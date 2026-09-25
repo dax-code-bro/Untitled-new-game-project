@@ -12,6 +12,11 @@ class Shader {
 public:
     bool load(const std::string& vsFile, const std::string& fsFile, const std::string& defines = {});
     bool reload();
+    // Two-phase loading: begin() on every shader, then finish() on every shader (parallel compile).
+    void begin(const std::string& vsFile, const std::string& fsFile, const std::string& defines = {});
+    void begin();
+    bool finish();
+    static void setGlobalDefines(const std::string& d);   // e.g. "#define LOW_QUALITY 1" on phones
     void use() const { glUseProgram(prog_); }
     GLuint id() const { return prog_; }
     GLint loc(const char* name);
@@ -27,6 +32,7 @@ public:
 
 private:
     GLuint prog_ = 0;
+    GLuint pendV_ = 0, pendF_ = 0, pendP_ = 0;
     std::string vs_, fs_, defines_;
     std::unordered_map<std::string, GLint> cache_;
 };

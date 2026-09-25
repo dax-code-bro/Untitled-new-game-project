@@ -7,6 +7,7 @@
 #include <GLFW/glfw3.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#include <emscripten/html5.h>
 #endif
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -164,6 +165,10 @@ bool Game::init(int argc, char** argv) {
     glfwGetFramebufferSize(window_, &fbw, &fbh);
     width_ = fbw; height_ = fbh;
     std::fprintf(stderr, "[startup] 4/8 compiling shaders (%dx%d)\n", width_, height_);
+    if (touch_ || low_) Shader::setGlobalDefines("#define LOW_QUALITY 1");
+#ifdef __EMSCRIPTEN__
+    emscripten_webgl_enable_extension(emscripten_webgl_get_current_context(), "KHR_parallel_shader_compile");
+#endif
     renderer_.init(width_, height_);
     renderer_.indoorBox = buildingBounds();
     renderer_.indoorBox.max.y = kCeilingY + 0.2f;

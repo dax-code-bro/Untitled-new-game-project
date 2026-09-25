@@ -184,6 +184,9 @@ float sampleShadow(sampler2DShadow sm, mat4 m, vec3 wp, float bias) {
     vec4 p = m * vec4(wp, 1.0);
     vec3 c = p.xyz / p.w * 0.5 + 0.5;
     if (c.x < 0.0 || c.x > 1.0 || c.y < 0.0 || c.y > 1.0 || c.z > 1.0) return -1.0;
+#ifdef LOW_QUALITY
+    return texture(sm, vec3(c.xy, c.z - bias));   // one hardware-filtered tap on phones
+#endif
     float sum = 0.0;
     vec2 texel = vec2(uShadowTexel);
     for (int x = -1; x <= 1; ++x)
@@ -233,7 +236,12 @@ void main() {
     float fres = pow(1.0 - max(dot(N, V), 0.0), 5.0);
     color += skyRadiance(R) * (f0 + (1.0 - f0) * fres) * (1.0 - s.rough) * 0.35 * skyVis;
     // Point lights (indoor ceiling lights, lamp posts)
-    for (int i = 0; i < MAX_POINT; ++i) {
+#ifdef LOW_QUALITY
+    const int POINT_LOOP = 6;   // phones: nearest 6 lights
+#else
+    const int POINT_LOOP = MAX_POINT;
+#endif
+    for (int i = 0; i < POINT_LOOP; ++i) {
         if (i >= uNumPoint) break;
         vec3 lv = uPointPos[i].xyz - vWorldPos;
         float d2 = dot(lv, lv);

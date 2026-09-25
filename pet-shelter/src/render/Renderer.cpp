@@ -62,19 +62,22 @@ bool Renderer::init(int width, int height) {
 }
 
 void Renderer::reloadShaders() {
+    // Start every compile first, then collect results: drivers can work on them in parallel.
+    lit_.begin("lit.vert", "lit.frag");
+    litInst_.begin("lit.vert", "lit.frag", "#define INSTANCED 1");
+    shadow_.begin("shadow.vert", "shadow.frag");
+    shadowInst_.begin("shadow.vert", "shadow.frag", "#define INSTANCED 1");
+    sky_.begin("fullscreen.vert", "sky.frag");
+    bloomDown_.begin("fullscreen.vert", "bloom_down.frag");
+    bloomUp_.begin("fullscreen.vert", "bloom_up.frag");
+    lum_.begin("fullscreen.vert", "luminance.frag");
+    adapt_.begin("fullscreen.vert", "adapt.frag");
+    tonemap_.begin("fullscreen.vert", "tonemap.frag");
+    fxaa_.begin("fullscreen.vert", "fxaa.frag");
+    cctv_.begin("fullscreen.vert", "cctv.frag");
     bool ok = true;
-    ok &= lit_.load("lit.vert", "lit.frag");
-    ok &= litInst_.load("lit.vert", "lit.frag", "#define INSTANCED 1");
-    ok &= shadow_.load("shadow.vert", "shadow.frag");
-    ok &= shadowInst_.load("shadow.vert", "shadow.frag", "#define INSTANCED 1");
-    ok &= sky_.load("fullscreen.vert", "sky.frag");
-    ok &= bloomDown_.load("fullscreen.vert", "bloom_down.frag");
-    ok &= bloomUp_.load("fullscreen.vert", "bloom_up.frag");
-    ok &= lum_.load("fullscreen.vert", "luminance.frag");
-    ok &= adapt_.load("fullscreen.vert", "adapt.frag");
-    ok &= tonemap_.load("fullscreen.vert", "tonemap.frag");
-    ok &= fxaa_.load("fullscreen.vert", "fxaa.frag");
-    ok &= cctv_.load("fullscreen.vert", "cctv.frag");
+    for (Shader* s : {&lit_, &litInst_, &shadow_, &shadowInst_, &sky_, &bloomDown_, &bloomUp_, &lum_, &adapt_, &tonemap_, &fxaa_, &cctv_})
+        ok &= s->finish();
     std::fprintf(stderr, "[renderer] shaders %s\n", ok ? "loaded" : "error: shaders failed to compile (see above)");
 }
 

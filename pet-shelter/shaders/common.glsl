@@ -29,7 +29,12 @@ float vnoise(vec2 p) {
 }
 float fbm2(vec2 p) {
     float s = 0.0, a = 0.5;
-    for (int i = 0; i < 4; ++i) { s += a * vnoise(p); p = p * 2.03 + 17.1; a *= 0.5; }
+#ifdef LOW_QUALITY
+    const int OCTAVES = 2;   // phones: cheaper noise
+#else
+    const int OCTAVES = 4;
+#endif
+    for (int i = 0; i < OCTAVES; ++i) { s += a * vnoise(p); p = p * 2.03 + 17.1; a *= 0.5; }
     return s;
 }
 

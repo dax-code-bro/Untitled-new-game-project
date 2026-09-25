@@ -216,11 +216,17 @@
     gpu = dbg ? probe.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : probe.getParameter(probe.RENDERER);
   } catch (e) { /* not available */ }
   (function countFrames() { rafTicks++; requestAnimationFrame(countFrames); })();
+  const stepAt = {};   // first time each startup step (1..8) was reached
+  function timings() {
+    const d = (a, b) => (stepAt[a] != null && stepAt[b] != null) ? ((stepAt[b] - stepAt[a]) / 1000).toFixed(1) + ' s' : '…';
+    return 'download ' + (stepAt[1] != null ? (stepAt[1] / 1000).toFixed(1) + ' s' : '…') +
+           ' · shaders ' + d(4, 5) + ' · world ' + d(5, 6) + ' · first frames ' + d(7, 9);
+  }
   function updateDiag() {
     if (ready) return;
     const secs = ((performance.now() - t0) / 1000).toFixed(0);
     document.getElementById('diag').textContent =
-      'Step: ' + lastStep + '\n' + secs + ' s · screen refreshes: ' + rafTicks + ' · ' + gpu +
+      'Step: ' + lastStep + '\n' + timings() + '\n' + secs + ' s · screen refreshes: ' + rafTicks + ' · ' + gpu +
       (isTouch ? ' · touch' : '') + (lowMode ? ' · low graphics' : '') + (timerLoop ? ' · timer frames' : '');
   }
   setInterval(updateDiag, 500);
@@ -249,6 +255,9 @@
     const m = /^\[startup\] (.*)/.exec(t);
     if (m) {
       lastStep = m[1];
+      const n = parseInt(m[1], 10);
+      if (stepAt[n] == null) stepAt[n] = performance.now() - t0;
+      if (/frame 3 drawn/.test(m[1])) { stepAt[9] = performance.now() - t0; console.log('[timings] ' + timings()); }
       if (!loaded && m[1].startsWith('7/8')) { loaded = true; setTimeout(startWatchdog, 0); }
       updateDiag();
     }
