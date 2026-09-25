@@ -53,6 +53,117 @@ for (const id of ['helipad', 'resort', 'town', 'demolition']) {
   };
 }
 
+/* THE ARMOURY: every gun in the game, for the native gallery.
+ *
+ * Every multiplayer gun from MP_DATA, built exactly as mp-game's buildGun
+ * builds it (the bespoke model if there is one, the service-arm table
+ * otherwise), plus the zombies weapons multiplayer does not carry, taken
+ * from the zombies game's own viewmodels. Laid out on a grid a metre above
+ * a studio floor, in studio light, everything else hidden. Each gun's
+ * actors are tagged, and the exporter writes their world bounds beside the
+ * scene (out.lescene.json) so the native side can frame every one. */
+GAMES.armory = {
+  hiRes: true,
+  scripts: ['site/games/bunker-nine.js', 'site/games/mp-data.js'],
+  start: `
+    window.B = BUNKER.start({ canvas: '#game', test: true, quality: 'ultra' }); window.__G = B.game;
+    const G = B.game, R = G.renderer;
+    for (let i = 0; i < 3; i++) G.step(1 / 60);
+    const BESPOKE = { mp5: 'mp5', m1911: 'pistol1911', model5: 'model5', mauser: 'mauserC96', breakwater: 'breakwater',
+      scatter: 'scattergun', sawnoff: 'sawnOff', thompson: 'thompson', mg42: 'mg42', remington: 'remington700',
+      killstreak: 'killStreak', riotshield: 'riotShield' };
+    const list = [];
+    for (const g of MP_DATA.GUNS) {
+      let made = null;
+      const fn = BESPOKE[g.id];
+      if (fn && typeof G[fn] === 'function') { try { made = G[fn]({ at: [0, -50, 0], physics: false }); } catch (e) { made = null; } }
+      if (!made) { try { made = G.serviceArm(g.id, { at: [0, -50, 0], physics: false }); } catch (e) { made = null; } }
+      if (!made) continue;
+      list.push({ id: g.id, name: g.name, cls: g.cls, root: made.root || made, parts: null });
+    }
+    const ZW = window.__T_WEAPONS || {};
+    for (const id of ['blaze', 'paralyzer', 'obliterator', 'arc', 'arc2']) {
+      const v = B.P.view[id];
+      if (!v) continue;
+      list.push({ id: 'z-' + id, name: (ZW[id] && ZW[id].name) || id, cls: 'zombies', root: v.root || v.actor,
+                  parts: v.parts || null });
+    }
+    const roots = new Map(list.map((e, i) => [e.root, i]));
+    const cols = 8;
+    list.forEach((e, i) => {
+      e.root.parent = null;
+      e.root.setPosition([(i % cols) * 5.0, 0.42, Math.floor(i / cols) * 4.0]);
+      e.root.setRotation([0, 0, 0, 1]);
+      e.root.visible = true;
+      if (e.parts) for (const q of e.parts) if (q) q.visible = true;
+    });
+    for (const a of G.actors) {
+      let r = a, k = -1;
+      for (let d = 0; r && d < 16; d++, r = r.parent) if (roots.has(r)) { k = roots.get(r); break; }
+      if (k < 0 || a.skeleton) { a.visible = false; continue; }
+      a.__gun = k;
+    }
+    const rows = Math.ceil(list.length / cols);
+    const floor = G.box({ at: [(cols - 1) * 2.5, -0.05, (rows - 1) * 2.0], size: [cols * 5.0 + 16, 0.1, rows * 4.0 + 16],
+      physics: false, material: G.material({ color: 0x3a3b3e, texture: 'smooth', roughness: 0.5 }) });
+    floor.name = 'studio-floor';
+    R.sun.direction.set(-0.45, 0.78, 0.44).normalize();
+    R.sun.color.set(1.0, 0.96, 0.9); R.sun.intensity = 3.4;
+    // An overhead softbox, not a sky: bright above, dark at the horizon, so
+    // steel reads as graded highlights instead of mirroring a white world.
+    R.sky.zenith.set(0.42, 0.43, 0.45); R.sky.horizon.set(0.16, 0.16, 0.17); R.sky.ground.set(0.05, 0.05, 0.05);
+    R.sky.intensity = 1.0; R.sky.clouds = 0;
+    R.fog.density = 0.0; R.lights.length = 0;
+    R.post.vignette = 0.3; R.post.grain = 0; R.post.chromatic = 0; R.post.bloom = 0.25;
+    window.__ARMORY = list.map((e) => ({ id: e.id, name: e.name, cls: e.cls }));
+  `,
+};
+
+/* THE GUNS AT DESKTOP RESOLUTION -- applied to the bundle text for the
+ * armoury export only, never to the shipped web build.
+ *
+ * Every gun is swept profiles and revolved outlines (96-pistol.js's
+ * toolkit): the web builds each round section from 18-24 points and each
+ * rounded rectangle from 22-28, a phone's budget, and at 4K the facets on a
+ * barrel or a pistol grip are countable. Here every ring and rounded
+ * rectangle gets three times the points and every revolve three times the
+ * facets. sweepPath needs every station of a sweep to carry the same count,
+ * and a sweep can mix a generated outline with a hand-written one, so any
+ * station short by a whole factor is resampled up to match -- corner pairs
+ * kept, so a sharp corner stays sharp and a smooth one stays smooth. */
+function hiResGuns(engine) {
+  const patch = (from, to) => {
+    if (!engine.includes(from)) throw new Error('hi-res anchor not found: ' + from);
+    engine = engine.replace(from, to);
+  };
+  patch('function ringOutline(r, n, cy = 0, cz = 0) {', 'function ringOutline(r, n, cy = 0, cz = 0) { n = n * 3;');
+  patch('function roundRect(hf, hb, hw, e, n) {', 'function roundRect(hf, hb, hw, e, n) { n = n * 3;');
+  patch('function spin(g, raw, seg = 24, smooth = 32, cy = 0, cz = 0) {',
+        'function spin(g, raw, seg = 24, smooth = 32, cy = 0, cz = 0) { seg = Math.max(48, seg * 3);');
+  patch('function sweepPath(g, stations, capStart = true, capEnd = true) {',
+    `function __hiResPts(pts, N) {
+      const m = pts.length;
+      if (m === N || m % 2 || N % m) return pts;
+      const f = N / m, raw = m / 2, out = [];
+      for (let i = 0; i < raw; i++) {
+        const b = pts[2 * i + 1], c = pts[(2 * i + 2) % m];
+        out.push(pts[2 * i], b);
+        for (let j = 1; j < f; j++) {
+          const t = j / f;
+          let nx = b[2] + (c[2] - b[2]) * t, ny = b[3] + (c[3] - b[3]) * t;
+          const L = Math.hypot(nx, ny) || 1; nx /= L; ny /= L;
+          const q = [b[0] + (c[0] - b[0]) * t, b[1] + (c[1] - b[1]) * t, nx, ny];
+          out.push(q, q.slice());
+        }
+      }
+      return out;
+    }
+    function sweepPath(g, stations, capStart = true, capEnd = true) {
+      { let N = 0; for (const st of stations) N = Math.max(N, st.pts.length);
+        stations = stations.map((st) => st.pts.length === N ? st : Object.assign({}, st, { pts: __hiResPts(st.pts, N) })); }`);
+  return engine;
+}
+
 async function main() {
   const [, , name, out, ...rest] = process.argv;
   const game = GAMES[name];
@@ -69,6 +180,7 @@ async function main() {
   const anchor = 'this.bounds = geometry.bounds || null;';
   if (!engine.includes(anchor)) throw new Error('GpuMesh anchor not found -- update export_scene.js');
   engine = engine.replace(anchor, anchor + ' this.__geometry = geometry;');
+  if (game.hiRes) engine = hiResGuns(engine);
 
   const browser = await chromium.launch({
     executablePath: CHROME,
@@ -238,6 +350,22 @@ async function main() {
     };
     const camera = { position: v3(cam.position), target: v3(cam.target), fov: cam.fov,
                      near: cam.near, far: cam.far };
+    // The armoury: each gun's world bounds, from its tagged actors.
+    let armory = null;
+    if (window.__ARMORY) {
+      env.studio = true;
+      env.bevel = 0.0035;   // gun parts are centimetres: a 3 cm bevel would melt them
+      armory = window.__ARMORY.map((g) => Object.assign({ lo: [1e9, 1e9, 1e9], hi: [-1e9, -1e9, -1e9] }, g));
+      for (const a of G.actors) {
+        if (a.__gun == null || !a.visible || !a.mesh || !a.mesh.bounds) continue;
+        const bd = a.mesh.bounds, e = a.matrix.e, g = armory[a.__gun];
+        if (!isFinite(bd.min.x)) continue;
+        for (const x of [bd.min.x, bd.max.x]) for (const y of [bd.min.y, bd.max.y]) for (const z of [bd.min.z, bd.max.z]) {
+          const p = [e[0] * x + e[4] * y + e[8] * z + e[12], e[1] * x + e[5] * y + e[9] * z + e[13], e[2] * x + e[6] * y + e[10] * z + e[14]];
+          for (let k = 0; k < 3; k++) { g.lo[k] = Math.min(g.lo[k], p[k]); g.hi[k] = Math.max(g.hi[k], p[k]); }
+        }
+      }
+    }
 
     // Concatenate and base64 in slices small enough for String.fromCharCode.
     const blob = new Uint8Array(bytes);
@@ -251,6 +379,7 @@ async function main() {
       parts.push(btoa(str));
     }
     return {
+      armory,
       json: { version: 1, meshes, materials, draws, env, camera,
               stats: { batches: batches.length, skippedSkinned: skipped, noGeometry, actors: G.actors.length } },
       parts,
@@ -266,6 +395,10 @@ async function main() {
   head.writeUInt32LE(1, 4);
   head.writeUInt32LE(json.length + pad, 8);
   fs.writeFileSync(out, Buffer.concat([head, json, Buffer.alloc(pad, 0x20), blob]));
+  if (res.armory) {
+    fs.writeFileSync(out + '.json', JSON.stringify(res.armory, null, 1));
+    console.log(`armory: ${res.armory.length} guns -> ${out}.json`);
+  }
 
   const st = res.json.stats;
   let verts = 0, tris = 0;

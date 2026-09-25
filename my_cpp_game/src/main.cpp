@@ -24,6 +24,7 @@
 #include "rendering/Renderer.hpp"
 #include "rendering/ShaderLibrary.hpp"
 #include "rendering/Tunables.hpp"
+#include <fstream>
 #include "scene/SceneFile.hpp"
 #include "scene/Showcase.hpp"
 
@@ -82,7 +83,7 @@ struct FlyCamera {
 } // namespace
 
 int main(int argc, char** argv) try {
-    const game::core::Args args = game::core::parseArgs(argc, argv);
+    game::core::Args args = game::core::parseArgs(argc, argv);
 
     auto window = std::make_unique<game::core::Window>(
         args.hidden ? 64 : args.width, args.hidden ? 64 : args.height, "my_cpp_game", !args.hidden,
@@ -159,6 +160,27 @@ int main(int argc, char** argv) try {
     if (!args.eye.empty()) camera.position = parse3(args.eye);
     if (!args.target.empty()) camera.target = parse3(args.target);
     if (args.fov > 0.0f) camera.fov = glm::radians(args.fov);
+    struct ListedShot { std::string name; glm::vec3 eye, target; float fov; };
+    std::vector<ListedShot> listed;
+    size_t listedAt = 0;
+    if (!args.shotList.empty()) {
+        std::ifstream in(args.shotList);
+        if (!in) throw std::runtime_error("cannot open shot list " + args.shotList);
+        std::string line;
+        while (std::getline(in, line)) {
+            if (line.empty() || line[0] == '#') continue;
+            char nm[256], e[128], t[128];
+            float fv = 40.0f;
+            if (std::sscanf(line.c_str(), "%255s %127s %127s %f", nm, e, t, &fv) < 3) continue;
+            listed.push_back({nm, parse3(e), parse3(t), fv});
+        }
+        if (listed.empty()) throw std::runtime_error("no shots in " + args.shotList);
+        if (args.frames <= 0) args.frames = 8;
+        std::filesystem::create_directories(args.shotDir);
+        camera.position = listed[0].eye;
+        camera.target = listed[0].target;
+        camera.fov = glm::radians(listed[0].fov);
+    }
     FlyCamera fly;
     fly.lookFrom(camera);
 
@@ -243,6 +265,21 @@ int main(int argc, char** argv) try {
         gpuMsSum += std::chrono::duration<double, std::milli>(clock::now() - g0).count();
         ++frame;
 
+        if (!listed.empty() && frame >= args.frames) {
+            const auto& sh = listed[listedAt];
+            auto px = game::core::readRGBA8(out.id(), out.width(), out.height());
+            const std::string file = (std::filesystem::path(args.shotDir) / (sh.name + ".png")).string();
+            game::core::savePNG(file, out.width(), out.height(), px);
+            std::printf("wrote %s\n", file.c_str());
+            if (++listedAt < listed.size()) {
+                camera.position = listed[listedAt].eye;
+                camera.target = listed[listedAt].target;
+                camera.fov = glm::radians(listed[listedAt].fov);
+                fly.lookFrom(camera);
+                frame = 0;
+                continue;
+            }
+        }
         if (args.frames > 0 && frame >= args.frames) {
             const auto& st = renderer.stats();
             std::printf("%d frames, %.1f ms/frame avg, last frame %d draws, %lld tris, %d instances\n",

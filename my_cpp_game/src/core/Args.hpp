@@ -29,6 +29,10 @@ struct Args {
     bool        hidden     = false;      // no visible window (headless capture)
     bool        glDebug    = false;      // KHR_debug output, errors counted and printed
     bool        fullscreen = false;      // primary monitor at its native resolution
+    /* --shots list.txt outdir: one capture per line ("name ex,ey,ez tx,ty,tz
+       fov"), each after --frames frames, all in one run -- the scene loads
+       and the textures bake once. */
+    std::string shotList, shotDir;
 };
 
 Args parseArgs(int argc, char** argv);

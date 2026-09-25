@@ -71,6 +71,12 @@ no DLLs beyond the system's; smoke-tested under Wine).
 
 Maps: `node tools/export_scene.js <bunker-nine|coastline|helipad|resort|town|demolition> out.lescene [--compare web.ppm]`.
 
+Guns: `node tools/export_scene.js armory armory.lescene --frames 0` builds all 80 guns (every
+multiplayer gun plus the zombies-only models) at desktop resolution -- 3x the points in every
+swept section and revolve, patched into the bundle text for this export only -- on a studio
+floor, and writes each gun's bounds to `armory.lescene.json`. `--shots list.txt outdir` renders
+one picture per line (`name ex,ey,ez tx,ty,tz fov`) in a single run.
+
 Linux host packages: `libgl1-mesa-dev libx11-dev libxrandr-dev
 libxinerama-dev libxcursor-dev libxi-dev libxkbcommon-dev`. Glad is
 generated at configure time and needs Python 3 with `jinja2`.

@@ -164,6 +164,12 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
     const json doc = json::parse(file.begin() + 12, file.begin() + 12 + jsonBytes);
     Blob blob{file.data() + 12 + jsonBytes, file.size() - 12 - jsonBytes};
 
+    /* A studio scene (the armoury): props on a floor, not a map. No ground
+       scatter, no building kit, no map light re-set, and a bevel sized for
+       gun parts instead of for walls. */
+    const bool studio = doc.at("env").value("studio", false);
+    const float boxBevel = doc.at("env").value("bevel", 0.03f);
+
     // ---- meshes ----
     std::vector<const rendering::Mesh*> meshes;
     std::vector<bool> isBox;          // unit cubes: these get the edge bevel
@@ -224,6 +230,9 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
         bound(d);
         m_stats.vertices += d.positions.size();
         m_stats.triangles += d.indices.size() / 3;
+        // An empty part (a builder's placeholder -- the armoury has a few)
+        // has nothing to upload: no mesh, and the draws that use it drop.
+        if (d.indices.empty() || d.positions.empty()) { meshes.push_back(nullptr); continue; }
         m_meshes.push_back(std::make_unique<rendering::Mesh>(d));
         meshes.push_back(m_meshes.back().get());
     }
@@ -312,7 +321,8 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
     for (const auto& jd : doc.at("draws")) {
         rendering::DrawItem it;
         it.mesh = meshes.at(jd.at("mesh").get<size_t>());
-        if (isBox.at(jd.at("mesh").get<size_t>())) it.bevel = 0.03f;
+        if (!it.mesh) continue;
+        if (isBox.at(jd.at("mesh").get<size_t>())) it.bevel = boxBevel;
         const std::string name = get(jd, "name", std::string());
         it.water = isWaterName(name);
         if (it.water) it.bevel = 0.0f;
@@ -529,7 +539,7 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
        Hipped tile roofs for the slabs, parapets and plant for flat roofs,
        framed windows on blank exterior walls. GAME_NO_KIT=1 turns it off. */
     static const bool noKit = std::getenv("GAME_NO_KIT") != nullptr;
-    if (!noKit && unitBox) {
+    if (!noKit && unitBox && !studio) {
         KitResult kit = buildKit(kitBoxes, lib);
         std::map<size_t, std::vector<size_t>> drop;
         for (const auto& [item, inst] : kit.removed) drop[item].push_back(inst);
@@ -581,7 +591,7 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
        Grass on the lawns, weeds on bare earth and up against every wall
        foot, stones on dirt and sand. GAME_NO_SCATTER=1 turns it off. */
     static const bool noScatter = std::getenv("GAME_NO_SCATTER") != nullptr;
-    if (!noScatter) {
+    if (!noScatter && !studio) {
         ScatterResult sc = scatterGround(world, 0x5ca77e5u);
         if (std::getenv("GAME_SCATTER_VERBOSE")) {
             size_t k[6] = {};
@@ -733,7 +743,7 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
        the haze thins, because a haze tuned to hide a phone's draw distance
        is not needed here. GAME_WEB_LIGHT=1 keeps the web light. */
     static const bool webLight = std::getenv("GAME_WEB_LIGHT") != nullptr;
-    if (!webLight) {
+    if (!webLight && !studio) {
         r.post.autoKey = 0.2f;
         const float elev = std::asin(std::clamp(r.sun.direction.y, -1.0f, 1.0f));
         const bool day = r.sky.horizon.b > r.sky.horizon.r && elev > 0.2f;
@@ -751,6 +761,7 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
         }
     }
 
+    if (studio) r.post.autoKey = 0.2f;   // metered, like the maps; the light itself is the studio's
     const auto& cam = doc.at("camera");
     m_camera.position = vec3(cam.at("position"));
     m_camera.target = vec3(cam.at("target"));
