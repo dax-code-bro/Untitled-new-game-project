@@ -1,8 +1,8 @@
 {
-  "version": "0.23.0",
-  "name": "brick you can feel",
-  "date": "2026-09-24",
+  "version": "0.24.0",
+  "name": "light you can see through",
+  "date": "2026-09-25",
   "mode": "multiplayer",
-  "did": "At ULTRA, surfaces with relief are displaced as you look across them: brick courses, cobbles and pantiles now occlude each other at a glancing angle instead of being a flat picture of depth.",
+  "did": "At ULTRA: volumetric sun shafts through the air, and a BRDF that conserves energy -- rough metals no longer lose two thirds of their reflected light.",
   "onAccept": "The armoury reloads. Your loadouts are kept; anything you had equipped that moved class is still where you left it."
 }

@@ -141,7 +141,62 @@ const QUALITY = {
 };
 // `medium` is what the old auto-detect asked for and what several callers
 // still pass; it is this tier's previous name.
-QUALITY.medium = QUALITY.normal;
+QUALITY.medium = QUALITY.normal;/* ---- FEATURE 6: ENERGY-CONSERVING SPECULAR, PHASE 1 TIER RAISE ----
+ *
+ * ULTRA ONLY. The recommended landing in the shared contract was
+ * 0/1/1/1/1 and this is 0/0/0/0/1; here is the argument for the
+ * difference, because it is not timidity.
+ *
+ * Every other feature in this programme is SELECTIVE. SSR changes
+ * reflective surfaces. Parallax changes textured surfaces at a grazing
+ * angle. The probe changes what a mirror contains. This one changes
+ * THE BRDF, which means it changes every lit pixel of every material
+ * in every frame -- the same blast radius the tonemapper has, and the
+ * tonemapper shipped at zero on all five tiers for exactly this reason.
+ *
+ * And it does not move the frame in one direction. Height-correlated
+ * Smith is 13-21% BRIGHTER in direct specular than the Disney-k term it
+ * replaces. Multiple-scattering compensation is up to +116% on rough
+ * metal specular and under +0.5% on a dielectric. Specular and horizon
+ * occlusion DARKEN ambient specular in creases. Which of those wins at
+ * a given pixel depends on its metalness, its roughness, its AO map and
+ * its angle, so the net effect on any one assertion cannot be predicted
+ * from the parts -- it has to be measured, per tier.
+ *
+ * The four tightest numbers in the suite all live on the tiers the
+ * contract wanted this switched on for:
+ *   underside.test.js:196   brick underside 30 against a floor of 24
+ *   interior.test.js:110    covered/open 0.746 against a ceiling of 0.78
+ *   graphics.test.js:223    SSAO p50 delta -6.63% against -5%
+ *   graphics.test.js:226    SSAO mean delta -4.00% against -2%
+ * Three of browser.test.js's eight scenes run at 'high', underside pins
+ * it, sweep raises to it mid-run, and graphics/interior/density all pin
+ * 'normal'. Raising this key there is a re-baseline of roughly thirty
+ * numbers across seven files, and it would land in the same commit as
+ * eight other features doing the same thing to the same numbers.
+ *
+ * Ultra is reachable only by an explicit setQuality('ultra') or
+ * LE.create({quality:'ultra'}): detectQuality() tops out at 'high' and
+ * the watchdog only ever steps down. So ultra is where a global BRDF
+ * change can be proved correct against a purpose-built rig
+ * (engine/test/energy.test.js) before anyone proposes it for the tiers
+ * the pixel suite pins. A game or a map that wants it sooner has
+ * qualityOverrides: { multiscatter: 1 }, which reaches it at any tier.
+ *
+ * CLEARCOAT AND SHEEN ARE NOT GATED HERE AT ALL and are not in this
+ * table. They are per-material and default to zero, so they cost a
+ * branch nobody takes until a material asks -- see _bindMaterial. */
+QUALITY.ultra.multiscatter = 1;
+/* Specular + horizon occlusion is a separate key from the energy half
+   on purpose. They pull opposite ways -- one brightens rough metal,
+   the other darkens ambient specular in cavities -- so a tier raise
+   that regressed a luma assertion would otherwise leave you unable to
+   say which half did it. Two keys, two bisections. */
+QUALITY.ultra.specOcclusion = 1;
+for (const _t6 of ['retro', 'low', 'normal', 'high']) {
+  if (QUALITY[_t6].multiscatter == null) QUALITY[_t6].multiscatter = 0;
+  if (QUALITY[_t6].specOcclusion == null) QUALITY[_t6].specOcclusion = 0;
+}
 /* ---- FEATURE 1: SCREEN-SPACE REFLECTIONS, PHASE 1 TIER RAISE ----
  *
  * Patched onto the table rather than written into it, for one reason
@@ -174,6 +229,50 @@ QUALITY.medium = QUALITY.normal;
  * this is idempotent with whatever the plumbing commit wrote. Note that
  * QUALITY.medium IS QUALITY.normal -- one object, so writing 'normal'
  * writes both, which is what is wanted. */
+/* ---- FEATURE 4: VOLUMETRIC SCATTERING, PHASE 1 TIER RAISE ----
+ *
+ * Patched onto the table for the same reason the reflection keys below
+ * are: nine features are landing on these five object literals in
+ * parallel, and a property assignment after the fact composes with all
+ * of them instead of conflicting with eight.
+ *
+ * ULTRA ONLY, and the reasoning is the same as the reflection's but
+ * sharper, because in-scattered sunlight is BROAD LOW-FREQUENCY
+ * BRIGHTNESS -- precisely the kind of change a mean-luma assertion is
+ * built to catch. Three of browser.test.js's eight scenes run at
+ * 'high', underside.test.js pins it, and sweep.test.js raises to it
+ * mid-run; 'high' is the most heavily asserted tier in the suite, not
+ * the quiet one its name suggests. Ultra is reachable only by an
+ * explicit setQuality('ultra') or LE.create({quality:'ultra'});
+ * detectQuality() cannot return it and the watchdog only ever steps
+ * down. So this raise moves no existing baseline, and the feature is
+ * measured by a test of its own (engine/test/volumetric.test.js) that
+ * asks for ultra deliberately.
+ *
+ * volSteps 24. The march is not step-limited on ACCURACY -- the
+ * per-segment weight is the exact integral of a piecewise-constant
+ * medium, so the total brightness is the same at eight steps as at
+ * sixty-four. What the steps buy is how finely the SHADOW is resolved
+ * along the ray, i.e. how sharp the edge of a beam is. With the
+ * growing step the local spacing is 0.132*t: 0.74 m at three metres,
+ * 1.7 m at ten. A doorway beam is one to two metres across, so three
+ * metres out it is resolved by two or three samples and the dither
+ * plus the 3x3 blur turn the remainder into a soft edge rather than a
+ * stair. Twelve steps doubles that spacing and the stair survives the
+ * blur; forty-eight halves it and buys detail the half-resolution
+ * buffer cannot hold.
+ *
+ * The four lower tiers are pinned to 0 only if nothing has set them,
+ * so this is idempotent with whatever the plumbing commit wrote. Note
+ * that QUALITY.medium IS QUALITY.normal -- one object, so writing
+ * 'normal' writes both, which is what is wanted. */
+QUALITY.ultra.volumetric = 1;
+QUALITY.ultra.volSteps = 24;
+for (const _vt of ['retro', 'low', 'normal', 'high']) {
+  if (QUALITY[_vt].volumetric == null) QUALITY[_vt].volumetric = 0;
+  if (QUALITY[_vt].volSteps == null) QUALITY[_vt].volSteps = 0;
+}
+
 QUALITY.ultra.ssr = 1;
 QUALITY.ultra.ssrSteps = 28;
 /* THE PROBE BAKES THE SCENE, NOT JUST THE SKY, and only at ultra.
@@ -609,6 +708,134 @@ class Renderer {
       clamp: 6.0,
       maxDarken: 0.60,
     };
+    /* ================================================================
+       VOLUMETRIC SCATTERING  (feature 4 — every uniform is uVol*)
+       ================================================================
+       Live and writable the way `shadows`, `fog`, `post` and `ssr` are,
+       so a map or a test can reach all of it without a rebuild.
+
+       The two COST knobs are deliberately not here: whether the pass
+       runs and how many march steps it gets are tier keys
+       (quality.volumetric, quality.volSteps), because those are the two
+       numbers that have to differ between a phone and a desktop. What
+       is here is the LOOK, which should not. */
+    this.volumetric = {
+      /* Straight gain on the result. 1.0 is the physical answer for the
+         medium described below, and it is left there because it
+         measures right: on a dim interior at the default density the
+         shafts add 26 sRGB luma to the brightest one per cent of the
+         frame and 39 at the beam's core, against a scene median of 91.
+         That is a beam you cannot miss and one that has not taken the
+         room over. Raise it on a map that wants theatre; lower it on a
+         bright open map, where every ray is lit and the term becomes an
+         overall haze rather than a shaft. */
+      intensity: 1.0,
+      /* HOW MUCH DENSER THE BEAM MEDIUM IS THAN THE MAP'S HAZE.
+       *
+         uFogDensity is an EXTINCTION coefficient for kilometre-scale
+         aerial perspective: the bunker's 0.0104 is 1/e at 96 m, and the
+         multiplayer maps run 0.0018 to 0.0030. What makes a beam
+         VISIBLE is local dust and moisture, an order denser than that,
+         and at aerial-haze density a three-metre doorway shaft
+         in-scatters about two thousandths of linear radiance against an
+         interior sitting around a tenth. Invisible.
+
+         WHAT THIS SETS IS THE SATURATION LENGTH, 1/sigma -- how far a
+         beam has to run before it has given up most of its light -- and
+         not the brightness. Single scattering with an albedo of one can
+         never in-scatter more than phase(theta) * sunRadiance however
+         dense the air gets; the density decides WHERE along the ray
+         that ceiling is approached, and past a point it makes the beam
+         DIMMER, because the medium occludes itself before the light
+         reaches the eye.
+
+         8 IS PINNED FROM BOTH ENDS, and the two answers agree.
+
+         From outdoors: the clearest map in the game is coastline at
+         0.0020, and the march is bounded by shadows.distance = 60 m.
+         For an outdoor shaft to stay PROPORTIONAL to the haze the map
+         authored -- rather than flattening into a constant veil over
+         everything -- the medium must not saturate inside that range:
+         sigma * 60 <= 1, so scale <= 8.3. Eight is the largest value
+         that keeps the coupling honest on an open map.
+
+         From indoors: the in-scatter a beam of length L delivers to an
+         eye d away is exp(-sigma*d) * (1 - exp(-sigma*L)), which peaks
+         and then falls. Measured on the rig in volumetric.test.js at
+         d = 10 m, L = 3 m, as the 99th-percentile luma the shafts add:
+         scale 4 -> 20.7, 6 -> 24.8, 8 -> 25.6, 9 -> 25.8, 12 -> 24.9,
+         24 -> 16.6. Eight is within one per cent of the peak.
+
+         THE HONEST PART. A scattering coefficient larger than the
+         extinction coefficient is an albedo above one, which no real
+         medium has. What it stands in for is that uFogDensity describes
+         the wrong medium at the wrong scale. Set this to 1 for the
+         physical answer and watch the shafts disappear. */
+      densityScale: 8,
+      /* HENYEY-GREENSTEIN ANISOTROPY. Atmospheric aerosol is g 0.7 to
+         0.85 and cloud droplet is higher still, and at 0.72 the
+         forward-to-side ratio of the phase function is 85:1 -- which
+         means that once the sun-facing view is exposed correctly the
+         ninety-degree beam is under a hundredth of it and gone. At 0.45
+         the ratio is 7.9:1 forward to side and 18:1 forward to back:
+         looking toward the sun is still plainly the money shot, and a
+         beam crossing the view sideways still reads at an eighth of it,
+         which is where a beam reads as a beam. This is the one number
+         in the feature chosen against the display rather than against
+         physics, and it is chosen against a measured ratio rather than
+         by eye. */
+      anisotropy: 0.45,
+      /* How much of the map's authored fog HUE the scattering takes on,
+         normalised so only the colour transfers and not the brightness.
+         0.6 is enough that the bunker's warm haze and coastline's cool
+         one are plainly different shafts and short of the point where
+         a saturated fog colour starts tinting sunlight itself. */
+      tint: 0.60,
+      /* Metres. Clamped against shadows.distance at bind time, because
+         a shaft cannot be longer than the shadow map that makes it. */
+      maxDistance: 60,
+      /* Where the shaft starts fading, as a fraction of that range.
+         outsideCascade's convention is that anything past the cascade
+         is FULLY LIT, so a march that reached the edge at full weight
+         would grow a hard bright plane across the frame at exactly 60
+         metres. 0.62 gives a 23 m ramp against a 5.2 m local step at
+         that distance -- four steps of ramp, with a smoothstep's zero
+         derivative at both ends, so the fade itself has no edge to band
+         on. And 37 m is already past where a shaft carries visible
+         contrast at any density the maps ship. */
+      fadeStart: 0.62,
+      /* In the cascade's own normalised depth, which is LINEAR because
+         the cascade projection is orthographic.
+
+         THE SAMPLES ARE AIR, so there is no receiver plane, no slope
+         and no acne -- which is why this is one small constant and not
+         the slope-scaled pair the surface path needs. What it buys is
+         only headroom over the numerical noise in the projection.
+
+         WHAT IT COSTS IS THE FAILURE THAT MATTERS HERE: the bias makes
+         a shell of air just behind every occluder read as lit, so a bias
+         thicker than the occluder lets the beam straight through it.
+         The thinnest thing in this game whose shadow a shaft has to
+         keep is a crane-lattice bar at roughly 5 cm. At the default
+         shadow settings the cascades span about 87 m and 300 m of
+         normalised depth, so 0.0001 is 8.7 mm and 30 mm -- a thousand
+         times the 1e-5 m of float error in the light-space multiply,
+         and comfortably inside the bar. 0.0006 would be 5 cm and 18 cm,
+         and the lattice would stop casting. */
+      bias: 0.0001,
+      /* A firefly ceiling in linear radiance. Single scattering with an
+         albedo of one cannot exceed phase * sunRadiance, so a
+         well-behaved frame never reaches this; it is a rail so that a
+         map with an absurd fog density degrades into haze instead of
+         punching a white hole through the brightest assertion in the
+         suite. */
+      clamp: 4.0,
+      /* The ratio between the last march step and the first. See the
+         derivation in GLSL.volumetricFrag: at 24 over a 60 m range the
+         step runs 0.34 m at the camera to 8.3 m at the far end, growing
+         as 0.132*t, which is the law the pixel footprint grows by. */
+      curve: 24,
+    };
     this._instanceScratch = new Float32Array(20 * 1024);
 
     this._initTargets();
@@ -904,7 +1131,20 @@ class Renderer {
     sh.f('uSkyIntensity', this.sky.intensity);
     sh.v3('uRoomAmbient', this.sky.room);
     sh.f('uSkyOcclusion', this.sky.occlusion);
-    sh.f('uGroundBounce', this.sky.bounce);
+    sh.f('uGroundBounce', this.sky.bounce);    /* ---- FEATURE 6: THE BRDF GATES ----
+       Bound here and nowhere else. _bindEnv is the one site that
+       already reaches every program that evaluates the BRDF -- pbr,
+       fluidShade and screenSpace -- which is exactly the set that has
+       to agree on these two numbers or the screen-space fold pays back
+       a different sky from the one the forward pass applied. (It also
+       reaches sky, where GLSL.pbr is not included, so both are
+       inactive uniforms there and the setters no-op.)
+
+       The `|| 0` idiom, so a tier table that predates these keys, or
+       a game that builds a quality object by hand, gets the old
+       renderer rather than an undefined uniform. */
+    sh.f('uSpecEnergy', this.quality.multiscatter || 0);
+    sh.f('uSpecOcclusion', this.quality.specOcclusion || 0);
     sh.v3('uFogColor', this.fog.color);
     sh.f('uFogDensity', this.fog.density);
     sh.f('uFogHeight', this.fog.height);
@@ -1095,7 +1335,19 @@ class Renderer {
     sh.f('uParallaxRange', pRange);
     sh.f('uParallaxTop', (mat.maps && mat.maps.heightTop != null) ? mat.maps.heightTop : 1);
     sh.f('uDetailNormal', this.quality.detailNormal ? 1 : 0);
-    sh.f('uSubsurface', mat.subsurface);
+    sh.f('uSubsurface', mat.subsurface);    /* ---- FEATURE 6: COAT AND CLOTH, PER MATERIAL ----
+       Five uniforms, four of them a float. Zero by default, and the
+       shader's branches on the two weights are uniform across a draw
+       call, so a material that wants neither pays two compares.
+       Bound unconditionally rather than inside an `if (mat.clearcoat)`
+       because a uniform left unset keeps the PREVIOUS draw's value --
+       the program is cached and reused across batches, so one crane
+       with a coat would put a coat on every material drawn after it. */
+    sh.f('uClearcoatWeight', mat.clearcoat || 0);
+    sh.f('uClearcoatRough', mat.clearcoatRoughness != null ? mat.clearcoatRoughness : 0.1);
+    sh.f('uSheenWeight', mat.sheen || 0);
+    sh.v3('uSheenColor', mat.sheenColor);
+    sh.f('uSheenRough', mat.sheenRoughness != null ? mat.sheenRoughness : 0.3);
     sh.i('uReceiveShadow', mat.receiveShadow ? 1 : 0);
     sh.i('uHasMaps', mat.maps ? 1 : 0);
     if (mat.maps) {
@@ -1702,6 +1954,135 @@ class Renderer {
     return this.hdrB.color;
   }
 
+  /* ================================================================
+     VOLUMETRIC SCATTERING  (feature 4)
+     ================================================================
+     Two half-resolution draws at ultra and none anywhere else: a
+     raymarch through the shadow cascades accumulating single-scattered
+     sunlight with a Henyey-Greenstein phase function, and one
+     depth-aware 3x3 that dissolves its dither. The result is folded
+     into the frame by _applyScreenSpace, which already has the hook and
+     needs no edit -- quality.volStrength is left unset on purpose so
+     its `|| 1` gives full strength and every look knob stays on
+     renderer.volumetric where a map can reach it.
+
+     WHAT THIS BUYS. The air in this game carries no light. applyFog is
+     a closed-form exponential that has never read the shadow map, so
+     the air inside a sunbeam and the air in the shadow beside it are
+     painted the same value -- which is why there is no god ray through
+     a doorway, no dust in a bunker, no cone from the tunnel mouth, and
+     why every interior reads as evenly filled rather than shafted. */
+
+  /* Allocated on demand and freed again when the tier drops, following
+     _ensureSsrTargets exactly: ultra is the only tier that asks for
+     this and it is reachable only by an explicit setQuality, so two
+     half-resolution RGBA16F targets at boot would be memory every other
+     tier pays and never uses -- and doing it here means setQuality()
+     needs no edit at all, which matters when nine features are landing
+     on that one method in parallel.
+
+     SHADOWS ARE PART OF THE GATE, not just a bind-time detail. Without
+     a cascade this pass is uniform fog with a phase function on it,
+     which is what applyFog already draws; and _bindShadows indexes
+     shadowMaps[0] unconditionally, so an empty array would throw here
+     rather than degrade. Nulling BOTH targets on the way out is what
+     keeps present()'s `quality.volumetric && this.volB` gate honest. */
+  _ensureVolTargets() {
+    const want = !!(this.quality.volumetric && this.floatBuffers && this.camera
+      && this.hdrA.depthTexture && this.shadows.enabled
+      && this.shadowMaps && this.shadowMaps.length
+      && this.width >= 2 && this.height >= 2);
+    if (!want) {
+      if (this.volA) { this.volA.dispose(); this.volA = null; }
+      if (this.volB) { this.volB.dispose(); this.volB = null; }
+      return false;
+    }
+    /* Half resolution, by exactly the aoA/aoB rule. In-scattering is
+       the lowest-frequency signal in the frame -- it has no edges of
+       its own, only the ones the shadow map puts in it -- and it is
+       blurred on the way out regardless, so the half that is thrown
+       away is half the pass would have thrown away anyway. */
+    const w = Math.max(2, this.width >> 1), h = Math.max(2, this.height >> 1);
+    if (!this.volA) {
+      const gl = this.gl;
+      const spec = { internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT };
+      this.volA = new Framebuffer(gl, { width: w, height: h, colors: [spec], depth: false });
+      this.volB = new Framebuffer(gl, { width: w, height: h, colors: [spec], depth: false });
+    } else {
+      this.volA.resize(w, h);
+      this.volB.resize(w, h);
+    }
+    return true;
+  }
+
+  _renderVolumetrics() {
+    if (!this._ensureVolTargets()) return;
+    const cam = this.camera;
+    const V = this.volumetric;
+
+    /* A SHAFT CANNOT BE LONGER THAN THE SHADOW MAP THAT MAKES IT.
+       Past shadows.distance outsideCascade reports fully lit, so the
+       march is clamped to it and faded out well before it. A game that
+       raises shadows.distance gets longer shafts for free; one that
+       lowers it gets shorter ones rather than a bright wall. */
+    const far = Math.max(4, Math.min(this.shadows.distance, V.maxDistance || 60));
+    /* Written with a constant bound of 64 and a break in the shader,
+       which is the form ANGLE compiles without complaint -- the same
+       shape as the SSAO loop's cap of 32. Clamped here as well so a
+       tier asking for 100 gets 64 rather than silently getting 64. */
+    const steps = Math.max(2, Math.min(64, this.quality.volSteps || 16));
+
+    const sh = this.program('volumetric', FULLSCREEN_VS, GLSL.volumetricFrag).use();
+    this.volA.bind(true, 0, 0, 0, 0);
+    /* The sun, the sky and the fog, from the one binding site that
+       already serves the pbr, sky and fluidShade programs. Every
+       uniform in it that this program does not declare is a silent
+       no-op, which is what makes calling it free. */
+    this._bindEnv(sh);
+    /* The cascades, unchanged and uncopied. _bindNoBlocker inside it
+       early-returns because this program declares no blocker sampler,
+       so PCSS costs this pass nothing. */
+    this._bindShadows(sh);
+    sh.tex('uSceneDepth', this.hdrA.depthTexture);
+    sh.m4('uInvViewProj', cam.invViewProj);
+    sh.v3('uCameraPos', cam.position);
+    sh.i('uVolSteps', steps);
+    /* THE COUPLING TO THE MAP. One multiply: the map's own fog density
+       times one scale. A map that dials its fog up gets thicker shafts,
+       a clear map gets none, and nothing new has to be authored. */
+    sh.f('uVolDensity', Math.max(0, this.fog.density)
+      * (V.densityScale != null ? V.densityScale : 8));
+    sh.f('uVolIntensity', V.intensity != null ? V.intensity : 1);
+    sh.f('uVolG', V.anisotropy != null ? V.anisotropy : 0.45);
+    sh.f('uVolTint', V.tint != null ? V.tint : 0.6);
+    sh.f('uVolBias', V.bias != null ? V.bias : 0.0001);
+    sh.f('uVolClamp', V.clamp != null ? V.clamp : 4.0);
+    sh.f('uVolCurve', Math.max(1.5, V.curve || 24));
+    sh.f('uVolNear', Math.max(0.02, cam.near));
+    sh.v2('uVolRange', far * (V.fadeStart != null ? V.fadeStart : 0.62), far);
+    /* Zero unless TAA is running. Animating the dither without a
+       temporal filter to resolve it trades a static stipple for a
+       crawling one, which is strictly worse to look at. The golden
+       ratio is the sequence that fills [0,1) most evenly for every
+       prefix length, so however many frames TAA happens to have in its
+       history they are spread rather than clustered. */
+    sh.f('uVolJitter', this.quality.taa
+      ? ((this.frameIndex || 0) * 0.6180339887498949) % 1 : 0);
+    this.fullscreen.draw();
+    this.stats.draws++;
+
+    const bl = this.program('volBlur', FULLSCREEN_VS, GLSL.volBlurFrag).use();
+    /* Cleared to alpha 1 so that if anything ever samples volB outside
+       the region this pass covers it reads "no extinction" rather than
+       a black multiply. */
+    this.volB.bind(true, 0, 0, 0, 1);
+    bl.tex('uVolSrc', this.volA.color);
+    bl.v2('uVolTexel', 1 / this.volA.width, 1 / this.volA.height);
+    this.fullscreen.draw();
+    this.stats.draws++;
+    if (this.stats.passes) this.stats.passes.vol = (this.stats.passes.vol || 0) + 1;
+  }
+
   /* ---------------- post ---------------- */
 
   present() {
@@ -1725,6 +2106,10 @@ class Renderer {
      *
      * The gate is written to include volumetrics and GTAO as well, so
      * features 4 and 9 need no edit to present() at all. */
+    /* VOLUMETRICS FIRST, because the fold below gates on this.volB
+       existing and because bloom must see the shafts: a sunbeam is
+       exactly the kind of bright low-frequency thing a lens blooms. */
+    this._renderVolumetrics();
     this._sceneTex = this.hdrA.color;
     if ((this.quality.ssr && this.gbuffer)
         || (this.quality.volumetric && this.volB)

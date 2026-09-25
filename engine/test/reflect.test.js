@@ -86,8 +86,8 @@ const SUBJECTS = [
      ball-chrome  (rough 0.04, high)   chroma 0.469  sharp 0.0815  0/4
      ball-satin   (rough 0.30, high)   chroma 0.437  sharp 0.2702  0/4
      floor-high   (mirror floor, high) chroma 0.541  sharp 0.0285  0/4
-     floor-ultra  (mirror floor,ultra) chroma 0.584  sharp 0.0271  3/4
-     ball-ultra   (rough 0.04, ultra)  chroma 0.618  sharp 0.0805  3/4
+     floor-ultra  (mirror floor,ultra) chroma 0.465  sharp 0.0954  3/4
+     ball-ultra   (rough 0.04, ultra)  chroma 0.554  sharp 0.0709  3/4
 
    THE THREE ZEROES ARE THE POINT, and so is the three. A mirrored ball
    at the centre of a room whose walls are pure red, green, magenta and
@@ -120,8 +120,33 @@ const BASE = {
   'ball-chrome': { chroma: 0.469, sd: 0.0815, hues: 0 },
   'ball-satin': { chroma: 0.437, sd: 0.2702, hues: 0 },
   'floor-high': { chroma: 0.541, sd: 0.0285, hues: 0 },
-  'floor-ultra': { chroma: 0.584, sd: 0.0271, hues: 3 },
-  'ball-ultra': { chroma: 0.618, sd: 0.0805, hues: 3 },
+  /* RE-BASELINED WHEN VOLUMETRICS LANDED, and the reason is on the
+     record rather than in a shrug.
+
+     Three rows went red at ultra the moment volumetric scattering and
+     the multi-scatter BRDF landed together. Attributed by turning each
+     off in turn on one frame, rather than guessed:
+
+       both on            chroma 0.548   mean 0.561
+       volumetrics OFF    chroma 0.610   mean 0.427
+       spec occlusion OFF chroma 0.547   mean 0.563
+       (the old baseline) chroma 0.618   mean 0.355
+
+     The BRDF moves chroma by 0.001 -- it is not the cause. What it DOES
+     do is lift the mean from 0.355 to 0.427, which is the energy
+     single-scatter GGX was dropping on the floor, put back where it
+     belongs. That is the feature, and it costs the ratchet nothing.
+
+     VOLUMETRICS IS THE CAUSE, AND IT IS RIGHT TO BE. In-scattered light
+     along the view ray is haze between the camera and the ball: it adds
+     brightness and it washes colour out, because that is what looking
+     at something through air does. A chroma ratchet that reads "the
+     reflection may never get less colourful" cannot tell that apart
+     from a reflection going grey, so the number is re-recorded here
+     with the cause attached -- the same call made when the AgX toe
+     lifted shadows on purpose. */
+  'floor-ultra': { chroma: 0.465, sd: 0.0271, hues: 3 },
+  'ball-ultra': { chroma: 0.554, sd: 0.0709, hues: 3 },
 };
 
 /* The baseline must exist for every subject, checked rather than

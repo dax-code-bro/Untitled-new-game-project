@@ -291,6 +291,224 @@ vec3 fresnelSchlickRough(float cosT, vec3 F0, float rough){
   vec3 Fr = max(vec3(1.0 - rough), F0);
   return F0 + (Fr - F0) * pow(saturate1(1.0 - cosT), 5.0);
 }
+/* ============================================================
+   FEATURE 6 — ENERGY-CONSERVING SPECULAR, CLEARCOAT AND SHEEN
+   ============================================================
+   Five terms, all of them BRDF and none of them a new pass:
+
+     visSmithGGX            the masking-shadowing term GGX is actually
+                            derived with, replacing a 2012 fudge
+     specularDirAlbedo      how much energy one bounce returns
+     specularMultiScatter   putting the rest of it back
+     horizonOcclusion       stopping the reflection sampling the inside
+     specularOcclusion      of the surface it is standing on
+     visKelemen             the clearcoat lobe's visibility
+     distributionCharlie    cloth, which GGX cannot express at all
+     visAshikhmin
+     sheenDirAlbedo
+
+   uSpecEnergy is declared HERE rather than in pbrFrag because the
+   screen-space fold has to apply the identical compensation to the
+   sky it pays back (see GLSL.screenSpaceFrag), and both programs
+   include this chunk. One declaration, one binding site in _bindEnv,
+   no chance of the two drifting apart. GLSL.pbr is also compiled into
+   fluidShadeFrag and ssrFrag, neither of which references it, so in
+   those two it is an inactive uniform and its setter silently no-ops.
+
+   AT uSpecEnergy = 0 THIS WHOLE FEATURE IS BIT-IDENTICAL TO THE
+   SHADER IT REPLACED. Not "close" -- the off path in every call site
+   is the original expression, character for character, and the only
+   new arithmetic on it is a multiply by a literal 1.0, which is exact
+   in IEEE 754. That is what lets the four tiers the test suite pins
+   keep their recorded numbers with no re-baseline. */
+uniform float uSpecEnergy;
+uniform float uSpecOcclusion;
+
+/* ---- HEIGHT-CORRELATED SMITH VISIBILITY ----
+ *
+ * geometrySmith above is Schlick-GGX with Disney's k = (rough+1)^2/8.
+ * That remap is not the Smith term the GGX distribution is derived
+ * with; it is a deliberate darkening fudge from the 2012 course notes,
+ * introduced in their words "to reduce the hotness", and it throws away
+ * energy that never comes back. This is Heitz's height-correlated
+ * Smith, written as a VISIBILITY term with the 1/(4 NoL NoV) of the
+ * Cook-Torrance denominator already folded in, so the caller writes
+ * D * Vis * F and never divides.
+ *
+ * FOLDING THE DENOMINATOR IS NOT A MICRO-OPTIMISATION, it is what makes
+ * the term finite. G/(4 NoV NoL) is 0/0 at grazing incidence and the
+ * old line papered over it with max(..., 1e-4) -- a clamp that fires on
+ * exactly the silhouette pixels a rough metal is judged by. Here the
+ * NoL and NoV cancel analytically before anything is divided, and the
+ * remaining max() is only there for the case where both are zero.
+ *
+ * alpha = rough*rough, matching distributionGGX, which squares it the
+ * same way. Measured against the old term at NoV = NoL = 0.7 this is
+ * 13% brighter at rough 0.1, 21% at 0.5 and 15% at 0.8. */
+float visSmithGGX(float NoV, float NoL, float rough){
+  float a = rough * rough;
+  float a2 = a * a;
+  float gv = NoL * sqrt(NoV * NoV * (1.0 - a2) + a2);
+  float gl = NoV * sqrt(NoL * NoL * (1.0 - a2) + a2);
+  return 0.5 / max(gv + gl, 1e-6);
+}
+
+/* ---- SINGLE-SCATTER DIRECTIONAL ALBEDO, Ess(NoV, rough) ----
+ *
+ * The fraction of incident energy one bounce off a GGX microsurface
+ * returns. At rough 0 it is ~1. At rough 1 and normal incidence it is
+ * about 0.45, and the missing 55% is light that struck a SECOND
+ * microfacet and was simply dropped, because a single-scatter model has
+ * nowhere to put it. That is why rough metal in this renderer -- worn
+ * steel, brushed aluminium, a rusted hinge, gold -- goes grey and dead
+ * as roughness rises, and why a roughness sweep across one object shows
+ * a dark band through the middle of it.
+ *
+ * This is Karis' split-sum fit evaluated at F0 = 1, where F0*A + B
+ * collapses to A + B. Deliberately the ANALYTIC FIT and not the
+ * integrated LUT that GLSL.sky's envBRDF() prefers: the compensation
+ * has to be the same number in pbrFrag and in the screen-space fold
+ * that pays part of it back, and those two programs do not both have
+ * the LUT bound on every tier. A fit that agrees everywhere beats a
+ * table that is better in one program and missing from the other. */
+float specularDirAlbedo(float rough, float NoV){
+  const vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022);
+  const vec4 c1 = vec4(1.0, 0.0425, 1.04, -0.04);
+  vec4 r = rough * c0 + c1;
+  float a004 = min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y;
+  vec2 AB = vec2(-1.04, 1.04) * a004 + r.zw;
+  return clamp(AB.x + AB.y, 1e-3, 1.0);
+}
+
+/* ---- MULTIPLE-SCATTERING COMPENSATION (Turquin 2019) ----
+ *
+ * Multiply any single-scatter specular lobe by this and the energy the
+ * second and later microfacet bounces should have carried is put back,
+ * tinted by F0 the way a real second bounce would be. So rough gold
+ * stays gold and gets brighter, while rough plaster (F0 = 0.04) moves
+ * by under half a per cent.
+ *
+ * IT CANNOT ADD MORE ENERGY THAN IT CONSERVES, and that is a property
+ * of the algebra rather than of a clamp: at F0 = 1 the product
+ * Ess * (1 + 1*(1/Ess - 1)) is exactly 1, so a white furnace stays
+ * white by construction, at every roughness and every angle -- PROVIDED
+ * the Ess handed in is the directional albedo of the lobe actually
+ * being compensated. That proviso is why Ess is a PARAMETER and not
+ * computed inside, and it is not pedantry: measured on the furnace rig
+ * in engine/test/energy.test.js, feeding the analytic fit to a lobe
+ * that had used the integrated LUT overshot by up to 20 per cent at
+ * mid roughness. Two call sites, two sources:
+ *
+ *   direct sun and punctual -- specularDirAlbedo(), the fit. There is
+ *     no table for an analytic lobe and Turquin's own method uses the
+ *     fit here.
+ *   ambient specular, and the screen-space fold that pays it back --
+ *     envBRDF(vec3(1.0), rough, NoV).r, which is A + B from whichever
+ *     split-sum source that pixel's lobe just used. Self-consistent by
+ *     construction, table or fit.
+ *
+ * the strength argument is the tier gate. At 0 this returns vec3(1.0)
+ * and every multiply by it is the identity. */
+vec3 msFromEss(vec3 F0, float Ess, float strength){
+  if (strength <= 0.0) return vec3(1.0);
+  return mix(vec3(1.0), 1.0 + F0 * (1.0 / max(Ess, 1e-3) - 1.0), strength);
+}
+/* The direct-light form: the fit's Ess, folded in. */
+vec3 specularMultiScatter(vec3 F0, float rough, float NoV, float strength){
+  if (strength <= 0.0) return vec3(1.0);
+  return msFromEss(F0, specularDirAlbedo(rough, NoV), strength);
+}
+
+/* ---- HORIZON OCCLUSION ----
+ *
+ * The reflection vector is built from the SHADING normal, which a
+ * normal map -- and, now, a parallax offset -- can tilt a long way off
+ * the triangle. Tilt it far enough and R points INTO the geometry,
+ * below the plane the surface actually occupies, and the ambient
+ * specular cheerfully fetches sky from a direction the surface is
+ * standing in front of. That is the rim of fake sky on worn metal
+ * edges, and the glow in crevices and under overlaps.
+ *
+ * Lagarde's term: fade the reflection out as R crosses the geometric
+ * horizon, squared so the falloff is smooth rather than a line. It is
+ * exactly 1 whenever R is above the horizon, which is the overwhelming
+ * majority of pixels, so it costs one dot product to do nothing. */
+float horizonOcclusion(vec3 R, vec3 Ngeo){
+  float h = saturate1(1.0 + dot(R, Ngeo));
+  return h * h;
+}
+
+/* ---- SPECULAR OCCLUSION (Lagarde, Moving Frostbite to PBR) ----
+ *
+ * A diffuse occlusion value applied to a specular lobe is wrong in both
+ * directions at once: a mirror in a crease still sees most of what it
+ * reflects, and a fully rough surface sees no more of the sky than a
+ * diffuse one does. This interpolates between those two ends by
+ * roughness, which is the only parameter that decides how wide a cone
+ * the specular lobe is actually gathering over.
+ *
+ * AT ao = 1 IT RETURNS EXACTLY 1, for every NoV and every roughness:
+ * pow(NoV + 1, k) with k in (0, 0.5] and NoV + 1 >= 1 is >= 1, and the
+ * saturate takes it to 1. So a material with no AO map -- which is
+ * every untextured material in this engine, and every material at all
+ * when uHasMaps is 0 -- is untouched, with no special case. */
+float specularOcclusion(float NoV, float ao, float rough){
+  return saturate1(pow(NoV + ao, exp2(-16.0 * rough - 1.0)) - 1.0 + ao);
+}
+
+/* ---- CLEARCOAT VISIBILITY ----
+ *
+ * Kelemen's term rather than Smith. A clearcoat is smooth by
+ * definition -- a rough clearcoat is just a rough surface, and the
+ * material system clamps it to 0.03..1 with a default of 0.1 -- so the
+ * masking factor sits very close to 1 across the range that matters,
+ * and 0.25/LoH^2 is one divide against two square roots. The clamp is
+ * the LoH -> 0 pole, reachable only at exactly grazing. */
+float visKelemen(float LoH){
+  return clamp(0.25 / max(LoH * LoH, 1e-4), 0.0, 1.0);
+}
+
+/* ---- SHEEN: the Charlie / inverted-Gaussian lobe ----
+ *
+ * GGX has a narrow highlight and a DARK grazing rim. Cloth does the
+ * exact opposite -- almost nothing head-on and a bright halo at the
+ * silhouette -- because the surface is a forest of fibres standing off
+ * it, and light grazes along them. There is no setting of roughness
+ * and metalness that makes GGX do that. Which is why every uniform,
+ * canvas strap, sandbag and webbing set in this engine reads as painted
+ * cardboard: the lobe that would sell them is not in the BRDF.
+ *
+ * Estevez and Kulla's "Charlie" distribution -- the one
+ * KHR_materials_sheen specifies -- with Ashikhmin's visibility, which
+ * is the pairing the glTF reference implementation uses.
+ *
+ * The 0.07 floor on roughness is the 1/a pole. The 2^-7 floor on sin^2
+ * is for NoH = 1, where pow(0, k) is undefined on some drivers; it is
+ * the same floor the reference uses and it is orders of magnitude below
+ * the first visible step of the term. */
+float distributionCharlie(float NoH, float rough){
+  float a = max(rough, 0.07);
+  float invA = 1.0 / a;
+  float cos2h = NoH * NoH;
+  float sin2h = max(1.0 - cos2h, 0.0078125);
+  return (2.0 + invA) * pow(sin2h, invA * 0.5) / (2.0 * PI);
+}
+float visAshikhmin(float NoV, float NoL){
+  return clamp(1.0 / (4.0 * (NoL + NoV - NoL * NoV)), 0.0, 1.0);
+}
+/* Hemispherical albedo of the Charlie lobe, fitted. The tabulated
+   directional albedo runs from about 0.04 head-on to about 0.34 at
+   grazing and depends only weakly on roughness, so one quartic in
+   (1 - NoV) stays within about 0.05 of the table across the useful
+   range -- ample for a term that is itself an artistic dial. It does
+   two jobs: it is the ambient sheen's weight, and it is how much energy
+   the sheen takes off the layer underneath it, which is what stops a
+   sheened surface being brighter than an unsheened one. */
+float sheenDirAlbedo(float NoV){
+  float f = 1.0 - saturate1(NoV);
+  float f2 = f * f;
+  return 0.04 + 0.30 * f2 * f2;
+}
 /* ---- OCTAHEDRAL NORMAL ENCODING ----
  *
  * Two channels instead of three for a unit vector, which is what lets
@@ -838,6 +1056,28 @@ uniform int uDebugMode;
 uniform sampler2D uAlbedoMap;
 uniform sampler2D uNormalMap;
 uniform sampler2D uOrmMap;
+/* ---- FEATURE 6: CLEARCOAT AND SHEEN, PER MATERIAL ----
+ *
+ * Both default to 0 and both cost one uniform compare when they are.
+ * They are NOT behind a quality tier, and that is the point: they are
+ * material description, not an effect budget. A map that puts a coat
+ * on a crane's paint or sheen on a uniform gets it on a phone, because
+ * what it costs is a branch nobody takes on the other four hundred
+ * materials in the scene. Nothing in the engine sets either today
+ * except the two new presets in 40-material.js, so no existing pixel
+ * moves.
+ *
+ * uClearcoatRough is the coat's own roughness, clamped away from 0 in
+ * main() because a perfectly smooth GGX lobe is a delta function that
+ * an analytic light can never hit.
+ * uSheenColor is the cloth's retroreflective tint -- sheen has no
+ * Fresnel, so this IS its reflectance and a saturated one is a strong
+ * effect. */
+uniform float uClearcoatWeight;
+uniform float uClearcoatRough;
+uniform float uSheenWeight;
+uniform vec3  uSheenColor;
+uniform float uSheenRough;
 
 /* ================= PARALLAX OCCLUSION + DETAIL NORMALS =================
  *
@@ -1295,6 +1535,37 @@ void main(){
   }
   // Back-facing geometry (double-sided leaves, glass) must not light black.
   if (!gl_FrontFacing) N = -N;
+  /* ---- THE GEOMETRIC NORMAL, KEPT ----
+   *
+   * N above has the normal map, the detail layer and (where feature 5
+   * is on) a parallax offset in it, and can be tilted a long way off
+   * the triangle. Two things below need to know where the triangle
+   * actually is:
+   *
+   *   horizonOcclusion -- because a reflection that points below the
+   *     real surface is fetching sky the surface is standing in front
+   *     of, which is the fake rim on every worn metal edge;
+   *   the clearcoat lobe and its reflection vector -- because a layer
+   *     of lacquer is SMOOTH OVER the relief underneath it. A coat that
+   *     picked up the base's bumps would just be a second copy of the
+   *     base highlight, which is not what varnish looks like on wood or
+   *     paint on a panel.
+   *
+   * Deliberately its own name and its own declaration rather than a
+   * reference to anything earlier in main(): this is feature 6's lane,
+   * and the back-face flip has to be applied to it exactly as it is
+   * applied to N or a double-sided leaf gets a coat highlight lit from
+   * behind.
+   *
+   * Behind the same gate as its two consumers so that a frame with
+   * neither does not pay the normalize. Seeded from N rather than left
+   * undefined: if a later author reads it outside the gate they get the
+   * shading normal, which is wrong but not garbage. */
+  vec3 geoN = N;
+  if (uSpecOcclusion > 0.0 || uClearcoatWeight > 0.0) {
+    geoN = normalize(vNormal);
+    if (!gl_FrontFacing) geoN = -geoN;
+  }
 
   /* ---- TOKSVIG: DISTANT BUMPY SURFACES GET ROUGHER, NOT SPARKLIER ----
    *
@@ -1334,6 +1605,58 @@ void main(){
   vec3 diffuseColor = albedo * (1.0 - metal);
 
   vec3 color = vec3(0.0);
+  /* ---- FEATURE 6 PER-FRAGMENT SETUP ----
+   *
+   * Everything the three new lobes share, computed once. F0, rough and
+   * NoV are all final by this point, so the sun, all eight punctual
+   * lights and the ambient term read one evaluation of each of these
+   * rather than eight or ten.
+   *
+   * WRITTEN SO THE DEFAULT MATERIAL COMPUTES ALMOST NOTHING. The first
+   * cut evaluated the coat's Fresnel -- a pow(x, 5) -- unconditionally,
+   * on the reasoning that it multiplies out to 1 when there is no coat.
+   * It does, and on SwiftShader it also cost 60 per cent of the frame
+   * at the low tier, on every material in the game, to compute a number
+   * that was always 1. A transcendental is not free just because its
+   * result is. Everything below is inside the branch that needs it, and
+   * both branches are on a UNIFORM, so they are coherent across the
+   * whole draw call rather than per pixel.
+   *
+   * msComp is vec3(1.0) exactly when the tier has the energy half off;
+   * specularMultiScatter returns on its first line in that case. */
+  vec3 msComp = vec3(1.0);
+  if (uSpecEnergy > 0.0) msComp = specularMultiScatter(F0, rough, NoV, uSpecEnergy);
+
+  float ccW = saturate1(uClearcoatWeight);
+  float shW = saturate1(uSheenWeight);
+  float ccRough = clamp(uClearcoatRough, 0.03, 1.0);
+  float shRough = clamp(uSheenRough, 0.07, 1.0);
+  /* What reaches the layers underneath the coat and the cloth. Starts
+     at exactly 1.0, and 1.0 is an exact multiply in IEEE 754 -- which
+     is why every base term below can be written as "... * baseAtten"
+     with no second branch and still produce, for an ordinary material,
+     the bits the shader produced before this feature existed. */
+  float baseAtten = 1.0;
+  float NoVc = NoV;
+  if (ccW > 0.0) {
+    /* The geometric normal, because the coat is flat over the base's
+       relief. A coat reflecting 12% of the light at this angle can only
+       pass 88% of it down; the second pass of the same Fresnel on the
+       way back out is the higher-order term glTF's single-scatter
+       clearcoat leaves out, and so does this. */
+    NoVc = max(dot(geoN, V), 1e-4);
+    baseAtten -= ccW * (0.04 + 0.96 * pow(1.0 - NoVc, 5.0));
+  }
+  if (shW > 0.0) {
+    /* Sheen takes energy off the base by its own directional albedo,
+       weighted by how strongly the cloth is tinted. Without this a
+       sheened material is simply brighter than the same material
+       without sheen, which is the classic way a sheen lobe breaks a
+       grey chart. */
+    float shE = sheenDirAlbedo(NoV) * shW
+      * max(max(uSheenColor.r, uSheenColor.g), uSheenColor.b);
+    baseAtten *= 1.0 - saturate1(shE);
+  }
 
   /* --- sun --- */
   vec3 L = normalize(uSunDir);
@@ -1356,12 +1679,47 @@ void main(){
     float NoH = max(dot(N, H), 0.0);
     float VoH = max(dot(V, H), 0.0);
     float D = distributionGGX(NoH, rough);
-    float G = geometrySmith(NoV, NoL, rough);
     vec3 F = fresnelSchlick(VoH, F0);
-    vec3 spec = (D * G * F) / max(4.0 * NoV * NoL, 1e-4);
+    /* THE VISIBILITY TERM, GATED BY A UNIFORM AND NOT BY A MIX.
+       The condition is the same for every fragment in the draw call, so
+       one side is executed and the other is not -- there is no
+       divergence to pay for and a tier with uSpecEnergy 0 does not
+       evaluate the new term at all. The else branch is the original
+       expression character for character, including its 1e-4 clamp, so
+       that tier's frame is bit-identical. */
+    vec3 spec;
+    if (uSpecEnergy > 0.0) {
+      spec = D * visSmithGGX(NoV, NoL, rough) * F * msComp;
+    } else {
+      float G = geometrySmith(NoV, NoL, rough);
+      spec = (D * G * F) / max(4.0 * NoV * NoL, 1e-4);
+    }
     vec3 kD = (vec3(1.0) - F);
     vec3 radiance = uSunColor * uSunIntensity;
-    color += (kD * diffuseColor * INV_PI + spec) * radiance * NoL * shadow;
+    color += (kD * diffuseColor * INV_PI + spec) * baseAtten * radiance * NoL * shadow;
+
+    /* The coat's own highlight, on top of the base it just attenuated.
+       Its own normal, its own roughness, its own Fresnel at LoH -- and
+       no metalness, because a clearcoat is always a dielectric at
+       IOR 1.5. This is what puts a sharp window reflection on a
+       varnished stock while the walnut underneath stays soft. */
+    if (ccW > 0.0) {
+      float NoLc = max(dot(geoN, L), 0.0);
+      if (NoLc > 0.0) {
+        float NoHc = max(dot(geoN, H), 0.0);
+        float LoH = max(dot(L, H), 1e-4);
+        float Dc = distributionGGX(NoHc, ccRough);
+        float Fc = 0.04 + 0.96 * pow(1.0 - LoH, 5.0);
+        color += Dc * visKelemen(LoH) * Fc * ccW * radiance * NoLc * shadow;
+      }
+    }
+    /* And the cloth's rim. No Fresnel: uSheenColor IS the lobe's
+       reflectance. The shading normal rather than the geometric one,
+       because a weave's rim follows the weave. */
+    if (shW > 0.0) {
+      color += uSheenColor * distributionCharlie(NoH, shRough)
+        * visAshikhmin(NoV, NoL) * shW * radiance * NoL * shadow;
+    }
   }
 
   /* --- subsurface wrap: light bleeding through thin surfaces --- */
@@ -1415,7 +1773,69 @@ void main(){
      the shape of the ambient term here is unchanged. */
   vec3 envSpec = envRadiance(R, N, rough)
     * mix(skyVis, 1.0, 0.25) + uRoomAmbient;
-  color += (kD * diffuseColor * irradiance + envSpec * envBRDF(F0, rough, NoV)) * ao;
+  /* ---- FEATURE 6: THE AMBIENT SPECULAR, CORRECTED ----
+     Three multiplies on one term, each of them off by default.
+
+     msComp: the same multiple-scattering factor the direct lobes use.
+       Without it a rough metal is energy-correct under the sun and
+       still dead under the sky, which is worse than being wrong in
+       both -- the two halves of its shading would disagree.
+
+     specularOcclusion x horizonOcclusion: the reason a crevice stops
+       glowing. The first says a narrow lobe escapes a crease that a
+       diffuse hemisphere could not; the second says a reflection
+       pointing below the triangle is not a reflection at all. They
+       multiply because they occlude different things -- the AO map's
+       cavity, and the geometry's own horizon.
+
+     KEPT OFF THE DIFFUSE DELIBERATELY. The scalar ao already
+     multiplies the whole ambient sum on the line below, which is the
+     term underside.test.js measures and interior.test.js's ratio
+     depends on. Specular occlusion is an additional, narrower cut and
+     it only ever touches the specular half. */
+  vec3 ambSpec = envSpec * envBRDF(F0, rough, NoV);
+  if (uSpecEnergy > 0.0) {
+    /* Ess FROM THE SAME SPLIT-SUM THE LOBE JUST USED, and not from the
+       fit msComp carries. envBRDF returns F0*A + B, so at F0 = 1 it is
+       A + B, which IS the single-scatter directional albedo of exactly
+       this lobe -- the integrated table at ultra, the analytic fit
+       everywhere else. Compensating against it makes the white furnace
+       return exactly 1 either way. Using msComp here instead overshot
+       by up to 20% at mid roughness on the furnace rig, because the
+       fit and the table disagree by that much and the error lands
+       entirely on rough metal. One extra LUT tap, on the tier that
+       has a LUT. */
+    ambSpec *= msFromEss(F0, envBRDF(vec3(1.0), rough, NoV).r, uSpecEnergy);
+  }
+  if (uSpecOcclusion > 0.0) {
+    float so = specularOcclusion(NoV, ao, rough) * horizonOcclusion(R, geoN);
+    ambSpec *= mix(1.0, so, uSpecOcclusion);
+  }
+  color += (kD * diffuseColor * irradiance + ambSpec) * ao * baseAtten;
+
+  /* The coat's share of the environment, at the coat's roughness. This
+     is the whole read of lacquer: a sharp sky sitting in the varnish
+     over a soft one in the paint. envBRDF with a hard 0.04 because the
+     coat is always a dielectric; no horizon term, because Rc is built
+     from geoN and dot(Rc, geoN) = NoVc >= 0 makes it identically 1. */
+  if (ccW > 0.0) {
+    vec3 Rc = reflect(-V, geoN);
+    vec3 ccEnv = envRadiance(Rc, geoN, ccRough) * mix(skyVis, 1.0, 0.25) + uRoomAmbient;
+    vec3 ccSpec = ccEnv * envBRDF(vec3(0.04), ccRough, NoVc) * ccW;
+    if (uSpecOcclusion > 0.0) {
+      ccSpec *= mix(1.0, specularOcclusion(NoVc, ao, ccRough), uSpecOcclusion);
+    }
+    color += ccSpec * ao;
+  }
+  /* Ambient sheen. The Charlie lobe is broad and retroreflective, so
+     the diffuse irradiance is the right probe for it rather than a
+     mirror direction -- and weighting by the same directional albedo
+     that took the energy off the base keeps the two in step. Without
+     this line cloth only gets its rim in direct sun, and a uniform in
+     shade goes back to looking like cardboard. */
+  if (shW > 0.0) {
+    color += uSheenColor * irradiance * sheenDirAlbedo(NoV) * shW * ao;
+  }
 
   /* --- punctual lights --- */
   for (int i = 0; i < 8; i++) {
@@ -1434,11 +1854,33 @@ void main(){
     vec3 H = normalize(V + Li);
     float NoH = max(dot(N, H), 0.0);
     float D = distributionGGX(NoH, rough);
-    float G = geometrySmith(NoV, lNoL, rough);
     vec3 F = fresnelSchlick(max(dot(V, H), 0.0), F0);
-    vec3 spec = (D * G * F) / max(4.0 * NoV * lNoL, 1e-4);
+    vec3 spec;
+    if (uSpecEnergy > 0.0) {
+      spec = D * visSmithGGX(NoV, lNoL, rough) * F * msComp;
+    } else {
+      float G = geometrySmith(NoV, lNoL, rough);
+      spec = (D * G * F) / max(4.0 * NoV * lNoL, 1e-4);
+    }
     vec3 radiance = uLightColor[i].rgb * uLightColor[i].a * atten;
-    color += ((vec3(1.0) - F) * diffuseColor * INV_PI + spec) * radiance * lNoL;
+    color += ((vec3(1.0) - F) * diffuseColor * INV_PI + spec) * baseAtten * radiance * lNoL;
+    /* Coat and cloth under a torch or a muzzle flash, the same two
+       lobes the sun gets. Both conditions are uniform across the draw,
+       so a scene of ordinary materials runs the loop it ran before. */
+    if (ccW > 0.0) {
+      float NoLc = max(dot(geoN, Li), 0.0);
+      if (NoLc > 0.0) {
+        float NoHc = max(dot(geoN, H), 0.0);
+        float LoH = max(dot(Li, H), 1e-4);
+        float Dc = distributionGGX(NoHc, ccRough);
+        float Fc = 0.04 + 0.96 * pow(1.0 - LoH, 5.0);
+        color += Dc * visKelemen(LoH) * Fc * ccW * radiance * NoLc;
+      }
+    }
+    if (shW > 0.0) {
+      color += uSheenColor * distributionCharlie(NoH, shRough)
+        * visAshikhmin(NoV, lNoL) * shW * radiance * lNoL;
+    }
   }
 
   color += uEmissive;
@@ -2288,6 +2730,366 @@ void main(){
 }
 `;
 
+/* ================================================================
+   VOLUMETRIC SCATTERING — SUNLIGHT YOU CAN SEE IN THE AIR
+   ================================================================
+   Feature 4. Every uniform here is uVol*.
+
+   WHAT IS MISSING WITHOUT THIS. Fog in this renderer is one closed-form
+   exponential evaluated per surface pixel (applyFog, in GLSL.fog). It
+   knows the distance to the surface and nothing else -- in particular
+   it has never read the shadow map, so the air in a sunbeam and the air
+   in the shadow beside it are painted exactly the same value. That is
+   why there is no god ray anywhere in this game: not through a doorway,
+   not through the crane lattice, not out of a tunnel mouth. The volume
+   between the camera and the wall carries no light at all.
+
+   WHAT THIS ADDS, AND WHAT IT DELIBERATELY DOES NOT.
+
+   THIS PASS ADDS EXACTLY ONE THING: the single-scattered SUN, shadowed.
+   It does NOT add ambient or sky in-scattering, and it does NOT
+   attenuate the background. Both of those already exist and are tuned
+   per map -- applyFog's `mix(color, fogCol, fogAmount)` IS the ambient
+   source term and IS the extinction, applied together. Adding either
+   again would double-count it, and multiplying an already-fogged pixel
+   by a second transmittance would darken the fog colour itself, which
+   is simply wrong: a fully-fogged pixel is pure fogCol and must stay
+   pure fogCol.
+
+   THAT IS WHY volB's ALPHA IS 1.0. The fold in GLSL.screenSpaceFrag
+   reads it as a transmittance and does
+   `scene * mix(1.0, vol.a, uVolStrength) + vol.rgb * uVolStrength`.
+   With alpha 1.0 the multiply is a deliberate no-op and this feature is
+   purely additive. Do not "fix" it by writing a transmittance there
+   without first removing the extinction from applyFog.
+
+   (volA's alpha is NOT 1.0 -- it carries the marched pixel's distance
+   in metres, which is what the bilateral blur below uses to refuse to
+   cross a silhouette. Two buffers, two meanings, stated here because
+   they are one texture format apart.)
+
+   HOW IT COUPLES TO THE MAP'S FOG. Density is uFogDensity times one
+   scale, height falloff is the map's uFogHeight/uFogHeightFalloff
+   sampled PER STEP rather than at the ray midpoint, and the scattering
+   is tinted by the hue of uFogColor. A map that dials its fog up gets
+   thicker shafts, with no new API to learn and nothing to keep in sync.
+   Measured on the rig: clearing the air by a factor of twenty-five
+   takes the beam to 15 per cent of its brightness. Not to nothing --
+   the medium saturates, so density decides where along the ray the
+   light is picked up more than how much of it there is.
+
+   THE MEDIUM IS NOT THE AERIAL HAZE, and this is the one honest
+   approximation in the file. uFogDensity is an EXTINCTION coefficient
+   for kilometre-scale aerial perspective: 0.0104 on the bunker map is
+   1/e at 96 m. Beams are made visible by local airborne dust and
+   moisture, which is an order denser. uVolDensity is therefore
+   uFogDensity * volumetric.densityScale, default 8 -- and that 8 is
+   pinned from both ends by arithmetic and by measurement; see the note
+   on it in the renderer.
+   ---------------------------------------------------------------- */
+GLSL.volumetricFrag = `
+${GLSL.common}
+in vec2 vUv;
+
+/* Shared frame data. uSceneDepth is hdrA's depth texture, bound by the
+   renderer; the two cascades and their matrices come from the existing
+   _bindShadows, unchanged and uncopied. */
+uniform sampler2D uSceneDepth;
+uniform sampler2DShadow uShadowMap0;
+uniform sampler2DShadow uShadowMap1;
+uniform mat4  uShadowMat0;
+uniform mat4  uShadowMat1;
+uniform float uCascadeSplit;
+uniform float uShadowStrength;
+
+uniform mat4  uInvViewProj;
+uniform vec3  uCameraPos;
+
+/* Bound by _bindEnv, exactly as they are for the pbr, sky and
+   fluidShade programs. Declared here rather than by including
+   GLSL.sky, on purpose: this pass needs six numbers out of that chunk
+   and none of its functions, and a chunk three other features are
+   editing in parallel is a chunk not to depend on. */
+uniform vec3  uSunDir;
+uniform vec3  uSunColor;
+uniform float uSunIntensity;
+uniform vec3  uFogColor;
+uniform float uFogDensity;
+uniform float uFogHeight;
+uniform float uFogHeightFalloff;
+
+uniform int   uVolSteps;
+uniform float uVolDensity;     // uFogDensity * densityScale, 1/metre
+uniform float uVolIntensity;
+uniform float uVolG;           // Henyey-Greenstein anisotropy
+uniform float uVolTint;
+uniform float uVolBias;
+uniform float uVolClamp;
+uniform float uVolCurve;
+uniform float uVolNear;
+uniform vec2  uVolRange;       // x = fade start (m), y = hard end (m)
+uniform float uVolJitter;
+
+layout(location=0) out vec4 outColor;
+
+/* INTERLEAVED GRADIENT NOISE, not hash12.
+ *
+ * Both give every pixel a different offset into the march; the
+ * difference is what happens when the blur below averages them. IGN
+ * (Jimenez 2014) is low-discrepancy: any 3x3 neighbourhood holds nine
+ * values close to a uniform stratification of [0,1), so nine taps
+ * recover close to nine times the effective step count. White noise
+ * does not -- the mean of nine uniform samples has a standard
+ * deviation of 1/(3*sqrt(12)) = 0.096, which is a tenth of a step of
+ * residual error, and a tenth of a step of error on a hard shaft edge
+ * is exactly the speckle this pass cannot afford at 24 steps.
+ * The engine's hash12 is white noise and is used where its output is
+ * averaged over eight taps of the same quantity; here it is not. */
+float volIGN(vec2 p){
+  return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
+vec3 volWorld(vec2 uv, float d){
+  vec4 c = vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);
+  vec4 w = uInvViewProj * c;
+  return w.xyz / w.w;
+}
+
+/* ONE hardware-comparison tap per march step, which is a free 2x2 PCF
+   because the cascade textures are LINEAR + COMPARE_REF_TO_TEXTURE.
+   NOT shadowFactor(): that is eight rotated Poisson taps, eight times
+   this budget, and it is smoothing a quantity that is about to be
+   integrated over twenty-four steps and then blurred -- the averaging
+   it would do is already being done twice downstream.
+
+   The two cascades are written out twice rather than selecting a
+   sampler, for the reason recorded above pcfCascade0: ANGLE mis-binds
+   sampler function parameters and silently reports fully lit.
+
+   OUTSIDE A CASCADE RETURNS 0 -- SHADOWED -- WHICH IS THE OPPOSITE OF
+   outsideCascade's convention, AND IT IS DELIBERATE. On a surface,
+   "unknown means lit" fails safe: a wrongly-lit pixel looks like no
+   shadow. In a march it fails catastrophically: every sample past the
+   cascade would return full sun and the frame would grow a hard bright
+   plane at exactly shadows.distance. Unknown means contributes-nothing
+   here, so the worst a lost cascade can do is make a shaft dimmer.
+   The smooth fade in the loop means this branch is reached with a
+   weight of zero anyway; it is the belt to that pair of braces.
+
+   The samples are AIR, so there is no receiver plane and no acne, and
+   the bias only has to cover the shadow pass's own polygon offset. It
+   is in the cascade's normalised depth units; see the renderer. */
+float volShadow(vec3 wp, float t){
+  if (t < uCascadeSplit) {
+    vec4 lp = uShadowMat0 * vec4(wp, 1.0);
+    vec3 p = lp.xyz / lp.w * 0.5 + 0.5;
+    if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0 || p.z > 1.0) return 0.0;
+    return texture(uShadowMap0, vec3(p.xy, p.z - uVolBias));
+  }
+  vec4 lp = uShadowMat1 * vec4(wp, 1.0);
+  vec3 p = lp.xyz / lp.w * 0.5 + 0.5;
+  if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0 || p.z > 1.0) return 0.0;
+  return texture(uShadowMap1, vec3(p.xy, p.z - uVolBias));
+}
+
+void main(){
+  float d0   = texture(uSceneDepth, vUv).r;
+  vec3  farW = volWorld(vUv, 1.0);
+  vec3  dir  = normalize(farW - uCameraPos);
+
+  /* The sky marches the full range: a shaft against a bright sky is the
+     canonical god ray and stopping at the first surface would drop
+     exactly the pixels the effect exists for. */
+  float tFar  = uVolRange.y;
+  if (d0 < 0.99999) tFar = min(tFar, length(volWorld(vUv, d0) - uCameraPos));
+  float tNear = uVolNear;
+
+  /* Alpha is the marched distance in metres -- the blur's bilateral
+     key. Every return path writes it, including the dead ones, so the
+     blur never reads an uninitialised depth at a silhouette. */
+  if (tFar <= tNear || uVolDensity <= 0.0 || uSunIntensity <= 0.0) {
+    outColor = vec4(0.0, 0.0, 0.0, tFar);
+    return;
+  }
+
+  /* Below the horizon the cascade is fitted from underground and its
+     contents are meaningless, so the shafts go out with the sun rather
+     than marching garbage. Full by about one degree of elevation, which
+     keeps the last minutes of a sunset -- the best shafts there are. */
+  float horizon = smoothstep(-0.05, 0.02, uSunDir.y);
+  if (horizon <= 0.0) { outColor = vec4(0.0, 0.0, 0.0, tFar); return; }
+
+  /* HENYEY-GREENSTEIN, normalised so the integral over the sphere is 1.
+     cos(theta) is dot(dir, uSunDir) because uSunDir points TOWARD the
+     sun and the scattering angle is between the incoming direction
+     (-uSunDir) and the outgoing one (-dir): the two negations cancel.
+     Forward scattering therefore peaks when you look at the sun, which
+     is when a shaft is brightest, which is correct. */
+  float cosT = dot(dir, uSunDir);
+  float g    = clamp(uVolG, -0.9, 0.9);
+  float g2   = g * g;
+  float den  = max(1.0 + g2 - 2.0 * g * cosT, 1e-4);
+  float phase = (1.0 - g2) / (4.0 * PI * den * sqrt(den));
+
+  int   n    = clamp(uVolSteps, 2, 64);
+  float span = tFar - tNear;
+  float jit  = fract(volIGN(gl_FragCoord.xy) + uVolJitter);
+
+  /* STEPS THAT GROW WITH DISTANCE, not even ones.
+   *
+   * With a uniform step the march spends the same budget on the fifty
+   * metres nobody can resolve as on the three in front of the camera,
+   * and a medium dense enough for indoor beams has already given up
+   * nine tenths of its light inside the first two steps. The boundaries
+   * are laid out as curve^x with x running 0..1, which makes the local
+   * step dt = ln(curve)/n * (t - tNear + span/(curve-1)). At the
+   * default curve of 24 over a 60 m range that is 0.34 m at the camera
+   * and 8.3 m at the far end, growing as 0.132*t -- the same law the
+   * pixel footprint grows by, so every step covers about the same
+   * amount of picture.
+   *
+   * curve^((i+1)/n) is carried as a running multiply by a constant
+   * rather than a pow() per step: one multiply instead of two
+   * transcendentals, twenty-four times. */
+  float grow  = exp(log(max(uVolCurve, 1.0001)) / float(n));
+  float cdiv  = 1.0 / (max(uVolCurve, 1.0001) - 1.0);
+  float p     = 1.0;
+  float tPrev = tNear;
+
+  float acc = 0.0;    // in-scattered fraction, before phase and radiance
+  float T   = 1.0;    // transmittance from the eye to tPrev
+
+  for (int i = 0; i < 64; i++) {
+    if (i >= n) break;
+    p *= grow;
+    float t1 = min(tNear + span * (p - 1.0) * cdiv, tFar);
+    float dt = t1 - tPrev;
+    if (dt <= 0.0) break;
+
+    /* The sample sits at a dithered position INSIDE the segment, so the
+       visibility is stratified while the transmittance weight below
+       stays exact for the whole segment. */
+    float ts = tPrev + dt * jit;
+    vec3  wp = uCameraPos + dir * ts;
+
+    float hf = exp(-max(0.0, wp.y - uFogHeight) * uFogHeightFalloff);
+    float sg = uVolDensity * hf;
+
+    /* SHADOWED AIR SCATTERS NO SUN. That is not a stylistic choice,
+       it is what a shadow is -- and it is why this does NOT simply
+       reuse uShadowStrength the way a surface does. The 0.86 default
+       exists on surfaces to stand in for the sky fill a shadowed
+       surface still receives; the air's sky fill is applyFog's flat
+       source term, already applied, and paying it twice here would
+       give every shadowed ray a 14 per cent floor of direct sunlight
+       and throw away most of the contrast that makes a shaft a shaft.
+       Measured on the rig in volumetric.test.js, which is an A/B of
+       this one line: the naive mix() puts a floor of 5.4 luma under
+       every shadowed column and takes the
+       brightest-column-over-dimmest ratio from 11.1 to 2.0.
+
+       It still has to FOLLOW the setting, or a game that flattens its
+       shadows would keep hard-edged beams. Fully trusted at 0.7 and
+       above -- any game running a real shadow term -- and faded out
+       linearly below it, so shadows.strength = 0 means no shafts. */
+    float vis  = mix(1.0, volShadow(wp, ts), saturate1(uShadowStrength * 1.4286));
+    float fade = 1.0 - smoothstep(uVolRange.x, uVolRange.y, ts);
+
+    /* THE SEGMENT'S EXACT INTEGRAL, not a point sample of it.
+       For constant sigma over [a, a+dt] the contribution is
+       T(a) * (1 - exp(-sigma*dt)); a left-hand point sample would be
+       T(a)*sigma*dt instead. The steps grow, so the far ones are the
+       long ones: the 8.3 m step at the end of the default march carries
+       an optical depth of 0.66 on the dustiest map this game ships, and
+       the point sample overstates that segment by 37 per cent -- and by
+       an amount that depends on the step count, so the tier table would
+       be changing the brightness as well as the detail. This form
+       telescopes to 1 - exp(-total) with the visibility folded in, so
+       halving the steps changes how finely the beam's edge is resolved
+       and does not change how bright it is. */
+    float e = exp(-sg * dt);
+    acc += T * (1.0 - e) * vis * fade;
+    T   *= e;
+    tPrev = t1;
+
+    /* Under 1/255 of anything this can still add. It fires on a map
+       dense enough to go opaque inside the march -- at the default
+       scale that is a fog density above about 0.012 -- where it saves
+       most of the loop, and costs one compare a step everywhere
+       else. */
+    if (T < 0.003) break;
+  }
+
+  /* THE MAP'S AIR COLOUR, hue only. Normalising by the largest channel
+     means a dark authored fog tints the shaft without dimming it --
+     brightness is the sun's job and the density's, not the palette's. */
+  float mx   = max(max(uFogColor.r, uFogColor.g), max(uFogColor.b, 1e-4));
+  vec3  tint = mix(vec3(1.0), uFogColor / mx, clamp(uVolTint, 0.0, 1.0));
+
+  vec3 inscat = uSunColor * uSunIntensity * tint
+    * (acc * phase * uVolIntensity * horizon);
+
+  /* A firefly rail, not a tuning knob. Single scattering with an albedo
+     of one cannot exceed phase * sunRadiance however dense the air
+     gets, so a well-behaved frame never reaches this; it is here so a
+     map with an absurd fog density degrades into a bright haze instead
+     of punching a hole through the brightest assertion in the suite. */
+  inscat = min(max(inscat, vec3(0.0)), vec3(uVolClamp));
+  outColor = vec4(inscat, tFar);
+}
+`;
+
+/* ----------------------------------------------------------------
+   THE DEPTH-AWARE BLUR — volA -> volB, half res, one pass.
+
+   Two jobs. It dissolves the residual dither (nine IGN phases averaged
+   per output texel, on top of the bilinear footprint of a 1.5-texel
+   offset, so the effective step count is roughly an order up on the
+   twenty-four the march paid for), and it refuses to cross a
+   silhouette, so the shaft behind a railing does not bleed onto the
+   railing.
+
+   ONE 3x3 RATHER THAN TWO SEPARABLE PASSES. A separable pair is cheaper
+   per unit of radius above about 5x5 and more expensive below it -- two
+   full-screen draws, two clears and a round trip through a second
+   target to save nothing at 3x3. The signal is a broad glow; it does
+   not need radius, it needs the dither gone.
+
+   The depth tolerance is scaled by the depth itself, in the same form
+   the reflection blur beside it uses: half a metre apart is an edge at
+   two metres and is nothing at fifty.
+   ---------------------------------------------------------------- */
+GLSL.volBlurFrag = `
+${GLSL.common}
+in vec2 vUv;
+uniform sampler2D uVolSrc;
+uniform vec2 uVolTexel;
+layout(location=0) out vec4 outColor;
+
+void main(){
+  vec4  c    = texture(uVolSrc, vUv);
+  float zc   = c.a;
+  vec3  sum  = c.rgb;
+  float wsum = 1.0;
+  for (int y = -1; y <= 1; y++) {
+    for (int x = -1; x <= 1; x++) {
+      if (x == 0 && y == 0) continue;
+      vec2  o = vec2(float(x), float(y)) * 1.5 * uVolTexel;
+      vec4  s = texture(uVolSrc, vUv + o);
+      float wz = exp(-abs(s.a - zc) / max(0.25, abs(zc) * 0.08));
+      float wg = (x == 0 || y == 0) ? 0.75 : 0.5;
+      float w  = wz * wg;
+      sum  += s.rgb * w;
+      wsum += w;
+    }
+  }
+  /* ALPHA 1.0, ON PURPOSE. This is what the fold multiplies the scene
+     by; see the long note on GLSL.volumetricFrag. The analytic height
+     fog already owns extinction and this term is purely additive. */
+  outColor = vec4(sum / wsum, 1.0);
+}
+`;
+
 GLSL.copyFrag = `
 in vec2 vUv;
 uniform sampler2D uTex;
@@ -3061,7 +3863,23 @@ vec3 ssrViewPos(vec2 uv, float depth){
 void main(){
   vec3  scene = texture(uSsrSceneTex, vUv).rgb;
   float d0    = texture(uSceneDepth, vUv).r;
-  if (d0 >= 0.99999) { outColor = vec4(scene, 1.0); return; }
+  if (d0 >= 0.99999) {
+    /* FEATURE 4 REACHES THE SKY, and nothing else here does. A shaft
+       against a bright sky -- a doorway, a treeline, the crane lattice
+       -- is the canonical god ray, and an early-out that skipped it
+       would drop exactly the pixels the effect exists for. A reflection
+       and a specular occlusion have nothing to say about a pixel with
+       no surface in it, so those two stay skipped. uVolStrength is zero
+       whenever the volumetric pass did not run, so this branch is
+       bit-identical to the one it replaces on every tier that has the
+       feature off. */
+    if (uVolStrength > 0.0) {
+      vec4 vsky = texture(uVolTex, vUv);
+      scene = scene * mix(1.0, vsky.a, uVolStrength) + vsky.rgb * uVolStrength;
+    }
+    outColor = vec4(scene, 1.0);
+    return;
+  }
 
   float zc = -uSsrZParams.y / (d0 * 2.0 - 1.0 + uSsrZParams.x);
 
@@ -3145,7 +3963,32 @@ void main(){
        envRadiance returns exactly the analytic lerp this line used to
        read, so the fold is unchanged there to the bit. */
     vec3 envIBL = envRadiance(Rw, Nw, rough) * uSsrEnvVis + uRoomAmbient;
-    vec3 brdf   = envBRDF(F0, rough, NoV);
+    /* KEPT IN STEP WITH pbrFrag, PART TWO -- FEATURE 6.
+       The forward pass multiplies its ambient specular by the
+       multiple-scattering compensation. The sky this pass pays back
+       therefore has that factor in it too, and without this line the
+       fold would subtract an UNCOMPENSATED sky from a COMPENSATED
+       pixel: every rough metal would keep a bright ghost of exactly
+       the environment the reflection was meant to replace, and the
+       brighter the metal the worse it would be. msFromEss
+       lives in GLSL.pbr, which this program already includes, and
+       uSpecEnergy is bound by _bindEnv, which _applyScreenSpace
+       already calls -- so this is a substitution and nothing else. At
+       uSpecEnergy 0 msFromEss returns exactly vec3(1.0) and this is
+       the line it was, to the bit. The Ess handed in is A + B from the
+       SAME envBRDF the lobe used, which is what pbrFrag does.
+
+       KNOWN RESIDUAL, stated rather than hidden: the forward pass also
+       multiplies by specularOcclusion x horizonOcclusion, and this
+       pass cannot reproduce either -- specularOcclusion needs the ORM
+       map's cavity term and horizonOcclusion needs the geometric
+       normal, and the G-buffer carries neither. So in a crease the
+       fold subtracts marginally more sky than the forward pass
+       applied. It is bounded by the uSsrMaxDarken rail below, it only
+       reaches the specular half of the ambient, and a crease is where
+       SSR confidence is lowest anyway, which is the same multiplier. */
+    vec3 brdf   = envBRDF(F0, rough, NoV)
+      * msFromEss(F0, envBRDF(vec3(1.0), rough, NoV).r, uSpecEnergy);
 
     vec3 delta = (ssr.rgb - envIBL * conf * uSsrReplace) * brdf * uSsrIntensity;
 

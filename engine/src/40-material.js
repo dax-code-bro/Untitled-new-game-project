@@ -2242,7 +2242,39 @@ class Material {
     this.castShadow = opts.castShadow !== false;
     this.receiveShadow = opts.receiveShadow !== false;
     // Subsurface approximation — foliage and skin look dead without it.
-    this.subsurface = opts.subsurface != null ? opts.subsurface : 0;
+    this.subsurface = opts.subsurface != null ? opts.subsurface : 0;    /* ---- CLEARCOAT: a thin dielectric layer over everything else ----
+     *
+       Car paint, varnished wood, a lacquered helmet, the glass in front
+       of an optic, a polished lens housing. The coat has a fixed IOR of
+       1.5 and therefore a fixed F0 of 0.04, which is why there is no
+       tint here -- a coloured coat is an absorbing medium and a
+       different feature.
+
+       0 is off and costs a uniform compare. clearcoatRoughness defaults
+       to 0.1 rather than 0 because a perfectly smooth GGX lobe is a
+       delta function that no analytic light ever hits: at 0.1 the sun
+       is a small hard highlight, which is what lacquer does. */
+    this.clearcoat = opts.clearcoat != null ? opts.clearcoat : 0;
+    this.clearcoatRoughness = opts.clearcoatRoughness != null
+      ? opts.clearcoatRoughness : 0.1;
+    /* ---- SHEEN: the one lobe GGX cannot express ----
+     *
+       Cloth is bright at the silhouette and dark head-on, which is the
+       opposite of every microfacet highlight, because a woven surface
+       is a field of fibres standing off it. No roughness and no
+       metalness produces that shape, so uniforms, canvas webbing, tent
+       fabric and sandbags have all been reading as painted board.
+
+       sheenColor is the lobe's reflectance and not a tint on something
+       else -- sheen has no Fresnel -- so a saturated value is a strong
+       effect. White is the neutral choice and is what an undyed fibre
+       does; a dyed fabric's sheen is usually close to white too,
+       because the fibre surface scatters before the dye absorbs.
+       0.3 roughness is a tight, visible rim; push it to 0.8 for
+       something fuzzy like wool or a blanket. */
+    this.sheen = opts.sheen != null ? opts.sheen : 0;
+    this.sheenColor = parseColor(opts.sheenColor != null ? opts.sheenColor : 0xffffff);
+    this.sheenRoughness = opts.sheenRoughness != null ? opts.sheenRoughness : 0.3;
 
     this.maps = null;
     /* THE SIZE COMES FROM THE QUALITY TIER, not from a constant.
@@ -2350,7 +2382,28 @@ const MaterialPresets = {
   tile: { color: 0xffffff, texture: 'tile', roughness: 0.2, metalness: 0 },
   rubber: { color: 0x2a2a2e, texture: 'smooth', roughness: 0.95, metalness: 0 },
   neon: { color: 0x111111, emissive: 0x36e0ff, emissiveStrength: 4, roughness: 0.4 },
-  lava: { color: 0x2a0a04, emissive: 0xff5a1e, emissiveStrength: 3.5, texture: 'rock', roughness: 0.8 },
+  lava: { color: 0x2a0a04, emissive: 0xff5a1e, emissiveStrength: 3.5, texture: 'rock', roughness: 0.8 },  /* ---- TWO NEW PRESETS, AND NO CHANGE TO ANY EXISTING ONE ----
+   *
+     Feature 6 adds a clearcoat lobe and a sheen lobe. Putting either
+     on an existing preset would move pixels in every map that uses it,
+     in a commit whose whole claim is that it moves none. So the coat
+     and the cloth arrive as presets that nothing references yet, and a
+     map opts in by name.
+
+     carpaint: a metallic base under a near-smooth coat. That is
+       literally how automotive paint is built -- flake and pigment in a
+       basecoat, clear lacquer over it -- and it is why a car panel has
+       TWO highlights, a soft coloured one in the paint and a sharp
+       white one in the coat. Metalness 0.75 rather than 1 leaves the
+       basecoat some diffuse, which is what a pigmented (as opposed to
+       purely metallic-flake) paint has.
+     canvas: webbing, tent fabric, kit bags, a uniform. Roughness 0.95
+       kills the GGX highlight almost entirely and lets the sheen rim
+       be the whole specular read, which is what cloth actually does. */
+  carpaint: { color: 0xb43a2e, texture: 'smooth', roughness: 0.38, metalness: 0.75,
+    clearcoat: 1, clearcoatRoughness: 0.05 },
+  canvas: { color: 0x8d8468, texture: 'fabric', roughness: 0.95, metalness: 0,
+    sheen: 1, sheenColor: 0xffffff, sheenRoughness: 0.3 },
 };
 
 function resolveMaterial(gl, spec, cache) {
