@@ -83,6 +83,7 @@ public:
     float fade = 1.0f;           // 0 = black
     float letterbox = 0.0f;
     float wind = 1.0f;
+    void setShadowSize(int s) { kShadowSize = s; }
     AABB indoorBox;              // sky ambient is blocked inside this box
     std::vector<PointLight> lights;   // candidates; nearest 16 are used
 
@@ -108,7 +109,7 @@ private:
     bool firstAdapt_ = true;
     int lumLevels_ = 1;
 
-    static constexpr int kShadowSize = 2048;
+    int kShadowSize = 2048;   // lowered on phones (set before init)
     GLuint shadowFbo_[2] = {0, 0}, shadowTex_[2] = {0, 0};
     mat4 shadowMat_[2];
 

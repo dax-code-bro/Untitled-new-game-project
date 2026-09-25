@@ -16,6 +16,7 @@ uniform sampler2DShadow uShadow1;
 uniform mat4 uShadowMat0;
 uniform mat4 uShadowMat1;
 uniform float uShadowOn;
+uniform float uShadowTexel;   // 1 / shadow map size
 
 #define MAX_POINT 16
 uniform int  uNumPoint;
@@ -184,7 +185,7 @@ float sampleShadow(sampler2DShadow sm, mat4 m, vec3 wp, float bias) {
     vec3 c = p.xyz / p.w * 0.5 + 0.5;
     if (c.x < 0.0 || c.x > 1.0 || c.y < 0.0 || c.y > 1.0 || c.z > 1.0) return -1.0;
     float sum = 0.0;
-    vec2 texel = vec2(1.0 / 2048.0);
+    vec2 texel = vec2(uShadowTexel);
     for (int x = -1; x <= 1; ++x)
         for (int y = -1; y <= 1; ++y)
             sum += texture(sm, vec3(c.xy + vec2(x, y) * texel * 1.2, c.z - bias));

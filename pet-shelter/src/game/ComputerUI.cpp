@@ -89,21 +89,22 @@ bool ComputerUI::draw(Sim& sim, const Facility& facility) {
     ImGui::TextDisabled("| %s  %s", sim.clock.dateString().c_str(), sim.clock.timeString().c_str());
     ImGui::SameLine();
     ImGui::Text("   Cash: %s", money(sim.econ.cash).c_str());
-    ImGui::SameLine();
     float fs = sim.financialScore();
-    ImGui::Text("   Financial rating: %s", Economy::grade(fs));
-    ImGui::SameLine(ImGui::GetWindowWidth() - 150);
+    if (!compact) {
+        ImGui::SameLine();
+        ImGui::Text("   Financial rating: %s", Economy::grade(fs));
+    }
+    ImGui::SameLine(ImGui::GetWindowWidth() - (compact ? 175.0f : 150.0f));
     if (ImGui::Button("Log off  [Esc]", ImVec2(130, 0))) keepOpen = false;
     ImGui::Separator();
 
     // Sidebar tabs
-    ImGui::BeginChild("tabs", ImVec2(240, 0), ImGuiChildFlags_Borders);
+    ImGui::BeginChild("tabs", ImVec2(compact ? 150.0f : 240.0f, 0), ImGuiChildFlags_Borders);
     const char* names[] = {"Animals", "Security", "Finances", "Ratings"};
     const char* hints[] = {"Every animal in your care", "Cameras, gate & locks", "Taxes, income, payroll", "Private & public opinion"};
     for (int i = 0; i < TabCount; ++i) {
         if (ImGui::Selectable(names[i], tab == i, 0, ImVec2(0, 34))) tab = i;
-        ImGui::TextDisabled("  %s", hints[i]);
-        ImGui::Spacing();
+        if (!compact) { ImGui::TextDisabled("  %s", hints[i]); ImGui::Spacing(); }
     }
     ImGui::Separator();
     ImGui::TextDisabled("Inbox");
@@ -149,7 +150,7 @@ void ComputerUI::drawSecurity(Sim& sim, const Facility& facility) {
     SecuritySystem& sec = sim.security;
     ImGui::Text("SECURITY");
     ImGui::Separator();
-    ImGui::BeginChild("cams", ImVec2(260, 0), ImGuiChildFlags_Borders);
+    ImGui::BeginChild("cams", ImVec2(compact ? 170.0f : 260.0f, 0), ImGuiChildFlags_Borders);
     ImGui::TextDisabled("Cameras (%d)", int(sec.cameras.size()));
     for (size_t i = 0; i < sec.cameras.size(); ++i) {
         char label[96];
@@ -223,11 +224,11 @@ void ComputerUI::drawFinances(Sim& sim) {
     Economy& e = sim.econ;
     float fs = sim.financialScore();
     ImGui::Text("FINANCES");
-    ImGui::SameLine(200);
+    if (compact) ImGui::SameLine(0, 20); else ImGui::SameLine(200);
     ImGui::Text("Cash: %s", money(e.cash).c_str());
-    ImGui::SameLine(420);
+    if (compact) ImGui::SameLine(0, 20); else ImGui::SameLine(420);
     ImGui::Text("Financial rating: %s (%.0f/100)", Economy::grade(fs), fs);
-    ImGui::SameLine(720);
+    if (!compact) ImGui::SameLine(720);
     double run = e.runwayDays(sim.weeklyPayroll());
     if (run > 9000) ImGui::TextColored(ImVec4(0.5f, 0.9f, 0.5f, 1), "Runway: profitable");
     else ImGui::Text("Runway: %.0f days", run);

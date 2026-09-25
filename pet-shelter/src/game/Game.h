@@ -30,6 +30,12 @@ public:
     Input& input() { return input_; }
     void onResize(int w, int h);
     bool wantsPointerLock() const;
+    // Touch (phone) support used by the web page
+    int touchState() const;
+    void touchPause();
+    bool takeNameEditRequest();
+    const std::string& playerName() const { return appearance_.name; }
+    void setPlayerName(const std::string& n) { appearance_.name = n.substr(0, 40); }
 
 private:
     enum class State { MainMenu, Creator, Cutscene, Playing, Computer, Paused };
@@ -91,6 +97,7 @@ private:
     std::string screenshotSuiteDir_;
     std::chrono::steady_clock::time_point lastTick_;
     bool browserLocked_ = false;
+    bool touch_ = false;          // phone / tablet mode (--touch)
 };
 
 }  // namespace ps

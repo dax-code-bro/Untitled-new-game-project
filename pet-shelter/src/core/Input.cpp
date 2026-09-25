@@ -16,6 +16,9 @@ void Input::beginFrame() {
     deltaAccum_ = {0, 0};
     scroll_ = scrollAccum_;
     scrollAccum_ = 0;
+    look_ = lookAccum_; lookAccum_ = {0, 0};
+    pan_ = panAccum_; panAccum_ = {0, 0};
+    twist_ = twistAccum_; twistAccum_ = {0, 0};
 }
 
 bool Input::down(int key) const { return key >= 0 && key < kKeys && keys_[key] && !uiWantsKeyboard; }

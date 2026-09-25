@@ -27,7 +27,17 @@ void CreativeMode::update(float dt, const Input& in, World& world, Sim& sim, con
     if (in.down(GLFW_KEY_S) || in.down(GLFW_KEY_DOWN)) pan -= fwd;
     if (in.down(GLFW_KEY_D) || in.down(GLFW_KEY_RIGHT)) pan += right;
     if (in.down(GLFW_KEY_A) || in.down(GLFW_KEY_LEFT)) pan -= right;
+    pan += fwd * -in.touchMove.y + right * in.touchMove.x;
     target += pan * panSpeed * dt;
+    {   // one-finger drag pans (ground follows the finger), two-finger twist orbits
+        vec2 tp = in.touchPan();
+        float k = distance * 0.0022f;
+        target -= right * tp.x * k;
+        target += fwd * tp.y * k;
+        vec2 tw = in.touchTwist();
+        yaw += tw.x;
+        pitch = clampf(pitch + tw.y, radians(-89.0f), radians(-8.0f));
+    }
     if (in.down(GLFW_KEY_Q)) yaw += 1.5f * dt;
     if (in.down(GLFW_KEY_E)) yaw -= 1.5f * dt;
     if (in.mouseDown(GLFW_MOUSE_BUTTON_RIGHT)) {
@@ -98,7 +108,45 @@ void CreativeMode::update(float dt, const Input& in, World& world, Sim& sim, con
     }
 }
 
+void CreativeMode::drawTouchUI(float& timeScale) {
+    ImGuiIO& io = ImGui::GetIO();
+    const float side = 150.0f;   // leave room for the joystick (left) and buttons (right)
+    float w = std::max(260.0f, io.DisplaySize.x - side * 2.0f);
+    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y - 6.0f), ImGuiCond_Always, ImVec2(0.5f, 1.0f));
+    ImGui::SetNextWindowSize(ImVec2(w, 0.0f));
+    ImGui::SetNextWindowBgAlpha(0.85f);
+    ImGui::Begin("BuildTouch", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
+    ImGui::BeginChild("strip", ImVec2(0, 62), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
+    for (int i = 0; i < int(BuildKind::Count); ++i) {
+        const BuildInfo& bi = buildInfo(BuildKind(i));
+        if (i) ImGui::SameLine();
+        bool sel = tool == i;
+        if (sel) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.55f, 0.3f, 1));
+        char label[96];
+        std::snprintf(label, sizeof label, "%s\n$%s", bi.name, std::to_string(int(bi.cost)).c_str());
+        if (ImGui::Button(label, ImVec2(112, 46))) tool = sel ? -1 : i;
+        if (sel) ImGui::PopStyleColor();
+    }
+    ImGui::EndChild();
+    const float speeds[] = {0.0f, 1.0f, 5.0f, 20.0f};
+    const char* names[] = {"||", "1x", "5x", "20x"};
+    for (int i = 0; i < 4; ++i) {
+        if (i) ImGui::SameLine();
+        bool on = timeScale == speeds[i];
+        if (on) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.45f, 0.7f, 1));
+        if (ImGui::Button(names[i], ImVec2(40, 0))) timeScale = speeds[i];
+        if (on) ImGui::PopStyleColor();
+    }
+    ImGui::SameLine();
+    if (statusTimer > 0.0f && !status.empty()) ImGui::TextColored(ImVec4(1, 0.85f, 0.4f, 1), "%s", status.c_str());
+    else if (tool >= 0) ImGui::TextDisabled("Tap the ground to preview, tap again to build");
+    else if (tool == -2) ImGui::TextDisabled("Tap a building, tap again to demolish");
+    else ImGui::TextDisabled("Drag to move, pinch to zoom, twist to turn");
+    ImGui::End();
+}
+
 void CreativeMode::drawUI(Sim& sim, float& timeScale) {
+    if (touchUI) { drawTouchUI(timeScale); return; }
     ImGuiIO& io = ImGui::GetIO();
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y - 10.0f), ImGuiCond_Always, ImVec2(0.5f, 1.0f));
     ImGui::SetNextWindowBgAlpha(0.85f);

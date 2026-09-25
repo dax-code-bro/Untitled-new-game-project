@@ -10,7 +10,6 @@ namespace ps {
 using namespace layout;
 
 static constexpr float kTreeCell = 200.0f;
-static constexpr float kTreeRadius = 2600.0f;
 static constexpr float kTreeShadowRadius = 280.0f;
 
 static float snapDown(float v, float s) { return std::floor(v / s) * s; }
@@ -129,12 +128,12 @@ const std::vector<World::TreeInst>& World::treeCell(int cx, int cz) {
 
 void World::refreshTrees(vec3 camPos) {
     std::vector<InstanceData> pines, oaks, pinesS, oaksS;
-    int c0x = int(std::floor((camPos.x - kTreeRadius) / kTreeCell)), c1x = int(std::floor((camPos.x + kTreeRadius) / kTreeCell));
-    int c0z = int(std::floor((camPos.z - kTreeRadius) / kTreeCell)), c1z = int(std::floor((camPos.z + kTreeRadius) / kTreeCell));
+    int c0x = int(std::floor((camPos.x - treeRadius) / kTreeCell)), c1x = int(std::floor((camPos.x + treeRadius) / kTreeCell));
+    int c0z = int(std::floor((camPos.z - treeRadius) / kTreeCell)), c1z = int(std::floor((camPos.z + treeRadius) / kTreeCell));
     for (int cz = c0z; cz <= c1z; ++cz)
         for (int cx = c0x; cx <= c1x; ++cx) {
             float mx = (float(cx) + 0.5f) * kTreeCell - camPos.x, mz = (float(cz) + 0.5f) * kTreeCell - camPos.z;
-            if (mx * mx + mz * mz > (kTreeRadius + kTreeCell) * (kTreeRadius + kTreeCell)) continue;
+            if (mx * mx + mz * mz > (treeRadius + kTreeCell) * (treeRadius + kTreeCell)) continue;
             for (const TreeInst& t : treeCell(cx, cz)) {
                 InstanceData d;
                 d.model = mat4::translate(t.pos) * mat4::rotateY(t.yaw) * mat4::scale(vec3(t.scale));

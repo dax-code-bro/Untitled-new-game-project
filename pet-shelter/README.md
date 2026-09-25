@@ -33,7 +33,8 @@ Linux needs the X11 dev packages: `libx11-dev libxrandr-dev libxinerama-dev libx
 emcmake cmake -S . -B build-web -DCMAKE_BUILD_TYPE=Release -DPS_BUILD_TESTS=OFF
 cmake --build build-web      # -> build-web/PetShelter.js + PetShelter.wasm (shaders embedded)
 ```
-Serve those two files next to a page with `<canvas id="canvas">` and `Module = { canvas }`.
+Serve those two files next to `web/index.html` (the page body; it adds the phone touch controls and the loading screen).
+On phones and tablets the page starts the game with `--touch`, which turns on touch controls, bigger UI and lighter graphics.
 
 **Headless simulation tests** (economy, taxes, payroll, ratings, collision, 500 sq mi check, save/load):
 ```bash
@@ -53,6 +54,7 @@ cmake -S . -B build-tests -DPS_BUILD_GAME=OFF && cmake --build build-tests && ./
 | **Creative mode** | WASD/arrows pan, right mouse rotate, middle mouse pan, wheel zoom, Q/E rotate, R rotate the building, X demolish, Esc cancel |
 | **Both** | **Tab** switches POV/Creative, Esc pause, F5 quick save, F9 quick load, F12 screenshot, F6 reload shaders, F1 hide help |
 | **Cutscene** | Space/Enter skips |
+| **Phone / tablet (landscape)** | Left stick walks (or moves the camera in Build mode), drag the right side to look, Use / Run buttons, Build/Walk mode and Menu at the top. Build mode: tap an item, tap the ground to preview, tap the same spot to build; drag to move, pinch to zoom, twist to turn. Menus: tap, drag up/down to scroll, drag sideways on sliders. |
 
 ## Layout
 ```

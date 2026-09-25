@@ -28,6 +28,20 @@ static Game* g_game = nullptr;
 #ifdef __EMSCRIPTEN__
 // Called from the web page on click: pointer lock may only be requested from a user gesture.
 extern "C" EMSCRIPTEN_KEEPALIVE int ps_wants_pointer_lock() { return g_game && g_game->wantsPointerLock() ? 1 : 0; }
+
+// ---- Touch controls (phones). The web page turns finger gestures into these calls. ----
+extern "C" EMSCRIPTEN_KEEPALIVE int ps_touch_state() { return g_game ? g_game->touchState() : 0; }
+extern "C" EMSCRIPTEN_KEEPALIVE void ps_touch_move(float x, float y) { if (g_game) g_game->input().touchMove = {x, y}; }
+extern "C" EMSCRIPTEN_KEEPALIVE void ps_touch_look(float dx, float dy) { if (g_game) g_game->input().addTouchLook(dx, dy); }
+extern "C" EMSCRIPTEN_KEEPALIVE void ps_touch_pan(float dx, float dy) { if (g_game) g_game->input().addTouchPan(dx, dy); }
+extern "C" EMSCRIPTEN_KEEPALIVE void ps_touch_twist(float yaw, float pitch) { if (g_game) g_game->input().addTouchTwist(yaw, pitch); }
+extern "C" EMSCRIPTEN_KEEPALIVE void ps_key(int key, int down) { if (g_game) g_game->input().onKey(key, down ? GLFW_PRESS : GLFW_RELEASE); }
+extern "C" EMSCRIPTEN_KEEPALIVE void ps_pause() { if (g_game) g_game->touchPause(); }
+extern "C" EMSCRIPTEN_KEEPALIVE int ps_ui_item_active() { return ImGui::GetCurrentContext() && ImGui::IsAnyItemActive() ? 1 : 0; }
+extern "C" EMSCRIPTEN_KEEPALIVE int ps_ui_wants_pointer() { return ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse ? 1 : 0; }
+extern "C" EMSCRIPTEN_KEEPALIVE int ps_name_edit_requested() { return g_game && g_game->takeNameEditRequest() ? 1 : 0; }
+extern "C" EMSCRIPTEN_KEEPALIVE const char* ps_get_name() { return g_game ? g_game->playerName().c_str() : ""; }
+extern "C" EMSCRIPTEN_KEEPALIVE void ps_set_name(const char* n) { if (g_game && n) g_game->setPlayerName(n); }
 #endif
 static void keyCb(GLFWwindow*, int key, int, int action, int) { if (g_game) g_game->input().onKey(key, action); }
 static void buttonCb(GLFWwindow*, int b, int action, int) { if (g_game) g_game->input().onButton(b, action); }
@@ -61,6 +75,7 @@ bool Game::init(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
         if (a == "--screenshots" && i + 1 < argc) screenshotSuiteDir_ = argv[++i];
+        else if (a == "--touch") touch_ = true;
         else if (a == "--size" && i + 2 < argc) { width_ = std::atoi(argv[++i]); height_ = std::atoi(argv[++i]); }
     }
     // Shader directory: next to the executable, else the source tree
@@ -107,7 +122,26 @@ bool Game::init(int argc, char** argv) {
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename = nullptr;
     applyTheme();
+    if (touch_) {
+        // Bigger targets for fingers
+        ImGuiStyle& st = ImGui::GetStyle();
+        st.ScaleAllSizes(1.25f);
+        st.TouchExtraPadding = ImVec2(6, 6);
+        st.ScrollbarSize = 22.0f;
+        st.GrabMinSize = 22.0f;
+        ImGui::GetIO().FontGlobalScale = 1.1f;
+        ImGui::GetIO().ConfigInputTrickleEventQueue = true;
+        creative_.touchUI = true;
+        creatorUI_.touchUI = true;
+        computer_.compact = true;
+        world_.treeRadius = 1400.0f;
+        renderer_.setShadowSize(1024);
+        renderer_.bloomStrength = 0.035f;
+    }
     ImGui_ImplGlfw_InitForOpenGL(window_, true);   // chains to our callbacks
+#ifdef __EMSCRIPTEN__
+    ImGui_ImplGlfw_InstallEmscriptenCallbacks(window_, "#canvas");   // browser wheel/scroll for the UI
+#endif
 #ifdef __EMSCRIPTEN__
     ImGui_ImplOpenGL3_Init("#version 300 es");
 #else
@@ -159,7 +193,25 @@ void Game::tick() {
 #endif
 }
 
-bool Game::wantsPointerLock() const { return state_ == State::Playing && mode_ == Mode::POV; }
+bool Game::wantsPointerLock() const { return !touch_ && state_ == State::Playing && mode_ == Mode::POV; }
+
+int Game::touchState() const {
+    switch (state_) {
+    case State::Cutscene: return 1;
+    case State::Playing: return mode_ == Mode::POV ? 2 : 3;
+    default: return 0;   // menus, creator, computer, pause: plain taps
+    }
+}
+
+void Game::touchPause() {
+    if (state_ == State::Playing) state_ = State::Paused;
+}
+
+bool Game::takeNameEditRequest() {
+    bool r = creatorUI_.nameEditRequested;
+    creatorUI_.nameEditRequested = false;
+    return r;
+}
 
 int Game::run() {
     if (!screenshotSuiteDir_.empty()) return runScreenshotSuite(screenshotSuiteDir_);
@@ -275,7 +327,7 @@ void Game::update(float dt) {
     }
     if (characterDirty_) { character_.build(appearance_); characterDirty_ = false; }
 
-    bool wantLock = state_ == State::Playing && mode_ == Mode::POV;
+    bool wantLock = !touch_ && state_ == State::Playing && mode_ == Mode::POV;
     input_.setCursorLocked(wantLock);
 
     switch (state_) {
@@ -451,13 +503,15 @@ void Game::drawMainMenu() {
     ImGui::SetWindowFontScale(1.0f);
     ImGui::TextDisabled("(title coming soon)");
     ImGui::Spacing();
-    ImVec2 bs(360, 44);
+    ImVec2 bs(std::min(360.0f, io.DisplaySize.x * 0.42f), 44);
     if (ImGui::Button("New Game", bs)) beginNewGame();
     if (!saveExists()) ImGui::BeginDisabled();
     if (ImGui::Button("Continue", bs)) loadGame();
     if (!saveExists()) ImGui::EndDisabled();
     if (ImGui::Button("Settings", bs)) showSettings_ = !showSettings_;
-    if (ImGui::Button("Quit", bs)) glfwSetWindowShouldClose(window_, 1);
+#ifndef __EMSCRIPTEN__
+    if (ImGui::Button("Quit", bs)) glfwSetWindowShouldClose(window_, 1);   // browsers: just close the tab
+#endif
     ImGui::End();
 }
 
@@ -490,7 +544,7 @@ void Game::drawHUD() {
             dl->AddRectFilled(ImVec2(p.x - 10, p.y - 6), ImVec2(p.x + sz.x + 10, p.y + sz.y + 6), IM_COL32(0, 0, 0, 150), 4.0f);
             dl->AddText(p, IM_COL32(255, 255, 255, 255), txt.c_str());
         }
-        if (showHelp_) {
+        if (showHelp_ && !touch_) {
             ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 12, io.DisplaySize.y - 12), ImGuiCond_Always, ImVec2(1, 1));
             ImGui::SetNextWindowBgAlpha(0.45f);
             ImGui::Begin("##help", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs);
@@ -532,7 +586,9 @@ void Game::drawPauseMenu() {
     if (!saveExists()) ImGui::EndDisabled();
     if (ImGui::Button("Settings", bs)) showSettings_ = !showSettings_;
     if (ImGui::Button("Quit to main menu", bs)) { state_ = State::MainMenu; showSettings_ = false; }
+#ifndef __EMSCRIPTEN__
     if (ImGui::Button("Quit game", bs)) glfwSetWindowShouldClose(window_, 1);
+#endif
     ImGui::End();
 }
 
@@ -576,6 +632,7 @@ void Game::drawCutsceneOverlay() {
         dl->AddText(f, fs, ImVec2(p.x + 2, p.y + 2), IM_COL32(0, 0, 0, int(200 * a)), sub.c_str());
         dl->AddText(f, fs, p, IM_COL32(255, 255, 255, int(255 * a)), sub.c_str());
     }
+    if (touch_) return;   // phones get a Skip button from the page
     const char* skip = "Space: skip";
     ImVec2 sz = ImGui::CalcTextSize(skip);
     dl->AddText(ImVec2(io.DisplaySize.x - sz.x - 16, io.DisplaySize.y * 0.12f * 0.5f), IM_COL32(200, 200, 200, 160), skip);

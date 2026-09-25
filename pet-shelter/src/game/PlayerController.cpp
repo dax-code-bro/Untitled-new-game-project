@@ -23,9 +23,15 @@ void PlayerController::update(float dt, const Input& in, const CollisionWorld& c
         pitch += (invertY ? md.y : -md.y) * mouseSensitivity;
         pitch = clampf(pitch, radians(-85.0f), radians(85.0f));
     }
+    if (allowMove) {
+        vec2 tl = in.touchLook();
+        yaw -= tl.x * 0.0042f;
+        pitch = clampf(pitch - (invertY ? -tl.y : tl.y) * 0.0042f, radians(-85.0f), radians(85.0f));
+    }
     vec3 fwd{std::sin(yaw), 0, std::cos(yaw)};
     vec3 right{-fwd.z, 0, fwd.x};
     vec3 wish{0, 0, 0};
+    if (allowMove) wish += fwd * -in.touchMove.y + right * in.touchMove.x;
     if (allowMove) {
         if (in.down(GLFW_KEY_W) || in.down(GLFW_KEY_UP)) wish += fwd;
         if (in.down(GLFW_KEY_S) || in.down(GLFW_KEY_DOWN)) wish -= fwd;
@@ -35,7 +41,7 @@ void PlayerController::update(float dt, const Input& in, const CollisionWorld& c
     float speed = in.down(GLFW_KEY_LEFT_SHIFT) ? 6.5f : 3.0f;
     float len = length(wish);
     vec3 delta{0, 0, 0};
-    if (len > 0.01f) delta = wish / len * speed * dt;
+    if (len > 0.01f) delta = wish / std::max(len, 1.0f) * speed * dt;   // analog stick: partial tilt = slower
     vec3 before = feet;
     feet = cw.moveCharacter(feet, delta, 0.3f, 1.8f);
     float moved = length(vec3(feet.x - before.x, 0, feet.z - before.z));

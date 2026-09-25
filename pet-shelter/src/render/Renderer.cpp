@@ -204,6 +204,7 @@ void Renderer::setupLitUniforms(Shader& s, const Camera& cam, bool shadowsOn, fl
     s.set("uWind", wind);
     s.set("uLogDepthCoef", 1.0f / std::log2(cam.zFar + 1.0f));
     s.set("uShadowOn", shadowsOn ? 1.0f : 0.0f);
+    s.set("uShadowTexel", 1.0f / float(kShadowSize));
     s.set("uShadowMat0", shadowMat_[0]);
     s.set("uShadowMat1", shadowMat_[1]);
     s.set("uShadow0", 0);

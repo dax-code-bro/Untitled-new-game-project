@@ -140,6 +140,10 @@ Interact with the computer in your office (E). It opens full screen. Tabs:
   boxes, cylinders and ellipsoids). They already use the final shader and lighting pipeline, so real modeled
   and rigged assets can replace them later without renderer changes.
 
+- **Playable in the browser** (WebAssembly/WebGL 2) at the published link, on computers and on
+  phones/tablets held sideways. Phone mode has touch controls, larger UI, a name box that uses the phone keyboard,
+  and lighter graphics (1024 shadow maps, shorter tree distance).
+
 ## 8. Next up (from the owner)
 - **Animals**: "I'll get into animals next." They hook into the Animals tab, the medical room,
   the appointment room, adoptions (income plus public rating) and creative mode enclosures.

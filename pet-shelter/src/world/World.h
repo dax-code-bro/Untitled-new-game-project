@@ -34,6 +34,7 @@ public:
     mat4 ghostModel;
     bool ghostValid = true;
     int highlightPlaced = -1;
+    float treeRadius = 2600.0f;   // trees drawn within this distance (smaller on phones)
 
 private:
     struct Chunk { Mesh mesh; AABB bounds; int level; };

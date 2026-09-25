@@ -19,6 +19,7 @@ public:
     int tool = -1;          // -1 = none, -2 = demolish, else BuildKind
     int rotation = 0;
     bool snap = true;
+    bool touchUI = false;      // phone layout: one scrolling strip, room for on-screen controls
     std::string status;
     float statusTimer = 0.0f;
 
@@ -26,6 +27,7 @@ public:
     void update(float dt, const Input& in, World& world, Sim& sim, const Camera& cam, int screenW, int screenH);
     void applyCamera(Camera& cam) const;
     void drawUI(Sim& sim, float& timeScale);
+    void drawTouchUI(float& timeScale);
 };
 
 }  // namespace ps

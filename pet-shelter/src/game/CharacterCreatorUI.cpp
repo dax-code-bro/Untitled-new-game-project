@@ -1,6 +1,8 @@
 #include "game/CharacterCreatorUI.h"
 #include <imgui.h>
+#include <algorithm>
 #include <cstring>
+#include <string>
 
 namespace ps {
 
@@ -8,14 +10,20 @@ CharacterCreatorUI::Result CharacterCreatorUI::draw(Appearance& a, bool& changed
     Result result = None;
     ImGuiIO& io = ImGui::GetIO();
     ImGui::SetNextWindowPos(ImVec2(16, 16));
-    ImGui::SetNextWindowSize(ImVec2(420, io.DisplaySize.y - 32));
+    ImGui::SetNextWindowSize(ImVec2(std::min(420.0f, io.DisplaySize.x * 0.52f), io.DisplaySize.y - 32));
     ImGui::SetNextWindowBgAlpha(0.88f);
     ImGui::Begin("Create your character", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
 
-    char name[64];
-    std::strncpy(name, a.name.c_str(), sizeof name - 1);
-    name[sizeof name - 1] = 0;
-    if (ImGui::InputText("Name", name, sizeof name)) a.name = name;
+    if (touchUI) ImGui::BeginChild("opts", ImVec2(0, -58));
+    if (touchUI) {
+        std::string label = "Name: " + a.name + "   (tap to change)";
+        if (ImGui::Button(label.c_str(), ImVec2(-1, 0))) nameEditRequested = true;
+    } else {
+        char name[64];
+        std::strncpy(name, a.name.c_str(), sizeof name - 1);
+        name[sizeof name - 1] = 0;
+        if (ImGui::InputText("Name", name, sizeof name)) a.name = name;
+    }
 
     ImGui::SeparatorText("Gender");
     int g = int(a.gender);
@@ -45,7 +53,7 @@ CharacterCreatorUI::Result CharacterCreatorUI::draw(Appearance& a, bool& changed
         if (ImGui::ColorEdit3(label, col, ImGuiColorEditFlags_NoInputs)) { c = {col[0], col[1], col[2]}; changed = true; }
     };
 
-    ImGui::BeginChild("opts", ImVec2(0, -80));
+    if (!touchUI) ImGui::BeginChild("opts", ImVec2(0, -80));
     if (ImGui::CollapsingHeader("Body", ImGuiTreeNodeFlags_DefaultOpen)) {
         slider("Height", a.height, 1.50f, 2.05f, "%.2f m");
         slider("Weight", a.weight);
@@ -75,7 +83,7 @@ CharacterCreatorUI::Result CharacterCreatorUI::draw(Appearance& a, bool& changed
     if (ImGui::CollapsingHeader("Preview", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::SliderAngle("Rotate", &previewYaw, -180.0f, 180.0f);
         ImGui::SliderFloat("Zoom", &zoom, 0.0f, 1.0f, "%.2f");
-        ImGui::TextDisabled("Tip: drag with the right mouse button to spin.");
+        ImGui::TextDisabled(touchUI ? "Tip: use the slider to spin." : "Tip: drag with the right mouse button to spin.");
     }
     ImGui::EndChild();
     ImGui::Separator();

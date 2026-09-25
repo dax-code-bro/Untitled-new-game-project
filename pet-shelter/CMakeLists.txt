@@ -102,8 +102,8 @@ if(PS_BUILD_GAME)
     set_target_properties(PetShelter PROPERTIES SUFFIX ".js")
     target_link_options(PetShelter PRIVATE
       -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sGL_ENABLE_GET_PROC_ADDRESS=1
-      -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=268435456 -sSTACK_SIZE=4194304
-      -sENVIRONMENT=web -sEXPORTED_FUNCTIONS=_main,_ps_wants_pointer_lock
+      -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=134217728 -sSTACK_SIZE=4194304
+      -sENVIRONMENT=web -sEXPORTED_RUNTIME_METHODS=ccall,UTF8ToString
       "--embed-file=${CMAKE_CURRENT_SOURCE_DIR}/shaders@/shaders")
   endif()
   # Copy shaders next to the executable so a packaged build runs anywhere.

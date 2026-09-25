@@ -23,7 +23,6 @@ public:
     void applyCamera(Camera& cam) const;
 
 private:
-    float bob_ = 0.0f;
 };
 
 }  // namespace ps

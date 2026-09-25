@@ -15,6 +15,7 @@ public:
     int tab = TabFinances;
     int selectedCamera = 0;
     bool open = false;
+    bool compact = false;   // phone layout
 
     void init(Renderer& r);
     // Renders the selected security camera feed into a texture (call before ImGui).
