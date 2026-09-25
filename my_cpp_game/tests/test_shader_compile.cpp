@@ -26,7 +26,7 @@ int main() {
 
     std::vector<Case> cases;
     const std::vector<std::vector<std::string>> meshVariants = {
-        {}, {"INSTANCED"}, {"SKINNED"}, {"INSTANCED", "GRASS"},
+        {}, {"INSTANCED"}, {"SKINNED"}, {"INSTANCED", "GRASS"}, {"INSTANCED", "GRASS", "GRASS_FIELD"},
         {"ALPHA_CLIP"}, {"INSTANCED", "ALPHA_CLIP"}, {"SKINNED", "ALPHA_CLIP"},
     };
     for (const auto& d : meshVariants) cases.push_back({"pbr.vert", "pbr.frag", d});

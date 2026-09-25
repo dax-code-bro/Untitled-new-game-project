@@ -32,6 +32,7 @@ environment switch to turn it off for comparison):
 | C. Trees | canopy spheres become crowns of ~1100 leaves in clumps (`Foliage.cpp`) | — |
 | D. Ground | albedos brought into a measured physical range; macro colour variation, grime at wall feet, rain streaks; damp patches, puddles and cracks on outdoor paving; grass, weeds and stones scattered on the ground nothing stands on (`Scatter.cpp`) | `GAME_NO_SCATTER=1`, `weatheringScale`, `wetScale` |
 | E. Buildings | roof slabs become hipped tile roofs (stepped stacks become the roof they drew), a hangar a barrel vault, flat roofs get parapets, gravel and plant; blank exterior walls get framed, sill-hung windows (`BuildingKit.cpp`) | `GAME_NO_KIT=1` |
+| G. Close-up | a dense lawn around the camera: a fixed disc of ~26k tufts the vertex shader re-centres every frame over a lawn density/height field baked from the map (`GRASS_FIELD`); rooms behind the kit's windows by interior mapping (walls, floorboards, cabinet, picture, curtains, some lamps, seeded per window); plinths, cornices and string courses on exterior masonry; ridge and hip tiles, gutters and downpipes on hipped roofs | `GAME_NO_LAWN=1`, `interiorScale = 0` |
 | F. Light | auto exposure (`exposure.frag`), physical sky on daytime maps, noon suns lowered to 40° on their own bearing, thinner haze | `GAME_WEB_LIGHT=1` |
 
 ### What is not ported

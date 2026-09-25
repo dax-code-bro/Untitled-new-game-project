@@ -33,7 +33,8 @@ public:
     struct Stats { size_t meshes = 0, materials = 0, draws = 0, instances = 0, vertices = 0,
                    triangles = 0, rewound = 0, lights = 0, skinned = 0,
                    retessellated = 0, foliage = 0, scattered = 0,
-                   weathered = 0, albedoCapped = 0, roofs = 0, flatRoofs = 0, windows = 0; };
+                   weathered = 0, albedoCapped = 0, roofs = 0, flatRoofs = 0, windows = 0, lawnTufts = 0,
+                   trim = 0; };
     [[nodiscard]] const Stats& stats() const { return m_stats; }
 
 private:
@@ -41,6 +42,7 @@ private:
     std::deque<rendering::Material>              m_materials;
     std::deque<std::vector<rendering::Instance>> m_instances;
     std::deque<gl::Texture>                      m_boneTextures;
+    std::deque<gl::Texture>                      m_fieldTextures;
     std::vector<rendering::DrawItem>             m_items;
     rendering::Camera                            m_camera;
     Stats                                        m_stats;

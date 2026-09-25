@@ -140,6 +140,54 @@ geometry::MeshData grassTuft(uint32_t seed, int blades, bool dry) {
     return m;
 }
 
+LawnField buildLawnField(const std::vector<WorldBox>& boxes, uint32_t seed, float cell) {
+    LawnField f;
+    glm::vec2 lo(1e9f), hi(-1e9f);
+    for (const auto& b : boxes)
+        if (b.kind == WorldBox::Lawn) {
+            lo = glm::min(lo, glm::vec2(b.lo.x, b.lo.z));
+            hi = glm::max(hi, glm::vec2(b.hi.x, b.hi.z));
+        }
+    if (lo.x >= hi.x) return f;
+    cell = std::max(cell, std::max(hi.x - lo.x, hi.y - lo.y) / 2048.0f);
+    f.origin = lo;
+    f.nx = static_cast<int>(std::ceil((hi.x - lo.x) / cell));
+    f.nz = static_cast<int>(std::ceil((hi.y - lo.y) / cell));
+    f.size = glm::vec2(f.nx, f.nz) * cell;
+    f.rg.assign(static_cast<size_t>(f.nx) * f.nz * 2, 0.0f);
+    Grid grid;
+    grid.build(boxes, lo, hi);
+    for (uint32_t gi = 0; gi < boxes.size(); ++gi) {
+        const auto& g = boxes[gi];
+        if (g.kind != WorldBox::Lawn) continue;
+        const float top = g.hi.y;
+        const int x0 = std::max(0, static_cast<int>((g.lo.x - lo.x) / cell));
+        const int x1 = std::min(f.nx - 1, static_cast<int>((g.hi.x - lo.x) / cell));
+        const int z0 = std::max(0, static_cast<int>((g.lo.z - lo.y) / cell));
+        const int z1 = std::min(f.nz - 1, static_cast<int>((g.hi.z - lo.y) / cell));
+        for (int iz = z0; iz <= z1; ++iz)
+            for (int ix = x0; ix <= x1; ++ix) {
+                const float px = lo.x + (ix + 0.5f) * cell, pz = lo.y + (iz + 0.5f) * cell;
+                if (px < g.lo.x || px > g.hi.x || pz < g.lo.z || pz > g.hi.z) continue;
+                bool blocked = false;
+                for (uint32_t oi : grid.at(px, pz)) {
+                    if (oi == gi) continue;
+                    const auto& o = boxes[oi];
+                    const bool rises = o.lo.y < top + 1.8f && o.hi.y > top + 0.01f;
+                    const bool twin = isGround(o.kind) && std::abs(o.hi.y - top) <= 0.01f && oi < gi;
+                    if ((rises || twin) && px > o.lo.x - 0.06f && px < o.hi.x + 0.06f && pz > o.lo.z - 0.06f &&
+                        pz < o.hi.z + 0.06f) { blocked = true; break; }
+                }
+                if (blocked) continue;
+                const float n = noise2(px * 0.23f, pz * 0.23f, seed + 11u);
+                const size_t k = (static_cast<size_t>(iz) * f.nx + ix) * 2;
+                f.rg[k] = 0.55f + 0.45f * smoothstep(0.25f, 0.7f, n);
+                f.rg[k + 1] = top;
+            }
+    }
+    return f;
+}
+
 ScatterResult scatterGround(const std::vector<WorldBox>& boxes, uint32_t seed, size_t budget) {
     ScatterResult out;
     glm::vec2 lo(1e9f), hi(-1e9f);

@@ -32,6 +32,16 @@ struct ScatterResult {
 
 ScatterResult scatterGround(const std::vector<WorldBox>& boxes, uint32_t seed, size_t budget = 80000);
 
+/* The lawn as a field for the GPU grass around the camera (GRASS_FIELD in
+   transform.glsl): per cell, the density of grass (0 where anything stands
+   or the ground is not lawn) and the height of the ground. */
+struct LawnField {
+    glm::vec2 origin{0.0f}, size{0.0f};
+    int nx = 0, nz = 0;
+    std::vector<float> rg;   // interleaved density, height
+};
+LawnField buildLawnField(const std::vector<WorldBox>& boxes, uint32_t seed, float cell = 0.25f);
+
 // One tuft: blades fanned round the origin, root at y = 0, height ~1, uv.y
 // running root to tip (the GRASS vertex path bends by it). Two-sided by
 // construction, both faces lit from above, so it needs no culling change.

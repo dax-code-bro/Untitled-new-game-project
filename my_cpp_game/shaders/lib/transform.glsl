@@ -41,6 +41,19 @@ uniform float uTime;
 uniform vec3 uWindDir;
 uniform float uWindStrength;
 #endif
+#ifdef GRASS_FIELD
+/* NATIVE: the lawn around the camera. The instances are a fixed disc of
+   grid offsets; each frame they are re-centred on the camera, snapped to the
+   grid so a tuft stays put while the camera moves, and every tuft's jitter,
+   turn, size and tint are hashed from its WORLD cell, never its instance
+   index. Density and ground height come from a field baked from the map's
+   own lawns (Scatter.cpp); where the field is 0 the tuft collapses. */
+uniform sampler2D uLawnField;   // r = density 0..1, g = ground height
+uniform vec4  uLawnRect;        // field origin x, z; size x, z (metres)
+uniform vec3  uFieldCentre;     // the camera
+uniform float uFieldSpacing;
+uniform float uFieldRadius;
+#endif
 
 struct Surface {
   vec3 worldPos;
@@ -59,6 +72,27 @@ Surface computeSurface(){
 #ifdef INSTANCED
   mat4 model = aModel;
   s.params = aParams;
+#ifdef GRASS_FIELD
+  {
+    vec2 base = floor(uFieldCentre.xz / uFieldSpacing) * uFieldSpacing;
+    vec2 cellW = base + aModel[3].xz;
+    vec2 cid = floor(cellW / uFieldSpacing + 0.5);
+    float h1 = hash12(cid), h2 = hash12(cid + 17.3), h3 = hash12(cid - 41.7), h4 = hash12(cid * 1.7 + 3.1);
+    vec2 root = cellW + (vec2(h1, h2) - 0.5) * uFieldSpacing;
+    vec2 fuv = (root - uLawnRect.xy) / uLawnRect.zw;
+    vec2 fld = (all(greaterThanEqual(fuv, vec2(0.0))) && all(lessThanEqual(fuv, vec2(1.0))))
+             ? textureLod(uLawnField, fuv, 0.0).rg : vec2(0.0);
+    float fade = 1.0 - smoothstep(uFieldRadius * 0.6, uFieldRadius, length(root - uFieldCentre.xz));
+    float sc = step(h3, fld.r) * fade * mix(0.7, 1.0, fld.r);
+    float a = h4 * 6.2831853;
+    float w = mix(0.28, 0.42, h1) * sc;
+    float ht = mix(0.14, 0.30, h2) * sc * (0.8 + 0.4 * valueNoise(vec3(root * 0.15, 2.0)));
+    model = mat4(vec4(cos(a) * w, 0.0, -sin(a) * w, 0.0), vec4(0.0, ht, 0.0, 0.0),
+                 vec4(sin(a) * w, 0.0, cos(a) * w, 0.0), vec4(root.x, fld.g - 0.01, root.y, 1.0));
+    float lush = valueNoise(vec3(root * 0.06, 0.0));
+    s.params = vec4(mix(vec3(1.18, 1.08, 0.72), vec3(0.86, 1.02, 0.92), lush) * (0.9 + 0.2 * h3), h4);
+  }
+#endif
 #else
   mat4 model = uModel;
   s.params = uParams;

@@ -8,6 +8,7 @@
 #include <glm/trigonometric.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -449,12 +450,14 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
             const bool glassy = part.material.roughness < 0.1f && !part.material.maps;
             it.bevel = glassy ? 0.0f : 0.012f;
             it.weathering = glassy ? 0.0f : 0.7f;
+            it.interior = part.interior;
             m_stats.instances += it.instances->size();
             m_items.push_back(it);
         }
         m_stats.roofs = kit.roofs;
         m_stats.flatRoofs = kit.flatRoofs;
         m_stats.windows = kit.windows;
+        m_stats.trim = kit.trim;
     }
 
     /* ---- NATIVE: the ground scatter (Scatter.hpp) ----
@@ -507,6 +510,46 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
         stone.parallax = 0.0f;
         try { stone.maps = lib.maps("rock", 7u); } catch (const std::exception&) {}
         addDraw(geometry::rock(0.5, 11u, 1), std::move(sc.stones), stone, false);
+
+        /* The lawn around the camera (GRASS_FIELD): a disc of grid offsets,
+           18 m across the radius at 20 cm, placed each frame by the shader
+           from the lawn field. Dense where the static scatter is sparse. */
+        LawnField lf = buildLawnField(world, 0x5ca77e5u);
+        static const bool noField = std::getenv("GAME_NO_LAWN") != nullptr;
+        if (!lf.rg.empty() && !noField) {
+            gl::TextureDesc td;
+            td.width = lf.nx;
+            td.height = lf.nz;
+            td.internalFormat = GL_RG16F;
+            td.minFilter = td.magFilter = GL_LINEAR;
+            td.wrap = GL_CLAMP_TO_EDGE;
+            m_fieldTextures.emplace_back(td);
+            m_fieldTextures.back().upload(0, lf.nx, lf.nz, GL_RG, GL_FLOAT, lf.rg.data());
+            const float spacing = 0.2f, radius = 18.0f;
+            std::vector<rendering::Instance> grid;
+            const int n = static_cast<int>(std::ceil(radius / spacing)) + 1;
+            for (int z = -n; z <= n; ++z)
+                for (int x = -n; x <= n; ++x) {
+                    if (std::hypot(static_cast<float>(x), static_cast<float>(z)) * spacing > radius + spacing) continue;
+                    rendering::Instance in;
+                    in.model[3] = glm::vec4(x * spacing, 0.0f, z * spacing, 1.0f);
+                    grid.push_back(in);
+                }
+            m_meshes.push_back(std::make_unique<rendering::Mesh>(grassTuft(41u, 9, false)));
+            m_materials.push_back(blade);
+            m_instances.push_back(std::move(grid));
+            rendering::DrawItem it;
+            it.mesh = m_meshes.back().get();
+            it.material = &m_materials.back();
+            it.instances = &m_instances.back();
+            it.grass = true;
+            it.field = &m_fieldTextures.back();
+            it.fieldRect = glm::vec4(lf.origin.x, lf.origin.y, lf.size.x, lf.size.y);
+            it.fieldSpacing = spacing;
+            it.fieldRadius = radius;
+            m_stats.lawnTufts = it.instances->size();
+            m_items.push_back(it);
+        }
     }
 
     // ---- the world the map was lit in ----

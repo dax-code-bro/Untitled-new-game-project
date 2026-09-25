@@ -39,6 +39,16 @@ struct DrawItem {
     /* NATIVE: 0..1 -- this is outdoor ground: damp patches, puddles and
        cracks in the paving. */
     float           wetGround = 0.0f;
+    /* NATIVE: a fake window pane -- trace a room behind it (pbr.frag);
+       the value is the room's brightness. 0 = off. */
+    float           interior = 0.0f;
+    /* NATIVE: the lawn around the camera (GRASS_FIELD). A density/height
+       field over the map (r = density, g = ground height); the instances
+       are a fixed grid of offsets the vertex shader re-centres on the
+       camera every frame. */
+    const gl::Texture* field = nullptr;
+    glm::vec4       fieldRect{0.0f};   // origin x, z, size x, z (metres)
+    float           fieldSpacing = 0.2f, fieldRadius = 18.0f;
 };
 
 struct PointLight {
@@ -202,6 +212,7 @@ public:
     float      bevelScale = 1.0f;       // multiplies every DrawItem::bevel
     float      weatheringScale = 1.0f;  // multiplies every DrawItem::weathering
     float      wetScale = 1.0f;         // multiplies every DrawItem::wetGround
+    float      interiorScale = 1.0f;    // multiplies every DrawItem::interior
     int        debugMode = 0;
     /* Stage switches for the step-by-step screenshots. All on = the frame. */
     struct Stages {

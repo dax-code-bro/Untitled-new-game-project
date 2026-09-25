@@ -46,10 +46,11 @@ struct KitResult {
     struct BoxPart {
         std::vector<rendering::Instance> instances;
         rendering::Material material;
+        float interior = 0.0f;   // a fake window pane: trace a room behind it
     };
     std::vector<MeshPart> meshes;
     std::vector<BoxPart> boxes;
-    size_t roofs = 0, flatRoofs = 0, windows = 0;
+    size_t roofs = 0, flatRoofs = 0, windows = 0, trim = 0;
 };
 
 KitResult buildKit(const std::vector<KitBox>& boxes, rendering::MaterialLibrary& lib);

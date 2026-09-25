@@ -55,6 +55,16 @@ uniform float uWater;
      - on outdoor ground, damp patches, standing puddles (a flat mirror:
        the SSR and probe do the rest) and cracks along noise contours. */
 uniform float uWeathering;
+/* NATIVE: INTERIOR MAPPING. A window the building kit hung on a solid wall
+   has nothing behind it, and dark glass on every house reads as a boarded
+   street. uInterior > 0 marks those panes: the view ray is traced, in the
+   pane's own frame, into a room that is not there -- back wall, side walls,
+   floorboards, ceiling -- with a curtain just behind the glass, a cabinet
+   against the back wall, daylight falling off with depth and, in some
+   rooms, a lamp. Every room is seeded by where its window is, so no two
+   neighbours match. The value is the room's brightness; it is added under
+   the glass's own reflection, weighted by what the Fresnel term lets in. */
+uniform float uInterior;
 uniform float uWetGround;
 vec3 waterNormal(vec2 p, float t, float dist){
   vec2 g = vec2(0.0);
@@ -376,6 +386,65 @@ layout(location=0) out vec4 outColor;
  * mortar courses and one that slides over them as if the wall were
  * glass. */
 layout(location=1) out vec4 outGBuffer;
+
+
+vec3 interiorRoom(){
+  // Pane frame: x along the wall, y up, z out of the wall (the thin axis).
+  vec3 rd = normalize(transpose(vObjRot) * (vWorldPos - uCameraPos));
+  vec3 ro = vObjPos;
+  if (rd.z > -1e-3) return vec3(0.0);
+  // The room's seed comes per instance (params.w, set by the building
+  // kit): derived from the pixel's position it would carry that pixel's
+  // float error, and the hash turns the error into noise.
+  float h = fract(vParams.w * 0.9731 + 0.137);
+  float hw = 1.5 + 0.6 * hash11(h * 13.0), depth = 3.0 + 1.5 * hash11(h * 29.0);
+  float yFloor = -0.5 * vObjScale.y - 0.95, yCeil = yFloor + 2.7;
+  vec3 wall = mix(vec3(0.62, 0.55, 0.44), vec3(0.44, 0.52, 0.56), hash11(h * 3.0));
+  wall = mix(wall, vec3(0.66, 0.44, 0.36), step(0.8, hash11(h * 71.0)));
+  wall *= 0.75 + 0.25 * hash11(h * 91.0);
+  // The curtain, 12 cm behind the glass, drawn in from each side.
+  float tc = (-0.12 - ro.z) / rd.z;
+  vec3 pc = ro + rd * tc;
+  float cw = vObjScale.x * (0.06 + 0.16 * hash11(h * 5.0));
+  vec3 curtainCol = mix(vec3(0.55, 0.50, 0.42), vec3(0.35, 0.18, 0.14), hash11(h * 17.0));
+  float daylightAtGlass = 1.0;
+  /* How bright a room is follows the day outside: a room reads at about a
+     quarter of the sunlit street, which is darker than the street, as it
+     should be, but not the black of an unlit box. */
+  float roomLight = 0.06 + 0.1 * dot(uSunColor, vec3(0.3333)) * uSunIntensity;
+  if (abs(pc.x) > 0.5 * vObjScale.x - cw && abs(pc.y) < 0.5 * vObjScale.y + 0.1)
+    return curtainCol * (0.88 + 0.12 * sin(pc.x * 38.0)) * daylightAtGlass * roomLight;
+  // The room: the nearest of its planes along the ray.
+  float tx = ((rd.x > 0.0 ? hw : -hw) - ro.x) / rd.x;
+  float ty = ((rd.y > 0.0 ? yCeil : yFloor) - ro.y) / rd.y;
+  float tz = (-depth - ro.z) / rd.z;
+  float t = min(tx, min(ty, tz));
+  vec3 p = ro + rd * t;
+  vec3 col;
+  if (t == tz) {
+    col = wall;
+    // A cabinet against the back wall, a picture above it.
+    float cx = (hash11(h * 41.0) - 0.5) * hw;
+    if (abs(p.x - cx) < 0.55 && p.y < yFloor + 0.85) col = vec3(0.24, 0.15, 0.09) * (0.8 + 0.2 * step(0.5, fract((p.y - yFloor) * 2.4)));
+    else if (abs(p.x - cx) < 0.35 && abs(p.y - (yFloor + 1.6)) < 0.25) col = mix(vec3(0.2, 0.3, 0.35), vec3(0.6, 0.45, 0.25), hash11(h * 53.0));
+  } else if (t == tx) {
+    col = wall * 0.82;
+  } else if (rd.y < 0.0) {
+    float plank = hash11(floor(p.x * 5.5) + 17.0 * h + floor((p.z + 13.0 * hash11(floor(p.x * 5.5))) * 0.6) * 3.1);
+    col = vec3(0.30, 0.19, 0.11) * (0.7 + 0.55 * plank);
+  } else {
+    col = vec3(0.72, 0.70, 0.66);
+  }
+  // Daylight through the window falls off with depth; some rooms have a lamp.
+  float dayl = 0.3 + 0.7 * exp(p.z * 0.45);
+  vec3 lampPos = vec3(0.0, yCeil - 0.35, -0.5 * depth);
+  float lampOn = step(0.62, hash11(h * 37.0));
+  vec3 lamp = vec3(1.0, 0.82, 0.58) * lampOn * 1.6 / (1.0 + 1.5 * dot(p - lampPos, p - lampPos));
+  vec3 lit = col * (vec3(dayl) * roomLight + lamp);
+  // The lamp itself, seen on the ceiling.
+  if (t == ty && rd.y > 0.0) lit += vec3(1.0, 0.85, 0.6) * lampOn * 6.0 * smoothstep(0.16, 0.1, length(p.xz - lampPos.xz));
+  return lit;
+}
 
 void main(){
   vec2 uv = vUv * uUvScale;
@@ -1051,6 +1120,11 @@ void main(){
   }
 
   color += uEmissive;
+  if (uInterior > 0.0) {
+    float NoVi = max(dot(normalize(vNormal), normalize(uCameraPos - vWorldPos)), 0.0);
+    float Fi = 0.04 + 0.96 * pow(1.0 - NoVi, 5.0);
+    color += interiorRoom() * uInterior * (1.0 - Fi);
+  }
 
   vec3 viewDir = normalize(vWorldPos - uCameraPos);
   color = applyFog(color, vWorldPos, uCameraPos, viewDir);

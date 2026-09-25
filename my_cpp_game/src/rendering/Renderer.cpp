@@ -348,6 +348,7 @@ static std::vector<std::string> meshDefines(const DrawItem& it, bool alphaClip) 
     if (it.instances && !it.instances->empty()) d.emplace_back("INSTANCED");
     else if (it.boneTexture && it.mesh->skinned()) d.emplace_back("SKINNED");
     if (it.grass) d.emplace_back("GRASS");
+    if (it.field) d.emplace_back("GRASS_FIELD");
     if (alphaClip && it.material->alphaClip) d.emplace_back("ALPHA_CLIP");
     return d;
 }
@@ -366,6 +367,14 @@ void Renderer::drawPbr(const DrawItem& it, const Camera& cam) {
     p->set("uWater", it.water ? 1.0f : 0.0f);
     p->set("uWeathering", it.weathering * weatheringScale);
     p->set("uWetGround", it.wetGround * wetScale);
+    p->set("uInterior", it.interior * interiorScale);
+    if (it.field) {
+        p->texture("uLawnField", *it.field);
+        p->set("uLawnRect", it.fieldRect);
+        p->set("uFieldCentre", cam.position);
+        p->set("uFieldSpacing", it.fieldSpacing);
+        p->set("uFieldRadius", it.fieldRadius);
+    }
     if (it.grass) {
         p->set("uWindDir", windDir);
         p->set("uWindStrength", windStrength);

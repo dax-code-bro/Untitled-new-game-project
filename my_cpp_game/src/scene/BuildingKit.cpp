@@ -4,6 +4,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <map>
 
 namespace game::scene {
@@ -155,6 +157,53 @@ void vaultRoof(Builder& b, const Frame& f, float fascia) {
     b.face({W(-hl, yb, -hs), W(hl, yb, -hs), W(hl, yb, hs), W(-hl, yb, hs)}, -Y, L);
 }
 
+/* Roof furniture for a hipped roof: ridge and hip tiles along the lines the
+   slopes meet on, a gutter under every eave, and downpipes at two corners
+   down to whatever the corner stands over. */
+void roofTrim(const Frame& f, float rise, float fascia, float groundY,
+              std::vector<rendering::Instance>& ridge, std::vector<rendering::Instance>& metal) {
+    const float hx = 0.5f * f.s.x, hz = 0.5f * f.s.z;
+    const float yb = -0.5f * f.s.y, e = yb + fascia, top = e + rise;
+    auto W = [&](float x, float y, float z) { return f.t + f.r[0] * x + f.r[1] * y + f.r[2] * z; };
+    auto bar = [&](std::vector<rendering::Instance>& out, glm::vec3 a, glm::vec3 b, float w, float h) {
+        const glm::vec3 d = b - a;
+        const float len = glm::length(d);
+        if (len < 0.05f) return;
+        const glm::vec3 x = d / len;
+        glm::vec3 z = glm::cross(x, glm::vec3(0, 1, 0));
+        z = glm::dot(z, z) > 1e-6f ? glm::normalize(z) : glm::vec3(0, 0, 1);
+        const glm::vec3 y = glm::cross(z, x);
+        rendering::Instance in;
+        in.model = boxModel(0.5f * (a + b) + y * (0.5f * h - 0.02f), glm::mat3(x, y, z), {len + 0.04f, h, w});
+        out.push_back(in);
+    };
+    const bool alongX = hx >= hz;
+    const float r = alongX ? hx - hz : hz - hx;
+    const glm::vec3 r0 = alongX ? W(-r, top, 0) : W(0, top, -r), r1 = alongX ? W(r, top, 0) : W(0, top, r);
+    bar(ridge, r0, r1, 0.2f, 0.12f);
+    const glm::vec3 c[4] = {W(-hx, e, -hz), W(hx, e, -hz), W(hx, e, hz), W(-hx, e, hz)};
+    for (int k = 0; k < 4; ++k) {
+        const glm::vec3 lc = glm::transpose(f.r) * (c[k] - f.t);
+        const bool nearR1 = alongX ? lc.x > 0.0f : lc.z > 0.0f;
+        bar(ridge, c[k], nearR1 ? r1 : r0, 0.16f, 0.1f);
+    }
+    // Gutters just outside the fascia, at its foot.
+    const float g = 0.07f;
+    bar(metal, W(-hx, yb + g, hz + g), W(hx, yb + g, hz + g), 0.12f, 0.11f);
+    bar(metal, W(hx, yb + g, -hz - g), W(-hx, yb + g, -hz - g), 0.12f, 0.11f);
+    bar(metal, W(hx + g, yb + g, hz), W(hx + g, yb + g, -hz), 0.12f, 0.11f);
+    bar(metal, W(-hx - g, yb + g, -hz), W(-hx - g, yb + g, hz), 0.12f, 0.11f);
+    // Downpipes at two opposite corners.
+    for (float sg : {-1.0f, 1.0f}) {
+        const glm::vec3 top3 = W(sg * (hx + g), yb + g, sg * (hz + g));
+        if (top3.y - groundY < 0.8f) continue;
+        rendering::Instance in;
+        in.model = boxModel(glm::vec3(top3.x, 0.5f * (top3.y + groundY), top3.z), f.r,
+                            {0.09f, top3.y - groundY, 0.09f});
+        metal.push_back(in);
+    }
+}
+
 } // namespace
 
 KitResult buildKit(const std::vector<KitBox>& boxes, rendering::MaterialLibrary& lib) {
@@ -203,6 +252,21 @@ KitResult buildKit(const std::vector<KitBox>& boxes, rendering::MaterialLibrary&
         }
     }
 
+    // The highest broad surface under a point and below a height: ground,
+    // pavement or a deck, for downpipes to stand on.
+    auto groundUnder = [&](const glm::vec3& p) {
+        float g = -1e9f;
+        for (size_t o = 0; o < boxes.size(); ++o) {
+            const Frame& F = fr[o];
+            if (p.x < F.lo.x || p.x > F.hi.x || p.z < F.lo.z || p.z > F.hi.z || F.hi.y > p.y - 0.8f) continue;
+            if ((F.hi.x - F.lo.x) * (F.hi.z - F.lo.z) < 4.0f) continue;
+            g = std::max(g, F.hi.y);
+        }
+        return g > -1e8f ? g : 0.0f;
+    };
+    std::map<const rendering::Material*, std::vector<rendering::Instance>> ridgeTiles;
+    std::vector<rendering::Instance> roofMetal;
+
     /* ---- the roofs ---- one merged mesh per source material */
     std::map<const rendering::Material*, Builder> tileRoofs, metalRoofs;
     for (size_t i : pitched) {
@@ -220,6 +284,10 @@ KitResult buildKit(const std::vector<KitBox>& boxes, rendering::MaterialLibrary&
             const float rise = stackTop[i] > 0.0f ? std::max(stackTop[i] - eaveTop, 0.6f * pitchRise) : pitchRise;
             const bool metal = boxes[i].texture == "metal" || boxes[i].texture == "corrugated";
             hipRoof(metal ? metalRoofs[boxes[i].material] : tileRoofs[boxes[i].material], f, rise, fascia);
+            const glm::vec3 corner = f.t + f.r[0] * (0.5f * f.s.x + 0.07f) + f.r[2] * (0.5f * f.s.z + 0.07f) -
+                                     f.r[1] * (0.5f * f.s.y);
+            roofTrim(f, rise, fascia, groundUnder(corner), ridgeTiles[boxes[i].material], roofMetal);
+            out.trim += 1;
         }
         out.removed.emplace_back(boxes[i].item, boxes[i].instance);
         ++out.roofs;
@@ -245,6 +313,21 @@ KitResult buildKit(const std::vector<KitBox>& boxes, rendering::MaterialLibrary&
     };
     emit(tileRoofs, "pantile", 0.5f);
     emit(metalRoofs, "corrugated", 0.5f);
+    for (auto& [src, v] : ridgeTiles) {
+        if (v.empty()) continue;
+        rendering::Material m = *src;
+        try { m.maps = lib.maps("pantile", 3u); } catch (const std::exception&) {}
+        m.worldUv = true;
+        m.uvScale = 1.5f;
+        const float l = luminance(m.color);
+        m.color *= (l > 0.26f ? 0.26f / l : 1.0f) * 0.85f;
+        out.boxes.push_back({std::move(v), m});
+    }
+    rendering::Material gutter;
+    gutter.color = glm::vec3(0.32f, 0.33f, 0.33f);
+    gutter.roughness = 0.4f;
+    gutter.metalness = 0.6f;
+    if (!roofMetal.empty()) out.boxes.push_back({std::move(roofMetal), gutter});
 
     /* ---- flat roofs: parapet, gravel, plant ---- */
     rendering::Material gravel;
@@ -304,7 +387,7 @@ KitResult buildKit(const std::vector<KitBox>& boxes, rendering::MaterialLibrary&
     sill.worldUv = true;
     sill.uvScale = 0.5f;
     try { sill.maps = lib.maps("concrete", 4u); } catch (const std::exception&) {}
-    std::vector<rendering::Instance> frames, panes, sills;
+    std::vector<rendering::Instance> frames, panes, sills, plinths, cornices;
 
     // Everything a window could collide with, as world AABBs.
     std::vector<size_t> obstacles;
@@ -324,7 +407,7 @@ KitResult buildKit(const std::vector<KitBox>& boxes, rendering::MaterialLibrary&
         const bool longX = f.s.x >= f.s.z;
         const float L = longX ? f.s.x : f.s.z, th = longX ? f.s.z : f.s.x;
         if (th > 0.7f || L < 2.4f) continue;
-        const glm::vec3 a = longX ? f.r[0] : f.r[2];
+        glm::vec3 a = longX ? f.r[0] : f.r[2];
         glm::vec3 n = longX ? f.r[2] : f.r[0];
         // The roof over it, and which side is out.
         long roof = -1;
@@ -340,8 +423,27 @@ KitResult buildKit(const std::vector<KitBox>& boxes, rendering::MaterialLibrary&
         const glm::vec3 rc = 0.5f * (R.lo + R.hi);
         const float side = glm::dot(glm::vec3(f.t.x - rc.x, 0.0f, f.t.z - rc.z), n);
         if (side < 0.0f) n = -n;
+        // (a, up, n) must be right-handed, or every box built on it is a
+        // mirror image: its faces wind inside out and the back face is the
+        // one drawn -- which is what hid the rooms behind the glass.
+        if (glm::dot(glm::cross(a, glm::vec3(0.0f, 1.0f, 0.0f)), n) < 0.0f) a = -a;
         const float half = std::abs(n.x) > std::abs(n.z) ? 0.5f * (R.hi.x - R.lo.x) : 0.5f * (R.hi.z - R.lo.z);
         if (half - std::abs(side) > 1.6f) continue;   // an inside wall
+        const bool cladding = boxes[i].texture == "metal" || boxes[i].texture == "corrugated";
+        {
+            /* Trim: a plinth course at the foot, a cornice under the eave,
+               a string course at each floor line. Masonry only. */
+            const glm::mat3 tb(a, up, n);
+            const glm::vec3 fc = f.t + n * (0.5f * th);
+            if (!cladding) {
+                plinths.push_back(inst(boxModel(fc + n * 0.02f + up * (f.lo.y + 0.2f - f.t.y), tb, {L + 0.1f, 0.4f, 0.06f})));
+                cornices.push_back(inst(boxModel(fc + n * 0.05f + up * (f.hi.y - 0.12f - f.t.y), tb, {L + 0.16f, 0.2f, 0.12f})));
+                for (float yl = f.lo.y + 3.0f; yl < f.hi.y - 1.0f; yl += 3.0f)
+                    cornices.push_back(inst(boxModel(fc + n * 0.03f + up * (yl - f.t.y), tb, {L + 0.06f, 0.12f, 0.07f})));
+                out.trim += 1;
+            }
+        }
+        if (cladding) continue;   // no sash windows in a hangar's sheet steel
         const glm::mat3 basis(a, up, n);
         const glm::vec3 face = f.t + n * (0.5f * th);
         const float yb = f.lo.y, yt = f.hi.y;
@@ -370,6 +472,7 @@ KitResult buildKit(const std::vector<KitBox>& boxes, rendering::MaterialLibrary&
                 }
                 if (!clear) continue;
                 panes.push_back(inst(boxModel(centre + n * 0.012f, basis, {ww, wh, 0.024f})));
+                panes.back().params.w = hash(centre.x * 1.37f + centre.y * 0.71f, centre.z * 1.13f - centre.y);   // the room's seed
                 const glm::vec3 fc = centre + n * 0.04f;
                 frames.push_back(inst(boxModel(fc + up * (0.5f * wh + 0.5f * fb), basis, {ww + 2 * fb, fb, 0.09f})));
                 frames.push_back(inst(boxModel(fc - up * (0.5f * wh + 0.5f * fb), basis, {ww + 2 * fb, fb, 0.09f})));
@@ -382,11 +485,20 @@ KitResult buildKit(const std::vector<KitBox>& boxes, rendering::MaterialLibrary&
                 sills.push_back(inst(boxModel(centre + n * 0.03f + up * (0.5f * wh + fb + 0.08f), basis,
                                               {ww + 0.34f, 0.16f, 0.06f})));                              // lintel
                 ++out.windows;
+                if (std::getenv("GAME_KIT_VERBOSE") && out.windows % 10 == 1)
+                    std::fprintf(stderr, "[kit] window %zu at (%.1f %.1f %.1f) facing (%.2f %.2f) on '%s'\n", out.windows,
+                                 centre.x, centre.y, centre.z, n.x, n.z, boxes[i].name.c_str());
             }
         }
     }
+    rendering::Material plinthMat = sill;
+    plinthMat.color = glm::vec3(0.24f, 0.23f, 0.22f);
+    rendering::Material corniceMat = sill;
+    corniceMat.color = glm::vec3(0.46f, 0.44f, 0.40f);
+    if (!plinths.empty()) out.boxes.push_back({std::move(plinths), plinthMat});
+    if (!cornices.empty()) out.boxes.push_back({std::move(cornices), corniceMat});
     if (!panes.empty()) {
-        out.boxes.push_back({std::move(panes), glass});
+        out.boxes.push_back({std::move(panes), glass, 0.9f});
         out.boxes.push_back({std::move(frames), frameMat});
         out.boxes.push_back({std::move(sills), sill});
     }
