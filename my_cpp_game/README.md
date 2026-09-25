@@ -1,139 +1,88 @@
 # my_cpp_game — native C++ / OpenGL 4.6 core
 
-Bootstrap for the proposed port of the Legend Engine (102,416 lines of
-JavaScript across `engine/src` and `site/games`) to native C++.
+The Legend Engine's renderer, material baker and geometry, ported to native
+C++, rendering the game's real maps at any resolution — 4K, 8K — with
+procedural textures baked at 4096².
 
-**Status: the window bootstrap compiles, links and runs to the point
-where it needs a display. Nothing is ported yet.** Read "What this costs"
-before going further, because the decision is not really a technical one.
+**Download (Windows, ready to run):** `dist/legend-native-windows.zip` —
+unzip, double-click an `Explore - …` launcher. See `tools/windows/README.txt`
+for controls and requirements.
 
----
+## What is ported, and how it is verified
 
-## What exists and is verified
-
-| | |
-|---|---|
-| `CMakeLists.txt` | CMake 3.28, C++20, dependencies via `FetchContent` (no submodules) |
-| `src/main.cpp` | GL 4.6 core context, debug callback, fixed-step loop at 1/60 with the same 0.20 s clamp the JS loop uses |
-| `src/core/Window.{hpp,cpp}` | GLFW window and context, RAII |
-| `shaders/pbr.{vert,frag}` | placeholder — the real shader is a port of `GLSL.pbrFrag` |
-| `scripts/tuning.lua` | the live-editable values, mirroring the JS ones |
-
-Built and run on this machine:
-
-```
-$ cmake -B build -DCMAKE_BUILD_TYPE=Release -DGLFW_BUILD_WAYLAND=OFF
-$ cmake --build build -j4
-[100%] Built target my_cpp_game          # 694 KB binary
-
-$ ./build/my_cpp_game
-[glfw] 65550: X11: The DISPLAY environment variable is missing
-fatal: glfwInit failed
-```
-
-That is the correct and expected result in a headless container. It
-proves the toolchain, the fetch, the Glad 4.6 generation and the C++
-compile; it proves nothing about rendering, because there is no GPU here.
-
-## Dependencies
-
-Fetched at configure time, pinned:
-
-| library | version | role |
+| | | verified by |
 |---|---|---|
-| GLFW | 3.4 | window, context, input |
-| Glad 2 | 2.0.6 | GL 4.6 core loader, **generated** at configure time |
-| GLM | 1.0.1 | maths matching GLSL |
-| stb_image | master | 2D texture loading |
-| Assimp | 5.4.3 | meshes, skeletons, animation — `-DGAME_WITH_ASSIMP=ON` |
-| Lua + Sol2 | 5.4.5 / 3.3.0 | hot-reloaded gameplay values — `-DGAME_WITH_LUA=ON` |
+| Material baker | all 46 procedural recipes (`40-material.js`), multithreaded | byte-identical to the JS at every size and seed tried (`test_assets_parity`, tolerance 0) |
+| Geometry | every primitive in `30-geometry.js`, tangents, bounds | bit-identical positions/normals/UVs (`test_geometry_parity`), plus a winding fix, below |
+| Shaders | all 37 programs of `50-shaders.js`, extracted verbatim (`tools/extract_glsl.js`) | compile and link in every `#define` variant under GL 4.5 core (`test_shader_compile`) |
+| Renderer | the whole frame of `60-renderer.js`: cascaded shadows + PCSS, scene-baked environment probe (GGX prefilter + SH), PBR with multi-scatter BRDF, clearcoat, sheen, parallax, detail normals, sky, volumetric scattering, SSR, SSAO, contact shadows, bloom, ACES/AgX composite, FXAA, supersampling | `test_render_stages`: zero GL errors (KHR_debug), every active uniform of every program set, and each pass checked for output |
+| Maps | Bunker Nine, Coastline, Helipad, Resort, Town, Demolition | exported from the running web game (`tools/export_scene.js`) and rendered side by side with the web frame |
 
-Assimp and Lua are **off by default**: Assimp alone is a multi-minute
-build and nothing in the bootstrap references either yet. Turn them on
-with the code that uses them, not before.
+### What is not ported
 
-Host packages needed on Linux (not fetchable): `libgl1-mesa-dev`,
-`libx11-dev`, `libxrandr-dev`, `libxinerama-dev`, `libxcursor-dev`,
-`libxi-dev`.
+Gameplay. There are no zombies, no weapons firing, no physics, no AI, no
+HUD and no audio in the native build: it renders the maps and lets you fly
+through them. Those systems are the larger part of the JavaScript (`70-`
+to `99-`, and `site/games/`), and the web build remains the playable game.
 
-## Memory
+## A bug the port found in the web game
 
-No raw `new` / `delete` anywhere. GLFW hands back a raw `GLFWwindow*` and
-expects `glfwDestroyWindow`; that pair is wrapped exactly once, in
-`Window`'s `unique_ptr` with a custom deleter, and never written again.
-`glfwInit`/`glfwTerminate` are bound to a function-local static so their
-ordering is not something a caller can get wrong.
+The web primitives wind a box's top and bottom faces, and every cylinder,
+cone and torus triangle, against their own normals (measured 4/12, 96/96,
+48/48, 1728/1728). The web renderer culls back faces, so **every box top
+in the web game is culled** and the shapes are drawn inside out. On
+Coastline the web game shows grass where the paved footpath is; in Bunker
+Nine it shows the dirt under the concrete floor. The C++ `Shapes` port
+emits them wound correctly and `SceneFile` repairs exported meshes on load
+(`GAME_KEEP_WEB_WINDING=1` reproduces the web picture). The web engine
+itself is unchanged — fixing it there changes the look of every web map.
 
----
-
-## What this costs — read this first
-
-The nine graphics features in the proposal are not hypothetical here.
-**Six of them already exist in the JavaScript engine, measured:**
-
-| feature | state | measurement |
-|---|---|---|
-| SSR | shipped v0.19.0 | 0 → 2 of 4 walls in a mirror floor |
-| Environment probe | shipped v0.20.0 | −13.9% reflection spread at mid roughness |
-| Scene probe | shipped v0.21.0 | 26.55% — the wall *behind the camera*, in the mirror |
-| PCSS + contact shadows | shipped v0.22.0 | 2.58% of pixels; 0 → 13 px soft edge |
-| Parallax occlusion | shipped v0.23.0 | 15.02% of pixels |
-| Multi-scatter BRDF + volumetrics | verified, landing | +20% recovered specular energy |
-| ACES tonemapping | shipped long ago | — |
-| Bloom, SSAO, CSM | shipped long ago | — |
-| GTAO, TAA | not built | — |
-
-So the graphics gap the port is meant to close is **two features wide**,
-not nine. Both were authored and lost to a session limit, not to any
-limitation of the web platform.
-
-**The thing a port would break is how this game is used.** It ships as a
-static page and is played by opening a link:
+## Build
 
 ```
-https://raw.githack.com/dax-code-bro/Untitled-new-game-project/claude/lock-in-0ak39k/site/games/bunker-nine.html
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DGLFW_BUILD_WAYLAND=OFF
+cmake --build build -j
+./build/my_cpp_game                                   # showcase, windowed
+./build/my_cpp_game --fullscreen --quality cinematic --texture-res 4096
+./build/my_cpp_game --width 7680 --height 4320 --screenshot 8k.png
+./build/my_cpp_game --scene coastline.lescene        # an exported map
 ```
 
-A native binary cannot be opened by a link. It needs a per-platform
-toolchain, a build, a download, and on macOS a signature and
-notarisation. Every "give me the link when you're done" becomes "install
-this." That is the real cost, and it is paid on every single change.
+Windows release from Linux: `tools/package_windows.sh` (MinGW-w64, static,
+no DLLs beyond the system's; smoke-tested under Wine).
 
-**The hot-reload argument is already won.** The JS engine has no compile
-step at all — `node engine/build.js` concatenates and takes under a
-second. Embedding Lua in C++ to avoid C++ compile times recovers
-something the current stack never lost.
+Maps: `node tools/export_scene.js <bunker-nine|coastline|helipad|resort|town|demolition> out.lescene [--compare web.ppm]`.
 
-### What a port would genuinely buy
+Linux host packages: `libgl1-mesa-dev libx11-dev libxrandr-dev
+libxinerama-dev libxcursor-dev libxi-dev libxkbcommon-dev`. Glad is
+generated at configure time and needs Python 3 with `jinja2`.
 
-Real threads, real SIMD, no garbage collector, no browser sandbox, and
-compute shaders. Those matter at a scale this game is not at: the
-measured frame cost today is 3.66 ms at the tier the tests use, on a
-software rasteriser with no GPU at all.
+## Dependencies (FetchContent, pinned)
 
-### If you want it anyway
+GLFW 3.4 · Glad 2.0.6 (GL 4.6 core) · GLM 1.0.1 · stb · nlohmann/json 3.11.3
+(scene files). Assimp 5.4.3 and Lua 5.4 + Sol2 3.3.0 are wired but off
+(`-DGAME_WITH_ASSIMP=ON`, `-DGAME_WITH_LUA=ON`); the live-tuning loop is
+`scripts/look.ini`, watched and re-applied on save, and every shader
+hot-reloads the same way.
 
-The order that works, and which this bootstrap is shaped for:
+## Layout
 
-1. **Window + context** — done, compiles.
-2. **Renderer core** — VAO/VBO/FBO/Shader RAII wrappers. Mechanical.
-3. **Port `50-shaders.js` verbatim.** It is already GLSL and already
-   carries every feature above. Change the `#version` line and the
-   precision qualifiers. This is the single highest-value step and the
-   least risky.
-4. **Port the material baker** (`40-material.js`, 46 procedural recipes).
-   Pure maths, no GL, portable as-is — and `height.test.js` will tell you
-   if the packing constants drift.
-5. **Port the physics** (`70-`/`71-`/`72-`). Pure maths, already has
-   `require()`-able tests that run in Node today.
-6. **ECS + gameplay.** The largest share of the 102k lines and the part
-   with no test coverage to port against.
+```
+src/assets/     procedural material baker        (game_assets, no GL)
+src/geometry/   primitives, tangents              (game_geometry, no GL)
+src/rendering/  gl/ RAII wrappers, ShaderLibrary, Renderer, Material, Mesh, Tunables
+src/scene/      Showcase, SceneFile (exported maps)
+src/core/       Window, Args, Capture, Paths, GlDebug
+shaders/        GLSL 4.50, #include-able lib/
+scripts/        look.ini (live look overrides)
+tools/          extract_glsl.js, export_scene.js, package_windows.sh, parity dumps
+tests/          parity, shader compile, render stages
+```
 
-Steps 3–5 are roughly 15k lines and mostly mechanical. Step 6 is the
-rest, and it is where a port of this kind usually stalls.
+## Rules the code keeps
 
-**The measurement that should decide it:** run the game on the target
-hardware at ULTRA and look at the frame time. If it is comfortable, the
-port buys fidelity you already have. If it is not, that number tells you
-which of the six features to spend on — and that is a smaller, safer
-change than 102,000 lines.
+No raw `new`/`delete`: every GL object is a move-only RAII handle, GLFW's
+window is a `unique_ptr` with a deleter. Every sampler owns a texture unit
+fixed at link time, so two sampler types can never share a unit (a bug the
+web engine hit twice). Every departure from the web renderer is marked
+`NATIVE` in the source with the reason.

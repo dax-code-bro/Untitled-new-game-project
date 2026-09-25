@@ -27,6 +27,7 @@ struct Args {
     float       fov        = 0.0f;       // --fov degrees (0 = the shot's own)
     bool        hidden     = false;      // no visible window (headless capture)
     bool        glDebug    = false;      // KHR_debug output, errors counted and printed
+    bool        fullscreen = false;      // primary monitor at its native resolution
 };
 
 Args parseArgs(int argc, char** argv);

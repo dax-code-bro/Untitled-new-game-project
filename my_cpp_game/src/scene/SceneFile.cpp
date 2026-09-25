@@ -56,6 +56,29 @@ size_t repairWinding(geometry::MeshData& m) {
     return flipped;
 }
 
+/* THE PRIMITIVES, AT DESKTOP TESSELLATION.
+ * The web engine builds its shared primitives for a phone: a sphere is
+ * 20x28, a cylinder 20 sides, a capsule 8x16 -- a silhouette you can count
+ * the facets on at 4K. They arrive tagged with the engine's cache key, so
+ * the ones whose parameters the key carries are rebuilt here with the
+ * native Shapes port (the same builders, bit-identical UV layout) at five
+ * to eight times the segment count. Boxes are exact already; rocks keep
+ * their deliberate facets; everything bespoke uses its exported mesh. */
+bool rebuildPrimitive(const std::string& key, geometry::MeshData& out) {
+    namespace G = geometry;
+    auto field = [&](int i) {
+        size_t a = 0;
+        for (int k = 0; k < i; ++k) a = key.find(':', a) + 1;
+        return std::stod(key.substr(a, key.find(':', a) - a));
+    };
+    if (key == "sphere")   { out = G::sphere(0.5, 112, 160); return true; }
+    if (key == "cylinder") { out = G::cylinder(0.5, 1, 128, true); return true; }
+    if (key == "cone")     { out = G::cone(0.5, 1, 128); return true; }
+    if (key.rfind("torus:", 0) == 0)   { out = G::torus(1, field(3), 96, 192); return true; }
+    if (key.rfind("capsule:", 0) == 0) { out = G::capsule(field(1), field(2), 48, 96); return true; }
+    return false;
+}
+
 template <class T>
 T get(const json& j, const char* k, T fallback) {
     const auto it = j.find(k);
@@ -81,8 +104,18 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
 
     // ---- meshes ----
     std::vector<const rendering::Mesh*> meshes;
+    static const bool webTessellation = std::getenv("GAME_WEB_TESSELLATION") != nullptr;
     for (const auto& jm : doc.at("meshes")) {
         geometry::MeshData d;
+        const auto key = jm.find("key");
+        if (!webTessellation && key != jm.end() && key->is_string() && rebuildPrimitive(key->get<std::string>(), d)) {
+            ++m_stats.retessellated;
+            m_stats.vertices += d.positions.size();
+            m_stats.triangles += d.indices.size() / 3;
+            m_meshes.push_back(std::make_unique<rendering::Mesh>(d));
+            meshes.push_back(m_meshes.back().get());
+            continue;
+        }
         d.positions = pack<glm::vec3>(blob.array<float>(jm.at("positions")));
         d.normals = pack<glm::vec3>(blob.array<float>(jm.at("normals")));
         d.uvs = pack<glm::vec2>(blob.array<float>(jm.at("uvs")));

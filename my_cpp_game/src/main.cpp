@@ -12,11 +12,13 @@
  * than of a special capture mode.
  *
  * Controls (windowed): WASD / QE move, hold right mouse to look, Shift is
- * fast, 1-6 jump to the named shots, F5 hot-reloads shaders (also automatic
- * on save), F12 saves a screenshot at the window's resolution. */
+ * fast, 1-6 jump to the named shots, F12 saves a screenshot, Esc quits.
+ * Shaders and scripts/look.ini hot-reload on save. --fullscreen runs at the
+ * monitor's own resolution. */
 #include "core/Args.hpp"
 #include "core/Capture.hpp"
 #include "core/GlDebug.hpp"
+#include "core/Paths.hpp"
 #include "core/Window.hpp"
 #include "rendering/Material.hpp"
 #include "rendering/Renderer.hpp"
@@ -40,13 +42,6 @@
 namespace {
 
 constexpr double kFixedStep = 1.0 / 60.0;   // the sim step the JS engine uses
-
-std::filesystem::path shaderRoot() {
-    namespace fs = std::filesystem;
-    for (const fs::path& p : {fs::path(GAME_SOURCE_DIR) / "shaders", fs::path("shaders")})
-        if (fs::is_directory(p)) return p;
-    throw std::runtime_error("no shaders directory found");
-}
 
 void applyDisables(game::rendering::Renderer& r, const std::vector<std::string>& off) {
     auto& s = r.stages;
@@ -89,16 +84,22 @@ int main(int argc, char** argv) try {
     const game::core::Args args = game::core::parseArgs(argc, argv);
 
     auto window = std::make_unique<game::core::Window>(
-        args.hidden ? 64 : args.width, args.hidden ? 64 : args.height, "my_cpp_game", !args.hidden);
+        args.hidden ? 64 : args.width, args.hidden ? 64 : args.height, "my_cpp_game", !args.hidden,
+        args.fullscreen);
     std::printf("GL %d.%d core | %s | %s\n", window->glMajor(), window->glMinor(),
                 glGetString(GL_RENDERER), glGetString(GL_VERSION));
     if (args.glDebug) game::core::installGlDebug();
 
-    game::rendering::ShaderLibrary shaders(shaderRoot());
+    const std::filesystem::path root = game::core::dataRoot();
+    game::rendering::ShaderLibrary shaders(root / "shaders");
     game::rendering::Quality quality = game::rendering::Quality::byName(args.quality);
     quality.renderScale = args.scale;
     game::rendering::Renderer renderer(shaders, quality);
-    renderer.resize(args.width, args.height);
+    /* Offscreen captures render at exactly --width x --height. A window
+       renders at its own framebuffer size and follows it when resized, so
+       fullscreen on a 4K monitor is a 4K frame. */
+    if (args.hidden) renderer.resize(args.width, args.height);
+    else renderer.resize(window->width(), window->height());
     renderer.debugMode = args.debugMode;
 
     game::rendering::MaterialLibrary materials(args.textureRes);
@@ -112,9 +113,9 @@ int main(int argc, char** argv) try {
     } else {
         sceneFile = std::make_unique<game::scene::SceneFile>(args.scene, materials, renderer);
         const auto& st = sceneFile->stats();
-        std::printf("imported %s: %zu meshes (%zu verts, %zu tris, %zu triangles rewound), %zu materials, "
+        std::printf("imported %s: %zu meshes (%zu verts, %zu tris, %zu triangles rewound), %zu primitives re-tessellated, %zu materials, "
                     "%zu draws (%zu skinned), %zu instances, %zu lights\n", args.scene.c_str(), st.meshes, st.vertices,
-                    st.triangles, st.rewound, st.materials, st.draws, st.skinned, st.instances, st.lights);
+                    st.triangles, st.rewound, st.retessellated, st.materials, st.draws, st.skinned, st.instances, st.lights);
     }
     const std::vector<game::rendering::DrawItem>& items = showcase ? showcase->items() : sceneFile->items();
     auto shotCamera = [&](const std::string& name) {
@@ -124,7 +125,7 @@ int main(int argc, char** argv) try {
     /* The look file is applied over the scene's own settings and then
        watched; --set wins over both. */
     game::rendering::TunableFile look(args.look.empty()
-        ? std::filesystem::path(GAME_SOURCE_DIR) / "scripts" / "look.ini" : std::filesystem::path(args.look));
+        ? root / "scripts" / "look.ini" : std::filesystem::path(args.look));
     look.reloadIfChanged(renderer);
     auto applySets = [&] {
         for (const auto& kv : args.sets) {
@@ -174,6 +175,9 @@ int main(int argc, char** argv) try {
 
         if (!args.hidden) {
             GLFWwindow* w = window->handle();
+            if (glfwGetKey(w, GLFW_KEY_ESCAPE)) window->close();
+            if (window->width() > 0 && window->height() > 0)
+                renderer.resize(window->width(), window->height());
             const float speed = static_cast<float>(dt) * (glfwGetKey(w, GLFW_KEY_LEFT_SHIFT) ? 12.0f : 3.5f);
             const glm::vec3 f = fly.forward();
             const glm::vec3 r = glm::normalize(glm::cross(f, glm::vec3(0, 1, 0)));

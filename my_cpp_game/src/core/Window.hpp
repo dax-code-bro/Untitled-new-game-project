@@ -16,7 +16,9 @@ namespace game::core {
  * that ordering is not a thing a caller can get wrong. */
 class Window {
 public:
-    Window(int width, int height, const std::string& title, bool visible = true);
+    /* fullscreen: the primary monitor at its own resolution (width and
+       height are then ignored) -- a 4K screen gets a 4K framebuffer. */
+    Window(int width, int height, const std::string& title, bool visible = true, bool fullscreen = false);
     ~Window();
 
     Window(const Window&)            = delete;
@@ -27,6 +29,7 @@ public:
     [[nodiscard]] bool shouldClose() const;
     void swapBuffers() const;
     void pollEvents() const;
+    void close() const;
 
     [[nodiscard]] int  width()  const { return m_width; }
     [[nodiscard]] int  height() const { return m_height; }

@@ -40,6 +40,19 @@ const GAMES = {
   },
 };
 
+// The four multiplayer maps: built straight onto an engine by MP_MAPS, as
+// engine/test/mpmaps.test.js does, and framed from team A's spawn looking
+// up the map, the view a player gets at the start of a match.
+for (const id of ['helipad', 'resort', 'town', 'demolition']) {
+  GAMES[id] = {
+    scripts: ['site/games/mp-data.js', 'site/games/mp-maps.js'],
+    start: `window.__G = LE.create({ canvas: '#game', quality: 'ultra', gravity: -19.6 });
+            window.__M = MP_MAPS.build(window.__G, '${id}');
+            { const f = window.__M.spawns.a[2].at;
+              window.__G.lookAt([f[0], f[1] + 1.6, f[2]], [f[0] * 0.3, 1.4, f[2] + 40]); }`,
+  };
+}
+
 async function main() {
   const [, , name, out, ...rest] = process.argv;
   const game = GAMES[name];
@@ -120,6 +133,10 @@ async function main() {
       const g = m.__geometry;
       if (!g) return -1;
       const e = {
+        // The engine's primitive cache key ('sphere', 'cylinder',
+        // 'torus:14:28:0.240', ...) -- lets the native side rebuild the
+        // primitive at desktop tessellation instead of the phone-budget one.
+        key: m.__key || null,
         positions: f32(g.positions), normals: f32(g.normals), uvs: f32(g.uvs),
         tangents: g.tangents ? f32(g.tangents) : null,
         colors: g.colors ? f32(g.colors) : null,

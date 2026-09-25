@@ -37,6 +37,7 @@ Args parseArgs(int argc, char** argv) {
         else if (!std::strcmp(k, "--fov"))         a.fov        = static_cast<float>(std::atof(need(i)));
         else if (!std::strcmp(k, "--hidden"))      a.hidden     = true;
         else if (!std::strcmp(k, "--gl-debug"))    a.glDebug    = true;
+        else if (!std::strcmp(k, "--fullscreen"))  a.fullscreen = true;
         else throw std::invalid_argument(std::string("unknown argument ") + k);
     }
     if (a.width <= 0 || a.height <= 0) throw std::invalid_argument("width/height must be positive");

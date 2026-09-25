@@ -30,9 +30,19 @@ struct GlfwRuntime {
 void ensureGlfw() { static GlfwRuntime runtime; }
 } // namespace
 
-Window::Window(int width, int height, const std::string& title, bool visible)
+Window::Window(int width, int height, const std::string& title, bool visible, bool fullscreen)
     : m_width(width), m_height(height) {
     ensureGlfw();
+    GLFWmonitor* monitor = nullptr;
+    if (fullscreen && visible) {
+        monitor = glfwGetPrimaryMonitor();
+        if (const GLFWvidmode* mode = monitor ? glfwGetVideoMode(monitor) : nullptr) {
+            width = mode->width;
+            height = mode->height;
+        } else {
+            monitor = nullptr;
+        }
+    }
 
     /* 4.6 first, then 4.5. The engine uses nothing 4.6 added (SPIR-V
        shaders are its one real feature), and 4.5 is what Mesa's software
@@ -50,7 +60,7 @@ Window::Window(int width, int height, const std::string& title, bool visible)
         glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 #endif
         glfwWindowHint(GLFW_SAMPLES, 0);   // MSAA is the renderer's business
-        m_window.reset(glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr));
+        m_window.reset(glfwCreateWindow(width, height, title.c_str(), monitor, nullptr));
         if (m_window) { m_major = 4; m_minor = minor; break; }
     }
     if (!m_window)
@@ -87,5 +97,6 @@ Window::~Window() = default;
 bool Window::shouldClose() const { return glfwWindowShouldClose(m_window.get()); }
 void Window::swapBuffers() const { glfwSwapBuffers(m_window.get()); }
 void Window::pollEvents()  const { glfwPollEvents(); }
+void Window::close()       const { glfwSetWindowShouldClose(m_window.get(), GLFW_TRUE); }
 
 } // namespace game::core
