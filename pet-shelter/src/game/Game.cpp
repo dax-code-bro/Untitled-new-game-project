@@ -5,6 +5,9 @@
 #include "world/Layout.h"
 #include "world/Terrain.h"
 #include <GLFW/glfw3.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -21,6 +24,11 @@ using namespace layout;
 
 // ---------------------------------------------------------------- GLFW glue
 static Game* g_game = nullptr;
+
+#ifdef __EMSCRIPTEN__
+// Called from the web page on click: pointer lock may only be requested from a user gesture.
+extern "C" EMSCRIPTEN_KEEPALIVE int ps_wants_pointer_lock() { return g_game && g_game->wantsPointerLock() ? 1 : 0; }
+#endif
 static void keyCb(GLFWwindow*, int key, int, int action, int) { if (g_game) g_game->input().onKey(key, action); }
 static void buttonCb(GLFWwindow*, int b, int action, int) { if (g_game) g_game->input().onButton(b, action); }
 static void scrollCb(GLFWwindow*, double, double dy) { if (g_game) g_game->input().onScroll(dy); }
@@ -57,6 +65,11 @@ bool Game::init(int argc, char** argv) {
     }
     // Shader directory: next to the executable, else the source tree
     std::string shaderDir = "shaders";
+#ifdef __EMSCRIPTEN__
+    shaderDir = "/shaders";   // embedded into the WebAssembly build
+    width_ = EM_ASM_INT({ return window.innerWidth; });
+    height_ = EM_ASM_INT({ return window.innerHeight; });
+#endif
     if (!std::filesystem::exists(shaderDir + "/lit.frag")) {
         std::filesystem::path exe = std::filesystem::path(argv[0]).parent_path() / "shaders";
         if (std::filesystem::exists(exe / "lit.frag")) shaderDir = exe.string();
@@ -67,9 +80,11 @@ bool Game::init(int argc, char** argv) {
     Shader::setDirectory(shaderDir);
 
     if (!glfwInit()) { std::fprintf(stderr, "glfwInit failed\n"); return false; }
+#ifndef __EMSCRIPTEN__
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#endif
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 #endif
@@ -93,7 +108,11 @@ bool Game::init(int argc, char** argv) {
     ImGui::GetIO().IniFilename = nullptr;
     applyTheme();
     ImGui_ImplGlfw_InitForOpenGL(window_, true);   // chains to our callbacks
+#ifdef __EMSCRIPTEN__
+    ImGui_ImplOpenGL3_Init("#version 300 es");
+#else
     ImGui_ImplOpenGL3_Init("#version 330 core");
+#endif
 
     int fbw, fbh;
     glfwGetFramebufferSize(window_, &fbw, &fbh);
@@ -116,18 +135,40 @@ void Game::onResize(int w, int h) {
     renderer_.resize(w, h);
 }
 
+void Game::tick() {
+#ifdef __EMSCRIPTEN__
+    // Follow the browser window size
+    int bw = EM_ASM_INT({ return window.innerWidth; }), bh = EM_ASM_INT({ return window.innerHeight; });
+    if (bw != width_ || bh != height_) {
+        glfwSetWindowSize(window_, bw, bh);
+        onResize(bw, bh);
+    }
+#endif
+    input_.beginFrame();
+    glfwPollEvents();
+    auto now = std::chrono::steady_clock::now();
+    float dt = std::min(0.1f, std::chrono::duration<float>(now - lastTick_).count());
+    lastTick_ = now;
+    frame(dt);
+    glfwSwapBuffers(window_);
+#ifdef __EMSCRIPTEN__
+    // Browsers release the mouse when you press Esc; treat that as "pause".
+    bool locked = EM_ASM_INT({ return document.pointerLockElement ? 1 : 0; }) != 0;
+    if (browserLocked_ && !locked && state_ == State::Playing && mode_ == Mode::POV) state_ = State::Paused;
+    browserLocked_ = locked;
+#endif
+}
+
+bool Game::wantsPointerLock() const { return state_ == State::Playing && mode_ == Mode::POV; }
+
 int Game::run() {
     if (!screenshotSuiteDir_.empty()) return runScreenshotSuite(screenshotSuiteDir_);
-    auto last = std::chrono::steady_clock::now();
-    while (!glfwWindowShouldClose(window_)) {
-        input_.beginFrame();
-        glfwPollEvents();
-        auto now = std::chrono::steady_clock::now();
-        float dt = std::min(0.1f, std::chrono::duration<float>(now - last).count());
-        last = now;
-        frame(dt);
-        glfwSwapBuffers(window_);
-    }
+    lastTick_ = std::chrono::steady_clock::now();
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop_arg([](void* g) { static_cast<Game*>(g)->tick(); }, this, 0, true);
+#else
+    while (!glfwWindowShouldClose(window_)) tick();
+#endif
     return 0;
 }
 

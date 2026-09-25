@@ -38,6 +38,7 @@ endif()
 
 if(PS_BUILD_GAME)
   include(FetchContent)
+  if(NOT EMSCRIPTEN)
   set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
   set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
   set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -46,11 +47,18 @@ if(PS_BUILD_GAME)
     GIT_REPOSITORY https://github.com/glfw/glfw.git
     GIT_TAG 3.4
     GIT_SHALLOW TRUE)
+  endif()
   FetchContent_Declare(imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG v1.91.9b
     GIT_SHALLOW TRUE)
-  FetchContent_MakeAvailable(glfw imgui)
+  if(EMSCRIPTEN)
+    FetchContent_MakeAvailable(imgui)
+    add_library(glfw INTERFACE)   # Emscripten ships its own GLFW
+    target_link_options(glfw INTERFACE -sUSE_GLFW=3)
+  else()
+    FetchContent_MakeAvailable(glfw imgui)
+  endif()
 
   add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui.cpp
@@ -88,6 +96,15 @@ if(PS_BUILD_GAME)
     target_compile_options(PetShelter PRIVATE /W3)
   else()
     target_compile_options(PetShelter PRIVATE -Wall -Wno-unused-parameter)
+  endif()
+  if(EMSCRIPTEN)
+    # Browser build: WebGL2, shaders embedded in the .wasm, no threads.
+    set_target_properties(PetShelter PROPERTIES SUFFIX ".js")
+    target_link_options(PetShelter PRIVATE
+      -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sGL_ENABLE_GET_PROC_ADDRESS=1
+      -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=268435456 -sSTACK_SIZE=4194304
+      -sENVIRONMENT=web -sEXPORTED_FUNCTIONS=_main,_ps_wants_pointer_lock
+      "--embed-file=${CMAKE_CURRENT_SOURCE_DIR}/shaders@/shaders")
   endif()
   # Copy shaders next to the executable so a packaged build runs anywhere.
   add_custom_command(TARGET PetShelter POST_BUILD

@@ -28,6 +28,13 @@ cmake --build build -j
 ```
 Linux needs the X11 dev packages: `libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl-dev`.
 
+**Browser build (WebAssembly / WebGL 2)** with [Emscripten](https://emscripten.org):
+```bash
+emcmake cmake -S . -B build-web -DCMAKE_BUILD_TYPE=Release -DPS_BUILD_TESTS=OFF
+cmake --build build-web      # -> build-web/PetShelter.js + PetShelter.wasm (shaders embedded)
+```
+Serve those two files next to a page with `<canvas id="canvas">` and `Module = { canvas }`.
+
 **Headless simulation tests** (economy, taxes, payroll, ratings, collision, 500 sq mi check, save/load):
 ```bash
 cmake -S . -B build-tests -DPS_BUILD_GAME=OFF && cmake --build build-tests && ./build-tests/ps_tests

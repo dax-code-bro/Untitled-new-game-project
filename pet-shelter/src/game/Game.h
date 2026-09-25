@@ -11,6 +11,7 @@
 #include "game/Sim.h"
 #include "render/Renderer.h"
 #include "world/World.h"
+#include <chrono>
 #include <deque>
 #include <string>
 
@@ -22,11 +23,13 @@ class Game {
 public:
     bool init(int argc, char** argv);
     int run();
+    void tick();   // one frame (the browser build calls this from its main loop)
     void shutdown();
 
     // GLFW callback plumbing
     Input& input() { return input_; }
     void onResize(int w, int h);
+    bool wantsPointerLock() const;
 
 private:
     enum class State { MainMenu, Creator, Cutscene, Playing, Computer, Paused };
@@ -86,6 +89,8 @@ private:
     struct Toast { std::string text; float t; };
     std::deque<Toast> toasts_;
     std::string screenshotSuiteDir_;
+    std::chrono::steady_clock::time_point lastTick_;
+    bool browserLocked_ = false;
 };
 
 }  // namespace ps

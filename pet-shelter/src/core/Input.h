@@ -31,8 +31,8 @@ public:
 private:
     GLFWwindow* win_ = nullptr;
     static constexpr int kKeys = 512;
-    bool keys_[kKeys] = {}, prevKeys_[kKeys] = {};
-    bool buttons_[8] = {}, prevButtons_[8] = {};
+    bool keys_[kKeys] = {};
+    bool buttons_[8] = {};
     bool pendingPress_[kKeys] = {}, pendingButton_[8] = {};
     bool framePress_[kKeys] = {}, frameButton_[8] = {};
     vec2 mouse_, lastMouse_, delta_, deltaAccum_;

@@ -3,7 +3,6 @@
 
 PFN_psglClear psgl_Clear = nullptr;
 PFN_psglClearColor psgl_ClearColor = nullptr;
-PFN_psglClearDepth psgl_ClearDepth = nullptr;
 PFN_psglViewport psgl_Viewport = nullptr;
 PFN_psglEnable psgl_Enable = nullptr;
 PFN_psglDisable psgl_Disable = nullptr;
@@ -62,7 +61,7 @@ PFN_psglBindFramebuffer psgl_BindFramebuffer = nullptr;
 PFN_psglFramebufferTexture2D psgl_FramebufferTexture2D = nullptr;
 PFN_psglCheckFramebufferStatus psgl_CheckFramebufferStatus = nullptr;
 PFN_psglDeleteFramebuffers psgl_DeleteFramebuffers = nullptr;
-PFN_psglDrawBuffer psgl_DrawBuffer = nullptr;
+PFN_psglDrawBuffers psgl_DrawBuffers = nullptr;
 PFN_psglReadBuffer psgl_ReadBuffer = nullptr;
 PFN_psglReadPixels psgl_ReadPixels = nullptr;
 PFN_psglPixelStorei psgl_PixelStorei = nullptr;
@@ -76,8 +75,6 @@ bool loadGL(GLLoadFn getProc) {
     if (!psgl_Clear) { std::fprintf(stderr, "Missing GL function glClear\n"); ok = false; }
     psgl_ClearColor = reinterpret_cast<PFN_psglClearColor>(getProc("glClearColor"));
     if (!psgl_ClearColor) { std::fprintf(stderr, "Missing GL function glClearColor\n"); ok = false; }
-    psgl_ClearDepth = reinterpret_cast<PFN_psglClearDepth>(getProc("glClearDepth"));
-    if (!psgl_ClearDepth) { std::fprintf(stderr, "Missing GL function glClearDepth\n"); ok = false; }
     psgl_Viewport = reinterpret_cast<PFN_psglViewport>(getProc("glViewport"));
     if (!psgl_Viewport) { std::fprintf(stderr, "Missing GL function glViewport\n"); ok = false; }
     psgl_Enable = reinterpret_cast<PFN_psglEnable>(getProc("glEnable"));
@@ -194,8 +191,8 @@ bool loadGL(GLLoadFn getProc) {
     if (!psgl_CheckFramebufferStatus) { std::fprintf(stderr, "Missing GL function glCheckFramebufferStatus\n"); ok = false; }
     psgl_DeleteFramebuffers = reinterpret_cast<PFN_psglDeleteFramebuffers>(getProc("glDeleteFramebuffers"));
     if (!psgl_DeleteFramebuffers) { std::fprintf(stderr, "Missing GL function glDeleteFramebuffers\n"); ok = false; }
-    psgl_DrawBuffer = reinterpret_cast<PFN_psglDrawBuffer>(getProc("glDrawBuffer"));
-    if (!psgl_DrawBuffer) { std::fprintf(stderr, "Missing GL function glDrawBuffer\n"); ok = false; }
+    psgl_DrawBuffers = reinterpret_cast<PFN_psglDrawBuffers>(getProc("glDrawBuffers"));
+    if (!psgl_DrawBuffers) { std::fprintf(stderr, "Missing GL function glDrawBuffers\n"); ok = false; }
     psgl_ReadBuffer = reinterpret_cast<PFN_psglReadBuffer>(getProc("glReadBuffer"));
     if (!psgl_ReadBuffer) { std::fprintf(stderr, "Missing GL function glReadBuffer\n"); ok = false; }
     psgl_ReadPixels = reinterpret_cast<PFN_psglReadPixels>(getProc("glReadPixels"));

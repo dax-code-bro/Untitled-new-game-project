@@ -113,9 +113,6 @@ extern PFN_psglClear psgl_Clear;
 typedef void (PSGL_APIENTRY *PFN_psglClearColor)(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
 extern PFN_psglClearColor psgl_ClearColor;
 #define glClearColor psgl_ClearColor
-typedef void (PSGL_APIENTRY *PFN_psglClearDepth)(GLdouble d);
-extern PFN_psglClearDepth psgl_ClearDepth;
-#define glClearDepth psgl_ClearDepth
 typedef void (PSGL_APIENTRY *PFN_psglViewport)(GLint x, GLint y, GLsizei w, GLsizei h);
 extern PFN_psglViewport psgl_Viewport;
 #define glViewport psgl_Viewport
@@ -290,9 +287,9 @@ extern PFN_psglCheckFramebufferStatus psgl_CheckFramebufferStatus;
 typedef void (PSGL_APIENTRY *PFN_psglDeleteFramebuffers)(GLsizei n, const GLuint* f);
 extern PFN_psglDeleteFramebuffers psgl_DeleteFramebuffers;
 #define glDeleteFramebuffers psgl_DeleteFramebuffers
-typedef void (PSGL_APIENTRY *PFN_psglDrawBuffer)(GLenum b);
-extern PFN_psglDrawBuffer psgl_DrawBuffer;
-#define glDrawBuffer psgl_DrawBuffer
+typedef void (PSGL_APIENTRY *PFN_psglDrawBuffers)(GLsizei n, const GLenum* b);
+extern PFN_psglDrawBuffers psgl_DrawBuffers;
+#define glDrawBuffers psgl_DrawBuffers
 typedef void (PSGL_APIENTRY *PFN_psglReadBuffer)(GLenum b);
 extern PFN_psglReadBuffer psgl_ReadBuffer;
 #define glReadBuffer psgl_ReadBuffer

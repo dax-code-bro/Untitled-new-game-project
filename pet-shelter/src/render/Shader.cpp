@@ -67,7 +67,11 @@ bool Shader::load(const std::string& vsFile, const std::string& fsFile, const st
 }
 
 bool Shader::reload() {
+#ifdef __EMSCRIPTEN__
+    std::string header = "#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2DShadow;\n" + defines_ + "\n";
+#else
     std::string header = "#version 330 core\n" + defines_ + "\n";
+#endif
     std::string vsrc = header + preprocess(vs_), fsrc = header + preprocess(fs_);
     GLuint v = compile(GL_VERTEX_SHADER, vsrc, vs_);
     GLuint f = compile(GL_FRAGMENT_SHADER, fsrc, fs_);

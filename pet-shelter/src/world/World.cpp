@@ -23,9 +23,14 @@ void World::build() {
     scenery::Rect l1{-8000.0f, -7680.0f, 8000.0f, 8320.0f};
     scenery::Rect l2{snapDown(kRegionMinX - kBackgroundExtent, 160.0f), snapDown(kRegionMinZ - kBackgroundExtent, 160.0f),
                      snapUp(kRegionMaxX + kBackgroundExtent, 160.0f), snapUp(kRegionMaxZ + kBackgroundExtent, 160.0f)};
-    auto f0 = std::async(std::launch::async, [=] { return scenery::buildTerrainLevel(l0, 6.0f, 8, nullptr); });
-    auto f1 = std::async(std::launch::async, [=] { return scenery::buildTerrainLevel(l1, 32.0f, 8, &l0); });
-    auto f2 = std::async(std::launch::async, [=] { return scenery::buildTerrainLevel(l2, 160.0f, 8, &l1); });
+#ifdef __EMSCRIPTEN__
+    const auto policy = std::launch::deferred;   // no threads in the browser build
+#else
+    const auto policy = std::launch::async;
+#endif
+    auto f0 = std::async(policy, [=] { return scenery::buildTerrainLevel(l0, 6.0f, 8, nullptr); });
+    auto f1 = std::async(policy, [=] { return scenery::buildTerrainLevel(l1, 32.0f, 8, &l0); });
+    auto f2 = std::async(policy, [=] { return scenery::buildTerrainLevel(l2, 160.0f, 8, &l1); });
     int level = 0;
     for (auto* f : {&f0, &f1, &f2}) {
         auto tiles = f->get();

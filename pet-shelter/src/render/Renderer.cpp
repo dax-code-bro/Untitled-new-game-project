@@ -40,7 +40,7 @@ bool Renderer::init(int width, int height) {
     for (int i = 0; i < 2; ++i) {
         glGenTextures(1, &shadowTex_[i]);
         glBindTexture(GL_TEXTURE_2D, shadowTex_[i]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, kShadowSize, kShadowSize, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, kShadowSize, kShadowSize, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -50,7 +50,8 @@ bool Renderer::init(int width, int height) {
         glGenFramebuffers(1, &shadowFbo_[i]);
         glBindFramebuffer(GL_FRAMEBUFFER, shadowFbo_[i]);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowTex_[i], 0);
-        glDrawBuffer(GL_NONE);
+        const GLenum none = GL_NONE;
+        glDrawBuffers(1, &none);
         glReadBuffer(GL_NONE);
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
             std::fprintf(stderr, "[renderer] shadow framebuffer incomplete\n");
@@ -303,7 +304,6 @@ void Renderer::renderScene(const Camera& cam, const SceneFn& scene, GLuint fbo, 
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glViewport(0, 0, w, h);
     glDepthMask(1);
-    glClearDepth(1.0);
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
     viewPos_ = cam.pos;
 
@@ -501,10 +501,13 @@ void Renderer::renderToTarget(const Camera& cam, const SceneFn& scene, Target& t
 }
 
 std::vector<uint8_t> Renderer::readPixels() const {
-    std::vector<uint8_t> px(size_t(w_) * size_t(h_) * 3);
+    // RGBA read-back works on both desktop GL and WebGL2; convert to RGB.
+    std::vector<uint8_t> rgba(size_t(w_) * size_t(h_) * 4), px(size_t(w_) * size_t(h_) * 3);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glReadPixels(0, 0, w_, h_, GL_RGB, GL_UNSIGNED_BYTE, px.data());
+    glReadPixels(0, 0, w_, h_, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+    for (size_t i = 0, n = size_t(w_) * size_t(h_); i < n; ++i)
+        for (int k = 0; k < 3; ++k) px[i * 3 + size_t(k)] = rgba[i * 4 + size_t(k)];
     return px;
 }
 
