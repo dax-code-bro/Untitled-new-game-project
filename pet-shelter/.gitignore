@@ -1,5 +1,5 @@
 build/
 build-*/
-saves/
-screenshots/
+/saves/
+/screenshots/
 imgui.ini
