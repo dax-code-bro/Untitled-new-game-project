@@ -32,6 +32,7 @@ desktop GL would produce a native build from the same sources. Nothing in
 | `src/shaders.h` | ~470 | every GLSL shader in the engine |
 | `src/models.h`  | ~930 | procedural mesh builders — all geometry, zero asset files |
 | `src/anim.h`    | ~590 | three rigs, keyframed clips, sampling, cross-fade blending |
+| `src/texgen.h`  | ~300 | procedural GPU material generation, texture arrays, budget |
 | `src/world.h`   | ~560 | terrain, biomes, roads, city generation, spatial buckets |
 | `src/main.cpp`  | ~1300 | renderer, frame graph, simulation, input, HUD |
 
@@ -77,6 +78,54 @@ terrain chunks, and a quality ladder (low / high / 4K) that scales internal
 render resolution independently of canvas size.
 
 ---
+
+## Materials — every texture generated on the GPU
+
+There are no image files. All four materials are synthesised at load by a
+generation shader rendering into a `GL_TEXTURE_2D_ARRAY`:
+
+| Layer | Material | Built from |
+| ----- | -------- | ---------- |
+| 0 | vegetation | clumped blade noise over a patchy dryness field |
+| 1 | rock | tiling Worley cracks, ridged grain, mineral tint |
+| 2 | sand | wind ripples, fine grain, dune undulation |
+| 3 | asphalt / concrete | aggregate + pebble Worley, speckle, slab seams |
+
+Each layer produces **albedo + roughness** in one attachment and a
+**tangent-space normal + height + cavity** in another, via MRT in a single
+pass. All noise is lattice-tiled so every material wraps seamlessly.
+
+Surfaces are sampled with **triplanar projection** — three world-axis
+projections blended by the surface normal — so nothing stretches on a cliff
+and the meshes never need UVs. Normals use a whiteout blend, so surface
+detail lights correctly without tangent vectors. A second, finer tile fades
+in within 60 m to break up repetition underfoot.
+
+Textures get a **full mip chain** and **16× anisotropic filtering** where the
+driver offers it, which is the difference between crisp ground at a grazing
+angle and a shimmering mess.
+
+### On "8K"
+
+The resolution is selectable — 1K, 2K, 4K, 8K — and the honest arithmetic is
+printed in the UI. Per layer, albedo + normal with mips costs about
+`size² × 8 bytes × 1.334`:
+
+| Per layer | 4 layers total |
+| --------- | -------------- |
+| 1K | ~45 MB |
+| 2K | ~171 MB *(default)* |
+| 4K | ~683 MB |
+| **8K** | **~2.7 GB** |
+
+8192² across four materials is **2.7 GB**, which no browser tab will be
+given. Worse, on several drivers the oversized request doesn't fail cleanly —
+it loses the WebGL context and kills the page. I hit exactly that during
+testing. So the budget is enforced *before* the allocation: ask for 8K and
+the engine tells you what it would cost, then gives you the largest size that
+actually fits (4K on the hardware tested, which is still 16 megapixels per
+material). There is also a `webglcontextlost` handler so a low-memory device
+says so instead of showing a frozen black canvas.
 
 ## Geometry — every model, no asset files
 
@@ -181,7 +230,8 @@ Three real defects found by testing, each of which looked like something else:
 | Space | — | brake |
 | O | time +3h | |
 | R | toggle 4K internal resolution | |
-| T | toggle FXAA | |
+| T | toggle textures | |
+| Y | toggle FXAA | |
 
 Touch devices get a virtual stick and CAR / RUN buttons that feed the same
 input path.

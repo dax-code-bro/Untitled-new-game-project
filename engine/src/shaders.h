@@ -13,6 +13,7 @@ namespace shaders {
 static const char* COMMON_FRAG_HEAD = R"(#version 300 es
 precision highp float;
 precision highp sampler2D;
+precision highp sampler2DArray;
 )";
 
 // Physically based shading + cascaded shadows + fog. Injected into the main pass.
@@ -76,6 +77,7 @@ layout(location=3)  in float aAO;
 layout(location=4)  in float aJoint;
 layout(location=5)  in float aRough;
 layout(location=6)  in float aMetal;
+layout(location=12) in float aMat;
 layout(location=7)  in vec4  iM0;
 layout(location=8)  in vec4  iM1;
 layout(location=9)  in vec4  iM2;
@@ -95,6 +97,7 @@ out float vAO;
 out float vRough;
 out float vMetal;
 out float vExtra;
+out float vMat;
 
 void main(){
   mat4 model = mat4(iM0, iM1, iM2, iM3);
@@ -129,6 +132,7 @@ void main(){
   vRough = aRough;
   vMetal = aMetal;
   vExtra = iTint.w;
+  vMat   = aMat;
 
   gl_Position = uViewProj * world;
 }
@@ -142,6 +146,7 @@ in float vAO;
 in float vRough;
 in float vMetal;
 in float vExtra;
+in float vMat;
 
 uniform vec3  uCamPos;
 uniform vec3  uSunDir;           // points *towards* the sun
@@ -167,6 +172,11 @@ uniform float     uShadowTexel1;
 uniform float     uShadowTexel2;
 
 // Point lights: headlights, street lamps, windows. Tight budget, big payoff.
+uniform sampler2DArray uMatAlbedo;   // rgb albedo, a roughness
+uniform sampler2DArray uMatNormal;   // rg normal.xy, b height, a cavity
+uniform float uTexScale;             // world units per texture tile
+uniform int   uTexOn;                // 0 = flat vertex colour, 1 = textured
+uniform int   uTriplanar;            // 0 = top projection only (cheap), 1 = full
 uniform int   uDebugMode;   // 0 off, 1 shadow factor, 2 cascade id, 3 light-space uv
 uniform int   uNumLights;
 uniform vec4  uLightPos[16];     // xyz = position, w = radius
@@ -189,6 +199,34 @@ float shadowFactor(float viewDepth){
     p = (lp.xyz / lp.w) * 0.5 + 0.5;
     return sampleCascade(uShadow2, p, uShadowTexel2, 0.0030);
   }
+}
+
+// ---- triplanar material sampling -------------------------------------------
+// Projects the material along all three world axes and blends by the surface
+// normal, so nothing stretches on a cliff face and no UVs are ever needed.
+vec4 triAlbedo(vec3 wp, vec3 bl, float layer, float sc){
+  if(uTriplanar == 0) return texture(uMatAlbedo, vec3(wp.xz * sc, layer));
+  vec4 x = texture(uMatAlbedo, vec3(wp.zy * sc, layer));
+  vec4 y = texture(uMatAlbedo, vec3(wp.xz * sc, layer));
+  vec4 z = texture(uMatAlbedo, vec3(wp.xy * sc, layer));
+  return x * bl.x + y * bl.y + z * bl.z;
+}
+vec4 triNormalRaw(vec3 wp, vec3 bl, float layer, float sc){
+  if(uTriplanar == 0) return texture(uMatNormal, vec3(wp.xz * sc, layer));
+  vec4 x = texture(uMatNormal, vec3(wp.zy * sc, layer));
+  vec4 y = texture(uMatNormal, vec3(wp.xz * sc, layer));
+  vec4 z = texture(uMatNormal, vec3(wp.xy * sc, layer));
+  return x * bl.x + y * bl.y + z * bl.z;
+}
+// Whiteout blend: perturb the geometric normal without needing tangents.
+vec3 triNormal(vec3 wp, vec3 N, vec3 bl, float layer, float sc){
+  vec2 ax = texture(uMatNormal, vec3(wp.zy * sc, layer)).rg * 2.0 - 1.0;
+  vec2 ay = texture(uMatNormal, vec3(wp.xz * sc, layer)).rg * 2.0 - 1.0;
+  vec2 az = texture(uMatNormal, vec3(wp.xy * sc, layer)).rg * 2.0 - 1.0;
+  vec3 nx = vec3(ax + N.zy, abs(N.x));
+  vec3 ny = vec3(ay + N.xz, abs(N.y));
+  vec3 nz = vec3(az + N.xy, abs(N.z));
+  return normalize(nx.zyx * bl.x + ny.xzy * bl.y + nz.xyz * bl.z);
 }
 
 void main(){
@@ -224,15 +262,44 @@ void main(){
     }
   }
   vec3  V = normalize(uCamPos - vWorld);
-  float NoV = max(dot(N, V), 1e-4);
+  float NoV = max(dot(N, V), 1e-4);   // recomputed below if normal mapping runs
 
   vec3  albedo = vCol;
   float rough  = clamp(vRough, 0.045, 1.0);
+  float cavity = 1.0;
+
+  // ---- material detail
+  if(uTexOn == 1 && vMat >= 0.0){
+    vec3 bl = abs(N);
+    bl = pow(bl, vec3(4.0));
+    bl /= max(bl.x + bl.y + bl.z, 1e-4);
+    float layer = vMat;
+    float sc = 1.0 / max(uTexScale, 0.01);
+
+    vec4 a = triAlbedo(vWorld, bl, layer, sc);
+    // the generated material modulates the base colour rather than replacing
+    // it, so per-building and per-biome tints survive
+    albedo = albedo * (a.rgb * 2.05);
+    rough  = clamp(rough * 0.45 + a.a * 0.55, 0.045, 1.0);
+
+    vec4 nr = triNormalRaw(vWorld, bl, layer, sc);
+    cavity  = mix(1.0, nr.a, 0.75);
+
+    N = triNormal(vWorld, N, bl, layer, sc);
+    // a second, much finer tile breaks up repetition up close
+    float dist = length(uCamPos - vWorld);
+    if(dist < 60.0){
+      float w = 1.0 - smoothstep(18.0, 60.0, dist);
+      vec3 Nd = triNormal(vWorld, N, bl, layer, sc * 5.7);
+      N = normalize(mix(N, Nd, 0.45 * w));
+    }
+  }
   float a      = rough * rough;
   float metal  = clamp(vMetal, 0.0, 1.0);
   vec3  f0     = mix(vec3(0.04), albedo, metal);
   vec3  diffAlb= albedo * (1.0 - metal);
 
+  NoV = max(dot(N, V), 1e-4);
   float viewDepth = length(uCamPos - vWorld);
 
   // ---------------- sun (directional)
@@ -255,10 +322,10 @@ void main(){
   // ---------------- ambient: hemisphere IBL approximation
   float hemi = 0.5 + 0.5 * N.y;
   vec3  irr  = mix(uGroundColour, uSkyColour, hemi);
-  vec3  ambDiff = diffAlb * irr * vAO;
+  vec3  ambDiff = diffAlb * irr * vAO * cavity;
   // cheap specular occlusion + horizon fade for the reflective lobe
   float fres = pow(1.0 - NoV, 4.0);
-  vec3  ambSpec = mix(f0, vec3(1.0), fres) * uSkyColour * (1.0 - rough) * 0.35 * vAO;
+  vec3  ambSpec = mix(f0, vec3(1.0), fres) * uSkyColour * (1.0 - rough) * 0.35 * vAO * cavity;
 
   vec3 colour = direct + ambDiff + ambSpec;
 

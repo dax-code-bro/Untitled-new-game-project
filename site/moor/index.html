@@ -45,7 +45,7 @@
   #tr .fps{margin-top:2px;font-size:10.5px;color:#6d8298}
   #br{bottom:calc(14px + env(safe-area-inset-bottom,0px));right:12px;text-align:right}
   #br .speed{font-size:15px;font-weight:700;color:#7dd8a0}
-  #keys{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom,0px));left:12px;font-size:10.5px;color:#5d708a;line-height:1.75}
+  #keys{position:absolute;bottom:calc(58px + env(safe-area-inset-bottom,0px));left:12px;font-size:10.5px;color:#5d708a;line-height:1.75}
   #keys b{color:#8fa3b8;font-weight:700}
 
   /* ---------- touch controls ---------- */
@@ -62,13 +62,23 @@
   #bB{bottom:calc(24px + env(safe-area-inset-bottom,0px));right:calc(96px + env(safe-area-inset-right,0px))}
 
   /* ---------- settings ---------- */
-  #gear{position:fixed;z-index:26;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);
-        background:rgba(8,12,18,.62);border:1px solid rgba(255,255,255,.10);border-radius:10px;
-        color:#8fa3b8;font-size:11px;padding:8px 12px;display:none;gap:10px;align-items:center}
+  #gear{position:fixed;z-index:26;bottom:calc(12px + env(safe-area-inset-bottom,0px));left:50%;
+        transform:translateX(-50%);max-width:calc(100vw - 24px);
+        background:rgba(8,12,18,.72);backdrop-filter:blur(8px);
+        border:1px solid rgba(255,255,255,.10);border-radius:10px;
+        color:#8fa3b8;font-size:11px;padding:7px 11px;display:none;gap:8px;
+        align-items:center;flex-wrap:wrap;justify-content:center}
   #gear.show{display:flex}
+  @media(max-width:720px){
+    #keys{display:none}
+    #gear{font-size:10px;padding:6px 8px;gap:6px}
+    #gear button{padding:4px 7px;font-size:10px}
+  }
   #gear button{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#cfe0f0;
                border-radius:7px;padding:5px 9px;font:600 11px -apple-system,sans-serif;cursor:pointer}
   #gear button.on{background:rgba(232,195,122,.20);border-color:#e8c37a;color:#e8c37a}
+  #gear .sep{margin-left:6px;padding-left:10px;border-left:1px solid rgba(255,255,255,.12)}
+  #gear #texinfo{color:#6d8298;font-size:10px;min-width:96px}
 </style>
 </head>
 <body>
@@ -102,7 +112,7 @@
   </div>
   <div id="keys">
     <b>WASD</b> move · <b>Shift</b> sprint · <b>mouse</b> look · <b>F</b> enter/exit car<br>
-    <b>Space</b> brake · <b>O</b> time +3h · <b>R</b> 4K toggle · <b>T</b> FXAA
+    <b>Space</b> brake · <b>O</b> time +3h · <b>R</b> 4K render · <b>T</b> textures · <b>Y</b> FXAA
   </div>
 </div>
 
@@ -117,6 +127,12 @@
   <button data-q="1">low</button>
   <button data-q="2" class="on">high</button>
   <button data-q="3">4K</button>
+  <span class="sep">textures</span>
+  <button data-t="1024">1K</button>
+  <button data-t="2048" class="on">2K</button>
+  <button data-t="4096">4K</button>
+  <button data-t="8192">8K</button>
+  <span id="texinfo"></span>
 </div>
 
 <script>
@@ -164,6 +180,7 @@
     document.getElementById('hud').classList.add('show');
     document.getElementById('gear').classList.add('show');
     if(isTouch) document.getElementById('touch').classList.add('show');
+    setTimeout(refreshTexInfo, 120);
     // the overlay swallows the click, so tell the engine directly
     try { Module._startGame(); } catch(e){}
     document.getElementById('canvas').focus();
@@ -184,6 +201,52 @@
       try { Module._setQuality(parseInt(btn.dataset.q, 10)); } catch(e){}
     });
   });
+
+  // ---------- texture resolution ----------
+  function refreshTexInfo(){
+    try {
+      var got = Module._getTextureRes();
+      var mb  = Module._getTextureMB();
+      document.getElementById('texinfo').textContent =
+        got ? (got + '² · ' + Math.round(mb) + ' MB') : 'off';
+      Array.prototype.forEach.call(document.querySelectorAll('#gear button[data-t]'), function(b){
+        b.classList.toggle('on', parseInt(b.dataset.t, 10) === got);
+      });
+    } catch(e){}
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#gear button[data-t]'), function(btn){
+    btn.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      var want = parseInt(btn.dataset.t, 10);
+      var info = document.getElementById('texinfo');
+      try {
+        var safe = Module._getSafeTextureRes(want);
+        if(safe < want){
+          // tell the truth rather than silently doing something smaller
+          info.textContent = 'capped: ' + want + '² needs ~' +
+            Math.round(want * want * 4 * 8 * 1.334 / 1048576) + ' MB';
+          setTimeout(function(){
+            Module._setTextureRes(want);
+            refreshTexInfo();
+          }, 1400);
+          return;
+        }
+        info.textContent = 'generating…';
+        setTimeout(function(){ Module._setTextureRes(want); refreshTexInfo(); }, 30);
+      } catch(e){}
+    });
+  });
+  window.addEventListener('keydown', function(e){ if(e.keyCode === 84) setTimeout(refreshTexInfo, 60); });
+  setInterval(function(){ if(started) refreshTexInfo(); }, 2000);
+
+  // the context can still be lost on low-memory devices; say so instead of
+  // leaving a frozen black canvas
+  document.getElementById('canvas').addEventListener('webglcontextlost', function(ev){
+    ev.preventDefault();
+    var n = document.getElementById('bootnote');
+    document.getElementById('boot').classList.remove('gone');
+    if(n) n.textContent = 'graphics context lost — reload to restart (try a lower texture setting)';
+  }, false);
 
   // ---------- touch: virtual stick -> key events into C++ ----------
   (function(){

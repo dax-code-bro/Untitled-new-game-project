@@ -18,6 +18,7 @@
 #include "models.h"
 #include "anim.h"
 #include "world.h"
+#include "texgen.h"
 
 using m::v3;
 using m::v4;
@@ -50,6 +51,12 @@ static gfx::Program  progMain, progShadow, progSky, progWater, progBright, progB
 static gfx::RenderTarget rtScene, rtBloomA, rtBloomB;
 static gfx::ShadowMap    shadow[3];
 static gfx::FullscreenQuad fsq;
+static gfx::Program        progGen;
+static texgen::MaterialArray gMaterials;
+static int   gTexRes      = 2048;    // per-layer texture resolution
+static float gTexScale    = 4.0f;    // world metres per material tile
+static bool  gTexOn       = true;
+static bool  gTriplanar   = true;
 
 // meshes
 static Mesh meshChar;
@@ -273,6 +280,12 @@ static void buildChunk(Chunk& ch, int gx, int gz){
       v.joint = 0.0f;
       v.rough = (b == world::B_SAND) ? 0.80f : (b == world::B_MOUNTAIN) ? 0.92f : 0.88f;
       v.metal = 0.0f;
+      v.mat   = (b == world::B_SAND) ? (float)texgen::MAT_SAND
+              : (b == world::B_MOUNTAIN) ? (float)texgen::MAT_ROCK
+              : world::World::isUrbanB((uint8_t)b) ? (float)texgen::MAT_MANMADE
+              : (float)texgen::MAT_VEG;
+      // steep ground shows rock whatever the biome says
+      if(slope > 0.55f) v.mat = (float)texgen::MAT_ROCK;
       verts.push_back(v);
     }
   }
@@ -317,6 +330,10 @@ static void buildFarTerrain(){
       v.nrm = nr;
       v.col = biomeColour(b, h, 1.0f - nr.y, m::hash2(x, z));
       v.ao = 1.0f; v.joint = 0.0f; v.rough = 0.90f; v.metal = 0.0f;
+      v.mat = (b == world::B_SAND) ? (float)texgen::MAT_SAND
+            : (b == world::B_MOUNTAIN) ? (float)texgen::MAT_ROCK
+            : world::World::isUrbanB((uint8_t)b) ? (float)texgen::MAT_MANMADE
+            : (float)texgen::MAT_VEG;
       verts.push_back(v);
     }
   }
@@ -424,6 +441,7 @@ static void buildRoadTileGeometry(const std::vector<int>& edgeIds,
         v.joint = 0.0f;
         v.rough = isKerb ? 0.80f : 0.56f;
         v.metal = 0.0f;
+        v.mat   = (float)texgen::MAT_MANMADE;
         verts.push_back(v);
       }
     }
@@ -583,6 +601,7 @@ static bool buildShaders(){
   ok &= progBright.build(shaders::POST_VS, shaders::BRIGHT_FS, "bright");
   ok &= progBlur.build(shaders::POST_VS, shaders::BLUR_FS, "blur");
   ok &= progComp.build(shaders::POST_VS, shaders::COMPOSITE_FS, "composite");
+  ok &= progGen.build(texgen::GEN_VS, texgen::GEN_FS, "texgen");
   return ok;
 }
 
@@ -897,6 +916,12 @@ static void setCommonUniforms(const gfx::Program& pr, const SunState& sun){
 
   int n = (int)gLightPos.size();
   if(n > 16) n = 16;
+  gMaterials.bind(3, 4);
+  pr.set("uMatAlbedo", 3);
+  pr.set("uMatNormal", 4);
+  pr.set("uTexScale", gTexScale);
+  pr.set("uTexOn", (gTexOn && gMaterials.ready) ? 1 : 0);
+  pr.set("uTriplanar", gTriplanar ? 1 : 0);
   pr.set("uDebugMode", gDbgMode);
   pr.set("uNumLights", n);
   if(n > 0){
@@ -1779,7 +1804,8 @@ static EM_BOOL onKey(int type, const EmscriptenKeyboardEvent* e, void*){
   if(down && !keyDown[code]){
     if(code == 70) toggleCar();                                  // F
     if(code == 82){ gRenderScale = (gRenderScale > 1.4f) ? 1.0f : 2.0f; resizeTargets(); }  // R
-    if(code == 84) gFXAA = !gFXAA;                               // T
+    if(code == 84) gTexOn = !gTexOn;                             // T textures
+    if(code == 89) gFXAA = !gFXAA;                               // Y FXAA
     if(code == 79){ gClock += 3.0f; if(gClock >= 24.0f) gClock -= 24.0f; }  // O
   }
   keyDown[code] = down;
@@ -1841,6 +1867,25 @@ extern "C" {
   }
   EMSCRIPTEN_KEEPALIVE void actionEnterCar(){ gStarted = true; toggleCar(); }
   EMSCRIPTEN_KEEPALIVE void startGame(){ gStarted = true; }
+  EMSCRIPTEN_KEEPALIVE int  setTextureRes(int px){
+    if(px < 256) px = 256;
+    if(px > 8192) px = 8192;
+    gTexRes = px;
+    gMaterials.generate(gTexRes, progGen, fsq);
+    return gMaterials.size;               // what we actually got
+  }
+  EMSCRIPTEN_KEEPALIVE int   getTextureRes(){ return gMaterials.size; }
+  EMSCRIPTEN_KEEPALIVE float getTextureMB(){ return (float)texgen::MaterialArray::megabytes(gMaterials.size); }
+  EMSCRIPTEN_KEEPALIVE float getTextureBudgetMB(){ return (float)texgen::MaterialArray::budgetMB(); }
+  EMSCRIPTEN_KEEPALIVE int   getSafeTextureRes(int want){
+    return texgen::MaterialArray::largestWithinBudget(want);
+  }
+  EMSCRIPTEN_KEEPALIVE int   getMaxTextureSize(){
+    GLint m = 0; glGetIntegerv(GL_MAX_TEXTURE_SIZE, &m); return (int)m;
+  }
+  EMSCRIPTEN_KEEPALIVE void  setTextures(int on){ gTexOn = on != 0; }
+  EMSCRIPTEN_KEEPALIVE void  setTriplanar(int on){ gTriplanar = on != 0; }
+  EMSCRIPTEN_KEEPALIVE void  setTexScale(float m){ gTexScale = m < 0.2f ? 0.2f : m; }
   EMSCRIPTEN_KEEPALIVE void setRenderScale(float s){
     gRenderScale = m::clampf(s, 0.5f, 2.0f);
     resizeTargets();
@@ -2002,6 +2047,11 @@ int main(){
   printf("[shaders] ok\n");
 
   fsq.create();
+  {
+    double t = emscripten_get_now();
+    gMaterials.generate(gTexRes, progGen, fsq);
+    printf("[texgen] generated in %.0f ms\n", emscripten_get_now() - t);
+  }
   for(int i = 0; i < 3; i++) shadow[i].create(SHADOW_RES[i]);
   resizeTargets();
 

@@ -86,6 +86,7 @@ struct Vertex {
   float joint = 0.0f;     // single-joint skinning: enough for our rigs, 4x cheaper
   float rough = 0.6f;
   float metal = 0.0f;
+  float mat   = -1.0f;    // texgen layer, or <0 for untextured
 };
 
 // ---------------------------------------------------------------- mesh
@@ -125,6 +126,7 @@ struct Mesh {
     attr(4, 1, offsetof(Vertex, joint));
     attr(5, 1, offsetof(Vertex, rough));
     attr(6, 1, offsetof(Vertex, metal));
+    attr(12, 1, offsetof(Vertex, mat));
 
     glGenBuffers(1, &ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
