@@ -470,6 +470,24 @@ What's built:
 - **Back buttons everywhere:** the office computer (goes back out of a person / animal, then logs off), pause
   menu, settings, the operating table, animal check, the pet store counter, and build mode (back to walking).
 
+## 8.14 Owner's report — the installed app kept running an old version
+"You are updating them into links, so the PWA still runs an outdated version."
+
+Why: an installed app (especially on iPhone) is usually *resumed*, not reloaded, so it never asked for the new
+files; and the page fetch could come from the browser's cache.
+
+Fixed (from version 16-autoupdate on):
+- The app asks the server which version is current (`version.json`, never cached) when it opens, whenever you come
+  back to it, and every 10 minutes.
+- While it's still loading it switches to the new version by itself (once per version, so it can't loop). Mid-game it
+  shows a **"New version ready - Update now"** bar at the top; your game is saved before it reloads.
+- The service worker always fetches the page fresh when online (bypassing the browser cache), and each release gets
+  its own cache (the old one is deleted).
+- The version is shown on the main menu and in the pause menu ("Version 16-autoupdate"), so you can see which one
+  you're running.
+- One-time step for copies installed before this fix: close the app completely (swipe it away) and open it again
+  while online. After that, updates arrive by themselves.
+
 ## 9. Next up
 - More model passes until nothing looks off (small terriers, fur close-ups, coiled snakes).
 - Staff and protesters as visible people in the world; clients in the waiting room.

@@ -11,6 +11,7 @@ file(READ "${SRC}/pwa/head.html" HEAD)
 file(MAKE_DIRECTORY "${OUT}/icons")
 file(WRITE "${OUT}/index.html" "${HEAD}${PAGE}\n</body>\n</html>\n")
 configure_file("${SRC}/pwa/sw.js.in" "${OUT}/sw.js" @ONLY)
+file(WRITE "${OUT}/version.json" "{\"build\": \"${PS_BUILD}\"}\n")   # the running app compares itself to this
 file(COPY "${SRC}/pwa/manifest.webmanifest" DESTINATION "${OUT}")
 file(GLOB ICONS "${SRC}/pwa/icons/*.png")
 file(COPY ${ICONS} DESTINATION "${OUT}/icons")

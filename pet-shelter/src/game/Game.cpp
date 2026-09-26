@@ -95,6 +95,7 @@ bool Game::init(int argc, char** argv) {
         else if (a == "--poses") animalStudioPoses_ = true;
         else if (a == "--touch") touch_ = true;
         else if (a == "--low") low_ = true;
+        else if (a == "--build" && i + 1 < argc) buildLabel_ = argv[++i];
         else if (a == "--size" && i + 2 < argc) { width_ = std::atoi(argv[++i]); height_ = std::atoi(argv[++i]); }
     }
     // Shader directory: next to the executable, else the source tree
@@ -728,6 +729,7 @@ void Game::drawMainMenu() {
 #ifndef __EMSCRIPTEN__
     if (ImGui::Button("Quit", bs)) glfwSetWindowShouldClose(window_, 1);   // browsers: just close the tab
 #endif
+    if (!buildLabel_.empty()) ImGui::TextDisabled("Version %s", buildLabel_.c_str());
     ImGui::End();
 }
 
@@ -1103,6 +1105,7 @@ void Game::drawPauseMenu() {
     ImGui::TextDisabled("Public %.0f   Private %.0f   Finance %s", sim_.ratings.publicRating, sim_.ratings.privateRating,
                         Economy::grade(sim_.financialScore()));
     ImGui::TextDisabled("Shelter: %s", sim_.shelterOpen ? "OPEN" : "closed");
+    if (!buildLabel_.empty()) ImGui::TextDisabled("Version %s", buildLabel_.c_str());
     ImGui::Separator();
     if (ImGui::Button("< Back to the game", bs)) { state_ = State::Playing; showSettings_ = false; }
     if (ImGui::Button("Save game", bs)) saveGame();

@@ -1,7 +1,7 @@
 // Service worker for the installable (PWA) build: the game works offline after the first visit.
-// 15-staff is filled in from PS_BUILD in index.html when the app is assembled, so each release
+// 16-autoupdate is filled in from PS_BUILD in index.html when the app is assembled, so each release
 // gets its own cache and old ones are removed.
-const VERSION = '15-staff';
+const VERSION = '16-autoupdate';
 const CACHE = 'pet-shelter-' + VERSION;
 const FONTS = 'pet-shelter-fonts';
 const SHELL = [
@@ -24,7 +24,9 @@ self.addEventListener('activate', (e) => {
 async function page(req) {
   const cache = await caches.open(CACHE);
   try {
-    const res = await Promise.race([fetch(req), new Promise((_, no) => setTimeout(() => no(new Error('slow')), 4000))]);
+    // no-store: skip the browser's HTTP cache too, so a new release shows up right away
+    const res = await Promise.race([fetch(req.url, { cache: 'no-store', credentials: 'same-origin' }),
+                                    new Promise((_, no) => setTimeout(() => no(new Error('slow')), 8000))]);
     if (res.ok) cache.put('index.html', res.clone());
     return res;
   } catch (err) {
@@ -55,6 +57,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin === self.location.origin) {
+    if (url.pathname.endsWith('/version.json')) return;   // always asks the server (the update check)
     e.respondWith(req.mode === 'navigate' ? page(req) : asset(req));
   } else if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     e.respondWith(font(req));

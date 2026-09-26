@@ -153,6 +153,7 @@ private:
     int framesDrawn_ = 0;
     int ticksStarted_ = 0;
     bool low_ = false;            // low graphics mode (--low)
+    std::string buildLabel_;      // release name from the web page (--build), shown on the main menu
     float autosaveTimer_ = 0.0f;  // seconds of play since the last save
 };
 

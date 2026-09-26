@@ -339,11 +339,11 @@
     e.preventDefault();
     showProblem('The graphics stopped, usually because the device ran low on memory. Close other tabs or apps and reload the page.');
   });
-  const PS_BUILD = '15-staff';   // bump with each release so browsers fetch the new game files
+  const PS_BUILD = '16-autoupdate';   // bump with each release so browsers fetch the new game files
   window.Module = {
     locateFile: (f) => f + '?v=' + PS_BUILD,
     canvas,
-    arguments: (isTouch ? ['--touch'] : []).concat(lowMode ? ['--low'] : []),
+    arguments: (isTouch ? ['--touch'] : []).concat(lowMode ? ['--low'] : []).concat(['--build', PS_BUILD]),
     setStatus,
     print: note,
     printErr: note,
@@ -373,6 +373,56 @@
   // ---- Installable app (PWA): only in the build that ships a manifest and service worker ----
   if ('serviceWorker' in navigator && window.isSecureContext && document.querySelector('link[rel="manifest"]')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    // Staying up to date: an installed app is often resumed rather than reloaded, so it asks the
+    // server which version is current when it opens, whenever you come back to it, and every 10 minutes.
+    let updating = false;
+    const applyUpdate = async () => {
+      if (updating) return;
+      updating = true;
+      autosave();
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) await reg.update();
+      } catch (err) { /* offline: the reload still fetches the new page */ }
+      setTimeout(() => location.reload(), 600);   // give the save a moment to reach storage
+    };
+    const showUpdate = (v) => {
+      let bar = document.getElementById('updateBar');
+      if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'updateBar';
+        bar.style.cssText = 'position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:50;' +
+          'display:flex;gap:10px;align-items:center;padding:8px 10px 8px 14px;border-radius:20px;background:rgba(21,32,27,0.94);' +
+          'border:1px solid #7fc49a;color:#d8e2dc;font:500 13px/1.2 system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.4)';
+        bar.innerHTML = '<span>New version ready</span>';
+        const btn = document.createElement('button');
+        btn.textContent = 'Update now';
+        btn.style.cssText = 'padding:7px 12px;border-radius:14px;border:0;background:#7fc49a;color:#0d1411;font:600 13px system-ui,sans-serif';
+        btn.addEventListener('click', applyUpdate);
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); applyUpdate(); }, { passive: false });
+        bar.appendChild(btn);
+        document.body.appendChild(bar);
+      }
+    };
+    const checkForUpdate = async () => {
+      try {
+        const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) return;
+        const v = (await r.json()).build;
+        if (!v || v === PS_BUILD) return;
+        // Reload by itself only once per new version (if the server is still catching up, just offer the button)
+        let tried = null;
+        try { tried = sessionStorage.getItem('psTriedUpdate'); } catch (err) { /* storage unavailable */ }
+        if (!ready && tried !== v) {   // still loading: just switch to the new version
+          try { sessionStorage.setItem('psTriedUpdate', v); } catch (err) { /* storage unavailable */ }
+          applyUpdate();
+        } else showUpdate(v);          // mid-game: ask first (your game is saved before it reloads)
+      } catch (err) { /* offline: keep playing this version */ }
+    };
+    checkForUpdate();
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForUpdate(); });
+    window.addEventListener('pageshow', (e) => { if (e.persisted) checkForUpdate(); });
+    setInterval(checkForUpdate, 10 * 60 * 1000);
   }
 
   // ---- Computers: mouse capture comes from a click ----
