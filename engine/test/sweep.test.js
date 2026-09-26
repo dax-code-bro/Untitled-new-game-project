@@ -707,6 +707,13 @@ const SWEEP = () => {
       for (const a of G.actors) {
         if (!a.mesh || a.visible === false || a.dead) continue;
         if (a.parent) continue;               // parts of a model, not scenery
+        /* Nor anything skinned. This reads a box's size off its matrix,
+           which is right for the map's scaled unit boxes and meaningless
+           for a character: body, neck, hands and boots all share one
+           transform and came out as four identical 1 m boxes "fighting"
+           on the same planes. Its surfaces are wherever the bones put
+           them, not where the matrix scale says. */
+        if (a.skeleton) continue;
         const m = a.matrix.e;
         // Axis-aligned only: a rotated box does not have axis-aligned faces
         // and the cheap test would be a lie about it.
