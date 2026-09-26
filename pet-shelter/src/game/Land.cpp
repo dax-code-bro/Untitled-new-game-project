@@ -85,7 +85,20 @@ bool Land::contains(float x, float z, float margin) const {
     return true;
 }
 
-std::vector<FenceSeg> Land::fence() const {
+void Land::setYard(const AABB& y) {
+    if (std::fabs(y.min.x - yard_.min.x) < 0.01f && std::fabs(y.max.x - yard_.max.x) < 0.01f &&
+        std::fabs(y.min.z - yard_.min.z) < 0.01f && std::fabs(y.max.z - yard_.max.z) < 0.01f) return;
+    yard_ = y;
+    ++version_;
+}
+
+std::vector<FenceSeg> Land::yardFence() const {
+    const AABB& w = yard_;
+    vec3 sw{w.min.x, 0, w.max.z}, se{w.max.x, 0, w.max.z}, ne{w.max.x, 0, w.min.z}, nw{w.min.x, 0, w.min.z};
+    return {{sw, se}, {se, ne}, {ne, nw}, {nw, sw}};
+}
+
+std::vector<FenceSeg> Land::propertyLine() const {
     std::vector<FenceSeg> out;
     if (!homeOwned()) {
         AABB w = workspace();

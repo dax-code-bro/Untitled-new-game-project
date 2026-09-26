@@ -532,8 +532,9 @@ void ComputerUI::drawStore(Sim& sim) {
     }
     Land& L = sim.land;
     ImGui::Text("You own %.2f sq mi of 500.  Parcels: %d.", double(L.ownedSqMi()), L.parcelsOwned());
-    ImGui::TextWrapped(L.homeOwned() ? "Buy any square mile next to land you own. The fence moves out around your new land automatically."
-                                     : "You're on a small fenced workspace. Buy the square mile around your shelter to start expanding.");
+    ImGui::TextWrapped(L.homeOwned() ? "Buy any square mile next to land you own to get more room to build. Orange survey stakes mark your property line."
+                                     : "You own a small workspace around the shelter. Buy the square mile around it to start expanding.");
+    ImGui::TextDisabled("The fence hugs your shelter's yard and moves out by itself when you build outside it.");
     // Map: north is up. Row 0 is the south edge (the highway side).
     float avail = std::min(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y - 60.0f);
     float cell = std::floor(std::max(10.0f, avail / float(Land::kCols)));

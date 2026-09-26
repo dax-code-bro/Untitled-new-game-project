@@ -433,9 +433,10 @@ void Driving::drawHUD(const Sim& sim, const Truck& t, bool touch) const {
     const float wx0 = -1200.0f, wx1 = 4200.0f, wz0 = -600.0f, wz1 = 1200.0f;
     auto M = [&](float x, float z) { return ImVec2(m0.x + (x - wx0) / (wx1 - wx0) * (m1.x - m0.x), m0.y + (z - wz0) / (wz1 - wz0) * (m1.y - m0.y)); };
     dl->PushClipRect(m0, m1, true);
-    for (const FenceSeg& f : sim.land.fence()) dl->AddLine(M(f.a.x, f.a.z), M(f.b.x, f.b.z), IM_COL32(120, 200, 120, 220), 1.5f);
+    for (const FenceSeg& f : sim.land.propertyLine()) dl->AddLine(M(f.a.x, f.a.z), M(f.b.x, f.b.z), IM_COL32(255, 140, 60, 160), 1.0f);
+    for (const FenceSeg& f : sim.land.yardFence()) dl->AddLine(M(f.a.x, f.a.z), M(f.b.x, f.b.z), IM_COL32(120, 200, 120, 230), 2.0f);
     dl->AddLine(M(wx0, kHighwayZ), M(wx1, kHighwayZ), IM_COL32(230, 230, 230, 255), 4.0f);
-    dl->AddLine(M(0, kParkMaxZ), M(0, kSouthEdge), IM_COL32(200, 200, 200, 255), 2.0f);
+    dl->AddLine(M(0, kParkMaxZ), M(0, kHighwayZ), IM_COL32(200, 200, 200, 255), 2.0f);
     dl->AddLine(M(kCrossX, kHighwayZ), M(kCrossX, kHighwayZ + 190.0f), IM_COL32(200, 200, 200, 255), 2.0f);
     dl->AddCircleFilled(M(0, 0), 5.0f, IM_COL32(230, 70, 60, 255));
     dl->AddText(ImVec2(M(0, 0).x + 7, M(0, 0).y - 7), IM_COL32(255, 255, 255, 230), "Shelter");

@@ -109,6 +109,8 @@ public:
     // Creative mode
     bool build(BuildKind k, float x, float z, int rot, std::string* why, int* outId = nullptr);
     bool demolish(int placedId);      // refunds 40%
+    // The fence hugs the shelter: its yard grows to enclose whatever you build (not trees or paths)
+    void refreshYard();
     const Placed* findPlaced(int id) const;
 
     void log(const std::string& text);

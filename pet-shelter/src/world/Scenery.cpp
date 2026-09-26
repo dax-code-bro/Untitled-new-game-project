@@ -82,24 +82,30 @@ std::vector<TerrainTile> buildTerrainLevel(Rect area, float spacing, int tilesPe
     return tiles;
 }
 
-void buildFence(MeshBuilder& b, const std::vector<FenceSeg>& segs) {
+std::vector<FenceSeg> fencePieces(const std::vector<FenceSeg>& segs, float gateZ) {
+    // Split the fence line that crosses the access road around the gate opening
+    const float gate = kGateHalfWidth + 0.35f;
+    std::vector<FenceSeg> out;
+    for (const FenceSeg& fs : segs) {
+        bool south = std::fabs(fs.a.z - gateZ) < 0.5f && std::fabs(fs.b.z - gateZ) < 0.5f;
+        if (!south) { out.push_back(fs); continue; }
+        float x0 = std::min(fs.a.x, fs.b.x), x1 = std::max(fs.a.x, fs.b.x);
+        if (x1 <= -gate || x0 >= gate) out.push_back({{x0, 0, gateZ}, {x1, 0, gateZ}});
+        else {
+            if (x0 < -gate) out.push_back({{x0, 0, gateZ}, {-gate, 0, gateZ}});
+            if (x1 > gate) out.push_back({{gate, 0, gateZ}, {x1, 0, gateZ}});
+        }
+    }
+    return out;
+}
+
+void buildFence(MeshBuilder& b, const std::vector<FenceSeg>& segs, float gateZ) {
     Material m = Material::make({0.62f, 0.64f, 0.66f}, 0.45f, 1.0f, PAT_FENCE);
     Material post = Material::make({0.5f, 0.52f, 0.55f}, 0.4f, 1.0f, PAT_METAL);
-    const float seg = 12.0f, h = 2.2f, gate = kGateHalfWidth + 0.35f;
-    for (const FenceSeg& fs : segs) {
-        // Split the south line around the gate opening
-        std::vector<std::pair<vec3, vec3>> pieces{{fs.a, fs.b}};
-        bool south = std::fabs(fs.a.z - kSouthEdge) < 0.5f && std::fabs(fs.b.z - kSouthEdge) < 0.5f;
-        if (south) {
-            float x0 = std::min(fs.a.x, fs.b.x), x1 = std::max(fs.a.x, fs.b.x);
-            pieces.clear();
-            if (x1 <= -gate || x0 >= gate) pieces.push_back({{x0, 0, kSouthEdge}, {x1, 0, kSouthEdge}});
-            else {
-                if (x0 < -gate) pieces.push_back({{x0, 0, kSouthEdge}, {-gate, 0, kSouthEdge}});
-                if (x1 > gate) pieces.push_back({{gate, 0, kSouthEdge}, {x1, 0, kSouthEdge}});
-            }
-        }
-        for (auto [from, to] : pieces) {
+    const float seg = 12.0f, h = 2.2f;
+    for (const FenceSeg& piece : fencePieces(segs, gateZ)) {
+        {
+            vec3 from = piece.a, to = piece.b;
             vec3 d = to - from;
             float len = length(vec3(d.x, 0, d.z));
             if (len < 0.01f) continue;
@@ -128,6 +134,24 @@ void buildFence(MeshBuilder& b, const std::vector<FenceSeg>& segs) {
                     b.addQuad(q0 - side * 0.03f, q1 - side * 0.03f, q1 + side * 0.03f + vec3(0, 0.05f, 0) * 0.0f, q0 + side * 0.03f, post);
                 }
             }
+        }
+    }
+}
+
+void buildPropertyStakes(MeshBuilder& b, const std::vector<FenceSeg>& segs, float radius) {
+    Material wood = Material::make({0.55f, 0.42f, 0.28f}, 0.8f);
+    Material flag = Material::make({1.0f, 0.42f, 0.08f}, 0.5f, 0.0f, PAT_PLAIN, 0.6f);
+    for (const FenceSeg& fs : segs) {
+        vec3 d = fs.b - fs.a;
+        float len = length(vec3(d.x, 0, d.z));
+        int n = std::max(1, int(len / 30.0f));
+        for (int i = 0; i <= n; ++i) {
+            vec3 p = fs.a + d * (float(i) / float(n));
+            if (p.x * p.x + p.z * p.z > radius * radius) continue;
+            if (std::fabs(p.z - kHighwayZ) < kHighwayHalfWidth + 3.0f) continue;
+            p.y = terrain::height(p.x, p.z);
+            b.addBox(AABB(p + vec3(-0.04f, 0.0f, -0.04f), p + vec3(0.04f, 1.0f, 0.04f)), wood);
+            b.addBox(AABB(p + vec3(-0.05f, 0.85f, -0.05f), p + vec3(0.05f, 1.02f, 0.05f)), flag);
         }
     }
 }

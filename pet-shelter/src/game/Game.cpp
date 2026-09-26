@@ -1243,7 +1243,7 @@ int Game::runScreenshotSuite(const std::string& dir) {
     pov("10_pov_medical_room", {7.6f, kFloorY, -0.5f}, 135.0f, -14.0f, 10.0f);
     pov("11_pov_appointment_room", {5.0f, kFloorY, 2.2f}, 50.0f, -10.0f, 10.0f);
     pov("12_pov_bathroom", {-6.0f, kFloorY, -0.6f}, 190.0f, -15.0f, 10.0f);
-    pov("13_pov_gate", {-2.0f, 0.0f, kSouthEdge - 14.0f}, 10.0f, 0.0f, 16.5f);
+    pov("13_pov_gate", {-2.0f, 0.0f, world_.facility.gateZ - 14.0f}, 10.0f, 0.0f, 16.5f);
     pov("14_pov_night_exterior", {6.0f, 0.0f, 30.0f}, 200.0f, 2.0f, 21.5f);
 
     // Creative mode
@@ -1266,6 +1266,21 @@ int Game::runScreenshotSuite(const std::string& dir) {
     creative_.distance = 9000.0f;
     creative_.pitch = radians(-25.0f);
     shoot("16_creative_whole_property");
+    // The fence hugs the yard; build a dog run out past it and the fence moves out to take it in
+    creative_.target = {15.0f, 0.0f, 20.0f};
+    creative_.distance = 230.0f;
+    creative_.pitch = radians(-52.0f);
+    creative_.yaw = radians(200.0f);
+    shoot("47_yard_fence", 4);
+    {
+        std::string why2;
+        sim_.econ.cash += 20000.0;
+        int runId = -1;
+        if (sim_.build(BuildKind::DogRun, 70.0f, 90.0f, 0, &why2, &runId)) {
+            shoot("48_yard_fence_grown", 4);
+            sim_.demolish(runId);
+        } else std::fprintf(stderr, "[yard] could not build: %s\n", why2.c_str());
+    }
 
     // Office computer
     setMode(Mode::POV);
@@ -1396,12 +1411,13 @@ int Game::runScreenshotSuite(const std::string& dir) {
     drive("43_driving_chase_night", {-60.0f, 0.0f, kHighwayZ + 5.6f}, 90.0f, 20.0f, 1, 20.6f, 0.0f, 8);
     // Hold the gas from inside the yard: the gate remote opens the gate and the truck rolls out onto the highway
     truck_.speed = 0.0f;
-    drive("46_through_the_gate", {0.0f, 0.0f, kSouthEdge - 130.0f}, 0.0f, 0.0f, 1, 9.0f, 0.0f, 1);
+    drive("46_through_the_gate", {1.8f, 0.0f, world_.facility.gateZ - 12.0f}, 0.0f, 0.0f, 1, 9.0f, 0.0f, 1);
+    shoot("46_through_the_gate", 150);   // wait for the gate remote to open the gate
     input_.onKey(GLFW_KEY_W, GLFW_PRESS);
-    shoot("46_through_the_gate", 290);
+    shoot("46_through_the_gate", 200);
     input_.onKey(GLFW_KEY_W, GLFW_RELEASE);
-    std::fprintf(stderr, "[drive-test] after 290 frames of gas: z=%.1f speed=%.1f mph (gate at z=%.0f)\n", double(truck_.pos.z),
-                 double(truck_.mph()), double(kSouthEdge));
+    std::fprintf(stderr, "[drive-test] after 200 frames of gas: z=%.1f speed=%.1f mph (gate at z=%.0f)\n", double(truck_.pos.z),
+                 double(truck_.mph()), double(world_.facility.gateZ));
     truck_.speed = 0.0f;
     exitTruck();
     sim_.buyFromPetStore(0);

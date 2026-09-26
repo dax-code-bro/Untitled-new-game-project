@@ -1,7 +1,7 @@
 // Service worker for the installable (PWA) build: the game works offline after the first visit.
-// 11-githack is filled in from PS_BUILD in index.html when the app is assembled, so each release
+// 12-yard is filled in from PS_BUILD in index.html when the app is assembled, so each release
 // gets its own cache and old ones are removed.
-const VERSION = '11-githack';
+const VERSION = '12-yard';
 const CACHE = 'pet-shelter-' + VERSION;
 const FONTS = 'pet-shelter-fonts';
 const SHELL = [

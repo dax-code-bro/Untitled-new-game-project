@@ -209,7 +209,7 @@ void CreativeMode::drawUI(Sim& sim, float& timeScale) {
         if (on) ImGui::PopStyleColor();
     }
     if (statusTimer > 0.0f && !status.empty()) ImGui::TextColored(ImVec4(1, 0.85f, 0.4f, 1), "%s", status.c_str());
-    else ImGui::TextDisabled("You own %.2f of 500 sq mi. Build inside your fence; buy more land in the computer's Store.", double(sim.land.ownedSqMi()));
+    else ImGui::TextDisabled("You own %.2f of 500 sq mi. Build anywhere on your land - the fence moves out to take it in. More land: the computer's Store.", double(sim.land.ownedSqMi()));
     ImGui::End();
 }
 

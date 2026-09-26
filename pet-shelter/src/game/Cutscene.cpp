@@ -40,18 +40,21 @@ bool Cutscene::update(float dt, Sim& sim, World& world, CharacterModel& characte
     sim.security.gateManualOpen = t > 4.5f && t < 14.0f;
 
     // ---- Truck path (two shots, so there's a cut in the middle of the drive) ----
+    // The gate is where the yard fence crosses the access road (it moves out as the yard grows)
     Facility& fac = world.facility;
+    const float g = fac.gateZ;
+    const float inside = std::min(g - 12.0f, 110.0f);
     vec3 parked = Facility::parkedCarPos();
     if (t < 9.0f) {
-        fac.playerCar = carAt({1.8f, 0.03f, kHighwayZ - 10.0f}, {0, 0, -1});
+        fac.playerCar = carAt({1.8f, 0.03f, g + 30.0f}, {0, 0, -1});
     } else if (t < 12.0f) {
         float u = ease(Ease::InOutSine, (t - 9.0f) / 3.0f);
-        vec3 p = lerp(vec3(1.8f, 0.03f, kHighwayZ - 10.0f), vec3(1.8f, 0.03f, kSouthEdge - 40.0f), u);
+        vec3 p = lerp(vec3(1.8f, 0.03f, g + 30.0f), vec3(1.8f, 0.03f, inside), u);
         fac.playerCar = carAt(p, {0, 0, -1});
     } else if (t < 15.5f) {
         Track<vec3> tr;
-        tr.add(0.0f, {1.8f, 0.03f, 110.0f});
-        tr.add(0.45f, {1.8f, 0.03f, 50.0f});
+        tr.add(0.0f, {1.8f, 0.03f, inside});
+        tr.add(0.45f, {1.8f, 0.03f, std::min(inside, 42.0f)});
         tr.add(0.75f, {-4.0f, 0.04f, 30.0f});
         tr.add(0.92f, {-8.0f, 0.04f, 24.0f});
         tr.add(1.0f, parked + vec3(0, 0.04f, 0));
@@ -77,12 +80,12 @@ bool Cutscene::update(float dt, Sim& sim, World& world, CharacterModel& characte
     // ---- Camera shots ----
     if (t < 6.0f) {
         float u = ease(Ease::InOutSine, t / 6.0f);
-        camPos_ = lerp(vec3(230.0f, 95.0f, -260.0f), vec3(140.0f, 40.0f, 430.0f), u);
-        camTarget_ = lerp(vec3(0.0f, 2.0f, 5.0f), vec3(0.0f, 2.0f, 600.0f), smoothstepf(0.45f, 1.0f, u));
+        camPos_ = lerp(vec3(230.0f, 95.0f, -260.0f), vec3(90.0f, 30.0f, g + 110.0f), u);
+        camTarget_ = lerp(vec3(0.0f, 2.0f, 5.0f), vec3(0.0f, 2.0f, g), smoothstepf(0.45f, 1.0f, u));
     } else if (t < 12.0f) {
         float u = ease(Ease::InOutSine, (t - 6.0f) / 6.0f);
-        camPos_ = lerp(vec3(16.0f, 3.2f, kSouthEdge + 16.0f), vec3(11.0f, 2.4f, kSouthEdge + 6.0f), u);
-        camTarget_ = lerp(vec3(0.0f, 1.4f, kSouthEdge), vec3(1.0f, 1.0f, kSouthEdge - 25.0f), u);
+        camPos_ = lerp(vec3(16.0f, 3.2f, g + 16.0f), vec3(11.0f, 2.4f, g + 6.0f), u);
+        camTarget_ = lerp(vec3(0.0f, 1.4f, g), vec3(1.0f, 1.0f, g - 25.0f), u);
     } else if (t < 15.5f) {
         camPos_ = vec3(12.0f, 4.0f, 44.0f);
         camTarget_ = fac.playerCar.transformPoint({0, 1.0f, 0});

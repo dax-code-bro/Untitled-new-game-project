@@ -1,6 +1,8 @@
-// Land ownership. You start with a small fenced workspace around the shelter;
-// the rest of the 500 sq mi is a grid of one-square-mile parcels you buy from
-// the office computer. The fence follows whatever you own.
+// Land ownership and the fenced yard. You start owning a small workspace around
+// the shelter; the rest of the 500 sq mi is a grid of one-square-mile parcels you
+// buy from the office computer. The fence itself only surrounds the shelter's
+// yard (building, parking, container shelters, what you build) and grows when
+// you build outside it; the property line is marked with survey stakes.
 #pragma once
 #include "core/Math.h"
 #include <bitset>
@@ -36,7 +38,12 @@ public:
     int parcelsOwned() const;
     float ownedSqMi() const;                     // includes the workspace until the home parcel is bought
     bool contains(float x, float z, float margin = 0.0f) const;
-    std::vector<FenceSeg> fence() const;         // outline of everything owned
+    std::vector<FenceSeg> propertyLine() const;  // outline of everything owned (survey stakes)
+    // The fenced yard around the shelter (the gate is where the access road leaves it, on the south side)
+    const AABB& yard() const { return yard_; }
+    void setYard(const AABB& y);                 // bumps version() when it changes
+    float gateZ() const { return yard_.max.z; }
+    std::vector<FenceSeg> yardFence() const;
     int version() const { return version_; }
 
     void save(KeyValues& kv) const;
@@ -45,6 +52,7 @@ public:
 private:
     std::bitset<size_t(kCols * kRows)> owned_;
     int version_ = 1;
+    AABB yard_{{-40.0f, 0.0f, -60.0f}, {40.0f, 0.0f, 55.0f}};
 };
 
 }  // namespace ps

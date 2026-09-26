@@ -190,6 +190,7 @@ struct AABB {
     bool overlaps(const AABB& o) const {
         return min.x < o.max.x && max.x > o.min.x && min.y < o.max.y && max.y > o.min.y && min.z < o.max.z && max.z > o.min.z;
     }
+    void expand(const AABB& o) { min = vmin(min, o.min); max = vmax(max, o.max); }
 };
 
 // Ray vs AABB (slab test). Returns distance or -1.

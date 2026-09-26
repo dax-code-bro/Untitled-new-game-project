@@ -45,8 +45,8 @@ void Sim::newGame() {
                 staff.employees.push_back(e);
             }
     staff.refreshApplicants(rng, ratings.privateRating / 100.0f, clock.day());
-    // Built-in cameras: highway gate and waiting room.
-    security.addCamera("Highway Gate", {8.0f, 4.2f, layout::kSouthEdge - 8.0f}, radians(-38.0f), -0.22f);
+    // Built-in cameras: front gate (it follows the gate as the yard grows) and waiting room.
+    security.addCamera("Front Gate", {8.0f, 4.2f, land.gateZ() - 8.0f}, radians(-38.0f), -0.22f);
     security.addCamera("Waiting Room", {3.6f, layout::kCeilingY - 0.3f, 5.7f}, radians(-150.0f), -0.42f);
     security.addCamera("Parking Lot", {-21.5f, 4.6f, 39.5f}, radians(130.0f), -0.32f);
     security.doorLocked.assign(layout::doors().size(), false);
@@ -61,6 +61,7 @@ void Sim::newGame() {
         p.rot = 0;
         placed.push_back(p);
     }
+    refreshYard();
     // Your first residents: a dachshund and a pair of rabbits, in the container shelters.
     if (findSpecies("Dachshund") >= 0) { Animal& a = admit(findSpecies("Dachshund"), "Owner surrender", 1.0f); a.name = "Frank"; a.male = true; a.coat = 0; }
     if (findSpecies("Holland Lop") >= 0) {
@@ -77,7 +78,7 @@ void Sim::newGame() {
     food[size_t(FoodKind::Pellets)] = 10.0f;
     food[size_t(FoodKind::FruitVeg)] = 8.0f;
     econ.cashHistory.push_back(float(econ.cash));
-    log("Welcome to your new shelter! The highway gate is closed, so no visitors can get in yet. "
+    log("Welcome to your new shelter! The front gate is closed, so no visitors can get in yet. "
         "Open it at the gate keypad, or set it to automatic from the office computer.");
 }
 
@@ -335,6 +336,7 @@ bool Sim::build(BuildKind k, float x, float z, int rot, std::string* why, int* o
         security.addCamera("Camera #" + std::to_string(p.id), {x, gy + 4.0f, z}, radians(90.0f * float(rot)), -0.35f, p.id);
     }
     if (outId) *outId = p.id;
+    refreshYard();
     return true;
 }
 
@@ -346,9 +348,35 @@ bool Sim::demolish(int id) {
             econ.propertyValue = std::max(850000.0, econ.propertyValue - bi.cost * 0.8);
             if (placed[i].kind == BuildKind::SecurityCamera) security.removeCameraForPlaced(id);
             placed.erase(placed.begin() + long(i));
+            refreshYard();
             return true;
         }
     return false;
+}
+
+void Sim::refreshYard() {
+    using namespace layout;
+    // The shelter itself and its parking lot, then everything you've built except trees and paths
+    AABB y = buildingBounds();
+    y.expand(AABB({kParkMinX, 0, kParkMinZ}, {kParkMaxX, 0, kParkMaxZ}));
+    for (const Placed& p : placed) {
+        BuildCat c = buildCategory(p.kind);
+        if (c == BuildCat::Trees || c == BuildCat::Pathways || p.kind == BuildKind::LampPost || p.kind == BuildKind::SecurityCamera) continue;
+        y.expand(p.bounds(0.0f));
+    }
+    // Room to walk around everything, snapped outward to 5 m
+    const float margin = 10.0f;
+    auto down = [](float v) { return std::floor(v / 5.0f) * 5.0f; };
+    auto up = [](float v) { return std::ceil(v / 5.0f) * 5.0f; };
+    AABB out({down(y.min.x - margin), 0.0f, down(y.min.z - margin)}, {up(y.max.x + margin), 0.0f, up(y.max.z + margin)});
+    // Never past the old property edge by the highway (the gate stays on your side of the road)
+    out.max.z = std::min(out.max.z, kSouthEdge - 2.0f);
+    out.min.x = std::min(out.min.x, -kGateHalfWidth - 6.0f);
+    out.max.x = std::max(out.max.x, kGateHalfWidth + 6.0f);
+    land.setYard(out);
+    // The front gate camera watches the gate wherever it is now
+    for (SecurityCamera& c : security.cameras)
+        if (c.placedId < 0 && (c.name == "Front Gate" || c.name == "Highway Gate")) { c.name = "Front Gate"; c.pos = {8.0f, 4.2f, out.max.z - 8.0f}; }
 }
 
 int Sim::officeCapacity() const {
@@ -510,6 +538,7 @@ void Sim::load(const KeyValues& kv) {
                                radians(90.0f * float(pl.rot)), -0.35f, pl.id);
     }
     nextPlacedId = int(kv.geti("placed.nextId", 1));
+    refreshYard();
     security.gateAutomatic = kv.geti("sec.auto", 0) != 0;
     security.gateLocked = kv.geti("sec.locked", 0) != 0;
     security.gateManualOpen = kv.geti("sec.manual", 0) != 0;

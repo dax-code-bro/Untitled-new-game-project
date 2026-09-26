@@ -1,6 +1,7 @@
 // The starting facility: the building (waiting room, hallways, bathrooms,
 // office, medical room, appointment room), furniture, lights, animated
-// doors, the parking lot, access road and the owner-only highway gate.
+// doors, the parking lot, access road and the owner-only front gate (it sits
+// wherever the yard fence crosses the access road).
 #pragma once
 #include "game/Security.h"
 #include "render/Animation.h"
@@ -42,6 +43,8 @@ public:
     std::vector<Door> doors;
     Tween gate;                  // 0 closed .. 1 open
     mat4 playerCar;              // truck transform (cutscene / parked / driving)
+    float gateZ = layout::kSouthEdge;   // where the yard fence crosses the access road
+    void setGateZ(CollisionWorld& cw, float z);
     bool gateRemote = false;     // your truck is at the gate: its remote opens it
     bool drawCar = true;         // the game draws the drivable truck itself
     int carCollider = -1;
@@ -56,7 +59,10 @@ private:
     void buildExterior(MeshBuilder& b, CollisionWorld& cw);
     void buildGate(CollisionWorld& cw);
 
-    Mesh shell_, glass_, door_, frontDoor_, gatePanel_, car_, emissiveNight_;
+    Mesh shell_, glass_, door_, frontDoor_, gatePanel_, gateFixtures_, car_, emissiveNight_;
+    std::vector<int> gateFixtureColliders_;
+    std::vector<AABB> gateFixtureBoxes_;   // as built at kSouthEdge
+    AABB gateKeypadBase_;
     std::vector<PointLight> roomLights_, outdoorLights_;
     int gateCollider_ = -1;
     AABB gateKeypad_, computerBox_;

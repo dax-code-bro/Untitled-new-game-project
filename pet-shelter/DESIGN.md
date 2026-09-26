@@ -379,6 +379,22 @@ What's built:
 - Hosting: a PWA needs its own HTTPS web address. The claude.ai play link can't be installed as an app (it runs
   inside claude.ai), so the installable version needs a host such as GitHub Pages or Vercel.
 
+## 8.10 Update 5: owner's direction — the fence hugs the shelter
+"I want the fence to just be covering the perimeter of your shelter, but as you expand it, the fence dynamically
+gives you more room."
+
+What's built:
+- The fence now surrounds only the shelter's **yard**: the building, the parking lot and the five container
+  shelters, with about 10 m to walk around them. The **front gate** (sliding gate, keypad, camera, sign) sits where
+  the access road leaves the yard, about 50 m south of the building; the road runs on through open land to HWY 89.
+- **It grows by itself:** build something outside the fence (anything except trees, paths, lamp posts and cameras) on
+  land you own and the fence moves out to take it in, gate and all. Remove it and the fence moves back in.
+- The fence is solid now (you, your truck and the animals can only get in and out through the gate). Outside it
+  you can still walk and drive anywhere on land you own.
+- Buying land (computer Store) gives you more room to build; your **property line** is marked by orange-topped
+  survey stakes, and both the yard fence and the property line show on the driving map.
+- The truck's gate remote opens the gate when you're within about 45 m. The gate slides open in 4.5 s (was 7 s).
+
 ## 9. Next up
 - More model passes until nothing looks off (small terriers, fur close-ups, coiled snakes).
 - Staff and protesters as visible people in the world; clients in the waiting room.

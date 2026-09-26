@@ -109,7 +109,7 @@ void Facility::toggleDoor(int i) {
 // ---------------------------------------------------------------- build
 void Facility::build(CollisionWorld& cw) {
     MeshBuilder opaque, glass;
-    gateKeypad_ = AABB({-kGateHalfWidth - 1.9f, 0.0f, kSouthEdge - 2.6f}, {-kGateHalfWidth - 1.5f, 1.5f, kSouthEdge - 2.2f});
+    gateKeypad_ = gateKeypadBase_ = AABB({-kGateHalfWidth - 1.9f, 0.0f, kSouthEdge - 2.6f}, {-kGateHalfWidth - 1.5f, 1.5f, kSouthEdge - 2.2f});
     buildShell(opaque, glass, cw);
     buildFurniture(opaque, cw);
     buildExterior(opaque, cw);
@@ -630,33 +630,38 @@ void Facility::buildExterior(MeshBuilder& b, CollisionWorld& cw) {
     // Mailbox by the road entrance
     b.addCylinder({5.0f, 0.0f, 44.0f}, 0.05f, 1.1f, 8, kWoodDark);
     b.addBox(AABB({4.8f, 1.1f, 43.8f}, {5.2f, 1.35f, 44.35f}), paint({0.2f, 0.25f, 0.5f}, 0.4f));
-    // Gate posts, sliding track and the owner's keypad
+    // Gate posts, sliding track and the owner's keypad. These are built at the old property edge
+    // (z = kSouthEdge) in their own mesh and moved to wherever the yard's gate is (setGateZ).
+    MeshBuilder gb;
+    auto gateSolid = [&](const AABB& box) { gateFixtureBoxes_.push_back(box); gateFixtureColliders_.push_back(cw.addBox(box)); };
     for (float x : {-kGateHalfWidth - 0.2f, kGateHalfWidth + 0.2f}) {
-        b.addBox(AABB({x - 0.15f, 0.0f, kSouthEdge - 0.15f}, {x + 0.15f, 2.6f, kSouthEdge + 0.15f}), pole);
-        b.addBox(AABB({x - 0.18f, 2.6f, kSouthEdge - 0.18f}, {x + 0.18f, 2.68f, kSouthEdge + 0.18f}), pole);
-        cw.addBox(AABB({x - 0.15f, 0.0f, kSouthEdge - 0.15f}, {x + 0.15f, 2.6f, kSouthEdge + 0.15f}));
+        gb.addBox(AABB({x - 0.15f, 0.0f, kSouthEdge - 0.15f}, {x + 0.15f, 2.6f, kSouthEdge + 0.15f}), pole);
+        gb.addBox(AABB({x - 0.18f, 2.6f, kSouthEdge - 0.18f}, {x + 0.18f, 2.68f, kSouthEdge + 0.18f}), pole);
+        gateSolid(AABB({x - 0.15f, 0.0f, kSouthEdge - 0.15f}, {x + 0.15f, 2.6f, kSouthEdge + 0.15f}));
     }
-    b.addBox(AABB({-kGateHalfWidth, 0.0f, kSouthEdge - 0.32f}, {kGateHalfWidth * 3.0f + 0.4f, 0.05f, kSouthEdge - 0.18f}), kSteel);
+    gb.addBox(AABB({-kGateHalfWidth, 0.0f, kSouthEdge - 0.32f}, {kGateHalfWidth * 3.0f + 0.4f, 0.05f, kSouthEdge - 0.18f}), kSteel);
     {
         vec3 k = gateKeypad_.center();
-        b.addBox(AABB({k.x - 0.08f, 0.0f, k.z - 0.08f}, {k.x + 0.08f, 1.2f, k.z + 0.08f}), pole);
-        b.addBox(AABB({k.x - 0.16f, 1.1f, k.z - 0.12f}, {k.x + 0.16f, 1.45f, k.z + 0.1f}), paint({0.25f, 0.27f, 0.3f}, 0.4f));
-        b.addBox(AABB({k.x - 0.1f, 1.3f, k.z - 0.125f}, {k.x + 0.1f, 1.4f, k.z - 0.12f}),
-                 Material::make({0.2f, 1.0f, 0.4f}, 0.3f, 0.0f, PAT_PLAIN, 2.0f));
-        cw.addBox(AABB({k.x - 0.16f, 0.0f, k.z - 0.12f}, {k.x + 0.16f, 1.45f, k.z + 0.1f}));
+        gb.addBox(AABB({k.x - 0.08f, 0.0f, k.z - 0.08f}, {k.x + 0.08f, 1.2f, k.z + 0.08f}), pole);
+        gb.addBox(AABB({k.x - 0.16f, 1.1f, k.z - 0.12f}, {k.x + 0.16f, 1.45f, k.z + 0.1f}), paint({0.25f, 0.27f, 0.3f}, 0.4f));
+        gb.addBox(AABB({k.x - 0.1f, 1.3f, k.z - 0.125f}, {k.x + 0.1f, 1.4f, k.z - 0.12f}),
+                  Material::make({0.2f, 1.0f, 0.4f}, 0.3f, 0.0f, PAT_PLAIN, 2.0f));
+        gateSolid(AABB({k.x - 0.16f, 0.0f, k.z - 0.12f}, {k.x + 0.16f, 1.45f, k.z + 0.1f}));
     }
     // Built-in security cameras (gate + parking lot) on poles, and one in the waiting room
-    auto camPole = [&](vec3 base, float h, float yaw) {
-        b.addCylinder(base, 0.07f, h, 8, pole);
-        mat4 saved = b.xf;
-        b.xf = mat4::translate(base + vec3(0, h, 0)) * mat4::rotateY(yaw);
-        b.addBox(AABB({-0.1f, -0.14f, -0.05f}, {0.1f, 0.06f, 0.35f}), paint({0.9f, 0.9f, 0.88f}, 0.3f));
-        b.addCylinder({0.0f, -0.08f, 0.35f}, 0.045f, 0.02f, 10, kBlackPlastic);
-        b.xf = saved;
-        cw.addBox(AABB(base - vec3(0.1f, 0.0f, 0.1f), base + vec3(0.1f, h, 0.1f)));
+    auto camPole = [&](MeshBuilder& mb, vec3 base, float h, float yaw, bool atGate) {
+        mb.addCylinder(base, 0.07f, h, 8, pole);
+        mat4 saved = mb.xf;
+        mb.xf = mat4::translate(base + vec3(0, h, 0)) * mat4::rotateY(yaw);
+        mb.addBox(AABB({-0.1f, -0.14f, -0.05f}, {0.1f, 0.06f, 0.35f}), paint({0.9f, 0.9f, 0.88f}, 0.3f));
+        mb.addCylinder({0.0f, -0.08f, 0.35f}, 0.045f, 0.02f, 10, kBlackPlastic);
+        mb.xf = saved;
+        AABB box(base - vec3(0.1f, 0.0f, 0.1f), base + vec3(0.1f, h, 0.1f));
+        if (atGate) gateSolid(box);
+        else cw.addBox(box);
     };
-    camPole({8.0f, 0.0f, kSouthEdge - 8.0f}, 4.2f, radians(-38.0f));
-    camPole({-21.5f, 0.0f, 39.5f}, 4.6f, radians(130.0f));
+    camPole(gb, {8.0f, 0.0f, kSouthEdge - 8.0f}, 4.2f, radians(-38.0f), true);
+    camPole(b, {-21.5f, 0.0f, 39.5f}, 4.6f, radians(130.0f), false);
     {
         mat4 saved = b.xf;
         b.xf = mat4::translate({3.6f, kCeilingY - 0.3f, 5.7f}) * mat4::rotateY(radians(-150.0f));
@@ -665,10 +670,21 @@ void Facility::buildExterior(MeshBuilder& b, CollisionWorld& cw) {
         b.xf = saved;
     }
     // Property sign near the gate (inside)
-    b.addBox(AABB({-8.0f, 0.0f, kSouthEdge - 8.0f}, {-7.85f, 2.2f, kSouthEdge - 7.85f}), kWoodDark);
-    b.addBox(AABB({-10.4f, 0.0f, kSouthEdge - 8.0f}, {-10.25f, 2.2f, kSouthEdge - 7.85f}), kWoodDark);
-    b.addBox(AABB({-10.6f, 1.2f, kSouthEdge - 8.02f}, {-7.65f, 2.1f, kSouthEdge - 7.84f}), paint({0.15f, 0.35f, 0.3f}, 0.5f));
-    b.addBox(AABB({-10.3f, 1.55f, kSouthEdge - 7.83f}, {-7.95f, 1.62f, kSouthEdge - 7.82f}), paint({0.95f, 0.9f, 0.75f}, 0.5f));
+    gb.addBox(AABB({-8.0f, 0.0f, kSouthEdge - 8.0f}, {-7.85f, 2.2f, kSouthEdge - 7.85f}), kWoodDark);
+    gb.addBox(AABB({-10.4f, 0.0f, kSouthEdge - 8.0f}, {-10.25f, 2.2f, kSouthEdge - 7.85f}), kWoodDark);
+    gb.addBox(AABB({-10.6f, 1.2f, kSouthEdge - 8.02f}, {-7.65f, 2.1f, kSouthEdge - 7.84f}), paint({0.15f, 0.35f, 0.3f}, 0.5f));
+    gb.addBox(AABB({-10.3f, 1.55f, kSouthEdge - 7.83f}, {-7.95f, 1.62f, kSouthEdge - 7.82f}), paint({0.95f, 0.9f, 0.75f}, 0.5f));
+    gateFixtures_.upload(gb);
+}
+
+void Facility::setGateZ(CollisionWorld& cw, float z) {
+    gateZ = z;
+    const vec3 d{0.0f, 0.0f, z - kSouthEdge};
+    for (size_t i = 0; i < gateFixtureColliders_.size(); ++i)
+        cw.setBox(gateFixtureColliders_[i], AABB(gateFixtureBoxes_[i].min + d, gateFixtureBoxes_[i].max + d));
+    gateKeypad_ = AABB(gateKeypadBase_.min + d, gateKeypadBase_.max + d);
+    float open = gate.eased() * (kGateHalfWidth * 2.0f);
+    if (gateCollider_ >= 0) cw.setBox(gateCollider_, AABB({-kGateHalfWidth + open, 0.0f, z - 0.3f}, {kGateHalfWidth + open, 2.2f, z + 0.3f}));
 }
 
 void Facility::buildGate(CollisionWorld& cw) {
@@ -703,7 +719,7 @@ void Facility::buildGate(CollisionWorld& cw) {
     // Amber warning beacon (on the panel's east end)
     g.addCylinder({w - 0.05f, h, 0.0f}, 0.07f, 0.14f, 10, Material::make({1.0f, 0.55f, 0.1f}, 0.3f, 0.0f, PAT_PLAIN, 4.0f));
     gatePanel_.upload(g);
-    gate.duration = 7.0f;
+    gate.duration = 4.5f;
     gate.curve = Ease::InOutSine;
     gateCollider_ = cw.addBox(AABB({-kGateHalfWidth, 0.0f, kSouthEdge - 0.3f}, {kGateHalfWidth, 2.2f, kSouthEdge + 0.3f}));
 }
@@ -725,7 +741,7 @@ void Facility::update(float dt, SecuritySystem& sec, float hour, CollisionWorld&
     gate.target = sec.gateShouldBeOpen(hour) || gateRemote ? 1.0f : 0.0f;
     gate.update(dt);
     float open = gate.eased() * (kGateHalfWidth * 2.0f);
-    cw.setBox(gateCollider_, AABB({-kGateHalfWidth + open, 0.0f, kSouthEdge - 0.3f}, {kGateHalfWidth + open, 2.2f, kSouthEdge + 0.3f}));
+    cw.setBox(gateCollider_, AABB({-kGateHalfWidth + open, 0.0f, gateZ - 0.3f}, {kGateHalfWidth + open, 2.2f, gateZ + 0.3f}));
 }
 
 void Facility::draw(Renderer& r, Pass pass, float night, float time) const {
@@ -740,8 +756,9 @@ void Facility::draw(Renderer& r, Pass pass, float night, float time) const {
     float open = gate.eased() * (kGateHalfWidth * 2.0f);
     float blink = gate.moving() ? (std::fmod(time, 0.8f) < 0.4f ? 1.0f : 0.6f) : 0.85f;
     r.setDoubleSided(true);
-    r.draw(gatePanel_, mat4::translate({-kGateHalfWidth - 0.1f + open, 0.0f, kSouthEdge - 0.25f}), vec4(vec3(blink), 1.0f));
+    r.draw(gatePanel_, mat4::translate({-kGateHalfWidth - 0.1f + open, 0.0f, gateZ - 0.25f}), vec4(vec3(blink), 1.0f));
     r.setDoubleSided(false);
+    r.draw(gateFixtures_, mat4::translate({0.0f, 0.0f, gateZ - kSouthEdge}));
     if (drawCar) r.draw(car_, playerCar);
 }
 
@@ -786,7 +803,7 @@ Interaction Facility::pick(vec3 ro, vec3 rd, float maxDist, const SecuritySystem
         }
     }
     t = rayAABB(ro, rd, gateKeypad_);
-    AABB gateBox({-kGateHalfWidth, 0.0f, kSouthEdge - 0.6f}, {kGateHalfWidth, 2.2f, kSouthEdge + 0.6f});
+    AABB gateBox({-kGateHalfWidth, 0.0f, gateZ - 0.6f}, {kGateHalfWidth, 2.2f, gateZ + 0.6f});
     float t2 = rayAABB(ro, rd, gateBox);
     if (t2 >= 0.0f && (t < 0.0f || t2 < t)) t = t2;
     if (t >= 0.0f && t < best.distance) {
@@ -794,7 +811,7 @@ Interaction Facility::pick(vec3 ro, vec3 rd, float maxDist, const SecuritySystem
         best.index = 0;
         best.distance = t;
         if (sec.gateLocked) best.prompt = "Gate locked - unlock it from the office computer";
-        else best.prompt = gate.target > 0.5f ? "Close highway gate (owner only)" : "Open highway gate (owner only)";
+        else best.prompt = gate.target > 0.5f ? "Close the front gate (owner only)" : "Open the front gate (owner only)";
     }
     return best;
 }

@@ -159,7 +159,7 @@ void Game::updateDriving(float dt) {
     truck_.update(dt, throttle, brake, steer, handbrake, world_.collision, world_.facility.carCollider);
     world_.facility.setCarCollider(world_.collision, truck_.pos, truck_.yaw);
     // The gate remote on your visor: the gate opens when you drive up to it
-    world_.facility.gateRemote = std::fabs(truck_.pos.x) < 40.0f && std::fabs(truck_.pos.z - kSouthEdge) < 110.0f;
+    world_.facility.gateRemote = std::fabs(truck_.pos.x) < 40.0f && std::fabs(truck_.pos.z - world_.facility.gateZ) < 45.0f;
     player_.feet = truck_.transform().transformPoint(TruckModel::doorOutside());   // saves put you beside the truck
     if (!sim_.truckCargo.empty() && sim_.land.contains(truck_.pos.x, truck_.pos.z) && truck_.pos.z < kParkMaxZ + 10.0f &&
         std::fabs(truck_.speed) < 0.3f && roads_.warningTimer <= 0.0f) {

@@ -18,7 +18,11 @@ struct TerrainTile {
 // Builds one LOD ring as tiles (optionally with a hole where a finer level is).
 std::vector<TerrainTile> buildTerrainLevel(Rect area, float spacing, int tilesPerSide, const Rect* hole);
 
-void buildFence(MeshBuilder& b, const std::vector<FenceSeg>& segs);   // around owned land, gap at the gate
+// The yard fence (gap at the gate where the access road crosses the line z = gateZ)
+std::vector<FenceSeg> fencePieces(const std::vector<FenceSeg>& segs, float gateZ);
+void buildFence(MeshBuilder& b, const std::vector<FenceSeg>& segs, float gateZ);
+// Survey stakes with orange tops along your property line (within `radius` of the shelter)
+void buildPropertyStakes(MeshBuilder& b, const std::vector<FenceSeg>& segs, float radius);
 void buildHighway(MeshBuilder& b);
 void buildPineTree(MeshBuilder& b);
 void buildOakTree(MeshBuilder& b);

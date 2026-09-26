@@ -218,9 +218,21 @@ void World::refreshCover(vec3 camPos) {
 void World::update(float dt, vec3 camPos, float time, Sim& sim) {
     if (fenceVersion_ != sim.land.version()) {
         fenceVersion_ = sim.land.version();
+        // The fence hugs the shelter's yard; the gate sits where the access road leaves it
+        const float gz = sim.land.gateZ();
+        const std::vector<FenceSeg> yard = sim.land.yardFence();
         MeshBuilder fb;
-        scenery::buildFence(fb, sim.land.fence());
+        scenery::buildFence(fb, yard, gz);
         fence_.upload(fb);
+        for (int id : fenceColliders_) collision.remove(id);
+        fenceColliders_.clear();
+        for (const FenceSeg& f : scenery::fencePieces(yard, gz))
+            fenceColliders_.push_back(collision.addBox(AABB(vmin(f.a, f.b) - vec3(0.12f, 0.0f, 0.12f), vmax(f.a, f.b) + vec3(0.12f, 2.2f, 0.12f))));
+        facility.setGateZ(collision, gz);
+        // Your property line (the edge of the land you own) is marked with survey stakes
+        MeshBuilder sb;
+        scenery::buildPropertyStakes(sb, sim.land.propertyLine(), 2500.0f);
+        stakes_.upload(sb);
     }
     // Nature avoids what you build and your fence; regenerate when either changes
     int nv = sim.land.version() * 7919 + int(sim.placed.size()) * 31 + (sim.placed.empty() ? 0 : sim.placed.back().id);
@@ -231,7 +243,7 @@ void World::update(float dt, vec3 camPos, float time, Sim& sim) {
             AABB a = p.bounds(0.0f);
             keepClear_.push_back(AABB(a.min - vec3(2.5f, 0, 2.5f), a.max + vec3(2.5f, 0, 2.5f)));
         }
-        fenceSegs_ = sim.land.fence();
+        fenceSegs_ = sim.land.yardFence();
         treeCells_.clear();
         coverCells_.clear();
         treeCenter_ = vec3(1e9f, 0, 1e9f);
@@ -335,6 +347,7 @@ void World::draw(Renderer& r, Pass pass, float night, float time) const {
     }
     r.setDoubleSided(true);
     r.draw(fence_);
+    r.draw(stakes_);
     r.setDoubleSided(false);
     r.draw(highway_);
     if (!shadow) r.drawInstanced(poles_);

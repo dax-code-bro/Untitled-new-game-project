@@ -275,13 +275,29 @@ int main() {
         CHECK(s.orderFood(FoodKind::Hay, 25.0f));
         s.advance(1440.0);
         CHECK(s.food[size_t(FoodKind::Hay)] > before);
+        // The fence hugs the shelter's yard, grows when you build outside it and shrinks back when you remove it
+        {
+            AABB y0 = s.land.yard();
+            CHECK(y0.max.z < 100.0f && y0.min.z > -100.0f && y0.max.x < 80.0f);   // snug around the shelter
+            s.econ.cash += 1e6;
+            int runId = -1;
+            CHECK(s.build(BuildKind::DogRun, 90.0f, 140.0f, 0, &why, &runId));
+            AABB y1 = s.land.yard();
+            CHECK(y1.max.x > 95.0f && y1.max.z > 145.0f && s.land.gateZ() == y1.max.z);
+            int treeId = -1;
+            CHECK(s.build(BuildKind::Tree, -120.0f, 300.0f, 0, &why, &treeId));
+            CHECK(s.land.yard().max.z == y1.max.z);             // planting trees doesn't move the fence
+            CHECK(s.demolish(runId));
+            CHECK(std::fabs(s.land.yard().max.z - y0.max.z) < 0.01f);
+            s.demolish(treeId);
+        }
         // Land: only the home parcel is buyable at first, then its neighbors; the fence follows
-        CHECK(!s.land.homeOwned() && s.land.fence().size() == 4);
+        CHECK(!s.land.homeOwned() && s.land.propertyLine().size() == 4);
         CHECK(!s.buyLand(Land::kHomeCol + 1, 0, &why));
         CHECK(s.buyLand(Land::kHomeCol, 0, &why));
         CHECK(s.land.canBuy(Land::kHomeCol + 1, 0) && !s.land.canBuy(Land::kHomeCol + 2, 0));
         CHECK(s.buyLand(Land::kHomeCol + 1, 0, &why));
-        CHECK(s.land.fence().size() == 6 && s.land.ownedSqMi() > 1.9f);
+        CHECK(s.land.propertyLine().size() == 6 && s.land.ownedSqMi() > 1.9f);
         // Pet store: snakes, birds, cats and dogs; what you buy rides home in the truck, then joins the shelter
         CHECK(s.petStore.size() == 9);
         bool dog = false, cat = false, bird = false, snake = false;

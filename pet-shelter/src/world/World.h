@@ -49,7 +49,8 @@ private:
 
     std::vector<Chunk> terrain_;
     Mesh fence_, highway_, pine_, oak_, pineShadow_, oakShadow_, poles_, traffic_;
-    Mesh bush_, rock_, grass_, flowers_;
+    Mesh bush_, rock_, grass_, flowers_, stakes_;
+    std::vector<int> fenceColliders_;
     struct CoverInst { vec3 pos; float scale, yaw; int kind; vec4 tint; };
     std::unordered_map<long long, std::vector<CoverInst>> coverCells_;
     const std::vector<CoverInst>& coverCell(int cx, int cz);
