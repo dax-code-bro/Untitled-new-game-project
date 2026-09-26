@@ -27,6 +27,8 @@ uniform vec4 uPointPos[MAX_POINT];    // xyz, radius
 uniform vec4 uPointColor[MAX_POINT];  // rgb intensity
 uniform vec3 uIndoorMin;
 uniform vec3 uIndoorMax;
+uniform vec3 uIndoor2Min;   // a second building (the pet store)
+uniform vec3 uIndoor2Max;
 uniform float uTransparentPass;
 
 // ---------------- Procedural material patterns ----------------
@@ -257,7 +259,8 @@ void main() {
     vec3 N = s.n;
     vec3 V = normalize(uCamPos - vWorldPos);
 
-    bool indoor = all(greaterThan(vWorldPos, uIndoorMin)) && all(lessThan(vWorldPos, uIndoorMax));
+    bool indoor = (all(greaterThan(vWorldPos, uIndoorMin)) && all(lessThan(vWorldPos, uIndoorMax))) ||
+                  (all(greaterThan(vWorldPos, uIndoor2Min)) && all(lessThan(vWorldPos, uIndoor2Max)));
     float skyVis = indoor ? 0.10 : 1.0;
 
     vec3 color = vec3(0.0);

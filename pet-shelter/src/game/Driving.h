@@ -46,7 +46,7 @@ private:
     std::vector<RoadSign> signs_;
     float clock_ = 0.0f;
     Mesh post_, speedBoard_, guideBoard_, mileBoard_, storeBoard_, serviceBoard_, lightHead_, lampRed_, lampYellow_, lampGreen_;
-    Mesh store_, lot_, sideRoad_;
+    Mesh lot_, sideRoad_;
     // Rules state
     float overTimer_ = 0.0f, speedCooldown_ = 0.0f, wrongWayTimer_ = 0.0f;
     int lastLane_ = -1;

@@ -105,6 +105,7 @@ if(PS_BUILD_GAME)
     src/game/Vehicle.cpp
     src/game/Driving.cpp
     src/game/GameDriving.cpp
+    src/game/PetStoreInterior.cpp
   )
   target_link_libraries(PetShelter PRIVATE ps_sim imgui glfw)
   target_compile_definitions(PetShelter PRIVATE GLFW_INCLUDE_NONE PS_SHADER_DIR="${CMAKE_CURRENT_SOURCE_DIR}/shaders")

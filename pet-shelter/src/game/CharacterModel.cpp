@@ -177,7 +177,7 @@ void CharacterModel::build(const Appearance& a) {
     animate(0.0f, 0.0f, 0.0f);
 }
 
-void CharacterModel::animate(float time, float phase, float walk, float lookYaw) {
+void CharacterModel::animate(float time, float phase, float walk, float lookYaw, float hold) {
     skel_.resetPose();
     auto rx = [](float a) { return quat::axisAngle({1, 0, 0}, a); };
     auto rz = [](float a) { return quat::axisAngle({0, 0, 1}, a); };
@@ -205,6 +205,10 @@ void CharacterModel::animate(float time, float phase, float walk, float lookYaw)
         float armSwing = -s * sgn * 0.4f * walk;
         skel_.joints[size_t(jShoulder_[side])].rot = rx(armSwing) * rz(sgn * (0.07f + 0.02f * breathe * idle));
         skel_.joints[size_t(jElbow_[side])].rot = rx(-0.15f - 0.25f * walk - std::max(0.0f, armSwing) * 0.4f);
+        if (hold > 0.0f) {   // upper arms a little forward, forearms up and in: holding something at the chest
+            skel_.joints[size_t(jShoulder_[side])].rot = rx(armSwing * (1.0f - hold) - 0.35f * hold) * rz(sgn * (0.07f + 0.1f * hold));
+            skel_.joints[size_t(jElbow_[side])].rot = rx(-0.15f - 1.35f * hold) * rz(-sgn * 0.35f * hold);
+        }
     }
     skel_.joints[size_t(jPelvis_)].offset.y = 0.98f + std::fabs(c) * 0.03f * walk - 0.015f * walk;
     skel_.joints[size_t(jChest_)].rot = ry(-s * 0.08f * walk);

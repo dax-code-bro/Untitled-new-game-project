@@ -90,6 +90,7 @@ public:
     float wind = 1.0f;
     void setShadowSize(int s) { kShadowSize = s; }
     AABB indoorBox;              // sky ambient is blocked inside this box
+    AABB indoorBox2{vec3(1e6f), vec3(1e6f + 1.0f)};   // ...and this one (a second building)
     std::vector<PointLight> lights;   // candidates; nearest 16 are used
 
 private:

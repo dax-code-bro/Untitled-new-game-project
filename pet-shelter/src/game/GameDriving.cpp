@@ -29,8 +29,9 @@ void Game::initDriving() {
     truckModel_.build({0.55f, 0.10f, 0.08f});
     roads_.build();
     world_.facility.drawCar = false;
-    // The pet store is solid
-    world_.collision.addBox(AABB({kPetStoreX - 20.0f, 0.0f, kPetStoreZ - 7.8f}, {kPetStoreX + 20.0f, 5.4f, kPetStoreZ + 10.0f}));
+    // The pet store: a walk-in building with its own colliders (walls, counter, shelves, pens)
+    store_.build(world_.collision);
+    renderer_.indoorBox2 = PetStoreInterior::interiorBox();
     resetTruck();
 }
 
@@ -57,15 +58,18 @@ void Game::pickTruck(vec3 eye, vec3 fwd) {
         float t2 = raySphere(eye, fwd, dx.transformPoint({0.0f, 0.9f, -0.75f}), 0.45f);
         if (t2 >= 0.0f && t2 < best) { best = t2; truckHover_ = 3; }
     }
-    // The pet store's front door
-    vec3 sd = kStoreDoor + vec3(0, 1.3f, 0);
-    float ts = raySphere(eye, fwd, sd, 1.4f);
-    if (ts >= 0.0f && ts < 3.5f) truckHover_ = 4;
+    // Inside the pet store: the cashier, or an animal's pen
+    std::string storePrompt;
+    int sid = -1;
+    int sp = store_.pick(eye, fwd, sim_, &sid, &storePrompt);
+    if (sp == 1) truckHover_ = 4;
+    else if (sp == 2) { truckHover_ = 5; storeFocus_ = sid; }
     switch (truckHover_) {
     case 1: hover_.prompt = "Open the truck door"; break;
     case 2: hover_.prompt = sim_.truckCargo.empty() ? "Get in the truck" : "Get in the truck (animals in the back)"; break;
     case 3: hover_.prompt = "Close the truck door"; break;
-    case 4: hover_.prompt = storeOpen(sim_.clock.hour()) ? "Go into Paws & Claws Pet Supply" : "Paws & Claws is closed (open 7 AM - 9 PM)"; break;
+    case 4:
+    case 5: hover_.prompt = storePrompt; break;
     default: break;
     }
 }
@@ -75,7 +79,10 @@ void Game::useTruckHover() {
     case 1: truck_.doorOpen = true; break;
     case 2: enterTruck(); break;
     case 3: truck_.doorOpen = false; break;
-    case 4:
+    case 4:   // talk to the cashier
+        if (storeOpen(sim_.clock.hour())) { state_ = State::PetStore; storeMsg_.clear(); storeFocus_ = -1; }
+        break;
+    case 5:   // ask about the animal in this pen: the cashier brings up its details
         if (storeOpen(sim_.clock.hour())) { state_ = State::PetStore; storeMsg_.clear(); }
         break;
     default: break;
@@ -259,6 +266,7 @@ void Game::drawPetStore() {
                     const Species& sp = cat[size_t(a.species)];
                     ImGui::PushID(int(i));
                     ImGui::TableNextRow();
+                    if (a.id == storeFocus_) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, IM_COL32(90, 70, 20, 200));
                     ImGui::TableNextColumn();
                     if (!sp.coats.empty()) {
                         vec3 c = sp.coats[size_t(a.coat) % sp.coats.size()].a;

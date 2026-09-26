@@ -123,18 +123,6 @@ void Driving::build() {
     for (float x = kPetLotMinX + 4.0f; x < kPetLotMaxX - 2.0f; x += 3.0f)
         b.addBox(AABB({x - 0.06f, 0.031f, kPetLotMaxZ - 6.0f}, {x + 0.06f, 0.035f, kPetLotMaxZ - 0.5f}), paint);
     lot_.upload(b);
-    b.clear();
-    {
-        float x0 = kPetStoreX - 20.0f, x1 = kPetStoreX + 20.0f, z0 = kPetStoreZ - 8.0f, z1 = kPetStoreZ + 10.0f;
-        b.addBox(AABB({x0, -0.5f, z0}, {x1, 0.25f, z1}), Material::make({0.6f, 0.6f, 0.58f}, 0.9f, 0.0f, PAT_CONCRETE));
-        b.addBox(AABB({x0, 0.25f, z0 + 0.2f}, {x1, 5.0f, z1}), Material::make({0.82f, 0.76f, 0.62f}, 0.7f, 0.0f, PAT_SIDING));
-        b.addBox(AABB({x0 - 0.3f, 5.0f, z0 - 0.3f}, {x1 + 0.3f, 5.4f, z1 + 0.3f}), Material::make({0.3f, 0.3f, 0.32f}, 0.6f));
-        b.addBox(AABB({x0 + 2.0f, 0.9f, z0 + 0.1f}, {kPetStoreX - 3.0f, 3.3f, z0 + 0.2f}), Material::make({0.08f, 0.1f, 0.12f}, 0.05f, 0.6f));
-        b.addBox(AABB({kPetStoreX + 3.0f, 0.9f, z0 + 0.1f}, {x1 - 2.0f, 3.3f, z0 + 0.2f}), Material::make({0.08f, 0.1f, 0.12f}, 0.05f, 0.6f));
-        b.addBox(AABB({kPetStoreX - 1.5f, 0.25f, z0 + 0.1f}, {kPetStoreX + 1.5f, 2.8f, z0 + 0.2f}), Material::make({0.1f, 0.12f, 0.14f}, 0.05f, 0.6f));
-        b.addBox(AABB({x0 + 1.0f, 3.5f, z0 - 1.6f}, {x1 - 1.0f, 3.7f, z0 + 0.2f}), Material::make({0.7f, 0.12f, 0.1f}, 0.6f));   // awning
-    }
-    store_.upload(b);
 }
 
 float Driving::speedLimitMph(vec3 p, const Sim& sim) const {
@@ -317,7 +305,6 @@ void Driving::draw(Renderer& r, Pass p, vec3 camPos) const {
     if (p == Pass::Transparent) return;
     r.draw(sideRoad_);
     r.draw(lot_);
-    r.draw(store_);
     for (const RoadSign& s : signs_) {
         float dx = s.pos.x - camPos.x, dz = s.pos.z - camPos.z;
         if (dx * dx + dz * dz > 900.0f * 900.0f) continue;

@@ -407,6 +407,28 @@ What's built:
   again to go (or use the buttons).
 - Tab from the truck (once it's stopped) gets you out and into build mode, so you can fast-travel from the road too.
 
+## 8.12 Update 7: owner's direction — a real, walk-in pet store
+"When you actually go inside of the store, it's fully developed with a cashier at the front and multiple people
+buying and picking up stuff and examining it, some people actually buy stuff, and there's animals and cages and a
+bunch of other things walking around, eating from their water and food dispensers, and each one has a name tag:
+their age and their gender and their color."
+
+What's built (Paws & Claws, 2 mi east of your gate):
+- Walk in through the sliding glass doors (open 7 AM - 9 PM; locked after hours). Inside: tiled floor, ceiling
+  lights, a **checkout counter** with register and a **cashier** in the store's red polo at the front.
+- **Shoppers** (8 people from the town, each in their own clothes) come in, browse the aisles (dog food & treats,
+  cat food & litter, toys/beds/leashes), look at the aquarium fish, and spend a lot of time at the animals. At the
+  shelves they **pick products up and look them over**; some put them back, others **keep them, queue at the till,
+  pay** (the cashier scans it) and leave with a shopping bag. Then they come back later.
+- **The animals for sale live in the store**: 3 dog pens, 2 cat condos (with cat trees, litter boxes), 2 bird
+  cages, 2 snake terrariums (heat lamp, hide, water dish). They wander, lie down, groom, and walk over to their
+  **food and water dispensers** (gravity feeders you can see through) to eat and drink. Mango, the orange shop cat,
+  roams the floor (not for sale).
+- **Name tag on every enclosure:** name, species, **sex, age, color**, and price ("Nala / Corn Snake / Female,
+  11 months / Amelanistic / $70"). When one is bought, its tag says SOLD until the morning restock.
+- Look at an enclosure and press E: the cashier brings up that animal (highlighted) so you can buy it. Talk to the
+  cashier for everything else (all the animals, food and supplies).
+
 ## 9. Next up
 - More model passes until nothing looks off (small terriers, fur close-ups, coiled snakes).
 - Staff and protesters as visible people in the world; clients in the waiting room.

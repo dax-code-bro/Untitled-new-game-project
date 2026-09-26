@@ -30,6 +30,8 @@ struct GameEvent { int day; std::string text; };
 
 // Pet store (2 miles east on the highway): today's animals for sale
 struct StoreAnimal {
+    int id = 0;          // stable while it's in the store
+    int pen = -1;        // 0-2 dog pens, 3-4 cat condos, 5-6 bird cages, 7-8 terrariums
     int species = 0;
     bool male = true;
     float ageFrac = 0.3f;
@@ -88,6 +90,7 @@ public:
     // ---- Driving & the pet store ----
     std::vector<StoreAnimal> petStore;     // restocked every morning
     std::vector<StoreAnimal> truckCargo;   // animals riding home in your truck
+    int nextStoreId = 1;
     int ticketsTotal = 0;
     double finesTotal = 0.0;
     void restockPetStore();

@@ -536,6 +536,7 @@ void Game::update(float dt) {
     if (inGame() || state_ == State::Cutscene) {
         float rdt = state_ == State::Paused ? 0.0f : dt;
         roads_.update(rdt, sim_, truck_, state_ == State::Driving);
+        store_.update(sim_, rdt, time_, camera_.pos, world_.collision);
         world_.setTraffic(roads_.trafficInstances());
         if (state_ != State::Driving) {   // the door still swings while you're on foot
             truck_.door += ((truck_.doorOpen ? 1.0f : 0.0f) - truck_.door) * std::min(1.0f, rdt * 5.0f);
@@ -562,6 +563,7 @@ bool Game::inGame() const {
 void Game::scene(Renderer& r, Pass pass) {
     world_.draw(r, pass, r.nightAmount(), time_);
     drawTruck(r, pass);
+    store_.draw(r, pass, camera_.pos);
     if (pass == Pass::Transparent) return;
     roads_.draw(r, pass, camera_.pos);
     if (inGame()) animals_.draw(r, pass, camera_.pos);
@@ -627,6 +629,7 @@ void Game::render(float dt) {
     }
     renderer_.lights.clear();
     world_.appendLights(renderer_.lights, renderer_.nightAmount());
+    store_.appendLights(renderer_.lights, camera_.pos);
     renderer_.fade = state_ == State::Cutscene ? cutscene_.fade() : 1.0f;
     renderer_.letterbox = state_ == State::Cutscene ? 1.0f : 0.0f;
     auto sceneFn = [this](Renderer& r, Pass p) { scene(r, p); };
@@ -689,7 +692,10 @@ void Game::drawUI() {
     // Words on the road signs you can see
     if ((state_ == State::Playing && mode_ == Mode::POV) || state_ == State::Driving || state_ == State::PetStore ||
         (state_ == State::Paused && inTruck_))
+    {
         roads_.drawSignText(camera_, int(ImGui::GetIO().DisplaySize.x), int(ImGui::GetIO().DisplaySize.y));
+        store_.drawLabels(sim_, camera_, int(ImGui::GetIO().DisplaySize.x), int(ImGui::GetIO().DisplaySize.y));
+    }
 }
 
 void Game::drawMainMenu() {
@@ -1423,6 +1429,19 @@ int Game::runScreenshotSuite(const std::string& dir) {
     exitTruck();
     sim_.buyFromPetStore(0);
     pov("44_pet_store", {kPetStoreX + 6.0f, 0.0f, kPetStoreZ - 22.0f}, -10.0f, 2.0f, 11.0f);
+    // Inside the store: let the shoppers and animals get going first
+    {
+        auto S = [](float x, float z) { return vec3(kPetStoreX + x, 0.0f, kPetStoreZ - 8.0f + z); };
+        sim_.clock.minutes = 11.0 * 60.0;
+        for (int i = 0; i < 400; ++i) store_.update(sim_, 0.1f, time_ + 0.1f * float(i), S(0, 8), world_.collision);
+        pov("51_store_entrance", S(-1.0f, 1.0f), 25.0f, -8.0f, 11.0f);
+        pov("57_store_wide", S(13.0f, 1.0f), -40.0f, -8.0f, 11.0f);
+        pov("52_store_dog_pens", S(13.6f, 4.1f), 90.0f, -12.0f, 11.0f);
+        pov("53_store_checkout", S(-5.0f, 8.5f), 190.0f, -10.0f, 11.0f);
+        pov("54_store_birds_cats", S(3.0f, 6.6f), 5.0f, -4.0f, 11.0f);
+        pov("55_store_reptiles", S(-2.0f, 14.2f), 0.0f, -22.0f, 11.0f);
+        pov("56_store_aisles", S(-12.5f, 5.4f), -20.0f, -6.0f, 11.0f);
+    }
     state_ = State::PetStore;
     shoot("45_pet_store_counter", 4);
     // Fast travel home from build mode: point at the shelter and click (the animal in the truck gets unloaded)

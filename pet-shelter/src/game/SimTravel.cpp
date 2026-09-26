@@ -16,9 +16,11 @@ void Sim::restockPetStore() {
     auto cats = pool([](const Species& s) { return s.category == "Cat" && s.cls != AnimalClass::Feral; });
     auto birds = pool([](const Species& s) { return s.category == "Bird" && s.cls != AnimalClass::Feral; });
     auto snakes = pool([](const Species& s) { return s.shape.plan == BodyPlan::Snake && s.cls != AnimalClass::Restricted; });
-    auto add = [&](const std::vector<int>& ids, int n) {
+    auto add = [&](const std::vector<int>& ids, int n, int firstPen) {
         for (int i = 0; i < n && !ids.empty(); ++i) {
             StoreAnimal a;
+            a.id = nextStoreId++;
+            a.pen = firstPen + i;
             a.species = ids[size_t(rng.next() % ids.size())];
             const Species& sp = cat[size_t(a.species)];
             a.male = rng.uniform() < 0.5f;
@@ -32,10 +34,10 @@ void Sim::restockPetStore() {
             petStore.push_back(a);
         }
     };
-    add(dogs, 3);
-    add(cats, 2);
-    add(birds, 2);
-    add(snakes, 2);
+    add(dogs, 3, 0);
+    add(cats, 2, 3);
+    add(birds, 2, 5);
+    add(snakes, 2, 7);
 }
 
 bool Sim::buyFromPetStore(size_t i, std::string* why) {

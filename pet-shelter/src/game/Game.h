@@ -9,6 +9,7 @@
 #include "game/CreativeMode.h"
 #include "game/Cutscene.h"
 #include "game/Driving.h"
+#include "game/PetStoreInterior.h"
 #include "game/PlayerController.h"
 #include "game/Sim.h"
 #include "game/Vehicle.h"
@@ -122,6 +123,8 @@ private:
     int truckHover_ = 0;               // 1 open door, 2 get in, 3 close door, 4 pet store
     int storeTab_ = 0;
     std::string storeMsg_;
+    PetStoreInterior store_;           // the walk-in pet store (cashier, shoppers, animals)
+    int storeFocus_ = -1;              // store animal you asked about (highlighted at the counter)
 
     State state_ = State::MainMenu;
     Mode mode_ = Mode::POV;

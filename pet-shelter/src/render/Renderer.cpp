@@ -235,6 +235,8 @@ void Renderer::setupLitUniforms(Shader& s, const Camera& cam, bool shadowsOn, fl
     s.set("uShadow1", 1);
     s.set("uIndoorMin", indoorBox.min);
     s.set("uIndoorMax", indoorBox.max);
+    s.set("uIndoor2Min", indoorBox2.min);
+    s.set("uIndoor2Max", indoorBox2.max);
     s.set("uTransparentPass", transparent ? 1.0f : 0.0f);
     s.set("uTint", vec4(1, 1, 1, 1));
 

@@ -1,7 +1,7 @@
 // Service worker for the installable (PWA) build: the game works offline after the first visit.
-// 13-travel is filled in from PS_BUILD in index.html when the app is assembled, so each release
+// 14-store is filled in from PS_BUILD in index.html when the app is assembled, so each release
 // gets its own cache and old ones are removed.
-const VERSION = '13-travel';
+const VERSION = '14-store';
 const CACHE = 'pet-shelter-' + VERSION;
 const FONTS = 'pet-shelter-fonts';
 const SHELL = [

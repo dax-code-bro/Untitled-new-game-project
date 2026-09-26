@@ -13,7 +13,8 @@ class CharacterModel {
 public:
     void build(const Appearance& a);
     // walkAmount 0 = idle, 1 = full walk. walkPhase advances with distance.
-    void animate(float time, float walkPhase, float walkAmount, float lookYaw = 0.0f);
+    // hold 0..1 raises both forearms in front of the chest (carrying or examining something)
+    void animate(float time, float walkPhase, float walkAmount, float lookYaw = 0.0f, float hold = 0.0f);
     void draw(Renderer& r, const mat4& root) const;
     float eyeHeight() const { return eyeHeight_; }
 
