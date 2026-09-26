@@ -62,7 +62,7 @@ cmake -S . -B build-tests -DPS_BUILD_GAME=OFF && cmake --build build-tests && ./
 | | |
 |---|---|
 | **POV mode** | WASD move, mouse look, Shift sprint, **E** or left click to interact (doors, gate keypad, office computer) |
-| **Creative mode** | WASD/arrows pan, right mouse rotate, middle mouse pan, wheel zoom, Q/E rotate, R rotate the building, X demolish, Esc cancel |
+| **Creative mode** | WASD/arrows pan, right mouse rotate, middle mouse pan, wheel zoom, Q/E rotate, R rotate the building, X demolish, Esc cancel. **Fast travel:** with nothing picked, click the shelter (or the pet store) to go straight there, or use the Go to buttons |
 | **Driving** | At the red truck: E opens the door, E again to get in. W gas, S brake/reverse, A/D steer, Space handbrake, Q/E turn signals, L headlights, V camera, mouse look (C recenters), F get out. On phones: the stick is gas/brake/steering, plus Signal, Brake, Lights, View and Get out buttons. |
 | **Both** | **Tab** switches POV/Creative, Esc pause, F5 quick save, F9 quick load, F12 screenshot, F6 reload shaders, F1 hide help |
 | **Cutscene** | Space/Enter skips |

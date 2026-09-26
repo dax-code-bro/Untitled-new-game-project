@@ -67,6 +67,7 @@ void CreativeMode::update(float dt, const Input& in, World& world, Sim& sim, con
 
     world.ghostVisible = false;
     world.highlightPlaced = -1;
+    hoverTravel = 0;
     if (in.uiWantsMouse) return;
     if (tool >= 0) {
         float t = world.raycastTerrain(ro, rd, 20000.0f);
@@ -88,6 +89,16 @@ void CreativeMode::update(float dt, const Input& in, World& world, Sim& sim, con
                 statusTimer = 2.5f;
             } else { status = why; statusTimer = 2.5f; }
         }
+    } else if (tool == -1) {
+        // Fast travel: click the shelter (or the pet store) to go there right away
+        hoverTravel = 0;
+        AABB shelter = layout::buildingBounds();
+        shelter.min.y = 0.0f; shelter.max.y = layout::kCeilingY + 2.5f;
+        AABB store({layout::kPetStoreX - 20.0f, 0.0f, layout::kPetStoreZ - 8.0f}, {layout::kPetStoreX + 20.0f, 5.4f, layout::kPetStoreZ + 10.0f});
+        float ts = rayAABB(ro, rd, shelter), tp = rayAABB(ro, rd, store);
+        if (ts >= 0.0f && (tp < 0.0f || ts < tp)) hoverTravel = 1;
+        else if (tp >= 0.0f) hoverTravel = 2;
+        if (hoverTravel && in.mousePressed(GLFW_MOUSE_BUTTON_LEFT)) travelRequest = hoverTravel;
     } else if (tool == -2) {
         // Demolish: pick the closest placed object under the cursor
         float best = 1e9f;
@@ -153,7 +164,12 @@ void CreativeMode::drawTouchUI(float& timeScale) {
     if (statusTimer > 0.0f && !status.empty()) ImGui::TextColored(ImVec4(1, 0.85f, 0.4f, 1), "%s", status.c_str());
     else if (tool >= 0) ImGui::TextDisabled("Tap the ground to preview, tap again to build");
     else if (tool == -2) ImGui::TextDisabled("Tap a building, tap again to demolish");
-    else ImGui::TextDisabled("Drag to move, pinch to zoom, twist to turn");
+    else ImGui::TextDisabled("Tap the shelter twice to go there");
+    ImGui::SameLine();
+    if (ImGui::Button("Go: Shelter")) travelRequest = 1;
+    ImGui::SameLine();
+    if (ImGui::Button("Pet store")) travelRequest = 2;
+    if (hoverTravel) ImGui::SetTooltip(hoverTravel == 1 ? "Tap again: go to your shelter" : "Tap again: go to the pet store");
     ImGui::End();
 }
 
@@ -208,7 +224,16 @@ void CreativeMode::drawUI(Sim& sim, float& timeScale) {
         if (ImGui::Button(names[i])) timeScale = speeds[i];
         if (on) ImGui::PopStyleColor();
     }
+    ImGui::SameLine(0, 30);
+    ImGui::Text("Go to:");
+    ImGui::SameLine();
+    if (ImGui::Button("Shelter")) travelRequest = 1;
+    ImGui::SameLine();
+    if (ImGui::Button("Pet store")) travelRequest = 2;
+    if (hoverTravel && !io.WantCaptureMouse)
+        ImGui::SetTooltip(hoverTravel == 1 ? "Click: go to your shelter now" : "Click: go to the pet store now");
     if (statusTimer > 0.0f && !status.empty()) ImGui::TextColored(ImVec4(1, 0.85f, 0.4f, 1), "%s", status.c_str());
+    else if (tool == -1) ImGui::TextDisabled("Click the shelter to go straight there (no driving). You own %.2f of 500 sq mi; build anywhere on your land and the fence moves out to take it in.", double(sim.land.ownedSqMi()));
     else ImGui::TextDisabled("You own %.2f of 500 sq mi. Build anywhere on your land - the fence moves out to take it in. More land: the computer's Store.", double(sim.land.ownedSqMi()));
     ImGui::End();
 }

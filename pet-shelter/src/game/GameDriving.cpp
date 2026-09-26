@@ -108,11 +108,33 @@ bool Game::exitTruck() {
     out.y = world_.collision.groundHeight(out.x, out.z, out.y + 1.0f, 0.3f);
     player_.place(out, truck_.yaw + kPi * 0.5f + 0.3f, radians(-8.0f));
     // Home with animals in the back: unload them
-    if (!sim_.truckCargo.empty() && sim_.land.contains(truck_.pos.x, truck_.pos.z)) {
-        int n = sim_.deliverCargo();
-        toasts_.push_back({std::to_string(n) + (n == 1 ? " animal" : " animals") + " unloaded and settled in at the shelter.", 7.0f});
-    }
+    if (!sim_.truckCargo.empty() && sim_.land.contains(truck_.pos.x, truck_.pos.z)) sim_.deliverCargo();
     return true;
+}
+
+void Game::fastTravel(int dest) {
+    // Skip the drive: you and the truck are there, instantly
+    truck_.speed = 0.0f;
+    truck_.signal = 0;
+    truck_.doorOpen = false;
+    truck_.door = 0.0f;
+    inTruck_ = false;
+    world_.facility.gateRemote = false;
+    if (dest == 1) {
+        truck_.pos = Facility::parkedCarPos();
+        truck_.yaw = kPi;
+        player_.place(playerSpawnFrontDoor(), kPi, radians(-3.0f));
+        toasts_.push_back({"You're back at the shelter.", 4.0f});
+        if (!sim_.truckCargo.empty()) sim_.deliverCargo();   // (its log line tells you who arrived)
+    } else {
+        truck_.pos = {kPetStoreX - 8.0f, 0.0f, kPetLotMaxZ - 4.0f};
+        truck_.yaw = 0.0f;   // nose toward the store
+        player_.place(kStoreDoor + vec3(3.0f, 0.0f, -6.0f), radians(-20.0f), radians(-3.0f));
+        toasts_.push_back({"You're at Paws & Claws Pet Supply.", 4.0f});
+    }
+    world_.facility.setCarCollider(world_.collision, truck_.pos, truck_.yaw);
+    state_ = State::Playing;
+    setMode(Mode::POV);
 }
 
 void Game::updateDriving(float dt) {
@@ -123,6 +145,8 @@ void Game::updateDriving(float dt) {
     for (const auto& d : sim_.decisions)
         if (d.urgent && std::fabs(truck_.speed) < 1.0f) { dialogDecision_ = d.id; state_ = State::Dialog; return; }
     if (input_.pressed(GLFW_KEY_F) && exitTruck()) return;
+    // Build mode (for fast travel): get out first, so stop the truck
+    if (input_.pressed(GLFW_KEY_TAB) && exitTruck()) { setMode(Mode::Creative); return; }
     // Pedals and wheel (keyboard or the phone joystick: up = gas, down = brake, sideways = steer)
     float throttle = (input_.down(GLFW_KEY_W) || input_.down(GLFW_KEY_UP)) ? 1.0f : 0.0f;
     float brake = (input_.down(GLFW_KEY_S) || input_.down(GLFW_KEY_DOWN)) ? 1.0f : 0.0f;

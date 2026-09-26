@@ -21,6 +21,9 @@ public:
     int category = int(BuildCat::Operations);
     bool snap = true;
     bool touchUI = false;      // phone layout: one scrolling strip, room for on-screen controls
+    // Fast travel: with no tool picked, clicking the shelter (or the pet store) takes you there on foot.
+    int hoverTravel = 0;       // 1 shelter, 2 pet store (under the cursor)
+    int travelRequest = 0;     // set on click; the game performs the trip
     std::string status;
     float statusTimer = 0.0f;
 

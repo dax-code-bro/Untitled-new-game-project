@@ -481,6 +481,7 @@ void Game::update(float dt) {
             character_.animate(time_, player_.walkPhase, player_.walkAmount);
         } else {
             creative_.update(dt, input_, world_, sim_, camera_, width_, height_);
+            if (creative_.travelRequest) { fastTravel(creative_.travelRequest); creative_.travelRequest = 0; }
             character_.animate(time_, 0.0f, 0.0f);
         }
         renderer_.setTimeOfDay(sim_.clock.hour());
@@ -1424,6 +1425,30 @@ int Game::runScreenshotSuite(const std::string& dir) {
     pov("44_pet_store", {kPetStoreX + 6.0f, 0.0f, kPetStoreZ - 22.0f}, -10.0f, 2.0f, 11.0f);
     state_ = State::PetStore;
     shoot("45_pet_store_counter", 4);
+    // Fast travel home from build mode: point at the shelter and click (the animal in the truck gets unloaded)
+    {
+        int inCareBefore = sim_.animalsInCare(), cargo = int(sim_.truckCargo.size());
+        state_ = State::Playing;
+        setMode(Mode::Creative);
+        creative_.tool = -1;
+        creative_.target = {0.0f, 0.0f, 10.0f};
+        creative_.distance = 120.0f;
+        creative_.pitch = radians(-40.0f);
+        creative_.yaw = radians(200.0f);
+        shoot("49_build_mode_fast_travel", 3);
+        vec3 c = buildingBounds().center();
+        vec4 cp = camera_.viewProj() * vec4(c.x, 2.0f, c.z, 1.0f);
+        float sx = (cp.x / cp.w * 0.5f + 0.5f) * float(width_), sy = (1.0f - (cp.y / cp.w * 0.5f + 0.5f)) * float(height_);
+        input_.onCursor(double(sx), double(sy));
+        shoot("49_build_mode_fast_travel", 3);   // the tooltip shows under the cursor
+        input_.onButton(GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
+        shoot("50_after_fast_travel", 1);
+        input_.onButton(GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
+        shoot("50_after_fast_travel", 4);
+        std::fprintf(stderr, "[fast-travel] mode=%s feet=(%.1f, %.1f) truck=(%.1f, %.1f) cargo %d -> %d, in care %d -> %d\n",
+                     mode_ == Mode::POV ? "POV" : "build", double(player_.feet.x), double(player_.feet.z), double(truck_.pos.x),
+                     double(truck_.pos.z), cargo, int(sim_.truckCargo.size()), inCareBefore, sim_.animalsInCare());
+    }
     resetTruck();
     // A tiger in the parking lot
     state_ = State::Playing;

@@ -87,6 +87,7 @@ private:
     void drawDriving();
     void drawPetStore();
     void drawTruck(Renderer& r, Pass pass);
+    void fastTravel(int dest);                 // 1 shelter, 2 pet store: you and the truck, no drive
 
     GLFWwindow* window_ = nullptr;
     int width_ = 1600, height_ = 900;

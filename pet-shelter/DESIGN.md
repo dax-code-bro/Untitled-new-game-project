@@ -395,6 +395,18 @@ What's built:
   survey stakes, and both the yard fence and the property line show on the driving map.
 - The truck's gate remote opens the gate when you're within about 45 m. The gate slides open in 4.5 s (was 7 s).
 
+## 8.11 Update 6: owner's direction — fast travel from build mode
+"You can skip having to drive everywhere instantly by just going into build mode and just clicking the shelter."
+
+What's built:
+- In build mode with no building picked, point at the shelter: a label says "Click: go to your shelter now". Click
+  it and you're instantly on foot at the front door, with the truck parked out front; any animals riding in the
+  truck are unloaded into the shelter. No time passes.
+- The same works for the pet store (click the store building), and there are **Go to: Shelter / Pet store** buttons
+  in the build bar for when the building isn't on screen. On phones: tap the building once to see the label, tap
+  again to go (or use the buttons).
+- Tab from the truck (once it's stopped) gets you out and into build mode, so you can fast-travel from the road too.
+
 ## 9. Next up
 - More model passes until nothing looks off (small terriers, fur close-ups, coiled snakes).
 - Staff and protesters as visible people in the world; clients in the waiting room.
