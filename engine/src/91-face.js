@@ -940,7 +940,7 @@ const BEARD_STYLES = {
 /* One patch of a geometry, pushed out along its normals.
    `keep(u, w, xn, i)` decides, per vertex, whether it is in. A
    triangle is emitted when all three of its corners are. */
-function offsetPatch(src, keep, thick, warp) {
+function offsetPatch(src, keep, thick, warp, feather) {
   const P = src.positions, N = src.normals, I = src.indices;
   let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
   for (let i = 0; i < P.length; i += 3) {
@@ -971,7 +971,9 @@ function offsetPatch(src, keep, thick, warp) {
         remap[v] = g.positions.length / 3;
         const px = P[v * 3], py = P[v * 3 + 1], pz = P[v * 3 + 2];
         const nx = N[v * 3], ny = N[v * 3 + 1], nz = N[v * 3 + 2];
-        let ox = px + nx * thick, oy = py + ny * thick, oz = pz + nz * thick;
+        // An optional taper: a multiplier on the thickness by position, so an edge can thin to nothing.
+        const tk = feather ? thick * feather((py - lo[1]) / sy, (pz - lo[2]) / sz, Math.abs((px - lo[0]) / sx - 0.5) * 2) : thick;
+        let ox = px + nx * tk, oy = py + ny * tk, oz = pz + nz * tk;
         if (warp) {
           const u = (py - lo[1]) / sy, w = (pz - lo[2]) / sz;
           const d = warp(u, w);
@@ -990,6 +992,20 @@ function offsetPatch(src, keep, thick, warp) {
   return g;
 }
 
+/* WHERE THE HAIR STARTS on a field-built head (94d), in the same
+   normalised coordinates the styles use. The styles were tuned on the ring
+   sculpt, whose brow sits higher up its box; on this head the same number
+   put the hairline just above the eyebrows, level all the way round -- a
+   bowl cut on everybody. A hairline is a third of the face above the brow
+   at the front, lifts back over the temples and comes down in front of the
+   ear; the style's own `back` still sets the nape. */
+function sdfHairEdge(S, w, xn) {
+  const side = Math.max(0, Math.min(1, (xn - 0.45) / 0.5));
+  const front = 0.845 + (0.70 - 0.845) * side * side * (3 - 2 * side);
+  const lift = Math.max(0, S.cut - 0.735) * 0.5;       // a longer style starts a touch lower
+  return S.back + (front - lift - S.back) * w;
+}
+
 /* The hair on top. `style` is a key of HAIR_STYLES. */
 function makeHairGeometry(headGeo, style) {
   const S = HAIR_STYLES[style];
@@ -998,7 +1014,8 @@ function makeHairGeometry(headGeo, style) {
      the front, because a hairline does -- level all the way round
      is a swimming cap. `back` is where it sits at the occiput and
      `cut` where it sits at the brow, interpolated on w. */
-  const keep = (u, w) => u > (S.back + (S.cut - S.back) * w);
+  const keep = headGeo.sdf ? (u, w, xn) => u > sdfHairEdge(S, w, xn)
+    : (u, w) => u > (S.back + (S.cut - S.back) * w);
   const warp = (S.fall || S.lean || S.knot) ? (u, w) => {
     let dy = 0, dz = 0;
     // Long hair hangs: the further down the back, the further it falls.
@@ -1009,7 +1026,17 @@ function makeHairGeometry(headGeo, style) {
     if (S.knot && w < 0.28 && u > 0.62) dz -= S.knot;
     return [0, dy, dz];
   } : null;
-  return offsetPatch(headGeo, keep, S.thick, warp);
+  /* Thin at the hairline, full on top. At a constant thickness the cut
+     stood up as a rim all the way round -- on the field-built head,
+     which is smooth enough to show it, every longer style read as a bowl
+     set on the skull. The painted scalp underneath (94d) takes over where
+     the shell thins out. */
+  const feather = headGeo.sdf ? (u, w, xn) => {
+    const edge = sdfHairEdge(S, w, xn);
+    const t = Math.max(0, Math.min(1, (u - edge) / 0.09));
+    return 0.12 + 0.88 * t * t * (3 - 2 * t);
+  } : null;
+  return offsetPatch(headGeo, keep, S.thick, warp, feather);
 }
 
 /* EYEBROWS.

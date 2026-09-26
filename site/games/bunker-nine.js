@@ -6178,10 +6178,14 @@ function heroModel(game, S, id) {
     outfit: B.outfit, faceType: B.faceType || 'male', seed: B.seed || 5,
     hair: B.hair, hairColor: B.hairColor, beard: B.beard, beardColor: B.beardColor,
     height: B.height || 1.78,
+    /* The field-built head and body (94c/94d) want the operators' skin:
+       real subsurface, a little rougher, and the texture tiled so a pore
+       is a pore -- at uvScale 1 the neck and a bare forearm, whose UVs
+       are in metres, came out blotched like fur. */
     skin: { color: L.skin || 0x9d9691, texture: 'skin',
-      roughness: L.rough != null ? L.rough : 0.72, metalness: 0, subsurface: 0.12 },
+      roughness: Math.min(0.86, (L.rough != null ? L.rough : 0.72) + 0.06), metalness: 0, subsurface: 0.40, uvScale: 10 },
     material: { color: L.skin || 0x9d9691, texture: 'skin',
-      roughness: L.rough != null ? L.rough : 0.72, metalness: 0, subsurface: 0.12 },
+      roughness: Math.min(0.86, (L.rough != null ? L.rough : 0.72) + 0.06), metalness: 0, subsurface: 0.40, uvScale: 10 },
     clothMaterial: { color: 0xffffff, texture: 'fabric', roughness: 0.95, metalness: 0, uvScale: 2.4 },
   });
   /* Eyes. The head sculptor leaves sockets and the dead get lit ones

@@ -762,11 +762,21 @@ class Engine {
        twelve of them was re-solving the field and the skin weights for
        each one. Skinning is per actor in the shader, so the buffers are
        shared exactly the way an imported model's already were. */
-    const sdfLiving = !model && !opts.zombie && opts.sdfBody !== false;
-    const bodyOpts = { thickness: opts.build || 1, stature: scale, fit: opts.fit, seed: opts.seed, sdfBody: opts.sdfBody };
+    /* A SURVIVOR -- the clothed builder at zero decay, which is how Bunker
+       Nine dresses its ten playable heroes -- gets the field-built body in
+       the outfit it names: the same table the old builder read, cut in
+       the new body (94c, `outfitDef`), on a female, heavy or male frame. */
+    const heroOutfit = !model && opts.zombie && rot < 0.01 && opts.blood === false && opts.sdfBody !== false
+      && opts.outfit && typeof OUTFITS !== 'undefined' ? OUTFITS[opts.outfit] || null : null;
+    const sdfLiving = !model && (!opts.zombie || !!heroOutfit) && opts.sdfBody !== false;
+    const bodyOpts = heroOutfit
+      ? { thickness: opts.girth || 1, stature: scale, seed: opts.seed, outfitDef: heroOutfit,
+        frame: opts.zombieBuild || opts.faceType || 'male' }
+      : { thickness: opts.build || 1, stature: scale, fit: opts.fit, seed: opts.seed, sdfBody: opts.sdfBody };
     let bodyEnt = null;
     if (sdfLiving) {
-      const bk = [opts.build || 1, scale.toFixed(3), opts.fit || '', opts.seed == null ? '' : opts.seed].join(':');
+      const bk = [bodyOpts.thickness, scale.toFixed(3), opts.fit || '', opts.seed == null ? '' : opts.seed,
+        heroOutfit ? opts.outfit + ':' + bodyOpts.frame : ''].join(':');
       const bc = Engine._sdfBodies || (Engine._sdfBodies = new Map());
       bodyEnt = bc.get(bk);
       if (!bodyEnt) {
@@ -787,7 +797,7 @@ class Engine {
        and the clothing already are. "Do the ribs actually surface?" is a
        question about vertex positions, and it should never have to be
        settled by squinting at a screenshot. */
-    if (!model && opts.zombie) {
+    if (!model && opts.zombie && !heroOutfit) {
       mesh.__key = 'zbody:' + (opts.zombieBuild || 'male') + ':' + (opts.girth || 1) + ':' + (opts.seed || 3) + ':' + rot.toFixed(3);
       (this._geoByKey || (this._geoByKey = new Map())).set(mesh.__key, geo);
     } else if (!model) {
@@ -820,13 +830,19 @@ class Engine {
        The dead lurch further, trail their arms more and do not breathe. */
     animator.dynamics = new BodyDynamics(skeleton, {
       source: controller, seed: opts.seed != null ? opts.seed * 7.3 : undefined,
-      gain: opts.zombie ? { lean: 1.35, bank: 1.2, lag: 1.4, gaze: 0.4, breath: 0, shift: 0.6 } : {},
+      gain: opts.zombie && !heroOutfit ? { lean: 1.35, bank: 1.2, lag: 1.4, gaze: 0.4, breath: 0, shift: 0.6 } : {},
     });
 
     const actor = new Actor(this, {
       name: opts.name || 'character',
       mesh,
-      material: this.material(opts.material != null ? opts.material : { preset: 'fabric', color: opts.color != null ? opts.color : 0x3a6ea8 }),
+      // A survivor's body mesh IS the garment, painted per vertex: the cloth material, not the skin.
+      /* Its UVs are in metres (94c), so a weave tuned for the old builder's
+         per-limb UVs at 2.4 read as towelling: scaled to real cloth. */
+      material: this.material(heroOutfit
+        ? Object.assign({}, opts.clothMaterial || { color: 0xffffff, texture: 'fabric', roughness: 0.95, metalness: 0 },
+          { uvScale: ((opts.clothMaterial && opts.clothMaterial.uvScale) || 2.4) * 3.6 })
+        : opts.material != null ? opts.material : { preset: 'fabric', color: opts.color != null ? opts.color : 0x3a6ea8 }),
       skeleton,
       animator,
       controller,
@@ -857,7 +873,7 @@ class Engine {
          the sides. The neck is shared by everyone of one build, so a
          bearded man gets his own tinted copy (and one per level of detail). */
       const NECK_BEARD = { stubble: 0.40, full: 0.88, heavy: 0.94 };
-      const bdens = bodyEnt && !opts.zombie && opts.beard ? NECK_BEARD[opts.beard] : 0;
+      const bdens = bodyEnt && (!opts.zombie || heroOutfit) && opts.beard ? NECK_BEARD[opts.beard] : 0;
       const skinC = (opts.skin && typeof opts.skin === 'object' && opts.skin.color != null) ? opts.skin.color : 0xc8a080;
       const beardC = opts.beardColor != null ? opts.beardColor : (opts.hairColor != null ? opts.hairColor : 0x2a2320);
       const neckOf = (ng) => (bdens ? this._beardNeck(ng, opts.beard, bdens, beardC, skinC, scale) : ng);
@@ -883,8 +899,15 @@ class Engine {
     /* Hands and boots: the field-built body's other materials. Gloves by
        default -- every operator wears them -- and boots in leather. */
     for (const [key, mat, nm] of [
-      ['hands', opts.gloves != null ? opts.gloves : { color: 0x2b2a27, texture: 'leather', roughness: 0.62, metalness: 0, uvScale: 3 }, 'hands'],
-      ['boots', opts.boots != null ? opts.boots : { color: 0x3a3028, texture: 'leather', roughness: 0.58, metalness: 0, uvScale: 2 }, 'boots'],
+      ['hands', opts.gloves != null ? opts.gloves
+        : heroOutfit ? (opts.skin != null ? opts.skin : 'skin')
+        : { color: 0x2b2a27, texture: 'leather', roughness: 0.62, metalness: 0, uvScale: 3 }, 'hands'],
+      ['boots', opts.boots != null ? opts.boots
+        // White, so the outfit's shoe colours (painted per vertex) come through.
+        : heroOutfit ? (heroOutfit.shoes && heroOutfit.shoes.kind === 'sneaker'
+          ? { color: 0xffffff, texture: 'fabric', roughness: 0.82, metalness: 0, uvScale: 3 }
+          : { color: 0xffffff, texture: 'leather', roughness: 0.55, metalness: 0, uvScale: 2 })
+        : { color: 0x3a3028, texture: 'leather', roughness: 0.58, metalness: 0, uvScale: 2 }, 'boots'],
     ]) {
       const sub = geo[key];
       if (!sub || !sub.indices || !sub.indices.length) continue;
@@ -906,7 +929,7 @@ class Engine {
        skin under it is flesh. Sharing one mesh means sharing one material,
        and a coat that has to be the same colour as the body it covers is
        not clothing — it is a paint job. */
-    if (opts.zombie && !model) {
+    if (opts.zombie && !model && !heroOutfit) {
       const clothGeo = makeHumanoidMesh(skeleton, {
         stature: scale,
         zombieBuild: opts.zombieBuild || 'male', girth: opts.girth,
@@ -998,14 +1021,16 @@ class Engine {
          per face and shared -- a match builds the same seven heads over
          and over. */
       const living = rot < 0.01 && opts.sdfHead !== false;
+      // `hair` as a style name (the survivors pass it that way) paints the field-built scalp as well.
+      const hairOf = opts.hairStyle || (typeof opts.hair === 'string' ? opts.hair : undefined);
       const skinCol = (opts.skin && typeof opts.skin === 'object' && opts.skin.color != null) ? opts.skin.color : 0xc8a080;
-      const hk = [opts.faceKey || '', opts.seed || 5, opts.faceType || 'male', opts.eyeColor || 0, opts.hairStyle || '',
+      const hk = [opts.faceKey || '', opts.seed || 5, opts.faceType || 'male', opts.eyeColor || 0, hairOf || '',
         opts.hairColor || 0, opts.brows || '', opts.browColor || 0, opts.beard || '', opts.beardColor || 0, skinCol].join(':');
       const headCache = Engine._sdfHeads || (Engine._sdfHeads = new Map());
       const headGeo = living
         ? (headCache.get(hk) || headCache.set(hk, makeSdfHeadGeometry({ seed: opts.seed || 5, type: opts.faceType,
           face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
-          hairStyle: opts.hairStyle, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
+          hairStyle: hairOf, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
           beard: opts.beard, beardColor: opts.beardColor })).get(hk))
         : makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot,
           face: opts.faceShape || null, hair: opts.hair, eyeColor: opts.eyeColor });
@@ -1032,7 +1057,7 @@ class Engine {
               if (!g2) {
                 g2 = makeSdfHeadGeometry({ seed: opts.seed || 5, type: opts.faceType,
                   face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
-                  hairStyle: opts.hairStyle, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
+                  hairStyle: hairOf, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
                   beard: opts.beard, beardColor: opts.beardColor, resolution: src });
                 headCache.set(hk + tag, g2);
               }

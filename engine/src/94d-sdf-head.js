@@ -35,6 +35,11 @@ const SDF_HEAD_TO_UNITS = 1 / 0.378;     // metres of real head -> old sculpt un
 
 function makeSdfHeadGeometry(opts = {}) {
   const T = opts.type || 'male';
+  /* A woman's face is not the man's with a flag set: a narrower, more
+     tapered jaw and a smaller chin, a lower brow ridge, a shorter and
+     finer nose, fuller cheeks. Defaults only -- a faceShape still wins. */
+  const FEM = T === 'female' ? { jaw: 0.160, gonialX: 0.017, chinWide: 0.058, chin: 0.046, noseLen: 0.90,
+    noseWide: 0.86, noseBridge: 0.92, browShelf: 0, cheek: 0.026, boxy: 0.62, glabella: 0.008, jawDepth: 0.050 } : {};
   const F = Object.assign({
     boxy: 0.75, brow: T === 'female' ? 0.026 : 0.040, browShelf: 0, browWide: 0.150,
     orbit: 0.085, cheek: T === 'female' ? 0.024 : T === 'heavy' ? 0.030 : 0.019, cheekX: 0.150,
@@ -45,7 +50,7 @@ function makeSdfHeadGeometry(opts = {}) {
     mental: 0.022, nasolabial: 0.017, philtrum: 0.015, vaultTaperX: 0.115, vaultTaperZ: 0.070,
     parietal: 0.085, backFull: 0.035, backWide: 0.030, forehead: 0.022, crownFlat: 0.028,
     occiputHigh: 0.022, lidFold: 0.014,
-  }, opts.face || {});
+  }, FEM, opts.face || {});
   const seed = opts.seed || 5;
   const vary = ((seed * 7919) % 97) / 97 - 0.5;           // a per-head nudge
   const fem = T === 'female' ? 1 : 0, heavy = T === 'heavy' ? 1 : 0;
@@ -325,8 +330,8 @@ function paintHeadHair(g, opts) {
     return m;
   } });
   const H = opts.hairStyle && HAIR_STYLES[opts.hairStyle];
-  if (H) layers.push({ col: ratio(opts.hairColor != null ? opts.hairColor : 0x2a2320), dens: opts.hairStyle === 'crop' ? 0.86 : 0.95, mask: (u, w) => {
-    const edge = H.back + (H.cut - H.back) * w;
+  if (H) layers.push({ col: ratio(opts.hairColor != null ? opts.hairColor : 0x2a2320), dens: opts.hairStyle === 'crop' ? 0.86 : 0.95, mask: (u, w, xn) => {
+    const edge = sdfHairEdge(H, w, xn);
     return _ss(edge - 0.012, edge + 0.010, u);
   } });
   if (!layers.length) return;

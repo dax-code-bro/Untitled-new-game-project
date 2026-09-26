@@ -298,7 +298,8 @@ function makeHumanoidMesh(skeleton, opts = {}) {
       for (let i = 0; i < sub.positions.length; i++) sub.positions[i] *= st0;
       if (sub.computeBounds) sub.bounds = sub.computeBounds();
     }
-    g.neck = smoothSkinWeights(solveSkinWeights(g.neckGeo, skeleton), 4);
+    // bindFieldLimbs as well: the skin mesh carries any bare forearm or shin as well as the neck.
+    g.neck = smoothSkinWeights(bindFieldLimbs(solveSkinWeights(g.neckGeo, skeleton), skeleton), 4);
     g.hands = solveSkinWeights(g.handGeo, skeleton);
     g.boots = smoothSkinWeights(bindFieldLimbs(solveSkinWeights(g.bootGeo, skeleton), skeleton), 4);
     return smoothSkinWeights(bindFieldLimbs(solveSkinWeights(g, skeleton), skeleton), 6);

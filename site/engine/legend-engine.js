@@ -17249,7 +17249,7 @@ const BEARD_STYLES = {
 /* One patch of a geometry, pushed out along its normals.
    `keep(u, w, xn, i)` decides, per vertex, whether it is in. A
    triangle is emitted when all three of its corners are. */
-function offsetPatch(src, keep, thick, warp) {
+function offsetPatch(src, keep, thick, warp, feather) {
   const P = src.positions, N = src.normals, I = src.indices;
   let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
   for (let i = 0; i < P.length; i += 3) {
@@ -17280,7 +17280,9 @@ function offsetPatch(src, keep, thick, warp) {
         remap[v] = g.positions.length / 3;
         const px = P[v * 3], py = P[v * 3 + 1], pz = P[v * 3 + 2];
         const nx = N[v * 3], ny = N[v * 3 + 1], nz = N[v * 3 + 2];
-        let ox = px + nx * thick, oy = py + ny * thick, oz = pz + nz * thick;
+        // An optional taper: a multiplier on the thickness by position, so an edge can thin to nothing.
+        const tk = feather ? thick * feather((py - lo[1]) / sy, (pz - lo[2]) / sz, Math.abs((px - lo[0]) / sx - 0.5) * 2) : thick;
+        let ox = px + nx * tk, oy = py + ny * tk, oz = pz + nz * tk;
         if (warp) {
           const u = (py - lo[1]) / sy, w = (pz - lo[2]) / sz;
           const d = warp(u, w);
@@ -17299,6 +17301,20 @@ function offsetPatch(src, keep, thick, warp) {
   return g;
 }
 
+/* WHERE THE HAIR STARTS on a field-built head (94d), in the same
+   normalised coordinates the styles use. The styles were tuned on the ring
+   sculpt, whose brow sits higher up its box; on this head the same number
+   put the hairline just above the eyebrows, level all the way round -- a
+   bowl cut on everybody. A hairline is a third of the face above the brow
+   at the front, lifts back over the temples and comes down in front of the
+   ear; the style's own `back` still sets the nape. */
+function sdfHairEdge(S, w, xn) {
+  const side = Math.max(0, Math.min(1, (xn - 0.45) / 0.5));
+  const front = 0.845 + (0.70 - 0.845) * side * side * (3 - 2 * side);
+  const lift = Math.max(0, S.cut - 0.735) * 0.5;       // a longer style starts a touch lower
+  return S.back + (front - lift - S.back) * w;
+}
+
 /* The hair on top. `style` is a key of HAIR_STYLES. */
 function makeHairGeometry(headGeo, style) {
   const S = HAIR_STYLES[style];
@@ -17307,7 +17323,8 @@ function makeHairGeometry(headGeo, style) {
      the front, because a hairline does -- level all the way round
      is a swimming cap. `back` is where it sits at the occiput and
      `cut` where it sits at the brow, interpolated on w. */
-  const keep = (u, w) => u > (S.back + (S.cut - S.back) * w);
+  const keep = headGeo.sdf ? (u, w, xn) => u > sdfHairEdge(S, w, xn)
+    : (u, w) => u > (S.back + (S.cut - S.back) * w);
   const warp = (S.fall || S.lean || S.knot) ? (u, w) => {
     let dy = 0, dz = 0;
     // Long hair hangs: the further down the back, the further it falls.
@@ -17318,7 +17335,17 @@ function makeHairGeometry(headGeo, style) {
     if (S.knot && w < 0.28 && u > 0.62) dz -= S.knot;
     return [0, dy, dz];
   } : null;
-  return offsetPatch(headGeo, keep, S.thick, warp);
+  /* Thin at the hairline, full on top. At a constant thickness the cut
+     stood up as a rim all the way round -- on the field-built head,
+     which is smooth enough to show it, every longer style read as a bowl
+     set on the skull. The painted scalp underneath (94d) takes over where
+     the shell thins out. */
+  const feather = headGeo.sdf ? (u, w, xn) => {
+    const edge = sdfHairEdge(S, w, xn);
+    const t = Math.max(0, Math.min(1, (u - edge) / 0.09));
+    return 0.12 + 0.88 * t * t * (3 - 2 * t);
+  } : null;
+  return offsetPatch(headGeo, keep, S.thick, warp, feather);
 }
 
 /* EYEBROWS.
@@ -18739,7 +18766,8 @@ function makeHumanoidMesh(skeleton, opts = {}) {
       for (let i = 0; i < sub.positions.length; i++) sub.positions[i] *= st0;
       if (sub.computeBounds) sub.bounds = sub.computeBounds();
     }
-    g.neck = smoothSkinWeights(solveSkinWeights(g.neckGeo, skeleton), 4);
+    // bindFieldLimbs as well: the skin mesh carries any bare forearm or shin as well as the neck.
+    g.neck = smoothSkinWeights(bindFieldLimbs(solveSkinWeights(g.neckGeo, skeleton), skeleton), 4);
     g.hands = solveSkinWeights(g.handGeo, skeleton);
     g.boots = smoothSkinWeights(bindFieldLimbs(solveSkinWeights(g.bootGeo, skeleton), skeleton), 4);
     return smoothSkinWeights(bindFieldLimbs(solveSkinWeights(g, skeleton), skeleton), 6);
@@ -21864,6 +21892,23 @@ function _sdEllipsoid(px, py, pz, c, r) {
   return k1 > 1e-9 ? k0 * (k0 - 1) / k1 : -Math.min(r[0], r[1], r[2]);
 }
 
+/* A flared elliptic column, grown by `th`: a coat's skirt.
+   Its section is an ellipse (a0 x b0 at y0, a1 x b1 at y1, straight
+   between), measured as distance from the ellipse scaled by its smaller
+   axis -- not exact, but this field only has to be right near the wall. */
+function _sdSkirt(px, py, pz, p) {
+  const t = Math.max(0, Math.min(1, (p.y0 - py) / (p.y0 - p.y1)));
+  const a = p.a0 + (p.a1 - p.a0) * t, b = p.b0 + (p.b1 - p.b0) * t;
+  const x = px, z = pz - p.cz;
+  const k = Math.sqrt((x / a) * (x / a) + (z / b) * (z / b));
+  const d = (k - 1) * Math.min(a, b);
+  /* Solid, not a shell: a wall a few millimetres thick is thinner than a
+     cell of the coarser levels (22 and 32 mm) and the mesher threw spikes
+     off it. The legs inside are hidden either way; only the hem's
+     underside shows it, from below. */
+  return Math.max(d - p.th, py - p.y0, p.y1 - py);
+}
+
 // A rounded box in a local frame: c centre, u/v/w unit axes, h half-sizes, rad rounding.
 function _sdRoundBox(px, py, pz, c, u, v, w, h, rad) {
   const dx = px - c[0], dy = py - c[1], dz = pz - c[2];
@@ -21893,6 +21938,7 @@ function _primBound(p, k) {
   let c, r;
   if (p.t === 'c') { c = _lerp3(p.a, p.b, 0.5); r = Math.hypot(p.b[0] - p.a[0], p.b[1] - p.a[1], p.b[2] - p.a[2]) * 0.5 + Math.max(p.r1, p.r2); }
   else if (p.t === 'e') { c = p.c; r = Math.max(p.r[0], p.r[1], p.r[2]); }
+  else if (p.t === 'k') { c = [0, (p.y0 + p.y1) * 0.5, p.cz]; r = Math.hypot(Math.max(p.a0, p.a1, p.b0, p.b1), (p.y0 - p.y1) * 0.5) + p.th; }
   else { c = p.c; r = Math.hypot(p.h[0], p.h[1], p.h[2]) + p.rad; }
   return { c, r: r + (p.k != null ? p.k : k) + 0.002 };
 }
@@ -21905,6 +21951,7 @@ function _evalRegion(R, x, y, z) {
     let e;
     if (p.t === 'c') e = _sdRoundCone(x, y, z, p.a, p.b, p.r1, p.r2);
     else if (p.t === 'e') e = _sdEllipsoid(x, y, z, p.c, p.r);
+    else if (p.t === 'k') e = _sdSkirt(x, y, z, p);
     else e = _sdRoundBox(x, y, z, p.c, p.u, p.v, p.w, p.h, p.rad);
     const k = p.k != null ? p.k : R.k;
     // `op: 's'` carves: a smooth subtraction, for sockets, nostrils and seams.
@@ -22145,7 +22192,27 @@ function makeSdfBodyGeometry(skeleton, opts = {}) {
   const st = opts.stature || 1;
   const kb = opts.thickness || 1;
   const kw = Math.pow(kb, 0.85);          // girth follows build, a little sub-linear
-  const fit = BODY_FIT[opts.fit || 'fatigues'] || BODY_FIT.fatigues;
+  /* A CIVILIAN OUTFIT, from the same table the clothed builder dresses
+     the dead and the ten survivors from (OUTFITS, 94a-zombie-body.js):
+     colours per garment, how far down the arm a sleeve comes, where a
+     hem stops, a coat's tails, a belt, the shoes. Where a sleeve or a
+     leg stops short the limb carries on as skin, in the skin mesh. */
+  const od = opts.outfitDef || null;
+  const coatHem = od && od.top && od.top.hem < -0.075 ? -0.105 + (od.top.hem + 0.07) * 7 : null;
+  const fit = od
+    ? { trunk: coatHem != null ? 0.016 : 0.010, sleeve: coatHem != null ? 0.015 : 0.010, leg: 0.012, fold: 0.8, pockets: false,
+      cuffs: !!(od.top && od.top.sleeve > 0.85) }
+    : BODY_FIT[opts.fit || 'fatigues'] || BODY_FIT.fatigues;
+  /* The frame. The rig is the same for everyone (the shoulders and hips
+     sit where the skeleton puts them); what differs is the flesh between:
+     a woman's narrower waist and ribcage over wider hips, and a bust; a
+     heavy man's belly carried forward and a thicker middle. */
+  const frame = opts.frame || 'male';
+  const fem = frame === 'female' ? 1 : 0, hvy = frame === 'heavy' ? 1 : 0;
+  const FR = {
+    pelvX: 1 + 0.08 * fem + 0.06 * hvy, waistX: 1 - 0.13 * fem + 0.10 * hvy, waistZ: 1 - 0.08 * fem + 0.26 * hvy,
+    ribX: 1 - 0.09 * fem + 0.07 * hvy, ribZ: 1 - 0.05 * fem + 0.12 * hvy, belly: 0.020 * hvy, lat: 1 - 0.18 * fem,
+  };
   const h = opts.resolution || 0.011;
   const seed = (opts.seed || 7) * 1.37;
 
@@ -22157,6 +22224,8 @@ function makeSdfBodyGeometry(skeleton, opts = {}) {
 
   const g = new Geometry();
   g.parts = [];
+  // The skin: the neck, and any arm or leg a short sleeve or a hem leaves bare.
+  const ng = new Geometry(); ng.parts = [];
   /* UVs IN METRES. u runs round the region (angle x its circumference),
      v straight up it, so a fabric's grid is square and the same size on
      a sleeve as on the chest; a material's uvScale is then "tiles per
@@ -22175,15 +22244,18 @@ function makeSdfBodyGeometry(skeleton, opts = {}) {
   /* ---- TRUNK: pelvis to collar, with the deltoid caps ---- */
   const w = (v) => v * kw;
   const T = [
-    _ell([0, 0.020, -0.004], [w(0.150), 0.105, w(0.100)]),               // pelvis / hips
-    _ell([w(0.066), -0.018, -0.050], [w(0.082), 0.092, w(0.070)]),        // glute L
-    _ell([-w(0.066), -0.018, -0.050], [w(0.082), 0.092, w(0.070)]),       // glute R
-    _ell([0, 0.175, 0.004], [w(0.128), 0.125, w(0.092)]),                 // abdomen / waist
-    _ell([0, 0.335, -0.004], [w(0.142), 0.150, w(0.104)]),                // ribcage
-    _ell([w(0.066), 0.395, 0.052], [w(0.078), 0.058, w(0.040)]),          // pectoral L
-    _ell([-w(0.066), 0.395, 0.052], [w(0.078), 0.058, w(0.040)]),         // pectoral R
-    _ell([w(0.088), 0.330, -0.052], [w(0.060), 0.110, w(0.042)]),         // lat L
-    _ell([-w(0.088), 0.330, -0.052], [w(0.060), 0.110, w(0.042)]),        // lat R
+    _ell([0, 0.020, -0.004], [w(0.150) * FR.pelvX, 0.105, w(0.100)]),               // pelvis / hips
+    _ell([w(0.066) * FR.pelvX, -0.018, -0.050], [w(0.082) * FR.pelvX, 0.092, w(0.070) * (1 + 0.06 * fem)]),   // glute L
+    _ell([-w(0.066) * FR.pelvX, -0.018, -0.050], [w(0.082) * FR.pelvX, 0.092, w(0.070) * (1 + 0.06 * fem)]),  // glute R
+    _ell([0, 0.175, 0.004 + FR.belly], [w(0.128) * FR.waistX, 0.125, w(0.092) * FR.waistZ]),                 // abdomen / waist
+    _ell([0, 0.335, -0.004], [w(0.142) * FR.ribX, 0.150, w(0.104) * FR.ribZ]),                                // ribcage
+    ...(fem
+      ? [_ell([w(0.056), 0.372, 0.058], [w(0.058), 0.056, w(0.050)], 0.03),                          // bust L
+        _ell([-w(0.056), 0.372, 0.058], [w(0.058), 0.056, w(0.050)], 0.03)]                          // bust R
+      : [_ell([w(0.066), 0.395, 0.052], [w(0.078), 0.058, w(0.040)]),                                // pectoral L
+        _ell([-w(0.066), 0.395, 0.052], [w(0.078), 0.058, w(0.040)])]),                               // pectoral R
+    _ell([w(0.088) * FR.lat, 0.330, -0.052], [w(0.060) * FR.lat, 0.110, w(0.042)]),                // lat L
+    _ell([-w(0.088) * FR.lat, 0.330, -0.052], [w(0.060) * FR.lat, 0.110, w(0.042)]),               // lat R
     _ell([0, 0.468, -0.022], [w(0.118), 0.050, w(0.068)]),                // trapezius / upper back
     _ell([0, 0.448, 0.020], [w(0.100), 0.040, w(0.070)]),                 // collarbone line
   ];
@@ -22213,7 +22285,58 @@ function makeSdfBodyGeometry(skeleton, opts = {}) {
   trunk.cut = (x, y, z) => Math.max(-0.105 - y + Math.abs(x) * 0.35, y - 0.534,
     // (the hole is {r < 0.056, y > 0.49}; subtracting it is max(d, -hole))
     Math.min(0.056 - Math.sqrt(x * x + (z + 0.006) * (z + 0.006)), y - 0.490));
+  /* The outfit's colours, applied per vertex once everything is meshed:
+     [first vertex, last vertex, colour-at-position]. Tints, not sRGB --
+     the table was authored for exactly that (see OUTFITS). */
+  const paint = [];
+  /* The table's hexes are tints tuned by eye for the old builder's
+     lighting and come out washed pale here (a navy boiler suit read as
+     sky blue, a deep red flannel as salmon), so they go through a power
+     curve on the way in: darks get deep, the lab coat stays pale. */
+  const hex3 = (c) => [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255].map((v) => Math.pow(v, 1.6));
+  const topC = od && od.top ? hex3(od.top.color) : null;
+  const underC = od && od.under ? hex3(od.under.color) : null;
+  const botC = od && od.bottom ? hex3(od.bottom.color) : null;
+  const beltC = od && od.belt != null ? hex3(od.belt) : null;
+  let v0 = g.positions.length / 3;
   meshWrapped(g, trunk, h, PART.BODY, 0, 0, 0.92 * kw);
+  if (od) paint.push([v0, g.positions.length / 3, (x, y, z) => {
+    // The shirt under an open collar: a V down the front of the chest, blended at its edge
+    // (the vertices are a centimetre apart, and a hard edge came out stair-stepped).
+    if (underC && z > 0.02 && y > 0.35) {
+      const m = Math.max(0, Math.min(1, ((y - 0.37) * 0.30 - Math.abs(x)) / 0.014 + 0.5));
+      const wgt = m * m * (3 - 2 * m);
+      if (wgt > 0) {
+        const base = beltC && y > 0.074 && y < 0.106 ? beltC : topC;
+        return base.map((v, i) => v + (underC[i] - v) * wgt);
+      }
+    }
+    if (beltC && y > 0.074 && y < 0.106) return beltC;
+    // Below the belt it is the trousers, unless a coat comes down over them.
+    if (y < 0.090 && coatHem == null && botC) return botC;
+    return topC;
+  }]);
+
+  /* ---- COAT TAILS: two panels, one per thigh, open at the front ----
+     Each follows its own leg (it is tagged with that leg's part), so a
+     stride parts the coat down the middle the way a real one opens. */
+  if (od && coatHem != null) {
+    /* A flared tube from inside the waist to the hem, wide enough to
+       clear both thighs, split down the middle into two panels. */
+    const yTop = 0.07;
+    const a0 = w(0.150) * FR.pelvX + 0.004, b0 = w(0.100) * (1 + 0.06 * fem) + 0.020;
+    const flare = Math.min(0.06, (yTop - coatHem) * 0.10);
+    const skirt = { t: 'k', y0: yTop, y1: coatHem, cz: -0.012, a0, b0, a1: Math.max(a0 + flare, w(0.185)), b1: b0 + flare * 0.8, th: 0.0 };
+    for (const s of [1, -1]) {
+      const tail = _region([skirt], 0.01);
+      tail.bmin = [s > 0 ? -0.01 : -0.40, coatHem - 0.03, -0.30];
+      tail.bmax = [s > 0 ? 0.40 : 0.01, yTop + 0.03, 0.30];
+      tail.cut = (x, y, z) => 0.003 - s * x;
+      v0 = g.positions.length / 3;
+      meshWrapped(g, tail, h, s > 0 ? PART.LEG_L_FIELD : PART.LEG_R_FIELD, 0, 0, 0.95 * kw);
+      paint.push([v0, g.positions.length / 3, () => topC]);
+    }
+  }
 
   /* ---- ARMS: sleeve from inside the deltoid to the cuff ---- */
   for (const s of [1, -1]) {
@@ -22245,11 +22368,29 @@ function makeSdfBodyGeometry(skeleton, opts = {}) {
     };
     // Starts inside the shoulder cap, ends at the cuff; the glove takes over.
     arm.cut = (x, y, z) => (wr[1] + 0.012) - y;
+    /* A short or rolled sleeve: the cloth stops at that fraction of the
+       arm and the rest is the same arm in skin, starting a centimetre
+       inside the sleeve so the edge reads as a hem over it. */
+    const sf = od && od.top ? od.top.sleeve : 1;
+    if (sf < 0.90) {
+      const l1 = Math.hypot(el[0] - sh[0], el[1] - sh[1], el[2] - sh[2]), l2 = Math.hypot(wr[0] - el[0], wr[1] - el[1], wr[2] - el[2]);
+      const at = sf * (l1 + l2);
+      const [pa, pb, tt] = at <= l1 ? [sh, el, at / l1] : [el, wr, (at - l1) / l2];
+      const ps = _lerp3(pa, pb, tt), dir = _norm3([pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]]);
+      const along = (x, y, z) => (x - ps[0]) * dir[0] + (y - ps[1]) * dir[1] + (z - ps[2]) * dir[2];
+      arm.cut = (x, y, z) => Math.max((wr[1] + 0.012) - y, along(x, y, z));
+      const bare = _region(A.slice(0, 6), 0.030);
+      bare.bmin = lo; bare.bmax = hi;
+      bare.cut = (x, y, z) => Math.max((wr[1] + 0.012) - y, -along(x, y, z) - 0.012);
+      meshWrapped(ng, bare, h, s > 0 ? PART.ARM_L_FIELD : PART.ARM_R_FIELD, sh[0], sh[2], 0.30 * kw);
+    }
     if (fit.pockets) {   // a sleeve pocket on the upper arm, outside face
       const pc = _lerp3(sh, el, 0.34);
       A.push(_box([pc[0] + s * w(0.046), pc[1], pc[2] + 0.004], [0, 1, 0], [0, 0, 1], [0.050, 0.004 + fit.sleeve * 0.2, 0.040], 0.006, 0.012));
     }
+    v0 = g.positions.length / 3;
     meshWrapped(g, arm, h, s > 0 ? PART.ARM_L_FIELD : PART.ARM_R_FIELD, sh[0], sh[2], 0.30 * kw);
+    if (od) paint.push([v0, g.positions.length / 3, () => topC]);
   }
 
   /* ---- LEGS: trouser leg from inside the pelvis to above the boot ---- */
@@ -22280,12 +22421,28 @@ function makeSdfBodyGeometry(skeleton, opts = {}) {
       L.push(_box([pc[0] + s * w(0.074), pc[1], pc[2] + 0.004], [0, 1, 0], [0, 0, 1], [0.078, 0.006 + fit.leg * 0.3, 0.064], 0.008, 0.014));
       L.push(_box([pc[0] + s * w(0.080), pc[1] + 0.066, pc[2] + 0.004], [0, 1, 0], [0, 0, 1], [0.020, 0.008 + fit.leg * 0.3, 0.068], 0.005, 0.006));
     }
+    // Shorts: the leg carries on bare below the hem.
+    const hf = od && od.bottom ? od.bottom.hem : 1;
+    if (hf < 0.95) {
+      const l1 = Math.hypot(kn[0] - top[0], kn[1] - top[1], kn[2] - top[2]), l2 = Math.hypot(ankle[0] - kn[0], ankle[1] - kn[1], ankle[2] - kn[2]);
+      const at = hf * (l1 + l2);
+      const [pa, pb, tt] = at <= l1 ? [top, kn, at / l1] : [kn, ankle, (at - l1) / l2];
+      const ps = _lerp3(pa, pb, tt), dir = _norm3([pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]]);
+      const along = (x, y, z) => (x - ps[0]) * dir[0] + (y - ps[1]) * dir[1] + (z - ps[2]) * dir[2];
+      const cut0 = leg.cut;
+      leg.cut = (x, y, z) => Math.max(cut0(x, y, z), along(x, y, z));
+      const bare = _region(L.slice(0, 7), 0.035);
+      bare.bmin = leg.bmin; bare.bmax = leg.bmax;
+      bare.cut = (x, y, z) => Math.max(cut0(x, y, z), -along(x, y, z) - 0.014);
+      meshWrapped(ng, bare, h, s > 0 ? PART.LEG_L_FIELD : PART.LEG_R_FIELD, hp[0], hp[2], 0.48 * kw);
+    }
+    v0 = g.positions.length / 3;
     meshWrapped(g, leg, h, s > 0 ? PART.LEG_L_FIELD : PART.LEG_R_FIELD, hp[0], hp[2], 0.48 * kw);
+    if (od) paint.push([v0, g.positions.length / 3, (x, y, z) => (beltC && y > 0.074 && y < 0.106 ? beltC : botC)]);
   }
   const clothVerts = g.positions.length / 3;
 
   /* ---- NECK (skin) ---- */
-  const ng = new Geometry(); ng.parts = [];
   {
     const nb = J.neck, hd = J.head;
     const N = [
@@ -22311,8 +22468,10 @@ function makeSdfBodyGeometry(skeleton, opts = {}) {
     const S = s > 0 ? 'L' : 'R';
     const an = J['foot' + S];
     const sole = -0.875;
+    const sneaker = !!(od && od.shoes && od.shoes.kind === 'sneaker');
+    const shaftTop = sneaker ? 0.055 : 0.13;
     const B = [
-      _cone([an[0], an[1] + 0.13, an[2] - 0.004], [an[0], an[1] + 0.02, an[2] - 0.006], 0.052, 0.050),          // shaft
+      _cone([an[0], an[1] + shaftTop, an[2] - 0.004], [an[0], an[1] + 0.02, an[2] - 0.006], 0.052, 0.050),          // shaft
       _box([an[0] + s * 0.004, sole + 0.040, an[2] + 0.042], [1, 0, 0], [0, 1, 0], [0.048, 0.040, 0.128], 0.030),  // foot
       _ell([an[0] + s * 0.003, sole + 0.042, an[2] + 0.140], [0.046, 0.036, 0.050], 0.03),                      // toe box
       _box([an[0] + s * 0.004, sole + 0.012, an[2] + 0.040], [1, 0, 0], [0, 1, 0], [0.054, 0.012, 0.150], 0.008, 0.01), // sole
@@ -22321,14 +22480,19 @@ function makeSdfBodyGeometry(skeleton, opts = {}) {
     const boot = _region(B, 0.025);
     boot.bmin = [an[0] - 0.09, sole - 0.02, an[2] - 0.15];
     boot.bmax = [an[0] + 0.09, an[1] + 0.17, an[2] + 0.24];
-    boot.cut = (x, y, z) => Math.max(sole - y, y - (an[1] + 0.155));
+    boot.cut = (x, y, z) => Math.max(sole - y, y - (an[1] + shaftTop + 0.025));
     // Lacing ridges across the instep.
     boot.fold = (x, y, z) => {
       const dz = z - (an[2] + 0.04), dx = x - an[0];
       if (dz < -0.06 || dz > 0.09 || Math.abs(dx) > 0.03) return 0;
       return -0.0018 * (0.5 + 0.5 * Math.sin((y + dz * 0.7) * 260)) * Math.exp(-dx * dx * 4000);
     };
+    const bv0 = bg.positions.length / 3;
     _meshRegion(bg, boot, h * 0.85, s > 0 ? PART.LEG_L_FIELD : PART.LEG_R_FIELD, (x, y, z, out) => { out[0] = x * 4 + z * 2; out[1] = y * 4 + z * 2; });
+    if (od && od.shoes) {
+      const up = hex3(od.shoes.color), so = od.shoes.sole != null ? hex3(od.shoes.sole) : up.map((v) => v * 0.55);
+      paint.push([bv0, bg.positions.length / 3, (x, y) => (y < sole + 0.022 ? so : up), bg]);
+    }
   }
 
   /* ---- HANDS (gloved or bare, the caller's choice of material) ---- */
@@ -22341,6 +22505,25 @@ function makeSdfBodyGeometry(skeleton, opts = {}) {
 
   for (const G2 of [g, ng, bg, hg]) {
     while (G2.parts.length < G2.positions.length / 3) G2.parts.push(G2.part || 0);
+  }
+  /* The skin shares its material with the head, whose UVs run 0..1 over a
+     head a quarter of a metre tall; in metres the same skin texture came
+     out four times coarser on a neck or a bare forearm, and blotched. */
+  for (let i = 0; i < ng.uvs.length; i++) ng.uvs[i] *= 3.2;
+  if (paint.length) {
+    for (const G2 of [g, bg]) {
+      const n = G2.positions.length / 3;
+      if (!paint.some((q) => (q[3] || g) === G2)) continue;
+      const C = new Array(n * 3).fill(1);
+      for (const [a, b, fn, tgt] of paint) {
+        if ((tgt || g) !== G2) continue;
+        for (let v = a; v < b; v++) {
+          const c = fn(G2.positions[v * 3], G2.positions[v * 3 + 1], G2.positions[v * 3 + 2]);
+          if (c) { C[v * 3] = c[0]; C[v * 3 + 1] = c[1]; C[v * 3 + 2] = c[2]; }
+        }
+      }
+      G2.colors = C;
+    }
   }
   void clothVerts;
   g.finalize();
@@ -22390,6 +22573,11 @@ const SDF_HEAD_TO_UNITS = 1 / 0.378;     // metres of real head -> old sculpt un
 
 function makeSdfHeadGeometry(opts = {}) {
   const T = opts.type || 'male';
+  /* A woman's face is not the man's with a flag set: a narrower, more
+     tapered jaw and a smaller chin, a lower brow ridge, a shorter and
+     finer nose, fuller cheeks. Defaults only -- a faceShape still wins. */
+  const FEM = T === 'female' ? { jaw: 0.160, gonialX: 0.017, chinWide: 0.058, chin: 0.046, noseLen: 0.90,
+    noseWide: 0.86, noseBridge: 0.92, browShelf: 0, cheek: 0.026, boxy: 0.62, glabella: 0.008, jawDepth: 0.050 } : {};
   const F = Object.assign({
     boxy: 0.75, brow: T === 'female' ? 0.026 : 0.040, browShelf: 0, browWide: 0.150,
     orbit: 0.085, cheek: T === 'female' ? 0.024 : T === 'heavy' ? 0.030 : 0.019, cheekX: 0.150,
@@ -22400,7 +22588,7 @@ function makeSdfHeadGeometry(opts = {}) {
     mental: 0.022, nasolabial: 0.017, philtrum: 0.015, vaultTaperX: 0.115, vaultTaperZ: 0.070,
     parietal: 0.085, backFull: 0.035, backWide: 0.030, forehead: 0.022, crownFlat: 0.028,
     occiputHigh: 0.022, lidFold: 0.014,
-  }, opts.face || {});
+  }, FEM, opts.face || {});
   const seed = opts.seed || 5;
   const vary = ((seed * 7919) % 97) / 97 - 0.5;           // a per-head nudge
   const fem = T === 'female' ? 1 : 0, heavy = T === 'heavy' ? 1 : 0;
@@ -22680,8 +22868,8 @@ function paintHeadHair(g, opts) {
     return m;
   } });
   const H = opts.hairStyle && HAIR_STYLES[opts.hairStyle];
-  if (H) layers.push({ col: ratio(opts.hairColor != null ? opts.hairColor : 0x2a2320), dens: opts.hairStyle === 'crop' ? 0.86 : 0.95, mask: (u, w) => {
-    const edge = H.back + (H.cut - H.back) * w;
+  if (H) layers.push({ col: ratio(opts.hairColor != null ? opts.hairColor : 0x2a2320), dens: opts.hairStyle === 'crop' ? 0.86 : 0.95, mask: (u, w, xn) => {
+    const edge = sdfHairEdge(H, w, xn);
     return _ss(edge - 0.012, edge + 0.010, u);
   } });
   if (!layers.length) return;
@@ -23463,11 +23651,21 @@ class Engine {
        twelve of them was re-solving the field and the skin weights for
        each one. Skinning is per actor in the shader, so the buffers are
        shared exactly the way an imported model's already were. */
-    const sdfLiving = !model && !opts.zombie && opts.sdfBody !== false;
-    const bodyOpts = { thickness: opts.build || 1, stature: scale, fit: opts.fit, seed: opts.seed, sdfBody: opts.sdfBody };
+    /* A SURVIVOR -- the clothed builder at zero decay, which is how Bunker
+       Nine dresses its ten playable heroes -- gets the field-built body in
+       the outfit it names: the same table the old builder read, cut in
+       the new body (94c, `outfitDef`), on a female, heavy or male frame. */
+    const heroOutfit = !model && opts.zombie && rot < 0.01 && opts.blood === false && opts.sdfBody !== false
+      && opts.outfit && typeof OUTFITS !== 'undefined' ? OUTFITS[opts.outfit] || null : null;
+    const sdfLiving = !model && (!opts.zombie || !!heroOutfit) && opts.sdfBody !== false;
+    const bodyOpts = heroOutfit
+      ? { thickness: opts.girth || 1, stature: scale, seed: opts.seed, outfitDef: heroOutfit,
+        frame: opts.zombieBuild || opts.faceType || 'male' }
+      : { thickness: opts.build || 1, stature: scale, fit: opts.fit, seed: opts.seed, sdfBody: opts.sdfBody };
     let bodyEnt = null;
     if (sdfLiving) {
-      const bk = [opts.build || 1, scale.toFixed(3), opts.fit || '', opts.seed == null ? '' : opts.seed].join(':');
+      const bk = [bodyOpts.thickness, scale.toFixed(3), opts.fit || '', opts.seed == null ? '' : opts.seed,
+        heroOutfit ? opts.outfit + ':' + bodyOpts.frame : ''].join(':');
       const bc = Engine._sdfBodies || (Engine._sdfBodies = new Map());
       bodyEnt = bc.get(bk);
       if (!bodyEnt) {
@@ -23488,7 +23686,7 @@ class Engine {
        and the clothing already are. "Do the ribs actually surface?" is a
        question about vertex positions, and it should never have to be
        settled by squinting at a screenshot. */
-    if (!model && opts.zombie) {
+    if (!model && opts.zombie && !heroOutfit) {
       mesh.__key = 'zbody:' + (opts.zombieBuild || 'male') + ':' + (opts.girth || 1) + ':' + (opts.seed || 3) + ':' + rot.toFixed(3);
       (this._geoByKey || (this._geoByKey = new Map())).set(mesh.__key, geo);
     } else if (!model) {
@@ -23521,13 +23719,19 @@ class Engine {
        The dead lurch further, trail their arms more and do not breathe. */
     animator.dynamics = new BodyDynamics(skeleton, {
       source: controller, seed: opts.seed != null ? opts.seed * 7.3 : undefined,
-      gain: opts.zombie ? { lean: 1.35, bank: 1.2, lag: 1.4, gaze: 0.4, breath: 0, shift: 0.6 } : {},
+      gain: opts.zombie && !heroOutfit ? { lean: 1.35, bank: 1.2, lag: 1.4, gaze: 0.4, breath: 0, shift: 0.6 } : {},
     });
 
     const actor = new Actor(this, {
       name: opts.name || 'character',
       mesh,
-      material: this.material(opts.material != null ? opts.material : { preset: 'fabric', color: opts.color != null ? opts.color : 0x3a6ea8 }),
+      // A survivor's body mesh IS the garment, painted per vertex: the cloth material, not the skin.
+      /* Its UVs are in metres (94c), so a weave tuned for the old builder's
+         per-limb UVs at 2.4 read as towelling: scaled to real cloth. */
+      material: this.material(heroOutfit
+        ? Object.assign({}, opts.clothMaterial || { color: 0xffffff, texture: 'fabric', roughness: 0.95, metalness: 0 },
+          { uvScale: ((opts.clothMaterial && opts.clothMaterial.uvScale) || 2.4) * 3.6 })
+        : opts.material != null ? opts.material : { preset: 'fabric', color: opts.color != null ? opts.color : 0x3a6ea8 }),
       skeleton,
       animator,
       controller,
@@ -23558,7 +23762,7 @@ class Engine {
          the sides. The neck is shared by everyone of one build, so a
          bearded man gets his own tinted copy (and one per level of detail). */
       const NECK_BEARD = { stubble: 0.40, full: 0.88, heavy: 0.94 };
-      const bdens = bodyEnt && !opts.zombie && opts.beard ? NECK_BEARD[opts.beard] : 0;
+      const bdens = bodyEnt && (!opts.zombie || heroOutfit) && opts.beard ? NECK_BEARD[opts.beard] : 0;
       const skinC = (opts.skin && typeof opts.skin === 'object' && opts.skin.color != null) ? opts.skin.color : 0xc8a080;
       const beardC = opts.beardColor != null ? opts.beardColor : (opts.hairColor != null ? opts.hairColor : 0x2a2320);
       const neckOf = (ng) => (bdens ? this._beardNeck(ng, opts.beard, bdens, beardC, skinC, scale) : ng);
@@ -23584,8 +23788,15 @@ class Engine {
     /* Hands and boots: the field-built body's other materials. Gloves by
        default -- every operator wears them -- and boots in leather. */
     for (const [key, mat, nm] of [
-      ['hands', opts.gloves != null ? opts.gloves : { color: 0x2b2a27, texture: 'leather', roughness: 0.62, metalness: 0, uvScale: 3 }, 'hands'],
-      ['boots', opts.boots != null ? opts.boots : { color: 0x3a3028, texture: 'leather', roughness: 0.58, metalness: 0, uvScale: 2 }, 'boots'],
+      ['hands', opts.gloves != null ? opts.gloves
+        : heroOutfit ? (opts.skin != null ? opts.skin : 'skin')
+        : { color: 0x2b2a27, texture: 'leather', roughness: 0.62, metalness: 0, uvScale: 3 }, 'hands'],
+      ['boots', opts.boots != null ? opts.boots
+        // White, so the outfit's shoe colours (painted per vertex) come through.
+        : heroOutfit ? (heroOutfit.shoes && heroOutfit.shoes.kind === 'sneaker'
+          ? { color: 0xffffff, texture: 'fabric', roughness: 0.82, metalness: 0, uvScale: 3 }
+          : { color: 0xffffff, texture: 'leather', roughness: 0.55, metalness: 0, uvScale: 2 })
+        : { color: 0x3a3028, texture: 'leather', roughness: 0.58, metalness: 0, uvScale: 2 }, 'boots'],
     ]) {
       const sub = geo[key];
       if (!sub || !sub.indices || !sub.indices.length) continue;
@@ -23607,7 +23818,7 @@ class Engine {
        skin under it is flesh. Sharing one mesh means sharing one material,
        and a coat that has to be the same colour as the body it covers is
        not clothing — it is a paint job. */
-    if (opts.zombie && !model) {
+    if (opts.zombie && !model && !heroOutfit) {
       const clothGeo = makeHumanoidMesh(skeleton, {
         stature: scale,
         zombieBuild: opts.zombieBuild || 'male', girth: opts.girth,
@@ -23699,14 +23910,16 @@ class Engine {
          per face and shared -- a match builds the same seven heads over
          and over. */
       const living = rot < 0.01 && opts.sdfHead !== false;
+      // `hair` as a style name (the survivors pass it that way) paints the field-built scalp as well.
+      const hairOf = opts.hairStyle || (typeof opts.hair === 'string' ? opts.hair : undefined);
       const skinCol = (opts.skin && typeof opts.skin === 'object' && opts.skin.color != null) ? opts.skin.color : 0xc8a080;
-      const hk = [opts.faceKey || '', opts.seed || 5, opts.faceType || 'male', opts.eyeColor || 0, opts.hairStyle || '',
+      const hk = [opts.faceKey || '', opts.seed || 5, opts.faceType || 'male', opts.eyeColor || 0, hairOf || '',
         opts.hairColor || 0, opts.brows || '', opts.browColor || 0, opts.beard || '', opts.beardColor || 0, skinCol].join(':');
       const headCache = Engine._sdfHeads || (Engine._sdfHeads = new Map());
       const headGeo = living
         ? (headCache.get(hk) || headCache.set(hk, makeSdfHeadGeometry({ seed: opts.seed || 5, type: opts.faceType,
           face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
-          hairStyle: opts.hairStyle, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
+          hairStyle: hairOf, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
           beard: opts.beard, beardColor: opts.beardColor })).get(hk))
         : makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot,
           face: opts.faceShape || null, hair: opts.hair, eyeColor: opts.eyeColor });
@@ -23733,7 +23946,7 @@ class Engine {
               if (!g2) {
                 g2 = makeSdfHeadGeometry({ seed: opts.seed || 5, type: opts.faceType,
                   face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
-                  hairStyle: opts.hairStyle, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
+                  hairStyle: hairOf, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
                   beard: opts.beard, beardColor: opts.beardColor, resolution: src });
                 headCache.set(hk + tag, g2);
               }
