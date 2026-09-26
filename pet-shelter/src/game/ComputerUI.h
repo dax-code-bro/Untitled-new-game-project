@@ -6,7 +6,9 @@
 #include "game/Sim.h"
 #include "render/Renderer.h"
 #include "world/Facility.h"
+#include <functional>
 #include <map>
+#include <string>
 #include <memory>
 #include <vector>
 
@@ -33,6 +35,7 @@ public:
     void setStoreTab(int t) { storeTab_ = t; }
     void selectRecruit(int personId) { selectedRecruit_ = personId; }
     void selectStaff(int id) { selectedStaff_ = id; }
+    std::function<std::string(int)> staffStatus;   // what each person is doing right now (from the 3D world)
 
 private:
     void drawAnimals(Sim& sim);

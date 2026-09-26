@@ -92,6 +92,7 @@ bool World::clearGround(float x, float z, float pad) const {
     if (std::fabs(x) < kRoadHalfWidth + 3.0f + pad && z > kParkMaxZ - 2.0f && z < kSouthEdge + 8.0f) return false;
     if (z > kSouthEdge - 6.0f - pad && z < kHighwayZ + kHighwayHalfWidth + 8.0f + pad) return false;
     if (publicArea(x, z) && z > kHighwayZ) return false;
+    if (x > kMapleX - 45.0f - pad && x < kMapleX + 45.0f + pad && z > kHighwayZ && z < kMapleZ1 + 15.0f + pad) return false;   // Maple Lane
     if (x > -40.0f - pad && x < 40.0f + pad && z > -60.0f - pad && z < -18.0f + pad) return false;   // container yards behind the shelter
     for (const AABB& a : keepClear_)
         if (x > a.min.x - pad && x < a.max.x + pad && z > a.min.z - pad && z < a.max.z + pad) return false;

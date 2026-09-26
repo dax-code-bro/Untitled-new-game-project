@@ -128,8 +128,9 @@ void CreativeMode::drawTouchUI(float& timeScale) {
     ImGui::SetNextWindowBgAlpha(0.85f);
     ImGui::Begin("BuildTouch", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
     ImGui::BeginChild("cats", ImVec2(0, 40), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
+    if (ImGui::Button("< Back", ImVec2(0, 32))) backRequest = true;
     for (int c = 0; c < int(BuildCat::Count); ++c) {
-        if (c) ImGui::SameLine();
+        ImGui::SameLine();
         bool on = category == c;
         if (on) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.45f, 0.65f, 1));
         if (ImGui::Button(buildCatName(BuildCat(c)), ImVec2(0, 32))) category = c;
@@ -179,6 +180,8 @@ void CreativeMode::drawUI(Sim& sim, float& timeScale) {
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y - 10.0f), ImGuiCond_Always, ImVec2(0.5f, 1.0f));
     ImGui::SetNextWindowBgAlpha(0.85f);
     ImGui::Begin("Build", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
+    if (ImGui::Button("< Back")) backRequest = true;
+    ImGui::SameLine();
     ImGui::TextColored(ImVec4(0.6f, 0.9f, 0.6f, 1), "BUILD MODE");
     ImGui::SameLine();
     ImGui::TextDisabled("  WASD pan | RMB rotate | wheel zoom | R rotate | X demolish | Tab: POV mode");

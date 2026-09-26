@@ -48,10 +48,17 @@ constexpr float kCrossX = 3150.0f;                     // crossroads (traffic li
 constexpr float kPetStoreX = 3230.0f, kPetStoreZ = kHighwayZ + 48.0f;   // store building center
 constexpr float kPetLotMinX = 3165.0f, kPetLotMaxX = 3300.0f, kPetLotMinZ = kHighwayZ + 12.0f, kPetLotMaxZ = kHighwayZ + 36.0f;
 constexpr float kHighwaySpeedMph = 55.0f, kLocalSpeedMph = 25.0f;
+// Maple Lane: where your staff live, a short street south off HWY 89, one mile west of your gate
+constexpr float kMapleX = -1600.0f, kMapleZ0 = kHighwayZ + 9.0f, kMapleZ1 = kHighwayZ + 175.0f;
+constexpr int kMapleHouses = 10;
+inline vec3 mapleHouse(int i) {   // house center; even = west side, odd = east side of the lane
+    return {kMapleX + (i % 2 == 0 ? -20.0f : 20.0f), 0.0f, kHighwayZ + 34.0f + 30.0f * float(i / 2)};
+}
 // Where people may be off your land: the highway corridor and the pet store's lot.
 inline bool publicArea(float x, float z) {
     if (z > kSouthEdge + 0.6f && z < kHighwayZ + kHighwayHalfWidth + 12.0f) return true;
     if (x > kCrossX - 9.0f && x < kCrossX + 9.0f && z > kHighwayZ && z < kHighwayZ + 140.0f) return true;   // side road
+    if (x > kMapleX - 34.0f && x < kMapleX + 34.0f && z > kHighwayZ && z < kMapleZ1 + 10.0f) return true;       // Maple Lane
     return x > kPetLotMinX - 2.0f && x < kPetStoreX + 22.0f && z > kHighwayZ && z < kPetStoreZ + 12.0f;
 }
 

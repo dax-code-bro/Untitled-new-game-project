@@ -69,6 +69,9 @@ void Driving::build() {
     S({-700.0f, 0, zE}, radians(-90.0f), 1, "ANIMAL SHELTER\nNEXT LEFT  0.4 mi");
     S({700.0f, 0, zW}, radians(90.0f), 1, "ANIMAL SHELTER\nNEXT RIGHT  0.4 mi");
     S({kGateHalfWidth + 4.0f, 0, zW - 1.5f}, radians(90.0f), 4, "YOUR SHELTER\nPrivate drive - owner's gate");
+    // Maple Lane, where your staff live (a mile west, south side)
+    S({kMapleX + 700.0f, 0, zW}, radians(90.0f), 1, "MAPLE LANE\nNEXT LEFT  0.4 mi");
+    S({kMapleX - 700.0f, 0, zE}, radians(-90.0f), 1, "MAPLE LANE\nNEXT RIGHT  0.4 mi");
     // Toward the pet store
     S({kCrossX - 600.0f, 0, zE}, radians(-90.0f), 1, "PET STORE\nCROSSROADS RD\nNEXT RIGHT  0.4 mi");
     S({kCrossX + 600.0f, 0, zW}, radians(90.0f), 1, "PET STORE\nCROSSROADS RD\nNEXT LEFT  0.4 mi");
@@ -417,7 +420,7 @@ void Driving::drawHUD(const Sim& sim, const Truck& t, bool touch) const {
     ImVec2 m1 = touch ? ImVec2(232.0f, 272.0f) : ImVec2(296.0f, io.DisplaySize.y - 16.0f);
     dl->AddRectFilled(m0, m1, IM_COL32(18, 28, 22, 215), 6.0f);
     dl->AddRect(m0, m1, IM_COL32(200, 220, 200, 120), 6.0f);
-    const float wx0 = -1200.0f, wx1 = 4200.0f, wz0 = -600.0f, wz1 = 1200.0f;
+    const float wx0 = -2000.0f, wx1 = 4200.0f, wz0 = -700.0f, wz1 = 1300.0f;
     auto M = [&](float x, float z) { return ImVec2(m0.x + (x - wx0) / (wx1 - wx0) * (m1.x - m0.x), m0.y + (z - wz0) / (wz1 - wz0) * (m1.y - m0.y)); };
     dl->PushClipRect(m0, m1, true);
     for (const FenceSeg& f : sim.land.propertyLine()) dl->AddLine(M(f.a.x, f.a.z), M(f.b.x, f.b.z), IM_COL32(255, 140, 60, 160), 1.0f);
@@ -427,6 +430,8 @@ void Driving::drawHUD(const Sim& sim, const Truck& t, bool touch) const {
     dl->AddLine(M(kCrossX, kHighwayZ), M(kCrossX, kHighwayZ + 190.0f), IM_COL32(200, 200, 200, 255), 2.0f);
     dl->AddCircleFilled(M(0, 0), 5.0f, IM_COL32(230, 70, 60, 255));
     dl->AddText(ImVec2(M(0, 0).x + 7, M(0, 0).y - 7), IM_COL32(255, 255, 255, 230), "Shelter");
+    dl->AddLine(M(kMapleX, kHighwayZ), M(kMapleX, kMapleZ1), IM_COL32(200, 200, 200, 255), 2.0f);
+    dl->AddText(ImVec2(M(kMapleX, kMapleZ1).x - 30, M(kMapleX, kMapleZ1).y + 2), IM_COL32(220, 230, 220, 220), "Maple Ln");
     dl->AddCircleFilled(M(kPetStoreX, kPetStoreZ), 5.0f, IM_COL32(80, 160, 255, 255));
     dl->AddText(ImVec2(M(kPetStoreX, kPetStoreZ).x - 60, M(kPetStoreX, kPetStoreZ).y + 5), IM_COL32(255, 255, 255, 230), "Pet store");
     vec3 f = t.forward();

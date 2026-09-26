@@ -140,7 +140,15 @@ bool ComputerUI::draw(Sim& sim, const Facility& facility) {
     ImGui::Begin("ShelterOS", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
     bool keepOpen = true;
 
-    // Top bar
+
+    // Top bar. Back: closes whatever you opened inside the tab first, then leaves the computer.
+    if (ImGui::Button("< Back", ImVec2(90, 0))) {
+        if (tab == TabAnimals && selectedAnimal_ >= 0) selectedAnimal_ = -1;
+        else if (tab == TabStaff && selectedStaff_ >= 0) selectedStaff_ = -1;
+        else if (tab == TabRecruit && selectedRecruit_ >= 0) selectedRecruit_ = -1;
+        else keepOpen = false;
+    }
+    ImGui::SameLine();
     ImGui::TextColored(ImVec4(0.45f, 0.8f, 1.0f, 1), "ShelterOS");
     ImGui::SameLine();
     ImGui::TextDisabled("| %s  %s", sim.clock.dateString().c_str(), sim.clock.timeString().c_str());
@@ -151,7 +159,10 @@ bool ComputerUI::draw(Sim& sim, const Facility& facility) {
         ImGui::SameLine();
         ImGui::Text("   Financial rating: %s", Economy::grade(fs));
     }
-    ImGui::SameLine(ImGui::GetWindowWidth() - (compact ? 175.0f : 150.0f));
+    ImGui::SameLine(ImGui::GetWindowWidth() - (compact ? 175.0f : 150.0f) - 170.0f);
+    if (sim.shelterOpen) { if (ImGui::Button("Close the shelter", ImVec2(160, 0))) sim.closeShelter(); }
+    else if (ImGui::Button("Open the shelter", ImVec2(160, 0))) sim.openShelter();
+    ImGui::SameLine();
     if (ImGui::Button("Log off  [Esc]", ImVec2(130, 0))) keepOpen = false;
     ImGui::Separator();
 
@@ -671,6 +682,33 @@ void ComputerUI::drawStaff(Sim& sim) {
     }
     ImGui::Text("%s  |  $%.2f/hr (market $%.2f)  |  %.0f h/week  |  %d days with you", roleInfo(e->role).name, double(e->hourlyWage),
                 double(roleInfo(e->role).marketWage), double(e->hoursPerWeek), e->daysEmployed);
+    // Right now, their job, their office
+    {
+        std::string now = staffStatus ? staffStatus(e->id) : std::string();
+        ImGui::TextColored(ImVec4(0.6f, 0.9f, 1.0f, 1), "Right now: %s", now.empty() ? "-" : now.c_str());
+        int slot = sim.officeSlot(e->id);
+        const char* office = slot == 0 ? "the front desk" : slot == 1 ? "the medical room desk" : slot == 2 ? "the appointment room desk"
+                           : slot > 2 ? "a staff building office" : nullptr;
+        if (office) ImGui::TextDisabled("Office: %s", office);
+        else ImGui::TextColored(ImVec4(1, 0.55f, 0.35f, 1), "No office! Build a Staff Building or Staff Offices (Build mode > Operations). It wears on them.");
+        ImGui::TextDisabled("Arrives about %d:%02d AM  |  %s today", int(sim.arriveHour(*e)), int(std::fmod(sim.arriveHour(*e), 1.0f) * 60.0f),
+                            sim.worksToday(*e) ? "working" : "off");
+        int job = int(e->job);
+        ImGui::SetNextItemWidth(260.0f);
+        if (ImGui::BeginCombo("Job", jobName(e->job))) {
+            for (int j = 0; j < int(Job::Count); ++j) {
+                if (ImGui::Selectable(jobName(Job(j)), job == j)) e->job = Job(j);
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", jobDescription(Job(j)));
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        ImGui::TextDisabled("(%s)", jobName(sim.jobOf(*e)));
+        if (!e->calledToOffice) { if (ImGui::Button("Call them to my office")) e->calledToOffice = true; }
+        else if (ImGui::Button("Send them back to work")) e->calledToOffice = false;
+        ImGui::SameLine();
+        ImGui::TextDisabled("Today: %d animals checked, %d treated, %d clients helped", e->checksToday, e->treatedToday, e->clientsToday);
+    }
     if (e->relationship > 0.6f) ImGui::TextWrapped("You know them well: %s, and %s.", e->family.c_str(), e->hobby.c_str());
     else ImGui::TextDisabled("You don't know them well yet. One-on-ones build trust.");
     if (e->lifeEvent != LE_None)

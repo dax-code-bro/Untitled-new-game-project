@@ -17,6 +17,11 @@ struct RoleInfo {
 };
 const RoleInfo& roleInfo(Role r);
 
+// What someone does at work. Auto = what their role suggests.
+enum class Job : uint8_t { Auto, FrontDesk, Rounds, Clinic, Roam, Count };
+const char* jobName(Job j);
+const char* jobDescription(Job j);
+
 struct Employee {
     int id = 0;
     int personId = 0;       // which of the 40 recruitable people this is
@@ -41,6 +46,10 @@ struct Employee {
     int lifeEventDay = -1;
     bool lifeEventSupported = false;
     bool gearIssued = false;    // protective gear (feral/restricted handling)
+    Job job = Job::Auto;        // assigned in the Staff tab
+    bool calledToOffice = false;// you asked them to come see you
+    int leftDay = -1;           // day they went home (they don't come back until tomorrow)
+    int checksToday = 0, treatedToday = 0, clientsToday = 0;   // what they got done today
     std::string family;         // spouse/kids/pets - shared with a boss they trust
     std::string hobby;
     bool onVacation(int day) const { return vacationUntil > day; }

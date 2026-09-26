@@ -122,7 +122,9 @@ void Sim::onHour(int h) {
     animalsHourly(h);
     careHourly(h);
     peopleHourly(h);
-    // Visitors arrive during opening hours if the gate lets them in.
+    staffWorkHourly(h);
+    // Visitors arrive while you're open (the front-door sign) during opening hours, if the gate lets them in.
+    if (!shelterOpen) return;
     if (!security.isOpenHours(float(h))) return;
     if (!security.visitorsCanEnter(float(h))) return;
     int openHours = std::max(1, security.closeHour - security.openHour);
@@ -468,7 +470,9 @@ void Sim::save(KeyValues& kv) const {
         kv.setf(p + "fatigue", e.fatigue); kv.setf(p + "stress", e.stress); kv.setf(p + "rel", e.relationship);
         kv.seti(p + "daysoff", e.daysOffPerWeek); kv.seti(p + "vac", e.vacationUntil); kv.seti(p + "interview", e.lastInterviewDay);
         kv.set(p + "family", e.family); kv.set(p + "hobby", e.hobby); kv.seti(p + "person", e.personId);
+        kv.seti(p + "job", int(e.job)); kv.seti(p + "left", e.leftDay);
     }
+    kv.seti("shelter.open", shelterOpen);
     kv.seti("animal.nextId", nextAnimalId);
     int n = 0;
     for (const Animal& a : animalList) {
@@ -561,6 +565,7 @@ void Sim::load(const KeyValues& kv) {
     }
     land.load(kv);
     ownerName = kv.get("owner", ownerName);
+    shelterOpen = kv.geti("shelter.open", 0) != 0;
     for (int i = 0; i < int(staff.employees.size()); ++i) {
         Employee& e = staff.employees[size_t(i)];
         std::string p = "staff." + std::to_string(i) + ".";
@@ -568,6 +573,8 @@ void Sim::load(const KeyValues& kv) {
         e.daysOffPerWeek = int(kv.geti(p + "daysoff", 2)); e.vacationUntil = int(kv.geti(p + "vac", -1));
         e.lastInterviewDay = int(kv.geti(p + "interview", -999)); e.family = kv.get(p + "family"); e.hobby = kv.get(p + "hobby");
         e.personId = int(kv.geti(p + "person", 0));
+        e.job = Job(kv.geti(p + "job", 0));
+        e.leftDay = int(kv.geti(p + "left", -1));
         e.gearIssued = protectiveGear;
         if (e.family.empty()) randomPersonalLife(e, rng);
     }

@@ -112,6 +112,20 @@ public:
     // Creative mode
     bool build(BuildKind k, float x, float z, int rot, std::string* why, int* outId = nullptr);
     bool demolish(int placedId);      // refunds 40%
+
+    // ---- Opening the shelter and the staff's workday (SimStaffWork.cpp) ----
+    bool shelterOpen = false;                  // you flip the front-door sign; visitors only come while it's OPEN
+    void openShelter();
+    void closeShelter();                       // staff head home
+    Job jobOf(const Employee& e) const;        // Auto resolves to the role's usual job
+    bool worksToday(const Employee& e) const;  // not a day off, not on vacation
+    float arriveHour(const Employee& e) const; // they come in early, before you open
+    bool staffOnSite(const Employee& e) const; // at work right now
+    int officeSlot(int employeeId) const;      // desk index (0 front desk, 1 clinic, 2 appointment room, 3+ staff buildings), -1 none
+    bool staffCheckAnimal(int employeeId, int animalId);   // a caretaker's rounds
+    bool staffTreat(int employeeId, int animalId);         // a vet's check-up / surgery
+    int animalNeedingVet() const;              // the next animal a vet should see (-1 none)
+    void staffWorkHourly(int hour);
     // The fence hugs the shelter: its yard grows to enclose whatever you build (not trees or paths)
     void refreshYard();
     const Placed* findPlaced(int id) const;

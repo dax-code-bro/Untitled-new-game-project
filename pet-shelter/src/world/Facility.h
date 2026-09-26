@@ -45,6 +45,7 @@ public:
     mat4 playerCar;              // truck transform (cutscene / parked / driving)
     float gateZ = layout::kSouthEdge;   // where the yard fence crosses the access road
     void setGateZ(CollisionWorld& cw, float z);
+    bool staffAtGate = false;    // a staff member's car is coming through
     bool gateRemote = false;     // your truck is at the gate: its remote opens it
     bool drawCar = true;         // the game draws the drivable truck itself
     int carCollider = -1;

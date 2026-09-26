@@ -24,7 +24,11 @@ float naturalness(float x, float z) {
     float sx = std::max(std::max(kCrossX - 30.0f - x, x - (kPetStoreX + 60.0f)), 0.0f);
     float sz = std::max(std::max(kHighwayZ - z, z - (kHighwayZ + 190.0f)), 0.0f);
     float wStore = smoothstepf(0.0f, 300.0f, std::sqrt(sx * sx + sz * sz));
-    return std::min(std::min(wFac, wHwy), wStore);
+    // Maple Lane neighborhood (staff homes), south of the highway a mile west
+    float mx = std::max(std::fabs(x - kMapleX) - 50.0f, 0.0f);
+    float mz = std::max(std::max(kHighwayZ - z, z - (kMapleZ1 + 20.0f)), 0.0f);
+    float wMaple = smoothstepf(0.0f, 250.0f, std::sqrt(mx * mx + mz * mz));
+    return std::min(std::min(std::min(wFac, wHwy), wStore), wMaple);
 }
 
 // Distance outside the property (0 inside)

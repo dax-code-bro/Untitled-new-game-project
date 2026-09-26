@@ -64,12 +64,15 @@ void Game::pickTruck(vec3 eye, vec3 fwd) {
     int sp = store_.pick(eye, fwd, sim_, &sid, &storePrompt);
     if (sp == 1) truckHover_ = 4;
     else if (sp == 2) { truckHover_ = 5; storeFocus_ = sid; }
+    // The OPEN / CLOSED sign on the shelter's front door
+    if (staff_.pickSign(eye, fwd)) truckHover_ = 6;
     switch (truckHover_) {
     case 1: hover_.prompt = "Open the truck door"; break;
     case 2: hover_.prompt = sim_.truckCargo.empty() ? "Get in the truck" : "Get in the truck (animals in the back)"; break;
     case 3: hover_.prompt = "Close the truck door"; break;
     case 4:
     case 5: hover_.prompt = storePrompt; break;
+    case 6: hover_.prompt = sim_.shelterOpen ? "Flip the sign to CLOSED (staff head home)" : "Flip the sign to OPEN (let visitors in)"; break;
     default: break;
     }
 }
@@ -81,6 +84,10 @@ void Game::useTruckHover() {
     case 3: truck_.doorOpen = false; break;
     case 4:   // talk to the cashier
         if (storeOpen(sim_.clock.hour())) { state_ = State::PetStore; storeMsg_.clear(); storeFocus_ = -1; }
+        break;
+    case 6:
+        if (sim_.shelterOpen) sim_.closeShelter();
+        else sim_.openShelter();
         break;
     case 5:   // ask about the animal in this pen: the cashier brings up its details
         if (storeOpen(sim_.clock.hour())) { state_ = State::PetStore; storeMsg_.clear(); }
@@ -244,6 +251,8 @@ void Game::drawPetStore() {
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowSize(size);
     ImGui::Begin("PAWS & CLAWS PET SUPPLY", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+    if (ImGui::Button("< Back", ImVec2(110, 0))) state_ = State::Playing;
+    ImGui::SameLine();
     ImGui::TextDisabled("Crossroads Rd off HWY 89  -  open 7 AM to 9 PM  -  new animals every morning");
     ImGui::Text("Cash: $%lld", (long long)sim_.econ.cash);
     ImGui::SameLine(0, 30);
@@ -314,7 +323,7 @@ void Game::drawPetStore() {
     }
     ImGui::Separator();
     if (!storeMsg_.empty()) ImGui::TextWrapped("%s", storeMsg_.c_str());
-    if (ImGui::Button(touch_ ? "Leave the store" : "Leave the store  [Esc]", ImVec2(220, 0))) state_ = State::Playing;
+    if (ImGui::Button(touch_ ? "< Back" : "< Back  [Esc]", ImVec2(220, 0))) state_ = State::Playing;
     ImGui::End();
 }
 

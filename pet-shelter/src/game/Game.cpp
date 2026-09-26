@@ -209,6 +209,8 @@ bool Game::init(int argc, char** argv) {
         return layout::publicArea(x, z);
     };
     initDriving();
+    staff_.build(world_.collision);
+    computer_.staffStatus = [this](int id) { return staff_.status(id); };
     std::fprintf(stderr, "[startup] 6/8 world built\n");
     computer_.init(renderer_);
     sim_.newGame();
@@ -333,6 +335,7 @@ void Game::startCutscene() {
 void Game::startPlaying() {
     state_ = State::Playing;
     resetTruck();
+    staff_.placeAll(sim_, world_);
     player_.eyeHeight = character_.eyeHeight();
     player_.place(playerSpawnFrontDoor(), kPi, radians(-3.0f));
     world_.facility.doors[0].swing.target = 1.0f;   // the front door is open, come on in
@@ -390,6 +393,7 @@ bool Game::loadGame() {
     player_.place(kv.getv("player.feet", playerSpawnFrontDoor()), float(kv.getf("player.yaw", kPi)));
     setMode(Mode(kv.geti("player.mode", 0)));
     resetTruck();
+    staff_.placeAll(sim_, world_);
     truck_.pos = kv.getv("truck.pos", Facility::parkedCarPos());
     truck_.yaw = float(kv.getf("truck.yaw", kPi));
     world_.facility.setCarCollider(world_.collision, truck_.pos, truck_.yaw);
@@ -482,6 +486,7 @@ void Game::update(float dt) {
         } else {
             creative_.update(dt, input_, world_, sim_, camera_, width_, height_);
             if (creative_.travelRequest) { fastTravel(creative_.travelRequest); creative_.travelRequest = 0; }
+            if (creative_.backRequest) { creative_.backRequest = false; setMode(Mode::POV); }
             character_.animate(time_, 0.0f, 0.0f);
         }
         renderer_.setTimeOfDay(sim_.clock.hour());
@@ -537,6 +542,9 @@ void Game::update(float dt) {
         float rdt = state_ == State::Paused ? 0.0f : dt;
         roads_.update(rdt, sim_, truck_, state_ == State::Driving);
         store_.update(sim_, rdt, time_, camera_.pos, world_.collision);
+        // Staff move in "clock time": a sped-up clock moves them faster; menus that slow the clock slow them too
+        float clockRate = state_ == State::Dialog || state_ == State::AnimalCheck || state_ == State::Surgery ? 0.2f : 1.0f;
+        staff_.update(sim_, world_, animals_, rdt * std::max(1.0f, timeScale_) * clockRate * (timeScale_ > 0.0f ? 1.0f : 0.0f), time_, camera_.pos);
         world_.setTraffic(roads_.trafficInstances());
         if (state_ != State::Driving) {   // the door still swings while you're on foot
             truck_.door += ((truck_.doorOpen ? 1.0f : 0.0f) - truck_.door) * std::min(1.0f, rdt * 5.0f);
@@ -564,6 +572,7 @@ void Game::scene(Renderer& r, Pass pass) {
     world_.draw(r, pass, r.nightAmount(), time_);
     drawTruck(r, pass);
     store_.draw(r, pass, camera_.pos);
+    staff_.draw(r, pass, camera_.pos, sim_.shelterOpen);
     if (pass == Pass::Transparent) return;
     roads_.draw(r, pass, camera_.pos);
     if (inGame()) animals_.draw(r, pass, camera_.pos);
@@ -630,6 +639,7 @@ void Game::render(float dt) {
     renderer_.lights.clear();
     world_.appendLights(renderer_.lights, renderer_.nightAmount());
     store_.appendLights(renderer_.lights, camera_.pos);
+    staff_.appendLights(renderer_.lights, camera_.pos, renderer_.nightAmount());
     renderer_.fade = state_ == State::Cutscene ? cutscene_.fade() : 1.0f;
     renderer_.letterbox = state_ == State::Cutscene ? 1.0f : 0.0f;
     auto sceneFn = [this](Renderer& r, Pass p) { scene(r, p); };
@@ -695,6 +705,7 @@ void Game::drawUI() {
     {
         roads_.drawSignText(camera_, int(ImGui::GetIO().DisplaySize.x), int(ImGui::GetIO().DisplaySize.y));
         store_.drawLabels(sim_, camera_, int(ImGui::GetIO().DisplaySize.x), int(ImGui::GetIO().DisplaySize.y));
+        staff_.drawLabels(sim_, camera_, int(ImGui::GetIO().DisplaySize.x), int(ImGui::GetIO().DisplaySize.y));
     }
 }
 
@@ -722,38 +733,8 @@ void Game::drawMainMenu() {
 
 void Game::drawHUD() {
     ImGuiIO& io = ImGui::GetIO();
-    // Status panel (top-left)
-    ImGui::SetNextWindowPos(ImVec2(12, 12));
-    ImGui::SetNextWindowBgAlpha(0.55f);
-    ImGui::Begin("##status", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs);
-    ImGui::Text("%s   %s", sim_.clock.dateString().c_str(), sim_.clock.timeString().c_str());
-    ImGui::Text("Cash: $%s", std::to_string((long long)sim_.econ.cash).c_str());
-    ImGui::Text("Public %.0f   Private %.0f   Finance %s", sim_.ratings.publicRating, sim_.ratings.privateRating,
-                Economy::grade(sim_.financialScore()));
-    if (inTruck_)
-        ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.45f, 1), "DRIVING  (%s)", touch_ ? "Get out: stop first" : "F: get out");
-    else
-        ImGui::TextColored(mode_ == Mode::POV ? ImVec4(0.6f, 0.85f, 1.0f, 1) : ImVec4(0.6f, 0.95f, 0.6f, 1), "%s",
-                           mode_ == Mode::POV ? "POV MODE  (Tab: Build)" : "BUILD MODE  (Tab: POV)");
-    if (mode_ == Mode::POV && !inTruck_) {
-        const RoomSpec* room = roomAt(player_.feet.x, player_.feet.z);
-        ImGui::TextDisabled("%s", room && player_.feet.y > 0.2f ? room->name.c_str() : "Outside");
-    }
-    ImGui::End();
-
+    // (No status box in the corner: the date, cash and ratings are in the pause menu and on the office computer.)
     drawIncidentBanner();
-    // Daily rounds reminder
-    if (state_ == State::Playing) {
-        int unchecked = sim_.uncheckedToday();
-        if (unchecked > 0) {
-            ImGui::SetNextWindowPos(ImVec2(12, 130), ImGuiCond_Always);
-            ImGui::SetNextWindowBgAlpha(0.5f);
-            ImGui::Begin("##rounds", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs);
-            ImGui::TextColored(ImVec4(1, 0.85f, 0.4f, 1), "Daily rounds: %d animal%s still to check today", unchecked, unchecked == 1 ? "" : "s");
-            if (sim_.examReady()) ImGui::TextColored(ImVec4(0.5f, 0.9f, 1, 1), "Scan results are ready at the clinic (operating table).");
-            ImGui::End();
-        }
-    }
     // Inbox: decisions waiting for you
     if (!sim_.decisions.empty() && state_ == State::Playing) {
         ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y - 14), ImGuiCond_Always, ImVec2(0.5f, 1));
@@ -890,6 +871,7 @@ void Game::drawSurgery() {
     ImGui::SetNextWindowBgAlpha(0.88f);
     ImGui::Begin("Operating table", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
     auto close = [&]() { if (!S.active) state_ = State::Playing; };
+    if (!S.active && ImGui::Button("< Back", ImVec2(110, 30))) close();
     if (!S.active) {
         if (ImGui::RadioButton("Check-ups & scans", clinicTab_ == 0)) clinicTab_ = 0;
         ImGui::SameLine();
@@ -1055,7 +1037,7 @@ void Game::drawAnimalCheck() {
         if (sim_.startExam(a->id, &why)) { message_ = "The staff took " + a->name + " for the " + examName(sim_.exam.kind) + ". Results at the clinic soon."; messageTimer_ = 5.0f; }
         else { message_ = why; messageTimer_ = 4.0f; }
     }
-    if (ImGui::Button(touch_ ? "Done" : "Done  [E]", bs)) state_ = State::Playing;
+    if (ImGui::Button(touch_ ? "< Back" : "< Back  [E]", bs)) state_ = State::Playing;
     ImGui::End();
 }
 
@@ -1116,7 +1098,13 @@ void Game::drawPauseMenu() {
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
     ImGui::Begin("Paused", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse);
     ImVec2 bs(300, 38);
-    if (ImGui::Button("Resume", bs)) { state_ = State::Playing; showSettings_ = false; }
+    ImGui::Text("%s   %s", sim_.clock.dateString().c_str(), sim_.clock.timeString().c_str());
+    ImGui::Text("Cash: $%s", std::to_string((long long)sim_.econ.cash).c_str());
+    ImGui::TextDisabled("Public %.0f   Private %.0f   Finance %s", sim_.ratings.publicRating, sim_.ratings.privateRating,
+                        Economy::grade(sim_.financialScore()));
+    ImGui::TextDisabled("Shelter: %s", sim_.shelterOpen ? "OPEN" : "closed");
+    ImGui::Separator();
+    if (ImGui::Button("< Back to the game", bs)) { state_ = State::Playing; showSettings_ = false; }
     if (ImGui::Button("Save game", bs)) saveGame();
     if (!saveExists()) ImGui::BeginDisabled();
     if (ImGui::Button("Load game", bs)) loadGame();
@@ -1132,6 +1120,7 @@ void Game::drawPauseMenu() {
 void Game::drawSettings() {
     ImGui::SetNextWindowSize(ImVec2(420, 0), ImGuiCond_Appearing);
     ImGui::Begin("Settings", &showSettings_, ImGuiWindowFlags_AlwaysAutoResize);
+    if (ImGui::Button("< Back", ImVec2(120, 30))) showSettings_ = false;
     ImGui::SeparatorText("Graphics (HDR)");
     ImGui::Checkbox("Auto exposure (eye adaptation)", &renderer_.autoExposure);
     ImGui::SliderFloat("Exposure bias (stops)", &renderer_.exposureBias, -3.0f, 3.0f, "%.1f");
@@ -1469,6 +1458,41 @@ int Game::runScreenshotSuite(const std::string& dir) {
                      double(truck_.pos.z), cargo, int(sim_.truckCargo.size()), inCareBefore, sim_.animalsInCare());
     }
     resetTruck();
+    // A day in the life of your staff
+    {
+        resetTruck();
+        sim_.shelterOpen = false;
+        for (Employee& e : sim_.staff.employees) { e.leftDay = -1; e.calledToOffice = false; e.vacationUntil = -1; e.daysOffPerWeek = 0; }
+        sim_.clock.minutes = 4.5 * 60.0;
+        staff_.placeAll(sim_, world_);
+        const vec3 far{0.0f, 0.0f, -3000.0f};
+        auto live = [&](double untilHour, vec3 cam) {
+            while (sim_.clock.hour() < float(untilHour)) {
+                sim_.advance(1.0);
+                staff_.update(sim_, world_, animals_, 1.0f, time_, cam);
+            }
+            for (const Employee& e : sim_.staff.employees)
+                std::fprintf(stderr, "[staff %.2f] %s: %s\n", untilHour, e.name.c_str(), staff_.status(e.id).c_str());
+        };
+        live(7.2, far);
+        pov("59_staff_arriving", {9.0f, 0.0f, 30.0f}, 200.0f, -8.0f, float(sim_.clock.hour()));
+        live(8.3, far);
+        pov("60_staff_coffee_chat", {0.0f, kFloorY, 0.9f}, 0.0f, -4.0f, float(sim_.clock.hour()));
+        sim_.openShelter();
+        live(8.9, far);
+        pov("61_front_desk", {0.9f, kFloorY, 2.6f}, 190.0f, -8.0f, float(sim_.clock.hour()));
+        live(9.8, far);
+        pov("62_staff_rounds", {-6.0f, 0.0f, -14.0f}, 190.0f, -10.0f, float(sim_.clock.hour()));
+        live(17.0, far);
+        sim_.closeShelter();
+        live(17.25, far);
+        pov("63_staff_leaving", {9.0f, 0.0f, 30.0f}, 200.0f, -8.0f, float(sim_.clock.hour()));
+        live(23.0, far);
+        vec3 eye;
+        float yaw;
+        if (!sim_.staff.employees.empty() && staff_.homeView(sim_.staff.employees[0].id, &eye, &yaw))
+            pov("64_staff_asleep", eye, yaw, -18.0f, 23.0f);
+    }
     // A tiger in the parking lot
     state_ = State::Playing;
     sim_.startIncident(findSpecies("Bengal Tiger"));

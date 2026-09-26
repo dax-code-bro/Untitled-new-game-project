@@ -429,6 +429,47 @@ What's built (Paws & Claws, 2 mi east of your gate):
 - Look at an enclosure and press E: the cashier brings up that animal (highlighted) so you can buy it. Talk to the
   cashier for everything else (all the animals, food and supplies).
 
+## 8.13 Update 8: owner's direction — staff with real lives, no corner box, Back buttons
+"Let's start off with the purpose of getting staff members. You can assign them to do certain things or they'll just
+walk around the facility. You need them to have an office and they have a full routine: when you close they'll get in
+their car and drive to their home where they will sleep in their bed, and then wake up the next morning, get in the
+car and drive all the way back to work where they will get coffee from the coffee machine, they'll talk to other
+workers. They do arrive early, and when you finally decide to open, they'll just check up on the pets every once in a
+while, and there's also someone at the front desk, of course, who is almost never not at the front desk unless
+something's going wrong or you call them into your office, but they will take clients' requests for you. They will
+operate on animals for you. They will do check-ups on animals for you and a bunch of other things."
+"Can you remove the thing that says day one / that little message pop-up in the left corner, it obstructs a lot, and
+the menus don't have a back button so you're stuck in them - add a back button."
+
+What's built:
+- **You open and close the shelter** with the OPEN/CLOSED sign by the front door (look at it, press E / Use) or the
+  button on the office computer. Visitors only come while it says OPEN. If you forget, staff still go home at 9 PM and
+  the sign flips at 10 PM.
+- **Every employee is a person in the world** with their own car (their color), a parking spot, and a house on
+  **Maple Lane** (a little street of 10 houses a mile west of your gate, south of HWY 89; signposted from the highway).
+- **Their day:** asleep in their own bed at night (walk into their house and you'll see them, with a nightlight on),
+  up around 5 AM, drive to work (the gate opens for their cars), **arrive early (7:00 - 7:50)**, get **coffee from the
+  staff coffee machine** (end of the right hallway), carry the cup around, **chat with coworkers** in the waiting room
+  and peek in on the animals. **Once you open**, they do their job. **When you close**, they walk to their cars and
+  **drive home**, go inside, and go to bed.
+- **Jobs** (Office computer > Staff > pick a person > Job; "Their usual job" follows their role):
+  - **Front desk**: stays at the front desk, only leaving if a dangerous animal gets loose or you call them to your
+    office; **handles client visits for you** (greets the owner, explains, gets consent) and deals with rule-breaking
+    visitors politely.
+  - **Animal rounds**: walks to every animal and checks on it (counts as that animal's daily check-up), topping up
+    water and feeding hungry ones, and tells you if something's wrong.
+  - **Clinic**: vets and vet techs see the sick animals, do check-ups that find hidden problems (and start treatment),
+    and **vets operate** on animals that need surgery (with the owner's consent) at the operating table.
+  - **Walk the facility**: walks the yard and checks on pets now and then.
+- **Offices:** the front desk, the medical-room desk and the appointment-room desk, plus 2 per Staff Building and 4
+  per Staff Offices. Someone with no office has nowhere to be and their morale drops every day until you build one.
+- **Call someone to your office** (Staff card): they walk to your office and wait until you send them back to work.
+- Name tags over staff when you're close: their name and what they're doing. The Staff card shows the same live.
+- The **status box in the top-left corner and the "daily rounds" pop-up are gone**. The date, cash and ratings are in
+  the pause menu and at the top of the office computer.
+- **Back buttons everywhere:** the office computer (goes back out of a person / animal, then logs off), pause
+  menu, settings, the operating table, animal check, the pet store counter, and build mode (back to walking).
+
 ## 9. Next up
 - More model passes until nothing looks off (small terriers, fur close-ups, coiled snakes).
 - Staff and protesters as visible people in the world; clients in the waiting room.

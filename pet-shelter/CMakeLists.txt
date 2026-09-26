@@ -32,6 +32,7 @@ add_library(ps_sim STATIC
   src/game/SimPeople.cpp
   src/game/SimClinic.cpp
   src/game/SimTravel.cpp
+  src/game/SimStaffWork.cpp
   src/game/Species.cpp
 )
 target_include_directories(ps_sim PUBLIC src)
@@ -106,6 +107,7 @@ if(PS_BUILD_GAME)
     src/game/Driving.cpp
     src/game/GameDriving.cpp
     src/game/PetStoreInterior.cpp
+    src/game/StaffActors.cpp
   )
   target_link_libraries(PetShelter PRIVATE ps_sim imgui glfw)
   target_compile_definitions(PetShelter PRIVATE GLFW_INCLUDE_NONE PS_SHADER_DIR="${CMAKE_CURRENT_SOURCE_DIR}/shaders")

@@ -520,8 +520,16 @@ void Facility::buildFurniture(MeshBuilder& b, CollisionWorld& cw) {
 
     // ================= Right hallway =================
     b.addBox(AABB({4.4f, F, 0.45f}, {11.6f, F + 0.008f, 1.15f}), fabric({0.35f, 0.18f, 0.14f}));
-    b.addBox(AABB({11.35f, F, 0.25f}, {11.85f, F + 0.45f, 1.35f}), kWoodDark);   // bench at the end
-    solid(cw, AABB({11.3f, F, 0.2f}, {11.9f, F + 0.45f, 1.4f}));
+    // Staff coffee station at the end of the hallway: counter, machine, mugs
+    b.addBox(AABB({11.35f, F, 0.2f}, {11.95f, F + 0.95f, 1.4f}), kWoodDark);
+    b.addBox(AABB({11.3f, F + 0.95f, 0.15f}, {11.97f, F + 1.0f, 1.45f}), paint({0.2f, 0.2f, 0.22f}, 0.3f));
+    b.addBox(AABB({11.55f, F + 1.0f, 0.55f}, {11.9f, F + 1.45f, 0.95f}), Material::make({0.12f, 0.12f, 0.13f}, 0.35f, 0.6f));   // machine
+    b.addBox(AABB({11.5f, F + 1.18f, 0.62f}, {11.56f, F + 1.26f, 0.88f}), Material::make({0.3f, 0.9f, 0.4f}, 0.3f, 0.0f, PAT_PLAIN, 1.5f));
+    b.addCylinder({11.5f, F + 1.0f, 0.75f}, 0.045f, 0.1f, 10, paint({0.9f, 0.9f, 0.88f}, 0.4f));   // cup under the spout
+    for (int i = 0; i < 4; ++i)
+        b.addCylinder({11.72f, F + 1.0f, 0.25f + 0.07f * float(i)}, 0.03f, 0.08f, 8, paint(i % 2 ? vec3(0.7f, 0.2f, 0.15f) : vec3(0.2f, 0.35f, 0.6f), 0.4f));
+    b.addBox(AABB({11.6f, F + 1.0f, 1.05f}, {11.9f, F + 1.3f, 1.35f}), paint({0.85f, 0.75f, 0.55f}, 0.8f));   // coffee bags
+    solid(cw, AABB({11.3f, F, 0.15f}, {11.97f, F + 1.45f, 1.45f}));
 }
 
 void Facility::buildExterior(MeshBuilder& b, CollisionWorld& cw) {
@@ -738,7 +746,7 @@ void Facility::update(float dt, SecuritySystem& sec, float hour, CollisionWorld&
             cw.setEnabled(d.collider, true);
         }
     }
-    gate.target = sec.gateShouldBeOpen(hour) || gateRemote ? 1.0f : 0.0f;
+    gate.target = sec.gateShouldBeOpen(hour) || gateRemote || staffAtGate ? 1.0f : 0.0f;
     gate.update(dt);
     float open = gate.eased() * (kGateHalfWidth * 2.0f);
     cw.setBox(gateCollider_, AABB({-kGateHalfWidth + open, 0.0f, gateZ - 0.3f}, {kGateHalfWidth + open, 2.2f, gateZ + 0.3f}));

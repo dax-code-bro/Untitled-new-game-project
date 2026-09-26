@@ -85,7 +85,9 @@ int main() {
     CHECK(sim.econ.cash == 175000.0);
     CHECK(sim.staff.employees.size() == 2);
     sim.security.gateAutomatic = true;
-    sim.advance(7 * 1440.0);
+    sim.advance(8.5 * 60.0);
+    sim.openShelter();          // visitors only come while you're open
+    sim.advance(7 * 1440.0 - 8.5 * 60.0);
     CHECK(sim.econ.lifetime[size_t(Ledger::Payroll)] < 0.0);
     CHECK(sim.econ.lifetime[size_t(Ledger::PayrollTax)] < 0.0);
     double gross = -sim.econ.lifetime[size_t(Ledger::Payroll)];
@@ -311,6 +313,50 @@ int main() {
         CHECK(s.buyFromPetStore(0, &why) && s.truckCargo.size() == 1 && s.petStore.size() == 8 && s.econ.cash < cash);
         CHECK(s.animalsInCare() == inCare);
         CHECK(s.deliverCargo() == 1 && s.truckCargo.empty() && s.animalsInCare() == inCare + 1);
+        // Staff workday: they come in early, work while you're open, go home when you close
+        {
+            Sim w;
+            w.newGame();
+            w.advance(7.95 * 60.0);   // 7:57 AM on day 1
+            int here = 0;
+            for (const Employee& e : w.staff.employees) here += w.staffOnSite(e) && w.worksToday(e) ? 1 : 0;
+            int working = 0;
+            for (const Employee& e : w.staff.employees) working += w.worksToday(e) ? 1 : 0;
+            CHECK(here == working);
+            CHECK(!w.shelterOpen);
+            // Front desk (June the receptionist) takes a client visit for you once you're open
+            w.openShelter();
+            int deskId = -1;
+            for (const Employee& e : w.staff.employees) if (w.jobOf(e) == Job::FrontDesk) deskId = e.id;
+            CHECK(deskId >= 0 && w.officeSlot(deskId) == 0);
+            Decision& d = w.addDecision(DecisionKind::ClientVisit, "Test client", "x", {"a", "b", "c", "d"}, 600.0);
+            d.b = -1;
+            bool handled = false;
+            if (Employee* desk = w.staff.find(deskId)) {
+                if (w.worksToday(*desk)) {
+                    for (int h = 0; h < 6 && !handled; ++h) {
+                        w.advance(60.0);
+                        handled = true;
+                        for (const Decision& x : w.decisions) if (x.title == "Test client") handled = false;
+                    }
+                    CHECK(handled);
+                }
+            }
+            // A caretaker's rounds count as the daily check-up
+            int careId = -1;
+            for (const Employee& e : w.staff.employees) if (w.jobOf(e) == Job::Rounds && w.worksToday(e)) careId = e.id;
+            if (careId < 0) {   // make one of them do rounds today
+                for (Employee& e : w.staff.employees) if (w.worksToday(e)) { e.job = Job::Rounds; careId = e.id; break; }
+            }
+            if (careId >= 0) {
+                int animal = -1;
+                for (const Animal& a : w.animalList) if (a.inCare() && a.checkedDay != w.clock.day()) animal = a.id;
+                int before = w.uncheckedToday();
+                CHECK(animal >= 0 && w.staffCheckAnimal(careId, animal) && w.uncheckedToday() == before - 1);
+            }
+            w.closeShelter();
+            for (const Employee& e : w.staff.employees) CHECK(!w.staffOnSite(e));
+        }
         // Traffic tickets cost money and count up
         cash = s.econ.cash;
         s.ticket("speeding (70 in a 55 zone)", 300.0);
