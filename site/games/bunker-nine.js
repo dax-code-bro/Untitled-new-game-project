@@ -1873,7 +1873,7 @@ const HEROES = {
        and what the sleeve is made of. Bear in mind the skin texture bakes
        its own warmth and the subsurface term adds red on top, so these
        bases run cold -- a hex that looks grey here lands on skin. */
-    look: { skin: 0xaba5a2, rough: 0.80, sleeve: 0x3a3c31, sleeveTex: 'fabric', sleeveRough: 0.97 }, // Soviet greatcoat wool, and eighty-five years of weather
+    look: { skin: 0xaba5a2, rough: 0.80, sleeve: 0x3a3c31, sleeveTex: 'wool', sleeveRough: 0.97 }, // Soviet greatcoat wool, and eighty-five years of weather
     /* Eighty-five, and still standing like a man at attention because he
        has never been told to stand any other way. Heavy Soviet frame gone
        thin at the shoulders, close grey crop, a moustache he has had
@@ -1924,7 +1924,7 @@ const HEROES = {
     bio: 'Kept the generators running at the depot. Knows every fuse in the building and half the prayers.',
     voice: { base: 158, spread: 32, type: 'triangle', color: '#ffb066' },
     voiceBox: { pitch: 126, tract: 1.03, rasp: 0.16, breath: 0.08, rate: 5.4, swing: 0.17, say: { pitch: 0.92, rate: 1.02 } },
-    look: { skin: 0x847c76, rough: 0.70, sleeve: 0x2f3a48, sleeveTex: 'fabric', sleeveRough: 0.90 }, // depot coveralls, oil into the weave
+    look: { skin: 0x847c76, rough: 0.70, sleeve: 0x2f3a48, sleeveTex: 'ripstop', sleeveRough: 0.90 }, // depot coveralls, oil into the weave
     /* Built by twenty years of lifting things that were not designed to be
        lifted. Depot coveralls with the oil worked into them, a full black
        beard, hair tied back out of the way of the machinery. */
@@ -2021,7 +2021,7 @@ const HEROES = {
     bio: 'Nineteen. Out hunting with her father until he started acting strange. Hid in an empty house for two days.',
     voice: { base: 272, spread: 50, type: 'sine', color: '#ffc0e0' },
     voiceBox: { pitch: 232, tract: 0.83, rasp: 0.05, breath: 0.30, rate: 6.4, swing: 0.30, say: { pitch: 1.42, rate: 1.16 } }, // nineteen, and frightened
-    look: { skin: 0xb4aea9, rough: 0.62, sleeve: 0x6b3230, sleeveTex: 'fabric', sleeveRough: 0.98 }, // her father's flannel, far too big for her
+    look: { skin: 0xb4aea9, rough: 0.62, sleeve: 0x6b3230, sleeveTex: 'wool', sleeveRough: 0.98 }, // her father's flannel, far too big for her
     /* Nineteen, small, and wearing a shirt cut for a man twice her size
        because it was her father's. Long hair she has stopped tying back.
        The only one here who does not look like she chose this. */
@@ -2118,7 +2118,7 @@ const HEROES = {
     bio: 'Big. Was big before all this and it has only become more useful. Enjoys the work more than he should.',
     voice: { base: 116, spread: 24, type: 'square', color: '#c9a06a' },
     voiceBox: { pitch: 78, tract: 1.24, rasp: 0.34, breath: 0.05, rate: 4.2, swing: 0.10, say: { pitch: 0.52, rate: 0.88 } }, // the biggest chest in the room
-    look: { skin: 0x9f9792, rough: 0.74, sleeve: 0x4a5560, sleeveTex: 'fabric', sleeveRough: 0.94 }, // work shirt, sleeves rolled past the elbow
+    look: { skin: 0x9f9792, rough: 0.74, sleeve: 0x4a5560, sleeveTex: 'denim', sleeveRough: 0.94 }, // work shirt, sleeves rolled past the elbow
     /* The biggest thing in the bunker that is still on your side. Work
        shirt with the sleeves rolled past the elbow, a neck that does not
        narrow, and chops down both sides of a face that enjoys this. */
@@ -2167,7 +2167,7 @@ const HEROES = {
     bio: 'Eighty. A Black Native American in a winter trenchcoat who was fighting a war in 1855 and stepped through something that should not have been open.',
     voice: { base: 130, spread: 22, type: 'sawtooth', color: '#a8d8b8' },
     voiceBox: { pitch: 94, tract: 1.20, rasp: 0.52, breath: 0.22, rate: 3.6, swing: 0.13, say: { pitch: 0.66, rate: 0.76 } }, // eighty, warm, weathered
-    look: { skin: 0x544e4b, rough: 0.82, sleeve: 0x35291f, sleeveTex: 'fabric', sleeveRough: 0.97 }, // the winter trenchcoat he walked in wearing
+    look: { skin: 0x544e4b, rough: 0.82, sleeve: 0x35291f, sleeveTex: 'wool', sleeveRough: 0.97 }, // the winter trenchcoat he walked in wearing
     /* Eighty, and he walked out of 1855 in a winter trenchcoat that has
        been through both. Long grey hair, a heavy grey beard, and a coat
        that reaches his boots. */
@@ -2268,7 +2268,7 @@ const HEROES = {
     bio: 'Never once let a bad moment pass without a remark. It is not clear whether this is courage or a condition.',
     voice: { base: 198, spread: 56, type: 'triangle', color: '#ffe08a' },
     voiceBox: { pitch: 154, tract: 0.95, rasp: 0.12, breath: 0.09, rate: 5.8, swing: 0.42, say: { pitch: 1.12, rate: 1.08 } }, // the pitch does the joking
-    look: { skin: 0x99918c, rough: 0.70, sleeve: 0x5c2a34, sleeveTex: 'fabric', sleeveRough: 0.86 }, // a colour nobody else would have picked
+    look: { skin: 0x99918c, rough: 0.70, sleeve: 0x5c2a34, sleeveTex: 'knit', sleeveRough: 0.86 }, // a colour nobody else would have picked
     /* Dressed, on purpose, in a colour nobody else would have picked, and
        carrying it. Hair set and holding, clean-shaven, and standing as
        though somebody is about to take a photograph. */
@@ -2317,7 +2317,7 @@ const HEROES = {
     bio: 'Walks into rooms like the room has been waiting for him. Annoyingly, it usually has.',
     voice: { base: 142, spread: 38, type: 'square', color: '#ff9a5a' },
     voiceBox: { pitch: 108, tract: 1.10, rasp: 0.24, breath: 0.06, rate: 5.0, swing: 0.19, say: { pitch: 0.74, rate: 1.00 } },
-    look: { skin: 0x79716c, rough: 0.69, sleeve: 0x2a211c, sleeveTex: 'plastic', sleeveRough: 0.63 }, // leather, and he knows it
+    look: { skin: 0x79716c, rough: 0.69, sleeve: 0x2a211c, sleeveTex: 'leather', sleeveRough: 0.63 }, // leather, and he knows it
     /* Walks into rooms like the room has been waiting for him. Leather,
        and he knows it. Thick dark hair, a moustache, and the shoulders to
        go with the entrance. */
@@ -3210,10 +3210,16 @@ function sayLine(game, text, V, opts = {}) {
 function applyHeroLook(game, P, hero) {
   const L = (hero && hero.look) || null;
   if (!L || !P || !P.view) return;
+  /* Skin with real subsurface (the renderer's wrap lobe), and each sleeve
+     in the cloth it is described as -- wool, flannel, denim, a jumper,
+     leather -- with the low retroreflective sheen cloth has, instead of
+     one generic weave for all ten. */
   const skinMat = game.material({ color: L.skin, texture: 'skin',
-    roughness: L.rough != null ? L.rough : 0.72, metalness: 0, subsurface: 0.12 });
+    roughness: L.rough != null ? L.rough : 0.72, metalness: 0, subsurface: 0.38 });
+  const knitted = L.sleeveTex === 'wool' || L.sleeveTex === 'knit';
   const sleeveMat = game.material({ color: L.sleeve, texture: L.sleeveTex || 'fabric',
-    roughness: L.sleeveRough != null ? L.sleeveRough : 0.96, metalness: 0, uvScale: 1.4 });
+    roughness: L.sleeveRough != null ? L.sleeveRough : 0.96, metalness: 0, uvScale: 1.4,
+    sheen: L.sleeveTex === 'leather' ? 0 : knitted ? 0.5 : 0.25, sheenColor: 0xb0aca4, sheenRoughness: knitted ? 0.5 : 0.35 });
   for (const v of Object.values(P.view)) {
     const a = v.arms;
     if (!a) continue;

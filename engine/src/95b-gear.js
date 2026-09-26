@@ -234,35 +234,130 @@ function gearKnees(g, skeleton, k, o) {
    over the occiput and cuts away over the ears -- plus a rail either
    side and a shroud on the front for the night-vision mount. */
 function gearHelmet(g, headY, s, o) {
-  const R = 0.118 * s;
-  const rings = [
-    [0.128, 0.028, 0.030], [0.104, 0.086, 0.092], [0.062, 0.110, 0.116],
-    [0.010, 0.120, 0.126], [-0.040, 0.121, 0.128], [-0.074, 0.118, 0.122],
-  ];
-  loftRings(g, rings.map(([y, w, d], i) => ({
-    p: new Vec3(0, headY + y * s, -0.004 * s), w: w * s, d: d * s, e: 2.5, uv: i / 5,
-  })), 22, true, false);
-  void R;
-  // Side rails.
-  for (const sx of [1, -1]) {
-    gearStrap(g, [sx * 0.112 * s, headY - 0.052 * s, 0.066 * s],
-      [sx * 0.104 * s, headY - 0.046 * s, -0.082 * s], 0.012 * s, 0.008 * s);
+  /* A SHELL, NOT A STACK OF RINGS. The old one lofted six level rings,
+     so its lower edge was the same height all the way round -- five
+     centimetres above the chin, which put the brim across the eyes. A
+     real helmet's edge rises to the forehead at the front, clears the
+     ears at the side and drops to the occiput at the back, and the shell
+     has a thickness you can see at that edge. So: an outer ellipsoid
+     minus an inner one, cut along that sloping line, meshed by the same
+     field mesher as the bodies (94c-sdf-body.js). */
+  /* FITTED TO THE SKULL IT SITS ON, when the caller hands one over
+     (o.headPts: the head's vertices in the same bind space as the kit).
+     The shell was sized for a nominal 0.252 m head, and two field-built
+     skulls came out of it: SWAT's crown 26 mm above the top of the
+     shell, Delta's and Alpha's parietals 8 per cent through its sides.
+     So: lift the whole helmet until the crown clears the lining, then
+     grow the shell until no point of the scalp above the brim is outside
+     it. Everything below is placed from the lifted headY, so the rails,
+     the shroud and the straps come with it. */
+  let k = 1;
+  const pts = o.headPts || null;
+  if (pts) {
+    let top = -1e9;
+    for (let i = 1; i < pts.length; i += 3) top = Math.max(top, pts[i]);
+    const inTop0 = headY + 0.030 * s - 0.004 * s + (0.101 - 0.0095) * s;
+    headY += Math.max(0, top + 0.004 * s - inTop0);
+    const cy0 = headY + 0.030 * s - 0.004 * s, cz0 = -0.006 * s;
+    const ri = [(0.096 - 0.0095) * s, (0.101 - 0.0095) * s, (0.109 - 0.0095) * s];
+    for (let i = 0; i < pts.length; i += 3) {
+      const x = pts[i], y = pts[i + 1], z = pts[i + 2];
+      const cut = headY + s * (0.030 * Math.max(-1, Math.min(1, (z - cz0) / (0.10 * s))) - 0.004);
+      if (y < cut) continue;
+      k = Math.max(k, 1.012 * Math.hypot(x / ri[0], (y - cy0) / ri[1], (z - cz0) / ri[2]));
+    }
+    k = Math.min(k, 1.25);
   }
-  // NVG shroud, front and centre.
-  gearSlab(g, -0.024 * s, headY + 0.052 * s, 0.116 * s,
-    0.024 * s, headY + 0.092 * s, 0.140 * s, 3.4);
+  const cy = headY + 0.030 * s, cz = -0.006 * s;
+  const th = 0.0095 * s;
+  const ro = [0.096 * s * k, 0.101 * s * k, 0.109 * s * k];
+  const R = _region([
+    { t: 'e', c: [0, cy, cz], r: ro },
+    { t: 'e', c: [0, cy - 0.004 * s, cz], r: [ro[0] - th, ro[1] - th, ro[2] - th], op: 's', k: 0.002 },
+  ], 0.004);
+  // The edge: forehead in front, top of the ear at the side, occiput behind.
+  R.cut = (x, y, z) => (headY + s * (0.030 * Math.max(-1, Math.min(1, (z - cz) / (0.10 * s))) - 0.004)) - y;
+  R.bmin = [-0.11 * s * k, headY - 0.06 * s, -0.13 * s * k];
+  R.bmax = [0.11 * s * k, cy + ro[1] + 0.012 * s, 0.13 * s * k];
+  _meshRegion(g, R, 0.0048 * s, g.part, (x, y, z, out) => {
+    out[0] = Math.atan2(x, z) / (2 * Math.PI) + 0.5; out[1] = (y - headY) / (0.25 * s);
+  });
+  /* The hardware sits on the shell, so it moves out with it when the
+     shell was grown to fit (k > 1): each point scaled about the shell's
+     own centre. Left where it was, the NVG mount and both tubes ended up
+     inside a fitted helmet. */
+  const H = (x, y, z) => [x * k, cy + (y - cy) * k, cz + (z - cz) * k];
+  // Side rails, along the edge.
+  for (const sx of [1, -1]) {
+    gearStrap(g, H(sx * 0.090 * s, headY + 0.022 * s, 0.050 * s),
+      H(sx * 0.088 * s, headY - 0.012 * s, -0.070 * s), 0.012 * s, 0.008 * s);
+  }
+  // NVG shroud, on the front of the shell.
+  const s0 = H(-0.022 * s, headY + 0.050 * s, 0.078 * s), s1 = H(0.022 * s, headY + 0.086 * s, 0.098 * s);
+  gearSlab(g, s0[0], s0[1], s0[2], s1[0], s1[1], s1[2], 3.4);
   if (o.nvg) {
     // Mount arm and two tubes, flipped up.
-    gearTube(g, [0, headY + 0.092 * s, 0.128 * s], [0, 0.92, 0.39], 0.010 * s, 0.062 * s, 10);
+    gearTube(g, H(0, headY + 0.086 * s, 0.090 * s), [0, 0.92, 0.39], 0.010 * s, 0.058 * s, 10);
     for (const sx of [1, -1]) {
-      gearTube(g, [sx * 0.026 * s, headY + 0.148 * s, 0.146 * s], [0, 0.34, 0.94],
-        0.017 * s, 0.070 * s, 12);
+      gearTube(g, H(sx * 0.026 * s, headY + 0.138 * s, 0.108 * s), [0, 0.34, 0.94],
+        0.017 * s, 0.066 * s, 12);
     }
   }
-  // Chin strap, down past the ear to under the jaw.
-  for (const sx of [1, -1]) {
-    gearStrap(g, [sx * 0.100 * s, headY - 0.044 * s, 0.010 * s],
-      [sx * 0.040 * s, headY - 0.188 * s, 0.028 * s], 0.010 * s, 0.005 * s);
+  // Chin strap, from the edge past the ear to under the jaw.
+  if (pts) {
+    /* LAID ON THE FACE. A straight bar from the brim to the jaw hung a
+       centimetre off every cheek, which from the front read as a cage
+       round the face. So the run is sampled, and each sample is pushed
+       out from the middle of the skull to 3 mm off the scalp -- cast
+       against the head's own points, the widest one in a narrow cone. */
+    const C = [0, headY - 0.030 * s, -0.004 * s];
+    const hug = (p) => {
+      const d = [p[0] - C[0], p[1] - C[1], p[2] - C[2]];
+      const dl = Math.hypot(d[0], d[1], d[2]) || 1; d[0] /= dl; d[1] /= dl; d[2] /= dl;
+      let best = -1;
+      for (let i = 0; i < pts.length; i += 3) {
+        const qx = pts[i] - C[0], qy = pts[i + 1] - C[1], qz = pts[i + 2] - C[2];
+        const ql = Math.hypot(qx, qy, qz) || 1;
+        const dot = (qx * d[0] + qy * d[1] + qz * d[2]) / ql;
+        if (dot > 0.9965 && ql > best) best = ql;          // within ~4.8 degrees
+      }
+      if (best < 0) return p;
+      const r = best + 0.003 * s;
+      return [C[0] + d[0] * r, C[1] + d[1] * r, C[2] + d[2] * r];
+    };
+    for (const sx of [1, -1]) {
+      const run = [];
+      const N = 9;
+      for (let i = 0; i <= N; i++) {
+        const t = i / N;
+        // Brim in front of the ear, down the back of the cheek, round under the chin.
+        const x = sx * s * (0.086 - 0.060 * t * t);
+        const y = headY - s * (0.006 + 0.132 * t);
+        const z = s * (0.004 + 0.040 * t * t);
+        run.push(hug([x, y, z]));
+      }
+      /* One loft through the whole run, framed at each sample by the
+         surface: thickness along the outward normal, width across it.
+         Nine separate straight straps each picked their own frame, so
+         the run was a chain of flat pieces twisting against each other. */
+      const rings = run.map((p, i) => {
+        const a = run[Math.max(0, i - 1)], b = run[Math.min(N, i + 1)];
+        const dir = _norm3([b[0] - a[0], b[1] - a[1], b[2] - a[2]]);
+        let nrm = [p[0] - C[0], p[1] - C[1], p[2] - C[2]];
+        const dd = nrm[0] * dir[0] + nrm[1] * dir[1] + nrm[2] * dir[2];
+        nrm = _norm3([nrm[0] - dir[0] * dd, nrm[1] - dir[1] * dd, nrm[2] - dir[2] * dd]);
+        const rt = _norm3(_cross3(dir, nrm));
+        return { p: new Vec3(p[0] - nrm[0] * 0.001 * s, p[1] - nrm[1] * 0.001 * s, p[2] - nrm[2] * 0.001 * s),
+          w: 0.010 * s, d: 0.004 * s, e: 3.2,
+          right: new Vec3(rt[0], rt[1], rt[2]), fwd: new Vec3(nrm[0], nrm[1], nrm[2]), uv: i / N };
+      });
+      loftRings(g, rings, 10, true, true);
+    }
+  } else {
+    for (const sx of [1, -1]) {
+      gearStrap(g, [sx * 0.090 * s, headY - 0.004 * s, -0.004 * s],
+        [sx * 0.052 * s, headY - 0.124 * s, -0.012 * s], 0.010 * s, 0.005 * s);
+    }
   }
 }
 
@@ -272,7 +367,7 @@ function gearHelmet(g, headY, s, o) {
 function gearRespirator(g, headY, s, o) {
   // The face piece, cupping the nose and mouth.
   loftRings(g, [
-    { p: new Vec3(0, headY - 0.020 * s, 0.062 * s), w: 0.078 * s, d: 0.050 * s, e: 2.6 },
+    { p: new Vec3(0, headY - 0.020 * s, 0.074 * s), w: 0.078 * s, d: 0.050 * s, e: 2.6 },
     { p: new Vec3(0, headY - 0.056 * s, 0.092 * s), w: 0.082 * s, d: 0.058 * s, e: 2.5 },
     { p: new Vec3(0, headY - 0.104 * s, 0.086 * s), w: 0.074 * s, d: 0.054 * s, e: 2.6 },
     { p: new Vec3(0, headY - 0.140 * s, 0.050 * s), w: 0.058 * s, d: 0.040 * s, e: 2.8 },

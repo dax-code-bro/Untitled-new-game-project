@@ -2418,15 +2418,38 @@
        arm, with a centimetre to spare. The number is not a taste; it
        is the angle at which the hand can get there.
 
+       Now thirty-nine at full aim (0.20 + 0.48 rad): with the pelvis no
+       longer inheriting a stale forward tilt from the last run cycle,
+       thirty-five left the Thompson 4 mm short of a second grip, and a
+       bladed stance runs thirty to forty-five in any case.
+
        The head does NOT go with it. A shooter's torso blades and his
        head stays square, looking down the sights, so the neck takes the
-       same rotation back. Without that he aims thirty-five degrees off
+       same rotation back. Without that he aims nearly forty degrees off
        the thing he is shooting at, which the kill cam would show. */
-    var iChest = sk.index('chest'), iNeck = sk.index('neck');
+    var iChest = sk.index('chest'), iNeck = sk.index('neck'), iSpine = sk.index('spine');
     if (iChest >= 0) {
       if (!_ikQ) _ikQ = new W.LE.Quat();
       if (!_ikY) _ikY = new W.LE.Vec3(0, 1, 0);
-      var blade = -(0.20 + aim * 0.41);
+      /* AND LEAN INTO IT. A shouldered rifle is fired from an
+         aggressive stance -- nose over toes, the weight on the balls of
+         the feet -- and the forward lean is what takes the recoil and
+         what brings the support shoulder the last centimetre down the
+         handguard. This used to be supplied by accident: the idle kept
+         whatever pelvis tilt the last run cycle left in the animator's
+         pose object (see AnimationClip.sample), and when that went the
+         reach dropped by exactly the lean it had been lending. The neck
+         takes it back out, as it does the blade, so the eyes stay on
+         the sights. */
+      if (iSpine >= 0 && aim > 1e-3) {
+        _ikQ.setEuler(0.16 * aim, 0, 0);
+        sk.bones[iSpine].localRotation.mul(_ikQ).normalize();
+        if (iNeck >= 0) {
+          _ikQ.setEuler(-0.16 * aim, 0, 0);
+          sk.bones[iNeck].localRotation.mul(_ikQ).normalize();
+        }
+      }
+      var blade = -(0.20 + aim * 0.48);
       _ikQ.setAxisAngle(_ikY, blade);
       sk.bones[iChest].localRotation.premul(_ikQ).normalize();
       if (iNeck >= 0) {

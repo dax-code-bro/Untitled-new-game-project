@@ -1482,7 +1482,11 @@ class Renderer {
           sh.v3('uWindDir', this.wind ? this.wind.direction : _defaultWind);
           sh.f('uWindStrength', this.wind ? this.wind.strength : 0.25);
         }
+        // The coarsest level of detail, where the mesh has levels (95-engine.js).
+        const full = batch.mesh;
+        if (batch.shadowMesh) batch.mesh = batch.shadowMesh;
         this._drawBatch(sh, batch);
+        batch.mesh = full;
       }
     }
     gl.disable(gl.POLYGON_OFFSET_FILL);

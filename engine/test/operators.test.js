@@ -138,10 +138,54 @@ function check(name, cond, detail = '') {
       if (ref[v * 3 + 2] > 0.62 && ref[v * 3 + 1] > 0.18 && ref[v * 3 + 1] < 0.86) mask.push(v);
     }
     console.log(`  .. face mask: ${mask.length} of ${heads[got[0]].n} vertices`);
+    /* HEADS WITH DIFFERENT TOPOLOGIES. The field-built heads (94d) are
+       meshed per face, so no two share a vertex list and the per-vertex
+       comparison below cannot run on them. Instead each head becomes a
+       RADIAL DEPTH MAP in its own unit box: for a grid of directions from
+       the box centre, the furthest surface point that way. Two maps are
+       compared bin by bin -- over the whole head, and over the face
+       region (forward-facing, brow to chin) -- which is the same question
+       the per-vertex metric asks, answered without correspondence. */
+    const LAT = 30, LON = 60;
+    const radial = (a) => {
+      const m = new Float64Array(LAT * LON).fill(NaN);
+      for (let v = 0; v < a.length; v += 3) {
+        const x = a[v] - 0.5, y = a[v + 1] - 0.5, z = a[v + 2] - 0.5, r = Math.hypot(x, y, z);
+        if (r < 1e-6) continue;
+        const la = Math.min(LAT - 1, Math.floor((Math.asin(y / r) / Math.PI + 0.5) * LAT));
+        const lo = Math.min(LON - 1, Math.floor((Math.atan2(x, z) / (2 * Math.PI) + 0.5) * LON));
+        const k = la * LON + lo;
+        if (!(m[k] >= r)) m[k] = r;
+      }
+      return m;
+    };
+    const maps = {};
+    const topoMismatch = got.some((id) => norm[id].length !== norm[got[0]].length);
+    if (topoMismatch) for (const id of got) maps[id] = radial(norm[id]);
+    const faceBin = (k) => {
+      const la = Math.floor(k / LON), lo = k % LON;
+      const lat = ((la + 0.5) / LAT - 0.5) * 180, lon = ((lo + 0.5) / LON - 0.5) * 360;
+      return Math.abs(lon) < 50 && lat > -45 && lat < 38;
+    };
     const dists = [];
     for (let i = 0; i < got.length; i++) {
       for (let j = i + 1; j < got.length; j++) {
         const a = norm[got[i]], b = norm[got[j]];
+        if (topoMismatch) {
+          const A = maps[got[i]], B = maps[got[j]];
+          let s = 0, c = 0, fs = 0, fc = 0;
+          for (let k = 0; k < A.length; k++) {
+            if (!(A[k] === A[k]) || !(B[k] === B[k])) continue;
+            const d = Math.abs(A[k] - B[k]); s += d; c++;
+            if (faceBin(k)) { fs += d; fc++; }
+          }
+          const d = c ? s / c : NaN, fd = fc ? fs / fc : NaN;
+          if (!(d === d)) nan++;
+          dists.push([got[i], got[j], d, fd]);
+          if (fd < worstF) { worstF = fd; worstFPair = got[i] + '/' + got[j]; }
+          if (d < worstD) { worstD = d; worstPair = got[i] + '/' + got[j]; }
+          continue;
+        }
         if (a.length !== b.length) { nan++; dists.push([got[i], got[j], NaN]); continue; }
         let s = 0, fs = 0;
         for (let v = 0; v < a.length; v += 3) {
@@ -167,10 +211,17 @@ function check(name, cond, detail = '') {
     /* One sculpt at seven sizes would score ~0 here by construction.
        A hundredth of the head's own size between the two CLOSEST of the
        seven is a real structural difference everywhere. */
+    /* The radial map reads lower than the per-vertex metric -- it sees
+       only how far the surface moved OUT, not along -- so its floors are
+       its own, calibrated on the ring sculpt these heads replaced,
+       measured the same way: closest whole heads 0.70, closest faces
+       1.11. The floors sit a little under that; the field-built heads
+       measure 0.91 and 0.99. */
+    const FL = topoMismatch ? { same: 0.0060, clear: 0.0065, face: 0.0095 } : { same: 0.010, clear: 0.012, face: 0.016 };
     check('no two heads are the same sculpt at different sizes',
-      worstD > 0.010, `closest pair ${worstPair} at ${(worstD * 100).toFixed(2)}`);
+      worstD > FL.same, `closest pair ${worstPair} at ${(worstD * 100).toFixed(2)}`);
     check('and the closest pair is still clearly two different heads',
-      worstD > 0.012, `${worstPair} at ${(worstD * 100).toFixed(2)}`);
+      worstD > FL.clear, `${worstPair} at ${(worstD * 100).toFixed(2)}`);
     /* The one that matters, and the threshold is argued rather than
        picked. The figure is the mean displacement per face vertex as a
        fraction of the head's own size, so on a 232 mm head 1.6 per cent
@@ -189,7 +240,7 @@ function check(name, cond, detail = '') {
        midface fullness, jaw -- and giving each man a different corner
        of that space, which is what the tables now do. */
     check('no two FACES are close, over the face region alone',
-      worstF > 0.016, `${worstFPair} at ${(worstF * 100).toFixed(2)}`);
+      worstF > FL.face, `${worstFPair} at ${(worstF * 100).toFixed(2)}`);
   }
 
   /* ---- the pictures ----

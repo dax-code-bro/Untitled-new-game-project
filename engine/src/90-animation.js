@@ -266,6 +266,22 @@ class AnimationClip {
   sample(time, out) {
     const dur = this.duration;
     const t = this.loop ? ((time % dur) + dur) % dur : clamp(time, 0, dur);
+    /* A POSE OBJECT IS REUSED, SO CLEAR WHAT ANOTHER CLIP LEFT IN IT.
+       The animator samples every clip into the same two objects, and
+       this only ever wrote the bones this clip has tracks for -- so a
+       bone the new clip does not key kept the last value the old one
+       gave it, and the animator applied that as if it were keyed. An
+       idle, which keys no pelvis, stood on whatever height the run
+       before it happened to stop at: 57 mm down on one bot, 26 on the
+       next, and the support hand's reach down a rifle moved with it
+       (hold.test.js, 16 cm against 20). Cleared once per change of
+       clip, so a steady cycle allocates nothing. */
+    if (out.__clip !== this) {
+      for (const k in out) delete out[k];
+      if (!Object.prototype.hasOwnProperty.call(out, '__clip')) {
+        Object.defineProperty(out, '__clip', { value: this, writable: true, enumerable: false });
+      } else out.__clip = this;
+    }
     for (const name in this.tracks) {
       const track = this.tracks[name];
       const times = track.times;
@@ -492,6 +508,11 @@ class Animator {
       }
     }
     this.skeleton.update();
+    /* The physically-driven layer (90b-dynamics.js): lean, bank, lag,
+       gaze and breath, added to whatever the clips produced. Before the
+       correction hook, so a hand solved onto a rifle still has the last
+       word over an arm that was trailing a change of speed. */
+    if (this.dynamics) { this.dynamics.apply(dt, this); this.skeleton.update(); }
     /* THE LAST WORD ON THE POSE.
      *
        Anything that corrects a clip -- a hand reaching for a weapon, a
@@ -1527,8 +1548,15 @@ function makeHumanoidClips() {
     upperLegR: { keys: [[0, 0, 0, 0], [0.28, -10, 0, 5], [0.66, 0, 0, 9], [1, 2, 0, 8]] },
     lowerLegL: { keys: [[0, 5, 0, 0], [0.32, 28, 0, 0], [0.74, 2, 0, 0], [1, -4, 0, 0]] },
     lowerLegR: { keys: [[0, 5, 0, 0], [0.36, 24, 0, 0], [0.76, 0, 0, 0], [1, -6, 0, 0]] },
-    upperArmL: { keys: [[0, -8, 0, -7], [0.3, 26, 0, -18], [0.72, 54, 0, -14], [1, 50, 0, -13]] },
-    upperArmR: { keys: [[0, -8, 0, 7], [0.34, 22, 0, 16], [0.76, 50, 0, 13], [1, 46, 0, 12]] },
+    /* The arms splay as he lands -- the elbows go OUT, not under. This
+       clip keys no hands or shoulders, and until the animator stopped
+       reusing stale pose slots (AnimationClip.sample) it was quietly
+       borrowing both from whichever clip ran before it; posed honestly,
+       at the old roll the right hand finished inside his own chest.
+       Rolled 15 degrees the other way (this rig's sign), they land
+       beside it. */
+    upperArmL: { keys: [[0, -8, 0, -7], [0.3, 26, 0, -6], [0.72, 54, 0, 2], [1, 50, 0, 2]] },
+    upperArmR: { keys: [[0, -8, 0, 7], [0.34, 22, 0, 6], [0.76, 50, 0, -2], [1, 46, 0, -2]] },
     lowerArmL: { keys: [[0, -18, 0, 0], [0.42, -74, 0, 0], [1, -50, 0, 0]] },
     lowerArmR: { keys: [[0, -18, 0, 0], [0.46, -68, 0, 0], [1, -46, 0, 0]] },
   }, { loop: false }));

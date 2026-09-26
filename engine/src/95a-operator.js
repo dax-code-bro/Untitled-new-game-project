@@ -49,12 +49,17 @@ const OP_CLOTH = {
      coyote over tan skin. Under a warm sky he read as a naked man
      wearing a plate carrier, which is what a Best Play screenshot
      caught him doing. Real coyote brown is two stops below skin. */
-  coyote: { color: 0x77603f, texture: 'fabric', roughness: 0.93, metalness: 0, uvScale: 10 },
-  olive:  { color: 0x5c6046, texture: 'fabric', roughness: 0.93, metalness: 0, uvScale: 10 },
-  black:  { color: 0x2e302e, texture: 'fabric', roughness: 0.90, metalness: 0, uvScale: 10 },
-  navy:   { color: 0x323a49, texture: 'fabric', roughness: 0.91, metalness: 0, uvScale: 10 },
-  hazmat: { color: 0xd8cf55, texture: 'fabric', roughness: 0.66, metalness: 0, uvScale: 8 },
-  grey:   { color: 0x6e7175, texture: 'fabric', roughness: 0.92, metalness: 0, uvScale: 10 },
+  /* RIPSTOP, at its real grid. The field-built body's UVs are in metres
+     (94c-sdf-body.js), so uvScale is tiles per metre: 8 puts the
+     reinforcing bars 7 mm apart, which is what combat ripstop measures.
+     The sheen is the synthetic's low broad lobe. */
+  coyote: { color: 0x77603f, texture: 'ripstop', roughness: 0.90, metalness: 0, uvScale: 8, sheen: 0.35, sheenColor: 0xa89272 },
+  olive:  { color: 0x5c6046, texture: 'ripstop', roughness: 0.90, metalness: 0, uvScale: 8, sheen: 0.35, sheenColor: 0x8e9478 },
+  black:  { color: 0x2e302e, texture: 'ripstop', roughness: 0.88, metalness: 0, uvScale: 8, sheen: 0.30, sheenColor: 0x5e6264 },
+  navy:   { color: 0x323a49, texture: 'ripstop', roughness: 0.88, metalness: 0, uvScale: 8, sheen: 0.30, sheenColor: 0x626c80 },
+  // PVC-coated: smooth, shinier, and no weave to speak of at this scale.
+  hazmat: { color: 0xd8cf55, texture: 'smooth', roughness: 0.48, metalness: 0, uvScale: 3 },
+  grey:   { color: 0x6e7175, texture: 'ripstop', roughness: 0.90, metalness: 0, uvScale: 8, sheen: 0.35, sheenColor: 0x9a9ea2 },
 };
 
 const OP_SKIN = {
@@ -483,6 +488,7 @@ Engine.prototype.operator = function (id, opts = {}) {
     name: opts.name || ('op-' + id),
     height: op.height, radius: op.radius, scale: op.scale, build: op.build,
     faceType: op.faceType,
+    fit: op.outfit === 'hazmat' ? 'hazmat' : 'fatigues',
     faceShape: OP_FACE[op.face],
     faceKey: op.id,
     /* The caller wins. Object.assign put the operator's own flag AFTER
@@ -495,7 +501,10 @@ Engine.prototype.operator = function (id, opts = {}) {
        `hair` is whether the head carries a scalp shell at all, which
        has to be on for anybody with a haircut; hairStyle is the cut. */
     hair: opts.hair !== undefined ? opts.hair : !!op.hairStyle,
-    hairStyle: opts.hair === false ? null : op.hairStyle,
+    /* Under a helmet or a hood the hair is a shorn band below the rim,
+       painted into the scalp -- a shell of it only pushes through the kit. */
+    hairStyle: opts.hair === false ? null
+      : (op.hairStyle && opts.gear !== false && op.gear && (op.gear.includes('helmet') || op.gear.includes('hood')) ? 'crop' : op.hairStyle),
     hairColor: op.hairColor,
     beard: opts.hair === false ? null : op.beard,
     beardColor: op.beardColor,
@@ -519,7 +528,7 @@ Engine.prototype.operator = function (id, opts = {}) {
        damage to "is this a person" than any amount of sculpting could
        undo. Twelve tiles puts the grain at roughly skin scale. */
     skin: opts.skin || { preset: 'skin', color: OP_SKIN[op.skin] || OP_SKIN.tan,
-      roughness: 0.62, metalness: 0, uvScale: 12 },
+      roughness: 0.80, metalness: 0, uvScale: 12, subsurface: 0.45 },
   }));
   if (!c) return c;
   c.operator = op.id;
@@ -538,8 +547,24 @@ Engine.prototype.operator = function (id, opts = {}) {
      what the comparison bench does -- a helmet would hide the sculpt it
      is trying to measure. */
   if (op.gear && op.gear.length && opts.gear !== false) {
+    /* The head's own surface, in the kit's bind space, so a helmet can
+       be fitted to this skull rather than to a nominal one (gearHelmet). */
+    let headPts = null;
+    const hgeo = c.head && c.head.__geo;
+    if (hgeo && hgeo.sdf) {
+      const hb = c.skeleton.bones[c.skeleton.index('head')].bindMatrix.e;
+      const off = c.head.localOffset || { x: 0, y: 0, z: 0 };
+      const sc = typeof c.head.scale === 'number' ? c.head.scale : (c.head.scale ? c.head.scale.x : 1);
+      const P = hgeo.positions, n = Math.floor(P.length / 12);
+      headPts = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        headPts[i * 3] = hb[12] + (off.x || 0) + P[i * 12] * sc;
+        headPts[i * 3 + 1] = hb[13] + (off.y || 0) + P[i * 12 + 1] * sc;
+        headPts[i * 3 + 2] = hb[14] + (off.z || 0) + P[i * 12 + 2] * sc;
+      }
+    }
     const kit = buildGear(c.skeleton, op.gear,
-      Object.assign({ build: op.build, stature: op.scale }, op.gearOpts || {}));
+      Object.assign({ build: op.build, stature: op.scale, headPts }, op.gearOpts || {}));
     c.gear = [];
     for (const part of kit) {
       const gm = new GpuMesh(this.gl, part.geometry);
@@ -577,9 +602,24 @@ Engine.prototype.operator = function (id, opts = {}) {
         name: 'balaclava', mesh: bm,
         material: this.material(GEAR_MAT.black),
         parent: c, parentBone: c.skeleton.index('head'),
-        offset: c.head.offset, scale: c.head.scale,
+        offset: c.head.localOffset, scale: c.head.scale,
         boundRadius: 0.45 * op.scale,
       });
+      /* Cut again from each of the head's coarser levels, so a mask is
+         never the heaviest thing on a man thirty metres away -- cut from
+         the close-up head alone it was 66,000 triangles at every range. */
+      if (c.head.lods) {
+        ba.lods = c.head.lods.map((l, i) => {
+          if (i === 0) return { mesh: bm, from: l.from };
+          const lg = this.geometryOf(l.mesh);
+          const lb = lg ? gearBalaclava(lg, op.scale) : null;
+          if (!lb || !lb.indices.length) return { mesh: bm, from: l.from };
+          const lm = new GpuMesh(this.gl, lb);
+          lm.__key = 'mask:' + op.id + ':' + i;
+          lm.setupInstancing(20);
+          return { mesh: lm, from: l.from };
+        });
+      }
       this.actors.push(ba);
       c.balaclava = ba;
     }

@@ -700,6 +700,14 @@ class Engine {
     return this.fluid;
   }
 
+  /* One GPU upload per geometry object, however many actors draw it. */
+  _gpuMeshOf(geo) {
+    const W = this._gpuOf || (this._gpuOf = new WeakMap());
+    let m = W.get(geo);
+    if (!m) { m = new GpuMesh(this.gl, geo); W.set(geo, m); }
+    return m;
+  }
+
   /* A humanoid with a skinned body, an expressive head, and a controller. */
   character(opts = {}) {
     const scale = opts.scale != null ? opts.scale : 1;
@@ -717,13 +725,34 @@ class Engine {
       ? (opts.rot != null ? opts.rot : 0.55 + (((opts.seed || 5) * 7) % 9) / 20)
       : 0;
     // `zombie: true` swaps in the starved silhouette and torn clothing.
-    const geo = model ? model.geometry : makeHumanoidMesh(skeleton, opts.zombie
+    /* THE FIELD-BUILT BODY IS BUILT ONCE PER BUILD, and twice over: at
+       the 11 mm it is meshed at for a close-up and at 22 mm (a quarter of
+       the triangles) for anyone past six metres. Every man of one build,
+       height, cut and seed is the same body, and a match respawning
+       twelve of them was re-solving the field and the skin weights for
+       each one. Skinning is per actor in the shader, so the buffers are
+       shared exactly the way an imported model's already were. */
+    const sdfLiving = !model && !opts.zombie && opts.sdfBody !== false;
+    const bodyOpts = { thickness: opts.build || 1, stature: scale, fit: opts.fit, seed: opts.seed, sdfBody: opts.sdfBody };
+    let bodyEnt = null;
+    if (sdfLiving) {
+      const bk = [opts.build || 1, scale.toFixed(3), opts.fit || '', opts.seed == null ? '' : opts.seed].join(':');
+      const bc = Engine._sdfBodies || (Engine._sdfBodies = new Map());
+      bodyEnt = bc.get(bk);
+      if (!bodyEnt) {
+        bodyEnt = { geo: makeHumanoidMesh(skeleton, bodyOpts),
+          far: makeHumanoidMesh(skeleton, Object.assign({}, bodyOpts, { resolution: 0.022 })),
+          vfar: makeHumanoidMesh(skeleton, Object.assign({}, bodyOpts, { resolution: 0.032 })) };
+        bc.set(bk, bodyEnt);
+      }
+    }
+    const geo = model ? model.geometry : bodyEnt ? bodyEnt.geo : makeHumanoidMesh(skeleton, opts.zombie
       ? { zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, rot,
         stature: scale }
-      : { thickness: opts.build || 1, stature: scale });
+      : bodyOpts);
     // One model, many copies: the GPU buffers are built once and shared.
     if (model && !model._mesh) model._mesh = new GpuMesh(this.gl, geo);
-    const mesh = model ? model._mesh : new GpuMesh(this.gl, geo);
+    const mesh = model ? model._mesh : this._gpuMeshOf(geo);
     /* Registered so the flesh can be MEASURED too, the same way the head
        and the clothing already are. "Do the ribs actually surface?" is a
        question about vertex positions, and it should never have to be
@@ -757,6 +786,12 @@ class Engine {
       jumpSpeed: opts.jumpSpeed,
     });
     controller.animator = animator;
+    /* Weight, lag and breath on top of the clips -- see 90b-dynamics.js.
+       The dead lurch further, trail their arms more and do not breathe. */
+    animator.dynamics = new BodyDynamics(skeleton, {
+      source: controller, seed: opts.seed != null ? opts.seed * 7.3 : undefined,
+      gain: opts.zombie ? { lean: 1.35, bank: 1.2, lag: 1.4, gaze: 0.4, breath: 0, shift: 0.6 } : {},
+    });
 
     const actor = new Actor(this, {
       name: opts.name || 'character',
@@ -768,6 +803,12 @@ class Engine {
       body: controller.body,
       boundRadius: 1.4 * scale,
     });
+    /* The neck, gloves and boots below take the same levels from the
+       same coarse builds. */
+    const lodsFor = (sub, hi) => (bodyEnt && sub ? [{ mesh: hi, from: 0 },
+      { mesh: this._gpuMeshOf(bodyEnt.far[sub] || bodyEnt.far), from: 6 },
+      { mesh: this._gpuMeshOf(bodyEnt.vfar[sub] || bodyEnt.vfar), from: 16 }] : null);
+    if (bodyEnt) actor.lods = lodsFor('_', mesh);
     // The body mesh is authored with its soles at exactly -0.875 (half of
     // 1.75), which is where the centred capsule's bottom already is — so
     // the visual needs no vertical correction at all.
@@ -778,7 +819,7 @@ class Engine {
        Same skeleton, same animator, so it moves as one piece with the
        rest of him -- it is only a second material, not a second body. */
     if (geo.neck) {
-      const nm = new GpuMesh(this.gl, geo.neck);
+      const nm = this._gpuMeshOf(geo.neck);
       nm.__key = 'neck:' + (opts.build || 1) + ':' + scale.toFixed(3);
       (this._geoByKey || (this._geoByKey = new Map())).set(nm.__key, geo.neck);
       const na = new Actor(this, {
@@ -788,9 +829,32 @@ class Engine {
         boundRadius: 1.4 * scale,
       });
       na.visualOffset = new Vec3(0, 0, 0);
+      na.lods = lodsFor('neck', nm);
       this.actors.push(na);
       actor.neck = na;
       (actor.rigged || (actor.rigged = [])).push(na);
+    }
+
+    /* Hands and boots: the field-built body's other materials. Gloves by
+       default -- every operator wears them -- and boots in leather. */
+    for (const [key, mat, nm] of [
+      ['hands', opts.gloves != null ? opts.gloves : { color: 0x2b2a27, texture: 'leather', roughness: 0.62, metalness: 0, uvScale: 3 }, 'hands'],
+      ['boots', opts.boots != null ? opts.boots : { color: 0x3a3028, texture: 'leather', roughness: 0.58, metalness: 0, uvScale: 2 }, 'boots'],
+    ]) {
+      const sub = geo[key];
+      if (!sub || !sub.indices || !sub.indices.length) continue;
+      const sm = this._gpuMeshOf(sub);
+      sm.__key = key + ':' + (opts.build || 1) + ':' + scale.toFixed(3);
+      (this._geoByKey || (this._geoByKey = new Map())).set(sm.__key, sub);
+      const sa = new Actor(this, {
+        name: nm, mesh: sm, material: this.material(mat),
+        skeleton, animator, controller, body: controller.body, boundRadius: 1.4 * scale,
+      });
+      sa.visualOffset = new Vec3(0, 0, 0);
+      sa.lods = lodsFor(key, sm);
+      this.actors.push(sa);
+      actor[key] = sa;
+      (actor.rigged || (actor.rigged = [])).push(sa);
     }
 
     /* Clothes: their own skinned mesh, so cloth can be canvas while the
@@ -883,28 +947,84 @@ class Engine {
       /* faceShape is the full sculpt control set -- the thing that makes
          two heads DIFFERENT rather than one head at two sizes. See the
          block in 91-face.js. Absent, nothing changes. */
-      const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot,
-        face: opts.faceShape || null, hair: opts.hair, eyeColor: opts.eyeColor });
-      const headMesh = new GpuMesh(this.gl, headGeo);
-      /* Registered so it can be MEASURED. A head built straight into a
-         GpuMesh is invisible to geometryOf, so nothing outside the engine
-         could ever ask a question about a face -- which is why "the
-         zombies look middling" had to stay an opinion. */
-      headMesh.__key = 'head:' + (opts.seed || 5) + ':' + (opts.faceType || 'male') + ':' + rot.toFixed(3)
-        + (opts.faceKey ? ':' + opts.faceKey : '');
-      (this._geoByKey || (this._geoByKey = new Map())).set(headMesh.__key, headGeo);
-      // A head with no expression rig has neither skeleton nor face, so the
-      // renderer batches it through the instanced path — which needs an
-      // instance buffer this mesh would otherwise never be given, and the
-      // draw silently produces nothing. Every static-faced character came
-      // out headless because of it.
-      headMesh.setupInstancing(20);   // stride in floats, matching _mesh()
+      /* The living get the field-built head (94d-sdf-head.js): real
+         sockets, lids, a nose that grows out of the face. The dead keep
+         the ring sculpt, whose decay terms are written for it. Built once
+         per face and shared -- a match builds the same seven heads over
+         and over. */
+      const living = rot < 0.01 && opts.sdfHead !== false;
+      const skinCol = (opts.skin && typeof opts.skin === 'object' && opts.skin.color != null) ? opts.skin.color : 0xc8a080;
+      const hk = [opts.faceKey || '', opts.seed || 5, opts.faceType || 'male', opts.eyeColor || 0, opts.hairStyle || '',
+        opts.hairColor || 0, opts.brows || '', opts.browColor || 0, opts.beard || '', opts.beardColor || 0, skinCol].join(':');
+      const headCache = Engine._sdfHeads || (Engine._sdfHeads = new Map());
+      const headGeo = living
+        ? (headCache.get(hk) || headCache.set(hk, makeSdfHeadGeometry({ seed: opts.seed || 5, type: opts.faceType,
+          face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
+          hairStyle: opts.hairStyle, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
+          beard: opts.beard, beardColor: opts.beardColor })).get(hk))
+        : makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot,
+          face: opts.faceShape || null, hair: opts.hair, eyeColor: opts.eyeColor });
+      /* ONE UPLOAD PER FACE, AND THREE OF THEM. The field-built head is
+         a hundred thousand triangles at the 2 mm it is meshed at for a
+         close-up, and a match drew twelve of them -- two million
+         triangles of faces, most of them twenty metres away and a dozen
+         pixels tall, and the software-GL test page fell from nine
+         frames a second to one. So the same field is meshed again at 4
+         and 7.5 mm (a quarter and a twelfth of the triangles) and the
+         renderer picks by distance (_buildBatches); and a face that
+         seven bots share is uploaded once, not seven times. */
+      const headMeshes = this._sdfHeadMeshes || (this._sdfHeadMeshes = new Map());
+      const sdfLods = [];
+      let headMesh = living ? headMeshes.get(hk) : null;
+      if (living) {
+        const tiers = [[headGeo, 0, ''], [0.0042, 2.5, ':mid'], [0.0075, 7, ':far'], [0.012, 16, ':vfar']];
+        for (const [src, from, tag] of tiers) {
+          let gm = headMeshes.get(hk + tag);
+          if (!gm) {
+            let g2 = src;
+            if (typeof src === 'number') {
+              g2 = headCache.get(hk + tag);
+              if (!g2) {
+                g2 = makeSdfHeadGeometry({ seed: opts.seed || 5, type: opts.faceType,
+                  face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
+                  hairStyle: opts.hairStyle, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
+                  beard: opts.beard, beardColor: opts.beardColor, resolution: src });
+                headCache.set(hk + tag, g2);
+              }
+            }
+            gm = new GpuMesh(this.gl, g2);
+            gm.__key = 'sdfhead:' + hk + tag;
+            (this._geoByKey || (this._geoByKey = new Map())).set(gm.__key, g2);
+            gm.setupInstancing(20);
+            headMeshes.set(hk + tag, gm);
+          }
+          sdfLods.push({ mesh: gm, from });
+        }
+        headMesh = sdfLods[0].mesh;
+      }
+      if (!headMesh) {
+        headMesh = new GpuMesh(this.gl, headGeo);
+        /* Registered so it can be MEASURED. A head built straight into a
+           GpuMesh is invisible to geometryOf, so nothing outside the engine
+           could ever ask a question about a face -- which is why "the
+           zombies look middling" had to stay an opinion. */
+        headMesh.__key = 'head:' + (opts.seed || 5) + ':' + (opts.faceType || 'male') + ':' + rot.toFixed(3)
+          + (opts.faceKey ? ':' + opts.faceKey : '');
+        (this._geoByKey || (this._geoByKey = new Map())).set(headMesh.__key, headGeo);
+        // A head with no expression rig has neither skeleton nor face, so the
+        // renderer batches it through the instanced path — which needs an
+        // instance buffer this mesh would otherwise never be given, and the
+        // draw silently produces nothing. Every static-faced character came
+        // out headless because of it.
+        headMesh.setupInstancing(20);   // stride in floats, matching _mesh()
+      }
       // face: 'static' renders the head but skips the expression rig — no
       // blendshape build, no per-frame morphing. A crowd of NPCs costs a
       // fraction of one talking hero, which is exactly the trade a horde
       // wants to make.
       let face = null;
-      if (opts.face !== 'static') {
+      // The expression rig's regions are tuned to the ring sculpt's topology.
+      if (opts.face !== 'static' && !headGeo.sdf) {
         face = new Face(this.gl, headGeo, { seed: opts.seed || 5 });
         face.attach(headMesh);
       }
@@ -930,7 +1050,9 @@ class Engine {
          Six heads is the proportion of a stylised toy, and it was doing
          more damage to how these read than any amount of sculpting could
          undo. This is a head. */
-      const headHeight = 0.252;
+      /* The field-built head's box includes a neck stub of a different
+         length, so its overall height is its own number. */
+      const headHeight = headGeo.sdf ? 0.250 : 0.252;   // measured: 0.235 chin to crown, a real head
       const headScale = (headHeight / HEAD_MESH_HEIGHT) * scale;
       const headActor = new Actor(this, {
         name: 'head',
@@ -953,6 +1075,7 @@ class Engine {
         scale: headScale,
         boundRadius: 0.4 * scale,
       });
+      if (sdfLods.length > 1) headActor.lods = sdfLods;
       this.actors.push(headActor);
       /* Kept so a test can measure where this skull actually ENDS --
          which is how the helmet was found to be sitting half a head
@@ -997,8 +1120,14 @@ class Engine {
          out with the same undifferentiated thatch. hairStyle is the
          style; hair stays the on/off. */
       const hs = opts.hairStyle || (typeof opts.hair === 'string' ? opts.hair : null);
-      if (hs) actor.hair = addPatch(makeHairGeometry(headGeo, hs), 'hair', hairColor, 0.86);
-      if (opts.beard) {
+      /* On the field-built head a shorn or short scalp, stubble and brows
+         are painted into the skin: a shell that thin is all edge, and its
+         edge came out saw-toothed along the mesh. */
+      if (hs && !(headGeo.sdf && (hs === 'crop' || hs === 'short'))) actor.hair = addPatch(makeHairGeometry(headGeo, hs), 'hair', hairColor, 0.86);
+      /* Every beard on the field-built head is painted into the skin: the
+         old shell was cut for the ring sculpt and sat on this one as a
+         hard-edged black block with a square corner on each cheek. */
+      if (opts.beard && !headGeo.sdf) {
         const bc = opts.beardColor != null ? opts.beardColor : hairColor;
         actor.beard = addPatch(makeBeardGeometry(headGeo, opts.beard), 'beard', bc, 0.90);
       }
@@ -1034,7 +1163,7 @@ class Engine {
         this.actors.push(ea);
         actor.eyes = ea;
       }
-      if (opts.brows) {
+      if (opts.brows && !headGeo.sdf) {
         const brc = opts.browColor != null ? opts.browColor : hairColor;
         actor.brows = addPatch(makeBrowGeometry(headGeo, opts.brows), 'brows', brc, 0.88);
       }
@@ -1452,6 +1581,20 @@ class Engine {
   }
 
   _updateActors(dt) {
+    /* ONCE PER FRAME, HOWEVER MANY ACTORS SHARE IT.
+
+       A character is several actors -- body, neck, clothes, blood, one
+       per material of kit -- and every one of them carries the SAME
+       animator and the SAME controller so they move as one. This loop
+       updated each of them once per actor. Measured: an operator in full
+       kit is six actors, so his animation ran at six times its authored
+       speed and his controller integrated six times a frame; a zombie
+       was four or five; the zombies player two. Every gait rate, every
+       stride match and every fade in the game was being multiplied by a
+       number that depended on how much the man was wearing.
+
+       A stamp per frame, so the shared state advances exactly once. */
+    const F = (this._actorFrame = (this._actorFrame || 0) + 1);
     for (let i = 0; i < this.actors.length; i++) {
       const a = this.actors[i];
       if (a.dead) continue;
@@ -1459,9 +1602,9 @@ class Engine {
         a.lifetime -= dt;
         if (a.lifetime <= 0) { a.destroy(); i--; continue; }
       }
-      if (a.controller) a.controller.update(dt);
-      if (a.animator) a.animator.update(dt);
-      if (a.face) a.face.update(dt);
+      if (a.controller && a.controller._frame !== F) { a.controller._frame = F; a.controller.update(dt); }
+      if (a.animator && a.animator._frame !== F) { a.animator._frame = F; a.animator.update(dt); }
+      if (a.face && a.face._frame !== F) { a.face._frame = F; a.face.update(dt); }
       if (a.onUpdate) a.onUpdate(a, dt);
     }
 
@@ -1531,6 +1674,28 @@ class Engine {
       if (!actor.dead) actor.updateMatrix();
     }
 
+    /* LEVEL OF DETAIL, for the few meshes that carry it (the field-built
+       heads and bodies, 94c/94d). Chosen on how many pixels the thing
+       covers, not on metres alone: distance corrected for the lens, so a
+       sniper scope at sixty metres gets the face a man at five would, and
+       for the height of the picture, so the thresholds are metres at
+       1080p -- a 4K screen holds the fine head twice as far out and a
+       phone-sized canvas drops it sooner. A reflection probe always takes
+       the coarsest. */
+    const vh = Math.max(120, (this.renderer && this.renderer.height > 1) ? this.renderer.height : 1080);
+    const lodK = Math.tan((this.camera.fov || 0.96) * 0.5) / 0.5206 * (1080 / vh);   // tan(27.5 deg)
+    const pickMesh = (actor) => {
+      const L = actor.lods;
+      // An offline export wants the close-up meshes whatever the camera (tools/export_scene.js).
+      if (this.fullDetail) return actor.mesh;
+      if (!L || probe) return L ? L[L.length - 1].mesh : actor.mesh;
+      const m = actor.matrix.e;
+      const d = Math.hypot(m[12] - camPos.x, m[13] - camPos.y, m[14] - camPos.z) * lodK;
+      let pick = L[0].mesh;
+      for (let i = 1; i < L.length; i++) if (d >= L[i].from) pick = L[i].mesh;
+      return pick;
+    };
+
     for (const actor of this.actors) {
       if (!actor.visible || !actor.mesh || actor.dead) continue;
 
@@ -1571,11 +1736,12 @@ class Engine {
         continue;
       }
 
-      const key = `${actor.mesh.__key || actor.mesh.__uid || (actor.mesh.__uid = ++_meshUid)}|${actor.material.id}`;
+      const amesh = actor.lods ? pickMesh(actor) : actor.mesh;
+      const key = `${amesh.__key || amesh.__uid || (amesh.__uid = ++_meshUid)}|${actor.material.id}`;
       let g = groups.get(key);
       if (!g) {
         g = {
-          mesh: actor.mesh,
+          mesh: amesh,
           material: actor.material,
           data: new Float32Array(64 * 20),
           count: 0,
@@ -1593,6 +1759,7 @@ class Engine {
       // which is the best approximation available without splitting draws.
       const ap = actor.position;
       g.cx += ap.x; g.cy += ap.y; g.cz += ap.z;
+      if (actor.lods && !this.fullDetail) g.shadowMesh = actor.lods[actor.lods.length - 1].mesh;
       if ((g.count + 1) * 20 > g.data.length) {
         const bigger = new Float32Array(g.data.length * 2);
         bigger.set(g.data);
@@ -1622,7 +1789,10 @@ class Engine {
 
     for (const actor of individual) {
       const batch = {
-        mesh: actor.mesh,
+        mesh: actor.lods ? pickMesh(actor) : actor.mesh,
+        /* A shadow is a silhouette a few texels across: it takes the
+           coarsest level whatever the camera distance. */
+        shadowMesh: actor.lods && !this.fullDetail ? actor.lods[actor.lods.length - 1].mesh : null,
         material: actor.material,
         model: actor.matrix,
         params: [actor.tint.x, actor.tint.y, actor.tint.z, actor.custom],

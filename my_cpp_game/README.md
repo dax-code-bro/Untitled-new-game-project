@@ -77,6 +77,12 @@ swept section and revolve, patched into the bundle text for this export only -- 
 floor, and writes each gun's bounds to `armory.lescene.json`. `--shots list.txt outdir` renders
 one picture per line (`name ex,ey,ez tx,ty,tz fov`) in a single run.
 
+Operators: `node tools/export_scene.js roster roster.lescene` stands all seven operators in a row
+at x = (i - 3) * 1.6 on a studio floor (bounds in `roster.lescene.json`), skinned and posed at
+the close-up level of detail (the web engine's `fullDetail`). Keep the default `--frames 12`:
+with `--frames 0` the skeletons have never been posed, every skinning palette is empty and only
+the rigid heads arrive.
+
 Linux host packages: `libgl1-mesa-dev libx11-dev libxrandr-dev
 libxinerama-dev libxcursor-dev libxi-dev libxkbcommon-dev`. Glad is
 generated at configure time and needs Python 3 with `jinja2`.

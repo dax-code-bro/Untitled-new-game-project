@@ -119,6 +119,44 @@ GAMES.armory = {
   `,
 };
 
+/* THE ROSTER: the seven operators, field-built bodies and heads, for the
+ * native portrait gallery. Stood in a row on a studio floor in the idle
+ * pose, half a second into it so the breathing layer has started, every
+ * actor of each man tagged so the exporter writes his world bounds beside
+ * the scene (out.lescene.json) -- the same path the armoury uses. */
+GAMES.roster = {
+  scripts: [],
+  start: `
+    const G = window.__G = LE.create({ canvas: '#game', quality: 'ultra', gravity: 0 });
+    const R = G.renderer;
+    const ids = G.operators().map((o) => o.id || o);
+    const list = [];
+    ids.forEach((id, i) => {
+      const sp = G.operatorSpec(id);
+      const c = G.operator(id, { at: [(i - (ids.length - 1) / 2) * 1.6, 0.875 * sp.scale + 0.005, 0] });
+      c.controller.autoAnimate = false; c.controller.facing = 0;
+      c.animator.play('idle', 0);
+      const mine = new Set([c].concat(c.rigged || []));
+      for (const a of G.actors) {
+        let r = a;
+        for (let d = 0; r && d < 8; d++, r = r.parent) if (mine.has(r)) { a.__gun = i; break; }
+      }
+      list.push({ id, name: sp.name || id, cls: 'operator', height: sp.height, scale: sp.scale });
+    });
+    const floor = G.box({ at: [0, -0.05, 0], size: [16, 0.1, 10], physics: false,
+      material: G.material({ color: 0x3a3b3e, texture: 'concrete', roughness: 0.8, uvScale: 4 }) });
+    floor.name = 'studio-floor';
+    R.sun.direction.set(-0.40, 0.72, 0.56).normalize();
+    R.sun.color.set(1.0, 0.96, 0.9); R.sun.intensity = 3.0;
+    R.sky.zenith.set(0.46, 0.47, 0.50); R.sky.horizon.set(0.24, 0.24, 0.25); R.sky.ground.set(0.07, 0.07, 0.07);
+    R.sky.intensity = 1.1; R.sky.clouds = 0;
+    R.fog.density = 0.0; R.lights.length = 0;
+    R.post.vignette = 0.25; R.post.grain = 0; R.post.chromatic = 0; R.post.bloom = 0.2;
+    G.lookAt([0, 1.2, 9], [0, 1.0, 0]);
+    window.__ARMORY = list;
+  `,
+};
+
 /* THE GUNS AT DESKTOP RESOLUTION -- applied to the bundle text for the
  * armoury export only, never to the shipped web build.
  *
@@ -281,6 +319,8 @@ async function main() {
     // Everything, not what the camera happens to see: probe mode culls by
     // distance, so a huge radius returns the whole map.
     const cam = G.camera;
+    // The close-up level of every mesh that has levels of detail (95-engine.js _buildBatches).
+    G.fullDetail = true;
     const batches = G._buildBatches({ x: cam.position.x, y: cam.position.y, z: cam.position.z, radius: 1e7 });
     // Skinned batches carry the bone texture, not the skeleton; find the
     // actor that owns it to read the palette (bones x 16 floats, the exact

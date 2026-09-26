@@ -83,7 +83,7 @@ function appendLimb(g, from, to, r0, r1, sides = 8) {
    The builders know exactly which piece of anatomy they are emitting, so
    they say so, and each part may only bind to the bones that actually move
    it. */
-const PART = { BODY: 0, ARM_L: 1, ARM_R: 2, LEG_L: 3, LEG_R: 4, NECK: 5 };
+const PART = { BODY: 0, ARM_L: 1, ARM_R: 2, LEG_L: 3, LEG_R: 4, NECK: 5, LEG_L_FIELD: 6, LEG_R_FIELD: 7, ARM_L_FIELD: 8, ARM_R_FIELD: 9 };
 
 const PART_BONES = {
   0: ['hips', 'spine', 'chest', 'neck', 'shoulderL', 'shoulderR'],
@@ -92,6 +92,16 @@ const PART_BONES = {
   3: ['hips', 'upperLegL', 'lowerLegL', 'footL'],
   4: ['hips', 'upperLegR', 'lowerLegR', 'footR'],
   5: ['chest', 'neck', 'head'],
+  /* The field-built trouser leg starts INSIDE the pelvis, under the
+     trunk's own surface. Blended toward the hips it tears across that
+     hidden band every time the thigh swings; bound to the leg alone it
+     rotates rigidly under the pelvis, which covers it. */
+  6: ['upperLegL', 'lowerLegL', 'footL'],
+  7: ['upperLegR', 'lowerLegR', 'footR'],
+  // The same for the sleeve, whose top sits inside the trunk under the
+  // shoulder slope. The upper arm is the shoulder's child, so a shrug still carries it.
+  8: ['upperArmL', 'lowerArmL', 'handL'],
+  9: ['upperArmR', 'lowerArmR', 'handR'],
 };
 
 /* Bind an arbitrary geometry to a skeleton in its current bind pose. Split
@@ -154,6 +164,110 @@ function solveSkinWeights(g, skeleton) {
   return g;
 }
 
+/* SMOOTH THE WEIGHTS OVER THE SURFACE.
+ *
+   The solver weights by inverse fourth power of distance to each bone,
+   which makes the change from one bone to the next sharp -- fine on the
+   lofted body, whose edges were several centimetres long, and a problem
+   on the field-built one, whose edges are one: the whole bend of an
+   elbow lands in one or two rows of triangles and they stretch three to
+   seven times their length. So the weights are relaxed over the mesh's
+   own connectivity, a few rounds of averaging each vertex with its
+   neighbours, which spreads every transition across several centimetres
+   of skin the way real skin shares a bend. Coincident vertices (a UV
+   seam's duplicates) are welded first so a seam cannot open. */
+function smoothSkinWeights(g, iterations = 8) {
+  const P = g.positions, I = g.indices, n = P.length / 3;
+  if (!g.joints || !g.weights || !n) return g;
+  // Weld coincident vertices.
+  const key = new Map(), rep = new Int32Array(n);
+  for (let v = 0; v < n; v++) {
+    // Welded only within a part: two limbs can meet at one plane without sharing skin.
+    const k = (g.parts ? g.parts[v] : 0) + ':' + Math.round(P[v * 3] * 2e4) + ',' + Math.round(P[v * 3 + 1] * 2e4) + ',' + Math.round(P[v * 3 + 2] * 2e4);
+    const r = key.get(k);
+    if (r == null) { key.set(k, v); rep[v] = v; } else rep[v] = r;
+  }
+  const nb = Array.from({ length: n }, () => new Set());
+  for (let t = 0; t < I.length; t += 3) {
+    const a = rep[I[t]], b = rep[I[t + 1]], c = rep[I[t + 2]];
+    nb[a].add(b); nb[a].add(c); nb[b].add(a); nb[b].add(c); nb[c].add(a); nb[c].add(b);
+  }
+  const parts = g.parts && g.parts.length === n ? g.parts : null;
+  let W = new Array(n);
+  for (let v = 0; v < n; v++) {
+    if (rep[v] !== v) continue;
+    const m = new Map();
+    for (let k = 0; k < 4; k++) { const w = g.weights[v * 4 + k]; if (w > 0) m.set(g.joints[v * 4 + k], w); }
+    W[v] = m;
+  }
+  for (let it = 0; it < iterations; it++) {
+    const next = new Array(n);
+    for (let v = 0; v < n; v++) {
+      if (rep[v] !== v) continue;
+      const acc = new Map(W[v]);
+      let cnt = 1;
+      for (const u of nb[v]) {
+        // Only across the same part: an arm must not borrow the trunk's weights.
+        if (parts && parts[u] !== parts[v]) continue;
+        for (const [b, w] of W[u]) acc.set(b, (acc.get(b) || 0) + w);
+        cnt++;
+      }
+      for (const [b, w] of acc) acc.set(b, w / cnt);
+      next[v] = acc;
+    }
+    W = next;
+  }
+  for (let v = 0; v < n; v++) {
+    const m = W[rep[v]];
+    const top = Array.from(m.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    let sum = 0; for (const [, w] of top) sum += w;
+    for (let k = 0; k < 4; k++) {
+      g.joints[v * 4 + k] = top[k] ? top[k][0] : 0;
+      g.weights[v * 4 + k] = top[k] && sum > 0 ? top[k][1] / sum : (k === 0 ? 1 : 0);
+    }
+  }
+  return g;
+}
+
+/* BIND A FIELD-BUILT LIMB BY ITS JOINTS.
+ *
+   The general solver blends linearly along each bone, so a vertex a
+   fifth of the way down the thigh carries a fifth of the SHIN -- and a
+   sprint's knee, folded 120 degrees, drags the top of the thigh with it.
+   A limb is rigid between its joints and bends AT them: all thigh until a
+   few centimetres above the knee, a smooth hand-over across it, all shin
+   below. The same at the elbow, the wrist and the ankle. */
+function bindFieldLimbs(g, skeleton) {
+  const P = g.positions, n = P.length / 3;
+  if (!g.parts || !g.joints) return g;
+  const pos = (nm) => { const i = skeleton.index(nm); const v = new Vec3(); skeleton.bones[i].bindMatrix.getTranslation(v); return [i, v]; };
+  const chains = {};
+  for (const S of ['L', 'R']) {
+    const [uL, hip] = pos('upperLeg' + S), [lL, knee] = pos('lowerLeg' + S), [fL, ankle] = pos('foot' + S);
+    const [uA, sh] = pos('upperArm' + S), [lA, elbow] = pos('lowerArm' + S), [hA, wrist] = pos('hand' + S);
+    chains[S === 'L' ? PART.LEG_L_FIELD : PART.LEG_R_FIELD] = { bones: [uL, lL, fL], joints: [knee, ankle], dirs: [knee.clone().sub(hip).normalize(), ankle.clone().sub(knee).normalize()], zone: [[-0.080, 0.070], [-0.020, 0.030]] };
+    chains[S === 'L' ? PART.ARM_L_FIELD : PART.ARM_R_FIELD] = { bones: [uA, lA, hA], joints: [elbow, wrist], dirs: [elbow.clone().sub(sh).normalize(), wrist.clone().sub(elbow).normalize()], zone: [[-0.065, 0.055], [-0.015, 0.020]] };
+  }
+  const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  for (let v = 0; v < n; v++) {
+    const C = chains[g.parts[v]];
+    if (!C) continue;
+    const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2];
+    // How far past each joint, along the limb there.
+    const a1 = (x - C.joints[0].x) * C.dirs[0].x + (y - C.joints[0].y) * C.dirs[0].y + (z - C.joints[0].z) * C.dirs[0].z;
+    const a2 = (x - C.joints[1].x) * C.dirs[1].x + (y - C.joints[1].y) * C.dirs[1].y + (z - C.joints[1].z) * C.dirs[1].z;
+    const w1 = sstep(C.zone[0][0], C.zone[0][1], a1);      // upper -> lower
+    const w2 = sstep(C.zone[1][0], C.zone[1][1], a2);      // lower -> end
+    const wu = 1 - w1, wl = w1 * (1 - w2), we = w1 * w2;
+    const J = [[C.bones[0], wu], [C.bones[1], wl], [C.bones[2], we]].sort((p, q) => q[1] - p[1]);
+    for (let k = 0; k < 4; k++) {
+      g.joints[v * 4 + k] = k < 3 ? J[k][0] : 0;
+      g.weights[v * 4 + k] = k < 3 ? J[k][1] : 0;
+    }
+  }
+  return g;
+}
+
 function makeHumanoidMesh(skeleton, opts = {}) {
   // A zombie build is a different body, not the same body scaled — its own
   // cross-section stack, its own neck, and its own clothes.
@@ -170,7 +284,25 @@ function makeHumanoidMesh(skeleton, opts = {}) {
       intact: opts.blood === false })
     : opts.zombieBuild
       ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, girth: opts.girth, seed: opts.seed, segments: opts.segments, rot: opts.rot })
-      : makeHumanBodyGeometry(skeleton, opts);
+      : opts.sdfBody === false
+        ? makeHumanBodyGeometry(skeleton, opts)
+        : makeSdfBodyGeometry(skeleton, opts);
+
+  /* THE FIELD-BUILT BODY (94c-sdf-body.js) comes back with its neck,
+     hands and boots as separate geometries, because each wears its own
+     material. Scaled and skinned here with the body, the same way. */
+  if (g.neckGeo) {
+    const st0 = opts.stature != null ? opts.stature : 1;
+    for (const sub of [g, g.neckGeo, g.handGeo, g.bootGeo]) {
+      if (!sub || Math.abs(st0 - 1) < 1e-6) continue;
+      for (let i = 0; i < sub.positions.length; i++) sub.positions[i] *= st0;
+      if (sub.computeBounds) sub.bounds = sub.computeBounds();
+    }
+    g.neck = smoothSkinWeights(solveSkinWeights(g.neckGeo, skeleton), 4);
+    g.hands = solveSkinWeights(g.handGeo, skeleton);
+    g.boots = smoothSkinWeights(bindFieldLimbs(solveSkinWeights(g.bootGeo, skeleton), skeleton), 4);
+    return smoothSkinWeights(bindFieldLimbs(solveSkinWeights(g, skeleton), skeleton), 6);
+  }
 
   /* STATURE.
    *
@@ -264,9 +396,17 @@ class CharacterController {
        actually doing. */
     this.sliding = false;
     this.jumpSpeed = opts.jumpSpeed || 7.6;
-    this.acceleration = opts.acceleration || 34;
+    /* TUNED AT TWICE PER FRAME, and carried over as such. Until the
+       engine stopped updating a shared controller once per actor, the
+       zombies player -- body plus neck -- ran this integration twice a
+       frame, and that is the feel every number here was tuned against.
+       With one update a frame the constants carry the doubling
+       themselves: acceleration x2, the decays squared, the turn rate x2.
+       Everyone now moves the way the zombies player always did, instead
+       of an operator in full kit accelerating six times as hard. */
+    this.acceleration = opts.acceleration || 68;
     this.airControl = opts.airControl != null ? opts.airControl : 0.28;
-    this.turnSpeed = opts.turnSpeed || 12;
+    this.turnSpeed = opts.turnSpeed || 24;
     /* How tall a step this thing will walk up without being asked. Anything
        taller is a wall. A stair with a 24 cm riser needs at least that. */
     this.stepHeight = opts.stepHeight != null ? opts.stepHeight : 0.42;
@@ -308,8 +448,8 @@ class CharacterController {
        to plant, so it holds for most of a second and you genuinely
        drift. */
     this.external = new Vec3();
-    this.externalDamp = opts.externalDamp != null ? opts.externalDamp : 0.004;
-    this.externalDampAir = opts.externalDampAir != null ? opts.externalDampAir : 0.35;
+    this.externalDamp = opts.externalDamp != null ? opts.externalDamp : 0.000016;
+    this.externalDampAir = opts.externalDampAir != null ? opts.externalDampAir : 0.1225;
     this._extApplied = new Vec3();
   }
 
@@ -397,7 +537,7 @@ class CharacterController {
     // Ground friction only when there is no input, so stopping is crisp but
     // moving does not feel like wading.
     if (this.grounded && this._desired.lengthSq() < 1e-6) {
-      const damp = Math.pow(0.0016, dt);
+      const damp = Math.pow(0.00000256, dt);   // 0.0016 squared: see acceleration
       body.velocity.x *= damp;
       body.velocity.z *= damp;
     }

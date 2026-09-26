@@ -9983,7 +9983,11 @@ class Renderer {
           sh.v3('uWindDir', this.wind ? this.wind.direction : _defaultWind);
           sh.f('uWindStrength', this.wind ? this.wind.strength : 0.25);
         }
+        // The coarsest level of detail, where the mesh has levels (95-engine.js).
+        const full = batch.mesh;
+        if (batch.shadowMesh) batch.mesh = batch.shadowMesh;
         this._drawBatch(sh, batch);
+        batch.mesh = full;
       }
     }
     gl.disable(gl.POLYGON_OFFSET_FILL);
@@ -14609,6 +14613,22 @@ class AnimationClip {
   sample(time, out) {
     const dur = this.duration;
     const t = this.loop ? ((time % dur) + dur) % dur : clamp(time, 0, dur);
+    /* A POSE OBJECT IS REUSED, SO CLEAR WHAT ANOTHER CLIP LEFT IN IT.
+       The animator samples every clip into the same two objects, and
+       this only ever wrote the bones this clip has tracks for -- so a
+       bone the new clip does not key kept the last value the old one
+       gave it, and the animator applied that as if it were keyed. An
+       idle, which keys no pelvis, stood on whatever height the run
+       before it happened to stop at: 57 mm down on one bot, 26 on the
+       next, and the support hand's reach down a rifle moved with it
+       (hold.test.js, 16 cm against 20). Cleared once per change of
+       clip, so a steady cycle allocates nothing. */
+    if (out.__clip !== this) {
+      for (const k in out) delete out[k];
+      if (!Object.prototype.hasOwnProperty.call(out, '__clip')) {
+        Object.defineProperty(out, '__clip', { value: this, writable: true, enumerable: false });
+      } else out.__clip = this;
+    }
     for (const name in this.tracks) {
       const track = this.tracks[name];
       const times = track.times;
@@ -14835,6 +14855,11 @@ class Animator {
       }
     }
     this.skeleton.update();
+    /* The physically-driven layer (90b-dynamics.js): lean, bank, lag,
+       gaze and breath, added to whatever the clips produced. Before the
+       correction hook, so a hand solved onto a rifle still has the last
+       word over an arm that was trailing a change of speed. */
+    if (this.dynamics) { this.dynamics.apply(dt, this); this.skeleton.update(); }
     /* THE LAST WORD ON THE POSE.
      *
        Anything that corrects a clip -- a hand reaching for a weapon, a
@@ -15870,8 +15895,15 @@ function makeHumanoidClips() {
     upperLegR: { keys: [[0, 0, 0, 0], [0.28, -10, 0, 5], [0.66, 0, 0, 9], [1, 2, 0, 8]] },
     lowerLegL: { keys: [[0, 5, 0, 0], [0.32, 28, 0, 0], [0.74, 2, 0, 0], [1, -4, 0, 0]] },
     lowerLegR: { keys: [[0, 5, 0, 0], [0.36, 24, 0, 0], [0.76, 0, 0, 0], [1, -6, 0, 0]] },
-    upperArmL: { keys: [[0, -8, 0, -7], [0.3, 26, 0, -18], [0.72, 54, 0, -14], [1, 50, 0, -13]] },
-    upperArmR: { keys: [[0, -8, 0, 7], [0.34, 22, 0, 16], [0.76, 50, 0, 13], [1, 46, 0, 12]] },
+    /* The arms splay as he lands -- the elbows go OUT, not under. This
+       clip keys no hands or shoulders, and until the animator stopped
+       reusing stale pose slots (AnimationClip.sample) it was quietly
+       borrowing both from whichever clip ran before it; posed honestly,
+       at the old roll the right hand finished inside his own chest.
+       Rolled 15 degrees the other way (this rig's sign), they land
+       beside it. */
+    upperArmL: { keys: [[0, -8, 0, -7], [0.3, 26, 0, -6], [0.72, 54, 0, 2], [1, 50, 0, 2]] },
+    upperArmR: { keys: [[0, -8, 0, 7], [0.34, 22, 0, 6], [0.76, 50, 0, -2], [1, 46, 0, -2]] },
     lowerArmL: { keys: [[0, -18, 0, 0], [0.42, -74, 0, 0], [1, -50, 0, 0]] },
     lowerArmR: { keys: [[0, -18, 0, 0], [0.46, -68, 0, 0], [1, -46, 0, 0]] },
   }, { loop: false }));
@@ -16111,6 +16143,167 @@ function noise1(t, seed = 0) {
 }
 
 const Motion = { Ease, win: mWin, settle: mSettle, kick: mKick, stroke: mStroke, lift: mLift, arc: mArc, Spring, noise1, clamp01 };
+
+
+/* ─────────── 90b-dynamics.js ─────────── */
+/* ============================================================
+   BODY DYNAMICS -- what a clip cannot know.
+
+   Every clip in the game is a loop authored in place: a walk is the
+   same walk whether the man is setting off, pulling up, turning a
+   corner or standing still with his heart going from a sprint. So the
+   moment a body changes what it is doing, the animation is wrong --
+   nothing leans into the start, nothing is thrown forward by the stop,
+   nobody banks into a turn, the arms arrive with the torso instead of
+   after it, and the head rides every bob of the spine like a camera
+   bolted to a post.
+
+   This layer reads how the body is ACTUALLY moving -- measured from
+   where its rig went this frame, so it is equally right for a
+   physics-driven bot, a teleported replay and a scripted cutscene
+   figure -- and adds, on top of whatever clip is playing:
+
+     lean       the trunk pitches into acceleration and is thrown
+                forward by braking, on an underdamped spring, so a
+                stop overshoots and settles instead of freezing.
+     bank       into a turn, from the centripetal acceleration the
+                turn actually has (speed x turn rate).
+     lag        the arms trail a change of speed and catch up late,
+                and the forearm trails the upper arm -- follow-through
+                down the chain, the thing that separates weight from
+                rotation.
+     gaze       the head counter-rotates the trunk's lean and bank, as
+                a real head does to keep the eyes level.
+     breath     at rest the chest rises and falls, faster and deeper
+                for a while after hard running, then settling back.
+     shift      a slow weight shift at the hips, from smooth noise, so
+                two men standing in the same idle are not a mirror.
+
+   Additive and small by construction. It rotates bones in their own
+   frames after the sample and before anything that corrects the pose
+   (the hand IK onto a rifle runs after it and still wins), and every
+   channel is a Spring integrated exactly, so it is the same at 30 fps
+   and at 144.
+   ============================================================ */
+
+const _dynQ = new Quat();
+
+class BodyDynamics {
+  constructor(skeleton, opts = {}) {
+    this.skeleton = skeleton;
+    const ix = (n) => skeleton.index(n);
+    this.b = {
+      hips: ix('hips'), spine: ix('spine'), chest: ix('chest'), neck: ix('neck'), head: ix('head'),
+      uaL: ix('upperArmL'), uaR: ix('upperArmR'), laL: ix('lowerArmL'), laR: ix('lowerArmR'),
+      shL: ix('shoulderL'), shR: ix('shoulderR'),
+    };
+    /* How much of each effect this body gets. A zombie lurches further
+       and has no business breathing; a living man is tidier. */
+    this.gain = Object.assign({ lean: 1, bank: 1, lag: 1, gaze: 1, breath: 1, shift: 1 }, opts.gain || {});
+    this.source = opts.source || null;       // a CharacterController (for facing + body)
+    this.seed = opts.seed != null ? opts.seed : Math.random() * 100;
+    this.enabled = true;
+
+    this.lean = new Spring(2.1, 0.52);        // pitch, rad
+    this.bank = new Spring(1.8, 0.60);        // roll, rad
+    this.armA = new Spring(2.6, 0.45);        // upper-arm lag
+    this.armB = new Spring(2.2, 0.40);        // forearm, driven by the upper arm
+    this.aF = new Spring(6.0, 0.9);           // smoothed forward acceleration
+    this.aR = new Spring(6.0, 0.9);           // smoothed lateral acceleration
+    this.exert = 0;                           // 0..1, how blown he is
+    this.t = 0;
+    this._p = null; this._vF = 0; this._vR = 0; this._yaw = null;
+  }
+
+  reset() {
+    for (const s of [this.lean, this.bank, this.armA, this.armB, this.aF, this.aR]) s.reset(0);
+    this._p = null; this._yaw = null; this._vF = 0; this._vR = 0;
+  }
+
+  /* Measure the body's motion this frame. Returns false when there is
+     nothing trustworthy to measure (first frame, a teleport). */
+  _measure(dt) {
+    const src = this.source;
+    if (!src || !src.body || !(dt > 0)) return false;
+    const p = src.body.position, yaw = src.facing || 0;
+    if (!this._p) { this._p = [p.x, p.y, p.z]; this._yaw = yaw; return false; }
+    const dx = p.x - this._p[0], dz = p.z - this._p[2];
+    this._p[0] = p.x; this._p[1] = p.y; this._p[2] = p.z;
+    let dyaw = yaw - this._yaw; this._yaw = yaw;
+    dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw));
+    // A jump of more than ~20 m/s is a teleport or a respawn, not motion.
+    if (dx * dx + dz * dz > (20 * dt) * (20 * dt) + 0.04) { this.reset(); return false; }
+    const fx = Math.sin(yaw), fz = Math.cos(yaw);
+    const vx = dx / dt, vz = dz / dt;
+    const vF = vx * fx + vz * fz;             // along the facing
+    const vR = -(vx * fz - vz * fx);          // across it (+ = his right, -X side)
+    const aF = (vF - this._vF) / dt, aR = (vR - this._vR) / dt;
+    this._vF = vF; this._vR = vR;
+    const yawRate = dyaw / dt;
+    this.speed = Math.hypot(vx, vz);
+    // Centripetal acceleration of the turn is speed x turn rate.
+    this.aF.update(Math.max(-30, Math.min(30, aF)), dt);
+    this.aR.update(Math.max(-30, Math.min(30, aR + vF * yawRate)), dt);
+    return true;
+  }
+
+  apply(dt, animator) {
+    if (!this.enabled || !(dt > 0)) return;
+    dt = Math.min(dt, 0.05);
+    this.t += dt;
+    const ok = this._measure(dt);
+    const G = this.gain;
+    const aF = ok ? this.aF.value : 0, aR = ok ? this.aR.value : 0;
+    const spd = ok ? (this.speed || 0) : 0;
+
+    /* Exertion rises with running and decays over several seconds, so
+       a man who has just sprinted stands there breathing hard. */
+    const wantEx = Math.min(1, Math.max(0, (spd - 2.5) / 4));
+    this.exert += (wantEx > this.exert ? (wantEx - this.exert) * Math.min(1, dt * 0.8)
+      : (wantEx - this.exert) * Math.min(1, dt * 0.12));
+
+    const lean = this.lean.update(Math.max(-0.20, Math.min(0.20, aF * 0.022)) * G.lean, dt);
+    const bank = this.bank.update(Math.max(-0.16, Math.min(0.16, -aR * 0.016)) * G.bank, dt);
+    const armA = this.armA.update(Math.max(-0.35, Math.min(0.35, -aF * 0.030)) * G.lag, dt);
+    const armB = this.armB.update(armA * 0.8, dt);
+
+    /* Breathing and weight shift fade out with speed: a gait carries
+       its own torso motion and adding more on top only muddies it. */
+    /* A body playing a gait is moving whatever its rig says (a replay, a
+       treadmill in a test, a figure pushed by script): no idle breathing
+       or weight shift on top of a stride. */
+    const gait = animator && animator.current && animator.current.stride > 0;
+    const still = gait ? 0 : Math.max(0, 1 - spd / 1.2);
+    const rate = 0.24 + 0.34 * this.exert;           // breaths per second
+    const depth = (0.010 + 0.030 * this.exert) * G.breath * (0.35 + 0.65 * still);
+    this._ph = (this._ph || 0) + dt * rate * 2 * Math.PI;
+    const br = Math.sin(this._ph), br2 = Math.max(0, br);
+    const sh = G.shift * still;
+    const shiftR = noise1(this.t * 0.11, this.seed) * 0.035 * sh;
+    const shiftP = noise1(this.t * 0.07, this.seed + 3) * 0.012 * sh;
+
+    const bones = this.skeleton.bones, B = this.b;
+    const rot = (i, x, y, z) => {
+      if (i < 0 || (Math.abs(x) + Math.abs(y) + Math.abs(z)) < 1e-5) return;
+      _dynQ.setEuler(x, y, z);
+      bones[i].localRotation.mul(_dynQ);
+    };
+    // Trunk: the lean and bank shared down the spine, hips least.
+    rot(B.hips, lean * 0.25 + shiftP, 0, bank * 0.20 + shiftR);
+    rot(B.spine, lean * 0.35 - shiftP * 0.6, 0, bank * 0.40 - shiftR * 0.7);
+    rot(B.chest, lean * 0.30 - depth * br, 0, bank * 0.35 - shiftR * 0.25);
+    // The head keeps the eyes level: it takes most of the trunk back out.
+    const trunkP = lean * 0.9 + shiftP * 0.4 - depth * br;
+    const trunkR = bank * 0.95 + shiftR * 0.05;
+    rot(B.neck, -trunkP * 0.35 * G.gaze, 0, -trunkR * 0.35 * G.gaze);
+    rot(B.head, -trunkP * 0.45 * G.gaze + depth * br * 0.3, 0, -trunkR * 0.45 * G.gaze);
+    // Shoulders ride the breath; arms trail the change of speed.
+    rot(B.shL, 0, 0, depth * br2 * 0.8);
+    rot(B.shR, 0, 0, -depth * br2 * 0.8);
+    rot(B.uaL, armA, 0, 0); rot(B.uaR, armA, 0, 0);
+    rot(B.laL, armB * 0.6, 0, 0); rot(B.laR, armB * 0.6, 0, 0);
+  }
+}
 
 
 /* ─────────── 91-face.js ─────────── */
@@ -18323,7 +18516,7 @@ function appendLimb(g, from, to, r0, r1, sides = 8) {
    The builders know exactly which piece of anatomy they are emitting, so
    they say so, and each part may only bind to the bones that actually move
    it. */
-const PART = { BODY: 0, ARM_L: 1, ARM_R: 2, LEG_L: 3, LEG_R: 4, NECK: 5 };
+const PART = { BODY: 0, ARM_L: 1, ARM_R: 2, LEG_L: 3, LEG_R: 4, NECK: 5, LEG_L_FIELD: 6, LEG_R_FIELD: 7, ARM_L_FIELD: 8, ARM_R_FIELD: 9 };
 
 const PART_BONES = {
   0: ['hips', 'spine', 'chest', 'neck', 'shoulderL', 'shoulderR'],
@@ -18332,6 +18525,16 @@ const PART_BONES = {
   3: ['hips', 'upperLegL', 'lowerLegL', 'footL'],
   4: ['hips', 'upperLegR', 'lowerLegR', 'footR'],
   5: ['chest', 'neck', 'head'],
+  /* The field-built trouser leg starts INSIDE the pelvis, under the
+     trunk's own surface. Blended toward the hips it tears across that
+     hidden band every time the thigh swings; bound to the leg alone it
+     rotates rigidly under the pelvis, which covers it. */
+  6: ['upperLegL', 'lowerLegL', 'footL'],
+  7: ['upperLegR', 'lowerLegR', 'footR'],
+  // The same for the sleeve, whose top sits inside the trunk under the
+  // shoulder slope. The upper arm is the shoulder's child, so a shrug still carries it.
+  8: ['upperArmL', 'lowerArmL', 'handL'],
+  9: ['upperArmR', 'lowerArmR', 'handR'],
 };
 
 /* Bind an arbitrary geometry to a skeleton in its current bind pose. Split
@@ -18394,6 +18597,110 @@ function solveSkinWeights(g, skeleton) {
   return g;
 }
 
+/* SMOOTH THE WEIGHTS OVER THE SURFACE.
+ *
+   The solver weights by inverse fourth power of distance to each bone,
+   which makes the change from one bone to the next sharp -- fine on the
+   lofted body, whose edges were several centimetres long, and a problem
+   on the field-built one, whose edges are one: the whole bend of an
+   elbow lands in one or two rows of triangles and they stretch three to
+   seven times their length. So the weights are relaxed over the mesh's
+   own connectivity, a few rounds of averaging each vertex with its
+   neighbours, which spreads every transition across several centimetres
+   of skin the way real skin shares a bend. Coincident vertices (a UV
+   seam's duplicates) are welded first so a seam cannot open. */
+function smoothSkinWeights(g, iterations = 8) {
+  const P = g.positions, I = g.indices, n = P.length / 3;
+  if (!g.joints || !g.weights || !n) return g;
+  // Weld coincident vertices.
+  const key = new Map(), rep = new Int32Array(n);
+  for (let v = 0; v < n; v++) {
+    // Welded only within a part: two limbs can meet at one plane without sharing skin.
+    const k = (g.parts ? g.parts[v] : 0) + ':' + Math.round(P[v * 3] * 2e4) + ',' + Math.round(P[v * 3 + 1] * 2e4) + ',' + Math.round(P[v * 3 + 2] * 2e4);
+    const r = key.get(k);
+    if (r == null) { key.set(k, v); rep[v] = v; } else rep[v] = r;
+  }
+  const nb = Array.from({ length: n }, () => new Set());
+  for (let t = 0; t < I.length; t += 3) {
+    const a = rep[I[t]], b = rep[I[t + 1]], c = rep[I[t + 2]];
+    nb[a].add(b); nb[a].add(c); nb[b].add(a); nb[b].add(c); nb[c].add(a); nb[c].add(b);
+  }
+  const parts = g.parts && g.parts.length === n ? g.parts : null;
+  let W = new Array(n);
+  for (let v = 0; v < n; v++) {
+    if (rep[v] !== v) continue;
+    const m = new Map();
+    for (let k = 0; k < 4; k++) { const w = g.weights[v * 4 + k]; if (w > 0) m.set(g.joints[v * 4 + k], w); }
+    W[v] = m;
+  }
+  for (let it = 0; it < iterations; it++) {
+    const next = new Array(n);
+    for (let v = 0; v < n; v++) {
+      if (rep[v] !== v) continue;
+      const acc = new Map(W[v]);
+      let cnt = 1;
+      for (const u of nb[v]) {
+        // Only across the same part: an arm must not borrow the trunk's weights.
+        if (parts && parts[u] !== parts[v]) continue;
+        for (const [b, w] of W[u]) acc.set(b, (acc.get(b) || 0) + w);
+        cnt++;
+      }
+      for (const [b, w] of acc) acc.set(b, w / cnt);
+      next[v] = acc;
+    }
+    W = next;
+  }
+  for (let v = 0; v < n; v++) {
+    const m = W[rep[v]];
+    const top = Array.from(m.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    let sum = 0; for (const [, w] of top) sum += w;
+    for (let k = 0; k < 4; k++) {
+      g.joints[v * 4 + k] = top[k] ? top[k][0] : 0;
+      g.weights[v * 4 + k] = top[k] && sum > 0 ? top[k][1] / sum : (k === 0 ? 1 : 0);
+    }
+  }
+  return g;
+}
+
+/* BIND A FIELD-BUILT LIMB BY ITS JOINTS.
+ *
+   The general solver blends linearly along each bone, so a vertex a
+   fifth of the way down the thigh carries a fifth of the SHIN -- and a
+   sprint's knee, folded 120 degrees, drags the top of the thigh with it.
+   A limb is rigid between its joints and bends AT them: all thigh until a
+   few centimetres above the knee, a smooth hand-over across it, all shin
+   below. The same at the elbow, the wrist and the ankle. */
+function bindFieldLimbs(g, skeleton) {
+  const P = g.positions, n = P.length / 3;
+  if (!g.parts || !g.joints) return g;
+  const pos = (nm) => { const i = skeleton.index(nm); const v = new Vec3(); skeleton.bones[i].bindMatrix.getTranslation(v); return [i, v]; };
+  const chains = {};
+  for (const S of ['L', 'R']) {
+    const [uL, hip] = pos('upperLeg' + S), [lL, knee] = pos('lowerLeg' + S), [fL, ankle] = pos('foot' + S);
+    const [uA, sh] = pos('upperArm' + S), [lA, elbow] = pos('lowerArm' + S), [hA, wrist] = pos('hand' + S);
+    chains[S === 'L' ? PART.LEG_L_FIELD : PART.LEG_R_FIELD] = { bones: [uL, lL, fL], joints: [knee, ankle], dirs: [knee.clone().sub(hip).normalize(), ankle.clone().sub(knee).normalize()], zone: [[-0.080, 0.070], [-0.020, 0.030]] };
+    chains[S === 'L' ? PART.ARM_L_FIELD : PART.ARM_R_FIELD] = { bones: [uA, lA, hA], joints: [elbow, wrist], dirs: [elbow.clone().sub(sh).normalize(), wrist.clone().sub(elbow).normalize()], zone: [[-0.065, 0.055], [-0.015, 0.020]] };
+  }
+  const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  for (let v = 0; v < n; v++) {
+    const C = chains[g.parts[v]];
+    if (!C) continue;
+    const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2];
+    // How far past each joint, along the limb there.
+    const a1 = (x - C.joints[0].x) * C.dirs[0].x + (y - C.joints[0].y) * C.dirs[0].y + (z - C.joints[0].z) * C.dirs[0].z;
+    const a2 = (x - C.joints[1].x) * C.dirs[1].x + (y - C.joints[1].y) * C.dirs[1].y + (z - C.joints[1].z) * C.dirs[1].z;
+    const w1 = sstep(C.zone[0][0], C.zone[0][1], a1);      // upper -> lower
+    const w2 = sstep(C.zone[1][0], C.zone[1][1], a2);      // lower -> end
+    const wu = 1 - w1, wl = w1 * (1 - w2), we = w1 * w2;
+    const J = [[C.bones[0], wu], [C.bones[1], wl], [C.bones[2], we]].sort((p, q) => q[1] - p[1]);
+    for (let k = 0; k < 4; k++) {
+      g.joints[v * 4 + k] = k < 3 ? J[k][0] : 0;
+      g.weights[v * 4 + k] = k < 3 ? J[k][1] : 0;
+    }
+  }
+  return g;
+}
+
 function makeHumanoidMesh(skeleton, opts = {}) {
   // A zombie build is a different body, not the same body scaled — its own
   // cross-section stack, its own neck, and its own clothes.
@@ -18410,7 +18717,25 @@ function makeHumanoidMesh(skeleton, opts = {}) {
       intact: opts.blood === false })
     : opts.zombieBuild
       ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, girth: opts.girth, seed: opts.seed, segments: opts.segments, rot: opts.rot })
-      : makeHumanBodyGeometry(skeleton, opts);
+      : opts.sdfBody === false
+        ? makeHumanBodyGeometry(skeleton, opts)
+        : makeSdfBodyGeometry(skeleton, opts);
+
+  /* THE FIELD-BUILT BODY (94c-sdf-body.js) comes back with its neck,
+     hands and boots as separate geometries, because each wears its own
+     material. Scaled and skinned here with the body, the same way. */
+  if (g.neckGeo) {
+    const st0 = opts.stature != null ? opts.stature : 1;
+    for (const sub of [g, g.neckGeo, g.handGeo, g.bootGeo]) {
+      if (!sub || Math.abs(st0 - 1) < 1e-6) continue;
+      for (let i = 0; i < sub.positions.length; i++) sub.positions[i] *= st0;
+      if (sub.computeBounds) sub.bounds = sub.computeBounds();
+    }
+    g.neck = smoothSkinWeights(solveSkinWeights(g.neckGeo, skeleton), 4);
+    g.hands = solveSkinWeights(g.handGeo, skeleton);
+    g.boots = smoothSkinWeights(bindFieldLimbs(solveSkinWeights(g.bootGeo, skeleton), skeleton), 4);
+    return smoothSkinWeights(bindFieldLimbs(solveSkinWeights(g, skeleton), skeleton), 6);
+  }
 
   /* STATURE.
    *
@@ -18504,9 +18829,17 @@ class CharacterController {
        actually doing. */
     this.sliding = false;
     this.jumpSpeed = opts.jumpSpeed || 7.6;
-    this.acceleration = opts.acceleration || 34;
+    /* TUNED AT TWICE PER FRAME, and carried over as such. Until the
+       engine stopped updating a shared controller once per actor, the
+       zombies player -- body plus neck -- ran this integration twice a
+       frame, and that is the feel every number here was tuned against.
+       With one update a frame the constants carry the doubling
+       themselves: acceleration x2, the decays squared, the turn rate x2.
+       Everyone now moves the way the zombies player always did, instead
+       of an operator in full kit accelerating six times as hard. */
+    this.acceleration = opts.acceleration || 68;
     this.airControl = opts.airControl != null ? opts.airControl : 0.28;
-    this.turnSpeed = opts.turnSpeed || 12;
+    this.turnSpeed = opts.turnSpeed || 24;
     /* How tall a step this thing will walk up without being asked. Anything
        taller is a wall. A stair with a 24 cm riser needs at least that. */
     this.stepHeight = opts.stepHeight != null ? opts.stepHeight : 0.42;
@@ -18548,8 +18881,8 @@ class CharacterController {
        to plant, so it holds for most of a second and you genuinely
        drift. */
     this.external = new Vec3();
-    this.externalDamp = opts.externalDamp != null ? opts.externalDamp : 0.004;
-    this.externalDampAir = opts.externalDampAir != null ? opts.externalDampAir : 0.35;
+    this.externalDamp = opts.externalDamp != null ? opts.externalDamp : 0.000016;
+    this.externalDampAir = opts.externalDampAir != null ? opts.externalDampAir : 0.1225;
     this._extApplied = new Vec3();
   }
 
@@ -18637,7 +18970,7 @@ class CharacterController {
     // Ground friction only when there is no input, so stopping is crisp but
     // moving does not feel like wading.
     if (this.grounded && this._desired.lengthSq() < 1e-6) {
-      const damp = Math.pow(0.0016, dt);
+      const damp = Math.pow(0.00000256, dt);   // 0.0016 squared: see acceleration
       body.velocity.x *= damp;
       body.velocity.z *= damp;
     }
@@ -21461,6 +21794,880 @@ function skeletonFromRig(rig) {
 }
 
 
+/* ─────────── 94c-sdf-body.js ─────────── */
+/* ============================================================
+   THE BODY AS A FIELD -- a continuous anatomical surface.
+
+   Every living body in the game was lofted tubes: a torso, two arms and
+   two legs, each a closed stack of superellipse rings pushed into the
+   others. Rings can only describe a cross-section that sweeps along one
+   axis, so there was no pectoral, no deltoid cap, no glute, no calf that
+   sits BEHIND the shin, and every joint was two tubes butting into each
+   other. From any distance it read as a mannequin made of pipe.
+
+   This builds the body the way a sculptor blocks one in: as masses. Each
+   is a signed-distance primitive -- a round cone for a bone's length, an
+   ellipsoid for a muscle belly, a rounded box for a pocket -- and the
+   masses of one region are blended with a smooth minimum, so a biceps
+   runs into a deltoid runs into a pectoral with no seam, the way flesh
+   does. The field is then meshed (surface nets on a narrow band, then
+   every vertex projected back onto the true surface) and its normals
+   come straight from the field's gradient, which is why the result
+   shades like a surface and not like a stack of rings.
+
+   WHY SEVERAL FIELDS AND NOT ONE. In the bind pose the arms hang against
+   the flanks and the thighs nearly touch. A single blended field fuses
+   them -- and fused skin is a web that tears the moment an arm lifts to
+   hold a rifle, which every bot in the game does. So each region is its
+   own field and its own meshing pass (trunk, each arm, each leg, the
+   neck, each boot), and the regions meet where a real garment has a
+   seam: at the shoulder, the crotch and the boot top.
+
+   CLOTHES ARE THE SAME FIELD, OFFSET. A uniform is the body grown by its
+   ease -- a centimetre over the trunk, more down a trouser leg -- with
+   the folds a garment actually makes added as displacement where it
+   actually makes them: stacked at the elbow and the back of the knee,
+   bunched over the belt and above the boot. Pockets are rounded boxes
+   blended into the leg. That is geometry, so it catches light and casts
+   shadow; the weave is left to the fabric's normal map.
+   ============================================================ */
+
+/* ---------------- primitives ---------------- */
+
+function _sdRoundCone(px, py, pz, a, b, r1, r2) {
+  // iq: round cone between a (radius r1) and b (radius r2).
+  const bax = b[0] - a[0], bay = b[1] - a[1], baz = b[2] - a[2];
+  const l2 = bax * bax + bay * bay + baz * baz;
+  const rr = r1 - r2, a2 = l2 - rr * rr, il2 = 1 / l2;
+  const pax = px - a[0], pay = py - a[1], paz = pz - a[2];
+  const y = pax * bax + pay * bay + paz * baz, z = y - l2;
+  const xx = (pax * l2 - bax * y), xy = (pay * l2 - bay * y), xz = (paz * l2 - baz * y);
+  const x2 = xx * xx + xy * xy + xz * xz, y2 = y * y * l2, z2 = z * z * l2;
+  const k = Math.sign(rr) * rr * rr * x2;
+  if (Math.sign(z) * a2 * z2 > k) return Math.sqrt(x2 + z2) * il2 - r2;
+  if (Math.sign(y) * a2 * y2 < k) return Math.sqrt(x2 + y2) * il2 - r1;
+  return (Math.sqrt(x2 * a2 * il2) + y * rr) * il2 - r1;
+}
+
+function _sdEllipsoid(px, py, pz, c, r) {
+  const x = (px - c[0]), y = (py - c[1]), z = (pz - c[2]);
+  const k0 = Math.sqrt((x / r[0]) ** 2 + (y / r[1]) ** 2 + (z / r[2]) ** 2);
+  const k1 = Math.sqrt((x / (r[0] * r[0])) ** 2 + (y / (r[1] * r[1])) ** 2 + (z / (r[2] * r[2])) ** 2);
+  return k1 > 1e-9 ? k0 * (k0 - 1) / k1 : -Math.min(r[0], r[1], r[2]);
+}
+
+// A rounded box in a local frame: c centre, u/v/w unit axes, h half-sizes, rad rounding.
+function _sdRoundBox(px, py, pz, c, u, v, w, h, rad) {
+  const dx = px - c[0], dy = py - c[1], dz = pz - c[2];
+  const qx = Math.abs(dx * u[0] + dy * u[1] + dz * u[2]) - h[0] + rad;
+  const qy = Math.abs(dx * v[0] + dy * v[1] + dz * v[2]) - h[1] + rad;
+  const qz = Math.abs(dx * w[0] + dy * w[1] + dz * w[2]) - h[2] + rad;
+  const ox = Math.max(qx, 0), oy = Math.max(qy, 0), oz = Math.max(qz, 0);
+  return Math.sqrt(ox * ox + oy * oy + oz * oz) + Math.min(Math.max(qx, qy, qz), 0) - rad;
+}
+
+function _smin(a, b, k) {
+  if (k <= 0) return Math.min(a, b);
+  const h = Math.max(k - Math.abs(a - b), 0) / k;
+  return Math.min(a, b) - h * h * k * 0.25;
+}
+
+/* A region: a list of masses blended at `k`, optionally grown by an
+   ease and displaced by a fold function. */
+function _region(prims, k) {
+  return { prims, k, ease: 0, fold: null, cut: null, bmin: null, bmax: null };
+}
+
+/* A bounding sphere per mass, so a block of the grid only evaluates the
+   masses that can reach it. Blending reaches `k` past a surface, so that
+   goes on the radius too. */
+function _primBound(p, k) {
+  let c, r;
+  if (p.t === 'c') { c = _lerp3(p.a, p.b, 0.5); r = Math.hypot(p.b[0] - p.a[0], p.b[1] - p.a[1], p.b[2] - p.a[2]) * 0.5 + Math.max(p.r1, p.r2); }
+  else if (p.t === 'e') { c = p.c; r = Math.max(p.r[0], p.r[1], p.r[2]); }
+  else { c = p.c; r = Math.hypot(p.h[0], p.h[1], p.h[2]) + p.rad; }
+  return { c, r: r + (p.k != null ? p.k : k) + 0.002 };
+}
+
+function _evalRegion(R, x, y, z) {
+  let d = 1e9;
+  const P = R.active || R.prims;
+  for (let i = 0; i < P.length; i++) {
+    const p = P[i];
+    let e;
+    if (p.t === 'c') e = _sdRoundCone(x, y, z, p.a, p.b, p.r1, p.r2);
+    else if (p.t === 'e') e = _sdEllipsoid(x, y, z, p.c, p.r);
+    else e = _sdRoundBox(x, y, z, p.c, p.u, p.v, p.w, p.h, p.rad);
+    const k = p.k != null ? p.k : R.k;
+    // `op: 's'` carves: a smooth subtraction, for sockets, nostrils and seams.
+    if (p.op === 's') d = -_smin(-d, e, k);
+    else d = _smin(d, e, k);
+  }
+  d -= R.ease;
+  if (R.fold) d += R.fold(x, y, z);
+  // A cut is a half-space the region is clipped to (where it meets the next one).
+  if (R.cut) d = Math.max(d, R.cut(x, y, z));
+  return d;
+}
+
+/* ---------------- meshing: surface nets on a narrow band ---------------- */
+
+function _meshRegion(g, R, h, part, uvFn) {
+  const bmin = R.bmin, bmax = R.bmax;
+  const nx = Math.ceil((bmax[0] - bmin[0]) / h) + 1;
+  const ny = Math.ceil((bmax[1] - bmin[1]) / h) + 1;
+  const nz = Math.ceil((bmax[2] - bmin[2]) / h) + 1;
+  const N = nx * ny * nz;
+  R._bounds = R.prims.map((p) => _primBound(p, R.k));
+  const val = new Float32Array(N).fill(NaN);
+  const f = (x, y, z) => _evalRegion(R, x, y, z);
+  const idx = (i, j, k) => i + nx * (j + ny * k);
+  const X = (i) => bmin[0] + i * h, Y = (j) => bmin[1] + j * h, Z = (k) => bmin[2] + k * h;
+
+  // Only blocks near the surface are sampled finely.
+  const B = 4, diag = Math.sqrt(3) * B * h * 0.5;
+  for (let bk = 0; bk < nz - 1; bk += B) for (let bj = 0; bj < ny - 1; bj += B) for (let bi = 0; bi < nx - 1; bi += B) {
+    const ci = Math.min(bi + B, nx - 1), cj = Math.min(bj + B, ny - 1), ck = Math.min(bk + B, nz - 1);
+    const mx = (X(bi) + X(ci)) * 0.5, my = (Y(bj) + Y(cj)) * 0.5, mz = (Z(bk) + Z(ck)) * 0.5;
+    // Only the masses that can reach this block (plus their blend).
+    const act = [];
+    for (let q = 0; q < R.prims.length; q++) {
+      const bd = R._bounds[q];
+      if (Math.hypot(mx - bd.c[0], my - bd.c[1], mz - bd.c[2]) < bd.r + diag * 1.2 + R.ease) act.push(R.prims[q]);
+    }
+    if (!act.some((q) => q.op !== 's')) continue;       // nothing solid anywhere near
+    R.active = act;
+    const dc = f(mx, my, mz);
+    if (Math.abs(dc) > diag * 2.6 + 0.025 * (R.bandScale || 1)) { R.active = null; continue; }   // generous: the field is not an exact distance
+    for (let k = bk; k <= ck; k++) for (let j = bj; j <= cj; j++) for (let i = bi; i <= ci; i++) {
+      const n = idx(i, j, k);
+      if (val[n] !== val[n]) val[n] = f(X(i), Y(j), Z(k));
+    }
+    R.active = null;
+  }
+
+  const cellV = new Int32Array(N).fill(-1);
+  const base = g.positions.length / 3;
+  const vpos = [];
+  const EDGES = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
+  const cv = new Float32Array(8);
+  for (let k = 0; k < nz - 1; k++) for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+    let neg = 0, ok = true;
+    for (let c = 0; c < 8; c++) {
+      const v = val[idx(i + (c & 1), j + ((c >> 1) & 1), k + ((c >> 2) & 1))];
+      if (v !== v) { ok = false; break; }
+      cv[c] = v; if (v < 0) neg++;
+    }
+    if (!ok || neg === 0 || neg === 8) continue;
+    let sx = 0, sy = 0, sz = 0, cnt = 0;
+    for (const [a, b] of EDGES) {
+      const va = cv[a], vb = cv[b];
+      if ((va < 0) === (vb < 0)) continue;
+      const t = va / (va - vb);
+      sx += (a & 1) + (((b & 1) - (a & 1)) * t);
+      sy += ((a >> 1) & 1) + ((((b >> 1) & 1) - ((a >> 1) & 1)) * t);
+      sz += ((a >> 2) & 1) + ((((b >> 2) & 1) - ((a >> 2) & 1)) * t);
+      cnt++;
+    }
+    cellV[idx(i, j, k)] = vpos.length / 3;
+    vpos.push(X(i) + sx / cnt * h, Y(j) + sy / cnt * h, Z(k) + sz / cnt * h);
+  }
+
+  // Project each vertex onto the true surface and take the normal from the field.
+  const e = h * 0.35, nv = vpos.length / 3;
+  const nrm = new Float32Array(nv * 3);
+  for (let v = 0; v < nv; v++) {
+    let x = vpos[v * 3], y = vpos[v * 3 + 1], z = vpos[v * 3 + 2];
+    for (let it = 0; it < 2; it++) {   // a Newton step onto the surface, then the gradient there for the normal
+      const d = f(x, y, z);
+      const gx = f(x + e, y, z) - f(x - e, y, z), gy = f(x, y + e, z) - f(x, y - e, z), gz = f(x, y, z + e) - f(x, y, z - e);
+      const gl = Math.sqrt(gx * gx + gy * gy + gz * gz) / (2 * e) || 1;
+      const s = Math.max(-h, Math.min(h, d)) / gl;
+      const inv = 1 / (gl * 2 * e);
+      x -= gx * inv * s; y -= gy * inv * s; z -= gz * inv * s;
+      if (it === 1) { nrm[v * 3] = gx * inv; nrm[v * 3 + 1] = gy * inv; nrm[v * 3 + 2] = gz * inv; }
+    }
+    vpos[v * 3] = x; vpos[v * 3 + 1] = y; vpos[v * 3 + 2] = z;
+  }
+
+  /* Merge vertices that landed almost on top of each other. Surface nets
+     puts one vertex per cell, and near a cell corner two neighbours can
+     sit a fraction of a millimetre apart: slivers that shade fine but
+     turn any measurement of stretch into noise, and waste triangles. Every
+     edge the quads below will make is checked, and the short ones are
+     collapsed (union-find), so nothing slips between two buckets. */
+  const remap = new Int32Array(nv);
+  for (let v = 0; v < nv; v++) remap[v] = v;
+  const find = (v) => { while (remap[v] !== v) { remap[v] = remap[remap[v]]; v = remap[v]; } return v; };
+  const minLen2 = (h * 0.28) * (h * 0.28);
+  const quads = [];
+  const prev = g.part;
+  g.part = part;
+  const uv = [0, 0];
+  for (let v = 0; v < nv; v++) {
+    const x = vpos[v * 3], y = vpos[v * 3 + 1], z = vpos[v * 3 + 2];
+    uvFn(x, y, z, uv);
+    g.vert(x, y, z, nrm[v * 3], nrm[v * 3 + 1], nrm[v * 3 + 2], uv[0], uv[1]);
+  }
+  g.part = prev;
+
+  // One quad per sign-changing edge, between the four cells around it.
+  const quad = (a, b, c, d, flip) => {
+    if (a < 0 || b < 0 || c < 0 || d < 0) return;
+    // Measured: the natural cell order winds inward, so the outward face is the reverse.
+    quads.push(flip ? [a, b, c, d] : [a, d, c, b]);
+  };
+  for (let k = 1; k < nz - 1; k++) for (let j = 1; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+    const v0 = val[idx(i, j, k)], v1 = val[idx(i + 1, j, k)];
+    if (v0 !== v0 || v1 !== v1 || (v0 < 0) === (v1 < 0)) continue;
+    quad(cellV[idx(i, j - 1, k - 1)], cellV[idx(i, j, k - 1)], cellV[idx(i, j, k)], cellV[idx(i, j - 1, k)], v0 < 0);
+  }
+  for (let k = 1; k < nz - 1; k++) for (let j = 0; j < ny - 1; j++) for (let i = 1; i < nx - 1; i++) {
+    const v0 = val[idx(i, j, k)], v1 = val[idx(i, j + 1, k)];
+    if (v0 !== v0 || v1 !== v1 || (v0 < 0) === (v1 < 0)) continue;
+    quad(cellV[idx(i - 1, j, k - 1)], cellV[idx(i - 1, j, k)], cellV[idx(i, j, k)], cellV[idx(i, j, k - 1)], v0 < 0);
+  }
+  for (let k = 0; k < nz - 1; k++) for (let j = 1; j < ny - 1; j++) for (let i = 1; i < nx - 1; i++) {
+    const v0 = val[idx(i, j, k)], v1 = val[idx(i, j, k + 1)];
+    if (v0 !== v0 || v1 !== v1 || (v0 < 0) === (v1 < 0)) continue;
+    quad(cellV[idx(i - 1, j - 1, k)], cellV[idx(i, j - 1, k)], cellV[idx(i, j, k)], cellV[idx(i - 1, j, k)], v0 < 0);
+  }
+  // Collapse the short edges, then emit what is left (a quad that lost a corner is a triangle).
+  const d2 = (a, b) => (vpos[a * 3] - vpos[b * 3]) ** 2 + (vpos[a * 3 + 1] - vpos[b * 3 + 1]) ** 2 + (vpos[a * 3 + 2] - vpos[b * 3 + 2]) ** 2;
+  for (const q of quads) for (let e = 0; e < 4; e++) {
+    const a = find(q[e]), b = find(q[(e + 1) % 4]);
+    if (a !== b && d2(a, b) < minLen2) remap[Math.max(a, b)] = Math.min(a, b);
+  }
+  for (const q of quads) {
+    const r = q.map(find);
+    const uniq = r.filter((x, i) => r.indexOf(x) === i);
+    if (uniq.length === 4) g.quad(base + r[0], base + r[1], base + r[2], base + r[3]);
+    else if (uniq.length === 3) g.tri(base + uniq[0], base + uniq[1], base + uniq[2]);
+  }
+  return nv;
+}
+
+/* A texture seam: a cylindrical UV wraps from 1 back to 0 somewhere, and
+   the triangles across it would stretch the whole texture backwards over
+   one strip. Those triangles get their own copies of the wrapped corners
+   with u shifted by one period. */
+function _fixUvSeams(g, triFrom, triTo, period) {
+  const I = g.indices, U = g.uvs;
+  for (let t = triFrom; t < triTo; t += 3) {
+    const a = I[t], b = I[t + 1], c = I[t + 2];
+    const ua = U[a * 2], ub = U[b * 2], uc = U[c * 2];
+    const hi = Math.max(ua, ub, uc), lo = Math.min(ua, ub, uc);
+    if (hi - lo < period * 0.5) continue;
+    for (let s = 0; s < 3; s++) {
+      const v = I[t + s];
+      if (U[v * 2] < hi - period * 0.5) {
+        const p = g.positions, n = g.normals;
+        const nvi = g.vert(p[v * 3], p[v * 3 + 1], p[v * 3 + 2], n[v * 3], n[v * 3 + 1], n[v * 3 + 2], U[v * 2] + period, U[v * 2 + 1]);
+        if (g.parts) g.parts[nvi] = g.parts[v];
+        I[t + s] = nvi;
+      }
+    }
+  }
+}
+
+/* ---------------- the body ---------------- */
+
+const _bp = new Vec3();
+function _bonePos(skeleton, name, st) {
+  const i = skeleton.index(name);
+  skeleton.bones[i].bindMatrix.getTranslation(_bp);
+  return [_bp.x / st, _bp.y / st, _bp.z / st];
+}
+const _lerp3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const _cone = (a, b, r1, r2, k) => ({ t: 'c', a, b, r1, r2, k });
+const _ell = (c, r, k) => ({ t: 'e', c, r, k });
+function _norm3(v) { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }
+function _cross3(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+function _box(c, u, v, h, rad, k) {
+  const U = _norm3(u), V0 = _norm3(v), W = _norm3(_cross3(U, V0)), V = _cross3(W, U);
+  return { t: 'b', c, u: U, v: V, w: W, h, rad, k };
+}
+
+/* Folds along a limb: bands of ridges perpendicular to the limb axis,
+   concentrated where the garment is compressed. `sites` are [t, width,
+   amplitude] along the segment a->b. */
+function _foldsAlong(a, b, sites, seed, rings) {
+  const ax = b[0] - a[0], ay = b[1] - a[1], az = b[2] - a[2];
+  const L2 = ax * ax + ay * ay + az * az, L = Math.sqrt(L2);
+  return (x, y, z) => {
+    const t = ((x - a[0]) * ax + (y - a[1]) * ay + (z - a[2]) * az) / L2;
+    if (t < -0.1 || t > 1.1) return 0;
+    // Around-the-limb angle, from a fixed reference, so a ridge wavers.
+    const ang = Math.atan2(x - a[0] - ax * t, z - a[2] - az * t);
+    let d = 0;
+    for (const [c, w, amp] of sites) {
+      const u = (t - c) / w;
+      if (u < -1.5 || u > 1.5) continue;
+      const env = Math.exp(-u * u * 2.2);
+      const s = t * L * (rings || 38) + Math.sin(ang * 2 + seed) * 0.9 + Math.sin(ang * 3.1 + seed * 1.7) * 0.5;
+      d += -amp * env * (0.5 + 0.5 * Math.sin(s));
+    }
+    return d;
+  };
+}
+
+/* Outfits: how loose, how folded, and what is sewn on. */
+const BODY_FIT = {
+  fatigues: { trunk: 0.010, sleeve: 0.012, leg: 0.014, fold: 1.0, pockets: true, cuffs: true },
+  hazmat:   { trunk: 0.026, sleeve: 0.030, leg: 0.032, fold: 2.0, pockets: false, cuffs: true, tape: true },
+  tight:    { trunk: 0.004, sleeve: 0.004, leg: 0.005, fold: 0.3, pockets: false, cuffs: false },
+};
+
+/* Build the body. Returns a Geometry tagged with PART like the lofted
+   body (so the skin solver binds it the same way), with the neck, hands
+   and boots split off as their own geometries for their own materials. */
+function makeSdfBodyGeometry(skeleton, opts = {}) {
+  const st = opts.stature || 1;
+  const kb = opts.thickness || 1;
+  const kw = Math.pow(kb, 0.85);          // girth follows build, a little sub-linear
+  const fit = BODY_FIT[opts.fit || 'fatigues'] || BODY_FIT.fatigues;
+  const h = opts.resolution || 0.011;
+  const seed = (opts.seed || 7) * 1.37;
+
+  const J = {};
+  for (const n of ['hips', 'spine', 'chest', 'neck', 'head', 'shoulderL', 'shoulderR', 'upperArmL', 'upperArmR',
+    'lowerArmL', 'lowerArmR', 'handL', 'handR', 'upperLegL', 'upperLegR', 'lowerLegL', 'lowerLegR', 'footL', 'footR']) {
+    J[n] = _bonePos(skeleton, n, st);
+  }
+
+  const g = new Geometry();
+  g.parts = [];
+  /* UVs IN METRES. u runs round the region (angle x its circumference),
+     v straight up it, so a fabric's grid is square and the same size on
+     a sleeve as on the chest; a material's uvScale is then "tiles per
+     metre". The wrap is one circumference, and the triangles across it
+     are given their own shifted corners. */
+  const cyl = (cx, cz, circ) => (x, y, z, out) => {
+    const a = Math.atan2(x - cx, z - cz) / (2 * Math.PI) + 0.5;
+    out[0] = a * circ; out[1] = y;
+  };
+  const meshWrapped = (G2, R, hh, part, cx, cz, circ) => {
+    const t0 = G2.indices.length;
+    _meshRegion(G2, R, hh, part, cyl(cx, cz, circ));
+    _fixUvSeams(G2, t0, G2.indices.length, circ);
+  };
+
+  /* ---- TRUNK: pelvis to collar, with the deltoid caps ---- */
+  const w = (v) => v * kw;
+  const T = [
+    _ell([0, 0.020, -0.004], [w(0.150), 0.105, w(0.100)]),               // pelvis / hips
+    _ell([w(0.066), -0.018, -0.050], [w(0.082), 0.092, w(0.070)]),        // glute L
+    _ell([-w(0.066), -0.018, -0.050], [w(0.082), 0.092, w(0.070)]),       // glute R
+    _ell([0, 0.175, 0.004], [w(0.128), 0.125, w(0.092)]),                 // abdomen / waist
+    _ell([0, 0.335, -0.004], [w(0.142), 0.150, w(0.104)]),                // ribcage
+    _ell([w(0.066), 0.395, 0.052], [w(0.078), 0.058, w(0.040)]),          // pectoral L
+    _ell([-w(0.066), 0.395, 0.052], [w(0.078), 0.058, w(0.040)]),         // pectoral R
+    _ell([w(0.088), 0.330, -0.052], [w(0.060), 0.110, w(0.042)]),         // lat L
+    _ell([-w(0.088), 0.330, -0.052], [w(0.060), 0.110, w(0.042)]),        // lat R
+    _ell([0, 0.468, -0.022], [w(0.118), 0.050, w(0.068)]),                // trapezius / upper back
+    _ell([0, 0.448, 0.020], [w(0.100), 0.040, w(0.070)]),                 // collarbone line
+  ];
+  /* The shoulder SLOPE belongs to the trunk -- trapezius running down to
+     the acromion -- and stops short of the joint, under the sleeve. The
+     deltoid itself is the arm's: a trunk that owns the cap sticks out past
+     the sleeve as a ledge, which is what read as shoulder pads. */
+  for (const s of [1, -1]) {
+    const ua = J['upperArm' + (s > 0 ? 'L' : 'R')];
+    T.push(_ell([ua[0] * 0.72, ua[1] + 0.028, ua[2] - 0.006], [w(0.070), 0.040, w(0.058)], 0.04));
+  }
+  const trunk = _region(T, 0.045);
+  trunk.ease = fit.trunk;
+  trunk.bmin = [-0.30 * kw - 0.05, -0.14, -0.22 * kw - 0.03];
+  trunk.bmax = [0.30 * kw + 0.05, 0.535, 0.20 * kw + 0.03];
+  // Shirt folds: bunched at the waist where it is tucked into the belt.
+  trunk.fold = (x, y, z) => {
+    const u = (y - 0.095) / 0.07;
+    if (u < -1.5 || u > 1.5) return 0;
+    const ang = Math.atan2(x, z);
+    return -0.0035 * fit.fold * Math.exp(-u * u * 2) * (0.5 + 0.5 * Math.sin(ang * 9 + Math.sin(y * 60 + seed) * 1.4 + seed));
+  };
+  // The collar: a band of doubled cloth standing up round the neck.
+  T.push({ t: 'c', a: [0, 0.505, -0.010], b: [0, 0.532, -0.004], r1: w(0.074), r2: w(0.070), k: 0.012 });
+  // Clip the trunk below the crotch and above the collar: the legs and neck take over.
+  // ...and hollow the collar out round the neck, so the shirt stands off it.
+  trunk.cut = (x, y, z) => Math.max(-0.105 - y + Math.abs(x) * 0.35, y - 0.534,
+    // (the hole is {r < 0.056, y > 0.49}; subtracting it is max(d, -hole))
+    Math.min(0.056 - Math.sqrt(x * x + (z + 0.006) * (z + 0.006)), y - 0.490));
+  meshWrapped(g, trunk, h, PART.BODY, 0, 0, 0.92 * kw);
+
+  /* ---- ARMS: sleeve from inside the deltoid to the cuff ---- */
+  for (const s of [1, -1]) {
+    const S = s > 0 ? 'L' : 'R';
+    const sh = J['upperArm' + S], el = J['lowerArm' + S], wr = J['hand' + S];
+    const top = [sh[0] - s * 0.010, sh[1] + 0.012, sh[2]];
+    const A = [
+      _ell([sh[0] + s * 0.006, sh[1] - 0.004, sh[2]], [w(0.050), 0.060, w(0.054)]),                    // deltoid
+      _cone(top, el, w(0.046), w(0.039)),
+      _ell(_lerp3(sh, el, 0.45).map((v, i) => v + [0, 0, 0.018][i]), [w(0.038), 0.080, w(0.036)]),   // biceps
+      _ell(_lerp3(sh, el, 0.40).map((v, i) => v + [0, 0, -0.020][i]), [w(0.040), 0.090, w(0.038)]),  // triceps
+      _cone(el, wr, w(0.040), w(0.028)),
+      _ell(_lerp3(el, wr, 0.22).map((v, i) => v + [s * 0.006, 0, 0.008][i]), [w(0.040), 0.075, w(0.036)]), // forearm flexors
+    ];
+    const arm = _region(A, 0.030);
+    arm.ease = fit.sleeve;
+    const lo = [Math.min(top[0], wr[0]) - 0.09, wr[1] - 0.02, Math.min(sh[2], wr[2]) - 0.09];
+    const hi = [Math.max(top[0], wr[0]) + 0.09, top[1] + 0.07, Math.max(sh[2], wr[2]) + 0.09];
+    arm.bmin = lo; arm.bmax = hi;
+    const folds = _foldsAlong(top, wr, [[0.49, 0.10, 0.004 * fit.fold], [0.30, 0.12, 0.0015 * fit.fold], [0.93, 0.05, 0.0025 * fit.fold]], seed + s, 70);
+    const cuffC = _lerp3(el, wr, 0.93);
+    arm.fold = (x, y, z) => {
+      let d = folds(x, y, z);
+      if (fit.cuffs) {   // the cuff: a band of doubled cloth just short of the wrist
+        const u = (y - cuffC[1]) / 0.012;
+        d -= 0.0025 * Math.exp(-u * u);
+      }
+      return d;
+    };
+    // Starts inside the shoulder cap, ends at the cuff; the glove takes over.
+    arm.cut = (x, y, z) => (wr[1] + 0.012) - y;
+    if (fit.pockets) {   // a sleeve pocket on the upper arm, outside face
+      const pc = _lerp3(sh, el, 0.34);
+      A.push(_box([pc[0] + s * w(0.046), pc[1], pc[2] + 0.004], [0, 1, 0], [0, 0, 1], [0.050, 0.004 + fit.sleeve * 0.2, 0.040], 0.006, 0.012));
+    }
+    meshWrapped(g, arm, h, s > 0 ? PART.ARM_L_FIELD : PART.ARM_R_FIELD, sh[0], sh[2], 0.30 * kw);
+  }
+
+  /* ---- LEGS: trouser leg from inside the pelvis to above the boot ---- */
+  for (const s of [1, -1]) {
+    const S = s > 0 ? 'L' : 'R';
+    const hp = J['upperLeg' + S], kn = J['lowerLeg' + S], an = J['foot' + S];
+    const top = [hp[0] - s * 0.012, hp[1] + 0.07, hp[2] - 0.004];
+    const ankle = [an[0], an[1] + 0.10, an[2]];
+    const L = [
+      _cone(top, kn, w(0.088), w(0.052)),
+      _ell(_lerp3(hp, kn, 0.45).map((v, i) => v + [s * 0.004, 0, 0.026][i]), [w(0.058), 0.150, w(0.050)]),   // quadriceps
+      _ell(_lerp3(hp, kn, 0.40).map((v, i) => v + [0, 0, -0.024][i]), [w(0.055), 0.140, w(0.048)]),          // hamstrings
+      _ell(_lerp3(hp, kn, 0.70).map((v, i) => v + [-s * 0.022, 0, 0.004][i]), [w(0.036), 0.090, w(0.040)]),  // adductor / vastus medialis
+      _ell([kn[0], kn[1], kn[2] + 0.014], [w(0.050), 0.050, w(0.052)]),                                     // knee
+      _cone(kn, ankle, w(0.050), w(0.034)),
+      _ell(_lerp3(kn, an, 0.28).map((v, i) => v + [0, 0, -0.030][i]), [w(0.046), 0.095, w(0.042)]),          // calf
+    ];
+    const leg = _region(L, 0.035);
+    leg.ease = fit.leg;
+    leg.bmin = [hp[0] - 0.16, ankle[1] - 0.04, hp[2] - 0.15];
+    leg.bmax = [hp[0] + 0.16, top[1] + 0.05, hp[2] + 0.15];
+    const folds = _foldsAlong(top, ankle, [[0.52, 0.08, 0.0045 * fit.fold], [0.95, 0.06, 0.005 * fit.fold], [0.05, 0.05, 0.002 * fit.fold]], seed + 3 * s, 60);
+    leg.fold = folds;
+    // Inner-thigh cut keeps the two legs apart; the hem tucks into the boot.
+    leg.cut = (x, y, z) => Math.max(y - top[1], (ankle[1] - 0.01) - y, 0.004 - s * x);   // each leg stays on its own side of the midline
+    if (fit.pockets) {   // cargo pocket on the outer thigh, with a flap
+      const pc = _lerp3(hp, kn, 0.52);
+      L.push(_box([pc[0] + s * w(0.074), pc[1], pc[2] + 0.004], [0, 1, 0], [0, 0, 1], [0.078, 0.006 + fit.leg * 0.3, 0.064], 0.008, 0.014));
+      L.push(_box([pc[0] + s * w(0.080), pc[1] + 0.066, pc[2] + 0.004], [0, 1, 0], [0, 0, 1], [0.020, 0.008 + fit.leg * 0.3, 0.068], 0.005, 0.006));
+    }
+    meshWrapped(g, leg, h, s > 0 ? PART.LEG_L_FIELD : PART.LEG_R_FIELD, hp[0], hp[2], 0.48 * kw);
+  }
+  const clothVerts = g.positions.length / 3;
+
+  /* ---- NECK (skin) ---- */
+  const ng = new Geometry(); ng.parts = [];
+  {
+    const nb = J.neck, hd = J.head;
+    const N = [
+      /* Full width to half way up, then tapering in to END INSIDE the
+         head's own neck stub (94d), up under the jaw: the jaw overhangs
+         the join, as it does on a person, so neither open end is on show. */
+      _cone([0, 0.492, -0.006], [0, 0.584, 0.002], w(0.056), w(0.053)),
+      _cone([0, 0.584, 0.002], [0, 0.616, 0.006], w(0.053), 0.030),
+      _ell([0, 0.540, -0.022], [0.060, 0.034, 0.046]),                          // nape
+      _ell([0, 0.505, -0.020], [w(0.080), 0.030, w(0.055)]),                   // where the trapezius meets it
+      _ell([0.030, 0.545, 0.028], [0.018, 0.045, 0.016]), _ell([-0.030, 0.545, 0.028], [0.018, 0.045, 0.016]), // sternomastoids
+    ];
+    void nb; void hd;
+    const neck = _region(N, 0.02);
+    neck.bmin = [-0.12, 0.47, -0.12]; neck.bmax = [0.12, 0.632, 0.12];
+    neck.cut = (x, y, z) => Math.max(0.48 - y, y - 0.626);
+    meshWrapped(ng, neck, h * 0.9, PART.NECK, 0, 0, 0.40);
+  }
+
+  /* ---- BOOTS ---- */
+  const bg = new Geometry(); bg.parts = [];
+  for (const s of [1, -1]) {
+    const S = s > 0 ? 'L' : 'R';
+    const an = J['foot' + S];
+    const sole = -0.875;
+    const B = [
+      _cone([an[0], an[1] + 0.13, an[2] - 0.004], [an[0], an[1] + 0.02, an[2] - 0.006], 0.052, 0.050),          // shaft
+      _box([an[0] + s * 0.004, sole + 0.040, an[2] + 0.042], [1, 0, 0], [0, 1, 0], [0.048, 0.040, 0.128], 0.030),  // foot
+      _ell([an[0] + s * 0.003, sole + 0.042, an[2] + 0.140], [0.046, 0.036, 0.050], 0.03),                      // toe box
+      _box([an[0] + s * 0.004, sole + 0.012, an[2] + 0.040], [1, 0, 0], [0, 1, 0], [0.054, 0.012, 0.150], 0.008, 0.01), // sole
+      _ell([an[0], sole + 0.050, an[2] - 0.070], [0.042, 0.042, 0.036], 0.03),                                    // heel
+    ];
+    const boot = _region(B, 0.025);
+    boot.bmin = [an[0] - 0.09, sole - 0.02, an[2] - 0.15];
+    boot.bmax = [an[0] + 0.09, an[1] + 0.17, an[2] + 0.24];
+    boot.cut = (x, y, z) => Math.max(sole - y, y - (an[1] + 0.155));
+    // Lacing ridges across the instep.
+    boot.fold = (x, y, z) => {
+      const dz = z - (an[2] + 0.04), dx = x - an[0];
+      if (dz < -0.06 || dz > 0.09 || Math.abs(dx) > 0.03) return 0;
+      return -0.0018 * (0.5 + 0.5 * Math.sin((y + dz * 0.7) * 260)) * Math.exp(-dx * dx * 4000);
+    };
+    _meshRegion(bg, boot, h * 0.85, s > 0 ? PART.LEG_L_FIELD : PART.LEG_R_FIELD, (x, y, z, out) => { out[0] = x * 4 + z * 2; out[1] = y * 4 + z * 2; });
+  }
+
+  /* ---- HANDS (gloved or bare, the caller's choice of material) ---- */
+  const hg = new Geometry(); hg.parts = [];
+  for (const s of [1, -1]) {
+    hg.part = s > 0 ? PART.ARM_L : PART.ARM_R;
+    const wr = J['hand' + (s > 0 ? 'L' : 'R')];
+    buildHand(hg, s, new Vec3(wr[0], wr[1], wr[2]), 14, opts.claw);
+  }
+
+  for (const G2 of [g, ng, bg, hg]) {
+    while (G2.parts.length < G2.positions.length / 3) G2.parts.push(G2.part || 0);
+  }
+  void clothVerts;
+  g.finalize();
+  ng.finalize(); bg.finalize(); hg.finalize();
+  hg.computeWeldGroups && hg.computeWeldGroups();
+  if (typeof smoothNormals === 'function') smoothNormals(hg);
+  g.neckGeo = ng; g.bootGeo = bg; g.handGeo = hg;
+  return g;
+}
+
+
+/* ─────────── 94d-sdf-head.js ─────────── */
+/* ============================================================
+   THE HEAD AS A FIELD.
+
+   The sculpt it replaces (91-face.js) is a sphere of rings pushed in and
+   out, with the features built separately and pressed onto it: a nose
+   that was a cone stuck to the front, two lip lozenges, two ball bearings
+   for eyes sitting proud of a face that had no sockets for them. Close up
+   it read as a mannequin, because every one of those joins was a crease
+   where two unrelated surfaces met, and because a face is almost entirely
+   the transitions -- the way the brow turns under into the orbit, the
+   nose rises out of the cheek, the lids wrap an eye that sits BEHIND
+   them.
+
+   So the head is built the way the body now is (94c-sdf-body.js): as
+   masses blended with a smooth minimum, with the hollows CARVED by smooth
+   subtraction -- the orbits, the nostrils, the line of the mouth, the
+   bowl of the ear. The eyes are real balls in real sockets, with lids
+   that are part of the face and an aperture cut through them. Meshed at
+   two millimetres, projected onto the true surface, normals from the
+   field.
+
+   IT IS THE SAME PERSON. Every sculpt control the operators already carry
+   (brow shelf, orbit depth, nose length / bridge / hump / width, cheek,
+   malar hollow, jaw width and squareness, chin projection, width, cleft,
+   a boxy vault) drives the masses here, so the seven stay seven.
+
+   IT SITS WHERE THE OLD ONE SAT. Built in millimetres of a real head,
+   then brought into the old sculpt's frame -- the same height, the same
+   eye line, the same chin -- so the placement in Engine.character, the
+   hair, brows and beard cut from its surface, and every helmet and mask
+   authored around it all land where they always did.
+   ============================================================ */
+
+const SDF_HEAD_TO_UNITS = 1 / 0.378;     // metres of real head -> old sculpt units
+
+function makeSdfHeadGeometry(opts = {}) {
+  const T = opts.type || 'male';
+  const F = Object.assign({
+    boxy: 0.75, brow: T === 'female' ? 0.026 : 0.040, browShelf: 0, browWide: 0.150,
+    orbit: 0.085, cheek: T === 'female' ? 0.024 : T === 'heavy' ? 0.030 : 0.019, cheekX: 0.150,
+    malarHollow: 0, jaw: 0.135, jawSquare: 0, gonialX: 0.026, chin: T === 'female' ? 0.050 : 0.062,
+    chinWide: 0.072, chinCleft: 0, noseLen: 1, noseBridge: 1, noseHump: 0, noseWide: 1, noseBend: 0,
+    orbitX: 0.091, orbitY: 0.034, orbitWide: 0.072, orbitTall: 0.062, browTall: 0.058, glabella: 0.014,
+    temple: 0.014, cheekY: -0.020, cheekZ: 0.012, jawDepth: 0.055, gonialLow: -0.212, chinY: -0.282,
+    mental: 0.022, nasolabial: 0.017, philtrum: 0.015, vaultTaperX: 0.115, vaultTaperZ: 0.070,
+    parietal: 0.085, backFull: 0.035, backWide: 0.030, forehead: 0.022, crownFlat: 0.028,
+    occiputHigh: 0.022, lidFold: 0.014,
+  }, opts.face || {});
+  const seed = opts.seed || 5;
+  const vary = ((seed * 7919) % 97) / 97 - 0.5;           // a per-head nudge
+  const fem = T === 'female' ? 1 : 0, heavy = T === 'heavy' ? 1 : 0;
+  const h = opts.resolution || 0.0021;
+
+  // Scalars from the controls, around 1 at the default head.
+  const wide = 1 + (F.boxy - 0.75) * 0.10 + heavy * 0.05 - fem * 0.04;
+  const browR = 0.0085 + (F.brow - 0.040) * 0.16 + F.browShelf * 0.0025;
+  const browZ = 0.083 + F.browShelf * 0.004 + (F.brow - 0.040) * 0.06;
+  const orbitD = 0.015 * (F.orbit / 0.085);
+  const cheekK = 1 + (F.cheek - 0.019) * 14;
+  const gonX = (0.045 + (F.gonialX - 0.026) * 0.45 + heavy * 0.004 - fem * 0.004) * wide;
+  const jawR = 0.0125 + F.jawSquare * 0.0035 + heavy * 0.002;
+  const chinZ = 0.064 + (F.chin - 0.062) * 0.35;
+  const chinW = 0.019 * (F.chinWide / 0.072);
+  const nL = F.noseLen, nB = F.noseBridge, nW = F.noseWide;
+
+  /* Every sculpt control, mapped onto the masses. The old sculpt's units
+     are 0.378 m, so a control that moved a feature by 0.01 there moves it
+     3.8 mm here; the gains below are that, adjusted by eye where a mass
+     answers differently from a ring displacement. */
+  const U2M = 0.378;
+  const EYE = [0.0318 * (F.orbitX / 0.091), 0.011 + (F.orbitY - 0.034) * U2M * 0.9, 0.0745], EYE_R = 0.0120;
+  const oW = F.orbitWide / 0.072, oT = F.orbitTall / 0.062;
+  const vaultX = 1 - (F.vaultTaperX - 0.115) * 0.9 + (F.parietal - 0.085) * 0.5;
+  const vaultY = 1 - (F.crownFlat - 0.028) * 1.2;
+  const faceLen = (F.chinY + 0.282) * U2M * 1.2;          // negative = longer face
+  const cheekY = (F.cheekY + 0.020) * U2M, cheekZ = (F.cheekZ - 0.012) * U2M;
+  const jawTaper = 1 - (F.jaw - 0.135) * 0.55;            // a higher 'jaw' tapers the mandible in
+  const P = [];
+  const U = (prim) => { P.push(prim); return prim; };
+  const S = (prim) => { prim.op = 's'; P.push(prim); return prim; };
+  const mirror = (fn) => { fn(1); fn(-1); };
+
+  /* ---- the vault ---- */
+  U(_ell([0, 0.036, -0.012], [0.073 * wide * vaultX, 0.086 * vaultY, 0.097 * (1 + (F.backFull - 0.035) * 1.2)]));
+  // A boxy vault is flatter on the top and the sides: a rounded box blended in.
+  if (F.boxy > 0.8) U(_box([0, 0.040, -0.014], [1, 0, 0], [0, 1, 0], [0.062 * wide, 0.070, 0.082], 0.040, 0.02));
+  U(_ell([0, 0.060 + (F.forehead - 0.022) * 0.3, 0.040 + (F.forehead - 0.022) * 0.35], [0.060 * wide * vaultX, 0.052, 0.046]));   // forehead
+  U(_ell([0, -0.030 + (F.occiputHigh - 0.022) * 0.5, -0.052 - (F.backFull - 0.035) * 0.3], [0.058 * wide * (1 + (F.backWide - 0.030) * 1.5), 0.050, 0.050]));   // occiput / nape
+  mirror((s) => U(_ell([s * 0.050 * wide, 0.024, 0.002], [0.030, 0.052, 0.058], 0.03))); // temples / sides
+
+  /* ---- brow ---- */
+  const bW = 0.040 * wide * (F.browWide / 0.150), bT = F.browTall / 0.058;
+  U(_cone([-bW, EYE[1] + 0.017 * bT, browZ - 0.010], [0, EYE[1] + 0.020 * bT, browZ + 0.003], browR, browR * 1.05, 0.010));
+  U(_cone([bW, EYE[1] + 0.017 * bT, browZ - 0.010], [0, EYE[1] + 0.020 * bT, browZ + 0.003], browR, browR * 1.05, 0.010));
+  U(_ell([0, EYE[1] + 0.012, 0.081 + F.glabella * 0.15], [0.012, 0.012, 0.010]));   // glabella
+
+  /* ---- midface, cheekbones, the orbits carved into them ---- */
+  U(_ell([0, -0.028, 0.058], [0.040 * wide, 0.042, 0.036]));                      // maxilla
+  mirror((s) => {
+    U(_ell([s * 0.047 * wide * (F.cheekX / 0.150), -0.007 + cheekY, 0.050 + cheekZ], [0.021 * cheekK, 0.018, 0.021 * cheekK], 0.022));   // zygomatic arch
+    U(_ell([s * 0.036 * wide, -0.030, 0.052], [0.022, 0.024, 0.022], 0.022));                    // cheek fat
+    if (F.malarHollow > 0) S(_ell([s * 0.047 * wide, -0.040, 0.056], [0.016, 0.015, 0.012 * F.malarHollow], 0.012));
+    // The orbit: a socket carved under the brow, deeper at the top.
+    S(_ell([s * EYE[0], EYE[1] + 0.0025, EYE[2] + 0.011], [0.0195 * oW, 0.0150 * oT, orbitD + 0.004], 0.012));
+    if (F.temple > 0.02) S(_ell([s * 0.062 * wide, EYE[1] + 0.010, 0.034], [0.012, 0.022, 0.018 * (F.temple / 0.03)], 0.014));   // hollow temples
+    // The eyelids: a shell round the ball, with the aperture cut through it.
+    /* 1.6 mm off the ball, and the cornea (below) stands only 5 per cent
+       proud of it: at 1.2 mm and 10 per cent the cornea came straight
+       through the lids, so every iris showed whole with white all round
+       it -- a stare on every face. Now the upper lid takes the top of the
+       iris and the lower one meets its bottom edge, as they do. */
+    U({ t: 'e', c: [s * EYE[0], EYE[1] + 0.0006, EYE[2] - 0.0006], r: [EYE_R + 0.0016, EYE_R + 0.0015, EYE_R + 0.0015], k: 0.009 });
+    S(_ell([s * (EYE[0] + 0.0008), EYE[1] - 0.0008, EYE[2] + 0.012], [0.0142, 0.0043 + fem * 0.0007, 0.012], 0.0018));
+    // The fold of the upper lid and the crease under the eye.
+    U(_cone([s * (EYE[0] - 0.011), EYE[1] + 0.0080, EYE[2] + 0.0066], [s * (EYE[0] + 0.011), EYE[1] + 0.0072, EYE[2] + 0.0046], 0.0015 * (F.lidFold / 0.014), 0.0012 * (F.lidFold / 0.014), 0.004));
+    S(_cone([s * (EYE[0] - 0.008), EYE[1] - 0.0175, EYE[2] + 0.0090], [s * (EYE[0] + 0.013), EYE[1] - 0.0160, EYE[2] + 0.0055], 0.0012, 0.0010, 0.008));
+  });
+
+  /* ---- nose ---- */
+  const tip = [0, -0.028 - (nL - 1) * 0.012, 0.104 + (nL - 1) * 0.006 + (nB - 1) * 0.004];
+  const root = [0, EYE[1] + 0.006, 0.083 + (nB - 1) * 0.003];
+  U(_cone(root, [tip[0] + F.noseBend * 0.004, tip[1] + 0.008, tip[2] - 0.004], 0.0062, 0.0074 * (0.85 + 0.15 * nW), 0.006));  // bridge
+  if (F.noseHump > 0) U(_ell(_lerp3(root, tip, 0.45).map((v, i) => v + [0, 0, 0.0035 * F.noseHump][i]), [0.0058, 0.009, 0.0045], 0.004));
+  U(_ell(tip, [0.0105 * (0.8 + 0.2 * nW), 0.0098, 0.0092], 0.005));                               // tip
+  mirror((s) => {
+    U(_ell([s * 0.0118 * nW, tip[1] - 0.004, tip[2] - 0.012], [0.0085 * nW, 0.0078, 0.0085], 0.006));   // alae
+    S(_ell([s * 0.0060 * nW, tip[1] - 0.0100, tip[2] - 0.0090], [0.0030 * nW, 0.0020, 0.0048], 0.0025)); // nostril
+  });
+
+  if (F.nasolabial > 0.012) mirror((s) => S(_cone([s * 0.0185 * nW, tip[1] - 0.002, tip[2] - 0.019], [s * 0.030, -0.070, 0.064],
+    0.0034 * (F.nasolabial / 0.017), 0.0030, 0.016)));   // nasolabial fold, soft
+
+  /* ---- mouth ---- */
+  const mouthY = -0.068;
+  U(_ell([0, -0.061, 0.058], [0.033, 0.028, 0.027]));                                             // muzzle
+  U(_ell([0, mouthY + 0.0055, 0.0815], [0.0235 + fem * 0.002, 0.0062 + fem * 0.0012, 0.0085], 0.004));   // upper lip
+  U(_ell([0, mouthY - 0.0072, 0.0790], [0.0215 + fem * 0.002, 0.0075 + fem * 0.0012, 0.0088], 0.004));   // lower lip
+  S(_cone([-0.019, mouthY, 0.0885], [0.019, mouthY, 0.0885], 0.0016, 0.0016, 0.0035));             // where the lips meet
+  mirror((s) => S(_ell([s * 0.0228, mouthY, 0.0775], [0.0030, 0.0030, 0.0045], 0.006)));              // corners, soft
+  S(_cone([0, -0.050, 0.0925 + (0.015 - F.philtrum) * 0.05], [0, mouthY + 0.010, 0.0915 + (0.015 - F.philtrum) * 0.05], 0.0034, 0.0040, 0.008));                 // philtrum
+  S(_ell([0, mouthY - 0.019, 0.080], [0.014, 0.004, 0.006], 0.006));                                 // mentolabial sulcus
+
+  /* ---- jaw and chin ---- */
+  const chin = [0, -0.104 + faceLen, chinZ + (F.mental - 0.022) * 0.25];
+  mirror((s) => {
+    const gon = [s * gonX * jawTaper, -0.074 + F.jawSquare * 0.003 + (F.gonialLow + 0.212) * U2M + faceLen * 0.5, -0.012 - (F.jawDepth - 0.055) * 0.25];
+    U(_cone(gon, [s * 0.016, chin[1], chin[2] - 0.008], jawR * 0.9, 0.012, 0.022));                          // mandible body
+    U(_cone([s * (gonX + 0.003), -0.018, -0.014], gon, 0.011, jawR * 0.9, 0.02));                        // ramus
+  });
+  U(_ell(chin, [chinW * wide, 0.015, 0.0125], 0.016));
+  if (F.chinCleft > 0) S(_cone([0, -0.094, chinZ + 0.011], [0, -0.108, chinZ + 0.009], 0.0022, 0.0022, 0.003));
+
+  /* ---- ears ---- */
+  mirror((s) => {
+    const e = [s * 0.075 * wide, -0.004, -0.012];
+    U({ t: 'e', c: e, r: [0.0072, 0.029, 0.017], k: 0.004 });
+    S({ t: 'e', c: [e[0] + s * 0.006, e[1] - 0.002, e[2] + 0.002], r: [0.0055, 0.018, 0.010], k: 0.003 });  // concha
+    S({ t: 'e', c: [e[0] + s * 0.004, e[1] - 0.010, e[2] + 0.006], r: [0.004, 0.006, 0.005], k: 0.002 });   // canal
+  });
+
+  // The masseters: the jaw's corner is muscle, not a hollow.
+  mirror((s) => U(_ell([s * 0.046 * wide, -0.052, 0.012], [0.016, 0.028, 0.026], 0.022)));
+  /* Under the jaw: the floor of the mouth and the muscles running down to
+     the neck, so the jaw's angle sits on something instead of over a pit. */
+  U(_ell([0, -0.096, 0.012], [0.040 * wide, 0.020, 0.046], 0.022));
+  mirror((s) => U(_cone([s * 0.052 * wide, -0.030, -0.030], [s * 0.020, -0.125, 0.020], 0.013, 0.012, 0.022)));  // sternomastoid
+
+  /* ---- neck stub, to overlap the body's neck ----
+     It used to stop at -0.132, cut flat by the mesher's box, exactly
+     where the body's neck stopped too -- two open ends butted together
+     and read as a ring under every jaw. Now it runs 3.5 cm further down
+     INSIDE the body's neck, whose top tapers in under it (94c): the two
+     surfaces cross, so the only thing on show is a soft crease. */
+  U(_cone([0, -0.058, -0.024], [0, -0.160, -0.017], 0.058 * wide, 0.044 * wide, 0.02));
+
+  const R = _region(P, 0.016);
+  R.bmin = [-0.105 * wide, -0.167, -0.125]; R.bmax = [0.105 * wide, 0.130, 0.125];
+  R.bandScale = 0.4;
+  const g = new Geometry();
+  // UVs 0..1 over the head, as the old sculpt had them, so a skin material's uvScale means the same thing.
+  const t0 = g.indices.length;
+  _meshRegion(g, R, h, PART.NECK, (x, y, z, out) => { out[0] = Math.atan2(x, z) / (2 * Math.PI) + 0.5; out[1] = (y + 0.167) / 0.297; });
+  _fixUvSeams(g, t0, g.indices.length, 1);
+
+  /* SKIN IS NOT ONE COLOUR. Blood near the surface reddens the cheeks,
+     the nose, the ears and the lips; the skin under the eyes is thinner
+     and darker; a man's shaved jaw carries a grey-blue shadow. All of it
+     as vertex colour under the material's tint, then the cavity bake
+     multiplied on top. */
+  const Pp = g.positions, n = Pp.length / 3;
+  const col = new Float32Array(n * 3);
+  const bump = (x, y, z, c, r) => { const d = ((x - c[0]) / r[0]) ** 2 + ((y - c[1]) / r[1]) ** 2 + ((z - c[2]) / r[2]) ** 2; return Math.exp(-d * 1.6); };
+  for (let v = 0; v < n; v++) {
+    const x = Pp[v * 3], y = Pp[v * 3 + 1], z = Pp[v * 3 + 2];
+    let r = 1, gg = 1, b = 1;
+    const red = Math.max(bump(x, y, z, [0.040, -0.028, 0.060], [0.028, 0.024, 0.03]), bump(x, y, z, [-0.040, -0.028, 0.060], [0.028, 0.024, 0.03]),
+      bump(x, y, z, tip, [0.014, 0.016, 0.02]) * 0.9, bump(Math.abs(x), y, z, [0.075, 0, -0.012], [0.014, 0.03, 0.02]) * 0.8);
+    r *= 1 + red * 0.05; gg *= 1 - red * 0.07; b *= 1 - red * 0.06;
+    const lip = Math.max(bump(x, y, z, [0, mouthY + 0.005, 0.082], [0.022, 0.007, 0.012]), bump(x, y, z, [0, mouthY - 0.007, 0.080], [0.020, 0.008, 0.012]));
+    r *= 1 - lip * 0.06; gg *= 1 - lip * 0.24; b *= 1 - lip * 0.18;
+    const line = Math.exp(-(((y - mouthY) / 0.0014) ** 2)) * (1 - _ss(0.018, 0.024, Math.abs(x))) * (z > 0.080 ? 1 : 0);
+    r *= 1 - line * 0.55; gg *= 1 - line * 0.60; b *= 1 - line * 0.58;
+    const under = Math.max(bump(x, y, z, [EYE[0], EYE[1] - 0.013, EYE[2] + 0.005], [0.016, 0.006, 0.012]), bump(x, y, z, [-EYE[0], EYE[1] - 0.013, EYE[2] + 0.005], [0.016, 0.006, 0.012]));
+    r *= 1 - under * 0.12; gg *= 1 - under * 0.13; b *= 1 - under * 0.08;
+    if (!fem && opts.shave !== false) {
+      const jaw = Math.max(0, Math.min(1, (-0.040 - y) / 0.03)) * (z > -0.02 ? 1 : 0) * (1 - lip);
+      const upper = bump(x, y, z, [0, -0.051, 0.084], [0.024, 0.006, 0.012]);
+      const sh = Math.max(jaw, upper) * 0.10;
+      r *= 1 - sh * 1.2; gg *= 1 - sh * 1.0; b *= 1 - sh * 0.6;
+    }
+    col[v * 3] = r; col[v * 3 + 1] = gg; col[v * 3 + 2] = b;
+  }
+  g.colors = Array.from(col);
+
+  // Into the old sculpt's frame.
+  for (let i = 0; i < Pp.length; i++) Pp[i] *= SDF_HEAD_TO_UNITS;
+  g.finalize();
+  if (!(g.colors instanceof Float32Array)) g.colors = new Float32Array(g.colors);
+  bakeCavityAO(g, { radius: 0.040, strength: 0.75, floor: 0.42, samples: 1400 });
+
+  /* HAIR THAT IS PAINTED, NOT BUILT. Brows, stubble and a shorn scalp
+     were shells cut from the surface and pushed out a few millimetres:
+     solid slabs with a stair-stepped edge, which is exactly how they read.
+     Real ones are density -- skin showing through hair -- so on this head
+     they are soft masks over the SAME regions the shells used (the style
+     tables in 91-face.js, in the same normalised space), multiplied into
+     the skin as the hair's colour relative to the skin's, with a per-vertex
+     jitter for the grain. Full beards and longer hair keep their shells;
+     under them the paint closes any gap at the edge. */
+  paintHeadHair(g, opts);
+
+  // The same measurements the old sculpt reported, so the caller places it the same way.
+  {
+    let lo = 1e9, hi = -1e9, chinY = 1e9;
+    const Q = g.positions;
+    for (let i = 0; i < Q.length; i += 3) {
+      if (Q[i + 1] < lo) lo = Q[i + 1];
+      if (Q[i + 1] > hi) hi = Q[i + 1];
+      if (Q[i + 2] > 0.10 && Math.abs(Q[i]) < 0.06 && Q[i + 1] < chinY) chinY = Q[i + 1];
+    }
+    // Measured from where the stub USED to end, so lengthening it does not shrink the head.
+    lo = Math.max(lo, -0.132 * SDF_HEAD_TO_UNITS);
+    g.headBounds = { loY: lo, hiY: hi, height: hi - lo, chinY: chinY < 1e8 ? chinY : lo };
+  }
+
+  /* ---- the eyes: sclera, iris, pupil and a cornea that bulges ---- */
+  const eg = new Geometry();
+  eg.colors = [];
+  const iris = opts.eyeColor != null ? opts.eyeColor : 0x5a4632;
+  const ir = ((iris >> 16) & 255) / 255, ig = ((iris >> 8) & 255) / 255, ib = (iris & 255) / 255;
+  const RINGS = 22, SECT = 28;
+  mirror((s) => {
+    const c = [s * EYE[0], EYE[1], EYE[2]];
+    const base = eg.positions.length / 3;
+    for (let a = 0; a <= RINGS; a++) {
+      const th = (a / RINGS) * Math.PI;           // from the front pole (0) to the back
+      for (let b = 0; b <= SECT; b++) {
+        const ph = (b / SECT) * Math.PI * 2;
+        let nx = Math.sin(th) * Math.cos(ph), ny = Math.sin(th) * Math.sin(ph), nz = Math.cos(th);
+        // The cornea: the front cap stands proud of the ball.
+        const bulge = th < 0.62 ? 1 + 0.05 * Math.cos(th / 0.62 * Math.PI * 0.5) : 1;
+        const px = c[0] + nx * EYE_R * bulge, py = c[1] + ny * EYE_R * bulge, pz = c[2] + nz * EYE_R * bulge;
+        let cr, cg, cb;
+        if (th < 0.17) { cr = 0.03; cg = 0.025; cb = 0.025; }                     // pupil
+        else if (th < 0.50) {                                                     // iris, darker at its rim
+          const f = (th - 0.17) / 0.33, rim = f > 0.82 ? 0.55 : 1, fib = 0.85 + 0.15 * Math.sin(ph * 23 + a);
+          cr = ir * rim * fib; cg = ig * rim * fib; cb = ib * rim * fib;
+        } else {                                                                  // sclera, a little warm and veined at the corners
+          const edge = Math.min(1, Math.max(0, (th - 0.9) / 0.6));
+          cr = 0.93 - edge * 0.05; cg = 0.90 - edge * 0.10; cb = 0.87 - edge * 0.10;
+        }
+        eg.setColor(cr, cg, cb);
+        eg.vert(px * SDF_HEAD_TO_UNITS, py * SDF_HEAD_TO_UNITS, pz * SDF_HEAD_TO_UNITS, nx, ny, nz, b / SECT, a / RINGS);
+      }
+    }
+    for (let a = 0; a < RINGS; a++) for (let b = 0; b < SECT; b++) {
+      const i0 = base + a * (SECT + 1) + b, i1 = i0 + SECT + 1;
+      eg.tri(i0, i1, i0 + 1); eg.tri(i0 + 1, i1, i1 + 1);
+    }
+  });
+  eg.setColor(null);
+  eg.finalize();
+  g.eyes = eg;
+  g.sdf = true;
+  return g;
+}
+
+function _hex3(c) { return [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255]; }
+const _ss = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+
+function paintHeadHair(g, opts) {
+  const P = g.positions, C = g.colors, n = P.length / 3;
+  let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+  for (let i = 0; i < P.length; i += 3) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], P[i + k]); hi[k] = Math.max(hi[k], P[i + k]); }
+  // The style bands were laid out against a stub that ended at -0.132; the longer one must not move them.
+  lo[1] = Math.max(lo[1], -0.132 * SDF_HEAD_TO_UNITS);
+  const sx = hi[0] - lo[0], sy = hi[1] - lo[1], sz = hi[2] - lo[2];
+  const skin = _hex3(opts.skinColor != null ? opts.skinColor : 0xc8a080);
+  const ratio = (col) => { const c = _hex3(col); return c.map((v, i) => Math.max(0.04, Math.min(1.15, v / Math.max(0.05, skin[i])))); };
+  const layers = [];
+  const B = opts.brows && BROW_STYLES[opts.brows];
+  if (B) layers.push({ col: ratio(opts.browColor != null ? opts.browColor : 0x2a2320), dens: 0.92, mask: (u, w, xn) => {
+    const t = (xn - B.x[0]) / Math.max(1e-6, B.x[1] - B.x[0]);
+    const rise = B.arch * Math.sin(Math.min(1, Math.max(0, t) / 0.68) * Math.PI * 0.5) * (1 - Math.max(0, t - 0.68) / 0.32 * 0.5);
+    const l = B.u[0] + rise + B.tilt * (1 - t), h2 = B.u[1] + rise + B.tilt * (1 - t);
+    // Thicker at the inner end, feathered at the outer tail.
+    return _ss(0.66, 0.74, w) * _ss(B.x[0] - 0.02, B.x[0] + 0.03, xn) * (1 - _ss(B.x[1] - 0.06, B.x[1] + 0.02, xn))
+      * _ss(l - 0.004, l + 0.008, u) * (1 - _ss(h2 - 0.008, h2 + 0.004, u));
+  } });
+  const Bd = opts.beard && BEARD_STYLES[opts.beard];
+  if (Bd) layers.push({ col: ratio(opts.beardColor != null ? opts.beardColor : 0x2a2320), dens: opts.beard === 'stubble' ? 0.42 : 0.90, mask: (u, w, xn) => {
+    let m = _ss(Bd.u[0] - 0.01, Bd.u[0] + 0.02, u) * (1 - _ss(Bd.u[1] - 0.025, Bd.u[1] + 0.005, u))
+      * _ss(Bd.w[0] - 0.04, Bd.w[0] + 0.04, w) * (1 - _ss(Bd.x - 0.08, Bd.x + 0.02, xn)) * _ss((Bd.xMin || 0) - 0.02, (Bd.xMin || 0) + 0.04, xn);
+    if (!Bd.overLip) { const L = Bd.lips || [0.198, 0.272]; m *= 1 - _ss(0.84, 0.88, w) * _ss(L[0] - 0.005, L[0] + 0.01, u) * (1 - _ss(L[1] - 0.01, L[1] + 0.005, u)) * (1 - _ss(0.36, 0.42, xn)); }
+    return m;
+  } });
+  const H = opts.hairStyle && HAIR_STYLES[opts.hairStyle];
+  if (H) layers.push({ col: ratio(opts.hairColor != null ? opts.hairColor : 0x2a2320), dens: opts.hairStyle === 'crop' ? 0.86 : 0.95, mask: (u, w) => {
+    const edge = H.back + (H.cut - H.back) * w;
+    return _ss(edge - 0.012, edge + 0.010, u);
+  } });
+  if (!layers.length) return;
+  for (let v = 0; v < n; v++) {
+    const u = (P[v * 3 + 1] - lo[1]) / sy, w = (P[v * 3 + 2] - lo[2]) / sz;
+    const xn = Math.abs((P[v * 3] - lo[0]) / sx - 0.5) * 2;
+    const grain = 0.78 + 0.22 * (((Math.sin(v * 12.9898 + P[v * 3] * 78.233) * 43758.5453) % 1 + 1) % 1);
+    for (const L of layers) {
+      const m = L.mask(u, w, xn) * L.dens * grain;
+      if (m <= 0.002) continue;
+      for (let k = 0; k < 3; k++) C[v * 3 + k] *= 1 + (L.col[k] - 1) * m;
+    }
+  }
+}
+
+
 /* ─────────── 95-engine.js ─────────── */
 /* ============================================================
    ENGINE — the layer everything else is written against.
@@ -22164,6 +23371,14 @@ class Engine {
     return this.fluid;
   }
 
+  /* One GPU upload per geometry object, however many actors draw it. */
+  _gpuMeshOf(geo) {
+    const W = this._gpuOf || (this._gpuOf = new WeakMap());
+    let m = W.get(geo);
+    if (!m) { m = new GpuMesh(this.gl, geo); W.set(geo, m); }
+    return m;
+  }
+
   /* A humanoid with a skinned body, an expressive head, and a controller. */
   character(opts = {}) {
     const scale = opts.scale != null ? opts.scale : 1;
@@ -22181,13 +23396,34 @@ class Engine {
       ? (opts.rot != null ? opts.rot : 0.55 + (((opts.seed || 5) * 7) % 9) / 20)
       : 0;
     // `zombie: true` swaps in the starved silhouette and torn clothing.
-    const geo = model ? model.geometry : makeHumanoidMesh(skeleton, opts.zombie
+    /* THE FIELD-BUILT BODY IS BUILT ONCE PER BUILD, and twice over: at
+       the 11 mm it is meshed at for a close-up and at 22 mm (a quarter of
+       the triangles) for anyone past six metres. Every man of one build,
+       height, cut and seed is the same body, and a match respawning
+       twelve of them was re-solving the field and the skin weights for
+       each one. Skinning is per actor in the shader, so the buffers are
+       shared exactly the way an imported model's already were. */
+    const sdfLiving = !model && !opts.zombie && opts.sdfBody !== false;
+    const bodyOpts = { thickness: opts.build || 1, stature: scale, fit: opts.fit, seed: opts.seed, sdfBody: opts.sdfBody };
+    let bodyEnt = null;
+    if (sdfLiving) {
+      const bk = [opts.build || 1, scale.toFixed(3), opts.fit || '', opts.seed == null ? '' : opts.seed].join(':');
+      const bc = Engine._sdfBodies || (Engine._sdfBodies = new Map());
+      bodyEnt = bc.get(bk);
+      if (!bodyEnt) {
+        bodyEnt = { geo: makeHumanoidMesh(skeleton, bodyOpts),
+          far: makeHumanoidMesh(skeleton, Object.assign({}, bodyOpts, { resolution: 0.022 })),
+          vfar: makeHumanoidMesh(skeleton, Object.assign({}, bodyOpts, { resolution: 0.032 })) };
+        bc.set(bk, bodyEnt);
+      }
+    }
+    const geo = model ? model.geometry : bodyEnt ? bodyEnt.geo : makeHumanoidMesh(skeleton, opts.zombie
       ? { zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, rot,
         stature: scale }
-      : { thickness: opts.build || 1, stature: scale });
+      : bodyOpts);
     // One model, many copies: the GPU buffers are built once and shared.
     if (model && !model._mesh) model._mesh = new GpuMesh(this.gl, geo);
-    const mesh = model ? model._mesh : new GpuMesh(this.gl, geo);
+    const mesh = model ? model._mesh : this._gpuMeshOf(geo);
     /* Registered so the flesh can be MEASURED too, the same way the head
        and the clothing already are. "Do the ribs actually surface?" is a
        question about vertex positions, and it should never have to be
@@ -22221,6 +23457,12 @@ class Engine {
       jumpSpeed: opts.jumpSpeed,
     });
     controller.animator = animator;
+    /* Weight, lag and breath on top of the clips -- see 90b-dynamics.js.
+       The dead lurch further, trail their arms more and do not breathe. */
+    animator.dynamics = new BodyDynamics(skeleton, {
+      source: controller, seed: opts.seed != null ? opts.seed * 7.3 : undefined,
+      gain: opts.zombie ? { lean: 1.35, bank: 1.2, lag: 1.4, gaze: 0.4, breath: 0, shift: 0.6 } : {},
+    });
 
     const actor = new Actor(this, {
       name: opts.name || 'character',
@@ -22232,6 +23474,12 @@ class Engine {
       body: controller.body,
       boundRadius: 1.4 * scale,
     });
+    /* The neck, gloves and boots below take the same levels from the
+       same coarse builds. */
+    const lodsFor = (sub, hi) => (bodyEnt && sub ? [{ mesh: hi, from: 0 },
+      { mesh: this._gpuMeshOf(bodyEnt.far[sub] || bodyEnt.far), from: 6 },
+      { mesh: this._gpuMeshOf(bodyEnt.vfar[sub] || bodyEnt.vfar), from: 16 }] : null);
+    if (bodyEnt) actor.lods = lodsFor('_', mesh);
     // The body mesh is authored with its soles at exactly -0.875 (half of
     // 1.75), which is where the centred capsule's bottom already is — so
     // the visual needs no vertical correction at all.
@@ -22242,7 +23490,7 @@ class Engine {
        Same skeleton, same animator, so it moves as one piece with the
        rest of him -- it is only a second material, not a second body. */
     if (geo.neck) {
-      const nm = new GpuMesh(this.gl, geo.neck);
+      const nm = this._gpuMeshOf(geo.neck);
       nm.__key = 'neck:' + (opts.build || 1) + ':' + scale.toFixed(3);
       (this._geoByKey || (this._geoByKey = new Map())).set(nm.__key, geo.neck);
       const na = new Actor(this, {
@@ -22252,9 +23500,32 @@ class Engine {
         boundRadius: 1.4 * scale,
       });
       na.visualOffset = new Vec3(0, 0, 0);
+      na.lods = lodsFor('neck', nm);
       this.actors.push(na);
       actor.neck = na;
       (actor.rigged || (actor.rigged = [])).push(na);
+    }
+
+    /* Hands and boots: the field-built body's other materials. Gloves by
+       default -- every operator wears them -- and boots in leather. */
+    for (const [key, mat, nm] of [
+      ['hands', opts.gloves != null ? opts.gloves : { color: 0x2b2a27, texture: 'leather', roughness: 0.62, metalness: 0, uvScale: 3 }, 'hands'],
+      ['boots', opts.boots != null ? opts.boots : { color: 0x3a3028, texture: 'leather', roughness: 0.58, metalness: 0, uvScale: 2 }, 'boots'],
+    ]) {
+      const sub = geo[key];
+      if (!sub || !sub.indices || !sub.indices.length) continue;
+      const sm = this._gpuMeshOf(sub);
+      sm.__key = key + ':' + (opts.build || 1) + ':' + scale.toFixed(3);
+      (this._geoByKey || (this._geoByKey = new Map())).set(sm.__key, sub);
+      const sa = new Actor(this, {
+        name: nm, mesh: sm, material: this.material(mat),
+        skeleton, animator, controller, body: controller.body, boundRadius: 1.4 * scale,
+      });
+      sa.visualOffset = new Vec3(0, 0, 0);
+      sa.lods = lodsFor(key, sm);
+      this.actors.push(sa);
+      actor[key] = sa;
+      (actor.rigged || (actor.rigged = [])).push(sa);
     }
 
     /* Clothes: their own skinned mesh, so cloth can be canvas while the
@@ -22347,28 +23618,84 @@ class Engine {
       /* faceShape is the full sculpt control set -- the thing that makes
          two heads DIFFERENT rather than one head at two sizes. See the
          block in 91-face.js. Absent, nothing changes. */
-      const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot,
-        face: opts.faceShape || null, hair: opts.hair, eyeColor: opts.eyeColor });
-      const headMesh = new GpuMesh(this.gl, headGeo);
-      /* Registered so it can be MEASURED. A head built straight into a
-         GpuMesh is invisible to geometryOf, so nothing outside the engine
-         could ever ask a question about a face -- which is why "the
-         zombies look middling" had to stay an opinion. */
-      headMesh.__key = 'head:' + (opts.seed || 5) + ':' + (opts.faceType || 'male') + ':' + rot.toFixed(3)
-        + (opts.faceKey ? ':' + opts.faceKey : '');
-      (this._geoByKey || (this._geoByKey = new Map())).set(headMesh.__key, headGeo);
-      // A head with no expression rig has neither skeleton nor face, so the
-      // renderer batches it through the instanced path — which needs an
-      // instance buffer this mesh would otherwise never be given, and the
-      // draw silently produces nothing. Every static-faced character came
-      // out headless because of it.
-      headMesh.setupInstancing(20);   // stride in floats, matching _mesh()
+      /* The living get the field-built head (94d-sdf-head.js): real
+         sockets, lids, a nose that grows out of the face. The dead keep
+         the ring sculpt, whose decay terms are written for it. Built once
+         per face and shared -- a match builds the same seven heads over
+         and over. */
+      const living = rot < 0.01 && opts.sdfHead !== false;
+      const skinCol = (opts.skin && typeof opts.skin === 'object' && opts.skin.color != null) ? opts.skin.color : 0xc8a080;
+      const hk = [opts.faceKey || '', opts.seed || 5, opts.faceType || 'male', opts.eyeColor || 0, opts.hairStyle || '',
+        opts.hairColor || 0, opts.brows || '', opts.browColor || 0, opts.beard || '', opts.beardColor || 0, skinCol].join(':');
+      const headCache = Engine._sdfHeads || (Engine._sdfHeads = new Map());
+      const headGeo = living
+        ? (headCache.get(hk) || headCache.set(hk, makeSdfHeadGeometry({ seed: opts.seed || 5, type: opts.faceType,
+          face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
+          hairStyle: opts.hairStyle, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
+          beard: opts.beard, beardColor: opts.beardColor })).get(hk))
+        : makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot,
+          face: opts.faceShape || null, hair: opts.hair, eyeColor: opts.eyeColor });
+      /* ONE UPLOAD PER FACE, AND THREE OF THEM. The field-built head is
+         a hundred thousand triangles at the 2 mm it is meshed at for a
+         close-up, and a match drew twelve of them -- two million
+         triangles of faces, most of them twenty metres away and a dozen
+         pixels tall, and the software-GL test page fell from nine
+         frames a second to one. So the same field is meshed again at 4
+         and 7.5 mm (a quarter and a twelfth of the triangles) and the
+         renderer picks by distance (_buildBatches); and a face that
+         seven bots share is uploaded once, not seven times. */
+      const headMeshes = this._sdfHeadMeshes || (this._sdfHeadMeshes = new Map());
+      const sdfLods = [];
+      let headMesh = living ? headMeshes.get(hk) : null;
+      if (living) {
+        const tiers = [[headGeo, 0, ''], [0.0042, 2.5, ':mid'], [0.0075, 7, ':far'], [0.012, 16, ':vfar']];
+        for (const [src, from, tag] of tiers) {
+          let gm = headMeshes.get(hk + tag);
+          if (!gm) {
+            let g2 = src;
+            if (typeof src === 'number') {
+              g2 = headCache.get(hk + tag);
+              if (!g2) {
+                g2 = makeSdfHeadGeometry({ seed: opts.seed || 5, type: opts.faceType,
+                  face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
+                  hairStyle: opts.hairStyle, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
+                  beard: opts.beard, beardColor: opts.beardColor, resolution: src });
+                headCache.set(hk + tag, g2);
+              }
+            }
+            gm = new GpuMesh(this.gl, g2);
+            gm.__key = 'sdfhead:' + hk + tag;
+            (this._geoByKey || (this._geoByKey = new Map())).set(gm.__key, g2);
+            gm.setupInstancing(20);
+            headMeshes.set(hk + tag, gm);
+          }
+          sdfLods.push({ mesh: gm, from });
+        }
+        headMesh = sdfLods[0].mesh;
+      }
+      if (!headMesh) {
+        headMesh = new GpuMesh(this.gl, headGeo);
+        /* Registered so it can be MEASURED. A head built straight into a
+           GpuMesh is invisible to geometryOf, so nothing outside the engine
+           could ever ask a question about a face -- which is why "the
+           zombies look middling" had to stay an opinion. */
+        headMesh.__key = 'head:' + (opts.seed || 5) + ':' + (opts.faceType || 'male') + ':' + rot.toFixed(3)
+          + (opts.faceKey ? ':' + opts.faceKey : '');
+        (this._geoByKey || (this._geoByKey = new Map())).set(headMesh.__key, headGeo);
+        // A head with no expression rig has neither skeleton nor face, so the
+        // renderer batches it through the instanced path — which needs an
+        // instance buffer this mesh would otherwise never be given, and the
+        // draw silently produces nothing. Every static-faced character came
+        // out headless because of it.
+        headMesh.setupInstancing(20);   // stride in floats, matching _mesh()
+      }
       // face: 'static' renders the head but skips the expression rig — no
       // blendshape build, no per-frame morphing. A crowd of NPCs costs a
       // fraction of one talking hero, which is exactly the trade a horde
       // wants to make.
       let face = null;
-      if (opts.face !== 'static') {
+      // The expression rig's regions are tuned to the ring sculpt's topology.
+      if (opts.face !== 'static' && !headGeo.sdf) {
         face = new Face(this.gl, headGeo, { seed: opts.seed || 5 });
         face.attach(headMesh);
       }
@@ -22394,7 +23721,9 @@ class Engine {
          Six heads is the proportion of a stylised toy, and it was doing
          more damage to how these read than any amount of sculpting could
          undo. This is a head. */
-      const headHeight = 0.252;
+      /* The field-built head's box includes a neck stub of a different
+         length, so its overall height is its own number. */
+      const headHeight = headGeo.sdf ? 0.250 : 0.252;   // measured: 0.235 chin to crown, a real head
       const headScale = (headHeight / HEAD_MESH_HEIGHT) * scale;
       const headActor = new Actor(this, {
         name: 'head',
@@ -22417,6 +23746,7 @@ class Engine {
         scale: headScale,
         boundRadius: 0.4 * scale,
       });
+      if (sdfLods.length > 1) headActor.lods = sdfLods;
       this.actors.push(headActor);
       /* Kept so a test can measure where this skull actually ENDS --
          which is how the helmet was found to be sitting half a head
@@ -22461,8 +23791,14 @@ class Engine {
          out with the same undifferentiated thatch. hairStyle is the
          style; hair stays the on/off. */
       const hs = opts.hairStyle || (typeof opts.hair === 'string' ? opts.hair : null);
-      if (hs) actor.hair = addPatch(makeHairGeometry(headGeo, hs), 'hair', hairColor, 0.86);
-      if (opts.beard) {
+      /* On the field-built head a shorn or short scalp, stubble and brows
+         are painted into the skin: a shell that thin is all edge, and its
+         edge came out saw-toothed along the mesh. */
+      if (hs && !(headGeo.sdf && (hs === 'crop' || hs === 'short'))) actor.hair = addPatch(makeHairGeometry(headGeo, hs), 'hair', hairColor, 0.86);
+      /* Every beard on the field-built head is painted into the skin: the
+         old shell was cut for the ring sculpt and sat on this one as a
+         hard-edged black block with a square corner on each cheek. */
+      if (opts.beard && !headGeo.sdf) {
         const bc = opts.beardColor != null ? opts.beardColor : hairColor;
         actor.beard = addPatch(makeBeardGeometry(headGeo, opts.beard), 'beard', bc, 0.90);
       }
@@ -22498,7 +23834,7 @@ class Engine {
         this.actors.push(ea);
         actor.eyes = ea;
       }
-      if (opts.brows) {
+      if (opts.brows && !headGeo.sdf) {
         const brc = opts.browColor != null ? opts.browColor : hairColor;
         actor.brows = addPatch(makeBrowGeometry(headGeo, opts.brows), 'brows', brc, 0.88);
       }
@@ -22916,6 +24252,20 @@ class Engine {
   }
 
   _updateActors(dt) {
+    /* ONCE PER FRAME, HOWEVER MANY ACTORS SHARE IT.
+
+       A character is several actors -- body, neck, clothes, blood, one
+       per material of kit -- and every one of them carries the SAME
+       animator and the SAME controller so they move as one. This loop
+       updated each of them once per actor. Measured: an operator in full
+       kit is six actors, so his animation ran at six times its authored
+       speed and his controller integrated six times a frame; a zombie
+       was four or five; the zombies player two. Every gait rate, every
+       stride match and every fade in the game was being multiplied by a
+       number that depended on how much the man was wearing.
+
+       A stamp per frame, so the shared state advances exactly once. */
+    const F = (this._actorFrame = (this._actorFrame || 0) + 1);
     for (let i = 0; i < this.actors.length; i++) {
       const a = this.actors[i];
       if (a.dead) continue;
@@ -22923,9 +24273,9 @@ class Engine {
         a.lifetime -= dt;
         if (a.lifetime <= 0) { a.destroy(); i--; continue; }
       }
-      if (a.controller) a.controller.update(dt);
-      if (a.animator) a.animator.update(dt);
-      if (a.face) a.face.update(dt);
+      if (a.controller && a.controller._frame !== F) { a.controller._frame = F; a.controller.update(dt); }
+      if (a.animator && a.animator._frame !== F) { a.animator._frame = F; a.animator.update(dt); }
+      if (a.face && a.face._frame !== F) { a.face._frame = F; a.face.update(dt); }
       if (a.onUpdate) a.onUpdate(a, dt);
     }
 
@@ -22995,6 +24345,28 @@ class Engine {
       if (!actor.dead) actor.updateMatrix();
     }
 
+    /* LEVEL OF DETAIL, for the few meshes that carry it (the field-built
+       heads and bodies, 94c/94d). Chosen on how many pixels the thing
+       covers, not on metres alone: distance corrected for the lens, so a
+       sniper scope at sixty metres gets the face a man at five would, and
+       for the height of the picture, so the thresholds are metres at
+       1080p -- a 4K screen holds the fine head twice as far out and a
+       phone-sized canvas drops it sooner. A reflection probe always takes
+       the coarsest. */
+    const vh = Math.max(120, (this.renderer && this.renderer.height > 1) ? this.renderer.height : 1080);
+    const lodK = Math.tan((this.camera.fov || 0.96) * 0.5) / 0.5206 * (1080 / vh);   // tan(27.5 deg)
+    const pickMesh = (actor) => {
+      const L = actor.lods;
+      // An offline export wants the close-up meshes whatever the camera (tools/export_scene.js).
+      if (this.fullDetail) return actor.mesh;
+      if (!L || probe) return L ? L[L.length - 1].mesh : actor.mesh;
+      const m = actor.matrix.e;
+      const d = Math.hypot(m[12] - camPos.x, m[13] - camPos.y, m[14] - camPos.z) * lodK;
+      let pick = L[0].mesh;
+      for (let i = 1; i < L.length; i++) if (d >= L[i].from) pick = L[i].mesh;
+      return pick;
+    };
+
     for (const actor of this.actors) {
       if (!actor.visible || !actor.mesh || actor.dead) continue;
 
@@ -23035,11 +24407,12 @@ class Engine {
         continue;
       }
 
-      const key = `${actor.mesh.__key || actor.mesh.__uid || (actor.mesh.__uid = ++_meshUid)}|${actor.material.id}`;
+      const amesh = actor.lods ? pickMesh(actor) : actor.mesh;
+      const key = `${amesh.__key || amesh.__uid || (amesh.__uid = ++_meshUid)}|${actor.material.id}`;
       let g = groups.get(key);
       if (!g) {
         g = {
-          mesh: actor.mesh,
+          mesh: amesh,
           material: actor.material,
           data: new Float32Array(64 * 20),
           count: 0,
@@ -23057,6 +24430,7 @@ class Engine {
       // which is the best approximation available without splitting draws.
       const ap = actor.position;
       g.cx += ap.x; g.cy += ap.y; g.cz += ap.z;
+      if (actor.lods && !this.fullDetail) g.shadowMesh = actor.lods[actor.lods.length - 1].mesh;
       if ((g.count + 1) * 20 > g.data.length) {
         const bigger = new Float32Array(g.data.length * 2);
         bigger.set(g.data);
@@ -23086,7 +24460,10 @@ class Engine {
 
     for (const actor of individual) {
       const batch = {
-        mesh: actor.mesh,
+        mesh: actor.lods ? pickMesh(actor) : actor.mesh,
+        /* A shadow is a silhouette a few texels across: it takes the
+           coarsest level whatever the camera distance. */
+        shadowMesh: actor.lods && !this.fullDetail ? actor.lods[actor.lods.length - 1].mesh : null,
         material: actor.material,
         model: actor.matrix,
         params: [actor.tint.x, actor.tint.y, actor.tint.z, actor.custom],
@@ -23480,12 +24857,17 @@ const OP_CLOTH = {
      coyote over tan skin. Under a warm sky he read as a naked man
      wearing a plate carrier, which is what a Best Play screenshot
      caught him doing. Real coyote brown is two stops below skin. */
-  coyote: { color: 0x77603f, texture: 'fabric', roughness: 0.93, metalness: 0, uvScale: 10 },
-  olive:  { color: 0x5c6046, texture: 'fabric', roughness: 0.93, metalness: 0, uvScale: 10 },
-  black:  { color: 0x2e302e, texture: 'fabric', roughness: 0.90, metalness: 0, uvScale: 10 },
-  navy:   { color: 0x323a49, texture: 'fabric', roughness: 0.91, metalness: 0, uvScale: 10 },
-  hazmat: { color: 0xd8cf55, texture: 'fabric', roughness: 0.66, metalness: 0, uvScale: 8 },
-  grey:   { color: 0x6e7175, texture: 'fabric', roughness: 0.92, metalness: 0, uvScale: 10 },
+  /* RIPSTOP, at its real grid. The field-built body's UVs are in metres
+     (94c-sdf-body.js), so uvScale is tiles per metre: 8 puts the
+     reinforcing bars 7 mm apart, which is what combat ripstop measures.
+     The sheen is the synthetic's low broad lobe. */
+  coyote: { color: 0x77603f, texture: 'ripstop', roughness: 0.90, metalness: 0, uvScale: 8, sheen: 0.35, sheenColor: 0xa89272 },
+  olive:  { color: 0x5c6046, texture: 'ripstop', roughness: 0.90, metalness: 0, uvScale: 8, sheen: 0.35, sheenColor: 0x8e9478 },
+  black:  { color: 0x2e302e, texture: 'ripstop', roughness: 0.88, metalness: 0, uvScale: 8, sheen: 0.30, sheenColor: 0x5e6264 },
+  navy:   { color: 0x323a49, texture: 'ripstop', roughness: 0.88, metalness: 0, uvScale: 8, sheen: 0.30, sheenColor: 0x626c80 },
+  // PVC-coated: smooth, shinier, and no weave to speak of at this scale.
+  hazmat: { color: 0xd8cf55, texture: 'smooth', roughness: 0.48, metalness: 0, uvScale: 3 },
+  grey:   { color: 0x6e7175, texture: 'ripstop', roughness: 0.90, metalness: 0, uvScale: 8, sheen: 0.35, sheenColor: 0x9a9ea2 },
 };
 
 const OP_SKIN = {
@@ -23914,6 +25296,7 @@ Engine.prototype.operator = function (id, opts = {}) {
     name: opts.name || ('op-' + id),
     height: op.height, radius: op.radius, scale: op.scale, build: op.build,
     faceType: op.faceType,
+    fit: op.outfit === 'hazmat' ? 'hazmat' : 'fatigues',
     faceShape: OP_FACE[op.face],
     faceKey: op.id,
     /* The caller wins. Object.assign put the operator's own flag AFTER
@@ -23926,7 +25309,10 @@ Engine.prototype.operator = function (id, opts = {}) {
        `hair` is whether the head carries a scalp shell at all, which
        has to be on for anybody with a haircut; hairStyle is the cut. */
     hair: opts.hair !== undefined ? opts.hair : !!op.hairStyle,
-    hairStyle: opts.hair === false ? null : op.hairStyle,
+    /* Under a helmet or a hood the hair is a shorn band below the rim,
+       painted into the scalp -- a shell of it only pushes through the kit. */
+    hairStyle: opts.hair === false ? null
+      : (op.hairStyle && opts.gear !== false && op.gear && (op.gear.includes('helmet') || op.gear.includes('hood')) ? 'crop' : op.hairStyle),
     hairColor: op.hairColor,
     beard: opts.hair === false ? null : op.beard,
     beardColor: op.beardColor,
@@ -23950,7 +25336,7 @@ Engine.prototype.operator = function (id, opts = {}) {
        damage to "is this a person" than any amount of sculpting could
        undo. Twelve tiles puts the grain at roughly skin scale. */
     skin: opts.skin || { preset: 'skin', color: OP_SKIN[op.skin] || OP_SKIN.tan,
-      roughness: 0.62, metalness: 0, uvScale: 12 },
+      roughness: 0.80, metalness: 0, uvScale: 12, subsurface: 0.45 },
   }));
   if (!c) return c;
   c.operator = op.id;
@@ -23969,8 +25355,24 @@ Engine.prototype.operator = function (id, opts = {}) {
      what the comparison bench does -- a helmet would hide the sculpt it
      is trying to measure. */
   if (op.gear && op.gear.length && opts.gear !== false) {
+    /* The head's own surface, in the kit's bind space, so a helmet can
+       be fitted to this skull rather than to a nominal one (gearHelmet). */
+    let headPts = null;
+    const hgeo = c.head && c.head.__geo;
+    if (hgeo && hgeo.sdf) {
+      const hb = c.skeleton.bones[c.skeleton.index('head')].bindMatrix.e;
+      const off = c.head.localOffset || { x: 0, y: 0, z: 0 };
+      const sc = typeof c.head.scale === 'number' ? c.head.scale : (c.head.scale ? c.head.scale.x : 1);
+      const P = hgeo.positions, n = Math.floor(P.length / 12);
+      headPts = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        headPts[i * 3] = hb[12] + (off.x || 0) + P[i * 12] * sc;
+        headPts[i * 3 + 1] = hb[13] + (off.y || 0) + P[i * 12 + 1] * sc;
+        headPts[i * 3 + 2] = hb[14] + (off.z || 0) + P[i * 12 + 2] * sc;
+      }
+    }
     const kit = buildGear(c.skeleton, op.gear,
-      Object.assign({ build: op.build, stature: op.scale }, op.gearOpts || {}));
+      Object.assign({ build: op.build, stature: op.scale, headPts }, op.gearOpts || {}));
     c.gear = [];
     for (const part of kit) {
       const gm = new GpuMesh(this.gl, part.geometry);
@@ -24008,9 +25410,24 @@ Engine.prototype.operator = function (id, opts = {}) {
         name: 'balaclava', mesh: bm,
         material: this.material(GEAR_MAT.black),
         parent: c, parentBone: c.skeleton.index('head'),
-        offset: c.head.offset, scale: c.head.scale,
+        offset: c.head.localOffset, scale: c.head.scale,
         boundRadius: 0.45 * op.scale,
       });
+      /* Cut again from each of the head's coarser levels, so a mask is
+         never the heaviest thing on a man thirty metres away -- cut from
+         the close-up head alone it was 66,000 triangles at every range. */
+      if (c.head.lods) {
+        ba.lods = c.head.lods.map((l, i) => {
+          if (i === 0) return { mesh: bm, from: l.from };
+          const lg = this.geometryOf(l.mesh);
+          const lb = lg ? gearBalaclava(lg, op.scale) : null;
+          if (!lb || !lb.indices.length) return { mesh: bm, from: l.from };
+          const lm = new GpuMesh(this.gl, lb);
+          lm.__key = 'mask:' + op.id + ':' + i;
+          lm.setupInstancing(20);
+          return { mesh: lm, from: l.from };
+        });
+      }
       this.actors.push(ba);
       c.balaclava = ba;
     }
@@ -24256,35 +25673,130 @@ function gearKnees(g, skeleton, k, o) {
    over the occiput and cuts away over the ears -- plus a rail either
    side and a shroud on the front for the night-vision mount. */
 function gearHelmet(g, headY, s, o) {
-  const R = 0.118 * s;
-  const rings = [
-    [0.128, 0.028, 0.030], [0.104, 0.086, 0.092], [0.062, 0.110, 0.116],
-    [0.010, 0.120, 0.126], [-0.040, 0.121, 0.128], [-0.074, 0.118, 0.122],
-  ];
-  loftRings(g, rings.map(([y, w, d], i) => ({
-    p: new Vec3(0, headY + y * s, -0.004 * s), w: w * s, d: d * s, e: 2.5, uv: i / 5,
-  })), 22, true, false);
-  void R;
-  // Side rails.
-  for (const sx of [1, -1]) {
-    gearStrap(g, [sx * 0.112 * s, headY - 0.052 * s, 0.066 * s],
-      [sx * 0.104 * s, headY - 0.046 * s, -0.082 * s], 0.012 * s, 0.008 * s);
+  /* A SHELL, NOT A STACK OF RINGS. The old one lofted six level rings,
+     so its lower edge was the same height all the way round -- five
+     centimetres above the chin, which put the brim across the eyes. A
+     real helmet's edge rises to the forehead at the front, clears the
+     ears at the side and drops to the occiput at the back, and the shell
+     has a thickness you can see at that edge. So: an outer ellipsoid
+     minus an inner one, cut along that sloping line, meshed by the same
+     field mesher as the bodies (94c-sdf-body.js). */
+  /* FITTED TO THE SKULL IT SITS ON, when the caller hands one over
+     (o.headPts: the head's vertices in the same bind space as the kit).
+     The shell was sized for a nominal 0.252 m head, and two field-built
+     skulls came out of it: SWAT's crown 26 mm above the top of the
+     shell, Delta's and Alpha's parietals 8 per cent through its sides.
+     So: lift the whole helmet until the crown clears the lining, then
+     grow the shell until no point of the scalp above the brim is outside
+     it. Everything below is placed from the lifted headY, so the rails,
+     the shroud and the straps come with it. */
+  let k = 1;
+  const pts = o.headPts || null;
+  if (pts) {
+    let top = -1e9;
+    for (let i = 1; i < pts.length; i += 3) top = Math.max(top, pts[i]);
+    const inTop0 = headY + 0.030 * s - 0.004 * s + (0.101 - 0.0095) * s;
+    headY += Math.max(0, top + 0.004 * s - inTop0);
+    const cy0 = headY + 0.030 * s - 0.004 * s, cz0 = -0.006 * s;
+    const ri = [(0.096 - 0.0095) * s, (0.101 - 0.0095) * s, (0.109 - 0.0095) * s];
+    for (let i = 0; i < pts.length; i += 3) {
+      const x = pts[i], y = pts[i + 1], z = pts[i + 2];
+      const cut = headY + s * (0.030 * Math.max(-1, Math.min(1, (z - cz0) / (0.10 * s))) - 0.004);
+      if (y < cut) continue;
+      k = Math.max(k, 1.012 * Math.hypot(x / ri[0], (y - cy0) / ri[1], (z - cz0) / ri[2]));
+    }
+    k = Math.min(k, 1.25);
   }
-  // NVG shroud, front and centre.
-  gearSlab(g, -0.024 * s, headY + 0.052 * s, 0.116 * s,
-    0.024 * s, headY + 0.092 * s, 0.140 * s, 3.4);
+  const cy = headY + 0.030 * s, cz = -0.006 * s;
+  const th = 0.0095 * s;
+  const ro = [0.096 * s * k, 0.101 * s * k, 0.109 * s * k];
+  const R = _region([
+    { t: 'e', c: [0, cy, cz], r: ro },
+    { t: 'e', c: [0, cy - 0.004 * s, cz], r: [ro[0] - th, ro[1] - th, ro[2] - th], op: 's', k: 0.002 },
+  ], 0.004);
+  // The edge: forehead in front, top of the ear at the side, occiput behind.
+  R.cut = (x, y, z) => (headY + s * (0.030 * Math.max(-1, Math.min(1, (z - cz) / (0.10 * s))) - 0.004)) - y;
+  R.bmin = [-0.11 * s * k, headY - 0.06 * s, -0.13 * s * k];
+  R.bmax = [0.11 * s * k, cy + ro[1] + 0.012 * s, 0.13 * s * k];
+  _meshRegion(g, R, 0.0048 * s, g.part, (x, y, z, out) => {
+    out[0] = Math.atan2(x, z) / (2 * Math.PI) + 0.5; out[1] = (y - headY) / (0.25 * s);
+  });
+  /* The hardware sits on the shell, so it moves out with it when the
+     shell was grown to fit (k > 1): each point scaled about the shell's
+     own centre. Left where it was, the NVG mount and both tubes ended up
+     inside a fitted helmet. */
+  const H = (x, y, z) => [x * k, cy + (y - cy) * k, cz + (z - cz) * k];
+  // Side rails, along the edge.
+  for (const sx of [1, -1]) {
+    gearStrap(g, H(sx * 0.090 * s, headY + 0.022 * s, 0.050 * s),
+      H(sx * 0.088 * s, headY - 0.012 * s, -0.070 * s), 0.012 * s, 0.008 * s);
+  }
+  // NVG shroud, on the front of the shell.
+  const s0 = H(-0.022 * s, headY + 0.050 * s, 0.078 * s), s1 = H(0.022 * s, headY + 0.086 * s, 0.098 * s);
+  gearSlab(g, s0[0], s0[1], s0[2], s1[0], s1[1], s1[2], 3.4);
   if (o.nvg) {
     // Mount arm and two tubes, flipped up.
-    gearTube(g, [0, headY + 0.092 * s, 0.128 * s], [0, 0.92, 0.39], 0.010 * s, 0.062 * s, 10);
+    gearTube(g, H(0, headY + 0.086 * s, 0.090 * s), [0, 0.92, 0.39], 0.010 * s, 0.058 * s, 10);
     for (const sx of [1, -1]) {
-      gearTube(g, [sx * 0.026 * s, headY + 0.148 * s, 0.146 * s], [0, 0.34, 0.94],
-        0.017 * s, 0.070 * s, 12);
+      gearTube(g, H(sx * 0.026 * s, headY + 0.138 * s, 0.108 * s), [0, 0.34, 0.94],
+        0.017 * s, 0.066 * s, 12);
     }
   }
-  // Chin strap, down past the ear to under the jaw.
-  for (const sx of [1, -1]) {
-    gearStrap(g, [sx * 0.100 * s, headY - 0.044 * s, 0.010 * s],
-      [sx * 0.040 * s, headY - 0.188 * s, 0.028 * s], 0.010 * s, 0.005 * s);
+  // Chin strap, from the edge past the ear to under the jaw.
+  if (pts) {
+    /* LAID ON THE FACE. A straight bar from the brim to the jaw hung a
+       centimetre off every cheek, which from the front read as a cage
+       round the face. So the run is sampled, and each sample is pushed
+       out from the middle of the skull to 3 mm off the scalp -- cast
+       against the head's own points, the widest one in a narrow cone. */
+    const C = [0, headY - 0.030 * s, -0.004 * s];
+    const hug = (p) => {
+      const d = [p[0] - C[0], p[1] - C[1], p[2] - C[2]];
+      const dl = Math.hypot(d[0], d[1], d[2]) || 1; d[0] /= dl; d[1] /= dl; d[2] /= dl;
+      let best = -1;
+      for (let i = 0; i < pts.length; i += 3) {
+        const qx = pts[i] - C[0], qy = pts[i + 1] - C[1], qz = pts[i + 2] - C[2];
+        const ql = Math.hypot(qx, qy, qz) || 1;
+        const dot = (qx * d[0] + qy * d[1] + qz * d[2]) / ql;
+        if (dot > 0.9965 && ql > best) best = ql;          // within ~4.8 degrees
+      }
+      if (best < 0) return p;
+      const r = best + 0.003 * s;
+      return [C[0] + d[0] * r, C[1] + d[1] * r, C[2] + d[2] * r];
+    };
+    for (const sx of [1, -1]) {
+      const run = [];
+      const N = 9;
+      for (let i = 0; i <= N; i++) {
+        const t = i / N;
+        // Brim in front of the ear, down the back of the cheek, round under the chin.
+        const x = sx * s * (0.086 - 0.060 * t * t);
+        const y = headY - s * (0.006 + 0.132 * t);
+        const z = s * (0.004 + 0.040 * t * t);
+        run.push(hug([x, y, z]));
+      }
+      /* One loft through the whole run, framed at each sample by the
+         surface: thickness along the outward normal, width across it.
+         Nine separate straight straps each picked their own frame, so
+         the run was a chain of flat pieces twisting against each other. */
+      const rings = run.map((p, i) => {
+        const a = run[Math.max(0, i - 1)], b = run[Math.min(N, i + 1)];
+        const dir = _norm3([b[0] - a[0], b[1] - a[1], b[2] - a[2]]);
+        let nrm = [p[0] - C[0], p[1] - C[1], p[2] - C[2]];
+        const dd = nrm[0] * dir[0] + nrm[1] * dir[1] + nrm[2] * dir[2];
+        nrm = _norm3([nrm[0] - dir[0] * dd, nrm[1] - dir[1] * dd, nrm[2] - dir[2] * dd]);
+        const rt = _norm3(_cross3(dir, nrm));
+        return { p: new Vec3(p[0] - nrm[0] * 0.001 * s, p[1] - nrm[1] * 0.001 * s, p[2] - nrm[2] * 0.001 * s),
+          w: 0.010 * s, d: 0.004 * s, e: 3.2,
+          right: new Vec3(rt[0], rt[1], rt[2]), fwd: new Vec3(nrm[0], nrm[1], nrm[2]), uv: i / N };
+      });
+      loftRings(g, rings, 10, true, true);
+    }
+  } else {
+    for (const sx of [1, -1]) {
+      gearStrap(g, [sx * 0.090 * s, headY - 0.004 * s, -0.004 * s],
+        [sx * 0.052 * s, headY - 0.124 * s, -0.012 * s], 0.010 * s, 0.005 * s);
+    }
   }
 }
 
@@ -24294,7 +25806,7 @@ function gearHelmet(g, headY, s, o) {
 function gearRespirator(g, headY, s, o) {
   // The face piece, cupping the nose and mouth.
   loftRings(g, [
-    { p: new Vec3(0, headY - 0.020 * s, 0.062 * s), w: 0.078 * s, d: 0.050 * s, e: 2.6 },
+    { p: new Vec3(0, headY - 0.020 * s, 0.074 * s), w: 0.078 * s, d: 0.050 * s, e: 2.6 },
     { p: new Vec3(0, headY - 0.056 * s, 0.092 * s), w: 0.082 * s, d: 0.058 * s, e: 2.5 },
     { p: new Vec3(0, headY - 0.104 * s, 0.086 * s), w: 0.074 * s, d: 0.054 * s, e: 2.6 },
     { p: new Vec3(0, headY - 0.140 * s, 0.050 * s), w: 0.058 * s, d: 0.040 * s, e: 2.8 },
@@ -43580,7 +45092,7 @@ const LegendEngine = {
   /* The shared motion vocabulary -- easing with anticipation and
      overshoot, analytic settle/kick curves, mechanism strokes, arcs,
      exact springs, smooth noise. See 90a-motion.js. */
-  Motion, Ease, Spring,
+  Motion, Ease, Spring, BodyDynamics,
   /* The reload, as a thing you can watch. Both games drive the same
      six load paths from here -- see 97f-reload.js. */
   RELOAD_WINDOW, RELOAD_CARRIES, RELOAD_HOLD, RELOAD_AMMO,
