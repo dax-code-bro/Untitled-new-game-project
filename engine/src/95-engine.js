@@ -700,6 +700,36 @@ class Engine {
     return this.fluid;
   }
 
+  /* A copy of a shared neck with a beard painted on its throat (see the
+     neck in character()). Cached per source geometry, style and colours. */
+  _beardNeck(ng, style, dens, beardColor, skinColor, st) {
+    const W = this._beardNecks || (this._beardNecks = new WeakMap());
+    let byKey = W.get(ng);
+    if (!byKey) { byKey = new Map(); W.set(ng, byKey); }
+    const key = style + ':' + beardColor + ':' + skinColor;
+    let out = byKey.get(key);
+    if (out) return out;
+    const hex = (c) => [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255];
+    const sk = hex(skinColor), bc = hex(beardColor);
+    const ratio = bc.map((v, i) => Math.max(0.04, Math.min(1.15, v / Math.max(0.05, sk[i]))));
+    const P = ng.positions, n = P.length / 3;
+    const C = new Float32Array(n * 3);
+    const ss = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+    const y0 = (style === 'heavy' ? 0.572 : style === 'stubble' ? 0.584 : 0.578) * st;
+    for (let v = 0; v < n; v++) {
+      const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2] - 0.002 * st;
+      const r = Math.hypot(x, z) || 1;
+      const front = ss(-0.20, 0.45, z / r);
+      const down = ss(y0 - 0.006 * st, y0 + 0.012 * st, y);
+      const grain = 0.78 + 0.22 * (((Math.sin(v * 12.9898 + x * 78.233) * 43758.5453) % 1 + 1) % 1);
+      const m = front * down * dens * grain;
+      for (let k = 0; k < 3; k++) C[v * 3 + k] = 1 + (ratio[k] - 1) * m;
+    }
+    out = Object.assign(Object.create(Object.getPrototypeOf(ng)), ng, { colors: C });
+    byKey.set(key, out);
+    return out;
+  }
+
   /* One GPU upload per geometry object, however many actors draw it. */
   _gpuMeshOf(geo) {
     const W = this._gpuOf || (this._gpuOf = new WeakMap());
@@ -819,9 +849,22 @@ class Engine {
        Same skeleton, same animator, so it moves as one piece with the
        rest of him -- it is only a second material, not a second body. */
     if (geo.neck) {
-      const nm = this._gpuMeshOf(geo.neck);
-      nm.__key = 'neck:' + (opts.build || 1) + ':' + scale.toFixed(3);
-      (this._geoByKey || (this._geoByKey = new Map())).set(nm.__key, geo.neck);
+      /* A BEARD DOES NOT STOP AT THE JAW. It is painted on the head, and
+         under the jaw the skin on show is this mesh, so a bearded man had a
+         clean-shaven strip between his beard and his collar. For the styles
+         that reach the underside of the jaw the neck gets the same paint:
+         dense up under the jaw line, thinning down the throat and round to
+         the sides. The neck is shared by everyone of one build, so a
+         bearded man gets his own tinted copy (and one per level of detail). */
+      const NECK_BEARD = { stubble: 0.40, full: 0.88, heavy: 0.94 };
+      const bdens = bodyEnt && !opts.zombie && opts.beard ? NECK_BEARD[opts.beard] : 0;
+      const skinC = (opts.skin && typeof opts.skin === 'object' && opts.skin.color != null) ? opts.skin.color : 0xc8a080;
+      const beardC = opts.beardColor != null ? opts.beardColor : (opts.hairColor != null ? opts.hairColor : 0x2a2320);
+      const neckOf = (ng) => (bdens ? this._beardNeck(ng, opts.beard, bdens, beardC, skinC, scale) : ng);
+      const neckGeo = neckOf(geo.neck);
+      const nm = this._gpuMeshOf(neckGeo);
+      nm.__key = 'neck:' + (opts.build || 1) + ':' + scale.toFixed(3) + (bdens ? ':' + opts.beard : '');
+      (this._geoByKey || (this._geoByKey = new Map())).set(nm.__key, neckGeo);
       const na = new Actor(this, {
         name: 'neck', mesh: nm,
         material: this.material(opts.skin != null ? opts.skin : 'skin'),
@@ -829,7 +872,9 @@ class Engine {
         boundRadius: 1.4 * scale,
       });
       na.visualOffset = new Vec3(0, 0, 0);
-      na.lods = lodsFor('neck', nm);
+      na.lods = bodyEnt ? [{ mesh: nm, from: 0 },
+        { mesh: this._gpuMeshOf(neckOf(bodyEnt.far.neck)), from: 6 },
+        { mesh: this._gpuMeshOf(neckOf(bodyEnt.vfar.neck)), from: 16 }] : null;
       this.actors.push(na);
       actor.neck = na;
       (actor.rigged || (actor.rigged = [])).push(na);

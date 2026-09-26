@@ -129,6 +129,11 @@ function _meshRegion(g, R, h, part, uvFn) {
 
   // Only blocks near the surface are sampled finely.
   const B = 4, diag = Math.sqrt(3) * B * h * 0.5;
+  /* Each sampled block's short list of masses is KEPT, for the projection
+     below: projecting a vertex against every mass in the region was four
+     fifths of the time it took to build a head (measured, 3.2 s of 4). */
+  const blockAct = new Map();
+  const bkey = (bi, bj, bk) => bi + 4096 * (bj + 4096 * bk);
   for (let bk = 0; bk < nz - 1; bk += B) for (let bj = 0; bj < ny - 1; bj += B) for (let bi = 0; bi < nx - 1; bi += B) {
     const ci = Math.min(bi + B, nx - 1), cj = Math.min(bj + B, ny - 1), ck = Math.min(bk + B, nz - 1);
     const mx = (X(bi) + X(ci)) * 0.5, my = (Y(bj) + Y(cj)) * 0.5, mz = (Z(bk) + Z(ck)) * 0.5;
@@ -146,6 +151,7 @@ function _meshRegion(g, R, h, part, uvFn) {
       const n = idx(i, j, k);
       if (val[n] !== val[n]) val[n] = f(X(i), Y(j), Z(k));
     }
+    blockAct.set(bkey(bi, bj, bk), act);
     R.active = null;
   }
 
@@ -181,6 +187,11 @@ function _meshRegion(g, R, h, part, uvFn) {
   const nrm = new Float32Array(nv * 3);
   for (let v = 0; v < nv; v++) {
     let x = vpos[v * 3], y = vpos[v * 3 + 1], z = vpos[v * 3 + 2];
+    /* The masses of the block this vertex's cell was sampled in. A block's
+       list reaches 1.2 x its half-diagonal past it and a vertex moves under
+       one cell, so the list covers every point evaluated here. */
+    const cb = (q, lo) => Math.max(0, Math.floor((q - lo) / h / B) * B);
+    R.active = blockAct.get(bkey(cb(x, bmin[0]), cb(y, bmin[1]), cb(z, bmin[2]))) || null;
     for (let it = 0; it < 2; it++) {   // a Newton step onto the surface, then the gradient there for the normal
       const d = f(x, y, z);
       const gx = f(x + e, y, z) - f(x - e, y, z), gy = f(x, y + e, z) - f(x, y - e, z), gz = f(x, y, z + e) - f(x, y, z - e);
@@ -192,6 +203,7 @@ function _meshRegion(g, R, h, part, uvFn) {
     }
     vpos[v * 3] = x; vpos[v * 3 + 1] = y; vpos[v * 3 + 2] = z;
   }
+  R.active = null;
 
   /* Merge vertices that landed almost on top of each other. Surface nets
      puts one vertex per cell, and near a cell corner two neighbours can

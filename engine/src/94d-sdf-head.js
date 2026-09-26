@@ -302,10 +302,20 @@ function paintHeadHair(g, opts) {
   if (B) layers.push({ col: ratio(opts.browColor != null ? opts.browColor : 0x2a2320), dens: 0.92, mask: (u, w, xn) => {
     const t = (xn - B.x[0]) / Math.max(1e-6, B.x[1] - B.x[0]);
     const rise = B.arch * Math.sin(Math.min(1, Math.max(0, t) / 0.68) * Math.PI * 0.5) * (1 - Math.max(0, t - 0.68) / 0.32 * 0.5);
-    const l = B.u[0] + rise + B.tilt * (1 - t), h2 = B.u[1] + rise + B.tilt * (1 - t);
-    // Thicker at the inner end, feathered at the outer tail.
-    return _ss(0.66, 0.74, w) * _ss(B.x[0] - 0.02, B.x[0] + 0.03, xn) * (1 - _ss(B.x[1] - 0.06, B.x[1] + 0.02, xn))
-      * _ss(l - 0.004, l + 0.008, u) * (1 - _ss(h2 - 0.008, h2 + 0.004, u));
+    /* THICKER AT THE INNER END, FEATHERED AT THE OUTER TAIL -- which the
+       comment here always said and the band never did: it was the same
+       height end to end with square ends, and read as a strip of tape.
+       The top edge now comes down along the last two thirds to under half
+       the height at the tail, the tail thins out, and the inner head is
+       rounded and a little sparse, where the hairs stand up. */
+    const tc = Math.max(0, Math.min(1, t));
+    const taper = 1 - 0.58 * _ss(0.30, 1.0, tc);
+    const l = B.u[0] + rise + B.tilt * (1 - t), h2 = l + (B.u[1] - B.u[0]) * taper;
+    const mid = (l + h2) * 0.5, half = (h2 - l) * 0.5;
+    const inner = _ss(B.x[0] - 0.015, B.x[0] + 0.05, xn) * (0.80 + 0.20 * _ss(0.0, 0.18, tc));
+    const tail = 1 - _ss(B.x[1] - 0.09, B.x[1] + 0.015, xn);
+    const band = 1 - _ss(half - 0.004, half + 0.007, Math.abs(u - mid));
+    return _ss(0.66, 0.74, w) * inner * tail * band * (1 - 0.25 * _ss(0.6, 1.0, tc));
   } });
   const Bd = opts.beard && BEARD_STYLES[opts.beard];
   if (Bd) layers.push({ col: ratio(opts.beardColor != null ? opts.beardColor : 0x2a2320), dens: opts.beard === 'stubble' ? 0.42 : 0.90, mask: (u, w, xn) => {

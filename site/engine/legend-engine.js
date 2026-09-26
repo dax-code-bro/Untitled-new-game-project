@@ -17078,16 +17078,24 @@ function makeHeadGeometry(opts = {}) {
          rarely reaches 0.79, so what survived was a scatter of specks on
          the crown. Most of the scalp should have hair on it; the clumps
          that are gone are the exception, and the rot decides how many. */
-      m *= smoothstep(0.12 + R * 0.20, 0.40 + R * 0.20, patch);
-      return m;
+      return [m, m * smoothstep(0.12 + R * 0.20, 0.40 + R * 0.20, patch)];
     };
-    const mask = new Float32Array((rings + 1) * row);
-    for (let i = 0; i < mask.length; i++) mask[i] = maskAt(i);
-    g.setColor(hairCol);
+    /* ONE SHELL OVER THE WHOLE HAIRLINE, FADED -- not a shell per clump.
+       A quad used to exist only where all four corners had hair, so every
+       bald patch the rot opened ended in a stair-stepped edge along the
+       grid, in hair colour against skin: square holes all over the crown.
+       Now the shell covers everything inside the hairline and the patches
+       are colour and thickness, fading to the scalp's own tone, so a clump
+       that has come away leaves a soft bald spot. */
+    const mask = new Float32Array((rings + 1) * row), line = new Float32Array(mask.length);
+    for (let i = 0; i < mask.length; i++) { const q = maskAt(i); line[i] = q[0]; mask[i] = q[1]; }
+    const hc = [((hairCol >> 16) & 255) / 255, ((hairCol >> 8) & 255) / 255, (hairCol & 255) / 255];
     const base = g.positions.length / 3;
     const idx = new Int32Array(mask.length).fill(-1);
     for (let i = 0; i < mask.length; i++) {
-      if (mask[i] <= 0.004) continue;
+      if (line[i] <= 0.004) continue;
+      const cm = Math.min(1, mask[i] * 1.6);
+      g.setColor(1 + (hc[0] - 1) * cm, 1 + (hc[1] - 1) * cm, 1 + (hc[2] - 1) * cm);
       /* Thickness, plus a fine ripple so it reads as matted strands and
          not as a swim cap. */
       const x = P[i * 3], y = P[i * 3 + 1], z = P[i * 3 + 2];
@@ -17098,7 +17106,7 @@ function makeHeadGeometry(opts = {}) {
          not, the result was a crenellated wall -- a battlement round the
          crown, which is what a wig looks like when it is quantised to the
          grid it is built on. Squared, so it feathers. */
-      const t = (0.011 + strand * 0.012) * mask[i] * mask[i];
+      const t = 0.0012 + (0.011 + strand * 0.012) * mask[i] * mask[i];
       idx[i] = g.positions.length / 3;
       g.vert(x + N[i * 3] * t, y + N[i * 3 + 1] * t, z + N[i * 3 + 2] * t,
         N[i * 3], N[i * 3 + 1], N[i * 3 + 2],
@@ -17110,7 +17118,7 @@ function makeHeadGeometry(opts = {}) {
         if (idx[a] < 0 || idx[b2] < 0 || idx[c2] < 0 || idx[d2] < 0) continue;
         // Average, not all-four: with the thickness feathering to nothing
         // the edge fades out instead of stopping at a grid line.
-        if ((mask[a] + mask[b2] + mask[c2] + mask[d2]) * 0.25 < 0.05) continue;
+        if ((line[a] + line[b2] + line[c2] + line[d2]) * 0.25 < 0.05) continue;
         g.tri(idx[a], idx[b2], idx[c2]);
         g.tri(idx[b2], idx[d2], idx[c2]);
       }
@@ -21926,6 +21934,11 @@ function _meshRegion(g, R, h, part, uvFn) {
 
   // Only blocks near the surface are sampled finely.
   const B = 4, diag = Math.sqrt(3) * B * h * 0.5;
+  /* Each sampled block's short list of masses is KEPT, for the projection
+     below: projecting a vertex against every mass in the region was four
+     fifths of the time it took to build a head (measured, 3.2 s of 4). */
+  const blockAct = new Map();
+  const bkey = (bi, bj, bk) => bi + 4096 * (bj + 4096 * bk);
   for (let bk = 0; bk < nz - 1; bk += B) for (let bj = 0; bj < ny - 1; bj += B) for (let bi = 0; bi < nx - 1; bi += B) {
     const ci = Math.min(bi + B, nx - 1), cj = Math.min(bj + B, ny - 1), ck = Math.min(bk + B, nz - 1);
     const mx = (X(bi) + X(ci)) * 0.5, my = (Y(bj) + Y(cj)) * 0.5, mz = (Z(bk) + Z(ck)) * 0.5;
@@ -21943,6 +21956,7 @@ function _meshRegion(g, R, h, part, uvFn) {
       const n = idx(i, j, k);
       if (val[n] !== val[n]) val[n] = f(X(i), Y(j), Z(k));
     }
+    blockAct.set(bkey(bi, bj, bk), act);
     R.active = null;
   }
 
@@ -21978,6 +21992,11 @@ function _meshRegion(g, R, h, part, uvFn) {
   const nrm = new Float32Array(nv * 3);
   for (let v = 0; v < nv; v++) {
     let x = vpos[v * 3], y = vpos[v * 3 + 1], z = vpos[v * 3 + 2];
+    /* The masses of the block this vertex's cell was sampled in. A block's
+       list reaches 1.2 x its half-diagonal past it and a vertex moves under
+       one cell, so the list covers every point evaluated here. */
+    const cb = (q, lo) => Math.max(0, Math.floor((q - lo) / h / B) * B);
+    R.active = blockAct.get(bkey(cb(x, bmin[0]), cb(y, bmin[1]), cb(z, bmin[2]))) || null;
     for (let it = 0; it < 2; it++) {   // a Newton step onto the surface, then the gradient there for the normal
       const d = f(x, y, z);
       const gx = f(x + e, y, z) - f(x - e, y, z), gy = f(x, y + e, z) - f(x, y - e, z), gz = f(x, y, z + e) - f(x, y, z - e);
@@ -21989,6 +22008,7 @@ function _meshRegion(g, R, h, part, uvFn) {
     }
     vpos[v * 3] = x; vpos[v * 3 + 1] = y; vpos[v * 3 + 2] = z;
   }
+  R.active = null;
 
   /* Merge vertices that landed almost on top of each other. Surface nets
      puts one vertex per cell, and near a cell corner two neighbours can
@@ -22637,10 +22657,20 @@ function paintHeadHair(g, opts) {
   if (B) layers.push({ col: ratio(opts.browColor != null ? opts.browColor : 0x2a2320), dens: 0.92, mask: (u, w, xn) => {
     const t = (xn - B.x[0]) / Math.max(1e-6, B.x[1] - B.x[0]);
     const rise = B.arch * Math.sin(Math.min(1, Math.max(0, t) / 0.68) * Math.PI * 0.5) * (1 - Math.max(0, t - 0.68) / 0.32 * 0.5);
-    const l = B.u[0] + rise + B.tilt * (1 - t), h2 = B.u[1] + rise + B.tilt * (1 - t);
-    // Thicker at the inner end, feathered at the outer tail.
-    return _ss(0.66, 0.74, w) * _ss(B.x[0] - 0.02, B.x[0] + 0.03, xn) * (1 - _ss(B.x[1] - 0.06, B.x[1] + 0.02, xn))
-      * _ss(l - 0.004, l + 0.008, u) * (1 - _ss(h2 - 0.008, h2 + 0.004, u));
+    /* THICKER AT THE INNER END, FEATHERED AT THE OUTER TAIL -- which the
+       comment here always said and the band never did: it was the same
+       height end to end with square ends, and read as a strip of tape.
+       The top edge now comes down along the last two thirds to under half
+       the height at the tail, the tail thins out, and the inner head is
+       rounded and a little sparse, where the hairs stand up. */
+    const tc = Math.max(0, Math.min(1, t));
+    const taper = 1 - 0.58 * _ss(0.30, 1.0, tc);
+    const l = B.u[0] + rise + B.tilt * (1 - t), h2 = l + (B.u[1] - B.u[0]) * taper;
+    const mid = (l + h2) * 0.5, half = (h2 - l) * 0.5;
+    const inner = _ss(B.x[0] - 0.015, B.x[0] + 0.05, xn) * (0.80 + 0.20 * _ss(0.0, 0.18, tc));
+    const tail = 1 - _ss(B.x[1] - 0.09, B.x[1] + 0.015, xn);
+    const band = 1 - _ss(half - 0.004, half + 0.007, Math.abs(u - mid));
+    return _ss(0.66, 0.74, w) * inner * tail * band * (1 - 0.25 * _ss(0.6, 1.0, tc));
   } });
   const Bd = opts.beard && BEARD_STYLES[opts.beard];
   if (Bd) layers.push({ col: ratio(opts.beardColor != null ? opts.beardColor : 0x2a2320), dens: opts.beard === 'stubble' ? 0.42 : 0.90, mask: (u, w, xn) => {
@@ -23371,6 +23401,36 @@ class Engine {
     return this.fluid;
   }
 
+  /* A copy of a shared neck with a beard painted on its throat (see the
+     neck in character()). Cached per source geometry, style and colours. */
+  _beardNeck(ng, style, dens, beardColor, skinColor, st) {
+    const W = this._beardNecks || (this._beardNecks = new WeakMap());
+    let byKey = W.get(ng);
+    if (!byKey) { byKey = new Map(); W.set(ng, byKey); }
+    const key = style + ':' + beardColor + ':' + skinColor;
+    let out = byKey.get(key);
+    if (out) return out;
+    const hex = (c) => [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255];
+    const sk = hex(skinColor), bc = hex(beardColor);
+    const ratio = bc.map((v, i) => Math.max(0.04, Math.min(1.15, v / Math.max(0.05, sk[i]))));
+    const P = ng.positions, n = P.length / 3;
+    const C = new Float32Array(n * 3);
+    const ss = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+    const y0 = (style === 'heavy' ? 0.572 : style === 'stubble' ? 0.584 : 0.578) * st;
+    for (let v = 0; v < n; v++) {
+      const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2] - 0.002 * st;
+      const r = Math.hypot(x, z) || 1;
+      const front = ss(-0.20, 0.45, z / r);
+      const down = ss(y0 - 0.006 * st, y0 + 0.012 * st, y);
+      const grain = 0.78 + 0.22 * (((Math.sin(v * 12.9898 + x * 78.233) * 43758.5453) % 1 + 1) % 1);
+      const m = front * down * dens * grain;
+      for (let k = 0; k < 3; k++) C[v * 3 + k] = 1 + (ratio[k] - 1) * m;
+    }
+    out = Object.assign(Object.create(Object.getPrototypeOf(ng)), ng, { colors: C });
+    byKey.set(key, out);
+    return out;
+  }
+
   /* One GPU upload per geometry object, however many actors draw it. */
   _gpuMeshOf(geo) {
     const W = this._gpuOf || (this._gpuOf = new WeakMap());
@@ -23490,9 +23550,22 @@ class Engine {
        Same skeleton, same animator, so it moves as one piece with the
        rest of him -- it is only a second material, not a second body. */
     if (geo.neck) {
-      const nm = this._gpuMeshOf(geo.neck);
-      nm.__key = 'neck:' + (opts.build || 1) + ':' + scale.toFixed(3);
-      (this._geoByKey || (this._geoByKey = new Map())).set(nm.__key, geo.neck);
+      /* A BEARD DOES NOT STOP AT THE JAW. It is painted on the head, and
+         under the jaw the skin on show is this mesh, so a bearded man had a
+         clean-shaven strip between his beard and his collar. For the styles
+         that reach the underside of the jaw the neck gets the same paint:
+         dense up under the jaw line, thinning down the throat and round to
+         the sides. The neck is shared by everyone of one build, so a
+         bearded man gets his own tinted copy (and one per level of detail). */
+      const NECK_BEARD = { stubble: 0.40, full: 0.88, heavy: 0.94 };
+      const bdens = bodyEnt && !opts.zombie && opts.beard ? NECK_BEARD[opts.beard] : 0;
+      const skinC = (opts.skin && typeof opts.skin === 'object' && opts.skin.color != null) ? opts.skin.color : 0xc8a080;
+      const beardC = opts.beardColor != null ? opts.beardColor : (opts.hairColor != null ? opts.hairColor : 0x2a2320);
+      const neckOf = (ng) => (bdens ? this._beardNeck(ng, opts.beard, bdens, beardC, skinC, scale) : ng);
+      const neckGeo = neckOf(geo.neck);
+      const nm = this._gpuMeshOf(neckGeo);
+      nm.__key = 'neck:' + (opts.build || 1) + ':' + scale.toFixed(3) + (bdens ? ':' + opts.beard : '');
+      (this._geoByKey || (this._geoByKey = new Map())).set(nm.__key, neckGeo);
       const na = new Actor(this, {
         name: 'neck', mesh: nm,
         material: this.material(opts.skin != null ? opts.skin : 'skin'),
@@ -23500,7 +23573,9 @@ class Engine {
         boundRadius: 1.4 * scale,
       });
       na.visualOffset = new Vec3(0, 0, 0);
-      na.lods = lodsFor('neck', nm);
+      na.lods = bodyEnt ? [{ mesh: nm, from: 0 },
+        { mesh: this._gpuMeshOf(neckOf(bodyEnt.far.neck)), from: 6 },
+        { mesh: this._gpuMeshOf(neckOf(bodyEnt.vfar.neck)), from: 16 }] : null;
       this.actors.push(na);
       actor.neck = na;
       (actor.rigged || (actor.rigged = [])).push(na);

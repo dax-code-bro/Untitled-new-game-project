@@ -769,16 +769,24 @@ function makeHeadGeometry(opts = {}) {
          rarely reaches 0.79, so what survived was a scatter of specks on
          the crown. Most of the scalp should have hair on it; the clumps
          that are gone are the exception, and the rot decides how many. */
-      m *= smoothstep(0.12 + R * 0.20, 0.40 + R * 0.20, patch);
-      return m;
+      return [m, m * smoothstep(0.12 + R * 0.20, 0.40 + R * 0.20, patch)];
     };
-    const mask = new Float32Array((rings + 1) * row);
-    for (let i = 0; i < mask.length; i++) mask[i] = maskAt(i);
-    g.setColor(hairCol);
+    /* ONE SHELL OVER THE WHOLE HAIRLINE, FADED -- not a shell per clump.
+       A quad used to exist only where all four corners had hair, so every
+       bald patch the rot opened ended in a stair-stepped edge along the
+       grid, in hair colour against skin: square holes all over the crown.
+       Now the shell covers everything inside the hairline and the patches
+       are colour and thickness, fading to the scalp's own tone, so a clump
+       that has come away leaves a soft bald spot. */
+    const mask = new Float32Array((rings + 1) * row), line = new Float32Array(mask.length);
+    for (let i = 0; i < mask.length; i++) { const q = maskAt(i); line[i] = q[0]; mask[i] = q[1]; }
+    const hc = [((hairCol >> 16) & 255) / 255, ((hairCol >> 8) & 255) / 255, (hairCol & 255) / 255];
     const base = g.positions.length / 3;
     const idx = new Int32Array(mask.length).fill(-1);
     for (let i = 0; i < mask.length; i++) {
-      if (mask[i] <= 0.004) continue;
+      if (line[i] <= 0.004) continue;
+      const cm = Math.min(1, mask[i] * 1.6);
+      g.setColor(1 + (hc[0] - 1) * cm, 1 + (hc[1] - 1) * cm, 1 + (hc[2] - 1) * cm);
       /* Thickness, plus a fine ripple so it reads as matted strands and
          not as a swim cap. */
       const x = P[i * 3], y = P[i * 3 + 1], z = P[i * 3 + 2];
@@ -789,7 +797,7 @@ function makeHeadGeometry(opts = {}) {
          not, the result was a crenellated wall -- a battlement round the
          crown, which is what a wig looks like when it is quantised to the
          grid it is built on. Squared, so it feathers. */
-      const t = (0.011 + strand * 0.012) * mask[i] * mask[i];
+      const t = 0.0012 + (0.011 + strand * 0.012) * mask[i] * mask[i];
       idx[i] = g.positions.length / 3;
       g.vert(x + N[i * 3] * t, y + N[i * 3 + 1] * t, z + N[i * 3 + 2] * t,
         N[i * 3], N[i * 3 + 1], N[i * 3 + 2],
@@ -801,7 +809,7 @@ function makeHeadGeometry(opts = {}) {
         if (idx[a] < 0 || idx[b2] < 0 || idx[c2] < 0 || idx[d2] < 0) continue;
         // Average, not all-four: with the thickness feathering to nothing
         // the edge fades out instead of stopping at a grid line.
-        if ((mask[a] + mask[b2] + mask[c2] + mask[d2]) * 0.25 < 0.05) continue;
+        if ((line[a] + line[b2] + line[c2] + line[d2]) * 0.25 < 0.05) continue;
         g.tri(idx[a], idx[b2], idx[c2]);
         g.tri(idx[b2], idx[d2], idx[c2]);
       }

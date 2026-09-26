@@ -6188,8 +6188,11 @@ function heroModel(game, S, id) {
      put into them by hand; a living face with empty sockets is the one
      thing that stops a character reading as a person. Same sockets,
      same measurements -- a white, a coloured iris and a black pupil,
-     and nothing emissive, because these are alive. */
-  if (a.head && a.skeleton) {
+     and nothing emissive, because these are alive.
+     A field-built head (94d-sdf-head.js) -- which a living face now is --
+     carries its own eyeballs in its own sockets, and these, placed at the
+     old sculpt's socket coordinates, hung a second pair in front of it. */
+  if (a.head && a.skeleton && !(a.head.__geo && a.head.__geo.sdf)) {
     const hb = a.skeleton.index('head');
     const hs = a.head.scale.y;
     const ho = a.head.localOffset;
