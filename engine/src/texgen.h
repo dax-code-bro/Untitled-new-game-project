@@ -218,7 +218,9 @@ struct MaterialArray {
       GLfloat v = 1.0f;
       while(glGetError() != GL_NO_ERROR) {}
       glGetFloatv(0x84FF /* MAX_TEXTURE_MAX_ANISOTROPY_EXT */, &v);
-      if(glGetError() == GL_NO_ERROR && v > 1.0f) a = v;
+      // Cap at 4x. 16x costs far more than it returns here and was the
+      // difference between playable and a slideshow on modest hardware.
+      if(glGetError() == GL_NO_ERROR && v > 1.0f) a = v < 4.0f ? v : 4.0f;
     }
     return a;
   }

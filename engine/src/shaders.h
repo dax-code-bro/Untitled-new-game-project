@@ -177,6 +177,7 @@ uniform sampler2DArray uMatNormal;   // rg normal.xy, b height, a cavity
 uniform float uTexScale;             // world units per texture tile
 uniform int   uTexOn;                // 0 = flat vertex colour, 1 = textured
 uniform int   uTriplanar;            // 0 = top projection only (cheap), 1 = full
+uniform int   uDetailTile;           // second finer tile up close (expensive)
 uniform int   uDebugMode;   // 0 off, 1 shadow factor, 2 cascade id, 3 light-space uv
 uniform int   uNumLights;
 uniform vec4  uLightPos[16];     // xyz = position, w = radius
@@ -286,12 +287,15 @@ void main(){
     cavity  = mix(1.0, nr.a, 0.75);
 
     N = triNormal(vWorld, N, bl, layer, sc);
-    // a second, much finer tile breaks up repetition up close
-    float dist = length(uCamPos - vWorld);
-    if(dist < 60.0){
-      float w = 1.0 - smoothstep(18.0, 60.0, dist);
-      vec3 Nd = triNormal(vWorld, N, bl, layer, sc * 5.7);
-      N = normalize(mix(N, Nd, 0.45 * w));
+    // a second, much finer tile breaks up repetition up close. It costs
+    // another three texture fetches, so it is off unless quality is high.
+    if(uDetailTile == 1){
+      float dist = length(uCamPos - vWorld);
+      if(dist < 45.0){
+        float w = 1.0 - smoothstep(14.0, 45.0, dist);
+        vec3 Nd = triNormal(vWorld, N, bl, layer, sc * 5.7);
+        N = normalize(mix(N, Nd, 0.45 * w));
+      }
     }
   }
   float a      = rough * rough;

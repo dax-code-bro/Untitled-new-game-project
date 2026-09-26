@@ -53,10 +53,13 @@ static gfx::ShadowMap    shadow[3];
 static gfx::FullscreenQuad fsq;
 static gfx::Program        progGen;
 static texgen::MaterialArray gMaterials;
-static int   gTexRes      = 2048;    // per-layer texture resolution
+static int   gTexRes      = 1024;    // per-layer texture resolution
 static float gTexScale    = 4.0f;    // world metres per material tile
 static bool  gTexOn       = true;
 static bool  gTriplanar   = true;
+static bool  gDetailTile  = false;   // extra 3 fetches; high quality only
+static bool  gAutoQuality = true;    // step down if the frame rate collapses
+static int   gAutoLevel   = 0;       // how far we have already stepped down
 
 // meshes
 static Mesh meshChar;
@@ -922,6 +925,7 @@ static void setCommonUniforms(const gfx::Program& pr, const SunState& sun){
   pr.set("uTexScale", gTexScale);
   pr.set("uTexOn", (gTexOn && gMaterials.ready) ? 1 : 0);
   pr.set("uTriplanar", gTriplanar ? 1 : 0);
+  pr.set("uDetailTile", gDetailTile ? 1 : 0);
   pr.set("uDebugMode", gDbgMode);
   pr.set("uNumLights", n);
   if(n > 0){
@@ -1577,6 +1581,19 @@ static void updateHUD(float fps){
 static double lastT = 0.0;
 static float  gLastDt = 0.0f;
 static float  gRealDt = 0.0f;
+static float  gSlowFor = 0.0f;
+
+// Tell the page why the picture just changed.
+static void autoNote(const char* what){
+  printf("[auto quality] %s (fps was low)\n", what);
+  EM_ASM({
+    var e = document.getElementById('autonote');
+    if(e){ e.textContent = 'Performance: ' + UTF8ToString($0);
+           e.style.opacity = 1;
+           clearTimeout(window.__anoT);
+           window.__anoT = setTimeout(function(){ e.style.opacity = 0; }, 4000); }
+  }, what);
+}
 static float  fpsAccum = 0.0f;
 static int    fpsFrames = 0;
 static float  fpsShown = 60.0f;
@@ -1740,7 +1757,7 @@ static void mainLoop(){
   float realDt = (float)(now - lastT);
   lastT = now;
   if(!(realDt > 0.0f)) realDt = 1.0f / 60.0f;
-  float dt = realDt > 0.1f ? 0.1f : realDt;   // sim step is clamped, timing is not
+  float dt = realDt > 0.25f ? 0.25f : realDt;  // sim step is clamped, timing is not
   gLastDt = dt;
   gRealDt = realDt;
 
@@ -1790,6 +1807,31 @@ static void mainLoop(){
     fpsShown = fpsFrames / fpsAccum;
     fpsAccum = 0.0f; fpsFrames = 0;
     updateHUD(fpsShown);
+
+    // If the frame rate collapses, shed the most expensive features in order
+    // rather than leaving someone staring at a slideshow. Each step is
+    // announced so it never looks like the game silently broke.
+    if(gAutoQuality && gStarted){
+      if(fpsShown < 18.0f){
+        gSlowFor += 0.4f;
+        if(gSlowFor > 2.0f){
+          gSlowFor = 0.0f;
+          switch(gAutoLevel){
+            case 0: gDetailTile = false; gRenderScale = 0.85f; resizeTargets();
+                    autoNote("reduced render scale"); break;
+            case 1: gTriplanar = false;  autoNote("simplified texture projection"); break;
+            case 2: gRenderScale = 0.65f; resizeTargets();
+                    autoNote("lowered resolution further"); break;
+            case 3: gTexOn = false;      autoNote("turned textures off"); break;
+            case 4: gFXAA = false;       autoNote("turned anti-aliasing off"); break;
+            default: break;
+          }
+          if(gAutoLevel <= 4) gAutoLevel++;
+        }
+      } else if(fpsShown > 40.0f){
+        gSlowFor = 0.0f;
+      }
+    }
   }
 }
 
@@ -1885,6 +1927,8 @@ extern "C" {
   }
   EMSCRIPTEN_KEEPALIVE void  setTextures(int on){ gTexOn = on != 0; }
   EMSCRIPTEN_KEEPALIVE void  setTriplanar(int on){ gTriplanar = on != 0; }
+  EMSCRIPTEN_KEEPALIVE void  setDetailTile(int on){ gDetailTile = on != 0; }
+  EMSCRIPTEN_KEEPALIVE void  setAutoQuality(int on){ gAutoQuality = on != 0; gAutoLevel = 0; gSlowFor = 0.0f; }
   EMSCRIPTEN_KEEPALIVE void  setTexScale(float m){ gTexScale = m < 0.2f ? 0.2f : m; }
   EMSCRIPTEN_KEEPALIVE void setRenderScale(float s){
     gRenderScale = m::clampf(s, 0.5f, 2.0f);
@@ -1893,6 +1937,10 @@ extern "C" {
   EMSCRIPTEN_KEEPALIVE void setQuality(int q){
     gQuality = q;
     gFXAA = q >= 1;
+    gTexOn = true;
+    gTriplanar  = q >= 2;
+    gDetailTile = q >= 3;
+    gAutoLevel = 0; gSlowFor = 0.0f;
     setRenderScale(q >= 3 ? 2.0f : q >= 2 ? 1.0f : 0.75f);
   }
   EMSCRIPTEN_KEEPALIVE int  getBuildings(){ return (int)W.buildings.size(); }
