@@ -542,12 +542,12 @@ struct World {
       {0.84f,0.78f,0.68f},{0.72f,0.66f,0.60f},{0.78f,0.80f,0.84f},{0.86f,0.80f,0.70f}
     };
     static const v3 MID_COLS[] = {
-      {0.56f,0.60f,0.65f},{0.62f,0.64f,0.68f},{0.64f,0.62f,0.58f},{0.54f,0.58f,0.62f},
-      {0.60f,0.58f,0.55f},{0.58f,0.63f,0.66f}
+      {0.64f,0.62f,0.58f},{0.72f,0.68f,0.60f},{0.58f,0.56f,0.54f},{0.68f,0.64f,0.62f},
+      {0.55f,0.60f,0.64f},{0.74f,0.70f,0.64f}
     };
     static const v3 TOWER_COLS[] = {
-      {0.38f,0.44f,0.50f},{0.42f,0.48f,0.54f},{0.34f,0.40f,0.47f},{0.45f,0.51f,0.58f},
-      {0.37f,0.45f,0.52f}
+      {0.52f,0.55f,0.58f},{0.61f,0.60f,0.56f},{0.44f,0.50f,0.57f},{0.66f,0.63f,0.58f},
+      {0.40f,0.46f,0.53f},{0.58f,0.52f,0.46f},{0.49f,0.54f,0.52f}
     };
 
     for(const auto& e : edges){
@@ -592,13 +592,13 @@ struct World {
           B.litSeed = rng.f();
           float roll = rng.f();
           if(high){
-            if(roll < 0.34f){ B.type = BT_TOWER; B.h = rng.range(45, 118); B.tint = TOWER_COLS[rng.next() % 5]; B.meshVariant = rng.irange(0,1); }
+            if(roll < 0.34f){ B.type = BT_TOWER; B.h = rng.range(45, 118); B.tint = TOWER_COLS[rng.next() % 7]; B.meshVariant = rng.irange(0,1); }
             else if(roll < 0.72f){ B.type = BT_APT; B.h = rng.range(26, 58); B.tint = MID_COLS[rng.next() % 6]; B.meshVariant = rng.irange(0,1); }
             else { B.type = BT_SHOP; B.h = rng.range(11, 17); B.tint = MID_COLS[rng.next() % 6]; B.meshVariant = 0; }
           } else if(mid){
             if(roll < 0.30f){ B.type = BT_SHOP; B.h = rng.range(9, 15); B.tint = MID_COLS[rng.next() % 6]; B.meshVariant = 0; }
             else if(roll < 0.62f){ B.type = BT_APT; B.h = rng.range(20, 46); B.tint = MID_COLS[rng.next() % 6]; B.meshVariant = rng.irange(0,1); }
-            else if(roll < 0.80f){ B.type = BT_TOWER; B.h = rng.range(24, 46); B.tint = TOWER_COLS[rng.next() % 5]; B.meshVariant = rng.irange(0,1); }
+            else if(roll < 0.80f){ B.type = BT_TOWER; B.h = rng.range(24, 46); B.tint = TOWER_COLS[rng.next() % 7]; B.meshVariant = rng.irange(0,1); }
             else { B.type = BT_HOUSE; B.h = rng.range(7, 11); B.tint = HOUSE_COLS[rng.next() % 8]; B.meshVariant = 1; }
           } else {
             if(roll < 0.80f){

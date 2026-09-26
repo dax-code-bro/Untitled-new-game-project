@@ -188,8 +188,10 @@ struct RenderTarget {
   GLuint fbo = 0, colour = 0, depth = 0;
   int w = 0, h = 0;
   bool hdr = false;
+  bool depthIsTexture = false;
 
-  void create(int W, int H, bool isHDR, bool withDepth){
+  // depthMode: 0 none, 1 renderbuffer, 2 sampleable texture (needed for SSAO)
+  void create(int W, int H, bool isHDR, int depthMode){
     destroy();
     w = W; h = H; hdr = isHDR;
     glGenFramebuffers(1, &fbo);
@@ -205,7 +207,20 @@ struct RenderTarget {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colour, 0);
 
-    if(withDepth){
+    depthIsTexture = (depthMode == 2);
+    if(depthMode == 2){
+      glGenTextures(1, &depth);
+      glBindTexture(GL_TEXTURE_2D, depth);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, W, H, 0,
+                   GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
+      // depth textures are not filterable in GLES3 — NEAREST or the sampler
+      // is incomplete and every fetch silently returns zero
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth, 0);
+    } else if(depthMode == 1){
       glGenRenderbuffers(1, &depth);
       glBindRenderbuffer(GL_RENDERBUFFER, depth);
       glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, W, H);
@@ -217,7 +232,11 @@ struct RenderTarget {
   }
   void destroy(){
     if(colour){ glDeleteTextures(1, &colour); colour = 0; }
-    if(depth) { glDeleteRenderbuffers(1, &depth); depth = 0; }
+    if(depth){
+      if(depthIsTexture) glDeleteTextures(1, &depth);
+      else               glDeleteRenderbuffers(1, &depth);
+      depth = 0;
+    }
     if(fbo)   { glDeleteFramebuffers(1, &fbo); fbo = 0; }
   }
   void bind() const {

@@ -278,9 +278,15 @@ void main(){
     float sc = 1.0 / max(uTexScale, 0.01);
 
     vec4 a = triAlbedo(vWorld, bl, layer, sc);
-    // the generated material modulates the base colour rather than replacing
-    // it, so per-building and per-biome tints survive
-    albedo = albedo * (a.rgb * 2.05);
+    // Divide by the layer's own mean so the material contributes VARIATION
+    // around 1.0 instead of replacing the surface colour. Without this a dark
+    // asphalt material turned every concrete building near-black.
+    vec3 meanA = layer < 0.5  ? vec3(0.23, 0.30, 0.14)     // vegetation
+               : layer < 1.5  ? vec3(0.34, 0.32, 0.30)     // rock
+               : layer < 2.5  ? vec3(0.49, 0.44, 0.33)     // sand
+                              : vec3(0.19, 0.19, 0.19);    // manmade
+    vec3 detail = a.rgb / max(meanA, vec3(1e-3));
+    albedo = albedo * mix(vec3(1.0), detail, 0.88);
     rough  = clamp(rough * 0.45 + a.a * 0.55, 0.045, 1.0);
 
     vec4 nr = triNormalRaw(vWorld, bl, layer, sc);
@@ -584,6 +590,99 @@ void main(){
 }
 )";
 
+
+// ---------------------------------------------------------------------------
+//  SSAO — horizon-style occlusion from the depth buffer alone.
+//  No G-buffer: view position comes from depth, and the normal from its
+//  screen-space derivatives.
+// ---------------------------------------------------------------------------
+static const char* SSAO_FS = R"(#version 300 es
+precision highp float;
+precision highp sampler2D;
+in vec2 vUV;
+uniform sampler2D uDepth;
+uniform vec2  uTexel;
+uniform float uNear;
+uniform float uFar;
+uniform float uTanHalfFov;
+uniform float uAspect;
+uniform float uRadius;      // world-space sample radius, metres
+uniform float uStrength;
+uniform float uTime;
+out vec4 fragColour;
+
+float linearZ(float d){
+  float z = d * 2.0 - 1.0;
+  return (2.0 * uNear * uFar) / (uFar + uNear - z * (uFar - uNear));
+}
+vec3 viewPos(vec2 uv){
+  float d = texture(uDepth, uv).r;
+  float z = linearZ(d);
+  vec2 ndc = uv * 2.0 - 1.0;
+  return vec3(ndc.x * uTanHalfFov * uAspect, ndc.y * uTanHalfFov, -1.0) * z;
+}
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+void main(){
+  float d = texture(uDepth, vUV).r;
+  if(d >= 0.99999){ fragColour = vec4(1.0); return; }   // sky
+
+  vec3 P = viewPos(vUV);
+  // normal from depth derivatives; cheaper than carrying a normal buffer
+  vec3 dx = dFdx(P), dy = dFdy(P);
+  vec3 N = normalize(cross(dx, dy));
+
+  // 12 taps on a spiral, rotated per pixel to trade banding for noise
+  const int TAPS = 12;
+  float ao = 0.0;
+  float ang = hash(vUV * 1000.0) * 6.2831853;
+  float radius = uRadius;
+
+  for(int i = 0; i < TAPS; i++){
+    float fi = float(i);
+    float a = ang + fi * 2.39996;               // golden angle
+    float r = radius * sqrt((fi + 0.5) / float(TAPS));
+    // project the world-space offset into screen space at this depth
+    vec2 off = vec2(cos(a), sin(a)) * r / max(-P.z, 0.2);
+    off.x /= (uTanHalfFov * uAspect * 2.0);
+    off.y /= (uTanHalfFov * 2.0);
+    vec2 suv = vUV + off;
+    if(suv.x < 0.0 || suv.x > 1.0 || suv.y < 0.0 || suv.y > 1.0) continue;
+
+    vec3 S = viewPos(suv);
+    vec3 diff = S - P;
+    float dist = length(diff);
+    if(dist < 1e-4) continue;
+    float occl = max(dot(N, diff / dist), 0.0);
+    // ignore samples far enough away to be a different surface
+    float rangeFade = smoothstep(1.0, 0.0, dist / (radius * 2.2));
+    ao += occl * rangeFade;
+  }
+  ao = 1.0 - (ao / float(TAPS)) * uStrength;
+  // fade AO out with distance; it is a contact cue, not a global darkener
+  float fade = smoothstep(90.0, 26.0, -P.z);
+  ao = mix(1.0, ao, fade);
+  fragColour = vec4(clamp(ao, 0.0, 1.0));
+}
+)";
+
+// Separable box blur that will not bleed across depth discontinuities.
+static const char* AOBLUR_FS = R"(#version 300 es
+precision highp float;
+precision highp sampler2D;
+in vec2 vUV;
+uniform sampler2D uSrc;
+uniform vec2 uDir;
+out vec4 fragColour;
+void main(){
+  float s = 0.0;
+  for(int i = -3; i <= 3; i++){
+    s += texture(uSrc, vUV + uDir * float(i)).r;
+  }
+  fragColour = vec4(s / 7.0);
+}
+)";
+
 // ---------------------------------------------------------------------------
 //  POST — bright pass, separable blur, composite (ACES + FXAA + vignette)
 // ---------------------------------------------------------------------------
@@ -640,6 +739,11 @@ uniform vec2  uTexel;
 uniform float uBloomStrength;
 uniform float uVignette;
 uniform float uChromatic;
+uniform float uContrast;
+uniform float uSaturation;
+uniform float uLift;
+uniform sampler2D uAO;
+uniform int   uAOOn;
 uniform int   uFXAA;
 uniform sampler2D uDbgTex;
 uniform int   uShowDbgTex;
@@ -671,10 +775,30 @@ void main(){
     scene = texture(uScene, vUV).rgb;
   }
 
+  if(uAOOn == 1){
+    float ao = texture(uAO, vUV).r;
+    scene *= ao;
+  }
   scene += texture(uBloom, vUV).rgb * uBloomStrength;
 
   // --- tonemap to LDR
   vec3 colour = ACESfit(scene);
+
+  // --- grade. A flat, ungraded image is the single biggest reason a render
+  // reads as "engine test" rather than "game".
+  // filmic split tone: cool the shadows, warm the highlights
+  float lum0 = luma(colour);
+  vec3 shadowTint    = vec3(0.92, 0.97, 1.10);
+  vec3 highlightTint = vec3(1.06, 1.01, 0.94);
+  colour *= mix(shadowTint, highlightTint, smoothstep(0.15, 0.85, lum0));
+  // contrast around mid grey
+  colour = (colour - 0.5) * uContrast + 0.5;
+  // saturation
+  float g = luma(colour);
+  colour = mix(vec3(g), colour, uSaturation);
+  // a touch of lift keeps the blacks from crushing to pure void
+  colour = colour * (1.0 - uLift) + uLift;
+  colour = clamp(colour, 0.0, 1.0);
 
   // --- FXAA 3.11 (console flavour) on the tonemapped image
   if(uFXAA == 1){

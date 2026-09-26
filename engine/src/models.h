@@ -33,8 +33,10 @@ struct Builder {
 
   int  joint = 0;
   float rough = 0.65f, metal = 0.0f, ao = 1.0f;
+  float matId = -1.0f;      // texgen layer, -1 = flat vertex colour
 
   void mat(float r, float mt){ rough = r; metal = mt; }
+  void surface(float layer){ matId = layer; }
 
   // Append a transformed box. The workhorse — most models are boxes.
   void box(const v3& centre, const v3& half, const v3& col,
@@ -65,6 +67,7 @@ struct Builder {
         v.joint = (float)joint;
         v.rough = rough;
         v.metal = metal;
+        v.mat   = matId;
         verts.push_back(v);
       }
       idx.insert(idx.end(), { base, base+1, base+2, base, base+2, base+3 });
@@ -94,6 +97,7 @@ struct Builder {
         v.ao    = ao * shade;
         v.joint = (float)joint;
         v.rough = rough; v.metal = metal;
+        v.mat   = matId;
         verts.push_back(v);
       }
       idx.insert(idx.end(), { base, base+1, base+2, base, base+2, base+3 });
@@ -118,6 +122,7 @@ struct Builder {
       lo.joint = hi.joint = (float)joint;
       lo.rough = hi.rough = rough;
       lo.metal = hi.metal = metal;
+      lo.mat   = hi.mat   = matId;
       verts.push_back(lo);
       verts.push_back(hi);
     }
@@ -134,7 +139,7 @@ struct Builder {
       Vertex mid;
       mid.pos = centre + rot.rotate({0, y, 0});
       mid.nrm = n; mid.col = col; mid.ao = ao * (cap ? 1.0f : 0.7f);
-      mid.joint = (float)joint; mid.rough = rough; mid.metal = metal;
+      mid.joint = (float)joint; mid.rough = rough; mid.metal = metal; mid.mat = matId;
       verts.push_back(mid);
       for(int i = 0; i < seg; i++){
         float a0 = (float)i / seg * m::TAU;
@@ -167,7 +172,7 @@ struct Builder {
         vt.nrm = m::norm(v3{ n.x / squash.x, n.y / squash.y, n.z / squash.z });
         vt.col = col;
         vt.ao  = ao * m::lerpf(0.62f, 1.0f, (n.y + 1.0f) * 0.5f);
-        vt.joint = (float)joint; vt.rough = rough; vt.metal = metal;
+        vt.joint = (float)joint; vt.rough = rough; vt.metal = metal; vt.mat = matId;
         verts.push_back(vt);
       }
     }
@@ -407,6 +412,7 @@ inline void buildWheel(gfx::Mesh& out, float r, float w){
 inline void buildTower(gfx::Mesh& out, int floors, bool setback){
   Builder b;
   b.mat(0.42f, 0.10f);
+  b.surface(3.0f);          // MAT_MANMADE: concrete / render
   const v3 wall{1,1,1};
   const v3 glass{0.14f, 0.19f, 0.26f};
   const v3 dark {0.20f, 0.21f, 0.24f};
@@ -420,13 +426,13 @@ inline void buildTower(gfx::Mesh& out, int floors, bool setback){
     b.mat(0.44f, 0.08f);
     b.box({0, y + fh * 0.5f, 0}, {hx, fh * 0.5f, hz}, wall);
     // continuous glazing band, inset slightly
-    b.mat(0.10f, 0.35f);
+    b.mat(0.10f, 0.35f); b.surface(-1.0f);
     b.box({0, y + fh * 0.58f,  hz}, {hx * 0.92f, fh * 0.30f, 0.008f}, glass);
     b.box({0, y + fh * 0.58f, -hz}, {hx * 0.92f, fh * 0.30f, 0.008f}, glass);
     b.box({ hx, y + fh * 0.58f, 0}, {0.008f, fh * 0.30f, hz * 0.92f}, glass);
     b.box({-hx, y + fh * 0.58f, 0}, {0.008f, fh * 0.30f, hz * 0.92f}, glass);
     // floor slab lip
-    b.mat(0.55f, 0.05f);
+    b.mat(0.55f, 0.05f); b.surface(3.0f);
     b.box({0, y + fh * 0.03f, 0}, {hx * 1.012f, fh * 0.035f, hz * 1.012f}, dark);
     y += fh;
   }
@@ -441,6 +447,7 @@ inline void buildTower(gfx::Mesh& out, int floors, bool setback){
 
 inline void buildHouse(gfx::Mesh& out, bool twoStorey){
   Builder b;
+  b.surface(3.0f);
   const v3 wall{1,1,1};
   const v3 roofc{0.30f, 0.20f, 0.17f};
   const v3 door {0.32f, 0.20f, 0.13f};
@@ -457,7 +464,7 @@ inline void buildHouse(gfx::Mesh& out, bool twoStorey){
   b.box({0, bodyTop + 0.012f, 0}, {0.545f, 0.018f, 0.545f}, roofc);   // eaves
 
   // windows + door on the front face (+Z)
-  b.mat(0.10f, 0.30f);
+  b.mat(0.10f, 0.30f); b.surface(-1.0f);
   float wy = twoStorey ? 0.44f : 0.30f;
   b.box({ 0.24f, wy, 0.502f}, {0.105f, 0.085f, 0.006f}, glass);
   b.box({-0.24f, wy, 0.502f}, {0.105f, 0.085f, 0.006f}, glass);
@@ -470,12 +477,12 @@ inline void buildHouse(gfx::Mesh& out, bool twoStorey){
     b.box({-0.24f, 0.16f, 0.502f}, {0.095f, 0.075f, 0.006f}, glass);
   }
   // door
-  b.mat(0.55f, 0.0f);
+  b.mat(0.55f, 0.0f); b.surface(-1.0f);
   b.box({0, 0.115f, 0.505f}, {0.075f, 0.115f, 0.008f}, door);
   b.mat(0.25f, 0.8f);
   b.box({0.052f, 0.118f, 0.515f}, {0.012f, 0.012f, 0.006f}, {0.8f,0.7f,0.3f});
   // chimney
-  b.mat(0.75f, 0.0f);
+  b.mat(0.75f, 0.0f); b.surface(3.0f);
   b.box({0.30f, bodyTop + 0.22f, -0.22f}, {0.055f, 0.14f, 0.055f}, {0.42f,0.31f,0.27f});
   b.finish(out);
 }
@@ -489,10 +496,10 @@ inline void buildShop(gfx::Mesh& out){
   b.mat(0.66f, 0.0f);
   b.box({0, 0.625f, 0}, {0.52f, 0.035f, 0.52f}, {0.55f, 0.55f, 0.57f});
   // full-height shopfront glazing
-  b.mat(0.08f, 0.35f);
+  b.mat(0.08f, 0.35f); b.surface(-1.0f);
   b.box({0, 0.26f, 0.503f}, {0.44f, 0.20f, 0.008f}, {0.13f, 0.19f, 0.25f});
   // awning
-  b.mat(0.70f, 0.0f);
+  b.mat(0.70f, 0.0f); b.surface(-1.0f);
   b.frustumBox({0, 0.50f, 0.60f}, 0.46f, 0.12f, 0.46f, 0.02f, 0.035f, {0.72f, 0.20f, 0.18f});
   // sign band
   b.mat(0.40f, 0.1f);
@@ -505,15 +512,16 @@ inline void buildApartment(gfx::Mesh& out, int floors){
   const v3 wall{1,1,1};
   float fh = 1.0f / floors;
   b.mat(0.58f, 0.04f);
+  b.surface(3.0f);
   b.box({0, 0.5f, 0}, {0.5f, 0.5f, 0.5f}, wall);
   // balconies + window bands per floor
   for(int f = 0; f < floors; f++){
     float y = (f + 0.55f) * fh;
-    b.mat(0.10f, 0.30f);
+    b.mat(0.10f, 0.30f); b.surface(-1.0f);
     b.box({0, y, 0.502f}, {0.40f, fh * 0.26f, 0.008f}, {0.15f, 0.20f, 0.27f});
     b.box({0, y, -0.502f}, {0.40f, fh * 0.26f, 0.008f}, {0.15f, 0.20f, 0.27f});
     if(f > 0){
-      b.mat(0.55f, 0.1f);
+      b.mat(0.55f, 0.1f); b.surface(3.0f);
       b.box({0, y - fh * 0.28f, 0.565f}, {0.42f, 0.010f, 0.065f}, {0.60f,0.60f,0.62f});
       b.box({0, y - fh * 0.20f, 0.628f}, {0.42f, 0.055f, 0.008f}, {0.52f,0.53f,0.56f});
     }
@@ -557,6 +565,7 @@ inline void buildRock(gfx::Mesh& out, uint32_t seed){
   Builder b;
   m::Rng r(seed ? seed : 7u);
   b.mat(0.88f, 0.0f);
+  b.surface(1.0f);          // MAT_ROCK
   int n = 3 + (int)(r.f() * 3);
   for(int i = 0; i < n; i++){
     v3 c{ r.range(-0.42f, 0.42f), r.range(0.0f, 0.34f), r.range(-0.42f, 0.42f) };

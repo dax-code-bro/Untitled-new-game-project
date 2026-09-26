@@ -116,7 +116,7 @@ float heightOf(vec2 uv, int layer){
   float mottle    = fbm(uv * 16.0, 16.0, 3);
   vec2  g         = abs(fract(uv * 4.0) - 0.5);
   float seam      = smoothstep(0.455, 0.50, max(g.x, g.y));
-  return aggregate * 0.34 + pebble * 0.20 + speck * 0.28 + mottle * 0.18 - seam * 0.30;
+  return aggregate * 0.40 + pebble * 0.16 + speck * 0.36 + mottle * 0.08 - seam * 0.30;
 }
 
 void main(){
@@ -140,9 +140,9 @@ void main(){
     float blotch = fbm(uv * 2.5, 2.5, 3);
     vec3 lush = vec3(0.16, 0.33, 0.11);
     vec3 pale = vec3(0.38, 0.40, 0.17);
-    albedo = mix(lush, pale, smoothstep(0.35, 0.72, dry));
+    albedo = mix(lush, pale, smoothstep(0.30, 0.80, dry) * 0.72);
     albedo *= 0.80 + h * 0.45;
-    albedo = mix(albedo, vec3(0.20, 0.24, 0.12), smoothstep(0.62, 0.95, blotch) * 0.45);
+    albedo = mix(albedo, vec3(0.20, 0.24, 0.12), smoothstep(0.62, 0.95, blotch) * 0.26);
     rough  = 0.86 - h * 0.10;
   } else if(L == 1){
     float mineral = fbm(uv * 17.0, 17.0, 4);
@@ -161,16 +161,17 @@ void main(){
     albedo *= 0.86 + h * 0.26;
     rough  = 0.80 + h * 0.10;
   } else {
-    float tone = fbm(uv * 14.0, 14.0, 3);
-    vec3 asphalt  = vec3(0.115, 0.118, 0.126);
-    vec3 concrete = vec3(0.315, 0.315, 0.305);
-    albedo = mix(asphalt, concrete, smoothstep(0.38, 0.66, tone));
+    // tone varies over metres, not centimetres, and far more gently
+    float tone = fbm(uv * 2.2, 2.2, 3);
+    vec3 asphalt  = vec3(0.150, 0.152, 0.158);
+    vec3 concrete = vec3(0.232, 0.231, 0.226);
+    albedo = mix(asphalt, concrete, smoothstep(0.40, 0.62, tone));
     // exposed aggregate flecks
     float fleck = smoothstep(0.66, 0.92, fbm(uv * 330.0, 330.0, 2));
     albedo = mix(albedo, vec3(0.52, 0.50, 0.47), fleck * 0.50);
-    float dark = smoothstep(0.70, 0.95, 1.0 - worley(uv * 78.0, 78.0));
-    albedo *= mix(1.0, 0.78, dark);
-    albedo *= 0.84 + h * 0.30;
+    float dark = smoothstep(0.62, 0.95, 1.0 - worley(uv * 78.0, 78.0));
+    albedo *= mix(1.0, 0.88, dark);
+    albedo *= 0.90 + h * 0.17;
     rough  = 0.74 + h * 0.18;
   }
 

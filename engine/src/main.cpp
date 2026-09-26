@@ -48,15 +48,22 @@ static int   gQuality = 2;                 // 0 low, 1 med, 2 high, 3 ultra/4K
 
 static world::World  W;
 static gfx::Program  progMain, progShadow, progSky, progWater, progBright, progBlur, progComp;
-static gfx::RenderTarget rtScene, rtBloomA, rtBloomB;
+static gfx::Program  progSSAO, progAOBlur;
+static gfx::RenderTarget rtScene, rtBloomA, rtBloomB, rtAO, rtAOBlur;
 static gfx::ShadowMap    shadow[3];
 static gfx::FullscreenQuad fsq;
 static gfx::Program        progGen;
 static texgen::MaterialArray gMaterials;
 static int   gTexRes      = 1024;    // per-layer texture resolution
-static float gTexScale    = 4.0f;    // world metres per material tile
+static float gTexScale    = 2.0f;    // world metres per material tile
 static bool  gTexOn       = true;
 static bool  gTriplanar   = true;
+static bool  gAOOn        = true;
+static float gAORadius    = 1.6f;
+static float gAOStrength  = 1.25f;
+static float gContrast    = 1.18f;
+static float gSaturation  = 1.16f;
+static float gLift        = 0.008f;
 static bool  gDetailTile  = false;   // extra 3 fetches; high quality only
 static bool  gAutoQuality = true;    // step down if the frame rate collapses
 static int   gAutoLevel   = 0;       // how far we have already stepped down
@@ -605,6 +612,8 @@ static bool buildShaders(){
   ok &= progBlur.build(shaders::POST_VS, shaders::BLUR_FS, "blur");
   ok &= progComp.build(shaders::POST_VS, shaders::COMPOSITE_FS, "composite");
   ok &= progGen.build(texgen::GEN_VS, texgen::GEN_FS, "texgen");
+  ok &= progSSAO.build(shaders::POST_VS, shaders::SSAO_FS, "ssao");
+  ok &= progAOBlur.build(shaders::POST_VS, shaders::AOBLUR_FS, "aoblur");
   return ok;
 }
 
@@ -614,10 +623,14 @@ static bool buildShaders(){
 static void resizeTargets(){
   gRW = std::max(320, (int)(gW * gRenderScale));
   gRH = std::max(240, (int)(gH * gRenderScale));
-  rtScene.create(gRW, gRH, true, true);
+  rtScene.create(gRW, gRH, true, 2);          // 2 = sampleable depth, for SSAO
   int bw = std::max(2, gRW / 2), bh = std::max(2, gRH / 2);
-  rtBloomA.create(bw, bh, true, false);
-  rtBloomB.create(bw, bh, true, false);
+  rtBloomA.create(bw, bh, true, 0);
+  rtBloomB.create(bw, bh, true, 0);
+  // AO at half res: it is low frequency and this is the single biggest saving
+  int aw = std::max(2, gRW / 2), ah = std::max(2, gRH / 2);
+  rtAO.create(aw, ah, false, 0);
+  rtAOBlur.create(aw, ah, false, 0);
 }
 
 // ============================================================================
@@ -1582,6 +1595,7 @@ static double lastT = 0.0;
 static float  gLastDt = 0.0f;
 static float  gRealDt = 0.0f;
 static float  gSlowFor = 0.0f;
+static float  gFastFor = 0.0f;
 
 // Tell the page why the picture just changed.
 static void autoNote(const char* what){
@@ -1698,9 +1712,42 @@ static void renderFrame(){
     glDrawElements(GL_TRIANGLES, waterIndexCount, GL_UNSIGNED_INT, nullptr);
   }
 
-  // ---------------- bloom
+  // ---------------- ambient occlusion
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
+  if(gAOOn){
+    rtAO.bind();
+    progSSAO.use();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, rtScene.depth);
+    progSSAO.set("uDepth", 0);
+    progSSAO.set("uTexel", m::v2{ 1.0f / rtAO.w, 1.0f / rtAO.h });
+    progSSAO.set("uNear", 0.25f);
+    progSSAO.set("uFar", 6000.0f);
+    progSSAO.set("uTanHalfFov", std::tan(cam.fov * 0.5f));
+    progSSAO.set("uAspect", (float)gRW / (float)gRH);
+    progSSAO.set("uRadius", gAORadius);
+    progSSAO.set("uStrength", gAOStrength);
+    progSSAO.set("uTime", gTime);
+    fsq.draw();
+
+    // two-pass blur to take the noise off
+    progAOBlur.use();
+    rtAOBlur.bind();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, rtAO.colour);
+    progAOBlur.set("uSrc", 0);
+    progAOBlur.set("uDir", m::v2{ 1.0f / rtAO.w, 0.0f });
+    fsq.draw();
+    rtAO.bind();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, rtAOBlur.colour);
+    progAOBlur.set("uSrc", 0);
+    progAOBlur.set("uDir", m::v2{ 0.0f, 1.0f / rtAO.h });
+    fsq.draw();
+  }
+
+  // ---------------- bloom
   rtBloomA.bind();
   glClear(GL_COLOR_BUFFER_BIT);
   progBright.use();
@@ -1738,11 +1785,17 @@ static void renderFrame(){
   progComp.use();
   glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, rtScene.colour);
   glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, rtBloomA.colour);
+  glActiveTexture(GL_TEXTURE3); glBindTexture(GL_TEXTURE_2D, rtAO.colour);
   progComp.set("uScene", 0);
   progComp.set("uBloom", 1);
+  progComp.set("uAO", 3);
+  progComp.set("uAOOn", gAOOn ? 1 : 0);
   progComp.set("uTexel", m::v2{ 1.0f / gRW, 1.0f / gRH });
   progComp.set("uBloomStrength", 0.62f);
-  progComp.set("uVignette", 0.30f);
+  progComp.set("uVignette", 0.26f);
+  progComp.set("uContrast", gContrast);
+  progComp.set("uSaturation", gSaturation);
+  progComp.set("uLift", gLift);
   progComp.set("uChromatic", gQuality >= 2 ? 0.0022f : 0.0f);
   progComp.set("uFXAA", gFXAA ? 1 : 0);
   glActiveTexture(GL_TEXTURE2);
@@ -1813,14 +1866,14 @@ static void mainLoop(){
     // announced so it never looks like the game silently broke.
     if(gAutoQuality && gStarted){
       if(fpsShown < 18.0f){
-        gSlowFor += 0.4f;
-        if(gSlowFor > 2.0f){
+        gSlowFor += 0.4f; gFastFor = 0.0f;
+        if(gSlowFor > 2.5f){
           gSlowFor = 0.0f;
           switch(gAutoLevel){
-            case 0: gDetailTile = false; gRenderScale = 0.85f; resizeTargets();
-                    autoNote("reduced render scale"); break;
+            case 0: gDetailTile = false; gAOOn = false;
+                    autoNote("turned ambient occlusion off"); break;
             case 1: gTriplanar = false;  autoNote("simplified texture projection"); break;
-            case 2: gRenderScale = 0.65f; resizeTargets();
+            case 2: gRenderScale = 0.75f; resizeTargets();
                     autoNote("lowered resolution further"); break;
             case 3: gTexOn = false;      autoNote("turned textures off"); break;
             case 4: gFXAA = false;       autoNote("turned anti-aliasing off"); break;
@@ -1828,8 +1881,24 @@ static void mainLoop(){
           }
           if(gAutoLevel <= 4) gAutoLevel++;
         }
-      } else if(fpsShown > 40.0f){
+      } else if(fpsShown > 46.0f){
         gSlowFor = 0.0f;
+        // plenty of headroom: give back what we took, best-looking first
+        gFastFor += 0.4f;
+        if(gFastFor > 3.0f && gAutoLevel > 0){
+          gFastFor = 0.0f;
+          gAutoLevel--;
+          switch(gAutoLevel){
+            case 0: gAOOn = true; autoNote("ambient occlusion back on"); break;
+            case 1: gTriplanar = true;   autoNote("restored texture projection"); break;
+            case 2: gRenderScale = 0.85f; resizeTargets(); autoNote("raised resolution"); break;
+            case 3: gTexOn = true;       autoNote("textures back on"); break;
+            case 4: gFXAA = true;        autoNote("anti-aliasing back on"); break;
+            default: break;
+          }
+        }
+      } else {
+        gSlowFor = 0.0f; gFastFor = 0.0f;
       }
     }
   }
@@ -1928,20 +1997,31 @@ extern "C" {
   EMSCRIPTEN_KEEPALIVE void  setTextures(int on){ gTexOn = on != 0; }
   EMSCRIPTEN_KEEPALIVE void  setTriplanar(int on){ gTriplanar = on != 0; }
   EMSCRIPTEN_KEEPALIVE void  setDetailTile(int on){ gDetailTile = on != 0; }
+  EMSCRIPTEN_KEEPALIVE void  setAO(int on){ gAOOn = on != 0; }
+  EMSCRIPTEN_KEEPALIVE void  setAOParams(float radius, float strength){
+    gAORadius = radius; gAOStrength = strength;
+  }
+  EMSCRIPTEN_KEEPALIVE int   getAO(){ return gAOOn ? 1 : 0; }
   EMSCRIPTEN_KEEPALIVE void  setAutoQuality(int on){ gAutoQuality = on != 0; gAutoLevel = 0; gSlowFor = 0.0f; }
   EMSCRIPTEN_KEEPALIVE void  setTexScale(float m){ gTexScale = m < 0.2f ? 0.2f : m; }
+  EMSCRIPTEN_KEEPALIVE void  setGrade(float contrast, float sat, float lift){
+    gContrast = contrast; gSaturation = sat; gLift = lift;
+  }
   EMSCRIPTEN_KEEPALIVE void setRenderScale(float s){
     gRenderScale = m::clampf(s, 0.5f, 2.0f);
     resizeTargets();
   }
   EMSCRIPTEN_KEEPALIVE void setQuality(int q){
     gQuality = q;
-    gFXAA = q >= 1;
+    gFXAA = true;                 // cheap, and the alternative is jagged
     gTexOn = true;
     gTriplanar  = q >= 2;
     gDetailTile = q >= 3;
+    gAOOn       = q >= 1;
     gAutoLevel = 0; gSlowFor = 0.0f;
-    setRenderScale(q >= 3 ? 2.0f : q >= 2 ? 1.0f : 0.75f);
+    // Never drop below native resolution just to save frames — softness is
+    // the most damaging thing you can do to how a game reads.
+    setRenderScale(q >= 3 ? 2.0f : q >= 2 ? 1.0f : 0.9f);
   }
   EMSCRIPTEN_KEEPALIVE int  getBuildings(){ return (int)W.buildings.size(); }
   EMSCRIPTEN_KEEPALIVE int  getProps(){ return (int)W.props.size(); }

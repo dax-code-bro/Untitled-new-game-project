@@ -69,6 +69,13 @@
         color:#8fa3b8;font-size:11px;padding:7px 11px;display:none;gap:8px;
         align-items:center;flex-wrap:wrap;justify-content:center}
   #gear.show{display:flex}
+  #gear.collapsed{display:none}
+  #gearToggle{position:fixed;z-index:28;display:none;
+    top:calc(58px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);
+    width:38px;height:38px;border-radius:19px;background:rgba(8,12,18,.66);
+    border:1px solid rgba(255,255,255,.12);color:#e8c37a;font-size:16px;line-height:36px;
+    text-align:center;cursor:pointer;padding:0}
+  #gearToggle.show{display:block}
   @media(max-width:720px){
     #keys{display:none}
     #gear{font-size:10px;padding:6px 8px;gap:6px}
@@ -129,6 +136,7 @@
 
 <div id="autonote"></div>
 
+<button id="gearToggle" title="Settings">⚙</button>
 <div id="gear">
   <span>quality</span>
   <button data-q="1">low</button>
@@ -188,6 +196,8 @@
     document.getElementById('title').classList.remove('show');
     document.getElementById('hud').classList.add('show');
     document.getElementById('gear').classList.add('show');
+    document.getElementById('gear').classList.add('collapsed');
+    document.getElementById('gearToggle').classList.add('show');
     if(isTouch) document.getElementById('touch').classList.add('show');
     setTimeout(refreshTexInfo, 120);
     // the overlay swallows the click, so tell the engine directly
@@ -223,6 +233,18 @@
       });
     } catch(e){}
   }
+  (function(){
+    var gear = document.getElementById('gear');
+    var tog  = document.getElementById('gearToggle');
+    tog.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      gear.classList.toggle('collapsed');
+    });
+    ['touchstart','pointerdown'].forEach(function(t){
+      gear.addEventListener(t, function(ev){ ev.stopPropagation(); }, {passive:true});
+    });
+  })();
+
   Array.prototype.forEach.call(document.querySelectorAll('#gear button[data-t]'), function(btn){
     btn.addEventListener('click', function(ev){
       ev.stopPropagation();
@@ -251,8 +273,8 @@
       Module._setQuality(1);
       Module._setTriplanar(0);
       Module._setDetailTile(0);
-      Module._setTextureRes(512);
-      Module._setRenderScale(0.6);
+      Module._setTextureRes(1024);
+      Module._setRenderScale(0.9);
       refreshTexInfo();
       document.getElementById('texinfo').textContent = 'fast mode';
     } catch(e){}
