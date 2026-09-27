@@ -6183,9 +6183,9 @@ function heroModel(game, S, id) {
        is a pore -- at uvScale 1 the neck and a bare forearm, whose UVs
        are in metres, came out blotched like fur. */
     skin: { color: L.skin || 0x9d9691, texture: 'skin',
-      roughness: Math.min(0.86, (L.rough != null ? L.rough : 0.72) + 0.06), metalness: 0, subsurface: 0.40, uvScale: 10 },
+      roughness: Math.min(0.95, (L.rough != null ? L.rough : 0.72) + 0.18), metalness: 0, subsurface: 0.46, uvScale: 10 },
     material: { color: L.skin || 0x9d9691, texture: 'skin',
-      roughness: Math.min(0.86, (L.rough != null ? L.rough : 0.72) + 0.06), metalness: 0, subsurface: 0.40, uvScale: 10 },
+      roughness: Math.min(0.95, (L.rough != null ? L.rough : 0.72) + 0.18), metalness: 0, subsurface: 0.46, uvScale: 10 },
     clothMaterial: { color: 0xffffff, texture: 'fabric', roughness: 0.95, metalness: 0, uvScale: 2.4 },
   });
   /* Eyes. The head sculptor leaves sockets and the dead get lit ones

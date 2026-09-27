@@ -528,7 +528,7 @@ Engine.prototype.operator = function (id, opts = {}) {
        damage to "is this a person" than any amount of sculpting could
        undo. Twelve tiles puts the grain at roughly skin scale. */
     skin: opts.skin || { preset: 'skin', color: OP_SKIN[op.skin] || OP_SKIN.tan,
-      roughness: 0.80, metalness: 0, uvScale: 12, subsurface: 0.45 },
+      roughness: 0.95, metalness: 0, uvScale: 12, subsurface: 0.50 },
   }));
   if (!c) return c;
   c.operator = op.id;

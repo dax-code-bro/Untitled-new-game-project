@@ -347,7 +347,8 @@ function _foldsAlong(a, b, sites, seed, rings) {
 
 /* Outfits: how loose, how folded, and what is sewn on. */
 const BODY_FIT = {
-  fatigues: { trunk: 0.010, sleeve: 0.012, leg: 0.014, fold: 1.0, pockets: true, cuffs: true },
+  // A little ease: cloth that shrink-wraps every muscle reads as a superhero suit, not a uniform.
+  fatigues: { trunk: 0.015, sleeve: 0.017, leg: 0.017, fold: 1.1, pockets: true, cuffs: true },
   hazmat:   { trunk: 0.026, sleeve: 0.030, leg: 0.032, fold: 2.0, pockets: false, cuffs: true, tape: true },
   tight:    { trunk: 0.004, sleeve: 0.004, leg: 0.005, fold: 0.3, pockets: false, cuffs: false },
 };
@@ -419,8 +420,8 @@ function makeSdfBodyGeometry(skeleton, opts = {}) {
     ...(fem
       ? [_ell([w(0.056), 0.372, 0.058], [w(0.058), 0.056, w(0.050)], 0.03),                          // bust L
         _ell([-w(0.056), 0.372, 0.058], [w(0.058), 0.056, w(0.050)], 0.03)]                          // bust R
-      : [_ell([w(0.066), 0.395, 0.052], [w(0.078), 0.058, w(0.040)]),                                // pectoral L
-        _ell([-w(0.066), 0.395, 0.052], [w(0.078), 0.058, w(0.040)])]),                               // pectoral R
+      : [_ell([w(0.066), 0.395, 0.048], [w(0.078), 0.058, w(0.034)]),                                // pectoral L
+        _ell([-w(0.066), 0.395, 0.048], [w(0.078), 0.058, w(0.034)])]),                               // pectoral R
     _ell([w(0.088) * FR.lat, 0.330, -0.052], [w(0.060) * FR.lat, 0.110, w(0.042)]),                // lat L
     _ell([-w(0.088) * FR.lat, 0.330, -0.052], [w(0.060) * FR.lat, 0.110, w(0.042)]),               // lat R
     _ell([0, 0.468, -0.022], [w(0.118), 0.050, w(0.068)]),                // trapezius / upper back
@@ -511,10 +512,10 @@ function makeSdfBodyGeometry(skeleton, opts = {}) {
     const sh = J['upperArm' + S], el = J['lowerArm' + S], wr = J['hand' + S];
     const top = [sh[0] - s * 0.010, sh[1] + 0.012, sh[2]];
     const A = [
-      _ell([sh[0] + s * 0.006, sh[1] - 0.004, sh[2]], [w(0.050), 0.060, w(0.054)]),                    // deltoid
+      _ell([sh[0] + s * 0.004, sh[1] - 0.004, sh[2]], [w(0.047), 0.058, w(0.051)]),                    // deltoid
       _cone(top, el, w(0.046), w(0.039)),
-      _ell(_lerp3(sh, el, 0.45).map((v, i) => v + [0, 0, 0.018][i]), [w(0.038), 0.080, w(0.036)]),   // biceps
-      _ell(_lerp3(sh, el, 0.40).map((v, i) => v + [0, 0, -0.020][i]), [w(0.040), 0.090, w(0.038)]),  // triceps
+      _ell(_lerp3(sh, el, 0.45).map((v, i) => v + [0, 0, 0.014][i]), [w(0.035), 0.080, w(0.033)]),   // biceps
+      _ell(_lerp3(sh, el, 0.40).map((v, i) => v + [0, 0, -0.016][i]), [w(0.037), 0.090, w(0.035)]),  // triceps
       _cone(el, wr, w(0.040), w(0.028)),
       _ell(_lerp3(el, wr, 0.22).map((v, i) => v + [s * 0.006, 0, 0.008][i]), [w(0.040), 0.075, w(0.036)]), // forearm flexors
     ];

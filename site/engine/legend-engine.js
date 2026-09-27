@@ -22180,7 +22180,8 @@ function _foldsAlong(a, b, sites, seed, rings) {
 
 /* Outfits: how loose, how folded, and what is sewn on. */
 const BODY_FIT = {
-  fatigues: { trunk: 0.010, sleeve: 0.012, leg: 0.014, fold: 1.0, pockets: true, cuffs: true },
+  // A little ease: cloth that shrink-wraps every muscle reads as a superhero suit, not a uniform.
+  fatigues: { trunk: 0.015, sleeve: 0.017, leg: 0.017, fold: 1.1, pockets: true, cuffs: true },
   hazmat:   { trunk: 0.026, sleeve: 0.030, leg: 0.032, fold: 2.0, pockets: false, cuffs: true, tape: true },
   tight:    { trunk: 0.004, sleeve: 0.004, leg: 0.005, fold: 0.3, pockets: false, cuffs: false },
 };
@@ -22252,8 +22253,8 @@ function makeSdfBodyGeometry(skeleton, opts = {}) {
     ...(fem
       ? [_ell([w(0.056), 0.372, 0.058], [w(0.058), 0.056, w(0.050)], 0.03),                          // bust L
         _ell([-w(0.056), 0.372, 0.058], [w(0.058), 0.056, w(0.050)], 0.03)]                          // bust R
-      : [_ell([w(0.066), 0.395, 0.052], [w(0.078), 0.058, w(0.040)]),                                // pectoral L
-        _ell([-w(0.066), 0.395, 0.052], [w(0.078), 0.058, w(0.040)])]),                               // pectoral R
+      : [_ell([w(0.066), 0.395, 0.048], [w(0.078), 0.058, w(0.034)]),                                // pectoral L
+        _ell([-w(0.066), 0.395, 0.048], [w(0.078), 0.058, w(0.034)])]),                               // pectoral R
     _ell([w(0.088) * FR.lat, 0.330, -0.052], [w(0.060) * FR.lat, 0.110, w(0.042)]),                // lat L
     _ell([-w(0.088) * FR.lat, 0.330, -0.052], [w(0.060) * FR.lat, 0.110, w(0.042)]),               // lat R
     _ell([0, 0.468, -0.022], [w(0.118), 0.050, w(0.068)]),                // trapezius / upper back
@@ -22344,10 +22345,10 @@ function makeSdfBodyGeometry(skeleton, opts = {}) {
     const sh = J['upperArm' + S], el = J['lowerArm' + S], wr = J['hand' + S];
     const top = [sh[0] - s * 0.010, sh[1] + 0.012, sh[2]];
     const A = [
-      _ell([sh[0] + s * 0.006, sh[1] - 0.004, sh[2]], [w(0.050), 0.060, w(0.054)]),                    // deltoid
+      _ell([sh[0] + s * 0.004, sh[1] - 0.004, sh[2]], [w(0.047), 0.058, w(0.051)]),                    // deltoid
       _cone(top, el, w(0.046), w(0.039)),
-      _ell(_lerp3(sh, el, 0.45).map((v, i) => v + [0, 0, 0.018][i]), [w(0.038), 0.080, w(0.036)]),   // biceps
-      _ell(_lerp3(sh, el, 0.40).map((v, i) => v + [0, 0, -0.020][i]), [w(0.040), 0.090, w(0.038)]),  // triceps
+      _ell(_lerp3(sh, el, 0.45).map((v, i) => v + [0, 0, 0.014][i]), [w(0.035), 0.080, w(0.033)]),   // biceps
+      _ell(_lerp3(sh, el, 0.40).map((v, i) => v + [0, 0, -0.016][i]), [w(0.037), 0.090, w(0.035)]),  // triceps
       _cone(el, wr, w(0.040), w(0.028)),
       _ell(_lerp3(el, wr, 0.22).map((v, i) => v + [s * 0.006, 0, 0.008][i]), [w(0.040), 0.075, w(0.036)]), // forearm flexors
     ];
@@ -22570,6 +22571,9 @@ function makeSdfBodyGeometry(skeleton, opts = {}) {
    ============================================================ */
 
 const SDF_HEAD_TO_UNITS = 1 / 0.378;     // metres of real head -> old sculpt units
+const SDF_HEAD_SEAT = 0.021;             // how far below the head bone the chin sits (95-engine, 95b-gear)
+
+const FACE_DAMPED = new Set(['brow', 'browShelf', 'orbit', 'temple', 'malarHollow', 'nasolabial', 'chinCleft', 'lidFold', 'glabella', 'philtrum']);
 
 function makeSdfHeadGeometry(opts = {}) {
   const T = opts.type || 'male';
@@ -22578,7 +22582,7 @@ function makeSdfHeadGeometry(opts = {}) {
      finer nose, fuller cheeks. Defaults only -- a faceShape still wins. */
   const FEM = T === 'female' ? { jaw: 0.160, gonialX: 0.017, chinWide: 0.058, chin: 0.046, noseLen: 0.90,
     noseWide: 0.86, noseBridge: 0.92, browShelf: 0, cheek: 0.026, boxy: 0.62, glabella: 0.008, jawDepth: 0.050 } : {};
-  const F = Object.assign({
+  const BASE = Object.assign({
     boxy: 0.75, brow: T === 'female' ? 0.026 : 0.040, browShelf: 0, browWide: 0.150,
     orbit: 0.085, cheek: T === 'female' ? 0.024 : T === 'heavy' ? 0.030 : 0.019, cheekX: 0.150,
     malarHollow: 0, jaw: 0.135, jawSquare: 0, gonialX: 0.026, chin: T === 'female' ? 0.050 : 0.062,
@@ -22587,8 +22591,23 @@ function makeSdfHeadGeometry(opts = {}) {
     temple: 0.014, cheekY: -0.020, cheekZ: 0.012, jawDepth: 0.055, gonialLow: -0.212, chinY: -0.282,
     mental: 0.022, nasolabial: 0.017, philtrum: 0.015, vaultTaperX: 0.115, vaultTaperZ: 0.070,
     parietal: 0.085, backFull: 0.035, backWide: 0.030, forehead: 0.022, crownFlat: 0.028,
-    occiputHigh: 0.022, lidFold: 0.014,
-  }, FEM, opts.face || {});
+    occiputHigh: 0.022, lidFold: 0.009,
+  }, FEM);
+  /* EACH FACE'S OWN CONTROLS, AT A LITTLE OVER HALF STRENGTH. They were
+     tuned on the ring sculpt, where a control moved a ring; here the same
+     number moves a whole mass, and every operator came out a caricature
+     of himself -- a swollen jaw, a shelf of brow, hollow cheeks, a chin a
+     hand long. Pulled 45 per cent of the way back to the average face,
+     they are still seven different men, and none of them is a cartoon. */
+  const F = Object.assign({}, BASE);
+  for (const k in (opts.face || {})) {
+    const v = opts.face[k];
+    /* Only the controls that made a face frightening are pulled toward the average: a shelf of brow,
+       deep orbits, hollow temples and cheeks, hard folds, a cleft. The skull, the jaw, the nose and
+       the cheekbones pass at full strength -- damped too, the seven operators came out too alike to
+       tell apart (operators.test.js). */
+    F[k] = (typeof v === 'number' && typeof BASE[k] === 'number' && FACE_DAMPED.has(k)) ? BASE[k] + (v - BASE[k]) * 0.55 : v;
+  }
   const seed = opts.seed || 5;
   const vary = ((seed * 7919) % 97) / 97 - 0.5;           // a per-head nudge
   const fem = T === 'female' ? 1 : 0, heavy = T === 'heavy' ? 1 : 0;
@@ -22633,18 +22652,31 @@ function makeSdfHeadGeometry(opts = {}) {
 
   /* ---- brow ---- */
   const bW = 0.040 * wide * (F.browWide / 0.150), bT = F.browTall / 0.058;
-  U(_cone([-bW, EYE[1] + 0.017 * bT, browZ - 0.010], [0, EYE[1] + 0.020 * bT, browZ + 0.003], browR, browR * 1.05, 0.010));
-  U(_cone([bW, EYE[1] + 0.017 * bT, browZ - 0.010], [0, EYE[1] + 0.020 * bT, browZ + 0.003], browR, browR * 1.05, 0.010));
-  U(_ell([0, EYE[1] + 0.012, 0.081 + F.glabella * 0.15], [0.012, 0.012, 0.010]));   // glabella
+  U(_cone([-bW, EYE[1] + 0.017 * bT, browZ - 0.010], [0, EYE[1] + 0.020 * bT, browZ + 0.003], browR, browR * 1.05, 0.016));
+  U(_cone([bW, EYE[1] + 0.017 * bT, browZ - 0.010], [0, EYE[1] + 0.020 * bT, browZ + 0.003], browR, browR * 1.05, 0.016));
+  // Level with the brow ridge, not standing off it: 1.5 mm proud, it was a knob between the brows on every face.
+  U(_ell([0, EYE[1] + 0.012, 0.0785 + F.glabella * 0.15], [0.012, 0.012, 0.010], 0.016));   // glabella
 
   /* ---- midface, cheekbones, the orbits carved into them ---- */
   U(_ell([0, -0.028, 0.058], [0.040 * wide, 0.042, 0.036]));                      // maxilla
   mirror((s) => {
-    U(_ell([s * 0.047 * wide * (F.cheekX / 0.150), -0.007 + cheekY, 0.050 + cheekZ], [0.021 * cheekK, 0.018, 0.021 * cheekK], 0.022));   // zygomatic arch
-    U(_ell([s * 0.036 * wide, -0.030, 0.052], [0.022, 0.024, 0.022], 0.022));                    // cheek fat
-    if (F.malarHollow > 0) S(_ell([s * 0.047 * wide, -0.040, 0.056], [0.016, 0.015, 0.012 * F.malarHollow], 0.012));
+    // The cheekbone softened and the fat under it fuller: a ridge with a hollow below is a gaunt face.
+    U(_ell([s * 0.047 * wide * (F.cheekX / 0.150), -0.007 + cheekY, 0.049 + cheekZ], [0.020 * cheekK, 0.017, 0.019 * cheekK], 0.028));   // zygomatic arch
+    U(_ell([s * 0.037 * wide, -0.032, 0.053], [0.025, 0.027, 0.024], 0.028));                    // cheek fat
+    /* The hollow under the cheekbone, as a rounded pocket whose front reaches the same depth. It was an
+       ellipsoid 1.3 mm thick: the distance estimate for a disc that flat is wrong across its whole plane,
+       and it scored a crack down the side of every face, in front of the ear. */
+    if (F.malarHollow > 0) {
+      /* Placed from the cheek's actual surface, found by marching in along z through the masses so far:
+         a pocket at a fixed depth sat behind a full cheek and dented the side of the face instead. */
+      const hx = s * 0.047 * wide, tmp = _region(P.slice(), 0.020);
+      let sz = 0.12;
+      while (sz > 0 && _evalRegion(tmp, hx, -0.040, sz) > 0) sz -= 0.0005;
+      S(_ell([hx, -0.040, sz + 0.010 - Math.min(0.006, 0.0035 * F.malarHollow)], [0.016, 0.015, 0.010], 0.018));
+    }
     // The orbit: a socket carved under the brow, deeper at the top.
-    S(_ell([s * EYE[0], EYE[1] + 0.0025, EYE[2] + 0.011], [0.0195 * oW, 0.0150 * oT, orbitD + 0.004], 0.012));
+    // Round and soft-edged: a tighter, harder socket framed every eye in a sunken box.
+    S(_ell([s * EYE[0], EYE[1] + 0.0040, EYE[2] + 0.012], [0.0175 * oW, 0.0130 * oT, orbitD * 0.56 + 0.002], 0.030));
     if (F.temple > 0.02) S(_ell([s * 0.062 * wide, EYE[1] + 0.010, 0.034], [0.012, 0.022, 0.018 * (F.temple / 0.03)], 0.014));   // hollow temples
     // The eyelids: a shell round the ball, with the aperture cut through it.
     /* 1.6 mm off the ball, and the cornea (below) stands only 5 per cent
@@ -22653,35 +22685,52 @@ function makeSdfHeadGeometry(opts = {}) {
        it -- a stare on every face. Now the upper lid takes the top of the
        iris and the lower one meets its bottom edge, as they do. */
     U({ t: 'e', c: [s * EYE[0], EYE[1] + 0.0006, EYE[2] - 0.0006], r: [EYE_R + 0.0016, EYE_R + 0.0015, EYE_R + 0.0015], k: 0.009 });
-    S(_ell([s * (EYE[0] + 0.0008), EYE[1] - 0.0008, EYE[2] + 0.012], [0.0142, 0.0043 + fem * 0.0007, 0.012], 0.0018));
+    /* The lid margin rounded over 3 mm, not 1.8: a blend under the 2.1 mm cell is a hard edge the
+       mesh can only draw as a saw, and every eye had a serrated rim. */
+    /* And the opening centred 1.4 mm under the ball, so the upper lid takes the top of the iris: with
+       the whole iris showing, white above it, every face stared. */
+    S(_ell([s * (EYE[0] + 0.0008), EYE[1] - 0.0014, EYE[2] + 0.012], [0.0146, 0.0043 + fem * 0.0007, 0.012], 0.0032)).keep = true;
     // The fold of the upper lid and the crease under the eye.
-    U(_cone([s * (EYE[0] - 0.011), EYE[1] + 0.0080, EYE[2] + 0.0066], [s * (EYE[0] + 0.011), EYE[1] + 0.0072, EYE[2] + 0.0046], 0.0015 * (F.lidFold / 0.014), 0.0012 * (F.lidFold / 0.014), 0.004));
-    S(_cone([s * (EYE[0] - 0.008), EYE[1] - 0.0175, EYE[2] + 0.0090], [s * (EYE[0] + 0.013), EYE[1] - 0.0160, EYE[2] + 0.0055], 0.0012, 0.0010, 0.008));
+    U(_cone([s * (EYE[0] - 0.008), EYE[1] + 0.0080, EYE[2] + 0.0060], [s * (EYE[0] + 0.011), EYE[1] + 0.0072, EYE[2] + 0.0046], 0.0013 * (F.lidFold / 0.014), 0.0011 * (F.lidFold / 0.014), 0.006));
+    /* No crease cut under the eye, and the hollow between the lower lid and the cheek filled: the cut
+       outlined the lid's bulb, and a round bag under each eye read as ill, not as a man. */
+    U(_ell([s * EYE[0], EYE[1] - 0.0165, EYE[2] + 0.0005], [0.0150, 0.0065, 0.0095], 0.014));
   });
 
   /* ---- nose ---- */
   const tip = [0, -0.028 - (nL - 1) * 0.012, 0.104 + (nL - 1) * 0.006 + (nB - 1) * 0.004];
   const root = [0, EYE[1] + 0.006, 0.083 + (nB - 1) * 0.003];
-  U(_cone(root, [tip[0] + F.noseBend * 0.004, tip[1] + 0.008, tip[2] - 0.004], 0.0062, 0.0074 * (0.85 + 0.15 * nW), 0.006));  // bridge
+  U(_cone(root, [tip[0] + F.noseBend * 0.004, tip[1] + 0.008, tip[2] - 0.004], 0.0062, 0.0074 * (0.85 + 0.15 * nW), 0.010));  // bridge
   if (F.noseHump > 0) U(_ell(_lerp3(root, tip, 0.45).map((v, i) => v + [0, 0, 0.0035 * F.noseHump][i]), [0.0058, 0.009, 0.0045], 0.004));
-  U(_ell(tip, [0.0105 * (0.8 + 0.2 * nW), 0.0098, 0.0092], 0.005));                               // tip
+  U(_ell(tip, [0.0105 * (0.8 + 0.2 * nW), 0.0098, 0.0092], 0.008));                               // tip
   mirror((s) => {
-    U(_ell([s * 0.0118 * nW, tip[1] - 0.004, tip[2] - 0.012], [0.0085 * nW, 0.0078, 0.0085], 0.006));   // alae
-    S(_ell([s * 0.0060 * nW, tip[1] - 0.0100, tip[2] - 0.0090], [0.0030 * nW, 0.0020, 0.0048], 0.0025)); // nostril
+    U(_ell([s * 0.0108 * nW, tip[1] - 0.0045, tip[2] - 0.0145], [0.0068 * nW, 0.0060, 0.0086], 0.014));   // alae: flat wings grown into the tip, not balls stuck on
+    S(_ell([s * 0.0058 * nW, tip[1] - 0.0104, tip[2] - 0.0120], [0.0024 * nW, 0.0010, 0.0034], 0.0045)); // nostril, a shadowed slot under the tip, not a punched hole
   });
 
   if (F.nasolabial > 0.012) mirror((s) => S(_cone([s * 0.0185 * nW, tip[1] - 0.002, tip[2] - 0.019], [s * 0.030, -0.070, 0.064],
-    0.0034 * (F.nasolabial / 0.017), 0.0030, 0.016)));   // nasolabial fold, soft
+    0.0020 * (F.nasolabial / 0.017), 0.0018, 0.022)));   // nasolabial fold, soft (a line, not a gash)
 
   /* ---- mouth ---- */
   const mouthY = -0.068;
   U(_ell([0, -0.061, 0.058], [0.033, 0.028, 0.027]));                                             // muzzle
-  U(_ell([0, mouthY + 0.0055, 0.0815], [0.0235 + fem * 0.002, 0.0062 + fem * 0.0012, 0.0085], 0.004));   // upper lip
-  U(_ell([0, mouthY - 0.0072, 0.0790], [0.0215 + fem * 0.002, 0.0075 + fem * 0.0012, 0.0088], 0.004));   // lower lip
-  S(_cone([-0.019, mouthY, 0.0885], [0.019, mouthY, 0.0885], 0.0016, 0.0016, 0.0035));             // where the lips meet
-  mirror((s) => S(_ell([s * 0.0228, mouthY, 0.0775], [0.0030, 0.0030, 0.0045], 0.006)));              // corners, soft
-  S(_cone([0, -0.050, 0.0925 + (0.015 - F.philtrum) * 0.05], [0, mouthY + 0.010, 0.0915 + (0.015 - F.philtrum) * 0.05], 0.0034, 0.0040, 0.008));                 // philtrum
-  S(_ell([0, mouthY - 0.019, 0.080], [0.014, 0.004, 0.006], 0.006));                                 // mentolabial sulcus
+  /* THE LIPS FOLLOW THE TEETH. They were two straight ellipsoids across a muzzle that curves back
+     round the dental arch, so their ends stood proud of the face at the corners -- two pale knobs
+     either side of the mouth, read as fangs. Now each lip is a centre and two side pieces set back
+     onto the arch (`az`, the muzzle's own front), and the line between them follows it too. */
+  const az = (x) => 0.058 + 0.027 * Math.sqrt(Math.max(0, 1 - (x / 0.033) ** 2));
+  const lw = 1 + fem * 0.08;
+  U(_ell([0, mouthY + 0.0050, az(0) - 0.0042], [0.0140 * lw, 0.0050 + fem * 0.0012, 0.0062], 0.010));   // upper lip
+  U(_ell([0, mouthY - 0.0066, az(0) - 0.0055], [0.0130 * lw, 0.0062 + fem * 0.0012, 0.0060], 0.012));   // lower lip
+  mirror((s) => {
+    U(_ell([s * 0.0115 * lw, mouthY + 0.0040, az(0.0115) - 0.0042], [0.0105 * lw, 0.0038 + fem * 0.001, 0.0052], 0.014));
+    U(_ell([s * 0.0100 * lw, mouthY - 0.0052, az(0.0100) - 0.0052], [0.0095 * lw, 0.0044 + fem * 0.001, 0.0052], 0.014));   // thinner at the sides: a lip is a crescent
+    // Where the lips meet, thinning to nothing at the corner: a round end left a dark dot there.
+    S(_cone([0, mouthY, az(0) + 0.0010], [s * 0.0215 * lw, mouthY, az(0.0215 * lw) + 0.0004], 0.0010, 0.0003, 0.0040));
+    // No pit cut at the corner: seen from three quarters it read as a knob, not a crease.
+  });
+  S(_cone([0, -0.050, 0.0925 + (0.015 - F.philtrum) * 0.05], [0, mouthY + 0.0135, 0.0915 + (0.015 - F.philtrum) * 0.05], 0.0034, 0.0030, 0.008));                 // philtrum, stopping short of the lip: its end notched the lip's top
+  S(_ell([0, mouthY - 0.019, 0.080], [0.014, 0.004, 0.004], 0.010));                                 // mentolabial sulcus
 
   /* ---- jaw and chin ---- */
   const chin = [0, -0.104 + faceLen, chinZ + (F.mental - 0.022) * 0.25];
@@ -22691,7 +22740,9 @@ function makeSdfHeadGeometry(opts = {}) {
     U(_cone([s * (gonX + 0.003), -0.018, -0.014], gon, 0.011, jawR * 0.9, 0.02));                        // ramus
   });
   U(_ell(chin, [chinW * wide, 0.015, 0.0125], 0.016));
-  if (F.chinCleft > 0) S(_cone([0, -0.094, chinZ + 0.011], [0, -0.108, chinZ + 0.009], 0.0022, 0.0022, 0.003));
+  /* A cleft chin is a soft dimple a millimetre or two deep, not a groove: the cut line it was drew a
+     seam from the lip to the point of the chin, with a dot at the end. */
+  if (F.chinCleft > 0) S(_ell([0, chin[1] + 0.003, chin[2] + 0.0125 + 0.0045 - 0.0016 * Math.min(1, F.chinCleft)], [0.0045, 0.0080, 0.0045], 0.010));
 
   /* ---- ears ---- */
   mirror((s) => {
@@ -22702,7 +22753,7 @@ function makeSdfHeadGeometry(opts = {}) {
   });
 
   // The masseters: the jaw's corner is muscle, not a hollow.
-  mirror((s) => U(_ell([s * 0.046 * wide, -0.052, 0.012], [0.016, 0.028, 0.026], 0.022)));
+  mirror((s) => U(_ell([s * 0.046 * wide, -0.052, 0.012], [0.014, 0.026, 0.024], 0.030)));
   /* Under the jaw: the floor of the mouth and the muscles running down to
      the neck, so the jaw's angle sits on something instead of over a pit. */
   U(_ell([0, -0.096, 0.012], [0.040 * wide, 0.020, 0.046], 0.022));
@@ -22716,8 +22767,23 @@ function makeSdfHeadGeometry(opts = {}) {
      surfaces cross, so the only thing on show is a soft crease. */
   U(_cone([0, -0.058, -0.024], [0, -0.160, -0.017], 0.058 * wide, 0.044 * wide, 0.02));
 
-  const R = _region(P, 0.016);
-  R.bmin = [-0.105 * wide, -0.167, -0.125]; R.bmax = [0.105 * wide, 0.130, 0.125];
+  /* THE COARSE LEVELS OF DETAIL (95-engine meshes the same field again at 4.2, 7.5 and 12 mm for
+     distance). A cut thinner than a cell -- the line of the lips, the corners, the nostrils, the
+     philtrum, the lid fold -- is not drawn at that size, it is sampled: it comes out as a dark gash
+     or a dot wherever a cell happens to straddle it, and at play distance every mouth was a grimace
+     of teeth and every eye a stare. On those levels the features under two cells go (the paint still
+     carries the lip line and the nostrils) and no blend is sharper than the cell. */
+  if (h > 0.003) {
+    for (let i = P.length - 1; i >= 0; i--) {
+      const p = P[i];
+      const thin = p.t === 'c' ? Math.max(p.r1, p.r2) : p.t === 'e' ? Math.min(p.r[0], p.r[1], p.r[2]) : 1;
+      if (p.op === 's' && thin < h * 1.1 && !p.keep) P.splice(i, 1);
+      else if (p.k != null && p.k < h * 1.1) p.k = h * 1.1;
+    }
+  }
+  const R = _region(P, 0.020);
+  // Wide enough that no cheek or ear is clipped by the box (a clip reads as a crack down the side of the face).
+  R.bmin = [-0.118 * wide, -0.167, -0.132]; R.bmax = [0.118 * wide, 0.134, 0.132];
   R.bandScale = 0.4;
   const g = new Geometry();
   // UVs 0..1 over the head, as the old sculpt had them, so a skin material's uvScale means the same thing.
@@ -22741,12 +22807,16 @@ function makeSdfHeadGeometry(opts = {}) {
     r *= 1 + red * 0.05; gg *= 1 - red * 0.07; b *= 1 - red * 0.06;
     const lip = Math.max(bump(x, y, z, [0, mouthY + 0.005, 0.082], [0.022, 0.007, 0.012]), bump(x, y, z, [0, mouthY - 0.007, 0.080], [0.020, 0.008, 0.012]));
     r *= 1 - lip * 0.06; gg *= 1 - lip * 0.24; b *= 1 - lip * 0.18;
-    const line = Math.exp(-(((y - mouthY) / 0.0014) ** 2)) * (1 - _ss(0.018, 0.024, Math.abs(x))) * (z > 0.080 ? 1 : 0);
+    const line = Math.exp(-(((y - mouthY) / 0.0014) ** 2)) * (1 - _ss(0.017, 0.025, Math.abs(x))) * (z > 0.074 ? 1 : 0);
     r *= 1 - line * 0.55; gg *= 1 - line * 0.60; b *= 1 - line * 0.58;
     const under = Math.max(bump(x, y, z, [EYE[0], EYE[1] - 0.013, EYE[2] + 0.005], [0.016, 0.006, 0.012]), bump(x, y, z, [-EYE[0], EYE[1] - 0.013, EYE[2] + 0.005], [0.016, 0.006, 0.012]));
-    r *= 1 - under * 0.12; gg *= 1 - under * 0.13; b *= 1 - under * 0.08;
+    r *= 1 - under * 0.07; gg *= 1 - under * 0.08; b *= 1 - under * 0.05;
+    // Inside the nostrils: shade that the slot alone is too shallow to make.
+    const nos = Math.max(bump(x, y, z, [0.0058 * nW, tip[1] - 0.0102, tip[2] - 0.0110], [0.0030, 0.0022, 0.0042]), bump(x, y, z, [-0.0058 * nW, tip[1] - 0.0102, tip[2] - 0.0110], [0.0030, 0.0022, 0.0042]));
+    r *= 1 - nos * 0.55; gg *= 1 - nos * 0.62; b *= 1 - nos * 0.62;
     if (!fem && opts.shave !== false) {
-      const jaw = Math.max(0, Math.min(1, (-0.040 - y) / 0.03)) * (z > -0.02 ? 1 : 0) * (1 - lip);
+      // Fading out under the jaw: carried down the neck stub it ended in a line where the body's neck takes over.
+      const jaw = Math.max(0, Math.min(1, (-0.040 - y) / 0.03)) * (z > -0.02 ? 1 : 0) * (1 - lip) * (1 - _ss(0.098, 0.122, -y));
       const upper = bump(x, y, z, [0, -0.051, 0.084], [0.024, 0.006, 0.012]);
       const sh = Math.max(jaw, upper) * 0.10;
       r *= 1 - sh * 1.2; gg *= 1 - sh * 1.0; b *= 1 - sh * 0.6;
@@ -22759,7 +22829,10 @@ function makeSdfHeadGeometry(opts = {}) {
   for (let i = 0; i < Pp.length; i++) Pp[i] *= SDF_HEAD_TO_UNITS;
   g.finalize();
   if (!(g.colors instanceof Float32Array)) g.colors = new Float32Array(g.colors);
-  bakeCavityAO(g, { radius: 0.040, strength: 0.75, floor: 0.42, samples: 1400 });
+  /* Gentle. At 0.75 with a floor of 0.42 every fold went near black and the
+     faces read as melted wax -- the single biggest thing that made them
+     frightening rather than human. */
+  bakeCavityAO(g, { radius: 0.036, strength: 0.38, floor: 0.68, samples: 1400 });
 
   /* HAIR THAT IS PAINTED, NOT BUILT. Brows, stubble and a shorn scalp
      were shells cut from the surface and pushed out a few millimetres:
@@ -22804,13 +22877,14 @@ function makeSdfHeadGeometry(opts = {}) {
         const bulge = th < 0.62 ? 1 + 0.05 * Math.cos(th / 0.62 * Math.PI * 0.5) : 1;
         const px = c[0] + nx * EYE_R * bulge, py = c[1] + ny * EYE_R * bulge, pz = c[2] + nz * EYE_R * bulge;
         let cr, cg, cb;
-        if (th < 0.17) { cr = 0.03; cg = 0.025; cb = 0.025; }                     // pupil
-        else if (th < 0.50) {                                                     // iris, darker at its rim
-          const f = (th - 0.17) / 0.33, rim = f > 0.82 ? 0.55 : 1, fib = 0.85 + 0.15 * Math.sin(ph * 23 + a);
+        if (th < 0.16) { cr = 0.03; cg = 0.025; cb = 0.025; }                     // pupil
+        else if (th < 0.53) {                                                     // iris, darker at its rim
+          const f = (th - 0.16) / 0.37, rim = f > 0.82 ? 0.55 : 1, fib = 0.85 + 0.15 * Math.sin(ph * 23 + a);
           cr = ir * rim * fib; cg = ig * rim * fib; cb = ib * rim * fib;
         } else {                                                                  // sclera, a little warm and veined at the corners
           const edge = Math.min(1, Math.max(0, (th - 0.9) / 0.6));
-          cr = 0.93 - edge * 0.05; cg = 0.90 - edge * 0.10; cb = 0.87 - edge * 0.10;
+          // Off-white: a sclera paper-white in shade is what makes a stare.
+          cr = 0.80 - edge * 0.05; cg = 0.76 - edge * 0.08; cb = 0.72 - edge * 0.08;
         }
         eg.setColor(cr, cg, cb);
         eg.vert(px * SDF_HEAD_TO_UNITS, py * SDF_HEAD_TO_UNITS, pz * SDF_HEAD_TO_UNITS, nx, ny, nz, b / SECT, a / RINGS);
@@ -22831,6 +22905,11 @@ function makeSdfHeadGeometry(opts = {}) {
 function _hex3(c) { return [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255]; }
 const _ss = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
 
+/* The brow tables were laid against the old sculpt's ridge. On this head that band lands in the
+   crease between the lid and the ridge -- measured, 8 mm low -- and reads as a smudge of shadow on
+   the lid. Up onto the ridge, where brows grow. */
+const BROW_LIFT = 0.028;
+
 function paintHeadHair(g, opts) {
   const P = g.positions, C = g.colors, n = P.length / 3;
   let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
@@ -22841,8 +22920,14 @@ function paintHeadHair(g, opts) {
   const skin = _hex3(opts.skinColor != null ? opts.skinColor : 0xc8a080);
   const ratio = (col) => { const c = _hex3(col); return c.map((v, i) => Math.max(0.04, Math.min(1.15, v / Math.max(0.05, skin[i])))); };
   const layers = [];
-  const B = opts.brows && BROW_STYLES[opts.brows];
-  if (B) layers.push({ col: ratio(opts.browColor != null ? opts.browColor : 0x2a2320), dens: 0.92, mask: (u, w, xn) => {
+  /* Everyone has eyebrows. A caller that names no style (the survivors never did) got a browless
+     face, and nothing on a head is more alien than that; one is chosen from the seed, in the hair's
+     colour. 'none' still means none. */
+  const browStyle = opts.brows !== undefined ? opts.brows
+    : (opts.type === 'female' ? ['arched', 'thin'] : ['straight', 'angled', 'heavy'])[(opts.seed || 5) % (opts.type === 'female' ? 2 : 3)];
+  const browCol = opts.browColor != null ? opts.browColor : opts.hairColor != null ? opts.hairColor : 0x2a2320;
+  const B = browStyle && BROW_STYLES[browStyle];
+  if (B) layers.push({ col: ratio(browCol), dens: 0.78, mask: (u, w, xn) => {
     const t = (xn - B.x[0]) / Math.max(1e-6, B.x[1] - B.x[0]);
     const rise = B.arch * Math.sin(Math.min(1, Math.max(0, t) / 0.68) * Math.PI * 0.5) * (1 - Math.max(0, t - 0.68) / 0.32 * 0.5);
     /* THICKER AT THE INNER END, FEATHERED AT THE OUTER TAIL -- which the
@@ -22853,17 +22938,23 @@ function paintHeadHair(g, opts) {
        rounded and a little sparse, where the hairs stand up. */
     const tc = Math.max(0, Math.min(1, t));
     const taper = 1 - 0.58 * _ss(0.30, 1.0, tc);
-    const l = B.u[0] + rise + B.tilt * (1 - t), h2 = l + (B.u[1] - B.u[0]) * taper;
+    const l = B.u[0] + BROW_LIFT + rise + B.tilt * (1 - t), h2 = l + (B.u[1] - B.u[0]) * taper;
     const mid = (l + h2) * 0.5, half = (h2 - l) * 0.5;
     const inner = _ss(B.x[0] - 0.015, B.x[0] + 0.05, xn) * (0.80 + 0.20 * _ss(0.0, 0.18, tc));
     const tail = 1 - _ss(B.x[1] - 0.09, B.x[1] + 0.015, xn);
-    const band = 1 - _ss(half - 0.004, half + 0.007, Math.abs(u - mid));
+    // A feathered edge, wider on top than below: the hairs lie up and out, and a hard edge reads as painted on.
+    const band = 1 - _ss(half - 0.006, half + 0.008 + (u > mid ? 0.003 : 0), Math.abs(u - mid));
     return _ss(0.66, 0.74, w) * inner * tail * band * (1 - 0.25 * _ss(0.6, 1.0, tc));
   } });
   const Bd = opts.beard && BEARD_STYLES[opts.beard];
   if (Bd) layers.push({ col: ratio(opts.beardColor != null ? opts.beardColor : 0x2a2320), dens: opts.beard === 'stubble' ? 0.42 : 0.90, mask: (u, w, xn) => {
-    let m = _ss(Bd.u[0] - 0.01, Bd.u[0] + 0.02, u) * (1 - _ss(Bd.u[1] - 0.025, Bd.u[1] + 0.005, u))
-      * _ss(Bd.w[0] - 0.04, Bd.w[0] + 0.04, w) * (1 - _ss(Bd.x - 0.08, Bd.x + 0.02, xn)) * _ss((Bd.xMin || 0) - 0.02, (Bd.xMin || 0) + 0.04, xn);
+    /* Soft on every side -- hair thins out at the edge of a beard, it does not stop -- and softest
+       at the top and the front, where a sideburn or a pair of chops was a hard-edged rectangle. */
+    let m = _ss(Bd.u[0] - 0.012, Bd.u[0] + 0.025, u) * (1 - _ss(Bd.u[1] - 0.060, Bd.u[1] + 0.010, u))
+      * _ss(Bd.w[0] - 0.04, Bd.w[0] + 0.04, w) * (1 - _ss(Bd.x - 0.08, Bd.x + 0.02, xn))
+      /* Only a style that leaves the middle bare (a split) fades there: with no xMin this still took the
+         beard to a quarter at the centre line, a bare stripe down the lip and chin. */
+      * (Bd.xMin ? _ss(Bd.xMin - 0.09, Bd.xMin + 0.10, xn) : 1);
     if (!Bd.overLip) { const L = Bd.lips || [0.198, 0.272]; m *= 1 - _ss(0.84, 0.88, w) * _ss(L[0] - 0.005, L[0] + 0.01, u) * (1 - _ss(L[1] - 0.01, L[1] + 0.005, u)) * (1 - _ss(0.36, 0.42, xn)); }
     return m;
   } });
@@ -24011,7 +24102,12 @@ class Engine {
          undo. This is a head. */
       /* The field-built head's box includes a neck stub of a different
          length, so its overall height is its own number. */
-      const headHeight = headGeo.sdf ? 0.250 : 0.252;   // measured: 0.235 chin to crown, a real head
+      /* The field-built head a little larger and seated a little lower than
+         the sculpt: at 0.250 on a 9 mm seat it read as a small head on a
+         long neck -- one of the things that made these people look like
+         dolls. The kit (95b-gear.js) sits from the same seat. */
+      const headHeight = headGeo.sdf ? 0.262 : 0.252;   // measured: 0.235 chin to crown, a real head
+      const headSeat = headGeo.sdf ? SDF_HEAD_SEAT : 0.011;
       const headScale = (headHeight / HEAD_MESH_HEIGHT) * scale;
       const headActor = new Actor(this, {
         name: 'head',
@@ -24030,7 +24126,7 @@ class Engine {
            overlaps the top of the neck instead of balancing on it.
            Exactly level, the two surfaces meet in a seam and the head
            reads as a separate object sitting on a post. */
-        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - 0.011 * scale, 0.006 * scale],
+        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - headSeat * scale, 0.006 * scale],
         scale: headScale,
         boundRadius: 0.4 * scale,
       });
@@ -24066,7 +24162,7 @@ class Engine {
            overlaps the top of the neck instead of balancing on it.
            Exactly level, the two surfaces meet in a seam and the head
            reads as a separate object sitting on a post. */
-        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - 0.011 * scale, 0.006 * scale],
+        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - headSeat * scale, 0.006 * scale],
           scale: headScale, boundRadius: 0.45 * scale,
         });
         this.actors.push(a2);
@@ -24116,7 +24212,7 @@ class Engine {
            overlaps the top of the neck instead of balancing on it.
            Exactly level, the two surfaces meet in a seam and the head
            reads as a separate object sitting on a post. */
-        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - 0.011 * scale, 0.006 * scale],
+        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - headSeat * scale, 0.006 * scale],
           scale: headScale, boundRadius: 0.45 * scale,
         });
         this.actors.push(ea);
@@ -25624,7 +25720,7 @@ Engine.prototype.operator = function (id, opts = {}) {
        damage to "is this a person" than any amount of sculpting could
        undo. Twelve tiles puts the grain at roughly skin scale. */
     skin: opts.skin || { preset: 'skin', color: OP_SKIN[op.skin] || OP_SKIN.tan,
-      roughness: 0.80, metalness: 0, uvScale: 12, subsurface: 0.45 },
+      roughness: 0.95, metalness: 0, uvScale: 12, subsurface: 0.50 },
   }));
   if (!c) return c;
   c.operator = op.id;
@@ -25768,6 +25864,12 @@ const GEAR_MAT = {
   navy:     { color: 0x2b3340, texture: 'fabric', roughness: 0.90, metalness: 0, uvScale: 9 },
   olive:    { color: 0x44402c, texture: 'fabric', roughness: 0.91, metalness: 0, uvScale: 9 },
   rubber:   { color: 0x2a2b2c, texture: 'smooth', roughness: 0.76, metalness: 0, uvScale: 6 },
+  /* The goggles: the same rubber, casting no shadow. Their lenses stand
+     three centimetres off the forehead, and the shadow lookup's normal
+     offset carried points on the cheeks, the lip and the jaw into their
+     shadow -- black blotches across the face at every sun angle. A few
+     square centimetres of kit on the brow is not worth that. */
+  goggle:   { color: 0x2a2b2c, texture: 'smooth', roughness: 0.76, metalness: 0, uvScale: 6, castShadow: false },
   steel:    { color: 0x8d9298, texture: 'metal',  roughness: 0.40, metalness: 1, uvScale: 5 },
   brass:    { color: 0xb08a3c, texture: 'metal',  roughness: 0.34, metalness: 1, uvScale: 5 },
   glass:    { color: 0x9fb4ad, texture: 'smooth', roughness: 0.10, metalness: 0, opacity: 0.55 },
@@ -26152,18 +26254,35 @@ function gearBalaclava(headGeo, s) {
 
 /* Goggles, on the brow rather than over the eyes -- pushed up is how
    they are worn nine tenths of the time. */
-function gearGoggles(g, headY, s) {
-  gearStrap(g, [-0.116 * s, headY + 0.086 * s, 0.028 * s],
-    [0.116 * s, headY + 0.086 * s, 0.028 * s], 0.020 * s, 0.009 * s);
+function gearGoggles(g, headY, s, pts) {
+  /* FITTED TO THE SKULL, when the caller hands one over (o.headPts). The
+     band was a straight bar 0.232 wide, authored for a nominal head: on a
+     field-built skull its ends stood 4 cm clear of the temples like horns,
+     and the sun dropped their shadows onto the cheeks and the jaw as
+     black blotches. Now the band ends at the scalp, and the lenses sit on
+     the forehead that is actually there. */
+  const band = headY + 0.086 * s;
+  let hw = 0.116 * s, zf = 0.100 * s;
+  if (pts) {
+    let mx = 0, fz = -1e9;
+    for (let i = 0; i < pts.length; i += 3) {
+      if (Math.abs(pts[i + 1] - band) > 0.012 * s) continue;
+      mx = Math.max(mx, Math.abs(pts[i]));
+      if (Math.abs(pts[i]) < 0.040 * s) fz = Math.max(fz, pts[i + 2]);
+    }
+    if (mx > 0) hw = mx + 0.004 * s;
+    if (fz > -1e9) zf = fz - 0.004 * s;
+  }
+  gearStrap(g, [-hw, band, 0.028 * s], [hw, band, 0.028 * s], 0.020 * s, 0.009 * s);
   for (const sx of [1, -1]) {
-    gearSlab(g, sx * 0.014 * s, headY + 0.060 * s, 0.100 * s,
-      sx * 0.086 * s, headY + 0.112 * s, 0.130 * s, 3.0);
+    gearSlab(g, sx * 0.014 * s, headY + 0.060 * s, zf,
+      sx * Math.min(0.086 * s, hw - 0.006 * s), headY + 0.112 * s, zf + 0.030 * s, 3.0);
   }
   // The band round the back.
-  gearStrap(g, [-0.112 * s, headY + 0.086 * s, 0.020 * s],
-    [-0.070 * s, headY + 0.104 * s, -0.118 * s], 0.018 * s, 0.006 * s);
-  gearStrap(g, [0.112 * s, headY + 0.086 * s, 0.020 * s],
-    [0.070 * s, headY + 0.104 * s, -0.118 * s], 0.018 * s, 0.006 * s);
+  for (const sx of [1, -1]) {
+    gearStrap(g, [sx * (hw - 0.004 * s), band, 0.020 * s],
+      [sx * 0.070 * s, headY + 0.104 * s, -0.118 * s], 0.018 * s, 0.006 * s);
+  }
 }
 
 /* ------------------------------------------------------------------
@@ -26187,7 +26306,7 @@ const GEAR_PIECES = {
   respirator: { mat: 'rubber',  fn: (g, c) => gearRespirator(g, c.headY, c.s, c.o) },
   hood:       { mat: 'hazmat',  fn: (g, c) => gearHood(g, c.headY, c.s) },
   visor:      { mat: 'glass',   fn: (g, c) => gearVisor(g, c.headY, c.s) },
-  goggles:    { mat: 'rubber',  fn: (g, c) => gearGoggles(g, c.headY, c.s) },
+  goggles:    { mat: 'goggle',  fn: (g, c) => gearGoggles(g, c.headY, c.s, c.o.headPts || null) },
 };
 
 /* Build every piece on a list, grouped by material, skinned, and handed
@@ -26219,7 +26338,7 @@ function buildGear(skeleton, list, opts) {
      this is exactly the class of mistake that put every helmet in the
      game half a head too low the first time. One constant, both
      places, and a note at each end. */
-  const HEAD_SEAT = 0.011 * s;
+  const HEAD_SEAT = (opts && opts.headPts ? SDF_HEAD_SEAT : 0.011) * s;   // a field-built head sits lower (94d)
   const chinY = (hi >= 0 ? skeleton.bones[hi].bindMatrix.e[13] : 0.61 * s) - HEAD_SEAT;
   const HEAD_H = 0.252 * s;
   const headY = chinY + HEAD_H * 0.5;
@@ -26243,7 +26362,7 @@ function buildGear(skeleton, list, opts) {
   for (const [mat, g] of byMat) {
     if (!g.indices.length) continue;
     g.finalize();
-    if (Math.abs(s - 1) > 1e-6 && mat !== 'kevlar' && mat !== 'rubber' && mat !== 'hazmat'
+    if (Math.abs(s - 1) > 1e-6 && mat !== 'kevlar' && mat !== 'rubber' && mat !== 'goggle' && mat !== 'hazmat'
       && mat !== 'glass') {
       // Trunk kit is authored at stature 1; head kit already took `s`.
       for (let i = 0; i < g.positions.length; i++) g.positions[i] *= s;

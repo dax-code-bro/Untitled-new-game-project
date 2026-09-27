@@ -141,8 +141,10 @@ const note = (s) => console.log(`  ..   ${s}`);
      rig, which is what this was written to catch. Measured against the
      nape it could not have been set below 25 mm without failing on
      correct geometry. */
+  /* The field-built head is seated 21 mm under the bone, not 11 (SDF_HEAD_SEAT, 94d): its jaw
+     reaches further down into the neck. The bar is measured from that seat, and stays 15 mm. */
   check('the chin is on the head bone, not the middle of the face',
-    fits.every((f) => Math.abs(f.head.chin - f.boneY) < 0.015),
+    fits.every((f) => Math.abs(f.head.chin - f.boneY + 0.021) < 0.015),
     fits.map((f) => (f.head.chin - f.boneY).toFixed(3)).join(' '));
 
   const lids = fits.filter((f) => f.wears.indexOf('helmet') >= 0);

@@ -1122,7 +1122,12 @@ class Engine {
          undo. This is a head. */
       /* The field-built head's box includes a neck stub of a different
          length, so its overall height is its own number. */
-      const headHeight = headGeo.sdf ? 0.250 : 0.252;   // measured: 0.235 chin to crown, a real head
+      /* The field-built head a little larger and seated a little lower than
+         the sculpt: at 0.250 on a 9 mm seat it read as a small head on a
+         long neck -- one of the things that made these people look like
+         dolls. The kit (95b-gear.js) sits from the same seat. */
+      const headHeight = headGeo.sdf ? 0.262 : 0.252;   // measured: 0.235 chin to crown, a real head
+      const headSeat = headGeo.sdf ? SDF_HEAD_SEAT : 0.011;
       const headScale = (headHeight / HEAD_MESH_HEIGHT) * scale;
       const headActor = new Actor(this, {
         name: 'head',
@@ -1141,7 +1146,7 @@ class Engine {
            overlaps the top of the neck instead of balancing on it.
            Exactly level, the two surfaces meet in a seam and the head
            reads as a separate object sitting on a post. */
-        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - 0.011 * scale, 0.006 * scale],
+        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - headSeat * scale, 0.006 * scale],
         scale: headScale,
         boundRadius: 0.4 * scale,
       });
@@ -1177,7 +1182,7 @@ class Engine {
            overlaps the top of the neck instead of balancing on it.
            Exactly level, the two surfaces meet in a seam and the head
            reads as a separate object sitting on a post. */
-        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - 0.011 * scale, 0.006 * scale],
+        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - headSeat * scale, 0.006 * scale],
           scale: headScale, boundRadius: 0.45 * scale,
         });
         this.actors.push(a2);
@@ -1227,7 +1232,7 @@ class Engine {
            overlaps the top of the neck instead of balancing on it.
            Exactly level, the two surfaces meet in a seam and the head
            reads as a separate object sitting on a post. */
-        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - 0.011 * scale, 0.006 * scale],
+        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - headSeat * scale, 0.006 * scale],
           scale: headScale, boundRadius: 0.45 * scale,
         });
         this.actors.push(ea);

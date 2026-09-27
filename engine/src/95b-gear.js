@@ -41,6 +41,12 @@ const GEAR_MAT = {
   navy:     { color: 0x2b3340, texture: 'fabric', roughness: 0.90, metalness: 0, uvScale: 9 },
   olive:    { color: 0x44402c, texture: 'fabric', roughness: 0.91, metalness: 0, uvScale: 9 },
   rubber:   { color: 0x2a2b2c, texture: 'smooth', roughness: 0.76, metalness: 0, uvScale: 6 },
+  /* The goggles: the same rubber, casting no shadow. Their lenses stand
+     three centimetres off the forehead, and the shadow lookup's normal
+     offset carried points on the cheeks, the lip and the jaw into their
+     shadow -- black blotches across the face at every sun angle. A few
+     square centimetres of kit on the brow is not worth that. */
+  goggle:   { color: 0x2a2b2c, texture: 'smooth', roughness: 0.76, metalness: 0, uvScale: 6, castShadow: false },
   steel:    { color: 0x8d9298, texture: 'metal',  roughness: 0.40, metalness: 1, uvScale: 5 },
   brass:    { color: 0xb08a3c, texture: 'metal',  roughness: 0.34, metalness: 1, uvScale: 5 },
   glass:    { color: 0x9fb4ad, texture: 'smooth', roughness: 0.10, metalness: 0, opacity: 0.55 },
@@ -425,18 +431,35 @@ function gearBalaclava(headGeo, s) {
 
 /* Goggles, on the brow rather than over the eyes -- pushed up is how
    they are worn nine tenths of the time. */
-function gearGoggles(g, headY, s) {
-  gearStrap(g, [-0.116 * s, headY + 0.086 * s, 0.028 * s],
-    [0.116 * s, headY + 0.086 * s, 0.028 * s], 0.020 * s, 0.009 * s);
+function gearGoggles(g, headY, s, pts) {
+  /* FITTED TO THE SKULL, when the caller hands one over (o.headPts). The
+     band was a straight bar 0.232 wide, authored for a nominal head: on a
+     field-built skull its ends stood 4 cm clear of the temples like horns,
+     and the sun dropped their shadows onto the cheeks and the jaw as
+     black blotches. Now the band ends at the scalp, and the lenses sit on
+     the forehead that is actually there. */
+  const band = headY + 0.086 * s;
+  let hw = 0.116 * s, zf = 0.100 * s;
+  if (pts) {
+    let mx = 0, fz = -1e9;
+    for (let i = 0; i < pts.length; i += 3) {
+      if (Math.abs(pts[i + 1] - band) > 0.012 * s) continue;
+      mx = Math.max(mx, Math.abs(pts[i]));
+      if (Math.abs(pts[i]) < 0.040 * s) fz = Math.max(fz, pts[i + 2]);
+    }
+    if (mx > 0) hw = mx + 0.004 * s;
+    if (fz > -1e9) zf = fz - 0.004 * s;
+  }
+  gearStrap(g, [-hw, band, 0.028 * s], [hw, band, 0.028 * s], 0.020 * s, 0.009 * s);
   for (const sx of [1, -1]) {
-    gearSlab(g, sx * 0.014 * s, headY + 0.060 * s, 0.100 * s,
-      sx * 0.086 * s, headY + 0.112 * s, 0.130 * s, 3.0);
+    gearSlab(g, sx * 0.014 * s, headY + 0.060 * s, zf,
+      sx * Math.min(0.086 * s, hw - 0.006 * s), headY + 0.112 * s, zf + 0.030 * s, 3.0);
   }
   // The band round the back.
-  gearStrap(g, [-0.112 * s, headY + 0.086 * s, 0.020 * s],
-    [-0.070 * s, headY + 0.104 * s, -0.118 * s], 0.018 * s, 0.006 * s);
-  gearStrap(g, [0.112 * s, headY + 0.086 * s, 0.020 * s],
-    [0.070 * s, headY + 0.104 * s, -0.118 * s], 0.018 * s, 0.006 * s);
+  for (const sx of [1, -1]) {
+    gearStrap(g, [sx * (hw - 0.004 * s), band, 0.020 * s],
+      [sx * 0.070 * s, headY + 0.104 * s, -0.118 * s], 0.018 * s, 0.006 * s);
+  }
 }
 
 /* ------------------------------------------------------------------
@@ -460,7 +483,7 @@ const GEAR_PIECES = {
   respirator: { mat: 'rubber',  fn: (g, c) => gearRespirator(g, c.headY, c.s, c.o) },
   hood:       { mat: 'hazmat',  fn: (g, c) => gearHood(g, c.headY, c.s) },
   visor:      { mat: 'glass',   fn: (g, c) => gearVisor(g, c.headY, c.s) },
-  goggles:    { mat: 'rubber',  fn: (g, c) => gearGoggles(g, c.headY, c.s) },
+  goggles:    { mat: 'goggle',  fn: (g, c) => gearGoggles(g, c.headY, c.s, c.o.headPts || null) },
 };
 
 /* Build every piece on a list, grouped by material, skinned, and handed
@@ -492,7 +515,7 @@ function buildGear(skeleton, list, opts) {
      this is exactly the class of mistake that put every helmet in the
      game half a head too low the first time. One constant, both
      places, and a note at each end. */
-  const HEAD_SEAT = 0.011 * s;
+  const HEAD_SEAT = (opts && opts.headPts ? SDF_HEAD_SEAT : 0.011) * s;   // a field-built head sits lower (94d)
   const chinY = (hi >= 0 ? skeleton.bones[hi].bindMatrix.e[13] : 0.61 * s) - HEAD_SEAT;
   const HEAD_H = 0.252 * s;
   const headY = chinY + HEAD_H * 0.5;
@@ -516,7 +539,7 @@ function buildGear(skeleton, list, opts) {
   for (const [mat, g] of byMat) {
     if (!g.indices.length) continue;
     g.finalize();
-    if (Math.abs(s - 1) > 1e-6 && mat !== 'kevlar' && mat !== 'rubber' && mat !== 'hazmat'
+    if (Math.abs(s - 1) > 1e-6 && mat !== 'kevlar' && mat !== 'rubber' && mat !== 'goggle' && mat !== 'hazmat'
       && mat !== 'glass') {
       // Trunk kit is authored at stature 1; head kit already took `s`.
       for (let i = 0; i < g.positions.length; i++) g.positions[i] *= s;
