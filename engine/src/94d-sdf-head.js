@@ -263,6 +263,18 @@ function makeSdfHeadGeometry(opts = {}) {
   _meshRegion(g, R, h, PART.NECK, (x, y, z, out) => { out[0] = Math.atan2(x, z) / (2 * Math.PI) + 0.5; out[1] = (y + 0.167) / 0.297; });
   _fixUvSeams(g, t0, g.indices.length, 1);
 
+  return _headFinish(g, { EYE, EYE_R, tip, mouthY, nW, fem, lipZ: 0.093 }, opts);
+}
+
+
+/* Everything after the surface exists, shared by the field-built head and the
+   MakeHuman head (94f): skin colour variation, the cavity bake, painted hair,
+   brows and beard, the measurements the caller places the head by, and the
+   eyeballs. C carries the landmarks: EYE (centre of the left eyeball, metres),
+   EYE_R, the nose tip, the mouth line, the lips' depth, nose width, fem. */
+function _headFinish(g, C, opts) {
+  const { EYE, EYE_R, tip, mouthY, nW, fem, lipZ } = C;
+  const mirror = (fn) => { fn(1); fn(-1); };
   /* SKIN IS NOT ONE COLOUR. Blood near the surface reddens the cheeks,
      the nose, the ears and the lips; the skin under the eyes is thinner
      and darker; a man's shaved jaw carries a grey-blue shadow. All of it
@@ -278,7 +290,7 @@ function makeSdfHeadGeometry(opts = {}) {
       bump(x, y, z, tip, [0.014, 0.016, 0.02]) * 0.9, bump(Math.abs(x), y, z, [0.075, 0, -0.012], [0.014, 0.03, 0.02]) * 0.8);
     r *= 1 + red * 0.05; gg *= 1 - red * 0.07; b *= 1 - red * 0.06;
     // Centred on the lips where they now stand (az, the arch), not 12 mm behind them: they read as bare skin.
-    const lip = Math.max(bump(x, y, z, [0, mouthY + 0.004, 0.093], [0.023, 0.0055, 0.010]), bump(x, y, z, [0, mouthY - 0.0065, 0.091], [0.021, 0.0065, 0.010]));
+    const lip = Math.max(bump(x, y, z, [0, mouthY + 0.004, lipZ], [0.023, 0.0055, 0.010]), bump(x, y, z, [0, mouthY - 0.0065, lipZ - 0.002], [0.021, 0.0065, 0.010]));
     r *= 1 - lip * 0.08; gg *= 1 - lip * 0.28; b *= 1 - lip * 0.22;
     const line = Math.exp(-(((y - mouthY) / 0.0014) ** 2)) * (1 - _ss(0.017, 0.025, Math.abs(x))) * (z > 0.074 ? 1 : 0);
     r *= 1 - line * 0.55; gg *= 1 - line * 0.60; b *= 1 - line * 0.58;
@@ -316,7 +328,7 @@ function makeSdfHeadGeometry(opts = {}) {
      the skin as the hair's colour relative to the skin's, with a per-vertex
      jitter for the grain. Full beards and longer hair keep their shells;
      under them the paint closes any gap at the edge. */
-  paintHeadHair(g, Object.assign({}, opts, { _mouthY: mouthY * SDF_HEAD_TO_UNITS }));
+  paintHeadHair(g, Object.assign({}, opts, { _mouthY: mouthY * SDF_HEAD_TO_UNITS, _eyeY: EYE[1] * SDF_HEAD_TO_UNITS }));
 
   // The same measurements the old sculpt reported, so the caller places it the same way.
   {
@@ -329,6 +341,8 @@ function makeSdfHeadGeometry(opts = {}) {
     }
     // Measured from where the stub USED to end, so lengthening it does not shrink the head.
     lo = Math.max(lo, -0.132 * SDF_HEAD_TO_UNITS);
+    // A head that knows its own chin says so (94f): the search above can land on the front of a long neck.
+    if (C.chinY != null) chinY = C.chinY * SDF_HEAD_TO_UNITS;
     g.headBounds = { loY: lo, hiY: hi, height: hi - lo, chinY: chinY < 1e8 ? chinY : lo };
   }
 
@@ -405,6 +419,12 @@ function paintHeadHair(g, opts) {
     : (opts.type === 'female' ? ['arched', 'thin'] : ['straight', 'angled', 'heavy'])[(opts.seed || 5) % (opts.type === 'female' ? 2 : 3)];
   const browCol = opts.browColor != null ? opts.browColor : opts.hairColor != null ? opts.hairColor : 0x2a2320;
   const B = browStyle && BROW_STYLES[browStyle];
+  /* Where the head says where its eyes are, the band is centred 2.2 cm above them -- on the ridge, on
+     any skull -- rather than at a fixed fraction of the head's height, which put a woman's brows up at
+     her hairline on a smaller head. */
+  const browLift = B && opts._eyeY != null
+    ? (opts._eyeY + 0.022 * SDF_HEAD_TO_UNITS - lo[1]) / sy - (B.u[0] + B.u[1]) / 2
+    : BROW_LIFT;
   if (B) layers.push({ col: ratio(browCol), dens: 0.78, mask: (u, w, xn) => {
     const t = (xn - B.x[0]) / Math.max(1e-6, B.x[1] - B.x[0]);
     const rise = B.arch * Math.sin(Math.min(1, Math.max(0, t) / 0.68) * Math.PI * 0.5) * (1 - Math.max(0, t - 0.68) / 0.32 * 0.5);
@@ -416,7 +436,7 @@ function paintHeadHair(g, opts) {
        rounded and a little sparse, where the hairs stand up. */
     const tc = Math.max(0, Math.min(1, t));
     const taper = 1 - 0.58 * _ss(0.30, 1.0, tc);
-    const l = B.u[0] + BROW_LIFT + rise + B.tilt * (1 - t), h2 = l + (B.u[1] - B.u[0]) * taper;
+    const l = B.u[0] + browLift + rise + B.tilt * (1 - t), h2 = l + (B.u[1] - B.u[0]) * taper;
     const mid = (l + h2) * 0.5, half = (h2 - l) * 0.5;
     const inner = _ss(B.x[0] - 0.015, B.x[0] + 0.05, xn) * (0.80 + 0.20 * _ss(0.0, 0.18, tc));
     const tail = 1 - _ss(B.x[1] - 0.09, B.x[1] + 0.015, xn);

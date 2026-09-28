@@ -864,7 +864,9 @@ class Engine {
     /* The neck, in skin rather than in whatever the body is wearing.
        Same skeleton, same animator, so it moves as one piece with the
        rest of him -- it is only a second material, not a second body. */
-    if (geo.neck) {
+    /* A living face (94f) brings its own neck, skinned in below (after the head); the body's goes. */
+    const mhNeckHead = !model && opts.face !== false && rot < 0.01 && opts.sdfHead !== false && !!bodyEnt;
+    if (geo.neck && !mhNeckHead) {
       /* A BEARD DOES NOT STOP AT THE JAW. It is painted on the head, and
          under the jaw the skin on show is this mesh, so a bearded man had a
          clean-shaven strip between his beard and his collar. For the styles
@@ -1028,7 +1030,7 @@ class Engine {
         opts.hairColor || 0, opts.brows || '', opts.browColor || 0, opts.beard || '', opts.beardColor || 0, skinCol].join(':');
       const headCache = Engine._sdfHeads || (Engine._sdfHeads = new Map());
       const headGeo = living
-        ? (headCache.get(hk) || headCache.set(hk, makeSdfHeadGeometry({ seed: opts.seed || 5, type: opts.faceType,
+        ? (headCache.get(hk) || headCache.set(hk, makeMhHeadGeometry({ seed: opts.seed || 5, type: opts.faceType,
           face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
           hairStyle: hairOf, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
           beard: opts.beard, beardColor: opts.beardColor })).get(hk))
@@ -1055,7 +1057,7 @@ class Engine {
             if (typeof src === 'number') {
               g2 = headCache.get(hk + tag);
               if (!g2) {
-                g2 = makeSdfHeadGeometry({ seed: opts.seed || 5, type: opts.faceType,
+                g2 = makeMhHeadGeometry({ seed: opts.seed || 5, type: opts.faceType,
                   face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
                   hairStyle: hairOf, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
                   beard: opts.beard, beardColor: opts.beardColor, resolution: src });
@@ -1159,6 +1161,57 @@ class Engine {
       headActor.__geo = headGeo;
       actor.head = headActor;
       actor.face = face;
+
+      /* THE NECK OF A LIVING FACE (94f, `mhNeck`): the head mesh below the line of the jaw, carried into
+         the skeleton's rest pose exactly as the head actor places the head -- bone, offset, scale -- and
+         skinned there: wholly to the head at the cut, so it meets the rigid head seamlessly in every
+         pose, then the neck bone, then the chest down in the collar. It replaces the body's neck. */
+      if (headGeo.mhNeck && headGeo.mhNeck.indices.length && !actor.neck && skeleton.index('neck') >= 0) {
+        const W = this._mhNecks || (this._mhNecks = new Map());
+        const nk = hk + ':' + scale.toFixed(3);
+        let nm = W.get(nk);
+        if (!nm) {
+          const src = headGeo.mhNeck, S = SDF_HEAD_TO_UNITS;
+          const hi = skeleton.index('head'), ni = skeleton.index('neck');
+          const ci = skeleton.index('chest') >= 0 ? skeleton.index('chest') : ni;
+          const e = skeleton.bones[hi].bindMatrix.e;
+          const off = [0, -(HB ? HB.chinY : -0.36) * headScale - headSeat * scale, 0.006 * scale];
+          const g = new Geometry();
+          g.part = PART.NECK;
+          g.colors = [];
+          const n = src.positions.length / 3;
+          const J = new Float32Array(n * 4), Wt = new Float32Array(n * 4);
+          for (let v = 0; v < n; v++) {
+            const lx = off[0] + src.positions[v * 3] * headScale, ly = off[1] + src.positions[v * 3 + 1] * headScale, lz = off[2] + src.positions[v * 3 + 2] * headScale;
+            const nx = src.normals[v * 3], ny = src.normals[v * 3 + 1], nz = src.normals[v * 3 + 2];
+            g.vert(e[0] * lx + e[4] * ly + e[8] * lz + e[12], e[1] * lx + e[5] * ly + e[9] * lz + e[13], e[2] * lx + e[6] * ly + e[10] * lz + e[14],
+              e[0] * nx + e[4] * ny + e[8] * nz, e[1] * nx + e[5] * ny + e[9] * nz, e[2] * nx + e[6] * ny + e[10] * nz,
+              src.uvs[v * 2], src.uvs[v * 2 + 1]);
+            if (src.colors) g.colors.push(src.colors[v * 3], src.colors[v * 3 + 1], src.colors[v * 3 + 2]);
+            const d = src.below[v], y = src.positions[v * 3 + 1] / S;
+            const wh = 1 - _ss(0.0, 0.045, d), wc = (1 - wh) * _ss(-0.190, -0.235, y), wn = Math.max(0, 1 - wh - wc);
+            J[v * 4] = hi; J[v * 4 + 1] = ni; J[v * 4 + 2] = ci;
+            Wt[v * 4] = wh; Wt[v * 4 + 1] = wn; Wt[v * 4 + 2] = wc;
+          }
+          for (let t = 0; t < src.indices.length; t++) g.indices.push(src.indices[t]);
+          g.joints = J; g.weights = Wt;
+          g.finalize();
+          nm = new GpuMesh(this.gl, g);
+          nm.__key = 'mhneck:' + nk;
+          (this._geoByKey || (this._geoByKey = new Map())).set(nm.__key, g);
+          W.set(nk, nm);
+        }
+        const na = new Actor(this, {
+          name: 'neck', mesh: nm,
+          material: this.material(opts.skin != null ? opts.skin : 'skin'),
+          skeleton, animator, controller, body: controller.body,
+          boundRadius: 1.4 * scale,
+        });
+        na.visualOffset = new Vec3(0, 0, 0);
+        this.actors.push(na);
+        actor.neck = na;
+        (actor.rigged || (actor.rigged = [])).push(na);
+      }
 
       /* Hair and facial hair, cut out of the head's own surface and
          pushed out along its normals -- so they hug this particular
