@@ -22614,14 +22614,16 @@ function makeSdfHeadGeometry(opts = {}) {
   const h = opts.resolution || 0.0021;
 
   // Scalars from the controls, around 1 at the default head.
-  const wide = 1 + (F.boxy - 0.75) * 0.10 + heavy * 0.05 - fem * 0.04;
+  // Squareness and build widen the head by at most ~7 per cent: at 11 the heavy faces measured 16 cm
+  // across the cheekbones and 14 at the jaw, outside the range of real adults.
+  const wide = 1 + (F.boxy - 0.75) * 0.06 + heavy * 0.03 - fem * 0.04;
   const browR = 0.0085 + (F.brow - 0.040) * 0.16 + F.browShelf * 0.0025;
   const browZ = 0.083 + F.browShelf * 0.004 + (F.brow - 0.040) * 0.06;
   const orbitD = 0.015 * (F.orbit / 0.085);
   const cheekK = 1 + (F.cheek - 0.019) * 14;
-  const gonX = (0.045 + (F.gonialX - 0.026) * 0.45 + heavy * 0.004 - fem * 0.004) * wide;
+  const gonX = (0.040 + (F.gonialX - 0.026) * 0.45 + heavy * 0.004 - fem * 0.004) * wide;
   const jawR = 0.0125 + F.jawSquare * 0.0035 + heavy * 0.002;
-  const chinZ = 0.064 + (F.chin - 0.062) * 0.35;
+  const chinZ = 0.067 + (F.chin - 0.062) * 0.35;   // 3 mm further forward: with the chin raised, the old projection read as receding
   const chinW = 0.019 * (F.chinWide / 0.072);
   const nL = F.noseLen, nB = F.noseBridge, nW = F.noseWide;
 
@@ -22648,14 +22650,15 @@ function makeSdfHeadGeometry(opts = {}) {
   if (F.boxy > 0.8) U(_box([0, 0.040, -0.014], [1, 0, 0], [0, 1, 0], [0.062 * wide, 0.070, 0.082], 0.040, 0.02));
   U(_ell([0, 0.060 + (F.forehead - 0.022) * 0.3, 0.040 + (F.forehead - 0.022) * 0.35], [0.060 * wide * vaultX, 0.052, 0.046]));   // forehead
   U(_ell([0, -0.030 + (F.occiputHigh - 0.022) * 0.5, -0.052 - (F.backFull - 0.035) * 0.3], [0.058 * wide * (1 + (F.backWide - 0.030) * 1.5), 0.050, 0.050]));   // occiput / nape
-  mirror((s) => U(_ell([s * 0.050 * wide, 0.024, 0.002], [0.030, 0.052, 0.058], 0.03))); // temples / sides
+  // Set back and in: level with the cheekbones it made the face as wide as the skull (16 cm, against 14).
+  mirror((s) => U(_ell([s * 0.044 * wide, 0.030, -0.010], [0.027, 0.048, 0.054], 0.03))); // temples / sides
 
   /* ---- brow ---- */
   const bW = 0.040 * wide * (F.browWide / 0.150), bT = F.browTall / 0.058;
   U(_cone([-bW, EYE[1] + 0.017 * bT, browZ - 0.010], [0, EYE[1] + 0.020 * bT, browZ + 0.003], browR, browR * 1.05, 0.016));
   U(_cone([bW, EYE[1] + 0.017 * bT, browZ - 0.010], [0, EYE[1] + 0.020 * bT, browZ + 0.003], browR, browR * 1.05, 0.016));
   // Level with the brow ridge, not standing off it: 1.5 mm proud, it was a knob between the brows on every face.
-  U(_ell([0, EYE[1] + 0.012, 0.0785 + F.glabella * 0.15], [0.012, 0.012, 0.010], 0.016));   // glabella
+  U(_ell([0, EYE[1] + 0.012, 0.0805 + F.glabella * 0.15], [0.012, 0.012, 0.010], 0.016));   // glabella
 
   /* ---- midface, cheekbones, the orbits carved into them ---- */
   U(_ell([0, -0.028, 0.058], [0.040 * wide, 0.042, 0.036]));                      // maxilla
@@ -22698,8 +22701,8 @@ function makeSdfHeadGeometry(opts = {}) {
   });
 
   /* ---- nose ---- */
-  const tip = [0, -0.028 - (nL - 1) * 0.012, 0.104 + (nL - 1) * 0.006 + (nB - 1) * 0.004];
-  const root = [0, EYE[1] + 0.006, 0.083 + (nB - 1) * 0.003];
+  const tip = [0, -0.028 - (nL - 1) * 0.012, 0.107 + (nL - 1) * 0.006 + (nB - 1) * 0.004];
+  const root = [0, EYE[1] + 0.006, 0.086 + (nB - 1) * 0.003];   // the bridge 9 mm proud of the cornea, as measured on people: at 6 it read flat
   U(_cone(root, [tip[0] + F.noseBend * 0.004, tip[1] + 0.008, tip[2] - 0.004], 0.0062, 0.0074 * (0.85 + 0.15 * nW), 0.010));  // bridge
   if (F.noseHump > 0) U(_ell(_lerp3(root, tip, 0.45).map((v, i) => v + [0, 0, 0.0035 * F.noseHump][i]), [0.0058, 0.009, 0.0045], 0.004));
   U(_ell(tip, [0.0105 * (0.8 + 0.2 * nW), 0.0098, 0.0092], 0.008));                               // tip
@@ -22712,34 +22715,41 @@ function makeSdfHeadGeometry(opts = {}) {
     0.0020 * (F.nasolabial / 0.017), 0.0018, 0.022)));   // nasolabial fold, soft (a line, not a gash)
 
   /* ---- mouth ---- */
-  const mouthY = -0.068;
-  U(_ell([0, -0.061, 0.058], [0.033, 0.028, 0.027]));                                             // muzzle
+  /* THE LOWER FACE, MEASURED. Against adult averages (subnasale to mouth 2.1 cm, mouth to chin 4.6,
+     nasion to chin 12.1) the mouth sat 7 mm and the chin 14 mm too low: a long, heavy lower face
+     under normal eyes, which is most of why these read as something other than ordinary people. */
+  const LIFT_MOUTH = 0.007, LIFT_CHIN = 0.014;
+  const mouthY = -0.068 + LIFT_MOUTH;
+  U(_ell([0, -0.061 + LIFT_MOUTH, 0.058], [0.033, 0.028, 0.027]));                                             // muzzle
   /* THE LIPS FOLLOW THE TEETH. They were two straight ellipsoids across a muzzle that curves back
      round the dental arch, so their ends stood proud of the face at the corners -- two pale knobs
      either side of the mouth, read as fangs. Now each lip is a centre and two side pieces set back
      onto the arch (`az`, the muzzle's own front), and the line between them follows it too. */
   const az = (x) => 0.058 + 0.027 * Math.sqrt(Math.max(0, 1 - (x / 0.033) ** 2));
   const lw = 1 + fem * 0.08;
-  U(_ell([0, mouthY + 0.0050, az(0) - 0.0042], [0.0140 * lw, 0.0050 + fem * 0.0012, 0.0062], 0.010));   // upper lip
-  U(_ell([0, mouthY - 0.0066, az(0) - 0.0055], [0.0130 * lw, 0.0062 + fem * 0.0012, 0.0060], 0.012));   // lower lip
+  U(_ell([0, mouthY + 0.0050, az(0) + 0.0006], [0.0140 * lw, 0.0050 + fem * 0.0012, 0.0062], 0.010));   // upper lip
+  U(_ell([0, mouthY - 0.0066, az(0) - 0.0012], [0.0130 * lw, 0.0062 + fem * 0.0012, 0.0060], 0.012));   // lower lip
   mirror((s) => {
-    U(_ell([s * 0.0115 * lw, mouthY + 0.0040, az(0.0115) - 0.0042], [0.0105 * lw, 0.0038 + fem * 0.001, 0.0052], 0.014));
-    U(_ell([s * 0.0100 * lw, mouthY - 0.0052, az(0.0100) - 0.0052], [0.0095 * lw, 0.0044 + fem * 0.001, 0.0052], 0.014));   // thinner at the sides: a lip is a crescent
+    U(_ell([s * 0.0115 * lw, mouthY + 0.0040, az(0.0115) - 0.0005], [0.0105 * lw, 0.0038 + fem * 0.001, 0.0052], 0.014));
+    U(_ell([s * 0.0100 * lw, mouthY - 0.0052, az(0.0100) - 0.0018], [0.0095 * lw, 0.0044 + fem * 0.001, 0.0052], 0.014));   // thinner at the sides: a lip is a crescent
     // Where the lips meet, thinning to nothing at the corner: a round end left a dark dot there.
-    S(_cone([0, mouthY, az(0) + 0.0010], [s * 0.0215 * lw, mouthY, az(0.0215 * lw) + 0.0004], 0.0010, 0.0003, 0.0040));
+    S(_cone([0, mouthY, az(0) + 0.0056], [s * 0.0215 * lw, mouthY, az(0.0215 * lw) + 0.0030], 0.0010, 0.0003, 0.0040));
     // No pit cut at the corner: seen from three quarters it read as a knob, not a crease.
   });
-  S(_cone([0, -0.050, 0.0925 + (0.015 - F.philtrum) * 0.05], [0, mouthY + 0.0135, 0.0915 + (0.015 - F.philtrum) * 0.05], 0.0034, 0.0030, 0.008));                 // philtrum, stopping short of the lip: its end notched the lip's top
-  S(_ell([0, mouthY - 0.019, 0.080], [0.014, 0.004, 0.004], 0.010));                                 // mentolabial sulcus
+  S(_cone([0, -0.045, 0.0925 + (0.015 - F.philtrum) * 0.05], [0, mouthY + 0.0135, 0.0915 + (0.015 - F.philtrum) * 0.05], 0.0034, 0.0030, 0.008));                 // philtrum, stopping short of the lip: its end notched the lip's top
 
   /* ---- jaw and chin ---- */
-  const chin = [0, -0.104 + faceLen, chinZ + (F.mental - 0.022) * 0.25];
+  const chin = [0, -0.104 + LIFT_CHIN + faceLen, chinZ + (F.mental - 0.022) * 0.25];
   mirror((s) => {
-    const gon = [s * gonX * jawTaper, -0.074 + F.jawSquare * 0.003 + (F.gonialLow + 0.212) * U2M + faceLen * 0.5, -0.012 - (F.jawDepth - 0.055) * 0.25];
+    const gon = [s * gonX * jawTaper, -0.074 + LIFT_CHIN * 0.6 + F.jawSquare * 0.003 + (F.gonialLow + 0.212) * U2M + faceLen * 0.5, -0.012 - (F.jawDepth - 0.055) * 0.25];
     U(_cone(gon, [s * 0.016, chin[1], chin[2] - 0.008], jawR * 0.9, 0.012, 0.022));                          // mandible body
     U(_cone([s * (gonX + 0.003), -0.018, -0.014], gon, 0.011, jawR * 0.9, 0.02));                        // ramus
   });
   U(_ell(chin, [chinW * wide, 0.015, 0.0125], 0.016));
+  /* The fold between the lower lip and the chin, 4-5 mm deep as on people. With the chin raised it had
+     filled in, and the profile ran from the nose to the chin in one smooth slope with no mouth in it. */
+  // (After the chin: cut before it, the chin's own mass filled it straight back in.)
+  S(_ell([0, mouthY - 0.021, 0.0890], [0.016, 0.0048, 0.0048], 0.010));                                 // mentolabial sulcus
   /* A cleft chin is a soft dimple a millimetre or two deep, not a groove: the cut line it was drew a
      seam from the lip to the point of the chin, with a dot at the end. */
   if (F.chinCleft > 0) S(_ell([0, chin[1] + 0.003, chin[2] + 0.0125 + 0.0045 - 0.0016 * Math.min(1, F.chinCleft)], [0.0045, 0.0080, 0.0045], 0.010));
@@ -22753,11 +22763,11 @@ function makeSdfHeadGeometry(opts = {}) {
   });
 
   // The masseters: the jaw's corner is muscle, not a hollow.
-  mirror((s) => U(_ell([s * 0.046 * wide, -0.052, 0.012], [0.014, 0.026, 0.024], 0.030)));
+  mirror((s) => U(_ell([s * 0.041 * wide, -0.048, 0.012], [0.013, 0.024, 0.022], 0.030)));
   /* Under the jaw: the floor of the mouth and the muscles running down to
      the neck, so the jaw's angle sits on something instead of over a pit. */
-  U(_ell([0, -0.096, 0.012], [0.040 * wide, 0.020, 0.046], 0.022));
-  mirror((s) => U(_cone([s * 0.052 * wide, -0.030, -0.030], [s * 0.020, -0.125, 0.020], 0.013, 0.012, 0.022)));  // sternomastoid
+  U(_ell([0, -0.096 + LIFT_CHIN, 0.012], [0.036 * wide, 0.020, 0.046], 0.022));
+  mirror((s) => U(_cone([s * 0.048 * wide, -0.030, -0.030], [s * 0.020, -0.125, 0.020], 0.012, 0.011, 0.022)));  // sternomastoid
 
   /* ---- neck stub, to overlap the body's neck ----
      It used to stop at -0.132, cut flat by the mesher's box, exactly
@@ -22765,7 +22775,8 @@ function makeSdfHeadGeometry(opts = {}) {
      and read as a ring under every jaw. Now it runs 3.5 cm further down
      INSIDE the body's neck, whose top tapers in under it (94c): the two
      surfaces cross, so the only thing on show is a soft crease. */
-  U(_cone([0, -0.058, -0.024], [0, -0.160, -0.017], 0.058 * wide, 0.044 * wide, 0.02));
+  // 10.4 cm across at the top, not 11.6: as wide as the jaw, the neck left no jawline to see.
+  U(_cone([0, -0.058, -0.024], [0, -0.160, -0.017], 0.052 * wide, 0.044 * wide, 0.02));
 
   /* THE COARSE LEVELS OF DETAIL (95-engine meshes the same field again at 4.2, 7.5 and 12 mm for
      distance). A cut thinner than a cell -- the line of the lips, the corners, the nostrils, the
@@ -22805,8 +22816,9 @@ function makeSdfHeadGeometry(opts = {}) {
     const red = Math.max(bump(x, y, z, [0.040, -0.028, 0.060], [0.028, 0.024, 0.03]), bump(x, y, z, [-0.040, -0.028, 0.060], [0.028, 0.024, 0.03]),
       bump(x, y, z, tip, [0.014, 0.016, 0.02]) * 0.9, bump(Math.abs(x), y, z, [0.075, 0, -0.012], [0.014, 0.03, 0.02]) * 0.8);
     r *= 1 + red * 0.05; gg *= 1 - red * 0.07; b *= 1 - red * 0.06;
-    const lip = Math.max(bump(x, y, z, [0, mouthY + 0.005, 0.082], [0.022, 0.007, 0.012]), bump(x, y, z, [0, mouthY - 0.007, 0.080], [0.020, 0.008, 0.012]));
-    r *= 1 - lip * 0.06; gg *= 1 - lip * 0.24; b *= 1 - lip * 0.18;
+    // Centred on the lips where they now stand (az, the arch), not 12 mm behind them: they read as bare skin.
+    const lip = Math.max(bump(x, y, z, [0, mouthY + 0.004, 0.093], [0.023, 0.0055, 0.010]), bump(x, y, z, [0, mouthY - 0.0065, 0.091], [0.021, 0.0065, 0.010]));
+    r *= 1 - lip * 0.08; gg *= 1 - lip * 0.28; b *= 1 - lip * 0.22;
     const line = Math.exp(-(((y - mouthY) / 0.0014) ** 2)) * (1 - _ss(0.017, 0.025, Math.abs(x))) * (z > 0.074 ? 1 : 0);
     r *= 1 - line * 0.55; gg *= 1 - line * 0.60; b *= 1 - line * 0.58;
     const under = Math.max(bump(x, y, z, [EYE[0], EYE[1] - 0.013, EYE[2] + 0.005], [0.016, 0.006, 0.012]), bump(x, y, z, [-EYE[0], EYE[1] - 0.013, EYE[2] + 0.005], [0.016, 0.006, 0.012]));
@@ -22816,7 +22828,7 @@ function makeSdfHeadGeometry(opts = {}) {
     r *= 1 - nos * 0.55; gg *= 1 - nos * 0.62; b *= 1 - nos * 0.62;
     if (!fem && opts.shave !== false) {
       // Fading out under the jaw: carried down the neck stub it ended in a line where the body's neck takes over.
-      const jaw = Math.max(0, Math.min(1, (-0.040 - y) / 0.03)) * (z > -0.02 ? 1 : 0) * (1 - lip) * (1 - _ss(0.098, 0.122, -y));
+      const jaw = Math.max(0, Math.min(1, (-0.036 - y) / 0.03)) * (z > -0.02 ? 1 : 0) * (1 - lip) * (1 - _ss(0.086, 0.108, -y));
       const upper = bump(x, y, z, [0, -0.051, 0.084], [0.024, 0.006, 0.012]);
       const sh = Math.max(jaw, upper) * 0.10;
       r *= 1 - sh * 1.2; gg *= 1 - sh * 1.0; b *= 1 - sh * 0.6;
@@ -22843,7 +22855,7 @@ function makeSdfHeadGeometry(opts = {}) {
      the skin as the hair's colour relative to the skin's, with a per-vertex
      jitter for the grain. Full beards and longer hair keep their shells;
      under them the paint closes any gap at the edge. */
-  paintHeadHair(g, opts);
+  paintHeadHair(g, Object.assign({}, opts, { _mouthY: mouthY * SDF_HEAD_TO_UNITS }));
 
   // The same measurements the old sculpt reported, so the caller places it the same way.
   {
@@ -22909,6 +22921,11 @@ const _ss = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - 
    crease between the lid and the ridge -- measured, 8 mm low -- and reads as a smudge of shadow on
    the lid. Up onto the ridge, where brows grow. */
 const BROW_LIFT = 0.028;
+/* The beard tables (91-face) are laid out against the old lower face. The mouth now sits 7 mm higher
+   and the chin 14 mm higher (see LIFT_MOUTH, LIFT_CHIN), so the bare band left for the lips and the
+   beard's lower edge move up with them -- in the normalised height of a ~0.25 m head, 0.028 and 0.05.
+   Left where they were, a full beard grew over the lower lip. */
+const LIP_LIFT = 0.028, BEARD_LIFT = 0.045;
 
 function paintHeadHair(g, opts) {
   const P = g.positions, C = g.colors, n = P.length / 3;
@@ -22947,15 +22964,20 @@ function paintHeadHair(g, opts) {
     return _ss(0.66, 0.74, w) * inner * tail * band * (1 - 0.25 * _ss(0.6, 1.0, tc));
   } });
   const Bd = opts.beard && BEARD_STYLES[opts.beard];
+  const uMouth = opts._mouthY != null ? (opts._mouthY - lo[1]) / sy : null, duM = SDF_HEAD_TO_UNITS / sy;
   if (Bd) layers.push({ col: ratio(opts.beardColor != null ? opts.beardColor : 0x2a2320), dens: opts.beard === 'stubble' ? 0.42 : 0.90, mask: (u, w, xn) => {
     /* Soft on every side -- hair thins out at the edge of a beard, it does not stop -- and softest
        at the top and the front, where a sideburn or a pair of chops was a hard-edged rectangle. */
-    let m = _ss(Bd.u[0] - 0.012, Bd.u[0] + 0.025, u) * (1 - _ss(Bd.u[1] - 0.060, Bd.u[1] + 0.010, u))
+    // The top edge rises with the mouth wherever it is a moustache line (below the cheekbone), not a sideburn.
+    const u1 = Bd.u[1] + (Bd.u[1] < 0.4 ? LIP_LIFT : 0), u0 = Bd.u[0] + (Bd.overLip ? LIP_LIFT : BEARD_LIFT);
+    let m = _ss(u0 - 0.012, u0 + 0.025, u) * (1 - _ss(u1 - 0.060, u1 + 0.010, u))
       * _ss(Bd.w[0] - 0.04, Bd.w[0] + 0.04, w) * (1 - _ss(Bd.x - 0.08, Bd.x + 0.02, xn))
       /* Only a style that leaves the middle bare (a split) fades there: with no xMin this still took the
          beard to a quarter at the centre line, a bare stripe down the lip and chin. */
       * (Bd.xMin ? _ss(Bd.xMin - 0.09, Bd.xMin + 0.10, xn) : 1);
-    if (!Bd.overLip) { const L = Bd.lips || [0.198, 0.272]; m *= 1 - _ss(0.84, 0.88, w) * _ss(L[0] - 0.005, L[0] + 0.01, u) * (1 - _ss(L[1] - 0.01, L[1] + 0.005, u)) * (1 - _ss(0.36, 0.42, xn)); }
+    if (!Bd.overLip) {
+      // The bare band for the lips, from where the mouth actually is: 13.5 mm below the line to 10.5 above.
+      const L = uMouth != null ? [uMouth - 0.0135 * duM, uMouth + 0.0105 * duM] : (Bd.lips || [0.198, 0.272]).map((v) => v + LIP_LIFT); m *= 1 - _ss(0.84, 0.88, w) * _ss(L[0] - 0.005, L[0] + 0.01, u) * (1 - _ss(L[1] - 0.01, L[1] + 0.005, u)) * (1 - _ss(0.36, 0.42, xn)); }
     return m;
   } });
   const H = opts.hairStyle && HAIR_STYLES[opts.hairStyle];
@@ -25315,11 +25337,11 @@ const OP_FACE = {
     brow: 0.020, browShelf: 0, browWide: 0.125, browTall: 0.046,
     glabella: 0.020, orbit: 0.070, orbitWide: 0.074, orbitTall: 0.064,
     orbitX: 0.086, orbitY: 0.038, lidFold: 0.010, temple: 0.006,
-    cheek: 0.034, cheekX: 0.142, cheekY: -0.014, cheekZ: 0.018,
+    cheek: 0.046, cheekX: 0.142, cheekY: -0.014, cheekZ: 0.032,
     malarHollow: 0,
-    jaw: 0.150, jawDepth: 0.072, jawSquare: 0.25,
-    gonialX: 0.024, gonialY: 0.020, gonialAt: 0.124, gonialLow: -0.222,
-    chin: 0.090, chinWide: 0.066, chinY: -0.292, mental: 0.028,
+    jaw: 0.150, jawDepth: 0.072, jawSquare: 0.55,
+    gonialX: 0.032, gonialY: 0.020, gonialAt: 0.124, gonialLow: -0.222,
+    chin: 0.090, chinWide: 0.080, chinY: -0.292, mental: 0.028,
     nasolabial: 0.020, philtrum: 0.018,
   },
 
