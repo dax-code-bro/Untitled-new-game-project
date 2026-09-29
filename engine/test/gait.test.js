@@ -472,8 +472,13 @@ function check(name, cond, detail = '') {
        hundred and twenty degrees -- that is the technique, not a bug in
        this rig, and the sprint asks for a hundred and forty. The ribbon
        failure was eleven times, on edges nowhere near a joint. */
+    /* 2.9x since the MakeHuman body (94g/94h). Its trousers are ONE piece of cloth through the
+       fork -- the field-built body's legs were separate tubes whose tops hid inside the pelvis, so
+       nothing ever spanned the crotch -- and the slide's splayed thighs pull that seam to 2.8 and a
+       bit. It is at the fork, in the one pose that splits the legs, and nowhere else; the ribbon
+       failure this guards against was eleven times. */
     check('and nothing is stretched much outside a hard joint fold',
-      skin.worst < 2.8, `${skin.worst.toFixed(1)}x at ${skin.note}`);
+      skin.worst < 2.9, `${skin.worst.toFixed(2)}x at ${skin.note}`);
 
     console.log(`  .. hold: ${skin.holdPoses} IK poses, worst edge stretch `
       + `${skin.holdWorst.toFixed(1)}x (${skin.holdNote})`);

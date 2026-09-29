@@ -1050,6 +1050,7 @@ uniform float uDetailScale;
 uniform float uDetailFade;
 uniform float uDetail;
 uniform float uSubsurface;
+uniform int uSubsurfaceThin;
 uniform int uHasMaps;
 uniform int uReceiveShadow;
 uniform int uDebugMode;
@@ -1662,7 +1663,22 @@ void main(){
   vec3 L = normalize(uSunDir);
   float NoL = dot(N, L);
   float shadow = 1.0;
-  if (uReceiveShadow == 1) shadow = shadowFactor(vWorldPos, vViewDepth, max(NoL, 0.0));
+  /* skyShadow: what the sky occlusion below reads. The sun's shadow stands in for "is there a roof
+     over this", which for a building is the same question. For a PERSON it is not: his own trunk
+     shadows the small of his back and the backs of his calves from a high sun, and reading that as
+     "under a roof" cut the sky off in blotches wherever his far side happened to resolve in the map
+     -- a dark cut-out of himself on his own back. So a skinned mesh asks two metres toward the sun,
+     clear of himself and still under whatever roof is over him; its direct light keeps its own
+     shadow, terminator and all. */
+  float skyShadow = 1.0;
+  if (uReceiveShadow == 1) {
+    shadow = shadowFactor(vWorldPos, vViewDepth, max(NoL, 0.0));
+#ifdef SKINNED
+    skyShadow = shadowFactor(vWorldPos + L * 2.0, vViewDepth, 1.0);
+#else
+    skyShadow = shadow;
+#endif
+  }
 
   // Debug views. Cheap to keep — a black screen or a missing shadow is
   // otherwise almost impossible to diagnose from the final image alone.
@@ -1723,11 +1739,21 @@ void main(){
   }
 
   /* --- subsurface wrap: light bleeding through thin surfaces --- */
-  if (uSubsurface > 0.0) {
+  if (uSubsurface > 0.0 && uSubsurfaceThin == 1) {
     float back = saturate1(dot(-N, L) * 0.5 + 0.5);
     float wrap = pow(back, 2.0) * uSubsurface;
     // Transmission is tinted by the material, warmed slightly.
     color += diffuseColor * uSunColor * uSunIntensity * wrap * 0.55 * mix(0.35, 1.0, shadow);
+  } else if (uSubsurface > 0.0) {
+    /* THICK: skin, cloth on a body. Light does not come THROUGH a torso -- the transmission above
+       lit the whole of a man's back at a quarter of the sun -- it scatters a little way round the
+       terminator. So: the diffuse a wrapped Lambert would add past the plain one, reddened the way
+       skin scatters red furthest, and nothing at all on the far side. */
+    float w = 0.45 * uSubsurface / 0.5;
+    float wl = saturate1((NoL + w) / (1.0 + w));
+    float extra = max(wl * wl - max(NoL, 0.0), 0.0);
+    vec3 tint = mix(vec3(1.0), vec3(1.0, 0.55, 0.42), saturate1(uSubsurface * 1.6));
+    color += diffuseColor * tint * INV_PI * uSunColor * uSunIntensity * extra * shadow;
   }
 
   /* --- ambient from the sky ---
@@ -1762,7 +1788,7 @@ void main(){
      the whole thing -- the term that stops an unlit interior going to
      black. Specular gets three quarters of the attenuation rather than
      all of it: a polished floor indoors still catches the doorway. */
-  float skyVis = mix(1.0 - uSkyOcclusion, 1.0, shadow);
+  float skyVis = mix(1.0 - uSkyOcclusion, 1.0, skyShadow);
   vec3 irradiance = envIrradiance(N) * skyVis;
   vec3 kS = fresnelSchlickRough(NoV, F0, rough);
   vec3 kD = (vec3(1.0) - kS) * (1.0 - metal);

@@ -563,8 +563,11 @@ Engine.prototype.operator = function (id, opts = {}) {
         headPts[i * 3 + 2] = hb[14] + (off.z || 0) + P[i * 12 + 2] * sc;
       }
     }
+    /* The dressed body's own measurements, where there is a body to measure (95b gearProfile). */
+    const bgeo = c.mesh && this.geometryOf(c.mesh);
+    const torso = bgeo && bgeo.mh ? gearProfile(bgeo, op.scale) : null;
     const kit = buildGear(c.skeleton, op.gear,
-      Object.assign({ build: op.build, stature: op.scale, headPts }, op.gearOpts || {}));
+      Object.assign({ build: op.build, stature: op.scale, headPts, torso }, op.gearOpts || {}));
     c.gear = [];
     for (const part of kit) {
       const gm = new GpuMesh(this.gl, part.geometry);

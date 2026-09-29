@@ -1335,7 +1335,8 @@ class Renderer {
     sh.f('uParallaxRange', pRange);
     sh.f('uParallaxTop', (mat.maps && mat.maps.heightTop != null) ? mat.maps.heightTop : 1);
     sh.f('uDetailNormal', this.quality.detailNormal ? 1 : 0);
-    sh.f('uSubsurface', mat.subsurface);    /* ---- FEATURE 6: COAT AND CLOTH, PER MATERIAL ----
+    sh.f('uSubsurface', mat.subsurface);
+    sh.i('uSubsurfaceThin', mat.thin ? 1 : 0);    /* ---- FEATURE 6: COAT AND CLOTH, PER MATERIAL ----
        Five uniforms, four of them a float. Zero by default, and the
        shader's branches on the two weights are uniform across a draw
        call, so a material that wants neither pays two compares.

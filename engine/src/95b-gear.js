@@ -56,6 +56,52 @@ const GEAR_MAT = {
 
 const _gz = new Vec3(0, 0, 1), _gx = new Vec3(1, 0, 0), _gy = new Vec3(0, 1, 0);
 
+/* THE BODY IT IS ON, MEASURED. The numbers in the table above are the old field-built torso's, and
+   on the MakeHuman figure (94g) -- fuller in the chest, the spine further back, a real waist -- a
+   carrier built to them sank into the shirt until only its pouches showed. So when the body is
+   there to measure, every trunk piece is fitted to it: this reads the dressed body's bind pose into
+   a profile, in stature-1 units like everything else here (buildGear scales the kit afterwards).
+
+     at(y0, y1)      the trunk between two heights: widest half-width, frontmost and backmost
+     shoulderTop(x)  the top of the shoulder at that distance from the midline
+     thighOuter(y)   the outside of the thigh at a height
+     kneeFront(S)    the front of the knee, per side */
+function gearProfile(geo, stature) {
+  if (!geo || !geo.positions || !geo.parts) return null;
+  const P = geo.positions, parts = geo.parts, n = P.length / 3, st = stature || 1;
+  const trunk = [], legs = [];
+  for (let i = 0; i < n; i++) {
+    const x = P[i * 3] / st, y = P[i * 3 + 1] / st, z = P[i * 3 + 2] / st;
+    if (parts[i] === PART.BODY) trunk.push(x, y, z);
+    else if (parts[i] === PART.LEG_L || parts[i] === PART.LEG_R) legs.push(x, y, z);
+  }
+  const at = (y0, y1) => {
+    let w = 0, zf = -1, zb = 1;
+    for (let i = 0; i < trunk.length; i += 3) {
+      const y = trunk[i + 1];
+      if (y < y0 || y > y1) continue;
+      w = Math.max(w, Math.abs(trunk[i])); zf = Math.max(zf, trunk[i + 2]); zb = Math.min(zb, trunk[i + 2]);
+    }
+    return { w, zf, zb, d: (zf - zb) / 2, cz: (zf + zb) / 2 };
+  };
+  const shoulderTop = (x) => {
+    let y = 0;
+    for (let i = 0; i < trunk.length; i += 3) if (Math.abs(Math.abs(trunk[i]) - x) < 0.012 && Math.abs(trunk[i + 2]) < 0.04) y = Math.max(y, trunk[i + 1]);
+    return y;
+  };
+  const thighOuter = (y) => {
+    let x = 0;
+    for (let i = 0; i < legs.length; i += 3) if (Math.abs(legs[i + 1] - y) < 0.012) x = Math.max(x, Math.abs(legs[i]));
+    return x;
+  };
+  const kneeFront = (S, ky) => {
+    let z = -1;
+    for (let i = 0; i < legs.length; i += 3) if ((S === 'L' ? legs[i] > 0 : legs[i] < 0) && Math.abs(legs[i + 1] - ky) < 0.02) z = Math.max(z, legs[i + 2]);
+    return z;
+  };
+  return { at, shoulderTop, thighOuter, kneeFront };
+}
+
 /* A slab: a rounded box given as two corners. The workhorse -- a plate,
    a pouch, a radio and a magazine are all slabs at different sizes, and
    building them from one primitive is what keeps the whole kit
@@ -104,11 +150,11 @@ function gearStrap(g, a, b, w, t, e) {
 /* A band right round the trunk at a height, following the torso's own
    cross-section so a belt sits ON the waist rather than hovering in a
    circle around it. */
-function gearBand(g, y0, y1, w, d, out, e) {
+function gearBand(g, y0, y1, w, d, out, e, cz = 0) {
   loftRings(g, [
-    { p: new Vec3(0, y0, 0), w: w + out, d: d + out, e: e || 2.5 },
-    { p: new Vec3(0, (y0 + y1) / 2, 0), w: w + out * 1.06, d: d + out * 1.06, e: e || 2.5 },
-    { p: new Vec3(0, y1, 0), w: w + out, d: d + out, e: e || 2.5 },
+    { p: new Vec3(0, y0, cz), w: w + out, d: d + out, e: e || 2.5 },
+    { p: new Vec3(0, (y0 + y1) / 2, cz), w: w + out * 1.06, d: d + out * 1.06, e: e || 2.5 },
+    { p: new Vec3(0, y1, cz), w: w + out, d: d + out, e: e || 2.5 },
   ], 22, false, false);
 }
 
@@ -144,6 +190,26 @@ function gearTube(g, p, axis, r, len, seg) {
    one looks like a man in one. */
 function gearPlateCarrier(g, k, o) {
   const s = o.scale || 1;
+  const T = o.torso;
+  if (T) {
+    /* Fitted: the plates stand just clear of the chest and the back over their own height, the
+       cummerbund round the ribs as they are, the straps over the shoulders where they are. A plate
+       is a standard size (25 x 32 cm, about), whatever the chest behind it. */
+    const Fr = T.at(0.19 * s, 0.41 * s), Bk = T.at(0.17 * s, 0.43 * s), Rb = T.at(0.21 * s, 0.32 * s);
+    const W = Math.min(0.128 * s, Fr.w * 0.80);
+    const zf = Fr.zf + 0.006 * s, zb = Bk.zb - 0.006 * s;
+    o._plate = { zf: zf + 0.024 * s, zb: zb - 0.024 * s, W };
+    const top = Math.max(0.40 * s, T.shoulderTop(0.060 * s) - 0.075 * s);
+    gearSlab(g, -W, 0.196 * s, zf, W, top, zf + 0.024 * s, 3.6);
+    gearSlab(g, -W, 0.176 * s, zb - 0.024 * s, W, top + 0.016 * s, zb, 3.6);
+    gearBand(g, 0.214 * s, 0.318 * s, Rb.w, Rb.d, 0.014 * s, 2.7, Rb.cz);
+    for (const sx of [1, -1]) {
+      const xs = 0.085 * s, ys = T.shoulderTop(xs) + 0.008 * s;
+      gearStrap(g, [sx * W * 0.62, top - 0.012 * s, zf + 0.018 * s], [sx * xs, ys, (zf + zb) * 0.5], 0.038 * s, 0.013 * s);
+      gearStrap(g, [sx * xs, ys, (zf + zb) * 0.5], [sx * W * 0.62, top + 0.004 * s, zb - 0.018 * s], 0.038 * s, 0.013 * s);
+    }
+    return;
+  }
   const W = 0.158 * k * s, D = 0.128 * k * s;
   /* The plate stops at the STERNAL NOTCH, not at the collarbone.
      Running it to 0.452 put its top edge level with the deltoid shelf
@@ -175,12 +241,14 @@ function gearPlateCarrier(g, k, o) {
 function gearMagPouches(g, k, o) {
   const s = o.scale || 1, D = 0.128 * k * s;
   const n = o.pouches || 3;
-  const span = 0.104 * k * s;
+  const pl = o.torso && o._plate;
+  const span = pl ? Math.min(0.104 * s, pl.W - 0.034 * s) : 0.104 * k * s;
+  const z0 = pl ? pl.zf - 0.002 * s : D * 1.28, z1 = pl ? pl.zf + 0.022 * s : D * 1.46;
   for (let i = 0; i < n; i++) {
     const x = n === 1 ? 0 : (-span + (2 * span * i) / (n - 1));
-    gearSlab(g, x - 0.032 * s, 0.228 * s, D * 1.28, x + 0.032 * s, 0.322 * s, D * 1.46, 3.4);
+    gearSlab(g, x - 0.032 * s, 0.228 * s, z0, x + 0.032 * s, 0.322 * s, z1, 3.4);
     // The flap over the top of it, which is where a pouch stops being a box.
-    gearSlab(g, x - 0.034 * s, 0.312 * s, D * 1.26, x + 0.034 * s, 0.334 * s, D * 1.50, 3.2);
+    gearSlab(g, x - 0.034 * s, 0.312 * s, z0 - 0.002 * s, x + 0.034 * s, 0.334 * s, z1 + 0.004 * s, 3.2);
   }
 }
 
@@ -189,6 +257,14 @@ function gearMagPouches(g, k, o) {
    is reads as a uniform rather than as somebody's. */
 function gearAdmin(g, k, o) {
   const s = o.scale || 1, D = 0.128 * k * s, side = o.leftHanded ? -1 : 1;
+  const pl = o.torso && o._plate;
+  if (pl) {
+    // Radio on the back plate, high on the off side; utility pouch on the front, low.
+    gearSlab(g, side * 0.060 * s, 0.312 * s, pl.zb - 0.030 * s, side * 0.108 * s, 0.400 * s, pl.zb + 0.002 * s, 3.4);
+    gearTube(g, [side * 0.096 * s, 0.398 * s, pl.zb - 0.016 * s], [0.06, 0.99, 0.02], 0.006 * s, 0.098 * s, 8);
+    gearSlab(g, -side * (pl.W - 0.060 * s), 0.206 * s, pl.zf - 0.004 * s, -side * (pl.W + 0.002 * s), 0.290 * s, pl.zf + 0.024 * s, 3.4);
+    return;
+  }
   // Radio, high on the off side, with a stub antenna.
   gearSlab(g, side * 0.104 * k * s, 0.312 * s, -D * 1.34,
     side * 0.152 * k * s, 0.400 * s, -D * 1.06, 3.4);
@@ -204,6 +280,20 @@ function gearAdmin(g, k, o) {
    a hip reads as a pocket. */
 function gearBelt(g, k, o) {
   const s = o.scale || 1, side = o.leftHanded ? -1 : 1;
+  if (o.torso) {
+    /* The battle belt, over the trouser belt at the waist (94h puts that at 0.06-0.10), padded
+       and standing off it; the holster dropped from it onto the outside of the thigh. */
+    const Wb = o.torso.at(0.050 * s, 0.108 * s);
+    gearBand(g, 0.054 * s, 0.104 * s, Wb.w, Wb.d, 0.010 * s, 2.6, Wb.cz);
+    gearSlab(g, -0.030 * s, 0.062 * s, Wb.zf + 0.006 * s, 0.030 * s, 0.096 * s, Wb.zf + 0.018 * s, 3.4);
+    if (o.holster) {
+      const hx = side * (o.torso.thighOuter(-0.07 * s) + 0.008 * s);
+      gearStrap(g, [hx, 0.075 * s, Wb.cz + 0.02 * s], [hx + side * 0.010 * s, -0.020 * s, 0.026 * s], 0.020 * s, 0.009 * s);
+      gearSlab(g, hx - side * 0.004 * s - 0.022 * s, -0.126 * s, 0.000 * s, hx + side * 0.004 * s + 0.022 * s, -0.008 * s, 0.070 * s, 3.5);
+      gearSlab(g, hx - 0.016 * s, -0.020 * s, 0.014 * s, hx + 0.016 * s, 0.038 * s, 0.056 * s, 3.2);
+    }
+    return;
+  }
   gearBand(g, 0.130 * s, 0.176 * s, 0.150 * k * s, 0.100 * k * s, 0.012 * s, 2.6);
   gearSlab(g, -0.030 * s, 0.138 * s, 0.108 * k * s + 0.012 * s,
     0.030 * s, 0.170 * s, 0.108 * k * s + 0.024 * s, 3.4);
@@ -228,6 +318,11 @@ function gearKnees(g, skeleton, k, o) {
     if (ki < 0) continue;
     const p = new Vec3();
     skeleton.bones[ki].bindMatrix.getTranslation(p);
+    if (o.torso) {
+      // On the front of THIS knee: the pad's middle ring 12 mm clear of the trouser.
+      const zf = o.torso.kneeFront(S, p.y / (o.stature || 1)) * (o.stature || 1);
+      if (zf > -0.5) p.z = zf - 0.040 * s + 0.012 * s;
+    }
     loftRings(g, [
       { p: new Vec3(p.x, p.y + 0.052 * s, p.z + 0.026 * s), w: 0.058 * k * s, d: 0.030 * s, e: 3.0 },
       { p: new Vec3(p.x, p.y + 0.004 * s, p.z + 0.040 * s), w: 0.066 * k * s, d: 0.036 * s, e: 3.2 },

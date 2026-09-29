@@ -31,11 +31,11 @@ function _mhDecode() {
     if (typeof atob === 'function') { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
     return new Uint8Array(Buffer.from(s, 'base64'));
   };
-  const V = new Float32Array(bytes(MH_HEAD.V).buffer);
-  const Q = new Uint16Array(bytes(MH_HEAD.Q).buffer);
+  const V = new Float32Array(bytes(MH_FIG.V).buffer);
+  const Q = new Uint16Array(bytes(MH_FIG.Q).buffer);
   const T = {};
-  for (const k in MH_HEAD.T) {
-    const [n, b64] = MH_HEAD.T[k];
+  for (const k in MH_FIG.T) {
+    const [n, b64] = MH_FIG.T[k];
     const u = bytes(b64);
     T[k] = { n, idx: new Uint16Array(u.buffer, 0, n), d: new Int16Array(u.buffer.slice(n * 2)) };
   }
@@ -45,9 +45,74 @@ function _mhDecode() {
     const f = [Q[i], Q[i + 1], Q[i + 2], Q[i + 3]];
     F.push(f[3] === f[2] ? f.slice(0, 3) : f);
   }
-  _mhData = { V, F, T, EL: MH_HEAD.EL, ER: MH_HEAD.ER };
+  const QS = new Uint16Array(bytes(MH_FIG.QS).buffer);
+  const FS = [];
+  for (let i = 0; i < QS.length; i += 4) {
+    const f = [QS[i], QS[i + 1], QS[i + 2], QS[i + 3]];
+    FS.push(F[i / 4].length === 3 ? f.slice(0, 3) : f);
+  }
+  _mhData = { V, F, FS, O: new Uint16Array(bytes(MH_FIG.O).buffer), UV: new Float32Array(bytes(MH_FIG.UV).buffer),
+    T, J: MH_FIG.J, B: MH_FIG.B, W: bytes(MH_FIG.W), nBody: MH_FIG.nBody };
   return _mhData;
 }
+
+/* ONE FIGURE PER CHARACTER. The head (makeMhHeadGeometry) and the body
+   (makeMhBodyGeometry, 94g) are cut from the same morphed mesh, so they
+   meet vertex for vertex at the line of the jaw. Morphed once and kept. */
+const _mhFigCache = new Map();
+function _mhFigure(opts) {
+  const key = JSON.stringify([opts.seed || 5, opts.type || 'male', opts.face || null, opts.skinColor != null ? opts.skinColor : null,
+    opts.ancestry || null, opts.age != null ? opts.age : null, +(opts.build || 1).toFixed(3)]);
+  let f = _mhFigCache.get(key);
+  if (f) return f;
+  const D = _mhDecode();
+  const P = Float32Array.from(D.V);
+  const W = _mhWeights(opts);
+  for (const k in W) {
+    const t = D.T[k], w = W[k];
+    if (!t || !w) continue;
+    for (let i = 0; i < t.n; i++) {
+      const v = t.idx[i] * 3;
+      P[v] += t.d[i * 3] * w / 5000; P[v + 1] += t.d[i * 3 + 1] * w / 5000; P[v + 2] += t.d[i * 3 + 2] * w / 5000;
+    }
+  }
+  const cen = (name) => { const idx = D.J[name]; const c = [0, 0, 0]; for (const i of idx) for (let k = 0; k < 3; k++) c[k] += P[i * 3 + k] / idx.length; return c; };
+  const J = {};
+  for (const k in D.J) J[k] = cen(k);
+  // The head's frame: eyeball centres at (+-0.0318, 0.011, 0.0745 + MH_FWD) m, a real 6.36 cm apart.
+  const mid = [(J.eyeL[0] + J.eyeR[0]) / 2, (J.eyeL[1] + J.eyeR[1]) / 2, (J.eyeL[2] + J.eyeR[2]) / 2];
+  const s = 0.0636 / Math.abs(J.eyeL[0] - J.eyeR[0]);
+  const c = [0, 0.011, 0.0745 + MH_FWD];
+  const toHF = (x, y, z) => [(x - mid[0]) * s + c[0], (y - mid[1]) * s + c[1], (z - mid[2]) * s + c[2]];
+  // Which body faces are the head's: every corner on or above the line of the jaw.
+  const headFace = D.F.map((fc) => fc.every((v) => { const h = toHF(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]); return h[1] >= _mhCutY(h[2]); }));
+  /* Normals over the WHOLE figure, and the vertices the head and body share: along the jaw both sides
+     take these, so the join does not show as a change of shading either. */
+  const nv = P.length / 3, N = new Float32Array(nv * 3), onHead = new Uint8Array(nv), onBody = new Uint8Array(nv);
+  D.F.forEach((fc, i) => {
+    for (const v of fc) (headFace[i] ? onHead : onBody)[v] = 1;
+    for (let j = 1; j + 1 < fc.length; j++) {
+      const a = fc[0], b = fc[j], cc = fc[j + 1];
+      if (a === b || b === cc || a === cc) continue;
+      const ux = P[b * 3] - P[a * 3], uy = P[b * 3 + 1] - P[a * 3 + 1], uz = P[b * 3 + 2] - P[a * 3 + 2];
+      const vx = P[cc * 3] - P[a * 3], vy = P[cc * 3 + 1] - P[a * 3 + 1], vz = P[cc * 3 + 2] - P[a * 3 + 2];
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      for (const v of [a, b, cc]) { N[v * 3] += nx; N[v * 3 + 1] += ny; N[v * 3 + 2] += nz; }
+    }
+  });
+  const seam = new Uint8Array(nv);
+  for (let v = 0; v < nv; v++) {
+    const l = Math.hypot(N[v * 3], N[v * 3 + 1], N[v * 3 + 2]) || 1; N[v * 3] /= l; N[v * 3 + 1] /= l; N[v * 3 + 2] /= l;
+    seam[v] = onHead[v] && onBody[v] ? 1 : 0;
+  }
+  f = { key, P, N, J, mid, s, c, toHF, headFace, seam };
+  if (_mhFigCache.size > 32) _mhFigCache.delete(_mhFigCache.keys().next().value);
+  _mhFigCache.set(key, f);
+  return f;
+}
+
+/* 2.7 cm further forward than the field head's eyes: a real neck is 12 cm behind the eyeballs. */
+const MH_FWD = 0.027;
 
 /* The target mix for one character. `face` is the operators' sculpt table
    (OP_FACE, 95a) where there is one; each control is mapped onto the
@@ -66,9 +131,15 @@ function _mhWeights(opts) {
   // Sex and ancestry: the macro targets, as MakeHuman mixes them.
   const anc = opts.ancestry || _mhAncestryFromSkin(opts.skinColor, opts.seed || 5);
   const sx = fem ? 'female' : 'male';
-  for (const k of ['african', 'asian', 'caucasian']) add(`${k}-${sx}-young`, anc[k] || 0);
+  add(sx, 1);                                                    // the sex, averaged over ancestry (whole body)
+  for (const k of ['african', 'asian', 'caucasian']) add(`${k}-${sx}`, anc[k] || 0);   // the face and neck
   if (opts.age != null) pair('head-age', Math.max(-1, Math.min(1, (opts.age - 25) / 35)), 0.8);
-  if (T === 'heavy') add('head-fat-incr', 0.45);
+  /* Build: the operators' and survivors' `build` (1 average, 1.24 the heaviest) onto MakeHuman's
+     muscle and weight targets; a heavy frame carries weight. */
+  const bld = opts.build || 1;
+  if (T === 'heavy') add(`build-${sx}-heavy`, 0.55);
+  if (bld > 1.02) add(fem ? 'build-female-heavy' : 'build-male-muscle', Math.min(0.9, (bld - 1) * 3));
+  if (bld < 0.98) add(`build-${sx}-thin`, Math.min(0.8, (1 - bld) * 4));
 
   const F = opts.face || null;
   const seed = opts.seed || 5;
@@ -155,8 +226,9 @@ function _mhSubdivide(P, F) {
     for (let k = 0; k < 3; k++) {
       const p = P[v * 3 + k];
       if (bnd.length >= 2) {
-        const o = bnd.slice(0, 2).map((e) => P[(e.a === v ? e.b : e.a) * 3 + k]);
-        out[v * 3 + k] = (6 * p + o[0] + o[1]) / 8;
+        // On an open edge the vertex stays where it is: the head's edge at the jaw is shared with the
+        // body, which is not smoothed, and the edge's new midpoints then lie on the body's own edges.
+        out[v * 3 + k] = p;
       } else if (vf[v].length) {
         const n = vf[v].length;
         let q = 0; for (const fi of vf[v]) q += fp[fi * 3 + k] / n;
@@ -175,77 +247,61 @@ function _mhSubdivide(P, F) {
   return { P: new Float32Array(out), F: NF };
 }
 
+/* THE FACE'S LANDMARKS, ONCE PER FIGURE: the tip of the nose, the line of the mouth, the chin, in
+   the head frame (metres), off the figure's own vertices above the jaw cut. The head and the body
+   both place the head by the chin, and each used to find it on its own mesh -- the head on its
+   subdivided one, where the extra midpoints found a deeper crease in the mouth and so a lower chin.
+   On SWAT's face that put the head 17 mm below where the body's neck was waiting for it. */
+function _mhLandmarks(fig) {
+  if (fig._lm) return fig._lm;
+  const P = fig.P, n = P.length / 3;
+  const H = new Float32Array(n * 3);
+  const head = new Uint8Array(n);
+  for (let v = 0; v < n; v++) {
+    const h = fig.toHF(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]);
+    H[v * 3] = h[0]; H[v * 3 + 1] = h[1]; H[v * 3 + 2] = h[2];
+    head[v] = h[1] >= _mhCutY(h[2]) ? 1 : 0;
+  }
+  const D = _mhDecode();
+  let tip = [0, 0, -1], hiY = -1e9;
+  for (let v = 0; v < D.nBody; v++) {
+    if (!head[v]) continue;
+    if (H[v * 3 + 1] > hiY) hiY = H[v * 3 + 1];
+    if (Math.abs(H[v * 3]) < 0.004 && H[v * 3 + 1] < 0 && H[v * 3 + 1] > -0.07 && H[v * 3 + 2] > tip[2]) tip = [0, H[v * 3 + 1], H[v * 3 + 2]];
+  }
+  let mouth = [0, tip[1] - 0.033, 1];
+  for (let v = 0; v < D.nBody; v++) {
+    const y = H[v * 3 + 1];
+    if (head[v] && Math.abs(H[v * 3]) < 0.003 && y < tip[1] - 0.022 && y > tip[1] - 0.042 && H[v * 3 + 2] > 0.05 && H[v * 3 + 2] < mouth[2]) mouth = [0, y, H[v * 3 + 2]];
+  }
+  // The chin: the lowest point of the midline still well forward -- under it the jaw turns back into the throat.
+  let chinY = mouth[1];
+  for (let v = 0; v < D.nBody; v++) if (head[v] && Math.abs(H[v * 3]) < 0.008 && H[v * 3 + 2] > mouth[2] - 0.028 && H[v * 3 + 1] < chinY) chinY = H[v * 3 + 1];
+  fig._lm = { H, tip, mouth, chinY, hiY };
+  return fig._lm;
+}
+
 function makeMhHeadGeometry(opts = {}) {
   const D = _mhDecode();
   const T = opts.type || 'male';
-  const fem = T === 'female' ? 1 : 0, heavy = T === 'heavy' ? 1 : 0;
-  let P = Float32Array.from(D.V);
-  const W = _mhWeights(opts);
-  for (const k in W) {
-    const t = D.T[k], w = W[k];
-    if (!t || !w) continue;
-    for (let i = 0; i < t.n; i++) {
-      const v = t.idx[i] * 3;
-      P[v] += t.d[i * 3] * w / 5000; P[v + 1] += t.d[i * 3 + 1] * w / 5000; P[v + 2] += t.d[i * 3 + 2] * w / 5000;
-    }
-  }
-  // Into the field head's frame: eyeball centres at (+-0.0318, 0.011, 0.0745) m.
-  const cen = (idx) => { const c = [0, 0, 0]; for (const i of idx) for (let k = 0; k < 3; k++) c[k] += P[i * 3 + k] / idx.length; return c; };
-  const eL = cen(D.EL), eR = cen(D.ER);
-  const mid = [(eL[0] + eR[0]) / 2, (eL[1] + eR[1]) / 2, (eL[2] + eR[2]) / 2];
-  const s = 0.0636 / Math.abs(eL[0] - eR[0]);
+  const fem = T === 'female' ? 1 : 0;
+  const fig = _mhFigure(opts);
   const F0 = (opts.face || {});
-  // A squarer or heavier head a little wider, a woman's a little narrower -- a few per cent, no more.
-  const wide = 1 + ((F0.boxy != null ? F0.boxy : 0.75) - 0.75) * 0.04 + heavy * 0.02 - fem * 0.015;
-  /* 2.7 cm further forward than the field head's eyes: a real neck is 12 cm behind the eyeballs, and
-     the field head's was 9.5 -- the body's neck (94c) is built round that axis, and with the eyes left
-     where they were its top stood out under the jaw as a lump. Everything that fits to the head (the
-     helmet, the painted hair, the shells) measures the head's own points, so it follows. */
-  const MH_FWD = 0.027;
-  for (let i = 0; i < P.length; i += 3) {
-    P[i] = (P[i] - mid[0]) * s * wide;
-    P[i + 1] = (P[i + 1] - mid[1]) * s + 0.011;
-    P[i + 2] = (P[i + 2] - mid[2]) * s + 0.0745 + MH_FWD;
-  }
-  const EYE = [Math.abs(eL[0] - eR[0]) * s * wide / 2, 0.011, 0.0745 + MH_FWD];
-  /* THE NECK, INTO THE COLLAR. The mesh stops 15 cm under the eyes, where the back of a real neck
-     already turns into the trapezius; below that it is carried on as a tube, extruded straight down
-     from its own open edge in four rings to 30 cm under the eyes and eased round, about the neck's
-     axis, to 5.8 cm -- inside the collar, where the shirt covers where it goes. */
-  let F = D.F.slice();
-  {
-    const nv0 = P.length / 3;
-    const next = new Int32Array(nv0).fill(-1);
-    const ek = new Set();
-    for (const f of F) for (let j = 0; j < f.length; j++) { const a = f[j], b = f[(j + 1) % f.length]; ek.add(a * 65536 + b); }
-    for (const f of F) for (let j = 0; j < f.length; j++) {
-      const a = f[j], b = f[(j + 1) % f.length];
-      if (!ek.has(b * 65536 + a) && P[a * 3 + 1] < -0.10 && P[b * 3 + 1] < -0.10) next[a] = b;
-    }
-    const loop = [];
-    let start = -1;
-    for (let v = 0; v < nv0; v++) if (next[v] >= 0) { start = v; break; }
-    for (let v = start, guard = 0; v >= 0 && guard < 4000; guard++) { loop.push(v); v = next[v]; if (v === start) break; }
-    if (loop.length > 8) {
-      const RINGS = 4, zc = -0.014, out = Array.from(P);
-      let prev = loop;
-      for (let r = 1; r <= RINGS; r++) {
-        const t = r / RINGS, ring = [];
-        for (const v of loop) {
-          const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2];
-          const dz = z - zc, rad = Math.hypot(x, dz) || 1e-6, k = 1 + (0.058 / rad - 1) * _ss(0, 1, t);
-          ring.push(out.length / 3);
-          out.push(x * k, y + (-0.30 - y) * t, zc + dz * k);
-        }
-        for (let i = 0; i < loop.length; i++) {
-          const j = (i + 1) % loop.length;
-          F.push([prev[j], prev[i], ring[i], ring[j]]);
-        }
-        prev = ring;
-      }
-      P = new Float32Array(out);
-    }
-  }
+  // The head's faces, in its own frame (metres, eyes at the field head's eyes).
+  const map = new Int32Array(D.V.length / 3).fill(-1);
+  const out0 = [];
+  let F = [];
+  D.F.forEach((fc, i) => {
+    if (!fig.headFace[i]) return;
+    F.push(fc.map((v) => {
+      if (map[v] < 0) { map[v] = out0.length / 3; out0.push(...fig.toHF(fig.P[v * 3], fig.P[v * 3 + 1], fig.P[v * 3 + 2])); }
+      return map[v];
+    }));
+  });
+  let P = new Float32Array(out0);
+  const EYE = [Math.abs(fig.J.eyeL[0] - fig.J.eyeR[0]) * fig.s / 2, 0.011, 0.0745 + MH_FWD];
+  const n0 = P.length / 3, src0 = new Int32Array(n0);
+  for (let v = 0; v < map.length; v++) if (map[v] >= 0) src0[map[v]] = v;
 
   // Close-ups are smoothed once; the distant levels of detail (95-engine asks by `resolution`) are not.
   if (!(opts.resolution > 0.003)) ({ P, F } = _mhSubdivide(P, F));
@@ -264,6 +320,8 @@ function makeMhHeadGeometry(opts = {}) {
     const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
     for (const v of [a, b, c]) { N[v * 3] += nx; N[v * 3 + 1] += ny; N[v * 3 + 2] += nz; }
   }
+  // Along the jaw, the whole figure's normals (subdivision keeps the original vertices first).
+  for (let v = 0; v < n0; v++) if (fig.seam[src0[v]]) { const w = src0[v]; N[v * 3] = fig.N[w * 3]; N[v * 3 + 1] = fig.N[w * 3 + 1]; N[v * 3 + 2] = fig.N[w * 3 + 2]; }
   for (let v = 0; v < nv; v++) {
     const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2];
     const l = Math.hypot(N[v * 3], N[v * 3 + 1], N[v * 3 + 2]) || 1;
@@ -281,66 +339,14 @@ function makeMhHeadGeometry(opts = {}) {
     const y = P[v * 3 + 1];
     if (Math.abs(P[v * 3]) < 0.003 && y < tip[1] - 0.022 && y > tip[1] - 0.042 && P[v * 3 + 2] > 0.05 && P[v * 3 + 2] < mouth[2]) mouth = [0, y, P[v * 3 + 2]];
   }
-  // The chin: the lowest point of the midline still well forward -- under it the jaw turns back into the throat.
-  let chinY = mouth[1];
-  for (let v = 0; v < nv; v++) if (Math.abs(P[v * 3]) < 0.008 && P[v * 3 + 2] > mouth[2] - 0.028 && P[v * 3 + 1] < chinY) chinY = P[v * 3 + 1];
+  // The chin: the figure's own (_mhLandmarks, metres like P here) -- the one the body places the head by.
+  const chinY = _mhLandmarks(fig).chinY;
   const nW = 1 + ((F0.noseWide != null ? F0.noseWide : 1) - 1) * 0.5;
-  const full = _headFinish(g, { EYE, EYE_R: 0.0120, tip, mouthY: mouth[1], nW, fem, lipZ: mouth[2] + 0.004, chinY }, opts);
-  const out = _mhSplitNeck(full);
+  const out = _headFinish(g, { EYE, EYE_R: 0.0120, tip, mouthY: mouth[1], nW, fem, lipZ: mouth[2] + 0.004, chinY }, opts);
   out.mh = true;
+  out.mhFig = fig.key;
   return out;
 }
 
-/* THE NECK IS NOT PART OF THE HEAD. The head rides the head bone rigidly;
-   a neck has to bend with the neck bones and run down into the collar, or
-   it swings out of the shirt the moment he looks up. So the finished mesh
-   (coloured, painted, measured as one) is cut along the line of the jaw --
-   under the chin in front, the base of the skull behind -- and the part
-   below becomes `mhNeck`, which Engine.character skins to the head, neck
-   and chest bones in place of the body's own neck (94c). The cut's
-   vertices are in both, weighted wholly to the head bone in the neck, so
-   the two meet exactly in every pose. `below` is each neck vertex's depth
-   under the cut, in metres, for those weights. */
 /* The line of the jaw, in metres in the head's frame: under the chin in front, the base of the skull behind. */
 function _mhCutY(z) { return -0.100 - 0.45 * (Math.max(-0.06, Math.min(0.10, z)) + 0.06); }
-
-function _mhSplitNeck(src) {
-  const S = SDF_HEAD_TO_UNITS;
-  const P = src.positions, n = P.length / 3;
-  const cutY = _mhCutY;
-  const below = new Float32Array(n);
-  for (let v = 0; v < n; v++) below[v] = cutY(P[v * 3 + 2] / S) - P[v * 3 + 1] / S;
-  const I = src.indices;
-  const pick = (neck) => {
-    const map = new Int32Array(n).fill(-1);
-    const g = new Geometry();
-    g.part = PART.NECK;
-    g.colors = [];
-    const dep = [];
-    for (let t = 0; t < I.length; t += 3) {
-      const a = I[t], b = I[t + 1], c = I[t + 2];
-      const isNeck = below[a] > 0 || below[b] > 0 || below[c] > 0;
-      if (isNeck !== neck) continue;
-      const q = [a, b, c].map((v) => {
-        if (map[v] < 0) {
-          map[v] = g.positions.length / 3;
-          g.positions.push(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]);
-          g.normals.push(src.normals[v * 3], src.normals[v * 3 + 1], src.normals[v * 3 + 2]);
-          g.uvs.push(src.uvs[v * 2], src.uvs[v * 2 + 1]);
-          g.parts.push(PART.NECK);
-          if (src.colors) g.colors.push(src.colors[v * 3], src.colors[v * 3 + 1], src.colors[v * 3 + 2]); else g.colors.push(1, 1, 1);
-          dep.push(Math.max(0, below[v]));
-        }
-        return map[v];
-      });
-      g.tri(q[0], q[1], q[2]);
-    }
-    g.finalize();
-    g.below = new Float32Array(dep);
-    return g;
-  };
-  const head = pick(false);
-  for (const k of ['headBounds', 'eyes', 'sdf']) head[k] = src[k];
-  head.mhNeck = pick(true);
-  return head;
-}

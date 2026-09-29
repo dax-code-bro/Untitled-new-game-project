@@ -574,10 +574,33 @@ const HUMANOID_BONES = [
   ['footR', 17, [0, -0.40, 0]],
 ];
 
-function makeHumanoidSkeleton(scale = 1) {
-  const bones = HUMANOID_BONES.map(([name, parent, pos]) => new Bone(
-    name, parent, [pos[0] * scale, pos[1] * scale, pos[2] * scale], null,
-  ));
+/* THE SAME RIG, WITH A REAL PERSON'S NECK AND SHOULDERS -- for the MakeHuman figure (94g).
+ *
+ * Measured by laying MakeHuman's own joints over the rig with its head where the head actor puts
+ * it: the torso from the hip joints to the shoulders is the rig's length to within 5 mm, but the
+ * rig's shoulder joints sit 5 cm below MakeHuman's and its neck joint 7.5 cm below, so fitting
+ * the figure to HUMANOID_BONES stretched its neck to 1.7 times its length and dropped its
+ * shoulders into a slope -- a giraffe on a coat hanger, which is what "they look like aliens"
+ * was about once the faces were real. Here the neck joint is where MakeHuman has it (the head
+ * bone does not move: helmets, eyes and cameras all hang off it), the shoulder joints are 5 cm
+ * higher and 2 cm wider, and the arm is 5 cm longer so the hand still hangs where it did -- at
+ * the top of the thigh, which is where a real man's hangs. Offsets override HUMANOID_BONES by
+ * name; the chain and every bone index are unchanged. */
+const MH_BONES = {
+  neck: [0, 0.235, -0.004],
+  head: [0, 0.035, 0.004],
+  shoulderL: [0.030, 0.160, 0.004], upperArmL: [0.165, -0.034, 0.002],
+  lowerArmL: [0.016, -0.290, 0.004], handL: [0.006, -0.262, 0.010],
+  shoulderR: [-0.030, 0.160, 0.004], upperArmR: [-0.165, -0.034, 0.002],
+  lowerArmR: [-0.016, -0.290, 0.004], handR: [-0.006, -0.262, 0.010],
+};
+
+function makeHumanoidSkeleton(scale = 1, variant = null) {
+  const over = variant === 'mh' ? MH_BONES : null;
+  const bones = HUMANOID_BONES.map(([name, parent, pos0]) => {
+    const pos = (over && over[name]) || pos0;
+    return new Bone(name, parent, [pos[0] * scale, pos[1] * scale, pos[2] * scale], null);
+  });
   return new Skeleton(bones);
 }
 

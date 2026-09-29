@@ -2242,7 +2242,10 @@ class Material {
     this.castShadow = opts.castShadow !== false;
     this.receiveShadow = opts.receiveShadow !== false;
     // Subsurface approximation — foliage and skin look dead without it.
-    this.subsurface = opts.subsurface != null ? opts.subsurface : 0;    /* ---- CLEARCOAT: a thin dielectric layer over everything else ----
+    this.subsurface = opts.subsurface != null ? opts.subsurface : 0;
+    /* A blade or a leaf: light through it (the transmission lobe). Anything else with subsurface is thick -- skin, cloth
+       on a body -- and scatters round its terminator instead (50-shaders.js). */
+    this.thin = !!opts.thin;    /* ---- CLEARCOAT: a thin dielectric layer over everything else ----
      *
        Car paint, varnished wood, a lacquered helmet, the glass in front
        of an optic, a polished lens housing. The coat has a fixed IOR of
@@ -2370,7 +2373,7 @@ const MaterialPresets = {
   rust: { color: 0xffffff, texture: 'rust', roughness: 0.85, metalness: 0.3 },
   rock: { color: 0xa8a49c, texture: 'rock', roughness: 0.92, metalness: 0 },
   stone: { color: 0xa8a49c, texture: 'rock', roughness: 0.92, metalness: 0 },
-  grass: { color: 0xffffff, texture: 'grass', roughness: 0.95, metalness: 0, subsurface: 0.35 },
+  grass: { color: 0xffffff, texture: 'grass', roughness: 0.95, metalness: 0, subsurface: 0.35, thin: true },
   dirt: { color: 0xffffff, texture: 'dirt', roughness: 0.96, metalness: 0 },
   sand: { color: 0xffffff, texture: 'sand', roughness: 0.9, metalness: 0 },
   marble: { color: 0xf2efe9, texture: 'marble', roughness: 0.2, metalness: 0 },

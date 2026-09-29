@@ -29,6 +29,7 @@ class Grass {
       roughness: 0.92,
       metalness: 0,
       subsurface: opts.subsurface != null ? opts.subsurface : 0.5,
+      thin: true,
       doubleSided: true,
       castShadow: opts.castShadow !== false,
     });

@@ -745,7 +745,6 @@ class Engine {
        solved offline. It also brings its own clothes and head, sculpted into
        the one mesh, so none of the procedural layers below apply to it. */
     const model = opts.model || null;
-    const skeleton = model ? skeletonFromRig(model.rig) : makeHumanoidSkeleton(scale);
     /* How far gone this one is. Derived ONCE, here, and handed to both the
        body and the head -- they used to compute it separately from the same
        formula, which worked only for as long as nobody passed opts.rot, and
@@ -774,7 +773,28 @@ class Engine {
         frame: opts.zombieBuild || opts.faceType || 'male' }
       : { thickness: opts.build || 1, stature: scale, fit: opts.fit, seed: opts.seed, sdfBody: opts.sdfBody };
     let bodyEnt = null;
-    if (sdfLiving) {
+    /* A LIVING PERSON IS ONE MAKEHUMAN FIGURE (94f, 94g): the head and the body are cut from the same
+       morphed mesh, so both must be built from the same settings. */
+    const mhFig = !model && sdfLiving && opts.face !== false && rot < 0.01 && opts.sdfHead !== false
+      && typeof makeMhBodyGeometry === 'function';
+    /* A MakeHuman figure stands on the rig with a real person's neck and shoulders (90-animation.js,
+       MH_BONES); everyone else keeps the rig their bodies were built for. */
+    const skeleton = model ? skeletonFromRig(model.rig) : makeHumanoidSkeleton(scale, mhFig ? 'mh' : null);
+    const figOpts = mhFig ? {
+      seed: opts.seed || 5, type: opts.faceType || (heroOutfit ? bodyOpts.frame : 'male'), face: opts.faceShape || null,
+      skinColor: (opts.skin && typeof opts.skin === 'object' && opts.skin.color != null) ? opts.skin.color : 0xc8a080,
+      build: heroOutfit ? (opts.girth || 1) : (opts.build || 1),
+    } : null;
+    if (mhFig) {
+      const bk = 'mh:' + JSON.stringify(figOpts) + ':' + scale.toFixed(3) + ':' + (opts.fit || '') + ':' + (heroOutfit ? opts.outfit : '');
+      const bc = Engine._mhBodies || (Engine._mhBodies = new Map());
+      bodyEnt = bc.get(bk);
+      if (!bodyEnt) {
+        const g0 = makeMhBodyGeometry(skeleton, { fig: figOpts, stature: scale, outfitDef: heroOutfit, fit: opts.fit });
+        bodyEnt = { geo: g0, far: g0, vfar: g0 };
+        bc.set(bk, bodyEnt);
+      }
+    } else if (sdfLiving) {
       const bk = [bodyOpts.thickness, scale.toFixed(3), opts.fit || '', opts.seed == null ? '' : opts.seed,
         heroOutfit ? opts.outfit + ':' + bodyOpts.frame : ''].join(':');
       const bc = Engine._sdfBodies || (Engine._sdfBodies = new Map());
@@ -839,7 +859,7 @@ class Engine {
       // A survivor's body mesh IS the garment, painted per vertex: the cloth material, not the skin.
       /* Its UVs are in metres (94c), so a weave tuned for the old builder's
          per-limb UVs at 2.4 read as towelling: scaled to real cloth. */
-      material: this.material(heroOutfit
+      material: this.material(geo.mh && geo.mhSkinOnly ? (opts.skin != null ? opts.skin : 'skin') : heroOutfit
         ? Object.assign({}, opts.clothMaterial || { color: 0xffffff, texture: 'fabric', roughness: 0.95, metalness: 0 },
           { uvScale: ((opts.clothMaterial && opts.clothMaterial.uvScale) || 2.4) * 3.6 })
         : opts.material != null ? opts.material : { preset: 'fabric', color: opts.color != null ? opts.color : 0x3a6ea8 }),
@@ -864,9 +884,7 @@ class Engine {
     /* The neck, in skin rather than in whatever the body is wearing.
        Same skeleton, same animator, so it moves as one piece with the
        rest of him -- it is only a second material, not a second body. */
-    /* A living face (94f) brings its own neck, skinned in below (after the head); the body's goes. */
-    const mhNeckHead = !model && opts.face !== false && rot < 0.01 && opts.sdfHead !== false && !!bodyEnt;
-    if (geo.neck && !mhNeckHead) {
+    if (geo.neck) {
       /* A BEARD DOES NOT STOP AT THE JAW. It is painted on the head, and
          under the jaw the skin on show is this mesh, so a bearded man had a
          clean-shaven strip between his beard and his collar. For the styles
@@ -903,13 +921,13 @@ class Engine {
     for (const [key, mat, nm] of [
       ['hands', opts.gloves != null ? opts.gloves
         : heroOutfit ? (opts.skin != null ? opts.skin : 'skin')
-        : { color: 0x2b2a27, texture: 'leather', roughness: 0.62, metalness: 0, uvScale: 3 }, 'hands'],
+        : { color: 0x2b2a27, texture: 'leather', roughness: 0.80, metalness: 0, uvScale: 3 }, 'hands'],
       ['boots', opts.boots != null ? opts.boots
         // White, so the outfit's shoe colours (painted per vertex) come through.
         : heroOutfit ? (heroOutfit.shoes && heroOutfit.shoes.kind === 'sneaker'
           ? { color: 0xffffff, texture: 'fabric', roughness: 0.82, metalness: 0, uvScale: 3 }
           : { color: 0xffffff, texture: 'leather', roughness: 0.55, metalness: 0, uvScale: 2 })
-        : { color: 0x3a3028, texture: 'leather', roughness: 0.58, metalness: 0, uvScale: 2 }, 'boots'],
+        : { color: 0x3a3028, texture: 'leather', roughness: 0.68, metalness: 0, uvScale: 2 }, 'boots'],
     ]) {
       const sub = geo[key];
       if (!sub || !sub.indices || !sub.indices.length) continue;
@@ -1026,11 +1044,11 @@ class Engine {
       // `hair` as a style name (the survivors pass it that way) paints the field-built scalp as well.
       const hairOf = opts.hairStyle || (typeof opts.hair === 'string' ? opts.hair : undefined);
       const skinCol = (opts.skin && typeof opts.skin === 'object' && opts.skin.color != null) ? opts.skin.color : 0xc8a080;
-      const hk = [opts.faceKey || '', opts.seed || 5, opts.faceType || 'male', opts.eyeColor || 0, hairOf || '',
+      const hk = [opts.faceKey || '', opts.seed || 5, figOpts ? figOpts.type + ':' + figOpts.build : opts.faceType || 'male', opts.eyeColor || 0, hairOf || '',
         opts.hairColor || 0, opts.brows || '', opts.browColor || 0, opts.beard || '', opts.beardColor || 0, skinCol].join(':');
       const headCache = Engine._sdfHeads || (Engine._sdfHeads = new Map());
       const headGeo = living
-        ? (headCache.get(hk) || headCache.set(hk, makeMhHeadGeometry({ seed: opts.seed || 5, type: opts.faceType,
+        ? (headCache.get(hk) || headCache.set(hk, makeMhHeadGeometry({ seed: opts.seed || 5, type: figOpts ? figOpts.type : opts.faceType, build: figOpts ? figOpts.build : 1,
           face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
           hairStyle: hairOf, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
           beard: opts.beard, beardColor: opts.beardColor })).get(hk))
@@ -1057,7 +1075,7 @@ class Engine {
             if (typeof src === 'number') {
               g2 = headCache.get(hk + tag);
               if (!g2) {
-                g2 = makeMhHeadGeometry({ seed: opts.seed || 5, type: opts.faceType,
+                g2 = makeMhHeadGeometry({ seed: opts.seed || 5, type: figOpts ? figOpts.type : opts.faceType, build: figOpts ? figOpts.build : 1,
                   face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
                   hairStyle: hairOf, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
                   beard: opts.beard, beardColor: opts.beardColor, resolution: src });
@@ -1131,6 +1149,7 @@ class Engine {
       const headHeight = headGeo.sdf ? 0.262 : 0.252;   // measured: 0.235 chin to crown, a real head
       const headSeat = headGeo.sdf ? SDF_HEAD_SEAT : 0.011;
       const headScale = (headHeight / HEAD_MESH_HEIGHT) * scale;
+      const mhPlace = headGeo.mh && bodyEnt && bodyEnt.geo.mhHeadPlace && bodyEnt.geo.mhHeadPlace.fig === headGeo.mhFig ? bodyEnt.geo.mhHeadPlace : null;
       const headActor = new Actor(this, {
         name: 'head',
         mesh: headMesh,
@@ -1148,8 +1167,9 @@ class Engine {
            overlaps the top of the neck instead of balancing on it.
            Exactly level, the two surfaces meet in a seam and the head
            reads as a separate object sitting on a post. */
-        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - headSeat * scale, 0.006 * scale],
-        scale: headScale,
+        /* A MakeHuman head sits where the body's fit put it (94g), to the vertex. */
+        offset: mhPlace ? mhPlace.offset : [0, -(HB ? HB.chinY : -0.36) * headScale - headSeat * scale, 0.006 * scale],
+        scale: mhPlace ? mhPlace.scale : headScale,
         boundRadius: 0.4 * scale,
       });
       if (sdfLods.length > 1) headActor.lods = sdfLods;
@@ -1162,56 +1182,6 @@ class Engine {
       actor.head = headActor;
       actor.face = face;
 
-      /* THE NECK OF A LIVING FACE (94f, `mhNeck`): the head mesh below the line of the jaw, carried into
-         the skeleton's rest pose exactly as the head actor places the head -- bone, offset, scale -- and
-         skinned there: wholly to the head at the cut, so it meets the rigid head seamlessly in every
-         pose, then the neck bone, then the chest down in the collar. It replaces the body's neck. */
-      if (headGeo.mhNeck && headGeo.mhNeck.indices.length && !actor.neck && skeleton.index('neck') >= 0) {
-        const W = this._mhNecks || (this._mhNecks = new Map());
-        const nk = hk + ':' + scale.toFixed(3);
-        let nm = W.get(nk);
-        if (!nm) {
-          const src = headGeo.mhNeck, S = SDF_HEAD_TO_UNITS;
-          const hi = skeleton.index('head'), ni = skeleton.index('neck');
-          const ci = skeleton.index('chest') >= 0 ? skeleton.index('chest') : ni;
-          const e = skeleton.bones[hi].bindMatrix.e;
-          const off = [0, -(HB ? HB.chinY : -0.36) * headScale - headSeat * scale, 0.006 * scale];
-          const g = new Geometry();
-          g.part = PART.NECK;
-          g.colors = [];
-          const n = src.positions.length / 3;
-          const J = new Float32Array(n * 4), Wt = new Float32Array(n * 4);
-          for (let v = 0; v < n; v++) {
-            const lx = off[0] + src.positions[v * 3] * headScale, ly = off[1] + src.positions[v * 3 + 1] * headScale, lz = off[2] + src.positions[v * 3 + 2] * headScale;
-            const nx = src.normals[v * 3], ny = src.normals[v * 3 + 1], nz = src.normals[v * 3 + 2];
-            g.vert(e[0] * lx + e[4] * ly + e[8] * lz + e[12], e[1] * lx + e[5] * ly + e[9] * lz + e[13], e[2] * lx + e[6] * ly + e[10] * lz + e[14],
-              e[0] * nx + e[4] * ny + e[8] * nz, e[1] * nx + e[5] * ny + e[9] * nz, e[2] * nx + e[6] * ny + e[10] * nz,
-              src.uvs[v * 2], src.uvs[v * 2 + 1]);
-            if (src.colors) g.colors.push(src.colors[v * 3], src.colors[v * 3 + 1], src.colors[v * 3 + 2]);
-            const d = src.below[v], y = src.positions[v * 3 + 1] / S;
-            const wh = 1 - _ss(0.0, 0.045, d), wc = (1 - wh) * _ss(-0.190, -0.235, y), wn = Math.max(0, 1 - wh - wc);
-            J[v * 4] = hi; J[v * 4 + 1] = ni; J[v * 4 + 2] = ci;
-            Wt[v * 4] = wh; Wt[v * 4 + 1] = wn; Wt[v * 4 + 2] = wc;
-          }
-          for (let t = 0; t < src.indices.length; t++) g.indices.push(src.indices[t]);
-          g.joints = J; g.weights = Wt;
-          g.finalize();
-          nm = new GpuMesh(this.gl, g);
-          nm.__key = 'mhneck:' + nk;
-          (this._geoByKey || (this._geoByKey = new Map())).set(nm.__key, g);
-          W.set(nk, nm);
-        }
-        const na = new Actor(this, {
-          name: 'neck', mesh: nm,
-          material: this.material(opts.skin != null ? opts.skin : 'skin'),
-          skeleton, animator, controller, body: controller.body,
-          boundRadius: 1.4 * scale,
-        });
-        na.visualOffset = new Vec3(0, 0, 0);
-        this.actors.push(na);
-        actor.neck = na;
-        (actor.rigged || (actor.rigged = [])).push(na);
-      }
 
       /* Hair and facial hair, cut out of the head's own surface and
          pushed out along its normals -- so they hug this particular
