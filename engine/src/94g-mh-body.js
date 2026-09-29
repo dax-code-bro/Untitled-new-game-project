@@ -154,6 +154,108 @@ function makeMhBodyGeometry(skeleton, opts = {}) {
     out[v * 3] = px; out[v * 3 + 1] = py; out[v * 3 + 2] = pz;
   }
 
+  /* A MAN'S CHEST AND SEAT. MakeHuman's default figure carries the pectorals as two defined mounds
+     with a crease under each and the buttocks as a high round shelf; under a shirt and trousers, and
+     lit from above, that read as a woman's chest and a cartoon's backside ("the chest and rear end
+     look way too alien"). Both are blended toward a smoothed copy of themselves -- the volume stays,
+     the definition goes -- the chest only on a man (a woman keeps her figure), the seat on everyone. */
+  const adj = Array.from({ length: nv }, () => []);
+  for (const i of bodyFaces) {
+    const f = D.F[i];
+    for (let j = 0; j < f.length; j++) { const a = f[j], b = f[(j + 1) % f.length]; if (a !== b) { adj[a].push(b); adj[b].push(a); } }
+  }
+  const fem = (opts.fig && opts.fig.type) === 'female';
+  const smoothToward = (zone, iters, amount) => {
+    const Z = new Float64Array(nv);
+    for (let v = 0; v < nv; v++) if (need[v]) Z[v] = zone(out[v * 3] / st, out[v * 3 + 1] / st, out[v * 3 + 2] / st);
+    const A = Float64Array.from(out), T = new Float64Array(out.length);
+    for (let it = 0; it < iters; it++) {
+      for (let v = 0; v < nv; v++) {
+        if (Z[v] <= 0 || !adj[v].length) { T[v * 3] = A[v * 3]; T[v * 3 + 1] = A[v * 3 + 1]; T[v * 3 + 2] = A[v * 3 + 2]; continue; }
+        let x = 0, y = 0, z = 0;
+        for (const q of adj[v]) { x += A[q * 3]; y += A[q * 3 + 1]; z += A[q * 3 + 2]; }
+        const n = adj[v].length;
+        T[v * 3] = x / n; T[v * 3 + 1] = y / n; T[v * 3 + 2] = z / n;
+      }
+      A.set(T);
+    }
+    for (let v = 0; v < nv; v++) if (Z[v] > 0) for (let k = 0; k < 3; k++) out[v * 3 + k] += (A[v * 3 + k] - out[v * 3 + k]) * amount * Z[v];
+  };
+  if (!fem) smoothToward((x, y, z) => (z > 0.0 ? _ss(0.0, 0.05, z) : 0) * _ss(0.22, 0.30, y) * (1 - _ss(0.44, 0.50, y)) * (1 - _ss(0.13, 0.18, Math.abs(x))), 40, 0.7);
+  smoothToward((x, y, z) => (z < -0.02 ? _ss(-0.02, -0.07, z) : 0) * _ss(-0.24, -0.15, y) * (1 - _ss(0.04, 0.12, y)) * (1 - _ss(0.13, 0.18, Math.abs(x))), 40, fem ? 0.35 : 0.6);
+
+  /* ARMS AT THE SIDES, NOT THROUGH THEM. MakeHuman stands with its arms out at forty-five degrees;
+     swung down to hang beside the body, the upper arm passed straight through the lats and the side
+     of the chest -- in the rest pose the sleeve overlapped the trunk by seven centimetres. A real arm
+     at rest lies against the side and the side gives under it. So wherever a hanging arm is, the
+     trunk is moved out of its way (toward the middle), by the arm's own measured thickness, and the
+     move is smoothed into the skin round it so the side is dented, not creased. */
+  for (const sd of ['L', 'R']) {
+    const sx = sd === 'L' ? 1 : -1;
+    const A0 = Q['upperArm' + sd], B0 = Q['lowerArm' + sd], C0 = Q['hand' + sd];
+    const armJ = new Set(['upperArm', 'lowerArm', 'hand'].map((n) => skeleton.index(n + sd)));
+    const aw = (v) => { let w = 0; for (let q = 0; q < 4; q++) if (armJ.has(joints[v * 4 + q])) w += weights[v * 4 + q]; return w; };
+    const near = (p) => {
+      // Closest point on shoulder->elbow->wrist; t runs 0..1 down the upper arm, 1..2 down the forearm.
+      let best = null;
+      for (const [a, b, t0] of [[A0, B0, 0], [B0, C0, 1]]) {
+        const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], L2 = ab[0] * ab[0] + ab[1] * ab[1] + ab[2] * ab[2];
+        const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * ab[0] + (p[1] - a[1]) * ab[1] + (p[2] - a[2]) * ab[2]) / L2));
+        const c = [a[0] + ab[0] * t, a[1] + ab[1] * t, a[2] + ab[2] * t];
+        const d = Math.hypot(p[0] - c[0], p[1] - c[1], p[2] - c[2]);
+        if (!best || d < best.d) best = { d, c, t: t0 + t };
+      }
+      return best;
+    };
+    // The arm's thickness along its length, from its own skin (a high percentile, so the biceps count).
+    const bins = Array.from({ length: 20 }, () => []);
+    for (let v = 0; v < nv; v++) {
+      if (!need[v] || out[v * 3] * sx <= 0 || aw(v) < 0.92) continue;
+      const q = near([out[v * 3], out[v * 3 + 1], out[v * 3 + 2]]);
+      bins[Math.min(19, Math.floor(q.t * 10))].push(q.d);
+    }
+    const R = bins.map((b) => { if (!b.length) return 0; b.sort((x, y) => x - y); return b[Math.floor(b.length * 0.9)]; });
+    for (let i = 0; i < 20; i++) if (!R[i]) R[i] = R[i - 1] || 0.04 * st;
+    const rad = (t) => { const f = Math.min(19, Math.max(0, t * 10 - 0.5)), i = Math.floor(f), j = Math.min(19, i + 1); return R[i] + (R[j] - R[i]) * (f - i); };
+    const Dp = new Float64Array(nv * 3), hit = new Uint8Array(nv);
+    const pushOut = () => {
+      for (let v = 0; v < nv; v++) {
+        if (!need[v] || out[v * 3] * sx <= 0) continue;
+        const w = aw(v);
+        if (w > 0.45) continue;
+        const p = [out[v * 3] + Dp[v * 3], out[v * 3 + 1] + Dp[v * 3 + 1], out[v * 3 + 2] + Dp[v * 3 + 2]];
+        const q = near(p);
+        // Above the shoulder joint is the shoulder's own business; below the elbow the forearm hangs clear
+        // of the hip on its own, and denting the hip for it bent the trousers' fork out of true.
+        if (q.t <= 0.02 || q.t > 1.0) continue;
+        const rr = rad(q.t) + 0.004 * st;
+        if (q.d >= rr) continue;
+        const k = 1 - _ss(0.25, 0.45, w);                  // the armpit's blended skin gives less
+        const dir = q.d > 1e-5 ? [(p[0] - q.c[0]) / q.d, (p[1] - q.c[1]) / q.d, (p[2] - q.c[2]) / q.d] : [-sx, 0, 0];
+        for (let m = 0; m < 3; m++) Dp[v * 3 + m] += dir[m] * (rr - q.d) * k;
+        hit[v] = 1;
+      }
+    };
+    for (let round = 0; round < 3; round++) {
+      pushOut();
+      // Spread each move into the skin round it.
+      for (let it = 0; it < 6; it++) {
+        const T = Float64Array.from(Dp);
+        for (let v = 0; v < nv; v++) {
+          if (!need[v] || !adj[v].length || aw(v) > 0.6) continue;
+          let x = 0, y = 0, z = 0;
+          for (const q of adj[v]) { x += Dp[q * 3]; y += Dp[q * 3 + 1]; z += Dp[q * 3 + 2]; }
+          const n = adj[v].length;
+          T[v * 3] = Dp[v * 3] * 0.5 + x / n * 0.5; T[v * 3 + 1] = Dp[v * 3 + 1] * 0.5 + y / n * 0.5; T[v * 3 + 2] = Dp[v * 3 + 2] * 0.5 + z / n * 0.5;
+        }
+        Dp.set(T);
+      }
+    }
+    pushOut();
+    for (let i = 0; i < nv * 3; i++) out[i] += Dp[i];
+    void hit;
+  }
+
   // Normals over the unsplit surface (so a seam in the texture is not a seam in the shading); along
   // the jaw the whole figure's, as the head has them.
   const N = new Float32Array(nv * 3);

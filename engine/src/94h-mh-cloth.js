@@ -338,6 +338,69 @@ function _cmSmoothLoops(M, iters) {
   }
 }
 
+/* Keep a garment out of the sleeves. `F` is one side's limb frame (shoulder, elbow, wrist); the
+   sleeve's thickness down its length is measured off `ref` (the shirt, its vertices bound almost
+   wholly to that arm, `armW(M, v)`), and every vertex of `M` that is not itself the sleeve and lies
+   inside it is moved out of the way, the move smoothed into the cloth round it. The same rule the
+   body follows (94g), for the ease the cloth added on both sides. */
+function _cmArmClear(M, ref, F, armW, margin) {
+  const near = (p) => {
+    let best = null;
+    for (const [a, b, t0] of [[F.sh, F.el, 0], [F.el, F.wr, 1]]) {
+      const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], L2 = ab[0] * ab[0] + ab[1] * ab[1] + ab[2] * ab[2];
+      const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * ab[0] + (p[1] - a[1]) * ab[1] + (p[2] - a[2]) * ab[2]) / L2));
+      const c = [a[0] + ab[0] * t, a[1] + ab[1] * t, a[2] + ab[2] * t];
+      const d = Math.hypot(p[0] - c[0], p[1] - c[1], p[2] - c[2]);
+      if (!best || d < best.d) best = { d, c, t: t0 + t };
+    }
+    return best;
+  };
+  const bins = Array.from({ length: 20 }, () => []);
+  for (let v = 0; v < _cmNV(ref); v++) {
+    if (armW(ref, v) < 0.92) continue;
+    const q = near([ref.P[v * 3], ref.P[v * 3 + 1], ref.P[v * 3 + 2]]);
+    bins[Math.min(19, Math.floor(q.t * 10))].push(q.d);
+  }
+  const R = bins.map((b) => { if (!b.length) return 0; b.sort((x, y) => x - y); return b[Math.floor(b.length * 0.9)]; });
+  for (let i = 0; i < 20; i++) if (!R[i]) R[i] = R[i - 1] || 0.05;
+  const rad = (t) => { const f = Math.min(19, Math.max(0, t * 10 - 0.5)), i = Math.floor(f), j = Math.min(19, i + 1); return R[i] + (R[j] - R[i]) * (f - i); };
+  const nv = _cmNV(M), topo = _cmTopo(M), D = new Float64Array(nv * 3);
+  const sx = Math.sign(F.sh[0]) || 1;
+  const push = () => {
+    for (let v = 0; v < nv; v++) {
+      if (M.P[v * 3] * sx <= 0) continue;
+      const w = armW(M, v);
+      if (w > 0.45) continue;
+      const p = [M.P[v * 3] + D[v * 3], M.P[v * 3 + 1] + D[v * 3 + 1], M.P[v * 3 + 2] + D[v * 3 + 2]];
+      const q = near(p);
+      if (q.t <= 0.02) continue;
+      const rr = rad(q.t) + margin;
+      if (q.d >= rr) continue;
+      const k = 1 - _ss01(0.25, 0.45, w);
+      const dir = q.d > 1e-5 ? [(p[0] - q.c[0]) / q.d, (p[1] - q.c[1]) / q.d, (p[2] - q.c[2]) / q.d] : [-sx, 0, 0];
+      for (let m = 0; m < 3; m++) D[v * 3 + m] += dir[m] * (rr - q.d) * k;
+    }
+  };
+  for (let round = 0; round < 3; round++) {
+    push();
+    for (let it = 0; it < 5; it++) {
+      const T = Float64Array.from(D);
+      for (let v = 0; v < nv; v++) {
+        if (armW(M, v) > 0.6) continue;
+        const o0 = topo.off[v], o1 = topo.off[v + 1];
+        if (o1 === o0) continue;
+        let x = 0, y = 0, z = 0;
+        for (let o = o0; o < o1; o++) { const q = topo.adj[o]; x += D[q * 3]; y += D[q * 3 + 1]; z += D[q * 3 + 2]; }
+        const n = o1 - o0;
+        T[v * 3] = D[v * 3] * 0.5 + x / n * 0.5; T[v * 3 + 1] = D[v * 3 + 1] * 0.5 + y / n * 0.5; T[v * 3 + 2] = D[v * 3 + 2] * 0.5 + z / n * 0.5;
+      }
+      D.set(T);
+    }
+  }
+  push();
+  for (let i = 0; i < nv * 3; i++) M.P[i] += D[i];
+}
+
 function _cmNormals(M) {
   const nv = _cmNV(M), P = M.P, N = new Float64Array(nv * 3);
   for (let i = 0; i < M.T.length; i += 3) {
@@ -790,6 +853,33 @@ function _mhDress(base, Q, B, opts) {
         D.set(D2);
       }
       for (let i = 0; i < nvG * 3; i++) G.P[i] = P0[i] + D[i];
+      /* ...and the hang taken again, unsmoothed: the smoothing that removes the terraces also let the
+         cloth curl back in under the chest by a quarter -- a bust's profile, not a man's shirt, which
+         drops almost straight from the chest to the belt. */
+      if (cfg.rehang) {
+        // Kept as a displacement too, faded toward the sides (a column hung off the edge of the chest
+        // kinked into a point there) and smoothed a little, so it straightens without creasing.
+        const P1 = G.P.slice();
+        cfg.rehang(G);
+        const D2 = new Float64Array(nvG * 3);
+        for (let v = 0; v < nvG; v++) {
+          const f = cfg.rehangFade ? cfg.rehangFade(v, G) : 1;
+          for (let k = 0; k < 3; k++) D2[v * 3 + k] = (G.P[v * 3 + k] - P1[v * 3 + k]) * f;
+        }
+        for (let it2 = 0; it2 < 4; it2++) {
+          const T = Float64Array.from(D2);
+          for (let v = 0; v < nvG; v++) {
+            const o0 = topo.off[v], o1 = topo.off[v + 1];
+            if (o1 === o0) continue;
+            let x = 0, y = 0, z = 0;
+            for (let o = o0; o < o1; o++) { const q = topo.adj[o]; x += D2[q * 3]; y += D2[q * 3 + 1]; z += D2[q * 3 + 2]; }
+            const n = o1 - o0;
+            T[v * 3] = D2[v * 3] * 0.5 + x / n * 0.5; T[v * 3 + 1] = D2[v * 3 + 1] * 0.5 + y / n * 0.5; T[v * 3 + 2] = D2[v * 3 + 2] * 0.5 + z / n * 0.5;
+          }
+          D2.set(T);
+        }
+        for (let i = 0; i < nvG * 3; i++) G.P[i] = P1[i] + D2[i];
+      }
     }
     const eMin = (cfg.minEase != null ? cfg.minEase : 0.004) * st;
     /* Never inside the body it is on -- measured against the body with its smallest bumps smoothed
@@ -880,9 +970,14 @@ function _mhDress(base, Q, B, opts) {
       const band = (v) => torso(v) && G.BP[v * 3 + 1] > waistY - 0.01 * st && G.BP[v * 3 + 1] < 0.47 * st;
       _cmHang(G, (v) => band(v) && G.P[v * 3 + 2] > 0.02 * st, 0.012 * st, 0.9, 1);
       _cmHang(G, (v) => band(v) && G.P[v * 3 + 2] < -0.03 * st, 0.012 * st, 0.7, -1);
-      // And down the sides, from the ribcage to the hip: a shirt does not follow a waist in.
-      _cmHang(G, (v) => band(v) && G.P[v * 3] > 0.07 * st, 0.012 * st, 0.8, 1, 0, 2);
-      _cmHang(G, (v) => band(v) && G.P[v * 3] < -0.07 * st, 0.012 * st, 0.8, -1, 0, 2);
+      // (Not down the sides: hung from the ribcage the trunk stood out into the arms hanging there.)
+    },
+    rehangFade: (v, G) => 1 - _ss01(0.07 * st, 0.12 * st, Math.abs(G.P[v * 3])),
+    rehang: (G) => {
+      const armW = (v) => wsum(G.W, v, arms.L) + wsum(G.W, v, arms.R);
+      const band = (v) => armW(v) < 0.25 && G.BP[v * 3 + 1] > waistY - 0.01 * st && G.BP[v * 3 + 1] < 0.40 * st;
+      _cmHang(G, (v) => band(v) && G.P[v * 3 + 2] > 0.03 * st, 0.012 * st, 1.0, 1);
+      _cmHang(G, (v) => band(v) && G.P[v * 3 + 2] < -0.04 * st, 0.012 * st, 0.8, -1);
     },
     wIters: 14, wS: (p) => {
       const de = Math.min(Math.hypot(p[0] - S.L.el[0], p[1] - S.L.el[1], p[2] - S.L.el[2]), Math.hypot(p[0] - S.R.el[0], p[1] - S.R.el[1], p[2] - S.R.el[2]));
@@ -918,6 +1013,9 @@ function _mhDress(base, Q, B, opts) {
       // The seat hangs from the buttocks to the backs of the thighs.
       _cmHang(G, (v) => G.P[v * 3 + 2] < -0.02 * st && G.BP[v * 3 + 1] < waistY - 0.03 * st && G.BP[v * 3 + 1] > -0.40 * st, 0.012 * st, 0.75, -1);
     },
+    // The seat only: off the midline and above the fork, where the legs part in a stride.
+    rehangFade: (v, G) => _ss01(0.025 * st, 0.06 * st, Math.abs(G.P[v * 3])) * _ss01(-0.20 * st, -0.12 * st, G.BP[v * 3 + 1]),
+    rehang: (G) => _cmHang(G, (v) => G.P[v * 3 + 2] < -0.02 * st && G.BP[v * 3 + 1] < -0.02 * st && G.BP[v * 3 + 1] > -0.40 * st, 0.012 * st, 1.0, -1),
     wIters: 14, wS: (p) => {
       // Harder over the knees: MakeHuman hands a knee from thigh to shin in a centimetre, and a slide
       // folds it right over. Cloth spreads that bend over a hand's width of itself.
@@ -930,7 +1028,8 @@ function _mhDress(base, Q, B, opts) {
     const p = [trouT.BP[v * 3], trouT.BP[v * 3 + 1], trouT.BP[v * 3 + 2]];
     const dk = Math.min(Math.hypot(p[0] - S.L.kn[0], p[1] - S.L.kn[1], p[2] - S.L.kn[2]), Math.hypot(p[0] - S.R.kn[0], p[1] - S.R.kn[1], p[2] - S.R.kn[2]));
     const seat = (1 - _ss01(-0.02 * st, 0.03 * st, p[2])) * _ss01(-0.26 * st, -0.18 * st, p[1]) * (1 - _ss01(waistY - 0.04 * st, waistY + 0.01 * st, p[1]));
-    return 0.8 * Math.max(1 - _ss01(0.08 * st, 0.14 * st, dk), seat);
+    const fork = 1 - _ss01(0.10 * st, 0.17 * st, dCrotch(p));
+    return 0.8 * Math.max(1 - _ss01(0.08 * st, 0.14 * st, dk), seat, fork);
   });
 
   /* Across the seat and the fly, above the fork, the two thighs' shares of the weight are dealt as a
@@ -941,6 +1040,15 @@ function _mhDress(base, Q, B, opts) {
     const x = trouT.BP[v * 3], y = trouT.BP[v * 3 + 1];
     return _ss01(-0.25 * st, -0.13 * st, y) * (1 - _ss01(waistY - 0.03 * st, waistY + 0.01 * st, y)) * (1 - _ss01(0.09 * st, 0.15 * st, Math.abs(x)));
   }, B.upperLegL, B.upperLegR, 0.065 * st);
+
+  // Neither the shirt's trunk nor the trousers' hips inside a sleeve: the arms hang against the sides.
+  for (const sd of ['L', 'R']) {
+    const armW = (M, v) => wsum(M.W, v, arms[sd]);
+    _cmArmClear(shirtT, shirtT, S[sd], armW, 0.003 * st);
+    _cmArmClear(trouT, shirtT, S[sd], armW, 0.003 * st);
+  }
+  // The clearing packs the cloth at the side of the chest closer: no edge shorter than cloth folds, again.
+  for (const M of [shirtT, trouT]) for (let pass = 0; pass < 8; pass++) if (!_cmCollapseShort(M, 0.004 * st)) break;
 
   const bootT = _mhBoots(base, S, st, sole, bootTop, od, (p) => trouEase(p), legs, wsum);
 
