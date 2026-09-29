@@ -566,8 +566,11 @@ Engine.prototype.operator = function (id, opts = {}) {
     /* The dressed body's own measurements, where there is a body to measure (95b gearProfile). */
     const bgeo = c.mesh && this.geometryOf(c.mesh);
     const torso = bgeo && bgeo.mh ? gearProfile(bgeo, op.scale) : null;
-    const kit = buildGear(c.skeleton, op.gear,
-      Object.assign({ build: op.build, stature: op.scale, headPts, torso }, op.gearOpts || {}));
+    /* On the MakeHuman figure the kit is fitted to the dressed body itself (95c); anything else
+       still gets 95b's. */
+    const kopts = Object.assign({ build: op.build, stature: op.scale, headPts, torso, outfit: op.outfit }, op.gearOpts || {});
+    const kit = torso ? buildKit(c.skeleton, op.gear, Object.assign(kopts, { body: bgeo }))
+      : buildGear(c.skeleton, op.gear, kopts);
     c.gear = [];
     for (const part of kit) {
       const gm = new GpuMesh(this.gl, part.geometry);
@@ -582,6 +585,11 @@ Engine.prototype.operator = function (id, opts = {}) {
       });
       ga.visualOffset = new Vec3(0, 0, 0);
       ga.__geo = part.geometry;
+      // The fitted kit's distant versions (95c), switched at the body's own distances.
+      if (part.far && part.vfar) {
+        const lodMesh = (geo, tag) => { const m = new GpuMesh(this.gl, geo); m.__key = gm.__key + tag; return m; };
+        ga.lods = [{ mesh: gm, from: 0 }, { mesh: lodMesh(part.far, ':far'), from: 6 }, { mesh: lodMesh(part.vfar, ':vfar'), from: 16 }];
+      }
       this.actors.push(ga);
       c.gear.push(ga);
       // Shares the skeleton rather than hanging off a bone, so it has no
