@@ -226,16 +226,20 @@ function _cmCollapseShort(M, minLen) {
     const a = M.T[i + k], b = M.T[i + (k + 1) % 3], key = a < b ? a * nv + b : b * nv + a;
     cnt.set(key, (cnt.get(key) || 0) + 1);
   }
-  for (const [key, n] of cnt) if (n === 1) { used[Math.floor(key / nv)] = 2; used[key % nv] = 2; }
+  const onHem = new Uint8Array(nv);
+  for (const [key, n] of cnt) if (n === 1) { onHem[Math.floor(key / nv)] = 1; onHem[key % nv] = 1; }
   const m2 = minLen * minLen;
   for (let i = 0; i < M.T.length; i += 3) for (let k = 0; k < 3; k++) {
-    const a = M.T[i + k], b = M.T[i + (k + 1) % 3];
+    let a = M.T[i + k], b = M.T[i + (k + 1) % 3];
     if (used[a] || used[b]) continue;
     const dx = P[a * 3] - P[b * 3], dy = P[a * 3 + 1] - P[b * 3 + 1], dz = P[a * 3 + 2] - P[b * 3 + 2];
     if (dx * dx + dy * dy + dz * dz >= m2) continue;
+    // Into the hem, where the hem is: an inner point merges onto the edge's point, not the other way.
+    if (onHem[b] && !onHem[a]) { const t = a; a = b; b = t; }
+    const keepA = onHem[a] && !onHem[b];
     used[a] = used[b] = 1;
     par[b] = a;
-    for (let q = 0; q < 3; q++) { P[a * 3 + q] = (P[a * 3 + q] + P[b * 3 + q]) / 2; M.BP[a * 3 + q] = (M.BP[a * 3 + q] + M.BP[b * 3 + q]) / 2; }
+    if (!keepA) for (let q = 0; q < 3; q++) { P[a * 3 + q] = (P[a * 3 + q] + P[b * 3 + q]) / 2; M.BP[a * 3 + q] = (M.BP[a * 3 + q] + M.BP[b * 3 + q]) / 2; }
     const w = _wMixN(M.W, [[a, 0.5], [b, 0.5]]);
     for (let q = 0; q < 8; q++) M.W[a * 8 + q] = w[q];
   }
