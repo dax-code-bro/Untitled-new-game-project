@@ -466,6 +466,137 @@ function gearHelmet(g, headY, s, o) {
    as a gas mask rather than as a scarf -- and it is on ONE cheek,
    because that is where a real one goes. */
 function gearRespirator(g, headY, s, o) {
+  const H = o && o.headPts;
+  if (H && H.length > 300) {
+    /* FITTED TO THE FACE UNDER IT. Placed by fixed offsets from the old sculpt, the cup sat inside
+       the MakeHuman face -- the nose came through it -- and hung past the chin onto the neck. Here
+       the face is measured off the head's own surface (the kit's bind space): the tip of the nose,
+       the depth of the face at every height down the midline, the chin; the half-mask is a cup over
+       nose and mouth standing a centimetre off that profile, from the bridge of the nose to the
+       point of the chin, and the filter and valve sit on it. */
+    const n = H.length / 3;
+    let tip = [0, 0, -1e9], chin = [0, 1e9, 0];
+    for (let i = 0; i < n; i++) {
+      const x = H[i * 3], y = H[i * 3 + 1], z = H[i * 3 + 2];
+      if (Math.abs(x) < 0.006 * s && y < headY + 0.02 * s && y > headY - 0.10 * s && z > tip[2]) tip = [x, y, z];
+    }
+    for (let i = 0; i < n; i++) {
+      const x = H[i * 3], y = H[i * 3 + 1], z = H[i * 3 + 2];
+      if (Math.abs(x) < 0.01 * s && z > tip[2] - 0.05 * s && y < chin[1]) chin = [x, y, z];
+    }
+    const faceZ = (y, xw) => {
+      let z = -1e9;
+      for (let i = 0; i < n; i++) if (Math.abs(H[i * 3]) < xw && Math.abs(H[i * 3 + 1] - y) < 0.006 * s) z = Math.max(z, H[i * 3 + 2]);
+      return z > -1e8 ? z : tip[2] - 0.03 * s;
+    };
+    const cheekZ = (y) => faceZ(y, 0.065 * s) > -1e8 ? (() => {
+      let z = -1e9;
+      for (let i = 0; i < n; i++) if (Math.abs(Math.abs(H[i * 3]) - 0.055 * s) < 0.006 * s && Math.abs(H[i * 3 + 1] - y) < 0.008 * s) z = Math.max(z, H[i * 3 + 2]);
+      return z > -1e8 ? z : tip[2] - 0.05 * s;
+    })() : tip[2] - 0.05 * s;
+    const yB = tip[1] + 0.028 * s, yN = tip[1] - 0.004 * s, yM = (tip[1] + chin[1]) * 0.5 - 0.004 * s, yC = chin[1] + 0.010 * s;
+    /* Each ring: front clear of the face's midline, back ON the cheeks -- the seal. Held to a
+       mask's depth, the cup stood off the cheek as a slab with daylight behind it. */
+    const ring = (y, w, clear) => {
+      const front = faceZ(y, 0.012 * s) + clear, back = cheekZ(y) - 0.004 * s;
+      const d = Math.min(0.052 * s, Math.max(0.018 * s, (front - back) / 2));
+      return { p: new Vec3(0, y, front - d), w, d, e: 2.6 };
+    };
+    /* Nine rings from the bridge to the chin, the widths and the clearances on a smooth curve through
+       the four the shape is drawn by: four alone came out a faceted octagon. */
+    const keys = [[yB, 0.030, 0.008], [yN, 0.052, 0.012], [yM, 0.056, 0.020], [yC, 0.042, 0.012]];
+    const cr = (a0, a1, a2, a3, t) => 0.5 * (2 * a1 + (-a0 + a2) * t + (2 * a0 - 5 * a1 + 4 * a2 - a3) * t * t + (-a0 + 3 * a1 - 3 * a2 + a3) * t * t * t);
+    const K = keys.map(([y, w, c]) => ring(y, w * s, c * s));   // measured at the four only: every ring measuring the face crumpled the profile
+    const rings = [];
+    for (let k = 0; k < 3; k++) {
+      const k0 = K[Math.max(0, k - 1)], k1 = K[k], k2 = K[k + 1], k3 = K[Math.min(3, k + 2)];
+      for (let j = 0; j < 3 || (k === 2 && j === 3); j++) {
+        const t = j / 3, f = (q) => cr(q(k0), q(k1), q(k2), q(k3), t);
+        rings.push({ p: new Vec3(0, f((r) => r.p.y), f((r) => r.p.z)), w: f((r) => r.w), d: f((r) => r.d), e: 2.6 });
+      }
+    }
+    /* Closed off in domes, not flat caps: a flat plate under the chin read as a slab. */
+    const r0 = rings[0], r9 = rings[rings.length - 1];
+    rings.unshift({ p: new Vec3(0, r0.p.y + 0.007 * s, r0.p.z - 0.004 * s), w: r0.w * 0.45, d: r0.d * 0.7, e: 2.4 });
+    rings.push({ p: new Vec3(0, r9.p.y - 0.007 * s, r9.p.z - 0.006 * s), w: r9.w * 0.55, d: r9.d * 0.7, e: 2.4 });
+    loftRings(g, rings, 24, true, true);
+    rings.shift(); rings.pop();
+    const zm = faceZ(yM, 0.012 * s) + 0.020 * s;
+    // Two filter canisters, one on each cheek of the mask, short and round; the exhale valve low.
+    for (const sx of [1, -1]) {
+      const ax = [sx * 0.62, -0.22, 0.75], l = Math.hypot(ax[0], ax[1], ax[2]);
+      gearTube(g, [sx * 0.040 * s, yM + 0.002 * s, zm - 0.026 * s], ax.map((v) => v / l), 0.022 * s, 0.024 * s, 20);
+    }
+    gearTube(g, [0, yM - 0.012 * s, zm - 0.004 * s], [0, -0.28, 0.96], 0.014 * s, 0.014 * s, 16);
+    /* THE HARNESS lies on the head. Straight straps to fixed points behind it stood off into the air
+       behind a MakeHuman skull like a pair of blades. Each strap is a ribbon walked round the head
+       from the side of the cup to the back, at every step set 2.5 mm off the head's own surface at
+       that bearing and height: the upper one climbs over the ear to the back of the crown, the
+       lower one runs under it to the nape, and the two sides meet behind. */
+    let cx = 0, cz = 0, cn = 0;
+    for (let i = 0; i < n; i++) if (Math.abs(H[i * 3 + 1] - headY) < 0.03 * s) { cx += H[i * 3]; cz += H[i * 3 + 2]; cn++; }
+    cz = cn ? cz / cn : 0;
+    const surfR = (phi, y) => {
+      let r = 0;
+      for (let i = 0; i < n; i++) {
+        if (Math.abs(H[i * 3 + 1] - y) > 0.006 * s) continue;
+        const x = H[i * 3], z = H[i * 3 + 2] - cz;
+        let dp = Math.atan2(x, z) - phi;
+        dp = Math.atan2(Math.sin(dp), Math.cos(dp));
+        if (Math.abs(dp) < 0.10) r = Math.max(r, Math.hypot(x, z));
+      }
+      return r;
+    };
+    const ribbon = (sx, y0, y1, phi0, yEar) => {
+      const N = 28, S2 = [];
+      for (let k = 0; k <= N; k++) {
+        const t = k / N, phi = sx * (phi0 + (Math.PI - phi0) * t);
+        // Back along the cheek first (clear of the eye), up past the ear at the side, easing to the back.
+        const u = Math.max(0, Math.min(1, (t - 0.10) / 0.45)), y = t < 0.55 ? y0 + (yEar - y0) * (u * (2 - u)) : yEar + (y1 - yEar) * ((t - 0.55) / 0.45);
+        S2.push({ phi, y, r: surfR(phi, y) });
+      }
+      // Where the head's own mesh stops (under the jaw, into the neck) the radius is carried across.
+      for (let k = 0; k <= N; k++) if (!S2[k].r) {
+        let a4 = k - 1, b4 = k + 1;
+        while (a4 >= 0 && !S2[a4].r) a4--;
+        while (b4 <= N && !S2[b4].r) b4++;
+        if (a4 >= 0 && b4 <= N) S2[k].r = S2[a4].r + (S2[b4].r - S2[a4].r) * (k - a4) / (b4 - a4);
+        else if (a4 >= 0) S2[k].r = S2[a4].r;
+        else if (b4 <= N) S2[k].r = S2[b4].r;
+      }
+      // The radius smoothed along the run, keeping the larger: bumps in the scalp tore the ribbon.
+      for (let it = 0; it < 3; it++) for (let k = 1; k < N; k++) {
+        const a3 = S2[k - 1].r, b3 = S2[k + 1].r;
+        if (a3 && b3 && S2[k].r) S2[k].r = Math.max(S2[k].r, (a3 + 2 * S2[k].r + b3) / 4);
+      }
+      const pts = [];
+      for (const { phi, y, r } of S2) {
+        if (!r) continue;
+        const rr = r + 0.0025 * s;
+        pts.push({ p: new Vec3(Math.sin(phi) * rr, y, cz + Math.cos(phi) * rr), nrm: new Vec3(Math.sin(phi), 0, Math.cos(phi)) });
+      }
+      if (pts.length < 2) return;
+      const R = pts.map((q, k) => {
+        const a2 = pts[Math.max(0, k - 1)].p, b2 = pts[Math.min(pts.length - 1, k + 1)].p;
+        const dir = new Vec3(b2.x - a2.x, b2.y - a2.y, b2.z - a2.z);
+        const dl = Math.hypot(dir.x, dir.y, dir.z) || 1;
+        const nn = q.nrm;
+        let wv = new Vec3((dir.y * nn.z - dir.z * nn.y) / dl, (dir.z * nn.x - dir.x * nn.z) / dl, (dir.x * nn.y - dir.y * nn.x) / dl);
+        const wl = Math.hypot(wv.x, wv.y, wv.z) || 1;
+        wv = new Vec3(wv.x / wl, wv.y / wl, wv.z / wl);
+        return { p: q.p, w: 0.0065 * s, d: 0.0018 * s, e: 3.2, right: wv, fwd: nn, uv: k / (pts.length - 1) };
+      });
+      loftRings(g, R, 8, true, true);
+    };
+    const rN = rings[3], rC = rings[rings.length - 2];
+    for (const sx of [1, -1]) {
+      const phiU = Math.atan2(rN.w * 0.92, rN.p.z - cz), phiL = Math.atan2(rC.w * 0.92, rC.p.z - cz);
+      ribbon(sx, rN.p.y, headY + 0.022 * s, phiU, headY + 0.016 * s);
+      ribbon(sx, rC.p.y, headY - 0.060 * s, phiL, headY - 0.058 * s);
+    }
+    void cx;
+    return;
+  }
   // The face piece, cupping the nose and mouth.
   loftRings(g, [
     { p: new Vec3(0, headY - 0.020 * s, 0.074 * s), w: 0.078 * s, d: 0.050 * s, e: 2.6 },

@@ -322,6 +322,28 @@ function makeMhHeadGeometry(opts = {}) {
   }
   // Along the jaw, the whole figure's normals (subdivision keeps the original vertices first).
   for (let v = 0; v < n0; v++) if (fig.seam[src0[v]]) { const w = src0[v]; N[v * 3] = fig.N[w * 3]; N[v * 3 + 1] = fig.N[w * 3 + 1]; N[v * 3 + 2] = fig.N[w * 3 + 2]; }
+  /* ...and the points subdivision put BETWEEN them along the edge take the average of their two
+     neighbours on it. Left with the head's own normals they tilted like an open rim, and in a band
+     along the jaw line -- lowest, and so most in the light, at the front of the throat -- the neck
+     showed a dark rectangle where the head met it. */
+  if (nv > n0) {
+    const ec = new Map(), key = (a, b) => (a < b ? a * nv + b : b * nv + a);
+    for (let i = 0; i < tris.length; i += 3) for (let k = 0; k < 3; k++) { const q = key(tris[i + k], tris[i + (k + 1) % 3]); ec.set(q, (ec.get(q) || 0) + 1); }
+    const bn = new Map();
+    for (const [q, c] of ec) {
+      if (c !== 1) continue;
+      const a = Math.floor(q / nv), b = q % nv;
+      (bn.get(a) || bn.set(a, []).get(a)).push(b);
+      (bn.get(b) || bn.set(b, []).get(b)).push(a);
+    }
+    for (let pass = 0; pass < 2; pass++) for (const [v, nb] of bn) {
+      if (v < n0) continue;
+      let x = 0, y = 0, z = 0;
+      for (const q of nb) { x += N[q * 3]; y += N[q * 3 + 1]; z += N[q * 3 + 2]; }
+      const l = Math.hypot(x, y, z) || 1;
+      N[v * 3] = x / l; N[v * 3 + 1] = y / l; N[v * 3 + 2] = z / l;
+    }
+  }
   for (let v = 0; v < nv; v++) {
     const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2];
     const l = Math.hypot(N[v * 3], N[v * 3 + 1], N[v * 3 + 2]) || 1;

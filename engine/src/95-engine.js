@@ -791,7 +791,10 @@ class Engine {
       bodyEnt = bc.get(bk);
       if (!bodyEnt) {
         const g0 = makeMhBodyGeometry(skeleton, { fig: figOpts, stature: scale, outfitDef: heroOutfit, fit: opts.fit });
-        bodyEnt = { geo: g0, far: g0, vfar: g0 };
+        /* Past six metres, the same clothes at the body's own resolution (94h, `lod`): a quarter of the
+           triangles, and twelve men in a match are drawn at that most of the time. */
+        const g1 = makeMhBodyGeometry(skeleton, { fig: figOpts, stature: scale, outfitDef: heroOutfit, fit: opts.fit, lod: 'far' });
+        bodyEnt = { geo: g0, far: g1, vfar: g1 };
         bc.set(bk, bodyEnt);
       }
     } else if (sdfLiving) {
@@ -921,11 +924,15 @@ class Engine {
     for (const [key, mat, nm] of [
       ['hands', opts.gloves != null ? opts.gloves
         : heroOutfit ? (opts.skin != null ? opts.skin : 'skin')
-        : { color: 0x2b2a27, texture: 'leather', roughness: 0.80, metalness: 0, uvScale: 3 }, 'hands'],
+        /* Matte synthetic, not leather: the leather recipe's wax finish takes an asked-for 0.88
+           down to 0.45 (the shader multiplies by the map) and the gloves read as wet latex; the
+           polymer grain, at a glove's texture scale, came out as lizard skin. 'smooth' is the map's
+           identity, so this is the roughness asked for. */
+        : { color: 0x2e2d2a, texture: 'smooth', roughness: 0.80, metalness: 0, uvScale: 3 }, 'hands'],
       ['boots', opts.boots != null ? opts.boots
         // White, so the outfit's shoe colours (painted per vertex) come through.
         : heroOutfit ? (heroOutfit.shoes && heroOutfit.shoes.kind === 'sneaker'
-          ? { color: 0xffffff, texture: 'fabric', roughness: 0.82, metalness: 0, uvScale: 3 }
+          ? { color: 0xffffff, texture: 'smooth', roughness: 0.58, metalness: 0, uvScale: 3 }   // smooth synthetic: a fabric weave read as a slipper, and leather's own brown drowned the outfit colours
           : { color: 0xffffff, texture: 'leather', roughness: 0.55, metalness: 0, uvScale: 2 })
         : { color: 0x3a3028, texture: 'leather', roughness: 0.68, metalness: 0, uvScale: 2 }, 'boots'],
     ]) {

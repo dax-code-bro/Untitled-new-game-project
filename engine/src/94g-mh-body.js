@@ -328,7 +328,7 @@ function makeMhBodyGeometry(skeleton, opts = {}) {
   const Bidx = {};
   for (const b of skeleton.bones) Bidx[b.name] = skeleton.index(b.name);
   const od = opts.outfitDef || null;
-  const dr = _mhDress(base, Q, Bidx, { stature: st, outfitDef: od, fit: opts.fit });
+  const dr = _mhDress(base, Q, Bidx, { stature: st, outfitDef: od, fit: opts.fit, lod: opts.lod });
   const names = skeleton.bones.map((b) => b.name);
   const partOf = (M) => (v) => PARTOF(names[M.W[v * 8]] || 'hips');
 
@@ -353,13 +353,16 @@ function makeMhBodyGeometry(skeleton, opts = {}) {
 
   // The skin that shows, with the whole figure's normals along the jaw (as the head has them).
   const sk = dr.skin;
-  g.neck = _cmToGeometry(sk, 6, partOf(sk), null,
+  /* Metres x 1.67: the head's texture coordinates run once round a 0.6 m head, so the skin's grain is
+     the same size either side of the jaw line and the join does not show as a change of texture. */
+  g.neck = _cmToGeometry(sk, 1.67, partOf(sk), null,
     (v) => (sk.S[v] >= 0 && fig.seam[sk.S[v]] ? [fig.N[sk.S[v] * 3], fig.N[sk.S[v] * 3 + 1], fig.N[sk.S[v] * 3 + 2]] : null));
   g.hands = dr.hands ? _cmToGeometry(dr.hands, dr.uvM, partOf(dr.hands)) : null;
   const shoes = od && od.shoes;
   const upC = shoes ? hex3(shoes.color) : white, soC = shoes ? (shoes.sole != null ? hex3(shoes.sole) : upC.map((x) => x * 0.55)) : [0.45, 0.45, 0.45];
   const bt = dr.boots;
-  g.boots = _cmToGeometry(bt, dr.uvM, partOf(bt), (v) => (bt.P[v * 3 + 1] < -0.875 * st + 0.022 * st ? soC : upC));
+  const midY = -0.875 * st + (shoes && shoes.kind === 'sneaker' ? 0.027 : 0.022) * st;   // the midsole in its own colour
+  g.boots = _cmToGeometry(bt, 1, partOf(bt), (v) => ((bt.sole ? bt.sole[v] : bt.P[v * 3 + 1] < midY) ? soC : upC));
   g.mhHeadPlace = place;
   g.mh = true;
   return g;

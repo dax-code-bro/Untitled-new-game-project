@@ -36,19 +36,31 @@ const _cmNV = (M) => M.P.length / 3;
 
 /* Weights: 4 x [joint, weight] per vertex, flat. Mixing sums by joint, keeps the heaviest
    four and renormalises -- the same rule the renderer skins with. */
+// Accumulate by joint in a scratch table (no Map, no sort): this is the
+// innermost call of every weight smoothing pass.
+const _wAcc = new Float64Array(256), _wSeen = new Int32Array(256);
 function _wMixN(W, list) {
-  const m = new Map();
-  for (const [v, t] of list) {
+  let n = 0;
+  for (let i = 0; i < list.length; i++) {
+    const v = list[i][0], t = list[i][1];
     if (t <= 0) continue;
     for (let k = 0; k < 4; k++) {
       const w = W[v * 8 + k * 2 + 1] * t;
-      if (w > 0) { const j = W[v * 8 + k * 2]; m.set(j, (m.get(j) || 0) + w); }
+      if (w > 0) { const j = W[v * 8 + k * 2]; if (_wAcc[j] === 0) _wSeen[n++] = j; _wAcc[j] += w; }
     }
   }
-  const L = [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
-  const tot = L.reduce((s, x) => s + x[1], 0) || 1;
   const out = [0, 0, 0, 0, 0, 0, 0, 0];
-  L.forEach(([j, w], k) => { out[k * 2] = j; out[k * 2 + 1] = w / tot; });
+  let tot = 0;
+  // top four, earliest first on ties (as the stable sort did)
+  for (let k = 0; k < 4 && k < n; k++) {
+    let bi = -1, bw = 0;
+    for (let i = 0; i < n; i++) { const w = _wAcc[_wSeen[i]]; if (w > bw) { bw = w; bi = i; } }
+    if (bi < 0) break;
+    out[k * 2] = _wSeen[bi]; out[k * 2 + 1] = bw; tot += bw; _wAcc[_wSeen[bi]] = -1;
+  }
+  for (let i = 0; i < n; i++) _wAcc[_wSeen[i]] = 0;
+  tot = tot || 1;
+  for (let k = 0; k < 4; k++) out[k * 2 + 1] /= tot;
   return out;
 }
 function _cmCopyVert(O, M, v) {
@@ -191,18 +203,22 @@ function _cmSmooth(M, iters, s, topo, plain) {
 function _cmSmoothWeights(M, iters, s, topo) {
   const nv = _cmNV(M);
   const T = topo || _cmTopo(M);
+  // Only the vertices inside the zone do any work: most passes are over a knee or a shoulder.
+  const K = new Float64Array(nv), active = [];
+  for (let v = 0; v < nv; v++) {
+    K[v] = typeof s === 'function' ? s(v) : s;
+    if (K[v] > 0 && T.off[v + 1] > T.off[v]) active.push(v);
+  }
+  if (!active.length) return;
+  const list = [];
   for (let it = 0; it < iters; it++) {
-    const W2 = new Array(nv * 8);
-    for (let v = 0; v < nv; v++) {
-      const k = typeof s === 'function' ? s(v) : s;
-      const n = T.off[v + 1] - T.off[v];
-      let w;
-      if (k <= 0 || !n) w = M.W.slice(v * 8, v * 8 + 8);
-      else {
-        const list = [[v, 1 - k]];
-        for (let o = T.off[v]; o < T.off[v + 1]; o++) list.push([T.adj[o], k / n]);
-        w = _wMixN(M.W, list);
-      }
+    const W2 = M.W.slice();
+    for (const v of active) {
+      const k = K[v], n = T.off[v + 1] - T.off[v];
+      list.length = 0;
+      list.push([v, 1 - k]);
+      for (let o = T.off[v]; o < T.off[v + 1]; o++) list.push([T.adj[o], k / n]);
+      const w = _wMixN(M.W, list);
       for (let q = 0; q < 8; q++) W2[v * 8 + q] = w[q];
     }
     M.W = W2;
@@ -338,6 +354,35 @@ function _cmSmoothLoops(M, iters) {
   }
 }
 
+/* Triangles turned inside out -- facing into the body they came from, where the fork's seam and
+   the clearing crowd the cloth -- showed as a pale diamond at the crotch. Each pass pulls the
+   corners of every such triangle to their neighbours' mean until none is left facing in. */
+function _cmUnflip(M, passes = 12) {
+  const T = _cmTopo(M), P = M.P, BN = M.BN;
+  for (let it = 0; it < passes; it++) {
+    const bad = new Set();
+    for (let i = 0; i < M.T.length; i += 3) {
+      const a = M.T[i], b = M.T[i + 1], c = M.T[i + 2];
+      const ux = P[b * 3] - P[a * 3], uy = P[b * 3 + 1] - P[a * 3 + 1], uz = P[b * 3 + 2] - P[a * 3 + 2];
+      const vx = P[c * 3] - P[a * 3], vy = P[c * 3 + 1] - P[a * 3 + 1], vz = P[c * 3 + 2] - P[a * 3 + 2];
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      let d = 0;
+      for (const q of [a, b, c]) d += nx * BN[q * 3] + ny * BN[q * 3 + 1] + nz * BN[q * 3 + 2];
+      if (d < 0) { bad.add(a); bad.add(b); bad.add(c); }
+    }
+    if (!bad.size) return it;
+    for (const v of bad) {
+      const o0 = T.off[v], o1 = T.off[v + 1];
+      if (o1 === o0) continue;
+      let x = 0, y = 0, z = 0;
+      for (let o = o0; o < o1; o++) { const q = T.adj[o]; x += P[q * 3]; y += P[q * 3 + 1]; z += P[q * 3 + 2]; }
+      const n = o1 - o0;
+      P[v * 3] = x / n; P[v * 3 + 1] = y / n; P[v * 3 + 2] = z / n;
+    }
+  }
+  return passes;
+}
+
 /* Keep a garment out of the sleeves. `F` is one side's limb frame (shoulder, elbow, wrist); the
    sleeve's thickness down its length is measured off `ref` (the shirt, its vertices bound almost
    wholly to that arm, `armW(M, v)`), and every vertex of `M` that is not itself the sleeve and lies
@@ -468,9 +513,32 @@ function _cmDistFrom(M, seeds, topo, maxD) {
 function _cmHem(M, depth, loops, uvk = 1) {
   const N = _cmNormals(M);
   for (const L of loops || _cmBoundaryLoops(M)) {
-    const inner = L.map(({ v }) => {
+    /* Into the cloth from each edge point: toward the corner opposite each boundary edge, averaged
+       over the two edges meeting there. A folded edge's normal can tilt out past the edge, and the
+       strip turned under along it came out below the hem as a row of teeth: the part of the offset
+       that runs out past the edge is dropped, and a little of it goes up into the garment instead. */
+    const P = M.P, n = L.length;
+    const into = L.map(({ tri, k }) => {
+      const a = M.T[tri * 3 + k], b = M.T[tri * 3 + (k + 1) % 3], c = M.T[tri * 3 + (k + 2) % 3];
+      return [0, 1, 2].map((q) => P[c * 3 + q] - (P[a * 3 + q] + P[b * 3 + q]) / 2);
+    });
+    let D = L.map(({ v }, j) => {
+      const e0 = into[j], e1 = into[(j - 1 + n) % n];
+      const nv = [N[v * 3], N[v * 3 + 1], N[v * 3 + 2]];
+      let e = [e0[0] + e1[0], e0[1] + e1[1], e0[2] + e1[2]];
+      const en = e[0] * nv[0] + e[1] * nv[1] + e[2] * nv[2];
+      e = [e[0] - nv[0] * en, e[1] - nv[1] * en, e[2] - nv[2] * en];
+      const el = Math.hypot(e[0], e[1], e[2]) || 1;
+      e = [e[0] / el, e[1] / el, e[2] / el];
+      const d = [-nv[0] * depth, -nv[1] * depth, -nv[2] * depth];
+      const out = -(d[0] * e[0] + d[1] * e[1] + d[2] * e[2]);
+      return [0, 1, 2].map((q) => d[q] + e[q] * (Math.max(0, out) + depth * 0.25));
+    });
+    // Smoothed along the loop: one corner with a bad normal (a sliver the collapse left) was a tooth.
+    if (n > 4) for (let it = 0; it < 6; it++) D = D.map((d, j) => { const a = D[(j - 1 + n) % n], b = D[(j + 1) % n]; return [0, 1, 2].map((q) => (a[q] + 2 * d[q] + b[q]) / 4); });
+    const inner = L.map(({ v }, j) => {
       const i = _cmCopyVert(M, M, v);
-      for (let k = 0; k < 3; k++) M.P[i * 3 + k] -= N[v * 3 + k] * depth;
+      for (let q = 0; q < 3; q++) P[i * 3 + q] += D[j][q];
       return i;
     });
     for (let j = 0; j < L.length; j++) {
@@ -597,6 +665,39 @@ function _cmToGeometry(M, uvScale, partOf, colorOf, normalOf) {
   if (C) g.colors = C;
   g.finalize();
   return g;
+}
+
+/* The distant hand: vertex clustering on a grid of `cell`. Each cell keeps the member nearest its
+   middle (weights, bind data and all), triangles are re-pointed and the ones that collapse drop.
+   Fingers a cell apart can join; at six metres and beyond a hand is twenty pixels. */
+function _cmCluster(M, cell) {
+  const nv = _cmNV(M), key = new Map(), cellOf = new Int32Array(nv), sum = [];
+  for (let v = 0; v < nv; v++) {
+    const k = Math.floor(M.P[v * 3] / cell) + ',' + Math.floor(M.P[v * 3 + 1] / cell) + ',' + Math.floor(M.P[v * 3 + 2] / cell);
+    let c = key.get(k);
+    if (c == null) { c = sum.length; key.set(k, c); sum.push([0, 0, 0, 0]); }
+    cellOf[v] = c; const s = sum[c];
+    s[0] += M.P[v * 3]; s[1] += M.P[v * 3 + 1]; s[2] += M.P[v * 3 + 2]; s[3]++;
+  }
+  const rep = new Int32Array(sum.length).fill(-1), best = new Float64Array(sum.length).fill(Infinity);
+  for (let v = 0; v < nv; v++) {
+    const s = sum[cellOf[v]], n = s[3];
+    const d = (M.P[v * 3] - s[0] / n) ** 2 + (M.P[v * 3 + 1] - s[1] / n) ** 2 + (M.P[v * 3 + 2] - s[2] / n) ** 2;
+    if (d < best[cellOf[v]]) { best[cellOf[v]] = d; rep[cellOf[v]] = v; }
+  }
+  const O = _cmNew(), idx = new Int32Array(sum.length).fill(-1), faces = new Set();
+  for (let i = 0; i < M.T.length; i += 3) {
+    const c = [cellOf[M.T[i]], cellOf[M.T[i + 1]], cellOf[M.T[i + 2]]];
+    if (c[0] === c[1] || c[1] === c[2] || c[0] === c[2]) continue;
+    const f = [...c].sort((a, b) => a - b).join(',');
+    if (faces.has(f)) continue;
+    faces.add(f);
+    for (let k = 0; k < 3; k++) {
+      if (idx[c[k]] < 0) idx[c[k]] = _cmCopyVert(O, M, rep[c[k]]);
+      O.T.push(idx[c[k]]); O.UV.push(M.UV[(i + k) * 2], M.UV[(i + k) * 2 + 1]);
+    }
+  }
+  return O;
 }
 
 /* Metres of body per unit of MakeHuman's texture space, measured on the mesh, so a fabric's
@@ -759,8 +860,10 @@ function _mhDress(base, Q, B, opts) {
   const waistY = 0.100 * st;                  // the top of the trousers, just under the navel
   const beltH = 0.040 * st;
   const collarAt = (p) => p[1] - (neckQ[1] - 0.034 * st - 0.44 * (p[2] - neckQ[2]));   // higher at the nape than at the throat
-  const bootTop = sole + 0.160 * st;
-  const trouserEnd = sole + 0.110 * st;
+  // A boot takes the trouser tucked into it; a trainer is low, and the trouser hangs down over it.
+  const sneaker = !!(od && od.shoes && od.shoes.kind === 'sneaker');
+  const bootTop = sneaker ? sole + 0.098 * st : sole + 0.160 * st;
+  const trouserEnd = sneaker ? sole + 0.090 * st : sole + 0.110 * st;   // over a trainer: the hem rests on its collar
 
   // Per-vertex limb membership, from the skin weights.
   const A = { L: new Float64Array(nv), R: new Float64Array(nv) }, Lg = { L: new Float64Array(nv), R: new Float64Array(nv) };
@@ -794,7 +897,9 @@ function _mhDress(base, Q, B, opts) {
       : -0.05;
     fShirt[v] = Math.max(Math.min(NW[v] - 0.30, collarAt(p) + 0.02 * st), hem, sl);
     const ls = legSide(v);
-    const legEnd = legFrac >= 0.95 ? trouserEnd - p[1] : legAlong(ls, p) - legFrac * (S[ls].k1 + S[ls].k2);
+    // Over a trainer the hem breaks lower at the back and sides than over the tongue in front.
+    const endY = sneaker ? sole + (0.064 + 0.028 * _ss01(S[ls].an[2] - 0.01 * st, S[ls].an[2] + 0.05 * st, p[2])) * st : trouserEnd;
+    const legEnd = legFrac >= 0.95 ? endY - p[1] : legAlong(ls, p) - legFrac * (S[ls].k1 + S[ls].k2);
     fTrou[v] = Math.max(p[1] - waistY, legEnd, arm - 0.5);
     fGlove[v] = Math.max(0.5 - arm, -0.035 * st - wristCut(v, p));
     fBoot[v] = Math.max(p[1] - bootTop, arm - 0.5);
@@ -820,8 +925,11 @@ function _mhDress(base, Q, B, opts) {
 
   /* Let a piece out: subdivide, smooth away the anatomy, stand it off the body by its ease, keep
      it outside the body everywhere, and fold it. */
+  /* THE DISTANT BUILD (opts.lod): the same garments at the body's own resolution -- not subdivided,
+     no pockets -- a quarter of the triangles, for anyone past six metres. */
+  const lod = !!opts.lod;
   const tailor = (M, cfg) => {
-    const G = cfg.subdivide === false ? M : _cmSubdivide(M);
+    const G = cfg.subdivide === false || lod ? M : _cmSubdivide(M);
     const topo = _cmTopo(G);
     const it = cfg.smooth != null ? cfg.smooth : 6;
     if (it > 0) _cmSmooth(G, it, (v) => (cfg.smoothS ? cfg.smoothS(v, G) : 1), topo);
@@ -921,9 +1029,14 @@ function _mhDress(base, Q, B, opts) {
     if (p[1] < -0.10 * st) e += 0.007 * _ss01(-0.10 * st, -0.20 * st, p[1]);         // cut full through the thigh and below
     if (p[1] > waistY - 0.05 * st) e += 0.005 * _ss01(waistY - 0.05 * st, waistY - 0.01 * st, p[1]);   // the waistband sits outside the shirt
     if (p[1] < -0.52 * st) e += 0.005 * _ss01(-0.52 * st, -0.70 * st, p[1]);      // the shin hangs loose
-    // Tucked into the boot: gathered in to the shaft below its top, bloused out over it just above.
-    if (p[1] < bootTop + 0.06 * st) e += 0.006 * Math.exp(-Math.pow((p[1] - bootTop - 0.018 * st) / (0.022 * st), 2));
-    if (p[1] < bootTop) e -= 0.010 * _ss01(bootTop, bootTop - 0.025 * st, p[1]);
+    if (sneaker) {
+      // Over a trainer: hanging straight and a little full at the hem, clear of the shoe's collar.
+      if (p[1] < bootTop + 0.05 * st) e += 0.014 * _ss01(bootTop + 0.05 * st, bootTop, p[1]);
+    } else {
+      // Tucked into the boot: gathered in to the shaft below its top, bloused out over it just above.
+      if (p[1] < bootTop + 0.06 * st) e += 0.006 * Math.exp(-Math.pow((p[1] - bootTop - 0.018 * st) / (0.022 * st), 2));
+      if (p[1] < bootTop) e -= 0.010 * _ss01(bootTop, bootTop - 0.025 * st, p[1]);
+    }
     return e;
   };
   const side = (p, s) => p[0] * (s === 'L' ? 1 : -1) > -0.01 * st;
@@ -935,6 +1048,12 @@ function _mhDress(base, Q, B, opts) {
       let e = easeT;
       if (p[2] < -0.02 * st) e += 0.003;                                             // cut fuller across the back
       e += 0.006 * _ss01(0.14 * st, 0.17 * st, Math.abs(p[0])) * _ss01(S.L.sh[1] - 0.02 * st, S.L.sh[1] - 0.09 * st, p[1]);   // a sleeve is a tube, not a second skin (below the shoulder cap)
+      if (gloved) {
+        /* Over the glove's gauntlet the cuff stands off it: the cuff's folds (inward, up to 2.4 mm)
+           centred on the glove's top edge sawed it through the sleeve in a row of teeth. */
+        const F = S[p[0] >= 0 ? 'L' : 'R'], wc = dot3(sub3(p, F.wr), F.uFore);
+        e += 0.005 * _ss01(-0.065 * st, -0.045 * st, wc) * (Math.abs(p[0]) > 0.12 * st ? 1 : 0);
+      }
       if (tucked) {
         // Tucked in under the waistband (whose top the belt covers), bloused out over the belt above it.
         const t = _ss01(waistY + 0.002 * st, waistY + 0.014 * st, p[1]);
@@ -1002,7 +1121,7 @@ function _mhDress(base, Q, B, opts) {
         const F = S[s];
         if (!side(p, s)) continue;
         d += ringFolds(p, F.kn, F.uShin, -0.005 * st, 0.07 * st, 1 / (0.035 * st), 0.0032 * fold, s === 'L' ? 0.4 : 2.9);   // the knee
-        d += ringFolds(p, F.an, F.uShin, -(bootTop - F.an[1]) - 0.020 * st, 0.026 * st, 1 / (0.018 * st), 0.0035 * fold, s === 'L' ? 1.7 : 3.8);  // bloused over the boot top
+        if (!sneaker) d += ringFolds(p, F.an, F.uShin, -(bootTop - F.an[1]) - 0.020 * st, 0.026 * st, 1 / (0.018 * st), 0.0035 * fold, s === 'L' ? 1.7 : 3.8);  // bloused over the boot top
         d += ringFolds(p, F.hp, F.uThigh, 0.05 * st, 0.06 * st, 1 / (0.05 * st), 0.0016 * fold, s === 'L' ? 2.6 : 0.9);  // drag from the crotch
       }
       return d;
@@ -1049,10 +1168,12 @@ function _mhDress(base, Q, B, opts) {
   }
   // The clearing packs the cloth at the side of the chest closer: no edge shorter than cloth folds, again.
   for (const M of [shirtT, trouT]) for (let pass = 0; pass < 8; pass++) if (!_cmCollapseShort(M, 0.004 * st)) break;
+  // Inside-out triangles relaxed, and the edges that relaxing shortened collapsed in turn.
+  for (const M of [trouT]) { _cmUnflip(M); for (let pass = 0; pass < 8; pass++) if (!_cmCollapseShort(M, 0.004 * st)) break; }
 
-  const bootT = _mhBoots(base, S, st, sole, bootTop, od, (p) => trouEase(p), legs, wsum);
+  const bootT = _mhBoots(base, S, st, sole, bootTop, od, (p) => trouEase(p), legs, wsum, lod);
 
-  const gloveT = gloves ? tailor(gloves, { subdivide: false, smooth: 2, ease: () => 0.0026, minEase: 0.0018, collapse: false }) : null;
+  let gloveT = gloves ? tailor(gloves, { subdivide: false, smooth: 2, ease: () => 0.0026, minEase: 0.0018, collapse: false }) : null;
 
   /* The belt: a band cut from the trousers at the waist and stood off them. */
   let belt = null;
@@ -1094,14 +1215,30 @@ function _mhDress(base, Q, B, opts) {
         }
       }
     }
+    /* The neck's own radius round its axis, at a height and a bearing, off the body: the collar stands
+       at least 5 mm clear of it. Leaning in by a fixed 4 mm, it went inside the throat at the front
+       -- where the neck swells toward the chin -- and showed only as a patch of z-fighting. */
+    const neckR = (y, ang) => {
+      let r = 0;
+      for (let v = 0; v < nv; v++) {
+        if (Math.abs(P[v * 3 + 1] - y) > 0.010 * st || NW[v] < 0.2) continue;
+        const dx = P[v * 3] - neckQ[0], dz = P[v * 3 + 2] - neckQ[2];
+        let da = Math.atan2(dx, dz) - ang;
+        da = Math.atan2(Math.sin(da), Math.cos(da));
+        if (Math.abs(da) < 0.18) r = Math.max(r, Math.hypot(dx, dz));
+      }
+      return r;
+    };
     const top = collarLoop.map(({ v }) => {
       const i = _cmCopyVert(shirtT, shirtT, v);
       const dx = shirtT.P[v * 3] - neckQ[0], dz = shirtT.P[v * 3 + 2] - neckQ[2];
-      const r = Math.hypot(dx, dz) || 1;
+      const r = Math.hypot(dx, dz) || 1, ang = Math.atan2(dx, dz);
       const back = _ss01(0.0, -0.05 * st, dz);           // taller at the back
-      shirtT.P[i * 3] -= dx / r * 0.004 * st;
-      shirtT.P[i * 3 + 1] += H * (0.8 + 0.3 * back);
-      shirtT.P[i * 3 + 2] -= dz / r * 0.004 * st;
+      const y = shirtT.P[v * 3 + 1] + H * (0.8 + 0.3 * back);
+      const rr = Math.max(r - 0.004 * st, neckR(y, ang) + 0.005 * st);
+      shirtT.P[i * 3] = neckQ[0] + dx / r * rr;
+      shirtT.P[i * 3 + 1] = y;
+      shirtT.P[i * 3 + 2] = neckQ[2] + dz / r * rr;
       return i;
     });
     for (let j = 0; j < collarLoop.length; j++) {
@@ -1115,14 +1252,22 @@ function _mhDress(base, Q, B, opts) {
     }
   }
 
-  // Every open edge of the cloth turned under (the collar's top included).
-  _cmHem(shirtT, 0.006 * st, null, uvk);
+  /* Every open edge of the cloth turned under -- the collar's top only just: it stands against the
+     throat, and turned in by the shirt's six millimetres it came out through the skin there. */
+  {
+    const loops = _cmBoundaryLoops(shirtT);
+    let top = null, best = -Infinity;
+    for (const L of loops) { let y = 0; for (const { v } of L) y += shirtT.P[v * 3 + 1]; if (y / L.length > best) { best = y / L.length; top = L; } }
+    _cmHem(shirtT, 0.006 * st, loops.filter((L) => L !== top), uvk);
+    if (top) _cmHem(shirtT, 0.0015 * st, [top], uvk);
+  }
   _cmHem(trouT, 0.006 * st, null, uvk);
   if (gloveT) _cmHem(gloveT, 0.003 * st, null, uvk);
+  if (gloveT && lod) gloveT = _cmCluster(gloveT, 0.009 * st);
 
   /* Pockets and flaps, sewn on last so nothing turns their edges under. */
   const s0 = _cmNV(shirtT), t0 = _cmNV(trouT);
-  if (!od && !hazmat) {
+  if (!od && !hazmat && !lod) {
     const Ns = _cmNormals(shirtT), Nt = _cmNormals(trouT);
     for (const s of ['L', 'R']) {
       const F = S[s], sx = s === 'L' ? 1 : -1, out = [sx, 0, 0];
@@ -1148,7 +1293,7 @@ function _mhDress(base, Q, B, opts) {
   }
 
   // ...and each patch's weights smoothed across it, so it bends as one piece of cloth.
-  if (!od && !hazmat) {
+  if (!od && !hazmat && !lod) {
     _cmSmoothWeights(shirtT, 6, (v) => (v >= s0 ? 0.7 : 0));
     _cmSmoothWeights(trouT, 6, (v) => (v >= t0 ? 0.7 : 0));
   }
@@ -1159,20 +1304,36 @@ function _mhDress(base, Q, B, opts) {
     for (const s of ['L', 'R']) {
       const F = S[s], sx = s === 'L' ? 1 : -1;
       frames.push({ o: F.sh, axis: _norm3(sub3(F.sh, F.wr)), out: [sx, 0, 0], R: 0.05 * st });
-      frames.push({ o: F.hp, axis: _norm3(sub3(F.hp, F.an)), out: [sx, 0, 0], R: 0.08 * st });
+      // Its origin where the leg's axis crosses y = 0, the trunk's: the weave's rows run on round the seam.
+      const ax = _norm3(sub3(F.hp, F.an)), k0 = -F.hp[1] / ax[1];
+      frames.push({ o: [F.hp[0] + ax[0] * k0, 0, F.hp[2] + ax[2] * k0], axis: ax, out: [sx, 0, 0], R: 0.08 * st });
     }
     const pickOf = (M) => (i) => {
-      let aL = 0, aR = 0, lL = 0, lR = 0, y = 0;
+      let aL = 0, aR = 0, x = 0, y = 0;
       for (let k = 0; k < 3; k++) {
         const v = M.T[i + k];
-        aL += wsum(M.W, v, arms.L); aR += wsum(M.W, v, arms.R); lL += wsum(M.W, v, legs.L); lR += wsum(M.W, v, legs.R);
-        y += M.BP[v * 3 + 1];
+        aL += wsum(M.W, v, arms.L); aR += wsum(M.W, v, arms.R);
+        x += M.BP[v * 3]; y += M.BP[v * 3 + 1];
       }
       if (Math.max(aL, aR) > 1.5) return aL >= aR ? 1 : 3;
-      if (Math.max(lL, lR) > 1.5 && y / 3 < -0.02 * st) return lL >= lR ? 2 : 4;
+      /* Trunk above the fork, a leg below it, by position: chosen by the leg weights, the triangles
+         of the upper thigh flipped between the two wraps and the weave's lines stepped across it. */
+      if (y / 3 < crotch[1]) return x >= 0 ? 2 : 4;
       return 0;
     };
     for (const M of [shirtT, trouT, belt]) if (M) _cmCylUV(M, frames, pickOf(M));
+    /* The skin that shows gets the same treatment, the neck wrapped round its own axis with the seam
+       at the nape: on MakeHuman's layout the throat sits on an island edge whose coordinates
+       collapse, and the skin's pore map smeared into a dark rectangle there. */
+    const nf = frames.length;
+    frames.push({ o: neckQ, axis: [0, 1, 0], out: [0, 0, 1], R: 0.055 * st });
+    const neckSet2 = [B.neck, B.head, B.chest];
+    _cmCylUV(skin, frames, (i) => {
+      let a = 0, n2 = 0;
+      for (let k = 0; k < 3; k++) { const v = skin.T[i + k]; a += Math.max(wsum(skin.W, v, arms.L), wsum(skin.W, v, arms.R)); n2 += wsum(skin.W, v, neckSet2); }
+      if (a > 1.5 || n2 < 1.2) return pickOf(skin)(i);
+      return nf;
+    });
   }
 
   return { shirt: shirtT, trousers: trouT, belt, boots: bootT, hands: gloveT, skin, gloved, uvM, waistY, beltH, coat, tucked };
@@ -1220,10 +1381,10 @@ function _cmMerge(pieces) {
 
 /* The boots (see _mhDress): a pair modelled on the figure's own feet, as a working mesh, each
    vertex skinned like the nearest point of the foot or shin under it. */
-function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum) {
+function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum, lod) {
   const nv = _cmNV(base), P = base.BP;
   const sneaker = !!(od && od.shoes && od.shoes.kind === 'sneaker');
-  const top = sneaker ? sole + 0.075 * st : bootTop;
+  const top = sneaker ? sole + 0.098 * st : bootTop;
   const g = new Geometry(); g.parts = [];
   const sides = [];
   for (const s of ['L', 'R']) {
@@ -1253,7 +1414,7 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum) {
       const w = (P[v * 3] - heel[0]) * u[0] + (P[v * 3 + 2] - heel[2]) * u[2];
       wMin = Math.min(wMin, w); wMax = Math.max(wMax, w);
     }
-    const L = Math.hypot(toe[0] - heel[0], toe[2] - heel[2]) + 0.022 * st;      // a boot is longer than the foot in it
+    const L = Math.hypot(toe[0] - heel[0], toe[2] - heel[2]) + (sneaker ? 0.016 : 0.022) * st;      // a boot is longer than the foot in it
     const W = (wMax - wMin) + 0.016 * st;
     const wc = (wMin + wMax) / 2;
     const at = (along, y) => [heel[0] - d[0] * 0.008 * st + d[0] * along + u[0] * wc, y, heel[2] - d[2] * 0.008 * st + d[2] * along + u[2] * wc];
@@ -1261,27 +1422,58 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum) {
     const bare = sneaker || (od && od.bottom && od.bottom.hem < 0.95);
     const tIn = bare ? 0.007 * st : Math.max(0.010, Math.min(0.024, trouEase([ax, top - 0.01 * st, az]) / st + 0.004)) * st;
     const rTop = ar + tIn, rAnk = ar + 0.009 * st;
-    const B = [
-      _cone([ax, top, az - 0.004 * st], [ax, sole + 0.070 * st, az - 0.006 * st], rTop, rAnk),                              // shaft
-      _box(at(L * 0.47, sole + 0.042 * st), u, [0, 1, 0], [W / 2, 0.040 * st, L * 0.36], 0.028 * st),                      // foot
-      _ell(at(L - 0.045 * st, sole + 0.036 * st), [W / 2 - 0.002 * st, 0.030 * st, 0.050 * st], 0.03 * st),                // toe box
-      _ell(at(0.042 * st, sole + 0.052 * st), [0.040 * st, 0.046 * st, 0.042 * st], 0.03 * st),                            // heel
-      _box(at(L * 0.5, sole + 0.013 * st), u, [0, 1, 0], [W / 2 + 0.006 * st, 0.013 * st, L * 0.5 + 0.004 * st], 0.008 * st, 0.008 * st),   // sole
-    ];
-    const R = _region(B, 0.024 * st);
-    R.bmin = [Math.min(heel[0], toe[0], ax) - 0.12 * st, sole - 0.02 * st, Math.min(heel[2], az) - 0.12 * st];
-    R.bmax = [Math.max(heel[0], toe[0], ax) + 0.12 * st, top + 0.04 * st, toe[2] + 0.08 * st];
-    R.cut = (x, y, z) => Math.max(sole - y, y - top);
-    // Lacing: ridges across the instep, on the line of the foot.
+    /* A TRAINER is not a boot cut down: a padded collar hugging the ankle, a heel counter standing up
+       behind it, a tongue, and a thick midsole it all sits on. Cut down to a low box it read as a
+       slipper. */
+    /* A TRAINER is its upper sitting in a midsole, and they are two pieces: meshed as one, with the
+       sole told apart by height, the colour line wandered up and down the triangles as a ragged
+       white fringe. The upper is a wedge -- tall at the collar and the heel counter, falling over
+       the laces to a low toe box -- not a box of one height: that was a clog. The midsole is
+       thicker under the heel than under the toe and stands a few millimetres proud of the upper. */
     const lc = at(L * 0.55, 0);
-    R.fold = (x, y, z) => {
+    const lacing = (x, y, z) => {
       const al = (x - lc[0]) * d[0] + (z - lc[2]) * d[2], ac = (x - lc[0]) * u[0] + (z - lc[2]) * u[2];
       if (al < -0.12 * st || al > 0.06 * st || Math.abs(ac) > 0.03 * st || y < sole + 0.05 * st) return 0;
       return -0.0018 * st * (0.5 + 0.5 * Math.sin((y - al * 0.7) * 260 / st)) * Math.exp(-ac * ac * 4000 / (st * st));
     };
+    const box = (cut) => ({
+      bmin: [Math.min(heel[0], toe[0], ax) - 0.12 * st, sole - 0.02 * st, Math.min(heel[2], az) - 0.12 * st],
+      bmax: [Math.max(heel[0], toe[0], ax) + 0.12 * st, top + 0.04 * st, toe[2] + 0.08 * st], cut,
+    });
+    const regions = sneaker ? [
+      // No lacing ridges on a trainer: at this resolution they came out as lumps down the vamp.
+      { sole: false, k: 0.016 * st, fold: null, ...box((x, y, z) => Math.max(sole + 0.010 * st - y, y - top)), prims: [
+        _cone([ax, top, az - 0.006 * st], [ax, sole + 0.060 * st, az - 0.008 * st], ar + 0.010 * st, ar + 0.012 * st),   // padded collar
+        _ell(at(0.034 * st, sole + 0.052 * st), [W / 2 - 0.004 * st, 0.040 * st, 0.040 * st]),                            // heel counter
+        _ell(at(L * 0.34, sole + 0.044 * st), [W / 2, 0.034 * st, L * 0.26]),                                              // quarters
+        _ell(at(L * 0.62, sole + 0.030 * st), [W / 2, 0.030 * st, L * 0.30]),                                              // vamp, falling to the toe
+        // The tongue rises up the instep to the collar: lower, the foot's skin showed through above it.
+        _ell(at(L * 0.42, sole + 0.066 * st), [0.034 * st, 0.020 * st, 0.056 * st], 0.020 * st),                           // tongue over the instep, blended into the vamp
+        _ell(at(L - 0.044 * st, sole + 0.024 * st), [W / 2 - 0.002 * st, 0.020 * st, 0.048 * st]),                        // toe box, low and round
+      ] },
+      { sole: true, k: 0.022 * st, fold: null, ...box((x, y, z) => sole - y), prims: [
+        // One slab with its top tilted, 29 mm under the heel to 17 under the toe: two blocks stepped.
+        _box(at(L * 0.5, sole + 0.023 * st - 0.030 * st), u, [-d[0] * 0.012 * st / L, 1, -d[2] * 0.012 * st / L], [W / 2 + 0.006 * st, 0.030 * st, L * 0.5 + 0.006 * st], 0.008 * st),
+      ] },
+    ] : [
+      { sole: false, k: 0.024 * st, fold: lacing, ...box((x, y, z) => Math.max(sole - y, y - top)), prims: [
+        _cone([ax, top, az - 0.004 * st], [ax, sole + 0.070 * st, az - 0.006 * st], rTop, rAnk),                              // shaft
+        _box(at(L * 0.47, sole + 0.042 * st), u, [0, 1, 0], [W / 2, 0.040 * st, L * 0.36], 0.028 * st),                      // foot
+        _ell(at(L - 0.045 * st, sole + 0.036 * st), [W / 2 - 0.002 * st, 0.030 * st, 0.050 * st], 0.03 * st),                // toe box
+        _ell(at(0.042 * st, sole + 0.052 * st), [0.040 * st, 0.046 * st, 0.042 * st], 0.03 * st),                            // heel
+        _box(at(L * 0.5, sole + 0.013 * st), u, [0, 1, 0], [W / 2 + 0.006 * st, 0.013 * st, L * 0.5 + 0.004 * st], 0.008 * st, 0.008 * st),   // sole
+      ] },
+    ];
     const v0 = g.positions.length / 3;
-    _meshRegion(g, R, 0.0075 * st, s === 'L' ? PART.LEG_L : PART.LEG_R, (x, y, z, out) => { out[0] = x * 4 + z * 2; out[1] = y * 4 + z * 2; });
-    sides.push({ sx, v0, v1: g.positions.length / 3 });
+    const soleRanges = [];
+    for (const rg of regions) {
+      const R = _region(rg.prims, rg.k);
+      R.bmin = rg.bmin; R.bmax = rg.bmax; R.cut = rg.cut; R.fold = rg.fold;
+      const r0 = g.positions.length / 3;
+      _meshRegion(g, R, (lod ? 0.014 : 0.0075) * st, s === 'L' ? PART.LEG_L : PART.LEG_R, (x, y, z, out) => { out[0] = x * 4 + z * 2; out[1] = y * 4 + z * 2; });
+      if (rg.sole) soleRanges.push([r0, g.positions.length / 3]);
+    }
+    sides.push({ sx, v0, v1: g.positions.length / 3, soleRanges });
   }
   const M = _cmNew();
   for (const { sx, v0, v1 } of sides) {
@@ -1303,5 +1495,10 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum) {
   }
   for (let i = 0; i < g.indices.length; i++) { const v = g.indices[i]; M.T.push(v); M.UV.push(g.uvs[v * 2], g.uvs[v * 2 + 1]); }
   _cmSmoothWeights(M, 3, 0.5);
+  // Which vertices are the trainer's midsole, for its own colour (a boot's sole is told by height).
+  if (sneaker) {
+    M.sole = new Uint8Array(_cmNV(M));
+    for (const { soleRanges } of sides) for (const [r0, r1] of soleRanges) M.sole.fill(1, r0, r1);
+  }
   return M;
 }
