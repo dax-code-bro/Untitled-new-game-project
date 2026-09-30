@@ -998,6 +998,72 @@ function _mhDress(base, Q, B, opts) {
       const d = (G.P[v * 3] - ref.P[v * 3]) * G.BN[v * 3] + (G.P[v * 3 + 1] - ref.P[v * 3 + 1]) * G.BN[v * 3 + 1] + (G.P[v * 3 + 2] - ref.P[v * 3 + 2]) * G.BN[v * 3 + 2];
       if (d < eMin) for (let k = 0; k < 3; k++) G.P[v * 3 + k] += G.BN[v * 3 + k] * (eMin - d);
     }
+    /* BAGGED: a loose suit does not follow the chest under it, nipples and pectorals and all; it
+       hangs smooth off the body's broad shape. So in its zone the cloth is smoothed freely, then held
+       off a copy of the body smoothed until it HAS no such detail, and that three times over. */
+    if (cfg.bag) {
+      const Sb = new Float64Array(nvG);
+      for (let v = 0; v < nvG; v++) Sb[v] = cfg.bag.s(bp(v));
+      const ref2 = { P: G.BP.slice() };
+      _cmSmooth(Object.assign({}, G, ref2), cfg.bag.refIters, 1, topo, true);
+      /* Held off along the SMOOTHED body's normals: under a pectoral the body's own normal points at
+         the floor, and pushing out along it hung a blob of suit off the bottom of each one. */
+      const RN = _cmNormals(Object.assign({}, G, { P: ref2.P }));
+      const gap = cfg.bag.gap * st;
+      for (let round = 0; round < 3; round++) {
+        _cmSmooth(G, cfg.bag.iters, (v) => Sb[v], topo, true);
+        for (let v = 0; v < nvG; v++) {
+          if (Sb[v] <= 0) continue;
+          const d = (G.P[v * 3] - ref2.P[v * 3]) * RN[v * 3] + (G.P[v * 3 + 1] - ref2.P[v * 3 + 1]) * RN[v * 3 + 1] + (G.P[v * 3 + 2] - ref2.P[v * 3 + 2]) * RN[v * 3 + 2];
+          if (d < gap) for (let k = 0; k < 3; k++) G.P[v * 3 + k] += RN[v * 3 + k] * (gap - d) * Math.min(1, Sb[v] * 1.5);
+        }
+      }
+      /* And clear of the body itself -- but not by pushing each point out onto it, which printed the
+         pectorals and nipples straight back into the suit: the push each point needs is spread over
+         its neighbours (never shrinking) so the suit rises over a chest in one broad swell. */
+      const clear = cfg.bag.clear * st, need = new Float64Array(nvG);
+      for (let v = 0; v < nvG; v++) {
+        const d = (G.P[v * 3] - ref.P[v * 3]) * RN[v * 3] + (G.P[v * 3 + 1] - ref.P[v * 3 + 1]) * RN[v * 3 + 1] + (G.P[v * 3 + 2] - ref.P[v * 3 + 2]) * RN[v * 3 + 2];
+        need[v] = Math.max(0, clear - d);
+      }
+      for (let it = 0; it < cfg.bag.spread; it++) {
+        const n2 = Float64Array.from(need);
+        for (let v = 0; v < nvG; v++) {
+          if (Sb[v] <= 0) continue;
+          const o0 = topo.off[v], o1 = topo.off[v + 1];
+          if (o1 === o0) continue;
+          let m = 0;
+          for (let o = o0; o < o1; o++) m += need[topo.adj[o]];
+          n2[v] = Math.max(need[v], 0.985 * m / (o1 - o0));
+        }
+        need.set(n2);
+      }
+      for (let v = 0; v < nvG; v++) if (need[v] > 0) for (let k = 0; k < 3; k++) G.P[v * 3 + k] += RN[v * 3 + k] * need[v];
+      /* And HUNG: below the chest a loose suit falls from the chest, it does not tuck back in under it
+         (the ledge under each pectoral is what read as a bust). Down the front, each point comes
+         forward to within a gentle slope of the cloth above it. */
+      const slope = 0.30;
+      for (let it = 0; it < 60; it++) {
+        let moved = 0;
+        for (let v = 0; v < nvG; v++) {
+          if (Sb[v] <= 0 || RN[v * 3 + 2] < 0.35) continue;
+          const o0 = topo.off[v], o1 = topo.off[v + 1];
+          let want = -Infinity;
+          for (let o = o0; o < o1; o++) {
+            const q = topo.adj[o], dy = G.P[q * 3 + 1] - G.P[v * 3 + 1];
+            if (dy <= 0 || RN[q * 3 + 2] < 0.35) continue;
+            want = Math.max(want, G.P[q * 3 + 2] - dy * slope);
+          }
+          if (want > G.P[v * 3 + 2] + 1e-5) { G.P[v * 3 + 2] += (want - G.P[v * 3 + 2]) * Math.min(1, Sb[v] * 1.5); moved++; }
+        }
+        if (!moved) break;
+      }
+      _cmSmooth(G, 6, (v) => Sb[v] * 0.6, topo, true);
+      for (let v = 0; v < nvG; v++) {
+        const d = (G.P[v * 3] - ref.P[v * 3]) * G.BN[v * 3] + (G.P[v * 3 + 1] - ref.P[v * 3 + 1]) * G.BN[v * 3 + 1] + (G.P[v * 3 + 2] - ref.P[v * 3 + 2]) * G.BN[v * 3 + 2];
+        if (d < eMin) for (let k = 0; k < 3; k++) G.P[v * 3 + k] += G.BN[v * 3 + k] * (eMin - d);
+      }
+    }
     if (cfg.folds) {
       const N1 = _cmNormals(G);
       for (let v = 0; v < nvG; v++) {
@@ -1043,7 +1109,12 @@ function _mhDress(base, Q, B, opts) {
 
   const shirtT = tailor(shirt, {
     smooth: 7,
+    /* A hazmat suit is a bag, not a shirt: over the chest it hangs from the pectorals instead of
+       following them (with the carrier gone from over it, the suit showed a bust). */
     flatten: { iters: 24, s: (p) => (p[2] > 0.02 * st && p[1] > 0.28 * st && p[1] < 0.48 * st && Math.abs(p[0]) < 0.14 * st ? 1 : 0) },
+    /* A hazmat suit is a bag, not a shirt: over the chest and back it hangs smooth (with the
+       carrier gone from over it, the suit showed pectorals and nipples through it). */
+    bag: hazmat ? { iters: 30, refIters: 70, gap: 0.024, clear: 0.010, spread: 40, s: (p) => _ss01(0.08 * st, 0.16 * st, p[1]) * (1 - _ss01(0.50 * st, 0.56 * st, p[1])) * (1 - _ss01(0.16 * st, 0.21 * st, Math.abs(p[0]))) } : null,
     ease: (p) => {
       let e = easeT;
       if (p[2] < -0.02 * st) e += 0.003;                                             // cut fuller across the back
@@ -1105,9 +1176,14 @@ function _mhDress(base, Q, B, opts) {
       _cmHang(G, (v) => band(v) && G.P[v * 3 + 2] > 0.03 * st, 0.012 * st, 1.0, 1);
       _cmHang(G, (v) => band(v) && G.P[v * 3 + 2] < -0.04 * st, 0.012 * st, 0.8, -1);
     },
-    wIters: 14, wS: (p) => {
+    /* Ramped, not stepped: switched from 0.4 to 0.85 at one height, the weights below the chest were
+       averaged half as much as those above, and the kink that left in them folded the cloth into a
+       pair of points under the pectorals whenever the chest turned against the spine (on anyone
+       without a plate carrier over them). */
+    wIters: hazmat ? 30 : 14, wS: (p) => {
       const de = Math.min(Math.hypot(p[0] - S.L.el[0], p[1] - S.L.el[1], p[2] - S.L.el[2]), Math.hypot(p[0] - S.R.el[0], p[1] - S.R.el[1], p[2] - S.R.el[2]));
-      return (p[1] > 0.26 * st && p[1] < 0.52 * st) || de < 0.09 * st ? 0.85 : 0.4;
+      const band = _ss01(0.14 * st, 0.30 * st, p[1]) * (1 - _ss01(0.50 * st, 0.56 * st, p[1]));
+      return 0.4 + 0.45 * Math.max(band, 1 - _ss01(0.07 * st, 0.11 * st, de));
     },
   });
 

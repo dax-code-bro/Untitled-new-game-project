@@ -395,10 +395,13 @@ const OPERATORS = [
   {
     id: 'biohazard', name: 'BIOHAZARD',
     blurb: 'Decon. Sealed, and happier that way.',
-    /* Decon: sealed. Hood and visor over everything, a carrier under
-       it, and he is the only one of the seven whose face you never see. */
-    gear: ['carrier', 'pouches', 'belt', 'knees', 'hood', 'visor'],
-    gearOpts: { pouches: 2, holster: true },
+    /* Decon: sealed. Hood and visor over everything and nothing strapped
+       over the suit's chest -- a plate carrier worn over a hazmat suit is
+       a contradiction (the suit goes over what he wears, and a carrier on
+       top of it is a thing to decontaminate) -- just a belt and holster
+       at the waist and pads at the knees for kneeling. */
+    gear: ['belt', 'knees', 'hood', 'visor'],
+    gearOpts: { holster: true },
     outfit: 'hazmat',
     eyeColor: 0x5f7a4e,
     face: 'biohazard', faceType: 'heavy', skin: 'ruddy', seed: 19,
