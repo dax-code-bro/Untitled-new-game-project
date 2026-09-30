@@ -933,8 +933,9 @@ class Engine {
         // White, so the outfit's shoe colours (painted per vertex) come through.
         : heroOutfit ? (heroOutfit.shoes && heroOutfit.shoes.kind === 'sneaker'
           ? { color: 0xffffff, texture: 'smooth', roughness: 0.58, metalness: 0, uvScale: 3 }   // smooth synthetic: a fabric weave read as a slipper, and leather's own brown drowned the outfit colours
-          : { color: 0xffffff, texture: 'leather', roughness: 0.55, metalness: 0, uvScale: 2 })
-        : { color: 0x3a3028, texture: 'leather', roughness: 0.68, metalness: 0, uvScale: 2 }, 'boots'],
+          : { color: 0xffffff, texture: 'leather', roughness: 0.95, metalness: 0, uvScale: 2 })   // the leather map's wax halves this
+        // Suede and nylon, matte; the sole and the rand darkened in the vertex colours (94g). Operators choose their own (95a).
+        : { color: 0x6f5d44, texture: 'fabric', roughness: 0.92, metalness: 0, uvScale: 14 }, 'boots'],
     ]) {
       const sub = geo[key];
       if (!sub || !sub.indices || !sub.indices.length) continue;

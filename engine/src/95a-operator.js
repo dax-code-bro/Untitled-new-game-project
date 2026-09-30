@@ -513,6 +513,10 @@ Engine.prototype.operator = function (id, opts = {}) {
     eyeColor: op.eyeColor,
     seed: op.seed,
     material: opts.material || OP_CLOTH[op.outfit] || OP_CLOTH.olive,
+    /* Boots to go with it: suede and nylon, matte -- black under a black or navy uniform, coyote under
+       anything else. The sole and the rand are darkened in the boots' own vertex colours (94g). */
+    boots: opts.boots || { color: (op.outfit === 'black' || op.outfit === 'navy') ? 0x2c2c2d : 0x6f5d44,
+      texture: 'fabric', roughness: 0.92, metalness: 0, uvScale: 14 },
     /* THE SKIN, and it was being dropped on the floor. character()
        reads the head's material from `opts.skin`; this passed
        `headMaterial`, which nothing looks at -- so all seven operators

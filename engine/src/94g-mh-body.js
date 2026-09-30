@@ -359,10 +359,13 @@ function makeMhBodyGeometry(skeleton, opts = {}) {
     (v) => (sk.S[v] >= 0 && fig.seam[sk.S[v]] ? [fig.N[sk.S[v] * 3], fig.N[sk.S[v] * 3 + 1], fig.N[sk.S[v] * 3 + 2]] : null));
   g.hands = dr.hands ? _cmToGeometry(dr.hands, dr.uvM, partOf(dr.hands)) : null;
   const shoes = od && od.shoes;
-  const upC = shoes ? hex3(shoes.color) : white, soC = shoes ? (shoes.sole != null ? hex3(shoes.sole) : upC.map((x) => x * 0.55)) : [0.45, 0.45, 0.45];
+  /* The upper in the shoe's colour (white for an operator: his boot material carries it), the sole in
+     its own, and a boot's rand -- the rubber round its toe and heel -- darker than the upper. */
+  const upC = shoes ? hex3(shoes.color) : white, soC = shoes ? (shoes.sole != null ? hex3(shoes.sole) : upC.map((x) => x * 0.55)) : [0.12, 0.12, 0.12];
+  const randC = upC.map((x) => x * 0.5);
   const bt = dr.boots;
-  const midY = -0.875 * st + (shoes && shoes.kind === 'sneaker' ? 0.027 : 0.022) * st;   // the midsole in its own colour
-  g.boots = _cmToGeometry(bt, 1, partOf(bt), (v) => ((bt.sole ? bt.sole[v] : bt.P[v * 3 + 1] < midY) ? soC : upC));
+  const laceC = upC.map((x) => x * 0.3);
+  g.boots = _cmToGeometry(bt, 1, partOf(bt), (v) => (bt.sole[v] === 1 ? soC : bt.sole[v] === 2 ? randC : bt.sole[v] === 3 ? laceC : upC));
   g.mhHeadPlace = place;
   g.mh = true;
   return g;

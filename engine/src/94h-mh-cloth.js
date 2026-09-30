@@ -1456,24 +1456,97 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum, lod) {
         _box(at(L * 0.5, sole + 0.023 * st - 0.030 * st), u, [-d[0] * 0.012 * st / L, 1, -d[2] * 0.012 * st / L], [W / 2 + 0.006 * st, 0.030 * st, L * 0.5 + 0.006 * st], 0.008 * st),
       ] },
     ] : [
-      { sole: false, k: 0.024 * st, fold: lacing, ...box((x, y, z) => Math.max(sole - y, y - top)), prims: [
-        _cone([ax, top, az - 0.004 * st], [ax, sole + 0.070 * st, az - 0.006 * st], rTop, rAnk),                              // shaft
-        _box(at(L * 0.47, sole + 0.042 * st), u, [0, 1, 0], [W / 2, 0.040 * st, L * 0.36], 0.028 * st),                      // foot
-        _ell(at(L - 0.045 * st, sole + 0.036 * st), [W / 2 - 0.002 * st, 0.030 * st, 0.050 * st], 0.03 * st),                // toe box
-        _ell(at(0.042 * st, sole + 0.052 * st), [0.040 * st, 0.046 * st, 0.042 * st], 0.03 * st),                            // heel
-        _box(at(L * 0.5, sole + 0.013 * st), u, [0, 1, 0], [W / 2 + 0.006 * st, 0.013 * st, L * 0.5 + 0.004 * st], 0.008 * st, 0.008 * st),   // sole
+      /* A BOOT, the same way: an upper -- a shaft that hugs the ankle over the trouser tucked into it,
+         a heel counter, the quarters and vamp falling to a low toe box, a tongue under the laces --
+         set in a lugged outsole that is its own piece, thicker under the heel, with the arch cut away
+         under the middle of the foot. Built as one box-footed blob it read as a glossy Wellington. */
+      { sole: false, k: 0.018 * st, fold: lacing, h: 0.0065, ...box((x, y, z) => Math.max(sole + 0.014 * st - y, y - top)), prims: [
+        _cone([ax, top, az - 0.004 * st], [ax, sole + 0.082 * st, az - 0.006 * st], rTop, rAnk),                              // shaft
+        _ell(at(0.036 * st, sole + 0.060 * st), [W / 2 - 0.004 * st, 0.048 * st, 0.042 * st]),                                // heel counter
+        _ell(at(L * 0.40, sole + 0.050 * st), [W / 2, 0.040 * st, L * 0.24]),                                                 // quarters
+        _ell(at(L * 0.63, sole + 0.037 * st), [W / 2, 0.031 * st, L * 0.26]),                                                 // vamp
+        _ell(at(L * 0.47, sole + 0.076 * st), [0.032 * st, 0.030 * st, 0.060 * st], 0.014 * st),                             // tongue under the laces
+        _ell(at(L - 0.046 * st, sole + 0.031 * st), [W / 2 - 0.002 * st, 0.023 * st, 0.050 * st]),                           // toe box
       ] },
+      { sole: true, k: 0.010 * st, h: 0.004, ...box((x, y, z) => sole - y), prims: [
+        _box(at(L * 0.5, sole + 0.030 * st - 0.030 * st), u, [-d[0] * 0.011 * st / L, 1, -d[2] * 0.011 * st / L], [W / 2 + 0.006 * st, 0.030 * st, L * 0.5 + 0.009 * st], 0.007 * st),
+        Object.assign(_box(at(L * 0.44, sole - 0.001 * st), u, [0, 1, 0], [W / 2 + 0.03 * st, 0.0055 * st, L * 0.13], 0.004 * st), { op: 's', k: 0.006 * st }),   // the arch
+      ],
+      /* Lugs round the side of the sole: grooves every 12 mm, from the tread up to the midsole line. */
+      fold: (x, y, z) => {
+        const al = (x - heel[0]) * d[0] + (z - heel[2]) * d[2], ac = (x - heel[0]) * u[0] + (z - heel[2]) * u[2] - wc;
+        const band = _ss01(sole + 0.002 * st, sole + 0.006 * st, y) * (1 - _ss01(sole + 0.016 * st, sole + 0.020 * st, y));
+        const g1 = Math.pow(Math.max(0, Math.cos((al + ac * 0.6) * 2 * Math.PI / (0.012 * st))), 6);
+        return 0.0022 * st * band * g1;
+      } },
     ];
     const v0 = g.positions.length / 3;
-    const soleRanges = [];
+    const soleRanges = [], randV = [], laceV = [];
     for (const rg of regions) {
       const R = _region(rg.prims, rg.k);
-      R.bmin = rg.bmin; R.bmax = rg.bmax; R.cut = rg.cut; R.fold = rg.fold;
+      R.bmin = rg.bmin; R.bmax = rg.bmax; R.cut = rg.cut; R.fold = rg.fold || null;
       const r0 = g.positions.length / 3;
-      _meshRegion(g, R, (lod ? 0.014 : 0.0075) * st, s === 'L' ? PART.LEG_L : PART.LEG_R, (x, y, z, out) => { out[0] = x * 4 + z * 2; out[1] = y * 4 + z * 2; });
+      _meshRegion(g, R, (lod ? 0.014 : rg.h || 0.0075) * st, s === 'L' ? PART.LEG_L : PART.LEG_R, (x, y, z, out) => { out[0] = x * 4 + z * 2; out[1] = y * 4 + z * 2; });
+      /* The laces: crossed between two rows of eyelets down the instep to the toe side of the vamp, and
+         up the front of the shaft, each cross a cord standing just proud of the upper. The upper is
+         found by walking in from outside it until the field goes negative. */
+      if (!rg.sole && !sneaker) {
+        const inside = (x, y, z) => _evalRegion(R, x, y, z) < 0;
+        const hitDown = (x, z) => {
+          let y = top + 0.02 * st;
+          for (; y > sole; y -= 0.003 * st) if (inside(x, y, z)) break;
+          if (y <= sole) return null;
+          let lo = y, hi = y + 0.003 * st;
+          for (let it = 0; it < 18; it++) { const m = (lo + hi) / 2; if (inside(x, m, z)) lo = m; else hi = m; }
+          return hi;
+        };
+        const hitBack = (y, ac) => {
+          const f0 = at(L * 0.75, y);
+          let t = 0;
+          for (; t < L; t += 0.003 * st) if (inside(f0[0] - d[0] * t + u[0] * ac, y, f0[2] - d[2] * t + u[2] * ac)) break;
+          if (t >= L) return null;
+          let lo = t - 0.003 * st, hi = t;
+          for (let it = 0; it < 18; it++) { const m = (lo + hi) / 2; if (inside(f0[0] - d[0] * m + u[0] * ac, y, f0[2] - d[2] * m + u[2] * ac)) hi = m; else lo = m; }
+          return [f0[0] - d[0] * hi + u[0] * ac, y, f0[2] - d[2] * hi + u[2] * ac];
+        };
+        /* One ladder of stations up the middle of the tongue -- down the vamp from the toe side to the
+           instep, then up the front of the shaft -- each with an eyelet either side, and a cross
+           between each station and the next. */
+        const stations = [];
+        for (const f of [0.64, 0.585, 0.53, 0.475, 0.425]) {
+          const q = at(L * f, 0), y = hitDown(q[0], q[2]);
+          if (y != null) stations.push({ c: [q[0], y, q[2]], out: [0, 1, 0] });
+        }
+        const yv = stations.length ? stations[stations.length - 1].c[1] : sole + 0.09 * st;
+        for (let yy = yv + 0.020 * st; yy < top - 0.012 * st; yy += 0.020 * st) {
+          const q = hitBack(yy, 0);
+          if (q) stations.push({ c: q, out: [d[0], 0, d[2]] });
+        }
+        const eyes = stations.map(({ c, out }, i) => {
+          const half = (0.0125 + 0.0005 * i) * st, lift = 0.0018 * st;
+          return [-1, 1].map((sg) => [c[0] + u[0] * sg * half + out[0] * lift, c[1] + out[1] * lift, c[2] + u[2] * sg * half + out[2] * lift]);
+        });
+        const l0 = g.positions.length / 3;
+        for (let i = 0; i + 1 < eyes.length; i++) {
+          const [a0, b0] = eyes[i], [a1, b1] = eyes[i + 1];
+          const o2 = stations[i].out, o3 = stations[i + 1].out;
+          for (const [p, q] of [[a0, b1], [b0, a1]]) {
+            // The cross stands off the tongue: the chord between two eyelets passes under a curved upper.
+            const mid = [0, 1, 2].map((k) => (p[k] + q[k]) / 2 + (o2[k] + o3[k]) * 0.0014 * st);
+            loftRings(g, [p, mid, q].map((c) => ({ p: new Vec3(c[0], c[1], c[2]), w: 0.0017 * st, d: 0.0017 * st, e: 2 })), 5, true, true);
+          }
+        }
+        for (let v = l0; v < g.positions.length / 3; v++) laceV.push(v);
+      }
+      // The rand: the upper's lowest centimetre and a half round the toe and the heel, in darker rubber.
+      if (!rg.sole && !sneaker) for (let v = r0; v < g.positions.length / 3; v++) {
+        const x = g.positions[v * 3], y = g.positions[v * 3 + 1], z = g.positions[v * 3 + 2];
+        const al = (x - heel[0]) * d[0] + (z - heel[2]) * d[2];
+        if (y < sole + 0.034 * st && (al < 0.05 * st || al > L - 0.075 * st) && !laceV.includes(v)) randV.push(v);
+      }
       if (rg.sole) soleRanges.push([r0, g.positions.length / 3]);
     }
-    sides.push({ sx, v0, v1: g.positions.length / 3, soleRanges });
+    sides.push({ sx, v0, v1: g.positions.length / 3, soleRanges, randV, laceV });
   }
   const M = _cmNew();
   for (const { sx, v0, v1 } of sides) {
@@ -1496,9 +1569,9 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum, lod) {
   for (let i = 0; i < g.indices.length; i++) { const v = g.indices[i]; M.T.push(v); M.UV.push(g.uvs[v * 2], g.uvs[v * 2 + 1]); }
   _cmSmoothWeights(M, 3, 0.5);
   // Which vertices are the trainer's midsole, for its own colour (a boot's sole is told by height).
-  if (sneaker) {
-    M.sole = new Uint8Array(_cmNV(M));
-    for (const { soleRanges } of sides) for (const [r0, r1] of soleRanges) M.sole.fill(1, r0, r1);
-  }
+  M.sole = new Uint8Array(_cmNV(M));
+  for (const { soleRanges } of sides) for (const [r0, r1] of soleRanges) M.sole.fill(1, r0, r1);
+  for (const { randV } of sides) for (const v of randV) M.sole[v] = 2;
+  for (const { laceV } of sides) for (const v of laceV) M.sole[v] = 3;
   return M;
 }
