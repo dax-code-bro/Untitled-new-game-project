@@ -32,6 +32,14 @@ for m in $MAPS; do
   fi
 done
 
+# The seven operators on a studio floor (skinned, posed, at their close-up detail).
+if [ -n "$SCENES" ] && [ -f "$SCENES/roster.lescene" ]; then
+  cp "$SCENES/roster.lescene" "$PKG/scenes/"
+else
+  node "$HERE/tools/export_scene.js" roster "$PKG/scenes/roster.lescene"
+fi
+rm -f "$PKG/scenes/"*.json
+
 bat() {   # name, arguments -- CRLF, and pause on failure so errors stay on screen
   printf '@echo off\r\ncd /d "%%~dp0"\r\nmy_cpp_game.exe %s\r\nif errorlevel 1 pause\r\n' "$2" > "$PKG/$1.bat"
 }
@@ -43,6 +51,7 @@ bat "Explore - Helipad"              "--fullscreen --scene scenes\\helipad.lesce
 bat "Explore - Resort"               "--fullscreen --scene scenes\\resort.lescene --texture-res 4096"
 bat "Explore - Town"                 "--fullscreen --scene scenes\\town.lescene --texture-res 4096"
 bat "Explore - Demolition"           "--fullscreen --scene scenes\\demolition.lescene --texture-res 4096"
+bat "Explore - Operators"            "--fullscreen --scene scenes\\roster.lescene --texture-res 4096 --eye 0,1.35,6.5 --target 0,1.0,0"
 bat "Windowed"                    "--width 1600 --height 900"
 printf '@echo off\r\ncd /d "%%~dp0"\r\necho Rendering 7680x4320 -- this takes a few seconds on a real GPU.\r\nmy_cpp_game.exe --width 7680 --height 4320 --quality cinematic --texture-res 4096 --frames 16 --screenshot showcase-8k.png\r\npause\r\n' \
   > "$PKG/Screenshot - 8K Showcase.bat"

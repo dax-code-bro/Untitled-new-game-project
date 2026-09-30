@@ -45,6 +45,9 @@ struct Material {
     bool      castShadow = true;
     bool      receiveShadow = true;
     float     subsurface = 0.0f;
+    /* A blade or a leaf: light through it (the transmission lobe). Otherwise subsurface is THICK --
+       skin, cloth on a body -- and scatters round the terminator instead (pbr.frag). */
+    bool      thin = true;
     float     clearcoat = 0.0f;
     float     clearcoatRoughness = 0.1f;
     float     sheen = 0.0f;

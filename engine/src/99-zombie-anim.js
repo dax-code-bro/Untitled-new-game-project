@@ -1243,9 +1243,11 @@ function makeZombieClips() {
     chest: { keys: [[0, -1, 1, 0], [0.5, 2, -1, 0], [1, -1, 1, 0]] },
     head: { keys: [[0, 0, 5, -1], [0.3, -2, -4, 1], [0.62, 1, 8, -2], [1, 0, 5, -1]] },
     /* Hanging, with the small outward carry a real arm has -- the elbows
-       stand a few degrees off the ribs rather than being welded to them. */
-    upperArmL: { keys: [[0, -4, 2, -7], [0.35, -1, -1, -9], [0.7, -6, 3, -6], [1, -4, 2, -7]] },
-    upperArmR: { keys: [[0, -6, -2, 7], [0.35, -2, 1, 9], [0.7, -3, -3, 6], [1, -6, -2, 7]] },
+       stand a few degrees off the ribs rather than being welded to them.
+       Outward is POSITIVE on the left (the walk's +7): at -7 to -9 these
+       drew the elbows in and laid both hands flat on the thighs. */
+    upperArmL: { keys: [[0, -4, 2, 4], [0.35, -1, -1, 5.5], [0.7, -6, 3, 3.5], [1, -4, 2, 4]] },
+    upperArmR: { keys: [[0, -6, -2, -4], [0.35, -2, 1, -5.5], [0.7, -3, -3, -3.5], [1, -6, -2, -4]] },
     lowerArmL: { keys: [[0, -10, 0, 0], [0.5, -15, 0, 0], [1, -10, 0, 0]] },
     lowerArmR: { keys: [[0, -13, 0, 0], [0.5, -8, 0, 0], [1, -13, 0, 0]] },
     handL: { keys: [[0, 4, 0, -3], [0.5, -2, 0, 2], [1, 4, 0, -3]] },

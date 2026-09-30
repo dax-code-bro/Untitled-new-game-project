@@ -307,7 +307,7 @@ async function main() {
         uvScale: m.uvScale, worldUv: !!m.worldUv, normalStrength: m.normalStrength,
         detail: m.detail, texture: m.texture || null, seed: m.maps ? (seedOf.get(m.maps) || 1) : 1,
         parallax: m.parallax, castShadow: m.castShadow !== false, receiveShadow: m.receiveShadow !== false,
-        subsurface: m.subsurface || 0, clearcoat: m.clearcoat || 0,
+        subsurface: m.subsurface || 0, thin: !!m.thin, clearcoat: m.clearcoat || 0,
         clearcoatRoughness: m.clearcoatRoughness != null ? m.clearcoatRoughness : 0.1,
         sheen: m.sheen || 0, sheenColor: m.sheenColor ? v3(m.sheenColor) : [1, 1, 1],
         sheenRoughness: m.sheenRoughness != null ? m.sheenRoughness : 0.3,

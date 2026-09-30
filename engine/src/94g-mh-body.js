@@ -39,6 +39,164 @@ function _m3FromTo(a, b) {
 }
 const _m3mul = (R, x, y, z) => [R[0] * x + R[1] * y + R[2] * z, R[3] * x + R[4] * y + R[5] * z, R[6] * x + R[7] * y + R[8] * z];
 
+/* RELAXED HANDS. MakeHuman's hand is modelled flat with the fingers spread, and the rig has no finger
+   bones to close it, so every hand hung at a man's side splayed like a starfish. A hand at rest is
+   half closed: each finger bent a little at the knuckle, more at the middle joint and a little at the
+   last, the little finger most, the fingers drawn together, the thumb bent toward the palm.
+
+   Found on the mesh, not assumed: geodesic distance from the wrist (the band where the forearm's
+   weight hands over to the hand's) peaks at the five fingertips, and the shortest of those is the
+   thumb. Each vertex belongs to the fingers by its geodesic distance to their tips (softly, so the
+   webs between them bend with both). Each finger's axis is the long axis of its free part, its knuckle
+   a proportion of its length back from the tip, its palm side the side the thumb is on. The joints
+   are bent tip first, each about its own rest pivot (forward kinematics), each over a short ramp so
+   the knuckle rounds instead of creasing. */
+function _mhRelaxHands(D, P, adj, st, knuckle) {
+  const nv = D.nBody;
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const nrm = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+  const pt = (v) => [P[v * 3], P[v * 3 + 1], P[v * 3 + 2]];
+  const dist = (a, b) => Math.hypot(P[a * 3] - P[b * 3], P[a * 3 + 1] - P[b * 3 + 1], P[a * 3 + 2] - P[b * 3 + 2]);
+  // Rodrigues: p rotated by angle t about unit axis k through c.
+  const rot = (p, c, k, t) => {
+    const x = p[0] - c[0], y = p[1] - c[1], z = p[2] - c[2];
+    const co = Math.cos(t), si = Math.sin(t), d = (k[0] * x + k[1] * y + k[2] * z) * (1 - co);
+    return [c[0] + x * co + (k[1] * z - k[2] * y) * si + k[0] * d,
+      c[1] + y * co + (k[2] * x - k[0] * z) * si + k[1] * d,
+      c[2] + z * co + (k[0] * y - k[1] * x) * si + k[2] * d];
+  };
+  for (const side of ['L', 'R']) {
+    const hb = D.B.indexOf('hand' + side);
+    const wv = new Float32Array(nv);
+    for (let v = 0; v < nv; v++) for (let q = 0; q < 4; q++) if (D.W[v * 8 + q * 2] === hb) wv[v] += D.W[v * 8 + q * 2 + 1] / 255;
+    const inH = (v) => wv[v] > 0.5 && adj[v].length > 0;
+    const geo = (seeds) => {
+      const g = new Float64Array(nv).fill(Infinity);
+      let open = [];
+      for (const v of seeds) { g[v] = 0; open.push(v); }
+      while (open.length) {
+        const nx = [];
+        for (const u of open) for (const w of adj[u]) if (inH(w)) { const d = g[u] + dist(u, w); if (d < g[w] - 1e-9) { g[w] = d; nx.push(w); } }
+        open = nx;
+      }
+      return g;
+    };
+    const band = [];
+    for (let v = 0; v < nv; v++) if (wv[v] > 0.3 && wv[v] < 0.7 && adj[v].length) band.push(v);
+    if (!band.length) continue;
+    const gw = geo(band);
+    const hv = [];
+    for (let v = 0; v < nv; v++) if (inH(v) && gw[v] < Infinity) hv.push(v);
+    hv.sort((a, b) => gw[b] - gw[a]);
+    const tips = [];
+    for (const v of hv) {
+      if (tips.length === 5) break;
+      if (gw[v] < 0.05 * st) break;
+      if (!tips.every((t) => dist(t, v) > 0.025 * st)) continue;
+      if (adj[v].every((w) => gw[w] <= gw[v])) tips.push(v);
+    }
+    if (tips.length < 5) continue;
+    // Middle reaches furthest, the thumb least; of the two left, the index is the one nearer the thumb.
+    tips.sort((a, b) => gw[b] - gw[a]);
+    const thumb = tips[4], middle = tips[0], little = tips[3];
+    const [ia, ib] = [tips[1], tips[2]];
+    const index = dist(ia, thumb) < dist(ib, thumb) ? ia : ib, ring = index === ia ? ib : ia;
+    const order = [index, middle, ring, little, thumb];
+    const gt = order.map((t) => geo([t]));
+    const lab = new Int8Array(nv).fill(-1);
+    for (const v of hv) { let b = 0; for (let f = 1; f < 5; f++) if (gt[f][v] < gt[b][v]) b = f; lab[v] = b; }
+    // The web: where a finger's region meets its neighbour's (the thumb's web is the index's side of it).
+    const web = [Infinity, Infinity, Infinity, Infinity, Infinity];
+    for (const v of hv) for (const w of adj[v]) if (lab[w] >= 0 && lab[w] !== lab[v]) {
+      const f = lab[v];
+      if (f < 4 && lab[w] === 4) continue;
+      web[f] = Math.min(web[f], gt[f][v]);
+    }
+    const F = order.map((tip, f) => {
+      const free = hv.filter((v) => lab[v] === f && gt[f][v] < web[f]);
+      if (free.length < 8) return null;
+      const c = [0, 0, 0];
+      for (const v of free) { c[0] += P[v * 3] / free.length; c[1] += P[v * 3 + 1] / free.length; c[2] += P[v * 3 + 2] / free.length; }
+      let d = nrm(sub(pt(tip), c));
+      for (let it = 0; it < 20; it++) {
+        const acc = [0, 0, 0];
+        for (const v of free) { const q = sub(pt(v), c), s = dot(q, d); acc[0] += q[0] * s; acc[1] += q[1] * s; acc[2] += q[2] * s; }
+        d = nrm(acc);
+      }
+      if (dot(d, sub(pt(tip), c)) < 0) d = [-d[0], -d[1], -d[2]];
+      return { tip, c, d, sTip: dot(sub(pt(tip), c), d) };
+    });
+    if (F.some((x) => !x)) continue;
+    // The fingers' plane, and its palm side: the side the thumb is on.
+    let n = nrm(_cross3(F[1].d, sub(F[0].c, F[3].c)));
+    const mid4 = [0, 1, 2, 3].reduce((a, f) => [a[0] + F[f].c[0] / 4, a[1] + F[f].c[1] / 4, a[2] + F[f].c[2] / 4], [0, 0, 0]);
+    if (dot(n, sub(pt(thumb), mid4)) < 0) n = [-n[0], -n[1], -n[2]];
+    /* The knuckles: MakeHuman's finger joint lies on the knuckle line (10.6 cm from the middle
+       fingertip on its figure). Each finger's knuckle is where its own axis meets that line, the line
+       curving back 4 mm at the index and ring and 13 mm at the little finger. */
+    const K = knuckle(side);
+    const Lm = Math.max(0.06 * st, dot(sub(pt(middle), K), F[1].d));
+    const hs = Lm / 0.106;
+    const arc = [0.004, 0, 0.004, 0.013].map((x) => x * hs);
+    const DEG = Math.PI / 180;
+    // Bends (degrees) at the knuckle, the middle joint and the last: least at the index, most at the little finger.
+    const bend = [[10, 24, 10], [17, 31, 14], [22, 35, 16], [28, 40, 18], [10, 16, 0]];
+    const joint = [0, 0.46, 0.73];
+    const toPalm = nrm(sub(mid4, pt(thumb)));
+    const R = F.map((fg, f) => {
+      let M;
+      if (f < 4) {
+        // On the finger's axis, level (along the middle finger) with the knuckle line.
+        const t = (dot(sub(K, fg.c), F[1].d) - arc[f]) / (dot(fg.d, F[1].d) || 1);
+        M = [fg.c[0] + fg.d[0] * t, fg.c[1] + fg.d[1] * t, fg.c[2] + fg.d[2] * t];
+      } else {
+        const t = fg.sTip - 0.64 * Lm;
+        M = [fg.c[0] + fg.d[0] * t, fg.c[1] + fg.d[1] * t, fg.c[2] + fg.d[2] * t];
+      }
+      const L = Math.max(0.03 * st, dot(sub(pt(fg.tip), M), fg.d));
+      // Fingers bend toward the palm; the thumb across it, toward the little finger's side.
+      const want = f < 4 ? n : nrm([n[0] * 0.5 + toPalm[0] * 0.5, n[1] * 0.5 + toPalm[1] * 0.5, n[2] * 0.5 + toPalm[2] * 0.5]);
+      const k = nrm(_cross3(fg.d, want));
+      // Splay: draw each finger most of the way toward the middle finger's line, about the palm's normal.
+      let spK = null, spA = 0;
+      if (f !== 1 && f < 4) {
+        const dp = [fg.d[0] - n[0] * dot(fg.d, n), fg.d[1] - n[1] * dot(fg.d, n), fg.d[2] - n[2] * dot(fg.d, n)];
+        const dm = [F[1].d[0] - n[0] * dot(F[1].d, n), F[1].d[1] - n[1] * dot(F[1].d, n), F[1].d[2] - n[2] * dot(F[1].d, n)];
+        const cx = _cross3(nrm(dp), nrm(dm)), sn = Math.hypot(cx[0], cx[1], cx[2]);
+        if (sn > 1e-4) { spK = nrm(cx); spA = Math.atan2(sn, dot(nrm(dp), nrm(dm))) * 0.7; }
+      }
+      const js = f < 4 ? joint : [0, 0.5, 2];
+      const piv = js.map((t) => [M[0] + fg.d[0] * L * t, M[1] + fg.d[1] * L * t, M[2] + fg.d[2] * L * t]);
+      return { M, L, k, spK, spA, piv, js, ang: bend[f].map((x) => x * DEG) };
+    });
+    const ramp = 0.006 * st, sig = 0.004 * st;
+    for (const v of hv) {
+      const p0 = pt(v);
+      let tot = 0;
+      const ws = [0, 0, 0, 0, 0];
+      const gmin = Math.min(gt[0][v], gt[1][v], gt[2][v], gt[3][v], gt[4][v]);
+      for (let f = 0; f < 5; f++) { ws[f] = Math.exp(-(gt[f][v] - gmin) / sig); tot += ws[f]; }
+      const acc = [0, 0, 0];
+      for (let f = 0; f < 5; f++) {
+        const w = ws[f] / tot;
+        if (w < 1e-4) continue;
+        const r = R[f];
+        const s = dot(sub(p0, r.M), F[f].d) / r.L;
+        let p = p0;
+        for (let j = 2; j >= 0; j--) {
+          const t = _ss(r.js[j] * r.L - ramp, r.js[j] * r.L + ramp, s * r.L);
+          if (t <= 0) continue;
+          p = rot(p, r.piv[j], r.k, r.ang[j] * t);
+          if (j === 0 && r.spK) p = rot(p, r.piv[0], r.spK, r.spA * t);
+        }
+        acc[0] += p[0] * w; acc[1] += p[1] * w; acc[2] += p[2] * w;
+      }
+      P[v * 3] = acc[0]; P[v * 3 + 1] = acc[1]; P[v * 3 + 2] = acc[2];
+    }
+  }
+}
+
 function makeMhBodyGeometry(skeleton, opts = {}) {
   const D = _mhDecode();
   const fig = _mhFigure(opts.fig || {});
@@ -183,6 +341,7 @@ function makeMhBodyGeometry(skeleton, opts = {}) {
   };
   if (!fem) smoothToward((x, y, z) => (z > 0.0 ? _ss(0.0, 0.05, z) : 0) * _ss(0.22, 0.30, y) * (1 - _ss(0.44, 0.50, y)) * (1 - _ss(0.13, 0.18, Math.abs(x))), 40, 0.7);
   smoothToward((x, y, z) => (z < -0.02 ? _ss(-0.02, -0.07, z) : 0) * _ss(-0.24, -0.15, y) * (1 - _ss(0.04, 0.12, y)) * (1 - _ss(0.13, 0.18, Math.abs(x))), 40, fem ? 0.35 : 0.6);
+  _mhRelaxHands(D, out, adj, st, (s) => apply(X['hand' + s], J['finger' + s][0], J['finger' + s][1], J['finger' + s][2]));
 
   /* ARMS AT THE SIDES, NOT THROUGH THEM. MakeHuman stands with its arms out at forty-five degrees;
      swung down to hang beside the body, the upper arm passed straight through the lats and the side
@@ -364,7 +523,7 @@ function makeMhBodyGeometry(skeleton, opts = {}) {
   const upC = shoes ? hex3(shoes.color) : white, soC = shoes ? (shoes.sole != null ? hex3(shoes.sole) : upC.map((x) => x * 0.55)) : [0.12, 0.12, 0.12];
   const randC = upC.map((x) => x * 0.5);
   const bt = dr.boots;
-  const laceC = upC.map((x) => x * 0.3);
+  const laceC = shoes && shoes.kind === 'sneaker' ? [0.82, 0.82, 0.80] : upC.map((x) => x * 0.3);   // a trainer's laces are white
   g.boots = _cmToGeometry(bt, 1, partOf(bt), (v) => (bt.sole[v] === 1 ? soC : bt.sole[v] === 2 ? randC : bt.sole[v] === 3 ? laceC : upC));
   g.mhHeadPlace = place;
   g.mh = true;

@@ -674,8 +674,15 @@ function makeHumanoidClips() {
     spine: { keys: [[0, 0, 0, 0], [0.5, 1.5, 0, 0], [1, 0, 0, 0]] },
     chest: { keys: [[0, 0, 0, 1], [0.5, -1.5, 0, -1], [1, 0, 0, 1]] },
     head: { keys: [[0, 0, 0, 0], [0.35, 1, 4, 0], [0.7, 0, -3, 0], [1, 0, 0, 0]] },
-    upperArmL: { keys: [[0, 0, 0, -6], [0.5, 0, 0, -9], [1, 0, 0, -6]] },
-    upperArmR: { keys: [[0, 0, 0, 6], [0.5, 0, 0, 9], [1, 0, 0, 6]] },
+    /* OUT, NOT IN. On this rig a positive upperArmL roll (negative for the right) takes the elbow
+       AWAY from the body -- the walk swings its arms at +7. The idle had -6 to -9: the elbows drawn
+       into the ribs and the hands swung 5 cm across the front of the thighs, into the holster and
+       the pouches, with nowhere for a relaxed hand's curled fingers to go. A man at rest hangs his
+       arms just clear of his sides, and a little further out on each breath in. (Not much further:
+       the weapon holds are solved from this pose, and at +4 the high-port hold pulled the back of the
+       right shoulder past 2.8x its length.) */
+    upperArmL: { keys: [[0, 0, 0, 1.5], [0.5, 0, 0, 3], [1, 0, 0, 1.5]] },
+    upperArmR: { keys: [[0, 0, 0, -1.5], [0.5, 0, 0, -3], [1, 0, 0, -1.5]] },
     /* NEGATIVE. On this rig a positive lower arm is HYPEREXTENSION --
        the forearm swinging backwards past straight -- and every clip in
        this file had it positive, 59 keys of it, up to +86 in the crawl.
@@ -1621,14 +1628,14 @@ function makeHumanoidClips() {
     neck: { keys: [[0, 0, 0, 0], [0.18, 0, -12, 0], [0.42, 0, -17, 1], [0.72, 0, -6, 0], [1, 0, 0, 0]] },
     head: { keys: [[0, 0, 0, 0], [0.26, 0, -13, -1], [0.5, 0, -19, -2], [0.8, 0, -5, 0], [1, 0, 0, 0]] },
     chest: { keys: [[0, 0, 0, 1], [0.5, 0, -4, 1], [1, 0, 0, 1]] },
-    upperArmL: { keys: [[0, 0, 0, -6], [0.5, 0, 0, -8], [1, 0, 0, -6]] },
+    upperArmL: { keys: [[0, 0, 0, 4], [0.5, 0, 0, 5], [1, 0, 0, 4]] },
   }, { loop: false }));
 
   /* A hand goes to the chest rig and comes back. The elbow does the
      work; the shoulder barely moves, which is what stops it reading as
      a salute. */
   clips.push(buildClip('idleCheck', 2.8, {
-    upperArmR: { keys: [[0, 0, 0, 6], [0.24, -18, 0, 16], [0.55, -22, 0, 19], [0.82, -8, 0, 10], [1, 0, 0, 6]] },
+    upperArmR: { keys: [[0, 0, 0, -4], [0.24, -18, 0, 14], [0.55, -22, 0, 19], [0.82, -8, 0, 6], [1, 0, 0, -4]] },
     lowerArmR: { keys: [[0, -13, 0, 0], [0.24, -70, 0, 0], [0.58, -80, 0, 0], [0.85, -34, 0, 0], [1, -13, 0, 0]] },
     handR: { keys: [[0, 0, 0, 0], [0.4, 0, 0, -14], [0.6, 0, 0, -10], [1, 0, 0, 0]] },
     neck: { keys: [[0, 0, 0, 0], [0.45, 5, 0, 0], [0.7, 4, 0, 0], [1, 0, 0, 0]] },

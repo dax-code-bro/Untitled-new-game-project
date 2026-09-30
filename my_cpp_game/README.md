@@ -81,7 +81,11 @@ Operators: `node tools/export_scene.js roster roster.lescene` stands all seven o
 at x = (i - 3) * 1.6 on a studio floor (bounds in `roster.lescene.json`), skinned and posed at
 the close-up level of detail (the web engine's `fullDetail`). Keep the default `--frames 12`:
 with `--frames 0` the skeletons have never been posed, every skinning palette is empty and only
-the rigid heads arrive.
+the rigid heads arrive. The Windows release ships it as `scenes/roster.lescene` ("Explore -
+Operators"). Materials carry the web engine's `thin` flag: thin subsurface (grass, leaves) transmits,
+thick (skin, cloth on a body) scatters round the terminator, and a skinned draw reads its sky
+occlusion two metres toward the sun so a man's own trunk is not taken for a roof. Scene files from
+before the flag load as thin, as they were drawn.
 
 Linux host packages: `libgl1-mesa-dev libx11-dev libxrandr-dev
 libxinerama-dev libxcursor-dev libxi-dev libxkbcommon-dev`. Glad is

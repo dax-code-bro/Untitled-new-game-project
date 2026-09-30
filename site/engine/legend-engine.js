@@ -15051,8 +15051,15 @@ function makeHumanoidClips() {
     spine: { keys: [[0, 0, 0, 0], [0.5, 1.5, 0, 0], [1, 0, 0, 0]] },
     chest: { keys: [[0, 0, 0, 1], [0.5, -1.5, 0, -1], [1, 0, 0, 1]] },
     head: { keys: [[0, 0, 0, 0], [0.35, 1, 4, 0], [0.7, 0, -3, 0], [1, 0, 0, 0]] },
-    upperArmL: { keys: [[0, 0, 0, -6], [0.5, 0, 0, -9], [1, 0, 0, -6]] },
-    upperArmR: { keys: [[0, 0, 0, 6], [0.5, 0, 0, 9], [1, 0, 0, 6]] },
+    /* OUT, NOT IN. On this rig a positive upperArmL roll (negative for the right) takes the elbow
+       AWAY from the body -- the walk swings its arms at +7. The idle had -6 to -9: the elbows drawn
+       into the ribs and the hands swung 5 cm across the front of the thighs, into the holster and
+       the pouches, with nowhere for a relaxed hand's curled fingers to go. A man at rest hangs his
+       arms just clear of his sides, and a little further out on each breath in. (Not much further:
+       the weapon holds are solved from this pose, and at +4 the high-port hold pulled the back of the
+       right shoulder past 2.8x its length.) */
+    upperArmL: { keys: [[0, 0, 0, 1.5], [0.5, 0, 0, 3], [1, 0, 0, 1.5]] },
+    upperArmR: { keys: [[0, 0, 0, -1.5], [0.5, 0, 0, -3], [1, 0, 0, -1.5]] },
     /* NEGATIVE. On this rig a positive lower arm is HYPEREXTENSION --
        the forearm swinging backwards past straight -- and every clip in
        this file had it positive, 59 keys of it, up to +86 in the crawl.
@@ -15998,14 +16005,14 @@ function makeHumanoidClips() {
     neck: { keys: [[0, 0, 0, 0], [0.18, 0, -12, 0], [0.42, 0, -17, 1], [0.72, 0, -6, 0], [1, 0, 0, 0]] },
     head: { keys: [[0, 0, 0, 0], [0.26, 0, -13, -1], [0.5, 0, -19, -2], [0.8, 0, -5, 0], [1, 0, 0, 0]] },
     chest: { keys: [[0, 0, 0, 1], [0.5, 0, -4, 1], [1, 0, 0, 1]] },
-    upperArmL: { keys: [[0, 0, 0, -6], [0.5, 0, 0, -8], [1, 0, 0, -6]] },
+    upperArmL: { keys: [[0, 0, 0, 4], [0.5, 0, 0, 5], [1, 0, 0, 4]] },
   }, { loop: false }));
 
   /* A hand goes to the chest rig and comes back. The elbow does the
      work; the shoulder barely moves, which is what stops it reading as
      a salute. */
   clips.push(buildClip('idleCheck', 2.8, {
-    upperArmR: { keys: [[0, 0, 0, 6], [0.24, -18, 0, 16], [0.55, -22, 0, 19], [0.82, -8, 0, 10], [1, 0, 0, 6]] },
+    upperArmR: { keys: [[0, 0, 0, -4], [0.24, -18, 0, 14], [0.55, -22, 0, 19], [0.82, -8, 0, 6], [1, 0, 0, -4]] },
     lowerArmR: { keys: [[0, -13, 0, 0], [0.24, -70, 0, 0], [0.58, -80, 0, 0], [0.85, -34, 0, 0], [1, -13, 0, 0]] },
     handR: { keys: [[0, 0, 0, 0], [0.4, 0, 0, -14], [0.6, 0, 0, -10], [1, 0, 0, 0]] },
     neck: { keys: [[0, 0, 0, 0], [0.45, 5, 0, 0], [0.7, 4, 0, 0], [1, 0, 0, 0]] },
@@ -23513,6 +23520,164 @@ function _m3FromTo(a, b) {
 }
 const _m3mul = (R, x, y, z) => [R[0] * x + R[1] * y + R[2] * z, R[3] * x + R[4] * y + R[5] * z, R[6] * x + R[7] * y + R[8] * z];
 
+/* RELAXED HANDS. MakeHuman's hand is modelled flat with the fingers spread, and the rig has no finger
+   bones to close it, so every hand hung at a man's side splayed like a starfish. A hand at rest is
+   half closed: each finger bent a little at the knuckle, more at the middle joint and a little at the
+   last, the little finger most, the fingers drawn together, the thumb bent toward the palm.
+
+   Found on the mesh, not assumed: geodesic distance from the wrist (the band where the forearm's
+   weight hands over to the hand's) peaks at the five fingertips, and the shortest of those is the
+   thumb. Each vertex belongs to the fingers by its geodesic distance to their tips (softly, so the
+   webs between them bend with both). Each finger's axis is the long axis of its free part, its knuckle
+   a proportion of its length back from the tip, its palm side the side the thumb is on. The joints
+   are bent tip first, each about its own rest pivot (forward kinematics), each over a short ramp so
+   the knuckle rounds instead of creasing. */
+function _mhRelaxHands(D, P, adj, st, knuckle) {
+  const nv = D.nBody;
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const nrm = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+  const pt = (v) => [P[v * 3], P[v * 3 + 1], P[v * 3 + 2]];
+  const dist = (a, b) => Math.hypot(P[a * 3] - P[b * 3], P[a * 3 + 1] - P[b * 3 + 1], P[a * 3 + 2] - P[b * 3 + 2]);
+  // Rodrigues: p rotated by angle t about unit axis k through c.
+  const rot = (p, c, k, t) => {
+    const x = p[0] - c[0], y = p[1] - c[1], z = p[2] - c[2];
+    const co = Math.cos(t), si = Math.sin(t), d = (k[0] * x + k[1] * y + k[2] * z) * (1 - co);
+    return [c[0] + x * co + (k[1] * z - k[2] * y) * si + k[0] * d,
+      c[1] + y * co + (k[2] * x - k[0] * z) * si + k[1] * d,
+      c[2] + z * co + (k[0] * y - k[1] * x) * si + k[2] * d];
+  };
+  for (const side of ['L', 'R']) {
+    const hb = D.B.indexOf('hand' + side);
+    const wv = new Float32Array(nv);
+    for (let v = 0; v < nv; v++) for (let q = 0; q < 4; q++) if (D.W[v * 8 + q * 2] === hb) wv[v] += D.W[v * 8 + q * 2 + 1] / 255;
+    const inH = (v) => wv[v] > 0.5 && adj[v].length > 0;
+    const geo = (seeds) => {
+      const g = new Float64Array(nv).fill(Infinity);
+      let open = [];
+      for (const v of seeds) { g[v] = 0; open.push(v); }
+      while (open.length) {
+        const nx = [];
+        for (const u of open) for (const w of adj[u]) if (inH(w)) { const d = g[u] + dist(u, w); if (d < g[w] - 1e-9) { g[w] = d; nx.push(w); } }
+        open = nx;
+      }
+      return g;
+    };
+    const band = [];
+    for (let v = 0; v < nv; v++) if (wv[v] > 0.3 && wv[v] < 0.7 && adj[v].length) band.push(v);
+    if (!band.length) continue;
+    const gw = geo(band);
+    const hv = [];
+    for (let v = 0; v < nv; v++) if (inH(v) && gw[v] < Infinity) hv.push(v);
+    hv.sort((a, b) => gw[b] - gw[a]);
+    const tips = [];
+    for (const v of hv) {
+      if (tips.length === 5) break;
+      if (gw[v] < 0.05 * st) break;
+      if (!tips.every((t) => dist(t, v) > 0.025 * st)) continue;
+      if (adj[v].every((w) => gw[w] <= gw[v])) tips.push(v);
+    }
+    if (tips.length < 5) continue;
+    // Middle reaches furthest, the thumb least; of the two left, the index is the one nearer the thumb.
+    tips.sort((a, b) => gw[b] - gw[a]);
+    const thumb = tips[4], middle = tips[0], little = tips[3];
+    const [ia, ib] = [tips[1], tips[2]];
+    const index = dist(ia, thumb) < dist(ib, thumb) ? ia : ib, ring = index === ia ? ib : ia;
+    const order = [index, middle, ring, little, thumb];
+    const gt = order.map((t) => geo([t]));
+    const lab = new Int8Array(nv).fill(-1);
+    for (const v of hv) { let b = 0; for (let f = 1; f < 5; f++) if (gt[f][v] < gt[b][v]) b = f; lab[v] = b; }
+    // The web: where a finger's region meets its neighbour's (the thumb's web is the index's side of it).
+    const web = [Infinity, Infinity, Infinity, Infinity, Infinity];
+    for (const v of hv) for (const w of adj[v]) if (lab[w] >= 0 && lab[w] !== lab[v]) {
+      const f = lab[v];
+      if (f < 4 && lab[w] === 4) continue;
+      web[f] = Math.min(web[f], gt[f][v]);
+    }
+    const F = order.map((tip, f) => {
+      const free = hv.filter((v) => lab[v] === f && gt[f][v] < web[f]);
+      if (free.length < 8) return null;
+      const c = [0, 0, 0];
+      for (const v of free) { c[0] += P[v * 3] / free.length; c[1] += P[v * 3 + 1] / free.length; c[2] += P[v * 3 + 2] / free.length; }
+      let d = nrm(sub(pt(tip), c));
+      for (let it = 0; it < 20; it++) {
+        const acc = [0, 0, 0];
+        for (const v of free) { const q = sub(pt(v), c), s = dot(q, d); acc[0] += q[0] * s; acc[1] += q[1] * s; acc[2] += q[2] * s; }
+        d = nrm(acc);
+      }
+      if (dot(d, sub(pt(tip), c)) < 0) d = [-d[0], -d[1], -d[2]];
+      return { tip, c, d, sTip: dot(sub(pt(tip), c), d) };
+    });
+    if (F.some((x) => !x)) continue;
+    // The fingers' plane, and its palm side: the side the thumb is on.
+    let n = nrm(_cross3(F[1].d, sub(F[0].c, F[3].c)));
+    const mid4 = [0, 1, 2, 3].reduce((a, f) => [a[0] + F[f].c[0] / 4, a[1] + F[f].c[1] / 4, a[2] + F[f].c[2] / 4], [0, 0, 0]);
+    if (dot(n, sub(pt(thumb), mid4)) < 0) n = [-n[0], -n[1], -n[2]];
+    /* The knuckles: MakeHuman's finger joint lies on the knuckle line (10.6 cm from the middle
+       fingertip on its figure). Each finger's knuckle is where its own axis meets that line, the line
+       curving back 4 mm at the index and ring and 13 mm at the little finger. */
+    const K = knuckle(side);
+    const Lm = Math.max(0.06 * st, dot(sub(pt(middle), K), F[1].d));
+    const hs = Lm / 0.106;
+    const arc = [0.004, 0, 0.004, 0.013].map((x) => x * hs);
+    const DEG = Math.PI / 180;
+    // Bends (degrees) at the knuckle, the middle joint and the last: least at the index, most at the little finger.
+    const bend = [[10, 24, 10], [17, 31, 14], [22, 35, 16], [28, 40, 18], [10, 16, 0]];
+    const joint = [0, 0.46, 0.73];
+    const toPalm = nrm(sub(mid4, pt(thumb)));
+    const R = F.map((fg, f) => {
+      let M;
+      if (f < 4) {
+        // On the finger's axis, level (along the middle finger) with the knuckle line.
+        const t = (dot(sub(K, fg.c), F[1].d) - arc[f]) / (dot(fg.d, F[1].d) || 1);
+        M = [fg.c[0] + fg.d[0] * t, fg.c[1] + fg.d[1] * t, fg.c[2] + fg.d[2] * t];
+      } else {
+        const t = fg.sTip - 0.64 * Lm;
+        M = [fg.c[0] + fg.d[0] * t, fg.c[1] + fg.d[1] * t, fg.c[2] + fg.d[2] * t];
+      }
+      const L = Math.max(0.03 * st, dot(sub(pt(fg.tip), M), fg.d));
+      // Fingers bend toward the palm; the thumb across it, toward the little finger's side.
+      const want = f < 4 ? n : nrm([n[0] * 0.5 + toPalm[0] * 0.5, n[1] * 0.5 + toPalm[1] * 0.5, n[2] * 0.5 + toPalm[2] * 0.5]);
+      const k = nrm(_cross3(fg.d, want));
+      // Splay: draw each finger most of the way toward the middle finger's line, about the palm's normal.
+      let spK = null, spA = 0;
+      if (f !== 1 && f < 4) {
+        const dp = [fg.d[0] - n[0] * dot(fg.d, n), fg.d[1] - n[1] * dot(fg.d, n), fg.d[2] - n[2] * dot(fg.d, n)];
+        const dm = [F[1].d[0] - n[0] * dot(F[1].d, n), F[1].d[1] - n[1] * dot(F[1].d, n), F[1].d[2] - n[2] * dot(F[1].d, n)];
+        const cx = _cross3(nrm(dp), nrm(dm)), sn = Math.hypot(cx[0], cx[1], cx[2]);
+        if (sn > 1e-4) { spK = nrm(cx); spA = Math.atan2(sn, dot(nrm(dp), nrm(dm))) * 0.7; }
+      }
+      const js = f < 4 ? joint : [0, 0.5, 2];
+      const piv = js.map((t) => [M[0] + fg.d[0] * L * t, M[1] + fg.d[1] * L * t, M[2] + fg.d[2] * L * t]);
+      return { M, L, k, spK, spA, piv, js, ang: bend[f].map((x) => x * DEG) };
+    });
+    const ramp = 0.006 * st, sig = 0.004 * st;
+    for (const v of hv) {
+      const p0 = pt(v);
+      let tot = 0;
+      const ws = [0, 0, 0, 0, 0];
+      const gmin = Math.min(gt[0][v], gt[1][v], gt[2][v], gt[3][v], gt[4][v]);
+      for (let f = 0; f < 5; f++) { ws[f] = Math.exp(-(gt[f][v] - gmin) / sig); tot += ws[f]; }
+      const acc = [0, 0, 0];
+      for (let f = 0; f < 5; f++) {
+        const w = ws[f] / tot;
+        if (w < 1e-4) continue;
+        const r = R[f];
+        const s = dot(sub(p0, r.M), F[f].d) / r.L;
+        let p = p0;
+        for (let j = 2; j >= 0; j--) {
+          const t = _ss(r.js[j] * r.L - ramp, r.js[j] * r.L + ramp, s * r.L);
+          if (t <= 0) continue;
+          p = rot(p, r.piv[j], r.k, r.ang[j] * t);
+          if (j === 0 && r.spK) p = rot(p, r.piv[0], r.spK, r.spA * t);
+        }
+        acc[0] += p[0] * w; acc[1] += p[1] * w; acc[2] += p[2] * w;
+      }
+      P[v * 3] = acc[0]; P[v * 3 + 1] = acc[1]; P[v * 3 + 2] = acc[2];
+    }
+  }
+}
+
 function makeMhBodyGeometry(skeleton, opts = {}) {
   const D = _mhDecode();
   const fig = _mhFigure(opts.fig || {});
@@ -23657,6 +23822,7 @@ function makeMhBodyGeometry(skeleton, opts = {}) {
   };
   if (!fem) smoothToward((x, y, z) => (z > 0.0 ? _ss(0.0, 0.05, z) : 0) * _ss(0.22, 0.30, y) * (1 - _ss(0.44, 0.50, y)) * (1 - _ss(0.13, 0.18, Math.abs(x))), 40, 0.7);
   smoothToward((x, y, z) => (z < -0.02 ? _ss(-0.02, -0.07, z) : 0) * _ss(-0.24, -0.15, y) * (1 - _ss(0.04, 0.12, y)) * (1 - _ss(0.13, 0.18, Math.abs(x))), 40, fem ? 0.35 : 0.6);
+  _mhRelaxHands(D, out, adj, st, (s) => apply(X['hand' + s], J['finger' + s][0], J['finger' + s][1], J['finger' + s][2]));
 
   /* ARMS AT THE SIDES, NOT THROUGH THEM. MakeHuman stands with its arms out at forty-five degrees;
      swung down to hang beside the body, the upper arm passed straight through the lats and the side
@@ -23838,7 +24004,7 @@ function makeMhBodyGeometry(skeleton, opts = {}) {
   const upC = shoes ? hex3(shoes.color) : white, soC = shoes ? (shoes.sole != null ? hex3(shoes.sole) : upC.map((x) => x * 0.55)) : [0.12, 0.12, 0.12];
   const randC = upC.map((x) => x * 0.5);
   const bt = dr.boots;
-  const laceC = upC.map((x) => x * 0.3);
+  const laceC = shoes && shoes.kind === 'sneaker' ? [0.82, 0.82, 0.80] : upC.map((x) => x * 0.3);   // a trainer's laces are white
   g.boots = _cmToGeometry(bt, 1, partOf(bt), (v) => (bt.sole[v] === 1 ? soC : bt.sole[v] === 2 ? randC : bt.sole[v] === 3 ? laceC : upC));
   g.mhHeadPlace = place;
   g.mh = true;
@@ -24901,7 +25067,14 @@ function _mhDress(base, Q, B, opts) {
         /* Over the glove's gauntlet the cuff stands off it: the cuff's folds (inward, up to 2.4 mm)
            centred on the glove's top edge sawed it through the sleeve in a row of teeth. */
         const F = S[p[0] >= 0 ? 'L' : 'R'], wc = dot3(sub3(p, F.wr), F.uFore);
-        e += 0.005 * _ss01(-0.065 * st, -0.045 * st, wc) * (Math.abs(p[0]) > 0.12 * st ? 1 : 0);
+        e += 0.0035 * _ss01(-0.065 * st, -0.045 * st, wc) * (Math.abs(p[0]) > 0.12 * st ? 1 : 0);
+      }
+      {
+        /* THE CUFF CLOSES. A tactical shirt's cuff is strapped shut round the wrist (or the glove);
+           left as loose as the sleeve above it, it hung open 15 mm all round and showed its inside
+           as a hollow ring. Over its last 4 cm the sleeve is taken in to lie 8 mm off the glove. */
+        const F = S[p[0] >= 0 ? 'L' : 'R'], wc = dot3(sub3(p, F.wr), F.uFore);
+        if (Math.abs(p[0]) > 0.12 * st) e -= 0.013 * _ss01(-0.080 * st, -0.045 * st, wc);
       }
       if (tucked) {
         // Tucked in under the waistband (whose top the belt covers), bloused out over the belt above it.
@@ -25126,6 +25299,9 @@ function _mhDress(base, Q, B, opts) {
       const pc = alongA(F.l1 * 0.40, [sx * 0.045 * st, 0, 0]);
       _cmPatch(shirtT, Ns, pc, upA, 0.070 * st, 0.090 * st, 0.004 * st, { face: out, bulge: 0.002 * st, uvk });
       _cmPatch(shirtT, Ns, [pc[0] + upA[0] * 0.040 * st, pc[1] + upA[1] * 0.040 * st, pc[2] + upA[2] * 0.040 * st], upA, 0.078 * st, 0.030 * st, 0.0075 * st, { face: out, lip: true, edge: 0.12, uvk });
+      // The cuff's closure tab, on the outside of the wrist.
+      const cuffC = [F.wr[0] - F.uFore[0] * 0.030 * st + sx * 0.030 * st, F.wr[1] - F.uFore[1] * 0.030 * st, F.wr[2] - F.uFore[2] * 0.030 * st];
+      _cmPatch(shirtT, Ns, cuffC, [-F.uFore[0], -F.uFore[1], -F.uFore[2]], 0.024 * st, 0.034 * st, 0.0028 * st, { face: out, lip: true, edge: 0.2, nx: 6, ny: 7, uvk });
       // The cargo pocket on the outer thigh and its flap; a smaller one on the calf.
       const upT = [-F.uThigh[0], -F.uThigh[1], -F.uThigh[2]];
       const tc = [F.hp[0] + F.uThigh[0] * F.k1 * 0.56 + sx * 0.078 * st, F.hp[1] + F.uThigh[1] * F.k1 * 0.56, F.hp[2] + F.uThigh[2] * F.k1 * 0.56 + 0.004 * st];
@@ -25157,6 +25333,9 @@ function _mhDress(base, Q, B, opts) {
       const ax = _norm3(sub3(F.hp, F.an)), k0 = -F.hp[1] / ax[1];
       frames.push({ o: [F.hp[0] + ax[0] * k0, 0, F.hp[2] + ax[2] * k0], axis: ax, out: [sx, 0, 0], R: 0.08 * st });
     }
+    // The trousers' own legs, wrapped all the way up to the waistband, sized to the girth.
+    const legFrameL = frames.length; frames.push(Object.assign({}, frames[2], { adapt: true }));
+    const legFrameR = frames.length; frames.push(Object.assign({}, frames[4], { adapt: true }));
     const pickOf = (M) => (i) => {
       let aL = 0, aR = 0, x = 0, y = 0;
       for (let k = 0; k < 3; k++) {
@@ -25170,7 +25349,20 @@ function _mhDress(base, Q, B, opts) {
       if (y / 3 < crotch[1]) return x >= 0 ? 2 : 4;
       return 0;
     };
-    for (const M of [shirtT, trouT, belt]) if (M) _cmCylUV(M, frames, pickOf(M));
+    for (const M of [shirtT, belt]) if (M) _cmCylUV(M, frames, pickOf(M));
+    /* Trousers are cut in two halves seamed down the fly and up the seat: each half takes its own leg's
+       wrap right up to the waistband, so the weave runs unbroken from the belt to the cuff and changes
+       only on those seams. (Switched from the trunk's wrap to the leg's at the height of the fork, the
+       weave jumped in a line straight across both thighs.) */
+    if (trouT) {
+      const pk = pickOf(trouT);
+      _cmCylUV(trouT, frames, (i) => {
+        const k = pk(i);
+        if (k === 1 || k === 3) return k;
+        let x = 0; for (let q = 0; q < 3; q++) x += trouT.BP[trouT.T[i + q] * 3];
+        return x >= 0 ? legFrameL : legFrameR;
+      });
+    }
     /* The skin that shows gets the same treatment, the neck wrapped round its own axis with the seam
        at the nape: on MakeHuman's layout the throat sits on an island edge whose coordinates
        collapse, and the skin's pore map smeared into a dark rectangle there. */
@@ -25196,8 +25388,32 @@ function _mhDress(base, Q, B, opts) {
    the arm, the inside of the leg. `frames` are {o, axis, out, R}; `pick(tri)` says whose it is. */
 function _cmCylUV(M, frames, pick) {
   const P = M.P;
+  /* A frame marked `adapt` sizes its u by the girth it wraps at each height (the mean distance from
+     its axis of the triangles it maps, in 1 cm bands, eased): a trouser leg wrapped on up to the
+     waistband would otherwise stretch its weave to half again as wide over the hip. */
+  const picks = new Int32Array(M.T.length / 3);
+  for (let i = 0; i < M.T.length; i += 3) picks[i / 3] = pick(i);
+  const girth = frames.map((F, fi) => {
+    if (!F.adapt) return null;
+    const lo = -1.2, bins = 240, sum = new Float64Array(bins), cnt = new Float64Array(bins);
+    for (let i = 0; i < M.T.length; i += 3) {
+      if (picks[i / 3] !== fi) continue;
+      for (let k = 0; k < 3; k++) {
+        const v = M.T[i + k], r = [P[v * 3] - F.o[0], P[v * 3 + 1] - F.o[1], P[v * 3 + 2] - F.o[2]];
+        const t = r[0] * F.axis[0] + r[1] * F.axis[1] + r[2] * F.axis[2];
+        const d = Math.hypot(r[0] - F.axis[0] * t, r[1] - F.axis[1] * t, r[2] - F.axis[2] * t);
+        const b = Math.floor((t - lo) / 0.01);
+        if (b >= 0 && b < bins) { sum[b] += d; cnt[b]++; }
+      }
+    }
+    let R = new Float64Array(bins);
+    for (let b = 0; b < bins; b++) R[b] = cnt[b] ? sum[b] / cnt[b] : 0;
+    for (let b = 0; b < bins; b++) if (!R[b]) { let a = b, c = b; while (a >= 0 && !cnt[a]) a--; while (c < bins && !cnt[c]) c++; R[b] = a >= 0 && c < bins ? (R[a] + R[c]) / 2 : a >= 0 ? R[a] : c < bins ? R[c] : F.R; }
+    for (let it = 0; it < 8; it++) { const R2 = R.slice(); for (let b = 1; b + 1 < bins; b++) R2[b] = (R[b - 1] + 2 * R[b] + R[b + 1]) / 4; R = R2; }
+    return (t) => { const x = (t - lo) / 0.01 - 0.5, b = Math.max(0, Math.min(bins - 2, Math.floor(x))), f = Math.max(0, Math.min(1, x - b)); return Math.max(F.R * 0.6, R[b] + (R[b + 1] - R[b]) * f); };
+  });
   for (let i = 0; i < M.T.length; i += 3) {
-    const F = frames[pick(i)];
+    const F = frames[picks[i / 3]], gR = girth[picks[i / 3]];
     const e2 = F.out, e1 = _norm3(_cross3(F.axis, e2));
     const ang = [], vv = [];
     for (let k = 0; k < 3; k++) {
@@ -25209,7 +25425,7 @@ function _cmCylUV(M, frames, pick) {
       vv.push(t);
     }
     if (Math.max(...ang) - Math.min(...ang) > Math.PI) for (let k = 0; k < 3; k++) if (ang[k] < 0) ang[k] += 2 * Math.PI;
-    for (let k = 0; k < 3; k++) { M.UV[(i + k) * 2] = ang[k] * F.R; M.UV[(i + k) * 2 + 1] = vv[k]; }
+    for (let k = 0; k < 3; k++) { M.UV[(i + k) * 2] = ang[k] * (gR ? gR(vv[k]) : F.R); M.UV[(i + k) * 2 + 1] = vv[k]; }
   }
 }
 
@@ -25291,7 +25507,8 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum, lod) {
     });
     const regions = sneaker ? [
       // No lacing ridges on a trainer: at this resolution they came out as lumps down the vamp.
-      { sole: false, k: 0.016 * st, fold: null, ...box((x, y, z) => Math.max(sole + 0.010 * st - y, y - top)), prims: [
+      // Meshed as finely as the boot (at 7.5 mm the midsole's edge came out lumpy, like packing foam).
+      { sole: false, k: 0.016 * st, fold: null, h: 0.0055, ...box((x, y, z) => Math.max(sole + 0.010 * st - y, y - top)), prims: [
         _cone([ax, top, az - 0.006 * st], [ax, sole + 0.060 * st, az - 0.008 * st], ar + 0.010 * st, ar + 0.012 * st),   // padded collar
         _ell(at(0.034 * st, sole + 0.052 * st), [W / 2 - 0.004 * st, 0.040 * st, 0.040 * st]),                            // heel counter
         _ell(at(L * 0.34, sole + 0.044 * st), [W / 2, 0.034 * st, L * 0.26]),                                              // quarters
@@ -25300,9 +25517,18 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum, lod) {
         _ell(at(L * 0.42, sole + 0.066 * st), [0.034 * st, 0.020 * st, 0.056 * st], 0.020 * st),                           // tongue over the instep, blended into the vamp
         _ell(at(L - 0.044 * st, sole + 0.024 * st), [W / 2 - 0.002 * st, 0.020 * st, 0.048 * st]),                        // toe box, low and round
       ] },
-      { sole: true, k: 0.022 * st, fold: null, ...box((x, y, z) => sole - y), prims: [
+      /* The midsole in plan is the foot's own outline -- a round heel, widening to the ball, a round
+         toe -- not the rectangle the slab alone made: the slab clipped to that outline. */
+      { sole: true, k: 0.022 * st, fold: null, h: 0.0038, ...box((x, y, z) => {
+        // In at()'s coordinates: along from 8 mm behind the heel.
+        const al = (x - heel[0]) * d[0] + (z - heel[2]) * d[2] + 0.008 * st, ac = (x - heel[0]) * u[0] + (z - heel[2]) * u[2] - wc;
+        const r1 = W / 2 + 0.005 * st, r2 = W / 2 + 0.011 * st, a1 = r1 - 0.008 * st, a2 = L + 0.009 * st - r2;
+        const t = Math.max(0, Math.min(1, (al - a1) / (a2 - a1)));
+        const plan = Math.hypot(al - (a1 + (a2 - a1) * t), ac) - (r1 + (r2 - r1) * t * t * (3 - 2 * t));
+        return Math.max(sole - y, plan);
+      }), prims: [
         // One slab with its top tilted, 29 mm under the heel to 17 under the toe: two blocks stepped.
-        _box(at(L * 0.5, sole + 0.023 * st - 0.030 * st), u, [-d[0] * 0.012 * st / L, 1, -d[2] * 0.012 * st / L], [W / 2 + 0.006 * st, 0.030 * st, L * 0.5 + 0.006 * st], 0.008 * st),
+        _box(at(L * 0.5, sole + 0.023 * st - 0.030 * st), u, [-d[0] * 0.012 * st / L, 1, -d[2] * 0.012 * st / L], [W / 2 + 0.014 * st, 0.030 * st, L * 0.5 + 0.014 * st], 0.008 * st),
       ] },
     ] : [
       /* A BOOT, the same way: an upper -- a shaft that hugs the ankle over the trouser tucked into it,
@@ -25339,7 +25565,7 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum, lod) {
       /* The laces: crossed between two rows of eyelets down the instep to the toe side of the vamp, and
          up the front of the shaft, each cross a cord standing just proud of the upper. The upper is
          found by walking in from outside it until the field goes negative. */
-      if (!rg.sole && !sneaker) {
+      if (!rg.sole) {
         const inside = (x, y, z) => _evalRegion(R, x, y, z) < 0;
         const hitDown = (x, z) => {
           let y = top + 0.02 * st;
@@ -25362,17 +25588,18 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum, lod) {
            instep, then up the front of the shaft -- each with an eyelet either side, and a cross
            between each station and the next. */
         const stations = [];
-        for (const f of [0.64, 0.585, 0.53, 0.475, 0.425]) {
+        // A trainer laces down its tongue only, six pairs from the toe side of the vamp to the collar.
+        for (const f of sneaker ? [0.60, 0.555, 0.51, 0.465, 0.42, 0.378] : [0.64, 0.585, 0.53, 0.475, 0.425]) {
           const q = at(L * f, 0), y = hitDown(q[0], q[2]);
-          if (y != null) stations.push({ c: [q[0], y, q[2]], out: [0, 1, 0] });
+          if (y != null && y < top - 0.006 * st) stations.push({ c: [q[0], y, q[2]], out: [0, 1, 0] });
         }
         const yv = stations.length ? stations[stations.length - 1].c[1] : sole + 0.09 * st;
-        for (let yy = yv + 0.020 * st; yy < top - 0.012 * st; yy += 0.020 * st) {
+        if (!sneaker) for (let yy = yv + 0.020 * st; yy < top - 0.012 * st; yy += 0.020 * st) {
           const q = hitBack(yy, 0);
           if (q) stations.push({ c: q, out: [d[0], 0, d[2]] });
         }
         const eyes = stations.map(({ c, out }, i) => {
-          const half = (0.0125 + 0.0005 * i) * st, lift = 0.0018 * st;
+          const half = ((sneaker ? 0.0105 : 0.0125) + 0.0005 * i) * st, lift = 0.0018 * st;
           return [-1, 1].map((sg) => [c[0] + u[0] * sg * half + out[0] * lift, c[1] + out[1] * lift, c[2] + u[2] * sg * half + out[2] * lift]);
         });
         const l0 = g.positions.length / 3;
@@ -25383,6 +25610,25 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum, lod) {
             // The cross stands off the tongue: the chord between two eyelets passes under a curved upper.
             const mid = [0, 1, 2].map((k) => (p[k] + q[k]) / 2 + (o2[k] + o3[k]) * 0.0014 * st);
             loftRings(g, [p, mid, q].map((c) => ({ p: new Vec3(c[0], c[1], c[2]), w: 0.0017 * st, d: 0.0017 * st, e: 2 })), 5, true, true);
+          }
+        }
+        // The bow, tied at the top pair: two loops lying back over the tongue, and the two ends.
+        if (sneaker && stations.length > 1) {
+          const tc = stations[stations.length - 1].c, lift = 0.0035 * st;
+          for (const sg of [-1, 1]) {
+            const loop = [];
+            for (let k = 0; k < 10; k++) {
+              const t = k / 10 * 2 * Math.PI;
+              const a2 = 0.011 * st * (1 - Math.cos(t)) * 0.5 + 0.002 * st, b2 = 0.0055 * st * Math.sin(t);
+              // Out to the side and a little down the vamp.
+              const p = [tc[0] + u[0] * sg * a2 + d[0] * (b2 + 0.003 * st), tc[1] + lift + 0.002 * st * Math.sin(t * 0.5), tc[2] + u[2] * sg * a2 + d[2] * (b2 + 0.003 * st)];
+              loop.push({ p: new Vec3(p[0], p[1], p[2]), w: 0.0016 * st, d: 0.0016 * st, e: 2 });
+            }
+            loftLoop(g, loop, 5);
+            const e0 = [tc[0] + u[0] * sg * 0.002 * st, tc[1] + lift, tc[2] + u[2] * sg * 0.002 * st];
+            const e1 = [tc[0] + u[0] * sg * 0.008 * st + d[0] * 0.022 * st, tc[1] + lift - 0.004 * st, tc[2] + u[2] * sg * 0.008 * st + d[2] * 0.022 * st];
+            const em = [(e0[0] + e1[0]) / 2, (e0[1] + e1[1]) / 2 + 0.002 * st, (e0[2] + e1[2]) / 2];
+            loftRings(g, [e0, em, e1].map((c) => ({ p: new Vec3(c[0], c[1], c[2]), w: 0.0015 * st, d: 0.0015 * st, e: 2 })), 5, true, true);
           }
         }
         for (let v = l0; v < g.positions.length / 3; v++) laceV.push(v);
@@ -29613,7 +29859,7 @@ function _kStat(G, label, fn) {
 /* A SHEET: a grid of points on the inner face of a band (rows up it, columns along it), each with
    its outward direction, thickness and skin weights, made into a closed solid with a rolled edge all
    round -- two loops if it closes on itself (a belt), one if it does not (a platform). */
-function _kSheet(g, rows, closedU, rollTop = true) {
+function _kSheet(g, rows, closedU, rollTop = true, hole = null) {
   const R = rows.length, Cn = rows[0].length;
   const P = [], X = [], Bd = [], T = [];
   const add = (p, x, b) => { P.push(p); X.push(x); Bd.push(b); return P.length - 1; };
@@ -29628,7 +29874,9 @@ function _kSheet(g, rows, closedU, rollTop = true) {
     O.push(ro); I.push(ri);
   }
   const cols = closedU ? Cn : Cn - 1;
+  const inHole = (j, i) => hole && j >= hole.j0 && j < hole.j1 && i >= hole.i0 && i < hole.i1;
   for (let j = 0; j + 1 < R; j++) for (let i = 0; i < cols; i++) {
+    if (inHole(j, i)) continue;
     const i2 = (i + 1) % Cn;
     T.push(O[j][i], O[j][i2], O[j + 1][i2], O[j][i], O[j + 1][i2], O[j + 1][i]);
     T.push(I[j][i], I[j + 1][i2], I[j][i2], I[j][i], I[j + 1][i], I[j + 1][i2]);
@@ -29645,8 +29893,20 @@ function _kSheet(g, rows, closedU, rollTop = true) {
     for (let j = R - 2; j >= 1; j--) L.push([j, 0]);
     loops.push(L);
   }
+  // A hole's edge rolls too, toward the hole (its loop is marked so the direction test knows).
+  if (hole) {
+    const L = [];
+    for (let i = hole.i0; i < hole.i1; i++) L.push([hole.j0, i]);
+    for (let j = hole.j0; j < hole.j1; j++) L.push([j, hole.i1]);
+    for (let i = hole.i1; i > hole.i0; i--) L.push([hole.j1, i]);
+    for (let j = hole.j1; j > hole.j0; j--) L.push([j, hole.i0]);
+    L.hole = true;
+    loops.push(L);
+  }
   for (const L of loops) {
     const m = L.length, colsR = [];
+    let hc = null;
+    if (L.hole) { hc = [0, 0, 0]; for (const [j, i] of L) { const p = rows[j][i].p; hc[0] += p[0] / m; hc[1] += p[1] / m; hc[2] += p[2] / m; } }
     for (let k = 0; k < m; k++) {
       const [j, i] = L[k], q = rows[j][i];
       const [ja, ia] = L[(k - 1 + m) % m], [jb, ib] = L[(k + 1) % m];
@@ -29657,7 +29917,8 @@ function _kSheet(g, rows, closedU, rollTop = true) {
       const ji = Math.min(R - 1, Math.max(0, j + (j === 0 ? 1 : j === R - 1 ? -1 : 0)));
       const ii = closedU ? i : Math.min(Cn - 1, Math.max(0, i + (i === 0 ? 1 : i === Cn - 1 ? -1 : 0)));
       const pin = rows[ji][ii].p;
-      if ((q.p[0] - pin[0]) * e[0] + (q.p[1] - pin[1]) * e[1] + (q.p[2] - pin[2]) * e[2] < 0) e = e.map((x) => -x);
+      if (hc) { if ((hc[0] - q.p[0]) * e[0] + (hc[1] - q.p[1]) * e[1] + (hc[2] - q.p[2]) * e[2] < 0) e = e.map((x) => -x); }
+      else if ((q.p[0] - pin[0]) * e[0] + (q.p[1] - pin[1]) * e[1] + (q.p[2] - pin[2]) * e[2] < 0) e = e.map((x) => -x);
       const r = q.th / 2, c = [q.p[0] + q.n[0] * r, q.p[1] + q.n[1] * r, q.p[2] + q.n[2] * r];
       const col = [I[j][i]];
       for (const ph of [Math.PI * 0.75, Math.PI * 0.5, Math.PI * 0.25]) {
@@ -29947,6 +30208,8 @@ function kitCarrier(K, G, C) {
     g.setColor(col[0], col[1], col[2]);
     const v0 = g.positions.length / 3;
     loftRings(g, rings, 14, true, true, true);      // framed by hand, wound the other way round
+    // Kept whole at a distance: clustered, a strap this thin crumpled into the shirt under it.
+    (g.lodKeep || (g.lodKeep = [])).push([v0, g.positions.length / 3]);
     _kBoxUV(g, v0);
     _kSeal(g, v0, (v) => K.bindNear(g.positions[v * 3], g.positions[v * 3 + 1], g.positions[v * 3 + 2]));
   }
@@ -29980,14 +30243,16 @@ function kitMagPouches(K, G, C, n) {
     _kBoxUV(gc, v0); _kSeal(gc, v0, bind);
     /* The magazine, baseplate up: the lower body out of the mouth with grip ribs across it, then
        the flared baseplate. */
+    /* Only what shows, and a centimetre into the mouth: the rest of the magazine is inside a closed
+       pouch, and at a distance, clustered, it poked through the pouch's front as dark specks. */
     const top = vb + ph;
-    const mf = _kFlatOn(fr, uc, top - 0.026, wc);
+    const mf = _kFlatOn(fr, uc, top + 0.011, wc);
     gp.setColor(magCol[0], magCol[1], magCol[2]);
     const ribs = [];
-    for (let k = 0; k < 9; k++) ribs.push(0.028 + k * 0.0028);
-    v0 = _kSlab(gp, mf, (u, v) => _kRect(u, v, 0.031, 0.060, 0.006), 0.025, 0.004, {
-      nu: 8, dv: 0.03, levels: ribs,
-      relief: (u, v) => (v > 0.028 && v < 0.052 ? 0.0006 * (0.5 + 0.5 * Math.cos((v - 0.028) * 2 * Math.PI / 0.0056)) : 0),
+    for (let k = 0; k < 9; k++) ribs.push(-0.009 + k * 0.0028);
+    v0 = _kSlab(gp, mf, (u, v) => _kRect(u, v, 0.031, 0.023, 0.006), 0.025, 0.004, {
+      nu: 8, dv: 0.012, levels: ribs,
+      relief: (u, v) => (v > -0.009 && v < 0.015 ? 0.0006 * (0.5 + 0.5 * Math.cos((v + 0.009) * 2 * Math.PI / 0.0056)) : 0),
     });
     _kBoxUV(gp, v0); _kSeal(gp, v0, bind);
     const bf = _kFlatOn(fr, uc, top + 0.038, wc);
@@ -30226,7 +30491,7 @@ function kitHolster(K, G, C) {
   _kStat(G, 'holster', () => {
     const aLat = sx * Math.PI / 2 + sx * 0.10;
     _kRing(K, gc, {
-      y0: yBot, y1: yTop, ny: 9, a0: aLat - 0.62, a1: aLat + 0.62, na: 12, axis, filt: onLeg,
+      y0: yBot, y1: yTop, ny: 9, a0: aLat - 0.50, a1: aLat + 0.50, na: 12, axis, filt: onLeg,
       standoff: 0.0045, th: 0.007, smooth: 6, col,
     });
     // Two leg straps, 38 mm, right round the thigh.
@@ -30260,10 +30525,13 @@ function kitHolster(K, G, C) {
       _kBoxUV(gc, v0);
       _kSeal(gc, v0, (v) => K.bindNear(gc.positions[v * 3], gc.positions[v * 3 + 1], gc.positions[v * 3 + 2]));
     }
-    /* The holster, canted a little forward on the platform: a moulded shell the shape of the gun,
-       the trigger guard's bulge on its front edge; the grip, the back of the slide and the hood over
-       them. */
-    const yc = -0.180 * st, a = axis(yc), cc = K.castH(yc, sx * Math.PI / 2 + sx * 0.12, a[0], a[1], onLeg);
+    /* The holster, canted a little forward on the platform. Holstered muzzle down, a pistol's slide
+       runs down the thigh and its grip points BACK out of the top (the grip's 18 degree rake now
+       tilting it up), the trigger guard under the grip at the back of the shell. The shell is moulded
+       round both -- thick over the slide, thinner over the guard, domed, with a lip at the mouth,
+       three screws into the platform -- and the hood caps the back of the slide. Everything is laid
+       out in the side view: uu forward along the thigh, v up, in millimetres of the gun. */
+    const yc = -0.190 * st, a = axis(yc), cc = K.castH(yc, sx * Math.PI / 2 + sx * 0.12, a[0], a[1], onLeg);
     if (!cc) return;
     const W = _norm3([cc.n[0], 0, cc.n[2]]);
     const cant = 0.14;
@@ -30271,36 +30539,109 @@ function kitHolster(K, G, C) {
     const fwd = Fw[2] > 0 ? Fw : Fw.map((x) => -x);
     const V = _norm3([fwd[0] * Math.sin(cant), Math.cos(cant), fwd[2] * Math.sin(cant)]);
     const U = _norm3(_cross3(V, W));
-    const hc = [cc.p[0] + W[0] * (0.011 + 0.021), yc, cc.p[2] + W[2] * (0.011 + 0.021)];
-    const f = _kFlat(hc, U, V, W);
-    const bind = K.bindAt(cc.p[0], cc.p[1], cc.p[2], 0.07, onLeg);
     const uSign = (U[0] * fwd[0] + U[2] * fwd[2]) > 0 ? 1 : -1;   // +u toward the front of the thigh
-    gp.setColor(0.08, 0.08, 0.08);
-    let v0 = _kSlab(gp, f, (u, v) => {
-      const uu = u * uSign;
-      const body = _kRect(uu - 0.004, v, 0.040, 0.085, 0.014);
-      const guard = _kRect(uu - 0.036, v - 0.030, 0.016, 0.028, 0.012);
-      return Math.min(body, guard);
-    }, 0.040, 0.010, { nu: 12, dv: 0.02 });
+    const tS = 0.030;                                     // the shell's thickness over the guard
+    const hc = [cc.p[0] + W[0] * (0.011 + tS / 2), yc, cc.p[2] + W[2] * (0.011 + tS / 2)];
+    const f = _kFlat(hc, U, V, W);
+    const at = (uu, v, w) => f.world(uu * uSign, v, w);
+    const flatAt = (uu, v, w, rot = 0) => {
+      // A frame at (uu, v, w) turned by rot in the side view (positive turns +v toward the back).
+      const c = Math.cos(rot), s2 = Math.sin(rot);
+      const Vr = _norm3([V[0] * c - U[0] * uSign * s2, V[1] * c - U[1] * uSign * s2, V[2] * c - U[2] * uSign * s2]);
+      const Ur = _norm3(_cross3(Vr, W));
+      return { fr: _kFlat(at(uu, v, w), Ur, Vr, W), us: (Ur[0] * fwd[0] + Ur[2] * fwd[2]) > 0 ? 1 : -1 };
+    };
+    const bind = K.bindAt(cc.p[0], cc.p[1], cc.p[2], 0.07, onLeg);
+    // The slide's channel: 36 mm deep front to back, muzzle rounded; the guard's pocket behind it.
+    const slideU0 = -0.008, slideU1 = 0.030, top = 0.080, muz = -0.110;
+    const shellSd = (uu, v) => {
+      const slide = _kRect(uu - (slideU0 + slideU1) / 2, v - (top + muz) / 2, (slideU1 - slideU0) / 2, (top - muz) / 2, 0.015);
+      const guard = _kRect(uu - (slideU0 - 0.016), v - 0.046, 0.021, 0.033, 0.013);
+      const k = 0.008, h = _kClamp(0.5 + 0.5 * (guard - slide) / k, 0, 1);
+      return guard * (1 - h) + slide * h - k * h * (1 - h);     // smooth union: moulded, not two boxes
+    };
+    const shellRelief = (uu, v) => {
+      // Over the slide the shell stands 7 mm prouder, domed across; a ridge where the ejection port is.
+      const ov = _kSS(slideU0 - 0.004, slideU0 + 0.006, uu) * (1 - _kSS(slideU1 - 0.006, slideU1 + 0.004, uu));
+      const dome = 0.007 * ov * Math.sqrt(Math.max(0, 1 - ((uu - 0.011) / 0.024) ** 2));
+      const lip = v > top - 0.008 ? 0.0012 : 0;
+      const port = 0.0009 * _kSS(0.004, 0.0, Math.abs(v - 0.050) - 0.012) * ov;
+      const edge = _kSS(0, 0.010, -shellSd(uu, v));
+      return (dome + lip + port) * edge;
+    };
+    gp.setColor(0.075, 0.075, 0.078);
+    let v0 = _kSlab(gp, f, (u, v) => shellSd(u * uSign, v), tS, 0.011, {
+      nu: 16, dv: 0.008, levels: [top - 0.006, top - 0.010, 0.030, 0.012],
+      relief: (u, v) => shellRelief(u * uSign, v),
+    });
     _kBoxUV(gp, v0); _kSeal(gp, v0, bind);
-    // The grip, raked back out of the top, and the back of the slide above it.
-    const gf = _kFlat(f.world(-uSign * 0.016, 0.110, 0.001), U, V, W);
-    const rake = 0.30;
-    const gU = U, gV = _norm3([V[0] * Math.cos(rake) - U[0] * uSign * Math.sin(rake), V[1] * Math.cos(rake) - U[1] * uSign * Math.sin(rake), V[2] * Math.cos(rake) - U[2] * uSign * Math.sin(rake)]);
-    const gf2 = _kFlat(gf.world(0, 0, 0), _norm3(_cross3(gV, W)), gV, W);
-    gp.setColor(0.05, 0.05, 0.05);
-    v0 = _kSlab(gp, gf2, (u, v) => _kRect(u, v, 0.015, 0.042, 0.007), 0.028, 0.008, { nu: 6, dv: 0.02,
-      levels: [-0.02, -0.018, -0.006, -0.004, 0.008, 0.010, 0.022, 0.024],
-      relief: (u, v) => 0.0006 * (0.5 + 0.5 * Math.cos(v * 2 * Math.PI / 0.006)) });
-    _kBoxUV(gp, v0); _kSeal(gp, v0, bind);
-    const sf = _kFlat(f.world(uSign * 0.010, 0.094, 0.001), U, V, W);
-    gh.setColor(0.20, 0.20, 0.21);
-    v0 = _kSlab(gh, sf, (u, v) => _kRect(u, v, 0.034, 0.013, 0.004), 0.026, 0.004, { nu: 8, dv: 0.01, K: 4 });
+    // Three screws into the platform, down the back edge and under the mouth.
+    gh.setColor(0.16, 0.16, 0.17);
+    for (const [su, sv] of [[slideU0 - 0.028, 0.050], [slideU0 + 0.001, -0.030], [slideU0 + 0.001, -0.080]]) {
+      const sfr = _kFlat(at(su, sv, tS / 2 + shellRelief(su, sv) + 0.0006), U, V, W);
+      v0 = _kSlab(gh, sfr, (u, v) => Math.hypot(u, v) - 0.0045, 0.0022, 0.0009, { nu: 6, dv: 0.003, K: 4,
+        relief: (u, v) => (Math.abs(u) < 0.0007 ? -0.0007 : 0) });
+      _kBoxUV(gh, v0); _kSeal(gh, v0, bind);
+    }
+    // The slide's back end, above the shell's mouth: black nitride, rear serrations, the rear sight.
+    const slideW = 0.024;
+    gh.setColor(0.085, 0.085, 0.09);
+    const sl = flatAt((slideU0 + slideU1) / 2 - 0.002, top + 0.008, 0);
+    v0 = _kSlab(gh, sl.fr, (u, v) => _kRect(u, v, (slideU1 - slideU0) / 2 - 0.004, 0.016, 0.003), slideW, 0.003, {
+      nu: 8, dv: 0.0025, K: 4, relief: (u, v) => (v > 0.0 && Math.sin(v * 2 * Math.PI / 0.0024) > 0.3 ? -0.0006 : 0) });
     _kBoxUV(gh, v0); _kSeal(gh, v0, bind);
-    // The retention hood, a U over the back of the slide.
-    const hf = _kFlat(f.world(-uSign * 0.018, 0.098, 0.001), U, V, W);
-    gp.setColor(0.08, 0.08, 0.08);
-    v0 = _kSlab(gp, hf, (u, v) => Math.max(_kRect(u, v, 0.010, 0.024, 0.008), -_kRect(u, v + 0.012, 0.004, 0.02, 0.003)), 0.034, 0.005, { nu: 6, dv: 0.01, K: 4 });
+    const rs = flatAt(slideU1 - 0.003, top + 0.020, 0);
+    v0 = _kSlab(gh, rs.fr, (u, v) => _kRect(u, v, 0.0035, 0.004, 0.001), 0.019, 0.0015, { nu: 4, dv: 0.002, K: 4 });
+    _kBoxUV(gh, v0); _kSeal(gh, v0, bind);
+    /* The grip, out of the back: its backstrap runs from the slide's back corner, its front strap from
+       behind the trigger guard, both raked 18 degrees up; finger grooves on the front strap, a
+       beavertail, stippled flats, and the magazine's flared baseplate on the end. */
+    const rake = 18 * Math.PI / 180, gl = 0.092;
+    const gdir = [-Math.cos(rake), Math.sin(rake)], gn = [Math.sin(rake), Math.cos(rake)];
+    const A0 = [slideU0 + 0.002, top + 0.018], B0 = [slideU0 - 0.036, top - 0.032];
+    const gmid = [(A0[0] + B0[0]) / 2 + gdir[0] * gl / 2, (A0[1] + B0[1]) / 2 + gdir[1] * gl / 2];
+    const gh2 = ((A0[0] - B0[0]) * gn[0] + (A0[1] - B0[1]) * gn[1]) / 2;      // half the grip's depth
+    const gp2 = flatAt(gmid[0], gmid[1], 0, Math.PI / 2 - rake);
+    const gs = gp2.us;
+    const gripSd = (u, v) => {
+      const a2 = u * gs;                                   // across the grip: + toward the backstrap
+      let d = _kRect(a2, v, gh2 - 0.002, gl / 2, 0.010);
+      // Finger grooves: three scallops in the front strap.
+      if (a2 < 0) d += 0.0016 * Math.max(0, Math.sin((v + gl / 2 - 0.012) * Math.PI / 0.021)) * _kSS(-gh2 + 0.012, -gh2 + 0.004, a2) * (v > -gl / 2 + 0.008 && v < gl / 2 - 0.030 ? 1 : 0);
+      return d;
+    };
+    gp.setColor(0.048, 0.048, 0.05);
+    v0 = _kSlab(gp, gp2.fr, gripSd, 0.029, 0.010, { nu: 12, dv: 0.004,
+      relief: (u, v) => {
+        // Stippling: a fine grid of pits on the flats, stopped short of the edges.
+        const e = _kSS(0, 0.006, -gripSd(u, v));
+        const pit = (Math.sin(u * 2 * Math.PI / 0.0021) * Math.sin(v * 2 * Math.PI / 0.0021) > 0.55 ? -0.00035 : 0);
+        return pit * e;
+      } });
+    _kBoxUV(gp, v0); _kSeal(gp, v0, bind);
+    // The beavertail over the web of the hand.
+    const bt = flatAt(A0[0] - 0.004, A0[1] + 0.002, 0, Math.PI / 2 - rake + 0.4);
+    v0 = _kSlab(gp, bt.fr, (u, v) => _kRect(u, v, 0.006, 0.010, 0.004), 0.024, 0.008, { nu: 6, dv: 0.004, K: 4 });
+    _kBoxUV(gp, v0); _kSeal(gp, v0, bind);
+    // The magazine baseplate, flared past the grip's end.
+    const bpc = [gmid[0] + gdir[0] * (gl / 2 + 0.003), gmid[1] + gdir[1] * (gl / 2 + 0.003)];
+    const bp = flatAt(bpc[0], bpc[1], 0, Math.PI / 2 - rake);
+    gp.setColor(0.06, 0.06, 0.062);
+    v0 = _kSlab(gp, bp.fr, (u, v) => _kRect(u, v, gh2 + 0.001, 0.0045, 0.003), 0.032, 0.004, { nu: 8, dv: 0.003, K: 4 });
+    _kBoxUV(gp, v0); _kSeal(gp, v0, bind);
+    // The hood: a cap over the back of the slide, pivoting on the shell's sides, its release lever behind.
+    gp.setColor(0.07, 0.07, 0.072);
+    const hd = flatAt((slideU0 + slideU1) / 2 + 0.001, top + 0.012, 0);
+    v0 = _kSlab(gp, hd.fr, (u, v) => Math.max(_kRect(u, v, (slideU1 - slideU0) / 2 + 0.003, 0.016, 0.009), -v - 0.004 - 0.0 * u), slideW + 0.010, 0.006, {
+      nu: 10, dv: 0.004, K: 4, relief: (u, v) => 0.0012 * _kSS(0.0, 0.008, v) });
+    _kBoxUV(gp, v0); _kSeal(gp, v0, bind);
+    const pv = flatAt(slideU0 + 0.004, top - 0.004, tS / 2 + 0.004);
+    gh.setColor(0.12, 0.12, 0.13);
+    v0 = _kSlab(gh, pv.fr, (u, v) => Math.hypot(u, v) - 0.005, 0.004, 0.0015, { nu: 6, dv: 0.003, K: 4 });
+    _kBoxUV(gh, v0); _kSeal(gh, v0, bind);
+    const lv = flatAt(slideU0 - 0.014, top - 0.014, tS / 2 + 0.002, 0.3);
+    gp.setColor(0.07, 0.07, 0.072);
+    v0 = _kSlab(gp, lv.fr, (u, v) => _kRect(u, v, 0.005, 0.011, 0.004), 0.006, 0.0025, { nu: 5, dv: 0.004, K: 4 });
     _kBoxUV(gp, v0); _kSeal(gp, v0, bind);
   });
 }
@@ -30708,6 +31049,18 @@ function kitHood(K, G, C) {
     }
     for (let j = 0; j <= nr; j++) R[j] = R2[j];
   }
+  /* Over the skull the samples are the head's own points, sparse at a bearing and a height, and the
+     ironing above only ever raises: the crown came out lumpy. Plain averaging there (the ease is
+     26 mm; this moves nothing by more than a few). */
+  const chinY0 = H.chinY;
+  for (let it = 0; it < 5; it++) {
+    const R2 = R.map((r) => r.slice());
+    for (let j = 1; j < nr; j++) {
+      if (ys[j] < chinY0) continue;
+      for (let i = 0; i < na; i++) R2[j][i] = (R[j - 1][i] + R[j + 1][i] + R[j][(i + 1) % na] + R[j][(i - 1 + na) % na] + 4 * R[j][i]) / 8;
+    }
+    for (let j = 0; j <= nr; j++) R[j] = R2[j];
+  }
   // The crown is a dome: over its last six centimetres each row draws in, to nothing at the top.
   const y0d = yTop - 0.065 * s;
   for (let j = 0; j <= nr; j++) {
@@ -30728,51 +31081,128 @@ function kitHood(K, G, C) {
     const sum = out[1] + out[3] + out[5] + out[7]; for (let q = 1; q < 8; q += 2) out[q] /= sum;
     return out;
   };
-  // The visor's window: a band of bearings round the front between two heights.
+  /* THE VISOR, sealed into the hood. The window is a block of the hood's own grid round the front
+     between the brow and the chin. The glass across it is, row by row, the arc through the window's
+     two side edges that just clears the face (22 mm off the nose), those arcs eased from row to row;
+     and the hood's own rows along the window's top and bottom are laid on that glass, so hood, gasket
+     and glass meet on one line. (A curved panel of one radius, laid in a rectangle cut from the grid,
+     stood 2 cm proud of the hood at the temples and left a seam of daylight above and below.) */
   const vTop = H.headY + 0.050 * s, vBot = chinY + 0.004 * s, vHalf = 0.95;
-  const inWindow = (y, a) => y > vBot && y < vTop && Math.abs(a) < vHalf;
+  const jT = Math.max(1, ys.findIndex((y) => y >= vTop)), jB = Math.max(0, ys.findIndex((y) => y > vBot) - 1);
+  const iw = Math.ceil(vHalf / (2 * Math.PI) * na), iL = na / 2 - iw, iR = na / 2 + iw;
+  const angOf = (i) => -Math.PI + 2 * Math.PI * i / na;
+  const clear = 0.022 * s;
+  // The arc through (a0, r0), (a1, r1) and (0, rf), read back at bearing a: a ray from the axis.
+  const arcR = (a0, r0, a1, r1, rf, a) => {
+    const P0 = [Math.sin(a0) * r0, Math.cos(a0) * r0], P1 = [Math.sin(a1) * r1, Math.cos(a1) * r1], P2 = [0, rf];
+    const ax = P0[0], ay = P0[1], bx = P1[0], by = P1[1], cx2 = P2[0], cy2 = P2[1];
+    const d = 2 * (ax * (by - cy2) + bx * (cy2 - ay) + cx2 * (ay - by));
+    if (Math.abs(d) < 1e-9) return r0 + (r1 - r0) * (a - a0) / (a1 - a0);
+    const ux = ((ax * ax + ay * ay) * (by - cy2) + (bx * bx + by * by) * (cy2 - ay) + (cx2 * cx2 + cy2 * cy2) * (ay - by)) / d;
+    const uy = ((ax * ax + ay * ay) * (cx2 - bx) + (bx * bx + by * by) * (ax - cx2) + (cx2 * cx2 + cy2 * cy2) * (bx - ax)) / d;
+    const rr = Math.hypot(ax - ux, ay - uy);
+    // Ray (sin a, cos a) t from the origin meets the circle: t^2 - 2 t (dir . u) + |u|^2 - rr^2 = 0.
+    const dx = Math.sin(a), dy = Math.cos(a), bb = dx * ux + dy * uy, cc2 = ux * ux + uy * uy - rr * rr;
+    const disc = bb * bb - cc2;
+    return disc < 0 ? rf : bb + Math.sqrt(disc);
+  };
+  const faceNeed = [];
+  for (let j = jB; j <= jT; j++) {
+    const row = [];
+    for (let i = iL; i <= iR; i++) row.push(headR(ys[j], angOf(i)) + clear);
+    faceNeed.push(row);
+  }
+  const rfRow = [];
+  for (let j = jB; j <= jT; j++) {
+    const r0 = R[j][iL], r1 = R[j][iR], a0 = angOf(iL), a1 = angOf(iR);
+    let lo = Math.max(r0, r1) * Math.cos(vHalf) , hi = Math.max(r0, r1) + 0.10 * s;
+    for (let k = 0; k < 30; k++) {
+      const m = (lo + hi) / 2;
+      let ok = true;
+      for (let i = iL + 1; i < iR && ok; i++) if (arcR(a0, r0, a1, r1, m, angOf(i)) < faceNeed[j - jB][i - iL]) ok = false;
+      if (ok) hi = m; else lo = m;
+    }
+    rfRow.push(hi);
+  }
+  // Eased from row to row, never below what the face needs.
+  for (let it = 0; it < 6; it++) {
+    const r2 = rfRow.slice();
+    for (let k = 0; k < rfRow.length; k++) {
+      const a2 = rfRow[Math.max(0, k - 1)], b2 = rfRow[Math.min(rfRow.length - 1, k + 1)];
+      r2[k] = Math.max(rfRow[k], (a2 + b2 + 2 * rfRow[k]) / 4);
+    }
+    for (let k = 0; k < rfRow.length; k++) rfRow[k] = r2[k];
+  }
+  const visR = (j, a) => arcR(angOf(iL), R[j][iL], angOf(iR), R[j][iR], rfRow[j - jB], a);
+  // The hood's rows along the window's top and bottom lie on the glass; the rows past them ease back.
+  for (const [jj, dir] of [[jT, 1], [jB, -1]]) {
+    const onGlass = [];
+    for (let i = iL; i <= iR; i++) onGlass.push(visR(jj, angOf(i)));
+    for (let k = 0; k <= 2; k++) {
+      const j = jj + dir * k;
+      if (j < 0 || j > nr) continue;
+      const w = [1, 0.55, 0.2][k];
+      for (let i = iL; i <= iR; i++) {
+        const fade = Math.min(1, Math.min(i - iL, iR - i) / 2 + 0.5 * (k === 0 ? 2 : 0));
+        R[j][i] += (onGlass[i - iL] - R[j][i]) * w * Math.min(1, fade);
+      }
+    }
+  }
   const point = (j, i, fold) => {
-    const a = -Math.PI + 2 * Math.PI * i / na, y = ys[j];
+    const a = angOf(i), y = ys[j];
     const below = 1 - _kSS(chinY - 0.03 * s, chinY + 0.02 * s, y);
     const r = R[j][i] + (fold ? 0.005 * s * below * Math.sin(a * 11 + y * 40) : 0);
     const p = [Math.sin(a) * r, y, cz + Math.cos(a) * r];
     return { p, n: [Math.sin(a), 0, Math.cos(a)], th: 0.0025 * s, b: bindAt(p, y) };
   };
   gz.setColor(1, 1, 1);
-  // Above the window, below it (closed rings), and beside it (an open band round the back).
-  const jTopW = ys.findIndex((y) => y >= vTop), jBotW = ys.findIndex((y) => y > vBot) - 1;
-  const band = (j0, j1, i0, i1, closed) => {
-    const rows = [];
-    for (let j = j0; j <= j1; j++) {
-      const row = [];
-      if (closed) for (let i = 0; i < na; i++) row.push(point(j, i, true));
-      else for (let i = i0; i <= i1; i++) row.push(point(j, ((i % na) + na) % na, true));
-      rows.push(row);
+  // One sheet, crown to hem, with the window left out of it: no seam anywhere round the head.
+  const hoodRows = [];
+  for (let j = 0; j <= nr; j++) { const row = []; for (let i = 0; i < na; i++) row.push(point(j, i, true)); hoodRows.push(row); }
+  _kSheet(gz, hoodRows, true, false, { j0: jB, j1: jT, i0: iL, i1: iR });
+  // The glass, at twice the grid's density, on the arcs; it sits into the gasket.
+  const th = 0.0025 * s;
+  const gRows = [];
+  const nV = (jT - jB) * 2, nU = (iR - iL) * 2;
+  for (let q = 0; q <= nV; q++) {
+    const jf = jB + q / 2, j0 = Math.floor(jf), j1 = Math.min(jT, j0 + 1), t = jf - j0;
+    const y = ys[j0] + (ys[j1] - ys[j0]) * t;
+    const row = [];
+    for (let k = 0; k <= nU; k++) {
+      const a = angOf(iL) + (angOf(iR) - angOf(iL)) * k / nU;
+      const r = visR(j0, a) * (1 - t) + visR(j1, a) * t + th * 0.5 - 0.0009 * s;
+      const p = [Math.sin(a) * r, y, cz + Math.cos(a) * r];
+      row.push({ p, n: [Math.sin(a), 0, Math.cos(a)], th: 0.0018 * s, b: head });
     }
-    if (rows.length >= 2) _kSheet(gz, rows, closed, !closed ? true : j1 !== nr);
-  };
-  band(Math.max(0, jTopW), nr, 0, 0, true);
-  band(0, Math.max(1, jBotW), 0, 0, true);
-  const iw = Math.ceil(vHalf / (2 * Math.PI) * na);
-  band(Math.max(0, jBotW), Math.max(1, jTopW), na / 2 + iw, na / 2 + na - iw, false);
-  void inWindow;
-  // The visor: a clear panel curved round the face, and the gasket round it.
-  const rF = R[Math.round((jBotW + jTopW) / 2)][na / 2];
-  const fr = _kBent(() => cz, rF + 0.004 * s, 1, (vTop + vBot) / 2);
-  const hw = (rF + 0.004 * s) * vHalf, hh = (vTop - vBot) / 2;
+    gRows.push(row);
+  }
   gl.setColor(0.70, 0.78, 0.76);
-  let v0 = _kSlab(gl, fr, (u, v) => _kRect(u, v, hw, hh, 0.030 * s), 0.003 * s, 0.0012, { nu: 18, dv: 0.02, K: 4 });
-  _kSeal(gl, v0, head);
+  _kSheet(gl, gRows, false, true);
+  // The gasket: a rubber bead round the window's own edge, over the hood's cut and the glass's rim.
+  const loop = [];
+  for (let i = iL; i < iR; i++) loop.push([jB, i]);
+  for (let j = jB; j < jT; j++) loop.push([j, iR]);
+  for (let i = iR; i > iL; i--) loop.push([jT, i]);
+  for (let j = jT; j > jB; j--) loop.push([j, iL]);
   const ring = [];
-  for (let i = 0; i < 48; i++) {
-    const t = i / 48 * Math.PI * 2, u = Math.cos(t), v = Math.sin(t);
-    const sq = (x) => Math.sign(x) * Math.pow(Math.abs(x), 0.35);
-    const p = fr.world(sq(u) * hw, sq(v) * hh, 0.0015 * s);
-    ring.push({ p: new Vec3(p[0], p[1], p[2]), w: 0.0055 * s, d: 0.0055 * s, e: 2 });
+  for (const [j, i] of loop) {
+    const a = angOf(i), r = R[j][i] + th * 0.5;
+    ring.push({ p: new Vec3(Math.sin(a) * r, ys[j], cz + Math.cos(a) * r), w: 0.0058 * s, d: 0.0058 * s, e: 2 });
+  }
+  // Rounded corners: each corner point replaced by two, a third of the way along each edge.
+  const smooth = [];
+  for (let k = 0; k < ring.length; k++) {
+    const A2 = ring[(k - 1 + ring.length) % ring.length].p, B2 = ring[k].p, C2 = ring[(k + 1) % ring.length].p;
+    const u1 = new Vec3(B2.x - A2.x, B2.y - A2.y, B2.z - A2.z), u2 = new Vec3(C2.x - B2.x, C2.y - B2.y, C2.z - B2.z);
+    const turn = (u1.x * u2.x + u1.y * u2.y + u1.z * u2.z) / ((Math.hypot(u1.x, u1.y, u1.z) * Math.hypot(u2.x, u2.y, u2.z)) || 1);
+    if (turn < 0.5) {
+      smooth.push(Object.assign({}, ring[k], { p: new Vec3(B2.x - u1.x * 0.35, B2.y - u1.y * 0.35, B2.z - u1.z * 0.35) }));
+      smooth.push(Object.assign({}, ring[k], { p: new Vec3(B2.x + u2.x * 0.35, B2.y + u2.y * 0.35, B2.z + u2.z * 0.35) }));
+    } else smooth.push(ring[k]);
   }
   gr.setColor(0.06, 0.06, 0.06);
-  v0 = gr.positions.length / 3;
-  loftLoop(gr, ring, 8);
+  const v0 = gr.positions.length / 3;
+  loftLoop(gr, smooth, 8);
   _kBoxUV(gr, v0); _kSeal(gr, v0, head);
 }
 
@@ -30788,8 +31218,10 @@ function _kLod(g, cell) {
     const x = NN[v * 3], y = NN[v * 3 + 1], z = NN[v * 3 + 2], ax = Math.abs(x), ay = Math.abs(y), az = Math.abs(z);
     return ax >= ay && ax >= az ? (x > 0 ? 0 : 1) : ay >= az ? (y > 0 ? 2 : 3) : (z > 0 ? 4 : 5);
   };
+  const keep = new Uint8Array(n);
+  for (const [a0, a1] of g.lodKeep || []) keep.fill(1, a0, a1);
   for (let v = 0; v < n; v++) {
-    const k = Math.floor(P[v * 3] / cell) + ',' + Math.floor(P[v * 3 + 1] / cell) + ',' + Math.floor(P[v * 3 + 2] / cell) + ',' + facing(v);
+    const k = keep[v] ? 'k' + v : Math.floor(P[v * 3] / cell) + ',' + Math.floor(P[v * 3 + 1] / cell) + ',' + Math.floor(P[v * 3 + 2] / cell) + ',' + facing(v);
     let c = key.get(k);
     if (c == null) { c = sum.length; key.set(k, c); sum.push([0, 0, 0, 0]); }
     cellOf[v] = c; const q = sum[c];
@@ -30804,24 +31236,48 @@ function _kLod(g, cell) {
   const o = new Geometry(), idx = new Int32Array(sum.length).fill(-1), seen = new Set();
   const N = g.normals, U = g.uvs, Cc = g.colors, J = g.joints, W = g.weights, I = g.indices;
   const jj = [], ww = [], cols = Cc ? [] : null;
+  /* THE SPECKS. Each cell took its one representative's normal and colour, and at 32 mm a cell on a
+     pouch often kept a vertex from the rolled edge underneath -- a normal facing the ground, a colour
+     from the dirt in a crease -- and a whole distant triangle shaded dark: a speck. The cell's normal
+     and colour are now its members' mean; only the position (and the skin) is one vertex's. */
+  const nS = new Float64Array(sum.length * 3), cS = Cc ? new Float64Array(sum.length * 3) : null;
+  for (let v = 0; v < n; v++) {
+    const c = cellOf[v];
+    nS[c * 3] += N[v * 3]; nS[c * 3 + 1] += N[v * 3 + 1]; nS[c * 3 + 2] += N[v * 3 + 2];
+    if (cS) { cS[c * 3] += Cc[v * 3]; cS[c * 3 + 1] += Cc[v * 3 + 1]; cS[c * 3 + 2] += Cc[v * 3 + 2]; }
+  }
   const get = (c) => {
     if (idx[c] >= 0) return idx[c];
-    const v = rep[c];
+    const v = rep[c], m = sum[c][3];
     idx[c] = o.positions.length / 3;
-    o.positions.push(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]); o.normals.push(N[v * 3], N[v * 3 + 1], N[v * 3 + 2]);
+    const nl = Math.hypot(nS[c * 3], nS[c * 3 + 1], nS[c * 3 + 2]) || 1;
+    /* Clustering shrinks: a padded strap 10 mm thick, its cells' corners pulled to the middle, sank
+       into the shirt under it and showed it through in holes. Each kept point stands out along its
+       cell's mean normal by a fifth of a cell, less where the cell's normals disagree (a corner). */
+    const coh = nl / m, off = m > 1 ? 0.2 * cell * coh : 0;
+    o.positions.push(P[v * 3] + nS[c * 3] / nl * off, P[v * 3 + 1] + nS[c * 3 + 1] / nl * off, P[v * 3 + 2] + nS[c * 3 + 2] / nl * off);
+    o.normals.push(nS[c * 3] / nl, nS[c * 3 + 1] / nl, nS[c * 3 + 2] / nl);
     o.uvs.push(U[v * 2], U[v * 2 + 1]); o.parts.push(PART.BODY);
-    if (cols) cols.push(Cc[v * 3], Cc[v * 3 + 1], Cc[v * 3 + 2]);
+    if (cols) cols.push(cS[c * 3] / m, cS[c * 3 + 1] / m, cS[c * 3 + 2] / m);
     for (let k = 0; k < 4; k++) { jj.push(J[v * 4 + k]); ww.push(W[v * 4 + k]); }
     return idx[c];
   };
   for (let i = 0; i < I.length; i += 3) {
-    const a = cellOf[I[i]], b = cellOf[I[i + 1]], c = cellOf[I[i + 2]];
+    let a = cellOf[I[i]], b = cellOf[I[i + 1]], c = cellOf[I[i + 2]];
     if (a === b || b === c || a === c) continue;
     // A face repeated in the same winding goes; the same cells wound the other way (the far side of
     // something thin) stays.
     const wkey = a + '>' + b + '>' + c, w2 = b + '>' + c + '>' + a, w3 = c + '>' + a + '>' + b;
     if (seen.has(wkey) || seen.has(w2) || seen.has(w3)) continue;
     seen.add(wkey);
+    // Wound the way its corners face: clustering can turn a small face over, and a face turned over
+    // is culled from the side it should be seen from.
+    const ra = rep[a], rb = rep[b], rc = rep[c];
+    const ux = P[rb * 3] - P[ra * 3], uy = P[rb * 3 + 1] - P[ra * 3 + 1], uz = P[rb * 3 + 2] - P[ra * 3 + 2];
+    const vx = P[rc * 3] - P[ra * 3], vy = P[rc * 3 + 1] - P[ra * 3 + 1], vz = P[rc * 3 + 2] - P[ra * 3 + 2];
+    const fx = uy * vz - uz * vy, fy = uz * vx - ux * vz, fz = ux * vy - uy * vx;
+    const mx = nS[a * 3] + nS[b * 3] + nS[c * 3], my = nS[a * 3 + 1] + nS[b * 3 + 1] + nS[c * 3 + 1], mz = nS[a * 3 + 2] + nS[b * 3 + 2] + nS[c * 3 + 2];
+    if (fx * mx + fy * my + fz * mz < 0) { const t = b; b = c; c = t; }
     o.indices.push(get(a), get(b), get(c));
   }
   if (cols) o.colors = cols;
@@ -30847,6 +31303,60 @@ const KIT_PIECES = {
 /* Build an operator's kit on the MakeHuman figure. Pieces this module has taken over are built here;
    the rest still come from 95b, bound properly: head kit to the head bone, the rest by the old
    solver. Returns [{ material, geometry, name }] like buildGear. */
+/* WEAR. New kit is one flat colour; kit that has been worn is not. Per vertex, over every group but
+   the glass:
+   - edges are worn lighter (cordura fades where it rubs, keeping its hue; paint comes off a
+     buckle's corners and the metal shows), found by how far a vertex stands out from its neighbours;
+   - creases and the roots of things hold dirt, darker and browner (the same measure, the other way);
+   - dust rises from the ground: kit at the knee is dustier than kit at the chest;
+   - and the colour wanders a little, two octaves of noise, so no panel is one flat value. */
+const _kHash = (x, y, z) => { const h = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return h - Math.floor(h); };
+function _kNoise(x, y, z) {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z), xf = x - xi, yf = y - yi, zf = z - zi;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), w = zf * zf * (3 - 2 * zf);
+  const L = (a, b, t) => a + (b - a) * t;
+  const c = (dx, dy, dz) => _kHash(xi + dx, yi + dy, zi + dz);
+  return L(L(L(c(0, 0, 0), c(1, 0, 0), u), L(c(0, 1, 0), c(1, 1, 0), u), v), L(L(c(0, 0, 1), c(1, 0, 1), u), L(c(0, 1, 1), c(1, 1, 1), u), v), w);
+}
+function _kWeather(g, mat, st) {
+  if (!g.colors || mat === 'glass' || mat === 'lens') return;
+  const P = g.positions, N = g.normals, Cl = g.colors, I = g.indices, n = P.length / 3;
+  const sx = new Float64Array(n * 3), cnt = new Uint16Array(n), el = new Float64Array(n);
+  for (let t = 0; t < I.length; t += 3) for (let e = 0; e < 3; e++) {
+    const a = I[t + e], b = I[t + (e + 1) % 3];
+    sx[a * 3] += P[b * 3]; sx[a * 3 + 1] += P[b * 3 + 1]; sx[a * 3 + 2] += P[b * 3 + 2]; cnt[a]++;
+    el[a] += Math.hypot(P[a * 3] - P[b * 3], P[a * 3 + 1] - P[b * 3 + 1], P[a * 3 + 2] - P[b * 3 + 2]);
+  }
+  const k = { cordura: 1, polymer: 0.8, hardware: 1.2, kevlar: 0.9, rubber: 0.6, hazmat: 0.55 }[mat] || 0.7;
+  const ground = -0.875 * st;
+  for (let v = 0; v < n; v++) {
+    if (!cnt[v]) continue;
+    const mx = sx[v * 3] / cnt[v] - P[v * 3], my = sx[v * 3 + 1] / cnt[v] - P[v * 3 + 1], mz = sx[v * 3 + 2] / cnt[v] - P[v * 3 + 2];
+    const len = el[v] / cnt[v] || 1;
+    // Positive where the vertex stands proud of its neighbours (an edge), negative in a crease.
+    const conv = -(mx * N[v * 3] + my * N[v * 3 + 1] + mz * N[v * 3 + 2]) / len;
+    const edge = _kSS(0.04, 0.26, conv), crease = _kSS(-0.08, -0.40, conv);
+    const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2];
+    const dust = 1 - _kSS(ground + 0.25 * st, ground + 0.75 * st, y);
+    const mott = (_kNoise(x * 14, y * 14, z * 14) - 0.5) * 0.12 + (_kNoise(x * 60 + 5, y * 60, z * 60) - 0.5) * 0.08;
+    let r = Cl[v * 3], gg = Cl[v * 3 + 1], b = Cl[v * 3 + 2];
+    const lum = (r + gg + b) / 3;
+    // Worn edges: toward a faded grey a little lighter than the colour (metal: toward bare steel).
+    // Faded, not grey: the same hue a little lighter (bare steel for the metal).
+    const wear = edge * 0.35 * k;
+    if (mat === 'hardware') { r += (0.34 - r) * wear; gg += (0.34 - gg) * wear; b += (0.33 - b) * wear; }
+    else { const f = 1 + 0.45 * wear; r = Math.min(1, r * f + 0.02 * wear); gg = Math.min(1, gg * f + 0.02 * wear); b = Math.min(1, b * f + 0.015 * wear); }
+    // Dirt in creases and dust from the ground: a dry brown-grey, multiplied and mixed.
+    const dirt = crease * 0.22 * k, du = dust * 0.34 * k * (0.7 + 0.6 * _kNoise(x * 9, y * 9 + 3, z * 9));
+    r *= 1 - dirt; gg *= 1 - dirt * 1.05; b *= 1 - dirt * 1.15;
+    // Dust is its own colour whatever it lies on: a dry grey-brown that shows most on dark kit.
+    const dc = [0.30, 0.275, 0.235];
+    r += (dc[0] - r) * du; gg += (dc[1] - gg) * du; b += (dc[2] - b) * du;
+    const m = 1 + mott * k;
+    Cl[v * 3] = Math.max(0, r * m); Cl[v * 3 + 1] = Math.max(0, gg * m); Cl[v * 3 + 2] = Math.max(0, b * m);
+  }
+}
+
 function buildKit(skeleton, list, opts) {
   const K = kitContext(skeleton, opts);
   const G = new Map();
@@ -30870,6 +31380,7 @@ function buildKit(skeleton, list, opts) {
   const out = [];
   for (const [mat, g] of G) {
     if (!g.indices.length) continue;
+    _kWeather(g, mat, K.st);
     g.finalize();
     g.joints = new Float32Array(g.kj); g.weights = new Float32Array(g.kw);
     delete g.kj; delete g.kw;
@@ -49825,9 +50336,11 @@ function makeZombieClips() {
     chest: { keys: [[0, -1, 1, 0], [0.5, 2, -1, 0], [1, -1, 1, 0]] },
     head: { keys: [[0, 0, 5, -1], [0.3, -2, -4, 1], [0.62, 1, 8, -2], [1, 0, 5, -1]] },
     /* Hanging, with the small outward carry a real arm has -- the elbows
-       stand a few degrees off the ribs rather than being welded to them. */
-    upperArmL: { keys: [[0, -4, 2, -7], [0.35, -1, -1, -9], [0.7, -6, 3, -6], [1, -4, 2, -7]] },
-    upperArmR: { keys: [[0, -6, -2, 7], [0.35, -2, 1, 9], [0.7, -3, -3, 6], [1, -6, -2, 7]] },
+       stand a few degrees off the ribs rather than being welded to them.
+       Outward is POSITIVE on the left (the walk's +7): at -7 to -9 these
+       drew the elbows in and laid both hands flat on the thighs. */
+    upperArmL: { keys: [[0, -4, 2, 4], [0.35, -1, -1, 5.5], [0.7, -6, 3, 3.5], [1, -4, 2, 4]] },
+    upperArmR: { keys: [[0, -6, -2, -4], [0.35, -2, 1, -5.5], [0.7, -3, -3, -3.5], [1, -6, -2, -4]] },
     lowerArmL: { keys: [[0, -10, 0, 0], [0.5, -15, 0, 0], [1, -10, 0, 0]] },
     lowerArmR: { keys: [[0, -13, 0, 0], [0.5, -8, 0, 0], [1, -13, 0, 0]] },
     handL: { keys: [[0, 4, 0, -3], [0.5, -2, 0, 2], [1, 4, 0, -3]] },

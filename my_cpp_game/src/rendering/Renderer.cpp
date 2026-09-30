@@ -306,6 +306,7 @@ void Renderer::bindMaterial(const gl::Program& p, const Material& m) const {
     p.set("uParallaxTop", mapsOn ? m.maps->heightTop : 1.0f);
     p.set("uDetailNormal", m_q.detailNormal ? 1.0f : 0.0f);
     p.set("uSubsurface", m.subsurface);
+    p.set("uSubsurfaceThin", m.thin ? 1 : 0);
     p.set("uClearcoatWeight", m.clearcoat);
     p.set("uClearcoatRough", m.clearcoatRoughness);
     p.set("uSheenWeight", m.sheen);

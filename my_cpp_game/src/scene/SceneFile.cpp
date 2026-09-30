@@ -269,6 +269,8 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
         m.castShadow = get(jm, "castShadow", true);
         m.receiveShadow = get(jm, "receiveShadow", true);
         m.subsurface = get(jm, "subsurface", 0.0f);
+        // Files exported before the web engine split thin from thick carry no flag: thin, as they were drawn.
+        m.thin = get(jm, "thin", true);
         m.clearcoat = get(jm, "clearcoat", 0.0f);
         m.clearcoatRoughness = get(jm, "clearcoatRoughness", 0.1f);
         m.sheen = get(jm, "sheen", 0.0f);
@@ -369,6 +371,7 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
                 m.uvScale = 1.0f;
                 m.roughness = 0.6f;
                 m.subsurface = std::max(m.subsurface, 0.4f);
+                m.thin = true;
                 m.parallax = 0.0f;
                 m.normalStrength = 1.0f;
                 m_materials.push_back(m);
@@ -398,6 +401,7 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
                 m.uvScale = 1.0f;
                 m.roughness = 0.65f;
                 m.subsurface = std::max(m.subsurface, 0.25f);
+                m.thin = true;
                 m.parallax = 0.0f;
                 m_materials.push_back(m);
                 nm = &m_materials.back();

@@ -1052,7 +1052,14 @@ function _mhDress(base, Q, B, opts) {
         /* Over the glove's gauntlet the cuff stands off it: the cuff's folds (inward, up to 2.4 mm)
            centred on the glove's top edge sawed it through the sleeve in a row of teeth. */
         const F = S[p[0] >= 0 ? 'L' : 'R'], wc = dot3(sub3(p, F.wr), F.uFore);
-        e += 0.005 * _ss01(-0.065 * st, -0.045 * st, wc) * (Math.abs(p[0]) > 0.12 * st ? 1 : 0);
+        e += 0.0035 * _ss01(-0.065 * st, -0.045 * st, wc) * (Math.abs(p[0]) > 0.12 * st ? 1 : 0);
+      }
+      {
+        /* THE CUFF CLOSES. A tactical shirt's cuff is strapped shut round the wrist (or the glove);
+           left as loose as the sleeve above it, it hung open 15 mm all round and showed its inside
+           as a hollow ring. Over its last 4 cm the sleeve is taken in to lie 8 mm off the glove. */
+        const F = S[p[0] >= 0 ? 'L' : 'R'], wc = dot3(sub3(p, F.wr), F.uFore);
+        if (Math.abs(p[0]) > 0.12 * st) e -= 0.013 * _ss01(-0.080 * st, -0.045 * st, wc);
       }
       if (tucked) {
         // Tucked in under the waistband (whose top the belt covers), bloused out over the belt above it.
@@ -1277,6 +1284,9 @@ function _mhDress(base, Q, B, opts) {
       const pc = alongA(F.l1 * 0.40, [sx * 0.045 * st, 0, 0]);
       _cmPatch(shirtT, Ns, pc, upA, 0.070 * st, 0.090 * st, 0.004 * st, { face: out, bulge: 0.002 * st, uvk });
       _cmPatch(shirtT, Ns, [pc[0] + upA[0] * 0.040 * st, pc[1] + upA[1] * 0.040 * st, pc[2] + upA[2] * 0.040 * st], upA, 0.078 * st, 0.030 * st, 0.0075 * st, { face: out, lip: true, edge: 0.12, uvk });
+      // The cuff's closure tab, on the outside of the wrist.
+      const cuffC = [F.wr[0] - F.uFore[0] * 0.030 * st + sx * 0.030 * st, F.wr[1] - F.uFore[1] * 0.030 * st, F.wr[2] - F.uFore[2] * 0.030 * st];
+      _cmPatch(shirtT, Ns, cuffC, [-F.uFore[0], -F.uFore[1], -F.uFore[2]], 0.024 * st, 0.034 * st, 0.0028 * st, { face: out, lip: true, edge: 0.2, nx: 6, ny: 7, uvk });
       // The cargo pocket on the outer thigh and its flap; a smaller one on the calf.
       const upT = [-F.uThigh[0], -F.uThigh[1], -F.uThigh[2]];
       const tc = [F.hp[0] + F.uThigh[0] * F.k1 * 0.56 + sx * 0.078 * st, F.hp[1] + F.uThigh[1] * F.k1 * 0.56, F.hp[2] + F.uThigh[2] * F.k1 * 0.56 + 0.004 * st];
@@ -1308,6 +1318,9 @@ function _mhDress(base, Q, B, opts) {
       const ax = _norm3(sub3(F.hp, F.an)), k0 = -F.hp[1] / ax[1];
       frames.push({ o: [F.hp[0] + ax[0] * k0, 0, F.hp[2] + ax[2] * k0], axis: ax, out: [sx, 0, 0], R: 0.08 * st });
     }
+    // The trousers' own legs, wrapped all the way up to the waistband, sized to the girth.
+    const legFrameL = frames.length; frames.push(Object.assign({}, frames[2], { adapt: true }));
+    const legFrameR = frames.length; frames.push(Object.assign({}, frames[4], { adapt: true }));
     const pickOf = (M) => (i) => {
       let aL = 0, aR = 0, x = 0, y = 0;
       for (let k = 0; k < 3; k++) {
@@ -1321,7 +1334,20 @@ function _mhDress(base, Q, B, opts) {
       if (y / 3 < crotch[1]) return x >= 0 ? 2 : 4;
       return 0;
     };
-    for (const M of [shirtT, trouT, belt]) if (M) _cmCylUV(M, frames, pickOf(M));
+    for (const M of [shirtT, belt]) if (M) _cmCylUV(M, frames, pickOf(M));
+    /* Trousers are cut in two halves seamed down the fly and up the seat: each half takes its own leg's
+       wrap right up to the waistband, so the weave runs unbroken from the belt to the cuff and changes
+       only on those seams. (Switched from the trunk's wrap to the leg's at the height of the fork, the
+       weave jumped in a line straight across both thighs.) */
+    if (trouT) {
+      const pk = pickOf(trouT);
+      _cmCylUV(trouT, frames, (i) => {
+        const k = pk(i);
+        if (k === 1 || k === 3) return k;
+        let x = 0; for (let q = 0; q < 3; q++) x += trouT.BP[trouT.T[i + q] * 3];
+        return x >= 0 ? legFrameL : legFrameR;
+      });
+    }
     /* The skin that shows gets the same treatment, the neck wrapped round its own axis with the seam
        at the nape: on MakeHuman's layout the throat sits on an island edge whose coordinates
        collapse, and the skin's pore map smeared into a dark rectangle there. */
@@ -1347,8 +1373,32 @@ function _mhDress(base, Q, B, opts) {
    the arm, the inside of the leg. `frames` are {o, axis, out, R}; `pick(tri)` says whose it is. */
 function _cmCylUV(M, frames, pick) {
   const P = M.P;
+  /* A frame marked `adapt` sizes its u by the girth it wraps at each height (the mean distance from
+     its axis of the triangles it maps, in 1 cm bands, eased): a trouser leg wrapped on up to the
+     waistband would otherwise stretch its weave to half again as wide over the hip. */
+  const picks = new Int32Array(M.T.length / 3);
+  for (let i = 0; i < M.T.length; i += 3) picks[i / 3] = pick(i);
+  const girth = frames.map((F, fi) => {
+    if (!F.adapt) return null;
+    const lo = -1.2, bins = 240, sum = new Float64Array(bins), cnt = new Float64Array(bins);
+    for (let i = 0; i < M.T.length; i += 3) {
+      if (picks[i / 3] !== fi) continue;
+      for (let k = 0; k < 3; k++) {
+        const v = M.T[i + k], r = [P[v * 3] - F.o[0], P[v * 3 + 1] - F.o[1], P[v * 3 + 2] - F.o[2]];
+        const t = r[0] * F.axis[0] + r[1] * F.axis[1] + r[2] * F.axis[2];
+        const d = Math.hypot(r[0] - F.axis[0] * t, r[1] - F.axis[1] * t, r[2] - F.axis[2] * t);
+        const b = Math.floor((t - lo) / 0.01);
+        if (b >= 0 && b < bins) { sum[b] += d; cnt[b]++; }
+      }
+    }
+    let R = new Float64Array(bins);
+    for (let b = 0; b < bins; b++) R[b] = cnt[b] ? sum[b] / cnt[b] : 0;
+    for (let b = 0; b < bins; b++) if (!R[b]) { let a = b, c = b; while (a >= 0 && !cnt[a]) a--; while (c < bins && !cnt[c]) c++; R[b] = a >= 0 && c < bins ? (R[a] + R[c]) / 2 : a >= 0 ? R[a] : c < bins ? R[c] : F.R; }
+    for (let it = 0; it < 8; it++) { const R2 = R.slice(); for (let b = 1; b + 1 < bins; b++) R2[b] = (R[b - 1] + 2 * R[b] + R[b + 1]) / 4; R = R2; }
+    return (t) => { const x = (t - lo) / 0.01 - 0.5, b = Math.max(0, Math.min(bins - 2, Math.floor(x))), f = Math.max(0, Math.min(1, x - b)); return Math.max(F.R * 0.6, R[b] + (R[b + 1] - R[b]) * f); };
+  });
   for (let i = 0; i < M.T.length; i += 3) {
-    const F = frames[pick(i)];
+    const F = frames[picks[i / 3]], gR = girth[picks[i / 3]];
     const e2 = F.out, e1 = _norm3(_cross3(F.axis, e2));
     const ang = [], vv = [];
     for (let k = 0; k < 3; k++) {
@@ -1360,7 +1410,7 @@ function _cmCylUV(M, frames, pick) {
       vv.push(t);
     }
     if (Math.max(...ang) - Math.min(...ang) > Math.PI) for (let k = 0; k < 3; k++) if (ang[k] < 0) ang[k] += 2 * Math.PI;
-    for (let k = 0; k < 3; k++) { M.UV[(i + k) * 2] = ang[k] * F.R; M.UV[(i + k) * 2 + 1] = vv[k]; }
+    for (let k = 0; k < 3; k++) { M.UV[(i + k) * 2] = ang[k] * (gR ? gR(vv[k]) : F.R); M.UV[(i + k) * 2 + 1] = vv[k]; }
   }
 }
 
@@ -1442,7 +1492,8 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum, lod) {
     });
     const regions = sneaker ? [
       // No lacing ridges on a trainer: at this resolution they came out as lumps down the vamp.
-      { sole: false, k: 0.016 * st, fold: null, ...box((x, y, z) => Math.max(sole + 0.010 * st - y, y - top)), prims: [
+      // Meshed as finely as the boot (at 7.5 mm the midsole's edge came out lumpy, like packing foam).
+      { sole: false, k: 0.016 * st, fold: null, h: 0.0055, ...box((x, y, z) => Math.max(sole + 0.010 * st - y, y - top)), prims: [
         _cone([ax, top, az - 0.006 * st], [ax, sole + 0.060 * st, az - 0.008 * st], ar + 0.010 * st, ar + 0.012 * st),   // padded collar
         _ell(at(0.034 * st, sole + 0.052 * st), [W / 2 - 0.004 * st, 0.040 * st, 0.040 * st]),                            // heel counter
         _ell(at(L * 0.34, sole + 0.044 * st), [W / 2, 0.034 * st, L * 0.26]),                                              // quarters
@@ -1451,9 +1502,18 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum, lod) {
         _ell(at(L * 0.42, sole + 0.066 * st), [0.034 * st, 0.020 * st, 0.056 * st], 0.020 * st),                           // tongue over the instep, blended into the vamp
         _ell(at(L - 0.044 * st, sole + 0.024 * st), [W / 2 - 0.002 * st, 0.020 * st, 0.048 * st]),                        // toe box, low and round
       ] },
-      { sole: true, k: 0.022 * st, fold: null, ...box((x, y, z) => sole - y), prims: [
+      /* The midsole in plan is the foot's own outline -- a round heel, widening to the ball, a round
+         toe -- not the rectangle the slab alone made: the slab clipped to that outline. */
+      { sole: true, k: 0.022 * st, fold: null, h: 0.0038, ...box((x, y, z) => {
+        // In at()'s coordinates: along from 8 mm behind the heel.
+        const al = (x - heel[0]) * d[0] + (z - heel[2]) * d[2] + 0.008 * st, ac = (x - heel[0]) * u[0] + (z - heel[2]) * u[2] - wc;
+        const r1 = W / 2 + 0.005 * st, r2 = W / 2 + 0.011 * st, a1 = r1 - 0.008 * st, a2 = L + 0.009 * st - r2;
+        const t = Math.max(0, Math.min(1, (al - a1) / (a2 - a1)));
+        const plan = Math.hypot(al - (a1 + (a2 - a1) * t), ac) - (r1 + (r2 - r1) * t * t * (3 - 2 * t));
+        return Math.max(sole - y, plan);
+      }), prims: [
         // One slab with its top tilted, 29 mm under the heel to 17 under the toe: two blocks stepped.
-        _box(at(L * 0.5, sole + 0.023 * st - 0.030 * st), u, [-d[0] * 0.012 * st / L, 1, -d[2] * 0.012 * st / L], [W / 2 + 0.006 * st, 0.030 * st, L * 0.5 + 0.006 * st], 0.008 * st),
+        _box(at(L * 0.5, sole + 0.023 * st - 0.030 * st), u, [-d[0] * 0.012 * st / L, 1, -d[2] * 0.012 * st / L], [W / 2 + 0.014 * st, 0.030 * st, L * 0.5 + 0.014 * st], 0.008 * st),
       ] },
     ] : [
       /* A BOOT, the same way: an upper -- a shaft that hugs the ankle over the trouser tucked into it,
@@ -1490,7 +1550,7 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum, lod) {
       /* The laces: crossed between two rows of eyelets down the instep to the toe side of the vamp, and
          up the front of the shaft, each cross a cord standing just proud of the upper. The upper is
          found by walking in from outside it until the field goes negative. */
-      if (!rg.sole && !sneaker) {
+      if (!rg.sole) {
         const inside = (x, y, z) => _evalRegion(R, x, y, z) < 0;
         const hitDown = (x, z) => {
           let y = top + 0.02 * st;
@@ -1513,17 +1573,18 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum, lod) {
            instep, then up the front of the shaft -- each with an eyelet either side, and a cross
            between each station and the next. */
         const stations = [];
-        for (const f of [0.64, 0.585, 0.53, 0.475, 0.425]) {
+        // A trainer laces down its tongue only, six pairs from the toe side of the vamp to the collar.
+        for (const f of sneaker ? [0.60, 0.555, 0.51, 0.465, 0.42, 0.378] : [0.64, 0.585, 0.53, 0.475, 0.425]) {
           const q = at(L * f, 0), y = hitDown(q[0], q[2]);
-          if (y != null) stations.push({ c: [q[0], y, q[2]], out: [0, 1, 0] });
+          if (y != null && y < top - 0.006 * st) stations.push({ c: [q[0], y, q[2]], out: [0, 1, 0] });
         }
         const yv = stations.length ? stations[stations.length - 1].c[1] : sole + 0.09 * st;
-        for (let yy = yv + 0.020 * st; yy < top - 0.012 * st; yy += 0.020 * st) {
+        if (!sneaker) for (let yy = yv + 0.020 * st; yy < top - 0.012 * st; yy += 0.020 * st) {
           const q = hitBack(yy, 0);
           if (q) stations.push({ c: q, out: [d[0], 0, d[2]] });
         }
         const eyes = stations.map(({ c, out }, i) => {
-          const half = (0.0125 + 0.0005 * i) * st, lift = 0.0018 * st;
+          const half = ((sneaker ? 0.0105 : 0.0125) + 0.0005 * i) * st, lift = 0.0018 * st;
           return [-1, 1].map((sg) => [c[0] + u[0] * sg * half + out[0] * lift, c[1] + out[1] * lift, c[2] + u[2] * sg * half + out[2] * lift]);
         });
         const l0 = g.positions.length / 3;
@@ -1534,6 +1595,25 @@ function _mhBoots(base, S, st, sole, bootTop, od, trouEase, legs, wsum, lod) {
             // The cross stands off the tongue: the chord between two eyelets passes under a curved upper.
             const mid = [0, 1, 2].map((k) => (p[k] + q[k]) / 2 + (o2[k] + o3[k]) * 0.0014 * st);
             loftRings(g, [p, mid, q].map((c) => ({ p: new Vec3(c[0], c[1], c[2]), w: 0.0017 * st, d: 0.0017 * st, e: 2 })), 5, true, true);
+          }
+        }
+        // The bow, tied at the top pair: two loops lying back over the tongue, and the two ends.
+        if (sneaker && stations.length > 1) {
+          const tc = stations[stations.length - 1].c, lift = 0.0035 * st;
+          for (const sg of [-1, 1]) {
+            const loop = [];
+            for (let k = 0; k < 10; k++) {
+              const t = k / 10 * 2 * Math.PI;
+              const a2 = 0.011 * st * (1 - Math.cos(t)) * 0.5 + 0.002 * st, b2 = 0.0055 * st * Math.sin(t);
+              // Out to the side and a little down the vamp.
+              const p = [tc[0] + u[0] * sg * a2 + d[0] * (b2 + 0.003 * st), tc[1] + lift + 0.002 * st * Math.sin(t * 0.5), tc[2] + u[2] * sg * a2 + d[2] * (b2 + 0.003 * st)];
+              loop.push({ p: new Vec3(p[0], p[1], p[2]), w: 0.0016 * st, d: 0.0016 * st, e: 2 });
+            }
+            loftLoop(g, loop, 5);
+            const e0 = [tc[0] + u[0] * sg * 0.002 * st, tc[1] + lift, tc[2] + u[2] * sg * 0.002 * st];
+            const e1 = [tc[0] + u[0] * sg * 0.008 * st + d[0] * 0.022 * st, tc[1] + lift - 0.004 * st, tc[2] + u[2] * sg * 0.008 * st + d[2] * 0.022 * st];
+            const em = [(e0[0] + e1[0]) / 2, (e0[1] + e1[1]) / 2 + 0.002 * st, (e0[2] + e1[2]) / 2];
+            loftRings(g, [e0, em, e1].map((c) => ({ p: new Vec3(c[0], c[1], c[2]), w: 0.0015 * st, d: 0.0015 * st, e: 2 })), 5, true, true);
           }
         }
         for (let v = l0; v < g.positions.length / 3; v++) laceV.push(v);

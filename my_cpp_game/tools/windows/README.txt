@@ -8,6 +8,9 @@ your monitor's own resolution (a 4K monitor renders a 4K frame).
   Explore - Showcase (cinematic)   8192 shadows, 4096 textures, max samples
   Explore - Bunker Nine / Coastline   the zombies maps, exported from the game
   Explore - Helipad / Resort / Town / Demolition   the multiplayer maps
+  Explore - Operators              the seven operators in a row on a studio
+                                   floor: bodies, clothes, kit, as the game
+                                   builds them close up
 
 WHAT THIS IS: the game's renderer and maps running natively on your
 graphics card. You fly through the maps; the gameplay itself (zombies,
