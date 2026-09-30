@@ -1248,7 +1248,8 @@ class Engine {
          tint, and the three shells carry their own vertex colours. */
       if (headGeo.eyes) {
         const em = new GpuMesh(this.gl, headGeo.eyes);
-        em.__key = 'eyes:' + (opts.faceKey || opts.seed || 5);
+        // Keyed by the whole face: the teeth in this mesh are placed from this head's own mouth.
+        em.__key = 'eyes:' + hk;
         (this._geoByKey || (this._geoByKey = new Map())).set(em.__key, headGeo.eyes);
         em.setupInstancing(20);
         const ea = new Actor(this, {
@@ -1268,6 +1269,11 @@ class Engine {
         });
         this.actors.push(ea);
         actor.eyes = ea;
+      }
+      /* A MakeHuman head talks and blinks (91c-mh-face.js). It costs nothing until it does: the
+         head keeps its shared, instanced meshes until a line or a blink needs private ones. */
+      if (living && headGeo.mh && opts.blink !== false) {
+        actor.face = new MhFace(this, headActor, actor.eyes || null, { seed: opts.seed || 5 });
       }
       if (opts.brows && !headGeo.sdf) {
         const brc = opts.browColor != null ? opts.browColor : hairColor;

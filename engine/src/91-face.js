@@ -165,9 +165,10 @@ class Face {
       this.targetWeights.set(name, 0);
     }
 
-    this.blinkTimer = opts.blinkInterval || 3.2;
-    this.blinkPhase = -1;      // -1 = not blinking
     this.rng = new Rng(opts.seed || 77);
+    // A blink every thirty seconds or so (the first somewhere inside the first interval).
+    this.blinkTimer = opts.blinkInterval || this.rng.range(1.5, 30);
+    this.blinkPhase = -1;      // -1 = not blinking
     this.speaking = null;
     this.speakTime = 0;
     this.gaze = new Vec3(0, 0, 1);
@@ -193,10 +194,11 @@ class Face {
   }
 
   /* Drive the mouth from text. Duration defaults to a natural reading pace. */
+  /* The mouth comes from the words' SOUNDS (91a-lipsync.js), not their letters: a letter-a-frame
+     mouth opened on every vowel letter and said nothing a lip-reader could follow. */
   say(text, opts = {}) {
-    const chars = String(text).toLowerCase().replace(/[^a-z\s]/g, '');
-    const rate = opts.rate || 13;       // letters per second
-    this.speaking = { chars, rate, duration: chars.length / rate };
+    const tl = LipSync.timeline(text, opts.duration);
+    this.speaking = { tl, duration: tl.duration, ctl: {} };
     this.speakTime = 0;
     this.onSpeakEnd = opts.onEnd || null;
     return this;
@@ -229,28 +231,26 @@ class Face {
       this.blinkTimer -= dt;
       if (this.blinkTimer <= 0) {
         this.blinkPhase = 0;
-        this.blinkTimer = this.rng.range(2.2, 6.0);
+        this.blinkTimer = this.rng.range(27, 33);
       }
     }
 
     /* --- lipsync --- */
     if (this.speaking) {
       this.speakTime += dt;
-      const idx = Math.floor(this.speakTime * this.speaking.rate);
-      for (const v of ['vAA', 'vEE', 'vOH', 'vFV', 'vMB', 'vL']) this.targetWeights.set(v, 0);
-      if (idx >= this.speaking.chars.length) {
+      if (this.speakTime >= this.speaking.duration) {
         this.stopSpeaking();
         if (this.onSpeakEnd) { const cb = this.onSpeakEnd; this.onSpeakEnd = null; cb(); }
       } else {
-        const ch = this.speaking.chars[idx];
-        const viseme = LETTER_VISEME[ch];
-        if (viseme) {
-          this.targetWeights.set(viseme, 0.85);
-          // Jaw follows the vowels, which carries most of the visible motion.
-          this.targetWeights.set('jawOpen', viseme === 'vAA' ? 0.7 : viseme === 'vOH' ? 0.45 : 0.2);
-        } else {
-          this.targetWeights.set('jawOpen', 0.08);
-        }
+        // The rig's six shapes stand in for LipSync's controls.
+        const c = LipSync.sample(this.speaking.tl, this.speakTime, this.speaking.ctl);
+        this.targetWeights.set('jawOpen', c.jaw * 0.75);
+        this.targetWeights.set('vAA', Math.max(0, c.jaw - 0.5) * c.upper * 2);
+        this.targetWeights.set('vOH', Math.min(1, c.round + c.funnel * 0.6));
+        this.targetWeights.set('vEE', c.spread);
+        this.targetWeights.set('vMB', c.press);
+        this.targetWeights.set('vFV', c.tuck);
+        this.targetWeights.set('vL', 0);
       }
     }
 

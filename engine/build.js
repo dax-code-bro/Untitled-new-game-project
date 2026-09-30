@@ -104,6 +104,9 @@ const LegendEngine = {
   /* The noises a weapon makes when nobody is shooting it. */
   HANDLING, RELOAD_SOUNDS, INSPECT_SOUNDS,
   bakeCavityAO,
+  /* Speech a lip-reader can follow: words to phonemes to mouth shapes on a timeline (91a-lipsync.js),
+     and the MakeHuman face rig that wears them, with a blink every thirty seconds (91c-mh-face.js). */
+  LipSync, MhFace, buildMhFaceRig, mhFaceDeform, makeMhHeadGeometry,
   clamp, lerp, smoothstep,
 };
 

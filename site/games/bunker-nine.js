@@ -3158,12 +3158,23 @@ function playClip(game, who, text) {
  * get. Falling back to the pitch means two characters with the same pitch
  * would share, which is the thing being fixed.
  */
+/* The face that says it, if the speaker is standing where you can see them -- the character on
+   the select stage, or on the sand at the end. Its mouth is driven from the words themselves
+   (engine LipSync: the phonemes, the shapes a lip-reader reads, timed to the line), so it says
+   what the voice says rather than flapping while it talks. */
+function speakingFace(game, who) {
+  const a = who && game.speakers ? game.speakers[who] : null;
+  return a && a.visible !== false && a.face && a.face.say ? a.face : null;
+}
+
 function sayLine(game, text, V, opts = {}) {
   const say = (V && V.say) || null;
   const who = opts.who || (V && V.id) || null;
+  const face = speakingFace(game, who);
   /* A real recording beats everything and plays alone -- layering a
      synthesiser under an actor is how you make an actor sound synthetic. */
   const clip = who ? playClip(game, who, text) : 0;
+  if (clip > 0 && face) face.say(text, { duration: clip });
   if (clip > 0) return clip > 0.01 ? clip : 0;
   let real = null;
   if (say && _spokenWords && typeof speechSynthesis !== 'undefined' && !opts.noWords) {
@@ -3176,6 +3187,7 @@ function sayLine(game, text, V, opts = {}) {
   if (real) box.volume = (box.volume != null ? box.volume : 1) * 0.22;
   let dur = 0;
   try { dur = game.audio.speak(text, box) || 0; } catch (e) { void e; }
+  if (face) face.say(text, { duration: dur > 0 ? dur : lineLength(game, text, V) - 0.35 });
 
   if (real) {
     try {
@@ -3188,6 +3200,11 @@ function sayLine(game, text, V, opts = {}) {
       u.rate = Math.max(0.6, Math.min(1.5, 1 + ((say.rate || 1) - 1) * 0.7));
       u.volume = (opts.wordVolume != null ? opts.wordVolume : 1) * _voiceVol;
       u.voice = real;
+      /* The real voice keeps its own time, so the mouth follows it word by word. */
+      if (face) {
+        u.onstart = () => face.restart();
+        u.onboundary = (e) => { if (e && e.name !== 'sentence') face.syncChar(e.charIndex || 0); };
+      }
       speechSynthesis.cancel();
       speechSynthesis.speak(u);
     } catch (e) { void e; }
@@ -6243,6 +6260,8 @@ function heroModel(game, S, id) {
   a.controller.autoAnimate = false;
   if (a.animator) a.animator.play(a.animator.clips.has('zstand') ? 'zstand' : 'idle', 0);
   S.heroModels[id] = a;
+  // Whatever this character says while they can be seen, their mouth says it (sayLine).
+  (game.speakers || (game.speakers = {}))[id] = a;
   return a;
 }
 

@@ -367,6 +367,8 @@ function makeMhHeadGeometry(opts = {}) {
   const out = _headFinish(g, { EYE, EYE_R: 0.0120, tip, mouthY: mouth[1], nW, fem, lipZ: mouth[2] + 0.004, chinY }, opts);
   out.mh = true;
   out.mhFig = fig.key;
+  // Teeth behind the lips (91c-mh-face.js), on the close-up only: the eye mesh is the head's one white material.
+  if (!(opts.resolution > 0.003)) addMhTeeth(out, out.eyes);
   return out;
 }
 

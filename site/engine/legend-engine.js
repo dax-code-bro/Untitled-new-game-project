@@ -16534,9 +16534,10 @@ class Face {
       this.targetWeights.set(name, 0);
     }
 
-    this.blinkTimer = opts.blinkInterval || 3.2;
-    this.blinkPhase = -1;      // -1 = not blinking
     this.rng = new Rng(opts.seed || 77);
+    // A blink every thirty seconds or so (the first somewhere inside the first interval).
+    this.blinkTimer = opts.blinkInterval || this.rng.range(1.5, 30);
+    this.blinkPhase = -1;      // -1 = not blinking
     this.speaking = null;
     this.speakTime = 0;
     this.gaze = new Vec3(0, 0, 1);
@@ -16562,10 +16563,11 @@ class Face {
   }
 
   /* Drive the mouth from text. Duration defaults to a natural reading pace. */
+  /* The mouth comes from the words' SOUNDS (91a-lipsync.js), not their letters: a letter-a-frame
+     mouth opened on every vowel letter and said nothing a lip-reader could follow. */
   say(text, opts = {}) {
-    const chars = String(text).toLowerCase().replace(/[^a-z\s]/g, '');
-    const rate = opts.rate || 13;       // letters per second
-    this.speaking = { chars, rate, duration: chars.length / rate };
+    const tl = LipSync.timeline(text, opts.duration);
+    this.speaking = { tl, duration: tl.duration, ctl: {} };
     this.speakTime = 0;
     this.onSpeakEnd = opts.onEnd || null;
     return this;
@@ -16598,28 +16600,26 @@ class Face {
       this.blinkTimer -= dt;
       if (this.blinkTimer <= 0) {
         this.blinkPhase = 0;
-        this.blinkTimer = this.rng.range(2.2, 6.0);
+        this.blinkTimer = this.rng.range(27, 33);
       }
     }
 
     /* --- lipsync --- */
     if (this.speaking) {
       this.speakTime += dt;
-      const idx = Math.floor(this.speakTime * this.speaking.rate);
-      for (const v of ['vAA', 'vEE', 'vOH', 'vFV', 'vMB', 'vL']) this.targetWeights.set(v, 0);
-      if (idx >= this.speaking.chars.length) {
+      if (this.speakTime >= this.speaking.duration) {
         this.stopSpeaking();
         if (this.onSpeakEnd) { const cb = this.onSpeakEnd; this.onSpeakEnd = null; cb(); }
       } else {
-        const ch = this.speaking.chars[idx];
-        const viseme = LETTER_VISEME[ch];
-        if (viseme) {
-          this.targetWeights.set(viseme, 0.85);
-          // Jaw follows the vowels, which carries most of the visible motion.
-          this.targetWeights.set('jawOpen', viseme === 'vAA' ? 0.7 : viseme === 'vOH' ? 0.45 : 0.2);
-        } else {
-          this.targetWeights.set('jawOpen', 0.08);
-        }
+        // The rig's six shapes stand in for LipSync's controls.
+        const c = LipSync.sample(this.speaking.tl, this.speakTime, this.speaking.ctl);
+        this.targetWeights.set('jawOpen', c.jaw * 0.75);
+        this.targetWeights.set('vAA', Math.max(0, c.jaw - 0.5) * c.upper * 2);
+        this.targetWeights.set('vOH', Math.min(1, c.round + c.funnel * 0.6));
+        this.targetWeights.set('vEE', c.spread);
+        this.targetWeights.set('vMB', c.press);
+        this.targetWeights.set('vFV', c.tuck);
+        this.targetWeights.set('vL', 0);
       }
     }
 
@@ -17512,6 +17512,957 @@ function makeBeardGeometry(headGeo, style) {
     return true;
   };
   return offsetPatch(headGeo, keep, S.thick, null);
+}
+
+
+/* ─────────── 91a-lipsync.js ─────────── */
+/* ============================================================
+   LIP SYNC THAT CAN BE READ.
+
+   The old mouth (91-face.js) opened on every vowel letter and did
+   something on m, f and l: it moved while a character talked, but it
+   said nothing. A lip-reader works from VISEMES -- the dozen or so
+   shapes the face makes for the forty-odd sounds of English -- and
+   from their order and timing. Getting those right needs three steps,
+   each of them here:
+
+   1. WORDS TO SOUNDS. English spelling is not phonetic ("though",
+      "through", "tough"), so letters are turned into phonemes (ARPAbet)
+      by a table of the commonest irregular words and, for the rest, a
+      set of spelling rules -- digraphs, the silent e, soft c and g,
+      -tion, -ough and the rest. A lip-reader does not need the vowel
+      in "cot" told from the one in "caught"; they do need an m told
+      from an n, an f from a p and an "oo" from an "ee", and those the
+      rules get right.
+
+   2. SOUNDS TO SHAPES. Each phoneme is a target for six mouth
+      controls the face rig provides (95-engine / 91c-mh-face.js):
+
+        jaw     how far the jaw is dropped
+        round   lips pushed forward and drawn in round (oo, w, oh)
+        spread  lips drawn wide, corners back (ee, s)
+        press   lips pressed shut and a little rolled (m, b, p)
+        tuck    lower lip up under the top teeth (f, v)
+        funnel  lips flared forward and open (sh, ch, j)
+        upper   upper lip lifted off the teeth (th, the open vowels)
+
+      The closures are the important part: m, b and p SHUT the mouth
+      completely and f and v put the lip on the teeth, and those are
+      what a lip-reader reads first, so they are held long enough to
+      land even at speed.
+
+   3. TIMING. The phonemes are laid along the line's actual spoken
+      length (the recording's, or the synthesiser's own estimate),
+      each with a duration by kind -- vowels long, stops short, a
+      beat at every word break and a longer one at a comma -- and the
+      controls are interpolated between them with a little of the
+      next sound anticipated, the way a mouth really moves.
+   ============================================================ */
+
+/* The commonest words English does not spell the way it says. A rule set
+   gets "cat" and "stone" right and "one", "said" and "you" wrong, and
+   those are among the most frequent words in the language. */
+const LIP_WORDS = {
+  a: 'AH', the: 'DH AH', of: 'AH V', to: 'T UW', do: 'D UW', you: 'Y UW', your: 'Y AO R', are: 'AA R',
+  one: 'W AH N', two: 'T UW', once: 'W AH N S', said: 'S EH D', says: 'S EH Z', was: 'W AA Z', what: 'W AH T',
+  who: 'HH UW', whom: 'HH UW M', whose: 'HH UW Z', where: 'W EH R', there: 'DH EH R', here: 'HH IY R',
+  were: 'W ER', have: 'HH AE V', give: 'G IH V', live: 'L IH V', love: 'L AH V', come: 'K AH M', some: 'S AH M',
+  done: 'D AH N', none: 'N AH N', gone: 'G AO N', been: 'B IH N', does: 'D AH Z', any: 'EH N IY', many: 'M EH N IY',
+  I: 'AY', i: 'AY', me: 'M IY', he: 'HH IY', she: 'SH IY', we: 'W IY', be: 'B IY', they: 'DH EY', them: 'DH EH M',
+  their: 'DH EH R', is: 'IH Z', his: 'HH IH Z', has: 'HH AE Z', as: 'AE Z', was_: 'W AA Z', this: 'DH IH S',
+  that: 'DH AE T', with: 'W IH DH', from: 'F R AH M', for: 'F AO R', or: 'AO R', not: 'N AA T', no: 'N OW',
+  so: 'S OW', go: 'G OW', oh: 'OW', ok: 'OW K EY', okay: 'OW K EY', eye: 'AY', eyes: 'AY Z', buy: 'B AY',
+  by: 'B AY', my: 'M AY', why: 'W AY', could: 'K UH D', would: 'W UH D', should: 'SH UH D', put: 'P UH T',
+  full: 'F UH L', pull: 'P UH L', push: 'P UH SH', good: 'G UH D', look: 'L UH K', took: 'T UH K', book: 'B UH K',
+  foot: 'F UH T', wood: 'W UH D', stood: 'S T UH D', people: 'P IY P AH L', friend: 'F R EH N D',
+  again: 'AH G EH N', against: 'AH G EH N S T', enough: 'IH N AH F', though: 'DH OW', through: 'TH R UW',
+  thought: 'TH AO T', tough: 'T AH F', rough: 'R AH F', cough: 'K AO F', bought: 'B AO T', brought: 'B R AO T',
+  night: 'N AY T', right: 'R AY T', light: 'L AY T', fight: 'F AY T', might: 'M AY T', eight: 'EY T',
+  world: 'W ER L D', work: 'W ER K', word: 'W ER D', worse: 'W ER S', worth: 'W ER TH',
+  women: 'W IH M AH N', woman: 'W UH M AH N', only: 'OW N L IY', also: 'AO L S OW', always: 'AO L W EY Z',
+  every: 'EH V R IY', very: 'V EH R IY', sure: 'SH UH R', busy: 'B IH Z IY', business: 'B IH Z N AH S',
+  water: 'W AO T ER', father: 'F AA DH ER', mother: 'M AH DH ER', brother: 'B R AH DH ER', other: 'AH DH ER',
+  know: 'N OW', knew: 'N UW', knife: 'N AY F', answer: 'AE N S ER', listen: 'L IH S AH N', often: 'AO F AH N',
+  hour: 'AW ER', honest: 'AA N AH S T', ghost: 'G OW S T', island: 'AY L AH N D', talk: 'T AO K', walk: 'W AO K',
+  half: 'HH AE F', calm: 'K AA M', climb: 'K L AY M', bomb: 'B AA M', dumb: 'D AH M', lamb: 'L AE M',
+  door: 'D AO R', floor: 'F L AO R', blood: 'B L AH D', flood: 'F L AH D', move: 'M UW V', lose: 'L UW Z',
+  prove: 'P R UW V', whole: 'HH OW L', hole: 'HH OW L', owe: 'OW', own: 'OW N', towards: 'T AO R D Z',
+  area: 'EH R IY AH', idea: 'AY D IY AH', real: 'R IY L', really: 'R IH L IY', ready: 'R EH D IY',
+  head: 'HH EH D', dead: 'D EH D', read: 'R IY D', bread: 'B R EH D', breath: 'B R EH TH', death: 'D EH TH',
+  great: 'G R EY T', break: 'B R EY K', steak: 'S T EY K', heart: 'HH AA R T', learn: 'L ER N', earth: 'ER TH',
+  zombie: 'Z AA M B IY', zombies: 'Z AA M B IY Z', thompson: 'T AA M S AH N', minute: 'M IH N AH T',
+  bunker: 'B AH NG K ER', fuel: 'F Y UW L', radio: 'R EY D IY OW', over: 'OW V ER', never: 'N EH V ER',
+  even: 'IY V AH N', open: 'OW P AH N', shoe: 'SH UW', shoes: 'SH UW Z', canoe: 'K AH N UW',
+};
+
+/* Spelling rules, longest first. Each: letters, the phonemes they make, and an optional test of the
+   letters around them (the whole word, and where the match starts and ends). */
+const _V = 'aeiouy';
+const _isV = (c) => !!c && _V.includes(c);
+const _isC = (c) => !!c && /[a-z]/.test(c) && !_V.includes(c);
+const LIP_RULES = [
+  ['tion', 'SH AH N'], ['sion', 'ZH AH N'], ['cian', 'SH AH N'], ['ture', 'CH ER'], ['sure', 'ZH ER'],
+  ['ough', 'AO'], ['augh', 'AO'], ['eigh', 'EY'], ['igh', 'AY'],
+  ['tch', 'CH'], ['dge', 'JH'], ['sch', 'S K'], ['que', 'K', (w, i, j) => j === w.length], ['qu', 'K W'],
+  ['kn', 'N', (w, i) => i === 0], ['wr', 'R', (w, i) => i === 0], ['gn', 'N', (w, i) => i === 0 || i === w.length - 2],
+  ['mb', 'M', (w, i, j) => j === w.length], ['ph', 'F'], ['wh', 'W'], ['th', 'TH'], ['sh', 'SH'], ['ch', 'CH'],
+  ['ck', 'K'], ['ng', 'NG'], ['gh', '', (w, i) => i > 0], ['gh', 'G'],
+  ['ee', 'IY'], ['ea', 'IY'], ['oo', 'UW'], ['ou', 'AW'], ['ow', 'OW', (w, i, j) => j === w.length], ['ow', 'AW'],
+  ['oi', 'OY'], ['oy', 'OY'], ['ai', 'EY'], ['ay', 'EY'], ['ey', 'EY', (w, i, j) => j === w.length && w.length <= 4], ['ey', 'IY'],
+  ['au', 'AO'], ['aw', 'AO'], ['ew', 'UW'], ['ue', 'UW'], ['ui', 'UW'], ['ie', 'AY', (w, i, j) => j === w.length && w.length <= 4],
+  ['ie', 'IY'], ['ei', 'EY'], ['oa', 'OW'], ['oe', 'OW'],
+  ['ar', 'AA R', (w, i, j) => !_isV(w[j]) || w[j] === 'y'], ['or', 'AO R', (w, i, j) => !_isV(w[j])],
+  ['er', 'ER', (w, i, j) => !_isV(w[j])], ['ir', 'ER', (w, i, j) => !_isV(w[j])], ['ur', 'ER', (w, i, j) => !_isV(w[j])],
+  ['wa', 'W AA', (w, i, j) => !_isV(w[j]) && w[j] !== 'y' && w[j] !== 'g' && w[j] !== 'k'],
+];
+// A vowel before one consonant and a final e is long, and the e is silent ("stone", "time", "made").
+const LIP_LONG = { a: 'EY', e: 'IY', i: 'AY', o: 'OW', u: 'UW', y: 'AY' };
+const LIP_SHORT = { a: 'AE', e: 'EH', i: 'IH', o: 'AA', u: 'AH', y: 'IH' };
+const LIP_CONS = { b: 'B', d: 'D', f: 'F', h: 'HH', j: 'JH', k: 'K', l: 'L', m: 'M', n: 'N', p: 'P', r: 'R', s: 'S',
+  t: 'T', v: 'V', w: 'W', x: 'K S', z: 'Z' };
+
+function lipWordPhonemes(word) {
+  const w0 = word.toLowerCase().replace(/[^a-z']/g, '');
+  const w = w0.replace(/'/g, '');
+  if (!w) return [];
+  if (LIP_WORDS[w0] || LIP_WORDS[w]) return (LIP_WORDS[w0] || LIP_WORDS[w]).split(' ');
+  // Plurals and -ed of listed words ("zombies" is listed; "doors", "looked" are not).
+  if (w.length > 3 && w.endsWith('s') && LIP_WORDS[w.slice(0, -1)]) return LIP_WORDS[w.slice(0, -1)].split(' ').concat(['Z']);
+  if (w.length > 4 && w.endsWith('ed') && LIP_WORDS[w.slice(0, -2)]) return LIP_WORDS[w.slice(0, -2)].split(' ').concat(['D']);
+  const out = [];
+  const n = w.length;
+  // Is the final e silent: a consonant before it and a vowel somewhere before that (not "be", "the").
+  const silentE = n > 2 && w[n - 1] === 'e' && _isC(w[n - 2]) && /[aeiouy]/.test(w.slice(0, n - 2));
+  let i = 0;
+  while (i < n) {
+    if (silentE && i === n - 1) break;
+    let hit = null;
+    for (const [pat, ph, ok] of LIP_RULES) {
+      if (w.startsWith(pat, i) && (!ok || ok(w, i, i + pat.length))) { hit = [pat, ph]; break; }
+    }
+    if (hit) { if (hit[1]) out.push(...hit[1].split(' ')); i += hit[0].length; continue; }
+    const ch = w[i], nx = w[i + 1];
+    if (nx === ch && _isC(ch)) { i++; continue; }            // a doubled consonant is said once
+    if (ch === 'c') { out.push(nx === 'e' || nx === 'i' || nx === 'y' ? 'S' : 'K'); i++; continue; }
+    if (ch === 'g') { out.push((nx === 'e' || nx === 'i' || nx === 'y') && i > 0 ? 'JH' : 'G'); i++; continue; }
+    if (ch === 's' && _isV(w[i - 1]) && _isV(nx) && !(silentE && i + 1 === n - 1 && false)) { out.push('Z'); i++; continue; }
+    if (ch === 's' && i === n - 1 && i > 0 && /[bdgvmnlr]|[aeiouy]/.test(w[i - 1]) && w[i - 1] !== 's') { out.push('Z'); i++; continue; }
+    if (ch === 'y') {
+      if (i === 0 && _isV(nx)) out.push('Y');
+      else out.push(i === n - 1 ? (n <= 3 ? 'AY' : 'IY') : 'IH');
+      i++; continue;
+    }
+    if (_isV(ch)) {
+      // Long before consonant + silent e, or at the end of a short word ("go", "me", "hi").
+      const longE = silentE && i === n - 3;
+      const open = i === n - 1 && n <= 3;
+      out.push(longE || open ? LIP_LONG[ch] : (i === n - 1 && ch === 'e' ? '' : LIP_SHORT[ch]));
+      if (!out[out.length - 1]) out.pop();
+      i++; continue;
+    }
+    if (LIP_CONS[ch]) out.push(...LIP_CONS[ch].split(' '));
+    i++;
+  }
+  // "-ed" after t or d is a syllable; after a voiceless sound it is T ("walked"), otherwise D.
+  if (n > 3 && w.endsWith('ed') && !LIP_WORDS[w]) {
+    const k = out.lastIndexOf('EH');
+    if (k === out.length - 2 && out[out.length - 1] === 'D') {
+      const before = out[k - 1];
+      if (before !== 'T' && before !== 'D') { out.splice(k, 1); if (['P', 'K', 'F', 'S', 'SH', 'CH', 'TH'].includes(before)) out[out.length - 1] = 'T'; }
+    }
+  }
+  return out;
+}
+
+/* Numbers are said, not spelled: "800" is "eight hundred". */
+function _lipNumber(s) {
+  const ones = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve',
+    'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+  const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+  const say = (n) => {
+    if (n < 20) return ones[n];
+    if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+    if (n < 1000) return ones[Math.floor(n / 100)] + ' hundred' + (n % 100 ? ' ' + say(n % 100) : '');
+    if (n < 1e6) return say(Math.floor(n / 1000)) + ' thousand' + (n % 1000 ? ' ' + say(n % 1000) : '');
+    return String(n).split('').map((d) => ones[+d]).join(' ');
+  };
+  const v = parseInt(s, 10);
+  return isFinite(v) ? say(v) : s;
+}
+
+/* The six controls (plus upper) for each phoneme: the target a mouth reaches saying it. */
+const LIP_SHAPES = {
+  // Vowels. Jaw carries most of the visible difference; the lips carry the rest.
+  AA: { jaw: 0.95, upper: 0.25 },              // fAther
+  AE: { jaw: 0.75, spread: 0.45, upper: 0.3 },  // cAt
+  AH: { jaw: 0.6, upper: 0.15 },               // cUt
+  AO: { jaw: 0.75, round: 0.45 },              // thOUGHt
+  AW: { jaw: 0.85, upper: 0.2, to: 'UW' },     // nOW  -> ends rounded
+  AY: { jaw: 0.9, upper: 0.2, to: 'IY' },      // mY   -> ends spread
+  EH: { jaw: 0.55, spread: 0.35, upper: 0.2 }, // bEd
+  ER: { jaw: 0.3, round: 0.35, funnel: 0.2 },  // bIRd
+  EY: { jaw: 0.5, spread: 0.4, to: 'IY' },     // dAY
+  IH: { jaw: 0.32, spread: 0.5 },              // bIt
+  IY: { jaw: 0.14, spread: 0.9 },              // bEE
+  OW: { jaw: 0.55, round: 0.65, to: 'UW' },    // gO
+  OY: { jaw: 0.65, round: 0.55, to: 'IY' },    // bOY
+  UH: { jaw: 0.3, round: 0.6 },                // bOOk
+  UW: { jaw: 0.08, round: 1.0 },               // fOOd
+  // Consonants. The closures are the lip-reader's anchors.
+  P: { press: 1, hold: true }, B: { press: 1, hold: true }, M: { press: 1, hold: true },
+  F: { tuck: 1, jaw: 0.12, hold: true }, V: { tuck: 1, jaw: 0.12, hold: true },
+  TH: { jaw: 0.25, upper: 0.35, spread: 0.2 }, DH: { jaw: 0.22, upper: 0.3, spread: 0.2 },
+  T: { jaw: 0.2, spread: 0.2 }, D: { jaw: 0.22, spread: 0.15 }, N: { jaw: 0.18, spread: 0.15 }, L: { jaw: 0.3 },
+  S: { jaw: 0.06, spread: 0.55, upper: 0.2 }, Z: { jaw: 0.06, spread: 0.5, upper: 0.15 },
+  SH: { jaw: 0.18, funnel: 1, round: 0.3 }, ZH: { jaw: 0.18, funnel: 0.9, round: 0.3 },
+  CH: { jaw: 0.16, funnel: 0.9, round: 0.25 }, JH: { jaw: 0.18, funnel: 0.85, round: 0.25 },
+  K: { jaw: 0.32 }, G: { jaw: 0.32 }, NG: { jaw: 0.28 },
+  R: { jaw: 0.2, round: 0.55, funnel: 0.25 }, W: { jaw: 0.08, round: 1.0 }, Y: { jaw: 0.12, spread: 0.6 },
+  HH: { breathe: true },                      // takes the shape of the vowel it opens
+  _: {},                                       // rest
+};
+const LIP_CONTROLS = ['jaw', 'round', 'spread', 'press', 'tuck', 'funnel', 'upper'];
+// How long each kind of sound lasts, relative to a plain vowel.
+function _lipDur(ph) {
+  if (/^(AA|AE|AO|AW|AY|EY|OW|OY|ER)$/.test(ph)) return 1.25;
+  if (/^(AH|EH|IH|IY|UH|UW)$/.test(ph)) return 1.0;
+  if (/^(P|B|M|F|V)$/.test(ph)) return 0.8;      // closures held long enough to see
+  if (/^(S|Z|SH|ZH|CH|JH|TH|DH)$/.test(ph)) return 0.75;
+  if (ph === 'HH') return 0.35;
+  return 0.55;
+}
+
+/* The phonemes and pauses of a line: [{ ph, word }] with '_' for a break. */
+function lipPhonemes(text) {
+  const out = [];
+  // Each word keeps where it starts in the line, so a voice that reports its progress (a speech
+  // synthesiser's word boundaries) can pull the mouth back into step with it.
+  const re = /\d+|[A-Za-z']+|[.,!?;:\u2014-]+/g, src = String(text);
+  let m;
+  while ((m = re.exec(src))) {
+    const t0 = m[0], at = m.index;
+    if (/^[.,!?;:\u2014-]+$/.test(t0)) { out.push({ ph: '_', pause: /[.!?]/.test(t0) ? 2.2 : 1.3 }); continue; }
+    for (const t of /^\d/.test(t0) ? _lipNumber(t0).split(' ') : [t0]) {
+      const p = lipWordPhonemes(t);
+      if (!p.length) continue;
+      if (out.length && out[out.length - 1].ph !== '_') out.push({ ph: '_', pause: 0.22 });
+      for (const ph of p) out.push({ ph, word: t, at });
+    }
+  }
+  return out;
+}
+
+/* The viseme a lip-reader would name for a phoneme: the classes a reader can actually tell apart. */
+const LIP_VISEME = {
+  P: 'PP', B: 'PP', M: 'PP', F: 'FF', V: 'FF', TH: 'TH', DH: 'TH', T: 'DD', D: 'DD', N: 'DD', L: 'DD',
+  K: 'kk', G: 'kk', NG: 'kk', CH: 'CH', JH: 'CH', SH: 'CH', ZH: 'CH', S: 'SS', Z: 'SS', R: 'RR', ER: 'RR',
+  W: 'ou', UW: 'ou', UH: 'ou', OW: 'oh', AO: 'oh', OY: 'oh', AA: 'aa', AH: 'aa', AW: 'aa', AY: 'aa', AE: 'aa',
+  EH: 'E', EY: 'E', IH: 'ih', IY: 'ih', Y: 'ih', HH: 'sil', _: 'sil',
+};
+
+/* A line laid out in time: keys at each phoneme's centre with its control targets, stretched to the
+   line's real length. `duration` is seconds; omitted, a conversational 12 sounds a second. */
+function lipTimeline(text, duration) {
+  const ph = lipPhonemes(text);
+  const segs = [];
+  for (let i = 0; i < ph.length; i++) {
+    const p = ph[i];
+    if (p.ph === '_') { segs.push({ ph: '_', w: p.pause, shape: {} }); continue; }
+    let shape = LIP_SHAPES[p.ph] || {};
+    if (shape.breathe) {                          // /h/ is the vowel after it, breathed
+      const nx = ph.slice(i + 1).find((q) => q.ph !== '_');
+      shape = nx ? Object.assign({}, LIP_SHAPES[nx.ph] || {}, { jaw: ((LIP_SHAPES[nx.ph] || {}).jaw || 0.3) * 0.7 }) : {};
+    }
+    const w = _lipDur(p.ph);
+    if (shape.to) {
+      // A diphthong glides: the first shape for 60 per cent, the second for the rest.
+      segs.push({ ph: p.ph, w: w * 0.6, shape, word: p.word, at: p.at });
+      segs.push({ ph: p.ph + '>', w: w * 0.4, shape: LIP_SHAPES[shape.to], word: p.word, at: p.at });
+    } else segs.push({ ph: p.ph, w, shape, word: p.word, at: p.at });
+  }
+  let total = 0;
+  for (const s of segs) total += s.w;
+  const dur = duration && duration > 0 ? duration : total / 12;
+  const k = total > 0 ? dur / total : 0;
+  let t = 0;
+  for (const s of segs) { s.t0 = t; s.t1 = t + s.w * k; s.tc = (s.t0 + s.t1) / 2; t = s.t1; }
+  return { segs, duration: dur };
+}
+
+/* The controls at time t: between the key before and after, eased, with closures held at full for the
+   middle of their span and the next sound anticipated a little. Returns { jaw, round, ... }. */
+function lipSample(tl, t, out = {}) {
+  for (const c of LIP_CONTROLS) out[c] = 0;
+  const S = tl.segs;
+  if (!S.length || t < 0 || t > tl.duration) return out;
+  let i = 0;
+  while (i < S.length - 1 && t > S[i].t1) i++;
+  const s = S[i];
+  const val = (seg, c) => (seg && seg.shape[c]) || 0;
+  // Held sounds: flat for their middle 60%, so a closure actually closes.
+  const hold = s.shape.hold ? 0.3 : 0.12;
+  const a = s.t0 + (s.t1 - s.t0) * hold, b = s.t1 - (s.t1 - s.t0) * hold;
+  let from, to, f;
+  if (t < a) { from = S[i - 1]; to = s; f = 0.5 + 0.5 * (t - s.t0) / Math.max(1e-6, a - s.t0); }
+  else if (t > b) { from = s; to = S[i + 1]; f = 0.5 * (t - b) / Math.max(1e-6, s.t1 - b); }
+  else { from = s; to = s; f = 0; }
+  const e = f * f * (3 - 2 * f);
+  for (const c of LIP_CONTROLS) out[c] = val(from, c) + (val(to, c) - val(from, c)) * e;
+  // A closure wins over anything blended into it: lips cannot be shut and open at once.
+  if (out.press > 0.01) { out.jaw *= 1 - out.press; out.round *= 1 - out.press * 0.7; out.spread *= 1 - out.press * 0.7; }
+  if (out.tuck > 0.01) out.round *= 1 - out.tuck;
+  return out;
+}
+
+/* When the word at character `c` of the line starts, in the timeline's seconds (or -1). */
+function lipWordTime(tl, c) {
+  let t = -1, a = -1;
+  for (const s of tl.segs) if (s.at != null && s.at <= c && s.at > a) { a = s.at; t = s.t0; }
+  return t;
+}
+
+/* For tests and debugging: the sequence of visemes a line produces, as a lip-reader would transcribe it. */
+function lipVisemes(text) {
+  return lipTimeline(text).segs.filter((s) => s.ph !== '_' && !s.ph.endsWith('>')).map((s) => LIP_VISEME[s.ph] || '?');
+}
+
+const LipSync = { phonemes: lipPhonemes, wordPhonemes: lipWordPhonemes, timeline: lipTimeline, sample: lipSample, wordTime: lipWordTime,
+  visemes: lipVisemes, SHAPES: LIP_SHAPES, VISEME: LIP_VISEME, CONTROLS: LIP_CONTROLS };
+
+
+/* ─────────── 91c-mh-face.js ─────────── */
+/* ============================================================
+   A MAKEHUMAN FACE THAT TALKS AND BLINKS.
+
+   The field-built heads (94f-mh-head.js) had no expression rig at all:
+   91-face.js is written against the old ring sculpt's topology, so the
+   MakeHuman heads were built with `face = null` and every character in
+   the game spoke with a mouth that never moved and eyes that never
+   closed. This is their rig, built from the head's own geometry:
+
+     jaw     the lower face rotated about the hinge in front of the ear,
+             split from the upper face exactly at the lips -- the lip
+             rows are 1.2 mm apart there, so the split is found by
+             walking the mesh (the upper lip and the lower lip are only
+             joined at the corners), and the weight between the two is
+             solved over the surface, so the corners stretch rather than
+             tear and the inside of each lip goes with its own lip
+     round, spread, press, tuck, funnel, upper
+             the lip shapes LipSync (91a-lipsync.js) asks for: pucker,
+             smile-wide, pressed shut, lower lip under the teeth, flared
+             forward, top lip lifted
+     blink   each upper lid rotated down over its eyeball about the
+             eye's own centre, by the angle that closes THAT column of
+             the aperture (measured), and the lower lid up a little
+
+   and a set of teeth, added to the eye mesh (the only white material on
+   a head), the lower row riding the jaw -- an open mouth with nothing in
+   it is a hole, and a lip-reader reads the teeth for f, v and th.
+
+   The head meshes are shared between every character with the same face
+   and drawn instanced, so the driver (MhFace) gives a character private
+   copies only while it is moving its face, and hands the shared ones
+   back when it stops. A crowd that is not talking costs nothing.
+   ============================================================ */
+
+const MHF_JAW_MAX = 0.105;          // radians of jaw drop at jaw = 1: about 13 mm at the lips, an open "ah"
+const MHF_BLINK_EVERY = 30;         // seconds between blinks
+const MHF_BLINK_JITTER = 3;         // +- seconds, so a room of people does not blink in unison
+const MHF_BLINK_TIME = 0.16;        // one blink: down fast, up slower
+const MHF_NEAR = 9;                 // metres: past this the face is a few pixels and is not morphed
+
+function _mhfS(e0, e1, x) { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); }
+
+/* The mouth on the midline: the nose tip, the two lip peaks under it, and the slit between them. */
+function _mhfMouth(X, Y, Z, n) {
+  let tipY = 0, tipZ = -1;
+  for (let v = 0; v < n; v++) if (Math.abs(X[v]) < 0.004 && Y[v] < 0 && Y[v] > -0.07 && Z[v] > tipZ) { tipZ = Z[v]; tipY = Y[v]; }
+  const B0 = tipY - 0.085, NB = 80, prof = new Float32Array(NB).fill(-1);
+  for (let v = 0; v < n; v++) {
+    if (Math.abs(X[v]) > 0.0025) continue;
+    const b = Math.floor((Y[v] - B0) / 0.001);
+    if (b >= 0 && b < NB && Z[v] > prof[b]) prof[b] = Z[v];
+  }
+  for (let b = 0; b < NB; b++) if (prof[b] < 0) {                // a coarse mesh leaves bins empty
+    let a = b - 1, c = b + 1;
+    while (a >= 0 && prof[a] < 0) a--;
+    while (c < NB && prof[c] < 0) c++;
+    if (a >= 0 && c < NB) prof[b] = prof[a] + (prof[c] - prof[a]) * (b - a) / (c - a);
+    else prof[b] = a >= 0 ? prof[a] : c < NB ? prof[c] : 0;
+  }
+  const yb = (b) => B0 + (b + 0.5) * 0.001, bin = (y) => Math.max(0, Math.min(NB - 1, Math.floor((y - B0) / 0.001)));
+  let up = bin(tipY - 0.045);
+  for (let b = bin(tipY - 0.045); b <= bin(tipY - 0.016); b++) if (prof[b] > prof[up]) up = b;
+  let lo = bin(yb(up) - 0.035);
+  for (let b = bin(yb(up) - 0.035); b <= bin(yb(up) - 0.010); b++) if (prof[b] > prof[lo]) lo = b;
+  let sl = lo;
+  for (let b = lo; b <= up; b++) if (prof[b] < prof[sl]) sl = b;
+  return { tipY, slitY: yb(sl), slitZ: prof[sl], prof, bin };
+
+}
+
+/* The rig for one head geometry (any level of detail). Cached on the geometry: faces are shared. */
+function buildMhFaceRig(geo, ref = null) {
+  if (geo._faceRig !== undefined) return geo._faceRig;
+  const U = SDF_HEAD_TO_UNITS, P = geo.positions, I = geo.indices, n = P.length / 3;
+  const X = new Float32Array(n), Y = new Float32Array(n), Z = new Float32Array(n);
+  for (let v = 0; v < n; v++) { X[v] = P[v * 3] / U; Y[v] = P[v * 3 + 1] / U; Z[v] = P[v * 3 + 2] / U; }
+
+  const mouth = _mhfMouth(X, Y, Z, n);
+  // Likewise the mouth: a coarse mesh's midline profile is too sparse to find the slit to a millimetre.
+  let slitY = ref ? ref.slitY : mouth.slitY;
+  const slitZ = ref ? ref.slitZ : mouth.slitZ, tipY = ref ? ref.tipY : mouth.tipY, prof = mouth.prof, bin = mouth.bin;
+
+  /* ---- adjacency, welded by position (a seam duplicate is the same point of skin) ---- */
+  const wkey = new Map(), W = new Int32Array(n);
+  for (let v = 0; v < n; v++) {
+    const k = Math.round(P[v * 3] * 4e4) + ',' + Math.round(P[v * 3 + 1] * 4e4) + ',' + Math.round(P[v * 3 + 2] * 4e4);
+    let r = wkey.get(k);
+    if (r === undefined) { r = v; wkey.set(k, v); }
+    W[v] = r;
+  }
+  const nbr = new Map();
+  const link = (a, b) => { if (a === b) return; let s = nbr.get(a); if (!s) nbr.set(a, s = new Set()); s.add(b); };
+  for (let t = 0; t < I.length; t += 3) {
+    const a = W[I[t]], b = W[I[t + 1]], c = W[I[t + 2]];
+    link(a, b); link(b, a); link(b, c); link(c, b); link(c, a); link(a, c);
+  }
+  const NB2 = (v) => nbr.get(v) || [];
+
+  /* ---- upper lip / lower lip: flood each from its own side inside the mouth box ---- */
+  const inBox = (v) => Math.abs(X[v]) < 0.016 && Z[v] > slitZ - 0.05 && Y[v] > slitY - 0.05 && Y[v] < slitY + 0.03;
+  const seedNear = (y) => {
+    let best = -1, bd = 1e9;
+    for (let v = 0; v < n; v++) {
+      if (W[v] !== v || Math.abs(X[v]) > 0.003) continue;
+      const d = (Y[v] - y) ** 2 + (Z[v] - prof[bin(y)]) ** 2;
+      if (d < bd) { bd = d; best = v; }
+    }
+    return best;
+  };
+  const flood = (seed) => {
+    const s = new Set([seed]), st = [seed];
+    while (st.length) { const v = st.pop(); for (const q of NB2(v)) if (!s.has(q) && inBox(q)) { s.add(q); st.push(q); } }
+    return s;
+  };
+  const sU = seedNear(slitY + 0.008), sL = seedNear(slitY - 0.012);
+  let upperSet = flood(sU), lowerSet = flood(sL);
+  const split = !upperSet.has(sL) && !lowerSet.has(sU);
+  if (!split) { upperSet = new Set(); lowerSet = new Set(); }
+  // The slit itself, refined: between the lowest outer point of the upper lip and the highest of the lower.
+  if (split && !ref) {
+    let a = Infinity, b = -Infinity;
+    for (const v of upperSet) if (Math.abs(X[v]) < 0.004 && Z[v] > slitZ - 0.004) a = Math.min(a, Y[v]);
+    for (const v of lowerSet) if (Math.abs(X[v]) < 0.004 && Z[v] > slitZ - 0.004) b = Math.max(b, Y[v]);
+    if (a < Infinity && b > -Infinity && a > b) slitY = (a + b) / 2;
+  }
+  const hingeY = slitY + 0.025, hingeZ = slitZ - 0.1325;
+
+  /* ---- jaw weight: pinned where it is certain, solved over the surface everywhere else ---- */
+  const soft = (v) => {
+    const dz = Z[v] - hingeZ, yl = hingeY + (slitY - hingeY) * dz / (slitZ - hingeZ);
+    const band = 0.004 + 0.014 * _mhfS(0.012, 0.05, Math.abs(X[v]));
+    return _mhfS(-band, band, yl - Y[v]) * _mhfS(0.01, 0.055, dz);
+  };
+  const jw = new Float32Array(n), pinned = new Uint8Array(n);
+  for (let v = 0; v < n; v++) {
+    if (W[v] !== v) continue;
+    const ax = Math.abs(X[v]), dz = Z[v] - hingeZ, yl = hingeY + (slitY - hingeY) * dz / (slitZ - hingeZ);
+    if (split && ax < 0.013 && upperSet.has(v)) { jw[v] = 0; pinned[v] = 1; }
+    else if (split && ax < 0.013 && lowerSet.has(v)) { jw[v] = 1; pinned[v] = 1; }
+    else if (Y[v] - yl > 0.022 || dz < 0.0) { jw[v] = 0; pinned[v] = 1; }
+    else if (yl - Y[v] > 0.026 && dz > 0.06) { jw[v] = 1; pinned[v] = 1; }
+    else jw[v] = soft(v);
+  }
+  // Gauss-Seidel with over-relaxation over the free vertices: a harmonic weight follows the skin, not the air.
+  const free = [];
+  for (let v = 0; v < n; v++) if (W[v] === v && !pinned[v]) free.push(v);
+  for (let it = 0; it < 160; it++) {
+    for (const v of free) {
+      let s = 0, c = 0;
+      for (const q of NB2(v)) { s += jw[q]; c++; }
+      if (c) jw[v] = Math.max(0, Math.min(1, jw[v] + 1.85 * (s / c - jw[v])));
+    }
+  }
+  // The neck edge is shared with the body vertex for vertex, so nothing near it may move.
+  for (let v = 0; v < n; v++) {
+    const r = W[v];
+    const cut = _mhCutY(Z[v]);
+    jw[v] = jw[r] * _mhfS(cut + 0.006, cut + 0.04, Y[v]);
+  }
+
+  /* ---- the lip controls, as displacements at full weight (metres) ---- */
+  const D = {};
+  for (const c of ['round', 'spread', 'press', 'tuck', 'funnel', 'upper']) D[c] = [];
+  const jaw = [];
+  for (let v = 0; v < n; v++) {
+    const x = X[v], y = Y[v], z = Z[v], ax = Math.abs(x), sx = x < 0 ? -1 : 1, w = jw[v];
+    if (w > 1e-4) jaw.push(v, w);
+    const ry = (y - slitY) / (y > slitY ? 0.017 : 0.021), rr = (x / 0.036) ** 2 + ry * ry, rrW = (x / 0.05) ** 2 + ry * ry;
+    if (rrW >= 1) continue;
+    const fz = _mhfS(slitZ - 0.042, slitZ - 0.016, z);
+    if (fz <= 0) continue;
+    // M is the lips and the skin just round them; Mw reaches the corners and the cheek beside them,
+    // which is where a pucker or a smile is actually seen from the front.
+    const M = rr < 1 ? (1 - rr) * (1 - rr) * fz : 0, Mw = (1 - rrW) * (1 - rrW) * fz;
+    const nearU = Math.exp(-(((y - slitY) / 0.0075) ** 2)) * (1 - w), nearL = Math.exp(-(((y - slitY) / 0.0085) ** 2)) * w;
+    const near = Math.max(nearU, nearL), mid = Math.exp(-((x / 0.014) ** 2)), midW = Math.exp(-((x / 0.022) ** 2));
+    const corner = _mhfS(0.008, 0.026, ax) * (1 - _mhfS(0.032, 0.046, ax));
+    const put = (c, dx, dy, dz) => { if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) > 2e-6) D[c].push(v, dx * U, dy * U, dz * U); };
+    // oo, w, oh: corners drawn in, lips pushed forward, a small round opening
+    put('round', -sx * Math.min(ax, 0.03) * 0.40 * Mw, (0.0005 * nearU - 0.0005 * nearL) * mid * M, 0.0075 * M * (0.45 + 0.55 * near));
+    // ee, s: corners wide and back, a touch up
+    put('spread', sx * 0.0062 * Mw * _mhfS(0, 0.025, ax), 0.0010 * M * corner - 0.0004 * nearU * M + 0.0004 * nearL * M, -0.0030 * Mw * _mhfS(0.004, 0.028, ax));
+    // m, b, p: pressed together and rolled in
+    put('press', 0, (-0.0009 * nearU + 0.0009 * nearL) * M, -0.0030 * M * near);
+    // f, v: the lower lip up and back under the top teeth, the top lip lifted off them
+    const nearL2 = Math.exp(-(((y - slitY) / 0.012) ** 2)) * w;
+    put('tuck', 0, (0.0030 * nearL2 + 0.0026 * nearU) * M * midW, (-0.0030 * nearL2 + 0.0008 * nearU) * M * midW);
+    // sh, ch, j: lips flared forward and parted, corners in a little
+    put('funnel', -sx * Math.min(ax, 0.03) * 0.18 * Mw, (0.0018 * nearU - 0.0018 * nearL) * M, 0.0066 * M * (0.4 + 0.6 * near));
+    // th and the open vowels: the top lip lifted off the teeth
+    put('upper', 0, 0.0021 * nearU * M * midW, 0.0005 * nearU * M * midW);
+  }
+  for (const c in D) D[c] = new Float32Array(D[c]);
+
+  /* ---- the lids: each eye's aperture measured column by column ---- */
+  const lids = [];
+  const eyes = geo.eyes;
+  const cols = 37, cw = 0.001, c0 = -0.018;
+  const at = (A, dx) => {
+    const f = (dx - c0) / cw - 0.5, a = Math.floor(f), t = f - a;
+    const p = A[a], q = A[a + 1];
+    if (p === p && p !== undefined && q === q && q !== undefined) return p + (q - p) * t;
+    if (p === p && p !== undefined) return p;
+    if (q === q && q !== undefined) return q;
+    return NaN;
+  };
+  const measure = (s) => {
+    let cx = 0, cy = 0, cz = 0, k = 0;
+    if (!eyes) return null;
+    const E = eyes.positions, nE = eyes._teeth != null ? eyes._teeth : E.length / 3;
+    for (let i = 0; i < nE * 3; i += 3) if (E[i] * s > 0) { cx += E[i]; cy += E[i + 1]; cz += E[i + 2]; k++; }
+    if (!k) return null;
+    cx /= k * U; cy /= k * U; cz /= k * U;
+    let er = 0;
+    for (let i = 0; i < nE * 3; i += 3) if (E[i] * s > 0) { const d = Math.hypot(E[i] / U - cx, E[i + 1] / U - cy, E[i + 2] / U - cz); if (d < 0.02) er = Math.max(er, d); }
+    if (!er) er = 0.0125;
+    const aU = new Float32Array(cols).fill(NaN), aL = new Float32Array(cols).fill(NaN);
+    const byCol = Array.from({ length: cols }, () => []);
+    for (let v = 0; v < n; v++) {
+      const dx = X[v] - cx, dy = Y[v] - cy, dz = Z[v] - cz;
+      const r = Math.hypot(dx, dy, dz);
+      if (r < er || r > er + 0.0065 || dz < 0.004) continue;
+      // Each column 3 mm wide, overlapping: a margin row's vertices are spaced wider than one column.
+      const a = Math.atan2(dy, dz), cc = (dx - c0) / cw - 0.5;
+      for (let c = Math.max(0, Math.ceil(cc - 1.5)); c <= Math.min(cols - 1, Math.floor(cc + 1.5)); c++) byCol[c].push(a);
+    }
+    for (let c = 0; c < cols; c++) {
+      const A = byCol[c].sort((p, q) => p - q);
+      let best = 0, bu = NaN, bl = NaN;
+      for (let i = 1; i < A.length; i++) {
+        const g = A[i] - A[i - 1];
+        if (g > best && A[i] > -0.35 && A[i - 1] < 0.3) { best = g; bu = A[i]; bl = A[i - 1]; }
+      }
+      // The aperture is the gap that the eye-level line runs through.
+      if (best > 0.05 && bl < -0.03 && bu > -0.2) { aU[c] = bu; aL[c] = bl; }
+    }
+    // Only the run of columns joined to the middle of the eye is the eye.
+    const mid = Math.round(-c0 / cw - 0.5);
+    let c1 = mid, c2 = mid;
+    if (!(aU[mid] === aU[mid])) return null;
+    while (c1 > 0 && aU[c1 - 1] === aU[c1 - 1]) c1--;
+    while (c2 < cols - 1 && aU[c2 + 1] === aU[c2 + 1]) c2++;
+    for (let c = 0; c < cols; c++) if (c < c1 || c > c2) { aU[c] = NaN; aL[c] = NaN; }
+    const sm = (A) => { const o = new Float32Array(cols).fill(NaN); for (let c = 0; c < cols; c++) { let s2 = 0, m = 0; for (let d = -2; d <= 2; d++) { const q = A[c + d]; if (q === q && q !== undefined) { s2 += q; m++; } } if (m && A[c] === A[c]) o[c] = s2 / m; } return o; };
+    // The two corners are not the same distance from the eye's centre: the outer one is further out.
+    const dxMin = c0 + (c1 + 0.5) * cw, dxMax = c0 + (c2 + 0.5) * cw;
+    return { cx, cy, cz, er, su: sm(aU), sl: sm(aL), hw: Math.max(-dxMin, dxMax), dxMin, dxMax };
+  };
+  // A coarser level of detail of the same face takes the close-up's measurements: it has too few
+  // vertices round an eye to find the margins by itself, and it is the same eye in the same place.
+  for (const s of [-1, 1]) {
+    const refLid = ref && ref.lids ? ref.lids.find((l) => l.side === s) : null;
+    const m = refLid ? refLid.meas : measure(s);
+    if (!m) continue;
+    const { cx, cy, cz, er, su, hw, dxMin, dxMax } = m, sl2 = m.sl;
+    const rot = [];
+    for (let v = 0; v < n; v++) {
+      const dx = X[v] - cx, dy = Y[v] - cy, dz = Z[v] - cz;
+      const r = Math.hypot(dx, dy, dz);
+      if (r < er * 0.98 || r > 0.03 || dz < -0.004) continue;
+      if (dx < dxMin - 0.003 || dx > dxMax + 0.0032) continue;
+      const cdx = Math.max(dxMin, Math.min(dxMax, dx));
+      const u = at(su, cdx), l = at(sl2, cdx);
+      if (!(u === u) || !(l === l)) continue;
+      const gap = Math.max(0, u - l);
+      const a = Math.atan2(dy, dz);
+      // Full across the opening, and tapering over the few millimetres past each corner where the lids meet.
+      const lat = _mhfS(dxMin - 0.0028, dxMin + 0.0004, dx) * (1 - _mhfS(dxMax + 0.0004, dxMax + 0.0030, dx));
+      const rad = 1 - _mhfS(0.020, 0.028, r);
+      let th = 0;
+      if (a >= u - 0.02) th = -1.10 * 0.82 * gap * (1 - _mhfS(u + 0.14, u + 0.85, a));   // upper lid, down
+      else if (a <= l + 0.02) th = 1.10 * 0.22 * gap * _mhfS(l - 0.6, l - 0.08, a);      // lower lid, up
+      th *= lat * rad;
+      if (Math.abs(th) > 1e-4) rot.push(v, th);
+    }
+    lids.push({ side: s, meas: m, c: [cx * U, cy * U, cz * U], rot: new Float32Array(rot), hw, gap: at(su, 0) - at(sl2, 0) });
+  }
+
+  const rig = { n, U, slitY, slitZ, tipY, split, hinge: [hingeY * U, hingeZ * U], jaw: new Float32Array(jaw), D, lids,
+    upperN: upperSet.size, lowerN: lowerSet.size, jw };
+  geo._faceRig = rig;
+  return rig;
+}
+
+/* The teeth: two arches of eight, added to the eye mesh, the lower row flagged to ride the jaw.
+   Placed from the head's own mouth -- just behind the inside of the lips, the upper edge at the slit. */
+function addMhTeeth(head, eyes) {
+  if (!eyes || eyes._teeth != null) return eyes;
+  const U = SDF_HEAD_TO_UNITS, P = head.positions, n = P.length / 3;
+  const X = new Float32Array(n), Y = new Float32Array(n), Z = new Float32Array(n);
+  for (let v = 0; v < n; v++) { X[v] = P[v * 3] / U; Y[v] = P[v * 3 + 1] / U; Z[v] = P[v * 3 + 2] / U; }
+  const rig = _mhfMouth(X, Y, Z, n);
+  // The inside of the lips on the midline: the deepest point still in front of the cavity at the slit.
+  let innerZ = rig.slitZ - 0.010;
+  { let best = -1; for (let v = 0; v < n; v++) { const x = P[v * 3] / U, y = P[v * 3 + 1] / U, z = P[v * 3 + 2] / U;
+    if (Math.abs(x) < 0.002 && Math.abs(y - rig.slitY) < 0.003 && z < rig.slitZ - 0.004 && z > rig.slitZ - 0.02 && z > best) best = z; }
+    if (best > 0) innerZ = best; }
+  const nOld = eyes.positions.length / 3;
+  const pos = Array.from(eyes.positions), nrm = Array.from(eyes.normals), uv = Array.from(eyes.uvs);
+  const col = eyes.colors ? Array.from(eyes.colors) : new Array(nOld * 3).fill(1);
+  const idx = Array.from(eyes.indices);
+  const lower = [];
+  const arch = (isLower) => {
+    const zF = innerZ - (isLower ? 0.0038 : 0.0014), yEdge = rig.slitY + (isLower ? -0.0030 : 0.0006);
+    const h = isLower ? 0.0085 : 0.0098, thick = 0.0055, half = 0.024, K = 24;
+    const bounds = isLower ? [0, 0.0028, 0.0058, 0.0092, 0.0130, 0.0175, 0.024] : [0, 0.0045, 0.0080, 0.0118, 0.0158, 0.0200, 0.024];
+    const SEG = 48, ROWS = 4, base = pos.length / 3;
+    for (let i = 0; i <= SEG; i++) {
+      const x = -half + (2 * half * i) / SEG, ax = Math.abs(x);
+      const z = zF - K * x * x, dzdx = -2 * K * x, l = Math.hypot(1, dzdx);
+      const nx = -dzdx / l, nz = 1 / l;                // the arch's outward normal
+      let gapD = 1e9;
+      for (const b of bounds) gapD = Math.min(gapD, Math.abs(ax - b));
+      const gap = _mhfS(0.0009, 0.0002, gapD);          // the dark line between two teeth
+      const scal = 0.0006 * gap;                          // and the notch in the edge there
+      const back = 0.12 + 0.88 * (1 - _mhfS(0.010, 0.024, ax));    // the back teeth fall into shadow
+      for (let r = 0; r <= ROWS; r++) {
+        const f = r / ROWS, yy = isLower ? yEdge - scal * -1 - h * f : yEdge + scal + h * f;
+        const tilt = (isLower ? 0.0006 : 0.0022) * f;     // the uppers lean back into the gum
+        for (const side of [0, 1]) {
+          const o = side ? thick : 0;
+          pos.push((x - nx * (o + tilt)) * U, yy * U, (z - nz * (o + tilt)) * U);
+          nrm.push(side ? -nx : nx, 0, side ? -nz : nz);
+          uv.push(i / SEG, f);
+          const gum = f > 0.82 ? _mhfS(0.82, 1, f) : 0;
+          const shade = (side ? 0.35 : 1) * back * (1 - 0.55 * gap);
+          col.push((0.76 * (1 - gum) + 0.62 * gum) * shade, (0.72 * (1 - gum) + 0.36 * gum) * shade, (0.63 * (1 - gum) + 0.38 * gum) * shade);
+          if (isLower) lower.push(pos.length / 3 - 1);
+        }
+      }
+    }
+    const at = (i, r, s) => base + (i * (ROWS + 1) + r) * 2 + s;
+    for (let i = 0; i < SEG; i++) for (let r = 0; r < ROWS; r++) {
+      const a = at(i, r, 0), b = at(i + 1, r, 0), c = at(i + 1, r + 1, 0), d = at(i, r + 1, 0);
+      const a2 = at(i, r, 1), b2 = at(i + 1, r, 1), c2 = at(i + 1, r + 1, 1), d2 = at(i, r + 1, 1);
+      // Front faces out toward the lips, back faces in; wound so that is the outside either way.
+      if (isLower) { idx.push(a, c, b, a, d, c, a2, b2, c2, a2, c2, d2); } else { idx.push(a, b, c, a, c, d, a2, c2, b2, a2, d2, c2); }
+    }
+    // The biting edge, closing front to back.
+    for (let i = 0; i < SEG; i++) {
+      const a = at(i, 0, 0), b = at(i + 1, 0, 0), a2 = at(i, 0, 1), b2 = at(i + 1, 0, 1);
+      if (isLower) idx.push(a, b, b2, a, b2, a2); else idx.push(a, b2, b, a, a2, b2);
+    }
+  };
+  arch(false); arch(true);
+  eyes.positions = new Float32Array(pos); eyes.normals = new Float32Array(nrm); eyes.uvs = new Float32Array(uv);
+  eyes.colors = new Float32Array(col); eyes.indices = idx;
+  eyes.tangents = null; eyes.bounds = null;
+  if (eyes.parts) while (eyes.parts.length < pos.length / 3) eyes.parts.push(eyes.parts[0] || 0);
+  eyes.computeTangents(); eyes.computeBounds();
+  eyes._teeth = nOld;
+  eyes._lowerTeeth = new Int32Array(lower);
+  return eyes;
+}
+
+/* A face's positions for a set of controls: the lip shapes added, the jaw turned about its hinge,
+   the lids turned about each eye. Pure arithmetic on arrays, so a test can run it without a GPU. */
+function mhFaceDeform(R, B, c, blinkW, Q) {
+  Q.set(B);
+  for (const k in R.D) {
+    const w = c[k];
+    if (!(Math.abs(w) > 1e-3)) continue;
+    const d = R.D[k];
+    for (let i = 0; i < d.length; i += 4) { const v = d[i] * 3; Q[v] += d[i + 1] * w; Q[v + 1] += d[i + 2] * w; Q[v + 2] += d[i + 3] * w; }
+  }
+  const jawA = Math.max(0, Math.min(1.1, c.jaw || 0)) * MHF_JAW_MAX;
+  if (jawA > 1e-4) {
+    const J = R.jaw, hy = R.hinge[0], hz = R.hinge[1];
+    for (let i = 0; i < J.length; i += 2) {
+      const v = J[i] * 3, a = jawA * J[i + 1], ca = Math.cos(a), sa = Math.sin(a);
+      const dy = Q[v + 1] - hy, dz = Q[v + 2] - hz;
+      Q[v + 1] = hy + dy * ca - dz * sa;
+      Q[v + 2] = hz + dy * sa + dz * ca;
+    }
+  }
+  if (blinkW > 1e-3) {
+    for (const lid of R.lids) {
+      const Rt = lid.rot, cy = lid.c[1], cz = lid.c[2];
+      for (let i = 0; i < Rt.length; i += 2) {
+        const v = Rt[i] * 3, a = Rt[i + 1] * blinkW, ca = Math.cos(a), sa = Math.sin(a);
+        const dy = Q[v + 1] - cy, dz = Q[v + 2] - cz;
+        // Positive rotation carries the front of the eye upward (atan2(dy, dz) grows).
+        Q[v + 1] = cy + dy * ca + dz * sa;
+        Q[v + 2] = cz - dy * sa + dz * ca;
+      }
+    }
+  }
+  return Q;
+}
+
+/* The driver: one per character. Speech from LipSync, a blink every thirty seconds, and private
+   meshes only while any of it is showing. */
+class MhFace {
+  constructor(engine, head, eyes, opts = {}) {
+    this.engine = engine;
+    this.gl = engine.gl;
+    this.head = head;
+    this.eyes = eyes || null;
+    this.rng = new Rng((opts.seed || 5) * 7919 + 13);
+    // The first blink anywhere in the first interval, so a crowd that appeared together does not blink together.
+    this.blinkTimer = opts.blinkIn != null ? opts.blinkIn : 1.5 + this.rng.next() * (MHF_BLINK_EVERY - 1.5);
+    this.blinkEvery = opts.blinkEvery || MHF_BLINK_EVERY;
+    this.blinkT = -1;
+    this.blinks = 0;
+    this.line = null;
+    this.lineT = 0;
+    this.onEnd = null;
+    this.ctl = { jaw: 0, round: 0, spread: 0, press: 0, tuck: 0, funnel: 0, upper: 0 };
+    this.blinkW = 0;
+    this._shared = null;
+    this._priv = null;
+    this._idle = 0;
+    this.enabled = true;
+  }
+
+  /* Say a line. `duration` is its real spoken length in seconds (the recording's, or the synthesiser's
+     estimate); left out, a conversational pace. Returns the duration used. */
+  say(text, opts = {}) {
+    this.line = LipSync.timeline(text, opts.duration);
+    this.lineT = -(opts.delay || 0);
+    this.onEnd = opts.onEnd || null;
+    this.text = String(text);
+    return this.line.duration;
+  }
+
+  stop() { this.line = null; return this; }
+  /* Keep step with a voice that reports where it is: restart when it actually starts speaking,
+     and jump to each word as it reaches it (SpeechSynthesisUtterance start / boundary). */
+  restart() { if (this.line) this.lineT = 0; return this; }
+  syncChar(c) {
+    if (!this.line) return this;
+    const t = LipSync.wordTime(this.line, c);
+    // Only ever pulled FORWARD to a word, or back a little: a late event must not replay the line.
+    if (t >= 0 && (t > this.lineT || this.lineT - t < 0.25)) this.lineT = t;
+    return this;
+  }
+  /* Hold the face in a pose -- { jaw, round, ..., blink } -- until pose(null). For tools and tests. */
+  pose(p) { this.held = p ? Object.assign({}, p) : null; return this; }
+  get speaking() { return !!this.line; }
+  blink() { if (this.blinkT < 0) { this.blinkT = 0; this.blinks++; } return this; }
+
+  update(dt) {
+    // Blinking: every thirty seconds, give or take.
+    if (this.blinkT >= 0) {
+      this.blinkT += dt;
+      if (this.blinkT >= MHF_BLINK_TIME) this.blinkT = -1;
+    } else {
+      this.blinkTimer -= dt;
+      if (this.blinkTimer <= 0) {
+        this.blink();
+        this.blinkTimer = this.blinkEvery + (this.rng.next() * 2 - 1) * MHF_BLINK_JITTER;
+      }
+    }
+    if (this.blinkT >= 0) {
+      const T = MHF_BLINK_TIME, t = this.blinkT;
+      // Closed in 45 ms, held for 20, open over the rest: a real blink is quick down and slower up.
+      const e = t < 0.045 ? t / 0.045 : t < 0.065 ? 1 : Math.max(0, 1 - (t - 0.065) / (T - 0.065));
+      this.blinkW = e * e * (3 - 2 * e);
+    } else this.blinkW = 0;
+
+    // Speech.
+    const c = this.ctl;
+    if (this.line) {
+      this.lineT += dt;
+      if (this.lineT >= 0) LipSync.sample(this.line, this.lineT, c);
+      if (this.lineT > this.line.duration) {
+        this.line = null;
+        for (const k in c) c[k] = 0;
+        if (this.onEnd) { const f = this.onEnd; this.onEnd = null; f(); }
+      }
+    } else for (const k in c) c[k] *= Math.max(0, 1 - dt * 18);
+
+    if (this.held) {
+      for (const k in c) c[k] = this.held[k] || 0;
+      this.blinkW = this.held.blink || 0;
+    }
+    let any = this.blinkW > 1e-3;
+    for (const k in c) if (Math.abs(c[k]) > 1e-3) any = true;
+    if (!this.enabled || !this.head || this.head.dead || this.head.visible === false) { if (this._priv && this.head && this.head.visible === false) this._release(); return; }
+    if (!any) {
+      this._idle += dt;
+      if (this._priv && this._idle > 0.25) this._release();
+      return;
+    }
+    this._idle = 0;
+    if (!this._near()) { if (this._priv) this._release(); return; }
+    this._acquire();
+    this._apply();
+  }
+
+  _near() {
+    const cam = this.engine.camera, m = this.head.matrix && this.head.matrix.e;
+    if (!cam || !m) return true;
+    const p = cam.position || cam.pos;
+    if (!p) return true;
+    return Math.hypot(m[12] - p.x, m[13] - p.y, m[14] - p.z) < MHF_NEAR;
+  }
+
+  /* Private copies of the two close levels of detail (and of the eyes, for the teeth). */
+  _acquire() {
+    const h = this.head;
+    if (!this._shared) this._shared = { mesh: h.mesh, lods: h.lods, eyes: this.eyes ? this.eyes.mesh : null };
+    if (!this._priv) {
+      const E = this.engine, gl = this.gl;
+      const geoOf = (m) => (E._geoByKey && E._geoByKey.get(m.__key)) || null;
+      const S = this._shared;
+      const tiers = S.lods ? S.lods.slice(0, 2) : [{ mesh: S.mesh, from: 0 }];
+      const mk = (geo, tag) => {
+        const gm = new GpuMesh(gl, geo);
+        gm.__key = 'mhface:' + (MhFace._uid = (MhFace._uid || 0) + 1) + tag;
+        gm.setupInstancing(20);
+        return gm;
+      };
+      const levels = [];
+      for (const t of tiers) {
+        const geo = geoOf(t.mesh);
+        if (!geo || !geo.sdf) continue;
+        const rig = buildMhFaceRig(geo, levels.length ? levels[0].rig : null);
+        levels.push({ geo, rig, gm: mk(geo, ':h'), work: new Float32Array(geo.positions), nrm: new Float32Array(geo.normals), from: t.from,
+          restN: null });
+      }
+      let eyesL = null;
+      if (this.eyes && S.eyes) {
+        const eg = geoOf(S.eyes);
+        if (eg && eg._lowerTeeth && levels.length) eyesL = { geo: eg, gm: mk(eg, ':e'), work: new Float32Array(eg.positions) };
+      }
+      this._priv = { levels, eyes: eyesL };
+      this._swapIn();
+    } else if (this.head.mesh === this._shared.mesh) this._swapIn();
+  }
+
+  _swapIn() {
+    const h = this.head, S = this._shared, L = this._priv.levels;
+    if (!L.length) return;
+    if (S.lods) {
+      const lods = S.lods.map((o) => ({ mesh: o.mesh, from: o.from }));
+      for (let i = 0; i < L.length; i++) lods[i].mesh = L[i].gm;
+      h.lods = lods;
+    }
+    h.mesh = L[0].gm;
+    if (this._priv.eyes) this.eyes.mesh = this._priv.eyes.gm;
+  }
+
+  _release() {
+    const h = this.head, S = this._shared;
+    if (S) { h.mesh = S.mesh; h.lods = S.lods; if (this.eyes && S.eyes) this.eyes.mesh = S.eyes; }
+    this._idle = 0;
+    this._swapped = false;
+    // The private meshes are kept for the next line; only the draw goes back to the shared one.
+    if (this._priv) this._priv.dirty = true;
+  }
+
+  /* The deformed positions for the current controls, and their normals, uploaded. */
+  _apply() {
+    const gl = this.gl, c = this.ctl;
+    const jawA = Math.max(0, Math.min(1.1, c.jaw)) * MHF_JAW_MAX, cj = Math.cos(jawA), sj = Math.sin(jawA);
+    for (const L of this._priv.levels) {
+      mhFaceDeform(L.rig, L.geo.positions, c, this.blinkW, L.work);
+      const Q = L.work;
+      this._normals(L);
+      gl.bindBuffer(gl.ARRAY_BUFFER, L.gm.buffers[0]);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, Q);
+      gl.bindBuffer(gl.ARRAY_BUFFER, L.gm.buffers[1]);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, L.nrm);
+    }
+    const E = this._priv.eyes;
+    if (E) {
+      const B = E.geo.positions, Q = E.work, lt = E.geo._lowerTeeth;
+      Q.set(B);
+      if (jawA > 1e-4) {
+        const R = this._priv.levels[0].rig, hy = R.hinge[0], hz = R.hinge[1];
+        for (let i = 0; i < lt.length; i++) {
+          const v = lt[i] * 3, dy = Q[v + 1] - hy, dz = Q[v + 2] - hz;
+          Q[v + 1] = hy + dy * cj - dz * sj;
+          Q[v + 2] = hz + dy * sj + dz * cj;
+        }
+      }
+      gl.bindBuffer(gl.ARRAY_BUFFER, E.gm.buffers[0]);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, Q);
+    }
+  }
+
+  /* Normals: the rest normals plus how much the face has turned since rest. Only the moved skin
+     changes, and the neck edge -- whose normals are the body's, not the head's -- keeps them exactly. */
+  _normals(L) {
+    const R = L.rig;
+    if (!R.touch) {
+      // Every vertex any control can move, their neighbours, and the triangles round them: done once.
+      const moved = new Uint8Array(R.n);
+      for (const k in R.D) { const d = R.D[k]; for (let i = 0; i < d.length; i += 4) moved[d[i]] = 1; }
+      for (let i = 0; i < R.jaw.length; i += 2) moved[R.jaw[i]] = 1;
+      for (const lid of R.lids) for (let i = 0; i < lid.rot.length; i += 2) moved[lid.rot[i]] = 1;
+      const I = L.geo.indices, tris = [], touched = new Uint8Array(R.n);
+      for (let t = 0; t < I.length; t += 3) if (moved[I[t]] || moved[I[t + 1]] || moved[I[t + 2]]) { tris.push(t); touched[I[t]] = touched[I[t + 1]] = touched[I[t + 2]] = 1; }
+      const vs = [];
+      for (let v = 0; v < R.n; v++) if (touched[v]) vs.push(v);
+      R.touch = { tris: new Int32Array(tris), verts: new Int32Array(vs) };
+    }
+    if (!L.restN) L.restN = this._faceNormals(L.geo.positions, L.geo.indices, R.touch, new Float32Array(R.n * 3));
+    const now = L.nowN || (L.nowN = new Float32Array(R.n * 3));
+    this._faceNormals(L.work, L.geo.indices, R.touch, now);
+    const N = L.nrm, B = L.geo.normals, rest = L.restN;
+    for (const v of R.touch.verts) {
+      const i = v * 3;
+      let x = B[i] + now[i] - rest[i], y = B[i + 1] + now[i + 1] - rest[i + 1], z = B[i + 2] + now[i + 2] - rest[i + 2];
+      const l = Math.hypot(x, y, z) || 1;
+      N[i] = x / l; N[i + 1] = y / l; N[i + 2] = z / l;
+    }
+  }
+
+  _faceNormals(Q, I, T, out) {
+    for (const v of T.verts) { out[v * 3] = 0; out[v * 3 + 1] = 0; out[v * 3 + 2] = 0; }
+    for (const t of T.tris) {
+      const a = I[t] * 3, b = I[t + 1] * 3, c = I[t + 2] * 3;
+      const ux = Q[b] - Q[a], uy = Q[b + 1] - Q[a + 1], uz = Q[b + 2] - Q[a + 2];
+      const vx = Q[c] - Q[a], vy = Q[c + 1] - Q[a + 1], vz = Q[c + 2] - Q[a + 2];
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      out[a] += nx; out[a + 1] += ny; out[a + 2] += nz;
+      out[b] += nx; out[b + 1] += ny; out[b + 2] += nz;
+      out[c] += nx; out[c + 1] += ny; out[c + 2] += nz;
+    }
+    for (const v of T.verts) {
+      const i = v * 3, l = Math.hypot(out[i], out[i + 1], out[i + 2]) || 1;
+      out[i] /= l; out[i + 1] /= l; out[i + 2] /= l;
+    }
+    return out;
+  }
+
+  /* For tests and tools: the head's positions as they are this frame (units, the geometry's frame). */
+  positionsNow(level = 0) {
+    return this._priv && this._priv.levels[level] ? this._priv.levels[level].work : null;
+  }
 }
 
 
@@ -23471,6 +24422,8 @@ function makeMhHeadGeometry(opts = {}) {
   const out = _headFinish(g, { EYE, EYE_R: 0.0120, tip, mouthY: mouth[1], nW, fem, lipZ: mouth[2] + 0.004, chinY }, opts);
   out.mh = true;
   out.mhFig = fig.key;
+  // Teeth behind the lips (91c-mh-face.js), on the close-up only: the eye mesh is the head's one white material.
+  if (!(opts.resolution > 0.003)) addMhTeeth(out, out.eyes);
   return out;
 }
 
@@ -26999,7 +27952,8 @@ class Engine {
          tint, and the three shells carry their own vertex colours. */
       if (headGeo.eyes) {
         const em = new GpuMesh(this.gl, headGeo.eyes);
-        em.__key = 'eyes:' + (opts.faceKey || opts.seed || 5);
+        // Keyed by the whole face: the teeth in this mesh are placed from this head's own mouth.
+        em.__key = 'eyes:' + hk;
         (this._geoByKey || (this._geoByKey = new Map())).set(em.__key, headGeo.eyes);
         em.setupInstancing(20);
         const ea = new Actor(this, {
@@ -27019,6 +27973,11 @@ class Engine {
         });
         this.actors.push(ea);
         actor.eyes = ea;
+      }
+      /* A MakeHuman head talks and blinks (91c-mh-face.js). It costs nothing until it does: the
+         head keeps its shared, instanced meshes until a line or a blink needs private ones. */
+      if (living && headGeo.mh && opts.blink !== false) {
+        actor.face = new MhFace(this, headActor, actor.eyes || null, { seed: opts.seed || 5 });
       }
       if (opts.brows && !headGeo.sdf) {
         const brc = opts.browColor != null ? opts.browColor : hairColor;
@@ -50623,6 +51582,9 @@ const LegendEngine = {
   /* The noises a weapon makes when nobody is shooting it. */
   HANDLING, RELOAD_SOUNDS, INSPECT_SOUNDS,
   bakeCavityAO,
+  /* Speech a lip-reader can follow: words to phonemes to mouth shapes on a timeline (91a-lipsync.js),
+     and the MakeHuman face rig that wears them, with a blink every thirty seconds (91c-mh-face.js). */
+  LipSync, MhFace, buildMhFaceRig, mhFaceDeform, makeMhHeadGeometry,
   clamp, lerp, smoothstep,
 };
 
