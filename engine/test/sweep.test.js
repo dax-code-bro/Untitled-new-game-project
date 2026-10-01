@@ -616,7 +616,7 @@ const SWEEP = () => {
           for (let i = 0; i < pos.length; i += 3) {
             if (Math.hypot(pos[i] - cx, pos[i + 1] - cy, pos[i + 2] - cz) > 0.045) reach++;
           }
-          out.sys.grips.push({ id, which,
+          out.sys.grips.push({ id, which, quad, near,
             sides: quad.filter((n) => n > near * 0.06).length,
             reach: +(reach / n3 * 100).toFixed(1) });
         }
@@ -1253,7 +1253,8 @@ function check(name, cond, detail = '') {
     list(grErr, (g2) => `${g2.id} ${g2.which}: ${g2.err}`));
   const claw = gr.filter((g2) => !g2.err && g2.sides < 4);
   check('every hand has skin on all four sides of what it holds', claw.length === 0,
-    list(claw, (g2) => `${g2.id} ${g2.which}: skin on only ${g2.sides} sides`));
+    list(claw, (g2) => `${g2.id} ${g2.which}: skin on only ${g2.sides} sides`
+      + (g2.quad ? ` (quadrants ${g2.quad.join('/')} of ${g2.near})` : '')));
   /* Fingers reach; a lump does not. The bar is low because it has to hold
      for a fist round a 34 mm grip and for a hand laid open on a 108 mm
      tube, which are legitimately different shapes. */
