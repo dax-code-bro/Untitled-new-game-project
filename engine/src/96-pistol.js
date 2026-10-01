@@ -161,17 +161,29 @@ function sweepPath(g, stations, capStart = true, capEnd = true) {
      direction of travel against the profile's own outward normal,
      which the outline already carries -- so this needs no assumption
      about which axis a part is built along, and it stays correct for a
-     sweep that curves. */
+     sweep that curves.
+
+     SEGMENT BY SEGMENT, NOT END TO END. This compared the travel from
+     the first station to the LAST against the first station's face,
+     which is right for a straight sweep and wrong for a hoop: a lever
+     gun's loop leaves the hinge going forward and down, comes round
+     under the grip and finishes level with where it started, so its
+     end-to-end travel points backwards and the whole loop was flipped
+     inside out (the winding test caught it at -2.5e-5 m3). Each segment's own
+     travel is weighed against its own station's face instead, so a
+     sweep is judged by which way it actually runs at every step. */
   let flip = false;
   {
-    const a0 = world[0], a1 = world[ns - 1];
-    const tv = new Vec3(0, 0, 0);
-    for (let k = 0; k < n; k++) {
-      tv.x += a1[k].x - a0[k].x; tv.y += a1[k].y - a0[k].y; tv.z += a1[k].z - a0[k].z;
+    let vote = 0;
+    const face = new Vec3();
+    for (let i = 0; i < ns - 1; i++) {
+      const a0 = world[i], a1 = world[i + 1];
+      let tx = 0, ty = 0, tz = 0;
+      for (let k = 0; k < n; k++) { tx += a1[k].x - a0[k].x; ty += a1[k].y - a0[k].y; tz += a1[k].z - a0[k].z; }
+      face.crossVectors(stations[i].u, stations[i].v);
+      vote += tx * face.x + ty * face.y + tz * face.z;
     }
-    const st0 = stations[0];
-    const face = new Vec3().crossVectors(st0.u, st0.v);
-    flip = (tv.x * face.x + tv.y * face.y + tv.z * face.z) < 0;
+    flip = vote < 0;
   }
 
   const t = new Vec3(), ax = new Vec3(), nrm = new Vec3(), fallback = new Vec3();

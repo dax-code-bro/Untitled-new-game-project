@@ -33121,17 +33121,29 @@ function sweepPath(g, stations, capStart = true, capEnd = true) {
      direction of travel against the profile's own outward normal,
      which the outline already carries -- so this needs no assumption
      about which axis a part is built along, and it stays correct for a
-     sweep that curves. */
+     sweep that curves.
+
+     SEGMENT BY SEGMENT, NOT END TO END. This compared the travel from
+     the first station to the LAST against the first station's face,
+     which is right for a straight sweep and wrong for a hoop: a lever
+     gun's loop leaves the hinge going forward and down, comes round
+     under the grip and finishes level with where it started, so its
+     end-to-end travel points backwards and the whole loop was flipped
+     inside out (the winding test caught it at -2.5e-5 m3). Each segment's own
+     travel is weighed against its own station's face instead, so a
+     sweep is judged by which way it actually runs at every step. */
   let flip = false;
   {
-    const a0 = world[0], a1 = world[ns - 1];
-    const tv = new Vec3(0, 0, 0);
-    for (let k = 0; k < n; k++) {
-      tv.x += a1[k].x - a0[k].x; tv.y += a1[k].y - a0[k].y; tv.z += a1[k].z - a0[k].z;
+    let vote = 0;
+    const face = new Vec3();
+    for (let i = 0; i < ns - 1; i++) {
+      const a0 = world[i], a1 = world[i + 1];
+      let tx = 0, ty = 0, tz = 0;
+      for (let k = 0; k < n; k++) { tx += a1[k].x - a0[k].x; ty += a1[k].y - a0[k].y; tz += a1[k].z - a0[k].z; }
+      face.crossVectors(stations[i].u, stations[i].v);
+      vote += tx * face.x + ty * face.y + tz * face.z;
     }
-    const st0 = stations[0];
-    const face = new Vec3().crossVectors(st0.u, st0.v);
-    flip = (tv.x * face.x + tv.y * face.y + tv.z * face.z) < 0;
+    flip = vote < 0;
   }
 
   const t = new Vec3(), ax = new Vec3(), nrm = new Vec3(), fallback = new Vec3();
@@ -40456,9 +40468,12 @@ function svcPump(g, K) {
   if (!P) return;
   const y = P.y != null ? P.y : -(K.barrel.r1 + 0.0170);
   const r = P.r || 0.0175, x0 = P.x0, x1 = P.x1;
-  // The sleeve, closed at both ends.
-  spin(g, [[x0, 0], [x0 + 0.004, r * 0.86], [x0 + 0.012, r],
-    [x1 - 0.012, r], [x1 - 0.004, r * 0.86], [x1, 0]], 22, 26, y);
+  /* The sleeve, closed at both ends. Counter-clockwise in (x, r), the
+     way spin() needs it -- front end first. Written rear-to-front it was
+     clockwise, and every pump gun's forend was inside out: back-face
+     culling drew the inside of its far wall. */
+  spin(g, [[x1, 0], [x1 - 0.004, r * 0.86], [x1 - 0.012, r],
+    [x0 + 0.012, r], [x0 + 0.004, r * 0.86], [x0, 0]], 22, 26, y);
   /* The grooves. Eight of them down the length, cut in rather than
      stuck on -- a pump's forend is ribbed so a wet hand can work it. */
   const n = P.grooves || 8;

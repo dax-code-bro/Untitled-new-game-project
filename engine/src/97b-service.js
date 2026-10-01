@@ -731,9 +731,12 @@ function svcPump(g, K) {
   if (!P) return;
   const y = P.y != null ? P.y : -(K.barrel.r1 + 0.0170);
   const r = P.r || 0.0175, x0 = P.x0, x1 = P.x1;
-  // The sleeve, closed at both ends.
-  spin(g, [[x0, 0], [x0 + 0.004, r * 0.86], [x0 + 0.012, r],
-    [x1 - 0.012, r], [x1 - 0.004, r * 0.86], [x1, 0]], 22, 26, y);
+  /* The sleeve, closed at both ends. Counter-clockwise in (x, r), the
+     way spin() needs it -- front end first. Written rear-to-front it was
+     clockwise, and every pump gun's forend was inside out: back-face
+     culling drew the inside of its far wall. */
+  spin(g, [[x1, 0], [x1 - 0.004, r * 0.86], [x1 - 0.012, r],
+    [x0 + 0.012, r], [x0 + 0.004, r * 0.86], [x0, 0]], 22, 26, y);
   /* The grooves. Eight of them down the length, cut in rather than
      stuck on -- a pump's forend is ribbed so a wet hand can work it. */
   const n = P.grooves || 8;

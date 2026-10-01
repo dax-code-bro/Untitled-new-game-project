@@ -116,6 +116,24 @@ const SWEEP = () => {
     for (let i = 0; i < 40; i++) window.B.game.step(1 / 60);
   } catch (e) { out.errors.push('boot: ' + e.message); }
 
+  /* NOTHING IS DRAWN WHILE THE GAME IS ONLY BEING DRIVEN.
+   *
+     engine.step() renders a frame as well as advancing the world, and the
+     systems half below steps the game some eight thousand times -- every
+     weapon emptied and reloaded twice, every variant, every hero -- for
+     checks that read sounds, brass, rounds and errors, never pixels.
+     Under SwiftShader that was the whole of the run: it went past the
+     25-minute limit and was killed before it reported anything at all.
+     So the main game's draw calls are switched off for those loops and
+     back on for the two sections that do read the screen (the skin tones
+     and the settings toggles, whose faults show up in the render path).
+     The cull pass draws with an engine of its own and is untouched. */
+  const DRAW = ['renderShadows', 'renderScene', 'renderFluid', 'renderParticles', 'present'];
+  const RR = window.B && window.B.game && window.B.game.renderer;
+  const drawOff = () => { if (RR) for (const k of DRAW) if (typeof RR[k] === 'function') RR[k] = () => {}; };
+  const drawOn = () => { if (RR) for (const k of DRAW) if (Object.prototype.hasOwnProperty.call(RR, k)) delete RR[k]; };
+  drawOff();
+
   /* Then everything the boot does not touch: every weapon the player can
      ever hold, and every zombie variant's body. */
   const S = window.B && window.B.S, P = S && S.player;
@@ -999,6 +1017,7 @@ const SWEEP = () => {
      * is neutral and the hand is not, it is the hands; if both are warm, it
      * is the light, and that is a different repair. */
     out.sys.skin = [];
+    drawOn();
     try {
       /* At High, because that is the tier the tones were measured and
          tuned against -- reading them at Low would be a band from one
