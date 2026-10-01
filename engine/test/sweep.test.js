@@ -195,6 +195,15 @@ const SWEEP = () => {
         g.camera.position.set(c[0] + rad * 1.5, c[1] + rad * 1.1, c[2] + rad * 1.7);
         g.camera.target.set(c[0], c[1], c[2]);
         g.camera.fov = 45 * Math.PI / 180;
+        /* THE NEAR PLANE SCALED TO THE PART. The camera sits 2.5 radii
+           from the centre, and the default near plane is 0.1 m -- so for
+           anything under about 65 mm across (a finger bone, a thumb, a
+           knife grip, a battery cell) the near plane cut through the
+           front of the part. What was left was its far side, which is
+           ALL back faces, and the culled draw lost 100 per cent of it:
+           101 parts reported inside out that were not, every one of them
+           small. A near plane a fifth of the radius clears the front. */
+        g.camera.near = Math.min(0.1, rad * 0.2);
         const n = cover();
         if (dbl) both = n; else solid = n;
         if (a.destroy) a.destroy(); else a.visible = false;
@@ -378,14 +387,16 @@ const SWEEP = () => {
       out.sys.variants.push(row);
     }
 
-    /* A window with AUTO REPAIR off must stay broken while you stand at
-       it, and go back up when it is on. The gate has been correct all
-       along; what was not correct was a saved setting from an older build
-       overriding the default, which nothing was watching for. */
+    /* A window must stay broken while you merely stand at it, and go back
+       up while you hold interact. There used to be an AUTO REPAIR setting
+       that boarded by proximity; it was removed ("whenever I go up to a
+       barrier I automatically start building it"), so what is checked now
+       is that standing does nothing, holding works, and the setting has
+       not crept back. */
     out.sys.repair = [];
     // Read after the boot: __T_SYS does not exist until the game starts.
-    out.autoRepairDefault = (window.__T_SYS && window.__T_SYS.TOGGLES
-      && window.__T_SYS.TOGGLES.autoRepair) ? window.__T_SYS.TOGGLES.autoRepair.def : null;
+    out.autoRepairGone = !(window.__T_SYS && window.__T_SYS.TOGGLES
+      && window.__T_SYS.TOGGLES.autoRepair) && typeof SS.toggles.autoRepair === 'undefined';
     try {
       const strip = (w) => {
         for (let i = 0; i < w.boards.length; i++) {
@@ -409,15 +420,17 @@ const SWEEP = () => {
       }
       if (!win) out.sys.repair.push({ err: 'no window offers a repair prompt' });
       else {
-        for (const auto of [false, true]) {
-          SS.toggles.autoRepair = auto;
+        for (const held of [false, true]) {
           strip(win);
           __T.teleport(spot[0], spot[1], spot[2]);
           runFrames(20);
-          runFrames(420);
-          out.sys.repair.push({ auto, boards: win.boards.filter(Boolean).length });
+          /* Held is one interact a frame for seven seconds, through the
+             same doInteract the key reaches -- consecutive frames, which
+             is what the plank timer reads as a hold. */
+          if (held) for (let i = 0; i < 420; i++) { SS.toSpawn = 0; SS.spawnT = 1e9; __T.doInteractAt(spot[0], spot[1], spot[2]); }
+          else runFrames(420);
+          out.sys.repair.push({ held, boards: win.boards.filter(Boolean).length });
         }
-        SS.toggles.autoRepair = false;
       }
     } catch (e) { out.sys.repair.push({ err: e.message }); }
 
@@ -1261,15 +1274,14 @@ function check(name, cond, detail = '') {
 
   const rp = sy.repair || [];
   const rpErr = rp.filter((r) => r.err);
-  const off = rp.find((r) => r.auto === false), on = rp.find((r) => r.auto === true);
-  check('a barricade does not rebuild itself with auto repair off',
+  const off = rp.find((r) => r.held === false), on = rp.find((r) => r.held === true);
+  check('a barricade does not rebuild itself while you only stand at it',
     !rpErr.length && off && off.boards === 0,
     rpErr.length ? rpErr[0].err : off ? `${off.boards} boards went back on their own` : 'no reading');
-  check('a barricade does rebuild itself with auto repair on',
+  check('a barricade rebuilds while you hold interact',
     !rpErr.length && on && on.boards > 0,
     on ? `${on.boards} boards` : 'no reading');
-  check('the settings default to auto repair off',
-    r.autoRepairDefault === false, 'default is ' + r.autoRepairDefault);
+  check('there is no auto-repair setting to board by proximity', r.autoRepairGone === true);
 
   const hErr = sy.heroes.filter((h) => h.err);
   check('every playable character can be selected', hErr.length === 0,

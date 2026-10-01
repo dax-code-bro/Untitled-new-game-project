@@ -5374,7 +5374,13 @@ function buildBunker9(game, S) {
     run(M.x0, SLOT.x0 - 0.1, M.z0, M.z0 + DP);        // back wall, west of the slot
     run(M.x0, M.x1, M.z1 - DP, M.z1);                 // front wall
     run(M.x0, M.x0 + DP, M.z0 + DP, M.z1 - DP);       // west wall, between the two
-    run(M.x1 - DP, M.x1, SLOT.z1, M.z1 - DP);         // east wall, south of the slot
+    /* East wall, south of the slot -- starting two centimetres back
+       from the slot's edge. Started AT the edge, its end cap shared the
+       plane z = SLOT.z1 with the end of the ceiling slab it is buried
+       in, and the ten centimetres where they overlap flickered (the
+       surface sweep, 0.03 m2). Set back, the end cap sits under the
+       slab's lip like a reveal. */
+    run(M.x1 - DP, M.x1, SLOT.z1 + 0.02, M.z1 - DP);
     // Joists across the short way, clear of the stair slot.
     for (let x = M.x0 + 2.2; x < SLOT.x0 - 0.4; x += 2.2) {
       slab(x - 0.10, x + 0.10, CY - 0.26, CY + 0.10, M.z0 + IN, M.z1 - IN, beam);
