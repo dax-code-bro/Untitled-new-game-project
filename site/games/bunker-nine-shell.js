@@ -1898,6 +1898,13 @@ function openMain() {
   el.mainlist.innerHTML = '';
   var rows = [];
 
+  /* The story: missions on the multiplayer maps (campaign.html, campaign-missions.js). */
+  if (W.MP_DATA) {
+    var camp = mkItem('Campaign', 'the story, mission by mission');
+    el.mainlist.appendChild(camp);
+    rows.push(wire({ el: camp, onEnter: function () { W.location.href = 'campaign.html'; } }));
+  }
+
   var zombies = mkItem('Play Zombies', 'choose your ground');
   el.mainlist.appendChild(zombies);
   rows.push(wire({ el: zombies, onEnter: openMaps }));

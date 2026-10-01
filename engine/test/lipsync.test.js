@@ -171,6 +171,34 @@ console.log('blinking every thirty seconds');
   check('and the mouth goes back to rest after it', !f.speaking && Object.values(f.ctl).every((v) => Math.abs(v) < 0.01));
 }
 
+console.log('expression and gaze');
+{
+  const e = [0.4, 0, 0, 0, 0, 0.4, 0, 0, 0, 0, 0.4, 0, 0, 1.6, 0, 1];   // a head 1.6 m up, scaled like a character's
+  const f = new MhFace({ gl: null, camera: null }, { matrix: { e }, visible: true }, null, { seed: 3 });
+  f.enabled = false;                                     // no GPU here: exercise the driver, not the upload
+  f.setEmotion('pain', 1);
+  for (let i = 0; i < 60; i++) f.update(1 / 60);
+  check('pain: brows down, eyes squeezed, mouth pulled', f.ctl.browDown > 0.7 && f.ctl.squint > 0.6 && f.ctl.spread > 0.3, JSON.stringify(f.ctl));
+  f.setEmotion('fear', 1, 0.5);
+  for (let i = 0; i < 20; i++) f.update(1 / 60);
+  check('fear: brows up, eyes wide', f.ctl.browUp > 0.6 && f.ctl.wide > 0.6);
+  for (let i = 0; i < 90; i++) f.update(1 / 60);
+  check('a timed expression relaxes on its own', f.ctl.browUp < 0.1 && f.emotion === 'neutral', f.ctl.browUp);
+  f.setEmotion('happy', 1);
+  f.say('Good to see you.', { duration: 1.2 });
+  for (let i = 0; i < 20; i++) f.update(1 / 60);
+  check('speech rides on the expression: the smile holds while the mouth talks', f.ctl.smile > 0.15 && f.speaking);
+  // Gaze: a point off to the character's left (+x in the head frame) and level with the eyes.
+  f.lookAt({ x: 3, y: 1.6 + 0.011 * 0.4 / 0.378, z: 2 });
+  let yaw = 0, jumps = 0, last = f.gaze.yaw;
+  for (let i = 0; i < 240; i++) { f.update(1 / 60); if (Math.abs(f.gaze.yaw - last) > 0.02) jumps++; last = f.gaze.yaw; yaw = f.gaze.yaw; }
+  check('the eyes turn to what they are told to look at', yaw > 0.35, yaw.toFixed(2));
+  check('and do not stare fixed: small quick jumps (saccades)', jumps >= 2, jumps);
+  f.lookAt(null);
+  for (let i = 0; i < 120; i++) f.update(1 / 60);
+  check('looking ahead again', Math.abs(f.gaze.yaw) < 0.2, f.gaze.yaw.toFixed(2));
+}
+
 /* 5. In the game: pick a character on the Bunker Nine select screen and the one standing on the
    stage says their line with their own mouth. Needs a browser; skipped (and said so) without one. */
 (async () => {

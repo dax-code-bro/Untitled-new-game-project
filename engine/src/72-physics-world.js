@@ -159,6 +159,8 @@ class Joint {
 
 /* ---------------- world ---------------- */
 
+const _rc = [new Vec3(), new Vec3(), new Vec3()];
+
 class PhysicsWorld {
   constructor(opts = {}) {
     this.gravity = Vec3.from(opts.gravity != null ? opts.gravity : [0, -19.6, 0]);
@@ -206,6 +208,7 @@ class PhysicsWorld {
     if (i >= 0) this.bodies.splice(i, 1);
     const j = this._staticPlanes.indexOf(body);
     if (j >= 0) this._staticPlanes.splice(j, 1);
+    this._bpUnhash(body);
     // Drop cached manifolds by identity — matching on the string key would
     // mis-handle ids that are prefixes of one another (1 vs 10).
     for (const [key, m] of Array.from(this.manifolds.entries())) {
@@ -228,51 +231,109 @@ class PhysicsWorld {
     return a.id < b.id ? a.id * 2097152 + b.id : b.id * 2097152 + a.id;
   }
 
+  /* THE STILL WORLD IS HASHED ONCE.
+   *
+     Every step cleared the grid and hashed every body in it again -- the
+     thousand-odd walls, kerbs and crates of a map that had not moved since
+     it was built, each into every cell it covers -- and then walked every
+     cell comparing wall with wall only for _shouldCollide to reject the
+     pair. Profiled on Town that was the largest single cost in the frame,
+     larger than the whole match. Bodies that do not move under the solver
+     (static and kinematic) now live in a grid of their own that is only
+     touched when one of them actually moves (a door swinging, a lift) or
+     comes or goes; each step hashes just the moving bodies and asks each
+     of them about its own cells in both grids. The pairs are the same
+     pairs, found without the walls meeting each other. */
+  _bpHash(b, inv) {
+    b.updateAabb();
+    const x0 = Math.floor(b.aabb.min.x * inv), x1 = Math.floor(b.aabb.max.x * inv);
+    const y0 = Math.floor(b.aabb.min.y * inv), y1 = Math.floor(b.aabb.max.y * inv);
+    const z0 = Math.floor(b.aabb.min.z * inv), z1 = Math.floor(b.aabb.max.z * inv);
+    const keys = b._bpKeys || (b._bpKeys = []);
+    keys.length = 0;
+    // Guard against an object flung to infinity filling the grid.
+    if ((x1 - x0) > 64 || (y1 - y0) > 64 || (z1 - z0) > 64) return keys;
+    for (let x = x0; x <= x1; x++) {
+      for (let y = y0; y <= y1; y++) {
+        for (let z = z0; z <= z1; z++) {
+          // Standard spatial hash. Distinct cells may collide onto one bucket, which only costs a
+          // redundant AABB test -- never a miss, since equal cells always hash equally.
+          keys.push((x * 73856093) ^ (y * 19349663) ^ (z * 83492791));
+        }
+      }
+    }
+    return keys;
+  }
+
+  _bpUnhash(b) {
+    if (!b._bpIn || !this._sgrid) return;
+    for (const k of b._bpKeys) {
+      const cell = this._sgrid.get(k);
+      if (!cell) continue;
+      const i = cell.indexOf(b);
+      if (i >= 0) { cell[i] = cell[cell.length - 1]; cell.pop(); }
+      if (!cell.length) this._sgrid.delete(k);
+    }
+    b._bpIn = false;
+  }
+
   _broadphase() {
     this.grid.clear();
     this._pairs.length = 0;
     this._seen.clear();
-    this._cellPool.length = 0;
     const inv = 1 / this.cellSize;
+    if (!this._sgrid || this._sgridCell !== this.cellSize) {
+      if (this._sgrid) for (const b of this.bodies) b._bpIn = false;
+      this._sgrid = new Map(); this._sgridCell = this.cellSize;
+    }
+    const S = this._sgrid;
 
     const movable = this._movable;
     movable.length = 0;
+    const dyn = this._dynList || (this._dynList = []);
+    dyn.length = 0;
     for (const b of this.bodies) {
       if (b.shape.type === SHAPE.PLANE) continue;
-      b.updateAabb();
       movable.push(b);
-      const x0 = Math.floor(b.aabb.min.x * inv), x1 = Math.floor(b.aabb.max.x * inv);
-      const y0 = Math.floor(b.aabb.min.y * inv), y1 = Math.floor(b.aabb.max.y * inv);
-      const z0 = Math.floor(b.aabb.min.z * inv), z1 = Math.floor(b.aabb.max.z * inv);
-      // Guard against an object flung to infinity filling the grid.
-      if ((x1 - x0) > 64 || (y1 - y0) > 64 || (z1 - z0) > 64) continue;
-      for (let x = x0; x <= x1; x++) {
-        for (let y = y0; y <= y1; y++) {
-          for (let z = z0; z <= z1; z++) {
-            // Standard spatial hash. Distinct cells may collide onto one
-            // bucket, which only costs a redundant AABB test — never a miss,
-            // since equal cells always hash equally.
-            const key = (x * 73856093) ^ (y * 19349663) ^ (z * 83492791);
-            let cell = this.grid.get(key);
-            if (!cell) { cell = []; this.grid.set(key, cell); }
-            cell.push(b);
-          }
+      if (b.dynamic) {
+        const keys = this._bpHash(b, inv);
+        for (const k of keys) {
+          let cell = this.grid.get(k);
+          if (!cell) { cell = []; this.grid.set(k, cell); }
+          cell.push(b);
         }
+        dyn.push(b);
+        continue;
       }
+      // Still: re-hashed only if it has moved since it was hashed.
+      const p = b.position, q = b.quaternion, c = b._bpAt;
+      if (b._bpIn && c && c[0] === p.x && c[1] === p.y && c[2] === p.z
+          && (!q || (c[3] === q.x && c[4] === q.y && c[5] === q.z && c[6] === q.w))) continue;
+      this._bpUnhash(b);
+      const keys = this._bpHash(b, inv);
+      for (const k of keys) {
+        let cell = S.get(k);
+        if (!cell) { cell = []; S.set(k, cell); }
+        cell.push(b);
+      }
+      b._bpIn = true;
+      b._bpAt = [p.x, p.y, p.z, q ? q.x : 0, q ? q.y : 0, q ? q.z : 0, q ? q.w : 1];
     }
 
-    for (const cell of this.grid.values()) {
-      for (let i = 0; i < cell.length; i++) {
-        const a = cell[i];
-        for (let j = i + 1; j < cell.length; j++) {
-          const b = cell[j];
-          if (!this._shouldCollide(a, b)) continue;
-          if (!a.aabb.overlaps(b.aabb)) continue;
-          const key = this._pairKey(a, b);
-          if (this._seen.has(key)) continue;
-          this._seen.add(key);
-          this._pairs.push(a.id < b.id ? a : b, a.id < b.id ? b : a, key);
-        }
+    const consider = (a, b) => {
+      if (a === b || !this._shouldCollide(a, b)) return;
+      if (!a.aabb.overlaps(b.aabb)) return;
+      const key = this._pairKey(a, b);
+      if (this._seen.has(key)) return;
+      this._seen.add(key);
+      this._pairs.push(a.id < b.id ? a : b, a.id < b.id ? b : a, key);
+    };
+    for (const a of dyn) {
+      for (const k of a._bpKeys) {
+        const dc = this.grid.get(k);
+        if (dc) for (let j = 0; j < dc.length; j++) { const b = dc[j]; if (b.id > a.id) consider(a, b); }
+        const sc = S.get(k);
+        if (sc) for (let j = 0; j < sc.length; j++) consider(a, sc[j]);
       }
     }
 
@@ -818,12 +879,11 @@ class PhysicsWorld {
     const o = Vec3.from(origin);
     const d = Vec3.from(direction).normalize();
     let best = null, bestT = maxDist;
-    const localO = new Vec3(), localD = new Vec3(), n = new Vec3();
+    const localO = _rc[0], localD = _rc[1], n = _rc[2];
 
-    for (const b of this.bodies) {
-      if (filter && !filter(b)) continue;
-      if (b.isTrigger) continue;
-
+    const test = (b) => {
+      if (filter && !filter(b)) return;
+      if (b.isTrigger) return;
       if (b.shape.type === SHAPE.SPHERE) {
         const t = raySphere(o, d, b.position, b.shape.radius);
         if (t >= 0 && t < bestT) {
@@ -835,7 +895,7 @@ class PhysicsWorld {
       } else if (b.shape.type === SHAPE.PLANE) {
         const pn = new Vec3().copy(b.shape.normal).applyQuat(b.quaternion);
         const denom = pn.dot(d);
-        if (Math.abs(denom) < 1e-8) continue;
+        if (Math.abs(denom) < 1e-8) return;
         const offset = b.shape.offset + pn.dot(b.position);
         const t = (offset - pn.dot(o)) / denom;
         if (t >= 0 && t < bestT) {
@@ -848,7 +908,8 @@ class PhysicsWorld {
         }
       } else {
         // Cheap reject against the bounding sphere before the face walk.
-        if (raySphere(o, d, b.position, b.shape.boundRadius) < 0) continue;
+        const ts = raySphere(o, d, b.position, b.shape.boundRadius);
+        if (ts < 0 || ts > bestT + b.shape.boundRadius * 2) return;
         worldToLocal(b, o, localO);
         localD.copy(d).applyQuatInv(b.quaternion);
         const t = rayConvex(localO, localD, b.shape, n);
@@ -861,7 +922,53 @@ class PhysicsWorld {
           };
         }
       }
+    };
+
+    /* THROUGH THE STILL GRID, NOT PAST EVERY BODY.
+     *
+       A ray walked all thousand-odd bodies of a map to find the one under
+       a man's feet, and every combatant asks that every frame. With the
+       still bodies hashed (_broadphase) the ray steps cell by cell along
+       its own line and tests only what is in the cells it crosses, nearest
+       first, stopping once a hit is nearer than the next cell. Everything
+       that is not in that grid -- moving bodies, planes, anything too big
+       to hash, anything added since the last step -- is tested directly. */
+    const S = this._sgrid;
+    if (!S || this.bodies.length < 160) {
+      for (const b of this.bodies) test(b);
+      return best;
     }
+    const stamp = (this._rayStamp = (this._rayStamp + 1) | 0) || (this._rayStamp = 1);
+    for (const b of this.bodies) {
+      if (b._bpIn && b._bpKeys.length && !b.dynamic) continue;
+      test(b);
+    }
+    const cs = this.cellSize, inv = 1 / cs;
+    let cx = Math.floor(o.x * inv), cy = Math.floor(o.y * inv), cz = Math.floor(o.z * inv);
+    const sx = d.x > 0 ? 1 : -1, sy = d.y > 0 ? 1 : -1, sz = d.z > 0 ? 1 : -1;
+    const tdx = d.x !== 0 ? Math.abs(cs / d.x) : Infinity, tdy = d.y !== 0 ? Math.abs(cs / d.y) : Infinity, tdz = d.z !== 0 ? Math.abs(cs / d.z) : Infinity;
+    let tmx = d.x !== 0 ? ((d.x > 0 ? (cx + 1) * cs - o.x : o.x - cx * cs) / Math.abs(d.x)) : Infinity;
+    let tmy = d.y !== 0 ? ((d.y > 0 ? (cy + 1) * cs - o.y : o.y - cy * cs) / Math.abs(d.y)) : Infinity;
+    let tmz = d.z !== 0 ? ((d.z > 0 ? (cz + 1) * cs - o.z : o.z - cz * cs) / Math.abs(d.z)) : Infinity;
+    let tEnter = 0;
+    for (let guard = 0; guard < 4096; guard++) {
+      const cell = S.get((cx * 73856093) ^ (cy * 19349663) ^ (cz * 83492791));
+      if (cell) for (let i = 0; i < cell.length; i++) {
+        const b = cell[i];
+        if (b._rayStamp === stamp) continue;
+        b._rayStamp = stamp;
+        test(b);
+      }
+      // Anything hit is nearer than the next cell boundary: nothing further on can beat it.
+      const tNext = Math.min(tmx, tmy, tmz);
+      if (best && bestT <= tNext) break;
+      if (tNext > bestT || tNext > maxDist) break;
+      tEnter = tNext;
+      if (tmx <= tmy && tmx <= tmz) { cx += sx; tmx += tdx; }
+      else if (tmy <= tmz) { cy += sy; tmy += tdy; }
+      else { cz += sz; tmz += tdz; }
+    }
+    void tEnter;
     return best;
   }
 

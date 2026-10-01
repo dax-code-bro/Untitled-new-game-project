@@ -5,8 +5,8 @@ C++, rendering the game's real maps at any resolution — 4K, 8K — with
 procedural textures baked at 4096².
 
 **Download (Windows, ready to run):** `release/legend-native-windows.zip` —
-unzip, double-click an `Explore - …` launcher. See `tools/windows/README.txt`
-for controls and requirements.
+unzip, double-click `PLAY - Bunker Nine (zombies)` or an `Explore - …`
+launcher. See `tools/windows/README.txt` for controls and requirements.
 
 ## What is ported, and how it is verified
 
@@ -36,12 +36,28 @@ environment switch to turn it off for comparison):
 | H. Trees & walls | near crowns are alpha-cut cards carrying a painted spray of small leaves (so a leaf is centimetres, whatever the crown's scale), conifer tiers are needle sprays hanging off the cone, trunks and limbs are tapered, bent, root-flared meshes in a generated bark; cut-out shadows (`shadow.frag` ALPHA_CLIP); mulch mounds; wall fittings (meter boxes, conduit, vents, lamps, wall AC units); freestanding and cover walls get stone posts and copings | `GAME_GEOMETRY_LEAVES=1` |
 | F. Light | auto exposure (`exposure.frag`), physical sky on daytime maps, noon suns lowered to 40° on their own bearing, thinner haze | `GAME_WEB_LIGHT=1` |
 
+### The game (`--play`, `src/game/`)
+
+A zombies round on Bunker Nine or Coastline, native:
+
+| | | from the web game |
+|---|---|---|
+| What is solid | every static body of the web physics world, as world-space convex hulls, spheres and planes, in a 2D grid; rays (DDA) and sphere push-out (`Collision.cpp`) | `export_scene.js` writes the `gameplay` section |
+| Where they walk | a layered 0.5 m walk grid probed down from the colliders (floors, decks, stairs), and one flow field (Dijkstra from the player) every zombie follows (`Nav.cpp`) | built natively from the same colliders |
+| The zombies and the guns | the web game's own zombie bodies and viewmodels, RECORDED frame by frame -- part matrices, visibility, every skeleton's bone palette, the muzzle -- and played back (`Kit.cpp`) | `tools/export_kit.js` → `kit.lekit` |
+| The round | come up at the spawn pads, walk to a window, tear at it, climb in, hunt on the flow field, swing; count, health, damage, spawn gap, live cap and speed per round from the web `ROUNDS` table; the player's walk, sprint, aimed speed and regeneration from `PLAYER`; M1911, Thompson and Scattergun with the web `WEAPONS` damage, headshot multiplier, rate, magazine, reserve, spread, aimed spread, aim time and recoil (`Zombies.cpp`) | the numbers are the web game's |
+| HUD | round tally, points and pop-ups, ammunition, crosshair that opens with spread, hit marker, reload bar, health, hurt vignette, down screen, pause (`Hud.cpp`, a built-in 5x7 face, no font files) | |
+
+`--autoplay` puts a bot at the controls (it aims, shoots, reloads and backs
+off); `--sim-seconds S` plays S seconds unrendered before the first frame,
+so a test plays several rounds in seconds and prints what happened.
+
 ### What is not ported
 
-Gameplay. There are no zombies, no weapons firing, no physics, no AI, no
-HUD and no audio in the native build: it renders the maps and lets you fly
-through them. Those systems are the larger part of the JavaScript (`70-`
-to `99-`, and `site/games/`), and the web build remains the playable game.
+From the zombies game: buyable doors, perks, the mystery box, wall buys,
+power-ups, the special zombies and bosses, boards being rebuilt, audio.
+Multiplayer matches and the campaign are web-only. The web build remains
+the complete game.
 
 ## A bug the port found in the web game
 
@@ -106,10 +122,11 @@ src/assets/     procedural material baker        (game_assets, no GL)
 src/geometry/   primitives, tangents              (game_geometry, no GL)
 src/rendering/  gl/ RAII wrappers, ShaderLibrary, Renderer, Material, Mesh, Tunables
 src/scene/      Showcase, SceneFile (exported maps), Foliage, Scatter, BuildingKit
+src/game/       --play: Collision, Nav, Kit (recorded rigs), Zombies (the round), Hud
 src/core/       Window, Args, Capture, Paths, GlDebug
 shaders/        GLSL 4.50, #include-able lib/
 scripts/        look.ini (live look overrides)
-tools/          extract_glsl.js, export_scene.js, package_windows.sh, parity dumps
+tools/          extract_glsl.js, export_scene.js, export_kit.js, package_windows.sh, parity dumps
 tests/          parity, shader compile, render stages
 ```
 

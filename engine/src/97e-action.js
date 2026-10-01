@@ -113,10 +113,66 @@ function turnAbout(a, pivot, axis, deg) {
   a.setPosition([px - rx, py - ry, pz - rz]);
 }
 
+/* WHERE THE BREECH RESTS, which is not "closed" for every gun.
+ *
+ * Two real behaviours the actions above did not have, and both are the
+ * first thing a person who has handled the gun looks for:
+ *
+ *   OPEN BOLT    the submachine guns of the war and every belt and bipod
+ *                gun fire from an open bolt: cocked, it sits at the BACK of
+ *                the receiver, and the trigger lets it fly forward, strip a
+ *                round, fire and come back to be caught. So at rest the bolt
+ *                of a Thompson is back, not forward -- and on an empty
+ *                magazine it rides home and stays shut until it is cocked.
+ *   HOLD-OPEN    a pistol's slide, and the bolt of a rifle with a bolt catch,
+ *                LOCKS BACK on the last round. The empty gun tells you it is
+ *                empty; the reload ends with the slide (or bolt) going home.
+ *
+ * Which guns, from the real ones: the MP5 and the AK famously do not hold
+ * open; the M16, the Garand, the AUG and every service pistol do. */
+const BREECH_OPEN_BOLT = new Set(['thompson', 'grease', 'mp40', 'ppsh', 'sten',
+  'mg42', 'mg34', 'm60', 'pkm', 'rpd', 'bar', 'bren', 'dp28']);
+const BREECH_HOLD_OPEN = new Set(['m1911', 'blaze', 'p226', 'tokarev', 'g18', 'mauser',
+  'm16', 'm4', 'garand', 'svt40', 'bm59', 'falke', 'aug', 'mp7', 'ump', 'vector', 'svd']);
+function breechOf(id) {
+  return { openBolt: BREECH_OPEN_BOLT.has(id), holdOpen: BREECH_HOLD_OPEN.has(id) };
+}
+/* The breech's travel for a gun on a shot cycle. `u` is how far through the
+   cycle it is (0..1, or < 0 between shots), `stroke` the closed-bolt stroke
+   at u (0 in battery, 1 back), `empty` whether the magazine is out. */
+function breechTravel(br, u, stroke, empty) {
+  const cycling = u >= 0 && u < 1;
+  if (br && br.openBolt) {
+    if (cycling) return empty && u > 0.5 ? Math.min(1 - stroke, 1 - u) : 1 - stroke;   // forward, fire, back -- or home on the last
+    return empty ? 0 : 1;
+  }
+  if (br && br.holdOpen && empty) {
+    // Back as usual, and caught there: it does not come forward again.
+    return cycling ? (u > 0.2 ? 1 : stroke) : 1;
+  }
+  return cycling ? stroke : 0;
+}
+
 function poseAction(gun, act, s) {
   if (!gun || !act) return;
   const fire = s.fire || 0, hand = s.hand || 0, reload = s.reload || 0;
-  const back = act.cycle === 'shot' ? fire : (act.cycle === 'hand' ? hand : 0);
+  let back = act.cycle === 'shot' ? fire : (act.cycle === 'hand' ? hand : 0);
+  /* The open bolt and the hold-open (breechOf), when the caller says which
+     gun this is and where its cycle is. */
+  if (s.breech && act.cycle === 'shot' && s.fireU != null) {
+    const want = breechTravel(s.breech, s.fireU, fire, !!s.empty);
+    /* Between shots the rest position can change under it -- the reload
+       ends and an open bolt is cocked, a slide is released -- and a part
+       does not teleport: it runs there in a few hundredths of a second.
+       On the shot itself it follows the stroke exactly. */
+    const k = s.breechState;
+    if (k) {
+      const cycling = s.fireU >= 0 && s.fireU < 1;
+      k.shown = cycling || k.shown == null ? want : k.shown + (want - k.shown) * Math.min(1, (s.dt || 0.016) * 28);
+      back = k.shown;
+    } else back = want;
+    if (s.hand > 0) back = Math.max(back, hand);   // the inspect still opens it
+  }
 
   /* The breech. Along the throw the MODEL declares, so a side-charging
      SMG and an inline rifle each move along the axis their own tube

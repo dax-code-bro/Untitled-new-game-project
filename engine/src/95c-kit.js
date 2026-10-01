@@ -501,6 +501,120 @@ function _kDecimate(P, I, maxErr, maxLen = 0.045) {
 }
 
 
+/* A DISTANT VERSION OF ANY HARD-EDGED MESH. A gun, a crate or a lamp is built with its normals
+   split at every crease, so as far as the mesh knows each flat face is its own island -- every
+   edge is "open", and _kDecimate (which never moves an open edge) cannot touch it. So the points
+   are welded by position first, the welded surface is decimated, and the result is drawn flat,
+   one normal per triangle: at the distance this is drawn from, a crease is a pixel and a flat
+   facet is what it looks like anyway. Colours and UVs come from the vertex each point was welded
+   from. Returns null when decimation would not save at least a third. */
+function decimateForDistance(geo, maxErr) {
+  const P0 = geo.positions, I0 = geo.indices, n0 = P0.length / 3;
+  if (!I0 || I0.length < 3 || n0 < 64) return null;
+  const q = 1 / Math.max(maxErr * 0.05, 1e-6), rep = new Int32Array(n0), seen = new Map(), P = [];
+  const src = [];
+  for (let v = 0; v < n0; v++) {
+    const k = Math.round(P0[v * 3] * q) + ',' + Math.round(P0[v * 3 + 1] * q) + ',' + Math.round(P0[v * 3 + 2] * q);
+    let r = seen.get(k);
+    if (r === undefined) { r = src.length; seen.set(k, r); src.push(v); P.push(P0[v * 3], P0[v * 3 + 1], P0[v * 3 + 2]); }
+    rep[v] = r;
+  }
+  const I = [];
+  for (let t = 0; t < I0.length; t += 3) {
+    const a = rep[I0[t]], b = rep[I0[t + 1]], c = rep[I0[t + 2]];
+    if (a !== b && b !== c && a !== c) I.push(a, b, c);
+  }
+  if (!I.length) return null;
+  const Pw = new Float64Array(P);
+  let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+  for (let i = 0; i < Pw.length; i += 3) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], Pw[i + k]); hi[k] = Math.max(hi[k], Pw[i + k]); }
+  const diag = Math.hypot(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
+  const { keep, tris } = _kDecimate(Pw, I, maxErr, Math.max(diag * 0.6, maxErr * 8));
+  /* Shared vertices, split only at a real crease: each kept point gets one vertex per group of its
+     triangles whose normals agree within ~50 degrees, with their area-weighted normal. Drawn flat it
+     had one vertex per corner and came out BIGGER than the close-up it was meant to replace. */
+  const nt = tris.length / 3, FN = new Float64Array(nt * 3);
+  for (let t = 0; t < nt; t++) {
+    const a = keep[tris[t * 3]], b = keep[tris[t * 3 + 1]], c = keep[tris[t * 3 + 2]];
+    const ux = Pw[b * 3] - Pw[a * 3], uy = Pw[b * 3 + 1] - Pw[a * 3 + 1], uz = Pw[b * 3 + 2] - Pw[a * 3 + 2];
+    const vx = Pw[c * 3] - Pw[a * 3], vy = Pw[c * 3 + 1] - Pw[a * 3 + 1], vz = Pw[c * 3 + 2] - Pw[a * 3 + 2];
+    FN[t * 3] = uy * vz - uz * vy; FN[t * 3 + 1] = uz * vx - ux * vz; FN[t * 3 + 2] = ux * vy - uy * vx;
+  }
+  const vt = Array.from({ length: keep.length }, () => []);
+  for (let t = 0; t < nt; t++) for (let k = 0; k < 3; k++) vt[tris[t * 3 + k]].push(t);
+  const g = new Geometry();
+  const C0 = geo.colors, UV0 = geo.uvs;
+  if (C0) g.colors = [];
+  const corner = new Int32Array(tris.length);
+  for (let kv = 0; kv < keep.length; kv++) {
+    const w = keep[kv], o = src[w], groups = [];
+    for (const t of vt[kv]) {
+      const l = Math.hypot(FN[t * 3], FN[t * 3 + 1], FN[t * 3 + 2]) || 1;
+      const nx = FN[t * 3] / l, ny = FN[t * 3 + 1] / l, nz = FN[t * 3 + 2] / l;
+      let grp = null;
+      for (const q of groups) if (q.fx * nx + q.fy * ny + q.fz * nz > 0.64) { grp = q; break; }
+      if (!grp) groups.push(grp = { fx: nx, fy: ny, fz: nz, sx: 0, sy: 0, sz: 0, tris: [] });
+      grp.sx += FN[t * 3]; grp.sy += FN[t * 3 + 1]; grp.sz += FN[t * 3 + 2]; grp.tris.push(t);
+    }
+    for (const q of groups) {
+      const l = Math.hypot(q.sx, q.sy, q.sz) || 1;
+      const id = g.positions.length / 3;
+      g.positions.push(Pw[w * 3], Pw[w * 3 + 1], Pw[w * 3 + 2]);
+      g.normals.push(q.sx / l, q.sy / l, q.sz / l);
+      g.uvs.push(UV0 ? UV0[o * 2] : 0, UV0 ? UV0[o * 2 + 1] : 0);
+      g.parts.push(g.part);
+      if (C0) g.colors.push(C0[o * 3], C0[o * 3 + 1], C0[o * 3 + 2]);
+      for (const t of q.tris) for (let k = 0; k < 3; k++) if (tris[t * 3 + k] === kv) corner[t * 3 + k] = id;
+    }
+  }
+  if (g.positions.length / 3 >= n0 * 0.7) return null;
+  for (let i = 0; i < corner.length; i++) g.indices.push(corner[i]);
+  g.finalize();
+  return g;
+}
+
+/* A COARSER COPY OF A SMOOTH MESH THAT KEEPS EVERYTHING IT CARRIES -- skin weights, painted colours,
+   UVs, normals -- because every surviving vertex is one of the originals (_kDecimate keeps an
+   endpoint of each collapsed edge). For bodies, hands, boots and heads at the distance where a whole
+   person is a few dozen pixels tall. Open edges (a neck cut, a UV seam) do not move, so a head still
+   meets its neck exactly. Returns null if it would not save a quarter. */
+function decimateKeep(geo, maxErr, maxLen = 0.08) {
+  const P = geo.positions, I0 = geo.indices, n = P.length / 3;
+  if (!I0 || I0.length < 3 || n < 200) return null;
+  /* Welded by position first: a UV seam or a split normal is an open edge to the decimator, which
+     pins it, and a glove's fingers are nothing but seams. Each weld keeps the first vertex's data. */
+  const seen = new Map(), rep = new Int32Array(n), q = 1 / Math.max(maxErr * 0.02, 1e-6);
+  for (let v = 0; v < n; v++) {
+    const k = Math.round(P[v * 3] * q) + ',' + Math.round(P[v * 3 + 1] * q) + ',' + Math.round(P[v * 3 + 2] * q);
+    const r = seen.get(k);
+    if (r === undefined) { seen.set(k, v); rep[v] = v; } else rep[v] = r;
+  }
+  const I = [];
+  for (let t = 0; t < I0.length; t += 3) {
+    const a = rep[I0[t]], b = rep[I0[t + 1]], c = rep[I0[t + 2]];
+    if (a !== b && b !== c && a !== c) I.push(a, b, c);
+  }
+  const { keep, tris } = _kDecimate(P, I, maxErr, maxLen);
+  if (keep.length > n * 0.75) return null;
+  const g = new Geometry();
+  const take = (A) => {
+    if (!A || !A.length || A.length % n) return null;
+    const k = A.length / n, out = new A.constructor(keep.length * k);
+    for (let i = 0; i < keep.length; i++) for (let j = 0; j < k; j++) out[i * k + j] = A[keep[i] * k + j];
+    return out;
+  };
+  g.positions = take(geo.positions); g.normals = take(geo.normals); g.uvs = take(geo.uvs) || new Float32Array(keep.length * 2);
+  if (geo.colors) g.colors = take(geo.colors);
+  if (geo.joints) g.joints = take(geo.joints);
+  if (geo.weights) g.weights = take(geo.weights);
+  g.parts = geo.parts && geo.parts.length === n ? keep.map((v) => geo.parts[v]) : new Array(keep.length).fill(geo.part || 0);
+  g.part = geo.part;
+  g.indices = tris;
+  for (const k of ['weldGroups', 'tangents', 'bounds']) g[k] = null;
+  g.finalize();
+  return g;
+}
+
 
 // Bench only: the triangles and time a step adds (window.__kitStats).
 function _kStat(G, label, fn) {

@@ -88,7 +88,7 @@ const LegendEngine = {
   /* And the twelve that are hand-dimensioned rather than table-built,
      for the same reason. See BESPOKE_ARMS in 97a-arms.js. */
   BESPOKE_ARMS, makeBespokeArm,
-  WEAPON_ACTIONS, weaponAction, poseAction,
+  WEAPON_ACTIONS, weaponAction, poseAction, breechOf, breechTravel,
   /* The shared motion vocabulary -- easing with anticipation and
      overshoot, analytic settle/kick curves, mechanism strokes, arcs,
      exact springs, smooth noise. See 90a-motion.js. */
@@ -106,7 +106,7 @@ const LegendEngine = {
   bakeCavityAO,
   /* Speech a lip-reader can follow: words to phonemes to mouth shapes on a timeline (91a-lipsync.js),
      and the MakeHuman face rig that wears them, with a blink every thirty seconds (91c-mh-face.js). */
-  LipSync, MhFace, buildMhFaceRig, mhFaceDeform, makeMhHeadGeometry,
+  LipSync, MhFace, buildMhFaceRig, mhFaceDeform, makeMhHeadGeometry, decimateForDistance, decimateKeep,
   clamp, lerp, smoothstep,
 };
 

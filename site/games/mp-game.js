@@ -52,6 +52,8 @@
        most. */
     inspect: ['i'],
     quit: ['escape'],
+    // The campaign's: hold to use something, and to skip a cutscene.
+    interact: ['f'], skip: [' ', 'enter'],
   };
 
   /* WHICH ROW OF THE SETTINGS SCREEN DRIVES WHICH READER.
@@ -1595,6 +1597,7 @@
         if (LE && LE.weaponAction && g) {
           if (state.actId !== id) {
             state.actId = id;
+            state.breechState = {};
             var sp = (window.MP_DATA && window.MP_DATA.gun) ? window.MP_DATA.gun(id) : null;
             state.act = LE.weaponAction(sp);
           }
@@ -1641,6 +1644,12 @@
               INS.bolt),
             reload: state.reloadU || 0, trigger: state.trig,
             rounds: state.rounds, spin: state.spin,
+            /* Where this gun's breech rests (LE.breechOf): an open bolt
+               cocked at the back, a slide locked back on the last round. */
+            breech: LE.breechOf ? LE.breechOf(id) : null,
+            fireU: state.cyc > 0 ? 1 - state.cyc / state.cycMax : -1,
+            empty: ammoFrac === 0, dt: d,
+            breechState: state.breechState || (state.breechState = {}),
           });
         }
 
@@ -2073,6 +2082,115 @@
     sec = Math.max(0, Math.round(sec));
     var m = Math.floor(sec / 60), s = sec % 60;
     return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  /* ================================================================
+     WHAT THE BOTS SAY
+     ================================================================
+     Short callouts -- reloading, contact, man down -- in each bot's own
+     voice, heard by distance, and SAID: the line goes to the bot's face
+     (engine MhFace), whose mouth makes the shapes of the words, with an
+     expression to go with it. A bot that is hit flinches whether or not
+     it says anything, and a bot with a target looks at it. Rationed per
+     bot and across the team, so it is chatter and not a choir. */
+  function makeChatter(game, M) {
+    var LINES = {
+      reload: ['Reloading!', 'Changing mags!', 'Cover me, reloading!', 'Mag out!'],
+      contact: ['Contact!', 'Enemy spotted!', 'Eyes on!', 'Contact front!', 'I see one!'],
+      kill: ['Got him.', 'Target down.', 'One down.', 'He is down.', 'Enemy down.'],
+      mandown: ['Man down!', 'We lost one!', 'They got him!'],
+      hurt: ['I am hit!', 'Taking fire!', 'Argh, I am hit!'],
+      plant: ['Bomb is planted!', 'The charge is set!'],
+      collapse: ['Get clear, it is coming down!', 'Move, it is falling!'],
+    };
+    var EMO = { reload: 'focus', contact: 'focus', kill: 'relief', mandown: 'fear', hurt: 'pain', plant: 'focus', collapse: 'fear' };
+    var CHANCE = { reload: 0.6, contact: 0.5, kill: 0.7, mandown: 0.6, hurt: 0.25, plant: 1, collapse: 1 };
+    var last = {}, bags = {}, globalAt = -99, seen = {};
+    function pick(kind) {
+      if (!bags[kind] || !bags[kind].length) bags[kind] = LINES[kind].slice();
+      return bags[kind].splice(Math.floor(Math.random() * bags[kind].length), 1)[0];
+    }
+    function dist(p) {
+      var me = M.you;
+      if (!me || !p.pos) return 1e9;
+      return Math.hypot(p.pos.x - me.pos.x, p.pos.y - me.pos.y, p.pos.z - me.pos.z);
+    }
+    function say(p, kind, force) {
+      if (!p || !p.bot || (!p.alive && kind !== 'hurt')) return false;
+      var now = M.time;
+      if (!force && (now - (last[p.id] == null ? -99 : last[p.id]) < 5 || now - globalAt < 1.2)) return false;
+      if (!force && Math.random() > (CHANCE[kind] || 0.5)) return false;
+      var d = dist(p);
+      if (d > 45) return false;                 // nobody near enough to hear it
+      last[p.id] = now; globalAt = now;
+      var text = pick(kind);
+      var V = { pitch: 92 + (p.id * 37) % 64, rate: 5.6, tract: 0.94 + ((p.id * 13) % 12) / 100, volume: 0.55 * (1 - d / 45) };
+      var dur = 0;
+      try { if (game.audio && game.audio.speak) dur = game.audio.speak(text, V) || 0; } catch (e) { /* audio off */ }
+      if (!dur) { try { dur = game.audio && game.audio.speakLength ? game.audio.speakLength(text, V) : 0; } catch (e) { dur = 0; } }
+      if (!dur) dur = 0.35 + text.length * 0.055;
+      var f = p.actor && p.actor.face;
+      if (f && f.say) f.say(text, { duration: dur, emotion: EMO[kind], strength: 0.8 });
+      return text;
+    }
+    return {
+      say: say,
+      onEvent: function (ev) {
+        if (ev.kind === 'kill') {
+          var by = M.people[ev.by], who = M.people[ev.who];
+          if (by && by !== who) say(by, 'kill');
+          if (who) {
+            var f = who.actor && who.actor.face;
+            if (f && f.setEmotion) f.setEmotion('pain', 1, 2.5);
+            // The nearest teammate who saw it happen calls it.
+            var best = null, bd = 15;
+            for (var i = 0; i < M.people.length; i++) {
+              var q = M.people[i];
+              if (q === who || !q.alive || !q.bot || q.team !== who.team) continue;
+              var dd = Math.hypot(q.pos.x - who.pos.x, q.pos.z - who.pos.z);
+              if (dd < bd) { bd = dd; best = q; }
+            }
+            if (best) say(best, 'mandown');
+          }
+        } else if (ev.kind === 'plant') {
+          say(M.people[ev.who], 'plant', true);
+        } else if (ev.kind === 'creak' && ev.at) {
+          for (var j = 0; j < M.people.length; j++) {
+            var r = M.people[j];
+            if (r.bot && r.alive && Math.hypot(r.pos.x - ev.at[0], r.pos.z - ev.at[2]) < (ev.r || 8) + 6) { say(r, 'collapse', true); break; }
+          }
+        }
+      },
+      tick: function () {
+        var cam = game.camera && game.camera.position;
+        for (var i = 0; i < M.people.length; i++) {
+          var p = M.people[i];
+          if (!p.bot) continue;
+          var s = seen[p.id] || (seen[p.id] = { reload: 0, target: null, hurt: p.hurtAt || 0 });
+          var face = p.actor && p.actor.face;
+          if (p.alive) {
+            if (p.reloadUntil > 0 && !s.reload) say(p, 'reload');
+            var t = p.ai && p.ai.target;
+            if (t && t !== s.target && !s.target) say(p, 'contact');
+            if ((p.hurtAt || 0) > s.hurt + 1e-6) {
+              if (face && face.setEmotion) face.setEmotion('pain', 0.9, 0.55);
+              say(p, 'hurt');
+            }
+            s.target = t || null;
+          }
+          s.reload = p.reloadUntil > 0 ? 1 : 0;
+          s.hurt = p.hurtAt || 0;
+          /* Where the eyes go: at the man it is fighting, or -- if nobody, and you are close
+             and in front of it -- at you. Otherwise ahead. */
+          if (face && face.lookAt) {
+            var tgt = p.ai && p.ai.target;
+            if (tgt && tgt.actor) face.lookAt(tgt === M.you && cam ? cam : tgt.actor);
+            else if (cam && dist(p) < 6) face.lookAt(cam);
+            else face.lookAt(null);
+          }
+        }
+      },
+    };
   }
 
   function makeHud(root, M) {
@@ -2955,11 +3073,17 @@
       game: game,
       mapId: opts.mapId || 'town',
       mode: opts.mode || 'tdm',
+      /* The campaign's: its own mode (no score, no clock, no respawns of their own), its own side
+         sizes, and who is who. See campaign.js. */
+      modeDef: opts.modeDef || null, teamSize: opts.teamSize || null, roster: opts.roster || null,
       seed: opts.seed || (Date.now() & 0x7fffffff),
       you: { name: opts.name || 'YOU', loadout: opts.loadout,
         operator: opts.operator || 'delta' },
-      onEvent: function (ev) { hud.onEvent(ev); },
+      onEvent: function (ev) { hud.onEvent(ev); if (chatter) chatter.onEvent(ev); },
     });
+    var chatter = makeChatter(game, M);
+    W.MP_CHATTER = chatter;
+    var storyTick = null, controlsLocked = false;
 
     /* YOU ARE INSIDE YOUR OWN HEAD, so it must not be drawn.
      *
@@ -3464,6 +3588,11 @@
          suggestion. Without this you would be walking at your own
          pace, firing your own weapon, from inside a mech. */
       var suited = !!(berserk && berserk.riding);
+      /* Held still by the campaign during a briefing or a cutscene: no walking, no shooting. */
+      if (controlsLocked) {
+        cmd.forward = 0; cmd.right = 0; cmd.run = false; cmd.jump = false; cmd.crouch = false;
+        cmd.reload = false; cmd.swap = false; cmd.inspect = false; cmd.slide = false; cmd.fire = false; cmd.aim = false;
+      }
       if (!suited) M.control(cmd, dt);
       if (!suited && p.ammo[p.held] < before) {
         /* THE WEAPON IN HAND NOW, not the one `w` happens to hold.
@@ -3495,6 +3624,8 @@
         fireSound(game, p.guns[p.held], p.ammo[p.held] === 0);
       }
       M.update(dt);
+      if (chatter) chatter.tick(dt);
+      if (storyTick) storyTick(dt);
       /* THE KILL, AND WHAT IT IS WORTH. Counted off p.kills rather than
          the event stream, because that is the number the scoreboard
          already trusts and the two must not disagree. */
@@ -3597,7 +3728,16 @@
          who did it, which is the cheapest kill camera there is and is
          better than a black screen. */
       var eye;
-      if (p.alive) {
+      /* A CUTSCENE HAS THE CAMERA (the campaign's api.cinematic): an eye, a point to look at and a
+         lens, every frame, and no gun in the picture. */
+      var cine = api && api.cinematic ? api.cinematic(dt) : null;
+      if (cine) {
+        vm.hide();
+        game.lookAt(cine.eye, cine.at);
+        if (cine.fov && game.fieldOfView) game.fieldOfView(cine.fov);
+        eye = { x: cine.eye[0], y: cine.eye[1], z: cine.eye[2] };
+        hud.paint(0.02, false, 0);
+      } else if (p.alive) {
         /* THE STANCE IS EASED, NOT SWITCHED. Standing, crouched and
            flat are 1.62, 1.20 and 0.38 metres of eye height, and
            jumping between them is what makes a crouch feel like a
@@ -3793,7 +3933,8 @@
          the frame you fell over in. */
       if (aliveWas && !p.alive && !M.over) {
         var ev = myLastDeath();
-        if (ev && ev.by != null && ev.by !== p.id) camPend = { ev: ev, at: M.time + 0.75 };
+        // The campaign handles its own deaths (a checkpoint, not a kill camera).
+        if (ev && ev.by != null && ev.by !== p.id && !opts.story) camPend = { ev: ev, at: M.time + 0.75 };
       }
       aliveWas = p.alive;
       if (p.alive) camPend = null;
@@ -3900,9 +4041,15 @@
         return rail._call();
       },
       look: function (x, y) { yaw = x; pitch = y; },
+      /* For the campaign (campaign.js): a camera override, a control lock, and the two keys it reads. */
+      cinematic: null,
+      lockControls: function (on) { controlsLocked = !!on; },
+      interactHeld: function () { return input.any(K.interact); },
+      skipHeld: function () { return input.any(K.skip); },
       stop: function () { over = true; input.dispose(); game.stop(); },
     };
     W.MP_GAME_LIVE = api;
+    if (opts.onReady) storyTick = opts.onReady(api, M, game, hud) || null;
     return api;
   }
 

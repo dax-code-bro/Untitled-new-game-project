@@ -102,15 +102,20 @@ target_compile_definitions(game_core PUBLIC GAME_SOURCE_DIR="${CMAKE_CURRENT_SOU
 game_module(game_scene src/scene)
 target_link_libraries(game_scene PUBLIC game_render game_core nlohmann_json::nlohmann_json)
 
+# The game: collision, navigation, the recorded zombies and viewmodels, the
+# rules of a zombies round and the HUD. Pure CPU apart from Kit/Hud uploads.
+game_module(game_play src/game)
+target_link_libraries(game_play PUBLIC game_scene game_render game_core nlohmann_json::nlohmann_json)
+
 add_executable(my_cpp_game src/main.cpp)
-target_link_libraries(my_cpp_game PRIVATE game_scene game_core game_render)
+target_link_libraries(my_cpp_game PRIVATE game_play game_scene game_core game_render)
 
 # Every tests/*.cpp becomes its own executable, linked against everything.
 file(GLOB _tests CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp)
 foreach(_t ${_tests})
   get_filename_component(_n ${_t} NAME_WE)
   add_executable(${_n} ${_t})
-  target_link_libraries(${_n} PRIVATE game_scene game_core game_render game_assets game_geometry)
+  target_link_libraries(${_n} PRIVATE game_play game_scene game_core game_render game_assets game_geometry)
 endforeach()
 
 if(GAME_WITH_ASSIMP)

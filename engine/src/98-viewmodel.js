@@ -1949,6 +1949,95 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     p = new Vec3(p.x + d.x * 0.0045, p.y + d.y * 0.0045, p.z + d.z * 0.0045);
     travelled += 0.0045;
     push(r0 * 0.44);
+    /* OUT OF THE SIGHT PICTURE, A SUPPORT FINGER AT A TIME.
+     *
+     * Measured on the seven weapons that still had a hand in the sights,
+     * the offenders were the four fingertips of the support hand, standing
+     * straight up over the CENTRE of the weapon 42 to 61 mm above its top:
+     * not wrapped round anything, floating, because the march stalls once
+     * the crown is behind it and the last bones carry on in the direction
+     * they had. Re-shaping the bends was tried eleven ways (see above) and
+     * every shape that cleared the line put flesh in the metal.
+     *
+     * A finger that is in the air over a forend has room to close: so the
+     * finished finger is turned, whole, about its own knuckle and its own
+     * bend axis -- the way it closes, never the other way -- by the least
+     * angle that puts every ring of it (centre plus radius) under the sight
+     * line, and only if that leaves no more of its axis inside the weapon
+     * than it had before. Nothing is reshaped; a finger that cannot get
+     * under the line that way is left as it was. */
+    if (fore && marchOn && opts.sightY != null) {
+      const ceil = opts.sightY - 0.0015;
+      const overOf = (R) => { let m = -1; for (const q of R) if (q.p.y + q.w - ceil > m) m = q.p.y + q.w - ceil; return m; };
+      if (overOf(rs) > 0) {
+        let ax = pt.y * cl.z - pt.z * cl.y, ay = pt.z * cl.x - pt.x * cl.z, az = pt.x * cl.y - pt.y * cl.x;
+        const aL = Math.hypot(ax, ay, az) || 1; ax /= aL; ay /= aL; az /= aL;
+        const solid = opts.surface && opts.surface.inside;
+        /* How much SKIN is in the metal: for each ring, how far its surface reaches past the
+           weapon's surface -- its radius less the signed distance from its centre to the gun. The
+           parity test alone says "outside" wherever a model is not watertight, which is most guns
+           along some line, and a finger turned by it came out a quarter buried. */
+        const S = opts.surface;
+        const buriedOf = (P) => {
+          if (!S) return 0;
+          let n = 0;
+          for (let i = 0; i < P.length; i++) n += Math.max(0, rs[i].w * 0.95 - S(P[i].x, P[i].y, P[i].z));
+          return n;
+        };
+        // Rodrigues about a pivot, positive = the way the finger closes.
+        const rotAbout = (q, o, ang) => {
+          const c = Math.cos(ang), sn = Math.sin(ang);
+          const vx = q.x - o.x, vy = q.y - o.y, vz = q.z - o.z;
+          const dt = ax * vx + ay * vy + az * vz;
+          const cx = ay * vz - az * vy, cy = az * vx - ax * vz, cz = ax * vy - ay * vx;
+          return new Vec3(o.x + vx * c + cx * sn + ax * dt * (1 - c),
+            o.y + vy * c + cy * sn + ay * dt * (1 - c),
+            o.z + vz * c + cz * sn + az * dt * (1 - c));
+        };
+        /* Two closings, not one: the whole finger about its knuckle (a1) and the two bones past the
+           middle joint about that joint (a2) -- a finger lying over a crown bends at the middle
+           knuckle as well as the big one, and with only the big one a finger floating over the
+           middle of a forend could not get down without sweeping through its far side. The least
+           total closing that gets every ring under the line without more skin in the metal. */
+        const j0 = joints[0] ? new Vec3(joints[0][0], joints[0][1], joints[0][2]) : root;
+        const mid0 = boneEnd[0];
+        const pose = (a1, a2) => {
+          const j0n = rotAbout(j0, root, a1);
+          return rs.map((q, i) => {
+            const r1 = rotAbout(q.p, root, a1);
+            return i > mid0 && a2 ? rotAbout(r1, j0n, a2) : r1;
+          });
+        };
+        const b0 = buriedOf(rs.map((q) => q.p));
+        const tries = [];
+        // Closing first; opening (back to the near side, off the crown) only if no closing works.
+        for (let a1 = -1.2; a1 <= 2.4; a1 += 0.08) for (let a2 = -0.6; a2 <= 1.8; a2 += 0.08) {
+          if (Math.abs(a1) + Math.abs(a2) > 0.01) tries.push([a1, a2]);
+        }
+        const cost = (u) => Math.abs(u[0]) + Math.abs(u[1]) + (u[0] < 0 || u[1] < 0 ? 2 : 0);
+        tries.sort((u, v) => cost(u) - cost(v));
+        let pick = null;
+        for (const [a1, a2] of tries) {
+          const P2 = pose(a1, a2);
+          let over = -1;
+          for (let i = 0; i < P2.length; i++) over = Math.max(over, P2[i].y + rs[i].w - ceil);
+          if (over > 0) continue;
+          if (buriedOf(P2) <= b0 + 1e-6) { pick = [a1, a2, P2]; break; }
+        }
+        if (pick != null) {
+          const [a1, a2, P2] = pick;
+          const j0n = rotAbout(j0, root, a1);
+          rs.forEach((q, i) => { q.p = P2[i]; });
+          for (let i = 0; i < joints.length; i++) {
+            let q = rotAbout(new Vec3(joints[i][0], joints[i][1], joints[i][2]), root, a1);
+            if (i > 0 && a2) q = rotAbout(q, j0n, a2);
+            joints[i] = [q.x, q.y, q.z];
+          }
+          p = a2 ? rotAbout(rotAbout(p, root, a1), j0n, a2) : rotAbout(p, root, a1);
+          if (opts.out) opts.out.sightTurned = (opts.out.sightTurned || 0) + 1;
+        } else if (opts.out) opts.out.sightStuck = (opts.out.sightStuck || 0) + 1;
+      }
+    }
     /* ONE FINGER, THREE BONES, THREE MESHES.
      *
      * Reported: the fingers are "wiggly and wobbly, and it doesn't feel

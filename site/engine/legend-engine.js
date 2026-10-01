@@ -12406,6 +12406,8 @@ class Joint {
 
 /* ---------------- world ---------------- */
 
+const _rc = [new Vec3(), new Vec3(), new Vec3()];
+
 class PhysicsWorld {
   constructor(opts = {}) {
     this.gravity = Vec3.from(opts.gravity != null ? opts.gravity : [0, -19.6, 0]);
@@ -12453,6 +12455,7 @@ class PhysicsWorld {
     if (i >= 0) this.bodies.splice(i, 1);
     const j = this._staticPlanes.indexOf(body);
     if (j >= 0) this._staticPlanes.splice(j, 1);
+    this._bpUnhash(body);
     // Drop cached manifolds by identity — matching on the string key would
     // mis-handle ids that are prefixes of one another (1 vs 10).
     for (const [key, m] of Array.from(this.manifolds.entries())) {
@@ -12475,51 +12478,109 @@ class PhysicsWorld {
     return a.id < b.id ? a.id * 2097152 + b.id : b.id * 2097152 + a.id;
   }
 
+  /* THE STILL WORLD IS HASHED ONCE.
+   *
+     Every step cleared the grid and hashed every body in it again -- the
+     thousand-odd walls, kerbs and crates of a map that had not moved since
+     it was built, each into every cell it covers -- and then walked every
+     cell comparing wall with wall only for _shouldCollide to reject the
+     pair. Profiled on Town that was the largest single cost in the frame,
+     larger than the whole match. Bodies that do not move under the solver
+     (static and kinematic) now live in a grid of their own that is only
+     touched when one of them actually moves (a door swinging, a lift) or
+     comes or goes; each step hashes just the moving bodies and asks each
+     of them about its own cells in both grids. The pairs are the same
+     pairs, found without the walls meeting each other. */
+  _bpHash(b, inv) {
+    b.updateAabb();
+    const x0 = Math.floor(b.aabb.min.x * inv), x1 = Math.floor(b.aabb.max.x * inv);
+    const y0 = Math.floor(b.aabb.min.y * inv), y1 = Math.floor(b.aabb.max.y * inv);
+    const z0 = Math.floor(b.aabb.min.z * inv), z1 = Math.floor(b.aabb.max.z * inv);
+    const keys = b._bpKeys || (b._bpKeys = []);
+    keys.length = 0;
+    // Guard against an object flung to infinity filling the grid.
+    if ((x1 - x0) > 64 || (y1 - y0) > 64 || (z1 - z0) > 64) return keys;
+    for (let x = x0; x <= x1; x++) {
+      for (let y = y0; y <= y1; y++) {
+        for (let z = z0; z <= z1; z++) {
+          // Standard spatial hash. Distinct cells may collide onto one bucket, which only costs a
+          // redundant AABB test -- never a miss, since equal cells always hash equally.
+          keys.push((x * 73856093) ^ (y * 19349663) ^ (z * 83492791));
+        }
+      }
+    }
+    return keys;
+  }
+
+  _bpUnhash(b) {
+    if (!b._bpIn || !this._sgrid) return;
+    for (const k of b._bpKeys) {
+      const cell = this._sgrid.get(k);
+      if (!cell) continue;
+      const i = cell.indexOf(b);
+      if (i >= 0) { cell[i] = cell[cell.length - 1]; cell.pop(); }
+      if (!cell.length) this._sgrid.delete(k);
+    }
+    b._bpIn = false;
+  }
+
   _broadphase() {
     this.grid.clear();
     this._pairs.length = 0;
     this._seen.clear();
-    this._cellPool.length = 0;
     const inv = 1 / this.cellSize;
+    if (!this._sgrid || this._sgridCell !== this.cellSize) {
+      if (this._sgrid) for (const b of this.bodies) b._bpIn = false;
+      this._sgrid = new Map(); this._sgridCell = this.cellSize;
+    }
+    const S = this._sgrid;
 
     const movable = this._movable;
     movable.length = 0;
+    const dyn = this._dynList || (this._dynList = []);
+    dyn.length = 0;
     for (const b of this.bodies) {
       if (b.shape.type === SHAPE.PLANE) continue;
-      b.updateAabb();
       movable.push(b);
-      const x0 = Math.floor(b.aabb.min.x * inv), x1 = Math.floor(b.aabb.max.x * inv);
-      const y0 = Math.floor(b.aabb.min.y * inv), y1 = Math.floor(b.aabb.max.y * inv);
-      const z0 = Math.floor(b.aabb.min.z * inv), z1 = Math.floor(b.aabb.max.z * inv);
-      // Guard against an object flung to infinity filling the grid.
-      if ((x1 - x0) > 64 || (y1 - y0) > 64 || (z1 - z0) > 64) continue;
-      for (let x = x0; x <= x1; x++) {
-        for (let y = y0; y <= y1; y++) {
-          for (let z = z0; z <= z1; z++) {
-            // Standard spatial hash. Distinct cells may collide onto one
-            // bucket, which only costs a redundant AABB test — never a miss,
-            // since equal cells always hash equally.
-            const key = (x * 73856093) ^ (y * 19349663) ^ (z * 83492791);
-            let cell = this.grid.get(key);
-            if (!cell) { cell = []; this.grid.set(key, cell); }
-            cell.push(b);
-          }
+      if (b.dynamic) {
+        const keys = this._bpHash(b, inv);
+        for (const k of keys) {
+          let cell = this.grid.get(k);
+          if (!cell) { cell = []; this.grid.set(k, cell); }
+          cell.push(b);
         }
+        dyn.push(b);
+        continue;
       }
+      // Still: re-hashed only if it has moved since it was hashed.
+      const p = b.position, q = b.quaternion, c = b._bpAt;
+      if (b._bpIn && c && c[0] === p.x && c[1] === p.y && c[2] === p.z
+          && (!q || (c[3] === q.x && c[4] === q.y && c[5] === q.z && c[6] === q.w))) continue;
+      this._bpUnhash(b);
+      const keys = this._bpHash(b, inv);
+      for (const k of keys) {
+        let cell = S.get(k);
+        if (!cell) { cell = []; S.set(k, cell); }
+        cell.push(b);
+      }
+      b._bpIn = true;
+      b._bpAt = [p.x, p.y, p.z, q ? q.x : 0, q ? q.y : 0, q ? q.z : 0, q ? q.w : 1];
     }
 
-    for (const cell of this.grid.values()) {
-      for (let i = 0; i < cell.length; i++) {
-        const a = cell[i];
-        for (let j = i + 1; j < cell.length; j++) {
-          const b = cell[j];
-          if (!this._shouldCollide(a, b)) continue;
-          if (!a.aabb.overlaps(b.aabb)) continue;
-          const key = this._pairKey(a, b);
-          if (this._seen.has(key)) continue;
-          this._seen.add(key);
-          this._pairs.push(a.id < b.id ? a : b, a.id < b.id ? b : a, key);
-        }
+    const consider = (a, b) => {
+      if (a === b || !this._shouldCollide(a, b)) return;
+      if (!a.aabb.overlaps(b.aabb)) return;
+      const key = this._pairKey(a, b);
+      if (this._seen.has(key)) return;
+      this._seen.add(key);
+      this._pairs.push(a.id < b.id ? a : b, a.id < b.id ? b : a, key);
+    };
+    for (const a of dyn) {
+      for (const k of a._bpKeys) {
+        const dc = this.grid.get(k);
+        if (dc) for (let j = 0; j < dc.length; j++) { const b = dc[j]; if (b.id > a.id) consider(a, b); }
+        const sc = S.get(k);
+        if (sc) for (let j = 0; j < sc.length; j++) consider(a, sc[j]);
       }
     }
 
@@ -13065,12 +13126,11 @@ class PhysicsWorld {
     const o = Vec3.from(origin);
     const d = Vec3.from(direction).normalize();
     let best = null, bestT = maxDist;
-    const localO = new Vec3(), localD = new Vec3(), n = new Vec3();
+    const localO = _rc[0], localD = _rc[1], n = _rc[2];
 
-    for (const b of this.bodies) {
-      if (filter && !filter(b)) continue;
-      if (b.isTrigger) continue;
-
+    const test = (b) => {
+      if (filter && !filter(b)) return;
+      if (b.isTrigger) return;
       if (b.shape.type === SHAPE.SPHERE) {
         const t = raySphere(o, d, b.position, b.shape.radius);
         if (t >= 0 && t < bestT) {
@@ -13082,7 +13142,7 @@ class PhysicsWorld {
       } else if (b.shape.type === SHAPE.PLANE) {
         const pn = new Vec3().copy(b.shape.normal).applyQuat(b.quaternion);
         const denom = pn.dot(d);
-        if (Math.abs(denom) < 1e-8) continue;
+        if (Math.abs(denom) < 1e-8) return;
         const offset = b.shape.offset + pn.dot(b.position);
         const t = (offset - pn.dot(o)) / denom;
         if (t >= 0 && t < bestT) {
@@ -13095,7 +13155,8 @@ class PhysicsWorld {
         }
       } else {
         // Cheap reject against the bounding sphere before the face walk.
-        if (raySphere(o, d, b.position, b.shape.boundRadius) < 0) continue;
+        const ts = raySphere(o, d, b.position, b.shape.boundRadius);
+        if (ts < 0 || ts > bestT + b.shape.boundRadius * 2) return;
         worldToLocal(b, o, localO);
         localD.copy(d).applyQuatInv(b.quaternion);
         const t = rayConvex(localO, localD, b.shape, n);
@@ -13108,7 +13169,53 @@ class PhysicsWorld {
           };
         }
       }
+    };
+
+    /* THROUGH THE STILL GRID, NOT PAST EVERY BODY.
+     *
+       A ray walked all thousand-odd bodies of a map to find the one under
+       a man's feet, and every combatant asks that every frame. With the
+       still bodies hashed (_broadphase) the ray steps cell by cell along
+       its own line and tests only what is in the cells it crosses, nearest
+       first, stopping once a hit is nearer than the next cell. Everything
+       that is not in that grid -- moving bodies, planes, anything too big
+       to hash, anything added since the last step -- is tested directly. */
+    const S = this._sgrid;
+    if (!S || this.bodies.length < 160) {
+      for (const b of this.bodies) test(b);
+      return best;
     }
+    const stamp = (this._rayStamp = (this._rayStamp + 1) | 0) || (this._rayStamp = 1);
+    for (const b of this.bodies) {
+      if (b._bpIn && b._bpKeys.length && !b.dynamic) continue;
+      test(b);
+    }
+    const cs = this.cellSize, inv = 1 / cs;
+    let cx = Math.floor(o.x * inv), cy = Math.floor(o.y * inv), cz = Math.floor(o.z * inv);
+    const sx = d.x > 0 ? 1 : -1, sy = d.y > 0 ? 1 : -1, sz = d.z > 0 ? 1 : -1;
+    const tdx = d.x !== 0 ? Math.abs(cs / d.x) : Infinity, tdy = d.y !== 0 ? Math.abs(cs / d.y) : Infinity, tdz = d.z !== 0 ? Math.abs(cs / d.z) : Infinity;
+    let tmx = d.x !== 0 ? ((d.x > 0 ? (cx + 1) * cs - o.x : o.x - cx * cs) / Math.abs(d.x)) : Infinity;
+    let tmy = d.y !== 0 ? ((d.y > 0 ? (cy + 1) * cs - o.y : o.y - cy * cs) / Math.abs(d.y)) : Infinity;
+    let tmz = d.z !== 0 ? ((d.z > 0 ? (cz + 1) * cs - o.z : o.z - cz * cs) / Math.abs(d.z)) : Infinity;
+    let tEnter = 0;
+    for (let guard = 0; guard < 4096; guard++) {
+      const cell = S.get((cx * 73856093) ^ (cy * 19349663) ^ (cz * 83492791));
+      if (cell) for (let i = 0; i < cell.length; i++) {
+        const b = cell[i];
+        if (b._rayStamp === stamp) continue;
+        b._rayStamp = stamp;
+        test(b);
+      }
+      // Anything hit is nearer than the next cell boundary: nothing further on can beat it.
+      const tNext = Math.min(tmx, tmy, tmz);
+      if (best && bestT <= tNext) break;
+      if (tNext > bestT || tNext > maxDist) break;
+      tEnter = tNext;
+      if (tmx <= tmy && tmx <= tmz) { cx += sx; tmx += tdx; }
+      else if (tmy <= tmz) { cy += sy; tmy += tdy; }
+      else { cz += sz; tmz += tdz; }
+    }
+    void tEnter;
     return best;
   }
 
@@ -17993,7 +18100,7 @@ function buildMhFaceRig(geo, ref = null) {
 
   /* ---- the lip controls, as displacements at full weight (metres) ---- */
   const D = {};
-  for (const c of ['round', 'spread', 'press', 'tuck', 'funnel', 'upper']) D[c] = [];
+  for (const c of ['round', 'spread', 'press', 'tuck', 'funnel', 'upper', 'smile', 'frown', 'browUp', 'browDown']) D[c] = [];
   const jaw = [];
   for (let v = 0; v < n; v++) {
     const x = X[v], y = Y[v], z = Z[v], ax = Math.abs(x), sx = x < 0 ? -1 : 1, w = jw[v];
@@ -18022,8 +18129,12 @@ function buildMhFaceRig(geo, ref = null) {
     put('funnel', -sx * Math.min(ax, 0.03) * 0.18 * Mw, (0.0018 * nearU - 0.0018 * nearL) * M, 0.0066 * M * (0.4 + 0.6 * near));
     // th and the open vowels: the top lip lifted off the teeth
     put('upper', 0, 0.0021 * nearU * M * midW, 0.0005 * nearU * M * midW);
+    /* EXPRESSION. A smile lifts the corners up and back and bunches the cheek above them; a frown
+       (or a grimace of pain) pulls the corners down and pushes the lower lip out a little. */
+    const cheek = Math.exp(-(((y - slitY - 0.022) / 0.012) ** 2)) * _mhfS(0.012, 0.03, ax) * (1 - _mhfS(0.045, 0.06, ax)) * fz;
+    put('smile', sx * 0.0045 * Mw * corner, 0.0065 * Mw * corner + 0.0028 * cheek, -0.0024 * Mw * corner + 0.0020 * cheek);
+    put('frown', sx * 0.0010 * Mw * corner, -0.0045 * Mw * corner, 0.0016 * nearL * M * midW);
   }
-  for (const c in D) D[c] = new Float32Array(D[c]);
 
   /* ---- the lids: each eye's aperture measured column by column ---- */
   const lids = [];
@@ -18109,6 +18220,23 @@ function buildMhFaceRig(geo, ref = null) {
     lids.push({ side: s, meas: m, c: [cx * U, cy * U, cz * U], rot: new Float32Array(rot), hw, gap: at(su, 0) - at(sl2, 0) });
   }
 
+  /* ---- the brows: raised (surprise, fear, listening) and drawn down and in (anger, pain) ---- */
+  for (const lid of lids) {
+    const cx = lid.meas.cx, cy = lid.meas.cy, cz = lid.meas.cz;
+    for (let v = 0; v < n; v++) {
+      const x = X[v], y = Y[v], z = Z[v];
+      const dx = x - cx, dyb = y - (cy + 0.022);
+      if (Math.abs(dx) > 0.034 || Math.abs(dyb) > 0.026 || z < cz - 0.004) continue;
+      const w = Math.exp(-((dx / 0.022) ** 2) - ((dyb / 0.013) ** 2)) * _mhfS(cz - 0.004, cz + 0.012, z);
+      if (w < 0.01) continue;
+      const inner = _mhfS(0.012, -0.012, dx * Math.sign(cx));             // 1 at the nose end of the brow
+      const put = (c, px, py, pz) => { if (Math.abs(px) + Math.abs(py) + Math.abs(pz) > 2e-6) D[c].push(v, px * U, py * U, pz * U); };
+      put('browUp', 0, 0.0065 * w * (0.6 + 0.4 * inner), 0.0008 * w);
+      put('browDown', -Math.sign(cx) * 0.0030 * w * inner, -0.0050 * w * (0.35 + 0.65 * inner), 0.0016 * w * inner);
+    }
+  }
+  for (const c in D) D[c] = D[c] instanceof Float32Array ? D[c] : new Float32Array(D[c]);
+
   const rig = { n, U, slitY, slitZ, tipY, split, hinge: [hingeY * U, hingeZ * U], jaw: new Float32Array(jaw), D, lids,
     upperN: upperSet.size, lowerN: lowerSet.size, jw };
   geo._faceRig = rig;
@@ -18132,7 +18260,7 @@ function addMhTeeth(head, eyes) {
   const pos = Array.from(eyes.positions), nrm = Array.from(eyes.normals), uv = Array.from(eyes.uvs);
   const col = eyes.colors ? Array.from(eyes.colors) : new Array(nOld * 3).fill(1);
   const idx = Array.from(eyes.indices);
-  const lower = [];
+  const lower = [], cx0 = 0;
   const arch = (isLower) => {
     const zF = innerZ - (isLower ? 0.0038 : 0.0014), yEdge = rig.slitY + (isLower ? -0.0030 : 0.0006);
     const h = isLower ? 0.0085 : 0.0098, thick = 0.0055, half = 0.024, K = 24;
@@ -18157,7 +18285,7 @@ function addMhTeeth(head, eyes) {
           uv.push(i / SEG, f);
           const gum = f > 0.82 ? _mhfS(0.82, 1, f) : 0;
           const shade = (side ? 0.35 : 1) * back * (1 - 0.55 * gap);
-          col.push((0.76 * (1 - gum) + 0.62 * gum) * shade, (0.72 * (1 - gum) + 0.36 * gum) * shade, (0.63 * (1 - gum) + 0.38 * gum) * shade);
+          col.push((0.66 * (1 - gum) + 0.62 * gum) * shade, (0.61 * (1 - gum) + 0.36 * gum) * shade, (0.52 * (1 - gum) + 0.38 * gum) * shade);
           if (isLower) lower.push(pos.length / 3 - 1);
         }
       }
@@ -18176,6 +18304,32 @@ function addMhTeeth(head, eyes) {
     }
   };
   arch(false); arch(true);
+  /* The tongue: a flattened, wet, darker-pink mound on the floor of the mouth behind the lower teeth,
+     riding the jaw. Without it an open "ah" showed a black hole under the upper teeth. */
+  {
+    const cy = rig.slitY - 0.0072, cz = innerZ - 0.019, rx = 0.0165, ry = 0.0042, rz = 0.021;
+    const RINGS = 10, SECT = 18, base = pos.length / 3;
+    for (let a = 0; a <= RINGS; a++) {
+      const th = (a / RINGS) * Math.PI;
+      for (let b = 0; b <= SECT; b++) {
+        const ph = (b / SECT) * Math.PI * 2;
+        const nx = Math.sin(th) * Math.cos(ph), ny = Math.cos(th), nz = Math.sin(th) * Math.sin(ph);
+        const tip = nz > 0 ? 1 - 0.25 * nz * nz : 1;                  // narrower toward the tip
+        const px = cx0 + nx * rx * tip, py = cy + ny * ry * (ny > 0 ? 1 : 0.6), pz = cz + nz * rz;
+        pos.push(px * U, py * U, pz * U);
+        const l = Math.hypot(nx / rx, ny / ry, nz / rz) || 1;
+        nrm.push(nx / rx / l, ny / ry / l, nz / rz / l);
+        uv.push(b / SECT, a / RINGS);
+        const shade = 0.35 + 0.65 * _mhfS(-0.6, 0.9, nz) * (ny > -0.2 ? 1 : 0.5);
+        col.push(0.58 * shade, 0.27 * shade, 0.27 * shade);
+        lower.push(pos.length / 3 - 1);
+      }
+    }
+    for (let a = 0; a < RINGS; a++) for (let b = 0; b < SECT; b++) {
+      const i0 = base + a * (SECT + 1) + b, i1 = i0 + SECT + 1;
+      idx.push(i0, i0 + 1, i1, i0 + 1, i1 + 1, i1);
+    }
+  }
   eyes.positions = new Float32Array(pos); eyes.normals = new Float32Array(nrm); eyes.uvs = new Float32Array(uv);
   eyes.colors = new Float32Array(col); eyes.indices = idx;
   eyes.tangents = null; eyes.bounds = null;
@@ -18206,11 +18360,17 @@ function mhFaceDeform(R, B, c, blinkW, Q) {
       Q[v + 2] = hz + dy * sa + dz * ca;
     }
   }
-  if (blinkW > 1e-3) {
+  /* The lids: a blink closes both; a squint (a smile, pain, anger) brings the lower lid up most of
+     the way and the upper down a little; wide eyes (fear, surprise) lift the upper lid. */
+  const sq = Math.max(0, c.squint || 0), wide = Math.max(0, c.wide || 0);
+  if (blinkW > 1e-3 || sq > 1e-3 || wide > 1e-3) {
     for (const lid of R.lids) {
       const Rt = lid.rot, cy = lid.c[1], cz = lid.c[2];
       for (let i = 0; i < Rt.length; i += 2) {
-        const v = Rt[i] * 3, a = Rt[i + 1] * blinkW, ca = Math.cos(a), sa = Math.sin(a);
+        const th = Rt[i + 1];
+        let a = th * blinkW + (th > 0 ? th * 1.3 : th * 0.22) * sq * (1 - blinkW) + (th < 0 ? -th * 0.22 : 0) * wide * (1 - blinkW);
+        if (!(Math.abs(a) > 1e-5)) continue;
+        const v = Rt[i] * 3, ca = Math.cos(a), sa = Math.sin(a);
         const dy = Q[v + 1] - cy, dz = Q[v + 2] - cz;
         // Positive rotation carries the front of the eye upward (atan2(dy, dz) grows).
         Q[v + 1] = cy + dy * ca + dz * sa;
@@ -18221,8 +18381,25 @@ function mhFaceDeform(R, B, c, blinkW, Q) {
   return Q;
 }
 
-/* The driver: one per character. Speech from LipSync, a blink every thirty seconds, and private
-   meshes only while any of it is showing. */
+/* Faces with something on them. Each is a set of the rig's controls; a character eases toward the
+   one it is given and back again, and speech rides on top of whatever the face is doing. */
+const MHF_EMOTIONS = {
+  neutral: {},
+  happy: { smile: 0.75, squint: 0.35, browUp: 0.15 },
+  relief: { smile: 0.45, browUp: 0.35, squint: 0.15, jaw: 0.06 },
+  pain: { browDown: 0.9, squint: 0.8, frown: 0.35, spread: 0.45, jaw: 0.14, upper: 0.35 },
+  fear: { browUp: 0.95, wide: 0.9, jaw: 0.22, spread: 0.25, frown: 0.2 },
+  anger: { browDown: 1.0, squint: 0.35, frown: 0.45, press: 0.25 },
+  surprise: { browUp: 1.0, wide: 0.8, jaw: 0.45, round: 0.2 },
+  sad: { browUp: 0.45, frown: 0.6, squint: 0.1 },
+  focus: { browDown: 0.35, squint: 0.3, press: 0.15 },
+};
+const MHF_KEYS = ['jaw', 'round', 'spread', 'press', 'tuck', 'funnel', 'upper', 'smile', 'frown', 'browUp', 'browDown', 'squint', 'wide'];
+
+/* The driver: one per character. Speech from LipSync, expression, where the eyes are looking (with
+   the small fast jumps real eyes make), a blink every thirty seconds -- and private meshes only
+   while any of it is showing. The head and the eye mesh are taken separately: eyes that dart about
+   need only the eye mesh (a few thousand vertices), not the head. */
 class MhFace {
   constructor(engine, head, eyes, opts = {}) {
     this.engine = engine;
@@ -18238,11 +18415,24 @@ class MhFace {
     this.line = null;
     this.lineT = 0;
     this.onEnd = null;
-    this.ctl = { jaw: 0, round: 0, spread: 0, press: 0, tuck: 0, funnel: 0, upper: 0 };
+    this.ctl = {};
+    this.speech = {};
+    this.expr = {};
+    this.exprTarget = {};
+    for (const k of MHF_KEYS) { this.ctl[k] = 0; this.speech[k] = 0; this.expr[k] = 0; this.exprTarget[k] = 0; }
+    this.emotion = 'neutral';
+    this.emotionUntil = 0;
+    this.time = 0;
+    // Gaze, in radians about the head: where the eyes point now, where they are going, and what at.
+    this.gaze = { yaw: 0, pitch: 0 };
+    this.gazeGoal = { yaw: 0, pitch: 0 };
+    this.lookTarget = null;
+    this.saccadeIn = 0.4 + this.rng.next() * 1.5;
     this.blinkW = 0;
     this._shared = null;
     this._priv = null;
     this._idle = 0;
+    this._eyeIdle = 0;
     this.enabled = true;
   }
 
@@ -18253,6 +18443,7 @@ class MhFace {
     this.lineT = -(opts.delay || 0);
     this.onEnd = opts.onEnd || null;
     this.text = String(text);
+    if (opts.emotion) this.setEmotion(opts.emotion, opts.strength != null ? opts.strength : 1, this.line.duration + 0.6);
     return this.line.duration;
   }
 
@@ -18267,12 +18458,47 @@ class MhFace {
     if (t >= 0 && (t > this.lineT || this.lineT - t < 0.25)) this.lineT = t;
     return this;
   }
-  /* Hold the face in a pose -- { jaw, round, ..., blink } -- until pose(null). For tools and tests. */
+  /* Hold the face in a pose -- { jaw, round, ..., blink, yaw, pitch } -- until pose(null). For tools and tests. */
   pose(p) { this.held = p ? Object.assign({}, p) : null; return this; }
   get speaking() { return !!this.line; }
   blink() { if (this.blinkT < 0) { this.blinkT = 0; this.blinks++; } return this; }
 
+  /* An expression: a name from MHF_EMOTIONS (or a control set of your own), how strongly, and for how
+     long before it relaxes (omitted: until changed). A flinch is setEmotion('pain', 1, 0.6). */
+  setEmotion(name, strength = 1, seconds = 0) {
+    const set = typeof name === 'string' ? (MHF_EMOTIONS[name] || {}) : (name || {});
+    this.emotion = typeof name === 'string' ? name : 'custom';
+    for (const k of MHF_KEYS) this.exprTarget[k] = (set[k] || 0) * Math.max(0, Math.min(1, strength));
+    this.emotionUntil = seconds > 0 ? this.time + seconds : 0;
+    return this;
+  }
+
+  /* Look at something: a world point {x,y,z}, an actor (its head, if it has one), or null for ahead. */
+  lookAt(target) { this.lookTarget = target || null; return this; }
+
+  _aimFor() {
+    // Where the target is, in the head's frame, as yaw and pitch from between the eyes.
+    const t = this.lookTarget, h = this.head;
+    if (!t || !h || !h.matrix) return { yaw: 0, pitch: 0 };
+    let p = t;
+    if (t.matrix && t.matrix.e) {
+      const src = t.head && t.head.matrix ? t.head : t;
+      const e = src.matrix.e;
+      p = { x: e[12], y: e[13] + (src === t && t.head ? 0 : 0.08), z: e[14] };
+    } else if (t.x === undefined && t.position) p = t.position;
+    const m = h.matrix.e;
+    // Inverse of an affine matrix with uniform scale: R^T (p - o) / s^2.
+    const ox = p.x - m[12], oy = p.y - m[13], oz = p.z - m[14];
+    const s2 = m[0] * m[0] + m[1] * m[1] + m[2] * m[2] || 1;
+    const lx = (m[0] * ox + m[1] * oy + m[2] * oz) / s2, ly = (m[4] * ox + m[5] * oy + m[6] * oz) / s2, lz = (m[8] * ox + m[9] * oy + m[10] * oz) / s2;
+    const U = SDF_HEAD_TO_UNITS, ey = 0.011 * U, ez = 0.10 * U;
+    const dx = lx, dy = ly - ey, dz = lz - ez;
+    if (dz < 0.05) return { yaw: Math.sign(dx) * 0.55, pitch: 0 };         // behind: as far round as eyes go
+    return { yaw: Math.max(-0.55, Math.min(0.55, Math.atan2(dx, dz))), pitch: Math.max(-0.4, Math.min(0.35, Math.atan2(dy, Math.hypot(dx, dz)))) };
+  }
+
   update(dt) {
+    this.time += dt;
     // Blinking: every thirty seconds, give or take.
     if (this.blinkT >= 0) {
       this.blinkT += dt;
@@ -18292,33 +18518,76 @@ class MhFace {
     } else this.blinkW = 0;
 
     // Speech.
-    const c = this.ctl;
+    const sp = this.speech;
     if (this.line) {
       this.lineT += dt;
-      if (this.lineT >= 0) LipSync.sample(this.line, this.lineT, c);
+      if (this.lineT >= 0) LipSync.sample(this.line, this.lineT, sp);
       if (this.lineT > this.line.duration) {
         this.line = null;
-        for (const k in c) c[k] = 0;
+        for (const k of MHF_KEYS) sp[k] = 0;
         if (this.onEnd) { const f = this.onEnd; this.onEnd = null; f(); }
       }
-    } else for (const k in c) c[k] *= Math.max(0, 1 - dt * 18);
+    } else for (const k of MHF_KEYS) sp[k] *= Math.max(0, 1 - dt * 18);
+
+    // Expression: eased toward its target, and back to neutral when its time is up.
+    if (this.emotionUntil && this.time >= this.emotionUntil) this.setEmotion('neutral');
+    const ex = this.expr, k1 = Math.min(1, dt * 7);
+    for (const k of MHF_KEYS) ex[k] += (this.exprTarget[k] - ex[k]) * k1;
+
+    // The face: speech on top of expression. While talking the mouth is the speech's; the
+    // expression keeps the brows, the eyes and what is left of the mouth.
+    const c = this.ctl, talking = this.line ? 1 : Math.min(1, Math.abs(sp.jaw) * 4);
+    for (const k of MHF_KEYS) {
+      const mouth = k !== 'browUp' && k !== 'browDown' && k !== 'squint' && k !== 'wide';
+      c[k] = sp[k] + ex[k] * (mouth ? 1 - 0.65 * talking : 1);
+    }
+
+    // Gaze: hold on the target, with a small quick jump every second or two (a saccade), and back.
+    const aim = this._aimFor();
+    this.saccadeIn -= dt;
+    if (this.saccadeIn <= 0) {
+      const r = this.rng;
+      const far = r.next() < 0.18;                          // now and then a real look away
+      this.gazeGoal.yaw = aim.yaw + (r.next() * 2 - 1) * (far ? 0.28 : 0.06);
+      this.gazeGoal.pitch = aim.pitch + (r.next() * 2 - 1) * (far ? 0.12 : 0.035);
+      this.saccadeIn = (far ? 0.5 : 0.7) + r.next() * (far ? 0.6 : 2.2);
+      this._backTo = far ? this.time + 0.35 + r.next() * 0.5 : 0;
+    } else {
+      // Between jumps the eyes follow the target smoothly (pursuit), keeping the last jump's offset.
+      if (this._backTo && this.time > this._backTo) { this.gazeGoal.yaw = aim.yaw; this.gazeGoal.pitch = aim.pitch; this._backTo = 0; }
+      const oy = this.gazeGoal.yaw - (this._aim0 ? this._aim0.yaw : aim.yaw), op = this.gazeGoal.pitch - (this._aim0 ? this._aim0.pitch : aim.pitch);
+      this.gazeGoal.yaw = aim.yaw + oy; this.gazeGoal.pitch = aim.pitch + op;
+    }
+    this._aim0 = aim;
+    // A saccade takes about 40 ms: close most of the distance every frame.
+    const kg = Math.min(1, dt * 26);
+    this.gaze.yaw += (Math.max(-0.6, Math.min(0.6, this.gazeGoal.yaw)) - this.gaze.yaw) * kg;
+    this.gaze.pitch += (Math.max(-0.42, Math.min(0.38, this.gazeGoal.pitch)) - this.gaze.pitch) * kg;
+    // Looking down, the upper lid follows the eye down a little (it does, and without it a downcast look stares).
+    const lidFollow = Math.max(0, -this.gaze.pitch) * 1.2;
 
     if (this.held) {
-      for (const k in c) c[k] = this.held[k] || 0;
+      for (const k of MHF_KEYS) c[k] = this.held[k] || 0;
       this.blinkW = this.held.blink || 0;
+      if (this.held.yaw != null) this.gaze.yaw = this.held.yaw;
+      if (this.held.pitch != null) this.gaze.pitch = this.held.pitch;
     }
-    let any = this.blinkW > 1e-3;
-    for (const k in c) if (Math.abs(c[k]) > 1e-3) any = true;
-    if (!this.enabled || !this.head || this.head.dead || this.head.visible === false) { if (this._priv && this.head && this.head.visible === false) this._release(); return; }
-    if (!any) {
-      this._idle += dt;
-      if (this._priv && this._idle > 0.25) this._release();
-      return;
-    }
-    this._idle = 0;
-    if (!this._near()) { if (this._priv) this._release(); return; }
+    this._lidFollow = this.held ? 0 : lidFollow;
+
+    let headAny = this.blinkW > 1e-3 || this._lidFollow > 0.02;
+    for (const k of MHF_KEYS) if (Math.abs(c[k]) > 1e-3) headAny = true;
+    const eyesAny = Math.abs(this.gaze.yaw) > 0.004 || Math.abs(this.gaze.pitch) > 0.004 || c.jaw > 1e-3;
+    const h = this.head;
+    if (!this.enabled || !h || h.dead || h.visible === false) { if (this._priv) this._release(true, true); return; }
+    if (!headAny) this._idle += dt; else this._idle = 0;
+    if (!eyesAny) this._eyeIdle += dt; else this._eyeIdle = 0;
+    if (!this._near()) { if (this._priv) this._release(true, true); return; }
+    if (this._idle > 0.25 && this._priv && this._priv.headIn) this._release(true, false);
+    if (this._eyeIdle > 0.25 && this._priv && this._priv.eyesIn) this._release(false, true);
+    if (!headAny && !eyesAny) return;
     this._acquire();
-    this._apply();
+    if (headAny) this._applyHead(); else if (this._priv.headIn) this._release(true, false);
+    if (eyesAny || headAny) this._applyEyes();
   }
 
   _near() {
@@ -18329,88 +18598,125 @@ class MhFace {
     return Math.hypot(m[12] - p.x, m[13] - p.y, m[14] - p.z) < MHF_NEAR;
   }
 
-  /* Private copies of the two close levels of detail (and of the eyes, for the teeth). */
+  /* Private copies of the two close levels of detail, and of the eye mesh (eyes and teeth). */
   _acquire() {
     const h = this.head;
     if (!this._shared) this._shared = { mesh: h.mesh, lods: h.lods, eyes: this.eyes ? this.eyes.mesh : null };
-    if (!this._priv) {
-      const E = this.engine, gl = this.gl;
-      const geoOf = (m) => (E._geoByKey && E._geoByKey.get(m.__key)) || null;
-      const S = this._shared;
-      const tiers = S.lods ? S.lods.slice(0, 2) : [{ mesh: S.mesh, from: 0 }];
-      const mk = (geo, tag) => {
-        const gm = new GpuMesh(gl, geo);
-        gm.__key = 'mhface:' + (MhFace._uid = (MhFace._uid || 0) + 1) + tag;
-        gm.setupInstancing(20);
-        return gm;
-      };
-      const levels = [];
-      for (const t of tiers) {
-        const geo = geoOf(t.mesh);
-        if (!geo || !geo.sdf) continue;
-        const rig = buildMhFaceRig(geo, levels.length ? levels[0].rig : null);
-        levels.push({ geo, rig, gm: mk(geo, ':h'), work: new Float32Array(geo.positions), nrm: new Float32Array(geo.normals), from: t.from,
-          restN: null });
+    if (this._priv) return;
+    const E = this.engine, gl = this.gl;
+    const geoOf = (m) => (E._geoByKey && E._geoByKey.get(m.__key)) || null;
+    const S = this._shared;
+    const tiers = S.lods ? S.lods.slice(0, 2) : [{ mesh: S.mesh, from: 0 }];
+    const mk = (geo, tag) => {
+      const gm = new GpuMesh(gl, geo);
+      gm.__key = 'mhface:' + (MhFace._uid = (MhFace._uid || 0) + 1) + tag;
+      gm.setupInstancing(20);
+      return gm;
+    };
+    const levels = [];
+    for (const t of tiers) {
+      const geo = geoOf(t.mesh);
+      if (!geo || !geo.sdf) continue;
+      const rig = buildMhFaceRig(geo, levels.length ? levels[0].rig : null);
+      levels.push({ geo, rig, gm: null, work: new Float32Array(geo.positions), nrm: new Float32Array(geo.normals), from: t.from, restN: null });
+    }
+    let eyesL = null;
+    if (this.eyes && S.eyes && levels.length) {
+      const eg = geoOf(S.eyes);
+      if (eg) {
+        // Which eye each eyeball vertex belongs to, and where its centre is (units).
+        const nE = eg._teeth != null ? eg._teeth : eg.positions.length / 3, side = new Int8Array(nE);
+        for (let v = 0; v < nE; v++) side[v] = eg.positions[v * 3] < 0 ? -1 : 1;
+        const cen = {};
+        for (const lid of levels[0].rig.lids) cen[lid.side] = lid.c;
+        eyesL = { geo: eg, gm: null, work: new Float32Array(eg.positions), nrm: new Float32Array(eg.normals), nE, side, cen };
       }
-      let eyesL = null;
-      if (this.eyes && S.eyes) {
-        const eg = geoOf(S.eyes);
-        if (eg && eg._lowerTeeth && levels.length) eyesL = { geo: eg, gm: mk(eg, ':e'), work: new Float32Array(eg.positions) };
-      }
-      this._priv = { levels, eyes: eyesL };
-      this._swapIn();
-    } else if (this.head.mesh === this._shared.mesh) this._swapIn();
+    }
+    this._priv = { levels, eyes: eyesL, headIn: false, eyesIn: false, mk };
   }
 
-  _swapIn() {
-    const h = this.head, S = this._shared, L = this._priv.levels;
-    if (!L.length) return;
+  _swapHead() {
+    const h = this.head, S = this._shared, P = this._priv, L = P.levels;
+    if (!L.length || P.headIn) return;
+    for (const l of L) if (!l.gm) l.gm = P.mk(l.geo, ':h');
     if (S.lods) {
       const lods = S.lods.map((o) => ({ mesh: o.mesh, from: o.from }));
       for (let i = 0; i < L.length; i++) lods[i].mesh = L[i].gm;
       h.lods = lods;
     }
     h.mesh = L[0].gm;
-    if (this._priv.eyes) this.eyes.mesh = this._priv.eyes.gm;
+    P.headIn = true;
   }
 
-  _release() {
-    const h = this.head, S = this._shared;
-    if (S) { h.mesh = S.mesh; h.lods = S.lods; if (this.eyes && S.eyes) this.eyes.mesh = S.eyes; }
-    this._idle = 0;
-    this._swapped = false;
-    // The private meshes are kept for the next line; only the draw goes back to the shared one.
-    if (this._priv) this._priv.dirty = true;
+  _swapEyes() {
+    const P = this._priv;
+    if (!P.eyes || P.eyesIn) return;
+    if (!P.eyes.gm) P.eyes.gm = P.mk(P.eyes.geo, ':e');
+    this.eyes.mesh = P.eyes.gm;
+    P.eyesIn = true;
   }
 
-  /* The deformed positions for the current controls, and their normals, uploaded. */
-  _apply() {
+  _release(head = true, eyes = true) {
+    const h = this.head, S = this._shared, P = this._priv;
+    if (!S || !P) return;
+    if (head && P.headIn) { h.mesh = S.mesh; h.lods = S.lods; P.headIn = false; }
+    if (eyes && P.eyesIn && this.eyes && S.eyes) { this.eyes.mesh = S.eyes; P.eyesIn = false; }
+    // The private meshes are kept for next time; only the draw goes back to the shared one.
+  }
+
+  /* The deformed head for the current controls, its normals, uploaded. */
+  _applyHead() {
+    this._swapHead();
     const gl = this.gl, c = this.ctl;
-    const jawA = Math.max(0, Math.min(1.1, c.jaw)) * MHF_JAW_MAX, cj = Math.cos(jawA), sj = Math.sin(jawA);
+    // The lid following a downward look rides on the blink (a partial close of the upper lid only).
+    const blink = Math.min(1, this.blinkW + (this._lidFollow || 0) * 0.35);
     for (const L of this._priv.levels) {
-      mhFaceDeform(L.rig, L.geo.positions, c, this.blinkW, L.work);
-      const Q = L.work;
+      mhFaceDeform(L.rig, L.geo.positions, c, blink, L.work);
       this._normals(L);
       gl.bindBuffer(gl.ARRAY_BUFFER, L.gm.buffers[0]);
-      gl.bufferSubData(gl.ARRAY_BUFFER, 0, Q);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, L.work);
       gl.bindBuffer(gl.ARRAY_BUFFER, L.gm.buffers[1]);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, L.nrm);
     }
+  }
+
+  /* The eyes turned to their gaze about their own centres, and the lower teeth (and tongue) on the jaw. */
+  _applyEyes() {
     const E = this._priv.eyes;
-    if (E) {
-      const B = E.geo.positions, Q = E.work, lt = E.geo._lowerTeeth;
-      Q.set(B);
-      if (jawA > 1e-4) {
-        const R = this._priv.levels[0].rig, hy = R.hinge[0], hz = R.hinge[1];
-        for (let i = 0; i < lt.length; i++) {
-          const v = lt[i] * 3, dy = Q[v + 1] - hy, dz = Q[v + 2] - hz;
-          Q[v + 1] = hy + dy * cj - dz * sj;
-          Q[v + 2] = hz + dy * sj + dz * cj;
+    if (!E) return;
+    this._swapEyes();
+    const gl = this.gl, c = this.ctl, B = E.geo.positions, BN = E.geo.normals, Q = E.work, N = E.nrm;
+    Q.set(B); N.set(BN);
+    const yaw = this.gaze.yaw, pitch = this.gaze.pitch;
+    if (Math.abs(yaw) + Math.abs(pitch) > 1e-4) {
+      const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+      for (let v = 0; v < E.nE; v++) {
+        const ce = E.cen[E.side[v]];
+        if (!ce) continue;
+        const i = v * 3;
+        for (const [A, o] of [[Q, ce], [N, null]]) {
+          let x = A[i] - (o ? o[0] : 0), y = A[i + 1] - (o ? o[1] : 0), z = A[i + 2] - (o ? o[2] : 0);
+          // Pitch about x (up is +), then yaw about y (toward +x is +).
+          const y1 = y * cp + z * sp, z1 = -y * sp + z * cp;
+          const x2 = x * cy + z1 * sy, z2 = -x * sy + z1 * cy;
+          A[i] = x2 + (o ? o[0] : 0); A[i + 1] = y1 + (o ? o[1] : 0); A[i + 2] = z2 + (o ? o[2] : 0);
         }
       }
-      gl.bindBuffer(gl.ARRAY_BUFFER, E.gm.buffers[0]);
-      gl.bufferSubData(gl.ARRAY_BUFFER, 0, Q);
     }
+    const jawA = Math.max(0, Math.min(1.1, c.jaw)) * MHF_JAW_MAX;
+    const lt = E.geo._lowerTeeth;
+    if (jawA > 1e-4 && lt) {
+      const R = this._priv.levels[0].rig, hy = R.hinge[0], hz = R.hinge[1], cj = Math.cos(jawA), sj = Math.sin(jawA);
+      for (let i = 0; i < lt.length; i++) {
+        const v = lt[i] * 3, dy = Q[v + 1] - hy, dz = Q[v + 2] - hz;
+        Q[v + 1] = hy + dy * cj - dz * sj;
+        Q[v + 2] = hz + dy * sj + dz * cj;
+      }
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, E.gm.buffers[0]);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, Q);
+    gl.bindBuffer(gl.ARRAY_BUFFER, E.gm.buffers[1]);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, N);
   }
 
   /* Normals: the rest normals plus how much the face has turned since rest. Only the moved skin
@@ -27160,6 +27466,79 @@ class Engine {
     return this._geoByKey.get(mesh.__key) || null;
   }
 
+  /* DISTANT VERSIONS FOR A STATIC MESH, built once per mesh key and shared: the close-up, a
+     simplified copy from `near` metres and a coarser one from `far` (95c-kit decimateForDistance).
+     Skipped for anything small enough that it would not pay. Returns the lods, or null. */
+  autoLods(actor, near = 5, far = 14, opts = {}) {
+    const mesh = actor && actor.mesh;
+    if (!mesh || !mesh.__key || actor.skeleton) return null;
+    const cache = this._autoLodCache || (this._autoLodCache = new Map());
+    let L = cache.get(mesh.__key);
+    /* NOT IN THE FRAME. Decimating a gun's receiver is a hundred milliseconds, and a bot picking up
+       a weapon nobody had held yet did it inside the match tick -- a 50 ms frame out of nowhere. So
+       once the game is running the work is queued for idle time (one mesh per idle slice) and the
+       close-up is drawn until it is done; only during loading, when nothing is being drawn, is it
+       done on the spot. */
+    if (L === undefined && this._lodDeferred && !opts.now) {
+      const q = this._lodQueue || (this._lodQueue = []);
+      if (!q.some((e) => e.actor === actor)) q.push({ actor, near, far });
+      if (!this._lodIdle) {
+        this._lodIdle = true;
+        const run = (deadline) => {
+          const t0 = (typeof performance !== 'undefined') ? performance.now() : 0;
+          while (q.length) {
+            const e = q.shift();
+            if (!e.actor.dead) this.autoLods(e.actor, e.near, e.far, { now: true });
+            const spent = (typeof performance !== 'undefined') ? performance.now() - t0 : 0;
+            if (deadline && deadline.timeRemaining ? deadline.timeRemaining() < 2 : spent > 8) break;
+          }
+          if (q.length) schedule(); else this._lodIdle = false;
+        };
+        const schedule = () => (typeof requestIdleCallback === 'function'
+          ? requestIdleCallback(run, { timeout: 2000 }) : setTimeout(run, 60));
+        schedule();
+      }
+      return null;
+    }
+    if (L === undefined) {
+      L = null;
+      const geo = this._geoByKey && this._geoByKey.get(mesh.__key);
+      if (geo && geo.positions && geo.positions.length / 3 >= 240 && !geo.joints) {
+        const b = geo.bounds || (geo.computeBounds && geo.computeBounds(), geo.bounds);
+        const size = b ? Math.hypot(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z) : 0.5;
+        const g1 = decimateForDistance(geo, Math.max(0.0008, size * 0.006));
+        const g2 = g1 && decimateForDistance(geo, Math.max(0.002, size * 0.02));
+        if (g1) {
+          L = [{ mesh, from: 0 }];
+          const up = (g, tag) => {
+            const k = mesh.__key + tag, gm = new GpuMesh(this.gl, g);
+            gm.setupInstancing(20); gm.__key = k; this._geoByKey.set(k, g);
+            return gm;
+          };
+          L.push({ mesh: up(g1, ':lod1'), from: near });
+          if (g2 && g2.positions.length < g1.positions.length * 0.8) L.push({ mesh: up(g2, ':lod2'), from: far });
+        }
+      }
+      cache.set(mesh.__key, L);
+    }
+    if (L && L[0].mesh === mesh) actor.lods = L;
+    return L;
+  }
+
+  /* Which of an actor's meshes a frame draws from the camera as it stands -- the same choice the
+     renderer makes in _buildBatches. For measuring what a frame costs rather than what is loaded. */
+  drawnMesh(actor) {
+    const L = actor.lods;
+    if (!L || this.fullDetail) return actor.mesh;
+    const vh = Math.max(120, (this.renderer && this.renderer.height > 1) ? this.renderer.height : 1080);
+    const lodK = Math.tan((this.camera.fov || 0.96) * 0.5) / 0.5206 * (1080 / vh);
+    const c = this.camera.position, m = actor.matrix.e;
+    const d = Math.hypot(m[12] - c.x, m[13] - c.y, m[14] - c.z) * lodK;
+    let pick = L[0].mesh;
+    for (let i = 1; i < L.length; i++) if (d >= L[i].from) pick = L[i].mesh;
+    return pick;
+  }
+
   _mesh(key, build) {
     let m = this.meshCache.get(key);
     if (!m) {
@@ -27498,7 +27877,16 @@ class Engine {
         /* Past six metres, the same clothes at the body's own resolution (94h, `lod`): a quarter of the
            triangles, and twelve men in a match are drawn at that most of the time. */
         const g1 = makeMhBodyGeometry(skeleton, { fig: figOpts, stature: scale, outfitDef: heroOutfit, fit: opts.fit, lod: 'far' });
-        bodyEnt = { geo: g0, far: g1, vfar: g1 };
+        /* And past sixteen, where a whole person is a few dozen pixels tall, the far build decimated
+           (95c-kit decimateKeep: every surviving vertex an original, so the skin weights and the
+           painted colours hold). It was the far build again -- 5,400 vertices of clothes, 3,200 of
+           gloves -- for a figure the height of a thumbnail. The gloves get it from six metres: the
+           far build barely thins them, and at six metres a finger is two pixels. */
+        const thin = (g, e) => (g && decimateKeep(g, e, 0.12)) || g;
+        const g2 = thin(g1, 0.005) || g1;
+        if (g2 !== g1) { g2.hands = thin(g1.hands, 0.004); g2.boots = thin(g1.boots, 0.005); g2.neck = thin(g1.neck, 0.004); }
+        if (g1.hands) { const h1 = decimateKeep(g1.hands, 0.0018, 0.05); if (h1) g1.hands = h1; }
+        bodyEnt = { geo: g0, far: g1, vfar: g2 };
         bc.set(bk, bodyEnt);
       }
     } else if (sdfLiving) {
@@ -27786,6 +28174,14 @@ class Engine {
             let g2 = src;
             if (typeof src === 'number') {
               g2 = headCache.get(hk + tag);
+              /* The two farthest are the middle one decimated (95c-kit decimateKeep), not the figure
+                 remeshed coarser: the MakeHuman base mesh IS the coarsest mesh it has, so all three
+                 used to come out the same 4,246 vertices. The paint and the neck edge are kept. */
+              if (!g2 && (tag === ':far' || tag === ':vfar') && headCache.get(hk + ':mid')) {
+                const mid = headCache.get(hk + ':mid');
+                g2 = decimateKeep(mid, (tag === ':far' ? 0.0016 : 0.0035) * SDF_HEAD_TO_UNITS, 0.05 * SDF_HEAD_TO_UNITS);
+                if (g2) { g2.sdf = true; g2.mh = true; g2.headBounds = mid.headBounds; headCache.set(hk + tag, g2); }
+              }
               if (!g2) {
                 g2 = makeMhHeadGeometry({ seed: opts.seed || 5, type: figOpts ? figOpts.type : opts.faceType, build: figOpts ? figOpts.build : 1,
                   face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
@@ -28829,6 +29225,8 @@ class Engine {
   }
 
   start() {
+    // From here on a frame is being drawn: distant versions of meshes are built in idle time (autoLods).
+    this._lodDeferred = true;
     if (this.running) return this;
     this.running = true;
     this._lastTime = 0;
@@ -30884,6 +31282,120 @@ function _kDecimate(P, I, maxErr, maxLen = 0.045) {
   return { keep, tris };
 }
 
+
+/* A DISTANT VERSION OF ANY HARD-EDGED MESH. A gun, a crate or a lamp is built with its normals
+   split at every crease, so as far as the mesh knows each flat face is its own island -- every
+   edge is "open", and _kDecimate (which never moves an open edge) cannot touch it. So the points
+   are welded by position first, the welded surface is decimated, and the result is drawn flat,
+   one normal per triangle: at the distance this is drawn from, a crease is a pixel and a flat
+   facet is what it looks like anyway. Colours and UVs come from the vertex each point was welded
+   from. Returns null when decimation would not save at least a third. */
+function decimateForDistance(geo, maxErr) {
+  const P0 = geo.positions, I0 = geo.indices, n0 = P0.length / 3;
+  if (!I0 || I0.length < 3 || n0 < 64) return null;
+  const q = 1 / Math.max(maxErr * 0.05, 1e-6), rep = new Int32Array(n0), seen = new Map(), P = [];
+  const src = [];
+  for (let v = 0; v < n0; v++) {
+    const k = Math.round(P0[v * 3] * q) + ',' + Math.round(P0[v * 3 + 1] * q) + ',' + Math.round(P0[v * 3 + 2] * q);
+    let r = seen.get(k);
+    if (r === undefined) { r = src.length; seen.set(k, r); src.push(v); P.push(P0[v * 3], P0[v * 3 + 1], P0[v * 3 + 2]); }
+    rep[v] = r;
+  }
+  const I = [];
+  for (let t = 0; t < I0.length; t += 3) {
+    const a = rep[I0[t]], b = rep[I0[t + 1]], c = rep[I0[t + 2]];
+    if (a !== b && b !== c && a !== c) I.push(a, b, c);
+  }
+  if (!I.length) return null;
+  const Pw = new Float64Array(P);
+  let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+  for (let i = 0; i < Pw.length; i += 3) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], Pw[i + k]); hi[k] = Math.max(hi[k], Pw[i + k]); }
+  const diag = Math.hypot(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
+  const { keep, tris } = _kDecimate(Pw, I, maxErr, Math.max(diag * 0.6, maxErr * 8));
+  /* Shared vertices, split only at a real crease: each kept point gets one vertex per group of its
+     triangles whose normals agree within ~50 degrees, with their area-weighted normal. Drawn flat it
+     had one vertex per corner and came out BIGGER than the close-up it was meant to replace. */
+  const nt = tris.length / 3, FN = new Float64Array(nt * 3);
+  for (let t = 0; t < nt; t++) {
+    const a = keep[tris[t * 3]], b = keep[tris[t * 3 + 1]], c = keep[tris[t * 3 + 2]];
+    const ux = Pw[b * 3] - Pw[a * 3], uy = Pw[b * 3 + 1] - Pw[a * 3 + 1], uz = Pw[b * 3 + 2] - Pw[a * 3 + 2];
+    const vx = Pw[c * 3] - Pw[a * 3], vy = Pw[c * 3 + 1] - Pw[a * 3 + 1], vz = Pw[c * 3 + 2] - Pw[a * 3 + 2];
+    FN[t * 3] = uy * vz - uz * vy; FN[t * 3 + 1] = uz * vx - ux * vz; FN[t * 3 + 2] = ux * vy - uy * vx;
+  }
+  const vt = Array.from({ length: keep.length }, () => []);
+  for (let t = 0; t < nt; t++) for (let k = 0; k < 3; k++) vt[tris[t * 3 + k]].push(t);
+  const g = new Geometry();
+  const C0 = geo.colors, UV0 = geo.uvs;
+  if (C0) g.colors = [];
+  const corner = new Int32Array(tris.length);
+  for (let kv = 0; kv < keep.length; kv++) {
+    const w = keep[kv], o = src[w], groups = [];
+    for (const t of vt[kv]) {
+      const l = Math.hypot(FN[t * 3], FN[t * 3 + 1], FN[t * 3 + 2]) || 1;
+      const nx = FN[t * 3] / l, ny = FN[t * 3 + 1] / l, nz = FN[t * 3 + 2] / l;
+      let grp = null;
+      for (const q of groups) if (q.fx * nx + q.fy * ny + q.fz * nz > 0.64) { grp = q; break; }
+      if (!grp) groups.push(grp = { fx: nx, fy: ny, fz: nz, sx: 0, sy: 0, sz: 0, tris: [] });
+      grp.sx += FN[t * 3]; grp.sy += FN[t * 3 + 1]; grp.sz += FN[t * 3 + 2]; grp.tris.push(t);
+    }
+    for (const q of groups) {
+      const l = Math.hypot(q.sx, q.sy, q.sz) || 1;
+      const id = g.positions.length / 3;
+      g.positions.push(Pw[w * 3], Pw[w * 3 + 1], Pw[w * 3 + 2]);
+      g.normals.push(q.sx / l, q.sy / l, q.sz / l);
+      g.uvs.push(UV0 ? UV0[o * 2] : 0, UV0 ? UV0[o * 2 + 1] : 0);
+      g.parts.push(g.part);
+      if (C0) g.colors.push(C0[o * 3], C0[o * 3 + 1], C0[o * 3 + 2]);
+      for (const t of q.tris) for (let k = 0; k < 3; k++) if (tris[t * 3 + k] === kv) corner[t * 3 + k] = id;
+    }
+  }
+  if (g.positions.length / 3 >= n0 * 0.7) return null;
+  for (let i = 0; i < corner.length; i++) g.indices.push(corner[i]);
+  g.finalize();
+  return g;
+}
+
+/* A COARSER COPY OF A SMOOTH MESH THAT KEEPS EVERYTHING IT CARRIES -- skin weights, painted colours,
+   UVs, normals -- because every surviving vertex is one of the originals (_kDecimate keeps an
+   endpoint of each collapsed edge). For bodies, hands, boots and heads at the distance where a whole
+   person is a few dozen pixels tall. Open edges (a neck cut, a UV seam) do not move, so a head still
+   meets its neck exactly. Returns null if it would not save a quarter. */
+function decimateKeep(geo, maxErr, maxLen = 0.08) {
+  const P = geo.positions, I0 = geo.indices, n = P.length / 3;
+  if (!I0 || I0.length < 3 || n < 200) return null;
+  /* Welded by position first: a UV seam or a split normal is an open edge to the decimator, which
+     pins it, and a glove's fingers are nothing but seams. Each weld keeps the first vertex's data. */
+  const seen = new Map(), rep = new Int32Array(n), q = 1 / Math.max(maxErr * 0.02, 1e-6);
+  for (let v = 0; v < n; v++) {
+    const k = Math.round(P[v * 3] * q) + ',' + Math.round(P[v * 3 + 1] * q) + ',' + Math.round(P[v * 3 + 2] * q);
+    const r = seen.get(k);
+    if (r === undefined) { seen.set(k, v); rep[v] = v; } else rep[v] = r;
+  }
+  const I = [];
+  for (let t = 0; t < I0.length; t += 3) {
+    const a = rep[I0[t]], b = rep[I0[t + 1]], c = rep[I0[t + 2]];
+    if (a !== b && b !== c && a !== c) I.push(a, b, c);
+  }
+  const { keep, tris } = _kDecimate(P, I, maxErr, maxLen);
+  if (keep.length > n * 0.75) return null;
+  const g = new Geometry();
+  const take = (A) => {
+    if (!A || !A.length || A.length % n) return null;
+    const k = A.length / n, out = new A.constructor(keep.length * k);
+    for (let i = 0; i < keep.length; i++) for (let j = 0; j < k; j++) out[i * k + j] = A[keep[i] * k + j];
+    return out;
+  };
+  g.positions = take(geo.positions); g.normals = take(geo.normals); g.uvs = take(geo.uvs) || new Float32Array(keep.length * 2);
+  if (geo.colors) g.colors = take(geo.colors);
+  if (geo.joints) g.joints = take(geo.joints);
+  if (geo.weights) g.weights = take(geo.weights);
+  g.parts = geo.parts && geo.parts.length === n ? keep.map((v) => geo.parts[v]) : new Array(keep.length).fill(geo.part || 0);
+  g.part = geo.part;
+  g.indices = tris;
+  for (const k of ['weldGroups', 'tangents', 'bounds']) g[k] = null;
+  g.finalize();
+  return g;
+}
 
 
 // Bench only: the triangles and time a step adds (window.__kitStats).
@@ -36596,6 +37108,9 @@ function mountArm(E, key, parts, mats, opts, boundR, mass, main) {
     E._mesh(key + ':' + main, () => geo), shape, boundR);
   body.name = opts.name || key;
   body.partNames = [main];
+  // A gun in somebody else's hands is a few dozen pixels: distant versions of every part (95-engine).
+  const lod = opts.lod !== false;
+  if (lod) E.autoLods(body);
   /* Named, every one of them.
    *
    * These went in anonymous and came out as actor7022 -- which is what a
@@ -36611,6 +37126,7 @@ function mountArm(E, key, parts, mats, opts, boundR, mass, main) {
       E._mesh(key + ':' + name, () => parts[name]), null, boundR);
     a.parent = body;
     a.name = key + ':' + name;
+    if (lod) E.autoLods(a);
     /* WHERE IT TURNS, if it turns. Not where it SITS: every part is
        built in the gun's own frame and stays there, because that frame
        is what every measurement in the test suite reads -- guns.test.js
@@ -44035,10 +44551,66 @@ function turnAbout(a, pivot, axis, deg) {
   a.setPosition([px - rx, py - ry, pz - rz]);
 }
 
+/* WHERE THE BREECH RESTS, which is not "closed" for every gun.
+ *
+ * Two real behaviours the actions above did not have, and both are the
+ * first thing a person who has handled the gun looks for:
+ *
+ *   OPEN BOLT    the submachine guns of the war and every belt and bipod
+ *                gun fire from an open bolt: cocked, it sits at the BACK of
+ *                the receiver, and the trigger lets it fly forward, strip a
+ *                round, fire and come back to be caught. So at rest the bolt
+ *                of a Thompson is back, not forward -- and on an empty
+ *                magazine it rides home and stays shut until it is cocked.
+ *   HOLD-OPEN    a pistol's slide, and the bolt of a rifle with a bolt catch,
+ *                LOCKS BACK on the last round. The empty gun tells you it is
+ *                empty; the reload ends with the slide (or bolt) going home.
+ *
+ * Which guns, from the real ones: the MP5 and the AK famously do not hold
+ * open; the M16, the Garand, the AUG and every service pistol do. */
+const BREECH_OPEN_BOLT = new Set(['thompson', 'grease', 'mp40', 'ppsh', 'sten',
+  'mg42', 'mg34', 'm60', 'pkm', 'rpd', 'bar', 'bren', 'dp28']);
+const BREECH_HOLD_OPEN = new Set(['m1911', 'blaze', 'p226', 'tokarev', 'g18', 'mauser',
+  'm16', 'm4', 'garand', 'svt40', 'bm59', 'falke', 'aug', 'mp7', 'ump', 'vector', 'svd']);
+function breechOf(id) {
+  return { openBolt: BREECH_OPEN_BOLT.has(id), holdOpen: BREECH_HOLD_OPEN.has(id) };
+}
+/* The breech's travel for a gun on a shot cycle. `u` is how far through the
+   cycle it is (0..1, or < 0 between shots), `stroke` the closed-bolt stroke
+   at u (0 in battery, 1 back), `empty` whether the magazine is out. */
+function breechTravel(br, u, stroke, empty) {
+  const cycling = u >= 0 && u < 1;
+  if (br && br.openBolt) {
+    if (cycling) return empty && u > 0.5 ? Math.min(1 - stroke, 1 - u) : 1 - stroke;   // forward, fire, back -- or home on the last
+    return empty ? 0 : 1;
+  }
+  if (br && br.holdOpen && empty) {
+    // Back as usual, and caught there: it does not come forward again.
+    return cycling ? (u > 0.2 ? 1 : stroke) : 1;
+  }
+  return cycling ? stroke : 0;
+}
+
 function poseAction(gun, act, s) {
   if (!gun || !act) return;
   const fire = s.fire || 0, hand = s.hand || 0, reload = s.reload || 0;
-  const back = act.cycle === 'shot' ? fire : (act.cycle === 'hand' ? hand : 0);
+  let back = act.cycle === 'shot' ? fire : (act.cycle === 'hand' ? hand : 0);
+  /* The open bolt and the hold-open (breechOf), when the caller says which
+     gun this is and where its cycle is. */
+  if (s.breech && act.cycle === 'shot' && s.fireU != null) {
+    const want = breechTravel(s.breech, s.fireU, fire, !!s.empty);
+    /* Between shots the rest position can change under it -- the reload
+       ends and an open bolt is cocked, a slide is released -- and a part
+       does not teleport: it runs there in a few hundredths of a second.
+       On the shot itself it follows the stroke exactly. */
+    const k = s.breechState;
+    if (k) {
+      const cycling = s.fireU >= 0 && s.fireU < 1;
+      k.shown = cycling || k.shown == null ? want : k.shown + (want - k.shown) * Math.min(1, (s.dt || 0.016) * 28);
+      back = k.shown;
+    } else back = want;
+    if (s.hand > 0) back = Math.max(back, hand);   // the inspect still opens it
+  }
 
   /* The breech. Along the throw the MODEL declares, so a side-charging
      SMG and an inline rifle each move along the axis their own tube
@@ -47534,6 +48106,95 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     p = new Vec3(p.x + d.x * 0.0045, p.y + d.y * 0.0045, p.z + d.z * 0.0045);
     travelled += 0.0045;
     push(r0 * 0.44);
+    /* OUT OF THE SIGHT PICTURE, A SUPPORT FINGER AT A TIME.
+     *
+     * Measured on the seven weapons that still had a hand in the sights,
+     * the offenders were the four fingertips of the support hand, standing
+     * straight up over the CENTRE of the weapon 42 to 61 mm above its top:
+     * not wrapped round anything, floating, because the march stalls once
+     * the crown is behind it and the last bones carry on in the direction
+     * they had. Re-shaping the bends was tried eleven ways (see above) and
+     * every shape that cleared the line put flesh in the metal.
+     *
+     * A finger that is in the air over a forend has room to close: so the
+     * finished finger is turned, whole, about its own knuckle and its own
+     * bend axis -- the way it closes, never the other way -- by the least
+     * angle that puts every ring of it (centre plus radius) under the sight
+     * line, and only if that leaves no more of its axis inside the weapon
+     * than it had before. Nothing is reshaped; a finger that cannot get
+     * under the line that way is left as it was. */
+    if (fore && marchOn && opts.sightY != null) {
+      const ceil = opts.sightY - 0.0015;
+      const overOf = (R) => { let m = -1; for (const q of R) if (q.p.y + q.w - ceil > m) m = q.p.y + q.w - ceil; return m; };
+      if (overOf(rs) > 0) {
+        let ax = pt.y * cl.z - pt.z * cl.y, ay = pt.z * cl.x - pt.x * cl.z, az = pt.x * cl.y - pt.y * cl.x;
+        const aL = Math.hypot(ax, ay, az) || 1; ax /= aL; ay /= aL; az /= aL;
+        const solid = opts.surface && opts.surface.inside;
+        /* How much SKIN is in the metal: for each ring, how far its surface reaches past the
+           weapon's surface -- its radius less the signed distance from its centre to the gun. The
+           parity test alone says "outside" wherever a model is not watertight, which is most guns
+           along some line, and a finger turned by it came out a quarter buried. */
+        const S = opts.surface;
+        const buriedOf = (P) => {
+          if (!S) return 0;
+          let n = 0;
+          for (let i = 0; i < P.length; i++) n += Math.max(0, rs[i].w * 0.95 - S(P[i].x, P[i].y, P[i].z));
+          return n;
+        };
+        // Rodrigues about a pivot, positive = the way the finger closes.
+        const rotAbout = (q, o, ang) => {
+          const c = Math.cos(ang), sn = Math.sin(ang);
+          const vx = q.x - o.x, vy = q.y - o.y, vz = q.z - o.z;
+          const dt = ax * vx + ay * vy + az * vz;
+          const cx = ay * vz - az * vy, cy = az * vx - ax * vz, cz = ax * vy - ay * vx;
+          return new Vec3(o.x + vx * c + cx * sn + ax * dt * (1 - c),
+            o.y + vy * c + cy * sn + ay * dt * (1 - c),
+            o.z + vz * c + cz * sn + az * dt * (1 - c));
+        };
+        /* Two closings, not one: the whole finger about its knuckle (a1) and the two bones past the
+           middle joint about that joint (a2) -- a finger lying over a crown bends at the middle
+           knuckle as well as the big one, and with only the big one a finger floating over the
+           middle of a forend could not get down without sweeping through its far side. The least
+           total closing that gets every ring under the line without more skin in the metal. */
+        const j0 = joints[0] ? new Vec3(joints[0][0], joints[0][1], joints[0][2]) : root;
+        const mid0 = boneEnd[0];
+        const pose = (a1, a2) => {
+          const j0n = rotAbout(j0, root, a1);
+          return rs.map((q, i) => {
+            const r1 = rotAbout(q.p, root, a1);
+            return i > mid0 && a2 ? rotAbout(r1, j0n, a2) : r1;
+          });
+        };
+        const b0 = buriedOf(rs.map((q) => q.p));
+        const tries = [];
+        // Closing first; opening (back to the near side, off the crown) only if no closing works.
+        for (let a1 = -1.2; a1 <= 2.4; a1 += 0.08) for (let a2 = -0.6; a2 <= 1.8; a2 += 0.08) {
+          if (Math.abs(a1) + Math.abs(a2) > 0.01) tries.push([a1, a2]);
+        }
+        const cost = (u) => Math.abs(u[0]) + Math.abs(u[1]) + (u[0] < 0 || u[1] < 0 ? 2 : 0);
+        tries.sort((u, v) => cost(u) - cost(v));
+        let pick = null;
+        for (const [a1, a2] of tries) {
+          const P2 = pose(a1, a2);
+          let over = -1;
+          for (let i = 0; i < P2.length; i++) over = Math.max(over, P2[i].y + rs[i].w - ceil);
+          if (over > 0) continue;
+          if (buriedOf(P2) <= b0 + 1e-6) { pick = [a1, a2, P2]; break; }
+        }
+        if (pick != null) {
+          const [a1, a2, P2] = pick;
+          const j0n = rotAbout(j0, root, a1);
+          rs.forEach((q, i) => { q.p = P2[i]; });
+          for (let i = 0; i < joints.length; i++) {
+            let q = rotAbout(new Vec3(joints[i][0], joints[i][1], joints[i][2]), root, a1);
+            if (i > 0 && a2) q = rotAbout(q, j0n, a2);
+            joints[i] = [q.x, q.y, q.z];
+          }
+          p = a2 ? rotAbout(rotAbout(p, root, a1), j0n, a2) : rotAbout(p, root, a1);
+          if (opts.out) opts.out.sightTurned = (opts.out.sightTurned || 0) + 1;
+        } else if (opts.out) opts.out.sightStuck = (opts.out.sightStuck || 0) + 1;
+      }
+    }
     /* ONE FINGER, THREE BONES, THREE MESHES.
      *
      * Reported: the fingers are "wiggly and wobbly, and it doesn't feel
@@ -51566,7 +52227,7 @@ const LegendEngine = {
   /* And the twelve that are hand-dimensioned rather than table-built,
      for the same reason. See BESPOKE_ARMS in 97a-arms.js. */
   BESPOKE_ARMS, makeBespokeArm,
-  WEAPON_ACTIONS, weaponAction, poseAction,
+  WEAPON_ACTIONS, weaponAction, poseAction, breechOf, breechTravel,
   /* The shared motion vocabulary -- easing with anticipation and
      overshoot, analytic settle/kick curves, mechanism strokes, arcs,
      exact springs, smooth noise. See 90a-motion.js. */
@@ -51584,7 +52245,7 @@ const LegendEngine = {
   bakeCavityAO,
   /* Speech a lip-reader can follow: words to phonemes to mouth shapes on a timeline (91a-lipsync.js),
      and the MakeHuman face rig that wears them, with a blink every thirty seconds (91c-mh-face.js). */
-  LipSync, MhFace, buildMhFaceRig, mhFaceDeform, makeMhHeadGeometry,
+  LipSync, MhFace, buildMhFaceRig, mhFaceDeform, makeMhHeadGeometry, decimateForDistance, decimateKeep,
   clamp, lerp, smoothstep,
 };
 

@@ -456,6 +456,79 @@ class Engine {
     return this._geoByKey.get(mesh.__key) || null;
   }
 
+  /* DISTANT VERSIONS FOR A STATIC MESH, built once per mesh key and shared: the close-up, a
+     simplified copy from `near` metres and a coarser one from `far` (95c-kit decimateForDistance).
+     Skipped for anything small enough that it would not pay. Returns the lods, or null. */
+  autoLods(actor, near = 5, far = 14, opts = {}) {
+    const mesh = actor && actor.mesh;
+    if (!mesh || !mesh.__key || actor.skeleton) return null;
+    const cache = this._autoLodCache || (this._autoLodCache = new Map());
+    let L = cache.get(mesh.__key);
+    /* NOT IN THE FRAME. Decimating a gun's receiver is a hundred milliseconds, and a bot picking up
+       a weapon nobody had held yet did it inside the match tick -- a 50 ms frame out of nowhere. So
+       once the game is running the work is queued for idle time (one mesh per idle slice) and the
+       close-up is drawn until it is done; only during loading, when nothing is being drawn, is it
+       done on the spot. */
+    if (L === undefined && this._lodDeferred && !opts.now) {
+      const q = this._lodQueue || (this._lodQueue = []);
+      if (!q.some((e) => e.actor === actor)) q.push({ actor, near, far });
+      if (!this._lodIdle) {
+        this._lodIdle = true;
+        const run = (deadline) => {
+          const t0 = (typeof performance !== 'undefined') ? performance.now() : 0;
+          while (q.length) {
+            const e = q.shift();
+            if (!e.actor.dead) this.autoLods(e.actor, e.near, e.far, { now: true });
+            const spent = (typeof performance !== 'undefined') ? performance.now() - t0 : 0;
+            if (deadline && deadline.timeRemaining ? deadline.timeRemaining() < 2 : spent > 8) break;
+          }
+          if (q.length) schedule(); else this._lodIdle = false;
+        };
+        const schedule = () => (typeof requestIdleCallback === 'function'
+          ? requestIdleCallback(run, { timeout: 2000 }) : setTimeout(run, 60));
+        schedule();
+      }
+      return null;
+    }
+    if (L === undefined) {
+      L = null;
+      const geo = this._geoByKey && this._geoByKey.get(mesh.__key);
+      if (geo && geo.positions && geo.positions.length / 3 >= 240 && !geo.joints) {
+        const b = geo.bounds || (geo.computeBounds && geo.computeBounds(), geo.bounds);
+        const size = b ? Math.hypot(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z) : 0.5;
+        const g1 = decimateForDistance(geo, Math.max(0.0008, size * 0.006));
+        const g2 = g1 && decimateForDistance(geo, Math.max(0.002, size * 0.02));
+        if (g1) {
+          L = [{ mesh, from: 0 }];
+          const up = (g, tag) => {
+            const k = mesh.__key + tag, gm = new GpuMesh(this.gl, g);
+            gm.setupInstancing(20); gm.__key = k; this._geoByKey.set(k, g);
+            return gm;
+          };
+          L.push({ mesh: up(g1, ':lod1'), from: near });
+          if (g2 && g2.positions.length < g1.positions.length * 0.8) L.push({ mesh: up(g2, ':lod2'), from: far });
+        }
+      }
+      cache.set(mesh.__key, L);
+    }
+    if (L && L[0].mesh === mesh) actor.lods = L;
+    return L;
+  }
+
+  /* Which of an actor's meshes a frame draws from the camera as it stands -- the same choice the
+     renderer makes in _buildBatches. For measuring what a frame costs rather than what is loaded. */
+  drawnMesh(actor) {
+    const L = actor.lods;
+    if (!L || this.fullDetail) return actor.mesh;
+    const vh = Math.max(120, (this.renderer && this.renderer.height > 1) ? this.renderer.height : 1080);
+    const lodK = Math.tan((this.camera.fov || 0.96) * 0.5) / 0.5206 * (1080 / vh);
+    const c = this.camera.position, m = actor.matrix.e;
+    const d = Math.hypot(m[12] - c.x, m[13] - c.y, m[14] - c.z) * lodK;
+    let pick = L[0].mesh;
+    for (let i = 1; i < L.length; i++) if (d >= L[i].from) pick = L[i].mesh;
+    return pick;
+  }
+
   _mesh(key, build) {
     let m = this.meshCache.get(key);
     if (!m) {
@@ -794,7 +867,16 @@ class Engine {
         /* Past six metres, the same clothes at the body's own resolution (94h, `lod`): a quarter of the
            triangles, and twelve men in a match are drawn at that most of the time. */
         const g1 = makeMhBodyGeometry(skeleton, { fig: figOpts, stature: scale, outfitDef: heroOutfit, fit: opts.fit, lod: 'far' });
-        bodyEnt = { geo: g0, far: g1, vfar: g1 };
+        /* And past sixteen, where a whole person is a few dozen pixels tall, the far build decimated
+           (95c-kit decimateKeep: every surviving vertex an original, so the skin weights and the
+           painted colours hold). It was the far build again -- 5,400 vertices of clothes, 3,200 of
+           gloves -- for a figure the height of a thumbnail. The gloves get it from six metres: the
+           far build barely thins them, and at six metres a finger is two pixels. */
+        const thin = (g, e) => (g && decimateKeep(g, e, 0.12)) || g;
+        const g2 = thin(g1, 0.005) || g1;
+        if (g2 !== g1) { g2.hands = thin(g1.hands, 0.004); g2.boots = thin(g1.boots, 0.005); g2.neck = thin(g1.neck, 0.004); }
+        if (g1.hands) { const h1 = decimateKeep(g1.hands, 0.0018, 0.05); if (h1) g1.hands = h1; }
+        bodyEnt = { geo: g0, far: g1, vfar: g2 };
         bc.set(bk, bodyEnt);
       }
     } else if (sdfLiving) {
@@ -1082,6 +1164,14 @@ class Engine {
             let g2 = src;
             if (typeof src === 'number') {
               g2 = headCache.get(hk + tag);
+              /* The two farthest are the middle one decimated (95c-kit decimateKeep), not the figure
+                 remeshed coarser: the MakeHuman base mesh IS the coarsest mesh it has, so all three
+                 used to come out the same 4,246 vertices. The paint and the neck edge are kept. */
+              if (!g2 && (tag === ':far' || tag === ':vfar') && headCache.get(hk + ':mid')) {
+                const mid = headCache.get(hk + ':mid');
+                g2 = decimateKeep(mid, (tag === ':far' ? 0.0016 : 0.0035) * SDF_HEAD_TO_UNITS, 0.05 * SDF_HEAD_TO_UNITS);
+                if (g2) { g2.sdf = true; g2.mh = true; g2.headBounds = mid.headBounds; headCache.set(hk + tag, g2); }
+              }
               if (!g2) {
                 g2 = makeMhHeadGeometry({ seed: opts.seed || 5, type: figOpts ? figOpts.type : opts.faceType, build: figOpts ? figOpts.build : 1,
                   face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
@@ -2125,6 +2215,8 @@ class Engine {
   }
 
   start() {
+    // From here on a frame is being drawn: distant versions of meshes are built in idle time (autoLods).
+    this._lodDeferred = true;
     if (this.running) return this;
     this.running = true;
     this._lastTime = 0;

@@ -146,7 +146,10 @@ function check(name, cond, detail = '') {
        machine the test is running on. */
     const t0i = M.time;
     let moved = 0, ran = 0, maxIns = 0, ended = -1;
-    for (let i = 0; i < 40; i++) {
+    /* Until it ends or four seconds of game time pass -- not forty frames:
+       once the match got faster (the perf round) forty frames was 1.97 s of
+       a two-second inspect, and the check failed on a gun that was fine. */
+    for (let i = 0; i < 400 && M.time - t0i < 4; i++) {
       await frame();
       const s = vm.state;
       if ((s.ins || 0) > 0) { ran++; if ((s.ins || 0) > maxIns) maxIns = s.ins; }

@@ -1,8 +1,15 @@
 LEGEND ENGINE -- NATIVE BUILD (Windows, OpenGL 4.6)
 ====================================================
 
-Double-click one of the "Explore - ..." files. Each opens fullscreen at
-your monitor's own resolution (a 4K monitor renders a 4K frame).
+Double-click one of the "PLAY - ..." or "Explore - ..." files. Each opens
+fullscreen at your monitor's own resolution (a 4K monitor renders a 4K frame).
+
+  PLAY - Bunker Nine (zombies)     the zombies round, native: they come up out
+  PLAY - Coastline (zombies)       of the field, tear at the windows, climb in
+                                   and hunt you through the house; rounds grow
+                                   in number and health; M1911, Thompson and
+                                   Scattergun with the web game's numbers and
+                                   the web game's own models and animation
 
   Explore - Showcase               the golden-hour plaza, every effect on
   Explore - Showcase (cinematic)   8192 shadows, 4096 textures, max samples
@@ -13,12 +20,21 @@ your monitor's own resolution (a 4K monitor renders a 4K frame).
                                    builds them close up
 
 WHAT THIS IS: the game's renderer and maps running natively on your
-graphics card. You fly through the maps; the gameplay itself (zombies,
-guns, matches) is still in the web version and is not in this build yet.
+graphics card, and the zombies round played on them. NOT in the native
+build yet (the web version has them): buyable doors, perks, the mystery
+box, wall buys, power-ups, the special zombies, multiplayer matches and
+the campaign.
   Screenshot - 8K Showcase        renders a 7680x4320 PNG next to the .exe
   Windowed                        a 1600x900 window instead of fullscreen
 
-CONTROLS
+CONTROLS -- PLAY
+  W A S D      move          Mouse        look
+  Left mouse   fire          Right mouse  aim down the sights
+  R            reload        Space        jump        Shift  sprint
+  1 2 3 / wheel  change gun  Enter        go again after you go down
+  Esc          pause (click to resume, Q to quit)
+
+CONTROLS -- EXPLORE
   W A S D      move          Q / E    down / up
   Right mouse  hold to look  Shift    move faster
   1 - 6        jump between the showcase's camera shots

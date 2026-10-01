@@ -63,8 +63,8 @@ const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 /* The count of weapons whose support hand is above the sight line, and
    the worst offender's height, as they stand. Both may go DOWN freely;
    neither may go up. */
-const BASELINE_BLOCKING = 7;
-const BASELINE_WORST = 0.0486;
+const BASELINE_BLOCKING = 0;
+const BASELINE_WORST = 0.0;
 
 let passed = 0, failed = 0;
 function check(name, cond, detail = '') {

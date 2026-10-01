@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Bunker Nine &mdash; Campaign</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #05060a; overflow: hidden; color: #e8ddc8;
+    font-family: Georgia, 'Times New Roman', serif; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; }
+  #menu { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; background: radial-gradient(ellipse at 50% 40%, #15171f 0%, #05060a 70%); }
+  #menu .k { font-size: 12px; letter-spacing: .45em; color: #c9a35a; text-transform: uppercase; }
+  #menu h1 { font-weight: normal; font-size: 44px; letter-spacing: .2em; margin: 10px 0 34px; text-transform: uppercase; }
+  #menu .m { width: min(560px, 90vw); border-top: 1px solid #2a2a30; }
+  #menu .row { display: flex; align-items: center; justify-content: space-between; padding: 16px 6px; border-bottom: 1px solid #2a2a30;
+    cursor: pointer; }
+  #menu .row:hover, #menu .row.sel { background: rgba(201,163,90,.08); }
+  #menu .row.locked { opacity: .35; cursor: default; }
+  #menu .row .t { font-size: 20px; letter-spacing: .12em; text-transform: uppercase; }
+  #menu .row .p { font-size: 12px; color: #8f8775; letter-spacing: .1em; margin-top: 4px; }
+  #menu .row .s { font-size: 12px; letter-spacing: .2em; color: #c9a35a; text-transform: uppercase; text-align: right; }
+  #menu .back { margin-top: 26px; font-size: 12px; letter-spacing: .3em; color: #8f8775; text-transform: uppercase; cursor: pointer; }
+  #boot { position: fixed; inset: 0; z-index: 60; display: none; flex-direction: column; align-items: center; justify-content: center;
+    background: #05060a; letter-spacing: .3em; text-transform: uppercase; }
+  #boot.on { display: flex; }
+  #boot .t { font-size: 13px; color: #6b6455; }
+  #boot .m { font-size: 27px; letter-spacing: .2em; margin-top: 14px; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="menu">
+  <div class="k">Bunker Nine</div>
+  <h1>Campaign</h1>
+  <div class="m"></div>
+  <div class="back">Back to the menu</div>
+</div>
+<div id="boot"><div class="t">Mission</div><div class="m">&mdash;</div></div>
+<script src="../engine/legend-engine.js"></script>
+<script src="mp-data.js"></script>
+<script src="mp-maps.js"></script>
+<script src="mp-decals.js"></script>
+<script src="mp-match.js"></script>
+<script src="mp-streaks.js"></script>
+<script src="mp-berserker.js"></script>
+<script src="mp-cutscene.js"></script>
+<script src="mp-game.js"></script>
+<script src="campaign-missions.js"></script>
+<script src="campaign.js"></script>
+<script>
+/* The mission list. A mission is unlocked when the one before it has been finished on this machine;
+   ?mission=<id> plays one directly (and is how the tests drive it). */
+(function () {
+  var missions = window.CAMPAIGN_MISSIONS || [];
+  var save = CAMPAIGN.loadSave();
+  var list = document.querySelector('#menu .m');
+  var q = new URLSearchParams(location.search);
+  var mp = null;
+  try { mp = JSON.parse(localStorage.getItem('b9.mp.v1')); } catch (e) { mp = null; }
+
+  function unlocked(i) { return i === 0 || !!(save.done && save.done[missions[i - 1].id]) || q.get('all') === '1'; }
+  function launch(i, resume) {
+    var m = missions[i];
+    document.getElementById('menu').style.display = 'none';
+    var boot = document.getElementById('boot');
+    boot.querySelector('.m').textContent = m.title;
+    boot.classList.add('on');
+    requestAnimationFrame(function () { requestAnimationFrame(function () {
+      window.MP = CAMPAIGN.play(m, {
+        index: i, resume: resume !== false, next: i + 1 < missions.length,
+        loadout: mp && mp.loadout, name: 'You',
+        onNext: function () { location.href = 'campaign.html' + (i + 1 < missions.length ? '?mission=' + missions[i + 1].id : ''); },
+      });
+      boot.classList.remove('on');
+    }); });
+  }
+  missions.forEach(function (m, i) {
+    var row = document.createElement('div');
+    var open = unlocked(i), d = save.done && save.done[m.id], pr = save.progress && save.progress[m.id];
+    row.className = 'row' + (open ? '' : ' locked');
+    row.innerHTML = '<div><div class="t">' + (i + 1) + '. ' + m.title + '</div><div class="p">' + m.place + '</div></div>'
+      + '<div class="s">' + (d ? 'Complete' : pr ? 'Continue' : open ? 'Play' : 'Locked') + '</div>';
+    if (open) row.addEventListener('click', function () { launch(i); });
+    list.appendChild(row);
+  });
+  document.querySelector('#menu .back').addEventListener('click', function () { location.href = 'bunker-nine.html'; });
+  var want = q.get('mission');
+  if (want) {
+    var ix = missions.map(function (m) { return m.id; }).indexOf(want);
+    if (ix >= 0) launch(ix, q.get('fresh') !== '1');
+  }
+}());
+</script>
+</body>
+</html>

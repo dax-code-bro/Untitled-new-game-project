@@ -390,6 +390,59 @@ async function main() {
     };
     const camera = { position: v3(cam.position), target: v3(cam.target), fov: cam.fov,
                      near: cam.near, far: cam.far };
+    /* THE RULES' VIEW OF THE MAP, for the native game (src/game): what is
+       solid, where the zombies come in, where you start. Only the zombies
+       maps have it.
+       - colliders: every static, non-trigger body of the web physics world,
+         as the web collides with it -- each convex hull as its world-space
+         planes (nx, ny, nz, d: inside where n.p < d) plus its world box,
+         spheres as centre and radius, infinite planes as n and d.
+       - windows: each barricade's outside pad, sill and inside point.
+       - start: where the player stands and which way he faces. */
+    let gameplay = null;
+    if (window.B && B.S && B.P && G.physics) {
+      const S = B.S, P = B.P;
+      const rot = (q, v) => {   // v rotated by the unit quaternion q
+        const x = q.x, y = q.y, z = q.z, w = q.w;
+        const tx = 2 * (y * v[2] - z * v[1]), ty = 2 * (z * v[0] - x * v[2]), tz = 2 * (x * v[1] - y * v[0]);
+        return [v[0] + w * tx + (y * tz - z * ty), v[1] + w * ty + (z * tx - x * tz), v[2] + w * tz + (x * ty - y * tx)];
+      };
+      const planes = [], hulls = [], spheres = [], ground = [];
+      for (const b of G.physics.bodies) {
+        if (b.isTrigger) continue;
+        const ud = b.userData || {};
+        if (ud.zombie || ud.player) continue;
+        if (!(b.isStatic || b.isKinematic || b.invMass === 0)) continue;
+        const s = b.shape, p = b.position, q = b.quaternion;
+        if (s.type === 1 && s.faces && s.vertices) {
+          const first = planes.length / 4;
+          for (const f of s.faces) {
+            const n = rot(q, [f.normal.x, f.normal.y, f.normal.z]);
+            planes.push(n[0], n[1], n[2], f.offset + n[0] * p.x + n[1] * p.y + n[2] * p.z);
+          }
+          const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+          for (const v of s.vertices) {
+            const w = rot(q, [v.x, v.y, v.z]);
+            const wp = [w[0] + p.x, w[1] + p.y, w[2] + p.z];
+            for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], wp[k]); hi[k] = Math.max(hi[k], wp[k]); }
+          }
+          hulls.push(first, s.faces.length, lo[0], lo[1], lo[2], hi[0], hi[1], hi[2]);
+        } else if (s.type === 0) {
+          spheres.push(p.x, p.y, p.z, s.radius);
+        } else if (s.type === 2) {
+          const n = rot(q, [s.normal.x, s.normal.y, s.normal.z]);
+          ground.push(n[0], n[1], n[2], s.offset + n[0] * p.x + n[1] * p.y + n[2] * p.z);
+        }
+      }
+      const pp = P.actor.controller ? P.actor.controller.body.position : P.actor.position;
+      gameplay = {
+        planes: f32(new Float32Array(planes)), hulls: f32(new Float32Array(hulls)), hullCount: hulls.length / 8,
+        spheres: f32(new Float32Array(spheres)), ground: f32(new Float32Array(ground)),
+        windows: S.windows.map((w) => ({ id: w.def.id, pad: w.def.pad, sill: w.def.sillAt, inside: w.def.inside,
+                                         active: S.activeWindows.includes(w.def.id) })),
+        start: { at: [pp.x, pp.y, pp.z], yaw: G._camYaw || 0, eye: P.eyeHeight || 1.62 },
+      };
+    }
     // The armoury: each gun's world bounds, from its tagged actors.
     let armory = null;
     if (window.__ARMORY) {
@@ -420,7 +473,7 @@ async function main() {
     }
     return {
       armory,
-      json: { version: 1, meshes, materials, draws, env, camera,
+      json: { version: 1, meshes, materials, draws, env, camera, gameplay,
               stats: { batches: batches.length, skippedSkinned: skipped, noGeometry, actors: G.actors.length } },
       parts,
     };

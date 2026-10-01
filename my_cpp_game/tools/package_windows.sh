@@ -38,11 +38,19 @@ if [ -n "$SCENES" ] && [ -f "$SCENES/roster.lescene" ]; then
 else
   node "$HERE/tools/export_scene.js" roster "$PKG/scenes/roster.lescene"
 fi
+# The recorded zombies and viewmodels the game plays (tools/export_kit.js).
+if [ -n "$SCENES" ] && [ -f "$SCENES/kit.lekit" ]; then
+  cp "$SCENES/kit.lekit" "$PKG/scenes/"
+else
+  node "$HERE/tools/export_kit.js" "$PKG/scenes/kit.lekit"
+fi
 rm -f "$PKG/scenes/"*.json
 
 bat() {   # name, arguments -- CRLF, and pause on failure so errors stay on screen
   printf '@echo off\r\ncd /d "%%~dp0"\r\nmy_cpp_game.exe %s\r\nif errorlevel 1 pause\r\n' "$2" > "$PKG/$1.bat"
 }
+bat "PLAY - Bunker Nine (zombies)"   "--fullscreen --play --scene scenes\\bunker-nine.lescene --texture-res 2048"
+bat "PLAY - Coastline (zombies)"     "--fullscreen --play --scene scenes\\coastline.lescene --texture-res 2048"
 bat "Explore - Showcase"             "--fullscreen"
 bat "Explore - Showcase (cinematic)" "--fullscreen --quality cinematic --texture-res 4096"
 bat "Explore - Bunker Nine"          "--fullscreen --scene scenes\\bunker-nine.lescene --texture-res 4096"

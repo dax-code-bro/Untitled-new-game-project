@@ -8279,7 +8279,24 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      bounces off the stop: fast back, dwell, slower forward, rebound --
      LE.Motion.stroke. The half-sine went back exactly as fast as it came
      forward, which is the one thing a slide never does. */
-  const cycBack = cycU >= 0 ? window.LE.Motion.stroke(Math.min(1, Math.max(0, cycU))) : 0;
+  const cycStroke = cycU >= 0 ? window.LE.Motion.stroke(Math.min(1, Math.max(0, cycU))) : 0;
+  /* WHERE THE BREECH RESTS (LE.breechOf, 97e-action.js): the Thompson and
+     the MG42 fire from an open bolt, so cocked they sit with the bolt BACK
+     and fly forward on the shot; the 1911, the Mauser and the rest lock
+     back on the last round and go home at the end of the reload. A change
+     of rest between shots runs there in a few hundredths of a second
+     rather than jumping. */
+  const eqId = P.equipped();
+  const br = window.LE.breechOf ? window.LE.breechOf(eqId) : null;
+  const magNow = P.ammoFor && P.ammoFor(eqId) ? P.ammoFor(eqId).mag : 1;
+  let cycBack = cycStroke;
+  if (br && (br.openBolt || br.holdOpen)) {
+    const want = window.LE.breechTravel(br, cycU, cycStroke, magNow === 0);
+    const k = P.breechShown || (P.breechShown = {});
+    if (k.id !== eqId) { k.id = eqId; k.v = want; }
+    k.v = (cycU >= 0 && cycU < 1) ? want : k.v + (want - k.v) * Math.min(1, dt * 28);
+    cycBack = k.v;
+  }
 
   if (gunActor.slide) {
     gunActor.slide.setPosition([-(gunActor.slideTravel || 0.02) * cycBack, 0, 0]);

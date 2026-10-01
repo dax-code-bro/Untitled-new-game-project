@@ -263,68 +263,75 @@
       ti = best[0]; tj = best[1];
     }
     var n = w * h;
-    var gScore = new Float32Array(n).fill(Infinity);
-    var came = new Int32Array(n).fill(-1);
-    var closed = new Uint8Array(n);
+    /* SCRATCH THAT IS KEPT, AND A HEURISTIC THAT LEANS.
+     *
+       Every search allocated three grid-sized arrays and filled one with
+       Infinity -- on Town that is a quarter of a megabyte per search, and
+       the garbage came back as a collector pause inside a later frame. The
+       arrays are the nav's own now and a generation stamp says which
+       entries belong to this search, so nothing is allocated or cleared.
+
+       And the heuristic is weighted by 1.4. Plain A* proves the shortest
+       path by expanding everything nearly as good; a bot does not need the
+       proof, it needs a sensible route this frame, and the smoothing pass
+       below straightens whatever a slightly greedy search leaves. Measured
+       on Town: the worst single search went from 24 ms to under 4. */
+    var S = nav._scratch;
+    if (!S || S.n !== n) {
+      S = nav._scratch = { n: n, g: new Float32Array(n), came: new Int32Array(n), stamp: new Uint32Array(n),
+        shut: new Uint32Array(n), gen: 0, hk: new Int32Array(1024), hv: new Float32Array(1024) };
+    }
+    S.gen = (S.gen + 1) >>> 0;
+    if (S.gen === 0) { S.stamp.fill(0); S.shut.fill(0); S.gen = 1; }
+    var gen = S.gen, gScore = S.g, came = S.came, stamp = S.stamp, shut = S.shut;
     var start = sj * w + si, goal = tj * w + ti;
-    gScore[start] = 0;
+    stamp[start] = gen; gScore[start] = 0; came[start] = -1;
+    var W = 1.4;
     function hEst(k) {
       var i = k % w, j = (k / w) | 0;
       var dx = Math.abs(i - ti), dz = Math.abs(j - tj);
-      return (dx + dz) + (Math.SQRT2 - 2) * Math.min(dx, dz);
+      return W * ((dx + dz) + (Math.SQRT2 - 2) * Math.min(dx, dz));
     }
-    /* A BINARY HEAP, AND NOT A LINEAR SCAN.
-     *
-       The zombies version scans the open set to find the cheapest cell,
-       with a comment saying the grid is under two thousand cells and a
-       scan costs less than the code to avoid it. That is true of the
-       bunker. It is not true here: Demolition's grid is a hundred and
-       eighty-two squared, so a search that has to look at most of it
-       does thirty-three thousand scans of an open set that is itself
-       thousands long. One twelve-minute match on that map took SEVENTY
-       TWO SECONDS to simulate, against four for the others.
-
-       The heap is twenty lines and makes it linear-ish in the number of
-       cells examined. */
-    var heap = [], hf = [];
+    /* A binary heap in two typed arrays, grown by doubling and kept between searches. */
+    var hn = 0;
     function push(k, f) {
-      heap.push(k); hf.push(f);
-      var c = heap.length - 1;
-      while (c > 0) {
-        var par = (c - 1) >> 1;
-        if (hf[par] <= hf[c]) break;
-        var tk = heap[par]; heap[par] = heap[c]; heap[c] = tk;
-        var tf = hf[par]; hf[par] = hf[c]; hf[c] = tf;
-        c = par;
+      if (hn >= S.hk.length) {
+        var nk = new Int32Array(S.hk.length * 2); nk.set(S.hk); S.hk = nk;
+        var nv = new Float32Array(S.hv.length * 2); nv.set(S.hv); S.hv = nv;
       }
+      var HK = S.hk, HV = S.hv, c3 = hn++;
+      while (c3 > 0) {
+        var par = (c3 - 1) >> 1;
+        if (HV[par] <= f) break;
+        HK[c3] = HK[par]; HV[c3] = HV[par]; c3 = par;
+      }
+      HK[c3] = k; HV[c3] = f;
     }
     function pop() {
-      var top = heap[0];
-      var lastK = heap.pop(), lastF = hf.pop();
-      if (heap.length) {
-        heap[0] = lastK; hf[0] = lastF;
-        var c2 = 0;
+      var HK = S.hk, HV = S.hv, top = HK[0];
+      hn--;
+      if (hn > 0) {
+        var lk = HK[hn], lv = HV[hn], c2 = 0;
         for (;;) {
-          var l = c2 * 2 + 1, r2 = l + 1, m2 = c2;
-          if (l < heap.length && hf[l] < hf[m2]) m2 = l;
-          if (r2 < heap.length && hf[r2] < hf[m2]) m2 = r2;
+          var l = c2 * 2 + 1, r2 = l + 1, m2 = c2, mv = lv;
+          if (l < hn && HV[l] < mv) { m2 = l; mv = HV[l]; }
+          if (r2 < hn && HV[r2] < mv) m2 = r2;
           if (m2 === c2) break;
-          var tk2 = heap[m2]; heap[m2] = heap[c2]; heap[c2] = tk2;
-          var tf2 = hf[m2]; hf[m2] = hf[c2]; hf[c2] = tf2;
-          c2 = m2;
+          HK[c2] = HK[m2]; HV[c2] = HV[m2]; c2 = m2;
         }
+        HK[c2] = lk; HV[c2] = lv;
       }
       return top;
     }
     push(start, hEst(start));
     var found = false, guard = 0;
-    while (heap.length && guard++ < 40000) {
+    while (hn > 0 && guard++ < 40000) {
       if (stats) stats.pathCells++;
       var cur = pop();
-      if (closed[cur]) continue;
+      if (shut[cur] === gen) continue;
       if (cur === goal) { found = true; break; }
-      closed[cur] = 1;
-      var i3 = cur % w, j3 = (cur / w) | 0;
+      shut[cur] = gen;
+      var i3 = cur % w, j3 = (cur / w) | 0, gc = gScore[cur];
       for (var dj = -1; dj <= 1; dj++) {
         for (var di = -1; di <= 1; di++) {
           if (!di && !dj) continue;
@@ -332,14 +339,10 @@
           if (navBlocked(nav, ni, nj)) continue;
           if (di && dj && (navBlocked(nav, i3 + di, j3) || navBlocked(nav, i3, j3 + dj))) continue;
           var kk = nj * w + ni;
-          if (closed[kk]) continue;
-          var step = (di && dj) ? Math.SQRT2 : 1;
-          var g2 = gScore[cur] + step;
-          if (g2 < gScore[kk]) {
-            gScore[kk] = g2; came[kk] = cur;
-            /* Pushed again rather than decreased in place; the stale
-               copy is skipped when it comes out, because by then the
-               cell is closed. */
+          if (shut[kk] === gen) continue;
+          var g2 = gc + ((di && dj) ? Math.SQRT2 : 1);
+          if (stamp[kk] !== gen || g2 < gScore[kk]) {
+            stamp[kk] = gen; gScore[kk] = g2; came[kk] = cur;
             push(kk, g2 + hEst(kk));
           }
         }
@@ -347,7 +350,7 @@
     }
     if (!found) return null;
     var out = [];
-    for (var k3 = goal; k3 !== -1 && k3 !== start; k3 = came[k3]) {
+    for (var k3 = goal; k3 !== -1 && k3 !== start && stamp[k3] === gen; k3 = came[k3]) {
       out.push([b.x0 + (k3 % w + 0.5) * c, 0, b.z0 + (((k3 / w) | 0) + 0.5) * c]);
     }
     out.reverse();
@@ -452,7 +455,9 @@
     var game = opts.game;
     var mapId = opts.mapId || 'town';
     var modeId = opts.mode || 'tdm';
-    var mode = MP_DATA.MODES.filter(function (m) { return m.id === modeId; })[0] || MP_DATA.MODES[0];
+    /* A mode can be handed in whole -- the campaign's has no score, no clock and no respawns of its
+       own (campaign.js) -- or named from the table. */
+    var mode = opts.modeDef || MP_DATA.MODES.filter(function (m) { return m.id === modeId; })[0] || MP_DATA.MODES[0];
     var teamSize = opts.teamSize || MP_DATA.TEAM_SIZE;
     var rand = rng(opts.seed || 20260915);
     var emit = opts.onEvent || function () {};
@@ -480,10 +485,12 @@
     for (var i = 1; i < teamSize * 2; i++) {
       var team = (i % 2) ? 'b' : 'a';
       var sk = MP_DATA.BOT_SKILL[(i * 3 + 1) % MP_DATA.BOT_SKILL.length];
+      var ro = (opts.roster && opts.roster[i]) || {};
       people.push(makeCombatant(null, i, team, {
-        name: names[(i - 1) % names.length], bot: true, skill: sk,
-        loadout: botLoadout(rand),
+        name: ro.name || names[(i - 1) % names.length], bot: true, skill: sk,
+        loadout: ro.loadout || botLoadout(rand),
       }));
+      if (ro.operator) people[people.length - 1].operator = ro.operator;
     }
 
     /* Counters. Cheap, always on, and the only reason the first
@@ -591,6 +598,29 @@
     if (mode.bomb) armRound(M);
 
     M.update = function (dt) { update(M, dt, rand, emit); };
+    /* ---- for the campaign (campaign.js) ----
+       spawnAt puts somebody in play at a place on the map (on the ground there, facing yaw);
+       park takes them out of it until somebody spawns them again; groundAt is the floor height
+       under a point; finish ends the match. A `director` set on M is asked where bots go
+       (goalFor), whether the dead come back on their own (noRespawn) and where (spawnFor). */
+    M.spawnAt = function (p, at, yaw) {
+      var x = at[0], z = at.length > 2 ? at[2] : at[1];
+      var y = groundAt(M, x, z, 30);
+      p._forceSpawn = { at: [x, y == null ? 0 : y, z], yaw: yaw || 0 };
+      var keep = M.director;
+      M.director = { spawnFor: function (q) { return q === p ? q._forceSpawn : null; } };
+      try { spawn(M, p, false); } finally { M.director = keep; p._forceSpawn = null; }
+      if (p.actor) lodShow(p.actor, true);
+      return p;
+    };
+    M.park = function (p) {
+      p.alive = false; p.respawnAt = Infinity; p.busy = null;
+      p.pos = { x: 0, y: -60, z: 0 };
+      if (p.actor && p.actor.controller) p.actor.controller.teleport([0, -60, 0]);
+      return p;
+    };
+    M.groundAt = function (x, z) { return groundAt(M, x, z, 30); };
+    M.finish = function (winner) { return finish(M, winner, emit); };
     M.scoreboard = function () { return scoreboard(M); };
     M.spawnOf = function (p) { return pickSpawn(M, p); };
     M.damage = function (from, to, amount, head) { return hurt(M, from, to, amount, head, emit); };
@@ -676,7 +706,8 @@
   }
 
   function spawn(M, p, first) {
-    var s = pickSpawn(M, p);
+    // The campaign can say where somebody comes back (beside you, for a squadmate).
+    var s = (M.director && M.director.spawnFor && M.director.spawnFor(p)) || pickSpawn(M, p);
     p.pos = { x: s.at[0], y: s.at[1], z: s.at[2] };
     p.yaw = s.yaw; p.pitch = 0;
     p.hp = HEALTH; p.alive = true; p.streak = 0;
@@ -2876,9 +2907,14 @@
     var ai = p.ai, sk = p.skill || MP_DATA.BOT_SKILL[1];
     var w = gun(p);
 
-    /* ---- see ---- */
-    if (M.time - ai.sawAt > 0.18) {
-      ai.sawAt = M.time;
+    /* ---- see ----
+       A look round is a line-of-sight ray at everybody on the other side. Twelve bots that all
+       spawned on the same tick all looked on the same tick, every 0.18 s, and that frame cost
+       eight milliseconds while the four between cost one. Now no more than three look on any one
+       frame, and each next look is jittered, so the cost spreads into a flat line. */
+    if (M.time - ai.sawAt > 0.18 && M._scanBudget > 0) {
+      M._scanBudget--;
+      ai.sawAt = M.time - rand() * 0.05;
       if (M.stats) M.stats.scans++;
       var best = null, bd = 1e9;
       for (var i = 0; i < M.people.length; i++) {
@@ -3074,6 +3110,11 @@
   }
 
   function rawGoal(M, p, rand) {
+    // The campaign decides what its bots are trying to do: stay with you, come for you, hold a place.
+    if (M.director && M.director.goalFor) {
+      var dg = M.director.goalFor(p);
+      if (dg) return dg;
+    }
     if (M.mode.bomb && M.bomb) {
       var att = M.bomb.attackers === p.team;
       if (M.bomb.planted) {
@@ -3848,6 +3889,7 @@
     recSample(M, dt);
     hlTick(M);
     M._pathBudget = 1;
+    M._scanBudget = 3;
     M.aliveCount = { a: 0, b: 0 };
     for (var c0 = 0; c0 < M.people.length; c0++) {
       if (M.people[c0].alive) M.aliveCount[M.people[c0].team]++;
@@ -3859,13 +3901,19 @@
          a body that stops moving stops calling moveBy, so animating
          from inside the mover left anyone who came to a halt frozen
          mid-stride until they set off again. */
-      if (p.actor && !M.replaying) animate(p, dt);
+      if (p.actor && !M.replaying) {
+        var _pa = M.prof ? performance.now() : 0;
+        animate(p, dt);
+        if (M.prof) M.prof.anim = (M.prof.anim || 0) + performance.now() - _pa;
+      }
       if (!p.alive) {
         /* Search and Destroy has no respawns inside a round. The round
            itself puts everybody back, in the first few seconds of it. */
-        if (M.time >= p.respawnAt && (!M.mode.bomb || M.roundTime < 4.0)) spawn(M, p, false);
+        if (M.time >= p.respawnAt && (!M.mode.bomb || M.roundTime < 4.0)
+            && !(M.director && M.director.noRespawn && M.director.noRespawn(p))) spawn(M, p, false);
         continue;
       }
+      var _pt = M.prof ? performance.now() : 0;
       settleKick(M, p, dt);
       /* EVERYBODY'S SWAP, not just the one being steered by a keyboard.
        *
@@ -3881,7 +3929,9 @@
       /* Health comes back after five seconds untouched. Without it every
          fight after the first is decided by the one before it. */
       if (p.hp < HEALTH && M.time - (p.hurtAt || 0) > 5) p.hp = Math.min(HEALTH, p.hp + 18 * dt);
+      if (M.prof) { M.prof.misc = (M.prof.misc || 0) + performance.now() - _pt; _pt = performance.now(); }
       if (p.bot) botThink(M, p, dt, rand, emit);
+      if (M.prof) { M.prof.bots = (M.prof.bots || 0) + performance.now() - _pt; }
       /* OUTSIDE THE COMBAT ZONE. Ten seconds, then you are dead, and
          the same ten seconds for a bot as for the player. Cleared the
          moment you are back inside, so stepping out and back in costs
@@ -3895,14 +3945,18 @@
     }
 
     /* Nobody stands inside anybody, and then everybody is placed. */
+    var _pt2 = M.prof ? performance.now() : 0;
     separate(M);
     /* PLACEMENT IS A SECOND PASS, after everybody has moved, so a body
        is drawn where it is now rather than where it was last frame. */
     for (var j = 0; j < M.people.length; j++) place(M, M.people[j]);
+    if (M.prof) { M.prof.place = (M.prof.place || 0) + performance.now() - _pt2; _pt2 = performance.now(); }
 
     updateDoors(M, dt);
     updateCollapse(M, dt, emit, rand);
+    if (M.prof) { M.prof.world = (M.prof.world || 0) + performance.now() - _pt2; }
     if (M.mode.bomb) updateBomb(M, dt, emit, rand);
+    else if (M.mode.story) { /* the campaign decides when it is over */ }
     else {
       if (M.score.a >= M.mode.score) return finish(M, 'a', emit);
       if (M.score.b >= M.mode.score) return finish(M, 'b', emit);

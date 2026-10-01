@@ -33,6 +33,15 @@ struct Args {
        fov"), each after --frames frames, all in one run -- the scene loads
        and the textures bake once. */
     std::string shotList, shotDir;
+    /* --play: the zombies round on an exported zombies map (src/game).
+       --kit file: the recorded zombies and viewmodels (tools/export_kit.js;
+       default kit.lekit beside the scene). --autoplay: a bot plays (captures,
+       the self-test). --sim-seconds S: run S seconds of the round, unrendered,
+       before the first frame -- a test plays minutes in seconds. */
+    bool        play = false, autoplay = false;
+    std::string kit;
+    float       simSeconds = 0.0f;
+    unsigned    seed = 1;
 };
 
 Args parseArgs(int argc, char** argv);

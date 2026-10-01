@@ -70,6 +70,7 @@ const note = (s) => console.log(`  ..   ${s}`);
     for (let i = 0; i < N; i++) {
       sim = hud = vm = 0;
       const ev0 = M.events.length;
+      M.prof = {};
       await new Promise((rf) => requestAnimationFrame(rf));
       const f = now();
       t.total.push(f - last); last = f;
@@ -79,13 +80,17 @@ const note = (s) => console.log(`  ..   ${s}`);
          the number alone cannot tell them apart. */
       if (sim > 3) {
         t.why = t.why || [];
+        /* And WHERE in the tick: the match keeps a per-section clock while M.prof is set. */
+        const parts = Object.entries(M.prof || {}).sort((a, b) => b[1] - a[1]).slice(0, 2)
+          .map(([k, v]) => k + ' ' + v.toFixed(1)).join(', ');
         t.why.push({ ms: +sim.toFixed(1),
-          did: M.events.slice(ev0).map((e) => e.kind).join(',') || 'nothing' });
+          did: (M.events.slice(ev0).map((e) => e.kind).join(',') || 'nothing') + (parts ? '; ' + parts : '') });
       }
     }
     G.input._release('w');
     G.input.buttons.fire = false;
     M.update = realUpdate; G.hud.paint = realPaint; G.viewmodel.place = realPlace;
+    M.prof = null;
 
     const stat = (a) => {
       const s = a.slice().sort((x, y) => x - y);
@@ -113,14 +118,19 @@ const note = (s) => console.log(`  ..   ${s}`);
          boxes is not the map. Grouped by what the actor is, because
          "reduce the triangles" is not an action and "the twelve heads
          are 67,000 of them" is. */
+      /* COUNTED AS DRAWN. This read a.mesh -- the close-up -- for every actor, so a man at forty
+         metres counted his 17,000-vertex face and 24,000-vertex boots although the renderer draws
+         the distant versions of both; the number measured what was loaded, not what a frame costs.
+         drawnMesh is the renderer's own choice from this camera. And boots and gloves are the
+         body's, not the map's: they were the "map" 260k of it. */
       budget: (() => {
         const by = {};
         for (const a of G.game.actors) {
           if (!a.mesh || a.visible === false) continue;
-          const v = a.mesh.vertexCount || 0;
+          const v = (G.game.drawnMesh ? G.game.drawnMesh(a) : a.mesh).vertexCount || 0;
           const n = a.name || '';
           let k = 'map';
-          if (/^mp-/.test(n)) k = 'bodies';
+          if (/^mp-|^boots$|^hands$/.test(n)) k = 'bodies';
           else if (/^gear-/.test(n)) k = 'gear';
           else if (a.__isArm || /:/.test(n)) k = 'weapons';
           else if (/head|neck|eyes|hair|beard|brow|balaclava/.test(n)) k = 'heads';
@@ -139,7 +149,7 @@ const note = (s) => console.log(`  ..   ${s}`);
           const n = a.name || '';
           const m = /^[^:]+:(.+)$/.exec(n);
           if (!m) continue;
-          by[m[1]] = (by[m[1]] || 0) + (a.mesh.vertexCount || 0);
+          by[m[1]] = (by[m[1]] || 0) + ((G.game.drawnMesh ? G.game.drawnMesh(a) : a.mesh).vertexCount || 0);
         }
         return Object.entries(by).sort((x, y) => y[1] - x[1]);
       })() };
@@ -158,7 +168,7 @@ const note = (s) => console.log(`  ..   ${s}`);
   note(`${r.draws} draw calls, ${r.tris} triangles, ${r.instances} instances,`
     + ` ${r.individual} actors that cannot be instanced`);
   const totalV = Object.values(r.budget).reduce((a, b) => a + b, 0);
-  note(`${(totalV / 1000).toFixed(0)}k vertices standing in the scene`);
+  note(`${(totalV / 1000).toFixed(0)}k vertices drawn from this camera`);
   check('the scene is not carrying a quarter of a million vertices of detail',
     totalV < 300000, `${(totalV / 1000).toFixed(0)}k`);
   if (r.parts && r.parts.length) {

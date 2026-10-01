@@ -2561,6 +2561,9 @@ function mountArm(E, key, parts, mats, opts, boundR, mass, main) {
     E._mesh(key + ':' + main, () => geo), shape, boundR);
   body.name = opts.name || key;
   body.partNames = [main];
+  // A gun in somebody else's hands is a few dozen pixels: distant versions of every part (95-engine).
+  const lod = opts.lod !== false;
+  if (lod) E.autoLods(body);
   /* Named, every one of them.
    *
    * These went in anonymous and came out as actor7022 -- which is what a
@@ -2576,6 +2579,7 @@ function mountArm(E, key, parts, mats, opts, boundR, mass, main) {
       E._mesh(key + ':' + name, () => parts[name]), null, boundR);
     a.parent = body;
     a.name = key + ':' + name;
+    if (lod) E.autoLods(a);
     /* WHERE IT TURNS, if it turns. Not where it SITS: every part is
        built in the gun's own frame and stays there, because that frame
        is what every measurement in the test suite reads -- guns.test.js

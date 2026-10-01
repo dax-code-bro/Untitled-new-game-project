@@ -160,7 +160,7 @@ function buildMhFaceRig(geo, ref = null) {
 
   /* ---- the lip controls, as displacements at full weight (metres) ---- */
   const D = {};
-  for (const c of ['round', 'spread', 'press', 'tuck', 'funnel', 'upper']) D[c] = [];
+  for (const c of ['round', 'spread', 'press', 'tuck', 'funnel', 'upper', 'smile', 'frown', 'browUp', 'browDown']) D[c] = [];
   const jaw = [];
   for (let v = 0; v < n; v++) {
     const x = X[v], y = Y[v], z = Z[v], ax = Math.abs(x), sx = x < 0 ? -1 : 1, w = jw[v];
@@ -189,8 +189,12 @@ function buildMhFaceRig(geo, ref = null) {
     put('funnel', -sx * Math.min(ax, 0.03) * 0.18 * Mw, (0.0018 * nearU - 0.0018 * nearL) * M, 0.0066 * M * (0.4 + 0.6 * near));
     // th and the open vowels: the top lip lifted off the teeth
     put('upper', 0, 0.0021 * nearU * M * midW, 0.0005 * nearU * M * midW);
+    /* EXPRESSION. A smile lifts the corners up and back and bunches the cheek above them; a frown
+       (or a grimace of pain) pulls the corners down and pushes the lower lip out a little. */
+    const cheek = Math.exp(-(((y - slitY - 0.022) / 0.012) ** 2)) * _mhfS(0.012, 0.03, ax) * (1 - _mhfS(0.045, 0.06, ax)) * fz;
+    put('smile', sx * 0.0045 * Mw * corner, 0.0065 * Mw * corner + 0.0028 * cheek, -0.0024 * Mw * corner + 0.0020 * cheek);
+    put('frown', sx * 0.0010 * Mw * corner, -0.0045 * Mw * corner, 0.0016 * nearL * M * midW);
   }
-  for (const c in D) D[c] = new Float32Array(D[c]);
 
   /* ---- the lids: each eye's aperture measured column by column ---- */
   const lids = [];
@@ -276,6 +280,23 @@ function buildMhFaceRig(geo, ref = null) {
     lids.push({ side: s, meas: m, c: [cx * U, cy * U, cz * U], rot: new Float32Array(rot), hw, gap: at(su, 0) - at(sl2, 0) });
   }
 
+  /* ---- the brows: raised (surprise, fear, listening) and drawn down and in (anger, pain) ---- */
+  for (const lid of lids) {
+    const cx = lid.meas.cx, cy = lid.meas.cy, cz = lid.meas.cz;
+    for (let v = 0; v < n; v++) {
+      const x = X[v], y = Y[v], z = Z[v];
+      const dx = x - cx, dyb = y - (cy + 0.022);
+      if (Math.abs(dx) > 0.034 || Math.abs(dyb) > 0.026 || z < cz - 0.004) continue;
+      const w = Math.exp(-((dx / 0.022) ** 2) - ((dyb / 0.013) ** 2)) * _mhfS(cz - 0.004, cz + 0.012, z);
+      if (w < 0.01) continue;
+      const inner = _mhfS(0.012, -0.012, dx * Math.sign(cx));             // 1 at the nose end of the brow
+      const put = (c, px, py, pz) => { if (Math.abs(px) + Math.abs(py) + Math.abs(pz) > 2e-6) D[c].push(v, px * U, py * U, pz * U); };
+      put('browUp', 0, 0.0065 * w * (0.6 + 0.4 * inner), 0.0008 * w);
+      put('browDown', -Math.sign(cx) * 0.0030 * w * inner, -0.0050 * w * (0.35 + 0.65 * inner), 0.0016 * w * inner);
+    }
+  }
+  for (const c in D) D[c] = D[c] instanceof Float32Array ? D[c] : new Float32Array(D[c]);
+
   const rig = { n, U, slitY, slitZ, tipY, split, hinge: [hingeY * U, hingeZ * U], jaw: new Float32Array(jaw), D, lids,
     upperN: upperSet.size, lowerN: lowerSet.size, jw };
   geo._faceRig = rig;
@@ -299,7 +320,7 @@ function addMhTeeth(head, eyes) {
   const pos = Array.from(eyes.positions), nrm = Array.from(eyes.normals), uv = Array.from(eyes.uvs);
   const col = eyes.colors ? Array.from(eyes.colors) : new Array(nOld * 3).fill(1);
   const idx = Array.from(eyes.indices);
-  const lower = [];
+  const lower = [], cx0 = 0;
   const arch = (isLower) => {
     const zF = innerZ - (isLower ? 0.0038 : 0.0014), yEdge = rig.slitY + (isLower ? -0.0030 : 0.0006);
     const h = isLower ? 0.0085 : 0.0098, thick = 0.0055, half = 0.024, K = 24;
@@ -324,7 +345,7 @@ function addMhTeeth(head, eyes) {
           uv.push(i / SEG, f);
           const gum = f > 0.82 ? _mhfS(0.82, 1, f) : 0;
           const shade = (side ? 0.35 : 1) * back * (1 - 0.55 * gap);
-          col.push((0.76 * (1 - gum) + 0.62 * gum) * shade, (0.72 * (1 - gum) + 0.36 * gum) * shade, (0.63 * (1 - gum) + 0.38 * gum) * shade);
+          col.push((0.66 * (1 - gum) + 0.62 * gum) * shade, (0.61 * (1 - gum) + 0.36 * gum) * shade, (0.52 * (1 - gum) + 0.38 * gum) * shade);
           if (isLower) lower.push(pos.length / 3 - 1);
         }
       }
@@ -343,6 +364,32 @@ function addMhTeeth(head, eyes) {
     }
   };
   arch(false); arch(true);
+  /* The tongue: a flattened, wet, darker-pink mound on the floor of the mouth behind the lower teeth,
+     riding the jaw. Without it an open "ah" showed a black hole under the upper teeth. */
+  {
+    const cy = rig.slitY - 0.0072, cz = innerZ - 0.019, rx = 0.0165, ry = 0.0042, rz = 0.021;
+    const RINGS = 10, SECT = 18, base = pos.length / 3;
+    for (let a = 0; a <= RINGS; a++) {
+      const th = (a / RINGS) * Math.PI;
+      for (let b = 0; b <= SECT; b++) {
+        const ph = (b / SECT) * Math.PI * 2;
+        const nx = Math.sin(th) * Math.cos(ph), ny = Math.cos(th), nz = Math.sin(th) * Math.sin(ph);
+        const tip = nz > 0 ? 1 - 0.25 * nz * nz : 1;                  // narrower toward the tip
+        const px = cx0 + nx * rx * tip, py = cy + ny * ry * (ny > 0 ? 1 : 0.6), pz = cz + nz * rz;
+        pos.push(px * U, py * U, pz * U);
+        const l = Math.hypot(nx / rx, ny / ry, nz / rz) || 1;
+        nrm.push(nx / rx / l, ny / ry / l, nz / rz / l);
+        uv.push(b / SECT, a / RINGS);
+        const shade = 0.35 + 0.65 * _mhfS(-0.6, 0.9, nz) * (ny > -0.2 ? 1 : 0.5);
+        col.push(0.58 * shade, 0.27 * shade, 0.27 * shade);
+        lower.push(pos.length / 3 - 1);
+      }
+    }
+    for (let a = 0; a < RINGS; a++) for (let b = 0; b < SECT; b++) {
+      const i0 = base + a * (SECT + 1) + b, i1 = i0 + SECT + 1;
+      idx.push(i0, i0 + 1, i1, i0 + 1, i1 + 1, i1);
+    }
+  }
   eyes.positions = new Float32Array(pos); eyes.normals = new Float32Array(nrm); eyes.uvs = new Float32Array(uv);
   eyes.colors = new Float32Array(col); eyes.indices = idx;
   eyes.tangents = null; eyes.bounds = null;
@@ -373,11 +420,17 @@ function mhFaceDeform(R, B, c, blinkW, Q) {
       Q[v + 2] = hz + dy * sa + dz * ca;
     }
   }
-  if (blinkW > 1e-3) {
+  /* The lids: a blink closes both; a squint (a smile, pain, anger) brings the lower lid up most of
+     the way and the upper down a little; wide eyes (fear, surprise) lift the upper lid. */
+  const sq = Math.max(0, c.squint || 0), wide = Math.max(0, c.wide || 0);
+  if (blinkW > 1e-3 || sq > 1e-3 || wide > 1e-3) {
     for (const lid of R.lids) {
       const Rt = lid.rot, cy = lid.c[1], cz = lid.c[2];
       for (let i = 0; i < Rt.length; i += 2) {
-        const v = Rt[i] * 3, a = Rt[i + 1] * blinkW, ca = Math.cos(a), sa = Math.sin(a);
+        const th = Rt[i + 1];
+        let a = th * blinkW + (th > 0 ? th * 1.3 : th * 0.22) * sq * (1 - blinkW) + (th < 0 ? -th * 0.22 : 0) * wide * (1 - blinkW);
+        if (!(Math.abs(a) > 1e-5)) continue;
+        const v = Rt[i] * 3, ca = Math.cos(a), sa = Math.sin(a);
         const dy = Q[v + 1] - cy, dz = Q[v + 2] - cz;
         // Positive rotation carries the front of the eye upward (atan2(dy, dz) grows).
         Q[v + 1] = cy + dy * ca + dz * sa;
@@ -388,8 +441,25 @@ function mhFaceDeform(R, B, c, blinkW, Q) {
   return Q;
 }
 
-/* The driver: one per character. Speech from LipSync, a blink every thirty seconds, and private
-   meshes only while any of it is showing. */
+/* Faces with something on them. Each is a set of the rig's controls; a character eases toward the
+   one it is given and back again, and speech rides on top of whatever the face is doing. */
+const MHF_EMOTIONS = {
+  neutral: {},
+  happy: { smile: 0.75, squint: 0.35, browUp: 0.15 },
+  relief: { smile: 0.45, browUp: 0.35, squint: 0.15, jaw: 0.06 },
+  pain: { browDown: 0.9, squint: 0.8, frown: 0.35, spread: 0.45, jaw: 0.14, upper: 0.35 },
+  fear: { browUp: 0.95, wide: 0.9, jaw: 0.22, spread: 0.25, frown: 0.2 },
+  anger: { browDown: 1.0, squint: 0.35, frown: 0.45, press: 0.25 },
+  surprise: { browUp: 1.0, wide: 0.8, jaw: 0.45, round: 0.2 },
+  sad: { browUp: 0.45, frown: 0.6, squint: 0.1 },
+  focus: { browDown: 0.35, squint: 0.3, press: 0.15 },
+};
+const MHF_KEYS = ['jaw', 'round', 'spread', 'press', 'tuck', 'funnel', 'upper', 'smile', 'frown', 'browUp', 'browDown', 'squint', 'wide'];
+
+/* The driver: one per character. Speech from LipSync, expression, where the eyes are looking (with
+   the small fast jumps real eyes make), a blink every thirty seconds -- and private meshes only
+   while any of it is showing. The head and the eye mesh are taken separately: eyes that dart about
+   need only the eye mesh (a few thousand vertices), not the head. */
 class MhFace {
   constructor(engine, head, eyes, opts = {}) {
     this.engine = engine;
@@ -405,11 +475,24 @@ class MhFace {
     this.line = null;
     this.lineT = 0;
     this.onEnd = null;
-    this.ctl = { jaw: 0, round: 0, spread: 0, press: 0, tuck: 0, funnel: 0, upper: 0 };
+    this.ctl = {};
+    this.speech = {};
+    this.expr = {};
+    this.exprTarget = {};
+    for (const k of MHF_KEYS) { this.ctl[k] = 0; this.speech[k] = 0; this.expr[k] = 0; this.exprTarget[k] = 0; }
+    this.emotion = 'neutral';
+    this.emotionUntil = 0;
+    this.time = 0;
+    // Gaze, in radians about the head: where the eyes point now, where they are going, and what at.
+    this.gaze = { yaw: 0, pitch: 0 };
+    this.gazeGoal = { yaw: 0, pitch: 0 };
+    this.lookTarget = null;
+    this.saccadeIn = 0.4 + this.rng.next() * 1.5;
     this.blinkW = 0;
     this._shared = null;
     this._priv = null;
     this._idle = 0;
+    this._eyeIdle = 0;
     this.enabled = true;
   }
 
@@ -420,6 +503,7 @@ class MhFace {
     this.lineT = -(opts.delay || 0);
     this.onEnd = opts.onEnd || null;
     this.text = String(text);
+    if (opts.emotion) this.setEmotion(opts.emotion, opts.strength != null ? opts.strength : 1, this.line.duration + 0.6);
     return this.line.duration;
   }
 
@@ -434,12 +518,47 @@ class MhFace {
     if (t >= 0 && (t > this.lineT || this.lineT - t < 0.25)) this.lineT = t;
     return this;
   }
-  /* Hold the face in a pose -- { jaw, round, ..., blink } -- until pose(null). For tools and tests. */
+  /* Hold the face in a pose -- { jaw, round, ..., blink, yaw, pitch } -- until pose(null). For tools and tests. */
   pose(p) { this.held = p ? Object.assign({}, p) : null; return this; }
   get speaking() { return !!this.line; }
   blink() { if (this.blinkT < 0) { this.blinkT = 0; this.blinks++; } return this; }
 
+  /* An expression: a name from MHF_EMOTIONS (or a control set of your own), how strongly, and for how
+     long before it relaxes (omitted: until changed). A flinch is setEmotion('pain', 1, 0.6). */
+  setEmotion(name, strength = 1, seconds = 0) {
+    const set = typeof name === 'string' ? (MHF_EMOTIONS[name] || {}) : (name || {});
+    this.emotion = typeof name === 'string' ? name : 'custom';
+    for (const k of MHF_KEYS) this.exprTarget[k] = (set[k] || 0) * Math.max(0, Math.min(1, strength));
+    this.emotionUntil = seconds > 0 ? this.time + seconds : 0;
+    return this;
+  }
+
+  /* Look at something: a world point {x,y,z}, an actor (its head, if it has one), or null for ahead. */
+  lookAt(target) { this.lookTarget = target || null; return this; }
+
+  _aimFor() {
+    // Where the target is, in the head's frame, as yaw and pitch from between the eyes.
+    const t = this.lookTarget, h = this.head;
+    if (!t || !h || !h.matrix) return { yaw: 0, pitch: 0 };
+    let p = t;
+    if (t.matrix && t.matrix.e) {
+      const src = t.head && t.head.matrix ? t.head : t;
+      const e = src.matrix.e;
+      p = { x: e[12], y: e[13] + (src === t && t.head ? 0 : 0.08), z: e[14] };
+    } else if (t.x === undefined && t.position) p = t.position;
+    const m = h.matrix.e;
+    // Inverse of an affine matrix with uniform scale: R^T (p - o) / s^2.
+    const ox = p.x - m[12], oy = p.y - m[13], oz = p.z - m[14];
+    const s2 = m[0] * m[0] + m[1] * m[1] + m[2] * m[2] || 1;
+    const lx = (m[0] * ox + m[1] * oy + m[2] * oz) / s2, ly = (m[4] * ox + m[5] * oy + m[6] * oz) / s2, lz = (m[8] * ox + m[9] * oy + m[10] * oz) / s2;
+    const U = SDF_HEAD_TO_UNITS, ey = 0.011 * U, ez = 0.10 * U;
+    const dx = lx, dy = ly - ey, dz = lz - ez;
+    if (dz < 0.05) return { yaw: Math.sign(dx) * 0.55, pitch: 0 };         // behind: as far round as eyes go
+    return { yaw: Math.max(-0.55, Math.min(0.55, Math.atan2(dx, dz))), pitch: Math.max(-0.4, Math.min(0.35, Math.atan2(dy, Math.hypot(dx, dz)))) };
+  }
+
   update(dt) {
+    this.time += dt;
     // Blinking: every thirty seconds, give or take.
     if (this.blinkT >= 0) {
       this.blinkT += dt;
@@ -459,33 +578,76 @@ class MhFace {
     } else this.blinkW = 0;
 
     // Speech.
-    const c = this.ctl;
+    const sp = this.speech;
     if (this.line) {
       this.lineT += dt;
-      if (this.lineT >= 0) LipSync.sample(this.line, this.lineT, c);
+      if (this.lineT >= 0) LipSync.sample(this.line, this.lineT, sp);
       if (this.lineT > this.line.duration) {
         this.line = null;
-        for (const k in c) c[k] = 0;
+        for (const k of MHF_KEYS) sp[k] = 0;
         if (this.onEnd) { const f = this.onEnd; this.onEnd = null; f(); }
       }
-    } else for (const k in c) c[k] *= Math.max(0, 1 - dt * 18);
+    } else for (const k of MHF_KEYS) sp[k] *= Math.max(0, 1 - dt * 18);
+
+    // Expression: eased toward its target, and back to neutral when its time is up.
+    if (this.emotionUntil && this.time >= this.emotionUntil) this.setEmotion('neutral');
+    const ex = this.expr, k1 = Math.min(1, dt * 7);
+    for (const k of MHF_KEYS) ex[k] += (this.exprTarget[k] - ex[k]) * k1;
+
+    // The face: speech on top of expression. While talking the mouth is the speech's; the
+    // expression keeps the brows, the eyes and what is left of the mouth.
+    const c = this.ctl, talking = this.line ? 1 : Math.min(1, Math.abs(sp.jaw) * 4);
+    for (const k of MHF_KEYS) {
+      const mouth = k !== 'browUp' && k !== 'browDown' && k !== 'squint' && k !== 'wide';
+      c[k] = sp[k] + ex[k] * (mouth ? 1 - 0.65 * talking : 1);
+    }
+
+    // Gaze: hold on the target, with a small quick jump every second or two (a saccade), and back.
+    const aim = this._aimFor();
+    this.saccadeIn -= dt;
+    if (this.saccadeIn <= 0) {
+      const r = this.rng;
+      const far = r.next() < 0.18;                          // now and then a real look away
+      this.gazeGoal.yaw = aim.yaw + (r.next() * 2 - 1) * (far ? 0.28 : 0.06);
+      this.gazeGoal.pitch = aim.pitch + (r.next() * 2 - 1) * (far ? 0.12 : 0.035);
+      this.saccadeIn = (far ? 0.5 : 0.7) + r.next() * (far ? 0.6 : 2.2);
+      this._backTo = far ? this.time + 0.35 + r.next() * 0.5 : 0;
+    } else {
+      // Between jumps the eyes follow the target smoothly (pursuit), keeping the last jump's offset.
+      if (this._backTo && this.time > this._backTo) { this.gazeGoal.yaw = aim.yaw; this.gazeGoal.pitch = aim.pitch; this._backTo = 0; }
+      const oy = this.gazeGoal.yaw - (this._aim0 ? this._aim0.yaw : aim.yaw), op = this.gazeGoal.pitch - (this._aim0 ? this._aim0.pitch : aim.pitch);
+      this.gazeGoal.yaw = aim.yaw + oy; this.gazeGoal.pitch = aim.pitch + op;
+    }
+    this._aim0 = aim;
+    // A saccade takes about 40 ms: close most of the distance every frame.
+    const kg = Math.min(1, dt * 26);
+    this.gaze.yaw += (Math.max(-0.6, Math.min(0.6, this.gazeGoal.yaw)) - this.gaze.yaw) * kg;
+    this.gaze.pitch += (Math.max(-0.42, Math.min(0.38, this.gazeGoal.pitch)) - this.gaze.pitch) * kg;
+    // Looking down, the upper lid follows the eye down a little (it does, and without it a downcast look stares).
+    const lidFollow = Math.max(0, -this.gaze.pitch) * 1.2;
 
     if (this.held) {
-      for (const k in c) c[k] = this.held[k] || 0;
+      for (const k of MHF_KEYS) c[k] = this.held[k] || 0;
       this.blinkW = this.held.blink || 0;
+      if (this.held.yaw != null) this.gaze.yaw = this.held.yaw;
+      if (this.held.pitch != null) this.gaze.pitch = this.held.pitch;
     }
-    let any = this.blinkW > 1e-3;
-    for (const k in c) if (Math.abs(c[k]) > 1e-3) any = true;
-    if (!this.enabled || !this.head || this.head.dead || this.head.visible === false) { if (this._priv && this.head && this.head.visible === false) this._release(); return; }
-    if (!any) {
-      this._idle += dt;
-      if (this._priv && this._idle > 0.25) this._release();
-      return;
-    }
-    this._idle = 0;
-    if (!this._near()) { if (this._priv) this._release(); return; }
+    this._lidFollow = this.held ? 0 : lidFollow;
+
+    let headAny = this.blinkW > 1e-3 || this._lidFollow > 0.02;
+    for (const k of MHF_KEYS) if (Math.abs(c[k]) > 1e-3) headAny = true;
+    const eyesAny = Math.abs(this.gaze.yaw) > 0.004 || Math.abs(this.gaze.pitch) > 0.004 || c.jaw > 1e-3;
+    const h = this.head;
+    if (!this.enabled || !h || h.dead || h.visible === false) { if (this._priv) this._release(true, true); return; }
+    if (!headAny) this._idle += dt; else this._idle = 0;
+    if (!eyesAny) this._eyeIdle += dt; else this._eyeIdle = 0;
+    if (!this._near()) { if (this._priv) this._release(true, true); return; }
+    if (this._idle > 0.25 && this._priv && this._priv.headIn) this._release(true, false);
+    if (this._eyeIdle > 0.25 && this._priv && this._priv.eyesIn) this._release(false, true);
+    if (!headAny && !eyesAny) return;
     this._acquire();
-    this._apply();
+    if (headAny) this._applyHead(); else if (this._priv.headIn) this._release(true, false);
+    if (eyesAny || headAny) this._applyEyes();
   }
 
   _near() {
@@ -496,88 +658,125 @@ class MhFace {
     return Math.hypot(m[12] - p.x, m[13] - p.y, m[14] - p.z) < MHF_NEAR;
   }
 
-  /* Private copies of the two close levels of detail (and of the eyes, for the teeth). */
+  /* Private copies of the two close levels of detail, and of the eye mesh (eyes and teeth). */
   _acquire() {
     const h = this.head;
     if (!this._shared) this._shared = { mesh: h.mesh, lods: h.lods, eyes: this.eyes ? this.eyes.mesh : null };
-    if (!this._priv) {
-      const E = this.engine, gl = this.gl;
-      const geoOf = (m) => (E._geoByKey && E._geoByKey.get(m.__key)) || null;
-      const S = this._shared;
-      const tiers = S.lods ? S.lods.slice(0, 2) : [{ mesh: S.mesh, from: 0 }];
-      const mk = (geo, tag) => {
-        const gm = new GpuMesh(gl, geo);
-        gm.__key = 'mhface:' + (MhFace._uid = (MhFace._uid || 0) + 1) + tag;
-        gm.setupInstancing(20);
-        return gm;
-      };
-      const levels = [];
-      for (const t of tiers) {
-        const geo = geoOf(t.mesh);
-        if (!geo || !geo.sdf) continue;
-        const rig = buildMhFaceRig(geo, levels.length ? levels[0].rig : null);
-        levels.push({ geo, rig, gm: mk(geo, ':h'), work: new Float32Array(geo.positions), nrm: new Float32Array(geo.normals), from: t.from,
-          restN: null });
+    if (this._priv) return;
+    const E = this.engine, gl = this.gl;
+    const geoOf = (m) => (E._geoByKey && E._geoByKey.get(m.__key)) || null;
+    const S = this._shared;
+    const tiers = S.lods ? S.lods.slice(0, 2) : [{ mesh: S.mesh, from: 0 }];
+    const mk = (geo, tag) => {
+      const gm = new GpuMesh(gl, geo);
+      gm.__key = 'mhface:' + (MhFace._uid = (MhFace._uid || 0) + 1) + tag;
+      gm.setupInstancing(20);
+      return gm;
+    };
+    const levels = [];
+    for (const t of tiers) {
+      const geo = geoOf(t.mesh);
+      if (!geo || !geo.sdf) continue;
+      const rig = buildMhFaceRig(geo, levels.length ? levels[0].rig : null);
+      levels.push({ geo, rig, gm: null, work: new Float32Array(geo.positions), nrm: new Float32Array(geo.normals), from: t.from, restN: null });
+    }
+    let eyesL = null;
+    if (this.eyes && S.eyes && levels.length) {
+      const eg = geoOf(S.eyes);
+      if (eg) {
+        // Which eye each eyeball vertex belongs to, and where its centre is (units).
+        const nE = eg._teeth != null ? eg._teeth : eg.positions.length / 3, side = new Int8Array(nE);
+        for (let v = 0; v < nE; v++) side[v] = eg.positions[v * 3] < 0 ? -1 : 1;
+        const cen = {};
+        for (const lid of levels[0].rig.lids) cen[lid.side] = lid.c;
+        eyesL = { geo: eg, gm: null, work: new Float32Array(eg.positions), nrm: new Float32Array(eg.normals), nE, side, cen };
       }
-      let eyesL = null;
-      if (this.eyes && S.eyes) {
-        const eg = geoOf(S.eyes);
-        if (eg && eg._lowerTeeth && levels.length) eyesL = { geo: eg, gm: mk(eg, ':e'), work: new Float32Array(eg.positions) };
-      }
-      this._priv = { levels, eyes: eyesL };
-      this._swapIn();
-    } else if (this.head.mesh === this._shared.mesh) this._swapIn();
+    }
+    this._priv = { levels, eyes: eyesL, headIn: false, eyesIn: false, mk };
   }
 
-  _swapIn() {
-    const h = this.head, S = this._shared, L = this._priv.levels;
-    if (!L.length) return;
+  _swapHead() {
+    const h = this.head, S = this._shared, P = this._priv, L = P.levels;
+    if (!L.length || P.headIn) return;
+    for (const l of L) if (!l.gm) l.gm = P.mk(l.geo, ':h');
     if (S.lods) {
       const lods = S.lods.map((o) => ({ mesh: o.mesh, from: o.from }));
       for (let i = 0; i < L.length; i++) lods[i].mesh = L[i].gm;
       h.lods = lods;
     }
     h.mesh = L[0].gm;
-    if (this._priv.eyes) this.eyes.mesh = this._priv.eyes.gm;
+    P.headIn = true;
   }
 
-  _release() {
-    const h = this.head, S = this._shared;
-    if (S) { h.mesh = S.mesh; h.lods = S.lods; if (this.eyes && S.eyes) this.eyes.mesh = S.eyes; }
-    this._idle = 0;
-    this._swapped = false;
-    // The private meshes are kept for the next line; only the draw goes back to the shared one.
-    if (this._priv) this._priv.dirty = true;
+  _swapEyes() {
+    const P = this._priv;
+    if (!P.eyes || P.eyesIn) return;
+    if (!P.eyes.gm) P.eyes.gm = P.mk(P.eyes.geo, ':e');
+    this.eyes.mesh = P.eyes.gm;
+    P.eyesIn = true;
   }
 
-  /* The deformed positions for the current controls, and their normals, uploaded. */
-  _apply() {
+  _release(head = true, eyes = true) {
+    const h = this.head, S = this._shared, P = this._priv;
+    if (!S || !P) return;
+    if (head && P.headIn) { h.mesh = S.mesh; h.lods = S.lods; P.headIn = false; }
+    if (eyes && P.eyesIn && this.eyes && S.eyes) { this.eyes.mesh = S.eyes; P.eyesIn = false; }
+    // The private meshes are kept for next time; only the draw goes back to the shared one.
+  }
+
+  /* The deformed head for the current controls, its normals, uploaded. */
+  _applyHead() {
+    this._swapHead();
     const gl = this.gl, c = this.ctl;
-    const jawA = Math.max(0, Math.min(1.1, c.jaw)) * MHF_JAW_MAX, cj = Math.cos(jawA), sj = Math.sin(jawA);
+    // The lid following a downward look rides on the blink (a partial close of the upper lid only).
+    const blink = Math.min(1, this.blinkW + (this._lidFollow || 0) * 0.35);
     for (const L of this._priv.levels) {
-      mhFaceDeform(L.rig, L.geo.positions, c, this.blinkW, L.work);
-      const Q = L.work;
+      mhFaceDeform(L.rig, L.geo.positions, c, blink, L.work);
       this._normals(L);
       gl.bindBuffer(gl.ARRAY_BUFFER, L.gm.buffers[0]);
-      gl.bufferSubData(gl.ARRAY_BUFFER, 0, Q);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, L.work);
       gl.bindBuffer(gl.ARRAY_BUFFER, L.gm.buffers[1]);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, L.nrm);
     }
+  }
+
+  /* The eyes turned to their gaze about their own centres, and the lower teeth (and tongue) on the jaw. */
+  _applyEyes() {
     const E = this._priv.eyes;
-    if (E) {
-      const B = E.geo.positions, Q = E.work, lt = E.geo._lowerTeeth;
-      Q.set(B);
-      if (jawA > 1e-4) {
-        const R = this._priv.levels[0].rig, hy = R.hinge[0], hz = R.hinge[1];
-        for (let i = 0; i < lt.length; i++) {
-          const v = lt[i] * 3, dy = Q[v + 1] - hy, dz = Q[v + 2] - hz;
-          Q[v + 1] = hy + dy * cj - dz * sj;
-          Q[v + 2] = hz + dy * sj + dz * cj;
+    if (!E) return;
+    this._swapEyes();
+    const gl = this.gl, c = this.ctl, B = E.geo.positions, BN = E.geo.normals, Q = E.work, N = E.nrm;
+    Q.set(B); N.set(BN);
+    const yaw = this.gaze.yaw, pitch = this.gaze.pitch;
+    if (Math.abs(yaw) + Math.abs(pitch) > 1e-4) {
+      const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+      for (let v = 0; v < E.nE; v++) {
+        const ce = E.cen[E.side[v]];
+        if (!ce) continue;
+        const i = v * 3;
+        for (const [A, o] of [[Q, ce], [N, null]]) {
+          let x = A[i] - (o ? o[0] : 0), y = A[i + 1] - (o ? o[1] : 0), z = A[i + 2] - (o ? o[2] : 0);
+          // Pitch about x (up is +), then yaw about y (toward +x is +).
+          const y1 = y * cp + z * sp, z1 = -y * sp + z * cp;
+          const x2 = x * cy + z1 * sy, z2 = -x * sy + z1 * cy;
+          A[i] = x2 + (o ? o[0] : 0); A[i + 1] = y1 + (o ? o[1] : 0); A[i + 2] = z2 + (o ? o[2] : 0);
         }
       }
-      gl.bindBuffer(gl.ARRAY_BUFFER, E.gm.buffers[0]);
-      gl.bufferSubData(gl.ARRAY_BUFFER, 0, Q);
     }
+    const jawA = Math.max(0, Math.min(1.1, c.jaw)) * MHF_JAW_MAX;
+    const lt = E.geo._lowerTeeth;
+    if (jawA > 1e-4 && lt) {
+      const R = this._priv.levels[0].rig, hy = R.hinge[0], hz = R.hinge[1], cj = Math.cos(jawA), sj = Math.sin(jawA);
+      for (let i = 0; i < lt.length; i++) {
+        const v = lt[i] * 3, dy = Q[v + 1] - hy, dz = Q[v + 2] - hz;
+        Q[v + 1] = hy + dy * cj - dz * sj;
+        Q[v + 2] = hz + dy * sj + dz * cj;
+      }
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, E.gm.buffers[0]);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, Q);
+    gl.bindBuffer(gl.ARRAY_BUFFER, E.gm.buffers[1]);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, N);
   }
 
   /* Normals: the rest normals plus how much the face has turned since rest. Only the moved skin

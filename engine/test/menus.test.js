@@ -155,7 +155,13 @@ const note = (s) => console.log(`  ..   ${s}`);
     JSON.stringify(turn));
   check('and he gets all the way there',
     Math.abs(turn.end - turn.want) < 0.12, JSON.stringify(turn));
-  await page.screenshot({ path: path.join(OUT, 'menu-operator3d.jpg'), type: 'jpeg', quality: 86 });
+  /* The loop held for the picture. With the staged operator running at
+     full rate under SwiftShader the page never goes idle, and a screenshot
+     waits for idle: it timed out here on the last commit as well as this
+     one. A stopped loop still shows its last frame. */
+  await page.evaluate(() => window.BUNKER_SHELL.handle().game.stop());
+  await page.screenshot({ path: path.join(OUT, 'menu-operator3d.jpg'), type: 'jpeg', quality: 86, timeout: 90000 });
+  await page.evaluate(() => window.BUNKER_SHELL.handle().game.start());
   note(`shot -> ${path.join(OUT, 'menu-operator3d.jpg')}`);
 
   /* THE MENUS ARE VISIBLE, not merely present.

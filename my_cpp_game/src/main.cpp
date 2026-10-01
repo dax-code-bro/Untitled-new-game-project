@@ -14,7 +14,13 @@
  * Controls (windowed): WASD / QE move, hold right mouse to look, Shift is
  * fast, 1-6 jump to the named shots, F12 saves a screenshot, Esc quits.
  * Shaders and scripts/look.ini hot-reload on save. --fullscreen runs at the
- * monitor's own resolution. */
+ * monitor's own resolution.
+ *
+ * --play on a zombies map (bunker-nine, coastline) is the game instead of
+ * the fly camera: WASD move, mouse look, left button fire, right button
+ * aim, R reload, Space jump, Shift sprint, 1-3 or the wheel to change gun,
+ * Enter to go again when you are down, Esc to pause (Q quits from there).
+ * src/game/Zombies.hpp says what is and is not in it. */
 #include "core/Args.hpp"
 #include "core/Capture.hpp"
 #include "core/GlDebug.hpp"
@@ -27,6 +33,10 @@
 #include <fstream>
 #include "scene/SceneFile.hpp"
 #include "scene/Showcase.hpp"
+#include "game/Hud.hpp"
+#include "game/Kit.hpp"
+#include "game/Lesc.hpp"
+#include "game/Zombies.hpp"
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
@@ -79,6 +89,8 @@ struct FlyCamera {
         return {std::sin(yaw) * std::cos(pitch), std::sin(pitch), -std::cos(yaw) * std::cos(pitch)};
     }
 };
+
+double g_scroll = 0.0;   // mouse wheel since the last frame (GLFW delivers it by callback)
 
 } // namespace
 
@@ -184,6 +196,52 @@ int main(int argc, char** argv) try {
     FlyCamera fly;
     fly.lookFrom(camera);
 
+    /* ---- the game (--play) ---- */
+    std::unique_ptr<game::play::KitFile> kit;
+    std::unique_ptr<game::play::ZombiesGame> zgame;
+    std::unique_ptr<game::play::Hud> hud;
+    std::vector<game::rendering::PointLight> baseLights;
+    std::vector<game::rendering::DrawItem> frameItems;
+    if (args.play) {
+        if (!sceneFile) throw std::invalid_argument("--play needs --scene <zombies map>.lescene");
+        const std::filesystem::path kp = args.kit.empty()
+            ? std::filesystem::path(args.scene).parent_path() / "kit.lekit" : std::filesystem::path(args.kit);
+        const auto k0 = std::chrono::steady_clock::now();
+        kit = std::make_unique<game::play::KitFile>(kp, materials);
+        {
+            const game::play::Lesc map(args.scene);
+            zgame = std::make_unique<game::play::ZombiesGame>(map, *kit, camera, args.seed);
+        }
+        hud = std::make_unique<game::play::Hud>(shaders);
+        baseLights = renderer.lights;
+        /* No TAA in play. Its history is reprojected as if everything were
+           fixed in the world, and the gun in your hands moves with the
+           camera: turning smears it. FXAA, which is per frame, stays on. */
+        renderer.stages.taa = false;
+        std::printf("play: %zu collision hulls, %zu nav nodes, %zu zombie bodies, %zu bone-palette frames (%.2f s)\n",
+                    zgame->hulls(), zgame->navNodes(), kit->zombies().size(), kit->paletteTextures(),
+                    std::chrono::duration<double>(std::chrono::steady_clock::now() - k0).count());
+        if (args.simSeconds > 0.0f) {
+            const int steps = static_cast<int>(args.simSeconds / kFixedStep);
+            for (int s = 0; s < steps; ++s) zgame->update(static_cast<float>(kFixedStep), zgame->autopilot(static_cast<float>(kFixedStep)));
+            const auto& st = zgame->stats();
+            std::printf("sim %.0f s: round %d, %d spawned, %d climbed in, %d alive (max %d), %d kills (%d headshots), "
+                        "%d shots %d hits, %d points, %d downs, health %.0f\n", args.simSeconds, st.round, st.spawned,
+                        st.climbed, st.alive, st.maxAlive, st.kills, st.headshots, st.shots, st.hits, st.points,
+                        st.downs, st.health);
+        }
+        if (!args.hidden) {
+            glfwSetInputMode(window->handle(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            if (glfwRawMouseMotionSupported()) glfwSetInputMode(window->handle(), GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+            glfwSetScrollCallback(window->handle(), [](GLFWwindow*, double, double y) { g_scroll += y; });
+        }
+    }
+    bool paused = false, prevEsc = false, prevEnter = false, prevR = false, prevSpace = false, prevLmb = false;
+    bool pendFire = false, pendReload = false, pendJump = false, pendRestart = false;
+    int pendSlot = -1, pendCycle = 0;
+    double lookX = 0.0, lookY = 0.0;
+    bool mouseInit = false;
+
     using clock = std::chrono::steady_clock;
     auto   previous    = clock::now();
     double accumulator = 0.0;
@@ -203,7 +261,73 @@ int main(int argc, char** argv) try {
         if (shaders.reloadChanged()) std::printf("shaders reloaded\n");
         if (frame > 0 && look.reloadIfChanged(renderer)) { applySets(); std::printf("look reloaded\n"); }
 
-        if (!args.hidden) {
+        game::play::Input playIn;
+        if (zgame && !args.hidden) {
+            GLFWwindow* w = window->handle();
+            if (window->width() > 0 && window->height() > 0) renderer.resize(window->width(), window->height());
+            const bool esc = glfwGetKey(w, GLFW_KEY_ESCAPE) == GLFW_PRESS;
+            if (esc && !prevEsc) {
+                paused = !paused;
+                glfwSetInputMode(w, GLFW_CURSOR, paused ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
+                mouseInit = false;
+            }
+            prevEsc = esc;
+            if (paused) {
+                if (glfwGetKey(w, GLFW_KEY_Q)) window->close();
+                if (glfwGetMouseButton(w, GLFW_MOUSE_BUTTON_LEFT)) {
+                    paused = false;
+                    glfwSetInputMode(w, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                    mouseInit = false;
+                    prevLmb = true;
+                }
+            } else {
+                double mx = 0, my = 0;
+                glfwGetCursorPos(w, &mx, &my);
+                if (mouseInit) { lookX += (mx - lastX) * 0.0022; lookY -= (my - lastY) * 0.0022; }
+                mouseInit = true;
+                lastX = mx; lastY = my;
+                const bool lmb = glfwGetMouseButton(w, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+                if (lmb && !prevLmb) pendFire = true;
+                prevLmb = lmb;
+                const bool r = glfwGetKey(w, GLFW_KEY_R) == GLFW_PRESS, sp = glfwGetKey(w, GLFW_KEY_SPACE) == GLFW_PRESS;
+                const bool en = glfwGetKey(w, GLFW_KEY_ENTER) == GLFW_PRESS;
+                if (r && !prevR) pendReload = true;
+                if (sp && !prevSpace) pendJump = true;
+                if (en && !prevEnter) pendRestart = true;
+                prevR = r; prevSpace = sp; prevEnter = en;
+                for (int k = 0; k < 3; ++k) if (glfwGetKey(w, GLFW_KEY_1 + k)) pendSlot = k;
+                if (g_scroll > 0.5) { pendCycle = -1; g_scroll = 0; } else if (g_scroll < -0.5) { pendCycle = 1; g_scroll = 0; }
+                playIn.move = {static_cast<float>((glfwGetKey(w, GLFW_KEY_D) ? 1 : 0) - (glfwGetKey(w, GLFW_KEY_A) ? 1 : 0)),
+                               static_cast<float>((glfwGetKey(w, GLFW_KEY_W) ? 1 : 0) - (glfwGetKey(w, GLFW_KEY_S) ? 1 : 0))};
+                playIn.fire = lmb;
+                playIn.aim = glfwGetMouseButton(w, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+                playIn.sprint = glfwGetKey(w, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+            }
+        }
+        if (zgame) {
+            // The fixed-step sim. One-shot presses go to the first step that runs; the look is spread over them.
+            int steps = 0;
+            for (double a = accumulator; a >= kFixedStep; a -= kFixedStep) ++steps;
+            while (accumulator >= kFixedStep) {
+                accumulator -= kFixedStep;
+                if (paused) continue;
+                game::play::Input in = args.autoplay ? zgame->autopilot(static_cast<float>(kFixedStep)) : playIn;
+                if (!args.autoplay) {
+                    in.look = {static_cast<float>(lookX / steps), static_cast<float>(lookY / steps)};
+                    in.firePressed = pendFire; in.reloadPressed = pendReload; in.jumpPressed = pendJump;
+                    in.restartPressed = pendRestart; in.weaponSlot = pendSlot; in.weaponCycle = pendCycle;
+                    pendFire = pendReload = pendJump = pendRestart = false;
+                    pendSlot = -1; pendCycle = 0;
+                }
+                zgame->update(static_cast<float>(kFixedStep), in);
+            }
+            if (steps > 0) lookX = lookY = 0.0;
+            frameItems = items;
+            renderer.lights = baseLights;
+            zgame->frame(camera, frameItems, renderer.lights);
+        }
+
+        if (!args.hidden && !zgame) {
             GLFWwindow* w = window->handle();
             if (glfwGetKey(w, GLFW_KEY_ESCAPE)) window->close();
             if (window->width() > 0 && window->height() > 0)
@@ -236,7 +360,7 @@ int main(int argc, char** argv) try {
             camera.target = fly.pos + fly.forward();
         }
 
-        while (accumulator >= kFixedStep) accumulator -= kFixedStep;   // sim attaches here
+        while (accumulator >= kFixedStep) accumulator -= kFixedStep;   // the fly camera has no sim
 
         if (args.orbit != 0.0f) {
             // Swing the eye round the target about the vertical axis.
@@ -247,8 +371,19 @@ int main(int argc, char** argv) try {
         }
 
         const auto g0 = clock::now();
-        renderer.render(items, camera, static_cast<float>(dt));
+        renderer.render(zgame ? frameItems : items, camera, static_cast<float>(dt));
         const auto& out = renderer.output();
+        if (zgame) {
+            hud->begin(out.width(), out.height());
+            zgame->hud(*hud);
+            if (paused) {
+                const float W = static_cast<float>(out.width()), H = static_cast<float>(out.height()), u = std::max(1.0f, H / 540.0f);
+                hud->rect(0, 0, W, H, {0.0f, 0.0f, 0.0f, 0.55f});
+                hud->text("PAUSED", W * 0.5f, H * 0.38f, 6.0f * u, {0.93f, 0.86f, 0.72f, 1.0f}, 1);
+                hud->text("CLICK TO RESUME  -  Q TO QUIT", W * 0.5f, H * 0.38f + 60.0f * u, 2.0f * u, {0.93f, 0.86f, 0.72f, 0.7f}, 1);
+            }
+            hud->end(out.id());
+        }
         if (!args.hidden) {
             glBlitNamedFramebuffer(out.id(), 0, 0, 0, out.width(), out.height(),
                                    0, 0, window->width(), window->height(),
