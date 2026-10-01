@@ -1091,7 +1091,7 @@ function buildPerkMachine(game, S, id, def, at, yaw = 0) {
      life and reads as a flat card at that scale -- and the sweep's check
      for paper-thin geometry, which exists because a 2D card standing in the
      bunker is exactly the fault it was written for, is right to flag it. */
-  box([0, 0.86, 0.315], [0.56, 0.62, 0.032], glass, false);
+  box([0, 0.86, 0.315], [0.56, 0.62, 0.032], glass, false).name = 'perk-glass';
   for (const sx of [-1, 1]) box([sx * 0.30, 0.86, 0.315], [0.06, 0.68, 0.05], steel, false);
   box([0, 1.19, 0.315], [0.66, 0.05, 0.05], steel, false);
   box([0, 0.53, 0.315], [0.66, 0.05, 0.05], steel, false);
@@ -1107,7 +1107,7 @@ function buildPerkMachine(game, S, id, def, at, yaw = 0) {
     for (let k = -1; k <= 1; k++) {
       const bx2 = k * 0.155, by2 = 0.70 + r * 0.30;
       box([bx2, by2, 0.16], [0.048, 0.075, 0.048],
-        { color: 0x2a3a30, texture: 'smooth', roughness: 0.1, opacity: 0.6, transparent: true }, false);
+        { color: 0x2a3a30, texture: 'smooth', roughness: 0.1, opacity: 0.6, transparent: true }, false).name = 'perk-bottle';
       box([bx2, by2 + 0.004, 0.16], [0.052, 0.030, 0.052],
         { color: def.color, texture: 'fabric', roughness: 0.8 }, false);
       box([bx2, by2 + 0.052, 0.16], [0.024, 0.030, 0.024],
@@ -4258,12 +4258,33 @@ function finishGenericMap(game, S, def) {
     const nz = face === 'N' ? 1 : face === 'S' ? -1 : 0;
     const nx = face === 'E' ? 1 : face === 'W' ? -1 : 0;
     const at = b.at;
-    game.box({
-      at: [at[0] + nx * 0.03, at[1], at[2] + nz * 0.03],
+    /* ON the wall, wherever the wall actually is. The plate was placed a
+       fixed 3 cm out from the buy point, and the buy point is where the
+       player stands to buy, not a point on the masonry -- so on the
+       Coastline houses the plates hung a metre off the brick, and one stood
+       in the air beside a pier post (the model sweep found them). Find the
+       surface behind the buy point and mount the plate on it; where there is
+       none, stand it on a post. */
+    const plateMat = { color: 0x6a5a45, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 2 };
+    const solidOnly = (bd) => bd && !bd.isTrigger && !(bd.userData && (bd.userData.zombie || bd.userData.player));
+    const hit = game.raycast([at[0] + nx * 0.6, at[1], at[2] + nz * 0.6], [-nx, 0, -nz], 2.0, solidOnly);
+    const px = hit ? hit.point.x + nx * 0.026 : at[0] + nx * 0.03;
+    const pz = hit ? hit.point.z + nz * 0.026 : at[2] + nz * 0.03;
+    const plate = game.box({
+      at: [px, at[1], pz],
       size: alongX ? [1.30, 0.72, 0.05] : [0.05, 0.72, 1.30],
-      material: { color: 0x6a5a45, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 2 },
-      physics: false,
+      material: plateMat, physics: false,
     });
+    plate.name = 'wall-buy-plate';
+    if (!hit) {
+      const ground = game.raycast([px, at[1] - 0.4, pz], [0, -1, 0], 6, solidOnly);
+      const gy = ground ? ground.point.y : 0;
+      const top = at[1] - 0.36;
+      if (top - gy > 0.05) {
+        game.box({ at: [px - nx * 0.03, (gy + top) / 2, pz - nz * 0.03], size: [0.07, top - gy, 0.07],
+          material: plateMat, physics: false }).name = 'wall-buy-post';
+      }
+    }
     return { id: b.id, at, weapon: b.weapon, label: b.label };
   });
 
@@ -4341,7 +4362,8 @@ function finishGenericMap(game, S, def) {
     for (const p2 of (d.panels || [])) {
       for (const t of doorTrim(game, d.kind || 'plank', p2)) actors.push(t);
     }
-    for (const a of actors) if (a) a.name = 'door:' + d.id;
+    // 'door:<id>', and the trim keeps what it is after it ('door:ranch:door-mesh') -- a mesh or a pane of glass is see-through.
+    for (const a of actors) if (a) a.name = 'door:' + d.id + (a.name && /^door-/.test(a.name) ? ':' + a.name : '');
     S.doors[d.id] = { cost: d.cost == null ? ECONOMY.doorGenerator : d.cost,
       open: false, label: d.label, at: d.at.slice(), opens: (d.opens || []).slice(),
       kind: d.kind || 'plank', toll: d.toll || null, breach: (d.breach || []).slice(),
@@ -5275,9 +5297,16 @@ function buildBunker9(game, S) {
       [false, M.x0 - 0.2, -1, 0], [false, M.x1 + 0.2, 1, 0]]) {
       const lo = alongX ? M.x0 : M.z0, hi = alongX ? M.x1 : M.z1;
       for (let t = lo; t <= hi; t += 2.6) alongX ? stake(t, at, ox, oz) : stake(at, t, ox, oz);
-      for (const dy of [0.10, 0.22, 0.34]) strand(alongX, at, RH + dy, lo, hi);
+      /* Strung ON the stakes. They lean out 34 degrees about their middle,
+         so at each strand's height the stake is that far out from its foot;
+         strung on the line of the feet, the low strand hung inside the
+         stakes and the high one outside them, wire touching nothing (the
+         model sweep found all three). */
+      const lean = (dy) => (dy - 0.19) * Math.tan(34 * Math.PI / 180);
+      for (const dy of [0.10, 0.22, 0.34]) strand(alongX, at + (alongX ? oz : ox) * lean(dy), RH + dy, lo, hi);
+      const ab = at + (alongX ? oz : ox) * lean(0.22);
       for (let t = lo + 0.3; t <= hi; t += 0.55) {
-        if (alongX) barb(t, RH + 0.22, at, 0); else barb(at, RH + 0.22, t, 90);
+        if (alongX) barb(t, RH + 0.22, ab, 0); else barb(ab, RH + 0.22, t, 90);
       }
     }
   }
@@ -5660,7 +5689,7 @@ function buildBunker9(game, S) {
     }
     for (let k = 0; k < 7; k++) {
       game.box({ at: [-6.74 + k * 0.23, 1.455, WZ - 0.22], size: [0.030, 0.17, 0.055], material: blk, physics: false })
-        .setRotation([0, 0, (k * 11) % 9 - 4]);
+        .setRotation([0, 0, (k * 11) % 9 - 4]).name = 'loose-magazine';   // stood on a shelf, not squared up
     }
     game.cylinder({ at: [-4.80, 1.815, WZ - 0.22], radius: 0.085, height: 0.05, material: blk, physics: false })
       .setRotation([90, 0, 0]);
@@ -5670,12 +5699,12 @@ function buildBunker9(game, S) {
     }
     for (let k = 0; k < 4; k++) {
       game.cylinder({ at: [-4.70 + k * 0.16, 1.470, WZ - 0.22], radius: 0.014, height: 0.26, material: vice, physics: false })
-        .setRotation([0, 0, 74 + k * 6]);
+        .setRotation([0, 0, 74 + k * 6]).name = 'loose-rod';
     }
     // Stock parts and a stripped receiver on the top shelf.
     for (let k = 0; k < 3; k++) {
       game.box({ at: [-6.50 + k * 0.42, 2.13, WZ - 0.22], size: [0.36, 0.09, 0.10], material: MAT.wood, physics: false })
-        .setRotation([0, 0, 3 - k * 3]);
+        .setRotation([0, 0, 3 - k * 3]).name = 'loose-stock';
     }
     game.box({ at: [-4.40, 2.13, WZ - 0.22], size: [0.52, 0.08, 0.09], material: blk, physics: false });
     // Ammunition boxes on the return shelves.
@@ -5694,7 +5723,7 @@ function buildBunker9(game, S) {
     for (let k = 0; k < 13; k++) {
       const tx = -6.72 + k * 0.24;
       game.box({ at: [tx, 1.03, WZ - 0.12], size: [0.035, 0.28, 0.035],
-        material: k % 3 === 0 ? MAT.wood : vice, physics: false }).setRotation([0, 0, (k * 17) % 14 - 7]);
+        material: k % 3 === 0 ? MAT.wood : vice, physics: false }).setRotation([0, 0, (k * 17) % 14 - 7]).name = 'hung-tool';
     }
     game.box({ at: [-3.95, 1.55, WZ - 0.10], size: [0.42, 0.30, 0.03], material: vice, physics: false })
       .setRotation([0, 0, 12]);
@@ -5707,8 +5736,9 @@ function buildBunker9(game, S) {
       game.box({ at: [BX + dx, 1.03, BZ + 0.22], size: [0.34, 0.09, 0.24], material: vice, physics: false });
     }
     game.cylinder({ at: [BX + 1.10, 1.06, BZ - 0.10], radius: 0.045, height: 0.15, material: vice, physics: false });
-    game.cylinder({ at: [BX + 1.10, 1.16, BZ - 0.16], radius: 0.010, height: 0.11, material: vice, physics: false })
-      .setRotation([44, 0, 0]);
+    // The spout comes out of the can's shoulder: its foot inside the can, not in the air beside it (the model sweep).
+    game.cylinder({ at: [BX + 1.10, 1.165, BZ - 0.135], radius: 0.010, height: 0.11, material: vice, physics: false })
+      .setRotation([44, 0, 0]).name = 'oil-can-spout';
     game.box({ at: [BX + 0.62, 1.02, BZ - 0.16], size: [0.20, 0.07, 0.14], material: MAT.board, physics: false });
     for (let k = 0; k < 4; k++) {
       game.cylinder({ at: [BX + 0.58 + k * 0.026, 1.07, BZ - 0.16], radius: 0.009, height: 0.045,
@@ -6001,6 +6031,8 @@ function spawnBoard(game, w, slot, mat) {
   const alongX = WIN_SPANS_X(w.face);
   const size = alongX ? [1.78, 0.19, 0.06] : [0.06, 0.19, 1.78];
   const b = game.box({ at, size, material: mat, physics: false });
+  // Named for its window, so the native build can take it down and put it back (my_cpp_game/src/game).
+  b.name = 'window-board:' + w.id;
   const jitter = ((slot * 37) % 10 - 5) * 1.1;
   b.setRotation(alongX ? [0, jitter * 0.3, jitter] : [jitter, jitter * 0.3, 0]);
   return b;

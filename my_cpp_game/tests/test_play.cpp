@@ -78,6 +78,20 @@ int main(int argc, char** argv) {
     std::printf("the round (%.0f s, autopilot)\n", seconds);
     const play::Lesc scene(argv[1]);
     play::ZombiesGame game(scene, kit, map.camera(), 7);
+    std::vector<std::pair<std::string, rendering::DrawItem>> boards;
+    for (const auto& [name, idx] : map.named()) {
+        const auto& src = map.items()[idx];
+        if (!src.instances) { boards.emplace_back(name, src); continue; }
+        for (const auto& in : *src.instances) {
+            rendering::DrawItem d = src;
+            d.instances = nullptr;
+            d.model = in.model;
+            d.params = in.params;
+            boards.emplace_back(name, d);
+        }
+    }
+    game.adoptBoards(boards);
+    check(boards.size() >= 8, std::to_string(boards.size()) + " window boards found in the map");
     check(game.hulls() > 50, std::to_string(game.hulls()) + " collision hulls");
     check(game.navNodes() > 500, std::to_string(game.navNodes()) + " walkable nodes");
     const float startY = game.playerPos().y;
@@ -88,13 +102,14 @@ int main(int argc, char** argv) {
         lowest = std::min(lowest, game.playerPos().y);
     }
     const auto& st = game.stats();
-    std::printf("        round %d, %d spawned, %d climbed in, %d kills (%d headshots), %d/%d shots hit, %d points, %d downs\n",
-                st.round, st.spawned, st.climbed, st.kills, st.headshots, st.hits, st.shots, st.points, st.downs);
+    std::printf("        round %d (best %d), %d spawned, %d climbed in, %d kills (%d headshots), %d/%d shots hit, %d points, %d downs\n",
+                st.round, st.maxRound, st.spawned, st.climbed, st.kills, st.headshots, st.hits, st.shots, st.points, st.downs);
     check(st.spawned > 5, "zombies spawned");
     check(st.climbed > 0, "zombies came in through the windows");
+    check(st.boardsDown > 0, std::to_string(st.boardsDown) + " boards torn down (" + std::to_string(st.boardsRebuilt) + " rebuilt)");
     check(st.shots > 10 && st.hits > 0, "the guns fired and hit");
     check(st.kills > 3, "zombies died");
-    check(st.round >= 2, "the round count went up");
+    check(st.maxRound >= 2, "the round count went up (reached round " + std::to_string(st.maxRound) + ")");
     check(st.points > 500, "points were earned");
     check(lowest > startY - 3.0f, "the player stayed on the map (lowest " + std::to_string(lowest) + ")");
 

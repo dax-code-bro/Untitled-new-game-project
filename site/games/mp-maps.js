@@ -223,13 +223,96 @@
     var solids = [], decos = [], mats = {}, doors = [];
     for (var k in MAT) if (Object.prototype.hasOwnProperty.call(MAT, k)) mats[k] = game.material(MAT[k]);
 
+    /* ================================================================
+       NOTHING PLACED INSIDE ANYTHING ELSE
+       ================================================================
+       Furniture and cover are put down by fractions of a room or by a
+       coordinate typed into a map table, and the room's partitions, the
+       next crate and the hotel wall are put down by other code that
+       knows nothing about them. The model sweep (modelsweep.test.js)
+       found crates standing inside beds, tables and sun loungers, beds
+       and sofas through partitions, loungers through the hotel wall and
+       a parked car half inside a house.
+
+       So every wall and every piece of furniture is remembered as it is
+       placed, and a piece of furniture or cover that would overlap one is
+       slid the shortest way out of it on the ground plane before it is
+       built -- a few centimetres to a few tens of them, on the side it
+       was already mostly on. Walls never move; only the thing being put
+       down does. */
+    var placed = [];
+    var WALLISH = /(^|[-_ ])(wall|partition|part|column|pillar|facade|parapet|fence|cliff|rock|container|locker|shed)([-_ ]|$)/;
+    var FURNISH = /(^|[-_ ])(crate|table|bed|counter|sofa|lounger|desk|barrel|car|bike|bench|cabinet|shelf|fridge|chair|planter|bin|skip|pallet)([-_ ]|$)/;
+    function remember(x0, x1, y0, y1, z0, z1, name) {
+      var n = name || '';
+      var kind = WALLISH.test(n) ? 'wall' : (FURNISH.test(n) ? 'furn' : null);
+      if (kind) placed.push({ x0: x0, x1: x1, y0: y0, y1: y1, z0: z0, z1: z1, kind: kind, name: n });
+    }
+    /* The shortest slide on x/z that clears this footprint of every wall
+       and piece of furniture whose height range it shares. A few rounds,
+       because clearing one can push it into the next. */
+    function clear(x0, x1, y0, y1, z0, z1) {
+      var dx = 0, dz = 0, gap = 0.02;
+      for (var round = 0; round < 6; round++) {
+        var moved = false;
+        for (var i = 0; i < placed.length; i++) {
+          var p = placed[i];
+          if (p.y0 >= y1 - 0.02 || p.y1 <= y0 + 0.02) continue;
+          if (p.x1 - p.x0 > 30 && p.z1 - p.z0 > 30) continue;   // a floor or a lot, not a thing in the way
+          var ax0 = x0 + dx, ax1 = x1 + dx, az0 = z0 + dz, az1 = z1 + dz;
+          var ox = Math.min(ax1, p.x1 + gap) - Math.max(ax0, p.x0 - gap);
+          var oz = Math.min(az1, p.z1 + gap) - Math.max(az0, p.z0 - gap);
+          if (ox <= 0 || oz <= 0) continue;
+          var cx = (ax0 + ax1) / 2 - (p.x0 + p.x1) / 2, cz = (az0 + az1) / 2 - (p.z0 + p.z1) / 2;
+          if (ox < oz) dx += cx >= 0 ? ox : -ox; else dz += cz >= 0 ? oz : -oz;
+          moved = true;
+        }
+        if (!moved) break;
+      }
+      /* Boxed in -- a car parked inside a house, say, where clearing one
+         wall pushes it into the next: look outward for the nearest place
+         it fits at all. */
+      var hits = function (ox2, oz2) {
+        for (var j = 0; j < placed.length; j++) {
+          var q = placed[j];
+          if (q.y0 >= y1 - 0.02 || q.y1 <= y0 + 0.02) continue;
+          if (q.x1 - q.x0 > 30 && q.z1 - q.z0 > 30) continue;
+          if (Math.min(x1 + ox2, q.x1 + gap) - Math.max(x0 + ox2, q.x0 - gap) > 0 &&
+              Math.min(z1 + oz2, q.z1 + gap) - Math.max(z0 + oz2, q.z0 - gap) > 0) return true;
+        }
+        return false;
+      };
+      if (hits(dx, dz)) {
+        for (var rr = 0.5; rr <= 10; rr += 0.5) {
+          for (var ai = 0; ai < 16; ai++) {
+            var ang = ai * Math.PI / 8, tx = Math.cos(ang) * rr, tz = Math.sin(ang) * rr;
+            if (!hits(tx, tz)) return [tx, tz];
+          }
+        }
+      }
+      return [dx, dz];
+    }
+
     function slab(x0, x1, y0, y1, z0, z1, material, name) {
       if (x1 - x0 < 0.001 || y1 - y0 < 0.001 || z1 - z0 < 0.001) return null;
+      if (FURNISH.test(name || '') && !/car-|crate-/.test(name || '') && !slab.__group) {
+        var f = clear(x0, x1, y0, y1, z0, z1);
+        x0 += f[0]; x1 += f[0]; z0 += f[1]; z1 += f[1];
+      }
+      remember(x0, x1, y0, y1, z0, z1, name);
       var a = game.box({
         at: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2],
         size: [x1 - x0, y1 - y0, z1 - z0], material: material, static: true,
       });
       if (a) { a.name = name || 'mp'; solids.push(a); }
+      /* A lounger is a frame on legs. Built as one slab starting 14 cm off
+         the deck, it hovered there on nothing (the model sweep). */
+      if (/lounger$/.test(name || '') && y0 > 0.05) {
+        for (var lx = 0; lx < 2; lx++) for (var lz = 0; lz < 2; lz++) {
+          var ex = lx ? x1 - 0.07 : x0 + 0.02, ez = lz ? z1 - 0.07 : z0 + 0.02;
+          deco(ex, ex + 0.05, 0, y0 + 0.01, ez, ez + 0.05, mats.steelDark || material, 'lounger-leg');
+        }
+      }
       return a;
     }
 
@@ -261,6 +344,7 @@
        that runs at nine frames a second by the third round. */
     function frail(x0, x1, y0, y1, z0, z1, material, name, spec) {
       if (x1 - x0 < 0.001 || y1 - y0 < 0.001 || z1 - z0 < 0.001) return null;
+      remember(x0, x1, y0, y1, z0, z1, name);
       var w = x1 - x0, h = y1 - y0, d = z1 - z0;
       var vol = w * h * d;
       var S = spec || {};
@@ -285,6 +369,11 @@
     }
     function deco(x0, x1, y0, y1, z0, z1, material, name) {
       if (x1 - x0 < 0.001 || y1 - y0 < 0.001 || z1 - z0 < 0.001) return null;
+      if (/^(lounger|sun-lounger|desk|plan-table|table|bench)$/.test(name || '') && !deco.__group) {
+        var f = clear(x0, x1, y0, y1, z0, z1);
+        x0 += f[0]; x1 += f[0]; z0 += f[1]; z1 += f[1];
+      }
+      remember(x0, x1, y0, y1, z0, z1, name);
       var a = game.box({
         at: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2],
         size: [x1 - x0, y1 - y0, z1 - z0], material: material, physics: false,
@@ -304,6 +393,8 @@
        cube. Always one of the three cover heights. */
     function crate(x, z, w, d, h, material, name) {
       var m = material || mats.wood;
+      var cf = clear(x - w / 2 - 0.03, x + w / 2 + 0.03, 0, h, z - d / 2 - 0.03, z + d / 2 + 0.03);
+      x += cf[0]; z += cf[1];
       /* A wooden crate is the most obviously breakable thing on any of
          these maps and it was the most solid. Low threshold: a grenade
          beside it should do it, not only a rocket. */
@@ -505,6 +596,9 @@
     }
 
     function barrel(x, z, material) {
+      var bf = clear(x - 0.32, x + 0.32, 0, 0.92, z - 0.32, z + 0.32);
+      x += bf[0]; z += bf[1];
+      remember(x - 0.32, x + 0.32, 0, 0.92, z - 0.32, z + 0.32, 'barrel');
       var a = game.cylinder({ at: [x, 0.46, z], radius: 0.30, height: 0.92,
         material: material || mats.rust, static: true });
       if (a) { a.name = 'barrel'; solids.push(a); }
@@ -1014,6 +1108,9 @@
       var m = body || mats.paintBlue;
       var L = 4.30, Wd = 1.78;
       var hx = alongZ ? Wd / 2 : L / 2, hz = alongZ ? L / 2 : Wd / 2;
+      var kf = clear(x - hx, x + hx, 0.02, 1.46, z - hz, z + hz);
+      x += kf[0]; z += kf[1];
+      remember(x - hx, x + hx, 0.02, 1.46, z - hz, z + hz, 'car');
       slab(x - hx, x + hx, 0.32, 1.02, z - hz, z + hz, m, 'car-hull');
       var cl = alongZ ? hz * 0.52 : hx * 0.52;
       if (alongZ) {
@@ -1272,7 +1369,8 @@
     /* Lit, because a black hole in a rock face is a hole nobody walks
        into. Two strips down the length of it. */
     for (var tl = MZ0 + 2; tl < MZ1; tl += 4) {
-      K.deco(-TW + 0.2, TW - 0.2, THH - 0.18, THH - 0.10, tl - 0.25, tl + 0.25,
+      // Fixed to the lid, not ten centimetres below it on nothing (the model sweep).
+      K.deco(-TW + 0.2, TW - 0.2, THH - 0.08, THH, tl - 0.25, tl + 0.25,
         m.concretePale, 'tunnel-light');
     }
     /* THE WAY DOWN TO THE PAD. Out of the south mouth at three metres
@@ -1893,7 +1991,7 @@
     K.slab(NX0 - 0.7, NX1 + 0.7, NH, NH + 0.35, NZ0 - 0.7, NZ1 + 0.7, m.roof, 'biz-roof');
     K.door(35, NZ1 - 0.2, true, { hand: -1, into: -1, name: 'biz-door' });
     // The glass front, over the street side.
-    K.deco(39, 47, 1.0, 3.2, NZ1 - 0.22, NZ1 - 0.16, m.glass, 'shopfront');
+    K.deco(39, 47, 1.0, 3.2, NZ1 - 0.22, NZ1 - 0.16, m.glass, 'shopfront-glass');
     // Partitions on the open floor, and the counter.
     K.wall(NX0 + 4, NX0 + 4.16, NZ0 + 3, NZ1 - 5, 2.4, m.plaster, [[-36, -35]], 'biz-part', { frail: true });
     K.wall(NX0 + 4, NX1 - 4, NZ0 + 7, NZ0 + 7.16, 2.4, m.plaster, [[44, 45.2]], 'biz-part', { frail: true });
@@ -2143,6 +2241,13 @@
     heap(cIsland, -9, 1, -13, -3, 1.20, m.rock);
     heap(cIsland, -7, -1, -11, -6, 1.85, m.concretePale);
     K.slab(6, 14, F2 - 0.22, F2, 8, BZ1, m.concrete, 'slab-island');
+    /* It stands on something. The column grid stops at z = 7, and this
+       island runs from 8 to the end wall over the first-floor island
+       below it, with nothing in between (the model sweep): four short
+       columns off the floor beneath. */
+    [[7, 10], [13, 10], [7, 20], [13, 20]].forEach(function (cc) {
+      K.slab(cc[0] - 0.30, cc[0] + 0.30, F1, F2 - 0.22, cc[1] - 0.30, cc[1] + 0.30, m.concrete, 'column');
+    });
     K.slab(-9, 6, 0, C.low, -19, -16, m.rock, 'rubble');
     K.slab(-4, 10, 0, C.vault, 16, 19, m.rock, 'rubble');
     K.crate(-6, 8, 1.7, 1.7, C.vault, m.wood);
@@ -2202,12 +2307,26 @@
       // A partition and the furniture, so it reads as an office from the door.
       K.wall(OX0 + 6.6, OX0 + 6.78, OZ0 + 0.14, OZ1 - 1.6, OH, m.plaster, [], 'cabin-part',
         { frail: true, base: base });
-      K.deco(OX0 + 0.5, OX0 + 2.6, base + 0.68, base + 0.78, OZ0 + 0.6, OZ0 + 1.8, m.wood, 'desk');
-      K.deco(OX0 + 7.2, OX1 - 0.4, base + 0.80, base + 0.88, OZ0 + 1.0, OZ1 - 1.0, m.wood, 'plan-table');
+      /* Tables on legs -- the tops were boards in mid-air -- and the locker
+         put down first, so the plan table is laid out round it rather
+         than through it (both from the model sweep). */
       K.deco(OX1 - 1.1, OX1 - 0.3, base + 0.02, base + 1.85, OZ1 - 1.5, OZ1 - 0.6, m.paintBlue, 'locker');
+      var onLegs = function (top, h) {
+        if (!top) return;
+        var p = top.position, sz = top.mesh && top.mesh.bounds ? top.mesh.bounds : null;
+        var hx = sz ? (sz.max.x - sz.min.x) / 2 * top.scale.x : 0.5, hz = sz ? (sz.max.z - sz.min.z) / 2 * top.scale.z : 0.5;
+        for (var lx = -1; lx <= 1; lx += 2) for (var lz = -1; lz <= 1; lz += 2) {
+          var ex = p.x + lx * (hx - 0.06), ez = p.z + lz * (hz - 0.06);
+          K.deco(ex - 0.03, ex + 0.03, base, base + h + 0.005, ez - 0.03, ez + 0.03, m.steelDark, 'table-leg');
+        }
+      };
+      onLegs(K.deco(OX0 + 0.5, OX0 + 2.6, base + 0.68, base + 0.78, OZ0 + 0.6, OZ0 + 1.8, m.wood, 'desk'), 0.68);
+      // Between the building's column (x 23.65-24.35, which this office was put down round) and the locker.
+      onLegs(K.deco(OX0 + 8.0, OX1 - 0.4, base + 0.80, base + 0.88, OZ0 + 1.0, OZ1 - 1.7, m.wood, 'plan-table'), 0.80);
     });
     K.stair(OX1 + 1.4, OZ0 + 0.4, 1.1, 0.26, 0.31, 11, 'z+', m.steelDark);
-    K.deco(OX1 + 0.9, OX1 + 1.95, OH + 0.25, OH + 1.30, OZ0 + 0.4, OZ0 + 0.5, m.steelDark, 'office-rail');
+    // The guard at the open end of the landing it protects -- it stood over the foot of the stair, three metres up in the air.
+    K.deco(OX1 + 0.9, OX1 + 1.95, OH + 0.25, OH + 1.30, OZ0 + 4.5, OZ0 + 4.6, m.steelDark, 'office-rail');
     K.slab(OX1, OX1 + 2.0, OH + 0.11, OH + 0.25, OZ0 + 2.8, OZ0 + 4.6, m.steelDark, 'office-landing');
 
     /* ================================================================
@@ -2253,6 +2372,13 @@
         K.deco(KX - LEG - 0.1, KX + LEG + 0.1, by, by + 0.16, KZ - LEG - 0.1, KZ - LEG + 0.3, m.paintRed, 'crane-brace');
       }
     }
+    /* The landings hang between the stair flights in the middle of the
+       tower, nowhere near its corner legs: four columns carry them (the
+       model sweep found ten landings standing on nothing). */
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (cc) {
+      var ccx = KX + cc[0] * 2.95, ccz = KZ + cc[1] * 0.95;
+      K.deco(ccx - 0.08, ccx + 0.08, 0.55, DECK - 0.16, ccz - 0.08, ccz + 0.08, m.paintRed, 'crane-column');
+    });
     var FLIGHTS = 10, TREADS = 9, RISE = 0.26, RUN = 0.315;
     var LIFT = TREADS * RISE;                       // 2.34 m a flight
     for (var fi = 0; fi < FLIGHTS; fi++) {
@@ -2288,12 +2414,14 @@
     K.slab(JX0, JX1, JIBY - 0.14, JIBY, KZ - 0.75, KZ + 0.75, m.steelDark, 'jib-walk');
     K.deco(JX0, JX1, JIBY + 0.95, JIBY + 1.05, KZ - 0.80, KZ - 0.70, m.paintRed, 'jib-rail');
     K.deco(JX0, JX1, JIBY + 0.95, JIBY + 1.05, KZ + 0.70, KZ + 0.80, m.paintRed, 'jib-rail');
-    K.deco(JX0, JX1, JIBY + 2.5, JIBY + 2.9, KZ - 0.55, KZ + 0.55, m.paintRed, 'jib-boom');
+    // As wide as the lattice that holds it up: at +-0.55 it sat 15 cm inside the lattice, joined to nothing.
+    K.deco(JX0, JX1, JIBY + 2.5, JIBY + 2.9, KZ - 0.80, KZ + 0.80, m.paintRed, 'jib-boom');
     for (var jx = JX0; jx < JX1; jx += 2.6) {
       K.deco(jx, jx + 0.12, JIBY + 1.0, JIBY + 2.5, KZ - 0.80, KZ - 0.70, m.paintRed, 'jib-lattice');
       K.deco(jx, jx + 0.12, JIBY + 1.0, JIBY + 2.5, KZ + 0.70, KZ + 0.80, m.paintRed, 'jib-lattice');
     }
-    K.deco(JX1 - 2.6, JX1, JIBY - 1.5, JIBY - 0.2, KZ - 1.2, KZ + 1.2, m.concrete, 'counter-ballast');
+    // Hung ON the counter-jib, not six centimetres under it.
+    K.deco(JX1 - 2.6, JX1, JIBY - 1.5, JIBY - 0.14, KZ - 1.2, KZ + 1.2, m.concrete, 'counter-ballast');
     // The cable and the ball, hanging where the wall used to be.
     K.deco(-4.4, -3.6, 8.5, JIBY - 0.1, KZ - 0.2, KZ + 0.2, m.steelDark, 'crane-cable');
     K.deco(-6, -2, 7.2, 8.5, KZ - 1.8, KZ + 1.8, m.steelDark, 'wrecking-ball');
@@ -2333,9 +2461,17 @@
          the deck edge, so every rung is reachable from below and the
          deck is a step ACROSS from the rung beside it rather than a
          step up through it. */
+      var rTop = 0;
       for (var ri = 1; ri * 0.36 < 1.95 * lifts + 0.4; ri++) {
         into(c, K.slab(x + 1.62, x + 2.24, ri * 0.36 - 0.07, ri * 0.36,
           z - 0.40, z + 0.40, m.steelDark, 'scaffold-rung'));
+        rTop = ri * 0.36;
+      }
+      /* And the two stiles the rungs are fixed to. Without them it was a
+         column of steel plates standing on air (the model sweep). */
+      for (var sg = -1; sg <= 1; sg += 2) {
+        into(c, K.deco(x + 1.62, x + 2.24, 0, rTop + 0.6, z + sg * 0.40 - (sg < 0 ? 0.05 : 0), z + sg * 0.40 + (sg > 0 ? 0.05 : 0),
+          m.steelDark, 'ladder-stile'));
       }
     }
     var cN = fall('the scaffold on the north face', [-8, 0, 14], 4.2, 6.2, 2.4);

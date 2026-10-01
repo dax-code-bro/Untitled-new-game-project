@@ -24,6 +24,7 @@ struct Input {
     glm::vec2 look{0.0f};       // radians this step: x yaw right, y pitch up
     bool fire = false, firePressed = false, aim = false, reloadPressed = false;
     bool jumpPressed = false, sprint = false, restartPressed = false;
+    bool interact = false;      // held: put a board back up at a window
     int  weaponSlot = -1;       // 0.. to switch
     int  weaponCycle = 0;       // +1 / -1 (mouse wheel)
 };
@@ -42,14 +43,22 @@ struct Input {
  * comes back if you stop getting hit; down and it is over, and it starts
  * again.
  *
+ * The barricades are real: a zombie at a window tears its boards down one
+ * at a time before it can climb in, and you put them back up (F, held) for
+ * points.
+ *
  * Not here (the web build remains the full game): the buyable doors,
- * perks, the mystery box, wall buys, power-ups, the zombie variants beyond
- * the four recorded bodies, and the barricade boards being rebuilt. */
+ * perks, the mystery box, wall buys, power-ups, and the zombie variants
+ * beyond the four recorded bodies. */
 class ZombiesGame {
 public:
     ZombiesGame(const Lesc& scene, const KitFile& kit, const rendering::Camera& start, uint32_t seed = 1);
 
     void update(float dt, const Input& in);
+    /* The window boards, taken out of the static map so they can come down
+       as a zombie tears at them and go back up when you rebuild them. Each
+       is (window id, a single draw). */
+    void adoptBoards(const std::vector<std::pair<std::string, rendering::DrawItem>>& boards);
     /* The camera for this frame and every dynamic draw (zombies, viewmodel,
        muzzle flash, blood). `lights` gets the frame's transient lights. */
     void frame(rendering::Camera& cam, std::vector<rendering::DrawItem>& out, std::vector<rendering::PointLight>& lights);
@@ -59,7 +68,8 @@ public:
     Input autopilot(float dt);
 
     struct Stats { int round = 0, kills = 0, headshots = 0, shots = 0, hits = 0, points = 0, alive = 0,
-                   downs = 0, maxAlive = 0, spawned = 0, climbed = 0; float health = 100; };
+                   downs = 0, maxAlive = 0, spawned = 0, climbed = 0, boardsDown = 0, boardsRebuilt = 0, maxRound = 0;
+                   float health = 100; };
     [[nodiscard]] const Stats& stats() const { return m_stats; }
     [[nodiscard]] glm::vec3 playerPos() const { return m_pos; }
     [[nodiscard]] size_t navNodes() const { return m_nav ? m_nav->nodeCount() : 0; }
@@ -78,6 +88,9 @@ private:
         std::string death = "zdie_back";
     };
     struct Puff { glm::vec3 pos; glm::vec3 vel; float t = 0.0f, life = 0.4f, size = 0.05f; bool blood = true; };
+    struct Board { int window = -1; rendering::DrawItem item; bool down = false; };
+    [[nodiscard]] int boardsUp(int window) const;
+    void tearBoard(int window);
 
     void startRound(int n);
     void spawnZombie();
@@ -125,6 +138,10 @@ private:
     float m_hitMarkT = 99.0f, m_time = 0.0f;
     std::vector<std::pair<std::string, float>> m_popups;   // "+60" and their age
     Stats m_stats;
+
+    std::vector<Board> m_boards;
+    float m_rebuildT = 0.0f;
+    int m_nearWindow = -1;
 
     // Autopilot state.
     float m_botScan = 0.0f;

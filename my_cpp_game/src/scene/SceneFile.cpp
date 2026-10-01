@@ -499,6 +499,8 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
             m_stats.instances += 1;
         }
         m_items.push_back(it);
+        // Draws the game needs to find again (the zombies' window boards, which it takes down).
+        if (name.rfind("window-board", 0) == 0) m_named.emplace_back(name, m_items.size() - 1);
 
         // The draw's instances as world AABBs, classified for the scatter.
         if (!jd.contains("bones")) {
@@ -528,7 +530,7 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
             if (it.instances) for (const auto& in : *it.instances) add(in.model);
             else add(it.model);
         }
-        if (isBox.at(jd.at("mesh").get<size_t>()) && !jd.contains("bones")) {
+        if (isBox.at(jd.at("mesh").get<size_t>()) && !jd.contains("bones") && name.rfind("window-board", 0) != 0) {
             unitBox = it.mesh;
             const size_t item = m_items.size() - 1;
             if (it.instances)
@@ -560,7 +562,10 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
             if (v.empty()) eraseItems.push_back(item);
         }
         std::sort(eraseItems.rbegin(), eraseItems.rend());
-        for (size_t e : eraseItems) m_items.erase(m_items.begin() + static_cast<long>(e));
+        for (size_t e : eraseItems) {
+            m_items.erase(m_items.begin() + static_cast<long>(e));
+            for (auto& nm : m_named) if (nm.second > e) --nm.second;
+        }
         for (auto& part : kit.meshes) {
             m_meshes.push_back(std::make_unique<rendering::Mesh>(part.mesh));
             m_materials.push_back(part.material);

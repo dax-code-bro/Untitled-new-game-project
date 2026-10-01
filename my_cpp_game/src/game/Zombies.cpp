@@ -144,11 +144,13 @@ void ZombiesGame::restart() {
     m_slot = 0;
     m_reloadT = -1.0f;
     m_swapT = 0.0f;
+    for (auto& b : m_boards) b.down = false;
     startRound(1);
 }
 
 void ZombiesGame::startRound(int n) {
     m_stats.round = n;
+    m_stats.maxRound = std::max(m_stats.maxRound, n);
     m_toSpawn = countFor(n);
     m_spawnT = 2.5f;
     m_roundBanner = 4.0f;
@@ -204,6 +206,37 @@ void ZombiesGame::hurtPlayer(float dmg) {
     }
 }
 
+void ZombiesGame::adoptBoards(const std::vector<std::pair<std::string, rendering::DrawItem>>& boards) {
+    for (const auto& [name, item] : boards) {
+        const auto colon = name.find(':');
+        const std::string id = colon == std::string::npos ? std::string() : name.substr(colon + 1);
+        int w = -1;
+        for (size_t i = 0; i < m_windows.size(); ++i) if (m_windows[i].id == id) w = static_cast<int>(i);
+        if (w < 0) continue;
+        m_boards.push_back({w, item, false});
+    }
+}
+
+int ZombiesGame::boardsUp(int window) const {
+    int n = 0;
+    for (const auto& b : m_boards) if (b.window == window && !b.down) ++n;
+    return n;
+}
+
+void ZombiesGame::tearBoard(int window) {
+    // The top board first: the one a hand reaching in gets hold of.
+    Board* best = nullptr;
+    for (auto& b : m_boards)
+        if (b.window == window && !b.down && (!best || b.item.model[3].y > best->item.model[3].y)) best = &b;
+    if (!best) return;
+    best->down = true;
+    ++m_stats.boardsDown;
+    std::uniform_real_distribution<float> U(-1.0f, 1.0f);
+    const glm::vec3 p(best->item.model[3]);
+    for (int k = 0; k < 5; ++k)
+        m_puffs.push_back({p, glm::vec3(U(m_rng), U(m_rng) * 0.5f + 0.6f, U(m_rng)) * 1.5f, 0.0f, 0.5f, 0.03f, false});
+}
+
 void ZombiesGame::update(float dt, const Input& in) {
     m_time += dt;
     m_hitMarkT += dt;
@@ -219,6 +252,33 @@ void ZombiesGame::update(float dt, const Input& in) {
     }
     updatePlayer(dt, in);
     updateWeapon(dt, in);
+
+    // Rebuilding: hold the key at a window with a board down, a board a second, ten points each.
+    m_nearWindow = -1;
+    for (size_t i = 0; i < m_windows.size(); ++i) {
+        const glm::vec3 d = m_windows[i].inside - m_pos;
+        if (glm::length(glm::vec2(d.x, d.z)) < 1.9f && std::fabs(d.y) < 1.5f &&
+            boardsUp(static_cast<int>(i)) < static_cast<int>(std::count_if(m_boards.begin(), m_boards.end(),
+                                                                [&](const Board& b) { return b.window == static_cast<int>(i); })))
+            m_nearWindow = static_cast<int>(i);
+    }
+    if (m_nearWindow >= 0 && in.interact) {
+        m_rebuildT += dt;
+        if (m_rebuildT >= 1.0f) {
+            m_rebuildT = 0.0f;
+            Board* low = nullptr;   // bottom board first, the way you would nail them
+            for (auto& b : m_boards)
+                if (b.window == m_nearWindow && b.down && (!low || b.item.model[3].y < low->item.model[3].y)) low = &b;
+            if (low) {
+                low->down = false;
+                ++m_stats.boardsRebuilt;
+                m_stats.points += 10;
+                m_popups.emplace_back("+10", 0.0f);
+            }
+        }
+    } else {
+        m_rebuildT = 0.0f;
+    }
 
     // The round.
     m_roundBanner = std::max(0.0f, m_roundBanner - dt);
@@ -471,11 +531,16 @@ void ZombiesGame::updateZombies(float dt) {
                 goal = w.outside;
                 if (glm::length(glm::vec2(goal.x - z.pos.x, goal.z - z.pos.z)) < 0.35f) { z.state = Zombie::Tear; z.stateT = 0.0f; }
                 break;
-            case Zombie::Tear: {   // at the barricade: tearing at the boards
+            case Zombie::Tear: {   // at the barricade: a board a second, as the web game's plankTime
                 walking = false;
                 const glm::vec3 to = w.inside - z.pos;
                 z.yaw = std::atan2(to.x, to.z);
-                if (z.stateT > 1.6f) { z.state = Zombie::Climb; z.stateT = 0.0f; }
+                if (boardsUp(z.window) == 0) {
+                    if (z.stateT > 0.4f) { z.state = Zombie::Climb; z.stateT = 0.0f; }
+                } else if (z.stateT > 1.0f) {
+                    tearBoard(z.window);
+                    z.stateT = 0.0f;
+                }
                 break;
             }
             case Zombie::Climb: {   // over the sill: up, across, down
@@ -579,6 +644,29 @@ Input ZombiesGame::autopilot(float dt) {
         }
     }
     const Gun& g = m_guns[static_cast<size_t>(m_slot)];
+    static const bool dbg = std::getenv("GAME_BOT_DEBUG") != nullptr;
+    if (dbg && std::fmod(m_time, 1.0f) < dt) {
+        int vis = 0, near = 0;
+        for (const Zombie& z : m_zombies) {
+            if (z.state == Zombie::Dying || z.state == Zombie::Gone) continue;
+            const glm::vec3 c = z.pos + glm::vec3(0.0f, z.rig->height * 0.7f, 0.0f);
+            if (glm::length(c - eye()) < 45.0f) ++near;
+            if (canSee(eye(), c)) ++vis;
+        }
+        float ey = 0, ep = 0, td = 0;
+        int st = -1;
+        if (m_botTarget >= 0 && m_botTarget < static_cast<int>(m_zombies.size())) {
+            const Zombie& z = m_zombies[static_cast<size_t>(m_botTarget)];
+            const glm::vec3 c = z.pos + glm::vec3(0.0f, z.rig->height * 0.78f, 0.0f);
+            const glm::vec3 d = glm::normalize(c - eye());
+            ey = wrapPi(std::atan2(d.x, -d.z) - (m_yaw + m_recoilYaw));
+            ep = std::asin(std::clamp(d.y, -1.0f, 1.0f)) - (m_pitch + m_recoilPitch);
+            td = glm::length(c - eye());
+            st = z.state;
+        }
+        std::printf("[bot] t=%.0f pos %.1f,%.1f,%.1f target %d (state %d, %.1f m, err %.3f %.3f) near %d visible %d mag %d reloadT %.2f cool %.2f swap %.2f pitch %.2f\n",
+                    m_time, m_pos.x, m_pos.y, m_pos.z, m_botTarget, st, td, ey, ep, near, vis, g.mag, m_reloadT, m_cool, m_swapT, m_pitch);
+    }
     if (m_botTarget >= 0 && m_botTarget < static_cast<int>(m_zombies.size())) {
         const Zombie& z = m_zombies[static_cast<size_t>(m_botTarget)];
         const glm::vec3 c = z.pos + glm::vec3(0.0f, z.rig->height * 0.78f, 0.0f);
@@ -589,14 +677,18 @@ Input ZombiesGame::autopilot(float dt) {
         const float dist = glm::length(c - eye());
         in.aim = dist > 6.0f;
         const bool onTarget = std::fabs(ey) < 0.05f && std::fabs(ep) < 0.05f;
-        in.fire = onTarget && g.mag > 0;
+        // A semi-automatic wants the trigger let go between shots, as a finger does.
+        in.fire = onTarget && g.mag > 0 && (g.def->automatic || m_triggerUp);
         in.firePressed = in.fire && m_triggerUp;
         if (dist < 3.0f) in.move.y = -1.0f;   // back off
     } else {
         in.look.x = dt * 0.4f;   // look around
+        in.interact = m_nearWindow >= 0;
         if (g.mag < g.def->mag) in.reloadPressed = true;
     }
     if (g.mag == 0) in.reloadPressed = true;
+    // The Thompson by preference: thirty rounds of automatic fire is what a crowd at a window calls for.
+    if (m_slot == 0 && m_guns.size() > 1 && m_guns[1].mag + m_guns[1].reserve > 0 && m_swapT <= 0.0f) in.weaponSlot = 1;
     // Use the gun with ammo in it.
     if (g.mag == 0 && g.reserve == 0)
         for (size_t s = 0; s < m_guns.size(); ++s)
@@ -624,6 +716,9 @@ void ZombiesGame::frame(rendering::Camera& cam, std::vector<rendering::DrawItem>
     const float baseFov = m_kit.fov() > 0.2f ? m_kit.fov() : glm::radians(70.0f);
     cam.fov = baseFov * glm::mix(1.0f, g.def->sightFov, m_ads);
     cam.nearZ = 0.05f;
+
+    // ---- the boards that are still up ----
+    for (const auto& b : m_boards) if (!b.down) out.push_back(b.item);
 
     /* GAME_ZOMBIE_LINEUP=clip:seconds stands every recorded body in a row in
        front of the start, playing that clip -- a look at the rigs on their own. */
@@ -829,6 +924,8 @@ void ZombiesGame::hud(Hud& h) const {
     } else if (g.mag <= std::max(1, g.def->mag / 4)) {
         h.text("RELOAD", W * 0.5f, H * 0.62f, 2.0f * u, ink, 1);
     }
+    if (m_nearWindow >= 0)
+        h.text("HOLD F TO REBUILD THE BARRIER", W * 0.5f, H * 0.68f, 2.0f * u, ink, 1);
     // The slots.
     for (size_t s = 0; s < m_guns.size(); ++s) {
         const std::string label = std::to_string(s + 1) + " " + m_guns[s].def->name;

@@ -55,9 +55,13 @@ function audit() {
   const G = window.__G;
   const FLOATERS = /sky|cloud|bird|gull|glow|halo|beam|flare|smoke|steam|fog|mist|water|sea|lake|pool|wave|foam|ripple|spark|ember|dust|particle|star|moon|sun|light-cone|godray|shaft|leaf|leaves|canopy|crown|foliage|hedge|bush|tree|ivy|vine|insect|moth|fly|bat|chopper|heli-rotor|rotor|blade|drone|plane|balloon|kite|banner|flag|bunting|garland|string|wire|cable|rope|chain|line|tag|text|letter|sign-glyph|glyph|decal|stain|crack|mark|puddle|shadow|marker|arrow|beacon|hologram|holo|screen|ui|hud|fx/;
   const SEE_THROUGH_OK = /glass|window|pane|glazing|water|sea|lake|pool|wave|foam|light|lamp|glow|halo|beam|flare|smoke|steam|fog|mist|haze|cloud|sky|screen|visor|lens|bottle|jar|ghost|hologram|holo|shield|bubble|ice|crystal|godray|shaft|cone|ripple|splash|decal|shadow|vapour|vapor|fx|spray|jet|tint|film|net|mesh|fence|grate|curtain|veil|plastic|acrylic|perspex|vinyl|tarp/;
-  const FURNITURE = /sofa|couch|chair|stool|table|desk|bench|bed|cabinet|cupboard|shelf|shelves|bookcase|wardrobe|dresser|fridge|freezer|oven|stove|washer|counter|bar-top|crate|barrel|drum|locker|safe|car|truck|van|bus|jeep|sedan|pickup|boat|machine|vending|kiosk|generator|piano|tv|television|sink|toilet|bath|tub|lounger|sunbed|umbrella|planter|pot|bin|dumpster|skip|pallet|sandbag|tyre|tire|cart|trolley|forklift|bike|motorbike|helicopter/;
-  const WALLISH = /wall|partition|facade|parapet|pillar|column|pier/;
+  const FURNITURE = /^(?:sofa|couch|chair|stool|table|desk|bench|bed|cabinet|cupboard|shelf|shelves|bookcase|wardrobe|dresser|fridge|freezer|oven|stove|washer|counter|bar-top|crate|barrel|drum|locker|safe|car|truck|van|bus|jeep|sedan|pickup|boat|machine|vending|kiosk|generator|piano|tv|television|sink|toilet|bath|tub|lounger|sunbed|umbrella|planter|pot|bin|dumpster|skip|pallet|sandbag|tyre|tire|cart|trolley|forklift|bike|motorbike|helicopter)s?$/;
+  const WALLISH = /^(?:wall|partition|facade|parapet|pillar|column)s?$/;
   const name = (a) => (/^actor\d+$/.test(a.name || '') ? '' : (a.name || '')).toLowerCase();
+  /* Matched as WHOLE WORDS of the name, not substrings: 'lake-bed' is not a
+     bed and 'boathouse-deck' is not a boat. */
+  const words = (n) => n.split(/[^a-z]+/).filter(Boolean);
+  const hasWord = (n, re) => words(n).some((w) => re.test(w));
   const list = [];
   for (const a of G.actors) {
     if (!a.visible || a.dead || !a.mesh || a.skeleton || a.face || a.controller || a.grass) continue;
@@ -128,7 +132,11 @@ function audit() {
   };
   const r = { floating: [], crooked: [], transparent: [], clipping: [], objects: list.length };
   const at = (o) => o.C.map((v) => +v.toFixed(2));
+  // What it is, for an unnamed box: its size and its material.
+  const what = (o) => ({ size: o.hs.map((v) => +(v * 2).toFixed(2)), tex: (o.a.material && o.a.material.texture) || '',
+                         parent: o.a.parent ? name(o.a.parent) || 'unnamed' : '', line: o.a.__src || '' });
   list.forEach((o, i) => {
+    if (o.C[1] < -20) return;   // parked out of the world until it is needed
     const big = o.hs[0] > 40 || o.hs[2] > 40;
     // FLOATING: touches nothing within 1.5 cm, and is not on or under the ground plane.
     if (!big && !FLOATERS.test(o.nm) && o.lo[1] > 0.02) {
@@ -143,7 +151,7 @@ function audit() {
       if (!touches) {
         // The physics ground counts too: a ray down from the bottom.
         const hit = G.raycast([o.C[0], o.lo[1] + 0.01, o.C[2]], [0, -1, 0], 0.05);
-        if (!hit) r.floating.push({ name: o.nm || o.key || '(unnamed)', at: at(o), gap: o.lo[1].toFixed(3) });
+        if (!hit) r.floating.push(Object.assign({ name: o.nm || o.key || '(unnamed)', at: at(o), gap: o.lo[1].toFixed(3) }, what(o)));
       }
     }
     // CROOKED: the up axis tilted a little.
@@ -151,26 +159,30 @@ function audit() {
     const tilt = Math.acos(Math.min(1, Math.abs(up[1]))) * 180 / Math.PI;
     const anyUp = Math.max(Math.abs(o.au[0][1]), Math.abs(o.au[1][1]), Math.abs(o.au[2][1]));
     const tiltAny = Math.acos(Math.min(1, anyUp)) * 180 / Math.PI;
-    if (tiltAny > 0.3 && tiltAny < 4 && !/rubble|debris|plank|board|lean|fallen|tilt|wreck|broken|slope|ramp|roof|stair|step|pile|heap|rock|stone|boulder|log|branch|root|grave|tomb|sag|drift|dune|wave|cloth|sheet|tarp|paper|book|bottle|can|cup|shell|casing|brass/.test(o.nm))
-      r.crooked.push({ name: o.nm || o.key || '(unnamed)', at: at(o), tilt: +tiltAny.toFixed(2) });
+    if (tiltAny > 0.3 && tiltAny < 4 && !/rubble|debris|plank|board|lean|fallen|tilt|wreck|broken|slope|ramp|roof|stair|step|pile|heap|rock|stone|boulder|log|branch|root|grave|tomb|sag|drift|dune|wave|cloth|sheet|tarp|paper|book|bottle|can|cup|shell|casing|brass|hung|loose|torn|stake|barb|spout/.test(o.nm))
+      r.crooked.push(Object.assign({ name: o.nm || o.key || '(unnamed)', at: at(o), tilt: +tiltAny.toFixed(2) }, what(o)));
     void tilt;
     // TRANSPARENT where it should not be.
     if ((o.tr || o.op < 0.999) && !SEE_THROUGH_OK.test(o.nm) && !SEE_THROUGH_OK.test(o.key))
-      r.transparent.push({ name: o.nm || o.key || '(unnamed)', at: at(o), opacity: +o.op.toFixed(2) });
+      r.transparent.push(Object.assign({ name: o.nm || o.key || '(unnamed)', at: at(o), opacity: +o.op.toFixed(2) }, what(o)));
     // CLIPPING: furniture into walls or other furniture.
-    if (FURNITURE.test(o.nm)) {
+    const notFurniture = (n) => /\b(lake|river|sea|flower|garden|sea|road|truck)[-_ ]bed/.test(n);
+    if (hasWord(o.nm, FURNITURE) && !notFurniture(o.nm) && o.C[1] > -20) {
       for (const j of near(o, 0)) {
-        if (j <= i && FURNITURE.test(list[j].nm)) continue;   // each furniture pair once
+        if (j <= i && hasWord(list[j].nm, FURNITURE)) continue;   // each furniture pair once
         if (j === i) continue;
         const p = list[j];
-        const wall = WALLISH.test(p.nm), furn = FURNITURE.test(p.nm);
+        const wall = hasWord(p.nm, WALLISH), furn = hasWord(p.nm, FURNITURE) && !notFurniture(p.nm);
         if (!wall && !furn) continue;
         // Parts of the same object (a car's wheel and its body) share a name stem: not a clip.
         const stem = (s) => s.split(/[-_:\s]/)[0];
         if (furn && stem(p.nm) === stem(o.nm)) continue;
+        // An L of two parts of one piece (a 'long bench top' meeting its 'return bench top'): same last word, same height.
+        const last = (s) => words(s).slice(-2).join(' ');
+        if (furn && last(p.nm) === last(o.nm) && Math.abs(p.hi[1] - o.hi[1]) < 0.01) continue;
         if (o.a.parent && (o.a.parent === p.a || o.a.parent === p.a.parent)) continue;
         const d = overlap(o, p);
-        if (d > 0.06) r.clipping.push({ name: o.nm, into: p.nm, at: at(o), depth: +d.toFixed(3) });
+        if (d > 0.06) r.clipping.push({ name: o.nm, into: p.nm, at: at(o), depth: +d.toFixed(3), line: o.a.__src || '', intoLine: p.a.__src || '' });
       }
     }
   });
@@ -201,7 +213,22 @@ for (const id of ['helipad', 'resort', 'town', 'demolition']) {
     p.on('pageerror', (e) => errs.push(e.message.split('\n')[0]));
     await p.setContent('<body style="margin:0"><canvas id="game" style="position:fixed;inset:0"></canvas></body>');
     await p.addScriptTag({ content: fs.readFileSync(R + 'site/engine/legend-engine.js', 'utf8') });
-    for (const s of m.scripts) await p.addScriptTag({ content: fs.readFileSync(R + s, 'utf8') });
+    // Where each object was made: the first stack frame in a game script, so a finding names its source line.
+    await p.evaluate(() => {
+      const E = window.LE.Engine.prototype, orig = E._spawn;
+      E._spawn = function (...args) {
+        const a = orig.apply(this, args);
+        try {
+          const st = new Error().stack.split('\n').slice(2);
+          const f = st.find((l) => /games\//.test(l)) || '';
+          const mm = f.match(/games\/([\w.-]+):(\d+):\d+\)?$/);
+          a.__src = mm ? mm[1].replace('.js', '') + ':' + mm[2] : '';
+        } catch (e) { /* */ }
+        return a;
+      };
+    });
+    // By path, so their stack frames carry the file name (the engine's do not).
+    for (const s of m.scripts) await p.addScriptTag({ path: R + s });
     await p.evaluate(m.start);
     await p.evaluate(() => { for (let i = 0; i < 3; i++) window.__G.step(1 / 60); });
     const r = await p.evaluate(audit);

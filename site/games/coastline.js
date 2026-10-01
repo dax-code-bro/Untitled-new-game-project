@@ -1237,13 +1237,23 @@ function build(game, S) {
        the water rather than stopping square. */
     for (const z of [PAP.breaks.z0, PAP.breaks.z1]) {
       const into = z === PAP.breaks.z0 ? 1 : -1;
-      const bent = game.cylinder({ at: [x, P.deckY + 0.72, z + into * 0.34], radius: 0.045, height: 0.62,
+      /* From the end of the top rail, down and out over the gap. It was
+         centred in mid-air with its top end pointing UP into the gap and its
+         bottom end short of the rail: a bar floating beside a handrail. */
+      const ang = 58 * Math.PI / 180, L = 0.62;
+      const dy = -Math.cos(ang), dz = into * Math.sin(ang);
+      const ax = P.deckY + 0.96, az = z - into * 0.03;
+      const bent = game.cylinder({ at: [x, ax + dy * L / 2, az + dz * L / 2], radius: 0.045, height: L,
         material: mats.galv, physics: false });
       bent.name = 'pier-rail-torn';
-      bent.setRotation([into * 58, 0, 0]);
+      bent.setRotation([-into * 58, 0, 0]);
       decos.push(bent);
     }
-    for (let z = 0.2; z <= P.z1; z += 2.2) post(x, z, P.deckY, P.deckY + 1.0, 0.045, mats.galv, 'pier-stanchion');
+    for (let z = 0.2; z <= P.z1; z += 2.2) {
+      // Not where the deck is gone: a stanchion stands on boards.
+      if (z > PAP.breaks.z0 - 0.05 && z < PAP.breaks.z1 + 0.05) continue;
+      post(x, z, P.deckY, P.deckY + 1.0, 0.045, mats.galv, 'pier-stanchion');
+    }
   }
 
   /* The pavilion: open on all four sides, rails between the posts, and
@@ -1610,17 +1620,30 @@ function build(game, S) {
     deco(x - 0.74, x + 0.74, 0.42, 0.66, z - 0.98, z + 0.98, mats.mattress, 'bed-mattress');
     deco(x - 0.78, x + 0.78, 0.42, 1.05, z - 1.06, z - 0.96, mats.cabinet, 'bed-head');
   };
-  const kitchen = (x0k, x1k, z, face) => {
+  /* `wall` is the inside face of the wall the run stands against, and the
+     run faces away from it ('N': the wall is to the south). The units, the
+     worktop, the cupboards and the cooker all stand AGAINST it.
+     They did not: the units stood 17 cm off the wall and the cupboards were
+     hung on the FRONT edge of the run -- 27 cm out from the plaster, over
+     the worktop, held up by nothing (the model sweep found them) -- and a
+     run facing south had its cupboards built with the depth the wrong way
+     round, which deco quietly turned into no cupboards at all. */
+  const span = (a, b) => [Math.min(a, b), Math.max(a, b)];
+  const kitchen = (x0k, x1k, wall, face) => {
     const n = face === 'N' ? 1 : -1;
-    deco(x0k, x1k, 0.13, 0.88, z - 0.32, z + 0.32, mats.cabinet, 'units');
-    deco(x0k - 0.03, x1k + 0.03, 0.88, 0.94, z - 0.36, z + 0.36, mats.counter, 'worktop');
-    // Wall cupboards above, and a cooker in the run.
-    deco(x0k, x1k - 1.6, 1.52, 2.22, z + n * 0.10, z + n * 0.42, mats.cabinet, 'cupboards');
-    deco(x1k - 1.5, x1k - 0.6, 0.13, 0.92, z - 0.32, z + 0.32, mats.appliance, 'cooker');
+    const [u0, u1] = span(wall, wall + n * 0.64);
+    deco(x0k, x1k, 0.13, 0.88, u0, u1, mats.cabinet, 'units');
+    const [w0, w1] = span(wall, wall + n * 0.68);
+    deco(x0k - 0.03, x1k + 0.03, 0.88, 0.94, w0, w1, mats.counter, 'worktop');
+    // Wall cupboards above, on the wall, and a cooker in the run.
+    const [c0, c1] = span(wall, wall + n * 0.32);
+    deco(x0k, x1k - 1.6, 1.52, 2.22, c0, c1, mats.cabinet, 'cupboards');
+    deco(x1k - 1.5, x1k - 0.6, 0.13, 0.92, u0, u1, mats.appliance, 'cooker');
   };
-  const shelf = (x0s, x1s, y, z, face) => {
+  const shelf = (x0s, x1s, y, wall, face) => {
     const n = face === 'N' ? 1 : -1;
-    deco(x0s, x1s, y, y + 0.05, z, z + n * 0.34, mats.cabinet, 'shelf');
+    const [s0, s1] = span(wall, wall + n * 0.34);
+    deco(x0s, x1s, y, y + 0.05, s0, s1, mats.cabinet, 'shelf');
   };
 
   /* THE RANCH. One long room down the lake side, a kitchen at the road
@@ -1632,10 +1655,10 @@ function build(game, S) {
     const r = room(h, { partX: [[h.x - 3.2, h.z + 1.2, 1.05]], partZ: [[h.z - 1.6, h.x + 4.5, 1.10]] });
     sofa(h.x + 2.6, r.z1 - 1.6, 1);
     table(h.x + 5.6, h.z + 1.0, 0.85, 0.60);
-    kitchen(h.x + 1.4, h.x + 6.4, r.z0 + 0.5, 'N');
+    kitchen(h.x + 1.4, h.x + 6.4, r.z0 + 0.01, 'N');
     bed(h.x - 6.0, h.z - 2.6);
     bed(h.x - 6.0, h.z + 2.2);
-    shelf(h.x - 1.6, h.x + 1.0, 1.30, r.z0 + 0.34, 'N');
+    shelf(h.x - 1.6, h.x + 1.0, 1.30, r.z0 + 0.01, 'N');
     game.light({ at: [h.x + 3.0, 2.5, h.z + 2.0], color: 0xffd2a0, intensity: 7, radius: 9 });
     game.light({ at: [h.x - 6.0, 2.5, h.z], color: 0xffd2a0, intensity: 5, radius: 8 });
   }
@@ -1649,7 +1672,7 @@ function build(game, S) {
     const r = room(h, { partZ: [[h.z - 1.0, h.x - 3.0, 1.10]] });
     sofa(h.x - 2.0, r.z1 - 1.7, 1);
     table(h.x - 5.0, h.z + 2.0, 0.80, 0.80);
-    kitchen(h.x - 6.2, h.x - 1.2, r.z0 + 0.5, 'N');
+    kitchen(h.x - 6.2, h.x - 1.2, r.z0 + 0.01, 'N');
     // Upstairs: a partition across the landing, and a bed either side.
     slab(h.x - 1.0, h.x + 1.2, 3.25, h.wall, r.z0, r.z1 - 2.6, mats.plaster, 'upper-part');
     bed(h.x - 4.2, h.z - 1.0);
@@ -1666,9 +1689,9 @@ function build(game, S) {
     const r = room(h, { floor: mats.carpet, partX: [[h.x + 1.6, h.z - 0.4, 1.05]] });
     sofa(h.x - 3.0, h.z + 1.2, 1);
     table(h.x - 2.4, h.z - 2.0, 0.70, 0.55);
-    kitchen(h.x + 2.4, h.x + 5.2, r.z1 - 0.5, 'S');
+    kitchen(h.x + 2.4, h.x + 5.2, r.z1 - 0.01, 'S');
     bed(h.x + 3.6, h.z - 2.4);
-    shelf(h.x - 4.8, h.x - 2.4, 1.40, r.z0 + 0.34, 'N');
+    shelf(h.x - 4.8, h.x - 2.4, 1.40, r.z0 + 0.01, 'N');
     game.light({ at: [h.x - 2.0, 2.4, h.z], color: 0xffd2a0, intensity: 6, radius: 9 });
     game.light({ at: [h.x + 3.4, 2.4, h.z], color: 0xffd2a0, intensity: 5, radius: 8 });
   }
@@ -1681,10 +1704,10 @@ function build(game, S) {
     const r = room(h, { partZ: [[h.z + 0.6, h.x + 3.4, 1.15]] });
     sofa(h.x + 2.0, r.z1 - 1.8, 1);
     table(h.x - 2.0, h.z + 1.8, 0.90, 0.65);
-    kitchen(h.x - 5.4, h.x - 1.0, r.z0 + 0.5, 'N');
+    kitchen(h.x - 5.4, h.x - 1.0, r.z0 + 0.01, 'N');
     bed(h.x + 3.2, h.z - 2.0);
     bed(h.x - 3.2, h.z - 2.0);
-    shelf(h.x + 4.4, h.x + 6.0, 1.35, r.z0 + 0.34, 'N');
+    shelf(h.x + 4.4, h.x + 6.0, 1.35, r.z0 + 0.01, 'N');
     game.light({ at: [h.x, 2.6, h.z + 2.0], color: 0xffd2a0, intensity: 7, radius: 10 });
     game.light({ at: [h.x, 2.6, h.z - 2.4], color: 0xffd2a0, intensity: 5, radius: 9 });
   }
@@ -2283,6 +2306,11 @@ function build(game, S) {
       K[2] - 0.045, K[2] + 0.045, mats.steelDark, 'gas-can-spout'));
     canParts.push(deco(K[0] - 0.15, K[0] + 0.02, K[1] + 0.46, K[1] + 0.50,
       K[2] - 0.03, K[2] + 0.03, mats.steelDark, 'gas-can-handle'));
+    // On its two pressed posts, not two centimetres above the can (the model sweep).
+    for (const hx of [-0.13, 0.0]) {
+      canParts.push(deco(K[0] + hx - 0.012, K[0] + hx + 0.012, K[1] + 0.435, K[1] + 0.465,
+        K[2] - 0.02, K[2] + 0.02, mats.steelDark, 'gas-can-handle-post'));
+    }
     S.escapeCan = { at: K.slice(), parts: canParts.filter(Boolean) };
 
     /* The boat. Same builder as the two already on the map, so it is

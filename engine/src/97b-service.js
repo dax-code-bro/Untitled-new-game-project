@@ -2261,6 +2261,11 @@ const SERVICE_KINDS = {
        to shed heat. */
     vents: { x0: 0.140, x1: 0.252, n: 6, r: 0.0230, r0: 0.0048 },
     foregrip: { x: 0.205, len: 0.092, rake: 0.08, under: 0.0230 },
+    /* And the FAL pattern's carrying handle, folded down at the front
+       of the receiver. At its real 1090 mm against the G3's 1025 this
+       and the G3 came within 0.30 of each other. The handle is the
+       thing on a FAL that the G3 has nothing like. */
+    handle: { x0: 0.040, x1: 0.112, y: 0.0425 },
     rail: { x0: -0.120, x1: 0.030 },
     mag: { curve: 0.22, len: 0.185, w: 0.0140, d: 0.0150 },
     grip: { rake: 0.44 },
@@ -2413,6 +2418,166 @@ const SERVICE_KINDS = {
    BUILDING ONE
    ================================================================== */
 
+/* ==================================================================
+   HOW LONG THE REAL ONE IS
+   ==================================================================
+ *
+   Measured off the built geometry, butt to muzzle, against the real
+   weapon's published overall length, the table guns came out of the
+   fidelity check like this: the rifles, carbines and machine guns 10 to
+   28 per cent SHORT (an M1 Garand at 918 mm against 1100, a BAR at 968
+   against 1214, an AUG at 565 against 790), and the pistols 25 to 45
+   per cent LONG, all of it ahead of the grip (a P226 at 268 mm against
+   196). The receivers, grips and magazines were right; what was wrong
+   was the barrel, the handguard and the stock -- the parts that were
+   drawn "about that long" rather than measured.
+
+   So the correction is one stretch along the bore axis, applied once to
+   the finished geometry and to every point the mount derives from it,
+   instead of sixty hand edits that would each have to move a barrel, a
+   handguard, its sight, its bands and a bipod together:
+
+     the RECEIVER stays rigid (rec.rear to rec.front, widened to cover
+       the magazine), so the grip, the trigger, the magazine well, the
+       ejection port and the bolt's stroke are all exactly where they
+       were and the hands do not move on it;
+     everything AHEAD of it and everything BEHIND it is scaled by the
+       one factor that makes the overall length the real length.
+
+   A pistol has no stock and its error is all forward, so on a pistol
+   only what is ahead of the grip moves. A gun within 8 per cent of the
+   real length is left alone -- that is inside what a folded or
+   extended stock, a flash hider or a model year changes. */
+const SERVICE_REAL_LENGTH = {
+  // Rifles and carbines.
+  garand: 1100, svt40: 1226, stg44: 940, fg42: 975, ak74: 943, m16: 1000, aug: 790,
+  lee: 1129, kar98: 1110, g3a: 1025, falke: 1090, bm59: 1095,
+  // Submachine guns (folding stocks at their folded length).
+  sten: 762, ppsh: 843, p90: 500, thompson: 852, mp40: 630, vector: 622,
+  // Machine guns.
+  mg34: 1219, pkm: 1173, rpd: 1037, bren: 1156, bar: 1214, dp28: 1266,
+  // Pistols: corrected ahead of the grip only.
+  p226: 196, tokarev: 194, g18: 186, luger: 222, blaze: 216, webley: 286, mauser: 288,
+};
+const SERVICE_PISTOLS = { p226: 1, tokarev: 1, g18: 1, luger: 1, blaze: 1, webley: 1, mauser: 1 };
+
+/* The stretch for one gun, in K space (before fin() moves the origin).
+   It is a piecewise-linear map along x: RIGID spans keep their length
+   and only move, everything between and beyond them scales by one
+   factor `f`. The rigid spans are the receiver (or, on a pistol,
+   everything from the grip back), the magazine, and each grip -- a
+   vertical grip stretched along the bore comes out as an oval post,
+   and a magazine stretched comes out fat. Null when the gun is within
+   8 per cent already or has no real length on file. */
+function serviceWarp(kind, K, geos) {
+  const target = SERVICE_REAL_LENGTH[kind];
+  if (!target) return null;
+  let lo = 1e9, hi = -1e9, mlo = 1e9, mhi = -1e9;
+  for (const k of Object.keys(geos)) {
+    const P = geos[k].positions;
+    for (let i = 0; i < P.length; i += 3) {
+      if (P[i] < lo) lo = P[i];
+      if (P[i] > hi) hi = P[i];
+      if (k === 'mag') { if (P[i] < mlo) mlo = P[i]; if (P[i] > mhi) mhi = P[i]; }
+    }
+  }
+  const L = (hi - lo) * 1000;
+  if (!(L > 0) || Math.abs(L - target) / target <= 0.08) return null;
+  const T = target / 1000, g = 0.06, o = K.origin.x;
+  const gripSpan = (G, len, rake) => [G.x - Math.abs(rake) * len - 0.022, G.x + 0.022];
+  const islands = [];
+  if (mhi > mlo) islands.push([mlo, mhi]);
+  if (K.grip) islands.push(gripSpan(K.grip, K.grip.len, K.grip.rake));
+  if (K.foregrip) islands.push(gripSpan(K.foregrip, K.foregrip.len || 0.100, K.foregrip.rake || 0.10));
+  const build = (main) => {
+    // Merge, clip to the gun.
+    const R = [main, ...islands].map(([a, b]) => [Math.max(a, lo), Math.min(b, hi)])
+      .filter(([a, b]) => b > a).sort((p, q) => p[0] - q[0]);
+    const M = [];
+    for (const r of R) {
+      if (M.length && r[0] <= M[M.length - 1][1]) M[M.length - 1][1] = Math.max(M[M.length - 1][1], r[1]);
+      else M.push(r.slice());
+    }
+    const rigid = M.reduce((t, [a, b]) => t + (b - a), 0);
+    const free = (hi - lo) - rigid;
+    if (!(free > 1e-4)) return null;
+    const f = (T - rigid) / free;
+    // Knots: [x, x', slope of the segment that starts here].
+    const xs = [lo];
+    for (const [a, b] of M) xs.push(a, b);
+    xs.push(hi);
+    const pts = [...new Set(xs)].sort((p, q) => p - q);
+    const isRigid = (x0, x1) => M.some(([a, b]) => x0 >= a - 1e-9 && x1 <= b + 1e-9);
+    // Pin the span holding the origin (the grip) where it is.
+    const pin = Math.min(Math.max(o, lo), hi);
+    const knots = pts.map((x) => [x, 0, 1]);
+    for (let k = 0; k < knots.length - 1; k++) knots[k][2] = isRigid(knots[k][0], knots[k + 1][0]) ? 1 : f;
+    let x0 = 0;
+    for (let k = 0; k < knots.length - 1; k++) {
+      knots[k][1] = x0;
+      x0 += (knots[k + 1][0] - knots[k][0]) * knots[k][2];
+    }
+    knots[knots.length - 1][1] = x0;
+    knots[knots.length - 1][2] = knots.length > 1 ? knots[knots.length - 2][2] : 1;
+    const W = { knots, f, lead: knots[0][2] };
+    const shift = pin - warpX(W, pin);
+    for (const kn of knots) kn[1] += shift;
+    return W;
+  };
+  let W;
+  if (SERVICE_PISTOLS[kind]) {
+    W = build([lo, o + g]);
+  } else {
+    let a = K.rec ? K.rec.rear : o - g, b = K.rec ? K.rec.front : o + g;
+    W = build([a, b]);
+    /* A bullpup's receiver is most of the gun, and stretching what is
+       left of it by more than half again turns a round barrel into an
+       oval one. Let the receiver stretch too, outside the grip. */
+    if (!W || !(W.f > 0) || W.f > 1.5) W = build([o - g, o + g]);
+  }
+  return W && W.f > 0.2 && W.f < 2 ? W : null;
+}
+
+/* x through the map, and the map's slope there (for the normals). */
+function warpX(W, x) {
+  if (!W) return x;
+  const K = W.knots;
+  if (x <= K[0][0]) return K[0][1] + (x - K[0][0]) * K[0][2];
+  for (let k = 0; k < K.length - 1; k++) {
+    if (x <= K[k + 1][0]) return K[k][1] + (x - K[k][0]) * K[k][2];
+  }
+  const e = K[K.length - 1];
+  return e[1] + (x - e[0]) * e[2];
+}
+function warpSlope(W, x) {
+  const K = W.knots;
+  for (let k = 0; k < K.length - 1; k++) if (x <= K[k + 1][0]) return K[k][2];
+  return K[K.length - 1][2];
+}
+/* The same map, moved into the mount's space (fin() subtracts the
+   origin from everything). */
+function shiftWarp(W, dx) {
+  return { f: W.f, lead: W.lead, knots: W.knots.map(([x, y, s]) => [x - dx, y - dx, s]) };
+}
+
+function applyServiceWarp(W, geos, pivots) {
+  for (const k of Object.keys(geos)) {
+    const G = geos[k], P = G.positions, N = G.normals;
+    for (let i = 0; i < P.length; i += 3) {
+      const x = P[i], s = warpSlope(W, x);
+      P[i] = warpX(W, x);
+      /* Normals take the inverse of the stretch: a surface leaning
+         forward leans less once it is longer. */
+      if (s !== 1 && N && N.length > i + 2) {
+        const nx = N[i] / s, ny = N[i + 1], nz = N[i + 2];
+        const l = Math.hypot(nx, ny, nz) || 1;
+        N[i] = nx / l; N[i + 1] = ny / l; N[i + 2] = nz / l;
+      }
+    }
+  }
+  for (const k of Object.keys(pivots)) pivots[k].x = warpX(W, pivots[k].x);
+}
+
 function makeServiceArm(kind) {
   const K = SERVICE_KINDS[kind];
   const geos = {};
@@ -2493,14 +2658,25 @@ function makeServiceArm(kind) {
       delete geos['shell' + i]; delete geos['tip' + i];
     }
   }
-  return fin(geos, K.origin, pivots);
+  const W = serviceWarp(kind, K, geos);
+  if (W) applyServiceWarp(W, geos, pivots);
+  const out = fin(geos, K.origin, pivots);
+  /* In the mount's space, for serviceArm to move its derived points
+     with the geometry. Non-enumerable for the same reason __pivots is. */
+  if (W) {
+    const o = K.origin.x;
+    Object.defineProperty(out, '__warp', { value: shiftWarp(W, o) });
+  }
+  return out;
 }
 
 function serviceArm(E, kind, opts) {
   const K = SERVICE_KINDS[kind];
   if (!K) throw new Error('no such service arm: ' + kind);
   const parts = armCache(E, 'svc:' + kind, function () { return makeServiceArm(kind); });
-  const body = mountArm(E, 'svc:' + kind, parts, K.mats, opts, K.bound, K.mass, 'steel');
+  const W = parts.__warp || null;
+  const body = mountArm(E, 'svc:' + kind, parts, K.mats, opts,
+    W && K.bound ? K.bound * Math.max(1, W.f) : K.bound, K.mass, 'steel');
   const o = K.origin;
   body.boreAt = -o.y;
   /* THE MUZZLE IS THE END OF THE CAN, if there is a can.
@@ -2607,6 +2783,18 @@ function serviceArm(E, kind, opts) {
   body.feedFrom = K.mag && K.mag.kind !== 'none'
     ? [K.mag.x - o.x, K.mag.y - o.y + A_FEED_LIFT, 0] : null;
   body.feedTo = [K.rec.front - 0.030 - o.x, -o.y, 0];
+  /* Every point above was read off the spec, which is the gun before
+     its length was corrected. Move each one with the geometry. */
+  if (W) {
+    body.muzzleAt = warpX(W, body.muzzleAt);
+    body.tipAt = warpX(W, body.tipAt);
+    if (body.ejectPort) body.ejectPort[0] = warpX(W, body.ejectPort[0]);
+    body.magWell[0] = warpX(W, body.magWell[0]);
+    body.breechAt = warpX(W, body.breechAt);
+    if (body.feedFrom) body.feedFrom[0] = warpX(W, body.feedFrom[0]);
+    body.feedTo[0] = warpX(W, body.feedTo[0]);
+    body.lengthCorrection = W.f;
+  }
   /* Fly the round from the lips to the chamber. `t` runs 0 to 1 over
      the bolt's FORWARD stroke; anything outside that hides it, because
      a round sitting in mid-air between cycles is worse than no round

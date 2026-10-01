@@ -18,7 +18,8 @@
  *
  * --play on a zombies map (bunker-nine, coastline) is the game instead of
  * the fly camera: WASD move, mouse look, left button fire, right button
- * aim, R reload, Space jump, Shift sprint, 1-3 or the wheel to change gun,
+ * aim, R reload, Space jump, Shift sprint, F (held) rebuild a window's
+ * boards, 1-3 or the wheel to change gun,
  * Enter to go again when you are down, Esc to pause (Q quits from there).
  * src/game/Zombies.hpp says what is and is not in it. */
 #include "core/Args.hpp"
@@ -201,7 +202,7 @@ int main(int argc, char** argv) try {
     std::unique_ptr<game::play::ZombiesGame> zgame;
     std::unique_ptr<game::play::Hud> hud;
     std::vector<game::rendering::PointLight> baseLights;
-    std::vector<game::rendering::DrawItem> frameItems;
+    std::vector<game::rendering::DrawItem> frameItems, playStatic;
     if (args.play) {
         if (!sceneFile) throw std::invalid_argument("--play needs --scene <zombies map>.lescene");
         const std::filesystem::path kp = args.kit.empty()
@@ -211,6 +212,29 @@ int main(int argc, char** argv) try {
         {
             const game::play::Lesc map(args.scene);
             zgame = std::make_unique<game::play::ZombiesGame>(map, *kit, camera, args.seed);
+        }
+        /* The window boards come out of the static draw list and into the game,
+           which takes them down and puts them back up. */
+        {
+            std::vector<std::pair<std::string, game::rendering::DrawItem>> boards;
+            std::vector<char> taken(items.size(), 0);
+            for (const auto& [name, idx] : sceneFile->named()) {
+                if (idx >= items.size()) continue;
+                taken[idx] = 1;
+                const auto& src = items[idx];
+                if (src.instances)
+                    for (const auto& in : *src.instances) {
+                        game::rendering::DrawItem d = src;
+                        d.instances = nullptr;
+                        d.model = in.model;
+                        d.params = in.params;
+                        boards.emplace_back(name, d);
+                    }
+                else boards.emplace_back(name, src);
+            }
+            for (size_t i = 0; i < items.size(); ++i) if (!taken[i]) playStatic.push_back(items[i]);
+            zgame->adoptBoards(boards);
+            std::printf("play: %zu window boards\n", boards.size());
         }
         hud = std::make_unique<game::play::Hud>(shaders);
         baseLights = renderer.lights;
@@ -302,6 +326,7 @@ int main(int argc, char** argv) try {
                 playIn.fire = lmb;
                 playIn.aim = glfwGetMouseButton(w, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
                 playIn.sprint = glfwGetKey(w, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+                playIn.interact = glfwGetKey(w, GLFW_KEY_F) == GLFW_PRESS;
             }
         }
         if (zgame) {
@@ -322,7 +347,7 @@ int main(int argc, char** argv) try {
                 zgame->update(static_cast<float>(kFixedStep), in);
             }
             if (steps > 0) lookX = lookY = 0.0;
-            frameItems = items;
+            frameItems = playStatic;
             renderer.lights = baseLights;
             zgame->frame(camera, frameItems, renderer.lights);
         }

@@ -598,7 +598,7 @@ Object.assign(SERVICE_KINDS, {
     stock: { butt: -0.370, comb: 0.0230, drop: 0.0310 },
     charge: { x: -0.012, y: 0.0020, z: 0.0300 },
     // A straight wrist, not a pistol grip. See the Springfield's.
-    grip: { rake: 0.68, deep: 0.96, e: 0.82 },
+    grip: { rake: 0.80, deep: 0.96, e: 0.82 },
     /* THE ZF41, AND IT IS MOUNTED FORWARD OF THE ACTION.
      *
        This and the Springfield are both full-stocked wooden bolt
@@ -618,7 +618,19 @@ Object.assign(SERVICE_KINDS, {
        its scope is. Correct, and it is the only optic in the rack
        mounted forward of the breech. */
     optic: { x0: 0.130, x1: 0.240, r: 0.0098, bell: 0.0110, y: 0.0430 },
-    sight: { frontX: 0.590, rearX: 0.090, front: 'ears', rear: 'notch' },
+    /* THE HOODED POST AND THE FLUSH FLOORPLATE. Once the length check
+       put the Kar98k at its real 1110 mm and the No. 4 at 1129, the two
+       of them measured 0.25 apart. That is not wrong: they are two
+       wooden bolt rifles of one war at one length. They are still told
+       apart at a glance, though, and by two things. The Kar's five
+       rounds sit in an internal box whose floorplate is flush with the
+       stock, where the Lee's ten-round box stands below it, and the Kar
+       has a hand's width of bare barrel out in front of the nose band
+       with a hooded post on the end. */
+    mag: { len: 0.036 },
+    // The cleaning rod in its channel under the barrel, tip proud of the nose band.
+    tube: { x0: 0.300, x1: 0.505, r: 0.0034, y: -0.0170 },
+    sight: { frontX: 0.590, rearX: 0.090, front: 'hood', rear: 'notch' },
     mass: 3.9, bound: 0.66,
   }),
 
@@ -777,14 +789,21 @@ Object.assign(SERVICE_KINDS, {
        than the Mauser pattern and why the handle is further back than
        any other bolt gun's here. */
     charge: { x: -0.060, y: -0.0020, z: 0.0290 },
-    hg: { kind: 'wood', x0: 0.075, x1: 0.480, r: 0.0225, w: 0.0225, drop: 0.0265,
+    /* Wood almost to the muzzle: the No. 4's nose cap leaves only the
+       last few centimetres of barrel bare, which is the other half of
+       telling it from the Kar98k. */
+    hg: { kind: 'wood', x0: 0.075, x1: 0.545, r: 0.0225, w: 0.0225, drop: 0.0265,
       upper: 0.0230 },
     // Ten, in two rows, in a box that stands well below the stock.
-    mag: { kind: 'box', x: -0.024, y: -0.0210, len: 0.082, curve: 0.06,
+    mag: { kind: 'box', x: -0.024, y: -0.0210, len: 0.090, curve: 0.06,
       w: 0.0150, d: 0.0165, r: 0.030, clear: false },
     grip: { x: -0.092, y: -0.0175, len: 0.104, rake: 0.58, deep: 1.06, e: 0.86 },
     stock: { kind: 'wood', butt: -0.370, comb: 0.0240, drop: 0.0320, w: 0.0220 },
-    optic: { x0: -0.096, x1: 0.040, r: 0.0140, bell: 0.0160, y: 0.0480 },
+    /* The No. 32 telescope of the No. 4 (T): eleven inches of one-inch
+       tube, not the stub this was. The length correction stretches
+       what is ahead of the receiver, so 0.130 here comes out at 0.137
+       and the tube at its real 277 mm. */
+    optic: { x0: -0.140, x1: 0.130, r: 0.0130, bell: 0.0165, y: 0.0480 },
     sight: { y: 0.0340, frontX: 0.570, rearX: 0.060, front: 'ears', rear: 'aperture' },
     mass: 4.2, bound: 0.68,
   }),

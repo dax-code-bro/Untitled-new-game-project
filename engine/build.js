@@ -84,7 +84,7 @@ const LegendEngine = {
      and whether two weapons differ by anything at all. The pistol
      cluster that started this was found with a renderer and confirmed
      in forty milliseconds with arithmetic. */
-  SERVICE_KINDS, makeServiceArm,
+  SERVICE_KINDS, makeServiceArm, SERVICE_REAL_LENGTH,
   /* And the twelve that are hand-dimensioned rather than table-built,
      for the same reason. See BESPOKE_ARMS in 97a-arms.js. */
   BESPOKE_ARMS, makeBespokeArm,

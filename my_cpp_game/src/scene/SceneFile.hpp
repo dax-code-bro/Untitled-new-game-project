@@ -4,6 +4,8 @@
 #include <deque>
 #include <filesystem>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace game::scene {
@@ -29,6 +31,9 @@ public:
 
     [[nodiscard]] const std::vector<rendering::DrawItem>& items() const { return m_items; }
     [[nodiscard]] rendering::Camera camera() const { return m_camera; }
+    /* Draws found by name for the game: (name, index into items()). Only the
+       names the game asks after are kept -- the zombies' window boards. */
+    [[nodiscard]] const std::vector<std::pair<std::string, size_t>>& named() const { return m_named; }
 
     struct Stats { size_t meshes = 0, materials = 0, draws = 0, instances = 0, vertices = 0,
                    triangles = 0, rewound = 0, lights = 0, skinned = 0,
@@ -46,6 +51,7 @@ private:
     std::vector<const rendering::Mesh*>          m_mulchMesh;
     const rendering::Material*                   m_mulchMat = nullptr;
     std::vector<rendering::DrawItem>             m_items;
+    std::vector<std::pair<std::string, size_t>>  m_named;
     rendering::Camera                            m_camera;
     Stats                                        m_stats;
 };
