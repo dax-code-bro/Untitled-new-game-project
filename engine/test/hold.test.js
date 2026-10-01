@@ -107,7 +107,27 @@ const note = (s) => console.log(`  ..   ${s}`);
       for (const aiming of [false, true]) {
         foe.guns[foe.held] = Object.assign({}, foe.guns[foe.held], byId[id], { id });
         foe._armCache = null;
-        foe.aiming = aiming;
+        /* PIN HIS STANCE TOO, not just his animator. botThink rewrites
+           `sprinting` and `aiming` every frame, and a bot that broke into
+           a sprint between two of the three samples took his rifle
+           toward low-ready under them: the reach spread jumped from
+           0.3 mm to 13-28 mm on some runs and not others, which is the
+           signature of the match, not of the arms. Both are held at what
+           this subject is being measured in for as long as he is.
+
+           AND HE DOES NOT SHOOT. A bot with someone in his sights fires,
+           and every shot puts recoil on his pitch (kickFrom) -- the
+           weapon rises, the reach re-solves, and the support hand slid
+           5 mm on a pistol and over 20 on the worst draws for a frame or
+           two, a few frames into the sample. `nextShot` held in the
+           future keeps fire() from ever getting that far, and the kick
+           already in flight is zeroed. */
+        for (const [k, val] of [['sprinting', false], ['aiming', aiming], ['nextShot', 1e12]]) {
+          Object.defineProperty(foe, k, { configurable: true, enumerable: true,
+            get: () => val, set: () => {} });
+        }
+        foe._lowT = 0;
+        foe.kickUp = 0; foe.kickSide = 0; foe.kickHold = 0;
         /* Let the ADS ease settle rather than assuming it snaps: the
            carry eases to the shoulder the same way the viewmodel does. */
         foe._adsT = aiming ? 1 : 0;
@@ -145,7 +165,12 @@ const note = (s) => console.log(`  ..   ${s}`);
         foe.actor.animator.play('idle', 0);
         foe.actor.animator.speed = 0;
         foe.actor.animator.time = 0;
-        for (let i = 0; i < 6; i++) {
+        /* Twenty-four frames, not six. Handed a new weapon, the reach
+           is still easing in for the first ten or so: sampled at six,
+           the first subject's support hand read 118.4 mm, dipped to
+           113 for two frames, and came back -- a 5 mm spread on an arm
+           that was doing nothing wrong. */
+        for (let i = 0; i < 24; i++) {
           foe.actor.animator.time = 0;
           await frame();
         }
@@ -237,6 +262,8 @@ const note = (s) => console.log(`  ..   ${s}`);
         out.measured.push(rec);
       }
     }
+    // Give him his own stance back.
+    for (const k of ['sprinting', 'aiming', 'nextShot']) { delete foe[k]; foe[k] = k === 'nextShot' ? 0 : false; }
     return out;
   });
 
