@@ -46,7 +46,7 @@ A zombies round on Bunker Nine or Coastline, native:
 | Where they walk | a layered 0.5 m walk grid probed down from the colliders (floors, decks, stairs), and one flow field (Dijkstra from the player) every zombie follows (`Nav.cpp`) | built natively from the same colliders |
 | The zombies and the guns | the web game's own zombie bodies and viewmodels, RECORDED frame by frame -- part matrices, visibility, every skeleton's bone palette, the muzzle -- and played back (`Kit.cpp`) | `tools/export_kit.js` → `kit.lekit` |
 | The round | come up at the spawn pads, walk to a window, tear at it, climb in, hunt on the flow field, swing; count, health, damage, spawn gap, live cap and speed per round from the web `ROUNDS` table; the player's walk, sprint, aimed speed and regeneration from `PLAYER`; M1911, Thompson and Scattergun with the web `WEAPONS` damage, headshot multiplier, rate, magazine, reserve, spread, aimed spread, aim time and recoil (`Zombies.cpp`) | the numbers are the web game's |
-| HUD | round tally, points and pop-ups, ammunition, crosshair that opens with spread, hit marker, reload bar, health, hurt vignette, down screen, pause (`Hud.cpp`, a built-in 5x7 face, no font files) | |
+| HUD | round tally, points and pop-ups, ammunition, crosshair that opens with spread, hit marker, reload bar, health, hurt vignette, down screen, pause (`Hud.cpp`; text in DejaVu Sans Bold as a compiled-in distance-field atlas -- smooth at every size, outlined, no font file to ship; regenerate with `tools/make_hud_font.py`) | |
 
 `--autoplay` puts a bot at the controls (it aims, shoots, reloads and backs
 off); `--sim-seconds S` plays S seconds unrendered before the first frame,

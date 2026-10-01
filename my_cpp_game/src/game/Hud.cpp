@@ -3,76 +3,54 @@
 #include <glad/gl.h>
 
 #include <cctype>
+#include <cstddef>
 #include <cstring>
 
 namespace game::play {
 
 namespace {
 
-/* 5x7, one string of seven rows per glyph, '#' lit. */
-struct Glyph { char c; const char* rows[7]; };
-const Glyph kFont[] = {
-    {'0', {" ### ", "#   #", "#  ##", "# # #", "##  #", "#   #", " ### "}},
-    {'1', {"  #  ", " ##  ", "  #  ", "  #  ", "  #  ", "  #  ", " ### "}},
-    {'2', {" ### ", "#   #", "    #", "   # ", "  #  ", " #   ", "#####"}},
-    {'3', {"#####", "   # ", "  #  ", "   # ", "    #", "#   #", " ### "}},
-    {'4', {"   # ", "  ## ", " # # ", "#  # ", "#####", "   # ", "   # "}},
-    {'5', {"#####", "#    ", "#### ", "    #", "    #", "#   #", " ### "}},
-    {'6', {"  ## ", " #   ", "#    ", "#### ", "#   #", "#   #", " ### "}},
-    {'7', {"#####", "    #", "   # ", "  #  ", " #   ", " #   ", " #   "}},
-    {'8', {" ### ", "#   #", "#   #", " ### ", "#   #", "#   #", " ### "}},
-    {'9', {" ### ", "#   #", "#   #", " ####", "    #", "   # ", " ##  "}},
-    {'A', {" ### ", "#   #", "#   #", "#####", "#   #", "#   #", "#   #"}},
-    {'B', {"#### ", "#   #", "#   #", "#### ", "#   #", "#   #", "#### "}},
-    {'C', {" ### ", "#   #", "#    ", "#    ", "#    ", "#   #", " ### "}},
-    {'D', {"#### ", "#   #", "#   #", "#   #", "#   #", "#   #", "#### "}},
-    {'E', {"#####", "#    ", "#    ", "#### ", "#    ", "#    ", "#####"}},
-    {'F', {"#####", "#    ", "#    ", "#### ", "#    ", "#    ", "#    "}},
-    {'G', {" ### ", "#   #", "#    ", "# ###", "#   #", "#   #", " ####"}},
-    {'H', {"#   #", "#   #", "#   #", "#####", "#   #", "#   #", "#   #"}},
-    {'I', {" ### ", "  #  ", "  #  ", "  #  ", "  #  ", "  #  ", " ### "}},
-    {'J', {"  ###", "   # ", "   # ", "   # ", "   # ", "#  # ", " ##  "}},
-    {'K', {"#   #", "#  # ", "# #  ", "##   ", "# #  ", "#  # ", "#   #"}},
-    {'L', {"#    ", "#    ", "#    ", "#    ", "#    ", "#    ", "#####"}},
-    {'M', {"#   #", "## ##", "# # #", "# # #", "#   #", "#   #", "#   #"}},
-    {'N', {"#   #", "#   #", "##  #", "# # #", "#  ##", "#   #", "#   #"}},
-    {'O', {" ### ", "#   #", "#   #", "#   #", "#   #", "#   #", " ### "}},
-    {'P', {"#### ", "#   #", "#   #", "#### ", "#    ", "#    ", "#    "}},
-    {'Q', {" ### ", "#   #", "#   #", "#   #", "# # #", "#  # ", " ## #"}},
-    {'R', {"#### ", "#   #", "#   #", "#### ", "# #  ", "#  # ", "#   #"}},
-    {'S', {" ####", "#    ", "#    ", " ### ", "    #", "    #", "#### "}},
-    {'T', {"#####", "  #  ", "  #  ", "  #  ", "  #  ", "  #  ", "  #  "}},
-    {'U', {"#   #", "#   #", "#   #", "#   #", "#   #", "#   #", " ### "}},
-    {'V', {"#   #", "#   #", "#   #", "#   #", "#   #", " # # ", "  #  "}},
-    {'W', {"#   #", "#   #", "#   #", "# # #", "# # #", "# # #", " # # "}},
-    {'X', {"#   #", "#   #", " # # ", "  #  ", " # # ", "#   #", "#   #"}},
-    {'Y', {"#   #", "#   #", " # # ", "  #  ", "  #  ", "  #  ", "  #  "}},
-    {'Z', {"#####", "    #", "   # ", "  #  ", " #   ", "#    ", "#####"}},
-    {':', {"     ", "  #  ", "  #  ", "     ", "  #  ", "  #  ", "     "}},
-    {'/', {"    #", "    #", "   # ", "  #  ", " #   ", "#    ", "#    "}},
-    {'-', {"     ", "     ", "     ", " ### ", "     ", "     ", "     "}},
-    {'+', {"     ", "  #  ", "  #  ", "#####", "  #  ", "  #  ", "     "}},
-    {'.', {"     ", "     ", "     ", "     ", "     ", " ##  ", " ##  "}},
-    {',', {"     ", "     ", "     ", "     ", " ##  ", "  #  ", " #   "}},
-    {'!', {"  #  ", "  #  ", "  #  ", "  #  ", "  #  ", "     ", "  #  "}},
-    {'?', {" ### ", "#   #", "    #", "   # ", "  #  ", "     ", "  #  "}},
-    {'%', {"##   ", "##  #", "   # ", "  #  ", " #   ", "#  ##", "   ##"}},
-    {'(', {"   # ", "  #  ", " #   ", " #   ", " #   ", "  #  ", "   # "}},
-    {')', {" #   ", "  #  ", "   # ", "   # ", "   # ", "  #  ", " #   "}},
-    {'\'', {"  #  ", "  #  ", " #   ", "     ", "     ", "     ", "     "}},
-    {'x', {"     ", "     ", "#   #", " # # ", "  #  ", " # # ", "#   #"}},
-};
+#include "game/HudFont.inc"
 
-const Glyph* glyph(char c) {
-    if (c != 'x') c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-    for (const auto& g : kFont) if (g.c == c) return &g;
-    return nullptr;
+/* Capitals only, as the bitmap face was: the HUD is set in caps throughout,
+   and the weapon names come from the web game in mixed case. A lower-case
+   x stays one -- it is the multiplication sign in "x2". */
+char shape(char c) {
+    if (c == 'x') return c;
+    return static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
 }
+
+const hudfont::Glyph* glyph(char c) {
+    const int i = static_cast<unsigned char>(c) - 32;
+    return (i >= 0 && i < 95) ? &hudfont::kGlyphs[i] : nullptr;
+}
+
+// A little air between capitals, which a HUD set in caps wants.
+constexpr float kTracking = 0.035f * hudfont::kEm;
 
 } // namespace
 
 Hud::Hud(rendering::ShaderLibrary& shaders) : m_shaders(shaders) {
     m_prog = shaders.get("hud.vert", "hud.frag");
+    gl::TextureDesc d;
+    d.width = hudfont::kAtlasW;
+    d.height = hudfont::kAtlasH;
+    d.levels = 0;                               // full chain: the weapon list is drawn at a third of the atlas
+    d.internalFormat = GL_R8;
+    d.minFilter = GL_LINEAR_MIPMAP_LINEAR;
+    m_atlas = gl::Texture(d);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    m_atlas.upload(0, hudfont::kAtlasW, hudfont::kAtlasH, GL_RED, GL_UNSIGNED_BYTE, hudfont::kAtlas);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    m_atlas.generateMips();
+}
+
+float Hud::textWidth(const std::string& s, float px) {
+    const float k = 7.0f * px / hudfont::kCapHeight;
+    float w = 0.0f;
+    for (char ch : s)
+        if (const hudfont::Glyph* g = glyph(shape(ch))) w += (g->adv + kTracking) * k;
+    return s.empty() ? 0.0f : w - kTracking * k;
 }
 
 void Hud::begin(int w, int h) {
@@ -81,31 +59,32 @@ void Hud::begin(int w, int h) {
     m_v.clear();
 }
 
+void Hud::quad(glm::vec2 a, glm::vec2 b, glm::vec2 ua, glm::vec2 ub, const glm::vec4& c) {
+    const V v0{a, ua, c}, v1{{b.x, a.y}, {ub.x, ua.y}, c}, v2{b, ub, c}, v3{{a.x, b.y}, {ua.x, ub.y}, c};
+    m_v.push_back(v0); m_v.push_back(v1); m_v.push_back(v2);
+    m_v.push_back(v0); m_v.push_back(v2); m_v.push_back(v3);
+}
+
 void Hud::rect(float x, float y, float w, float h, const glm::vec4& c) {
-    const glm::vec2 a(x, y), b(x + w, y), d(x + w, y + h), e(x, y + h);
-    m_v.push_back({a, c}); m_v.push_back({b, c}); m_v.push_back({d, c});
-    m_v.push_back({a, c}); m_v.push_back({d, c}); m_v.push_back({e, c});
+    quad({x, y}, {x + w, y + h}, {-1.0f, -1.0f}, {-1.0f, -1.0f}, c);
 }
 
 void Hud::text(const std::string& s, float x, float y, float px, const glm::vec4& c, int align) {
     const float w = textWidth(s, px);
     if (align == 1) x -= w * 0.5f;
     else if (align == 2) x -= w;
+    const float k = 7.0f * px / hudfont::kCapHeight;     // screen px per atlas px
+    const float base = y + hudfont::kCapHeight * k;      // the baseline
+    const glm::vec2 inv(1.0f / hudfont::kAtlasW, 1.0f / hudfont::kAtlasH);
     for (char ch : s) {
-        if (const Glyph* g = glyph(ch)) {
-            for (int r = 0; r < 7; ++r) {
-                const char* row = g->rows[r];
-                // Runs of lit pixels in a row become one quad.
-                for (int k = 0; k < 5;) {
-                    if (row[k] != '#') { ++k; continue; }
-                    int e = k;
-                    while (e < 5 && row[e] == '#') ++e;
-                    rect(x + k * px, y + r * px, (e - k) * px, px, c);
-                    k = e;
-                }
-            }
+        const hudfont::Glyph* g = glyph(shape(ch));
+        if (!g) continue;
+        if (g->w > 0) {
+            const glm::vec2 a(x + g->ox * k, base + g->oy * k);
+            const glm::vec2 b = a + glm::vec2(g->w, g->h) * k;
+            quad(a, b, glm::vec2(g->ax, g->ay) * inv, glm::vec2(g->ax + g->w, g->ay + g->h) * inv, c);
         }
-        x += 6.0f * px;
+        x += (g->adv + kTracking) * k;
     }
 }
 
@@ -118,6 +97,7 @@ void Hud::end(unsigned fbo) {
         m_vao.vertexBuffer(0, *m_vbo, 0, sizeof(V));
         m_vao.attribute(0, 0, 2, GL_FLOAT, offsetof(V, p));
         m_vao.attribute(1, 0, 4, GL_FLOAT, offsetof(V, c));
+        m_vao.attribute(2, 0, 2, GL_FLOAT, offsetof(V, uv));
     }
     m_vbo->update(0, static_cast<GLsizeiptr>(bytes), m_v.data());
     m_prog = m_shaders.get("hud.vert", "hud.frag");
@@ -134,6 +114,9 @@ void Hud::end(unsigned fbo) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     m_prog->use();
     m_prog->set("uScreen", glm::vec2(static_cast<float>(m_w), static_cast<float>(m_h)));
+    m_prog->set("uAtlas", 0);
+    m_prog->set("uSpread", hudfont::kSpread);
+    m_atlas.bind(0);
     m_vao.bind();
     glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(m_v.size()));
     glBindVertexArray(0);

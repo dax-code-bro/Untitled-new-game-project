@@ -64,3 +64,8 @@ COMMAND LINE (my_cpp_game.exe --help style)
   --disable ssr,volumetric,...            switch individual passes off
 
 The phone keeps the web version: phones do not run desktop OpenGL.
+
+FONT
+The in-game text is DejaVu Sans Bold (Bitstream Vera Fonts copyright (c)
+2003 Bitstream, Inc.; DejaVu changes are in the public domain), used under
+the Bitstream Vera Fonts licence: https://dejavu-fonts.github.io/License.html
