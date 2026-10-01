@@ -49,7 +49,20 @@ const R = path.join(__dirname, '..', '..') + '/';
    * budget. The claims below are unchanged; only who calls them. */
   const setup = await p.evaluate(() => {
     window.B = BUNKER.start({ canvas: '#game', test: true, quality: 'low' });
-    window.__run = (n) => { for (let i = 0; i < n; i++) { B.S.toSpawn = 0; B.S.spawnT = 1e9; B.game.step(1/60); } };
+    /* NOTHING IS DRAWN while the game is only being driven. Every claim
+       here is read off the scene graph -- what is visible, what threw --
+       and never off the screen, and engine.step() renders a frame each
+       time it is called: under SwiftShader that was 300 to 375 seconds a
+       gun, and the run hit its 25-minute limit on the fourth weapon of
+       twenty-odd. `__frame()` draws one real frame, which each fitting
+       still gets, so a render-path fault with a magazine fitted is
+       still caught. */
+    const DRAW = ['renderShadows', 'renderScene', 'renderFluid', 'renderParticles', 'present'];
+    const RR = B.game.renderer;
+    const off = () => { for (const k of DRAW) if (typeof RR[k] === 'function') RR[k] = () => {}; };
+    const on = () => { for (const k of DRAW) if (Object.prototype.hasOwnProperty.call(RR, k)) delete RR[k]; };
+    window.__run = (n) => { off(); try { for (let i = 0; i < n; i++) { B.S.toSpawn = 0; B.S.spawnT = 1e9; B.game.step(1/60); } } finally { on(); } };
+    window.__frame = () => { B.S.toSpawn = 0; B.S.spawnT = 1e9; B.game.step(1/60); };
     __T.buildPool(4); __T.god(true); __T.killAll(); window.__run(20);
     const A = __T_SYS.ATTACH;
     const GUNS = Object.keys(__T_WEAPONS).filter((k) => !__T_WEAPONS[k].melee);
@@ -161,6 +174,7 @@ const R = path.join(__dirname, '..', '..') + '/';
           P.fitted[g] = { mag: m };
           __T_SYS.applyAttachmentLooks(B.game, P, g);
           run(6);
+          window.__frame();
           /* Asked directly rather than inferred from a count.
            *
            * Counting visible parts before and after and predicting the

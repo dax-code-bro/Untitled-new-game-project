@@ -600,7 +600,17 @@ const SWEEP = () => {
               near++;
               const a1 = dx * rd[0] + dy * rd[1] + dz * rd[2];
               const a2 = dx * side3[0] + dy * side3[1] + dz * side3[2];
-              quad[(a1 >= 0 ? 0 : 2) + (a2 >= 0 ? 0 : 1)]++;
+              /* SIDES, NOT DIAGONALS. Splitting on the signs of a1 and a2
+                 cuts the grip into front-far, rear-far, front-near and
+                 rear-near -- diagonals -- and the rear-far one is bare on a
+                 real firing grip below the thumb: palm on the backstrap,
+                 fingertips on the far side FRONT. Eighteen closed hands
+                 failed on exactly that quadrant, every right hand on the
+                 same one and every left hand on its mirror. What this
+                 check is named for is the four SIDES of what is held --
+                 front, back, near, far -- which are the sectors centred
+                 on those directions. */
+              quad[Math.abs(a1) >= Math.abs(a2) ? (a1 >= 0 ? 0 : 2) : (a2 >= 0 ? 1 : 3)]++;
             }
           }
           const n3 = pos.length / 3;
