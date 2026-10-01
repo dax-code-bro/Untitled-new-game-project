@@ -590,7 +590,23 @@ const SWEEP = () => {
               + (gunPts[i+2]-hz)*(gunPts[i+2]-hz);
             if (d < wd) { wd = d; wx = gunPts[i]; wy = gunPts[i+1]; wz = gunPts[i+2]; }
           }
-          if (gunPts.length) { hx = wx; hy = wy; hz = wz; }
+          /* And then into the MIDDLE of what it holds, not onto its skin.
+             The nearest weapon vertex is on the surface of the grip --
+             the palm-side face of it -- and splitting quadrants there put
+             the whole far side of a 30 mm grip in two quadrants and left
+             the others nearly empty: 18 hands "on three sides" whose
+             close-ups show fingers wrapped round the front and palm
+             behind. The centroid of the weapon's own vertices within
+             20 mm of that point is the middle of the held section, which
+             is what "all four sides of what it holds" is about. */
+          if (gunPts.length) {
+            let sx = 0, sy = 0, sz = 0, sn = 0;
+            for (let i = 0; i < gunPts.length; i += 3) {
+              const dx = gunPts[i] - wx, dy = gunPts[i+1] - wy, dz = gunPts[i+2] - wz;
+              if (dx * dx + dy * dy + dz * dz < 0.02 * 0.02) { sx += gunPts[i]; sy += gunPts[i+1]; sz += gunPts[i+2]; sn++; }
+            }
+            if (sn) { hx = sx / sn; hy = sy / sn; hz = sz / sn; } else { hx = wx; hy = wy; hz = wz; }
+          }
           let near = 0, cx = 0, cy = 0, cz = 0;
           const quad = [0, 0, 0, 0];
           for (let i = 0; i < pos.length; i += 3) {
