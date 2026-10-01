@@ -1189,7 +1189,17 @@ function check(name, cond, detail = '') {
    * precisely what "backface culling deleted this surface" means, and it
    * cannot be fooled by geometry that overlaps itself. All twelve came
    * back within noise of the controls. */
-  const inv = r.cull.filter((c) => c.lost > 20);
+  /* EXCEPT THROUGH A FINGER BONE'S OPEN JOINT. Each finger is three
+     lofts cut at the joint rings and capped only at the knuckle and the
+     tip (98-viewmodel.js, "CAPPED AT THE OUTER ENDS ONLY": two discs back
+     to back at a joint z-fight at rest, and the bend is spread over three
+     joints so the gap stays under a millimetre). Drawn on its own, a bone
+     shows its inside through that open end -- 21 to 46 per cent here --
+     which in the assembled hand is always inside the next bone. They keep
+     a looser line rather than none: an inside-out bone loses nearly all
+     of itself, not half. */
+  const phalanx = (k) => /:[rl]f\d_\d:/.test(k);
+  const inv = r.cull.filter((c) => c.lost > (phalanx(c.key) ? 60 : 20));
   check('backface culling does not delete any surface', inv.length === 0,
     list(inv, (c) => `${c.key}: culling removes ${c.lost}% of it`));
 
