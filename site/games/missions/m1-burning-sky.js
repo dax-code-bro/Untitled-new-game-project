@@ -187,8 +187,8 @@
     });
   }
   // A seated head in the hold, and a point across the aisle from it (for a portrait).
-  function headOf(k) { return seatAt(k, 2.2); }
-  function across(k, d) { var q = SEATS[k]; return [q[0], 2.18, q[1] * (0.80 - (d || 1.1))]; }
+  function headOf(k) { return seatAt(k, 1.98); }
+  function across(k, d) { var q = SEATS[k]; return [q[0], 2.02, q[1] * (0.80 - (d || 1.15))]; }
 
   var intro = {
     id: 'intro', type: 'scene',
@@ -214,20 +214,20 @@
       S.shot({ eye: L([2.15, 2.12, -0.15]), at: L([-1.2, 1.85, 0.0]), fov: 58, to: { eye: L([2.05, 2.05, 0.15]) }, secs: 2.6 });
       yield S.wait(2.4);
       c.payback.feel('focus');
-      S.shot({ eye: L(across('payback')), at: L(headOf('payback')), fov: 30 });          // Payback, across the aisle
+      S.shot({ eye: L(across('payback')), at: L(headOf('payback')), fov: 34 });          // Payback, across the aisle
       yield S.wait(2.8);
-      S.shot({ eye: L(across('mike')), at: L(seatAt('mike', 2.12)), fov: 32 });           // Mike at his tablet...
+      S.shot({ eye: L(across('mike')), at: L(seatAt('mike', 1.92)), fov: 34 });           // Mike at his tablet...
       yield S.wait(1.8);
       c.mike.play('sit', 0.6); c.mike.feel('fear');                                         // ...then nothing; staring
       yield S.wait(1.8);
       // Molotov, over his shoulder: the fires going by through the far door.
       S.shot({ eye: L([-0.30, 2.30, 1.08]), at: L([0.2, 1.6, -3.2]), fov: 46, to: { at: L([0.9, 1.3, -3.6]) }, secs: 3.5 });
       yield S.wait(3.4);
-      S.shot({ eye: L(across('alec')), at: L(headOf('alec')), fov: 30 });                // Alec, the watch, the smile
+      S.shot({ eye: L(across('alec')), at: L(headOf('alec')), fov: 34 });                // Alec, the watch, the smile
       c.alec.feel('happy');
       yield S.wait(3.0);
       // Spite looks round at each of them, along the bench opposite.
-      var sh = seatAt('spite', 2.22);
+      var sh = seatAt('spite', 2.06);
       S.shot({ eye: L([sh[0], sh[1], sh[2] + 0.12]), at: L(headOf('payback')), fov: 52, to: { at: L(headOf('molotov')) }, secs: 4.2 });
       yield S.wait(4.4);
       // Outside again: the command post, the roof, the pad.
