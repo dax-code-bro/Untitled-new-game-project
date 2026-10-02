@@ -23,6 +23,13 @@ missions are data in `site/games/campaign-missions.js` and
 `site/games/CAMPAIGN.md` is the authoring guide. `engine/test/campaign.test.js`
 plays a mission through every step type.
 
+Mission 1, "Burning Sky" (`site/games/missions/m1-burning-sky.js`, script in
+`m1-script.md`), is written as a screenplay: `scene` and `play` steps are
+generators over the stage (`campaign-stage.js`) with the story's cast
+(`campaign-cast.js`) on the Colombia map (`campaign-maps.js`). The older data
+missions are marked `demo`. `engine/test/burningsky.test.js` plays it from the
+helicopter to Mission Passed (and walks the command post's stairs).
+
 ## Model sweep
 
 `engine/test/modelsweep.test.js` checks every placed object on all six maps

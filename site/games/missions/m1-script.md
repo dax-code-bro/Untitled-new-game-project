@@ -36,6 +36,8 @@ Sergeant Lincoln walks up and shakes Alec's hand.
 
 - **LINCOLN:** Sharp. Took your sweet time.
 - **ALEC:** I'm eighty-two, Sergeant. Everything takes its sweet time.
+- **ALEC:** Lovely evening for it.
+- **LINCOLN:** Lovely is one word for it.
 - **LINCOLN:** We gotta get the job done. Investigate what's going on down there.
 
 He points. Wide shot over the parapet: smoke, rubble, a city engulfed in flames.
@@ -61,6 +63,10 @@ Each floor has soldiers posted, an ammo crate and a map. Picking up the map is o
 - **2nd floor.** A medic over a wounded man. *WOUNDED SOLDIER:* They didn't look like soldiers. Jeans. Sandals. And they fought like they had nothing left to lose.
   **MIKE:** That's... that's not great.
 - **Ground floor.** **ALEC:** Right then. Nice and quiet... is what I'd say if I were a liar.
+
+The maps, as you take them: **ALEC** (4th) the street runs north to the plaza; **PAYBACK** (3rd)
+"Hostile positions marked in red. That's a lot of goddamn red."; **MIKE** (2nd) "Casualty list.
+Th-these are just from today."; **MOLOTOV** (ground) "Supply route. Cut." 
 
 ## 4. The street (play) — four waves, thirty hostiles
 
@@ -101,6 +107,7 @@ Binoculars. Black tanks crest the hill, white letters on their sides: **HYDRA**.
 Ten seconds after they appear, they open fire.
 
 - **PAYBACK:** Oh, you have *got* to be shitting me!
+- **ALEC:** Bloody hell! Get down, get DOWN!
 
 **Cutscene:** shells walk up the street. Spite sprints for a mortar knocked on its side, is nearly hit twice, drags it behind a wall, stands it up and drops a round in.
 
@@ -153,7 +160,7 @@ Upbeat music. **MISSION PASSED**, then stars and completion.
 
 **Stars (3).** One star off for dying more than three times. One off for any friendly fire.
 
-**Friendly fire.** Shooting a teammate cuts straight to black: *FRIENDLY FIRE WILL NOT BE TOLERATED*. You go back to the last checkpoint.
+**Friendly fire.** Shooting a teammate cuts straight to black: *FRIENDLY FIRE WILL NOT BE TOLERATED*. You go back to the last checkpoint. A squadmate who runs into your line of fire gets one "Watch your fire!" first; a second hit within ten seconds is the black screen. Shooting anyone standing still (the soldiers on the floors, Lincoln, the twins) is the black screen at once.
 
 **Completion %:**
 - 50: the objectives.
