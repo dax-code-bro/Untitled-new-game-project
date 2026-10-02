@@ -42,7 +42,8 @@ function check(name, cond, detail = '') {
 
   // The first mission, with the long timers cut down so a test can play it.
   await page.evaluate(() => {
-    const m = JSON.parse(JSON.stringify(window.CAMPAIGN_MISSIONS[0]));
+    // First Light: the data-only mission that exercises every plain step type (Burning Sky has its own test).
+    const m = JSON.parse(JSON.stringify(window.CAMPAIGN_MISSIONS.filter((q) => q.id === 'first-light')[0]));
     m.steps.forEach((s) => { if (s.seconds) s.seconds = Math.min(s.seconds, 3); (s.waves || []).forEach((w) => { w.delay = Math.min(w.delay, 1); }); });
     m.steps.forEach((s) => { if (s.shots) s.shots.forEach((sh) => { sh.seconds = 1.2; }); });
     document.getElementById('menu').style.display = 'none';

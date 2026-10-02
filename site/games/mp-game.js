@@ -2348,6 +2348,8 @@
          places the camera and decayed in the same call. Returning it
          and decaying it in two places is how you get a shake that
          never stops or one that never starts. */
+      /* The campaign's explosions shake the ground too (campaign-stage.js). */
+      shake: function (k) { shake = Math.max(shake, k); },
       shakeTake: function (dt) {
         var v = shake;
         shake *= Math.pow(0.02, dt);
@@ -3078,12 +3080,12 @@
       modeDef: opts.modeDef || null, teamSize: opts.teamSize || null, roster: opts.roster || null,
       seed: opts.seed || (Date.now() & 0x7fffffff),
       you: { name: opts.name || 'YOU', loadout: opts.loadout,
-        operator: opts.operator || 'delta' },
+        operator: opts.operator || 'delta', cast: opts.cast || null },
       onEvent: function (ev) { hud.onEvent(ev); if (chatter) chatter.onEvent(ev); },
     });
     var chatter = makeChatter(game, M);
     W.MP_CHATTER = chatter;
-    var storyTick = null, controlsLocked = false;
+    var storyTick = null, controlsLocked = false, storyFire = false, storyAim = false;
 
     /* YOU ARE INSIDE YOUR OWN HEAD, so it must not be drawn.
      *
@@ -3589,6 +3591,7 @@
          pace, firing your own weapon, from inside a mech. */
       var suited = !!(berserk && berserk.riding);
       /* Held still by the campaign during a briefing or a cutscene: no walking, no shooting. */
+      storyFire = !!cmd.fire; storyAim = !!cmd.aim;
       if (controlsLocked) {
         cmd.forward = 0; cmd.right = 0; cmd.run = false; cmd.jump = false; cmd.crouch = false;
         cmd.reload = false; cmd.swap = false; cmd.inspect = false; cmd.slide = false; cmd.fire = false; cmd.aim = false;
@@ -4046,6 +4049,10 @@
       lockControls: function (on) { controlsLocked = !!on; },
       interactHeld: function () { return input.any(K.interact); },
       skipHeld: function () { return input.any(K.skip); },
+      /* The trigger and the sights, read even while the controls are locked -- the mortar is aimed
+         and fired with them while you are not walking anywhere. */
+      fireHeld: function () { return storyFire; },
+      aimHeld: function () { return storyAim; },
       stop: function () { over = true; input.dispose(); game.stop(); },
     };
     W.MP_GAME_LIVE = api;

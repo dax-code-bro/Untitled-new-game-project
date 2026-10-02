@@ -114,6 +114,11 @@
     return {
       zone: { x0: -11, x1: 11, z0: -58, z1: 54 },
       navR: 62,
+      // The command post is climbed: its stairs are walkable and each storey and the roof has its own grid.
+      walkSteps: true,
+      levels: [1, 2, 3, 4].map(function (k) {
+        return { y: k * F, box: { x0: HQ.x0 - 0.4, x1: HQ.x1 + 0.4, z0: HQ.z0 - 0.4, z1: HQ.z1 + 0.4 } };
+      }),
       spawns: {
         a: [[-3, -38], [0, -38], [3, -38], [-3, -35], [0, -35], [3, -35]],
         b: [[-4, 40], [0, 42], [4, 40], [-4, 46], [0, 46], [4, 46]],
@@ -405,7 +410,8 @@
     K.slab(ox - 1.2, ox + 1.2, 0, 0.78, oz + 2.2, oz + 3.1, MAT.wood, 'desk');
     onLegsTable(K, ox, oz - 0.2, 0, 3.0, 1.3, MAT.wood, 'table');
     // Chairs: four round the table.
-    var chairs = [[-0.9, -1.25, 0], [0.9, -1.25, 0], [-0.9, 0.85, 180], [0.9, 0.85, 180]];
+    // All four on the near side of the table, facing the desk: the team is in front of Lincoln, not round a table.
+    var chairs = [[-1.2, -1.25, 0], [-0.4, -1.25, 0], [0.4, -1.25, 0], [1.2, -1.25, 0]];
     chairs.forEach(function (c) {
       K.slab(ox + c[0] - 0.24, ox + c[0] + 0.24, 0.42, 0.47, oz + c[1] - 0.24, oz + c[1] + 0.24, MAT.wood, 'chair');
       var bz = c[2] ? oz + c[1] + 0.22 : oz + c[1] - 0.22;

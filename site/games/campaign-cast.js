@@ -130,6 +130,39 @@
       voice: { pitch: 100 },
       weapon: 'm16',
     },
+    // More of the same army, so the floors of the command post are not one man nine times.
+    soldierB: {
+      id: 'soldierB', name: 'Soldier', frame: 'male', face: 'charlie', seed: 83, height: 1.82,
+      skin: 0x8a6444, hair: 'crop', hairColor: 0x161210, beard: 'stubble', beardColor: 0x161210,
+      fatigues: CAMO,
+      gear: ['carrier', 'pouches', 'belt', 'knees', 'helmet'], gearOpts: { pouches: 2, kitColor: 0x4a4a36 },
+      voice: { pitch: 92, rate: 5.1 },
+      weapon: 'm16',
+    },
+    soldierC: {
+      id: 'soldierC', name: 'Soldier', frame: 'male', face: 'alpha', seed: 85, height: 1.75,
+      skin: 0xd0a888, hair: 'short', hairColor: 0x5a4028, eyeColor: 0x4b6a86,
+      fatigues: CAMO,
+      gear: ['carrier', 'pouches', 'admin', 'belt'], gearOpts: { pouches: 3, kitColor: 0x4a4a36 },
+      voice: { pitch: 108, rate: 5.6 },
+      weapon: 'm4',
+    },
+    medic: {
+      id: 'medic', name: 'Medic', frame: 'female', face: 'alpha', seed: 87, height: 1.70,
+      skin: 0xa77a55, hair: 'tied', hairColor: 0x1a120c,
+      fatigues: CAMO,
+      gear: ['carrier', 'pouches', 'belt'], gearOpts: { pouches: 2, kitColor: 0x4a4a36 },
+      voice: { pitch: 126, rate: 5.4, tract: 0.9 },
+      weapon: 'm4',
+    },
+    wounded: {
+      id: 'wounded', name: 'Wounded soldier', frame: 'male', face: 'swat', seed: 89, height: 1.78,
+      skin: 0xc49a72, hair: 'crop', hairColor: 0x2a2018,
+      fatigues: CAMO,
+      gear: ['belt'], gearOpts: { kitColor: 0x4a4a36 },
+      voice: { pitch: 94, rate: 4.4, tract: 1.05 },
+      weapon: null,
+    },
   };
 
   /* HYDRA: the people you fight. Three weeks before, civilians -- so

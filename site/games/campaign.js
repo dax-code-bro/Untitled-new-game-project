@@ -113,10 +113,17 @@
       var p = allies[i];
       if (!p) return;
       p.name = a.name; byName[a.name] = p; p.voice = a.voice || {};
+      // The weapon they are SEEN with, when it is not one of the multiplayer table's (Payback's Desert Eagle).
+      if (a.gunModel && p.guns && p.guns[0]) p.guns[0] = Object.assign({}, p.guns[0], { id: a.gunModel });
     });
     // Allies past the mission's squad, and every hostile, start out of play.
     allies.slice((mission.allies || []).length).forEach(function (p) { M.park(p); });
+    allies = allies.slice(0, (mission.allies || []).length);
     hostiles.forEach(function (p) { M.park(p); });
+
+    /* What the end screen is made of. Carried across checkpoints: dying does not wipe the record. */
+    var stats = { deaths: 0, ff: 0, skipped: 0, intel: 0, intelTotal: mission.intelTotal || 0, spawned: 0, killed: 0, t0: 0 };
+    var stage = null;
 
     /* ---- what the match asks the director ---- */
     var step = null, stepIx = -1, stepT = 0, stepState = null;
@@ -135,6 +142,8 @@
          you (that is the checkpoint). A squadmate who goes down is back on their feet beside you a
          few seconds later: the squad is the story's, not the score's. */
       noRespawn: function (p) { return p === you || p.team !== you.team; },
+      onFriendlyFire: function (from, to) { if (from === you) friendlyFire(to); },
+      shotRay: function (from, dir, maxD) { if (stage) stage.shotRay(from, dir, maxD); },
       spawnFor: function (p) {
         if (p.team !== you.team || p === you || !you.alive) return null;
         var a = you.yaw + Math.PI + (Math.random() - 0.5);
@@ -147,37 +156,55 @@
     // Speech keeps the wall clock, not the match's: it has to stay with the voice whatever the frame rate.
     var clock = function () { return (W.performance ? W.performance.now() : Date.now()) / 1000; };
     function hush() { queue.length = 0; speaking = null; silenceUntil = 0; $('.sub').style.display = 'none'; }
-    function voiceOf(who) {
+    /* Who is speaking: a name from the mission's squad (byName), or -- for a mission with a cast
+       (campaign-cast.js) -- a cast id. The face that says it is the cast member's extra if one is on
+       the stage, else the ally in the match dressed as them. */
+    var CAST = W.CAMPAIGN_CAST || {};
+    function speakerOf(who) {
+      var spec = CAST[who];
+      var e = stage && stage.cast[who] && stage.cast[who].visible ? stage.cast[who] : null;
+      var p = byName[who] || null;
+      if (!p && spec) p = allies.filter(function (q) { return q.cast === who; })[0] || null;
+      if (!p && spec && who === (mission.player && mission.player.cast)) p = you;
+      var name = who === 'you' ? (you.name || 'You') : who === 'radio' ? 'Radio' : who === 'all' ? 'Everyone'
+        : e ? e.name : spec ? spec.name.split(' ')[0] : who;
+      var actor = e ? e.actor : p && p !== you && p.actor && !p.scripted ? p.actor : null;
+      return { name: name, voice: (spec && spec.voice) || (p && p.voice) || {}, actor: actor };
+    }
+    function voiceOf(who, l) {
       if (who === 'radio') return { pitch: 118, rate: 5.4, tract: 0.9, volume: 0.75 };
       if (who === 'you') return { pitch: 100, rate: 5.4, volume: 0.8 };
-      var p = byName[who], v = (p && p.voice) || {};
-      return { pitch: v.pitch || 100, rate: v.rate || 5.3, tract: v.tract || 1, volume: 0.85 };
+      var v = speakerOf(who).voice;
+      return { pitch: v.pitch || 100, rate: v.rate || 5.3, tract: v.tract || 1, volume: (l && l.volume) || (l && l.radio ? 0.7 : 0.85) };
     }
     function say(lines) { (lines || []).forEach(function (l) { queue.push(l); }); }
     function speakNext() {
       var l = queue.shift();
       if (!l) return;
-      var V = voiceOf(l.who), dur = 0;
+      var V = voiceOf(l.who, l), dur = 0;
       try { if (game.audio && game.audio.speak) dur = game.audio.speak(l.text, V) || 0; } catch (e) { dur = 0; }
       if (!dur) { try { dur = game.audio.speakLength(l.text, V) || 0; } catch (e) { dur = 0; } }
       if (!dur) dur = 0.4 + l.text.length * 0.055;
       dur = Math.max(1.2, dur);
       speaking = l; speakEnd = clock() + dur; silenceUntil = speakEnd + (l.wait != null ? l.wait : 0.35);
       var sub = $('.sub');
-      var name = l.who === 'you' ? (you.name || 'You') : l.who === 'radio' ? 'Radio' : l.who;
-      sub.innerHTML = '<b>' + esc(name) + '</b>' + esc(l.text);
+      var who = speakerOf(l.who);
+      sub.innerHTML = '<b>' + esc(who.name) + (l.radio ? ' (radio)' : '') + '</b>' + esc(l.text);
       sub.style.display = 'block';
-      var p = byName[l.who];
-      var f = p && p.actor && p.actor.face;
+      var f = who.actor && who.actor.face;
       if (f && f.say) f.say(l.text, { duration: dur, emotion: l.emotion || null, strength: 0.85 });
       // And whoever is listening looks at whoever is talking.
-      allies.forEach(function (q) { if (q !== p && q.actor && q.actor.face && p && p.actor) q.actor.face.lookAt(p.actor); });
+      if (who.actor) {
+        allies.forEach(function (q) { if (q.actor !== who.actor && q.actor && q.actor.face) q.actor.face.lookAt(who.actor); });
+        if (stage) for (var k in stage.cast) { var e = stage.cast[k]; if (e.visible && e.actor !== who.actor && e.actor.face) e.actor.face.lookAt(who.actor); }
+      }
     }
     function tickSpeech() {
       if (speaking && clock() >= speakEnd) {
         $('.sub').style.display = 'none';
         speaking = null;
         allies.forEach(function (q) { if (q.actor && q.actor.face) q.actor.face.lookAt(null); });
+        if (stage) for (var k in stage.cast) { var e = stage.cast[k]; if (e.actor.face) e.actor.face.lookAt(null); }
       }
       if (!speaking && queue.length && clock() >= silenceUntil) speakNext();
     }
@@ -197,7 +224,17 @@
         p._hold = g.hold ? placeOf(M, g.hold) : null;
         M.spawnAt(p, [at.x + Math.cos(a) * r, at.z + Math.sin(a) * r], Math.atan2(you.pos.x - at.x, you.pos.z - at.z));
         if (spawned.indexOf(p) < 0) spawned.push(p);
+        stats.spawned++;
+        p._counted = false;
       }
+    }
+    /* Every hostile who goes down is counted once, whoever shot him. */
+    function countKills() {
+      hostiles.forEach(function (q) {
+        if (q.alive) { q._seenAlive = true; return; }
+        if (q._seenAlive && !q._counted && q.dyingAt) { q._counted = true; stats.killed++; }
+        q._seenAlive = false;
+      });
     }
     function hostilesAlive() { return hostiles.filter(function (q) { return q.alive; }).length; }
 
@@ -279,7 +316,7 @@
       if (!step) return complete();
       if (step.checkpoint) {
         save.progress = save.progress || {};
-        save.progress[mission.id] = { step: ix, at: { x: you.pos.x, z: you.pos.z } };
+        save.progress[mission.id] = { step: ix, at: { x: you.pos.x, y: you.pos.y, z: you.pos.z } };
         writeSave(save);
       }
       setProgress(null);
@@ -288,10 +325,48 @@
       if (step.type === 'eliminate') (step.spawn || []).forEach(spawnGroup);
       if (step.type === 'cutscene') { cutscene(step.shots || []); say(step.lines); setObjective(null); }
       if (step.type === 'talk') { say(step.lines); setObjective(null); }
+      if (step.type === 'scene' || step.type === 'play') runScript();
       if (opts.onStep) opts.onStep(step, ix);
+    }
+    /* A SCENE or a PLAY step is a generator over the stage (campaign-stage.js). A scene has the
+       camera and the controls; a play step leaves you playing while it runs. */
+    function runScript() {
+      if (!stage) { stepState.gen = null; return; }
+      stage.ctx.stepIx = stepIx;
+      if (step.type === 'scene') {
+        $('.bars').style.display = step.bars === false ? 'none' : 'block';
+        if (mpui) mpui.classList.add('cine');
+        api.lockControls(true);
+        setObjective(null);
+      } else {
+        stage.releaseCamera();
+        $('.bars').style.display = 'none';
+        if (mpui) mpui.classList.remove('cine');
+        api.lockControls(false);
+      }
+      stepState.gen = step.run.call(step, stage, stepState);
+      stepState.wait = null;
+    }
+    function stepScript() {
+      var g = stepState.gen;
+      if (!g) return true;
+      for (var guard = 0; guard < 50; guard++) {
+        if (stepState.wait && !stepState.wait()) return false;
+        var r = g.next();
+        if (r.done) return true;
+        stepState.wait = typeof r.value === 'function' ? r.value : null;
+      }
+      return false;
+    }
+    function endScene() {
+      $('.bars').style.display = 'none';
+      if (mpui) mpui.classList.remove('cine');
+      api.lockControls(false);
+      if (stage) stage.releaseCamera();
     }
     function finishStep() {
       if (step.type === 'cutscene') endCutscene();
+      if (step.type === 'scene') endScene();
       say(step.done);
       setProgress(null);
       $('.prompt').style.display = 'none';
@@ -352,6 +427,16 @@
         case 'wait':
           if (stepT >= (step.seconds || 1)) finishStep();
           break;
+        case 'scene':
+          if (step.skippable !== false && api.skipHeld && api.skipHeld() && stepT > 0.8) {
+            hush(); stats.skipped++;
+            if (step.skip) step.skip.call(step, stage, stepState);
+            finishStep();
+          } else if (stepScript()) finishStep();
+          break;
+        case 'play':
+          if (stepScript()) finishStep();
+          break;
         default:
           finishStep();
       }
@@ -361,7 +446,7 @@
     var deadAt = 0;
     function tickDeath() {
       if (you.alive) { deadAt = 0; return; }
-      if (!deadAt) { deadAt = M.time; card('Killed in action', mission.title, ['Back to the last checkpoint...'], null); return; }
+      if (!deadAt) { deadAt = M.time; stats.deaths++; card('Killed in action', mission.title, ['Back to the last checkpoint...'], null); return; }
       if (M.time - deadAt > 3.2) restartCheckpoint();
     }
     function restartCheckpoint() {
@@ -369,14 +454,58 @@
       var pr = save.progress && save.progress[mission.id];
       var ix = pr ? pr.step : 0;
       var at = pr && pr.at ? pr.at : placeOf(M, 'spawnA:2');
-      hostiles.forEach(function (p) { M.park(p); });
+      hostiles.forEach(function (p) { M.park(p); p.puppet = false; });
       spawned.length = 0;
       hush();
-      M.spawnAt(you, [at.x, at.z], you.yaw);
-      allies.slice(0, (mission.allies || []).length).forEach(function (p, k) { M.spawnAt(p, [at.x + (k ? 2 : -2), at.z - 2], you.yaw); });
+      if (step && step.type === 'scene') endScene();
+      M.spawnAt(you, at.y != null ? [at.x, at.y, at.z] : [at.x, at.z], you.yaw);
+      allies.forEach(function (p, k) { M.spawnAt(p, at.y != null ? [at.x + (k ? 2 : -2), at.y, at.z - 2] : [at.x + (k ? 2 : -2), at.z - 2], you.yaw); });
       deadAt = 0;
       begin(ix);
     }
+
+    /* ---- friendly fire: not tolerated ----
+       Black, the words, and back to the last checkpoint. Counted against the stars. */
+    var ffUntil = 0;
+    function friendlyFire(who) {
+      if (ffUntil || done || !started) return;
+      stats.ff++;
+      ffUntil = clock() + 3.4;
+      hush();
+      api.lockControls(true);
+      var el = stage ? stage.$('.ff') : null;
+      if (el) {
+        el.innerHTML = '<div class="h">Friendly fire will not be tolerated</div><div class="s">Returning to the last checkpoint</div>';
+        el.style.display = 'flex';
+      } else card('Friendly fire', 'Will not be tolerated', ['Back to the last checkpoint...'], null);
+    }
+    function tickFriendlyFire() {
+      if (!ffUntil || clock() < ffUntil) return !!ffUntil;
+      ffUntil = 0;
+      if (stage) stage.$('.ff').style.display = 'none';
+      api.lockControls(false);
+      restartCheckpoint();
+      return false;
+    }
+
+    /* ---- the stage, for missions that have a cast ---- */
+    if (W.CAMPAIGN_STAGE && (mission.setup || mission.steps.some(function (s) { return s.type === 'scene' || s.type === 'play'; }))) {
+      stage = new W.CAMPAIGN_STAGE.Stage({
+        api: api, M: M, game: game, mission: mission, allies: allies, hostiles: hostiles, stats: stats,
+        say: function (l) { say(l); }, hush: hush, talking: talking,
+        objective: function (t, place) { setObjective(t, place ? placeOf(M, place) : null); },
+        progress: function (f) { setProgress(f); },
+        prompt: function (t) { var pr = $('.prompt'); pr.style.display = t ? 'block' : 'none'; pr.textContent = t || ''; },
+        spawn: function (g) { spawnGroup(g); },
+        hostilesAlive: function () { return hostilesAlive(); },
+        friendlyFire: function () { friendlyFire(); },
+        hudShake: function (k) { if (hud && hud.shake) hud.shake(k); },
+        placeOf: function (a) { return placeOf(M, a); },
+      });
+      self.stage = stage;
+      if (mission.setup) mission.setup(stage);
+    }
+    var hud = opts.hud || null;
 
     /* ---- cards: briefing, death, debrief ---- */
     function card(kicker, head, lines, buttons, sub) {
@@ -397,6 +526,8 @@
     var started = false, done = false, kills0 = you.kills || 0, t0 = 0;
     function briefing() {
       api.lockControls(true);
+      // A mission that opens on its own cutscene goes straight in.
+      if (mission.noBriefing) { setTimeout(start, 0); return; }
       var objectives = mission.steps.filter(function (s) { return s.objective && s.type !== 'cutscene'; }).map(function (s) { return s.objective; });
       card('Mission ' + (opts.index != null ? opts.index + 1 : ''), mission.title, objectives, [
         { label: 'Begin', go: start },
@@ -409,11 +540,13 @@
       hideCard();
       api.lockControls(false);
       hush();
-      t0 = M.time;
+      t0 = M.time; stats.t0 = M.time;
       var pr = save.progress && save.progress[mission.id];
-      if (pr && opts.resume !== false && pr.step > 0) {
-        M.spawnAt(you, [pr.at.x, pr.at.z], you.yaw);
-        allies.slice(0, (mission.allies || []).length).forEach(function (p, k) { M.spawnAt(p, [pr.at.x + (k ? 2 : -2), pr.at.z - 2], you.yaw); });
+      if (opts.startAt != null) begin(opts.startAt);
+      else if (pr && opts.resume !== false && pr.step > 0) {
+        var at3 = function (dx, dz) { return pr.at.y != null ? [pr.at.x + dx, pr.at.y, pr.at.z + dz] : [pr.at.x + dx, pr.at.z + dz]; };
+        M.spawnAt(you, at3(0, 0), you.yaw);
+        allies.forEach(function (p, k) { M.spawnAt(p, at3(k ? 2 : -2, -2), you.yaw); });
         begin(pr.step);
       } else begin(0);
     }
@@ -425,6 +558,21 @@
       save.done[mission.id] = { at: Date.now(), time: Math.round(M.time - t0), kills: (you.kills || 0) - kills0 };
       if (save.progress) delete save.progress[mission.id];
       writeSave(save);
+      if (stage && mission.passed) {
+        api.lockControls(true);
+        var r = mission.passed(stats, stage);
+        r.title = mission.title;
+        r.onRestart = function () {
+          var sv = loadSave(); if (sv.progress) delete sv.progress[mission.id]; writeSave(sv);
+          W.location.href = W.location.pathname + '?mission=' + mission.id + '&fresh=1';
+        };
+        r.onNext = function () { if (opts.onNext) opts.onNext(); };
+        r.onMenu = function () { if (opts.onMenu) opts.onMenu(); else W.location.href = 'campaign.html'; };
+        save.done[mission.id].stars = r.stars; save.done[mission.id].pct = r.pct; writeSave(save);
+        stage.passed(r);
+        self.result = r;
+        return;
+      }
       setTimeout(function () {
         api.lockControls(true);
         var mins = Math.floor((M.time - t0) / 60), secs = Math.round((M.time - t0) % 60);
@@ -441,16 +589,20 @@
     /* ---- the tick, run after the match's own ---- */
     this.tick = function (dt) {
       tickSpeech();
+      if (stage) stage.tick(dt);
       if (!started || done) { tickMarker(); return; }
+      if (tickFriendlyFire()) return;
+      countKills();
       tickDeath();
       if (you.alive) tickStep(dt);
       tickMarker();
     };
+    this.stats = stats;
     this.begin = begin;
     this.say = say;
     this.restartCheckpoint = restartCheckpoint;
     this.state = function () {
-      return { step: stepIx, type: step && step.type, objective: step && step.objective, alive: hostilesAlive(), speaking: speaking && speaking.text, queue: queue.length, started: started, done: done };
+      return { step: stepIx, id: step && step.id, type: step && step.type, objective: step && step.objective, alive: hostilesAlive(), speaking: speaking && speaking.text, queue: queue.length, started: started, done: done, stats: stats };
     };
     this.start = start;
     briefing();
@@ -468,22 +620,30 @@
       var team = (i % 2) ? 'b' : 'a';
       if (team === 'a') {
         var a = (mission.allies || [])[(i / 2 | 0) - 1] || null;
-        roster[i] = a ? { name: a.name, operator: a.operator } : {};
-      } else roster[i] = {};
+        roster[i] = a ? { name: a.name, operator: a.operator, cast: a.cast, loadout: a.loadout } : {};
+      } else {
+        // Hostiles in a mission with a cast are dealt its enemy looks round-robin.
+        var looks = mission.hostileCast || null;
+        var k = (i - 1) / 2 | 0, los = mission.hostileLoadouts;
+        roster[i] = looks ? { cast: looks[k % looks.length], loadout: los ? los[k % los.length] : undefined } : {};
+      }
     }
     var director = null;
     var api = W.MP_GAME.start({
       canvas: opts.canvas || '#game',
       mapId: mission.map,
-      modeDef: { id: 'story', name: 'Campaign', short: 'Story', score: Infinity, minutes: Infinity, respawn: false, story: true },
+      modeDef: { id: 'story', name: 'Campaign', short: 'Story', score: Infinity, minutes: Infinity, respawn: false, story: true,
+        friendlyFire: !!mission.friendlyFire },
       teamSize: teamSize,
       roster: roster,
       operator: (mission.player && mission.player.operator) || 'delta',
       loadout: (mission.player && mission.player.loadout) || opts.loadout || null,
-      name: opts.name || 'You',
+      name: opts.name || (mission.player && mission.player.name) || 'You',
+      cast: (mission.player && mission.player.cast) || null,
       story: true,
       timeOfDay: mission.time,
-      onReady: function (apiReady, M, game) {
+      onReady: function (apiReady, M, game, hud) {
+        opts.hud = hud;
         director = new Director(apiReady, M, game, mission, opts);
         W.CAMPAIGN_LIVE = director;
         return function (dt) { director.tick(dt); };

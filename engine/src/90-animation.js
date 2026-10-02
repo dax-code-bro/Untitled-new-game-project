@@ -1486,6 +1486,131 @@ function makeHumanoidClips() {
     head: { keys: [[0, 0, 0, 0], [0.5, 0, -12, 0], [1, 0, 0, 0]] },
   }, { loop: false }));
 
+  /* THE STORY'S CLIPS -- what the campaign's people do in its cutscenes
+     (site/games/campaign.js). Sitting on a bench or a chair, shaking a
+     hand, pointing at something, ducking from a blast with the arms over
+     the head, cheering, glassing a hill through binoculars, talking with
+     the hands, and dropping a round down a mortar tube. Nobody holds a
+     weapon in any of them: a cutscene that needs the gun shows the gun
+     (the match's carry), and one that does not slings it.
+
+     The signs are this rig's: a negative upper arm is FORWARD and up, a
+     negative lower arm is a bent elbow, a negative upper leg is the thigh
+     coming forward and a positive lower leg the knee bending. */
+  const SIT_HIP = -0.40;
+  const SIT_LEGS = {
+    upperLegL: { keys: [[0, -92, 0, 5], [1, -92, 0, 5]] },
+    upperLegR: { keys: [[0, -92, 0, -5], [1, -92, 0, -5]] },
+    lowerLegL: { keys: [[0, 86, 0, 0], [1, 86, 0, 0]] },
+    lowerLegR: { keys: [[0, 86, 0, 0], [1, 86, 0, 0]] },
+    footL: { keys: [[0, 4, 0, 0], [1, 4, 0, 0]] },
+    footR: { keys: [[0, 4, 0, 0], [1, 4, 0, 0]] },
+  };
+  clips.push(buildClip('sit', 4.0, Object.assign({
+    hips: { keys: [[0, -2, 0, 0], [0.5, -2, 0, 0], [1, -2, 0, 0]],
+      pos: [[0, 0, SIT_HIP, 0], [0.5, 0, SIT_HIP + 0.006, 0], [1, 0, SIT_HIP, 0]] },
+    spine: { keys: [[0, 7, 0, 0], [0.5, 8.5, 0, 0], [1, 7, 0, 0]] },
+    chest: { keys: [[0, 3, 0, 0], [0.5, 2, 0, 0], [1, 3, 0, 0]] },
+    head: { keys: [[0, -3, 0, 0], [0.4, -3, 5, 0], [0.75, -3, -4, 0], [1, -3, 0, 0]] },
+    // Forearms on the thighs.
+    upperArmL: { keys: [[0, -30, 0, 9], [0.5, -31, 0, 10], [1, -30, 0, 9]] },
+    upperArmR: { keys: [[0, -30, 0, -9], [0.5, -31, 0, -10], [1, -30, 0, -9]] },
+    lowerArmL: { keys: [[0, -52, 0, 0], [0.5, -54, 0, 0], [1, -52, 0, 0]] },
+    lowerArmR: { keys: [[0, -52, 0, 0], [0.5, -54, 0, 0], [1, -52, 0, 0]] },
+  }, SIT_LEGS)));
+  // Sitting with the forearms on a table in front.
+  clips.push(buildClip('sitTable', 4.0, Object.assign({
+    hips: { keys: [[0, 2, 0, 0], [1, 2, 0, 0]], pos: [[0, 0, SIT_HIP, 0], [0.5, 0, SIT_HIP + 0.006, 0], [1, 0, SIT_HIP, 0]] },
+    spine: { keys: [[0, 9, 0, 0], [0.5, 10, 0, 0], [1, 9, 0, 0]] },
+    chest: { keys: [[0, 3, 0, 0], [1, 3, 0, 0]] },
+    head: { keys: [[0, 2, 0, 0], [0.4, 2, 4, 0], [0.75, 2, -4, 0], [1, 2, 0, 0]] },
+    upperArmL: { keys: [[0, -42, 0, 12], [1, -42, 0, 12]] },
+    upperArmR: { keys: [[0, -42, 0, -12], [1, -42, 0, -12]] },
+    lowerArmL: { keys: [[0, -78, 0, 0], [0.5, -80, 0, 0], [1, -78, 0, 0]] },
+    lowerArmR: { keys: [[0, -78, 0, 0], [0.5, -80, 0, 0], [1, -78, 0, 0]] },
+  }, SIT_LEGS)));
+  // Shaking a hand: the right hand out low, three pumps, and back.
+  clips.push(buildClip('handshake', 2.6, {
+    spine: { keys: [[0, 0, 0, 0], [0.2, 4, -4, 0], [0.8, 4, -4, 0], [1, 0, 0, 0]] },
+    head: { keys: [[0, 0, 0, 0], [0.3, 6, 0, 0], [0.45, 0, 0, 0], [1, 0, 0, 0]] },
+    upperArmR: { keys: [[0, 0, 0, -2], [0.2, -48, 0, -4], [0.3, -44, 0, -4], [0.4, -50, 0, -4], [0.5, -44, 0, -4],
+      [0.6, -50, 0, -4], [0.7, -46, 0, -4], [0.82, -46, 0, -4], [1, 0, 0, -2]] },
+    lowerArmR: { keys: [[0, -13, 0, 0], [0.2, -42, 0, 0], [0.3, -50, 0, 0], [0.4, -38, 0, 0], [0.5, -50, 0, 0],
+      [0.6, -38, 0, 0], [0.7, -44, 0, 0], [0.82, -44, 0, 0], [1, -13, 0, 0]] },
+    upperArmL: { keys: [[0, 0, 0, 2], [1, 0, 0, 2]] },
+    lowerArmL: { keys: [[0, -13, 0, 0], [1, -13, 0, 0]] },
+  }, { loop: false }));
+  // Pointing out at something: the arm comes up and stays there.
+  clips.push(buildClip('point', 1.6, {
+    chest: { keys: [[0, 0, 0, 0], [0.3, 0, -8, 0], [1, 0, -8, 0]] },
+    head: { keys: [[0, 0, 0, 0], [0.3, -2, -6, 0], [1, -2, -6, 0]] },
+    upperArmR: { keys: [[0, 0, 0, -2], [0.3, -86, 0, -10], [1, -84, 0, -10]] },
+    lowerArmR: { keys: [[0, -13, 0, 0], [0.3, -6, 0, 0], [1, -6, 0, 0]] },
+    upperArmL: { keys: [[0, 0, 0, 2], [1, 0, 0, 3]] },
+    lowerArmL: { keys: [[0, -13, 0, 0], [1, -15, 0, 0]] },
+  }, { loop: false }));
+  // DUCKING from a blast: down onto the haunches, arms over the head. Fast in, and held.
+  clips.push(buildClip('duck', 1.4, {
+    hips: { keys: [[0, 0, 0, 0], [0.18, 26, 0, 0], [1, 24, 0, 0]],
+      pos: [[0, 0, 0, 0], [0.18, 0, -0.38, 0], [1, 0, -0.36, 0]] },
+    spine: { keys: [[0, 0, 0, 0], [0.18, 16, 0, 0], [1, 14, 0, 0]] },
+    chest: { keys: [[0, 0, 0, 0], [0.18, 10, 0, 0], [1, 9, 0, 0]] },
+    head: { keys: [[0, 0, 0, 0], [0.18, 24, 0, 0], [1, 20, 0, 0]] },
+    upperLegL: { keys: [[0, 0, 0, 0], [0.18, -92, 0, 8], [1, -90, 0, 8]] },
+    upperLegR: { keys: [[0, 0, 0, 0], [0.18, -92, 0, -8], [1, -90, 0, -8]] },
+    lowerLegL: { keys: [[0, 0, 0, 0], [0.18, 118, 0, 0], [1, 116, 0, 0]] },
+    lowerLegR: { keys: [[0, 0, 0, 0], [0.18, 118, 0, 0], [1, 116, 0, 0]] },
+    footL: { keys: [[0, 0, 0, 0], [0.18, -22, 0, 0], [1, -22, 0, 0]] },
+    footR: { keys: [[0, 0, 0, 0], [0.18, -22, 0, 0], [1, -22, 0, 0]] },
+    upperArmL: { keys: [[0, 0, 0, 2], [0.16, -150, 0, 30], [1, -146, 0, 30]] },
+    upperArmR: { keys: [[0, 0, 0, -2], [0.16, -150, 0, -30], [1, -146, 0, -30]] },
+    lowerArmL: { keys: [[0, -13, 0, 0], [0.16, -112, 0, 0], [1, -110, 0, 0]] },
+    lowerArmR: { keys: [[0, -13, 0, 0], [0.16, -112, 0, 0], [1, -110, 0, 0]] },
+  }, { loop: false }));
+  // Cheering: both fists up, punching the air, alternately.
+  clips.push(buildClip('cheer', 1.2, {
+    spine: { keys: [[0, -4, 0, 0], [0.5, -6, 0, 0], [1, -4, 0, 0]] },
+    head: { keys: [[0, -12, 0, 0], [0.5, -16, 0, 0], [1, -12, 0, 0]] },
+    upperArmR: { keys: [[0, -168, 0, -14], [0.25, -150, 0, -14], [0.5, -168, 0, -14], [0.75, -168, 0, -14], [1, -168, 0, -14]] },
+    lowerArmR: { keys: [[0, -30, 0, 0], [0.25, -70, 0, 0], [0.5, -30, 0, 0], [0.75, -34, 0, 0], [1, -30, 0, 0]] },
+    upperArmL: { keys: [[0, -164, 0, 14], [0.25, -166, 0, 14], [0.5, -164, 0, 14], [0.75, -146, 0, 14], [1, -164, 0, 14]] },
+    lowerArmL: { keys: [[0, -32, 0, 0], [0.25, -34, 0, 0], [0.5, -32, 0, 0], [0.75, -72, 0, 0], [1, -32, 0, 0]] },
+  }));
+  // Binoculars up to the eyes, both elbows out.
+  clips.push(buildClip('binoculars', 3.0, {
+    spine: { keys: [[0, -2, 0, 0], [1, -2, 0, 0]] },
+    head: { keys: [[0, -4, 0, 0], [0.5, -4, 2, 0], [1, -4, 0, 0]] },
+    upperArmL: { keys: [[0, -58, -40, 22], [0.5, -59, -40, 22], [1, -58, -40, 22]] },
+    upperArmR: { keys: [[0, -58, 40, -22], [0.5, -59, 40, -22], [1, -58, 40, -22]] },
+    lowerArmL: { keys: [[0, -128, 0, 0], [1, -128, 0, 0]] },
+    lowerArmR: { keys: [[0, -128, 0, 0], [1, -128, 0, 0]] },
+  }));
+  // Talking with the hands: the right forearm working, the left at rest.
+  clips.push(buildClip('gesture', 2.4, {
+    chest: { keys: [[0, 0, 0, 0], [0.3, 0, -4, 0], [0.7, 0, 3, 0], [1, 0, 0, 0]] },
+    head: { keys: [[0, 0, 0, 0], [0.25, 3, -3, 0], [0.6, -2, 4, 0], [1, 0, 0, 0]] },
+    upperArmR: { keys: [[0, -22, 0, -10], [0.3, -30, 0, -14], [0.55, -18, 0, -8], [0.8, -28, 0, -12], [1, -22, 0, -10]] },
+    lowerArmR: { keys: [[0, -62, 0, 0], [0.3, -78, 0, 0], [0.55, -55, 0, 0], [0.8, -74, 0, 0], [1, -62, 0, 0]] },
+    upperArmL: { keys: [[0, -6, 0, 4], [0.5, -10, 0, 5], [1, -6, 0, 4]] },
+    lowerArmL: { keys: [[0, -30, 0, 0], [0.5, -38, 0, 0], [1, -30, 0, 0]] },
+  }));
+  // Down on one knee at a mortar, a round lifted over the muzzle and let go.
+  clips.push(buildClip('mortarLoad', 1.3, {
+    hips: { keys: [[0, 18, 0, 0], [1, 18, 0, 0]], pos: [[0, 0, -0.42, 0], [1, 0, -0.42, 0]] },
+    spine: { keys: [[0, 6, 0, 0], [0.4, 2, 0, 0], [0.7, 12, 0, 0], [1, 6, 0, 0]] },
+    head: { keys: [[0, -6, 0, 0], [0.4, -14, 0, 0], [0.7, 6, 0, 0], [1, -6, 0, 0]] },
+    upperLegL: { keys: [[0, -92, 0, 6], [1, -92, 0, 6]] },
+    lowerLegL: { keys: [[0, 96, 0, 0], [1, 96, 0, 0]] },
+    footL: { keys: [[0, -4, 0, 0], [1, -4, 0, 0]] },
+    upperLegR: { keys: [[0, -8, 0, -4], [1, -8, 0, -4]] },
+    lowerLegR: { keys: [[0, 104, 0, 0], [1, 104, 0, 0]] },
+    footR: { keys: [[0, 30, 0, 0], [1, 30, 0, 0]] },
+    upperArmL: { keys: [[0, -60, 0, 10], [0.4, -128, 0, 12], [0.6, -128, 0, 12], [0.75, -90, 0, 10], [1, -60, 0, 10]] },
+    upperArmR: { keys: [[0, -60, 0, -10], [0.4, -128, 0, -12], [0.6, -128, 0, -12], [0.75, -90, 0, -10], [1, -60, 0, -10]] },
+    lowerArmL: { keys: [[0, -60, 0, 0], [0.4, -40, 0, 0], [0.6, -40, 0, 0], [0.75, -70, 0, 0], [1, -60, 0, 0]] },
+    lowerArmR: { keys: [[0, -60, 0, 0], [0.4, -40, 0, 0], [0.6, -40, 0, 0], [0.75, -70, 0, 0], [1, -60, 0, 0]] },
+  }));
+
   /* DYING.
      ================================================================
      A man who is shot does not lie down. His legs stop carrying him

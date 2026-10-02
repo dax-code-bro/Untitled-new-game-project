@@ -82,12 +82,17 @@
      NAVIGATION
      ================================================================ */
 
-  function navBuild(game, box, y) {
+  function navBuild(game, box, y, walkSteps) {
     var c = NAV_CELL;
     var w = Math.ceil((box.x1 - box.x0) / c);
     var h = Math.ceil((box.z1 - box.z0) / c);
     var g = new Uint8Array(w * h);
-    var solid = function (b) { return b && !b.isTrigger && !(b.userData && b.userData.actor); };
+    /* A map that says so (the campaign's command post) can be walked up its stairs: the steps are
+       ground to climb, not a wall to stop at. The multiplayer maps keep the old rule. */
+    var solid = function (b) {
+      return b && !b.isTrigger && !(b.userData && b.userData.actor)
+        && !(walkSteps && b.actor && b.actor.name === 'step');
+    };
     function mark(x, z) {
       var i = Math.floor((x - box.x0) / c), j = Math.floor((z - box.z0) / c);
       if (i >= 0 && i < w && j >= 0 && j < h) g[j * w + i] = 1;
@@ -467,7 +472,13 @@
     if (!map) throw new Error('no such map: ' + mapId);
 
     var R = map.navR || (mapId === 'demolition' ? 50 : (mapId === 'town' ? 62 : 58));
-    var nav = navBuild(game, { x0: -R, x1: R, z0: -R, z1: R }, NAV_Y);
+    var nav = navBuild(game, { x0: -R, x1: R, z0: -R, z1: R }, NAV_Y, !!map.walkSteps);
+    /* UPPER FLOORS. The grid is swept at one floor's height, so a building you can climb carries a
+       grid per storey (map.levels: the floor's height and the box it covers); a body on that storey
+       is stopped by that storey's walls, not by the ground floor's. */
+    var navLevels = (map.levels || []).map(function (l) {
+      return { y: l.y, box: l.box, nav: navBuild(game, l.box, l.y + NAV_Y, !!map.walkSteps) };
+    }).sort(function (a, b) { return b.y - a.y; });
     /* Seeded from a spawn point, because that is by definition ground
        somebody is standing on. */
     navFlood(nav, { x: map.spawns.a[2].at[0], z: map.spawns.a[2].at[2] });
@@ -491,7 +502,10 @@
         loadout: ro.loadout || botLoadout(rand),
       }));
       if (ro.operator) people[people.length - 1].operator = ro.operator;
+      if (ro.cast) people[people.length - 1].cast = ro.cast;
     }
+    /* The campaign dresses you as its main character too (seen in its cutscenes and mirrors). */
+    if (you.cast) people[0].cast = you.cast;
 
     /* Counters. Cheap, always on, and the only reason the first
        simulated match was debuggable at all: it dealt four hundred
@@ -503,7 +517,7 @@
 
     var M = {
       stats: stats,
-      game: game, map: map, mapId: mapId, mode: mode, nav: nav,
+      game: game, map: map, mapId: mapId, mode: mode, nav: nav, navLevels: navLevels,
       /* The HUD draws the skull and the countdown off these rather than
          computing the zone a second time and disagreeing about it. */
       outsideBy: function (pos) { return outsideBy(M, pos); },
@@ -558,7 +572,11 @@
       if (headless) return;
       var c = p.team === 'a' ? 0x4c6a8a : 0x8a5a4c;
       if (!p.operator) p.operator = OPS.length ? OPS[(p.id * 3 + 1) % OPS.length] : null;
-      if (p.operator && game.operator) {
+      /* A story character (campaign-cast.js): built from their own spec, not an operator's. */
+      var castSpec = p.cast && W.CAMPAIGN_CAST && W.CAMPAIGN_CAST[p.cast];
+      if (castSpec && game.castMember) {
+        p.actor = game.castMember(castSpec, { at: [0, -50, 0], name: 'mp-' + p.id, speed: 4.6, runSpeed: 6.4 });
+      } else if (p.operator && game.operator) {
         /* NO TEAM TINT ON THE MAN HIMSELF.
          *
            This passed a flat team colour as the body material, which
@@ -605,7 +623,9 @@
        (goalFor), whether the dead come back on their own (noRespawn) and where (spawnFor). */
     M.spawnAt = function (p, at, yaw) {
       var x = at[0], z = at.length > 2 ? at[2] : at[1];
-      var y = groundAt(M, x, z, 30);
+      /* [x, y, z] puts them on the floor at that height -- a storey of a building, not its roof. */
+      var y = at.length > 2 ? groundAt(M, x, z, at[1] + 0.8) : groundAt(M, x, z, 30);
+      if (at.length > 2 && (y == null || Math.abs(y - at[1]) > 1.2)) y = at[1];
       p._forceSpawn = { at: [x, y == null ? 0 : y, z], yaw: yaw || 0 };
       var keep = M.director;
       M.director = { spawnFor: function (q) { return q === p ? q._forceSpawn : null; } };
@@ -647,6 +667,14 @@
       return true;
     };
     M.unpose = function () { unpose(M); };
+    /* For the campaign's people who are not in the match (campaign-stage.js): a body that is not
+       one of M.people can still carry its weapon -- anything with an actor, a pos, a yaw and a
+       guns/held pair -- and put it away again. */
+    M.carryFor = function (q, aim) {
+      q.aiming = !!aim;
+      carry(M, q, q.yaw, q.pitch || 0, false, true);
+    };
+    M.stowFor = function (q) { if (q._armShown) showArm(q._armShown, false); q._reachGun = null; q._armShown = null; };
     return M;
   }
 
@@ -1058,10 +1086,10 @@
     var n = M.people.length;
     for (var i = 0; i < n; i++) {
       var a = M.people[i];
-      if (!a.alive) continue;
+      if (!a.alive || a.scripted || a.puppet) continue;
       for (var j = i + 1; j < n; j++) {
         var b = M.people[j];
-        if (!b.alive) continue;
+        if (!b.alive || b.scripted || b.puppet) continue;
         /* Different floors are not a collision. */
         if (Math.abs(a.pos.y - b.pos.y) > 1.4) continue;
         var dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z;
@@ -1326,7 +1354,9 @@
       var best = null;
       for (var i = 0; i < M.people.length; i++) {
         var q = M.people[i];
-        if (q === p || !q.alive || q.team === p.team) continue;
+        if (q === p || !q.alive || q.scripted) continue;
+        /* Your own side is only in the way in a story that says so (the campaign's friendly fire). */
+        if (q.team === p.team && !(M.mode.friendlyFire && p === M.you)) continue;
         var r = rayBody(from, dir, q);
         if (!r || r.d > w.far * 2.2) continue;
         if (best && r.d >= best.r.d) continue;
@@ -1344,6 +1374,11 @@
             else markAt(M, wh.point, wh.normal);
           }
         } catch (e) { /* no physics on this map */ }
+      }
+      /* And the campaign's people who are not in the match -- the soldiers on the floors, the
+         sergeant on the roof -- can be shot too, which is friendly fire. */
+      if (p === M.you && M.director && M.director.shotRay) {
+        M.director.shotRay(from, dir, best ? best.r.d : w.far * 2.2);
       }
       /* A rocket that hits a man goes off on him, not through him. */
       if (best && w.splash > 0) {
@@ -1540,6 +1575,11 @@
        long as somebody is riding one. */
     if (to && to.inSuit && M.absorbHit && M.absorbHit(to, amount)) return 0;
     if (!to.alive) return 0;
+    /* Friendly fire in a story is not damage: the campaign stops the mission (campaign.js). */
+    if (M.mode.friendlyFire && from && from !== to && from.team === to.team) {
+      if (M.director && M.director.onFriendlyFire) M.director.onFriendlyFire(from, to);
+      return 0;
+    }
     var dealt = Math.min(to.hp, amount);
     to.hp -= amount;
     /* When you were last hit, which is what the regeneration delay is
@@ -1900,6 +1940,18 @@
      wall instead of sticking to it. The visible actor is then placed
      where the simulation says it is. */
 
+  /* The grid for where a body is standing: the storey it is on, or the ground. */
+  function navFor(M, x, y, z) {
+    var L = M.navLevels;
+    if (L && L.length) {
+      for (var i = 0; i < L.length; i++) {
+        var l = L[i], b = l.box;
+        if (y >= l.y - 0.3 && x >= b.x0 && x <= b.x1 && z >= b.z0 && z <= b.z1) return l.nav;
+      }
+    }
+    return M.nav;
+  }
+
   function cellBlocked(nav, x, z) {
     var i = Math.floor((x - nav.box.x0) / nav.c), j = Math.floor((z - nav.box.z0) / nav.c);
     return navBlocked(nav, i, j);
@@ -1954,10 +2006,11 @@
       if (Math.abs(p.push.z) < 1e-3) p.push.z = 0;
     }
     var nx = p.pos.x + vx * dt, nz = p.pos.z + vz * dt;
-    if (!cellBlocked(M.nav, nx, nz)) { p.pos.x = nx; p.pos.z = nz; }
+    var nv = navFor(M, p.pos.x, p.pos.y, p.pos.z);
+    if (!cellBlocked(nv, nx, nz)) { p.pos.x = nx; p.pos.z = nz; }
     else {
-      if (!cellBlocked(M.nav, nx, p.pos.z)) p.pos.x = nx;
-      if (!cellBlocked(M.nav, p.pos.x, nz)) p.pos.z = nz;
+      if (!cellBlocked(nv, nx, p.pos.z)) p.pos.x = nx;
+      if (!cellBlocked(nv, p.pos.x, nz)) p.pos.z = nz;
     }
     /* Vertical properly, rather than snapping to whatever is underneath.
      *
@@ -3901,6 +3954,10 @@
          a body that stops moving stops calling moveBy, so animating
          from inside the mover left anyone who came to a halt frozen
          mid-stride until they set off again. */
+      /* SCRIPTED: the campaign has this body for a cutscene and the match leaves it entirely alone.
+         PUPPET: the campaign moves them (p.pos, p.yaw) and the match still animates and places them
+         and carries their gun -- a squad following you down a stairwell, a sniper in a window. */
+      if (p.scripted) { if (p._armShown) showArm(p._armShown, false); continue; }
       if (p.actor && !M.replaying) {
         var _pa = M.prof ? performance.now() : 0;
         animate(p, dt);
@@ -3913,6 +3970,7 @@
             && !(M.director && M.director.noRespawn && M.director.noRespawn(p))) spawn(M, p, false);
         continue;
       }
+      if (p.puppet) continue;
       var _pt = M.prof ? performance.now() : 0;
       settleKick(M, p, dt);
       /* EVERYBODY'S SWAP, not just the one being steered by a keyboard.
@@ -3949,7 +4007,7 @@
     separate(M);
     /* PLACEMENT IS A SECOND PASS, after everybody has moved, so a body
        is drawn where it is now rather than where it was last frame. */
-    for (var j = 0; j < M.people.length; j++) place(M, M.people[j]);
+    for (var j = 0; j < M.people.length; j++) if (!M.people[j].scripted) place(M, M.people[j]);
     if (M.prof) { M.prof.place = (M.prof.place || 0) + performance.now() - _pt2; _pt2 = performance.now(); }
 
     updateDoors(M, dt);
