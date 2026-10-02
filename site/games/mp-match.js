@@ -630,7 +630,8 @@
       var keep = M.director;
       M.director = { spawnFor: function (q) { return q === p ? q._forceSpawn : null; } };
       try { spawn(M, p, false); } finally { M.director = keep; p._forceSpawn = null; }
-      if (p.actor) lodShow(p.actor, true);
+      // Never your own body: the camera is inside it (see lod()).
+      if (p.actor && p !== M.you) lodShow(p.actor, true);
       return p;
     };
     M.park = function (p) {

@@ -195,7 +195,7 @@
       var rotor = S.rotorSound();
       rotor.level(0.8);
       // A light in the cabin: the faces in the dark of the hold, lit warm from the open door.
-      var cab = S.game.light({ at: [0, -50, 0], color: 0xffb070, intensity: 3.2, radius: 4.5 });
+      var cab = S.game.light({ at: [0, -50, 0], color: 0xffb070, intensity: 6, radius: 5 });
       S.every(function () { if (S.ctx.stepIx !== 0) { cab.intensity = 0; return true; } var p = S.vLocal(H, [0.4, 2.3, 0.9]); cab.position.set(p[0], p[1], p[2]); return false; });
       S.fade(1, 0); yield S.wait(0.1);
       S.fade(0, 2.5);
@@ -204,26 +204,24 @@
       S.shot({ eye: function () { return [H.x - 16, H.y + 9, H.z - 20]; }, at: function () { return [H.x + 26, H.y - 16, H.z + 34]; }, fov: 50,
         to: { eye: function () { return [H.x + 18, H.y + 3, H.z - 14]; }, at: function () { return [H.x - 6, H.y - 3, H.z + 16]; } }, secs: 5 });
       yield S.wait(4.6);
-      // Inside. Nobody speaks.
+      // Inside. Nobody speaks. The whole hold first, from the pilots' bulkhead.
+      S.shot({ eye: L([2.15, 2.12, -0.2]), at: L([-1.4, 1.95, 0.05]), fov: 58, to: { eye: L([2.05, 2.05, 0.2]) }, secs: 2.6 });
+      yield S.wait(2.4);
       c.payback.feel('focus');
-      S.shot({ eye: L([-0.55, 1.72, -0.52]), at: L([-1.40, 1.72, -0.84]), fov: 40 });     // Payback, rolling her shoulder
-      c.payback.play('idleShift', 0.3);
-      yield S.wait(3.0);
-      S.shot({ eye: L([-0.6, 1.62, 0.05]), at: L([-1.38, 1.40, -0.28]), fov: 40 });       // Mike at his tablet...
+      S.shot({ eye: L([1.05, 2.26, -0.98]), at: L([-1.42, 2.22, -0.84]), fov: 24 });     // Payback, rolling her shoulder
+      yield S.wait(2.8);
+      S.shot({ eye: L([1.05, 2.22, -0.16]), at: L([-1.40, 2.16, -0.28]), fov: 26 });     // Mike at his tablet...
       yield S.wait(1.8);
       c.mike.play('sit', 0.6); c.mike.feel('fear');                                         // ...then nothing; staring
       yield S.wait(1.8);
-      S.shot({ eye: L([-1.0, 1.75, -0.2]), at: L([0.6, 1.2, 2.6]), fov: 44,                 // Molotov, the fires through the door
-        to: { at: L([0.6, 1.0, 3.6]) }, secs: 3.5 });
-      c.molotov.look(null);
+      S.shot({ eye: L([-1.05, 2.18, 0.05]), at: L([0.6, 1.7, 2.6]), fov: 44,                // Molotov, the fires through the door
+        to: { at: L([0.6, 1.4, 3.6]) }, secs: 3.5 });
       yield S.wait(3.4);
-      S.shot({ eye: L([-0.55, 1.70, 0.55]), at: L([-1.40, 1.70, 0.84]), fov: 38 });       // Alec, the watch, the smile
-      c.alec.play('point', 0.4); c.alec.feel('happy');
-      yield S.wait(1.4);
-      c.alec.play('sit', 0.5);
-      yield S.wait(1.6);
+      S.shot({ eye: L([1.05, 2.26, 0.98]), at: L([-1.42, 2.22, 0.84]), fov: 24 });       // Alec, the watch, the smile
+      c.alec.feel('happy');
+      yield S.wait(3.0);
       // Spite looks round at each of them.
-      S.shot({ eye: L([1.48, 1.74, 0.62]), at: L([-1.40, 1.66, -0.84]), fov: 50, to: { at: L([-1.40, 1.66, 0.84]) }, secs: 4.2 });
+      S.shot({ eye: L([1.50, 2.24, 0.66]), at: L([-1.40, 2.18, -0.84]), fov: 50, to: { at: L([-1.40, 2.18, 0.84]) }, secs: 4.2 });
       yield S.wait(4.4);
       // Outside again: the command post, the roof, the pad.
       S.shot({ eye: [12, ROOF + 4, -36], at: function () { return [H.x, H.y + 1, H.z]; }, fov: 40 });
@@ -261,7 +259,7 @@
         e.at([DOOR[0] - i * 0.25, ROOF, DOOR[2] - 0.2], 0);
         e.hide();
       });
-      S.shot({ eye: [1.4, ROOF + 1.7, -43.6], at: [-2.2, ROOF + 1.3, -47.6], fov: 42 });
+      S.shot({ eye: [3.8, ROOF + 1.8, -45.2], at: [-2.4, ROOF + 1.3, -47.3], fov: 42 });
       var order = ['alec', 'payback', 'mike', 'molotov', 'spite'];
       for (var i = 0; i < order.length; i++) {
         var e = c[order[i]];
@@ -435,8 +433,9 @@
       S.cast.spite.hide();
       if (S.rotorHandle) { S.rotorHandle.stop(); S.rotorHandle = null; }
       if (you.pos.z < -42.2 || you.pos.y > 1) S.putYou([0, 0, -40.6], 0);
+      S.ctx.hostiles.forEach(function (p) { if (p.alive) S.M.park(p); p.puppet = false; });
       S.squad('fight');
-      S.ctx.allies.forEach(function (p, k) { if (!p.alive || p.pos.z < -42 || p.pos.y > 1) S.M.spawnAt(p, [-3 + k * 2, -39.5], 0); });
+      S.ctx.allies.forEach(function (p, k) { if (!p.alive || p.pos.z < -42 || p.pos.y > 1) S.M.spawnAt(p, [(k < 2 ? -3.2 : 3.2) + (k % 2) * (k < 2 ? -1.2 : 1.2), -41.2], 0); });
       var killed0 = S.ctx.stats.killed, total = 30;
       for (var w = 0; w < WAVES.length; w++) {
         var wv = WAVES[w];
@@ -489,7 +488,8 @@
           if (Math.random() < dt * 30 && S.game.particles) S.game.particles.smoke([V.x, V.y + 2.5, V.z], { count: 1, size: 3, life: 4, alpha: 0.7, color: 0x151413, colorEnd: 0x4a4642 });
         } else return;
       };
-      S.shot({ eye: [-1.0, 1.7, -8.2], at: function () { return [V.x, V.y + 1.5, V.z]; }, fov: 50 });
+      // Over Spite's shoulder, looking up at it.
+      S.shot({ eye: [-1.9, 1.95, -10.6], at: function () { return [V.x, V.y + 1.5, V.z]; }, fov: 52 });
       yield S.wait(hitAt);
       S.boom([V.x, V.y + 2, V.z], 1.2, { shake: 0.4 });
       S.line('spite', 'Bird down! Bird down!', { emotion: 'fear' });
@@ -505,9 +505,9 @@
       c.spite.play('idle', 0.3);
       S.line('alec', 'Into the wreck! Use it!', { emotion: 'focus' });
       // Everybody runs for the near side of it.
-      var cover = [[-2.6, 0, cr.z - 2.4], [1.4, 0, cr.z - 2.6], [3.6, 0, cr.z - 2.2], [-0.6, 0, cr.z - 2.9]];
+      var cover = COVER(S).squad;
       SQUAD.forEach(function (k, i) { c[k].walkTo(cover[i], { speed: 4.6, clip: 'run', then: 'crouchIdle', face: 0 }); });
-      c.spite.walkTo([0.4, 0, cr.z - 2.5], { speed: 4.6, clip: 'run', then: 'crouchIdle', face: 0 });
+      c.spite.walkTo(COVER(S).you, { speed: 4.6, clip: 'run', then: 'crouchIdle', face: 0 });
       yield S.wait(3.2);
     },
     skip: function (S) {
@@ -520,7 +520,8 @@
   /* ================================================================
      6. THE HANDOFF: Payback's Desert Eagle, with an optic
      ================================================================ */
-  var COVER = function (S) { var cr = S.props.crash; return { you: [0.4, 0, cr.z - 2.5], squad: [[-2.6, 0, cr.z - 2.4], [1.4, 0, cr.z - 2.6], [3.6, 0, cr.z - 2.2], [-0.6, 0, cr.z - 2.9]] }; };
+  // Behind the wreck, on the near side: clear of the fuselage, which lies tilted towards you.
+  var COVER = function (S) { var cr = S.props.crash; return { you: [0.4, 0, cr.z - 4.3], squad: [[-2.8, 0, cr.z - 4.2], [1.8, 0, cr.z - 4.5], [3.8, 0, cr.z - 4.0], [-0.9, 0, cr.z - 4.8]] }; };
   var handoff = {
     id: 'handoff', type: 'scene',
     run: function* (S) {
@@ -532,7 +533,8 @@
       // Rounds off the fuselage.
       var pings = 0;
       S.every(function () { if (pings > 14) return true; if (Math.random() < S.dt * 3) { pings++; if (S.game.particles) S.game.particles.sparks([S.props.crash.x + (Math.random() - 0.5) * 6, 1 + Math.random() * 1.5, S.props.crash.z - 1.4], { count: 6, speed: 4 }); if (S.game.audio && S.game.audio.ping) S.game.audio.ping({ volume: 0.05 }); } return false; });
-      S.shot({ eye: [-4.6, 1.2, cv.you[2] - 2.6], at: [-2.2, 1.1, cv.you[2] + 0.2], fov: 40 });
+      // Low, between the wreck and the squad, looking back at their faces.
+      S.shot({ eye: [-4.4, 1.05, cv.you[2] + 1.9], at: [-2.4, 0.95, cv.you[2] + 0.1], fov: 42 });
       S.line('payback', 'Snipers in the windows. Six of the sons of bitches.', { emotion: 'anger' });
       yield S.quiet();
       // She stands, faces him, and hands it over.
@@ -574,7 +576,10 @@
       world.wreck(S);
       SQUAD.forEach(function (k) { c[k].hide(); });
       c.spite.hide();
-      S.putYou(cv.you, 0);
+      S.ctx.hostiles.forEach(function (p) { if (p.alive) M.park(p); p.puppet = false; });
+      // Facing the first window, not the fuselage.
+      var w0 = S.props.snipers[0];
+      S.putYou(cv.you, Math.atan2(w0.x - cv.you[0], w0.z - cv.you[2]), -0.12);
       S.squad('hold', cv.squad.map(function (p) { return [p[0], p[1], p[2], 0]; }));
       S.ctx.allies.forEach(function (p) { p.crouching = true; });
       giveDeagle(you, true);
@@ -652,7 +657,11 @@
       // Through the glasses: the crest, and black shapes coming over it.
       S.api.lockControls(true);
       S.binoculars(true);
-      var eye = [you.pos.x, you.pos.y + 1.6, you.pos.z];
+      // Glass cuts through haze: the fog thins while you are looking through them.
+      var fog = S.game.renderer.fog, fog0 = fog.density;
+      fog.density = fog0 * 0.3;
+      // From the end of the wreck, where it does not block the hill.
+      var eye = [S.props.crash.x - 6.6, 1.65, Math.min(you.pos.z, S.props.crash.z - 3.6)];
       S.shot({ eye: eye, at: [0, 18, 128], fov: 9, to: { at: [-6, 17.5, 126] }, secs: 9 });
       tanksRoll(S, 1.6, 118);
       var seen = S.t;
@@ -665,6 +674,7 @@
       S.hydra.forEach(function (T, i) { T.firing = true; T._shotAt = S.t + i * 0.35; });
       yield S.wait(0.5);
       S.binoculars(false);
+      fog.density = fog0;
       S.releaseCamera();
       S.api.lockControls(false);
       S.line('payback', 'Oh, you have GOT to be shitting me!', { emotion: 'anger' });
@@ -757,17 +767,23 @@
       if (S.api.look) S.api.look(0, -0.05);
       // A marker where the round will land.
       var mark = S.game.cylinder ? S.game.cylinder({ at: [0, -50, 0], radius: 4, height: 0.15, physics: false,
-        material: { color: 0xff3020, emissive: 0xff3020, emissiveStrength: 1.2, opacity: 0.45 } }) : null;
+        material: { color: 0xff3020, emissive: 0xff3020, emissiveStrength: 3.0, opacity: 0.55 } }) : null;
       var aimAt = function () {
         var yaw = S.api.yaw, pitch = S.api.pitch;
         var R = Math.max(50, Math.min(175, 105 - pitch * 140));
         var x = mo.x + Math.sin(yaw) * R, z = mo.z + Math.cos(yaw) * R;
         return { x: x, z: z, y: hillY(z), R: R, yaw: yaw };
       };
+      /* The spotter's view: high over the street, two thirds of the way out to where the round will
+         land, looking down on it -- the marker, the tanks round it, and the hill they are on. */
+      var camE = null, camA = null;
       S.camRig(function () {
         var a = aimAt();
-        var bx = -Math.sin(a.yaw) * 4.2, bz = -Math.cos(a.yaw) * 4.2;
-        return { eye: [mo.x + bx, 2.6, mo.z + bz], at: [a.x, a.y + 2, a.z], fov: 38 };
+        var ex = mo.x + (a.x - mo.x) * 0.45, ez = mo.z + (a.z - mo.z) * 0.45;
+        var want = [ex - Math.sin(a.yaw) * 6, Math.max(26, a.y + 22), ez - Math.cos(a.yaw) * 6], look = [a.x, a.y + 1, a.z];
+        if (!camE) { camE = want.slice(); camA = look.slice(); }
+        for (var k = 0; k < 3; k++) { camE[k] += (want[k] - camE[k]) * Math.min(1, S.dt * 6); camA[k] += (look[k] - camA[k]) * Math.min(1, S.dt * 9); }
+        return { eye: camE.slice(), at: camA.slice(), fov: 48 };
       });
       S.hud('&nbsp;');
       var fired = 0, hits = 0, wasDown = false, readyAt = 0, misses = 0;

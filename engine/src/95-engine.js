@@ -2089,12 +2089,16 @@ class Engine {
     const h = this.canvas.clientHeight || window.innerHeight;
     this.camera.update(w / Math.max(1, h));
 
-    const batches = this._buildBatches();
-    this.renderer.renderShadows(batches, this.camera);
-    this.renderer.renderScene(batches, this.camera);
-    if (this.fluid && this.fluid.count) this.renderer.renderFluid(this.fluid, this.camera);
-    this.renderer.renderParticles(this.particles, this.camera);
-    this.renderer.present();
+    /* skipRender: simulate the frame and draw nothing -- for a recorder that keeps one frame in
+       several and should not pay to draw the ones it throws away. */
+    if (!this.skipRender) {
+      const batches = this._buildBatches();
+      this.renderer.renderShadows(batches, this.camera);
+      this.renderer.renderScene(batches, this.camera);
+      if (this.fluid && this.fluid.count) this.renderer.renderFluid(this.fluid, this.camera);
+      this.renderer.renderParticles(this.particles, this.camera);
+      this.renderer.present();
+    }
 
     this.input.endFrame();
 

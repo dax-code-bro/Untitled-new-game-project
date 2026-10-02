@@ -466,9 +466,19 @@
 
     /* ---- friendly fire: not tolerated ----
        Black, the words, and back to the last checkpoint. Counted against the stars. */
-    var ffUntil = 0;
+    var ffUntil = 0, ffWarned = -99;
+    var FF_WARN = ['Watch your fire!', 'Check your fire, damn it!', 'Hey! Friendly!'];
     function friendlyFire(who) {
       if (ffUntil || done || !started) return;
+      /* A squadmate who runs into your line gets one warning: they move, and one stray round from a
+         man they stepped in front of is not the mission. The second inside ten seconds is. Anyone
+         standing still -- the soldiers on the floors, the sergeant -- is never an accident. */
+      if (who && who.team === you.team && M.time - ffWarned > 10) {
+        ffWarned = M.time;
+        var c = who.cast || who.name;
+        say([{ who: c, text: FF_WARN[Math.floor(Math.random() * FF_WARN.length)], emotion: 'anger' }]);
+        return;
+      }
       stats.ff++;
       ffUntil = clock() + 3.4;
       hush();
@@ -566,7 +576,10 @@
           var sv = loadSave(); if (sv.progress) delete sv.progress[mission.id]; writeSave(sv);
           W.location.href = W.location.pathname + '?mission=' + mission.id + '&fresh=1';
         };
-        r.onNext = function () { if (opts.onNext) opts.onNext(); };
+        r.onNext = function () {
+          if (opts.next && opts.onNext) opts.onNext();
+          else stage.toast('Mission 2 is coming soon');
+        };
         r.onMenu = function () { if (opts.onMenu) opts.onMenu(); else W.location.href = 'campaign.html'; };
         save.done[mission.id].stars = r.stars; save.done[mission.id].pct = r.pct; writeSave(save);
         stage.passed(r);

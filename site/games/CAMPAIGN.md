@@ -130,3 +130,59 @@ It talks to the game through the api that `MP_GAME.start` returns:
 - `api.lockControls(on)`, `api.interactHeld()` and `api.skipHeld()`.
 
 A new step type is a `case` in `tickStep` in `campaign.js`.
+
+## Missions with a cast: scene and play steps
+
+Burning Sky (`missions/m1-burning-sky.js`) is written differently from the
+data missions above: as a screenplay. Its people are the story's cast
+(`campaign-cast.js`), its map is `campaign-maps.js`, and two step types run
+a script on the stage (`campaign-stage.js`):
+
+- `scene`: a cutscene. The camera, the bars and the controls belong to the
+  script. Holding Skip calls the step's `skip(S)` (put the world where the
+  scene would have left it) and counts against completion.
+- `play`: gameplay with a script running alongside it (waves, snipers,
+  floors, the mortar). The player plays; the script watches and reacts.
+
+Both are generator functions handed the stage `S`. Each `yield` waits for
+what it is given, and everything else carries on in the background:
+
+```js
+{ id: 'rooftop', type: 'scene', run: function* (S) {
+    S.shot({ eye: [1.2, 15.2, -45.9], at: [-1.6, 15.0, -45.9], fov: 34 });
+    S.cast.lincoln.play('handshake');
+    S.line('lincoln', 'Sharp. Took your sweet time.');
+    yield S.quiet();                       // until the line is said
+    S.boom([2.6, 1.6, -18], 2.2);          // a mortar on the tank
+    yield S.wait(0.4);
+  } }
+```
+
+The stage gives a script:
+
+- People: `S.extra(id, castKey)` builds a cast member once (in
+  `mission.setup`); `S.cast[id]` then `.at(p, yaw, clip)`, `.walkTo(p)`,
+  `.play(clip)`, `.turnTo(yaw)`, `.arm(on)`, `.rideOn(vehicle, local)`,
+  `.feel(emotion)`, `.look(other)`, `.hide()`. Story clips: sit, sitTable,
+  handshake, point, duck, cheer, binoculars, gesture, mortarLoad.
+- The squad (the match's allies): `S.squad('away' | 'fight' | 'trail' |
+  'hold')`, and `S.squadFromExtras(ids, mode)` to swap cutscene copies for
+  the real thing where they stand.
+- Camera: `S.shot({ eye, at, fov, to: { eye, at, fov }, secs })`, where eye
+  and at may be functions so the camera can follow something moving;
+  `S.camRig(fn)`; `S.shake(k)`.
+- Vehicles: `S.vehicle('helicopter' | 'tank' | 'mortar')`, moved by setting
+  `x y z yaw pitch roll` (and `rotor spin`, `turret gun`), or by `update`.
+- Effects: `S.boom(at, scale)`, `S.burn(at, size)`, `S.whistle(secs)`,
+  `S.rotorSound()`, `S.tracer(a, b)`.
+- Screen: `S.line(who, text, opts)`, `S.title(lines)`, `S.toast(text)`,
+  `S.hud(html)`, `S.binoculars(on)`, `S.fade(to, secs)`.
+- Time: `S.wait(secs)`, `S.quiet()`, `S.arrive(...people)`, `S.until(fn)`,
+  `S.after(secs, fn)`, `S.every(fn)`. All game time, never setTimeout.
+
+`friendlyFire: true` on a mission makes shooting any teammate (a squadmate
+or any extra) cut to black with FRIENDLY FIRE WILL NOT BE TOLERATED and
+restart the last checkpoint. `mission.passed(stats, S)` returns the stars,
+completion and rows for the Mission Passed screen (restart, next mission,
+main menu, and its own music). `stats` holds deaths, friendly fire,
+cutscenes skipped, intel found, and hostiles spawned and killed.

@@ -55,6 +55,7 @@
   var MISSIONS = [
     {
       id: 'first-light',
+      demo: true,          // a foundation test mission on a multiplayer map, not part of the story
       title: 'First Light',
       place: 'Town -- the high street, 05:40',
       map: 'town',
@@ -108,6 +109,7 @@
     },
     {
       id: 'lift-off',
+      demo: true,          // a foundation test mission on a multiplayer map, not part of the story
       title: 'Lift Off',
       place: 'Helipad -- the fuel farm, 16:10',
       map: 'helipad',

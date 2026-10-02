@@ -72,7 +72,7 @@
     boot.classList.add('on');
     requestAnimationFrame(function () { requestAnimationFrame(function () {
       window.MP = CAMPAIGN.play(m, {
-        index: i, resume: resume !== false, next: i + 1 < missions.length,
+        index: i, resume: resume !== false, next: i + 1 < missions.length && !(m.demo === undefined && missions[i + 1].demo),
         loadout: mp && mp.loadout, name: 'You',
         onNext: function () { location.href = 'campaign.html' + (i + 1 < missions.length ? '?mission=' + missions[i + 1].id : ''); },
       });

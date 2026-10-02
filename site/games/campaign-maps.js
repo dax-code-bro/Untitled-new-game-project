@@ -378,18 +378,38 @@
      ================================================================ */
   function buildCity(K, props) {
     var rng = (function (s) { return function () { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; })(1999);
-    for (var i = 0; i < 160; i++) {
-      var a = rng() * Math.PI * 2, r = 40 + rng() * 380;
-      var x = Math.cos(a) * r, z = Math.sin(a) * r - 20;
-      // Keep the street, the hill and the office clear.
-      if (Math.abs(x) < 26 && z > -70 && z < 60) continue;
-      if (z > 55 && Math.abs(x) < 140 && z < 170) continue;
-      var w = 8 + rng() * 14, d = 8 + rng() * 14, h = 4 + rng() * 22;
-      var burnt = rng() < 0.38;
-      K.game.box({ at: [x, h / 2, z], size: [w, h, d], material: burnt ? MAT.soot : WALLS[Math.floor(rng() * WALLS.length)], physics: false });
-      if (!burnt && rng() < 0.4) K.game.box({ at: [x, h + 0.6, z], size: [w * 1.02, 1.2, d * 1.02], material: MAT.tileRoof, physics: false });
-      if (burnt && rng() < 0.55 && props.fires.length < 34) props.fires.push({ at: [x, h, z], r: Math.min(w, d) * 0.6, rate: 5, size: 2.6 });
-      if (burnt && rng() < 0.5 && props.smoke.length < 26) props.smoke.push({ at: [x, h + 2, z], r: 4, rate: 1.2, size: 9, life: 14 });
+    /* A street grid: blocks 34 m on a side with 9 m streets, out to about 380 m. Each block is two to
+       four buildings shoulder to shoulder, one to eight storeys, plaster in the town's colours or
+       burnt black; a third of them burning, smoke going straight up into the still evening air. */
+    var BL = 34, ST = 9, P = BL + ST;
+    var fires = 0, smokes = 0;
+    for (var gx = -9; gx <= 9; gx++) {
+      for (var gz = -9; gz <= 9; gz++) {
+        var cx = gx * P, cz = gz * P - 20;
+        var r = Math.hypot(cx, cz + 20);
+        if (r > 390 || r < 30) continue;
+        // Keep the street, the hill and the office clear.
+        if (Math.abs(cx) < 26 + BL / 2 && cz > -70 - BL / 2 && cz < 60 + BL / 2) continue;
+        if (cz > 40 && Math.abs(cx) < 150 && cz < 190) continue;
+        if (cx < -270 && Math.abs(cz) < 40) continue;
+        var n = 2 + Math.floor(rng() * 3), along = rng() < 0.5;
+        for (var i = 0; i < n; i++) {
+          var w = BL / n, x = along ? cx - BL / 2 + w * (i + 0.5) : cx, z = along ? cz : cz - BL / 2 + w * (i + 0.5);
+          var sx = along ? w - 0.6 : BL - rng() * 6, sz = along ? BL - rng() * 6 : w - 0.6;
+          var storeys = 1 + Math.floor(Math.pow(rng(), 1.6) * 8), h = storeys * 3.2;
+          var burnt = rng() < 0.34;
+          K.game.box({ at: [x, h / 2, z], size: [sx, h, sz], material: burnt ? MAT.soot : WALLS[Math.floor(rng() * WALLS.length)], physics: false });
+          if (!burnt && rng() < 0.5) K.game.box({ at: [x, h + 0.5, z], size: [sx * 1.02, 1.0, sz * 1.02], material: MAT.tileRoof, physics: false });
+          // A dark band of windows on each floor of the taller ones, so they read as buildings and not crates.
+          if (storeys > 1 && !burnt) {
+            for (var f = 1; f < storeys; f++) {
+              K.game.box({ at: [x, f * 3.2 - 1.4, z], size: [sx + 0.08, 1.1, sz * 0.82], material: MAT.soot, physics: false });
+            }
+          }
+          if (burnt && fires < 40 && rng() < 0.7) { fires++; props.fires.push({ at: [x, h, z], r: Math.min(sx, sz) * 0.6, rate: 8, size: 3.2 }); }
+          if (burnt && smokes < 30 && rng() < 0.6) { smokes++; props.smoke.push({ at: [x, h + 3, z], r: 5, rate: 1.4, size: 13, life: 18 }); }
+        }
+      }
     }
   }
 
@@ -432,6 +452,6 @@
   W.MP_EXTRA_MAPS.colombia = {
     build: buildColombia,
     // Sunset: the sun low in the west, orange on everything, haze from the fires.
-    sky: { sky: 'sunset', hours: 17.4, exposure: 1.05, fog: 0xa07060, fogDensity: 0.0075, ground: 0x8a8378 },
+    sky: { sky: 'sunset', hours: 17.4, exposure: 1.05, fog: 0xa07060, fogDensity: 0.0042, ground: 0x8a8378 },
   };
 })();

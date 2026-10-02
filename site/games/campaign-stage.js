@@ -53,7 +53,7 @@
     '#stg .hud{position:absolute;left:50%;bottom:9vh;transform:translateX(-50%);font-family:"Courier New",monospace;font-size:16px;',
     'letter-spacing:.2em;text-align:center;text-shadow:0 1px 3px #000;display:none;background:rgba(0,0,0,.45);padding:8px 16px}',
     '#stg .toast{position:absolute;right:28px;top:26px;font-size:14px;letter-spacing:.2em;text-transform:uppercase;color:#d8b45a;',
-    'text-shadow:0 1px 3px #000;opacity:0;transition:opacity .4s}',
+    'text-shadow:0 1px 3px #000;opacity:0;transition:opacity .4s;z-index:5}',
     '#stg .cross{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border:1px solid rgba(255,255,255,.7);',
     'border-radius:50%;display:none}',
     /* MISSION PASSED */
@@ -97,6 +97,8 @@
     this.voice = spec.voice || {};
     this.actor = S.game.castMember(spec, { at: [0, -80, 0], name: 'extra-' + id, speed: 1.5, runSpeed: 4.5 });
     if (this.actor.controller) this.actor.controller.autoAnimate = false;
+    // A person, not scenery: rays for bullets and lines of sight pass the capsule (the match's rule).
+    if (this.actor.body) this.actor.body.userData = { actor: true, extra: id };
     // What the match's carry() reads: a pos, a yaw and pitch, a gun.
     this.pos = { x: 0, y: -80, z: 0 }; this.yaw = 0; this.pitch = 0;
     var gunId = opts.gun !== undefined ? opts.gun : spec.weapon;
@@ -480,7 +482,7 @@
     var P = g.particles;
     if (P) {
       P.dust([at[0], at[1] + 0.3, at[2]], { count: Math.round(30 * (scale || 1)), size: 1.4 * (scale || 1) });
-      P.smoke([at[0], at[1] + 1, at[2]], { count: Math.round(10 * (scale || 1)), size: 4 * (scale || 1), life: 5, alpha: 0.6, color: 0x2a2724, colorEnd: 0x77706a });
+      P.smoke([at[0], at[1] + 1, at[2]], { count: Math.round(4 * (scale || 1)), size: 3 * (scale || 1), life: 3.5, alpha: 0.45, color: 0x2a2724, colorEnd: 0x77706a });
     }
     var cam = this.camState ? this.cinematic(0) : null;
     var eye = cam ? cam.eye : [this.you.pos.x, this.you.pos.y + 1.6, this.you.pos.z];

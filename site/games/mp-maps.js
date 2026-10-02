@@ -2725,6 +2725,8 @@
       // A campaign map can size the bots' navigation area, and hand back anything else it builds.
       navR: out.navR || null,
       props: out.props || null,
+      // And a building you can climb: its storeys' walk grids, and stairs that are ground (mp-match).
+      levels: out.levels || null, walkSteps: !!out.walkSteps,
     };
   }
 
