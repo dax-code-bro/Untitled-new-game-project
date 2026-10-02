@@ -66,6 +66,18 @@ uniform float uWeathering;
    the glass's own reflection, weighted by what the Fresnel term lets in. */
 uniform float uInterior;
 uniform float uWetGround;
+/* NATIVE: CAST CONCRETE. A concrete slab is never one sheet: it is cut into
+   bays to control cracking, and it carries the stains of what stood on it.
+   A concrete wall carries the marks of the forms it was poured in: the
+   boards, the panel seams, and the holes the ties left. Those are what make
+   a grey box read as a bunker wall rather than as a grey box. uCast > 0 on
+   draws whose material is concrete (SceneFile). */
+uniform float uCast;
+float castLine(float x, float pitch, float halfW) {
+  float d = abs(fract(x / pitch + 0.5) - 0.5) * pitch;       // metres to the nearest line
+  float aa = max(fwidth(x) * 0.75, 1e-4);
+  return 1.0 - smoothstep(halfW - aa, halfW + aa, d);
+}
 vec3 waterNormal(vec2 p, float t, float dist){
   vec2 g = vec2(0.0);
   // direction.xy, wavelength (m), amplitude (m)
@@ -769,6 +781,42 @@ void main(){
     rough = mix(rough, 0.03, pud);
     metal *= 1.0 - pud;
     N = normalize(mix(N, normalize(vNormal), pud));
+  }
+  if (uCast > 0.0 && uWater == 0.0) {
+    vec3 cN = normalize(vNormal);
+    vec3 wp = vWorldPos;
+    // Fine detail fades out with distance before it can shimmer.
+    float near = 1.0 - smoothstep(18.0, 45.0, length(wp - uCameraPos));
+    if (cN.y > 0.7) {
+      // Saw-cut joints on a 3 m bay grid, a groove about 8 mm wide.
+      float joint = max(castLine(wp.x, 3.0, 0.004), castLine(wp.z, 3.0, 0.004)) * near;
+      albedo *= 1.0 - joint * 0.55;
+      ao *= 1.0 - joint * 0.4;
+      // Old stains: dark, slightly glossy, where something leaked or stood.
+      float st = valueNoise(vec3(wp.xz * 0.45, 3.3)) * 0.65 + valueNoise(vec3(wp.xz * 1.7, 7.1)) * 0.35;
+      float stain = smoothstep(0.62, 0.74, st) * uCast;
+      albedo *= 1.0 - stain * 0.28;
+      rough = mix(rough, rough * 0.7, stain);
+      // Wear: the middle of a bay is paler and smoother than its edges.
+      float wear = valueNoise(vec3(wp.xz * 0.22, 9.4));
+      albedo *= 1.0 + (wear - 0.5) * 0.12 * uCast;
+    } else if (abs(cN.y) < 0.5) {
+      vec3 side = normalize(cross(cN, vec3(0.0, 1.0, 0.0)));
+      float u = dot(wp, side), v = wp.y;
+      // Board-formed: 15 cm boards, each poured against a slightly different plank.
+      float board = floor(v / 0.15);
+      float tone = valueNoise(vec3(board * 1.7, floor(u / 2.4) * 3.1, 2.2));
+      albedo *= 1.0 + (tone - 0.5) * 0.10 * uCast;
+      float seamB = castLine(v, 0.15, 0.0012) * near;
+      // Panel seams every 2.4 m along and 1.2 m up.
+      float seamP = max(castLine(u, 2.4, 0.003), castLine(v, 1.2, 0.002)) * near;
+      // Tie holes: a 0.6 m grid, inset from the panel seams.
+      vec2 tc = vec2(u, v) / 0.6;
+      vec2 f = (fract(tc) - 0.5) * 0.6;                     // metres from the hole centre
+      float hole = (1.0 - smoothstep(0.009, 0.013, length(f))) * near;
+      albedo *= 1.0 - (seamB * 0.12 + seamP * 0.35 + hole * 0.6) * uCast;
+      ao *= 1.0 - (seamP * 0.3 + hole * 0.5) * uCast;
+    }
   }
   // Back-facing geometry (double-sided leaves, glass) must not light black.
   if (!gl_FrontFacing) N = -N;

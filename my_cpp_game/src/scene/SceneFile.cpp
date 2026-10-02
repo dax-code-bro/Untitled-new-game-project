@@ -284,6 +284,17 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
             texName = "asphalt";
             m.roughness = std::max(m.roughness, 0.85f);
         }
+        /* NATIVE: TEXTURE AT REAL-WORLD SIZE. The web maps lay their
+           concrete and plaster at half a tile a metre and less, which on a
+           phone hides the repeat but here blows the recipe's grain up to
+           blotches the size of a hand -- the bunker floor read as carpet or
+           sand, not as poured concrete. A tile no bigger than two thirds of
+           a metre puts the aggregate, the trowel marks and the stains at
+           the scale they are in a real floor; the weathering pass above the
+           texture still varies it over tens of metres, so it does not
+           repeat visibly. */
+        if (m.worldUv && (texName == "concrete" || texName == "plaster" || texName == "asphalt"))
+            m.uvScale = std::max(m.uvScale, 1.5f);
         matTex.push_back(texName);
         if (!texName.empty()) {
             try {
@@ -462,6 +473,7 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
         if (!it.water && !foliageDraw && !it.grass && !mat.transparent && !glowing && !jd.contains("bones")) {
             it.weathering = mat.metalness > 0.5f ? 0.5f : 1.0f;
             ++m_stats.weathered;
+            if (matTex[matIdx] == "concrete") it.cast = 1.0f;
             if (matGround[matIdx] && isGroundName(tokens) && matTex[matIdx] != "grass" && !matTex[matIdx].empty() &&
                 !hasToken(tokens, {"inside", "interior", "floor", "hall", "room"}))
                 // Hard paving holds standing water; earth only darkens.

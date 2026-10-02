@@ -39,6 +39,9 @@ struct DrawItem {
     /* NATIVE: 0..1 -- this is outdoor ground: damp patches, puddles and
        cracks in the paving. */
     float           wetGround = 0.0f;
+    /* NATIVE: 0..1 -- cast concrete: saw-cut joints and stains on a slab,
+       board-formed bands, panel seams and tie holes on a wall (pbr.frag). */
+    float           cast = 0.0f;
     /* NATIVE: a fake window pane -- trace a room behind it (pbr.frag);
        the value is the room's brightness. 0 = off. */
     float           interior = 0.0f;
