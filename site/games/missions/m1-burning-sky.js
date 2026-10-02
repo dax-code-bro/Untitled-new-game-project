@@ -910,8 +910,18 @@
       SQUAD.forEach(function (k, i) { c[k].at([cov.x + 0.6 + (i - 1.5) * 1.2, 0, cov.z - 1.8 - (i % 2) * 0.5], Math.PI * 0.15, 'cheer').arm(false); c[k].feel('happy'); });
       c.spite.at([cov.x + 0.4, 0, cov.z - 0.6], Math.PI * 0.9, 'cheer').arm(false);
       c.molotov.play('idle', 0); // Molotov does not cheer.
-      S.shot({ eye: [cov.x + 4, 1.7, cov.z - 6], at: [cov.x + 0.5, 1.3, cov.z - 1.4], fov: 44, to: { eye: [cov.x + 3, 6, cov.z - 9] }, secs: 6 });
-      yield S.wait(3.5);
+      S.shot({ eye: [cov.x + 4, 1.7, cov.z - 6], at: [cov.x + 0.5, 1.3, cov.z - 1.4], fov: 44, to: { eye: [cov.x + 3, 3.2, cov.z - 7.5] }, secs: 6 });
+      S.line('payback', 'Six for six! HELL yes!', { emotion: 'happy' });
+      yield S.quiet();
+      S.line('mike', 'Is it... is it over? Are we done?', { emotion: 'happy' });
+      yield S.quiet();
+      // Molotov does not cheer. He looks back up the street at the hill, still burning.
+      c.molotov.turnTo([0, 0, 120]);
+      yield S.wait(0.6);
+      S.shot(faceShot(c.molotov, 1.4, -0.5, 30));
+      yield S.wait(2.4);
+      S.shot({ eye: [cov.x + 4, 1.7, cov.z - 6], at: [cov.x + 0.5, 1.3, cov.z - 1.4], fov: 44, to: { eye: [cov.x + 3, 6, cov.z - 9] }, secs: 4 });
+      yield S.wait(1.2);
       yield S.fade(1, 2.0);
       yield S.wait(0.6);
     },
