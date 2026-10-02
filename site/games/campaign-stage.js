@@ -86,6 +86,107 @@
   function angTo(a, b) { var d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
 
   /* ================================================================
+     PROPS: what the script says they carry that the kit does not build
+     ================================================================
+     Small things on a person or a gun, parented so they move with it.
+     A bone's frame is +X to the character's left, +Y up, +Z forward
+     (photographed: the hips' origin is at the pelvis, the head's at the
+     base of the neck). A gun's frame is +X down the bore, +Y up. */
+  var PROP_MAT = {
+    glass: { color: 0x26341a, texture: 'smooth', roughness: 0.42, metalness: 0 },
+    rag: { color: 0xd2c6a4, texture: 'fabric', roughness: 0.95, metalness: 0 },
+    gold: { color: 0xd8aa3c, texture: 'metal', roughness: 0.28, metalness: 1 },
+    walnut: { color: 0x4a2a16, texture: 'wood', roughness: 0.55, metalness: 0 },
+    black: { color: 0x1d1e20, texture: 'smooth', roughness: 0.5, metalness: 0.2 },
+    hopper: { color: 0x2a2c2e, texture: 'smooth', roughness: 0.45, metalness: 0 },
+    hopperLid: { color: 0xd8b020, texture: 'smooth', roughness: 0.45, metalness: 0 },
+    charm: { color: 0xff6a10, emissive: 0xff4a00, emissiveStrength: 0.6, texture: 'smooth', roughness: 0.4, metalness: 0 },
+    cord: { color: 0x111111, texture: 'smooth', roughness: 0.9, metalness: 0 },
+    lens: { color: 0x101820, texture: 'smooth', roughness: 0.3, metalness: 0 },
+  };
+  function propOn(game, parent, bone, kind, size, at, rot, mat) {
+    var o = { at: [0, -80, 0], material: PROP_MAT[mat] || mat, physics: false };
+    var a = kind === 'cyl' ? game.cylinder(Object.assign(o, { radius: size[0], height: size[1] }))
+      : kind === 'sph' ? game.sphere(Object.assign(o, { radius: size[0] })) : game.box(Object.assign(o, { size: size }));
+    if (!a) return null;
+    a.parent = parent;
+    if (bone) { a.parentBone = parent.skeleton.index(bone); a.localOffset.set(at[0], at[1], at[2]); }
+    else a._position.set(at[0], at[1], at[2]);
+    if (rot) a.rotation.copy(W.LE.Quat.from(rot));
+    a.name = 'prop';
+    a._still = false;
+    return a;
+  }
+  var PROPS = {
+    // Two petrol bombs on Molotov's left hip, rags stuffed in the necks.
+    molotovs: function (g, a) {
+      [[0.17, -0.07], [0.15, -0.16]].forEach(function (q) {
+        // Boxes, turned 45 degrees and stacked, read as a round bottle at this size (a cylinder on a
+        // bone draws with the wrong material in this renderer).
+        propOn(g, a, 'hips', 'box', [0.06, 0.19, 0.06], [q[0], -0.06, q[1]], [0, 0, 4], 'glass');
+        propOn(g, a, 'hips', 'box', [0.06, 0.19, 0.06], [q[0], -0.06, q[1]], [0, 45, 4], 'glass');
+        propOn(g, a, 'hips', 'box', [0.024, 0.07, 0.024], [q[0], 0.07, q[1]], [0, 45, 0], 'glass');
+        propOn(g, a, 'hips', 'box', [0.03, 0.08, 0.028], [q[0], 0.13, q[1]], [0, 30, 12], 'rag');
+      });
+    },
+    // The golden Mauser in Lincoln's thigh holster: the grip and hammer standing out of it.
+    mauser: function (g, a) {
+      /* Over the grip the thigh holster already holds, which stands out of the top of it raked up and
+         back (found by photographing markers in the hips' frame): gold frame, walnut panels. */
+      propOn(g, a, 'hips', 'box', [0.044, 0.105, 0.036], [-0.252, -0.088, -0.105], [-50, 0, 0], 'gold');
+      propOn(g, a, 'hips', 'box', [0.048, 0.08, 0.026], [-0.253, -0.09, -0.108], [-50, 0, 0], 'walnut');
+      propOn(g, a, 'hips', 'box', [0.04, 0.03, 0.05], [-0.25, -0.05, -0.065], [-10, 0, 0], 'gold');
+    },
+  };
+  // On the gun, once it exists (the match builds a body's weapon the first time it is carried).
+  var GUN_PROPS = {
+    // Mike's pepper-ball hopper on top of the receiver.
+    hopper: function (g, gun, B) {
+      var x = B.min.x + (B.max.x - B.min.x) * 0.42, y = B.max.y;
+      propOn(g, gun, null, 'box', [0.12, 0.085, 0.095], [x, y + 0.035, 0], null, 'hopper');
+      propOn(g, gun, null, 'sph', [0.052], [x, y + 0.07, 0], null, 'hopper');
+      propOn(g, gun, null, 'cyl', [0.04, 0.018], [x, y + 0.115, 0], null, 'hopperLid');
+    },
+    // The fire charm Molotov hangs off his shotgun: a cord from the barrel and a little flame.
+    charm: function (g, gun, B) {
+      var x = B.max.x - 0.32, y = B.min.y + (B.max.y - B.min.y) * 0.25;
+      propOn(g, gun, null, 'cyl', [0.003, 0.09], [x, y - 0.045, 0], null, 'cord');
+      propOn(g, gun, null, 'sph', [0.021], [x, y - 0.1, 0], null, 'charm');
+      propOn(g, gun, null, 'box', [0.018, 0.045, 0.018], [x, y - 0.13, 0], [0, 45, 0], 'charm');
+      propOn(g, gun, null, 'box', [0.012, 0.03, 0.012], [x + 0.012, y - 0.075, 0], [0, 0, 25], 'charm');
+    },
+  };
+  function gunBounds(game, gun) {
+    var geo = game.geometryOf && gun.mesh ? game.geometryOf(gun.mesh) : null;
+    return geo && geo.bounds ? geo.bounds : { min: { x: -0.4, y: -0.05, z: -0.03 }, max: { x: 0.5, y: 0.06, z: 0.03 } };
+  }
+  var CAST_PROPS = { molotov: { body: 'molotovs', gun: 'charm' }, lincoln: { body: 'mauser' }, mike: { gun: 'hopper' } };
+  W.CAMPAIGN_PROPS = {
+    // Dress a body built from a cast spec (an extra, or the match's ally dressed as them).
+    dress: function (game, actor, castKey) {
+      var c = CAST_PROPS[castKey];
+      if (c && c.body && actor && actor.skeleton) PROPS[c.body](game, actor);
+    },
+    gun: function (game, gun, castKey) {
+      var c = CAST_PROPS[castKey];
+      if (!c || !c.gun || !gun || gun._propped) return;
+      gun._propped = true;
+      GUN_PROPS[c.gun](game, gun, gunBounds(game, gun));
+    },
+    // Binoculars held up to the eyes (with the 'binoculars' clip).
+    binoculars: function (game, actor) {
+      var parts = [];
+      [-0.034, 0.034].forEach(function (x) {
+        parts.push(propOn(game, actor, 'head', 'box', [0.046, 0.046, 0.12], [x, 0.045, 0.16], [0, 0, 45], 'black'));
+        parts.push(propOn(game, actor, 'head', 'box', [0.034, 0.034, 0.006], [x, 0.045, 0.222], [0, 0, 45], 'lens'));
+      });
+      parts.push(propOn(game, actor, 'head', 'box', [0.04, 0.02, 0.05], [0, 0.045, 0.16], null, 'black'));
+      return parts;
+    },
+    propOn: propOn,
+  };
+
+  /* ================================================================
      AN EXTRA
      ================================================================ */
   function Extra(S, id, castKey, opts) {
@@ -97,6 +198,7 @@
     this.voice = spec.voice || {};
     this.actor = S.game.castMember(spec, { at: [0, -80, 0], name: 'extra-' + id, speed: 1.5, runSpeed: 4.5 });
     if (this.actor.controller) this.actor.controller.autoAnimate = false;
+    W.CAMPAIGN_PROPS.dress(S.game, this.actor, castKey);
     // A person, not scenery: rays for bullets and lines of sight pass the capsule (the match's rule).
     if (this.actor.body) this.actor.body.userData = { actor: true, extra: id };
     // What the match's carry() reads: a pos, a yaw and pitch, a gun.
@@ -143,6 +245,12 @@
     return this;
   };
   Extra.prototype.arrived = function () { return !this.walk; };
+  // Binoculars up to the eyes, or put away.
+  Extra.prototype.binos = function (on) {
+    if (on && !this._binos) { this._binos = W.CAMPAIGN_PROPS.binoculars(this.S.game, this.actor); this.play('binoculars', 0.3); }
+    if (this._binos) this._binos.forEach(function (p) { if (p) p.visible = !!on; });
+    return this;
+  };
   Extra.prototype.turnTo = function (yawOrPoint) {
     if (typeof yawOrPoint === 'number') this.wantYaw = yawOrPoint;
     else { var q = yawOrPoint.pos || { x: yawOrPoint[0], z: yawOrPoint[2] }; this.wantYaw = Math.atan2(q.x - this.pos.x, q.z - this.pos.z); }
@@ -203,7 +311,10 @@
       if (Math.abs(d2) < 0.01) this.wantYaw = null;
     }
     this.apply();
-    if (this.armed && S.M.carryFor) S.M.carryFor(this, this.aim);
+    if (this.armed && S.M.carryFor) {
+      S.M.carryFor(this, this.aim);
+      if (this._armShown && !this._armShown._propped) W.CAMPAIGN_PROPS.gun(S.game, this._armShown, this.cast);
+    }
   };
   // Where his eyes are, for a camera that wants to look at his face.
   Extra.prototype.head = function (dy) {

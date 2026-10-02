@@ -29,7 +29,9 @@
   var PAD = { x: -2.6, z: -49 };
   var SQUAD = ['payback', 'molotov', 'alec', 'mike'];
 
-  function hillY(z) { return z <= 56 ? 0 : z >= 126 ? 18 : (z - 56) / 70 * 18; }
+  /* The hill's surface (campaign-maps.js buildHill): the slope box's top face runs through y 9.02 at
+     z 89 at 18 in 70; the foot strip is half a metre up; the plateau is at 18. */
+  function hillY(z) { return z <= 53 ? 0 : z <= 59 ? 0.5 : z >= 125 ? 18.0 : Math.min(18.3, 9.02 + (z - 89) * (18 / 70)); }
   var HILL_PITCH = Math.atan2(18, 70);
 
   /* ---------------- the world, put in the state a step needs ----------------

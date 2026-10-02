@@ -576,6 +576,7 @@
       var castSpec = p.cast && W.CAMPAIGN_CAST && W.CAMPAIGN_CAST[p.cast];
       if (castSpec && game.castMember) {
         p.actor = game.castMember(castSpec, { at: [0, -50, 0], name: 'mp-' + p.id, speed: 4.6, runSpeed: 6.4 });
+        if (W.CAMPAIGN_PROPS) W.CAMPAIGN_PROPS.dress(game, p.actor, p.cast);
       } else if (p.operator && game.operator) {
         /* NO TEAM TINT ON THE MAN HIMSELF.
          *

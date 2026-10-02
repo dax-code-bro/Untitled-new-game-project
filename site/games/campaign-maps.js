@@ -83,30 +83,50 @@
     /* ---------------- the hill, the city, the office ---------------- */
     buildHill(K, props);
     buildCity(K, props);
+    dressStreet(K, props);
+    dressHill(K, props);
     buildOffice(K, props);
 
     /* Fire and smoke where things are burning, a little every frame. Lights for the biggest fires so
        they throw orange onto the street at dusk. */
+    /* FIRE AND SMOKE, emitted by hand rather than through P.fire/P.smoke, whose particles are a
+       campfire's: half a metre tall and gone in a second. A burning building is flame tongues a
+       couple of metres high licking up out of its windows and roof, embers, and above it a column
+       of smoke that climbs thirty or forty metres and leans with the evening wind. */
+    var WIND = { x: 0.7, z: 0.25 };
+    var hex = function (c) { return { x: ((c >> 16) & 255) / 255, y: ((c >> 8) & 255) / 255, z: (c & 255) / 255 }; };
+    var FL0 = hex(0xff9a34), FL1 = hex(0x8c1a06), SM0 = hex(0x141210), SM1 = hex(0x4a4440), EM = hex(0xffa040);
     var t = 0;
     game.onUpdate(function (dt) {
       t += dt;
       var P = game.particles;
       if (!P) return;
       props.fires.forEach(function (f, i) {
-        f.acc = (f.acc || 0) + dt * (f.rate || 6);
+        var sz = f.size || 0.9;
+        f.acc = (f.acc || 0) + dt * (f.rate || 6) * 1.6;
         while (f.acc > 1) {
           f.acc -= 1;
-          P.fire([f.at[0] + (Math.random() - 0.5) * f.r, f.at[1], f.at[2] + (Math.random() - 0.5) * f.r],
-            { count: 1, size: f.size || 0.9, life: 0.9 });
+          var a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * f.r * 0.5;
+          P.spawn({ position: [f.at[0] + Math.cos(a) * r, f.at[1], f.at[2] + Math.sin(a) * r],
+            velocity: { x: WIND.x * 0.4 + (Math.random() - 0.5) * 0.5, y: 1.4 + Math.random() * 1.6 * Math.min(2, sz), z: WIND.z * 0.4 + (Math.random() - 0.5) * 0.5 },
+            life: 0.55 + Math.random() * 0.6, size: sz * (0.55 + Math.random() * 0.5), sizeEnd: sz * 0.12,
+            color: FL0, colorEnd: FL1, alpha: 0.8, drag: 0.6, gravity: 1.8, type: 2, spin: (Math.random() - 0.5) * 1.5 });
+          // An ember now and then, carried up and away.
+          if (Math.random() < 0.08) P.spawn({ position: [f.at[0] + Math.cos(a) * r, f.at[1] + sz * 0.5, f.at[2] + Math.sin(a) * r],
+            velocity: { x: WIND.x * 1.5 + (Math.random() - 0.5), y: 3 + Math.random() * 3, z: WIND.z * 1.5 + (Math.random() - 0.5) },
+            life: 2.5 + Math.random() * 2, size: 0.06, sizeEnd: 0.02, color: EM, colorEnd: FL1, alpha: 1, drag: 0.3, gravity: 0.4, type: 2 });
         }
         if (f.light) f.light.intensity = f.glow * (0.82 + 0.18 * Math.sin(t * 9 + i * 2.1) * Math.sin(t * 5.3 + i));
       });
       props.smoke.forEach(function (s) {
+        var sz = s.size || 3.5, life = s.life || 9;
         s.acc = (s.acc || 0) + dt * (s.rate || 2.5);
         while (s.acc > 1) {
           s.acc -= 1;
-          P.smoke([s.at[0] + (Math.random() - 0.5) * s.r, s.at[1], s.at[2] + (Math.random() - 0.5) * s.r],
-            { count: 1, size: s.size || 3.5, life: s.life || 7, alpha: 0.55, color: 0x2a2724, colorEnd: 0x6a645e });
+          P.spawn({ position: [s.at[0] + (Math.random() - 0.5) * s.r, s.at[1], s.at[2] + (Math.random() - 0.5) * s.r],
+            velocity: { x: WIND.x + (Math.random() - 0.5) * 0.4, y: 2.0 + Math.random() * 0.8, z: WIND.z + (Math.random() - 0.5) * 0.4 },
+            life: life * (0.8 + Math.random() * 0.5), size: sz * 0.35, sizeEnd: sz * (1.4 + Math.random() * 0.6),
+            color: SM0, colorEnd: SM1, alpha: 0.62, drag: 0.18, gravity: 0.35, type: 1, spin: (Math.random() - 0.5) * 0.3 });
         }
       });
     });
@@ -233,7 +253,8 @@
       K.deco(d.map[0] - 0.8, d.map[0] + 0.8, y + 0.92, y + 0.925, d.map[1] - 0.45, d.map[1] + 0.45, MAT.mapPaper, 'intel-map');
       fl.map = { x: d.map[0], y: y + 0.93, z: d.map[1] };
       // A ceiling lamp, warm.
-      props.lamps.push({ at: [d.map[0], y + F - 0.4, d.map[1]], color: 0xffc890, intensity: 2.2, radius: 9 });
+      props.lamps.push({ at: [d.map[0], y + F - 0.4, d.map[1]], color: 0xffc890, intensity: 4.5, radius: 11 });
+      furnishFloor(K, d, y);
       if (d.kind === 'aid') {
         // Two cots with a man on one of them (the mission puts him there).
         K.slab(-6.4, -4.4, y, y + 0.45, -55.2, -54.4, MAT.green, 'cot');
@@ -309,7 +330,7 @@
       } else {
         // Gutted: no roof, black inside, and on fire.
         props.fires.push({ at: [side * 14, H - 0.6, (z0 + z1) / 2], r: 5, rate: 9, size: 1.6, glow: 6 });
-        props.smoke.push({ at: [side * 15, H + 1, (z0 + z1) / 2], r: 4, rate: 2.2, size: 5, life: 9 });
+        props.smoke.push({ at: [side * 15, H + 1, (z0 + z1) / 2], r: 4, rate: 3.2, size: 7, life: 14 });
       }
       bk[6].forEach(function (sw) {
         props.snipers.push({ x: side * 10.6, y: sw[1] * F, z: sw[0] + 0.6, face: -side, window: { x: xIn, y: sw[1] * F + 1.6, z: sw[0] + 0.6 } });
@@ -411,6 +432,139 @@
         }
       }
     }
+  }
+
+  /* ================================================================
+     DRESSING: what makes the street a place a war went through and the
+     hill a hill, and the command post somewhere people have been living
+     ================================================================ */
+  function rngOf(seed) { return function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
+  var DRESS_MAT = {
+    canvas: [0x8a3a2a, 0x2f5a6a, 0x6a6a2a, 0x7a5a3a, 0x3a4a3a].map(function (c) { return { color: c, texture: 'canvas', roughness: 0.95, metalness: 0, uvScale: 1.5 }; }),
+    sign: [0xd8c08a, 0x2a6a8a, 0xa83a2a, 0xe0e0d0, 0x3a7a4a].map(function (c) { return { color: c, texture: 'paint', roughness: 0.7, metalness: 0, uvScale: 1 }; }),
+    brick: { color: 0x9a5a3a, texture: 'brick', roughness: 0.95, metalness: 0, uvScale: 1 },
+    litter: { color: 0xc8c0a8, texture: 'smooth', roughness: 0.95, metalness: 0 },
+    tyre: { color: 0x151515, texture: 'smooth', roughness: 0.95, metalness: 0 },
+    wire: { color: 0x101010, texture: 'smooth', roughness: 0.6, metalness: 0.3 },
+    scrub: { color: 0x4a4a28, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 1.2 },
+    bark: { color: 0x2c2620, texture: 'bark', roughness: 0.95, metalness: 0, uvScale: 1 },
+    track: { color: 0x8a7a5a, texture: 'dirt', roughness: 0.98, metalness: 0, uvScale: 0.15 },
+    stone: { color: 0x8a8070, texture: 'rock', roughness: 0.95, metalness: 0, uvScale: 0.6 },
+  };
+  function dbox(K, at, size, rot, mat) { return K.game.box({ at: at, size: size, rotation: rot || null, material: mat, physics: false }); }
+
+  function dressStreet(K, props) {
+    var rng = rngOf(4242), g = K.game;
+    for (var side = -1; side <= 1; side += 2) {
+      for (var z = -38; z < 50; z += 4.2) {
+        // Awnings over the shopfronts, some torn and hanging, and the shop's sign above.
+        if (rng() < 0.55) {
+          var torn = rng() < 0.3;
+          dbox(K, [side * (9.6 - 0.55), 2.75 - (torn ? 0.35 : 0), z + 1.3], [1.1, 0.04, 2.5], [0, 0, side * (torn ? -38 : -14)], DRESS_MAT.canvas[Math.floor(rng() * 5)]);
+        }
+        if (rng() < 0.45) dbox(K, [side * 9.56, 3.15, z + 1.3], [0.06, 0.45, 1.8 + rng() * 0.6], null, DRESS_MAT.sign[Math.floor(rng() * 5)]);
+      }
+    }
+    // Rubble and litter along both kerbs and out into the road.
+    for (var i = 0; i < 220; i++) {
+      var kerb = rng() < 0.7, sx = rng() < 0.5 ? -1 : 1;
+      var x = kerb ? sx * (6.4 + rng() * 2.8) : (rng() - 0.5) * 12, zz = -40 + rng() * 90;
+      var sz = 0.08 + Math.pow(rng(), 2) * 0.5;
+      var mat = rng() < 0.25 ? DRESS_MAT.brick : rng() < 0.2 ? DRESS_MAT.litter : MAT.rubble;
+      dbox(K, [x, sz * 0.4, zz], mat === DRESS_MAT.litter ? [0.3, 0.01, 0.22] : [sz, sz * 0.7, sz * 1.2], [rng() * 40, rng() * 360, rng() * 40], mat);
+    }
+    // Shell craters in the road: a scorched dish with broken asphalt round the lip.
+    [[-2.5, -28], [3.0, -6], [-1.0, 20], [2.5, 34], [-3.5, 44], [1.5, -16]].forEach(function (c) {
+      var r = 1.2 + rng() * 0.8;
+      g.cylinder({ at: [c[0], 0.012, c[1]], radius: r, height: 0.02, material: MAT.soot, physics: false });
+      for (var k = 0; k < 9; k++) {
+        var a = k / 9 * Math.PI * 2 + rng(), q = 0.15 + rng() * 0.25;
+        dbox(K, [c[0] + Math.cos(a) * r, q * 0.3, c[1] + Math.sin(a) * r], [q * 1.6, q * 0.5, q], [rng() * 30, a * 57, rng() * 30], MAT.road);
+      }
+    });
+    // Power lines strung along the lamp posts, and a few across the street, sagging.
+    for (var zp = -36; zp < 40; zp += 12) {
+      [-7.5, 7.5].forEach(function (px) {
+        var z0 = px < 0 ? zp : zp + 6;
+        for (var w = 0; w < 2; w++) {
+          var y = 5.0 - w * 0.25;
+          g.cylinder({ at: [px, y - 0.25, z0 + 6], radius: 0.012, height: 12.1, rotation: [90, 0, 0], material: DRESS_MAT.wire, physics: false });
+        }
+      });
+      if ((zp / 12) % 2 === 0) {
+        var len = Math.hypot(15, 6), ang = Math.atan2(6, 15) * 180 / Math.PI;
+        g.cylinder({ at: [0, 4.6, zp + 3], radius: 0.012, height: len, rotation: [0, -ang, 90], material: DRESS_MAT.wire, physics: false });
+      }
+    }
+    // More of what burned: cars, tyres, oil drums.
+    var burnt = { color: 0x2e2a27, texture: 'rust', roughness: 0.9, metalness: 0.3, uvScale: 1 };
+    K.car(5.0, -33, false, burnt); K.car(-5.2, 9, false, burnt); K.car(4.8, 46, true, burnt);
+    props.fires.push({ at: [5.0, 1.0, -33], r: 1.4, rate: 6, size: 1.1, glow: 3 });
+    [[-6.8, -8], [6.9, 14], [-7.0, 31], [6.5, -26]].forEach(function (t) {
+      for (var k = 0; k < 3; k++) g.cylinder({ at: [t[0] + k * 0.25, 0.12 + k * 0.24, t[1]], radius: 0.36, height: 0.22, material: DRESS_MAT.tyre, physics: false });
+    });
+    [[6.6, -2], [-6.6, 26], [6.2, 38]].forEach(function (b) { K.barrel(b[0], b[1]); });
+  }
+
+  function dressHill(K, props) {
+    var rng = rngOf(777), g = K.game;
+    var slope = function (z) { return 9.02 + (z - 89) * (18 / 70); };
+    var ang = Math.atan2(18, 70) * 180 / Math.PI;
+    // The track the tanks come down: a strip of worn dirt over the crest and down the middle.
+    g.box({ at: [0, 9.02 + 0.06, 89], size: [7, 0.12, 72.5], rotation: [-ang, 0, 0], material: DRESS_MAT.track, physics: false });
+    g.box({ at: [0, 18.06, 140], size: [7, 0.12, 30], material: DRESS_MAT.track, physics: false });
+    // Rocks, scrub and dead trees, thicker towards the sides.
+    for (var i = 0; i < 140; i++) {
+      var x = (rng() - 0.5) * 200, z = 58 + rng() * 66;
+      if (Math.abs(x) < 5) continue;
+      var y = slope(z), r = rng();
+      if (r < 0.4) {
+        var q = 0.3 + Math.pow(rng(), 2) * 2.2;
+        dbox(K, [x, y + q * 0.25, z], [q * 1.3, q * 0.7, q], [rng() * 25, rng() * 360, rng() * 25], DRESS_MAT.stone);
+      } else if (r < 0.85) {
+        for (var k = 0; k < 3; k++) g.sphere({ at: [x + (rng() - 0.5) * 1.2, y + 0.3 + rng() * 0.3, z + (rng() - 0.5) * 1.2], radius: 0.35 + rng() * 0.5, material: DRESS_MAT.scrub, physics: false });
+      } else {
+        var h = 3 + rng() * 3, lean = (rng() - 0.5) * 12;
+        g.cylinder({ at: [x, y + h / 2, z], radius: 0.13, height: h, rotation: [lean, 0, lean * 0.5], material: DRESS_MAT.bark, physics: false });
+        for (var b = 0; b < 3; b++) {
+          var by = y + h * (0.55 + b * 0.15), bl = 1 + rng() * 1.2, ba = rng() * 360;
+          g.cylinder({ at: [x + Math.cos(ba * Math.PI / 180) * bl * 0.4, by + 0.3, z + Math.sin(ba * Math.PI / 180) * bl * 0.4], radius: 0.05, height: bl, rotation: [0, -ba, 55], material: DRESS_MAT.bark, physics: false });
+        }
+      }
+    }
+    // Telegraph poles along the crest, and the burnt-out shell of a farmhouse on it.
+    for (var px = -90; px <= 90; px += 22) g.cylinder({ at: [px, 18 + 4, 131], radius: 0.12, height: 8, material: DRESS_MAT.bark, physics: false });
+    g.box({ at: [-34, 19.6, 134], size: [9, 3.2, 7], material: MAT.soot, physics: false });
+    g.box({ at: [-34, 21.6, 134], size: [9.4, 0.3, 7.4], rotation: [0, 0, 8], material: MAT.soot, physics: false });
+    props.fires.push({ at: [-34, 21.4, 134], r: 4, rate: 6, size: 2.2 });
+    props.smoke.push({ at: [-34, 22, 134], r: 3, rate: 1.6, size: 10, life: 16 });
+  }
+
+  // The rooms of the command post: sandbagged windows, ammunition stacked, somewhere to sit.
+  function furnishFloor(K, d, y) {
+    var x0 = HQ.x0, x1 = HQ.x1, z1 = HQ.z1, rng = rngOf(100 + d.level);
+    var bag = { color: 0x9a8a62, texture: 'canvas', roughness: 0.98, metalness: 0, uvScale: 2 };
+    if (d.level > 0) {
+      // A row of bags under the front windows.
+      for (var wx = x0 + 1.6; wx < x1 - 1.6; wx += 3.0) {
+        for (var k = 0; k < 2; k++) dbox(K, [wx + 0.65, y + 0.15 + k * 0.28, z1 - 0.62], [1.35, 0.26, 0.42], [0, (rng() - 0.5) * 6, 0], bag);
+      }
+    }
+    // Crates of ammunition stacked against the back wall.
+    var cz = HQ.z0 + 0.7;
+    for (var c = 0; c < 3; c++) {
+      var cx = -2.4 + c * 0.9 + (rng() - 0.5) * 0.2;
+      for (var h = 0; h < 1 + Math.floor(rng() * 3); h++) dbox(K, [cx, y + 0.21 + h * 0.42, cz], [0.8, 0.4, 0.5], [0, (rng() - 0.5) * 8, 0], MAT.green);
+    }
+    // Two folding chairs and a shelf of supplies.
+    for (var ch = 0; ch < 2; ch++) {
+      var px = d.map[0] + (ch ? 1.2 : -1.2), pz = d.map[1] + 0.8;
+      dbox(K, [px, y + 0.45, pz], [0.42, 0.04, 0.42], null, MAT.metal);
+      dbox(K, [px, y + 0.7, pz + 0.2], [0.42, 0.45, 0.03], null, MAT.metal);
+      for (var lg = 0; lg < 4; lg++) dbox(K, [px + (lg % 2 ? 0.18 : -0.18), y + 0.22, pz + (lg > 1 ? 0.18 : -0.18)], [0.025, 0.44, 0.025], null, MAT.metal);
+    }
+    dbox(K, [x0 + 0.5, y + 0.9, HQ.z0 + 4.5], [0.4, 1.8, 1.6], null, MAT.wood);
+    for (var sb = 0; sb < 3; sb++) dbox(K, [x0 + 0.5, y + 0.45 + sb * 0.5, HQ.z0 + 4.5], [0.38, 0.3, 1.4 - sb * 0.2], null, sb % 2 ? MAT.green : MAT.sand);
   }
 
   /* ================================================================
