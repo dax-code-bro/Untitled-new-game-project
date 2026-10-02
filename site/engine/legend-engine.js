@@ -2333,6 +2333,9 @@ const TextureLib = {
        made of. Snow, paint and glass are the three that stay pale and
        DO take a tint, so they are not in here. */
     'asphalt', 'setts', 'corrugated', 'pantile', 'gravel', 'mud',
+    /* The campaign's cloth: a printed camouflage and a painted mask carry
+       their own colours, the way the floaties do. */
+    'camo', 'flameknit',
   ]),
 
   normalStrength: {
@@ -2351,6 +2354,7 @@ const TextureLib = {
     /* Enough relief to give each toy an edge and not so much that the
        ripple under them turns into facets. */
     floaties: 1.0,
+    camo: 1.3, flameknit: 1.4, skulltattoo: 1.0,
     /* ---- the gun set ----
        These are looked at from thirty centimetres rather than three
        metres, so the relief has to survive being magnified rather than
@@ -3558,6 +3562,145 @@ const TextureLib = {
       c.rough = clamp(0.93 - round * 0.04 + (fuzz - 0.5) * 0.05, 0.78, 1);
       c.ao = 0.62 + round * 0.38;
       c.h = round * 0.9 + (fuzz - 0.5) * 0.12;
+    },
+
+    /* WOODLAND CAMOUFLAGE: four colours in interlocking blobs, the US
+       pattern of the period -- light green, field drab, forest green and
+       black, on a ripstop weave. Blobs, not noise: a camouflage is shapes
+       with edges, printed one colour at a time, and a smooth fbm blend
+       reads as a stain. Each colour is its own threshold of its own noise
+       field, stretched horizontally the way the printed pattern is. */
+    camo(u, v, n, c) {
+      const f1 = n.fbm(u * 3.2, v * 5.0, 7.1, 4);
+      const f2 = n.fbm(u * 3.6, v * 5.6, 31.7, 4);
+      const f3 = n.fbm(u * 5.2, v * 8.0, 55.3, 3);
+      let r = 0.42, g = 0.44, b = 0.30;                         // light green ground
+      if (f1 > 0.05) { r = 0.36; g = 0.29; b = 0.20; }          // field drab
+      if (f2 > 0.10) { r = 0.20; g = 0.25; b = 0.16; }          // forest green
+      if (f3 > 0.34) { r = 0.07; g = 0.07; b = 0.065; }         // black
+      const gu = u * 180, gv = v * 180;
+      const weave = (Math.abs(Math.sin(gu * Math.PI)) + Math.abs(Math.sin(gv * Math.PI))) * 0.5;
+      const grid = (Math.abs(((gu / 6) % 1) - 0.5) < 0.05 || Math.abs(((gv / 6) % 1) - 0.5) < 0.05) ? 1 : 0;
+      const fuzz = n.fbm(u * 90, v * 90, 3.3, 2) * 0.5 + 0.5;
+      const k = 0.92 + weave * 0.08 + grid * 0.04 + (fuzz - 0.5) * 0.08;
+      c.r = r * k; c.g = g * k; c.b = b * k;
+      c.metal = 0;
+      c.rough = clamp(0.88 + (fuzz - 0.5) * 0.08, 0.75, 1);
+      c.ao = 0.86 + weave * 0.14;
+      c.h = 0.5 + weave * 0.25 + grid * 0.12;
+    },
+
+    /* A BLACK KNIT MASK, SPRAY-PAINTED WITH FIRE. Molotov's.
+
+       The knit underneath is the `knit` recipe's, taken down to near black.
+       The flames are tongues rising from the hem: a height threshold that
+       climbs and falls with a slow noise along the hem, torn at the tips by
+       a fast one, so each tongue licks up to its own point. Inside a tongue
+       the colour runs yellow at the root, orange through the body and red
+       at the ragged edge -- the order a real flame burns in, and the order
+       a man with three cans of paint would lay it down. Paint sits on the
+       wool, so where it is the knit's relief is halved and the surface is
+       a little less matte; overspray speckles the black just outside. */
+    flameknit(u, v, n, c) {
+      // The wool at four times the knit recipe's own gauge: one tile of this goes round a whole head.
+      TextureLib.kinds.knit((u * 4) % 1, (v * 4) % 1, n, c);
+      const knitR = c.r;
+      c.r = c.g = c.b = knitR * 0.10;
+      const y = v;                                              // 0 at the hem, 1 at the crown (the head's UVs run up)
+      /* Eleven tongues round the head, each its own height and lean. Inside
+         a tongue the edge is a parabola from a wide root to a sharp tip, and
+         the edge wanders with a noise so no two are the same shape. */
+      const K = 11, gu = u * K, k = Math.floor(gu), fu = gu - k;
+      const hash = (i) => { const h = Math.sin((((i % K) + K) % K) * 127.1 + 31.7) * 43758.5453; return h - Math.floor(h); };
+      let best = 0, bestT = 2;
+      for (let d = -1; d <= 1; d++) {
+        const i = k + d, h = hash(i);
+        const height = 0.34 + h * 0.36;                          // root to tip
+        const lean = (hash(i + 5) - 0.5) * 0.9;
+        const t = y / height;                                    // 0 root .. 1 tip
+        if (t > 1.15) continue;
+        const centre = 0.5 + d + lean * t * t;                   // tips curl sideways
+        const wob = n.fbm(u * 30 + i * 3.1, y * 6, 5.3, 2) * 0.10;
+        const halfW = 0.62 * Math.pow(Math.max(0, 1 - t), 0.85) + wob;
+        const dx = Math.abs(fu - centre);
+        if (dx < halfW && t < 1) {
+          const edge = dx / Math.max(1e-3, halfW);               // 0 core .. 1 edge
+          const tt = Math.max(t, edge * 0.85);
+          if (tt < bestT) { bestT = tt; best = 1; }
+        }
+      }
+      if (best) {
+        const t = bestT;
+        let r, g, b;
+        if (t < 0.35) { const q = t / 0.35; r = 1.0; g = 0.88 - q * 0.22; b = 0.30 - q * 0.20; }
+        else if (t < 0.72) { const q = (t - 0.35) / 0.37; r = 1.0; g = 0.66 - q * 0.40; b = 0.10 - q * 0.06; }
+        else { const q = (t - 0.72) / 0.28; r = 0.94 - q * 0.22; g = 0.26 - q * 0.18; b = 0.04; }
+        const spray = n.fbm(u * 140, v * 140, 21.1, 2) * 0.5 + 0.5;
+        const cover = clamp(0.86 + spray * 0.20, 0, 1);
+        const lit = 0.80 + knitR * 0.35;
+        c.r = c.r * (1 - cover) + r * cover * lit;
+        c.g = c.g * (1 - cover) + g * cover * lit;
+        c.b = c.b * (1 - cover) + b * cover * lit;
+        c.rough = c.rough * 0.86;
+        c.h = 0.5 + (c.h - 0.5) * 0.5;
+      } else {
+        // Overspray: a few red specks in the black just above the tips.
+        const dot = n.fbm(u * 260, v * 260, 44.4, 1);
+        if (dot > 0.62 && y < 0.85) { c.r = 0.50; c.g = 0.09; c.b = 0.03; }
+      }
+    },
+
+    /* SKIN WITH A SKULL INKED INTO IT. Payback's shoulder.
+
+       The skin recipe's own texel, then a skull on the middle of the tile
+       in old black ink gone slightly blue-green in the skin, the way a
+       tattoo a few years old sits: cranium, two sockets, the nose, a jaw
+       with a row of teeth, and a pair of crossed bones behind it. The
+       material's colour still decides the skin tone, so this is a layer,
+       not a whole material: it only takes the skin DOWN where the ink is. */
+    skulltattoo(u, v, n, c) {
+      TextureLib.kinds.skin(u, v, n, c);
+      const x = (u - 0.5) / 0.40, y = (v - 0.48) / 0.40;       // skull space, y down
+      let ink = 0;
+      const line = (d, w) => Math.max(0, 1 - Math.abs(d) / w);
+      // Cranium and cheekbones: one outline, the top a circle, the jaw narrower.
+      const cr = Math.hypot(x / 0.78, (y + 0.18) / 0.72);
+      const jaw = Math.max(Math.abs(x) / 0.46, (y - 0.42) / 0.30, -(y - 0.20) / 0.30);
+      const outline = Math.min(Math.abs(cr - 1), y > 0.20 ? Math.abs(jaw - 1) : 9);
+      ink = Math.max(ink, line(outline, 0.07));
+      const inside = cr < 1 || (y > 0.20 && jaw < 1);
+      if (inside) {
+        // Sockets: filled, slightly angry slant.
+        for (const sx of [-1, 1]) {
+          const ex = x - sx * 0.32, ey = y - 0.02 + sx * ex * 0.12;
+          if (Math.hypot(ex / 0.23, ey / 0.19) < 1) ink = 1;
+        }
+        // The nose: an inverted heart, two small lobes.
+        if (y > 0.20 && y < 0.40 && Math.abs(x) < (0.40 - y) * 0.55 + 0.02) ink = 1;
+        // Teeth: a row of verticals across the jaw.
+        if (y > 0.50 && y < 0.70 && Math.abs(x) < 0.36) {
+          ink = Math.max(ink, line(((x * 5.5) % 1 + 1) % 1 - 0.5, 0.10));
+          ink = Math.max(ink, line(y - 0.60, 0.03));
+        }
+        // A little shading on the cranium, stippled.
+        const st = n.fbm(u * 160, v * 160, 2.2, 1);
+        if (y < -0.30 && x < -0.2 && st > 0.35) ink = Math.max(ink, 0.45);
+      } else {
+        // Crossed bones behind the skull.
+        for (const sx of [-1, 1]) {
+          const bx = x, by = y - 0.35, along = (bx * sx + by) * 0.707, across = (bx * sx - by) * 0.707;
+          if (Math.abs(along) < 1.05) ink = Math.max(ink, line(across, 0.09));
+          for (const end of [-1.05, 1.05]) {
+            const kx = along - end, ky = Math.abs(across) - 0.08;
+            if (Math.hypot(kx, ky) < 0.10) ink = 1;
+          }
+        }
+      }
+      const age = n.fbm(u * 40, v * 40, 8.8, 2) * 0.5 + 0.5;
+      ink = clamp(ink * (0.86 + age * 0.14), 0, 1);
+      c.r = c.r * (1 - ink * 0.86) + 0.05 * ink;
+      c.g = c.g * (1 - ink * 0.84) + 0.07 * ink;
+      c.b = c.b * (1 - ink * 0.80) + 0.08 * ink;
     },
 
     /* ==================================================================
@@ -19196,7 +19339,12 @@ class Audio {
       this.master.connect(this.ctx.destination);
       this.bus = this.ctx.createGain();
       this.bus.gain.value = this.sfxVolume;
-      this.bus.connect(this.bus);
+      /* Into the MASTER. This read `this.bus.connect(this.bus)` from the day the
+         sound-effects volume was added: every one of the fourteen paths in this
+         class ends at the bus, and a gain node fed back into itself with no
+         delay in the loop is a cycle WebAudio renders as silence -- so every
+         shot, impact and spoken line went nowhere. */
+      this.bus.connect(this.master);
     } catch (e) {
       this.enabled = false;
     }
@@ -24157,6 +24305,35 @@ function _headFinish(g, C, opts) {
     r *= 1 - line * 0.55; gg *= 1 - line * 0.60; b *= 1 - line * 0.58;
     const under = Math.max(bump(x, y, z, [EYE[0], EYE[1] - 0.013, EYE[2] + 0.005], [0.016, 0.006, 0.012]), bump(x, y, z, [-EYE[0], EYE[1] - 0.013, EYE[2] + 0.005], [0.016, 0.006, 0.012]));
     r *= 1 - under * 0.07; gg *= 1 - under * 0.08; b *= 1 - under * 0.05;
+    /* Eye black: grease paint round the sockets, under a mask's eye port. A wide soft ring over the lids,
+       the brow bone and the top of the cheek -- the eyes are their own mesh, so they stay clear. */
+    /* AGE: what eighty years writes on a face that the shape alone does not -- creases across the
+       forehead, crow's feet fanning from the outer corners of the eyes, hollows under them and down
+       the cheeks, and the skin a little blotchier and paler. Scaled from fifty (nothing) up. */
+    const aged = opts.age != null ? Math.max(0, Math.min(1, (opts.age - 50) / 30)) : 0;
+    if (aged > 0) {
+      const fy = (y - EYE[1] - 0.030) / 0.026;                 // 0 at the brow, 1 at the hairline
+      if (fy > 0 && fy < 1 && z > 0.035 && Math.abs(x) < 0.050) {
+        const crease = Math.pow(Math.abs(Math.sin(fy * Math.PI * 3.5 + x * 9)), 10) * (1 - Math.abs(x) / 0.05);
+        r *= 1 - crease * 0.20 * aged; gg *= 1 - crease * 0.22 * aged; b *= 1 - crease * 0.20 * aged;
+      }
+      const ax = Math.abs(x) - EYE[0] - 0.020, ay = y - EYE[1];
+      if (ax > 0 && ax < 0.018 && Math.abs(ay) < 0.014 && z > 0.02) {
+        const fan = Math.pow(Math.abs(Math.sin(Math.atan2(ay, ax) * 7)), 8) * (1 - ax / 0.018);
+        r *= 1 - fan * 0.22 * aged; gg *= 1 - fan * 0.24 * aged; b *= 1 - fan * 0.22 * aged;
+      }
+      const hol = Math.max(bump(Math.abs(x), y, z, [EYE[0], EYE[1] - 0.020, EYE[2] - 0.002], [0.020, 0.008, 0.014]),
+        bump(Math.abs(x), y, z, [0.034, -0.036, 0.062], [0.012, 0.024, 0.02]) * 0.7);
+      r *= 1 - hol * 0.14 * aged; gg *= 1 - hol * 0.16 * aged; b *= 1 - hol * 0.12 * aged;
+      const spot = Math.max(0, Math.sin(x * 410) * Math.sin(y * 370) * Math.sin(z * 290) - 0.75) * 4;
+      r *= 1 - spot * 0.10 * aged; gg *= 1 - spot * 0.13 * aged; b *= 1 - spot * 0.16 * aged;
+    }
+    if (opts.eyeBlack) {
+      // bump() is 0.2 at one radius, so the radius here is the inner edge of the fade, not the outer.
+      const eb = Math.min(1, 3.2 * Math.max(bump(Math.abs(x), y, z, [EYE[0], EYE[1] + 0.002, EYE[2]], [0.036, 0.026, 0.034]),
+        bump(Math.abs(x), y, z, [EYE[0] * 0.5, EYE[1] - 0.004, EYE[2] + 0.008], [0.024, 0.018, 0.026])));
+      r *= 1 - eb * 0.90; gg *= 1 - eb * 0.90; b *= 1 - eb * 0.88;
+    }
     // Inside the nostrils: shade that the slot alone is too shallow to make.
     const nos = Math.max(bump(x, y, z, [0.0058 * nW, tip[1] - 0.0102, tip[2] - 0.0110], [0.0030, 0.0022, 0.0042]), bump(x, y, z, [-0.0058 * nW, tip[1] - 0.0102, tip[2] - 0.0110], [0.0030, 0.0022, 0.0042]));
     r *= 1 - nos * 0.55; gg *= 1 - nos * 0.62; b *= 1 - nos * 0.62;
@@ -27871,6 +28048,7 @@ class Engine {
       seed: opts.seed || 5, type: opts.faceType || (heroOutfit ? bodyOpts.frame : 'male'), face: opts.faceShape || null,
       skinColor: (opts.skin && typeof opts.skin === 'object' && opts.skin.color != null) ? opts.skin.color : 0xc8a080,
       build: heroOutfit ? (opts.girth || 1) : (opts.build || 1),
+      age: opts.age,
     } : null;
     if (mhFig) {
       const bk = 'mh:' + JSON.stringify(figOpts) + ':' + scale.toFixed(3) + ':' + (opts.fit || '') + ':' + (heroOutfit ? opts.outfit : '');
@@ -28149,13 +28327,13 @@ class Engine {
       const hairOf = opts.hairStyle || (typeof opts.hair === 'string' ? opts.hair : undefined);
       const skinCol = (opts.skin && typeof opts.skin === 'object' && opts.skin.color != null) ? opts.skin.color : 0xc8a080;
       const hk = [opts.faceKey || '', opts.seed || 5, figOpts ? figOpts.type + ':' + figOpts.build : opts.faceType || 'male', opts.eyeColor || 0, hairOf || '',
-        opts.hairColor || 0, opts.brows || '', opts.browColor || 0, opts.beard || '', opts.beardColor || 0, skinCol].join(':');
+        opts.hairColor || 0, opts.brows || '', opts.browColor || 0, opts.beard || '', opts.beardColor || 0, skinCol, opts.eyeBlack ? 'eb' : '', opts.age || ''].join(':');
       const headCache = Engine._sdfHeads || (Engine._sdfHeads = new Map());
       const headGeo = living
         ? (headCache.get(hk) || headCache.set(hk, makeMhHeadGeometry({ seed: opts.seed || 5, type: figOpts ? figOpts.type : opts.faceType, build: figOpts ? figOpts.build : 1,
           face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
           hairStyle: hairOf, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
-          beard: opts.beard, beardColor: opts.beardColor })).get(hk))
+          beard: opts.beard, beardColor: opts.beardColor, eyeBlack: opts.eyeBlack, age: opts.age })).get(hk))
         : makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot,
           face: opts.faceShape || null, hair: opts.hair, eyeColor: opts.eyeColor });
       /* ONE UPLOAD PER FACE, AND THREE OF THEM. The field-built head is
@@ -28190,7 +28368,7 @@ class Engine {
                 g2 = makeMhHeadGeometry({ seed: opts.seed || 5, type: figOpts ? figOpts.type : opts.faceType, build: figOpts ? figOpts.build : 1,
                   face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
                   hairStyle: hairOf, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
-                  beard: opts.beard, beardColor: opts.beardColor, resolution: src });
+                  beard: opts.beard, beardColor: opts.beardColor, eyeBlack: opts.eyeBlack, age: opts.age, resolution: src });
                 headCache.set(hk + tag, g2);
               }
             }
@@ -32959,6 +33137,362 @@ function buildKit(skeleton, list, opts) {
   }
   return out;
 }
+
+
+/* ─────────── 95e-cast.js ─────────── */
+/* ============================================================
+   THE CAST -- story characters, one spec each.
+
+   The seven operators are a table of faces in fatigues and kit: good
+   for a multiplayer roster, and wrong for a story, whose people are
+   particular. Payback is a woman in her own clothes under a plate
+   carrier with a skull on her shoulder; Molotov has never been seen
+   without a ski mask he painted with fire himself; Lincoln is bald and
+   in camouflage with a pistol on his hip. None of that was buildable:
+   operator() always dresses fatigues, every mask is plain black, there
+   is no camouflage, no tattoo and no woman among the seven.
+
+   castMember(spec) builds one of these from a single description. It
+   is operator() with every choice opened up, and it reuses every piece
+   operator() is made of -- the MakeHuman figure and head, the fitted
+   kit (95c), the balaclava cut from the head's own surface (95b) --
+   so a cast member stands, moves, speaks and is lit exactly the way
+   an operator is.
+
+   A SPEC
+     id, name
+     frame       'male' | 'female' | 'heavy'
+     face        an operator face sculpt to start from ('alpha', ...)
+     seed        varies the figure within the frame
+     height      metres; build  1 = average, above is broader
+     skin        an operator skin name ('tan', ...) or a hex colour
+     hair        style name or null (bald); hairColor
+     brows, browColor, beard, beardColor, eyeColor, eyeBlack (bool)
+
+     outfit      civilian clothes: a name from the outfit table, or one
+                 described as { top, under, bottom, shoes, belt }
+     fatigues    OR a uniform: an operator cloth name, or a material
+                 (e.g. { texture: 'camo', ... })
+     gear        kit pieces: carrier pouches admin belt knees helmet ...
+     gearOpts    { pouches, holster, nvg, kitColor }
+     mask        'balaclava' (head with an eye port) | 'gaiter' (the
+                 lower face, nose to chin) | null
+     maskMaterial  what it is made of; plain black knit if not given
+     mic         a boom microphone off the mask (or the head)
+     tattoo      'skull' on the left shoulder
+     voice       carried for the director: { pitch, rate, tract }
+   ============================================================ */
+
+/* Civilian outfits named in a spec are registered into the outfit table
+   under their own key, because the clothed body builder (94c/94h) finds
+   its outfit by name and caches the dressed body by it. */
+function castOutfitKey(spec) {
+  if (!spec.outfit) return null;
+  if (typeof spec.outfit === 'string') return spec.outfit;
+  const key = 'cast:' + spec.id;
+  if (typeof OUTFITS !== 'undefined') {
+    const o = spec.outfit;
+    OUTFITS[key] = {
+      top: Object.assign({ color: 0x8a8578, collar: 0.512, hem: -0.055, sleeve: 0.22, tears: 0 }, o.top || {}),
+      under: o.under ? Object.assign({ collar: 0.500, hem: -0.08 }, o.under) : undefined,
+      bottom: Object.assign({ color: 0x3e4a62, hem: 0.99, tears: 0, knees: false }, o.bottom || {}),
+      shoes: Object.assign({ kind: 'boot', color: 0x2c241c }, o.shoes || {}),
+      hat: null, wire: false,
+      belt: o.belt, badge: o.badge,
+    };
+    if (!OUTFITS[key].under) delete OUTFITS[key].under;
+  }
+  return key;
+}
+
+/* A lower-face mask: nose to under the chin, all the way round the back
+   of the head below the ears -- a gaiter pulled up, which is what a
+   "long mask" with nothing over the eyes is. Same surface trick as the
+   balaclava (offsetPatch), so it fits this face and moves with the jaw. */
+function castGaiter(headGeo) {
+  const keep = (u, w, xn) => {
+    if (u < 0.02) return false;                  // down over the neck
+    // Over the bridge of the nose in front, lower behind the ears.
+    const top = 0.505 - (1 - w) * 0.10;
+    return u < top;
+  };
+  return offsetPatch(headGeo, keep, 0.0058, null);
+}
+
+/* A ski mask: the whole head, crown included -- a balaclava cut for a
+   helmet stops at the crown, and on a man who wears no helmet that left
+   a bald patch of scalp on top -- and down over the neck, with the eye
+   port the balaclava has. */
+function castSkiMask(headGeo) {
+  const keep = (u, w, xn) => {
+    if (u < 0.02) return false;
+    if (u > 0.520 && u < 0.640 && w > 0.80 && xn < 0.62) return false;
+    return true;
+  };
+  return offsetPatch(headGeo, keep, 0.0056, null);
+}
+
+/* A boom microphone: a thin arm from below the ear round to the corner
+   of the mouth, with a foam head on the end. In the head's frame, scaled
+   with it. */
+function castMic(s) {
+  const g = new Geometry();
+  const pts = [[0.090, -0.010, 0.000], [0.094, -0.030, 0.042], [0.078, -0.054, 0.088], [0.048, -0.064, 0.116]];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i].map((v) => v * s), b = pts[i + 1].map((v) => v * s);
+    const st = (p, q) => {
+      const dx = q[0] - p[0], dy = q[1] - p[1], dz = q[2] - p[2], L = Math.hypot(dx, dy, dz) || 1;
+      const t = new Vec3(dx / L, dy / L, dz / L);
+      const up = Math.abs(t.y) > 0.9 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
+      const u = new Vec3().crossVectors(up, t).normalize(), v = new Vec3().crossVectors(t, u).normalize();
+      return { u, v };
+    };
+    const f = st(a, b);
+    sweepPath(g, [
+      { o: new Vec3(a[0], a[1], a[2]), u: f.u, v: f.v, pts: ringOutline(0.0021 * s, 8) },
+      { o: new Vec3(b[0], b[1], b[2]), u: f.u, v: f.v, pts: ringOutline(0.0021 * s, 8) },
+    ], i === 0, false);
+  }
+  // The pivot at the ear and the foam at the mouth.
+  const ear = pts[0].map((v) => v * s), tip = pts[pts.length - 1].map((v) => v * s);
+  sweepPath(g, [
+    { o: new Vec3(ear[0] - 0.014 * s, ear[1], ear[2]), u: new Vec3(0, 1, 0), v: new Vec3(0, 0, 1), pts: ringOutline(0.030 * s, 16) },
+    { o: new Vec3(ear[0] + 0.004 * s, ear[1], ear[2]), u: new Vec3(0, 1, 0), v: new Vec3(0, 0, 1), pts: ringOutline(0.027 * s, 16) },
+  ], true, true);
+  const fo = (dx) => ({ o: new Vec3(tip[0] + dx * 0.010 * s, tip[1], tip[2] + dx * 0.004 * s), u: new Vec3(0, 1, 0), v: new Vec3(0, 0, 1),
+    pts: ringOutline((dx === 0 ? 0.0075 : 0.0055) * s, 12) });
+  sweepPath(g, [fo(-1), fo(0), fo(1)], true, true);
+  g.finalize();
+  return g;
+}
+
+/* A tattoo, as a skinned patch of the body's own surface lifted a hair
+   off it: the triangles of the upper arm's outside face round the
+   deltoid, carried with the body's skin weights so it rides the arm,
+   and laid out flat so the inked recipe (40-material.js `skulltattoo`)
+   lands on it the right way up. */
+function castTattooPatch(bgeo, skeleton, side) {
+  const P = bgeo.positions, N = bgeo.normals, I = bgeo.indices;
+  const J = bgeo.joints, Wt = bgeo.weights;
+  if (!P || !N || !I || !J || !Wt) return null;
+  /* Found by the SKIN WEIGHTS, not by where the skeleton says the arm is: the dressed body's arm
+     does not sit exactly on the bone line, and a box placed off the bones found no skin at all. The
+     upper arm is every vertex bound mostly to it; the patch is the top of that, on its outside. */
+  const arm = skeleton.index(side > 0 ? 'upperArmL' : 'upperArmR');
+  const n = P.length / 3;
+  const wOn = (v) => { let w = 0; for (let q = 0; q < 4; q++) if (J[v * 4 + q] === arm) w += Wt[v * 4 + q]; return w; };
+  let yTop = -1e9, yBot = 1e9, cx = 0, cz = 0, cn = 0;
+  const onArm = new Uint8Array(n);
+  for (let v = 0; v < n; v++) {
+    if (wOn(v) < 0.55) continue;
+    onArm[v] = 1;
+    const y = P[v * 3 + 1];
+    if (y > yTop) yTop = y;
+    if (y < yBot) yBot = y;
+    cx += P[v * 3]; cz += P[v * 3 + 2]; cn++;
+  }
+  if (cn < 20) return null;
+  cx /= cn; cz /= cn;
+  const len = yTop - yBot;
+  const yc = yTop - len * 0.30, R = Math.max(0.035, len * 0.22);
+  const inside = new Uint8Array(n), U = new Float32Array(n), V = new Float32Array(n);
+  for (let v = 0; v < n; v++) {
+    if (!onArm[v] && wOn(v) < 0.3) continue;
+    const y = P[v * 3 + 1], z = P[v * 3 + 2];
+    const facing = N[v * 3] * side;
+    if (Math.abs(y - yc) < R && Math.abs(z - cz) < R && facing > 0.2 && (P[v * 3] - cx) * side > 0) {
+      inside[v] = 1;
+      U[v] = 0.5 + (z - cz) / (2 * R);
+      V[v] = 0.5 + (yc - y) / (2 * R);
+    }
+  }
+  if (typeof window !== 'undefined') { let k = 0; for (let v = 0; v < n; v++) k += inside[v]; window.__tattooVerts = k; }
+  const g = new Geometry();
+  const remap = new Int32Array(n).fill(-1);
+  const joints = [], weights = [];
+  for (let t = 0; t < I.length; t += 3) {
+    const a = I[t], b = I[t + 1], cc = I[t + 2];
+    if (!inside[a] || !inside[b] || !inside[cc]) continue;
+    for (const v of [a, b, cc]) {
+      if (remap[v] < 0) {
+        remap[v] = g.positions.length / 3;
+        const k = 0.0007;
+        g.positions.push(P[v * 3] + N[v * 3] * k, P[v * 3 + 1] + N[v * 3 + 1] * k, P[v * 3 + 2] + N[v * 3 + 2] * k);
+        g.normals.push(N[v * 3], N[v * 3 + 1], N[v * 3 + 2]);
+        // Seen from outside the left arm, +Z (the front) is on the viewer's right.
+        g.uvs.push(side > 0 ? 1 - U[v] : U[v], V[v]);
+        for (let q = 0; q < 4; q++) { joints.push(J[v * 4 + q]); weights.push(Wt[v * 4 + q]); }
+      }
+      g.indices.push(remap[v]);
+    }
+  }
+  if (!g.indices.length) return null;
+  g.finalize();
+  g.joints = new Float32Array(joints);
+  g.weights = new Float32Array(weights);
+  return g;
+}
+
+Engine.prototype.castMember = function (spec, opts = {}) {
+  const frame = spec.frame || 'male';
+  const height = spec.height || (frame === 'female' ? 1.68 : 1.79);
+  const scale = spec.scale || height / 1.80;
+  const build = spec.build || 1;
+  const skinCol = typeof spec.skin === 'number' ? spec.skin : (OP_SKIN[spec.skin] || OP_SKIN.tan);
+  const skin = { preset: 'skin', color: skinCol, roughness: 0.95, metalness: 0, uvScale: 12, subsurface: 0.50 };
+  const civ = castOutfitKey(spec);
+  const gear = (spec.gear || []).slice();
+  const covered = gear.includes('helmet') || spec.mask === 'balaclava';
+  const hairStyle = spec.hair === undefined ? 'crop' : spec.hair;
+  const base = Object.assign({}, opts, {
+    name: opts.name || ('cast-' + spec.id),
+    height: height * 0.985, radius: 0.32 * scale, scale, build,
+    faceType: frame,
+    faceShape: OP_FACE[spec.face] || OP_FACE.alpha,
+    faceKey: 'cast:' + spec.id,
+    hair: !!hairStyle,
+    hairStyle: hairStyle && covered ? 'crop' : hairStyle,
+    hairColor: spec.hairColor != null ? spec.hairColor : 0x1a1512,
+    beard: spec.beard || null, beardColor: spec.beardColor != null ? spec.beardColor : spec.hairColor,
+    brows: spec.brows, browColor: spec.browColor != null ? spec.browColor : spec.hairColor,
+    age: spec.age,
+    eyeColor: spec.eyeColor != null ? spec.eyeColor : 0x3b2a1c,
+    eyeBlack: !!spec.eyeBlack,
+    seed: spec.seed || 5,
+    skin,
+  });
+  if (civ) {
+    /* The clothed builder at zero decay: the same route Bunker Nine dresses its heroes by. `zombie`
+       picks the builder and `rot: 0` says alive -- see heroModel in bunker-nine.js. */
+    Object.assign(base, {
+      zombie: true, rot: 0, blood: false, face: opts.face || 'static',
+      zombieBuild: frame, girth: 1 + (build - 1) * 0.55, outfit: civ,
+      material: skin,
+      clothMaterial: { color: 0xffffff, texture: 'fabric', roughness: 0.95, metalness: 0, uvScale: 2.4 },
+    });
+  } else {
+    const cloth = typeof spec.fatigues === 'string' ? OP_CLOTH[spec.fatigues] : spec.fatigues;
+    Object.assign(base, {
+      fit: 'fatigues',
+      material: cloth || OP_CLOTH.black,
+      boots: { color: 0x2c2c2d, texture: 'fabric', roughness: 0.92, metalness: 0, uvScale: 14 },
+    });
+  }
+  const c = this.character(base);
+  if (!c) return c;
+  c.cast = spec.id;
+  c.castSpec = spec;
+
+  /* The kit, fitted to the dressed body -- operator()'s own route. */
+  if (gear.length) {
+    let headPts = null;
+    const hgeo = c.head && c.head.__geo;
+    if (hgeo && hgeo.sdf) {
+      const hb = c.skeleton.bones[c.skeleton.index('head')].bindMatrix.e;
+      const off = c.head.localOffset || { x: 0, y: 0, z: 0 };
+      const sc = typeof c.head.scale === 'number' ? c.head.scale : (c.head.scale ? c.head.scale.x : 1);
+      const P = hgeo.positions, n = Math.floor(P.length / 12);
+      headPts = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        headPts[i * 3] = hb[12] + (off.x || 0) + P[i * 12] * sc;
+        headPts[i * 3 + 1] = hb[13] + (off.y || 0) + P[i * 12 + 1] * sc;
+        headPts[i * 3 + 2] = hb[14] + (off.z || 0) + P[i * 12 + 2] * sc;
+      }
+    }
+    const bgeo = c.mesh && this.geometryOf(c.mesh);
+    const torso = bgeo && bgeo.mh ? gearProfile(bgeo, scale) : null;
+    const kopts = Object.assign({ build, stature: scale, headPts, torso,
+      outfit: typeof spec.fatigues === 'string' ? spec.fatigues : 'black' }, spec.gearOpts || {});
+    const kit = torso ? buildKit(c.skeleton, gear, Object.assign(kopts, { body: bgeo }))
+      : buildGear(c.skeleton, gear, kopts);
+    c.gear = [];
+    for (const part of kit) {
+      const gm = new GpuMesh(this.gl, part.geometry);
+      gm.__key = 'gear:cast:' + spec.id + ':' + part.name;
+      (this._geoByKey || (this._geoByKey = new Map())).set(gm.__key, part.geometry);
+      const ga = new Actor(this, {
+        name: 'gear-' + part.name, mesh: gm, material: this.material(part.material),
+        skeleton: c.skeleton, animator: c.animator, controller: c.controller, body: c.controller.body,
+        boundRadius: 1.4 * scale,
+      });
+      ga.visualOffset = new Vec3(0, 0, 0);
+      ga.__geo = part.geometry;
+      if (part.far && part.vfar) {
+        const lodMesh = (geo, tag) => { const m = new GpuMesh(this.gl, geo); m.__key = gm.__key + tag; return m; };
+        ga.lods = [{ mesh: gm, from: 0 }, { mesh: lodMesh(part.far, ':far'), from: 6 }, { mesh: lodMesh(part.vfar, ':vfar'), from: 16 }];
+      }
+      this.actors.push(ga);
+      c.gear.push(ga);
+      (c.rigged || (c.rigged = [])).push(ga);
+    }
+  }
+
+  /* Head pieces cut from the head's own surface, or hung on the head bone. */
+  const onHead = (geo, key, material, lodFrom) => {
+    const m = new GpuMesh(this.gl, geo);
+    m.__key = key;
+    (this._geoByKey || (this._geoByKey = new Map())).set(key, geo);
+    m.setupInstancing(20);
+    const a = new Actor(this, {
+      name: key.split(':')[0], mesh: m, material: this.material(material),
+      parent: c, parentBone: c.skeleton.index('head'),
+      offset: c.head.localOffset, scale: c.head.scale,
+      boundRadius: 0.45 * scale,
+    });
+    if (lodFrom && c.head.lods) {
+      a.lods = c.head.lods.map((l, i) => {
+        if (i === 0) return { mesh: m, from: l.from };
+        const lg = this.geometryOf(l.mesh);
+        const lb = lg ? lodFrom(lg) : null;
+        if (!lb || !lb.indices.length) return { mesh: m, from: l.from };
+        const lm = new GpuMesh(this.gl, lb);
+        lm.__key = key + ':' + i;
+        lm.setupInstancing(20);
+        return { mesh: lm, from: l.from };
+      });
+    }
+    this.actors.push(a);
+    return a;
+  };
+  if (spec.mask && c.head) {
+    const hg = this.geometryOf(c.head.mesh);
+    const cut = spec.mask === 'gaiter' ? (g) => castGaiter(g) : (g) => castSkiMask(g);
+    const mg = hg ? cut(hg) : null;
+    if (mg && mg.indices.length) {
+      c.mask = onHead(mg, 'mask:cast:' + spec.id, spec.maskMaterial || GEAR_MAT.black, cut);
+      if (spec.mask === 'balaclava') c.balaclava = c.mask;
+    }
+  }
+  if (spec.mic && c.head) {
+    const hs = typeof c.head.scale === 'number' ? c.head.scale : (c.head.scale ? c.head.scale.x : 1);
+    c.mic = onHead(castMic(1 / Math.max(0.2, hs)), 'mic:cast:' + spec.id,
+      { color: 0x1d1e20, texture: 'polymer', roughness: 0.55, metalness: 0, uvScale: 4 });
+  }
+
+  /* The tattoo, on the left shoulder. */
+  if (spec.tattoo && c.mesh) {
+    /* The bare skin of a clothed body is not in the body mesh -- that is the garment -- but in the
+       `neck` piece the dresser cuts for everything the clothes leave showing (94h), arms included. */
+    const skinGeo = (c.neck && c.neck.mesh && this.geometryOf(c.neck.mesh)) || this.geometryOf(c.mesh);
+    const tg = skinGeo ? castTattooPatch(skinGeo, c.skeleton, 1) : null;
+    if (tg) {
+      const tm = new GpuMesh(this.gl, tg);
+      tm.__key = 'tattoo:cast:' + spec.id;
+      (this._geoByKey || (this._geoByKey = new Map())).set(tm.__key, tg);
+      const ta = new Actor(this, {
+        name: 'tattoo', mesh: tm,
+        material: this.material({ color: skinCol, texture: 'skulltattoo', roughness: 0.92, metalness: 0, uvScale: 1, subsurface: 0.45 }),
+        skeleton: c.skeleton, animator: c.animator, controller: c.controller, body: c.controller.body,
+        boundRadius: 1.4 * scale,
+      });
+      ta.visualOffset = new Vec3(0, 0, 0);
+      this.actors.push(ta);
+      c.tattoo = ta;
+      (c.rigged || (c.rigged = [])).push(ta);
+    }
+  }
+  return c;
+};
 
 
 /* ─────────── 96-pistol.js ─────────── */
@@ -37732,6 +38266,11 @@ const ARM_MAT = {
   walnut: { color: 0xc2c2c0, texture: 'walnut', roughness: 1, metalness: 0, uvScale: 2.2 },
   copper: { color: 0xffffff, texture: 'copper', roughness: 1, metalness: 1, uvScale: 3 },
   brass: { color: 0xffffff, texture: 'brass', roughness: 1, metalness: 1, uvScale: 3 },
+  /* Bronze: the brass recipe taken darker and redder, as a cerakote or a plated bronze finish on a
+     pistol is -- not the bright yellow of a cartridge case. */
+  bronze: { color: 0x9a7650, texture: 'metal', roughness: 0.40, metalness: 1 },
+  // Gold plate: the brass recipe pushed to a richer yellow, and polished.
+  gold: { color: 0xffe2a0, texture: 'brass', roughness: 0.7, metalness: 1, uvScale: 3 },
   glow: { color: 0x9fe8ff, texture: 'smooth', roughness: 0.30, metalness: 0, emissive: 0x54c8ff, emissiveStrength: 1.5 },
   glass: { color: 0xb6c6cc, texture: 'smooth', roughness: 0.12, metalness: 0, opacity: 0.42 },
   /* Smoked polymer, for a magazine you are meant to see the rounds
@@ -42864,8 +43403,9 @@ const SERVICE_REAL_LENGTH = {
   mg34: 1219, pkm: 1173, rpd: 1037, bren: 1156, bar: 1214, dp28: 1266,
   // Pistols: corrected ahead of the grip only.
   p226: 196, tokarev: 194, g18: 186, luger: 222, blaze: 216, webley: 286, mauser: 288,
+  deagle: 267,
 };
-const SERVICE_PISTOLS = { p226: 1, tokarev: 1, g18: 1, luger: 1, blaze: 1, webley: 1, mauser: 1 };
+const SERVICE_PISTOLS = { p226: 1, tokarev: 1, g18: 1, luger: 1, blaze: 1, webley: 1, mauser: 1, deagle: 1 };
 
 /* The stretch for one gun, in K space (before fin() moves the origin).
    It is a piecewise-linear map along x: RIGID spans keep their length
@@ -44169,6 +44709,37 @@ Object.assign(SERVICE_KINDS, {
     mass: 0.92, bound: 0.20,
   }),
 });
+
+/* THE DESERT EAGLE. Payback's, in bronze.
+
+   A .50 Action Express, and everything about it is the size the round
+   asks for: a slide three centimetres wide, a grip that fills a man's
+   hand front to back, and a fixed six-inch barrel inside a slab-sided
+   block with a rail cut along its whole top -- one long flat-sided
+   brick with a handle under it, which is the outline nobody mistakes. It is
+   gas-operated with a rotating bolt, like a rifle, which is why the
+   slide is so long and the ejection port so far back. */
+Object.assign(SERVICE_KINDS, {
+  deagle: sideSpec({
+    ammoKind: 'pistolBottle',
+    muzzle: 0.214,
+    barrel: { rear: 0.022, r0: 0.0118, r1: 0.0112, bore: 0.0064, step: 0.120 },
+    rec: { rear: -0.062, front: 0.208, up: 0.0176, down: 0.0136, w: 0.0158, e: 4.6 },
+    port: { x0: 0.020, x1: 0.064, up: 0.0118, down: 0.0020 },
+    grip: { x: -0.040, y: -0.0180, len: 0.104, rake: 0.18,
+      deep: 1.06, wide: 1.22, e: 1.55, checkN: [6, 9], checkH: 0.0008 },
+    mag: { x: -0.040, y: -0.0200, len: 0.094, w: 0.0122, d: 0.0130, r: 0.026 },
+    // The rail along the top of the barrel block, end to end.
+    rail: { x0: 0.010, x1: 0.206 },
+    sight: { y: 0.0236, frontX: 0.202, rearX: -0.052 },
+    serr: { kind: 'vert', rear: [-0.058, -0.024], pitch: 0.0050, out: 0.0016, hw: 0.0018 },
+    hammer: { kind: 'spur', x: -0.064, y: 0.0112 },
+    mass: 2.0, bound: 0.22,
+  }),
+});
+// Bronze all over the steel, and a black polymer grip.
+SERVICE_KINDS.deagle.mats = Object.assign({}, SERVICE_KINDS.deagle.mats,
+  { steel: ARM_MAT.bronze, bolt: ARM_MAT.bronze, mag: ARM_MAT.bronze });
 
 /* ---------------- launchers ----------------
 

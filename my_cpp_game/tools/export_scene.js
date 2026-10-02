@@ -83,6 +83,13 @@ GAMES.armory = {
       if (!made) continue;
       list.push({ id: g.id, name: g.name, cls: g.cls, root: made.root || made, parts: null });
     }
+    // --only can also name guns outside the multiplayer table (the campaign's), built off the service table.
+    if (only) for (const id of only) {
+      if (list.some((e) => e.id === id) || id.indexOf('z-') === 0) continue;
+      let made = null;
+      try { made = G.serviceArm(id, { at: [0, -50, 0], physics: false }); } catch (e) { made = null; }
+      if (made) list.push({ id, name: id, cls: 'campaign', root: made.root || made, parts: null });
+    }
     const ZW = window.__T_WEAPONS || {};
     for (const id of ['blaze', 'paralyzer', 'obliterator', 'arc', 'arc2']) {
       if (only && !only.includes('z-' + id)) continue;

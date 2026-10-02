@@ -2461,8 +2461,9 @@ const SERVICE_REAL_LENGTH = {
   mg34: 1219, pkm: 1173, rpd: 1037, bren: 1156, bar: 1214, dp28: 1266,
   // Pistols: corrected ahead of the grip only.
   p226: 196, tokarev: 194, g18: 186, luger: 222, blaze: 216, webley: 286, mauser: 288,
+  deagle: 267,
 };
-const SERVICE_PISTOLS = { p226: 1, tokarev: 1, g18: 1, luger: 1, blaze: 1, webley: 1, mauser: 1 };
+const SERVICE_PISTOLS = { p226: 1, tokarev: 1, g18: 1, luger: 1, blaze: 1, webley: 1, mauser: 1, deagle: 1 };
 
 /* The stretch for one gun, in K space (before fin() moves the origin).
    It is a piecewise-linear map along x: RIGID spans keep their length

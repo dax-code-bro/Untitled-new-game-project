@@ -417,7 +417,12 @@ class Audio {
       this.master.connect(this.ctx.destination);
       this.bus = this.ctx.createGain();
       this.bus.gain.value = this.sfxVolume;
-      this.bus.connect(this.bus);
+      /* Into the MASTER. This read `this.bus.connect(this.bus)` from the day the
+         sound-effects volume was added: every one of the fourteen paths in this
+         class ends at the bus, and a gain node fed back into itself with no
+         delay in the loop is a cycle WebAudio renders as silence -- so every
+         shot, impact and spoken line went nowhere. */
+      this.bus.connect(this.master);
     } catch (e) {
       this.enabled = false;
     }

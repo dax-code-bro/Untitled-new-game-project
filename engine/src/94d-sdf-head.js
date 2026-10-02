@@ -296,6 +296,35 @@ function _headFinish(g, C, opts) {
     r *= 1 - line * 0.55; gg *= 1 - line * 0.60; b *= 1 - line * 0.58;
     const under = Math.max(bump(x, y, z, [EYE[0], EYE[1] - 0.013, EYE[2] + 0.005], [0.016, 0.006, 0.012]), bump(x, y, z, [-EYE[0], EYE[1] - 0.013, EYE[2] + 0.005], [0.016, 0.006, 0.012]));
     r *= 1 - under * 0.07; gg *= 1 - under * 0.08; b *= 1 - under * 0.05;
+    /* Eye black: grease paint round the sockets, under a mask's eye port. A wide soft ring over the lids,
+       the brow bone and the top of the cheek -- the eyes are their own mesh, so they stay clear. */
+    /* AGE: what eighty years writes on a face that the shape alone does not -- creases across the
+       forehead, crow's feet fanning from the outer corners of the eyes, hollows under them and down
+       the cheeks, and the skin a little blotchier and paler. Scaled from fifty (nothing) up. */
+    const aged = opts.age != null ? Math.max(0, Math.min(1, (opts.age - 50) / 30)) : 0;
+    if (aged > 0) {
+      const fy = (y - EYE[1] - 0.030) / 0.026;                 // 0 at the brow, 1 at the hairline
+      if (fy > 0 && fy < 1 && z > 0.035 && Math.abs(x) < 0.050) {
+        const crease = Math.pow(Math.abs(Math.sin(fy * Math.PI * 3.5 + x * 9)), 10) * (1 - Math.abs(x) / 0.05);
+        r *= 1 - crease * 0.20 * aged; gg *= 1 - crease * 0.22 * aged; b *= 1 - crease * 0.20 * aged;
+      }
+      const ax = Math.abs(x) - EYE[0] - 0.020, ay = y - EYE[1];
+      if (ax > 0 && ax < 0.018 && Math.abs(ay) < 0.014 && z > 0.02) {
+        const fan = Math.pow(Math.abs(Math.sin(Math.atan2(ay, ax) * 7)), 8) * (1 - ax / 0.018);
+        r *= 1 - fan * 0.22 * aged; gg *= 1 - fan * 0.24 * aged; b *= 1 - fan * 0.22 * aged;
+      }
+      const hol = Math.max(bump(Math.abs(x), y, z, [EYE[0], EYE[1] - 0.020, EYE[2] - 0.002], [0.020, 0.008, 0.014]),
+        bump(Math.abs(x), y, z, [0.034, -0.036, 0.062], [0.012, 0.024, 0.02]) * 0.7);
+      r *= 1 - hol * 0.14 * aged; gg *= 1 - hol * 0.16 * aged; b *= 1 - hol * 0.12 * aged;
+      const spot = Math.max(0, Math.sin(x * 410) * Math.sin(y * 370) * Math.sin(z * 290) - 0.75) * 4;
+      r *= 1 - spot * 0.10 * aged; gg *= 1 - spot * 0.13 * aged; b *= 1 - spot * 0.16 * aged;
+    }
+    if (opts.eyeBlack) {
+      // bump() is 0.2 at one radius, so the radius here is the inner edge of the fade, not the outer.
+      const eb = Math.min(1, 3.2 * Math.max(bump(Math.abs(x), y, z, [EYE[0], EYE[1] + 0.002, EYE[2]], [0.036, 0.026, 0.034]),
+        bump(Math.abs(x), y, z, [EYE[0] * 0.5, EYE[1] - 0.004, EYE[2] + 0.008], [0.024, 0.018, 0.026])));
+      r *= 1 - eb * 0.90; gg *= 1 - eb * 0.90; b *= 1 - eb * 0.88;
+    }
     // Inside the nostrils: shade that the slot alone is too shallow to make.
     const nos = Math.max(bump(x, y, z, [0.0058 * nW, tip[1] - 0.0102, tip[2] - 0.0110], [0.0030, 0.0022, 0.0042]), bump(x, y, z, [-0.0058 * nW, tip[1] - 0.0102, tip[2] - 0.0110], [0.0030, 0.0022, 0.0042]));
     r *= 1 - nos * 0.55; gg *= 1 - nos * 0.62; b *= 1 - nos * 0.62;

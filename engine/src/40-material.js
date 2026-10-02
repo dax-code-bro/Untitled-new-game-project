@@ -292,6 +292,9 @@ const TextureLib = {
        made of. Snow, paint and glass are the three that stay pale and
        DO take a tint, so they are not in here. */
     'asphalt', 'setts', 'corrugated', 'pantile', 'gravel', 'mud',
+    /* The campaign's cloth: a printed camouflage and a painted mask carry
+       their own colours, the way the floaties do. */
+    'camo', 'flameknit',
   ]),
 
   normalStrength: {
@@ -310,6 +313,7 @@ const TextureLib = {
     /* Enough relief to give each toy an edge and not so much that the
        ripple under them turns into facets. */
     floaties: 1.0,
+    camo: 1.3, flameknit: 1.4, skulltattoo: 1.0,
     /* ---- the gun set ----
        These are looked at from thirty centimetres rather than three
        metres, so the relief has to survive being magnified rather than
@@ -1517,6 +1521,145 @@ const TextureLib = {
       c.rough = clamp(0.93 - round * 0.04 + (fuzz - 0.5) * 0.05, 0.78, 1);
       c.ao = 0.62 + round * 0.38;
       c.h = round * 0.9 + (fuzz - 0.5) * 0.12;
+    },
+
+    /* WOODLAND CAMOUFLAGE: four colours in interlocking blobs, the US
+       pattern of the period -- light green, field drab, forest green and
+       black, on a ripstop weave. Blobs, not noise: a camouflage is shapes
+       with edges, printed one colour at a time, and a smooth fbm blend
+       reads as a stain. Each colour is its own threshold of its own noise
+       field, stretched horizontally the way the printed pattern is. */
+    camo(u, v, n, c) {
+      const f1 = n.fbm(u * 3.2, v * 5.0, 7.1, 4);
+      const f2 = n.fbm(u * 3.6, v * 5.6, 31.7, 4);
+      const f3 = n.fbm(u * 5.2, v * 8.0, 55.3, 3);
+      let r = 0.42, g = 0.44, b = 0.30;                         // light green ground
+      if (f1 > 0.05) { r = 0.36; g = 0.29; b = 0.20; }          // field drab
+      if (f2 > 0.10) { r = 0.20; g = 0.25; b = 0.16; }          // forest green
+      if (f3 > 0.34) { r = 0.07; g = 0.07; b = 0.065; }         // black
+      const gu = u * 180, gv = v * 180;
+      const weave = (Math.abs(Math.sin(gu * Math.PI)) + Math.abs(Math.sin(gv * Math.PI))) * 0.5;
+      const grid = (Math.abs(((gu / 6) % 1) - 0.5) < 0.05 || Math.abs(((gv / 6) % 1) - 0.5) < 0.05) ? 1 : 0;
+      const fuzz = n.fbm(u * 90, v * 90, 3.3, 2) * 0.5 + 0.5;
+      const k = 0.92 + weave * 0.08 + grid * 0.04 + (fuzz - 0.5) * 0.08;
+      c.r = r * k; c.g = g * k; c.b = b * k;
+      c.metal = 0;
+      c.rough = clamp(0.88 + (fuzz - 0.5) * 0.08, 0.75, 1);
+      c.ao = 0.86 + weave * 0.14;
+      c.h = 0.5 + weave * 0.25 + grid * 0.12;
+    },
+
+    /* A BLACK KNIT MASK, SPRAY-PAINTED WITH FIRE. Molotov's.
+
+       The knit underneath is the `knit` recipe's, taken down to near black.
+       The flames are tongues rising from the hem: a height threshold that
+       climbs and falls with a slow noise along the hem, torn at the tips by
+       a fast one, so each tongue licks up to its own point. Inside a tongue
+       the colour runs yellow at the root, orange through the body and red
+       at the ragged edge -- the order a real flame burns in, and the order
+       a man with three cans of paint would lay it down. Paint sits on the
+       wool, so where it is the knit's relief is halved and the surface is
+       a little less matte; overspray speckles the black just outside. */
+    flameknit(u, v, n, c) {
+      // The wool at four times the knit recipe's own gauge: one tile of this goes round a whole head.
+      TextureLib.kinds.knit((u * 4) % 1, (v * 4) % 1, n, c);
+      const knitR = c.r;
+      c.r = c.g = c.b = knitR * 0.10;
+      const y = v;                                              // 0 at the hem, 1 at the crown (the head's UVs run up)
+      /* Eleven tongues round the head, each its own height and lean. Inside
+         a tongue the edge is a parabola from a wide root to a sharp tip, and
+         the edge wanders with a noise so no two are the same shape. */
+      const K = 11, gu = u * K, k = Math.floor(gu), fu = gu - k;
+      const hash = (i) => { const h = Math.sin((((i % K) + K) % K) * 127.1 + 31.7) * 43758.5453; return h - Math.floor(h); };
+      let best = 0, bestT = 2;
+      for (let d = -1; d <= 1; d++) {
+        const i = k + d, h = hash(i);
+        const height = 0.34 + h * 0.36;                          // root to tip
+        const lean = (hash(i + 5) - 0.5) * 0.9;
+        const t = y / height;                                    // 0 root .. 1 tip
+        if (t > 1.15) continue;
+        const centre = 0.5 + d + lean * t * t;                   // tips curl sideways
+        const wob = n.fbm(u * 30 + i * 3.1, y * 6, 5.3, 2) * 0.10;
+        const halfW = 0.62 * Math.pow(Math.max(0, 1 - t), 0.85) + wob;
+        const dx = Math.abs(fu - centre);
+        if (dx < halfW && t < 1) {
+          const edge = dx / Math.max(1e-3, halfW);               // 0 core .. 1 edge
+          const tt = Math.max(t, edge * 0.85);
+          if (tt < bestT) { bestT = tt; best = 1; }
+        }
+      }
+      if (best) {
+        const t = bestT;
+        let r, g, b;
+        if (t < 0.35) { const q = t / 0.35; r = 1.0; g = 0.88 - q * 0.22; b = 0.30 - q * 0.20; }
+        else if (t < 0.72) { const q = (t - 0.35) / 0.37; r = 1.0; g = 0.66 - q * 0.40; b = 0.10 - q * 0.06; }
+        else { const q = (t - 0.72) / 0.28; r = 0.94 - q * 0.22; g = 0.26 - q * 0.18; b = 0.04; }
+        const spray = n.fbm(u * 140, v * 140, 21.1, 2) * 0.5 + 0.5;
+        const cover = clamp(0.86 + spray * 0.20, 0, 1);
+        const lit = 0.80 + knitR * 0.35;
+        c.r = c.r * (1 - cover) + r * cover * lit;
+        c.g = c.g * (1 - cover) + g * cover * lit;
+        c.b = c.b * (1 - cover) + b * cover * lit;
+        c.rough = c.rough * 0.86;
+        c.h = 0.5 + (c.h - 0.5) * 0.5;
+      } else {
+        // Overspray: a few red specks in the black just above the tips.
+        const dot = n.fbm(u * 260, v * 260, 44.4, 1);
+        if (dot > 0.62 && y < 0.85) { c.r = 0.50; c.g = 0.09; c.b = 0.03; }
+      }
+    },
+
+    /* SKIN WITH A SKULL INKED INTO IT. Payback's shoulder.
+
+       The skin recipe's own texel, then a skull on the middle of the tile
+       in old black ink gone slightly blue-green in the skin, the way a
+       tattoo a few years old sits: cranium, two sockets, the nose, a jaw
+       with a row of teeth, and a pair of crossed bones behind it. The
+       material's colour still decides the skin tone, so this is a layer,
+       not a whole material: it only takes the skin DOWN where the ink is. */
+    skulltattoo(u, v, n, c) {
+      TextureLib.kinds.skin(u, v, n, c);
+      const x = (u - 0.5) / 0.40, y = (v - 0.48) / 0.40;       // skull space, y down
+      let ink = 0;
+      const line = (d, w) => Math.max(0, 1 - Math.abs(d) / w);
+      // Cranium and cheekbones: one outline, the top a circle, the jaw narrower.
+      const cr = Math.hypot(x / 0.78, (y + 0.18) / 0.72);
+      const jaw = Math.max(Math.abs(x) / 0.46, (y - 0.42) / 0.30, -(y - 0.20) / 0.30);
+      const outline = Math.min(Math.abs(cr - 1), y > 0.20 ? Math.abs(jaw - 1) : 9);
+      ink = Math.max(ink, line(outline, 0.07));
+      const inside = cr < 1 || (y > 0.20 && jaw < 1);
+      if (inside) {
+        // Sockets: filled, slightly angry slant.
+        for (const sx of [-1, 1]) {
+          const ex = x - sx * 0.32, ey = y - 0.02 + sx * ex * 0.12;
+          if (Math.hypot(ex / 0.23, ey / 0.19) < 1) ink = 1;
+        }
+        // The nose: an inverted heart, two small lobes.
+        if (y > 0.20 && y < 0.40 && Math.abs(x) < (0.40 - y) * 0.55 + 0.02) ink = 1;
+        // Teeth: a row of verticals across the jaw.
+        if (y > 0.50 && y < 0.70 && Math.abs(x) < 0.36) {
+          ink = Math.max(ink, line(((x * 5.5) % 1 + 1) % 1 - 0.5, 0.10));
+          ink = Math.max(ink, line(y - 0.60, 0.03));
+        }
+        // A little shading on the cranium, stippled.
+        const st = n.fbm(u * 160, v * 160, 2.2, 1);
+        if (y < -0.30 && x < -0.2 && st > 0.35) ink = Math.max(ink, 0.45);
+      } else {
+        // Crossed bones behind the skull.
+        for (const sx of [-1, 1]) {
+          const bx = x, by = y - 0.35, along = (bx * sx + by) * 0.707, across = (bx * sx - by) * 0.707;
+          if (Math.abs(along) < 1.05) ink = Math.max(ink, line(across, 0.09));
+          for (const end of [-1.05, 1.05]) {
+            const kx = along - end, ky = Math.abs(across) - 0.08;
+            if (Math.hypot(kx, ky) < 0.10) ink = 1;
+          }
+        }
+      }
+      const age = n.fbm(u * 40, v * 40, 8.8, 2) * 0.5 + 0.5;
+      ink = clamp(ink * (0.86 + age * 0.14), 0, 1);
+      c.r = c.r * (1 - ink * 0.86) + 0.05 * ink;
+      c.g = c.g * (1 - ink * 0.84) + 0.07 * ink;
+      c.b = c.b * (1 - ink * 0.80) + 0.08 * ink;
     },
 
     /* ==================================================================

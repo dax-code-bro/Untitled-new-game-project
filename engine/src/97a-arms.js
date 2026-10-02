@@ -2624,6 +2624,11 @@ const ARM_MAT = {
   walnut: { color: 0xc2c2c0, texture: 'walnut', roughness: 1, metalness: 0, uvScale: 2.2 },
   copper: { color: 0xffffff, texture: 'copper', roughness: 1, metalness: 1, uvScale: 3 },
   brass: { color: 0xffffff, texture: 'brass', roughness: 1, metalness: 1, uvScale: 3 },
+  /* Bronze: the brass recipe taken darker and redder, as a cerakote or a plated bronze finish on a
+     pistol is -- not the bright yellow of a cartridge case. */
+  bronze: { color: 0x9a7650, texture: 'metal', roughness: 0.40, metalness: 1 },
+  // Gold plate: the brass recipe pushed to a richer yellow, and polished.
+  gold: { color: 0xffe2a0, texture: 'brass', roughness: 0.7, metalness: 1, uvScale: 3 },
   glow: { color: 0x9fe8ff, texture: 'smooth', roughness: 0.30, metalness: 0, emissive: 0x54c8ff, emissiveStrength: 1.5 },
   glass: { color: 0xb6c6cc, texture: 'smooth', roughness: 0.12, metalness: 0, opacity: 0.42 },
   /* Smoked polymer, for a magazine you are meant to see the rounds

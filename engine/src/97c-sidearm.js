@@ -322,6 +322,37 @@ Object.assign(SERVICE_KINDS, {
   }),
 });
 
+/* THE DESERT EAGLE. Payback's, in bronze.
+
+   A .50 Action Express, and everything about it is the size the round
+   asks for: a slide three centimetres wide, a grip that fills a man's
+   hand front to back, and a fixed six-inch barrel inside a slab-sided
+   block with a rail cut along its whole top -- one long flat-sided
+   brick with a handle under it, which is the outline nobody mistakes. It is
+   gas-operated with a rotating bolt, like a rifle, which is why the
+   slide is so long and the ejection port so far back. */
+Object.assign(SERVICE_KINDS, {
+  deagle: sideSpec({
+    ammoKind: 'pistolBottle',
+    muzzle: 0.214,
+    barrel: { rear: 0.022, r0: 0.0118, r1: 0.0112, bore: 0.0064, step: 0.120 },
+    rec: { rear: -0.062, front: 0.208, up: 0.0176, down: 0.0136, w: 0.0158, e: 4.6 },
+    port: { x0: 0.020, x1: 0.064, up: 0.0118, down: 0.0020 },
+    grip: { x: -0.040, y: -0.0180, len: 0.104, rake: 0.18,
+      deep: 1.06, wide: 1.22, e: 1.55, checkN: [6, 9], checkH: 0.0008 },
+    mag: { x: -0.040, y: -0.0200, len: 0.094, w: 0.0122, d: 0.0130, r: 0.026 },
+    // The rail along the top of the barrel block, end to end.
+    rail: { x0: 0.010, x1: 0.206 },
+    sight: { y: 0.0236, frontX: 0.202, rearX: -0.052 },
+    serr: { kind: 'vert', rear: [-0.058, -0.024], pitch: 0.0050, out: 0.0016, hw: 0.0018 },
+    hammer: { kind: 'spur', x: -0.064, y: 0.0112 },
+    mass: 2.0, bound: 0.22,
+  }),
+});
+// Bronze all over the steel, and a black polymer grip.
+SERVICE_KINDS.deagle.mats = Object.assign({}, SERVICE_KINDS.deagle.mats,
+  { steel: ARM_MAT.bronze, bolt: ARM_MAT.bronze, mag: ARM_MAT.bronze });
+
 /* ---------------- launchers ----------------
 
    A launcher is a TUBE, and almost nothing else. There is no

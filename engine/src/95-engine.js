@@ -857,6 +857,7 @@ class Engine {
       seed: opts.seed || 5, type: opts.faceType || (heroOutfit ? bodyOpts.frame : 'male'), face: opts.faceShape || null,
       skinColor: (opts.skin && typeof opts.skin === 'object' && opts.skin.color != null) ? opts.skin.color : 0xc8a080,
       build: heroOutfit ? (opts.girth || 1) : (opts.build || 1),
+      age: opts.age,
     } : null;
     if (mhFig) {
       const bk = 'mh:' + JSON.stringify(figOpts) + ':' + scale.toFixed(3) + ':' + (opts.fit || '') + ':' + (heroOutfit ? opts.outfit : '');
@@ -1135,13 +1136,13 @@ class Engine {
       const hairOf = opts.hairStyle || (typeof opts.hair === 'string' ? opts.hair : undefined);
       const skinCol = (opts.skin && typeof opts.skin === 'object' && opts.skin.color != null) ? opts.skin.color : 0xc8a080;
       const hk = [opts.faceKey || '', opts.seed || 5, figOpts ? figOpts.type + ':' + figOpts.build : opts.faceType || 'male', opts.eyeColor || 0, hairOf || '',
-        opts.hairColor || 0, opts.brows || '', opts.browColor || 0, opts.beard || '', opts.beardColor || 0, skinCol].join(':');
+        opts.hairColor || 0, opts.brows || '', opts.browColor || 0, opts.beard || '', opts.beardColor || 0, skinCol, opts.eyeBlack ? 'eb' : '', opts.age || ''].join(':');
       const headCache = Engine._sdfHeads || (Engine._sdfHeads = new Map());
       const headGeo = living
         ? (headCache.get(hk) || headCache.set(hk, makeMhHeadGeometry({ seed: opts.seed || 5, type: figOpts ? figOpts.type : opts.faceType, build: figOpts ? figOpts.build : 1,
           face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
           hairStyle: hairOf, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
-          beard: opts.beard, beardColor: opts.beardColor })).get(hk))
+          beard: opts.beard, beardColor: opts.beardColor, eyeBlack: opts.eyeBlack, age: opts.age })).get(hk))
         : makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot,
           face: opts.faceShape || null, hair: opts.hair, eyeColor: opts.eyeColor });
       /* ONE UPLOAD PER FACE, AND THREE OF THEM. The field-built head is
@@ -1176,7 +1177,7 @@ class Engine {
                 g2 = makeMhHeadGeometry({ seed: opts.seed || 5, type: figOpts ? figOpts.type : opts.faceType, build: figOpts ? figOpts.build : 1,
                   face: opts.faceShape || null, eyeColor: opts.eyeColor, skinColor: skinCol,
                   hairStyle: hairOf, hairColor: opts.hairColor, brows: opts.brows, browColor: opts.browColor,
-                  beard: opts.beard, beardColor: opts.beardColor, resolution: src });
+                  beard: opts.beard, beardColor: opts.beardColor, eyeBlack: opts.eyeBlack, age: opts.age, resolution: src });
                 headCache.set(hk + tag, g2);
               }
             }
