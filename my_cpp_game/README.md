@@ -92,6 +92,11 @@ multiplayer gun plus the zombies-only models) at desktop resolution -- 3x the po
 swept section and revolve, patched into the bundle text for this export only -- on a studio
 floor, and writes each gun's bounds to `armory.lescene.json`. `--shots list.txt outdir` renders
 one picture per line (`name ex,ey,ez tx,ty,tz fov`) in a single run.
+`--only m1911,thompson,scatter` exports just those guns (about 20 s instead of the whole
+rack), for iterating on one model. In play, `GAME_VIEW_POSE=clip:seconds[:aimed]` holds the
+viewmodel in one recorded pose and `GAME_VIEW_GUN=slot` draws that slot's gun (0 M1911,
+1 Thompson, 2 Scattergun) whatever is equipped -- together they photograph any gun at any
+frame of its recorded reload.
 
 Operators: `node tools/export_scene.js roster roster.lescene` stands all seven operators in a row
 at x = (i - 3) * 1.6 on a studio floor (bounds in `roster.lescene.json`), skinned and posed at

@@ -33683,23 +33683,85 @@ function buildFrame(g) {
      proud strip where the .45-sized claw rides. */
   hardBox(g, P11.slideRear + 0.0135, 0.0006, P11.slideHalfW - 0.0003, 0.0092, 0.0016, 0.0006);
 
-  /* Thumb safety and slide stop — small, but their absence is loud. */
+  /* THE FRAME BEHIND THE TRIGGER, UNDER THE SLIDE. The dust cover
+     started at x 0.030 and the grip safety ended at 0.0175, and between
+     them under the slide there was nothing: a hole you could see light
+     through, right where the thumb safety mounts. A 1911's frame runs
+     the full length of the slide; this is its rear. */
   sweepPath(g, [
-    { o: new Vec3(0.0250, -0.0104, -0.0110), u: U, v: new Vec3(1, 0, 0), pts: roundRect(0.0042, 0.0042, 0.0026, 2.6, 14) },
-    { o: new Vec3(0.0250, -0.0104, -0.0135), u: U, v: new Vec3(1, 0, 0), pts: roundRect(0.0042, 0.0042, 0.0026, 2.6, 14) },
-  ], false, true);
-  hardBox(g, 0.0335, -0.0088, -0.0126, 0.0090, 0.0022, 0.0011);
-  sweepPath(g, [
-    { o: new Vec3(0.0688, -0.0166, -0.0110), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0038, 14) },
-    { o: new Vec3(0.0688, -0.0166, -0.0128), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0038, 14) },
-  ], false, true);
-  hardBox(g, 0.0600, -0.0166, -0.0118, 0.0092, 0.0020, 0.0009);
+    { o: new Vec3(0.0160, 0, 0), u: U, v: V, pts: profileOutline([
+      [P11.slideBottom + 0.0022, -0.0110], [-0.0205, -0.0110], [-0.0215, -0.0100],
+      [-0.0215, 0.0100], [-0.0205, 0.0110], [P11.slideBottom + 0.0022, 0.0110]].reverse(), 30) },
+    { o: new Vec3(0.0312, 0, 0), u: U, v: V, pts: profileOutline([
+      [P11.slideBottom + 0.0022, -0.0110], [-0.0205, -0.0110], [-0.0215, -0.0100],
+      [-0.0215, 0.0100], [-0.0205, 0.0110], [P11.slideBottom + 0.0022, 0.0110]].reverse(), 30) },
+  ], true, true);
+  buildPistolControls(g);
+}
 
-  /* Magazine release button. */
-  sweepPath(g, [
-    { o: new Vec3(0.0475, -0.0268, -0.0110), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0034, 14) },
-    { o: new Vec3(0.0475, -0.0268, -0.0126), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0034, 14) },
-  ], false, true);
+/* THE LEFT SIDE OF A 1911, which is the side the shooter looks at.
+
+   The thumb safety was a 5 mm stub, the slide stop a 1.7 mm strip with no
+   thumb piece, the magazine release a 3.4 mm disc standing 1.6 mm off the
+   frame and 3.4 mm UNDER the grip panel's face -- three controls, all
+   present in the source, none of which could be found on the screen.
+
+   At their real sizes, as separate pieces of steel:
+     the THUMB SAFETY -- pivot at the rear of the frame, a lever forward
+       along the slide's lower edge to a thumb shelf that stands out;
+     the SLIDE STOP -- pivot pin over the front of the trigger guard, a
+       lever back along the frame to a tall serrated thumb piece;
+     the MAGAZINE RELEASE -- a checkered button behind the trigger,
+       standing level with the grip panel, on its own geometry so a
+       reload can push it in (buildMagCatch1911).
+   And on the right, the ends of the pins that hold them: the slide stop
+   pin, the safety's shaft, the sear pin. */
+function buildPistolControls(g) {
+  const FZ = 0.0110, L = -1, R = 1;
+  const top = P11.slideBottom - 0.0003;                 // just under the slide
+
+  // Thumb safety: lever, then the shelf on its front end.
+  ctlPlate(g, [
+    [0.0168, -0.0182], [0.0228, -0.0198], [0.0262, -0.0170], [0.0410, -0.0150],
+    [0.0418, top], [0.0200, top], [0.0164, -0.0140],
+  ], -(FZ - 0.0004), -(FZ + 0.0016), 0.0004);
+  ctlButton(g, 0.0205, -0.0158, -(FZ + 0.0016), L, 0.0030, 0.0005, 0.0003);   // shaft boss
+  ctlPlate(g, [
+    [0.0318, -0.0150], [0.0418, -0.0150], [0.0424, top - 0.0004], [0.0322, top - 0.0004],
+  ], -(FZ + 0.0010), -(FZ + 0.0046), 0.0005);
+  ctlSerrate(g, 0.0330, -0.0136, [1, 0], [0, 1], 7, 0.0013, 0.0018, -(FZ + 0.0046), L, 0.0003, 0.00028);
+
+  // Slide stop: hub on its pin, lever back to the thumb piece.
+  const sx = 0.0700, sy = -0.0168;
+  ctlPlate(g, [
+    ...Array.from({ length: 9 }, (_, i) => {
+      const t = -PI / 2 + (i / 8) * PI;               // the hub's front half
+      return [sx + 0.0042 * Math.cos(t), sy + 0.0042 * Math.sin(t)];
+    }),
+    [0.0590, top], [0.0468, top], [0.0462, -0.0212], [0.0478, -0.0226], [0.0566, -0.0222],
+  ], -(FZ - 0.0004), -(FZ + 0.0018), 0.0004);
+  ctlPin(g, sx, sy, -(FZ + 0.0018), L, 0.0024, 0.0005);
+  // The thumb piece stands out further, and it is serrated.
+  ctlPlate(g, [[0.0470, -0.0222], [0.0560, -0.0218], [0.0566, top - 0.0004], [0.0474, top - 0.0004]],
+    -(FZ + 0.0012), -(FZ + 0.0036), 0.0005);
+  ctlSerrate(g, 0.0484, -0.0170, [1, 0], [0, 1], 6, 0.0014, 0.0080, -(FZ + 0.0036), L, 0.0003, 0.0003);
+
+  // Right side: the pin ends.
+  ctlPin(g, sx, sy, FZ, R, 0.0021, 0.0004);
+  ctlPin(g, 0.0205, -0.0158, FZ, R, 0.0023, 0.0004);
+  ctlPin(g, 0.0272, -0.0192, FZ, R, 0.0016, 0.0003);
+}
+
+/* The magazine release: a checkered button behind the trigger, its face
+   level with the grip panel's, so the thumb finds it without looking. */
+const MAG_CATCH_1911 = { x: 0.0446, y: -0.0256, r: 0.0046 };
+function buildMagCatch1911(g) {
+  const C = MAG_CATCH_1911, FZ = 0.0110, h = M1911.gripW / 2 - FZ + 0.0006;
+  ctlButton(g, C.x, C.y, -FZ, -1, C.r, h, 0.0006, 0.0002, 26);
+  // Checkering: two sets of ridges crossed on the face.
+  const zf = -(FZ + h - 0.0002);
+  ctlSerrate(g, C.x - 0.0021, C.y, [1, 0], [0, 1], 4, 0.0014, 0.0056, zf, -1, 0.00028, 0.00026);
+  ctlSerrate(g, C.x, C.y - 0.0021, [0, 1], [1, 0], 4, 0.0014, 0.0056, zf, -1, 0.00028, 0.00026);
 }
 
 /* ---------------- sights ---------------- */
@@ -33789,18 +33851,37 @@ function buildGripPanels(g, side) {
      cuts are. Checkering is faceted in reality anyway — every facet is one
      flat pass of the cutter — so each quad gets its own normal and its own
      four vertices. */
+  /* ONE NORMAL PER TRIANGLE, SPLIT ON THE LOW DIAGONAL -- not one per quad.
+
+     Every quad here has two raised corners on one diagonal and two low
+     ones on the other, so it is not flat: it is a saddle. Giving the
+     whole saddle one normal shaded each grid square as a single flat
+     tone, and the panel came out as a mosaic of brown squares -- the
+     "pixelated" look, on the part of the gun nearest the camera.
+
+     Cut along the LOW diagonal instead and each half is exactly one face
+     of one pyramid: the raised node is the apex and the two low nodes
+     are its base edge. Four such faces round every raised node make the
+     diamond, lit from four directions, which is what hand checkering
+     looks like -- a regular field of points, each with a bright side and
+     a dark side. */
   const idx = [];
   const fn = new Vec3(), e1 = new Vec3(), e2 = new Vec3();
+  const facet = (p, q, r, i, j) => {
+    e1.subVectors(q, p); e2.subVectors(r, p);
+    fn.crossVectors(e1, e2).normalize();
+    if (fn.z * side < 0) fn.scale(-1);
+    const b3 = g.positions.length / 3;
+    for (const v of [p, q, r]) g.vert(v.x, v.y, v.z, fn.x, fn.y, fn.z, i / NU, j / NV);
+    // Wound to face out of the grip on either side.
+    const w = (e1.x * e2.y - e1.y * e2.x) * side;
+    if (w > 0) g.tri(b3, b3 + 1, b3 + 2); else g.tri(b3, b3 + 2, b3 + 1);
+  };
   for (let i = 0; i < NU; i++) {
     for (let j = 0; j < NV; j++) {
       const a = rows[i][j], b = rows[i + 1][j], c = rows[i + 1][j + 1], d = rows[i][j + 1];
-      e1.subVectors(b, a); e2.subVectors(d, a);
-      fn.crossVectors(e1, e2).normalize();
-      if (fn.z * side < 0) fn.scale(-1);
-      const base4 = g.positions.length / 3;
-      for (const p of [a, b, c, d]) g.vert(p.x, p.y, p.z, fn.x, fn.y, fn.z, i / NU, j / NV);
-      if (side > 0) g.quad(base4, base4 + 1, base4 + 2, base4 + 3);
-      else g.quad(base4, base4 + 3, base4 + 2, base4 + 1);
+      if ((i + j) % 2 === 0) { facet(a, b, d, i, j); facet(c, d, b, i, j); }   // a, c raised
+      else { facet(b, c, a, i, j); facet(d, a, c, i, j); }                     // b, d raised
     }
   }
   // The rim still needs the boundary rows, so keep them as their own strip.
@@ -34004,6 +34085,9 @@ function makePistol1911(opts = {}) {
   buildGripPanels(grip, 1);
   buildGripPanels(grip, -1);
 
+  const magCatch = new Geometry();
+  buildMagCatch1911(magCatch);
+
   const mark = new Geometry();
   buildBore(mark);
   buildEngraving(mark, opts.engrave != null ? opts.engrave : 'river', opts);
@@ -34014,6 +34098,7 @@ function makePistol1911(opts = {}) {
     mag: offsetGeometry(mag, PISTOL_ORIGIN).finalize(),
     grip: offsetGeometry(grip, PISTOL_ORIGIN).finalize(),
     mark: offsetGeometry(mark, PISTOL_ORIGIN).finalize(),
+    magCatch: offsetGeometry(magCatch, PISTOL_ORIGIN).finalize(),
   };
 }
 
@@ -34125,6 +34210,8 @@ Engine.prototype.pistol1911 = function (opts = {}) {
   body.mark = child('mark', parts.mark, PISTOL_MATERIALS.mark);
   body.slide = child('slide', parts.slide, opts.material || PISTOL_MATERIALS.steel);
   body.mag = child('mag', parts.mag, opts.material || PISTOL_MATERIALS.steel);
+  body.magCatch = child('catch', parts.magCatch, opts.material || PISTOL_MATERIALS.steel);
+  body.magCatchPush = [0, 0, 0.0020];   // into the frame, from the left
   // Where the brass leaves and where a dropped magazine starts, in gun-local
   // space, so the game never has to know the model's internals.
   body.ejectPort = [0.0900, 0.0400, 0.0110];
@@ -34139,7 +34226,7 @@ Engine.prototype.pistol1911 = function (opts = {}) {
      mp-match's, bunker-nine's camo and the attachment fitter -- and on
      a gun without one they all walked an empty list and silently did
      nothing to four fifths of the model. */
-  body.partNames = ['steel', 'grips', 'mark', 'slide', 'mag'];
+  body.partNames = ['steel', 'grips', 'mark', 'slide', 'mag', 'magCatch'];
   // Where the bore sits above the grip, so anything bolted to the muzzle
   // lands on the barrel's own line rather than on a guess at it.
   body.boreAt = -PISTOL_ORIGIN.y;
@@ -34147,6 +34234,301 @@ Engine.prototype.pistol1911 = function (opts = {}) {
   body.sightAt = 0.0155 - PISTOL_ORIGIN.y;
   return body;
 };
+
+
+/* ─────────── 96a-controls.js ─────────── */
+/* ============================================================
+   CONTROLS — the small parts a hand works: levers, buttons, pins,
+   screws, serrated thumb pads.
+
+   "There's no detail in the gun even if he had an entire roughness
+    scale there wouldn't be detail. There should be the mag drop
+    button, the semi full auto, those switches."
+
+   A gun is read by its controls. The receiver of a Thompson is a
+   plain milled slab; what makes it a Thompson from three feet away
+   is the pair of rocker levers over the grip, the magazine catch,
+   the pins through the frame and the screw heads in the wood. Every
+   one of those was either missing or built as a 3.6 mm disc sunk
+   most of the way into the steel -- correct in the source, a dot on
+   the screen.
+
+   So these are drawn at the size the real parts are, and drawn as
+   PARTS: a lever is a plate with a hub, cut to its outline, standing
+   proud of the frame by its real thickness, with its outer edge
+   broken by a small chamfer. That chamfer is most of it. A flat plate
+   with square edges is invisible against the flat it sits on, because
+   both face the same way and take the same light; a broken edge faces
+   somewhere else and catches a highlight all the way round, and the
+   eye reads the highlight as the outline of a separate piece of steel.
+
+   Coordinates are the weapon's own (+X to the muzzle, +Y up, +Z the
+   right side). `side` is -1 for the left face and +1 for the right.
+   ============================================================ */
+
+const CTL_X = new Vec3(1, 0, 0), CTL_Y = new Vec3(0, 1, 0);
+
+/* Counter-clockwise, which is what profileOutline's normals assume. */
+function ctlCCW(raw) {
+  let a = 0;
+  for (let i = 0; i < raw.length; i++) {
+    const p = raw[i], q = raw[(i + 1) % raw.length];
+    a += p[0] * q[1] - q[0] * p[1];
+  }
+  return a < 0 ? raw.slice().reverse() : raw;
+}
+
+/* The outline pulled in by d, mitred at the corners (and the mitre
+   clamped, so a needle-sharp corner does not shoot across the part). */
+function ctlInset(raw, d) {
+  const n = raw.length, out = [];
+  for (let i = 0; i < n; i++) {
+    const a = raw[(i - 1 + n) % n], p = raw[i], b = raw[(i + 1) % n];
+    let ax = p[0] - a[0], ay = p[1] - a[1], bx = b[0] - p[0], by = b[1] - p[1];
+    const la = Math.hypot(ax, ay) || 1, lb = Math.hypot(bx, by) || 1;
+    ax /= la; ay /= la; bx /= lb; by /= lb;
+    const n1x = ay, n1y = -ax, n2x = by, n2y = -bx;
+    let mx = n1x + n2x, my = n1y + n2y;
+    const lm = Math.hypot(mx, my) || 1;
+    mx /= lm; my /= lm;
+    const k = Math.min(3, 1 / Math.max(0.2, mx * n1x + my * n1y));
+    out.push([p[0] - mx * d * k, p[1] - my * d * k]);
+  }
+  return out;
+}
+
+/* A plate cut to an outline in the XY plane, standing from zIn out to
+   zOut, with its outer edge chamfered by `bevel`. zIn is meant to be
+   buried in whatever the part sits on, so the plate has no visible
+   back and no seam. */
+function ctlPlate(g, raw, zIn, zOut, bevel = 0.0004, smooth = 40) {
+  raw = ctlCCW(raw);
+  const s = Math.sign(zOut - zIn) || 1;
+  const prof = profileOutline(raw, smooth);
+  const st = (z, pts) => ({ o: new Vec3(0, 0, z), u: CTL_X, v: CTL_Y, pts });
+  if (bevel > 0 && Math.abs(zOut - zIn) > bevel * 1.5) {
+    const inner = profileOutline(ctlInset(raw, bevel), smooth);
+    sweepPath(g, [st(zIn, prof), st(zOut - s * bevel, prof), st(zOut, inner)], true, true);
+  } else {
+    sweepPath(g, [st(zIn, prof), st(zOut, prof)], true, true);
+  }
+}
+
+/* A plate swept through Y instead of Z -- for parts that lie on a top
+   strap rather than a side, like a shotgun's tang safety. Outline in
+   (x, z); bevel on the top edge. */
+function ctlPlateY(g, raw, yIn, yOut, bevel = 0.0004, smooth = 40) {
+  // (z, x) basis so that u x v = +Y; the outline is given in (x, z).
+  const flip = raw.map(([x, z]) => [z, x]);
+  const r = ctlCCW(flip);
+  const s = Math.sign(yOut - yIn) || 1;
+  const prof = profileOutline(r, smooth);
+  const U = new Vec3(0, 0, 1), V = new Vec3(1, 0, 0);
+  const st = (y, pts) => ({ o: new Vec3(0, y, 0), u: U, v: V, pts });
+  if (bevel > 0 && Math.abs(yOut - yIn) > bevel * 1.5) {
+    const inner = profileOutline(ctlInset(r, bevel), smooth);
+    sweepPath(g, [st(yIn, prof), st(yOut - s * bevel, prof), st(yOut, inner)], true, true);
+  } else {
+    sweepPath(g, [st(yIn, prof), st(yOut, prof)], true, true);
+  }
+}
+
+/* Revolve an outline about an axis parallel to Z through (cx, cy).
+   The outline is [d, r] pairs: d is the distance OUT from the face
+   (zFace), r the radius. It must start and end on the axis so it
+   closes. Normals come from the outline, so a chamfer or a dome is
+   lit as one -- which is what a button needs and a stack of cylinders
+   cannot give it. */
+function ctlSpin(g, raw, cx, cy, zFace, side, seg = 20, smooth = 34) {
+  let pts = raw.map(([d, r]) => [zFace + side * d, r]);
+  pts = ctlCCW(pts);
+  const prof = profileOutline(pts, smooth);
+  const n = prof.length, base = g.positions.length / 3;
+  const vArc = new Float64Array(n);
+  for (let k = 1; k < n; k++) vArc[k] = vArc[k - 1] + Math.hypot(prof[k][0] - prof[k - 1][0], prof[k][1] - prof[k - 1][1]);
+  for (let s = 0; s <= seg; s++) {
+    const th = (s / seg) * TAU, c = Math.cos(th), si = Math.sin(th);
+    for (let k = 0; k < n; k++) {
+      const p = prof[k];
+      // spin()'s revolve about X with the axes turned cyclically
+      // (x, y, z) -> (y, z, x): same handedness, so the same winding.
+      g.vert(cx + p[1] * c, cy + p[1] * si, p[0], p[3] * c, p[3] * si, p[2], (s / seg) * TAU * p[1], vArc[k]);
+    }
+  }
+  for (let s = 0; s < seg; s++) {
+    for (let k = 0; k < n; k++) {
+      const k2 = (k + 1) % n;
+      g.quad(base + s * n + k, base + s * n + k2, base + (s + 1) * n + k2, base + (s + 1) * n + k);
+    }
+  }
+}
+
+/* A round button or hub: buried 1 mm, standing `h` proud, with its
+   face edge chamfered. `dish` > 0 dishes the face in slightly, the
+   way a thumb-worn button is. */
+function ctlButton(g, cx, cy, zFace, side, r, h, chamfer = 0.0005, dish = 0, seg = 22) {
+  const c = Math.min(chamfer, r * 0.4, h * 0.6);
+  ctlSpin(g, [
+    [-0.0010, 0], [-0.0010, r], [h - c, r], [h, r - c],
+    [h - dish, (r - c) * 0.45], [h - dish, 0],
+  ], cx, cy, zFace, side, seg, 30);
+}
+
+/* A pin end, flush but not invisible: 0.3 mm proud with a rounded edge.
+   Pins are how a frame says it is assembled from parts. */
+function ctlPin(g, cx, cy, zFace, side, r, h = 0.0003) {
+  ctlSpin(g, [
+    [-0.0008, 0], [-0.0008, r], [h * 0.4, r], [h, r * 0.7], [h, 0],
+  ], cx, cy, zFace, side, 16, 50);
+}
+
+/* A slotted screw head: a low dome cut by its slot. The slot is a real
+   gap between two half-domes, so it shades as a groove from any side.
+   `ang` turns the slot (degrees from the X axis). */
+function ctlScrew(g, cx, cy, zFace, side, r, ang = 30, h = 0.0009) {
+  const slot = Math.max(0.00025, r * 0.16);
+  const ca = Math.cos(ang * PI / 180), sa = Math.sin(ang * PI / 180);
+  for (const half of [-1, 1]) {
+    const raw = [];
+    // Half disc, offset off the slot by half its width.
+    for (let i = 0; i <= 10; i++) {
+      const t = (i / 10) * PI;
+      const lx = r * Math.cos(t), ly = half * (slot / 2 + (r - slot / 2) * Math.sin(t));
+      raw.push([cx + lx * ca - ly * sa, cy + lx * sa + ly * ca]);
+    }
+    ctlPlate(g, raw, zFace - side * 0.0008, zFace + side * h, Math.min(h * 0.6, r * 0.35), 55);
+  }
+}
+
+/* A row of serrations across a thumb pad: ridges standing `h` proud of
+   the plate face at zFace, running along `dir` (a unit 2D vector in
+   XY), spaced `pitch` apart, `len` long, starting at (x0, y0) and
+   stepping along `step`. */
+function ctlSerrate(g, x0, y0, step, dir, count, pitch, len, zFace, side, h = 0.00035, w = 0.00032) {
+  const L = Math.hypot(step[0], step[1]) || 1, sx = step[0] / L, sy = step[1] / L;
+  for (let i = 0; i < count; i++) {
+    const cx = x0 + sx * pitch * i, cy = y0 + sy * pitch * i;
+    const hx = dir[0] * len / 2, hy = dir[1] * len / 2, wx = -dir[1] * w, wy = dir[0] * w;
+    ctlPlate(g, [
+      [cx - hx - wx, cy - hy - wy], [cx + hx - wx, cy + hy - wy],
+      [cx + hx + wx, cy + hy + wy], [cx - hx + wx, cy - hy + wy],
+    ], zFace - side * 0.0004, zFace + side * h, 0, 60);
+  }
+}
+
+/* A lever outline: a round hub at (hx, hy) radius hr, an arm running to
+   (tx, ty) tapering to half-width tw, ending in a rounded tip. Returned
+   as a closed outline for ctlPlate. */
+function ctlLeverOutline(hx, hy, hr, tx, ty, aw, tw, steps = 10) {
+  const dx = tx - hx, dy = ty - hy, L = Math.hypot(dx, dy) || 1;
+  const ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
+  const out = [];
+  // Hub: the back half-circle (away from the arm), from one side round to the other.
+  const a0 = Math.atan2(ny, nx);
+  for (let i = 0; i <= steps; i++) {
+    const t = a0 + (i / steps) * PI;
+    out.push([hx + hr * Math.cos(t), hy + hr * Math.sin(t)]);
+  }
+  // Down the arm on the -n side to the tip.
+  out.push([hx - nx * aw + ux * hr * 0.6, hy - ny * aw + uy * hr * 0.6]);
+  out.push([tx - nx * tw - ux * tw, ty - ny * tw - uy * tw]);
+  // Rounded tip.
+  const b0 = Math.atan2(-ny, -nx);
+  for (let i = 1; i < steps / 2; i++) {
+    const t = b0 + (i / (steps / 2)) * PI;
+    out.push([tx - ux * tw + tw * Math.cos(t), ty - uy * tw + tw * Math.sin(t)]);
+  }
+  out.push([tx + nx * tw - ux * tw, ty + ny * tw - uy * tw]);
+  out.push([hx + nx * aw + ux * hr * 0.6, hy + ny * aw + uy * hr * 0.6]);
+  return out;
+}
+
+/* STAMPED LETTERS: the markings over a selector and the maker's roll
+   mark down a receiver. A selector you cannot read is a lever; one that
+   says SAFE and FIRE is a safety -- the words do as much of the work as
+   the steel. Single-stroke capitals on a unit cap height, cut as raised
+   bars by markBar (96-pistol.js), the same way the 1911's name is. */
+const CTL_GLYPHS = {
+  A: [0.60, [[[0, 0], [0.3, 1], [0.6, 0]], [[0.11, 0.36], [0.49, 0.36]]]],
+  B: [0.60, [[[0, 0], [0, 1], [0.4, 1], [0.52, 0.9], [0.52, 0.62], [0.4, 0.53], [0, 0.53]],
+             [[0.4, 0.53], [0.56, 0.43], [0.56, 0.1], [0.44, 0], [0, 0]]]],
+  C: [0.60, [[[0.56, 0.85], [0.44, 0.98], [0.18, 0.98], [0.03, 0.82], [0.03, 0.18], [0.18, 0.02], [0.44, 0.02], [0.56, 0.15]]]],
+  D: [0.60, [[[0, 0], [0, 1], [0.36, 1], [0.55, 0.8], [0.55, 0.2], [0.36, 0], [0, 0]]]],
+  E: [0.56, [[[0.52, 1], [0, 1], [0, 0], [0.52, 0]], [[0, 0.52], [0.4, 0.52]]]],
+  F: [0.54, [[[0.52, 1], [0, 1], [0, 0]], [[0, 0.52], [0.4, 0.52]]]],
+  G: [0.62, [[[0.56, 0.85], [0.44, 0.98], [0.18, 0.98], [0.03, 0.82], [0.03, 0.18], [0.18, 0.02], [0.44, 0.02],
+              [0.57, 0.15], [0.57, 0.45], [0.32, 0.45]]]],
+  H: [0.62, [[[0, 0], [0, 1]], [[0.56, 0], [0.56, 1]], [[0, 0.52], [0.56, 0.52]]]],
+  I: [0.24, [[[0.1, 0], [0.1, 1]]]],
+  J: [0.50, [[[0.42, 1], [0.42, 0.18], [0.3, 0.02], [0.12, 0.02], [0.02, 0.16]]]],
+  K: [0.58, [[[0, 0], [0, 1]], [[0.54, 1], [0, 0.38]], [[0.18, 0.56], [0.56, 0]]]],
+  L: [0.52, [[[0, 1], [0, 0], [0.5, 0]]]],
+  M: [0.74, [[[0, 0], [0, 1], [0.34, 0.3], [0.68, 1], [0.68, 0]]]],
+  N: [0.62, [[[0, 0], [0, 1], [0.56, 0], [0.56, 1]]]],
+  O: [0.62, [[[0.18, 0.02], [0.03, 0.18], [0.03, 0.82], [0.18, 0.98], [0.42, 0.98], [0.57, 0.82], [0.57, 0.18], [0.42, 0.02], [0.18, 0.02]]]],
+  P: [0.58, [[[0, 0], [0, 1], [0.4, 1], [0.54, 0.88], [0.54, 0.62], [0.4, 0.5], [0, 0.5]]]],
+  Q: [0.64, [[[0.18, 0.02], [0.03, 0.18], [0.03, 0.82], [0.18, 0.98], [0.42, 0.98], [0.57, 0.82], [0.57, 0.18], [0.42, 0.02], [0.18, 0.02]],
+             [[0.36, 0.22], [0.6, -0.04]]]],
+  R: [0.60, [[[0, 0], [0, 1], [0.4, 1], [0.54, 0.88], [0.54, 0.64], [0.4, 0.52], [0, 0.52]], [[0.28, 0.52], [0.56, 0]]]],
+  S: [0.58, [[[0.54, 0.86], [0.42, 0.98], [0.14, 0.98], [0.03, 0.86], [0.03, 0.64], [0.14, 0.54], [0.42, 0.47],
+              [0.55, 0.36], [0.55, 0.14], [0.42, 0.02], [0.13, 0.02], [0.01, 0.14]]]],
+  T: [0.60, [[[0, 1], [0.6, 1]], [[0.3, 1], [0.3, 0]]]],
+  U: [0.62, [[[0, 1], [0, 0.18], [0.15, 0.02], [0.41, 0.02], [0.56, 0.18], [0.56, 1]]]],
+  V: [0.60, [[[0, 1], [0.3, 0], [0.6, 1]]]],
+  W: [0.78, [[[0, 1], [0.18, 0], [0.38, 0.7], [0.58, 0], [0.76, 1]]]],
+  X: [0.58, [[[0, 1], [0.56, 0]], [[0.56, 1], [0, 0]]]],
+  Y: [0.60, [[[0, 1], [0.3, 0.48], [0.6, 1]], [[0.3, 0.48], [0.3, 0]]]],
+  Z: [0.60, [[[0.02, 1], [0.56, 1], [0, 0], [0.58, 0]]]],
+  0: [0.56, [[[0.15, 0.02], [0.03, 0.18], [0.03, 0.82], [0.15, 0.98], [0.37, 0.98], [0.49, 0.82], [0.49, 0.18], [0.37, 0.02], [0.15, 0.02]]]],
+  1: [0.40, [[[0.1, 0.82], [0.28, 1], [0.28, 0]]]],
+  2: [0.56, [[[0.03, 0.84], [0.16, 0.98], [0.38, 0.98], [0.5, 0.85], [0.5, 0.62], [0.02, 0], [0.52, 0]]]],
+  3: [0.56, [[[0.03, 0.88], [0.15, 0.98], [0.38, 0.98], [0.5, 0.86], [0.5, 0.64], [0.38, 0.54], [0.2, 0.54]],
+             [[0.38, 0.54], [0.52, 0.44], [0.52, 0.14], [0.38, 0.02], [0.14, 0.02], [0.02, 0.12]]]],
+  4: [0.58, [[[0.4, 0], [0.4, 1], [0.02, 0.3], [0.56, 0.3]]]],
+  5: [0.56, [[[0.5, 1], [0.06, 1], [0.03, 0.55], [0.18, 0.6], [0.38, 0.6], [0.52, 0.46], [0.52, 0.14], [0.38, 0.02],
+              [0.14, 0.02], [0.02, 0.12]]]],
+  6: [0.56, [[[0.48, 0.9], [0.36, 0.98], [0.16, 0.98], [0.03, 0.8], [0.03, 0.18], [0.16, 0.02], [0.38, 0.02], [0.51, 0.16],
+              [0.51, 0.42], [0.38, 0.56], [0.16, 0.56], [0.03, 0.42]]]],
+  7: [0.54, [[[0.02, 1], [0.52, 1], [0.18, 0]]]],
+  8: [0.56, [[[0.26, 0.54], [0.08, 0.62], [0.06, 0.86], [0.18, 0.98], [0.36, 0.98], [0.48, 0.86], [0.46, 0.62], [0.26, 0.54],
+              [0.05, 0.44], [0.03, 0.14], [0.16, 0.02], [0.38, 0.02], [0.51, 0.14], [0.49, 0.44], [0.26, 0.54]]]],
+  9: [0.56, [[[0.05, 0.1], [0.16, 0.02], [0.36, 0.02], [0.49, 0.2], [0.49, 0.82], [0.36, 0.98], [0.14, 0.98], [0.03, 0.84],
+              [0.03, 0.58], [0.16, 0.44], [0.36, 0.44], [0.49, 0.58]]]],
+  '.': [0.22, [[[0.08, 0], [0.08, 0.06]]]],
+  ',': [0.22, [[[0.1, 0.06], [0.04, -0.12]]]],
+  '-': [0.42, [[[0.05, 0.45], [0.35, 0.45]]]],
+  ' ': [0.36, []],
+};
+
+function ctlTextWidth(text, H) {
+  let w = 0;
+  for (const ch of text) w += ((CTL_GLYPHS[ch] || CTL_GLYPHS[' '])[0] + 0.12) * H;
+  return Math.max(0, w - 0.12 * H);
+}
+
+/* Stamp `text` centred on (cx, baseline y) on the face of the given side,
+   reading left to right from that side: on the left (-Z) face that means
+   advancing towards -X, on the right towards +X. `zFace` may be a number
+   or a function of y, for a face that curves. */
+function ctlStamp(g, text, cx, y, H, zFace, side, opts = {}) {
+  const stroke = H * (opts.weight || 0.13);
+  const dir = side < 0 ? -1 : 1;
+  const zAt = typeof zFace === 'function' ? zFace : () => zFace;
+  let adv = -ctlTextWidth(text, H) / 2;
+  for (const ch of text) {
+    const gl = CTL_GLYPHS[ch] || CTL_GLYPHS[' '];
+    for (const poly of gl[1]) {
+      for (let i = 0; i < poly.length - 1; i++) {
+        const p = poly[i], q = poly[i + 1];
+        const ya = y + p[1] * H, yb = y + q[1] * H;
+        const z = zAt((ya + yb) / 2);
+        markBar(g, cx + dir * (adv + p[0] * H), ya, cx + dir * (adv + q[0] * H), yb,
+          stroke, z - side * 0.00020, z + side * (opts.proud || 0.00022));
+      }
+    }
+    adv += (gl[0] + 0.12) * H;
+  }
+}
 
 
 /* ─────────── 97-thompson.js ─────────── */
@@ -34285,24 +34667,32 @@ function buildTommySteel(g) {
 
   // Its track stays with the receiver; the handle itself reciprocates and
   // lives in its own geometry.
-  hardBox(g, 0.050, 0.0090, T.recHalfW + 0.0002, 0.055, 0.0028, 0.0008);
-
-  /* Selector and safety levers, left side. */
-  for (const lx of [0.010, 0.038]) {
-    sweepPath(g, [
-      { o: new Vec3(lx, -0.004, -T.recHalfW * 0.86), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0036, 12) },
-      { o: new Vec3(lx, -0.004, -T.recHalfW * 0.86 - 0.0062), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0036, 12) },
-    ], false, true);
-  }
-
+  /* The slot the handle runs in -- a cut, so it is drawn as one: a dark
+     channel (buildTommyControls lays it, in the `mark` material) with a
+     lip either side. It was a raised steel strip, which is a rail, and a
+     rail is the one thing a slot is not. */
 
   /* Trigger guard and serrated trigger. */
   const guardPts = [
     [0.052, -0.0455], [0.056, -0.0560], [0.068, -0.0640], [0.084, -0.0660],
     [0.100, -0.0635], [0.110, -0.0560], [0.113, -0.0465],
   ];
-  const guard = guardPts.map(([x, y], i) => {
-    const p = guardPts[Math.max(0, i - 1)], q = guardPts[Math.min(guardPts.length - 1, i + 1)];
+  /* Subdivided through a Catmull-Rom spline, like the 1911's: seven
+     stations round a bow left it a visible polygon, seven straight bars
+     welded end to end, which is the first thing that reads as a model. */
+  const fine = [];
+  for (let i = 0; i < guardPts.length - 1; i++) {
+    const a = guardPts[Math.max(0, i - 1)], b = guardPts[i];
+    const c = guardPts[i + 1], d = guardPts[Math.min(guardPts.length - 1, i + 2)];
+    for (let k = 0; k < 4; k++) {
+      const t = k / 4, t2 = t * t, t3 = t2 * t;
+      fine.push([0, 1].map((j) => 0.5 * (2 * b[j] + (c[j] - a[j]) * t +
+        (2 * a[j] - 5 * b[j] + 4 * c[j] - d[j]) * t2 + (-a[j] + 3 * b[j] - 3 * c[j] + d[j]) * t3)));
+    }
+  }
+  fine.push(guardPts[guardPts.length - 1]);
+  const guard = fine.map(([x, y], i) => {
+    const p = fine[Math.max(0, i - 1)], q = fine[Math.min(fine.length - 1, i + 1)];
     const dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy) || 1;
     return { o: new Vec3(x, y, 0), u: new Vec3(-dy / L, dx / L, 0), v: V, pts: roundRect(0.0022, 0.0022, 0.0046, 2.5, 12) };
   });
@@ -34331,6 +34721,144 @@ function buildTommySteel(g) {
      caught that; my eye did not, either time. -0.0350 has it biting
      into the forend, which is where a swivel screw goes. */
   loop(0.343, -0.0350);
+}
+
+/* THE CONTROLS, at the size they are.
+
+   They were two discs 3.6 mm across standing 3.5 mm off the frame, on
+   the receiver rather than the frame, with nothing to say which was
+   which -- and the magazine catch, the one control every reload uses,
+   was not there at all. From the shooter's eye, which looks down the
+   gun's LEFT flank, the whole side of the gun was one grey slab.
+
+   An M1A1's left side, rear to front:
+     the SAFETY, a rocker lever over the grip, its paddle reaching up
+       the receiver towards SAFE (back) or FIRE (forward);
+     the FIRE SELECTOR, the same lever over the trigger, towards SINGLE
+       (back) or FULL AUTO (forward);
+     the frame pins -- trigger, sear and disconnector -- through the
+       trigger housing;
+     the MAGAZINE CATCH, a thumb lever just behind the well that you
+       push up to drop the stick;
+     and the roll mark down the receiver over the magazine.
+   Both levers sit forward here: the gun is on FIRE and FULL AUTO,
+   because that is how the zombies game fires it.
+
+   The right side has the axle ends of both levers, the same pins, and
+   the ejection port -- moved to below the cocking-handle slot where the
+   brass actually leaves (body.ejectPort follows it). */
+const TOMMY_FRAME_Z = TOMMY.recHalfW * 0.88;          // the trigger housing's flank
+function tommyFlankZ(y) {                              // the receiver's, at height y
+  const T = TOMMY, u = y - 0.0018, d = u >= 0 ? T.recUp : T.recDown;
+  const a = Math.min(0.999, Math.abs(u) / d);
+  return T.recHalfW * Math.pow(1 - Math.pow(a, 3.2), 1 / 3.2);
+}
+const TOMMY_CATCH_PIVOT = new Vec3(0.1080, -0.0285, 0);
+
+function buildTommyControls(g, mark) {
+  const FZ = TOMMY_FRAME_Z;
+  const L = -1, R = 1;
+
+  /* The two rocker levers. A hub on the frame, standing out past the
+     receiver's flank so the lever clears it, and a flat lever from the
+     hub up the side of the receiver to a serrated paddle. */
+  /* The lever lies 0.5 mm off the receiver's flank at its paddle and the
+     hub bridges the step down to the frame. Further out and it hangs in
+     the air in any three-quarter view, because the receiver's lower
+     corners round away from it. */
+  const LZ0 = 0.0182, LZ1 = 0.0200;
+  const rocker = (hx, hy, tiltDeg) => {
+    const t = tiltDeg * PI / 180, len = 0.0185;
+    const tx = hx + Math.sin(t) * len, ty = hy + Math.cos(t) * len;
+    ctlButton(g, hx, hy, -FZ, L, 0.0050, LZ1 - FZ - 0.0001, 0.0006);         // hub
+    ctlPlate(g, ctlLeverOutline(hx, hy, 0.0046, tx, ty, 0.0026, 0.0041), -LZ0, -LZ1, 0.0005);
+    ctlScrew(g, hx, hy, -LZ1, L, 0.0024, 60 + tiltDeg);                         // axle screw
+    // Paddle serrations, across the lever.
+    const ux = Math.sin(t), uy = Math.cos(t);
+    ctlSerrate(g, tx - ux * 0.0034, ty - uy * 0.0034, [ux, uy], [uy, -ux], 4, 0.0013, 0.0052, -LZ1, L);
+    // The axle comes through: its end, on the right.
+    ctlPin(g, hx, hy, FZ, R, 0.0030, 0.0005);
+  };
+  rocker(0.0160, -0.0262, 22);       // safety, on FIRE
+  rocker(0.0560, -0.0262, 22);       // selector, on FULL AUTO
+
+  /* The positions, stamped into the receiver above each paddle's arc. */
+  const flank = (y) => -tommyFlankZ(y);
+  const H = 0.0021;
+  // Each word over the tick its paddle points at in that position.
+  const tip = (hx, deg) => hx + Math.sin(deg * PI / 180) * 0.0185;
+  const ticks = [[tip(0.0160, -22), 'SAFE'], [tip(0.0160, 22), 'FIRE'],
+                 [tip(0.0560, -22), 'SINGLE'], [tip(0.0560, 22), 'FULL AUTO']];
+  for (const [x, word] of ticks) {
+    markBar(mark, x, -0.0078, x, -0.0062, 0.00026, flank(-0.0070) + 0.0002, flank(-0.0070) - 0.00022);
+    ctlStamp(mark, word, x, -0.0050, H, flank, L);
+  }
+
+  /* The roll mark, over the magazine, where every M1A1 carries it. */
+  ctlStamp(mark, 'THOMPSON SUBMACHINE GUN', 0.1820, 0.0085, 0.0021, flank, L);
+  ctlStamp(mark, 'CALIBER .45 M1A1', 0.1820, 0.0040, 0.0021, flank, L);
+
+  /* Frame pins, both sides: trigger, sear, disconnector. */
+  for (const [x, y, r] of [[0.0810, -0.0380, 0.0021], [0.0975, -0.0330, 0.0019], [0.0360, -0.0350, 0.0019]]) {
+    ctlPin(g, x, y, -FZ, L, r);
+    ctlPin(g, x, y, FZ, R, r);
+  }
+  // The catch's pivot comes through on the right as well.
+  ctlPin(g, TOMMY_CATCH_PIVOT.x, TOMMY_CATCH_PIVOT.y, FZ, R, 0.0022);
+
+  /* Ejection port, on the right below the handle slot: a dark opening
+     with a raised steel rim round it. There is no boolean cut here, so
+     the opening is the dark `mark` material laid on the flank and the
+     rim is what makes it read as a hole -- the edge catches the light
+     the way a machined port's edge does. */
+  const px0 = 0.0960, px1 = 0.1320, py0 = -0.0074, py1 = 0.0043;
+  /* Laid ON the flank, which curves: a section that follows the
+     receiver's own superellipse from y0 to y1, `a` to `b` off it, swept
+     along X. Flat plates stood 1.5 mm proud at the bottom of the port. */
+  const patch = (geo, x0, x1, y0, y1, a, b) => {
+    const pts = [];
+    for (let i = 0; i <= 6; i++) { const y = y0 + (y1 - y0) * i / 6; pts.push([y, tommyFlankZ(y) + b]); }
+    for (let i = 6; i >= 0; i--) { const y = y0 + (y1 - y0) * i / 6; pts.push([y, tommyFlankZ(y) + a]); }
+    const prof = profileOutline(ctlCCW(pts), 40);
+    sweepPath(geo, [
+      { o: new Vec3(x0, 0, 0), u: CTL_Y, v: new Vec3(0, 0, 1), pts: prof },
+      { o: new Vec3(x1, 0, 0), u: CTL_Y, v: new Vec3(0, 0, 1), pts: prof },
+    ], true, true);
+  };
+  patch(mark, px0, px1, py0, py1, -0.0010, 0.00012);
+  const rim = 0.0011;
+  patch(g, px0 - rim, px1 + rim, py0 - rim, py0, -0.0010, 0.00055);
+  patch(g, px0 - rim, px1 + rim, py1, py1 + rim, -0.0010, 0.00055);
+  patch(g, px0 - rim, px0, py0, py1, -0.0010, 0.00055);
+  patch(g, px1, px1 + rim, py0, py1, -0.0010, 0.00055);
+  // The cocking handle's slot, above the port.
+  patch(mark, -0.0050, 0.1050, 0.0074, 0.0106, -0.0010, 0.00010);
+  patch(g, -0.0050, 0.1050, 0.0064, 0.0074, -0.0010, 0.00045);
+  patch(g, -0.0050, 0.1050, 0.0106, 0.0116, -0.0010, 0.00045);
+  // The bolt's flank and extractor, seen through it.
+  patch(g, px0 + 0.0008, px0 + 0.0105, py0 + 0.0012, py1 - 0.0012, -0.0010, 0.00030);
+
+  /* Butt plate screws, in the plate's face. */
+  for (const y of [-0.0240, -0.0880]) {
+    sweepPath(g, [
+      { o: new Vec3(TOMMY.stockButt - 0.0046, y, 0), u: CTL_Y, v: new Vec3(0, 0, 1), pts: ringOutline(0.0034, 16) },
+      { o: new Vec3(TOMMY.stockButt - 0.0058, y, 0), u: CTL_Y, v: new Vec3(0, 0, 1), pts: ringOutline(0.0028, 16) },
+    ], false, true);
+  }
+}
+
+/* The magazine catch, its own part so a reload can press it. A lever on
+   a pin behind the well, its paddle under the thumb just aft of the
+   magazine; pushing the paddle up swings the catch off the magazine's
+   notch and the stick falls. */
+function buildTommyCatch(g) {
+  const FZ = TOMMY_FRAME_Z, P = TOMMY_CATCH_PIVOT;
+  const tx = 0.1265, ty = -0.0372;
+  ctlPlate(g, ctlLeverOutline(P.x, P.y, 0.0036, tx, ty, 0.0022, 0.0038), -(FZ - 0.0004), -(FZ + 0.0022), 0.0005);
+  ctlPin(g, P.x, P.y, -(FZ + 0.0022), -1, 0.0019, 0.0004);
+  const ux = (tx - P.x), uy = (ty - P.y), l = Math.hypot(ux, uy);
+  ctlSerrate(g, tx - (ux / l) * 0.0030, ty - (uy / l) * 0.0030, [ux / l, uy / l], [uy / l, -ux / l], 4, 0.0012, 0.0050,
+    -(FZ + 0.0022), -1);
 }
 
 /* The charging handle, on its own so it can ride back with each shot. */
@@ -34486,6 +35014,10 @@ const TOMMY_MATERIALS = {
      it is warm twice over, which is the mistake that made every service
      rifle in this game terracotta. */
   wood: { color: 0xc2c2c0, texture: 'walnut', roughness: 1, metalness: 0, uvScale: 2.2 },
+  /* The stampings and the ejection port's opening: a rough near-black
+     dielectric, for the 1911's reason -- a mark only reads where it
+     scatters and the steel round it reflects. */
+  mark: { color: 0x14171a, texture: 'smooth', roughness: 0.8, metalness: 0 },
 };
 
 function makeThompson() {
@@ -34497,6 +35029,10 @@ function makeThompson() {
   buildTommyBolt(bolt);
   const mag = new Geometry();
   buildTommyMag(mag);
+  const mark = new Geometry();
+  buildTommyControls(steel, mark);
+  const magCatch = new Geometry();
+  buildTommyCatch(magCatch);
   // Origin at the pistol grip, matching the 1911's hand-centred datum.
   const origin = new Vec3(0.030, -0.070, 0);
   return {
@@ -34504,6 +35040,8 @@ function makeThompson() {
     wood: offsetGeometry(wood, origin).finalize(),
     bolt: offsetGeometry(bolt, origin).finalize(),
     mag: offsetGeometry(mag, origin).finalize(),
+    mark: offsetGeometry(mark, origin).finalize(),
+    magCatch: offsetGeometry(magCatch, origin).finalize(),
   };
 }
 
@@ -34542,17 +35080,24 @@ Engine.prototype.thompson = function (opts = {}) {
     const a = this._spawn({ material: mat, physics: false },
       this._mesh('tommy:' + suffix, () => geo), null, 0.6);
     a.parent = body;
+    a.name = 'tommy:' + suffix;
     return a;
   };
   body.slide = child('bolt', parts.bolt, opts.material || TOMMY_MATERIALS.steel);
   body.mag = child('mag', parts.mag, opts.material || TOMMY_MATERIALS.steel);
-  body.ejectPort = [0.0700, 0.0930, 0.0210];
+  body.mark = child('mark', parts.mark, opts.material ? opts.material : TOMMY_MATERIALS.mark);
+  body.magCatch = child('catch', parts.magCatch, opts.material || TOMMY_MATERIALS.steel);
+  // The pivot in the actor's own frame, for turnAbout-style pressing.
+  body.magCatchPivot = [TOMMY_CATCH_PIVOT.x - 0.030, TOMMY_CATCH_PIVOT.y + 0.070, 0];
+  body.magCatchPress = 9;              // degrees the paddle travels up
+  // Out of the port on the right flank, which is where it is now.
+  body.ejectPort = [0.0840, 0.0700, 0.0210];
   body.magWell = [0.1180, -0.0300, 0];
   body.slideTravel = 0.030;
   /* See the note on the 1911's: `visible` does not inherit, so without
      this list hiding the Thompson left its stock, its bolt handle and
      its magazine floating where the gun used to be. */
-  body.partNames = ['steel', 'wood', 'slide', 'mag'];
+  body.partNames = ['steel', 'wood', 'slide', 'mag', 'mark', 'magCatch'];
   body.boreAt = 0.070;                 // the origin sits 70 mm under the bore
   body.muzzleAt = TOMMY.muzzle + 0.030;
   body.sightAt = TOMMY.recUp + 0.0040 + 0.070;
@@ -34767,7 +35312,28 @@ function strut(g, a, b, pts, capA = true, capB = true) {
  * The clearance argument above stands on its own: it was measured off
  * the distance field at the point the solve aims at, and no reload prop
  * comes into it. */
-function guardBow(g, pts, hf = 0.0022, hb = 0.0022, hw = 0.0046, z = 0) {
+function guardBow(g, pts, hf = 0.0022, hb = 0.0022, hw = 0.0046, z = 0, fine = false) {
+  /* `fine`: through a Catmull-Rom spline, three stations to every span.
+     Six stations round a bow is six straight bars welded at the corners,
+     and on a gun held a hand's length from the eye every corner shows.
+
+     OPT-IN, for the guns you hold in first person. Turned on for the
+     whole rack it tripled the vertices in the one region every gun has
+     in the same place, and distinct.test.js -- which compares where each
+     gun's vertices sit -- read sixty guns as two pairs more alike. That
+     is the metric counting vertices rather than shapes, but the rack is
+     seen at a distance in multiplayer, where the facets do not show. */
+  const raw = pts;
+  if (fine) pts = [];
+  for (let i = 0; fine && i < raw.length - 1; i++) {
+    const a = raw[Math.max(0, i - 1)], b = raw[i], c = raw[i + 1], d = raw[Math.min(raw.length - 1, i + 2)];
+    for (let k = 0; k < 3; k++) {
+      const t = k / 3, t2 = t * t, t3 = t2 * t;
+      pts.push([0, 1].map((j) => 0.5 * (2 * b[j] + (c[j] - a[j]) * t +
+        (2 * a[j] - 5 * b[j] + 4 * c[j] - d[j]) * t2 + (-a[j] + 3 * b[j] - 3 * c[j] + d[j]) * t3)));
+    }
+  }
+  if (fine) pts.push(raw[raw.length - 1]);
   const sts = pts.map(([x, y], i) => {
     const p = pts[Math.max(0, i - 1)], q = pts[Math.min(pts.length - 1, i + 1)];
     const dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy) || 1;
@@ -35260,18 +35826,17 @@ function buildDoubleAction(g, C) {
      the bead now, so it cannot drift above the sight line again whatever
      the action's proportions do. */
   const lev = doubleBeadY(C) - 0.0008;
-  hardBox(g, -0.0330, lev - 0.0019, 0, 0.0170, 0.0019, 0.0090);
-  sweepPath(g, [
-    ax(-0.0230, roundRect(0.0021, 0.0032, 0.0056, 2.6, 12), lev - 0.0021),
-    ax(-0.0170, roundRect(0.0020, 0.0030, 0.0040, 2.6, 12), lev - 0.0021, 0.0050),
-  ], true, true);
-
+  /* The top strap the lever lies in: a flat on the action's crown. */
+  hardBox(g, -0.0330, lev - 0.0021, 0, 0.0190, 0.0015, 0.0095);
+  /* The lever itself is its own part now (buildDoubleTopLever), so it
+     can swing to the right as the gun breaks, the way the shooter's
+     thumb pushes it. */
   /* Trigger group: two blades in one guard on the shotguns, one on the
      Paralyzer, which fires both barrels together. */
   guardBow(g, [
     [-0.0480, bot - 0.0010], [-0.0450, bot - 0.0130], [-0.0330, bot - 0.0205],
     [-0.0180, bot - 0.0195], [-0.0100, bot - 0.0120], [-0.0080, bot - 0.0010],
-  ], 0.0026, 0.0026, 0.0056);
+  ], 0.0026, 0.0026, 0.0056, 0, true);
   if (C.twinTriggers) {
     triggerBlade(g, -0.0380, bot - 0.0020, 0, 0.019, 0.0032);
     triggerBlade(g, -0.0250, bot - 0.0020, 0, 0.019, 0.0032);
@@ -35280,12 +35845,106 @@ function buildDoubleAction(g, C) {
   }
   // Safety on the tang, and the hinge pin's bosses. The safety is on the
   // same strap as the lever, so it takes its height from the same line.
-  hardBox(g, -0.0560, lev - 0.0018, 0, 0.0075, 0.0018, 0.0048);
+  /* The tang safety: a sliding thumb piece on the top strap, behind the
+     lever, in its slot -- serrated across so a thumb can push it, with
+     the S it uncovers when it is back. It is forward here: off safe. */
+  hardBox(g, -0.0545, lev - 0.0024, 0, 0.0080, 0.0012, 0.0036);        // slot floor
+  ctlPlateY(g, [
+    [-0.0560, -0.0040], [-0.0500, -0.0034], [-0.0490, 0], [-0.0500, 0.0034],
+    [-0.0560, 0.0040], [-0.0574, 0.0020], [-0.0574, -0.0020],
+  ], lev - 0.0030, lev - 0.0002, 0.0004);
+  for (let i = 0; i < 4; i++) hardBox(g, -0.0554 + i * 0.0015, lev - 0.0001, 0, 0.00028, 0.00022, 0.0030);
+  if (!C.science) {
+    // The S, stamped in the strap beside the slide, to read from the stock.
+    const sx = -0.0535, sz = -0.0072, sy = lev - 0.0012, h = 0.0026, k = 0.13 * h;
+    const S = CTL_GLYPHS.S[1][0];
+    for (let i = 0; i < S.length - 1; i++) {
+      const a = S[i], b = S[i + 1];
+      // Lying flat on the strap: glyph x runs along -Z (reading from behind), glyph y along +X.
+      const ax0 = sx + (a[1] - 0.5) * h, az0 = sz + (a[0] - 0.29) * h;
+      const bx0 = sx + (b[1] - 0.5) * h, bz0 = sz + (b[0] - 0.29) * h;
+      ctlPlateY(g, (() => {
+        const dx = bx0 - ax0, dz = bz0 - az0, L = Math.hypot(dx, dz) || 1;
+        const px = -dz / L * k, pz = dx / L * k, ex = dx / L * k, ez = dz / L * k;
+        return [[ax0 - ex + px, az0 - ez + pz], [bx0 + ex + px, bz0 + ez + pz], [bx0 + ex - px, bz0 + ez - pz], [ax0 - ex - px, az0 - ez - pz]];
+      })(), sy - 0.0003, sy + 0.00022, 0, 60);
+    }
+  }
   for (const s of [-1, 1]) {
     strut(g, [D.hinge[0] - 0.006, D.hinge[1], s * (halfW - 0.0040)],
       [D.hinge[0] - 0.006, D.hinge[1], s * (halfW + 0.0010)], ringOutline(0.0072, 14));
   }
+  /* A boxlock's sides: the two cross pins the lockwork hangs on, the
+     cocking-lever pin under them, a screw for the trigger plate, and the
+     FENCES -- the rounded shoulders the action carries up round the
+     breech ends of the barrels. The flank is a superellipse, so every
+     part is seated on the flank's own z at its height. */
+  if (!C.science) {
+    const flank = (y) => {
+      const a = Math.min(0.999, Math.abs(y - cy) / hh);
+      return halfW * Math.pow(1 - Math.pow(a, 3.0), 1 / 3.0);
+    };
+    for (const sd of [-1, 1]) {
+      for (const [px, py, r] of [[-0.0150, -0.0060, 0.0021], [-0.0300, -0.0060, 0.0021], [-0.0080, -0.0170, 0.0018]]) {
+        ctlPin(g, px, py, sd * flank(py), sd, r, 0.0004);
+      }
+      ctlScrew(g, -0.0440, -0.0150, sd * flank(-0.0150), sd, 0.0026, sd > 0 ? 25 : 70);
+      // Fences: two low domes either side of the breech face's top.
+      ctlSpin(g, [[-0.0010, 0], [-0.0010, 0.0082], [0.0006, 0.0078], [0.0016, 0.0062], [0.0022, 0.0036], [0.0024, 0]],
+        D.breech - 0.0080, cy + hh * 0.30, sd * (flank(cy + hh * 0.30) - 0.0006), sd, 24, 40);
+      // A border line round the side panel: the engraver's frame.
+      const bx0 = -0.0560, bx1 = D.breech - 0.0170, by0 = cy - hh * 0.62, by1 = cy + hh * 0.50;
+      for (const [x0, y0, x1, y1] of [[bx0, by0, bx1, by0], [bx1, by0, bx1, by1], [bx1, by1, bx0, by1], [bx0, by1, bx0, by0]]) {
+        const zl = sd * flank((y0 + y1) / 2);
+        markBar(g, x0, y0, x1, y1, 0.00028, zl - sd * 0.0004, zl + sd * 0.00022);
+      }
+    }
+  }
   if (C.science) buildParalyzerBack(g, C);
+}
+
+/* THE TOP LEVER, on its spindle at the front of the top strap. A tapered
+   arm back along the strap to a thumb piece canted right, serrated on top.
+   Built in the gun's frame like every part; DOUBLE_LEVER_PIVOT is where it
+   turns, and it turns about Y -- the thumb piece swings out to the right. */
+const DOUBLE_LEVER_PIVOT = [-0.0140, 0, 0];
+function buildDoubleTopLever(g, C) {
+  const lev = doubleBeadY(C) - 0.0008, px = DOUBLE_LEVER_PIVOT[0];
+  const raw = [];
+  for (let i = 0; i <= 10; i++) {                    // the spindle boss, front half
+    const t = -PI / 2 + (i / 10) * PI;
+    raw.push([px + 0.0062 * Math.cos(t), 0.0062 * Math.sin(t)]);
+  }
+  raw.push([-0.0300, 0.0040], [-0.0380, 0.0062], [-0.0430, 0.0092], [-0.0452, 0.0100],
+           [-0.0462, 0.0072], [-0.0440, 0.0030], [-0.0360, -0.0040], [-0.0260, -0.0048]);
+  ctlPlateY(g, raw, lev - 0.0034, lev - 0.0002, 0.0005);
+  // The spindle's head, flush in the boss.
+  hardBox(g, px, lev - 0.0001, 0, 0.0026, 0.0002, 0.0026);
+  for (let i = 0; i < 4; i++) {
+    const x = -0.0452 + i * 0.0018;
+    hardBox(g, x, lev - 0.0001, 0.0062 + i * 0.0006, 0.00030, 0.00022, 0.0026);
+  }
+}
+
+/* Forend iron and latch: the steel the forend carries, which moves with
+   the barrels. A plate down the forend's belly from the knuckle, and the
+   push-rod latch at its tip. */
+function buildDoubleForendIron(g, C) {
+  const s = C.spacing != null ? C.spacing : 0.0245;
+  const x0 = C.forend[0], x1 = C.forend[1], y = -0.0090;
+  const belly = y - 0.0210;
+  ctlPlateY(g, [[x0 + 0.020, -0.0088], [x0 + 0.068, -0.0070], [x0 + 0.072, 0], [x0 + 0.068, 0.0070], [x0 + 0.020, 0.0088], [x0 + 0.0165, 0]],
+    belly + 0.0010, belly - 0.0007, 0.0004);
+  // Two screws through it into the wood.
+  for (const xx of [x0 + 0.028, x0 + 0.060]) {
+    const ring = [];
+    for (let i = 0; i < 14; i++) { const t = (i / 14) * TAU; ring.push([xx + 0.0021 * Math.cos(t), 0.0021 * Math.sin(t)]); }
+    ctlPlateY(g, ring, belly - 0.0005, belly - 0.0013, 0.0004, 55);
+    hardBox(g, xx, belly - 0.0013, 0, 0.0019, 0.0002, 0.00025);
+  }
+  // The latch: a round push rod standing out of the forend's tip.
+  tubeRun(g, [[x1 - 0.004, 0.0032], [x1 + 0.0035, 0.0032], [x1 + 0.0045, 0.0024]], 16, false, true, y - 0.0040, 0);
+  void s;
 }
 
 /* Buttstock and grip. `stock` is 'full' for a shouldered gun, 'stub' for
@@ -37291,20 +37950,20 @@ const DOUBLE_KINDS = {
     barrelLen: 0.4800, spacing: 0.0245, bands: [0.190, 0.360],
     forend: [0.0560, 0.2300], stock: 'full', twinTriggers: true, combDrop: 1,
     origin: new Vec3(-0.0980, -0.0420, 0), mass: 3.4, bound: 0.42,
-    mats: { steel: ARM_MAT.blued, wood: ARM_MAT.walnut, swing: ARM_MAT.blued, forend: ARM_MAT.walnut },
+    mats: { steel: ARM_MAT.blued, wood: ARM_MAT.walnut, swing: ARM_MAT.blued, forend: ARM_MAT.walnut, toplever: ARM_MAT.blued },
   },
   sawnoff: {
     barrelLen: 0.2300, spacing: 0.0245, bands: [],
     forend: [0.0500, 0.1500], stock: 'stub', twinTriggers: true,
     origin: new Vec3(-0.0680, -0.0340, 0), mass: 2.4, bound: 0.24,
-    mats: { steel: ARM_MAT.blued, wood: ARM_MAT.walnut, swing: ARM_MAT.blued, forend: ARM_MAT.walnut },
+    mats: { steel: ARM_MAT.blued, wood: ARM_MAT.walnut, swing: ARM_MAT.blued, forend: ARM_MAT.walnut, toplever: ARM_MAT.blued },
   },
   paralyzer: {
     barrelLen: 0.4200, spacing: 0.0300, bands: [0.060, 0.320], overUnder: true,
     forend: [0.0500, 0.0900], stock: 'full', twinTriggers: false, science: true,
     origin: new Vec3(-0.0980, -0.0620, 0), mass: 4.1, bound: 0.42,
     mats: {
-      steel: ARM_MAT.bright, wood: ARM_MAT.grey, swing: ARM_MAT.bright, forend: ARM_MAT.grey,
+      steel: ARM_MAT.bright, wood: ARM_MAT.grey, swing: ARM_MAT.bright, forend: ARM_MAT.grey, toplever: ARM_MAT.bright,
       copper: ARM_MAT.copper, glow: ARM_MAT.glow,
     },
   },
@@ -37317,11 +37976,14 @@ function makeDoubleGun(kind) {
   geos.wood = new Geometry(); buildDoubleStock(geos.wood, C);
   geos.swing = new Geometry(); buildDoubleBarrels(geos.swing, C);
   geos.forend = new Geometry(); buildDoubleForend(geos.forend, C);
+  geos.toplever = new Geometry(); buildDoubleTopLever(geos.toplever, C);
+  if (!C.science) buildDoubleForendIron(geos.swing, C);
   if (C.science) {
     geos.copper = new Geometry(); buildParalyzerCoil(geos.copper, C);
     geos.glow = new Geometry(); buildParalyzerGlow(geos.glow, C);
   }
-  return fin(geos, C.origin);
+  const P = DOUBLE_LEVER_PIVOT;
+  return fin(geos, C.origin, { toplever: new Vec3(P[0], P[1], P[2]) });
 }
 
 function doubleGun(E, kind, opts) {
@@ -44908,6 +45570,11 @@ function poseAction(gun, act, s) {
     /* NEGATIVE, and about the pin. A rotation about Z carries +X toward
        +Y, which tips the muzzle UP; a break gun's barrels drop. */
     turnAbout(gun.swing, gun.swingPivot, 'z', -(gun.hingeArc || 26) * breakOpen(reload));
+    // The top lever is pushed over first and held there while it is open.
+    if (gun.toplever) {
+      const k = Math.min(1, breakOpen(reload) * 3.5);
+      turnAbout(gun.toplever, gun.topleverPivot, 'y', 34 * k * k * (3 - 2 * k));
+    }
   }
   /* A rotary's barrels never stop while it is spun up. They are the
      `cylinder` group -- the barrel cluster, offset to its own axis -- not

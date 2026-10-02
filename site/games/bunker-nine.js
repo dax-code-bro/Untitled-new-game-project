@@ -6436,7 +6436,7 @@ function makePlayer(game, S, hud, sfx, voice) {
      works off one list rather than off a hand-written set of names. */
   const singleParts = (a) => {
     const out = [a];
-    for (const k of ['slide', 'mag', 'wood', 'grips', 'mark', 'bolt']) if (a[k]) out.push(a[k]);
+    for (const k of ['slide', 'mag', 'wood', 'grips', 'mark', 'bolt', 'magCatch']) if (a[k]) out.push(a[k]);
     return out;
   };
   for (const id of ['m1911', 'thompson', 'blaze']) {
@@ -7801,6 +7801,16 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       e.a.setPosition([hx + dx * c - dy * sn, hy + dx * sn + dy * c, e.p[2]]);
       e.a.setRotation([e.r[0], e.r[1], e.r[2] + ang * 57.2958]);
     }
+    /* The top lever goes over first -- it is what the thumb pushes to
+       let the barrels fall -- and stays over while the gun is open; it
+       snaps home as the barrels lock up. About its spindle, to the right. */
+    const tl = v.root && v.root.toplever, tp = v.root && v.root.topleverPivot;
+    if (tl && tp) {
+      const k = Math.min(1, open * 3.5), a = 34 * (k * k * (3 - 2 * k)) * Math.PI / 180;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      tl.setRotation([0, a * 57.2958, 0]);
+      tl.setPosition([tp[0] - (tp[0] * ca + tp[2] * sa), 0, tp[2] - (-tp[0] * sa + tp[2] * ca)]);
+    }
   }
 
   /* Box magazine on a group model. The single-actor path below drives
@@ -7858,6 +7868,24 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
     if (bands) for (const b of bands) for (const a of b) dropList.push(a);
     const ru = P.reloading > 0 ? 1 - P.reloading / (P.reloadMax || spec.reload) : -1;
     const drop = out ? Math.max(0, Math.min(1, (ru - 0.06) / 0.26)) : 0;
+    /* THE THUMB THAT DROPS IT. A magazine does not fall out because the
+       reload has reached 16 per cent; it falls because the catch was
+       pressed. The catch is pressed just before, held while the
+       magazine clears the well, and let go -- a pivoted lever turning
+       up on the Thompson, a button pushed into the frame on the 1911. */
+    if (gunRoot && gunRoot.magCatch) {
+      const k = ru < 0 ? 0 : Math.max(0, Math.min(1, (ru - 0.08) / 0.06)) * (1 - Math.max(0, Math.min(1, (ru - 0.28) / 0.06)));
+      const c = gunRoot.magCatch, e = k * k * (3 - 2 * k);
+      if (gunRoot.magCatchPivot) {
+        const P = gunRoot.magCatchPivot, a = (gunRoot.magCatchPress || 8) * e * Math.PI / 180;
+        const ca = Math.cos(a), sa = Math.sin(a);
+        c.setPosition([P[0] - (P[0] * ca - P[1] * sa), P[1] - (P[0] * sa + P[1] * ca), 0]);
+        c.setRotation([0, 0, a * 57.2958]);
+      } else if (gunRoot.magCatchPush) {
+        const D = gunRoot.magCatchPush;
+        c.setPosition([D[0] * e, D[1] * e, D[2] * e]);
+      }
+    }
     for (const m of dropList) {
       if (!m.__magRest) {
         const q = m.position || m._position;

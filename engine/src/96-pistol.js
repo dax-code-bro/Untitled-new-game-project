@@ -719,23 +719,85 @@ function buildFrame(g) {
      proud strip where the .45-sized claw rides. */
   hardBox(g, P11.slideRear + 0.0135, 0.0006, P11.slideHalfW - 0.0003, 0.0092, 0.0016, 0.0006);
 
-  /* Thumb safety and slide stop — small, but their absence is loud. */
+  /* THE FRAME BEHIND THE TRIGGER, UNDER THE SLIDE. The dust cover
+     started at x 0.030 and the grip safety ended at 0.0175, and between
+     them under the slide there was nothing: a hole you could see light
+     through, right where the thumb safety mounts. A 1911's frame runs
+     the full length of the slide; this is its rear. */
   sweepPath(g, [
-    { o: new Vec3(0.0250, -0.0104, -0.0110), u: U, v: new Vec3(1, 0, 0), pts: roundRect(0.0042, 0.0042, 0.0026, 2.6, 14) },
-    { o: new Vec3(0.0250, -0.0104, -0.0135), u: U, v: new Vec3(1, 0, 0), pts: roundRect(0.0042, 0.0042, 0.0026, 2.6, 14) },
-  ], false, true);
-  hardBox(g, 0.0335, -0.0088, -0.0126, 0.0090, 0.0022, 0.0011);
-  sweepPath(g, [
-    { o: new Vec3(0.0688, -0.0166, -0.0110), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0038, 14) },
-    { o: new Vec3(0.0688, -0.0166, -0.0128), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0038, 14) },
-  ], false, true);
-  hardBox(g, 0.0600, -0.0166, -0.0118, 0.0092, 0.0020, 0.0009);
+    { o: new Vec3(0.0160, 0, 0), u: U, v: V, pts: profileOutline([
+      [P11.slideBottom + 0.0022, -0.0110], [-0.0205, -0.0110], [-0.0215, -0.0100],
+      [-0.0215, 0.0100], [-0.0205, 0.0110], [P11.slideBottom + 0.0022, 0.0110]].reverse(), 30) },
+    { o: new Vec3(0.0312, 0, 0), u: U, v: V, pts: profileOutline([
+      [P11.slideBottom + 0.0022, -0.0110], [-0.0205, -0.0110], [-0.0215, -0.0100],
+      [-0.0215, 0.0100], [-0.0205, 0.0110], [P11.slideBottom + 0.0022, 0.0110]].reverse(), 30) },
+  ], true, true);
+  buildPistolControls(g);
+}
 
-  /* Magazine release button. */
-  sweepPath(g, [
-    { o: new Vec3(0.0475, -0.0268, -0.0110), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0034, 14) },
-    { o: new Vec3(0.0475, -0.0268, -0.0126), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0034, 14) },
-  ], false, true);
+/* THE LEFT SIDE OF A 1911, which is the side the shooter looks at.
+
+   The thumb safety was a 5 mm stub, the slide stop a 1.7 mm strip with no
+   thumb piece, the magazine release a 3.4 mm disc standing 1.6 mm off the
+   frame and 3.4 mm UNDER the grip panel's face -- three controls, all
+   present in the source, none of which could be found on the screen.
+
+   At their real sizes, as separate pieces of steel:
+     the THUMB SAFETY -- pivot at the rear of the frame, a lever forward
+       along the slide's lower edge to a thumb shelf that stands out;
+     the SLIDE STOP -- pivot pin over the front of the trigger guard, a
+       lever back along the frame to a tall serrated thumb piece;
+     the MAGAZINE RELEASE -- a checkered button behind the trigger,
+       standing level with the grip panel, on its own geometry so a
+       reload can push it in (buildMagCatch1911).
+   And on the right, the ends of the pins that hold them: the slide stop
+   pin, the safety's shaft, the sear pin. */
+function buildPistolControls(g) {
+  const FZ = 0.0110, L = -1, R = 1;
+  const top = P11.slideBottom - 0.0003;                 // just under the slide
+
+  // Thumb safety: lever, then the shelf on its front end.
+  ctlPlate(g, [
+    [0.0168, -0.0182], [0.0228, -0.0198], [0.0262, -0.0170], [0.0410, -0.0150],
+    [0.0418, top], [0.0200, top], [0.0164, -0.0140],
+  ], -(FZ - 0.0004), -(FZ + 0.0016), 0.0004);
+  ctlButton(g, 0.0205, -0.0158, -(FZ + 0.0016), L, 0.0030, 0.0005, 0.0003);   // shaft boss
+  ctlPlate(g, [
+    [0.0318, -0.0150], [0.0418, -0.0150], [0.0424, top - 0.0004], [0.0322, top - 0.0004],
+  ], -(FZ + 0.0010), -(FZ + 0.0046), 0.0005);
+  ctlSerrate(g, 0.0330, -0.0136, [1, 0], [0, 1], 7, 0.0013, 0.0018, -(FZ + 0.0046), L, 0.0003, 0.00028);
+
+  // Slide stop: hub on its pin, lever back to the thumb piece.
+  const sx = 0.0700, sy = -0.0168;
+  ctlPlate(g, [
+    ...Array.from({ length: 9 }, (_, i) => {
+      const t = -PI / 2 + (i / 8) * PI;               // the hub's front half
+      return [sx + 0.0042 * Math.cos(t), sy + 0.0042 * Math.sin(t)];
+    }),
+    [0.0590, top], [0.0468, top], [0.0462, -0.0212], [0.0478, -0.0226], [0.0566, -0.0222],
+  ], -(FZ - 0.0004), -(FZ + 0.0018), 0.0004);
+  ctlPin(g, sx, sy, -(FZ + 0.0018), L, 0.0024, 0.0005);
+  // The thumb piece stands out further, and it is serrated.
+  ctlPlate(g, [[0.0470, -0.0222], [0.0560, -0.0218], [0.0566, top - 0.0004], [0.0474, top - 0.0004]],
+    -(FZ + 0.0012), -(FZ + 0.0036), 0.0005);
+  ctlSerrate(g, 0.0484, -0.0170, [1, 0], [0, 1], 6, 0.0014, 0.0080, -(FZ + 0.0036), L, 0.0003, 0.0003);
+
+  // Right side: the pin ends.
+  ctlPin(g, sx, sy, FZ, R, 0.0021, 0.0004);
+  ctlPin(g, 0.0205, -0.0158, FZ, R, 0.0023, 0.0004);
+  ctlPin(g, 0.0272, -0.0192, FZ, R, 0.0016, 0.0003);
+}
+
+/* The magazine release: a checkered button behind the trigger, its face
+   level with the grip panel's, so the thumb finds it without looking. */
+const MAG_CATCH_1911 = { x: 0.0446, y: -0.0256, r: 0.0046 };
+function buildMagCatch1911(g) {
+  const C = MAG_CATCH_1911, FZ = 0.0110, h = M1911.gripW / 2 - FZ + 0.0006;
+  ctlButton(g, C.x, C.y, -FZ, -1, C.r, h, 0.0006, 0.0002, 26);
+  // Checkering: two sets of ridges crossed on the face.
+  const zf = -(FZ + h - 0.0002);
+  ctlSerrate(g, C.x - 0.0021, C.y, [1, 0], [0, 1], 4, 0.0014, 0.0056, zf, -1, 0.00028, 0.00026);
+  ctlSerrate(g, C.x, C.y - 0.0021, [0, 1], [1, 0], 4, 0.0014, 0.0056, zf, -1, 0.00028, 0.00026);
 }
 
 /* ---------------- sights ---------------- */
@@ -825,18 +887,37 @@ function buildGripPanels(g, side) {
      cuts are. Checkering is faceted in reality anyway — every facet is one
      flat pass of the cutter — so each quad gets its own normal and its own
      four vertices. */
+  /* ONE NORMAL PER TRIANGLE, SPLIT ON THE LOW DIAGONAL -- not one per quad.
+
+     Every quad here has two raised corners on one diagonal and two low
+     ones on the other, so it is not flat: it is a saddle. Giving the
+     whole saddle one normal shaded each grid square as a single flat
+     tone, and the panel came out as a mosaic of brown squares -- the
+     "pixelated" look, on the part of the gun nearest the camera.
+
+     Cut along the LOW diagonal instead and each half is exactly one face
+     of one pyramid: the raised node is the apex and the two low nodes
+     are its base edge. Four such faces round every raised node make the
+     diamond, lit from four directions, which is what hand checkering
+     looks like -- a regular field of points, each with a bright side and
+     a dark side. */
   const idx = [];
   const fn = new Vec3(), e1 = new Vec3(), e2 = new Vec3();
+  const facet = (p, q, r, i, j) => {
+    e1.subVectors(q, p); e2.subVectors(r, p);
+    fn.crossVectors(e1, e2).normalize();
+    if (fn.z * side < 0) fn.scale(-1);
+    const b3 = g.positions.length / 3;
+    for (const v of [p, q, r]) g.vert(v.x, v.y, v.z, fn.x, fn.y, fn.z, i / NU, j / NV);
+    // Wound to face out of the grip on either side.
+    const w = (e1.x * e2.y - e1.y * e2.x) * side;
+    if (w > 0) g.tri(b3, b3 + 1, b3 + 2); else g.tri(b3, b3 + 2, b3 + 1);
+  };
   for (let i = 0; i < NU; i++) {
     for (let j = 0; j < NV; j++) {
       const a = rows[i][j], b = rows[i + 1][j], c = rows[i + 1][j + 1], d = rows[i][j + 1];
-      e1.subVectors(b, a); e2.subVectors(d, a);
-      fn.crossVectors(e1, e2).normalize();
-      if (fn.z * side < 0) fn.scale(-1);
-      const base4 = g.positions.length / 3;
-      for (const p of [a, b, c, d]) g.vert(p.x, p.y, p.z, fn.x, fn.y, fn.z, i / NU, j / NV);
-      if (side > 0) g.quad(base4, base4 + 1, base4 + 2, base4 + 3);
-      else g.quad(base4, base4 + 3, base4 + 2, base4 + 1);
+      if ((i + j) % 2 === 0) { facet(a, b, d, i, j); facet(c, d, b, i, j); }   // a, c raised
+      else { facet(b, c, a, i, j); facet(d, a, c, i, j); }                     // b, d raised
     }
   }
   // The rim still needs the boundary rows, so keep them as their own strip.
@@ -1040,6 +1121,9 @@ function makePistol1911(opts = {}) {
   buildGripPanels(grip, 1);
   buildGripPanels(grip, -1);
 
+  const magCatch = new Geometry();
+  buildMagCatch1911(magCatch);
+
   const mark = new Geometry();
   buildBore(mark);
   buildEngraving(mark, opts.engrave != null ? opts.engrave : 'river', opts);
@@ -1050,6 +1134,7 @@ function makePistol1911(opts = {}) {
     mag: offsetGeometry(mag, PISTOL_ORIGIN).finalize(),
     grip: offsetGeometry(grip, PISTOL_ORIGIN).finalize(),
     mark: offsetGeometry(mark, PISTOL_ORIGIN).finalize(),
+    magCatch: offsetGeometry(magCatch, PISTOL_ORIGIN).finalize(),
   };
 }
 
@@ -1161,6 +1246,8 @@ Engine.prototype.pistol1911 = function (opts = {}) {
   body.mark = child('mark', parts.mark, PISTOL_MATERIALS.mark);
   body.slide = child('slide', parts.slide, opts.material || PISTOL_MATERIALS.steel);
   body.mag = child('mag', parts.mag, opts.material || PISTOL_MATERIALS.steel);
+  body.magCatch = child('catch', parts.magCatch, opts.material || PISTOL_MATERIALS.steel);
+  body.magCatchPush = [0, 0, 0.0020];   // into the frame, from the left
   // Where the brass leaves and where a dropped magazine starts, in gun-local
   // space, so the game never has to know the model's internals.
   body.ejectPort = [0.0900, 0.0400, 0.0110];
@@ -1175,7 +1262,7 @@ Engine.prototype.pistol1911 = function (opts = {}) {
      mp-match's, bunker-nine's camo and the attachment fitter -- and on
      a gun without one they all walked an empty list and silently did
      nothing to four fifths of the model. */
-  body.partNames = ['steel', 'grips', 'mark', 'slide', 'mag'];
+  body.partNames = ['steel', 'grips', 'mark', 'slide', 'mag', 'magCatch'];
   // Where the bore sits above the grip, so anything bolted to the muzzle
   // lands on the barrel's own line rather than on a guess at it.
   body.boreAt = -PISTOL_ORIGIN.y;

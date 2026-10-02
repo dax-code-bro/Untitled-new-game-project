@@ -133,24 +133,32 @@ function buildTommySteel(g) {
 
   // Its track stays with the receiver; the handle itself reciprocates and
   // lives in its own geometry.
-  hardBox(g, 0.050, 0.0090, T.recHalfW + 0.0002, 0.055, 0.0028, 0.0008);
-
-  /* Selector and safety levers, left side. */
-  for (const lx of [0.010, 0.038]) {
-    sweepPath(g, [
-      { o: new Vec3(lx, -0.004, -T.recHalfW * 0.86), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0036, 12) },
-      { o: new Vec3(lx, -0.004, -T.recHalfW * 0.86 - 0.0062), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0036, 12) },
-    ], false, true);
-  }
-
+  /* The slot the handle runs in -- a cut, so it is drawn as one: a dark
+     channel (buildTommyControls lays it, in the `mark` material) with a
+     lip either side. It was a raised steel strip, which is a rail, and a
+     rail is the one thing a slot is not. */
 
   /* Trigger guard and serrated trigger. */
   const guardPts = [
     [0.052, -0.0455], [0.056, -0.0560], [0.068, -0.0640], [0.084, -0.0660],
     [0.100, -0.0635], [0.110, -0.0560], [0.113, -0.0465],
   ];
-  const guard = guardPts.map(([x, y], i) => {
-    const p = guardPts[Math.max(0, i - 1)], q = guardPts[Math.min(guardPts.length - 1, i + 1)];
+  /* Subdivided through a Catmull-Rom spline, like the 1911's: seven
+     stations round a bow left it a visible polygon, seven straight bars
+     welded end to end, which is the first thing that reads as a model. */
+  const fine = [];
+  for (let i = 0; i < guardPts.length - 1; i++) {
+    const a = guardPts[Math.max(0, i - 1)], b = guardPts[i];
+    const c = guardPts[i + 1], d = guardPts[Math.min(guardPts.length - 1, i + 2)];
+    for (let k = 0; k < 4; k++) {
+      const t = k / 4, t2 = t * t, t3 = t2 * t;
+      fine.push([0, 1].map((j) => 0.5 * (2 * b[j] + (c[j] - a[j]) * t +
+        (2 * a[j] - 5 * b[j] + 4 * c[j] - d[j]) * t2 + (-a[j] + 3 * b[j] - 3 * c[j] + d[j]) * t3)));
+    }
+  }
+  fine.push(guardPts[guardPts.length - 1]);
+  const guard = fine.map(([x, y], i) => {
+    const p = fine[Math.max(0, i - 1)], q = fine[Math.min(fine.length - 1, i + 1)];
     const dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy) || 1;
     return { o: new Vec3(x, y, 0), u: new Vec3(-dy / L, dx / L, 0), v: V, pts: roundRect(0.0022, 0.0022, 0.0046, 2.5, 12) };
   });
@@ -179,6 +187,144 @@ function buildTommySteel(g) {
      caught that; my eye did not, either time. -0.0350 has it biting
      into the forend, which is where a swivel screw goes. */
   loop(0.343, -0.0350);
+}
+
+/* THE CONTROLS, at the size they are.
+
+   They were two discs 3.6 mm across standing 3.5 mm off the frame, on
+   the receiver rather than the frame, with nothing to say which was
+   which -- and the magazine catch, the one control every reload uses,
+   was not there at all. From the shooter's eye, which looks down the
+   gun's LEFT flank, the whole side of the gun was one grey slab.
+
+   An M1A1's left side, rear to front:
+     the SAFETY, a rocker lever over the grip, its paddle reaching up
+       the receiver towards SAFE (back) or FIRE (forward);
+     the FIRE SELECTOR, the same lever over the trigger, towards SINGLE
+       (back) or FULL AUTO (forward);
+     the frame pins -- trigger, sear and disconnector -- through the
+       trigger housing;
+     the MAGAZINE CATCH, a thumb lever just behind the well that you
+       push up to drop the stick;
+     and the roll mark down the receiver over the magazine.
+   Both levers sit forward here: the gun is on FIRE and FULL AUTO,
+   because that is how the zombies game fires it.
+
+   The right side has the axle ends of both levers, the same pins, and
+   the ejection port -- moved to below the cocking-handle slot where the
+   brass actually leaves (body.ejectPort follows it). */
+const TOMMY_FRAME_Z = TOMMY.recHalfW * 0.88;          // the trigger housing's flank
+function tommyFlankZ(y) {                              // the receiver's, at height y
+  const T = TOMMY, u = y - 0.0018, d = u >= 0 ? T.recUp : T.recDown;
+  const a = Math.min(0.999, Math.abs(u) / d);
+  return T.recHalfW * Math.pow(1 - Math.pow(a, 3.2), 1 / 3.2);
+}
+const TOMMY_CATCH_PIVOT = new Vec3(0.1080, -0.0285, 0);
+
+function buildTommyControls(g, mark) {
+  const FZ = TOMMY_FRAME_Z;
+  const L = -1, R = 1;
+
+  /* The two rocker levers. A hub on the frame, standing out past the
+     receiver's flank so the lever clears it, and a flat lever from the
+     hub up the side of the receiver to a serrated paddle. */
+  /* The lever lies 0.5 mm off the receiver's flank at its paddle and the
+     hub bridges the step down to the frame. Further out and it hangs in
+     the air in any three-quarter view, because the receiver's lower
+     corners round away from it. */
+  const LZ0 = 0.0182, LZ1 = 0.0200;
+  const rocker = (hx, hy, tiltDeg) => {
+    const t = tiltDeg * PI / 180, len = 0.0185;
+    const tx = hx + Math.sin(t) * len, ty = hy + Math.cos(t) * len;
+    ctlButton(g, hx, hy, -FZ, L, 0.0050, LZ1 - FZ - 0.0001, 0.0006);         // hub
+    ctlPlate(g, ctlLeverOutline(hx, hy, 0.0046, tx, ty, 0.0026, 0.0041), -LZ0, -LZ1, 0.0005);
+    ctlScrew(g, hx, hy, -LZ1, L, 0.0024, 60 + tiltDeg);                         // axle screw
+    // Paddle serrations, across the lever.
+    const ux = Math.sin(t), uy = Math.cos(t);
+    ctlSerrate(g, tx - ux * 0.0034, ty - uy * 0.0034, [ux, uy], [uy, -ux], 4, 0.0013, 0.0052, -LZ1, L);
+    // The axle comes through: its end, on the right.
+    ctlPin(g, hx, hy, FZ, R, 0.0030, 0.0005);
+  };
+  rocker(0.0160, -0.0262, 22);       // safety, on FIRE
+  rocker(0.0560, -0.0262, 22);       // selector, on FULL AUTO
+
+  /* The positions, stamped into the receiver above each paddle's arc. */
+  const flank = (y) => -tommyFlankZ(y);
+  const H = 0.0021;
+  // Each word over the tick its paddle points at in that position.
+  const tip = (hx, deg) => hx + Math.sin(deg * PI / 180) * 0.0185;
+  const ticks = [[tip(0.0160, -22), 'SAFE'], [tip(0.0160, 22), 'FIRE'],
+                 [tip(0.0560, -22), 'SINGLE'], [tip(0.0560, 22), 'FULL AUTO']];
+  for (const [x, word] of ticks) {
+    markBar(mark, x, -0.0078, x, -0.0062, 0.00026, flank(-0.0070) + 0.0002, flank(-0.0070) - 0.00022);
+    ctlStamp(mark, word, x, -0.0050, H, flank, L);
+  }
+
+  /* The roll mark, over the magazine, where every M1A1 carries it. */
+  ctlStamp(mark, 'THOMPSON SUBMACHINE GUN', 0.1820, 0.0085, 0.0021, flank, L);
+  ctlStamp(mark, 'CALIBER .45 M1A1', 0.1820, 0.0040, 0.0021, flank, L);
+
+  /* Frame pins, both sides: trigger, sear, disconnector. */
+  for (const [x, y, r] of [[0.0810, -0.0380, 0.0021], [0.0975, -0.0330, 0.0019], [0.0360, -0.0350, 0.0019]]) {
+    ctlPin(g, x, y, -FZ, L, r);
+    ctlPin(g, x, y, FZ, R, r);
+  }
+  // The catch's pivot comes through on the right as well.
+  ctlPin(g, TOMMY_CATCH_PIVOT.x, TOMMY_CATCH_PIVOT.y, FZ, R, 0.0022);
+
+  /* Ejection port, on the right below the handle slot: a dark opening
+     with a raised steel rim round it. There is no boolean cut here, so
+     the opening is the dark `mark` material laid on the flank and the
+     rim is what makes it read as a hole -- the edge catches the light
+     the way a machined port's edge does. */
+  const px0 = 0.0960, px1 = 0.1320, py0 = -0.0074, py1 = 0.0043;
+  /* Laid ON the flank, which curves: a section that follows the
+     receiver's own superellipse from y0 to y1, `a` to `b` off it, swept
+     along X. Flat plates stood 1.5 mm proud at the bottom of the port. */
+  const patch = (geo, x0, x1, y0, y1, a, b) => {
+    const pts = [];
+    for (let i = 0; i <= 6; i++) { const y = y0 + (y1 - y0) * i / 6; pts.push([y, tommyFlankZ(y) + b]); }
+    for (let i = 6; i >= 0; i--) { const y = y0 + (y1 - y0) * i / 6; pts.push([y, tommyFlankZ(y) + a]); }
+    const prof = profileOutline(ctlCCW(pts), 40);
+    sweepPath(geo, [
+      { o: new Vec3(x0, 0, 0), u: CTL_Y, v: new Vec3(0, 0, 1), pts: prof },
+      { o: new Vec3(x1, 0, 0), u: CTL_Y, v: new Vec3(0, 0, 1), pts: prof },
+    ], true, true);
+  };
+  patch(mark, px0, px1, py0, py1, -0.0010, 0.00012);
+  const rim = 0.0011;
+  patch(g, px0 - rim, px1 + rim, py0 - rim, py0, -0.0010, 0.00055);
+  patch(g, px0 - rim, px1 + rim, py1, py1 + rim, -0.0010, 0.00055);
+  patch(g, px0 - rim, px0, py0, py1, -0.0010, 0.00055);
+  patch(g, px1, px1 + rim, py0, py1, -0.0010, 0.00055);
+  // The cocking handle's slot, above the port.
+  patch(mark, -0.0050, 0.1050, 0.0074, 0.0106, -0.0010, 0.00010);
+  patch(g, -0.0050, 0.1050, 0.0064, 0.0074, -0.0010, 0.00045);
+  patch(g, -0.0050, 0.1050, 0.0106, 0.0116, -0.0010, 0.00045);
+  // The bolt's flank and extractor, seen through it.
+  patch(g, px0 + 0.0008, px0 + 0.0105, py0 + 0.0012, py1 - 0.0012, -0.0010, 0.00030);
+
+  /* Butt plate screws, in the plate's face. */
+  for (const y of [-0.0240, -0.0880]) {
+    sweepPath(g, [
+      { o: new Vec3(TOMMY.stockButt - 0.0046, y, 0), u: CTL_Y, v: new Vec3(0, 0, 1), pts: ringOutline(0.0034, 16) },
+      { o: new Vec3(TOMMY.stockButt - 0.0058, y, 0), u: CTL_Y, v: new Vec3(0, 0, 1), pts: ringOutline(0.0028, 16) },
+    ], false, true);
+  }
+}
+
+/* The magazine catch, its own part so a reload can press it. A lever on
+   a pin behind the well, its paddle under the thumb just aft of the
+   magazine; pushing the paddle up swings the catch off the magazine's
+   notch and the stick falls. */
+function buildTommyCatch(g) {
+  const FZ = TOMMY_FRAME_Z, P = TOMMY_CATCH_PIVOT;
+  const tx = 0.1265, ty = -0.0372;
+  ctlPlate(g, ctlLeverOutline(P.x, P.y, 0.0036, tx, ty, 0.0022, 0.0038), -(FZ - 0.0004), -(FZ + 0.0022), 0.0005);
+  ctlPin(g, P.x, P.y, -(FZ + 0.0022), -1, 0.0019, 0.0004);
+  const ux = (tx - P.x), uy = (ty - P.y), l = Math.hypot(ux, uy);
+  ctlSerrate(g, tx - (ux / l) * 0.0030, ty - (uy / l) * 0.0030, [ux / l, uy / l], [uy / l, -ux / l], 4, 0.0012, 0.0050,
+    -(FZ + 0.0022), -1);
 }
 
 /* The charging handle, on its own so it can ride back with each shot. */
@@ -334,6 +480,10 @@ const TOMMY_MATERIALS = {
      it is warm twice over, which is the mistake that made every service
      rifle in this game terracotta. */
   wood: { color: 0xc2c2c0, texture: 'walnut', roughness: 1, metalness: 0, uvScale: 2.2 },
+  /* The stampings and the ejection port's opening: a rough near-black
+     dielectric, for the 1911's reason -- a mark only reads where it
+     scatters and the steel round it reflects. */
+  mark: { color: 0x14171a, texture: 'smooth', roughness: 0.8, metalness: 0 },
 };
 
 function makeThompson() {
@@ -345,6 +495,10 @@ function makeThompson() {
   buildTommyBolt(bolt);
   const mag = new Geometry();
   buildTommyMag(mag);
+  const mark = new Geometry();
+  buildTommyControls(steel, mark);
+  const magCatch = new Geometry();
+  buildTommyCatch(magCatch);
   // Origin at the pistol grip, matching the 1911's hand-centred datum.
   const origin = new Vec3(0.030, -0.070, 0);
   return {
@@ -352,6 +506,8 @@ function makeThompson() {
     wood: offsetGeometry(wood, origin).finalize(),
     bolt: offsetGeometry(bolt, origin).finalize(),
     mag: offsetGeometry(mag, origin).finalize(),
+    mark: offsetGeometry(mark, origin).finalize(),
+    magCatch: offsetGeometry(magCatch, origin).finalize(),
   };
 }
 
@@ -390,17 +546,24 @@ Engine.prototype.thompson = function (opts = {}) {
     const a = this._spawn({ material: mat, physics: false },
       this._mesh('tommy:' + suffix, () => geo), null, 0.6);
     a.parent = body;
+    a.name = 'tommy:' + suffix;
     return a;
   };
   body.slide = child('bolt', parts.bolt, opts.material || TOMMY_MATERIALS.steel);
   body.mag = child('mag', parts.mag, opts.material || TOMMY_MATERIALS.steel);
-  body.ejectPort = [0.0700, 0.0930, 0.0210];
+  body.mark = child('mark', parts.mark, opts.material ? opts.material : TOMMY_MATERIALS.mark);
+  body.magCatch = child('catch', parts.magCatch, opts.material || TOMMY_MATERIALS.steel);
+  // The pivot in the actor's own frame, for turnAbout-style pressing.
+  body.magCatchPivot = [TOMMY_CATCH_PIVOT.x - 0.030, TOMMY_CATCH_PIVOT.y + 0.070, 0];
+  body.magCatchPress = 9;              // degrees the paddle travels up
+  // Out of the port on the right flank, which is where it is now.
+  body.ejectPort = [0.0840, 0.0700, 0.0210];
   body.magWell = [0.1180, -0.0300, 0];
   body.slideTravel = 0.030;
   /* See the note on the 1911's: `visible` does not inherit, so without
      this list hiding the Thompson left its stock, its bolt handle and
      its magazine floating where the gun used to be. */
-  body.partNames = ['steel', 'wood', 'slide', 'mag'];
+  body.partNames = ['steel', 'wood', 'slide', 'mag', 'mark', 'magCatch'];
   body.boreAt = 0.070;                 // the origin sits 70 mm under the bore
   body.muzzleAt = TOMMY.muzzle + 0.030;
   body.sightAt = TOMMY.recUp + 0.0040 + 0.070;

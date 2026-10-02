@@ -244,6 +244,11 @@ function poseAction(gun, act, s) {
     /* NEGATIVE, and about the pin. A rotation about Z carries +X toward
        +Y, which tips the muzzle UP; a break gun's barrels drop. */
     turnAbout(gun.swing, gun.swingPivot, 'z', -(gun.hingeArc || 26) * breakOpen(reload));
+    // The top lever is pushed over first and held there while it is open.
+    if (gun.toplever) {
+      const k = Math.min(1, breakOpen(reload) * 3.5);
+      turnAbout(gun.toplever, gun.topleverPivot, 'y', 34 * k * k * (3 - 2 * k));
+    }
   }
   /* A rotary's barrels never stop while it is spun up. They are the
      `cylinder` group -- the barrel cluster, offset to its own axis -- not

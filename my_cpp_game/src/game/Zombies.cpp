@@ -762,7 +762,11 @@ void ZombiesGame::frame(rendering::Camera& cam, std::vector<rendering::DrawItem>
 
     // ---- the viewmodel ----
     if (m_health > 0.0f) {
-        const KitRig& rig = *g.rig;
+        /* GAME_VIEW_GUN=slot draws that slot's viewmodel whatever is equipped -- for
+           photographing each gun in the hand with GAME_VIEW_POSE. */
+        static const char* viewGun = std::getenv("GAME_VIEW_GUN");
+        const int vg = viewGun ? std::atoi(viewGun) : -1;
+        const KitRig& rig = (vg >= 0 && vg < static_cast<int>(m_guns.size())) ? *m_guns[static_cast<size_t>(vg)].rig : *g.rig;
         const KitClip* hip = rig.clip("idle");
         const KitClip* ads = rig.clip("ads") ? rig.clip("ads") : hip;
         const KitClip* A = hip;

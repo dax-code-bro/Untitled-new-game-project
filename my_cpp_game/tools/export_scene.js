@@ -73,7 +73,9 @@ GAMES.armory = {
       scatter: 'scattergun', sawnoff: 'sawnOff', thompson: 'thompson', mg42: 'mg42', remington: 'remington700',
       killstreak: 'killStreak', riotshield: 'riotShield' };
     const list = [];
+    const only = window.__ARMORY_ONLY;
     for (const g of MP_DATA.GUNS) {
+      if (only && !only.includes(g.id)) continue;
       let made = null;
       const fn = BESPOKE[g.id];
       if (fn && typeof G[fn] === 'function') { try { made = G[fn]({ at: [0, -50, 0], physics: false }); } catch (e) { made = null; } }
@@ -83,6 +85,7 @@ GAMES.armory = {
     }
     const ZW = window.__T_WEAPONS || {};
     for (const id of ['blaze', 'paralyzer', 'obliterator', 'arc', 'arc2']) {
+      if (only && !only.includes('z-' + id)) continue;
       const v = B.P.view[id];
       if (!v) continue;
       list.push({ id: 'z-' + id, name: (ZW[id] && ZW[id].name) || id, cls: 'zombies', root: v.root || v.actor,
@@ -230,6 +233,8 @@ async function main() {
   await page.setContent('<body style="margin:0"><canvas id="game" style="position:fixed;inset:0;width:100%;height:100%"></canvas></body>');
   await page.addScriptTag({ content: engine });
   for (const s of game.scripts) await page.addScriptTag({ content: fs.readFileSync(path.join(ROOT, s), 'utf8') });
+  // --only id,id: the armoury with just these guns, for iterating on one model.
+  if (rest.includes('--only')) await page.evaluate((l) => { window.__ARMORY_ONLY = l; }, rest[rest.indexOf('--only') + 1].split(','));
   await page.evaluate(game.start);
   await page.evaluate((n) => { for (let i = 0; i < n; i++) window.__G.step(1 / 60); }, frames);
   if (compare) {

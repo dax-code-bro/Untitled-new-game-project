@@ -204,7 +204,28 @@ function strut(g, a, b, pts, capA = true, capB = true) {
  * The clearance argument above stands on its own: it was measured off
  * the distance field at the point the solve aims at, and no reload prop
  * comes into it. */
-function guardBow(g, pts, hf = 0.0022, hb = 0.0022, hw = 0.0046, z = 0) {
+function guardBow(g, pts, hf = 0.0022, hb = 0.0022, hw = 0.0046, z = 0, fine = false) {
+  /* `fine`: through a Catmull-Rom spline, three stations to every span.
+     Six stations round a bow is six straight bars welded at the corners,
+     and on a gun held a hand's length from the eye every corner shows.
+
+     OPT-IN, for the guns you hold in first person. Turned on for the
+     whole rack it tripled the vertices in the one region every gun has
+     in the same place, and distinct.test.js -- which compares where each
+     gun's vertices sit -- read sixty guns as two pairs more alike. That
+     is the metric counting vertices rather than shapes, but the rack is
+     seen at a distance in multiplayer, where the facets do not show. */
+  const raw = pts;
+  if (fine) pts = [];
+  for (let i = 0; fine && i < raw.length - 1; i++) {
+    const a = raw[Math.max(0, i - 1)], b = raw[i], c = raw[i + 1], d = raw[Math.min(raw.length - 1, i + 2)];
+    for (let k = 0; k < 3; k++) {
+      const t = k / 3, t2 = t * t, t3 = t2 * t;
+      pts.push([0, 1].map((j) => 0.5 * (2 * b[j] + (c[j] - a[j]) * t +
+        (2 * a[j] - 5 * b[j] + 4 * c[j] - d[j]) * t2 + (-a[j] + 3 * b[j] - 3 * c[j] + d[j]) * t3)));
+    }
+  }
+  if (fine) pts.push(raw[raw.length - 1]);
   const sts = pts.map(([x, y], i) => {
     const p = pts[Math.max(0, i - 1)], q = pts[Math.min(pts.length - 1, i + 1)];
     const dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy) || 1;
@@ -697,18 +718,17 @@ function buildDoubleAction(g, C) {
      the bead now, so it cannot drift above the sight line again whatever
      the action's proportions do. */
   const lev = doubleBeadY(C) - 0.0008;
-  hardBox(g, -0.0330, lev - 0.0019, 0, 0.0170, 0.0019, 0.0090);
-  sweepPath(g, [
-    ax(-0.0230, roundRect(0.0021, 0.0032, 0.0056, 2.6, 12), lev - 0.0021),
-    ax(-0.0170, roundRect(0.0020, 0.0030, 0.0040, 2.6, 12), lev - 0.0021, 0.0050),
-  ], true, true);
-
+  /* The top strap the lever lies in: a flat on the action's crown. */
+  hardBox(g, -0.0330, lev - 0.0021, 0, 0.0190, 0.0015, 0.0095);
+  /* The lever itself is its own part now (buildDoubleTopLever), so it
+     can swing to the right as the gun breaks, the way the shooter's
+     thumb pushes it. */
   /* Trigger group: two blades in one guard on the shotguns, one on the
      Paralyzer, which fires both barrels together. */
   guardBow(g, [
     [-0.0480, bot - 0.0010], [-0.0450, bot - 0.0130], [-0.0330, bot - 0.0205],
     [-0.0180, bot - 0.0195], [-0.0100, bot - 0.0120], [-0.0080, bot - 0.0010],
-  ], 0.0026, 0.0026, 0.0056);
+  ], 0.0026, 0.0026, 0.0056, 0, true);
   if (C.twinTriggers) {
     triggerBlade(g, -0.0380, bot - 0.0020, 0, 0.019, 0.0032);
     triggerBlade(g, -0.0250, bot - 0.0020, 0, 0.019, 0.0032);
@@ -717,12 +737,106 @@ function buildDoubleAction(g, C) {
   }
   // Safety on the tang, and the hinge pin's bosses. The safety is on the
   // same strap as the lever, so it takes its height from the same line.
-  hardBox(g, -0.0560, lev - 0.0018, 0, 0.0075, 0.0018, 0.0048);
+  /* The tang safety: a sliding thumb piece on the top strap, behind the
+     lever, in its slot -- serrated across so a thumb can push it, with
+     the S it uncovers when it is back. It is forward here: off safe. */
+  hardBox(g, -0.0545, lev - 0.0024, 0, 0.0080, 0.0012, 0.0036);        // slot floor
+  ctlPlateY(g, [
+    [-0.0560, -0.0040], [-0.0500, -0.0034], [-0.0490, 0], [-0.0500, 0.0034],
+    [-0.0560, 0.0040], [-0.0574, 0.0020], [-0.0574, -0.0020],
+  ], lev - 0.0030, lev - 0.0002, 0.0004);
+  for (let i = 0; i < 4; i++) hardBox(g, -0.0554 + i * 0.0015, lev - 0.0001, 0, 0.00028, 0.00022, 0.0030);
+  if (!C.science) {
+    // The S, stamped in the strap beside the slide, to read from the stock.
+    const sx = -0.0535, sz = -0.0072, sy = lev - 0.0012, h = 0.0026, k = 0.13 * h;
+    const S = CTL_GLYPHS.S[1][0];
+    for (let i = 0; i < S.length - 1; i++) {
+      const a = S[i], b = S[i + 1];
+      // Lying flat on the strap: glyph x runs along -Z (reading from behind), glyph y along +X.
+      const ax0 = sx + (a[1] - 0.5) * h, az0 = sz + (a[0] - 0.29) * h;
+      const bx0 = sx + (b[1] - 0.5) * h, bz0 = sz + (b[0] - 0.29) * h;
+      ctlPlateY(g, (() => {
+        const dx = bx0 - ax0, dz = bz0 - az0, L = Math.hypot(dx, dz) || 1;
+        const px = -dz / L * k, pz = dx / L * k, ex = dx / L * k, ez = dz / L * k;
+        return [[ax0 - ex + px, az0 - ez + pz], [bx0 + ex + px, bz0 + ez + pz], [bx0 + ex - px, bz0 + ez - pz], [ax0 - ex - px, az0 - ez - pz]];
+      })(), sy - 0.0003, sy + 0.00022, 0, 60);
+    }
+  }
   for (const s of [-1, 1]) {
     strut(g, [D.hinge[0] - 0.006, D.hinge[1], s * (halfW - 0.0040)],
       [D.hinge[0] - 0.006, D.hinge[1], s * (halfW + 0.0010)], ringOutline(0.0072, 14));
   }
+  /* A boxlock's sides: the two cross pins the lockwork hangs on, the
+     cocking-lever pin under them, a screw for the trigger plate, and the
+     FENCES -- the rounded shoulders the action carries up round the
+     breech ends of the barrels. The flank is a superellipse, so every
+     part is seated on the flank's own z at its height. */
+  if (!C.science) {
+    const flank = (y) => {
+      const a = Math.min(0.999, Math.abs(y - cy) / hh);
+      return halfW * Math.pow(1 - Math.pow(a, 3.0), 1 / 3.0);
+    };
+    for (const sd of [-1, 1]) {
+      for (const [px, py, r] of [[-0.0150, -0.0060, 0.0021], [-0.0300, -0.0060, 0.0021], [-0.0080, -0.0170, 0.0018]]) {
+        ctlPin(g, px, py, sd * flank(py), sd, r, 0.0004);
+      }
+      ctlScrew(g, -0.0440, -0.0150, sd * flank(-0.0150), sd, 0.0026, sd > 0 ? 25 : 70);
+      // Fences: two low domes either side of the breech face's top.
+      ctlSpin(g, [[-0.0010, 0], [-0.0010, 0.0082], [0.0006, 0.0078], [0.0016, 0.0062], [0.0022, 0.0036], [0.0024, 0]],
+        D.breech - 0.0080, cy + hh * 0.30, sd * (flank(cy + hh * 0.30) - 0.0006), sd, 24, 40);
+      // A border line round the side panel: the engraver's frame.
+      const bx0 = -0.0560, bx1 = D.breech - 0.0170, by0 = cy - hh * 0.62, by1 = cy + hh * 0.50;
+      for (const [x0, y0, x1, y1] of [[bx0, by0, bx1, by0], [bx1, by0, bx1, by1], [bx1, by1, bx0, by1], [bx0, by1, bx0, by0]]) {
+        const zl = sd * flank((y0 + y1) / 2);
+        markBar(g, x0, y0, x1, y1, 0.00028, zl - sd * 0.0004, zl + sd * 0.00022);
+      }
+    }
+  }
   if (C.science) buildParalyzerBack(g, C);
+}
+
+/* THE TOP LEVER, on its spindle at the front of the top strap. A tapered
+   arm back along the strap to a thumb piece canted right, serrated on top.
+   Built in the gun's frame like every part; DOUBLE_LEVER_PIVOT is where it
+   turns, and it turns about Y -- the thumb piece swings out to the right. */
+const DOUBLE_LEVER_PIVOT = [-0.0140, 0, 0];
+function buildDoubleTopLever(g, C) {
+  const lev = doubleBeadY(C) - 0.0008, px = DOUBLE_LEVER_PIVOT[0];
+  const raw = [];
+  for (let i = 0; i <= 10; i++) {                    // the spindle boss, front half
+    const t = -PI / 2 + (i / 10) * PI;
+    raw.push([px + 0.0062 * Math.cos(t), 0.0062 * Math.sin(t)]);
+  }
+  raw.push([-0.0300, 0.0040], [-0.0380, 0.0062], [-0.0430, 0.0092], [-0.0452, 0.0100],
+           [-0.0462, 0.0072], [-0.0440, 0.0030], [-0.0360, -0.0040], [-0.0260, -0.0048]);
+  ctlPlateY(g, raw, lev - 0.0034, lev - 0.0002, 0.0005);
+  // The spindle's head, flush in the boss.
+  hardBox(g, px, lev - 0.0001, 0, 0.0026, 0.0002, 0.0026);
+  for (let i = 0; i < 4; i++) {
+    const x = -0.0452 + i * 0.0018;
+    hardBox(g, x, lev - 0.0001, 0.0062 + i * 0.0006, 0.00030, 0.00022, 0.0026);
+  }
+}
+
+/* Forend iron and latch: the steel the forend carries, which moves with
+   the barrels. A plate down the forend's belly from the knuckle, and the
+   push-rod latch at its tip. */
+function buildDoubleForendIron(g, C) {
+  const s = C.spacing != null ? C.spacing : 0.0245;
+  const x0 = C.forend[0], x1 = C.forend[1], y = -0.0090;
+  const belly = y - 0.0210;
+  ctlPlateY(g, [[x0 + 0.020, -0.0088], [x0 + 0.068, -0.0070], [x0 + 0.072, 0], [x0 + 0.068, 0.0070], [x0 + 0.020, 0.0088], [x0 + 0.0165, 0]],
+    belly + 0.0010, belly - 0.0007, 0.0004);
+  // Two screws through it into the wood.
+  for (const xx of [x0 + 0.028, x0 + 0.060]) {
+    const ring = [];
+    for (let i = 0; i < 14; i++) { const t = (i / 14) * TAU; ring.push([xx + 0.0021 * Math.cos(t), 0.0021 * Math.sin(t)]); }
+    ctlPlateY(g, ring, belly - 0.0005, belly - 0.0013, 0.0004, 55);
+    hardBox(g, xx, belly - 0.0013, 0, 0.0019, 0.0002, 0.00025);
+  }
+  // The latch: a round push rod standing out of the forend's tip.
+  tubeRun(g, [[x1 - 0.004, 0.0032], [x1 + 0.0035, 0.0032], [x1 + 0.0045, 0.0024]], 16, false, true, y - 0.0040, 0);
+  void s;
 }
 
 /* Buttstock and grip. `stock` is 'full' for a shouldered gun, 'stub' for
@@ -2728,20 +2842,20 @@ const DOUBLE_KINDS = {
     barrelLen: 0.4800, spacing: 0.0245, bands: [0.190, 0.360],
     forend: [0.0560, 0.2300], stock: 'full', twinTriggers: true, combDrop: 1,
     origin: new Vec3(-0.0980, -0.0420, 0), mass: 3.4, bound: 0.42,
-    mats: { steel: ARM_MAT.blued, wood: ARM_MAT.walnut, swing: ARM_MAT.blued, forend: ARM_MAT.walnut },
+    mats: { steel: ARM_MAT.blued, wood: ARM_MAT.walnut, swing: ARM_MAT.blued, forend: ARM_MAT.walnut, toplever: ARM_MAT.blued },
   },
   sawnoff: {
     barrelLen: 0.2300, spacing: 0.0245, bands: [],
     forend: [0.0500, 0.1500], stock: 'stub', twinTriggers: true,
     origin: new Vec3(-0.0680, -0.0340, 0), mass: 2.4, bound: 0.24,
-    mats: { steel: ARM_MAT.blued, wood: ARM_MAT.walnut, swing: ARM_MAT.blued, forend: ARM_MAT.walnut },
+    mats: { steel: ARM_MAT.blued, wood: ARM_MAT.walnut, swing: ARM_MAT.blued, forend: ARM_MAT.walnut, toplever: ARM_MAT.blued },
   },
   paralyzer: {
     barrelLen: 0.4200, spacing: 0.0300, bands: [0.060, 0.320], overUnder: true,
     forend: [0.0500, 0.0900], stock: 'full', twinTriggers: false, science: true,
     origin: new Vec3(-0.0980, -0.0620, 0), mass: 4.1, bound: 0.42,
     mats: {
-      steel: ARM_MAT.bright, wood: ARM_MAT.grey, swing: ARM_MAT.bright, forend: ARM_MAT.grey,
+      steel: ARM_MAT.bright, wood: ARM_MAT.grey, swing: ARM_MAT.bright, forend: ARM_MAT.grey, toplever: ARM_MAT.bright,
       copper: ARM_MAT.copper, glow: ARM_MAT.glow,
     },
   },
@@ -2754,11 +2868,14 @@ function makeDoubleGun(kind) {
   geos.wood = new Geometry(); buildDoubleStock(geos.wood, C);
   geos.swing = new Geometry(); buildDoubleBarrels(geos.swing, C);
   geos.forend = new Geometry(); buildDoubleForend(geos.forend, C);
+  geos.toplever = new Geometry(); buildDoubleTopLever(geos.toplever, C);
+  if (!C.science) buildDoubleForendIron(geos.swing, C);
   if (C.science) {
     geos.copper = new Geometry(); buildParalyzerCoil(geos.copper, C);
     geos.glow = new Geometry(); buildParalyzerGlow(geos.glow, C);
   }
-  return fin(geos, C.origin);
+  const P = DOUBLE_LEVER_PIVOT;
+  return fin(geos, C.origin, { toplever: new Vec3(P[0], P[1], P[2]) });
 }
 
 function doubleGun(E, kind, opts) {

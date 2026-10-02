@@ -40,3 +40,17 @@ overall length by `SERVICE_REAL_LENGTH` in `engine/src/97b-service.js`
 A new table gun gets its real length added there if it builds more than 8%
 off. `engine/test/fidelity.test.js` holds every listed gun within 2%, and
 `distinct.test.js` must still pass (no pair under 0.30).
+
+## Gun controls
+
+The small parts a hand works -- levers, buttons, pins, slotted screws,
+serrations and stamped markings -- are built with `engine/src/96a-controls.js`
+(`ctlPlate`, `ctlButton`, `ctlPin`, `ctlScrew`, `ctlSerrate`, `ctlStamp`), at
+real size and with a chamfered edge so they read against the flat they sit
+on. The three guns you hold have them (M1911, Thompson, Scattergun). Parts
+that move are their own geometry: the mag catch (`magCatch`, pressed in the
+reload by bunker-nine's magazine block) and the Scattergun's `toplever`
+(swung by the break-open code and `poseAction`). A new moving part must be in
+the gun's `partNames` and in bunker-nine's `singleParts` list, or it stays
+visible when the gun is hidden. After changing a held gun, re-record the kit
+(`tools/export_kit.js`) so the PC build gets it.
