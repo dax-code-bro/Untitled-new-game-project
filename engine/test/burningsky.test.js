@@ -80,10 +80,19 @@ function check(name, cond, detail = '') {
   check('the squad in the match is put away for it', intro.squadAway);
   await run(6);
   const ride = await page.evaluate(() => {
-    const S = window.CAMPAIGN_LIVE.stage, e = S.cast.payback, p = S.vLocal(S.heli, [-1.40, 0.88, -0.84]);
+    const S = window.CAMPAIGN_LIVE.stage, e = S.cast.payback, p = S.vLocal(S.heli, e.ride.l);
     return Math.hypot(e.pos.x - p[0], e.pos.y - p[1], e.pos.z - p[2]);
   });
   check('a rider stays in their seat as it flies (within 5 cm)', ride < 0.05, ride.toFixed(3));
+  const facing = await page.evaluate(() => {
+    const S = window.CAMPAIGN_LIVE.stage, H = S.heli, c = S.cast;
+    // Each rider's heading, measured in the helicopter's own frame (0 = facing +Z of the cabin).
+    const local = (e) => { let a = e.yaw - H.yaw; while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
+    return { sides: ['payback', 'mike', 'molotov', 'alec', 'spite'].map((k) => Math.sign(c[k].ride.l[2])),
+      pay: local(c.payback), alec: local(c.alec), heliYaw: H.yaw };
+  });
+  check('the team sits down both sides of the hold', facing.sides.join(',') === '1,1,1,-1,-1', JSON.stringify(facing));
+  check('and the two benches face each other across it', Math.abs(Math.abs(facing.pay) - Math.PI) < 0.05 && Math.abs(facing.alec) < 0.05, JSON.stringify(facing));
 
   await skip();
   s = await st();

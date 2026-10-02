@@ -42,6 +42,8 @@ function vehSweep(g, rows, e = 3, n = 24, caps = true, z = 0) {
 
 /* ---------------- the helicopter ---------------- */
 
+const HELI_SEAT_X = [-1.50, -0.95, -0.40];
+
 function buildHeliParts() {
   const body = new Geometry(), glass = new Geometry(), inside = new Geometry();
   const rotor = new Geometry(), tail = new Geometry();
@@ -71,17 +73,17 @@ function buildHeliParts() {
   hardBox(inside, (X0 + X1) / 2, FY + 0.02, 0, (X1 - X0) / 2, 0.03, HW - 0.08);               // floor
   // The bulkhead behind the pilots, with a gap through the middle.
   for (const s of [-1, 1]) hardBox(inside, X1 - 0.05, (FY + RY) / 2, s * 0.78, 0.05, (RY - FY) / 2, 0.42);
-  // Troop seats: a bench of four on the rear bulkhead facing forward, canvas over a frame.
-  for (let k = 0; k < 4; k++) {
-    const z = -0.84 + k * 0.56;
-    hardBox(inside, X0 + 0.38, FY + 0.46, z, 0.24, 0.03, 0.24);                          // seat pan
-    hardBox(inside, X0 + 0.16, FY + 0.82, z, 0.03, 0.36, 0.24);                          // back
-    hardBox(inside, X0 + 0.58, FY + 0.22, z, 0.02, 0.22, 0.02);                          // front leg
-  }
-  // And one seat each side facing in, by the doors.
+  /* Troop seats: a canvas bench down each side, three seats a side, facing each other across the
+     hold -- the rear three against the rear panel, the front one by the open door on a pole frame. */
   for (const s of [-1, 1]) {
-    hardBox(inside, 1.55, FY + 0.46, s * (HW - 0.34), 0.24, 0.03, 0.24);
-    hardBox(inside, 1.55, FY + 0.82, s * (HW - 0.12), 0.24, 0.36, 0.03);
+    for (const x of HELI_SEAT_X) {
+      hardBox(inside, x, FY + 0.46, s * (HW - 0.36), 0.25, 0.03, 0.22);                  // seat pan
+      hardBox(inside, x, FY + 0.82, s * (HW - 0.13), 0.25, 0.34, 0.025);                 // canvas back
+      hardBox(inside, x, FY + 0.22, s * (HW - 0.56), 0.02, 0.22, 0.02);                  // front leg
+    }
+    // The frame the backs hang from: a rail along the wall and a post at each end.
+    hardBox(inside, (HELI_SEAT_X[0] + HELI_SEAT_X[2]) / 2, FY + 1.18, s * (HW - 0.12), 0.85, 0.02, 0.02);
+    for (const x of [HELI_SEAT_X[0] - 0.27, HELI_SEAT_X[2] + 0.27]) hardBox(inside, x, FY + 0.6, s * (HW - 0.12), 0.02, 0.6, 0.02);
   }
   // The tail cone and boom.
   vehSweep(body, [
@@ -143,8 +145,8 @@ Engine.prototype.helicopter = function (opts = {}) {
   const body = mountArm(this, 'helicopter', parts,
     { body: tint.body || VEH_MAT.olive, glass: VEH_MAT.glass, inside: VEH_MAT.cabin, rotor: VEH_MAT.rotor, tailRotor: VEH_MAT.rotor },
     Object.assign({ physics: false, lod: false }, opts), 10, 5000, 'body');
-  body.cabin = { floorY: 0.88, bench: { x: -1.47, z: [-0.84, -0.28, 0.28, 0.84], seatY: 1.34 }, door: { x: 0.6, z: 1.22 },
-    side: [{ x: 1.55, z: -0.88 }, { x: 1.55, z: 0.88 }] };
+  // Where people sit: a seat on either bench at each x, sitting at z = +-0.80 and facing the other side.
+  body.cabin = { floorY: 0.88, seatX: HELI_SEAT_X.slice(), seatZ: 0.80, seatY: 1.34, door: { x: 0.6, z: 1.22 } };
   return body;
 };
 

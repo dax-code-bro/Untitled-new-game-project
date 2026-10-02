@@ -399,8 +399,9 @@
   Stage.prototype.placeOnVehicle = function (e) {
     var r = e.ride, p = this.vLocal(r.V, r.l);
     e.pos.x = p[0]; e.pos.y = p[1]; e.pos.z = p[2];
-    // The vehicle's yaw is about +X for its nose; a person's yaw 0 faces +Z.
-    e.yaw = Math.PI / 2 - r.V.yaw + r.yaw;
+    /* r.yaw is relative to facing the nose (+X). A turn of a about +Y takes a heading psi in the
+       vehicle's frame to psi + a in the world, and the nose is psi = pi/2. */
+    e.yaw = r.V.yaw + Math.PI / 2 + r.yaw;
   };
 
   /* ---- the camera ---- */

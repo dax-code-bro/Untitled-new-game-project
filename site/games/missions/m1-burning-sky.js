@@ -176,13 +176,19 @@
       if (t > 38) { H.y = ROOF; H.pitch = 0; H.roll = 0; H.spin = Math.max(6, 26 - (t - 38) * 4); }
     };
   }
-  var SEATS = { payback: -0.84, mike: -0.28, molotov: 0.28, alec: 0.84 };
+  /* Down both sides of the hold, facing each other: Payback, Mike and Molotov (by the open door) on
+     one bench; Alec and Spite across from them on the other. [x, side] -- side +1 sits at +Z facing -Z. */
+  var SEATS = { payback: [-1.50, 1], mike: [-0.95, 1], molotov: [-0.40, 1], alec: [-1.50, -1], spite: [-0.95, -1] };
+  function seatAt(k, up) { var q = SEATS[k]; return [q[0], up, q[1] * 0.80]; }
   function seatTeam(S) {
     var H = S.heli;
-    SQUAD.forEach(function (k) { S.cast[k].rideOn(H, [-1.40, 0.88, SEATS[k]], 0, k === 'mike' ? 'sitTable' : 'sit').arm(false); });
-    // Spite on the jump seat by the right-hand door, facing across the cabin at them.
-    S.cast.spite.rideOn(H, [1.55, 0.88, 0.80], -Math.PI / 2, 'sit').arm(false);
+    ['payback', 'mike', 'molotov', 'alec', 'spite'].forEach(function (k) {
+      S.cast[k].rideOn(H, seatAt(k, 0.88), SEATS[k][1] > 0 ? Math.PI / 2 : -Math.PI / 2, k === 'mike' ? 'sitTable' : 'sit').arm(false);
+    });
   }
+  // A seated head in the hold, and a point across the aisle from it (for a portrait).
+  function headOf(k) { return seatAt(k, 2.2); }
+  function across(k, d) { var q = SEATS[k]; return [q[0], 2.18, q[1] * (0.80 - (d || 1.1))]; }
 
   var intro = {
     id: 'intro', type: 'scene',
@@ -204,24 +210,25 @@
       S.shot({ eye: function () { return [H.x - 16, H.y + 9, H.z - 20]; }, at: function () { return [H.x + 26, H.y - 16, H.z + 34]; }, fov: 50,
         to: { eye: function () { return [H.x + 18, H.y + 3, H.z - 14]; }, at: function () { return [H.x - 6, H.y - 3, H.z + 16]; } }, secs: 5 });
       yield S.wait(4.6);
-      // Inside. Nobody speaks. The whole hold first, from the pilots' bulkhead.
-      S.shot({ eye: L([2.15, 2.12, -0.2]), at: L([-1.4, 1.95, 0.05]), fov: 58, to: { eye: L([2.05, 2.05, 0.2]) }, secs: 2.6 });
+      // Inside. Nobody speaks. The whole hold first, from the pilots' bulkhead: two rows, facing.
+      S.shot({ eye: L([2.15, 2.12, -0.15]), at: L([-1.2, 1.85, 0.0]), fov: 58, to: { eye: L([2.05, 2.05, 0.15]) }, secs: 2.6 });
       yield S.wait(2.4);
       c.payback.feel('focus');
-      S.shot({ eye: L([1.05, 2.26, -0.98]), at: L([-1.42, 2.22, -0.84]), fov: 24 });     // Payback, rolling her shoulder
+      S.shot({ eye: L(across('payback')), at: L(headOf('payback')), fov: 30 });          // Payback, across the aisle
       yield S.wait(2.8);
-      S.shot({ eye: L([1.05, 2.22, -0.16]), at: L([-1.40, 2.16, -0.28]), fov: 26 });     // Mike at his tablet...
+      S.shot({ eye: L(across('mike')), at: L(seatAt('mike', 2.12)), fov: 32 });           // Mike at his tablet...
       yield S.wait(1.8);
       c.mike.play('sit', 0.6); c.mike.feel('fear');                                         // ...then nothing; staring
       yield S.wait(1.8);
-      S.shot({ eye: L([-1.05, 2.18, 0.05]), at: L([0.6, 1.7, 2.6]), fov: 44,                // Molotov, the fires through the door
-        to: { at: L([0.6, 1.4, 3.6]) }, secs: 3.5 });
+      // Molotov, over his shoulder: the fires going by through the far door.
+      S.shot({ eye: L([-0.30, 2.30, 1.08]), at: L([0.2, 1.6, -3.2]), fov: 46, to: { at: L([0.9, 1.3, -3.6]) }, secs: 3.5 });
       yield S.wait(3.4);
-      S.shot({ eye: L([1.05, 2.26, 0.98]), at: L([-1.42, 2.22, 0.84]), fov: 24 });       // Alec, the watch, the smile
+      S.shot({ eye: L(across('alec')), at: L(headOf('alec')), fov: 30 });                // Alec, the watch, the smile
       c.alec.feel('happy');
       yield S.wait(3.0);
-      // Spite looks round at each of them.
-      S.shot({ eye: L([1.50, 2.24, 0.66]), at: L([-1.40, 2.18, -0.84]), fov: 50, to: { at: L([-1.40, 2.18, 0.84]) }, secs: 4.2 });
+      // Spite looks round at each of them, along the bench opposite.
+      var sh = seatAt('spite', 2.22);
+      S.shot({ eye: L([sh[0], sh[1], sh[2] + 0.12]), at: L(headOf('payback')), fov: 52, to: { at: L(headOf('molotov')) }, secs: 4.2 });
       yield S.wait(4.4);
       // Outside again: the command post, the roof, the pad.
       S.shot({ eye: [12, ROOF + 4, -36], at: function () { return [H.x, H.y + 1, H.z]; }, fov: 40 });
