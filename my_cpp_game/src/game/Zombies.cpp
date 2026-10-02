@@ -857,7 +857,9 @@ void ZombiesGame::frame(rendering::Camera& cam, std::vector<rendering::DrawItem>
 void ZombiesGame::hud(Hud& h) const {
     const float W = static_cast<float>(h.width()), H = static_cast<float>(h.height());
     const float u = std::max(1.0f, H / 540.0f);   // one font pixel at 1080p is 2 px
-    const glm::vec4 ink(0.93f, 0.86f, 0.72f, 0.95f), dim(0.93f, 0.86f, 0.72f, 0.55f), red(0.75f, 0.06f, 0.04f, 0.95f);
+    /* Neutral off-white and a deep, unsaturated red: the cream and the bright
+       red read as cartoonish next to the new face. */
+    const glm::vec4 ink(0.94f, 0.94f, 0.92f, 0.92f), dim(0.94f, 0.94f, 0.92f, 0.55f), red(0.58f, 0.07f, 0.05f, 0.92f);
     const Gun& g = m_guns[static_cast<size_t>(m_slot)];
     // Hurt: the edges go red.
     if (m_hurtT > 0.0f || m_health < 40.0f) {
@@ -897,17 +899,17 @@ void ZombiesGame::hud(Hud& h) const {
         }
     }
     // The round, bottom left, in red like the web game's tally.
-    h.text(std::to_string(m_stats.round), 40.0f * u, H - 70.0f * u, 7.0f * u, red, 0);
+    h.text(std::to_string(m_stats.round), 40.0f * u, H - 66.0f * u, 6.5f * u, red, 0);
     if (m_roundBanner > 0.0f) {
         const float a = std::min(1.0f, m_roundBanner);
-        h.text("ROUND " + std::to_string(m_stats.round), W * 0.5f, H * 0.28f, 5.0f * u, {0.75f, 0.06f, 0.04f, a}, 1);
+        h.text("ROUND " + std::to_string(m_stats.round), W * 0.5f, H * 0.28f, 4.0f * u, {0.94f, 0.94f, 0.92f, 0.9f * a}, 1);
     }
     // Points, and what was just earned.
     h.text(std::to_string(m_stats.points), W - 40.0f * u, H * 0.55f, 3.0f * u, ink, 2);
     for (size_t i = 0; i < m_popups.size(); ++i) {
         const float age = m_popups[i].second;
         h.text(m_popups[i].first, W - 40.0f * u, H * 0.55f - (24.0f + age * 40.0f + i * 4.0f) * u, 2.0f * u,
-               {1.0f, 0.85f, 0.3f, 1.0f - age / 1.2f}, 2);
+               {0.92f, 0.80f, 0.48f, 1.0f - age / 1.2f}, 2);
     }
     // The gun and its ammunition, bottom right.
     h.text(g.def->name, W - 40.0f * u, H - 96.0f * u, 2.0f * u, dim, 2);

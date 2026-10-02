@@ -2,6 +2,7 @@
 
 #include <glad/gl.h>
 
+#include <algorithm>
 #include <cctype>
 #include <cstddef>
 #include <cstring>
@@ -26,7 +27,7 @@ const hudfont::Glyph* glyph(char c) {
 }
 
 // A little air between capitals, which a HUD set in caps wants.
-constexpr float kTracking = 0.035f * hudfont::kEm;
+constexpr float kTracking = 0.06f * hudfont::kEm;
 
 } // namespace
 
@@ -59,8 +60,8 @@ void Hud::begin(int w, int h) {
     m_v.clear();
 }
 
-void Hud::quad(glm::vec2 a, glm::vec2 b, glm::vec2 ua, glm::vec2 ub, const glm::vec4& c) {
-    const V v0{a, ua, c}, v1{{b.x, a.y}, {ub.x, ua.y}, c}, v2{b, ub, c}, v3{{a.x, b.y}, {ua.x, ub.y}, c};
+void Hud::quad(glm::vec2 a, glm::vec2 b, glm::vec2 ua, glm::vec2 ub, const glm::vec4& c, float soft) {
+    const V v0{a, ua, c, soft}, v1{{b.x, a.y}, {ub.x, ua.y}, c, soft}, v2{b, ub, c, soft}, v3{{a.x, b.y}, {ua.x, ub.y}, c, soft};
     m_v.push_back(v0); m_v.push_back(v1); m_v.push_back(v2);
     m_v.push_back(v0); m_v.push_back(v2); m_v.push_back(v3);
 }
@@ -76,15 +77,24 @@ void Hud::text(const std::string& s, float x, float y, float px, const glm::vec4
     const float k = 7.0f * px / hudfont::kCapHeight;     // screen px per atlas px
     const float base = y + hudfont::kCapHeight * k;      // the baseline
     const glm::vec2 inv(1.0f / hudfont::kAtlasW, 1.0f / hudfont::kAtlasH);
-    for (char ch : s) {
-        const hudfont::Glyph* g = glyph(shape(ch));
-        if (!g) continue;
-        if (g->w > 0) {
-            const glm::vec2 a(x + g->ox * k, base + g->oy * k);
-            const glm::vec2 b = a + glm::vec2(g->w, g->h) * k;
-            quad(a, b, glm::vec2(g->ax, g->ay) * inv, glm::vec2(g->ax + g->w, g->ay + g->h) * inv, c);
+    /* The shadow first, under the whole string: the same glyphs, offset down
+       and right by a few per cent of their height, dark and soft-edged. */
+    const glm::vec2 off(std::max(1.0f, px * 0.35f), std::max(1.0f, px * 0.45f));
+    const glm::vec4 shade(0.0f, 0.0f, 0.0f, c.a * 0.55f);
+    for (int pass = 0; pass < 2; ++pass) {
+        float pen = x;
+        for (char ch : s) {
+            const hudfont::Glyph* g = glyph(shape(ch));
+            if (!g) continue;
+            if (g->w > 0) {
+                glm::vec2 a(pen + g->ox * k, base + g->oy * k);
+                if (pass == 0) a += off;
+                const glm::vec2 b = a + glm::vec2(g->w, g->h) * k;
+                quad(a, b, glm::vec2(g->ax, g->ay) * inv, glm::vec2(g->ax + g->w, g->ay + g->h) * inv,
+                     pass == 0 ? shade : c, pass == 0 ? 1.0f : 0.0f);
+            }
+            pen += (g->adv + kTracking) * k;
         }
-        x += (g->adv + kTracking) * k;
     }
 }
 
@@ -98,6 +108,7 @@ void Hud::end(unsigned fbo) {
         m_vao.attribute(0, 0, 2, GL_FLOAT, offsetof(V, p));
         m_vao.attribute(1, 0, 4, GL_FLOAT, offsetof(V, c));
         m_vao.attribute(2, 0, 2, GL_FLOAT, offsetof(V, uv));
+        m_vao.attribute(3, 0, 1, GL_FLOAT, offsetof(V, soft));
     }
     m_vbo->update(0, static_cast<GLsizeiptr>(bytes), m_v.data());
     m_prog = m_shaders.get("hud.vert", "hud.frag");
