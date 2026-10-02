@@ -9141,8 +9141,12 @@ class Renderer {
       bloomThreshold: 1.1,
       vignette: 0.55,
       chromatic: 0.0018,
-      saturation: 1.08,
-      contrast: 1.04,
+      /* Under 1, not over it. 1.08 here put the whole game a notch past
+         nature -- neon grass, sweets-coloured paint -- and the report was
+         plain: "everything looks too cartoonish". The tone curve stays
+         ACES for the reasons above; what comes out is the boost. */
+      saturation: 0.9,
+      contrast: 1.06,
       grain: 0.012,
       /* See the shader. tintMix 0 is "no cast", which is every frame the
          game has ever drawn until an optic asks otherwise. */
