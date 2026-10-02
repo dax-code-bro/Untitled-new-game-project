@@ -765,9 +765,19 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
                 r.sun.direction = glm::normalize(glm::vec3(az.x * std::cos(kMax), std::sin(kMax), az.y * std::cos(kMax)));
             }
             r.fog.density *= 0.6f;
-            r.post.contrast = std::max(r.post.contrast, 1.08f);
-            r.post.saturation = std::max(r.post.saturation, 1.1f);
         }
+        /* A FILM GRADE, NOT A GAME ONE. This used to push every daytime map
+           to saturation 1.1 at least, on top of ACES -- which is how the
+           grass came out neon and the whole frame read as a cartoon ("too
+           cartoonish"). Every map now goes through AgX, which rolls bright
+           colours off toward white the way film does instead of clipping
+           them saturated, with saturation brought under 1, a little more
+           contrast and a fine grain. */
+        r.post.toneMap = 1;
+        r.post.agxSat = 0.92f;
+        r.post.saturation = std::min(r.post.saturation, 0.86f);
+        r.post.contrast = std::max(r.post.contrast, 1.08f);
+        r.post.grain = std::max(r.post.grain, 0.02f);
     }
 
     if (studio) r.post.autoKey = 0.2f;   // metered, like the maps; the light itself is the studio's
