@@ -195,6 +195,7 @@
   var intro = {
     id: 'intro', type: 'scene',
     run: function* (S) {
+      S.battle(0);
       var H = S.heli, c = S.cast;
       S.squad('away');
       world.roof(S);
@@ -258,6 +259,7 @@
   var rooftop = {
     id: 'rooftop', type: 'scene',
     run: function* (S) {
+      S.battle(0);
       var c = S.cast, H = S.heli;
       S.squad('away');
       world.roof(S);
@@ -365,6 +367,7 @@
   var stairs = {
     id: 'stairs', type: 'play', checkpoint: true, objective: 'Go down through the command post',
     run: function* (S, st) {
+      S.battle(0);
       var c = S.cast, P = S.props, you = S.you;
       if (S.rotorHandle) S.rotorHandle.level(0.25);
       world.roof(S); world.floors(S);
@@ -436,6 +439,7 @@
   var street = {
     id: 'street', type: 'play', checkpoint: true, objective: 'Push up the street',
     run: function* (S, st) {
+      S.battle(1);
       var you = S.you;
       world.floorsAway(S);
       SQUAD.forEach(function (k) { S.cast[k].hide(); });
@@ -471,6 +475,7 @@
   var birddown = {
     id: 'birddown', type: 'scene',
     run: function* (S) {
+      S.battle(0.6);
       var V = S.heli2, cr = S.props.crash, c = S.cast;
       S.ctx.hostiles.forEach(function (p) { if (p.alive) S.M.park(p); });     // the last of them fall back
       S.squad('away');
@@ -534,6 +539,7 @@
   var handoff = {
     id: 'handoff', type: 'scene',
     run: function* (S) {
+      S.battle(0.45);
       var c = S.cast, cv = COVER(S);
       world.wreck(S);
       S.squad('away');
@@ -551,13 +557,15 @@
       c.payback.crouching = false;
       S.shot({ eye: [-0.3, 1.35, cv.you[2] - 1.9], at: [-0.1, 1.2, cv.you[2] - 0.1], fov: 34 });
       yield S.wait(0.6);
-      c.payback.arm(false); c.payback.play('handshake', 0.2);
+      c.payback.arm(false); c.payback.hold('deagle', true); c.payback.play('handshake', 0.2);
       S.line('payback', 'Here. Optic\'s zeroed. You scratch her, I scratch you.', { emotion: 'focus' });
       yield S.quiet();
+      // Taken: it is in your hands now.
+      c.payback.hold('deagle', false); c.payback.play('idle', 0.3);
       S.line('jesse', 'No angle on those windows from up here. They\'re yours, Spite.', { radio: true });
       yield S.quiet();
     },
-    skip: function (S) { world.wreck(S); },
+    skip: function (S) { world.wreck(S); S.cast.payback.hold('deagle', false); },
   };
 
   /* ================================================================
@@ -581,6 +589,7 @@
   var snipers = {
     id: 'snipers', type: 'play', checkpoint: true, objective: 'Kill the six snipers',
     run: function* (S, st) {
+      S.battle(0.8);
       var c = S.cast, cv = COVER(S), M = S.M, you = S.you;
       world.wreck(S);
       SQUAD.forEach(function (k) { c[k].hide(); });
@@ -617,6 +626,13 @@
           p.yaw = Math.atan2(dx, dz); p.pitch = -Math.atan2(dy, Math.hypot(dx, dz));
           p.aiming = true;
           if (S.t > p._fireAt) { p._fireAt = S.t + 2.8 + Math.random() * 2.2; if (you.alive) M.fire(p); }
+          // The glint off his scope in the second before he fires: your warning, and where to look.
+          if (p._fireAt - S.t < 1.0 && S.game.particles) {
+            var dl = Math.hypot(dx, dy, dz) || 1, gp = [p.pos.x + dx / dl * 0.5, p.pos.y + 1.6 + dy / dl * 0.5, p.pos.z + dz / dl * 0.5];
+            var fl = 0.6 + 0.4 * Math.sin(S.t * 40);
+            S.game.particles.spawn({ position: { x: gp[0], y: gp[1], z: gp[2] }, velocity: { x: 0, y: 0, z: 0 }, life: 0.05,
+              size: 0.55 * fl, sizeEnd: 0.2, color: { x: 1, y: 0.97, z: 0.85 }, colorEnd: { x: 1, y: 0.8, z: 0.5 }, alpha: 1, drag: 0, gravity: 0, type: 2 });
+          }
         });
         yield null;
       }
@@ -633,8 +649,17 @@
     S.hydra.forEach(function (T, i) {
       T.update = function (dt) {
         if (T.dead) return;
-        if (T.z > stopZ + (i % 2) * 4) T.z -= speed * dt;
+        var moving = T.z > stopZ + (i % 2) * 4;
+        if (moving) T.z -= speed * dt;
         T.y = hillY(T.z); T.pitch = T.z < 126 ? HILL_PITCH : 0;
+        // Diesel off the engine deck, and the dust the tracks throw up while they move.
+        T._fx = (T._fx || 0) + dt;
+        if (T._fx > 0.15 && S.game.particles) {
+          T._fx = 0;
+          var Pp = S.game.particles, sd = Math.random() < 0.5 ? -1 : 1;
+          Pp.smoke(S.vLocal(T, [-3.7, 1.65, sd * 0.9]), { count: 1, size: 0.7, life: 0.8, color: 0x2a2826, colorEnd: 0x0c0c0e, alpha: 0.5 });
+          if (moving) Pp.smoke(S.vLocal(T, [-3.9, 0.2, sd * 1.5]), { count: 1, size: 1.8, life: 1.2, color: 0x8a7458, colorEnd: 0x5a4c3c, alpha: 0.38 });
+        }
         if (T.firing && S.t > (T._shotAt || 0)) {
           T._shotAt = S.t + 6 + Math.random() * 5;
           // Muzzle flash, then the shell lands somewhere in the street.
@@ -651,6 +676,7 @@
   var hydra = {
     id: 'hydra', type: 'play', checkpoint: true, objective: 'Look at the hill',
     run: function* (S, st) {
+      S.battle(0.6);
       var c = S.cast, cv = COVER(S), you = S.you;
       world.wreck(S);
       if (!S.squadMode || S.squadMode === 'away') { S.putYou(cv.you, 0); S.squad('hold', cv.squad.map(function (p) { return [p[0], p[1], p[2], 0]; })); }
@@ -698,6 +724,7 @@
   var mortarrun = {
     id: 'mortarrun', type: 'scene',
     run: function* (S) {
+      S.battle(1);
       var c = S.cast, P = S.props, mo = S.mortar, cv = COVER(S);
       world.wreck(S);
       S.squad('away');
@@ -761,6 +788,7 @@
   var mortar = {
     id: 'mortar', type: 'play', checkpoint: true, objective: 'Destroy the Hydra tanks',
     run: function* (S, st) {
+      S.battle(1);
       var c = S.cast, P = S.props, mo = S.mortar, cov = P.mortar.cover, cv = COVER(S), you = S.you;
       world.wreck(S);
       var base = [cov.x + 0.6, 0, cov.z - 0.4];
@@ -857,6 +885,7 @@
   var cheer = {
     id: 'cheer', type: 'scene',
     run: function* (S) {
+      S.battle(0);
       var c = S.cast, cov = S.props.mortar.cover;
       S.squad('away');
       SQUAD.forEach(function (k, i) { c[k].at([cov.x + 0.6 + (i - 1.5) * 1.2, 0, cov.z - 1.8 - (i % 2) * 0.5], Math.PI * 0.15, 'cheer').arm(false); c[k].feel('happy'); });
@@ -876,6 +905,7 @@
   var debrief = {
     id: 'debrief', type: 'scene',
     run: function* (S) {
+      S.battle(0);
       var c = S.cast, O = S.props.office, ox = O.at.x, oz = O.at.z;
       S.squad('away');
       S.hydra.forEach(function (T) { T.firing = false; });

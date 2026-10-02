@@ -103,6 +103,8 @@
     charm: { color: 0xff6a10, emissive: 0xff4a00, emissiveStrength: 0.6, texture: 'smooth', roughness: 0.4, metalness: 0 },
     cord: { color: 0x111111, texture: 'smooth', roughness: 0.9, metalness: 0 },
     lens: { color: 0x101820, texture: 'smooth', roughness: 0.3, metalness: 0 },
+    steel: { color: 0x3a3c40, texture: 'metal', roughness: 0.35, metalness: 1 },
+    dot: { color: 0xff2010, emissive: 0xff2010, emissiveStrength: 2.0, texture: 'smooth', roughness: 0.3, metalness: 0 },
   };
   function propOn(game, parent, bone, kind, size, at, rot, mat) {
     var o = { at: [0, -80, 0], material: PROP_MAT[mat] || mat, physics: false };
@@ -133,9 +135,8 @@
     mauser: function (g, a) {
       /* Over the grip the thigh holster already holds, which stands out of the top of it raked up and
          back (found by photographing markers in the hips' frame): gold frame, walnut panels. */
-      propOn(g, a, 'hips', 'box', [0.044, 0.105, 0.036], [-0.252, -0.088, -0.105], [-50, 0, 0], 'gold');
-      propOn(g, a, 'hips', 'box', [0.048, 0.08, 0.026], [-0.253, -0.09, -0.108], [-50, 0, 0], 'walnut');
-      propOn(g, a, 'hips', 'box', [0.04, 0.03, 0.05], [-0.25, -0.05, -0.065], [-10, 0, 0], 'gold');
+      propOn(g, a, 'hips', 'box', [0.044, 0.125, 0.04], [-0.252, -0.088, -0.07], [-50, 0, 0], 'gold');
+      propOn(g, a, 'hips', 'box', [0.05, 0.085, 0.03], [-0.252, -0.094, -0.074], [-50, 0, 0], 'walnut');
     },
   };
   // On the gun, once it exists (the match builds a body's weapon the first time it is carried).
@@ -183,6 +184,16 @@
       parts.push(propOn(game, actor, 'head', 'box', [0.04, 0.02, 0.05], [0, 0.045, 0.16], null, 'black'));
       return parts;
     },
+    /* Payback's Desert Eagle in her right fist, for the handoff (the match's own gun is put away while
+       she holds it out). The hand's frame: -Y to the fingers, +X out of the palm, +Z up the thumb. */
+    deagle: function (game, actor) {
+      return [
+        propOn(game, actor, 'handR', 'box', [0.033, 0.27, 0.04], [0.025, -0.19, 0.05], null, 'steel'),
+        propOn(game, actor, 'handR', 'box', [0.03, 0.055, 0.125], [0.025, -0.09, -0.028], [15, 0, 0], 'black'),
+        propOn(game, actor, 'handR', 'box', [0.03, 0.045, 0.03], [0.025, -0.1, 0.084], null, 'black'),
+        propOn(game, actor, 'handR', 'box', [0.012, 0.004, 0.012], [0.025, -0.123, 0.09], null, 'dot'),
+      ];
+    },
     propOn: propOn,
   };
 
@@ -220,6 +231,8 @@
     this.visible = true; this.walk = null; this.ride = null;
     this.play(clip || this.clip || 'idle', 0);
     this.apply();
+    // The binoculars come with their pose and go with any other.
+    if (clip === 'binoculars' || this._binos) this.binos(clip === 'binoculars');
     return this;
   };
   Extra.prototype.hide = function () {
@@ -227,6 +240,8 @@
     this.pos.y = -80;
     if (this.actor.controller) this.actor.controller.teleport([0, -80, 0]);
     if (this.S.M.stowFor) this.S.M.stowFor(this);
+    for (var k in this._held || {}) this.hold(k, false);
+    if (this._binos) this.binos(false);
     return this;
   };
   Extra.prototype.play = function (clip, blend, speed) {
@@ -249,6 +264,13 @@
   Extra.prototype.binos = function (on) {
     if (on && !this._binos) { this._binos = W.CAMPAIGN_PROPS.binoculars(this.S.game, this.actor); this.play('binoculars', 0.3); }
     if (this._binos) this._binos.forEach(function (p) { if (p) p.visible = !!on; });
+    return this;
+  };
+  // Something held in the hand for a scene (CAMPAIGN_PROPS[kind]: 'deagle'), shown or put away.
+  Extra.prototype.hold = function (kind, on) {
+    this._held = this._held || {};
+    if (on && !this._held[kind]) this._held[kind] = W.CAMPAIGN_PROPS[kind](this.S.game, this.actor);
+    if (this._held[kind]) this._held[kind].forEach(function (p) { if (p) p.visible = !!on; });
     return this;
   };
   Extra.prototype.turnTo = function (yawOrPoint) {
@@ -662,6 +684,107 @@
     };
   };
 
+  /* ---- the battle, heard: music and the fighting all around ----
+     S.battle(level): 0 is quiet, 1 is the thick of it; scenes sit in between. The score is D minor at
+     96 bpm (Dm Bb Gm A): a driving low ostinato, a string pad, war drums that thicken with the level.
+     The ambience is the rest of the city fighting: distant bursts, far explosions, and the wind --
+     spread through game time (S.after), so it pauses with the game. Synthesised: nothing to download. */
+  Stage.prototype.battle = function (level) {
+    var S = this, A = this.game.audio, ctx = A && A.ensure && A.ensure();
+    level = Math.max(0, Math.min(1, level || 0));
+    var B = this._battle;
+    if (!B && level > 0) B = this._battle = this.battleStart(ctx);
+    if (!B) return;
+    B.level = level;
+    if (B.setLevel) B.setLevel(level);
+    if (level === 0) { if (B.stop) B.stop(); this._battle = null; }
+  };
+  Stage.prototype.battleStart = function (ctx) {
+    var S = this, A = this.game.audio, B = { level: 1, off: false };
+    // The city: a burst somewhere every couple of seconds, a big one now and then.
+    this.every(function (dt) {
+      if (B.off) return true;
+      if (!A || !A.report || S.passedShown) return false;
+      var L = B.level;
+      if (Math.random() < dt * (0.25 + 0.6 * L)) {
+        var n = 2 + Math.floor(Math.random() * 5), vol = 0.05 + Math.random() * 0.09, gap = 0.07 + Math.random() * 0.05, bore = 0.25 + Math.random() * 0.3;
+        for (var k = 0; k < n; k++) S.after(k * gap, function () { A.report(bore, { volume: vol, crack: 0.12, crackHz: 1500, mech: 0, tail: 1.3, tailHz: 420 }); });
+      }
+      if (Math.random() < dt * (0.03 + 0.08 * L) && A.impact) A.impact(2.4, { volume: 0.18 + Math.random() * 0.16 });
+      return false;
+    });
+    if (!ctx) { B.stop = function () { B.off = true; }; return B; }
+    var out = ctx.createGain(); out.gain.value = 0.0001; out.connect(A.master || ctx.destination);
+    var drums = ctx.createGain(); drums.gain.value = 0.6; drums.connect(out);
+    // The wind: looped noise, low and slowly breathing.
+    var len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    var wind = ctx.createBufferSource(); wind.buffer = buf; wind.loop = true;
+    var wlp = ctx.createBiquadFilter(); wlp.type = 'lowpass'; wlp.frequency.value = 340;
+    var wg = ctx.createGain(); wg.gain.value = 0.05;
+    var wl = ctx.createOscillator(); wl.frequency.value = 0.13; var wlg = ctx.createGain(); wlg.gain.value = 0.025;
+    wl.connect(wlg).connect(wg.gain);
+    wind.connect(wlp).connect(wg).connect(A.bus || ctx.destination); wind.start(); wl.start();
+    var beat = 60 / 96, bar = beat * 4;
+    var ROOT = [38, 34, 31, 33];                                      // D Bb G A
+    var CH = [[50, 53, 57], [46, 50, 53], [43, 46, 50], [45, 49, 52]]; // Dm Bb Gm A
+    var OST = [0, 0, 12, 0, 0, 0, 10, 7];
+    var hz = function (n) { return 440 * Math.pow(2, (n - 69) / 12); };
+    function note(type, f, t, dur, vol, lpHz, att, dest) {
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + (att || 0.01));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      var node = o.connect(g);
+      if (lpHz) { var lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = lpHz; node = g.connect(lp); }
+      node.connect(dest || out);
+      o.start(t); o.stop(t + dur + 0.05);
+    }
+    function tom(t, f, v) {
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 0.55, t + 0.25);
+      g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+      o.connect(g).connect(drums); o.start(t); o.stop(t + 0.5);
+    }
+    function hit(t, hp, v, dur) {
+      var sN = ctx.createBufferSource(); sN.buffer = buf;
+      var f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = hp;
+      var g = ctx.createGain(); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      sN.connect(f).connect(g).connect(drums); sN.start(t, Math.random() * 1.5); sN.stop(t + dur + 0.02);
+    }
+    var t0 = ctx.currentTime + 0.15, bars = 0;
+    function schedule() {
+      if (B.off) return;
+      while (t0 + bars * bar < ctx.currentTime + 1.6) {
+        var tb = t0 + bars * bar, k = bars % 4, L = B.level;
+        // The pad: the chord, three detuned saws a note, swelling over the bar.
+        CH[k].forEach(function (n) { [-7, 0, 7].forEach(function (c) { var f = hz(n) * Math.pow(2, c / 1200); note('sawtooth', f, tb, bar * 1.02, 0.018, 1100, bar * 0.4); }); });
+        // The ostinato, in eighths.
+        for (var q = 0; q < 8; q++) note('sawtooth', hz(ROOT[k] + OST[q]), tb + q * beat / 2, beat * 0.42, 0.09, 520);
+        // War drums: the low tom on one and three (and the and-of-two when it is hot), a crack on four.
+        tom(tb, 92, 0.8); tom(tb + beat * 2, 92, 0.7);
+        if (L > 0.55) { tom(tb + beat * 1.5, 120, 0.45); tom(tb + beat * 3.5, 140, 0.35); }
+        if (bars % 2 === 1) hit(tb + beat * 3, 900, 0.32, 0.22);
+        if (L > 0.75) for (var h = 0; h < 16; h++) hit(tb + h * beat / 4, 7000, h % 4 === 0 ? 0.05 : 0.025, 0.04);
+        // A rising brass-ish line on the A bar, to turn the loop round.
+        if (k === 3 && L > 0.4) [57, 58, 61, 64].forEach(function (n, j) { note('square', hz(n), tb + j * beat, beat * 0.9, 0.028, 1800, 0.05); });
+        bars++;
+      }
+      setTimeout(schedule, 400);
+    }
+    schedule();
+    B.setLevel = function (v) {
+      out.gain.setTargetAtTime(Math.max(0.0001, 0.12 + 0.3 * v), ctx.currentTime, 1.2);
+      drums.gain.setTargetAtTime(0.25 + 0.75 * v, ctx.currentTime, 0.8);
+    };
+    B.stop = function () {
+      B.off = true;
+      out.gain.setTargetAtTime(0.0001, ctx.currentTime, 1.0); wg.gain.setTargetAtTime(0.0001, ctx.currentTime, 1.5);
+      setTimeout(function () { try { wind.stop(); wl.stop(); } catch (e) { /* gone */ } }, 6000);
+    };
+    return B;
+  };
+
   /* ---- friendly fire on the extras: the match hands us every round you fire ---- */
   Stage.prototype.shotRay = function (from, dir, maxD) {
     for (var k in this.cast) {
@@ -789,6 +912,7 @@
       btn.addEventListener('click', function () { if (S._music) S._music.stop(); if (b[1]) b[1](); });
       bdiv.appendChild(btn);
     });
+    this.battle(0);
     this._music = this.music();
     var stars = el.querySelectorAll('.stars i');
     setTimeout(function () { el.classList.add('in'); }, 60);

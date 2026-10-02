@@ -12,9 +12,10 @@
  *                grid stopping you at the parapet
  *   friendly     shooting a soldier who is standing still is instant; a squadmate
  *                gets one warning, the second is the black screen and the checkpoint
- *   street       hostiles arrive dressed as Hydra
+ *   street       hostiles arrive dressed as Hydra, and the battle is heard
+ *   handoff      Payback holds out her Desert Eagle, and puts it away with the scene
  *   snipers      six of them at their windows
- *   passed       the Mission Passed screen: stars, completion, three buttons
+ *   passed       the Mission Passed screen: stars, completion, three buttons, the battle quiet
  *
  * Usage: node engine/test/burningsky.test.js
  */
@@ -186,6 +187,19 @@ function check(name, cond, detail = '') {
   });
   check('wave one comes up the street, dressed as Hydra', street.n === 6 && street.hydra, JSON.stringify(street));
   check('the squad fights as bots in the street', street.squad === 'fight');
+  check('the battle is heard: music and the city fighting', await page.evaluate(() => { const B = window.CAMPAIGN_LIVE.stage._battle; return !!B && B.level === 1 && !B.off; }));
+
+  // ---- the handoff: she holds the Desert Eagle out, and it goes with the scene ----
+  await page.evaluate(() => window.CAMPAIGN_LIVE.begin(5));
+  let held = false;
+  for (let k = 0; k < 40 && !held; k++) {
+    await run(0.5);
+    held = await page.evaluate(() => { const h = window.CAMPAIGN_LIVE.stage.cast.payback._held; return !!(h && h.deagle && h.deagle[0].visible); });
+  }
+  check('Payback holds out her Desert Eagle in the handoff', held);
+  await skip();
+  await run(0.5);
+  check('and it is gone from her hand when the scene ends', await page.evaluate(() => { const h = window.CAMPAIGN_LIVE.stage.cast.payback._held; return !h || !h.deagle || h.deagle.every((p) => !p.visible); }));
 
   // ---- the snipers ----
   await page.evaluate(() => window.CAMPAIGN_LIVE.begin(6));
@@ -211,6 +225,7 @@ function check(name, cond, detail = '') {
     return { shown: getComputedStyle(el).display, head: el.querySelector('.h').textContent, buttons: Array.from(el.querySelectorAll('button')).map((b) => b.textContent),
       stars: r && r.stars, pct: r && r.pct, why: r && r.why };
   });
+  check('the battle falls quiet for Mission Passed', await page.evaluate(() => !window.CAMPAIGN_LIVE.stage._battle));
   check('MISSION PASSED is on the screen', pass.shown === 'flex' && /mission passed/i.test(pass.head), JSON.stringify(pass));
   check('with restart, next mission and main menu', pass.buttons.join('|') === 'Restart mission|Next mission|Main menu', pass.buttons.join('|'));
   check('friendly fire costs a star', pass.stars === 2 && pass.why.indexOf('Friendly fire') >= 0, JSON.stringify(pass));
