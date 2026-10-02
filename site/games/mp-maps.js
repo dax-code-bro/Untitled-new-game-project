@@ -2652,7 +2652,7 @@
   };
 
   function applySky(game, id) {
-    var s = SKY[id] || SKY.town;
+    var s = SKY[id] || (W.MP_EXTRA_MAPS && W.MP_EXTRA_MAPS[id] && W.MP_EXTRA_MAPS[id].sky) || SKY.town;
     /* The exposure is applied after the preset, because setSky writes
        the preset's own and would put it back. The fog goes in as an
        override so setSky cannot put that back either. */
@@ -2669,8 +2669,13 @@
      a yaw already pointing up the map, because a player who spawns
      facing their own wall has lost a second of a match that is decided
      in less than that. */
+  /* CAMPAIGN MAPS live outside the multiplayer rotation: campaign-maps.js
+     registers them here (W.MP_EXTRA_MAPS[id] = { build, sky }), build()
+     and has() find them, and `list` -- which the lobby and the tests read
+     as "the multiplayer maps" -- does not include them. */
+  function extra(id) { return W.MP_EXTRA_MAPS && W.MP_EXTRA_MAPS[id] ? W.MP_EXTRA_MAPS[id] : null; }
   function build(game, id) {
-    var fn = BUILDERS[id];
+    var fn = BUILDERS[id] || (extra(id) && extra(id).build);
     if (!fn) return null;
     var K = kit(game);
     var out = fn(K);
@@ -2716,14 +2721,17 @@
          a builder returns and the assembler does not copy is a value
          nobody has. */
       zone: out.zone || null,
-      sky: SKY[id],
+      sky: SKY[id] || (extra(id) && extra(id).sky),
+      // A campaign map can size the bots' navigation area, and hand back anything else it builds.
+      navR: out.navR || null,
+      props: out.props || null,
     };
   }
 
   W.MP_MAPS = {
     MAT: MAT, COVER: COVER, SKY: SKY,
     list: Object.keys(BUILDERS),
-    has: function (id) { return !!BUILDERS[id]; },
+    has: function (id) { return !!BUILDERS[id] || !!extra(id); },
     kit: kit, build: build, applySky: applySky,
   };
 })();

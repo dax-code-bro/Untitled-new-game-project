@@ -466,7 +466,7 @@
     var map = MP_MAPS.build(game, mapId);
     if (!map) throw new Error('no such map: ' + mapId);
 
-    var R = mapId === 'demolition' ? 50 : (mapId === 'town' ? 62 : 58);
+    var R = map.navR || (mapId === 'demolition' ? 50 : (mapId === 'town' ? 62 : 58));
     var nav = navBuild(game, { x0: -R, x1: R, z0: -R, z1: R }, NAV_Y);
     /* Seeded from a spawn point, because that is by definition ground
        somebody is standing on. */

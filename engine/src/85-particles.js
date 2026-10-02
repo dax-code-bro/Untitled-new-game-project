@@ -80,8 +80,12 @@ class ParticleSystem {
   spawn(opts) {
     if (this.count >= this.capacity) return false;
     const i = this.count++;
+    /* An array or a vector. Callers have always passed both -- Bunker Nine's smoke, every
+       emitter in the campaign -- and an array read as p.x is undefined: the particle spawned at
+       NaN and was never drawn, so every one of those plumes was silently empty. */
     const p = opts.position;
-    this.px[i] = p.x; this.py[i] = p.y; this.pz[i] = p.z;
+    if (Array.isArray(p)) { this.px[i] = p[0]; this.py[i] = p[1]; this.pz[i] = p[2]; }
+    else { this.px[i] = p.x; this.py[i] = p.y; this.pz[i] = p.z; }
     const v = opts.velocity || Vec3.ZERO;
     this.vx[i] = v.x; this.vy[i] = v.y; this.vz[i] = v.z;
     const life = opts.life != null ? opts.life : 1;
