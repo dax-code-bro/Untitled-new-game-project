@@ -114,6 +114,12 @@ function check(name, cond, detail = '') {
   });
   check('you are on the roof', Math.abs(roof.y - 13.6) < 0.3, JSON.stringify(roof));
   check('the squad follows behind, dressed as themselves', roof.trail && roof.puppets && roof.cast === 'payback,molotov,alec,mike', JSON.stringify(roof));
+  await run(1.5);
+  const apart = await page.evaluate(() => {
+    const M = window.MP_GAME_LIVE.match, S = window.CAMPAIGN_LIVE.stage;
+    return S.ctx.allies.map((p) => +Math.hypot(p.pos.x - M.you.pos.x, p.pos.z - M.you.pos.z).toFixed(2));
+  });
+  check('and none of them stands inside you before you have moved', apart.every((d) => d > 0.5), JSON.stringify(apart));
   // The roof's own walk grid: walking east into the parapet stops you there.
   const edge = await page.evaluate(() => {
     const M = window.MP_GAME_LIVE.match;

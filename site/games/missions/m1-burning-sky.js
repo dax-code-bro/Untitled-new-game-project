@@ -191,6 +191,16 @@
   // A seated head in the hold, and a point across the aisle from it (for a portrait).
   function headOf(k) { return seatAt(k, 1.98); }
   function across(k, d) { var q = SEATS[k]; return [q[0], 2.02, q[1] * (0.80 - (d || 1.15))]; }
+  /* A close-up on a face from where they actually stand: `ahead` metres in front of them and `side`
+     to their right (negative: their left), at eye height -- a three-quarter angle, so whoever they
+     are talking to is beside the lens and not a head in the way. Follows them if they move. */
+  function faceShot(e, ahead, side, fov) {
+    var eye = function () {
+      var h = e.head(), fx = Math.sin(e.yaw), fz = Math.cos(e.yaw);
+      return [h[0] + fx * ahead - fz * side, h[1] + 0.03, h[2] + fz * ahead + fx * side];
+    };
+    return { eye: eye, at: function () { return e.head(-0.04); }, fov: fov || 30 };
+  }
 
   var intro = {
     id: 'intro', type: 'scene',
@@ -259,7 +269,7 @@
   var rooftop = {
     id: 'rooftop', type: 'scene',
     run: function* (S) {
-      S.battle(0);
+      S.battle(0.25);
       var c = S.cast, H = S.heli;
       S.squad('away');
       world.roof(S);
@@ -287,12 +297,13 @@
       c.lincoln.feel('focus'); c.alec.feel('happy');
       S.line('lincoln', 'Sharp. Took your sweet time.');
       yield S.quiet();
-      S.shot({ eye: [-1.25, ROOF + 1.7, -44.3], at: c.alec.head(), fov: 32 });
+      // Alec, from beside Lincoln: a three-quarter on his face, Lincoln just out of frame.
+      S.shot(faceShot(c.alec, 0.85, 0.95, 30));
       S.line('alec', 'I\'m eighty-two, Sergeant. Everything takes its sweet time.', { emotion: 'happy' });
       yield S.quiet();
       S.line('alec', 'Lovely evening for it.', { emotion: 'happy' });
       yield S.quiet();
-      S.shot({ eye: [-1.9, ROOF + 1.65, -47.3], at: c.lincoln.head(), fov: 30 });
+      S.shot(faceShot(c.lincoln, 0.85, 0.95, 30));
       S.line('lincoln', 'Lovely is one word for it.');
       yield S.quiet();
       c.lincoln.turnTo(0.15);
@@ -336,7 +347,7 @@
       c.lincoln.turnTo(Math.PI);
       S.line('lincoln', 'Stairwell\'s behind you. Move.');
       yield S.quiet();
-      S.shot({ eye: [-3.0, ROOF + 1.7, -45.2], at: c.molotov.head(), fov: 30 });
+      S.shot(faceShot(c.molotov, 1.5, 0.45, 30));
       S.line('molotov', 'Move.');
       yield S.quiet();
     },
@@ -367,7 +378,7 @@
   var stairs = {
     id: 'stairs', type: 'play', checkpoint: true, objective: 'Go down through the command post',
     run: function* (S, st) {
-      S.battle(0);
+      S.battle(0.25);
       var c = S.cast, P = S.props, you = S.you;
       if (S.rotorHandle) S.rotorHandle.level(0.25);
       world.roof(S); world.floors(S);
@@ -507,7 +518,10 @@
       yield S.wait(hitAt);
       S.boom([V.x, V.y + 2, V.z], 1.2, { shake: 0.4 });
       S.line('spite', 'Bird down! Bird down!', { emotion: 'fear' });
-      yield S.wait(downAt - hitAt);
+      yield S.wait(2.0);
+      // Wide and low from up the street for the last of the fall, so you see it hit.
+      S.shot({ eye: [-1.8, 1.2, cr.z - 21], at: function () { return [(V.x + cr.x) / 2, Math.max(2.5, V.y * 0.55), (V.z + cr.z) / 2]; }, fov: 46 });
+      yield S.wait(downAt - hitAt - 2.0);
       V.update = null;
       world.wreck(S);
       S.boom([cr.x, 1.2, cr.z], 2.6, { shake: 2.2 });
@@ -555,7 +569,9 @@
       // She stands, faces him, and hands it over.
       c.payback.at([cv.you[0] - 0.9, 0, cv.you[2] - 0.3], Math.PI / 2, 'idle').arm(true);
       c.payback.crouching = false;
-      S.shot({ eye: [-0.3, 1.35, cv.you[2] - 1.9], at: [-0.1, 1.2, cv.you[2] - 0.1], fov: 34 });
+      // Spite stands to take it. Side on to the two of them, the pistol held out between.
+      c.spite.at(cv.you, Math.atan2(-0.9, -0.3), 'idle').arm(false); c.spite.crouching = false;
+      S.shot({ eye: [cv.you[0] + 0.32, 1.4, cv.you[2] - 2.43], at: [cv.you[0] - 0.45, 1.22, cv.you[2] - 0.15], fov: 38 });
       yield S.wait(0.6);
       c.payback.arm(false); c.payback.hold('deagle', true); c.payback.play('handshake', 0.2);
       S.line('payback', 'Here. Optic\'s zeroed. You scratch her, I scratch you.', { emotion: 'focus' });
@@ -742,6 +758,8 @@
       // Nearly hit -- twice.
       S.whistle(0.6); yield S.wait(0.6);
       S.boom([sp.pos.x + 2.6, 0.3, sp.pos.z + 1.5], 1.6, { shake: 1.4 });
+      // Low, up the street ahead of him, as he runs at us: the second lands between.
+      S.shot({ eye: [1.0, 0.6, 17.5], at: function () { return [sp.pos.x, 1.0, sp.pos.z]; }, fov: 44 });
       yield S.wait(0.6);
       S.whistle(0.5); yield S.wait(0.5);
       S.boom([sp.pos.x - 2.2, 0.3, sp.pos.z + 2.4], 1.6, { shake: 1.6 });
@@ -749,7 +767,8 @@
       // Grabs it and drags it behind the wall.
       sp.arm(false);
       var cov = P.mortar.cover;
-      S.shot({ eye: [cov.x + 4.2, 1.3, cov.z - 2.5], at: [P.mortar.x - 1, 0.6, P.mortar.z + 1], fov: 44 });
+      // From up the street and a little above, clear of where he runs and of the smoke behind him.
+      S.shot({ eye: [cov.x + 6.7, 2.6, cov.z + 1.5], at: [P.mortar.x - 1.2, 0.6, P.mortar.z + 1.0], fov: 42 });
       sp.walkTo([cov.x + 1.4, 0, cov.z - 0.8], { speed: 1.6, clip: 'crouchWalk', then: 'crouchIdle' });
       sp.walk.backwards = true;
       var drag = S.t;

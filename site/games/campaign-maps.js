@@ -341,7 +341,7 @@
        cars, a bus on its side, rubble where facades came down, sandbags
        and barriers where someone tried to hold it. */
     var burnt = { color: 0x2e2a27, texture: 'rust', roughness: 0.9, metalness: 0.3, uvScale: 1 };
-    K.car(-4.2, -24, true, burnt); K.car(3.6, -12, false, burnt); K.car(-3.0, 2, true, burnt);
+    K.car(-4.2, -24, true, burnt); K.car(3.6, -12, false, burnt); K.car(-5.4, -3, true, burnt);   // at the kerb: not in the cover behind the wreck
     K.car(4.5, 29, true, burnt); K.car(-4.8, 36, false, burnt);
     props.fires.push({ at: [3.6, 1.2, -12], r: 1.5, rate: 6, size: 0.9, glow: 3 });
     props.fires.push({ at: [4.5, 1.2, 29], r: 1.5, rate: 6, size: 0.9, glow: 3 });

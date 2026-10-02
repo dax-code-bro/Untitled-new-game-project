@@ -448,11 +448,13 @@
     this.ctx.allies.forEach(function (p, k) {
       if (!p.alive) return;
       // Walk the trail back from the newest point by (k + 1) * 1.3 metres.
-      var want = (k + 1) * 1.35, acc = 0, i = T.length - 1, at = T[i];
-      for (; i > 0 && at; i--) {
+      /* Until you have walked that far there is no place for them on it: they stand where they are.
+         (Taking the oldest point instead put all four on top of you at the start -- inside the camera.) */
+      var want = (k + 1) * 1.35, acc = 0, i = T.length - 1, at = null;
+      for (; i > 0; i--) {
         var a = T[i], b = T[i - 1], seg = Math.hypot(a.x - b.x, a.z - b.z) + Math.abs(a.y - b.y);
         if (acc + seg >= want) { var u = (want - acc) / Math.max(seg, 1e-4); at = { x: lerp(a.x, b.x, u), y: lerp(a.y, b.y, u), z: lerp(a.z, b.z, u) }; break; }
-        acc += seg; at = b;
+        acc += seg;
       }
       if (!at) return;
       var dx = at.x - p.pos.x, dz = at.z - p.pos.z, d = Math.hypot(dx, dz);
