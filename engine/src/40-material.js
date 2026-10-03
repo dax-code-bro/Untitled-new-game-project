@@ -1603,9 +1603,10 @@ const TextureLib = {
         c.rough = c.rough * 0.86;
         c.h = 0.5 + (c.h - 0.5) * 0.5;
       } else {
-        // Overspray: a few red specks in the black just above the tips.
+        /* Overspray: a few red specks in the black just above the tips -- and only there. It was a
+           third of every texel up to the crown, which read as red noise over the whole mask. */
         const dot = n.fbm(u * 260, v * 260, 44.4, 1);
-        if (dot > 0.62 && y < 0.85) { c.r = 0.50; c.g = 0.09; c.b = 0.03; }
+        if (dot > 0.80 && y > 0.30 && y < 0.78) { c.r = 0.36; c.g = 0.07; c.b = 0.03; }
       }
     },
 

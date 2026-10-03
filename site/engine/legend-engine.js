@@ -3644,9 +3644,10 @@ const TextureLib = {
         c.rough = c.rough * 0.86;
         c.h = 0.5 + (c.h - 0.5) * 0.5;
       } else {
-        // Overspray: a few red specks in the black just above the tips.
+        /* Overspray: a few red specks in the black just above the tips -- and only there. It was a
+           third of every texel up to the crown, which read as red noise over the whole mask. */
         const dot = n.fbm(u * 260, v * 260, 44.4, 1);
-        if (dot > 0.62 && y < 0.85) { c.r = 0.50; c.g = 0.09; c.b = 0.03; }
+        if (dot > 0.80 && y > 0.30 && y < 0.78) { c.r = 0.36; c.g = 0.07; c.b = 0.03; }
       }
     },
 
@@ -33355,17 +33356,118 @@ function castGaiter(headGeo) {
   return offsetPatch(headGeo, keep, 0.0058, null);
 }
 
+/* A KNIT SHELL OVER THE HEAD, built properly. The ski mask was offsetPatch -- the head's own
+   triangles, each vertex pushed 5.6 mm along its normal, a triangle dropped whole if any corner was
+   in the eye port -- and it showed three faults on Molotov:
+     - the ears came through it: the MakeHuman head's ears have normals that face into the skull in
+       places, so their knit copy was pushed INSIDE the skin. Here the offset falls back to the
+       direction out from the head's centre wherever the normal faces in.
+     - the eye port was a staircase, because whole triangles went. Here every triangle is CLIPPED
+       against a smooth field (an ellipse round both eyes), with new vertices on the cut, so the
+       edge is a clean curve at any mesh density.
+     - it stopped where the head mesh stops, a hand's width above the collar, and the neck showed
+       front and back. Here a skirt of knit carries on down from the bottom edge, flaring a little,
+       to tuck into the collar.
+   `field(u, w, xn)` is >= 0 where the mask is. */
+function castMaskShell(src, field, thick, skirt) {
+  const P = src.positions, N = src.normals, I = src.indices, UV = src.uvs && src.uvs.length ? src.uvs : null;
+  let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+  for (let i = 0; i < P.length; i += 3) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], P[i + k]); hi[k] = Math.max(hi[k], P[i + k]); }
+  const sx = Math.max(1e-6, hi[0] - lo[0]), sy = Math.max(1e-6, hi[1] - lo[1]), sz = Math.max(1e-6, hi[2] - lo[2]);
+  const cx = (lo[0] + hi[0]) / 2, cy = lo[1] + sy * 0.55, cz = (lo[2] + hi[2]) / 2;
+  const n = P.length / 3, fv = new Float32Array(n);
+  for (let v = 0; v < n; v++) {
+    const u = (P[v * 3 + 1] - lo[1]) / sy, w = (P[v * 3 + 2] - lo[2]) / sz, xn = Math.abs((P[v * 3] - lo[0]) / sx - 0.5) * 2;
+    fv[v] = field(u, w, xn);
+  }
+  const g = new Geometry(), made = new Map();
+  // One output vertex per source vertex, or per cut edge (shared, so the mesh stays closed).
+  const emit = (key, p, nn, uv) => {
+    let id = made.get(key);
+    if (id !== undefined) return id;
+    let dx = nn[0], dy = nn[1], dz = nn[2];
+    const rx = p[0] - cx, ry = p[1] - cy, rz = p[2] - cz, rl = Math.hypot(rx, ry, rz) || 1;
+    if ((dx * rx + dy * ry + dz * rz) / rl < 0.15) { dx = rx / rl; dy = ry / rl; dz = rz / rl; }
+    id = g.positions.length / 3;
+    /* Over the ears the knit stands off further, the way the fabric stretches across them rather
+       than following every fold -- so no rim of ear comes through it. */
+    const un = (p[1] - lo[1]) / sy, xq = Math.abs((p[0] - lo[0]) / sx - 0.5) * 2;
+    const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const tk = thick + (skirt ? 0.0075 * sm(0.74, 0.90, xq) * (1 - sm(0.12, 0.20, Math.abs(un - 0.50))) : 0);
+    g.positions.push(p[0] + dx * tk, p[1] + dy * tk, p[2] + dz * tk);
+    g.normals.push(dx, dy, dz);
+    g.uvs.push(uv[0], uv[1]);
+    made.set(key, id);
+    return id;
+  };
+  const V = (v) => ({ key: 'v' + v, p: [P[v * 3], P[v * 3 + 1], P[v * 3 + 2]], n: [N[v * 3], N[v * 3 + 1], N[v * 3 + 2]],
+    uv: UV ? [UV[v * 2], UV[v * 2 + 1]] : [0, 0], f: fv[v] });
+  const cut = (a, b) => {
+    const t = a.f / (a.f - b.f), L = (x, y) => x + (y - x) * t;
+    const k = a.key < b.key ? a.key + '|' + b.key : b.key + '|' + a.key;
+    return { key: k, p: [L(a.p[0], b.p[0]), L(a.p[1], b.p[1]), L(a.p[2], b.p[2])],
+      n: [L(a.n[0], b.n[0]), L(a.n[1], b.n[1]), L(a.n[2], b.n[2])], uv: [L(a.uv[0], b.uv[0]), L(a.uv[1], b.uv[1])], f: 0 };
+  };
+  const edgeUse = new Map();
+  for (let t = 0; t < I.length; t += 3) {
+    const tri = [V(I[t]), V(I[t + 1]), V(I[t + 2])];
+    let poly;
+    if (tri.every((q) => q.f >= 0)) poly = tri;
+    else if (tri.every((q) => q.f < 0)) continue;
+    else {
+      poly = [];
+      for (let i = 0; i < 3; i++) {
+        const a = tri[i], b = tri[(i + 1) % 3];
+        if (a.f >= 0) poly.push(a);
+        if ((a.f >= 0) !== (b.f >= 0)) poly.push(cut(a, b));
+      }
+    }
+    const ids = poly.map((q) => emit(q.key, q.p, q.n, q.uv));
+    for (let i = 1; i + 1 < ids.length; i++) {
+      g.indices.push(ids[0], ids[i], ids[i + 1]);
+      for (const [x, y] of [[ids[0], ids[i]], [ids[i], ids[i + 1]], [ids[i + 1], ids[0]]]) {
+        const k = x < y ? x + ',' + y : y + ',' + x;
+        edgeUse.set(k, (edgeUse.get(k) || 0) + 1);
+      }
+    }
+  }
+  // The skirt: from every open edge low on the neck, a band of knit down and slightly out, both faces.
+  if (skirt) {
+    const Q = g.positions, low = lo[1] + sy * 0.30, drop = skirt.drop, flare = skirt.flare;
+    const down = new Map();
+    const lower = (i) => {
+      if (down.has(i)) return down.get(i);
+      const x = Q[i * 3], y = Q[i * 3 + 1], z = Q[i * 3 + 2], rx = x - cx, rz = z - cz, rl = Math.hypot(rx, rz) || 1;
+      const id = Q.length / 3;
+      Q.push(x + rx / rl * flare, y - drop, z + rz / rl * flare);
+      g.normals.push(rx / rl, 0, rz / rl);
+      g.uvs.push(g.uvs[i * 2], g.uvs[i * 2 + 1] - 0.05);
+      down.set(i, id);
+      return id;
+    };
+    for (const [k, c] of edgeUse) {
+      if (c !== 1) continue;
+      const [a, b] = k.split(',').map(Number);
+      if (Q[a * 3 + 1] > low || Q[b * 3 + 1] > low) continue;
+      const a2 = lower(a), b2 = lower(b);
+      g.indices.push(a, b, b2, a, b2, a2, b, a, a2, b, a2, b2);
+    }
+  }
+  g.finalize ? g.finalize() : null;
+  return g;
+}
+
 /* A ski mask: the whole head, crown included -- a balaclava cut for a
    helmet stops at the crown, and on a man who wears no helmet that left
    a bald patch of scalp on top -- and down over the neck, with the eye
    port the balaclava has. */
 function castSkiMask(headGeo) {
-  const keep = (u, w, xn) => {
-    if (u < 0.02) return false;
-    if (u > 0.520 && u < 0.640 && w > 0.80 && xn < 0.62) return false;
-    return true;
+  // Outside an ellipse round both eyes (brow to the top of the nose), or anywhere behind the face.
+  const field = (u, w, xn) => {
+    const e = Math.pow((u - 0.583) / 0.060, 2) + Math.pow(xn / 0.60, 2) - 1;
+    return Math.max(e, (0.79 - w) * 12);
   };
-  return offsetPatch(headGeo, keep, 0.0056, null);
+  return castMaskShell(headGeo, field, 0.0058, { drop: 0.080, flare: 0.012 });
 }
 
 /* A boom microphone: a thin arm from below the ear round to the corner
