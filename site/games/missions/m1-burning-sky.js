@@ -822,7 +822,8 @@
       S.battle(0.6);
       var c = S.cast, cv = COVER(S), you = S.you;
       world.wreck(S);
-      if (!S.squadMode || S.squadMode === 'away') { S.putYou(cv.you, 0); S.squad('hold', cv.squad.map(function (p) { return [p[0], p[1], p[2], 0]; })); }
+      // Past the end of the wreck, where the hill is in clear view -- not behind its tail boom.
+      if (!S.squadMode || S.squadMode === 'away') { S.putYou([cv.you[0] + 5.8, 0, cv.you[2] + 0.6], 0); S.squad('hold', cv.squad.map(function (p) { return [p[0], p[1], p[2], 0]; })); }
       giveDeagle(you, false);
       S.hydra.forEach(function (T) { T.dead = false; T.firing = false; });
       world.tanks(S, CREST_Z + 6);
@@ -895,7 +896,7 @@
       sp.arm(false);
       var cov = P.mortar.cover;
       // From up the street and a little above, clear of where he runs and of the smoke behind him.
-      S.shot({ eye: [cov.x + 6.7, 2.6, cov.z + 1.5], at: [P.mortar.x - 1.2, 0.6, P.mortar.z + 1.0], fov: 42 });
+      S.shot({ eye: [cov.x + 5.2, 3.2, cov.z - 8.0], at: [P.mortar.x - 1.6, 0.6, P.mortar.z + 1.2], fov: 40 });
       sp.walkTo([cov.x + 1.4, 0, cov.z - 0.8], { speed: 1.6, clip: 'crouchWalk', then: 'crouchIdle' });
       sp.walk.backwards = true;
       var drag = S.t;
@@ -1079,7 +1080,7 @@
       var g = S.game, folder = g.box({ at: [ox + 0.1, 0.81, oz + 2.6], size: [0.32, 0.03, 0.24], material: { color: 0x8a6a3a }, physics: false });
       S.line('lincoln', 'Hydra.', { wait: 0.8 });
       yield S.quiet();
-      S.shot({ eye: [ox + 0.2, 1.55, oz + 1.2], at: c.lincoln.head(-0.05), fov: 34 });
+      S.shot(faceShot(c.lincoln, 1.25, 0.35, 32));
       c.lincoln.play('gesture', 0.4);
       S.line('lincoln', 'A force we have never seen before. No flag. No country. No records.');
       yield S.quiet();
@@ -1099,11 +1100,11 @@
       S.line('alec', 'Then somebody turned them. Somebody handed a schoolteacher a tank.', { emotion: 'anger' });
       yield S.quiet();
       // The question.
-      S.shot({ eye: [O.corner.x - 1.6, 1.65, O.corner.z + 1.1], at: c.molotov.head(), fov: 30 });
+      S.shot(faceShot(c.molotov, 1.4, 0.35, 30));
       S.line('molotov', 'Why were we there?');
       yield S.quiet();
       yield S.wait(1.4);
-      S.shot({ eye: [ox + 0.15, 1.6, oz + 1.3], at: c.lincoln.head(-0.03), fov: 28 });
+      S.shot(faceShot(c.lincoln, 1.0, 0.25, 28));
       c.lincoln.play('idle', 0.4); c.lincoln.feel('fear');
       S.line('lincoln', 'We... the... it was a... civilians requested us to come there.', { emotion: 'fear', wait: 1.2 });
       yield S.quiet();
@@ -1111,17 +1112,17 @@
       ['payback', 'alec', 'spite', 'mike', 'molotov'].forEach(function (k) { c[k].feel('anger'); c[k].look(c.lincoln); });
       S.shot({ eye: [ox - 0.9, 1.5, oz + 1.7], at: [ox + 0.1, 1.15, oz - 1.25], fov: 40, to: { eye: [ox + 0.9, 1.5, oz + 1.7] }, secs: 3.6 });
       yield S.wait(3.6);
-      S.shot({ eye: [ox + 0.2, 1.55, oz + 1.2], at: c.lincoln.head(-0.05), fov: 34 });
+      S.shot(faceShot(c.lincoln, 1.25, 0.35, 32));
       c.lincoln.feel('anger');
       S.line('lincoln', 'Dismissed.');
       yield S.quiet();
-      S.shot({ eye: [ox + 1.6, 1.4, oz - 0.4], at: c.mike.head(), fov: 32 });
+      S.shot(faceShot(c.mike, 1.1, -0.35, 32));
       S.line('mike', 'Sir, with respect, if civilians requested us, then who was it we were --', { emotion: 'fear' });
       yield S.wait(2.6);
       S.ctx.hush();
       c.lincoln.turnTo([O.door.x, 0, O.door.z]);
       c.lincoln.play('point', 0.15);
-      S.shot({ eye: [ox + 1.2, 1.5, oz + 0.6], at: c.lincoln.head(-0.1), fov: 40 });
+      S.shot(faceShot(c.lincoln, 1.6, -0.5, 38));
       S.shake(0.08);
       S.line('lincoln', 'DISMISSED!', { emotion: 'anger', volume: 1 });
       yield S.quiet();

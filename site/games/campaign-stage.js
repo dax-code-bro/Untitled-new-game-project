@@ -644,13 +644,16 @@
     catch (e) { if (g.particles) g.particles.explosion({ x: at[0], y: at[1], z: at[2] }, { scale: scale || 1 }); }
     // Debris and dust thrown up, and the shake that falls off with distance.
     var P = g.particles;
-    if (P) {
-      P.dust([at[0], at[1] + 0.3, at[2]], { count: Math.round(30 * (scale || 1)), size: 1.4 * (scale || 1) });
-      P.smoke([at[0], at[1] + 1, at[2]], { count: Math.round(4 * (scale || 1)), size: 3 * (scale || 1), life: 3.5, alpha: 0.45, color: 0x2a2724, colorEnd: 0x77706a });
-    }
     var cam = this.camState ? this.cinematic(0) : null;
     var eye = cam ? cam.eye : [this.you.pos.x, this.you.pos.y + 1.6, this.you.pos.z];
     var d = Math.hypot(at[0] - eye[0], at[1] - eye[1], at[2] - eye[2]);
+    if (P) {
+      /* Less of it close to the lens: a blast a few metres from the camera put a wall of grey over the
+         whole frame for three seconds (the mortar run whited out three times). */
+      var near = Math.min(1, Math.max(0.25, (d - 2) / 10));
+      P.dust([at[0], at[1] + 0.3, at[2]], { count: Math.round(30 * (scale || 1) * near), size: 1.4 * (scale || 1) });
+      P.smoke([at[0], at[1] + 1, at[2]], { count: Math.max(1, Math.round(4 * (scale || 1) * near)), size: 3 * (scale || 1) * (0.5 + 0.5 * near), life: 3.5, alpha: 0.45 * near, color: 0x2a2724, colorEnd: 0x77706a });
+    }
     var k = (o.shake != null ? o.shake : 1.2) * (scale || 1) / Math.max(1, d / 12);
     this.shake(Math.min(0.9, k));
     if (this.ctx.hudShake) this.ctx.hudShake(Math.min(1, k * 1.5));
