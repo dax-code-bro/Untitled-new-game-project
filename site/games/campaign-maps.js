@@ -213,13 +213,13 @@
     // The helipad: a painted H in a circle, west of centre.
     var pad = { x: -2.6, z: -49 };
     K.deco(pad.x - 3.2, pad.x + 3.2, roofY, roofY + 0.012, pad.z - 3.2, pad.z + 3.2, MAT.roof, 'pad');
-    for (var a = 0; a < 24; a++) {
-      var th = a / 24 * Math.PI * 2, cx = pad.x + Math.cos(th) * 3.0, cz = pad.z + Math.sin(th) * 3.0;
-      K.deco(cx - 0.42, cx + 0.42, roofY + 0.012, roofY + 0.02, cz - 0.42, cz + 0.42, MAT.padYellow, 'pad-ring');
-    }
-    K.deco(pad.x - 1.1, pad.x - 0.7, roofY + 0.012, roofY + 0.022, pad.z - 1.5, pad.z + 1.5, MAT.padPaint, 'pad-h');
-    K.deco(pad.x + 0.7, pad.x + 1.1, roofY + 0.012, roofY + 0.022, pad.z - 1.5, pad.z + 1.5, MAT.padPaint, 'pad-h');
-    K.deco(pad.x - 0.7, pad.x + 0.7, roofY + 0.012, roofY + 0.022, pad.z - 0.2, pad.z + 0.2, MAT.padPaint, 'pad-h');
+    /* The ring, painted: a yellow disc with the roof inside it. It was 24 squares laid round a
+       circle, which from the air read as a staircase, not a circle. */
+    K.game.cylinder({ at: [pad.x, roofY + 0.014, pad.z], radius: 3.35, height: 0.004, material: MAT.padYellow, physics: false });
+    K.game.cylinder({ at: [pad.x, roofY + 0.017, pad.z], radius: 2.70, height: 0.004, material: MAT.roof, physics: false });
+    K.deco(pad.x - 1.1, pad.x - 0.7, roofY + 0.020, roofY + 0.026, pad.z - 1.5, pad.z + 1.5, MAT.padPaint, 'pad-h');
+    K.deco(pad.x + 0.7, pad.x + 1.1, roofY + 0.020, roofY + 0.026, pad.z - 1.5, pad.z + 1.5, MAT.padPaint, 'pad-h');
+    K.deco(pad.x - 0.7, pad.x + 0.7, roofY + 0.020, roofY + 0.026, pad.z - 0.2, pad.z + 0.2, MAT.padPaint, 'pad-h');
     props.pad = { x: pad.x, y: roofY, z: pad.z };
     // The sniper nest on the north parapet: sandbags round two firing positions.
     K.sandbags(-8.6, -3.2, -42.9, false, 0.6);
@@ -401,9 +401,57 @@
     var rng = (function (s) { return function () { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; })(1999);
     /* A street grid: blocks 34 m on a side with 9 m streets, out to about 380 m. Each block is two to
        four buildings shoulder to shoulder, one to eight storeys, plaster in the town's colours or
-       burnt black; a third of them burning, smoke going straight up into the still evening air. */
-    var BL = 34, ST = 9, P = BL + ST;
-    var fires = 0, smokes = 0;
+       burnt black; a third of them burning, smoke going straight up into the still evening air.
+
+       BUILT AS A HANDFUL OF MESHES, ONE PER MATERIAL, and with windows. It was a box per building
+       and one dark slab per floor poking out of two of its four faces -- so every building had two
+       blank walls, the burnt ones were plain black blocks, and the backdrop was three thousand
+       actors walked every frame. Now the near ring (within NEAR of the street) has window panes on
+       all four walls, a parapet round a flat roof, and on a burnt one dark holes, a few glowing; the
+       far ring gets window bands on all four sides; and all of it is merged geometry. */
+    var LE = W.LE, BL = 34, ST = 9, P = BL + ST, NEAR = 170;
+    var fires = 0, smokes = 0, geos = {}, mats = {};
+    var WIN = { color: 0x1a1d22, texture: 'smooth', roughness: 0.25, metalness: 0.1 };
+    var WIN_LIT = { color: 0xffb060, emissive: 0xff8a30, emissiveStrength: 1.6, texture: 'smooth', roughness: 0.5, metalness: 0 };
+    var WIN_FIRE = { color: 0xff7020, emissive: 0xff5010, emissiveStrength: 3.0, texture: 'smooth', roughness: 0.5, metalness: 0 };
+    function geoOf(key, mat) { if (!geos[key]) { geos[key] = new LE.Geometry(); mats[key] = mat; } return geos[key]; }
+    function box(key, mat, x, y, z, sx, sy, sz) { geoOf(key, mat).merge(LE.Shapes.box(sx, sy, sz), { x: x, y: y, z: z }); }
+    // One outward quad: centre c, half-sizes along the wall (ax, az horizontal; y up), facing n.
+    function quad(key, mat, c, tx, tz, hw, hh, nx, nz) {
+      var g = geoOf(key, mat), base = g.positions.length / 3;
+      var px = [-hw, hw, hw, -hw], py = [-hh, -hh, hh, hh];
+      for (var i = 0; i < 4; i++) {
+        g.positions.push(c[0] + tx * px[i], c[1] + py[i], c[2] + tz * px[i]);
+        g.normals.push(nx, 0, nz);
+        g.uvs.push(i === 1 || i === 2 ? 1 : 0, i >= 2 ? 1 : 0);
+      }
+      // Wound so the face looks along n.
+      if (tx * nz - tz * nx > 0) g.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+      else g.indices.push(base, base + 2, base + 1, base, base + 3, base + 2);
+    }
+    function windows(x, z, sx, sz, storeys, burnt, burning) {
+      // Four faces: +x, -x, +z, -z. Along each, panes every ~2.7 m on every floor.
+      var faces = [[1, 0, sz], [-1, 0, sz], [0, 1, sx], [0, -1, sx]];
+      faces.forEach(function (f) {
+        var nx = f[0], nz = f[1], len = f[2], n = Math.max(1, Math.floor((len - 1.6) / 2.7));
+        var off = (nx ? sx : sz) / 2 + 0.03, tx = nz ? 1 : 0, tz = nx ? 1 : 0;
+        for (var fl = 0; fl < storeys; fl++) {
+          var y = fl * 3.2 + (fl === 0 ? 1.5 : 1.9);
+          for (var i = 0; i < n; i++) {
+            var u = -len / 2 + (len / n) * (i + 0.5);
+            var c = [x + nx * off + tx * u, y, z + nz * off + tz * u];
+            var r = rng();
+            if (burnt) {
+              if (burning && r < 0.10) quad('winFire', WIN_FIRE, c, tx, tz, 0.55, 0.65, nx, nz);
+              else quad('win', WIN, c, tx, tz, 0.60, 0.70, nx, nz);
+            } else {
+              if (r < 0.06) continue;                                   // bricked up
+              quad(r < 0.12 ? 'winLit' : 'win', r < 0.12 ? WIN_LIT : WIN, c, tx, tz, 0.55, fl === 0 ? 0.9 : 0.65, nx, nz);
+            }
+          }
+        }
+      });
+    }
     for (var gx = -9; gx <= 9; gx++) {
       for (var gz = -9; gz <= 9; gz++) {
         var cx = gx * P, cz = gz * P - 20;
@@ -413,25 +461,45 @@
         if (Math.abs(cx) < 26 + BL / 2 && cz > -70 - BL / 2 && cz < 60 + BL / 2) continue;
         if (cz > 40 && Math.abs(cx) < 150 && cz < 190) continue;
         if (cx < -270 && Math.abs(cz) < 40) continue;
+        var near = r < NEAR;
         var n = 2 + Math.floor(rng() * 3), along = rng() < 0.5;
         for (var i = 0; i < n; i++) {
           var w = BL / n, x = along ? cx - BL / 2 + w * (i + 0.5) : cx, z = along ? cz : cz - BL / 2 + w * (i + 0.5);
           var sx = along ? w - 0.6 : BL - rng() * 6, sz = along ? BL - rng() * 6 : w - 0.6;
           var storeys = 1 + Math.floor(Math.pow(rng(), 1.6) * 8), h = storeys * 3.2;
-          var burnt = rng() < 0.34;
-          K.game.box({ at: [x, h / 2, z], size: [sx, h, sz], material: burnt ? MAT.soot : WALLS[Math.floor(rng() * WALLS.length)], physics: false });
-          if (!burnt && rng() < 0.5) K.game.box({ at: [x, h + 0.5, z], size: [sx * 1.02, 1.0, sz * 1.02], material: MAT.tileRoof, physics: false });
-          // A dark band of windows on each floor of the taller ones, so they read as buildings and not crates.
-          if (storeys > 1 && !burnt) {
+          var burnt = rng() < 0.34, wi = Math.floor(rng() * WALLS.length);
+          box(burnt ? 'soot' : 'wall' + wi, burnt ? MAT.soot : WALLS[wi], x, h / 2, z, sx, h, sz);
+          var tiled = !burnt && rng() < 0.5;
+          if (tiled) box('tile', MAT.tileRoof, x, h + 0.5, z, sx * 1.02, 1.0, sz * 1.02);
+          var burning = burnt && fires < 40 && rng() < 0.7;
+          if (near) {
+            windows(x, z, sx, sz, storeys, burnt, burning);
+            // A parapet round a flat roof, and a cornice line at its foot.
+            if (!tiled) {
+              var pk = burnt ? 'soot' : 'wall' + wi, pm = burnt ? MAT.soot : WALLS[wi];
+              box(pk, pm, x, h + 0.35, z + sz / 2 - 0.12, sx, 0.7, 0.24);
+              box(pk, pm, x, h + 0.35, z - sz / 2 + 0.12, sx, 0.7, 0.24);
+              box(pk, pm, x + sx / 2 - 0.12, h + 0.35, z, 0.24, 0.7, sz);
+              box(pk, pm, x - sx / 2 + 0.12, h + 0.35, z, 0.24, 0.7, sz);
+              box('soot', MAT.soot, x, h - 0.06, z, sx + 0.10, 0.12, sz + 0.10);
+            }
+          } else if (storeys > 1 && !burnt) {
+            // Far off: a dark band of windows on each floor, on all four sides.
             for (var f = 1; f < storeys; f++) {
-              K.game.box({ at: [x, f * 3.2 - 1.4, z], size: [sx + 0.08, 1.1, sz * 0.82], material: MAT.soot, physics: false });
+              box('soot', MAT.soot, x, f * 3.2 - 1.4, z, sx + 0.08, 1.1, sz * 0.86);
+              box('soot', MAT.soot, x, f * 3.2 - 1.4, z, sx * 0.86, 1.1, sz + 0.08);
             }
           }
-          if (burnt && fires < 40 && rng() < 0.7) { fires++; props.fires.push({ at: [x, h, z], r: Math.min(sx, sz) * 0.6, rate: 8, size: 3.2 }); }
+          if (burning) { fires++; props.fires.push({ at: [x, h, z], r: Math.min(sx, sz) * 0.6, rate: 8, size: 3.2 }); }
           if (burnt && smokes < 30 && rng() < 0.6) { smokes++; props.smoke.push({ at: [x, h + 3, z], r: 5, rate: 1.4, size: 13, life: 18 }); }
         }
       }
     }
+    Object.keys(geos).forEach(function (k) {
+      var g = geos[k];
+      g.finalize();
+      K.game.meshFrom(g, { name: 'city-' + k, material: mats[k], at: [0, 0, 0], boundRadius: 600 });
+    });
   }
 
   /* ================================================================
