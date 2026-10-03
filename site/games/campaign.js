@@ -514,6 +514,14 @@
       });
       self.stage = stage;
       if (mission.setup) mission.setup(stage);
+      /* Every face's talking rig, built now while the mission loads. Left to the first blink or line
+         it was built mid-scene, and each one stalled the frame it happened in (up to two seconds on
+         a slow CPU) -- the hitches in the intro and on the rooftop. */
+      (game.actors || []).forEach(function (a) { if (a.face && a.face.prewarm) a.face.prewarm(); });
+      /* And let the GPU finish everything loading queued (texture and buffer uploads) now. Otherwise
+         the first call that has to wait for it -- a face's eyes moving, two seconds in -- takes the
+         whole stall: one frame of two seconds, in the opening of the intro. */
+      if (game.gl && game.gl.finish) game.gl.finish();
     }
     var hud = opts.hud || null;
 

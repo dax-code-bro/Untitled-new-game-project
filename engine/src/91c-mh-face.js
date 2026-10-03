@@ -508,6 +508,23 @@ class MhFace {
   }
 
   stop() { this.line = null; return this; }
+  /* Build the private copies now -- at load, behind the loading screen -- rather than on the first
+     blink or line, where it stalls the frame it happens in. */
+  prewarm() {
+    this._acquire();
+    // And the private GPU meshes, with one upload each: the first write into a new buffer is where
+    // the driver allocates, and that was a frame-long stall the first time each face moved its eyes.
+    const P = this._priv, gl = this.gl;
+    if (!P) return this;
+    const touch = (gm, geo) => {
+      if (!gm || !gm.buffers) return;
+      gl.bindBuffer(gl.ARRAY_BUFFER, gm.buffers[0]); gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(geo.positions));
+      gl.bindBuffer(gl.ARRAY_BUFFER, gm.buffers[1]); gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(geo.normals));
+    };
+    for (const l of P.levels) { if (!l.gm) l.gm = P.mk(l.geo, ':h'); touch(l.gm, l.geo); }
+    if (P.eyes) { if (!P.eyes.gm) P.eyes.gm = P.mk(P.eyes.geo, ':e'); touch(P.eyes.gm, P.eyes.geo); }
+    return this;
+  }
   /* Keep step with a voice that reports where it is: restart when it actually starts speaking,
      and jump to each word as it reaches it (SpeechSynthesisUtterance start / boundary). */
   restart() { if (this.line) this.lineT = 0; return this; }
@@ -677,7 +694,10 @@ class MhFace {
     for (const t of tiers) {
       const geo = geoOf(t.mesh);
       if (!geo || !geo.sdf) continue;
-      const rig = buildMhFaceRig(geo, levels.length ? levels[0].rig : null);
+      /* One rig per head GEOMETRY, not per face: it depends on nothing else, and every soldier or
+         militiaman who shares a head was building the same rig again the first time he blinked --
+         up to two seconds a time on a slow CPU, mid-scene. */
+      const rig = geo.__mhRig || (geo.__mhRig = buildMhFaceRig(geo, levels.length ? levels[0].rig : null));
       levels.push({ geo, rig, gm: null, work: new Float32Array(geo.positions), nrm: new Float32Array(geo.normals), from: t.from, restN: null });
     }
     let eyesL = null;
