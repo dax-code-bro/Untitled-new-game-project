@@ -15,6 +15,8 @@
  *   street       hostiles arrive dressed as Hydra, and the battle is heard
  *   handoff      Payback holds out her Desert Eagle and Spite takes it; it goes with the scene
  *   snipers      six of them at their windows
+ *   mortar       the tanks face the city, drive down the street through the plaza wall, and
+ *                once close their shells hurt you
  *   passed       the Mission Passed screen: stars, completion, three buttons, the battle quiet
  *
  * Usage: node engine/test/burningsky.test.js
@@ -224,6 +226,20 @@ function check(name, cond, detail = '') {
   });
   check('six snipers at their windows', snip.n === 6 && snip.high, JSON.stringify(snip));
   check('you are holding Payback\'s Desert Eagle', snip.gun === 'deagle', snip.gun);
+
+  // ---- the mortar: the tanks come down the street at you ----
+  await page.evaluate(() => window.CAMPAIGN_LIVE.begin(9));
+  await run(1);
+  const tk0 = await page.evaluate(() => window.CAMPAIGN_LIVE.stage.hydra.map((T) => ({ z: T.z, fwdz: -Math.sin(T.yaw) })));
+  check('the Hydra tanks face the city, not up the hill', tk0.every((t) => t.fwdz < -0.8), JSON.stringify(tk0.map((t) => t.fwdz.toFixed(2))));
+  await page.evaluate(() => { window.__hp0 = window.MP_GAME_LIVE.match.you.hp; window.MP_GAME_LIVE.match.you.hp = 1e6; });
+  await run(55);
+  const tk1 = await page.evaluate(() => { const S = window.CAMPAIGN_LIVE.stage; return { zs: S.hydra.map((T) => +T.z.toFixed(1)), wall: !!S.flags.plazaDown,
+    wallGone: !S.game.actors.some((a) => a.name === 'plaza-wall'), hurt: window.MP_GAME_LIVE.match.you.hp < 1e6 }; });
+  check('they drive off the hill and down the street toward you', tk1.zs.some((z) => z < 45), JSON.stringify(tk1.zs));
+  check('the first through smashes the plaza wall', tk1.wall && tk1.wallGone, JSON.stringify(tk1));
+  check('and once they are close their shells hurt you', tk1.hurt, JSON.stringify(tk1));
+  await page.evaluate(() => { window.MP_GAME_LIVE.match.you.hp = window.__hp0; });
 
   // ---- the end ----
   await page.evaluate(() => window.CAMPAIGN_LIVE.begin(11));

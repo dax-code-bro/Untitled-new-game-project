@@ -92,8 +92,11 @@
       S.hydra.forEach(function (T, i) {
         if (T.dead) return;
         T.x = -40 + i * 16; T.z = z != null ? z + (i % 2) * 4 : T.z;
-        T.y = hillY(T.z); T.pitch = T.z < 126 ? HILL_PITCH : 0;
-        T.yaw = -Math.PI / 2 + 0.06 * (i - 2.5);
+        /* Facing DOWN the hill, at the city. This was -pi/2, which in this engine points the gun
+           up the hill (+z): every tank on the crest faced away from the street and then reversed
+           down it, its muzzle flash coming out behind it. */
+        T.y = hillY(T.z); T.pitch = T.z < 126 ? -HILL_PITCH : 0;
+        T.yaw = Math.PI / 2 - 0.06 * (i - 2.5); T.turret = 0;
       });
     },
   };
@@ -188,6 +191,53 @@
       S.cast[k].rideOn(H, seatAt(k, 0.88), SEATS[k][1] > 0 ? Math.PI / 2 : -Math.PI / 2, k === 'mike' ? 'sitTable' : 'sit').arm(false);
     });
   }
+  /* Out of the helicopter on foot: up off the bench, along the aisle to the door, a hop down onto
+     the roof with the knees taking it, and off to `stand`. Nobody appears at the door from nowhere.
+     Runs on its own ticker; e._climbing is true until they are on the roof and walking. */
+  function climbOut(S, e, stand, face, delay) {
+    var H = S.heli, r = e.ride, cab = H.actor && H.actor.cabin || { floorY: 0.88, door: { x: 0.6, z: 1.22 } };
+    if (!r) return;
+    var fy = cab.floorY, dx = cab.door.x, dz = cab.door.z;
+    var path = [[r.l[0], fy, r.l[2] * 0.25], [dx, fy, 0.25], [dx, fy, dz - 0.15]];
+    var t0 = S.t + (delay || 0), k = 0, hop = null, ix = S.ctx.stepIx;
+    e._climbing = true; e._up = false;
+    S.every(function (dt) {
+      // A skip, or any other step, ends it where it is.
+      if (S.ctx.stepIx !== ix) { e._climbing = false; return true; }
+      if (S.t < t0) return false;
+      if (!e.ride && !hop) { e._climbing = false; return true; }
+      if (k === 0 && !e._up) { e._up = true; e.play('idle', 0.35); t0 = S.t + 0.45; return false; }
+      if (k < path.length) {
+        if (e.clip !== 'walk') e.play('walk', 0.2);
+        var p = path[k], l = r.l, ddx = p[0] - l[0], ddz = p[2] - l[2], d = Math.hypot(ddx, ddz), st = 1.25 * dt;
+        l[1] = fy;
+        if (d > 1e-3) r.yaw += angTo(r.yaw, Math.atan2(-ddz, ddx)) * Math.min(1, dt * 8);
+        if (d <= st) { l[0] = p[0]; l[2] = p[2]; k++; } else { l[0] += ddx / d * st; l[2] += ddz / d * st; }
+        return false;
+      }
+      if (!hop) {
+        // The hop: from the sill to the roof just outside the door, over 0.5 s, in an arc.
+        var a = S.vLocal(H, [dx, fy, dz]), b = S.vLocal(H, [dx, 0, dz + 0.75]);
+        hop = { a: a, b: b, t: 0 };
+        var y = r.V.yaw + Math.PI / 2 + r.yaw;
+        e.ride = null; e.at(a, y, 'jump');
+        return false;
+      }
+      hop.t += dt / 0.5;
+      var u = Math.min(1, hop.t);
+      e.pos.x = hop.a[0] + (hop.b[0] - hop.a[0]) * u;
+      e.pos.z = hop.a[2] + (hop.b[2] - hop.a[2]) * u;
+      e.pos.y = hop.a[1] + (hop.b[1] - hop.a[1]) * u + Math.sin(u * Math.PI) * 0.18;
+      if (u >= 1) {
+        e.play('crouchIdle', 0.08);
+        hop = null; e._climbing = 'landed';
+        S.after(0.35, function () { e.walkTo(stand, { face: face }); e._climbing = false; });
+        return true;
+      }
+      return false;
+    });
+  }
+  function angTo(a, b) { var d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
   // A seated head in the hold, and a point across the aisle from it (for a portrait).
   function headOf(k) { return seatAt(k, 1.98); }
   function across(k, d) { var q = SEATS[k]; return [q[0], 2.02, q[1] * (0.80 - (d || 1.15))]; }
@@ -274,22 +324,17 @@
       S.squad('away');
       world.roof(S);
       H.update = null; H.x = PAD.x; H.y = ROOF; H.z = PAD.z; H.yaw = 0; H.spin = 8;
-      // Off the bird, through the north door, over to Lincoln.
-      ['alec', 'payback', 'mike', 'molotov', 'spite'].forEach(function (k, i) {
-        var e = c[k];
-        e.at([DOOR[0] - i * 0.25, ROOF, DOOR[2] - 0.2], 0);
-        e.hide();
-      });
-      S.shot({ eye: [3.8, ROOF + 1.8, -45.2], at: [-2.4, ROOF + 1.3, -47.3], fov: 42 });
+      // Off the bird one at a time: up off the bench, to the door, down onto the roof, over to Lincoln.
+      seatTeam(S);
+      // Up and back, clear of the guard by the pad (this sat 0.6 m behind his helmet).
+      S.shot({ eye: [5.2, ROOF + 2.6, -42.6], at: [-1.6, ROOF + 1.1, -47.2], fov: 40 });
       var order = ['alec', 'payback', 'mike', 'molotov', 'spite'];
-      for (var i = 0; i < order.length; i++) {
-        var e = c[order[i]];
-        e.at([DOOR[0], ROOF, DOOR[2]], 0);
-        e.walkTo(STAND[order[i]], { face: order[i] === 'alec' ? 0 : -0.2 + i * 0.1 });
-        e.arm(order[i] !== 'alec', false);
-        yield S.wait(0.55);
-      }
+      order.forEach(function (k, i) {
+        climbOut(S, c[k], STAND[k], k === 'alec' ? 0 : -0.2 + i * 0.1, i * 1.05);
+        S.after(i * 1.05 + 2.4, function () { c[k].arm(k !== 'alec', false); });
+      });
       c.lincoln.walkTo([-1.6, ROOF, -45.45], { face: Math.PI });
+      yield S.until(function () { return !c.alec._climbing; });
       yield S.arrive(c.alec, c.lincoln);
       // The handshake.
       S.shot({ eye: [1.2, ROOF + 1.6, -45.9], at: [-1.6, ROOF + 1.45, -45.9], fov: 34 });
@@ -668,33 +713,108 @@
      8. HYDRA: the binoculars, and they open fire
      ================================================================ */
   var CREST_Z = 140;
+  // Diesel off the engine deck, and the dust the tracks throw up while they move.
+  function tankFx(S, T, dt, moving) {
+    T._fx = (T._fx || 0) + dt;
+    if (T._fx > 0.15 && S.game.particles) {
+      T._fx = 0;
+      var Pp = S.game.particles, sd = Math.random() < 0.5 ? -1 : 1;
+      Pp.smoke(S.vLocal(T, [-3.7, 1.65, sd * 0.9]), { count: 1, size: 0.7, life: 0.8, color: 0x2a2826, colorEnd: 0x0c0c0e, alpha: 0.5 });
+      if (moving) Pp.smoke(S.vLocal(T, [-3.9, 0.2, sd * 1.5]), { count: 1, size: 1.8, life: 1.2, color: 0x8a7458, colorEnd: 0x5a4c3c, alpha: 0.38 });
+    }
+    if (T.gun > 0) T.gun = Math.max(0, T.gun - dt * 0.2);
+  }
+  // Where the muzzle is, with the turret turned: the gun is on the turret's +X, 7.6 m out, 1.98 up.
+  function tankMuzzle(S, T) {
+    var a = T.yaw + (T.turret || 0), c = Math.cos(a), sn = Math.sin(a);
+    return [T.x + c * 7.6, T.y + 1.98 + Math.sin(T.pitch || 0) * 3, T.z - sn * 7.6];
+  }
+  function tankFlash(S, T) {
+    var m = tankMuzzle(S, T);
+    if (S.game.particles) { S.game.particles.fire(m, { count: 8, size: 1.4, life: 0.25 }); S.game.particles.smoke(m, { count: 4, size: 3, life: 3 }); }
+    if (S.game.audio && S.game.audio.report) S.game.audio.report(1, { volume: 0.5, tail: 1.6, tailHz: 260, crack: 0.3 });
+    T.gun = 0.06;
+  }
   function tanksRoll(S, speed, stopZ) {
     S.hydra.forEach(function (T, i) {
       T.update = function (dt) {
         if (T.dead) return;
         var moving = T.z > stopZ + (i % 2) * 4;
         if (moving) T.z -= speed * dt;
-        T.y = hillY(T.z); T.pitch = T.z < 126 ? HILL_PITCH : 0;
-        // Diesel off the engine deck, and the dust the tracks throw up while they move.
-        T._fx = (T._fx || 0) + dt;
-        if (T._fx > 0.15 && S.game.particles) {
-          T._fx = 0;
-          var Pp = S.game.particles, sd = Math.random() < 0.5 ? -1 : 1;
-          Pp.smoke(S.vLocal(T, [-3.7, 1.65, sd * 0.9]), { count: 1, size: 0.7, life: 0.8, color: 0x2a2826, colorEnd: 0x0c0c0e, alpha: 0.5 });
-          if (moving) Pp.smoke(S.vLocal(T, [-3.9, 0.2, sd * 1.5]), { count: 1, size: 1.8, life: 1.2, color: 0x8a7458, colorEnd: 0x5a4c3c, alpha: 0.38 });
-        }
+        T.y = hillY(T.z); T.pitch = T.z < 126 ? -HILL_PITCH : 0;
+        tankFx(S, T, dt, moving);
         if (T.firing && S.t > (T._shotAt || 0)) {
           T._shotAt = S.t + 6 + Math.random() * 5;
           // Muzzle flash, then the shell lands somewhere in the street.
-          var m = S.vLocal(T, [7.7, 1.98, 0]);
-          if (S.game.particles) { S.game.particles.fire(m, { count: 8, size: 1.4, life: 0.25 }); S.game.particles.smoke(m, { count: 4, size: 3, life: 3 }); }
-          T.gun = 0.06;
+          tankFlash(S, T);
           var you = S.you, tx = -6 + Math.random() * 12, tz = Math.max(-20, you.pos.z + (Math.random() - 0.3) * 24);
           S.after(0.9, function () { S.boom([tx, 0.4, tz], 1.4); });
         }
-        if (T.gun > 0) T.gun = Math.max(0, T.gun - dt * 0.2);
       };
     });
+  }
+  /* THE ADVANCE. Off the hill, into the street two abreast, through the plaza wall, and down on
+     you. From the hill their rounds go wide; inside thirty metres they are laid on you, and a
+     shell that lands on you hurts -- so the mortar has to stop them before they get there. Each
+     lane keeps its order: a tank waits behind the one ahead of it. */
+  function tanksAdvance(S) {
+    var you = S.you, t0 = S.t;
+    S.hydra.forEach(function (T, i) {
+      var lane = i % 2 ? 3.4 : -3.4, rank = Math.floor(i / 2);
+      var path = [[lane * 2.2, 72], [lane, 58], [lane, 30 + rank * 10]];
+      var k = 0, go = t0 + 1.5 + i * 2.2;
+      T._lane = lane; T._rank = rank; T._fireAt = S.t + 6 + i * 1.6; T._hd = T._hd || [0, -1];
+      T.update = function (dt) {
+        if (T.dead) return;
+        var moving = false;
+        if (S.t > go && k < path.length) {
+          var p = path[k], dx = p[0] - T.x, dz = p[1] - T.z, d = Math.hypot(dx, dz);
+          var blocked = T.z < 66 && S.hydra.some(function (O) { return O !== T && !O.dead && O._lane === lane && O._rank < rank && O.z < T.z && T.z - O.z < 10; });
+          if (!blocked && d > 1e-3) {
+            var st = (T.z > 60 ? 2.4 : 1.5) * dt;
+            if (d <= st) { T.x = p[0]; T.z = p[1]; k++; } else { T.x += dx / d * st; T.z += dz / d * st; }
+            var hx = dx / d, hz = dz / d;
+            T._hd[0] += (hx - T._hd[0]) * Math.min(1, dt * 2); T._hd[1] += (hz - T._hd[1]) * Math.min(1, dt * 2);
+            moving = true;
+          } else if (d <= 1e-3) k++;
+        }
+        var hd = T._hd, hl = Math.hypot(hd[0], hd[1]) || 1;
+        T.yaw = Math.atan2(-hd[1] / hl, hd[0] / hl);
+        T.y = hillY(T.z);
+        T.pitch = Math.atan2(hillY(T.z + hd[1] / hl * 3) - hillY(T.z - hd[1] / hl * 3), 6);
+        if (!S.flags.plazaDown && T.z < 54.5) breakPlazaWall(S, T);
+        // The turret comes round onto you.
+        var ax = you.pos.x - T.x, az = you.pos.z - T.z, dist = Math.hypot(ax, az);
+        T.turret = (T.turret || 0) + angTo(T.turret || 0, Math.atan2(-az, ax) - T.yaw) * Math.min(1, dt * 1.2);
+        tankFx(S, T, dt, moving);
+        if (S.t > T._fireAt) {
+          var close = dist < 30;
+          T._fireAt = S.t + (close ? 3.4 : 5.5) + Math.random() * 2.5;
+          tankFlash(S, T);
+          var spread = close ? 1.3 : Math.min(22, dist * 0.22);
+          var tx = you.pos.x + (Math.random() - 0.5) * 2 * spread, tz = you.pos.z + (Math.random() - 0.5) * 2 * spread;
+          S.after(0.45 + dist / 450, function () {
+            S.boom([tx, 0.4, tz], 1.4);
+            var dd = Math.hypot(you.pos.x - tx, you.pos.z - tz);
+            if (dd < 6 && you.alive && S.M.damage) S.M.damage(null, you, Math.round(110 * (1 - dd / 6)));
+          });
+          if (close && !S.flags.tankClose) { S.flags.tankClose = true; S.line('payback', 'He\'s got us bracketed! KILL HIM!', { emotion: 'fear' }); }
+        }
+      };
+    });
+  }
+  // The first tank to reach the plaza wall goes through it.
+  function breakPlazaWall(S, T) {
+    S.flags.plazaDown = true;
+    var g = S.game;
+    (g.actors || []).filter(function (a) { return a.name === 'plaza-wall'; }).forEach(function (a) {
+      var M = S.M, sol = M && M.map && M.map.solids;
+      if (sol) { var k = sol.indexOf(a); if (k >= 0) sol.splice(k, 1); }
+      a.destroy();
+    });
+    for (var x = -8; x <= 8; x += 4) S.boom([x, 0.6, 52.3], 0.9, { shake: 0.4 });
+    if (g.particles) for (var j = 0; j < 40; j++) g.particles.sparks([T.x + (Math.random() - 0.5) * 6, 0.6, 52.3], { count: 2, speed: 5 });
+    S.line('alec', 'They\'re through the wall! Drop them before they\'re on top of us!', { emotion: 'fear' });
   }
   var hydra = {
     id: 'hydra', type: 'play', checkpoint: true, objective: 'Look at the hill',
@@ -824,7 +944,8 @@
       SQUAD.forEach(function (k, i) { c[k].at([cov.x + 0.4 + (i - 1.5) * 1.1, 0, cov.z - 2.0 - (i % 2) * 0.6], 0, i === 1 ? 'binoculars' : 'crouchIdle').arm(i !== 1); });
       c.spite.at([base[0] - 0.7, 0, base[2] - 0.6], 0.3, 'crouchIdle').arm(false);
       if (!S.hydra.some(function (T) { return T.firing; })) world.tanks(S, 118);
-      tanksRoll(S, 0.35, 96);
+      S.flags.tankClose = false;
+      tanksAdvance(S);
       S.hydra.forEach(function (T) { T.firing = true; });
       S.api.lockControls(true);
       if (S.api.look) S.api.look(0, -0.05);
@@ -833,7 +954,8 @@
         material: { color: 0xff3020, emissive: 0xff3020, emissiveStrength: 3.0, opacity: 0.55 } }) : null;
       var aimAt = function () {
         var yaw = S.api.yaw, pitch = S.api.pitch;
-        var R = Math.max(50, Math.min(175, 105 - pitch * 140));
+        // Down into the street as well as out to the hill: the tanks come to you.
+        var R = Math.max(12, Math.min(175, 105 - pitch * 140));
         var x = mo.x + Math.sin(yaw) * R, z = mo.z + Math.cos(yaw) * R;
         return { x: x, z: z, y: hillY(z), R: R, yaw: yaw };
       };
