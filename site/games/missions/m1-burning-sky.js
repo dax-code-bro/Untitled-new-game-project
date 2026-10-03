@@ -566,22 +566,29 @@
       S.shot({ eye: [-4.4, 1.05, cv.you[2] + 1.9], at: [-2.4, 0.95, cv.you[2] + 0.1], fov: 42 });
       S.line('payback', 'Snipers in the windows. Six of the sons of bitches.', { emotion: 'anger' });
       yield S.quiet();
-      // She stands, faces him, and hands it over.
-      c.payback.at([cv.you[0] - 0.9, 0, cv.you[2] - 0.3], Math.PI / 2, 'idle').arm(true);
+      // She stands, faces him, and holds it out to him grip first.
+      c.payback.at([cv.you[0] - 0.9, 0, cv.you[2] - 0.3], Math.atan2(0.9, 0.3), 'idle').arm(false);
       c.payback.crouching = false;
+      c.payback.gunInHand('deagle', 'offer');
       // Spite stands to take it. Side on to the two of them, the pistol held out between.
       c.spite.at(cv.you, Math.atan2(-0.9, -0.3), 'idle').arm(false); c.spite.crouching = false;
       S.shot({ eye: [cv.you[0] + 0.32, 1.4, cv.you[2] - 2.43], at: [cv.you[0] - 0.45, 1.22, cv.you[2] - 0.15], fov: 38 });
-      yield S.wait(0.6);
-      c.payback.arm(false); c.payback.hold('deagle', true); c.payback.play('handshake', 0.2);
+      yield S.wait(0.5);
+      c.payback.play('handshake', 0.3);
       S.line('payback', 'Here. Optic\'s zeroed. You scratch her, I scratch you.', { emotion: 'focus' });
+      yield S.wait(1.1);
+      // He reaches for it, closes his hand on the grip, and it is his.
+      c.spite.play('handshake', 0.35);
+      yield S.wait(0.75);
+      c.payback.give('deagle', c.spite, 'grip');
+      c.payback.play('idle', 0.4);
+      yield S.wait(0.35);
+      c.spite.play('idle', 0.55);
       yield S.quiet();
-      // Taken: it is in your hands now.
-      c.payback.hold('deagle', false); c.payback.play('idle', 0.3);
       S.line('jesse', 'No angle on those windows from up here. They\'re yours, Spite.', { radio: true });
       yield S.quiet();
     },
-    skip: function (S) { world.wreck(S); S.cast.payback.hold('deagle', false); },
+    skip: function (S) { world.wreck(S); S.cast.payback.gunInHand('deagle', false); S.cast.spite.gunInHand('deagle', false); },
   };
 
   /* ================================================================

@@ -13,7 +13,7 @@
  *   friendly     shooting a soldier who is standing still is instant; a squadmate
  *                gets one warning, the second is the black screen and the checkpoint
  *   street       hostiles arrive dressed as Hydra, and the battle is heard
- *   handoff      Payback holds out her Desert Eagle, and puts it away with the scene
+ *   handoff      Payback holds out her Desert Eagle and Spite takes it; it goes with the scene
  *   snipers      six of them at their windows
  *   passed       the Mission Passed screen: stars, completion, three buttons, the battle quiet
  *
@@ -195,17 +195,25 @@ function check(name, cond, detail = '') {
   check('the squad fights as bots in the street', street.squad === 'fight');
   check('the battle is heard: music and the city fighting', await page.evaluate(() => { const B = window.CAMPAIGN_LIVE.stage._battle; return !!B && B.level === 1 && !B.off; }));
 
-  // ---- the handoff: she holds the Desert Eagle out, and it goes with the scene ----
+  // ---- the handoff: she holds the Desert Eagle out, and he takes it ----
   await page.evaluate(() => window.CAMPAIGN_LIVE.begin(5));
-  let held = false;
-  for (let k = 0; k < 40 && !held; k++) {
-    await run(0.5);
-    held = await page.evaluate(() => { const h = window.CAMPAIGN_LIVE.stage.cast.payback._held; return !!(h && h.deagle && h.deagle[0].visible); });
+  const whoHolds = () => page.evaluate(() => {
+    const S = window.CAMPAIGN_LIVE.stage, g = S._handGuns && S._handGuns.deagle;
+    if (!g || !g.visible) return null;
+    return g.parent === S.cast.payback.actor ? 'payback' : g.parent === S.cast.spite.actor ? 'spite' : '?';
+  });
+  let held = null, taken = null;
+  for (let k = 0; k < 60 && taken !== 'spite'; k++) {
+    await run(0.25);
+    const w = await whoHolds();
+    if (w === 'payback') held = w;
+    if (w === 'spite') taken = w;
   }
-  check('Payback holds out her Desert Eagle in the handoff', held);
+  check('Payback holds out her Desert Eagle, the real model, in her hand', held === 'payback', String(held));
+  check('and Spite takes it: the same gun passes into his hand', taken === 'spite', String(taken));
   await skip();
   await run(0.5);
-  check('and it is gone from her hand when the scene ends', await page.evaluate(() => { const h = window.CAMPAIGN_LIVE.stage.cast.payback._held; return !h || !h.deagle || h.deagle.every((p) => !p.visible); }));
+  check('and it is put away when the scene ends', (await whoHolds()) === null);
 
   // ---- the snipers ----
   await page.evaluate(() => window.CAMPAIGN_LIVE.begin(6));

@@ -184,15 +184,25 @@
       parts.push(propOn(game, actor, 'head', 'box', [0.04, 0.02, 0.05], [0, 0.045, 0.16], null, 'black'));
       return parts;
     },
-    /* Payback's Desert Eagle in her right fist, for the handoff (the match's own gun is put away while
-       she holds it out). The hand's frame: -Y to the fingers, +X out of the palm, +Z up the thumb. */
-    deagle: function (game, actor) {
-      return [
-        propOn(game, actor, 'handR', 'box', [0.033, 0.27, 0.04], [0.025, -0.19, 0.05], null, 'steel'),
-        propOn(game, actor, 'handR', 'box', [0.03, 0.055, 0.125], [0.025, -0.09, -0.028], [15, 0, 0], 'black'),
-        propOn(game, actor, 'handR', 'box', [0.03, 0.045, 0.03], [0.025, -0.1, 0.084], null, 'black'),
-        propOn(game, actor, 'handR', 'box', [0.012, 0.004, 0.012], [0.025, -0.123, 0.09], null, 'dot'),
-      ];
+    /* A real gun in someone's right hand -- the game's own model, parented to the hand bone.
+       'grip': held as you hold a pistol (the mount origin is the top of the grip, where the web of
+       the hand sits; the hand's frame is -Y to the fingers, +X out of the palm, +Z up the thumb).
+       'offer': held by the barrel block, the grip held out to whoever is taking it. */
+    handGun: function (game, actor, kind, how) {
+      var g = game.serviceArm(kind, { at: [0, -80, 0], physics: false });
+      W.CAMPAIGN_PROPS.toHand(g, actor, how);
+      return g;
+    },
+    toHand: function (g, actor, how) {
+      g.parent = actor; g.parentBone = actor.skeleton.index('handR');
+      if (how === 'offer') { g.rotation.set(0.5, 0.5, 0.5, 0.5); g.localOffset.set(0.02, -0.27, -0.028); }
+      else { g.rotation.set(0.5, -0.5, -0.5, 0.5); g.localOffset.set(0.022, -0.072, 0.034); }
+      return g;
+    },
+    showGun: function (g, on) {
+      if (!g) return;
+      g.visible = !!on;
+      (g.partNames || []).forEach(function (n) { var c = g[n]; if (c && c !== g && !c.__lodDropped) c.visible = !!on; });
     },
     propOn: propOn,
   };
@@ -241,6 +251,7 @@
     if (this.actor.controller) this.actor.controller.teleport([0, -80, 0]);
     if (this.S.M.stowFor) this.S.M.stowFor(this);
     for (var k in this._held || {}) this.hold(k, false);
+    for (var hk in this.S._handGuns || {}) this.gunInHand(hk, false);
     if (this._binos) this.binos(false);
     return this;
   };
@@ -266,11 +277,28 @@
     if (this._binos) this._binos.forEach(function (p) { if (p) p.visible = !!on; });
     return this;
   };
-  // Something held in the hand for a scene (CAMPAIGN_PROPS[kind]: 'deagle'), shown or put away.
+  // Something held in the hand for a scene, built by CAMPAIGN_PROPS[kind], shown or put away.
   Extra.prototype.hold = function (kind, on) {
     this._held = this._held || {};
     if (on && !this._held[kind]) this._held[kind] = W.CAMPAIGN_PROPS[kind](this.S.game, this.actor);
     if (this._held[kind]) this._held[kind].forEach(function (p) { if (p) p.visible = !!on; });
+    return this;
+  };
+  /* A real gun (the game's model) in this one's right hand: how = 'grip' | 'offer' | false (put away).
+     give(other) passes it, the same object, into the other's hand. */
+  Extra.prototype.gunInHand = function (kind, how) {
+    var P = W.CAMPAIGN_PROPS, S = this.S;
+    S._handGuns = S._handGuns || {};
+    var g = S._handGuns[kind];
+    if (!how) { if (g && g.parent === this.actor) P.showGun(g, false); return this; }
+    if (!g) g = S._handGuns[kind] = P.handGun(S.game, this.actor, kind, how);
+    else P.toHand(g, this.actor, how);
+    P.showGun(g, true);
+    return this;
+  };
+  Extra.prototype.give = function (kind, other, how) {
+    var g = this.S._handGuns && this.S._handGuns[kind];
+    if (g) { W.CAMPAIGN_PROPS.toHand(g, other.actor, how || 'grip'); W.CAMPAIGN_PROPS.showGun(g, true); }
     return this;
   };
   Extra.prototype.turnTo = function (yawOrPoint) {
