@@ -16184,23 +16184,26 @@ function makeHumanoidClips() {
     upperArmL: { keys: [[0, 0, 0, 2], [1, 0, 0, 3]] },
     lowerArmL: { keys: [[0, -13, 0, 0], [1, -15, 0, 0]] },
   }, { loop: false }));
-  // DUCKING from a blast: down onto the haunches, arms over the head. Fast in, and held.
+  /* DUCKING from a blast: down onto the haunches, folded forward, head tucked, and the forearms
+     clamped up round the head with the elbows out in front of the face. Fast in, and held.
+     (It was the arms straight up over the head, elbows barely bent -- which read as somebody
+     surrendering, not somebody taking cover.) */
   clips.push(buildClip('duck', 1.4, {
-    hips: { keys: [[0, 0, 0, 0], [0.18, 26, 0, 0], [1, 24, 0, 0]],
-      pos: [[0, 0, 0, 0], [0.18, 0, -0.38, 0], [1, 0, -0.36, 0]] },
-    spine: { keys: [[0, 0, 0, 0], [0.18, 16, 0, 0], [1, 14, 0, 0]] },
-    chest: { keys: [[0, 0, 0, 0], [0.18, 10, 0, 0], [1, 9, 0, 0]] },
-    head: { keys: [[0, 0, 0, 0], [0.18, 24, 0, 0], [1, 20, 0, 0]] },
-    upperLegL: { keys: [[0, 0, 0, 0], [0.18, -92, 0, 8], [1, -90, 0, 8]] },
-    upperLegR: { keys: [[0, 0, 0, 0], [0.18, -92, 0, -8], [1, -90, 0, -8]] },
-    lowerLegL: { keys: [[0, 0, 0, 0], [0.18, 118, 0, 0], [1, 116, 0, 0]] },
-    lowerLegR: { keys: [[0, 0, 0, 0], [0.18, 118, 0, 0], [1, 116, 0, 0]] },
-    footL: { keys: [[0, 0, 0, 0], [0.18, -22, 0, 0], [1, -22, 0, 0]] },
-    footR: { keys: [[0, 0, 0, 0], [0.18, -22, 0, 0], [1, -22, 0, 0]] },
-    upperArmL: { keys: [[0, 0, 0, 2], [0.16, -150, 0, 30], [1, -146, 0, 30]] },
-    upperArmR: { keys: [[0, 0, 0, -2], [0.16, -150, 0, -30], [1, -146, 0, -30]] },
-    lowerArmL: { keys: [[0, -13, 0, 0], [0.16, -112, 0, 0], [1, -110, 0, 0]] },
-    lowerArmR: { keys: [[0, -13, 0, 0], [0.16, -112, 0, 0], [1, -110, 0, 0]] },
+    hips: { keys: [[0, 0, 0, 0], [0.18, 30, 0, 0], [1, 28, 0, 0]],
+      pos: [[0, 0, 0, 0], [0.18, 0, -0.47, 0], [1, 0, -0.46, 0]] },
+    spine: { keys: [[0, 0, 0, 0], [0.18, 30, 0, 0], [1, 28, 0, 0]] },
+    chest: { keys: [[0, 0, 0, 0], [0.18, 22, 0, 0], [1, 21, 0, 0]] },
+    head: { keys: [[0, 0, 0, 0], [0.18, 34, 0, 0], [1, 32, 0, 0]] },
+    upperLegL: { keys: [[0, 0, 0, 0], [0.18, -96, 0, 10], [1, -94, 0, 10]] },
+    upperLegR: { keys: [[0, 0, 0, 0], [0.18, -96, 0, -10], [1, -94, 0, -10]] },
+    lowerLegL: { keys: [[0, 0, 0, 0], [0.18, 128, 0, 0], [1, 126, 0, 0]] },
+    lowerLegR: { keys: [[0, 0, 0, 0], [0.18, 128, 0, 0], [1, 126, 0, 0]] },
+    footL: { keys: [[0, 0, 0, 0], [0.18, -32, 0, 0], [1, -32, 0, 0]] },
+    footR: { keys: [[0, 0, 0, 0], [0.18, -32, 0, 0], [1, -32, 0, 0]] },
+    upperArmL: { keys: [[0, 0, 0, 2], [0.16, -100, 30, 30], [1, -97, 30, 30]] },
+    upperArmR: { keys: [[0, 0, 0, -2], [0.16, -100, -30, -30], [1, -97, -30, -30]] },
+    lowerArmL: { keys: [[0, -13, 0, 0], [0.16, -148, 0, 0], [1, -146, 0, 0]] },
+    lowerArmR: { keys: [[0, -13, 0, 0], [0.16, -148, 0, 0], [1, -146, 0, 0]] },
   }, { loop: false }));
   // Cheering: both fists up, punching the air, alternately.
   clips.push(buildClip('cheer', 1.2, {
