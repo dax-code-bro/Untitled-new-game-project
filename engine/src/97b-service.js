@@ -2636,6 +2636,9 @@ function makeServiceArm(kind) {
      polymer one, but it is always its own material -- it is the only
      thing on the gun you are actually touching. */
   svcGrip(geos.wood, K);
+  /* A gun whose outline the table cannot draw adds its own parts here (the Desert Eagle's barrel
+     block, 97c-sidearm.js). Before the warp, so they stretch with everything else. */
+  if (K.custom) K.custom(geos, K);
   geos.mag = new Geometry(); svcMag(geos.mag, K);
   /* On a revolver whose cylinder IS its magazine -- the six-shot
      grenade launcher -- that group turns, so it needs its own axis. */

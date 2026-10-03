@@ -43711,6 +43711,9 @@ function makeServiceArm(kind) {
      polymer one, but it is always its own material -- it is the only
      thing on the gun you are actually touching. */
   svcGrip(geos.wood, K);
+  /* A gun whose outline the table cannot draw adds its own parts here (the Desert Eagle's barrel
+     block, 97c-sidearm.js). Before the warp, so they stretch with everything else. */
+  if (K.custom) K.custom(geos, K);
   geos.mag = new Geometry(); svcMag(geos.mag, K);
   /* On a revolver whose cylinder IS its magazine -- the six-shot
      grenade launcher -- that group turns, so it needs its own axis. */
@@ -44852,21 +44855,69 @@ Object.assign(SERVICE_KINDS, {
    brick with a handle under it, which is the outline nobody mistakes. It is
    gas-operated with a rotating bolt, like a rifle, which is why the
    slide is so long and the ejection port so far back. */
+/* WHAT MAKES IT A DESERT EAGLE AND NOT A BIG 1911. Built as the table gun it was, it was one
+   uniform slide running to the muzzle -- the outline of every other self-loader here, scaled up.
+   The real one is two blocks: a slide that stops a little over half-way, and in front of it the
+   fixed barrel, a slab-sided bar as wide as the slide with a rail along its top, whose underside
+   is cut away on a long slope up to the muzzle -- the wedge nose nobody mistakes. Under the slide
+   the frame is deep (the gun is 32 mm wide and the slide and frame together nearly 50 mm tall),
+   the trigger guard is big and square, and an ambidextrous safety sits on the back of the slide.
+   (Mark XIX, six-inch barrel, 267 mm overall.) */
+function deagleBody(geos, K) {
+  const g = geos.steel, R = K.rec, F = R.front, M = K.muzzle, up = R.up - 0.0004;
+  // The barrel block: deep at the back where it locks into the frame, sloping up to the nose.
+  svcSlab(g, [
+    [F - 0.0030, up * 0.96, 0.0250, R.w * 0.95, 4.8],
+    [F + 0.0020, up, 0.0270, R.w * 0.97, 4.8],
+    [F + 0.0240, up, 0.0262, R.w * 0.97, 4.8],
+    [M - 0.0420, up, 0.0150, R.w * 0.93, 4.8],
+    [M - 0.0060, up, 0.0096, R.w * 0.90, 4.8],
+    [M - 0.0010, up * 0.94, 0.0090, R.w * 0.86, 4.8],
+  ]);
+  // Two lightening flutes along each flank of the block, as on the real barrel.
+  [-1, 1].forEach(function (sd) {
+    svcSlab(g, [[F + 0.016, 0.0016, 0.0016, 0.0012, 3], [M - 0.030, 0.0016, 0.0016, 0.0012, 3]], sd * (R.w * 0.97 - 0.0006), true, true, 0.0075);
+  });
+  /* The seam between slide and frame: a dark line the length of the gun, which is what makes the
+     side read as two parts. On the black polymer group so it is dark. */
+  [-1, 1].forEach(function (sd) {
+    svcSlab(geos.wood, [[R.rear + 0.008, 0.0005, 0.0005, 0.0006, 3], [F - 0.002, 0.0005, 0.0005, 0.0006, 3]], sd * (R.w + 0.0001), true, true, -0.0118);
+  });
+  // The ambidextrous safety at the back of the slide, a lever each side.
+  [-1, 1].forEach(function (sd) {
+    svcSlab(g, [[R.rear + 0.010, 0.0050, 0.0050, 0.0016, 3], [R.rear + 0.026, 0.0034, 0.0034, 0.0016, 3]], sd * (R.w + 0.0014), true, true, 0.0040);
+  });
+  // The slide stop on the left of the frame, above the trigger.
+  svcSlab(g, [[-0.006, 0.0028, 0.0028, 0.0013, 3], [0.030, 0.0022, 0.0022, 0.0013, 3]], -(R.w + 0.0011), true, true, -0.0170);
+  /* The trigger guard's squared front with its finger hook, which the table's round bow lacks:
+     a flat plate down the front of the bow and a nub at its foot. */
+  const T = K.trigger, gd = -R.down;
+  svcSlab(g, [[T.x + 0.0228, 0.0185, 0.0185, 0.0040, 3], [T.x + 0.0272, 0.0185, 0.0185, 0.0040, 3]], 0, true, true, gd - 0.0185);
+  svcSlab(g, [[T.x - 0.0300, 0.0024, 0.0024, 0.0040, 3], [T.x + 0.0272, 0.0024, 0.0024, 0.0040, 3]], 0, true, true, gd - 0.0350);
+  svcSlab(g, [[T.x + 0.0262, 0.0030, 0.0030, 0.0036, 3], [T.x + 0.0320, 0.0024, 0.0024, 0.0030, 3]], 0, true, true, gd - 0.0330);
+  // The takedown lever's round head, forward of it.
+  svcSlab(g, [[0.052, 0.0034, 0.0034, 0.0014, 6], [0.059, 0.0034, 0.0034, 0.0014, 6]], -(R.w + 0.0010), true, true, -0.0190);
+}
+
 Object.assign(SERVICE_KINDS, {
   deagle: sideSpec({
     ammoKind: 'pistolBottle',
     muzzle: 0.214,
-    barrel: { rear: 0.022, r0: 0.0118, r1: 0.0112, bore: 0.0064, step: 0.120 },
-    rec: { rear: -0.062, front: 0.208, up: 0.0176, down: 0.0136, w: 0.0158, e: 4.6 },
-    port: { x0: 0.020, x1: 0.064, up: 0.0118, down: 0.0020 },
-    grip: { x: -0.040, y: -0.0180, len: 0.104, rake: 0.18,
+    // Inside the barrel block: only its crown shows, in the nose's face.
+    barrel: { rear: 0.022, r0: 0.0074, r1: 0.0072, bore: 0.0054, step: 0.120 },
+    // The slide stops at 0.122; the frame under it is deep.
+    rec: { rear: -0.062, front: 0.122, up: 0.0176, down: 0.0255, w: 0.0158, e: 4.6 },
+    port: { x0: 0.028, x1: 0.074, up: 0.0118, down: 0.0020 },
+    trigger: { x: -0.010 },
+    grip: { x: -0.042, y: -0.0270, len: 0.100, rake: 0.20,
       deep: 1.06, wide: 1.22, e: 1.55, checkN: [6, 9], checkH: 0.0008 },
-    mag: { x: -0.040, y: -0.0200, len: 0.094, w: 0.0122, d: 0.0130, r: 0.026 },
-    // The rail along the top of the barrel block, end to end.
-    rail: { x0: 0.010, x1: 0.206 },
+    mag: { x: -0.042, y: -0.0290, len: 0.090, w: 0.0122, d: 0.0130, r: 0.026 },
+    // The rail is on the barrel block only.
+    rail: { x0: 0.128, x1: 0.206 },
     sight: { y: 0.0236, frontX: 0.202, rearX: -0.052 },
-    serr: { kind: 'vert', rear: [-0.058, -0.024], pitch: 0.0050, out: 0.0016, hw: 0.0018 },
+    serr: { kind: 'vert', rear: [-0.058, -0.022], pitch: 0.0046, out: 0.0016, hw: 0.0018 },
     hammer: { kind: 'spur', x: -0.064, y: 0.0112 },
+    custom: deagleBody,
     mass: 2.0, bound: 0.22,
   }),
 });
