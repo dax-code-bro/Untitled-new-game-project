@@ -822,8 +822,8 @@
       S.battle(0.6);
       var c = S.cast, cv = COVER(S), you = S.you;
       world.wreck(S);
-      // Past the end of the wreck, where the hill is in clear view -- not behind its tail boom.
-      if (!S.squadMode || S.squadMode === 'away') { S.putYou([cv.you[0] + 5.8, 0, cv.you[2] + 0.6], 0); S.squad('hold', cv.squad.map(function (p) { return [p[0], p[1], p[2], 0]; })); }
+      // Across the street from the wreck, where the line to the hill clears its nose -- not behind it.
+      if (!S.squadMode || S.squadMode === 'away') { S.putYou([6.2, 0, cv.you[2] - 1.0], 0); S.squad('hold', cv.squad.map(function (p) { return [p[0], p[1], p[2], 0]; })); }
       giveDeagle(you, false);
       S.hydra.forEach(function (T) { T.dead = false; T.firing = false; });
       world.tanks(S, CREST_Z + 6);
@@ -839,8 +839,9 @@
       // Glass cuts through haze: the fog thins while you are looking through them.
       var fog = S.game.renderer.fog, fog0 = fog.density;
       fog.density = fog0 * 0.3;
-      // From the end of the wreck, where it does not block the hill.
-      var eye = [S.props.crash.x - 6.6, 1.65, Math.min(you.pos.z, S.props.crash.z - 3.6)];
+      /* From where you stand, across the street from the wreck: the line to the crest clears its nose.
+         (This was 'the end of the wreck' -- the tail end, so the glass was full of tail boom.) */
+      var eye = [6.2, 1.65, COVER(S).you[2] - 1.0];
       S.shot({ eye: eye, at: [0, 18, 128], fov: 9, to: { at: [-6, 17.5, 126] }, secs: 9 });
       tanksRoll(S, 1.6, 118);
       var seen = S.t;
