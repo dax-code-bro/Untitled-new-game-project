@@ -1900,7 +1900,9 @@ class Engine {
     };
 
     for (const actor of this.actors) {
-      if (!actor.visible || !actor.mesh || actor.dead) continue;
+      /* `noDraw`: posed every frame, measured by whatever reads its mesh, never drawn -- the
+         viewmodel rig under the first-person body arms (98f). */
+      if (!actor.visible || !actor.mesh || actor.dead || actor.noDraw) continue;
 
       if (probe) {
         /* A sphere around the probe, not a frustum: the cube faces cover

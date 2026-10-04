@@ -61,3 +61,17 @@ reload by bunker-nine's magazine block) and the Scattergun's `toplever`
 the gun's `partNames` and in bunker-nine's `singleParts` list, or it stays
 visible when the gun is hidden. After changing a held gun, re-record the kit
 (`tools/export_kit.js`) so the PC build gets it.
+
+## First-person arms
+
+The arms you see holding a gun are the MakeHuman body's own forearm, hand
+and sleeve (`engine/src/98f-body-arms.js`), not the lofted tubes of the
+viewmodel rig (98). The rig still does all the work -- grip solve, trigger
+finger, thumb, wrist give, reload -- and its actors are posed every frame
+but no longer drawn (`noDraw`); the body hand is
+closed onto the rig's solved finger joints and skinned to those actors
+through a palette read off them (`_bodyArmPalette`). `opts.stickArms` (or
+`engine.stickArms`) brings the old tubes back. A new rig part that moves a
+hand must be one of the actors the palette reads (sleeve, forearm, palm,
+thumb, finger bones). Multiplayer support hands are kept on the forend by
+`weaponForend` (98f) in `handsFor`. After changing them, re-record the kit.

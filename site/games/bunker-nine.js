@@ -3236,7 +3236,9 @@ function applyHeroLook(game, P, hero) {
   const knitted = L.sleeveTex === 'wool' || L.sleeveTex === 'knit';
   const sleeveMat = game.material({ color: L.sleeve, texture: L.sleeveTex || 'fabric',
     roughness: L.sleeveRough != null ? L.sleeveRough : 0.96, metalness: 0, uvScale: 1.4,
-    sheen: L.sleeveTex === 'leather' ? 0 : knitted ? 0.5 : 0.25, sheenColor: 0xb0aca4, sheenRoughness: knitted ? 0.5 : 0.35 });
+    sheen: L.sleeveTex === 'leather' ? 0 : knitted ? 0.5 : 0.25, sheenColor: 0xb0aca4, sheenRoughness: knitted ? 0.5 : 0.35,
+    // Both faces: the near plane cuts into a forearm when a gun is pulled to the eye (engine 98f).
+    doubleSided: true });
   for (const v of Object.values(P.view)) {
     const a = v.arms;
     if (!a) continue;
@@ -3253,6 +3255,10 @@ function applyHeroLook(game, P, hero) {
       .concat(a.rFingers || [], a.lFingers || []);
     for (const m of flesh) if (m) m.material = skinMat;
     for (const m of [a.sleeve, a.lSleeve]) if (m) m.material = sleeveMat;
+    /* And the arms that are actually drawn: the body's own forearm and hand
+       (engine 98f), which the rig above now only poses. */
+    for (const m of (a.bodySkin || [])) m.material = skinMat;
+    for (const m of (a.bodySleeve || [])) m.material = sleeveMat;
   }
 }
 

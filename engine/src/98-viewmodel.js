@@ -1367,6 +1367,11 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      one that is placed rather than closed -- the trigger finger, which
      lies on a blade and must not wrap round the front of the guard. */
   let marchOn = null;
+  /* Which finger the loop below is building, so the record a digit leaves
+     can be filed under it (the body arms, 98f, need each finger's joints by
+     name; probes for a finger run before its real build, so the last record
+     filed for it is the one that was kept). */
+  let curFinger = -1;
 
   const digit = (root, dir0, bends, lens, r0, pt = point, cl = curl) => {
     const rs = [];
@@ -2103,7 +2108,8 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      * which vertex belonged to which finger, and a measurement that cannot
      * name the finger cannot say which one is wrong. */
     if (opts.out) {
-      (opts.out.digits || (opts.out.digits = [])).push({
+      if (!opts.out.digits) opts.out.digits = [];
+      const rec = {
         knuckle: [root.x, root.y, root.z],
         joints,
         /* THE THREE POINTS A FINGER TURNS ABOUT, in order, so whatever
@@ -2162,7 +2168,9 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         // The closest any curl in the search could have brought the worst
         // knuckle. null for a digit that is not solved against a surface.
         reach: lastReach != null ? +lastReach.toFixed(4) : null,
-      });
+      };
+      opts.out.digits.push(rec);
+      if (curFinger >= 0) (opts.out.byFinger || (opts.out.byFinger = []))[curFinger] = rec;
     }
   };
 
@@ -2543,6 +2551,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     }
   }
   for (let f = 0; f < 4; f++) {
+    curFinger = f;
     // Which finger, if any, leaves the wrap to lie on a trigger.
     const isIndex = trigger && f === 3;
     // Index nearest the muzzle, little finger furthest from it.
@@ -3154,6 +3163,8 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        from the base joint to the tip, and this one has to reach a hammer. */
     step(0.019, 0.0112, 0.22);
     step(0.017, 0.0104, 0.44);
+    // The thumb's middle joint, where it turns from d0T onto d (98f).
+    if (opts.out) opts.out.thumbMid = [p.x, p.y, p.z];
     d = G.thumb === 'stack' ? V2(0.97, -0.04, side * 0.22)
       : G.thumb === 'along' ? V2(0.78, 0.00, -side * 0.62)
         : G.thumb === 'up' ? V2(0.16, 0.86, -side * 0.48)

@@ -942,7 +942,7 @@
   var PISTOL_WRAP = { axis: [-0.28, -0.94, 0], round: [0, 0, 1], girth: 0.078,
     spread: 0.0184, close: 0.90, index: 'wrap', thumb: 'stack', drop: 0 };
 
-  function handsFor(g, cls) {
+  function handsFor(g, cls, game) {
     var muzzle = (g && g.muzzleAt != null) ? g.muzzleAt : 0.42;
     var bore = (g && g.boreAt != null) ? g.boreAt : 0.05;
     var oneHanded = cls === 'pistol' || muzzle < 0.24;
@@ -954,6 +954,14 @@
        a two-thirds rule alone puts the support hand off the end of a
        submachine gun and halfway down the barrel of a rifle. */
     var fore = Math.max(0.12, Math.min(muzzle * 0.66, muzzle - 0.10));
+    /* And ON the forend. Two-thirds of the way out is past the end of the
+       handguard on an M4, on bare barrel, where the grip solve has nothing
+       to close the fingers onto and they stand straight up beside the gun.
+       A station with anything under it (a forend, a vertical grip) is kept;
+       one on bare barrel is brought back onto the forend the weapon's own
+       geometry shows (weaponForend, engine 98f). */
+    var fe = (game && game.weaponForend) ? game.weaponForend(g) : null;
+    if (fe && !fe.under(fore)) fore = Math.min(Math.max(fore, fe.from + 0.035), fe.to - 0.04);
     return { right: [-0.006, -0.024, 0.016], rightGrip: 'pistol',
       left: [fore, bore * 0.42, 0], leftGrip: 'fore' };
   }
@@ -1221,7 +1229,7 @@
     if (made && game.viewmodelArms) {
       try {
         var spec = W.MP_DATA && W.MP_DATA.gun ? W.MP_DATA.gun(id) : null;
-        made.__arms = game.viewmodelArms(made, handsFor(made, spec && (spec.cls || spec.class)), {
+        made.__arms = game.viewmodelArms(made, handsFor(made, spec && (spec.cls || spec.class), game), {
           key: 'mp:' + id,
           boreY: made.boreAt != null ? made.boreAt : null,
           sightY: made.sightAt != null ? made.sightAt : null,

@@ -148,7 +148,7 @@ async function main() {
        `relTo()` is the frame's reference (the zombie's root, the camera's
        view matrix); everything is stored relative to it. */
     function makeRig(name, kind, actors) {
-      actors = actors.filter((a) => a.mesh && meshId(a.mesh) >= 0).sort((p, q) => depth(p) - depth(q));
+      actors = actors.filter((a) => a.mesh && !a.noDraw && meshId(a.mesh) >= 0).sort((p, q) => depth(p) - depth(q));
       const skels = [];
       const parts = actors.map((a) => {
         let pal = -1;
@@ -173,6 +173,8 @@ async function main() {
         for (let k = 0; k < 16; k++) c.model.push(m[k]);
         c.vis.push(shown(a) ? 1 : 0);
       }
+      // The first-person arms' palette is read off the rig's actors (engine 98f): bring it to this frame.
+      rig.skels.forEach((sk) => { if (sk.refresh) sk.refresh(); });
       rig.skels.forEach((sk, i) => { const M = sk.matrices; for (let k = 0; k < sk.bones.length * 16; k++) c.pal[i].push(M[k]); });
       c.frames = (c.frames || 0) + 1;
       return c;

@@ -51,7 +51,7 @@ const _m3mul = (R, x, y, z) => [R[0] * x + R[1] * y + R[2] * z, R[3] * x + R[4] 
    a proportion of its length back from the tip, its palm side the side the thumb is on. The joints
    are bent tip first, each about its own rest pivot (forward kinematics), each over a short ramp so
    the knuckle rounds instead of creasing. */
-function _mhRelaxHands(D, P, adj, st, knuckle) {
+function _mhRelaxHands(D, P, adj, st, knuckle, info) {
   const nv = D.nBody;
   const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
   const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -168,15 +168,38 @@ function _mhRelaxHands(D, P, adj, st, knuckle) {
       }
       const js = f < 4 ? joint : [0, 0.5, 2];
       const piv = js.map((t) => [M[0] + fg.d[0] * L * t, M[1] + fg.d[1] * L * t, M[2] + fg.d[2] * L * t]);
-      return { M, L, k, spK, spA, piv, js, ang: bend[f].map((x) => x * DEG) };
+      // `info.open`: the fingers drawn together but left straight (98f closes them itself).
+      return { M, L, k, spK, spA, piv, js, ang: bend[f].map((x) => (info && info.open ? 0 : x * DEG)) };
     });
     const ramp = 0.006 * st, sig = 0.004 * st;
+    /* What the first-person arms (98f) need to close this hand on a grip themselves: each
+       finger's axis, joints and bend axis as they stand once drawn together, the palm's normal,
+       and every hand vertex's share of each finger and its station along it. */
+    let rec = null;
+    if (info) {
+      const rv = (a, k2, t) => rot(a, [0, 0, 0], k2, t);
+      rec = info[side] = {
+        n, toPalm, wrist: [0, 0, 0], hv: Int32Array.from(hv), ws: new Float32Array(hv.length * 5), s: new Float32Array(hv.length * 5),
+        fingers: R.map((r, f) => {
+          const sp = (p) => (r.spK ? rot(p, r.piv[0], r.spK, r.spA) : p);
+          const d = r.spK ? rv(F[f].d, r.spK, r.spA) : F[f].d;
+          const k2 = r.spK ? rv(r.k, r.spK, r.spA) : r.k;
+          return { M: r.M, L: r.L, js: r.js, d, k: k2, piv: r.piv.map(sp), tip: sp(pt(F[f].tip)) };
+        }),
+      };
+      for (const v of band) { rec.wrist[0] += P[v * 3] / band.length; rec.wrist[1] += P[v * 3 + 1] / band.length; rec.wrist[2] += P[v * 3 + 2] / band.length; }
+    }
+    let hi = 0;
     for (const v of hv) {
       const p0 = pt(v);
       let tot = 0;
       const ws = [0, 0, 0, 0, 0];
       const gmin = Math.min(gt[0][v], gt[1][v], gt[2][v], gt[3][v], gt[4][v]);
       for (let f = 0; f < 5; f++) { ws[f] = Math.exp(-(gt[f][v] - gmin) / sig); tot += ws[f]; }
+      if (rec) {
+        for (let f = 0; f < 5; f++) { rec.ws[hi * 5 + f] = ws[f] / tot; rec.s[hi * 5 + f] = dot(sub(p0, R[f].M), F[f].d); }
+        hi++;
+      }
       const acc = [0, 0, 0];
       for (let f = 0; f < 5; f++) {
         const w = ws[f] / tot;
@@ -341,7 +364,7 @@ function makeMhBodyGeometry(skeleton, opts = {}) {
   };
   if (!fem) smoothToward((x, y, z) => (z > 0.0 ? _ss(0.0, 0.05, z) : 0) * _ss(0.22, 0.30, y) * (1 - _ss(0.44, 0.50, y)) * (1 - _ss(0.13, 0.18, Math.abs(x))), 40, 0.7);
   smoothToward((x, y, z) => (z < -0.02 ? _ss(-0.02, -0.07, z) : 0) * _ss(-0.24, -0.15, y) * (1 - _ss(0.04, 0.12, y)) * (1 - _ss(0.13, 0.18, Math.abs(x))), 40, fem ? 0.35 : 0.6);
-  _mhRelaxHands(D, out, adj, st, (s) => apply(X['hand' + s], J['finger' + s][0], J['finger' + s][1], J['finger' + s][2]));
+  _mhRelaxHands(D, out, adj, st, (s) => apply(X['hand' + s], J['finger' + s][0], J['finger' + s][1], J['finger' + s][2]), opts.handInfo);
 
   /* ARMS AT THE SIDES, NOT THROUGH THEM. MakeHuman stands with its arms out at forty-five degrees;
      swung down to hang beside the body, the upper arm passed straight through the lats and the side
@@ -446,9 +469,11 @@ function makeMhBodyGeometry(skeleton, opts = {}) {
     const g = new Geometry();
     const sMap = new Int32Array(D.O.length).fill(-1);
     const J4 = [], W4 = [];
+    const src = [];
     const emit = (sIdx) => {
       if (sMap[sIdx] >= 0) return sMap[sIdx];
       const v = D.O[sIdx];
+      src.push(v);
       g.part = PARTOF(D.B[dom[v]]);
       sMap[sIdx] = g.vert(out[v * 3], out[v * 3 + 1], out[v * 3 + 2], N[v * 3], N[v * 3 + 1], N[v * 3 + 2], D.UV[sIdx * 2] * 6, D.UV[sIdx * 2 + 1] * 6);
       for (let q = 0; q < 4; q++) { J4.push(joints[v * 4 + q]); W4.push(weights[v * 4 + q]); }
@@ -456,6 +481,8 @@ function makeMhBodyGeometry(skeleton, opts = {}) {
     };
     for (let i = 0; i < tris.length; i += 3) g.tri(emit(tris[i]), emit(tris[i + 1]), emit(tris[i + 2]));
     g.joints = new Float32Array(J4); g.weights = new Float32Array(W4);
+    // The MakeHuman vertex each came from (98f reads the hand analysis by it).
+    g.srcVert = Int32Array.from(src);
     g.finalize();
     g.mhHeadPlace = place;
     g.mh = true;

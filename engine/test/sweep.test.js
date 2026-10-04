@@ -1124,12 +1124,48 @@ const SWEEP = () => {
         if (!n) return null;
         return { gr: +(g / r).toFixed(3), br: +(b / r).toFixed(3), n };
       };
+      /* THE HAND'S OWN PIXELS, not a box of floor with a hand in the corner.
+       *
+       * The box above was fixed in NDC, and with the pistol carried where
+       * it is now most of it is floor: a tan hand and a grey floor averaged
+       * together, so the reading said more about how much of the box the
+       * hand happened to cover than about its colour. The skin is drawn
+       * once and hidden once, and only the pixels that change are read --
+       * which is the hand and nothing else, whatever its pose. */
+      const view = PP && PP.view && PP.view.m1911;
+      const arms = view && view.arms;
+      const fleshOf = (a) => (a && a.bodySkin && a.bodySkin.length) ? a.bodySkin
+        : a ? [a.skin, a.lSkin, a.palm, a.lPalm, a.thumb, a.lThumb, a.index].concat(a.rFingers || [], a.lFingers || [],
+          ...(a.rBones || []).map((x) => x || []), ...(a.lBones || []).map((x) => x || [])).filter(Boolean) : [];
+      const px2 = new Uint8Array(W * H * 4);
+      const handPx = () => {
+        const fl = fleshOf(arms);
+        if (!fl.length) return null;
+        // `noDraw`, not `visible`: the game sets visibility every frame and nothing else touches this.
+        const was = fl.map((m) => m.noDraw);
+        for (const m of fl) m.noDraw = true;
+        G.step(0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, px2);
+        fl.forEach((m, i) => { m.noDraw = was[i]; });
+        G.step(0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, px);
+        let r = 0, g = 0, b = 0, n = 0;
+        for (let k = 0; k < px.length; k += 4) {
+          const d = Math.abs(px[k] - px2[k]) + Math.abs(px[k + 1] - px2[k + 1]) + Math.abs(px[k + 2] - px2[k + 2]);
+          if (d < 24 || (px[k] < 12 && px[k + 1] < 12 && px[k + 2] < 12)) continue;
+          r += px[k]; g += px[k + 1]; b += px[k + 2]; n++;
+        }
+        return n > 40 ? { gr: +(g / r).toFixed(3), br: +(b / r).toFixed(3), n } : null;
+      };
       for (const h of (window.__T_SYS.HERO_ORDER || [])) {
         SS.setHero(h);
         runFrames(4);
+        const own = handPx();
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, px);
-        const hand = box(0.20, 0.48, -0.98, -0.52);
+        const hand = own || box(0.20, 0.48, -0.98, -0.52);
         const wall = box(-0.30, 0.10, 0.10, 0.35);
         out.sys.skin.push({ h, hand, wall });
       }
