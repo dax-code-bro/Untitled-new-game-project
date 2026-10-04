@@ -379,8 +379,15 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
     const T0 = rec.thumbPivot;
     const L0 = len(sub(rec.thumbMid, T0)), L1 = len(sub(rec.thumbTip, rec.thumbMid));
     const leftAt = (x, y) => { const p = [x, y, 0]; for (let n = 0; n < 50 && sf(p[0], p[1], p[2]) < rT; n++) p[2] -= 0.0012; return p; };
+    /* At the height of the frame. Below a pistol's slide, ahead of the guard, there is nothing at
+       the thumb's own height, and the search left it on the centre line in the air under the gun,
+       showing out the other side. It rises until there is a side to lie along. */
+    const sideAt = (x, y) => {
+      for (let yy = y; yy <= y + 0.035; yy += 0.0015) if (sf(x, yy, 0) < rT) return leftAt(x, yy);
+      return leftAt(x, y);
+    };
     const yT = T0[1] + 0.004;
-    const M = leftAt(T0[0] + L0 * 0.95, yT), T = leftAt(T0[0] + (L0 + L1) * 0.92, yT + 0.002);
+    const M = sideAt(T0[0] + L0 * 0.95, yT), T = sideAt(T0[0] + (L0 + L1) * 0.92, yT + 0.002);
     const dNow = sf(rec.thumbTip[0], rec.thumbTip[1], rec.thumbTip[2]), dNew = sf(T[0], T[1], T[2]);
     if (dNew < Math.max(dNow, rT * 1.6) && Math.abs(T[2]) < 0.07 && len(sub(M, T0)) < L0 * 1.6) {
       rec.thumbMid = M; rec.thumbTip = T;
