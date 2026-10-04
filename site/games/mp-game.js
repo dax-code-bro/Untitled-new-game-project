@@ -961,7 +961,7 @@
        one on bare barrel is brought back onto the forend the weapon's own
        geometry shows (weaponForend, engine 98f). */
     var fe = (game && game.weaponForend) ? game.weaponForend(g) : null;
-    if (fe && !fe.under(fore)) fore = Math.min(Math.max(fore, fe.from + 0.035), fe.to - 0.04);
+    if (fe && !fe.under(fore)) fore = Math.min(Math.max(fore, fe.from + 0.035), fe.to - 0.07);
     return { right: [-0.006, -0.024, 0.016], rightGrip: 'pistol',
       left: [fore, bore * 0.42, 0], leftGrip: 'fore' };
   }

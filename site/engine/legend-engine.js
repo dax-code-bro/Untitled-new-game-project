@@ -52981,6 +52981,241 @@ function _baCarry(from, to, sa, sb, sc) {
 }
 const _baClamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 
+/* CLOSE THE HAND ON THE GUN, joint by joint.
+ *
+ * Reported: "the hands and fingers aren't positioned correctly." Measured against the weapon's
+ * own surface they were not: the rig's grip solve left the M4's middle and ring fingertips 56 to
+ * 66 mm off the grip in mid-air, and the support hand's four fingers standing straight up the
+ * side of the handguard, tips 13 to 27 mm clear of it with the bones through it. The body hand
+ * followed those joints faithfully, so it held the gun the same way.
+ *
+ * A finger closes the way a real one does: from the knuckle out, each joint bending until the
+ * bone beyond it comes to rest on the surface (or the joint runs out of travel), then the next.
+ * So it wraps -- along the underside, up the side, over the top -- whatever the shape under it.
+ * The knuckles stay where the grip solve put them; the trigger finger keeps its own solve (it
+ * lies along a trigger, it does not wrap); the thumb closes onto the gun the same way.
+ *
+ * The records are rewritten in place -- joints, tip, bend axis -- so everything that turns a
+ * finger afterwards (the reload opening the hand, the trigger) turns it about these joints. */
+function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
+  const { sub, add, mul, dot, cross, len, nrm } = _ba;
+  const DEG = Math.PI / 180;
+  const rot = (v, k, t) => {
+    const c = Math.cos(t), s = Math.sin(t), d = dot(k, v) * (1 - c);
+    return [v[0] * c + (k[1] * v[2] - k[2] * v[1]) * s + k[0] * d,
+      v[1] * c + (k[2] * v[0] - k[0] * v[2]) * s + k[1] * d,
+      v[2] * c + (k[0] * v[1] - k[1] * v[0]) * s + k[2] * d];
+  };
+  // How far the skin of a bone keeps off the gun: its worst point, its own radius taken off.
+  const clear = (p, dir, L, r) => {
+    let m = Infinity;
+    for (const t of [0.25, 0.45, 0.65, 0.85, 1.0]) {
+      const q = add(p, mul(dir, L * t));
+      m = Math.min(m, sf(q[0], q[1], q[2]) - r * (t === 1 ? 0.85 : 1));
+    }
+    return m;
+  };
+  /* One joint, starting from the angle the grip solve gave it: if that bone is in the gun, out to
+     the nearest angle that clears it (opening first, as a finger does); then closed from there
+     until the bone touches -- or the joint runs out of travel. */
+  const joint = (p, prev, k, L, r, start, lo, hi, noClose) => {
+    const STEP = 2.0 * DEG;
+    const c = (t) => clear(p, rot(prev, k, t), L, r);
+    let t = Math.max(lo, Math.min(hi, start));
+    if (c(t) < 0) {
+      let found = null, bestT = t, bestC = c(t);
+      for (let n = 1; n <= 45 && found == null; n++) {
+        for (const tt of [t - n * STEP, t + n * STEP]) {
+          if (tt < lo - 1e-6 || tt > hi + 1e-6) continue;
+          const cc = c(tt);
+          if (cc >= 0) { found = tt; break; }
+          if (cc > bestC) { bestC = cc; bestT = tt; }
+        }
+      }
+      t = found != null ? found : bestT;
+      if (found == null) return t;
+    }
+    if (noClose) return t;
+    // Close while it stays clear and keeps coming nearer the gun: a bone swinging past a thin part
+    // (a grip seen edge on) stops where it was closest, not out in the air beyond it.
+    let cur = c(t);
+    while (t + STEP <= hi + 1e-6) {
+      const cn = c(t + STEP);
+      if (cn < 0 || cn > cur + 0.0004) break;
+      t += STEP; cur = cn;
+    }
+    return t;
+  };
+  // The signed angle from a to b about k, both taken square to k.
+  const angle = (a, b, k) => {
+    const pa = nrm(sub(a, mul(k, dot(a, k)))), pb = nrm(sub(b, mul(k, dot(b, k))));
+    return Math.atan2(dot(cross(pa, pb), k), dot(pa, pb));
+  };
+  const trig = rec.indexPlane != null;                // the firing hand's index lies on a trigger
+  /* A HAND THAT STARTS INSIDE THE OTHER ONE moves out first. On a two-handed pistol grip the
+     solve put the support hand's knuckles where the firing hand's fingertips are, so every finger
+     began inside that hand and the closing could only swing them out forward. The whole hand
+     slides out to its own side and a little forward until the knuckles clear, then closes over. */
+  {
+    const ks = rec.byFinger.map((d) => d.pivots3[0]);
+    const worst = (dv) => Math.min(...ks.map((k) => sf(k[0] + dv[0], k[1] + dv[1], k[2] + dv[2])));
+    if (worst([0, 0, 0]) < radius) {
+      const side = (rec.wrist.p[2] + ks.reduce((a2, k) => a2 + k[2], 0) / 4) < 0 ? -1 : 1;
+      const dir = nrm([0.35, 0, side]);
+      let dv = null;
+      for (let n = 1; n <= 30; n++) { const t = mul(dir, n * 0.0015); if (worst(t) >= radius) { dv = t; break; } }
+      if (dv) {
+        const mv = (q) => { if (q) { q[0] += dv[0]; q[1] += dv[1]; q[2] += dv[2]; } };
+        const seen = new Set();
+        const mvOnce = (q) => { if (q && !seen.has(q)) { seen.add(q); mv(q); } };
+        for (const d of rec.byFinger) { for (const q of d.pivots3) mvOnce(q); mvOnce(d.tip); if (d.joints) for (const q of d.joints) mvOnce(q); mvOnce(d.knuckle); }
+        if (rec.pivots) for (const q of rec.pivots) mvOnce(q);
+        mvOnce(rec.wrist.p); mvOnce(rec.thumbPivot); mvOnce(rec.thumbMid); mvOnce(rec.thumbTip);
+        rec.shifted = dv;
+      }
+    }
+  }
+  const R = [radius, radius * 0.92, radius * 0.82];
+  for (let f = 0; f < 4; f++) {
+    const d = rec.byFinger[f];
+    /* The trigger finger keeps the trigger solve's pose: it reaches forward to a trigger, and any
+       closing at all curls it back round the guard into a fist (grip.test, "reaches forward"). It
+       only opens a bone the solve left inside the gun. */
+    const isTrig = trig && f === 3;
+    const onTrigger = isTrig;
+    const P0 = d.pivots3[0];
+    const L = [len(sub(d.pivots3[1], P0)), len(sub(d.pivots3[2], d.pivots3[1])), len(sub(d.tip, d.pivots3[2]))];
+    // The bend axis, signed so a positive turn closes toward the palm.
+    let k = nrm(d.axis);
+    const want = nrm(cross(palmA, nR));
+    if (dot(k, want) < 0) k = mul(k, -1);
+    // The grip solve's own bones, as directions, to start each joint from.
+    const rigDir = [nrm(sub(d.pivots3[1], P0)), nrm(sub(d.pivots3[2], d.pivots3[1])), nrm(sub(d.tip, d.pivots3[2]))];
+    // The knuckle turns about the rig's first bone (it may need to open well clear of a magazine or
+    // close well in); the middle and last joints bend only forward, as far as a finger's do.
+    let dir = sub(rigDir[0], mul(k, dot(rigDir[0], k)));
+    dir = nrm(dir);
+    const lim = [[-50 * DEG, 70 * DEG], [0, 105 * DEG], [0, 80 * DEG]];
+    const pts = [P0];
+    let p = P0;
+    for (let j = 0; j < 3; j++) {
+      const start = j === 0 ? 0 : Math.max(0, angle(dir, rigDir[j], k));
+      /* The trigger finger keeps the trigger solve's pose -- it lies along a blade, it does not wrap
+         -- and only opens a bone that the solve left inside the gun (its tip through the magwell). */
+      const t = onTrigger
+        ? joint(p, dir, k, L[j], R[j] * 0.8, j === 0 ? 0 : angle(dir, rigDir[j], k), -40 * DEG, 110 * DEG, true)
+        : joint(p, dir, k, L[j], R[j], start, lim[j][0], lim[j][1]);
+      dir = rot(dir, k, t);
+      p = add(p, mul(dir, L[j]));
+      pts.push(p);
+    }
+    d.pivots3 = [pts[0], pts[1], pts[2]];
+    d.joints = [pts[1], pts[2]];
+    d.tip = pts[3];
+    d.axis = k;
+    d.open = -1;
+    d.wrapped = true;
+  }
+  // The thumb, its two bones, closing onto the gun from where the grip solve laid it.
+  /* THE FIRING THUMB GOES ROUND TO THE FAR SIDE. The grip solve laid it forward along the near
+     side of the frame, under the receiver -- from the eye, a second finger pointing at the muzzle
+     beside the trigger finger. A right hand's thumb comes round the back of the grip, its web on the
+     backstrap, and lies along the LEFT of the frame. Not on a single action, whose thumb the game
+     drives up to the hammer from where the solve put it. */
+  if (firing && !keepThumb && rec.thumbPivot && rec.thumbMid && rec.thumbTip) {
+    const rT = radius * 1.05;
+    const L0 = len(sub(rec.thumbMid, rec.thumbPivot)), L1 = len(sub(rec.thumbTip, rec.thumbMid));
+    // Out from the middle of the frame to the left until clear of it, at a given station.
+    const leftOf = (q) => { const p = [q[0], q[1], 0]; for (let n = 0; n < 40 && sf(p[0], p[1], p[2]) < rT; n++) p[2] -= 0.0015; return p; };
+    // The base: behind the backstrap, a little to the right of centre (where the web of the hand is).
+    const b0 = [rec.thumbPivot[0], rec.thumbPivot[1], 0.004];
+    for (let n = 0; n < 30 && sf(b0[0], b0[1], b0[2]) < rT; n++) b0[0] -= 0.0015;
+    const tip = leftOf(rec.thumbTip);
+    // The middle joint between them, held off the corner of the grip it goes round.
+    const mid = leftOf([b0[0] + (tip[0] - b0[0]) * 0.42, (b0[1] + tip[1]) / 2, 0]);
+    // Lengths kept: the bones laid along base -> mid -> tip as far as they reach.
+    // Each joint pushed out to the left until it clears the grip it lies on.
+    const push = (q) => { const p = q.slice(); for (let n = 0; n < 30 && sf(p[0], p[1], p[2]) < rT; n++) p[2] -= 0.0012; return p; };
+    const d0 = nrm(sub(mid, b0)), M = push(add(b0, mul(d0, L0)));
+    const d1 = nrm(sub(tip, M)), T = push(add(M, mul(d1, L1)));
+    if (sf(M[0], M[1], M[2]) > rT * 0.8 && sf(T[0], T[1], T[2]) > rT * 0.8) {
+      rec.thumbPivot = b0; rec.thumbMid = M; rec.thumbTip = T;
+      // Its bend: across the thumb and the line into the gun.
+      let k = nrm(cross(d0, [0, 0, 1]));
+      rec.thumbAxis = k;
+      rec.thumbMoved = true;
+    }
+  }
+  /* THE SUPPORT THUMB LIES ALONG THE LEFT OF WHAT IT HOLDS, pointing at the muzzle -- on a forend
+     and on a pistol's frame alike. The grip solve aimed it forward and up off the side, and on the
+     M4 it reached past the end of the handguard into the air. From its own base, along the left
+     surface: the joints pushed out until they clear it. Only kept if it ends nearer the gun. */
+  if (!firing && rec.thumbPivot && rec.thumbMid && rec.thumbTip) {
+    const rT = radius * 1.05;
+    const T0 = rec.thumbPivot;
+    const L0 = len(sub(rec.thumbMid, T0)), L1 = len(sub(rec.thumbTip, rec.thumbMid));
+    const leftAt = (x, y) => { const p = [x, y, 0]; for (let n = 0; n < 50 && sf(p[0], p[1], p[2]) < rT; n++) p[2] -= 0.0012; return p; };
+    const yT = T0[1] + 0.004;
+    const M = leftAt(T0[0] + L0 * 0.95, yT), T = leftAt(T0[0] + (L0 + L1) * 0.92, yT + 0.002);
+    const dNow = sf(rec.thumbTip[0], rec.thumbTip[1], rec.thumbTip[2]), dNew = sf(T[0], T[1], T[2]);
+    if (dNew < Math.max(dNow, rT * 1.6) && Math.abs(T[2]) < 0.07 && len(sub(M, T0)) < L0 * 1.6) {
+      rec.thumbMid = M; rec.thumbTip = T;
+      rec.thumbAxis = nrm(cross(nrm(sub(M, T0)), [0, 0, -1]));
+      rec.thumbMoved = true;
+    }
+  }
+  // Only a thumb left floating: one the grip solve laid on the gun is already where it belongs.
+  const tt = rec.thumbTip;
+  if (rec.thumbPivot && rec.thumbMid && tt && rec.thumbAxis && sf(tt[0], tt[1], tt[2]) > 0.014) {
+    const T0 = rec.thumbPivot;
+    const L0 = len(sub(rec.thumbMid, T0)), L1 = len(sub(rec.thumbTip, rec.thumbMid));
+    let d0 = nrm(sub(rec.thumbMid, T0)), d1 = nrm(sub(rec.thumbTip, rec.thumbMid));
+    let k = nrm(rec.thumbAxis);
+    // Closing is whichever way brings the tip to the gun: tried both ways, a little.
+    const tipAt = (kk, t) => { const a0 = rot(d0, kk, t), a1 = rot(d1, kk, t); const q = add(add(T0, mul(a0, L0)), mul(a1, L1)); return sf(q[0], q[1], q[2]); };
+    if (tipAt(mul(k, -1), 15 * DEG) < tipAt(k, 15 * DEG)) k = mul(k, -1);
+    const rT = radius * 1.05;
+    const t0 = joint(T0, d0, k, L0, rT, 0, -30 * DEG, 70 * DEG);
+    d0 = rot(d0, k, t0);
+    const M = add(T0, mul(d0, L0));
+    d1 = rot(d1, k, t0);
+    const t1 = joint(M, d1, k, L1, rT * 0.85, 0, -25 * DEG, 60 * DEG);
+    d1 = rot(d1, k, t1);
+    rec.thumbMid = M;
+    rec.thumbTip = add(M, mul(d1, L1));
+    rec.thumbAxis = k;
+  }
+  // The finger list the game turns fingers by is the four kept fingers, in order -- not every
+  // trial build the solve made on the way.
+  rec.digits = rec.byFinger.slice(0, 4);
+  // This hand's bones as capsules, for the other hand to close onto (a two-handed pistol grip).
+  const caps = [];
+  for (const d of rec.byFinger) {
+    const q = [d.pivots3[0], d.pivots3[1], d.pivots3[2], d.tip];
+    for (let j = 0; j < 3; j++) caps.push([q[j], q[j + 1], R[j]]);
+  }
+  if (rec.thumbPivot && rec.thumbMid && rec.thumbTip) { caps.push([rec.thumbPivot, rec.thumbMid, radius * 1.05]); caps.push([rec.thumbMid, rec.thumbTip, radius * 0.9]); }
+  return caps;
+}
+
+/* The gun's surface with a hand's bones added to it: what the support hand of a two-handed pistol
+   grip closes onto is the firing hand's fingers wrapped round the grip, not the grip under them. */
+function _surfaceWithHand(sf, caps) {
+  const { sub, dot } = _ba;
+  return (x, y, z) => {
+    let d = sf(x, y, z);
+    const p = [x, y, z];
+    for (const [a, b, r] of caps) {
+      const ab = sub(b, a), ap = sub(p, a);
+      const t = Math.max(0, Math.min(1, dot(ap, ab) / (dot(ab, ab) || 1)));
+      const dx = ap[0] - ab[0] * t, dy = ap[1] - ab[1] * t, dz = ap[2] - ab[2] * t;
+      const dd = Math.hypot(dx, dy, dz) - r;
+      if (dd < d) d = dd;
+    }
+    return d;
+  };
+}
+
 /* Build one arm (skin and sleeve) in the weapon's space.
  *
  *   S      'R' or 'L' (the figure's side)
@@ -52989,7 +53224,7 @@ const _baClamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
  *   base   the first palette slot of this arm: base+0 sleeve, +1 forearm, +2 palm,
  *          +3 thumb, +4 + f*3 + b finger f bone b (the rig's own numbering, f 0 = little)
  */
-function _bodyArm(src, S, rec, shoulder, base) {
+function _bodyArm(src, S, rec, shoulder, base, sf, keepThumb) {
   const { g, info, Q, skel } = src;
   const H = info[S];
   if (!H || !rec || !rec.wrist || !rec.byFinger) return null;
@@ -53071,6 +53306,8 @@ function _bodyArm(src, S, rec, shoulder, base) {
   const palmMHk = kFrame(kMidMH, klMH0, palmMH.c, sgnK);
   const palmR = kFrame(kMidR, sub(BF[3].pivots3[0], BF[0].pivots3[0]), nR, sgnK);
   const palmCarry = _baCarry(palmMHk, palmR, hk, hk, hk);
+  // The fingers and thumb closed onto this weapon's own surface (the rig only placed the knuckles well).
+  if (sf && !rec.__wrapped) { rec.__caps = _wrapHand(rec, sf, palmR.a, nR, 0.0088, S === 'R', keepThumb); rec.__wrapped = true; }
   const wristR = palmCarry(Jw);
   /* THE FOREARM RUNS ON FROM THE HAND. A wrist holding a gun is all but straight; aimed at the
      rig's "shoulder" (a point it chose only so its sleeve tube would leave the frame low) the
@@ -53329,14 +53566,19 @@ function _bodyArm(src, S, rec, shoulder, base) {
 }
 
 /* Both arms for a viewmodel's parts, cached on them. */
-function makeBodyArms(parts, shoulders) {
+function makeBodyArms(parts, shoulders, sf, keepThumb) {
   if (parts.__bodyArms !== undefined) return parts.__bodyArms;
   parts.__bodyArms = null;
   const src = _bodyArmSource();
   if (!src || !parts.digits) return null;
   try {
-    const r = _bodyArm(src, 'R', parts.digits.right, shoulders.right, 0);
-    const l = parts.hasLeft ? _bodyArm(src, 'L', parts.digits.left, shoulders.left, 16) : null;
+    const r = _bodyArm(src, 'R', parts.digits.right, shoulders.right, 0, sf, keepThumb);
+    /* The support hand closes onto the gun and onto the firing hand's fingers wherever the two
+       hands share the grip (a two-handed pistol); on a rifle they are half a metre apart and the
+       firing hand changes nothing. */
+    const rc = parts.digits.right && parts.digits.right.__caps;
+    const sfL = sf && rc && rc.length ? _surfaceWithHand(sf, rc) : sf;
+    const l = parts.hasLeft ? _bodyArm(src, 'L', parts.digits.left, shoulders.left, 16, sfL) : null;
     if (!r) return null;
     parts.__bodyArms = { r, l };
   } catch (e) {
@@ -53379,8 +53621,13 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
   if (!parts) return arms;
   const back = parts.shoulderX != null ? parts.shoulderX : -0.07;
   const drop = opts.drop != null ? opts.drop : -0.335, spread = opts.spread != null ? opts.spread : 0.315;
-  const body = makeBodyArms(parts, { right: [back, drop, spread], left: [back, drop, -spread] });
+  const body = makeBodyArms(parts, { right: [back, drop, spread], left: [back, drop, -spread] }, opts.surface || null, !!opts.thumb);
   if (!body) return arms;
+  // The thumbs were closed onto the gun after the rig handed these out: the game turns them by these.
+  const dr = parts.digits.right, dl = parts.digits.left;
+  if (dr && dr.thumbAxis) arms.thumbAxis = parts.thumbAxis = dr.thumbAxis;
+  if (dr && dr.thumbPivot) arms.thumbPivot = parts.thumbPivot = dr.thumbPivot;
+  if (dl && dl.thumbAxis) arms.lThumbAxis = parts.lThumbAxis = dl.thumbAxis;
   const slot = (side) => {
     const R = side > 0;
     const pal = R ? arms.palm : arms.lPalm, fore = R ? arms.skin : arms.lSkin;
@@ -53504,7 +53751,8 @@ Engine.prototype.weaponForend = function (root) {
   if (!best || (best.b - best.a + 1) * STEP < 0.05) return null;
   const x0 = best.a * STEP, x1 = (best.b + 1) * STEP;
   let x = x0 + (x1 - x0) * 0.55;
-  x = Math.min(x, muzzle - 0.07, x1 - 0.045);
+  // Far enough from the front end that the thumb, laid along the side, still has forend under it.
+  x = Math.min(x, muzzle - 0.08, x1 - 0.07);
   x = Math.max(x, x0 + 0.03);
   /* Whether anything is under the bore at a station (a forend, a vertical grip): the caller keeps
      its own station when there is, and only moves a hand that would otherwise be on bare barrel. */

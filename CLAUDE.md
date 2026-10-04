@@ -73,5 +73,12 @@ closed onto the rig's solved finger joints and skinned to those actors
 through a palette read off them (`_bodyArmPalette`). `opts.stickArms` (or
 `engine.stickArms`) brings the old tubes back. A new rig part that moves a
 hand must be one of the actors the palette reads (sleeve, forearm, palm,
-thumb, finger bones). Multiplayer support hands are kept on the forend by
-`weaponForend` (98f) in `handsFor`. After changing them, re-record the kit.
+thumb, finger bones). The rig places the knuckles; `_wrapHand` (98f) then
+closes every finger joint by joint onto the weapon's own surface (`weaponSurface`)
+and writes the joints back into the hand records, so the game's finger turns
+use them. It keeps the trigger finger's solved pose (grip.test needs it reaching
+forward), moves the firing thumb round to the far side of the grip (not on a
+`thumb` single action), lays the support thumb along the forend, and on a
+two-handed pistol closes the support hand over the firing hand's fingers.
+Multiplayer support hands are kept on the forend by `weaponForend` (98f) in
+`handsFor`. After changing them, re-record the kit.
