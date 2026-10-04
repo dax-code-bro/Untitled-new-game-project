@@ -223,6 +223,8 @@ async function main() {
       // Every actor under the weapon (arms included -- they are parented to it), and the reload props.
       const set = new Set([root].concat(v.parts || []));
       if (v.prop && v.prop.parts) for (const q of v.prop.parts) if (q) set.add(q);
+      // The arms that are drawn: skinned to the rig, not parented to the weapon (engine 98f).
+      if (v.arms && v.arms.body) for (const q of v.arms.body) set.add(q);
       for (let grow = true; grow;) {
         grow = false;
         for (const a of G.actors) if (!set.has(a) && a.parent && set.has(a.parent)) { set.add(a); grow = true; }
