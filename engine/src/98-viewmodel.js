@@ -3405,6 +3405,7 @@ function makeViewmodelArms(hands, opts = {}) {
       // Finger 3 on the firing hand IS the index; keep the pivot arrays whole.
       if (rec.pivots) rec.pivots[3] = rec.indexPivot;
     }
+    rec.grip = typeof grip === 'string' ? grip : 'custom';
     out[side > 0 ? 'right' : 'left'] = rec;
     out[side > 0 ? 'rPivots' : 'lPivots'] = rec.pivots || [];
   }

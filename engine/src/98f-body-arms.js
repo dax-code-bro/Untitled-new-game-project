@@ -129,9 +129,12 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
   /* One joint, starting from the angle the grip solve gave it: if that bone is in the gun, out to
      the nearest angle that clears it (opening first, as a finger does); then closed from there
      until the bone touches -- or the joint runs out of travel. */
-  const joint = (p, prev, k, L, r, start, lo, hi, noClose) => {
+  /* `allow`: how deep the bone may already be. A knuckle the grip solve sank into the gun puts the
+     start of its bone in it whatever the angle; asking that bone to clear entirely swung the whole
+     finger out into the air. It may be as deep as its knuckle is, and no deeper. */
+  const joint = (p, prev, k, L, r, start, lo, hi, noClose, allow = 0) => {
     const STEP = 2.0 * DEG;
-    const c = (t) => clear(p, rot(prev, k, t), L, r);
+    const c = (t) => clear(p, rot(prev, k, t), L, r) - allow;
     let t = Math.max(lo, Math.min(hi, start));
     if (c(t) < 0) {
       let found = null, bestT = t, bestC = c(t);
@@ -162,6 +165,8 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
     const pa = nrm(sub(a, mul(k, dot(a, k)))), pb = nrm(sub(b, mul(k, dot(b, k))));
     return Math.atan2(dot(cross(pa, pb), k), dot(pa, pb));
   };
+  // A melee handle (the shield's, the hammer's) is a bar the grip solve already wraps.
+  if (rec.grip === 'haft') { rec.digits = rec.byFinger.slice(0, 4); return []; }
   const trig = rec.indexPlane != null;                // the firing hand's index lies on a trigger
   /* A HAND THAT STARTS INSIDE THE OTHER ONE moves out first. On a two-handed pistol grip the
      solve put the support hand's knuckles where the firing hand's fingertips are, so every finger
@@ -170,11 +175,23 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
   {
     const ks = rec.byFinger.map((d) => d.pivots3[0]);
     const worst = (dv) => Math.min(...ks.map((k) => sf(k[0] + dv[0], k[1] + dv[1], k[2] + dv[2])));
-    if (worst([0, 0, 0]) < radius) {
-      const side = (rec.wrist.p[2] + ks.reduce((a2, k) => a2 + k[2], 0) / 4) < 0 ? -1 : 1;
-      const dir = nrm([0.35, 0, side]);
+    // Only a hand inside the OTHER hand: knuckles the solve sank into the gun itself (a shield's
+    // second handle) are where the weapon's authored anchor wants them.
+    const rawSf = sf.raw || sf;
+    const inGun = Math.min(...ks.map((k) => rawSf(k[0], k[1], k[2]))) < radius;
+    if (sf.raw && !inGun && worst([0, 0, 0]) < radius) {
+      /* Out along the surface's own outward direction at the knuckles (under a forend that is
+         down; beside a firing hand it is out to the side); sideways only if that is undefined. */
+      const c = ks.reduce((a2, k) => add(a2, mul(k, 0.25)), [0, 0, 0]), e = 0.003;
+      let dir = [sf(c[0] + e, c[1], c[2]) - sf(c[0] - e, c[1], c[2]), sf(c[0], c[1] + e, c[2]) - sf(c[0], c[1] - e, c[2]),
+        sf(c[0], c[1], c[2] + e) - sf(c[0], c[1], c[2] - e)];
+      if (len(dir) < 1e-6) {
+        const side = (rec.wrist.p[2] + c[2]) < 0 ? -1 : 1;
+        dir = [0.35, 0, side];
+      }
+      dir = nrm(dir);
       let dv = null;
-      for (let n = 1; n <= 30; n++) { const t = mul(dir, n * 0.0015); if (worst(t) >= radius) { dv = t; break; } }
+      for (let n = 1; n <= 30; n++) { const t = mul(dir, n * 0.0015); if (worst(t) >= radius * 0.9) { dv = t; break; } }
       if (dv) {
         const mv = (q) => { if (q) { q[0] += dv[0]; q[1] += dv[1]; q[2] += dv[2]; } };
         const seen = new Set();
@@ -200,6 +217,18 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
     let k = nrm(d.axis);
     const want = nrm(cross(palmA, nR));
     if (dot(k, want) < 0) k = mul(k, -1);
+    /* And checked against the gun: closing is whichever way brings the fingertip to it. The palm
+       side the hand's frame implies came out the wrong way round on some support hands (the
+       Remington's, the MG 42's), and those fingers closed outward, their middles 20 mm off. */
+    {
+      const tipFor = (kk, t) => {
+        let q = d.pivots3[0], dd = nrm(sub(d.pivots3[1], d.pivots3[0]));
+        const segs = [len(sub(d.pivots3[1], d.pivots3[0])), len(sub(d.pivots3[2], d.pivots3[1])), len(sub(d.tip, d.pivots3[2]))];
+        for (let j = 0; j < 3; j++) { dd = rot(dd, kk, t); q = add(q, mul(dd, segs[j])); }
+        return sf(q[0], q[1], q[2]);
+      };
+      if (!firing && tipFor(mul(k, -1), 12 * DEG) < tipFor(k, 12 * DEG) - 0.006) k = mul(k, -1);
+    }
     // The grip solve's own bones, as directions, to start each joint from.
     const rigDir = [nrm(sub(d.pivots3[1], P0)), nrm(sub(d.pivots3[2], d.pivots3[1])), nrm(sub(d.tip, d.pivots3[2]))];
     // The knuckle turns about the rig's first bone (it may need to open well clear of a magazine or
@@ -215,11 +244,20 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
          -- and only opens a bone that the solve left inside the gun (its tip through the magwell). */
       const t = onTrigger
         ? joint(p, dir, k, L[j], R[j] * 0.8, j === 0 ? 0 : angle(dir, rigDir[j], k), -40 * DEG, 110 * DEG, true)
-        : joint(p, dir, k, L[j], R[j], start, lim[j][0], lim[j][1]);
+        : joint(p, dir, k, L[j], R[j], start, lim[j][0], lim[j][1], false,
+          Math.min(0, sf(p[0], p[1], p[2]) - R[j]) - 0.0005);
       dir = rot(dir, k, t);
       p = add(p, mul(dir, L[j]));
       pts.push(p);
     }
+    /* Kept only if it rests on the gun better than the grip solve's finger did: each joint's
+       distance from lying on the surface, a joint in the gun counting double. Where the solve
+       already had it right (a shield's handle, some forends), its pose stands. */
+    const score = (P1, P2, T) => [[P1, R[0]], [P2, R[1]], [T, R[2] * 0.85]].reduce((acc, [q, r]) => {
+      const e = sf(q[0], q[1], q[2]) - r;
+      return acc + (e < 0 ? -2 * e : e);
+    }, 0);
+    if (score(pts[1], pts[2], pts[3]) >= score(d.pivots3[1], d.pivots3[2], d.tip) - 0.001) continue;
     d.pivots3 = [pts[0], pts[1], pts[2]];
     d.joints = [pts[1], pts[2]];
     d.tip = pts[3];
@@ -313,18 +351,21 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
    grip closes onto is the firing hand's fingers wrapped round the grip, not the grip under them. */
 function _surfaceWithHand(sf, caps) {
   const { sub, dot } = _ba;
-  return (x, y, z) => {
+  const f = (x, y, z) => {
     let d = sf(x, y, z);
     const p = [x, y, z];
     for (const [a, b, r] of caps) {
       const ab = sub(b, a), ap = sub(p, a);
       const t = Math.max(0, Math.min(1, dot(ap, ab) / (dot(ab, ab) || 1)));
       const dx = ap[0] - ab[0] * t, dy = ap[1] - ab[1] * t, dz = ap[2] - ab[2] * t;
-      const dd = Math.hypot(dx, dy, dz) - r;
+      // Fingers are soft: the support fingers press a few millimetres into the firing hand's.
+      const dd = Math.hypot(dx, dy, dz) - r + 0.004;
       if (dd < d) d = dd;
     }
     return d;
   };
+  f.raw = sf;
+  return f;
 }
 
 /* Build one arm (skin and sleeve) in the weapon's space.
