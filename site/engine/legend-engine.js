@@ -53147,6 +53147,79 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
       const kk = mul(k, -1), alt = curl(kk);
       if (score(alt[1], alt[2], alt[3]) < score(pts[1], pts[2], pts[3]) - 0.002) { pts = alt; k = kk; }
     }
+    /* THE TRIGGER FINGER GOES TO THE TRIGGER. Where the grip solve could not reach the guard from
+       its knuckle in the plane the other fingers curl in -- the P226's opening is 17 mm above that
+       plane -- it laid the finger out straight, 9 cm forward and 35 mm off the gun, a finger
+       pointing at the target beside the muzzle. A finger can tilt out of that plane (the index
+       spreads 20 to 30 degrees), so the knuckle is aimed in both angles and the two outer joints
+       bend to put the pad of the last bone in the opening, every bone kept off the frame and the
+       tip still ahead of the knuckle (grip.test). Kept when the pad lands nearer than the solve's. */
+    if (isTrig && rec.trigAt) {
+      const T = rec.trigAt;
+      const c0 = nrm(cross(k, nrm(sub(rigDir[0], mul(k, dot(rigDir[0], k))))));
+      const pose = (yaw, pitch, a1, a2) => {
+        const kk = rot(k, c0, pitch);
+        let dir = rot(nrm(sub(rigDir[0], mul(k, dot(rigDir[0], k)))), c0, pitch);
+        dir = rot(dir, kk, yaw);
+        const P1 = add(P0, mul(dir, L[0]));
+        dir = rot(dir, kk, a1);
+        const P2 = add(P1, mul(dir, L[1]));
+        dir = rot(dir, kk, a2);
+        return { kk, P: [P0, P1, P2, add(P2, mul(dir, L[2]))] };
+      };
+      const padOf = (P) => add(P[2], mul(sub(P[3], P[2]), 0.55));
+      const dist = (a, b) => len(sub(a, b));
+      const cost = (q) => {
+        const P = q.P;
+        let pen = 0;
+        for (let j = 0; j < 3; j++) {
+          for (const t of j === 2 ? [0.5, 1] : [0.35, 0.7, 1]) {
+            const x = add(P[j], mul(sub(P[j + 1], P[j]), t));
+            pen = Math.max(pen, R[j] * 0.75 - sf(x[0], x[1], x[2]));
+          }
+        }
+        const fwd = P[3][0] - P0[0];
+        return dist(padOf(P), T) + 3 * Math.max(0, pen) + 3 * Math.max(0, 0.013 - fwd);
+      };
+      const rigCost = cost({ P: [P0, d.pivots3[1], d.pivots3[2], d.tip] });
+      // Coarse: the nearest poses by distance alone, then those costed against the gun.
+      const cand = [];
+      for (let y = -40; y <= 70; y += 10) for (let pi = -30; pi <= 30; pi += 10)
+        for (let a1 = 0; a1 <= 105; a1 += 15) for (let a2 = 0; a2 <= 80; a2 += 20) {
+          const q = pose(y * DEG, pi * DEG, a1 * DEG, a2 * DEG);
+          cand.push([dist(padOf(q.P), T), y, pi, a1, a2]);
+        }
+      cand.sort((u, v) => u[0] - v[0]);
+      let best = null;
+      for (const c of cand.slice(0, 60)) {
+        const q = pose(c[1] * DEG, c[2] * DEG, c[3] * DEG, c[4] * DEG);
+        const e = cost(q);
+        if (!best || e < best.e) best = { e, a: c.slice(1) };
+      }
+      // Fine: each angle in turn, a degree or two at a time.
+      const lo = [-40, -30, 0, 0], hi = [70, 30, 105, 80];
+      for (const st of [5, 2, 1]) {
+        for (let it = 0, moved = true; it < 12 && moved; it++) {
+          moved = false;
+          for (let i = 0; i < 4; i++) for (const sg of [-1, 1]) {
+            const a = best.a.slice(); a[i] = Math.max(lo[i], Math.min(hi[i], a[i] + sg * st));
+            const e = cost(pose(a[0] * DEG, a[1] * DEG, a[2] * DEG, a[3] * DEG));
+            if (e < best.e - 1e-5) { best = { e, a }; moved = true; }
+          }
+        }
+      }
+      d.trigWrap = [+(rigCost * 1000).toFixed(1), +(best.e * 1000).toFixed(1)].concat(best.a);
+      if (best.e < rigCost - 0.004) {
+        const q = pose(best.a[0] * DEG, best.a[1] * DEG, best.a[2] * DEG, best.a[3] * DEG);
+        d.pivots3 = [q.P[0], q.P[1], q.P[2]];
+        d.joints = [q.P[1], q.P[2]];
+        d.tip = q.P[3];
+        d.axis = q.kk;
+        d.open = -1;
+        d.wrapped = true;
+      }
+      continue;
+    }
     // Kept only if it rests on the gun better than the grip solve's finger did. Where the solve
     // already had it right (a shield's handle, some forends), its pose stands.
     if (score(pts[1], pts[2], pts[3]) >= score(d.pivots3[1], d.pivots3[2], d.tip) - 0.001) continue;
