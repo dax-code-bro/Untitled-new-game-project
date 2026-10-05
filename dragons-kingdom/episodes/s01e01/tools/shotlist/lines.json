@@ -1,0 +1,1784 @@
+[
+ {
+  "id": "L001",
+  "scene": "PROLOGUE",
+  "speaker": "NARRATOR",
+  "note": "",
+  "text": "Until the early twelve hundreds, humanity did not know that dragons existed.",
+  "src_line": 84,
+  "words": 12
+ },
+ {
+  "id": "L002",
+  "scene": "PROLOGUE",
+  "speaker": "NARRATOR",
+  "note": "",
+  "text": "The seas had names. The kingdoms had borders. Beyond them lay islands no one had reached, and things no one had thought to fear.",
+  "src_line": 91,
+  "words": 24
+ },
+ {
+  "id": "L003",
+  "scene": "PROLOGUE",
+  "speaker": "NARRATOR",
+  "note": "",
+  "text": "Tara. Scrapper. Verdor. The Citadel Sea and the Proxy Sea. Seven kingdoms, and undiscovered islands beyond the familiar shores.",
+  "src_line": 96,
+  "words": 19
+ },
+ {
+  "id": "L004",
+  "scene": "PROLOGUE",
+  "speaker": "NARRATOR",
+  "note": "",
+  "text": "By the fourteen hundreds, dragons were part of our lives. So were the people who rode them.",
+  "src_line": 101,
+  "words": 17
+ },
+ {
+  "id": "L005",
+  "scene": "PROLOGUE",
+  "speaker": "NARRATOR",
+  "note": "",
+  "text": "This is where our story begins.",
+  "src_line": 106,
+  "words": 6
+ },
+ {
+  "id": "L006",
+  "scene": "1A",
+  "speaker": "ATTENDANT",
+  "note": "",
+  "text": "It started a moment ago.",
+  "src_line": 122,
+  "words": 5
+ },
+ {
+  "id": "L007",
+  "scene": "1A",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Has anyone touched it?",
+  "src_line": 125,
+  "words": 4
+ },
+ {
+  "id": "L008",
+  "scene": "1A",
+  "speaker": "ATTENDANT",
+  "note": "",
+  "text": "No, Your Majesty.",
+  "src_line": 128,
+  "words": 3
+ },
+ {
+  "id": "L009",
+  "scene": "1A",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Then let it finish.",
+  "src_line": 131,
+  "words": 4
+ },
+ {
+  "id": "L010",
+  "scene": "1A",
+  "speaker": "ATTENDANT",
+  "note": "",
+  "text": "Look at it.",
+  "src_line": 140,
+  "words": 3
+ },
+ {
+  "id": "L011",
+  "scene": "1A",
+  "speaker": "ALEXANDRIA",
+  "note": "ORIGINAL; whispered",
+  "text": "My pretty little weapon",
+  "src_line": 145,
+  "words": 4
+ },
+ {
+  "id": "L012",
+  "scene": "1A",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Is it out?",
+  "src_line": 154,
+  "words": 3
+ },
+ {
+  "id": "L013",
+  "scene": "1A",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Come slowly.",
+  "src_line": 157,
+  "words": 2
+ },
+ {
+  "id": "L014",
+  "scene": "1A",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "It's gold.",
+  "src_line": 162,
+  "words": 2
+ },
+ {
+  "id": "L015",
+  "scene": "1A",
+  "speaker": "REMI",
+  "note": "",
+  "text": "I can see that.",
+  "src_line": 165,
+  "words": 4
+ },
+ {
+  "id": "L016",
+  "scene": "1A",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "I mean all of it.",
+  "src_line": 168,
+  "words": 5
+ },
+ {
+  "id": "L017",
+  "scene": "1A",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Wait. Let it settle.",
+  "src_line": 173,
+  "words": 4
+ },
+ {
+  "id": "L018",
+  "scene": "1A",
+  "speaker": "REMI",
+  "note": "",
+  "text": "How long has it been trying?",
+  "src_line": 176,
+  "words": 6
+ },
+ {
+  "id": "L019",
+  "scene": "1A",
+  "speaker": "ATTENDANT",
+  "note": "",
+  "text": "Long enough. It needs rest now.",
+  "src_line": 179,
+  "words": 6
+ },
+ {
+  "id": "L020",
+  "scene": "1A",
+  "speaker": "ABBY",
+  "note": "quietly",
+  "text": "There.",
+  "src_line": 184,
+  "words": 1
+ },
+ {
+  "id": "L021",
+  "scene": "1A",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Yes.",
+  "src_line": 187,
+  "words": 1
+ },
+ {
+  "id": "L022",
+  "scene": "1A",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Does it have a name?",
+  "src_line": 190,
+  "words": 5
+ },
+ {
+  "id": "L023",
+  "scene": "1A",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Not yet.",
+  "src_line": 193,
+  "words": 2
+ },
+ {
+  "id": "L024",
+  "scene": "1A",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Don't let him choose it.",
+  "src_line": 196,
+  "words": 5
+ },
+ {
+  "id": "L025",
+  "scene": "1A",
+  "speaker": "REMI",
+  "note": "",
+  "text": "I hadn't offered.",
+  "src_line": 201,
+  "words": 3
+ },
+ {
+  "id": "L026",
+  "scene": "1A",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Then you may both leave it in peace.",
+  "src_line": 204,
+  "words": 8
+ },
+ {
+  "id": "L027",
+  "scene": "1A",
+  "speaker": "REMI",
+  "note": "",
+  "text": "We're going flying.",
+  "src_line": 209,
+  "words": 3
+ },
+ {
+  "id": "L028",
+  "scene": "1A",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Together?",
+  "src_line": 212,
+  "words": 1
+ },
+ {
+  "id": "L029",
+  "scene": "1A",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Yes.",
+  "src_line": 215,
+  "words": 1
+ },
+ {
+  "id": "L030",
+  "scene": "1A",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Stay within reach of the island.",
+  "src_line": 218,
+  "words": 6
+ },
+ {
+  "id": "L031",
+  "scene": "1A",
+  "speaker": "REMI",
+  "note": "",
+  "text": "We will.",
+  "src_line": 221,
+  "words": 2
+ },
+ {
+  "id": "L032",
+  "scene": "1B",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Leaf. Here.",
+  "src_line": 237,
+  "words": 2
+ },
+ {
+  "id": "L033",
+  "scene": "1B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Finished?",
+  "src_line": 242,
+  "words": 1
+ },
+ {
+  "id": "L034",
+  "scene": "1B",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Nearly.",
+  "src_line": 245,
+  "words": 1
+ },
+ {
+  "id": "L035",
+  "scene": "1B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "That was nearly when I asked before.",
+  "src_line": 248,
+  "words": 7
+ },
+ {
+  "id": "L036",
+  "scene": "1B",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "You asked once.",
+  "src_line": 251,
+  "words": 3
+ },
+ {
+  "id": "L037",
+  "scene": "1B",
+  "speaker": "GROUND KEEPER",
+  "note": "",
+  "text": "The field's clear.",
+  "src_line": 258,
+  "words": 3
+ },
+ {
+  "id": "L038",
+  "scene": "1B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Stay clear when he lifts.",
+  "src_line": 263,
+  "words": 5
+ },
+ {
+  "id": "L039",
+  "scene": "1B",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "I remember.",
+  "src_line": 266,
+  "words": 2
+ },
+ {
+  "id": "L040",
+  "scene": "1B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Leaf doesn't always remember.",
+  "src_line": 269,
+  "words": 4
+ },
+ {
+  "id": "L041",
+  "scene": "1B",
+  "speaker": "ABBY",
+  "note": "to Leaf",
+  "text": "We'll go first.",
+  "src_line": 274,
+  "words": 3
+ },
+ {
+  "id": "L042",
+  "scene": "1C",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "You could have warned the grass.",
+  "src_line": 290,
+  "words": 6
+ },
+ {
+  "id": "L043",
+  "scene": "1C",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Everything secure?",
+  "src_line": 299,
+  "words": 2
+ },
+ {
+  "id": "L044",
+  "scene": "1C",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Yes.",
+  "src_line": 302,
+  "words": 1
+ },
+ {
+  "id": "L045",
+  "scene": "1C",
+  "speaker": "REMI",
+  "note": "",
+  "text": "All right.",
+  "src_line": 305,
+  "words": 2
+ },
+ {
+  "id": "L046",
+  "scene": "1D",
+  "speaker": "REMI",
+  "note": "ORIGINAL",
+  "text": "You're going to be queen when I'm gone. Least I think that's how that works. You good with that?",
+  "src_line": 319,
+  "words": 19
+ },
+ {
+  "id": "L047",
+  "scene": "1D",
+  "speaker": "REMI",
+  "note": "ORIGINAL",
+  "text": "Yeah, you're good.",
+  "src_line": 326,
+  "words": 3
+ },
+ {
+  "id": "L048",
+  "scene": "1D",
+  "speaker": "ABBY",
+  "note": "ORIGINAL",
+  "text": "Why couldn't I get a Bashion?",
+  "src_line": 333,
+  "words": 6
+ },
+ {
+  "id": "L049",
+  "scene": "1D",
+  "speaker": "REMI",
+  "note": "",
+  "text": "You have Leaf.",
+  "src_line": 336,
+  "words": 3
+ },
+ {
+  "id": "L050",
+  "scene": "1D",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "I know I have Leaf.",
+  "src_line": 339,
+  "words": 5
+ },
+ {
+  "id": "L051",
+  "scene": "1D",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Then don't ask like he isn't right here.",
+  "src_line": 342,
+  "words": 8
+ },
+ {
+  "id": "L052",
+  "scene": "1D",
+  "speaker": "ABBY",
+  "note": "to Leaf",
+  "text": "I didn't mean it like that.",
+  "src_line": 347,
+  "words": 6
+ },
+ {
+  "id": "L053",
+  "scene": "1D",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Nightwings are faster. More versatile.",
+  "src_line": 350,
+  "words": 5
+ },
+ {
+  "id": "L054",
+  "scene": "1D",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "And Bashions?",
+  "src_line": 353,
+  "words": 2
+ },
+ {
+  "id": "L055",
+  "scene": "1D",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Better for war.",
+  "src_line": 356,
+  "words": 3
+ },
+ {
+  "id": "L056",
+  "scene": "1D",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "I was thinking about being able to move the ground every time I leave.",
+  "src_line": 361,
+  "words": 14
+ },
+ {
+  "id": "L057",
+  "scene": "1D",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Someone has to mend it afterward.",
+  "src_line": 364,
+  "words": 6
+ },
+ {
+  "id": "L058",
+  "scene": "1D",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Not you.",
+  "src_line": 367,
+  "words": 2
+ },
+ {
+  "id": "L059",
+  "scene": "1D",
+  "speaker": "REMI",
+  "note": "",
+  "text": "That's true.",
+  "src_line": 370,
+  "words": 2
+ },
+ {
+  "id": "L060",
+  "scene": "1D",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Don't start.",
+  "src_line": 375,
+  "words": 2
+ },
+ {
+  "id": "L061",
+  "scene": "1D",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Leaf.",
+  "src_line": 382,
+  "words": 1
+ },
+ {
+  "id": "L062",
+  "scene": "1D",
+  "speaker": "REMI",
+  "note": "quietly, to Charcoal",
+  "text": "That's enough.",
+  "src_line": 391,
+  "words": 2
+ },
+ {
+  "id": "L063",
+  "scene": "1D",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "He put his head in his mouth.",
+  "src_line": 396,
+  "words": 7
+ },
+ {
+  "id": "L064",
+  "scene": "1D",
+  "speaker": "REMI",
+  "note": "",
+  "text": "I saw.",
+  "src_line": 399,
+  "words": 2
+ },
+ {
+  "id": "L065",
+  "scene": "1D",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "His whole head.",
+  "src_line": 402,
+  "words": 3
+ },
+ {
+  "id": "L066",
+  "scene": "1D",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Leaf saw too.",
+  "src_line": 405,
+  "words": 3
+ },
+ {
+  "id": "L067",
+  "scene": "1D",
+  "speaker": "ABBY",
+  "note": "to Leaf",
+  "text": "You're all right. Leave him alone.",
+  "src_line": 410,
+  "words": 6
+ },
+ {
+  "id": "L068",
+  "scene": "1D",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Still want one?",
+  "src_line": 415,
+  "words": 3
+ },
+ {
+  "id": "L069",
+  "scene": "1D",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Yes.",
+  "src_line": 418,
+  "words": 1
+ },
+ {
+  "id": "L070",
+  "scene": "1E",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Abby!",
+  "src_line": 438,
+  "words": 1
+ },
+ {
+  "id": "L071",
+  "scene": "1E",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Look at me. Abby!",
+  "src_line": 443,
+  "words": 4
+ },
+ {
+  "id": "L072",
+  "scene": "1E",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "My arm\u2014",
+  "src_line": 446,
+  "words": 2
+ },
+ {
+  "id": "L073",
+  "scene": "1E",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Stay with Leaf. Stay on him.",
+  "src_line": 449,
+  "words": 6
+ },
+ {
+  "id": "L074",
+  "scene": "1E",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Can he take you in?",
+  "src_line": 456,
+  "words": 5
+ },
+ {
+  "id": "L075",
+  "scene": "1E",
+  "speaker": "ABBY",
+  "note": "through pain",
+  "text": "Yes.",
+  "src_line": 459,
+  "words": 1
+ },
+ {
+  "id": "L076",
+  "scene": "1E",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Go straight back. I'll be behind you.",
+  "src_line": 462,
+  "words": 7
+ },
+ {
+  "id": "L077",
+  "scene": "1E",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Home. Come on.",
+  "src_line": 467,
+  "words": 3
+ },
+ {
+  "id": "L078",
+  "scene": "1E",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Attack.",
+  "src_line": 472,
+  "words": 1
+ },
+ {
+  "id": "L079",
+  "scene": "1F",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Again.",
+  "src_line": 488,
+  "words": 1
+ },
+ {
+  "id": "L080",
+  "scene": "1F",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Fire.",
+  "src_line": 497,
+  "words": 1
+ },
+ {
+  "id": "L081",
+  "scene": "1F",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Hold\u2014",
+  "src_line": 508,
+  "words": 1
+ },
+ {
+  "id": "L082",
+  "scene": "1F",
+  "speaker": "REMI",
+  "note": "firm, complete",
+  "text": "Hold!",
+  "src_line": 513,
+  "words": 1
+ },
+ {
+  "id": "L083",
+  "scene": "1F",
+  "speaker": "REMI",
+  "note": "low",
+  "text": "Back.",
+  "src_line": 524,
+  "words": 1
+ },
+ {
+  "id": "L084",
+  "scene": "2A",
+  "speaker": "GROUND KEEPER",
+  "note": "",
+  "text": "Clear the approach!",
+  "src_line": 536,
+  "words": 3
+ },
+ {
+  "id": "L085",
+  "scene": "2A",
+  "speaker": "GROUND KEEPER",
+  "note": "",
+  "text": "Your Highness?",
+  "src_line": 541,
+  "words": 2
+ },
+ {
+  "id": "L086",
+  "scene": "2A",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "My arm. Don't pull it.",
+  "src_line": 544,
+  "words": 5
+ },
+ {
+  "id": "L087",
+  "scene": "2A",
+  "speaker": "GROUND KEEPER",
+  "note": "",
+  "text": "We won't. Stay where you are.",
+  "src_line": 547,
+  "words": 6
+ },
+ {
+  "id": "L088",
+  "scene": "2A",
+  "speaker": "ABBY",
+  "note": "to Leaf",
+  "text": "I'm here. It's all right.",
+  "src_line": 552,
+  "words": 5
+ },
+ {
+  "id": "L089",
+  "scene": "2A",
+  "speaker": "GROUND KEEPER",
+  "note": "",
+  "text": "Will he let us help?",
+  "src_line": 557,
+  "words": 5
+ },
+ {
+  "id": "L090",
+  "scene": "2A",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Yes. Just go slowly.",
+  "src_line": 560,
+  "words": 4
+ },
+ {
+  "id": "L091",
+  "scene": "2A",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "I'm standing.",
+  "src_line": 565,
+  "words": 2
+ },
+ {
+  "id": "L092",
+  "scene": "2A",
+  "speaker": "GROUND KEEPER",
+  "note": "",
+  "text": "I know. We have you.",
+  "src_line": 568,
+  "words": 5
+ },
+ {
+  "id": "L093",
+  "scene": "2A",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Abby.",
+  "src_line": 575,
+  "words": 1
+ },
+ {
+  "id": "L094",
+  "scene": "2A",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "You said you'd be behind me.",
+  "src_line": 578,
+  "words": 6
+ },
+ {
+  "id": "L095",
+  "scene": "2A",
+  "speaker": "REMI",
+  "note": "",
+  "text": "I am.",
+  "src_line": 581,
+  "words": 2
+ },
+ {
+  "id": "L096",
+  "scene": "2A",
+  "speaker": "REMI",
+  "note": "to keeper",
+  "text": "Get the healer. Tell my mother.",
+  "src_line": 586,
+  "words": 6
+ },
+ {
+  "id": "L097",
+  "scene": "2A",
+  "speaker": "GROUND KEEPER",
+  "note": "",
+  "text": "They're being sent for.",
+  "src_line": 589,
+  "words": 4
+ },
+ {
+  "id": "L098",
+  "scene": "2A",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "I'll come back.",
+  "src_line": 594,
+  "words": 3
+ },
+ {
+  "id": "L099",
+  "scene": "2B",
+  "speaker": "HEALER",
+  "note": "",
+  "text": "Tell me where it hurts most.",
+  "src_line": 604,
+  "words": 6
+ },
+ {
+  "id": "L100",
+  "scene": "2B",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Here. And when I move it.",
+  "src_line": 607,
+  "words": 6
+ },
+ {
+  "id": "L101",
+  "scene": "2B",
+  "speaker": "HEALER",
+  "note": "",
+  "text": "Then let us keep it still.",
+  "src_line": 610,
+  "words": 6
+ },
+ {
+  "id": "L102",
+  "scene": "2B",
+  "speaker": "HEALER",
+  "note": "",
+  "text": "Give her room.",
+  "src_line": 615,
+  "words": 3
+ },
+ {
+  "id": "L103",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Abby?",
+  "src_line": 620,
+  "words": 1
+ },
+ {
+  "id": "L104",
+  "scene": "2B",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "I'm all right.",
+  "src_line": 623,
+  "words": 3
+ },
+ {
+  "id": "L105",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "You don't have to say that.",
+  "src_line": 626,
+  "words": 6
+ },
+ {
+  "id": "L106",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "to healer",
+  "text": "What do you know?",
+  "src_line": 631,
+  "words": 4
+ },
+ {
+  "id": "L107",
+  "scene": "2B",
+  "speaker": "HEALER",
+  "note": "",
+  "text": "Her arm is broken. It needs support and rest.",
+  "src_line": 634,
+  "words": 9
+ },
+ {
+  "id": "L108",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "to Remi",
+  "text": "Tell me.",
+  "src_line": 639,
+  "words": 2
+ },
+ {
+  "id": "L109",
+  "scene": "2B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "We were off the coast. Flying together. Something came past Leaf. A Slitherwing.",
+  "src_line": 642,
+  "words": 13
+ },
+ {
+  "id": "L110",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "With a rider?",
+  "src_line": 645,
+  "words": 3
+ },
+ {
+  "id": "L111",
+  "scene": "2B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Yes.",
+  "src_line": 648,
+  "words": 1
+ },
+ {
+  "id": "L112",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Did it strike her?",
+  "src_line": 651,
+  "words": 4
+ },
+ {
+  "id": "L113",
+  "scene": "2B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "It didn't have to. It passed close enough to throw her sideways. Leaf nearly rolled.",
+  "src_line": 654,
+  "words": 15
+ },
+ {
+  "id": "L114",
+  "scene": "2B",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "I didn't even see it coming.",
+  "src_line": 657,
+  "words": 6
+ },
+ {
+  "id": "L115",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Did you recognize the rider?",
+  "src_line": 662,
+  "words": 5
+ },
+ {
+  "id": "L116",
+  "scene": "2B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "No.",
+  "src_line": 665,
+  "words": 1
+ },
+ {
+  "id": "L117",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Anything on the saddle? A mark?",
+  "src_line": 668,
+  "words": 6
+ },
+ {
+  "id": "L118",
+  "scene": "2B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "I couldn't make one out.",
+  "src_line": 671,
+  "words": 5
+ },
+ {
+  "id": "L119",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Where are they now?",
+  "src_line": 676,
+  "words": 4
+ },
+ {
+  "id": "L120",
+  "scene": "2B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "In the water. Beyond the outer rocks.",
+  "src_line": 681,
+  "words": 7
+ },
+ {
+  "id": "L121",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Alive?",
+  "src_line": 684,
+  "words": 1
+ },
+ {
+  "id": "L122",
+  "scene": "2B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "When I left them.",
+  "src_line": 687,
+  "words": 4
+ },
+ {
+  "id": "L123",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "What did Charcoal do?",
+  "src_line": 692,
+  "words": 4
+ },
+ {
+  "id": "L124",
+  "scene": "2B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "I sent him after them. He burned the rider. Caught the dragon.",
+  "src_line": 695,
+  "words": 12
+ },
+ {
+  "id": "L125",
+  "scene": "2B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Its left wing came off.",
+  "src_line": 700,
+  "words": 5
+ },
+ {
+  "id": "L126",
+  "scene": "2B",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Leaf didn't do anything to them.",
+  "src_line": 705,
+  "words": 6
+ },
+ {
+  "id": "L127",
+  "scene": "2B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "I know.",
+  "src_line": 708,
+  "words": 2
+ },
+ {
+  "id": "L128",
+  "scene": "2B",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "We were just flying.",
+  "src_line": 711,
+  "words": 4
+ },
+ {
+  "id": "L129",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Was it one of ours?",
+  "src_line": 716,
+  "words": 5
+ },
+ {
+  "id": "L130",
+  "scene": "2B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "I don't know. A scout, perhaps. If they knew who we were\u2014",
+  "src_line": 719,
+  "words": 12
+ },
+ {
+  "id": "L131",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "That is an if.",
+  "src_line": 722,
+  "words": 4
+ },
+ {
+  "id": "L132",
+  "scene": "2B",
+  "speaker": "REMI",
+  "note": "",
+  "text": "They could be a traitor.",
+  "src_line": 725,
+  "words": 5
+ },
+ {
+  "id": "L133",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "They could be. First we find out who they are.",
+  "src_line": 728,
+  "words": 10
+ },
+ {
+  "id": "L134",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "to Abby",
+  "text": "I will be just outside.",
+  "src_line": 733,
+  "words": 5
+ },
+ {
+  "id": "L135",
+  "scene": "2B",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Don't send Leaf away.",
+  "src_line": 736,
+  "words": 4
+ },
+ {
+  "id": "L136",
+  "scene": "2B",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "No one is sending Leaf away.",
+  "src_line": 739,
+  "words": 6
+ },
+ {
+  "id": "L137",
+  "scene": "2C",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Take word to the Santa Maria. A dragon and rider are down beyond the outer rocks. They are to retrieve both.",
+  "src_line": 747,
+  "words": 21
+ },
+ {
+  "id": "L138",
+  "scene": "2C",
+  "speaker": "ROYAL MESSENGER",
+  "note": "",
+  "text": "Yes, Your Majesty.",
+  "src_line": 750,
+  "words": 3
+ },
+ {
+  "id": "L139",
+  "scene": "2C",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "The rider is burned. The dragon has lost its left wing. Tell them to prepare for injured survivors.",
+  "src_line": 753,
+  "words": 18
+ },
+ {
+  "id": "L140",
+  "scene": "2C",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Show him where.",
+  "src_line": 758,
+  "words": 3
+ },
+ {
+  "id": "L141",
+  "scene": "2C",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Past that point. We turned there. They fell on the seaward side.",
+  "src_line": 763,
+  "words": 12
+ },
+ {
+  "id": "L142",
+  "scene": "2C",
+  "speaker": "ROYAL MESSENGER",
+  "note": "",
+  "text": "I have it.",
+  "src_line": 766,
+  "words": 3
+ },
+ {
+  "id": "L143",
+  "scene": "2C",
+  "speaker": "REMI",
+  "note": "",
+  "text": "I'm sorry.",
+  "src_line": 777,
+  "words": 2
+ },
+ {
+  "id": "L144",
+  "scene": "2C",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "You didn't fly past me.",
+  "src_line": 780,
+  "words": 5
+ },
+ {
+  "id": "L145",
+  "scene": "2C",
+  "speaker": "REMI",
+  "note": "",
+  "text": "I know.",
+  "src_line": 783,
+  "words": 2
+ },
+ {
+  "id": "L146",
+  "scene": "2C",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Then what are you sorry for?",
+  "src_line": 786,
+  "words": 6
+ },
+ {
+  "id": "L147",
+  "scene": "2C",
+  "speaker": "REMI",
+  "note": "",
+  "text": "I said it would be a short flight.",
+  "src_line": 791,
+  "words": 8
+ },
+ {
+  "id": "L148",
+  "scene": "2C",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "It was.",
+  "src_line": 794,
+  "words": 2
+ },
+ {
+  "id": "L149",
+  "scene": "2C",
+  "speaker": "REMI",
+  "note": "",
+  "text": "Leaf brought you back well.",
+  "src_line": 799,
+  "words": 5
+ },
+ {
+  "id": "L150",
+  "scene": "2C",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "I know.",
+  "src_line": 802,
+  "words": 2
+ },
+ {
+  "id": "L151",
+  "scene": "2C",
+  "speaker": "REMI",
+  "note": "",
+  "text": "You should tell him.",
+  "src_line": 805,
+  "words": 4
+ },
+ {
+  "id": "L152",
+  "scene": "2C",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "I will.",
+  "src_line": 808,
+  "words": 2
+ },
+ {
+  "id": "L153",
+  "scene": "2C",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "You are both staying here for now.",
+  "src_line": 813,
+  "words": 7
+ },
+ {
+  "id": "L154",
+  "scene": "2C",
+  "speaker": "ABBY",
+  "note": "",
+  "text": "Can I see Leaf later?",
+  "src_line": 816,
+  "words": 5
+ },
+ {
+  "id": "L155",
+  "scene": "2C",
+  "speaker": "ALEXANDRIA",
+  "note": "",
+  "text": "Later. With help.",
+  "src_line": 821,
+  "words": 3
+ },
+ {
+  "id": "L156",
+  "scene": "3A",
+  "speaker": "VENDOR",
+  "note": "",
+  "text": "Mind the corner. That's the third time someone's caught it.",
+  "src_line": 837,
+  "words": 10
+ },
+ {
+  "id": "L157",
+  "scene": "3A",
+  "speaker": "MUSICIAN",
+  "note": "",
+  "text": "Move the stall.",
+  "src_line": 840,
+  "words": 3
+ },
+ {
+  "id": "L158",
+  "scene": "3A",
+  "speaker": "VENDOR",
+  "note": "",
+  "text": "Move the festival.",
+  "src_line": 843,
+  "words": 3
+ },
+ {
+  "id": "L159",
+  "scene": "3A",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "Have I missed everything?",
+  "src_line": 850,
+  "words": 4
+ },
+ {
+  "id": "L160",
+  "scene": "3A",
+  "speaker": "VENDOR",
+  "note": "",
+  "text": "Only the work, Your Majesty.",
+  "src_line": 853,
+  "words": 5
+ },
+ {
+  "id": "L161",
+  "scene": "3A",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "Then my timing is excellent.",
+  "src_line": 856,
+  "words": 5
+ },
+ {
+  "id": "L162",
+  "scene": "3A",
+  "speaker": "GUARD CAPTAIN",
+  "note": "",
+  "text": "The steps are ready for you.",
+  "src_line": 861,
+  "words": 6
+ },
+ {
+  "id": "L163",
+  "scene": "3A",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "They can wait.",
+  "src_line": 864,
+  "words": 3
+ },
+ {
+  "id": "L164",
+  "scene": "3A",
+  "speaker": "CHILD",
+  "note": "",
+  "text": "Are there going to be dragons?",
+  "src_line": 869,
+  "words": 6
+ },
+ {
+  "id": "L165",
+  "scene": "3A",
+  "speaker": "PARENT",
+  "note": "",
+  "text": "Let the king pass.",
+  "src_line": 872,
+  "words": 4
+ },
+ {
+  "id": "L166",
+  "scene": "3A",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "You can ask.",
+  "src_line": 875,
+  "words": 3
+ },
+ {
+  "id": "L167",
+  "scene": "3A",
+  "speaker": "CHILD",
+  "note": "",
+  "text": "Are there?",
+  "src_line": 878,
+  "words": 2
+ },
+ {
+  "id": "L168",
+  "scene": "3A",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "I haven't brought one.",
+  "src_line": 881,
+  "words": 4
+ },
+ {
+  "id": "L169",
+  "scene": "3A",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "All right. Before someone tells me I am delaying the food\u2014",
+  "src_line": 888,
+  "words": 11
+ },
+ {
+  "id": "L170",
+  "scene": "3A",
+  "speaker": "VENDOR",
+  "note": "calling",
+  "text": "You are!",
+  "src_line": 891,
+  "words": 2
+ },
+ {
+  "id": "L171",
+  "scene": "3A",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "\u2014I will be brief. Thank you for coming. Thank you to everyone who built this, cooked for it, and will still be here putting it back together when the rest of us have gone home.",
+  "src_line": 894,
+  "words": 35
+ },
+ {
+  "id": "L172",
+  "scene": "3A",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "Enjoy the day. Leave enough for the person behind you. And let the musicians eat before you ask them to play again.",
+  "src_line": 899,
+  "words": 22
+ },
+ {
+  "id": "L173",
+  "scene": "3B",
+  "speaker": "WATCHMAN",
+  "note": "",
+  "text": "Dragon.",
+  "src_line": 913,
+  "words": 1
+ },
+ {
+  "id": "L174",
+  "scene": "3B",
+  "speaker": "WATCHMAN",
+  "note": "",
+  "text": "Dragon approaching!",
+  "src_line": 918,
+  "words": 2
+ },
+ {
+  "id": "L175",
+  "scene": "3B",
+  "speaker": "GUARD CAPTAIN",
+  "note": "",
+  "text": "Where?",
+  "src_line": 923,
+  "words": 1
+ },
+ {
+  "id": "L176",
+  "scene": "3B",
+  "speaker": "KING OF CLING",
+  "note": "quietly",
+  "text": "Starlight.",
+  "src_line": 930,
+  "words": 1
+ },
+ {
+  "id": "L177",
+  "scene": "3B",
+  "speaker": "GUARD CAPTAIN",
+  "note": "",
+  "text": "Your Majesty?",
+  "src_line": 933,
+  "words": 2
+ },
+ {
+  "id": "L178",
+  "scene": "3B",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "Clear the square.",
+  "src_line": 936,
+  "words": 3
+ },
+ {
+  "id": "L179",
+  "scene": "3B",
+  "speaker": "GUARD CAPTAIN",
+  "note": "",
+  "text": "Through the arch! Keep the center clear! Move now!",
+  "src_line": 941,
+  "words": 9
+ },
+ {
+  "id": "L180",
+  "scene": "3B",
+  "speaker": "QUEEN FALL",
+  "note": "",
+  "text": "Attack.",
+  "src_line": 950,
+  "words": 1
+ },
+ {
+  "id": "L181",
+  "scene": "3C",
+  "speaker": "GUARD CAPTAIN",
+  "note": "",
+  "text": "Off the steps!",
+  "src_line": 962,
+  "words": 3
+ },
+ {
+  "id": "L182",
+  "scene": "3C",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "Open both sides! Don't let them crowd the arch!",
+  "src_line": 967,
+  "words": 9
+ },
+ {
+  "id": "L183",
+  "scene": "3C",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "Down!",
+  "src_line": 980,
+  "words": 1
+ },
+ {
+  "id": "L184",
+  "scene": "3C",
+  "speaker": "PARENT",
+  "note": "",
+  "text": "Stay with me. Don't stop.",
+  "src_line": 987,
+  "words": 5
+ },
+ {
+  "id": "L185",
+  "scene": "3C",
+  "speaker": "CHILD",
+  "note": "",
+  "text": "I can't see.",
+  "src_line": 990,
+  "words": 3
+ },
+ {
+  "id": "L186",
+  "scene": "3C",
+  "speaker": "PARENT",
+  "note": "",
+  "text": "Hold my hand.",
+  "src_line": 993,
+  "words": 3
+ },
+ {
+  "id": "L187",
+  "scene": "3C",
+  "speaker": "GUARD",
+  "note": "",
+  "text": "This way, Your Majesty.",
+  "src_line": 1000,
+  "words": 4
+ },
+ {
+  "id": "L188",
+  "scene": "3C",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "Take the people through first.",
+  "src_line": 1003,
+  "words": 5
+ },
+ {
+  "id": "L189",
+  "scene": "3C",
+  "speaker": "GUARD",
+  "note": "",
+  "text": "She's turning.",
+  "src_line": 1006,
+  "words": 2
+ },
+ {
+  "id": "L190",
+  "scene": "3C",
+  "speaker": "VENDOR",
+  "note": "",
+  "text": "Leave it! Come on!",
+  "src_line": 1017,
+  "words": 4
+ },
+ {
+  "id": "L191",
+  "scene": "3C",
+  "speaker": "ADULT VILLAGER",
+  "note": "",
+  "text": "My family\u2014",
+  "src_line": 1028,
+  "words": 2
+ },
+ {
+  "id": "L192",
+  "scene": "3C",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "Tell the guard where they were. He'll look.",
+  "src_line": 1031,
+  "words": 8
+ },
+ {
+  "id": "L193",
+  "scene": "3C",
+  "speaker": "GUARD",
+  "note": "",
+  "text": "I'll look.",
+  "src_line": 1036,
+  "words": 2
+ },
+ {
+  "id": "L194",
+  "scene": "3D",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "Find the injured. Bring them under stone cover. Keep someone watching the sky.",
+  "src_line": 1062,
+  "words": 13
+ },
+ {
+  "id": "L195",
+  "scene": "3D",
+  "speaker": "GUARD CAPTAIN",
+  "note": "",
+  "text": "Yes, Your Majesty.",
+  "src_line": 1065,
+  "words": 3
+ },
+ {
+  "id": "L196",
+  "scene": "3D",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "And send word to King Fallen.",
+  "src_line": 1068,
+  "words": 6
+ },
+ {
+  "id": "L197",
+  "scene": "3D",
+  "speaker": "GUARD CAPTAIN",
+  "note": "",
+  "text": "What shall I tell him?",
+  "src_line": 1073,
+  "words": 5
+ },
+ {
+  "id": "L198",
+  "scene": "3D",
+  "speaker": "KING OF CLING",
+  "note": "",
+  "text": "Starlight attacked Cling. Tell him exactly what you saw.",
+  "src_line": 1076,
+  "words": 9
+ }
+]
