@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Dragons Kingdom renderer</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "/three/build/three.module.js",
+    "three/addons/": "/three/examples/jsm/",
+    "three/examples/jsm/": "/three/examples/jsm/",
+    "dk/": "/runtime/lib/"
+  }
+}
+</script>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<script type="module">
+import * as dk from '/runtime/dk-runtime.js';
+window.dk = dk;
+window.dkReady = true;
+</script>
+</body>
+</html>
