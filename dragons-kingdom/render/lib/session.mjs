@@ -22,6 +22,8 @@ export function runtimeConfig(p, o = {}) {
     toneMapping: o.toneMapping,
     exposure: o.exposure,
     timing: !!o.timing,
+    shadowCache: o.shadowCache ?? true,
+    bitDepth: o.bitDepth ?? 8,
   };
 }
 
@@ -36,13 +38,13 @@ export async function openSession(o) {
   try { info = await worker.start(); } catch (e) { await worker.close(); if (!o.server) await server.close(); throw e; }
   return {
     info, preset: p, server, worker,
-    /** Render frames (absolute indices) into memory. capture: 'yuv' | 'rgba'. */
+    /** Render frames (absolute indices) into memory. capture: 'yuv' | 'yuv10' | 'rgba'. */
     async render(frames, capture = 'yuv', extra = {}) {
       const sink = memorySink(frames.map((f) => ({ frame: f, repeat: 1 })));
       const sid = newId('m');
-      const postBase = server.addSink(sid, sink);
+      const sinkUrl = server.addSink(sid, sink);
       try {
-        const stats = await worker.render({ postBase, frames, capture, ...extra });
+        const stats = await worker.render({ sinkUrl, frames, capture, ...extra });
         await sink.finish();
         return { frames: sink.frames, stats };
       } finally { server.removeSink(sid); }

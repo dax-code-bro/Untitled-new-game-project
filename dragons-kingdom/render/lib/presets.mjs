@@ -50,3 +50,20 @@ export function defaultWorkers() {
   const cores = os.availableParallelism?.() ?? os.cpus().length;
   return Math.max(1, Math.min(3, cores - 1));
 }
+
+/**
+ * RAM one worker needs at this preset (its browser + its x264 encoder),
+ * measured at 4K (10 s test clip, 4 workers, 10.6 GB peak in total): ~2.6 GB
+ * per worker (browser processes ~1.4 GB, x264 medium ~1.2 GB); scales roughly
+ * with the pixel count.
+ */
+export function workerMemoryGB(p) {
+  const px = Math.max(p.width * p.height, p.renderWidth * p.renderHeight) / (3840 * 2160);
+  return 0.4 + 2.2 * px;
+}
+
+/** Most workers that fit in this machine's RAM (keeps ~15% + 1 GB for everything else). */
+export function memoryWorkerCap(p) {
+  const totalGB = os.totalmem() / 2 ** 30;
+  return Math.max(1, Math.floor((totalGB * 0.85 - 1) / workerMemoryGB(p)));
+}

@@ -5,10 +5,10 @@
   "description": "Dragons Kingdom - code-defined 3D scenes rendered to 4K video on CPU (three.js + headless Chromium + ffmpeg)",
   "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
-    "test": "node --test --test-concurrency=1 test/*.test.mjs",
+    "test": "node test/run.mjs",
     "render": "node render/render.mjs",
     "render:draft": "node render/render.mjs scenes/test-kingdom.js --preset draft",
     "render:preview": "node render/render.mjs scenes/test-kingdom.js --preset preview",

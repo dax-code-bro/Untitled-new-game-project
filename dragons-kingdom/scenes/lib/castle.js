@@ -44,8 +44,11 @@ export function createCastle(THREE, { seed = 7, ground = 30, radius = 46, sides 
       tmpM.compose(new THREE.Vector3(x + Math.cos(a) * (r + 0.35), top + 1.4 + 0.8, z + Math.sin(a) * (r + 0.35)), tmpQ, tmpS);
       merlons.push(tmpM.clone());
     }
-    // roof cone sits inside the parapet
-    const cg = new THREE.ConeGeometry(r + 0.9, roofH, 28, 1, true);
+    // roof cone sits inside the parapet. Closed at the bottom: its eave
+    // overhangs the parapet ring by 0.2 m, and with an open cone you could
+    // look up through that gap into the (back-face culled) cone and see the
+    // sky - bright 1-pixel dashes under the merlons at 4K.
+    const cg = new THREE.ConeGeometry(r + 0.9, roofH, 28, 1, false);
     scaleRadialUVs(cg, r + 0.9, roofH, 2.5);
     add(new THREE.Mesh(cg, roofMat)).position.set(x, top + 1.4 + roofH / 2, z);
     // finial
@@ -196,7 +199,11 @@ export function createCastle(THREE, { seed = 7, ground = 30, radius = 46, sides 
     }
     p.needsUpdate = true;
     flagGeo.computeVertexNormals();
+    // the waving flag leaves its rest pose: keep the culling sphere in step
+    // (the runtime would also do this, see "culling determinism" in dk-runtime.js)
+    flagGeo.computeBoundingSphere();
   }
 
-  return { group, animate, height: donjonTop + 18, donjon: new THREE.Vector3(dx, donjonTop, dz) };
+  // flag: the only part that moves (and casts a moving shadow)
+  return { group, animate, flag, height: donjonTop + 18, donjon: new THREE.Vector3(dx, donjonTop, dz) };
 }

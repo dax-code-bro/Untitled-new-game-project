@@ -17,18 +17,43 @@ export const COLOR_TAGS = [
 
 // ffmpeg's own RGB -> yuv420p conversion (BT.709, limited range). "area" makes
 // chroma a plain 2x2 average, i.e. the same filter as the in-shader packer.
-export const RGBA_TO_YUV_FILTER = 'scale=out_color_matrix=bt709:out_range=tv:flags=area+accurate_rnd,format=yuv420p';
+export const rgbaToYuvFilter = (bitDepth = 8) =>
+  `scale=out_color_matrix=bt709:out_range=tv:flags=area+accurate_rnd,format=${bitDepth === 10 ? 'yuv420p10le' : 'yuv420p'}`;
+export const RGBA_TO_YUV_FILTER = rgbaToYuvFilter(8);
 
-/** Arguments for encoding raw frames from stdin into an H.264 mp4. */
-export function encoderArgs({ width, height, fps, input = 'yuv', crf = 16, preset = 'medium', out, threads }) {
+/** Raw frame formats the page can deliver (see runtime captureSize). */
+export const CAPTURE_PIX_FMT = { yuv: 'yuv420p', yuv10: 'yuv420p10le', rgba: 'rgba' };
+
+/**
+ * Highest useful CRF. x264's 10-bit CRF scale runs from -12 to 51 (values above
+ * 51 are clipped), the 8-bit one from 0 to 51 - so 51 for both. CRF values
+ * mean about the same visual quality at both bit depths.
+ */
+export const maxCrf = () => 51;
+
+/**
+ * Arguments for encoding raw frames from stdin into an H.264 mp4.
+ * input: 'yuv' (8-bit yuv420p) | 'yuv10' (yuv420p10le) | 'rgba' (ffmpeg converts)
+ * bitDepth: 8 -> High profile, yuv420p; 10 -> High 10 profile, yuv420p10le.
+ * crf 0 = lossless: encoded as "-qp 0" (at 10 bits "-crf 0" would be QP 12,
+ * NOT lossless); x264 then needs the High 4:4:4 Predictive profile, so no
+ * profile is forced (such files play in ffmpeg/VLC/editors, rarely elsewhere).
+ */
+export function encoderArgs({ width, height, fps, input = 'yuv', bitDepth = 8, crf = 16, preset = 'medium', out, threads }) {
   const r = fpsRational(fps);
   const gop = Math.max(1, Math.round(fps * 2));
+  const inFmt = CAPTURE_PIX_FMT[input];
+  if (!inFmt) throw new Error(`unknown capture "${input}"`);
+  if (input === 'yuv10' && bitDepth !== 10) throw new Error('10-bit capture needs bitDepth 10');
   const a = ['-hide_banner', '-loglevel', 'error', '-y',
-    '-f', 'rawvideo', '-pix_fmt', input === 'rgba' ? 'rgba' : 'yuv420p', '-s', `${width}x${height}`, '-framerate', r];
+    '-f', 'rawvideo', '-pix_fmt', inFmt, '-s', `${width}x${height}`, '-framerate', r];
   if (input !== 'rgba') a.push('-color_range', 'tv', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709');
   a.push('-i', 'pipe:0');
-  if (input === 'rgba') a.push('-vf', RGBA_TO_YUV_FILTER);
-  a.push('-c:v', 'libx264', '-preset', preset, '-crf', String(crf), '-profile:v', 'high', '-pix_fmt', 'yuv420p',
+  if (input === 'rgba') a.push('-vf', rgbaToYuvFilter(bitDepth));
+  const lossless = crf === 0;
+  const rate = lossless ? ['-qp', '0'] : ['-crf', String(crf)];
+  const profile = lossless ? [] : ['-profile:v', bitDepth === 10 ? 'high10' : 'high'];
+  a.push('-c:v', 'libx264', '-preset', preset, ...rate, ...profile, '-pix_fmt', bitDepth === 10 ? 'yuv420p10le' : 'yuv420p',
     '-g', String(gop), '-keyint_min', String(Math.max(1, Math.round(fps / 2))),
     '-x264-params', 'open-gop=0',          // closed GOPs: every chunk is independently decodable
     ...COLOR_TAGS, '-chroma_sample_location', 'center');
@@ -84,6 +109,36 @@ export function ffprobeJson(file, extra = []) {
   return JSON.parse(r.stdout);
 }
 
+/**
+ * Decode the whole file and check it: every packet decodes, no decoder
+ * errors, the expected frame count and size. Much stronger than counting
+ * packets (a chunk with damaged data still has the right packet count).
+ * Returns { ok, frames, packets, reason }.
+ */
+export function verifyVideo(file, { frames, width, height } = {}) {
+  const r = spawnSync(ffprobePath(), ['-v', 'error', '-select_streams', 'v:0', '-count_frames', '-count_packets',
+    '-show_entries', 'stream=width,height,nb_read_frames,nb_read_packets', '-of', 'json', file], { encoding: 'utf8', maxBuffer: 64 << 20 });
+  let s = null;
+  try { s = JSON.parse(r.stdout).streams?.[0]; } catch {}
+  if (r.status !== 0 || !s) return { ok: false, reason: `unreadable (${(r.stderr || '').trim().split('\n')[0] || `exit ${r.status}`})` };
+  const res = { frames: +s.nb_read_frames, packets: +s.nb_read_packets, width: s.width, height: s.height };
+  const errs = (r.stderr || '').trim();
+  if (errs) return { ...res, ok: false, reason: `decoder errors: ${errs.split('\n')[0]}` };
+  if (frames !== undefined && (res.frames !== frames || res.packets !== frames)) return { ...res, ok: false, reason: `${res.frames} decodable frames / ${res.packets} packets, expected ${frames}` };
+  if (width !== undefined && (res.width !== width || res.height !== height)) return { ...res, ok: false, reason: `size ${res.width}x${res.height}, expected ${width}x${height}` };
+  return { ...res, ok: true };
+}
+
+/** Does this file have an audio stream ffmpeg can read? Returns null if fine, else the problem. */
+export function audioProblem(file) {
+  if (!fs.existsSync(file)) return 'file not found';
+  try {
+    const j = ffprobeJson(file, ['-select_streams', 'a', '-show_entries', 'stream=codec_name,duration']);
+    if (!j.streams?.length) return 'it has no audio track';
+    return null;
+  } catch (e) { return `ffmpeg cannot read it (${e.message.split('\n')[0]})`; }
+}
+
 /** Video stream info incl. exact packet (= frame) count. Returns null if unreadable. */
 export function probeVideo(file) {
   try {
@@ -95,11 +150,15 @@ export function probeVideo(file) {
   } catch { return null; }
 }
 
+export class FrameCountError extends Error {}
+
 /**
  * Losslessly concatenate mp4 chunks (concat demuxer, stream copy) and
  * optionally mux an audio track (AAC). Audio is padded/cut to the video length.
+ * The result is written to <out>.part.mp4, checked (packet count = expectFrames)
+ * and only then renamed to out - a broken stitch never looks like an episode.
  */
-export async function concatChunks({ files, out, audio, audioOffset = 0, duration, listDir }) {
+export async function concatChunks({ files, out, audio, audioOffset = 0, duration, listDir, expectFrames }) {
   const list = path.join(listDir, `.concat-${process.pid}-${Date.now()}.txt`);
   fs.writeFileSync(list, files.map((f) => `file '${path.resolve(f).replace(/'/g, "'\\''")}'`).join('\n') + '\n');
   const tmp = out + '.part.mp4';
@@ -113,13 +172,30 @@ export async function concatChunks({ files, out, audio, audioOffset = 0, duratio
   a.push('-movflags', '+faststart', '-f', 'mp4', tmp);
   const ff = spawnFfmpeg(a, { label: 'concat' });
   ff.proc.stdin.end();
-  try { await ff.end(); } finally { fs.rmSync(list, { force: true }); }
+  try { await ff.end(); } catch (e) { fs.rmSync(tmp, { force: true }); throw e; } finally { fs.rmSync(list, { force: true }); }
+  if (expectFrames !== undefined) {
+    const v = probeVideo(tmp);
+    if (!v || v.frames !== expectFrames) {
+      fs.rmSync(tmp, { force: true });
+      throw new FrameCountError(`${path.basename(out)} would have ${v?.frames} frames, expected ${expectFrames}`);
+    }
+  }
+  fs.rmSync(out, { force: true });
   fs.renameSync(tmp, out);
   return out;
 }
 
-/** Write one RGBA frame as PNG. */
+/** Make sure a finished file's bytes are on disk before it is renamed into place. */
+export function fsyncFile(file) {
+  try { const fd = fs.openSync(file, 'r'); try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); } } catch {}
+}
+export function fsyncDir(dir) {
+  try { const fd = fs.openSync(dir, 'r'); try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); } } catch {}
+}
+
+/** Write one RGBA frame as PNG (creates the folder if needed). */
 export async function writePng(buf, { width, height, out }) {
+  fs.mkdirSync(path.dirname(path.resolve(out)), { recursive: true });
   const ff = spawnFfmpeg(['-hide_banner', '-loglevel', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgba',
     '-s', `${width}x${height}`, '-i', 'pipe:0', '-frames:v', '1', '-pix_fmt', 'rgb24', out], { label: 'png' });
   await ff.write(buf);

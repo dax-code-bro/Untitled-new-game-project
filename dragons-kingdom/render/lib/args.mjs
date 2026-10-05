@@ -20,9 +20,12 @@ export function parseArgs(argv, { booleans = [], aliases = {} } = {}) {
   return out;
 }
 
-export function num(v, name, { min = -Infinity, int = false } = {}) {
+export function num(v, name, { min = -Infinity, max = Infinity, int = false } = {}) {
   if (v === undefined) return undefined;
   const n = Number(v);
-  if (!Number.isFinite(n) || n < min || (int && !Number.isInteger(n))) throw new Error(`--${name}: "${v}" is not a valid ${int ? 'whole ' : ''}number${min > -Infinity ? ` >= ${min}` : ''}`);
+  if (v === '' || !Number.isFinite(n) || n < min || n > max || (int && !Number.isInteger(n))) {
+    const range = min > -Infinity && max < Infinity ? ` from ${min} to ${max}` : min > -Infinity ? ` >= ${min}` : max < Infinity ? ` <= ${max}` : '';
+    throw new Error(`--${name}: "${v}" is not a valid ${int ? 'whole ' : ''}number${range}`);
+  }
   return n;
 }

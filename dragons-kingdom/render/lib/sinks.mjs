@@ -1,7 +1,7 @@
-// Frame sinks: where POSTed frames go. Frames may arrive out of order (several
-// HTTP requests in flight); a sink writes them strictly in timeline order and
-// only acknowledges a frame once it has been written (=> backpressure all the
-// way back to the browser, which limits how many frames it keeps in flight).
+// Frame sinks: where the frames the page sends over its WebSocket go. A sink
+// writes them strictly in timeline order (it does not rely on arrival order)
+// and only acknowledges a frame once it has been written (=> backpressure all
+// the way back to the browser, which limits how many frames it keeps in flight).
 import fs from 'node:fs';
 import { spawnFfmpeg } from './ffmpeg.mjs';
 

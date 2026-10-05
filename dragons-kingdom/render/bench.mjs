@@ -47,8 +47,8 @@ async function trial(nWorkers, x264Preset) {
     await Promise.all(workers.map(async (w, i) => {
       const sink = ffmpegSink([{ frame: i, repeat: 1 }], encoderArgs({ width: p.width, height: p.height, fps, preset: x264Preset, crf: p.crf, out: path.join(tmp, `warm${i}.mp4`) }));
       const sid = newId('b');
-      const postBase = server.addSink(sid, sink);
-      await w.render({ postBase, frames: [i] });
+      const sinkUrl = server.addSink(sid, sink);
+      await w.render({ sinkUrl, frames: [i] });
       await sink.finish();
       server.removeSink(sid);
     }));
@@ -58,8 +58,8 @@ async function trial(nWorkers, x264Preset) {
       const order = frames.map((f) => ({ frame: f, repeat: a.twos ? 2 : 1 }));
       const sink = ffmpegSink(order, encoderArgs({ width: p.width, height: p.height, fps, preset: x264Preset, crf: p.crf, out: path.join(tmp, `w${i}.mp4`) }));
       const sid = newId('b');
-      const postBase = server.addSink(sid, sink);
-      await w.render({ postBase, frames });
+      const sinkUrl = server.addSink(sid, sink);
+      await w.render({ sinkUrl, frames });
       await sink.finish();
       server.removeSink(sid);
     }));
