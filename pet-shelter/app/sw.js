@@ -1,7 +1,7 @@
 // Service worker for the installable (PWA) build: the game works offline after the first visit.
-// 16-autoupdate is filled in from PS_BUILD in index.html when the app is assembled, so each release
+// 17-modern-text is filled in from PS_BUILD in index.html when the app is assembled, so each release
 // gets its own cache and old ones are removed.
-const VERSION = '16-autoupdate';
+const VERSION = '17-modern-text';
 const CACHE = 'pet-shelter-' + VERSION;
 const FONTS = 'pet-shelter-fonts';
 const SHELL = [

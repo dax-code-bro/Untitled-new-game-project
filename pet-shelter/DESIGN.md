@@ -488,6 +488,16 @@ Fixed (from version 16-autoupdate on):
 - One-time step for copies installed before this fix: close the app completely (swipe it away) and open it again
   while online. After that, updates arrive by themselves.
 
+## 8.15 Owner's direction — "Make the text look less retro"
+- All in-game text now uses **Inter** (a clean modern UI typeface, SIL Open Font License) instead of Dear ImGui's
+  built-in pixel font. It's compiled into the game (`assets/fonts/`, embedded by `cmake/EmbedFiles.cmake`), so the
+  desktop and web builds look the same, offline too.
+- A large cut of the font is used for titles and for text drawn over the world (road signs, store name tags, staff
+  name tags, speedometer), so it stays sharp at any size.
+- Softer, more modern panels: rounder corners, more padding, no hard borders. Title case instead of all caps.
+- The web page around the game (loading screen, phone buttons) uses Inter too, instead of the slab-serif and
+  typewriter-style fonts, and no more all-caps labels.
+
 ## 9. Next up
 - More model passes until nothing looks off (small terriers, fur close-ups, coiled snakes).
 - Staff and protesters as visible people in the world; clients in the waiting room.

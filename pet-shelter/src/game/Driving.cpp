@@ -3,6 +3,7 @@
 #include "world/Facility.h"
 #include "world/Layout.h"
 #include "world/Terrain.h"
+#include "game/UiFonts.h"
 #include <imgui.h>
 #include <algorithm>
 #include <cmath>
@@ -355,7 +356,7 @@ void Driving::drawSignText(const Camera& cam, int W, int H) const {
         if (sx < -200 || sx > float(W) + 200 || sy < -100 || sy > float(H) + 100) continue;
         float scale = clampf(28.0f / dist, 0.35f, 2.2f) * (s.kind == 3 ? 1.6f : 1.0f);
         ImU32 col = s.kind == 0 ? IM_COL32(20, 20, 20, 255) : IM_COL32(245, 245, 240, 255);
-        ImFont* f = ImGui::GetFont();
+        ImFont* f = labelFont();
         float fs = ImGui::GetFontSize() * scale;
         ImVec2 sz = f->CalcTextSizeA(fs, 1e9f, 0.0f, s.text.c_str());
         dl->AddText(f, fs, ImVec2(sx - sz.x * 0.5f, sy - sz.y * 0.5f), col, s.text.c_str());
@@ -386,7 +387,7 @@ void Driving::drawHUD(const Sim& sim, const Truck& t, bool touch) const {
     dl->AddLine(c, ImVec2(c.x + std::cos(na) * 66.0f, c.y - std::sin(na) * 66.0f), mph > limit + 5 ? IM_COL32(255, 70, 50, 255) : IM_COL32(255, 160, 60, 255), 3.5f);
     char b[48];
     std::snprintf(b, sizeof b, "%.0f mph", double(mph));
-    dl->AddText(ImGui::GetFont(), 22.0f, ImVec2(c.x - 30, c.y + 22), IM_COL32(255, 255, 255, 255), b);
+    dl->AddText(labelFont(), 22.0f, ImVec2(c.x - 30, c.y + 22), IM_COL32(255, 255, 255, 255), b);
     // Speed limit sign
     ImVec2 s0(c.x - (touch ? 160.0f : 190.0f), c.y - 40.0f);
     dl->AddRectFilled(s0, ImVec2(s0.x + 62, s0.y + 80), IM_COL32(240, 240, 235, 240), 4.0f);
@@ -394,7 +395,7 @@ void Driving::drawHUD(const Sim& sim, const Truck& t, bool touch) const {
     dl->AddText(ImVec2(s0.x + 8, s0.y + 6), IM_COL32(20, 20, 20, 255), "SPEED");
     dl->AddText(ImVec2(s0.x + 9, s0.y + 20), IM_COL32(20, 20, 20, 255), "LIMIT");
     std::snprintf(b, sizeof b, "%.0f", double(limit));
-    dl->AddText(ImGui::GetFont(), 28.0f, ImVec2(s0.x + 14, s0.y + 38), IM_COL32(20, 20, 20, 255), b);
+    dl->AddText(labelFont(), 28.0f, ImVec2(s0.x + 14, s0.y + 38), IM_COL32(20, 20, 20, 255), b);
     // Turn signal arrows (blinking)
     bool blink = std::fmod(clock_, 0.8f) < 0.4f;
     ImVec2 arrowC = touch ? ImVec2(c.x - 20.0f, c.y - 112.0f) : ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y - 40.0f);

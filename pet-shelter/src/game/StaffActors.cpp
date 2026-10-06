@@ -3,6 +3,7 @@
 #include "world/Facility.h"
 #include "world/Layout.h"
 #include "world/Terrain.h"
+#include "game/UiFonts.h"
 #include <imgui.h>
 #include <algorithm>
 #include <cmath>
@@ -761,7 +762,7 @@ void StaffActors::drawLabels(const Sim& sim, const Camera& cam, int W, int H) co
         float sx = (c.x / c.w * 0.5f + 0.5f) * float(W), sy = (1.0f - (c.y / c.w * 0.5f + 0.5f)) * float(H);
         if (sx < -200 || sx > float(W) + 200 || sy < -100 || sy > float(H) + 100) return;
         float s = clampf(10.0f / dist, 0.5f, 1.2f) * scale;
-        ImFont* f = ImGui::GetFont();
+        ImFont* f = labelFont();
         float fs = ImGui::GetFontSize() * s;
         ImVec2 sz = f->CalcTextSizeA(fs, 1e9f, 0.0f, text.c_str());
         ImVec2 p0(sx - sz.x * 0.5f, sy - sz.y * 0.5f);

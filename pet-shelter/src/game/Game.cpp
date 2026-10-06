@@ -1,5 +1,6 @@
 #include "game/Game.h"
 #include "game/ClinicViews.h"
+#include "game/UiFonts.h"
 #include "core/GL.h"
 #include "core/Image.h"
 #include "core/SaveFile.h"
@@ -67,11 +68,18 @@ static void sizeCb(GLFWwindow*, int w, int h) { if (g_game) g_game->onResize(w, 
 static void applyTheme() {
     ImGuiStyle& s = ImGui::GetStyle();
     ImGui::StyleColorsDark();
-    s.WindowRounding = 6.0f;
-    s.FrameRounding = 4.0f;
-    s.GrabRounding = 4.0f;
-    s.WindowPadding = ImVec2(12, 10);
-    s.ItemSpacing = ImVec2(8, 6);
+    s.WindowRounding = 10.0f;
+    s.ChildRounding = 8.0f;
+    s.FrameRounding = 7.0f;
+    s.PopupRounding = 8.0f;
+    s.GrabRounding = 7.0f;
+    s.TabRounding = 7.0f;
+    s.ScrollbarRounding = 8.0f;
+    s.WindowPadding = ImVec2(14, 12);
+    s.FramePadding = ImVec2(10, 6);
+    s.ItemSpacing = ImVec2(8, 7);
+    s.WindowBorderSize = 0.0f;
+    s.FrameBorderSize = 0.0f;
     ImVec4* c = s.Colors;
     c[ImGuiCol_WindowBg] = ImVec4(0.08f, 0.09f, 0.10f, 0.92f);
     c[ImGuiCol_Header] = ImVec4(0.22f, 0.35f, 0.28f, 0.8f);
@@ -155,6 +163,7 @@ bool Game::init(int argc, char** argv) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename = nullptr;
+    loadUiFonts();   // Inter instead of ImGui's built-in pixel font
     applyTheme();
     if (touch_) {
         // Bigger targets for fingers
@@ -715,9 +724,9 @@ void Game::drawMainMenu() {
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.06f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.0f, 0.5f));
     ImGui::SetNextWindowBgAlpha(0.75f);
     ImGui::Begin("##menu", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
-    ImGui::SetWindowFontScale(1.8f);
-    ImGui::TextColored(ImVec4(0.95f, 0.85f, 0.6f, 1), "UNTITLED PET SHELTER GAME");
-    ImGui::SetWindowFontScale(1.0f);
+    if (uiFonts().large) { ImGui::PushFont(uiFonts().large); ImGui::SetWindowFontScale(0.68f); }
+    ImGui::TextColored(ImVec4(0.95f, 0.85f, 0.6f, 1), "Untitled Pet Shelter Game");
+    if (uiFonts().large) { ImGui::SetWindowFontScale(1.0f); ImGui::PopFont(); }
     ImGui::TextDisabled("(title coming soon)");
     ImGui::Spacing();
     ImVec2 bs(std::min(360.0f, io.DisplaySize.x * 0.42f), 44);
@@ -825,9 +834,9 @@ void Game::drawDecision() {
     ImGui::SetNextWindowSize(ImVec2(w, 0));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, d->urgent ? ImVec4(0.22f, 0.04f, 0.04f, 0.96f) : ImVec4(0.08f, 0.1f, 0.13f, 0.96f));
     ImGui::Begin("##decision", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
-    ImGui::SetWindowFontScale(1.15f);
+    if (uiFonts().large) { ImGui::PushFont(uiFonts().large); ImGui::SetWindowFontScale(0.48f); }
     ImGui::TextColored(d->urgent ? ImVec4(1, 0.5f, 0.4f, 1) : ImVec4(1, 0.85f, 0.4f, 1), "%s", d->title.c_str());
-    ImGui::SetWindowFontScale(1.0f);
+    if (uiFonts().large) { ImGui::SetWindowFontScale(1.0f); ImGui::PopFont(); }
     ImGui::Separator();
     ImGui::PushTextWrapPos(w - 20);
     ImGui::TextUnformatted(d->text.c_str());
@@ -1147,7 +1156,7 @@ void Game::drawCutsceneOverlay() {
     std::string title = cutscene_.title();
     if (!title.empty()) {
         float scale = 2.4f;
-        ImFont* f = ImGui::GetFont();
+        ImFont* f = labelFont();
         float fs = ImGui::GetFontSize() * scale;
         ImVec2 sz = f->CalcTextSizeA(fs, FLT_MAX, 0.0f, title.c_str());
         dl->AddText(f, fs, ImVec2((io.DisplaySize.x - sz.x) * 0.5f, io.DisplaySize.y * 0.2f), IM_COL32(245, 225, 170, int(230 * a)), title.c_str());
@@ -1155,7 +1164,7 @@ void Game::drawCutsceneOverlay() {
     std::string sub = cutscene_.subtitle();
     if (!sub.empty()) {
         float fs = ImGui::GetFontSize() * 1.35f;
-        ImFont* f = ImGui::GetFont();
+        ImFont* f = labelFont();
         ImVec2 sz = f->CalcTextSizeA(fs, FLT_MAX, 0.0f, sub.c_str());
         ImVec2 p((io.DisplaySize.x - sz.x) * 0.5f, io.DisplaySize.y * 0.9f - sz.y * 0.5f);
         dl->AddText(f, fs, ImVec2(p.x + 2, p.y + 2), IM_COL32(0, 0, 0, int(200 * a)), sub.c_str());

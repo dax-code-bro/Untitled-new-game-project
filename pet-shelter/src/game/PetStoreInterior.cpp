@@ -1,6 +1,7 @@
 #include "game/PetStoreInterior.h"
 #include "game/People.h"
 #include "world/Layout.h"
+#include "game/UiFonts.h"
 #include <imgui.h>
 #include <algorithm>
 #include <cmath>
@@ -739,7 +740,7 @@ void PetStoreInterior::drawLabels(const Sim& sim, const Camera& cam, int W, int 
         float sx = (c.x / c.w * 0.5f + 0.5f) * float(W), sy = (1.0f - (c.y / c.w * 0.5f + 0.5f)) * float(H);
         if (sx < -300 || sx > float(W) + 300 || sy < -200 || sy > float(H) + 200) return;
         float s = clampf((card ? 3.6f : 18.0f) / dist, card ? 0.6f : 0.35f, card ? 1.5f : 2.0f) * scale;
-        ImFont* f = ImGui::GetFont();
+        ImFont* f = labelFont();
         float fs = ImGui::GetFontSize() * s;
         ImVec2 sz = f->CalcTextSizeA(fs, 1e9f, 0.0f, text.c_str());
         ImVec2 p0(sx - sz.x * 0.5f, sy - sz.y * 0.5f);

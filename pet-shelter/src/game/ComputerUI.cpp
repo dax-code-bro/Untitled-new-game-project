@@ -167,7 +167,7 @@ bool ComputerUI::draw(Sim& sim, const Facility& facility) {
     ImGui::Separator();
 
     // Sidebar tabs
-    ImGui::BeginChild("tabs", ImVec2(compact ? 150.0f : 240.0f, 0), ImGuiChildFlags_Borders);
+    ImGui::BeginChild("tabs", ImVec2(compact ? 170.0f : 285.0f, 0), ImGuiChildFlags_Borders);
     std::string inboxName = "Inbox (" + std::to_string(sim.decisions.size()) + ")";
     const char* names[] = {inboxName.c_str(), "Animals", "Staff", "Recruit", "Store", "Security", "Finances", "Ratings"};
     const char* hints[] = {"Decisions waiting for you", "Every animal in your care", "Your team, wellbeing, one-on-ones",

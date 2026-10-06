@@ -78,6 +78,16 @@ if(PS_BUILD_GAME)
   target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
   target_link_libraries(imgui PUBLIC glfw)
 
+  # Interface fonts (Inter) compiled into the game, so desktop and web load them the same way
+  set(PS_FONT_FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/Inter-Regular.ttf ${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/Inter-SemiBold.ttf)
+  add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated/EmbeddedFonts.cpp
+    COMMAND ${CMAKE_COMMAND} -DOUT=${CMAKE_CURRENT_BINARY_DIR}/generated/EmbeddedFonts.cpp
+            -DNAME1=kFontInterRegular -DFILE1=${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/Inter-Regular.ttf
+            -DNAME2=kFontInterSemiBold -DFILE2=${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/Inter-SemiBold.ttf
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedFiles.cmake
+    DEPENDS ${PS_FONT_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedFiles.cmake
+    VERBATIM)
   add_executable(PetShelter
     src/main.cpp
     src/core/GL.cpp
@@ -108,6 +118,8 @@ if(PS_BUILD_GAME)
     src/game/GameDriving.cpp
     src/game/PetStoreInterior.cpp
     src/game/StaffActors.cpp
+    src/game/UiFonts.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/EmbeddedFonts.cpp
   )
   target_link_libraries(PetShelter PRIVATE ps_sim imgui glfw)
   target_compile_definitions(PetShelter PRIVATE GLFW_INCLUDE_NONE PS_SHADER_DIR="${CMAKE_CURRENT_SOURCE_DIR}/shaders")
