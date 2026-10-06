@@ -488,6 +488,19 @@ Fixed (from version 16-autoupdate on):
 - One-time step for copies installed before this fix: close the app completely (swipe it away) and open it again
   while online. After that, updates arrive by themselves.
 
+### 8.14b Owner's report — "The update thing does not work"
+Real cause: githack caches files at a *branch* address for minutes up to an hour, so both the "which version is
+newest?" check and the reload after "Update now" could get the old files back.
+
+Fixed in 18-launcher:
+- The installed app's start page (`index.html`) is now a tiny **launcher**. It asks **GitHub** which commit is newest
+  on the branch (instant, never cached) and loads the game (`game.html` + game files) from **that commit's address**,
+  which githack never serves stale. Your saves stay where they are.
+- While you play, the same GitHub check runs when you open the app, come back to it, every 10 minutes, and when you
+  press **Check for updates** (main menu and pause menu). A new commit means "New version ready - Update now" (or an
+  automatic switch while it's still loading). The manual check also tells you when you're already up to date.
+- Offline, the launcher uses the commit it loaded last (kept by the service worker), or the copy next to it.
+
 ## 8.15 Owner's direction — "Make the text look less retro"
 - All in-game text now uses **Inter** (a clean modern UI typeface, SIL Open Font License) instead of Dear ImGui's
   built-in pixel font. It's compiled into the game (`assets/fonts/`, embedded by `cmake/EmbedFiles.cmake`), so the

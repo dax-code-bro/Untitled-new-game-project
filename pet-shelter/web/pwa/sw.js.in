@@ -5,8 +5,8 @@ const VERSION = '@PS_BUILD@';
 const CACHE = 'pet-shelter-' + VERSION;
 const FONTS = 'pet-shelter-fonts';
 const SHELL = [
-  'index.html', 'manifest.webmanifest',   // (no './': static hosts like githack don't serve folder indexes)
-  'PetShelter.js?v=' + VERSION, 'PetShelter.wasm?v=' + VERSION,
+  'index.html', 'game.html', 'manifest.webmanifest',   // (no './': static hosts like githack don't serve folder indexes)
+  'PetShelter.js?v=' + VERSION, 'PetShelter.wasm?v=' + VERSION,   // the branch copy: what the launcher falls back to offline
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png',
 ];
 
@@ -35,12 +35,18 @@ async function page(req) {
 }
 
 // Game files, icons: the saved copy first (each release has its own ?v= name), else download and keep it.
+const COMMIT = /\/([0-9a-f]{40})\//;
 async function asset(req) {
   const cache = await caches.open(CACHE);
   const hit = await cache.match(req);
   if (hit) return hit;
   const res = await fetch(req);
-  if (res.ok) cache.put(req, res.clone());
+  if (res.ok) {
+    await cache.put(req, res.clone());
+    // Files from a commit never change; keep only the newest commit's copy
+    const m = req.url.match(COMMIT);
+    if (m) for (const k of await cache.keys()) { const o = k.url.match(COMMIT); if (o && o[1] !== m[1]) cache.delete(k); }
+  }
   return res;
 }
 
