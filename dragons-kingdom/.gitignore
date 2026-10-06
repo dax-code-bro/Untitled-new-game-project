@@ -1,3 +1,4 @@
 node_modules/
 output/
 .dk-tuning.json
+episodes/s01e01/style-frames/*.png

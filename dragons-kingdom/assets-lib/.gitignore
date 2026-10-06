@@ -1,0 +1,9 @@
+# Everything that fetch.mjs downloads (hdri/, pbr/, model/, human/, .cache/,
+# .fetch-state.json) stays out of git: `node assets-lib/fetch.mjs` re-creates
+# it byte-for-byte from manifest.json (sha256-verified). Only these are committed:
+/*
+!/.gitignore
+!/manifest.json
+!/fetch.mjs
+!/README.md
+!/CREDITS.md

@@ -1,0 +1,7 @@
+{ "creature": "leaf", "quality": "draft", "rider": "abby",
+  "views": [
+    { "cam": [0.55, 0.4, 0.6], "target": [0, 0.24, 0.18], "fov": 30, "pose": {"name": "stand"} },
+    { "cam": [0.9, 0.25, 0.2], "target": [0, 0.22, 0.15], "fov": 30, "pose": {"name": "stand"} },
+    { "cam": [0.28, 0.33, 0.3], "target": [0, 0.24, 0.18], "fov": 30, "pose": {"name": "stand"} },
+    { "cam": [1.1, 0.5, 0.9], "target": [0, 0.15, 0.05], "fov": 35, "pose": {"name": "flight", "phase": 0.2} }
+  ] }

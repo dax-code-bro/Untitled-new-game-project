@@ -59,11 +59,14 @@ Options:
   --size WxH         custom output size (overrides the preset's size, renders natively)
   --sharpness X      final-fast sharpening 0..1 (default 0.5)
   --tone-mapping T   aces | agx | neutral (default: scene's meta.toneMapping or aces)
-  --shadow-filter F  tent9 (default) | bilinear4 (fastest) | pcf-soft (three.js, slowest)
+  --shadow-filter F  tent9 (default) | bilinear4 (fastest) | pcf-soft (three.js) |
+                     pcss (contact-hardening: penumbra from the sun's real size, slower)
   --exposure X       exposure multiplier (default: scene's meta.exposure or 1)
   --readback MODE    async (default) | sync
   --no-shadow-cache  ignore the scene's ctx.shadows cache, redraw every shadow map every frame
                      (same pictures, slower - for checking)
+  --cinematic MODE   cinematic realism stack: off (faster previews) | on (the scene's meta.cinematic,
+                     or the defaults) | default | hero | preview | film | velocity (a preset; overrides the scene's)
   --timing           (with --still) print per-stage GPU timings
   --png FILE         (with --still) where to write the picture
   --time T           (with --still) which moment to render, in seconds
@@ -93,8 +96,10 @@ async function main() {
     sharpness: num(a.sharpness, 'sharpness', { min: 0 }), toneMapping: a.toneMapping, exposure: num(a.exposure, 'exposure', { min: 0 }),
     readback: a.readback, timing: a.timing, verbose: a.verbose, shadowCache: a.shadowCache ?? true,
     quality: a.shadowFilter ? { shadowFilter: a.shadowFilter } : undefined,
+    ...(a.cinematic !== undefined ? { cinematic: a.cinematic } : {}),
   };
-  if (a.shadowFilter && !['tent9', 'bilinear4', 'pcf-soft'].includes(a.shadowFilter)) throw new Error('--shadow-filter must be tent9, bilinear4 or pcf-soft');
+  if (a.cinematic !== undefined && !['off', 'on', 'default', 'hero', 'preview', 'film', 'velocity'].includes(a.cinematic)) throw new Error('--cinematic must be off, on, default, hero, preview, film or velocity');
+  if (a.shadowFilter && !['tent9', 'bilinear4', 'pcf-soft', 'pcss'].includes(a.shadowFilter)) throw new Error('--shadow-filter must be tent9, bilinear4, pcf-soft or pcss');
 
   if (a.still) {
     const time = num(a.time, 'time', { min: 0 }) ?? 0;

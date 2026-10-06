@@ -1,0 +1,4563 @@
+{
+ "schema": 1,
+ "name": "Dragon's Kingdom free asset library",
+ "updated": "2026-10-06",
+ "rules": [
+  "Free / open licences only (CC0 preferred; CC BY only with a CREDITS line). Every file has a source URL and a sha256.",
+  "Binaries are git-ignored: run `node assets-lib/fetch.mjs` to (re)download them. Commit only manifest.json, fetch.mjs, README.md, CREDITS.md, .gitignore.",
+  "status \"available\": reachable from the build container and locked (sha256). status \"blocked\": the host was refused by this environment's network policy on 2026-10-06; fetch.mjs downloads them once the hosts are allowed and records their sha256 with --lock."
+ ],
+ "hosts": {
+  "reachable_2026_10_06": [
+   "storage.googleapis.com",
+   "raw.githubusercontent.com",
+   "media.githubusercontent.com",
+   "github.com (git protocol)",
+   "registry.npmjs.org",
+   "pypi.org"
+  ],
+  "blocked_2026_10_06": [
+   "api.polyhaven.com",
+   "dl.polyhaven.org",
+   "polyhaven.com",
+   "ambientcg.com",
+   "acg-download.struffelproductions.com",
+   "files.makehumancommunity.org",
+   "static.makehumancommunity.org",
+   "download.blender.org",
+   "sketchfab.com",
+   "threedscans.com",
+   "huggingface.co",
+   "sharetextures.com",
+   "cgbookcase.com",
+   "texturecan.com",
+   "kenney.nl",
+   "quaternius.com",
+   "3d-api.si.edu",
+   "opengameart.org",
+   "commons.wikimedia.org"
+  ]
+ },
+ "assets": [
+  {
+   "id": "hdri/umhlanga_sunrise",
+   "kind": "hdri",
+   "title": "Umhlanga Sunrise",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Greg Zaal",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/umhlanga_sunrise"
+   },
+   "via": "Google Research Kubric public mirror of Poly Haven HDRIs (gs://kubric-public/assets/HDRI_haven, CC0 1.0 per its HDRI_haven.json)",
+   "resolution": "4096x2048 (4k .hdr, RGBE)",
+   "sets": [
+    "set.prologue",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Dawn over open sea: sun just above the sea horizon, altocumulus sky, unclipped sun (peak ~2.9e3). Prologue key light and sky reference; mask out the beach/buildings (use the sky only).",
+   "files": [
+    {
+     "path": "hdri/umhlanga_sunrise/umhlanga_sunrise_4k.hdr",
+     "url": "https://storage.googleapis.com/kubric-public/assets/HDRI_haven/umhlanga_sunrise.tar.gz",
+     "archive": {
+      "format": "tar.gz",
+      "member": "environment_4k.hdr",
+      "sha256": "525e51a1a3eb1adec03c464c0e45da5d35043e1f013584a0bcee392b0825a9c2",
+      "bytes": 18576066
+     },
+     "sha256": "048e1ec769bb6530824ec308a38b7b1af6324ac862e7f534eb55727b8bcb2840",
+     "bytes": 24220047
+    }
+   ],
+   "params": {
+    "measured_peak": 2855,
+    "measured_median_upper_hemisphere": 0.998,
+    "categories": [
+     "outdoor",
+     "skies",
+     "nature",
+     "sunrise-sunset",
+     "partly cloudy",
+     "natural light",
+     "low contrast"
+    ],
+    "tags": [
+     "sun",
+     "beach",
+     "ocean",
+     "wave",
+     "sand",
+     "backplates"
+    ],
+    "coords": [
+     -29.7355,
+     31.0838
+    ],
+    "date_taken_unix": 1521523380
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "umhlanga_sunrise",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr",
+    "why": "4k is fine for lighting/reflections; a visible 4K-frame sky needs 8k-16k. Fetch with --upgrades once dl.polyhaven.org is allowed."
+   }
+  },
+  {
+   "id": "hdri/kloppenheim_01",
+   "kind": "hdri",
+   "title": "Kloppenheim 01 (misty dawn)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Greg Zaal",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/kloppenheim_01"
+   },
+   "via": "Google Research Kubric public mirror of Poly Haven HDRIs (gs://kubric-public/assets/HDRI_haven, CC0 1.0 per its HDRI_haven.json)",
+   "resolution": "4096x2048 (4k .hdr, RGBE)",
+   "sets": [
+    "set.prologue",
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Misty overcast dawn, sun diffused through fog, flat horizon, no man-made objects. Riding grounds 1B morning mist; prologue fog bank.",
+   "files": [
+    {
+     "path": "hdri/kloppenheim_01/kloppenheim_01_4k.hdr",
+     "url": "https://storage.googleapis.com/kubric-public/assets/HDRI_haven/kloppenheim_01.tar.gz",
+     "archive": {
+      "format": "tar.gz",
+      "member": "environment_4k.hdr",
+      "sha256": "16c9ba54bd0d935d94b80c2e434cb75df0708ebaddac44d49e71435d5fd75b92",
+      "bytes": 16773397
+     },
+     "sha256": "d071cd1f8198f05f7c8b474546709ecba3a17cdec9e0cdbf7ac749b4c77cfb42",
+     "bytes": 21718354
+    }
+   ],
+   "params": {
+    "measured_peak": 46,
+    "measured_median_upper_hemisphere": 0.807,
+    "categories": [
+     "outdoor",
+     "skies",
+     "nature",
+     "sunrise-sunset",
+     "overcast",
+     "low contrast",
+     "natural light"
+    ],
+    "tags": [
+     "field",
+     "mist",
+     "cloud",
+     "grass"
+    ],
+    "coords": [
+     -25.654156,
+     30.161901
+    ],
+    "date_taken_unix": 1572627540
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "kloppenheim_01",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr",
+    "why": "4k is fine for lighting/reflections; a visible 4K-frame sky needs 8k-16k. Fetch with --upgrades once dl.polyhaven.org is allowed."
+   }
+  },
+  {
+   "id": "hdri/fish_hoek_beach",
+   "kind": "hdri",
+   "title": "Fish Hoek Beach (overcast morning)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Greg Zaal",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/fish_hoek_beach"
+   },
+   "via": "Google Research Kubric public mirror of Poly Haven HDRIs (gs://kubric-public/assets/HDRI_haven, CC0 1.0 per its HDRI_haven.json)",
+   "resolution": "4096x2048 (4k .hdr, RGBE)",
+   "sets": [
+    "set.prologue",
+    "set.verdor_harbor"
+   ],
+   "use": "Overcast morning over a bay; low cloud sitting on the hills (\"high ground disappears into morning cloud\"). Soft key for prologue alternates and grey harbor mood.",
+   "files": [
+    {
+     "path": "hdri/fish_hoek_beach/fish_hoek_beach_4k.hdr",
+     "url": "https://storage.googleapis.com/kubric-public/assets/HDRI_haven/fish_hoek_beach.tar.gz",
+     "archive": {
+      "format": "tar.gz",
+      "member": "environment_4k.hdr",
+      "sha256": "cda84ca33699d3a11cf7db3e6196203c465ebe8c599c263467856d69ecea4853",
+      "bytes": 13941690
+     },
+     "sha256": "70406d0aa91341618cbdf286514ffcc08f3e9f7d487a1c0f9bfd5eb621488e02",
+     "bytes": 22597746
+    }
+   ],
+   "params": {
+    "measured_peak": 8,
+    "measured_median_upper_hemisphere": 0.922,
+    "categories": [
+     "outdoor",
+     "skies",
+     "nature",
+     "sunrise-sunset",
+     "overcast",
+     "low contrast",
+     "natural light"
+    ],
+    "tags": [
+     "beach",
+     "hill",
+     "ocean",
+     "water",
+     "backplates"
+    ],
+    "coords": [
+     -34.139809,
+     18.432651
+    ],
+    "date_taken_unix": 1464501360
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "fish_hoek_beach",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr",
+    "why": "4k is fine for lighting/reflections; a visible 4K-frame sky needs 8k-16k. Fetch with --upgrades once dl.polyhaven.org is allowed."
+   }
+  },
+  {
+   "id": "hdri/kloofendal_48d_partly_cloudy",
+   "kind": "hdri",
+   "title": "Kloofendal 48d Partly Cloudy",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Greg Zaal",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/kloofendal_48d_partly_cloudy"
+   },
+   "via": "Google Research Kubric public mirror of Poly Haven HDRIs (gs://kubric-public/assets/HDRI_haven, CC0 1.0 per its HDRI_haven.json)",
+   "resolution": "4096x2048 (4k .hdr, RGBE)",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_coast_sky",
+    "set.cling_village_square"
+   ],
+   "use": "Clear bright midday with cumulus, unclipped sun (peak ~3.8e4). Main clear-day light for riding grounds 2A/2C, sky off Verdor, Cling.",
+   "files": [
+    {
+     "path": "hdri/kloofendal_48d_partly_cloudy/kloofendal_48d_partly_cloudy_4k.hdr",
+     "url": "https://storage.googleapis.com/kubric-public/assets/HDRI_haven/kloofendal_48d_partly_cloudy.tar.gz",
+     "archive": {
+      "format": "tar.gz",
+      "member": "environment_4k.hdr",
+      "sha256": "41e23616cbaf150e2744405456cd6c506f74956ba1a7c64cbc456755c1590a1c",
+      "bytes": 21077749
+     },
+     "sha256": "c656b652aba1915cd0c27faad7be256b6f2796eb711cef6a2aadc18dd80a4187",
+     "bytes": 25820705
+    }
+   ],
+   "params": {
+    "measured_peak": 37813,
+    "measured_median_upper_hemisphere": 0.359,
+    "categories": [
+     "outdoor",
+     "skies",
+     "nature",
+     "midday",
+     "partly cloudy",
+     "high contrast",
+     "natural light"
+    ],
+    "tags": [
+     "sun",
+     "grass",
+     "rock",
+     "view"
+    ],
+    "coords": [
+     -26.14066228,
+     27.89984354
+    ],
+    "date_taken_unix": 1553262240
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "kloofendal_48d_partly_cloudy",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr",
+    "why": "4k is fine for lighting/reflections; a visible 4K-frame sky needs 8k-16k. Fetch with --upgrades once dl.polyhaven.org is allowed."
+   }
+  },
+  {
+   "id": "hdri/cloud_layers",
+   "kind": "hdri",
+   "title": "Cloud Layers",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Greg Zaal",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/cloud_layers"
+   },
+   "via": "Google Research Kubric public mirror of Poly Haven HDRIs (gs://kubric-public/assets/HDRI_haven, CC0 1.0 per its HDRI_haven.json)",
+   "resolution": "4096x2048 (4k .hdr, RGBE)",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_coast_sky",
+    "set.cling_village_square"
+   ],
+   "use": "Bright day, cumulus + altocumulus over green grass, flat horizon. Alternate clear-day sky with more cloud.",
+   "files": [
+    {
+     "path": "hdri/cloud_layers/cloud_layers_4k.hdr",
+     "url": "https://storage.googleapis.com/kubric-public/assets/HDRI_haven/cloud_layers.tar.gz",
+     "archive": {
+      "format": "tar.gz",
+      "member": "environment_4k.hdr",
+      "sha256": "d75e0fc32c5cea939b06575f398b20f6b0c93bb5613d4fe1f1f1f60e7e19d686",
+      "bytes": 23312650
+     },
+     "sha256": "1c2433a73ea245e376f0f57471938c3f2a713c3a6101ef962fa6022389ee7e6f",
+     "bytes": 27763254
+    }
+   ],
+   "params": {
+    "measured_peak": 4729,
+    "measured_median_upper_hemisphere": 0.269,
+    "categories": [
+     "outdoor",
+     "skies",
+     "nature",
+     "midday",
+     "partly cloudy",
+     "natural light",
+     "high contrast"
+    ],
+    "tags": [
+     "sun",
+     "grass",
+     "path"
+    ],
+    "coords": [
+     -26.15857,
+     27.971349
+    ],
+    "date_taken_unix": 1451395800
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "cloud_layers",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr",
+    "why": "4k is fine for lighting/reflections; a visible 4K-frame sky needs 8k-16k. Fetch with --upgrades once dl.polyhaven.org is allowed."
+   }
+  },
+  {
+   "id": "hdri/white_cliff_top",
+   "kind": "hdri",
+   "title": "White Cliff Top (sea cliff)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Greg Zaal",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/white_cliff_top"
+   },
+   "via": "Google Research Kubric public mirror of Poly Haven HDRIs (gs://kubric-public/assets/HDRI_haven, CC0 1.0 per its HDRI_haven.json)",
+   "resolution": "4096x2048 (4k .hdr, RGBE)",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.verdor_harbor"
+   ],
+   "use": "Clifftop above the sea (Cape Point), partly cloudy, cloud capping the headland, sun behind thin cloud. Coastal reference for the outer rocks / sea-cliff look and daylight on the coast.",
+   "files": [
+    {
+     "path": "hdri/white_cliff_top/white_cliff_top_4k.hdr",
+     "url": "https://storage.googleapis.com/kubric-public/assets/HDRI_haven/white_cliff_top.tar.gz",
+     "archive": {
+      "format": "tar.gz",
+      "member": "environment_4k.hdr",
+      "sha256": "8407e0a9f5a5985745b837766e558d338d67bbaa07a316fa453927e1934e8282",
+      "bytes": 18518003
+     },
+     "sha256": "f4e9bff41541065fccb2330705e46c3f26b69c547f22db51f87666e7e0ad13fc",
+     "bytes": 24390121
+    }
+   ],
+   "params": {
+    "measured_peak": 17773,
+    "measured_median_upper_hemisphere": 0.208,
+    "categories": [
+     "outdoor",
+     "skies",
+     "nature",
+     "morning-afternoon",
+     "partly cloudy",
+     "high contrast",
+     "natural light"
+    ],
+    "tags": [
+     "rock",
+     "ocean",
+     "sun",
+     "view",
+     "cliff",
+     "backplates"
+    ],
+    "coords": [
+     -34.357184,
+     18.476279
+    ],
+    "date_taken_unix": 1464595020
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "white_cliff_top",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr",
+    "why": "4k is fine for lighting/reflections; a visible 4K-frame sky needs 8k-16k. Fetch with --upgrades once dl.polyhaven.org is allowed."
+   }
+  },
+  {
+   "id": "hdri/cape_hill",
+   "kind": "hdri",
+   "title": "Cape Hill (warm low sun)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Greg Zaal",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/cape_hill"
+   },
+   "via": "Google Research Kubric public mirror of Poly Haven HDRIs (gs://kubric-public/assets/HDRI_haven, CC0 1.0 per its HDRI_haven.json)",
+   "resolution": "4096x2048 (4k .hdr, RGBE)",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.cling_village_square"
+   ],
+   "use": "Warm low sun behind a coastal hill, high contrast, wispy cloud. Warm late-afternoon option.",
+   "files": [
+    {
+     "path": "hdri/cape_hill/cape_hill_4k.hdr",
+     "url": "https://storage.googleapis.com/kubric-public/assets/HDRI_haven/cape_hill.tar.gz",
+     "archive": {
+      "format": "tar.gz",
+      "member": "environment_4k.hdr",
+      "sha256": "c5428fa9a19ec4b9b140bc5552c3f64ee93f1b8f71db2c91504eead0ea614bb8",
+      "bytes": 19560317
+     },
+     "sha256": "76003c9e9468aee16bf2afad943960a950a7a539ad400902d1d8fec6db78deff",
+     "bytes": 25033751
+    }
+   ],
+   "params": {
+    "measured_peak": 23241,
+    "measured_median_upper_hemisphere": 0.104,
+    "categories": [
+     "outdoor",
+     "skies",
+     "nature",
+     "sunrise-sunset",
+     "partly cloudy",
+     "high contrast",
+     "natural light"
+    ],
+    "tags": [
+     "rock",
+     "shrub",
+     "view",
+     "ocean",
+     "hill",
+     "hilltop",
+     "sun",
+     "backplates"
+    ],
+    "coords": [
+     -34.266591,
+     18.458238
+    ],
+    "date_taken_unix": 1464588960
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "cape_hill",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr",
+    "why": "4k is fine for lighting/reflections; a visible 4K-frame sky needs 8k-16k. Fetch with --upgrades once dl.polyhaven.org is allowed."
+   }
+  },
+  {
+   "id": "hdri/evening_meadow",
+   "kind": "hdri",
+   "title": "Evening Meadow",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Alexander Scholten",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/evening_meadow"
+   },
+   "via": "Google Research Kubric public mirror of Poly Haven HDRIs (gs://kubric-public/assets/HDRI_haven, CC0 1.0 per its HDRI_haven.json)",
+   "resolution": "4096x2048 (4k .hdr, RGBE)",
+   "sets": [
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Late-afternoon meadow with trees and broken cloud, warm medium-contrast light. Warm late-afternoon option for the riding grounds.",
+   "files": [
+    {
+     "path": "hdri/evening_meadow/evening_meadow_4k.hdr",
+     "url": "https://storage.googleapis.com/kubric-public/assets/HDRI_haven/evening_meadow.tar.gz",
+     "archive": {
+      "format": "tar.gz",
+      "member": "environment_4k.hdr",
+      "sha256": "53810a5f520d137b8fbb9e248c8af6f9ace227d01b97799d4c291fae8fc352b0",
+      "bytes": 21358471
+     },
+     "sha256": "92e556fd2186679bca38b05396a62d78cd96df28b441d9c47ac25b4f9dee5c6c",
+     "bytes": 26633304
+    }
+   ],
+   "params": {
+    "measured_peak": 6180,
+    "measured_median_upper_hemisphere": 0.636,
+    "categories": [
+     "outdoor",
+     "nature",
+     "morning-afternoon",
+     "partly cloudy",
+     "natural light",
+     "medium contrast"
+    ],
+    "tags": [
+     "grass",
+     "field",
+     "tree",
+     "meadow"
+    ],
+    "coords": null,
+    "date_taken_unix": 1628103000
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "evening_meadow",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr",
+    "why": "4k is fine for lighting/reflections; a visible 4K-frame sky needs 8k-16k. Fetch with --upgrades once dl.polyhaven.org is allowed."
+   }
+  },
+  {
+   "id": "hdri/venice_sunset",
+   "kind": "hdri",
+   "title": "Venice Sunset",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Greg Zaal",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/venice_sunset"
+   },
+   "via": "Google Research Kubric public mirror of Poly Haven HDRIs (gs://kubric-public/assets/HDRI_haven, CC0 1.0 per its HDRI_haven.json)",
+   "resolution": "4096x2048 (4k .hdr, RGBE)",
+   "sets": [
+    "set.verdor_harbor",
+    "set.cling_village_square"
+   ],
+   "use": "Warm sun low over open water, paved quay. Warm late-afternoon / harbor reflection option (city in frame: lighting only).",
+   "files": [
+    {
+     "path": "hdri/venice_sunset/venice_sunset_4k.hdr",
+     "url": "https://storage.googleapis.com/kubric-public/assets/HDRI_haven/venice_sunset.tar.gz",
+     "archive": {
+      "format": "tar.gz",
+      "member": "environment_4k.hdr",
+      "sha256": "623dc37f8dff290b69b284b29622717cb5021656587f856d958006de73b7d1b9",
+      "bytes": 17459057
+     },
+     "sha256": "37ecc5e0b06eebb56afc7cc226570b3f3a6921504765a5a64c7a99f5e839db04",
+     "bytes": 22641751
+    }
+   ],
+   "params": {
+    "measured_peak": 1501,
+    "measured_median_upper_hemisphere": 0.529,
+    "categories": [
+     "outdoor",
+     "skies",
+     "nature",
+     "urban",
+     "sunrise-sunset",
+     "clear",
+     "medium contrast",
+     "natural light"
+    ],
+    "tags": [
+     "sun",
+     "europe",
+     "architecture",
+     "building",
+     "street",
+     "town",
+     "ocean",
+     "river",
+     "cobblestone"
+    ],
+    "coords": [
+     45.4303,
+     12.3541
+    ],
+    "date_taken_unix": 1509724140
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "venice_sunset",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr",
+    "why": "4k is fine for lighting/reflections; a visible 4K-frame sky needs 8k-16k. Fetch with --upgrades once dl.polyhaven.org is allowed."
+   }
+  },
+  {
+   "id": "hdri/old_room",
+   "kind": "hdri",
+   "title": "Old Room (arched windows)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Sergej Majboroda",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/old_room"
+   },
+   "via": "Google Research Kubric public mirror of Poly Haven HDRIs (gs://kubric-public/assets/HDRI_haven, CC0 1.0 per its HDRI_haven.json)",
+   "resolution": "4096x2048 (4k .hdr, RGBE)",
+   "sets": [
+    "set.verdor_birthing_chamber",
+    "set.verdor_treatment_room"
+   ],
+   "use": "Old plastered room lit by tall arched windows: soft daylight fill and reflections for the treatment room and the birthing chamber.",
+   "files": [
+    {
+     "path": "hdri/old_room/old_room_4k.hdr",
+     "url": "https://storage.googleapis.com/kubric-public/assets/HDRI_haven/old_room.tar.gz",
+     "archive": {
+      "format": "tar.gz",
+      "member": "environment_4k.hdr",
+      "sha256": "eaef3d9fc895ec6fe61ff47f39eec21d7ff016d08c57cf412a9a7ee44e786468",
+      "bytes": 20139676
+     },
+     "sha256": "ea877325760a7a96d98669654850d1dc5289e5dd386672d76aad8744ad893ee1",
+     "bytes": 25119185
+    }
+   ],
+   "params": {
+    "measured_peak": 48,
+    "measured_median_upper_hemisphere": 0.233,
+    "categories": [
+     "indoor",
+     "urban",
+     "morning-afternoon",
+     "low contrast",
+     "natural light"
+    ],
+    "tags": [
+     "window",
+     "arch",
+     "fireplace",
+     "backplates"
+    ],
+    "coords": [
+     50.045274,
+     35.432855
+    ],
+    "date_taken_unix": 1602149820
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "old_room",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr",
+    "why": "4k is fine for lighting/reflections; a visible 4K-frame sky needs 8k-16k. Fetch with --upgrades once dl.polyhaven.org is allowed."
+   }
+  },
+  {
+   "id": "hdri/castle_zavelstein_cellar",
+   "kind": "hdri",
+   "title": "Castle Zavelstein Cellar",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Andreas Mischok",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/castle_zavelstein_cellar"
+   },
+   "via": "Google Research Kubric public mirror of Poly Haven HDRIs (gs://kubric-public/assets/HDRI_haven, CC0 1.0 per its HDRI_haven.json)",
+   "resolution": "4096x2048 (4k .hdr, RGBE)",
+   "sets": [
+    "set.verdor_birthing_chamber"
+   ],
+   "use": "Vaulted stone castle cellar with one small bright opening high up: matches the birthing chamber (\"daylight entering high above\").",
+   "files": [
+    {
+     "path": "hdri/castle_zavelstein_cellar/castle_zavelstein_cellar_4k.hdr",
+     "url": "https://storage.googleapis.com/kubric-public/assets/HDRI_haven/castle_zavelstein_cellar.tar.gz",
+     "archive": {
+      "format": "tar.gz",
+      "member": "environment_4k.hdr",
+      "sha256": "78232de06e1588a2eae3ebb0c8265bd106fb4be1a9fe2f46c7e152aee42df331",
+      "bytes": 24095287
+     },
+     "sha256": "3974c6ee98003f7e7c302781d4bb7d464e23644f46d3ecc34f56c4247830878e",
+     "bytes": 27038278
+    }
+   ],
+   "params": {
+    "measured_peak": 1585,
+    "measured_median_upper_hemisphere": 0.026,
+    "categories": [
+     "natural light",
+     "indoor",
+     "urban",
+     "high contrast"
+    ],
+    "tags": [
+     "cellar",
+     "basement",
+     "arch",
+     "tunnel",
+     "brick",
+     "castle"
+    ],
+    "coords": [
+     48.692198,
+     8.691207
+    ],
+    "date_taken_unix": 1616335020
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "castle_zavelstein_cellar",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr",
+    "why": "4k is fine for lighting/reflections; a visible 4K-frame sky needs 8k-16k. Fetch with --upgrades once dl.polyhaven.org is allowed."
+   }
+  },
+  {
+   "id": "pbr/acg_ground037",
+   "kind": "pbr",
+   "title": "Mossy grass ground (Ground037)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Ground037",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": "Ground037",
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures @ 0fb7ac1 (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.prologue",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Coastal turf / mossy grass ground under the grass blades; riding-grounds field.",
+   "files": [
+    {
+     "path": "pbr/acg_ground037/Ground037_2K_Color.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground037_2K_Color.jpg",
+     "sha256": "3d35e1f871609f5e4c47a032d5e622c30f163576eb3dbb0d2afba1be226a3679",
+     "bytes": 8673710
+    },
+    {
+     "path": "pbr/acg_ground037/Ground037_2K_Normal.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground037_2K_Normal.jpg",
+     "sha256": "77ba2ce37b76cae6b29b2878b1cf0dc6141abd486925ac4904bb5ffadb108fe8",
+     "bytes": 9794785
+    },
+    {
+     "path": "pbr/acg_ground037/Ground037_2K_Roughness.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground037_2K_Roughness.jpg",
+     "sha256": "62a2931ff01ae3ed58f7cfa3467c0e16e4ad0fe78141841e05ae58ce31ad105c",
+     "bytes": 3242027
+    },
+    {
+     "path": "pbr/acg_ground037/Ground037_2K_AmbientOcclusion.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground037_2K_AmbientOcclusion.jpg",
+     "sha256": "8541699952bcf8bb41f701cf81d10a3a8a0dbdcc904b25c3ab62802eb21f490e",
+     "bytes": 2274967
+    },
+    {
+     "path": "pbr/acg_ground037/Ground037_2K_Displacement.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground037_2K_Displacement.jpg",
+     "sha256": "02a93fdb0b100403ea474a5b12dc25190394f20880f7963ceaff5b330b7fdb66",
+     "bytes": 1720113
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_ground037/Ground037_2K_Color.jpg",
+     "normal": "pbr/acg_ground037/Ground037_2K_Normal.jpg",
+     "roughness": "pbr/acg_ground037/Ground037_2K_Roughness.jpg",
+     "ao": "pbr/acg_ground037/Ground037_2K_AmbientOcclusion.jpg",
+     "height": "pbr/acg_ground037/Ground037_2K_Displacement.jpg"
+    },
+    "tile_m": 2.0,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "height-gradient corr -0.83, curl ratio 2.8"
+   }
+  },
+  {
+   "id": "pbr/acg_ground03",
+   "kind": "pbr",
+   "title": "Grass and dirt patches (Ground03)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Ground03",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": "Ground003",
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures @ 0fb7ac1 (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.prologue"
+   ],
+   "use": "Worn turf, paths, field edges.",
+   "files": [
+    {
+     "path": "pbr/acg_ground03/Ground03_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground03_col.jpg",
+     "sha256": "feacfdf50ae0a727b836976fdbab698a91cb1b5a0699b64c887a8986f6e5ad86",
+     "bytes": 4058173
+    },
+    {
+     "path": "pbr/acg_ground03/Ground03_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground03_nrm.jpg",
+     "sha256": "c210d12db5caece26cab48eb4cb6c8f59090e423460f5f8809923f61c32b6996",
+     "bytes": 8532537
+    },
+    {
+     "path": "pbr/acg_ground03/Ground03_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground03_rgh.jpg",
+     "sha256": "d87ee13a0dd0a74f09807085e9ee0543488685a197ad210df6cf34dc0a8b0cad",
+     "bytes": 2113988
+    },
+    {
+     "path": "pbr/acg_ground03/Ground03_disp.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground03_disp.jpg",
+     "sha256": "295e2642c558b47b86e079398511e99087bdc580e1ca7e1aeb7427ec379d5b6c",
+     "bytes": 1541387
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_ground03/Ground03_col.jpg",
+     "normal": "pbr/acg_ground03/Ground03_nrm.jpg",
+     "roughness": "pbr/acg_ground03/Ground03_rgh.jpg",
+     "height": "pbr/acg_ground03/Ground03_disp.jpg"
+    },
+    "tile_m": 2.0,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "corr -0.70, curl ratio 3.4"
+   }
+  },
+  {
+   "id": "pbr/acg_ground13",
+   "kind": "pbr",
+   "title": "Sparse grass on dirt (Ground13)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Ground13",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": "Ground013",
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures @ 0fb7ac1 (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Trampled turf near buildings / launch area edges.",
+   "files": [
+    {
+     "path": "pbr/acg_ground13/Ground13_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground13_col.jpg",
+     "sha256": "6952a21d3971b26682b58cf2e806378b66da2d613b52117a0ae4b8075c334f0d",
+     "bytes": 6517029
+    },
+    {
+     "path": "pbr/acg_ground13/Ground13_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground13_nrm.jpg",
+     "sha256": "c0ba71fee769e358c0259ad5b31c20c232a75b55131ae6a030ad7c6f40140fe4",
+     "bytes": 9492004
+    },
+    {
+     "path": "pbr/acg_ground13/Ground13_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground13_rgh.jpg",
+     "sha256": "da9cd850d6a26306a36754e1920e21c424d629532384463eccd7c1e989dbe971",
+     "bytes": 3523834
+    },
+    {
+     "path": "pbr/acg_ground13/Ground13_AO.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground13_AO.jpg",
+     "sha256": "142ba8058358825ca49a6dbf02e372bc0da31856e2a34505cd8613eb72a9d919",
+     "bytes": 1861230
+    },
+    {
+     "path": "pbr/acg_ground13/Ground13_disp.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground13_disp.jpg",
+     "sha256": "805a18331c2fd853ab73ef822c57c65931f895600f2aefcf59937411ca474319",
+     "bytes": 1125460
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_ground13/Ground13_col.jpg",
+     "normal": "pbr/acg_ground13/Ground13_nrm.jpg",
+     "roughness": "pbr/acg_ground13/Ground13_rgh.jpg",
+     "ao": "pbr/acg_ground13/Ground13_AO.jpg",
+     "height": "pbr/acg_ground13/Ground13_disp.jpg"
+    },
+    "tile_m": 2.0,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "corr -0.95, curl ratio 5.1"
+   }
+  },
+  {
+   "id": "pbr/acg_ground24",
+   "kind": "pbr",
+   "title": "Mossy damp dirt (Ground24)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Ground24",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": "Ground024",
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures @ 0fb7ac1 (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_harbor"
+   ],
+   "use": "Torn-turf launch scar (1C), damp coastal soil.",
+   "files": [
+    {
+     "path": "pbr/acg_ground24/Ground24_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground24_col.jpg",
+     "sha256": "a9af50bab87586520158250e30394277f4649e7501c2110e482b3b5c995b610d",
+     "bytes": 6074761
+    },
+    {
+     "path": "pbr/acg_ground24/Ground24_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground24_nrm.jpg",
+     "sha256": "b3dc4bbfe75b15c4dee3a7636068a205cece76aa9e916a3f1ecf7b158baeb0c3",
+     "bytes": 9572242
+    },
+    {
+     "path": "pbr/acg_ground24/Ground24_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground24_rgh.jpg",
+     "sha256": "91a67e01cd3ee0de067fd5cfd426aeeb0099dc9f44d8ffe9d43cc12983be49d4",
+     "bytes": 2962153
+    },
+    {
+     "path": "pbr/acg_ground24/Ground24_AO.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground24_AO.jpg",
+     "sha256": "a3cb665780d4927559173b7e92e91516977e6dc4501c74ddd88ef1f06fd9e799",
+     "bytes": 2336481
+    },
+    {
+     "path": "pbr/acg_ground24/Ground24_disp.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground24_disp.jpg",
+     "sha256": "1819b62fcb6170369156fea79f187cb51a261f282b37dac75c658831efdc023d",
+     "bytes": 1324194
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_ground24/Ground24_col.jpg",
+     "normal": "pbr/acg_ground24/Ground24_nrm.jpg",
+     "roughness": "pbr/acg_ground24/Ground24_rgh.jpg",
+     "ao": "pbr/acg_ground24/Ground24_AO.jpg",
+     "height": "pbr/acg_ground24/Ground24_disp.jpg"
+    },
+    "tile_m": 2.0,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "corr -0.87, curl ratio 3.8"
+   }
+  },
+  {
+   "id": "pbr/acg_ground05",
+   "kind": "pbr",
+   "title": "Dry dirt (Ground05)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Ground05",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": null,
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures @ 0fb7ac1 (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.cling_village_square"
+   ],
+   "use": "Dry exposed dirt, Cling street margins, dust settling.",
+   "files": [
+    {
+     "path": "pbr/acg_ground05/Ground05_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground05_col.jpg",
+     "sha256": "7a143af6945f6b30d79fa094527b89334355e424dfa1a1479b7afb4818bbe2da",
+     "bytes": 3502212
+    },
+    {
+     "path": "pbr/acg_ground05/Ground05_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground05_nrm.jpg",
+     "sha256": "a88724bad21c42789428f8e4c61a8464fe5f9c58d2c3ac802814294439010710",
+     "bytes": 4255385
+    },
+    {
+     "path": "pbr/acg_ground05/Ground05_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground05_rgh.jpg",
+     "sha256": "e9ecc0c68f93774c3a82c4721604ded8aa99b9805862d960ac4ee9a5fe277d3f",
+     "bytes": 2214108
+    },
+    {
+     "path": "pbr/acg_ground05/Ground05_AO.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground05_AO.jpg",
+     "sha256": "b1b19980052a681a851a36f0105e12c74812e3d3208f149f990eb9762e2d4bc9",
+     "bytes": 1547897
+    },
+    {
+     "path": "pbr/acg_ground05/Ground05_disp.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground05_disp.jpg",
+     "sha256": "4de4e96fde0e1f9131b46f91b3cb82df730abe64afac9f62a4e206b3be2c4fdd",
+     "bytes": 777044
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_ground05/Ground05_col.jpg",
+     "normal": "pbr/acg_ground05/Ground05_nrm.jpg",
+     "roughness": "pbr/acg_ground05/Ground05_rgh.jpg",
+     "ao": "pbr/acg_ground05/Ground05_AO.jpg",
+     "height": "pbr/acg_ground05/Ground05_disp.jpg"
+    },
+    "tile_m": 2.0,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "corr -0.96, curl ratio 5.5"
+   }
+  },
+  {
+   "id": "pbr/acg_ground27",
+   "kind": "pbr",
+   "title": "Pale fine sand (Ground27)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Ground27",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": "Ground027",
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures @ 0fb7ac1 (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.prologue",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Beach sand.",
+   "files": [
+    {
+     "path": "pbr/acg_ground27/Ground27_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground27_col.jpg",
+     "sha256": "762683ca3655e8e4fab6ee2eadf325190ab4bd272e05e4e843e08086b07947fe",
+     "bytes": 4661688
+    },
+    {
+     "path": "pbr/acg_ground27/Ground27_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground27_nrm.jpg",
+     "sha256": "ba48b4469aad51e32866151d73bd39a16841f3b0106f8b9cee90c6d5318105e7",
+     "bytes": 6520380
+    },
+    {
+     "path": "pbr/acg_ground27/Ground27_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground27_rgh.jpg",
+     "sha256": "2f0413641381c96043c890ddb9eacd3edcf2417cb6653fe328045e93c920421f",
+     "bytes": 2199900
+    },
+    {
+     "path": "pbr/acg_ground27/Ground27_AO.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground27_AO.jpg",
+     "sha256": "6c3286007d8b07c763275493e23b9fc85961398723a4449cd93fdf4288d26a2d",
+     "bytes": 1105732
+    },
+    {
+     "path": "pbr/acg_ground27/Ground27_disp.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground27_disp.jpg",
+     "sha256": "70aac085bb5a3cb988002767aad2079fcb71498d9db32250753d0c9d13e3e9be",
+     "bytes": 734764
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_ground27/Ground27_col.jpg",
+     "normal": "pbr/acg_ground27/Ground27_nrm.jpg",
+     "roughness": "pbr/acg_ground27/Ground27_rgh.jpg",
+     "ao": "pbr/acg_ground27/Ground27_AO.jpg",
+     "height": "pbr/acg_ground27/Ground27_disp.jpg"
+    },
+    "tile_m": 2.0,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "corr -0.98, curl ratio 5.3"
+   }
+  },
+  {
+   "id": "pbr/acg_ground25",
+   "kind": "pbr",
+   "title": "Rippled sand (Ground25)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Ground25",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": "Ground025",
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures @ 0fb7ac1 (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.prologue",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Wind/wave-rippled beach sand.",
+   "files": [
+    {
+     "path": "pbr/acg_ground25/Ground25_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground25_col.jpg",
+     "sha256": "b349a8dc740bdec76d3dc8a73499f8c8cce12f404423952261da4b06acbda540",
+     "bytes": 6328636
+    },
+    {
+     "path": "pbr/acg_ground25/Ground25_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground25_nrm.jpg",
+     "sha256": "a4adfbc2b7dc0727f1ac0e735fa76eaa6c43a10fa8c7ab95704431eeb961e992",
+     "bytes": 8027822
+    },
+    {
+     "path": "pbr/acg_ground25/Ground25_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground25_rgh.jpg",
+     "sha256": "e5c470340456a7ecc9849bf89ba33de81eb48055eb2ef4159f58f50ab5eb0fd2",
+     "bytes": 2997194
+    },
+    {
+     "path": "pbr/acg_ground25/Ground25_AO.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground25_AO.jpg",
+     "sha256": "7bcef12cc435195e4072b20fe82a578fb111c5448c4126572ddd9f2993d4f1bb",
+     "bytes": 1817673
+    },
+    {
+     "path": "pbr/acg_ground25/Ground25_disp.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground25_disp.jpg",
+     "sha256": "a9b06578849940f3d2f8bf9cc70ae97647544dab1ecd935b0c71e32fdbfc65df",
+     "bytes": 1253622
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_ground25/Ground25_col.jpg",
+     "normal": "pbr/acg_ground25/Ground25_nrm.jpg",
+     "roughness": "pbr/acg_ground25/Ground25_rgh.jpg",
+     "ao": "pbr/acg_ground25/Ground25_AO.jpg",
+     "height": "pbr/acg_ground25/Ground25_disp.jpg"
+    },
+    "tile_m": 2.0,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "corr -0.83, curl ratio 3.2"
+   }
+  },
+  {
+   "id": "pbr/acg_ground28",
+   "kind": "pbr",
+   "title": "Gravel / shingle (Ground28)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Ground28",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": null,
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures @ 0fb7ac1 (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.prologue",
+    "set.verdor_coast_sky",
+    "set.verdor_harbor"
+   ],
+   "use": "Shingle beach, harbor gravel, loose stones.",
+   "files": [
+    {
+     "path": "pbr/acg_ground28/Ground28_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground28_col.jpg",
+     "sha256": "f1058dc2690be849ba43bdefa804990718e045b7dd4056168792a48cdbed1555",
+     "bytes": 7164668
+    },
+    {
+     "path": "pbr/acg_ground28/Ground28_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground28_nrm.jpg",
+     "sha256": "93727d64170bf0884e4d58bf87cce4d3f0c52231a6a130f80d73ed5e2d152dbf",
+     "bytes": 8869757
+    },
+    {
+     "path": "pbr/acg_ground28/Ground28_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground28_rgh.jpg",
+     "sha256": "30513745e9af1a2ac94fd34d7b4a8a5b9ef84d5bf704108658f130990be1308c",
+     "bytes": 3023063
+    },
+    {
+     "path": "pbr/acg_ground28/Ground28_AO.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground28_AO.jpg",
+     "sha256": "c883285b6efd07a0d6f4edf8a7b315bcb344d12755002b42b55c967f6977058c",
+     "bytes": 2169678
+    },
+    {
+     "path": "pbr/acg_ground28/Ground28_disp.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Ground-CC0-Textures/0fb7ac18c0110f9bde50019c9e034c5e591d8dd8/textures/Ground28_disp.jpg",
+     "sha256": "90fc1151f71cf72060611e1495d6595b7fc55dfb7f4c1c87c003bcae58f48de5",
+     "bytes": 1464989
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_ground28/Ground28_col.jpg",
+     "normal": "pbr/acg_ground28/Ground28_nrm.jpg",
+     "roughness": "pbr/acg_ground28/Ground28_rgh.jpg",
+     "ao": "pbr/acg_ground28/Ground28_AO.jpg",
+     "height": "pbr/acg_ground28/Ground28_disp.jpg"
+    },
+    "tile_m": 2.0,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "corr -0.82, curl ratio 3.2"
+   }
+  },
+  {
+   "id": "pbr/acg_ground36",
+   "kind": "pbr",
+   "title": "Dark mud with debris (Ground36)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Ground36",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": "Ground036",
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures @ 1b2a51f (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Exposed wet dirt in the launch scar (1C/2A/2C).",
+   "files": [
+    {
+     "path": "pbr/acg_ground36/Ground36_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Ground36_col.jpg",
+     "sha256": "141622b863580fc2a95472a3f8e7294fa4a04604c0f1962e3d9ac576b1902185",
+     "bytes": 7184441
+    },
+    {
+     "path": "pbr/acg_ground36/Ground36_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Ground36_nrm.jpg",
+     "sha256": "9daa174f8f26bc1f7e7d5bdc76cbeffe4ce0347b98b1000cc835fb88bb3563ad",
+     "bytes": 9463151
+    },
+    {
+     "path": "pbr/acg_ground36/Ground36_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Ground36_rgh.jpg",
+     "sha256": "cefc42e18b1fdec7e4ada702bb8146ef134d825a1cf664c78bbc2dac82b9cbe0",
+     "bytes": 3569086
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_ground36/Ground36_col.jpg",
+     "normal": "pbr/acg_ground36/Ground36_nrm.jpg",
+     "roughness": "pbr/acg_ground36/Ground36_rgh.jpg"
+    },
+    "tile_m": 2.0,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "no height map; curl ratio 3.7"
+   }
+  },
+  {
+   "id": "pbr/acg_rock26",
+   "kind": "pbr",
+   "title": "Pale weathered rock (Rock26)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Rock26",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": "Rock026",
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures @ 1b2a51f (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.prologue"
+   ],
+   "use": "Sea-cliff / outer-rocks rock face (pale, layered).",
+   "files": [
+    {
+     "path": "pbr/acg_rock26/Rock26_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Rock26_col.jpg",
+     "sha256": "bc411b4f43b99753082cf5fe87f122bc3b1d7eaac560ffae3bcbe5c497530674",
+     "bytes": 4778959
+    },
+    {
+     "path": "pbr/acg_rock26/Rock26_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Rock26_nrm.jpg",
+     "sha256": "0f4c9eb51ec0d6a230695d4b6e9836fa8788187b058a0506b36dc8ecdb8168ca",
+     "bytes": 6255727
+    },
+    {
+     "path": "pbr/acg_rock26/Rock26_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Rock26_rgh.jpg",
+     "sha256": "27d6ec1ba209360729ce36f49689631cb671a9742aa7e5f28e1d0c3772536bf2",
+     "bytes": 1626704
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_rock26/Rock26_col.jpg",
+     "normal": "pbr/acg_rock26/Rock26_nrm.jpg",
+     "roughness": "pbr/acg_rock26/Rock26_rgh.jpg"
+    },
+    "tile_m": 3.0,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "no height map; curl ratio 4.0"
+   }
+  },
+  {
+   "id": "pbr/acg_wood35",
+   "kind": "pbr",
+   "title": "Weathered grey-brown wood (Wood35)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Wood35",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": null,
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures @ 1b2a51f (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_harbor",
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Weathered timber: festival frames, stalls, platforms, quay.",
+   "files": [
+    {
+     "path": "pbr/acg_wood35/Wood35_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Wood35_col.jpg",
+     "sha256": "45cca13e3a5877e3c4ab8c8db2bb1bf461e49858c0a1f477dc0caa881607782b",
+     "bytes": 6250053
+    },
+    {
+     "path": "pbr/acg_wood35/Wood35_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Wood35_nrm.jpg",
+     "sha256": "ff183f6d1d90e53d46c437ded80390248602e114bf07e70b8882178e742e330d",
+     "bytes": 7572740
+    },
+    {
+     "path": "pbr/acg_wood35/Wood35_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Wood35_rgh.jpg",
+     "sha256": "4ab1845e2773710ad58bf85619a7ff1a9902b217a575f787c8830772f3ab1f89",
+     "bytes": 3073824
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_wood35/Wood35_col.jpg",
+     "normal": "pbr/acg_wood35/Wood35_nrm.jpg",
+     "roughness": "pbr/acg_wood35/Wood35_rgh.jpg"
+    },
+    "tile_m": 1.5,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "no height map; curl ratio 1.7"
+   }
+  },
+  {
+   "id": "pbr/acg_planks21",
+   "kind": "pbr",
+   "title": "Pine planks (Planks21)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Planks21",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": "Planks021",
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures @ 1b2a51f (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_harbor",
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Plank decks/walls (fresh pine; grade darker/greyer for age).",
+   "files": [
+    {
+     "path": "pbr/acg_planks21/Planks21_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Planks21_col.jpg",
+     "sha256": "61064629fb219c08d37140a75850a507311bdd5178715963ad214921fda6fdc3",
+     "bytes": 4385196
+    },
+    {
+     "path": "pbr/acg_planks21/Planks21_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Planks21_nrm.jpg",
+     "sha256": "7a11549518d022a86e9c729bf8d30adbce6975339ce8f03a4d12695e3eff2ff8",
+     "bytes": 6426690
+    },
+    {
+     "path": "pbr/acg_planks21/Planks21_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Planks21_rgh.jpg",
+     "sha256": "acce36b9d0d1c84fe32561d04527b47c278db6472b7e0be8d9e3ae34246eeabd",
+     "bytes": 2218122
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_planks21/Planks21_col.jpg",
+     "normal": "pbr/acg_planks21/Planks21_nrm.jpg",
+     "roughness": "pbr/acg_planks21/Planks21_rgh.jpg"
+    },
+    "tile_m": 1.5,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "no height map; curl ratio 2.4"
+   }
+  },
+  {
+   "id": "pbr/acg_leather26",
+   "kind": "pbr",
+   "title": "Black leather (Leather26)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Leather26",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": "Leather026",
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures @ 1b2a51f (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Saddles and riding rigs (black: suits Charcoal's rig).",
+   "files": [
+    {
+     "path": "pbr/acg_leather26/Leather26_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Leather26_col.jpg",
+     "sha256": "758863504193c6bf50eee90f5060a22f00c8e2460ad5126bb23434e0a8054b84",
+     "bytes": 2700872
+    },
+    {
+     "path": "pbr/acg_leather26/Leather26_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Leather26_nrm.jpg",
+     "sha256": "f2625d78d35741c2ef66f749c7176758a51e991d7ae051c72b9d85daebf8b2fb",
+     "bytes": 6798544
+    },
+    {
+     "path": "pbr/acg_leather26/Leather26_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Leather26_rgh.jpg",
+     "sha256": "f3ce61c22e7507673a0bb54d74f73451548825f7af8066bf20f2bb6495156910",
+     "bytes": 2362913
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_leather26/Leather26_col.jpg",
+     "normal": "pbr/acg_leather26/Leather26_nrm.jpg",
+     "roughness": "pbr/acg_leather26/Leather26_rgh.jpg"
+    },
+    "tile_m": 0.5,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "no height map; curl ratio 3.2"
+   }
+  },
+  {
+   "id": "pbr/acg_fabric36",
+   "kind": "pbr",
+   "title": "Light linen (Fabric36)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Fabric36",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": null,
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures @ 1b2a51f (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.verdor_birthing_chamber",
+    "set.verdor_treatment_room",
+    "set.cling_village_square"
+   ],
+   "use": "Undyed linen: clothing, folded cloths, bedding, bandages, stall cloth.",
+   "files": [
+    {
+     "path": "pbr/acg_fabric36/Fabric36_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Fabric36_col.jpg",
+     "sha256": "075495919b2bfbc65d9a0f5db74bc80bab84857250bede85b158a5655c24cca2",
+     "bytes": 2490655
+    },
+    {
+     "path": "pbr/acg_fabric36/Fabric36_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Fabric36_nrm.jpg",
+     "sha256": "fbd3ba34034f8b5ae58f500feb596cd7d3677a8ab5cf06c1fb94b6f3cde43c1c",
+     "bytes": 9718998
+    },
+    {
+     "path": "pbr/acg_fabric36/Fabric36_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Fabric36_rgh.jpg",
+     "sha256": "f8df7d126963ddbbdb88e4dda18ab00d7e48664d75c980d099c3c4f692cc0058",
+     "bytes": 2821539
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_fabric36/Fabric36_col.jpg",
+     "normal": "pbr/acg_fabric36/Fabric36_nrm.jpg",
+     "roughness": "pbr/acg_fabric36/Fabric36_rgh.jpg"
+    },
+    "tile_m": 0.5,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "no height map; curl ratio 2.9"
+   }
+  },
+  {
+   "id": "pbr/acg_fabric40",
+   "kind": "pbr",
+   "title": "Red woven cloth (Fabric40)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Fabric40",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": null,
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures @ 1b2a51f (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.cling_village_square"
+   ],
+   "use": "Warm festival banners and stall awnings.",
+   "files": [
+    {
+     "path": "pbr/acg_fabric40/Fabric40_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Fabric40_col.jpg",
+     "sha256": "9f891f1f0a8bfdbf395e4e8cc374470494ef2a4724cb9ed30550b4ffd4ced1b6",
+     "bytes": 5167741
+    },
+    {
+     "path": "pbr/acg_fabric40/Fabric40_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Fabric40_nrm.jpg",
+     "sha256": "869db553d15a4cd4e46f9da76e931c1f74fee71db704ffc34df2f94ff980f506",
+     "bytes": 8872262
+    },
+    {
+     "path": "pbr/acg_fabric40/Fabric40_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Fabric40_rgh.jpg",
+     "sha256": "abae0e61e2b5d9beebeb60aad62b6fbb29f2c3b9189149aa05d3515661cbd277",
+     "bytes": 2553391
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_fabric40/Fabric40_col.jpg",
+     "normal": "pbr/acg_fabric40/Fabric40_nrm.jpg",
+     "roughness": "pbr/acg_fabric40/Fabric40_rgh.jpg"
+    },
+    "tile_m": 0.5,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "no height map; curl ratio 2.0"
+   }
+  },
+  {
+   "id": "pbr/acg_fabric37",
+   "kind": "pbr",
+   "title": "Green woven cloth (Fabric37)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era, 2018-2020)",
+    "legacy_id": "Fabric37",
+    "url": "https://ambientcg.com/",
+    "current_id_guess": null,
+    "current_id_note": "cc0textures-era ids were renumbered by ambientCG; the current id is a guess by number, not verified"
+   },
+   "via": "GitHub mirror RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures @ 1b2a51f (plain JPEGs, as published by cc0textures.com)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.cling_village_square"
+   ],
+   "use": "Banners / clothing variety.",
+   "files": [
+    {
+     "path": "pbr/acg_fabric37/Fabric37_col.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Fabric37_col.jpg",
+     "sha256": "4592ab97515aaff2bb6b31f58e36f60856be98b0c8e57efd6255b719f924fb02",
+     "bytes": 4723724
+    },
+    {
+     "path": "pbr/acg_fabric37/Fabric37_nrm.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Fabric37_nrm.jpg",
+     "sha256": "b71002a58314e1e0ac56054e25923d0cae3029dd8ac6ac6020e62a97fb78cce4",
+     "bytes": 8762698
+    },
+    {
+     "path": "pbr/acg_fabric37/Fabric37_rgh.jpg",
+     "url": "https://raw.githubusercontent.com/RubenCUR/ArmorPaint-Blender-Materials-Latest-March-1st-CC0-Textures/1b2a51fa95d6bc4c6f01336142b20f15f01dfa4b/textures/Fabric37_rgh.jpg",
+     "sha256": "b702c301e931e50ad8e68c4ee6b2644ec3aca8f6242fa62be6c5767cc6f597ff",
+     "bytes": 2540534
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_fabric37/Fabric37_col.jpg",
+     "normal": "pbr/acg_fabric37/Fabric37_nrm.jpg",
+     "roughness": "pbr/acg_fabric37/Fabric37_rgh.jpg"
+    },
+    "tile_m": 0.5,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "no height map; curl ratio 1.9"
+   }
+  },
+  {
+   "id": "pbr/acg_leather05",
+   "kind": "pbr",
+   "title": "Red-brown leather (Leather05)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era)",
+    "legacy_id": "Leather05",
+    "url": "https://ambientcg.com/"
+   },
+   "via": "GitHub (Git LFS) yuki-koyama/cc0assetsloader @ 7401b0a",
+   "resolution": "2048 px",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Saddles, straps, riding rigs (warm brown-red leather).",
+   "files": [
+    {
+     "path": "pbr/acg_leather05/Leather05_col.jpg",
+     "url": "https://media.githubusercontent.com/media/yuki-koyama/cc0assetsloader/7401b0aa5ea7dcd8585c828fca354182358eca4c/assets/cc0textures.com/%5B2K%5DLeather05/Leather05_col.jpg",
+     "sha256": "671d708675df8290cc0a96731eccff3bf8ed2a0ad38d6bae17118da010b05e67",
+     "bytes": 2332789
+    },
+    {
+     "path": "pbr/acg_leather05/Leather05_nrm.jpg",
+     "url": "https://media.githubusercontent.com/media/yuki-koyama/cc0assetsloader/7401b0aa5ea7dcd8585c828fca354182358eca4c/assets/cc0textures.com/%5B2K%5DLeather05/Leather05_nrm.jpg",
+     "sha256": "3f9803608646da6f8998eea3a2272d57bef96df804e818b2cadee68d336de362",
+     "bytes": 8272932
+    },
+    {
+     "path": "pbr/acg_leather05/Leather05_rgh.jpg",
+     "url": "https://media.githubusercontent.com/media/yuki-koyama/cc0assetsloader/7401b0aa5ea7dcd8585c828fca354182358eca4c/assets/cc0textures.com/%5B2K%5DLeather05/Leather05_rgh.jpg",
+     "sha256": "d8599e091f92fcd415e5ae67cd14f1827293ab7adbea804bd0b134ed4115ce34",
+     "bytes": 2115549
+    },
+    {
+     "path": "pbr/acg_leather05/Leather05_disp.jpg",
+     "url": "https://media.githubusercontent.com/media/yuki-koyama/cc0assetsloader/7401b0aa5ea7dcd8585c828fca354182358eca4c/assets/cc0textures.com/%5B2K%5DLeather05/Leather05_disp.jpg",
+     "sha256": "a9fe3452c474e7fb6f5aa28d18c1e7fd628c6620a552ce8ec9bef0364eae68d2",
+     "bytes": 2385611
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_leather05/Leather05_col.jpg",
+     "normal": "pbr/acg_leather05/Leather05_nrm.jpg",
+     "roughness": "pbr/acg_leather05/Leather05_rgh.jpg",
+     "height": "pbr/acg_leather05/Leather05_disp.jpg"
+    },
+    "tile_m": 0.5,
+    "tile_m_note": "estimated",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "corr -0.95, curl ratio 3.4"
+   }
+  },
+  {
+   "id": "pbr/acg_metal26",
+   "kind": "pbr",
+   "title": "Rusted iron (Metal26)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG, formerly cc0textures.com)",
+   "origin": {
+    "provider": "ambientCG (cc0textures.com era)",
+    "legacy_id": "Metal26",
+    "url": "https://ambientcg.com/"
+   },
+   "via": "GitHub (Git LFS) yuki-koyama/cc0assetsloader @ 7401b0a",
+   "resolution": "2048 px",
+   "sets": [
+    "set.verdor_harbor",
+    "set.verdor_riding_grounds",
+    "set.cling_village_square"
+   ],
+   "use": "Iron fittings: rig buckles, cleats, bell, hinges, cart tyres.",
+   "files": [
+    {
+     "path": "pbr/acg_metal26/Metal26_col.jpg",
+     "url": "https://media.githubusercontent.com/media/yuki-koyama/cc0assetsloader/7401b0aa5ea7dcd8585c828fca354182358eca4c/assets/cc0textures.com/%5B2K%5DMetal26/Metal26_col.jpg",
+     "sha256": "232ec9db41e093957a3586af6f35f1aa93a119e8f64c2bba9036808d1eed8be1",
+     "bytes": 5609432
+    },
+    {
+     "path": "pbr/acg_metal26/Metal26_nrm.jpg",
+     "url": "https://media.githubusercontent.com/media/yuki-koyama/cc0assetsloader/7401b0aa5ea7dcd8585c828fca354182358eca4c/assets/cc0textures.com/%5B2K%5DMetal26/Metal26_nrm.jpg",
+     "sha256": "38a4d89e44d23f3c56e31e9c6582496965a2e6f74d00867a000e57c53d5f59ea",
+     "bytes": 5554346
+    },
+    {
+     "path": "pbr/acg_metal26/Metal26_rgh.jpg",
+     "url": "https://media.githubusercontent.com/media/yuki-koyama/cc0assetsloader/7401b0aa5ea7dcd8585c828fca354182358eca4c/assets/cc0textures.com/%5B2K%5DMetal26/Metal26_rgh.jpg",
+     "sha256": "b3732160ae1c62cc4206b2d07b2d9b43b6c0f93a082c5b13d70edd7a040ab626",
+     "bytes": 2912566
+    },
+    {
+     "path": "pbr/acg_metal26/Metal26_disp.jpg",
+     "url": "https://media.githubusercontent.com/media/yuki-koyama/cc0assetsloader/7401b0aa5ea7dcd8585c828fca354182358eca4c/assets/cc0textures.com/%5B2K%5DMetal26/Metal26_disp.jpg",
+     "sha256": "0e1b4e22fa8929aacf8020b3eb54dd8483c257a44cc6f6ef90dca21f03adf682",
+     "bytes": 2917872
+    },
+    {
+     "path": "pbr/acg_metal26/Metal26_met.jpg",
+     "url": "https://media.githubusercontent.com/media/yuki-koyama/cc0assetsloader/7401b0aa5ea7dcd8585c828fca354182358eca4c/assets/cc0textures.com/%5B2K%5DMetal26/Metal26_met.jpg",
+     "sha256": "256a395ac5c23500e64362d2e2e230b747e72d7daa4387f4feb70785a9de46d3",
+     "bytes": 3360526
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_metal26/Metal26_col.jpg",
+     "normal": "pbr/acg_metal26/Metal26_nrm.jpg",
+     "roughness": "pbr/acg_metal26/Metal26_rgh.jpg",
+     "height": "pbr/acg_metal26/Metal26_disp.jpg",
+     "metalness": "pbr/acg_metal26/Metal26_met.jpg"
+    },
+    "tile_m": 0.5,
+    "tile_m_note": "estimated",
+    "normal_convention": "dx",
+    "normal_convention_evidence": "corr -0.89, curl ratio 2.7"
+   }
+  },
+  {
+   "id": "pbr/ph_white_sandstone_bricks_03",
+   "kind": "pbr",
+   "title": "White sandstone bricks 03 (Poly Haven)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Poly Haven (Rob Tuytel / Poly Haven team)",
+   "origin": {
+    "provider": "Poly Haven (formerly texturehaven.com)",
+    "url": "https://polyhaven.com/a/white_sandstone_bricks_03"
+   },
+   "via": "GitHub (Git LFS) laurenth-personal/MaterialsStarter @ 484b174: 2K maps repacked for Unity HDRP (BC = base colour, N = normal, M = mask)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_harbor",
+    "set.verdor_birthing_chamber",
+    "set.verdor_treatment_room",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Weathered pale stone walls of Verdor (palace, quay, building at the field edge, interiors).",
+   "files": [
+    {
+     "path": "pbr/ph_white_sandstone_bricks_03/white_sandstone_bricks_03_BC.png",
+     "url": "https://media.githubusercontent.com/media/laurenth-personal/MaterialsStarter/484b1748a4abb5dc69633911cc3fb2b66530e588/Assets/MaterialStarter/Textures/white_sandstone_bricks_03_BC.png",
+     "sha256": "2bfba8da69e34ee7adae980579236525ce2c7ac068bcc598fb2b7b907190b091",
+     "bytes": 7619106
+    },
+    {
+     "path": "pbr/ph_white_sandstone_bricks_03/white_sandstone_bricks_03_N.png",
+     "url": "https://media.githubusercontent.com/media/laurenth-personal/MaterialsStarter/484b1748a4abb5dc69633911cc3fb2b66530e588/Assets/MaterialStarter/Textures/white_sandstone_bricks_03_N.png",
+     "sha256": "9afde9858af088ef0999ee8c99da758f3ccae27b4496d8c6e403d5387ac84ba1",
+     "bytes": 7740326
+    },
+    {
+     "path": "pbr/ph_white_sandstone_bricks_03/white_sandstone_bricks_03_M.png",
+     "url": "https://media.githubusercontent.com/media/laurenth-personal/MaterialsStarter/484b1748a4abb5dc69633911cc3fb2b66530e588/Assets/MaterialStarter/Textures/white_sandstone_bricks_03_M.png",
+     "sha256": "83ac00f356ac2880c0a95ca60bfc9acea53aaa64f12c201fab980d27079eed74",
+     "bytes": 9650325
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/ph_white_sandstone_bricks_03/white_sandstone_bricks_03_BC.png",
+     "normal": "pbr/ph_white_sandstone_bricks_03/white_sandstone_bricks_03_N.png",
+     "packed": "pbr/ph_white_sandstone_bricks_03/white_sandstone_bricks_03_M.png"
+    },
+    "packed_channels": {
+     "height": "R",
+     "ao": "G",
+     "roughness": "A"
+    },
+    "packed_note": "Mask map as found (R looks like height, G = AO, B = 1, A = smoothness or roughness; the repacker was not consistent). Roughness source chosen per set by physical plausibility (sandstone/pebbles are rough). Replace with the Poly Haven originals when dl.polyhaven.org is reachable.",
+    "tile_m": 2.0,
+    "tile_m_note": "estimated",
+    "normal_convention": "gl",
+    "normal_convention_evidence": "corr +0.92 (vs mask R = height), curl ratio 4.0"
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "white_sandstone_bricks_03",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg"
+   }
+  },
+  {
+   "id": "pbr/ph_sandstone_blocks_04",
+   "kind": "pbr",
+   "title": "Sandstone blocks 04 (Poly Haven)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Poly Haven (Rob Tuytel / Poly Haven team)",
+   "origin": {
+    "provider": "Poly Haven (formerly texturehaven.com)",
+    "url": "https://polyhaven.com/a/sandstone_blocks_04"
+   },
+   "via": "GitHub (Git LFS) laurenth-personal/MaterialsStarter @ 484b174: 2K maps repacked for Unity HDRP (BC = base colour, N = normal, M = mask)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_harbor",
+    "set.verdor_birthing_chamber"
+   ],
+   "use": "Large weathered pale ashlar blocks: steps, quay walls, chamber walls.",
+   "files": [
+    {
+     "path": "pbr/ph_sandstone_blocks_04/sandstone_blocks_04_BC.png",
+     "url": "https://media.githubusercontent.com/media/laurenth-personal/MaterialsStarter/484b1748a4abb5dc69633911cc3fb2b66530e588/Assets/MaterialStarter/Textures/sandstone_blocks_04_BC.png",
+     "sha256": "50e327109e0111f484fc55cf71c0d44b69f38d7428a6cd14507d9967bf204312",
+     "bytes": 6975819
+    },
+    {
+     "path": "pbr/ph_sandstone_blocks_04/sandstone_blocks_04_N.png",
+     "url": "https://media.githubusercontent.com/media/laurenth-personal/MaterialsStarter/484b1748a4abb5dc69633911cc3fb2b66530e588/Assets/MaterialStarter/Textures/sandstone_blocks_04_N.png",
+     "sha256": "8bd092885a30b06c39fe0b1519b58fb7ca56a5fd2d8efd258a84c8957e5b154d",
+     "bytes": 7529365
+    },
+    {
+     "path": "pbr/ph_sandstone_blocks_04/sandstone_blocks_04_M.png",
+     "url": "https://media.githubusercontent.com/media/laurenth-personal/MaterialsStarter/484b1748a4abb5dc69633911cc3fb2b66530e588/Assets/MaterialStarter/Textures/sandstone_blocks_04_M.png",
+     "sha256": "841524f6f635c2f19ba20beb7fd80e99b6f5e0814fe90b28daaa76ad5b3dec3c",
+     "bytes": 17239606
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/ph_sandstone_blocks_04/sandstone_blocks_04_BC.png",
+     "normal": "pbr/ph_sandstone_blocks_04/sandstone_blocks_04_N.png",
+     "packed": "pbr/ph_sandstone_blocks_04/sandstone_blocks_04_M.png"
+    },
+    "packed_channels": {
+     "height": "R",
+     "ao": "G",
+     "roughness": "1-A"
+    },
+    "packed_note": "Mask map as found (R looks like height, G = AO, B = 1, A = smoothness or roughness; the repacker was not consistent). Roughness source chosen per set by physical plausibility (sandstone/pebbles are rough). Replace with the Poly Haven originals when dl.polyhaven.org is reachable.",
+    "tile_m": 2.0,
+    "tile_m_note": "estimated",
+    "normal_convention": "gl",
+    "normal_convention_evidence": "corr +0.76, curl ratio 4.4"
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "sandstone_blocks_04",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg"
+   }
+  },
+  {
+   "id": "pbr/ph_floor_pebbles_01",
+   "kind": "pbr",
+   "title": "Floor pebbles 01 (Poly Haven)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Poly Haven (Rob Tuytel / Poly Haven team)",
+   "origin": {
+    "provider": "Poly Haven (formerly texturehaven.com)",
+    "url": "https://polyhaven.com/a/floor_pebbles_01"
+   },
+   "via": "GitHub (Git LFS) laurenth-personal/MaterialsStarter @ 484b174: 2K maps repacked for Unity HDRP (BC = base colour, N = normal, M = mask)",
+   "resolution": "2048 px",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_harbor",
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Pebbled/gravel path surfaces, alleys, yard floors.",
+   "files": [
+    {
+     "path": "pbr/ph_floor_pebbles_01/floor_pebbles_01_BC.png",
+     "url": "https://media.githubusercontent.com/media/laurenth-personal/MaterialsStarter/484b1748a4abb5dc69633911cc3fb2b66530e588/Assets/MaterialStarter/Textures/floor_pebbles_01_BC.png",
+     "sha256": "9357412bb20741ed17d7bb8068fcbd3ffcc80c35ccce919e31c2065a6f8e7104",
+     "bytes": 7431082
+    },
+    {
+     "path": "pbr/ph_floor_pebbles_01/floor_pebbles_01_N.png",
+     "url": "https://media.githubusercontent.com/media/laurenth-personal/MaterialsStarter/484b1748a4abb5dc69633911cc3fb2b66530e588/Assets/MaterialStarter/Textures/floor_pebbles_01_N.png",
+     "sha256": "46f6896a4610aae550d5b78339edd080dc427c63a6b4e81c927b142161607b93",
+     "bytes": 8948176
+    },
+    {
+     "path": "pbr/ph_floor_pebbles_01/floor_pebbles_01_M.png",
+     "url": "https://media.githubusercontent.com/media/laurenth-personal/MaterialsStarter/484b1748a4abb5dc69633911cc3fb2b66530e588/Assets/MaterialStarter/Textures/floor_pebbles_01_M.png",
+     "sha256": "ea54b00aa1bbc23474d15b981d90f733c543ff8e99314dd13f921b354ecea7ba",
+     "bytes": 19015313
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/ph_floor_pebbles_01/floor_pebbles_01_BC.png",
+     "normal": "pbr/ph_floor_pebbles_01/floor_pebbles_01_N.png",
+     "packed": "pbr/ph_floor_pebbles_01/floor_pebbles_01_M.png"
+    },
+    "packed_channels": {
+     "height": "R",
+     "ao": "G",
+     "roughness": "1-A"
+    },
+    "packed_note": "Mask map as found (R looks like height, G = AO, B = 1, A = smoothness or roughness; the repacker was not consistent). Roughness source chosen per set by physical plausibility (sandstone/pebbles are rough). Replace with the Poly Haven originals when dl.polyhaven.org is reachable.",
+    "tile_m": 2.0,
+    "tile_m_note": "estimated",
+    "normal_convention": "gl",
+    "normal_convention_evidence": "corr +0.42, curl ratio 4.6"
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "floor_pebbles_01",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg"
+   }
+  },
+  {
+   "id": "pbr/khr_wicker",
+   "kind": "pbr",
+   "title": "Wicker weave (Khronos ClearcoatWicker sample)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Eric Chadwick (Khronos glTF sample asset, 2023)",
+   "origin": {
+    "provider": "Khronos glTF-Sample-Assets",
+    "url": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/ClearcoatWicker"
+   },
+   "via": "raw.githubusercontent.com KhronosGroup/glTF-Sample-Assets @ edc7c9e",
+   "resolution": "512 px (low: mid-distance props only)",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_birthing_chamber"
+   ],
+   "use": "Baskets, wicker panels on stalls (use without the clearcoat). Opaque weave (no alpha).",
+   "files": [
+    {
+     "path": "pbr/khr_wicker/wicker_basecolor.png",
+     "url": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/edc7c9e67c639d230715049ee31f9a96a6babbbe/Models/ClearcoatWicker/glTF/wicker_basecolor.png",
+     "sha256": "e73c93a47216030b08df6301b209b1a7f462b67b9c41ed77441ea274003a5912",
+     "bytes": 387512
+    },
+    {
+     "path": "pbr/khr_wicker/wicker_normal.png",
+     "url": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/edc7c9e67c639d230715049ee31f9a96a6babbbe/Models/ClearcoatWicker/glTF/wicker_normal.png",
+     "sha256": "9132e59ee4d0e075642e4171f229353396b35ae80c1725fd297f2da35346f0dc",
+     "bytes": 324805
+    },
+    {
+     "path": "pbr/khr_wicker/wicker_occlusion-rough-metal.png",
+     "url": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/edc7c9e67c639d230715049ee31f9a96a6babbbe/Models/ClearcoatWicker/glTF/wicker_occlusion-rough-metal.png",
+     "sha256": "125aa18c43dfc2430082baea1c9ebc0e8f0e023a42ad2b97d28d96a5ec539034",
+     "bytes": 338821
+    },
+    {
+     "path": "pbr/khr_wicker/LICENSE.md",
+     "url": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/edc7c9e67c639d230715049ee31f9a96a6babbbe/Models/ClearcoatWicker/LICENSE.md",
+     "sha256": "625cc9e6acf2055201162048d083b017e7f59c82ebb29c09eb1f648360eb7f4b",
+     "bytes": 778
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/khr_wicker/wicker_basecolor.png",
+     "normal": "pbr/khr_wicker/wicker_normal.png",
+     "packed": "pbr/khr_wicker/wicker_occlusion-rough-metal.png"
+    },
+    "packed_channels": {
+     "ao": "R",
+     "roughness": "G",
+     "metalness": "B"
+    },
+    "tile_m": 0.5,
+    "tile_m_note": "estimated",
+    "normal_convention": "gl",
+    "normal_convention_evidence": "glTF convention; curl ratio 1.3"
+   }
+  },
+  {
+   "id": "model/babylon_coastal_cliff",
+   "kind": "model",
+   "title": "Coastal cliff composition (Poly Haven scans, processed by Babylon.js)",
+   "status": "available",
+   "license": "CC-BY-4.0",
+   "license_note": "Composition published in the BabylonJS/Assets repository (repository licence CC BY 4.0); its license.txt states it is built from Poly Haven CC0 assets (coastal_cliff_01, namaqualand_cliff_01/02, coast_land_rocks_04, rock_moss_set_01/02, moss_01, quiver_tree_02, dry_branches_medium_01). Treated as CC BY 4.0: credit \"Coastal cliff composition: Babylon.js (CC BY 4.0), from Poly Haven assets (CC0)\".",
+   "author": "Babylon.js team (composition); Poly Haven (source scans)",
+   "origin": {
+    "provider": "BabylonJS/Assets",
+    "url": "https://github.com/BabylonJS/Assets/tree/master/meshes/MeshBlending"
+   },
+   "via": "raw.githubusercontent.com BabylonJS/Assets @ ddad48e",
+   "resolution": "reduced textures (KTX2/Basis), Draco meshes",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.prologue"
+   ],
+   "use": "Outer rocks / rocky shore / sea-cliff pieces; mossy boulders and pebbles (instanced). Scale: metres; three.js bounding box of the loaded model ~22 x 10 x 22 m.",
+   "files": [
+    {
+     "path": "model/babylon_coastal_cliff/coastalCliff.glb",
+     "url": "https://raw.githubusercontent.com/BabylonJS/Assets/ddad48e7c2dfdaf1d09f53263f3f4116537e73bf/meshes/MeshBlending/coastalCliff.glb",
+     "sha256": "dc6d1d8a8ef17e3b2f703b91ef21971a87f2ead71f910e2aafdbd77e5e78decf",
+     "bytes": 4890384
+    },
+    {
+     "path": "model/babylon_coastal_cliff/license.txt",
+     "url": "https://raw.githubusercontent.com/BabylonJS/Assets/ddad48e7c2dfdaf1d09f53263f3f4116537e73bf/meshes/MeshBlending/license.txt",
+     "sha256": "be990b76cd0374830af31dbdb8c507af95221c2a32daaf78141b13cdf81513eb",
+     "bytes": 551
+    }
+   ],
+   "params": {
+    "entry": "model/babylon_coastal_cliff/coastalCliff.glb",
+    "units": "m",
+    "gltf_extensions": [
+     "KHR_draco_mesh_compression",
+     "KHR_texture_basisu",
+     "EXT_mesh_gpu_instancing"
+    ]
+   }
+  },
+  {
+   "id": "model/ph_dutch_ship_medium",
+   "kind": "model",
+   "title": "Dutch ship, medium (Poly Haven)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/dutch_ship_medium"
+   },
+   "via": "GitHub godotengine/godot-demo-projects @ 3e08537 (original Poly Haven 1k glTF, unmodified)",
+   "resolution": "1k textures",
+   "sets": [
+    "set.prologue",
+    "set.verdor_harbor"
+   ],
+   "use": "Wooden sailing vessel: distant prologue vessel / harbor background ship, rigging and sails reference. ~24 m long, rigging ~23 m high. Not the Santa Maria design (provisional).",
+   "files": [
+    {
+     "path": "model/ph_dutch_ship_medium/dutch_ship_medium_1k.gltf",
+     "url": "https://raw.githubusercontent.com/godotengine/godot-demo-projects/3e08537616661a5883831628decab4c526260289/3d/graphics_settings/polyhaven/dutch_ship_medium_1k.gltf",
+     "sha256": "f823f83e9452484bcadc41424cc3f40b794a7272f7505c8c774543e73a692d51",
+     "bytes": 7495
+    },
+    {
+     "path": "model/ph_dutch_ship_medium/dutch_ship_medium.bin",
+     "url": "https://raw.githubusercontent.com/godotengine/godot-demo-projects/3e08537616661a5883831628decab4c526260289/3d/graphics_settings/polyhaven/dutch_ship_medium.bin",
+     "sha256": "7ff5d886d3baea1f60afdc17c50b99029d7abca159db10212c89c95e39c5437e",
+     "bytes": 2480380
+    },
+    {
+     "path": "model/ph_dutch_ship_medium/textures/dutch_ship_medium_hull_diff_1k.jpg",
+     "url": "https://raw.githubusercontent.com/godotengine/godot-demo-projects/3e08537616661a5883831628decab4c526260289/3d/graphics_settings/polyhaven/textures/dutch_ship_medium_hull_diff_1k.jpg",
+     "sha256": "8bb56d0a31b08c5ca133041cf703daa33d6742d6df0d267c7fe5eced45c9d605",
+     "bytes": 745169
+    },
+    {
+     "path": "model/ph_dutch_ship_medium/textures/dutch_ship_medium_hull_nor_gl_1k.jpg",
+     "url": "https://raw.githubusercontent.com/godotengine/godot-demo-projects/3e08537616661a5883831628decab4c526260289/3d/graphics_settings/polyhaven/textures/dutch_ship_medium_hull_nor_gl_1k.jpg",
+     "sha256": "9f2c281b1b34182a8487cb2358d5e926bd1b2a5b898e8a22d17e0c4a5de9fb23",
+     "bytes": 967533
+    },
+    {
+     "path": "model/ph_dutch_ship_medium/textures/dutch_ship_medium_hull_arm_1k.jpg",
+     "url": "https://raw.githubusercontent.com/godotengine/godot-demo-projects/3e08537616661a5883831628decab4c526260289/3d/graphics_settings/polyhaven/textures/dutch_ship_medium_hull_arm_1k.jpg",
+     "sha256": "10274d6f3815b73f559a920d01a7e9df8feba2ee2e3f574fdc106cedd769106b",
+     "bytes": 992318
+    },
+    {
+     "path": "model/ph_dutch_ship_medium/textures/dutch_ship_medium_rigging_diff_1k.jpg",
+     "url": "https://raw.githubusercontent.com/godotengine/godot-demo-projects/3e08537616661a5883831628decab4c526260289/3d/graphics_settings/polyhaven/textures/dutch_ship_medium_rigging_diff_1k.jpg",
+     "sha256": "e88492e5cceef5b17e31d727b7d67ddce07ca58418e86581d845b949df2cb2d7",
+     "bytes": 567644
+    },
+    {
+     "path": "model/ph_dutch_ship_medium/textures/dutch_ship_medium_rigging_nor_gl_1k.jpg",
+     "url": "https://raw.githubusercontent.com/godotengine/godot-demo-projects/3e08537616661a5883831628decab4c526260289/3d/graphics_settings/polyhaven/textures/dutch_ship_medium_rigging_nor_gl_1k.jpg",
+     "sha256": "1a6c2fd46ba46239c6fe8d19b7462d86252f161d2dc21954780c12addbb6622c",
+     "bytes": 535119
+    },
+    {
+     "path": "model/ph_dutch_ship_medium/textures/dutch_ship_medium_rigging_arm_1k.jpg",
+     "url": "https://raw.githubusercontent.com/godotengine/godot-demo-projects/3e08537616661a5883831628decab4c526260289/3d/graphics_settings/polyhaven/textures/dutch_ship_medium_rigging_arm_1k.jpg",
+     "sha256": "7429a00828ab899e00460c128e06dcd8fb291ab906f4af9a5bd49568e6d3062e",
+     "bytes": 556896
+    },
+    {
+     "path": "model/ph_dutch_ship_medium/textures/dutch_ship_medium_sails_diff_1k.jpg",
+     "url": "https://raw.githubusercontent.com/godotengine/godot-demo-projects/3e08537616661a5883831628decab4c526260289/3d/graphics_settings/polyhaven/textures/dutch_ship_medium_sails_diff_1k.jpg",
+     "sha256": "0a877ee5b446ee5fe624618b3bc7224bd4555a077804c4f1afe61d8ae4600147",
+     "bytes": 579788
+    },
+    {
+     "path": "model/ph_dutch_ship_medium/textures/dutch_ship_medium_sails_nor_gl_1k.jpg",
+     "url": "https://raw.githubusercontent.com/godotengine/godot-demo-projects/3e08537616661a5883831628decab4c526260289/3d/graphics_settings/polyhaven/textures/dutch_ship_medium_sails_nor_gl_1k.jpg",
+     "sha256": "3ba665979b047c91386e89a855d1b9038f1c2e5cda116ecea1a54f976cf12fa4",
+     "bytes": 770917
+    },
+    {
+     "path": "model/ph_dutch_ship_medium/textures/dutch_ship_medium_sails_arm_1k.jpg",
+     "url": "https://raw.githubusercontent.com/godotengine/godot-demo-projects/3e08537616661a5883831628decab4c526260289/3d/graphics_settings/polyhaven/textures/dutch_ship_medium_sails_arm_1k.jpg",
+     "sha256": "ecc0c3b7903ae642cd74214d6a20e6804386cab98759c2f0738a6b0268f825c5",
+     "bytes": 532281
+    }
+   ],
+   "params": {
+    "entry": "model/ph_dutch_ship_medium/dutch_ship_medium_1k.gltf",
+    "units": "m"
+   },
+   "upgrade": {
+    "provider": "polyhaven",
+    "asset": "dutch_ship_medium",
+    "type": "models",
+    "res": "4k",
+    "format": "gltf"
+   }
+  },
+  {
+   "id": "model/khr_lantern",
+   "kind": "model",
+   "title": "Old wooden street lantern (Khronos sample)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "sbtron / Microsoft (Khronos glTF sample asset, 2017)",
+   "origin": {
+    "provider": "Khronos glTF-Sample-Assets",
+    "url": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Lantern"
+   },
+   "via": "raw.githubusercontent.com KhronosGroup/glTF-Sample-Assets @ edc7c9e",
+   "resolution": "see file",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_harbor"
+   ],
+   "use": "Street/quay lantern; disable the emissive map in daylight shots (no glow).",
+   "files": [
+    {
+     "path": "model/khr_lantern/Lantern.glb",
+     "url": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/edc7c9e67c639d230715049ee31f9a96a6babbbe/Models/Lantern/glTF-Binary/Lantern.glb",
+     "sha256": "a79458c4b02d695187a952f23a63b8bf278e7bc3d316a3c2a314f2d6974181f1",
+     "bytes": 9564264
+    },
+    {
+     "path": "model/khr_lantern/LICENSE.md",
+     "url": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/edc7c9e67c639d230715049ee31f9a96a6babbbe/Models/Lantern/LICENSE.md",
+     "sha256": "59fcd6131454dd17312ff9671094bfe9139f3b301d0c3e3b1a5a7e4ee1b0c75a",
+     "bytes": 911
+    }
+   ],
+   "params": {
+    "entry": "model/khr_lantern/Lantern.glb",
+    "units": "m",
+    "scale_to_m": 0.1,
+    "scale_note": "authored ~25.8 units tall; 0.1 gives a ~2.6 m lantern pole"
+   }
+  },
+  {
+   "id": "model/khr_barramundifish",
+   "kind": "model",
+   "title": "Barramundi fish (Khronos sample)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Microsoft (Khronos glTF sample asset, 2017)",
+   "origin": {
+    "provider": "Khronos glTF-Sample-Assets",
+    "url": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/BarramundiFish"
+   },
+   "via": "raw.githubusercontent.com KhronosGroup/glTF-Sample-Assets @ edc7c9e",
+   "resolution": "see file",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_harbor"
+   ],
+   "use": "Fish for the food stalls / harbor catch.",
+   "files": [
+    {
+     "path": "model/khr_barramundifish/BarramundiFish.glb",
+     "url": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/edc7c9e67c639d230715049ee31f9a96a6babbbe/Models/BarramundiFish/glTF-Binary/BarramundiFish.glb",
+     "sha256": "ecc3bafb6b00f2c8b810863c388e3768a7b7ea0d0335e8cb8c574c266e571f4a",
+     "bytes": 12488144
+    },
+    {
+     "path": "model/khr_barramundifish/LICENSE.md",
+     "url": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/edc7c9e67c639d230715049ee31f9a96a6babbbe/Models/BarramundiFish/LICENSE.md",
+     "sha256": "668819801937f5b3c4602ca744ddf06ef104e809b36795954ccb9072581a1f08",
+     "bytes": 777
+    }
+   ],
+   "params": {
+    "entry": "model/khr_barramundifish/BarramundiFish.glb",
+    "units": "m",
+    "scale_note": "fish ~0.64 m long, real scale"
+   }
+  },
+  {
+   "id": "human/makehuman_base",
+   "kind": "human",
+   "title": "MakeHuman base mesh (hm08) + default rig and weights",
+   "status": "available",
+   "license": "CC0-1.0",
+   "license_note": "MakeHuman/MPFB \"bundled assets\" (base mesh, proxies, targets, textures, rigs, poses) are CC0 1.0 (LICENSE.md section C + LICENSE.ASSETS.md); the program code is AGPL-3.0 (MakeHuman) / GPL-3.0 (MPFB) and is NOT included here. Output made from the assets is unrestricted (LICENSE.md section D). Third-party assets from the MakeHuman community repositories have their own licences and are not included.",
+   "author": "MakeHuman team / Data Collection AB (released CC0 in September 2020)",
+   "origin": {
+    "provider": "MakeHuman community",
+    "url": "https://github.com/makehumancommunity/makehuman"
+   },
+   "via": "raw.githubusercontent.com makehumancommunity/makehuman @ a8bc2d5, makehumancommunity/mpfb2 @ d0a32e5",
+   "resolution": "mesh: 13380 verts (hm08 topology incl. helper geometry)",
+   "sets": [
+    "all (every human character and crowd)"
+   ],
+   "use": "Starting topology for human characters (shape with targets, skin with the default rig). Realistic skin/hair/eyes still have to be authored (the CC0 MakeHuman skin library is on files.makehumancommunity.org, which is blocked here).",
+   "files": [
+    {
+     "path": "human/makehuman_base/base.obj",
+     "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/makehuman/data/3dobjs/base.obj",
+     "sha256": "8e761e6624b8f54536409135d1636da63b32486a90d4897f84e121d144f6fb4c",
+     "bytes": 1749303
+    },
+    {
+     "path": "human/makehuman_base/rig.default.json",
+     "url": "https://raw.githubusercontent.com/makehumancommunity/mpfb2/d0a32e57a7f915cb2f2b95410e2117648c7bbb7e/src/mpfb/data/rigs/standard/rig.default.json",
+     "sha256": "8b949de35c2dd70dbb5094e57a8586c3b9a9f650775a293212581a8f67be6797",
+     "bytes": 126355
+    },
+    {
+     "path": "human/makehuman_base/weights.default.json",
+     "url": "https://raw.githubusercontent.com/makehumancommunity/mpfb2/d0a32e57a7f915cb2f2b95410e2117648c7bbb7e/src/mpfb/data/rigs/standard/weights.default.json",
+     "sha256": "154b866774a8c2b055a8e86419f22a87b76c60440fdcb70bcb78345f00924e89",
+     "bytes": 5034981
+    },
+    {
+     "path": "human/makehuman_base/LICENSE.md",
+     "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/LICENSE.md",
+     "sha256": "edd99571ca62698f78c943fd4fffb159a413c315fa0d4819d3cec5cadaf8b4f1",
+     "bytes": 3598
+    },
+    {
+     "path": "human/makehuman_base/LICENSE.ASSETS.md",
+     "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/a8bc2d54ff0ac92e78ff71431b1023eda42bf482/LICENSE.ASSETS.md",
+     "sha256": "f6089cba01cb570a24712b41ab8a586ccd3cc5ef53dc266ca50b95c288956d2c",
+     "bytes": 6962
+    }
+   ],
+   "params": {
+    "entry": "human/makehuman_base/base.obj",
+    "units": "decimetres (MakeHuman default: multiply by 0.1 for metres)"
+   }
+  },
+  {
+   "id": "pbr/ph_cliff_side",
+   "kind": "pbr",
+   "title": "Cliff side (layered sea cliff)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/cliff_side"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "cliff_side",
+    "type": "textures",
+    "res": "4k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "4k",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.prologue"
+   ],
+   "use": "Hero sea-cliff face.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_aerial_rocks_02",
+   "kind": "pbr",
+   "title": "Aerial rocks 02 (rock + grass)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/aerial_rocks_02"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "aerial_rocks_02",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.prologue"
+   ],
+   "use": "Cliff tops, rocky headland seen from the air.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_coast_land_rocks_01",
+   "kind": "pbr",
+   "title": "Coast land rocks 01",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/coast_land_rocks_01"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "coast_land_rocks_01",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.verdor_coast_sky"
+   ],
+   "use": "Rocky shore above the tide line.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_rock_face_03",
+   "kind": "pbr",
+   "title": "Rock face 03",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/rock_face_03"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "rock_face_03",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.verdor_coast_sky"
+   ],
+   "use": "Outer rocks close-ups.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_aerial_grass_rock",
+   "kind": "pbr",
+   "title": "Aerial grass rock",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/aerial_grass_rock"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "aerial_grass_rock",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Coastal turf from the air.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_leafy_grass",
+   "kind": "pbr",
+   "title": "Leafy grass",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/leafy_grass"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "leafy_grass",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Turf under grass cards.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_sparse_grass",
+   "kind": "pbr",
+   "title": "Sparse grass",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/sparse_grass"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "sparse_grass",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Worn turf.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_brown_mud_rocks_01",
+   "kind": "pbr",
+   "title": "Brown mud rocks 01",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/brown_mud_rocks_01"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "brown_mud_rocks_01",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Launch scar dirt with stones.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_brown_mud_02",
+   "kind": "pbr",
+   "title": "Brown mud 02",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/brown_mud_02"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "brown_mud_02",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_harbor"
+   ],
+   "use": "Wet dirt.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_coast_sand_01",
+   "kind": "pbr",
+   "title": "Coast sand 01",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/coast_sand_01"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "coast_sand_01",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.prologue",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Beach sand.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_coast_sand_rocks_02",
+   "kind": "pbr",
+   "title": "Coast sand rocks 02",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/coast_sand_rocks_02"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "coast_sand_rocks_02",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.prologue",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Sand with rocks and seaweed.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_dry_river_pebbles",
+   "kind": "pbr",
+   "title": "Dry river pebbles",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/dry_river_pebbles"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "dry_river_pebbles",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.prologue",
+    "set.verdor_coast_sky",
+    "set.verdor_harbor"
+   ],
+   "use": "Shingle.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_medieval_blocks_05",
+   "kind": "pbr",
+   "title": "Medieval blocks 05 (pale limestone)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/medieval_blocks_05"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "medieval_blocks_05",
+    "type": "textures",
+    "res": "4k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "4k",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_harbor",
+    "set.verdor_birthing_chamber",
+    "set.verdor_treatment_room",
+    "set.cling_village_square"
+   ],
+   "use": "Hero weathered pale stone wall.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_white_sandstone_bricks",
+   "kind": "pbr",
+   "title": "White sandstone bricks",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/white_sandstone_bricks"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "white_sandstone_bricks",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_harbor",
+    "set.verdor_birthing_chamber"
+   ],
+   "use": "Pale stone walls.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_castle_wall_slates",
+   "kind": "pbr",
+   "title": "Castle wall slates",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/castle_wall_slates"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "castle_wall_slates",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square",
+    "set.prologue"
+   ],
+   "use": "Fortified walls / rubble walls.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_old_stone_wall",
+   "kind": "pbr",
+   "title": "Old stone wall",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/old_stone_wall"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "old_stone_wall",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Grey stone house walls.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_rock_wall_08",
+   "kind": "pbr",
+   "title": "Rock wall 08 (grey stone)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/rock_wall_08"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "rock_wall_08",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square"
+   ],
+   "use": "Grey stone: arch, steps, fountain, king's cover.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_grey_stone_path",
+   "kind": "pbr",
+   "title": "Grey stone path",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/grey_stone_path"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "grey_stone_path",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square"
+   ],
+   "use": "Flagstones.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_cobblestone_floor_08",
+   "kind": "pbr",
+   "title": "Cobblestone floor 08",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/cobblestone_floor_08"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "cobblestone_floor_08",
+    "type": "textures",
+    "res": "4k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "4k",
+   "sets": [
+    "set.cling_village_square"
+   ],
+   "use": "Uneven square paving (hero).",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_stone_pathway",
+   "kind": "pbr",
+   "title": "Stone pathway",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/stone_pathway"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "stone_pathway",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_harbor"
+   ],
+   "use": "Irregular flagstones (alleys, quay).",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_cobblestone_05",
+   "kind": "pbr",
+   "title": "Cobblestone 05",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/cobblestone_05"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "cobblestone_05",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square"
+   ],
+   "use": "Street cobbles.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_weathered_planks",
+   "kind": "pbr",
+   "title": "Weathered planks",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/weathered_planks"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "weathered_planks",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_harbor",
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Rough timber.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_wood_planks_grey",
+   "kind": "pbr",
+   "title": "Wood planks grey",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/wood_planks_grey"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "wood_planks_grey",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_harbor"
+   ],
+   "use": "Sun-greyed boards.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_rough_wood",
+   "kind": "pbr",
+   "title": "Rough wood",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/rough_wood"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "rough_wood",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_harbor"
+   ],
+   "use": "Beams, posts.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_medieval_wood",
+   "kind": "pbr",
+   "title": "Medieval wood",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/medieval_wood"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "medieval_wood",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_birthing_chamber"
+   ],
+   "use": "Doors, gates.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_clay_roof_tiles",
+   "kind": "pbr",
+   "title": "Clay roof tiles",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/clay_roof_tiles"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "clay_roof_tiles",
+    "type": "textures",
+    "res": "4k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "4k",
+   "sets": [
+    "set.cling_village_square"
+   ],
+   "use": "Terracotta roofs (hero roofline).",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_clay_roof_tiles_02",
+   "kind": "pbr",
+   "title": "Clay roof tiles 02",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/clay_roof_tiles_02"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "clay_roof_tiles_02",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square"
+   ],
+   "use": "Roof variety.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_roof_slates_02",
+   "kind": "pbr",
+   "title": "Roof slates 02",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/roof_slates_02"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "roof_slates_02",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Slate roofs.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_grey_roof_tiles",
+   "kind": "pbr",
+   "title": "Grey roof tiles (mossy)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/grey_roof_tiles"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "grey_roof_tiles",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_harbor"
+   ],
+   "use": "Old mossy roofs.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_rough_linen",
+   "kind": "pbr",
+   "title": "Rough linen",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/rough_linen"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "rough_linen",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.verdor_birthing_chamber",
+    "set.verdor_treatment_room",
+    "set.cling_village_square"
+   ],
+   "use": "Linen cloth (desaturate for undyed).",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_hessian_230",
+   "kind": "pbr",
+   "title": "Hessian 230",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/hessian_230"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "hessian_230",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_harbor",
+    "set.verdor_birthing_chamber"
+   ],
+   "use": "Sacks, nest bedding.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_caban",
+   "kind": "pbr",
+   "title": "Caban (wool)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/caban"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "caban",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.cling_village_square"
+   ],
+   "use": "Wool clothing, banners.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_brown_leather",
+   "kind": "pbr",
+   "title": "Brown leather",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/brown_leather"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "brown_leather",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Saddles and rigs.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_fabric_leather_02",
+   "kind": "pbr",
+   "title": "Fabric leather 02",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/fabric_leather_02"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "fabric_leather_02",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Worn saddle leather.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_white_plaster_rough_01",
+   "kind": "pbr",
+   "title": "White plaster rough 01",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/white_plaster_rough_01"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "white_plaster_rough_01",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.verdor_birthing_chamber",
+    "set.verdor_treatment_room"
+   ],
+   "use": "Interior plaster.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/ph_bark_willow",
+   "kind": "pbr",
+   "title": "Bark willow",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/bark_willow"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "bark_willow",
+    "type": "textures",
+    "res": "2k",
+    "format": "jpg",
+    "maps": {
+     "albedo": "Diffuse",
+     "normal": "nor_gl",
+     "roughness": "Rough",
+     "ao": "AO",
+     "height": "Displacement"
+    }
+   },
+   "id_verified": "yes: listed in the Poly Haven catalogue snapshot of github.com/Papyszoo/CC0-Public-Domain-Textures (fcc4ff9)",
+   "resolution": "2k",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.prologue"
+   ],
+   "use": "Tree trunks.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "tile_m_note": "filled from the Poly Haven API dimensions on fetch",
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/acg_rope001",
+   "kind": "pbr",
+   "title": "Rope 001 (natural fibre)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG)",
+   "origin": {
+    "provider": "ambientCG",
+    "url": "https://ambientcg.com/view?id=Rope001"
+   },
+   "resolve": {
+    "provider": "ambientcg",
+    "asset": "Rope001",
+    "attribute": "2K-JPG",
+    "url": "https://ambientcg.com/get?file=Rope001_2K-JPG.zip",
+    "bytes": 12196943,
+    "maps": {
+     "albedo": "_Color",
+     "normal": "_NormalGL",
+     "roughness": "_Roughness",
+     "ao": "_AmbientOcclusion",
+     "height": "_Displacement"
+    }
+   },
+   "id_verified": "yes: ambientCG downloads CSV snapshot 2024-03-04 (github.com/repalash/cc0textures-threejs)",
+   "resolution": "2K",
+   "sets": [
+    "set.prologue",
+    "set.verdor_harbor"
+   ],
+   "use": "Ropes, rigging, cleat insert, crate lashings.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/acg_rope003",
+   "kind": "pbr",
+   "title": "Rope 003 (dark tarred)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG)",
+   "origin": {
+    "provider": "ambientCG",
+    "url": "https://ambientcg.com/view?id=Rope003"
+   },
+   "resolve": {
+    "provider": "ambientcg",
+    "asset": "Rope003",
+    "attribute": "2K-JPG",
+    "url": "https://ambientcg.com/get?file=Rope003_2K-JPG.zip",
+    "bytes": 12977820,
+    "maps": {
+     "albedo": "_Color",
+     "normal": "_NormalGL",
+     "roughness": "_Roughness",
+     "ao": "_AmbientOcclusion",
+     "height": "_Displacement"
+    }
+   },
+   "id_verified": "yes: ambientCG downloads CSV snapshot 2024-03-04 (github.com/repalash/cc0textures-threejs)",
+   "resolution": "2K",
+   "sets": [
+    "set.verdor_harbor"
+   ],
+   "use": "Tarred ship rope.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/acg_roofingtiles006",
+   "kind": "pbr",
+   "title": "Roofing tiles 006",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG)",
+   "origin": {
+    "provider": "ambientCG",
+    "url": "https://ambientcg.com/view?id=RoofingTiles006"
+   },
+   "resolve": {
+    "provider": "ambientcg",
+    "asset": "RoofingTiles006",
+    "attribute": "2K-JPG",
+    "url": "https://ambientcg.com/get?file=RoofingTiles006_2K-JPG.zip",
+    "bytes": 23763062,
+    "maps": {
+     "albedo": "_Color",
+     "normal": "_NormalGL",
+     "roughness": "_Roughness",
+     "ao": "_AmbientOcclusion",
+     "height": "_Displacement"
+    }
+   },
+   "id_verified": "yes: ambientCG downloads CSV snapshot 2024-03-04 (github.com/repalash/cc0textures-threejs)",
+   "resolution": "2K",
+   "sets": [
+    "set.cling_village_square"
+   ],
+   "use": "Terracotta roof alternative.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/acg_pavingstones070",
+   "kind": "pbr",
+   "title": "Paving stones 070 (old cobbles)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG)",
+   "origin": {
+    "provider": "ambientCG",
+    "url": "https://ambientcg.com/view?id=PavingStones070"
+   },
+   "resolve": {
+    "provider": "ambientcg",
+    "asset": "PavingStones070",
+    "attribute": "2K-JPG",
+    "url": "https://ambientcg.com/get?file=PavingStones070_2K-JPG.zip",
+    "bytes": 31450845,
+    "maps": {
+     "albedo": "_Color",
+     "normal": "_NormalGL",
+     "roughness": "_Roughness",
+     "ao": "_AmbientOcclusion",
+     "height": "_Displacement"
+    }
+   },
+   "id_verified": "yes: ambientCG downloads CSV snapshot 2024-03-04 (github.com/repalash/cc0textures-threejs)",
+   "resolution": "2K",
+   "sets": [
+    "set.cling_village_square"
+   ],
+   "use": "Square paving alternative.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/acg_rock051",
+   "kind": "pbr",
+   "title": "Rock 051 (layered mossy rock)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG)",
+   "origin": {
+    "provider": "ambientCG",
+    "url": "https://ambientcg.com/view?id=Rock051"
+   },
+   "resolve": {
+    "provider": "ambientcg",
+    "asset": "Rock051",
+    "attribute": "2K-JPG",
+    "url": "https://ambientcg.com/get?file=Rock051_2K-JPG.zip",
+    "bytes": 30493712,
+    "maps": {
+     "albedo": "_Color",
+     "normal": "_NormalGL",
+     "roughness": "_Roughness",
+     "ao": "_AmbientOcclusion",
+     "height": "_Displacement"
+    }
+   },
+   "id_verified": "yes: ambientCG downloads CSV snapshot 2024-03-04 (github.com/repalash/cc0textures-threejs)",
+   "resolution": "2K",
+   "sets": [
+    "set.verdor_coast_sky"
+   ],
+   "use": "Layered coastal rock.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "pbr/acg_wicker006",
+   "kind": "pbr",
+   "title": "Wicker 006",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG)",
+   "origin": {
+    "provider": "ambientCG",
+    "url": "https://ambientcg.com/view?id=Wicker006"
+   },
+   "resolve": {
+    "provider": "ambientcg",
+    "asset": "Wicker006",
+    "attribute": "2K-JPG",
+    "url": "https://ambientcg.com/get?file=Wicker006_2K-JPG.zip",
+    "bytes": 30861178,
+    "maps": {
+     "albedo": "_Color",
+     "normal": "_NormalGL",
+     "roughness": "_Roughness",
+     "ao": "_AmbientOcclusion",
+     "height": "_Displacement"
+    }
+   },
+   "id_verified": "yes: ambientCG downloads CSV snapshot 2024-03-04 (github.com/repalash/cc0textures-threejs)",
+   "resolution": "2K",
+   "sets": [
+    "set.cling_village_square"
+   ],
+   "use": "Basket weave.",
+   "files": [],
+   "params": {
+    "tile_m": null,
+    "normal_convention": "gl"
+   }
+  },
+  {
+   "id": "hdri/umhlanga_sunrise_8k",
+   "kind": "hdri",
+   "title": "umhlanga_sunrise at 8k (visible sky)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/umhlanga_sunrise"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "umhlanga_sunrise",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr"
+   },
+   "id_verified": "yes (same asset as the 4k mirror copy)",
+   "resolution": "8192x4096",
+   "sets": [
+    "set.prologue",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Sharper visible sky for 4K frames (4k equirect = ~11 px per degree, a 4K frame at 40 deg FOV needs ~96).",
+   "files": []
+  },
+  {
+   "id": "hdri/kloofendal_48d_partly_cloudy_8k",
+   "kind": "hdri",
+   "title": "kloofendal_48d_partly_cloudy at 8k (visible sky)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/kloofendal_48d_partly_cloudy"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "kloofendal_48d_partly_cloudy",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr"
+   },
+   "id_verified": "yes (same asset as the 4k mirror copy)",
+   "resolution": "8192x4096",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_coast_sky",
+    "set.cling_village_square"
+   ],
+   "use": "Sharper visible sky for 4K frames (4k equirect = ~11 px per degree, a 4K frame at 40 deg FOV needs ~96).",
+   "files": []
+  },
+  {
+   "id": "hdri/white_cliff_top_8k",
+   "kind": "hdri",
+   "title": "white_cliff_top at 8k (visible sky)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/white_cliff_top"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "white_cliff_top",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr"
+   },
+   "id_verified": "yes (same asset as the 4k mirror copy)",
+   "resolution": "8192x4096",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.verdor_harbor"
+   ],
+   "use": "Sharper visible sky for 4K frames (4k equirect = ~11 px per degree, a 4K frame at 40 deg FOV needs ~96).",
+   "files": []
+  },
+  {
+   "id": "hdri/cape_hill_8k",
+   "kind": "hdri",
+   "title": "cape_hill at 8k (visible sky)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/cape_hill"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "cape_hill",
+    "type": "hdris",
+    "res": "8k",
+    "format": "hdr"
+   },
+   "id_verified": "yes (same asset as the 4k mirror copy)",
+   "resolution": "8192x4096",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.cling_village_square"
+   ],
+   "use": "Sharper visible sky for 4K frames (4k equirect = ~11 px per degree, a 4K frame at 40 deg FOV needs ~96).",
+   "files": []
+  },
+  {
+   "id": "model/ph_coastal_cliff_01",
+   "kind": "model",
+   "title": "Coastal cliff 01",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/coastal_cliff_01"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "coastal_cliff_01",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "yes: named in BabylonJS coastalCliff.glb materials",
+   "resolution": "2k textures",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.prologue"
+   ],
+   "use": "Sea cliff (full-res source of the Babylon composition).",
+   "files": []
+  },
+  {
+   "id": "model/ph_namaqualand_cliff_02",
+   "kind": "model",
+   "title": "Namaqualand cliff 02",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/namaqualand_cliff_02"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "namaqualand_cliff_02",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "yes: named in BabylonJS coastalCliff.glb materials",
+   "resolution": "2k textures",
+   "sets": [
+    "set.verdor_coast_sky"
+   ],
+   "use": "Cliff piece.",
+   "files": []
+  },
+  {
+   "id": "model/ph_coast_land_rocks_04",
+   "kind": "model",
+   "title": "Coast land rocks 04",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/coast_land_rocks_04"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "coast_land_rocks_04",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "yes: named in BabylonJS coastalCliff.glb materials",
+   "resolution": "2k textures",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.prologue"
+   ],
+   "use": "Shore rocks.",
+   "files": []
+  },
+  {
+   "id": "model/ph_rock_moss_set_01",
+   "kind": "model",
+   "title": "Rock moss set 01",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/rock_moss_set_01"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "rock_moss_set_01",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "yes: named in BabylonJS coastalCliff.glb materials",
+   "resolution": "2k textures",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Loose stones (takeoff debris).",
+   "files": []
+  },
+  {
+   "id": "model/ph_rock_moss_set_02",
+   "kind": "model",
+   "title": "Rock moss set 02",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/rock_moss_set_02"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "rock_moss_set_02",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "yes: named in BabylonJS coastalCliff.glb materials",
+   "resolution": "2k textures",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Loose stones.",
+   "files": []
+  },
+  {
+   "id": "model/ph_moss_01",
+   "kind": "model",
+   "title": "Moss 01",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/moss_01"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "moss_01",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "yes: named in BabylonJS coastalCliff.glb materials",
+   "resolution": "2k textures",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Moss clumps.",
+   "files": []
+  },
+  {
+   "id": "model/ph_dutch_ship_medium_4k",
+   "kind": "model",
+   "title": "Dutch ship medium (4k)",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/dutch_ship_medium"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "dutch_ship_medium",
+    "type": "models",
+    "res": "4k",
+    "format": "gltf"
+   },
+   "id_verified": "yes: Godot demo copy",
+   "resolution": "2k textures",
+   "sets": [
+    "set.prologue",
+    "set.verdor_harbor"
+   ],
+   "use": "Higher-res ship.",
+   "files": []
+  },
+  {
+   "id": "model/ph_namaqualand_boulder_02",
+   "kind": "model",
+   "title": "Namaqualand boulder 02",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/namaqualand_boulder_02"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "namaqualand_boulder_02",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "no (from memory; fetch.mjs --discover lists the real catalogue once api.polyhaven.com is reachable)",
+   "resolution": "2k textures",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Boulders.",
+   "files": []
+  },
+  {
+   "id": "model/ph_island_tree_02",
+   "kind": "model",
+   "title": "Island tree 02",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/island_tree_02"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "island_tree_02",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "no (from memory; fetch.mjs --discover lists the real catalogue once api.polyhaven.com is reachable)",
+   "resolution": "2k textures",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_coast_sky",
+    "set.prologue"
+   ],
+   "use": "Windswept coastal tree.",
+   "files": []
+  },
+  {
+   "id": "model/ph_fir_sapling",
+   "kind": "model",
+   "title": "Fir sapling",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/fir_sapling"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "fir_sapling",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "no (from memory; fetch.mjs --discover lists the real catalogue once api.polyhaven.com is reachable)",
+   "resolution": "2k textures",
+   "sets": [
+    "set.prologue",
+    "set.verdor_riding_grounds"
+   ],
+   "use": "Conifers.",
+   "files": []
+  },
+  {
+   "id": "model/ph_shrub_01",
+   "kind": "model",
+   "title": "Shrub 01",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/shrub_01"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "shrub_01",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "no (from memory; fetch.mjs --discover lists the real catalogue once api.polyhaven.com is reachable)",
+   "resolution": "2k textures",
+   "sets": [
+    "set.verdor_riding_grounds",
+    "set.verdor_coast_sky"
+   ],
+   "use": "Coastal shrubs.",
+   "files": []
+  },
+  {
+   "id": "model/ph_wooden_crate_01",
+   "kind": "model",
+   "title": "Wooden crate 01",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/wooden_crate_01"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "wooden_crate_01",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "yes: third-party page (cryengine marketplace) lists it",
+   "resolution": "2k textures",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_harbor"
+   ],
+   "use": "Vendor's crate, harbor supplies.",
+   "files": []
+  },
+  {
+   "id": "model/ph_barrel_01",
+   "kind": "model",
+   "title": "Barrel 01",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/Barrel_01"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "Barrel_01",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "no (from memory; fetch.mjs --discover lists the real catalogue once api.polyhaven.com is reachable)",
+   "resolution": "2k textures",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_harbor"
+   ],
+   "use": "Barrels.",
+   "files": []
+  },
+  {
+   "id": "model/ph_wooden_bucket_01",
+   "kind": "model",
+   "title": "Wooden bucket 01",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/wooden_bucket_01"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "wooden_bucket_01",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "yes: third-party page (cryengine marketplace) lists it",
+   "resolution": "2k textures",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_harbor",
+    "set.verdor_treatment_room"
+   ],
+   "use": "Buckets / water.",
+   "files": []
+  },
+  {
+   "id": "model/ph_wicker_basket_01",
+   "kind": "model",
+   "title": "Wicker basket 01",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/wicker_basket_01"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "wicker_basket_01",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "no (from memory; fetch.mjs --discover lists the real catalogue once api.polyhaven.com is reachable)",
+   "resolution": "2k textures",
+   "sets": [
+    "set.cling_village_square"
+   ],
+   "use": "Market baskets.",
+   "files": []
+  },
+  {
+   "id": "model/ph_woodentable_01",
+   "kind": "model",
+   "title": "Wooden table 01",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/WoodenTable_01"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "WoodenTable_01",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "no (from memory; fetch.mjs --discover lists the real catalogue once api.polyhaven.com is reachable)",
+   "resolution": "2k textures",
+   "sets": [
+    "set.cling_village_square",
+    "set.verdor_treatment_room"
+   ],
+   "use": "Stall tables.",
+   "files": []
+  },
+  {
+   "id": "model/ph_wooden_stool_02",
+   "kind": "model",
+   "title": "Wooden stool 02",
+   "status": "blocked",
+   "license": "CC0-1.0",
+   "author": "Poly Haven",
+   "origin": {
+    "provider": "Poly Haven",
+    "url": "https://polyhaven.com/a/wooden_stool_02"
+   },
+   "resolve": {
+    "provider": "polyhaven",
+    "asset": "wooden_stool_02",
+    "type": "models",
+    "res": "2k",
+    "format": "gltf"
+   },
+   "id_verified": "no (from memory; fetch.mjs --discover lists the real catalogue once api.polyhaven.com is reachable)",
+   "resolution": "2k textures",
+   "sets": [
+    "set.verdor_treatment_room",
+    "set.cling_village_square"
+   ],
+   "use": "Stool for Alexandria; stall seating.",
+   "files": []
+  }
+ ]
+}

@@ -24,6 +24,7 @@ export function runtimeConfig(p, o = {}) {
     timing: !!o.timing,
     shadowCache: o.shadowCache ?? true,
     bitDepth: o.bitDepth ?? 8,
+    ...(o.cinematic !== undefined ? { cinematic: o.cinematic } : {}),
   };
 }
 

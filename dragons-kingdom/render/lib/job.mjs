@@ -235,6 +235,7 @@ export async function runJob(opts) {
       fps, startFrame, totalFrames, chunkFrames, twos: !!opts.twos, capture, bitDepth, dither: initCfg.dither,
       aa: initCfg.aa, sharpness: initCfg.sharpness, quality: initCfg.quality, toneMapping: initCfg.toneMapping ?? null,
       exposure: initCfg.exposure ?? null, crf: opts.crf, x264Preset: opts.x264Preset,
+      ...(initCfg.cinematic !== undefined ? { cinematic: initCfg.cinematic } : {}),
     };
     // Resuming: keep the encoder settings the job was started with unless the
     // user explicitly asked for others (e.g. a new benchmark picked another

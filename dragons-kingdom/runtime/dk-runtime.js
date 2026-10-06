@@ -27,6 +27,7 @@
 
 import * as THREE from 'three';
 import * as POST from './post.js';
+import { createCinematic, cinematicFor, LENS_DEFAULTS } from './cinematic/index.js';
 
 export const RUNTIME_VERSION = '1.1.0';   // part of every job fingerprint: bump when pictures change
 
@@ -323,8 +324,57 @@ function patchShadowFilter(mode) {
       vec2 w0 = ( 1.0 - g ) * 0.5, w1 = vec2( 0.5 ), w2 = g * 0.5;
       shadow = ${terms.join(' +\n        ')};
     `;
+  } else if (mode === 'pcss') {
+    // Contact-hardening soft shadows (percentage-closer soft shadows, Fernando 2005):
+    // find the average blocker depth, then filter with a kernel as wide as the
+    // penumbra the sun's disk (0.53 deg) really casts at that blocker distance -
+    // sharp where a foot touches the ground, soft under a dragon's wing 10 m up.
+    // shadowRadius carries "penumbra texels per unit of shadow depth" (set per
+    // light and frame by updatePcss()). 8 + 12 taps, rotated per pixel.
+    body = `
+      vec2 texelSize = vec2( 1.0 ) / shadowMapSize;
+      float zr = shadowCoord.z;
+      float ang = 6.2831853 * fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) );
+      vec2 rc = vec2( cos( ang ), sin( ang ) );
+      float searchR = clamp( zr * shadowRadius, 1.5, 16.0 );
+      float bsum = 0.0, bn = 0.0;
+      for ( int i = 0; i < 8; i ++ ) {
+        float th = float( i ) * 2.39996323; vec2 d = vec2( cos( th ), sin( th ) );
+        vec2 o = vec2( d.x * rc.x - d.y * rc.y, d.x * rc.y + d.y * rc.x ) * sqrt( ( float( i ) + 0.5 ) / 8.0 ) * searchR * texelSize;
+        float bd = unpackRGBAToDepth( texture2D( shadowMap, shadowCoord.xy + o ) );
+        if ( bd < zr ) { bsum += bd; bn += 1.0; }
+      }
+      if ( bn < 0.5 ) shadow = 1.0;
+      else {
+        float pen = clamp( ( zr - bsum / bn ) * shadowRadius, 0.75, 24.0 );
+        float sacc = 0.0;
+        for ( int i = 0; i < 12; i ++ ) {
+          float th = float( i ) * 2.39996323; vec2 d = vec2( cos( th ), sin( th ) );
+          vec2 o = vec2( d.x * rc.x - d.y * rc.y, d.x * rc.y + d.y * rc.x ) * sqrt( ( float( i ) + 0.5 ) / 12.0 ) * pen * texelSize;
+          sacc += texture2DCompare( shadowMap, shadowCoord.xy + o, zr );
+        }
+        shadow = sacc / 12.0;
+      }
+    `;
   } else throw new Error(`unknown shadowFilter "${mode}"`);
   C.shadowmap_pars_fragment = src.slice(0, a) + PCF_SOFT_BEGIN + '\n' + body + '\n' + src.slice(b);
+}
+
+/**
+ * 'pcss' shadow filter: per light, how many shadow-map texels of penumbra one
+ * unit of normalised shadow depth between blocker and receiver produces, for a
+ * light disk of `angleDeg` (the sun: 0.53 deg; S.cfg / meta.sunAngularDiameter).
+ */
+function updatePcss() {
+  if (S.shadowFilter !== 'pcss') return;
+  const ang = (S.meta.sunAngularDiameter ?? 0.53) * (Math.PI / 180);
+  const k = 2 * Math.tan(ang / 2);
+  S.scene.traverse((l) => {
+    if (!(l.isDirectionalLight && l.castShadow)) return;
+    const c = l.shadow.camera;
+    const texel = (c.right - c.left) / (c.zoom || 1) / l.shadow.mapSize.x;
+    l.shadow.radius = (k * (c.far - c.near)) / Math.max(texel, 1e-6);
+  });
 }
 
 function makePass(material) {
@@ -409,6 +459,13 @@ export async function init(cfg) {
     // NOT listed in `dynamic` are rendered once per key value and reused;
     // only the `dynamic` objects (and their children) are drawn every frame.
     shadows: { key: null, dynamic: [] },
+    // physical camera (dk/camera.js): focal length, sensor, f-stop, focus, shutter, ISO.
+    // Read every frame; null focalLength keeps camera.fov.
+    lens: { ...LENS_DEFAULTS },
+    // cinematic realism stack (runtime/cinematic): null unless meta.cinematic is set
+    // (or --cinematic). setup() may change it; numbers may also change in update().
+    cinematic: cinematicFor(meta.cinematic, cfg.cinematic),
+    subframe: null,
     frame: 0, t: 0,
   };
   S.resetRng = () => { rngImpl = guardedRng(seed); };
@@ -421,16 +478,21 @@ export async function init(cfg) {
   const setupMs = performance.now() - tSetup;
   // shader chunks are only read when programs compile (below / first frame),
   // so the filter can still be chosen here: CLI > scene meta > default
-  const shadowFilter = cfg.quality?.shadowFilter ?? meta.shadowFilter ?? 'tent9';
+  const shadowFilter = cfg.quality?.shadowFilter ?? (ctx.cinematic?.shadows?.pcss ? 'pcss' : null) ?? meta.shadowFilter ?? 'tent9';
   patchShadowFilter(shadowFilter);
+  S.shadowFilter = shadowFilter;
   if (!POST.TONE_MAPPINGS.includes(post.toneMapping)) fail(`toneMapping "${post.toneMapping}" not one of ${POST.TONE_MAPPINGS}`);
+
+  // cinematic realism stack (opt-in): it owns its own scene/HDR targets
+  const useCin = !!ctx.cinematic;
+  S.cin = null;
 
   // ---- render targets
   const msaa = /^msaa(\d+)$/.exec(cfg.aa);
   const samples = msaa ? Math.min(+msaa[1], gl.getParameter(gl.MAX_SAMPLES)) : 0;
   const upscale = RW !== W || RH !== H;
   const fusedAA = cfg.aa === 'fxaa';
-  S.rt.scene = makeRT(RW, RH, { depth: true, samples, linear: fusedAA });
+  if (!useCin) S.rt.scene = makeRT(RW, RH, { depth: true, samples, linear: fusedAA });
   // final-fast (upscaling) with 8-bit output: the graded image the upscaler
   // reads is stored as dithered 8-bit instead of half-float. On SwiftShader a
   // filtered half-float fetch costs far more than an 8-bit one: the upscale
@@ -441,7 +503,7 @@ export async function init(cfg) {
   // rms 0.47 vs 0.41). 10-bit output keeps the half-float path.
   const grade8 = upscale && (cfg.bitDepth ?? 8) === 8;
   S.grade8 = grade8;
-  S.rt.grade = makeRT(RW, RH, { linear: true, type: grade8 ? THREE.UnsignedByteType : undefined });
+  if (!useCin) S.rt.grade = makeRT(RW, RH, { linear: true, type: grade8 ? THREE.UnsignedByteType : undefined });
   if (cfg.aa === 'fxaa-hq') S.rt.fxaa = makeRT(RW, RH, { linear: true });
   if (upscale) S.rt.up = makeRT(W, H, { linear: true });
   S.rt.yuv = makeRT(W / 4, H * 3 / 2, { type: THREE.UnsignedByteType });
@@ -468,6 +530,12 @@ export async function init(cfg) {
   S.pass.yuv10.material.uniforms.uSize.value.set(W, H);
   S.pass.rgba = makePass(POST.makePackRgbaMaterial());
   S.pass.rgba.material.uniforms.uSize.value.set(W, H);
+  if (useCin) {
+    S.cin = await createCinematic({
+      renderer, gl, scene, camera, ctx, cfg, meta, sceneUrl: cfg.sceneUrl,
+      makePass, drawPass, renderScene: renderMainScene, runAt: runUpdateAt, refreshBounds: () => refreshStaleBounds(),
+    });
+  }
 
   // compile everything and upload every texture up-front so the first frame
   // is not an outlier
@@ -490,6 +558,7 @@ export async function init(cfg) {
     width: W, height: H, renderWidth: RW, renderHeight: RH, samples, aa: cfg.aa, upscale,
     meta: { title: meta.title, duration: meta.duration, mode: meta.mode, warmupFrames: meta.warmupFrames },
     toneMapping: post.toneMapping, shadowFilter, setupMs: Math.round(setupMs), assetWaitMs, textures: seenTex.size,
+    cinematic: S.cin ? S.cin.features : null,
     initMs: Math.round(performance.now() - t0),
   };
   return S.info;
@@ -502,6 +571,26 @@ export async function init(cfg) {
 // does not take it for a hang. It also yields to the event loop then (the
 // scene's state does not depend on that, only on the order of update() calls).
 const HEARTBEAT_MS = 1000;
+/**
+ * update() at an arbitrary time (cinematic stack: shutter-open pose for motion
+ * vectors, accumulate-mode sub-frames). ctx.frame stays the frame being made,
+ * ctx.t / the t argument are the real time, ctx.subframe says why.
+ */
+function runUpdateAt(time, frame, sub = null) {
+  const { ctx, mod } = S;
+  ctx.frame = frame; ctx.t = time; ctx.subframe = sub;
+  updateSerial++;
+  inUpdate = true;
+  try { mod.update(time, ctx); } finally { inUpdate = false; ctx.subframe = null; }
+}
+// ctx.lens.focalLength (dk/camera.js) also works without the cinematic stack
+function applyLensBasic() {
+  const L = S.ctx.lens;
+  if (!L || !L.focalLength || S.cin) return;
+  // filmGauge = sensor width: three derives the film height from the aspect (16:9 crop of the sensor)
+  S.camera.filmGauge = typeof L.sensor === 'number' ? L.sensor : ({ super35: 24.89, fullframe: 36, alexa65: 54.12 }[L.sensor || 'super35'] ?? 24.89);
+  S.camera.setFocalLength(L.focalLength);
+}
 async function stepScene(frame, heartbeat) {
   const { ctx, mod, meta } = S;
   const fps = S.cfg.fps;
@@ -517,6 +606,7 @@ async function stepScene(frame, heartbeat) {
     let last = performance.now();
     while (S.simFrame < frame) {
       run(++S.simFrame);
+      if (S.cin) S.cin.afterSimFrame(S.simFrame, frame);
       if (heartbeat && performance.now() - last > HEARTBEAT_MS) {
         heartbeat(S.simFrame - from, frame - from);
         await new Promise((r) => setTimeout(r, 0));
@@ -524,8 +614,10 @@ async function stepScene(frame, heartbeat) {
       }
     }
   } else {
+    if (S.cin) S.cin.beforeUpdate(frame);    // velocity motion blur: pose + remember the shutter-open moment
     run(frame);
   }
+  applyLensBasic();
   // after update(): culling bounds must match this frame's data (see above)
   refreshStaleBounds();
 }
@@ -629,6 +721,15 @@ function shadowRect(light, spheres) {
 const unionRect = (a, b) => (!a || !b ? null
   : a.x1 <= a.x0 || a.y1 <= a.y0 ? b : b.x1 <= b.x0 || b.y1 <= b.y0 ? a
     : { x0: Math.min(a.x0, b.x0), y0: Math.min(a.y0, b.y0), x1: Math.max(a.x1, b.x1), y1: Math.max(a.y1, b.y1) });
+/** Everything about a shadow-casting light that changes its shadow map (pose + shadow camera). */
+function lightSig(l) {
+  const c = l.shadow?.camera;
+  const parts = [...l.matrixWorld.elements];
+  if (l.target) parts.push(...l.target.matrixWorld.elements);
+  if (c) parts.push(c.left, c.right, c.top, c.bottom, c.near, c.far, c.fov, c.zoom);
+  parts.push(l.shadow?.mapSize.x, l.shadow?.mapSize.y);
+  return parts.join(',');
+}
 function shadowCacheFor(light) {
   const map = light.shadow.map;
   let c = S.shadowCaches.get(light);
@@ -666,10 +767,12 @@ function installShadowCache(renderer) {
     if (!plan || scene !== S.scene || !lights.length || !sm.enabled) return threeRender.call(sm, lights, scene, camera);
     const prev = S.shadow;
     const sameLights = prev && prev.lights.length === lights.length && prev.lights.every((l, i) => l === lights[i]);
-    const valid = sameLights && prev.key === plan.key;
+    // a light that moved (e.g. cascades following the camera) invalidates the cache even under the same key
+    const sigs = lights.map(lightSig);
+    const valid = sameLights && prev.key === plan.key && prev.sigs.every((g, i) => g === sigs[i]);
     if (!plan.dynamic.length || sm.type === THREE.VSMShadowMap) {
       // nothing that casts a shadow moves (or VSM, whose blur cannot be split): once per key
-      if (!valid || prev.split) { run(lights, scene, camera, true); S.shadow = { key: plan.key, split: false, lights: [...lights], rects: new Map() }; }
+      if (!valid || prev.split) { run(lights, scene, camera, true); S.shadow = { key: plan.key, split: false, lights: [...lights], rects: new Map(), sigs }; }
       return;
     }
     const spheres = dynamicSpheres(plan.dynamic);
@@ -686,7 +789,7 @@ function installShadowCache(renderer) {
       // colour + depth copy costs ~250 ms on SwiftShader, more than it saves)
       for (const l of lights) blitRT(shadowCacheFor(l), l.shadow.map, unionRect(prev.rects.get(l), rects.get(l)));
     }
-    S.shadow = { key: plan.key, split: true, lights: [...lights], rects };
+    S.shadow = { key: plan.key, split: true, lights: [...lights], rects, sigs };
     // 2. the dynamic casters on top of it: no clear, depth-tested against the
     //    static depth. A proxy camera that only "sees" DYN_LAYER selects them.
     if (!S.dynCam) S.dynCam = camera.clone();
@@ -698,6 +801,17 @@ function installShadowCache(renderer) {
   };
 }
 
+/** Main scene pass into target (cinematic stack). Same shadow-cache handling as the standard path. */
+function renderMainScene(target, opts = {}) {
+  const { renderer } = S;
+  updatePcss();
+  if (opts.noShadowCache) { S.shadowPlan = null; S.shadow = null; } else planShadows();
+  renderer.autoClear = true;
+  renderer.setRenderTarget(target);
+  try { renderer.render(S.scene, S.camera); } finally { S.shadowPlan = null; renderer.autoClear = false; }
+  recordBounds();
+}
+
 function drawPass(mesh, target) {
   S.renderer.setRenderTarget(target);
   S.renderer.render(mesh, S.postCam);
@@ -707,13 +821,18 @@ function renderPipeline(capture) {
   const { renderer, rt, pass, ctx, cfg } = S;
   const timing = cfg.timing ? {} : null;
   // timing mode: a 1-pixel readback forces the GPU to finish the stage (gl.finish() does not block in Chrome)
-  const px = new Uint16Array(4), px8 = new Uint8Array(4);
+  const px = new Uint16Array(4), px8 = new Uint8Array(4), pxf = new Float32Array(4);
   let lastRT = null;
   const mark = timing ? (k) => {
-    if (lastRT) renderer.readRenderTargetPixels(lastRT, 0, 0, 1, 1, lastRT.texture.type === THREE.UnsignedByteType ? px8 : px);
+    if (lastRT) {
+      const ty = lastRT.texture.type;
+      renderer.readRenderTargetPixels(lastRT, 0, 0, 1, 1, ty === THREE.UnsignedByteType ? px8 : ty === THREE.FloatType ? pxf : px);
+    }
     timing[k] = performance.now();
   } : () => {};
   mark('start');
+  if (S.cin) return renderCinematic(capture, { timing, mark: (k, r) => { lastRT = r; mark(k); } });
+  updatePcss();
   planShadows();
   renderer.autoClear = true;
   renderer.setRenderTarget(rt.scene);
@@ -764,6 +883,35 @@ function renderPipeline(capture) {
   lastRT = target;
   mark('pack');
   renderer.setRenderTarget(target);   // leave the packed target bound for readPixels
+  return { target, timing };
+}
+
+function renderCinematic(capture, { timing, mark }) {
+  const { renderer, rt, pass, cfg } = S;
+  renderer.autoClear = false;
+  let src = S.cin.render(mark);
+  if (pass.up) {
+    pass.up.material.uniforms.tSrc.value = src.texture;
+    drawPass(pass.up, rt.up);
+    src = rt.up;
+    mark('upscale', src);
+  }
+  const { w, h } = captureSize(capture);
+  let target, packer;
+  if (capture === 'rgba') {
+    if (!rt.rgba) rt.rgba = makeRT(w, h, { type: THREE.UnsignedByteType });
+    target = rt.rgba; packer = pass.rgba;
+  } else if (capture === 'yuv10') {
+    if (!rt.yuv10) rt.yuv10 = makeRT(w, h, { type: THREE.UnsignedByteType });
+    target = rt.yuv10; packer = pass.yuv10;
+  } else {
+    target = rt.yuv; packer = pass.yuv;
+  }
+  const u = packer.material.uniforms;
+  u.tSrc.value = src.texture; u.uDither.value = cfg.dither ? 1 : 0;
+  drawPass(packer, target);
+  mark('pack', target);
+  renderer.setRenderTarget(target);
   return { target, timing };
 }
 
@@ -907,10 +1055,12 @@ export async function renderFrames(opts) {
     // 'all' = always simulate from frame 0 (exact continuity across chunks).
     // The first frame to render can lie before chunkStart (--twos with an odd
     // start renders the even frame just before it), so start from the earlier.
-    const wf = S.meta.warmupFrames === 'all' ? Infinity : (S.meta.warmupFrames | 0);
+    let wf = S.meta.warmupFrames === 'all' ? Infinity : (S.meta.warmupFrames | 0);
+    if (S.cin && S.cin.mode === 'velocity') wf = Math.max(wf, 1);   // motion vectors need the previous frame
     const first = Math.min(opts.chunkStart ?? frames[0], frames[0]);
     const start = Math.max(0, first - wf);
     S.resetRng();
+    S.cin?.resetSim();
     S.mod.reset(S.ctx);
     S.simFrame = start - 1;
   }
@@ -973,3 +1123,5 @@ export async function renderFrames(opts) {
 }
 
 export function info() { return S.info; }
+/** Cinematic stack: NaN/Inf/range of its float buffers after the last frame (null without the stack). */
+export function debugCinematic() { return S.cin ? S.cin.debugStats() : null; }
