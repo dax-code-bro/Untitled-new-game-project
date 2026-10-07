@@ -150,9 +150,9 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   // (a darkened, hair-tinted skin at partial coverage - a straight mix with the hair colour
   // reads as a grey band along the hairline)
   { float lc = dot(c, vec3(0.2126, 0.7152, 0.0722)), ls = max(1e-3, dot(uScalp, vec3(0.2126, 0.7152, 0.0722)));
-    vec3 tinted = c * mix(vec3(1.0), uScalp / ls, 0.6) * mix(1.0, ls / max(lc, 1e-3), 0.5);
-    c = mix(c, tinted, smoothstep(0.0, 0.6, vAux.a));
-    c = mix(c, uScalp * (0.6 + 0.5 * hN3(vObjP * 900.0)), smoothstep(0.5, 1.0, vAux.a) * 0.96); }
+    vec3 tinted = c * mix(vec3(1.0), uScalp / ls, 0.45) * mix(1.0, ls / max(lc, 1e-3), 0.3);
+    c = mix(c, tinted, smoothstep(0.1, 0.8, vAux.a));
+    c = mix(c, uScalp * (0.6 + 0.5 * hN3(vObjP * 900.0)), smoothstep(0.65, 1.0, vAux.a) * 0.96); }
   // stubble / shaved beard shadow (aux.b): fine dark dots in a soft tint
   { float dots = smoothstep(0.55, 0.9, hN3(vObjP * 2600.0 + 3.0));
     c = mix(c, c * mix(vec3(1.0), uBeard / max(0.02, dot(uBeard, vec3(0.333))) * 0.35, 0.6), vAux.b * (0.55 + 0.45 * dots)); }
@@ -185,7 +185,7 @@ skinSmoothN = normal;
   h += (hFbm(vObjP * 260.0) - 0.5) * 0.00012;   // soft undulation (fat, tendons, skin folds)
   h *= uPores * (1.0 - vAux.g);                  // nails stay smooth
   normal = hBump(normal, -vViewPosition, h, faceDirection);
-  float thin = exp(-vThick / 0.012);
+  float thin = exp(-vThick / 0.006);   // ears, nostrils, eyelid rims - not the forehead
   skinThin = thin;
   skinTransCol = diffuseColor.rgb * vec3(1.0, 0.35, 0.22);
 }`)
@@ -210,13 +210,15 @@ void RE_Direct_Skin( const in IncidentLight directLight, const in vec3 geometryP
   // further under the skin), energy-normalised; specular on the detailed normal
   vec3 nS = normalize(mix(geometryNormal, skinSmoothN, 0.7));
   float ndl = dot(nS, directLight.direction);
-  vec3 w = vec3(0.42, 0.16, 0.08) * uSSS;
+  // (a wide red wrap leaks past the shadow map's terminator - normal bias - as hard-edged red
+  // patches on the dark side of the face: keep it narrow)
+  vec3 w = vec3(0.17, 0.065, 0.035) * uSSS;
   vec3 diff = clamp((vec3(ndl) + w) / (1.0 + w), 0.0, 1.0);
   diff = mix(diff, diff * diff * (3.0 - 2.0 * diff), 0.25);
   vec3 irr = diff * directLight.color;
   reflectedLight.directDiffuse += irr * BRDF_Lambert( material.diffuseColor );
   // translucency where the flesh is thin (ears, nostrils, fingers): light arriving from behind
-  float back = clamp(dot(-geometryNormal, directLight.direction) * 0.6 + 0.4, 0.0, 1.0);
+  float back = clamp(dot(-geometryNormal, directLight.direction), 0.0, 1.0);
   reflectedLight.directDiffuse += directLight.color * skinTransCol * back * back * skinThin * 0.35 * uSSS;
   // specular (+ clearcoat oil layer + sheen) exactly as three's physical model
   float dotNL = saturate( dot( geometryNormal, directLight.direction ) );

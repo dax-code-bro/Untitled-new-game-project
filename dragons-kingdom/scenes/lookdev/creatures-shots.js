@@ -46,9 +46,10 @@ export const SHOTS = [
     cam: { subject: 'leaf', pos: [8.0, 1.55, 9.5], target: [0.6, 1.75, 0.6], mm: 35, fstop: 5.6, focus: 'target' } },
   // Leaf flying with Abby riding (50 mm air to air, slightly above, behind the shoulder)
   { id: 'leaf-flight', set: 'air', creatures: ['leaf'], riders: { leaf: 'abby' }, dur: 3, alt: 160, face: -110,
-    // (mid-downstroke: the membrane is cambered between the fingers)
-    pose: { leaf: { name: 'flight', corr: 1, phase: 0.3, look: [-0.25, 0.05] } },
-    cam: { subject: 'leaf', pos: [14.5, 3.6, 6.5], target: [0, 0.9, 0.2], mm: 40, fstop: 8, focus: 'target' } },
+    // (the start of the downstroke: wings high, already cambered, still slow enough to read -
+    // at mid-stroke a 1.6 Hz wing is a smear even at a 90-degree shutter)
+    pose: { leaf: { name: 'flight', corr: 1, phase: 0.1, look: [-0.25, 0.05] } },
+    cam: { subject: 'leaf', pos: [14.5, 3.6, 6.5], target: [0, 0.9, 0.2], mm: 40, fstop: 8, focus: 'target', shutter: 90 } },
   // Starlight gliding past a distant watchtower, seen from the ground (~260 m away, ~60 m up):
   // the tower (25 m) is as far away as she is, so her span reads as eight towers wide; a
   // watchman in the foreground points up at her; the haze between softens both
@@ -57,7 +58,7 @@ export const SHOTS = [
     tower: { at: [10, 0, 252], r: 3.6, h: 21, capH: 6.5 }, trees: true,
     people: [{ id: 'watchman', ground: [-0.95, 0, 4.6], yaw: -12 }],
     pose: { starlight: { name: 'glide', bank: -0.08, dihedral: 0.1, look: [0.1, -0.15] } },
-    cam: { ground: true, pos: [0, 1.0, 0], lookAt: [-6, 37.8, 262], mm: 40, fstop: 8 } },
+    cam: { ground: true, pos: [0, 1.0, 0], lookAt: [-6, 49, 262], mm: 40, fstop: 4 } },
   // the gold hatchling on the bedding: 100 mm macro, T2.8, focus on the eye
   { id: 'hatchling-macro', set: 'bed', creatures: ['hatchling'], dur: 3, face: -40,
     pose: { hatchling: { name: 'lie', raise: -0.1, headDown: 0.16, look: [0.42, -0.04], lidRelax: 0.42, breathe: 0.5 } },

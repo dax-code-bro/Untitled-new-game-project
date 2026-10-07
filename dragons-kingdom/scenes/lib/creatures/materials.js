@@ -426,7 +426,13 @@ void dkSkin(inout vec3 albedo) {
     reflectedLight.indirectSpecular *= computeSpecularOcclusion( dotNV, ambientOcclusion, material.roughness );
   #endif
 }
-#include <aomap_fragment>`);
+#include <aomap_fragment>
+#if defined( DK_SSAO ) && defined( USE_CLEARCOAT )
+  // the runtime's screen-space AO darkens diffuse and specular IBL but not the clearcoat: the
+  // wet film must not mirror the sky inside crevices the pose creates (the rest-pose AO bake
+  // cannot know a thigh folded against the belly)
+  { float dkAoC = mix( 1.0, dkAoS.r, dkAOStrength ); clearcoatSpecularIndirect *= dkAoC * dkAoC; }
+#endif`);
   };
   return mat;
 }

@@ -1,1 +1,1 @@
-{ "id": "remi", "accumulate": false, "still": true, "cam": { "tgt": "eye.R", "off": [0, 0, 0], "az": 15, "el": 2, "dist": 0.14, "fov": 24, "fstop": 8 } }
+{ "id": "abby", "accumulate": false, "still": true, "yaw": 2.2, "skinU": { "uSSS": 1.0 }, "cam": { "tgt": "head", "off": [0, -0.03, 0.02], "az": 0, "el": 2, "dist": 0.5, "fov": 24, "fstop": 8 } }

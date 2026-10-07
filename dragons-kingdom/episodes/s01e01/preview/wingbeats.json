@@ -1,0 +1,2171 @@
+{
+ "schema": "dragons-kingdom/preview-wingbeats v1",
+ "generated_by": "dragons-kingdom/episodes/s01e01/preview/tools/build_soundtrack.py",
+ "edl_frames": 14397,
+ "fps": 24,
+ "formula": "poses.js flight(c, {t, hz, phase, corr}): cyc = fract(t*hz + phase); a downstroke starts where cyc == 0 (wingFlap: downstroke = first 0.56 of the cycle). t = the set scene's time = render-jobs.json set_time_start_s + (EDL frame - edl_start_frame) / 24.",
+ "uneven_and_double": "segments with mode 'uneven' or 'double' list explicit onsets; animate them with cyc = (t - onset_k) / (onset_k+1 - onset_k) between consecutive onsets (the next segment's first onset closes the last cycle). 'glide': wings held (poses.js glide).",
+ "rule": "The sound plays a downstroke at every onset below. If the animation changes, change soundtrack_shots.py (HZ, TEMPO, FLIGHT) and rebuild; never retime one side only.",
+ "creatures": {
+  "leaf": {
+   "flapHz": 1.6,
+   "corr": 1.0,
+   "segments": [
+    {
+     "shot": "1C-01",
+     "mode": "glide",
+     "from": 7884,
+     "to": 7913,
+     "onsets": [],
+     "why": "1C-01: Leaf crouches; wings still before the first downbeat"
+    },
+    {
+     "shot": "1C-01",
+     "mode": "steady",
+     "from": 7913,
+     "to": 7980,
+     "hz": 1.6,
+     "phase": 0.466667,
+     "anchor": 7913,
+     "anchor_rule": "continuous with the previous segment (it ended on a downstroke)",
+     "onsets": [
+      7913.0,
+      7928.0,
+      7943.0,
+      7958.0,
+      7973.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-02",
+     "mode": "steady",
+     "from": 7980,
+     "to": 8052,
+     "hz": 1.6,
+     "phase": 0.4,
+     "anchor": 7980,
+     "anchor_rule": "EDL cue frame for this creature in this shot",
+     "onsets": [
+      7980.0,
+      7995.0,
+      8010.0,
+      8025.0,
+      8040.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-03",
+     "mode": "steady",
+     "from": 8052,
+     "to": 8220,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      8052.0,
+      8067.0,
+      8082.0,
+      8097.0,
+      8112.0,
+      8127.0,
+      8142.0,
+      8157.0,
+      8172.0,
+      8187.0,
+      8202.0,
+      8217.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-07",
+     "mode": "steady",
+     "from": 8556,
+     "to": 8616,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": 8556,
+     "anchor_rule": "EDL cue frame for this creature in this shot",
+     "onsets": [
+      8556.0,
+      8571.0,
+      8586.0,
+      8601.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-08",
+     "mode": "steady",
+     "from": 8616,
+     "to": 8736,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      8625.0,
+      8640.0,
+      8655.0,
+      8670.0,
+      8685.0,
+      8700.0,
+      8715.0,
+      8730.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-09",
+     "mode": "steady",
+     "from": 8736,
+     "to": 8832,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      8736.0,
+      8751.0,
+      8766.0,
+      8781.0,
+      8796.0,
+      8811.0,
+      8826.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-10",
+     "mode": "steady",
+     "from": 8832,
+     "to": 8976,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      8832.0,
+      8847.0,
+      8862.0,
+      8877.0,
+      8892.0,
+      8907.0,
+      8922.0,
+      8937.0,
+      8952.0,
+      8967.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-11",
+     "mode": "steady",
+     "from": 8976,
+     "to": 9096,
+     "hz": 1.6,
+     "phase": 0.8,
+     "anchor": 8976,
+     "anchor_rule": "EDL cue frame for this creature in this shot",
+     "onsets": [
+      8976.0,
+      8991.0,
+      9006.0,
+      9021.0,
+      9036.0,
+      9051.0,
+      9066.0,
+      9081.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-12",
+     "mode": "steady",
+     "from": 9096,
+     "to": 9192,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      9099.0,
+      9114.0,
+      9129.0,
+      9144.0,
+      9159.0,
+      9174.0,
+      9189.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-13",
+     "mode": "steady",
+     "from": 9192,
+     "to": 9288,
+     "hz": 1.6,
+     "phase": 0.8,
+     "anchor": 9288,
+     "anchor_rule": "continuous with the next segment (a downstroke falls on its first frame)",
+     "onsets": [
+      9198.0,
+      9213.0,
+      9228.0,
+      9243.0,
+      9258.0,
+      9273.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-13",
+     "mode": "double",
+     "from": 9288,
+     "to": 9294,
+     "onsets": [
+      9288.0
+     ],
+     "why": "1C-13: corrective double beat (two downstrokes 0.25 s apart)"
+    },
+    {
+     "shot": "1C-13",
+     "mode": "steady",
+     "from": 9294,
+     "to": 9336,
+     "hz": 1.6,
+     "phase": 0.4,
+     "anchor": 9294,
+     "anchor_rule": "continuous with the previous segment (it ended on a downstroke)",
+     "onsets": [
+      9294.0,
+      9309.0,
+      9324.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-14",
+     "mode": "steady",
+     "from": 9336,
+     "to": 9456,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      9336.0,
+      9351.0,
+      9366.0,
+      9381.0,
+      9396.0,
+      9411.0,
+      9426.0,
+      9441.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-15",
+     "mode": "steady",
+     "from": 9456,
+     "to": 9672,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      9462.0,
+      9477.0,
+      9492.0,
+      9507.0,
+      9522.0,
+      9537.0,
+      9552.0,
+      9567.0,
+      9582.0,
+      9597.0,
+      9612.0,
+      9627.0,
+      9642.0,
+      9657.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-16",
+     "mode": "steady",
+     "from": 9672,
+     "to": 9744,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      9678.0,
+      9693.0,
+      9708.0,
+      9723.0,
+      9738.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-17",
+     "mode": "steady",
+     "from": 9744,
+     "to": 9816,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      9744.0,
+      9759.0,
+      9774.0,
+      9789.0,
+      9804.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-18",
+     "mode": "steady",
+     "from": 9816,
+     "to": 9888,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      9825.0,
+      9840.0,
+      9855.0,
+      9870.0,
+      9885.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-19",
+     "mode": "steady",
+     "from": 9888,
+     "to": 10080,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      9891.0,
+      9906.0,
+      9921.0,
+      9936.0,
+      9951.0,
+      9966.0,
+      9981.0,
+      9996.0,
+      10011.0,
+      10026.0,
+      10041.0,
+      10056.0,
+      10071.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-01",
+     "mode": "steady",
+     "from": 10080,
+     "to": 10140,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10092.0,
+      10107.0,
+      10122.0,
+      10137.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-02",
+     "mode": "steady",
+     "from": 10140,
+     "to": 10212,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10146.0,
+      10161.0,
+      10176.0,
+      10191.0,
+      10206.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-03",
+     "mode": "steady",
+     "from": 10212,
+     "to": 10416,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10212.0,
+      10227.0,
+      10242.0,
+      10257.0,
+      10272.0,
+      10287.0,
+      10302.0,
+      10317.0,
+      10332.0,
+      10347.0,
+      10362.0,
+      10377.0,
+      10392.0,
+      10407.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-04",
+     "mode": "steady",
+     "from": 10416,
+     "to": 10512,
+     "hz": 1.6,
+     "phase": 0.4,
+     "anchor": 10440,
+     "anchor_rule": "EDL cue frame for this creature in this shot",
+     "onsets": [
+      10425.0,
+      10440.0,
+      10455.0,
+      10470.0,
+      10485.0,
+      10500.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-05",
+     "mode": "steady",
+     "from": 10512,
+     "to": 10572,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10512.0,
+      10527.0,
+      10542.0,
+      10557.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-06",
+     "mode": "steady",
+     "from": 10572,
+     "to": 10668,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10581.0,
+      10596.0,
+      10611.0,
+      10626.0,
+      10641.0,
+      10656.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-07",
+     "mode": "steady",
+     "from": 10668,
+     "to": 10740,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10677.0,
+      10692.0,
+      10707.0,
+      10722.0,
+      10737.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-08",
+     "mode": "steady",
+     "from": 10740,
+     "to": 10836,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10743.0,
+      10758.0,
+      10773.0,
+      10788.0,
+      10803.0,
+      10818.0,
+      10833.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-09",
+     "mode": "steady",
+     "from": 10836,
+     "to": 10908,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10839.0,
+      10854.0,
+      10869.0,
+      10884.0,
+      10899.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-10",
+     "mode": "steady",
+     "from": 10908,
+     "to": 11100,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10920.0,
+      10935.0,
+      10950.0,
+      10965.0,
+      10980.0,
+      10995.0,
+      11010.0,
+      11025.0,
+      11040.0,
+      11055.0,
+      11070.0,
+      11085.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-11",
+     "mode": "steady",
+     "from": 11100,
+     "to": 11220,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      11106.0,
+      11121.0,
+      11136.0,
+      11151.0,
+      11166.0,
+      11181.0,
+      11196.0,
+      11211.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-12",
+     "mode": "steady",
+     "from": 11220,
+     "to": 11427,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      11232.0,
+      11247.0,
+      11262.0,
+      11277.0,
+      11292.0,
+      11307.0,
+      11322.0,
+      11337.0,
+      11352.0,
+      11367.0,
+      11382.0,
+      11397.0,
+      11412.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-13",
+     "mode": "steady",
+     "from": 11427,
+     "to": 11715,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      11439.0,
+      11454.0,
+      11469.0,
+      11484.0,
+      11499.0,
+      11514.0,
+      11529.0,
+      11544.0,
+      11559.0,
+      11574.0,
+      11589.0,
+      11604.0,
+      11619.0,
+      11634.0,
+      11649.0,
+      11664.0,
+      11679.0,
+      11694.0,
+      11709.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-14",
+     "mode": "steady",
+     "from": 11715,
+     "to": 11727,
+     "hz": 1.6,
+     "phase": 0.2,
+     "anchor": 11727,
+     "anchor_rule": "continuous with the next segment (a downstroke falls on its first frame)",
+     "onsets": [],
+     "why": null
+    },
+    {
+     "shot": "1D-14",
+     "mode": "steady",
+     "from": 11727,
+     "to": 11859,
+     "hz": 2.0,
+     "phase": 0.0,
+     "anchor": 11727,
+     "anchor_rule": "tempo change starts on a downstroke",
+     "onsets": [
+      11727.0,
+      11739.0,
+      11751.0,
+      11763.0,
+      11775.0,
+      11787.0,
+      11799.0,
+      11811.0,
+      11823.0,
+      11835.0,
+      11847.0
+     ],
+     "why": "1D-14: Leaf's beats quicken as he edges toward Charcoal"
+    },
+    {
+     "shot": "1D-15",
+     "mode": "steady",
+     "from": 11859,
+     "to": 11895,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      11871.0,
+      11886.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-16",
+     "mode": "steady",
+     "from": 11895,
+     "to": 11955,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      11895.0,
+      11910.0,
+      11925.0,
+      11940.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-17",
+     "mode": "steady",
+     "from": 11955,
+     "to": 12051,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      11964.0,
+      11979.0,
+      11994.0,
+      12009.0,
+      12024.0,
+      12039.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-18",
+     "mode": "steady",
+     "from": 12051,
+     "to": 12135,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12060.0,
+      12075.0,
+      12090.0,
+      12105.0,
+      12120.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-19",
+     "mode": "steady",
+     "from": 12135,
+     "to": 12255,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12144.0,
+      12159.0,
+      12174.0,
+      12189.0,
+      12204.0,
+      12219.0,
+      12234.0,
+      12249.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-20",
+     "mode": "steady",
+     "from": 12255,
+     "to": 12315,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12255.0,
+      12270.0,
+      12285.0,
+      12300.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-21",
+     "mode": "steady",
+     "from": 12315,
+     "to": 12375,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12324.0,
+      12339.0,
+      12354.0,
+      12369.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-22",
+     "mode": "steady",
+     "from": 12375,
+     "to": 12399,
+     "hz": 1.6,
+     "phase": 0.6,
+     "anchor": 12399,
+     "anchor_rule": "continuous with the next segment (a downstroke falls on its first frame)",
+     "onsets": [
+      12384.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-22",
+     "mode": "steady",
+     "from": 12399,
+     "to": 12471,
+     "hz": 2.3,
+     "phase": 0.3,
+     "anchor": 12399,
+     "anchor_rule": "tempo change starts on a downstroke",
+     "onsets": [
+      12399.0,
+      12409.4348,
+      12419.8696,
+      12430.3043,
+      12440.7391,
+      12451.1739,
+      12461.6087
+     ],
+     "why": "1D-22: rapid beats, pulling away after the release"
+    },
+    {
+     "shot": "1D-23",
+     "mode": "steady",
+     "from": 12471,
+     "to": 12675,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12474.0,
+      12489.0,
+      12504.0,
+      12519.0,
+      12534.0,
+      12549.0,
+      12564.0,
+      12579.0,
+      12594.0,
+      12609.0,
+      12624.0,
+      12639.0,
+      12654.0,
+      12669.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-24",
+     "mode": "steady",
+     "from": 12675,
+     "to": 12819,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12678.0,
+      12693.0,
+      12708.0,
+      12723.0,
+      12738.0,
+      12753.0,
+      12768.0,
+      12783.0,
+      12798.0,
+      12813.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-25",
+     "mode": "steady",
+     "from": 12819,
+     "to": 12891,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12819.0,
+      12834.0,
+      12849.0,
+      12864.0,
+      12879.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-26",
+     "mode": "steady",
+     "from": 12891,
+     "to": 12952,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12900.0,
+      12915.0,
+      12930.0,
+      12945.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-01",
+     "mode": "steady",
+     "from": 12952,
+     "to": 13060,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12955.0,
+      12970.0,
+      12985.0,
+      13000.0,
+      13015.0,
+      13030.0,
+      13045.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-02",
+     "mode": "steady",
+     "from": 13060,
+     "to": 13108,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13069.0,
+      13084.0,
+      13099.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-03",
+     "mode": "steady",
+     "from": 13108,
+     "to": 13144,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13120.0,
+      13135.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-04",
+     "mode": "uneven",
+     "from": 13144,
+     "to": 13216,
+     "onsets": [
+      13144.0,
+      13151.78347450153,
+      13159.82172855038,
+      13169.075461468112,
+      13180.534064878113,
+      13189.674280396834,
+      13199.514620137807,
+      13207.277352797548,
+      13214.152340528113
+     ],
+     "why": "1E-04..1E-12: rapid and uneven as he tries to stabilize for her"
+    },
+    {
+     "shot": "1E-05",
+     "mode": "uneven",
+     "from": 13216,
+     "to": 13288,
+     "onsets": [
+      13221.87565310971,
+      13230.318232078132,
+      13240.596729988883,
+      13248.8046314716,
+      13256.764487416633,
+      13265.013306843899,
+      13272.575912887369,
+      13279.034361363652,
+      13285.63622837906
+     ],
+     "why": "1E-04..1E-12: rapid and uneven as he tries to stabilize for her"
+    },
+    {
+     "shot": "1E-06",
+     "mode": "uneven",
+     "from": 13288,
+     "to": 13324,
+     "onsets": [
+      13293.176523622571,
+      13300.262111798449,
+      13309.745753117913,
+      13318.209169165219
+     ],
+     "why": "1E-04..1E-12: rapid and uneven as he tries to stabilize for her"
+    },
+    {
+     "shot": "1E-07",
+     "mode": "uneven",
+     "from": 13324,
+     "to": 13396,
+     "onsets": [
+      13328.773030411143,
+      13337.607105115227,
+      13348.502939263459,
+      13358.204924041069,
+      13368.504266058113,
+      13375.255547640592,
+      13385.18730424843,
+      13394.462127740957
+     ],
+     "why": "1E-04..1E-12: rapid and uneven as he tries to stabilize for her"
+    },
+    {
+     "shot": "1E-08",
+     "mode": "uneven",
+     "from": 13396,
+     "to": 13456,
+     "onsets": [
+      13400.861136997855,
+      13409.940258238741,
+      13420.90054560261,
+      13428.975347960564,
+      13440.400447617498,
+      13449.95405292841
+     ],
+     "why": "1E-04..1E-12: rapid and uneven as he tries to stabilize for her"
+    },
+    {
+     "shot": "1E-09",
+     "mode": "uneven",
+     "from": 13456,
+     "to": 13485,
+     "onsets": [
+      13459.132871929398,
+      13466.448713150989,
+      13473.3822169887,
+      13481.873978328409
+     ],
+     "why": "1E-04..1E-12: rapid and uneven as he tries to stabilize for her"
+    },
+    {
+     "shot": "1E-10",
+     "mode": "uneven",
+     "from": 13485,
+     "to": 13569,
+     "onsets": [
+      13490.244152875384,
+      13501.257867649338,
+      13507.626821571524,
+      13516.820569613332,
+      13528.396734686738,
+      13535.626136487745,
+      13545.029231199394,
+      13556.42873903426,
+      13567.75759806717
+     ],
+     "why": "1E-04..1E-12: rapid and uneven as he tries to stabilize for her"
+    },
+    {
+     "shot": "1E-11",
+     "mode": "uneven",
+     "from": 13569,
+     "to": 13641,
+     "onsets": [
+      13578.938739341009,
+      13585.237303259448,
+      13596.165187330882,
+      13606.746729909952,
+      13617.320478156582,
+      13626.459224865288,
+      13637.909613775852
+     ],
+     "why": "1E-04..1E-12: rapid and uneven as he tries to stabilize for her"
+    },
+    {
+     "shot": "1E-12",
+     "mode": "uneven",
+     "from": 13641,
+     "to": 13713,
+     "onsets": [
+      13646.247583828497,
+      13653.745433788261,
+      13661.846527563976,
+      13672.17843405789,
+      13683.092490564404,
+      13690.024293071667,
+      13698.964937062668,
+      13709.84431201025
+     ],
+     "why": "1E-04..1E-12: rapid and uneven as he tries to stabilize for her"
+    },
+    {
+     "shot": "1E-13",
+     "mode": "uneven",
+     "from": 13713,
+     "to": 13773,
+     "onsets": [
+      13718.788091769437,
+      13728.68170365144,
+      13735.566265800713,
+      13742.835922587681,
+      13750.850463954834,
+      13761.434327918132
+     ],
+     "why": "1E-04..1E-12: rapid and uneven as he tries to stabilize for her"
+    },
+    {
+     "shot": "1E-13",
+     "mode": "steady",
+     "from": 13773,
+     "to": 13833,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": 13773,
+     "anchor_rule": "continuous with the previous segment (it ended on a downstroke)",
+     "onsets": [
+      13773.0,
+      13788.0,
+      13803.0,
+      13818.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-14",
+     "mode": "steady",
+     "from": 13833,
+     "to": 14001,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13839.0,
+      13854.0,
+      13869.0,
+      13884.0,
+      13899.0,
+      13914.0,
+      13929.0,
+      13944.0,
+      13959.0,
+      13974.0,
+      13989.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-15",
+     "mode": "steady",
+     "from": 14001,
+     "to": 14097,
+     "hz": 1.6,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      14010.0,
+      14025.0,
+      14040.0,
+      14055.0,
+      14070.0,
+      14085.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-16",
+     "mode": "steady",
+     "from": 14097,
+     "to": 14169,
+     "hz": 1.6,
+     "phase": 0.8,
+     "anchor": 14109,
+     "anchor_rule": "EDL cue frame for this creature in this shot",
+     "onsets": [
+      14109.0,
+      14124.0,
+      14139.0,
+      14154.0
+     ],
+     "why": null
+    }
+   ],
+   "ground_beats": [],
+   "extra_onsets": [],
+   "count": 426
+  },
+  "charcoal": {
+   "flapHz": 0.76,
+   "corr": 0.0,
+   "segments": [
+    {
+     "shot": "1C-07",
+     "mode": "steady",
+     "from": 8556,
+     "to": 8616,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      8556.0,
+      8587.5789
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-08",
+     "mode": "steady",
+     "from": 8616,
+     "to": 8736,
+     "hz": 0.76,
+     "phase": 0.2,
+     "anchor": 8640,
+     "anchor_rule": "EDL cue frame for this creature in this shot",
+     "onsets": [
+      8640.0,
+      8671.5789,
+      8703.1579,
+      8734.7368
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-09",
+     "mode": "steady",
+     "from": 8736,
+     "to": 8832,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      8748.6316,
+      8780.2105,
+      8811.7895
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-10",
+     "mode": "steady",
+     "from": 8832,
+     "to": 8976,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      8850.9474,
+      8882.5263,
+      8914.1053,
+      8945.6842
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-11",
+     "mode": "steady",
+     "from": 8976,
+     "to": 9096,
+     "hz": 0.76,
+     "phase": 0.28,
+     "anchor": 8976,
+     "anchor_rule": "EDL cue frame for this creature in this shot",
+     "onsets": [
+      8976.0,
+      9007.5789,
+      9039.1579,
+      9070.7368
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-12",
+     "mode": "steady",
+     "from": 9096,
+     "to": 9192,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      9118.7368,
+      9150.3158,
+      9181.8947
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-13",
+     "mode": "steady",
+     "from": 9192,
+     "to": 9336,
+     "hz": 0.76,
+     "phase": 0.54,
+     "anchor": 9204,
+     "anchor_rule": "EDL cue frame for this creature in this shot",
+     "onsets": [
+      9204.0,
+      9235.5789,
+      9267.1579,
+      9298.7368,
+      9330.3158
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-14",
+     "mode": "steady",
+     "from": 9336,
+     "to": 9456,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      9354.9474,
+      9386.5263,
+      9418.1053,
+      9449.6842
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-15",
+     "mode": "steady",
+     "from": 9456,
+     "to": 9672,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      9457.2632,
+      9488.8421,
+      9520.4211,
+      9552.0,
+      9583.5789,
+      9615.1579,
+      9646.7368
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-16",
+     "mode": "steady",
+     "from": 9672,
+     "to": 9744,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      9685.8947,
+      9717.4737
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-17",
+     "mode": "steady",
+     "from": 9744,
+     "to": 9816,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      9756.6316,
+      9788.2105
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-18",
+     "mode": "steady",
+     "from": 9816,
+     "to": 9888,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      9827.3684,
+      9858.9474
+     ],
+     "why": null
+    },
+    {
+     "shot": "1C-19",
+     "mode": "steady",
+     "from": 9888,
+     "to": 10080,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      9898.1053,
+      9929.6842,
+      9961.2632,
+      9992.8421,
+      10024.4211,
+      10056.0
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-01",
+     "mode": "steady",
+     "from": 10080,
+     "to": 10140,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10095.1579,
+      10126.7368
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-02",
+     "mode": "steady",
+     "from": 10140,
+     "to": 10212,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10153.8947,
+      10185.4737
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-03",
+     "mode": "steady",
+     "from": 10212,
+     "to": 10416,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10224.6316,
+      10256.2105,
+      10287.7895,
+      10319.3684,
+      10350.9474,
+      10382.5263,
+      10414.1053
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-04",
+     "mode": "steady",
+     "from": 10416,
+     "to": 10512,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10441.2632,
+      10472.8421,
+      10504.4211
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-05",
+     "mode": "steady",
+     "from": 10512,
+     "to": 10572,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10512.0,
+      10543.5789
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-06",
+     "mode": "steady",
+     "from": 10572,
+     "to": 10668,
+     "hz": 0.76,
+     "phase": 0.2,
+     "anchor": 10596,
+     "anchor_rule": "EDL cue frame for this creature in this shot",
+     "onsets": [
+      10596.0,
+      10627.5789,
+      10659.1579
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-07",
+     "mode": "steady",
+     "from": 10668,
+     "to": 10740,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10673.0526,
+      10704.6316,
+      10736.2105
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-08",
+     "mode": "steady",
+     "from": 10740,
+     "to": 10836,
+     "hz": 0.76,
+     "phase": 0.36,
+     "anchor": 10764,
+     "anchor_rule": "EDL cue frame for this creature in this shot",
+     "onsets": [
+      10764.0,
+      10795.5789,
+      10827.1579
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-09",
+     "mode": "steady",
+     "from": 10836,
+     "to": 10908,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10846.1053,
+      10877.6842
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-10",
+     "mode": "steady",
+     "from": 10908,
+     "to": 11100,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      10916.8421,
+      10948.4211,
+      10980.0,
+      11011.5789,
+      11043.1579,
+      11074.7368
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-11",
+     "mode": "steady",
+     "from": 11100,
+     "to": 11220,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      11113.8947,
+      11145.4737,
+      11177.0526,
+      11208.6316
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-12",
+     "mode": "steady",
+     "from": 11220,
+     "to": 11427,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      11247.7895,
+      11279.3684,
+      11310.9474,
+      11342.5263,
+      11374.1053,
+      11405.6842
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-13",
+     "mode": "steady",
+     "from": 11427,
+     "to": 11715,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      11435.8421,
+      11467.4211,
+      11499.0,
+      11530.5789,
+      11562.1579,
+      11593.7368,
+      11625.3158,
+      11656.8947,
+      11688.4737
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-14",
+     "mode": "steady",
+     "from": 11715,
+     "to": 11859,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      11727.6316,
+      11759.2105,
+      11790.7895,
+      11822.3684,
+      11853.9474
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-15",
+     "mode": "steady",
+     "from": 11859,
+     "to": 11895,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      11861.5263,
+      11893.1053
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-16",
+     "mode": "steady",
+     "from": 11895,
+     "to": 11955,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      11920.2632,
+      11951.8421
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-17",
+     "mode": "steady",
+     "from": 11955,
+     "to": 12051,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      11979.0,
+      12010.5789,
+      12042.1579
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-18",
+     "mode": "steady",
+     "from": 12051,
+     "to": 12135,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12081.3158,
+      12112.8947
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-19",
+     "mode": "steady",
+     "from": 12135,
+     "to": 12255,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12140.0526,
+      12171.6316,
+      12203.2105,
+      12234.7895
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-20",
+     "mode": "steady",
+     "from": 12255,
+     "to": 12315,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12273.9474,
+      12305.5263
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-21",
+     "mode": "steady",
+     "from": 12315,
+     "to": 12375,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12332.6842,
+      12364.2632
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-22",
+     "mode": "steady",
+     "from": 12375,
+     "to": 12471,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12391.4211,
+      12423.0,
+      12454.5789
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-23",
+     "mode": "steady",
+     "from": 12471,
+     "to": 12675,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12493.7368,
+      12525.3158,
+      12556.8947,
+      12588.4737,
+      12620.0526,
+      12651.6316
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-24",
+     "mode": "steady",
+     "from": 12675,
+     "to": 12819,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12678.7895,
+      12710.3684,
+      12741.9474,
+      12773.5263,
+      12805.1053
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-25",
+     "mode": "steady",
+     "from": 12819,
+     "to": 12891,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12844.2632,
+      12875.8421
+     ],
+     "why": null
+    },
+    {
+     "shot": "1D-26",
+     "mode": "steady",
+     "from": 12891,
+     "to": 12952,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12915.0,
+      12946.5789
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-01",
+     "mode": "steady",
+     "from": 12952,
+     "to": 13060,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      12974.7368,
+      13006.3158,
+      13037.8947
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-02",
+     "mode": "steady",
+     "from": 13060,
+     "to": 13108,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13065.0526,
+      13096.6316
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-03",
+     "mode": "steady",
+     "from": 13108,
+     "to": 13144,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13135.7895
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-04",
+     "mode": "steady",
+     "from": 13144,
+     "to": 13216,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13162.9474,
+      13194.5263
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-05",
+     "mode": "steady",
+     "from": 13216,
+     "to": 13288,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13233.6842,
+      13265.2632
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-06",
+     "mode": "steady",
+     "from": 13288,
+     "to": 13324,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13304.4211
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-07",
+     "mode": "steady",
+     "from": 13324,
+     "to": 13396,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13331.5789,
+      13363.1579,
+      13394.7368
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-08",
+     "mode": "steady",
+     "from": 13396,
+     "to": 13456,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13402.3158,
+      13433.8947
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-09",
+     "mode": "steady",
+     "from": 13456,
+     "to": 13485,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13461.0526
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-10",
+     "mode": "steady",
+     "from": 13485,
+     "to": 13569,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13512.7895,
+      13544.3684
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-11",
+     "mode": "steady",
+     "from": 13569,
+     "to": 13641,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13571.5263,
+      13603.1053,
+      13634.6842
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-12",
+     "mode": "steady",
+     "from": 13641,
+     "to": 13713,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13642.2632,
+      13673.8421,
+      13705.4211
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-13",
+     "mode": "steady",
+     "from": 13713,
+     "to": 13833,
+     "hz": 0.76,
+     "phase": 0.62,
+     "anchor": 13725,
+     "anchor_rule": "EDL cue frame for this creature in this shot",
+     "onsets": [
+      13725.0,
+      13756.5789,
+      13788.1579,
+      13819.7368
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-14",
+     "mode": "steady",
+     "from": 13833,
+     "to": 14001,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      13846.8947,
+      13878.4737,
+      13910.0526,
+      13941.6316,
+      13973.2105
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-15",
+     "mode": "steady",
+     "from": 14001,
+     "to": 14097,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      14012.3684,
+      14043.9474,
+      14075.5263
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-16",
+     "mode": "steady",
+     "from": 14097,
+     "to": 14169,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      14114.6842,
+      14146.2632
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-17",
+     "mode": "steady",
+     "from": 14169,
+     "to": 14217,
+     "hz": 0.76,
+     "phase": 0.0,
+     "anchor": null,
+     "anchor_rule": "pure set-time formula (phase 0)",
+     "onsets": [
+      14185.4211
+     ],
+     "why": null
+    },
+    {
+     "shot": "1E-18",
+     "mode": "glide",
+     "from": 14217,
+     "to": 14301,
+     "onsets": [],
+     "why": "1E-18: Charcoal glides; his one deep banking downstroke (14263) is the EDL's banking_wingbeat cue"
+    }
+   ],
+   "ground_beats": [
+    {
+     "frame": 8340,
+     "shot": "1C-05",
+     "realized_by": "launch_downbeat"
+    },
+    {
+     "frame": 8522,
+     "shot": "1C-06",
+     "realized_by": "charcoal_beats"
+    }
+   ],
+   "extra_onsets": [
+    {
+     "frame": 14263,
+     "shot": "1E-18",
+     "realized_by": "banking_wingbeat (EDL cue)",
+     "note": "one deep banking downstroke; glide before and after"
+    }
+   ],
+   "count": 181
+  }
+ }
+}

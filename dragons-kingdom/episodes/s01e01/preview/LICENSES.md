@@ -82,3 +82,40 @@ These are programs and libraries. Their licenses cover the software, not the aud
 - Not required by the Apache-2.0 license for the generated audio.
 - Suggested credit line for the preview description: "Temporary voices: Kokoro-82M (Apache-2.0)."
 - The screenplay asks to credit only real contributors. No computer voice is credited as a person.
+
+## Soundtrack (music, sound effects, mix) and subtitles
+
+Built by `tools/build_soundtrack.py` (cue sheet with every placed sound: `mix/soundtrack.json`).
+Nothing in the soundtrack is downloaded audio. The CC0 sites in `../audio-plan.md` (Freesound,
+OpenGameArt, Kenney, archive.org) were tried from this machine on 2026-10-07 and could not be
+reached, so every sound is made in code.
+
+| What | Source | License |
+|---|---|---|
+| All sound effects and ambience: sea, gull, ship, egg and shell stages, hatchling breaths, chamber room tone and lamp, footsteps and cloth, riding-ground birds and wind, leather and buckles, the three wingbeats, Charcoal's breath, the launch (turf, stones, dust), the altitude wind, the jaws beat, the scout's pass, the banking beat | Procedural synthesis in `tools/sfx_lib.py` (noise, oscillators, modal resonators, filters, synthetic reverb; fixed seeds). Original work of this project. | No third-party material, so nothing to license or credit |
+| Abby's held breath (1A-25) and ragged breath (1E-07) | `make_vo.py` breath generator (procedural) | as above |
+| Abby's startled cry (1E-04) | Kokoro `af_heart` (Abby's own preview voice) saying "Ah!", through the same pain processing as her pain lines | Apache-2.0 (as the takes above) |
+| Music: M1, M2a, M2b, M2c, M3 | Original score written in `tools/score.py` (notes, harmony, orchestration: this project) | Original work of this project |
+| Instrument sounds used to play the score | **FluidR3_GM.sf2** SoundFont, Debian package fluid-soundfont-gm 3.1 (sha256 `74594e8f…0cb0`, checked by `score.py`) | **MIT**, Copyright 2000-2002, 2008 Frank Wen (built partly from public-domain samples) |
+
+The MIT license allows any use, including commercial use. Its notice ("The above copyright notice
+and this permission notice shall be included in all copies or substantial portions of the
+Software") covers copies of the SoundFont itself, which is never distributed here. Crediting it
+is still the honest thing to do; see the suggested credit line below.
+
+### Tools used to make and check the soundtrack (software licenses; nothing from them is in the audio)
+
+| Tool | Version | License | Role |
+|---|---|---|---|
+| NumPy / SciPy / soundfile | 2.4.6 / 1.17.1 / 0.14.0 | BSD-3-Clause | Synthesis, filters, convolution reverb, compressor, true-peak limiter, WAV I/O |
+| FluidSynth | 2.3.4 | LGPL-2.1-or-later | Plays the score's MIDI through FluidR3_GM (reverb and chorus off) |
+| FFmpeg (Ubuntu build, `--enable-gpl`) | 6.1.1 | GPL-2.0-or-later (this build) | `loudnorm` two-pass mastering, `ebur128` measurement, AAC test encode |
+| SoX | 14.4.2 | GPL-2.0+ / LGPL-2.1+ | Resampling inside the cry's voice processing (`make_vo.py`) |
+| kokoro-onnx / onnxruntime / espeak-ng | 0.6.1 / 1.30.0 / 1.51 | MIT / MIT / GPL-3.0-or-later | The cry (same engine as the takes) |
+
+Subtitles (`preview.en.srt`) are the screenplay's own words from `../dialogue.json`.
+
+### Suggested credit line for the soundtrack
+
+"Temporary voices: Kokoro-82M (Apache-2.0). Music rendered with the FluidR3_GM SoundFont by Frank
+Wen (MIT)." Everything else is original to the project.

@@ -19,3 +19,7 @@
 .cache/
 # rendered image sequences
 frames/
+# soundtrack build intermediates (rebuilt by tools/build_soundtrack.py)
+*.mid
+mix/cache/
+mix/stems/
