@@ -1,0 +1,2181 @@
+{
+ "schema": "dragons-kingdom/preview-vo-words v1",
+ "source": "pocketsphinx forced alignment of vo/<id>.wav against dialogue.json text; times in seconds from the start of the file, 10 ms resolution",
+ "lines": {
+  "L001": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "until",
+     "start_s": 0.0,
+     "end_s": 0.42
+    },
+    {
+     "w": "the",
+     "start_s": 0.42,
+     "end_s": 0.58
+    },
+    {
+     "w": "early",
+     "start_s": 0.58,
+     "end_s": 0.86
+    },
+    {
+     "w": "twelve",
+     "start_s": 0.86,
+     "end_s": 1.17
+    },
+    {
+     "w": "hundreds",
+     "start_s": 1.17,
+     "end_s": 1.82
+    },
+    {
+     "w": "humanity",
+     "start_s": 2.15,
+     "end_s": 2.78
+    },
+    {
+     "w": "did",
+     "start_s": 2.78,
+     "end_s": 2.93
+    },
+    {
+     "w": "not",
+     "start_s": 2.93,
+     "end_s": 3.11
+    },
+    {
+     "w": "know",
+     "start_s": 3.11,
+     "end_s": 3.44
+    },
+    {
+     "w": "that",
+     "start_s": 3.44,
+     "end_s": 3.62
+    },
+    {
+     "w": "dragons",
+     "start_s": 3.62,
+     "end_s": 4.12
+    },
+    {
+     "w": "existed",
+     "start_s": 4.12,
+     "end_s": 4.85
+    }
+   ]
+  },
+  "L002": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "the",
+     "start_s": 0.0,
+     "end_s": 0.19
+    },
+    {
+     "w": "seas",
+     "start_s": 0.19,
+     "end_s": 0.69
+    },
+    {
+     "w": "had",
+     "start_s": 0.69,
+     "end_s": 0.88
+    },
+    {
+     "w": "names",
+     "start_s": 0.88,
+     "end_s": 1.46
+    },
+    {
+     "w": "the",
+     "start_s": 2.25,
+     "end_s": 2.38
+    },
+    {
+     "w": "kingdoms",
+     "start_s": 2.38,
+     "end_s": 3.0
+    },
+    {
+     "w": "had",
+     "start_s": 3.0,
+     "end_s": 3.22
+    },
+    {
+     "w": "borders",
+     "start_s": 3.22,
+     "end_s": 3.89
+    },
+    {
+     "w": "beyond",
+     "start_s": 4.62,
+     "end_s": 4.96
+    },
+    {
+     "w": "them",
+     "start_s": 4.96,
+     "end_s": 5.13
+    },
+    {
+     "w": "lay",
+     "start_s": 5.13,
+     "end_s": 5.34
+    },
+    {
+     "w": "islands",
+     "start_s": 5.34,
+     "end_s": 5.85
+    },
+    {
+     "w": "no",
+     "start_s": 5.85,
+     "end_s": 6.08
+    },
+    {
+     "w": "one",
+     "start_s": 6.08,
+     "end_s": 6.26
+    },
+    {
+     "w": "had",
+     "start_s": 6.26,
+     "end_s": 6.4
+    },
+    {
+     "w": "reached",
+     "start_s": 6.4,
+     "end_s": 6.97
+    },
+    {
+     "w": "and",
+     "start_s": 7.31,
+     "end_s": 7.47
+    },
+    {
+     "w": "things",
+     "start_s": 7.47,
+     "end_s": 7.74
+    },
+    {
+     "w": "no",
+     "start_s": 7.74,
+     "end_s": 7.95
+    },
+    {
+     "w": "one",
+     "start_s": 7.95,
+     "end_s": 8.15
+    },
+    {
+     "w": "had",
+     "start_s": 8.15,
+     "end_s": 8.26
+    },
+    {
+     "w": "thought",
+     "start_s": 8.26,
+     "end_s": 8.54
+    },
+    {
+     "w": "to",
+     "start_s": 8.54,
+     "end_s": 8.64
+    },
+    {
+     "w": "fear",
+     "start_s": 8.64,
+     "end_s": 9.1
+    }
+   ]
+  },
+  "L003": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "tara",
+     "start_s": 0.0,
+     "end_s": 0.63
+    },
+    {
+     "w": "scrapper",
+     "start_s": 1.76,
+     "end_s": 2.39
+    },
+    {
+     "w": "verdor",
+     "start_s": 3.14,
+     "end_s": 3.71
+    },
+    {
+     "w": "the",
+     "start_s": 4.43,
+     "end_s": 4.54
+    },
+    {
+     "w": "citadel",
+     "start_s": 4.54,
+     "end_s": 5.03
+    },
+    {
+     "w": "sea",
+     "start_s": 5.03,
+     "end_s": 5.47
+    },
+    {
+     "w": "and",
+     "start_s": 5.47,
+     "end_s": 5.67
+    },
+    {
+     "w": "the",
+     "start_s": 5.67,
+     "end_s": 5.74
+    },
+    {
+     "w": "proxy",
+     "start_s": 5.74,
+     "end_s": 6.22
+    },
+    {
+     "w": "sea",
+     "start_s": 6.22,
+     "end_s": 6.7
+    },
+    {
+     "w": "seven",
+     "start_s": 7.38,
+     "end_s": 7.77
+    },
+    {
+     "w": "kingdoms",
+     "start_s": 7.77,
+     "end_s": 8.42
+    },
+    {
+     "w": "and",
+     "start_s": 8.6,
+     "end_s": 8.74
+    },
+    {
+     "w": "undiscovered",
+     "start_s": 8.74,
+     "end_s": 9.45
+    },
+    {
+     "w": "islands",
+     "start_s": 9.45,
+     "end_s": 9.95
+    },
+    {
+     "w": "beyond",
+     "start_s": 9.95,
+     "end_s": 10.24
+    },
+    {
+     "w": "the",
+     "start_s": 10.24,
+     "end_s": 10.3
+    },
+    {
+     "w": "familiar",
+     "start_s": 10.3,
+     "end_s": 10.75
+    },
+    {
+     "w": "shores",
+     "start_s": 10.75,
+     "end_s": 11.38
+    }
+   ]
+  },
+  "L004": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "by",
+     "start_s": 0.0,
+     "end_s": 0.2
+    },
+    {
+     "w": "the",
+     "start_s": 0.2,
+     "end_s": 0.27
+    },
+    {
+     "w": "fourteen",
+     "start_s": 0.27,
+     "end_s": 0.77
+    },
+    {
+     "w": "hundreds",
+     "start_s": 0.77,
+     "end_s": 1.48
+    },
+    {
+     "w": "dragons",
+     "start_s": 1.63,
+     "end_s": 2.14
+    },
+    {
+     "w": "were",
+     "start_s": 2.14,
+     "end_s": 2.21
+    },
+    {
+     "w": "part",
+     "start_s": 2.21,
+     "end_s": 2.54
+    },
+    {
+     "w": "of",
+     "start_s": 2.54,
+     "end_s": 2.61
+    },
+    {
+     "w": "our",
+     "start_s": 2.61,
+     "end_s": 2.73
+    },
+    {
+     "w": "lives",
+     "start_s": 2.73,
+     "end_s": 3.38
+    },
+    {
+     "w": "so",
+     "start_s": 4.01,
+     "end_s": 4.31
+    },
+    {
+     "w": "were",
+     "start_s": 4.31,
+     "end_s": 4.54
+    },
+    {
+     "w": "the",
+     "start_s": 4.54,
+     "end_s": 4.65
+    },
+    {
+     "w": "people",
+     "start_s": 4.65,
+     "end_s": 5.04
+    },
+    {
+     "w": "who",
+     "start_s": 5.04,
+     "end_s": 5.22
+    },
+    {
+     "w": "rode",
+     "start_s": 5.22,
+     "end_s": 5.51
+    },
+    {
+     "w": "them",
+     "start_s": 5.51,
+     "end_s": 5.77
+    }
+   ]
+  },
+  "L005": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "this",
+     "start_s": 0.0,
+     "end_s": 0.35
+    },
+    {
+     "w": "is",
+     "start_s": 0.35,
+     "end_s": 0.55
+    },
+    {
+     "w": "where",
+     "start_s": 0.55,
+     "end_s": 0.81
+    },
+    {
+     "w": "our",
+     "start_s": 0.81,
+     "end_s": 0.92
+    },
+    {
+     "w": "story",
+     "start_s": 0.92,
+     "end_s": 1.38
+    },
+    {
+     "w": "begins",
+     "start_s": 1.38,
+     "end_s": 2.09
+    }
+   ]
+  },
+  "L006": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "it",
+     "start_s": 0.0,
+     "end_s": 0.18
+    },
+    {
+     "w": "started",
+     "start_s": 0.18,
+     "end_s": 0.62
+    },
+    {
+     "w": "a",
+     "start_s": 0.62,
+     "end_s": 0.66
+    },
+    {
+     "w": "moment",
+     "start_s": 0.66,
+     "end_s": 0.99
+    },
+    {
+     "w": "ago",
+     "start_s": 0.99,
+     "end_s": 1.49
+    }
+   ]
+  },
+  "L007": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "has",
+     "start_s": 0.0,
+     "end_s": 0.22
+    },
+    {
+     "w": "anyone",
+     "start_s": 0.22,
+     "end_s": 0.6
+    },
+    {
+     "w": "touched",
+     "start_s": 0.6,
+     "end_s": 0.96
+    },
+    {
+     "w": "it",
+     "start_s": 0.96,
+     "end_s": 1.28
+    }
+   ]
+  },
+  "L008": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "no",
+     "start_s": 0.0,
+     "end_s": 0.5
+    },
+    {
+     "w": "your",
+     "start_s": 0.5,
+     "end_s": 0.63
+    },
+    {
+     "w": "majesty",
+     "start_s": 0.63,
+     "end_s": 1.42
+    }
+   ]
+  },
+  "L009": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "then",
+     "start_s": 0.0,
+     "end_s": 0.25
+    },
+    {
+     "w": "let",
+     "start_s": 0.25,
+     "end_s": 0.4
+    },
+    {
+     "w": "it",
+     "start_s": 0.4,
+     "end_s": 0.48
+    },
+    {
+     "w": "finish",
+     "start_s": 0.48,
+     "end_s": 1.06
+    }
+   ]
+  },
+  "L010": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "look",
+     "start_s": 0.0,
+     "end_s": 0.31
+    },
+    {
+     "w": "at",
+     "start_s": 0.31,
+     "end_s": 0.58
+    },
+    {
+     "w": "it",
+     "start_s": 0.58,
+     "end_s": 0.94
+    }
+   ]
+  },
+  "L011": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "my",
+     "start_s": 0.0,
+     "end_s": 0.23
+    },
+    {
+     "w": "pretty",
+     "start_s": 0.23,
+     "end_s": 0.61
+    },
+    {
+     "w": "little",
+     "start_s": 0.61,
+     "end_s": 0.85
+    },
+    {
+     "w": "weapon",
+     "start_s": 0.85,
+     "end_s": 1.37
+    }
+   ]
+  },
+  "L012": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "is",
+     "start_s": 0.0,
+     "end_s": 0.21
+    },
+    {
+     "w": "it",
+     "start_s": 0.21,
+     "end_s": 0.31
+    },
+    {
+     "w": "out",
+     "start_s": 0.31,
+     "end_s": 0.71
+    }
+   ]
+  },
+  "L013": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "come",
+     "start_s": 0.0,
+     "end_s": 0.22
+    },
+    {
+     "w": "slowly",
+     "start_s": 0.22,
+     "end_s": 0.85
+    }
+   ]
+  },
+  "L014": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "it's",
+     "start_s": 0.0,
+     "end_s": 0.22
+    },
+    {
+     "w": "gold",
+     "start_s": 0.22,
+     "end_s": 0.7
+    }
+   ]
+  },
+  "L015": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "i",
+     "start_s": 0.0,
+     "end_s": 0.16
+    },
+    {
+     "w": "can",
+     "start_s": 0.16,
+     "end_s": 0.37
+    },
+    {
+     "w": "see",
+     "start_s": 0.37,
+     "end_s": 0.67
+    },
+    {
+     "w": "that",
+     "start_s": 0.67,
+     "end_s": 1.02
+    }
+   ]
+  },
+  "L016": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "i",
+     "start_s": 0.0,
+     "end_s": 0.15
+    },
+    {
+     "w": "mean",
+     "start_s": 0.15,
+     "end_s": 0.36
+    },
+    {
+     "w": "all",
+     "start_s": 0.36,
+     "end_s": 0.6
+    },
+    {
+     "w": "of",
+     "start_s": 0.6,
+     "end_s": 0.69
+    },
+    {
+     "w": "it",
+     "start_s": 0.69,
+     "end_s": 0.95
+    }
+   ]
+  },
+  "L017": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "wait",
+     "start_s": 0.0,
+     "end_s": 0.57
+    },
+    {
+     "w": "let",
+     "start_s": 0.93,
+     "end_s": 1.07
+    },
+    {
+     "w": "it",
+     "start_s": 1.07,
+     "end_s": 1.16
+    },
+    {
+     "w": "settle",
+     "start_s": 1.16,
+     "end_s": 1.62
+    }
+   ]
+  },
+  "L018": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "how",
+     "start_s": 0.0,
+     "end_s": 0.19
+    },
+    {
+     "w": "long",
+     "start_s": 0.19,
+     "end_s": 0.66
+    },
+    {
+     "w": "has",
+     "start_s": 0.66,
+     "end_s": 0.84
+    },
+    {
+     "w": "it",
+     "start_s": 0.84,
+     "end_s": 0.9
+    },
+    {
+     "w": "been",
+     "start_s": 0.9,
+     "end_s": 1.06
+    },
+    {
+     "w": "trying",
+     "start_s": 1.06,
+     "end_s": 1.7
+    }
+   ]
+  },
+  "L019": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "long",
+     "start_s": 0.0,
+     "end_s": 0.39
+    },
+    {
+     "w": "enough",
+     "start_s": 0.39,
+     "end_s": 0.79
+    },
+    {
+     "w": "it",
+     "start_s": 1.29,
+     "end_s": 1.42
+    },
+    {
+     "w": "needs",
+     "start_s": 1.42,
+     "end_s": 1.77
+    },
+    {
+     "w": "rest",
+     "start_s": 1.77,
+     "end_s": 2.1
+    },
+    {
+     "w": "now",
+     "start_s": 2.1,
+     "end_s": 2.63
+    }
+   ]
+  },
+  "L020": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "there",
+     "start_s": 0.0,
+     "end_s": 0.42
+    }
+   ]
+  },
+  "L021": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "yes",
+     "start_s": 0.0,
+     "end_s": 0.52
+    }
+   ]
+  },
+  "L022": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "does",
+     "start_s": 0.0,
+     "end_s": 0.25
+    },
+    {
+     "w": "it",
+     "start_s": 0.25,
+     "end_s": 0.31
+    },
+    {
+     "w": "have",
+     "start_s": 0.31,
+     "end_s": 0.56
+    },
+    {
+     "w": "a",
+     "start_s": 0.56,
+     "end_s": 0.61
+    },
+    {
+     "w": "name",
+     "start_s": 0.61,
+     "end_s": 1.07
+    }
+   ]
+  },
+  "L023": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "not",
+     "start_s": 0.0,
+     "end_s": 0.3
+    },
+    {
+     "w": "yet",
+     "start_s": 0.3,
+     "end_s": 0.78
+    }
+   ]
+  },
+  "L024": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "don't",
+     "start_s": 0.0,
+     "end_s": 0.2
+    },
+    {
+     "w": "let",
+     "start_s": 0.2,
+     "end_s": 0.37
+    },
+    {
+     "w": "him",
+     "start_s": 0.37,
+     "end_s": 0.5
+    },
+    {
+     "w": "choose",
+     "start_s": 0.5,
+     "end_s": 0.85
+    },
+    {
+     "w": "it",
+     "start_s": 0.85,
+     "end_s": 1.09
+    }
+   ]
+  },
+  "L025": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "i",
+     "start_s": 0.1,
+     "end_s": 0.24
+    },
+    {
+     "w": "hadn't",
+     "start_s": 0.24,
+     "end_s": 0.57
+    },
+    {
+     "w": "offered",
+     "start_s": 0.57,
+     "end_s": 1.22
+    }
+   ]
+  },
+  "L026": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "then",
+     "start_s": 0.0,
+     "end_s": 0.16
+    },
+    {
+     "w": "you",
+     "start_s": 0.16,
+     "end_s": 0.25
+    },
+    {
+     "w": "may",
+     "start_s": 0.25,
+     "end_s": 0.42
+    },
+    {
+     "w": "both",
+     "start_s": 0.42,
+     "end_s": 0.76
+    },
+    {
+     "w": "leave",
+     "start_s": 0.76,
+     "end_s": 0.99
+    },
+    {
+     "w": "it",
+     "start_s": 0.99,
+     "end_s": 1.05
+    },
+    {
+     "w": "in",
+     "start_s": 1.05,
+     "end_s": 1.19
+    },
+    {
+     "w": "peace",
+     "start_s": 1.19,
+     "end_s": 1.75
+    }
+   ]
+  },
+  "L027": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "we're",
+     "start_s": 0.0,
+     "end_s": 0.14
+    },
+    {
+     "w": "going",
+     "start_s": 0.14,
+     "end_s": 0.48
+    },
+    {
+     "w": "flying",
+     "start_s": 0.48,
+     "end_s": 1.2
+    }
+   ]
+  },
+  "L028": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "together",
+     "start_s": 0.0,
+     "end_s": 0.57
+    }
+   ]
+  },
+  "L029": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "yes",
+     "start_s": 0.0,
+     "end_s": 0.51
+    }
+   ]
+  },
+  "L030": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "stay",
+     "start_s": 0.0,
+     "end_s": 0.3
+    },
+    {
+     "w": "within",
+     "start_s": 0.3,
+     "end_s": 0.57
+    },
+    {
+     "w": "reach",
+     "start_s": 0.57,
+     "end_s": 0.92
+    },
+    {
+     "w": "of",
+     "start_s": 0.92,
+     "end_s": 1.0
+    },
+    {
+     "w": "the",
+     "start_s": 1.0,
+     "end_s": 1.14
+    },
+    {
+     "w": "island",
+     "start_s": 1.14,
+     "end_s": 1.71
+    }
+   ]
+  },
+  "L031": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "we",
+     "start_s": 0.0,
+     "end_s": 0.23
+    },
+    {
+     "w": "will",
+     "start_s": 0.23,
+     "end_s": 0.75
+    }
+   ]
+  },
+  "L032": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "leaf",
+     "start_s": 0.0,
+     "end_s": 0.49
+    },
+    {
+     "w": "here",
+     "start_s": 0.86,
+     "end_s": 1.23
+    }
+   ]
+  },
+  "L033": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "finished",
+     "start_s": 0.0,
+     "end_s": 0.69
+    }
+   ]
+  },
+  "L034": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "nearly",
+     "start_s": 0.0,
+     "end_s": 0.53
+    }
+   ]
+  },
+  "L035": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "that",
+     "start_s": 0.0,
+     "end_s": 0.19
+    },
+    {
+     "w": "was",
+     "start_s": 0.19,
+     "end_s": 0.37
+    },
+    {
+     "w": "nearly",
+     "start_s": 0.37,
+     "end_s": 0.7
+    },
+    {
+     "w": "when",
+     "start_s": 0.7,
+     "end_s": 0.86
+    },
+    {
+     "w": "i",
+     "start_s": 0.86,
+     "end_s": 0.95
+    },
+    {
+     "w": "asked",
+     "start_s": 0.95,
+     "end_s": 1.38
+    },
+    {
+     "w": "before",
+     "start_s": 1.38,
+     "end_s": 1.99
+    }
+   ]
+  },
+  "L036": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "you",
+     "start_s": 0.0,
+     "end_s": 0.17
+    },
+    {
+     "w": "asked",
+     "start_s": 0.17,
+     "end_s": 0.48
+    },
+    {
+     "w": "once",
+     "start_s": 0.48,
+     "end_s": 0.98
+    }
+   ]
+  },
+  "L037": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "the",
+     "start_s": 0.0,
+     "end_s": 0.08
+    },
+    {
+     "w": "field's",
+     "start_s": 0.08,
+     "end_s": 0.45
+    },
+    {
+     "w": "clear",
+     "start_s": 0.45,
+     "end_s": 0.85
+    }
+   ]
+  },
+  "L038": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "stay",
+     "start_s": 0.0,
+     "end_s": 0.3
+    },
+    {
+     "w": "clear",
+     "start_s": 0.3,
+     "end_s": 0.68
+    },
+    {
+     "w": "when",
+     "start_s": 0.68,
+     "end_s": 0.85
+    },
+    {
+     "w": "he",
+     "start_s": 0.85,
+     "end_s": 0.92
+    },
+    {
+     "w": "lifts",
+     "start_s": 0.92,
+     "end_s": 1.45
+    }
+   ]
+  },
+  "L039": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "i",
+     "start_s": 0.0,
+     "end_s": 0.2
+    },
+    {
+     "w": "remember",
+     "start_s": 0.2,
+     "end_s": 0.71
+    }
+   ]
+  },
+  "L040": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "leaf",
+     "start_s": 0.0,
+     "end_s": 0.4
+    },
+    {
+     "w": "doesn't",
+     "start_s": 0.4,
+     "end_s": 0.73
+    },
+    {
+     "w": "always",
+     "start_s": 0.73,
+     "end_s": 1.25
+    },
+    {
+     "w": "remember",
+     "start_s": 1.25,
+     "end_s": 1.86
+    }
+   ]
+  },
+  "L041": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "we'll",
+     "start_s": 0.0,
+     "end_s": 0.19
+    },
+    {
+     "w": "go",
+     "start_s": 0.19,
+     "end_s": 0.39
+    },
+    {
+     "w": "first",
+     "start_s": 0.39,
+     "end_s": 0.92
+    }
+   ]
+  },
+  "L042": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "you",
+     "start_s": 0.0,
+     "end_s": 0.13
+    },
+    {
+     "w": "could",
+     "start_s": 0.13,
+     "end_s": 0.28
+    },
+    {
+     "w": "have",
+     "start_s": 0.28,
+     "end_s": 0.42
+    },
+    {
+     "w": "warned",
+     "start_s": 0.42,
+     "end_s": 0.69
+    },
+    {
+     "w": "the",
+     "start_s": 0.69,
+     "end_s": 0.75
+    },
+    {
+     "w": "grass",
+     "start_s": 0.75,
+     "end_s": 1.32
+    }
+   ]
+  },
+  "L043": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "everything",
+     "start_s": 0.0,
+     "end_s": 0.53
+    },
+    {
+     "w": "secure",
+     "start_s": 0.53,
+     "end_s": 1.22
+    }
+   ]
+  },
+  "L044": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "yes",
+     "start_s": 0.0,
+     "end_s": 0.51
+    }
+   ]
+  },
+  "L045": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "all",
+     "start_s": 0.0,
+     "end_s": 0.31
+    },
+    {
+     "w": "right",
+     "start_s": 0.31,
+     "end_s": 0.78
+    }
+   ]
+  },
+  "L046": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "you're",
+     "start_s": 0.0,
+     "end_s": 0.14
+    },
+    {
+     "w": "going",
+     "start_s": 0.14,
+     "end_s": 0.42
+    },
+    {
+     "w": "to",
+     "start_s": 0.42,
+     "end_s": 0.53
+    },
+    {
+     "w": "be",
+     "start_s": 0.53,
+     "end_s": 0.68
+    },
+    {
+     "w": "queen",
+     "start_s": 0.68,
+     "end_s": 1.16
+    },
+    {
+     "w": "when",
+     "start_s": 1.16,
+     "end_s": 1.29
+    },
+    {
+     "w": "i'm",
+     "start_s": 1.29,
+     "end_s": 1.47
+    },
+    {
+     "w": "gone",
+     "start_s": 1.47,
+     "end_s": 1.91
+    },
+    {
+     "w": "least",
+     "start_s": 2.28,
+     "end_s": 2.67
+    },
+    {
+     "w": "i",
+     "start_s": 2.67,
+     "end_s": 2.78
+    },
+    {
+     "w": "think",
+     "start_s": 2.78,
+     "end_s": 3.04
+    },
+    {
+     "w": "that's",
+     "start_s": 3.04,
+     "end_s": 3.27
+    },
+    {
+     "w": "how",
+     "start_s": 3.27,
+     "end_s": 3.5
+    },
+    {
+     "w": "that",
+     "start_s": 3.5,
+     "end_s": 3.69
+    },
+    {
+     "w": "works",
+     "start_s": 3.69,
+     "end_s": 4.24
+    },
+    {
+     "w": "you",
+     "start_s": 4.58,
+     "end_s": 4.74
+    },
+    {
+     "w": "good",
+     "start_s": 4.74,
+     "end_s": 5.0
+    },
+    {
+     "w": "with",
+     "start_s": 5.0,
+     "end_s": 5.24
+    },
+    {
+     "w": "that",
+     "start_s": 5.24,
+     "end_s": 5.67
+    }
+   ]
+  },
+  "L047": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "yeah",
+     "start_s": 0.0,
+     "end_s": 0.29
+    },
+    {
+     "w": "you're",
+     "start_s": 0.29,
+     "end_s": 0.55
+    },
+    {
+     "w": "good",
+     "start_s": 0.55,
+     "end_s": 0.98
+    }
+   ]
+  },
+  "L048": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "why",
+     "start_s": 0.0,
+     "end_s": 0.23
+    },
+    {
+     "w": "couldn't",
+     "start_s": 0.23,
+     "end_s": 0.48
+    },
+    {
+     "w": "i",
+     "start_s": 0.48,
+     "end_s": 0.55
+    },
+    {
+     "w": "get",
+     "start_s": 0.55,
+     "end_s": 0.71
+    },
+    {
+     "w": "a",
+     "start_s": 0.71,
+     "end_s": 0.75
+    },
+    {
+     "w": "bashion",
+     "start_s": 0.75,
+     "end_s": 1.31
+    }
+   ]
+  },
+  "L049": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "you",
+     "start_s": 0.0,
+     "end_s": 0.24
+    },
+    {
+     "w": "have",
+     "start_s": 0.24,
+     "end_s": 0.5
+    },
+    {
+     "w": "leaf",
+     "start_s": 0.5,
+     "end_s": 0.96
+    }
+   ]
+  },
+  "L050": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "i",
+     "start_s": 0.0,
+     "end_s": 0.1
+    },
+    {
+     "w": "know",
+     "start_s": 0.1,
+     "end_s": 0.34
+    },
+    {
+     "w": "i",
+     "start_s": 0.34,
+     "end_s": 0.41
+    },
+    {
+     "w": "have",
+     "start_s": 0.41,
+     "end_s": 0.67
+    },
+    {
+     "w": "leaf",
+     "start_s": 0.67,
+     "end_s": 1.09
+    }
+   ]
+  },
+  "L051": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "then",
+     "start_s": 0.0,
+     "end_s": 0.26
+    },
+    {
+     "w": "don't",
+     "start_s": 0.26,
+     "end_s": 0.47
+    },
+    {
+     "w": "ask",
+     "start_s": 0.47,
+     "end_s": 0.84
+    },
+    {
+     "w": "like",
+     "start_s": 0.84,
+     "end_s": 1.03
+    },
+    {
+     "w": "he",
+     "start_s": 1.03,
+     "end_s": 1.17
+    },
+    {
+     "w": "isn't",
+     "start_s": 1.17,
+     "end_s": 1.42
+    },
+    {
+     "w": "right",
+     "start_s": 1.42,
+     "end_s": 1.68
+    },
+    {
+     "w": "here",
+     "start_s": 1.68,
+     "end_s": 2.04
+    }
+   ]
+  },
+  "L052": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "i",
+     "start_s": 0.0,
+     "end_s": 0.13
+    },
+    {
+     "w": "didn't",
+     "start_s": 0.13,
+     "end_s": 0.32
+    },
+    {
+     "w": "mean",
+     "start_s": 0.32,
+     "end_s": 0.51
+    },
+    {
+     "w": "it",
+     "start_s": 0.51,
+     "end_s": 0.58
+    },
+    {
+     "w": "like",
+     "start_s": 0.58,
+     "end_s": 0.77
+    },
+    {
+     "w": "that",
+     "start_s": 0.77,
+     "end_s": 1.19
+    }
+   ]
+  },
+  "L053": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "nightwings",
+     "start_s": 0.0,
+     "end_s": 0.59
+    },
+    {
+     "w": "are",
+     "start_s": 0.59,
+     "end_s": 0.67
+    },
+    {
+     "w": "faster",
+     "start_s": 0.67,
+     "end_s": 1.29
+    },
+    {
+     "w": "more",
+     "start_s": 1.69,
+     "end_s": 1.95
+    },
+    {
+     "w": "versatile",
+     "start_s": 1.95,
+     "end_s": 2.79
+    }
+   ]
+  },
+  "L054": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "and",
+     "start_s": 0.0,
+     "end_s": 0.18
+    },
+    {
+     "w": "bashions",
+     "start_s": 0.18,
+     "end_s": 0.8
+    }
+   ]
+  },
+  "L055": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "better",
+     "start_s": 0.0,
+     "end_s": 0.35
+    },
+    {
+     "w": "for",
+     "start_s": 0.35,
+     "end_s": 0.54
+    },
+    {
+     "w": "war",
+     "start_s": 0.54,
+     "end_s": 1.08
+    }
+   ]
+  },
+  "L056": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "i",
+     "start_s": 0.0,
+     "end_s": 0.11
+    },
+    {
+     "w": "was",
+     "start_s": 0.11,
+     "end_s": 0.29
+    },
+    {
+     "w": "thinking",
+     "start_s": 0.29,
+     "end_s": 0.65
+    },
+    {
+     "w": "about",
+     "start_s": 0.65,
+     "end_s": 0.87
+    },
+    {
+     "w": "being",
+     "start_s": 0.87,
+     "end_s": 1.07
+    },
+    {
+     "w": "able",
+     "start_s": 1.07,
+     "end_s": 1.26
+    },
+    {
+     "w": "to",
+     "start_s": 1.26,
+     "end_s": 1.38
+    },
+    {
+     "w": "move",
+     "start_s": 1.38,
+     "end_s": 1.64
+    },
+    {
+     "w": "the",
+     "start_s": 1.64,
+     "end_s": 1.72
+    },
+    {
+     "w": "ground",
+     "start_s": 1.72,
+     "end_s": 2.18
+    },
+    {
+     "w": "every",
+     "start_s": 2.48,
+     "end_s": 2.74
+    },
+    {
+     "w": "time",
+     "start_s": 2.74,
+     "end_s": 3.13
+    },
+    {
+     "w": "i",
+     "start_s": 3.13,
+     "end_s": 3.28
+    },
+    {
+     "w": "leave",
+     "start_s": 3.28,
+     "end_s": 3.7
+    }
+   ]
+  },
+  "L057": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "someone",
+     "start_s": 0.0,
+     "end_s": 0.42
+    },
+    {
+     "w": "has",
+     "start_s": 0.42,
+     "end_s": 0.61
+    },
+    {
+     "w": "to",
+     "start_s": 0.61,
+     "end_s": 0.71
+    },
+    {
+     "w": "mend",
+     "start_s": 0.71,
+     "end_s": 1.09
+    },
+    {
+     "w": "it",
+     "start_s": 1.09,
+     "end_s": 1.23
+    },
+    {
+     "w": "afterward",
+     "start_s": 1.23,
+     "end_s": 1.95
+    }
+   ]
+  },
+  "L058": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "not",
+     "start_s": 0.0,
+     "end_s": 0.36
+    },
+    {
+     "w": "you",
+     "start_s": 0.36,
+     "end_s": 0.66
+    }
+   ]
+  },
+  "L059": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "that's",
+     "start_s": 0.0,
+     "end_s": 0.38
+    },
+    {
+     "w": "true",
+     "start_s": 0.38,
+     "end_s": 0.85
+    }
+   ]
+  },
+  "L060": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "don't",
+     "start_s": 0.0,
+     "end_s": 0.27
+    },
+    {
+     "w": "start",
+     "start_s": 0.27,
+     "end_s": 0.8
+    }
+   ]
+  },
+  "L061": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "leaf",
+     "start_s": 0.0,
+     "end_s": 0.49
+    }
+   ]
+  },
+  "L062": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "that's",
+     "start_s": 0.0,
+     "end_s": 0.43
+    },
+    {
+     "w": "enough",
+     "start_s": 0.43,
+     "end_s": 0.99
+    }
+   ]
+  },
+  "L063": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "he",
+     "start_s": 0.0,
+     "end_s": 0.15
+    },
+    {
+     "w": "put",
+     "start_s": 0.15,
+     "end_s": 0.32
+    },
+    {
+     "w": "his",
+     "start_s": 0.32,
+     "end_s": 0.47
+    },
+    {
+     "w": "head",
+     "start_s": 0.47,
+     "end_s": 0.73
+    },
+    {
+     "w": "in",
+     "start_s": 0.73,
+     "end_s": 0.84
+    },
+    {
+     "w": "his",
+     "start_s": 0.84,
+     "end_s": 0.98
+    },
+    {
+     "w": "mouth",
+     "start_s": 0.98,
+     "end_s": 1.47
+    }
+   ]
+  },
+  "L064": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "i",
+     "start_s": 0.0,
+     "end_s": 0.26
+    },
+    {
+     "w": "saw",
+     "start_s": 0.26,
+     "end_s": 0.77
+    }
+   ]
+  },
+  "L065": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "his",
+     "start_s": 0.0,
+     "end_s": 0.21
+    },
+    {
+     "w": "whole",
+     "start_s": 0.21,
+     "end_s": 0.44
+    },
+    {
+     "w": "head",
+     "start_s": 0.44,
+     "end_s": 0.84
+    }
+   ]
+  },
+  "L066": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "leaf",
+     "start_s": 0.0,
+     "end_s": 0.32
+    },
+    {
+     "w": "saw",
+     "start_s": 0.32,
+     "end_s": 0.57
+    },
+    {
+     "w": "too",
+     "start_s": 0.57,
+     "end_s": 1.04
+    }
+   ]
+  },
+  "L067": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "you're",
+     "start_s": 0.0,
+     "end_s": 0.2
+    },
+    {
+     "w": "all",
+     "start_s": 0.2,
+     "end_s": 0.36
+    },
+    {
+     "w": "right",
+     "start_s": 0.36,
+     "end_s": 0.81
+    },
+    {
+     "w": "leave",
+     "start_s": 1.14,
+     "end_s": 1.38
+    },
+    {
+     "w": "him",
+     "start_s": 1.38,
+     "end_s": 1.51
+    },
+    {
+     "w": "alone",
+     "start_s": 1.51,
+     "end_s": 1.97
+    }
+   ]
+  },
+  "L068": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "still",
+     "start_s": 0.0,
+     "end_s": 0.37
+    },
+    {
+     "w": "want",
+     "start_s": 0.37,
+     "end_s": 0.71
+    },
+    {
+     "w": "one",
+     "start_s": 0.71,
+     "end_s": 1.09
+    }
+   ]
+  },
+  "L069": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "yes",
+     "start_s": 0.0,
+     "end_s": 0.51
+    }
+   ]
+  },
+  "L070": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "abby",
+     "start_s": 0.0,
+     "end_s": 0.55
+    }
+   ]
+  },
+  "L071": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "look",
+     "start_s": 0.0,
+     "end_s": 0.3
+    },
+    {
+     "w": "at",
+     "start_s": 0.3,
+     "end_s": 0.43
+    },
+    {
+     "w": "me",
+     "start_s": 0.43,
+     "end_s": 0.82
+    },
+    {
+     "w": "abby",
+     "start_s": 1.01,
+     "end_s": 1.52
+    }
+   ]
+  },
+  "L072": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "my",
+     "start_s": 0.3,
+     "end_s": 0.55
+    },
+    {
+     "w": "arm",
+     "start_s": 0.55,
+     "end_s": 0.84
+    }
+   ]
+  },
+  "L073": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "stay",
+     "start_s": 0.0,
+     "end_s": 0.32
+    },
+    {
+     "w": "with",
+     "start_s": 0.32,
+     "end_s": 0.49
+    },
+    {
+     "w": "leaf",
+     "start_s": 0.49,
+     "end_s": 0.95
+    },
+    {
+     "w": "stay",
+     "start_s": 1.13,
+     "end_s": 1.47
+    },
+    {
+     "w": "on",
+     "start_s": 1.47,
+     "end_s": 1.68
+    },
+    {
+     "w": "him",
+     "start_s": 1.68,
+     "end_s": 2.09
+    }
+   ]
+  },
+  "L074": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "can",
+     "start_s": 0.0,
+     "end_s": 0.16
+    },
+    {
+     "w": "he",
+     "start_s": 0.16,
+     "end_s": 0.26
+    },
+    {
+     "w": "take",
+     "start_s": 0.26,
+     "end_s": 0.59
+    },
+    {
+     "w": "you",
+     "start_s": 0.59,
+     "end_s": 0.77
+    },
+    {
+     "w": "in",
+     "start_s": 0.77,
+     "end_s": 1.16
+    }
+   ]
+  },
+  "L075": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "yes",
+     "start_s": 0.41,
+     "end_s": 0.99
+    }
+   ]
+  },
+  "L076": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "go",
+     "start_s": 0.0,
+     "end_s": 0.27
+    },
+    {
+     "w": "straight",
+     "start_s": 0.27,
+     "end_s": 0.65
+    },
+    {
+     "w": "back",
+     "start_s": 0.65,
+     "end_s": 1.16
+    },
+    {
+     "w": "i'll",
+     "start_s": 1.44,
+     "end_s": 1.59
+    },
+    {
+     "w": "be",
+     "start_s": 1.59,
+     "end_s": 1.77
+    },
+    {
+     "w": "behind",
+     "start_s": 1.77,
+     "end_s": 2.29
+    },
+    {
+     "w": "you",
+     "start_s": 2.29,
+     "end_s": 2.54
+    }
+   ]
+  },
+  "L077": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "home",
+     "start_s": 0.46,
+     "end_s": 0.89
+    },
+    {
+     "w": "come",
+     "start_s": 1.15,
+     "end_s": 1.37
+    },
+    {
+     "w": "on",
+     "start_s": 1.37,
+     "end_s": 1.72
+    }
+   ]
+  },
+  "L078": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "attack",
+     "start_s": 0.0,
+     "end_s": 0.72
+    }
+   ]
+  }
+ }
+}

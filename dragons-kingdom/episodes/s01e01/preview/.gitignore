@@ -1,0 +1,21 @@
+# Large binaries are rebuilt by the scripts in tools/ and are never committed.
+# Commit scripts, JSON and Markdown only.
+*.wav
+*.flac
+*.aiff
+*.mp3
+*.m4a
+*.aac
+*.ogg
+*.opus
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.exr
+*.npy
+*.npz
+# downloaded model files and other caches
+.cache/
+# rendered image sequences
+frames/
