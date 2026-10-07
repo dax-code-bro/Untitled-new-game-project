@@ -560,7 +560,7 @@ export function createSaddle(c, opts = {}) {
   let seatBone = opts.rigid !== false && c.boneIndex[opts.rigidBone ?? 'thorax'] !== undefined ? c.bones[c.boneIndex[opts.rigidBone ?? 'thorax']]
     : (sv >= 0 ? c.bones[bsi.getComponent(sv, 0)] : c.bones[c.boneIndex['neck_0']]);
   if (/^rib_/.test(seatBone.name)) seatBone = seatBone.parent;      // never ride a breathing (scaled) bone
-  return { kind, meshes, seatPoint, seatBone, seatZ, seatY, block };
+  return { kind, meshes, seatPoint, seatBone, seatZ, seatY, block, seatLen };
 }
 
 function clipToDistance(g, center, maxD) {
@@ -621,5 +621,56 @@ export function mountRider(c, tack, rider, opts = {}) {
   bone.add(holder);
   void restWorld;
   c.root.updateMatrixWorld(true);
+  if (opts.grip !== false) addGrip(tack, rider, holder);
+  c.root.updateMatrixWorld(true);
   return holder;
+}
+
+/**
+ * A leather-wrapped grab bar exactly where the seated rider's hands are, held by two straps
+ * from the pommel (riders hold on; hands floating in the air read wrong). Built in the mount
+ * holder's frame, so it rides with the seat like the rider does.
+ */
+function addGrip(tack, rider, holder) {
+  const find = (n) => (rider.character?.bone ? rider.character.bone(n) : null) || (rider.bones || []).find((b) => b.name === n);
+  rider.update?.(0);
+  holder.updateMatrixWorld(true);
+  rider.root.updateMatrixWorld(true);
+  const palm = (sd) => {
+    const w = find(`wrist.${sd}`), f = find(`finger3-1.${sd}`);
+    if (!w || !f) return null;
+    const a = w.getWorldPosition(new THREE.Vector3()), b = f.getWorldPosition(new THREE.Vector3());
+    return rider.root.worldToLocal(a.lerp(b, 0.85));
+  };
+  const pl = palm('L'), pr = palm('R');
+  if (!pl || !pr) return;
+  // the pommel's front edge in the rider root's frame (the holder sits at the seat point); the
+  // grip is the rider's child, so it shows and hides with the rider
+  const pom = new THREE.Vector3(0, 0.1, (tack.seatLen ?? 0.62) * 0.5).sub(rider.root.position);
+  const mid = pl.clone().add(pr).multiplyScalar(0.5);
+  if (mid.distanceTo(pom) > 0.9 || pl.distanceTo(pr) > 0.7) return;
+  const leather = leatherMaterial([0.05, 0.032, 0.02], 0.55);
+  const across = pr.clone().sub(pl);
+  const len = across.length() + 0.14;
+  const bar = new THREE.CylinderGeometry(0.017, 0.017, len, 12, 1);
+  bar.rotateZ(Math.PI / 2);
+  const m = new THREE.Mesh(bar, leather);
+  m.position.copy(mid);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), across.clone().normalize());
+  const g = new THREE.Group();
+  g.name = 'grip';
+  g.add(m);
+  // two straps from the bar ends down to the pommel
+  for (const sd of [-1, 1]) {
+    const top = mid.clone().addScaledVector(across.clone().normalize(), sd * (len * 0.5 - 0.03));
+    const bot = pom.clone().add(new THREE.Vector3(sd * 0.07, 0, 0));
+    const d = top.clone().sub(bot), l = d.length();
+    const st = new THREE.BoxGeometry(0.035, l, 0.007);
+    const sm = new THREE.Mesh(st, leather);
+    sm.position.copy(top).add(bot).multiplyScalar(0.5);
+    sm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+    g.add(sm);
+  }
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } });
+  rider.root.add(g);
 }

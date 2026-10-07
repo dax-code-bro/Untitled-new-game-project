@@ -143,7 +143,7 @@ export function membrane(wing, boneIndex, opts = {}) {
 
   // ---- propatagium: in front of the arm, from the shoulder to the wrist
   {
-    const neckSide = add(wing.root, [0, 0, len(sub(wing.elbow, wing.root)) * 0.35]);
+    const neckSide = add(wing.root, [0, 0, len(sub(wing.elbow, wing.root)) * 0.22]);
     const leadE = (a) => lerp3(neckSide, wing.wrist, a);
     const armE = (a) => polyAt(armPts, a).p;
     const l = len(sub(wing.wrist, wing.root));
@@ -159,5 +159,33 @@ export function membrane(wing, boneIndex, opts = {}) {
   const out = { positions: Float32Array.from(pos), index: Uint32Array.from(idx), skinIndex: Uint16Array.from(si), skinWeight: Float32Array.from(sw),
     wing: Float32Array.from(uvA), edge: Float32Array.from(edge) };
   computeNormals(out);
+  out.bgrad = billowGradient(out.positions, out.index, out.wing);
+  return out;
+}
+
+/**
+ * Rest-space gradient of the billow profile (aWing.w) per vertex (1/m), so the shader can tilt
+ * the normal with the camber it displaces (n' = n - grad h): the panels then SHADE as curved
+ * sails between the fingers instead of flat sheets. Area-weighted average of the per-triangle
+ * gradients of the linear interpolant. Stored as vec4 (xyz, 0).
+ */
+function billowGradient(P, I, W) {
+  const n = P.length / 3, g = new Float64Array(n * 3), wsum = new Float64Array(n), out = new Float32Array(n * 4);
+  for (let t = 0; t < I.length; t += 3) {
+    const a = I[t], b = I[t + 1], c = I[t + 2];
+    const e1 = [P[b * 3] - P[a * 3], P[b * 3 + 1] - P[a * 3 + 1], P[b * 3 + 2] - P[a * 3 + 2]];
+    const e2 = [P[c * 3] - P[a * 3], P[c * 3 + 1] - P[a * 3 + 1], P[c * 3 + 2] - P[a * 3 + 2]];
+    const nn = cross(e1, e2), n2 = dot(nn, nn);
+    if (n2 < 1e-14) continue;
+    const w0 = W[a * 4 + 3], d1 = W[b * 4 + 3] - w0, d2 = W[c * 4 + 3] - w0;
+    const u = cross(e2, nn), v = cross(nn, e1);
+    const gr = [(d1 * u[0] + d2 * v[0]) / n2, (d1 * u[1] + d2 * v[1]) / n2, (d1 * u[2] + d2 * v[2]) / n2];
+    const area = Math.sqrt(n2);
+    for (const k of [a, b, c]) { g[k * 3] += gr[0] * area; g[k * 3 + 1] += gr[1] * area; g[k * 3 + 2] += gr[2] * area; wsum[k] += area; }
+  }
+  for (let i = 0; i < n; i++) {
+    const s = wsum[i] > 0 ? 1 / wsum[i] : 0;
+    out[i * 4] = g[i * 3] * s; out[i * 4 + 1] = g[i * 3 + 1] * s; out[i * 4 + 2] = g[i * 3 + 2] * s;
+  }
   return out;
 }

@@ -209,7 +209,7 @@ export async function createCreature(which, opts = {}) {
   for (const w of anat.wings) {
     if (cfg.detachableLeftWing && w.side === 'L') continue;
     const mem = membrane(w, boneIndex, { res: membraneRes });
-    const mgeo = partGeometry(THREE, { ...mem, extra: mem.wing }, { aWing: mem.wing, aEdge: mem.edge });
+    const mgeo = partGeometry(THREE, { ...mem, extra: mem.wing }, { aWing: mem.wing, aEdge: mem.edge, aBGrad: mem.bgrad });
     const mm = new THREE.SkinnedMesh(mgeo, mats.membrane);
     mm.name = `${root.name}:membrane${w.side}`;
     mm.userData.side = w.side;
@@ -243,7 +243,7 @@ export async function createCreature(which, opts = {}) {
     const fm = skinPartMesh(THREE, fl, mats.finger, `${root.name}:wingL-fingers`, 'tube', 0, L);
     // the membrane's body edge rides on the wing root, so the whole membrane tears away with the wing
     const mem = membrane({ ...w, attachBones: [`${w.prefix}_0`, `${w.prefix}_0`, `${w.prefix}_0`] }, boneIndex, { res: membraneRes });
-    const mgeo = partGeometry(THREE, { ...mem, extra: mem.wing }, { aWing: mem.wing, aEdge: mem.edge });
+    const mgeo = partGeometry(THREE, { ...mem, extra: mem.wing }, { aWing: mem.wing, aEdge: mem.edge, aBGrad: mem.bgrad });
     const mm = new THREE.SkinnedMesh(mgeo, mats.membrane);
     mm.name = `${root.name}:wingL-membrane`;
     mm.userData.side = 'L';

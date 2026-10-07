@@ -10,7 +10,7 @@
 // measured energy, or old_room's window light indoors). Sets:
 //   field  open grassland (CC0 photo turf + geometry grass tufts around the subject and in
 //          front of the camera), the dragon on the ground in daylight
-//   air    the sky and the photographed land 150-300 m below, hazed by the atmosphere
+//   air    the sky and the open sea 150-300 m below (the runtime's FFT ocean), hazed by the atmosphere
 //   ground a camera on the ground looking up at a flyer, a person in the foreground
 //   bed    a creased linen sheet over planks with eggshell shards, indoor window light
 // Camera and people positions are metres in the subject's frame (x = its left, y = up,
@@ -48,25 +48,31 @@ export const SHOTS = [
   { id: 'leaf-flight', set: 'air', creatures: ['leaf'], riders: { leaf: 'abby' }, dur: 3, alt: 160, face: -110,
     pose: { leaf: { name: 'flight', corr: 1, phase: 0.62, look: [-0.25, 0.05] } },
     cam: { subject: 'leaf', pos: [13, 4.5, 6], target: [0, 0.3, 0.3], mm: 40, fstop: 8, focus: 'target' } },
-  // Starlight gliding high overhead, seen from the ground at a distance: a watchman in the
-  // foreground points up at her (24 mm, looking up ~40 degrees, haze between)
-  { id: 'starlight-below', set: 'ground', creatures: ['starlight'], tack: ['starlight'], dur: 3, face: 160, haze: 2.2,
-    flyer: { name: 'starlight', at: [-4, 52, 104], heading: -72 },
-    people: [{ id: 'watchman', ground: [-1.15, 0, 3.6], yaw: 172 }],
-    pose: { starlight: { name: 'glide', bank: -0.12, dihedral: 0.12, look: [0.1, -0.15] } },
-    cam: { ground: true, pos: [0, 1.25, 0], lookAt: [0, 36.4, 100], mm: 20, fstop: 8 } },
+  // Starlight gliding past a distant watchtower, seen from the ground (~260 m away, ~60 m up):
+  // the tower (25 m) is as far away as she is, so her span reads as eight towers wide; a
+  // watchman in the foreground points up at her; the haze between softens both
+  { id: 'starlight-below', set: 'ground', creatures: ['starlight'], tack: ['starlight'], dur: 3, face: 160, haze: 2.4,
+    flyer: { name: 'starlight', at: [-22, 51, 268], heading: -80 },
+    tower: { at: [10, 0, 252], r: 3.6, h: 21, capH: 6.5 }, trees: true,
+    people: [{ id: 'watchman', ground: [-1.3, 0, 4.6], yaw: 168 }],
+    pose: { starlight: { name: 'glide', bank: -0.08, dihedral: 0.1, look: [0.1, -0.15] } },
+    cam: { ground: true, pos: [0, 1.0, 0], lookAt: [-6, 37.8, 262], mm: 40, fstop: 8 } },
   // the gold hatchling on the bedding: 100 mm macro, T2.8, focus on the eye
   { id: 'hatchling-macro', set: 'bed', creatures: ['hatchling'], dur: 3, face: -40,
     pose: { hatchling: { name: 'lie', raise: -0.1, headDown: 0.16, look: [0.42, -0.04], lidRelax: 0.42, breathe: 0.5 } },
     cam: { subject: 'hatchling', bone: 'head', pos: [0.45, 0.2, 0.62], target: [0.02, -0.03, -0.06], mm: 100, fstop: 8, focus: 'eye_L' } },
   // the Slitherwing scout banking hard at speed (tracking, 45 mm)
+  // (the species study: no rider - a seated adult is as long as the scout's whole trunk and hides
+  // it; the rider appears, small, in the wing-loss shot)
   { id: 'scout-bank', set: 'air', creatures: ['scout'], dur: 3, alt: 200, face: -130,
     pose: { scout: { name: 'glide', bank: 0.85, look: [0.3, 0.0], dihedral: 0.05 } },
     cam: { subject: 'scout', pos: [5.5, 2.2, 6.0], target: [0, 0, 0.4], mm: 45, fstop: 8, focus: 'target' } },
   // the scout loses its LEFT wing (0.4 s after the tear): the wing tumbles away in the wake
-  { id: 'scout-wingloss', set: 'air', creatures: ['scout'], dur: 4, alt: 200, face: -130, detachAt: 0.6, still: 1.1,
+  // (the camera tracks the midpoint between the falling body and the tumbling wing, without
+  // the body's roll; the wing separates in silhouette, no close-up of the wound)
+  { id: 'scout-wingloss', set: 'air', creatures: ['scout'], riders: { scout: 'scout' }, dur: 4, alt: 200, face: -130, detachAt: 0.6, still: 1.1,
     pose: { scout: { name: 'flight' } },
-    cam: { subject: 'scout', pos: [7.0, 2.5, -2.0], target: [1.2, -0.4, -1.4], mm: 24, fstop: 8, focus: 'target' } },
+    cam: { subject: 'scout', track: 'wingloss', pos: [9.5, 3.0, -1.0], target: [0, -0.3, 0], mm: 24, fstop: 8, focus: 'target' } },
 ];
 
 /** Build a scene module for the given shot ids (default: all). */
@@ -113,10 +119,37 @@ export function makeTurntable(opts = {}) {
       scene.add(ground);
       S.ground = ground;
     }
+    // the air shots fly over the sea off the coast (as the episode's flights and the pursuit
+    // do): the runtime's FFT ocean, which follows the camera, instead of a tiled ground plane
+    if (needSets.has('air')) {
+      const { createOcean } = await import('dk/ocean.js');
+      S.ocean = createOcean(ctx, { windSpeed: 8, windDirection: 30, swell: 0.45, choppiness: 1.1, seed: 4, roughness: 0.05 });
+      scene.add(S.ocean.mesh);
+    }
     if (needSets.has('bed')) {
       S.room = await loadHDRI('hdri/old_room', ctx, { rotationY: 0.6 });
       if (!outdoor) S.room.apply(ctx.scene);
       S.bed = await buildBed(ctx);
+    }
+    // a stone watchtower for scale (shared set kit), shown only in the shots that ask for it
+    const towerShots = shots.filter((x) => x.tower);
+    if (towerShots.length) {
+      const { buildingKit } = await import('../lib/sets/buildings.js');
+      const kit = await buildingKit(ctx, {});
+      for (const sh of towerShots) {
+        const tw = kit.tower({ r: sh.tower.r, h: sh.tower.h, capH: sh.tower.capH, slits: 4 });
+        tw.position.set(...sh.tower.at);
+        tw.visible = false;
+        scene.add(tw);
+        sh._tower = tw;
+      }
+    }
+    // countryside for the ground shots: hedgerows and copses from 150 m to the horizon
+    if (shots.some((x) => x.trees)) {
+      const { bushGeometry, foliageMaterial, scatter } = await import('../lib/sets/scatter.js');
+      S.trees = treeBand(bushGeometry, foliageMaterial, scatter);
+      S.trees.visible = false;
+      scene.add(S.trees);
     }
     for (const name of need) {
       const c = await createCreature(name, { quality: q, log: (m) => console.log(m) });
@@ -145,7 +178,7 @@ export function makeTurntable(opts = {}) {
       for (const [n, outfit] of Object.entries(s.riders || {})) {
         if (S.riders[n]) continue;
         const tack = S.tacks[n] || (S.tacks[n] = createSaddle(S.C[n], {}));
-        const rider = H.rider(outfit);
+        const rider = H.rider(outfit, outfit === 'scout' ? { lean: 0.5 } : {});
         mountRider(S.C[n], tack, rider);
         S.riders[n] = { tack, rider };
       }
@@ -177,7 +210,10 @@ export function makeTurntable(opts = {}) {
     for (const [n, tk] of Object.entries(S.tacks)) for (const m of tk.meshes) m.visible = (shot.tack || []).includes(n) || !!(shot.riders && shot.riders[n]);
     for (const [n, r] of Object.entries(S.riders)) r.rider.root.visible = !!(shot.riders && shot.riders[n]);
     if (S.bed) S.bed.visible = shot.set === 'bed';
-    if (S.ground) S.ground.visible = shot.set !== 'bed';
+    for (const s of shots) if (s._tower) s._tower.visible = s === shot;
+    if (S.trees) S.trees.visible = !!shot.trees;
+    if (S.ground) S.ground.visible = shot.set !== 'bed' && !(S.ocean && shot.set === 'air');
+    if (S.ocean) { S.ocean.mesh.visible = shot.set === 'air'; if (shot.set === 'air') S.ocean.update(lt); }
     if (S.grass) for (const [n, g] of Object.entries(S.grass)) g.visible = shot.set === 'field' && shot.creatures[0] === n;
     if (S.bed && S.bed.userData.lights) for (const l of S.bed.userData.lights) l.visible = shot.set === 'bed';
     if (S.sun) S.sun.visible = shot.set !== 'bed';
@@ -242,6 +278,12 @@ export function makeTurntable(opts = {}) {
       c.root.updateMatrixWorld(true);
       let base = c.root.position.clone(), q = c.root.quaternion;
       if (cm.bone) { base = new THREE.Vector3().setFromMatrixPosition(c.bones[c.boneIndex[cm.bone]].matrixWorld); }
+      if (cm.track === 'wingloss' && c.detachable) {
+        // midpoint of the body and the torn wing, in the heading frame (no roll)
+        const wp = new THREE.Vector3().setFromMatrixPosition(c.detachable.rootBone.matrixWorld);
+        base = c.root.position.clone().lerp(wp, 0.5);
+        q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), faceYaw);
+      }
       target = base.clone().add(new THREE.Vector3(...cm.target).applyQuaternion(q));
       camera.position.copy(base).add(new THREE.Vector3(...cm.pos).applyQuaternion(q));
       camera.lookAt(target);
@@ -321,9 +363,10 @@ async function loadPeople(ids, riderOutfits) {
       const r = createPlaceholderRider(ph, { outfit: outfitOf(id), pose: 'stand', headPitch: -0.1 });
       return { root: r.root, place: (x, y, z, yaw) => { r.root.position.set(x, y + 0.88, z); r.root.rotation.set(0, yaw, 0); }, update: () => {} };
     },
-    rider(outfit) {
-      if (riderTok && riderTok.data[`${outfit}_ride`] && !(riderTok.data[`${outfit}_ride`] instanceof Error)) return lib.createRider(riderTok, { outfit, lean: 0.12 });
-      return createPlaceholderRider(ph, { outfit, lean: 0.12 });
+    rider(outfit, o = {}) {
+      const lean = o.lean ?? 0.12;
+      if (riderTok && riderTok.data[`${outfit}_ride`] && !(riderTok.data[`${outfit}_ride`] instanceof Error)) return lib.createRider(riderTok, { outfit, lean });
+      return createPlaceholderRider(ph, { outfit, lean });
     },
   };
 }
@@ -353,6 +396,41 @@ function fieldGrass(S, shot) {
   g.add(grassField({ count: 3000, height: [0.4, 0.7], seed: 11, blades: 3, width: 0.5, color: [0.16, 0.135, 0.065], dry: [0.26, 0.22, 0.12], dryAmount: 0.8, place }));
   const sunAz = S.sunDir ? Math.atan2(S.sunDir.x, S.sunDir.z) : 0;
   g.rotation.y = sunAz + (shot.face ?? 0) * D2R;
+  return g;
+}
+
+/**
+ * Hedgerows and copses in front of a ground camera at the origin looking along +z (built once,
+ * deterministic): tree-sized clumps of the set kit's bush geometry along field boundaries
+ * (lines across the view at irregular spacing) and in a few woods, 150 m to 2 km away.
+ */
+function treeBand(bushGeometry, foliageMaterial, scatter) {
+  const g = new THREE.Group();
+  const geos = [bushGeometry(3, 2, 0.9), bushGeometry(3, 5, 1.0), bushGeometry(3, 9, 0.85)];
+  const mat = foliageMaterial({ color: [0.045, 0.06, 0.028], leafScale: 0.35 });
+  const rows = [170, 235, 330, 420, 560, 720, 950, 1300, 1800];
+  const woods = [[-160, 380, 70], [210, 520, 110], [-420, 800, 160], [60, 1100, 200], [520, 1500, 260]];
+  geos.forEach((geo, gi) => {
+    const mesh = scatter(geo, mat, 1400, (rng) => {
+      let x, z;
+      if (rng() < 0.6) {
+        const zr = rows[Math.floor(rng() * rows.length)];
+        z = zr + (rng() - 0.5) * 14;
+        x = (rng() * 2 - 1) * z * 0.75;
+        if (Math.sin(x * 0.013 + zr) > 0.55) return null;            // gaps in the hedges
+      } else {
+        const w = woods[Math.floor(rng() * woods.length)];
+        const a = rng() * Math.PI * 2, r = Math.sqrt(rng()) * w[2];
+        x = w[0] + Math.cos(a) * r; z = w[1] + Math.sin(a) * r * 0.6;
+      }
+      if (z < 150) return null;
+      const h = 7 + rng() * 9, wdt = h * (0.8 + rng() * 0.6);
+      const k = 0.75 + rng() * 0.5;
+      return { p: [x, -0.4, z], s: [wdt, h, wdt * (0.8 + rng() * 0.4)], r: rng() * 6.28, c: [k * (0.9 + 0.2 * rng()), k, k * (0.85 + 0.2 * rng())] };
+    }, 11 + gi * 7);
+    mesh.castShadow = false;
+    g.add(mesh);
+  });
   return g;
 }
 

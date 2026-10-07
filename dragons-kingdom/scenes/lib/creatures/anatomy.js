@@ -499,7 +499,10 @@ export function buildAnatomy(spec, L, opts = {}) {
     const mus = (Wp.muscle ?? 1) * MU.wing;
     const k21 = Wp.r[0] / 0.021;
     // flight muscle mass on the back (the wing's "shoulder"), + arm bones with biceps/triceps
-    target.ell(sv(add(R, [-sd * 0.007, -0.005, -0.006])), sv([0.03 * mus * k21, 0.021 * mus * k21, 0.045 * mus * k21]), { k: S(0.02 * k21), bone: `${pre}_0`, chain: pre, tag: 'wingroot' });
+    // (a detachable wing leaves this mass on the body: the wing tears off at the humerus, so
+    // the torn wing ends in the arm, not in a ball joint, and the stump stays on the back)
+    (detachable ? m : target).ell(sv(add(R, [-sd * 0.007, -0.005, -0.006])), sv([0.03 * mus * k21, 0.021 * mus * k21, 0.045 * mus * k21]),
+      { k: S(0.02 * k21), bone: detachable ? 'thorax' : `${pre}_0`, chain: detachable ? 'spine' : pre, tag: detachable ? 'torso' : 'wingroot' });
     target.cone(sv(R), sv(E), S(Wp.r[0]), S(Wp.r[1]), { k: S(Wp.r[0] * 0.6), bone: `${pre}_0`, chain: pre, tag: 'warm' });
     target.ell(sv(lerp3(R, E, 0.32)), sv([Wp.r[0] * 0.78 * mus, len(sub(E, R)) * 0.34, Wp.r[0] * 1.0 * mus]), { ax: [0, 1, 0], ay: norm(sub(E, R)), k: S(Wp.r[0] * 0.45), bone: `${pre}_0`, chain: pre, tag: 'warm' });
     // the elbow: a bony point behind the joint (olecranon), the arm's narrowest part before it
