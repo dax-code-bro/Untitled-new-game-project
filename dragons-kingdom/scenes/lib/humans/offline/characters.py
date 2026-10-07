@@ -12,7 +12,7 @@ Colours are linear RGB of natural dyes (woad, madder, weld, walnut, undyed linen
 
 # ---------------------------------------------------------------- palette --
 DYE = {
-    'undyed': [0.42, 0.37, 0.29], 'linen': [0.62, 0.58, 0.5], 'oatmeal': [0.36, 0.31, 0.23], 'walnut': [0.11, 0.07, 0.045],
+    'undyed': [0.42, 0.37, 0.29], 'linen': [0.5, 0.47, 0.4], 'oatmeal': [0.36, 0.31, 0.23], 'walnut': [0.11, 0.07, 0.045],
     'russet': [0.2, 0.07, 0.035], 'madder': [0.32, 0.07, 0.045], 'woad': [0.07, 0.11, 0.2], 'darkwoad': [0.035, 0.05, 0.1],
     'weld': [0.42, 0.33, 0.08], 'sage': [0.12, 0.15, 0.1], 'moss': [0.08, 0.1, 0.045], 'grey': [0.15, 0.145, 0.14],
     'black': [0.02, 0.018, 0.018], 'ochre': [0.34, 0.2, 0.07], 'plum': [0.12, 0.05, 0.07], 'teal': [0.04, 0.09, 0.09],
@@ -78,7 +78,8 @@ def G_coat(c, hem=0.5, split=True, **kw):
 
 def G_kirtle(c, hem=0.03, sleeves='long', belt=False, **kw):
     """Women's fitted dress (laced bodice, full skirt to the ankles)."""
-    return dict({'type': 'kirtle', 'fabric': 'wool', 'color': _c(c), 'ease': 0.012, 'loose': 0.0, 'hang': 0.7, 'sleeves': sleeves, 'stack': 0.025,
+    return dict({'type': 'kirtle', 'fabric': 'wool', 'color': _c(c), 'ease': 0.014, 'loose': 0.012, 'hang': 0.3, 'cinch': True, 'cinch_ease': 0.016,
+                 'torso_smooth': 40, 'sleeves': sleeves, 'stack': 0.025,
                  'sleeve_frac': 0.35 if sleeves == 'rolled' else 0.95, 'hem': hem, 'flare': 1.9, 'prefold': 0.05, 'folds': 11, 'neck': 0.05,
                  'layer': 2, 'pin_hips': 0.7, 'belt': belt, 'thickness': 0.0025, 'wear': 0.4, 'dust': 0.45}, **kw)
 
@@ -92,7 +93,7 @@ def G_apron(c='linen', width=0.5, length=0.6, **kw):
     return dict({'type': 'apron', 'fabric': 'linen', 'color': _c(c), 'width': width, 'length': length, 'layer': 4, 'wear': 0.6}, **kw)
 
 
-def G_coif(c=(0.64, 0.61, 0.54), **kw):
+def G_coif(c=(0.5, 0.48, 0.42), **kw):
     return dict({'type': 'coif', 'fabric': 'linen', 'color': _c(c), 'front': 0.058, 'layer': 3}, **kw)
 
 
@@ -108,7 +109,7 @@ def G_hood(c, cape=0.3, **kw):
     return dict({'type': 'hood', 'fabric': 'wool', 'color': _c(c), 'ease': 0.032, 'layer': 3, 'cape_length': cape}, **kw)
 
 
-def G_veil(c=(0.6, 0.58, 0.52), length=0.5, **kw):
+def G_veil(c=(0.48, 0.46, 0.4), length=0.5, **kw):
     return dict({'type': 'veil', 'fabric': 'linen', 'sim_fabric': 'fine', 'color': _c(c), 'length': length, 'layer': 5}, **kw)
 
 
@@ -173,7 +174,7 @@ def cast():
         'macro': {'gender': 0.0, 'age': 0.43, 'muscle': 0.58, 'weight': 0.42, 'height': 0.55, 'proportions': 0.75, 'race': VERDOR_RACE},
         'details': _merge(VERDOR_FACE, {'mouth/mouth-lowerlip-volume': 0.2, 'chin/chin-height': -0.1, 'nose/nose-hump': 0.1}),
         'skin': {'texture': 'young_lightskinned_female_diffuse3', 'tone': [0.98, 0.95, 0.92], 'saturation': 0.86, 'redness': 0.15, 'flush': 0.55, 'age': 0.15, 'rough': 0.46},
-        'eyes': {'iris': 'brownlight', 'tint': [0.55, 0.45, 0.36]},
+        'eyes': {'iris': 'brownlight', 'tint': [0.6, 0.55, 0.5]},
         'brows': 'eyebrow006', 'lashes': 'eyelashes02',
         'hair': {'color': HAIR['brown'], 'style': 'braid'},
         'outfit': riding_clothes([0.065, 0.082, 0.055], shirt='linen', trousers='walnut', boots=[0.045, 0.028, 0.017]),
@@ -211,7 +212,7 @@ def cast():
                   outfit=[G_shoes([0.03, 0.022, 0.018]),
                           G_kirtle([0.045, 0.06, 0.075], hem=0.0, fabric='wool', sheen=0.55, neck=0.07, flare=2.1, train=0.12, folds=13, wear=0.1, dust=0.05,
                                    name='gown'),
-                          G_veil([0.7, 0.68, 0.62], length=0.45)],
+                          G_veil([0.52, 0.5, 0.45], length=0.45)],
                   accessories=[{'prop': 'circlet', 'dy': 0.07}],
                   pose='hands_front', pose_params={'weight': 'L', 'contrapposto': 0.4, 'reach': 0.16, 'dy': -0.1},
                   notes='canon: a restrained formal gown; circlet and veil are proposals')
@@ -256,7 +257,7 @@ def cast():
                     hair={'color': HAIR['salt'], 'style': 'pulled', 'count': 5000, 'loft': 0.003},
                     eyes=('grey', [0.8, 0.8, 0.8]), brows='eyebrow007',
                     outfit=[G_shoes([0.04, 0.026, 0.016]), G_kirtle('russet', hem=0.03, sleeves='rolled'), G_apron('linen', width=0.52, length=0.62),
-                            G_coif([0.66, 0.63, 0.56]), G_veil([0.6, 0.58, 0.52], length=0.5)],
+                            G_coif([0.52, 0.5, 0.44]), G_veil([0.48, 0.46, 0.4], length=0.5)],
                     pose='bowl', pose_params={'weight': 'L', 'contrapposto': 0.5, 'head_pitch': 0.08}, notes='suggested: clean work clothes, apron')
     healer['skin'].update({'texture': 'old_lightskinned_female_diffuse2'})
     C.append(healer)

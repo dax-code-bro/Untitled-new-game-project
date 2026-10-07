@@ -131,10 +131,54 @@ def hand_len(pb, side):
     return float(np.linalg.norm(m - w))
 
 
-def grip_at(pb, side, G, lat_dir, n_dir, grip='cylinder', amount=1.0, pole=None, depth=0.028, along=0.02):
+def _dist_line(p, c, ax):
+    v = p - c
+    return np.linalg.norm(v - ax * np.dot(v, ax))
+
+
+def wrap_hand(pb, side, C, ax, R, thick=0.0085, fingers=(2, 3, 4, 5), thumb=True):
+    """Close the fingers (and thumb) round a cylinder (axis point C, direction ax, radius R):
+    every segment turns toward the axis until its far end touches the surface (R + finger
+    half-thickness) - a real grip that neither floats nor cuts into the object."""
+    ax = norm(np.asarray(ax, float))
+    C = np.asarray(C, float)
+    want = R + thick
+    fwd, lat, n = pb.hand_frame(side)
+    angs = np.linspace(-0.25, 1.75, 81)
+    chains = [[f'finger{k}-1.{side}', f'finger{k}-2.{side}', f'finger{k}-3.{side}'] for k in fingers]
+    if thumb:
+        chains.append([f'finger1-2.{side}', f'finger1-3.{side}'])
+    for chain in chains:
+        for j, nm in enumerate(chain):
+            h = pb.head(nm)
+            t0 = pb.tail(nm)
+            d = norm(t0 - h)
+            v = C - h
+            toward = norm(v - ax * np.dot(v, ax))
+            rax = np.cross(d, toward)
+            if np.linalg.norm(rax) < 1e-6:
+                continue
+            rax = norm(rax)
+            best, best_a = 1e9, 0.0
+            L = np.linalg.norm(t0 - h)
+            for a in angs:
+                c, s_ = math.cos(a), math.sin(a)
+                dd = d * c + np.cross(rax, d) * s_ + rax * np.dot(rax, d) * (1 - c)
+                tip = h + dd * L
+                e = _dist_line(tip, C, ax) - want
+                cost = abs(e) + (4 * -e if e < 0 else 0) + 0.002 * abs(a)
+                if cost < best:
+                    best, best_a = cost, a
+            pb.rotate(nm, rax, best_a)
+    return pb
+
+
+def grip_at(pb, side, G, lat_dir, n_dir, grip='cylinder', amount=1.0, pole=None, depth=None, along=0.012, radius=None):
     """Close the hand around a point G: the index->little axis along lat_dir, the palm facing
     n_dir (toward the object's axis). Two IK passes correct the hand's own geometry."""
     sg = 1.0 if side == 'L' else -1.0
+    if depth is None:
+        depth = (radius + 0.013) if radius else 0.028
     lat = norm(lat_dir)
     n = norm(np.asarray(n_dir) - lat * np.dot(n_dir, lat))
     fwd = sg * np.cross(n, lat)
@@ -148,7 +192,11 @@ def grip_at(pb, side, G, lat_dir, n_dir, grip='cylinder', amount=1.0, pole=None,
         gc = (f2 + f5) / 2 + fw * along + nn * depth
         target = target + (np.asarray(G) - gc)
         place_hand(pb, side, target, pole=pole, palm=(fwd, n), grip=None)
-    if grip:
+    if radius and grip in ('cylinder', 'fist', 'loose', 'hook'):
+        # thumb half-opposed first, then every segment closes onto the surface
+        pb.curl_thumb(side, 0.55, 0.0, 0.0, 0.0, opp=0.45)
+        wrap_hand(pb, side, G, lat, radius, thumb=grip != 'hook')
+    elif grip:
         pb.grip(side, grip, amount)
     return pb
 
@@ -177,7 +225,7 @@ def act_spear(pb, p):
     base[1] = pb.head('foot.R')[1] - 0.09
     G = np.array([base[0], sh[1] - 0.15, base[2]])
     grip_at(pb, 'R', G, lat_dir=np.array([0, -1.0, 0]), n_dir=(G - sh) * np.array([1, 0, 1]),
-            pole=sh + side * 0.35 + np.array([0, -0.4, -0.2]), grip='cylinder', amount=0.95)
+            pole=sh + side * 0.35 + np.array([0, -0.4, -0.2]), grip='cylinder', amount=0.95, radius=0.015)
     pb.arm_down('L', out=0.12, fwd=0.05, elbow=0.3)
     pb.grip('L', 'loose')
     R = np.eye(3)
@@ -262,7 +310,7 @@ def act_lute(pb, p):
     board_n = norm(fwd - neck_dir * np.dot(fwd, neck_dir))
     R = np.stack([np.cross(neck_dir, board_n), neck_dir, board_n], 1)
     neck_pt = centre + neck_dir * 0.36
-    grip_at(pb, 'L', neck_pt, lat_dir=neck_dir, n_dir=-board_n + np.array([0, -0.3, 0]), grip='loose', amount=1.0,
+    grip_at(pb, 'L', neck_pt, lat_dir=neck_dir, n_dir=-board_n + np.array([0, -0.3, 0]), grip='loose', amount=1.0, radius=0.02,
             pole=pb.head('upperarm01.L') + lat * 0.3 + np.array([0, -0.45, 0.1]))
     rose = centre + neck_dir * 0.02 + board_n * 0.04 - lat * 0.03
     grip_at(pb, 'R', rose, lat_dir=-neck_dir, n_dir=-board_n, grip='relaxed', amount=0.8,
@@ -280,7 +328,7 @@ def act_recorder(pb, p):
     top = mouth + fwd * 0.005
     for s, k in (('L', 0.07), ('R', 0.17)):
         sg = 1 if s == 'L' else -1
-        grip_at(pb, s, top + d * k, lat_dir=d, n_dir=-fwd + lat * 0.0, grip='loose', amount=0.8, depth=0.022,
+        grip_at(pb, s, top + d * k, lat_dir=d, n_dir=-fwd + lat * 0.0, grip='loose', amount=0.8, radius=0.011,
                 pole=pb.head(f'upperarm01.{s}') + lat * sg * 0.35 + np.array([0, -0.35, -0.1]))
     R = frame_y(-d, fwd)
     return [place('recorder', R, top + d * 0.32, 'wrist.R')]
@@ -323,7 +371,7 @@ def act_drink(pb, p):
     fwd = pb.fwd_axis()
     lat = pb.side_axis()
     G = c + fwd * 0.22 - lat * 0.08 + np.array([0, -0.02, 0])
-    grip_at(pb, 'R', G, lat_dir=np.array([0, -1.0, 0]), n_dir=lat * 0.6 - fwd * 0.4, grip='cylinder', amount=0.85, depth=0.035,
+    grip_at(pb, 'R', G, lat_dir=np.array([0, -1.0, 0]), n_dir=lat * 0.6 - fwd * 0.4, grip='cylinder', amount=0.85, radius=0.04,
             pole=pb.head('upperarm01.R') - lat * 0.3 + np.array([0, -0.45, -0.1]))
     pb.arm_down('L', out=0.12, fwd=0.05, elbow=0.3)
     pb.grip('L', 'relaxed')
@@ -351,7 +399,7 @@ def act_hand_on_belt(pb, p):
     fwd = pb.fwd_axis()
     hipL = pb.head('upperleg01.L')
     hilt = hipL + lat * 0.06 + fwd * 0.12 + np.array([0, 0.1, 0])
-    grip_at(pb, 'L', hilt, lat_dir=np.array([0, -1.0, 0]) + fwd * 0.4, n_dir=-lat, grip='cylinder', amount=0.9,
+    grip_at(pb, 'L', hilt, lat_dir=np.array([0, -1.0, 0]) + fwd * 0.4, n_dir=-lat, grip='cylinder', amount=0.9, radius=0.016,
             pole=pb.head('upperarm01.L') + lat * 0.4 + np.array([0, -0.35, -0.3]))
     hipR = pb.head('upperleg01.R')
     place_hand(pb, 'R', hipR - lat * 0.14 + fwd * 0.04 + np.array([0, 0.17, 0]), pole=pb.head('upperarm01.R') - lat * 0.4 + np.array([0, -0.2, -0.4]),
@@ -371,7 +419,7 @@ def act_scroll(pb, p):
     fwd = pb.fwd_axis()
     lat = pb.side_axis()
     G = c + fwd * 0.2 - lat * 0.1
-    grip_at(pb, 'R', G, lat_dir=lat, n_dir=np.array([0, -1.0, 0]) + fwd * 0.2, grip='cylinder', amount=0.9, depth=0.02,
+    grip_at(pb, 'R', G, lat_dir=lat, n_dir=np.array([0, -1.0, 0]) + fwd * 0.2, grip='cylinder', amount=0.9, radius=0.016,
             pole=pb.head('upperarm01.R') - lat * 0.3 + np.array([0, -0.45, -0.2]))
     pb.arm_down('L', out=0.12, fwd=0.05, elbow=0.3)
     pb.grip('L', 'relaxed')
@@ -389,7 +437,7 @@ def act_rope(pb, p):
     p0 = c + fwd * 0.3 + np.array([0, -0.12, 0])
     for s, k in (('L', 0.18), ('R', 0.0)):
         sg = 1 if s == 'L' else -1
-        grip_at(pb, s, p0 + d * k, lat_dir=d * sg * -1, n_dir=np.array([0, -1.0, 0]), grip='cylinder', amount=1.0, depth=0.02,
+        grip_at(pb, s, p0 + d * k, lat_dir=d * sg * -1, n_dir=np.array([0, -1.0, 0]), grip='cylinder', amount=1.0, radius=0.01,
                 pole=pb.head(f'upperarm01.{s}') + lat * sg * 0.35 + np.array([0, -0.45, -0.1]))
     return [place('ropeline', frame_y(d, lat), p0 - d * 0.25, 'wrist.R', length=2.0)]
 

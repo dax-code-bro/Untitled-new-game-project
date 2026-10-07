@@ -1,1 +1,1 @@
-{ "id": "abby_dev", "accumulate": false, "still": true }
+{ "id": "abby_dev", "accumulate": false, "still": true, "cam": { "tgt": "head", "off": [0, -0.03, 0.04], "az": 28, "el": 3, "dist": 0.5, "fov": 24, "fstop": 11 } }

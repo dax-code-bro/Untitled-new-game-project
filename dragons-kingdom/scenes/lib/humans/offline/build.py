@@ -194,7 +194,7 @@ def assemble(kit, spec, out_dir, opts):
         import hair as hr
         gr = hr.Groom(kit, V, sk, pt.local, off_t, D.faces, D.rest, D.target, D.bidx, D.Wd, seed=zlib.crc32(cid.encode()) & 0xffff, log=log)
         build_hair(gr, hs, hero, kit, V, body)
-        hp = gr.to_part('hair', {'color': hs.get('color', [0.05, 0.03, 0.02]), 'spec': hs.get('spec', 0.06), 'shift': 0.1, 'variation': hs.get('variation', 0.3), 'occluder': True, 'ao_rays': 10, 'ao_stride': 2})
+        hp = gr.to_part('hair', {'color': hs.get('color', [0.05, 0.03, 0.02]), 'spec': hs.get('spec', 0.14), 'shift': 0.1, 'variation': hs.get('variation', 0.35), 'occluder': True, 'ao_rays': 10, 'ao_stride': 2})
         if hp is not None:
             parts.append(hp)
             log(f'    hair: {len(gr.strands)} strands, {len(hp.posed)} verts')
@@ -204,10 +204,10 @@ def assemble(kit, spec, out_dir, opts):
             b = spec['brows']
             card = next(p for p in parts if p.name == 'brows')
             img = image_array(os.path.join(kit.lib, f'human/mh_face_parts/eyebrows/{b}/{b}.png'))
-            gb.brows_from_card(card.P, card.tris, card.uv, img, n=hs.get('brow_count', 420))
-            bp = gb.to_part('browhair', {'color': hs.get('brow_color', hs.get('color')), 'spec': 0.04, 'shift': 0.1, 'variation': 0.2, 'occluder': False, 'ao_rays': 8, 'ao_stride': 2})
+            gb.brows_from_card(card.P, card.tris, card.uv, img, n=hs.get('brow_count', 340))
+            bp = gb.to_part('browhair', {'color': hs.get('brow_color', [c * 1.25 for c in hs.get('color', [0.05, 0.03, 0.02])]), 'spec': 0.04, 'shift': 0.1, 'variation': 0.2, 'occluder': False, 'ao_rays': 8, 'ao_stride': 2})
             parts.append(bp)
-            card.material['alphaGain'] = 0.6          # keep a faint card under the hairs (skin density)
+            card.material['alphaGain'] = 0.35         # keep a faint card under the hairs (skin density)
     # ---- AO / thickness / eyes
     rays = opts.get('rays', 24 if hero else 12)
     bake_ao_thickness(parts, rays=rays)
@@ -451,6 +451,16 @@ def build_hair(gr, hs, hero, kit, V, body):
         gr.style_pulled_back(int(hs.get('count', 15000) * dens), g, color_layers=hs.get('loft', 0.008), width=hs.get('width', 0.0009 if hero else 0.0015))
     elif st == 'crop':
         gr.style_crop(int(hs.get('count', 16000) * dens), length=tuple(hs.get('length', (0.012, 0.045))), flow=hs.get('flow', 'back'), width=hs.get('width', 0.0008 if hero else 0.0013), curl=hs.get('curl', 0.0))
+    if st in ('braid', 'pulled', 'bun') and hero:
+        G_ = g
+
+        def tw(r, G_=G_):
+            w = np.clip((r[2] - sk[2] + 0.02) / 0.08, 0, 1)
+            W1 = np.array([r[0] * 0.75, sk[1] + 0.1, sk[2] - 0.05])
+            return mu.norm((G_ + (W1 - G_) * w) - r)
+        gr.baby_hairs(int(hs.get('baby', 2500)), towards=tw)
+    elif st == 'crop' and hero:
+        gr.baby_hairs(int(hs.get('baby', 1500)), towards=lambda r: np.array([0, 0.6, -1.0]))
     n_scalp = len(gr.strands)
     if st in ('braid', 'pulled', 'bun'):
         if st == 'braid':

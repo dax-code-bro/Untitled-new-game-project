@@ -110,7 +110,9 @@ export function buildCharacter(data, opts = {}) {
     mesh.name = `${root.name}:${m.name}`;
     mesh.castShadow = opts.shadows !== false && m.material?.castShadow !== false;
     mesh.receiveShadow = true;
-    mesh.frustumCulled = false;
+    // the bind pose IS the drape pose (idle motion only adds small deltas), so the bounding
+    // spheres are valid for culling; opts.cull === false turns it off
+    mesh.frustumCulled = opts.cull !== false;
     mesh.userData.kind = m.kind;
     meshes.push(mesh);
   }

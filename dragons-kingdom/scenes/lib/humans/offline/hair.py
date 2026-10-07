@@ -149,23 +149,64 @@ class Groom:
         roots, nr = self.sample_scalp(n, hl_kw, region)
         edge = self.edge
         G = np.asarray(gather, float)
+        sk = self.skull
+
+        def fn(p, nn):
+            # hair from the front and the crown goes UP and back over the top first (a waypoint
+            # above the back of the crown), then down to the gather; temples and sides go back
+            w = np.clip((p[2] - sk[2] + 0.02) / 0.08, 0, 1) * np.clip((p[1] - (self.eye_y + 0.015)) / 0.04, 0, 1)
+            W1 = np.array([p[0] * 0.75, sk[1] + 0.1, sk[2] - 0.05])
+            return (G + (W1 - G) * w) - p
         for ri, (r, n0) in enumerate(zip(roots, nr)):
-            dist = np.linalg.norm(G - r)
-            steps = max(4, int(dist / 0.012))
+            dist = np.linalg.norm(G - r) * 1.15
+            steps = max(5, int(dist / 0.011))
             layer = self.rng.random() * color_layers
-            fn = lambda p, nn: (G - p)
             pts, nrms = self.grow_on_scalp(r, n0, fn, dist * 1.02 * length_scale, steps=steps, layer=layer, lift=0.0015)
             # pull the last points into the gather point (tied)
             k = len(pts)
             for i in range(k):
                 t = max(0.0, (i / (k - 1) - 0.75) / 0.25)
                 pts[i] = pts[i] * (1 - t * 0.7) + (G + nrms[i] * 0.004) * t * 0.7
-            wmul = 0.6 + 0.4 * edge[ri]
+            wmul = 0.3 + 0.7 * edge[ri] ** 1.5
             if self.rng.random() < 0.012 and edge[ri] > 0.8:   # a stray hair lifting off the groom
                 lift = np.linspace(0, 1, k) ** 2 * (0.003 + 0.006 * self.rng.random())
                 pts = pts + nrms * lift[:, None] + mu.norm(np.cross(nrms[0], pts[-1] - pts[0])) * lift[:, None] * (self.rng.random() - 0.5)
                 wmul *= 0.35
             self.add(pts, nrms, np.full(len(pts), width * wmul), depth=1 - layer / max(color_layers, 1e-6))
+
+    def baby_hairs(self, n, width=0.00035, length=(0.004, 0.014), towards=None, hl_kw=None):
+        """Fine short hairs straddling the hairline (a real hairline is a density gradient, not
+        an edge): rooted from 6 mm below to 4 mm above the hairline, lying close to the skin,
+        pointing roughly with the groom."""
+        P, T = self.rest, self.tris
+        cats = self.kit.base_cat[self.bidx]
+        headish = np.isin(cats, ['head'])
+        c = P[T].mean(1)
+        hl = self.hairline(c, **(hl_kw or {}))
+        dy = c[:, 1] - hl
+        ok = headish[T].all(1) & (dy > -0.006) & (dy < 0.004) & (c[:, 2] < self.eye_z + 0.03)
+        d = c - self.skull
+        ok &= ~((np.abs(d[:, 0]) > 0.062) & (c[:, 1] < self.eye_y + 0.03) & (d[:, 2] > -0.06))
+        tri = T[ok]
+        if not len(tri):
+            return
+        a, b, cc = P[tri[:, 0]], P[tri[:, 1]], P[tri[:, 2]]
+        area = np.linalg.norm(np.cross(b - a, cc - a), axis=1) / 2
+        pick = self.rng.choice(len(tri), size=n, p=area / area.sum())
+        u, v = self.rng.random(n), self.rng.random(n)
+        flip = u + v > 1
+        u[flip], v[flip] = 1 - u[flip], 1 - v[flip]
+        roots = a[pick] + (b[pick] - a[pick]) * u[:, None] + (cc[pick] - a[pick]) * v[:, None]
+        nr = mu.norm(np.cross(b[pick] - a[pick], cc[pick] - a[pick]))
+        nr *= np.sign(np.einsum('ij,ij->i', nr, roots - self.skull))[:, None]
+        for r, n0 in zip(roots, nr):
+            below = np.clip((self.hairline(r[None], **(hl_kw or {}))[0] - r[1]) / 0.006, 0, 1)
+            L = (length[0] + (length[1] - length[0]) * self.rng.random()) * (1 - 0.6 * below)
+            tgt = towards(r) if towards is not None else np.array([0, 1.0, -0.6])
+            jit = (self.rng.random(3) - 0.5) * 0.8
+            dirv = mu.norm(tgt + jit)
+            pts, nrms = self.grow_on_scalp(r, n0, lambda p, nn, d=dirv: d, L, steps=3, lift=0.0004, layer=0.0005 * self.rng.random(), curl=0.3)
+            self.add(pts, nrms, np.linspace(width, width * 0.3, len(pts)) * (1 - 0.5 * below), depth=0.1)
 
     def style_crop(self, n, length=(0.02, 0.05), flow='back', whorl=(0.0, 0.16, -0.06), fringe=0.3, width=0.0009, hl_kw=None, curl=0.0):
         """Short cropped hair, combed from a crown whorl (rest head space)."""
@@ -334,7 +375,7 @@ class Groom:
             P = np.array(P)
             self.add(P, np.repeat(nrm[None], 40, 0), np.full(40, 0.0012), depth=0.5)
 
-    def brows_from_card(self, card_rest_P, card_tris, card_uv, alpha_img, n=380, length=(0.006, 0.011), width=0.00035):
+    def brows_from_card(self, card_rest_P, card_tris, card_uv, alpha_img, n=380, length=(0.006, 0.011), width=0.00026):
         """Eyebrow hairs rooted on the MakeHuman eyebrow card where its alpha is dense (rest)."""
         from humanbuild import sample_image
         A = card_rest_P

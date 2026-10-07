@@ -251,6 +251,10 @@ varying float vAO; varying vec3 vGaze; varying float vIris;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
   float irisW = smoothstep(0.98, 0.9, vIris);           // vIris: angle from the gaze axis / limbus angle
+  // irises in daylight read darker and less saturated than the texture (the cornea and the
+  // iris' own depth): desaturate a little, then tint
+  { float li = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+    diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(li), diffuseColor.rgb, 0.7), irisW); }
   diffuseColor.rgb *= mix(uScleraTint, uIrisTint, irisW);
   // sclera: warmer and a little pinker toward the corners (vessels), never paper white
   diffuseColor.rgb *= mix(vec3(1.0), vec3(1.0, 0.86, 0.82), smoothstep(1.6, 2.6, vIris) * (1.0 - irisW));
@@ -285,7 +289,7 @@ varying float vAO; varying vec3 vGaze; varying float vIris;`)
 /** Alpha-textured hair cards / brows / lashes. o.map (RGBA), o.color tint, o.alphaFromRGB */
 export function cardMaterial(o = {}) {
   const mat = new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color(...(o.color || [0.05, 0.035, 0.025])), roughness: o.rough ?? 0.42, metalness: 0,
+    color: new THREE.Color(...(o.color || [0.05, 0.035, 0.025])), roughness: o.rough ?? 0.7, metalness: 0, specularIntensity: 0.5,
     side: THREE.DoubleSide, alphaHash: true, sheen: 0.0,
   });
   if (o.map) mat.alphaMap = libTexture(o.map, { color: false });

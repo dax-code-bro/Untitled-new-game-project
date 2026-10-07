@@ -400,8 +400,41 @@ def hull_profile(D, nth=144, dy=0.008):
         if not H[:, j].any():
             k = j - 1 if j > 0 and H[:, j - 1].any() else min(ny - 1, j + 1)
             H[:, j] = H[:, k]
+    # cloth (and the chemise under it) bridges small vertical undulations too - ribs, abdominal
+    # muscles, nipples: a max filter over +-2.4 cm of height, then a soft blur (allowing 2 mm
+    # of compression of the real form)
+    Hm = H.copy()
+    for k in range(1, 4):
+        Hm = np.maximum(Hm, np.maximum(np.roll(H, k, 1), np.roll(H, -k, 1)))
+    Hb = Hm.copy()
+    for _ in range(3):
+        Hb = (np.roll(Hb, 1, 1) + np.roll(Hb, -1, 1) + 2 * Hb) / 4
+        Hb = (np.roll(Hb, 1, 0) + np.roll(Hb, -1, 0) + 6 * Hb) / 8
+    Hb[:, :3] = H[:, :3]
+    Hb[:, -3:] = H[:, -3:]
+    H = np.maximum(Hb, H - 0.002)
     D._hull = (H, nth, y0, dy, c)
     return D._hull
+
+
+def collider_rest(D):
+    """The body as garments collide with it: the smoothed rest body with the trunk pushed out to
+    the bridged, fitted envelope of its cross-sections (an undergarment layer) - cloth never sinks
+    into the small of the back, under the bust or between ribs."""
+    if getattr(D, '_coll', None) is not None:
+        return D._coll
+    R = D.smooth_rest().copy()
+    env, top = drape_envelope(D, hang=0.6)
+    c = env[4]
+    trunk = np.isin(D.cat, ['torso', 'pelvis'])
+    hipy = (D.lm('upperleg01.L')[1] + D.lm('upperleg01.R')[1]) / 2
+    w = trunk * np.clip((top - R[:, 1]) / 0.04, 0, 1) * np.clip((R[:, 1] - hipy) / 0.05, 0, 1)
+    d = (R - c) * np.array([1, 0, 1])
+    r = np.linalg.norm(d, axis=1)
+    re = sample_profile(env, R)
+    R = R + d / np.maximum(r[:, None], 1e-9) * (np.maximum(0.0, re - r) * w)[:, None]
+    D._coll = R
+    return R
 
 
 def sample_profile(prof, P):
@@ -637,6 +670,15 @@ def upper_garment(D, g):
     # loose garments hang from the bust / shoulder blades instead of following every hollow
     if g.get('drape', True):
         S = apply_envelope(D, S, (~armv).astype(float), g, ycut)
+        # no anatomy under cloth: smooth the torso (ribs, abdominals, navel) and push it back
+        # out to the envelope, so only the big forms (bust, shoulder blades, hips) remain
+        nb_ = mu.neighbours(len(S), F)
+        bnd_ = np.zeros(len(S), bool)
+        for l in mu.boundary_loops(F):
+            bnd_[l] = True
+        msk = (~armv).astype(float) * np.clip((S[:, 1] - ycut) / 0.03, 0, 1)
+        S = mu.laplacian_smooth_fast(S, nb_, iters=g.get('torso_smooth', 25), lam=0.5, fixed=bnd_ | armv, mask=msk)
+        S = apply_envelope(D, S, (~armv).astype(float), g, ycut)
         if sl != 'none':
             S = sleeve_tubes(D, S, armv, g)
     loops = mu.boundary_loops(F)
@@ -689,11 +731,11 @@ def upper_garment(D, g):
         S, F, pin, info2 = extrude_skirt(D, S, F, hip, pin, g)
         goal = np.vstack([goal, np.zeros((len(S) - len(goal), 3))])
     armv2 = np.concatenate([armv, np.zeros(len(S) - len(armv), bool)])
-    if g.get('belt') and g.get('sim', True):
+    if (g.get('belt') or g.get('cinch')) and g.get('sim', True):
         wy = D.lm('spine04')[1] + g.get('belt_dy', 0.0)
         bw = np.clip(1 - np.abs(S[:, 1] - wy) / g.get('belt_band', 0.028), 0, 1) * (~armv2)
         pin = np.maximum(pin, np.clip(bw * 1.3, 0, 1))
-        belt_idx = np.where((bw > 0.6))[0]
+        belt_idx = np.where((bw > 0.6))[0] if g.get('belt') else None
         # the belt gathers the (wider) cloth in to the body: pinned rows move in during the sim
         goal += cinch_delta(D, S, np.clip(bw * 1.3, 0, 1), g.get('cinch_ease', 0.012))
     elif g.get('belt'):
@@ -918,6 +960,19 @@ def head_shell(D, g):
             top = np.clip((Pp[:, 1] - ey) / 0.1, 0, 1)
             return 0.025 * np.maximum(back, top) * (0.5 + 0.5 * top)
     S, F, old = D.shell(vm, g.get('ease', 0.006 if kind != 'hood' else 0.022), smooth=g.get('smooth', 30), extra_ease=xe)
+    if kind in ('coif', 'kerchief', 'cap'):
+        # linen gathered toward the back seam / knot: soft radial folds on the back half, and a
+        # little slack (the cloth is not shrink-wrapped to the skull)
+        nS = mu.vnormals(S, F)
+        dd = S - hc
+        a_ = np.arctan2(dd[:, 0], dd[:, 2])
+        back = np.clip(-np.cos(a_), 0, 1) ** 1.5
+        top = np.clip((S[:, 1] - ey) / 0.1, 0, 1)
+        rng_ = np.random.default_rng(zlib.crc32(kind.encode()))
+        ph = rng_.random(3) * 6.28
+        wav = np.sin(a_ * 13 + ph[0]) * 0.6 + np.sin(a_ * 7.3 + S[:, 1] * 40 + ph[1]) * 0.4
+        amp = (0.0016 if kind != 'cap' else 0.0012) * (0.3 + back) * (0.4 + 0.6 * top)
+        S = S + nS * (amp * wav + 0.0015 * back)[:, None]
     uv = uv_cylinder(S, hc, np.array([0, 1.0, 0]), np.array([0, 0, 1.0]))
     if kind == 'hood':
         # point (liripipe stub) at the back of the hood
@@ -973,9 +1028,9 @@ def apron_panel(D, g):
     n = g.get('cols', 28)
     rows = max(8, int(length / 0.025))
     # waist radius at front
-    sel = np.abs(D.dress[:, 1] - wy) < 0.015
-    fr = D.dress[sel & (D.dress[:, 2] > c[2])]
-    rz = (fr[:, 2].max() - c[2]) + g.get('ease', 0.025) if len(fr) else 0.14
+    prof = hull_profile(D)
+    probe = np.array([[c[0], wy, c[2] + 0.1]])
+    rz = float(sample_profile(prof, probe)[0]) + g.get('ease', 0.03)
     R = max(0.12, rz)
     th = np.linspace(-width / (2 * R), width / (2 * R), n)
     P = []
@@ -1042,6 +1097,8 @@ def hood_cape(D, g):
     G = cape_panel(D, g2)
     return G
 
+
+UPPER_TYPES = ('shirt', 'tunic', 'coat', 'gown', 'gambeson', 'kirtle', 'doublet')
 
 BUILDERS = {
     'shirt': upper_garment, 'tunic': upper_garment, 'coat': upper_garment, 'gown': upper_garment,
@@ -1126,7 +1183,7 @@ def simulate(D, garments, steps=6, settle0=8, trans=None, settle1=22, quality=5,
     f_end = fk[-1] + settle1
     sc.frame_start, sc.frame_end = 1, f_end
     # body collider (animated)
-    body_frames = [mc.lbs(D.smooth_rest(), D.I, D.W, M) for M in keys]
+    body_frames = [mc.lbs(collider_rest(D), D.I, D.W, M) for M in keys]
     body = _make_obj(bpy, 'body', body_frames[0], D.faces)
     _add_shape_anim(body, body_frames, fk)
     _set_linear(body)
@@ -1180,7 +1237,7 @@ def simulate(D, garments, steps=6, settle0=8, trans=None, settle1=22, quality=5,
         st.shrink_min = g.spec.get('shrink', 0.0)
         cs = cl.collision_settings
         cs.distance_min = g.spec.get('col_dist', 0.004)
-        cs.use_self_collision = bool(g.spec.get('self_collision', False))
+        cs.use_self_collision = bool(g.spec.get('self_collision', g.spec.get('type') in UPPER_TYPES))
         cs.self_distance_min = 0.003
         cs.collision_quality = 3
         cl.point_cache.frame_start = 1

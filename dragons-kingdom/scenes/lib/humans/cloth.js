@@ -118,9 +118,9 @@ if (uPattern > 0.5 && uPattern < 1.5) {
 export function hairStrandMaterial(o = {}) {
   const mat = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(...(o.color || [0.05, 0.03, 0.02])), roughness: o.rough ?? 0.55, metalness: 0,
-    side: THREE.DoubleSide, alphaHash: !!o.alphaTips,
+    side: THREE.DoubleSide, alphaHash: o.alphaHash !== false,
   });
-  const U = { uSpec: { value: o.spec ?? 0.06 }, uShift: { value: o.shift ?? 0.12 }, uVar: { value: o.variation ?? 0.25 }, uTint: { value: new THREE.Vector3(...(o.tint || [1.0, 0.75, 0.55])) } };
+  const U = { uSpec: { value: o.spec ?? 0.14 }, uShift: { value: o.shift ?? 0.12 }, uVar: { value: o.variation ?? 0.25 }, uTint: { value: new THREE.Vector3(...(o.tint || [1.0, 0.75, 0.55])) } };
   mat.userData.hair = U;
   mat.customProgramCacheKey = () => 'dk-human-hair';
   mat.onBeforeCompile = (sh) => {
@@ -152,14 +152,19 @@ vec3 hairT; float hairSub;`)
 }
 diffuseColor.rgb *= mix(1.0, 0.5, vAux.b);
 #ifdef USE_ALPHAHASH
-diffuseColor.a = 1.0 - smoothstep(0.82, 1.0, vAux.g) * 0.85;
+// thinning tips and soft ribbon edges: the film finish's jittered sub-frames resolve the
+// alpha-hash into fine, semi-transparent strand edges instead of hard clumps
+diffuseColor.a = (1.0 - smoothstep(0.75, 1.0, vAux.g) * 0.9) * (1.0 - smoothstep(0.3, 0.5, abs(vHairUv.x - 0.5)) * 0.55);
 #endif`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 hairT = normalize(vT);
 // shade a strand as a cylinder: the normal is the view vector made perpendicular to the strand
 { vec3 v = normalize(vViewPosition); vec3 nn = normalize(v - hairT * dot(v, hairT)); normal = normalize(mix(nn, normal, 0.35)); }`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
-{ float aoV = clamp(vAO, 0.0, 1.0); reflectedLight.indirectDiffuse *= aoV; reflectedLight.indirectSpecular *= aoV * aoV * 0.22; reflectedLight.directDiffuse *= mix(1.0, aoV, 0.4); }`)
+{ float aoV = clamp(vAO, 0.0, 1.0); reflectedLight.indirectDiffuse *= aoV;
+  // sky reflection on hair is weak and takes the hair's colour (light scatters inside the fibre)
+  vec3 htint = mix(vec3(1.0), diffuseColor.rgb / max(1e-4, max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b))), 0.6);
+  reflectedLight.indirectSpecular *= aoV * aoV * 0.12 * htint; reflectedLight.directDiffuse *= mix(1.0, aoV, 0.4); }`)
       .replace('#include <lights_physical_pars_fragment>', `#include <lights_physical_pars_fragment>
 float hairKK(vec3 T, vec3 L, vec3 V, float shift, float ex) {
   vec3 H = normalize(L + V);
@@ -173,9 +178,12 @@ void RE_Direct_Hair( const in IncidentLight directLight, const in vec3 geometryP
   float d = clamp(ndl * 0.6 + 0.4, 0.0, 1.0);
   reflectedLight.directDiffuse += directLight.color * d * BRDF_Lambert( material.diffuseColor );
   float vis = clamp(ndl * 0.5 + 0.5, 0.0, 1.0);
-  float s1 = hairKK(hairT, directLight.direction, geometryViewDir, -uShift, 60.0);
-  float s2 = hairKK(hairT, directLight.direction, geometryViewDir, uShift * 1.6, 14.0);
-  reflectedLight.directSpecular += directLight.color * vis * uSpec * (0.6 + 0.8 * hairSub) * (s1 * 0.5 + s2 * 0.3 * uTint * normalize(material.diffuseColor + 1e-4) * 1.2);
+  float s1 = hairKK(hairT, directLight.direction, geometryViewDir, -uShift, 90.0);
+  float s2 = hairKK(hairT, directLight.direction, geometryViewDir, uShift * 1.6, 16.0);
+  vec3 hc = material.diffuseColor / max(1e-4, max(material.diffuseColor.r, max(material.diffuseColor.g, material.diffuseColor.b)));
+  // primary: surface reflection (mostly white, a little of the fibre colour); secondary: through
+  // the fibre (hair coloured); hairSub breaks the band up strand by strand
+  reflectedLight.directSpecular += directLight.color * vis * uSpec * (0.4 + 1.0 * hairSub) * (s1 * 0.32 * mix(vec3(1.0), hc, 0.35) + s2 * 0.3 * uTint * hc);
 }
 #undef RE_Direct
 #define RE_Direct RE_Direct_Hair`);
@@ -183,26 +191,29 @@ void RE_Direct_Hair( const in IncidentLight directLight, const in vec3 geometryP
   return mat;
 }
 
+// lum: mean linear luminance of the photo albedo (measured) - with an explicit o.color only its
+// variation is used (the scan's own hue, e.g. Leather05's red, never tints the prop)
 const PROP_PBR = {
-  leather: { id: 'pbr/acg_leather05', base: 'Leather05', tile: 0.35 },
-  blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.35 },
-  iron: { id: 'pbr/acg_metal26', base: 'Metal26', tile: 0.4, metal: true },
-  wood: { id: 'pbr/acg_wood35', base: 'Wood35', tile: 0.6 },
-  pine: { id: 'pbr/acg_planks21', base: 'Planks21', tile: 0.8 },
-  linen: { id: 'pbr/acg_fabric36', base: 'Fabric36', tile: 0.12 },
+  leather: { id: 'pbr/acg_leather05', base: 'Leather05', tile: 0.35, lum: 0.027 },
+  blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.35, lum: 0.0055 },
+  iron: { id: 'pbr/acg_metal26', base: 'Metal26', tile: 0.4, metal: true, lum: 0.117 },
+  wood: { id: 'pbr/acg_wood35', base: 'Wood35', tile: 0.6, lum: 0.074 },
+  pine: { id: 'pbr/acg_planks21', base: 'Planks21', tile: 0.8, lum: 0.425 },
+  linen: { id: 'pbr/acg_fabric36', base: 'Fabric36', tile: 0.12, lum: 0.5 },
 };
 /** Generic prop / accessory material. o.kind: leather | blackleather | iron | steel | brass | gold | wood | pine | wicker | bread | rope | flat */
 export function propMaterial(o = {}) {
   const k = o.kind || 'flat';
   const mat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(...(o.color || [0.5, 0.5, 0.5])), roughness: o.rough ?? 0.6, metalness: o.metal ?? 0, side: o.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
   const p = PROP_PBR[k];
-  let tile = 1;
+  let tile = 1, varAlb = null, varLum = 1;
   if (p) {
     tile = 1 / (o.tile ?? p.tile);
     mat.normalMap = libTexture(`${p.id}/${p.base}_nrm.jpg`, { color: false, repeat: true, flipY: true });
     mat.normalScale = new THREE.Vector2(1, -1);
     mat.roughnessMap = libTexture(`${p.id}/${p.base}_rgh.jpg`, { color: false, repeat: true, flipY: true });
-    if (o.useAlbedo !== false) mat.map = libTexture(`${p.id}/${p.base}_col.jpg`, { color: true, repeat: true, flipY: true });
+    if (o.useAlbedo !== false && !o.color) mat.map = libTexture(`${p.id}/${p.base}_col.jpg`, { color: true, repeat: true, flipY: true });
+    else if (o.useAlbedo !== false) { varAlb = libTexture(`${p.id}/${p.base}_col.jpg`, { color: true, repeat: true, flipY: true }); varLum = p.lum; }
     if (p.metal) { mat.metalnessMap = libTexture(`${p.id}/${p.base}_met.jpg`, { color: false, repeat: true, flipY: true }); mat.metalness = 1; }
   } else if (k === 'wicker') {
     tile = 1 / (o.tile ?? 0.25);
@@ -210,12 +221,13 @@ export function propMaterial(o = {}) {
     mat.normalMap = libTexture('pbr/khr_wicker/wicker_normal.png', { color: false, repeat: true, flipY: false });
   } else if (k === 'steel') { mat.metalness = 1; mat.roughness = o.rough ?? 0.32; mat.color.setRGB(...(o.color || [0.55, 0.55, 0.56])); }
   else if (k === 'brass' || k === 'gold') { mat.metalness = 1; mat.roughness = o.rough ?? 0.3; mat.color.setRGB(...(o.color || (k === 'gold' ? [0.95, 0.72, 0.32] : [0.75, 0.55, 0.28]))); }
-  const U = { uTile: { value: tile }, uSeed: { value: (o.seed ?? 1) * 0.29 }, uKind: { value: ['flat', 'bread', 'rope', 'apple'].indexOf(k) } };
+  const U = { uTile: { value: tile }, uSeed: { value: (o.seed ?? 1) * 0.29 }, uKind: { value: ['flat', 'bread', 'rope', 'apple'].indexOf(k) },
+    uVarAlb: { value: varAlb }, uVarLum: { value: varLum }, uUseVar: { value: varAlb ? 1 : 0 } };
   mat.customProgramCacheKey = () => 'dk-human-prop';
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float ao; varying float vAO; varying vec3 vObjP; uniform float uTile;')
+      .replace('#include <common>', '#include <common>\nattribute float ao; varying float vAO; varying vec3 vObjP; varying vec2 vPUv; uniform float uTile;')
       .replace('#include <uv_vertex>', `#include <uv_vertex>
 #ifdef USE_MAP
   vMapUv = uv * uTile;
@@ -229,10 +241,11 @@ export function propMaterial(o = {}) {
 #ifdef USE_METALNESSMAP
   vMetalnessMapUv = uv * uTile;
 #endif`)
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvAO = ao; vObjP = position;');
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvAO = ao; vObjP = position;\n#ifdef USE_NORMALMAP\nvPUv = uv * uTile;\n#else\nvPUv = vec2(0.0);\n#endif');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', `#include <common>\n${NOISE_GLSL}\nvarying float vAO; varying vec3 vObjP; uniform float uSeed, uKind;`)
+      .replace('#include <common>', `#include <common>\n${NOISE_GLSL}\nvarying float vAO; varying vec3 vObjP; varying vec2 vPUv; uniform float uSeed, uKind, uVarLum, uUseVar; uniform sampler2D uVarAlb;`)
       .replace('#include <color_fragment>', `#include <color_fragment>
+if (uUseVar > 0.5) { vec3 a = texture2D(uVarAlb, vPUv).rgb; diffuseColor.rgb *= clamp(dot(a, vec3(0.2126, 0.7152, 0.0722)) / uVarLum, 0.3, 2.2); }
 { float n = hFbm(vObjP * 30.0 + uSeed);
   diffuseColor.rgb *= 0.85 + 0.3 * n;
   if (uKind > 0.5 && uKind < 1.5) { diffuseColor.rgb *= mix(vec3(1.0), vec3(1.15, 0.95, 0.75), hN3(vObjP * 120.0)); } }`)
