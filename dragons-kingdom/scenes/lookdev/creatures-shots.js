@@ -54,7 +54,7 @@ export const SHOTS = [
   // the tower (25 m) is as far away as she is, so her span reads as eight towers wide; a
   // watchman in the foreground points up at her; the haze between softens both
   { id: 'starlight-below', set: 'ground', creatures: ['starlight'], tack: ['starlight'], dur: 3, face: 160, haze: 2.4,
-    flyer: { name: 'starlight', at: [-22, 45, 268], heading: -80 },
+    flyer: { name: 'starlight', at: [-22, 45, 268], heading: -130 },
     tower: { at: [10, 0, 252], r: 3.6, h: 21, capH: 6.5 }, trees: true,
     people: [{ id: 'watchman', ground: [-0.95, 0, 4.6], yaw: -12 }],
     pose: { starlight: { name: 'glide', bank: -0.08, dihedral: 0.1, look: [0.1, -0.15] } },

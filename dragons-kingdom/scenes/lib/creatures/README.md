@@ -73,7 +73,7 @@ Lookdev scenes (`scenes/lookdev/`):
 
 | scene | what |
 |---|---|
-| `creatures-hero.js` (= `creatures-turntable.js`) | every hero shot in sequence (shot list in `creatures-shots.js`): Charcoal 3/4 front in daylight with Remi, Charcoal's head, Charcoal flying side-on over the sea, Leaf sitting upright with Abby, Leaf flying with Abby (mid-downstroke), Starlight gliding past a distant 27 m watchtower seen from the ground ~260 m away (a watchman points up; hedgerows and woods to the horizon), the hatchling macro on bedding, the scout banking over the sea, the scout (with its hooded rider) losing its LEFT wing |
+| `creatures-hero.js` (= `creatures-turntable.js`) | every hero shot in sequence (shot list in `creatures-shots.js`): Charcoal 3/4 front in daylight with Remi, Charcoal's head, Charcoal flying side-on over the sea, Leaf sitting upright with Abby, Leaf flying with Abby (start of the downstroke, 90-degree shutter), Starlight gliding past a distant 27 m watchtower seen from the ground ~270 m away (a watchman points up; hedgerows and woods to the horizon), the hatchling macro on bedding, the scout banking over the sea, the scout (with its hooded rider) losing its LEFT wing |
 | `creatures-turntable-<name>.js` | only one creature's shots (quicker builds) |
 | `creatures-review.js` | every shot for 1 s at its representative moment - one build, `--fps 1` |
 | `creatures-contact.js` | contact sheet: each creature on a turntable (4 views) under one neutral daylight sky, then a scale lineup with a person (t = 20; also `creatures-lineup.js`) |
@@ -155,10 +155,13 @@ clumps as hedgerows and woods 0.4-2.5 km out) only as scale references. Typical 
      screenplay wants the loss unambiguous without a close-up of the wound.
    * gold hatchling: reads as 24-karat gold through its tinted reflection - deep yellow gold
      (linear 1.0/0.64/0.16, not pale brass), metallic crowns (0.72) and less metallic soft
-     grooves (0.4) at roughness ~0.47 (a broad sheen, no pin-point sparkle), very low scale
-     relief and almost no micro relief (soft, not-yet-hardened scales, no embossed cells), a
-     wet clearcoat film on the smooth geometric normal (broad wet highlights), streaks and
-     drying patches, pale amniotic residue (non-metallic, slimy).
+     grooves (0.4) at roughness ~0.55 (a broad sheen, no pin-point sparkle), very low scale
+     relief (`amp` 0.035) and almost no micro relief (soft, not-yet-hardened scales, no
+     embossed cells), a wet clearcoat film on the smooth geometric normal (broad wet
+     highlights), streaks and drying patches, pale amniotic residue (non-metallic, slimy).
+     The wet film is occluded by the runtime's screen-space AO (the runtime darkens diffuse and
+     specular IBL but not the clearcoat; without this the film mirrored blue sky inside the
+     crevice of the folded hind leg).
    * Charcoal and Leaf: dry, dusty hide (roughness ~0.6) with dust and dried
      mud on the lower body, so the black hide shows soft sheen instead of
      lacquer; teeth stained ivory.

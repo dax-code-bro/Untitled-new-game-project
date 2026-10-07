@@ -83,7 +83,7 @@ export function lookParams(THREE, look) {
       // partly metallic reflection, the wet film (clearcoat) carries broad highlights
       // gold reads as gold through its tinted reflection: metallic crowns (broad, soft sheen at
       // roughness ~0.4, never pin-point sparkle), less in the soft grooves
-      rough: [0.47, 0.05, 0.05, 0.1], amp: 0.07, keel: 0.0, facet: 0.0, jit: 0.45, metal: [0.72, 0.4], mottle: 0.18,
+      rough: [0.55, 0.05, 0.05, 0.1], amp: 0.035, keel: 0.0, facet: 0.0, jit: 0.45, metal: [0.72, 0.4], mottle: 0.18,
       hier: [0.0, 0.5, 0.3, 0.0], damp: 0.0, bellyP: [0.38, 0.8, 0.15, 0.18], plateZ: -0.03,
       crevCol: lin(THREE, 0.7, 0.38, 0.06), crevAmt: 0.2,
       scl: [0.75, 0.42, 0.7, 1.1], tub: [0.0, 2.5, 0.0, 0], skin2: [0.0, 0.15, 0, 0.08], skin3: [0.1, 0.18, 0, 0],
