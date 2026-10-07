@@ -43,6 +43,12 @@ export async function setup(ctx) {
   const data = await loadCharacterData(CFG.id);
   const ch = buildCharacter(data);
   ch.root.rotation.y = CFG.yaw ?? 0;
+  if (CFG.seat) {
+    // riders: pelvis 0.1 m above a saddle-like block (seat height CFG.seat)
+    ch.root.position.y = CFG.seat + 0.1;
+    const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 1.2, 24).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x2a221c, roughness: 0.7 }));
+    seat.position.set(0, CFG.seat - 0.17, 0); seat.castShadow = seat.receiveShadow = true; scene.add(seat);
+  }
   if (CFG.only) for (const m of ch.meshes) m.visible = CFG.only.some((n) => m.name.endsWith(':' + n));
   if (CFG.flat) for (const m of ch.meshes) if (CFG.flat.some((n) => m.name.endsWith(':' + n))) m.material = new THREE.MeshStandardMaterial({ color: 0x9a8f80, roughness: 0.8, side: THREE.DoubleSide });
   if (CFG.hairSpec !== undefined) for (const m of ch.meshes) if (m.material.userData.hair) m.material.userData.hair.uSpec.value = CFG.hairSpec;

@@ -118,7 +118,20 @@ def ride(pb, p):
     return pb
 
 
-RECIPES = {'dress': dress, 'stand': stand, 'ride': ride}
+def dress_ride(pb, p=None):
+    """Riders' dress pose: already astride (legs as in ride()), trunk upright, arms out ~35 deg -
+    the garments are built and simulated seated, so coat skirts drape over the thighs and the
+    saddle instead of being swept up by the legs."""
+    q = dict(p or {})
+    q.update({'lean': 0.0, 'head_pitch': 0.0, 'skip_arms': ('L', 'R')})
+    ride(pb, q)
+    for s in ('L', 'R'):
+        pb.arm_down(s, out=0.62, fwd=0.12, elbow=0.18, twist=0.0)
+        pb.grip(s, 'relaxed', 0.6)
+    return pb
+
+
+RECIPES = {'dress': dress, 'dress_ride': dress_ride, 'stand': stand, 'ride': ride}
 
 
 # ====================================================== actions with props ==

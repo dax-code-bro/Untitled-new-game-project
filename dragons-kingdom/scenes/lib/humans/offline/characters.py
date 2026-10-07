@@ -72,7 +72,7 @@ def G_tunic(c, hem=0.5, belt=True, sleeves='long', **kw):
 
 def G_coat(c, hem=0.5, split=True, **kw):
     return dict({'type': 'coat', 'fabric': 'wool', 'color': _c(c), 'ease': 0.016, 'loose': 0.02, 'hang': 0.25, 'sleeves': 'long', 'sleeve_frac': 0.97,
-                 'stack': 0.035, 'hem': hem, 'flare': 1.5, 'prefold': 0.035, 'folds': 9, 'pin_hips': 0.5, 'split': 'front' if split else 'none',
+                 'stack': 0.035, 'hem': hem, 'flare': 1.5, 'prefold': 0.035, 'folds': 9, 'pin_hips': 0.5, 'split': 'both' if split else 'none',
                  'belt': True, 'neck_shape': 'v', 'neck': 0.15, 'neck_width': 0.075, 'layer': 2, 'thickness': 0.003, 'wear': 0.45, 'dust': 0.3}, **kw)
 
 

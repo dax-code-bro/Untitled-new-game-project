@@ -734,6 +734,11 @@ def upper_garment(D, g):
     if (g.get('belt') or g.get('cinch')) and g.get('sim', True):
         wy = D.lm('spine04')[1] + g.get('belt_dy', 0.0)
         bw = np.clip(1 - np.abs(S[:, 1] - wy) / g.get('belt_band', 0.028), 0, 1) * (~armv2)
+        # only cloth close to the body is under the belt (a seated rider's skirt starts out flat
+        # at belt height - it must stay free)
+        prof_ = hull_profile(D)
+        dr_ = np.linalg.norm((S - prof_[4]) * np.array([1, 0, 1]), axis=1) - sample_profile(prof_, S)
+        bw = bw * np.clip(1 - (dr_ - 0.05) / 0.03, 0, 1)
         pin = np.maximum(pin, np.clip(bw * 1.3, 0, 1))
         belt_idx = np.where((bw > 0.6))[0] if g.get('belt') else None
         # the belt gathers the (wider) cloth in to the body: pinned rows move in during the sim
@@ -811,10 +816,11 @@ def extrude_skirt(D, S, F, hip, pin, g):
     # seam points densified by linear interpolation along the loop
     Pd = np.array([P0[i // m] * (1 - (i % m) / m) + P0[(i // m + 1) % n] * ((i % m) / m) for i in range(N)])
     y0 = P0[:, 1].mean()
-    L = max(0.05, y0 - g['hem'])
+    L = max(0.05, y0 - (g['hem'] + getattr(D, 'hem_shift', 0.0)))
     rows = max(4, int(L / g.get('row', 0.022)))
     flare = g.get('flare', 1.25)
-    split = g.get('split', 'none') == 'front'
+    split = g.get('split', 'none') in ('front', 'both')
+    vent = g.get('split', 'none') == 'both'          # riding coats: front opening + back vent
     train = g.get('train', 0.0)
     pre = g.get('prefold', 0.0)
     nfold = g.get('folds', 9)
@@ -826,13 +832,26 @@ def extrude_skirt(D, S, F, hip, pin, g):
     dirs = r0v / np.maximum(r0[:, None], 1e-6)
     ang = np.arctan2(dirs[:, 0], dirs[:, 2])
     cols = N + 1 if split else N
+    ib = -1
+    if vent:
+        # back seam column: a seam-loop column (multiple of m) nearest to straight back
+        cand = np.arange(0, N, m)
+        ib = int(cand[np.argmin(np.abs(np.abs(np.arctan2(dirs[cand, 0], dirs[cand, 2])) - math.pi))])
+        cols = N + 2
     rings = []
     prev_rr = None
     for j in range(1, rows + 1):
         s = j / rows
         y = y0 - L * s
-        rr = r0 * (1 + (flare - 1) * s ** 1.3) + 0.01 * s
-        rr = np.maximum(rr, D.body_radius_c(ang, y, c) + g.get('clear', 0.018))
+        seated = getattr(D, 'seated', False)
+        if seated:
+            # riders: the skirt starts as a near-flat ring above the thighs and the saddle and
+            # falls onto them in the simulation (nothing for the legs to sweep up)
+            y = y0 - 0.025 * s
+            rr = r0 + L * s * 1.02
+        else:
+            rr = r0 * (1 + (flare - 1) * s ** 1.3) + 0.01 * s
+            rr = np.maximum(rr, D.body_radius_c(ang, y, c) + g.get('clear', 0.018))
         if prev_rr is not None:
             rr = np.maximum(rr, prev_rr * 0.998)
         prev_rr = rr
@@ -843,12 +862,16 @@ def extrude_skirt(D, S, F, hip, pin, g):
         ring = np.stack([c[0] + dirs[:, 0] * rr, np.full(N, y), c[2] + dirs[:, 2] * rr], 1)
         k = min(1.0, s * 4.0)
         ring[:, 1] = y + (Pd[:, 1] - y0) * (1 - k)
+        if seated:
+            ring[:, 1] = y + (Pd[:, 1] - y0)
         if train:
             back = np.clip(-np.cos(ang), 0, 1) ** 2
             ring[:, 1] -= train * back * s ** 2
             ring[:, 2] -= train * 0.6 * back * s ** 2
         if split:
             ring = np.vstack([ring, ring[:1]])
+        if vent:
+            ring = np.vstack([ring, ring[ib:ib + 1]])
         rings.append(ring)
     newP = np.vstack(rings)
     base = len(S)
@@ -863,13 +886,16 @@ def extrude_skirt(D, S, F, hip, pin, g):
         cs = [nid(1, i * m + k) for k in range(m + 1)]
         if i == n - 1:
             cs[-1] = nid(1, N) if split else nid(1, 0)
+        if vent and i * m == ib:
+            cs[0] = nid(1, N + 1)
         for k in range(m):
             sk.append((a, cs[k], cs[k + 1]))
         sk.append((a, cs[m], b))
     for j in range(1, rows):
         for i in range(N):
             i1 = i + 1 if (split or i + 1 < N) else 0
-            sk.append((nid(j, i), nid(j + 1, i), nid(j + 1, i1), nid(j, i1)))
+            i0 = N + 1 if (vent and i == ib) else i
+            sk.append((nid(j, i0), nid(j + 1, i0), nid(j + 1, i1), nid(j, i1)))
     # one orientation for the whole skirt (outward), decided on a band face at the back
     f = sk[n + m + N // 2]
     q = P2[list(f)]
@@ -917,11 +943,19 @@ def boots(D, g):
     S, F, old = D.shell(vm, g.get('ease', 0.006), smooth=g.get('smooth', 30))
     D.hide_under(old, F, rings=2)
     sole = D.sole
-    # flatten the underside to the ground plane (the body was lifted by the sole thickness)
-    n = mu.vnormals(S, F)
-    low = (n[:, 1] < -0.45) & (S[:, 1] < sole + 0.03)
-    S[low, 1] = 0.0
-    S[:, 1] = np.maximum(S[:, 1], 0.0)
+    # a boot is a last, not a foot: no toes, a rounded toe box (smoothed foot, pushed out)
+    nS = mu.vnormals(S, F)
+    nbb = mu.neighbours(len(S), F)
+    footv = np.isin(D.cat[old], ['footL', 'footR'])
+    Sm = mu.laplacian_smooth_fast(S, nbb, iters=40, lam=0.5, mask=footv.astype(float))
+    d_ = np.einsum('ij,ij->i', S - Sm, nS)
+    S = Sm + nS * ((np.maximum(0.0, d_) * 0.7 + 0.0025) * footv)[:, None]
+    if not getattr(D, 'seated', False):
+        # flatten the underside to the ground plane (the body was lifted by the sole thickness)
+        n = mu.vnormals(S, F)
+        low = (n[:, 1] < -0.45) & (S[:, 1] < sole + 0.03)
+        S[low, 1] = 0.0
+        S[:, 1] = np.maximum(S[:, 1], 0.0)
     # a little toe spring and a wider sole edge
     uv = uv_cylinder(S, D.axis_y(), np.array([0, 1.0, 0]), np.array([0, 0, 1.0]))
     return Garment(g.get('name', 'boots'), S, F, uv, np.ones(len(S)), g, sim=False, layer=0)
@@ -1153,7 +1187,7 @@ def _set_linear(ob):
                 kp.interpolation = 'LINEAR'
 
 
-def simulate(D, garments, steps=6, settle0=8, trans=None, settle1=22, quality=5, log=print):
+def simulate(D, garments, steps=6, settle0=8, trans=None, settle1=None, quality=5, log=print):
     """Simulate the garments (in list order = inner to outer) while the body moves dress -> target."""
     import bpy
     import time
@@ -1178,6 +1212,8 @@ def simulate(D, garments, steps=6, settle0=8, trans=None, settle1=22, quality=5,
         M = D.skel.skin_mats(pose)
         M[:, :, 3] += off
         keys.append(M)
+    if settle1 is None:
+        settle1 = 40 if getattr(D, 'seated', False) else 22
     f0 = 1
     fk = [f0 + settle0 + int(round(trans * k / steps)) for k in range(steps + 1)]
     f_end = fk[-1] + settle1
@@ -1191,7 +1227,8 @@ def simulate(D, garments, steps=6, settle0=8, trans=None, settle1=22, quality=5,
     body.collision.thickness_outer = 0.003
     body.collision.cloth_friction = 6.0
     # ground
-    gp = _make_obj(bpy, 'ground', np.array([[-5, 0, -5], [5, 0, -5], [5, 0, 5], [-5, 0, 5]]), [(0, 3, 2, 1)])
+    gy = -3.0 if getattr(D, 'seated', False) else 0.0     # riders are built pelvis-at-origin: no ground there
+    gp = _make_obj(bpy, 'ground', np.array([[-5, gy, -5], [5, gy, -5], [5, gy, 5], [-5, gy, 5]]), [(0, 3, 2, 1)])
     gp.modifiers.new('col', 'COLLISION')
     gp.collision.cloth_friction = 10.0
     # riders: the saddle / the dragon's back rises under the seat while the legs come up, so the

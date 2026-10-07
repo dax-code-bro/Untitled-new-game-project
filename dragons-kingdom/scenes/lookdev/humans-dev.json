@@ -1,1 +1,1 @@
-{ "id": "abby_dev2", "accumulate": false, "cam": { "tgt": "eye.R", "off": [0.012, 0, 0.0], "az": 20, "el": 0, "dist": 0.12, "fov": 22, "fstop": 11 } }
+{ "id": "abby_ride_dev", "accumulate": false, "still": true, "seat": 1.0, "cam": { "tgt": [0, 1.0, 0], "az": 200, "el": 12, "dist": 2.6, "fov": 32 } }

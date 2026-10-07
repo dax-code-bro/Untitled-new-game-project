@@ -83,13 +83,21 @@ def assemble(kit, spec, out_dir, opts):
     sk = mc.Skeleton(kit.rig, H, T)
     sole = spec.get('sole', 0.012)
     # poses
-    pd = make_pose(sk, 'dress', {})
+    seated = spec.get('pose', 'stand').startswith('ride')
+    pd = make_pose(sk, 'dress_ride' if seated else 'dress', spec.get('pose_params', {}) if seated else {})
     pt = make_pose(sk, spec.get('pose', 'stand'), spec.get('pose_params', {})) if not opts.get('dresspose') else make_pose(sk, 'dress', {})
-    off_d = ground_offset(sk, pd.local, V, kit, sole)
+    off_d = ride_offset(sk, pd.local) if seated else ground_offset(sk, pd.local, V, kit, sole)
     off_t = ground_offset(sk, pt.local, V, kit, sole) if not spec.get('pose', 'stand').startswith('ride') else ride_offset(sk, pt.local)
     # ---- garments (Blender cloth) -------------------------------------------------
     D = gm.Dresser(kit, V, sk, pd.local, pt.local, off_d, off_t, log=log)
     D.sole = sole
+    D.seated = seated
+    if seated:
+        # hems are given as heights above the ground when standing: shift them into the seated frame
+        ps_ = make_pose(sk, 'dress', {})
+        off_s = ground_offset(sk, ps_.local, V, kit, sole)
+        i4 = sk.names.index('spine04')
+        D.hem_shift = (sk.world(pd.local)[1][i4] + off_d)[1] - (sk.world(ps_.local)[1][i4] + off_s)[1]
     D.subdiv = spec.get('cloth_subdiv', 1 if hero else 0)
     D.nosim = opts.get('nosim', False)
     if spec.get('pose', 'stand').startswith('ride'):
@@ -255,7 +263,7 @@ def caruncles(kit, body, sk):
     part.I[:, 0] = hi
     part.W = np.zeros((len(Pm), 4))
     part.W[:, 0] = 1.0
-    part.material = {'color': [0.62, 0.3, 0.28], 'rough': 0.25, 'clearcoat': 0.8, 'castShadow': False, 'occluder': False}
+    part.material = {'color': [0.72, 0.42, 0.4], 'rough': 0.25, 'clearcoat': 0.8, 'castShadow': False, 'occluder': False}
     return part
 
 
