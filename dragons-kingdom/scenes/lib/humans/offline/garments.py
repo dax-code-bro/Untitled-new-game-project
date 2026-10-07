@@ -125,13 +125,15 @@ class Dresser:
             # nipples/areolae: smoothed away locally; the cloth may press them very slightly
             mask = np.zeros(len(S))
             core = np.zeros(len(S))
+            # the whole bust, not just the nipple, is rounded: cloth over a body-shaped apex tents
+            # into two points (and a period chemise / kirtle bodice supports and rounds the bust)
             for s_ in ('L', 'R'):
                 tip = self.skel.T[self.skel.names.index(f'breast.{s_}')]
                 j = int(np.argmin(np.linalg.norm(R - tip, axis=1)))
                 d = np.linalg.norm(R - R[j], axis=1)
-                mask = np.maximum(mask, np.clip(1 - (d - 0.03) / 0.035, 0, 1))
-                core = np.maximum(core, np.clip(1 - (d - 0.022) / 0.012, 0, 1))
-            S = mu.laplacian_smooth_fast(S, self.nb, iters=160, lam=0.5, mask=mask)
+                mask = np.maximum(mask, np.clip(1 - (d - 0.05) / 0.05, 0, 1))
+                core = np.maximum(core, np.clip(1 - (d - 0.04) / 0.025, 0, 1))
+            S = mu.laplacian_smooth_fast(S, self.nb, iters=120, lam=0.5, mask=mask)
             d = np.einsum('ij,ij->i', S - R, nR)
             S = S + nR * (np.maximum(0, -d) * (1 - core))[:, None]
             self._srest = S

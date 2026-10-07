@@ -235,10 +235,14 @@ class Groom:
                     if p[2] > self.skull[2]:
                         return mu.norm(away) * 0.6 + np.array([0, -0.2, 0.8])
                     return mu.norm(away) * 0.7 + down * 0.5
-                # swept back: up and back over the top, back and down on the sides
-                side = np.array([np.sign(rel[0]) * 0.35, 0, 0])
+                # swept back: up and back over the top, back and down on the sides. The sideways
+                # part fades to zero at the midline (np.sign made a parting down the middle) and
+                # the front hairline goes up and back, not down onto the forehead
+                side = np.array([np.clip(rel[0] / 0.05, -1, 1) * 0.35, 0, 0])
                 topk = np.clip((rel[1] - 0.02) / 0.06, 0, 1)
-                return np.array([0, 0.25 * (1 - topk), -1.0]) * (0.4 + 0.6 * topk) + side * topk + down * (1 - topk) * 0.9
+                frontk = np.clip(rel[2] / 0.05, 0, 1) * np.clip(1 - abs(rel[0]) / 0.065, 0, 1)
+                up = np.array([0, 0.25 * (1 - topk) + 0.9 * frontk * (1 - topk), -1.0])
+                return up * (0.4 + 0.6 * topk) + side * topk + down * (1 - topk) * 0.9 * (1 - frontk)
             layer = self.rng.random() * loft
             pts, nrms = self.grow_on_scalp(r, n0, fn, L, steps=6, layer=layer, lift=0.001, curl=curl)
             self.add(pts, nrms, np.linspace(width, width * 0.3, len(pts)), depth=1 - layer / max(loft, 1e-6))

@@ -83,7 +83,7 @@ export function skinMaterial(o = {}) {
     color: 0xffffff, roughness: o.rough ?? 0.46, metalness: 0,
     ior: 1.4, specularIntensity: 0.9,
     sheen: 0.18, sheenRoughness: 0.55, sheenColor: new THREE.Color(0.55, 0.45, 0.4),
-    clearcoat: o.oil ?? 0.18, clearcoatRoughness: 0.3,
+    clearcoat: o.oil ?? 0.12, clearcoatRoughness: 0.34,
   });
   if (o.map) mat.map = libTexture(o.map);
   const U = {
@@ -141,7 +141,7 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
     vec3 plain = lumc * vec3(1.17, 0.94, 0.8) * vec3(0.96, 0.95, 0.98) * 0.94;
     c = mix(c, plain, clamp(vAux2.b * 0.6, 0.0, 0.6)); }
   // lid margin: lash line and wet rim of the eye opening (dark, barely red)
-  c = mix(c, c * vec3(0.5, 0.42, 0.4), vAux2.g * uLid);
+  c = mix(c, c * vec3(0.62, 0.56, 0.55), vAux2.g * uLid);
   // lips (aux.r) a little deeper, nails (aux.g) paler
   c = mix(c, c * vec3(0.98, 0.7, 0.72), vAux.r * 0.75);
   c = mix(c, vec3(l) * vec3(1.15, 1.02, 0.98) + 0.03, vAux.g * 0.55);
@@ -310,23 +310,26 @@ export function cardMaterial(o = {}) {
   if (o.map) mat.alphaMap = libTexture(o.map, { color: false });
   if (o.map && o.colorMap) { mat.map = libTexture(o.map); mat.color.setRGB(...(o.tint || [1, 1, 1])); }
   mat.userData.dkNoSSAO = false;
-  const U = { uAlphaChannel: { value: o.alphaChannel ?? 3 }, uAlphaGain: { value: o.alphaGain ?? 1.0 }, uShift: { value: o.shift ?? 0.08 } };
+  // uLower: opacity of the LOWER lashes relative to the upper ones (attribute lw = 1 there): the
+  // MakeHuman lash cards draw them as thick as the upper row, which reads as eyeliner
+  const U = { uAlphaChannel: { value: o.alphaChannel ?? 3 }, uAlphaGain: { value: o.alphaGain ?? 1.0 }, uShift: { value: o.shift ?? 0.08 }, uLower: { value: o.lower ?? 0.4 } };
+  mat.userData.card = U;
   mat.customProgramCacheKey = () => 'dk-human-card';
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', `#include <common>
-attribute float ao; varying float vAO;`)
+attribute float ao; attribute float lw; varying float vAO; varying float vLw;`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-vAO = ao;`);
+vAO = ao; vLw = lw;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
-uniform float uAlphaChannel, uAlphaGain, uShift; varying float vAO;`)
+uniform float uAlphaChannel, uAlphaGain, uShift, uLower; varying float vAO; varying float vLw;`)
       .replace('#include <alphamap_fragment>', `
 #ifdef USE_ALPHAMAP
   vec4 am = texture2D( alphaMap, vAlphaMapUv );
   float a = uAlphaChannel > 2.5 ? am.a : am.g;
-  diffuseColor.a *= clamp(a * uAlphaGain, 0.0, 1.0);
+  diffuseColor.a *= clamp(a * uAlphaGain * mix(1.0, uLower, vLw), 0.0, 1.0);
 #endif`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= vAO; reflectedLight.indirectSpecular *= vAO;

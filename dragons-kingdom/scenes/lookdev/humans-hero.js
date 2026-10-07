@@ -14,6 +14,7 @@ import * as THREE from 'three';
 import { loadHDRI, loadPBR } from '../lib/assets.js';
 import { loadCharacter, placeCharacter } from '../lib/humans/index.js';
 import { applyIdle } from '../lib/humans/idle.js';
+import { groundMaterial } from '../lib/humans/stage.js';
 import { filmFinish } from './finish.js';
 
 export const meta = {
@@ -60,7 +61,7 @@ export async function setup(ctx) {
   scene.add(sun, sun.target);
   // worldSize = the metres UV 0..1 covers (the whole plane): the scan keeps its real scale
   const GW = SPACING * SHOTS.length + 200, GH = 200;
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(GW, GH), await loadPBR('pbr/acg_ground03', ctx, { worldSize: [GW, GH] }));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(GW, GH), await groundMaterial('pbr/acg_ground03', ctx, [GW, GH]));
   ground.rotation.x = -Math.PI / 2; ground.position.x = SPACING * (SHOTS.length - 1) / 2; ground.receiveShadow = true;
   scene.add(ground);
   const sunDir = sky.sun.direction.clone().normalize();

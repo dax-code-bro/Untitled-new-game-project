@@ -86,6 +86,21 @@ export function buildCharacter(data, opts = {}) {
       if (!g.attributes.aux2) g.setAttribute('aux2', new THREE.BufferAttribute(new Float32Array(n * 4), 4));
       if (!g.attributes.albg) g.setAttribute('albg', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
     }
+    if (m.kind === 'lash' || m.kind === 'brow' || m.kind === 'haircard') {
+      // lw = 1 on the lower lash row (below the eye centre, drape pose = bind pose)
+      const lw = new Float32Array(n);
+      if (m.kind === 'lash') {
+        const eyes = ['eye.L', 'eye.R'].filter((b) => index[b] !== undefined).map((b) => bones[index[b]].getWorldPosition(new THREE.Vector3()));
+        const pos = g.attributes.position;
+        for (let i = 0; i < n; i++) {
+          const x = pos.getX(i), y = pos.getY(i);
+          let best = null, bd = 1e9;
+          for (const e of eyes) { const d = Math.abs(e.x - x); if (d < bd) { bd = d; best = e; } }
+          if (best) lw[i] = Math.min(1, Math.max(0, (best.y - 0.001 - y) / 0.002));
+        }
+      }
+      g.setAttribute('lw', new THREE.BufferAttribute(lw, 1));
+    }
     g.computeBoundingSphere();
     const mat = materialFor(m, header, opts);
     let mesh;

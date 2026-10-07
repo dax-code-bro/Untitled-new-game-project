@@ -57,7 +57,11 @@ def stand(pb, p):
     for s in ('L', 'R'):
         if s in p.get('skip_arms', ()):
             continue
-        pb.arm_down(s, out=p.get('arm_out', 0.14), fwd=p.get('arm_fwd', 0.06), elbow=p.get('elbow', 0.22), twist=p.get('arm_twist', 0.0))
+        # not symmetric: the arm on the free-leg side hangs a little forward and more bent,
+        # the other one closer to the body (two identical straight arms read as a mannequin)
+        fr = 1.0 if s == free else 0.0
+        pb.arm_down(s, out=p.get('arm_out', 0.14) - 0.03 * (1 - fr), fwd=p.get('arm_fwd', 0.06) + 0.05 * fr,
+                    elbow=p.get('elbow', 0.22) + 0.1 * fr - 0.03 * (1 - fr), twist=p.get('arm_twist', 0.0))
         pb.grip(s, p.get('hand', 'relaxed'), p.get('hand_amount', 1.0))
     pb.neck_head(pitch=p.get('head_pitch', 0.02), yaw=p.get('head_yaw', 0.0), roll=p.get('head_roll', 0.03 * amt * sgw))
     return pb

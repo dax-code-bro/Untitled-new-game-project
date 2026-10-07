@@ -11,9 +11,10 @@
 //   node render/render.mjs --still scenes/lookdev/humans-contact.js --time 0 --preset final --png sheet-a.png
 // Characters that have not been built yet are skipped (listed in the console).
 import * as THREE from 'three';
-import { loadHDRI, loadPBR } from '../lib/assets.js';
+import { loadHDRI } from '../lib/assets.js';
 import { loadCharacter, placeCharacter, CROWD } from '../lib/humans/index.js';
 import { applyIdle } from '../lib/humans/idle.js';
+import { groundMaterial } from '../lib/humans/stage.js';
 import { filmFinish } from './finish.js';
 
 export const meta = {
@@ -48,7 +49,7 @@ export async function setup(ctx) {
   scene.add(sun, sun.target);
   // worldSize = the metres UV 0..1 covers (the whole plane): the scan keeps its real scale
   const GW = 200, GH = ROW_GAP * SHEETS.length + 100;
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(GW, GH), await loadPBR('pbr/acg_ground05', ctx, { worldSize: [GW, GH] }));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(GW, GH), await groundMaterial('pbr/acg_ground05', ctx, [GW, GH], { vary: 0.15 }));
   ground.rotation.x = -Math.PI / 2; ground.position.z = -ROW_GAP * (SHEETS.length - 1) / 2; ground.receiveShadow = true;
   scene.add(ground);
   const seatMat = new THREE.MeshStandardMaterial({ color: 0x3a2e24, roughness: 0.7 });
