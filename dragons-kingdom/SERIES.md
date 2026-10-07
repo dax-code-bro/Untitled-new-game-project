@@ -94,3 +94,12 @@ These rules apply to every episode of Dragon's Kingdom and to everyone working o
   - the additions are marked correctly and their dependency notes are present;
   - the canon lint is clean.
 - **Planning data (Episode 1):** `python3 episodes/s01e01/tools/extract_dialogue.py --check`.
+
+## 7. Where episodes come from
+
+Daxtyn writes the main story with ChatGPT. That story is ahead of production (around Season 2, Episode 6 as of October 2026).
+
+- Each episode arrives as a written handoff from Daxtyn, like the Season 1, Episode 1 handoff in `episodes/s01e01/screenplay.md`. It goes in `episodes/sXXeYY/screenplay.md`, unchanged.
+- Episodes are produced in order, starting with Season 1, Episode 1, until production catches up with the story.
+- Once production catches up, Daxtyn continues the story and sends each new episode's full description as it is written.
+- Characters, dragons, places and props are built once and reused in every episode they appear in, so each one looks the same everywhere. An episode's breakdown lists which existing models it reuses and which new ones it needs.
