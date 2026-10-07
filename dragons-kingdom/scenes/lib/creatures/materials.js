@@ -45,14 +45,17 @@ export function lookParams(THREE, look) {
       tooth: lin(THREE, 0.5, 0.45, 0.34), iris: [lin(THREE, 0.16, 0.085, 0.024), lin(THREE, 0.045, 0.02, 0.007)], sclera: lin(THREE, 0.02, 0.015, 0.011),
     },
     leaf: {
-      base: lin(THREE, 0.04, 0.085, 0.022), belly: lin(THREE, 0.12, 0.14, 0.055), dorsal: lin(THREE, 0.022, 0.05, 0.016),
-      wear: lin(THREE, 0.12, 0.16, 0.07), crev: 0.45, dust: lin(THREE, 0.22, 0.19, 0.15), salt: lin(THREE, 0.62, 0.62, 0.6),
-      rough: [0.5, 0.14, 0.1, 0.3], amp: 0.3, keel: 0.14, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.35,
-      hier: [0.9, 1.0, 0.55, 0.0], damp: 0.3, bellyP: [0.5, 1.1, 0.45, 0.4],
-      dustAmt: 0.6, saltAmt: 0.15, oral: lin(THREE, 0.32, 0.09, 0.08), oralDark: lin(THREE, 0.07, 0.015, 0.015),
-      membrane: lin(THREE, 0.03, 0.055, 0.02), trans: lin(THREE, 0.11, 0.08, 0.035), vein: lin(THREE, 0.06, 0.025, 0.012), memRough: 0.58,
+      // olive-green like a green iguana or emerald monitor: darker back, pale yellow-olive
+      // belly, mottled bands, never a toy's flat saturated green
+      base: lin(THREE, 0.048, 0.072, 0.026), belly: lin(THREE, 0.13, 0.135, 0.07), dorsal: lin(THREE, 0.026, 0.042, 0.018),
+      wear: lin(THREE, 0.1, 0.12, 0.07), crev: 0.5, dust: lin(THREE, 0.22, 0.19, 0.15), salt: lin(THREE, 0.62, 0.62, 0.6),
+      rough: [0.52, 0.14, 0.12, 0.3], amp: 0.3, keel: 0.14, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.45,
+      hier: [0.9, 1.0, 0.55, 0.0], damp: 0.3, bellyP: [0.42, 0.8, 0.25, 0.3], plateZ: -0.02,
+      scl: [0.85, 0.42, 0.75, 1.3], tub: [0.22, 2.6, 0.8, 0], skin2: [0.3, 0.4, 0, 0.32],
+      dustAmt: 0.6, saltAmt: 0.15, oral: lin(THREE, 0.15, 0.05, 0.045), oralDark: lin(THREE, 0.05, 0.012, 0.012),
+      membrane: lin(THREE, 0.034, 0.05, 0.022), trans: lin(THREE, 0.06, 0.068, 0.032), vein: lin(THREE, 0.05, 0.022, 0.012), memRough: 0.58,
       horn: [lin(THREE, 0.05, 0.05, 0.035), lin(THREE, 0.32, 0.29, 0.2)], claw: [lin(THREE, 0.03, 0.03, 0.025), lin(THREE, 0.16, 0.14, 0.1)],
-      tooth: lin(THREE, 0.5, 0.44, 0.32), iris: [lin(THREE, 0.42, 0.38, 0.09), lin(THREE, 0.11, 0.13, 0.025)], sclera: lin(THREE, 0.05, 0.045, 0.02),
+      tooth: lin(THREE, 0.5, 0.44, 0.32), iris: [lin(THREE, 0.26, 0.23, 0.06), lin(THREE, 0.06, 0.065, 0.016)], sclera: lin(THREE, 0.04, 0.036, 0.018),
     },
     starlight: {
       base: lin(THREE, 0.7, 0.71, 0.72), belly: lin(THREE, 0.5, 0.5, 0.51), dorsal: lin(THREE, 0.72, 0.73, 0.74),
@@ -144,6 +147,8 @@ function skinMaterial(THREE, P, ctx) {
     uScl2: { value: new THREE.Vector4(...(P.scl2 || [0.62, 0, 0, 0])) },
     // micro relief on the scales: amount, feature size (x the scale unit)
     uSkin3: { value: new THREE.Vector4(...(P.skin3 || [1, 0.16, 0, 0])) },
+    // belly plates end this far (L) in front of the withers when y = 1 (Nightwings: no chest plates)
+    uBellyZ: { value: new THREE.Vector4(P.plateZ ?? 0, P.plateZ !== undefined ? 1 : 0, 0, 0) },
     // crevice dust fill, crown wear (bleached keratin), -, per-scale tone variation
     uSkin2: { value: new THREE.Vector4(...(P.skin2 || [0.4, 0.4, 0, 0.3])) },
   };
@@ -166,7 +171,7 @@ vScale = aScale; vMask = aMask; vMask2 = aMask2; vRest = position; vRestN = norm
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec4 vScale; varying vec4 vMask; varying vec4 vMask2; varying vec3 vRest; varying vec3 vRestN; varying vec3 vRestT; varying vec4 vNoise; varying vec2 vWarp;
-uniform vec4 uScl, uScl2, uTub, uSkin2, uSkin3;
+uniform vec4 uScl, uScl2, uTub, uSkin2, uSkin3, uBellyZ;
 uniform vec3 uBase, uBelly, uDorsal, uWearCol, uDustCol, uSaltCol, uOral, uOralDark;
 uniform vec4 uRough, uPat, uDirt, uMisc, uWound, uCrev, uWet, uBellyP, uDamp; uniform float uWoundR;
 uniform vec4 uScarA[4]; uniform vec4 uScarB[4]; uniform vec3 uScarCol; uniform vec4 uResidue;
@@ -197,6 +202,7 @@ void dkSkin(inout vec3 albedo) {
   dkDetail = 1.0 - smoothstep(0.3, 0.9, fwc * 0.5);
   float latV = vScale.w - vScale.z;                 // lateral distance from the ventral midline (scale units)
   float bellySel = vMask.y + (n2 - 0.5) * 0.25;
+  if (uBellyZ.y > 0.5) bellySel -= smoothstep(uZones.x + uBellyZ.x * L - uZones.z * 0.6, uZones.x + uBellyZ.x * L, vRest.z) * 0.8;
   if (bellySel > 0.5) {
     S = dkPlates(vec2(latV, vScale.x + (n2 - 0.5) * 0.4), uBellyP.x, uBellyP.y);
     S.h *= uBellyP.w; S.grad *= uBellyP.w; S.cav *= uBellyP.z;

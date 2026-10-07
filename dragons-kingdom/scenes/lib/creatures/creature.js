@@ -47,7 +47,7 @@ function individual(spec, cfg) {
   const s = JSON.parse(JSON.stringify(spec));
   for (const k of ['neckPitch', 'headPitch', 'tailDroop']) s[k] = spec[k];
   s.headShape.gape0 = spec.headShape.gape0;
-  const a = cfg.age === 'subadult' ? { head: 1.18, eye: 1.22, snout: 0.94, horn: 0.72, neckW: 0.94, limb: 0.94, muscle: 0.88, crest: 0.8, wing: 0.96 }
+  const a = cfg.age === 'subadult' ? { head: 1.16, eye: 1.18, snout: 0.94, horn: 0.86, neckW: 0.94, limb: 0.94, muscle: 0.88, crest: 0.8, wing: 0.96 }
     : cfg.age === 'giant' ? { head: 0.94, eye: 0.84, snout: 1.02, horn: 1.12, neckW: 1.06, limb: 1.08, muscle: 1.06, crest: 1.1, wing: 1.0 }
     : null;
   if (!a) return spec;

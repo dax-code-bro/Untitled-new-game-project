@@ -1,1 +1,1 @@
-{ "id": "abby_dev", "blink": false, "cam": { "tgt": "head", "off": [0, -0.03, 0.04], "az": 28, "el": 3, "dist": 0.62, "fov": 24, "fstop": 5.6 } }
+{ "id": "abby_dev2", "accumulate": false, "cam": { "tgt": "eye.R", "off": [0.012, 0, 0.0], "az": 20, "el": 0, "dist": 0.12, "fov": 22, "fstop": 11 } }

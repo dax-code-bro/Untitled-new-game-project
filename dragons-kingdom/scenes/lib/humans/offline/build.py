@@ -151,6 +151,7 @@ def assemble(kit, spec, out_dir, opts):
     parts.append(proxy_part(kit, 'human/mh_face_parts/tongue/tongue01/tongue01.mhclo', V, 'tongue', 'tongue',
                             {'map': 'human/mh_face_parts/tongue/tongue01/tongue01_diffuse.png', 'rough': 0.35, 'castShadow': False}))
     skin_aux(kit, body, V, sk, os.path.join(kit.lib, body.material['map']))
+    parts.append(caruncles(kit, body, sk))
     from humanbuild import pose_parts
     pose_parts(sk, pt.local, parts, off_t)
     # ---- garments as parts (already in the drape pose)
@@ -224,6 +225,38 @@ def assemble(kit, spec, out_dir, opts):
                        'sole': sole, 'provisional': True, 'notes': spec.get('notes', '')}}
     size = write_character(os.path.join(out_dir, cid + opts.get('suffix', '')), header, [to_mesh_dict(p) for p in parts])
     log(f'   {cid}: {sum(len(p.posed) for p in parts)} verts, {size / 1e6:.1f} MB, {time.time() - t0:.0f} s')
+
+
+def caruncles(kit, body, sk):
+    """The pink, wet tissue in the inner corner of each eye (caruncle + plica): without it the
+    corner between eyeball and lids is a dark hole. A small ellipsoid tucked into the inner
+    canthus (the most medial point of the lid-margin rim), skinned to the head (rest space)."""
+    import props as pr
+    P = body.P
+    lm = body.attrs['aux2'][:, 1]
+    pieces = []
+    for sg, nm in ((1.0, 'eye.L'), (-1.0, 'eye.R')):
+        c = sk.H[sk.names.index(nm)]
+        sel = np.where((lm > 0.5) & ((P[:, 0] * sg) > 0) & (np.abs(P[:, 1] - c[1]) < 0.008))[0]
+        if not len(sel):
+            continue
+        q = P[sel[np.argmin(np.abs(P[sel, 0]))]]
+        p = q + (c - q) * np.array([0.12, 0.0, 0.25])
+        u, v = np.meshgrid(np.linspace(0, math.pi, 7), np.linspace(0, 2 * math.pi, 12, endpoint=False))
+        E = np.stack([np.sin(u) * np.cos(v) * 0.0024, np.cos(u) * 0.002, np.sin(u) * np.sin(v) * 0.0022], -1).reshape(-1, 3) + p
+        F = [(j * 7 + i, j * 7 + i + 1, ((j + 1) % 12) * 7 + i + 1, ((j + 1) % 12) * 7 + i) for j in range(12) for i in range(6)]
+        pieces.append((E, F))
+    Pm, Fm = pr.merge(pieces)
+    tris = mu.tris_of(Fm)
+    # skin weights from the nearest eyelash/eye vertices' source: use the head bone fully
+    part = Part('caruncle', 'teeth', Pm, tris, uv=np.zeros((len(Pm), 2)))
+    hi = kit.rig.names.index('head')
+    part.I = np.zeros((len(Pm), 4), np.int64)
+    part.I[:, 0] = hi
+    part.W = np.zeros((len(Pm), 4))
+    part.W[:, 0] = 1.0
+    part.material = {'color': [0.62, 0.3, 0.28], 'rough': 0.25, 'clearcoat': 0.8, 'castShadow': False, 'occluder': False}
+    return part
 
 
 def accessories(D, garments, spec, parts):

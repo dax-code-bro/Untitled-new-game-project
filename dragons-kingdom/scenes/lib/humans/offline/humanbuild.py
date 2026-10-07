@@ -364,8 +364,8 @@ def face_masks(kit, body, V):
         below = np.array([e[0] + np.sign(e[0]) * 0.002, e[1] - 0.016, e[2] + 0.004])
         ue = np.maximum(ue, gauss(below, np.array([0.016, 0.007, 0.02])))
         # upper lid and the crease (the photo albedo has a reddish make-up tone there)
-        upper = np.array([e[0], e[1] + 0.009, e[2] + 0.006])
-        ue = np.maximum(ue, gauss(upper, np.array([0.018, 0.008, 0.02])) * 0.9)
+        upper = np.array([e[0], e[1] + 0.011, e[2] + 0.005])
+        ue = np.maximum(ue, gauss(upper, np.array([0.021, 0.011, 0.022])) * 0.95)
     out[:, 1] = lm
     out[:, 2] = ue * face
     return out

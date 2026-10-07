@@ -168,7 +168,7 @@ const FOLD_DEFAULT = { humerus: [0.3, 0.1, -0.95], forearm: [-0.08, -0.1, 0.99],
 // forearm forward and a little up so the wrist lies against the shoulder, hand and fingers
 // back and down along the flank toward the haunch) and converted to the body frame here.
 function worldToBody(v, a) { const c = Math.cos(a), s = Math.sin(a); return [v[0], v[1] * c - v[2] * s, v[1] * s + v[2] * c]; }
-const SIT_PITCH = 0.95;
+const SIT_PITCH = 0.8;
 const FOLD_SIT = {
   humerus: worldToBody([0.1, -0.55, -0.83], SIT_PITCH),
   forearm: worldToBody([-0.04, 0.32, 0.95], SIT_PITCH),
@@ -331,7 +331,7 @@ export function sit(c, o = {}) {
   pb.sym('hl_#_0', -0.95 + a, 0.12, 0.1); pb.sym('hl_#_1', 2.0, 0, 0); pb.sym('hl_#_2', -2.0 + 0.35, 0, 0);
   for (let i = 0; i < 4; i++) pb.sym(`hl_#_t${i}`, 0.25, 0, 0);
   // neck forward-up in an S, head level (the body pitch already raises the neck)
-  carriage(pb, o.raise ?? -0.26, o.headDown ?? 0.47, o.headTilt ?? 0.0);
+  carriage(pb, o.raise ?? -0.36, o.headDown ?? 0.36, o.headTilt ?? 0.0);
   const lk = o.look || [0, 0];
   look(pb, lk[0] + 0.04 * wob(t * 0.35, 3), lk[1] + 0.02 * b);
   jaw(pb, (o.jaw ?? 0) + 0.01 * b);
@@ -343,7 +343,7 @@ export function sit(c, o = {}) {
   const droop = c.spec.tailDroop ?? 0.2;
   ts.forEach((n, i) => {
     const f = i / (ts.length - 1);
-    pb.add(n, (i < 3 ? -0.08 : 0.0) - droop * 1.3 / ts.length, (0.07 + 0.02 * Math.sin(t * 0.6 - i * 0.3)) * f * 1.6, 0);
+    pb.add(n, (i < 3 ? -0.08 : 0.0) - droop * 1.3 / ts.length, (0.11 + 0.02 * Math.sin(t * 0.6 - i * 0.3)) * f * 1.6, 0);
   });
   return pb.out({ groundTail: true });
 }
