@@ -75,7 +75,7 @@ export function membrane(wing, boneIndex, opts = {}) {
     return { bones: ent.map((e) => e[0]), weights: ent.map((e) => e[1] / s) };
   };
 
-  const grid = (na, nb, P, use, patch, billowF, freeEdgeFn) => {
+  const grid = (na, nb, P, use, patch, billowF, freeEdgeFn, flip = false) => {
     const base = pos.length / 3;
     for (let i = 0; i <= na; i++) for (let j = 0; j <= nb; j++) {
       const a = i / na, b = j / nb;
@@ -90,7 +90,7 @@ export function membrane(wing, boneIndex, opts = {}) {
     }
     for (let i = 0; i < na; i++) for (let j = 0; j < nb; j++) {
       const a = base + i * (nb + 1) + j, c = a + nb + 1;
-      if (side > 0) idx.push(a, c, a + 1, a + 1, c, c + 1); else idx.push(a, a + 1, c, a + 1, c + 1, c);
+      if ((side > 0) !== flip) idx.push(a, c, a + 1, a + 1, c, c + 1); else idx.push(a, a + 1, c, a + 1, c + 1, c);
     }
   };
   const steps = (l) => Math.max(4, Math.ceil(l / res));
@@ -153,7 +153,8 @@ export function membrane(wing, boneIndex, opts = {}) {
       return add(q, [0, -0.02 * l * Math.sin(Math.PI * b) * Math.sin(Math.PI * a), 0]);
     };
     grid(steps(l), Math.max(3, steps(len(sub(wing.elbow, lerp3(neckSide, wing.wrist, 0.5)))) >> 1), P, [holders[0]], 0,
-      (a, b) => Math.sin(Math.PI * a) * b * 0.6, (a, b) => len(sub(P(a, b), P(a, 1))));
+      (a, b) => Math.sin(Math.PI * a) * b * 0.6, (a, b) => len(sub(P(a, b), P(a, 1))),
+      true);   // b runs forward here (backward in the other patches): flip so every patch faces the same way
   }
 
   const out = { positions: Float32Array.from(pos), index: Uint32Array.from(idx), skinIndex: Uint16Array.from(si), skinWeight: Float32Array.from(sw),
