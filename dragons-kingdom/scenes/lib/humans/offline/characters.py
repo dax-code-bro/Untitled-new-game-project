@@ -59,7 +59,7 @@ def G_shoes(c, **kw):
     return dict({'type': 'shoes', 'fabric': 'leather', 'color': _c(c), 'height': 0.33, 'ease': 0.006, 'layer': 0, 'wear': 0.7, 'dust': 0.7}, **kw)
 
 
-def G_shirt(c='linen', collar=0.02, **kw):
+def G_shirt(c='linen', collar=0.012, **kw):
     return dict({'type': 'shirt', 'fabric': 'linen', 'color': _c(c), 'ease': 0.005, 'sleeves': 'long', 'sim': False, 'layer': 1, 'neck': 0.0,
                  'collar': collar, 'drape': False, 'thickness': 0.0015}, **kw)
 
@@ -94,11 +94,11 @@ def G_apron(c='linen', width=0.5, length=0.6, **kw):
 
 
 def G_coif(c=(0.5, 0.48, 0.42), **kw):
-    return dict({'type': 'coif', 'fabric': 'linen', 'color': _c(c), 'front': 0.058, 'layer': 3}, **kw)
+    return dict({'type': 'coif', 'fabric': 'linen', 'color': _c(c), 'front': 0.058, 'ease': 0.008, 'layer': 3}, **kw)
 
 
 def G_kerchief(c, **kw):
-    return dict({'type': 'kerchief', 'fabric': 'linen', 'color': _c(c), 'front': 0.062, 'layer': 3}, **kw)
+    return dict({'type': 'kerchief', 'fabric': 'linen', 'color': _c(c), 'front': 0.062, 'ease': 0.009, 'layer': 3}, **kw)
 
 
 def G_cap(c, **kw):
@@ -118,7 +118,7 @@ def G_cloak(c, length=1.0, **kw):
 
 
 def riding_clothes(outer, shirt='linen', trousers='walnut', boots='walnut', belt=True, split=True, hem=0.5):
-    return [G_hose(trousers), G_boots(boots, height=0.82), G_shirt(shirt), G_coat(outer, hem=hem, split=split, belt=belt)]
+    return [G_hose(trousers), G_boots(boots, height=0.82), G_shirt(shirt, collar=0.02), G_coat(outer, hem=hem, split=split, belt=belt)]
 
 
 # -------------------------------------------------------------- body kit --
@@ -297,7 +297,7 @@ def cast():
                     details={'head/head-round': 0.3, 'nose/nose-scale-vert': -0.1},
                     hair={'color': HAIR['brown'], 'style': 'braid', 'length': 0.2, 'count': 8000},
                     outfit=[G_hose('grey'), G_shoes([0.05, 0.035, 0.022]), G_tunic('sage', hem=0.25, flare=1.5, ease=0.014)],
-                    pose='child_hand', pose_params={'weight': 'L', 'contrapposto': 0.3, 'hand_target': [-0.2, 0.92, 0.05]},
+                    pose='child_hand', pose_params={'weight': 'L', 'contrapposto': 0.3, 'hand_target': [-0.2, 0.8, 0.08]},
                     cloth_subdiv=0, notes='no age stated in the screenplay'))
     C.append(person('musician', 'Musician (lute)', 1.0, 0.58, 'light', muscle=0.45, weight=0.42, height=0.48,
                     details={'nose/nose-scale-vert': 0.25, 'nose/nose-point-width': -0.2, 'mouth/mouth-scale-horiz': 0.15, 'head/head-oval': 0.4, 'asym/asym-eye-4': 0.4},

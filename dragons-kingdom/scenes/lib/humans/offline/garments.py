@@ -961,6 +961,28 @@ def boots(D, g):
     return Garment(g.get('name', 'boots'), S, F, uv, np.ones(len(S)), g, sim=False, layer=0)
 
 
+def head_cover_depth(D, g, P_rest):
+    """How far (m) rest-space points lie inside the area a head covering covers (negative =
+    outside it, by that distance). Used to keep hair under caps, coifs, kerchiefs and hoods."""
+    off = getattr(D, 'dress_off', np.zeros(3))
+    P = np.asarray(P_rest) + off                 # the head is unposed in the dress pose
+    eyeL, eyeR = D.lm('eye.L'), D.lm('eye.R')
+    ey = (eyeL[1] + eyeR[1]) / 2
+    hc = np.array([0, ey, (eyeL[2] + eyeR[2]) / 2 - 0.075])
+    d = P - hc
+    ang = np.arctan2(d[:, 0], d[:, 2])
+    kind = g['type']
+    if kind in ('coif', 'kerchief', 'cap'):
+        front = g.get('front', 0.045)
+        line = ey + front * np.cos(ang / 2) ** 2 - {'coif': 0.09, 'kerchief': 0.085, 'cap': 0.05}[kind] * np.sin(ang / 2) ** 2
+        return P[:, 1] - line
+    if kind == 'hood':
+        # everything but the face opening
+        inside_face = np.minimum.reduce([d[:, 2] - 0.02, 0.075 - np.abs(d[:, 0]), ey + 0.06 - P[:, 1], P[:, 1] - (ey - 0.1)])
+        return -inside_face
+    return np.full(len(P), -1.0)
+
+
 def head_shell(D, g):
     """coif / cap / kerchief (static) and hood (head part; the cape is a separate panel)."""
     P = D.dress
@@ -975,7 +997,7 @@ def head_shell(D, g):
     front = g.get('front', 0.045)               # how far down the forehead (above the eye line)
     if kind in ('coif', 'kerchief', 'cap'):
         # covers the skull above a hairline-like curve; coif also covers the ears and ties under the chin
-        line = ey + front * np.cos(ang / 2) ** 2 - (0.09 if kind == 'coif' else 0.05) * np.sin(ang / 2) ** 2
+        line = ey + front * np.cos(ang / 2) ** 2 - {'coif': 0.09, 'kerchief': 0.085, 'cap': 0.05}[kind] * np.sin(ang / 2) ** 2
         keep = P[:, 1] > line
         if kind == 'coif':
             # cheek straps down to the jaw, in front of the ears

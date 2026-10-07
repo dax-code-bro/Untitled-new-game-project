@@ -124,7 +124,12 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   c = max(vec3(0.0), mix(vec3(l), c, uSat));
   // subtle mottling: blood flow / pigment variation at 1-3 cm, never repeating
   float m1 = hFbm(vObjP * 55.0 + uSeed) - 0.5, m2 = hFbm(vObjP * 160.0 + uSeed * 3.0) - 0.5;
-  c *= 1.0 + vec3(0.07, -0.02, -0.03) * m1 * 2.0 + vec3(0.03, 0.035, 0.03) * m2;
+  c *= 1.0 + vec3(0.085, -0.022, -0.035) * m1 * 2.0 + vec3(0.035, 0.04, 0.035) * m2;
+  // sparse fine pigment speckle (1-2 mm) and tiny capillary flecks: photographed skin is never even
+  { float sp = smoothstep(0.78, 0.97, hN3(vObjP * 650.0 + uSeed * 5.0));
+    float cap = smoothstep(0.86, 0.99, hN3(vObjP * 1300.0 + 17.0));
+    c *= 1.0 - vec3(0.1, 0.13, 0.14) * sp;
+    c = mix(c, c * vec3(1.06, 0.9, 0.9), cap * 0.6); }
   c = mix(c, c * vec3(1.12, 0.92, 0.9), uRed * (0.5 + m1));
   // where blood shows (cheeks, nose tip, chin, ears) / thin cool skin under the eyes
   c = mix(c, c * vec3(1.1, 0.84, 0.84), vAux2.r * uFlush * (0.7 + 0.6 * m1));

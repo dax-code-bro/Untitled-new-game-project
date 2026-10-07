@@ -82,6 +82,8 @@ class Groom:
         d = c - self.skull
         rxy = np.sqrt(d[:, 0] ** 2 + (d[:, 2] * 0.85) ** 2)
         ok &= ~((np.abs(d[:, 0]) > 0.062) & (c[:, 1] < self.eye_y + 0.03) & (d[:, 2] > -0.06))
+        if region is None:
+            region = getattr(self, 'region', None)
         if region is not None:
             ok &= region(c)
         tri = T[ok]
@@ -187,6 +189,8 @@ class Groom:
         ok = headish[T].all(1) & (dy > -0.006) & (dy < 0.004) & (c[:, 2] < self.eye_z + 0.03)
         d = c - self.skull
         ok &= ~((np.abs(d[:, 0]) > 0.062) & (c[:, 1] < self.eye_y + 0.03) & (d[:, 2] > -0.06))
+        if getattr(self, 'region', None) is not None:
+            ok &= self.region(c)
         tri = T[ok]
         if not len(tri):
             return
@@ -208,7 +212,7 @@ class Groom:
             pts, nrms = self.grow_on_scalp(r, n0, lambda p, nn, d=dirv: d, L, steps=3, lift=0.0004, layer=0.0005 * self.rng.random(), curl=0.3)
             self.add(pts, nrms, np.linspace(width, width * 0.3, len(pts)) * (1 - 0.5 * below), depth=0.1)
 
-    def style_crop(self, n, length=(0.02, 0.05), flow='back', whorl=(0.0, 0.16, -0.06), fringe=0.3, width=0.0009, hl_kw=None, curl=0.0):
+    def style_crop(self, n, length=(0.02, 0.05), flow='back', whorl=(0.0, 0.16, -0.06), fringe=0.3, width=0.0009, hl_kw=None, curl=0.0, loft=0.006):
         """Short cropped hair, combed from a crown whorl (rest head space)."""
         roots, nr = self.sample_scalp(n, hl_kw)
         W = self.skull + np.asarray(whorl)
@@ -231,9 +235,9 @@ class Groom:
                 side = np.array([np.sign(rel[0]) * 0.35, 0, 0])
                 topk = np.clip((rel[1] - 0.02) / 0.06, 0, 1)
                 return np.array([0, 0.25 * (1 - topk), -1.0]) * (0.4 + 0.6 * topk) + side * topk + down * (1 - topk) * 0.9
-            layer = self.rng.random() * 0.006
+            layer = self.rng.random() * loft
             pts, nrms = self.grow_on_scalp(r, n0, fn, L, steps=6, layer=layer, lift=0.001, curl=curl)
-            self.add(pts, nrms, np.linspace(width, width * 0.3, len(pts)), depth=1 - layer / 0.006)
+            self.add(pts, nrms, np.linspace(width, width * 0.3, len(pts)), depth=1 - layer / max(loft, 1e-6))
 
     def beard_mask(self, P, moustache=True, coverage='full'):
         """Soft 0..1 beard-growth mask for rest-pose body points (stubble shading in the skin)."""

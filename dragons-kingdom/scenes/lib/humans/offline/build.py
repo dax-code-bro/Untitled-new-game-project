@@ -109,6 +109,10 @@ def assemble(kit, spec, out_dir, opts):
         garments.append(b(D, g))
         if g['type'] == 'hood' and g.get('cape', True):
             garments.append(gm.hood_cape(D, g))
+        if g['type'] == 'kerchief' and g.get('tail', True):
+            # the loose back of a kerchief tied at the nape: a short linen panel from the crown
+            garments.append(gm.veil_panel(D, dict(g, type='veil', length=g.get('tail_length', 0.24), name='kerchieftail',
+                                                   layer=g.get('layer', 3) + 0.5, sim_fabric='linen', ease=0.016)))
     garments.sort(key=lambda x: x.layer)
     if garments:
         gm.simulate(D, garments, quality=opts.get('quality', 5), log=log)
@@ -166,6 +170,8 @@ def assemble(kit, spec, out_dir, opts):
     for g in garments:
         P = g.result
         F = g.faces
+        if g.sim and not opts.get('nosim'):
+            P = relax_poles(P, F)
         nrm = mu.vnormals(P, F)
         thick = g.spec.get('thickness', 0.0025)
         uv = g.uv
@@ -205,6 +211,12 @@ def assemble(kit, spec, out_dir, opts):
     if hs:
         import hair as hr
         gr = hr.Groom(kit, V, sk, pt.local, off_t, D.faces, D.rest, D.target, D.bidx, D.Wd, seed=zlib.crc32(cid.encode()) & 0xffff, log=log)
+        covers = [g for g in spec.get('outfit', []) if g['type'] in ('coif', 'kerchief', 'cap', 'hood')]
+        if covers:
+            # hair only where it shows: outside the covering, plus a band reaching 1.2 cm under its
+            # edge; kept close to the scalp so it never pokes through the cloth
+            gr.region = lambda Q, cv=covers: np.all([gm.head_cover_depth(D, c, Q) < 0.012 for c in cv], axis=0)
+            hs = dict(hs, loft=min(hs.get('loft', 0.008), 0.003))
         build_hair(gr, hs, hero, kit, V, body)
         hp = gr.to_part('hair', {'color': hs.get('color', [0.05, 0.03, 0.02]), 'spec': hs.get('spec', 0.14), 'shift': 0.1, 'variation': hs.get('variation', 0.35), 'occluder': True, 'ao_rays': 10, 'ao_stride': 2})
         if hp is not None:
@@ -233,6 +245,26 @@ def assemble(kit, spec, out_dir, opts):
                        'sole': sole, 'provisional': True, 'notes': spec.get('notes', '')}}
     size = write_character(os.path.join(out_dir, cid + opts.get('suffix', '')), header, [to_mesh_dict(p) for p in parts])
     log(f'   {cid}: {sum(len(p.posed) for p in parts)} verts, {size / 1e6:.1f} MB, {time.time() - t0:.0f} s')
+
+
+def relax_poles(P, F, iters=8):
+    """Soften the star-shaped puckers the cloth simulation leaves around high-valence vertices
+    (the body mesh's poles at the nipples and navel are inherited by the garment shells)."""
+    nv = len(P)
+    val = np.zeros(nv, int)
+    for f in F:
+        for v in f:
+            val[v] += 1
+    nb = mu.neighbours(nv, F)
+    bnd = np.zeros(nv, bool)
+    for l in mu.boundary_loops(F):
+        bnd[l] = True
+    m = ((val >= 6) & ~bnd).astype(float)
+    for _ in range(2):
+        m = np.maximum(m, np.array([m[n].max() * 0.7 if len(n) else 0 for n in nb]))
+    if not m.any():
+        return P
+    return mu.laplacian_smooth_fast(P, nb, iters=iters, lam=0.5, fixed=bnd, mask=m)
 
 
 def caruncles(kit, body, sk):
@@ -494,7 +526,7 @@ def build_hair(gr, hs, hero, kit, V, body):
         g = s_ + n_ * 0.008
         gr.style_pulled_back(int(hs.get('count', 15000) * dens), g, color_layers=hs.get('loft', 0.008), width=hs.get('width', 0.0009 if hero else 0.0015))
     elif st == 'crop':
-        gr.style_crop(int(hs.get('count', 16000) * dens), length=tuple(hs.get('length', (0.012, 0.045))), flow=hs.get('flow', 'back'), width=hs.get('width', 0.0008 if hero else 0.0013), curl=hs.get('curl', 0.0))
+        gr.style_crop(int(hs.get('count', 16000) * dens), length=tuple(hs.get('length', (0.012, 0.045))), flow=hs.get('flow', 'back'), width=hs.get('width', 0.0008 if hero else 0.0013), curl=hs.get('curl', 0.0), loft=hs.get('loft', 0.006))
     if st in ('braid', 'pulled', 'bun') and hero:
         G_ = g
 
