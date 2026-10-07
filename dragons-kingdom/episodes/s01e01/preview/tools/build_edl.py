@@ -27,8 +27,12 @@ Timing rules (why each shot is as long as it is):
   * Cue gaps are authored per line in edl_shots.py: ~0.3 s quick exchanges, ~0.35-0.4 s normal,
     ~0.45-0.5 s between airborne speakers (wind between the lines), 0.15-0.25 s where a line cuts in.
   * The prologue's place-name shots (P-10..P-15) are cut to the narrator's words (captions appear
-    as each name is spoken); the narrator take L003 is split only in its existing sentence pauses
-    to give each landscape ~2 s.
+    as each name is spoken). The narrator take L003 is split in its existing sentence pauses to
+    give each landscape ~2 s, plus ONE word-boundary splice inside "The Citadel Sea | and the Proxy
+    Sea." (CITADEL_SPLICE, measured silent by tools/splice.py): the temporary narrator says both seas
+    in one breath, so a short breath is opened there and the dissolve to the Proxy Sea sits in it.
+    That breath is paid for by trimming the stretched pauses between Tara, Scrapper and Verdor, so
+    the place-name block keeps its length and nothing after P-14 moves.
 
 Deterministic: same inputs -> byte-identical outputs (no clocks, no randomness).
 """
@@ -50,6 +54,29 @@ SPF = SR // FPS          # 2000 samples per frame
 SCENES = ['PROLOGUE', 'TITLE', '1A', '1B', '1C', '1D', '1E']
 
 WIP_TEXT = 'WORK IN PROGRESS - Episode 1 preview - provisional designs, temporary voices'
+
+# The one in-sentence cut. The temporary narrator says "The Citadel Sea and the Proxy Sea." in one
+# breath, which left the CITADEL SEA caption (T04) only 1.0 s. The take is near-silent for ~15 ms
+# between "Sea" and "and"; it is cut there and a short breath is opened. Measured with
+#   python3 -I tools/splice.py vo/L003.wav 5.37 5.59
+# (search range: from 0.1 s before the aligned end of "sea" to 0.15 s before "proxy"). Pinned to the
+# take's sha256: if make_vo.py ever produces a different L003, the build stops and asks for a re-measure.
+CITADEL_SPLICE = {
+    'take': 'L003', 'take_sha256': '2c701d54c490b81132d33ff13731c5ccaea1c55c99c67f984ca02aaa5ff28109',
+    'sample': 265560, 'level_dbfs_5ms_rms': -64.62, 'peak_dbfs_5ms': -56.08,
+    'prev_speech_end_s': 5.519, 'next_speech_on_s': 5.537, 'search_s': [5.37, 5.59],
+    'text_before': 'The Citadel Sea', 'text_after': 'and the Proxy Sea.',
+    'measured_by': 'tools/splice.py (min 5 ms RMS at 1 ms hops; speech edges at -40 dBFS)',
+}
+# Place-name timing (seconds unless _F = frames). The breath after "The Citadel Sea" is paid for by
+# trimming the stretched pauses next to it, so the place-name block (P-10..P-14) keeps its length and
+# nothing from P-15 on moves: NAME_SPACING 2.25 s (54 f) -> 49 f, i.e. 5 frames from each pause between
+# Tara, Scrapper and Verdor, and SEVEN_AFTER_PROXY 2.2 -> 2.05 s ("Proxy Sea." to "Seven kingdoms").
+# Result: every place caption holds 37-38 frames (1.54-1.58 s; it was 1.0 s for CITADEL SEA).
+NAME_LEAD, NAME_SPACING, CUT_BEFORE_NAME = 0.5, 49 / FPS, 0.4
+CITADEL_PAUSE_F = 18        # silence opened at the splice (at least this; the frame grid adds < 1 frame)
+AND_CUT_LEAD = 0.15         # cut to the Proxy Sea this long before "and": its 6-frame dissolve ends before the word
+SEVEN_AFTER_PROXY, CUT_BEFORE_SEVEN = 2.05, 0.35
 WIP_FRAMES = 3 * FPS
 END_FRAMES = 4 * FPS
 END_LINES = [
@@ -242,28 +269,46 @@ def main():
                     return i
         raise KeyError(text)
 
-    # L003 parts: split in the middle of the existing pauses between its sentences
+    # L003 parts: split in the middle of the existing pauses between its sentences, plus the one
+    # measured word-boundary splice inside "The Citadel Sea | and the Proxy Sea." (CITADEL_SPLICE)
     segs3 = L3.segs
+    sp = CITADEL_SPLICE
+    if L3.rec['sha256'] != sp['take_sha256']:
+        sys.exit('vo/L003.wav is not the take CITADEL_SPLICE was measured on: re-run '
+                 'python3 -I tools/splice.py vo/L003.wav <from> <to> and update CITADEL_SPLICE in build_edl.py')
+    sp_s = sp['sample'] / SR
+    if len(segs3) != 5 or not (segs3[3]['start_s'] < sp['prev_speech_end_s'] < sp_s < sp['next_speech_on_s'] < segs3[3]['end_s']) \
+            or f"{sp['text_before']} {sp['text_after']}" != segs3[3]['text']:
+        sys.exit('CITADEL_SPLICE does not fit the L003 sentence segments in takes.json')
     cuts3 = [0.0] + [(segs3[i]['end_s'] + segs3[i + 1]['start_s']) / 2 for i in range(len(segs3) - 1)] + [L3.dur]
-    part_win = [(cuts3[i], cuts3[i + 1]) for i in range(len(segs3))]          # take-time windows
-    part_onset_off = [segs3[i]['start_s'] for i in range(len(segs3))]            # speech onset in take time
+    cuts3.insert(4, sp_s)
+    part_win = [(cuts3[i], cuts3[i + 1]) for i in range(6)]                       # take-time windows
+    part_text = [segs3[0]['text'], segs3[1]['text'], segs3[2]['text'], sp['text_before'], sp['text_after'], segs3[4]['text']]
+    part_onset_off = [segs3[0]['start_s'], segs3[1]['start_s'], segs3[2]['start_s'], segs3[3]['start_s'],
+                      sp['next_speech_on_s'], segs3[4]['start_s']]                 # speech onset in take time
+    part_cut = ['take start', 'sentence pause', 'sentence pause', 'sentence pause', 'word-boundary splice', 'sentence pause']
     # onsets of the parts relative to the start of P-10 (seconds), snapped through frame placement
-    NAME_LEAD, NAME_SPACING, CUT_BEFORE_NAME = 0.5, 2.25, 0.4
-    PROXY_CUT_LEAD, SEVEN_AFTER_PROXY, CUT_BEFORE_SEVEN = 0.15, 2.2, 0.35
     part_start_f = []
-    want = [NAME_LEAD, NAME_LEAD + NAME_SPACING, NAME_LEAD + 2 * NAME_SPACING, NAME_LEAD + 3 * NAME_SPACING]
     for i in range(4):
-        part_start_f.append(ceil_f(want[i] - (part_onset_off[i] - part_win[i][0])))
+        part_start_f.append(ceil_f(NAME_LEAD + i * NAME_SPACING - (part_onset_off[i] - part_win[i][0])))
     onset = [part_start_f[i] / FPS + (part_onset_off[i] - part_win[i][0]) for i in range(4)]
-    i_the = 3
+    # "and the Proxy Sea." follows the opened breath
+    end_4a = part_start_f[3] / FPS + (part_win[3][1] - part_win[3][0])
+    part_start_f.append(ceil_f(end_4a + CITADEL_PAUSE_F / FPS))
+    inserted_silence = part_start_f[4] / FPS - end_4a
+    onset.append(part_start_f[4] / FPS + (part_onset_off[4] - part_win[4][0]))      # "and"
     proxy_idx = find_word(w3, 'proxy')
     citadel_idx = find_word(w3, 'citadel')
-    proxy_on = part_start_f[3] / FPS + (w3[proxy_idx]['start_s'] - part_win[3][0])
+    if not (w3[citadel_idx]['start_s'] < sp_s < w3[proxy_idx]['start_s']):
+        sys.exit('CITADEL_SPLICE must lie between "Citadel" and "Proxy" in words.json')
+    proxy_on = part_start_f[4] / FPS + (w3[proxy_idx]['start_s'] - part_win[4][0])
     citadel_on = part_start_f[3] / FPS + (w3[citadel_idx]['start_s'] - part_win[3][0])
-    part_start_f.append(ceil_f(proxy_on + SEVEN_AFTER_PROXY - (part_onset_off[4] - part_win[4][0])))
-    onset.append(part_start_f[4] / FPS + (part_onset_off[4] - part_win[4][0]))
+    part_start_f.append(ceil_f(proxy_on + SEVEN_AFTER_PROXY - (part_onset_off[5] - part_win[5][0])))
+    onset.append(part_start_f[5] / FPS + (part_onset_off[5] - part_win[5][0]))
     cut10 = [round_f(onset[1] - CUT_BEFORE_NAME), round_f(onset[2] - CUT_BEFORE_NAME), round_f(onset[3] - CUT_BEFORE_NAME),
-             round_f(proxy_on - PROXY_CUT_LEAD), round_f(onset[4] - CUT_BEFORE_SEVEN)]
+             round_f(onset[4] - AND_CUT_LEAD), round_f(onset[5] - CUT_BEFORE_SEVEN)]
+    # the breath at the splice (timeline seconds rel. to P-10): from the end of "Sea" to "and"
+    citadel_breath = (part_start_f[3] / FPS + (sp['prev_speech_end_s'] - part_win[3][0]), onset[4])
     # P-10..P-14 durations, P-15 held at its estimate
     p10_order = ['P-10', 'P-11', 'P-12', 'P-13', 'P-14', 'P-15']
     bounds = [0] + cut10
@@ -274,12 +319,18 @@ def main():
     shot_rel_start = {sid: bounds[i] for i, sid in enumerate(p10_order[:5])}
     shot_rel_start['P-15'] = bounds[5]
     parts_plan = {'take': 'L003', 'parts': []}
-    for i in range(5):
+    for i in range(6):
         # which shot contains this part's start
         sf = part_start_f[i]
         host = max((sid for sid in p10_order if shot_rel_start[sid] <= sf), key=lambda s: shot_rel_start[s])
-        parts_plan['parts'].append({'part': i + 1, 'text': segs3[i]['text'], 'take_in_s': round(part_win[i][0], 6),
-                                    'take_out_s': round(part_win[i][1], 6), 'rel_p10_f': sf, 'host': host})
+        parts_plan['parts'].append({'part': i + 1, 'text': part_text[i], 'take_in_s': round(part_win[i][0], 6),
+                                    'take_out_s': round(part_win[i][1], 6), 'rel_p10_f': sf, 'host': host,
+                                    'cut': part_cut[i]})
+    # the dissolve into P-14 must sit inside the opened breath (no picture change on a word)
+    p14_half = authored['P-14'].get('trans', ('cut', 0))[1] // 2
+    p14_cut = shot_rel_start['P-14'] / FPS
+    if not (citadel_breath[0] <= p14_cut - p14_half / FPS and p14_cut + p14_half / FPS <= citadel_breath[1]):
+        problems.append('P-14: the dissolve is not inside the breath after "The Citadel Sea"')
     caption_words = {
         'T01': ('P-10', onset[0]), 'T02': ('P-11', onset[1] - shot_rel_start['P-11'] / FPS),
         'T03': ('P-12', onset[2] - shot_rel_start['P-12'] / FPS),
@@ -403,15 +454,35 @@ def main():
     # L003 parts
     p10g = gstart['P-10']
     l3parts = []
+    edit_text = {
+        'take start': 'start of the take',
+        'sentence pause': 'cut inside the silent pause between sentences (5 ms fades in the mix)',
+        'word-boundary splice': (f'cut at the silent word boundary between "Sea" and "and" (sample {sp["sample"]}, '
+                                 f'{sp["level_dbfs_5ms_rms"]:.1f} dBFS 5 ms RMS, measured by tools/splice.py); '
+                                 f'{inserted_silence:.3f} s of silence opened before it (5 ms fades in the mix)'),
+    }
     for pp in parts_plan['parts']:
         l3parts.append({'part': pp['part'], 'text': pp['text'], 'take_in_s': pp['take_in_s'], 'take_out_s': pp['take_out_s'],
                         'take_in_sample': round(pp['take_in_s'] * SR), 'take_out_sample': round(pp['take_out_s'] * SR),
                         'timeline_frame': p10g + pp['rel_p10_f'], 'timeline_tc': tc(p10g + pp['rel_p10_f']), 'shot': pp['host'],
-                        'edit': 'cut inside the silent pause between sentences (5 ms fades in the mix)'})
+                        'cut': pp['cut'], 'edit': edit_text[pp['cut']]})
     lines['L003'] = line_record('L003', 'P-10', l3parts[0]['timeline_frame'], 'words-driven (prologue captions)',
                                 NAME_LEAD, parts=l3parts, continues=['P-11', 'P-12', 'P-13', 'P-14', 'P-15'])
-    lines['L003']['note'] = ('Split only in its existing sentence pauses so each place name gets its own ~2 s landscape; '
-                             'the words themselves are untouched.')
+    lines['L003']['note'] = ('Split in its existing sentence pauses so each place name gets its own ~2 s landscape, and once '
+                             'at the silent word boundary in "The Citadel Sea | and the Proxy Sea." so the two seas never share '
+                             'a view; the words themselves are untouched.')
+    breath_g = (p10g / FPS + citadel_breath[0], p10g / FPS + citadel_breath[1])
+    lines['L003']['splice'] = {k: sp[k] for k in ('take_sha256', 'sample', 'level_dbfs_5ms_rms', 'peak_dbfs_5ms',
+                                                   'prev_speech_end_s', 'next_speech_on_s', 'search_s', 'measured_by')} | {
+        'between_parts': [4, 5], 'time_s': round(sp_s, 6),
+        'inserted_silence_s': round(inserted_silence, 4), 'inserted_silence_frames': round(inserted_silence * FPS, 3),
+        'breath_on_timeline_s': [round(breath_g[0], 4), round(breath_g[1], 4)],
+        'breath_s': round(breath_g[1] - breath_g[0], 4),
+        'why': ('The temporary narrator says "The Citadel Sea and the Proxy Sea." in one breath, which left the CITADEL SEA '
+                'caption 1.0 s. The breath opened here gives it its own hold; the dissolve to the Proxy Sea sits inside it. '
+                'It is paid for by trimming the stretched pauses next to it (5 frames from each pause between Tara, Scrapper '
+                'and Verdor, 0.15 s before "Seven kingdoms"), so nothing from P-15 on moves. A human narrator would make '
+                'this pause naturally.')}
 
     order = sorted(lines.values(), key=lambda r: r['speech_in_s'])
     prev = None
@@ -432,8 +503,8 @@ def main():
             r = lines[lid]
             if lid == 'L003' and not base.endswith('.end'):
                 # in the place-name shots 'L003' means the part spoken over that shot
-                local = {'P-10': onset[0], 'P-11': onset[1], 'P-12': onset[2], 'P-13': onset[3], 'P-14': proxy_on,
-                         'P-15': onset[4]}
+                local = {'P-10': onset[0], 'P-11': onset[1], 'P-12': onset[2], 'P-13': onset[3], 'P-14': onset[4],
+                         'P-15': onset[5]}
                 t = local[sid] - shot_rel_start[sid] / FPS
             else:
                 t = (r['speech_out_s'] if base.endswith('.end') else r['speech_in_s']) - gstart[sid] / FPS
@@ -802,9 +873,20 @@ def render_md(doc):
         w(f'| {t["id"]} | {md_esc(txt)} | {t["start_frame"]}-{t["end_frame"]} | {(t["end_frame"] - t["start_frame"]) / 24:.2f} s | '
           f'{md_esc(t.get("synced_to_word", t.get("shot", "")))} |')
     w('')
-    w('The opening card text is exact: **"' + doc['onscreen_text'][0]['text'] + '"**. '
-      'The CITADEL SEA caption holds for only about 1 s. The temporary narrator says "The Citadel Sea and the Proxy Sea" '
-      'in one 2.3 s breath, and the captions must not share a view. A human narrator pausing after "Citadel Sea" would fix it.')
+    w('The opening card text is exact: **"' + doc['onscreen_text'][0]['text'] + '"**.')
+    w('')
+    l3 = next(r for r in doc['lines'] if r['id'] == 'L003')
+    sp = l3['splice']
+    caps = [t for t in doc['onscreen_text'] if t['kind'] == 'location_caption']
+    w('**The two seas.** The temporary narrator says "The Citadel Sea and the Proxy Sea." in one breath, so the CITADEL SEA '
+      'caption had only 1.0 s. The take is now cut once inside that sentence, at the silent word boundary between "Sea" '
+      f'and "and" (sample {sp["sample"]}, {sp["level_dbfs_5ms_rms"]:.1f} dBFS, measured by `tools/splice.py`). '
+      f'A {sp["breath_s"]:.2f} s breath opens there, and the dissolve to the Proxy Sea sits inside it, so the two seas '
+      'never share a view and neither picture changes on a word. '
+      'The time comes from the stretched pauses next to it (5 frames from each pause between Tara, Scrapper and Verdor, '
+      'and 0.15 s before "Seven kingdoms"), so the place-name block keeps its length and nothing from P-15 on moves. '
+      f'The five captions now hold {min(t["hold_s"] for t in caps):.2f} to {max(t["hold_s"] for t in caps):.2f} s. '
+      'The words are untouched. A human narrator would make this pause naturally.')
     w('')
     w('## Music')
     w('')
@@ -855,8 +937,9 @@ def render_md(doc):
         for d in e['dialogue']:
             extra = ''
             if d.get('parts'):
-                extra = ' Split at its existing sentence pauses: ' + '; '.join(
-                    f'part {p["part"]} "{p["text"]}" @ {p["timeline_frame"]} ({p["shot"]})' for p in d['parts']) + '.'
+                extra = (' Split at its sentence pauses and at one silent word-boundary splice (marked): ' + '; '.join(
+                    f'part {p["part"]} "{p["text"]}" @ {p["timeline_frame"]} ({p["shot"]})'
+                    + (' [after the splice]' if p.get('cut') == 'word-boundary splice' else '') for p in d['parts']) + '.')
             gap = '' if d['gap_from_previous_line_s'] is None else f', gap {d["gap_from_previous_line_s"]:.2f} s'
             w(f'- **{d["id"]} {d["speaker"]}:** "{d["text"]}". Take @ {d["take_start_frame"]} (shot frame {d["take_start_shot_frame"]}); '
               f'speech {d["speech_in_frame"]}-{d["speech_out_frame"]}{gap}; {d["gain_db"]:+.1f} dB.{extra}')

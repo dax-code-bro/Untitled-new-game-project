@@ -63,7 +63,7 @@ shot('P-02', cam=cam(24, 'slow forward travel at 2 m/s, riding the swell (boat-m
                      'extreme wide; horizon on the upper third; pale sky reflected between moving bands of deep blue',
                      height='1.2 m above the sea', stop='T5.6', focus='infinity'),
      trans=('fade_in', 36),
-     who=[],
+     who=[('Open sea and dawn sky', 'C', 'horizon on the upper third; no people, no ship yet')],
      beats=[(0, 'Picture fades up from black over 1.5 s.'),
             (1.5, 'Low over the water; long swell rolls toward camera.'),
             (4.0, 'A cat\'s-paw of wind darkens the water ahead.')],
@@ -137,7 +137,7 @@ shot('P-07', cam=cam(50, 'static', 'medium from behind at deck height: the sailo
      real=('SIL', 'Back to camera, silhouetted against the fog (shot list P-07).'),
      needs=[('Sailor (humans: sailor1)', 'exists-wip', '')])
 
-# P-08 .. P-15: durations are computed from the narrator's words in build_edl.py (PROLOGUE_TIMING)
+# P-08 .. P-15: durations are computed from the narrator's words in build_edl.py (the "prologue words-driven block"; place-name timing constants and CITADEL_SPLICE at the top of that file)
 shot('P-08', cam=cam(50, 'slow lateral drift (aerial, 30 m up, offshore)',
                      'extreme wide: a coastal settlement of timber and stone houses under a pale sky; no map, no borders',
                      stop='T5.6', focus='infinity'),
@@ -194,18 +194,21 @@ shot('P-13', cam=cam(35, 'slow drift, 6 m above flat calm water', 'extreme wide:
                      stop='T8', focus='infinity'),
      trans=('dissolve', 8),
      who=[('Open water (calm)', 'C', '')],
-     beats=[(0, 'Dissolve in.'), ('L003', 'Narrator: "The Citadel Sea..." Caption CITADEL SEA.')],
+     beats=[(0, 'Dissolve in.'), ('L003', 'Narrator: "The Citadel Sea." Caption CITADEL SEA.'),
+            ('end-0.5', 'A breath (opened in the edit): the caption fades and the calm sea holds.')],
      sfx=[(0, 'sea_wash', 'calm open-water wash')],
      real=('NONE', 'No people.'),
      needs=[('Calm sea + clear-day HDRI (cloud_layers)', 'exists', '')],
-     note='Caption CITADEL SEA (T04). The TTS narrator says both seas in one 2.3 s sentence, so this caption '
-          'holds only about 1 s; a human narrator with a short pause after "Citadel Sea" fixes it.')
+     note='Caption CITADEL SEA (T04). The TTS narrator says both seas in one breath, so the take is cut once at the '
+          'silent word boundary after "The Citadel Sea" and a short breath is opened there (build_edl.py CITADEL_SPLICE); '
+          'this caption gets its own hold. A human narrator would pause here naturally.')
 
 shot('P-14', cam=cam(35, 'slow drift, 10 m up, riding a long swell', 'extreme wide: a different stretch of water, long swell under low cloud, different light; no coastline',
                      stop='T5.6', focus='infinity'),
      trans=('dissolve', 6),
      who=[('Open water (long swell, low cloud)', 'C', '')],
-     beats=[(0, 'Its own short dissolve: the two seas never share one view.'), ('L003', '"...and the Proxy Sea." Caption PROXY SEA.')],
+     beats=[(0, 'Its own short dissolve, inside the narrator\'s breath: the two seas never share one view.'),
+            ('L003', 'Narrator: "and the Proxy Sea." Caption PROXY SEA appears on "Proxy".')],
      sfx=[(0, 'sea_wash', 'heavier swell')],
      real=('NONE', 'No people.'),
      needs=[('Swell sea + overcast misty HDRI (kloppenheim_01)', 'exists', '')],

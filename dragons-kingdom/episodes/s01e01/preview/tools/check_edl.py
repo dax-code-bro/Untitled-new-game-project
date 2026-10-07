@@ -19,7 +19,10 @@ screenplay.md, vo/takes.json, vo/words.json - nothing is modified):
               to dialogue.json; take sha256 / sample count equal to takes.json; speech times
               recomputed from the takes' sentence segments; lines in script order, never
               overlapping; speech inside its shot (or the shots it is declared to continue into);
-              split takes cover the whole take once, in order, cut only in silent pauses
+              split takes cover the whole take once, in order, cut only in the silent pauses between
+              sentences or at a declared word-boundary splice (L003 "The Citadel Sea | and the Proxy
+              Sea."): pinned to the take's sha256, recorded <= -50 dBFS (5 ms RMS), and re-measured
+              from vo/<line>.wav with tools/splice.py when the take file is present
   canon       [ORIGINAL] lines exact and present in screenplay.md; Abby silent after the
               succession question (L047 follows L046 directly, >= 3 s of silence, no speech in it);
               last line L078 in the last shot, which carries ATTACK_NO_FLAME
@@ -33,6 +36,7 @@ screenplay.md, vo/takes.json, vo/words.json - nothing is modified):
   freshness   source sha256 values recorded in edl.json still match the files (else the EDL is stale)
 """
 import hashlib
+import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -49,9 +53,19 @@ ALLOWED_CODES = {'BACK', 'WIDE', 'SIL', 'HANDS', 'DOF', 'OTS', 'OFF', 'NONE'}
 TARGET_S, WARN_TOL_S, ERR_TOL_S = 600.0, 30.0, 60.0
 
 
+MAX_SPLICE_DBFS = -50.0       # a word-boundary cut must be at least 30 dB under the -20 dBFS voiced level
+
+
+def load_splice_tool():
+    spec = importlib.util.spec_from_file_location('splice', HERE / 'splice.py')
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 class Report:
     def __init__(self):
-        self.errors, self.warnings, self.ok = [], [], []
+        self.errors, self.warnings, self.notes, self.ok = [], [], [], []
 
     def err(self, m):
         self.errors.append(m)
@@ -59,10 +73,45 @@ class Report:
     def warn(self, m):
         self.warnings.append(m)
 
+    def note(self, m):
+        self.notes.append(m)
+
     def check(self, cond, m, warn=False):
         if not cond:
             (self.warn if warn else self.err)(m)
         return cond
+
+
+def check_splice(R, lid, r, prev_p, p, tk, segs):
+    """A declared cut inside a sentence: pinned to this take, silent, and re-measured when the WAV exists."""
+    sp = r.get('splice')
+    if not R.check(isinstance(sp, dict), f'{lid}: part {p["part"]} is a word-boundary splice but the line has no splice record'):
+        return
+    t = p['take_in_s']
+    R.check(sp['sample'] == p['take_in_sample'] == round(t * SR) and abs(sp['time_s'] - t) < 1e-6,
+            f'{lid}: splice sample differs from part {p["part"]} in-point')
+    R.check(sp['take_sha256'] == tk['sha256'], f'{lid}: splice was measured on another take (sha256 differs from takes.json)')
+    R.check(sp['level_dbfs_5ms_rms'] <= MAX_SPLICE_DBFS,
+            f'{lid}: splice level {sp["level_dbfs_5ms_rms"]} dBFS is not silent (limit {MAX_SPLICE_DBFS:g})')
+    R.check(any(s['start_s'] < t < s['end_s'] for s in segs) and sp['prev_speech_end_s'] < t < sp['next_speech_on_s'],
+            f'{lid}: splice at {t} s is not between two words inside one sentence')
+    opened = p['timeline_frame'] / FPS - (prev_p['timeline_frame'] / FPS + prev_p['take_out_s'] - prev_p['take_in_s'])
+    R.check(opened >= 0 and abs(opened - sp['inserted_silence_s']) < 1e-3,
+            f'{lid}: recorded inserted silence {sp["inserted_silence_s"]} s differs from the timeline ({opened:.4f} s)')
+    wav = PREVIEW / 'vo' / f'{lid}.wav'
+    if not wav.exists():
+        R.note(f'{lid}: splice level not re-measured ({wav.name} is not on disk; tools/make_vo.py rebuilds it)')
+        return
+    if not R.check(hashlib.sha256(wav.read_bytes()).hexdigest() == tk['sha256'], f'{lid}: {wav.name} differs from takes.json'):
+        return
+    tool = load_splice_tool()
+    rms, pk = tool.level_at(wav, sp['sample'])
+    R.check(rms <= MAX_SPLICE_DBFS and abs(rms - sp['level_dbfs_5ms_rms']) < 0.05,
+            f'{lid}: splice re-measured at {rms:.2f} dBFS (recorded {sp["level_dbfs_5ms_rms"]})')
+    m = tool.measure(wav, *sp['search_s'])
+    R.check(m['sample'] == sp['sample'], f'{lid}: splice.py now finds sample {m["sample"]}, not {sp["sample"]}')
+    R.note(f'{lid}: splice at sample {sp["sample"]} re-measured from {wav.name}: {rms:.2f} dBFS 5 ms RMS, peak {pk:.2f} dBFS; '
+           f'{sp["breath_s"]:.2f} s breath on the timeline')
 
 
 def main():
@@ -195,8 +244,12 @@ def main():
                 R.check(abs(a['take_out_s'] - b['take_in_s']) < 1e-9, f'{lid}: parts {a["part"]}/{b["part"]} are not contiguous in the take')
                 R.check(b['timeline_frame'] * FPS >= 0 and b['timeline_frame'] / FPS >= a['timeline_frame'] / FPS + (a['take_out_s'] - a['take_in_s']) - 1e-6,
                         f'{lid}: parts {a["part"]}/{b["part"]} overlap on the timeline')
-            # every cut point must lie in silence: between one sentence segment's end and the next's start
-            for p in parts[1:]:
+            # every cut point must lie in silence: between one sentence segment's end and the next's start,
+            # or at a declared word-boundary splice that was measured silent
+            for prev_p, p in zip(parts, parts[1:]):
+                if p.get('cut') == 'word-boundary splice':
+                    check_splice(R, lid, r, prev_p, p, tk, segs)
+                    continue
                 R.check(any(segs[i]['end_s'] <= p['take_in_s'] <= segs[i + 1]['start_s'] for i in range(len(segs) - 1)),
                         f'{lid}: split at {p["take_in_s"]} s is not inside a pause between sentences')
             sp_in = parts[0]['timeline_frame'] / FPS + segs[0]['start_s'] - parts[0]['take_in_s']
@@ -300,11 +353,13 @@ def main():
     # ------------------------------------------------------------ report
     ok = not R.errors and not (strict and R.warnings)
     res = {'ok': ok, 'frames': total, 'seconds': round(secs, 3), 'tc': edl['totals']['tc'], 'shots': len(shots),
-           'lines': len(lines), 'errors': R.errors, 'warnings': R.warnings}
+           'lines': len(lines), 'errors': R.errors, 'warnings': R.warnings, 'notes': R.notes}
     if as_json:
         print(json.dumps(res, indent=1))
     else:
         print(f'edl.json: {total} frames = {edl["totals"]["tc"]} ({secs:.2f} s), {len(shots)} shots + 2 cards, {len(lines)} lines')
+        for n in R.notes:
+            print('NOTE:    ' + n)
         for w in R.warnings:
             print('WARNING: ' + w)
         for e in R.errors:

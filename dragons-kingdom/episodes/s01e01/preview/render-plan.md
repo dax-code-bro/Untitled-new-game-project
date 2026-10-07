@@ -129,9 +129,9 @@ Rejected because they change the look:
   - `--start` is that whole second and `--seconds` is frames/24, so `render.mjs`'s rounding gives exactly the planned frames.
   - Choosing the shot by `round(t*24)` keeps the shutter-open sample of each frame (t - 1/96 s) inside the right shot.
 - **Chunks.** 2 s chunks (48 frames) for shots under 20 s per frame, 1 s (24 frames) up to 100 s per frame, and 0.5 s (12 frames) for the pass.
-  - No chunk is more than about 25 minutes of one browser's work.
+  - Chunks are sized to about 25 minutes of one browser's work; the longest is 1E-03, 12 frames at 146 s = 29 minutes.
   - `render.mjs` encodes each chunk, decodes it completely to check it, records its size and SHA-1, and only then marks it done.
-  - **If the container restarts, run the same queue command again.** Finished jobs are skipped, and the interrupted job resumes after its last verified chunk.
+  - **If the container restarts, run the same queue command again.** Finished jobs are skipped, and the interrupted job re-renders only the chunks that were not finished and verified. Each chunk is checked on its own, so one that finished out of order is kept.
   - At most the chunk each of the 2 workers had in progress is lost: 2 x 24 frames on the chamber, about 20 minutes.
 - **Workers.** `--workers 2` per job.
   - Each 4K browser needs about 2.6 GB on test-kingdom; the heavy sets need more (the pilot measures it).
@@ -164,7 +164,7 @@ node render/render.mjs episodes/s01e01/preview/scenes/sky-off-verdor.js --preset
      - a 10-bit CRF 16 master for YouTube.
    - x264 at 4K runs at a few frames per second here, so allow 1-2 h.
 2. **Sound.** The mix places each take at `take_start_frame x 2000` samples.
-   - L003 goes in as its five parts. Gains and spaces come from `takes.json`, with the beds, cues and music from `edl.json`.
+   - L003 goes in as its 6 parts at their `timeline_frame`s (`edl.json` lines, `parts`), with 5 ms fades at each cut. Gains and spaces come from `takes.json`, with the beds, cues and music from `edl.json`.
    - The master is 48 kHz, 24-bit and exactly `frames x 2000` samples, loudness-normalised as in `audio-plan.md`. It is muxed as AAC 256k, with the video stream copied.
 3. **Subtitles.** A soft English track is generated from `edl.json` line times and `dialogue.json` `subtitle_cues`.
 4. **Checks.** The video is exactly 14397 frames at 24 fps and 3840x2160, and the audio is exactly 28,794,000 samples.

@@ -8,7 +8,7 @@
   "one_job_per_shot": "so a finished shot stays valid when another shot is fixed later (render.mjs fingerprints the scene and every asset)",
   "set_timeline": "each set scene lays its shots out on whole seconds with >= 1 s between them; the scene picks the shot for time t by round(t*24) against this table, so the motion-blur shutter-open sample of a first frame never falls into the previous shot",
   "handles": "dissolve handles are included in frames (head first); the conform trims them",
-  "chunks": "chunk_frames keeps one chunk at <= ~25 min of one browser; a restart loses at most the chunk each worker had in progress",
+  "chunks": "chunk_frames keeps one chunk at about 25 min (at most ~30 min, the pass) of one browser; a restart loses at most the chunk each worker had in progress",
   "intermediate": "10-bit H.264 at CRF 12 (one more encode happens in the conform)"
  },
  "totals": {
@@ -201,20 +201,20 @@
    "scene": "episodes/s01e01/preview/scenes/prologue-vistas.js",
    "set_time_start_s": 18,
    "set_time_first_edl_frame": 438,
-   "frames": 67,
+   "frames": 62,
    "handles": [
     6,
     4
    ],
    "edl_start_frame": 1340,
-   "edl_end_frame": 1397,
+   "edl_end_frame": 1392,
    "cinematic": "velocity",
    "chunk_frames": 48,
    "chunks": 2,
    "spf_expected": 13.0,
-   "hours_expected_1browser": 0.242,
+   "hours_expected_1browser": 0.224,
    "out": "output/preview-s01e01/P-10",
-   "command": "node render/render.mjs episodes/s01e01/preview/scenes/prologue-vistas.js --preset final --cinematic velocity --start 18 --seconds 2.791667 --workers 2 --chunk-seconds 2.0000 --bit-depth 10 --crf 12 --out output/preview-s01e01/P-10"
+   "command": "node render/render.mjs episodes/s01e01/preview/scenes/prologue-vistas.js --preset final --cinematic velocity --start 18 --seconds 2.583333 --workers 2 --chunk-seconds 2.0000 --bit-depth 10 --crf 12 --out output/preview-s01e01/P-10"
   },
   {
    "job": "P-11",
@@ -223,20 +223,20 @@
    "scene": "episodes/s01e01/preview/scenes/prologue-vistas.js",
    "set_time_start_s": 22,
    "set_time_first_edl_frame": 532,
-   "frames": 62,
+   "frames": 57,
    "handles": [
     4,
     4
    ],
-   "edl_start_frame": 1397,
-   "edl_end_frame": 1451,
+   "edl_start_frame": 1392,
+   "edl_end_frame": 1441,
    "cinematic": "velocity",
    "chunk_frames": 48,
    "chunks": 2,
    "spf_expected": 13.0,
-   "hours_expected_1browser": 0.224,
+   "hours_expected_1browser": 0.206,
    "out": "output/preview-s01e01/P-11",
-   "command": "node render/render.mjs episodes/s01e01/preview/scenes/prologue-vistas.js --preset final --cinematic velocity --start 22 --seconds 2.583333 --workers 2 --chunk-seconds 2.0000 --bit-depth 10 --crf 12 --out output/preview-s01e01/P-11"
+   "command": "node render/render.mjs episodes/s01e01/preview/scenes/prologue-vistas.js --preset final --cinematic velocity --start 22 --seconds 2.375000 --workers 2 --chunk-seconds 2.0000 --bit-depth 10 --crf 12 --out output/preview-s01e01/P-11"
   },
   {
    "job": "P-12",
@@ -245,20 +245,20 @@
    "scene": "episodes/s01e01/preview/scenes/prologue-vistas.js",
    "set_time_start_s": 26,
    "set_time_first_edl_frame": 628,
-   "frames": 62,
+   "frames": 57,
    "handles": [
     4,
     4
    ],
-   "edl_start_frame": 1451,
-   "edl_end_frame": 1505,
+   "edl_start_frame": 1441,
+   "edl_end_frame": 1490,
    "cinematic": "velocity",
    "chunk_frames": 48,
    "chunks": 2,
    "spf_expected": 13.0,
-   "hours_expected_1browser": 0.224,
+   "hours_expected_1browser": 0.206,
    "out": "output/preview-s01e01/P-12",
-   "command": "node render/render.mjs episodes/s01e01/preview/scenes/prologue-vistas.js --preset final --cinematic velocity --start 26 --seconds 2.583333 --workers 2 --chunk-seconds 2.0000 --bit-depth 10 --crf 12 --out output/preview-s01e01/P-12"
+   "command": "node render/render.mjs episodes/s01e01/preview/scenes/prologue-vistas.js --preset final --cinematic velocity --start 26 --seconds 2.375000 --workers 2 --chunk-seconds 2.0000 --bit-depth 10 --crf 12 --out output/preview-s01e01/P-12"
   },
   {
    "job": "P-13",
@@ -267,50 +267,50 @@
    "scene": "episodes/s01e01/preview/scenes/prologue-vistas.js",
    "set_time_start_s": 30,
    "set_time_first_edl_frame": 724,
-   "frames": 45,
+   "frames": 59,
    "handles": [
     4,
     3
    ],
-   "edl_start_frame": 1505,
-   "edl_end_frame": 1543,
+   "edl_start_frame": 1490,
+   "edl_end_frame": 1542,
    "cinematic": "velocity",
    "chunk_frames": 48,
-   "chunks": 1,
+   "chunks": 2,
    "spf_expected": 13.0,
-   "hours_expected_1browser": 0.163,
+   "hours_expected_1browser": 0.213,
    "out": "output/preview-s01e01/P-13",
-   "command": "node render/render.mjs episodes/s01e01/preview/scenes/prologue-vistas.js --preset final --cinematic velocity --start 30 --seconds 1.875000 --workers 2 --chunk-seconds 2.0000 --bit-depth 10 --crf 12 --out output/preview-s01e01/P-13"
+   "command": "node render/render.mjs episodes/s01e01/preview/scenes/prologue-vistas.js --preset final --cinematic velocity --start 30 --seconds 2.458333 --workers 2 --chunk-seconds 2.0000 --bit-depth 10 --crf 12 --out output/preview-s01e01/P-13"
   },
   {
    "job": "P-14",
    "shot": "P-14",
    "set": "PROLOGUE_VISTAS",
    "scene": "episodes/s01e01/preview/scenes/prologue-vistas.js",
-   "set_time_start_s": 33,
-   "set_time_first_edl_frame": 795,
-   "frames": 57,
+   "set_time_start_s": 34,
+   "set_time_first_edl_frame": 819,
+   "frames": 58,
    "handles": [
     3,
     6
    ],
-   "edl_start_frame": 1543,
+   "edl_start_frame": 1542,
    "edl_end_frame": 1591,
    "cinematic": "velocity",
    "chunk_frames": 48,
    "chunks": 2,
    "spf_expected": 13.0,
-   "hours_expected_1browser": 0.206,
+   "hours_expected_1browser": 0.209,
    "out": "output/preview-s01e01/P-14",
-   "command": "node render/render.mjs episodes/s01e01/preview/scenes/prologue-vistas.js --preset final --cinematic velocity --start 33 --seconds 2.375000 --workers 2 --chunk-seconds 2.0000 --bit-depth 10 --crf 12 --out output/preview-s01e01/P-14"
+   "command": "node render/render.mjs episodes/s01e01/preview/scenes/prologue-vistas.js --preset final --cinematic velocity --start 34 --seconds 2.416667 --workers 2 --chunk-seconds 2.0000 --bit-depth 10 --crf 12 --out output/preview-s01e01/P-14"
   },
   {
    "job": "P-15",
    "shot": "P-15",
    "set": "PROLOGUE_VISTAS",
    "scene": "episodes/s01e01/preview/scenes/prologue-vistas.js",
-   "set_time_start_s": 37,
-   "set_time_first_edl_frame": 894,
+   "set_time_start_s": 38,
+   "set_time_first_edl_frame": 918,
    "frames": 294,
    "handles": [
     6,
@@ -324,15 +324,15 @@
    "spf_expected": 13.0,
    "hours_expected_1browser": 1.062,
    "out": "output/preview-s01e01/P-15",
-   "command": "node render/render.mjs episodes/s01e01/preview/scenes/prologue-vistas.js --preset final --cinematic velocity --start 37 --seconds 12.250000 --workers 2 --chunk-seconds 2.0000 --bit-depth 10 --crf 12 --out output/preview-s01e01/P-15"
+   "command": "node render/render.mjs episodes/s01e01/preview/scenes/prologue-vistas.js --preset final --cinematic velocity --start 38 --seconds 12.250000 --workers 2 --chunk-seconds 2.0000 --bit-depth 10 --crf 12 --out output/preview-s01e01/P-15"
   },
   {
    "job": "P-16",
    "shot": "P-16",
    "set": "PROLOGUE_VISTAS",
    "scene": "episodes/s01e01/preview/scenes/prologue-vistas.js",
-   "set_time_start_s": 51,
-   "set_time_first_edl_frame": 1236,
+   "set_time_start_s": 52,
+   "set_time_first_edl_frame": 1260,
    "frames": 276,
    "handles": [
     12,
@@ -346,7 +346,7 @@
    "spf_expected": 13.0,
    "hours_expected_1browser": 0.997,
    "out": "output/preview-s01e01/P-16",
-   "command": "node render/render.mjs episodes/s01e01/preview/scenes/prologue-vistas.js --preset final --cinematic velocity --start 51 --seconds 11.500000 --workers 2 --chunk-seconds 2.0000 --bit-depth 10 --crf 12 --out output/preview-s01e01/P-16"
+   "command": "node render/render.mjs episodes/s01e01/preview/scenes/prologue-vistas.js --preset final --cinematic velocity --start 52 --seconds 11.500000 --workers 2 --chunk-seconds 2.0000 --bit-depth 10 --crf 12 --out output/preview-s01e01/P-16"
   },
   {
    "job": "P-17",

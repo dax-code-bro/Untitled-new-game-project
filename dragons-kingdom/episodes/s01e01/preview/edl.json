@@ -32,7 +32,7 @@
   },
   "edl_shots.py": {
    "path": "dragons-kingdom/episodes/s01e01/preview/tools/edl_shots.py",
-   "sha256": "b4ac403263fe0e21bc3198ceeac76d7455ead4c3a619b0aed502f71ad03cb6f8"
+   "sha256": "ce9a5eac991ba891ff4187bf9df04cc0d3983eedbebcaeebff3676069a82f221"
   }
  },
  "scope": {
@@ -301,7 +301,13 @@
    },
    "time_of_day": "DAWN",
    "lighting": "Cold pale dawn, sun hidden behind sea cloud low on the horizon; soft fog; no hard shadows.",
-   "in_frame": [],
+   "in_frame": [
+    {
+     "who": "Open sea and dawn sky",
+     "screen_pos": "C",
+     "seen_as": "horizon on the upper third; no people, no ship yet"
+    }
+   ],
    "action": "Fade in: low view just above the water. Pale sky reflected between moving bands of deep blue.",
    "beats": [
     {
@@ -1211,11 +1217,11 @@
    "scene": "PROLOGUE",
    "set": "PROLOGUE_VISTAS",
    "start_frame": 1340,
-   "end_frame": 1397,
-   "duration_frames": 57,
-   "duration_s": 2.375,
+   "end_frame": 1392,
+   "duration_frames": 52,
+   "duration_s": 2.1667,
    "tc_in": "00:00:55:20",
-   "tc_out": "00:00:58:05",
+   "tc_out": "00:00:58:00",
    "shotlist_est_s": 2.0,
    "shotlist_range_s": [
     2.0,
@@ -1285,7 +1291,8 @@
        "timeline_frame": 1352,
        "timeline_tc": "00:00:56:08",
        "shot": "P-10",
-       "edit": "cut inside the silent pause between sentences (5 ms fades in the mix)"
+       "cut": "take start",
+       "edit": "start of the take"
       },
       {
        "part": 2,
@@ -1294,9 +1301,10 @@
        "take_out_s": 2.75,
        "take_in_sample": 66000,
        "take_out_sample": 132000,
-       "timeline_frame": 1399,
-       "timeline_tc": "00:00:58:07",
+       "timeline_frame": 1394,
+       "timeline_tc": "00:00:58:02",
        "shot": "P-11",
+       "cut": "sentence pause",
        "edit": "cut inside the silent pause between sentences (5 ms fades in the mix)"
       },
       {
@@ -1306,25 +1314,40 @@
        "take_out_s": 4.1,
        "take_in_sample": 132000,
        "take_out_sample": 196800,
-       "timeline_frame": 1453,
-       "timeline_tc": "00:01:00:13",
+       "timeline_frame": 1443,
+       "timeline_tc": "00:01:00:03",
        "shot": "P-12",
+       "cut": "sentence pause",
        "edit": "cut inside the silent pause between sentences (5 ms fades in the mix)"
       },
       {
        "part": 4,
-       "text": "The Citadel Sea and the Proxy Sea.",
+       "text": "The Citadel Sea",
        "take_in_s": 4.1,
-       "take_out_s": 7.045,
+       "take_out_s": 5.5325,
        "take_in_sample": 196800,
-       "take_out_sample": 338160,
-       "timeline_frame": 1507,
-       "timeline_tc": "00:01:02:19",
+       "take_out_sample": 265560,
+       "timeline_frame": 1492,
+       "timeline_tc": "00:01:02:04",
        "shot": "P-13",
+       "cut": "sentence pause",
        "edit": "cut inside the silent pause between sentences (5 ms fades in the mix)"
       },
       {
        "part": 5,
+       "text": "and the Proxy Sea.",
+       "take_in_s": 5.5325,
+       "take_out_s": 7.045,
+       "take_in_sample": 265560,
+       "take_out_sample": 338160,
+       "timeline_frame": 1545,
+       "timeline_tc": "00:01:04:09",
+       "shot": "P-14",
+       "cut": "word-boundary splice",
+       "edit": "cut at the silent word boundary between \"Sea\" and \"and\" (sample 265560, -64.6 dBFS 5 ms RMS, measured by tools/splice.py); 0.776 s of silence opened before it (5 ms fades in the mix)"
+      },
+      {
+       "part": 6,
        "text": "Seven kingdoms, and undiscovered islands beyond the familiar shores.",
        "take_in_s": 7.045,
        "take_out_s": 11.43,
@@ -1333,6 +1356,7 @@
        "timeline_frame": 1592,
        "timeline_tc": "00:01:06:08",
        "shot": "P-15",
+       "cut": "sentence pause",
        "edit": "cut inside the silent pause between sentences (5 ms fades in the mix)"
       }
      ]
@@ -1357,7 +1381,7 @@
      "id": "T01",
      "text": "TARA",
      "start_frame": 1350,
-     "end_frame": 1392
+     "end_frame": 1387
     }
    ],
    "shotlist_sound": "Narrator; wind in trees.",
@@ -1384,7 +1408,7 @@
      6,
      4
     ],
-    "frames_to_render": 67
+    "frames_to_render": 62
    },
    "note": "Caption TARA synced to the spoken word (onscreen-text.json T01)."
   },
@@ -1393,12 +1417,12 @@
    "kind": "shot",
    "scene": "PROLOGUE",
    "set": "PROLOGUE_VISTAS",
-   "start_frame": 1397,
-   "end_frame": 1451,
-   "duration_frames": 54,
-   "duration_s": 2.25,
-   "tc_in": "00:00:58:05",
-   "tc_out": "00:01:00:11",
+   "start_frame": 1392,
+   "end_frame": 1441,
+   "duration_frames": 49,
+   "duration_s": 2.0417,
+   "tc_in": "00:00:58:00",
+   "tc_out": "00:01:00:01",
    "shotlist_est_s": 2.0,
    "shotlist_range_s": [
     2.0,
@@ -1430,14 +1454,14 @@
    "beats": [
     {
      "shot_frame": 0,
-     "frame": 1397,
-     "tc": "00:00:58:05",
+     "frame": 1392,
+     "tc": "00:00:58:00",
      "what": "Dissolve in."
     },
     {
      "shot_frame": 9,
-     "frame": 1406,
-     "tc": "00:00:58:14",
+     "frame": 1401,
+     "tc": "00:00:58:09",
      "what": "Narrator: \"Scrapper.\" Caption SCRAPPER with the word."
     }
    ],
@@ -1455,8 +1479,8 @@
     {
      "cue": "wind_low",
      "shot_frame": 0,
-     "frame": 1397,
-     "tc": "00:00:58:05",
+     "frame": 1392,
+     "tc": "00:00:58:00",
      "what": "low wind / wind in trees / distant wind",
      "note": "distant wind",
      "source": "procedural - to build",
@@ -1468,8 +1492,8 @@
     {
      "id": "T02",
      "text": "SCRAPPER",
-     "start_frame": 1404,
-     "end_frame": 1446
+     "start_frame": 1399,
+     "end_frame": 1436
     }
    ],
    "shotlist_sound": "Narrator; distant wind.",
@@ -1496,7 +1520,7 @@
      4,
      4
     ],
-    "frames_to_render": 62
+    "frames_to_render": 57
    },
    "note": "Caption SCRAPPER (T02)."
   },
@@ -1505,12 +1529,12 @@
    "kind": "shot",
    "scene": "PROLOGUE",
    "set": "PROLOGUE_VISTAS",
-   "start_frame": 1451,
-   "end_frame": 1505,
-   "duration_frames": 54,
-   "duration_s": 2.25,
-   "tc_in": "00:01:00:11",
-   "tc_out": "00:01:02:17",
+   "start_frame": 1441,
+   "end_frame": 1490,
+   "duration_frames": 49,
+   "duration_s": 2.0417,
+   "tc_in": "00:01:00:01",
+   "tc_out": "00:01:02:02",
    "shotlist_est_s": 2.0,
    "shotlist_range_s": [
     2.0,
@@ -1542,14 +1566,14 @@
    "beats": [
     {
      "shot_frame": 0,
-     "frame": 1451,
-     "tc": "00:01:00:11",
+     "frame": 1441,
+     "tc": "00:01:00:01",
      "what": "A separate dissolve: nothing implies Verdor is near Scrapper."
     },
     {
      "shot_frame": 9,
-     "frame": 1460,
-     "tc": "00:01:00:20",
+     "frame": 1450,
+     "tc": "00:01:00:10",
      "what": "Narrator: \"Verdor.\" Caption VERDOR."
     }
    ],
@@ -1567,8 +1591,8 @@
     {
      "cue": "sea_wash",
      "shot_frame": 0,
-     "frame": 1451,
-     "tc": "00:01:00:11",
+     "frame": 1441,
+     "tc": "00:01:00:01",
      "what": "open-water wash / swell",
      "note": "soft sea wash",
      "source": "procedural - to build",
@@ -1580,8 +1604,8 @@
     {
      "id": "T03",
      "text": "VERDOR",
-     "start_frame": 1458,
-     "end_frame": 1500
+     "start_frame": 1448,
+     "end_frame": 1485
     }
    ],
    "shotlist_sound": "Narrator; soft sea wash.",
@@ -1611,7 +1635,7 @@
      4,
      4
     ],
-    "frames_to_render": 62
+    "frames_to_render": 57
    },
    "note": "Caption VERDOR (T03)."
   },
@@ -1620,12 +1644,12 @@
    "kind": "shot",
    "scene": "PROLOGUE",
    "set": "PROLOGUE_VISTAS",
-   "start_frame": 1505,
-   "end_frame": 1543,
-   "duration_frames": 38,
-   "duration_s": 1.5833,
-   "tc_in": "00:01:02:17",
-   "tc_out": "00:01:04:07",
+   "start_frame": 1490,
+   "end_frame": 1542,
+   "duration_frames": 52,
+   "duration_s": 2.1667,
+   "tc_in": "00:01:02:02",
+   "tc_out": "00:01:04:06",
    "shotlist_est_s": 2.5,
    "shotlist_range_s": [
     2.5,
@@ -1657,15 +1681,21 @@
    "beats": [
     {
      "shot_frame": 0,
-     "frame": 1505,
-     "tc": "00:01:02:17",
+     "frame": 1490,
+     "tc": "00:01:02:02",
      "what": "Dissolve in."
     },
     {
      "shot_frame": 9,
-     "frame": 1514,
-     "tc": "00:01:03:02",
-     "what": "Narrator: \"The Citadel Sea...\" Caption CITADEL SEA."
+     "frame": 1499,
+     "tc": "00:01:02:11",
+     "what": "Narrator: \"The Citadel Sea.\" Caption CITADEL SEA."
+    },
+    {
+     "shot_frame": 40,
+     "frame": 1530,
+     "tc": "00:01:03:18",
+     "what": "A breath (opened in the edit): the caption fades and the calm sea holds."
     }
    ],
    "dialogue": [],
@@ -1682,8 +1712,8 @@
     {
      "cue": "sea_wash",
      "shot_frame": 0,
-     "frame": 1505,
-     "tc": "00:01:02:17",
+     "frame": 1490,
+     "tc": "00:01:02:02",
      "what": "open-water wash / swell",
      "note": "calm open-water wash",
      "source": "procedural - to build",
@@ -1695,8 +1725,8 @@
     {
      "id": "T04",
      "text": "CITADEL SEA",
-     "start_frame": 1515,
-     "end_frame": 1539
+     "start_frame": 1500,
+     "end_frame": 1538
     }
    ],
    "shotlist_sound": "Narrator; calm open-water wash.",
@@ -1725,20 +1755,20 @@
      4,
      3
     ],
-    "frames_to_render": 45
+    "frames_to_render": 59
    },
-   "note": "Caption CITADEL SEA (T04). The TTS narrator says both seas in one 2.3 s sentence, so this caption holds only about 1 s; a human narrator with a short pause after \"Citadel Sea\" fixes it."
+   "note": "Caption CITADEL SEA (T04). The TTS narrator says both seas in one breath, so the take is cut once at the silent word boundary after \"The Citadel Sea\" and a short breath is opened there (build_edl.py CITADEL_SPLICE); this caption gets its own hold. A human narrator would pause here naturally."
   },
   {
    "id": "P-14",
    "kind": "shot",
    "scene": "PROLOGUE",
    "set": "PROLOGUE_VISTAS",
-   "start_frame": 1543,
+   "start_frame": 1542,
    "end_frame": 1591,
-   "duration_frames": 48,
-   "duration_s": 2.0,
-   "tc_in": "00:01:04:07",
+   "duration_frames": 49,
+   "duration_s": 2.0417,
+   "tc_in": "00:01:04:06",
    "tc_out": "00:01:06:07",
    "shotlist_est_s": 2.0,
    "shotlist_range_s": [
@@ -1771,15 +1801,15 @@
    "beats": [
     {
      "shot_frame": 0,
-     "frame": 1543,
-     "tc": "00:01:04:07",
-     "what": "Its own short dissolve: the two seas never share one view."
+     "frame": 1542,
+     "tc": "00:01:04:06",
+     "what": "Its own short dissolve, inside the narrator's breath: the two seas never share one view."
     },
     {
      "shot_frame": 3,
-     "frame": 1546,
-     "tc": "00:01:04:10",
-     "what": "\"...and the Proxy Sea.\" Caption PROXY SEA."
+     "frame": 1545,
+     "tc": "00:01:04:09",
+     "what": "Narrator: \"and the Proxy Sea.\" Caption PROXY SEA appears on \"Proxy\"."
     }
    ],
    "dialogue": [],
@@ -1787,15 +1817,17 @@
     {
      "id": "L003",
      "from_shot": "P-10",
-     "parts_starting_here": []
+     "parts_starting_here": [
+      5
+     ]
     }
    ],
    "sfx": [
     {
      "cue": "sea_wash",
      "shot_frame": 0,
-     "frame": 1543,
-     "tc": "00:01:04:07",
+     "frame": 1542,
+     "tc": "00:01:04:06",
      "what": "open-water wash / swell",
      "note": "heavier swell",
      "source": "procedural - to build",
@@ -1807,7 +1839,7 @@
     {
      "id": "T05",
      "text": "PROXY SEA",
-     "start_frame": 1546,
+     "start_frame": 1547,
      "end_frame": 1584
     }
    ],
@@ -1837,7 +1869,7 @@
      3,
      6
     ],
-    "frames_to_render": 57
+    "frames_to_render": 58
    },
    "note": "Caption PROXY SEA (T05)."
   },
@@ -1912,7 +1944,7 @@
      "id": "L003",
      "from_shot": "P-10",
      "parts_starting_here": [
-      5
+      6
      ]
     }
    ],
@@ -15909,7 +15941,8 @@
      "timeline_frame": 1352,
      "timeline_tc": "00:00:56:08",
      "shot": "P-10",
-     "edit": "cut inside the silent pause between sentences (5 ms fades in the mix)"
+     "cut": "take start",
+     "edit": "start of the take"
     },
     {
      "part": 2,
@@ -15918,9 +15951,10 @@
      "take_out_s": 2.75,
      "take_in_sample": 66000,
      "take_out_sample": 132000,
-     "timeline_frame": 1399,
-     "timeline_tc": "00:00:58:07",
+     "timeline_frame": 1394,
+     "timeline_tc": "00:00:58:02",
      "shot": "P-11",
+     "cut": "sentence pause",
      "edit": "cut inside the silent pause between sentences (5 ms fades in the mix)"
     },
     {
@@ -15930,25 +15964,40 @@
      "take_out_s": 4.1,
      "take_in_sample": 132000,
      "take_out_sample": 196800,
-     "timeline_frame": 1453,
-     "timeline_tc": "00:01:00:13",
+     "timeline_frame": 1443,
+     "timeline_tc": "00:01:00:03",
      "shot": "P-12",
+     "cut": "sentence pause",
      "edit": "cut inside the silent pause between sentences (5 ms fades in the mix)"
     },
     {
      "part": 4,
-     "text": "The Citadel Sea and the Proxy Sea.",
+     "text": "The Citadel Sea",
      "take_in_s": 4.1,
-     "take_out_s": 7.045,
+     "take_out_s": 5.5325,
      "take_in_sample": 196800,
-     "take_out_sample": 338160,
-     "timeline_frame": 1507,
-     "timeline_tc": "00:01:02:19",
+     "take_out_sample": 265560,
+     "timeline_frame": 1492,
+     "timeline_tc": "00:01:02:04",
      "shot": "P-13",
+     "cut": "sentence pause",
      "edit": "cut inside the silent pause between sentences (5 ms fades in the mix)"
     },
     {
      "part": 5,
+     "text": "and the Proxy Sea.",
+     "take_in_s": 5.5325,
+     "take_out_s": 7.045,
+     "take_in_sample": 265560,
+     "take_out_sample": 338160,
+     "timeline_frame": 1545,
+     "timeline_tc": "00:01:04:09",
+     "shot": "P-14",
+     "cut": "word-boundary splice",
+     "edit": "cut at the silent word boundary between \"Sea\" and \"and\" (sample 265560, -64.6 dBFS 5 ms RMS, measured by tools/splice.py); 0.776 s of silence opened before it (5 ms fades in the mix)"
+    },
+    {
+     "part": 6,
      "text": "Seven kingdoms, and undiscovered islands beyond the familiar shores.",
      "take_in_s": 7.045,
      "take_out_s": 11.43,
@@ -15957,6 +16006,7 @@
      "timeline_frame": 1592,
      "timeline_tc": "00:01:06:08",
      "shot": "P-15",
+     "cut": "sentence pause",
      "edit": "cut inside the silent pause between sentences (5 ms fades in the mix)"
     }
    ],
@@ -15980,7 +16030,33 @@
    ],
    "shotlist_speaker_on_screen": false,
    "mouth_visible": false,
-   "note": "Split only in its existing sentence pauses so each place name gets its own ~2 s landscape; the words themselves are untouched.",
+   "note": "Split in its existing sentence pauses so each place name gets its own ~2 s landscape, and once at the silent word boundary in \"The Citadel Sea | and the Proxy Sea.\" so the two seas never share a view; the words themselves are untouched.",
+   "splice": {
+    "take_sha256": "2c701d54c490b81132d33ff13731c5ccaea1c55c99c67f984ca02aaa5ff28109",
+    "sample": 265560,
+    "level_dbfs_5ms_rms": -64.62,
+    "peak_dbfs_5ms": -56.08,
+    "prev_speech_end_s": 5.519,
+    "next_speech_on_s": 5.537,
+    "search_s": [
+     5.37,
+     5.59
+    ],
+    "measured_by": "tools/splice.py (min 5 ms RMS at 1 ms hops; speech edges at -40 dBFS)",
+    "between_parts": [
+     4,
+     5
+    ],
+    "time_s": 5.5325,
+    "inserted_silence_s": 0.7758,
+    "inserted_silence_frames": 18.62,
+    "breath_on_timeline_s": [
+     63.5857,
+     64.3795
+    ],
+    "breath_s": 0.7938,
+    "why": "The temporary narrator says \"The Citadel Sea and the Proxy Sea.\" in one breath, which left the CITADEL SEA caption 1.0 s. The breath opened here gives it its own hold; the dissolve to the Proxy Sea sits inside it. It is paid for by trimming the stretched pauses next to it (5 frames from each pause between Tara, Scrapper and Verdor, 0.15 s before \"Seven kingdoms\"), so nothing from P-15 on moves. A human narrator would make this pause naturally."
+   },
    "gap_from_previous_line_s": 4.208
   },
   {
@@ -18634,10 +18710,10 @@
    "synced_to_word": "Tara",
    "word_onset_frame": 1352,
    "start_frame": 1350,
-   "end_frame": 1392,
+   "end_frame": 1387,
    "fade_in_frames": 6,
    "fade_out_frames": 6,
-   "hold_s": 1.75,
+   "hold_s": 1.542,
    "style": "simple small caps, white ~85 %, upper-left third (kept out of the subtitle area); no map, no borders, no arrows",
    "source": "onscreen-text.json T01"
   },
@@ -18647,12 +18723,12 @@
    "text": "SCRAPPER",
    "shot": "P-11",
    "synced_to_word": "Scrapper",
-   "word_onset_frame": 1406,
-   "start_frame": 1404,
-   "end_frame": 1446,
+   "word_onset_frame": 1401,
+   "start_frame": 1399,
+   "end_frame": 1436,
    "fade_in_frames": 6,
    "fade_out_frames": 6,
-   "hold_s": 1.75,
+   "hold_s": 1.542,
    "style": "simple small caps, white ~85 %, upper-left third (kept out of the subtitle area); no map, no borders, no arrows",
    "source": "onscreen-text.json T02"
   },
@@ -18662,12 +18738,12 @@
    "text": "VERDOR",
    "shot": "P-12",
    "synced_to_word": "Verdor",
-   "word_onset_frame": 1460,
-   "start_frame": 1458,
-   "end_frame": 1500,
+   "word_onset_frame": 1450,
+   "start_frame": 1448,
+   "end_frame": 1485,
    "fade_in_frames": 6,
    "fade_out_frames": 6,
-   "hold_s": 1.75,
+   "hold_s": 1.542,
    "style": "simple small caps, white ~85 %, upper-left third (kept out of the subtitle area); no map, no borders, no arrows",
    "source": "onscreen-text.json T03"
   },
@@ -18677,12 +18753,12 @@
    "text": "CITADEL SEA",
    "shot": "P-13",
    "synced_to_word": "The (Citadel Sea)",
-   "word_onset_frame": 1517,
-   "start_frame": 1515,
-   "end_frame": 1539,
+   "word_onset_frame": 1502,
+   "start_frame": 1500,
+   "end_frame": 1538,
    "fade_in_frames": 6,
    "fade_out_frames": 6,
-   "hold_s": 1.0,
+   "hold_s": 1.583,
    "style": "simple small caps, white ~85 %, upper-left third (kept out of the subtitle area); no map, no borders, no arrows",
    "source": "onscreen-text.json T04"
   },
@@ -18692,12 +18768,12 @@
    "text": "PROXY SEA",
    "shot": "P-14",
    "synced_to_word": "Proxy Sea",
-   "word_onset_frame": 1546,
-   "start_frame": 1546,
+   "word_onset_frame": 1549,
+   "start_frame": 1547,
    "end_frame": 1584,
    "fade_in_frames": 6,
    "fade_out_frames": 6,
-   "hold_s": 1.583,
+   "hold_s": 1.542,
    "style": "simple small caps, white ~85 %, upper-left third (kept out of the subtitle area); no map, no borders, no arrows",
    "source": "onscreen-text.json T05"
   },

@@ -106,7 +106,7 @@ def tc(frame):
 
 
 def chunk_frames(spf):
-    """At most ~25 min of one browser's work per chunk: a restart loses at most that per worker."""
+    """About 25 min (at most ~30 min) of one browser's work per chunk: a restart loses at most that per worker."""
     if spf < 20:
         return 48
     if spf <= 100:
@@ -184,7 +184,7 @@ def main():
             'one_job_per_shot': 'so a finished shot stays valid when another shot is fixed later (render.mjs fingerprints the scene and every asset)',
             'set_timeline': 'each set scene lays its shots out on whole seconds with >= 1 s between them; the scene picks the shot for time t by round(t*24) against this table, so the motion-blur shutter-open sample of a first frame never falls into the previous shot',
             'handles': 'dissolve handles are included in frames (head first); the conform trims them',
-            'chunks': 'chunk_frames keeps one chunk at <= ~25 min of one browser; a restart loses at most the chunk each worker had in progress',
+            'chunks': 'chunk_frames keeps one chunk at about 25 min (at most ~30 min, the pass) of one browser; a restart loses at most the chunk each worker had in progress',
             'intermediate': '10-bit H.264 at CRF 12 (one more encode happens in the conform)',
         },
         'totals': {'jobs': len(jobs), 'frames_to_render': rendered, 'hours_1browser_first_frame_figures': round(H, 1),
@@ -317,9 +317,12 @@ def main():
     w('  - `--start` is that whole second and `--seconds` is frames/24, so `render.mjs`\'s rounding gives exactly the planned frames.')
     w('  - Choosing the shot by `round(t*24)` keeps the shutter-open sample of each frame (t - 1/96 s) inside the right shot.')
     w('- **Chunks.** 2 s chunks (48 frames) for shots under 20 s per frame, 1 s (24 frames) up to 100 s per frame, and 0.5 s (12 frames) for the pass.')
-    w('  - No chunk is more than about 25 minutes of one browser\'s work.')
+    longest = max(jobs, key=lambda j: (j['chunk_frames'] * j['spf_expected'], j['shot']))
+    w(f'  - Chunks are sized to about 25 minutes of one browser\'s work; the longest is {longest["shot"]}, '
+      f'{longest["chunk_frames"]} frames at {longest["spf_expected"]:g} s = {longest["chunk_frames"] * longest["spf_expected"] / 60:.0f} minutes.')
     w('  - `render.mjs` encodes each chunk, decodes it completely to check it, records its size and SHA-1, and only then marks it done.')
-    w('  - **If the container restarts, run the same queue command again.** Finished jobs are skipped, and the interrupted job resumes after its last verified chunk.')
+    w('  - **If the container restarts, run the same queue command again.** Finished jobs are skipped, and the interrupted job re-renders only the chunks that were not finished and verified. '
+      'Each chunk is checked on its own, so one that finished out of order is kept.')
     w('  - At most the chunk each of the 2 workers had in progress is lost: 2 x 24 frames on the chamber, about 20 minutes.')
     w('- **Workers.** `--workers 2` per job.')
     w('  - Each 4K browser needs about 2.6 GB on test-kingdom; the heavy sets need more (the pilot measures it).')
@@ -355,7 +358,9 @@ def main():
     w('     - a 10-bit CRF 16 master for YouTube.')
     w('   - x264 at 4K runs at a few frames per second here, so allow 1-2 h.')
     w('2. **Sound.** The mix places each take at `take_start_frame x 2000` samples.')
-    w('   - L003 goes in as its five parts. Gains and spaces come from `takes.json`, with the beds, cues and music from `edl.json`.')
+    l3 = next(l for l in edl['lines'] if l['id'] == 'L003')
+    w(f'   - L003 goes in as its {len(l3["parts"])} parts at their `timeline_frame`s (`edl.json` lines, `parts`), with 5 ms fades at each cut. '
+      'Gains and spaces come from `takes.json`, with the beds, cues and music from `edl.json`.')
     w('   - The master is 48 kHz, 24-bit and exactly `frames x 2000` samples, loudness-normalised as in `audio-plan.md`. It is muxed as AAC 256k, with the video stream copied.')
     w('3. **Subtitles.** A soft English track is generated from `edl.json` line times and `dialogue.json` `subtitle_cues`.')
     w(f'4. **Checks.** The video is exactly {total} frames at 24 fps and 3840x2160, and the audio is exactly {total * 2000:,} samples.')
