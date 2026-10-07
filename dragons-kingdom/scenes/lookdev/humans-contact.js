@@ -46,7 +46,7 @@ export async function setup(ctx) {
   sun.shadow.mapSize.set(4096, 4096);
   sun.shadow.bias = -0.0001; sun.shadow.normalBias = 0.006;
   scene.add(sun, sun.target);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, ROW_GAP * SHEETS.length + 100), await loadPBR('pbr/acg_ground13', ctx, { worldSize: 3 }));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, ROW_GAP * SHEETS.length + 100), await loadPBR('pbr/acg_ground05', ctx, { worldSize: 2.5 }));
   ground.rotation.x = -Math.PI / 2; ground.position.z = -ROW_GAP * (SHEETS.length - 1) / 2; ground.receiveShadow = true;
   scene.add(ground);
   const seatMat = new THREE.MeshStandardMaterial({ color: 0x3a2e24, roughness: 0.7 });

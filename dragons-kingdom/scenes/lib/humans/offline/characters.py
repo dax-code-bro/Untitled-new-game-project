@@ -118,7 +118,7 @@ def G_cloak(c, length=1.0, **kw):
 
 
 def riding_clothes(outer, shirt='linen', trousers='walnut', boots='walnut', belt=True, split=True, hem=0.5):
-    return [G_hose(trousers), G_boots(boots, height=0.82), G_shirt(shirt, collar=0.02), G_coat(outer, hem=hem, split=split, belt=belt)]
+    return [G_hose(trousers), G_boots(boots, height=0.82), G_shirt(shirt, collar=0.014), G_coat(outer, hem=hem, split=split, belt=belt)]
 
 
 # -------------------------------------------------------------- body kit --
@@ -177,14 +177,14 @@ def cast():
         'eyes': {'iris': 'brownlight', 'tint': [0.6, 0.55, 0.5]},
         'brows': 'eyebrow006', 'lashes': 'eyelashes02',
         'hair': {'color': HAIR['brown'], 'style': 'braid'},
-        'outfit': riding_clothes([0.065, 0.082, 0.055], shirt='linen', trousers='walnut', boots=[0.045, 0.028, 0.017]),
+        'outfit': riding_clothes([0.065, 0.082, 0.055], shirt='undyed', trousers='walnut', boots=[0.045, 0.028, 0.017]),
         'pose': 'stand', 'pose_params': {'weight': 'R', 'head_yaw': 0.05},
         'notes': 'canon: riding clothes with a muted green outer layer; LEFT arm is the injured one',
     }
     C.append(abby)
     C.append(variant(abby, 'abby_injured', pose='injured_arm', pose_params={'weight': 'R', 'contrapposto': 0.4}))
     C.append(variant(abby, 'abby_sling', pose='sling', pose_params={'weight': 'L', 'contrapposto': 0.5}))
-    C.append(variant(abby, 'abby_ride', pose='ride', pose_params={'lean': 0.14, 'reach': 0.3}))
+    C.append(variant(abby, 'abby_ride', pose='ride', pose_params={'lean': 0.14, 'reach': 0.3}, cloth_subdiv=0))
     C.append(variant(abby, 'abby_ride_injured', pose='ride_injured', pose_params={}, lod='mid'))
     # ================================================================ Remi
     remi = {
@@ -202,7 +202,7 @@ def cast():
         'notes': 'canon: dark riding clothes with a muted blue outer layer',
     }
     C.append(remi)
-    C.append(variant(remi, 'remi_ride', pose='ride', pose_params={'lean': 0.12, 'reach': 0.32}))
+    C.append(variant(remi, 'remi_ride', pose='ride', pose_params={'lean': 0.12, 'reach': 0.32}, cloth_subdiv=0))
     # ========================================================== Alexandria
     alex = person('alexandria', 'Queen Alexandria', 0.0, 0.62, 'fair', lod='hero', muscle=0.4, weight=0.45, height=0.55,
                   details=_merge(VERDOR_FACE, {'nose/nose-scale-vert': 0.1, 'chin/chin-height': 0.1, 'cheek/l-cheek-bones': 0.35, 'cheek/r-cheek-bones': 0.32,
@@ -213,9 +213,8 @@ def cast():
                           G_kirtle([0.045, 0.06, 0.075], hem=0.0, fabric='wool', sheen=0.55, neck=0.07, flare=2.1, train=0.12, folds=13, wear=0.1, dust=0.05,
                                    name='gown'),
                           G_veil([0.52, 0.5, 0.45], length=0.45)],
-                  accessories=[{'prop': 'circlet', 'dy': 0.07}],
-                  pose='hands_front', pose_params={'weight': 'L', 'contrapposto': 0.4, 'reach': 0.16, 'dy': -0.1},
-                  notes='canon: a restrained formal gown; circlet and veil are proposals')
+                  pose='hands_front', pose_params={'weight': 'L', 'contrapposto': 0.4, 'reach': 0.16, 'dy': -0.1}, cloth_subdiv=0,
+                  notes='canon: a restrained formal gown; the veil is a proposal (no crown shown: not in the screenplay)')
     alex['skin'].update({'texture': 'middleage_lightskinned_female_diffuse2', 'age': 0.35})
     C.append(alex)
     # ========================================================== Queen Fall
@@ -240,9 +239,8 @@ def cast():
                   outfit=[G_hose('russet'), G_shoes([0.05, 0.032, 0.02]), G_shirt('linen'),
                           G_tunic([0.24, 0.08, 0.04], hem=0.32, flare=1.6, ease=0.024, neck=0.04, wear=0.25),
                           G_cloak([0.12, 0.09, 0.05], length=0.75, gap=1.3)],
-                  accessories=[{'prop': 'circlet', 'dy': 0.06}],
                   pose='gesture', pose_params={'weight': 'R', 'contrapposto': 0.5, 'head_yaw': 0.1},
-                  notes='screenplay: approachable; crown optional and never a prop gag. Warm festival clothes are a proposal')
+                  notes='screenplay: approachable; crown optional (none shown) and never a prop gag. Warm festival clothes are a proposal')
     king['skin'].update({'texture': 'middleage_lightskinned_male_diffuse', 'redness': 0.35})
     C.append(king)
     # =========================================================== household

@@ -303,7 +303,7 @@ export async function createCreature(which, opts = {}) {
       applyPose(creature, variants[vn](creature));
       creature.root.updateMatrixWorld(true);
       for (const mm of memMeshes) {
-        const d = drapeMembrane(creature, mm, { res: membraneRes, side: mm.userData.side === 'L' ? 1 : -1, ground: 0, iters: q.drapeIters, ...(vn === 'sit' ? { shrink: 0.36, gravity: 0.02 } : {}) });
+        const d = drapeMembrane(creature, mm, { res: membraneRes, side: mm.userData.side === 'L' ? 1 : -1, ground: 0, iters: q.drapeIters, ...(vn === 'sit' ? { shrink: 0.36, gravity: 0.02 } : { shrink: 0.34, gravity: 0.03 }) });
         res[mm.uuid].pos.push(new THREE.BufferAttribute(d.delta, 3));
         res[mm.uuid].nrm.push(new THREE.BufferAttribute(d.dnormal, 3));
       }

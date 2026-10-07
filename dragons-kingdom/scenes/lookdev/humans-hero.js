@@ -32,7 +32,7 @@ export const meta = {
 // elevation (deg), fov, f-stop, key: sun angle off the lens axis (deg, + = from camera left)
 const SHOTS = [
   { name: 'remi-abby', members: [['remi', -0.42, 0, 0.32], ['abby', 0.42, 0.05, -0.38]], cam: { y: 1.38, dist: 3.4, el: 1, fov: 30, fstop: 4, key: 38 } },
-  { name: 'abby-cu', members: [['abby', 0, 0, 0.18]], cam: { bone: 'head', bid: 'abby', dy: 0.075, dz: 0.03, dist: 0.78, el: 2, fov: 24, fstop: 2.8, key: 42 } },
+  { name: 'abby-cu', members: [['abby', 0, 0, 0.3]], cam: { bone: 'head', bid: 'abby', dy: 0.025, dz: 0.03, dist: 0.85, el: 1, fov: 24, fstop: 2.8, key: 58 } },
   { name: 'alexandria', members: [['alexandria', 0, 0, -0.75]], cam: { y: 1.2, dist: 3.6, el: 3, fov: 30, fstop: 4, key: 30 } },
   { name: 'king', members: [['king', 0, 0, 0.2]], cam: { y: 1.4, dist: 2.6, el: 1, fov: 30, fstop: 3.5, key: 40 } },
   {
@@ -58,7 +58,7 @@ export async function setup(ctx) {
   sun.shadow.mapSize.set(4096, 4096);
   sun.shadow.bias = -0.0001; sun.shadow.normalBias = 0.006;
   scene.add(sun, sun.target);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(SPACING * SHOTS.length + 200, 200), await loadPBR('pbr/acg_ground13', ctx, { worldSize: 3 }));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(SPACING * SHOTS.length + 200, 200), await loadPBR('pbr/acg_ground05', ctx, { worldSize: 2.5 }));
   ground.rotation.x = -Math.PI / 2; ground.position.x = SPACING * (SHOTS.length - 1) / 2; ground.receiveShadow = true;
   scene.add(ground);
   const sunDir = sky.sun.direction.clone().normalize();
@@ -73,7 +73,8 @@ export async function setup(ctx) {
     const camAz = sunAz - (sh.cam.key * Math.PI) / 180;
     const members = [];
     for (const [id, x, z, yo] of sh.members) {
-      const ch = await loadCharacter(id);
+      let ch;
+      try { ch = await loadCharacter(id); } catch (e) { console.warn(`humans-hero: ${id} not built yet`); continue; }
       // local layout: x across the frame, z toward the camera
       const right = new THREE.Vector3(Math.cos(camAz), 0, -Math.sin(camAz)), toward = new THREE.Vector3(Math.sin(camAz), 0, Math.cos(camAz));
       const p = new THREE.Vector3(cx, 0, 0).addScaledVector(right, x).addScaledVector(toward, z);
@@ -101,8 +102,8 @@ export function update(t, ctx) {
   const c = sh.cam;
   const tgt = new THREE.Vector3(sh.cx, c.y ?? 1.3, 0);
   if (c.bone) {
-    const ch = sh.members[sh.members.findIndex((m) => m.id === c.bid)];
-    ch.bone(c.bone).getWorldPosition(tgt);
+    const ch = sh.members.find((m) => m.id === c.bid) || sh.members[0];
+    if (ch) ch.bone(c.bone).getWorldPosition(tgt);
     tgt.y += c.dy ?? 0;
     tgt.addScaledVector(new THREE.Vector3(Math.sin(sh.camAz), 0, Math.cos(sh.camAz)), c.dz ?? 0);
   }

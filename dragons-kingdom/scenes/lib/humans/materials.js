@@ -83,7 +83,7 @@ export function skinMaterial(o = {}) {
     color: 0xffffff, roughness: o.rough ?? 0.46, metalness: 0,
     ior: 1.4, specularIntensity: 0.9,
     sheen: 0.18, sheenRoughness: 0.55, sheenColor: new THREE.Color(0.55, 0.45, 0.4),
-    clearcoat: o.oil ?? 0.12, clearcoatRoughness: 0.32,
+    clearcoat: o.oil ?? 0.18, clearcoatRoughness: 0.3,
   });
   if (o.map) mat.map = libTexture(o.map);
   const U = {
@@ -138,7 +138,7 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   // lid margin: lash line and wet rim of the eye opening
   c = mix(c, c * vec3(0.42, 0.3, 0.28), vAux2.g * uLid);
   // lips (aux.r) a little deeper, nails (aux.g) paler
-  c = mix(c, c * vec3(1.05, 0.86, 0.88), vAux.r * 0.5);
+  c = mix(c, c * vec3(0.98, 0.7, 0.72), vAux.r * 0.75);
   c = mix(c, vec3(l) * vec3(1.15, 1.02, 0.98) + 0.03, vAux.g * 0.55);
   c *= mix(1.0, 0.82, uDirt * hN3(vObjP * 90.0));
   // scalp under the hair takes the hair colour (roots, density), aux.a
@@ -151,7 +151,7 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 {
   float tz = hFbm(vObjP * 40.0 + 9.0);
-  roughnessFactor = clamp(roughnessFactor * (0.85 + 0.35 * tz) - vAux.r * 0.15 - vAux.g * 0.25 + vAux.b * 0.15 + vAux.a * 0.35 - vAux2.g * 0.3 - vAux2.r * 0.04, 0.12, 0.95);
+  roughnessFactor = clamp(roughnessFactor * (0.8 + 0.35 * tz) - vAux.r * 0.2 - vAux.g * 0.25 + vAux.b * 0.15 + vAux.a * 0.35 - vAux2.g * 0.3 - vAux2.r * 0.04, 0.12, 0.95);
 }`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 skinSmoothN = normal;

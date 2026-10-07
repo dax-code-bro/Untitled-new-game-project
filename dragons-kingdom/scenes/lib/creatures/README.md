@@ -38,9 +38,10 @@ leaf.root.position.set(x, 0, z);
 Poses (`poses.js`, all pure functions of `t`):
 
 * `stand` - wings folded, breathing, neck S-curve, idle head drift, automatic blinks
-* `sit` - dog-like upright sit (haunches down, forelegs straight, chest up, tail laid on the ground);
-  the wings use a separate fold: wrists raised beside the shoulders, fingers and membrane
-  hanging down along the flanks (a gargoyle's folded wings)
+* `sit` - dog-like upright sit (haunches down, forelegs straight, chest up, neck carried
+  forward in an S, tail curled round on the ground); the wings fold flat along the flanks
+  (the fold is given in the world, so the pitched body never stands the wrist up like a
+  raised arm)
 * `lie` - resting on the belly (Charcoal in 1B/2C, the weak hatchling); `raise`/`headDown`
   set the neck carriage, `lidRelax` how far the lids rest over the eyes
 * `flight` - flapping: downstroke 56% of the cycle, pronation on the downstroke,
@@ -50,10 +51,13 @@ Poses (`poses.js`, all pure functions of `t`):
 * `glide` - wings held with dihedral and small corrections; `bank` rolls the body,
   flexes the inner wing, the head counter-rolls, the tail steers
 * `dive` - wings partly folded (Starlight's attack)
-* `sit` takes `foldVariant`: `'sit'` (default: wrist raised beside the neck base,
-  gargoyle-like) or `'sitFlank'` (wing folded flat along the flank, wrist below the
-  shoulder, fingers back toward the haunch - use it when the wrist must not read
-  as a raised arm); `wingComp` / `wingAdduct` tilt and tuck the folded wing
+* `stand` / `lie` fold the wings the way a bird or a bat does: humerus back along the top of
+  the back (the elbow just above the back line), forearm forward so the wrist sits beside the
+  shoulder, fingers back along the flank; the membrane hangs in slack folds (drape.js).
+  `foldVariant: 'high'` keeps the old gargoyle fold
+* `flight` / `glide` tuck the legs: forelegs folded back against the chest, paws curled,
+  hind legs trailing under the tail base with the thigh muscles flattened (bone scale) and
+  the toes curled - no paws hanging down, no round haunches seen from behind
 * common options: `look: [yaw, pitch]`, `eyes: [yaw, pitch]`, `jaw: 0..0.9`,
   `blink: false`, `lidClose`, `breathe` (breaths/s)
 
@@ -63,8 +67,23 @@ away; a wound mask appears on the left shoulder; `attachWing()` restores it.
 `scenes/lookdev/creatures-shots.js` shows how to compute the tumble as a pure
 function of `t` (pose at the tear time, then ballistic motion).
 
-Lookdev scenes: `scenes/lookdev/creatures-turntable.js` (all shots) and the
-faster `creatures-turntable-<name>.js` / `creatures-lineup.js` wrappers.
+Lookdev scenes (`scenes/lookdev/`):
+
+| scene | what |
+|---|---|
+| `creatures-hero.js` (= `creatures-turntable.js`) | every hero shot in sequence (shot list in `creatures-shots.js`): Charcoal 3/4 front in daylight with Remi, Charcoal's head, Charcoal flying side-on, Leaf sitting upright with Abby, Leaf flying with Abby, Starlight gliding overhead seen from the ground (a watchman points up), the hatchling macro on bedding, the scout banking, the scout losing its LEFT wing |
+| `creatures-turntable-<name>.js` | only one creature's shots (quicker builds) |
+| `creatures-review.js` | every shot for 1 s at its representative moment - one build, `--fps 1` |
+| `creatures-contact.js` | contact sheet: each creature on a turntable (4 views) under one neutral daylight sky, then a scale lineup with a person (t = 20; also `creatures-lineup.js`) |
+| `creatures-dev.js` + `creatures-dev.json` | free views/poses for look development (`face` = yaw relative to the sun) |
+
+The hero shots are lit by the photographed sky alone (kloofendal_48d_partly_cloudy with its
+sun extracted; old_room's window light indoors for the hatchling), framed with a lens in mm
+on Super 35, and finished with `finish.js` (8 sub-frames: supersampling + true motion blur,
+print grade, grain). People come from `scenes/lib/humans` (cast builds) when its cache has
+them, else the placeholder rider. Field shots get geometry grass laid out in log distance
+from the lens. Typical cost at native 4K on this machine: ~6-7 min per shot with the build
+(Charcoal front: 6 min 44 s wall for one `--still`).
 
 ## How it is built (and why it looks the way it does)
 
@@ -97,26 +116,37 @@ faster `creatures-turntable-<name>.js` / `creatures-lineup.js` wrappers.
 4. **Materials** (`materials.js`, `glsl.js`) extend three.js' physically based
    materials (so sun shadows, HDRI lighting and the runtime's cinematic AO
    still apply):
-   * overlapping (imbricate) scales with analytic normals, per-scale size, tint,
-     roughness and wear; belly plates; enlarged dorsal row; joint wrinkles;
-     crevice dirt, patchy dust on the lower body, salt crust in crevices; wet
-     oral interior. When a scale becomes smaller than a pixel its relief turns
-     into extra roughness instead of shimmering (stable at 4K at any distance).
-   * polygonal head plates (crocodile-like tiles, smaller on the snout tip and
-     around the eyes) and the granular skin at joints are Voronoi tiles laid in
-     the creature's rest space (three projections blended on the rest normal,
-     so they do not depend on the chain coordinates, which pinch at the snout
-     tip). Their bump uses the analytic tile gradient, not a screen-space
-     derivative (no blocky 2x2-pixel stepping), and the tile size is quantised
-     to half-octave levels that cross-fade (scaling rest positions by a smoothly
-     varying size would smear the tiles into contour-line streaks).
-   * Starlight: planar per-scale facets with low roughness and a polished
-     clearcoat = silver, crystal-like glints from the sky, without any
-     emission; a soft grey belly; white-grey membranes (no pink).
-   * gold hatchling: the gold is a saturated dielectric (a golden gecko or
-     chrysalis) with only a little metalness on the scale crowns, fleshy amber
-     skin between the scales (`crevCol`), and a wet clearcoat that varies per
-     pixel (streaks, drier patches) - it should read born, not cast.
+   * **body scales are a 3D mosaic** (`glsl.js` `dkVor3`): cells seeded in rest space and
+     sliced by the surface, so no two scales are alike and there are no seams or chain
+     stretching; the metric is stretched along the body (scales a little longer than wide)
+     and each scale tilts up toward its free edge (imbricate overlap). The profile uses a
+     smooth second-nearest distance (no creases inside a scale): beads on the flanks (k=3),
+     domed granules at the joints and round the eyes, flat plates with a rounded rim on the
+     head. **Size hierarchy**: the size follows the chain's smoothed cross-section radius
+     (big on the back and shoulders, small on the neck, snout, toes), the junction mask
+     (granules where limbs meet the body, behind the limbs), and the eyes (fine granules);
+     it grades in octaves where each coarse scale either stays whole or splits into four
+     (decided per scale, so big and small scales meet along scale borders). On top: sparse
+     keeled **tubercles** (osteoderms) on the upper flanks, neck and outer limbs (`dkTub3`),
+     the big keeled **dorsal scutes** in rows along the spine and the **belly plates** (both
+     in chain coordinates), joint wrinkles, and **micro relief** on every scale (pits,
+     creases - `dkNoised` analytic gradient), faded out below a pixel. skin.js smooths the
+     scale direction and size across chain junctions so the mosaic never tears there.
+   * colour/roughness: every scale its own shade; rubbed, bleached keratin on the crowns
+     (lighter and glossier); grooves rough, dark where occluded and dust-filled where open to
+     the sky; dust held in the micro pits; dust and dried mud on the lower body and legs;
+     damp patches; healed scars. On Charcoal that contrast (glossy crowns, matte dusty
+     grooves) keeps the black hide readable in daylight.
+   * Nightwings (Leaf, Starlight) and the hatchling have no plates on the chest (`plateZ`):
+     the belly plates end behind the forelegs, the chest is scales (no breastplate read).
+   * Starlight: albino white keratin, each scale a flat polished plate tilted its own way
+     (`skin3.z` facets) - glints from the sky, never emission; a faint warm flush in the
+     grooves (thin skin), a warmer pale belly (not grey clay); white-grey membranes with soft
+     vessels, translucency kept low.
+   * gold hatchling: 24-karat yellow gold as a mostly dielectric pigment (metalness 0.18 on
+     the crowns), soft low-relief newborn scales (no crisp embossed cells), a wet clearcoat
+     film on the smooth geometric normal (broad wet highlights, not pin-point sparkle),
+     streaks and drying patches, pale amniotic residue.
    * Charcoal and Leaf: dry, dusty hide (roughness ~0.6) with dust and dried
      mud on the lower body, so the black hide shows soft sheen instead of
      lacquer; teeth stained ivory.
@@ -125,8 +155,10 @@ faster `creatures-turntable-<name>.js` / `creatures-lineup.js` wrappers.
      body - giants read immense when their scales are fine (Charcoal 0.6,
      Starlight 0.55); dorsal spikes vary in height, spacing, rake and lean,
      and about one in eight is broken or worn blunt.
-   * wing membrane: veins, stretch creases, thickness near bones and at the
-     hem, and thin-membrane TRANSLUCENCY - sunlight and sky light arriving from
+   * wing membrane: leathery micro-texture (analytic noise creases in rest space, so the
+     sheen breaks up), elastin striations in patches, mottling, darker thicker skin along the
+     bones and at the hem, a satin (not mirror) sky reflection, veins as a soft tracery, and
+     thin-membrane TRANSLUCENCY - sunlight and sky light arriving from
      behind pass through (shadowed by the body, attenuated by veins); lit, never
      emissive. Camber (billow) from the wing stroke.
    * eyes: the iris is ray-traced through a refracting cornea (n = 1.376),

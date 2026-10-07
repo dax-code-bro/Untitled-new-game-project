@@ -696,6 +696,14 @@ def upper_garment(D, g):
     nk = D.lm('neck01')
     dn = np.linalg.norm((S - nk) * [1, 0.6, 1], axis=1)
     pin = np.maximum(pin, np.clip(1 - (dn - 0.07) / 0.06, 0, 1) * g.get('pin_shoulders', 1.0))
+    # the shoulder seams sit on the shoulders (with a V-neck the neck band alone cannot hold the
+    # garment up when the arms cross the body)
+    for side in ('L', 'R'):
+        ua = D.lm(f'upperarm01.{side}')
+        acr = ua + np.array([0.0, 0.035, 0.0])
+        ds = np.linalg.norm(S - acr, axis=1)
+        up = S[:, 1] > ua[1] - 0.01
+        pin = np.maximum(pin, np.clip(1 - (ds - 0.045) / 0.05, 0, 1) * up * g.get('pin_shoulder_seam', 0.75))
     nb = mu.neighbours(len(S), F)
     for l in loops:
         if l is hip:
@@ -1313,7 +1321,7 @@ def simulate(D, garments, steps=6, settle0=8, trans=None, settle1=None, quality=
         st.shrink_min = g.spec.get('shrink', 0.0)
         cs = cl.collision_settings
         cs.distance_min = g.spec.get('col_dist', 0.004)
-        cs.use_self_collision = bool(g.spec.get('self_collision', g.spec.get('type') in UPPER_TYPES))
+        cs.use_self_collision = bool(g.spec.get('self_collision', g.spec.get('type') in UPPER_TYPES and len(g.P) < 12000))
         cs.self_distance_min = 0.003
         cs.collision_quality = 3
         cl.point_cache.frame_start = 1

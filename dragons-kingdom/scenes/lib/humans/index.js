@@ -102,7 +102,8 @@ const STANDING = { remi: 'remi', abby: 'abby', fall: 'fall', scout: 'scout_ride'
  * The result is only a token for createRider()/person(); it carries the loaded data.
  */
 export async function loadHuman(opts = {}) {
-  const ids = opts.ids || [...new Set([...Object.values(RIDERS), ...Object.values(STANDING)])];
+  // riders by default; pass opts.ids (or opts.standing: true) for the standing builds too
+  const ids = opts.ids || [...new Set([...Object.values(RIDERS), ...(opts.standing ? Object.values(STANDING) : [])])];
   const data = {};
   await Promise.all(ids.map(async (id) => { try { data[id] = await loadCharacterData(id); } catch (e) { data[id] = e; } }));
   return { kind: 'dk-humans', data };
@@ -119,7 +120,7 @@ export function createRider(human, opts = {}) {
   const name = typeof opts.outfit === 'object' && opts.outfit ? (opts.outfit.name || 'remi') : (opts.outfit || 'remi');
   const id = opts.id || (opts.pose === 'stand' ? STANDING[name] : RIDERS[name]) || 'remi_ride';
   const d = human?.data?.[id];
-  if (!d || d instanceof Error) throw new Error(`rider "${id}" is not loaded/built (${d?.message || 'missing from loadHuman()'})`);
+  if (!d || d instanceof Error) throw new Error(`rider "${id}" is not loaded/built (${d?.message || 'not preloaded: loadHuman({ ids: [...] }) or loadHuman({ standing: true })'})`);
   const ch = buildCharacter(d, opts);
   const holder = new THREE.Group();
   holder.name = `rider:${name}`;
