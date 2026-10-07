@@ -28,7 +28,7 @@ const deg = Math.PI / 180;
 /** The Episode 1 individuals (provisional designs; sizes = the "on-screen area" reading in assets.json). */
 export const CREATURES = {
   charcoal: { species: 'bashion', L: 35.8, look: 'charcoal', flapHz: 0.76, flapAmp: 0.7, scaleMul: 0.6, age: 'giant', title: 'Charcoal (Bashion, melanistic)' },
-  leaf: { species: 'nightwing', L: 8.0, look: 'leaf', flapHz: 1.6, flapAmp: 0.85, age: 'subadult', title: 'Leaf (Nightwing, subadult)' },
+  leaf: { species: 'nightwing', L: 8.0, look: 'leaf', flapHz: 1.6, flapAmp: 0.85, age: 'subadult', scaleMul: 0.78, title: 'Leaf (Nightwing, subadult)' },
   starlight: { species: 'nightwing', L: 50.6, look: 'starlight', flapHz: 0.64, flapAmp: 0.68, scaleMul: 0.55, age: 'giant', title: 'Starlight (Nightwing, albino)' },
   hatchling: { species: 'bashion_hatchling', L: 0.42, look: 'gold', flapHz: 0, title: 'Gold Bashion hatchling' },
   scout: { species: 'slitherwing', L: 5.6, look: 'scout', flapHz: 2.6, flapAmp: 0.9, detachableLeftWing: true, title: 'Slitherwing scout' },

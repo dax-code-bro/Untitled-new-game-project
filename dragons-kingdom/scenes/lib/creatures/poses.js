@@ -328,7 +328,10 @@ export function sit(c, o = {}) {
   pb.sym('fl_#_0', a - 0.12, 0, 0.04); pb.sym('fl_#_1', 0.08, 0, 0); pb.sym('fl_#_2', -0.05, 0, 0);
   for (let i = 0; i < 4; i++) pb.sym(`fl_#_t${i}`, -0.15, 0, 0);
   // hind legs folded: thigh forward, shin back, metatarsus flat on the ground
-  pb.sym('hl_#_0', -0.95 + a, 0.12, 0.1); pb.sym('hl_#_1', 2.0, 0, 0); pb.sym('hl_#_2', -2.0 + 0.35, 0, 0);
+  // (thigh along the flank, knee forward beside the elbow, a little out: the haunch reads as a
+  // folded leg, not a ball; o.hind = [thigh, knee, ankle, abduction] overrides)
+  const hl = o.hind || [-0.6, 1.7, -1.75, 0.3];
+  pb.sym('hl_#_0', hl[0] + a, hl[3] ?? 0.12, 0.1); pb.sym('hl_#_1', hl[1], 0, 0); pb.sym('hl_#_2', hl[2], 0, 0);
   for (let i = 0; i < 4; i++) pb.sym(`hl_#_t${i}`, 0.25, 0, 0);
   // neck forward-up in an S, head level (the body pitch already raises the neck)
   carriage(pb, o.raise ?? -0.62, o.headDown ?? 0.22, o.headTilt ?? 0.08);

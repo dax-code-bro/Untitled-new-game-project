@@ -46,15 +46,16 @@ export const SHOTS = [
     cam: { subject: 'leaf', pos: [8.0, 1.55, 9.5], target: [0.6, 1.75, 0.6], mm: 35, fstop: 5.6, focus: 'target' } },
   // Leaf flying with Abby riding (50 mm air to air, slightly above, behind the shoulder)
   { id: 'leaf-flight', set: 'air', creatures: ['leaf'], riders: { leaf: 'abby' }, dur: 3, alt: 160, face: -110,
-    pose: { leaf: { name: 'flight', corr: 1, phase: 0.62, look: [-0.25, 0.05] } },
-    cam: { subject: 'leaf', pos: [13, 4.5, 6], target: [0, 0.3, 0.3], mm: 40, fstop: 8, focus: 'target' } },
+    // (mid-downstroke: the membrane is cambered between the fingers)
+    pose: { leaf: { name: 'flight', corr: 1, phase: 0.3, look: [-0.25, 0.05] } },
+    cam: { subject: 'leaf', pos: [14.5, 3.6, 6.5], target: [0, 0.9, 0.2], mm: 40, fstop: 8, focus: 'target' } },
   // Starlight gliding past a distant watchtower, seen from the ground (~260 m away, ~60 m up):
   // the tower (25 m) is as far away as she is, so her span reads as eight towers wide; a
   // watchman in the foreground points up at her; the haze between softens both
   { id: 'starlight-below', set: 'ground', creatures: ['starlight'], tack: ['starlight'], dur: 3, face: 160, haze: 2.4,
-    flyer: { name: 'starlight', at: [-22, 51, 268], heading: -80 },
+    flyer: { name: 'starlight', at: [-22, 45, 268], heading: -80 },
     tower: { at: [10, 0, 252], r: 3.6, h: 21, capH: 6.5 }, trees: true,
-    people: [{ id: 'watchman', ground: [-1.3, 0, 4.6], yaw: 168 }],
+    people: [{ id: 'watchman', ground: [-0.95, 0, 4.6], yaw: -12 }],
     pose: { starlight: { name: 'glide', bank: -0.08, dihedral: 0.1, look: [0.1, -0.15] } },
     cam: { ground: true, pos: [0, 1.0, 0], lookAt: [-6, 37.8, 262], mm: 40, fstop: 8 } },
   // the gold hatchling on the bedding: 100 mm macro, T2.8, focus on the eye
@@ -144,7 +145,7 @@ export function makeTurntable(opts = {}) {
         sh._tower = tw;
       }
     }
-    // countryside for the ground shots: hedgerows and copses from 150 m to the horizon
+    // countryside for the ground shots: hedgerows and copses from 400 m to the horizon
     if (shots.some((x) => x.trees)) {
       const { bushGeometry, foliageMaterial, scatter } = await import('../lib/sets/scatter.js');
       S.trees = treeBand(bushGeometry, foliageMaterial, scatter);
@@ -402,16 +403,16 @@ function fieldGrass(S, shot) {
 /**
  * Hedgerows and copses in front of a ground camera at the origin looking along +z (built once,
  * deterministic): tree-sized clumps of the set kit's bush geometry along field boundaries
- * (lines across the view at irregular spacing) and in a few woods, 150 m to 2 km away.
+ * (lines across the view at irregular spacing) and in a few woods, 400 m to 2.5 km away.
  */
 function treeBand(bushGeometry, foliageMaterial, scatter) {
   const g = new THREE.Group();
   const geos = [bushGeometry(3, 2, 0.9), bushGeometry(3, 5, 1.0), bushGeometry(3, 9, 0.85)];
   const mat = foliageMaterial({ color: [0.045, 0.06, 0.028], leafScale: 0.35 });
-  const rows = [170, 235, 330, 420, 560, 720, 950, 1300, 1800];
-  const woods = [[-160, 380, 70], [210, 520, 110], [-420, 800, 160], [60, 1100, 200], [520, 1500, 260]];
+  const rows = [420, 520, 640, 780, 950, 1150, 1400, 1800, 2300];
+  const woods = [[-260, 600, 90], [260, 760, 120], [-520, 1000, 170], [80, 1350, 220], [620, 1700, 280]];
   geos.forEach((geo, gi) => {
-    const mesh = scatter(geo, mat, 1400, (rng) => {
+    const mesh = scatter(geo, mat, 520, (rng) => {
       let x, z;
       if (rng() < 0.6) {
         const zr = rows[Math.floor(rng() * rows.length)];
@@ -423,8 +424,8 @@ function treeBand(bushGeometry, foliageMaterial, scatter) {
         const a = rng() * Math.PI * 2, r = Math.sqrt(rng()) * w[2];
         x = w[0] + Math.cos(a) * r; z = w[1] + Math.sin(a) * r * 0.6;
       }
-      if (z < 150) return null;
-      const h = 7 + rng() * 9, wdt = h * (0.8 + rng() * 0.6);
+      if (z < 380) return null;
+      const h = 5 + rng() * rng() * 14, wdt = h * (0.7 + rng() * 0.7);
       const k = 0.75 + rng() * 0.5;
       return { p: [x, -0.4, z], s: [wdt, h, wdt * (0.8 + rng() * 0.4)], r: rng() * 6.28, c: [k * (0.9 + 0.2 * rng()), k, k * (0.85 + 0.2 * rng())] };
     }, 11 + gi * 7);
