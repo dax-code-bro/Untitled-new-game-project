@@ -50,7 +50,7 @@ export const SHOTS = [
 
 /** Build a scene module for the given shot ids (default: all). */
 export function makeTurntable(opts = {}) {
-  const shots = SHOTS.filter((s) => !opts.only || opts.only.includes(s.id)).map((s) => ({ ...s }));
+  const shots = SHOTS.filter((s) => !opts.only || opts.only.includes(s.id)).map((s) => ({ ...s, ...(opts.step ? { dur: opts.step } : {}) }));
   let start = 0;
   for (const s of shots) { s._start = start; start += s.dur; }
   const total = start;

@@ -77,7 +77,10 @@ export function update(t, ctx) {
     const po = (v.poses && v.poses[i]) || cc.pose || { name: 'stand' };
     c.root.visible = !(v.hide || []).includes(i);
     c.root.position.set(...(cc.at || [0, 0, 0]));
-    c.root.rotation.set(0, ((v.yaw && v.yaw[i]) ?? cc.yaw ?? 0) * Math.PI / 180, 0);
+    // face: yaw relative to the sun's azimuth (deg, 0 = facing the sun), as in creatures-shots.js
+    const sunAz = Math.atan2(sunDir.x, sunDir.z);
+    const face = (v.face && v.face[i]) ?? cc.face;
+    c.root.rotation.set(0, face !== undefined ? sunAz + face * Math.PI / 180 : ((v.yaw && v.yaw[i]) ?? cc.yaw ?? 0) * Math.PI / 180, 0);
     if (c.detachable) c.attachWing();
     c.setPose(poses[po.name](c, { blink: false, ...po, t: po.t ?? 0 }));
     const air = (v.airborne && v.airborne[i]) ?? cc.airborne;

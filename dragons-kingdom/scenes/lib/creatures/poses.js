@@ -161,7 +161,7 @@ const foldCache = new WeakMap();
 // standing up in front of the chest like a raised arm), and the hand and fingers
 // run back along the flank toward the haunch. The membrane between them hangs in
 // slack folds (drape.js). In the dog-sit the same fold rides on the pitched body.
-const FOLD_DEFAULT = { humerus: [0.14, -0.3, -0.94], forearm: [0.02, -0.06, 0.998], hand: [0.1, -0.05, -0.99] };
+const FOLD_DEFAULT = { humerus: [0.3, 0.1, -0.95], forearm: [-0.08, -0.1, 0.99], hand: [0.16, -0.26, -0.95] };
 // The dog-sit pitches the body ~55 deg nose-up, so the same fold expressed in the body frame
 // would swing the elbow down to the hip and stand the forearm up like a raised arm. The sit
 // fold is therefore given in the WORLD (humerus back and down along the top of the flank,
@@ -276,9 +276,16 @@ function wingFlap(pb, cyc, o = {}) {
  * hind legs trailing straight back along the tail base with the soles turned up.
  */
 function tuckLegs(pb, k = 1) {
-  pb.sym('fl_#_0', 0.62 * k, 0, 0.06 * k); pb.sym('fl_#_1', -1.6 * k, 0, 0); pb.sym('fl_#_2', 2.0 * k, 0, 0);
-  pb.sym('hl_#_0', 1.35 * k, 0, 0.05 * k); pb.sym('hl_#_1', -0.5 * k, 0, 0); pb.sym('hl_#_2', 1.75 * k, 0, 0);
-  for (let i = 0; i < 4; i++) { pb.sym(`fl_#_t${i}`, 0.55 * k, 0, 0); pb.sym(`hl_#_t${i}`, 0.5 * k, 0, 0); }
+  // forelegs: upper arm swung back along the chest, forearm folded forward against it,
+  // wrist flexed so the paw lies back against the chest, toes curled (no paws hanging down)
+  pb.sym('fl_#_0', 0.82 * k, -0.04 * k, -0.06 * k); pb.sym('fl_#_1', -1.78 * k, 0, 0); pb.sym('fl_#_2', 2.55 * k, 0, 0);
+  // hind legs trail back under the tail base: thigh back, shin and foot streamlined behind,
+  // soles turned up and toes curled
+  pb.sym('hl_#_0', 1.2 * k, 0, -0.06 * k); pb.sym('hl_#_1', -0.4 * k, 0, 0); pb.sym('hl_#_2', 1.5 * k, 0, 0);
+  // the thigh muscles stretch flat when the femur swings back (linear skinning would keep
+  // them as round lumps behind the hips)
+  pb.scale('hl_L_0', 1 - 0.18 * k, 1, 1 - 0.22 * k); pb.scale('hl_R_0', 1 - 0.18 * k, 1, 1 - 0.22 * k);
+  for (let i = 0; i < 4; i++) { pb.sym(`fl_#_t${i}`, 0.95 * k, 0, 0); pb.sym(`hl_#_t${i}`, 1.25 * k, 0, 0); }
 }
 
 /** Lift the tail out of its resting droop so it streams straight behind (flight). */
@@ -299,7 +306,7 @@ export function stand(c, o = {}) {
   const t = o.t ?? 0;
   const pb = new PB(c);
   const b = breathe(pb, t, o.breathe ?? (c.L > 20 ? 0.09 : 0.18));
-  carriage(pb, o.raise ?? 0.26, o.headDown ?? 0.4, o.headTilt ?? 0.0);
+  carriage(pb, o.raise ?? 0.06, o.headDown ?? 0.26, o.headTilt ?? 0.0);
   const lk = o.look || [0, 0];
   look(pb, lk[0] + 0.03 * wob(t * 0.3, 1), lk[1] + 0.02 * b + 0.02 * wob(t * 0.25, 2));
   jaw(pb, (o.jaw ?? 0) + 0.015 * b);

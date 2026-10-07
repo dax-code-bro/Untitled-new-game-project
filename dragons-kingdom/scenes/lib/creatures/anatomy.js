@@ -104,31 +104,33 @@ const hsh = (i, k) => { const x = Math.sin(i * 127.1 + k * 311.7 + 0.5) * 43758.
 export const SPECIES = {
   bashion: {
     species: 'Bashion',
-    head: 0.116, neck: 0.175, torso: 0.255, neckSegs: 10, tailSegs: 24,
-    hipY: 0.192, withersY: 0.21, backArch: 0.01, neckPitch: 23 * deg, headPitch: -24 * deg, tailDroop: 15 * deg, tailCurve: 0.6,
-    neckProfile: [[0, 0.019, 0.025, 0.001], [0.25, 0.025, 0.032, 0.003], [0.6, 0.036, 0.045, 0.01], [1, 0.056, 0.067, 0.025]],
-    torsoProfile: [[0, 0.057, 0.065, 0.032], [0.2, 0.069, 0.08, 0.048], [0.45, 0.065, 0.068, 0.043], [0.7, 0.057, 0.055, 0.03], [0.88, 0.05, 0.047, 0.018], [1, 0.052, 0.047, 0.012]],
-    tailProfile: [[0, 0.054, 0.054, 0.012], [0.12, 0.045, 0.047, 0.007], [0.35, 0.028, 0.031, 0.003], [0.65, 0.014, 0.0155, 0], [1, 0.002, 0.002, 0]],
-    front: { shoulder: [0.043, -0.07, 0.86], elbow: [0.052, 0.092, -0.04], wrist: [0.051, 0.034, -0.012], ball: [0.052, 0.01, 0.014],
-      r: [0.03, 0.023, 0.018, 0.0168], toeLen: 0.036, toeR: [0.0092, 0.0058], toeSpread: 15, toes: 4, muscle: 1.0 },
-    hind: { hip: [0.044, -0.026, 0.01], knee: [0.056, 0.1, 0.05], ankle: [0.054, 0.041, -0.03], ball: [0.054, 0.01, 0.004],
-      r: [0.034, 0.025, 0.018, 0.0168], toeLen: 0.038, toeR: [0.0096, 0.006], toeSpread: 14, toes: 4, muscle: 1.0 },
+    head: 0.112, neck: 0.165, torso: 0.262, neckSegs: 10, tailSegs: 24,
+    hipY: 0.214, withersY: 0.232, backArch: 0.01, neckPitch: 26 * deg, headPitch: -27 * deg, tailDroop: 14 * deg, tailCurve: 0.6,
+    neckProfile: [[0, 0.025, 0.031, 0.002], [0.3, 0.031, 0.039, 0.004], [0.65, 0.04, 0.05, 0.01], [1, 0.057, 0.068, 0.025]],
+    torsoProfile: [[0, 0.058, 0.066, 0.032], [0.2, 0.068, 0.078, 0.046], [0.45, 0.064, 0.068, 0.042], [0.7, 0.057, 0.057, 0.032], [0.88, 0.052, 0.05, 0.02], [1, 0.054, 0.05, 0.014]],
+    tailProfile: [[0, 0.055, 0.054, 0.012], [0.12, 0.046, 0.047, 0.007], [0.35, 0.029, 0.031, 0.003], [0.65, 0.0145, 0.0155, 0], [1, 0.0025, 0.0025, 0]],
+    front: { shoulder: [0.044, -0.07, 0.86], elbow: [0.053, 0.108, -0.04], wrist: [0.052, 0.042, -0.01], ball: [0.053, 0.012, 0.016],
+      r: [0.032, 0.025, 0.0195, 0.017], toeLen: 0.038, toeR: [0.0095, 0.006], toeSpread: 15, toes: 4, muscle: 1.0 },
+    hind: { hip: [0.045, -0.026, 0.01], knee: [0.058, 0.128, 0.05], ankle: [0.055, 0.066, -0.022], ball: [0.055, 0.012, 0.002],
+      r: [0.037, 0.026, 0.019, 0.017], toeLen: 0.04, toeR: [0.0098, 0.0062], toeSpread: 14, toes: 4, muscle: 1.0 },
     wing: { root: [0.032, 0.006, 0.8], elbow: [0.152, 0.016, -0.05], wrist: [0.315, 0.025, -0.01],
       digits: [[0.66, 0.02, 0.035], [0.615, 0.012, -0.135], [0.515, 0.004, -0.255], [0.385, -0.004, -0.325]],
       thumb: [0.011, 0.007, 0.016], r: [0.019, 0.012, 0.0094], fingerR: [0.0056, 0.0016], muscle: 1.1,
       attach: [[0.006, -0.014, -0.03], [0.014, -0.034, -0.11], [0.017, -0.047, -0.19]], billow: 0.035 },
     headShape: {
-      upper: [[-0.1, 0.22, 0.12, -0.12], [0.0, 0.27, 0.16, -0.1], [0.12, 0.3, 0.184, -0.09], [0.26, 0.289, 0.174, -0.086], [0.4, 0.251, 0.135, -0.081],
-        [0.55, 0.219, 0.105, -0.078], [0.72, 0.193, 0.087, -0.075], [0.87, 0.177, 0.079, -0.071], [1.0, 0.14, 0.063, -0.058]],
-      jaw: [[0.0, 0.272, -0.08, -0.28], [0.12, 0.28, -0.08, -0.29], [0.28, 0.256, -0.08, -0.242], [0.48, 0.223, -0.08, -0.188],
-        [0.68, 0.196, -0.078, -0.155], [0.86, 0.175, -0.075, -0.138], [0.98, 0.139, -0.072, -0.122]],
-      eye: [0.25, 0.104, 0.27], eyeR: 0.056, eyeInset: 0.5, brow: 1.5, cheek: 1.1, jawMuscle: 1.2, ridgeR: 0.024, hinge: [0, -0.09, 0.035], gape0: 14 * deg, nostril: 1.15,
+      // a deep, heavy head: a high crown and brow, a broad deep snout (not a crocodile's flat
+      // one) with a nasal bump, a massive lower jaw
+      upper: [[-0.1, 0.24, 0.15, -0.12], [0.0, 0.285, 0.2, -0.1], [0.12, 0.31, 0.232, -0.09], [0.28, 0.3, 0.222, -0.088], [0.42, 0.258, 0.172, -0.085],
+        [0.58, 0.218, 0.142, -0.082], [0.74, 0.188, 0.126, -0.08], [0.88, 0.162, 0.118, -0.076], [1.0, 0.112, 0.084, -0.066]],
+      jaw: [[0.0, 0.29, -0.08, -0.33], [0.12, 0.3, -0.08, -0.33], [0.3, 0.27, -0.08, -0.275], [0.5, 0.232, -0.08, -0.225],
+        [0.7, 0.196, -0.078, -0.192], [0.86, 0.166, -0.075, -0.174], [0.98, 0.118, -0.072, -0.15]],
+      eye: [0.262, 0.13, 0.31], eyeR: 0.052, eyeInset: 0.5, brow: 1.55, cheek: 1.15, jawMuscle: 1.25, ridgeR: 0.024, hinge: [0, -0.09, 0.035], gape0: 14 * deg, nostril: 1.15,
       teethUp: 15, teethSize: 0.06, lipCover: 0.55, tympanum: 1,
     },
     horns: 'bashion', crest: { count: 92, h: [0.0042, 0.0105, 0.0032], base: 1.15 },
     scale: { body: 0.0042, belly: 0.012, head: 0.0032 },   // scale width in L units at the chain's median radius
     muscle: { shoulder: 1.1, arm: 1.1, pec: 1.05, thigh: 1.05, tailbase: 1.1, belly: 0.85, neck: 1.1, wing: 1.05 },
-    folds: { throat: 4, axilla: 1, stifle: 1, neck: 2, tail: 3 },
+    folds: { throat: 4, axilla: 0, stifle: 0, neck: 2, tail: 3 },
   },
   nightwing: {
     species: 'Nightwing',
@@ -774,7 +776,7 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
     m.cone(W(sd * (eye[0] + 0.004), eye[1] - ER * 1.3, eye[2] + 0.1), W(sd * (0.175 + 0.012 * hs.cheek), -0.05, 0.04), 0.022 * H * hs.cheek, 0.034 * H * hs.cheek, { k: 0.022 * H, ...t });
     // nostril mound on top of the snout tip
     const zN = 0.9;
-    m.ell(W(sd * 0.045, U(zN)[1] - 0.016, zN), [0.036 * H * hs.nostril, 0.026 * H * hs.nostril, 0.06 * H * hs.nostril], { ax: ex, ay: ey, k: 0.03 * H, ...t });
+    m.ell(W(sd * 0.055, U(zN)[1] - 0.02, zN), [0.032 * H * hs.nostril, 0.02 * H * hs.nostril, 0.05 * H * hs.nostril], { ax: ex, ay: ey, k: 0.03 * H, ...t });
     // upper lip: a fleshy labial ridge along the tooth row that half covers the teeth
     const lc = hs.lipCover ?? 0.5;
     if (lc > 0) {
@@ -840,7 +842,7 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
   for (const sd of [1, -1]) {
     // the socket hugs the eyeball and opens along its gaze (outward and a little forward)
     m.ell(W(sd * eyeP[0], eyeP[1], eyeP[2]), [ER * H * 1.045, ER * H * 1.045, ER * H * 1.06], { ax: gW(sd), ay: ey, k: 0.008 * H, op: 'sub', ...t, tag: 'eyesocket' });
-    m.ell(W(sd * 0.05, U(0.93)[1] - 0.008, 0.93), [0.016 * H * hs.nostril, 0.011 * H * hs.nostril, 0.028 * H * hs.nostril], { ax: Wd(1, 0.6, 0.1 * sd), ay: Wd(-0.6, 1, 0), k: 0.01 * H, op: 'sub', ...t, tag: 'nostril' });
+    m.ell(W(sd * 0.062, U(0.92)[1] - 0.012, 0.92), [0.02 * H * hs.nostril, 0.013 * H * hs.nostril, 0.032 * H * hs.nostril], { ax: Wd(1, 0.7, 0.15 * sd), ay: Wd(-0.7, 1, 0), k: 0.008 * H, op: 'sub', ...t, tag: 'nostril' });
     if (hs.tympanum) m.ell(W(sd * 0.2, 0.03, -0.02), [0.02 * H, 0.05 * H * hs.tympanum, 0.035 * H * hs.tympanum], { ax: Wd(1, 0, -0.25 * sd), ay: ey, k: 0.015 * H, op: 'sub', ...t, tag: 'head' });
   }
 
@@ -942,9 +944,11 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
   const horn = (p0, p1, p2, r0, r1, tag = 'horn') => keratin.push({ kind: 'horn', bone: 'head', tag, points: [W(...p0), W(...p1), W(...p2)], radii: [r0 * H, r1 * H, r0 * 0.05 * H], flat: 0.82, up: ey, rings: tag === 'horn' });
   for (const sd of [1, -1]) {
     if (spec.horns === 'bashion') {
-      horn([sd * 0.13, 0.15, 0.05], [sd * 0.22, 0.13, -0.26], [sd * 0.28, -0.2, -0.58], 0.074, 0.046);
-      horn([sd * 0.2, 0.06, 0.02], [sd * 0.27, 0.0, -0.14], [sd * 0.3, -0.12, -0.28], 0.036, 0.022);
-      for (let i = 0; i < 2; i++) horn([sd * (0.2 + i * 0.012), -0.2 - i * 0.035, 0.02 - i * 0.07], [sd * (0.245 + i * 0.012), -0.23 - i * 0.035, -0.05 - i * 0.07], [sd * (0.26 + i * 0.012), -0.27 - i * 0.04, -0.11 - i * 0.07], 0.022 - i * 0.004, 0.013, 'spur');
+      // one heavy pair from the crown, swept back over the neck and curving down at the tips
+      // (reads in silhouette), a shorter pair behind the eyes, two spurs on the jaw angle
+      horn([sd * 0.135, 0.19, 0.09], [sd * 0.215, 0.29, -0.24], [sd * 0.255, 0.19, -0.64], 0.08, 0.05);
+      horn([sd * 0.22, 0.1, 0.05], [sd * 0.29, 0.1, -0.13], [sd * 0.325, 0.0, -0.3], 0.042, 0.026);
+      for (let i = 0; i < 2; i++) horn([sd * (0.215 + i * 0.012), -0.2 - i * 0.04, 0.03 - i * 0.07], [sd * (0.26 + i * 0.012), -0.23 - i * 0.04, -0.05 - i * 0.07], [sd * (0.28 + i * 0.012), -0.27 - i * 0.045, -0.13 - i * 0.07], 0.026 - i * 0.004, 0.015, 'spur');
     } else if (spec.horns === 'nightwing') {
       horn([sd * 0.105, 0.145, 0.06], [sd * 0.17, 0.12, -0.21], [sd * 0.205, -0.17, -0.5], 0.05, 0.03);
       horn([sd * 0.17, 0.05, 0.02], [sd * 0.215, 0.0, -0.12], [sd * 0.23, -0.1, -0.24], 0.024, 0.014);
