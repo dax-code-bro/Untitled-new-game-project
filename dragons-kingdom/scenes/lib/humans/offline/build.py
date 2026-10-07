@@ -11,6 +11,7 @@ thickness -> <id>.json + <id>.bin. Everything is deterministic (seeded).
 import argparse
 import json
 import math
+import zlib
 import os
 import sys
 import time
@@ -75,7 +76,7 @@ def assemble(kit, spec, out_dir, opts):
     t0 = time.time()
     cid = spec['id']
     log(f'== {cid}')
-    hero = spec.get('lod', 'mid') == 'hero'
+    hero = (opts.get('lod') or spec.get('lod', 'mid')) == 'hero'
     race = tuple(spec.get('macro', {}).get('race', (1 / 3, 1 / 3, 1 / 3)))
     V = shape(kit, spec)
     H, T = kit.rig.joints(V)
@@ -89,6 +90,7 @@ def assemble(kit, spec, out_dir, opts):
     # ---- garments (Blender cloth) -------------------------------------------------
     D = gm.Dresser(kit, V, sk, pd.local, pt.local, off_d, off_t, log=log)
     D.sole = sole
+    D.subdiv = spec.get('cloth_subdiv', 1 if hero else 0)
     D.nosim = opts.get('nosim', False)
     garments = []
     for g in spec.get('outfit', []):
@@ -139,7 +141,8 @@ def assemble(kit, spec, out_dir, opts):
     if spec.get('lashes', 'eyelashes01'):
         l = spec.get('lashes', 'eyelashes01')
         parts.append(proxy_part(kit, f'human/mh_face_parts/eyelashes/{l}/{l}.mhclo', V, 'lashes', 'lash',
-                                {'map': f'human/mh_face_parts/eyelashes/{l}/{l}.png', 'color': [0.025, 0.018, 0.014], 'alphaGain': 1.6, 'occluder': False}))
+                                {'map': f'human/mh_face_parts/eyelashes/{l}/{l}.png', 'color': [0.025, 0.018, 0.014], 'alphaGain': 1.6, 'occluder': False},
+                                morph_rest=morph))
     parts.append(proxy_part(kit, 'human/mh_face_parts/teeth/teeth_base/teeth_base.mhclo', V, 'teeth', 'teeth',
                             {'map': 'human/mh_face_parts/teeth/materials/teeth.png', 'rough': 0.3, 'clearcoat': 0.5, 'castShadow': False}))
     parts.append(proxy_part(kit, 'human/mh_face_parts/tongue/tongue01/tongue01.mhclo', V, 'tongue', 'tongue',
@@ -189,14 +192,14 @@ def assemble(kit, spec, out_dir, opts):
     hs = (spec.get('hair') or {}) if not opts.get('nohair') else {}
     if hs:
         import hair as hr
-        gr = hr.Groom(kit, V, sk, pt.local, off_t, D.faces, D.rest, D.target, D.bidx, D.Wd, seed=hash(cid) & 0xffff, log=log)
+        gr = hr.Groom(kit, V, sk, pt.local, off_t, D.faces, D.rest, D.target, D.bidx, D.Wd, seed=zlib.crc32(cid.encode()) & 0xffff, log=log)
         build_hair(gr, hs, hero, kit, V, body)
         hp = gr.to_part('hair', {'color': hs.get('color', [0.05, 0.03, 0.02]), 'spec': hs.get('spec', 0.06), 'shift': 0.1, 'variation': hs.get('variation', 0.3), 'occluder': True, 'ao_rays': 10, 'ao_stride': 2})
         if hp is not None:
             parts.append(hp)
             log(f'    hair: {len(gr.strands)} strands, {len(hp.posed)} verts')
         if hs.get('strand_brows', True) and spec.get('brows'):
-            gb = hr.Groom(kit, V, sk, pt.local, off_t, D.faces, D.rest, D.target, D.bidx, D.Wd, seed=(hash(cid) + 7) & 0xffff)
+            gb = hr.Groom(kit, V, sk, pt.local, off_t, D.faces, D.rest, D.target, D.bidx, D.Wd, seed=(zlib.crc32(cid.encode()) + 7) & 0xffff)
             from humanbuild import image_array
             b = spec['brows']
             card = next(p for p in parts if p.name == 'brows')
@@ -230,8 +233,8 @@ def accessories(D, garments, spec, parts):
     y = g.result[g.belt_idx][:, 1].mean() if g.belt_idx is not None and len(g.belt_idx) else D.Jt['spine04'][1]
     near = allP[np.abs(allP[:, 1] - y) < 0.03]
     c = np.array([(near[:, 0].min() + near[:, 0].max()) / 2, 0, (near[:, 2].min() + near[:, 2].max()) / 2])
-    bc = g.spec.get('belt_color', [0.05, 0.03, 0.018])
-    P, F, angs, R = pr.belt_ring(allP, y, c, width=g.spec.get('belt_width', 0.032))
+    bc = g.spec.get('belt_color', [0.085, 0.05, 0.028])
+    P, F, angs, R = pr.belt_ring(allP, y, c, width=g.spec.get('belt_width', 0.032), clearance=0.0015)
     pieces = [(P, F)]
     # buckle: a small iron frame at the front, a little to the wearer's left
     a0 = 0.32
@@ -248,7 +251,7 @@ def accessories(D, garments, spec, parts):
     tail = []
     for k in range(10):
         s_ = k / 9
-        tail.append(bpos + t * (0.03 + 0.02 * s_) + np.array([0, -0.11 * s_ ** 1.2, 0]) + nrm * (0.003 + 0.004 * s_))
+        tail.append(bpos + t * (0.03 + 0.015 * s_) + np.array([0, -0.075 * s_ ** 1.2, 0]) + nrm * (0.003 + 0.003 * s_))
     sv = np.cross(nrm, [0, 1.0, 0]) * 0.015
     tP = np.array([v for q in tail for v in (q + sv, q - sv)])
     tF = [(2 * k, 2 * k + 1, 2 * k + 3, 2 * k + 2) for k in range(len(tail) - 1)]
@@ -445,27 +448,48 @@ def build_hair(gr, hs, hero, kit, V, body):
         g = sk + np.array(hs.get('gather', [0.0, -0.035, -0.09]))
         s_, n_ = gr.surf(g)
         g = s_ + n_ * 0.008
-        gr.style_pulled_back(int(9000 * dens), g, color_layers=0.006, width=0.0011 if hero else 0.0016)
-        if st == 'braid':
-            gr.braid(g + np.array([0, -0.005, -0.012]), length=hs.get('length', 0.42), strands_per=int(80 * max(0.5, dens)), hang=hs.get('hang', 'back'))
-        if st == 'bun':
-            gr.bun(g + np.array([0, 0.0, -0.02]), radius=hs.get('bun_radius', 0.035), strands=int(600 * max(0.5, dens)))
+        gr.style_pulled_back(int(hs.get('count', 15000) * dens), g, color_layers=hs.get('loft', 0.008), width=hs.get('width', 0.0009 if hero else 0.0015))
     elif st == 'crop':
-        gr.style_crop(int(14000 * dens), length=tuple(hs.get('length', (0.012, 0.045))), flow=hs.get('flow', 'back'), width=0.0009 if hero else 0.0014, curl=hs.get('curl', 0.0))
+        gr.style_crop(int(hs.get('count', 16000) * dens), length=tuple(hs.get('length', (0.012, 0.045))), flow=hs.get('flow', 'back'), width=hs.get('width', 0.0008 if hero else 0.0013), curl=hs.get('curl', 0.0))
+    n_scalp = len(gr.strands)
+    if st in ('braid', 'pulled', 'bun'):
+        if st == 'braid':
+            gr.braid(g + np.array([0, -0.005, -0.012]), length=hs.get('length', 0.42), strands_per=int(90 * max(0.5, dens)), hang=hs.get('hang', 'back'))
+        if st == 'bun':
+            gr.bun(g + np.array([0, 0.0, -0.02]), radius=hs.get('bun_radius', 0.035), strands=int(700 * max(0.5, dens)))
     if hs.get('beard'):
         bd = hs['beard']
         m = gr.beard_mask(body.P, moustache=bd.get('moustache', True), coverage=bd.get('coverage', 'full'))
         body.attrs['aux'][:, 2] = np.maximum(body.attrs['aux'][:, 2], m * bd.get('shadow', 1.0))
         body.material['beardColor'] = list(bd.get('color', hs.get('color', [0.05, 0.03, 0.02])))
         if bd.get('count', 0) > 0:
-          gr.style_beard(int(bd.get('count', 6000) * (1.0 if hero else 0.5)), length=tuple(bd.get('length', (0.006, 0.02))), moustache=bd.get('moustache', True), coverage=bd.get('coverage', 'full'), curl=bd.get('curl', 0.4), width=bd.get('width', 0.0007))
-    # tint the scalp skin under the hair (aux.a)
-    if st != 'none':
-        hl = gr.hairline(body.P)
-        top = np.clip((body.P[:, 1] - hl) / 0.012, 0, 1)
-        headish = np.linalg.norm(body.P - gr.skull, axis=1) < 0.16
-        body.attrs['aux'][:, 3] = top * headish
-        body.material['scalpColor'] = list(hs.get('color', [0.05, 0.03, 0.02]))
+            gr.style_beard(int(bd.get('count', 6000) * (1.0 if hero else 0.5)), length=tuple(bd.get('length', (0.006, 0.02))), moustache=bd.get('moustache', True), coverage=bd.get('coverage', 'full'), curl=bd.get('curl', 0.4), width=bd.get('width', 0.0007))
+    # the scalp under the hair takes the hair colour (aux.a): exactly where strands cover it, so no
+    # bare skin shows between strands; it fades out at the hairline over a few millimetres
+    if st != 'none' and n_scalp:
+        scalp_coverage(gr, body, n_scalp)
+        body.material['scalpColor'] = list(hs.get('root_color', [c * 0.8 for c in hs.get('color', [0.05, 0.03, 0.02])]))
+
+
+def scalp_coverage(gr, body, n_scalp):
+    from mathutils.kdtree import KDTree
+    from mathutils import Vector
+    pts = np.vstack([s['p'][:max(2, len(s['p']) * 2 // 3)] for s in gr.strands[:n_scalp]])
+    if len(pts) > 400000:
+        pts = pts[::len(pts) // 400000 + 1]
+    kd = KDTree(len(pts))
+    for i, q in enumerate(pts):
+        kd.insert(q, i)
+    kd.balance()
+    P = body.P
+    head = np.linalg.norm(P - gr.skull, axis=1) < 0.17
+    ids = np.where(head)[0]
+    Pd = gr.to_drape(P[ids])
+    cov = np.zeros(len(P))
+    for k, (i, q) in enumerate(zip(ids, Pd)):
+        co, j, d = kd.find(Vector(q))
+        cov[i] = np.clip(1 - (d - 0.004) / 0.005, 0, 1)
+    body.attrs['aux'][:, 3] = np.maximum(body.attrs['aux'][:, 3], cov)
 
 
 def ride_offset(sk, pose):
@@ -487,6 +511,7 @@ def main():
     ap.add_argument('--dresspose', action='store_true')
     ap.add_argument('--nohair', action='store_true')
     ap.add_argument('--suffix', default='')
+    ap.add_argument('--lod', default='', help='override every character\'s lod (hero|mid) for quick tests')
     a = ap.parse_args()
     import characters
     cast = characters.cast()
@@ -500,7 +525,7 @@ def main():
     names = kit.rig.names
     kit.base_cat = np.array([gm.bone_category(names[b]) for b in np.argmax(kit.Wd, axis=1)])
     os.makedirs(a.out, exist_ok=True)
-    opts = {'quality': a.quality, 'nosim': a.nosim, 'nohair': a.nohair, 'suffix': a.suffix, 'dresspose': a.dresspose}
+    opts = {'quality': a.quality, 'nosim': a.nosim, 'nohair': a.nohair, 'suffix': a.suffix, 'dresspose': a.dresspose, 'lod': a.lod}
     if a.rays:
         opts['rays'] = a.rays
     fails = []

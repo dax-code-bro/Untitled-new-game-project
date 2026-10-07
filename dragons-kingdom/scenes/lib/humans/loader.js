@@ -83,6 +83,7 @@ export function buildCharacter(data, opts = {}) {
     if (m.kind === 'skin') {
       if (!g.attributes.thick) g.setAttribute('thick', new THREE.BufferAttribute(new Float32Array(n).fill(0.3), 1));
       if (!g.attributes.aux) g.setAttribute('aux', new THREE.BufferAttribute(new Float32Array(n * 4), 4));
+      if (!g.attributes.aux2) g.setAttribute('aux2', new THREE.BufferAttribute(new Float32Array(n * 4), 4));
     }
     g.computeBoundingSphere();
     const mat = materialFor(m, header, opts);

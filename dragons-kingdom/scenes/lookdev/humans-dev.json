@@ -1,1 +1,1 @@
-{ "id": "guard1", "accumulate": false, "still": true }
+{ "id": "abby", "accumulate": false, "still": true, "cam": { "tgt": "head", "off": [0, -0.03, 0.04], "az": 20, "el": 3, "dist": 0.42, "fov": 24, "fstop": 4 } }

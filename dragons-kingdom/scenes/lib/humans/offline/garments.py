@@ -14,6 +14,7 @@ Garment kinds (spec 'type'):
   belt                                     - leather band at the waist on top of the layers
 """
 import math
+import zlib
 
 import numpy as np
 
@@ -48,9 +49,9 @@ def bone_category(name):
 
 
 FABRIC_SIM = {
-    'linen': dict(mass=0.12, tension=12, compression=12, shear=4, bending=0.15, air=1.0),
+    'linen': dict(mass=0.12, tension=12, compression=12, shear=4, bending=0.4, air=1.0),
     'fine': dict(mass=0.08, tension=10, compression=10, shear=3, bending=0.05, air=1.2),
-    'wool': dict(mass=0.25, tension=16, compression=14, shear=5, bending=0.35, air=1.0),
+    'wool': dict(mass=0.25, tension=16, compression=14, shear=5, bending=1.2, air=1.0),
     'heavywool': dict(mass=0.35, tension=22, compression=22, shear=8, bending=2.5, air=0.8),
     'felt': dict(mass=0.35, tension=30, compression=30, shear=12, bending=6.0, air=0.8),
     'leather': dict(mass=0.4, tension=40, compression=40, shear=15, bending=12.0, air=0.6),
@@ -71,6 +72,7 @@ class Garment:
         self.result = None                     # drape pose positions
         self.I = self.W = None
         self.frames = None
+        self.goal = None                       # (N,3) dress-pose displacement of the pin goals (cinching)
 
 
 class Dresser:
@@ -304,14 +306,254 @@ def uv_cylinder(P, centre, axis, ref):
 
 
 # ================================================================ builders ==
-def neckline_mask(D, P, depth_front=0.03, back=0.0, wide=0.0):
-    """True for points BELOW the neckline (kept)."""
+def neckline_cut(D, P, depth_front=0.03, back=0.0, shape='round', vwidth=0.07):
+    """Height of the neckline above each point's (x, z) (the garment keeps what is below)."""
     nb = D.lm('neck01')
-    fwd = np.array([0, 0, 1.0])
     d = P - nb
     ang = np.arctan2(d[:, 0], d[:, 2])        # 0 = front
-    cut = nb[1] + 0.012 + back - depth_front * np.cos(ang / 2) ** 4 - wide * np.cos(ang) ** 2 * 0
-    return P[:, 1] < cut
+    if shape == 'v':
+        front = np.clip(np.cos(ang), 0, 1) ** 0.5 * (d[:, 2] > 0)
+        lin = np.clip(1 - np.abs(d[:, 0]) / vwidth, 0, 1)
+        return nb[1] + 0.012 + back - 0.012 * np.cos(ang / 2) ** 4 - depth_front * lin * front
+    return nb[1] + 0.012 + back - depth_front * np.cos(ang / 2) ** 4
+
+
+def neckline_mask(D, P, depth_front=0.03, back=0.0, wide=0.0, shape='round', vwidth=0.07):
+    """True for points BELOW the neckline (kept). shape 'round' (scoop) or 'v' (a V opening of
+    depth_front below the neck base, vwidth wide at the top - coats over a shirt)."""
+    return P[:, 1] < neckline_cut(D, P, depth_front, back, shape, vwidth)
+
+
+def snap_loop(S, loop, target_fn, iters=3):
+    """Move an opening's boundary vertices onto a cut curve (no staircase from the body mesh):
+    target_fn(P) -> corrected points; then relax along the loop."""
+    l = np.asarray(loop)
+    for _ in range(iters):
+        S[l] = target_fn(S[l])
+        Q = S[l]
+        S[l] = Q * 0.5 + (np.roll(Q, 1, 0) + np.roll(Q, -1, 0)) * 0.25
+    S[l] = target_fn(S[l])
+    return S
+
+
+def _hull2d(Q):
+    """Convex hull (monotone chain) of 2D points, counter-clockwise."""
+    Q = np.unique(np.round(Q, 5), axis=0)
+    if len(Q) < 3:
+        return Q
+    Q = Q[np.lexsort((Q[:, 1], Q[:, 0]))]
+
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lo, up = [], []
+    for p in Q:
+        while len(lo) >= 2 and cross(lo[-2], lo[-1], p) <= 0:
+            lo.pop()
+        lo.append(p)
+    for p in Q[::-1]:
+        while len(up) >= 2 and cross(up[-2], up[-1], p) <= 0:
+            up.pop()
+        up.append(p)
+    return np.array(lo[:-1] + up[:-1])
+
+
+def _ray_poly(H, th):
+    """Radius at angles th (0 = +z, atan2(x, z)) of the boundary of a convex polygon H (x, z)
+    that contains the origin."""
+    d = np.stack([np.sin(th), np.cos(th)], 1)                    # (T,2) as (x, z)
+    a = H
+    b = np.roll(H, -1, 0)
+    e = b - a                                                      # (E,2)
+    # solve t d = a + u e  ->  [d, -e] [t u]^T = a
+    det = d[:, None, 0] * (-e[None, :, 1]) - d[:, None, 1] * (-e[None, :, 0])
+    det = np.where(np.abs(det) < 1e-12, 1e-12, det)
+    t = (a[None, :, 0] * (-e[None, :, 1]) - a[None, :, 1] * (-e[None, :, 0])) / det
+    u = (d[:, None, 0] * a[None, :, 1] - d[:, None, 1] * a[None, :, 0]) / det
+    ok = (u >= -1e-6) & (u <= 1 + 1e-6) & (t > 0)
+    return np.where(ok, t, 0).max(1)
+
+
+def hull_profile(D, nth=144, dy=0.008):
+    """Convex-hull radius of the smoothed dress body without the arms, per (angle, height) bin
+    around the body axis (cached). Garments bridge every hollow of a cross-section."""
+    if getattr(D, '_hull', None) is not None:
+        return D._hull
+    keep = ~np.array([x.startswith(('uarm', 'farm', 'hand')) for x in D.cat])
+    P = D.dress_smooth()[keep]
+    c = D.axis_y()
+    y0, y1 = P[:, 1].min(), P[:, 1].max()
+    ny = int((y1 - y0) / dy) + 2
+    th = (np.arange(nth) + 0.5) / nth * 2 * math.pi - math.pi
+    H = np.zeros((nth, ny))
+    for j in range(ny):
+        y = y0 + j * dy
+        sel = np.abs(P[:, 1] - y) < dy * 0.8
+        if sel.sum() < 3:
+            continue
+        Q = P[sel][:, [0, 2]] - np.array([c[0], c[2]])
+        hull = _hull2d(Q)
+        if len(hull) < 3:
+            continue
+        H[:, j] = _ray_poly(hull, th)
+    # fill empty rows from neighbours
+    for j in range(ny):
+        if not H[:, j].any():
+            k = j - 1 if j > 0 and H[:, j - 1].any() else min(ny - 1, j + 1)
+            H[:, j] = H[:, k]
+    D._hull = (H, nth, y0, dy, c)
+    return D._hull
+
+
+def sample_profile(prof, P):
+    H, nth, y0, dy, c = prof
+    th = np.arctan2(P[:, 0] - c[0], P[:, 2] - c[2])
+    tf = (th + math.pi) / (2 * math.pi) * nth - 0.5
+    t0 = np.floor(tf).astype(int)
+    ft = tf - t0
+    yf = np.clip((P[:, 1] - y0) / dy, 0, H.shape[1] - 1.001)
+    y0i = np.floor(yf).astype(int)
+    fy = yf - y0i
+    a = H[t0 % nth, y0i] * (1 - ft) + H[(t0 + 1) % nth, y0i] * ft
+    b = H[t0 % nth, y0i + 1] * (1 - ft) + H[(t0 + 1) % nth, y0i + 1] * ft
+    return a * (1 - fy) + b * fy
+
+
+def drape_envelope(D, hang=0.22, top=None):
+    """Hull profile turned into the surface a loose garment hangs on: below `top` (armpits) the
+    cloth falls from the widest point above it, coming in by at most `hang` metres per metre
+    (fabric hanging from the bust / shoulder blades bridges the waist and the small of the back)."""
+    H, nth, y0, dy, c = hull_profile(D)
+    if top is None:
+        top = min(D.lm('upperarm01.L')[1], D.lm('upperarm01.R')[1]) - 0.035
+    jt = int(np.clip((top - y0) / dy, 0, H.shape[1] - 1))
+    E = H.copy()
+    for j in range(jt - 1, -1, -1):
+        E[:, j] = np.maximum(H[:, j], E[:, j + 1] - hang * dy)
+    return (E, nth, y0, dy, c), top
+
+
+def apply_envelope(D, S, torso, g, ylo):
+    """Push torso vertices of a shell out to the drape envelope (+ ease) between ylo and the armpits."""
+    hang = g.get('hang', 0.22)
+    env, top = drape_envelope(D, hang=hang)
+    c = env[4]
+    r_env = sample_profile(env, S) + g.get('env_ease', g.get('ease', 0.012) * 0.8)
+    d = (S - c) * np.array([1, 0, 1])
+    r = np.linalg.norm(d, axis=1)
+    dirs = d / np.maximum(r[:, None], 1e-9)
+    w = torso * np.clip((top - S[:, 1]) / 0.05, 0, 1) * np.clip((S[:, 1] - (ylo - 0.25)) / 0.05, 0, 1)
+    rn = r + np.maximum(0.0, r_env - r) * w
+    return S + dirs * (rn - r)[:, None]
+
+
+def add_collar(D, S, F, old, armv, height=0.025):
+    """Standing band collar: the neckline loop extruded up the neck (2 rows), sitting at the neck
+    hull radius + a little ease."""
+    loops = mu.boundary_loops(F)
+    nk = D.lm('neck01')
+    cand = [l for l in loops if S[l].mean(0)[1] > D.lm('spine02')[1]]
+    if not cand:
+        return S, F, old, armv
+    l = max(cand, key=lambda l: S[l].mean(0)[1])
+    prof = hull_profile(D)
+    c = prof[4]
+    rows = []
+    for k, f in ((1, 0.5), (2, 1.0)):
+        Q = S[l].copy()
+        Q[:, 1] += height * f
+        d = (Q - c) * np.array([1, 0, 1])
+        r = np.linalg.norm(d, axis=1)
+        rt = sample_profile(prof, Q) + 0.006
+        Q = Q + d / np.maximum(r[:, None], 1e-9) * (np.maximum(rt, r * 0.97) - r)[:, None]
+        rows.append(Q)
+    n = len(S)
+    m = len(l)
+    # keep the winding of the shell: the loop must run like the edge in its face
+    a0, b0 = l[0], l[1]
+    same = any(any(f[k] == a0 and f[(k + 1) % len(f)] == b0 for k in range(len(f))) for f in F if a0 in f and b0 in f)
+    if not same:
+        l = l[::-1]
+        rows = [r[::-1] for r in rows]
+    S2 = np.vstack([S] + rows)
+    Fn = list(F)
+    prev = list(l)
+    for k in range(2):
+        cur = [n + k * m + i for i in range(m)]
+        for i in range(m):
+            j = (i + 1) % m
+            Fn.append((prev[j], prev[i], cur[i], cur[j]))
+        prev = cur
+    # orient like the neighbouring shell faces (outward)
+    old2 = np.concatenate([old, np.repeat(old[l], 2)])
+    armv2 = np.concatenate([armv, np.zeros(2 * m, bool)])
+    return S2, Fn, old2, armv2
+
+
+def sleeve_tubes(D, S, armv, g):
+    """Sleeves are cut as (tapering) tubes, not arm-shaped: arm vertices are pushed out to a
+    cone round the arm's two segments, from the widest upper-arm radius to a wide cuff. The cuff
+    is then gathered to the wrist in the simulation, so the extra cloth folds."""
+    out = S.copy()
+    for side in ('L', 'R'):
+        sh, el, wr = D.lm(f'upperarm01.{side}'), D.lm(f'lowerarm01.{side}'), D.lm(f'wrist.{side}')
+        sel = np.where(armv & ((S[:, 0] > D.axis_y()[0]) == (side == 'L')))[0]
+        if not len(sel):
+            continue
+        P = S[sel]
+        L1, L2 = np.linalg.norm(el - sh), np.linalg.norm(wr - el)
+        # closest point on the polyline sh-el-wr and the arc parameter t (0 shoulder .. 1 wrist)
+        best_d = np.full(len(P), 1e9)
+        foot = np.zeros_like(P)
+        tt = np.zeros(len(P))
+        for a_, b_, t0, L in ((sh, el, 0.0, L1), (el, wr, L1, L2)):
+            ab = b_ - a_
+            u = np.clip((P - a_) @ ab / (L * L), 0, 1)
+            f = a_ + np.outer(u, ab)
+            d = np.linalg.norm(P - f, axis=1)
+            m = d < best_d
+            best_d[m] = d[m]
+            foot[m] = f[m]
+            tt[m] = (t0 + u[m] * L) / (L1 + L2)
+        rad = P - foot
+        r = np.linalg.norm(rad, axis=1)
+        top = np.percentile(r[(tt > 0.12) & (tt < 0.4)], 60) if np.any((tt > 0.12) & (tt < 0.4)) else r.max()
+        top *= g.get('sleeve_width', 1.0)
+        r_cuff = g.get('sleeve_cuff', top * 0.78)
+        R = top + (r_cuff - top) * np.clip((tt - 0.3) / 0.7, 0, 1)
+        w = np.clip((tt - 0.1) / 0.15, 0, 1) * g.get('sleeve_loose', 0.85)
+        rn = r + np.maximum(0, R - r) * w
+        out[sel] = foot + rad / np.maximum(r[:, None], 1e-9) * rn[:, None]
+    return out
+
+
+def cinch_delta(D, S, mask, extra):
+    """Displacement (dress pose) that pulls the vertices in `mask` (weights 0..1) radially in to the
+    body hull + extra: animated on the pinned rows during the simulation (belts, cuffs)."""
+    prof = hull_profile(D)
+    c = prof[4]
+    d = (S - c) * np.array([1, 0, 1])
+    r = np.linalg.norm(d, axis=1)
+    dirs = d / np.maximum(r[:, None], 1e-9)
+    rt = sample_profile(prof, S) + extra
+    return dirs * (np.minimum(0.0, rt - r) * mask)[:, None]
+
+
+def cuff_delta(D, S, loop_ids, side, extra=0.012, rings=None):
+    """Pull a sleeve opening (vertex ids) in toward the wrist axis: radius -> wrist radius + extra."""
+    a, b = D.lm(f'lowerarm01.{side}'), D.lm(f'wrist.{side}')
+    ax = mu.norm(b - a)
+    out = np.zeros_like(S)
+    P = S[loop_ids]
+    h = (P - a) @ ax
+    foot = a + np.outer(h, ax)
+    rad = P - foot
+    r = np.linalg.norm(rad, axis=1)
+    # wrist radius from the body
+    near = np.linalg.norm(D.dress - b, axis=1) < 0.05
+    rw = np.median(np.linalg.norm(np.cross(D.dress[near] - a, ax), axis=1)) if near.any() else 0.03
+    tgt = rw + extra
+    out[loop_ids] = rad / np.maximum(r[:, None], 1e-9) * np.minimum(0.0, tgt - r)[:, None]
+    return out
 
 
 def upper_garment(D, g):
@@ -329,7 +571,7 @@ def upper_garment(D, g):
     vm = D.region(cats)
     P = D.dress
     # neckline
-    vm &= neckline_mask(D, P, depth_front=g.get('neck', 0.03), back=g.get('neck_back', 0.0))
+    vm &= neckline_mask(D, P, depth_front=g.get('neck', 0.03), back=g.get('neck_back', 0.0), shape=g.get('neck_shape', 'round'), vwidth=g.get('neck_width', 0.07))
     # skirted garments are cut at the natural waist (convex cross-section; the skirt is a
     # separate panel sewn on there); short ones end on the hip line above the crotch
     hipj = (D.lm('upperleg01.L') + D.lm('upperleg01.R')) / 2
@@ -364,10 +606,39 @@ def upper_garment(D, g):
         vm &= ~(arm & (t > frac))
         if sl in ('short', 'elbow'):
             vm &= ~(np.isin(D.cat, [f'farm{s}', f'hand{s}']))
-    # keep the largest connected piece only
     S, F, old = D.shell(vm, ease, smooth=g.get('smooth', 160), extra_ease=_loose_ease(D, g))
     if g.get('hides', True):
         D.hide_under(old, F, rings=g.get('hide_rings', 3))
+    armv = np.array([x.startswith(('uarm', 'farm', 'hand')) for x in D.cat[old]])
+    # clean openings: neckline on its curve, cuffs square to the forearm
+    nkp = dict(depth_front=g.get('neck', 0.03), back=g.get('neck_back', 0.0), shape=g.get('neck_shape', 'round'), vwidth=g.get('neck_width', 0.07))
+    for l in mu.boundary_loops(F):
+        cl = S[l].mean(0)
+        if cl[1] > D.lm('spine02')[1] and abs(cl[0] - D.axis_y()[0]) < 0.06:
+            def tf(Q):
+                Q = Q.copy()
+                Q[:, 1] = neckline_cut(D, Q, **nkp) - 0.002
+                return Q
+            S = snap_loop(S, l, tf)
+        elif armv[l].mean() > 0.8 and sl in ('long', 'rolled'):
+            side = 'L' if cl[0] > D.axis_y()[0] else 'R'
+            a_, b_ = D.lm(f'lowerarm01.{side}'), D.lm(f'wrist.{side}')
+            ax = b_ - a_
+            Lx = np.linalg.norm(ax)
+            ax = ax / Lx
+            frac = g.get('sleeve_frac', 0.93 if sl == 'long' else 0.45)
+
+            def tf(Q, a_=a_, ax=ax, Lx=Lx, frac=frac):
+                t = (Q - a_) @ ax
+                return Q + np.outer(frac * Lx - t, ax)
+            S = snap_loop(S, l, tf)
+    if g.get('collar'):
+        S, F, old, armv = add_collar(D, S, F, old, armv, g['collar'])
+    # loose garments hang from the bust / shoulder blades instead of following every hollow
+    if g.get('drape', True):
+        S = apply_envelope(D, S, (~armv).astype(float), g, ycut)
+        if sl != 'none':
+            S = sleeve_tubes(D, S, armv, g)
     loops = mu.boundary_loops(F)
     # identify loops: hip loop = lowest mean y with largest extent
     info = []
@@ -378,59 +649,82 @@ def upper_garment(D, g):
     cand = [x for x in info if x[1][1] < chest] or info
     hip = min(cand, key=lambda x: abs(x[1][0] - D.axis_y()[0]) + 0.3 * max(0.0, x[1][1] - chest))[0]
     pin = np.zeros(len(S))
+    goal = np.zeros_like(S)
     # pins: shoulders/neckline band, cuffs, waist (belt)
     nk = D.lm('neck01')
     dn = np.linalg.norm((S - nk) * [1, 0.6, 1], axis=1)
     pin = np.maximum(pin, np.clip(1 - (dn - 0.07) / 0.06, 0, 1) * g.get('pin_shoulders', 1.0))
+    nb = mu.neighbours(len(S), F)
     for l in loops:
         if l is hip:
             continue
         c = S[l].mean(0)
         if c[1] < nk[1] - 0.12:     # cuffs
+            side = 'L' if c[0] > D.axis_y()[0] else 'R'
             for v in l:
                 pin[v] = 1.0
-            # second ring a little softer
             ring = set(l)
-            nb = mu.neighbours(len(S), F)
-            for v in l:
-                for u in nb[v]:
-                    if u not in ring:
-                        pin[u] = max(pin[u], 0.6)
+            ring2 = sorted({int(u) for v in l for u in nb[v] if u not in ring})
+            for u in ring2:
+                pin[u] = max(pin[u], 0.35)
+            if g.get('cuff', True) and sl in ('long', 'rolled'):
+                # the cuff closes round the wrist and rides a little up the forearm: the sleeve
+                # length in between stacks into folds
+                a_, b_ = D.lm(f'lowerarm01.{side}'), D.lm(f'wrist.{side}')
+                ax = mu.norm(b_ - a_)
+                dl = cuff_delta(D, S, np.asarray(l), side, extra=g.get('cuff_ease', 0.014 if sl == 'long' else 0.03))
+                dl[l] -= ax * g.get('stack', 0.03)
+                d2 = cuff_delta(D, S, np.asarray(ring2), side, extra=g.get('cuff_ease', 0.014) + 0.01) * 0.5
+                d2[ring2] -= ax * g.get('stack', 0.03) * 0.8
+                goal += dl + d2
     belt_idx = None
-    armv = np.array([x.startswith(('uarm', 'farm', 'hand')) for x in D.cat[old]])
-    # sleeves follow the arm (soft goal) - the sim adds folds but cannot lose them in bent poses
-    pin = np.maximum(pin, armv * g.get('pin_sleeves', 0.55))
-    if g.get('belt'):
-        wy = D.lm('spine04')[1] + g.get('belt_dy', 0.0)
-        bw = np.clip(1 - np.abs(S[:, 1] - wy) / 0.03, 0, 1) * (~armv)
-        pin = np.maximum(pin, bw)
-        belt_idx = np.where((bw > 0.7))[0]
+    # sleeves: a light goal toward the skinned shell (they must not slide off in bent poses);
+    # collisions with the arm do the rest, so the sleeve can fold
+    pin = np.maximum(pin, armv * g.get('pin_sleeves', 0.12))
     if not g.get('sim', True):
         pin[:] = 1
     # skirt extrusion from the hip loop
     hem = g.get('hem')
-    uvP = S
     if hem is not None:
         S, F, pin, info2 = extrude_skirt(D, S, F, hip, pin, g)
+        goal = np.vstack([goal, np.zeros((len(S) - len(goal), 3))])
+    armv2 = np.concatenate([armv, np.zeros(len(S) - len(armv), bool)])
+    if g.get('belt') and g.get('sim', True):
+        wy = D.lm('spine04')[1] + g.get('belt_dy', 0.0)
+        bw = np.clip(1 - np.abs(S[:, 1] - wy) / g.get('belt_band', 0.028), 0, 1) * (~armv2)
+        pin = np.maximum(pin, np.clip(bw * 1.3, 0, 1))
+        belt_idx = np.where((bw > 0.6))[0]
+        # the belt gathers the (wider) cloth in to the body: pinned rows move in during the sim
+        goal += cinch_delta(D, S, np.clip(bw * 1.3, 0, 1), g.get('cinch_ease', 0.012))
+    elif g.get('belt'):
+        wy = D.lm('spine04')[1] + g.get('belt_dy', 0.0)
+        bw = np.clip(1 - np.abs(S[:, 1] - wy) / 0.03, 0, 1) * (~armv2)
+        belt_idx = np.where((bw > 0.7))[0]
+    region = armv2.astype(float)
+    sub = g.get('subdiv', getattr(D, 'subdiv', 0))
+    for _ in range(sub):
+        S, F, (pin, region, goal) = mu.subdivide_quads_linear(S, F, extra=[pin, region, goal])
     uv = uv_body(D, S)
     G = Garment(g.get('name', g['type']), S, F, uv, pin, g, sim=g.get('sim', True), layer=g.get('layer', 2))
-    G.region = np.concatenate([armv.astype(int), np.zeros(len(S) - len(armv), int)])
+    G.region = (region > 0.5).astype(int)
     G.belt_idx = belt_idx
+    G.goal = goal
     return G
 
 
 def _loose_ease(D, g):
-    """Extra ease by height: looser at the waist/belly for tunics, so the cloth blouses and folds."""
+    """Extra ease: looser at the waist/belly for belted garments (the cloth blouses over the belt
+    and gathers), a little less on the sleeves (set-in sleeves, no padded shoulders)."""
     loose = g.get('loose', 0.0)
-    if not loose:
-        return None
+    arm_e = g.get('arm_ease', -0.004)
     wy = D.lm('spine04')[1]
     ch = D.lm('spine02')[1]
 
     def f(P, old):
         y = P[:, 1]
         k = np.clip(1 - np.abs(y - wy) / max(0.05, (ch - wy) * 1.6), 0, 1)
-        return loose * k
+        arm = np.array([x.startswith(('uarm', 'farm', 'hand')) for x in D.cat[old]])
+        return loose * k * (~arm) + arm_e * arm
     return f
 
 
@@ -482,6 +776,8 @@ def extrude_skirt(D, S, F, hip, pin, g):
     train = g.get('train', 0.0)
     pre = g.get('prefold', 0.0)
     nfold = g.get('folds', 9)
+    _r = np.random.default_rng(zlib.crc32(g.get('name', g['type']).encode()) % 9973 + int(g.get('seed', 0)))
+    ph1, ph2, ph3 = _r.random(3) * 2 * math.pi
     r0v = Pd - np.array([c[0], 0, c[2]])
     r0v[:, 1] = 0
     r0 = np.linalg.norm(r0v, axis=1)
@@ -499,7 +795,9 @@ def extrude_skirt(D, S, F, hip, pin, g):
             rr = np.maximum(rr, prev_rr * 0.998)
         prev_rr = rr
         if pre:
-            rr = rr * (1 + pre * s * np.cos(ang * nfold))
+            # irregular hanging flutes (no kilt pleats): a few incommensurate waves, uneven depth
+            fl = (np.cos(ang * nfold + ph1) * 0.6 + np.cos(ang * (nfold * 0.63) + ph2) * 0.4 + np.cos(ang * (nfold * 1.71) + ph3) * 0.25)
+            rr = rr * (1 + pre * s * fl * (0.6 + 0.4 * np.cos(ang * 1.3 + ph2)))
         ring = np.stack([c[0] + dirs[:, 0] * rr, np.full(N, y), c[2] + dirs[:, 2] * rr], 1)
         k = min(1.0, s * 4.0)
         ring[:, 1] = y + (Pd[:, 1] - y0) * (1 - k)
@@ -843,7 +1141,11 @@ def simulate(D, garments, steps=6, settle0=8, trans=None, settle1=22, quality=5,
     for g in garments:
         t0 = time.time()
         g.I, g.W = D.transfer(g.P)
-        frames = [D.skin_dress_to(g.P, g.I, g.W, M) for M in keys]
+        if g.goal is not None and np.any(g.goal):
+            fr = [min(1.0, 1.6 * (k / steps)) for k in range(steps + 1)]
+            frames = [D.skin_dress_to(g.P + g.goal * f, g.I, g.W, M) for f, M in zip(fr, keys)]
+        else:
+            frames = [D.skin_dress_to(g.P, g.I, g.W, M) for M in keys]
         if not g.sim or D.nosim:
             g.result = frames[-1]
             g.frames = None

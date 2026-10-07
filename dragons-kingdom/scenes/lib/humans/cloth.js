@@ -15,7 +15,7 @@ import { libTexture, NOISE_GLSL } from './materials.js';
 const FABRIC = {
   // lum: mean linear luminance of the photo albedo (measured), so the fibre variation is centred on 1
   linen: { id: 'pbr/acg_fabric36', base: 'Fabric36', tile: 0.12, sheen: 0.25, rough: 0.82, lum: 0.5 },
-  wool: { id: 'pbr/acg_fabric37', base: 'Fabric37', tile: 0.18, sheen: 0.55, rough: 0.9, lum: 0.062 },
+  wool: { id: 'pbr/acg_fabric37', base: 'Fabric37', tile: 0.18, sheen: 0.35, rough: 0.9, lum: 0.062 },
   twill: { id: 'pbr/acg_fabric40', base: 'Fabric40', tile: 0.15, sheen: 0.4, rough: 0.86, lum: 0.09 },
   felt: { id: 'pbr/acg_fabric37', base: 'Fabric37', tile: 0.5, sheen: 0.6, rough: 0.95, lum: 0.062 },
   silk: { id: 'pbr/acg_fabric40', base: 'Fabric40', tile: 0.06, sheen: 0.8, rough: 0.5, lum: 0.09 },
@@ -23,11 +23,18 @@ const FABRIC = {
   blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.35, sheen: 0.0, rough: 0.66, leather: true, lum: 0.0097 },
 };
 
+function sheenTint(c) {
+  const m = Math.max(c[0], c[1], c[2], 1e-4);
+  const k = Math.min(1.0, 0.55 / m);              // brighten to a saturated version of the dye
+  return new THREE.Color(c[0] * k, c[1] * k, c[2] * k).lerp(new THREE.Color(0.5, 0.5, 0.5), 0.12);
+}
+
 export function clothMaterial(o = {}) {
   const f = FABRIC[o.fabric || 'wool'] || FABRIC.wool;
   const mat = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(...(o.color || [0.3, 0.3, 0.3])), roughness: o.rough ?? f.rough, metalness: 0,
-    sheen: o.sheen ?? f.sheen, sheenRoughness: 0.7, sheenColor: new THREE.Color(...(o.color || [0.3, 0.3, 0.3])).lerp(new THREE.Color(1, 1, 1), 0.15),
+    // fibre sheen takes the dye colour (light scattered inside dyed fibres); a white sheen greys dark cloth
+    sheen: o.sheen ?? f.sheen, sheenRoughness: 0.75, sheenColor: sheenTint(o.color || [0.3, 0.3, 0.3]),
     side: THREE.DoubleSide,
   });
   mat.normalMap = libTexture(`${f.id}/${f.base}_nrm.jpg`, { color: false, repeat: true, flipY: true });
@@ -44,6 +51,7 @@ export function clothMaterial(o = {}) {
     uPatCol: { value: new THREE.Vector3(...(o.patternColor || [0, 0, 0])) },
     uLeather: { value: f.leather ? 1 : 0 },
   };
+  mat.userData.cloth = U;
   mat.customProgramCacheKey = () => 'dk-human-cloth';
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);

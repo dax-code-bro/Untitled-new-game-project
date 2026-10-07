@@ -205,14 +205,14 @@ def act_hands_front(pb, p, prop=None, size=None):
     lat = pb.side_axis()
     G = c + fwd * p.get('reach', 0.22) + np.array([0, p.get('dy', -0.06), 0])
     out = []
-    if prop in ('cloth', 'bowl', 'parcel', 'loaf', 'crate', 'basket2'):
-        w = {'cloth': 0.13, 'bowl': 0.1, 'parcel': 0.15, 'loaf': 0.08, 'crate': 0.27, 'basket2': 0.19}[prop]
+    if prop in ('cloth', 'bowl', 'parcel', 'loaf', 'crate', 'basket2', 'rope'):
+        w = {'cloth': 0.13, 'bowl': 0.1, 'parcel': 0.15, 'loaf': 0.08, 'crate': 0.27, 'basket2': 0.19, 'rope': 0.12}[prop]
         for s, sg in (('L', 1), ('R', -1)):
             grip_at(pb, s, G + lat * sg * w + np.array([0, -0.01, 0]), lat_dir=fwd * 0.3 + np.array([0, 0, 0]) + lat * 0.0 + fwd,
                     n_dir=-lat * sg + np.array([0, 0.6, 0]), grip='cup', amount=0.7,
                     pole=pb.head(f'upperarm01.{s}') + lat * sg * 0.3 + np.array([0, -0.4, -0.3]))
         R = frame_y(np.array([0, 1.0, 0]), fwd)
-        yoff = {'cloth': -0.04, 'bowl': -0.03, 'parcel': -0.0, 'loaf': -0.03, 'crate': -0.17, 'basket2': -0.12}[prop]
+        yoff = {'cloth': -0.04, 'bowl': -0.03, 'parcel': -0.0, 'loaf': -0.03, 'crate': -0.17, 'basket2': -0.12, 'rope': -0.02}[prop]
         name = 'basket' if prop == 'basket2' else prop
         out.append(place(name, R, G + np.array([0, yoff, 0]), 'wrist.R'))
     else:
@@ -517,7 +517,7 @@ def act_stand(pb, p):
 
 ACTIONS = {
     'stand': act_stand, 'spear': act_spear, 'point_up': act_point_up, 'hands_front': act_hands_front,
-    'cloth': lambda pb, p: act_hands_front(pb, p, prop='cloth'), 'bowl': lambda pb, p: act_hands_front(pb, p, prop='bowl'),
+    'cloth': lambda pb, p: act_hands_front(pb, p, prop='cloth'), 'rope_front': lambda pb, p: act_hands_front(pb, p, prop='rope'), 'bowl': lambda pb, p: act_hands_front(pb, p, prop='bowl'),
     'parcel_front': lambda pb, p: act_hands_front(pb, p, prop='parcel'), 'basket_front': lambda pb, p: act_hands_front(pb, dict(p, reach=0.24, dy=-0.12), prop='basket2'),
     'basket_hip': act_basket_hip, 'lute': act_lute, 'recorder': act_recorder, 'cheer': act_cheer,
     'cheer2': lambda pb, p: act_cheer(pb, dict(p, both=True)), 'eat': act_eat, 'drink': act_drink, 'gesture': act_gesture,

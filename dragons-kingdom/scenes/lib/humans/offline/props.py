@@ -49,7 +49,9 @@ def merge(parts):
 
 def belt_ring(surfP, y, centre, width=0.035, thick=0.004, nth=96, clearance=0.003):
     """Leather belt following the outermost surface (surfP: candidate surface points) at height y."""
-    sel = np.abs(surfP[:, 1] - y) < 0.02
+    sel = np.abs(surfP[:, 1] - y) < width * 0.3
+    if sel.sum() < 30:
+        sel = np.abs(surfP[:, 1] - y) < 0.02
     Q = surfP[sel]
     th = np.arctan2(Q[:, 0] - centre[0], Q[:, 2] - centre[2])
     r = np.hypot(Q[:, 0] - centre[0], Q[:, 2] - centre[2])

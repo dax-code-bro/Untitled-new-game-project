@@ -129,7 +129,7 @@ def body_part(kit, V, subdiv=0, morph_rest=None):
     return p
 
 
-def proxy_part(kit, rel, V, name, kind, material=None, keep=None):
+def proxy_part(kit, rel, V, name, kind, material=None, keep=None, morph_rest=None):
     px = kit.proxy(rel)
     P = px.fit(V)
     Wd = px.transfer(kit.Wd)
@@ -143,6 +143,9 @@ def proxy_part(kit, rel, V, name, kind, material=None, keep=None):
     part = Part(name, kind, P[vo], tris, uv=uv, Wd=Wd[vo], weld=weld, material=material)
     part.src = vo
     part.px = px
+    if morph_rest:
+        # the proxy follows the body's morphs (eyelashes ride on the blinking lids)
+        part.morphs = {k: (px.fit(V + d) - P)[vo] for k, d in morph_rest.items()}
     return part
 
 
@@ -317,4 +320,49 @@ def skin_aux(kit, body, V, skel, skin_map_path):
             m = np.clip((dors - 0.25) / 0.35, 0, 1) * np.clip((along - 0.3) / 0.2, 0, 1)
             aux[sel, 1] = np.maximum(aux[sel, 1], m[sel])
     body.attrs['aux'] = aux
+    body.attrs['aux2'] = face_masks(kit, body, V)
     return aux
+
+
+def face_masks(kit, body, V):
+    """Per-vertex (flush, lid margin, under-eye, ear) masks on the body (rest positions):
+    flush = where blood shows (cheeks, nose tip, chin, ears); lid margin = the rim of the eye
+    opening (lash line / wet waterline); under-eye = thin periorbital skin (cooler, darker)."""
+    P = body.P
+    out = np.zeros((len(P), 4))
+    g = lambda name: V[kit.base.group_verts(name)].mean(0)
+    eL, eR = g('joint-l-eye'), g('joint-r-eye')
+    mouth = g('joint-mouth')
+    ey = (eL[1] + eR[1]) / 2
+    ez = (eL[2] + eR[2]) / 2
+    face = (P[:, 2] > ez - 0.03) & (P[:, 1] > mouth[1] - 0.07) & (P[:, 1] < ey + 0.06) & (np.abs(P[:, 0]) < 0.085)
+    gauss = lambda c, s: np.exp(-np.sum(((P - c) / s) ** 2, axis=1))
+    # nose tip: the most forward face point between the eyes and the mouth on the midline
+    mid = face & (np.abs(P[:, 0]) < 0.01) & (P[:, 1] < ey - 0.015) & (P[:, 1] > mouth[1] + 0.012)
+    nose = P[mid][np.argmax(P[mid][:, 2])] if mid.any() else (eL + eR) / 2 + np.array([0, -0.04, 0.04])
+    fl = np.zeros(len(P))
+    for e in (eL, eR):
+        sg = np.sign(e[0])
+        cheek = np.array([e[0] + sg * 0.008, ey - 0.035, ez + 0.012])
+        fl = np.maximum(fl, gauss(cheek, np.array([0.022, 0.018, 0.03])) * face)
+    fl = np.maximum(fl, gauss(nose, np.array([0.012, 0.012, 0.012])) * 0.9)
+    chin = np.array([0, mouth[1] - 0.045, mouth[2] - 0.005])
+    fl = np.maximum(fl, gauss(chin, np.array([0.018, 0.014, 0.03])) * 0.5 * face)
+    # ears: lateral, around eye height, behind the eyes
+    ear = (np.abs(P[:, 0]) > 0.062) & (np.abs(P[:, 1] - (ey - 0.02)) < 0.04) & (P[:, 2] < ez - 0.05) & (P[:, 2] > ez - 0.12)
+    out[:, 3] = ear
+    fl = np.maximum(fl, ear * 0.7)
+    out[:, 0] = np.clip(fl, 0, 1)
+    # lid margin: skin within a few mm of the eyeball surface, in front of its centre
+    lm = np.zeros(len(P))
+    ue = np.zeros(len(P))
+    for e in (eL, eR):
+        d = np.linalg.norm(P - e, axis=1)
+        r_eye = 0.0122
+        front = np.clip((P[:, 2] - e[2] + 0.002) / 0.006, 0, 1)
+        lm = np.maximum(lm, np.clip(1 - (d - r_eye - 0.0008) / 0.0028, 0, 1) * front)
+        below = np.array([e[0] + np.sign(e[0]) * 0.002, e[1] - 0.016, e[2] + 0.004])
+        ue = np.maximum(ue, gauss(below, np.array([0.016, 0.007, 0.02])))
+    out[:, 1] = lm
+    out[:, 2] = ue * face
+    return out

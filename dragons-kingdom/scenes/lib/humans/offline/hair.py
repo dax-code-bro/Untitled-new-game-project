@@ -89,7 +89,7 @@ class Groom:
         area = np.linalg.norm(np.cross(b - a, cc - a), axis=1) / 2
         cent = (a + b + cc) / 3
         band = np.clip(1 - (cent[:, 1] - self.hairline(cent, **(hl_kw or {}))) / 0.03, 0, 1)
-        area = area * (1 + 1.5 * band)            # denser near the hairline (it shows the most)
+        area = area * (1 + 2.5 * band)            # denser near the hairline (it shows the most)
         pr = area / area.sum()
         pick = self.rng.choice(len(tri), size=n, p=pr)
         u, v = self.rng.random(n), self.rng.random(n)
@@ -160,7 +160,7 @@ class Groom:
             for i in range(k):
                 t = max(0.0, (i / (k - 1) - 0.75) / 0.25)
                 pts[i] = pts[i] * (1 - t * 0.7) + (G + nrms[i] * 0.004) * t * 0.7
-            wmul = 0.45 + 0.55 * edge[ri]
+            wmul = 0.6 + 0.4 * edge[ri]
             if self.rng.random() < 0.012 and edge[ri] > 0.8:   # a stray hair lifting off the groom
                 lift = np.linspace(0, 1, k) ** 2 * (0.003 + 0.006 * self.rng.random())
                 pts = pts + nrms * lift[:, None] + mu.norm(np.cross(nrms[0], pts[-1] - pts[0])) * lift[:, None] * (self.rng.random() - 0.5)

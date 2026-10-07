@@ -80,8 +80,8 @@ vec3 hBump(vec3 n, vec3 viewPos, float h, float facing) {
  */
 export function skinMaterial(o = {}) {
   const mat = new THREE.MeshPhysicalMaterial({
-    color: 0xffffff, roughness: o.rough ?? 0.5, metalness: 0,
-    ior: 1.4, specularIntensity: 0.7,
+    color: 0xffffff, roughness: o.rough ?? 0.46, metalness: 0,
+    ior: 1.4, specularIntensity: 0.9,
     sheen: 0.18, sheenRoughness: 0.55, sheenColor: new THREE.Color(0.55, 0.45, 0.4),
     clearcoat: o.oil ?? 0.12, clearcoatRoughness: 0.32,
   });
@@ -95,6 +95,8 @@ export function skinMaterial(o = {}) {
     uSSS: { value: o.sss ?? 1.0 },
     uSeed: { value: (o.seed ?? 1) * 0.137 },
     uDirt: { value: o.dirt ?? 0.0 },
+    uFlush: { value: o.flush ?? 0.5 },
+    uLid: { value: o.lid ?? 0.75 },
     uScalp: { value: new THREE.Vector3(...(o.scalpColor || [0.05, 0.03, 0.02])) },
     uBeard: { value: new THREE.Vector3(...(o.beardColor || [0.04, 0.025, 0.015])) },
   };
@@ -104,15 +106,15 @@ export function skinMaterial(o = {}) {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', `#include <common>
-attribute float ao; attribute float thick; attribute vec4 aux;
-varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux;`)
+attribute float ao; attribute float thick; attribute vec4 aux; attribute vec4 aux2;
+varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2;`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-vObjP = position; vAO = ao; vThick = thick; vAux = aux;`);
+vObjP = position; vAO = ao; vThick = thick; vAux = aux; vAux2 = aux2;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 ${NOISE_GLSL}
-uniform vec3 uTone, uScalp, uBeard; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt;
-varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux;
+uniform vec3 uTone, uScalp, uBeard; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid;
+varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2;
 vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
@@ -124,6 +126,11 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   float m1 = hFbm(vObjP * 55.0 + uSeed) - 0.5, m2 = hFbm(vObjP * 160.0 + uSeed * 3.0) - 0.5;
   c *= 1.0 + vec3(0.07, -0.02, -0.03) * m1 * 2.0 + vec3(0.03, 0.035, 0.03) * m2;
   c = mix(c, c * vec3(1.12, 0.92, 0.9), uRed * (0.5 + m1));
+  // where blood shows (cheeks, nose tip, chin, ears) / thin cool skin under the eyes
+  c = mix(c, c * vec3(1.1, 0.84, 0.84), vAux2.r * uFlush * (0.7 + 0.6 * m1));
+  c *= mix(vec3(1.0), vec3(0.9, 0.86, 0.92), vAux2.b * 0.7);
+  // lid margin: lash line and wet rim of the eye opening
+  c = mix(c, c * vec3(0.42, 0.3, 0.28), vAux2.g * uLid);
   // lips (aux.r) a little deeper, nails (aux.g) paler
   c = mix(c, c * vec3(1.05, 0.86, 0.88), vAux.r * 0.5);
   c = mix(c, vec3(l) * vec3(1.15, 1.02, 0.98) + 0.03, vAux.g * 0.55);
@@ -138,7 +145,7 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 {
   float tz = hFbm(vObjP * 40.0 + 9.0);
-  roughnessFactor = clamp(roughnessFactor * (0.85 + 0.35 * tz) - vAux.r * 0.15 - vAux.g * 0.25 + vAux.b * 0.15 + vAux.a * 0.35, 0.18, 0.95);
+  roughnessFactor = clamp(roughnessFactor * (0.85 + 0.35 * tz) - vAux.r * 0.15 - vAux.g * 0.25 + vAux.b * 0.15 + vAux.a * 0.35 - vAux2.g * 0.3 - vAux2.r * 0.04, 0.12, 0.95);
 }`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 skinSmoothN = normal;
@@ -213,7 +220,7 @@ export function eyeMaterial(o = {}) {
     clearcoat: 1.0, clearcoatRoughness: 0.02,
   });
   if (o.map) mat.map = libTexture(o.map);
-  const U = { uIrisTint: { value: new THREE.Vector3(...(o.irisTint || [1, 1, 1])) }, uScleraTint: { value: new THREE.Vector3(...(o.scleraTint || [0.93, 0.9, 0.86])) } };
+  const U = { uIrisTint: { value: new THREE.Vector3(...(o.irisTint || [1, 1, 1])) }, uScleraTint: { value: new THREE.Vector3(...(o.scleraTint || [0.97, 0.93, 0.88])) } };
   mat.customProgramCacheKey = () => 'dk-human-eye';
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
@@ -236,7 +243,16 @@ varying float vAO; varying vec3 vGaze; varying float vIris;`)
 {
   float irisW = smoothstep(0.98, 0.9, vIris);           // vIris: angle from the gaze axis / limbus angle
   diffuseColor.rgb *= mix(uScleraTint, uIrisTint, irisW);
+  // sclera: warmer and a little pinker toward the corners (vessels), never paper white
+  diffuseColor.rgb *= mix(vec3(1.0), vec3(1.0, 0.86, 0.82), smoothstep(1.6, 2.6, vIris) * (1.0 - irisW));
   diffuseColor.rgb *= mix(1.0, 0.82, smoothstep(0.85, 1.0, vIris) * smoothstep(1.15, 1.0, vIris)); // limbal ring
+}`)
+      .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>
+{
+  // the wet cornea is the mirror; the sclera's tear film is thinner and the lids shade it
+  float kc = smoothstep(1.2, 0.85, vIris);
+  material.clearcoat *= mix(0.4, 1.0, kc);
+  material.clearcoatRoughness = mix(0.12, 0.015, kc);
 }`)
       .replace('#include <clearcoat_normal_fragment_begin>', `#include <clearcoat_normal_fragment_begin>
 {
