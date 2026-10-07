@@ -86,8 +86,8 @@ export async function setup(ctx) {
       members.push(ch);
     }
     if (sh.ground) {
-      const pm = await loadPBR(sh.ground, ctx, { worldSize: 32 });
-      const patch = new THREE.Mesh(new THREE.CircleGeometry(16, 64), pm);
+      const pm = await loadPBR(sh.ground, ctx, { worldSize: 15 });
+      const patch = new THREE.Mesh(new THREE.CircleGeometry(7.5, 64), pm);
       patch.rotation.x = -Math.PI / 2; patch.position.set(cx, 0.004, 0); patch.receiveShadow = true;
       scene.add(patch);
     }
@@ -101,7 +101,12 @@ export function update(t, ctx) {
   const { camera } = ctx;
   const k = Math.min(S.shots.length - 1, Math.max(0, Math.floor(t)));
   const sh = S.shots[k];
-  for (const s of S.shots) for (const ch of s.members) applyIdle(ch, t + s.cx * 0.01, { amount: s === sh ? 1 : 0, blink: false });
+  for (const s of S.shots) for (const ch of s.members) {
+    // only this shot's people exist (a low sun reaches across 40 m: Abby's shadow fell into
+    // Alexandria's frame)
+    ch.root.visible = s === sh;
+    applyIdle(ch, t + s.cx * 0.01, { amount: s === sh ? 1 : 0, blink: false });
+  }
   const c = sh.cam;
   const tgt = new THREE.Vector3(sh.cx, c.y ?? 1.3, 0);
   if (c.bone) {

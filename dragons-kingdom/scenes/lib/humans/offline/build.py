@@ -447,7 +447,9 @@ def build_sling(sk, pt, off, D):
             rad = (loc - axis) * np.array([1, 0, 1])
             if np.dot(n, rad) < 0 and loc[1] < nk[1] - 0.02:
                 n = -n
-            path[k] = loc + n * 0.006 if np.dot(path[k] - loc, n) < 0.03 else path[k]
+            # lie on the clothes (the band is under tension): only the first few points, where it
+            # leaves the cradle, may stand off the body
+            path[k] = loc + n * 0.006 if (k >= 4 or np.dot(path[k] - loc, n) < 0.03) else path[k]
         t = mu.norm(np.gradient(path, axis=0))
         nrm = []
         for q in path:

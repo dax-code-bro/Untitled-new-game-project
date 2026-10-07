@@ -182,8 +182,16 @@ def cast():
         'notes': 'canon: riding clothes with a muted green outer layer; LEFT arm is the injured one',
     }
     C.append(abby)
-    C.append(variant(abby, 'abby_injured', pose='injured_arm', pose_params={'weight': 'R', 'contrapposto': 0.4}))
-    C.append(variant(abby, 'abby_sling', pose='sling', pose_params={'weight': 'L', 'contrapposto': 0.5}))
+    # the LEFT arm crosses the body in these two: its sleeve follows the arm more firmly and the
+    # coat does not self-collide (sleeve and front panel caught between arm and chest shredded)
+    def _arm_across(outfit):
+        out_ = [dict(g) for g in outfit]
+        for g in out_:
+            if g['type'] == 'coat':
+                g.update(pin_sleeves=0.55, self_collision=False)
+        return out_
+    C.append(variant(abby, 'abby_injured', pose='injured_arm', pose_params={'weight': 'R', 'contrapposto': 0.4}, outfit=_arm_across(abby['outfit'])))
+    C.append(variant(abby, 'abby_sling', pose='sling', pose_params={'weight': 'L', 'contrapposto': 0.5}, outfit=_arm_across(abby['outfit'])))
     C.append(variant(abby, 'abby_ride', pose='ride', pose_params={'lean': 0.14, 'reach': 0.3}, cloth_subdiv=0))
     C.append(variant(abby, 'abby_ride_injured', pose='ride_injured', pose_params={}, lod='mid'))
     # ================================================================ Remi
@@ -211,7 +219,7 @@ def cast():
                   hair={'color': HAIR['chestnut'], 'style': 'bun', 'count': 9000, 'loft': 0.005, 'bun_radius': 0.04},
                   eyes=('brownlight', [0.5, 0.42, 0.34]), brows='eyebrow007',
                   outfit=[G_shoes([0.03, 0.022, 0.018]),
-                          G_kirtle([0.045, 0.06, 0.075], hem=0.0, fabric='wool', sheen=0.55, neck=0.07, flare=2.1, train=0.12, folds=13, wear=0.1, dust=0.05,
+                          G_kirtle([0.045, 0.06, 0.075], hem=0.0, fabric='wool', sim_fabric='heavywool', sheen=0.55, neck=0.07, flare=2.1, train=0.12, folds=13, wear=0.1, dust=0.05,
                                    name='gown'),
                           G_veil([0.52, 0.5, 0.45], length=0.45)],
                   pose='hands_front', pose_params={'weight': 'L', 'contrapposto': 0.4, 'reach': 0.16, 'dy': -0.1}, cloth_subdiv=0,

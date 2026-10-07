@@ -28,7 +28,16 @@ bust and shoulder blades instead of following every hollow; sleeves are tapering
 simulated. During the simulation the belt rows and cuffs are pulled in to the body (pinned
 goals animated inward), so the wider cloth gathers above and below the belt and stacks along
 the forearm - the folds come from physics, not from a texture. Skirts are extruded from the
-waist seam with irregular flutes; riding coats are split at the front.
+waist seam with irregular flutes; riding coats are split at the front. Under-layers that are not
+simulated (shirts) get deterministic neckline gathers; band collars are fitted to the neck's own
+cross-section; the bust is rounded in the cloth collider (cloth over a body-shaped apex tents
+into two points, and a period chemise / kirtle bodice supports the bust anyway).
+
+Face skin (offline/humanbuild.albedo_gain): the MakeHuman photo textures carry the photo shoot's
+light and make-up at 1-5 cm (pale under the eyes, a red lid crease, shading beside the nose). A
+per-vertex RGB gain (`albg` = colour blurred over 4.5 cm / colour blurred over 8 mm, lips and
+lash line excluded) evens it out, so the renderer's own light does the modelling; pores,
+freckles and lip edges (finer than 8 mm) stay.
 
 ## Build
 
@@ -38,6 +47,9 @@ $PY -I scenes/lib/humans/offline/build.py --list            # every character id
 $PY -I scenes/lib/humans/offline/build.py                   # build all (about 1.5-2 h on 4 cores)
 $PY -I scenes/lib/humans/offline/build.py --only abby,remi  # some (also 'crowd*')
 #  options: --lod mid (quick test of a hero), --nohair, --nosim, --suffix _dev (writes <id>_dev)
+# restartable, in YOUR order (build.py --only always goes in cast order), skipping ids whose
+# cache is newer than a stamp file (touch it when the offline code changes):
+PY=$PY scenes/lib/humans/offline/queue.sh <stamp> abby remi king crowd01 ...
 ```
 
 Times on this machine (4 vCPU): close-up characters 4-6 min each, mid characters 1.5-3 min.
