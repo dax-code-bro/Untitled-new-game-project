@@ -1194,6 +1194,23 @@ def simulate(D, garments, steps=6, settle0=8, trans=None, settle1=22, quality=5,
     gp = _make_obj(bpy, 'ground', np.array([[-5, 0, -5], [5, 0, -5], [5, 0, 5], [-5, 0, 5]]), [(0, 3, 2, 1)])
     gp.modifiers.new('col', 'COLLISION')
     gp.collision.cloth_friction = 10.0
+    # riders: the saddle / the dragon's back rises under the seat while the legs come up, so the
+    # coat skirts drape over it instead of hanging through it (D.saddle: centre, radius, length)
+    if getattr(D, 'saddle', None):
+        sd = D.saddle
+        n_a, n_l = 24, 9
+        ang = np.linspace(0, 2 * math.pi, n_a, endpoint=False)
+        zs = np.linspace(-sd['length'] / 2, sd['length'] / 2, n_l)
+        full = np.array([[sd['centre'][0] + math.cos(a) * sd['rx'], sd['centre'][1] + math.sin(a) * sd['ry'], sd['centre'][2] + z] for z in zs for a in ang])
+        low = full.copy()
+        low[:, 1] = sd['centre'][1] - sd['ry'] - 0.6 + (full[:, 1] - sd['centre'][1]) * 0.05
+        Fs = mu.grid_faces(n_a, n_l, wrap_u=True)
+        so = _make_obj(bpy, 'saddle', low, Fs)
+        _add_shape_anim(so, [low, low, full, full], [1, max(2, fk[-1] - 8), fk[-1] + 2, f_end])
+        _set_linear(so)
+        so.modifiers.new('col', 'COLLISION')
+        so.collision.thickness_outer = 0.004
+        so.collision.cloth_friction = 8.0
     prev = []                                   # simulated garments: (object for collision)
     for g in garments:
         t0 = time.time()

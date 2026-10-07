@@ -92,6 +92,9 @@ def assemble(kit, spec, out_dir, opts):
     D.sole = sole
     D.subdiv = spec.get('cloth_subdiv', 1 if hero else 0)
     D.nosim = opts.get('nosim', False)
+    if spec.get('pose', 'stand').startswith('ride'):
+        # seat 0.1 m below the pelvis (root bone head = origin for riders), back along +-z
+        D.saddle = {'centre': np.array([0.0, -0.1 - 0.17, 0.0]), 'rx': 0.15, 'ry': 0.17, 'length': 1.2}
     garments = []
     for g in spec.get('outfit', []):
         b = gm.BUILDERS[g['type']]

@@ -124,7 +124,7 @@ export const SPECIES = {
         [0.58, 0.218, 0.142, -0.082], [0.74, 0.188, 0.126, -0.08], [0.88, 0.162, 0.118, -0.076], [1.0, 0.112, 0.084, -0.066]],
       jaw: [[0.0, 0.29, -0.08, -0.33], [0.12, 0.3, -0.08, -0.33], [0.3, 0.27, -0.08, -0.275], [0.5, 0.232, -0.08, -0.225],
         [0.7, 0.196, -0.078, -0.192], [0.86, 0.166, -0.075, -0.174], [0.98, 0.118, -0.072, -0.15]],
-      eye: [0.262, 0.13, 0.31], eyeR: 0.052, eyeInset: 0.5, brow: 1.55, cheek: 1.15, jawMuscle: 1.25, ridgeR: 0.024, hinge: [0, -0.09, 0.035], gape0: 14 * deg, nostril: 1.15,
+      eye: [0.262, 0.13, 0.31], eyeR: 0.058, eyeInset: 0.5, eyeExpose: 56, brow: 1.55, cheek: 1.15, jawMuscle: 1.25, ridgeR: 0.024, hinge: [0, -0.09, 0.035], gape0: 14 * deg, nostril: 1.15,
       teethUp: 15, teethSize: 0.06, lipCover: 0.55, tympanum: 1,
     },
     horns: 'bashion', crest: { count: 92, h: [0.0042, 0.0105, 0.0032], base: 1.15 },
@@ -765,11 +765,11 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
     // flat skull table between the eyes and the horn bases (a reptile's cranial platform)
     m.ell(W(sd * 0.06, U(0.15)[1] - 0.03, 0.12), [0.075 * H, 0.035 * H, 0.16 * H], { ax: ex, ay: ey, k: 0.04 * H, ...t });
     // brow ridge: a bony shelf overhanging the eye
-    m.ell(W(sd * (eye[0] - 0.02 + ER * 0.3), eye[1] + ER * 1.05, eye[2] - 0.01), [0.05 * H * hs.brow, 0.028 * H * hs.brow, 0.13 * H], { ax: Wd(1, 0.3 * sd, 0.1 * sd), ay: Wd(-0.3 * sd, 1, 0.05), k: 0.022 * H, ...t });
+    m.ell(W(sd * (eye[0] - 0.025 + ER * 0.3), eye[1] + ER * 0.95, eye[2] - 0.01), [0.045 * H * Math.sqrt(hs.brow), 0.024 * H * hs.brow, 0.15 * H], { ax: Wd(1, 0.3 * sd, 0.1 * sd), ay: Wd(-0.3 * sd, 1, 0.05), k: 0.022 * H, ...t });
     // canthus: bony ridge from the brow toward the nostril
     m.cone(W(sd * (eye[0] - 0.03), eye[1] + ER * 0.9, eye[2] + 0.07), W(sd * 0.065, U(0.86)[1] - 0.012, 0.86), 0.022 * H * hs.brow, 0.011 * H, { k: 0.025 * H, ...t });
-    // horn boss on the back corner of the skull
-    m.ell(W(sd * 0.125, U(0.04)[1] - 0.03, 0.05), [0.05 * H * hs.brow, 0.04 * H, 0.065 * H], { ax: ex, ay: ey, k: 0.03 * H, ...t });
+    // horn boss on the back corner of the skull (a low ridge, not a knob)
+    m.ell(W(sd * 0.125, U(0.04)[1] - 0.045, 0.06), [0.04 * H * Math.sqrt(hs.brow), 0.028 * H, 0.08 * H], { ax: ex, ay: ey, k: 0.03 * H, ...t });
     // temporal jaw muscles: the widest part of the head, behind and below the eye
     m.ell(W(sd * 0.14 * hs.jawMuscle ** 0.4, -0.03, 0.1), [0.08 * H * hs.jawMuscle, 0.11 * H, 0.14 * H], { ax: ex, ay: ey, k: 0.05 * H, ...t });
     // cheek bone (jugal) under the eye toward the jaw joint

@@ -195,7 +195,7 @@ export async function createCreature(which, opts = {}) {
     meshes.push(partMesh(THREE, eg, mats.eye, `${root.name}:eyes`, { aEye: eg.extra, aEyeX: mergeAttr(parts, 'ax', 4), aEyeZ: mergeAttr(parts, 'az', 4) }));
     const lids = [];
     for (const e of eyeData) for (const up of [true, false]) {
-      const g = eyelid(up, { rIn: 1.075, rOut: 1.19, span: 1.3, reach: up ? 0.98 : 0.86 });
+      const g = eyelid(up, { rIn: 1.07, rOut: 1.25, span: 1.32, reach: up ? 1.0 : 0.88 });
       transformPart(g, e.toWorld, e.toWorldN, boneIndex[up ? e.lidU : e.lidL]);
       lids.push(g);
     }

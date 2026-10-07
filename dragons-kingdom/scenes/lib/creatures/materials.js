@@ -42,7 +42,7 @@ export function lookParams(THREE, look) {
       // brown where the sun is right behind it, never a red glow)
       membrane: lin(THREE, 0.02, 0.018, 0.017), trans: lin(THREE, 0.006, 0.0032, 0.002), vein: lin(THREE, 0.025, 0.012, 0.009), memRough: 0.66,
       horn: [lin(THREE, 0.02, 0.019, 0.018), lin(THREE, 0.11, 0.1, 0.09)], claw: [lin(THREE, 0.018, 0.017, 0.016), lin(THREE, 0.06, 0.055, 0.05)],
-      tooth: lin(THREE, 0.5, 0.45, 0.34), iris: [lin(THREE, 0.3, 0.16, 0.04), lin(THREE, 0.1, 0.042, 0.012)], sclera: lin(THREE, 0.025, 0.018, 0.012),
+      tooth: lin(THREE, 0.5, 0.45, 0.34), iris: [lin(THREE, 0.16, 0.085, 0.024), lin(THREE, 0.045, 0.02, 0.007)], sclera: lin(THREE, 0.02, 0.015, 0.011),
     },
     leaf: {
       base: lin(THREE, 0.04, 0.085, 0.022), belly: lin(THREE, 0.12, 0.14, 0.055), dorsal: lin(THREE, 0.022, 0.05, 0.016),
@@ -415,7 +415,7 @@ function membraneMaterial(THREE, P, ctx) {
   const U = {
     uMemCol: { value: P.membrane }, uTransCol: { value: P.trans }, uVeinCol: { value: P.vein },
     uBillowL: { value: 0 }, uBillowR: { value: 0 }, uBillowScale: { value: ctx.L * 0.025 },
-    uL: { value: ctx.L }, uFold: { value: 0 },
+    uL: { value: ctx.L }, uFold: { value: 0 }, uMemRough: { value: P.memRough },
   };
   mat.userData.dkUniforms = U;
   mat.customProgramCacheKey = () => 'dk-membrane';
@@ -432,10 +432,10 @@ vWing = aWing; vEdge = aEdge; vRest = position;
     let frag = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec4 vWing; varying vec4 vEdge; varying vec3 vRest;
-uniform vec3 uMemCol, uTransCol, uVeinCol; uniform float uL, uFold;
+uniform vec3 uMemCol, uTransCol, uVeinCol; uniform float uL, uFold, uMemRough;
 ${GLSL_COMMON}
 ${PERTURB}
-float dkVein, dkThin, dkMemH; vec3 dkVeinAtt;
+float dkVein, dkThin, dkMemH, dkMemR; vec3 dkVeinAtt; vec3 dkMemG;
 // blood vessels: meandering, branching lines (iso-contours of stretched value noise at three
 // scales: arteries along the bones, branches, capillaries), thinning toward the free edge
 float dkVessels(vec2 uv, float det, float detC) {
@@ -479,6 +479,18 @@ void dkMembrane(inout vec3 col) {
   float crease = (sin(along * 60.0 + nn * 6.0) * 0.5 + 0.5) * 0.0004 * uL * detC;
   float wrinkle = (sin(across * 70.0 + nn * 9.0 + dkVnoise2(vec2(along * 9.0, across * 4.0)) * 5.0) * 0.5 + 0.5) * 0.0014 * uL * det * uFold;
   dkMemH = crease * (1.0 - uFold) + wrinkle + dkVein * 0.00012 * uL;
+  // leathery micro texture (bat-wing skin): a fine network of creases in rest space with an
+  // analytic slope, so the sheen breaks up instead of reading as a smooth sheet
+  float sc = uL * 0.0032;
+  vec4 l1 = dkNoised(vRest / sc + 1.7);
+  vec4 l2 = dkNoised(vRest / (sc * 0.42) + 9.2);
+  float fwr = length(fwidth(vRest));
+  float lf = (1.0 - smoothstep(0.3, 0.8, fwr / sc));
+  float lf2 = (1.0 - smoothstep(0.3, 0.8, fwr / (sc * 0.42)));
+  dkMemG = (-2.0 * sign(l1.x - 0.5) * l1.yzw * 0.06 * lf + l2.yzw * 0.035 * lf2) * (1.0 + uFold);
+  float cr = 1.0 - 2.0 * abs(l1.x - 0.5);
+  col *= 1.0 - 0.18 * smoothstep(0.75, 1.0, cr) * lf;           // creases a little darker
+  dkMemR = clamp(uMemRough * (0.8 + 0.45 * l2.x) + 0.1 * cr * lf + 0.08 * hem, 0.15, 1.0);
 }
 vec3 dkTransmit(vec3 lightCol, vec3 L, vec3 N, vec3 V) {
   float back = saturate(-dot(N, L));
@@ -488,8 +500,14 @@ vec3 dkTransmit(vec3 lightCol, vec3 L, vec3 N, vec3 V) {
 `)
       .replace('#include <color_fragment>', `#include <color_fragment>
 { vec3 c; dkMembrane(c); diffuseColor.rgb = c; }`)
+      .replace('#include <roughnessmap_fragment>', `float roughnessFactor = dkMemR;`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
-normal = dkPerturb(-vViewPosition, normal, dkSlope(dkMemH, -vViewPosition), faceDirection);`);
+normal = dkPerturb(-vViewPosition, normal, dkSlope(dkMemH, -vViewPosition), faceDirection);
+{
+  vec3 pv = -vViewPosition;
+  vec2 sl = vec2(dot(dkMemG, dFdx(vRest)) / max(length(dFdx(pv)), 1e-7), dot(dkMemG, dFdy(vRest)) / max(length(dFdy(pv)), 1e-7));
+  normal = dkPerturb(pv, normal, sl, faceDirection);
+}`);
     // transmitted sunlight: a copy of three's directional-light block (same shadow
     // lookup) in its own scope, after the normal lighting; the include itself is
     // left in place so runtime patches (cinematic AO / cascades) still apply.

@@ -16,7 +16,7 @@ export const meta = {
   duration: 6,
   seed: 3,
   cinematic: filmFinish({
-    motionBlur: CFG.accumulate === false ? { mode: 'off' } : undefined,
+    ...(CFG.accumulate === false ? { motionBlur: { mode: 'off' } } : {}),
     shadows: { cascades: 0 },
     ao: { enabled: true, radius: 0.12 },
     dof: { samples: 48 },

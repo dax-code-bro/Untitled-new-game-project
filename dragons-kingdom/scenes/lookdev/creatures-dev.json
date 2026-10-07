@@ -1,8 +1,10 @@
-{ "creatures": [{ "name": "charcoal", "quality": "standard", "face": -95, "pose": { "name": "stand", "look": [0.3, 0.02] } }],
+{ "creatures": [{ "name": "leaf", "quality": "standard", "face": -100, "pose": { "name": "sit", "look": [-0.3, -0.05] } }],
   "rotationY": -1.2,
   "views": [
-    { "subject": 0, "cam": [0.51, 0.08, 0.78], "target": [0, 0.13, 0.12], "fov": 34 },
-    { "subject": 0, "cam": [0.2, 0.17, 0.27], "target": [0.04, 0.16, 0.17], "fov": 30 },
-    { "subject": 0, "cam": [0.12, 0.2, 0.25], "target": [0.04, 0.2, 0.2], "fov": 18 },
-    { "subject": 0, "bone": "head", "cam": [0.16, 0.03, 0.17], "target": [0, -0.01, 0.05], "fov": 30 }
+    { "subject": 0, "cam": [0.62, 0.12, 0.72], "target": [0.0, 0.17, 0.12], "fov": 34 },
+    { "subject": 0, "cam": [1.0, 0.2, 0.0], "target": [0.0, 0.17, 0.0], "fov": 34 },
+    { "subject": 0, "cam": [0.05, 0.25, 0.8], "target": [0.0, 0.22, 0.1], "fov": 34 },
+    { "subject": 0, "bone": "head", "cam": [0.22, 0.03, 0.2], "target": [0, -0.01, 0.05], "fov": 30 },
+    { "subject": 0, "cam": [0.8, 0.3, 0.5], "target": [0, 0.15, 0.05], "fov": 34, "poses": { "0": { "name": "stand", "look": [0.3, 0.0] } } },
+    { "subject": 0, "cam": [0.9, 0.3, 0.3], "target": [0, 0.2, 0.0], "fov": 40, "poses": { "0": { "name": "flight", "phase": 0.6, "corr": 1 } }, "airborne": { "0": 0.6 } }
   ] }

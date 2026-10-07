@@ -336,6 +336,12 @@ export function computeSkin(anat, mesh, boneIndex, opts = {}) {
       ls.set(l2);
     }
     for (let v = 0; v < nV; v++) mask2[v * 4 + 2] = Math.exp(ls[v]);
+    // fine granules around the eyes (after the smoothing, which would wash them out)
+    if (opts.eyes) for (let v = 0; v < nV; v++) for (const e of opts.eyes) {
+      const dx = positions[v * 3] - e.center[0], dy = positions[v * 3 + 1] - e.center[1], dz = positions[v * 3 + 2] - e.center[2];
+      const d = Math.sqrt(dx * dx + dy * dy + dz * dz) / e.radius;
+      if (d < 3.2) mask2[v * 4 + 2] = Math.min(mask2[v * 4 + 2], e.radius * (0.2 + 0.22 * Math.max(0, d - 1.15)));
+    }
   }
 
   // ---------------------------------------------------- 5) ambient occlusion from the SDF

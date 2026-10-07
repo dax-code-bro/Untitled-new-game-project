@@ -111,7 +111,7 @@ function lids(pb, t, o = {}) {
     const bl = d >= 0 && d < 0.32 ? (d < 0.11 ? smooth(0, 0.11, d) : 1 - smooth(0.11, 0.32, d)) : 0;
     close = Math.max(close, bl);
   }
-  const relax = o.lidRelax ?? 0.42;     // resting lids lowered over the top of the eye (a calm look)
+  const relax = o.lidRelax ?? 0.3;     // resting lids lowered over the top of the eye (a calm look)
   for (const e of pb.c.eyes) {
     const ax = new THREE.Vector3(...e.gx);
     const up = mix(relax, 1.15, close), lo = mix(relax * 0.55, 0.4, close);
