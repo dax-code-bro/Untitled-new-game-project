@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scan Viewer</title>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }</script>
+<style>
+  :root { --bg: #111214; --panel: rgba(18,19,22,.94); --line: #2c2e33; --text: #e8e6e1; --dim: #8d8a83; --accent: #ffd23f; --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--mono); }
+  canvas { display: block; width: 100%; height: 100%; }
+  #ui { position: fixed; top: 12px; left: 12px; width: 300px; max-height: calc(100% - 24px); overflow-y: auto; background: var(--panel); border: 1px solid var(--line); padding: 14px; font-size: 12px; }
+  h1 { margin: 0 0 10px; font-size: 14px; color: var(--accent); letter-spacing: .15em; }
+  h2 { margin: 14px 0 6px; font-size: 12px; color: var(--accent); }
+  button, select { font: 12px var(--mono); color: var(--text); background: #24262a; border: 1px solid #3a3d42; border-radius: 4px; padding: 5px 8px; cursor: pointer; }
+  button.on { background: var(--accent); color: #111; border-color: var(--accent); }
+  select { width: 100%; }
+  .row { display: flex; gap: 4px; flex-wrap: wrap; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 3px 0; border-bottom: 1px solid #222; }
+  td:last-child { text-align: right; }
+  .dim { color: var(--dim); }
+  #drop { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(255,210,63,.15); border: 3px dashed var(--accent); font-size: 22px; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <h1>SCAN VIEWER</h1>
+  <select id="pick"><option value="">— assets.json —</option></select>
+  <p class="dim">…or drop a .glb / .gltf file anywhere.</p>
+  <h2>LOD</h2>
+  <div class="row" id="lods"></div>
+  <h2>View</h2>
+  <div class="row">
+    <button id="wire">Wireframe</button>
+    <button id="human" class="on">1.8 m human</button>
+    <button id="grid" class="on">1 m grid</button>
+    <button id="sun">Rotate sun</button>
+  </div>
+  <h2>Stats</h2>
+  <table id="stats"></table>
+  <p class="dim">Orbit: drag · Pan: right-drag · Zoom: wheel. In "Auto" the LOD switches with camera distance like in-game.</p>
+</div>
+<div id="drop">Drop .glb to inspect</div>
+<script type="module" src="src/viewer.js"></script>
+</body>
+</html>

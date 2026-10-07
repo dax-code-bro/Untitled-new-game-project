@@ -46,7 +46,7 @@ export class Raid {
     sun.shadow.normalBias = 0.05;
     scene.add(sun, sun.target);
 
-    this.world = new World(scene, MAP_SEED);
+    this.world = new World(scene, MAP_SEED, ctx.assets);
     this.effects = new Effects(scene);
     this.mapImg = this.world.renderMap(1024);
 
