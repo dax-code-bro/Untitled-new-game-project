@@ -306,7 +306,7 @@ export function stand(c, o = {}) {
   const t = o.t ?? 0;
   const pb = new PB(c);
   const b = breathe(pb, t, o.breathe ?? (c.L > 20 ? 0.09 : 0.18));
-  carriage(pb, o.raise ?? 0.06, o.headDown ?? 0.26, o.headTilt ?? 0.0);
+  carriage(pb, o.raise ?? -0.06, o.headDown ?? 0.2, o.headTilt ?? 0.06);
   const lk = o.look || [0, 0];
   look(pb, lk[0] + 0.03 * wob(t * 0.3, 1), lk[1] + 0.02 * b + 0.02 * wob(t * 0.25, 2));
   jaw(pb, (o.jaw ?? 0) + 0.015 * b);

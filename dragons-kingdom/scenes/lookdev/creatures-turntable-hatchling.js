@@ -1,4 +1,4 @@
-// Gold hatchling only (shots: hatchling-macro) - see creatures-shots.js. Builds just this creature, so stills are quick.
+// Gold hatchling only (0-3 hatchling-macro s) - see creatures-shots.js. Builds just this creature, so stills are quick.
 //   node render/render.mjs --still scenes/lookdev/creatures-turntable-hatchling.js --time 1 --preset final --png out.png
 import { makeTurntable } from './creatures-shots.js';
 

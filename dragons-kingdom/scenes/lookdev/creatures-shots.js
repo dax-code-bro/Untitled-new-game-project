@@ -1,51 +1,72 @@
 // Hero look-development shots for the Episode 1 creatures (PROVISIONAL designs).
-// Used by creatures-turntable.js (every shot) and the per-creature wrappers
-// (creatures-turntable-<name>.js), which build only what their shots need.
+// Used by creatures-hero.js (every shot), creatures-review.js (1 s per shot, fast checks)
+// and the per-creature wrappers creatures-turntable-<name>.js, which build only what
+// their shots need. The all-creature contact sheet is creatures-contact.js.
 //
-// Every shot is lit by one photographed sky (Poly Haven kloofendal_48d_partly_cloudy,
-// CC0; its sun is extracted into a shadow-casting light with the measured energy).
-// Shots are composed relative to that sun so the key light rakes across the scales
-// the way a camera crew would place it. Sets: 'field' (CC0 photo turf), 'air' (the
-// sky and the photographed land far below, with aerial haze), 'bed' (a linen sheet
-// over planks, the newborn hatchling macro). Every frame is a pure function of t.
+// Every shot is framed like a real camera setup: a lens in mm on a Super 35 sensor, a stop,
+// the focus on the subject's eye or body, a 180-degree shutter (true sub-frame motion blur
+// with the film finish), the photographed sky as the only light (Poly Haven
+// kloofendal_48d_partly_cloudy, CC0: its sun extracted into a shadow-casting light with the
+// measured energy, or old_room's window light indoors). Sets:
+//   field  open grassland (CC0 photo turf + geometry grass tufts around the subject and in
+//          front of the camera), the dragon on the ground in daylight
+//   air    the sky and the photographed land 150-300 m below, hazed by the atmosphere
+//   ground a camera on the ground looking up at a flyer, a person in the foreground
+//   bed    a creased linen sheet over planks with eggshell shards, indoor window light
+// Camera and people positions are metres in the subject's frame (x = its left, y = up,
+// z = forward); `face` turns the subject relative to the sun's azimuth (0 = facing the sun,
+// -90 = its LEFT side to the sun). Every frame is a pure function of t.
 import * as THREE from 'three';
 import { loadHDRI, loadPBR } from '../lib/assets.js';
-import { createCreature, poses, loadHuman, createRider, createSaddle, mountRider } from '../lib/creatures/index.js';
+import { createCreature, poses, loadHuman as loadPlaceholderHuman, createRider as createPlaceholderRider, createSaddle, mountRider } from '../lib/creatures/index.js';
+import { grassField } from '../lib/sets/grass.js';
+import { filmFinish } from './finish.js';
 
-const TAU = Math.PI * 2;
 const D2R = Math.PI / 180;
 
-// cam: orbit around the subject's target point (units of the subject's L unless metres:true):
-//   az (deg, 0 = in front of the creature, +90 = its left side), el (deg), dist, fov (deg), fstop.
-// face: the creature's facing relative to the sun's azimuth (deg; 0 = facing the sun).
 export const SHOTS = [
-  { id: 'charcoal-front', set: 'field', creatures: ['charcoal'], humans: [{ outfit: 'remi', rel: 'charcoal', at: [0.06, 0, 0.35], yaw: 160 }], dur: 4,
-    face: -95, pose: { charcoal: { name: 'stand', look: [0.32, 0.02] } },
-    cam: { subject: 'charcoal', target: [0.0, 0.14, 0.15], az: 34, el: 4, dist: 0.92, fov: 34, fstop: 8 } },
-  { id: 'charcoal-head', set: 'field', creatures: ['charcoal'], dur: 3, face: -95, pose: { charcoal: { name: 'stand', look: [0.32, 0.02] } },
-    cam: { subject: 'charcoal', bone: 'head', target: [0, -0.012, 0.045], az: 40, el: 6, dist: 0.2, fov: 30, fstop: 5.6, focusOn: 'eye_L' } },
-  { id: 'charcoal-flight', set: 'air', creatures: ['charcoal'], dur: 3, airborne: 6, face: -100, pose: { charcoal: { name: 'flight', phase: 0.54, look: [0, 0.05] } },
-    cam: { subject: 'charcoal', target: [0, 0.0, 0.02], az: 90, el: 4, dist: 1.6, fov: 32, fstop: 8, shutter: 180 } },
-  { id: 'leaf-abby', set: 'field', creatures: ['leaf'], tack: ['leaf'], humans: [{ outfit: 'abby', rel: 'leaf', at: [-0.17, 0, 0.26], yaw: 140 }], dur: 4,
-    face: -100, pose: { leaf: { name: 'sit', look: [-0.45, -0.1] } },
-    cam: { subject: 'leaf', target: [-0.02, 0.15, 0.15], az: 38, el: 3, dist: 0.95, fov: 34, fstop: 5.6 } },
-  { id: 'leaf-flight', set: 'air', creatures: ['leaf'], riders: { leaf: 'abby' }, dur: 3, airborne: 20, face: -110, pose: { leaf: { name: 'flight', corr: 1, phase: 0.72, look: [-0.2, 0.05] } },
-    cam: { subject: 'leaf', target: [0, 0.0, 0.05], az: 55, el: 14, dist: 1.5, fov: 36, fstop: 8, shutter: 180 } },
-  { id: 'starlight-below', set: 'air', creatures: ['starlight'], humans: [{ outfit: 'fall', below: true }], dur: 3, airborne: 5, face: 160, haze: 2.5,
-    pose: { starlight: { name: 'glide', bank: -0.16, dihedral: 0.14, look: [0.1, -0.12] } },
-    cam: { subject: 'starlight', target: [0, 0, 0.05], az: 160, el: -36, dist: 7.0, fov: 30, fstop: 11, ground: 1.2 } },
-  { id: 'starlight-side', set: 'air', creatures: ['starlight'], dur: 3, airborne: 5, face: -110, pose: { starlight: { name: 'glide', bank: 0.12, look: [0.05, -0.05] } },
-    cam: { subject: 'starlight', target: [0, 0.0, 0.05], az: 70, el: 8, dist: 1.35, fov: 34, fstop: 8 } },
-  { id: 'hatchling-macro', set: 'bed', creatures: ['hatchling'], dur: 3, face: -60,
-    pose: { hatchling: { name: 'lie', raise: -0.12, headDown: 0.18, look: [0.35, -0.05], lidRelax: 0.62, breathe: 0.5 } },
-    cam: { subject: 'hatchling', bone: 'head', target: [0, -0.02, 0.02], az: 48, el: 14, dist: 0.85, fov: 28, fstop: 4, focusOn: 'eye_L' } },
-  { id: 'scout-bank', set: 'air', creatures: ['scout'], dur: 3, airborne: 30, face: -130, pose: { scout: { name: 'glide', bank: 0.85, look: [0.3, 0.0], dihedral: 0.05 } },
-    cam: { subject: 'scout', target: [0, 0.0, 0.05], az: 120, el: 16, dist: 1.25, fov: 34, fstop: 8, shutter: 180 } },
-  { id: 'scout-wingloss', set: 'air', creatures: ['scout'], dur: 4, airborne: 30, face: -130, detachAt: 0.5, pose: { scout: { name: 'flight' } },
-    cam: { subject: 'scout', target: [0, -0.05, 0.05], az: 125, el: 10, dist: 1.9, fov: 36, fstop: 8, shutter: 180 } },
-  { id: 'lineup', set: 'field', creatures: ['leaf', 'charcoal', 'starlight'], humans: [{ outfit: 'remi', lineup: true }], dur: 3, lineup: true,
-    pose: { leaf: { name: 'stand', look: [-0.2, 0] }, charcoal: { name: 'stand', look: [-0.1, 0] }, starlight: { name: 'stand', look: [-0.15, 0] } },
-    cam: { subject: 'lineup' } },
+  // Charcoal 3/4 front in daylight: the sun rakes across his left side so the scale relief
+  // reads; Remi stands by the left forefoot for scale (32 mm from 64 m, eye height)
+  { id: 'charcoal-front', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], dur: 3, face: -55,
+    people: [{ id: 'remi', at: [8, 0, 12.5], yaw: 55 }],
+    pose: { charcoal: { name: 'stand', look: [0.14, -0.04], jaw: 0.02 } },
+    cam: { subject: 'charcoal', pos: [27, 1.7, 41], target: [1, 7.5, 4], mm: 35, fstop: 8, focus: 'target' } },
+  // Charcoal's head: 85 mm close-up on the eye
+  { id: 'charcoal-head', set: 'field', creatures: ['charcoal'], dur: 3, face: -55,
+    pose: { charcoal: { name: 'stand', look: [0.3, 0.0] } },
+    cam: { subject: 'charcoal', bone: 'head', pos: [8.5, 1.2, 8.0], target: [0.4, -0.3, 1.8], mm: 50, fstop: 5.6, focus: 'eye_L' } },
+  // Charcoal flying side-on (air to air, 40 mm from ~75 m, the downstroke)
+  { id: 'charcoal-flight', set: 'air', creatures: ['charcoal'], tack: ['charcoal'], dur: 3, alt: 260, face: -100,
+    pose: { charcoal: { name: 'flight', phase: 0.5, look: [0.05, 0.05] } },
+    cam: { subject: 'charcoal', pos: [74, 3, 6], target: [0, 0, 2], mm: 40, fstop: 8, focus: 'target' } },
+  // Leaf sitting upright like a dog, Abby beside his chest (40 mm, eye height, f/4)
+  { id: 'leaf-abby', set: 'field', creatures: ['leaf'], tack: ['leaf'], dur: 3, face: -70,
+    people: [{ id: 'abby', at: [2.1, 0, 0.9], yaw: 70 }],
+    pose: { leaf: { name: 'sit', look: [0.35, -0.12], eyes: [0.1, -0.05] } },
+    cam: { subject: 'leaf', pos: [8.0, 1.55, 9.5], target: [0.6, 1.75, 0.6], mm: 35, fstop: 5.6, focus: 'target' } },
+  // Leaf flying with Abby riding (50 mm air to air, slightly above, behind the shoulder)
+  { id: 'leaf-flight', set: 'air', creatures: ['leaf'], riders: { leaf: 'abby' }, dur: 3, alt: 160, face: -110,
+    pose: { leaf: { name: 'flight', corr: 1, phase: 0.62, look: [-0.25, 0.05] } },
+    cam: { subject: 'leaf', pos: [13, 4.5, 6], target: [0, 0.3, 0.3], mm: 40, fstop: 8, focus: 'target' } },
+  // Starlight gliding high overhead, seen from the ground at a distance: a watchman in the
+  // foreground points up at her (24 mm, looking up ~40 degrees, haze between)
+  { id: 'starlight-below', set: 'ground', creatures: ['starlight'], tack: ['starlight'], dur: 3, face: 160, haze: 2.2,
+    flyer: { name: 'starlight', at: [10, 72, 112], heading: -72 },
+    people: [{ id: 'watchman', ground: [-1.15, 0, 3.6], yaw: 172 }],
+    pose: { starlight: { name: 'glide', bank: -0.12, dihedral: 0.12, look: [0.1, -0.15] } },
+    cam: { ground: true, pos: [0, 1.25, 0], lookAt: [0, 41.6, 100], mm: 20, fstop: 8 } },
+  // the gold hatchling on the bedding: 100 mm macro, T2.8, focus on the eye
+  { id: 'hatchling-macro', set: 'bed', creatures: ['hatchling'], dur: 3, face: -40,
+    pose: { hatchling: { name: 'lie', raise: -0.1, headDown: 0.16, look: [0.42, -0.04], lidRelax: 0.42, breathe: 0.5 } },
+    cam: { subject: 'hatchling', bone: 'head', pos: [0.45, 0.2, 0.62], target: [0.02, -0.03, -0.06], mm: 100, fstop: 8, focus: 'eye_L' } },
+  // the Slitherwing scout banking hard at speed (tracking, 45 mm)
+  { id: 'scout-bank', set: 'air', creatures: ['scout'], dur: 3, alt: 200, face: -130,
+    pose: { scout: { name: 'glide', bank: 0.85, look: [0.3, 0.0], dihedral: 0.05 } },
+    cam: { subject: 'scout', pos: [5.5, 2.2, 6.0], target: [0, 0, 0.4], mm: 45, fstop: 8, focus: 'target' } },
+  // the scout loses its LEFT wing (0.4 s after the tear): the wing tumbles away in the wake
+  { id: 'scout-wingloss', set: 'air', creatures: ['scout'], dur: 4, alt: 200, face: -130, detachAt: 0.6,
+    pose: { scout: { name: 'flight' } },
+    cam: { subject: 'scout', pos: [9.0, 4.0, -3.5], target: [1.0, -0.8, -1.6], mm: 24, fstop: 8, focus: 'target' } },
 ];
 
 /** Build a scene module for the given shot ids (default: all). */
@@ -56,34 +77,34 @@ export function makeTurntable(opts = {}) {
   const total = start;
   const need = [...new Set(shots.flatMap((s) => s.creatures))];
   const needSets = new Set(shots.map((s) => s.set));
-  const S = { C: {}, riders: {}, tacks: {}, humans: [], sun: null, sunDir: null, ground: null, bed: null };
+  const S = { C: {}, riders: {}, tacks: {}, people: [], sun: null, sunDir: null, sky: null, ground: null, grass: null, bed: null };
 
   const meta = {
-    title: opts.title || 'Creature hero shots (provisional designs)', duration: total, toneMapping: 'aces', exposure: 0.62, vignette: 0.1, seed: 7,
-    // cinematic stack (runtime/cinematic): GTAO + contact shadows, physical DOF, motion blur from
-    // the real shutter, aerial haze from the photographed sky, filmic grade, lens effects, grain
-    cinematic: opts.cinematic ?? {
+    title: opts.title || 'Creature hero shots (provisional designs)', duration: total, seed: 7,
+    // the shared photographic finish (8 sub-frames: supersampling + true motion blur), aerial
+    // haze from the photographed sky; use --cinematic preview for fast checks
+    cinematic: opts.cinematic ?? filmFinish({
       atmosphere: { enabled: true, sky: 'scene', haze: 1.4, apDistanceScale: 1.0 },
-      grade: { toneMapping: 'agx', look: 'print', exposure: 0.25 }, grain: { amount: 1.6, size: 1.2 }, bloom: { intensity: 0.012 },
-      lensFx: { vignette: 0.6, chromaticAberration: 0.3 },
-    },
+      grade: { exposure: 0.2 },
+      shadows: { cascades: 0 },
+    }),
   };
 
   async function setup(ctx) {
     const { scene, quality } = ctx;
     const q = opts.quality || (ctx.preset === 'final' || ctx.preset === 'final-fast' ? 'hero' : ctx.preset === 'preview' ? 'standard' : 'draft');
-    // the photographer's horizon (a suburb) is matte-painted out with a haze band (assets.js horizonFill)
-    const sky = await loadHDRI(opts.hdri || 'hdri/kloofendal_48d_partly_cloudy', ctx, { extractSun: true, rotationY: opts.hdriRotation ?? -1.2, backgroundBlurriness: 0.0, horizonFill: { above: 4, below: -2, blend: 2 } });
-    const sun = sky.apply(scene);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
-    sun.shadow.bias = -0.0002;
-    scene.add(sun, sun.target);
-    S.sun = sun; S.sunDir = sky.sun.direction.clone();
-    S.sunAz = Math.atan2(S.sunDir.x, S.sunDir.z);
-    console.log('[creatures] sun dir', S.sunDir.toArray().map((v) => v.toFixed(3)).join(','), 'az', (S.sunAz / D2R).toFixed(1), 'el', (Math.asin(S.sunDir.y) / D2R).toFixed(1));
-    {
-      // open grass land to the horizon (the air shots fly 150-250 m above it, hazed by the atmosphere)
+    const outdoor = [...needSets].some((s) => s !== 'bed');
+    if (outdoor) {
+      // the photographer's horizon (a suburb) is matte-painted out with a haze band
+      const sky = await loadHDRI('hdri/kloofendal_48d_partly_cloudy', ctx, { extractSun: true, rotationY: opts.hdriRotation ?? -1.2, horizonFill: { above: 4, below: -2, blend: 2 } });
+      S.sky = sky;
+      const sun = sky.apply(scene);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
+      sun.shadow.bias = -0.0002;
+      scene.add(sun, sun.target);
+      S.sun = sun; S.sunDir = sky.sun.direction.clone();
+      // open land to the horizon (the air shots fly over it, hazed by the atmosphere)
       const groundMat = await loadPBR('pbr/acg_ground13', ctx, { worldSize: 16000 });
       breakTiling(groundMat);
       const ground = new THREE.Mesh(new THREE.CircleGeometry(9000, 256), groundMat);
@@ -92,38 +113,56 @@ export function makeTurntable(opts = {}) {
       scene.add(ground);
       S.ground = ground;
     }
-    if (needSets.has('bed')) S.bed = await buildBed(ctx);
-    // creatures
+    if (needSets.has('bed')) {
+      S.room = await loadHDRI('hdri/old_room', ctx, { rotationY: 0.6 });
+      if (!outdoor) S.room.apply(ctx.scene);
+      S.bed = await buildBed(ctx);
+    }
     for (const name of need) {
       const c = await createCreature(name, { quality: q, log: (m) => console.log(m) });
       scene.add(c.root);
       c.root.visible = false;
       S.C[name] = c;
     }
-    const needHuman = shots.some((s) => (s.humans && s.humans.length) || s.riders || s.tack);
-    const human = needHuman ? await loadHuman() : null;
+    // grass around the field subjects and in front of the camera (built once per subject)
+    if (needSets.has('field')) {
+      S.grass = {};
+      for (const s of shots.filter((x) => x.set === 'field')) {
+        const name = s.creatures[0];
+        if (S.grass[name]) continue;
+        const g = fieldGrass(S, s);
+        g.visible = false;
+        scene.add(g);
+        S.grass[name] = g;
+      }
+    }
+    // people: the humans library's cast builds when present, else the placeholder rider
+    const ppl = shots.flatMap((s) => (s.people || []).map((p) => p.id));
+    const riderOutfits = shots.flatMap((s) => Object.values(s.riders || {}));
+    const H = (ppl.length || riderOutfits.length) ? await loadPeople(ppl, riderOutfits) : null;
     for (const s of shots) {
       for (const n of s.tack || []) if (!S.tacks[n]) S.tacks[n] = createSaddle(S.C[n], {});
       for (const [n, outfit] of Object.entries(s.riders || {})) {
         if (S.riders[n]) continue;
         const tack = S.tacks[n] || (S.tacks[n] = createSaddle(S.C[n], {}));
-        const rider = createRider(human, { outfit, lean: 0.12 });
+        const rider = H.rider(outfit);
         mountRider(S.C[n], tack, rider);
         S.riders[n] = { tack, rider };
       }
-      s._humans = (s.humans || []).map((h) => {
-        const r = createRider(human, { outfit: h.outfit, pose: 'stand', headPitch: h.headPitch ?? (h.below ? -0.6 : -0.1) });
-        r.root.visible = false;
-        scene.add(r.root);
-        S.humans.push(r.root);
-        return { ...h, r };
+      s._people = (s.people || []).map((p) => {
+        const h = H.person(p.id);
+        h.root.visible = false;
+        scene.add(h.root);
+        S.people.push(h);
+        return { ...p, h };
       });
     }
     console.log('[creatures] built', Object.entries(S.C).map(([n, c]) => `${n}: ${c.stats.vertices} v, ${c.stats.buildMs} ms`).join('; '));
   }
 
-  const _v = new THREE.Vector3();
   const camFocus = new THREE.Vector3();
+  const _v = new THREE.Vector3(), _q = new THREE.Quaternion();
+  const toWorld = (c, p) => new THREE.Vector3(p[0], p[1], p[2]).applyQuaternion(c.root.quaternion).add(c.root.position);
 
   function update(t, ctx) {
     const { camera, scene } = ctx;
@@ -132,121 +171,188 @@ export function makeTurntable(opts = {}) {
     const lt = t - shot._start;
     // visibility
     for (const [n, c] of Object.entries(S.C)) c.root.visible = shot.creatures.includes(n);
-    for (const h of S.humans) h.visible = false;
-    for (const h of shot._humans || []) h.r.root.visible = true;
+    for (const h of S.people) h.root.visible = false;
+    for (const p of shot._people || []) p.h.root.visible = true;
     for (const [n, tk] of Object.entries(S.tacks)) for (const m of tk.meshes) m.visible = (shot.tack || []).includes(n) || !!(shot.riders && shot.riders[n]);
     for (const [n, r] of Object.entries(S.riders)) r.rider.root.visible = !!(shot.riders && shot.riders[n]);
     if (S.bed) S.bed.visible = shot.set === 'bed';
-    if (ctx.cinematic?.atmosphere) ctx.cinematic.atmosphere.haze = shot.haze ?? 1.4;
+    if (S.ground) S.ground.visible = shot.set !== 'bed';
+    if (S.grass) for (const [n, g] of Object.entries(S.grass)) g.visible = shot.set === 'field' && shot.creatures[0] === n;
+    if (S.bed && S.bed.userData.lights) for (const l of S.bed.userData.lights) l.visible = shot.set === 'bed';
+    if (S.sun) S.sun.visible = shot.set !== 'bed';
+    // the photographed sky outdoors, the photographed room (window light) indoors
+    {
+      const env = shot.set === 'bed' ? S.room : S.sky;
+      const rot = shot.set === 'bed' ? 0.6 : (opts.hdriRotation ?? -1.2);
+      if (env) {
+        scene.environment = env.envMap; scene.background = env.texture;
+        scene.environmentRotation.set(0, rot, 0); scene.backgroundRotation.set(0, rot, 0);
+        scene.backgroundBlurriness = shot.set === 'bed' ? 0.5 : 0;
+      }
+    }
+    if (ctx.cinematic?.atmosphere) ctx.cinematic.atmosphere.haze = shot.haze ?? (shot.set === 'bed' ? 0 : 1.4);
 
     // ---------------------------------------------------------- poses
-    const faceYaw = S.sunAz + (shot.face ?? 0) * D2R;
+    const sunAz = S.sunDir ? Math.atan2(S.sunDir.x, S.sunDir.z) : 0;
+    const faceYaw = sunAz + (shot.face ?? 0) * D2R;
     for (const n of shot.creatures) {
       const c = S.C[n];
       const po = shot.pose[n] || { name: 'stand' };
       c.root.position.set(0, 0, 0);
-      c.root.rotation.set(0, shot.lineup ? 0 : faceYaw, 0);
+      c.root.rotation.set(0, faceYaw, 0);
       if (c.detachable) c.attachWing();
       c.setPose(poses[po.name](c, { ...po, t: lt + (po.t0 ?? 0) }));
       if (shot.set === 'bed') c.root.position.y = S.bed.userData.top;
-      if (shot.airborne) c.root.position.y = shot.airborne * c.L;
+      if (shot.alt) c.root.position.y = shot.alt;
+      if (shot.flyer && shot.flyer.name === n) {
+        c.root.position.set(...shot.flyer.at);
+        c.root.rotation.y = (shot.flyer.heading ?? 0) * D2R;
+      }
+      c.root.updateMatrixWorld(true);
     }
     // scout: the LEFT wing tears away at detachAt and tumbles; the body rolls toward the lost side
-    if (shot.detachAt !== undefined) {
-      const c = S.C.scout;
-      const td = shot.detachAt;
-      if (lt >= td) {
-        c.setPose(poses.flight(c, { t: td }));
-        c.root.updateMatrixWorld(true);
-        const M0 = c.detachable.rootBone.matrixWorld.clone();
-        const dt = lt - td;
-        c.setPose(poses.flight(c, { t: lt, bank: 0.6 * dt + 0.25, amp: 0.55 }));
-        const fwd = new THREE.Vector3(Math.sin(faceYaw), 0, Math.cos(faceYaw));
-        c.root.position.y = shot.airborne * c.L - 0.5 * 9.81 * dt * dt * 0.35;
-        c.root.position.addScaledVector(fwd, 9 * dt);
-        c.root.rotateZ(1.6 * dt);
-        // the wing: ballistic, tumbling, falling back in the wake
-        const side = new THREE.Vector3(Math.cos(faceYaw), 0, -Math.sin(faceYaw));
-        const g = side.multiplyScalar(1.2 * dt).addScaledVector(fwd, -3 * dt).add(new THREE.Vector3(0, -0.5 * 9.81 * dt * dt * 0.3, 0));
-        const spin = new THREE.Quaternion().setFromEuler(new THREE.Euler(2.2 * dt, 0.8 * dt, 2.9 * dt));
-        _v.setFromMatrixPosition(M0);
-        const M = new THREE.Matrix4().compose(_v.clone().add(g), new THREE.Quaternion().setFromRotationMatrix(M0).premultiply(spin), new THREE.Vector3(1, 1, 1));
-        c.detachWing(scene, M);
-        // the torn wing goes limp: half folded
-        for (const n of ['w_L_1', 'w_L_2']) { const b = c.bones[c.boneIndex[n]]; b.quaternion.setFromEuler(new THREE.Euler(0, n === 'w_L_1' ? -0.9 : 0.8, 0.3)); }
-      }
-    }
-    // lineup: side by side on one ground line, all facing camera-right, a person for scale
-    if (shot.lineup) {
-      let x = 0;
-      const gap = 5;
-      for (const n of ['leaf', 'charcoal', 'starlight']) {
-        const c = S.C[n];
-        c.root.rotation.y = Math.PI / 2;
-        c.root.position.set(x + c.L * 0.45, 0, 0);
-        x += c.L * 1.0 + gap;
-      }
-    }
+    if (shot.detachAt !== undefined) scoutWingLoss(S.C.scout, shot, lt, faceYaw, scene);
+    for (const r of Object.values(S.riders)) r.rider.update?.(lt);
     // people
-    for (const h of shot._humans || []) {
-      if (h.lineup) { h.r.root.position.set(-3, 0.88, 5); h.r.root.rotation.y = Math.PI / 2 + 0.4; continue; }
-      if (h.below) continue;     // placed with the camera below
-      const c = S.C[h.rel];
-      const p = new THREE.Vector3(h.at[0] * c.L, 0, h.at[2] * c.L).applyAxisAngle(new THREE.Vector3(0, 1, 0), c.root.rotation.y).add(c.root.position);
-      h.r.root.position.set(p.x, 0.88, p.z);
-      h.r.root.rotation.y = c.root.rotation.y + (h.yaw ?? 180) * D2R;
+    for (const p of shot._people || []) {
+      const h = p.h;
+      if (p.ground) {       // world position (ground-camera shots)
+        h.place(p.ground[0], 0, p.ground[2], (p.yaw ?? 0) * D2R);
+      } else {
+        const c = S.C[shot.creatures[0]];
+        const w = toWorld(c, p.at);
+        h.place(w.x, 0, w.z, c.root.rotation.y + (p.yaw ?? 180) * D2R);
+      }
+      h.update(lt);
     }
 
     // ---------------------------------------------------------- camera
     const cm = shot.cam;
-    if (cm.subject === 'lineup') {
-      const L = S.C.starlight.L;
-      const xs = S.C.leaf.L * 0.45 + 55;
-      camera.position.set(xs, 15, 150);
-      camera.lookAt(xs + 4, 13, 0);
-      camera.fov = 34;
-      camera.near = 0.5; camera.far = 6000;
-      fitShadow(S, new THREE.Vector3(xs, 10, 0), L * 1.4);
-      camFocus.set(xs, 10, 0);
+    let target;
+    if (cm.ground) {
+      camera.position.set(...cm.pos);
+      target = new THREE.Vector3(...cm.lookAt);
+      camera.lookAt(target);
+      if (cm.tilt) camera.rotateZ(cm.tilt);
+      const c = S.C[shot.creatures[0]];
+      camFocus.copy(c.root.position);
     } else {
       const c = S.C[cm.subject];
-      const L = c.L;
       c.root.updateMatrixWorld(true);
-      let target;
-      if (cm.bone) target = new THREE.Vector3().setFromMatrixPosition(c.bones[c.boneIndex[cm.bone]].matrixWorld);
-      else target = c.root.position.clone();
-      target.add(new THREE.Vector3(...cm.target).multiplyScalar(L).applyAxisAngle(new THREE.Vector3(0, 1, 0), c.root.rotation.y));
-      const az = c.root.rotation.y + cm.az * D2R, el = cm.el * D2R;
-      const d = cm.dist * L;
-      camera.position.set(target.x + d * Math.cos(el) * Math.sin(az), target.y + d * Math.sin(el), target.z + d * Math.cos(el) * Math.cos(az));
-      if (cm.ground !== undefined) camera.position.y = cm.ground;       // a camera standing on the ground, looking up
+      let base = c.root.position.clone(), q = c.root.quaternion;
+      if (cm.bone) { base = new THREE.Vector3().setFromMatrixPosition(c.bones[c.boneIndex[cm.bone]].matrixWorld); }
+      target = base.clone().add(new THREE.Vector3(...cm.target).applyQuaternion(q));
+      camera.position.copy(base).add(new THREE.Vector3(...cm.pos).applyQuaternion(q));
       camera.lookAt(target);
-      camera.fov = cm.fov;
-      camera.near = Math.max(0.01, d * 0.01);
-      camera.far = Math.max(6000, L * 80);
-      fitShadow(S, target.clone(), L * (cm.bone ? 0.4 : 0.9));
       camFocus.copy(target);
-      if (cm.focusOn) camFocus.setFromMatrixPosition(c.bones[c.boneIndex[cm.focusOn]].matrixWorld);
+      if (cm.focus && cm.focus !== 'target') camFocus.setFromMatrixPosition(c.bones[c.boneIndex[cm.focus]].matrixWorld);
     }
+    const dist = camera.position.distanceTo(target);
+    camera.near = Math.max(0.01, Math.min(dist * 0.02, 1.0));
+    camera.far = 20000;
     camera.updateProjectionMatrix();
-    // a person on the ground near the camera, looking up at the dragon (scale)
-    for (const h of shot._humans || []) {
-      if (!h.below) continue;
-      const fw = new THREE.Vector3(); camera.getWorldDirection(fw); fw.y = 0; fw.normalize();
-      const rt = new THREE.Vector3(-fw.z, 0, fw.x);
-      const p = camera.position.clone().addScaledVector(fw, 4.2).addScaledVector(rt, 1.1);
-      h.r.root.position.set(p.x, 0.88, p.z);
-      h.r.root.rotation.y = Math.atan2(fw.x, fw.z);
+    // the sun's shadow frustum around what the camera looks at
+    if (S.sun) {
+      const c = S.C[shot.creatures[0]];
+      const R = shot.set === 'field' ? c.L * 0.9 : c.L * 0.75;
+      fitShadow(S, cm.ground ? c.root.position.clone() : (cm.bone ? c.root.position.clone().add(new THREE.Vector3(0, c.L * 0.15, 0)) : target.clone()), R);
     }
     if (ctx.lens) {
-      ctx.lens.focalLength = null;
+      ctx.lens.focalLength = cm.mm;
       ctx.lens.fstop = cm.fstop ?? 8;
       ctx.lens.focus = camera.position.distanceTo(camFocus);
-      ctx.lens.shutterAngle = cm.shutter ?? 45;
+      ctx.lens.shutterAngle = cm.shutter ?? 180;
+    } else {
+      camera.filmGauge = 24.89;
+      camera.setFocalLength(cm.mm);
     }
-    if (ctx.cinematic?.ao) ctx.cinematic.ao.radius = Math.max(0.01, (cm.subject === 'lineup' ? 2 : S.C[cm.subject].L * 0.04));
+    if (ctx.cinematic?.ao) ctx.cinematic.ao.radius = Math.max(0.01, S.C[shot.creatures[0]].L * 0.03);
   }
-  return { meta, setup, update };
+  return { meta, setup, update, shots };
+}
+
+/** The scout's LEFT wing tears away at shot.detachAt and tumbles in the wake (pure in lt). */
+function scoutWingLoss(c, shot, lt, faceYaw, scene) {
+  const td = shot.detachAt;
+  if (lt < td) return;
+  c.setPose(poses.flight(c, { t: td }));
+  c.root.updateMatrixWorld(true);
+  const M0 = c.detachable.rootBone.matrixWorld.clone();
+  const dt = lt - td;
+  const fwd = new THREE.Vector3(Math.sin(faceYaw), 0, Math.cos(faceYaw));
+  // the body: the right wing beats on, the body rolls toward the lost (left) side and drops
+  c.setPose(poses.flight(c, { t: lt, bank: 0.55 * dt + 0.2, amp: 0.6 }));
+  c.root.position.y = (shot.alt ?? 0) - 0.5 * 9.81 * dt * dt * 0.3;
+  c.root.position.addScaledVector(fwd, 7 * dt);
+  c.root.rotateZ(1.4 * dt);
+  // the wing: ballistic, tumbling, left behind in the wake
+  const side = new THREE.Vector3(Math.cos(faceYaw), 0, -Math.sin(faceYaw));
+  const g = side.multiplyScalar(1.1 * dt).addScaledVector(fwd, -2.5 * dt).add(new THREE.Vector3(0, -0.5 * 9.81 * dt * dt * 0.25, 0));
+  const spin = new THREE.Quaternion().setFromEuler(new THREE.Euler(2.0 * dt, 0.7 * dt, 2.6 * dt));
+  const p = new THREE.Vector3().setFromMatrixPosition(M0);
+  const M = new THREE.Matrix4().compose(p.add(g), new THREE.Quaternion().setFromRotationMatrix(M0).premultiply(spin), new THREE.Vector3(1, 1, 1));
+  c.detachWing(scene, M);
+  // the torn wing goes limp: half folded
+  for (const n of ['w_L_1', 'w_L_2']) { const b = c.bones[c.boneIndex[n]]; b.quaternion.setFromEuler(new THREE.Euler(0, n === 'w_L_1' ? -0.9 : 0.8, 0.3)); }
+}
+
+/**
+ * People for the shots: the humans library (scenes/lib/humans, cast builds from the offline
+ * MakeHuman pipeline) when its cache has the character, else the placeholder rider of
+ * creatures/rider.js. Returns { person(id) -> {root, place, update}, rider(outfit) }.
+ */
+async function loadPeople(ids, riderOutfits) {
+  let lib = null;
+  try { lib = await import('../lib/humans/index.js'); } catch (e) { lib = null; }
+  const chars = {};
+  if (lib) for (const id of new Set(ids)) { try { chars[id] = await lib.loadCharacterData(id); } catch (e) { chars[id] = null; } }
+  let riderTok = null;
+  if (lib && riderOutfits.length) { try { riderTok = await lib.loadHuman({ ids: riderOutfits.map((o) => `${o}_ride`) }); } catch (e) { riderTok = null; } }
+  const needPlaceholder = ids.some((id) => !chars[id]) || (riderOutfits.length && (!riderTok || riderOutfits.some((o) => !riderTok.data[`${o}_ride`] || riderTok.data[`${o}_ride`] instanceof Error)));
+  const ph = needPlaceholder ? await loadPlaceholderHuman() : null;
+  const outfitOf = (id) => (id.startsWith('abby') ? 'abby' : id.startsWith('remi') ? 'remi' : id.startsWith('fall') ? 'fall' : 'remi');
+  return {
+    person(id) {
+      if (chars[id]) {
+        const ch = lib.buildCharacter(chars[id], {});
+        return { root: ch.root, character: ch, place: (x, y, z, yaw) => lib.placeCharacter(ch, x, y, z, yaw), update: (t) => lib.applyIdle(ch, t) };
+      }
+      const r = createPlaceholderRider(ph, { outfit: outfitOf(id), pose: 'stand', headPitch: -0.1 });
+      return { root: r.root, place: (x, y, z, yaw) => { r.root.position.set(x, y + 0.88, z); r.root.rotation.set(0, yaw, 0); }, update: () => {} };
+    },
+    rider(outfit) {
+      if (riderTok && riderTok.data[`${outfit}_ride`] && !(riderTok.data[`${outfit}_ride`] instanceof Error)) return lib.createRider(riderTok, { outfit, lean: 0.12 });
+      return createPlaceholderRider(ph, { outfit, lean: 0.12 });
+    },
+  };
+}
+
+/**
+ * Grass tufts in the camera's view of a field subject (deterministic): laid out in the
+ * subject's frame in a sector from the camera toward the subject, uniform in log distance
+ * (about the same number of tufts per screen area near and far, dense at the lens).
+ */
+function fieldGrass(S, shot) {
+  const c = S.C[shot.creatures[0]];
+  const L = c.L;
+  const cam = shot.cam;
+  const g = new THREE.Group();
+  const cx = cam.pos[0], cz = cam.pos[2];
+  const d = Math.hypot(cx, cz);
+  const dirA = Math.atan2(-cx, -cz);                       // camera -> subject
+  const rMin = 1.2, rMax = d + L * 0.7;
+  const half = (Math.atan(24.89 / 2 / cam.mm) + 0.25);
+  const place = (rng) => {
+    const r = rMin * Math.pow(rMax / rMin, rng());
+    const a = dirA + (rng() * 2 - 1) * half;
+    return [cx + Math.sin(a) * r, 0, cz + Math.cos(a) * r];
+  };
+  g.add(grassField({ count: 70000, height: [0.07, 0.24], seed: 5, color: [0.05, 0.072, 0.022], dry: [0.2, 0.17, 0.085], dryAmount: 0.5, place }));
+  g.add(grassField({ count: 14000, height: [0.2, 0.45], seed: 7, blades: 12, width: 1.1, color: [0.035, 0.055, 0.018], dry: [0.22, 0.19, 0.1], dryAmount: 0.65, place }));
+  g.add(grassField({ count: 3000, height: [0.4, 0.7], seed: 11, blades: 3, width: 0.5, color: [0.16, 0.135, 0.065], dry: [0.26, 0.22, 0.12], dryAmount: 0.8, place }));
+  const sunAz = S.sunDir ? Math.atan2(S.sunDir.x, S.sunDir.z) : 0;
+  g.rotation.y = sunAz + (shot.face ?? 0) * D2R;
+  return g;
 }
 
 /** Fit the sun's shadow frustum around a point (pure: depends only on the arguments). */
@@ -265,11 +371,22 @@ function fitShadow(S, center, radius) {
 /**
  * The newborn's bedding: a creased linen sheet over a plank floor (both CC0 photo
  * materials), the sheet draped by a deterministic fold field and damp under the
- * hatchling, with a few curved fragments of the dark eggshell beside it.
+ * hatchling, with curved fragments of the dark eggshell beside it. Indoors the light is a
+ * photographed room with arched windows (Poly Haven old_room, CC0) plus the window's
+ * daylight as a soft shadow-casting key.
  */
 async function buildBed(ctx) {
   const g = new THREE.Group();
   const top = 0.06;
+  const key = new THREE.DirectionalLight(new THREE.Color(1.0, 0.86, 0.68), 2.6);
+  key.position.set(1.2, 1.6, 0.6);
+  key.castShadow = true;
+  key.shadow.mapSize.set(ctx.quality.shadowMapSize, ctx.quality.shadowMapSize);
+  Object.assign(key.shadow.camera, { left: -0.6, right: 0.6, top: 0.6, bottom: -0.6, near: 0.1, far: 6 });
+  key.shadow.bias = -0.0003; key.shadow.normalBias = 0.002;
+  key.target.position.set(0, top, 0);
+  ctx.scene.add(key, key.target);
+  g.userData.lights = [key];
   const linen = await loadPBR('pbr/acg_fabric36', ctx, { repeat: [5, 5], color: new THREE.Color(0.86, 0.82, 0.74), sheen: { color: 0xffffff, roughness: 0.5 } });
   linen.side = THREE.DoubleSide;
   const n = 220, size = 1.6;
@@ -277,15 +394,13 @@ async function buildBed(ctx) {
   sheet.rotateX(-Math.PI / 2);
   const p = sheet.attributes.position;
   const fold = (x, z) => {
-    // broad drapes + a few sharp creases running across the sheet
     let h = 0.025 * Math.sin(x * 3.1 + 0.6 * Math.sin(z * 2.3)) * Math.cos(z * 2.2 + 0.4)
       + 0.012 * Math.sin(x * 7.3 + z * 3.1) + 0.006 * Math.sin(z * 13.0 + x * 4.0);
     for (const [cx, cz, a, w] of [[0.1, -0.2, 0.7, 0.02], [-0.3, 0.15, -0.4, 0.015], [0.35, 0.3, 1.9, 0.018]]) {
       const u = (x - cx) * Math.cos(a) + (z - cz) * Math.sin(a);
       h += 0.014 * Math.exp(-(u * u) / (w * w)) * (0.6 + 0.4 * Math.sin(x * 9 + z * 5));
     }
-    // a hollow where the hatchling lies
-    h -= 0.018 * Math.exp(-(x * x + z * z) / 0.04);
+    h -= 0.018 * Math.exp(-(x * x + z * z) / 0.04);         // a hollow where the hatchling lies
     return h;
   };
   for (let i = 0; i < p.count; i++) p.setY(i, top + fold(p.getX(i), p.getZ(i)));
@@ -293,7 +408,6 @@ async function buildBed(ctx) {
   const sh = new THREE.Mesh(sheet, linen);
   sh.receiveShadow = true; sh.castShadow = true;
   g.add(sh);
-  // planks below
   const wood = await loadPBR('pbr/acg_planks21', ctx, { repeat: [2, 2] });
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), wood);
   floor.rotation.x = -Math.PI / 2; floor.position.y = 0.002; floor.receiveShadow = true;
@@ -315,10 +429,8 @@ async function buildBed(ctx) {
 }
 
 /**
- * Break up texture tiling on a large ground: the albedo is sampled at two
- * scales (the second rotated) blended by low-frequency noise, and multiplied
- * by macro colour variation - the usual terrain trick, so a 2 m photo tile
- * does not read as a carpet from 50 m away.
+ * Break up texture tiling on a large ground: the albedo is sampled at two scales (the second
+ * rotated) blended by low-frequency noise, and multiplied by macro colour variation.
  */
 function breakTiling(mat) {
   const prev = mat.onBeforeCompile;

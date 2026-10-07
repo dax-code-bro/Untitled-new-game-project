@@ -1,11 +1,8 @@
-{ "creatures": [{ "name": "leaf", "quality": "standard", "face": -100, "pose": { "name": "sit", "look": [-0.3, -0.05] } },
-                { "name": "starlight", "quality": "standard", "face": -100, "at": [300, 0, 0], "pose": { "name": "stand", "look": [0.3, 0.0] } }],
-  "rotationY": -1.2,
+{ "creatures": [{ "name": "hatchling", "quality": "standard", "face": -60, "pose": { "name": "lie", "raise": -0.12, "headDown": 0.18, "look": [0.35, -0.05], "lidRelax": 0.45 } }],
+  "rotationY": -1.2, "groundPBR": "pbr/acg_fabric36",
   "views": [
-    { "subject": 0, "cam": [0.62, 0.12, 0.72], "target": [0.0, 0.17, 0.12], "fov": 34 },
-    { "subject": 0, "cam": [0.05, 0.25, 0.8], "target": [0.0, 0.22, 0.1], "fov": 34 },
-    { "subject": 0, "bone": "head", "cam": [0.22, 0.03, 0.2], "target": [0, -0.01, 0.05], "fov": 30 },
-    { "subject": 1, "cam": [0.62, 0.12, 0.72], "target": [0.0, 0.15, 0.12], "fov": 34 },
-    { "subject": 1, "bone": "head", "cam": [0.16, 0.03, 0.17], "target": [0, -0.01, 0.05], "fov": 30 },
-    { "subject": 1, "cam": [0.2, -0.9, 0.3], "target": [0, 0.0, 0.0], "fov": 34, "poses": { "1": { "name": "glide", "bank": -0.15 } }, "airborne": { "1": 1.2 } }
+    { "subject": 0, "cam": [0.75, 0.35, 0.75], "target": [0.0, 0.08, 0.1], "fov": 34 },
+    { "subject": 0, "cam": [1.0, 0.15, 0.0], "target": [0.0, 0.08, 0.0], "fov": 34 },
+    { "subject": 0, "bone": "head", "cam": [0.25, 0.08, 0.3], "target": [0, -0.02, 0.05], "fov": 30 },
+    { "subject": 0, "cam": [0.25, 0.45, -0.35], "target": [0.03, 0.1, -0.02], "fov": 34 }
   ] }

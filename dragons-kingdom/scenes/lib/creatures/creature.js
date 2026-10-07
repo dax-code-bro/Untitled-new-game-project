@@ -47,7 +47,7 @@ function individual(spec, cfg) {
   const s = JSON.parse(JSON.stringify(spec));
   for (const k of ['neckPitch', 'headPitch', 'tailDroop']) s[k] = spec[k];
   s.headShape.gape0 = spec.headShape.gape0;
-  const a = cfg.age === 'subadult' ? { head: 1.16, eye: 1.18, snout: 0.94, horn: 0.86, neckW: 0.94, limb: 0.94, muscle: 0.88, crest: 0.8, wing: 0.96 }
+  const a = cfg.age === 'subadult' ? { head: 1.14, eye: 1.18, snout: 0.86, horn: 0.86, neckW: 0.96, limb: 0.94, muscle: 0.88, crest: 0.8, wing: 0.96 }
     : cfg.age === 'giant' ? { head: 0.94, eye: 0.84, snout: 1.02, horn: 1.12, neckW: 1.06, limb: 1.08, muscle: 1.06, crest: 1.1, wing: 1.0 }
     : null;
   if (!a) return spec;
@@ -195,7 +195,7 @@ export async function createCreature(which, opts = {}) {
     meshes.push(partMesh(THREE, eg, mats.eye, `${root.name}:eyes`, { aEye: eg.extra, aEyeX: mergeAttr(parts, 'ax', 4), aEyeZ: mergeAttr(parts, 'az', 4) }));
     const lids = [];
     for (const e of eyeData) for (const up of [true, false]) {
-      const g = eyelid(up, { rIn: 1.07, rOut: 1.25, span: 1.32, reach: up ? 1.0 : 0.88 });
+      const g = eyelid(up, { rIn: spec.lid?.rIn ?? 1.07, rOut: spec.lid?.rOut ?? 1.25, span: 1.32, reach: up ? 1.0 : 0.88 });
       transformPart(g, e.toWorld, e.toWorldN, boneIndex[up ? e.lidU : e.lidL]);
       lids.push(g);
     }

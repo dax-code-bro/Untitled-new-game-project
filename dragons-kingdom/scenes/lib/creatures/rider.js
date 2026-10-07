@@ -373,7 +373,7 @@ export function createSaddle(c, opts = {}) {
   // seat position: just behind the neck base, on the dorsal midline
   const sp = anat.bonePos[opts.bone ?? 'neck_0'];
   const fwd = new THREE.Vector3(0, 0, 1);
-  const seatZ = sp[2] + (opts.offsetZ ?? (kind === 'rig' ? -0.012 : -0.01)) * L;
+  const seatZ = sp[2] + (opts.offsetZ ?? (kind === 'rig' ? -0.022 : -0.03)) * L;
   // find the dorsal surface height above (x, z) by marching down
   let seatY0 = null;
   const surfY = (x, z) => {
@@ -478,7 +478,7 @@ export function createSaddle(c, opts = {}) {
   if (kind === 'rig') { strap(seatZ - 0.35, 0.32); strap(seatZ + 0.45, 0.32); strap(seatZ + 1.6, 0.25); }
   else { strap(seatZ - 0.05, 0.1); strap(seatZ + 0.28, 0.07); }
   // ---- stirrups (saddle) / foot boards (rig)
-  for (const sd of [1, -1]) {
+  if (opts.stirrups) for (const sd of [1, -1]) {
     const side = new THREE.Vector3(sd * (seatW * 0.5 + (kind === 'rig' ? 0.05 : 0.02)), seatY + block * 0.6, seatZ + 0.02);
     const drop = kind === 'rig' ? 0.55 : 0.62;
     const sx = side.x + sd * (kind === 'rig' ? 0.02 : 0.06);
@@ -523,7 +523,11 @@ export function createSaddle(c, opts = {}) {
   for (const [g, m] of geos) {
     const p = g.attributes.position;
     const S = new Uint16Array(p.count * 4), W = new Float32Array(p.count * 4);
+    // the tack is rigid on the thorax: following the neck or the shoulders vertex by vertex
+    // would fold the seat up like a fin when the neck bends (sitting, looking round)
+    const rigid = c.boneIndex[opts.rigidBone ?? 'thorax'];
     for (let i = 0; i < p.count; i++) {
+      if (rigid !== undefined && opts.rigid !== false) { S[i * 4] = rigid; W[i * 4] = 1; continue; }
       const v = nearest(p.getX(i), p.getY(i), p.getZ(i));
       if (v < 0) { S[i * 4] = c.boneIndex[opts.bone ?? 'neck_0']; W[i * 4] = 1; continue; }
       for (let k = 0; k < 4; k++) { S[i * 4 + k] = bsi.getComponent(v, k); W[i * 4 + k] = bsw.getComponent(v, k); }
@@ -540,7 +544,8 @@ export function createSaddle(c, opts = {}) {
   const seatPoint = new THREE.Vector3(0, seatY + block + 0.07, seatZ - seatLen * 0.08);
   // the seat follows the bone that owns the nearest body vertex at the seat
   const sv = nearest(0, seatY, seatZ);
-  let seatBone = sv >= 0 ? c.bones[bsi.getComponent(sv, 0)] : c.bones[c.boneIndex['neck_0']];
+  let seatBone = opts.rigid !== false && c.boneIndex[opts.rigidBone ?? 'thorax'] !== undefined ? c.bones[c.boneIndex[opts.rigidBone ?? 'thorax']]
+    : (sv >= 0 ? c.bones[bsi.getComponent(sv, 0)] : c.bones[c.boneIndex['neck_0']]);
   if (/^rib_/.test(seatBone.name)) seatBone = seatBone.parent;      // never ride a breathing (scaled) bone
   return { kind, meshes, seatPoint, seatBone, seatZ, seatY, block };
 }
