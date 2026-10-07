@@ -200,10 +200,16 @@ export function makeTurntable(opts = {}) {
 
   function update(t, ctx) {
     const { camera, scene } = ctx;
-    let shot = shots[shots.length - 1];
-    for (const s of shots) if (t >= s._start && t < s._start + s.dur) { shot = s; break; }
-    // review renders (opts.step) show each shot at its representative moment
-    const lt = opts.step ? (shot.still ?? 0) + (t - shot._start) : t - shot._start;
+    // The film finish renders sub-frames across the shutter (t +- T/2), so the shot is chosen by
+    // the FRAME time, never by the sub-frame time: otherwise the first frame of every shot is a
+    // double exposure with the end of the previous one (a cut inside the shutter). Review
+    // renders (opts.step, 1 fps) round to the whole second and map the sub-frame offset to a
+    // 24 fps shutter (a 180-degree shutter at 1 fps would be half a second of blur).
+    const tf = opts.step ? Math.round(t) : Math.round(t * 24) / 24;
+    let shot = tf < 0 ? shots[0] : shots[shots.length - 1];
+    for (const s of shots) if (tf >= s._start - 1e-6 && tf < s._start + s.dur - 1e-6) { shot = s; break; }
+    // review renders show each shot at its representative moment
+    const lt = opts.step ? (shot.still ?? 0) + (tf - shot._start) + (t - tf) / 24 : t - shot._start;
     // visibility
     for (const [n, c] of Object.entries(S.C)) c.root.visible = shot.creatures.includes(n);
     for (const h of S.people) h.root.visible = false;

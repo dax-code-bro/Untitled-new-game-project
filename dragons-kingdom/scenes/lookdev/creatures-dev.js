@@ -71,7 +71,7 @@ export async function setup(ctx) {
 
 export function update(t, ctx) {
   const views = cfg.views;
-  const vi = Math.min(views.length - 1, Math.floor(t + 1e-6));
+  const vi = Math.max(0, Math.min(views.length - 1, Math.round(t)));
   const v = views[vi];
   C.forEach(({ c, cc }, i) => {
     const po = (v.poses && v.poses[i]) || cc.pose || { name: 'stand' };

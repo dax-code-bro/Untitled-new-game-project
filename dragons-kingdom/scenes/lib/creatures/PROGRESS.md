@@ -29,6 +29,15 @@ only the state of the work.
   without the roll; Starlight-below reframed (~300 m away, 150 m up, 32 mm) with a stone
   watchtower (sets/buildings.js kit) for scale.
 
+- Later in the session: Leaf `scaleMul` 0.78 (finer scales, less "cobbled breastplate");
+  sit pose hind legs re-angled (thigh along the flank, knee beside the elbow: no ball haunch);
+  vessels in the membranes fainter (no drawn lines); Starlight's polish coat thinner/rougher
+  (no chrome); Charcoal's dust darker (no pale paws in flight); propatagium narrower;
+  mountRider() builds a grab bar at the rider's hands; Leaf flight shot at mid-downstroke;
+  scout-bank without the rider (an adult hides the whole small scout), rider kept in the
+  wing-loss shot; Starlight shot = ground camera, 40 mm, her at ~270 m beside a 27 m tower at
+  the same distance, hedgerows/woods 0.4-2.5 km (sets/scatter.js) - she reads 8 towers wide.
+
 ## Dev loop
 `scratchpad/cr/rv2.sh <name> <shot ids|all> [preset] [cinematic]` renders chosen hero shots
 through a temporary scene `scenes/lookdev/creatures-tmpreview.js` (delete it before commit).

@@ -69,7 +69,7 @@ const AIR = { scout: 0.35 };
 
 export function update(t, ctx) {
   const { camera } = ctx;
-  const k = Math.min(NAMES.length * 4, Math.floor(t + 1e-6));
+  const k = Math.max(0, Math.min(NAMES.length * 4, Math.round(t)));   // frame time (sub-frames never cross views)
   const sunAz = Math.atan2(S.sunDir.x, S.sunDir.z);
   // the camera looks along +z' where the sun comes from 40 degrees to its left and is in front
   const camAz = sunAz + Math.PI + 40 * D2R;

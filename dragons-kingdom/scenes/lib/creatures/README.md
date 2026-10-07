@@ -39,7 +39,9 @@ Poses (`poses.js`, all pure functions of `t`):
 
 * `stand` - wings folded, breathing, neck S-curve, idle head drift, automatic blinks
 * `sit` - dog-like upright sit (haunches down, forelegs straight, chest up, neck carried
-  forward in an S, tail curled round on the ground); the wings fold flat along the flanks
+  forward in an S, tail curled round on the ground; the thigh lies along the flank with the
+  knee forward beside the elbow, so the haunch reads as a folded leg - `hind: [thigh, knee,
+  ankle, abduction]` overrides); the wings fold flat along the flanks
   (the fold is given in the world, so the pitched body never stands the wrist up like a
   raised arm)
 * `lie` - resting on the belly (Charcoal in 1B/2C, the weak hatchling); `raise`/`headDown`
@@ -71,7 +73,7 @@ Lookdev scenes (`scenes/lookdev/`):
 
 | scene | what |
 |---|---|
-| `creatures-hero.js` (= `creatures-turntable.js`) | every hero shot in sequence (shot list in `creatures-shots.js`): Charcoal 3/4 front in daylight with Remi, Charcoal's head, Charcoal flying side-on, Leaf sitting upright with Abby, Leaf flying with Abby, Starlight gliding overhead seen from the ground (a watchman points up), the hatchling macro on bedding, the scout banking, the scout losing its LEFT wing |
+| `creatures-hero.js` (= `creatures-turntable.js`) | every hero shot in sequence (shot list in `creatures-shots.js`): Charcoal 3/4 front in daylight with Remi, Charcoal's head, Charcoal flying side-on over the sea, Leaf sitting upright with Abby, Leaf flying with Abby (mid-downstroke), Starlight gliding past a distant 27 m watchtower seen from the ground ~260 m away (a watchman points up; hedgerows and woods to the horizon), the hatchling macro on bedding, the scout banking over the sea, the scout (with its hooded rider) losing its LEFT wing |
 | `creatures-turntable-<name>.js` | only one creature's shots (quicker builds) |
 | `creatures-review.js` | every shot for 1 s at its representative moment - one build, `--fps 1` |
 | `creatures-contact.js` | contact sheet: each creature on a turntable (4 views) under one neutral daylight sky, then a scale lineup with a person (t = 20; also `creatures-lineup.js`) |
@@ -82,7 +84,10 @@ sun extracted; old_room's window light indoors for the hatchling), framed with a
 on Super 35, and finished with `finish.js` (8 sub-frames: supersampling + true motion blur,
 print grade, grain). People come from `scenes/lib/humans` (cast builds) when its cache has
 them, else the placeholder rider. Field shots get geometry grass laid out in log distance
-from the lens. Typical cost at native 4K on this machine: ~6-7 min per shot with the build
+from the lens. The air shots fly over the runtime's FFT ocean (`dk/ocean.js`, it follows the
+camera) - the episode's flights and the pursuit are off the coast - instead of a tiled ground
+plane. The Starlight shot borrows the set kit (`sets/buildings.js` tower, `sets/scatter.js`
+clumps as hedgerows and woods 0.4-2.5 km out) only as scale references. Typical cost at native 4K on this machine: ~6-7 min per shot with the build
 (Charcoal front: 6 min 44 s wall for one `--still`).
 
 ## How it is built (and why it looks the way it does)
@@ -140,27 +145,37 @@ from the lens. Typical cost at native 4K on this machine: ~6-7 min per shot with
    * Nightwings (Leaf, Starlight) and the hatchling have no plates on the chest (`plateZ`):
      the belly plates end behind the forelegs, the chest is scales (no breastplate read).
    * Starlight: albino white keratin, each scale a flat polished plate tilted its own way
-     (`skin3.z` facets) - glints from the sky, never emission; a faint warm flush in the
-     grooves (thin skin), a warmer pale belly (not grey clay); white-grey membranes with soft
-     vessels, translucency kept low.
-   * gold hatchling: 24-karat yellow gold as a mostly dielectric pigment (metalness 0.18 on
-     the crowns), soft low-relief newborn scales (no crisp embossed cells), a wet clearcoat
-     film on the smooth geometric normal (broad wet highlights, not pin-point sparkle),
-     streaks and drying patches, pale amniotic residue.
+     (`skin3.z` facets) - glints from the sky, never emission; only a thin, slightly rough
+     polish coat (clearcoat 0.32 at roughness 0.24: the whole animal must not read as chrome);
+     a faint warm flush in the grooves (thin skin), a warmer pale belly (not grey clay);
+     white-grey membranes with soft vessels, translucency kept low.
+   * scout wound (LEFT wing torn off): an open, dark, wet patch with a ragged rim and no scale
+     relief inside; the wing tears off at the humerus (the flight-muscle mass stays on the
+     back), so the torn wing ends in the arm, not in a ball joint. Kept small and dark: the
+     screenplay wants the loss unambiguous without a close-up of the wound.
+   * gold hatchling: reads as 24-karat gold through its tinted reflection - deep yellow gold
+     (linear 1.0/0.64/0.16, not pale brass), metallic crowns (0.72) and less metallic soft
+     grooves (0.4) at roughness ~0.47 (a broad sheen, no pin-point sparkle), very low scale
+     relief and almost no micro relief (soft, not-yet-hardened scales, no embossed cells), a
+     wet clearcoat film on the smooth geometric normal (broad wet highlights), streaks and
+     drying patches, pale amniotic residue (non-metallic, slimy).
    * Charcoal and Leaf: dry, dusty hide (roughness ~0.6) with dust and dried
      mud on the lower body, so the black hide shows soft sheen instead of
      lacquer; teeth stained ivory.
    * scale size per individual: `CREATURES.<name>.scaleMul` (or
      `createCreature(name, { scaleMul })`) shrinks the scales relative to the
      body - giants read immense when their scales are fine (Charcoal 0.6,
-     Starlight 0.55); dorsal spikes vary in height, spacing, rake and lean,
+     Starlight 0.55, Leaf 0.78); dorsal spikes vary in height, spacing, rake and lean,
      and about one in eight is broken or worn blunt.
    * wing membrane: leathery micro-texture (analytic noise creases in rest space, so the
      sheen breaks up), elastin striations in patches, mottling, darker thicker skin along the
-     bones and at the hem, a satin (not mirror) sky reflection, veins as a soft tracery, and
-     thin-membrane TRANSLUCENCY - sunlight and sky light arriving from
-     behind pass through (shadowed by the body, attenuated by veins); lit, never
-     emissive. Camber (billow) from the wing stroke.
+     bones and at the hem, a satin (not mirror) sky reflection, vessels as a faint soft
+     tracery (never drawn lines), and thin-membrane TRANSLUCENCY - sunlight and sky light
+     arriving from behind pass through (shadowed by the body, attenuated by veins); lit, never
+     emissive. Camber (billow) from the wing stroke, up to ~0.036 L between the fingers, and it
+     SHADES: wing.js stores the rest-space gradient of the billow profile per vertex
+     (`aBGrad`), the vertex shader skins it and tilts the normal by it (n' = n - grad h), so
+     each panel lights as a curved sail instead of a flat sheet.
    * eyes: the iris is ray-traced through a refracting cornea (n = 1.376),
      vertical slit pupil, iris fibres, limbal ring, clearcoat wet reflection;
      eyelids are real geometry that blink and rest over the top of the eye.
@@ -178,7 +193,9 @@ from the lens. Typical cost at native 4K on this machine: ~6-7 min per shot with
    cross-section) and every strap vertex is skinned like the nearest body
    vertex, so the tack breathes and bends with the dragon. Giants (Charcoal,
    Starlight) get a "riding rig": a padded seat block strapped on with broad
-   bands and a grab handle - nobody straddles a 4.5 m wide back.
+   bands and a grab handle - nobody straddles a 4.5 m wide back. `mountRider()` also builds a
+   leather-wrapped grab bar exactly where the seated rider's hands are, held by two straps
+   from the pommel (a child of the rider, so it shows and hides with the rider).
 
 ## Limb layout (decided for the provisional designs) - QUESTION FOR DAXTYN
 
@@ -252,14 +269,15 @@ full-frame Charcoal frame from 20.5 s to about 12 s with no visible change.
   bundle can read like a lifted arm, from some angles a standing wrist and
   thumb stick out in front of the chest, and the folded membrane reads as
   stiff panels.
-* Leaf's chest scutes are large, smooth, dark-seamed plates; at 4K they can
-  read a little like a breastplate (they are scales, but the look should be
-  checked against "no decorative armor").
+* Leaf's chest is scales, not plates, and his scales are finer than before
+  (`scaleMul` 0.78); seen straight on, the domed chest scales are still the biggest on his
+  body (check against "no decorative armor" with Daxtyn's references).
 * Eyes in a shaded socket read mostly as the wet reflection of the sky (the
   iris shows in close-ups with light on it, e.g. Leaf's eye macro).
-* The hatchling's belly plates are large and dark-seamed (more like an adult
-  crocodile's than a newborn's), and its head is still on the long side for a
-  newborn.
+* The hatchling's head is still on the long side for a newborn (shortening the snout
+  loft alone left the nostrils and egg tooth as a knob past the tip - needs the snout
+  features moved with it). Out of focus, the metallic body can still sparkle a little in
+  the bokeh.
 * The velocity motion blur poses the scene at the shutter-open time before
   `update()` has set the shot's lens, so a still uses the previous lens state
   for its shutter (the runtime default, 180 degrees, for a single still). The
