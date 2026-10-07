@@ -128,7 +128,8 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   c = mix(c, c * vec3(1.12, 0.92, 0.9), uRed * (0.5 + m1));
   // where blood shows (cheeks, nose tip, chin, ears) / thin cool skin under the eyes
   c = mix(c, c * vec3(1.1, 0.84, 0.84), vAux2.r * uFlush * (0.7 + 0.6 * m1));
-  c *= mix(vec3(1.0), vec3(0.9, 0.86, 0.92), vAux2.b * 0.7);
+  { float lumc = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    c = mix(c, mix(vec3(lumc) * vec3(1.06, 0.97, 0.95), c, 0.45) * vec3(0.95, 0.92, 0.95), vAux2.b * 0.75); }
   // lid margin: lash line and wet rim of the eye opening
   c = mix(c, c * vec3(0.42, 0.3, 0.28), vAux2.g * uLid);
   // lips (aux.r) a little deeper, nails (aux.g) paler
@@ -173,6 +174,14 @@ skinSmoothN = normal;
   skinThin = thin;
   skinTransCol = diffuseColor.rgb * vec3(1.0, 0.35, 0.22);
 }`)
+      .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>
+#ifdef USE_SHEEN
+  material.sheenColor *= 1.0 - vAux.a;
+#endif
+#ifdef USE_CLEARCOAT
+  material.clearcoat *= 1.0 - vAux.a;
+#endif
+`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 {
   float aoV = clamp(vAO, 0.0, 1.0);
@@ -263,8 +272,9 @@ varying float vAO; varying vec3 vGaze; varying float vIris;`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 {
   float aoV = clamp(vAO, 0.0, 1.0);
-  reflectedLight.indirectDiffuse *= aoV;
-  reflectedLight.indirectSpecular *= mix(1.0, aoV, 0.7);
+  // the eye sits in a skin-coloured socket: its fill light is warm bounce, not just blue sky
+  reflectedLight.indirectDiffuse *= aoV * vec3(1.22, 1.0, 0.86);
+  reflectedLight.indirectSpecular *= mix(1.0, aoV * aoV, 0.85);
   reflectedLight.directDiffuse *= mix(1.0, aoV, 0.6);
 }`);
   };

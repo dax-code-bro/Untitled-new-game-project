@@ -489,6 +489,9 @@ def scalp_coverage(gr, body, n_scalp):
     for k, (i, q) in enumerate(zip(ids, Pd)):
         co, j, d = kd.find(Vector(q))
         cov[i] = np.clip(1 - (d - 0.004) / 0.005, 0, 1)
+    # never past the hairline: the edge is drawn by the fine edge strands themselves
+    hl = gr.hairline(P[ids])
+    cov[ids] *= np.clip((P[ids, 1] - hl + 0.001) / 0.007, 0, 1) ** 1.5
     body.attrs['aux'][:, 3] = np.maximum(body.attrs['aux'][:, 3], cov)
 
 
