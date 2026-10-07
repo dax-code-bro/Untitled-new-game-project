@@ -239,7 +239,8 @@ class Mhclo:
                 if key == 'delete_verts':
                     mode = 'delete'; continue
                 if key in ('uuid', 'basemesh', 'name', 'tag', 'z_depth', 'offset', 'max_pole', 'special_pose', 'vertexboneweights_file', 'license', 'author', 'homepage', 'description'):
-                    mode = None if key not in ('offset',) else mode
+                    # metadata lines do not end a data section ('verts 0' may be followed by
+                    # 'tag ...' before the vertex lines, e.g. eyebrow010)
                     continue
                 if mode == 'verts' and re.match(r'^-?\d', key):
                     if len(p) == 1:

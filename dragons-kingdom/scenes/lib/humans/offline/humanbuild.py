@@ -321,7 +321,55 @@ def skin_aux(kit, body, V, skel, skin_map_path):
             aux[sel, 1] = np.maximum(aux[sel, 1], m[sel])
     body.attrs['aux'] = aux
     body.attrs['aux2'] = face_masks(kit, body, V)
+    body.attrs['albg'] = albedo_gain(kit, body, V, col, aux, body.attrs['aux2'])
     return aux
+
+
+def albedo_gain(kit, body, V, col, aux, aux2, r_keep=0.008, r_ref=0.045):
+    """Per-vertex RGB gain that takes the photo shoot's lighting out of the face texture: the
+    MakeHuman photo albedo carries 1-5 cm blotches of baked light and make-up (pale under the
+    eyes, a reddish lid crease, shading beside the nose). gain = (colour blurred over ~4.5 cm) /
+    (colour blurred over ~8 mm), so detail finer than 8 mm (pores, freckles, lip edges) stays and
+    the face reads as one even skin under the renderer's own light. Lips and the lash line are
+    real colour: they are left out of both averages and keep gain 1."""
+    P = body.P
+    N = len(P)
+    w = body.weld if body.weld is not None else np.arange(N)
+    nW = int(w.max()) + 1
+    cnt = np.bincount(w, minlength=nW).astype(float)
+    lin = np.clip(col, 0, 1) ** 2.2
+    C = np.stack([np.bincount(w, weights=lin[:, k], minlength=nW) for k in range(3)], 1) / np.maximum(cnt, 1)[:, None]
+    Pw = np.stack([np.bincount(w, weights=P[:, k], minlength=nW) for k in range(3)], 1) / np.maximum(cnt, 1)[:, None]
+    keep = 1.0 - np.clip(np.maximum(aux[:, 0] * 1.5, aux2[:, 1] * 1.5), 0, 1)
+    K = np.bincount(w, weights=keep, minlength=nW) / np.maximum(cnt, 1)
+    tw = w[body.tris]
+    a = np.concatenate([tw[:, 0], tw[:, 1], tw[:, 2], tw[:, 1], tw[:, 2], tw[:, 0]])
+    b = np.concatenate([tw[:, 1], tw[:, 2], tw[:, 0], tw[:, 0], tw[:, 1], tw[:, 2]])
+    deg = np.maximum(np.bincount(a, minlength=nW), 1).astype(float)
+    el = float(np.median(np.linalg.norm(Pw[tw[:, 0]] - Pw[tw[:, 1]], axis=1)))
+
+    def blur(X, radius):
+        it = int(np.clip(2.0 * (radius / max(el, 1e-4)) ** 2, 2, 2000))
+        X = X.copy()
+        for _ in range(it):
+            avg = np.stack([np.bincount(a, weights=X[b, k], minlength=nW) for k in range(X.shape[1])], 1) / deg[:, None]
+            X = X + 0.5 * (avg - X)
+        return X
+    # masked averages (lips and lash line count as missing data)
+    W4 = np.concatenate([C * K[:, None], K[:, None]], 1)
+    m = blur(W4, r_keep)
+    r = blur(W4, r_ref)
+    Cm = m[:, :3] / np.maximum(m[:, 3:], 1e-4)
+    Cr = r[:, :3] / np.maximum(r[:, 3:], 1e-4)
+    g = np.clip(Cr / np.maximum(Cm, 1e-4), 0.72, 1.3)
+    # the face only (not the scalp, ears, neck): in front of the ears, brow line to the chin
+    g_ = lambda name: V[kit.base.group_verts(name)].mean(0)
+    eL, eR, mouth = g_('joint-l-eye'), g_('joint-r-eye'), g_('joint-mouth')
+    ey, ez = (eL[1] + eR[1]) / 2, (eL[2] + eR[2]) / 2
+    face = (np.clip((Pw[:, 2] - (ez - 0.05)) / 0.02, 0, 1) * np.clip(((ey + 0.045) - Pw[:, 1]) / 0.015, 0, 1)
+            * np.clip((Pw[:, 1] - (mouth[1] - 0.07)) / 0.015, 0, 1))
+    g = 1.0 + (g - 1.0) * (face * K)[:, None]
+    return g[w]
 
 
 def face_masks(kit, body, V):

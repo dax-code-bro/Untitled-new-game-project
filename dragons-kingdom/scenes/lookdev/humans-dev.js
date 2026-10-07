@@ -37,7 +37,7 @@ export async function setup(ctx) {
   sun.position.copy(sky.sun.direction).multiplyScalar(30);
   sun.target.position.set(0, 0.9, 0);
   scene.add(sun, sun.target);
-  const groundMat = await loadPBR('pbr/acg_ground13', ctx, { worldSize: 8 });
+  const groundMat = await loadPBR('pbr/acg_ground13', ctx, { worldSize: 120 });   // UV 0..1 = the circle's diameter
   const ground = new THREE.Mesh(new THREE.CircleGeometry(60, 64), groundMat);
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
   const data = await loadCharacterData(CFG.id);
@@ -53,6 +53,11 @@ export async function setup(ctx) {
   if (CFG.flat) for (const m of ch.meshes) if (CFG.flat.some((n) => m.name.endsWith(':' + n))) m.material = new THREE.MeshStandardMaterial({ color: 0x9a8f80, roughness: 0.8, side: THREE.DoubleSide });
   if (CFG.hairSpec !== undefined) for (const m of ch.meshes) if (m.material.userData.hair) m.material.userData.hair.uSpec.value = CFG.hairSpec;
   if (CFG.noEnvHair) for (const m of ch.meshes) if (m.material.userData.hair) m.material.envMapIntensity = 0;
+  // material experiments: { "skinMat": { "clearcoat": 0 }, "skinU": { "uFlush": 0.3 } }
+  for (const m of ch.meshes) if (m.material.userData.skin) {
+    Object.assign(m.material, CFG.skinMat || {});
+    for (const [k, v] of Object.entries(CFG.skinU || {})) m.material.userData.skin[k].value = v;
+  }
   scene.add(ch.root);
   S = { ch, sun };
 }

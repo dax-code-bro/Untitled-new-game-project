@@ -59,14 +59,17 @@ class Groom:
         loc, n, i, d = self.rest_tree.find_nearest(Vector(p))
         return np.array(loc), np.array(n)
 
-    def hairline(self, P, front=0.062, temple=0.05, ear=0.018, nape=-0.07, hl=None):
+    def hairline(self, P, front=0.062, temple=0.047, ear=0.012, nape=-0.07, hl=None):
         """Height of the hairline above which the scalp grows hair (rest, per point azimuth),
         with a little irregularity (no ruler-straight edge)."""
         d = P - self.skull
         a = np.arctan2(d[:, 0], d[:, 2])
         ang = np.abs(a)                                   # 0 front, pi back
-        xs = np.array([0.0, 0.45, 0.75, 1.35, 1.75, math.pi])
-        ys = np.array([front, front - 0.002, temple, ear, ear - 0.04, nape])
+        # azimuth from the skull centre (7.8 cm behind the eyes): ~0.78 temple, ~1.2 front of the
+        # sideburn, ~1.45 tragus, ~1.57 ear canal. The hairline comes down in front of the ear to
+        # about the top of the ear (no bare temples), then drops behind the ear to the nape.
+        xs = np.array([0.0, 0.45, 0.78, 1.02, 1.22, 1.45, 1.8, math.pi])
+        ys = np.array([front, front - 0.002, temple, temple - 0.016, ear, ear - 0.012, ear - 0.04, nape])
         wob = 0.0035 * np.sin(a * 23.0 + 1.3) + 0.0025 * np.sin(a * 41.0 + 0.4)
         return self.eye_y + np.interp(ang, xs, ys) + wob
 
@@ -81,7 +84,7 @@ class Groom:
         # exclude the ears (outer side, small radius from the ear joint region)
         d = c - self.skull
         rxy = np.sqrt(d[:, 0] ** 2 + (d[:, 2] * 0.85) ** 2)
-        ok &= ~((np.abs(d[:, 0]) > 0.062) & (c[:, 1] < self.eye_y + 0.03) & (d[:, 2] > -0.06))
+        ok &= ~((np.abs(d[:, 0]) > 0.062) & (c[:, 1] < self.eye_y + 0.024) & (d[:, 2] > -0.05) & (d[:, 2] < 0.014))
         if region is None:
             region = getattr(self, 'region', None)
         if region is not None:
@@ -156,7 +159,8 @@ class Groom:
         def fn(p, nn):
             # hair from the front and the crown goes UP and back over the top first (a waypoint
             # above the back of the crown), then down to the gather; temples and sides go back
-            w = np.clip((p[2] - sk[2] + 0.02) / 0.08, 0, 1) * np.clip((p[1] - (self.eye_y + 0.015)) / 0.04, 0, 1)
+            w = np.clip((p[2] - sk[2] + 0.02) / 0.08, 0, 1) * np.clip((p[1] - (self.eye_y + 0.035)) / 0.04, 0, 1)
+            w = w * np.clip(1 - (abs(p[0]) - 0.035) / 0.035, 0, 1)
             W1 = np.array([p[0] * 0.75, sk[1] + 0.1, sk[2] - 0.05])
             return (G + (W1 - G) * w) - p
         for ri, (r, n0) in enumerate(zip(roots, nr)):
@@ -188,7 +192,7 @@ class Groom:
         dy = c[:, 1] - hl
         ok = headish[T].all(1) & (dy > -0.006) & (dy < 0.004) & (c[:, 2] < self.eye_z + 0.03)
         d = c - self.skull
-        ok &= ~((np.abs(d[:, 0]) > 0.062) & (c[:, 1] < self.eye_y + 0.03) & (d[:, 2] > -0.06))
+        ok &= ~((np.abs(d[:, 0]) > 0.062) & (c[:, 1] < self.eye_y + 0.024) & (d[:, 2] > -0.05) & (d[:, 2] < 0.014))
         if getattr(self, 'region', None) is not None:
             ok &= self.region(c)
         tri = T[ok]

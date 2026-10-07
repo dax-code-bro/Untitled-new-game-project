@@ -27,7 +27,7 @@ export async function setup(ctx) {
   sun.shadow.mapSize.set(4096, 4096);
   sun.shadow.bias = -0.0002;
   scene.add(sun, sun.target);
-  const g = new THREE.Mesh(new THREE.CircleGeometry(400, 96), await loadPBR('pbr/acg_ground13', ctx, { worldSize: 4 }));
+  const g = new THREE.Mesh(new THREE.CircleGeometry(400, 96), await loadPBR('pbr/acg_ground13', ctx, { worldSize: 800 }));   // UV 0..1 = diameter
   g.rotation.x = -Math.PI / 2; g.receiveShadow = true; scene.add(g);
   const human = await loadHuman({ ids: ['abby_ride', 'remi_ride'] });
   const sunDir = sky.sun.direction.clone().normalize();

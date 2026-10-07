@@ -96,7 +96,7 @@ export function skinMaterial(o = {}) {
     uSeed: { value: (o.seed ?? 1) * 0.137 },
     uDirt: { value: o.dirt ?? 0.0 },
     uFlush: { value: o.flush ?? 0.5 },
-    uLid: { value: o.lid ?? 0.75 },
+    uLid: { value: o.lid ?? 0.5 },
     uScalp: { value: new THREE.Vector3(...(o.scalpColor || [0.05, 0.03, 0.02])) },
     uBeard: { value: new THREE.Vector3(...(o.beardColor || [0.04, 0.025, 0.015])) },
   };
@@ -106,20 +106,21 @@ export function skinMaterial(o = {}) {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', `#include <common>
-attribute float ao; attribute float thick; attribute vec4 aux; attribute vec4 aux2;
-varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2;`)
+attribute float ao; attribute float thick; attribute vec4 aux; attribute vec4 aux2; attribute vec3 albg;
+varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec3 vAlbG;`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-vObjP = position; vAO = ao; vThick = thick; vAux = aux; vAux2 = aux2;`);
+vObjP = position; vAO = ao; vThick = thick; vAux = aux; vAux2 = aux2; vAlbG = albg;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 ${NOISE_GLSL}
 uniform vec3 uTone, uScalp, uBeard; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid;
-varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2;
+varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec3 vAlbG;
 vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
-  // character tone on the photographic albedo (keeps its lips, cheeks, knuckles, freckles)
-  vec3 c = diffuseColor.rgb * uTone;
+  // character tone on the photographic albedo (keeps its lips, cheeks, knuckles, freckles);
+  // vAlbG (offline) takes the photo shoot's light and make-up out of the face at 1-5 cm
+  vec3 c = diffuseColor.rgb * vAlbG * uTone;
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
   c = max(vec3(0.0), mix(vec3(l), c, uSat));
   // subtle mottling: blood flow / pigment variation at 1-3 cm, never repeating
@@ -133,16 +134,25 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   c = mix(c, c * vec3(1.12, 0.92, 0.9), uRed * (0.5 + m1));
   // where blood shows (cheeks, nose tip, chin, ears) / thin cool skin under the eyes
   c = mix(c, c * vec3(1.1, 0.84, 0.84), vAux2.r * uFlush * (0.7 + 0.6 * m1));
+  // periorbital skin (upper lid, crease, under-eye; aux2.b): the photo albedo carries make-up
+  // there (reddish lid shadow, pale concealer under the eye). Replace its colour by plain skin
+  // chroma at the same luminance, a touch darker and cooler (thin skin over the orbit).
   { float lumc = dot(c, vec3(0.2126, 0.7152, 0.0722));
-    c = mix(c, mix(vec3(lumc) * vec3(1.06, 0.97, 0.95), c, 0.45) * vec3(0.95, 0.92, 0.95), vAux2.b * 0.75); }
-  // lid margin: lash line and wet rim of the eye opening
-  c = mix(c, c * vec3(0.42, 0.3, 0.28), vAux2.g * uLid);
+    vec3 plain = lumc * vec3(1.17, 0.94, 0.8) * vec3(0.96, 0.95, 0.98) * 0.94;
+    c = mix(c, plain, clamp(vAux2.b * 0.6, 0.0, 0.6)); }
+  // lid margin: lash line and wet rim of the eye opening (dark, barely red)
+  c = mix(c, c * vec3(0.5, 0.42, 0.4), vAux2.g * uLid);
   // lips (aux.r) a little deeper, nails (aux.g) paler
   c = mix(c, c * vec3(0.98, 0.7, 0.72), vAux.r * 0.75);
   c = mix(c, vec3(l) * vec3(1.15, 1.02, 0.98) + 0.03, vAux.g * 0.55);
   c *= mix(1.0, 0.82, uDirt * hN3(vObjP * 90.0));
   // scalp under the hair takes the hair colour (roots, density), aux.a
-  c = mix(c, uScalp * (0.6 + 0.5 * hN3(vObjP * 900.0)), vAux.a * 0.96);
+  // (a darkened, hair-tinted skin at partial coverage - a straight mix with the hair colour
+  // reads as a grey band along the hairline)
+  { float lc = dot(c, vec3(0.2126, 0.7152, 0.0722)), ls = max(1e-3, dot(uScalp, vec3(0.2126, 0.7152, 0.0722)));
+    vec3 tinted = c * mix(vec3(1.0), uScalp / ls, 0.6) * mix(1.0, ls / max(lc, 1e-3), 0.5);
+    c = mix(c, tinted, smoothstep(0.0, 0.6, vAux.a));
+    c = mix(c, uScalp * (0.6 + 0.5 * hN3(vObjP * 900.0)), smoothstep(0.5, 1.0, vAux.a) * 0.96); }
   // stubble / shaved beard shadow (aux.b): fine dark dots in a soft tint
   { float dots = smoothstep(0.55, 0.9, hN3(vObjP * 2600.0 + 3.0));
     c = mix(c, c * mix(vec3(1.0), uBeard / max(0.02, dot(uBeard, vec3(0.333))) * 0.35, 0.6), vAux.b * (0.55 + 0.45 * dots)); }

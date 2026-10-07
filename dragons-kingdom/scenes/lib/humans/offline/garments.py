@@ -479,6 +479,29 @@ def apply_envelope(D, S, torso, g, ylo):
     return S + dirs * (rn - r)[:, None]
 
 
+def shirt_gathers(D, S, F, armv, g):
+    """A shirt that is not simulated (a fitted under-layer) still is not a smooth shell: soft
+    folds run down from the gathered neckline and the cloth undulates over the chest and back.
+    Outward-only displacement (it never cuts into the body), a few millimetres, deterministic."""
+    rng = np.random.default_rng(int(g.get('seed', 3)) * 7 + 11)
+    A = g.get('gathers', 0.0024)
+    nk = D.lm('neck01')
+    c = D.axis_y()
+    th = np.arctan2(S[:, 0] - c[0], S[:, 2] - c[2])
+    dy = np.clip((nk[1] - S[:, 1]), 0, None)
+    near = np.exp(-dy / 0.07)                         # neckline gathers fade over ~7 cm
+    ph = rng.random(4) * 6.283
+    k1 = 26 + int(rng.integers(0, 6))
+    wav = 0.5 + 0.5 * np.sin(th * k1 + ph[0] + 3.0 * np.sin(th * 3 + ph[1]) + dy * 9.0)
+    soft = 0.5 + 0.5 * np.sin(th * 7 + ph[2] + S[:, 1] * 23.0) * np.sin(S[:, 1] * 31.0 + th * 2 + ph[3])
+    disp = A * (wav ** 2 * near + 0.45 * soft * (1 - 0.6 * near))
+    disp = disp * (~armv) + armv * A * 0.35 * soft
+    nb = mu.neighbours(len(S), F)
+    disp = mu.laplacian_smooth_fast(disp[:, None], nb, iters=2, lam=0.5)[:, 0]
+    n = mu.vnormals(S, F)
+    return S + n * disp[:, None]
+
+
 def add_collar(D, S, F, old, armv, height=0.025):
     """Standing band collar: the neckline loop extruded up the neck (2 rows), sitting at the neck
     hull radius + a little ease."""
@@ -491,13 +514,44 @@ def add_collar(D, S, F, old, armv, height=0.025):
     prof = hull_profile(D)
     c = prof[4]
     rows = []
+    # the band is gathered into the neckline and fits the NECK (its own cross-section, not the
+    # hull, whose height max-filter reaches down to the shoulders): the first row comes most of
+    # the way in, the top edge sits on the neck + a finger of ease. A band left at the width of a
+    # low neckline stands off the neck like a plate.
+    B = D.dress_smooth()
+    neck = np.isin(D.cat, ['neck'])
+    Bn = B[neck]
+    n0_, n1_ = D.lm('neck01'), D.lm('neck02') if 'neck02' in D.J else D.lm('neck01') + np.array([0, 0.06, 0])
+    ax_ = mu.norm(n1_ - n0_)
     for k, f in ((1, 0.5), (2, 1.0)):
         Q = S[l].copy()
         Q[:, 1] += height * f
-        d = (Q - c) * np.array([1, 0, 1])
+        cq = n0_ + np.outer((Q - n0_) @ ax_, ax_)              # neck axis point at each vertex
+        d = Q - cq
+        d = d - np.outer(d @ ax_, ax_)
         r = np.linalg.norm(d, axis=1)
-        rt = sample_profile(prof, Q) + 0.006
-        Q = Q + d / np.maximum(r[:, None], 1e-9) * (np.maximum(rt, r * 0.97) - r)[:, None]
+        u = d / np.maximum(r[:, None], 1e-9)
+        # neck radius along each vertex' direction: max projection of the neck vertices within
+        # 1.2 cm of that height and 25 degrees of that direction
+        rt = np.zeros(len(Q))
+        for i in range(len(Q)):
+            dv = Bn - cq[i]
+            h = dv @ ax_
+            dv = dv - np.outer(h, ax_)
+            rv = np.linalg.norm(dv, axis=1)
+            ok = (np.abs(h) < 0.012) & (dv @ u[i] > rv * 0.9)
+            rt[i] = (dv[ok] @ u[i]).max() if ok.any() else r[i]
+        # the neck's cross-section is smooth: per-vertex maxima are noisy (a jagged, crumpled
+        # band), so smooth the radius around the loop (the loop is ordered)
+        for _ in range(12):
+            rt = 0.5 * rt + 0.25 * (np.roll(rt, 1) + np.roll(rt, -1))
+        rt = rt + 0.005
+        # stand up from the neckline and lean in toward the neck (never flare out: that is the
+        # plate look); a shelf straight in to the neck would read as a dark ledge
+        rn = np.where(r > rt, r - (r - rt) * (0.3 if k == 1 else 0.55), rt)
+        Q = cq + u * rn[:, None] + np.outer((Q - cq) @ ax_, ax_)
+        for _ in range(3):
+            Q = 0.5 * Q + 0.25 * (np.roll(Q, 1, 0) + np.roll(Q, -1, 0))
         rows.append(Q)
     n = len(S)
     m = len(l)
@@ -759,6 +813,8 @@ def upper_garment(D, g):
     sub = g.get('subdiv', getattr(D, 'subdiv', 0))
     for _ in range(sub):
         S, F, (pin, region, goal) = mu.subdivide_quads_linear(S, F, extra=[pin, region, goal])
+    if not g.get('sim', True) and g.get('gathers', 0.0024) > 0:
+        S = shirt_gathers(D, S, F, region > 0.5, g)
     uv = uv_body(D, S)
     G = Garment(g.get('name', g['type']), S, F, uv, pin, g, sim=g.get('sim', True), layer=g.get('layer', 2))
     G.region = (region > 0.5).astype(int)

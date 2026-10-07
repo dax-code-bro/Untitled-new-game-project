@@ -84,6 +84,7 @@ export function buildCharacter(data, opts = {}) {
       if (!g.attributes.thick) g.setAttribute('thick', new THREE.BufferAttribute(new Float32Array(n).fill(0.3), 1));
       if (!g.attributes.aux) g.setAttribute('aux', new THREE.BufferAttribute(new Float32Array(n * 4), 4));
       if (!g.attributes.aux2) g.setAttribute('aux2', new THREE.BufferAttribute(new Float32Array(n * 4), 4));
+      if (!g.attributes.albg) g.setAttribute('albg', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
     }
     g.computeBoundingSphere();
     const mat = materialFor(m, header, opts);
@@ -108,7 +109,9 @@ export function buildCharacter(data, opts = {}) {
       mesh.morphTargetInfluences = mnames.map(() => 0);
     }
     mesh.name = `${root.name}:${m.name}`;
-    mesh.castShadow = opts.shadows !== false && m.material?.castShadow !== false;
+    // lashes and brows are too fine for a shadow map: at a grazing sun they print long dark
+    // streaks across the cheek; their contact shading comes from the baked AO
+    mesh.castShadow = opts.shadows !== false && m.material?.castShadow !== false && m.kind !== 'lash' && m.kind !== 'brow';
     mesh.receiveShadow = true;
     // the bind pose IS the drape pose (idle motion only adds small deltas), so the bounding
     // spheres are valid for culling; opts.cull === false turns it off

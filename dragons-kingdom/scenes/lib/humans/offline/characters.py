@@ -196,7 +196,8 @@ def cast():
         'eyes': {'iris': 'brownlight', 'tint': [0.5, 0.42, 0.34]},
         'brows': 'eyebrow002', 'lashes': 'eyelashes01',
         'hair': {'color': HAIR['darkbrown'], 'style': 'crop', 'length': (0.015, 0.065), 'flow': 'back', 'curl': 0.25,
-                 'beard': {'count': 2500, 'length': (0.0012, 0.003), 'width': 0.0003, 'moustache': True, 'curl': 0.2, 'shadow': 0.7}},
+                 # stubble as skin shading only: a few thousand strand stubs read as specks, not a shadow
+                 'beard': {'count': 0, 'moustache': True, 'shadow': 0.7}},
         'outfit': riding_clothes([0.042, 0.058, 0.09], shirt=DYE['slate'], trousers='charcoal', boots=[0.03, 0.02, 0.014]),
         'pose': 'stand', 'pose_params': {'weight': 'L', 'contrapposto': 0.7, 'head_yaw': -0.05},
         'notes': 'canon: dark riding clothes with a muted blue outer layer',
@@ -322,7 +323,7 @@ def cast():
                    {'color': HAIR['black'], 'style': 'crop', 'length': (0.008, 0.02), 'flow': 'forward', 'beard': {'count': 6000, 'length': (0.006, 0.016), 'curl': 0.5, 'shadow': 0.8}},
                    'spear', [{'prop': 'sword'}]))
     C.append(guard('guard2', 'Guard (2)', 'light', 0.48, {'nose/nose-scale-vert': 0.2, 'chin/chin-height': 0.2, 'head/head-oval': 0.3},
-                   {'color': HAIR['dirtyblond'], 'style': 'crop', 'length': (0.01, 0.03), 'beard': {'count': 2000, 'length': (0.001, 0.003), 'width': 0.0003, 'shadow': 0.6}},
+                   {'color': HAIR['dirtyblond'], 'style': 'crop', 'length': (0.01, 0.03), 'beard': {'count': 0, 'shadow': 0.6}},
                    'spear', [{'prop': 'sword'}], gambeson=(0.3, 0.27, 0.2)))
     C.append(guard('guard3', 'Guard (3)', 'brown', 0.52, {'nose/nose-flaring': 0.3, 'mouth/mouth-scale-horiz': 0.1, 'head/head-square': 0.2},
                    {'color': HAIR['black'], 'style': 'crop', 'length': (0.004, 0.01), 'curl': 0.6, 'beard': {'count': 5000, 'length': (0.003, 0.008), 'curl': 0.7, 'shadow': 0.8}},
@@ -380,7 +381,7 @@ def crowd():
         ('crowd13', 0.0, 0.2, 'light', (0.45, 0.4, 0.45), {'style': 'braid', 'color': HAIR['auburn'], 'length': 0.36}, ('kirtle', 'teal'), None, 'stand', {}),
         ('crowd14', 1.0, 0.4, 'brown', (0.6, 0.45, 0.55), {'style': 'crop', 'color': HAIR['black'], 'length': (0.004, 0.01), 'curl': 0.7}, ('tunic', 'ochre'), None, 'drink', {}),
         ('crowd15', 0.0, 0.8, 'light', (0.35, 0.5, 0.4), {'style': 'pulled', 'color': HAIR['white'], 'count': 4000, 'loft': 0.003}, ('kirtle', 'grey'), ('coif+veil', None), 'stand', {}),
-        ('crowd16', 1.0, 0.33, 'light', (0.55, 0.45, 0.5), {'style': 'crop', 'color': HAIR['dirtyblond'], 'length': (0.02, 0.05), 'beard': {'count': 2000, 'length': (0.001, 0.003), 'width': 0.0003, 'shadow': 0.5}}, ('tunic', 'moss'), ('hood', 'woad'), 'call', {}),
+        ('crowd16', 1.0, 0.33, 'light', (0.55, 0.45, 0.5), {'style': 'crop', 'color': HAIR['dirtyblond'], 'length': (0.02, 0.05), 'beard': {'count': 0, 'shadow': 0.5}}, ('tunic', 'moss'), ('hood', 'woad'), 'call', {}),
         ('crowd17', 0.0, 0.38, 'tan', (0.45, 0.45, 0.5), {'style': 'bun', 'color': HAIR['darkbrown'], 'count': 7000, 'loft': 0.004}, ('kirtle', 'madder'), None, 'bowl', {}),
         ('crowd18', 1.0, 0.15, 'light', (0.5, 0.45, 0.5), {'style': 'crop', 'color': HAIR['blond'], 'length': (0.02, 0.05)}, ('tunic', 'woad'), None, 'cheer', {}),
     ]

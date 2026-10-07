@@ -23,7 +23,26 @@ Done (code committed; caches are git-ignored and rebuilt with offline/build.py)
 - Look-dev: humans-contact.js (7 sheets, turntable by frac(t)), humans-hero.js (8 hero shots),
   humans-riders.js (riders mounted on Leaf / Charcoal with the creature library), humans-dev.js.
 
+## Session 3 (2026-10-07, from ~21:30 UTC)
+
+Fixed after rendering the state left by session 2:
+- Shirt band collars stood off the neck like a plate (pushed OUT to a hull radius whose height
+  max-filter reaches the shoulders): now fitted to the neck's own cross-section, leaning in,
+  smoothed round the loop. Non-simulated shirts get deterministic neckline gathers.
+- Hairline: no bare temples (hairline comes down in front of the ear), ear exclusion only
+  covers the ear, temple strands of pulled-back styles go back instead of up over the crown;
+  hairline scalp tint is a darkened skin, not a grey mix.
+- Face albedo de-lighting (`albg`, offline/humanbuild.albedo_gain): the MakeHuman photo
+  textures carry the shoot's light and make-up at 1-5 cm (pale under the eyes, red lid crease):
+  per-vertex RGB gain = 4.5 cm blur / 8 mm blur, lips + lash line excluded.
+- mhclo parser: metadata lines ('tag') no longer end the vertex section (eyebrow010 failed).
+- Lashes/brows cast no shadow-map shadows (they printed long streaks across the cheek).
+- Sparse strand stubble (specks) replaced by stubble shading for Remi and a guard.
+- Look-dev scenes: ground scans were stretched over the whole plane (loadPBR worldSize is
+  the size UV 0..1 covers) - fixed; contact sheets quantise t to the frame (ghosting at k.0).
+
 In flight / next
-- Full rebuild of every character with the latest code (2-3 parallel processes, ~1.5 h).
-- Contact sheets + hero angles at preview, fix what shows, then final 4K + 1:1 crops.
-- npm test, README numbers, report with image paths.
+- Full rebuild of all 48 ids with this code started 22:12 UTC (3 processes, logs in the
+  scratchpad humans/logs/full{1,2,3}.log). If interrupted: rerun build.py for ids whose
+  cache json is older than offline/*.py.
+- Then contact sheets + hero angles at preview, fix, final 4K + crops, npm test, README.

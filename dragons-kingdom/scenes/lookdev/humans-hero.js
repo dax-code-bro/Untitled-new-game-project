@@ -58,7 +58,9 @@ export async function setup(ctx) {
   sun.shadow.mapSize.set(4096, 4096);
   sun.shadow.bias = -0.0001; sun.shadow.normalBias = 0.006;
   scene.add(sun, sun.target);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(SPACING * SHOTS.length + 200, 200), await loadPBR('pbr/acg_ground05', ctx, { worldSize: 2.5 }));
+  // worldSize = the metres UV 0..1 covers (the whole plane): the scan keeps its real scale
+  const GW = SPACING * SHOTS.length + 200, GH = 200;
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(GW, GH), await loadPBR('pbr/acg_ground03', ctx, { worldSize: [GW, GH] }));
   ground.rotation.x = -Math.PI / 2; ground.position.x = SPACING * (SHOTS.length - 1) / 2; ground.receiveShadow = true;
   scene.add(ground);
   const sunDir = sky.sun.direction.clone().normalize();
@@ -83,7 +85,7 @@ export async function setup(ctx) {
       members.push(ch);
     }
     if (sh.ground) {
-      const pm = await loadPBR(sh.ground, ctx, { worldSize: 2.5 });
+      const pm = await loadPBR(sh.ground, ctx, { worldSize: 32 });
       const patch = new THREE.Mesh(new THREE.CircleGeometry(16, 64), pm);
       patch.rotation.x = -Math.PI / 2; patch.position.set(cx, 0.004, 0); patch.receiveShadow = true;
       scene.add(patch);

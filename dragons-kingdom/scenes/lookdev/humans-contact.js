@@ -46,7 +46,9 @@ export async function setup(ctx) {
   sun.shadow.mapSize.set(4096, 4096);
   sun.shadow.bias = -0.0001; sun.shadow.normalBias = 0.006;
   scene.add(sun, sun.target);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, ROW_GAP * SHEETS.length + 100), await loadPBR('pbr/acg_ground05', ctx, { worldSize: 2.5 }));
+  // worldSize = the metres UV 0..1 covers (the whole plane): the scan keeps its real scale
+  const GW = 200, GH = ROW_GAP * SHEETS.length + 100;
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(GW, GH), await loadPBR('pbr/acg_ground05', ctx, { worldSize: [GW, GH] }));
   ground.rotation.x = -Math.PI / 2; ground.position.z = -ROW_GAP * (SHEETS.length - 1) / 2; ground.receiveShadow = true;
   scene.add(ground);
   const seatMat = new THREE.MeshStandardMaterial({ color: 0x3a2e24, roughness: 0.7 });
@@ -79,6 +81,9 @@ export async function setup(ctx) {
 
 export function update(t, ctx) {
   const { camera } = ctx;
+  // every sub-frame of the film finish (shutter + jitter AA) shows the same pose of the same
+  // sheet: quantise to the frame (no ghosting where one sheet hands over to the next at k.0)
+  t = Math.round(t * 24) / 24;
   const k = Math.min(S.sheets.length - 1, Math.max(0, Math.floor(t)));
   const sh = S.sheets[k];
   const yaw = (t - Math.floor(t)) * Math.PI * 2;
