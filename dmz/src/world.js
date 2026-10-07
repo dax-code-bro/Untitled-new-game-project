@@ -75,9 +75,13 @@ const PAL = {
 };
 
 export class World {
-  constructor(scene, seed = 7331) {
+  constructor(scene, seed = 7331, assets = null) {
     this.scene = scene;
-    this.rng = mulberry32(seed);
+    this.assets = assets;
+    this.rng = mulberry32(seed);              // layout: same map every raid
+    this.tintRng = mulberry32(seed ^ 0x5bd1e995); // color variation only, so it never shifts the layout
+    this.propRng = mulberry32(seed + 17);     // which scan goes where; adding scans keeps the layout identical
+    this.props = [];
     this.H = 320;
     this.colliders = [];
     this.grid = new Map();
@@ -115,7 +119,7 @@ export class World {
 
   // ---------- collision ----------
   solid(x0, y0, z0, x1, y1, z1, color, collide = true, tint = 0.06) {
-    this.batch.box(x0, y0, z0, x1, y1, z1, color, tint, this.rng);
+    this.batch.box(x0, y0, z0, x1, y1, z1, color, tint, this.tintRng);
     if (collide) this.addCollider({ min: [x0, y0, z0], max: [x1, y1, z1] });
   }
 
@@ -553,6 +557,29 @@ export class World {
     for (const [x, z] of [[-34, -12], [34, 12], [-12, 36], [12, -36]]) this.lootSpots.push({ x, z, poi, kind: 'crate' });
   }
 
+  hasScan(slot) { return !!(this.assets && this.assets.has(slot)); }
+
+  // Places a scanned asset inside the footprint `rc` (already reserved), with a collider
+  // that hugs the scan's scaled bounds. q = quarter turns; `along` forces the long axis.
+  scanProp(slot, rc, { maxH = Infinity, along = null, fill = 1.1 } = {}) {
+    const list = this.assets.forSlot(slot);
+    const a = list[Math.floor(this.propRng() * list.length)];
+    const [sx, sy, sz] = a.size;
+    let q = Math.floor(this.propRng() * 4);
+    if (along) {
+      const longX = sx >= sz;
+      const wantX = along === 'x';
+      if ((q % 2 === 0) !== (longX === wantX)) q = (q + 1) % 4;
+    }
+    const fw = q % 2 ? sz : sx, fd = q % 2 ? sx : sz;
+    const w = rc.x1 - rc.x0, d = rc.z1 - rc.z0;
+    const s = Math.min((w / fw) * fill, (d / fd) * fill, maxH / sy);
+    const cx = (rc.x0 + rc.x1) / 2, cz = (rc.z0 + rc.z1) / 2;
+    this.props.push({ a, x: cx, z: cz, s, yaw: q * Math.PI / 2 });
+    const hx = fw * s * 0.42, hz = fd * s * 0.42;
+    this.addCollider({ min: [cx - hx, 0, cz - hz], max: [cx + hx, sy * s * 0.92, cz + hz] });
+  }
+
   buildCars() {
     for (let i = 0; i < 40; i++) {
       const road = this.pk(this.roads);
@@ -564,6 +591,7 @@ export class World {
       if (this.occupied.some((o) => overlap(rc, o, 2))) continue;
       this.occupied.push(rc);
       const col = this.pk(PAL.cars);
+      if (this.hasScan('car')) { this.scanProp('car', rc, { along: horiz ? 'x' : 'z', fill: 1.0 }); continue; }
       this.solid(rc.x0, 0.3, rc.z0, rc.x1, 1.1, rc.z1, col, true, 0.15);
       const sh = 0.6;
       if (horiz) this.solid(x - L / 2 + 1.0, 1.1, z - Wd / 2 + 0.12, x + L / 2 - 1.3, 1.1 + sh, z + Wd / 2 - 0.12, col, true, 0.15);
@@ -583,8 +611,11 @@ export class World {
       const rc = rect(x - w / 2, z - d / 2, x + w / 2, z + d / 2);
       if (!this.freeRect(rc, 3, 3)) continue;
       this.occupied.push(rc);
+      const stacked = this.rng() < 0.5;
+      const top = stacked ? h + this.r(0.5, 1.5) : h;
+      if (this.hasScan('rock')) { this.scanProp('rock', rc, { maxH: top * 1.2 }); continue; }
       this.solid(rc.x0, 0, rc.z0, rc.x1, h, rc.z1, PAL.rock, true, 0.12);
-      if (this.rng() < 0.5) this.solid(rc.x0 + w * 0.2, h, rc.z0 + d * 0.15, rc.x1 - w * 0.25, h + this.r(0.5, 1.5), rc.z1 - d * 0.3, PAL.rock, true, 0.12);
+      if (stacked) this.solid(rc.x0 + w * 0.2, h, rc.z0 + d * 0.15, rc.x1 - w * 0.25, top, rc.z1 - d * 0.3, PAL.rock, true, 0.12);
     }
   }
 
@@ -631,6 +662,23 @@ export class World {
     this.scene.add(mesh);
     this.staticMesh = mesh;
     this.batch = null;
+
+    for (const p of this.props) {
+      const o = this.assets.instance(p.a, p.s, p.yaw);
+      o.position.set(p.x, 0, p.z);
+      this.scene.add(o);
+    }
+    if (this.hasScan('tree')) {
+      // scanned trees: scale each to the placeholder's height (~7.8 m at s = 1)
+      for (const tp of this.treePts) {
+        const list = this.assets.forSlot('tree');
+        const a = list[Math.floor(this.propRng() * list.length)];
+        const o = this.assets.instance(a, (7.8 * tp.s) / a.size[1], this.propRng() * Math.PI * 2);
+        o.position.set(tp.x, 0, tp.z);
+        this.scene.add(o);
+      }
+      return;
+    }
 
     const n = this.treePts.length;
     const cone1 = new THREE.ConeGeometry(2.3, 4.6, 7);

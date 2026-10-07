@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EXFIL — Extraction Shooter</title>
 <link rel="stylesheet" href="style.css">
-<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }</script>
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -48,7 +48,7 @@
   </div>
 </div>
 
-<div id="loading" class="hidden"><div><h2>INFILTRATING</h2><p>Generating the zone…</p></div></div>
+<div id="loading" class="hidden"><div><h2>INFILTRATING</h2><p id="loading-detail">Generating the zone…</p></div></div>
 
 <div id="hq" class="hidden"></div>
 

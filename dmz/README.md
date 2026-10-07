@@ -15,6 +15,15 @@ Then open http://localhost:8000. Click **DEPLOY**, then click the game view to c
 
 `?test` disables pointer lock, which helps when debugging or running automation. During a raid, `window.__raid` exposes the live game state.
 
+## Photogrammetry assets
+
+All the art is meant to come from photogrammetry scans, made with open-source tools. **[`pipeline/README.md`](pipeline/README.md)** covers the full process, from photographing an object to having it in the game:
+
+1. `pipeline/reconstruct.sh` turns photos into a raw scan (COLMAP + OpenMVS, or Meshroom).
+2. `pipeline/process_scan.py` turns the raw scan into a game-ready `.glb`. It runs in Blender, cleans and scales the scan, bakes textures, builds LODs and registers the asset in `assets/assets.json`.
+3. `viewer.html` lets you inspect a scan: check its scale against a human, step through the LODs, and view the wireframe.
+4. The game loads the manifest and swaps scans in for the placeholder blocks, by slot (`rock`, `tree`, `car`, ...). With no scans installed, it falls back to the placeholder blocks.
+
 ## The loop
 
 1. **HQ**: choose a primary and secondary weapon and the one weapon you insure. You can also buy weapons, plates, self-revives and backpack upgrades, and sell the valuables you've extracted.
@@ -56,6 +65,8 @@ Then open http://localhost:8000. Click **DEPLOY**, then click the game view to c
 | `hud.js` | Compass, rotating minimap, tactical map, vitals, hit markers, damage direction, loot and backpack panel |
 | `hq.js` | Menu between raids, stash, shop, debrief |
 | `save.js` | localStorage progression, loadout removal on deploy, merging raid results, insurance |
+| `assets.js` | Loads the scanned glTF assets from `assets/assets.json` and creates LOD copies of them |
+| `viewer.js` | The scan viewer (`viewer.html`) |
 | `audio.js` | Procedural WebAudio for gunshots, hit markers, the helicopter and the geiger counter |
 
 ## Ideas for next steps

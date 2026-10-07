@@ -5,6 +5,7 @@ import * as Save from './save.js';
 import { HQ } from './hq.js';
 import { HUD } from './hud.js';
 import { Raid } from './raid.js';
+import { AssetLib } from './assets.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -27,6 +28,12 @@ const input = { keys: {}, pressed: new Set(), mdx: 0, mdy: 0, lmb: false, rmb: f
 
 let raid = null;
 let kit = null;
+
+// Scanned assets load in the background while you're in the HQ.
+const assets = new AssetLib();
+const assetsReady = assets.load('assets/assets.json', (done, total, id) => {
+  $('loading-detail').textContent = `Loading scans ${done}/${total} (${id})`;
+});
 
 const locked = () => testMode || document.pointerLockElement === canvas;
 
@@ -52,15 +59,17 @@ function setPaused(p) {
 
 const hq = new HQ($('hq'), save, { deploy, audio });
 
-function deploy() {
+async function deploy() {
   audio.init();
   kit = Save.prepareKit(save);
   Save.store(save);
   hq.hide();
   $('loading').classList.remove('hidden');
+  await assetsReady;
+  $('loading-detail').textContent = 'Generating the zone…';
   // let the loading screen paint before the (synchronous) world build
   setTimeout(() => {
-    raid = new Raid({ renderer, audio, hud, input, kit, settings: save.settings, lock, unlock, onEnd });
+    raid = new Raid({ renderer, audio, hud, input, kit, assets, settings: save.settings, lock, unlock, onEnd });
     window.__raid = raid;
     $('loading').classList.add('hidden');
     hud.show();
