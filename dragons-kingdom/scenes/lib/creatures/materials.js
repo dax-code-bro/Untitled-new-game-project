@@ -90,7 +90,8 @@ export function lookParams(THREE, look) {
       // amniotic residue: a pale, slimy film in patches and streaks
       residue: [0.35, 0.8, 0.74, 0.52],
       dustAmt: 0.0, saltAmt: 0.0, oral: lin(THREE, 0.5, 0.2, 0.16), oralDark: lin(THREE, 0.14, 0.04, 0.035),
-      membrane: lin(THREE, 0.55, 0.3, 0.08), trans: lin(THREE, 0.7, 0.35, 0.1), vein: lin(THREE, 0.45, 0.12, 0.05), memRough: 0.3,
+      // the tiny crumpled wings: damp gold skin, satin not mirror (a smooth membrane fold mirrored blue sky)
+      membrane: lin(THREE, 0.62, 0.38, 0.1), trans: lin(THREE, 0.5, 0.28, 0.08), vein: lin(THREE, 0.45, 0.12, 0.05), memRough: 0.6,
       horn: [lin(THREE, 0.62, 0.48, 0.25), lin(THREE, 0.8, 0.7, 0.5)], claw: [lin(THREE, 0.62, 0.5, 0.3), lin(THREE, 0.82, 0.74, 0.58)],
       tooth: lin(THREE, 0.75, 0.7, 0.58), iris: [lin(THREE, 0.2, 0.11, 0.035), lin(THREE, 0.05, 0.025, 0.012)], sclera: lin(THREE, 0.06, 0.035, 0.02),
       wet: true,
@@ -419,7 +420,13 @@ void dkSkin(inout vec3 albedo) {
   #if defined( USE_CLEARCOAT )
     // the wet film reflects the sky only where the sky is visible (crevices and the
     // underside facing the ground would otherwise show mirror-bright sky patches)
-    clearcoatSpecularIndirect *= ambientOcclusion * ambientOcclusion * smoothstep(-0.35, 0.25, dot(reflect(-geometryViewDir, geometryClearcoatNormal), (viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz));
+    // (and not on the undersides: a film facing sideways-down under the body - the crevice of a
+    // folded thigh - sees body and ground, not sky; the rest-pose AO bake cannot know the pose)
+    {
+      vec3 dkUpV = (viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz;
+      clearcoatSpecularIndirect *= ambientOcclusion * ambientOcclusion * smoothstep(-0.2, 0.35, dot(reflect(-geometryViewDir, geometryClearcoatNormal), dkUpV))
+        * smoothstep(-0.25, 0.4, dot(geometryClearcoatNormal, dkUpV));
+    }
   #endif
   #if defined( USE_ENVMAP ) && defined( STANDARD )
     float dotNV = saturate( dot( geometryNormal, geometryViewDir ) );

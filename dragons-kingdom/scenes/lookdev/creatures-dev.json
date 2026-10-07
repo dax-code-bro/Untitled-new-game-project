@@ -1,8 +1,6 @@
-{ "creatures": [{ "name": "leaf", "quality": "standard", "face": -70, "pose": { "name": "sit", "look": [0.35, -0.12] } }],
+{ "creatures": [{ "name": "hatchling", "quality": "standard", "yaw": 0, "pose": { "name": "lie", "raise": -0.1, "headDown": 0.16, "look": [0.2, -0.04], "lidRelax": 0.42 } }],
   "rotationY": -1.2,
   "views": [
-    { "subject": 0, "cam": [0.95, 0.19, 1.15], "target": [0.07, 0.22, 0.07], "fov": 26 },
-    { "subject": 0, "cam": [0.95, 0.19, 1.15], "target": [0.07, 0.22, 0.07], "fov": 26, "poses": { "0": { "name": "sit", "look": [0.35, -0.12], "hind": [-0.6, 1.7, -1.75, 0.3] } } },
-    { "subject": 0, "cam": [0.95, 0.19, 1.15], "target": [0.07, 0.22, 0.07], "fov": 26, "poses": { "0": { "name": "sit", "look": [0.35, -0.12], "hind": [-0.35, 1.45, -1.75, 0.45] } } },
-    { "subject": 0, "cam": [1.3, 0.25, -0.2], "target": [0.0, 0.15, -0.05], "fov": 30, "poses": { "0": { "name": "sit", "look": [0.35, -0.12], "hind": [-0.35, 1.45, -1.75, 0.45] } } }
+    { "subject": 0, "cam": [1.1, 0.25, -0.1], "target": [0.0, 0.08, -0.1], "fov": 28 },
+    { "subject": 0, "cam": [0.7, 0.12, -0.3], "target": [0.05, 0.06, -0.15], "fov": 24 }
   ] }
