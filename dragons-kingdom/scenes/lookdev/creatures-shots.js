@@ -34,7 +34,7 @@ export const SHOTS = [
   // Charcoal's head: 85 mm close-up on the eye
   { id: 'charcoal-head', set: 'field', creatures: ['charcoal'], dur: 3, face: -55,
     pose: { charcoal: { name: 'stand', look: [0.3, 0.0] } },
-    cam: { subject: 'charcoal', bone: 'head', pos: [8.5, 1.2, 8.0], target: [0.4, -0.3, 1.8], mm: 50, fstop: 5.6, focus: 'eye_L' } },
+    cam: { subject: 'charcoal', bone: 'head', pos: [12.5, 1.6, 11.5], target: [0.3, -0.4, 1.7], mm: 50, fstop: 5.6, focus: 'eye_L' } },
   // Charcoal flying side-on (air to air, 40 mm from ~75 m, the downstroke)
   { id: 'charcoal-flight', set: 'air', creatures: ['charcoal'], tack: ['charcoal'], dur: 3, alt: 260, face: -100,
     pose: { charcoal: { name: 'flight', phase: 0.5, look: [0.05, 0.05] } },
@@ -51,10 +51,10 @@ export const SHOTS = [
   // Starlight gliding high overhead, seen from the ground at a distance: a watchman in the
   // foreground points up at her (24 mm, looking up ~40 degrees, haze between)
   { id: 'starlight-below', set: 'ground', creatures: ['starlight'], tack: ['starlight'], dur: 3, face: 160, haze: 2.2,
-    flyer: { name: 'starlight', at: [10, 72, 112], heading: -72 },
+    flyer: { name: 'starlight', at: [-4, 52, 104], heading: -72 },
     people: [{ id: 'watchman', ground: [-1.15, 0, 3.6], yaw: 172 }],
     pose: { starlight: { name: 'glide', bank: -0.12, dihedral: 0.12, look: [0.1, -0.15] } },
-    cam: { ground: true, pos: [0, 1.25, 0], lookAt: [0, 41.6, 100], mm: 20, fstop: 8 } },
+    cam: { ground: true, pos: [0, 1.25, 0], lookAt: [0, 36.4, 100], mm: 20, fstop: 8 } },
   // the gold hatchling on the bedding: 100 mm macro, T2.8, focus on the eye
   { id: 'hatchling-macro', set: 'bed', creatures: ['hatchling'], dur: 3, face: -40,
     pose: { hatchling: { name: 'lie', raise: -0.1, headDown: 0.16, look: [0.42, -0.04], lidRelax: 0.42, breathe: 0.5 } },
@@ -64,9 +64,9 @@ export const SHOTS = [
     pose: { scout: { name: 'glide', bank: 0.85, look: [0.3, 0.0], dihedral: 0.05 } },
     cam: { subject: 'scout', pos: [5.5, 2.2, 6.0], target: [0, 0, 0.4], mm: 45, fstop: 8, focus: 'target' } },
   // the scout loses its LEFT wing (0.4 s after the tear): the wing tumbles away in the wake
-  { id: 'scout-wingloss', set: 'air', creatures: ['scout'], dur: 4, alt: 200, face: -130, detachAt: 0.6,
+  { id: 'scout-wingloss', set: 'air', creatures: ['scout'], dur: 4, alt: 200, face: -130, detachAt: 0.6, still: 1.1,
     pose: { scout: { name: 'flight' } },
-    cam: { subject: 'scout', pos: [9.0, 4.0, -3.5], target: [1.0, -0.8, -1.6], mm: 24, fstop: 8, focus: 'target' } },
+    cam: { subject: 'scout', pos: [7.0, 2.5, -2.0], target: [1.2, -0.4, -1.4], mm: 24, fstop: 8, focus: 'target' } },
 ];
 
 /** Build a scene module for the given shot ids (default: all). */
@@ -168,7 +168,8 @@ export function makeTurntable(opts = {}) {
     const { camera, scene } = ctx;
     let shot = shots[shots.length - 1];
     for (const s of shots) if (t >= s._start && t < s._start + s.dur) { shot = s; break; }
-    const lt = t - shot._start;
+    // review renders (opts.step) show each shot at its representative moment
+    const lt = opts.step ? (shot.still ?? 0) + (t - shot._start) : t - shot._start;
     // visibility
     for (const [n, c] of Object.entries(S.C)) c.root.visible = shot.creatures.includes(n);
     for (const h of S.people) h.root.visible = false;

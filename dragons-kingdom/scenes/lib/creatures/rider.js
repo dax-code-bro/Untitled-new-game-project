@@ -369,11 +369,14 @@ export function createSaddle(c, opts = {}) {
   const kind = opts.kind ?? (L > 14 ? 'rig' : 'saddle');
   const anat = c.anatomy;
   const sdf = anat.sdf;
-  const f = (x, y, z) => { const l = sdf.cull(x, y, z, x, y, z, L * 0.05); return l.length ? Math.min(sdf.evalList(x, y, z, l), L * 0.04) : L * 0.04; };
+  // the body without the wing arms (in the rest pose the wings are spread sideways, and a girth
+  // must not follow them out)
+  const noWing = (l) => l.filter((i) => !/^w_/.test(sdf.prims[i].bone || ''));
+  const f = (x, y, z) => { const l = noWing(sdf.cull(x, y, z, x, y, z, L * 0.05)); return l.length ? Math.min(sdf.evalList(x, y, z, l), L * 0.04) : L * 0.04; };
   // seat position: just behind the neck base, on the dorsal midline
   const sp = anat.bonePos[opts.bone ?? 'neck_0'];
   const fwd = new THREE.Vector3(0, 0, 1);
-  const seatZ = sp[2] + (opts.offsetZ ?? (kind === 'rig' ? -0.022 : -0.03)) * L;
+  const seatZ = sp[2] + (opts.offsetZ ?? (kind === 'rig' ? -0.022 : -0.062)) * L;
   // find the dorsal surface height above (x, z) by marching down
   let seatY0 = null;
   const surfY = (x, z) => {
@@ -454,7 +457,7 @@ export function createSaddle(c, opts = {}) {
       // keep only the part within ~0.45 m below the seat edge
       for (let i = 0; i < nz; i++) for (let j = 0; j < ny; j++) { const a = i * (ny + 1) + j, b = a + ny + 1; if (sd > 0) If.push(a, a + 1, b, a + 1, b + 1, b); else If.push(a, b, a + 1, a + 1, b, b + 1); }
       const gf = new THREE.BufferGeometry(); gf.setAttribute('position', new THREE.Float32BufferAttribute(Pf, 3)); gf.setIndex(If); gf.computeVertexNormals();
-      clipToDistance(gf, new THREE.Vector3(sd * seatW * 0.45, seatY, seatZ), kind === 'rig' ? 0.9 : 0.42);
+      clipToDistance(gf, new THREE.Vector3(sd * seatW * 0.45, seatY, seatZ), kind === 'rig' ? 0.9 : 0.3);
       geos.push([gf, leather]);
     }
   }
@@ -476,7 +479,7 @@ export function createSaddle(c, opts = {}) {
     geos.push([g, strapMat]);
   };
   if (kind === 'rig') { strap(seatZ - 0.35, 0.32); strap(seatZ + 0.45, 0.32); strap(seatZ + 1.6, 0.25); }
-  else { strap(seatZ - 0.05, 0.1); strap(seatZ + 0.28, 0.07); }
+  else { strap(seatZ - Math.max(0.05, L * 0.032), 0.1); }      // one girth, behind the forelegs
   // ---- stirrups (saddle) / foot boards (rig)
   if (opts.stirrups) for (const sd of [1, -1]) {
     const side = new THREE.Vector3(sd * (seatW * 0.5 + (kind === 'rig' ? 0.05 : 0.02)), seatY + block * 0.6, seatZ + 0.02);
@@ -523,14 +526,24 @@ export function createSaddle(c, opts = {}) {
   for (const [g, m] of geos) {
     const p = g.attributes.position;
     const S = new Uint16Array(p.count * 4), W = new Float32Array(p.count * 4);
-    // the tack is rigid on the thorax: following the neck or the shoulders vertex by vertex
-    // would fold the seat up like a fin when the neck bends (sitting, looking round)
+    // the tack rides the trunk: each vertex takes the skinning of the nearest body vertex, but
+    // only its trunk bones (thorax, ribs) - following the neck or the shoulders would fold the
+    // seat up like a fin when the neck bends and drag the straps off with the forelegs
     const rigid = c.boneIndex[opts.rigidBone ?? 'thorax'];
+    const trunk = new Set(['thorax', 'rib_thorax', 'rib_body', 'body', 'rib_lumbar', 'lumbar'].map((n) => c.boneIndex[n]).filter((x) => x !== undefined));
+    const boneW = new Map();
     for (let i = 0; i < p.count; i++) {
-      if (rigid !== undefined && opts.rigid !== false) { S[i * 4] = rigid; W[i * 4] = 1; continue; }
       const v = nearest(p.getX(i), p.getY(i), p.getZ(i));
-      if (v < 0) { S[i * 4] = c.boneIndex[opts.bone ?? 'neck_0']; W[i * 4] = 1; continue; }
-      for (let k = 0; k < 4; k++) { S[i * 4 + k] = bsi.getComponent(v, k); W[i * 4 + k] = bsw.getComponent(v, k); }
+      if (v < 0 || opts.rigid === true) { S[i * 4] = rigid ?? c.boneIndex[opts.bone ?? 'neck_0']; W[i * 4] = 1; continue; }
+      boneW.clear();
+      for (let k = 0; k < 4; k++) {
+        const w = bsw.getComponent(v, k); if (w <= 0) continue;
+        const b0 = bsi.getComponent(v, k), b = trunk.has(b0) ? b0 : rigid;
+        boneW.set(b, (boneW.get(b) || 0) + w);
+      }
+      const ent = [...boneW.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+      const sum = ent.reduce((q, e) => q + e[1], 0) || 1;
+      for (let k = 0; k < 4; k++) { S[i * 4 + k] = ent[k] ? ent[k][0] : rigid; W[i * 4 + k] = ent[k] ? ent[k][1] / sum : 0; }
     }
     g.setAttribute('skinIndex', new THREE.BufferAttribute(S, 4));
     g.setAttribute('skinWeight', new THREE.BufferAttribute(W, 4));

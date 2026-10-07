@@ -331,7 +331,7 @@ export function sit(c, o = {}) {
   pb.sym('hl_#_0', -0.95 + a, 0.12, 0.1); pb.sym('hl_#_1', 2.0, 0, 0); pb.sym('hl_#_2', -2.0 + 0.35, 0, 0);
   for (let i = 0; i < 4; i++) pb.sym(`hl_#_t${i}`, 0.25, 0, 0);
   // neck forward-up in an S, head level (the body pitch already raises the neck)
-  carriage(pb, o.raise ?? -0.36, o.headDown ?? 0.36, o.headTilt ?? 0.0);
+  carriage(pb, o.raise ?? -0.62, o.headDown ?? 0.22, o.headTilt ?? 0.08);
   const lk = o.look || [0, 0];
   look(pb, lk[0] + 0.04 * wob(t * 0.35, 3), lk[1] + 0.02 * b);
   jaw(pb, (o.jaw ?? 0) + 0.01 * b);

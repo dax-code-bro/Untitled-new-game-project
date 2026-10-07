@@ -115,7 +115,7 @@ export const SPECIES = {
       r: [0.037, 0.026, 0.019, 0.017], toeLen: 0.04, toeR: [0.0098, 0.0062], toeSpread: 14, toes: 4, muscle: 1.0 },
     wing: { root: [0.032, 0.006, 0.8], elbow: [0.152, 0.016, -0.05], wrist: [0.315, 0.025, -0.01],
       digits: [[0.66, 0.02, 0.035], [0.615, 0.012, -0.135], [0.515, 0.004, -0.255], [0.385, -0.004, -0.325]],
-      thumb: [0.011, 0.007, 0.016], r: [0.0165, 0.011, 0.0088], fingerR: [0.0052, 0.0015], muscle: 1.0,
+      thumb: [0.011, 0.007, 0.016], r: [0.0155, 0.0092, 0.0078], fingerR: [0.005, 0.0015], muscle: 0.92,
       attach: [[0.006, -0.014, -0.03], [0.014, -0.034, -0.11], [0.017, -0.047, -0.19]], billow: 0.035 },
     headShape: {
       // a deep, heavy head: a high crown and brow, a broad deep snout (not a crocodile's flat
@@ -505,7 +505,7 @@ export function buildAnatomy(spec, L, opts = {}) {
     // the elbow: a bony point behind the joint (olecranon), the arm's narrowest part before it
     target.ell(sv(add(E, scale(norm(sub(E, R)), Wp.r[1] * 0.55))), sv([Wp.r[1] * 0.75, Wp.r[1] * 0.7, Wp.r[1] * 0.95]), { ax: [0, 1, 0], ay: norm(sub(E, R)), k: S(Wp.r[1] * 0.3), bone: `${pre}_1`, chain: pre, tag: 'warm' });
     target.cone(sv(E), sv(Wr), S(Wp.r[1]), S(Wp.r[2]), { k: S(Wp.r[1] * 0.5), bone: `${pre}_1`, chain: pre, tag: 'warm' });
-    target.ell(sv(lerp3(E, Wr, 0.2)), sv([Wp.r[1] * 1.0, len(sub(Wr, E)) * 0.25, Wp.r[1] * 1.25]), { ax: [0, 1, 0], ay: norm(sub(Wr, E)), k: S(Wp.r[1] * 0.4), bone: `${pre}_1`, chain: pre, tag: 'warm' });
+    target.ell(sv(lerp3(E, Wr, 0.18)), sv([Wp.r[1] * 0.95, len(sub(Wr, E)) * 0.2, Wp.r[1] * 1.15]), { ax: [0, 1, 0], ay: norm(sub(Wr, E)), k: S(Wp.r[1] * 0.35), bone: `${pre}_1`, chain: pre, tag: 'warm' });
     target.ell(sv(Wr), sv([Wp.r[2] * 1.45, Wp.r[2] * 1.12, Wp.r[2] * 1.35]), { k: S(Wp.r[2] * 0.5), bone: `${pre}_2`, chain: pre, tag: 'warm' });
     chains[pre] = { points: [R, E, Wr].map(sv), refUp: [0, 1, 0], kind: 'limb' };
     // fingers: 3 phalanges each, gently bowed toward the trailing edge

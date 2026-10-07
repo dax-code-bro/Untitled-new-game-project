@@ -37,7 +37,7 @@ export function lookParams(THREE, look) {
       // old healed scars [a.xyz, halfWidth, b.xyz, strength] in L units (rest pose): left flank, right neck, right shoulder, left thigh
       scars: [[0.066, 0.19, 0.17, 0.0042, 0.061, 0.143, 0.092, 0.9], [-0.027, 0.258, 0.335, 0.003, -0.025, 0.236, 0.298, 0.8],
         [-0.071, 0.172, 0.2, 0.003, -0.069, 0.152, 0.216, 0.75], [0.076, 0.132, 0.03, 0.0026, 0.071, 0.112, -0.012, 0.7]],
-      dustAmt: 0.6, saltAmt: 0.1, oral: lin(THREE, 0.09, 0.03, 0.035), oralDark: lin(THREE, 0.02, 0.006, 0.008),
+      dustAmt: 0.85, saltAmt: 0.1, oral: lin(THREE, 0.09, 0.03, 0.035), oralDark: lin(THREE, 0.02, 0.006, 0.008),
       // melanistic: the membrane is pigmented through, so almost no light passes (a faint warm
       // brown where the sun is right behind it, never a red glow)
       membrane: lin(THREE, 0.02, 0.018, 0.017), trans: lin(THREE, 0.006, 0.0032, 0.002), vein: lin(THREE, 0.025, 0.012, 0.009), memRough: 0.66,
@@ -68,7 +68,7 @@ export function lookParams(THREE, look) {
       scl: [0.8, 0.42, 0.75, 1.25], tub: [0.12, 2.5, 0.7, 0], skin2: [0.12, 0.2, 0, 0.12], skin3: [0.6, 0.16, 0.45, 0],
       dustAmt: 0.2, saltAmt: 0.0, oral: lin(THREE, 0.45, 0.16, 0.16), oralDark: lin(THREE, 0.1, 0.03, 0.03),
       // white-grey membranes (albino, but thick enough that blood barely tints them), silver highlights
-      membrane: lin(THREE, 0.62, 0.61, 0.6), trans: lin(THREE, 0.3, 0.27, 0.25), vein: lin(THREE, 0.5, 0.4, 0.4), memRough: 0.5,
+      membrane: lin(THREE, 0.6, 0.59, 0.58), trans: lin(THREE, 0.17, 0.15, 0.14), vein: lin(THREE, 0.5, 0.38, 0.38), memRough: 0.55,
       clearcoat: 0.55,
       horn: [lin(THREE, 0.62, 0.6, 0.55), lin(THREE, 0.78, 0.77, 0.74)], claw: [lin(THREE, 0.5, 0.48, 0.44), lin(THREE, 0.75, 0.74, 0.7)],
       tooth: lin(THREE, 0.66, 0.62, 0.52), iris: [lin(THREE, 0.5, 0.3, 0.34), lin(THREE, 0.2, 0.06, 0.1)], sclera: lin(THREE, 0.22, 0.14, 0.14),
@@ -76,13 +76,13 @@ export function lookParams(THREE, look) {
     gold: {
       // 24-karat gold: a deep, warm yellow-gold (not pale brass), from pigment and a thin-film
       // sheen in a living skin - only a little metallic tint; a newborn's soft scales, wet
-      base: lin(THREE, 0.95, 0.5, 0.055), belly: lin(THREE, 0.93, 0.58, 0.14), dorsal: lin(THREE, 0.88, 0.42, 0.035),
+      base: lin(THREE, 0.92, 0.6, 0.075), belly: lin(THREE, 0.9, 0.66, 0.18), dorsal: lin(THREE, 0.86, 0.52, 0.05),
       wear: lin(THREE, 0.98, 0.7, 0.2), crev: 0.78, dust: lin(THREE, 0.3, 0.25, 0.18), salt: lin(THREE, 0.7, 0.7, 0.68),
       // soft, not-yet-hardened scales: low relief, broad soft sheen; the gold shows as a
       // partly metallic reflection, the wet film (clearcoat) carries broad highlights
       rough: [0.5, 0.06, 0.04, 0.1], amp: 0.1, keel: 0.0, facet: 0.0, jit: 0.45, metal: [0.18, 0.04], mottle: 0.18,
       hier: [0.0, 0.5, 0.3, 0.0], damp: 0.0, bellyP: [0.38, 0.8, 0.15, 0.18], plateZ: -0.03,
-      crevCol: lin(THREE, 0.66, 0.3, 0.06), crevAmt: 0.22,
+      crevCol: lin(THREE, 0.7, 0.38, 0.06), crevAmt: 0.2,
       scl: [0.75, 0.42, 0.7, 1.1], tub: [0.0, 2.5, 0.0, 0], skin2: [0.0, 0.15, 0, 0.14], skin3: [0.35, 0.18, 0, 0],
       // amniotic residue: a pale, slimy film in patches and streaks
       residue: [0.6, 0.8, 0.74, 0.52],
@@ -493,9 +493,10 @@ void dkMembrane(inout vec3 col) {
   // relief: vessels raised a little, fine stretch creases across the span; a folded wing
   // gathers into many soft wrinkles running along the bones
   // elastin fibres: fine ridges spanning the panel (bat wings show them as striations)
-  float fib = along * 90.0 + nn * 8.0 + dkVnoise2(vec2(across * 3.0, along * 6.0)) * 6.0;
-  float crease = (sin(fib) * 0.5 + 0.5) * 0.0006 * uL * detC + (sin(along * 23.0 + nn * 4.0) * 0.5 + 0.5) * 0.0005 * uL * det;
-  col *= 1.0 - 0.06 * (sin(fib) * 0.5 + 0.5) * detC;
+  float fib = along * 90.0 + nn * 14.0 + dkVnoise2(vec2(across * 4.0, along * 7.0)) * 10.0;
+  float fibA = smoothstep(0.35, 0.75, dkVnoise2(vec2(across * 2.5 + 7.0, along * 3.0)));      // in patches, not everywhere
+  float crease = (sin(fib) * 0.5 + 0.5) * 0.0003 * uL * detC * fibA + (sin(along * 23.0 + nn * 6.0) * 0.5 + 0.5) * 0.00025 * uL * det;
+  col *= 1.0 - 0.04 * (sin(fib) * 0.5 + 0.5) * detC * fibA;
   float wrinkle = (sin(across * 70.0 + nn * 9.0 + dkVnoise2(vec2(along * 9.0, across * 4.0)) * 5.0) * 0.5 + 0.5) * 0.0014 * uL * det * uFold;
   dkMemH = crease * (1.0 - uFold) + wrinkle + dkVein * 0.00012 * uL;
   // leathery micro texture (bat-wing skin): a fine network of creases in rest space with an
@@ -541,6 +542,9 @@ normal = dkPerturb(-vViewPosition, normal, dkSlope(dkMemH, -vViewPosition), face
       } else console.warn('[creatures] membrane: three.js lights chunk changed - no translucency');
     }
     frag = frag.replace('#include <lights_fragment_maps>', `#include <lights_fragment_maps>
+#if defined( USE_ENVMAP ) && defined( RE_IndirectSpecular )
+  radiance *= 0.55;      // skin, not plastic: a satin sheen, no mirror-bright sky at grazing angles
+#endif
 #if defined( USE_ENVMAP ) && defined( RE_IndirectDiffuse )
   reflectedLight.indirectDiffuse += uTransCol * dkVeinAtt * dkThin * getIBLIrradiance( -geometryNormal ) * 0.3 * RECIPROCAL_PI;
 #endif`);
