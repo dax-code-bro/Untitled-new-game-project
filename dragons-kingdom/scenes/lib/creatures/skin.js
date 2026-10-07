@@ -189,7 +189,7 @@ export function computeSkin(anat, mesh, boneIndex, opts = {}) {
     const U = new Float64Array(BINS + 1);
     const ds = fr.total / BINS;
     for (let b = 0; b < BINS; b++) U[b + 1] = U[b] + N / (2 * Math.PI * Math.max(R[b], L * 0.0008)) * ds;
-    uTables.push({ U, ds, total: fr.total });
+    uTables.push({ U, ds, total: fr.total, R });
   });
   // the spine and jaw run toward the head: flip so that u grows toward the scale's free edge (tail-ward)
   const flip = chainNames.map((n) => (anat.chains[n].kind === 'spine' || anat.chains[n].kind === 'jaw' ? -1 : 1));
@@ -275,12 +275,67 @@ export function computeSkin(anat, mesh, boneIndex, opts = {}) {
     const region = isHead ? 1 : kind === 'limb' ? (chainNames[c].startsWith('w_') ? 5 : 2) : kind === 'toe' ? 3 : kind === 'jaw' ? 4 : 0;
     mask2[v * 4 + 3] = region;
     // world size of one scale unit here (for anti-aliasing and normal strength)
-    if (pr) { const N = chainN[c]; mask2[v * 4 + 2] = 2 * Math.PI * Math.max(pr.r, L * 0.0008) / N; } else mask2[v * 4 + 2] = L * 0.004;
+    // (from the chain's smoothed cross-section radius at this point, not the vertex's own
+    // distance: muscle bulges must not make the scales jump in size)
+    if (pr) {
+      const N = chainN[c], tb = uTables[c];
+      const f = clamp(pr.s / tb.ds, 0, BINS - 1.001), b = Math.floor(f);
+      const Rs = tb.R[b] + (tb.R[b + 1] - tb.R[b]) * (f - b);
+      mask2[v * 4 + 2] = 2 * Math.PI * Math.max(0.6 * Rs + 0.4 * pr.r, L * 0.0008) / N;
+    } else mask2[v * 4 + 2] = L * 0.004;
     if (opts.eyes) for (const e of opts.eyes) {
       const dx = positions[v * 3] - e.center[0], dy = positions[v * 3 + 1] - e.center[1], dz = positions[v * 3 + 2] - e.center[2];
       const d = Math.sqrt(dx * dx + dy * dy + dz * dz) / e.radius;
       if (d < 2.6) mask2[v * 4 + 2] = Math.min(mask2[v * 4 + 2], e.radius * (0.16 + 0.12 * Math.max(0, d - 1.2)));
     }
+  }
+
+  // ---------------------------------------------------- 4b) smooth the scale direction across chain junctions
+  // The 3D scale mosaic is elongated along the tangent; where two chains meet (shoulder,
+  // hip, neck base) their tangents differ, which would cut the mosaic along a seam. The
+  // tangent is relaxed over the mesh where the junction mask is set, so it turns gradually.
+  {
+    const it = opts.tangentSmooth ?? 12;
+    for (let k = 0; k < it; k++) {
+      const t2 = tangent.slice();
+      for (let v = 0; v < nV; v++) {
+        const g = mask[v * 4];
+        if (g <= 0.02) continue;
+        let x = tangent[v * 4], y = tangent[v * 4 + 1], z = tangent[v * 4 + 2];
+        for (let e = adj.start[v]; e < adj.start[v + 1]; e++) {
+          const u = adj.nb[e];
+          let ux = tangent[u * 4], uy = tangent[u * 4 + 1], uz = tangent[u * 4 + 2];
+          if (ux * x + uy * y + uz * z < 0) { ux = -ux; uy = -uy; uz = -uz; }     // a direction, not a vector
+          x += ux * g; y += uy * g; z += uz * g;
+        }
+        const nx = normals[v * 3], ny = normals[v * 3 + 1], nz = normals[v * 3 + 2];
+        const d = x * nx + y * ny + z * nz;
+        x -= d * nx; y -= d * ny; z -= d * nz;
+        const l = Math.hypot(x, y, z);
+        if (l > 1e-8) { t2[v * 4] = x / l; t2[v * 4 + 1] = y / l; t2[v * 4 + 2] = z / l; }
+      }
+      tangent.set(t2);
+    }
+  }
+
+  // ---------------------------------------------------- 4c) smooth the scale size across chain junctions
+  // (each chain has its own scale unit; an abrupt change would tear the mosaic)
+  {
+    const it = opts.sizeSmooth ?? 16;
+    const ls = new Float32Array(nV);
+    for (let v = 0; v < nV; v++) ls[v] = Math.log(Math.max(mask2[v * 4 + 2], 1e-6));
+    for (let k = 0; k < it; k++) {
+      const l2 = ls.slice();
+      for (let v = 0; v < nV; v++) {
+        const g = Math.min(1, mask[v * 4] * 1.5 + (k < 3 ? 0.35 : 0));
+        if (g <= 0.02) continue;
+        let acc = 0, n = 0;
+        for (let e = adj.start[v]; e < adj.start[v + 1]; e++) { acc += ls[adj.nb[e]]; n++; }
+        if (n) l2[v] = ls[v] + (acc / n - ls[v]) * g;
+      }
+      ls.set(l2);
+    }
+    for (let v = 0; v < nV; v++) mask2[v * 4 + 2] = Math.exp(ls[v]);
   }
 
   // ---------------------------------------------------- 5) ambient occlusion from the SDF

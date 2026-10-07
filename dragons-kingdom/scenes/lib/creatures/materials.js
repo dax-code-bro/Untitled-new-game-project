@@ -17,7 +17,7 @@
 //   teeth     ivory enamel with gum-line staining.
 // Nothing here is emissive.
 
-import { GLSL_COMMON, GLSL_SCALES } from './glsl.js';
+import { GLSL_COMMON, GLSL_SCALES, GLSL_VOR3 } from './glsl.js';
 
 const lin = (THREE, r, g, b) => new THREE.Color(r, g, b);                       // linear values
 const srgb = (THREE, r, g, b) => new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace);
@@ -26,11 +26,14 @@ const srgb = (THREE, r, g, b) => new THREE.Color().setRGB(r, g, b, THREE.SRGBCol
 export function lookParams(THREE, look) {
   const L = {
     charcoal: {
-      base: lin(THREE, 0.026, 0.025, 0.027), belly: lin(THREE, 0.04, 0.036, 0.034), dorsal: lin(THREE, 0.018, 0.018, 0.02),
-      wear: lin(THREE, 0.075, 0.07, 0.066), crev: 0.5, dust: lin(THREE, 0.15, 0.12, 0.085), salt: lin(THREE, 0.55, 0.55, 0.53),
-      // dry, dusty hide: broad soft sheen, never lacquer; dried mud and field dust on the lower body
-      rough: [0.5, 0.18, 0.14, 0.3], amp: 0.3, keel: 0.22, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.25,
-      hier: [1.0, 1.0, 0.65, 0.45], damp: 0.55, bellyP: [0.6, 1.25, 0.55, 0.5], scarCol: lin(THREE, 0.085, 0.07, 0.066),
+      base: lin(THREE, 0.03, 0.028, 0.028), belly: lin(THREE, 0.042, 0.038, 0.035), dorsal: lin(THREE, 0.022, 0.021, 0.022),
+      wear: lin(THREE, 0.12, 0.112, 0.104), crev: 0.5, dust: lin(THREE, 0.2, 0.17, 0.13), salt: lin(THREE, 0.55, 0.55, 0.53),
+      // dry, dusty hide: glossy black keratin on the scale crowns, matte dust in the grooves
+      // (that contrast is what keeps a black animal readable in daylight), dried mud and
+      // field dust on the lower body
+      rough: [0.56, 0.16, 0.12, 0.35], amp: 0.3, keel: 0.22, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.25,
+      hier: [1.0, 1.0, 0.65, 0.0], damp: 0.55, bellyP: [0.6, 1.25, 0.55, 0.5], scarCol: lin(THREE, 0.085, 0.07, 0.066),
+      scl: [0.8, 0.4, 0.75, 1.35], tub: [0.32, 2.7, 0.95, 0], skin2: [0.35, 0.5, 0, 0.35],
       // old healed scars [a.xyz, halfWidth, b.xyz, strength] in L units (rest pose): left flank, right neck, right shoulder, left thigh
       scars: [[0.066, 0.19, 0.17, 0.0042, 0.061, 0.143, 0.092, 0.9], [-0.027, 0.258, 0.335, 0.003, -0.025, 0.236, 0.298, 0.8],
         [-0.071, 0.172, 0.2, 0.003, -0.069, 0.152, 0.216, 0.75], [0.076, 0.132, 0.03, 0.0026, 0.071, 0.112, -0.012, 0.7]],
@@ -45,7 +48,7 @@ export function lookParams(THREE, look) {
       base: lin(THREE, 0.04, 0.085, 0.022), belly: lin(THREE, 0.12, 0.14, 0.055), dorsal: lin(THREE, 0.022, 0.05, 0.016),
       wear: lin(THREE, 0.12, 0.16, 0.07), crev: 0.45, dust: lin(THREE, 0.22, 0.19, 0.15), salt: lin(THREE, 0.62, 0.62, 0.6),
       rough: [0.5, 0.14, 0.1, 0.3], amp: 0.3, keel: 0.14, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.35,
-      hier: [0.9, 1.0, 0.55, 0.25], damp: 0.3, bellyP: [0.5, 1.1, 0.45, 0.4],
+      hier: [0.9, 1.0, 0.55, 0.0], damp: 0.3, bellyP: [0.5, 1.1, 0.45, 0.4],
       dustAmt: 0.6, saltAmt: 0.15, oral: lin(THREE, 0.32, 0.09, 0.08), oralDark: lin(THREE, 0.07, 0.015, 0.015),
       membrane: lin(THREE, 0.03, 0.055, 0.02), trans: lin(THREE, 0.11, 0.08, 0.035), vein: lin(THREE, 0.06, 0.025, 0.012), memRough: 0.58,
       horn: [lin(THREE, 0.05, 0.05, 0.035), lin(THREE, 0.32, 0.29, 0.2)], claw: [lin(THREE, 0.03, 0.03, 0.025), lin(THREE, 0.16, 0.14, 0.1)],
@@ -55,7 +58,7 @@ export function lookParams(THREE, look) {
       base: lin(THREE, 0.7, 0.71, 0.72), belly: lin(THREE, 0.5, 0.5, 0.51), dorsal: lin(THREE, 0.72, 0.73, 0.74),
       wear: lin(THREE, 0.78, 0.78, 0.76), crev: 0.72, dust: lin(THREE, 0.42, 0.38, 0.32), salt: lin(THREE, 0.8, 0.8, 0.78),
       rough: [0.24, 0.14, 0.08, 0.3], amp: 0.3, keel: 0.0, facet: 1.0, jit: 0.25, metal: [0, 0], mottle: 0.06,
-      hier: [0.85, 1.0, 0.5, 0.2], damp: 0.0, bellyP: [0.55, 1.2, 0.6, 0.45],
+      hier: [0.85, 1.0, 0.5, 0.0], damp: 0.0, bellyP: [0.55, 1.2, 0.6, 0.45],
       dustAmt: 0.2, saltAmt: 0.0, oral: lin(THREE, 0.45, 0.16, 0.16), oralDark: lin(THREE, 0.1, 0.03, 0.03),
       // white-grey membranes (albino, but thick enough that blood barely tints them), silver highlights
       membrane: lin(THREE, 0.6, 0.6, 0.61), trans: lin(THREE, 0.34, 0.33, 0.32), vein: lin(THREE, 0.46, 0.43, 0.43), memRough: 0.45,
@@ -83,7 +86,7 @@ export function lookParams(THREE, look) {
       base: lin(THREE, 0.055, 0.05, 0.045), belly: lin(THREE, 0.17, 0.15, 0.12), dorsal: lin(THREE, 0.035, 0.034, 0.033),
       wear: lin(THREE, 0.1, 0.095, 0.085), crev: 0.5, dust: lin(THREE, 0.2, 0.18, 0.15), salt: lin(THREE, 0.6, 0.6, 0.58),
       rough: [0.4, 0.12, 0.08, 0.3], amp: 0.26, keel: 0.25, facet: 0.0, jit: 0.25, metal: [0, 0], mottle: 0.3,
-      hier: [0.6, 1.0, 0.4, 0.15], damp: 0.15, bellyP: [0.7, 1.8, 0.85, 0.55],
+      hier: [0.6, 1.0, 0.4, 0.0], damp: 0.15, bellyP: [0.7, 1.8, 0.85, 0.55],
       dustAmt: 0.25, saltAmt: 0.3, oral: lin(THREE, 0.25, 0.07, 0.07), oralDark: lin(THREE, 0.05, 0.012, 0.012),
       membrane: lin(THREE, 0.05, 0.045, 0.04), trans: lin(THREE, 0.42, 0.2, 0.1), vein: lin(THREE, 0.06, 0.025, 0.015), memRough: 0.55,
       horn: [lin(THREE, 0.04, 0.038, 0.034), lin(THREE, 0.2, 0.18, 0.15)], claw: [lin(THREE, 0.03, 0.028, 0.025), lin(THREE, 0.12, 0.11, 0.09)],
@@ -133,6 +136,16 @@ function skinMaterial(THREE, P, ctx) {
     uScarB: { value: [0, 1, 2, 3].map(() => new THREE.Vector4(0, 0, 0, 0)) },
     uScarCol: { value: P.scarCol || lin(THREE, 0.1, 0.085, 0.08) },
     uResidue: { value: new THREE.Vector4(...(P.residue || [0, 0, 0, 0])) },
+    // 3D mosaic scales: cell size factors (body, granular, head) relative to the chain scale unit, elongation
+    uScl: { value: new THREE.Vector4(...(P.scl || [0.85, 0.42, 0.75, 1.35])) },
+    // enlarged tubercles: density, lattice size (x the body cell), height
+    uTub: { value: new THREE.Vector4(...(P.tub || [0.3, 2.6, 0.9, 0])) },
+    // cell jitter (lower = more even scale sizes)
+    uScl2: { value: new THREE.Vector4(...(P.scl2 || [0.62, 0, 0, 0])) },
+    // micro relief on the scales: amount, feature size (x the scale unit)
+    uSkin3: { value: new THREE.Vector4(...(P.skin3 || [1, 0.16, 0, 0])) },
+    // crevice dust fill, crown wear (bleached keratin), -, per-scale tone variation
+    uSkin2: { value: new THREE.Vector4(...(P.skin2 || [0.4, 0.4, 0, 0.3])) },
   };
   // healed scars (rest-space segments, metres): [a(3), halfWidth, b(3), strength]
   (P.scars || []).slice(0, 4).forEach((sc, i) => {
@@ -147,36 +160,26 @@ function skinMaterial(THREE, P, ctx) {
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', `#include <common>
 attribute vec4 aScale; attribute vec4 aMask; attribute vec4 aMask2; attribute vec4 aNoise; attribute vec2 aWarp;
-varying vec4 vScale; varying vec4 vMask; varying vec4 vMask2; varying vec3 vRest; varying vec3 vRestN; varying vec4 vNoise; varying vec2 vWarp;`)
+varying vec4 vScale; varying vec4 vMask; varying vec4 vMask2; varying vec3 vRest; varying vec3 vRestN; varying vec3 vRestT; varying vec4 vNoise; varying vec2 vWarp;`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-vScale = aScale; vMask = aMask; vMask2 = aMask2; vRest = position; vRestN = normal; vNoise = aNoise; vWarp = aWarp;`);
+vScale = aScale; vMask = aMask; vMask2 = aMask2; vRest = position; vRestN = normal; vRestT = tangent.xyz; vNoise = aNoise; vWarp = aWarp;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
-varying vec4 vScale; varying vec4 vMask; varying vec4 vMask2; varying vec3 vRest; varying vec3 vRestN; varying vec4 vNoise; varying vec2 vWarp;
+varying vec4 vScale; varying vec4 vMask; varying vec4 vMask2; varying vec3 vRest; varying vec3 vRestN; varying vec3 vRestT; varying vec4 vNoise; varying vec2 vWarp;
+uniform vec4 uScl, uScl2, uTub, uSkin2, uSkin3;
 uniform vec3 uBase, uBelly, uDorsal, uWearCol, uDustCol, uSaltCol, uOral, uOralDark;
 uniform vec4 uRough, uPat, uDirt, uMisc, uWound, uCrev, uWet, uBellyP, uDamp; uniform float uWoundR;
 uniform vec4 uScarA[4]; uniform vec4 uScarB[4]; uniform vec3 uScarCol; uniform vec4 uResidue;
 float dkResM;
 ${GLSL_COMMON}
 ${GLSL_SCALES}
+${GLSL_VOR3}
 ${PERTURB}
-struct DKTri { float h; vec3 g; float cav; float wear; float id; };
-// Voronoi tiles projected on the three rest-space planes, blended by the smooth rest normal
-DKTri dkTriGran(vec3 rp, vec3 nw) {
-  DKTri T; T.h = 0.0; T.g = vec3(0.0); T.cav = 0.0; T.wear = 0.0; T.id = 0.0;
-  float ws = 0.0;
-  if (nw.x > 0.03) { DKScale G = dkGranule(rp.yz); T.h += nw.x * G.h; T.g += nw.x * vec3(0.0, G.grad); T.cav += nw.x * G.cav; T.wear += nw.x * G.wear; T.id += nw.x * G.id; ws += nw.x; }
-  if (nw.y > 0.03) { DKScale G = dkGranule(rp.xz + 17.3); T.h += nw.y * G.h; T.g += nw.y * vec3(G.grad.x, 0.0, G.grad.y); T.cav += nw.y * G.cav; T.wear += nw.y * G.wear; T.id += nw.y * G.id; ws += nw.y; }
-  if (nw.z > 0.03) { DKScale G = dkGranule(rp.xy + 31.7); T.h += nw.z * G.h; T.g += nw.z * vec3(G.grad, 0.0); T.cav += nw.z * G.cav; T.wear += nw.z * G.wear; T.id += nw.z * G.id; ws += nw.z; }
-  float iw = 1.0 / max(ws, 1e-4);
-  T.h *= iw; T.g *= iw; T.cav *= iw; T.wear *= iw; T.id *= iw;
-  return T;
-}
 vec2 dkGrad; float dkDetail, dkCav, dkAO, dkRoughOut, dkMetalOut, dkOralM, dkGranM, dkWetK; vec3 dkGranG; float dkGranH;
-float dkScarM, dkDampM;
+float dkScarM, dkDampM, dkMicro = 0.5;
 void dkSkin(inout vec3 albedo) {
-  vec2 p = vec2(vScale.y, vScale.x);               // x = around, y = along (free edge +y)
-  float fw = max(length(fwidth(p)), 1e-5);
+  vec2 p = vec2(vScale.y, vScale.x);               // chain coordinates: x = around, y = along (free edge +y)
+  float fwc = max(length(fwidth(p)), 1e-5);
   float L = uDirt.w;
   float region = vMask2.w;
   // low-frequency noises are precomputed per vertex (skin.js: aNoise / aWarp)
@@ -184,93 +187,142 @@ void dkSkin(inout vec3 albedo) {
   float n2 = vNoise.w;                              // medium
   dkOralM = clamp(vMask2.y, 0.0, 1.0);
   float isHead = (region > 0.5 && region < 1.5) ? 1.0 : 0.0;
-  // neck: in front of the withers, scales get finer on the sides
   float neck = region < 0.5 ? smoothstep(uZones.x, uZones.x + uZones.z, vRest.z) : 0.0;
-  // --- the scale field: hierarchical imbricate scales, belly plates
+  float latD = vScale.z / max(vScale.w, 1.0);       // 0 on the dorsal midline .. 1 on the ventral one
+  // ---- chain-coordinate layers: big keeled dorsal scutes in rows along the spine (and
+  // across the fronts of the limbs), transverse belly plates
   vec2 pw = p + (vWarp - 0.5) * 0.9;
-  DKScale S = dkHier(pw, uPat.w, uPat.y, uPat.z, vScale.w, neck, region);
-  float levK = S.lv < 0.5 ? 0.5 : S.lv < 1.5 ? 1.0 : 1.8;
-  dkDetail = 1.0 - smoothstep(0.3, 0.9, fw * levK);
+  DKScale S = dkImbricateL(pw, 0.5, 0.0, uPat.w, uPat.y, uPat.z, vScale.w, neck, region);
+  float chainM = S.lv >= 0.0 && isHead < 0.5 ? 1.0 : 0.0;
+  dkDetail = 1.0 - smoothstep(0.3, 0.9, fwc * 0.5);
   float latV = vScale.w - vScale.z;                 // lateral distance from the ventral midline (scale units)
   float bellySel = vMask.y + (n2 - 0.5) * 0.25;
   if (bellySel > 0.5) {
     S = dkPlates(vec2(latV, vScale.x + (n2 - 0.5) * 0.4), uBellyP.x, uBellyP.y);
     S.h *= uBellyP.w; S.grad *= uBellyP.w; S.cav *= uBellyP.z;
-    dkDetail = 1.0 - smoothstep(0.3, 0.9, fw / uBellyP.x);
+    dkDetail = 1.0 - smoothstep(0.3, 0.9, fwc / uBellyP.x);
+    chainM = 1.0;
   }
-  // --- joint wrinkles (lines across the chain)
-  float wr = vMask.w * (0.6 + 0.4 * n2);
+  // ---- 3D mosaic scales everywhere else (rest-space anisotropic Voronoi, see glsl.js):
+  // overlapping body scales elongated along the body, small domed granules at the
+  // joints and around the eyes, flat polygonal plates on the head
+  float gm = clamp(vMask.x, 0.0, 1.0);
+  vec3 Tr = vRestT - vRestN * dot(vRestT, vRestN);
+  Tr = dot(Tr, Tr) > 1e-8 ? normalize(Tr) : vec3(0.0, 0.0, 1.0);
+  float gran = max(gm, isHead);
+  float csRaw = max(vMask2.z * mix(mix(uScl.x, uScl.y, gm), uScl.z * mix(1.0, 0.65, gm), isHead), L * 0.0012);
+  float an = mix(uScl.w, 1.0, gran);
+  float tilt = mix(0.9, 0.0, gran);                         // imbricate: rear edge raised
+  float dome = mix(3.0, mix(2.2, 5.0, isHead), gran);       // profile exponent: beads .. flat head plates
+  float groove = mix(0.22, mix(0.3, 0.16, isHead), gran);   // crevice width (fraction of q)
+  // size grading: octave levels; a coarse scale either stays whole or splits into fine
+  // ones (decided per coarse scale), so big and small scales meet along scale borders
+  // the way they do on real skin (no cross-faded double patterns)
+  float lv = log2(csRaw / L);
+  float l0 = floor(lv), fsub = lv - l0;
+  float gA = L * exp2(l0), gC = gA * 2.0;
+  float fwr = length(fwidth(vRest));
+  float vh = 0.0, vcav = 0.0, vcr = 0.0, vid = 0.0; vec3 vg = vec3(0.0);
+  float gDet = 1.0;
+  if (chainM < 0.5) {
+    // the pattern of a level depends only on its size (offset (n) for size 2^n), so the
+    // pattern is continuous where the octave index changes
+    DKV3 C = dkVor3(vRest / gC + (l0 + 1.0) * 7.31, Tr, an, tilt, dome, groove, uScl2.x);
+    float dC = 1.0 - smoothstep(0.35, 0.9, fwr / gC);
+    if (C.id2 >= fsub) {
+      DKV3 F = dkVor3(vRest / gA + l0 * 7.31, Tr, an, tilt, dome, groove, uScl2.x);
+      float dF = 1.0 - smoothstep(0.35, 0.9, fwr / gA);
+      vh = F.h * gA * dF; vg = F.g * dF; vcav = F.cav * dF; vcr = F.crown * dF; vid = F.id;
+      gDet = dF;
+    } else {
+      vh = C.h * gC * dC; vg = C.g * dC; vcav = C.cav * dC; vcr = C.crown * dC; vid = C.id;
+      gDet = dC;
+    }
+    // scattered enlarged tubercles on the upper flanks, the neck and the outer limbs
+    float tubD = 0.0;
+    if (region < 0.5) tubD = uTub.x * smoothstep(0.06, 0.18, latD) * (1.0 - smoothstep(0.36, 0.52, latD));
+    else if (region > 1.5 && region < 2.5) tubD = uTub.x * 0.55 * (1.0 - smoothstep(0.25, 0.55, latD));
+    tubD *= (1.0 - gm) * (0.6 + 0.8 * n2);
+    if (tubD > 0.01) {
+      float gt = gC * 0.7 * uTub.y;
+      DKT3 Tb = dkTub3(vRest / gt + 3.7, Tr, tubD, 0.42);
+      float dT = 1.0 - smoothstep(0.35, 0.9, fwr / gt);
+      if (Tb.m > 0.0) {
+        float tm = Tb.m;
+        vh = mix(vh, Tb.h * gt * uTub.z * dT, tm);
+        vg = mix(vg, Tb.g * uTub.z * dT, tm);
+        vcav = max(vcav * (1.0 - tm), 3.0 * tm * (1.0 - tm));
+        vcr = mix(vcr, smoothstep(0.2, 1.0, Tb.h) * 0.9, tm);
+        vid = mix(vid, Tb.id, tm);
+      }
+    }
+  }
+  float relief3 = mix(0.3, mix(0.22, 0.3, gm), isHead) * (uPat.x / 0.26);
+  // micro relief on the scales themselves: pits, creases and growth texture of old keratin
+  // (no scale is a polished cushion), faded once it gets smaller than a pixel
+  if (chainM < 0.5 && uSkin3.x > 0.0) {
+    float cm = max(vMask2.z, L * 0.001) * uSkin3.y;
+    vec4 mn = dkNoised(vRest / cm + 5.3);
+    vec4 mn2 = dkNoised(vRest / (cm * 0.43) + 17.1);
+    float fade = 1.0 - smoothstep(0.25, 0.7, fwr / cm);
+    float on = (1.0 - vcav) * fade * uSkin3.x;
+    vg += (mn.yzw + mn2.yzw * 0.45) * on * 0.08 / max(relief3, 1e-3);
+    vcr *= 0.8 + 0.4 * mn.x;
+    dkMicro = mix(0.5, mn.x * 0.7 + mn2.x * 0.3, on);
+  }
+  // ---- joint wrinkles (lines across the chain, on top of either layer)
+  float wr = vMask.w * (0.6 + 0.4 * n2) * (1.0 - isHead);
   float wph = vScale.x * 1.7 + n2 * 4.0;
   float wv = sin(wph);
-  S.h += wr * 0.35 * (wv * 0.5 + 0.5);
-  S.grad.y += wr * 0.35 * 0.5 * cos(wph) * 1.7;
-  S.cav = max(S.cav, wr * smoothstep(0.3, -0.9, wv) * 0.6);
-  // --- granular skin at chain junctions and polygonal head plates: Voronoi tiles in
-  // rest space, blended triplanar on the smooth rest normal, with an analytic
-  // height gradient (no screen-space derivative of the height -> no blocky bump)
-  float gm = clamp(vMask.x, 0.0, 1.0);
-  dkGranM = max(gm, isHead);
-  dkGranH = 0.0; dkGranG = vec3(0.0);
-  float gDet = 1.0;
-  if (dkGranM > 0.01) {
-    // the tile size varies over the body; scaling rest coordinates by a varying size
-    // would smear the pattern (rest positions are metres from the origin), so the
-    // size is quantised to half-octave levels and two fixed levels are cross-faded
-    float gsRaw = max(vMask2.z * mix(0.8, mix(1.05, 0.75, gm), isHead), L * 0.0015);   // tile size (m)
-    float relief = mix(0.3, mix(0.17, 0.3, gm), isHead) * (uPat.x / 0.26);              // head plates are flatter
-    vec3 nw = pow(abs(normalize(vRestN)), vec3(4.0)); nw /= nw.x + nw.y + nw.z;
-    float lv = log2(gsRaw / L) * 2.0;
-    float l0 = floor(lv), fb = smoothstep(0.3, 0.7, lv - l0);
-    float gA = L * exp2(l0 * 0.5), gB = gA * 1.41421356;
-    float fwr = length(fwidth(vRest));
-    float dA = (1.0 - smoothstep(0.3, 0.8, fwr / gA)) * (1.0 - fb), dB = (1.0 - smoothstep(0.3, 0.8, fwr / gB)) * fb;
-    float gh = 0.0, gc = 0.0, gwr = 0.0, gid = 0.0; vec3 g3 = vec3(0.0);
-    if (fb < 0.999) { DKTri T = dkTriGran(vRest / gA + l0 * 7.31, nw); gh += T.h * gA * dA; g3 += T.g * dA; gc += T.cav * dA; gwr += T.wear * dA; gid += T.id * (1.0 - fb); }
-    if (fb > 0.001) { DKTri T = dkTriGran(vRest / gB + (l0 + 1.0) * 7.31, nw); gh += T.h * gB * dB; g3 += T.g * dB; gc += T.cav * dB; gwr += T.wear * dB; gid += T.id * fb; }
-    gDet = dA + dB;
-    dkGranH = gh * relief;
-    dkGranG = g3 * relief;                          // d(height)/d(rest position)
-    float m = max(smoothstep(0.35, 0.65, gm + (n2 - 0.5) * 0.3), isHead);
-    S.cav = mix(S.cav, gc, m); S.wear = mix(S.wear, gwr, m); S.id = mix(S.id, gid, m);
-    S.grad *= 1.0 - m;
-    dkGranM = m;
-  }
-  // --- healed scars: old gashes across several scales (rest-space segments)
+  vec2 wg = vec2(0.0, wr * 0.35 * 0.5 * cos(wph) * 1.7);
+  // ---- healed scars: old gashes across several scales (rest-space segments)
   dkScarM = 0.0;
   for (int i = 0; i < 4; i++) {
     if (uScarB[i].w <= 0.0) continue;
     vec3 a = uScarA[i].xyz, ba = uScarB[i].xyz - a, pa = vRest - a;
     float hh = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-    float wv = uScarA[i].w * (0.55 + 0.45 * sin(hh * 3.14159)) * (0.75 + 0.5 * dkVnoise2(vec2(hh * 14.0, float(i) * 3.0)));
+    float wv2 = uScarA[i].w * (0.55 + 0.45 * sin(hh * 3.14159)) * (0.75 + 0.5 * dkVnoise2(vec2(hh * 14.0, float(i) * 3.0)));
     float dd = length(pa - ba * hh);
-    dkScarM = max(dkScarM, (1.0 - smoothstep(wv * 0.55, wv, dd)) * uScarB[i].w);
+    dkScarM = max(dkScarM, (1.0 - smoothstep(wv2 * 0.55, wv2, dd)) * uScarB[i].w);
   }
-  S.grad *= 1.0 - dkScarM; S.cav *= 1.0 - dkScarM; S.wear *= 1.0 - dkScarM;
   // amniotic residue (newborn): a pale, slimy film in patches and streaks that softens the scales
   dkResM = 0.0;
   if (uResidue.x > 0.0) {
     vec3 rq = vRest / uDirt.w;
     float rn = dkFbm(vec3(rq.x * 14.0, rq.y * 30.0, rq.z * 14.0)) * 0.7 + dkFbm(rq * 60.0 + 3.1) * 0.3;
     dkResM = smoothstep(0.5, 0.66, rn + 0.08 * (vMask.y - 0.5)) * uResidue.x;
-    S.grad *= 1.0 - 0.75 * dkResM; S.cav *= 1.0 - 0.6 * dkResM;
-    dkGranG *= 1.0 - 0.75 * dkResM;
   }
-  // chain-coordinate detail fade does not apply to the 3D tiles (their own fade is gDet)
-  float detailK = mix(dkDetail, 1.0, dkGranM) * (1.0 - dkOralM);
-  dkGrad = S.grad * uPat.x * detailK;
-  dkCav = S.cav * detailK;
+  float soften = (1.0 - dkScarM) * (1.0 - 0.75 * dkResM);
+  float detK = mix(gDet, dkDetail, chainM) * (1.0 - dkOralM);
+  dkGrad = (S.grad * uPat.x * chainM * dkDetail + wg * dkDetail) * soften * (1.0 - dkOralM);
+  dkGranG = vg * relief3 * (1.0 - chainM) * soften * (1.0 - dkOralM);
+  dkGranH = vh * relief3;
+  dkGranM = 1.0 - chainM;
+  float cav = mix(vcav, max(S.cav, wr * smoothstep(0.3, -0.9, wv) * 0.6), chainM);
+  cav = max(cav, (1.0 - chainM) * wr * smoothstep(0.3, -0.9, wv) * 0.6);
+  float crown = mix(vcr, S.wear, chainM);
+  float sid = mix(vid, S.id, chainM);
+  dkCav = cav * detK * soften;
   // --- colour
   vec3 col = uBase;
-  col = mix(col, uDorsal, smoothstep(0.6, 0.0, vScale.z / max(vScale.w, 1.0)) * 0.6);
+  col = mix(col, uDorsal, smoothstep(0.6, 0.0, latD) * 0.6 * (1.0 - isHead));
   col = mix(col, uBelly, smoothstep(0.35, 0.85, vMask.y));
   col *= 1.0 + uMisc.y * (n1 - 0.5) * 1.2;
-  col *= 1.0 + 0.26 * (S.id - 0.5) * mix(dkDetail, gDet, dkGranM);
-  col = mix(col, uDorsal * 1.15 + uWearCol * 0.15, (S.lv < 0.5 ? 0.35 : 0.0) * detailK * (1.0 - dkGranM));   // dorsal scutes: weathered
-  col = mix(col, uWearCol, S.wear * 0.45 * detailK);
+  col *= 1.0 + uSkin2.w * (sid - 0.5) * detK;                                   // every scale its own shade
+  col = mix(col, uDorsal * 1.15 + uWearCol * 0.15, (S.lv < 0.5 && S.lv >= 0.0 ? 0.35 : 0.0) * detK * chainM);   // dorsal scutes: weathered
+  col = mix(col, uWearCol, clamp(crown * uSkin2.y * detK, 0.0, 1.0));           // rubbed, bleached keratin on the crowns
   col = mix(col, uScarCol, dkScarM * 0.85);
   col = mix(col, uResidue.yzw * mix(vec3(1.0), col * 1.6, 0.35), dkResM * 0.55);
-  col *= mix(1.0, uMisc.x, dkCav * (1.0 - uCrev.w));
+  // crevices: shaded where occluded, dust-filled where they are open to the sky
+  float open = clamp(vMask2.x * 1.15, 0.0, 1.0);
+  col *= mix(1.0, uMisc.x, dkCav * (1.0 - 0.55 * open) * (1.0 - uCrev.w));
   col = mix(col, uCrev.rgb, clamp(dkCav * 1.6, 0.0, 1.0) * uCrev.w);     // flesh between the scales
+  float crevDust = clamp(uSkin2.x * dkCav * 1.3 * open * smoothstep(0.45, 0.75, vNoise.y + 0.25 * (n2 - 0.5)), 0.0, 1.0);
+  col = mix(col, uDustCol * 0.85, crevDust);
+  // old keratin: dust held in the micro pits, lighter worn high points
+  float pit = smoothstep(0.42, 0.18, dkMicro) * (1.0 - dkCav);
+  col *= 0.9 + 0.22 * dkMicro;
+  col = mix(col, uDustCol * 0.7, pit * uSkin2.x * 0.55 * open);
   // dust settles on the lower body and in crevices; salt crust in the deepest ones
   float low = smoothstep(uDirt.x, 0.0, vRest.y) + vMask.y * 0.25;
   float dn = vNoise.y;
@@ -292,10 +344,10 @@ void dkSkin(inout vec3 albedo) {
     dkCav = max(dkCav, w * 0.5);
   }
   albedo = col;
-  // --- roughness / metalness
-  float r = uRough.x + uRough.y * (S.id - 0.5) - uRough.z * S.wear * detailK + uRough.w * dust + 0.25 * salt;
+  // --- roughness / metalness: polished crowns, rough dusty grooves
+  float r = uRough.x + uRough.y * (sid - 0.5) - uRough.z * crown * detK + uRough.w * (dust + crevDust) + 0.25 * salt + 0.18 * dkCav + 0.2 * (0.5 - dkMicro);
   r = mix(r, 0.2, dkOralM);
-  r = sqrt(r * r + (1.0 - mix(dkDetail, gDet, dkGranM)) * 0.05 * (1.0 - dkOralM));    // sub-pixel scale relief -> roughness
+  r = sqrt(r * r + (1.0 - detK) * 0.05 * (1.0 - dkOralM));    // sub-pixel scale relief -> roughness
   r = mix(r, r * uDamp.z, dkDampM);
   r = mix(r, 0.32, dkScarM * 0.7);                                                       // scar tissue: smooth, shiny
   r = mix(r, 0.12, dkResM);
@@ -333,8 +385,7 @@ void dkSkin(inout vec3 albedo) {
   if (dkGranM > 0.0) {
     vec3 pv = -vViewPosition;
     vec2 sl = vec2(dot(dkGranG, dFdx(vRest)) / max(length(dFdx(pv)), 1e-7), dot(dkGranG, dFdy(vRest)) / max(length(dFdy(pv)), 1e-7));
-    vec3 n2 = dkPerturb(pv, normal, sl, faceDirection);
-    n1 = normalize(mix(n1, n2, dkGranM));
+    n1 = dkPerturb(pv, n1, sl, faceDirection);
   }
   normal = n1;
 }`)

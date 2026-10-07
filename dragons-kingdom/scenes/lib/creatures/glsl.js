@@ -19,6 +19,22 @@ float dkVnoise(vec3 p) {
   return mix(mix(mix(a, b, f.x), mix(c, d, f.x), f.y), mix(mix(e, g, f.x), mix(h, k, f.x), f.y), f.z);
 }
 float dkFbm(vec3 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { s += a * dkVnoise(p); p = p * 2.03 + 11.7; a *= 0.5; } return s / 0.9375; }
+vec3 dkH33(vec3 p) {
+  p = fract(p * vec3(0.1031, 0.1030, 0.0973));
+  p += dot(p, p.yxz + 33.33);
+  return fract((p.xxy + p.yxx) * p.zyx);
+}
+// value noise with its analytic gradient (quintic fade): vec4(value, d/dx, d/dy, d/dz)
+vec4 dkNoised(vec3 x) {
+  vec3 i = floor(x), f = fract(x);
+  vec3 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+  vec3 du = 30.0 * f * f * (f * (f - 2.0) + 1.0);
+  float a = dkH31(i), b = dkH31(i + vec3(1, 0, 0)), c = dkH31(i + vec3(0, 1, 0)), d = dkH31(i + vec3(1, 1, 0));
+  float e = dkH31(i + vec3(0, 0, 1)), f1 = dkH31(i + vec3(1, 0, 1)), g = dkH31(i + vec3(0, 1, 1)), h = dkH31(i + vec3(1, 1, 1));
+  float k1 = b - a, k2 = c - a, k3 = e - a, k4 = a - b - c + d, k5 = a - c - e + g, k6 = a - b - e + f1, k7 = -a + b + c - d + e - f1 - g + h;
+  return vec4(a + k1 * u.x + k2 * u.y + k3 * u.z + k4 * u.x * u.y + k5 * u.y * u.z + k6 * u.z * u.x + k7 * u.x * u.y * u.z,
+    du * vec3(k1 + k4 * u.y + k6 * u.z + k7 * u.y * u.z, k2 + k5 * u.z + k4 * u.x + k7 * u.z * u.x, k3 + k6 * u.x + k5 * u.y + k7 * u.x * u.y));
+}
 float dkVnoise2(vec2 p) {
   vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(dkH21(i), dkH21(i + vec2(1, 0)), f.x), mix(dkH21(i + vec2(0, 1)), dkH21(i + vec2(1, 1)), f.x), f.y);
@@ -192,5 +208,90 @@ DKScale dkGranule(vec2 p) {
   S.q = -v1;
   S.lv = 4.0;
   return S;
+}
+`;
+
+export const GLSL_VOR3 = /* glsl */`
+// ---- 3D anisotropic Voronoi scales ----------------------------------------------
+// Cells are seeded in 3D rest space, so the surface slices them into an irregular
+// mosaic with no projection blending, no seams and no chain-coordinate stretching
+// (the way real lizard and crocodile skin looks: no two scales alike, sizes grading
+// smoothly). The metric is compressed along T (the free-edge direction): scales are
+// elongated along the body (an > 1). Each scale tilts up toward its free edge, so its
+// rear rim stands above the front of the next one (imbricate overlap).
+// p: rest position / cell size. Returns height (cell units), its gradient d/dp,
+// cavity, crown (raised, rubbed), two per-scale randoms.
+struct DKV3 { float h; vec3 g; float cav; float crown; float id; float id2; };
+// shape: q = d1 / F2s, where F2s is a SMOOTH minimum of the distances to all the other
+// cell points (no creases inside a scale where the second-nearest neighbour changes):
+// 0 at the scale's centre, ~1 on its border -> height 1 - q^k: k = 2 a rounded bead,
+// k = 6 a flat plate with a rounded rim; tilt raises the free (rear) edge (imbricate)
+DKV3 dkVor3(vec3 p, vec3 T, float an, float tilt, float k, float cavW, float jit) {
+  vec3 ip = floor(p), fp = fract(p);
+  float ka = 1.0 / an - 1.0;
+  const float K = 9.0;
+  float d1 = 1e9; vec3 m1 = vec3(0.0); vec3 c1 = vec3(0.0);
+  float ws = 0.0; vec3 wg = vec3(0.0); float w1 = 0.0; vec3 g1w = vec3(0.0);
+  for (int kk = -1; kk <= 1; kk++) for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+    vec3 g = vec3(float(i), float(j), float(kk));
+    vec3 o = 0.5 + (dkH33(ip + g) - 0.5) * jit;
+    vec3 r = g + o - fp;
+    vec3 rm = r + ka * dot(r, T) * T;
+    float l = sqrt(dot(rm, rm)) + 1e-5;
+    float w = exp(-K * l);
+    vec3 gl = -(rm + ka * dot(rm, T) * T) / l;          // grad of l w.r.t. p
+    ws += w; wg += w * gl;
+    if (l < d1) { d1 = l; m1 = rm; c1 = ip + g; w1 = w; g1w = gl; }
+  }
+  DKV3 V;
+  float wo = max(ws - w1, 1e-30);
+  float l2 = -log(wo) / K;                               // smooth distance to the other cells
+  vec3 g2 = (wg - w1 * g1w) / wo;
+  float q = clamp(d1 / max(l2, 1e-4), 0.0, 1.0);
+  vec3 gq = (g1w * l2 - d1 * g2) / (l2 * l2);
+  float qk = pow(q, k);
+  float prof = 1.0 - qk;
+  vec3 gprof = -k * qk / max(q, 1e-4) * gq;
+  float tl = clamp(-dot(m1, T), -0.6, 0.6);              // -0.5 front .. +0.5 free (rear) edge
+  vec3 gtl = abs(tl) < 0.6 ? T / an : vec3(0.0);
+  vec3 h3 = dkH33(c1 + 7.7);
+  float amp = 0.65 + 0.7 * h3.x;                         // some scales lie flat, some stand proud
+  float body = 1.0 + tilt * tl;
+  V.h = prof * body * amp;
+  V.g = (gprof * body + prof * tilt * gtl) * amp;
+  V.cav = smoothstep(1.0 - cavW, 1.0, q);
+  V.crown = prof * prof * clamp(0.6 + tilt * tl * 1.5, 0.0, 1.0) * (0.5 + 0.5 * h3.x);
+  V.id = h3.y; V.id2 = h3.z;
+  return V;
+}
+// sparse enlarged tubercles (osteoderms) on a coarser lattice: a raised, keeled dome in
+// some of its cells (density 0..1), overriding the small scales under it
+struct DKT3 { float m; float h; vec3 g; float id; };
+DKT3 dkTub3(vec3 p, vec3 T, float density, float rad) {
+  vec3 ip = floor(p), fp = fract(p);
+  float best = 1e9; vec3 br = vec3(0.0); vec3 bc = vec3(0.0);
+  for (int k = -1; k <= 1; k++) for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+    vec3 g = vec3(float(i), float(j), float(k));
+    vec3 c = ip + g;
+    if (dkH33(c + 3.3).x > density) continue;
+    vec3 r = g + 0.25 + 0.5 * dkH33(c + 9.1) - fp;
+    float d = dot(r, r);
+    if (d < best) { best = d; br = r; bc = c; }
+  }
+  DKT3 R; R.m = 0.0; R.h = 0.0; R.g = vec3(0.0); R.id = 0.0;
+  vec3 hh = dkH33(bc + 5.5);
+  float rr = rad * (0.7 + 0.5 * hh.x);
+  if (best >= rr * rr) return R;
+  float d = sqrt(best), x = d / rr;
+  float a = 0.9 + 0.5 * hh.y;
+  vec3 lat = br - dot(br, T) * T;
+  float kw = rr * 0.3;
+  float kl = max(0.0, 1.0 - length(lat) / kw);
+  float prof = 1.0 - x * x;
+  R.h = prof * a * (1.0 + 0.45 * kl);
+  R.g = (2.0 * br / (rr * rr)) * a * (1.0 + 0.45 * kl) + prof * a * 0.45 * (kl > 0.0 ? normalize(lat + 1e-6) / kw : vec3(0.0));
+  R.m = smoothstep(1.0, 0.82, x);
+  R.id = hh.z;
+  return R;
 }
 `;
