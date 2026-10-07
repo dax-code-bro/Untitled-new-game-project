@@ -1,4 +1,4 @@
-// Loader for characters built offline by scenes/lib/humans/build/build.py.
+// Loader for characters built offline by scenes/lib/humans/offline/build.py.
 //
 // A character is two files in scenes/lib/humans/cache/: <id>.json (bones, meshes, materials)
 // and <id>.bin (vertex data). Every mesh is stored in its DRAPE pose (the pose its garments

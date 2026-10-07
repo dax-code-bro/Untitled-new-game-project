@@ -1,11 +1,11 @@
 // Garment, hair-strand and prop materials for the human system.
 //
-// cloth  - garments simulated offline (Blender cloth, build/garments.py) carry UVs in METRES
+// cloth  - garments simulated offline (Blender cloth, offline/garments.py) carry UVs in METRES
 //          of the flat pattern (u around, v down), so the photo weave maps from the asset
 //          library (ambientCG linen / woven cloth, CC0) land at their real thread scale. On
 //          top: dye unevenness, sun fading on the upper side, wear on edges and elbows
 //          (aux.g), dust toward the hem (aux.r), wool/linen sheen, baked AO (ao attribute).
-// hair   - strand ribbons (build/hair.py): Kajiya-Kay two-lobe highlight along the strand
+// hair   - strand ribbons (offline/hair.py): Kajiya-Kay two-lobe highlight along the strand
 //          tangent (primary shifted to the root, secondary tinted and shifted to the tip),
 //          per-strand colour variation, depth-in-the-groom darkening (aux), alpha-hashed tips.
 // prop   - leather, iron/steel, wood, wicker, bread...: PBR maps from the library or flat.

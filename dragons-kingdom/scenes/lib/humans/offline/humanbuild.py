@@ -1,0 +1,320 @@
+"""Character assembly: shape (targets) -> joints -> pose -> skinned meshes (body, eyes, brows,
+lashes, teeth, tongue, hair, garments, props) -> baked per-vertex AO / thickness -> export.
+
+All geometry is exported in the DRAPE pose (the pose the garments were simulated in), which is
+also the skin bind pose at render time, so the runtime only adds small deltas (breathing, sway,
+blinks, saccades) as pure functions of t.
+"""
+import math
+import os
+
+import numpy as np
+
+import mhcore as mc
+from posing import PoseBuilder, norm
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def lib_path(lib, *p):
+    return os.path.join(lib, *p)
+
+
+class Kit:
+    """Shared, loaded once: base mesh, rig, dense weights, proxy files."""
+
+    def __init__(self, lib):
+        self.lib = lib
+        self.base = mc.Obj(lib_path(lib, 'human/makehuman_base/base.obj'))
+        self.rig = mc.Rig(lib_path(lib, 'human/makehuman_base/rig.default.json'), lib_path(lib, 'human/makehuman_base/weights.default.json'), self.base)
+        self.tl = mc.TargetLib(lib)
+        self.N = len(self.base.v)
+        self.Wd = self.rig.dense_weights(self.N)
+        self.body_faces = [(vi, ti) for vi, ti, g in self.base.faces if g == 'body']
+        self._proxy = {}
+
+    def proxy(self, rel):
+        if rel not in self._proxy:
+            self._proxy[rel] = mc.Mhclo(lib_path(self.lib, rel))
+        return self._proxy[rel]
+
+
+# --------------------------------------------------------------- shape --
+def shape(kit, spec):
+    """Targeted base-mesh vertex positions (all 19158 verts incl. helpers), metres."""
+    m = spec.get('macro', {})
+    items = [(os.path.join(kit.tl.macro, n + '.target.gz'), w) for n, w in mc.macro_weights(
+        age=m.get('age', 0.5), gender=m.get('gender', 0.5), muscle=m.get('muscle', 0.5), weight=m.get('weight', 0.5),
+        height=m.get('height', 0.5), proportions=m.get('proportions', 0.5), race=tuple(m.get('race', (1 / 3, 1 / 3, 1 / 3))))]
+    items += mc.detail_items(kit.tl, spec.get('details', {}))
+    return mc.apply_targets(kit.base.v, items)
+
+
+# ----------------------------------------------------------- geometry --
+def split_by_uv(faces, nv):
+    """faces: list of (vidx, vtidx). Returns (vert_of (K,), vt_of (K,), tris (T,3) into K)."""
+    key = {}
+    vo, to = [], []
+    tris = []
+    for vi, ti in faces:
+        ids = []
+        for v, t in zip(vi, ti):
+            k = (v, t)
+            if k not in key:
+                key[k] = len(vo)
+                vo.append(v)
+                to.append(t)
+            ids.append(key[k])
+        for j in range(1, len(ids) - 1):
+            tris.append((ids[0], ids[j], ids[j + 1]))
+    return np.asarray(vo), np.asarray(to), np.asarray(tris, dtype=np.int64)
+
+
+class Part:
+    """A skinned mesh in rest space (before posing)."""
+
+    def __init__(self, name, kind, P, tris, uv=None, Wd=None, I=None, W=None, weld=None, material=None, attrs=None, morphs=None):
+        self.name, self.kind = name, kind
+        self.P = np.asarray(P, float)
+        self.tris = np.asarray(tris, dtype=np.int64)
+        self.uv = uv
+        self.weld = weld                      # (K,) topological vertex id (for smooth normals across UV seams)
+        if Wd is not None:
+            I, W = mc.topk(Wd, 4)
+        self.I, self.W = I, W
+        self.material = material or {}
+        self.attrs = attrs or {}
+        self.morphs = morphs or {}
+        self.posed = None
+        self.normals = None
+
+
+def welded_normals(P, tris, weld):
+    if weld is None:
+        return mc.vertex_normals(P, tris)
+    nw = weld.max() + 1
+    acc = np.zeros((nw, 3))
+    a, b, c = P[tris[:, 0]], P[tris[:, 1]], P[tris[:, 2]]
+    fn = np.cross(b - a, c - a)
+    for k in range(3):
+        np.add.at(acc, weld[tris[:, k]], fn)
+    l = np.linalg.norm(acc, axis=1, keepdims=True)
+    l[l == 0] = 1
+    return (acc / l)[weld]
+
+
+def body_part(kit, V, subdiv=0, morph_rest=None):
+    """The skin surface ('body' group) with UVs; optional Catmull-Clark level 1.
+    morph_rest: {name: (N,3) delta on base verts}. Returns Part."""
+    faces_v = [f[0] for f in kit.body_faces]
+    faces_t = [f[1] for f in kit.body_faces]
+    Vx, Wx = V, kit.Wd
+    morphs = dict(morph_rest or {})
+    nv, nvt = len(V), len(kit.base.vt)
+    UV = kit.base.vt
+    if subdiv:
+        S, faces_v, _ = mc.catmull_clark(nv, faces_v)
+        Su, faces_t = mc.subdivide_linear_uv(faces_t, nvt)
+        Vx = mc.sparse_apply(S, V)
+        Wx = mc.sparse_apply(S, kit.Wd)
+        morphs = {k: mc.sparse_apply(S, d) for k, d in morphs.items()}
+        UV = mc.sparse_apply(Su, UV)
+        nv = len(Vx)
+    vo, to, tris = split_by_uv(list(zip(faces_v, faces_t)), nv)
+    # compact the welded ids to the used vertices
+    used, weld = np.unique(vo, return_inverse=True)
+    p = Part('body', 'skin', Vx[vo], tris, uv=UV[to], Wd=Wx[vo], weld=weld)
+    p.morphs = {k: d[vo] for k, d in morphs.items()}
+    p.src = vo   # source (subdivided) vertex ids
+    return p
+
+
+def proxy_part(kit, rel, V, name, kind, material=None, keep=None):
+    px = kit.proxy(rel)
+    P = px.fit(V)
+    Wd = px.transfer(kit.Wd)
+    o = px.obj
+    faces = [(vi, ti) for vi, ti, g in o.faces]
+    if keep is not None:
+        faces = [f for f in faces if keep(f, P)]
+    vo, to, tris = split_by_uv(faces, len(P))
+    uv = o.vt[to] if len(o.vt) else np.zeros((len(vo), 2))
+    used, weld = np.unique(vo, return_inverse=True)
+    part = Part(name, kind, P[vo], tris, uv=uv, Wd=Wd[vo], weld=weld, material=material)
+    part.src = vo
+    part.px = px
+    return part
+
+
+# ---------------------------------------------------------------- pose --
+def pose_parts(skel, pose, parts, root_offset):
+    M = skel.skin_mats(pose)
+    M[:, :, 3] += root_offset
+    for p in parts:
+        if p.I is None:            # static (already in drape space)
+            p.posed = p.P.copy()
+            p.normals = welded_normals(p.posed, p.tris, p.weld)
+            continue
+        p.posed = mc.lbs(p.P, p.I, p.W, M)
+        p.normals = welded_normals(p.posed, p.tris, p.weld)
+        p.posed_morphs = {k: mc.lbs_dir(d, p.I, p.W, M) for k, d in p.morphs.items()}
+    return M
+
+
+# ------------------------------------------------------------- baking --
+def bake_ao_thickness(parts, rays=48, max_dist=0.12, thick_parts=('body',), seed=7):
+    """Per-vertex ambient occlusion (distance-limited, cosine-weighted) over ALL parts, and a
+    thickness estimate (distance along -normal to the opposite surface) for the skin."""
+    import bpy  # noqa: F401  (registers mathutils)
+    from mathutils.bvhtree import BVHTree
+    allP, allT, off = [], [], 0
+    for p in parts:
+        if not p.material.get('occluder', True):
+            continue
+        allP.append(p.posed)
+        allT.append(p.tris + off)
+        off += len(p.posed)
+    P = np.concatenate(allP)
+    T = np.concatenate(allT)
+    tree = BVHTree.FromPolygons(P.tolist(), T.tolist(), all_triangles=True, epsilon=0.0)
+    rng = np.random.default_rng(seed)
+    # cosine-weighted hemisphere directions (fixed set, rotated per vertex frame)
+    u1, u2 = rng.random(rays), rng.random(rays)
+    r = np.sqrt(u1)
+    th = 2 * np.pi * u2
+    local = np.stack([r * np.cos(th), r * np.sin(th), np.sqrt(1 - u1)], 1)
+    from mathutils import Vector
+    for p in parts:
+        if not p.material.get('bake_ao', True):
+            continue
+        n = p.normals
+        ao = np.ones(len(p.posed))
+        nr = p.material.get('ao_rays', rays)
+        stride = p.material.get('ao_stride', 1)      # bake every k-th vertex (ribbons: both edges alike)
+        for i in range(0, len(p.posed), stride):
+            nn = n[i]
+            t1 = np.cross(nn, [0, 1, 0] if abs(nn[1]) < 0.9 else [1, 0, 0])
+            t1 /= np.linalg.norm(t1) + 1e-12
+            t2 = np.cross(nn, t1)
+            dirs = (local[:, :1] * t1 + local[:, 1:2] * t2 + local[:, 2:3] * nn)[:nr]
+            o = p.posed[i] + nn * 0.0015
+            occ = 0.0
+            ov = Vector(o)
+            for d in dirs:
+                hit = tree.ray_cast(ov, Vector(d), max_dist)
+                if hit[0] is not None:
+                    occ += 1.0 - (hit[3] / max_dist) ** 0.5 * 0.6
+            ao[i] = 1.0 - occ / nr
+            if stride > 1:
+                ao[i:i + stride] = ao[i]
+        p.attrs['ao'] = ao
+        if p.name in thick_parts or p.material.get('thickness'):
+            th_ = np.full(len(p.posed), 0.3)
+            for i in range(len(p.posed)):
+                o = p.posed[i] - n[i] * 0.0015
+                hit = tree.ray_cast(Vector(o), Vector(-n[i]), 0.3)
+                if hit[0] is not None:
+                    th_[i] = hit[3]
+            p.attrs['thick'] = th_
+    return parts
+
+
+# ------------------------------------------------------------- export --
+def to_mesh_dict(p):
+    attrs = {
+        'position': (p.posed.astype(np.float32), 3, np.float32),
+        'normal': (p.normals.astype(np.float32), 3, np.float32),
+    }
+    if p.uv is not None:
+        attrs['uv'] = (np.asarray(p.uv, np.float32), 2, np.float32)
+    if p.I is not None:
+        attrs['skinIndex'] = (p.I.astype(np.uint16), 4, np.uint16)
+        attrs['skinWeight'] = (p.W.astype(np.float32), 4, np.float32)
+    for k, v in p.attrs.items():
+        v = np.asarray(v, np.float32)
+        attrs[k] = (v, 1 if v.ndim == 1 else v.shape[1], np.float32)
+    d = {'name': p.name, 'kind': p.kind, 'material': p.material, 'attrs': attrs, 'index': p.tris.reshape(-1)}
+    if getattr(p, 'posed_morphs', None):
+        d['morphs'] = {k: v.astype(np.float32) for k, v in p.posed_morphs.items()}
+    return d
+
+
+# ------------------------------------------------------ derived attributes --
+def image_array(path):
+    """RGBA float array (H, W, 4), row 0 = bottom (Blender convention, matches OBJ v up)."""
+    import bpy
+    img = bpy.data.images.load(path, check_existing=True)
+    w, h = img.size
+    a = np.empty(w * h * 4, dtype=np.float32)
+    img.pixels.foreach_get(a)
+    return a.reshape(h, w, 4)
+
+
+def sample_image(img, uv):
+    h, w = img.shape[:2]
+    x = np.clip((uv[:, 0] % 1.0) * (w - 1), 0, w - 1).astype(np.int64)
+    y = np.clip((uv[:, 1] % 1.0) * (h - 1), 0, h - 1).astype(np.int64)
+    return img[y, x]
+
+
+def eye_attrs(part, skel, pose, off):
+    from mhcore import quat_to_mat
+    Q, P = skel.world(pose)
+    idx = {n: i for i, n in enumerate(skel.names)}
+    g = np.zeros((len(part.posed), 3))
+    iris = np.full(len(part.posed), 2.0)
+    for side in ('L', 'R'):
+        i = idx[f'eye.{side}']
+        c = P[i] + off
+        d = quat_to_mat(Q[i]) @ (skel.T[i] - skel.H[i])
+        d /= np.linalg.norm(d)
+        sel = part.posed[:, 0] > 0 if side == 'L' else part.posed[:, 0] <= 0
+        v = part.posed[sel] - c
+        v /= np.linalg.norm(v, axis=1, keepdims=True) + 1e-12
+        ang = np.arccos(np.clip(v @ d, -1, 1))
+        g[sel] = d
+        iris[sel] = ang / math.radians(29.0)
+    part.attrs['gaze'] = g
+    part.attrs['iris'] = iris
+
+
+def skin_aux(kit, body, V, skel, skin_map_path):
+    """Per-vertex (lips, nails, lid margin, 0) on the body part (rest positions body.P)."""
+    P = body.P
+    aux = np.zeros((len(P), 4))
+    # lips: redder than the surrounding skin in the photographic texture, near the mouth
+    mouth = V[kit.base.group_verts('joint-mouth')].mean(0)
+    img = image_array(skin_map_path)
+    col = sample_image(img, body.uv)[:, :3]
+    red = col[:, 0] / np.maximum(1e-3, col[:, 1]) 
+    dm = np.linalg.norm((P - mouth) * [1.0, 1.3, 1.0], axis=1)
+    near = np.clip(1 - (dm - 0.022) / 0.012, 0, 1)
+    ref = np.median(red[(dm > 0.035) & (dm < 0.06)]) if np.any((dm > 0.035) & (dm < 0.06)) else red.mean()
+    aux[:, 0] = np.clip((red - ref) / 0.25, 0, 1) * near
+    # nails: distal finger segments, dorsal side, outer 60 %
+    idx = {n: i for i, n in enumerate(skel.names)}
+    nrm = mc.vertex_normals(P, body.tris) if body.weld is None else welded_normals(P, body.tris, body.weld)
+    for side in ('L', 'R'):
+        w = skel.H[idx[f'wrist.{side}']]
+        f2, f5 = skel.H[idx[f'finger2-1.{side}']], skel.H[idx[f'finger5-1.{side}']]
+        fwd = norm((f2 + f5) / 2 - w)
+        lat = norm(f5 - f2)
+        sg = 1.0 if side == 'L' else -1.0
+        palm = norm(sg * np.cross(lat, fwd))
+        for k in (1, 2, 3, 4, 5):
+            bi = idx[f'finger{k}-3.{side}']
+            h, t = skel.H[bi], skel.T[bi]
+            ax = t - h
+            L = np.linalg.norm(ax)
+            ax = ax / L
+            rel = P - h
+            along = rel @ ax / L
+            radial = rel - np.outer(rel @ ax, ax)
+            rd = np.linalg.norm(radial, axis=1)
+            back = -palm if k > 1 else norm(np.cross(ax, palm) * sg * -1.0)
+            sel = (along > 0.25) & (along < 1.25) & (rd < 0.012)
+            dors = (nrm @ back)
+            m = np.clip((dors - 0.25) / 0.35, 0, 1) * np.clip((along - 0.3) / 0.2, 0, 1)
+            aux[sel, 1] = np.maximum(aux[sel, 1], m[sel])
+    body.attrs['aux'] = aux
+    return aux
