@@ -19,37 +19,59 @@ import { keratin, tubes, eyeball, eyelid, computeNormals } from './parts.js';
 import { membrane } from './wing.js';
 import { makeMaterials } from './materials.js';
 import { applyPose, restPose } from './pose.js';
+import * as P from './poses.js';
+import { drapeMembrane } from './drape.js';
 import { add, sub, scale, norm, cross, dot, len, clamp } from './sdf.js';
 
 const deg = Math.PI / 180;
 
 /** The Episode 1 individuals (provisional designs; sizes = the "on-screen area" reading in assets.json). */
 export const CREATURES = {
-  charcoal: { species: 'bashion', L: 35.8, look: 'charcoal', flapHz: 0.76, flapAmp: 0.7, scaleMul: 0.6, title: 'Charcoal (Bashion, melanistic)' },
-  leaf: { species: 'nightwing', L: 8.0, look: 'leaf', flapHz: 1.6, flapAmp: 0.85, subadult: true, title: 'Leaf (Nightwing, subadult)' },
-  starlight: { species: 'nightwing', L: 50.6, look: 'starlight', flapHz: 0.64, flapAmp: 0.68, scaleMul: 0.55, title: 'Starlight (Nightwing, albino)' },
+  charcoal: { species: 'bashion', L: 35.8, look: 'charcoal', flapHz: 0.76, flapAmp: 0.7, scaleMul: 0.6, age: 'giant', title: 'Charcoal (Bashion, melanistic)' },
+  leaf: { species: 'nightwing', L: 8.0, look: 'leaf', flapHz: 1.6, flapAmp: 0.85, age: 'subadult', title: 'Leaf (Nightwing, subadult)' },
+  starlight: { species: 'nightwing', L: 50.6, look: 'starlight', flapHz: 0.64, flapAmp: 0.68, scaleMul: 0.55, age: 'giant', title: 'Starlight (Nightwing, albino)' },
   hatchling: { species: 'bashion_hatchling', L: 0.42, look: 'gold', flapHz: 0, title: 'Gold Bashion hatchling' },
   scout: { species: 'slitherwing', L: 5.6, look: 'scout', flapHz: 2.6, flapAmp: 0.9, detachableLeftWing: true, title: 'Slitherwing scout' },
 };
 
-/** Subadult Nightwing: relatively bigger head and eyes, shorter horns, slightly smaller wings. */
-function subadult(spec) {
+/**
+ * Individual variation within a species (provisional designs). Leaf and Starlight are
+ * the SAME species (Nightwing) and share every anatomical feature; only age and size
+ * differ, the way real animals scale (allometry):
+ *   subadult (Leaf): relatively bigger head and eyes, shorter snout and horns, a
+ *     slimmer neck, lighter muscles, slightly shorter wings;
+ *   giant adult (Starlight, Charcoal): relatively smaller head and eyes, thicker
+ *     neck and legs, heavier muscles - an animal of that size needs them.
+ */
+function individual(spec, cfg) {
   const s = JSON.parse(JSON.stringify(spec));
-  s.head = spec.head * 1.1; s.neck = spec.neck * 0.96;
-  s.headShape = { ...spec.headShape, eyeR: spec.headShape.eyeR * 1.15, cranium: spec.headShape.cranium * 1.05, snoutLen: spec.headShape.snoutLen * 0.96 };
-  s.spikes = { ...spec.spikes, h: spec.spikes.h.map((v) => v * 0.8) };
-  // keep functions/angles that JSON dropped
   for (const k of ['neckPitch', 'headPitch', 'tailDroop']) s[k] = spec[k];
   s.headShape.gape0 = spec.headShape.gape0;
-  s.hornScale = 0.75;
+  const a = cfg.age === 'subadult' ? { head: 1.18, eye: 1.22, snout: 0.94, horn: 0.72, neckW: 0.94, limb: 0.94, muscle: 0.88, crest: 0.8, wing: 0.96 }
+    : cfg.age === 'giant' ? { head: 0.94, eye: 0.84, snout: 1.02, horn: 1.12, neckW: 1.06, limb: 1.08, muscle: 1.06, crest: 1.1, wing: 1.0 }
+    : null;
+  if (!a) return spec;
+  s.head = spec.head * a.head;
+  s.neck = spec.neck * (a.head > 1 ? 0.97 : 1.0);
+  s.headShape.eyeR = spec.headShape.eyeR * a.eye;
+  // a shorter snout: compress the loft keys in front of the eyes
+  const sq = (keys) => keys.map(([z, ...r]) => [z > 0.4 ? 0.4 + (z - 0.4) * a.snout : z, ...r]);
+  s.headShape.upper = sq(spec.headShape.upper);
+  s.headShape.jaw = sq(spec.headShape.jaw);
+  s.neckProfile = spec.neckProfile.map(([z, w, h, d]) => [z, w * a.neckW, h * a.neckW, d]);
+  for (const leg of ['front', 'hind']) s[leg].r = spec[leg].r.map((r) => r * a.limb);
+  s.muscle = Object.fromEntries(Object.entries(spec.muscle || {}).map(([k, v]) => [k, v * (k === 'wing' ? 1 : a.muscle)]));
+  s.crest = { ...spec.crest, h: spec.crest.h.map((v) => v * a.crest) };
+  s.hornScale = a.horn;
+  s.wing = { ...spec.wing, digits: spec.wing.digits.map(([x, y, z]) => [x * a.wing, y, z * a.wing]) };
   return s;
 }
 
 const QUALITY = {
   // base cell size = L / res, head region res x headMul
-  draft: { res: 260, headMul: 2.2, membraneRes: 1 / 70 },
-  standard: { res: 420, headMul: 2.6, membraneRes: 1 / 110 },
-  hero: { res: 560, headMul: 3.0, membraneRes: 1 / 150 },
+  draft: { res: 260, headMul: 2.2, membraneRes: 1 / 80, drapeIters: 90 },
+  standard: { res: 420, headMul: 2.6, membraneRes: 1 / 120, drapeIters: 120 },
+  hero: { res: 560, headMul: 3.0, membraneRes: 1 / 170, drapeIters: 150 },
 };
 
 /**
@@ -61,7 +83,7 @@ export async function createCreature(which, opts = {}) {
   const log = opts.log || (() => {});
   const q = QUALITY[opts.quality || 'standard'];
   let spec = SPECIES[cfg.species];
-  if (cfg.subadult) spec = subadult(spec);
+  spec = individual(spec, cfg);
   const L = cfg.L;
   // scale size multiplier: a giant reads immense when its scales are fine relative to its body
   const SM = opts.scaleMul ?? cfg.scaleMul ?? 1;
@@ -111,7 +133,7 @@ export async function createCreature(which, opts = {}) {
   });
   log(`[creature ${root.name}] skin ${nowMs() - t0} ms total so far, chains N=${JSON.stringify(Object.fromEntries(sk.chainNames.map((c, i) => [c, sk.chainN[i]])))}`);
 
-  const mats = makeMaterials(THREE, cfg.look, { L, anat, spec, eyeRadius: anat.eyes[0].radius });
+  const mats = makeMaterials(THREE, opts.look ?? cfg.look, { L, anat, spec, eyeRadius: anat.eyes[0].radius, zones: { withersZ: anat.bonePos.neck_0[2], pelvisZ: anat.bonePos.pelvis[2] } });
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(sk.positions, 3));
@@ -130,10 +152,10 @@ export async function createCreature(which, opts = {}) {
   const meshes = [body];
 
   // ---------------------------------------------------------- rigid parts
-  const ker = keratin(anat.keratin.filter((k) => k.kind !== 'tooth'), boneIndex);
+  const ker = keratin(anat.keratin.filter((k) => k.kind !== 'tooth' && k.kind !== 'gum'), boneIndex);
   weldNormals(ker);
   meshes.push(partMesh(THREE, ker, mats.keratin, `${root.name}:keratin`, { aKer: ker.extra }));
-  const teeth = keratin(anat.keratin.filter((k) => k.kind === 'tooth'), boneIndex);
+  const teeth = keratin(anat.keratin.filter((k) => k.kind === 'tooth' || k.kind === 'gum'), boneIndex);
   weldNormals(teeth);
   meshes.push(partMesh(THREE, teeth, mats.teeth, `${root.name}:teeth`, { aKer: teeth.extra }));
 
@@ -173,27 +195,26 @@ export async function createCreature(which, opts = {}) {
     meshes.push(partMesh(THREE, eg, mats.eye, `${root.name}:eyes`, { aEye: eg.extra, aEyeX: mergeAttr(parts, 'ax', 4), aEyeZ: mergeAttr(parts, 'az', 4) }));
     const lids = [];
     for (const e of eyeData) for (const up of [true, false]) {
-      const g = eyelid(up, { rIn: 1.1, rOut: 1.22, span: 1.25, reach: up ? 0.95 : 0.85 });
+      const g = eyelid(up, { rIn: 1.075, rOut: 1.19, span: 1.3, reach: up ? 0.98 : 0.86 });
       transformPart(g, e.toWorld, e.toWorldN, boneIndex[up ? e.lidU : e.lidL]);
       lids.push(g);
     }
     const lg = mergeParts(lids);
-    meshes.push(skinPartMesh(THREE, lg, mats.lid, `${root.name}:lids`, 'granular', anat.eyes[0].radius * 0.18, L));
+    meshes.push(skinPartMesh(THREE, lg, mats.lid, `${root.name}:lids`, 'granular', anat.eyes[0].radius * 0.11, L));
   }
 
-  // wing membranes
+  // wing membranes (one mesh per wing: each gets its own folded-drape morph targets)
   const membraneRes = L * q.membraneRes;
-  const mems = [];
+  const memMeshes = [];
   for (const w of anat.wings) {
     if (cfg.detachableLeftWing && w.side === 'L') continue;
-    mems.push(membrane(w, boneIndex, { res: membraneRes }));
-  }
-  if (mems.length) {
-    const mg = mergeParts(mems.map((m) => ({ ...m, extra: m.wing })));
-    const mgeo = partGeometry(THREE, mg, { aWing: mg.extra, aEdge: mergeAttr(mems, 'edge', 4) });
+    const mem = membrane(w, boneIndex, { res: membraneRes });
+    const mgeo = partGeometry(THREE, { ...mem, extra: mem.wing }, { aWing: mem.wing, aEdge: mem.edge });
     const mm = new THREE.SkinnedMesh(mgeo, mats.membrane);
-    mm.name = `${root.name}:membrane`;
+    mm.name = `${root.name}:membrane${w.side}`;
+    mm.userData.side = w.side;
     meshes.push(mm);
+    memMeshes.push(mm);
   }
 
   // detachable LEFT wing (scout): its own SDF arm, fingers and membrane on the same skeleton
@@ -225,6 +246,8 @@ export async function createCreature(which, opts = {}) {
     const mgeo = partGeometry(THREE, { ...mem, extra: mem.wing }, { aWing: mem.wing, aEdge: mem.edge });
     const mm = new THREE.SkinnedMesh(mgeo, mats.membrane);
     mm.name = `${root.name}:wingL-membrane`;
+    mm.userData.side = 'L';
+    memMeshes.push(mm);
     detachable = { side: 'L', meshes: [arm, fm, mm], rootBone: bones[boneIndex[`${w.prefix}_0`]] };
     meshes.push(arm, fm, mm);
   }
@@ -242,7 +265,8 @@ export async function createCreature(which, opts = {}) {
     eyes: eyeData, stats: { vertices: sk.positions.length / 3, triangles: sk.index.length / 3, buildMs: nowMs() - t0, mesh: mesh.stats },
     restPos: Object.fromEntries(anat.bones.map((b) => [b.name, b.pos])),
     /** Pose: see pose.js. Pure function of its argument. */
-    setPose(p) { applyPose(creature, p); return creature; },
+    setPose(p) { applyPose(creature, p); setDrape(memMeshes, p.uniforms && p.uniforms.drape); return creature; },
+    membranes: memMeshes,
     /**
      * Detachable LEFT wing (Slitherwing scout). attachWing() puts the wing's
      * bone subtree back on the thorax; detachWing(parent, worldMatrix) moves it
@@ -268,12 +292,48 @@ export async function createCreature(which, opts = {}) {
       mats.setPoseUniforms({ wound: { center: creature.restPos[rb.name], radius: L * 0.03, amount: 1 } });
     },
   };
+  // folded-wing drapes: relax each membrane in the standing, sitting and lying folds (drape.js)
+  if (opts.drape !== false) {
+    const td = nowMs();
+    const variants = { stand: (c) => P.stand(c, { t: 0, blink: false, breathe: 0 }), sit: (c) => P.sit(c, { t: 0, blink: false, breathe: 0 }), lie: (c) => P.lie(c, { t: 0, blink: false, breathe: 0 }) };
+    const names = Object.keys(variants);
+    const res = {};
+    for (const mm of memMeshes) res[mm.uuid] = { pos: [], nrm: [] };
+    for (const vn of names) {
+      applyPose(creature, variants[vn](creature));
+      creature.root.updateMatrixWorld(true);
+      for (const mm of memMeshes) {
+        const d = drapeMembrane(creature, mm, { res: membraneRes, side: mm.userData.side === 'L' ? 1 : -1, ground: 0, iters: q.drapeIters, ...(vn === 'sit' ? { shrink: 0.36, gravity: 0.02 } : {}) });
+        res[mm.uuid].pos.push(new THREE.BufferAttribute(d.delta, 3));
+        res[mm.uuid].nrm.push(new THREE.BufferAttribute(d.dnormal, 3));
+      }
+    }
+    for (const mm of memMeshes) {
+      mm.geometry.morphAttributes.position = res[mm.uuid].pos;
+      mm.geometry.morphAttributes.normal = res[mm.uuid].nrm;
+      mm.geometry.morphTargetsRelative = true;
+      mm.updateMorphTargets();
+      mm.userData.drapeNames = names;
+    }
+    log(`[creature ${root.name}] wing drapes ${nowMs() - td} ms`);
+  }
   applyPose(creature, restPose());
   log(`[creature ${root.name}] built in ${creature.stats.buildMs} ms`);
   return creature;
 }
 
 // ---------------------------------------------------------------- helpers
+/** Folded-wing drape morph influences from a pose's uniforms.drape = { L: [variant, amount], R: [...] }. */
+function setDrape(meshes, dr) {
+  for (const m of meshes) {
+    if (!m.morphTargetInfluences) continue;
+    m.morphTargetInfluences.fill(0);
+    const e = dr && dr[m.userData.side];
+    if (!e) continue;
+    const i = m.userData.drapeNames.indexOf(e[0]);
+    if (i >= 0) m.morphTargetInfluences[i] = e[1];
+  }
+}
 function nowMs() { return (globalThis.performance && performance.now) ? Math.round(performance.now()) : 0; }
 
 /** arc-length ranges (on the spine and jaw chains) where the snout tip and chin turn to small irregular scales */
@@ -402,7 +462,12 @@ function skinPartMesh(THREE, g, mat, name, mode, size = 0, Lc = 1) {
     }
   } else {
     tan = new Float32Array(n * 4);
-    for (let i = 0; i < n; i++) { mk.set([1, 0, 0, 0], i * 4); m2.set([0.85, 0, size / 0.55, 7], i * 4); tan.set([1, 0, 0, 1], i * 4); }
+    for (let i = 0; i < n; i++) {
+      // eyelids: the margin and the inner surface are wet mucosa (a glistening rim on the eye)
+      const part = g.extra ? g.extra[i * 4 + 1] : 0, k = g.extra ? g.extra[i * 4] : 0;
+      const wet = part >= 1 ? 0.9 : Math.max(0, (k - 0.93) / 0.07) * 0.6;
+      mk.set([1, 0, 0, 0], i * 4); m2.set([0.85 - 0.25 * wet, wet, size / 0.55, 7], i * 4); tan.set([1, 0, 0, 1], i * 4);
+    }
   }
   const geo = partGeometry(THREE, g, { aScale: sc, aMask: mk, aMask2: m2 });
   geo.setAttribute('tangent', new THREE.BufferAttribute(tan, 4));

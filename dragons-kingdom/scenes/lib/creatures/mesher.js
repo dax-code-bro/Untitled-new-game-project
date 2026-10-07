@@ -60,7 +60,7 @@ function locate(xs, x) {
  */
 export function polygonize(model, opts) {
   const t0 = Date.now();
-  if (!model.P) model.compile();
+  if (!model.P || model.n !== model.prims.length) model.compile();
   const h = opts.h;
   const pad = opts.pad ?? h * 6;
   const bb = model.bounds();

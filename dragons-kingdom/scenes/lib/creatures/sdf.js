@@ -26,6 +26,7 @@ export class SDFModel {
   constructor() {
     this.prims = [];
     this.noise = null;      // { amp, freq, seed }: sculpted surface irregularity added to the final distance
+    this.quiet = [];        // [x, y, z, r]: spheres where the irregularity fades out (eyes: the socket must stay clean)
   }
 
   /** Round cone (elliptical cross-section optional). a, b: [x,y,z]. */
@@ -161,10 +162,18 @@ export class SDFModel {
     const N = this.noise;
     if (N && acc < N.amp * 8 && acc > -N.amp * 8) {
       // two octaves of value noise plus a ridged octave: lumpy, skin-like irregularity
+      let qa = 1;
+      const Q = this.quiet;
+      for (let i = 0; i < Q.length; i += 4) {
+        const dx = x - Q[i], dy = y - Q[i + 1], dz = z - Q[i + 2], r = Q[i + 3];
+        const d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 < 4 * r * r) { const t = Math.max(0, Math.sqrt(d2) / r - 1); qa = Math.min(qa, t * t * (3 - 2 * t)); }
+      }
+      if (qa <= 0) return acc;
       const f = N.freq;
       const n1 = vnoise3(x * f, y * f, z * f), n2 = vnoise3(x * f * 2.7 + 11.1, y * f * 2.7, z * f * 2.7);
       const r = 1 - Math.abs(vnoise3(x * f * 1.3 + 3.3, y * f * 1.3, z * f * 1.3) * 2 - 1);
-      acc += N.amp * ((n1 - 0.5) * 1.3 + (n2 - 0.5) * 0.6 - r * r * 0.5 + 0.18);
+      acc += qa * N.amp * ((n1 - 0.5) * 1.3 + (n2 - 0.5) * 0.6 - r * r * 0.5 + 0.18);
     }
     return acc;
   }

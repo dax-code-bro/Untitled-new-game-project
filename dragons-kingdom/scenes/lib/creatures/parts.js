@@ -40,12 +40,12 @@ class Builder {
  */
 export function keratin(items, boneIndex, opts = {}) {
   const B = new Builder();
-  const KIND = { horn: 0, claw: 1, tooth: 2, spike: 3 };
+  const KIND = { horn: 0, claw: 1, tooth: 2, spike: 3, gum: 4 };
   items.forEach((it, n) => {
     const [p0, p1, p2] = it.points;
     // dense enough for 4K close-ups (horn growth ridges are geometry, ~6 segments per ridge)
-    const segs = it.kind === 'tooth' ? 10 : it.kind === 'spike' ? 12 : it.kind === 'claw' ? 24 : 72;
-    const around = it.kind === 'tooth' ? 12 : it.kind === 'spike' ? 10 : it.kind === 'claw' ? 16 : 36;
+    const segs = it.kind === 'tooth' ? 12 : it.kind === 'gum' ? 10 : it.kind === 'spike' ? 12 : it.kind === 'claw' ? 24 : 72;
+    const around = it.kind === 'tooth' ? 14 : it.kind === 'gum' ? 12 : it.kind === 'spike' ? 10 : it.kind === 'claw' ? 16 : 36;
     const b = boneIndex[it.bone];
     if (b === undefined) throw new Error(`keratin: unknown bone ${it.bone}`);
     const base = B.n;
@@ -162,9 +162,10 @@ export function eyeball(opts = {}) {
     }
   }
   const row = nLon + 1;
+  // outward winding: (dP/dlat) x (dP/dlon) points out of the sphere
   for (let i = 0; i < nLat; i++) for (let j = 0; j < nLon; j++) {
     const a = i * row + j, c = a + row;
-    B.idx.push(a, a + 1, c, a + 1, c + 1, c);
+    B.idx.push(a, c, a + 1, a + 1, c, c + 1);
   }
   const o = B.out();
   computeNormals(o);
@@ -195,7 +196,10 @@ export function eyelid(upper, opts = {}) {
   const rows = [];
   // outer surface from back to margin, rounded margin, inner surface back
   const prof = [];
-  for (let i = 0; i <= nR; i++) prof.push([i / nR, rOut]);
+  // the outer surface dives into the socket toward the back (k -> 0), so only the rolled
+  // margin stands above the skin - a lid, not a cap
+  const rOutK = (k) => rIn + 0.012 + (rOut - rIn - 0.012) * Math.pow(Math.min(1, Math.max(0, (k - 0.35) / 0.55)), 1.5);
+  for (let i = 0; i <= nR; i++) prof.push([i / nR, rOutK(i / nR)]);
   const nM = 6;
   for (let i = 1; i < nM; i++) { const f = i / nM; prof.push([1 + 0.025 * Math.sin(f * Math.PI), mix(rOut, rIn, (1 - Math.cos(f * Math.PI)) / 2)]); }
   for (let i = nR; i >= 0; i--) prof.push([i / nR, rIn]);

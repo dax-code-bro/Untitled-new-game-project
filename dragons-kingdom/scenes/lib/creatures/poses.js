@@ -75,14 +75,24 @@ function look(pb, yaw = 0, pitch = 0, roll = 0) {
 }
 
 /** Neck carriage: raise the base, bring the head back to level (S-curve). */
-function carriage(pb, raise = 0.3, headDown = 0.25) {
+/**
+ * Neck carriage as an S-curve: the neck's direction changes smoothly from its base
+ * (rest pitch + raise) to its top (rest pitch + raise - 1.3 * headDown), the bend
+ * mostly in the upper half, like a real long-necked animal; headTilt pitches the
+ * head on the neck (positive = nose down).
+ */
+function carriage(pb, raise = 0.3, headDown = 0.25, headTilt = headDown * 0.45) {
   const ns = neckNames(pb.c);
   const n = ns.length;
+  const A = raise, B = raise - 1.3 * headDown;
+  const dir = (f) => A + (B - A) * Math.pow(f, 1.4);
+  let prev = 0;
   ns.forEach((name, i) => {
-    const f = i / (n - 1);
-    pb.add(name, -raise * (1 - f) * 2 / n + headDown * f * f * 2.2 / n, 0, 0);
+    const d = dir(n > 1 ? i / (n - 1) : 0);
+    pb.add(name, -(d - prev), 0, 0);
+    prev = d;
   });
-  pb.add('head', headDown * 0.45, 0, 0);
+  pb.add('head', headTilt, 0, 0);
 }
 
 function jaw(pb, open = 0) {
@@ -144,19 +154,30 @@ function frameQ(dir, up) {
 }
 function aimQ(d0, u0, d1, u1) { return frameQ(d1, u1).multiply(frameQ(d0, u0).invert()); }
 const foldCache = new WeakMap();
-// alternative fold targets (body frame) for poses that pitch the body: in the dog-sit
-// the forearm stands up along the neck base (wrist above the shoulder, like a
-// gargoyle's) and the fingers hang down behind it
+// Fold targets (directions in the body frame, left wing; mirrored for the right).
+// The default is the anatomical Z-fold of a bat/bird wing on a quadruped: the
+// humerus runs back and down from the wing root along the top of the flank, the
+// forearm comes forward so the wrist sits beside the shoulder blade (never
+// standing up in front of the chest like a raised arm), and the hand and fingers
+// run back along the flank toward the haunch. The membrane between them hangs in
+// slack folds (drape.js). In the dog-sit the same fold rides on the pitched body.
+const FOLD_DEFAULT = { humerus: [0.14, -0.3, -0.94], forearm: [0.02, -0.06, 0.998], hand: [0.1, -0.05, -0.99] };
+// The dog-sit pitches the body ~55 deg nose-up, so the same fold expressed in the body frame
+// would swing the elbow down to the hip and stand the forearm up like a raised arm. The sit
+// fold is therefore given in the WORLD (humerus back and down along the top of the flank,
+// forearm forward and a little up so the wrist lies against the shoulder, hand and fingers
+// back and down along the flank toward the haunch) and converted to the body frame here.
+function worldToBody(v, a) { const c = Math.cos(a), s = Math.sin(a); return [v[0], v[1] * c - v[2] * s, v[1] * s + v[2] * c]; }
+const SIT_PITCH = 0.95;
+const FOLD_SIT = {
+  humerus: worldToBody([0.1, -0.55, -0.83], SIT_PITCH),
+  forearm: worldToBody([-0.04, 0.32, 0.95], SIT_PITCH),
+  hand: worldToBody([0.07, -0.62, -0.78], SIT_PITCH),
+};
 const FOLD_VARIANTS = {
-  sit: { humerus: [0.28, -0.24, -0.93], forearm: [0.3, 0.5, 0.81], hand: [0.05, -0.55, -0.83] },
-  // the previous default (wrist raised above the back)
+  // the old gargoyle fold (wrist raised above the back) - kept for shots that ask for it
   high: { humerus: [0.28, -0.24, -0.93], forearm: [0.17, 0.3, 0.94], hand: [0.07, -0.3, -0.95] },
-  // dog-sit, wing folded flat along the flank: wrist below and behind the shoulder (never
-  // standing up like a raised arm), hand and fingers back along the body toward the haunch
-  // (directions in the body frame, which the sit pitches ~45 deg nose-up: these are, in the
-  // world, humerus back-down along the flank, forearm forward and down beside the chest, hand
-  // and fingers back and slightly down along the side toward the haunch)
-  sitFlank: { humerus: [0.3, 0.21, -0.92], forearm: [0.2, -0.87, 0.45], hand: [0.08, 0.5, -0.86] },
+  sit: FOLD_SIT, sitFlank: FOLD_SIT,
 };
 function foldedWing(c, sd, variant = '') {
   let cache = foldCache.get(c);
@@ -167,30 +188,23 @@ function foldedWing(c, sd, variant = '') {
   const rp = c.restPos;
   const P = (n) => _V(rp[`w_${sd}_${n}`]);
   const R = P(0), E = P(1), W = P(2);
-  const tip = (d) => {
-    const names = [0, 1, 2].map((j) => `w_${sd}_f${d}_${j}`);
-    // last phalanx end = extrapolate from the anatomy's finger record
-    const w = c.anatomy.wings.find((x) => x.side === sd);
-    return _V(w.fingers[d].points[3]);
-  };
+  const w = c.anatomy.wings.find((x) => x.side === sd);
+  const tip = (d) => _V(w.fingers[d].points[3]);
   const up0 = new THREE.Vector3(0, 1, 0);
-  const tgt = { ...(c.config.fold || {}), ...(FOLD_VARIANTS[variant] || {}) };
-  // default (standing/lying): humerus back and down along the flank, forearm forward
-  // nearly level (wrist beside the shoulder, not above the back), hand and fingers
-  // back along the flank, so the folded membrane lies against the body
-  const hum = _V(tgt.humerus || [0.24, -0.4, -0.88]).multiply(new THREE.Vector3(s, 1, 1));
-  const fore = _V(tgt.forearm || [0.1, 0.12, 0.99]).multiply(new THREE.Vector3(s, 1, 1));
-  const hand = _V(tgt.hand || [0.03, -0.22, -0.97]).multiply(new THREE.Vector3(s, 1, 1));
+  const tgt = { ...FOLD_DEFAULT, ...(c.config.fold || {}), ...(FOLD_VARIANTS[variant] || {}) };
+  const hum = _V(tgt.humerus).multiply(new THREE.Vector3(s, 1, 1));
+  const fore = _V(tgt.forearm).multiply(new THREE.Vector3(s, 1, 1));
+  const hand = _V(tgt.hand).multiply(new THREE.Vector3(s, 1, 1));
   const out = _V([s * 0.94, 0.3, 0.05]);
   const Qh = aimQ(E.clone().sub(R), up0, hum, out);
   const Qf = aimQ(W.clone().sub(E), up0, fore, _V([s * 0.97, -0.05, -0.12]));
   const Qw = aimQ(tip(1).sub(W), up0, hand, out);
   const res = { [`w_${sd}_0`]: Qh.clone(), [`w_${sd}_1`]: Qh.clone().invert().multiply(Qf), [`w_${sd}_2`]: Qf.clone().invert().multiply(Qw) };
-  // fingers bunched along the hand, fanned slightly downward in the folded plane
+  // fingers stacked along the hand like a closed fan, the lower ones fanned a little downward
   const handT = hand.clone().normalize();
   const down = new THREE.Vector3().crossVectors(out, handT).normalize();
   if (down.y > 0) down.negate();
-  const fan = [0.0, 0.035, 0.07, 0.11];
+  const fan = [0.0, 0.025, 0.05, 0.075];
   for (let d = 0; d < 4; d++) {
     const n0 = `w_${sd}_f${d}_0`;
     const dir0 = tip(d).sub(W);
@@ -201,9 +215,14 @@ function foldedWing(c, sd, variant = '') {
   cache[key] = res;
   return res;
 }
-/** Folded wing (fold 0 = spread rest, 1 = fully folded against the body). Overrides other rotations of the wing bones. */
-function wingFold(pb, fold, side = 'both', pitchComp = 0, adduct = 0, variant = '') {
+/**
+ * Folded wing (fold 0 = spread rest, 1 = fully folded against the body). Overrides other
+ * rotations of the wing bones. `drape` names the pre-relaxed membrane drape (creature.js:
+ * 'stand' | 'sit' | 'lie') that fades in as the wing closes.
+ */
+function wingFold(pb, fold, side = 'both', pitchComp = 0, adduct = 0, variant = '', drape = 'stand') {
   const f = clamp(fold, 0, 1);
+  pb.u.drape = pb.u.drape || {};
   for (const sd of side === 'both' ? ['L', 'R'] : [side]) {
     const F = foldedWing(pb.c, sd, variant);
     // pitchComp: tilt the folded wing up when the body is pitched nose-up;
@@ -214,6 +233,7 @@ function wingFold(pb, fold, side = 'both', pitchComp = 0, adduct = 0, variant = 
       if ((pitchComp || adduct) && n === `w_${sd}_0`) qq.premultiply(qc);
       pb.quat(n, qq.toArray());
     }
+    pb.u.drape[sd] = [drape, smooth(0.7, 1.0, f) * (variant === 'high' ? 0 : 1)];
   }
 }
 
@@ -250,11 +270,22 @@ function wingFlap(pb, cyc, o = {}) {
   return { phi, up, downSpread };
 }
 
-/** Legs tucked for flight: forelegs folded back under the chest, hind legs trailing. */
+/**
+ * Legs tucked for flight, as flying animals carry them: forelegs folded tight under the
+ * chest (upper arm back, forearm forward against it, wrist flexed so the paw points back),
+ * hind legs trailing straight back along the tail base with the soles turned up.
+ */
 function tuckLegs(pb, k = 1) {
-  pb.sym('fl_#_0', 0.7 * k, 0, 0.05 * k); pb.sym('fl_#_1', -2.3 * k, 0, 0); pb.sym('fl_#_2', 1.75 * k, 0, 0);
-  pb.sym('hl_#_0', 1.05 * k, 0, 0); pb.sym('hl_#_1', -0.15 * k, 0, 0); pb.sym('hl_#_2', 0.95 * k, 0, 0);
-  for (let i = 0; i < 4; i++) { pb.sym(`fl_#_t${i}`, 0.5 * k, 0, 0); pb.sym(`hl_#_t${i}`, 0.6 * k, 0, 0); }
+  pb.sym('fl_#_0', 0.62 * k, 0, 0.06 * k); pb.sym('fl_#_1', -1.6 * k, 0, 0); pb.sym('fl_#_2', 2.0 * k, 0, 0);
+  pb.sym('hl_#_0', 1.35 * k, 0, 0.05 * k); pb.sym('hl_#_1', -0.5 * k, 0, 0); pb.sym('hl_#_2', 1.75 * k, 0, 0);
+  for (let i = 0; i < 4; i++) { pb.sym(`fl_#_t${i}`, 0.55 * k, 0, 0); pb.sym(`hl_#_t${i}`, 0.5 * k, 0, 0); }
+}
+
+/** Lift the tail out of its resting droop so it streams straight behind (flight). */
+function tailStraight(pb, k = 1) {
+  const ts = tailNames(pb.c);
+  const droop = pb.c.spec.tailDroop ?? 0.2;
+  for (let i = 0; i < Math.min(6, ts.length); i++) pb.add(ts[i], -droop * 1.15 * k / 6, 0, 0);
 }
 
 // --------------------------------------------------------------- poses
@@ -268,13 +299,13 @@ export function stand(c, o = {}) {
   const t = o.t ?? 0;
   const pb = new PB(c);
   const b = breathe(pb, t, o.breathe ?? (c.L > 20 ? 0.09 : 0.18));
-  carriage(pb, o.raise ?? 0.35, o.headDown ?? 0.4);
+  carriage(pb, o.raise ?? 0.26, o.headDown ?? 0.4, o.headTilt ?? 0.0);
   const lk = o.look || [0, 0];
   look(pb, lk[0] + 0.03 * wob(t * 0.3, 1), lk[1] + 0.02 * b + 0.02 * wob(t * 0.25, 2));
   jaw(pb, (o.jaw ?? 0) + 0.015 * b);
   eyes(pb, ...(o.eyes || [0, 0]));
   lids(pb, t, o);
-  wingFold(pb, o.wingFold ?? 1, 'both', 0, 0, o.foldVariant ?? '');
+  wingFold(pb, o.wingFold ?? 1, 'both', 0, o.wingAdduct ?? 0, o.foldVariant ?? '', 'stand');
   tailCurve(pb, t, { sway: 0.06, droop: 0.9, curl: o.tailCurl ?? 0.25 });
   return pb.out({ groundTail: true });
 }
@@ -283,7 +314,7 @@ export function stand(c, o = {}) {
 export function sit(c, o = {}) {
   const t = o.t ?? 0;
   const pb = new PB(c);
-  const a = o.pitch ?? 0.78;             // body pitch (nose up)
+  const a = o.pitch ?? SIT_PITCH;        // body pitch (nose up): the chest high, haunches on the ground
   pb.rig.rotation = [-a, 0, 0];
   const b = breathe(pb, t, o.breathe ?? 0.2);
   // forelegs: counter the body pitch so they stand vertical and straight
@@ -293,18 +324,19 @@ export function sit(c, o = {}) {
   pb.sym('hl_#_0', -0.95 + a, 0.12, 0.1); pb.sym('hl_#_1', 2.0, 0, 0); pb.sym('hl_#_2', -2.0 + 0.35, 0, 0);
   for (let i = 0; i < 4; i++) pb.sym(`hl_#_t${i}`, 0.25, 0, 0);
   // neck forward-up in an S, head level (the body pitch already raises the neck)
-  carriage(pb, -0.55, 0.35 + a * 0.55);
+  carriage(pb, o.raise ?? -0.26, o.headDown ?? 0.47, o.headTilt ?? 0.0);
   const lk = o.look || [0, 0];
   look(pb, lk[0] + 0.04 * wob(t * 0.35, 3), lk[1] + 0.02 * b);
   jaw(pb, (o.jaw ?? 0) + 0.01 * b);
   eyes(pb, ...(o.eyes || [0, 0]));
   lids(pb, t, o);
-  wingFold(pb, 1, 'both', o.wingComp ?? a * 0.4, o.wingAdduct ?? 0.22, o.foldVariant ?? 'sit');
+  wingFold(pb, 1, 'both', o.wingComp ?? 0, o.wingAdduct ?? 0.06, o.foldVariant ?? 'sit', 'sit');
   // tail: down to the ground and curled around the side
   const ts = tailNames(c);
+  const droop = c.spec.tailDroop ?? 0.2;
   ts.forEach((n, i) => {
     const f = i / (ts.length - 1);
-    pb.add(n, i < 3 ? -0.08 : 0.0, (0.07 + 0.02 * Math.sin(t * 0.6 - i * 0.3)) * f * 1.6, 0);
+    pb.add(n, (i < 3 ? -0.08 : 0.0) - droop * 1.3 / ts.length, (0.07 + 0.02 * Math.sin(t * 0.6 - i * 0.3)) * f * 1.6, 0);
   });
   return pb.out({ groundTail: true });
 }
@@ -322,7 +354,7 @@ export function lie(c, o = {}) {
   jaw(pb, o.jaw ?? 0);
   eyes(pb, ...(o.eyes || [0, 0]));
   lids(pb, t, { ...o, lidRelax: o.lidRelax ?? 0.6 });
-  wingFold(pb, 1);
+  wingFold(pb, 1, 'both', 0, o.wingAdduct ?? 0, o.foldVariant ?? '', 'lie');
   tailCurve(pb, t, { sway: 0.03, droop: 0.45, curl: 0.5, swayHz: 0.04 });
   return pb.out({ groundTail: true, groundBody: true });
 }
@@ -338,6 +370,7 @@ export function flight(c, o = {}) {
   const ampJ = 1 + corr * 0.15 * wob(t * hz * 0.9, 6);
   const w = wingFlap(pb, cyc, { amp: (o.amp ?? c.config.flapAmp ?? 0.8) * ampJ, center: o.center ?? 0.12, asym });
   tuckLegs(pb, 1);
+  tailStraight(pb, 1);
   // body: lifted during the downstroke, slight pitch oscillation; the neck
   // counters it so the head stays steady (as flying animals do)
   const bob = Math.sin(w.phi - 0.7);
@@ -374,6 +407,7 @@ export function glide(c, o = {}) {
   }
   pb.u.billowL = 0.35; pb.u.billowR = 0.35;
   tuckLegs(pb, 1);
+  tailStraight(pb, 1);
   pb.rig.rotation = [o.bodyPitch ?? 0, 0, bank];
   carriage(pb, -0.2, 0.05);
   const lk = o.look || [0, 0];
@@ -395,8 +429,8 @@ export function dive(c, o = {}) {
   for (const [k, v] of Object.entries(p.bones)) if (Array.isArray(v) && v[3]) pb.o[k] = v[3];
   for (const [k, v] of Object.entries(p.bones)) if (!Array.isArray(v)) pb.q[k] = v.q;
   Object.assign(pb.s, p.scale);
+  pb.u = { billowL: 0.15, billowR: 0.15 };
   wingFold(pb, (o.fold ?? 0.55) * 0.6);
   pb.rig = p.rig;
-  pb.u = { billowL: 0.15, billowR: 0.15 };
   return pb.out({ ground: false });
 }

@@ -93,6 +93,7 @@ export function groundTail(c) {
   const inv = new THREE.Matrix4().copy(c.root.matrixWorld).invert();
   const rootQ = new THREE.Quaternion(); c.root.getWorldQuaternion(rootQ);
   const tp = c.spec.tailProfile;
+  let touched = false;
   for (let i = 0; i < tails.length; i++) {
     const b = tails[i];
     const next = tails[i + 1];
@@ -104,7 +105,10 @@ export function groundTail(c) {
     const seg = _p1.clone().sub(_p0);
     const L = seg.length();
     if (L < 1e-6) continue;
-    if (_p1.y >= r) continue;
+    // before the tail touches the ground only dipping segments are lifted; once it lies on
+    // the ground the rest follows the ground (a lifted base must not throw the tip up)
+    if (_p1.y >= r && !(touched && _p1.y > r * 1.05)) continue;
+    touched = true;
     const want = Math.min(1, Math.max(-1, (r - _p0.y) / L));
     const have = Math.min(1, Math.max(-1, seg.y / L));
     const delta = Math.asin(want) - Math.asin(have);
