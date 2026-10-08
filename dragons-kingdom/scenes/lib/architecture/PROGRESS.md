@@ -1,6 +1,6 @@
 # Architecture kit - progress log (for a successor)
 
-## Fix round 2 (in progress, 2026-10-08) - critic round 2
+## Fix round 2 (2026-10-08) - critic round 2
 Done at the first checkpoint (code, previewed at 1920 in scenes/lookdev/architecture-dev.js and the contact scene):
 - Masonry: stones SET IN the mortar (face flat 0-12 mm proud, rounded arrises dive under the bed:
   irregular outlines, no rim highlight / drop shadow); per-stone arris radius; block() clamps every
@@ -50,7 +50,46 @@ Done since (second checkpoint):
   visible through the window (heightfield headland + lower town on a slope).
 - Ground: puddles with wet mud rims and floating straws, wall-foot grime bands, door aprons, worn
   paths; Cling map overlay labels (architecture-cling.js 'plan' shot logs the projected positions).
-Next: 4K finals *_r2 in the scratchpad (arch/final_r2), crops, README, npm test.
+Late round-2 fixes (found in the previews, each checked in a re-render):
+- Tide zones never showed: `Kit.merge` recomputed every vertex's height above the footing from the
+  destination kit's base, so the quay (footing 2.4 m under the water) came out 'wet' to the coping.
+  `kit.merge(local, F, { keepFooting: true })` keeps each building's own footing (harbour, palace);
+  roofs and stacks still take it from their new positions. The quay joints use `mortarQuay` (wet and
+  slimed below the high-water line).
+- Orange arch soffits / jetty undersides: the sky map's lower half (brown grass) lit every down-facing
+  surface orange. kitMaterial keeps the level of the indirect light on down-facing surfaces and drops
+  80% of its tint (the bounce in a town comes off grey stone).
+- Faces wound downward (culled from above): the nest's straw bed (the sunlit floor showed between the
+  stalks: 'wire mesh straw') and the harbour's waterline foam strips. Both now face up.
+- Palace shot: the town moved to the flanks of the rise at the palace's distance (it was a row of big
+  houses between the lens and the palace), trees (scenes/lib/sets/scatter.js clumps) in the gardens and
+  a wood behind the walls, meadow in drifting patches, camera at 9 m; far-LOD joints darker than the
+  stone (pale mortar came out as white dashes); the road on the hill dropped (the terrain splat at ~10 m
+  smeared it into a smudge).
+- Fountain: grime under the coping's drip, algae streaks, splash dirt on the plinth; a stronger chop.
+- Worn-through cobble patches carry loose, tilted stones. Plan view north-up (steps at the bottom).
+- Found in the 4K contact tile: the conical roofs showed streaky 'wood grain' instead of slates - the
+  boarded cone under the slates was a single quad from eaves to apex, so once the bell-cast flared its
+  eaves ring it stood proud of the slates over the middle of the cone. It is built in 24 rings now.
+- Found in the 4K chamber door still: the reveal strips of an opening's head (lintel soffit, arch
+  soffit) and sill were wound the other way from its jambs - they faced into the wall and were culled,
+  so the sky showed through an arched doorway's soffit and a niche's head. masonryFace now runs every
+  strip the same way round the opening.
+
+Round-2 4K finals (session scratchpad arch/final_r2/, *_r2.png + *_1920.jpg + *_crop_*.jpg; the r1
+set stays in arch/final_r1/ for before/after). Render times at native 3840x2160 (final preset, one still
+at a time on 4 vCPU): interiors 150-415 s, Verdor 135-290 s, Cling 310-425 s (23.1 M triangles, 64
+houses), contact tiles ~120-200 s. Plan view labelled with offline/planlabels.mjs.
+
+Open after round 2 (seen in the finals):
+- Oak at 1:1 in sun still reads smooth (little grain/check relief on jetty bressumers and studs).
+- Palace far masonry is clean (no rain streaks or foot grime at 400 m); conical slate roofs streaky;
+  the palace shot's foreground meadow is plain.
+- Fountain stone weathering is faint; basin water reflects only the sky map (no planar reflection).
+- Birthing chamber linen clips to white where the sun shaft falls on it (exposure for the room).
+- Treatment-room sea is a flat band at 1:1 (no waves at 600 m), far shore a thin green strip.
+- Shop-window rooms are flat dim brown; the settle's boards vary too much in tone.
+- Cling kennel reads as a thin brown line from across the square.
 
 ## State (2026-10-08, fix round 1 done; 4K finals rendered to the session scratchpad)
 

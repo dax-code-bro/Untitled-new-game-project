@@ -48,7 +48,7 @@ export const meta = {
   }),
 };
 
-let S;
+let S, S_trees = null;
 export async function setup(ctx) {
   const { scene, camera } = ctx;
   const sky = await loadHDRI('hdri/kloofendal_48d_partly_cloudy', ctx, { extractSun: true, rotationY: 1.093 });
@@ -171,6 +171,9 @@ export async function setup(ctx) {
       return { p: [x, hgt(x, z) - 0.4, z], s: [wd, h, wd * (0.8 + rng() * 0.4)], r: rng() * 6.28, c: [c * (0.9 + 0.2 * rng()), c, c * (0.85 + 0.2 * rng())] };
     }, 31 + gi * 7)));
     scene.add(trees);
+    // (the clumps read as trees at the palace's distance on the long lens; from the riding grounds
+    // they line the ridge as a row of green domes - the sky map's own tree line stands there)
+    S_trees = trees;
   }
   const hb = new Kit(0);
   harbor(hb, yawFrame([HARBOR[0], 0, HARBOR[1]], HY), { seed: 8 });
@@ -219,6 +222,7 @@ export function update(t, ctx) {
   ctx.lens.shutterAngle = 180;
   ctx.lens.iso = 400;
   for (const k of ['sea', 'foam', 'pool']) { const u = S.M?.[k]?.userData?.dkUniforms?.akTime; if (u) u.value = t; }
+  if (S_trees) S_trees.visible = sh.name === 'palace';
   const { sun } = S;
   sun.target.position.set(sh.t[0], 0, sh.t[2]);
   sun.position.copy(sun.target.position).addScaledVector(SUN, 400);

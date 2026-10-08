@@ -417,15 +417,18 @@ export function masonryFace(kit, F, L, H, o = {}) {
         } else { hb.moveTo(xa, ya); hb.lineTo(xb, ya); hb.lineTo(xb, yb); hb.lineTo(xa, yb); hb.lineTo(xa, ya); }
         shapeFace(macc, sub(F, [0, 0, -DT]), hb, { seed: rnd() });
       }
+      // (round 2: every strip runs the same way round the opening - the jambs did, the head, the arch
+      // soffit and the sill ran the other way and faced into the wall: culled, the sky showed through
+      // an arched doorway's soffit and a niche's head)
       if ((op.head || 'lintel').startsWith('arch')) {
         const r = op.w / 2, sp = yb - r;
         strip([xa, sp], [xa, ya]); strip([xb, ya], [xb, sp]);
         for (let k = 0; k < 16; k++) {
           const a0 = Math.PI - (k / 16) * Math.PI, a1 = Math.PI - ((k + 1) / 16) * Math.PI;
-          strip([xa + r + Math.cos(a0) * r, sp + Math.sin(a0) * r], [xa + r + Math.cos(a1) * r, sp + Math.sin(a1) * r]);
+          strip([xa + r + Math.cos(a1) * r, sp + Math.sin(a1) * r], [xa + r + Math.cos(a0) * r, sp + Math.sin(a0) * r]);
         }
-      } else { strip([xa, yb], [xa, ya]); strip([xb, ya], [xb, yb]); strip([xa, yb], [xb, yb]); }
-      if (ya > 0.01) strip([xb, ya], [xa, ya]);
+      } else { strip([xa, yb], [xa, ya]); strip([xb, ya], [xb, yb]); strip([xb, yb], [xa, yb]); }
+      if (ya > 0.01) strip([xa, ya], [xb, ya]);
       // o.portals: a dim room behind every open window (far sets: a hole would show the sky)
       if (o.portals && !op.blocked && !op.niche && (op.head || 'lintel') !== 'archOpen' && op.y > 0.3) {
         const pa = kit.get('portal'), b0 = pa.vcount, zp = -Math.min(T, 1.2) + 0.03;
@@ -747,15 +750,21 @@ export function conicalRoof(kit0, F, o = {}) {
   const mat = o.mat || 'slate';
   // the boarded cone underneath (a dark shell) - visible at the eaves
   {
+    // (round 2: in rings, so the bell-cast below bends it with the slates - one quad from the flared
+    // eaves to the apex stood proud of the slates over the whole middle of the cone)
     const acc = kit.get('oakDark');
-    const n = 48;
-    const ids0 = [], ids1 = [];
-    for (let i = 0; i <= n; i++) {
-      const a = (i / n) * Math.PI * 2;
-      const p0 = xf(F, Math.cos(a) * Re, -over * Math.tan(ang), Math.sin(a) * Re), p1 = xf(F, 0, Hc, 0);
-      ids0.push(acc.v(p0[0], p0[1], p0[2], a * Re, 0, 0.4, 0.6, 0, 0, 1, 0)); ids1.push(acc.v(p1[0], p1[1] - 0.02, p1[2], a * Re, slant, 0.4, 0.6, 0, 0, 1, 0));
+    const n = 48, NR = 24;
+    const rings = [];
+    for (let j = 0; j <= NR; j++) {
+      const t = j / NR, ids = [];
+      for (let i = 0; i <= n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        const p = xf(F, Math.cos(a) * Re * (1 - t), -over * Math.tan(ang) + (Hc + over * Math.tan(ang)) * t - 0.02, Math.sin(a) * Re * (1 - t));
+        ids.push(acc.v(p[0], p[1], p[2], a * Re, slant * t, 0.4, 0.6, 0, 0, 1, 0));
+      }
+      rings.push(ids);
     }
-    for (let i = 0; i < n; i++) acc.q(ids0[i], ids1[i], ids1[i + 1], ids0[i + 1]);
+    for (let j = 0; j < NR; j++) for (let i = 0; i < n; i++) acc.q(rings[j][i], rings[j + 1][i], rings[j + 1][i + 1], rings[j][i + 1]);
   }
   // slates: courses from the eaves up (s = distance down the slant from the apex)
   let s = slant + 0.05;

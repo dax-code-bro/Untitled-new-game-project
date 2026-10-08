@@ -113,14 +113,14 @@ export function gateway(kit, F, o = {}) {
   member(kit, sub(F, [0, beamY, 0], [1, 0, 0], [0, 1, 0]), [-BW / 2 + 0.1, 0.55], [BW / 2 - 0.1, 0.55], 0.22, 0.32, rnd, { mat: 'oak', bow: 0.0, proud: 0.16 });
   gableRoof(kit, frame(xf(F, 0, beamY + 0.66, 0), [F[3], F[4], F[5]], [0, 1, 0]), { L: BW - 0.2, S: 1.3, pitch: 0.95, eaves: 0.35, verge: 0.22, cover: 'clay', lod: lod === 'hero' ? 'mid' : lod, seed: rnd() * 999, sag: { ridge: 0.025, slope: 0.012, eaves: 0.01, eavesLine: 0.02 } });
   // the threshold: big flags across the gateway, worn into two wheel ruts, a stop stone between
-  // the leaves
+  // the leaves (their tops 2.5 cm proud: the road's earth is built up to them)
   {
     const tz0 = -0.75, tz1 = 0.75;
     let x = -w / 2 - 0.05;
     while (x < w / 2 + 0.05 - 0.05) {
       const fw = Math.min(w / 2 + 0.05 - x, rnd.range(0.55, 0.95));
       const xc = x + fw / 2;
-      block(kit.get('stoneSett'), sub(F, [xc, -0.07 + rnd.sym(0.006), (tz0 + tz1) / 2 + rnd.sym(0.02)], [1, rnd.sym(0.008), 0], [0, 1, rnd.sym(0.008)]), fw - 0.014, 0.14, tz1 - tz0 - 0.02, {
+      block(kit.get('stoneSett'), sub(F, [xc, -0.045 + rnd.sym(0.006), (tz0 + tz1) / 2 + rnd.sym(0.02)], [1, rnd.sym(0.008), 0], [0, 1, rnd.sym(0.008)]), fw - 0.014, 0.14, tz1 - tz0 - 0.02, {
         r: rnd.range(0.015, 0.03), rs: L.rs, seg: [0.08, 0.07, 0.12], seed: rnd(), noise: 0.004, nf: 5, chip: 0.03, skip: 8,
         // two ruts 1.4 m apart (the axle of a cart), polished hollows
         warp: (lx, ly, lz) => { const gx = xc + lx; const rut = Math.exp(-((gx - 0.7) ** 2) / 0.012) + Math.exp(-((gx + 0.7) ** 2) / 0.012); return [lx, ly - (ly > 0 ? 0.035 * rut : 0), lz]; },

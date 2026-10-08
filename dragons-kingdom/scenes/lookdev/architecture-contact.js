@@ -55,7 +55,7 @@ export async function setup(ctx) {
   const { scene } = ctx;
   const sky = await loadHDRI('hdri/kloofendal_48d_partly_cloudy', ctx, { extractSun: true, rotationY: 0.0 });
   const sun = sky.apply(scene);
-  sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0002; sun.shadow.normalBias = 0.01;
+  sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0002; sun.shadow.normalBias = 0.03;   // (round 2: 0.01 left shadow-acne moire bands across the overlapping slates of a conical roof)
   scene.add(sun, sun.target);
   const M = await archMaterials(ctx);
   const GW = SPACING * MODELS.length + 600;
