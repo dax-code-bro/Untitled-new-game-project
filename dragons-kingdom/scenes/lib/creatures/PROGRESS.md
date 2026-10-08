@@ -63,7 +63,11 @@ only the state of the work.
   leather rougher/darker (grazing sky sheen made it pale), hatchling lids thin and inside the
   socket (thick shells stood off the domed head like coins: `lid.span` option), hatchling
   chin set back under the snout (`headShape.jawEnd` 0.84; the jaw tip poked out as a flap).
-- Final 4K re-render of all hero shots + contact sheet: `output/cr/s4final`, `output/cr/s4contact`.
+- Final 4K re-render of all hero shots + contact sheet: `output/cr/s4final` (png/<shot>.png,
+  <shot>_1920.jpg, crop_*.png), `output/cr/s4contact` (png/fNN.png, contact_sheet.jpg,
+  lineup_1920.jpg). 9 hero frames took 42 min (load ~10 from other agents), 21 contact frames
+  13 min. npm test: 33/33 pass.
+- `creatures-tmpreview.js` removed from git (rv2.sh writes it again when needed).
 
 ## Dev loop
 `scratchpad/cr/rv2.sh <name> <shot ids|all> [preset] [cinematic]` renders chosen hero shots
@@ -77,7 +81,11 @@ through a temporary scene `scenes/lookdev/creatures-tmpreview.js` (delete it bef
 - `contact4k/contact_sheet.jpg` (3840 wide) + `png/fNN.png` (4K): the 21-frame contact sheet;
   the hatchling views f13-f16 were re-rendered after the wet-film fix (`contact4k_h/`).
 
-## Next
+## Next (open)
+- the hatchling's lids are still separate shells (a cap read at 4K); its closed mouth reads as
+  a long dark crease - a sculpted lip fold that buries the line would help
+- the groin fan of chain-row scales behind the thigh (small, in shadow in the hero shots)
+- Charcoal's spread wing is the least detailed large surface in the flight shot
 - Daxtyn's approved references (limb layout, horns, colours) -> adjust the provisional designs
 - hatchling: shorter snout with the nostrils/egg tooth moved along; sit-pose wing fold
 - humans domain: a narrower/prone straddle for the scout rider; the watchman's head

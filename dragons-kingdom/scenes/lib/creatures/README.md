@@ -170,8 +170,10 @@ clumps as hedgerows and woods 0.4-2.5 km out) only as scale references. Typical 
      amber newborn claws and egg tooth (not white). Newborn head: the snout is shortened
      (`headShape.snoutMul` 0.76 in front of `snoutZ0` 0.46 - every snout feature, nostrils,
      lips, egg tooth, moves with it; the lower jaw is built closed and rotated rigidly about
-     the hinge in world space, so the lips still meet), a full rounded chin tucked under the
-     snout, thin lips, thick soft lids (the lower lid lower on the eye).
+     the hinge in world space, so the lips still meet), a full rounded chin set back under the
+     overhanging snout (`headShape.jawEnd` 0.84: a newborn's overbite), thin lips, thin lids
+     that sit inside the socket (`lid` rIn/rOut 1.03/1.09, `span`, `reachL`: thick lid shells
+     stood off the domed head like coins).
      The wet film is occluded by the runtime's screen-space AO (the runtime darkens diffuse and
      specular IBL but not the clearcoat; without this the film mirrored blue sky inside the
      crevice of the folded hind leg).
@@ -199,7 +201,9 @@ clumps as hedgerows and woods 0.4-2.5 km out) only as scale references. Typical 
      glossier and drier patches, and the micro creases are kept subtle (stronger, the
      membrane read as felt). How much sky each membrane reflects is per creature (`memSpec`:
      Charcoal's melanistic membranes 0.24 at roughness 0.52, so they are as dark as his hide,
-     not a grey sheet; Leaf 0.42 at 0.46, satin green skin).
+     not a grey sheet; Leaf 0.42 at 0.56) and how much direct sun sheen (`memSpecD`: Charcoal
+     0.45 - in full sun a black membrane at roughness ~0.5 read as a pale grey tarp - Leaf
+     0.75); Charcoal's membrane albedo is 0.014 (pigmented through).
    * eyes: the iris is ray-traced through a refracting cornea (n = 1.376),
      vertical slit pupil, iris fibres, limbal ring, clearcoat wet reflection;
      eyelids are real geometry that blink and rest over the top of the eye.
@@ -306,7 +310,13 @@ no sub-frames) took 11 min 55 s. Review renders at `--fps 1` map the sub-frame o
   iris shows in close-ups with light on it, e.g. Leaf's eye macro).
 * The hatchling's gold is a partly metallic layer under a wet film: in the out-of-focus
   bokeh of the macro the wet highlights on the lumpy body still show as soft pale blotches;
-  its eyelids are separate shells (the upper lid reads a little like a cap at 4K).
+  its eyelids are separate shells (the upper lid still reads a little like a cap at 4K), and
+  the closed mouth shows as a dark crease along its whole length.
+* Where a chain's scale rows converge (the jaw tip, the groin behind the thigh) the chain
+  pattern fans out; the jaw tip is now granular, the small fan in the groin (in shadow in
+  the hero shots) is not fixed.
+* Charcoal's spread wing in full sun is a smooth dark membrane with bone folds: at 4K it is
+  plausible skin but still the least detailed large surface in the flight shot.
 * Charcoal's propatagium (the membrane in front of the arm) is a straight-edged panel
   from the shoulder to the wrist; in the downstroke it sits in the shadow of the shoulder
   and reads as a dark rectangle beside the arm.
