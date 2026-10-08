@@ -733,6 +733,41 @@ export function barkMaterial(ctx) {
   });
 }
 
+/** Undyed linen: an off-white with a faint weave, slubs, a little soil; seen from both sides. */
+export function linenMaterial(ctx) {
+  return kitMaterial('linen', {
+    params: { side: THREE.DoubleSide },
+    body: /* glsl */ `
+  vec3 P = vObjP;
+  vec2 q = vMUv * 900.0;
+  float aa = 1.0 - smoothstep(0.15, 0.35, 900.0 * akFoot);
+  float weave = (sin(q.x) * sin(q.y + 1.5707 * step(0.0, sin(q.x * 0.5)))) * aa;
+  float slub = smoothstep(0.62, 0.9, akN2(vec2(vMUv.x * 260.0, vMUv.y * 6.0))) + smoothstep(0.62, 0.9, akN2(vec2(vMUv.x * 6.0, vMUv.y * 260.0 + 3.0)));
+  vec3 c = vec3(0.46, 0.44, 0.395) * (0.94 + 0.08 * akF2(P.xz * 6.0)) * (1.0 + 0.04 * weave) * (1.0 - 0.05 * slub);
+  c = mix(c, c * vec3(0.9, 0.86, 0.78), smoothstep(0.55, 0.85, akF2(P.xz * 3.0 + 5.0)) * 0.5);
+  akAlb = c * mix(0.65, 1.0, akI.y);
+  akRgh = 0.9; akAO = mix(0.6, 1.0, akI.y);
+  akHt = weave * 0.00015 + slub * 0.0002;
+`,
+  });
+}
+
+/** Straw stalks (tubes: uv.x along the stalk, m): three colour families (the seed's third), nodes, a waxy sheen. */
+export function strawStalkMaterial(ctx) {
+  return kitMaterial('straw', {
+    body: /* glsl */ `
+  float fam = floor(akI.x * 3.0);
+  vec3 c = fam < 0.5 ? vec3(0.5, 0.385, 0.17) : fam < 1.5 ? vec3(0.6, 0.51, 0.31) : vec3(0.33, 0.26, 0.145);
+  c *= 0.82 + 0.36 * akH1(akI.x * 91.7);
+  // nodes every 8-20 cm: a darker, slightly swollen band; streaks along the stalk
+  float node = smoothstep(0.93, 0.985, fract(vMUv.x * (5.0 + 7.0 * akH1(akI.x * 13.0)) + akI.x * 13.0));
+  c *= (1.0 - 0.3 * node) * (0.9 + 0.2 * akN2(vec2(vMUv.x * 40.0, vMUv.y * 400.0)));
+  akAlb = c * mix(0.6, 1.0, akI.y);
+  akRgh = 0.5 + 0.2 * akH1(akI.x * 7.0); akAO = mix(0.5, 1.0, akI.y);
+`,
+  });
+}
+
 /** Straw bedding: layers of strands lying every which way (cells of parallel stems, overlapping). */
 export function strawMaterial(ctx, opts = {}) {
   return kitMaterial('strawbed', {
@@ -763,8 +798,8 @@ export function strawMaterial(ctx, opts = {}) {
     cov = max(cov, m);
     ht += stem * (0.0003 - 0.00006 * fk) * aa;
   }
-  col *= mix(0.55, 1.0, akI.y);
-  akAlb = col; akRgh = 0.75; akAO = mix(0.4, 1.0, akI.y);
+  col *= mix(0.45, 0.85, akI.y);
+  akAlb = col; akRgh = 1.0; akAO = mix(0.4, 1.0, akI.y);
   akHt = ht;
 `,
   });
@@ -1019,7 +1054,8 @@ export function foamMaterial(ctx) {
     body: /* glsl */ `
   float u = vMUv.x, v = max(vMUv.y, 0.0), t = akTime;
   float n = akF2(vec2(u * 3.5 + t * 0.05, v * 6.0 - t * 0.08)) * 0.6 + akF2(vec2(u * 11.0 - t * 0.1, v * 17.0 + t * 0.2)) * 0.4;
-  float lace = smoothstep(0.5, 0.72, n) * exp(-v / 0.35) + 0.65 * exp(-v / 0.05) * (0.6 + 0.4 * n);
+  // aInfo.z: the weight of the scum line hard against the wall (0 for a patch of foam on open water)
+  float lace = smoothstep(0.5, 0.72, n) * exp(-v / 0.35) + 0.65 * akI.z * exp(-v / 0.05) * (0.6 + 0.4 * n);
   akFoA = clamp(lace * akI.y, 0.0, 0.9);
   akAlb = vec3(0.5, 0.52, 0.5) * (0.85 + 0.25 * n);
   akRgh = 0.6; akAO = 1.0;
@@ -1098,7 +1134,7 @@ export async function archMaterials(ctx, opts = {}) {
   const p = (async () => {
     const [stonePale, stoneGrey, stoneDressed, oak, oakDark, oakPeg, oakSilver, clay, slate, stoneSoot, stoneWet, stoneFar, stoneSett, stoneFloor, stoneQuay, stoneWashed] = await Promise.all([
       // Verdor: weathered pale limestone / sandstone
-      stoneMaterial(ctx, { texture: 'pbr/acg_ground27', scale: 0.7, palette: [[0.47, 0.44, 0.37], [0.43, 0.405, 0.345], [0.5, 0.465, 0.39]], variation: 0.13, lichen: 0.7, moss: 0.35, tooled: 0.6, streaks: 0.9, stain: 0.7, ...(opts.stonePale || {}) }),
+      stoneMaterial(ctx, { texture: 'pbr/acg_ground27', scale: 0.7, palette: [[0.47, 0.44, 0.37], [0.41, 0.395, 0.345], [0.5, 0.46, 0.38]], variation: 0.2, lichen: 0.75, moss: 0.4, tooled: 0.5, streaks: 0.7, stain: 0.8, ...(opts.stonePale || {}) }),
       // Cling: grey rubble stone
       stoneMaterial(ctx, { texture: 'pbr/acg_ground28', scale: 0.55, palette: [[0.2, 0.185, 0.162], [0.165, 0.155, 0.138], [0.225, 0.198, 0.162]], variation: 0.17, lichen: 0.6, moss: 0.45, tooled: 0.15, ...(opts.stoneGrey || {}) }),
       // dressed grey (quoins, arches, fountain, steps)
@@ -1115,7 +1151,7 @@ export async function archMaterials(ctx, opts = {}) {
       // harbour stone below the tide line: wet, dark, green-brown weed and algae
       stoneMaterial(ctx, { palette: [[0.16, 0.15, 0.12], [0.12, 0.12, 0.09], [0.2, 0.18, 0.14]], variation: 0.25, lichen: 0.0, moss: 0.9, algae: 1.0, tooled: 0.4, splash: 1.0, streaks: 0.8, ...(opts.stoneWet || {}) }),
       // pale stone seen from far off (silhouette LOD): the stone-to-stone variation of a whole wall averages out
-      stoneMaterial(ctx, { texture: 'pbr/acg_ground27', scale: 0.7, palette: [[0.48, 0.45, 0.39], [0.45, 0.42, 0.37], [0.5, 0.47, 0.4]], variation: 0.06, lichen: 0.2, moss: 0.2, tooled: 0.0, streaks: 0.9, ...(opts.stoneFar || {}) }),
+      stoneMaterial(ctx, { texture: 'pbr/acg_ground27', scale: 0.7, palette: [[0.46, 0.43, 0.37], [0.42, 0.395, 0.345], [0.49, 0.455, 0.385]], variation: 0.1, lichen: 0.3, moss: 0.25, tooled: 0.0, streaks: 0.25, stain: 0.9, ...(opts.stoneFar || {}) }),
       // cobbles / setts of a square: grey-brown, worn, moss in the joints, no splash band
       stoneMaterial(ctx, { texture: 'pbr/acg_ground28', scale: 0.8, palette: [[0.21, 0.195, 0.17], [0.14, 0.13, 0.115], [0.27, 0.235, 0.185]], variation: 0.38, lichen: 0.15, moss: 0.3, algae: 0.0, tooled: 0.1, splash: 0.0, streaks: 0.0, stain: 0.6, ...(opts.stoneSett || {}) }),
       // interiors: worn flagstone floors (no weather: no lichen, algae or splash)
@@ -1140,16 +1176,17 @@ export async function archMaterials(ctx, opts = {}) {
       glass: glassMaterial(ctx, opts.glass),
       portal: portalMaterial(ctx, opts.portal),
       lead: plainMaterial('lead', [0.12, 0.12, 0.125], { roughness: 0.6, vary: 0.3 }),
-      straw: plainMaterial('straw', [0.48, 0.36, 0.16], { roughness: 0.8, vary: 0.45, freq: 40, bump: 0.0005 }),
+      straw: strawStalkMaterial(ctx),
       strawBed: strawMaterial(ctx),
       bark: barkMaterial(ctx),
-      linen: plainMaterial('linen', [0.62, 0.6, 0.55], { roughness: 0.92, vary: 0.14, freq: 30, bump: 0.0006, params: { side: THREE.DoubleSide } }),
+      linen: linenMaterial(ctx),
       sootStain: sootMaterial(ctx),
       stain: stainMaterial(ctx),
       foam: foamMaterial(ctx),
       sacking: plainMaterial('sacking', [0.2, 0.155, 0.1], { roughness: 0.95, vary: 0.3, freq: 60, bump: 0.0008 }),
       clayware: plainMaterial('clayware', [0.3, 0.16, 0.08], { roughness: 0.7, vary: 0.2 }),
       // wet mud / dung caked on wheels, at wall feet
+      earth: plainMaterial('earth', [0.15, 0.125, 0.095], { roughness: 1.0, vary: 0.4, freq: 3, bump: 0.002 }),
       mud: plainMaterial('mud', [0.075, 0.058, 0.04], { roughness: 0.75, vary: 0.35, freq: 30, bump: 0.0015 }),
       rope: plainMaterial('rope', [0.22, 0.18, 0.12], { roughness: 0.95, vary: 0.3, freq: 80, bump: 0.001 }),
       soot: plainMaterial('soot', [0.02, 0.018, 0.016], { roughness: 0.95 }),
@@ -1160,7 +1197,8 @@ export async function archMaterials(ctx, opts = {}) {
       puddle: poolMaterial(ctx, { name: 'puddle', chop: 0.4, color: [0.03, 0.024, 0.016], roughness: 0.06 }),
       wetMud: plainMaterial('wetMud', [0.048, 0.038, 0.027], { roughness: 0.3, vary: 0.45, freq: 14, bump: 0.002 }),
       jet: jetMaterial(ctx),
-      water: new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.012, 0.016, 0.016), roughness: 0.03, metalness: 0, transmission: 0, ior: 1.33 }),
+      // clear standing water (a basin, a bowl): see-through to the clay under it, a sharp sheen
+      water: new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.03, 0.035, 0.032), roughness: 0.02, metalness: 0, transmission: 0, ior: 1.33, transparent: true, opacity: 0.5, specularIntensity: 1.0 }),
     };
     M.water.name = 'arch:water';
     // walls must block the sun from both sides (thin mortar beds / plaster coats leak light otherwise)

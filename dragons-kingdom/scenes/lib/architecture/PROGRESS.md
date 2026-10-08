@@ -1,7 +1,7 @@
 # Architecture kit - progress log (for a successor)
 
 ## Fix round 2 (in progress, 2026-10-08) - critic round 2
-Done so far (code, previewed at 1920 in scenes/lookdev/architecture-dev.js and the contact scene):
+Done at the first checkpoint (code, previewed at 1920 in scenes/lookdev/architecture-dev.js and the contact scene):
 - Masonry: stones SET IN the mortar (face flat 0-12 mm proud, rounded arrises dive under the bed:
   irregular outlines, no rim highlight / drop shadow); per-stone arris radius; block() clamps every
   displacement near an arris to half the rounding radius (the 'stacked paper' slivers were the
@@ -30,9 +30,27 @@ Done so far (code, previewed at 1920 in scenes/lookdev/architecture-dev.js and t
   turbulent ripples, limescale/algae streaks. Cobbles: tight, half buried, walking lines, LOD.
 - Stable: two-stage bonded buttresses; lodge: 15-18 cm copings, bark logs with sawn ends, a hood on
   wall posts and brackets.
-Next: foam patches too opaque; palace + round tower massing; interiors (chamber door/nest box/
-walls/straw/linen, treatment seat/coast/cloths/basin/spalls); lookdev scenes (map overlay, arch
-exposure, verdor ground, interior shots); 4K finals *_r2.
+Done since (second checkpoint):
+- Foam: impact patches as scum lines (aInfo.z edge weight), no opaque discs; waterline foam strips
+  along the quay. Harbour turned toward the sun in the Verdor scene (quay face lit, tide zones read).
+- Palace rebuilt: sunk 2 m into its rise, a keep with window rows and a stair turret, a hall with
+  tall windows and chimneys, a chapel with a bellcote, lean-to ranges, two battered round towers
+  (string courses, windows, bell-cast conical roofs with finial and vane) and two square saddleback
+  towers, crenellated curtain, gatehouse; portal quads behind every window (no see-through).
+  Round tower in the contact sheet: batter, strings, windows, flared roof. The palace town moved to
+  the foot of the rise (75-140 m out).
+- Birthing chamber: 5.6 m high (ceiling and the door now framed), lamp niches with soot fans and an
+  oil stain, a single bracket lamp on the east wall; the nest is a plank bedding frame (corner posts,
+  pegs) with a straw bed - straw clumps 4-34 cm, 1.2-2.6 mm thick, three tone families - and the
+  linen re-baked in bpy on the new bed (offline/nest_cloth.py v2, bed: 2). Plinth no longer reads as
+  an altar (it is a bedding frame).
+- Treatment room: splayed window reveal (sill, jambs and head splay inward, stone sill slabs,
+  shutters at the splay), Abby's arm chair with the padded LEFT arm rest (anchors.seat/armSupport),
+  Remi's seat and Alexandria's stool apart and legible, folded cloths layered, coast and harbour
+  visible through the window (heightfield headland + lower town on a slope).
+- Ground: puddles with wet mud rims and floating straws, wall-foot grime bands, door aprons, worn
+  paths; Cling map overlay labels (architecture-cling.js 'plan' shot logs the projected positions).
+Next: 4K finals *_r2 in the scratchpad (arch/final_r2), crops, README, npm test.
 
 ## State (2026-10-08, fix round 1 done; 4K finals rendered to the session scratchpad)
 

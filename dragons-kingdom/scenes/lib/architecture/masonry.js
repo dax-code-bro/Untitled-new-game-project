@@ -15,7 +15,7 @@
 // Face frame F (core.js frame): origin = bottom-left corner of the face ON the mortar surface,
 // x along the face (0..L), y up, z out of the wall. Stones stand proud by 8-30 mm.
 import * as THREE from 'three';
-import { block, shapeFace, sub, makeRand, clamp, xf, tube } from './core.js';
+import { block, shapeFace, sub, makeRand, clamp, xf, tube, lathe, Kit } from './core.js';
 import { stain } from './weathering.js';
 
 /** Course heights (bottom up) filling H: [{ y, h }]. */
@@ -103,7 +103,7 @@ function stone(kit, F, matName, x0, x1, y0, y1, dep, rnd, st, lod, extra = {}) {
   block(acc, Fs, sx, sy, dep, {
     r, rs: lod.rs, seg: [Math.max(lod.seg, w / 6), Math.max(lod.seg, h / 4), 9], skip: 32,
     seed: rnd(), noise: st.noise * (extra.noiseMul ?? 1) * (lod.noiseMul ?? 1), noct: lod.noct ?? 2, nf: st.nf, pillow: rnd.range(st.pillow[0], st.pillow[1]) * (extra.pillowMul ?? 1),
-    chip: st.chip, aoDepth: Math.max(0.006, prot + 0.7 * r), aoFloor: 0.45, uvMode: 'box', warp, aoOpen: extra.aoOpen,
+    chip: st.chip, aoDepth: Math.max(0.006, prot + 0.7 * r), aoFloor: 0.45, uvMode: 'box', warp, aoOpen: extra.aoOpen, aoMul: st.aoMul,
   });
 }
 
@@ -207,8 +207,9 @@ function fillSegment(kit, F, matName, xa, xb, y, h, rnd, st, lod, prevJoints, jo
  */
 export function masonryFace(kit, F, L, H, o = {}) {
   const rnd = makeRand(o.seed ?? 1);
-  const st = { ...STYLE[o.style || 'squared'], ...(o.styleOver || {}) };
-  const ds = STYLE.dressed;
+  // (o.aoMul: the whole face is shaded from the sky - a passage wall, a deep reveal)
+  const st = { ...STYLE[o.style || 'squared'], ...(o.styleOver || {}), aoMul: o.aoMul };
+  const ds = { ...STYLE.dressed, aoMul: o.aoMul };
   const lod = LOD[o.lod || 'mid'];
   const mat = o.mat || 'stoneGrey', dmat = o.dressedMat || mat;
   const C = o.courses || courses(rnd, H, { min: 0.18 * (lod.courseMul || 1), max: 0.34 * (lod.courseMul || 1) });
@@ -216,7 +217,9 @@ export function masonryFace(kit, F, L, H, o = {}) {
   const j = st.j;
   const qs = o.quoinStart || (() => 0), qe = o.quoinEnd || (() => 0);
   const zones = [];
-  const ops = o.openings || [];
+  // (op.splay / op.sillSplay / op.headSplay: an inner window splayed to spread the light - the
+  // face opening is wider and taller than the window itself at the back of the wall)
+  const ops = (o.openings || []).map((op) => (op.splay ? { ...op, x: op.x - op.splay, w: op.w + 2 * op.splay, y: op.y - (op.sillSplay ?? 0), h: op.h + (op.sillSplay ?? 0) + (op.headSplay ?? op.splay * 0.4), back: { x: op.x, w: op.w, y: op.y, h: op.h } } : op));
   // ---- openings: jambs, heads, sills (dressed), and their reserved zones
   for (const op of ops) {
     const head = op.head || 'lintel';
@@ -373,20 +376,38 @@ export function masonryFace(kit, F, L, H, o = {}) {
     const macc = kit.get(o.mortar || 'mortar');
     // (far off the flat stones stand only a few mm proud: the core goes back 3 cm, or the two
     // z-fight in triangle patches at a few hundred metres)
-    shapeFace(macc, lod.flat ? sub(F, [0, 0, -0.03]) : F, shape, { seed: rnd() });
-    if (o.back) shapeFace(kit.get(o.backMat || o.mortar || 'mortar'), sub(F, [0, 0, -T], [1, 0, 0], [0, 1, 0]), shape, { flip: true, seed: rnd() });
+    shapeFace(macc, lod.flat ? sub(F, [0, 0, -0.03]) : F, shape, { seed: rnd(), ao: o.aoMul ?? 1 });
+    let backShape = shape;
+    if (ops.some((op) => op.back || op.niche)) {
+      backShape = new THREE.Shape();
+      backShape.moveTo(x0, 0); backShape.lineTo(x1, 0); backShape.lineTo(x1, H); backShape.lineTo(x0, H); backShape.lineTo(x0, 0);
+      shape.holes.forEach((hl, k) => {
+        const op = ops[k];
+        if (op.niche) return;
+        if (!op.back) { backShape.holes.push(hl); return; }
+        const b = op.back, hh = new THREE.Path();
+        hh.moveTo(b.x, b.y); hh.lineTo(b.x, b.y + b.h); hh.lineTo(b.x + b.w, b.y + b.h); hh.lineTo(b.x + b.w, b.y); hh.lineTo(b.x, b.y);
+        backShape.holes.push(hh);
+      });
+    }
+    if (o.back) shapeFace(kit.get(o.backMat || o.mortar || 'mortar'), sub(F, [0, 0, -T], [1, 0, 0], [0, 1, 0]), backShape, { flip: true, seed: rnd() });
     // reveals (the sides / soffit of each opening through the full thickness)
     for (const op of ops) {
       const xa = op.x, xb = op.x + op.w, ya = op.y, yb = op.y + op.h;
-      // (a blocked opening: the reveal is only as deep as the fill is set back, closed by its own bed)
-      const DT = op.blocked ? 0.03 : T;
+      // (a blocked opening: the reveal is only as deep as the fill is set back, closed by its own bed;
+      // a niche: as deep as the niche)
+      const DT = op.blocked ? 0.03 : op.niche ? op.niche : T;
+      // a splayed opening: the face edge (p0, p1) runs back to the narrow window at the back
+      const bk = op.back;
+      const toBack = (p) => (bk ? [clamp(p[0], bk.x, bk.x + bk.w), clamp(p[1], bk.y, bk.y + bk.h)] : p);
       const strip = (p0, p1) => {  // a quad from face point p0 to p1, extruded along -z by DT, facing into the opening
         const a = macc.vcount;
-        const P = [[...p0, 0], [...p1, 0], [...p1, -DT], [...p0, -DT]].map((q) => xf(F, q[0], q[1], q[2]));
+        const b0 = toBack(p0), b1 = toBack(p1);
+        const P = [[...p0, 0], [...p1, 0], [...b1, -DT], [...b0, -DT]].map((q) => xf(F, q[0], q[1], q[2]));
         for (const [k, q] of P.entries()) macc.v(q[0], q[1], q[2], k < 2 ? 0 : DT, 0, 0.5, 0.5, 0, 1, 0, 0);
         macc.q(a, a + 1, a + 2, a + 3);
       };
-      if (op.blocked) {
+      if (op.blocked || op.niche) {
         const hb = new THREE.Shape();
         if ((op.head || 'lintel').startsWith('arch')) {
           const r = op.w / 2, sp = yb - r;
@@ -405,6 +426,13 @@ export function masonryFace(kit, F, L, H, o = {}) {
         }
       } else { strip([xa, yb], [xa, ya]); strip([xb, ya], [xb, yb]); strip([xa, yb], [xb, yb]); }
       if (ya > 0.01) strip([xb, ya], [xa, ya]);
+      // o.portals: a dim room behind every open window (far sets: a hole would show the sky)
+      if (o.portals && !op.blocked && !op.niche && (op.head || 'lintel') !== 'archOpen' && op.y > 0.3) {
+        const pa = kit.get('portal'), b0 = pa.vcount, zp = -Math.min(T, 1.2) + 0.03;
+        const top = (op.head || 'lintel').startsWith('arch') ? yb : yb;
+        for (const [x, y] of [[xa, ya], [xb, ya], [xb, top], [xa, top]]) { const q = xf(F, x, y, zp); pa.v(q[0], q[1], q[2], x - xa, y - ya, rnd(), 0, 0, op.w, op.h, 1.0); }
+        pa.q(b0, b0 + 1, b0 + 2, b0 + 3);
+      }
     }
   }
   return { courses: C, zones };
@@ -441,6 +469,9 @@ export function archRing(kit, F, matName, cx, cy, r, vh, dep, rnd, lod, o = {}) 
     block(acc, Fv, span, vhh, dep, lod.flat ? { r: 0, seg: 9, seed: rnd(), warp, uvMode: 'box' } : {
       r: rnd.range(ds.r[0], ds.r[1]) * 1.3, rs: lod.rs, seg: [Math.max(0.05, span / 4), Math.max(lod.seg, vhh / 3), Math.max(lod.seg, dep / 6)],
       seed: rnd(), noise: ds.noise * 1.5, nf: ds.nf, pillow: rnd.range(0.001, 0.004), chip: 0.012, warp, uvMode: 'box', skip: 0,
+      // the soffit (intrados) looks down into a shaded passage: it sees no bright ground, only the
+      // dark floor of the passage - occluded deeper toward the middle of the wall
+      aoFn: (lx, ly, lz) => (ly < -vhh / 2 + 0.004 ? 0.28 + 0.4 * Math.pow(Math.abs(lz) / (dep / 2), 2) : ly < -vhh / 2 + vhh * 0.3 ? 0.75 : 1),
     });
   }
 }
@@ -479,7 +510,7 @@ export function masonryBox(kit, F, o) {
       quoinStart: (ci) => (o.noQuoins ? 0.0 : qb(prev, ci)),
       quoinEnd: (ci) => (o.noQuoins ? 0.0 : qa(k, ci)),
       quoins: o.noQuoins ? null : { a: (ci) => qa(k, ci), b: (ci) => qb(k, ci) },
-      back: spec.back ?? o.back, backMat: o.backMat, depth: o.depth,
+      back: spec.back ?? o.back, backMat: o.backMat, depth: o.depth, portals: o.portals,
     });
   });
   // the wall top (under a timber sill beam / wall plate it is hidden; a bed of mortar)
@@ -507,17 +538,21 @@ export function steps(kit, F, o) {
       const depth = tread + 0.1 + (o.landing && i === n - 1 ? o.landing : 0);
       const h = rise + 0.06;
       const xc = x + L / 2;
-      const Fs = sub(F, [xc + rnd.sym(0.004), y0 + rise - h / 2 + rnd.sym(0.003), z0 - depth / 2 + 0.02 + rnd.sym(0.006)], [1, 0, rnd.sym(0.006)], [0, 1, 0]);
-      const wx = (lx) => { const gx = xc + lx; return Math.exp(-Math.pow(gx / (W * 0.28), 2)); };
-      block(kit.get(mat), Fs, L - 0.008, h, depth, lod.flat ? { r: 0, seg: 9, seed: rnd() } : {
-        r: rnd.range(0.012, 0.025), rs: lod.rs, seg: [Math.max(lod.seg, 0.12), Math.max(lod.seg, h / 2), Math.max(lod.seg, 0.08)],
-        seed: rnd(), noise: 0.003, nf: 6, pillow: 0.002, chip: 0.01, uvMode: 'box', skip: 0,
+      // (round 2) every slab set by hand and settled since: +-12 mm in height, a fraction of a
+      // degree of tilt, 4-9 mm joints; the walking line dished, the nosings worn round unevenly
+      const tiltX = rnd.sym(0.008), tiltZ = rnd.sym(0.008);
+      const Fs = sub(F, [xc + rnd.sym(0.006), y0 + rise - h / 2 + rnd.sym(0.012), z0 - depth / 2 + 0.02 + rnd.sym(0.01)], [1, tiltZ, rnd.sym(0.008)], [-tiltZ, 1, tiltX]);
+      const wx = (lx) => { const gx = xc + lx; return Math.exp(-Math.pow((gx - (o.walkX ?? 0)) / (W * 0.24), 2)) + 0.5 * Math.exp(-Math.pow((gx - (o.walkX ?? 0) - W * 0.3) / (W * 0.15), 2)); };
+      const nr = rnd.range(0.4, 1.6);
+      block(kit.get(mat), Fs, L - rnd.range(0.004, 0.009), h, depth, lod.flat ? { r: 0, seg: 9, seed: rnd() } : {
+        r: rnd.range(0.005, 0.016), rs: lod.rs, seg: [Math.max(lod.seg, 0.1), Math.max(lod.seg, h / 2), Math.max(lod.seg, 0.07)],
+        seed: rnd(), noise: 0.004, nf: 6, pillow: 0.002, chip: 0.03, uvMode: 'box', skip: 0,
         // the worn path: treads dished in the middle, the nosing rounded away
         warp: (lx, ly, lz) => {
           const top = ly > h / 2 - 0.03 ? 1 : 0;
           const front = smooth01((lz - (depth / 2 - 0.2)) / 0.2);
           const dish = wear * wx(lx) * top * (0.35 + 0.65 * front) * (1 - Math.pow(Math.abs(lz) / (depth / 2), 6) * 0.5);
-          const nose = wear * 1.2 * wx(lx) * front * smooth01((ly - (h / 2 - 0.08)) / 0.08);
+          const nose = wear * 1.2 * (0.3 + wx(lx)) * nr * (0.7 + 0.6 * Math.sin(lx * 7 + nr * 5) ** 2) * front * smooth01((ly - (h / 2 - 0.08)) / 0.08);
           return [lx, ly - dish - nose * 0.4, lz - nose * 0.5];
         },
       });
@@ -592,6 +627,11 @@ export function roundTower(kit, F, o = {}) {
   const C = courses(rnd, H, { min: (o.courseMin ?? 0.3) * (lod.courseMul || 1), max: (o.courseMax ?? 0.45) * (lod.courseMul || 1) });
   const slits = [];
   for (let k = 0; k < (o.slits ?? 3); k++) slits.push({ a: rnd() * Math.PI * 2, y0: 3 + k * (H - 6) / Math.max(1, (o.slits ?? 3) - 1), h: 1.3, w: 0.32 });
+  // (round 2) windows of other sizes at other levels: [{ a, y0, w, h }]
+  for (const wv of o.windows || []) slits.push({ a: wv.a, y0: wv.y0, h: wv.h ?? 1.2, w: wv.w ?? 0.7 });
+  // a battered base: the wall flares out batter (m) at the ground, dying into the plumb face at batterH
+  const bat = o.batter ?? 0, batH = o.batterH ?? 3;
+  const Rof = (y) => R + bat * Math.max(0, 1 - y / batH);
   // a slit is a dressed opening: the courses stop at its jambs (clean vertical edges), tall jamb
   // stones either side, a lintel over, a sill under, the dark loop behind - never a stepped hole
   const jw = 0.26;
@@ -617,9 +657,11 @@ export function roundTower(kit, F, o = {}) {
         const dep = 0.3;
         const Fs = sub(F, [0, c.y + c.h / 2, 0]);
         const prot = rnd.range(0.004, 0.015) * (lod.protMul ?? 1);
-        block(kit.get(mat), Fs, lod.protMul ? span + 0.01 : span, c.h - (lod.protMul ? 0.004 : 0.012), dep, lod.flat ? { r: 0, seg: [Math.max(0.3, span / 2), 9, 9], seed: rnd(), skip: 32, warp: (lx, ly, lz) => { const th = am - lx / R; const rr = R - dep / 2 + prot + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; } } : {
-          r: 0.012, rs: 1, seg: [Math.max(0.12, span / 4), Math.max(lod.seg, c.h / 2), 9], seed: rnd(), noise: 0.004, nf: 5, pillow: 0.004, chip: 0.01, skip: 32, aoDepth: prot + 0.02, aoFloor: 0.35,
-          warp: (lx, ly, lz) => { const th = am - lx / R; const rr = R - dep / 2 + prot + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; },
+        const yc = c.y + c.h / 2;
+        const tw = (lx, ly, lz) => { const th = am - lx / R; const rr = Rof(yc + ly) - dep / 2 + prot + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; };
+        block(kit.get(mat), Fs, lod.protMul ? span + 0.01 : span, c.h - (lod.protMul ? 0.004 : 0.012), dep, lod.flat ? { r: 0, seg: [Math.max(0.3, span / 2), 9, 9], seed: rnd(), skip: 32, warp: tw } : {
+          r: rnd.range(0.006, 0.016), rs: 1, seg: [Math.max(0.12, span / 4), Math.max(lod.seg, c.h / 2), 9], seed: rnd(), noise: 0.004, nf: 5, pillow: 0.004, chip: 0.012, skip: 32, aoDepth: prot + 0.012, aoFloor: 0.45,
+          warp: tw,
         });
       }
     }
@@ -638,17 +680,28 @@ export function roundTower(kit, F, o = {}) {
   {
     const acc = kit.get(o.mortar || 'mortar');
     const n = 48;
-    const ring = (y) => { const ids = []; for (let i = 0; i <= n; i++) { const a = (i / n) * Math.PI * 2; const p = xf(F, Math.cos(a) * (R - 0.012), y, Math.sin(a) * (R - 0.012)); ids.push(acc.v(p[0], p[1], p[2], 0, 0, 0.3, 0.6, 0, 0, 1, 0)); } return ids; };
-    const r0 = ring(0), r1 = ring(H);
-    for (let i = 0; i < n; i++) acc.q(r0[i], r0[i + 1], r1[i + 1], r1[i]);
+    const ring = (y) => { const ids = []; const rr = Rof(y) - (lod.flat ? 0.03 : 0.012); for (let i = 0; i <= n; i++) { const a = (i / n) * Math.PI * 2; const p = xf(F, Math.cos(a) * rr, y, Math.sin(a) * rr); ids.push(acc.v(p[0], p[1], p[2], 0, 0, 0.3, 0.6, 0, 0, 1, 0)); } return ids; };
+    const ys = bat ? [0, batH * 0.5, batH, H] : [0, H];
+    const rs = ys.map(ring);
+    for (let k = 0; k < rs.length - 1; k++) for (let i = 0; i < n; i++) acc.q(rs[k][i], rs[k][i + 1], rs[k + 1][i + 1], rs[k + 1][i]);
     for (const s of slits) {
       const pa = kit.get('portal');
-      const cx = Math.cos(s.a) * (R - 0.2), cz = Math.sin(s.a) * (R - 0.2);
+      const cx = Math.cos(s.a) * (Rof(s.y0) - 0.2), cz = Math.sin(s.a) * (Rof(s.y0) - 0.2);
       const X = [-Math.sin(s.a), 0, Math.cos(s.a)];
       const base = pa.vcount;
       for (const [x, y] of [[-s.w / 2, 0], [s.w / 2, 0], [s.w / 2, s.h], [-s.w / 2, s.h]]) { const p = xf(F, cx + X[0] * x, s.y0 + y, cz + X[2] * x); pa.v(p[0], p[1], p[2], x + s.w / 2, y, rnd(), 0, 0, s.w, s.h, 1.0); }
       // (wound so the portal faces outward)
       pa.q(base + 3, base + 2, base + 1, base);
+    }
+  }
+  // string courses: a dressed ring projecting 8 cm, its top weathered to shed the rain
+  for (const ysc of o.strings || []) {
+    const Rs = R + 0.08, n2 = Math.round((2 * Math.PI * Rs) / rnd.range(0.7, 0.95)), ph = rnd() * 3;
+    for (let i = 0; i < n2; i++) {
+      const a0 = ph + (i / n2) * Math.PI * 2, a1 = ph + ((i + 1) / n2) * Math.PI * 2 - 0.01 / Rs;
+      const am = (a0 + a1) / 2, span = (a1 - a0) * Rs;
+      block(kit.get(dmat), sub(F, [0, ysc + 0.12, 0]), span, 0.24, 0.4, { r: 0.012, seg: [Math.max(0.12, span / 3), 0.12, 0.2], seed: rnd(), noise: 0.003, chip: 0.015,
+        warp: (lx, ly, lz) => { const th = am - lx / Rs; const rr = Rs - 0.2 + lz - (ly > 0 ? 0.0 : 0) ; const yy = ly + (ly > 0 ? -0.06 * (lz / 0.2 + 1) * 0.5 : 0); return [Math.cos(th) * rr, yy, Math.sin(th) * rr]; } });
     }
   }
   // corbel table + parapet ring
@@ -682,8 +735,11 @@ export function roundTower(kit, F, o = {}) {
 }
 
 /** A conical roof of slates in courses round a cone (eaves overhang, a finial). F at the eaves centre. */
-export function conicalRoof(kit, F, o = {}) {
+export function conicalRoof(kit0, F, o = {}) {
   const rnd = makeRand(o.seed ?? 23);
+  // (round 2) built in its own kit, then given a bell-cast: the lowest part of the cone kicks out
+  // to a flatter pitch at the eaves (sprockets), the way a real conical roof sheds water off a wall
+  const kit = new Kit(0);
   const R = o.r ?? 4.5, Hc = o.h ?? 7, over = o.eaves ?? 0.35;
   const Re = R + over;
   const slant = Math.hypot(Re, Hc * (Re / R));
@@ -725,6 +781,20 @@ export function conicalRoof(kit, F, o = {}) {
     }
     s -= g;
   }
-  // finial
-  tube(kit.get('lead'), [xf(F, 0, Hc - 0.3, 0), xf(F, 0, Hc + 1.2, 0)], (t) => 0.12 * (1 - t * 0.8), { sides: 8, caps: true });
+  // finial: a lead-capped post, a ball, an iron vane
+  tube(kit.get('lead'), [xf(F, 0, Hc - 0.35, 0), xf(F, 0, Hc + 0.55, 0)], (t) => 0.13 * (1 - t * 0.7), { sides: 8, caps: true });
+  lathe(kit.get('lead'), sub(F, [0, Hc + 0.55, 0]), [[0.0, 0.0], [0.08, 0.02], [0.14, 0.13], [0.12, 0.25], [0.05, 0.3], [0.0, 0.31]], 12, { seed: rnd() });
+  tube(kit.get('iron'), [xf(F, 0, Hc + 0.8, 0), xf(F, 0, Hc + 1.9, 0)], 0.018, { sides: 6, caps: true });
+  const va = rnd() * Math.PI * 2;
+  block(kit.get('iron'), sub(F, [Math.cos(va) * 0.3, Hc + 1.65, Math.sin(va) * 0.3], [Math.cos(va), 0, Math.sin(va)], [0, 1, 0]), 0.55, 0.3, 0.008, { r: 0.004, seg: [0.2, 0.15, 0.008], seed: rnd(), warp: (lx, ly, lz) => [lx, ly * (1 - 0.6 * Math.max(0, lx / 0.55 + 0.5) ** 2), lz] });
+  // the bell-cast (in F's local frame: the kit is built in world coords, so undo / redo F)
+  const flare = o.flare ?? 0.14, y0 = -over * Math.tan(ang), yk = y0 + (Hc - y0) * 0.32;
+  const inv = (p) => { const d = [p[0] - F[0], p[1] - F[1], p[2] - F[2]]; return [d[0] * F[3] + d[1] * F[4] + d[2] * F[5], d[0] * F[6] + d[1] * F[7] + d[2] * F[8], d[0] * F[9] + d[1] * F[10] + d[2] * F[11]]; };
+  kit.deform((x, y, z) => {
+    const l = inv([x, y, z]);
+    const f = 1 - Math.min(1, Math.max(0, (l[1] - y0) / (yk - y0)));
+    const k = 1 + flare * f * f;
+    return xf(F, l[0] * k, l[1] - 0.25 * flare * f * f * Re * 0.3, l[2] * k);
+  });
+  kit0.merge(kit);
 }

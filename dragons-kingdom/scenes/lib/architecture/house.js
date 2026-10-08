@@ -12,7 +12,7 @@ import { masonryBox, masonryFace, masonryGable, courses } from './masonry.js';
 import { framedWall, jetty, gableFrame, member } from './timber.js';
 import { gableRoof, chimney } from './roof.js';
 import { windowUnit, door, threshold } from './openings.js';
-import { grimeBand } from './weathering.js';
+import { grimeBand, stain } from './weathering.js';
 
 /**
  * o: w, d, hs (stone storey), ht (timber storey), storeys (timber storeys), jetty (overhang per
@@ -88,13 +88,38 @@ export function house(kit, F, o = {}) {
     // the passage: rubble side walls between the front and back walls, a joisted ceiling at the crown
     const pz = d / 2 - T, L = d - 2 * T, hw = psg.h + 0.15;
     const Cp = courses(rnd, hw, { min: 0.17, max: 0.32 });
-    masonryFace(local, sub(frame([0, 0, 0]), [-psg.w / 2, 0, pz], [0, 0, -1], [0, 1, 0]), L, hw, { courses: Cp, style: o.style || 'rubble', mat: o.stoneMat || 'stoneGrey', dressedMat: 'stoneDressed', mortar: 'mortar', T: 0.5, lod, seed: rnd() * 999 });
-    masonryFace(local, sub(frame([0, 0, 0]), [psg.w / 2, 0, -pz], [0, 0, 1], [0, 1, 0]), L, hw, { courses: Cp, style: o.style || 'rubble', mat: o.stoneMat || 'stoneGrey', dressedMat: 'stoneDressed', mortar: 'mortar', T: 0.5, lod, seed: rnd() * 999 });
+    // (the passage is roofed: its walls and ceiling see little sky - shaded by aoMul)
+    masonryFace(local, sub(frame([0, 0, 0]), [-psg.w / 2, 0, pz], [0, 0, -1], [0, 1, 0]), L, hw, { courses: Cp, style: o.style || 'rubble', mat: o.stoneMat || 'stoneGrey', dressedMat: 'stoneDressed', mortar: 'mortar', T: 0.5, lod, seed: rnd() * 999, aoMul: 0.55, stains: false });
+    masonryFace(local, sub(frame([0, 0, 0]), [psg.w / 2, 0, -pz], [0, 0, 1], [0, 1, 0]), L, hw, { courses: Cp, style: o.style || 'rubble', mat: o.stoneMat || 'stoneGrey', dressedMat: 'stoneDressed', mortar: 'mortar', T: 0.5, lod, seed: rnd() * 999, aoMul: 0.55, stains: false });
     for (let k = 0; k <= Math.round(L / 0.42); k++) {
       const z = -L / 2 + 0.12 + (L - 0.24) * k / Math.round(L / 0.42);
-      block(local.get('oakDark'), frame([0, hw + 0.08, z]), psg.w + 0.5, 0.16, 0.13, { r: 0.008, seg: [0.5, 0.16, 0.13], seed: rnd(), noise: 0.002, nf: 3, axis: [1, 0, 0] });
+      block(local.get('oakDark'), frame([0, hw + 0.08, z]), psg.w + 0.5, 0.16, 0.13, { r: 0.008, seg: [0.5, 0.16, 0.13], seed: rnd(), noise: 0.002, nf: 3, axis: [1, 0, 0], aoMul: 0.4 });
     }
-    block(local.get('oakDark'), frame([0, hw + 0.18, 0]), psg.w + 0.5, 0.04, L + 0.05, { r: 0.002, seg: [1, 0.04, 1], seed: rnd() });
+    block(local.get('oakDark'), frame([0, hw + 0.18, 0]), psg.w + 0.5, 0.04, L + 0.05, { r: 0.002, seg: [1, 0.04, 1], seed: rnd(), aoMul: 0.3 });
+    // the passage floor: a threshold of worn flags at each end, a drain channel down the middle,
+    // mud and straw in the corners, damp up the wall feet
+    for (const zs of [pz + 0.02, -pz - 0.02]) {
+      let xx = -psg.w / 2;
+      while (xx < psg.w / 2 - 0.05) {
+        const fw = Math.min(psg.w / 2 - xx, rnd.range(0.5, 0.9));
+        block(local.get('stoneSett'), frame([xx + fw / 2, -0.06, zs - Math.sign(zs) * 0.32], [1, rnd.sym(0.01), 0], [0, 1, rnd.sym(0.01)]), fw - 0.012, 0.13, 0.62, { r: 0.02, rs: 1, seg: [0.1, 0.06, 0.1], seed: rnd(), noise: 0.003, chip: 0.025, skip: 8,
+          warp: (lx, ly, lz) => { const gx = xx + fw / 2 + lx; const rut = Math.exp(-((gx - 0.7) ** 2) / 0.015) + Math.exp(-((gx + 0.7) ** 2) / 0.015); return [lx, ly - (ly > 0 ? 0.028 * rut : 0), lz]; } });
+        xx += fw;
+      }
+    }
+    for (let k = 0; k < Math.round((L - 1.2) / 0.5); k++) {
+      const z = -L / 2 + 0.65 + k * 0.5;
+      for (const sx of [-1, 1]) block(local.get('stoneSett'), frame([sx * 0.13, -0.05, z], [1, 0, 0], [0, 1, 0]), 0.14, 0.1, 0.48, { r: 0.015, seg: [0.07, 0.05, 0.12], seed: rnd(), noise: 0.003, chip: 0.02, skip: 8, aoMul: 0.8 });
+    }
+    for (const sx of [-1, 1]) grimeBand(local, frame([sx * psg.w / 2 * 0.98, 0, -sx * L / 2], [0, 0, sx], [sx, 0, 0]), 0.1, L - 0.1, 0.0, 0.45, rnd, { strength: 0.55, z: 0.012 });
+    // the passage walls: a dark band of handling and grime from knee to shoulder height, and the
+    // scrapes of cart hubs at 0.6-0.9 m (pale, polished, running along the wall)
+    for (const sx of [-1, 1]) {
+      const Fw = frame([sx * psg.w / 2, 0, -sx * L / 2], [0, 0, sx], [0, 1, 0]);
+      grimeBand(local, Fw, 0.2, L - 0.2, 1.85, 1.3, rnd, { strength: 0.32, z: 0.02 });
+      const Fh = frame([sx * psg.w / 2, 0, -sx * L / 2], [0, -1, 0], [0, 0, sx]);
+      for (let k = 0; k < 4; k++) stain(local, Fh, -rnd.range(0.62, 0.86), rnd.range(0.4, L - 0.6), rnd.range(0.04, 0.09), rnd.range(0.5, 1.6), 'lime', { strength: 0.35, seed: rnd(), z: 0.02 });
+    }
   }
   // glazed side windows in the stone storey (masonryBox faces: right runs front->back, left back->front)
   for (const op of rightOps) if (!op.blocked) { const g = glaze(); windowUnit(local, sub(frame([0, 0, 0]), [w / 2, op.y, d / 2 - op.x], [0, 0, -1], [0, 1, 0]), { w: op.w, h: op.h, inset: 0.16, lights: 2, glazing: g, shutters: shutFor(g), floorBelow: op.y, seed: rnd() * 1000 }); }

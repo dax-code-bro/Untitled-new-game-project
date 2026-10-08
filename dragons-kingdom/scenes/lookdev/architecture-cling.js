@@ -17,7 +17,7 @@ import { filmFinish } from './finish.js';
 
 const SHOTS = [
   { name: 'row', p: [9.5, 1.62, -5.5], t: [-6.0, 4.6, -19.5], fl: 24, fstop: 5.6 },
-  { name: 'arch', p: [-9.0, 1.65, 11.0], t: [-19.6, 3.6, 16.5], fl: 24, fstop: 5.6 },
+  { name: 'arch', p: [-9.0, 1.65, 11.0], t: [-19.6, 3.6, 16.5], fl: 24, fstop: 5.6, exp: 1.9 },
   { name: 'square', p: [5.9, 3.28, 24.6], t: [-4, 5.0, -20], fl: 24, fstop: 5.6 },
   { name: 'gate', p: [6.5, 1.65, 1.0], t: [24.4, 2.2, 5.0], fl: 28, fstop: 5.6 },
   { name: 'detail', p: [1.2, 2.3, -12.6], t: [-2.6, 3.2, -18.2], fl: 35, fstop: 5.6 },
@@ -62,12 +62,15 @@ export async function setup(ctx) {
       // the broad road east from the gate: rutted earth, grass verges
       const roadD = x > GATE[0] - 2 ? Math.abs(z - GATE[1] - 0.02 * (x - GATE[0]) - 1.5 * N.fbm(x * 0.02, 1, 2)) : 99;
       const road = 1 - smooth(3.2, 5.0, roadD);
+      // two wheel ruts (dark, wet) worn along it, hoof-churned between them
+      const rc = x > GATE[0] - 2 ? (z - GATE[1] - 0.02 * (x - GATE[0]) - 1.5 * N.fbm(x * 0.02, 1, 2)) : 99;
+      const ruts = Math.exp(-(((Math.abs(rc) - 0.72) / 0.16) ** 2)) * road;
       const town = 1 - smooth(55, 75, Math.hypot(x, z - 2));
       if (!inSq) {
         // in the town: trodden earth and mud, a little grass in the corners; the road; fields beyond
         const g = smooth(0.1, 0.5, N.fbm(x * 0.12 + 7, z * 0.12, 3)) * 0.6;
         const earth = Math.max(town * (1 - g), road);
-        return [0, earth * 0.25, earth * 0.75, (1 - earth)];
+        return [0, earth * 0.25 * (1 - ruts), earth * (0.75 + 0.25 * ruts), (1 - earth)];
       }
       // the square: earth between the cobbles (the cobbles are geometry), damp round the fountain
       const damp = Math.max(smooth(5.6, 3.4, Math.hypot(x, z + 2)) * 0.9, 0.4 * smooth(0.3, 0.6, N.fbm(x * 0.2 + 9, z * 0.2, 3)));
@@ -86,8 +89,21 @@ export async function setup(ctx) {
   console.warn(`[arch-cling] tris ${set.tris}, houses ${set.houses.length}`);
   // weeds at the foot of the walls
   scene.add(grassField({ count: 4000, height: [0.05, 0.26], seed: 4, color: [0.05, 0.075, 0.025], dry: [0.22, 0.19, 0.1], dryAmount: 0.5, place: wallFootPlacer(houseFootSegments(set.houses)) }));
+  // the plan view's markers (only in that shot): the fixed escape geography, coloured, with a pole
+  // each (labelled afterwards from their projected positions - see README 'Cling map check')
+  const markers = new THREE.Group();
+  const C = CLING;
+  const marks = [['arch', C.arch, 0xd02020], ['gate', C.gate, 0x2050e0], ['fountain', C.fountain, 0x20c0d0], ['support', C.support, 0xf0d020], ['steps', C.steps, 0xf08020], ['stall', C.stall, 0xd020d0], ['music', C.music, 0x20b040], ['alley', C.alley, 0xffffff], ['watchman', C.watchman, 0x8040c0]];
+  for (const [name, m, col] of marks) {
+    const mat = new THREE.MeshBasicMaterial({ color: col });
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.3, 24), mat); disc.position.set(m.x, 6, m.z); markers.add(disc);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 6, 8), mat); pole.position.set(m.x, 3, m.z); markers.add(pole);
+    markers.userData[name] = [m.x, 6, m.z];
+  }
+  markers.visible = false;
+  scene.add(markers);
   camera.near = 0.1; camera.far = 4000;
-  S = { sun, sunDir: sky.sun.direction.clone(), M: set.materials };
+  S = { sun, sunDir: sky.sun.direction.clone(), M: set.materials, markers };
 }
 
 export function update(t, ctx) {
@@ -101,9 +117,17 @@ export function update(t, ctx) {
   ctx.lens.fstop = sh.fstop;
   ctx.lens.focus = new THREE.Vector3(...sh.p).distanceTo(new THREE.Vector3(...sh.t));
   ctx.lens.shutterAngle = 180;
-  ctx.lens.iso = 400;
+  ctx.lens.iso = 400 * (sh.exp || 1);
+  S.markers.visible = sh.name === 'plan';
+  if (sh.name === 'plan' && ctx.lens) {
+    // the markers' positions on the picture (for the map labels, drawn afterwards)
+    cam.updateProjectionMatrix();
+    const out = {};
+    for (const [k, p] of Object.entries(S.markers.userData)) { const v = new THREE.Vector3(...p).project(cam); out[k] = [+(0.5 + v.x / 2).toFixed(4), +(0.5 - v.y / 2).toFixed(4)]; }
+    console.warn('[arch-cling-plan] ' + JSON.stringify(out));
+  }
   // the fountain's water runs (pure in t)
-  for (const k of ['pool', 'jet']) { const u = S.M[k]?.userData?.dkUniforms?.akTime; if (u) u.value = t; }
+  for (const k of ['pool', 'jet', 'foam', 'puddle']) { const u = S.M[k]?.userData?.dkUniforms?.akTime; if (u) u.value = t; }
   const { sun, sunDir } = S;
   sun.target.position.set(0, 0, 0);
   sun.position.copy(sun.target.position).addScaledVector(sunDir, 200);

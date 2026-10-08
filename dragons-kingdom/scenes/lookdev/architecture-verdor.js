@@ -21,12 +21,17 @@ const SUN = new THREE.Vector3(0.598, 0.743, -0.300).normalize();
 // the rig stands in the open yard east of the stable (Charcoal lies beyond its gangway, +z of it)
 const STABLE = [0, -34], RIG = [34, -6], KEEPER = [-26, -14], LEAFP = [-17, -7];
 const PALACE = [-700, -620], HARBOR = [520, 260];
+// (round 2: the harbour turned so its quay face looks east-south-east, into a raking sun - the tide
+// zones, the slime and the foam line read in light instead of the quay's own shadow)
+const HY = 1.6, HC = Math.cos(HY), HS = Math.sin(HY);
+const hw = (lx, ly, lz) => [HARBOR[0] + lx * HC + lz * HS, ly, HARBOR[1] - lx * HS + lz * HC];   // harbour-local -> world
+const hl = (x, z) => { const dx = x - HARBOR[0], dz = z - HARBOR[1]; return [dx * HC - dz * HS, dx * HS + dz * HC]; };   // world -> harbour-local
 const SHOTS = [
   { name: 'stable-rig', p: [58, 2.2, 22], t: [14, 7.0, -22], fl: 21, fstop: 5.6 },
   { name: 'rig', p: [50, 1.7, 15.5], t: [33.5, 6.4, -5.5], fl: 18, fstop: 5.6 },
   { name: 'keeper', p: [-11.5, 1.6, 4.0], t: [-25, 2.4, -14], fl: 30, fstop: 5.6 },
   { name: 'palace', p: [-290, 22, -530], t: [-700, 40, -612], fl: 70, fstop: 8, near: 25 },
-  { name: 'harbor', p: [508, 3.9, 274], t: [517, 1.2, 258], fl: 28, fstop: 5.6 },
+  { name: 'harbor', p: hw(-12, 3.9, 14), t: hw(-3, 1.2, -2), fl: 28, fstop: 5.6 },
 ];
 
 export const meta = {
@@ -57,7 +62,7 @@ export async function setup(ctx) {
   const N = makeNoise(5);
   const ground = heightfield({
     xs: gradedAxis(-1200, 1200, 320, 0, 2.5), zs: gradedAxis(-1200, 1200, 320, 0, 2.5), height: (x, z) => {
-      if (Math.abs(x - HARBOR[0]) < 90 && z > HARBOR[1] - 70) return -3;                               // the harbour: built ground + basin
+      { const [lx, lz] = hl(x, z); if (Math.abs(lx) < 180 && lz > -70) return -3; }                  // the harbour: built ground + basin
       // the palace stands on a broad rise
       return 0.4 * N.fbm(x * 0.02, z * 0.02, 3) + 24 * smooth(330, 110, Math.hypot(x - PALACE[0], z - PALACE[1])) + 3 * N.fbm(x * 0.006, z * 0.006, 2) * smooth(330, 150, Math.hypot(x - PALACE[0], z - PALACE[1]));
     },
@@ -66,9 +71,17 @@ export async function setup(ctx) {
       // trodden mud and straw before the stable door and the lodge, a churned ring round the rig
       // and a cart track between them; the palace rise is turf with a little rock showing
       const track = smooth(2.6, 1.2, Math.abs((z - STABLE[1] - 6) - (x - STABLE[0]) * 0.75 + 2.0 * Math.sin(x * 0.08)));
-      const worn = Math.min(1, smooth(14, 4, nearB) * 0.8 + smooth(10, 4, Math.hypot(x - RIG[0], z - RIG[1])) * 0.85 + track * 0.7 * smooth(60, 30, Math.hypot(x - 15, z + 18)));
+      // (round 2: the trodden ground round the rig is ragged - no round decal - with a worn path
+      // from the stair foot to the cart track)
+      const rd = Math.hypot(x - RIG[0], z - RIG[1]) * (1 + 0.45 * (N.fbm(x * 0.12 + 3, z * 0.12, 3)));
+      const rigPath = smooth(1.8, 0.7, Math.abs((z - RIG[1] - 4.6) * 0.9 - (x - RIG[0] + 3.0) * 0.45 + 0.6 * Math.sin(x * 0.3))) * smooth(16, 4, Math.hypot(x - RIG[0] + 4, z - RIG[1] - 6));
+      const worn = Math.min(1, smooth(14, 4, nearB) * 0.8 + smooth(9, 3.5, rd) * 0.85 * (0.75 + 0.25 * N.fbm(x * 0.6, z * 0.6, 2)) + rigPath * 0.7 + track * 0.7 * smooth(60, 30, Math.hypot(x - 15, z + 18)));
       const rock = 0.12 * smooth(260, 120, Math.hypot(x - PALACE[0], z - PALACE[1])) * smooth(0.0, 0.4, N.fbm(x * 0.03 + 3, z * 0.03, 3) + 0.2);
-      return [rock, (1 - worn) * 0.6 * (1 - rock), (1 - worn) * 0.4 * (1 - rock), worn * (1 - rock)];
+      // the road winding up to the palace gate
+      const pd = Math.hypot(x - PALACE[0], z - PALACE[1]);
+      const road = pd < 340 && pd > 40 ? smooth(4.5, 2.0, Math.abs((z - PALACE[1]) - 0.28 * (x - PALACE[0]) - 26 * Math.sin((x - PALACE[0]) * 0.02))) * smooth(40, 60, pd) : 0;
+      const wr = Math.max(worn, road);
+      return [rock * (1 - road), (1 - wr) * 0.6 * (1 - rock), (1 - wr) * 0.4 * (1 - rock), wr * (1 - rock * (1 - road))];
     },
   });
   const landMat = await terrainMaterial(ctx, [
@@ -82,10 +95,11 @@ export async function setup(ctx) {
   {
     // the quay's hinterland: packed earth and cobbles at quay level behind the paving
     const { groundMaterial } = await import('../lib/humans/stage.js');
+    const hq = new THREE.Group(); hq.position.set(HARBOR[0], 0, HARBOR[1]); hq.rotation.y = HY; scene.add(hq);
     const qg = new THREE.Mesh(new THREE.PlaneGeometry(180, 62), await groundMaterial('pbr/ph_floor_pebbles_01', ctx, [180, 62], { tint: [0.7, 0.68, 0.64] }));
-    qg.rotation.x = -Math.PI / 2; qg.position.set(HARBOR[0], 2.79, HARBOR[1] - 8 - 31); qg.receiveShadow = true; scene.add(qg);
+    qg.rotation.x = -Math.PI / 2; qg.position.set(0, 2.79, -8 - 31); qg.receiveShadow = true; hq.add(qg);
     const qb = new THREE.Mesh(new THREE.BoxGeometry(180, 6, 62), new THREE.MeshStandardMaterial({ color: 0x2a2620, roughness: 1 }));
-    qb.position.set(HARBOR[0], -0.22, HARBOR[1] - 8 - 31); scene.add(qb);
+    qb.position.set(0, -0.22, -8 - 31); hq.add(qb);
   }
   // the buildings
   const kit = new Kit(0);
@@ -95,8 +109,24 @@ export async function setup(ctx) {
   leafPlatform(kit, yawFrame([LEAFP[0], 0, LEAFP[1]], 2.2), { seed: 6 });
   const far = new Kit(0);
   palace(far, yawFrame([PALACE[0], 24.4, PALACE[1]], 0.5), { seed: 7 });
+  // the town on the slope below the palace (between it and the camera): roofs stepping down the hill
+  {
+    const { house } = await import('../lib/architecture/house.js');
+    const hgt = (x, z) => 0.4 * N.fbm(x * 0.02, z * 0.02, 3) + 24 * smooth(330, 110, Math.hypot(x - PALACE[0], z - PALACE[1])) + 3 * N.fbm(x * 0.006, z * 0.006, 2) * smooth(330, 150, Math.hypot(x - PALACE[0], z - PALACE[1]));
+    const tr = (() => { let a = 77; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();
+    const town = new Kit(0);
+    // (round 2: the town hugs the foot of the palace rise, 75-140 m out, so it reads at the palace's
+    // scale - not big houses standing between the lens and the palace)
+    for (let k = 0; k < 20; k++) {
+      const ang = -0.75 + tr() * 1.5, dist = 75 + tr() * 65;
+      const x = PALACE[0] + Math.cos(ang) * dist, z = PALACE[1] + Math.sin(ang) * dist * 0.8;
+      const y = hgt(x, z) - 0.3;
+      house(town, yawFrame([x, y, z], ang + Math.PI / 2 + (tr() - 0.5) * 0.4), { w: 5.5 + tr() * 3, d: 7 + tr() * 2, storeys: tr() < 0.4 ? 2 : 1, roof: tr() < 0.5 ? 'side' : 'front', seed: 700 + k, lod: 'low', party: { left: false, right: false }, cover: tr() < 0.55 ? 'clay' : 'slate', chimney: tr() < 0.6 });
+    }
+    scene.add(town.build(M, { name: 'palace-town' }));
+  }
   const hb = new Kit(0);
-  harbor(hb, frame([HARBOR[0], 0, HARBOR[1]]), { seed: 8 });
+  harbor(hb, yawFrame([HARBOR[0], 0, HARBOR[1]], HY), { seed: 8 });
   for (const k of [kit, far, hb]) { const g = k.build(M, { name: 'verdor' }); scene.add(g); }
   // people for scale: Remi at the foot of the rig's stair, a keeper at the lodge door
   const people = [];
@@ -113,7 +143,9 @@ export async function setup(ctx) {
     const a = rng() * Math.PI * 2, r = Math.sqrt(rng()) * R;
     const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
     if (Math.hypot(x - STABLE[0], z - STABLE[1]) < 16) return null;
-    if (Math.hypot(x - RIG[0], z - RIG[1]) < 9.0) return null;
+    // (a ragged edge: grass thins out over a couple of metres, never a circle)
+    const rr = Math.hypot(x - RIG[0], z - RIG[1]) * (1 + 0.45 * N.fbm(x * 0.12 + 3, z * 0.12, 3));
+    if (rr < 6.0 || (rr < 9.5 && rng() < (9.5 - rr) / 3.5)) return null;
     if (Math.hypot(x - KEEPER[0], z - KEEPER[1]) < 7) return null;
     return [x, 0.4 * N.fbm(x * 0.02, z * 0.02, 3) - 0.02, z];
   };
@@ -122,7 +154,7 @@ export async function setup(ctx) {
     scene.add(grassField({ count: n / 6, height: [0.18, 0.42], seed: 7 + cx, blades: 10, color: [0.035, 0.055, 0.018], dry: [0.22, 0.19, 0.1], dryAmount: 0.6, place: place(cx, cz, R) }));
   }
   camera.near = 0.1; camera.far = 6000;
-  S = { sun, rig, people };
+  S = { sun, rig, people, M };
 }
 
 export function update(t, ctx) {
@@ -139,6 +171,7 @@ export function update(t, ctx) {
   ctx.lens.focus = new THREE.Vector3(...sh.p).distanceTo(new THREE.Vector3(...sh.t));
   ctx.lens.shutterAngle = 180;
   ctx.lens.iso = 400;
+  for (const k of ['sea', 'foam', 'pool']) { const u = S.M?.[k]?.userData?.dkUniforms?.akTime; if (u) u.value = t; }
   const { sun } = S;
   sun.target.position.set(sh.t[0], 0, sh.t[2]);
   sun.position.copy(sun.target.position).addScaledVector(SUN, 400);

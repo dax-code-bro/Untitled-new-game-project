@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { loadHDRI } from '../lib/assets.js';
 import { groundMaterial, reviewTime } from '../lib/humans/stage.js';
-import { Kit, frame, yawFrame } from '../lib/architecture/core.js';
+import { Kit, frame, yawFrame, sub } from '../lib/architecture/core.js';
 import { archMaterials } from '../lib/architecture/materials.js';
 import { house } from '../lib/architecture/house.js';
 import { archway, gateway, fountain, stonePier, kingsSteps } from '../lib/architecture/cling.js';
@@ -31,9 +31,9 @@ const MODELS = [
   { name: 'verdor-keeper-lodge', build: (k, F) => keeperHouse(k, F, { lod: 'mid' }) },
   { name: 'verdor-access-rig', build: (k, F) => accessRig(k, F, {}), person: 'remi', az: 0.9, el: 0.08 },
   { name: 'verdor-leaf-platform', build: (k, F) => leafPlatform(k, F, {}), person: 'keeper1', extra: 1.0, az: 0.9, el: 0.2 },
-  { name: 'verdor-harbour', build: (k, F) => harbor(k, F, { buildings: true, waterExtent: [40, 40], waterY: 0.03 }), az: 0.5, el: 0.14, extra: 0.62 },
+  { name: 'verdor-harbour', build: (k, F) => harbor(k, F, { buildings: true, waterExtent: [130, 120], waterY: 0.03, hinterland: 45 }), az: 0.5, el: 0.14, extra: 0.62, frameBox: [[-30, -2.4, -40], [30, 12, 6]] },
   { name: 'verdor-palace', build: (k, F) => palace(k, F, {}), el: 0.12 },
-  { name: 'round-tower', build: (k, F) => { const t = roundTower(k, F, { r: 4.2, h: 18, lod: 'mid', mat: 'stonePale', dressedMat: 'stonePale', slits: 3 }); conicalRoof(k, frame([F[0], F[1] + t.top - 0.2, F[2]]), { r: t.R - 0.15, h: 8, eaves: 0.45 }); }, extra: 1.25 },
+  { name: 'round-tower', build: (k, F) => { const t = roundTower(k, sub(F, [0, -1.0, 0]), { r: 4.2, h: 19, lod: 'mid', mat: 'stonePale', dressedMat: 'stonePale', slits: 3, batter: 0.8, batterH: 4.5, strings: [9.5], windows: [{ a: 0.4, y0: 12.5, w: 0.75, h: 1.45 }, { a: 2.6, y0: 7.0, w: 0.6, h: 1.1 }, { a: -0.9, y0: 15.0, w: 0.75, h: 1.45 }] }); conicalRoof(k, frame([F[0], F[1] + t.top - 1.2, F[2]]), { r: t.R - 0.15, h: 7.5, eaves: 0.45, flare: 0.16 }); }, extra: 1.25 },
   { name: 'cling-house-row', build: (k, F) => { let x = -10; for (let i = 0; i < 3; i++) { const w = [6.4, 5.6, 7.2][i]; house(k, frame([F[0] + x + w / 2, 0, F[2] + (i % 2) * 0.3]), { w, d: 8.5, storeys: i === 1 ? 2 : 1, roof: i === 2 ? 'side' : 'front', seed: 11 + i * 7, lod: 'mid', party: { left: i > 0, right: i < 2 } }); x += w + 0.05; } } },
 ];
 
@@ -69,7 +69,8 @@ export async function setup(ctx) {
     const g = kit.build(M, { name: m.name });
     console.warn(`[arch-contact] ${m.name}: ${g.userData.tris} tris, ${g.children.length} meshes, built in ${Math.round(performance.now() - t0)} ms`);
     scene.add(g);
-    const box = new THREE.Box3().setFromObject(g);
+    // (frameBox: frame the camera on the model's core, not on a sea or a terrain that runs off)
+    const box = m.frameBox ? new THREE.Box3(new THREE.Vector3(i * SPACING + m.frameBox[0][0], m.frameBox[0][1], m.frameBox[0][2]), new THREE.Vector3(i * SPACING + m.frameBox[1][0], m.frameBox[1][1], m.frameBox[1][2])) : new THREE.Box3().setFromObject(g);
     let person = null;
     if (m.person) {
       try {

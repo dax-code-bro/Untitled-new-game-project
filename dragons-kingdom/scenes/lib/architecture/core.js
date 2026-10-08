@@ -357,6 +357,7 @@ export function block(acc, F, sx, sy, sz, o = {}) {
       const oo = o.aoOpen || 0;
       if (((oo & 1) && p[0] <= -sx / 2 + r + 1e-6) || ((oo & 2) && p[0] >= sx / 2 - r - 1e-6) || ((oo & 4) && p[1] <= -sy / 2 + r + 1e-6) || ((oo & 8) && p[1] >= sy / 2 - r - 1e-6)) ao = 1;
     }
+    if (o.aoMul !== undefined) ao *= o.aoMul;
     // uv: metres; 'beam': u along x, v around the section
     let u, vv;
     if (o.uvFn) { const q = o.uvFn(p[0], p[1], p[2]); u = q[0]; vv = q[1]; }

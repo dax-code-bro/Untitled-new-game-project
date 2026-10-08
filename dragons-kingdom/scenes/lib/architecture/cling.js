@@ -20,6 +20,7 @@ import { member } from './timber.js';
 import { gableRoof } from './roof.js';
 import { archMaterials } from './materials.js';
 import { stain, grimeBand } from './weathering.js';
+import { barrel, crate, sack, handcart } from './dressing.js';
 
 /** The fixed layout (metres; y up; north = -z; the steps at the south edge). */
 export const CLING = {
@@ -311,7 +312,7 @@ export function fountain(kit, F, o = {}) {
       const c = [hit[0] + Math.cos(an) * rr, yw0 + hh, hit[2] + Math.sin(an) * rr];
       tube(kit.get('jet'), [[c[0] - Math.cos(an) * 0.008, c[1] - 0.012, c[2] - Math.sin(an) * 0.008], c, [c[0] + Math.cos(an) * 0.008, c[1] + 0.008, c[2] + Math.sin(an) * 0.008]], (t) => 0.0045 * Math.sin(Math.PI * t) + 0.0008, { sides: 5 });
     }
-    grid(kit.get('foam'), 16, 3, (u, v) => { const an = u * Math.PI * 2, rr = v * 0.32 * (1 + 0.25 * Math.sin(an * 3 + i)); return { p: [hit[0] + Math.cos(an) * rr, yw0 + 0.004, hit[2] + Math.sin(an) * rr], uv: [an * 0.3, rr * 0.4], seed: 0.5, ao: 1.0 }; }, [1, 0, 0], false);
+    grid(kit.get('foam'), 16, 3, (u, v) => { const an = u * Math.PI * 2, rr = v * 0.26 * (1 + 0.25 * Math.sin(an * 3 + i)); return { p: [hit[0] + Math.cos(an) * rr, yw0 + 0.004, hit[2] + Math.sin(an) * rr], uv: [an * 0.25 + i, rr * 1.6], seed: 0.5, ao: 0.55, ar: 0 }; }, [1, 0, 0], false);
     // limescale and algae run down the drum and the shaft below the spout
     {
       const Fd = sub(F, [out[0] * 0.43, 0, out[2] * 0.43], [out[2], 0, -out[0]], [0, 1, 0]);
@@ -544,7 +545,9 @@ export function kingsSteps(kit, F, o = {}) {
   const lod = o.lod || 'mid';
   const H = n * rise, depth = o.terrace ?? 5, run = n * tread;
   const cw = 0.6, para = 0.55;                                   // cheek / retaining wall thickness, parapet above the terrace
-  steps(kit, F, { n, w, rise, tread, lod, seed: rnd() * 999, mat: 'stoneDressed', wear: 0.03, landing: 0.0 });
+  steps(kit, F, { n, w, rise, tread, lod, seed: rnd() * 999, mat: 'stoneDressed', wear: 0.022, landing: 0.0, walkX: -0.8 });
+  // dirt, moss and weeds' bed in the joints at the back of each tread; dark streaks down the risers
+  for (let i = 0; i < n; i++) grimeBand(kit, sub(F, [-w / 2, 0, -i * tread + 0.02], [1, 0, 0], [0, 1, 0]), 0.1, w - 0.1, (i + 1) * rise - 0.01, rise * 0.85, rnd, { strength: 0.3, z: 0.006 });
   // the flight is solid: a rubble core under every step (it shows nowhere, but closes the flight)
   for (let i = 1; i < n; i++) block(kit.get('mortar'), sub(F, [0, i * rise / 2 - 0.03, -i * tread - tread / 2 + 0.06]), w - 0.02, i * rise - 0.06, tread, { r: 0, seg: 99, seed: rnd(), skip: 4 });
   // a wall section with stone on every face (quoined ends) along local x 0..L of frame Fw, h high
@@ -575,10 +578,21 @@ export function kingsSteps(kit, F, o = {}) {
   // the terrace paving (flags), over a solid fill
   const tz0 = -run;
   block(kit.get('mortar'), sub(F, [0, H / 2 - 0.06, tz0 - depth / 2]), w, H - 0.12, depth, { r: 0, seg: 99, seed: rnd(), skip: 4 });
-  for (let z = 0; z < depth; z += 0.62) for (let x = -w / 2; x < w / 2; x += 0.8) {
-    const fw = Math.min(0.8, w / 2 - x) - 0.01, fd = Math.min(0.62, depth - z) - 0.01;
-    block(kit.get('stoneDressed'), sub(F, [x + fw / 2 + rnd.sym(0.005), H - 0.05 + rnd.sym(0.004), tz0 - z - fd / 2]), fw, 0.1, fd, { r: 0.008, seg: [0.4, 0.1, 0.4], seed: rnd(), noise: 0.002, nf: 5, chip: 0.006, skip: 8 });
+  // the terrace: flags of mixed sizes in rows of mixed depth (not a grid), settled a little, a
+  // drain running to a spout through the back wall's foot
+  for (let z = 0; z < depth - 0.05;) {
+    const rd = Math.min(depth - z, rnd.range(0.45, 0.85));
+    for (let x = -w / 2; x < w / 2 - 0.05;) {
+      const fw = Math.min(w / 2 - x, rnd.range(0.5, 1.15));
+      const fd = rd - rnd.range(0.005, 0.01);
+      if (Math.abs(x + fw / 2 - 2.5) < 0.12) { x += 0.24; continue; }
+      block(kit.get('stoneDressed'), sub(F, [x + fw / 2 + rnd.sym(0.005), H - 0.05 + rnd.sym(0.008), tz0 - z - rd / 2], [1, rnd.sym(0.006), 0], [0, 1, rnd.sym(0.006)]), fw - rnd.range(0.005, 0.01), 0.1, fd, { r: rnd.range(0.006, 0.014), seg: [0.3, 0.1, 0.3], seed: rnd(), noise: 0.003, nf: 5, chip: 0.02, skip: 8 });
+      x += fw;
+    }
+    z += rd;
   }
+  // the drain: a channel of dished stones across the terrace
+  for (let z = 0.1; z < depth - 0.1; z += 0.5) block(kit.get('stoneSett'), sub(F, [2.5, H - 0.07, tz0 - z - 0.25]), 0.22, 0.1, 0.48, { r: 0.012, seg: [0.06, 0.05, 0.12], seed: rnd(), noise: 0.003, chip: 0.02, skip: 8, warp: (lx, ly, lz) => [lx, ly - (ly > 0 ? 0.025 * Math.cos(Math.min(1, Math.abs(lx) / 0.11) * Math.PI / 2) : 0), lz] });
   return { top: H, terrace: [tz0, tz0 - depth] };
 }
 
@@ -743,6 +757,30 @@ export async function clingSquare(ctx, opts = {}) {
     // puddles standing in the wheel ruts of the road
     for (let k = 0; k < 7; k++) puddle(kits.east, gt.x + 4 + k * 5.5 + rnd.sym(1.5), gt.z + (k % 2 ? 0.8 : -0.8) + rnd.sym(0.2), rnd.range(0.25, 0.6), 0.035, rnd(), 2.4);
   }
+  // set dressing by a few doors (clear of the escape routes, the stall and the music space): barrels,
+  // crates, sacks, a hand cart - the life of the square
+  if (opts.dressing !== false) {
+    const dr = makeRand((opts.seed ?? 5) + 303);
+    const keep = [[CLING.arch.x, CLING.arch.z, 6], [CLING.gate.x, CLING.gate.z, 7], [CLING.alley.x, CLING.alley.z, 4], [CLING.stall.x, CLING.stall.z, 4], [CLING.music.x, CLING.music.z, 4], [CLING.steps.x, CLING.steps.z, 9], [CLING.support.x, CLING.support.z, 4]];
+    let placed = 0;
+    for (const h of houses) {
+      if (placed >= 7 || h.back || !h.doors || !h.doors.length || dr() < 0.55) continue;
+      const d0 = h.doors[0];
+      const side = dr() < 0.5 ? -1 : 1;
+      const lx = d0.x + side * (d0.w / 2 + 0.75), lz = d0.z + 0.55;
+      const p = xf(h.frame, lx, 0, lz);
+      if (keep.some(([kx, kz, r]) => Math.hypot(p[0] - kx, p[2] - kz) < r)) continue;
+      if (p[0] < S.x0 - 1 || p[0] > S.x1 + 1 || p[2] < S.z0 - 1 || p[2] > S.z1 + 3) continue;
+      const Fd = sub(h.frame, [lx, 0, lz], [1, 0, 0], [0, 1, 0]);
+      const k = placed % 4;
+      const kit = kits[h.side] || kits.centre;
+      if (k === 0) { barrel(kit, Fd, dr); barrel(kit, sub(Fd, [side * 0.62, 0, 0.05]), dr); }
+      else if (k === 1) { crate(kit, Fd, dr, { w: 0.7, d: 0.5, h: 0.5 }); crate(kit, sub(Fd, [0.03, 0.52, 0.02]), dr, { w: 0.55, d: 0.45, h: 0.42 }); sack(kit, sub(Fd, [side * 0.65, 0, 0.1]), dr); }
+      else if (k === 2) { handcart(kit, sub(Fd, [side * 0.4, 0, 0.6], [0, 0, side], [0, 1, 0]), dr); }
+      else { barrel(kit, Fd, dr, { onSide: true }); sack(kit, sub(Fd, [side * 0.7, 0, 0.0]), dr); sack(kit, sub(Fd, [side * 1.05, 0, 0.12]), dr); }
+      placed++;
+    }
+  }
   // the square's paving (its own kit: one mesh), clear of the fountain, the steps and the wall feet
   if (opts.paving !== false) {
     kits.paving = new Kit(0);
@@ -764,8 +802,13 @@ export async function clingSquare(ctx, opts = {}) {
     });
     // damp and dirt along the foot of every house front: a dark band on the earth and the cobbles
     for (const [ax, az, bx, bz, nx, nz] of houseFootSegments(houses)) {
-      const L = Math.hypot(bx - ax, bz - az), X = [(bx - ax) / L, 0, (bz - az) / L];
-      const Fg = frame([ax, 0, az], X, [-nx, 0, -nz]);
+      // (frame: x along the wall, y into the wall - the stain runs 'down' y, out across the ground -
+      // z up; a wall whose x x inward points down is walked from its other end)
+      const L = Math.hypot(bx - ax, bz - az);
+      let X = [(bx - ax) / L, 0, (bz - az) / L], o0 = [ax, 0, az];
+      const Y = [-nx, 0, -nz];
+      if (X[2] * Y[0] - X[0] * Y[2] < 0) { X = [-X[0], 0, -X[2]]; o0 = [bx, 0, bz]; }
+      const Fg = frame(o0, X, Y);
       grimeBand(kits.paving, Fg, 0.05, L - 0.05, 0.0, 0.55, rnd, { strength: 0.55, z: 0.014 });
     }
   }

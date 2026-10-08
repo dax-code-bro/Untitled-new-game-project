@@ -19,6 +19,7 @@ import { Kit, frame, sub, makeRand, block, tube, lathe, xf, grid, curve, sagLine
 import { masonryFace, courses } from './masonry.js';
 import { member } from './timber.js';
 import { door } from './openings.js';
+import { stain } from './weathering.js';
 
 /**
  * Offline bakes (offline/*.py, Blender): scenes/lib/architecture/cache/<name>.json, git-ignored.
@@ -142,17 +143,59 @@ export function jug(kit, F, rnd) {
   tube(kit.get('clayware'), pts, 0.012, { sides: 6 });
 }
 
-/** A stack of folded linen cloths (each a soft slab). */
+/**
+ * A stack of folded linen cloths: each folded in layers (the loose edges show as thin stacked
+ * leaves on three sides, a rounded fold along the fourth), the top layer creased and slightly
+ * domed by the folds under it; each cloth turned and offset a little on the one below.
+ */
 export function foldedCloths(kit, F, rnd, n = 3, o = {}) {
   let y = 0;
   for (let i = 0; i < n; i++) {
-    const t = 0.03 + rnd() * 0.02;
+    const nl = 3 + Math.floor(rnd() * 3), lt = 0.0045;
     const w = (o.w ?? 0.36) + rnd.sym(0.03), d = (o.d ?? 0.26) + rnd.sym(0.02);
-    block(kit.get('linen'), sub(F, [rnd.sym(0.015), y + t / 2, rnd.sym(0.015)], [Math.cos(rnd.sym(0.08)), 0, Math.sin(rnd.sym(0.08))], [0, 1, 0]), w, t, d, {
-      r: t * 0.48, rs: 2, seg: [0.06, t / 2, 0.06], seed: rnd(), noise: 0.003, nf: 18,
-      warp: (lx, ly, lz) => [lx, ly - 0.004 * (lx * lx + lz * lz) / 0.05 + 0.002 * Math.sin(lx * 40 + lz * 23), lz],
-    });
-    y += t;
+    const yaw = rnd.sym(0.1);
+    const Fc = sub(F, [rnd.sym(0.015), y, rnd.sym(0.015)], [Math.cos(yaw), 0, Math.sin(yaw)], [0, 1, 0]);
+    const ph = rnd() * 6;
+    for (let k = 0; k < nl; k++) {
+      const top = k === nl - 1;
+      const ox = rnd.sym(0.006), oz = rnd.sym(0.004), sx = w - k * 0.002 + rnd.sym(0.004);
+      block(kit.get('linen'), sub(Fc, [ox, (k + 0.5) * lt, oz]), sx, lt * 0.9, d - 0.012, {
+        r: lt * 0.4, rs: 1, seg: top ? [0.03, lt, 0.03] : [0.08, lt, 0.08], seed: rnd(), noise: top ? 0.0012 : 0.0006, nf: 25,
+        warp: top ? (lx, ly, lz) => [lx, ly + 0.003 * (1 - (2 * lx / sx) ** 2) + 0.0018 * Math.sin(lx * 31 + ph) * Math.sin(lz * 17 + ph) + 0.0012 * Math.pow(1 - Math.abs(Math.sin(lx * 9 + lz * 14 + ph)), 6), lz] : undefined,
+      });
+    }
+    // the fold along the +z edge: a rounded roll the height of the stack
+    const sh = nl * lt;
+    const pts = []; for (let k = 0; k <= 8; k++) { const t = k / 8; pts.push(xf(Fc, -w / 2 + 0.006 + (w - 0.012) * t, sh / 2, d / 2 - 0.012 + 0.0015 * Math.sin(t * 9 + ph))); }
+    tube(kit.get('linen'), pts, sh / 2 + 0.0008, { sides: 10, seed: rnd() });
+    y += sh + 0.001;
+  }
+}
+
+/** A joined oak armchair (F at the seat's centre on the floor, the sitter facing +x): legs and arm
+ * posts, rails, a boarded back, a straw-stuffed cushion; o.pad 'left' | 'right' builds that arm up
+ * with a folded cloth pad (an arm support). */
+export function armChair(kit, F, rnd, o = {}) {
+  const sw = 0.56, sd = 0.5, sh = 0.45, ah = 0.66, bh = 1.05;
+  const leg = (x, z, y1, wd = 0.055) => block(kit.get('oakDark'), sub(F, [x, y1 / 2, z]), wd, y1, wd, { r: 0.006, rs: 1, seg: [wd, 0.2, wd], seed: rnd(), noise: 0.001, chip: 0.006, axis: [0, 1, 0] });
+  // back legs run up into the back, front legs up into the arms
+  for (const sz of [-1, 1]) { leg(-sd / 2 + 0.03, sz * (sw / 2 - 0.03), bh, 0.06); leg(sd / 2 - 0.03, sz * (sw / 2 - 0.03), ah, 0.055); }
+  // seat rails and the boarded seat
+  for (const [x, z, L, X] of [[0, sw / 2 - 0.03, sd, [1, 0, 0]], [0, -sw / 2 + 0.03, sd, [1, 0, 0]], [sd / 2 - 0.03, 0, sw, [0, 0, 1]], [-sd / 2 + 0.03, 0, sw, [0, 0, 1]]]) block(kit.get('oakDark'), sub(F, [x, sh - 0.05, z], X, [0, 1, 0]), L - 0.03, 0.07, 0.03, { r: 0.004, seg: [0.2, 0.07, 0.03], seed: rnd(), axis: [1, 0, 0] });
+  block(kit.get('oak'), sub(F, [0, sh, 0]), sd + 0.03, 0.03, sw + 0.02, { r: 0.006, seg: [0.2, 0.03, 0.2], seed: rnd(), noise: 0.001, axis: [0, 0, 1] });
+  // stretchers low down
+  for (const sz of [-1, 1]) block(kit.get('oakDark'), sub(F, [0, 0.12, sz * (sw / 2 - 0.03)]), sd - 0.06, 0.04, 0.025, { r: 0.004, seg: [0.2, 0.04, 0.025], seed: rnd(), axis: [1, 0, 0] });
+  // the arms: shaped boards from the back to the front posts
+  for (const sz of [-1, 1]) block(kit.get('oak'), sub(F, [0.02, ah + 0.012, sz * (sw / 2 - 0.03)]), sd + 0.06, 0.03, 0.075, { r: 0.012, rs: 1, seg: [0.1, 0.03, 0.04], seed: rnd(), noise: 0.001, axis: [1, 0, 0] });
+  // the boarded back between the back legs, a top rail
+  for (let k = 0; k < 4; k++) block(kit.get('oak'), sub(F, [-sd / 2 + 0.03, sh + 0.03 + (bh - sh - 0.1) / 2, -sw / 2 + 0.06 + (sw - 0.12) * (k + 0.5) / 4], [0, 1, 0], [-1, 0, 0]), bh - sh - 0.1, (sw - 0.12) / 4 - 0.006, 0.022, { r: 0.004, seg: [0.2, 0.06, 0.022], seed: rnd(), noise: 0.001, axis: [1, 0, 0] });
+  block(kit.get('oakDark'), sub(F, [-sd / 2 + 0.03, bh - 0.03, 0], [0, 0, 1], [0, 1, 0]), sw, 0.07, 0.06, { r: 0.008, seg: [0.2, 0.07, 0.06], seed: rnd(), axis: [1, 0, 0] });
+  // a cushion: leather over straw, sagging in the middle
+  block(kit.get('leather'), sub(F, [0.02, sh + 0.045, 0]), sd - 0.02, 0.06, sw - 0.08, { r: 0.025, rs: 2, seg: [0.06, 0.03, 0.06], seed: rnd(), noise: 0.002, nf: 12, warp: (lx, ly, lz) => [lx, ly - (ly > 0 ? 0.015 * (1 - (2 * lx / sd) ** 2) * (1 - (2 * lz / sw) ** 2) : 0), lz] });
+  // the arm support: a folded pad on the arm, built up, a cloth over it
+  if (o.pad) {
+    const sz = o.pad === 'left' ? -1 : 1;
+    foldedCloths(kit, sub(F, [0.03, ah + 0.027, sz * (sw / 2 - 0.03)], [1, 0, 0], [0, 1, 0]), rnd, 3, { w: 0.42, d: 0.16 });
   }
 }
 
@@ -183,49 +226,84 @@ export function stool(kit, F, rnd, o = {}) {
   }
 }
 
-/** The prepared nest: a low ring curb of dressed stones, a straw bed, linen laid over it. */
-export function nest(kit, F, rnd, o = {}) {
-  const R = o.r ?? 1.25, ch = o.h ?? 0.34;
-  // the kerb: straight dressed stones of different lengths set round a polygon (a built kerb, not a
-  // turned ring), each with a crisp chamfer on its top arrises, a little out of line
-  {
-    const startA = rnd() * Math.PI * 2, end = startA + Math.PI * 2;
-    let a = startA;
-    while (a < end - 0.05) {
-      let da = rnd.range(0.38, 0.72);
-      if (end - (a + da) < 0.3) da = end - a;
-      const a0 = a, a1 = a + da;
-      const p0 = [Math.cos(a0) * R, Math.sin(a0) * R], p1 = [Math.cos(a1) * R, Math.sin(a1) * R];
-      const chord = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]), L = chord - 0.008;
-      const mx = (p0[0] + p1[0]) / 2, mz = (p0[1] + p1[1]) / 2, ux = (p1[0] - p0[0]) / chord, uz = (p1[1] - p0[1]) / chord;
-      const hh = ch * rnd.range(0.94, 1.04);
-      const tw = 0.24 + rnd.sym(0.02);
-      block(kit.get('stonePale'), sub(F, [mx + rnd.sym(0.01), hh / 2, mz + rnd.sym(0.01)], [ux, 0, uz], [0, 1, 0]), L, hh, tw, {
-        r: 0.006, rs: 1, seg: [Math.max(0.1, L / 5), 0.1, 0.08], seed: rnd(), noise: 0.002, nf: 6, chip: 0.012, pillow: 0.0015,
-        // the chamfer: the top outer and inner arrises cut back at 45 degrees
-        warp: (lx, ly, lz) => { const c = 0.035; const e = Math.abs(lz) - (tw / 2 - c); return [lx, ly - (ly > hh / 2 - c && e > 0 ? Math.min(e, ly - (hh / 2 - c)) : 0), lz]; },
-      });
-      a = a1;
+/** The nest's bedding frame (inner half sizes A x B, the boards' top TOP, board thickness BT). */
+export const NEST = { A: 1.25, B: 1.0, TOP: 0.34, BT: 0.06 };
+/** Height of the straw bed inside the frame (nest-local x, z) - the offline cloth bake uses the same. */
+export function nestBedY(x, z) {
+  const sx = x / NEST.A, sz = z / NEST.B;
+  const dome = 0.17 * Math.max(0, 1 - sx * sx) * Math.max(0, 1 - sz * sz);
+  return 0.3 + dome + 0.018 * Math.sin(x * 7.3 + 1.0) * Math.sin(z * 6.1 + 0.5) + 0.01 * Math.sin(x * 13.1 - z * 11.3 + 2.0);
+}
+
+/**
+ * Straw: stalks 5-40 cm long, 1.5-4 mm thick, bent, kinked and broken, in three colour families
+ * (the straw material reads the family from the seed's third), laid in clumps of a common
+ * direction. yAt(x, z) -> the surface under a point. Returns the number of stalks.
+ */
+export function strawClumps(acc, F, rnd, n, place, yAt, o = {}) {
+  let count = 0;
+  for (let c = 0; c < n; c++) {
+    const pl = place(rnd);
+    if (!pl) continue;
+    const [cx, cz] = pl;
+    const fam = Math.floor(rnd() * 3 * 0.999);
+    const dir0 = rnd() * Math.PI * 2, ns = 4 + Math.floor(rnd() * 9);
+    for (let i = 0; i < ns; i++) {
+      // (mostly short pieces - trodden, broken - a few long whole stalks; laid one way in a clump)
+      const dir = dir0 + rnd.sym(0.3), l = Math.pow(rnd(), 2.2) * 0.3 + 0.04;
+      const x0 = cx + rnd.sym(0.06), z0 = cz + rnd.sym(0.06);
+      if (o.skip && o.skip(x0, z0)) continue;
+      const bend = rnd.sym(0.25) * l, kink = rnd() < 0.3 ? rnd.range(0.3, 0.8) : -1;
+      const pts = [];
+      const np = 5;
+      const ux = Math.cos(dir), uz = Math.sin(dir);
+      let ok = true;
+      for (let k = 0; k < np; k++) {
+        const t = k / (np - 1);
+        // a bow across the stalk, and a broken stalk turns sharply at its kink
+        const off = bend * Math.sin(Math.PI * t) + (kink > 0 && t > kink ? (t - kink) * l * 0.9 : 0);
+        const x = x0 + ux * l * t - uz * off, z = z0 + uz * l * t + ux * off;
+        if (o.skip && o.skip(x, z)) { ok = false; break; }
+        const lift = (k === 0 || k === np - 1 ? 0.0015 : 0.003 + rnd() * 0.006) + (o.loft ? o.loft * rnd() : 0);
+        pts.push(xf(F, x, yAt(x, z) + lift, z));
+      }
+      if (!ok || pts.length < 2) continue;
+      tube(acc, pts, rnd.range(0.0012, 0.0026), { sides: 3, seed: (fam + 0.05 + 0.9 * rnd()) / 3 });
+      count++;
     }
   }
-  // the straw bed: a domed mound filling the curb (its surface strewn with loose straws)
-  // (the mound spills over the kerb a little: lumpy, with tufts)
-  // (the same dome the linen was cloth-simulated over: anything higher pokes through the cloth)
-  const domeAt = (a, r) => ch * 0.85 + 0.12 * (1 - (r / R) ** 2) + 0.025 * Math.sin(a * 5 + r * 9) * (r / R);
-  grid(kit.get('strawBed'), 72, 30, (u, v) => {
-    const a = u * Math.PI * 2, r = v * (R + 0.06);
-    const y = r < R - 0.1 ? domeAt(a, r) : Math.max(domeAt(a, R - 0.1), ch + 0.03) - (r - (R - 0.1)) * 0.3;
-    const p = xf(F, Math.cos(a) * r, y, Math.sin(a) * r);
-    return { p, uv: [a * r, r], seed: 0.31, ao: 0.55 + 0.45 * (1 - (r / R) ** 2) };
+  return count;
+}
+
+/**
+ * The prepared nest: a plain bedding frame - four heavy oak boards on edge pegged into corner posts
+ * (a crib for bedding, nothing more) - full of straw heaped high in the middle and spilling over the
+ * boards onto the flags, a linen sheet laid over part of it (cloth-simulated: offline/nest_cloth.py).
+ * F at the frame's centre on the floor. o: cloth (the bake). Returns { r, top }.
+ */
+export function nest(kit, F, rnd, o = {}) {
+  const { A, B, TOP, BT } = NEST;
+  // the frame: two boards per side (edge-jointed), pegged to corner posts a little proud of them
+  for (const [cx, cz, L, along] of [[0, B + BT / 2, 2 * A + 2 * BT, 'x'], [0, -B - BT / 2, 2 * A + 2 * BT, 'x'], [A + BT / 2, 0, 2 * B, 'z'], [-A - BT / 2, 0, 2 * B, 'z']]) {
+    const X = along === 'x' ? [1, 0, 0] : [0, 0, 1];
+    for (const [y0, hh] of [[0.0, 0.17], [0.172, 0.168]]) {
+      block(kit.get(rnd() < 0.5 ? 'oak' : 'oakDark'), sub(F, [cx, y0 + hh / 2, cz], X, [0, 1, 0]), L - 0.01, hh - 0.004, BT, { r: rnd.range(0.005, 0.012), rs: 1, seg: [0.25, hh, BT], seed: rnd(), noise: 0.0015, chip: 0.008, axis: [1, 0, 0] });
+    }
+  }
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    block(kit.get('oakDark'), sub(F, [sx * (A + BT / 2), (TOP + 0.08) / 2, sz * (B + BT / 2)]), 0.12, TOP + 0.08, 0.12, { r: 0.012, rs: 1, seg: [0.06, 0.15, 0.06], seed: rnd(), noise: 0.0015, chip: 0.01, axis: [0, 1, 0] });
+    for (const yy of [0.09, 0.26]) tube(kit.get('oakPeg'), [xf(F, sx * (A + BT / 2) + sx * 0.0, yy, sz * (B + BT + 0.003)), xf(F, sx * (A + BT / 2), yy, sz * (B + BT + 0.007))], 0.012, { sides: 7, caps: true, seed: rnd() });
+  }
+  // the straw bed under it all (a matte surface, nearly hidden by the stalks)
+  grid(kit.get('strawBed'), 60, 48, (u, v) => {
+    const x = -A + 2 * A * u, z = -B + 2 * B * v;
+    return { p: xf(F, x, nestBedY(x, z) - 0.008, z), uv: [x, z], seed: 0.31, ao: 0.6 + 0.4 * Math.min(1, Math.min(A - Math.abs(x), B - Math.abs(z)) / 0.3) };
   }, [1, 0, 0], false);
-  // straw: thousands of stems in clumps (each clump laid one way, its stems bent and crossing),
-  // heaped deeper toward the kerb, spilling over it onto the flags; none on the linen
-  const acc = kit.get('straw');
-  // the linen's real footprint (2 cm cells under its draped quads), not its bounding box: the
-  // straw is heaped right up to the cloth's edges (no bare bed round it)
+  // the linen's real footprint (2 cm cells under its draped quads), eroded 6 cm: straw runs in under
+  // its edges and lies over them
   let cover = null;
-  const CS = 0.02, cell = (x, z) => Math.floor(x / CS) * 4096 + Math.floor(z / CS);
-  if (o.cloth) {
+  const CS = 0.02;
+  if (o.cloth && o.cloth.bed === 2) {
     const { nx, ny, positions: P } = o.cloth;
     cover = new Set();
     for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
@@ -236,66 +314,51 @@ export function nest(kit, F, rnd, o = {}) {
       for (let gx = Math.floor(a0 / CS); gx <= Math.floor(a1 / CS); gx++) for (let gz = Math.floor(b0 / CS); gz <= Math.floor(b1 / CS); gz++) cover.add(gx * 4096 + gz);
     }
   }
-  // (eroded by 6 cm: straws run in under the sheet's edges and lie over them)
   const onCloth = (x, z) => {
     if (!cover) return false;
     const gx = Math.floor(x / CS), gz = Math.floor(z / CS);
     for (let i = -3; i <= 3; i++) for (let j = -3; j <= 3; j++) if (!cover.has((gx + i) * 4096 + gz + j)) return false;
     return true;
   };
-  const yOn = (x, z, out) => { const rr = Math.hypot(x, z), aa = Math.atan2(z, x); return out ? 0.006 : rr > R - 0.12 ? ch + 0.03 : domeAt(aa, Math.min(rr, R - 0.1)) + 0.004; };
-  const nClumps = o.clumps ?? 2000;
-  for (let c = 0; c < nClumps; c++) {
-    const out = rnd() < 0.22;
-    const a = rnd() * Math.PI * 2, r = out ? R + 0.1 + Math.pow(rnd(), 1.8) * 0.65 : Math.sqrt(rnd()) * (R + 0.02);
-    const cx = Math.cos(a) * r, cz = Math.sin(a) * r;
-    if (onCloth(cx, cz)) continue;
-    const dir0 = rnd() * Math.PI * 2, ns = out ? 3 + Math.floor(rnd() * 5) : 5 + Math.floor(rnd() * 9);
-    for (let i = 0; i < ns; i++) {
-      const dir = dir0 + rnd.sym(0.8), l = rnd.range(0.06, 0.22);
-      const x0 = cx + rnd.sym(0.05), z0 = cz + rnd.sym(0.05), x1 = x0 + Math.cos(dir) * l, z1 = z0 + Math.sin(dir) * l;
-      if (onCloth(x1, z1)) continue;
-      const bw = rnd.sym(0.3) * l, xm = (x0 + x1) / 2 - Math.sin(dir) * bw * 0.3, zm = (z0 + z1) / 2 + Math.cos(dir) * bw * 0.3;
-      const lift = Math.pow(rnd(), 2) * 0.012;
-      const p0 = xf(F, x0, yOn(x0, z0, out) + lift * 0.3, z0), pm = xf(F, xm, yOn(xm, zm, out) + 0.004 + lift + rnd() * 0.01, zm), p1 = xf(F, x1, yOn(x1, z1, out) + lift * 0.5 + rnd() * 0.012, z1);
-      tube(acc, [p0, pm, p1], rnd.range(0.0016, 0.0028), { sides: 3, seed: rnd() });
-    }
-  }
-  // linen laid over the bed: the cloth-simulated drape (offline/nest_cloth.py) when baked
-  if (o.cloth) {
+  // the surface under a stalk: the bed inside, the boards' top, the floor outside
+  const surf = (x, z) => {
+    const ex = Math.abs(x) - A, ez = Math.abs(z) - B;
+    if (ex <= 0 && ez <= 0) return nestBedY(x, z);
+    if (ex <= BT && ez <= BT) return TOP + 0.004;
+    return 0.004;
+  };
+  const acc = kit.get('straw');
+  // inside: dense clumps over the whole bed (not on the linen), heaped against the boards
+  strawClumps(acc, F, rnd, o.clumps ?? 1500, (r) => [r.sym(A - 0.03), r.sym(B - 0.03)], surf, { skip: onCloth });
+  // over the boards and out onto the flags: stalks pulled out of the bed when it was made
+  strawClumps(acc, F, rnd, 380, (r) => {
+    const side = Math.floor(r() * 4), t = r.sym(1);
+    const out = Math.pow(r(), 1.7) * 0.75 + 0.02;
+    return side === 0 ? [A + BT * 0.5 + out * 0.6 - 0.05, t * B] : side === 1 ? [-A - BT * 0.5 - out * 0.6 + 0.05, t * B] : side === 2 ? [t * A, B + BT * 0.5 + out * 0.6 - 0.05] : [t * A, -B - BT * 0.5 - out * 0.6 + 0.05];
+  }, surf, { skip: onCloth });
+  // linen laid over the bed: the cloth-simulated drape when baked
+  if (cover) {
     const { nx, ny, positions: P } = o.cloth;
-    // the straw under the sheet lifts it in soft lumps (the bake lay on a smooth dome)
-    const lump = (x, z) => 0.009 * Math.max(0, 0.45 + 0.35 * Math.sin(x * 23.1 + 1.3) * Math.sin(z * 19.7 + 0.4) + 0.3 * Math.sin(x * 41.3 - z * 37.9 + 2.1) + 0.2 * Math.sin(x * 67.1 + z * 59.3));
-    // and it was laid by hand: soft creases running across it (narrow crests between flat runs)
-    const W = [[14, 5, 0.3, 0.008], [-6, 17, 1.1, 0.0065], [21, -13, 2.0, 0.005], [9, 24, 0.7, 0.0045], [31, 8, 1.9, 0.003]];
-    const crease = (x, z) => { let hh = 0; for (const [kx, kz, ph, am] of W) hh += am * Math.pow(1 - Math.abs(Math.sin(kx * x + kz * z + ph)), 3); return hh; };
-    // (never under the straw bed: the bake's collision dome is a little lower than this one in places)
-    const bedY = (x, z) => { const r = Math.hypot(x, z), a = Math.atan2(z, x); return r < R - 0.1 ? domeAt(a, r) : Math.max(domeAt(a, R - 0.1), ch + 0.03) - (r - (R - 0.1)) * 0.3; };
-    const yAt = (k) => Math.max(P[k + 1], bedY(P[k], P[k + 2]) + 0.006) + 0.004 + lump(P[k], P[k + 2]) + crease(P[k], P[k + 2]);
+    const yAt = (k) => P[k + 1] + 0.003;
     grid(kit.get('linen'), nx, ny, (u, v) => {
       const i = Math.round(u * nx), j = Math.round(v * ny), k = (j * (nx + 1) + i) * 3;
-      const p = xf(F, P[k], yAt(k), P[k + 2]);
-      return { p, uv: [u * 2.0, v * 1.6], seed: 0.62, ao: 0.85 };
+      return { p: xf(F, P[k], yAt(k), P[k + 2]), uv: [u * 1.5, v * 1.15], seed: 0.62, ao: 0.85 };
     }, [1, 0, 0], false);
     // a few stray stems lying on the linen
-    for (let s = 0; s < 35; s++) {
+    for (let s2 = 0; s2 < 30; s2++) {
       const i = 3 + Math.floor(rnd() * (nx - 5)), j = 2 + Math.floor(rnd() * (ny - 4)), di = rnd() < 0.5 ? 1 : -1, dj = Math.floor(rnd() * 3) - 1;
       const k0 = (j * (nx + 1) + i) * 3, k1 = ((j + dj * 2) * (nx + 1) + i + di * 3) * 3, km = (((j + dj)) * (nx + 1) + i + di) * 3;
-      tube(acc, [xf(F, P[k0], yAt(k0) + 0.003, P[k0 + 2]), xf(F, (P[k0] + P[k1]) / 2, yAt(km) + 0.005, (P[k0 + 2] + P[k1 + 2]) / 2), xf(F, P[k1], yAt(k1) + 0.003, P[k1 + 2])], rnd.range(0.0016, 0.0024), { sides: 3, seed: rnd() });
+      tube(acc, [xf(F, P[k0], yAt(k0) + 0.003, P[k0 + 2]), xf(F, (P[k0] + P[k1]) / 2, yAt(km) + 0.005, (P[k0 + 2] + P[k1 + 2]) / 2), xf(F, P[k1], yAt(k1) + 0.003, P[k1 + 2])], rnd.range(0.0009, 0.0016), { sides: 3, seed: (Math.floor(rnd() * 3) + 0.5) / 3 });
     }
-    return { r: R, top: ch * 0.85 + 0.12 };
+  } else {
+    // (procedural fallback) linen in soft folds over the middle of the bed
+    grid(kit.get('linen'), 40, 30, (u, v) => {
+      const x = (u - 0.5) * 1.4 + 0.5, z = (v - 0.5) * 1.1;
+      const y = nestBedY(Math.max(-A, Math.min(A, x)), z) + 0.02 + 0.015 * Math.sin(x * 7 + z * 3) * Math.cos(z * 5);
+      return { p: xf(F, x, y, z), uv: [x, z], seed: 0.62, ao: 0.8 };
+    }, [1, 0, 0], false);
   }
-  // (procedural fallback) linen in soft folds, a corner hanging over the curb
-  grid(kit.get('linen'), 40, 30, (u, v) => {
-    const x = (u - 0.5) * 2.0, z = (v - 0.5) * 1.6;
-    const r = Math.hypot(x, z);
-    const inside = R - 0.05;
-    let y = r < inside ? ch * 0.85 + 0.12 * (1 - (r / R) ** 2) + 0.03 : ch + 0.03 - (r - inside) * 0.9;
-    y += 0.018 * Math.sin(x * 7 + z * 3) * Math.cos(z * 5) + 0.012 * Math.sin(x * 13 - z * 9);
-    const p = xf(F, x * 0.9 + 0.25, Math.max(0.01, y), z * 0.9 - 0.1);
-    return { p, uv: [x, z], seed: 0.62, ao: 0.8 };
-  }, [1, 0, 0], true);
-  return { r: R, top: ch * 0.85 + 0.12 };
+  return { r: Math.hypot(A, B), top: nestBedY(0, 0) };
 }
 
 /**
@@ -305,20 +368,36 @@ export function nest(kit, F, rnd, o = {}) {
  */
 export function birthingChamber(kit, F, o = {}) {
   const rnd = makeRand(o.seed ?? 301);
-  const w = o.w ?? 7.2, d = o.d ?? 6.2, h = o.h ?? 6.6, T = 0.9;
+  // (round 2: the ceiling comes down to 5.6 m - its beams are in the wide shots)
+  const w = o.w ?? 7.2, d = o.d ?? 6.2, h = o.h ?? 5.6, T = 0.9;
   const lod = o.lod || 'mid';
   const local = new Kit(0);
-  const win = { wall: 'east', x: 2.2, y: 3.6, w: 1.1, h: 1.7, ...(o.window || {}) };
+  const win = { wall: 'east', x: 2.2, y: 3.15, w: 1.1, h: 1.6, ...(o.window || {}) };
   const dr = { wall: 'south', x: 4.6, w: 1.4, h: 2.7, open: 0.35, ...(o.door || {}) };
   const hw = h + 0.4;                     // the walls run up past the ceiling boards (no light leaks)
   const C = courses(rnd, hw, { min: 0.2, max: 0.34, plinth: 0.36 });
+  // lamp niches: arched recesses in the west and north walls (the lamps stand in them)
+  const niches = { west: { x: 3.25, y: 1.42, w: 0.42, h: 0.6 }, north: { x: 1.7, y: 1.42, w: 0.42, h: 0.6 } };
+  const nicheLamps = [];
   for (const wl of roomWalls(w, d)) {
     const Fw = sub(frame([0, 0, 0]), wl.o, wl.X, [0, 1, 0]);
     const ops = [];
     if (wl.key === win.wall) ops.push({ x: win.x, y: win.y, w: win.w, h: win.h, head: 'arch', reveal: T, archDepth: T, sill: false });
     if (wl.key === dr.wall) ops.push({ x: dr.x, y: 0, w: dr.w, h: dr.h, head: 'arch', reveal: T * 0.6 });
-    // a niche for a lamp
+    const nc = niches[wl.key];
+    if (nc) ops.push({ x: nc.x, y: nc.y, w: nc.w, h: nc.h, head: 'arch', reveal: 0.3, niche: 0.3, jamb: false, sill: true });
     masonryFace(local, Fw, wl.L, hw, { courses: C, style: 'washed', mat: 'stoneWashed', dressedMat: 'stonePale', mortar: 'mortarWashed', T, lod, seed: rnd() * 999, openings: ops, back: true, backMat: 'mortarPale', quoinStart: () => 0.04, quoinEnd: () => 0.04 });
+    if (nc) {
+      // the lamp on the niche floor, the soot it has laid on the wall above the niche over the years
+      const Fl = sub(Fw, [nc.x + nc.w / 2 - 0.08, nc.y + 0.004, -0.17], [1, 0, 0], [0, 1, 0]);
+      nicheLamps.push(xf(Fl, ...oilLamp(local, Fl, rnd)));
+      grid(local.get('sootStain'), 10, 16, (u, v) => {
+        const x = (u - 0.5) * (0.4 + 0.95 * v), y = nc.y + nc.h - 0.12 + v * 1.7;
+        return { p: xf(Fw, nc.x + nc.w / 2 + x, y, 0.03 + 0.004 * v), uv: [u, v], seed: rnd(), ao: 1 };
+      }, [1, 0, 0], false);
+      // oil spilled and soaked into the niche floor's front edge
+      stain(local, Fw, nc.x + nc.w / 2, nc.y - 0.1, nc.w * 0.8, 0.35, 'dirt', { strength: 0.45, seed: rnd(), z: 0.03 });
+    }
     if (wl.key === dr.wall) door(local, sub(Fw, [dr.x, 0, 0]), { w: dr.w, h: dr.h, arch: true, inset: T * 0.6, open: dr.open, hingeLeft: false, room: true, wallT: T, seed: rnd() * 999 });
     // a threshold slab through the reveal (the floor runs on to the room behind the portal)
     if (wl.key === dr.wall) block(local.get('stoneFloor'), sub(Fw, [dr.x + dr.w / 2, -0.066, -T / 2]), dr.w + 0.1, 0.14, T, { r: 0.012, seg: [0.2, 0.07, 0.2], seed: 0.37, noise: 0.003, chip: 0.008 });
@@ -330,6 +409,14 @@ export function birthingChamber(kit, F, o = {}) {
   // the nest (centre slightly toward the west wall), the bench along the north wall
   const nestC = o.nest || [-0.6, 0, 0.3];
   const nst = nest(local, frame(nestC), rnd, { cloth: o.cloth });
+  // straw and chaff trodden about the floor: round the nest and along the way from the door
+  {
+    const acc = local.get('straw');
+    strawClumps(acc, frame([0, 0, 0]), rnd, 260, (r) => {
+      if (r() < 0.65) { const a = r() * Math.PI * 2, rr = 1.5 + Math.pow(r(), 1.5) * 1.6; return [nestC[0] + Math.cos(a) * rr * 1.1, nestC[2] + Math.sin(a) * rr * 0.9]; }
+      const t = r(); return [w / 2 - dr.x - dr.w / 2 + (nestC[0] - (w / 2 - dr.x - dr.w / 2)) * t + r.sym(0.4), d / 2 - 0.3 + (nestC[2] - d / 2 + 0.3) * t + r.sym(0.4)];
+    }, () => 0.004, { skip: (x, z) => Math.abs(x - nestC[0]) < NEST.A + NEST.BT + 0.02 && Math.abs(z - nestC[2]) < NEST.B + NEST.BT + 0.02 });
+  }
   const lamps = [];
   {
     const bF = frame([-0.4, 0, -d / 2 + 0.5]);
@@ -340,19 +427,20 @@ export function birthingChamber(kit, F, o = {}) {
     foldedCloths(local, sub(bF, [0.75, 0.62, 0.0]), rnd, 4);
     lamps.push(xf(sub(bF, [-0.95, 0.62, 0.08]), ...oilLamp(local, sub(bF, [-0.95, 0.62, 0.08]), rnd)));
   }
-  stool(local, frame([nestC[0] + 1.65, 0, nestC[2] + 0.55]), rnd, { h: 0.4 });
-  foldedCloths(local, frame([nestC[0] + 1.5, 0, nestC[2] - 0.6]), rnd, 3, { w: 0.4, d: 0.3 });
-  bowl(local, frame([nestC[0] + 1.35, 0, nestC[2] - 1.05]), rnd, { r: 0.19, h: 0.09 });
-  // lamps in iron brackets on the walls
-  for (const [wx, wz, ry] of [[-w / 2 + 0.02, -0.8, Math.PI / 2], [w / 2 - 0.02, 1.4, -Math.PI / 2], [1.8, -d / 2 + 0.02, 0]]) {
+  stool(local, frame([nestC[0] + 2.05, 0, nestC[2] + 0.6]), rnd, { h: 0.4 });
+  foldedCloths(local, frame([nestC[0] + 1.95, 0, nestC[2] - 0.55]), rnd, 3, { w: 0.4, d: 0.3 });
+  bowl(local, frame([nestC[0] + 1.8, 0, nestC[2] - 1.25]), rnd, { r: 0.19, h: 0.09 });
+  for (const p of nicheLamps) lamps.push(p);
+  // a lamp on an iron bracket driven into a joint of the east wall
+  for (const [wx, wz, ry] of [[w / 2 - 0.02, 1.4, -Math.PI / 2]]) {
     const Fb = frame([wx, 1.75, wz], [Math.cos(ry), 0, -Math.sin(ry)], [0, 1, 0]);
     // the bracket: a bar out of the wall and a little iron shelf
     tube(local.get('iron'), [xf(Fb, 0, 0, 0), xf(Fb, 0, 0, 0.42)], 0.012, { sides: 6 });
     tube(local.get('iron'), [xf(Fb, 0, -0.2, 0), xf(Fb, 0, -0.01, 0.28)], 0.01, { sides: 6 });
     block(local.get('iron'), sub(Fb, [0, 0.004, 0.36]), 0.16, 0.008, 0.14, { r: 0.002, seg: [0.16, 0.008, 0.14], seed: rnd() });
-    // the soot plume the flame has laid on the wall above it over years
+    // the soot plume the flame has laid on the wall above it over years (a soft fan)
     grid(local.get('sootStain'), 10, 16, (u, v) => {
-      const x = (u - 0.5) * (0.25 + 0.55 * v), y = 0.05 + v * 1.4;
+      const x = (u - 0.5) * (0.4 + 0.95 * v), y = 0.05 + v * 1.7;
       return { p: xf(Fb, x, y, 0.03 + 0.004 * v), uv: [u, v], seed: rnd(), ao: 1 };
     }, [1, 0, 0], false);
     const Fl = sub(Fb, [0, 0.008, 0.35], [0, 0, 1], [0, 1, 0]);
@@ -385,22 +473,34 @@ export function treatmentRoom(kit, F, o = {}) {
   for (const wl of roomWalls(w, d)) {
     const Fw = sub(frame([0, 0, 0]), wl.o, wl.X, [0, 1, 0]);
     const ops = [];
-    if (wl.key === win.wall) ops.push({ x: win.x, y: win.y, w: win.w, h: win.h, head: 'lintel', reveal: T, sill: false });
+    // the window is splayed: 30 cm wider each side and lower at the sill on the room face than the
+    // window itself at the back of the wall (it spreads the daylight)
+    const SP = 0.3, SS = 0.22, SH = 0.12;
+    if (wl.key === win.wall) ops.push({ x: win.x, y: win.y, w: win.w, h: win.h, head: 'lintel', reveal: T, sill: false, splay: SP, sillSplay: SS, headSplay: SH, jamb: false });
     if (wl.key === dr.wall) ops.push({ x: dr.x, y: 0, w: dr.w, h: dr.h, head: 'lintel', reveal: T * 0.5 });
     // stone walls with a lime plaster coat over most of it (bare stone where it has fallen)
     // rubble walling under the lime plaster (it shows where the coat has fallen)
     masonryFace(local, Fw, wl.L, hw, { courses: C, style: 'washed', mat: 'stoneWashed', dressedMat: 'stoneWashed', mortar: 'mortarWashed', T, lod: 'mid', seed: rnd() * 999, openings: ops, back: true, backMat: 'mortarPale', quoinStart: () => 0.04, quoinEnd: () => 0.04 });
-    plasterCoat(local, Fw, wl.L, h, ops, rnd, { inset: 0.03, mat: 'plasterInt' });
+    plasterCoat(local, Fw, wl.L, h, ops.map((op) => (op.splay ? { ...op, x: op.x - SP, w: op.w + 2 * SP, y: op.y - SS, h: op.h + SS + SH } : op)), rnd, { inset: 0.03, mat: 'plasterInt' });
     if (wl.key === dr.wall) door(local, sub(Fw, [dr.x, 0, 0]), { w: dr.w, h: dr.h, inset: T * 0.5, open: dr.open, hingeLeft: true, room: true, wallT: T, seed: rnd() * 999 });
     // a threshold slab through the reveal (the floor runs on to the room behind the portal)
     if (wl.key === dr.wall) block(local.get('stoneFloor'), sub(Fw, [dr.x + dr.w / 2, -0.066, -T / 2]), dr.w + 0.1, 0.14, T, { r: 0.012, seg: [0.2, 0.07, 0.2], seed: 0.53, noise: 0.003, chip: 0.008 });
     if (wl.key === win.wall) {
       // the deep reveal is plastered; inside shutters folded back against the splay
       const Fo = sub(Fw, [win.x, win.y, 0]);
-      block(local.get('oak'), sub(Fo, [win.w / 2, -0.03, -T / 2]), win.w + 0.1, 0.06, T + 0.08, { r: 0.006, seg: [0.4, 0.06, 0.3], seed: rnd(), noise: 0.0015 });
+      // the stone sill: slabs falling from the window down the splay into the room, worn smooth
+      {
+        const ang = Math.atan2(SS, T), Ls = Math.hypot(SS, T);
+        let x0 = -SP * 0.5;
+        while (x0 < win.w + SP * 0.5 - 0.05) {
+          const lw = Math.min(win.w + SP * 0.5 - x0, rnd.range(0.4, 0.7));
+          block(local.get('stoneFloor'), sub(Fo, [x0 + lw / 2, -SS / 2 - 0.035, -T / 2], [1, 0, 0], [0, Math.cos(ang), -Math.sin(ang)]), lw - 0.01, 0.07, Ls + 0.02, { r: 0.012, rs: 1, seg: [0.15, 0.07, 0.2], seed: rnd(), noise: 0.002, chip: 0.012 });
+          x0 += lw;
+        }
+      }
       for (const sx of [0, 1]) {
-        // folded back flat against the inside wall face either side of the opening
-        const Fl = sub(Fo, [sx ? win.w + 0.03 : -0.03, 0.02, 0.07], sx ? [1, 0, 0.04] : [-1, 0, 0.04], [0, 1, 0]);
+        // folded back flat against the inside wall face either side of the splayed opening
+        const Fl = sub(Fo, [sx ? win.w + SP + 0.03 : -SP - 0.03, 0.02, 0.07], sx ? [1, 0, 0.04] : [-1, 0, 0.04], [0, 1, 0]);
         for (let i = 0; i < 3; i++) block(local.get('oakDark'), sub(Fl, [0.1 + i * 0.205, win.h / 2 - 0.02, 0.012]), 0.2, win.h - 0.06, 0.025, { r: 0.004, seg: [0.2, 0.5, 0.025], seed: rnd(), noise: 0.0015, axis: [0, 1, 0] });
         // ledges, strap hinges with nail heads, the pintles leaded into the reveal
         for (const fy of [0.18, 0.82]) {
@@ -418,13 +518,12 @@ export function treatmentRoom(kit, F, o = {}) {
   const settle = frame([-0.9, 0, d / 2 - 0.42], [-1, 0, 0], [0, 1, 0]);
   bench(local, settle, rnd, { L: 1.7, d: 0.45, h: 0.46 });
   for (let i = 0; i < 6; i++) block(local.get('oak'), sub(settle, [-0.85 + 0.03 + i * 0.29 + 0.14, 0.76, 0.23], [1, 0, 0], [0, 1, 0]), 0.28, 0.6, 0.03, { r: 0.004, seg: [0.28, 0.4, 0.03], seed: rnd(), noise: 0.0015, axis: [0, 1, 0] });
-  // the patient's stool by the window light, facing the room (+x); at her LEFT (-z) a low trestle
-  // with a folded cloth pad where her injured left arm rests (2B)
+  // the patient's chair by the window light, facing the room (+x): a joined oak armchair, a cushion
+  // on the seat, its LEFT arm (-z) built up with a folded pad where her injured left arm rests (2B)
   const seatP = [-w / 2 + 1.35, 0, 0.4];
-  stool(local, frame(seatP), rnd);
-  const armF = frame([seatP[0] + 0.05, 0, seatP[2] - 0.52], [1, 0, 0], [0, 1, 0]);
-  bench(local, armF, rnd, { L: 0.62, d: 0.34, h: 0.62, t: 0.05 });
-  foldedCloths(local, sub(armF, [0.02, 0.62, 0.0]), rnd, 3, { w: 0.48, d: 0.28 });
+  const chairF = frame(seatP);
+  armChair(local, chairF, rnd, { pad: 'left' });
+  const armF = sub(chairF, [0.0, 0, -0.29]);
   stool(local, frame([0.9, 0, 1.4]), rnd, { h: 0.44 });
   const table = frame([0.6, 0, -d / 2 + 0.75]);
   bench(local, table, rnd, { L: 1.6, d: 0.75, h: 0.76, t: 0.07 });
@@ -456,7 +555,7 @@ export function treatmentRoom(kit, F, o = {}) {
     for (const sx of [-2.05, -0.75]) block(local.get('iron'), frame([sx, y - 0.08, -d / 2 + 0.12]), 0.03, 0.16, 0.2, { r: 0.004, seg: [0.03, 0.16, 0.2], seed: rnd() });
   }
   kit.merge(local, F);
-  return { lights: [], anchors: { window: win, door: dr, settle: xf(settle, 0, 0.46, 0), seat: xf(F, seatP[0], 0.42, seatP[2]), armSupport: xf(armF, 0, 0.62 + 0.1, 0), w, d, h, T } };
+  return { lights: [], anchors: { window: win, door: dr, settle: xf(settle, 0, 0.46, 0), seat: xf(F, seatP[0], 0.47, seatP[2]), armSupport: xf(F, ...xf(armF, 0, 0.78, 0)), w, d, h, T } };
 }
 
 /**
@@ -472,7 +571,7 @@ function plasterCoat(kit, F, L, H, ops, rnd, o = {}) {
   const so = seed * 100;
   // > 0: the plaster has fallen (low down along the floor, and in a few ragged patches)
   const loss = (x, y) => Math.sin(x * 1.3 + seed * 20) * Math.sin(y * 1.7 + seed * 9) + 0.6 * Math.sin(x * 3.1 - y * 2.3)
-    + 0.45 * fbm3(x * 2.2 + so, y * 2.2, 0.5, 3) - 1.2 + Math.max(0, 0.16 - y) * 12;
+    + 0.45 * fbm3(x * 2.2 + so, y * 2.2, 0.5, 3) - 1.42 + Math.max(0, 0.12 - y) * 12;
   const inOp = (x, y) => ops.some((op) => x > op.x - 0.02 && x < op.x + op.w + 0.02 && y > op.y - 0.02 && y < op.y + op.h + 0.02);
   const keep = new Uint8Array(nx * ny);
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
@@ -510,20 +609,24 @@ function plasterCoat(kit, F, L, H, ops, rnd, o = {}) {
     acc.q(ids[j * (nx + 1) + i], ids[j * (nx + 1) + i + 1], ids[(j + 1) * (nx + 1) + i + 1], ids[(j + 1) * (nx + 1) + i]);
   }
   // the broken edge: the coat's thickness down to the wall along every kept/lost boundary
-  const edge = (a, b) => {
+  // the broken edge: feathered - it slopes from the coat's face down to the wall over 1.5-2.5 cm
+  // into the loss (dx, dy: toward the lost side), in plaster colour, one face toward the room
+  const edge = (a, b, dx, dy) => {
     const ax = pos[a * 2], ay = pos[a * 2 + 1], bx = pos[b * 2], by = pos[b * 2 + 1];
     const v = (x, y, z, ao) => { const p = xf(F, x, y, z); return acc.v(p[0], p[1], p[2], x, y + z, seed, ao, 0, F[3], F[4], F[5]); };
-    // the broken edge in plaster colour, a little shaded at its foot (no black outline)
-    const a0 = v(ax, ay, thick, 0.95), b0 = v(bx, by, thick, 0.95), a1 = v(ax, ay, 0.004, 0.8), b1 = v(bx, by, 0.004, 0.8);
-    acc.q(a0, b0, b1, a1); acc.q(a0, a1, b1, b0);               // both windings: the side is seen from either way
+    const f = 0.015 + 0.01 * Math.abs(Math.sin(ax * 37 + ay * 23));
+    const a0 = v(ax, ay, thick, 0.95), b0 = v(bx, by, thick, 0.95), a1 = v(ax + dx * f, ay + dy * f, 0.004, 0.85), b1 = v(bx + dx * f, by + dy * f, 0.004, 0.85);
+    // (wound to face out of the wall and toward the loss)
+    const crossZ = (bx - ax) * dy - (by - ay) * dx;
+    if (crossZ > 0) acc.q(a0, a1, b1, b0); else acc.q(a0, b0, b1, a1);
   };
   const vid = (i, j) => j * (nx + 1) + i;
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
     if (!kept(i, j)) continue;
-    if (lossCell(i - 1, j)) edge(vid(i, j), vid(i, j + 1));
-    if (lossCell(i + 1, j)) edge(vid(i + 1, j), vid(i + 1, j + 1));
-    if (lossCell(i, j - 1)) edge(vid(i, j), vid(i + 1, j));
-    if (lossCell(i, j + 1)) edge(vid(i, j + 1), vid(i + 1, j + 1));
+    if (lossCell(i - 1, j)) edge(vid(i, j), vid(i, j + 1), -1, 0);
+    if (lossCell(i + 1, j)) edge(vid(i + 1, j), vid(i + 1, j + 1), 1, 0);
+    if (lossCell(i, j - 1)) edge(vid(i, j), vid(i + 1, j), 0, -1);
+    if (lossCell(i, j + 1)) edge(vid(i, j + 1), vid(i + 1, j + 1), 0, 1);
   }
 }
 void sagLine;

@@ -24,6 +24,7 @@ import { door, windowUnit, threshold, glassQuad } from './openings.js';
 import { stain, grimeBand } from './weathering.js';
 import { barrel, crate, sack, coil, handcart } from './dressing.js';
 import { house } from './house.js';
+import { paving } from './cling.js';
 
 // ------------------------------------------------------------------ stable --
 /**
@@ -57,8 +58,9 @@ export function stable(kit, F, o = {}) {
   slitPortals(sub(frame([0, 0, 0]), [-w / 2, 0, d / 2]), frontOps);
   slitPortals(sub(frame([0, 0, 0]), [w / 2, 0, -d / 2], [-1, 0, 0], [0, 1, 0]), backOps);
   masonryBox(local, frame([0, 0, 0]), {
-    w, d, h, T, style: 'ashlar', mat: 'stonePale', dressedMat: 'stonePale', mortar: 'mortarPale', lod, seed: rnd() * 999,
-    courseMin: 0.28, courseMax: 0.38, plinth: 0.45, quoin: { long: 0.7, short: 0.42 },
+    // (round 2: squared stone of mixed course heights and lengths, not a breeze-block grid)
+    w, d, h, T, style: 'squared', mat: 'stonePale', dressedMat: 'stonePale', mortar: 'mortarPale', lod, seed: rnd() * 999,
+    courseMin: 0.2, courseMax: 0.44, plinth: 0.45, quoin: { long: 0.7, short: 0.42 },
     faces: { front: { openings: frontOps }, back: { openings: backOps, lod: lod === 'hero' ? 'mid' : lod }, left: { openings: [{ x: d / 2 - 0.6, y: 0, w: 1.2, h: 2.3, head: 'lintel', reveal: T }] }, right: {} },
   });
   // buttresses between the bays on both long sides: two stages, each set back at a sloped
@@ -101,6 +103,12 @@ export function stable(kit, F, o = {}) {
       for (const y of [0.6, dh * 0.45, spring - 0.2]) block(local.get('oakDark'), sub(Fl, [lw / 2, y, -0.03]), lw - 0.1, 0.2, 0.06, { r: 0.006, seg: [0.5, 0.2, 0.06], seed: rnd(), noise: 0.002 });
       for (const y of [0.65, spring - 0.15]) block(local.get('iron'), sub(Fl, [hinge === 'left' ? lw * 0.4 : lw * 0.6, y, 0.074], [1, 0, 0], [0, 1, 0]), lw * 0.8, 0.08, 0.01, { r: 0.003, seg: [0.3, 0.08, 0.01], seed: rnd() });
     }
+    // before the door: a cobbled apron worn through to the mud in patches, a drain down its middle,
+    // puddles in the hollows; dirt splashed along the wall feet
+    paving(local, -dw / 2 - 2.6, dw / 2 + 2.6, d / 2 + 0.15, d / 2 + 5.6, { seed: 202, wear: 0.8, puddles: 3,
+      skip: (x, z) => ((x / (dw / 2 + 2.6)) ** 2 + ((z - d / 2) / 5.5) ** 2) > 1,
+      kennel: [[0.2, d / 2 + 0.3], [0.5, d / 2 + 3.0], [1.4, d / 2 + 5.6]] });
+    for (const [x0, z0, X, Y, L] of [[-w / 2, d / 2, [1, 0, 0], [0, 0, -1], w], [w / 2, -d / 2, [-1, 0, 0], [0, 0, 1], w], [w / 2, d / 2, [0, 0, -1], [-1, 0, 0], d], [-w / 2, -d / 2, [0, 0, 1], [1, 0, 0], d]]) grimeBand(local, frame([x0, 0, z0], X, Y), 0.1, L - 0.1, 0.0, 0.7, rnd, { strength: 0.6, z: 0.015 });
     // the stable inside: a deep portal (straw floor, stalls in the dark)
     const pa = local.get('portal');
     const base = pa.vcount;
@@ -119,7 +127,7 @@ export function stable(kit, F, o = {}) {
   const pitch = 0.85, rise = (d / 2) * pitch;
   masonryGable(local, sub(frame([0, 0, 0]), [-w / 2, h, -d / 2], [0, 0, 1], [0, 1, 0]), d, rise, { style: 'ashlar', mat: 'stonePale', mortar: 'mortarPale', T, lod, seed: rnd() * 999 });
   masonryGable(local, sub(frame([0, 0, 0]), [w / 2, h, d / 2], [0, 0, -1], [0, 1, 0]), d, rise, { style: 'ashlar', mat: 'stonePale', mortar: 'mortarPale', T, lod, seed: rnd() * 999 });
-  gableRoof(local, frame([0, h, 0]), { L: w - 0.3, S: d, pitch, eaves: 0.5, verge: 0.0, gableL: false, gableR: false, cover: 'slate', lod, seed: rnd() * 999, sag: { ridge: 0.08, slope: 0.035, eaves: 0.03 } });
+  gableRoof(local, frame([0, h, 0]), { L: w - 0.3, S: d, pitch, eaves: 0.5, verge: 0.0, gableL: false, gableR: false, cover: 'slate', lod, seed: rnd() * 999, sag: { ridge: 0.11, slope: 0.04, eaves: 0.03, eavesLine: 0.06 }, missing: 0.004 });
   {
     // louvre: a small timber turret on the ridge with slatted sides and its own little roof
     const ry = h + rise + 0.1;
@@ -150,6 +158,8 @@ export function keeperHouse(kit, F, o = {}) {
     },
   });
   const Ff = sub(frame([0, 0, 0]), [-w / 2, 0, d / 2]);
+  // the ground at the wall feet: damp, trodden, splashed
+  for (const [x0, z0, X, Y, L] of [[-w / 2, d / 2, [1, 0, 0], [0, 0, -1], w], [w / 2, -d / 2, [-1, 0, 0], [0, 0, 1], w], [w / 2, d / 2, [0, 0, -1], [-1, 0, 0], d], [-w / 2, -d / 2, [0, 0, 1], [1, 0, 0], d]]) grimeBand(local, frame([x0, 0, z0], X, Y), 0.1, L - 0.1, 0.0, 0.6, rnd, { strength: 0.55, z: 0.015 });
   door(local, sub(Ff, [doorX, 0, 0]), { w: dw, h: dh, inset: 0.18, open: o.doorOpen ?? 0.6, hingeLeft: true, wallT: T, seed: rnd() * 999 });
   threshold(local, sub(Ff, [doorX, 0, 0]), dw, 0.35, rnd, { mat: 'stonePale' });
   windowUnit(local, sub(Ff, [1.1, 0.95, 0]), { w: 0.95, h: 1.1, inset: 0.16, lights: 2, glazing: 'square', shutters: 'open', floorBelow: 0.95, seed: rnd() * 999 });
@@ -527,70 +537,114 @@ export function leafPlatform(kit, F, o = {}) {
 }
 
 // ------------------------------------------------------------------ palace --
-/** The distant palace (silhouette scale): F at the centre of the inner ward. o: lod ('low'), seed. */
+/**
+ * The distant palace (silhouette scale, PROVISIONAL): grown over generations, not drawn with a
+ * ruler - a tall keep with rows of windows and a stair turret, a great hall range with tall
+ * windows and chimney stacks, a chapel with a bellcote, lower ranges leaning on the curtain, two
+ * round towers (battered bases, string courses, bell-cast cones) and two square towers with
+ * saddleback roofs at the corners, a crenellated curtain with a gatehouse. F: the centre of the
+ * inner ward at ground level (bury its base a metre or two in the terrain). o: lod ('far'), seed.
+ */
 export function palace(kit, F, o = {}) {
   const rnd = makeRand(o.seed ?? 241);
   const lod = o.lod || 'far';
   const local = new Kit(0);
   const stoneM = lod === 'far' ? 'stoneFar' : 'stonePale';
+  const plain = { style: 'ashlar', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', lod };
+  // (the masonry starts 2 m under the frame's ground: the base is buried in the hill)
+  const sink = 2.0;
   const box = (x, z, w, d, h, yaw, ops = {}) => {
-    const fr = yawFrame([x, 0, z], yaw);
-    masonryBox(local, fr, { w, d, h, T: 1.2, style: 'ashlar', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', lod, seed: rnd() * 999, courseMin: 0.38, courseMax: 0.55, plinth: 0.8, quoin: { long: 1.0, short: 0.6 }, ...ops });
-    return fr;
+    const fr = yawFrame([x, -sink, z], yaw);
+    masonryBox(local, fr, { w, d, h: h + sink, T: 1.2, ...plain, seed: rnd() * 999, courseMin: 0.38, courseMax: 0.55, plinth: 0.8, quoin: { long: 1.0, short: 0.6 }, portals: true, ...ops });
+    return sub(fr, [0, sink, 0]);
   };
-  const slits = (n, L, y, w = 0.7, hh = 1.8) => Array.from({ length: n }, (_, i) => ({ x: L * (i + 0.5) / n - w / 2, y, w, h: hh, head: 'arch', sill: true, reveal: 0.6 }));
-  // the keep: a tall block with a steep slate roof between stone gables, chimneys
+  const lift = (ops) => ops.map((op) => ({ ...op, y: op.y + sink }));
+  const wins = (n, L, y, w = 1.1, hh = 2.2, head = 'arch') => Array.from({ length: n }, (_, i) => ({ x: L * (i + 0.5) / n - w / 2 + rnd.sym(0.3), y, w, h: hh, head, sill: true, reveal: 0.6 }));
+  // the keep: three storeys of windows over a slit-lit base, a steep slate roof between stone
+  // gables, chimneys, a stair turret on its north-east corner rising above it
   {
     const w = 20, d = 15, h = 24;
-    const fr = box(0, -6, w, d, h, 0, { faces: { front: { openings: [...slits(4, w, 12), ...slits(4, w, 18)] }, left: { openings: slits(3, d, 16) }, right: { openings: slits(3, d, 16) }, back: { openings: slits(4, w, 16) } } });
+    const front = [...wins(3, w, 5 + sink, 0.5, 1.6, 'lintel'), ...wins(4, w, 11 + sink), ...wins(4, w, 16.5 + sink, 1.2, 2.4)];
+    const fr = box(0, -6, w, d, h, 0, { faces: { front: { openings: front }, left: { openings: lift(wins(2, d, 15)) }, right: { openings: lift(wins(2, d, 15)) }, back: { openings: lift(wins(4, w, 16)) } } });
     const rise = (d / 2) * 1.1;
-    masonryGable(local, sub(fr, [-w / 2, h, -d / 2], [0, 0, 1], [0, 1, 0]), d, rise, { style: 'ashlar', mat: stoneM, mortar: 'mortarPale', T: 1.2, lod, seed: rnd() * 999, courseMin: 0.38, courseMax: 0.55 });
-    masonryGable(local, sub(fr, [w / 2, h, d / 2], [0, 0, -1], [0, 1, 0]), d, rise, { style: 'ashlar', mat: stoneM, mortar: 'mortarPale', T: 1.2, lod, seed: rnd() * 999, courseMin: 0.38, courseMax: 0.55 });
-    gableRoof(local, sub(fr, [0, h, 0]), { L: w - 0.6, S: d, pitch: 1.1, eaves: 0.6, verge: 0, gableL: false, gableR: false, cover: 'slate', lod, seed: rnd() * 999, sag: { ridge: 0.04, slope: 0.03, eaves: 0.03 } });
+    masonryGable(local, sub(fr, [-w / 2, h, -d / 2], [0, 0, 1], [0, 1, 0]), d, rise, { ...plain, T: 1.2, seed: rnd() * 999, courseMin: 0.38, courseMax: 0.55 });
+    masonryGable(local, sub(fr, [w / 2, h, d / 2], [0, 0, -1], [0, 1, 0]), d, rise, { ...plain, T: 1.2, seed: rnd() * 999, courseMin: 0.38, courseMax: 0.55 });
+    gableRoof(local, sub(fr, [0, h, 0]), { L: w - 0.6, S: d, pitch: 1.1, eaves: 0.6, verge: 0, gableL: false, gableR: false, cover: 'slate', lod, seed: rnd() * 999, sag: { ridge: 0.06, slope: 0.03, eaves: 0.03 } });
     chimney(local, sub(fr, [-w * 0.25, h - 0.5, -d * 0.1]), { w: 1.2, d: 1.0, h: rise + 2.2, mat: stoneM, dressed: stoneM, lod, seed: rnd() * 999 });
     chimney(local, sub(fr, [w * 0.3, h - 0.5, d * 0.12]), { w: 1.2, d: 1.0, h: rise + 2.0, mat: stoneM, dressed: stoneM, lod, seed: rnd() * 999 });
+    const tt = roundTower(local, sub(fr, [w / 2 + 0.8, -sink, -d / 2 - 0.8]), { r: 2.6, h: h + 6 + sink, lod, seed: rnd() * 999, slits: 4, mat: stoneM, dressedMat: stoneM, corbel: false });
+    conicalRoof(local, sub(fr, [w / 2 + 0.8, h + 6 - 0.2, -d / 2 - 0.8]), { r: 2.75, h: 5.5, eaves: 0.3, seed: rnd() * 999, slateScale: lod === 'far' ? 1.6 : 1, flare: 0.12 });
+    void tt;
   }
-  // the great hall range along the east side
+  // the great hall range along the east side: tall windows to the ward, chimney stacks on its back
   {
     const w = 34, d = 13, h = 13;
-    const fr = box(24, 10, w, d, h, Math.PI / 2, { faces: { front: { openings: slits(6, w, 5, 1.4, 4.2) }, back: { openings: slits(6, w, 6, 1.0, 3.0) } } });
-    const rise = (d / 2) * 1.0;
-    masonryGable(local, sub(fr, [-w / 2, h, -d / 2], [0, 0, 1], [0, 1, 0]), d, rise, { style: 'ashlar', mat: stoneM, mortar: 'mortarPale', T: 1.0, lod, seed: rnd() * 999, courseMin: 0.38, courseMax: 0.55 });
-    masonryGable(local, sub(fr, [w / 2, h, d / 2], [0, 0, -1], [0, 1, 0]), d, rise, { style: 'ashlar', mat: stoneM, mortar: 'mortarPale', T: 1.0, lod, seed: rnd() * 999, courseMin: 0.38, courseMax: 0.55 });
-    gableRoof(local, sub(fr, [0, h, 0]), { L: w - 0.6, S: d, pitch: 1.0, eaves: 0.6, verge: 0, gableL: false, gableR: false, cover: 'slate', lod, seed: rnd() * 999 });
+    const front = lift(wins(6, w, 4.6, 1.5, 4.6));
+    const fr = box(24, 10, w, d, h, Math.PI / 2, { faces: { front: { openings: front }, back: { openings: lift(wins(5, w, 6, 1.0, 2.6)) } } });
+    const rise = (d / 2) * 0.95;
+    masonryGable(local, sub(fr, [-w / 2, h, -d / 2], [0, 0, 1], [0, 1, 0]), d, rise, { ...plain, T: 1.0, seed: rnd() * 999, courseMin: 0.38, courseMax: 0.55 });
+    masonryGable(local, sub(fr, [w / 2, h, d / 2], [0, 0, -1], [0, 1, 0]), d, rise, { ...plain, T: 1.0, seed: rnd() * 999, courseMin: 0.38, courseMax: 0.55 });
+    gableRoof(local, sub(fr, [0, h, 0]), { L: w - 0.6, S: d, pitch: 0.95, eaves: 0.6, verge: 0, gableL: false, gableR: false, cover: 'slate', lod, seed: rnd() * 999, sag: { ridge: 0.12, slope: 0.04, eaves: 0.04 } });
+    for (const fx of [-0.28, 0.12]) chimney(local, sub(fr, [w * fx, h - 0.6, -d / 2 + 0.6]), { w: 1.6, d: 1.1, h: rise + 2.6, mat: stoneM, dressed: stoneM, lod, seed: rnd() * 999 });
   }
-  // round towers at the corners of the curtain, with conical roofs seated on their parapets
+  // the chapel: tall and narrow, a steep roof, a bellcote on its west gable, a big east window
+  {
+    const w = 14, d = 7.5, h = 9;
+    const fr = box(-11, 10, w, d, h, 0.0, { faces: { front: { openings: lift(wins(3, w, 3.2, 1.0, 3.6)) }, right: { openings: lift([{ x: d / 2 - 1.0, y: 2.8, w: 2.0, h: 4.6, head: 'arch', sill: true, reveal: 0.6 }]) } } });
+    const rise = (d / 2) * 1.45;
+    masonryGable(local, sub(fr, [-w / 2, h, -d / 2], [0, 0, 1], [0, 1, 0]), d, rise, { ...plain, T: 1.0, seed: rnd() * 999 });
+    masonryGable(local, sub(fr, [w / 2, h, d / 2], [0, 0, -1], [0, 1, 0]), d, rise, { ...plain, T: 1.0, seed: rnd() * 999 });
+    gableRoof(local, sub(fr, [0, h, 0]), { L: w - 0.5, S: d, pitch: 1.45, eaves: 0.5, verge: 0, gableL: false, gableR: false, cover: 'slate', lod, seed: rnd() * 999 });
+    masonryBox(local, sub(fr, [-w / 2 + 0.2, h + rise - 0.6, 0]), { w: 1.0, d: 1.4, h: 2.6, T: 0.4, ...plain, seed: rnd() * 999, courseMin: 0.35, courseMax: 0.5, faces: { left: { openings: [{ x: 0.35, y: 1.0, w: 0.7, h: 1.2, head: 'arch', reveal: 0.3 }] } } });
+    gableRoof(local, sub(fr, [-w / 2 + 0.2, h + rise + 2.0, 0], [0, 0, 1], [0, 1, 0]), { L: 1.5, S: 1.1, pitch: 1.2, eaves: 0.15, verge: 0.15, cover: 'slate', lod, seed: rnd() * 999 });
+  }
+  // lower ranges leaning on the inside of the west and north curtains (stores, stables, kitchens)
+  for (const [x, z, L, yaw] of [[-26.5, 0, 34, Math.PI / 2], [0, -24.2, 30, 0]]) {
+    const fr = box(x, z, L, 6, 6.5, yaw, { faces: { back: { skip: true }, front: { openings: lift(wins(Math.round(L / 6), L, 2.2, 0.9, 1.4, 'lintel')) } } });
+    gableRoof(local, sub(fr, [0, 6.5, -3.0]), { L: L, S: 6, pitch: 0.55, eaves: 0.4, verge: 0.2, sides: [1], cover: 'slate', lod, seed: rnd() * 999 });
+  }
+  // the corner towers: two round (battered, a string course, windows high up, bell-cast cones) and
+  // two square (crenellated, a saddleback roof between stone gables)
   const corners = [[-30, -28], [34, -26], [36, 30], [-32, 28]];
-  for (const [x, z] of corners) {
-    const R = rnd.range(4.2, 5.2), hh = rnd.range(20, 26);
-    const t = roundTower(local, frame([x, 0, z]), { r: R, h: hh, lod, seed: rnd() * 999, slits: 3, mat: stoneM, dressedMat: stoneM });
-    conicalRoof(local, frame([x, t.top - 0.2, z]), { r: t.R - 0.15, h: R * 1.9, eaves: 0.45, seed: rnd() * 999, slateScale: lod === 'far' ? 1.8 : 1 });
+  for (const [ci, [x, z]] of corners.entries()) {
+    const hh = rnd.range(20, 26);
+    if (ci % 2 === 0) {
+      const R = rnd.range(4.6, 5.4);
+      const t = roundTower(local, frame([x, -sink, z]), { r: R, h: hh + sink, lod, seed: rnd() * 999, slits: 3, mat: stoneM, dressedMat: stoneM, batter: 0.9, batterH: 5 + sink, strings: [sink + hh * 0.45], windows: [{ a: rnd() * 6.28, y0: sink + hh * 0.62, w: 0.8, h: 1.6 }, { a: rnd() * 6.28, y0: sink + hh * 0.75, w: 0.8, h: 1.6 }] });
+      conicalRoof(local, frame([x, t.top - sink - 0.2, z]), { r: t.R - 0.15, h: R * rnd.range(1.5, 2.1), eaves: 0.45, seed: rnd() * 999, slateScale: lod === 'far' ? 1.8 : 1, flare: 0.16 });
+    } else {
+      const S = rnd.range(8, 9.5);
+      const fr = box(x, z, S, S, hh, rnd.sym(0.1), { quoin: { long: 1.1, short: 0.7 }, faces: { front: { openings: lift(wins(1, S, hh * 0.55, 0.9, 1.8)) }, left: { openings: lift(wins(1, S, hh * 0.7, 0.9, 1.8)) }, right: { openings: lift(wins(1, S, hh * 0.4, 0.5, 1.4, 'lintel')) }, back: { openings: lift(wins(1, S, hh * 0.65, 0.9, 1.8)) } } });
+      const rise = (S / 2) * 1.2;
+      masonryGable(local, sub(fr, [-S / 2, hh, -S / 2], [0, 0, 1], [0, 1, 0]), S, rise, { ...plain, T: 1.0, seed: rnd() * 999 });
+      masonryGable(local, sub(fr, [S / 2, hh, S / 2], [0, 0, -1], [0, 1, 0]), S, rise, { ...plain, T: 1.0, seed: rnd() * 999 });
+      gableRoof(local, sub(fr, [0, hh, 0]), { L: S - 0.4, S, pitch: 1.2, eaves: 0.35, verge: 0, gableL: false, gableR: false, cover: 'slate', lod, seed: rnd() * 999 });
+    }
   }
-  // curtain walls between the towers: a wall walk behind a parapet with a coping (no toy teeth)
+  // curtain walls between the towers: a wall walk behind a crenellated parapet
   for (let i = 0; i < 4; i++) {
     const [ax, az] = corners[i], [bx, bz] = corners[(i + 1) % 4];
     const L = Math.hypot(bx - ax, bz - az), yaw = Math.atan2(-(bz - az), bx - ax);
     const mx = (ax + bx) / 2, mz = (az + bz) / 2;
-    const fr = yawFrame([mx, 0, mz], yaw + Math.PI);      // front face outward
-    const Lw = L - 9;
+    const fr0 = yawFrame([mx, -sink, mz], yaw + Math.PI);      // front face outward
+    const fr = sub(fr0, [0, sink, 0]);
+    const Lw = L - 10;
     const gate = i === 3;
-    masonryFace(local, sub(fr, [-Lw / 2, 0, 1.4]), Lw, 12.5, { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', T: 2.8, lod, seed: rnd() * 999, back: true, openings: gate ? [{ x: Lw / 2 - 2.5, y: 0, w: 5, h: 7.2, head: 'arch', reveal: 1.5, archDepth: 2.83 }] : [] });
-    masonryFace(local, sub(fr, [Lw / 2, 0, -1.4], [-1, 0, 0], [0, 1, 0]), Lw, 11.0, { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', T: 2.8, lod, seed: rnd() * 999, openings: gate ? [{ x: Lw / 2 - 2.5, y: 0, w: 5, h: 7.2, head: 'archOpen', reveal: 1.5 }] : [] });
-    // the parapet over the wall-walk: crenellated (merlons and embrasures), each merlon capped
+    masonryFace(local, sub(fr0, [-Lw / 2, 0, 1.4]), Lw, 12.5 + sink, { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', T: 2.8, lod, seed: rnd() * 999, back: true, openings: gate ? [{ x: Lw / 2 - 2.5, y: sink, w: 5, h: 7.2, head: 'arch', reveal: 1.5, archDepth: 2.83 }] : [] });
+    masonryFace(local, sub(fr0, [Lw / 2, 0, -1.4], [-1, 0, 0], [0, 1, 0]), Lw, 11.0 + sink, { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', T: 2.8, lod, seed: rnd() * 999, openings: gate ? [{ x: Lw / 2 - 2.5, y: sink, w: 5, h: 7.2, head: 'archOpen', reveal: 1.5 }] : [] });
     const nm = Math.floor(Lw / 2.4);
     for (let k = 0; k < nm; k++) {
-      const x0 = -Lw / 2 + (Lw * k) / nm + 0.35, mw = Lw / nm - 0.9 + rnd.sym(0.1);
-      masonryFace(local, sub(fr, [x0, 12.5, 1.4]), mw, 1.35, { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', T: 0.7, lod, seed: rnd() * 999, back: true, courseMin: 0.4, courseMax: 0.5 });
+      const x0 = -Lw / 2 + (Lw * k) / nm + 0.35, mw = Lw / nm - 0.9 + rnd.sym(0.15);
+      masonryFace(local, sub(fr, [x0, 12.5, 1.4]), mw, 1.35 + rnd.sym(0.08), { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', T: 0.7, lod, seed: rnd() * 999, back: true, courseMin: 0.4, courseMax: 0.5 });
       block(local.get(stoneM), sub(fr, [x0 + mw / 2, 13.92, 1.05]), mw + 0.12, 0.16, 0.82, { r: 0.02, seg: [0.5, 0.16, 0.4], seed: rnd(), noise: 0.004, warp: (lx, ly, lz) => [lx, ly + (ly > 0 ? 0.05 * (1 - Math.abs(lz) / 0.41) : 0), lz] });
     }
     block(local.get(stoneM), sub(fr, [0, 12.42, 0.6]), Lw, 0.2, 1.9, { r: 0.02, seg: [2, 0.2, 0.5], seed: rnd(), noise: 0.003 });
-    // the gatehouse: two half-round towers flanking the gate, a chamber over it
     if (gate) {
       for (const sx of [-1, 1]) {
-        const t = roundTower(local, sub(fr, [sx * 4.6, 0, 3.0]), { r: 3.0, h: 15.5, lod, seed: rnd() * 999, slits: 2, mat: stoneM, dressedMat: stoneM });
-        conicalRoof(local, sub(fr, [sx * 4.6, t.top - 0.2, 3.0]), { r: t.R - 0.12, h: 5.2, eaves: 0.35, seed: rnd() * 999, slateScale: lod === 'far' ? 1.8 : 1 });
+        const t = roundTower(local, sub(fr0, [sx * 4.6, 0, 3.0]), { r: 3.0, h: 15.5 + sink, lod, seed: rnd() * 999, slits: 2, mat: stoneM, dressedMat: stoneM, batter: 0.5, batterH: 3 + sink });
+        conicalRoof(local, sub(fr0, [sx * 4.6, t.top - 0.2, 3.0]), { r: t.R - 0.12, h: 5.2, eaves: 0.35, seed: rnd() * 999, slateScale: lod === 'far' ? 1.8 : 1 });
       }
-      masonryBox(local, sub(fr, [0, 7.6, 1.3]), { w: 6.4, d: 4.6, h: 6.4, T: 1.0, style: 'ashlar', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', lod, seed: rnd() * 999, courseMin: 0.38, courseMax: 0.5, quoin: { long: 0.8, short: 0.5 }, faces: { front: { openings: [{ x: 2.6, y: 2.4, w: 1.2, h: 1.9, head: 'arch', sill: true, reveal: 0.6 }] } } });
+      masonryBox(local, sub(fr, [0, 7.6, 1.3]), { w: 6.4, d: 4.6, h: 6.4, T: 1.0, ...plain, seed: rnd() * 999, courseMin: 0.38, courseMax: 0.5, quoin: { long: 0.8, short: 0.5 }, faces: { front: { openings: [{ x: 2.6, y: 2.4, w: 1.2, h: 1.9, head: 'arch', sill: true, reveal: 0.6 }] } } });
       gableRoof(local, sub(fr, [0, 14.0, 1.3]), { L: 6.4, S: 4.6, pitch: 1.0, eaves: 0.4, verge: 0.3, cover: 'slate', lod, seed: rnd() * 999 });
     }
   }
@@ -624,6 +678,8 @@ export function harbor(kit, F, o = {}) {
     });
     x += len;
   }
+  // (o.hinterland: the built-up ground behind the quay, as deep as asked - packed earth at quay level)
+  if (o.hinterland) block(local.get('earth'), frame([0, (H - 0.14 + base) / 2, -8 - o.hinterland / 2]), L + 40, H - 0.14 - base, o.hinterland, { r: 0, seg: 99, seed: rnd(), skip: 8 });
   // quay paving behind the coping
   for (let z = -1.0; z > -8; z -= 0.75) for (let x = -L / 2; x < L / 2 - 0.1;) {
     const len = Math.min(rnd.range(0.7, 1.3), L / 2 - x);
@@ -684,12 +740,12 @@ export function harbor(kit, F, o = {}) {
   // scum and foam where the sea laps the quay face and the stair
   if (o.water !== false) {
     const wy = (o.waterY ?? 0) + 0.006;
-    const fseg = (x0, x1, z0, dirZ) => grid(local.get('foam'), Math.max(2, Math.round((x1 - x0) / 0.5)), 4, (u, v) => ({ p: [x0 + (x1 - x0) * u, wy, z0 + dirZ * v * 1.4], uv: [x0 + (x1 - x0) * u, v * 1.4], seed: 0.5, ao: 0.85 }), [1, 0, 0], dirZ < 0);
+    const fseg = (x0, x1, z0, dirZ) => grid(local.get('foam'), Math.max(2, Math.round((x1 - x0) / 0.5)), 4, (u, v) => ({ p: [x0 + (x1 - x0) * u, wy, z0 + dirZ * v * 1.4], uv: [x0 + (x1 - x0) * u, v * 1.4], seed: 0.5, ao: 0.85, ar: 1 }), [1, 0, 0], dirZ < 0);
     fseg(-L / 2, stepsX, 0.0, 1);
     fseg(stepsX, stepsX + stepsLen, stepsW, 1);
     fseg(stepsX + stepsLen, L / 2, 0.0, 1);
     // the stair's low end (a short run across x)
-    grid(local.get('foam'), 3, 4, (u, v) => ({ p: [stepsX + stepsLen + v * 1.2, wy, stepsW * u], uv: [stepsW * u, v * 1.2], seed: 0.5, ao: 0.85 }), [0, 0, 1], true);
+    grid(local.get('foam'), 3, 4, (u, v) => ({ p: [stepsX + stepsLen + v * 1.2, wy, stepsW * u], uv: [stepsW * u, v * 1.2], seed: 0.5, ao: 0.85, ar: 1 }), [0, 0, 1], true);
   }
   // the water surface (with a long chop) out to the harbour mouth
   if (o.water !== false) {
