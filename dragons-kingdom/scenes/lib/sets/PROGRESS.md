@@ -22,9 +22,29 @@ Done so far
   silhouette. Coastline moved seaward (the yard had sat on the shore slope). Exposure +1 stop.
   Debug cameras: `--time 101` (Leaf/Abby), `102` (Remi), `103` (rig).
 
+- F3 restaged on the flight line: camera ship ~40 m off the cliffs, 150 m up, on the inland side,
+  travel +z = screen left -> right (their RIGHT sides), Leaf near/left a length behind, Charcoal
+  far/right drawn level; sun over the sea behind them (az from SUN_H), Charcoal's shadow on the
+  shallow sandy bay. Wing phases via atCycle() so each creature is at a chosen point of its stroke
+  at t = 2. Riders from the humans cast (createRider of lib/humans).
+- F5 rebuilt on `architecture/cling.js` clingSquare (CLING map): crane camera 13 m up behind the
+  king's steps (18 mm), arch at the left edge, gate at the right, fountain centre; south rows struck
+  ('wild wall', dropTriangles with ANY vertex past the cut); 5 marketStall()s with food, bunting,
+  banners on the north row; musicians, vendor, parent+child (joinHands), ~30 crowd builds,
+  children by the fountain; watchman at the west edge (x -15.2, z 9.5) pointing by limbIK at
+  Starlight's head; Starlight (hero) ~170 m beyond the north row, 44 m up, nearly head-on; farmland
+  hills with hedgerows/copses (scatter) and a field patchwork (heightfield colour).
+- F4 rebuilt in `architecture/interiors.js` birthingChamber (baked nest linen; NEST_C = [-0.6,0,0.3]):
+  camera looking north along the bed; the sun through the east window lands on the bedding behind
+  the hatchling; the hatchling is lifted onto the baked linen (linenY lookup); Alexandria
+  (cast build) kneels at screen right, placed by her shoulders, right hand under the folded
+  linen pad (palm up), left hand steadying it; relaxHand opens her build's clasped hands.
+- F1: the sun is hidden in a dense sea-cloud bank (two mist banks over it), softer sun (2.2),
+  grade 3700 K / exposure -1.35 (whites ~90%, blacks ~4%); sail with clew tension creases,
+  robands, leech shake, seams; ship laden 0.32 m lower; crew = humans cast builds.
+- `style-contact.js`: contact sheet of the sets library's own models.
+- make.sh: 4K PNGs + logs to output/lookdev/style-frames/, previews into episodes/.../style-frames/.
+
 Next
-- F3 flight line (inland camera, travel screen L->R, right sides, Charcoal level, shadow on water).
-- F5 Cling square with `architecture/cling.js` + crowd kit + watchman + immense Starlight.
-- F4 chamber with `architecture/interiors.js` + Alexandria's hands + cloth + daylight shaft.
-- F1 ship/sail + sun hidden in sea cloud.
-- Contact-sheet lookdev for the sets library; final 4K renders; previews; README/PROGRESS.
+- Final 4K renders running (see the measurements section when filled), review 1920 + 1:1 crops,
+  fix, re-render, previews, npm test.

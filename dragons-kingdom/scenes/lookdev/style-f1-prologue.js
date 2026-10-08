@@ -28,8 +28,7 @@ import { applyShake } from 'dk/camera.js';
 import { filmFinish } from './finish.js';
 import { loadHDRI } from '../lib/assets.js';
 import { knarr } from '../lib/sets/ship.js';
-import { person } from '../lib/sets/people.js';
-import { loadHuman } from '../lib/creatures/index.js';
+import { loadCharacter, placeCharacter } from '../lib/humans/index.js';
 import { heightfield, makeNoise, smooth, gradedAxis } from '../lib/sets/terrain.js';
 import { terrainMaterial } from '../lib/sets/materials.js';
 import { createCreature, poses } from '../lib/creatures/index.js';
@@ -161,15 +160,13 @@ export async function setup(ctx) {
   scene.add(island);
 
   // the vessel: a small one-masted trading ship of the period (procedural knarr), three crew
-  const human = await loadHuman();
-  const crew = [
-    person(human, { name: 'steersman', jacket: [0.1, 0.08, 0.06], trousers: [0.05, 0.04, 0.03], boots: [0.03, 0.02, 0.015], gloves: [0.4, 0.26, 0.18], hair: [0.12, 0.1, 0.08], skin: [0.4, 0.26, 0.18], belt: [0.04, 0.03, 0.02], hairMode: 'cap', skirt: -0.42 }, 'wait', { headYaw: 0.4 }),
-    person(human, { name: 'sailor', jacket: [0.2, 0.17, 0.12], trousers: [0.06, 0.05, 0.04], boots: [0.03, 0.02, 0.015], gloves: [0.4, 0.26, 0.18], hair: [0.05, 0.035, 0.02], skin: [0.42, 0.27, 0.19], belt: [0.04, 0.03, 0.02], hairMode: 'cap', skirt: -0.42 }, 'stand', { headYaw: -0.3 }),
-    person(human, { name: 'sailor2', jacket: [0.08, 0.09, 0.1], trousers: [0.06, 0.05, 0.04], boots: [0.03, 0.02, 0.015], gloves: [0.4, 0.26, 0.18], hair: [0.03, 0.02, 0.015], skin: [0.36, 0.22, 0.15], belt: [0.04, 0.03, 0.02], hairMode: 'cap', skirt: -0.42 }, 'lookUp', { headYaw: 0.2 }),
-  ];
-  crew[0].root.position.set(-6.2, 0.3 + 0.88, 1.0); crew[0].root.rotation.y = Math.PI / 2 + 0.3;
-  crew[1].root.position.set(2.6, -0.1 + 0.88, -0.6); crew[1].root.rotation.y = Math.PI / 2 - 0.4;
-  crew[2].root.position.set(5.4, 0.35 + 0.88, 0.4); crew[2].root.rotation.y = -0.6;
+  // (the humans library's cast builds: a sailor hauling a rope, two hooded villagers as the
+  // steersman and a hand at the bow - anonymous, small at ~120 m)
+  const [c1, c2, c3] = await Promise.all([loadCharacter('crowd06'), loadCharacter('sailor1'), loadCharacter('crowd16')]);
+  const crew = [c1, c2, c3];
+  placeCharacter(c1, -6.2, 0.3, 1.0, Math.PI / 2 + 0.3);
+  placeCharacter(c2, 2.6, -0.1, -0.6, Math.PI / 2 - 0.4);
+  placeCharacter(c3, 5.4, 0.35, 0.4, -0.6);
   const ship = await knarr(ctx, { sailFill: 1.6, brace: -0.42, crew: crew.map((c) => c.root) });
   ship.root.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   const shipRoot = ship.root;
