@@ -24,6 +24,8 @@ const SHOTS = [
   { name: 'steps', p: [1.0, 1.25, 9.0], t: [4.5, 1.6, 20.0], fl: 24, fstop: 5.6 },
   { name: 'fountain', p: [4.6, 1.6, 3.2], t: [0.0, 1.2, -2.0], fl: 28, fstop: 5.6 },
   { name: 'alley', p: [-7.2, 1.62, -5.0], t: [-8.4, 2.6, -28.0], fl: 32, fstop: 5.6 },
+  // a plan view from high above (layout check: the fixed escape geography, nothing overlapping)
+  { name: 'plan', p: [0.5, 140, 3.0], t: [0, 0, 2.9], fl: 24, fstop: 11 },
 ];
 
 export const meta = {

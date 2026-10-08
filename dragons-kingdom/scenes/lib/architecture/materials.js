@@ -247,7 +247,7 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   vec3 nScan;
   vec3 sc = akScanTap(P, akN0, sd, akScale, nScan);
   // (the scan is a veined rock: on dressed faces only a hint, or the stone reads as marble)
-  float lum = mix(1.0, akLum(sc), mix(0.55, 0.22, akW.w));
+  float lum = mix(1.0, akLum(sc), mix(0.6, 0.45, akW.w));
   // bedding: faint bands across the stone (horizontal in the wall), and darker veins
   vec2 pl = akPlanarE(P, akN0, vAxisW);
   float bed = akN2(vec2(pl.x * 0.15 + sd * 40.0, P.y * 34.0 + sd * 17.0 + akN2(pl * 3.0) * 2.0));
@@ -425,7 +425,7 @@ export async function oakMaterial(ctx, opts = {}) {
   float gsA = akF2(vec2(u * 0.3, w1 * 45.0) + sd * 7.0), gsB = akF2(vec2(u * 0.3 + 5.0, w2 * 45.0) + sd * 3.0);
   float gs = mix(0.5, gsA, 1.0 - smoothstep(0.15, 0.35, (45.0 * akFoot))) * 0.5 + mix(0.5, gsB, 1.0 - smoothstep(0.15, 0.35, (45.0 * akFoot))) * 0.5;
   gs = 0.5 + (gs - 0.5) * 1.8;
-  vec3 c = base * (0.82 + 0.3 * streakW) * (0.8 + 0.4 * gs) * (0.92 + 0.12 * fib) * (1.04 - 0.09 * ring);
+  vec3 c = base * (0.74 + 0.46 * streakW) * (0.72 + 0.56 * gs) * (0.92 + 0.12 * fib) * (1.04 - 0.09 * ring);
   // checks: long dark shrinkage splits along the grain, a few per face
   float chk = 0.0;
   {
@@ -479,9 +479,10 @@ export async function oakMaterial(ctx, opts = {}) {
 // ---------------------------------------------------------- plaster --
 /** Lime-washed plaster; tints: up to 6 linear wash colours, picked per piece (aInfo.x). */
 export function plasterMaterial(ctx, opts = {}) {
-  const tints = (opts.tints || [[0.5, 0.47, 0.41], [0.55, 0.45, 0.31], [0.49, 0.455, 0.42], [0.44, 0.425, 0.39], [0.53, 0.43, 0.35], [0.47, 0.42, 0.33]]).map((c) => new THREE.Vector3(...c));
+  // old lime washes: off-white, ochre, buff, grey - never paper white
+  const tints = (opts.tints || [[0.46, 0.43, 0.37], [0.5, 0.41, 0.29], [0.45, 0.415, 0.38], [0.41, 0.395, 0.36], [0.49, 0.4, 0.32], [0.44, 0.39, 0.31]]).map((c) => new THREE.Vector3(...c));
   while (tints.length < 6) tints.push(tints[0]);
-  const U = { akT: { value: tints }, akAge: { value: opts.age ?? 0.6 }, akSoot: { value: opts.soot ?? 0 } };
+  const U = { akT: { value: tints }, akAge: { value: opts.age ?? 0.8 }, akSoot: { value: opts.soot ?? 0 } };
   return kitMaterial('plaster', {
     uniforms: U,
     decl: 'uniform vec3 akT[6]; uniform float akAge; uniform float akSoot;',
@@ -533,12 +534,12 @@ export function plasterMaterial(ctx, opts = {}) {
   // edges of a panel against the timbers: dirt and damp lime in the quirk (baked aInfo.y); green
   // algae in the lowest corners where the water stands on the rail
   float aov = akI.y;
-  c *= mix(0.62, 1.0, aov);
+  c *= mix(0.8, 1.0, aov);
   c = mix(c, c * vec3(0.62, 0.7, 0.5), clamp((1.0 - aov) * 0.6 * smoothstep(0.5, 0.75, akF3(P * 3.0 + 5.0)), 0.0, 1.0) * akAge);
   c *= 1.0 - akSoot * smoothstep(0.3, 0.8, akF3(P * 0.7 + 2.0));
   akAlb = c;
   akRgh = 0.9 - 0.08 * patchM;
-  akAO = mix(0.4, 1.0, aov);
+  akAO = mix(0.62, 1.0, aov);
   float hf = 1.0 - smoothstep(0.003, 0.015, (akFoot * 1.4));
   float sand = akR3(P * 520.0) * (1.0 - smoothstep(0.0006, 0.0016, (akFoot * 1.4)));
   akHt = (akN3(P * 90.0) * 0.0005 + brush * 0.0003 - crack * 0.0015 - flake * 0.0005 - daub * 0.0012 + patchM * 0.0005) * hf + sand * 0.00025;
@@ -550,7 +551,8 @@ export function plasterMaterial(ctx, opts = {}) {
 /** kind 'clay' (plain tiles) | 'slate' (stone slates). Per tile colour from aInfo.x. */
 export async function tileMaterial(ctx, opts = {}) {
   const kind = opts.kind || 'clay';
-  const S = await scan(ctx, 'pbr/acg_rock26');
+  // fired clay: a fine sandy grain; stone slates: the cleaved rock scan
+  const S = await scan(ctx, opts.texture || (kind === 'clay' ? 'pbr/acg_ground27' : 'pbr/acg_rock26'));
   const pal = opts.palette || (kind === 'clay'
     ? [[0.23, 0.09, 0.045], [0.17, 0.075, 0.045], [0.28, 0.13, 0.07], [0.12, 0.06, 0.04]]
     : [[0.085, 0.085, 0.08], [0.11, 0.105, 0.095], [0.07, 0.075, 0.075], [0.13, 0.12, 0.10]]);
@@ -910,11 +912,11 @@ export async function archMaterials(ctx, opts = {}) {
   const p = (async () => {
     const [stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneSett, stoneFloor, stoneQuay, stoneWashed] = await Promise.all([
       // Verdor: weathered pale limestone / sandstone
-      stoneMaterial(ctx, { palette: [[0.47, 0.44, 0.37], [0.43, 0.405, 0.345], [0.5, 0.465, 0.39]], variation: 0.13, lichen: 0.7, moss: 0.35, tooled: 0.6, streaks: 0.9, stain: 0.7, ...(opts.stonePale || {}) }),
+      stoneMaterial(ctx, { texture: 'pbr/acg_ground27', scale: 0.7, palette: [[0.47, 0.44, 0.37], [0.43, 0.405, 0.345], [0.5, 0.465, 0.39]], variation: 0.13, lichen: 0.7, moss: 0.35, tooled: 0.6, streaks: 0.9, stain: 0.7, ...(opts.stonePale || {}) }),
       // Cling: grey rubble stone
-      stoneMaterial(ctx, { palette: [[0.19, 0.18, 0.165], [0.16, 0.153, 0.14], [0.215, 0.193, 0.163]], variation: 0.17, lichen: 0.6, moss: 0.45, tooled: 0.15, ...(opts.stoneGrey || {}) }),
+      stoneMaterial(ctx, { texture: 'pbr/acg_ground28', scale: 0.55, palette: [[0.2, 0.185, 0.162], [0.165, 0.155, 0.138], [0.225, 0.198, 0.162]], variation: 0.17, lichen: 0.6, moss: 0.45, tooled: 0.15, ...(opts.stoneGrey || {}) }),
       // dressed grey (quoins, arches, fountain, steps)
-      stoneMaterial(ctx, { palette: [[0.24, 0.23, 0.21], [0.215, 0.207, 0.19], [0.26, 0.243, 0.215]], variation: 0.09, lichen: 0.45, moss: 0.3, tooled: 0.7, ...(opts.stoneDressed || {}) }),
+      stoneMaterial(ctx, { texture: 'pbr/acg_ground27', scale: 0.7, palette: [[0.24, 0.23, 0.21], [0.215, 0.207, 0.19], [0.26, 0.243, 0.215]], variation: 0.09, lichen: 0.45, moss: 0.3, tooled: 0.7, ...(opts.stoneDressed || {}) }),
       oakMaterial(ctx, { tone: 0.45, ...(opts.oak || {}) }),
       oakMaterial(ctx, { tone: 0.75, key: 'dark', ...(opts.oakDark || {}) }),
       tileMaterial(ctx, { kind: 'clay', ...(opts.clay || {}) }),
@@ -925,20 +927,20 @@ export async function archMaterials(ctx, opts = {}) {
       // pale stone seen from far off (silhouette LOD): the stone-to-stone variation of a whole wall averages out
       stoneMaterial(ctx, { palette: [[0.48, 0.45, 0.39], [0.45, 0.42, 0.37], [0.5, 0.47, 0.4]], variation: 0.06, lichen: 0.2, moss: 0.2, tooled: 0.0, streaks: 0.9, ...(opts.stoneFar || {}) }),
       // cobbles / setts of a square: grey-brown, worn, moss in the joints, no splash band
-      stoneMaterial(ctx, { palette: [[0.21, 0.195, 0.17], [0.14, 0.13, 0.115], [0.27, 0.235, 0.185]], variation: 0.38, lichen: 0.15, moss: 0.3, algae: 0.0, tooled: 0.1, splash: 0.0, streaks: 0.0, stain: 0.6, ...(opts.stoneSett || {}) }),
+      stoneMaterial(ctx, { texture: 'pbr/acg_ground28', scale: 0.8, palette: [[0.21, 0.195, 0.17], [0.14, 0.13, 0.115], [0.27, 0.235, 0.185]], variation: 0.38, lichen: 0.15, moss: 0.3, algae: 0.0, tooled: 0.1, splash: 0.0, streaks: 0.0, stain: 0.6, ...(opts.stoneSett || {}) }),
       // interiors: worn flagstone floors (no weather: no lichen, algae or splash)
-      stoneMaterial(ctx, { palette: [[0.42, 0.39, 0.33], [0.36, 0.34, 0.29], [0.46, 0.42, 0.35]], variation: 0.2, lichen: 0.0, moss: 0.0, algae: 0.0, tooled: 0.75, splash: 0.0, streaks: 0.0, stain: 0.5, ...(opts.stoneFloor || {}) }),
+      stoneMaterial(ctx, { texture: 'pbr/acg_ground27', scale: 0.7, palette: [[0.42, 0.39, 0.33], [0.36, 0.34, 0.29], [0.46, 0.42, 0.35]], variation: 0.2, lichen: 0.0, moss: 0.0, algae: 0.0, tooled: 0.75, splash: 0.0, streaks: 0.0, stain: 0.5, ...(opts.stoneFloor || {}) }),
       // harbour: pale quay stone with tide zones (the harbour kit's footing is 2.4 m below the
       // water: the tide line at +1.1 m is 3.5 m above it)
-      stoneMaterial(ctx, { palette: [[0.45, 0.42, 0.36], [0.41, 0.385, 0.33], [0.48, 0.45, 0.38]], variation: 0.12, lichen: 0.35, moss: 0.25, algae: 0.6, tooled: 0.45, splash: 0.0, streaks: 0.9, stain: 0.8, tide: 3.5, ...(opts.stoneQuay || {}) }),
+      stoneMaterial(ctx, { texture: 'pbr/acg_ground28', scale: 0.6, palette: [[0.45, 0.42, 0.36], [0.41, 0.385, 0.33], [0.48, 0.45, 0.38]], variation: 0.12, lichen: 0.35, moss: 0.25, algae: 0.6, tooled: 0.45, splash: 0.0, streaks: 0.9, stain: 0.8, tide: 3.5, ...(opts.stoneQuay || {}) }),
       // interiors: pale stone under old lime wash
-      stoneMaterial(ctx, { palette: [[0.46, 0.43, 0.37], [0.4, 0.37, 0.32], [0.5, 0.46, 0.39]], variation: 0.15, lichen: 0.0, moss: 0.0, algae: 0.0, tooled: 0.4, splash: 0.25, streaks: 0.15, wash: 0.85, ...(opts.stoneWashed || {}) }),
+      stoneMaterial(ctx, { texture: 'pbr/acg_ground27', scale: 0.7, palette: [[0.46, 0.43, 0.37], [0.4, 0.37, 0.32], [0.5, 0.46, 0.39]], variation: 0.15, lichen: 0.0, moss: 0.0, algae: 0.0, tooled: 0.4, splash: 0.25, streaks: 0.15, wash: 0.85, ...(opts.stoneWashed || {}) }),
     ]);
     const M = {
       stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneSett, stoneFloor, stoneWashed, stoneQuay,
       leather: plainMaterial('leather', [0.09, 0.05, 0.03], { roughness: 0.6, vary: 0.3, freq: 25, bump: 0.0008 }),
       mortar: mortarMaterial(ctx, opts.mortar),
-      mortarPale: mortarMaterial(ctx, { color: [0.42, 0.4, 0.35], key: 'pale', ...(opts.mortarPale || {}) }),
+      mortarPale: mortarMaterial(ctx, { color: [0.33, 0.31, 0.27], key: 'pale', ...(opts.mortarPale || {}) }),
       // interiors: joints filled and lime-washed over with the stones
       mortarWashed: mortarMaterial(ctx, { color: [0.6, 0.58, 0.52], moss: 0, ao: 0.95, key: 'washed', ...(opts.mortarWashed || {}) }),
       plaster: plasterMaterial(ctx, opts.plaster),

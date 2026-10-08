@@ -353,14 +353,16 @@ export function paving(kit, x0, x1, z0, z1, o = {}) {
       break;
     }
   }
-  for (const [px, pz, r, y] of spots) {
-    const sd = rnd();
-    grid(pacc, 24, 4, (u, v) => {
-      const a = u * Math.PI * 2, rr = v * r * (1 + 0.3 * Math.sin(a * 2 + sd * 9) + 0.15 * Math.sin(a * 5 + sd * 3)) * (1 - 0.35 * Math.abs(Math.sin(a + sd)));
-      return { p: [px + Math.cos(a) * rr * 1.4, y, pz + Math.sin(a) * rr], uv: [99, 0], seed: 0.5, ao: 1 };
-    }, [1, 0, 0], false);
-  }
+  for (const [px, pz, r, y] of spots) puddle(kit, px, pz, r, y, rnd());
   return n;
+}
+
+/** A puddle: still water with a ragged outline, elongated along x (world, at height y). */
+export function puddle(kit, px, pz, r, y, sd, stretch = 1.4) {
+  grid(kit.get('pool'), 24, 4, (u, v) => {
+    const a = u * Math.PI * 2, rr = v * r * (1 + 0.3 * Math.sin(a * 2 + sd * 9) + 0.15 * Math.sin(a * 5 + sd * 3)) * (1 - 0.35 * Math.abs(Math.sin(a + sd)));
+    return { p: [px + Math.cos(a) * rr * stretch, y, pz + Math.sin(a) * rr], uv: [99, 0], seed: 0.5, ao: 1 };
+  }, [1, 0, 0], false);
 }
 
 /** The substantial stone support beside the king's steps: a battered square pier with a cap. */
@@ -469,7 +471,8 @@ export function alley(kit, F, o = {}) {
  * Returns { group, houses: [{ ...info, frame }], layout: CLING, tris }.
  */
 export async function clingSquare(ctx, opts = {}) {
-  const M = await archMaterials(ctx, opts.materials || {});
+  // (opts.layoutOnly: lay everything out without materials or meshes - for checks in node)
+  const M = opts.layoutOnly ? null : await archMaterials(ctx, opts.materials || {});
   const rnd = makeRand(opts.seed ?? 5);
   const focus = opts.focus || [];
   const lodAt = (x, z) => {
@@ -528,7 +531,7 @@ export async function clingSquare(ctx, opts = {}) {
   // east side (faces west, -x): the gate gap
   const gt = CLING.gate;
   const gHalf = gt.w / 2 + 1.25 + 3.6;
-  row('east', S.x1, S.z0, [0, 1], S.z1 + 1 - S.z0, -Math.PI / 2, [[gt.z - gHalf - S.z0, gt.z + gHalf - S.z0]]);
+  row('east', S.x1, S.z0 + 2.5, [0, 1], S.z1 + 1 - S.z0 - 2.5, -Math.PI / 2, [[gt.z - gHalf - S.z0 - 2.5, gt.z + gHalf - S.z0 - 2.5]]);
   // south side either side of the steps (faces north, -z)
   const st = CLING.steps;
   row('south', S.x0 - 3, S.z1 + 2.5, [1, 0], (st.x - st.w / 2 - 1.2) - (S.x0 - 3), Math.PI);
@@ -544,10 +547,13 @@ export async function clingSquare(ctx, opts = {}) {
     houses.push({ ...info, frame: hF, center: [ar.x, ar.z], yaw: ar.yaw, side: 'west', passage: true });
     var beamInfo = info.beam;
     // the lane beyond the arch (the escape route runs on, west, then bends south)
-    lane(kits.west, [[S.x0 + 0.2, ar.z], [S.x0 - 14, ar.z + 0.6], [S.x0 - 24, ar.z + 7]], { w: ar.w - 0.1, seed: 131 });
-    const cF = yawFrame([S.x0 - 21.5 - 4.2, 0, ar.z - 2.6], Math.PI / 2 - 0.08);
-    const ci = house(kits.west, cF, { w: 7.0, d: 8.4, storeys: 1, roof: 'side', seed: 1301, lod: 'low', party: { left: false, right: false } });
-    houses.push({ ...ci, frame: cF, center: [S.x0 - 25, ar.z - 2.6], yaw: Math.PI / 2, side: 'west', back: true });
+    lane(kits.west, [[S.x0 + 0.2, ar.z], [S.x0 - 14, ar.z + 0.3], [S.x0 - 23, ar.z - 6.5]], { w: ar.w - 0.1, seed: 131 });
+    // houses beyond close every view west through the arch (the lane turns north between them)
+    for (const [hx, hz, hw, sd, n] of [[S.x0 - 26, ar.z + 2.6, 7.0, 1301, 1], [S.x0 - 14, ar.z + 6.0, 5.9, 1302, 2]]) {
+      const cF = yawFrame([hx, 0, hz], Math.PI / 2 - 0.06);
+      const ci = house(kits.west, cF, { w: hw, d: 8.0, storeys: n, roof: 'side', seed: sd, lod: 'low', party: { left: false, right: false } });
+      houses.push({ ...ci, frame: cF, center: [hx, hz], yaw: Math.PI / 2, side: 'west', back: true });
+    }
   }
   gateway(kits.east, yawFrame([gt.x, 0, gt.z], gt.yaw), { w: gt.w, lod: lodAt(gt.x, gt.z), seed: 81, wall: 3.6 });
   fountain(kits.centre, frame([CLING.fountain.x, 0, CLING.fountain.z]), { r: CLING.fountain.r, pillarH: CLING.fountain.pillarH, lod: lodAt(CLING.fountain.x, CLING.fountain.z) });
@@ -563,13 +569,13 @@ export async function clingSquare(ctx, opts = {}) {
     houses.push({ ...info, frame: hF, center: [x, z], yaw, side: key, back: !!extra.back });
   };
   lone('north', al.x - 3.6, S.z0 - 10.9 - 4.2, 0, 6.6, 8.4, 977, { roof: 'side' });                    // closes the vista up the alley
-  lone('north', al.x + 6.4, S.z0 - 11.5, -Math.PI / 2 + 0.75, 6.0, 7.6, 978, { lod: 'low' });           // along the far leg
+  lone('north', al.x + 7.6, S.z0 - 14.2, -Math.PI / 2 + 0.75, 6.0, 7.6, 978, { lod: 'low' });           // along the far leg
   lone('north', al.x + 9.4, S.z0 - 24.0, -0.35, 7.0, 8.0, 979, { lod: 'low' });                          // closing the far leg
-  lone('north', al.x + 2.4, S.z0 - 25.6, 0.12, 6.4, 8.0, 980, { lod: 'low', roof: 'front' });             // behind the bend (no sky through the alley)
+  lone('north', al.x + 0.4, S.z0 - 25.6, 0.12, 6.4, 8.0, 980, { lod: 'low', roof: 'front' });             // behind the bend (no sky through the alley)
   // second rows behind the square's houses (roofs over the first row, fronts in every gap): no
   // vista out of the square ends in an empty field
   const backRow = (key, x0, z0, dir, len, yaw, gaps = []) => row(key, x0, z0, dir, len, yaw, gaps, 'low');
-  backRow('north', S.x0 - 9, S.z0 - 12.5, [1, 0], al.x - 4 - (S.x0 - 9), 0);
+  backRow('north', S.x0 - 9, S.z0 - 12.5, [1, 0], al.x - 7.5 - (S.x0 - 9), 0);
   backRow('north', al.x + 13, S.z0 - 12.5, [1, 0], S.x1 + 9 - (al.x + 13), 0);
   backRow('west', S.x0 - 12.5, S.z1 + 6, [0, -1], (S.z1 + 6) - (ar.z + 9), Math.PI / 2);
   backRow('west', S.x0 - 12.5, ar.z - 4.5, [0, -1], (ar.z - 4.5) - (S.z0 - 8), Math.PI / 2);
@@ -578,8 +584,10 @@ export async function clingSquare(ctx, opts = {}) {
   backRow('south', S.x0 - 9, S.z1 + 14.5, [1, 0], (S.x1 + 9) - (S.x0 - 9), Math.PI);
   // the broad road beyond the gate: houses on both sides for the first stretch, then open country
   if (opts.road !== false) {
-    row('east', S.x1 + 17, gt.z - 4.6, [1, 0], 34, 0, [[14, 19]], 'low');
-    row('east', S.x1 + 19, gt.z + 4.6, [1, 0], 30, Math.PI, [], 'low');
+    row('east', S.x1 + 23.5, gt.z - 4.6, [1, 0], 32, 0, [[12, 17]], 'low');
+    row('east', S.x1 + 24.5, gt.z + 4.6, [1, 0], 28, Math.PI, [], 'low');
+    // puddles standing in the wheel ruts of the road
+    for (let k = 0; k < 7; k++) puddle(kits.east, gt.x + 4 + k * 5.5 + rnd.sym(1.5), gt.z + (k % 2 ? 0.8 : -0.8) + rnd.sym(0.2), rnd.range(0.25, 0.6), 0.035, rnd(), 2.4);
   }
   // the square's paving (its own kit: one mesh), clear of the fountain, the steps and the wall feet
   if (opts.paving !== false) {
@@ -592,6 +600,7 @@ export async function clingSquare(ctx, opts = {}) {
       kennel: [[fx + fr * 0.95, fz + 0.6], [7, 2.5], [14, 4.0], [gt.x - 0.3, gt.z]],
     });
   }
+  if (opts.layoutOnly) return { houses, layout: CLING, kits };
   const group = new THREE.Group();
   group.name = 'cling-square';
   let tris = 0;
