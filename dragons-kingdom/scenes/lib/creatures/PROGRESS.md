@@ -74,12 +74,13 @@ only the state of the work.
 through a temporary scene `scenes/lookdev/creatures-tmpreview.js` (delete it before commit).
 `scratchpad/cr/dev.sh <cfg.json> <name> preview` renders free views via creatures-dev.json.
 
-## Renders of this session (git-ignored, under dragons-kingdom/output/cr/)
-- `hero4k/png/<shot>.png` (+ `_1920.jpg`, `crop_*.png`): all nine hero shots at 4K, final finish.
-- `rv_f2/`: 4K re-render of the six shots changed after that (charcoal-flight, leaf-flight,
-  starlight-below, hatchling-macro, scout-bank, scout-wingloss).
-- `contact4k/contact_sheet.jpg` (3840 wide) + `png/fNN.png` (4K): the 21-frame contact sheet;
-  the hatchling views f13-f16 were re-rendered after the wet-film fix (`contact4k_h/`).
+## Renders (git-ignored, under dragons-kingdom/output/cr/; older ones deleted for disk)
+- `s4final/`: the nine hero shots at native 4K with the film finish - `png/<shot>.png`,
+  `<shot>_1920.jpg`, `crop_*.png` (1:1 crops). This is the current state.
+- `s4contact/`: the 21-frame contact sheet at 4K - `png/fNN.png`, `contact_sheet.jpg`
+  (3840 wide), `contact_sheet_1920.jpg`, `lineup_1920.jpg` (frame 21, scale lineup).
+- `s3hero/`: the 4K state at the start of session 3 (before this session's fixes), for comparison.
+- `s3final/`: an intermediate 4K pass (1920 jpgs + crops only).
 
 ## Next (open)
 - the hatchling's lids are still separate shells (a cap read at 4K); its closed mouth reads as
