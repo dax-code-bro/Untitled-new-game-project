@@ -35,11 +35,12 @@ export function courses(rnd, H, { min = 0.18, max = 0.34, joint = 0.015, plinth 
 
 // stone styles: rounding, pillow, noise, chips, protrusion, tilt, length factors, depth
 const STYLE = {
-  ashlar: { r: [0.006, 0.012], pillow: [0.001, 0.003], noise: 0.0015, nf: 7, chip: 0.004, prot: [0.004, 0.012], tilt: 0.004, len: [1.4, 2.8], j: 0.008, dep: [0.18, 0.32], sizeJit: 0.004, split: 0 },
+  ashlar: { r: [0.008, 0.016], pillow: [0.001, 0.004], noise: 0.002, nf: 7, chip: 0.008, prot: [0.002, 0.012], tilt: 0.005, len: [1.2, 3.0], j: 0.007, dep: [0.18, 0.32], sizeJit: 0.004, split: 0 },
   squared: { r: [0.007, 0.015], pillow: [0.002, 0.006], noise: 0.006, nf: 4, chip: 0.014, prot: [0.006, 0.018], tilt: 0.012, len: [1.0, 2.6], j: 0.012, dep: [0.15, 0.3], sizeJit: 0.008, split: 0.12, outline: 0.03, shrink: 0.05 },
-  rubble: { r: [0.004, 0.011], pillow: [0.006, 0.016], noise: 0.014, nf: 4.5, chip: 0.03, prot: [0.0, 0.024], tilt: 0.035, len: [0.7, 2.4], j: 0.012, dep: [0.14, 0.28], sizeJit: 0.01, split: 0.25, outline: 0.09, shrink: 0.1 },
+  // (packed tight: 10-25 mm joints, each stone its own projection and a convex, pitched face)
+  rubble: { r: [0.006, 0.014], pillow: [0.01, 0.026], noise: 0.014, nf: 4.5, chip: 0.03, prot: [0.004, 0.04], tilt: 0.03, len: [0.7, 2.4], j: 0.014, dep: [0.14, 0.28], sizeJit: 0.008, split: 0.25, outline: 0.04, shrink: 0.03 },
   // rubble under generations of lime wash: the coats fill the joints nearly flush and soften every arris
-  washed: { r: [0.01, 0.02], pillow: [0.002, 0.007], noise: 0.01, nf: 3.5, chip: 0.008, prot: [-0.004, 0.006], tilt: 0.015, len: [0.7, 2.4], j: 0.01, dep: [0.14, 0.28], sizeJit: 0.01, split: 0.25, outline: 0.08, shrink: 0.1 },
+  washed: { r: [0.022, 0.04], rs: 2, pillow: [0.008, 0.018], noise: 0.008, nf: 3.5, chip: 0.004, prot: [-0.002, 0.008], tilt: 0.012, len: [0.7, 2.4], j: 0.016, dep: [0.14, 0.28], sizeJit: 0.006, split: 0.25, outline: 0.03, shrink: 0.025 },
   dressed: { r: [0.008, 0.014], pillow: [0.001, 0.004], noise: 0.002, nf: 7, chip: 0.006, prot: [0.01, 0.018], tilt: 0.004, len: [1, 1], j: 0.01, dep: [0.2, 0.3], sizeJit: 0.003, split: 0 },
 };
 export const LOD = {
@@ -251,10 +252,23 @@ export function masonryFace(kit, F, L, H, o = {}) {
     const xa = qs(ci) > 0 ? qs(ci) + j : 0, xb = L - (qe(ci) > 0 ? qe(ci) + j : 0);
     const ya = c.y, yb = c.y + c.h;
     const bl = blockedRanges(zones, ya, yb, j);
-    const segs = [];
+    let segs = [];
     let x = xa;
     for (const [b0, b1] of bl) { if (b0 > x) segs.push([x, Math.min(b0, xb)]); x = Math.max(x, b1); }
     if (x < xb) segs.push([x, xb]);
+    if (o.clipTop) {
+      // only where the clip line (a stair's soffit, a sloping ground) is above this course
+      const ok = [];
+      for (const [s0, s1] of segs) {
+        let run0 = null;
+        for (let xx = s0; xx <= s1 + 1e-6; xx += 0.02) {
+          const inside = o.clipTop(Math.min(xx, s1)) >= yb - 1e-4;
+          if (inside && run0 === null) run0 = xx;
+          if ((!inside || xx + 0.02 > s1 + 1e-6) && run0 !== null) { const e = inside ? s1 : xx - 0.02; if (e - run0 > 0.08) ok.push([run0, e]); run0 = null; }
+        }
+      }
+      segs = ok;
+    }
     const joints = [];
     for (const [s0, s1] of segs) if (s1 - s0 > 0.05) fillSegment(kit, F, mat, s0, s1, ya, c.h, rnd, st, lod, prevJ, joints, o.depth || st.dep);
     // packing inside the blocked ranges: above an arch's extrados / a lintel, below a sill
@@ -296,7 +310,10 @@ export function masonryFace(kit, F, L, H, o = {}) {
   if (o.mortar !== null) {
     const shape = new THREE.Shape();
     const x0 = o.coreX0 ?? 0, x1 = o.coreX1 ?? L;
-    shape.moveTo(x0, 0); shape.lineTo(x1, 0); shape.lineTo(x1, H); shape.lineTo(x0, H); shape.lineTo(x0, 0);
+    shape.moveTo(x0, 0); shape.lineTo(x1, 0);
+    if (o.clipTop) { for (let xx = x1; xx >= x0 - 1e-6; xx -= 0.02) shape.lineTo(xx, Math.min(H, o.clipTop(xx))); }
+    else { shape.lineTo(x1, H); shape.lineTo(x0, H); }
+    shape.lineTo(x0, 0);
     for (const op of ops) {
       const hole = new THREE.Path();
       const xa = op.x, xb = op.x + op.w, ya = op.y, yb = op.y + op.h;
@@ -519,23 +536,47 @@ export function roundTower(kit, F, o = {}) {
   const C = courses(rnd, H, { min: (o.courseMin ?? 0.3) * (lod.courseMul || 1), max: (o.courseMax ?? 0.45) * (lod.courseMul || 1) });
   const slits = [];
   for (let k = 0; k < (o.slits ?? 3); k++) slits.push({ a: rnd() * Math.PI * 2, y0: 3 + k * (H - 6) / Math.max(1, (o.slits ?? 3) - 1), h: 1.3, w: 0.32 });
+  // a slit is a dressed opening: the courses stop at its jambs (clean vertical edges), tall jamb
+  // stones either side, a lintel over, a sill under, the dark loop behind - never a stepped hole
+  const jw = 0.26;
+  const zoneHalf = (s) => (s.w / 2 + jw) / R;               // half angle of slit + jambs
   let phase = 0;
   for (const c of C) {
-    const n = Math.max(8, Math.round((2 * Math.PI * R) / (rnd.range(0.6, 0.9) * (lod.lenMul || 1))));
-    phase += Math.PI / n + rnd.sym(0.05);
-    for (let i = 0; i < n; i++) {
-      const a0 = phase + (i / n) * Math.PI * 2, a1 = phase + ((i + 1) / n) * Math.PI * 2 - 0.012 / R;
-      const am = (a0 + a1) / 2, span = (a1 - a0) * R;
-      // a slit window here?
-      if (slits.some((s) => c.y + c.h > s.y0 && c.y < s.y0 + s.h && Math.abs(((am - s.a + Math.PI * 3) % (Math.PI * 2)) - Math.PI) * R < s.w / 2 + span / 2)) continue;
-      const dep = 0.3;
-      const Fs = sub(F, [0, c.y + c.h / 2, 0]);
-      const prot = rnd.range(0.004, 0.015) * (lod.protMul ?? 1);
-      block(kit.get(mat), Fs, lod.protMul ? span + 0.01 : span, c.h - (lod.protMul ? 0.004 : 0.012), dep, lod.flat ? { r: 0, seg: [Math.max(0.3, span / 2), 9, 9], seed: rnd(), skip: 32, warp: (lx, ly, lz) => { const th = am - lx / R; const rr = R - dep / 2 + prot + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; } } : {
-        r: 0.012, rs: 1, seg: [Math.max(0.12, span / 4), Math.max(lod.seg, c.h / 2), 9], seed: rnd(), noise: 0.004, nf: 5, pillow: 0.004, chip: 0.01, skip: 32, aoDepth: prot + 0.02, aoFloor: 0.35,
-        warp: (lx, ly, lz) => { const th = am - lx / R; const rr = R - dep / 2 + prot + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; },
-      });
+    phase += 0.37 + rnd.sym(0.08);
+    const n0 = Math.max(8, Math.round((2 * Math.PI * R) / (rnd.range(0.6, 0.9) * (lod.lenMul || 1))));
+    // the gaps in this course (slits and their surrounds: lintel / sill courses are gaps too)
+    const gaps = slits.filter((s) => c.y + c.h > s.y0 - 0.22 && c.y < s.y0 + s.h + 0.24).map((s) => [s.a - zoneHalf(s) - (c.y + c.h > s.y0 + s.h || c.y < s.y0 ? 0.12 / R : 0), s.a + zoneHalf(s) + (c.y + c.h > s.y0 + s.h || c.y < s.y0 ? 0.12 / R : 0)]);
+    // arcs to fill: the whole ring, or the ring between the gaps
+    const arcs = [];
+    if (!gaps.length) arcs.push([phase, phase + Math.PI * 2]);
+    else {
+      gaps.sort((a, b) => a[0] - b[0]);
+      for (let g = 0; g < gaps.length; g++) arcs.push([gaps[g][1], (g + 1 < gaps.length ? gaps[g + 1][0] : gaps[0][0] + Math.PI * 2)]);
     }
+    for (const [aa, ab] of arcs) {
+      const n = Math.max(1, Math.round(n0 * (ab - aa) / (Math.PI * 2)));
+      for (let i = 0; i < n; i++) {
+        const a0 = aa + ((ab - aa) * i) / n, a1 = aa + ((ab - aa) * (i + 1)) / n - 0.012 / R;
+        const am = (a0 + a1) / 2, span = (a1 - a0) * R;
+        const dep = 0.3;
+        const Fs = sub(F, [0, c.y + c.h / 2, 0]);
+        const prot = rnd.range(0.004, 0.015) * (lod.protMul ?? 1);
+        block(kit.get(mat), Fs, lod.protMul ? span + 0.01 : span, c.h - (lod.protMul ? 0.004 : 0.012), dep, lod.flat ? { r: 0, seg: [Math.max(0.3, span / 2), 9, 9], seed: rnd(), skip: 32, warp: (lx, ly, lz) => { const th = am - lx / R; const rr = R - dep / 2 + prot + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; } } : {
+          r: 0.012, rs: 1, seg: [Math.max(0.12, span / 4), Math.max(lod.seg, c.h / 2), 9], seed: rnd(), noise: 0.004, nf: 5, pillow: 0.004, chip: 0.01, skip: 32, aoDepth: prot + 0.02, aoFloor: 0.35,
+          warp: (lx, ly, lz) => { const th = am - lx / R; const rr = R - dep / 2 + prot + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; },
+        });
+      }
+    }
+  }
+  // the dressed surrounds of the slits: jambs, lintel, sill (curved to the wall)
+  const ringBlock = (am, span, y0, y1, dep, out = 0.01) => block(kit.get(dmat), sub(F, [0, (y0 + y1) / 2, 0]), span, y1 - y0, dep, { r: 0.01, rs: 1, seg: [Math.max(0.08, span / 3), 0.2, 9], seed: rnd(), noise: 0.002, chip: 0.01, skip: 32,
+    warp: (lx, ly, lz) => { const th = am - lx / R; const rr = R - dep / 2 + out + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; } });
+  for (const s of slits) {
+    const half = s.w / 2 / R, jj = jw / R;
+    ringBlock(s.a - half - jj / 2, jw - 0.01, s.y0 - 0.02, s.y0 + s.h + 0.02, 0.45);
+    ringBlock(s.a + half + jj / 2, jw - 0.01, s.y0 - 0.02, s.y0 + s.h + 0.02, 0.45);
+    ringBlock(s.a, s.w + 2 * jw + 0.2, s.y0 + s.h + 0.02, s.y0 + s.h + 0.24, 0.45, 0.014);
+    ringBlock(s.a, s.w + 2 * jw + 0.2, s.y0 - 0.22, s.y0 - 0.02, 0.5, 0.03);
   }
   // the core (mortar cylinder) and dark slits
   {
@@ -557,16 +598,21 @@ export function roundTower(kit, F, o = {}) {
   // corbel table + parapet ring
   let top = H;
   if (o.corbel !== false) {
-    const n = Math.round((2 * Math.PI * R) / 0.6);
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2;
-      const Fc = sub(F, [Math.cos(a) * (R + 0.12), H + 0.25, Math.sin(a) * (R + 0.12)], [-Math.sin(a), 0, Math.cos(a)], [0, 1, 0]);
-      block(kit.get(dmat), Fc, 0.3, 0.5, 0.45, { r: 0.015, seg: [0.15, 0.25, 0.2], seed: rnd(), noise: 0.003, chip: 0.01, warp: (lx, ly, lz) => [lx, ly, lz * (0.55 + 0.45 * (ly / 0.5 + 0.5))] });
+    // two courses, each oversailing the one below (a corbelled band carrying the parapet)
+    for (const [y0, hh, out] of [[H, 0.28, 0.14], [H + 0.28, 0.24, 0.28]]) {
+      const Rc = R + out - 0.15;
+      const n2 = Math.round((2 * Math.PI * Rc) / rnd.range(0.7, 0.95));
+      const ph = rnd() * 3;
+      for (let i = 0; i < n2; i++) {
+        const a0 = ph + (i / n2) * Math.PI * 2, a1 = ph + ((i + 1) / n2) * Math.PI * 2 - 0.012 / Rc;
+        const am = (a0 + a1) / 2, span = (a1 - a0) * Rc;
+        block(kit.get(dmat), sub(F, [0, y0 + hh / 2, 0]), span, hh - 0.01, 0.5, { r: 0.015, seg: [Math.max(0.15, span / 3), 0.14, 0.2], seed: rnd(), noise: 0.003, chip: 0.012, warp: (lx, ly, lz) => { const th = am - lx / Rc; const rr = Rc - 0.25 + lz + (ly < 0 ? -0.05 * (-ly / (hh / 2)) * (lz / 0.25 + 1) : 0); return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; } });
+      }
     }
     // the parapet ring above the corbels
     const Rp = R + 0.32;
     const n2 = Math.round((2 * Math.PI * Rp) / 0.8);
-    for (const [y0, hh] of [[H + 0.5, 0.36], [H + 0.88, 0.36], [H + 1.26, 0.22]]) {
+    for (const [y0, hh] of [[H + 0.53, 0.36], [H + 0.9, 0.36], [H + 1.27, 0.22]]) {
       const ph = rnd() * 3;
       for (let i = 0; i < n2; i++) {
         const a0 = ph + (i / n2) * Math.PI * 2, a1 = ph + ((i + 1) / n2) * Math.PI * 2 - 0.012 / Rp;

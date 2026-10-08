@@ -36,7 +36,8 @@ export function gableRoof(kit, F, o) {
   const hero = lod === 'hero';
   const cover = o.cover || 'clay';
   const tileMat = cover === 'clay' ? 'clay' : 'slate';
-  const sag = { ridge: 0.05, slope: 0.025, eaves: 0.03, ...(o.sag || {}) };
+  // old roofs: the ridge dips 6-12 cm between the gables, the slopes hollow and undulate
+  const sag = { ridge: 0.09, slope: 0.035, eaves: 0.035, ...(o.sag || {}) };
   const local = new Kit(0);
   const xL = -L / 2 - (o.gableL === false ? 0 : overV), xR = L / 2 + (o.gableR === false ? 0 : overV);
   const deckT = 0.05;                                // rafter top -> deck (boards + battens)
@@ -55,14 +56,19 @@ export function gableRoof(kit, F, o) {
     const SF = slopeF(side);
     const Fs = side > 0 ? SF : frame([0, rise, 0], [-1, 0, 0], [0, ca, side * sa]);   // keep right-handed frames
     const X = side > 0 ? 1 : -1;   // local x sign for Fs
-    // ---- rafters (only their tails show, under the eaves) and the verge rafters
-    const rafterW = 0.11, rafterH = 0.15, sp = 0.55;
-    const nr = Math.max(2, Math.round(L / sp));
-    for (let i = 0; i <= nr; i++) {
-      const x = -L / 2 + 0.06 + (L - 0.12) * i / nr;
-      const a = slope - overE / ca - 0.6, b = slope + rnd.range(-0.02, 0.02);
-      const Fr = sub(Fs, [x * X, -rafterH / 2, (a + b) / 2], [0, 0, 1], [0, 1, 0]);
-      block(local.get('oakDark'), Fr, b - a, rafterH, rafterW, { r: 0.008, seg: [0.3, 0.15, 0.11], seed: rnd(), noise: 0.002, nf: 4, chip: 0.005, axis: [1, 0, 0] });
+    // ---- the eaves: the rafter feet are boxed in - a boarded soffit from the wall line out to a
+    // fascia board (no row of identical rafter-end 'teeth' under the eaves)
+    const rafterH = 0.15;
+    {
+      const za = slope - overE / ca - 0.08, zb = slope - 0.02;
+      const nbS = Math.max(1, Math.round((xR - xL) / 0.28));
+      for (let k = 0; k < nbS; k++) {
+        const xa = xL + (xR - xL) * k / nbS, xb = xL + (xR - xL) * (k + 1) / nbS - 0.004;
+        const Fsb = sub(Fs, [((xa + xb) / 2) * X, -rafterH - 0.01 + rnd.sym(0.004), (za + zb) / 2], [1, 0, 0], [0, 1, 0]);
+        block(local.get('oakDark'), Fsb, xb - xa, 0.022, zb - za, { r: 0.002, seg: [0.3, 0.022, 0.3], seed: rnd(), noise: 0.0015, nf: 3, axis: [0, 0, 1] });
+      }
+      const Ff = sub(Fs, [((xL + xR) / 2) * X, -rafterH / 2 + 0.01, slope + 0.005]);
+      block(local.get('oakDark'), Ff, xR - xL, rafterH + 0.05, 0.035, { r: 0.004, seg: [0.5, 0.1, 0.035], seed: rnd(), noise: 0.002, nf: 2, axis: [1, 0, 0] });
     }
     // ---- deck boards: one board surface just under the battens (the soffit seen from below)
     {
@@ -77,7 +83,9 @@ export function gableRoof(kit, F, o) {
     }
     // ---- the covering, course by course from the eaves up
     if (cover === 'clay') {
-      const tl = 0.27, tw = 0.17, g = 0.1, th = 0.013;
+      // (back rows, 'low': bigger tiles - the roof reads the same from the square at a third of the cost)
+      const ts = lod === 'low' || lod === 'far' ? 1.7 : 1;
+      const tl = 0.27 * ts, tw = 0.17 * ts, g = 0.1 * ts, th = 0.013;
       const nc = Math.ceil((slope - 0.1) / g) + 2;
       for (let c = 0; c < nc; c++) {
         const tail = slope + 0.04 - c * g;                 // eaves course first (tilted up by the fillet)
@@ -98,7 +106,7 @@ export function gableRoof(kit, F, o) {
     } else {
       // stone slates: diminishing courses, random widths, thick
       let tail = slope + 0.05, c = 0;
-      const ssc = o.slateScale ?? (lod === 'far' ? 1.9 : 1);
+      const ssc = o.slateScale ?? (lod === 'far' ? 1.9 : lod === 'low' ? 1.6 : 1);
       while (tail > 0.12) {
         const f = tail / slope;                           // 1 at the eaves .. 0 at the ridge
         const len = (0.28 + 0.32 * f + rnd.sym(0.03)) * ssc;
@@ -164,7 +172,8 @@ export function gableRoof(kit, F, o) {
     // position down the slope (0 at the ridge .. 1 at the tail), from the height
     const t = clamp((rise - y) / (rise + overE * pitch), 0, 1.2);
     const hollow = sS * Math.sin(Math.PI * clamp(t / (half / (half + overE)), 0, 1));
-    const dy = -sR * along * (1 - t * 0.6) - hollow - sE * Math.pow(Math.max(0, t - 0.8) / 0.2, 2) * (0.6 + 0.4 * Math.sin(u * 7 + ph));
+    const und = 0.018 * Math.sin(u * 9.3 + ph) * Math.sin(Math.PI * Math.min(1, t)) + 0.012 * Math.sin(u * 4.1 + t * 5 + ph * 2);
+    const dy = -sR * along * (1 - t * 0.6) - hollow - und - sE * Math.pow(Math.max(0, t - 0.8) / 0.2, 2) * (0.6 + 0.4 * Math.sin(u * 7 + ph));
     return [x, y + dy, z];
   });
   kit.merge(local, F);
@@ -174,8 +183,9 @@ export function gableRoof(kit, F, o) {
 /** One tile / slate: a thin cambered slab from head (s) to tail (s) on the slope frame. */
 function tile(acc, Fs, X, xa, xb, head, tail, lift, th, rnd, hero, eave, irregular = 0) {
   const w = xb - xa, l = tail - head;
-  const tilt = Math.atan2(th * 1.6, l) + rnd.sym(0.012);
-  const yaw = rnd.sym(0.025), roll = rnd.sym(0.02);
+  // every tile sits a little differently (+-2-4 deg): the roof catches the light tile by tile
+  const tilt = Math.atan2(th * 1.6, l) + rnd.sym(0.03);
+  const yaw = rnd.sym(0.05), roll = rnd.sym(0.05);
   const cx = (xa + xb) / 2 + rnd.sym(0.004), cz = (head + tail) / 2 + rnd.sym(0.006);
   // centre height above the rafter top: the tail rests on the course below
   const cy = lift - th * 0.8 + Math.sin(tilt) * l * 0.5;
@@ -213,7 +223,9 @@ export function chimney(kit, F, o = {}) {
   // the cap: a projecting course of slabs, the flue mouth, soot
   const rnd = makeRand(o.seed ?? 31);
   block(local.get(o.dressed || 'stoneDressed'), frame([0, h - 0.09, 0]), w + 0.12, 0.16, d + 0.12, { r: 0.015, seg: [0.2, 0.08, 0.2], seed: rnd(), noise: 0.004, nf: 6, chip: 0.012 });
-  block(local.get('soot'), frame([0, h + 0.002, 0]), w * 0.45, 0.01, d * 0.4, { r: 0.004, seg: [1, 1, 1], seed: rnd() });
+  // mortar flaunching round the flue, sloped to shed the rain; the soot-black flue mouth
+  block(local.get('mortar'), frame([0, h + 0.03, 0]), w * 0.85, 0.06, d * 0.85, { r: 0.02, seg: [0.1, 0.03, 0.1], seed: rnd(), noise: 0.004, nf: 9, warp: (lx, ly, lz) => [lx, ly + (ly > 0 ? 0.05 * (1 - Math.max(Math.abs(lx) / (w * 0.42), Math.abs(lz) / (d * 0.42))) : 0), lz] });
+  block(local.get('soot'), frame([0, h + 0.09, 0]), w * 0.42, 0.03, d * 0.36, { r: 0.004, seg: [1, 1, 1], seed: rnd() });
   // the top courses blackened by smoke
   masonryBox(local, frame([0, h - 0.18 - 0.55, 0]), { w: w + 0.004, d: d + 0.004, h: 0.55, T: Math.min(w, d) / 2, style: 'squared', mat: 'stoneSoot', dressedMat: 'stoneSoot', mortar: 'soot', lod: o.lod || 'mid', seed: (o.seed ?? 31) + 7, courseMin: 0.16, courseMax: 0.26, quoin: { long: Math.min(0.4, w * 0.45), short: Math.min(0.25, d * 0.35) } });
   kit.merge(local, F);

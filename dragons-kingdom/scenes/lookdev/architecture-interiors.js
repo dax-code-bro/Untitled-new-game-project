@@ -6,7 +6,9 @@
 //   node render/render.mjs --still scenes/lookdev/architecture-interiors.js --time 0.5 --preset final --png chamber.png
 import * as THREE from 'three';
 import { loadHDRI } from '../lib/assets.js';
-import { Kit, frame, xf } from '../lib/architecture/core.js';
+import { Kit, frame, xf, yawFrame } from '../lib/architecture/core.js';
+import { harbor } from '../lib/architecture/verdor.js';
+import { house } from '../lib/architecture/house.js';
 import { archMaterials } from '../lib/architecture/materials.js';
 import { birthingChamber, treatmentRoom, loadArchCache } from '../lib/architecture/interiors.js';
 import { reviewTime } from '../lib/humans/stage.js';
@@ -20,6 +22,8 @@ const SHOTS = [
   { name: 'nest', p: [-2.5, 1.2, 2.3], t: [-0.6, 0.55, 0.2], fl: 28, fstop: 2.8, room: 0 },
   { name: 'treatment', p: [-297.8, 1.55, 1.8], t: [-302.3, 1.1, -0.9], fl: 21, fstop: 2.8, room: 1 },
   { name: 'treatment-window', p: [-298.2, 1.45, 0.4], t: [-303.0, 1.5, -0.1], fl: 24, fstop: 2.8, room: 1 },
+  // toward the doorway (Alexandria's entrance, 2B): the seat and the arm support in front, the beamed ceiling
+  { name: 'treatment-door', p: [-301.9, 1.5, -1.6], t: [-297.4, 1.3, 0.9], fl: 20, fstop: 2.8, room: 1 },
 ];
 
 export const meta = {
@@ -54,16 +58,29 @@ export async function setup(ctx) {
   const kit = new Kit(0), kit2 = new Kit(0);       // one kit per room (each built round its own origin)
   const cloth = await loadArchCache('nest_cloth');
   const ch = birthingChamber(kit, frame([0, 0, 0]), { seed: 3, cloth });
-  const tr = treatmentRoom(kit2, frame(ROOM2), { seed: 4 });
-  scene.add(kit.build(M, { name: 'chamber' }), kit2.build(M, { name: 'treatment' }));
+  const tableCloth = await loadArchCache('table_cloth');
+  const tr = treatmentRoom(kit2, frame(ROOM2), { seed: 4, tableCloth });
+  // the view from the treatment room's window (west): the roofs of the lower town falling to the
+  // harbour, the quay and the sea - real geometry, hazed by the volumetrics
+  const town = new Kit(-7);
+  for (let i = 0; i < 9; i++) {
+    const x = ROOM2[0] - 16 - (i % 3) * 9 - Math.floor(i / 3) * 3, z = ROOM2[2] - 14 + Math.floor(i / 3) * 10 + (i % 2) * 2;
+    const yb = -3 - 0.138 * (ROOM2[0] - x - 10);
+    house(town, yawFrame([x, yb, z], -Math.PI / 2 + ((i * 0.37) % 0.3) - 0.15), { w: 6 + (i % 3), d: 8, storeys: 1 + (i % 2), roof: i % 2 ? 'side' : 'front', seed: 500 + i, lod: 'low', party: { left: false, right: false } });
+  }
+  const hb = new Kit(-12);
+  harbor(hb, yawFrame([ROOM2[0] - 62, -12, ROOM2[2] + 4], -Math.PI / 2), { seed: 12, lod: 'low', waterExtent: [400, 900] });
+  scene.add(kit.build(M, { name: 'chamber' }), kit2.build(M, { name: 'treatment' }), town.build(M, { name: 'town' }), hb.build(M, { name: 'harbour' }));
   for (const l of ch.lights) scene.add(l);
   // bounce: the sunlit floor patch lights the room from below (warm), the sky through the window (cool)
   const b1 = new THREE.PointLight(new THREE.Color(1.0, 0.8, 0.6), 0.9, 8, 2); b1.position.set(-0.8, 0.5, -0.2); scene.add(b1);
   const b2 = new THREE.PointLight(new THREE.Color(1.0, 0.85, 0.7), 2.2, 8, 2); b2.position.set(ROOM2[0] - 1.4, 0.5, ROOM2[2] - 0.3); scene.add(b2);
   const b3 = new THREE.PointLight(new THREE.Color(0.9, 0.93, 1.0), 1.2, 7, 2); b3.position.set(ROOM2[0] - 2.2, 1.6, ROOM2[2] - 0.2); scene.add(b3);
   // outside the treatment room's window: the sea (a flat dark mirror) and the ground round the rooms
-  const sea = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), M.water);
-  sea.rotation.x = -Math.PI / 2; sea.position.set(0, -6, 0); scene.add(sea);
+  // the hillside under the rooms and the town (falls to the quay)
+  const hill = new THREE.Mesh(new THREE.PlaneGeometry(52, 400), new THREE.MeshStandardMaterial({ color: new THREE.Color(0.09, 0.08, 0.06), roughness: 1 }));
+  hill.rotation.order = 'ZXY'; hill.rotation.x = -Math.PI / 2; hill.rotation.z = Math.atan(0.138);
+  hill.position.set(ROOM2[0] - 32, -3 - 0.138 * 22 - 0.05, 0); scene.add(hill);
   camera.near = 0.03; camera.far = 5000;
   S = { sun, ch, tr };
 }

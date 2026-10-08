@@ -21,16 +21,17 @@ const MODELS = [
   { name: 'house-front-gable', build: (k, F) => house(k, F, { w: 6.6, d: 9, storeys: 1, roof: 'front', seed: 101, cover: 'clay', lod: 'mid' }) },
   { name: 'house-two-jetties', build: (k, F) => house(k, F, { w: 6.0, d: 8.5, storeys: 2, roof: 'front', seed: 202, cover: 'slate', lod: 'mid' }) },
   { name: 'house-eaves-to-street', build: (k, F) => house(k, F, { w: 7.6, d: 8.0, storeys: 1, roof: 'side', seed: 303, cover: 'clay', lod: 'mid' }) },
-  { name: 'cling-stone-arch', build: (k, F) => archway(k, F, { lod: 'mid' }) },
+  // the stone arch (escape route 1): the gate passage through a house of the west row, with its neighbours
+  { name: 'cling-stone-arch', build: (k, F) => { house(k, yawFrame([F[0], 0, F[2]], 0), { w: 7.36, d: 7.6, storeys: 1, roof: 'side', passage: { w: 3.6, h: 5.4 }, chimney: false, seed: 71, lod: 'mid', party: { left: true, right: true }, beamKit: k, cover: 'clay' }); house(k, frame([F[0] - 7.36 / 2 - 3.1, 0, F[2] + 0.2]), { w: 6.2, d: 8.6, storeys: 1, roof: 'front', seed: 33, lod: 'mid', party: { left: false, right: true } }); house(k, frame([F[0] + 7.36 / 2 + 3.3, 0, F[2] - 0.15]), { w: 6.6, d: 8.2, storeys: 2, roof: 'front', seed: 44, lod: 'mid', party: { left: true, right: false } }); }, az: 0.5, el: 0.1, extra: 0.62 },
   { name: 'cling-gate', build: (k, F) => gateway(k, F, { lod: 'mid', wall: 3.6 }), az: 0.6 },
-  { name: 'cling-fountain', build: (k, F) => fountain(k, F, { lod: 'mid' }), az: 0.4, el: 0.2, extra: 0.6 },
+  { name: 'cling-fountain', build: (k, F) => fountain(k, F, { lod: 'mid' }), az: 3.54, el: 0.2, extra: 0.6 },
   { name: 'cling-stone-support', build: (k, F) => stonePier(k, F, { lod: 'mid' }), extra: 1.7, el: 0.1 },
-  { name: 'cling-kings-steps', build: (k, F) => kingsSteps(k, F, { lod: 'mid' }), az: 3.55, el: 0.3, extra: 0.8 },
+  { name: 'cling-kings-steps', build: (k, F) => kingsSteps(k, F, { lod: 'mid' }), az: 0.41, el: 0.3, extra: 0.8 },
   { name: 'verdor-stable', build: (k, F) => stable(k, F, { lod: 'mid' }) },
   { name: 'verdor-keeper-lodge', build: (k, F) => keeperHouse(k, F, { lod: 'mid' }) },
-  { name: 'verdor-access-rig', build: (k, F) => accessRig(k, F, { gangwayDrop: 2.0 }), person: 'remi', az: 0.9 },
-  { name: 'verdor-leaf-platform', build: (k, F) => leafPlatform(k, F, {}), person: 'keeper1', extra: 1.15 },
-  { name: 'verdor-harbour', build: (k, F) => harbor(k, F, { buildings: true }), az: 0.35, el: 0.18, waterline: true },
+  { name: 'verdor-access-rig', build: (k, F) => accessRig(k, F, {}), person: 'remi', az: 0.9, el: 0.08 },
+  { name: 'verdor-leaf-platform', build: (k, F) => leafPlatform(k, F, {}), person: 'keeper1', extra: 1.0, az: 0.9, el: 0.2 },
+  { name: 'verdor-harbour', build: (k, F) => harbor(k, F, { buildings: true, waterExtent: [40, 40], waterY: 0.03 }), az: 0.5, el: 0.14, extra: 0.62 },
   { name: 'verdor-palace', build: (k, F) => palace(k, F, {}), el: 0.12 },
   { name: 'round-tower', build: (k, F) => { const t = roundTower(k, F, { r: 4.2, h: 18, lod: 'mid', mat: 'stonePale', dressedMat: 'stonePale', slits: 3 }); conicalRoof(k, frame([F[0], F[1] + t.top - 0.2, F[2]]), { r: t.R - 0.15, h: 8, eaves: 0.45 }); }, extra: 1.25 },
   { name: 'cling-house-row', build: (k, F) => { let x = -10; for (let i = 0; i < 3; i++) { const w = [6.4, 5.6, 7.2][i]; house(k, frame([F[0] + x + w / 2, 0, F[2] + (i % 2) * 0.3]), { w, d: 8.5, storeys: i === 1 ? 2 : 1, roof: i === 2 ? 'side' : 'front', seed: 11 + i * 7, lod: 'mid', party: { left: i > 0, right: i < 2 } }); x += w + 0.05; } } },
@@ -69,15 +70,11 @@ export async function setup(ctx) {
     console.warn(`[arch-contact] ${m.name}: ${g.userData.tris} tris, ${g.children.length} meshes, built in ${Math.round(performance.now() - t0)} ms`);
     scene.add(g);
     const box = new THREE.Box3().setFromObject(g);
-    if (m.waterline) {
-      const water = new THREE.Mesh(new THREE.PlaneGeometry(120, 80), M.water);
-      water.rotation.x = -Math.PI / 2; water.position.set(i * SPACING, 0.0, 40.5); scene.add(water);
-    }
     let person = null;
     if (m.person) {
       try {
         person = await loadCharacter(m.person);
-        placeCharacter(person, i * SPACING + (m.person === 'remi' ? -0.6 : 2.0), 0, m.person === 'remi' ? 3.6 : 1.2, m.person === 'remi' ? 0.6 : -0.6);
+        placeCharacter(person, i * SPACING + (m.person === 'remi' ? -1.3 : 2.0), 0, m.person === 'remi' ? 5.9 : 1.2, m.person === 'remi' ? 0.6 : -0.6);
         scene.add(person.root);
       } catch (e) { console.warn('contact: no ' + m.person); }
     }

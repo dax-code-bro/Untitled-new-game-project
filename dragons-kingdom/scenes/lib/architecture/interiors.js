@@ -49,21 +49,39 @@ function roomWalls(w, d) {
 /** A floor of flagstones (irregular sizes, slightly uneven, worn). */
 export function flagFloor(kit, F, w, d, rnd, o = {}) {
   const mat = o.mat || 'stoneFloor';
+  // the walking line (door -> work place): flags there are dished and polished
+  const path = o.path || null;
+  const pathD = (x, z) => {
+    if (!path) return 9;
+    const [ax, az, bx, bz] = path, dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz;
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2));
+    return Math.hypot(x - ax - dx * t, z - az - dz * t);
+  };
   let z = -d / 2;
   while (z < d / 2 - 0.05) {
-    const rowD = Math.min(rnd.range(0.45, 0.75), d / 2 - z);
-    let x = -w / 2;
+    const rowD = Math.min(rnd.range(0.38, 0.85), d / 2 - z);
+    let x = -w / 2 + rnd.range(-0.2, 0);
     while (x < w / 2 - 0.05) {
-      const fw = Math.min(rnd.range(0.5, 1.0), w / 2 - x);
-      block(kit.get(mat), sub(F, [x + fw / 2 + rnd.sym(0.004), -0.05 + rnd.sym(0.004), z + rowD / 2 + rnd.sym(0.004)], [1, rnd.sym(0.004), 0], [0, 1, rnd.sym(0.004)]), fw - 0.012, 0.1, rowD - 0.012, {
-        r: 0.012, rs: 1, seg: [0.25, 0.1, 0.25], seed: rnd(), noise: 0.003, nf: 4, chip: 0.01, pillow: 0.004, skip: 8,
-      });
+      const fw = Math.min(rnd.range(0.35, 1.1), w / 2 - x);
+      const g = rnd.range(0.006, 0.022);
+      // flags of different depths in the row (a stone laid in two halves, a narrow one)
+      const split = rnd() < 0.25 && rowD > 0.6;
+      const parts = split ? [[0, rowD * 0.45], [rowD * 0.45, rowD]] : [[0, rowD]];
+      for (const [z0, z1] of parts) {
+        const cx = x + fw / 2, cz = z + (z0 + z1) / 2;
+        const pd = pathD(cx, cz);
+        const wear = path ? 0.012 * Math.exp(-(pd * pd) / 0.35) : 0;
+        block(kit.get(mat), sub(F, [cx + rnd.sym(0.006), -0.05 + rnd.sym(0.006), cz + rnd.sym(0.006)], [1, rnd.sym(0.008), 0], [0, 1, rnd.sym(0.008)]), Math.max(0.05, Math.min(fw, w / 2 - x) - g), 0.1, z1 - z0 - g, {
+          r: 0.006, rs: 1, seg: [0.12, 0.1, 0.12], seed: rnd(), noise: 0.003, nf: 4, chip: 0.014, pillow: 0.0015, skip: 8,
+          warp: wear ? (lx, ly, lz) => [lx, ly - (ly > 0 ? wear * (1 - Math.min(1, (lx * lx) / (fw * fw / 4))) : 0), lz] : undefined,
+        });
+      }
       x += fw;
     }
     z += rowD;
   }
-  // the bed of mortar / dust between the flags
-  block(kit.get(o.mortar || 'mortarPale'), sub(F, [0, -0.08, 0]), w, 0.05, d, { r: 0, seg: [w, 0.05, d], seed: rnd() });
+  // the bed of earth and dust between the flags
+  block(kit.get(o.mortar || 'mortar'), sub(F, [0, -0.07, 0]), w, 0.05, d, { r: 0, seg: [w, 0.05, d], seed: rnd() });
 }
 
 /** A timber ceiling: big beams across the short span, joists, boards above. y = soffit height. */
@@ -168,14 +186,27 @@ export function stool(kit, F, rnd, o = {}) {
 /** The prepared nest: a low ring curb of dressed stones, a straw bed, linen laid over it. */
 export function nest(kit, F, rnd, o = {}) {
   const R = o.r ?? 1.25, ch = o.h ?? 0.34;
-  const n = 14;
-  for (let i = 0; i < n; i++) {
-    const a0 = (i / n) * Math.PI * 2, a1 = ((i + 1) / n) * Math.PI * 2 - 0.01 / R;
-    const am = (a0 + a1) / 2, span = (a1 - a0) * R, rm = R;
-    block(kit.get('stonePale'), sub(F, [0, ch / 2, 0]), span, ch, 0.26, {
-      r: 0.025, rs: 1, seg: [Math.max(0.1, span / 4), 0.1, 0.1], seed: rnd(), noise: 0.003, nf: 6, chip: 0.012, pillow: 0.004,
-      warp: (lx, ly, lz) => { const th = am - lx / rm; const rr = rm + lz; return [Math.cos(th) * rr, ly + (ly > 0 ? 0.02 * (1 - (2 * lz / 0.26) ** 2) : 0), Math.sin(th) * rr]; },
-    });
+  // the kerb: straight dressed stones of different lengths set round a polygon (a built kerb, not a
+  // turned ring), each with a crisp chamfer on its top arrises, a little out of line
+  {
+    const startA = rnd() * Math.PI * 2, end = startA + Math.PI * 2;
+    let a = startA;
+    while (a < end - 0.05) {
+      let da = rnd.range(0.38, 0.72);
+      if (end - (a + da) < 0.3) da = end - a;
+      const a0 = a, a1 = a + da;
+      const p0 = [Math.cos(a0) * R, Math.sin(a0) * R], p1 = [Math.cos(a1) * R, Math.sin(a1) * R];
+      const chord = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]), L = chord - 0.008;
+      const mx = (p0[0] + p1[0]) / 2, mz = (p0[1] + p1[1]) / 2, ux = (p1[0] - p0[0]) / chord, uz = (p1[1] - p0[1]) / chord;
+      const hh = ch * rnd.range(0.94, 1.04);
+      const tw = 0.24 + rnd.sym(0.02);
+      block(kit.get('stonePale'), sub(F, [mx + rnd.sym(0.01), hh / 2, mz + rnd.sym(0.01)], [ux, 0, uz], [0, 1, 0]), L, hh, tw, {
+        r: 0.006, rs: 1, seg: [Math.max(0.1, L / 5), 0.1, 0.08], seed: rnd(), noise: 0.002, nf: 6, chip: 0.012, pillow: 0.0015,
+        // the chamfer: the top outer and inner arrises cut back at 45 degrees
+        warp: (lx, ly, lz) => { const c = 0.035; const e = Math.abs(lz) - (tw / 2 - c); return [lx, ly - (ly > hh / 2 - c && e > 0 ? Math.min(e, ly - (hh / 2 - c)) : 0), lz]; },
+      });
+      a = a1;
+    }
   }
   // the straw bed: a domed mound filling the curb (its surface strewn with loose straws)
   // (the mound spills over the kerb a little: lumpy, with tufts)
@@ -187,18 +218,33 @@ export function nest(kit, F, rnd, o = {}) {
     const p = xf(F, Math.cos(a) * r, y, Math.sin(a) * r);
     return { p, uv: [a * r, r], seed: 0.31, ao: 0.55 + 0.45 * (1 - (r / R) ** 2) };
   }, [1, 0, 0], false);
-  // loose stems lying on the bed and strewn round the kerb on the flags
+  // straw: thousands of stems in clumps (each clump laid one way, its stems bent and crossing),
+  // heaped deeper toward the kerb, spilling over it onto the flags; none on the linen
   const acc = kit.get('straw');
-  for (let i = 0; i < (o.straws ?? 2800); i++) {
-    const out = rnd() < 0.3;
-    const a = rnd() * Math.PI * 2, r = out ? R + 0.12 + Math.pow(rnd(), 1.6) * 0.7 : Math.sqrt(rnd()) * (R - 0.12);
-    const dir = rnd() * Math.PI * 2, l = rnd.range(0.05, 0.2);
-    const x0 = Math.cos(a) * r, z0 = Math.sin(a) * r, x1 = x0 + Math.cos(dir) * l, z1 = z0 + Math.sin(dir) * l;
-    const yOn = (x, z) => { const rr = Math.hypot(x, z), aa = Math.atan2(z, x); return out ? 0.006 : domeAt(aa, Math.min(rr, R - 0.1)) + 0.004; };
-    // a stem is never quite straight: bowed, sometimes kinked where it was bent
-    const bw = rnd.sym(0.25) * l, xm = (x0 + x1) / 2 - Math.sin(dir) * bw * 0.3, zm = (z0 + z1) / 2 + Math.cos(dir) * bw * 0.3;
-    const p0 = xf(F, x0, yOn(x0, z0), z0), pm = xf(F, xm, yOn(xm, zm) + 0.004 + rnd() * 0.008, zm), p1 = xf(F, x1, yOn(x1, z1) + rnd() * 0.01, z1);
-    tube(acc, [p0, pm, p1], rnd.range(0.0014, 0.0024), { sides: 3, seed: rnd() });
+  let cloth = null;
+  if (o.cloth) {
+    const P = o.cloth.positions; let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+    for (let k = 0; k < P.length; k += 3) { x0 = Math.min(x0, P[k]); x1 = Math.max(x1, P[k]); z0 = Math.min(z0, P[k + 2]); z1 = Math.max(z1, P[k + 2]); }
+    cloth = [x0 + 0.06, x1 - 0.06, z0 + 0.06, z1 - 0.06];
+  }
+  const onCloth = (x, z) => cloth && x > cloth[0] && x < cloth[1] && z > cloth[2] && z < cloth[3];
+  const yOn = (x, z, out) => { const rr = Math.hypot(x, z), aa = Math.atan2(z, x); return out ? 0.006 : rr > R - 0.12 ? ch + 0.03 : domeAt(aa, Math.min(rr, R - 0.1)) + 0.004; };
+  const nClumps = o.clumps ?? 900;
+  for (let c = 0; c < nClumps; c++) {
+    const out = rnd() < 0.22;
+    const a = rnd() * Math.PI * 2, r = out ? R + 0.1 + Math.pow(rnd(), 1.8) * 0.65 : Math.pow(rnd(), 0.6) * (R + 0.02);
+    const cx = Math.cos(a) * r, cz = Math.sin(a) * r;
+    if (onCloth(cx, cz)) continue;
+    const dir0 = rnd() * Math.PI * 2, ns = out ? 3 + Math.floor(rnd() * 5) : 6 + Math.floor(rnd() * 10);
+    for (let i = 0; i < ns; i++) {
+      const dir = dir0 + rnd.sym(0.35), l = rnd.range(0.07, 0.24);
+      const x0 = cx + rnd.sym(0.05), z0 = cz + rnd.sym(0.05), x1 = x0 + Math.cos(dir) * l, z1 = z0 + Math.sin(dir) * l;
+      if (onCloth(x1, z1)) continue;
+      const bw = rnd.sym(0.3) * l, xm = (x0 + x1) / 2 - Math.sin(dir) * bw * 0.3, zm = (z0 + z1) / 2 + Math.cos(dir) * bw * 0.3;
+      const lift = rnd() * 0.02;
+      const p0 = xf(F, x0, yOn(x0, z0, out) + lift * 0.3, z0), pm = xf(F, xm, yOn(xm, zm, out) + 0.004 + lift + rnd() * 0.01, zm), p1 = xf(F, x1, yOn(x1, z1, out) + lift * 0.5 + rnd() * 0.012, z1);
+      tube(acc, [p0, pm, p1], rnd.range(0.0016, 0.0028), { sides: 3, seed: rnd() });
+    }
   }
   // linen laid over the bed: the cloth-simulated drape (offline/nest_cloth.py) when baked
   if (o.cloth) {
@@ -248,7 +294,7 @@ export function birthingChamber(kit, F, o = {}) {
     // a splayed sill for the high window: the bottom of the reveal slopes down into the room
     if (wl.key === win.wall) block(local.get('stonePale'), sub(Fw, [win.x + win.w / 2, win.y - 0.12, -T / 2 + 0.02], [1, 0, 0], [0, Math.cos(0.45), Math.sin(0.45)]), win.w + 0.06, 0.12, T * 1.05, { r: 0.012, seg: [0.2, 0.06, 0.2], seed: rnd(), noise: 0.003, chip: 0.01 });
   }
-  flagFloor(local, frame([0, 0, 0]), w, d, rnd);
+  flagFloor(local, frame([0, 0, 0]), w, d, rnd, { path: [w / 2 - dr.x - dr.w / 2, d / 2 - 0.3, -0.6, 0.3] });
   beamCeiling(local, frame([0, 0, 0]), w, d, h, rnd);
   // the nest (centre slightly toward the west wall), the bench along the north wall
   const nestC = o.nest || [-0.6, 0, 0.3];
@@ -270,15 +316,20 @@ export function birthingChamber(kit, F, o = {}) {
   for (const [wx, wz, ry] of [[-w / 2 + 0.02, -0.8, Math.PI / 2], [w / 2 - 0.02, 1.4, -Math.PI / 2], [1.8, -d / 2 + 0.02, 0]]) {
     const Fb = frame([wx, 1.75, wz], [Math.cos(ry), 0, -Math.sin(ry)], [0, 1, 0]);
     // the bracket: a bar out of the wall and a little iron shelf
-    tube(local.get('iron'), [xf(Fb, 0, 0, 0), xf(Fb, 0, 0, 0.32)], 0.012, { sides: 6 });
-    tube(local.get('iron'), [xf(Fb, 0, -0.18, 0), xf(Fb, 0, -0.01, 0.2)], 0.01, { sides: 6 });
-    block(local.get('iron'), sub(Fb, [0, 0.004, 0.26]), 0.16, 0.008, 0.14, { r: 0.002, seg: [0.16, 0.008, 0.14], seed: rnd() });
-    const Fl = sub(Fb, [0, 0.008, 0.25], [0, 0, 1], [0, 1, 0]);
+    tube(local.get('iron'), [xf(Fb, 0, 0, 0), xf(Fb, 0, 0, 0.42)], 0.012, { sides: 6 });
+    tube(local.get('iron'), [xf(Fb, 0, -0.2, 0), xf(Fb, 0, -0.01, 0.28)], 0.01, { sides: 6 });
+    block(local.get('iron'), sub(Fb, [0, 0.004, 0.36]), 0.16, 0.008, 0.14, { r: 0.002, seg: [0.16, 0.008, 0.14], seed: rnd() });
+    // the soot plume the flame has laid on the wall above it over years
+    grid(local.get('sootStain'), 10, 16, (u, v) => {
+      const x = (u - 0.5) * (0.25 + 0.55 * v), y = 0.05 + v * 1.4;
+      return { p: xf(Fb, x, y, 0.03 + 0.004 * v), uv: [u, v], seed: rnd(), ao: 1 };
+    }, [1, 0, 0], false);
+    const Fl = sub(Fb, [0, 0.008, 0.35], [0, 0, 1], [0, 1, 0]);
     lamps.push(xf(Fl, ...oilLamp(local, Fl, rnd)));
   }
   kit.merge(local, F);
   const lights = lamps.map((p) => {
-    const l = new THREE.PointLight(new THREE.Color(1.0, 0.62, 0.3), o.lampLight ?? 1.6, 6.0, 2);
+    const l = new THREE.PointLight(new THREE.Color(1.0, 0.5, 0.18), o.lampLight ?? 2.2, 7.0, 2);
     const q = xf(F, p[0], p[1], p[2]);
     l.position.set(q[0], q[1] + 0.03, q[2]);
     l.castShadow = false;
@@ -306,7 +357,8 @@ export function treatmentRoom(kit, F, o = {}) {
     if (wl.key === win.wall) ops.push({ x: win.x, y: win.y, w: win.w, h: win.h, head: 'lintel', reveal: T, sill: false });
     if (wl.key === dr.wall) ops.push({ x: dr.x, y: 0, w: dr.w, h: dr.h, head: 'lintel', reveal: T * 0.5 });
     // stone walls with a lime plaster coat over most of it (bare stone where it has fallen)
-    masonryFace(local, Fw, wl.L, hw, { courses: C, style: 'squared', mat: 'stonePale', dressedMat: 'stonePale', mortar: 'mortarPale', T, lod: 'low', seed: rnd() * 999, openings: ops, back: true, quoinStart: () => 0.04, quoinEnd: () => 0.04 });
+    // rubble walling under the lime plaster (it shows where the coat has fallen)
+    masonryFace(local, Fw, wl.L, hw, { courses: C, style: 'washed', mat: 'stoneWashed', dressedMat: 'stoneWashed', mortar: 'mortarWashed', T, lod: 'mid', seed: rnd() * 999, openings: ops, back: true, backMat: 'mortarPale', quoinStart: () => 0.04, quoinEnd: () => 0.04 });
     plasterCoat(local, Fw, wl.L, h, ops, rnd, { inset: 0.03, mat: 'plasterInt' });
     if (wl.key === dr.wall) door(local, sub(Fw, [dr.x, 0, 0]), { w: dr.w, h: dr.h, inset: T * 0.5, open: dr.open, hingeLeft: true, room: true, wallT: T, seed: rnd() * 999 });
     if (wl.key === win.wall) {
@@ -317,24 +369,43 @@ export function treatmentRoom(kit, F, o = {}) {
         // folded back flat against the inside wall face either side of the opening
         const Fl = sub(Fo, [sx ? win.w + 0.03 : -0.03, 0.02, 0.07], sx ? [1, 0, 0.04] : [-1, 0, 0.04], [0, 1, 0]);
         for (let i = 0; i < 3; i++) block(local.get('oakDark'), sub(Fl, [0.1 + i * 0.205, win.h / 2 - 0.02, 0.012]), 0.2, win.h - 0.06, 0.025, { r: 0.004, seg: [0.2, 0.5, 0.025], seed: rnd(), noise: 0.0015, axis: [0, 1, 0] });
+        // ledges, strap hinges with nail heads, the pintles leaded into the reveal
+        for (const fy of [0.18, 0.82]) {
+          block(local.get('oakDark'), sub(Fl, [0.31, win.h * fy, 0.035]), 0.58, 0.1, 0.022, { r: 0.004, seg: [0.3, 0.1, 0.022], seed: rnd(), noise: 0.0015, axis: [1, 0, 0] });
+          block(local.get('iron'), sub(Fl, [0.24, win.h * fy, 0.05]), 0.46, 0.04, 0.006, { r: 0.002, seg: [0.1, 0.04, 0.006], seed: rnd(), warp: (lx, ly, lz) => [lx, ly * (1 - 0.3 * (lx / 0.46 + 0.5)), lz] });
+          for (let k = 0; k < 3; k++) tube(local.get('iron'), [xf(Fl, 0.08 + k * 0.14, win.h * fy, 0.052), xf(Fl, 0.08 + k * 0.14, win.h * fy, 0.06)], 0.007, { sides: 5, caps: true });
+          tube(local.get('iron'), [xf(Fl, -0.01, win.h * fy - 0.05, 0.012), xf(Fl, -0.01, win.h * fy + 0.05, 0.012)], 0.011, { sides: 6, caps: true });
+        }
       }
     }
   }
-  flagFloor(local, frame([0, 0, 0]), w, d, rnd, { mat: 'stoneFloor' });
+  flagFloor(local, frame([0, 0, 0]), w, d, rnd, { mat: 'stoneFloor', path: [w / 2 - 0.4, -d / 2 + dr.x + dr.w / 2, -w / 2 + 1.4, 0.4] });
   beamCeiling(local, frame([0, 0, 0]), w, d, h, rnd, { beamSpacing: 1.3 });
   // a settle (high-backed bench) under the window wall's neighbour, stools, a table
   const settle = frame([-0.9, 0, d / 2 - 0.42], [-1, 0, 0], [0, 1, 0]);
   bench(local, settle, rnd, { L: 1.7, d: 0.45, h: 0.46 });
   for (let i = 0; i < 6; i++) block(local.get('oak'), sub(settle, [-0.85 + 0.03 + i * 0.29 + 0.14, 0.76, 0.23], [1, 0, 0], [0, 1, 0]), 0.28, 0.6, 0.03, { r: 0.004, seg: [0.28, 0.4, 0.03], seed: rnd(), noise: 0.0015, axis: [0, 1, 0] });
-  stool(local, frame([-w / 2 + 1.35, 0, 0.4]), rnd);
+  // the patient's stool by the window light, facing the room (+x); at her LEFT (-z) a low trestle
+  // with a folded cloth pad where her injured left arm rests (2B)
+  const seatP = [-w / 2 + 1.35, 0, 0.4];
+  stool(local, frame(seatP), rnd);
+  const armF = frame([seatP[0] + 0.05, 0, seatP[2] - 0.52], [1, 0, 0], [0, 1, 0]);
+  bench(local, armF, rnd, { L: 0.62, d: 0.34, h: 0.62, t: 0.05 });
+  foldedCloths(local, sub(armF, [0.02, 0.62, 0.0]), rnd, 3, { w: 0.48, d: 0.28 });
   stool(local, frame([0.9, 0, 1.4]), rnd, { h: 0.44 });
   const table = frame([0.6, 0, -d / 2 + 0.75]);
   bench(local, table, rnd, { L: 1.6, d: 0.75, h: 0.76, t: 0.07 });
   bowl(local, sub(table, [-0.3, 0.76, 0.05]), rnd, { r: 0.22, h: 0.1 });
   jug(local, sub(table, [0.15, 0.76, -0.12]), rnd);
   foldedCloths(local, sub(table, [0.5, 0.76, 0.1]), rnd, 5, { w: 0.34, d: 0.26 });
-  // a cloth draped over the table's edge
-  grid(local.get('linen'), 24, 16, (u, v) => {
+  // a clean cloth on the table, hanging over its front edge: cloth-simulated (offline/table_cloth.py)
+  if (o.tableCloth) {
+    const { nx, ny, positions: P } = o.tableCloth;
+    grid(local.get('linen'), nx, ny, (u, v) => {
+      const i = Math.round(u * nx), j = Math.round(v * ny), k = (j * (nx + 1) + i) * 3;
+      return { p: xf(table, P[k], P[k + 1] + 0.002, P[k + 2]), uv: [u * 0.8, v * 0.95], seed: 0.4, ao: 0.9 };
+    }, [1, 0, 0], false);
+  } else grid(local.get('linen'), 24, 16, (u, v) => {
     const x = (u - 0.5) * 0.55, z = v * 0.65;
     const over = Math.max(0, z - 0.32);
     const p = xf(table, -0.55 + x, 0.765 - over * 1.6 + 0.005 * Math.sin(x * 30), -0.05 + Math.min(z, 0.38) + over * 0.05);
@@ -345,13 +416,14 @@ export function treatmentRoom(kit, F, o = {}) {
     block(local.get('oak'), frame([-1.4, y, -d / 2 + 0.17]), 1.5, 0.04, 0.3, { r: 0.004, seg: [0.5, 0.04, 0.3], seed: rnd(), noise: 0.0015 });
     for (let i = 0; i < 4; i++) {
       const jx = -2.0 + i * 0.36 + rnd.sym(0.05);
-      if (rnd() < 0.6) lathe(local.get('clayware'), frame([jx, y + 0.02, -d / 2 + 0.17]), [[0, 0], [0.05, 0], [0.065, 0.06], [0.06, 0.12], [0.04, 0.15], [0.045, 0.17], [0.0, 0.17]], 16, { seed: rnd(), wobble: 0.02 });
+      const js = rnd.range(0.7, 1.35), jt = rnd.range(0.8, 1.4);
+      if (rnd() < 0.6) lathe(local.get('clayware'), frame([jx, y + 0.02, -d / 2 + 0.17]), [[0, 0], [0.05 * js, 0], [0.065 * js, 0.06 * jt], [0.06 * js * rnd.range(0.85, 1.1), 0.12 * jt], [0.04 * js, 0.15 * jt], [0.045 * js, 0.17 * jt], [0.0, 0.17 * jt]], 16, { seed: rnd(), wobble: 0.02 + rnd() * 0.03 });
       else block(local.get('linen'), frame([jx, y + 0.06, -d / 2 + 0.17]), 0.14, 0.1, 0.14, { r: 0.04, rs: 1, seg: [0.05, 0.05, 0.05], seed: rnd(), noise: 0.004 });
     }
     for (const sx of [-2.05, -0.75]) block(local.get('iron'), frame([sx, y - 0.08, -d / 2 + 0.12]), 0.03, 0.16, 0.2, { r: 0.004, seg: [0.03, 0.16, 0.2], seed: rnd() });
   }
   kit.merge(local, F);
-  return { lights: [], anchors: { window: win, door: dr, settle: xf(settle, 0, 0.46, 0), w, d, h, T } };
+  return { lights: [], anchors: { window: win, door: dr, settle: xf(settle, 0, 0.46, 0), seat: xf(F, seatP[0], 0.42, seatP[2]), armSupport: xf(armF, 0, 0.62 + 0.1, 0), w, d, h, T } };
 }
 
 /**
@@ -408,7 +480,8 @@ function plasterCoat(kit, F, L, H, ops, rnd, o = {}) {
   const edge = (a, b) => {
     const ax = pos[a * 2], ay = pos[a * 2 + 1], bx = pos[b * 2], by = pos[b * 2 + 1];
     const v = (x, y, z, ao) => { const p = xf(F, x, y, z); return acc.v(p[0], p[1], p[2], x, y + z, seed, ao, 0, F[3], F[4], F[5]); };
-    const a0 = v(ax, ay, thick, 0.9), b0 = v(bx, by, thick, 0.9), a1 = v(ax, ay, 0.004, 0.5), b1 = v(bx, by, 0.004, 0.5);
+    // the broken edge in plaster colour, a little shaded at its foot (no black outline)
+    const a0 = v(ax, ay, thick, 0.95), b0 = v(bx, by, thick, 0.95), a1 = v(ax, ay, 0.004, 0.8), b1 = v(bx, by, 0.004, 0.8);
     acc.q(a0, b0, b1, a1); acc.q(a0, a1, b1, b0);               // both windings: the side is seen from either way
   };
   const vid = (i, j) => j * (nx + 1) + i;

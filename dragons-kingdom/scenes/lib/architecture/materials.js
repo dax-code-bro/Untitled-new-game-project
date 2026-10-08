@@ -224,11 +224,12 @@ export async function stoneMaterial(ctx, opts = {}) {
     akDirt: { value: new THREE.Vector4(opts.splash ?? 0.6, opts.streaks ?? 0.5, opts.soot ?? 0.0, opts.stain ?? 0.4) },
     akScale: { value: opts.scale ?? 0.6 },
     akWash: { value: opts.wash ?? 0 },
+    akTide: { value: new THREE.Vector2(opts.tide ?? 0, opts.tide ? 1 : 0) },
   };
   return kitMaterial('stone', {
     uniforms: U, key: (opts.texture || 'rock26') + (opts.wash ? '-wash' : ''),
     decl: `${SCAN_DECL}
-uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform vec4 akDirt; uniform float akScale; uniform float akWash;`,
+uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform vec4 akDirt; uniform float akScale; uniform float akWash; uniform vec2 akTide;`,
     body: /* glsl */ `
   float sd = akI.x;
   vec3 P = vObjP;            // object space (Kit.build centres each set): noise keeps its precision far from the world origin
@@ -254,7 +255,7 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   vec3 c = base * lum * (0.93 + 0.14 * bed) * (1.0 - 0.18 * vein);
   // iron staining in patches
   float iron = smoothstep(0.62, 0.85, akF3(P * 3.1 + sd * 20.0)) * akDirt.w;
-  c = mix(c, c * vec3(1.18, 0.88, 0.6), iron * 0.6);
+  c = mix(c, c * vec3(1.12, 0.92, 0.72), iron * 0.4);
   // worn, paler arrises (and a little rounder: lighter where the weathered skin has gone)
   float ar = akI.z;
   c *= 1.0 + 0.12 * ar * (0.5 + akN3(P * 30.0));
@@ -303,15 +304,30 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   c = mix(c, mc, clamp(mossM, 0.0, 1.0));
   // soot (chimney stacks)
   c *= 1.0 - akDirt.z * smoothstep(0.3, 0.9, akF3(P * 1.5));
+  // tide zones (quays): wet and dark below the line, a fringe of weed and slime at it, barnacles
+  // lower down, a white salt bloom above it
+  float tideWet = 0.0;
+  if (akTide.y > 0.5) {
+    float tl = akTide.x;
+    tideWet = 1.0 - smoothstep(tl - 0.12, tl + 0.12, hb + 0.18 * (akN2(vec2(pl.x * 2.0, P.y)) - 0.5));
+    float weed = tideWet * smoothstep(tl - 1.0, tl - 0.25, hb) * smoothstep(0.3, 0.6, akF3(P * 4.0) + 0.25);
+    c *= mix(1.0, 0.5, tideWet);
+    c = mix(c, vec3(0.03, 0.036, 0.012) * (0.7 + 0.6 * akN3(P * 30.0)), weed * 0.85);
+    vec3 bc = akCell2(pl * 70.0 + sd * 13.0);
+    float barn = tideWet * (1.0 - smoothstep(tl - 1.4, tl - 0.5, hb)) * (1.0 - smoothstep(0.1, 0.25, bc.x)) * step(0.5, bc.z);
+    c = mix(c, vec3(0.3, 0.29, 0.25), barn * 0.7);
+    float salt = (1.0 - tideWet) * (1.0 - smoothstep(tl + 0.05, tl + 0.8, hb)) * smoothstep(0.35, 0.65, akF3(P * 3.0 + 2.0));
+    c = mix(c, c * 1.3 + 0.035, salt * 0.55);
+  }
   // lime wash: a thin white coat over the stones, worn through on the arrises and in patches,
   // greyer and thinner low down, settling darker in the joints
   if (akWash > 0.0) {
-    float cov = smoothstep(0.2, 0.55, akF3(P * 2.2 + sd * 3.0) + 0.38) * (1.0 - 0.45 * ar) * smoothstep(0.0, 0.8, hb + 0.3) * mix(0.6, 1.0, aov);
+    float cov = smoothstep(0.2, 0.55, akF3(P * 1.4) + 0.38) * (1.0 - 0.35 * ar) * smoothstep(0.0, 0.8, hb + 0.3);
     vec3 wc = vec3(0.6, 0.58, 0.53) * (0.9 + 0.12 * akF3(P * 9.0));
     c = mix(c, wc, clamp(cov * akWash, 0.0, 1.0));
   }
   akAlb = c;
-  akRgh = clamp(0.82 + 0.12 * (1.0 - lum) - 0.12 * damp + 0.1 * mossM, 0.5, 1.0);
+  akRgh = clamp(0.82 + 0.12 * (1.0 - lum) - 0.12 * damp + 0.1 * mossM - 0.45 * tideWet, 0.3, 1.0);
   akAO = mix(0.35, 1.0, aov);
   akNW = normalize(mix(akN0, nScan, 0.16 - 0.08 * akW.w));    // (the scans' normals carry a woven pattern: a hint only)
   float fw = (akFoot * 1.4);
@@ -820,26 +836,49 @@ export function portalMaterial(ctx, opts = {}) {
   return mat;
 }
 
+// ---------------------------------------------------------- soot --
+/** Soot laid on a wall above a flame: a transparent decal, dense at the source, fading up and out. */
+export function sootMaterial(ctx) {
+  const mat = kitMaterial('sootStain', {
+    params: { transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 },
+    body: /* glsl */ `
+  float u = vMUv.x - 0.5, v = vMUv.y;
+  float plume = exp(-u * u / (0.02 + 0.06 * v)) * (1.0 - smoothstep(0.15, 1.0, v)) * smoothstep(0.0, 0.08, v);
+  float n = akF3(vObjP * 6.0) * 0.6 + akF3(vObjP * 23.0) * 0.4;
+  akSootA = clamp(plume * (0.55 + 0.6 * n) * 0.85, 0.0, 0.92);
+  akAlb = vec3(0.02, 0.018, 0.016);
+  akRgh = 0.95; akAO = 1.0;
+`,
+    decl: 'float akSootA;',
+  });
+  const prev = mat.onBeforeCompile;
+  mat.onBeforeCompile = (sh, r) => { prev(sh, r); sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'diffuseColor.a = akSootA;\n#include <opaque_fragment>'); };
+  mat.userData.noShadow = true;
+  return mat;
+}
+
 // ---------------------------------------------------------- water --
 /**
  * Still water in a basin with ripple rings (uv.x = distance to the nearest jet's impact, m) and a
  * light chop; akTime (s) moves the rings - a scene sets M.pool.userData.dkUniforms.akTime.value = t.
  */
 export function poolMaterial(ctx, opts = {}) {
-  const U = { akTime: { value: 0 }, akCol: { value: new THREE.Color(...(opts.color || [0.012, 0.016, 0.015])) } };
-  return kitMaterial('pool', {
+  const U = { akTime: { value: 0 }, akCol: { value: new THREE.Color(...(opts.color || [0.012, 0.016, 0.015])) }, akChop: { value: opts.chop ?? 1 } };
+  return kitMaterial(opts.name || 'pool', {
     // (the basin's surroundings are not in the environment map: a duller, greener reflection)
     uniforms: U, physical: true, params: { ior: 1.33, specularIntensity: 0.75, specularColor: new THREE.Color(0.8, 0.9, 0.85) },
-    decl: 'uniform float akTime; uniform vec3 akCol;',
+    decl: 'uniform float akTime; uniform vec3 akCol; uniform float akChop;',
     body: /* glsl */ `
   vec3 P = vObjP;
   float d = vMUv.x;
   float t = akTime;
   float rings = sin(d * 70.0 - t * 9.0) * exp(-d * 1.6) * 0.0012 + sin(d * 38.0 - t * 5.5 + 1.3) * exp(-d * 0.9) * 0.0009;
-  float chop = (akN3(vec3(P.xz * 9.0, t * 0.7)) - 0.5) * 0.0006 + (akN3(vec3(P.xz * 23.0 + 3.0, t * 1.3)) - 0.5) * 0.0002;
+  float chop = ((akN3(vec3(P.xz * 9.0 / akChop, t * 0.7)) - 0.5) * 0.0006 + (akN3(vec3(P.xz * 23.0 / akChop + 3.0, t * 1.3)) - 0.5) * 0.0002) * akChop;
+  // open water: wind ripples and a slow swell (low frequencies: never faded)
+  float swell = akChop > 1.5 ? (akN3(vec3(P.x * 0.7 + P.z * 0.3, P.z * 1.3, t * 0.4)) - 0.5) * 0.06 + (akN3(vec3(P.x * 2.3, P.z * 3.9, t * 0.9)) - 0.5) * 0.018 + (akN3(vec3(P.x * 6.0 + 1.0, P.z * 9.0, t * 1.6)) - 0.5) * 0.004 : 0.0;
   akAlb = akCol;
   akRgh = 0.03;
-  akHt = (rings + chop) * (1.0 - smoothstep(0.004, 0.012, akFoot));
+  akHt = rings * (1.0 - smoothstep(0.004, 0.012, akFoot)) + chop * (1.0 - smoothstep(0.004 * akChop, 0.012 * akChop, akFoot)) + swell;
   // a film of dust and the odd leaf near the walls
   akAO = 1.0;
 `,
@@ -869,7 +908,7 @@ export async function archMaterials(ctx, opts = {}) {
   const key = JSON.stringify(opts);
   if (cache.has(key)) return cache.get(key);
   const p = (async () => {
-    const [stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneSett, stoneFloor, stoneWashed] = await Promise.all([
+    const [stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneSett, stoneFloor, stoneQuay, stoneWashed] = await Promise.all([
       // Verdor: weathered pale limestone / sandstone
       stoneMaterial(ctx, { palette: [[0.47, 0.44, 0.37], [0.43, 0.405, 0.345], [0.5, 0.465, 0.39]], variation: 0.13, lichen: 0.7, moss: 0.35, tooled: 0.6, streaks: 0.9, stain: 0.7, ...(opts.stonePale || {}) }),
       // Cling: grey rubble stone
@@ -886,14 +925,17 @@ export async function archMaterials(ctx, opts = {}) {
       // pale stone seen from far off (silhouette LOD): the stone-to-stone variation of a whole wall averages out
       stoneMaterial(ctx, { palette: [[0.48, 0.45, 0.39], [0.45, 0.42, 0.37], [0.5, 0.47, 0.4]], variation: 0.06, lichen: 0.2, moss: 0.2, tooled: 0.0, streaks: 0.9, ...(opts.stoneFar || {}) }),
       // cobbles / setts of a square: grey-brown, worn, moss in the joints, no splash band
-      stoneMaterial(ctx, { palette: [[0.2, 0.19, 0.17], [0.15, 0.145, 0.135], [0.25, 0.22, 0.18]], variation: 0.25, lichen: 0.15, moss: 0.3, algae: 0.0, tooled: 0.1, splash: 0.0, streaks: 0.0, stain: 0.6, ...(opts.stoneSett || {}) }),
+      stoneMaterial(ctx, { palette: [[0.21, 0.195, 0.17], [0.14, 0.13, 0.115], [0.27, 0.235, 0.185]], variation: 0.38, lichen: 0.15, moss: 0.3, algae: 0.0, tooled: 0.1, splash: 0.0, streaks: 0.0, stain: 0.6, ...(opts.stoneSett || {}) }),
       // interiors: worn flagstone floors (no weather: no lichen, algae or splash)
       stoneMaterial(ctx, { palette: [[0.42, 0.39, 0.33], [0.36, 0.34, 0.29], [0.46, 0.42, 0.35]], variation: 0.2, lichen: 0.0, moss: 0.0, algae: 0.0, tooled: 0.25, splash: 0.0, streaks: 0.0, stain: 0.5, ...(opts.stoneFloor || {}) }),
+      // harbour: pale quay stone with tide zones (the harbour kit's footing is 2.4 m below the
+      // water: the tide line at +1.1 m is 3.5 m above it)
+      stoneMaterial(ctx, { palette: [[0.45, 0.42, 0.36], [0.41, 0.385, 0.33], [0.48, 0.45, 0.38]], variation: 0.12, lichen: 0.35, moss: 0.25, algae: 0.6, tooled: 0.45, splash: 0.0, streaks: 0.9, stain: 0.8, tide: 3.5, ...(opts.stoneQuay || {}) }),
       // interiors: pale stone under old lime wash
       stoneMaterial(ctx, { palette: [[0.46, 0.43, 0.37], [0.4, 0.37, 0.32], [0.5, 0.46, 0.39]], variation: 0.15, lichen: 0.0, moss: 0.0, algae: 0.0, tooled: 0.4, splash: 0.25, streaks: 0.15, wash: 0.85, ...(opts.stoneWashed || {}) }),
     ]);
     const M = {
-      stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneSett, stoneFloor, stoneWashed,
+      stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneSett, stoneFloor, stoneWashed, stoneQuay,
       leather: plainMaterial('leather', [0.09, 0.05, 0.03], { roughness: 0.6, vary: 0.3, freq: 25, bump: 0.0008 }),
       mortar: mortarMaterial(ctx, opts.mortar),
       mortarPale: mortarMaterial(ctx, { color: [0.42, 0.4, 0.35], key: 'pale', ...(opts.mortarPale || {}) }),
@@ -908,11 +950,14 @@ export async function archMaterials(ctx, opts = {}) {
       lead: plainMaterial('lead', [0.12, 0.12, 0.125], { roughness: 0.6, vary: 0.3 }),
       straw: plainMaterial('straw', [0.48, 0.36, 0.16], { roughness: 0.8, vary: 0.45, freq: 40, bump: 0.0005 }),
       strawBed: strawMaterial(ctx),
-      linen: plainMaterial('linen', [0.5, 0.48, 0.43], { roughness: 0.92, vary: 0.14, freq: 30, bump: 0.0006, params: { side: THREE.DoubleSide } }),
+      linen: plainMaterial('linen', [0.62, 0.6, 0.55], { roughness: 0.92, vary: 0.14, freq: 30, bump: 0.0006, params: { side: THREE.DoubleSide } }),
+      sootStain: sootMaterial(ctx),
       clayware: plainMaterial('clayware', [0.3, 0.16, 0.08], { roughness: 0.7, vary: 0.2 }),
       rope: plainMaterial('rope', [0.22, 0.18, 0.12], { roughness: 0.95, vary: 0.3, freq: 80, bump: 0.001 }),
       soot: plainMaterial('soot', [0.02, 0.018, 0.016], { roughness: 0.95 }),
       pool: poolMaterial(ctx),
+      // the harbour's water: a long chop (no planar reflection of the quay: see README)
+      sea: poolMaterial(ctx, { name: 'sea', chop: 6, color: [0.01, 0.018, 0.017] }),
       jet: jetMaterial(ctx),
       water: new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.012, 0.016, 0.016), roughness: 0.03, metalness: 0, transmission: 0, ior: 1.33 }),
     };
@@ -925,6 +970,7 @@ export async function archMaterials(ctx, opts = {}) {
     M.flame.userData.noShadow = true;
     M.water.userData.noShadow = true;
     M.pool.userData.noShadow = true;
+    M.sea.userData.noShadow = true;
     M.jet.userData.noShadow = true;
     M.glass.userData.noShadow = true;
     M.portal.userData.noShadow = true;

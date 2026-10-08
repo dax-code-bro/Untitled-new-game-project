@@ -18,13 +18,14 @@ import { reviewTime } from '../lib/humans/stage.js';
 import { filmFinish } from './finish.js';
 
 const SUN = new THREE.Vector3(0.598, 0.743, -0.300).normalize();
-const STABLE = [0, -34], RIG = [14, -17], KEEPER = [-26, -14], LEAFP = [-17, -7];
+// the rig stands in the open yard east of the stable (Charcoal lies beyond its gangway, +z of it)
+const STABLE = [0, -34], RIG = [34, -6], KEEPER = [-26, -14], LEAFP = [-17, -7];
 const PALACE = [-700, -620], HARBOR = [520, 260];
 const SHOTS = [
-  { name: 'stable-rig', p: [17.6, 1.6, 8.0], t: [8, 5.9, -26], fl: 24, fstop: 5.6 },
-  { name: 'rig', p: [26, 1.6, -1], t: [13.5, 3.6, -15], fl: 24, fstop: 5.6 },
+  { name: 'stable-rig', p: [46, 1.7, 15], t: [12, 6.0, -24], fl: 21, fstop: 5.6 },
+  { name: 'rig', p: [43, 1.6, 9.5], t: [33, 5.5, -5], fl: 21, fstop: 5.6 },
   { name: 'keeper', p: [-11.5, 1.6, 4.0], t: [-25, 2.4, -14], fl: 30, fstop: 5.6 },
-  { name: 'palace', p: [-430, 14, -300], t: [-700, 40, -620], fl: 85, fstop: 8, near: 25 },
+  { name: 'palace', p: [-290, 22, -530], t: [-700, 40, -612], fl: 70, fstop: 8, near: 25 },
   { name: 'harbor', p: [508, 3.9, 274], t: [517, 1.2, 258], fl: 28, fstop: 5.6 },
 ];
 
@@ -61,8 +62,12 @@ export async function setup(ctx) {
     },
     splat: (x, z) => {
       const nearB = Math.min(Math.hypot(x - STABLE[0], z - STABLE[1] - 8), Math.hypot(x - KEEPER[0], z - KEEPER[1] - 5));
-      const worn = smooth(14, 4, nearB) * 0.8 + smooth(9, 3, Math.hypot(x - RIG[0], z - RIG[1])) * 0.7;
-      return [0, (1 - worn) * 0.6, (1 - worn) * 0.4, worn];
+      // trodden mud and straw before the stable door and the lodge, a churned ring round the rig
+      // and a cart track between them; the palace rise is rock under thin turf
+      const track = smooth(2.6, 1.2, Math.abs((z - STABLE[1] - 6) - (x - STABLE[0]) * 0.75 + 2.0 * Math.sin(x * 0.08)));
+      const worn = Math.min(1, smooth(14, 4, nearB) * 0.8 + smooth(10, 4, Math.hypot(x - RIG[0], z - RIG[1])) * 0.85 + track * 0.7 * smooth(60, 30, Math.hypot(x - 15, z + 18)));
+      const rock = smooth(260, 120, Math.hypot(x - PALACE[0], z - PALACE[1])) * smooth(0.0, 0.4, N.fbm(x * 0.03 + 3, z * 0.03, 3) + 0.2);
+      return [rock, (1 - worn) * 0.6 * (1 - rock), (1 - worn) * 0.4 * (1 - rock), worn * (1 - rock)];
     },
   });
   const landMat = await terrainMaterial(ctx, [
@@ -81,12 +86,10 @@ export async function setup(ctx) {
     const qb = new THREE.Mesh(new THREE.BoxGeometry(180, 6, 62), new THREE.MeshStandardMaterial({ color: 0x2a2620, roughness: 1 }));
     qb.position.set(HARBOR[0], -0.22, HARBOR[1] - 8 - 31); scene.add(qb);
   }
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(500, 300), M.water);
-  water.rotation.x = -Math.PI / 2; water.position.set(HARBOR[0], 0, HARBOR[1] + 150); scene.add(water);
   // the buildings
   const kit = new Kit(0);
   stable(kit, yawFrame([STABLE[0], 0, STABLE[1]], 0.9), { lod: 'mid', seed: 3 });
-  const rig = accessRig(kit, yawFrame([RIG[0], 0, RIG[1]], 0.25), { H: 7.2, seed: 4, gangwayDrop: 2.0 });
+  const rig = accessRig(kit, yawFrame([RIG[0], 0, RIG[1]], 0.35), { seed: 4 });         // deck 10.6 m, the gangway lands at Charcoal's saddle (~9.7 m)
   keeperHouse(kit, yawFrame([KEEPER[0], 0, KEEPER[1]], 1.2), { lod: 'mid', seed: 5 });
   leafPlatform(kit, yawFrame([LEAFP[0], 0, LEAFP[1]], 2.2), { seed: 6 });
   const far = new Kit(0);
@@ -98,7 +101,7 @@ export async function setup(ctx) {
   const people = [];
   try {
     const remi = await loadCharacter('remi');
-    placeCharacter(remi, RIG[0] - 0.4, 0, RIG[1] + 4.6, 0.9);
+    placeCharacter(remi, RIG[0] - 0.3, 0, RIG[1] + 6.6, 0.35);
     scene.add(remi.root); people.push(remi);
     const keeper = await loadCharacter('keeper1');
     placeCharacter(keeper, KEEPER[0] + 4.4, 0, KEEPER[1] + 3.0, 1.0);
@@ -109,11 +112,11 @@ export async function setup(ctx) {
     const a = rng() * Math.PI * 2, r = Math.sqrt(rng()) * R;
     const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
     if (Math.hypot(x - STABLE[0], z - STABLE[1]) < 16) return null;
-    if (Math.hypot(x - RIG[0], z - RIG[1]) < 4.0 && rng() < 0.8) return null;
+    if (Math.hypot(x - RIG[0], z - RIG[1]) < 9.0) return null;
     if (Math.hypot(x - KEEPER[0], z - KEEPER[1]) < 7) return null;
     return [x, 0.4 * N.fbm(x * 0.02, z * 0.02, 3) - 0.02, z];
   };
-  for (const [cx, cz, R, n] of [[16, -2, 22, 60000], [-16, -2, 18, 40000]]) {
+  for (const [cx, cz, R, n] of [[34, 4, 22, 60000], [-16, -2, 18, 40000]]) {
     scene.add(grassField({ count: n, height: [0.05, 0.2], seed: 5 + cx, color: [0.05, 0.072, 0.022], dry: [0.2, 0.17, 0.085], dryAmount: 0.5, place: place(cx, cz, R) }));
     scene.add(grassField({ count: n / 6, height: [0.18, 0.42], seed: 7 + cx, blades: 10, color: [0.035, 0.055, 0.018], dry: [0.22, 0.19, 0.1], dryAmount: 0.6, place: place(cx, cz, R) }));
   }

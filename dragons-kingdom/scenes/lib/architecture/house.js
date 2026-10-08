@@ -7,8 +7,8 @@
 //   // kit -> kit.build(materials): one mesh per material for the whole row / square
 //
 // Local frame: x along the frontage (w), y up, z toward the street (front face at z = +d/2).
-import { Kit, frame, sub, makeRand, block } from './core.js';
-import { masonryBox, courses } from './masonry.js';
+import { Kit, frame, sub, makeRand, block, xf } from './core.js';
+import { masonryBox, masonryFace, masonryGable, courses } from './masonry.js';
 import { framedWall, jetty, gableFrame, member } from './timber.js';
 import { gableRoof, chimney } from './roof.js';
 import { windowUnit, door, threshold } from './openings.js';
@@ -25,14 +25,19 @@ import { windowUnit, door, threshold } from './openings.js';
 export function house(kit, F, o = {}) {
   const rnd = makeRand(o.seed ?? 1);
   const w = o.w ?? 6.5, d = o.d ?? 9;
-  const hs = o.hs ?? rnd.range(3.0, 3.5), ht = o.ht ?? rnd.range(2.6, 2.9);
-  const n = o.storeys ?? 1;
+  const hs0 = rnd.range(3.0, 3.5), ht = o.ht ?? rnd.range(2.6, 2.9);
+  // o.allStone: a two-storey stone house (no timber storeys, stone gables with coping)
+  const hs = o.hs ?? (o.passage ? Math.max(hs0, o.passage.h + 0.75) : o.allStone ? hs0 + 2.6 : hs0);
+  const n = o.allStone ? 0 : (o.storeys ?? 1);
   const J = o.jetty ?? rnd.range(0.32, 0.5);
   const lod = o.lod || 'mid';
   const T = 0.6;
   const oak = o.oakTone || (rnd() < 0.5 ? 'oak' : 'oakDark');
   const local = new Kit(0);
   const info = { doors: [], windows: [] };
+  // o.beamKit: the bressumer over the front (first storey's sill) is built into that kit instead -
+  // its own mesh, so it can fall (3C: the beam across the arch path)
+  const beamLocal = o.beamKit ? new Kit(0) : null;
   // ---------------- ground storey (stone)
   const dr = o.door || {};
   const doorW = dr.w ?? rnd.range(1.05, 1.3), doorH = dr.h ?? rnd.range(2.25, 2.5);
@@ -42,31 +47,53 @@ export function house(kit, F, o = {}) {
   const shopW = sp.w ?? Math.min(w - doorW - 2.4, rnd.range(1.1, 1.8));
   const shopX = sp.x ?? (doorX < w / 2 ? doorX + doorW + rnd.range(0.8, Math.max(0.85, w - doorX - doorW - shopW - 0.7)) : rnd.range(0.7, Math.max(0.75, doorX - shopW - 0.8)));
   const shopH = sp.h ?? rnd.range(1.05, 1.3), shopY = sp.y ?? rnd.range(0.8, 1.0);
-  const frontOps = [{ x: doorX, y: 0, w: doorW, h: doorH, head: doorArch ? 'arch' : 'lintel', reveal: 0.3 }];
-  if (shopW > 0.6) frontOps.push({ x: shopX, y: shopY, w: shopW, h: shopH, head: 'lintel', sill: true, reveal: 0.3 });
+  // a gate passage (o.passage { w, h }): a through arch front and back instead of door and shop
+  const psg = o.passage || null;
+  const frontOps = psg ? [{ x: w / 2 - psg.w / 2, y: 0, w: psg.w, h: psg.h, head: 'arch', reveal: T, archDepth: T, jambW: 0.42 }]
+    : [{ x: doorX, y: 0, w: doorW, h: doorH, head: doorArch ? 'arch' : 'lintel', reveal: 0.3 }];
+  if (!psg && shopW > 0.6) frontOps.push({ x: shopX, y: shopY, w: shopW, h: shopH, head: 'lintel', sill: true, reveal: 0.3 });
+  const upperWins = [];
+  if (o.allStone) {
+    const nw = Math.max(1, Math.round(w / 2.8));
+    for (let i = 0; i < nw; i++) { const ww = rnd.range(0.8, 1.0), cx = (w * (i + 0.5)) / nw + rnd.sym(0.2); upperWins.push({ x: cx - ww / 2, y: hs0 + 0.75, w: ww, h: rnd.range(1.05, 1.3), head: 'lintel', sill: true, reveal: 0.3 }); }
+    frontOps.push(...upperWins);
+  }
   const sideOps = (L) => (rnd() < 0.5 ? [{ x: L * rnd.range(0.3, 0.6), y: 1.1, w: 0.7, h: 0.85, head: 'lintel', sill: true, reveal: 0.3 }] : []);
   const party = o.party || {};
   const leftOps = party.left ? [] : sideOps(d), rightOps = party.right ? [] : sideOps(d);
   const C = courses(rnd, hs, { min: 0.17, max: 0.32 });
   masonryBox(local, frame([0, 0, 0]), {
-    w, d, h: hs, T, style: o.style || 'rubble', mat: o.stoneMat || 'stoneGrey', dressedMat: 'stoneDressed', mortar: 'mortar', lod, seed: rnd() * 1000, courses: C,
+    w, d, h: hs, T, style: o.style || 'rubble', mat: o.stoneMat || 'stoneGrey', dressedMat: o.stoneMat === 'stoneWashed' ? 'stoneWashed' : 'stoneDressed', mortar: o.stoneMat === 'stoneWashed' ? 'mortarWashed' : 'mortar', lod, seed: rnd() * 1000, courses: C,
     faces: {
       front: { openings: frontOps },
       right: party.right ? { lod: 'low', openings: [] } : { openings: rightOps },
       left: party.left ? { lod: 'low', openings: [] } : { openings: leftOps },
-      back: { lod: lod === 'hero' ? 'mid' : 'low', openings: [] },
+      back: psg ? { openings: [{ x: w / 2 - psg.w / 2, y: 0, w: psg.w, h: psg.h, head: 'arch', reveal: T, archDepth: T, jambW: 0.42 }] } : { lod: lod === 'hero' ? 'mid' : 'low', openings: [] },
     },
   });
+  if (psg) {
+    // the passage: rubble side walls between the front and back walls, a joisted ceiling at the crown
+    const pz = d / 2 - T, L = d - 2 * T, hw = psg.h + 0.15;
+    const Cp = courses(rnd, hw, { min: 0.17, max: 0.32 });
+    masonryFace(local, sub(frame([0, 0, 0]), [-psg.w / 2, 0, pz], [0, 0, -1], [0, 1, 0]), L, hw, { courses: Cp, style: o.style || 'rubble', mat: o.stoneMat || 'stoneGrey', dressedMat: 'stoneDressed', mortar: 'mortar', T: 0.5, lod, seed: rnd() * 999 });
+    masonryFace(local, sub(frame([0, 0, 0]), [psg.w / 2, 0, -pz], [0, 0, 1], [0, 1, 0]), L, hw, { courses: Cp, style: o.style || 'rubble', mat: o.stoneMat || 'stoneGrey', dressedMat: 'stoneDressed', mortar: 'mortar', T: 0.5, lod, seed: rnd() * 999 });
+    for (let k = 0; k <= Math.round(L / 0.42); k++) {
+      const z = -L / 2 + 0.12 + (L - 0.24) * k / Math.round(L / 0.42);
+      block(local.get('oakDark'), frame([0, hw + 0.08, z]), psg.w + 0.5, 0.16, 0.13, { r: 0.008, seg: [0.5, 0.16, 0.13], seed: rnd(), noise: 0.002, nf: 3, axis: [1, 0, 0] });
+    }
+    block(local.get('oakDark'), frame([0, hw + 0.18, 0]), psg.w + 0.5, 0.04, L + 0.05, { r: 0.002, seg: [1, 0.04, 1], seed: rnd() });
+  }
   // glazed side windows in the stone storey (masonryBox faces: right runs front->back, left back->front)
   for (const op of rightOps) windowUnit(local, sub(frame([0, 0, 0]), [w / 2, op.y, d / 2 - op.x], [0, 0, -1], [0, 1, 0]), { w: op.w, h: op.h, inset: 0.16, lights: 2, glazing: rnd() < 0.5 ? 'diamond' : 'square', shutters: rnd() < 0.5 ? 'open' : 'none', floorBelow: op.y, seed: rnd() * 1000 });
   for (const op of leftOps) windowUnit(local, sub(frame([0, 0, 0]), [-w / 2, op.y, -d / 2 + op.x], [0, 0, 1], [0, 1, 0]), { w: op.w, h: op.h, inset: 0.16, lights: 2, glazing: rnd() < 0.5 ? 'diamond' : 'square', shutters: rnd() < 0.5 ? 'open' : 'none', floorBelow: op.y, seed: rnd() * 1000 });
   // door, threshold, shop window in the stone front
   const Ff = sub(frame([0, 0, 0]), [-w / 2, 0, d / 2]);
-  {
+  if (!psg) {
     const Fd = sub(Ff, [doorX, 0, 0]);
     door(local, Fd, { w: doorW, h: doorH, arch: doorArch, inset: 0.2, open: dr.open ?? (rnd() < 0.3 ? rnd.range(0.3, 0.9) : 0), hingeLeft: rnd() < 0.5, wallT: T, seed: rnd() * 1000 });
     threshold(local, Fd, doorW, 0.35, rnd);
     info.doors.push({ x: -w / 2 + doorX + doorW / 2, z: d / 2, w: doorW, h: doorH });
+    for (const uw of upperWins) windowUnit(local, sub(Ff, [uw.x, uw.y, 0]), { w: uw.w, h: uw.h, inset: 0.16, lights: 2, glazing: rnd() < 0.6 ? 'diamond' : 'square', shutters: rnd() < 0.5 ? 'open' : 'none', floorBelow: 0.9, seed: rnd() * 1000 });
     if (shopW > 0.6) {
       windowUnit(local, sub(Ff, [shopX, shopY, 0]), { w: shopW, h: shopH, inset: 0.16, lights: Math.max(2, Math.round(shopW / 0.45)), glazing: rnd() < 0.6 ? 'square' : 'none', shutters: rnd() < 0.6 ? (rnd() < 0.7 ? 'open' : 'half') : 'none', floorBelow: shopY, seed: rnd() * 1000 });
     }
@@ -94,7 +121,7 @@ export function house(kit, F, o = {}) {
     }
     // front
     const FF = sub(frame([0, 0, 0]), [-w / 2, y, front]);
-    framedWall(local, FF, w, ht, { studs, rail, windows: wins, lod, seed: rnd() * 1000, mat: oak, plasterSeed: (o.seed ?? 1) * 0.0137 + k * 0.001 });
+    framedWall(local, FF, w, ht, { studs, rail, windows: wins, lod, seed: rnd() * 1000, mat: oak, plasterSeed: (o.seed ?? 1) * 0.0137 + k * 0.001, sillKit: k === 0 && beamLocal ? beamLocal : undefined });
     for (const wn of wins) {
       const sh = rnd() < 0.45 ? 'none' : rnd() < 0.6 ? 'open' : rnd() < 0.7 ? 'half' : 'closed';
       windowUnit(local, sub(FF, [wn.x, wn.y, 0]), { w: wn.w, h: wn.h, inset: 0.05, frame: false, glazing: rnd() < 0.75 ? 'diamond' : 'square', shutters: sh, floorBelow: wn.y, seed: rnd() * 1000 });
@@ -135,38 +162,53 @@ export function house(kit, F, o = {}) {
     // front and back gables (a small light in the front gable)
     const gw = rnd() < 0.65 ? [{ x: w / 2 - 0.36 + rnd.sym(0.15), y: rise * 0.22, w: 0.62, h: 0.72 }] : [];
     const FG = sub(frame([0, 0, 0]), [-w / 2, y, front]);
-    gableFrame(local, FG, w, rise, { lod, seed: rnd() * 1000, mat: oak, windows: gw, plasterSeed: (o.seed ?? 1) * 0.0137 });
+    if (o.allStone) {
+      masonryGable(local, FG, w, rise, { style: o.style || 'rubble', mat: o.stoneMat || 'stoneGrey', dressedMat: 'stoneDressed', mortar: 'mortar', T, lod, seed: rnd() * 1000 });
+      masonryGable(local, sub(frame([0, 0, 0]), [w / 2, y, -d / 2], [-1, 0, 0], [0, 1, 0]), w, rise, { style: o.style || 'rubble', mat: o.stoneMat || 'stoneGrey', dressedMat: 'stoneDressed', mortar: 'mortar', T, lod: 'low', seed: rnd() * 1000 });
+      gw.length = 0;
+    } else gableFrame(local, FG, w, rise, { lod, seed: rnd() * 1000, mat: oak, windows: gw, plasterSeed: (o.seed ?? 1) * 0.0137 });
     for (const wn of gw) {
       framedOpening(local, FG, wn, oak, rnd, lod);
       windowUnit(local, sub(FG, [wn.x, wn.y, 0]), { w: wn.w, h: wn.h, inset: 0.05, frame: false, glazing: 'diamond', shutters: rnd() < 0.4 ? 'open' : 'none', floorBelow: 0.6, seed: rnd() * 1000 });
       windowCasement(local, sub(FG, [wn.x, wn.y, 0]), wn.w, wn.h, rnd);
     }
-    gableFrame(local, sub(frame([0, 0, 0]), [w / 2, y, -d / 2], [-1, 0, 0], [0, 1, 0]), w, rise, { lod: 'low', seed: rnd() * 1000, mat: oak, plasterSeed: (o.seed ?? 1) * 0.0137 });
+    if (!o.allStone) gableFrame(local, sub(frame([0, 0, 0]), [w / 2, y, -d / 2], [-1, 0, 0], [0, 1, 0]), w, rise, { lod: 'low', seed: rnd() * 1000, mat: oak, plasterSeed: (o.seed ?? 1) * 0.0137 });
     const RF = frame([0, y, front - dTop / 2], [0, 0, 1], [0, 1, 0]);
-    roofInfo = gableRoof(local, RF, { L: dTop, S: w, pitch, eaves: rnd.range(0.35, 0.55), verge: rnd.range(0.35, 0.6), cover, lod, seed: rnd() * 1000, damageAt: o.damage, sag: o.sag });
+    roofInfo = gableRoof(local, RF, { L: dTop, S: w, pitch, eaves: rnd.range(0.35, 0.55), verge: o.allStone ? 0.02 : rnd.range(0.18, 0.32), gableL: !o.allStone, gableR: !o.allStone, cover, lod, seed: rnd() * 1000, damageAt: o.damage, sag: o.sag });
     ridgeY = y + rise;
   } else {
     const rise = (dTop / 2) * pitch * 0.85;
     const RF = frame([0, y, front - dTop / 2], [1, 0, 0], [0, 1, 0]);
     roofInfo = gableRoof(local, RF, { L: w, S: dTop, pitch: pitch * 0.85, eaves: rnd.range(0.4, 0.6), verge: party.left || party.right ? 0.12 : 0.35, cover, lod, seed: rnd() * 1000, damageAt: o.damage, sag: o.sag, gableL: true, gableR: true });
-    gableFrame(local, sub(frame([0, 0, 0]), [-w / 2, y, -d / 2], [0, 0, 1], [0, 1, 0]), dTop, rise, { lod: party.left ? 'low' : lod, seed: rnd() * 1000, mat: oak, plasterSeed: (o.seed ?? 1) * 0.0137 });
-    gableFrame(local, sub(frame([0, 0, 0]), [w / 2, y, front], [0, 0, -1], [0, 1, 0]), dTop, rise, { lod: party.right ? 'low' : lod, seed: rnd() * 1000, mat: oak, plasterSeed: (o.seed ?? 1) * 0.0137 });
+    if (o.allStone) {
+      masonryGable(local, sub(frame([0, 0, 0]), [-w / 2, y, -d / 2], [0, 0, 1], [0, 1, 0]), dTop, rise, { style: o.style || 'rubble', mat: o.stoneMat || 'stoneGrey', dressedMat: 'stoneDressed', mortar: 'mortar', T, lod: party.left ? 'low' : lod, seed: rnd() * 1000 });
+      masonryGable(local, sub(frame([0, 0, 0]), [w / 2, y, front], [0, 0, -1], [0, 1, 0]), dTop, rise, { style: o.style || 'rubble', mat: o.stoneMat || 'stoneGrey', dressedMat: 'stoneDressed', mortar: 'mortar', T, lod: party.right ? 'low' : lod, seed: rnd() * 1000 });
+    } else {
+      gableFrame(local, sub(frame([0, 0, 0]), [-w / 2, y, -d / 2], [0, 0, 1], [0, 1, 0]), dTop, rise, { lod: party.left ? 'low' : lod, seed: rnd() * 1000, mat: oak, plasterSeed: (o.seed ?? 1) * 0.0137 });
+      gableFrame(local, sub(frame([0, 0, 0]), [w / 2, y, front], [0, 0, -1], [0, 1, 0]), dTop, rise, { lod: party.right ? 'low' : lod, seed: rnd() * 1000, mat: oak, plasterSeed: (o.seed ?? 1) * 0.0137 });
+    }
     ridgeY = y + rise;
   }
   // ---------------- chimney: a stone stack from the ground storey through the roof
   if (o.chimney !== false && rnd() < (o.chimney ? 1 : 0.75)) {
     const side = o.chimney === 'left' ? -1 : o.chimney === 'right' ? 1 : rnd() < 0.5 ? -1 : 1;
     const cx = side * (o.roof === 'side' ? w * 0.3 : w * 0.18), cz = -d * rnd.range(0.05, 0.25);
-    chimney(local, frame([cx, hs - 0.1, cz]), { w: rnd.range(0.8, 1.0), d: rnd.range(0.65, 0.8), h: ridgeY - hs + rnd.range(0.7, 1.2), lod: lod === 'hero' ? 'mid' : lod, seed: rnd() * 1000 });
+    chimney(local, frame([cx, hs - 0.1, cz]), { w: rnd.range(0.8, 1.0), d: rnd.range(0.65, 0.8), h: ridgeY - hs + rnd.range(1.05, 1.45), lod: lod === 'hero' ? 'mid' : lod, seed: rnd() * 1000 });
   }
   // ---------------- settle: the timber storeys lean a little and twist, the stone stays plumb
   const lean = o.lean ?? [rnd.sym(0.012), rnd.range(0.0, 0.012)];
   const twist = rnd.sym(0.004);
-  local.deform((x, yy, z) => {
+  const settle = (x, yy, z) => {
     const e = Math.max(0, yy - hs);
     return [x + lean[0] * e + twist * z * e * 0.2, yy - Math.abs(lean[0]) * e * 0.02, z + lean[1] * e - twist * x * e * 0.2];
-  });
+  };
+  local.deform(settle);
   kit.merge(local, F);
+  if (beamLocal) {
+    beamLocal.deform(settle);
+    o.beamKit.merge(beamLocal, F);
+    info.beam = { a: xf(F, -w / 2, hs + 0.1, d / 2 + J), b: xf(F, w / 2, hs + 0.1, d / 2 + J) };
+  }
   return { height: y, ridge: ridgeY, front, depthTop: dTop, w, d, hs, ...info, roof: roofInfo };
 }
 
