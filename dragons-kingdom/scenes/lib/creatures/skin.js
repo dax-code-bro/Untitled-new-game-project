@@ -265,7 +265,12 @@ export function computeSkin(anat, mesh, boneIndex, opts = {}) {
       belly = smoothstep(0.68 * Math.PI, 0.8 * Math.PI, th);
       dorsal = 1 - smoothstep(0.035 * Math.PI, 0.075 * Math.PI, th);
     }
-    if (kind === 'jaw') belly = smoothstep(0.62 * Math.PI, 0.75 * Math.PI, th) * 0.7;
+    if (kind === 'jaw') {
+      belly = smoothstep(0.62 * Math.PI, 0.75 * Math.PI, th) * 0.7;
+      // the chin plates stop short of the jaw tip, where the chain's rows converge (they drew
+      // concentric stripes there); the tip is granular like the snout
+      if (pr && opts.chinGranular) belly *= 1 - smoothstep(opts.chinGranular[0] - 0.4 * (opts.chinGranular[1] - opts.chinGranular[0]), opts.chinGranular[0] + 0.3 * (opts.chinGranular[1] - opts.chinGranular[0]), pr.s);
+    }
     // wrinkles where two bones of one chain share the vertex (bending joints)
     let wr = 0;
     const b0 = boneNames[I[v * 4]], b1 = boneNames[I[v * 4 + 1]];

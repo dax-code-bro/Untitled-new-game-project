@@ -54,6 +54,9 @@ only the state of the work.
 - Charcoal: teeth spaced unevenly, darker stained enamel with a few dark old teeth; dorsal
   spikes rough weathered keratin; riding rig leather darker/rougher (no pale paper bag).
 - Charcoal head close-up camera below the eye line (sky behind the head, not the flat field).
+- Jaw tip: the chin plates and chain-row scales stop where the jaw turns granular (the rows
+  converged at the tip and drew a swirl of stripes, seen in the 4K head close-up).
+- README updated (scale grading, membranes, hatchling head, teeth, limits).
 
 ## Dev loop
 `scratchpad/cr/rv2.sh <name> <shot ids|all> [preset] [cinematic]` renders chosen hero shots

@@ -144,6 +144,11 @@ clumps as hedgerows and woods 0.4-2.5 km out) only as scale references. Typical 
      grooves) keeps the black hide readable in daylight.
    * Nightwings (Leaf, Starlight) and the hatchling have no plates on the chest (`plateZ`):
      the belly plates end behind the forelegs, the chest is scales (no breastplate read).
+     On the Nightwings the scales also get smaller down the flanks, over the chest and the
+     throat (`scl2.y` 0.55: from about 40% of the way round from the dorsal midline) and on
+     the limbs (`CREATURES.<name>.limbScaleMul` 0.72, which sets the limb chains' scale
+     unit, so the junction smoothing still grades body into limb) - as on a monitor's chest;
+     the big cushions on the chest and upper arm read as plate armour.
    * Starlight: albino white keratin, each scale a flat polished plate tilted its own way
      (`skin3.z` facets) - glints from the sky, never emission; only a thin, slightly rough
      polish coat (clearcoat 0.32 at roughness 0.24: the whole animal must not read as chrome);
@@ -154,17 +159,28 @@ clumps as hedgerows and woods 0.4-2.5 km out) only as scale references. Typical 
      back), so the torn wing ends in the arm, not in a ball joint. Kept small and dark: the
      screenplay wants the loss unambiguous without a close-up of the wound.
    * gold hatchling: reads as 24-karat gold through its tinted reflection - deep yellow gold
-     (linear 1.0/0.64/0.16, not pale brass), metallic crowns (0.72) and less metallic soft
-     grooves (0.4) at roughness ~0.55 (a broad sheen, no pin-point sparkle), very low scale
-     relief (`amp` 0.035) and almost no micro relief (soft, not-yet-hardened scales, no
-     embossed cells), a wet clearcoat film on the smooth geometric normal (broad wet
-     highlights), streaks and drying patches, pale amniotic residue (non-metallic, slimy).
+     (linear 1.0/0.64/0.16, not pale brass), metallic crowns (0.7) and less metallic soft
+     grooves (0.4) at roughness ~0.5 (a broad sheen, no pin-point sparkle; the wet film does
+     not sharpen the base much), very low scale relief (`amp` 0.03), fine scales
+     (`scaleMul` 0.72), soft pale-gold grooves instead of dark seams, almost no micro relief
+     (soft, not-yet-hardened scales, no embossed cells), a wet clearcoat film on the smooth
+     geometric normal at roughness 0.1 (`wetRough`: broad wet highlights - a mirror film broke
+     the window's reflection into sparkle on the soft lumpy skin), streaks and drying
+     patches, a thin translucent amniotic slime in patches (soft sheen, not white flakes),
+     amber newborn claws and egg tooth (not white). Newborn head: the snout is shortened
+     (`headShape.snoutMul` 0.76 in front of `snoutZ0` 0.46 - every snout feature, nostrils,
+     lips, egg tooth, moves with it; the lower jaw is built closed and rotated rigidly about
+     the hinge in world space, so the lips still meet), a full rounded chin tucked under the
+     snout, thin lips, thick soft lids (the lower lid lower on the eye).
      The wet film is occluded by the runtime's screen-space AO (the runtime darkens diffuse and
      specular IBL but not the clearcoat; without this the film mirrored blue sky inside the
      crevice of the folded hind leg).
    * Charcoal and Leaf: dry, dusty hide (roughness ~0.6) with dust and dried
      mud on the lower body, so the black hide shows soft sheen instead of
-     lacquer; teeth stained ivory.
+     lacquer; teeth stained ivory (Charcoal's darker and yellower, a few old dark ones),
+     spaced unevenly along the jaw (shed and replaced one by one - never a comb), varied in
+     size, curve and lean, a few missing, broken or half-grown, set in gums; dorsal spikes are
+     rough weathered keratin (no polished saw teeth).
    * scale size per individual: `CREATURES.<name>.scaleMul` (or
      `createCreature(name, { scaleMul })`) shrinks the scales relative to the
      body - giants read immense when their scales are fine (Charcoal 0.6,
@@ -178,7 +194,12 @@ clumps as hedgerows and woods 0.4-2.5 km out) only as scale references. Typical 
      emissive. Camber (billow) from the wing stroke, up to ~0.036 L between the fingers, and it
      SHADES: wing.js stores the rest-space gradient of the billow profile per vertex
      (`aBGrad`), the vertex shader skins it and tilts the normal by it (n' = n - grad h), so
-     each panel lights as a curved sail instead of a flat sheet.
+     each panel lights as a curved sail instead of a flat sheet. The skin gathers in a few
+     soft folds along every bone (fading a hand's breadth from it), the sheen breaks into
+     glossier and drier patches, and the micro creases are kept subtle (stronger, the
+     membrane read as felt). How much sky each membrane reflects is per creature (`memSpec`:
+     Charcoal's melanistic membranes 0.24 at roughness 0.52, so they are as dark as his hide,
+     not a grey sheet; Leaf 0.42 at 0.46, satin green skin).
    * eyes: the iris is ray-traced through a refracting cornea (n = 1.376),
      vertical slit pupil, iris fibres, limbal ring, clearcoat wet reflection;
      eyelids are real geometry that blink and rest over the top of the eye.
@@ -279,15 +300,13 @@ no sub-frames) took 11 min 55 s. Review renders at `--fps 1` map the sub-frame o
   bundle can read like a lifted arm, from some angles a standing wrist and
   thumb stick out in front of the chest, and the folded membrane reads as
   stiff panels.
-* Leaf's chest is scales, not plates, and his scales are finer than before
-  (`scaleMul` 0.78); seen straight on, the domed chest scales are still the biggest on his
-  body (check against "no decorative armor" with Daxtyn's references).
+* Leaf's chest is small scales now (smaller than on his back); check the overall scale size
+  against "no decorative armor" with Daxtyn's references.
 * Eyes in a shaded socket read mostly as the wet reflection of the sky (the
   iris shows in close-ups with light on it, e.g. Leaf's eye macro).
-* The hatchling's head is still on the long side for a newborn (shortening the snout
-  loft alone left the nostrils and egg tooth as a knob past the tip - needs the snout
-  features moved with it). Out of focus, the metallic body can still sparkle a little in
-  the bokeh.
+* The hatchling's gold is a partly metallic layer under a wet film: in the out-of-focus
+  bokeh of the macro the wet highlights on the lumpy body still show as soft pale blotches;
+  its eyelids are separate shells (the upper lid reads a little like a cap at 4K).
 * Charcoal's propatagium (the membrane in front of the arm) is a straight-edged panel
   from the shoulder to the wrist; in the downstroke it sits in the shadow of the shoulder
   and reads as a dark rectangle beside the arm.

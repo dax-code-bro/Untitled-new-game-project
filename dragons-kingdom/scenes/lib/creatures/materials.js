@@ -213,7 +213,9 @@ void dkSkin(inout vec3 albedo) {
   // across the fronts of the limbs), transverse belly plates
   vec2 pw = p + (vWarp - 0.5) * 0.9;
   DKScale S = dkImbricateL(pw, 0.5, 0.0, uPat.w, uPat.y, uPat.z, vScale.w, neck, region);
-  float chainM = S.lv >= 0.0 && isHead < 0.5 ? 1.0 : 0.0;
+  // (no chain-row scales where the jaw turns granular at the chin: the rows converge at the
+  // jaw tip and drew a swirl of stripes there)
+  float chainM = S.lv >= 0.0 && isHead < 0.5 && !(region > 3.5 && region < 4.5 && vMask.x > 0.35) ? 1.0 : 0.0;
   dkDetail = 1.0 - smoothstep(0.3, 0.9, fwc * 0.5);
   float latV = vScale.w - vScale.z;                 // lateral distance from the ventral midline (scale units)
   float bellySel = vMask.y + (n2 - 0.5) * 0.25;
