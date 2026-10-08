@@ -2,27 +2,30 @@
 
 ## State (2026-10-08, session 1)
 
-Done (code in scenes/lib/architecture/):
-- core.js: seeded rng / noise, Acc + Kit geometry accumulators (one mesh per material per
-  building or set), rounded irregular `block()` primitive (stones, beams, tiles, boards) with
-  noise / pillow / chips / adze / wane / warp / baked occlusion, frames, tubes, shape faces.
-- materials.js: procedural stone (per-stone colour, scan micro detail, lichen, moss, splash,
-  algae), mortar, weathered oak (grain along the beam, checks, end grain), lime plaster
-  (washes, repairs, cracks, flaking, grime), clay tiles / stone slates, iron, leaded glass with
-  interior mapping, open-doorway portal (interior mapping), plain surfaces.
-- masonry.js: coursed walls (ashlar / squared / rubble) with shared courses, quoins, dressed
-  jambs, lintels, voussoir arches, sills, packing stones, mortar core with reveals; steps.
-- timber.js: hewn members (bow, adze, wane), pegs, framed walls (posts, studs, braces cutting
-  studs, rails, window framing), jetty joists, framed gables, plaster infill surface.
-- roof.js: gable roofs (rafter tails, deck, clay tiles / diminishing stone slates, ridge tiles
-  in mortar, bargeboards, sag), chimney stacks with sooty tops, pentice.
-- openings.js: windows (frames, mullions, leaded glazing, shutters open / half / closed),
-  doors (ledged boards, strap hinges, nails, ring handle, open/closed, arched), threshold.
-- house.js: Cling townhouse (stone ground storey + jettied timber storeys + gable + roof +
-  chimney, lean / sag).
+Done (code in scenes/lib/architecture/, see README.md for the API):
+- core.js (accumulators, rounded irregular blocks, lathe/tube/grid primitives, hard-edged
+  sharp blocks), materials.js (stone variants incl. lime-washed / wet / far / sooty, mortar, oak
+  with growth rings from the pith distance, plaster outdoor/indoor, clay tiles, stone slates,
+  iron, leaded glass + portal interior mapping, flame, linen, straw, clayware, rope, leather).
+- masonry.js: courses, faces, boxes with quoins, arches (also through-arches 'archOpen'),
+  sills, packing; stone gables with coping + kneelers; round towers with corbel table +
+  parapet; conical slate roofs; steps; LOD hero/mid/low/far.
+- timber.js, roof.js, openings.js, house.js: framed storeys, jetties, gables, roofs with sag,
+  chimneys, windows/shutters/doors, the Cling townhouse.
+- cling.js: the square (CLING layout = shot list cling_map as staged in F5), house rows with an
+  alley gap (closed by a house beyond), stone arch, gate, fountain, stone support, king's steps,
+  wall-foot weeds placer, roof damage hook.
+- verdor.js: stable, keepers' lodge (+ woodshed), Charcoal's access rig, Leaf's platform,
+  palace (far LOD), harbour (wet/dry quay courses, projecting steps, bollards, rings, fenders,
+  warehouses with hoist beams).
+- interiors.js: birthing chamber (lime-washed stone, high arched opening for the sun shaft,
+  oak door, beam ceiling, flags, nest with straw + linen, lamps, bench, bowls, jug, cloths,
+  stool), treatment room (plastered walls, window with folded shutters, settle, stools, table,
+  basin, jug, cloths, shelves); offline/nest_cloth.py bakes the nest linen with Blender cloth
+  (cache/nest_cloth.json, git-ignored; procedural fallback when missing).
+- Look-dev: scenes/lookdev/architecture-{cling,verdor,interiors,contact,dev}.js.
 
-Next: Cling square set (arch, gate, alley, fountain, steps, stone support, layout), Verdor
-stable + access rig + keeper house, palace silhouette, harbor (quay, steps, buildings),
-interiors (birthing chamber, treatment room), lookdev scenes architecture-*.js, 4K renders.
+Regenerate the bake:  <bpy python> scenes/lib/architecture/offline/nest_cloth.py   (~1 min)
 
-Dev scene: scenes/lookdev/architecture-dev.js (three-house row, 4 camera angles by second).
+Final renders: written to the session scratchpad (not in git); paths in the agent report.
+Next ideas: see "Open issues" in the report / README limits.

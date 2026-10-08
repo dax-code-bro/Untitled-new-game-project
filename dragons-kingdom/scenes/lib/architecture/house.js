@@ -46,16 +46,20 @@ export function house(kit, F, o = {}) {
   if (shopW > 0.6) frontOps.push({ x: shopX, y: shopY, w: shopW, h: shopH, head: 'lintel', sill: true, reveal: 0.3 });
   const sideOps = (L) => (rnd() < 0.5 ? [{ x: L * rnd.range(0.3, 0.6), y: 1.1, w: 0.7, h: 0.85, head: 'lintel', sill: true, reveal: 0.3 }] : []);
   const party = o.party || {};
+  const leftOps = party.left ? [] : sideOps(d), rightOps = party.right ? [] : sideOps(d);
   const C = courses(rnd, hs, { min: 0.17, max: 0.32 });
   masonryBox(local, frame([0, 0, 0]), {
     w, d, h: hs, T, style: o.style || 'rubble', mat: o.stoneMat || 'stoneGrey', dressedMat: 'stoneDressed', mortar: 'mortar', lod, seed: rnd() * 1000, courses: C,
     faces: {
       front: { openings: frontOps },
-      right: party.right ? { lod: 'low', openings: [] } : { openings: sideOps(d) },
-      left: party.left ? { lod: 'low', openings: [] } : { openings: sideOps(d) },
+      right: party.right ? { lod: 'low', openings: [] } : { openings: rightOps },
+      left: party.left ? { lod: 'low', openings: [] } : { openings: leftOps },
       back: { lod: lod === 'hero' ? 'mid' : 'low', openings: [] },
     },
   });
+  // glazed side windows in the stone storey (masonryBox faces: right runs front->back, left back->front)
+  for (const op of rightOps) windowUnit(local, sub(frame([0, 0, 0]), [w / 2, op.y, d / 2 - op.x], [0, 0, -1], [0, 1, 0]), { w: op.w, h: op.h, inset: 0.16, lights: 2, glazing: rnd() < 0.5 ? 'diamond' : 'square', shutters: rnd() < 0.5 ? 'open' : 'none', floorBelow: op.y, seed: rnd() * 1000 });
+  for (const op of leftOps) windowUnit(local, sub(frame([0, 0, 0]), [-w / 2, op.y, -d / 2 + op.x], [0, 0, 1], [0, 1, 0]), { w: op.w, h: op.h, inset: 0.16, lights: 2, glazing: rnd() < 0.5 ? 'diamond' : 'square', shutters: rnd() < 0.5 ? 'open' : 'none', floorBelow: op.y, seed: rnd() * 1000 });
   // door, threshold, shop window in the stone front
   const Ff = sub(frame([0, 0, 0]), [-w / 2, 0, d / 2]);
   {

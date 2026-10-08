@@ -20,6 +20,22 @@ import { masonryFace, courses } from './masonry.js';
 import { member } from './timber.js';
 import { door } from './openings.js';
 
+/**
+ * Offline bakes (offline/*.py, Blender): scenes/lib/architecture/cache/<name>.json, git-ignored.
+ * Resolves to null (with a warning) when the bake has not been run - builders fall back to
+ * their procedural shapes.
+ */
+export async function loadArchCache(name) {
+  try {
+    const r = await fetch(new URL(`./cache/${name}.json`, import.meta.url).href);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } catch (e) {
+    console.warn(`architecture: no ${name} bake (run scenes/lib/architecture/offline/${name}.py with Blender's python) - procedural fallback`);
+    return null;
+  }
+}
+
 /** Inward-facing walls: [{ key, o, X, L }] for a w x d room (frames: normal into the room). */
 function roomWalls(w, d) {
   return [
@@ -176,7 +192,17 @@ export function nest(kit, F, rnd, o = {}) {
     const p0 = xf(F, Math.cos(a) * r, y0 + rnd() * 0.01, Math.sin(a) * r), p1 = xf(F, Math.cos(a) * r + Math.cos(dir) * l, y0 + rnd() * 0.02, Math.sin(a) * r + Math.sin(dir) * l);
     tube(acc, [p0, p1], 0.0022, { sides: 3, seed: rnd() });
   }
-  // linen laid over the bed in soft folds, a corner hanging over the curb
+  // linen laid over the bed: the cloth-simulated drape (offline/nest_cloth.py) when baked
+  if (o.cloth) {
+    const { nx, ny, positions: P } = o.cloth;
+    grid(kit.get('linen'), nx, ny, (u, v) => {
+      const i = Math.round(u * nx), j = Math.round(v * ny), k = (j * (nx + 1) + i) * 3;
+      const p = xf(F, P[k], P[k + 1] + 0.004, P[k + 2]);
+      return { p, uv: [u * 2.0, v * 1.6], seed: 0.62, ao: 0.85 };
+    }, [1, 0, 0], false);
+    return { r: R, top: ch * 0.85 + 0.12 };
+  }
+  // (procedural fallback) linen in soft folds, a corner hanging over the curb
   grid(kit.get('linen'), 40, 30, (u, v) => {
     const x = (u - 0.5) * 2.0, z = (v - 0.5) * 1.6;
     const r = Math.hypot(x, z);
@@ -191,7 +217,8 @@ export function nest(kit, F, rnd, o = {}) {
 
 /**
  * The birthing chamber. o: w (7.2), d (6.2), h (6.6), window: { wall: 'east', x, y, w, h },
- * door: { wall: 'south', x, w, h, open }, lod, seed, lampLight (intensity, cd).
+ * door: { wall: 'south', x, w, h, open }, lod, seed, lampLight (intensity, cd), cloth (the baked
+ * nest linen: await loadArchCache('nest_cloth')).
  */
 export function birthingChamber(kit, F, o = {}) {
   const rnd = makeRand(o.seed ?? 301);
@@ -217,7 +244,7 @@ export function birthingChamber(kit, F, o = {}) {
   beamCeiling(local, frame([0, 0, 0]), w, d, h, rnd);
   // the nest (centre slightly toward the west wall), the bench along the north wall
   const nestC = o.nest || [-0.6, 0, 0.3];
-  const nst = nest(local, frame(nestC), rnd, {});
+  const nst = nest(local, frame(nestC), rnd, { cloth: o.cloth });
   const lamps = [];
   {
     const bF = frame([-0.4, 0, -d / 2 + 0.5]);

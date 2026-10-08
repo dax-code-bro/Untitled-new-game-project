@@ -682,7 +682,7 @@ export async function archMaterials(ctx, opts = {}) {
       portal: portalMaterial(ctx, opts.portal),
       lead: plainMaterial('lead', [0.12, 0.12, 0.125], { roughness: 0.6, vary: 0.3 }),
       straw: plainMaterial('straw', [0.36, 0.27, 0.12], { roughness: 0.85, vary: 0.5, freq: 40, bump: 0.002 }),
-      linen: plainMaterial('linen', [0.5, 0.48, 0.43], { roughness: 0.92, vary: 0.14, freq: 30, bump: 0.0006 }),
+      linen: plainMaterial('linen', [0.5, 0.48, 0.43], { roughness: 0.92, vary: 0.14, freq: 30, bump: 0.0006, params: { side: THREE.DoubleSide } }),
       clayware: plainMaterial('clayware', [0.3, 0.16, 0.08], { roughness: 0.7, vary: 0.2 }),
       rope: plainMaterial('rope', [0.22, 0.18, 0.12], { roughness: 0.95, vary: 0.3, freq: 80, bump: 0.001 }),
       soot: plainMaterial('soot', [0.02, 0.018, 0.016], { roughness: 0.95 }),

@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { loadHDRI } from '../lib/assets.js';
 import { Kit, frame, xf } from '../lib/architecture/core.js';
 import { archMaterials } from '../lib/architecture/materials.js';
-import { birthingChamber, treatmentRoom } from '../lib/architecture/interiors.js';
+import { birthingChamber, treatmentRoom, loadArchCache } from '../lib/architecture/interiors.js';
 import { reviewTime } from '../lib/humans/stage.js';
 import { filmFinish } from './finish.js';
 
@@ -52,7 +52,8 @@ export async function setup(ctx) {
   scene.environmentIntensity = 0.07;
   const M = await archMaterials(ctx);
   const kit = new Kit(0);
-  const ch = birthingChamber(kit, frame([0, 0, 0]), { seed: 3 });
+  const cloth = await loadArchCache('nest_cloth');
+  const ch = birthingChamber(kit, frame([0, 0, 0]), { seed: 3, cloth });
   const tr = treatmentRoom(kit, frame(ROOM2), { seed: 4 });
   scene.add(kit.build(M, { name: 'interiors' }));
   for (const l of ch.lights) scene.add(l);
