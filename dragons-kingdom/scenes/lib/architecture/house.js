@@ -19,7 +19,7 @@ import { windowUnit, door, threshold } from './openings.js';
  * door { x, w, h, arch, open }, shop { x, w, h } (ground-floor window), windows per storey
  * (count), shutters mix, lean (rad), party { left, right } (abutting neighbours: plain faces),
  * oakTone ('oak' | 'oakDark'), chimney (bool | 'left' | 'right'), studs (spacing), rail,
- * damage (fn([x, y, z] in the PARENT frame of F) -> bool: roof tiles removed there).
+ * damage (fn([x, y, z] in the house's local frame) -> bool: roof tiles removed there).
  * Returns { height, ridge, front (z of the top storey front), doors, windows, roof }.
  */
 export function house(kit, F, o = {}) {

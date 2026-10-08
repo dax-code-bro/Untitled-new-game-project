@@ -37,7 +37,7 @@ export function courses(rnd, H, { min = 0.18, max = 0.34, joint = 0.015, plinth 
 const STYLE = {
   ashlar: { r: [0.006, 0.012], pillow: [0.001, 0.003], noise: 0.0015, nf: 7, chip: 0.004, prot: [0.004, 0.012], tilt: 0.004, len: [1.4, 2.8], j: 0.008, dep: [0.18, 0.32], sizeJit: 0.004, split: 0 },
   squared: { r: [0.007, 0.015], pillow: [0.002, 0.006], noise: 0.006, nf: 4, chip: 0.014, prot: [0.006, 0.018], tilt: 0.012, len: [1.0, 2.6], j: 0.012, dep: [0.15, 0.3], sizeJit: 0.008, split: 0.12, outline: 0.03, shrink: 0.05 },
-  rubble: { r: [0.009, 0.02], pillow: [0.003, 0.01], noise: 0.012, nf: 3.5, chip: 0.022, prot: [0.006, 0.022], tilt: 0.025, len: [0.7, 2.2], j: 0.016, dep: [0.14, 0.28], sizeJit: 0.012, split: 0.25, outline: 0.06, shrink: 0.12 },
+  rubble: { r: [0.008, 0.018], pillow: [0.004, 0.014], noise: 0.012, nf: 3.5, chip: 0.022, prot: [0.004, 0.035], tilt: 0.035, len: [0.7, 2.4], j: 0.012, dep: [0.14, 0.28], sizeJit: 0.01, split: 0.25, outline: 0.045, shrink: 0.1 },
   dressed: { r: [0.008, 0.014], pillow: [0.001, 0.004], noise: 0.002, nf: 7, chip: 0.006, prot: [0.01, 0.018], tilt: 0.004, len: [1, 1], j: 0.01, dep: [0.2, 0.3], sizeJit: 0.003, split: 0 },
 };
 export const LOD = {
@@ -298,7 +298,13 @@ export function masonryFace(kit, F, L, H, o = {}) {
     for (const op of ops) {
       const hole = new THREE.Path();
       const xa = op.x, xb = op.x + op.w, ya = op.y, yb = op.y + op.h;
-      if ((op.head || 'lintel').startsWith('arch')) {
+      if ((op.head || 'lintel') === 'archOpen') {
+        // the voussoirs come through from the other face: leave their whole ring open
+        const r = op.w / 2, sp = yb - r, R = r + (op.archH ?? clamp(0.22 + r * 0.12, 0.25, 0.5)) + 0.01, cx = xa + r;
+        hole.moveTo(xa, ya); hole.lineTo(xa, sp); hole.lineTo(cx - R, sp);
+        for (let k = 1; k < 24; k++) { const an = Math.PI - (k / 24) * Math.PI; hole.lineTo(cx + Math.cos(an) * R, sp + Math.sin(an) * R); }
+        hole.lineTo(cx + R, sp); hole.lineTo(xb, sp); hole.lineTo(xb, ya); hole.lineTo(xa, ya);
+      } else if ((op.head || 'lintel').startsWith('arch')) {
         const r = op.w / 2, sp = yb - r;
         hole.moveTo(xa, ya); hole.lineTo(xa, sp);
         for (let k = 1; k <= 16; k++) { const an = Math.PI - (k / 16) * Math.PI; hole.lineTo(xa + r + Math.cos(an) * r, sp + Math.sin(an) * r); }

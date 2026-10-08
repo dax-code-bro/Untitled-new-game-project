@@ -371,7 +371,7 @@ export function palace(kit, F, o = {}) {
     const fr = yawFrame([mx, 0, mz], yaw + Math.PI);      // front face outward
     const Lw = L - 9;
     const gate = i === 3;
-    masonryFace(local, sub(fr, [-Lw / 2, 0, 1.4]), Lw, 12.5, { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', T: 2.8, lod, seed: rnd() * 999, back: true, openings: gate ? [{ x: Lw / 2 - 2.5, y: 0, w: 5, h: 7.2, head: 'arch', reveal: 1.5, archDepth: 2.8 }] : [] });
+    masonryFace(local, sub(fr, [-Lw / 2, 0, 1.4]), Lw, 12.5, { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', T: 2.8, lod, seed: rnd() * 999, back: true, openings: gate ? [{ x: Lw / 2 - 2.5, y: 0, w: 5, h: 7.2, head: 'arch', reveal: 1.5, archDepth: 2.83 }] : [] });
     masonryFace(local, sub(fr, [Lw / 2, 0, -1.4], [-1, 0, 0], [0, 1, 0]), Lw, 11.0, { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', T: 2.8, lod, seed: rnd() * 999, openings: gate ? [{ x: Lw / 2 - 2.5, y: 0, w: 5, h: 7.2, head: 'archOpen', reveal: 1.5 }] : [] });
     block(local.get(stoneM), sub(fr, [0, 12.62, 1.1]), Lw, 0.25, 0.75, { r: 0.03, seg: [2, 0.2, 0.4], seed: rnd(), noise: 0.004, warp: (lx, ly, lz) => [lx, ly + (ly > 0 ? 0.06 * (1 - Math.abs(lz) / 0.37) : 0), lz] });
   }

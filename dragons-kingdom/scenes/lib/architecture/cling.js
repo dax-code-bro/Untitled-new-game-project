@@ -42,7 +42,8 @@ export function archway(kit, F, o = {}) {
   const W = o.width ?? 7.2, H = o.height ?? 7.0, T = o.depth ?? 1.2;
   const aw = o.w ?? 3.6, ah = o.h ?? 5.4;
   const lod = o.lod || 'mid';
-  const op = { x: W / 2 - aw / 2, y: 0, w: aw, h: ah, reveal: T / 2 + 0.01, archDepth: T, jambW: 0.42 };
+  // the voussoirs run through the whole depth and stand proud of both faces
+  const op = { x: W / 2 - aw / 2, y: 0, w: aw, h: ah, reveal: T / 2 + 0.01, archDepth: T + 0.032, jambW: 0.42 };
   // one bonded block of masonry: the voussoirs pass through the full depth (their soffit shows
   // under the arch), dressed jambs from both faces, quoins at the four corners
   masonryBox(kit, F, {
