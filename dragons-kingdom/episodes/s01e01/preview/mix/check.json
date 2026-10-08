@@ -51,7 +51,7 @@
   {
    "check": "ends in silence (last 0.1 s)",
    "status": "PASS",
-   "value": -74.4000015258789,
+   "value": -74.0,
    "want": "< -60 dBFS peak"
   },
   {
@@ -63,14 +63,20 @@
   {
    "check": "true peak",
    "status": "PASS",
-   "value": -1.5,
+   "value": -2.0,
    "want": "<= -1.0 dBTP"
   },
   {
-   "check": "AAC 256k decode: true peak (info)",
+   "check": "AAC 256k decode (what the render pipeline muxes): true peak",
    "status": "PASS",
-   "value": -1.2,
+   "value": -1.4,
    "want": "<= -1.0 dBTP"
+  },
+  {
+   "check": "AAC 256k decode: integrated loudness",
+   "status": "PASS",
+   "value": -16.0,
+   "want": "-16.0 +/- 0.5 LUFS"
   },
   {
    "check": "loudnorm pass 2 stayed linear",
@@ -81,13 +87,13 @@
   {
    "check": "every line audible at its EDL in-point (dialogue stem, first 0.5 s)",
    "status": "PASS",
-   "value": "quietest -25.9 dBFS (L011)",
+   "value": "quietest -26.6 dBFS (L011)",
    "want": "> -45 dBFS"
   },
   {
    "check": "line levels match take level + line gain + compressor + master gain (+/- 1.5 dB; room reverb adds a little)",
-   "status": "FAIL",
-   "value": 1.8,
+   "status": "PASS",
+   "value": 0.8,
    "want": "<= 1.5 dB"
   },
   {
@@ -101,7 +107,7 @@
   {
    "check": "stem matches the take at that lag (normalized correlation)",
    "status": "PASS",
-   "value": 0.926,
+   "value": 0.95,
    "want": "> 0.9"
   },
   {
@@ -112,20 +118,20 @@
   },
   {
    "check": "dialogue above music + effects over every line",
-   "status": "FAIL",
-   "value": "min 4.4 dB (L044), median 17.5 dB",
+   "status": "PASS",
+   "value": "min 8.4 dB (L059), median 16.6 dB",
    "want": ">= 6 dB (median >= 10 dB)"
   },
   {
    "check": "dialogue-to-background median",
    "status": "PASS",
-   "value": 17.5,
+   "value": 16.6,
    "want": ">= 10 dB"
   },
   {
    "check": "airborne lines intelligible over the wind",
-   "status": "FAIL",
-   "value": "min 4.4 dB, median 7.6 dB over 37 lines",
+   "status": "PASS",
+   "value": "min 8.4 dB, median 10.9 dB over 37 lines",
    "want": ">= 6 dB"
   },
   {
@@ -137,7 +143,7 @@
   {
    "check": "wind fills the gaps between airborne speakers",
    "status": "PASS",
-   "value": "18 gaps, quietest -31.5 dBFS",
+   "value": "18 gaps, quietest -34.1 dBFS",
    "want": "> -60 dBFS in every gap"
   },
   {
@@ -167,37 +173,37 @@
   {
    "check": "music M1 present in its body",
    "status": "PASS",
-   "value": -20.1,
+   "value": -19.7,
    "want": "> -60 dBFS"
   },
   {
    "check": "music M2a present in its body",
    "status": "PASS",
-   "value": -20.0,
+   "value": -19.6,
    "want": "> -60 dBFS"
   },
   {
    "check": "music M2b present in its body",
    "status": "PASS",
-   "value": -25.3,
+   "value": -24.8,
    "want": "> -60 dBFS"
   },
   {
    "check": "music M2c present in its body",
    "status": "PASS",
-   "value": -33.5,
+   "value": -33.1,
    "want": "> -60 dBFS"
   },
   {
    "check": "music M3 present in its body",
    "status": "PASS",
-   "value": -22.1,
+   "value": -21.7,
    "want": "> -60 dBFS"
   },
   {
    "check": "M2b stops dead on the head-in-mouth beat (frame 12135)",
    "status": "PASS",
-   "value": "-34.3 dBFS before, silent after",
+   "value": "-33.9 dBFS before, silent after",
    "want": "silent after"
   },
   {
@@ -238,9 +244,15 @@
   },
   {
    "check": "dialogue + music + sfx stems = master (outside limiter regions)",
-   "status": "FAIL",
-   "value": -20.2,
+   "status": "PASS",
+   "value": -109.4,
    "want": "< -50 dB residual"
+  },
+  {
+   "check": "master limiter on dialogue (lines touched, worst)",
+   "status": "PASS",
+   "value": "54 of 78 lines, worst 5.48 dB (L071)",
+   "want": "info"
   },
   {
    "check": "srt cue count",
@@ -256,26 +268,8 @@
   },
   {
    "check": "subtitles: no overlaps, >= 2 frames apart",
-   "status": "FAIL",
-   "value": [
-    18,
-    19,
-    24,
-    32,
-    33,
-    37,
-    38,
-    39,
-    48,
-    50,
-    59,
-    63,
-    68,
-    69,
-    70,
-    73,
-    77
-   ],
+   "status": "PASS",
+   "value": [],
    "want": "none"
   },
   {
@@ -333,7 +327,7 @@
    }
   }
  ],
- "fails": 5,
+ "fails": 0,
  "edl": {
   "frames": 14397,
   "seconds": 599.875,
@@ -342,33 +336,33 @@
  },
  "loudness_master": {
   "integrated_lufs": -16.0,
-  "lra_lu": 16.7,
-  "true_peak_dbtp": -1.5
+  "lra_lu": 16.6,
+  "true_peak_dbtp": -2.0
  },
  "loudness_aac256": {
   "integrated_lufs": -16.0,
-  "lra_lu": 16.7,
-  "true_peak_dbtp": -1.2
+  "lra_lu": 16.6,
+  "true_peak_dbtp": -1.4
  },
  "mastering": {
-  "gain1_db": 5.83,
-  "gain2_db": 0.01,
-  "stems_gain_db": 5.84,
+  "gain1_db": 6.21,
+  "gain2_db": 0.04,
+  "stems_gain_db": 6.25,
   "limiter": {
-   "true_peak_in_dbtp": 6.64,
-   "true_peak_out_dbtp": -1.5,
-   "max_gain_reduction_db": 8.14,
-   "active_s": 120.48
+   "true_peak_in_dbtp": 7.02,
+   "true_peak_out_dbtp": -2.0,
+   "max_gain_reduction_db": 9.02,
+   "active_s": 105.99
   },
   "loudnorm_pass2": {
-   "input_i": "-15.97",
-   "input_tp": "-1.51",
-   "input_lra": "16.80",
-   "input_thresh": "-27.61",
+   "input_i": "-16.00",
+   "input_tp": "-2.01",
+   "input_lra": "16.40",
+   "input_thresh": "-27.65",
    "output_i": "-15.97",
-   "output_tp": "-1.50",
-   "output_lra": "16.80",
-   "output_thresh": "-27.60",
+   "output_tp": "-1.97",
+   "output_lra": "16.50",
+   "output_thresh": "-27.61",
    "normalization_type": "linear",
    "target_offset": "-0.03"
   }
@@ -381,18 +375,18 @@
    "in_s": 15.53,
    "out_s": 20.335,
    "take_start_sample": 744000,
-   "rms_first_0.5s_dbfs": -13.7,
-   "rms_line_dbfs": -16.2,
-   "expected_dbfs": -16.2,
+   "rms_first_0.5s_dbfs": -14.0,
+   "rms_line_dbfs": -16.3,
+   "expected_dbfs": -16.3,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.998,
-   "dialogue_to_background_db": 12.9,
+   "corr": 0.992,
+   "dialogue_to_background_db": 12.7,
    "lr_balance_db": 0.0,
    "pan": 0.0,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.79
+   "compressor_rms_change_db": -1.3
   },
   {
    "line": "L002",
@@ -401,18 +395,18 @@
    "in_s": 43.03,
    "out_s": 52.155,
    "take_start_sample": 2064000,
-   "rms_first_0.5s_dbfs": -14.9,
-   "rms_line_dbfs": -16.7,
-   "expected_dbfs": -16.7,
+   "rms_first_0.5s_dbfs": -15.4,
+   "rms_line_dbfs": -16.9,
+   "expected_dbfs": -16.9,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.996,
-   "dialogue_to_background_db": 18.2,
+   "corr": 0.987,
+   "dialogue_to_background_db": 17.6,
    "lr_balance_db": 0.0,
    "pan": 0.0,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.86
+   "compressor_rms_change_db": -1.48
   },
   {
    "line": "L003/1",
@@ -421,18 +415,18 @@
    "in_s": 56.3333,
    "out_s": 57.7083,
    "take_start_sample": 2704000,
-   "rms_first_0.5s_dbfs": -14.4,
-   "rms_line_dbfs": -17.9,
-   "expected_dbfs": -18.4,
+   "rms_first_0.5s_dbfs": -14.8,
+   "rms_line_dbfs": -18.3,
+   "expected_dbfs": -18.7,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.999,
-   "dialogue_to_background_db": 22.7,
+   "corr": 0.996,
+   "dialogue_to_background_db": 21.9,
    "lr_balance_db": 0.0,
    "pan": 0.0,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.05
+   "compressor_rms_change_db": -1.77
   },
   {
    "line": "L003/2",
@@ -441,18 +435,18 @@
    "in_s": 58.0833,
    "out_s": 59.4583,
    "take_start_sample": 2788000,
-   "rms_first_0.5s_dbfs": -21.9,
-   "rms_line_dbfs": -18.7,
-   "expected_dbfs": -18.3,
+   "rms_first_0.5s_dbfs": -22.2,
+   "rms_line_dbfs": -19.1,
+   "expected_dbfs": -18.6,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.992,
-   "dialogue_to_background_db": 24.4,
+   "corr": 0.98,
+   "dialogue_to_background_db": 23.6,
    "lr_balance_db": 0.0,
    "pan": 0.0,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.05
+   "compressor_rms_change_db": -1.77
   },
   {
    "line": "L003/3",
@@ -461,18 +455,18 @@
    "in_s": 60.125,
    "out_s": 61.475,
    "take_start_sample": 2886000,
-   "rms_first_0.5s_dbfs": -20.8,
-   "rms_line_dbfs": -17.7,
-   "expected_dbfs": -17.8,
+   "rms_first_0.5s_dbfs": -20.9,
+   "rms_line_dbfs": -17.8,
+   "expected_dbfs": -18.1,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.997,
-   "dialogue_to_background_db": 22.1,
+   "corr": 0.993,
+   "dialogue_to_background_db": 21.6,
    "lr_balance_db": 0.0,
    "pan": 0.0,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.05
+   "compressor_rms_change_db": -1.77
   },
   {
    "line": "L003/4",
@@ -481,18 +475,18 @@
    "in_s": 62.1667,
    "out_s": 63.5992,
    "take_start_sample": 2984000,
-   "rms_first_0.5s_dbfs": -20.5,
-   "rms_line_dbfs": -16.1,
-   "expected_dbfs": -15.6,
+   "rms_first_0.5s_dbfs": -21.4,
+   "rms_line_dbfs": -16.7,
+   "expected_dbfs": -15.9,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.994,
-   "dialogue_to_background_db": 21.3,
+   "corr": 0.979,
+   "dialogue_to_background_db": 20.3,
    "lr_balance_db": 0.0,
    "pan": 0.0,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.05
+   "compressor_rms_change_db": -1.77
   },
   {
    "line": "L003/5",
@@ -501,18 +495,18 @@
    "in_s": 64.375,
    "out_s": 65.8875,
    "take_start_sample": 3090000,
-   "rms_first_0.5s_dbfs": -16.4,
-   "rms_line_dbfs": -18.6,
-   "expected_dbfs": -18.8,
+   "rms_first_0.5s_dbfs": -17.3,
+   "rms_line_dbfs": -18.9,
+   "expected_dbfs": -19.1,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.991,
-   "dialogue_to_background_db": 18.3,
+   "corr": 0.973,
+   "dialogue_to_background_db": 17.6,
    "lr_balance_db": 0.0,
    "pan": 0.0,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.05
+   "compressor_rms_change_db": -1.77
   },
   {
    "line": "L003/6",
@@ -521,18 +515,18 @@
    "in_s": 66.3333,
    "out_s": 70.7183,
    "take_start_sample": 3184000,
-   "rms_first_0.5s_dbfs": -19.6,
-   "rms_line_dbfs": -16.9,
-   "expected_dbfs": -17.1,
+   "rms_first_0.5s_dbfs": -21.1,
+   "rms_line_dbfs": -17.1,
+   "expected_dbfs": -17.4,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.994,
-   "dialogue_to_background_db": 26.2,
+   "corr": 0.98,
+   "dialogue_to_background_db": 25.6,
    "lr_balance_db": 0.0,
    "pan": 0.0,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.05
+   "compressor_rms_change_db": -1.77
   },
   {
    "line": "L004",
@@ -541,18 +535,18 @@
    "in_s": 80.3217,
    "out_s": 86.2217,
    "take_start_sample": 3854000,
-   "rms_first_0.5s_dbfs": -14.5,
+   "rms_first_0.5s_dbfs": -15.0,
    "rms_line_dbfs": -16.7,
    "expected_dbfs": -16.7,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.996,
-   "dialogue_to_background_db": 11.4,
+   "corr": 0.988,
+   "dialogue_to_background_db": 10.9,
    "lr_balance_db": 0.0,
    "pan": 0.0,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.94
+   "compressor_rms_change_db": -1.4
   },
   {
    "line": "L005",
@@ -561,18 +555,18 @@
    "in_s": 90.03,
    "out_s": 92.075,
    "take_start_sample": 4320000,
-   "rms_first_0.5s_dbfs": -16.0,
-   "rms_line_dbfs": -15.9,
-   "expected_dbfs": -15.9,
+   "rms_first_0.5s_dbfs": -16.9,
+   "rms_line_dbfs": -16.1,
+   "expected_dbfs": -16.1,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.993,
-   "dialogue_to_background_db": 11.1,
+   "corr": 0.983,
+   "dialogue_to_background_db": 10.4,
    "lr_balance_db": 0.0,
    "pan": 0.0,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.97
+   "compressor_rms_change_db": -1.62
   },
   {
    "line": "L006",
@@ -581,18 +575,18 @@
    "in_s": 121.405,
    "out_s": 122.915,
    "take_start_sample": 5826000,
-   "rms_first_0.5s_dbfs": -13.5,
-   "rms_line_dbfs": -15.4,
-   "expected_dbfs": -16.1,
+   "rms_first_0.5s_dbfs": -15.7,
+   "rms_line_dbfs": -16.4,
+   "expected_dbfs": -16.8,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
    "corr": 0.952,
-   "dialogue_to_background_db": 26.9,
-   "lr_balance_db": -3.2,
+   "dialogue_to_background_db": 25.4,
+   "lr_balance_db": -3.55,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.41
+   "compressor_rms_change_db": -2.44
   },
   {
    "line": "L007",
@@ -601,18 +595,18 @@
    "in_s": 123.3217,
    "out_s": 124.5567,
    "take_start_sample": 5918000,
-   "rms_first_0.5s_dbfs": -12.9,
-   "rms_line_dbfs": -15.6,
-   "expected_dbfs": -16.6,
-   "pre_roll_dbfs": -61.8,
+   "rms_first_0.5s_dbfs": -13.3,
+   "rms_line_dbfs": -16.0,
+   "expected_dbfs": -16.4,
+   "pre_roll_dbfs": -64.9,
    "lag_samples": 0,
-   "corr": 0.946,
-   "dialogue_to_background_db": 27.1,
-   "lr_balance_db": 4.14,
+   "corr": 0.98,
+   "dialogue_to_background_db": 26.2,
+   "lr_balance_db": 3.65,
    "pan": 0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.8
+   "compressor_rms_change_db": -1.0
   },
   {
    "line": "L008",
@@ -621,18 +615,18 @@
    "in_s": 124.9467,
    "out_s": 126.3867,
    "take_start_sample": 5996000,
-   "rms_first_0.5s_dbfs": -11.9,
-   "rms_line_dbfs": -14.7,
-   "expected_dbfs": -15.7,
-   "pre_roll_dbfs": -70.3,
+   "rms_first_0.5s_dbfs": -13.1,
+   "rms_line_dbfs": -15.9,
+   "expected_dbfs": -16.4,
+   "pre_roll_dbfs": -74.6,
    "lag_samples": 0,
-   "corr": 0.957,
-   "dialogue_to_background_db": 24.4,
-   "lr_balance_db": -4.28,
+   "corr": 0.968,
+   "dialogue_to_background_db": 22.8,
+   "lr_balance_db": -4.35,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.89
+   "compressor_rms_change_db": -2.05
   },
   {
    "line": "L009",
@@ -641,14 +635,14 @@
    "in_s": 126.8217,
    "out_s": 127.9217,
    "take_start_sample": 6086000,
-   "rms_first_0.5s_dbfs": -12.2,
-   "rms_line_dbfs": -14.7,
-   "expected_dbfs": -16.5,
-   "pre_roll_dbfs": -68.4,
+   "rms_first_0.5s_dbfs": -12.8,
+   "rms_line_dbfs": -15.2,
+   "expected_dbfs": -16.0,
+   "pre_roll_dbfs": -71.7,
    "lag_samples": 0,
-   "corr": 0.946,
-   "dialogue_to_background_db": 27.6,
-   "lr_balance_db": 4.45,
+   "corr": 0.98,
+   "dialogue_to_background_db": 26.7,
+   "lr_balance_db": 3.73,
    "pan": 0.25,
    "airborne": false,
    "gain_db": 0.0,
@@ -661,18 +655,18 @@
    "in_s": 164.405,
    "out_s": 165.375,
    "take_start_sample": 7890000,
-   "rms_first_0.5s_dbfs": -14.0,
-   "rms_line_dbfs": -15.9,
-   "expected_dbfs": -16.3,
+   "rms_first_0.5s_dbfs": -15.4,
+   "rms_line_dbfs": -17.1,
+   "expected_dbfs": -17.2,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.953,
-   "dialogue_to_background_db": 23.9,
-   "lr_balance_db": -2.28,
+   "corr": 0.961,
+   "dialogue_to_background_db": 22.3,
+   "lr_balance_db": -2.66,
    "pan": -0.2,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.13
+   "compressor_rms_change_db": -2.4
   },
   {
    "line": "L011",
@@ -681,18 +675,18 @@
    "in_s": 170.2017,
    "out_s": 171.6067,
    "take_start_sample": 8168000,
-   "rms_first_0.5s_dbfs": -25.9,
-   "rms_line_dbfs": -27.5,
+   "rms_first_0.5s_dbfs": -26.6,
+   "rms_line_dbfs": -28.0,
    "expected_dbfs": -28.2,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.947,
-   "dialogue_to_background_db": 17.5,
-   "lr_balance_db": 3.76,
+   "corr": 0.968,
+   "dialogue_to_background_db": 16.6,
+   "lr_balance_db": 3.48,
    "pan": 0.25,
    "airborne": false,
    "gain_db": -11.0,
-   "compressor_rms_change_db": -1.41
+   "compressor_rms_change_db": -1.86
   },
   {
    "line": "L012",
@@ -701,18 +695,18 @@
    "in_s": 184.53,
    "out_s": 185.235,
    "take_start_sample": 8856000,
-   "rms_first_0.5s_dbfs": -13.3,
-   "rms_line_dbfs": -14.7,
-   "expected_dbfs": -15.4,
+   "rms_first_0.5s_dbfs": -13.5,
+   "rms_line_dbfs": -14.9,
+   "expected_dbfs": -15.2,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.958,
-   "dialogue_to_background_db": 24.9,
-   "lr_balance_db": -3.0,
+   "corr": 0.978,
+   "dialogue_to_background_db": 24.6,
+   "lr_balance_db": -3.4,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 1.0,
-   "compressor_rms_change_db": -1.22
+   "compressor_rms_change_db": -1.47
   },
   {
    "line": "L013",
@@ -721,18 +715,18 @@
    "in_s": 186.6133,
    "out_s": 187.4833,
    "take_start_sample": 8956000,
-   "rms_first_0.5s_dbfs": -13.1,
-   "rms_line_dbfs": -14.8,
-   "expected_dbfs": -16.1,
+   "rms_first_0.5s_dbfs": -13.6,
+   "rms_line_dbfs": -15.3,
+   "expected_dbfs": -15.8,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.946,
-   "dialogue_to_background_db": 25.9,
-   "lr_balance_db": 3.52,
+   "corr": 0.98,
+   "dialogue_to_background_db": 25.0,
+   "lr_balance_db": 2.93,
    "pan": 0.2,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.73
+   "compressor_rms_change_db": -0.89
   },
   {
    "line": "L014",
@@ -741,18 +735,18 @@
    "in_s": 192.6133,
    "out_s": 193.3383,
    "take_start_sample": 9244000,
-   "rms_first_0.5s_dbfs": -14.6,
-   "rms_line_dbfs": -16.0,
-   "expected_dbfs": -16.4,
+   "rms_first_0.5s_dbfs": -15.1,
+   "rms_line_dbfs": -16.5,
+   "expected_dbfs": -16.6,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.957,
-   "dialogue_to_background_db": 26.0,
-   "lr_balance_db": -2.97,
+   "corr": 0.977,
+   "dialogue_to_background_db": 25.1,
+   "lr_balance_db": -3.35,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.01
+   "compressor_rms_change_db": -1.63
   },
   {
    "line": "L015",
@@ -761,18 +755,18 @@
    "in_s": 193.655,
    "out_s": 194.69,
    "take_start_sample": 9294000,
-   "rms_first_0.5s_dbfs": -15.2,
-   "rms_line_dbfs": -15.9,
-   "expected_dbfs": -16.6,
-   "pre_roll_dbfs": -52.1,
+   "rms_first_0.5s_dbfs": -17.0,
+   "rms_line_dbfs": -17.0,
+   "expected_dbfs": -17.2,
+   "pre_roll_dbfs": -55.4,
    "lag_samples": 0,
-   "corr": 0.94,
-   "dialogue_to_background_db": 24.6,
-   "lr_balance_db": 3.09,
+   "corr": 0.955,
+   "dialogue_to_background_db": 23.1,
+   "lr_balance_db": 2.89,
    "pan": 0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.49
+   "compressor_rms_change_db": -2.55
   },
   {
    "line": "L016",
@@ -781,18 +775,18 @@
    "in_s": 195.03,
    "out_s": 195.98,
    "take_start_sample": 9360000,
-   "rms_first_0.5s_dbfs": -12.8,
-   "rms_line_dbfs": -14.9,
-   "expected_dbfs": -15.6,
-   "pre_roll_dbfs": -57.1,
+   "rms_first_0.5s_dbfs": -13.4,
+   "rms_line_dbfs": -15.3,
+   "expected_dbfs": -15.7,
+   "pre_roll_dbfs": -61.9,
    "lag_samples": 0,
-   "corr": 0.959,
-   "dialogue_to_background_db": 25.4,
-   "lr_balance_db": -3.53,
+   "corr": 0.978,
+   "dialogue_to_background_db": 24.5,
+   "lr_balance_db": -3.8,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.58
+   "compressor_rms_change_db": -1.08
   },
   {
    "line": "L017",
@@ -801,18 +795,18 @@
    "in_s": 203.6917,
    "out_s": 205.4617,
    "take_start_sample": 9776000,
-   "rms_first_0.5s_dbfs": -14.8,
-   "rms_line_dbfs": -16.6,
-   "expected_dbfs": -17.6,
+   "rms_first_0.5s_dbfs": -14.9,
+   "rms_line_dbfs": -16.8,
+   "expected_dbfs": -17.2,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.947,
-   "dialogue_to_background_db": 22.6,
-   "lr_balance_db": 3.98,
+   "corr": 0.982,
+   "dialogue_to_background_db": 21.9,
+   "lr_balance_db": 3.54,
    "pan": 0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.66
+   "compressor_rms_change_db": -0.68
   },
   {
    "line": "L018",
@@ -821,18 +815,18 @@
    "in_s": 206.405,
    "out_s": 208.06,
    "take_start_sample": 9906000,
-   "rms_first_0.5s_dbfs": -13.2,
-   "rms_line_dbfs": -15.6,
-   "expected_dbfs": -16.7,
-   "pre_roll_dbfs": -139.1,
+   "rms_first_0.5s_dbfs": -14.9,
+   "rms_line_dbfs": -16.6,
+   "expected_dbfs": -17.2,
+   "pre_roll_dbfs": -144.1,
    "lag_samples": 0,
-   "corr": 0.948,
-   "dialogue_to_background_db": 25.8,
-   "lr_balance_db": -3.12,
+   "corr": 0.956,
+   "dialogue_to_background_db": 24.3,
+   "lr_balance_db": -3.27,
    "pan": -0.2,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.41
+   "compressor_rms_change_db": -2.37
   },
   {
    "line": "L019",
@@ -841,18 +835,18 @@
    "in_s": 208.525,
    "out_s": 211.16,
    "take_start_sample": 10008000,
-   "rms_first_0.5s_dbfs": -13.1,
-   "rms_line_dbfs": -15.6,
-   "expected_dbfs": -16.6,
-   "pre_roll_dbfs": -74.3,
+   "rms_first_0.5s_dbfs": -14.4,
+   "rms_line_dbfs": -16.9,
+   "expected_dbfs": -17.2,
+   "pre_roll_dbfs": -77.8,
    "lag_samples": 0,
-   "corr": 0.957,
-   "dialogue_to_background_db": 25.8,
-   "lr_balance_db": 4.09,
+   "corr": 0.975,
+   "dialogue_to_background_db": 24.1,
+   "lr_balance_db": 3.6,
    "pan": 0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.77
+   "compressor_rms_change_db": -1.86
   },
   {
    "line": "L020",
@@ -861,18 +855,18 @@
    "in_s": 218.905,
    "out_s": 219.375,
    "take_start_sample": 10506000,
-   "rms_first_0.5s_dbfs": -20.9,
-   "rms_line_dbfs": -20.9,
-   "expected_dbfs": -21.8,
+   "rms_first_0.5s_dbfs": -21.6,
+   "rms_line_dbfs": -21.6,
+   "expected_dbfs": -22.0,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.964,
-   "dialogue_to_background_db": 19.6,
-   "lr_balance_db": -3.13,
+   "corr": 0.975,
+   "dialogue_to_background_db": 18.6,
+   "lr_balance_db": -3.39,
    "pan": -0.2,
    "airborne": false,
    "gain_db": -5.5,
-   "compressor_rms_change_db": -1.21
+   "compressor_rms_change_db": -1.84
   },
   {
    "line": "L021",
@@ -881,14 +875,14 @@
    "in_s": 219.905,
    "out_s": 220.49,
    "take_start_sample": 10554000,
-   "rms_first_0.5s_dbfs": -16.7,
-   "rms_line_dbfs": -17.4,
-   "expected_dbfs": -18.2,
-   "pre_roll_dbfs": -77.3,
+   "rms_first_0.5s_dbfs": -16.9,
+   "rms_line_dbfs": -17.5,
+   "expected_dbfs": -17.8,
+   "pre_roll_dbfs": -80.9,
    "lag_samples": 0,
-   "corr": 0.938,
-   "dialogue_to_background_db": 23.8,
-   "lr_balance_db": 3.39,
+   "corr": 0.978,
+   "dialogue_to_background_db": 23.3,
+   "lr_balance_db": 3.09,
    "pan": 0.25,
    "airborne": false,
    "gain_db": 0.0,
@@ -901,18 +895,18 @@
    "in_s": 222.03,
    "out_s": 223.155,
    "take_start_sample": 10656000,
-   "rms_first_0.5s_dbfs": -14.6,
-   "rms_line_dbfs": -15.8,
-   "expected_dbfs": -16.6,
+   "rms_first_0.5s_dbfs": -15.7,
+   "rms_line_dbfs": -16.6,
+   "expected_dbfs": -17.0,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.949,
-   "dialogue_to_background_db": 25.4,
-   "lr_balance_db": -3.52,
+   "corr": 0.954,
+   "dialogue_to_background_db": 24.2,
+   "lr_balance_db": -3.78,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.33
+   "compressor_rms_change_db": -2.14
   },
   {
    "line": "L023",
@@ -921,18 +915,18 @@
    "in_s": 223.53,
    "out_s": 224.265,
    "take_start_sample": 10728000,
-   "rms_first_0.5s_dbfs": -14.6,
-   "rms_line_dbfs": -16.2,
-   "expected_dbfs": -16.9,
-   "pre_roll_dbfs": -62.1,
+   "rms_first_0.5s_dbfs": -14.8,
+   "rms_line_dbfs": -16.4,
+   "expected_dbfs": -16.6,
+   "pre_roll_dbfs": -64.9,
    "lag_samples": 0,
-   "corr": 0.94,
-   "dialogue_to_background_db": 24.3,
-   "lr_balance_db": 4.0,
+   "corr": 0.976,
+   "dialogue_to_background_db": 23.7,
+   "lr_balance_db": 3.55,
    "pan": 0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.77
+   "compressor_rms_change_db": -0.86
   },
   {
    "line": "L024",
@@ -941,18 +935,18 @@
    "in_s": 224.5717,
    "out_s": 225.6667,
    "take_start_sample": 10778000,
-   "rms_first_0.5s_dbfs": -13.1,
-   "rms_line_dbfs": -14.9,
-   "expected_dbfs": -15.9,
-   "pre_roll_dbfs": -60.9,
+   "rms_first_0.5s_dbfs": -13.7,
+   "rms_line_dbfs": -15.4,
+   "expected_dbfs": -16.0,
+   "pre_roll_dbfs": -65.2,
    "lag_samples": 0,
-   "corr": 0.946,
-   "dialogue_to_background_db": 26.5,
-   "lr_balance_db": -3.31,
+   "corr": 0.969,
+   "dialogue_to_background_db": 25.6,
+   "lr_balance_db": -3.72,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.99
+   "compressor_rms_change_db": -1.45
   },
   {
    "line": "L025",
@@ -961,18 +955,18 @@
    "in_s": 228.905,
    "out_s": 230.08,
    "take_start_sample": 10986000,
-   "rms_first_0.5s_dbfs": -14.1,
-   "rms_line_dbfs": -15.7,
-   "expected_dbfs": -16.7,
+   "rms_first_0.5s_dbfs": -15.9,
+   "rms_line_dbfs": -17.3,
+   "expected_dbfs": -17.7,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.954,
-   "dialogue_to_background_db": 26.6,
-   "lr_balance_db": 3.84,
+   "corr": 0.969,
+   "dialogue_to_background_db": 24.6,
+   "lr_balance_db": 3.5,
    "pan": 0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.07
+   "compressor_rms_change_db": -2.48
   },
   {
    "line": "L026",
@@ -981,18 +975,18 @@
    "in_s": 231.6133,
    "out_s": 233.3133,
    "take_start_sample": 11116000,
-   "rms_first_0.5s_dbfs": -12.4,
-   "rms_line_dbfs": -15.5,
-   "expected_dbfs": -16.4,
+   "rms_first_0.5s_dbfs": -12.7,
+   "rms_line_dbfs": -15.9,
+   "expected_dbfs": -16.2,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.95,
-   "dialogue_to_background_db": 26.0,
-   "lr_balance_db": 3.57,
+   "corr": 0.977,
+   "dialogue_to_background_db": 25.2,
+   "lr_balance_db": 3.01,
    "pan": 0.2,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.72
+   "compressor_rms_change_db": -0.92
   },
   {
    "line": "L027",
@@ -1001,18 +995,18 @@
    "in_s": 237.53,
    "out_s": 238.685,
    "take_start_sample": 11400000,
-   "rms_first_0.5s_dbfs": -14.8,
-   "rms_line_dbfs": -16.2,
-   "expected_dbfs": -17.4,
+   "rms_first_0.5s_dbfs": -15.7,
+   "rms_line_dbfs": -17.2,
+   "expected_dbfs": -17.8,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.926,
-   "dialogue_to_background_db": 20.6,
-   "lr_balance_db": -3.78,
+   "corr": 0.95,
+   "dialogue_to_background_db": 19.9,
+   "lr_balance_db": -3.9,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.8
+   "compressor_rms_change_db": -2.62
   },
   {
    "line": "L028",
@@ -1021,18 +1015,18 @@
    "in_s": 239.0717,
    "out_s": 239.7117,
    "take_start_sample": 11474000,
-   "rms_first_0.5s_dbfs": -16.0,
-   "rms_line_dbfs": -17.0,
+   "rms_first_0.5s_dbfs": -16.5,
+   "rms_line_dbfs": -17.5,
    "expected_dbfs": -17.5,
-   "pre_roll_dbfs": -64.0,
+   "pre_roll_dbfs": -67.4,
    "lag_samples": 0,
-   "corr": 0.937,
-   "dialogue_to_background_db": 21.3,
-   "lr_balance_db": 3.96,
+   "corr": 0.964,
+   "dialogue_to_background_db": 21.0,
+   "lr_balance_db": 3.58,
    "pan": 0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.73
+   "compressor_rms_change_db": -2.17
   },
   {
    "line": "L029",
@@ -1041,18 +1035,18 @@
    "in_s": 240.03,
    "out_s": 240.53,
    "take_start_sample": 11520000,
-   "rms_first_0.5s_dbfs": -16.0,
-   "rms_line_dbfs": -16.0,
-   "expected_dbfs": -16.7,
-   "pre_roll_dbfs": -53.2,
+   "rms_first_0.5s_dbfs": -16.2,
+   "rms_line_dbfs": -16.2,
+   "expected_dbfs": -16.5,
+   "pre_roll_dbfs": -57.5,
    "lag_samples": 0,
-   "corr": 0.958,
-   "dialogue_to_background_db": 19.9,
-   "lr_balance_db": -4.0,
+   "corr": 0.978,
+   "dialogue_to_background_db": 20.0,
+   "lr_balance_db": -4.09,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.41
+   "compressor_rms_change_db": -1.6
   },
   {
    "line": "L030",
@@ -1061,18 +1055,18 @@
    "in_s": 240.905,
    "out_s": 242.57,
    "take_start_sample": 11562000,
-   "rms_first_0.5s_dbfs": -12.7,
-   "rms_line_dbfs": -15.3,
-   "expected_dbfs": -16.2,
-   "pre_roll_dbfs": -64.9,
+   "rms_first_0.5s_dbfs": -13.2,
+   "rms_line_dbfs": -15.6,
+   "expected_dbfs": -16.0,
+   "pre_roll_dbfs": -68.2,
    "lag_samples": 0,
-   "corr": 0.939,
-   "dialogue_to_background_db": 22.2,
-   "lr_balance_db": 3.76,
+   "corr": 0.976,
+   "dialogue_to_background_db": 22.0,
+   "lr_balance_db": 3.4,
    "pan": 0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.08
+   "compressor_rms_change_db": -1.2
   },
   {
    "line": "L031",
@@ -1081,18 +1075,18 @@
    "in_s": 242.9467,
    "out_s": 243.6517,
    "take_start_sample": 11660000,
-   "rms_first_0.5s_dbfs": -14.8,
-   "rms_line_dbfs": -16.0,
-   "expected_dbfs": -16.7,
-   "pre_roll_dbfs": -64.6,
+   "rms_first_0.5s_dbfs": -15.4,
+   "rms_line_dbfs": -16.7,
+   "expected_dbfs": -16.9,
+   "pre_roll_dbfs": -69.1,
    "lag_samples": 0,
-   "corr": 0.936,
-   "dialogue_to_background_db": 22.3,
-   "lr_balance_db": -2.99,
+   "corr": 0.958,
+   "dialogue_to_background_db": 21.8,
+   "lr_balance_db": -3.38,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.36
+   "compressor_rms_change_db": -2.01
   },
   {
    "line": "L032",
@@ -1101,18 +1095,18 @@
    "in_s": 279.1133,
    "out_s": 280.3833,
    "take_start_sample": 13396000,
-   "rms_first_0.5s_dbfs": -15.9,
-   "rms_line_dbfs": -17.0,
-   "expected_dbfs": -17.2,
+   "rms_first_0.5s_dbfs": -16.1,
+   "rms_line_dbfs": -17.1,
+   "expected_dbfs": -17.1,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.989,
-   "dialogue_to_background_db": 14.8,
-   "lr_balance_db": -3.29,
+   "corr": 0.993,
+   "dialogue_to_background_db": 14.6,
+   "lr_balance_db": -3.37,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.05
+   "compressor_rms_change_db": -1.35
   },
   {
    "line": "L033",
@@ -1121,18 +1115,18 @@
    "in_s": 283.8217,
    "out_s": 284.5217,
    "take_start_sample": 13622000,
-   "rms_first_0.5s_dbfs": -16.9,
-   "rms_line_dbfs": -18.3,
-   "expected_dbfs": -18.6,
+   "rms_first_0.5s_dbfs": -17.3,
+   "rms_line_dbfs": -18.7,
+   "expected_dbfs": -18.8,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.985,
-   "dialogue_to_background_db": 24.0,
-   "lr_balance_db": 3.08,
+   "corr": 0.986,
+   "dialogue_to_background_db": 23.3,
+   "lr_balance_db": 2.94,
    "pan": 0.2,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -2.01
+   "compressor_rms_change_db": -2.65
   },
   {
    "line": "L034",
@@ -1141,18 +1135,18 @@
    "in_s": 284.905,
    "out_s": 285.45,
    "take_start_sample": 13674000,
-   "rms_first_0.5s_dbfs": -15.0,
+   "rms_first_0.5s_dbfs": -14.9,
    "rms_line_dbfs": -15.3,
-   "expected_dbfs": -15.6,
-   "pre_roll_dbfs": -71.3,
+   "expected_dbfs": -15.4,
+   "pre_roll_dbfs": -76.1,
    "lag_samples": 0,
-   "corr": 0.992,
-   "dialogue_to_background_db": 18.5,
-   "lr_balance_db": -3.33,
+   "corr": 0.994,
+   "dialogue_to_background_db": 18.4,
+   "lr_balance_db": -3.4,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.66
+   "compressor_rms_change_db": -0.88
   },
   {
    "line": "L035",
@@ -1161,18 +1155,18 @@
    "in_s": 285.78,
    "out_s": 287.725,
    "take_start_sample": 13716000,
-   "rms_first_0.5s_dbfs": -14.5,
-   "rms_line_dbfs": -16.3,
+   "rms_first_0.5s_dbfs": -15.1,
+   "rms_line_dbfs": -16.4,
    "expected_dbfs": -16.5,
-   "pre_roll_dbfs": -58.5,
+   "pre_roll_dbfs": -63.6,
    "lag_samples": 0,
-   "corr": 0.982,
-   "dialogue_to_background_db": 26.0,
-   "lr_balance_db": 2.83,
+   "corr": 0.973,
+   "dialogue_to_background_db": 25.6,
+   "lr_balance_db": 2.81,
    "pan": 0.2,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.12
+   "compressor_rms_change_db": -1.56
   },
   {
    "line": "L036",
@@ -1181,18 +1175,18 @@
    "in_s": 288.155,
    "out_s": 289.085,
    "take_start_sample": 13830000,
-   "rms_first_0.5s_dbfs": -14.7,
-   "rms_line_dbfs": -15.9,
+   "rms_first_0.5s_dbfs": -14.9,
+   "rms_line_dbfs": -16.0,
    "expected_dbfs": -16.0,
-   "pre_roll_dbfs": -77.0,
+   "pre_roll_dbfs": -82.0,
    "lag_samples": 0,
-   "corr": 0.988,
-   "dialogue_to_background_db": 29.5,
-   "lr_balance_db": -3.59,
+   "corr": 0.989,
+   "dialogue_to_background_db": 29.0,
+   "lr_balance_db": -3.55,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.1
+   "compressor_rms_change_db": -1.48
   },
   {
    "line": "L037",
@@ -1201,14 +1195,14 @@
    "in_s": 294.3267,
    "out_s": 295.2017,
    "take_start_sample": 14126000,
-   "rms_first_0.5s_dbfs": -13.0,
-   "rms_line_dbfs": -13.4,
-   "expected_dbfs": -13.5,
+   "rms_first_0.5s_dbfs": -12.7,
+   "rms_line_dbfs": -13.1,
+   "expected_dbfs": -13.1,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.983,
-   "dialogue_to_background_db": 23.2,
-   "lr_balance_db": -6.02,
+   "corr": 0.992,
+   "dialogue_to_background_db": 23.1,
+   "lr_balance_db": -5.96,
    "pan": -0.4,
    "airborne": false,
    "gain_db": 3.0,
@@ -1221,18 +1215,18 @@
    "in_s": 311.1133,
    "out_s": 312.5583,
    "take_start_sample": 14932000,
-   "rms_first_0.5s_dbfs": -16.8,
-   "rms_line_dbfs": -16.6,
-   "expected_dbfs": -16.8,
+   "rms_first_0.5s_dbfs": -17.3,
+   "rms_line_dbfs": -17.0,
+   "expected_dbfs": -17.1,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.98,
-   "dialogue_to_background_db": 18.8,
-   "lr_balance_db": 3.43,
+   "corr": 0.973,
+   "dialogue_to_background_db": 18.3,
+   "lr_balance_db": 3.45,
    "pan": 0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.28
+   "compressor_rms_change_db": -1.94
   },
   {
    "line": "L039",
@@ -1241,18 +1235,18 @@
    "in_s": 312.9883,
    "out_s": 313.7333,
    "take_start_sample": 15022000,
-   "rms_first_0.5s_dbfs": -13.6,
-   "rms_line_dbfs": -15.0,
-   "expected_dbfs": -15.1,
-   "pre_roll_dbfs": -79.0,
+   "rms_first_0.5s_dbfs": -13.7,
+   "rms_line_dbfs": -15.2,
+   "expected_dbfs": -15.2,
+   "pre_roll_dbfs": -83.8,
    "lag_samples": 0,
    "corr": 0.992,
-   "dialogue_to_background_db": 18.9,
+   "dialogue_to_background_db": 18.5,
    "lr_balance_db": -3.59,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.59
+   "compressor_rms_change_db": -1.07
   },
   {
    "line": "L040",
@@ -1261,18 +1255,18 @@
    "in_s": 314.0717,
    "out_s": 315.8867,
    "take_start_sample": 15074000,
-   "rms_first_0.5s_dbfs": -16.6,
-   "rms_line_dbfs": -16.2,
-   "expected_dbfs": -16.4,
-   "pre_roll_dbfs": -61.1,
+   "rms_first_0.5s_dbfs": -17.3,
+   "rms_line_dbfs": -16.8,
+   "expected_dbfs": -16.8,
+   "pre_roll_dbfs": -67.0,
    "lag_samples": 0,
-   "corr": 0.984,
-   "dialogue_to_background_db": 24.4,
-   "lr_balance_db": 3.32,
+   "corr": 0.981,
+   "dialogue_to_background_db": 23.4,
+   "lr_balance_db": 3.39,
    "pan": 0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.38
+   "compressor_rms_change_db": -2.25
   },
   {
    "line": "L041",
@@ -1282,17 +1276,17 @@
    "out_s": 321.6483,
    "take_start_sample": 15394000,
    "rms_first_0.5s_dbfs": -14.3,
-   "rms_line_dbfs": -16.0,
+   "rms_line_dbfs": -16.1,
    "expected_dbfs": -16.2,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.989,
-   "dialogue_to_background_db": 26.2,
-   "lr_balance_db": -3.47,
+   "corr": 0.993,
+   "dialogue_to_background_db": 25.6,
+   "lr_balance_db": -3.48,
    "pan": -0.25,
    "airborne": false,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.36
+   "compressor_rms_change_db": -1.8
   },
   {
    "line": "L042",
@@ -1302,17 +1296,17 @@
    "out_s": 366.0917,
    "take_start_sample": 17510000,
    "rms_first_0.5s_dbfs": -15.2,
-   "rms_line_dbfs": -16.0,
+   "rms_line_dbfs": -16.1,
    "expected_dbfs": -16.1,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.993,
-   "dialogue_to_background_db": 9.3,
-   "lr_balance_db": -0.14,
+   "corr": 0.99,
+   "dialogue_to_background_db": 14.1,
+   "lr_balance_db": -0.11,
    "pan": 0.0,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.13
+   "compressor_rms_change_db": -1.6
   },
   {
    "line": "L043",
@@ -1321,18 +1315,18 @@
    "in_s": 389.6133,
    "out_s": 390.8483,
    "take_start_sample": 18700000,
-   "rms_first_0.5s_dbfs": -15.3,
-   "rms_line_dbfs": -17.1,
-   "expected_dbfs": -17.1,
+   "rms_first_0.5s_dbfs": -16.2,
+   "rms_line_dbfs": -17.5,
+   "expected_dbfs": -17.5,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.99,
-   "dialogue_to_background_db": 6.3,
-   "lr_balance_db": 2.79,
+   "corr": 0.963,
+   "dialogue_to_background_db": 9.7,
+   "lr_balance_db": 2.78,
    "pan": 0.2,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.39
+   "compressor_rms_change_db": -2.2
   },
   {
    "line": "L044",
@@ -1341,18 +1335,18 @@
    "in_s": 391.3633,
    "out_s": 391.8633,
    "take_start_sample": 18784000,
-   "rms_first_0.5s_dbfs": -16.7,
-   "rms_line_dbfs": -16.7,
-   "expected_dbfs": -16.7,
-   "pre_roll_dbfs": -174.9,
+   "rms_first_0.5s_dbfs": -16.5,
+   "rms_line_dbfs": -16.5,
+   "expected_dbfs": -16.5,
+   "pre_roll_dbfs": -179.4,
    "lag_samples": 0,
-   "corr": 0.993,
-   "dialogue_to_background_db": 4.4,
-   "lr_balance_db": -3.54,
+   "corr": 0.992,
+   "dialogue_to_background_db": 9.5,
+   "lr_balance_db": -3.53,
    "pan": -0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.41
+   "compressor_rms_change_db": -1.6
   },
   {
    "line": "L045",
@@ -1361,18 +1355,18 @@
    "in_s": 392.3633,
    "out_s": 393.1633,
    "take_start_sample": 18832000,
-   "rms_first_0.5s_dbfs": -14.4,
-   "rms_line_dbfs": -16.3,
-   "expected_dbfs": -16.2,
-   "pre_roll_dbfs": -156.8,
+   "rms_first_0.5s_dbfs": -15.3,
+   "rms_line_dbfs": -17.1,
+   "expected_dbfs": -17.1,
+   "pre_roll_dbfs": -159.4,
    "lag_samples": 0,
-   "corr": 0.997,
-   "dialogue_to_background_db": 6.5,
-   "lr_balance_db": 2.64,
+   "corr": 0.992,
+   "dialogue_to_background_db": 10.9,
+   "lr_balance_db": 2.69,
    "pan": 0.2,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.11
+   "compressor_rms_change_db": -2.35
   },
   {
    "line": "L046",
@@ -1381,18 +1375,18 @@
    "in_s": 427.53,
    "out_s": 433.165,
    "take_start_sample": 20520000,
-   "rms_first_0.5s_dbfs": -15.4,
-   "rms_line_dbfs": -18.1,
-   "expected_dbfs": -18.1,
+   "rms_first_0.5s_dbfs": -16.3,
+   "rms_line_dbfs": -18.4,
+   "expected_dbfs": -18.4,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.981,
-   "dialogue_to_background_db": 7.4,
+   "corr": 0.968,
+   "dialogue_to_background_db": 11.2,
    "lr_balance_db": 3.49,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.66
+   "compressor_rms_change_db": -2.32
   },
   {
    "line": "L047",
@@ -1401,18 +1395,18 @@
    "in_s": 438.3217,
    "out_s": 439.3217,
    "take_start_sample": 21038000,
-   "rms_first_0.5s_dbfs": -16.0,
-   "rms_line_dbfs": -17.0,
-   "expected_dbfs": -17.0,
+   "rms_first_0.5s_dbfs": -16.6,
+   "rms_line_dbfs": -17.4,
+   "expected_dbfs": -17.4,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.989,
-   "dialogue_to_background_db": 8.3,
-   "lr_balance_db": 3.56,
+   "corr": 0.97,
+   "dialogue_to_background_db": 11.1,
+   "lr_balance_db": 3.54,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.75
+   "compressor_rms_change_db": -2.59
   },
   {
    "line": "L048",
@@ -1422,17 +1416,17 @@
    "out_s": 453.4383,
    "take_start_sample": 21700000,
    "rms_first_0.5s_dbfs": -13.9,
-   "rms_line_dbfs": -15.9,
-   "expected_dbfs": -15.9,
+   "rms_line_dbfs": -16.0,
+   "expected_dbfs": -16.0,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.996,
-   "dialogue_to_background_db": 7.5,
-   "lr_balance_db": -2.79,
+   "corr": 0.995,
+   "dialogue_to_background_db": 10.1,
+   "lr_balance_db": -2.78,
    "pan": -0.2,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.1
+   "compressor_rms_change_db": -1.57
   },
   {
    "line": "L049",
@@ -1441,18 +1435,18 @@
    "in_s": 455.2383,
    "out_s": 456.2183,
    "take_start_sample": 21850000,
-   "rms_first_0.5s_dbfs": -14.8,
-   "rms_line_dbfs": -16.6,
-   "expected_dbfs": -16.6,
+   "rms_first_0.5s_dbfs": -15.2,
+   "rms_line_dbfs": -16.9,
+   "expected_dbfs": -16.9,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.992,
-   "dialogue_to_background_db": 9.8,
-   "lr_balance_db": 3.56,
+   "corr": 0.976,
+   "dialogue_to_background_db": 11.9,
+   "lr_balance_db": 3.53,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.35
+   "compressor_rms_change_db": -2.11
   },
   {
    "line": "L050",
@@ -1461,18 +1455,18 @@
    "in_s": 456.6967,
    "out_s": 457.7867,
    "take_start_sample": 21920000,
-   "rms_first_0.5s_dbfs": -13.5,
-   "rms_line_dbfs": -15.9,
-   "expected_dbfs": -15.9,
-   "pre_roll_dbfs": -148.9,
+   "rms_first_0.5s_dbfs": -13.7,
+   "rms_line_dbfs": -16.2,
+   "expected_dbfs": -16.2,
+   "pre_roll_dbfs": -153.1,
    "lag_samples": 0,
-   "corr": 0.997,
-   "dialogue_to_background_db": 10.4,
-   "lr_balance_db": -3.37,
+   "corr": 0.995,
+   "dialogue_to_background_db": 12.7,
+   "lr_balance_db": -3.43,
    "pan": -0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.86
+   "compressor_rms_change_db": -1.54
   },
   {
    "line": "L051",
@@ -1481,18 +1475,18 @@
    "in_s": 458.2383,
    "out_s": 460.2883,
    "take_start_sample": 21994000,
-   "rms_first_0.5s_dbfs": -14.8,
-   "rms_line_dbfs": -17.2,
-   "expected_dbfs": -17.2,
-   "pre_roll_dbfs": -143.5,
+   "rms_first_0.5s_dbfs": -15.8,
+   "rms_line_dbfs": -17.7,
+   "expected_dbfs": -17.7,
+   "pre_roll_dbfs": -146.1,
    "lag_samples": 0,
-   "corr": 0.985,
-   "dialogue_to_background_db": 7.5,
-   "lr_balance_db": 3.44,
+   "corr": 0.972,
+   "dialogue_to_background_db": 8.9,
+   "lr_balance_db": 3.47,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.52
+   "compressor_rms_change_db": -2.46
   },
   {
    "line": "L052",
@@ -1501,18 +1495,18 @@
    "in_s": 464.3217,
    "out_s": 465.5017,
    "take_start_sample": 22286000,
-   "rms_first_0.5s_dbfs": -13.3,
-   "rms_line_dbfs": -15.9,
-   "expected_dbfs": -16.0,
+   "rms_first_0.5s_dbfs": -13.1,
+   "rms_line_dbfs": -15.8,
+   "expected_dbfs": -15.8,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
    "corr": 0.998,
-   "dialogue_to_background_db": 7.5,
-   "lr_balance_db": 0.05,
+   "dialogue_to_background_db": 10.1,
+   "lr_balance_db": 0.02,
    "pan": 0.0,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.83
+   "compressor_rms_change_db": -1.1
   },
   {
    "line": "L053",
@@ -1521,18 +1515,18 @@
    "in_s": 468.1133,
    "out_s": 470.8583,
    "take_start_sample": 22468000,
-   "rms_first_0.5s_dbfs": -15.2,
-   "rms_line_dbfs": -17.0,
-   "expected_dbfs": -17.0,
+   "rms_first_0.5s_dbfs": -15.9,
+   "rms_line_dbfs": -17.6,
+   "expected_dbfs": -17.6,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.995,
-   "dialogue_to_background_db": 8.6,
-   "lr_balance_db": 3.52,
+   "corr": 0.982,
+   "dialogue_to_background_db": 11.4,
+   "lr_balance_db": 3.5,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.29
+   "compressor_rms_change_db": -2.27
   },
   {
    "line": "L054",
@@ -1541,18 +1535,18 @@
    "in_s": 471.3217,
    "out_s": 472.1217,
    "take_start_sample": 22622000,
-   "rms_first_0.5s_dbfs": -14.7,
-   "rms_line_dbfs": -16.2,
-   "expected_dbfs": -16.2,
-   "pre_roll_dbfs": -144.2,
+   "rms_first_0.5s_dbfs": -15.2,
+   "rms_line_dbfs": -16.6,
+   "expected_dbfs": -16.6,
+   "pre_roll_dbfs": -147.7,
    "lag_samples": 0,
-   "corr": 0.995,
-   "dialogue_to_background_db": 7.4,
-   "lr_balance_db": -3.52,
+   "corr": 0.99,
+   "dialogue_to_background_db": 11.1,
+   "lr_balance_db": -3.51,
    "pan": -0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.59
+   "compressor_rms_change_db": -2.42
   },
   {
    "line": "L055",
@@ -1561,18 +1555,18 @@
    "in_s": 472.53,
    "out_s": 473.61,
    "take_start_sample": 22680000,
-   "rms_first_0.5s_dbfs": -16.2,
-   "rms_line_dbfs": -16.7,
-   "expected_dbfs": -16.6,
-   "pre_roll_dbfs": -124.3,
+   "rms_first_0.5s_dbfs": -17.6,
+   "rms_line_dbfs": -17.3,
+   "expected_dbfs": -17.2,
+   "pre_roll_dbfs": -127.0,
    "lag_samples": 0,
-   "corr": 0.993,
-   "dialogue_to_background_db": 7.8,
-   "lr_balance_db": 3.49,
+   "corr": 0.971,
+   "dialogue_to_background_db": 10.1,
+   "lr_balance_db": 3.5,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.49
+   "compressor_rms_change_db": -2.52
   },
   {
    "line": "L056",
@@ -1581,18 +1575,18 @@
    "in_s": 477.3633,
    "out_s": 481.0583,
    "take_start_sample": 22912000,
-   "rms_first_0.5s_dbfs": -14.6,
-   "rms_line_dbfs": -16.4,
-   "expected_dbfs": -16.4,
+   "rms_first_0.5s_dbfs": -15.9,
+   "rms_line_dbfs": -16.8,
+   "expected_dbfs": -16.8,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.996,
-   "dialogue_to_background_db": 7.6,
-   "lr_balance_db": -3.56,
+   "corr": 0.985,
+   "dialogue_to_background_db": 10.1,
+   "lr_balance_db": -3.55,
    "pan": -0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.91
+   "compressor_rms_change_db": -1.73
   },
   {
    "line": "L057",
@@ -1601,18 +1595,18 @@
    "in_s": 481.5717,
    "out_s": 483.5117,
    "take_start_sample": 23114000,
-   "rms_first_0.5s_dbfs": -14.8,
-   "rms_line_dbfs": -16.3,
-   "expected_dbfs": -16.3,
-   "pre_roll_dbfs": -170.7,
+   "rms_first_0.5s_dbfs": -15.4,
+   "rms_line_dbfs": -16.7,
+   "expected_dbfs": -16.7,
+   "pre_roll_dbfs": -173.3,
    "lag_samples": 0,
-   "corr": 0.992,
-   "dialogue_to_background_db": 7.8,
-   "lr_balance_db": 3.42,
+   "corr": 0.978,
+   "dialogue_to_background_db": 10.5,
+   "lr_balance_db": 3.45,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.05
+   "compressor_rms_change_db": -1.88
   },
   {
    "line": "L058",
@@ -1622,17 +1616,17 @@
    "out_s": 484.5067,
    "take_start_sample": 23222000,
    "rms_first_0.5s_dbfs": -14.6,
-   "rms_line_dbfs": -15.8,
-   "expected_dbfs": -15.9,
-   "pre_roll_dbfs": -85.3,
+   "rms_line_dbfs": -15.7,
+   "expected_dbfs": -15.8,
+   "pre_roll_dbfs": -89.5,
    "lag_samples": 0,
-   "corr": 0.995,
-   "dialogue_to_background_db": 9.1,
-   "lr_balance_db": -3.5,
+   "corr": 0.991,
+   "dialogue_to_background_db": 11.3,
+   "lr_balance_db": -3.52,
    "pan": -0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.99
+   "compressor_rms_change_db": -1.3
   },
   {
    "line": "L059",
@@ -1641,18 +1635,18 @@
    "in_s": 484.8633,
    "out_s": 485.7433,
    "take_start_sample": 23272000,
-   "rms_first_0.5s_dbfs": -17.0,
-   "rms_line_dbfs": -17.1,
-   "expected_dbfs": -17.2,
-   "pre_roll_dbfs": -100.9,
+   "rms_first_0.5s_dbfs": -18.0,
+   "rms_line_dbfs": -17.5,
+   "expected_dbfs": -17.5,
+   "pre_roll_dbfs": -103.6,
    "lag_samples": 0,
-   "corr": 0.994,
-   "dialogue_to_background_db": 6.4,
-   "lr_balance_db": 3.48,
+   "corr": 0.979,
+   "dialogue_to_background_db": 8.4,
+   "lr_balance_db": 3.47,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.36
+   "compressor_rms_change_db": -2.12
   },
   {
    "line": "L060",
@@ -1661,18 +1655,18 @@
    "in_s": 494.4467,
    "out_s": 495.2367,
    "take_start_sample": 23732000,
-   "rms_first_0.5s_dbfs": -15.3,
-   "rms_line_dbfs": -16.9,
-   "expected_dbfs": -16.9,
+   "rms_first_0.5s_dbfs": -15.5,
+   "rms_line_dbfs": -17.0,
+   "expected_dbfs": -17.0,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.993,
-   "dialogue_to_background_db": 5.5,
-   "lr_balance_db": -3.53,
+   "corr": 0.992,
+   "dialogue_to_background_db": 8.5,
+   "lr_balance_db": -3.52,
    "pan": -0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.55
+   "compressor_rms_change_db": -2.07
   },
   {
    "line": "L061",
@@ -1681,18 +1675,18 @@
    "in_s": 504.8633,
    "out_s": 505.3733,
    "take_start_sample": 24232000,
-   "rms_first_0.5s_dbfs": -15.8,
-   "rms_line_dbfs": -15.9,
-   "expected_dbfs": -16.0,
+   "rms_first_0.5s_dbfs": -16.0,
+   "rms_line_dbfs": -16.1,
+   "expected_dbfs": -16.1,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.996,
-   "dialogue_to_background_db": 6.7,
+   "corr": 0.99,
+   "dialogue_to_background_db": 10.5,
    "lr_balance_db": -3.56,
    "pan": -0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.0
+   "compressor_rms_change_db": -1.53
   },
   {
    "line": "L062",
@@ -1701,18 +1695,18 @@
    "in_s": 513.53,
    "out_s": 514.54,
    "take_start_sample": 24648000,
-   "rms_first_0.5s_dbfs": -21.9,
-   "rms_line_dbfs": -22.5,
-   "expected_dbfs": -22.5,
+   "rms_first_0.5s_dbfs": -22.1,
+   "rms_line_dbfs": -22.8,
+   "expected_dbfs": -22.8,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.993,
-   "dialogue_to_background_db": 4.5,
+   "corr": 0.982,
+   "dialogue_to_background_db": 9.2,
    "lr_balance_db": 3.51,
    "pan": 0.25,
    "airborne": true,
    "gain_db": -5.5,
-   "compressor_rms_change_db": -1.26
+   "compressor_rms_change_db": -1.95
   },
   {
    "line": "L063",
@@ -1721,18 +1715,18 @@
    "in_s": 520.2383,
    "out_s": 521.6633,
    "take_start_sample": 24970000,
-   "rms_first_0.5s_dbfs": -15.7,
-   "rms_line_dbfs": -16.2,
-   "expected_dbfs": -16.3,
+   "rms_first_0.5s_dbfs": -15.4,
+   "rms_line_dbfs": -16.1,
+   "expected_dbfs": -16.1,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
    "corr": 0.994,
-   "dialogue_to_background_db": 9.7,
-   "lr_balance_db": -3.58,
+   "dialogue_to_background_db": 13.4,
+   "lr_balance_db": -3.56,
    "pan": -0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.02
+   "compressor_rms_change_db": -1.22
   },
   {
    "line": "L064",
@@ -1741,18 +1735,18 @@
    "in_s": 522.1133,
    "out_s": 522.9083,
    "take_start_sample": 25060000,
-   "rms_first_0.5s_dbfs": -15.6,
-   "rms_line_dbfs": -16.7,
-   "expected_dbfs": -16.7,
-   "pre_roll_dbfs": -141.4,
+   "rms_first_0.5s_dbfs": -16.5,
+   "rms_line_dbfs": -17.5,
+   "expected_dbfs": -17.5,
+   "pre_roll_dbfs": -144.2,
    "lag_samples": 0,
-   "corr": 0.997,
-   "dialogue_to_background_db": 8.6,
+   "corr": 0.994,
+   "dialogue_to_background_db": 11.9,
    "lr_balance_db": 3.49,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.17
+   "compressor_rms_change_db": -2.43
   },
   {
    "line": "L065",
@@ -1761,18 +1755,18 @@
    "in_s": 523.28,
    "out_s": 524.12,
    "take_start_sample": 25116000,
-   "rms_first_0.5s_dbfs": -15.3,
-   "rms_line_dbfs": -16.4,
-   "expected_dbfs": -16.4,
-   "pre_roll_dbfs": -111.8,
+   "rms_first_0.5s_dbfs": -15.1,
+   "rms_line_dbfs": -16.3,
+   "expected_dbfs": -16.3,
+   "pre_roll_dbfs": -116.1,
    "lag_samples": 0,
    "corr": 0.992,
-   "dialogue_to_background_db": 8.2,
-   "lr_balance_db": -3.46,
+   "dialogue_to_background_db": 11.7,
+   "lr_balance_db": -3.48,
    "pan": -0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.35
+   "compressor_rms_change_db": -1.67
   },
   {
    "line": "L066",
@@ -1781,18 +1775,18 @@
    "in_s": 524.53,
    "out_s": 525.6,
    "take_start_sample": 25176000,
-   "rms_first_0.5s_dbfs": -15.5,
-   "rms_line_dbfs": -16.6,
-   "expected_dbfs": -16.6,
-   "pre_roll_dbfs": -117.8,
+   "rms_first_0.5s_dbfs": -16.3,
+   "rms_line_dbfs": -17.2,
+   "expected_dbfs": -17.2,
+   "pre_roll_dbfs": -120.7,
    "lag_samples": 0,
-   "corr": 0.996,
-   "dialogue_to_background_db": 7.6,
-   "lr_balance_db": 3.5,
+   "corr": 0.986,
+   "dialogue_to_background_db": 9.6,
+   "lr_balance_db": 3.49,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.32
+   "compressor_rms_change_db": -2.33
   },
   {
    "line": "L067",
@@ -1801,18 +1795,18 @@
    "in_s": 529.7383,
    "out_s": 531.7233,
    "take_start_sample": 25426000,
-   "rms_first_0.5s_dbfs": -13.9,
+   "rms_first_0.5s_dbfs": -14.1,
    "rms_line_dbfs": -16.4,
    "expected_dbfs": -16.4,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.997,
-   "dialogue_to_background_db": 8.2,
-   "lr_balance_db": -0.08,
+   "corr": 0.994,
+   "dialogue_to_background_db": 12.1,
+   "lr_balance_db": -0.05,
    "pan": 0.0,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -0.94
+   "compressor_rms_change_db": -1.35
   },
   {
    "line": "L068",
@@ -1821,18 +1815,18 @@
    "in_s": 537.4467,
    "out_s": 538.5267,
    "take_start_sample": 25796000,
-   "rms_first_0.5s_dbfs": -15.7,
-   "rms_line_dbfs": -16.7,
-   "expected_dbfs": -16.8,
+   "rms_first_0.5s_dbfs": -15.8,
+   "rms_line_dbfs": -17.1,
+   "expected_dbfs": -17.1,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.996,
-   "dialogue_to_background_db": 7.0,
-   "lr_balance_db": 3.53,
+   "corr": 0.987,
+   "dialogue_to_background_db": 9.2,
+   "lr_balance_db": 3.51,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.19
+   "compressor_rms_change_db": -1.91
   },
   {
    "line": "L069",
@@ -1841,18 +1835,18 @@
    "in_s": 538.905,
    "out_s": 539.405,
    "take_start_sample": 25866000,
-   "rms_first_0.5s_dbfs": -16.7,
-   "rms_line_dbfs": -16.7,
-   "expected_dbfs": -16.7,
-   "pre_roll_dbfs": -115.5,
+   "rms_first_0.5s_dbfs": -16.5,
+   "rms_line_dbfs": -16.5,
+   "expected_dbfs": -16.5,
+   "pre_roll_dbfs": -119.6,
    "lag_samples": 0,
-   "corr": 0.993,
-   "dialogue_to_background_db": 9.0,
-   "lr_balance_db": -3.54,
+   "corr": 0.992,
+   "dialogue_to_background_db": 10.9,
+   "lr_balance_db": -3.53,
    "pan": -0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.41
+   "compressor_rms_change_db": -1.6
   },
   {
    "line": "L070",
@@ -1861,14 +1855,14 @@
    "in_s": 553.9517,
    "out_s": 554.5267,
    "take_start_sample": 26588000,
-   "rms_first_0.5s_dbfs": -11.8,
-   "rms_line_dbfs": -12.4,
-   "expected_dbfs": -12.5,
+   "rms_first_0.5s_dbfs": -11.4,
+   "rms_line_dbfs": -12.1,
+   "expected_dbfs": -12.1,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.998,
-   "dialogue_to_background_db": 13.2,
-   "lr_balance_db": 3.55,
+   "corr": 0.999,
+   "dialogue_to_background_db": 14.9,
+   "lr_balance_db": 3.53,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 3.5,
@@ -1881,18 +1875,18 @@
    "in_s": 558.4467,
    "out_s": 559.9367,
    "take_start_sample": 26804000,
-   "rms_first_0.5s_dbfs": -12.2,
-   "rms_line_dbfs": -13.4,
-   "expected_dbfs": -13.4,
+   "rms_first_0.5s_dbfs": -11.8,
+   "rms_line_dbfs": -13.0,
+   "expected_dbfs": -13.0,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
    "corr": 0.996,
-   "dialogue_to_background_db": 11.4,
-   "lr_balance_db": 3.53,
+   "dialogue_to_background_db": 15.0,
+   "lr_balance_db": 3.51,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 3.5,
-   "compressor_rms_change_db": -1.18
+   "compressor_rms_change_db": -1.19
   },
   {
    "line": "L072",
@@ -1901,18 +1895,18 @@
    "in_s": 561.155,
    "out_s": 561.75,
    "take_start_sample": 26922000,
-   "rms_first_0.5s_dbfs": -16.8,
-   "rms_line_dbfs": -17.4,
-   "expected_dbfs": -17.3,
+   "rms_first_0.5s_dbfs": -17.1,
+   "rms_line_dbfs": -17.6,
+   "expected_dbfs": -17.5,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.988,
-   "dialogue_to_background_db": 7.1,
-   "lr_balance_db": -3.43,
+   "corr": 0.969,
+   "dialogue_to_background_db": 11.6,
+   "lr_balance_db": -3.44,
    "pan": -0.25,
    "airborne": true,
    "gain_db": -1.5,
-   "compressor_rms_change_db": -1.48
+   "compressor_rms_change_db": -2.09
   },
   {
    "line": "L073",
@@ -1921,18 +1915,18 @@
    "in_s": 562.03,
    "out_s": 564.075,
    "take_start_sample": 26976000,
-   "rms_first_0.5s_dbfs": -15.7,
-   "rms_line_dbfs": -16.6,
-   "expected_dbfs": -16.6,
-   "pre_roll_dbfs": -59.3,
+   "rms_first_0.5s_dbfs": -16.4,
+   "rms_line_dbfs": -17.0,
+   "expected_dbfs": -17.0,
+   "pre_roll_dbfs": -62.0,
    "lag_samples": 0,
-   "corr": 0.989,
-   "dialogue_to_background_db": 10.0,
+   "corr": 0.976,
+   "dialogue_to_background_db": 13.5,
    "lr_balance_db": 3.48,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 1.0,
-   "compressor_rms_change_db": -1.65
+   "compressor_rms_change_db": -2.48
   },
   {
    "line": "L074",
@@ -1941,18 +1935,18 @@
    "in_s": 576.9883,
    "out_s": 578.1033,
    "take_start_sample": 27694000,
-   "rms_first_0.5s_dbfs": -14.7,
-   "rms_line_dbfs": -16.4,
-   "expected_dbfs": -16.3,
+   "rms_first_0.5s_dbfs": -15.7,
+   "rms_line_dbfs": -17.0,
+   "expected_dbfs": -17.0,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.995,
-   "dialogue_to_background_db": 7.5,
-   "lr_balance_db": 3.43,
+   "corr": 0.982,
+   "dialogue_to_background_db": 11.4,
+   "lr_balance_db": 3.45,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 0.5,
-   "compressor_rms_change_db": -1.37
+   "compressor_rms_change_db": -2.47
   },
   {
    "line": "L075",
@@ -1961,18 +1955,18 @@
    "in_s": 578.9,
    "out_s": 579.48,
    "take_start_sample": 27768000,
-   "rms_first_0.5s_dbfs": -16.9,
-   "rms_line_dbfs": -17.5,
-   "expected_dbfs": -17.4,
-   "pre_roll_dbfs": -128.8,
+   "rms_first_0.5s_dbfs": -17.9,
+   "rms_line_dbfs": -18.5,
+   "expected_dbfs": -18.3,
+   "pre_roll_dbfs": -132.5,
    "lag_samples": 0,
-   "corr": 0.995,
-   "dialogue_to_background_db": 7.5,
-   "lr_balance_db": -3.28,
+   "corr": 0.974,
+   "dialogue_to_background_db": 10.0,
+   "lr_balance_db": -3.33,
    "pan": -0.25,
    "airborne": true,
    "gain_db": -1.5,
-   "compressor_rms_change_db": -1.31
+   "compressor_rms_change_db": -2.56
   },
   {
    "line": "L076",
@@ -1981,18 +1975,18 @@
    "in_s": 579.8167,
    "out_s": 582.3617,
    "take_start_sample": 27830000,
-   "rms_first_0.5s_dbfs": -15.2,
-   "rms_line_dbfs": -17.1,
-   "expected_dbfs": -17.2,
-   "pre_roll_dbfs": -106.7,
+   "rms_first_0.5s_dbfs": -15.6,
+   "rms_line_dbfs": -17.7,
+   "expected_dbfs": -17.7,
+   "pre_roll_dbfs": -109.6,
    "lag_samples": 0,
-   "corr": 0.994,
-   "dialogue_to_background_db": 6.2,
-   "lr_balance_db": 3.44,
+   "corr": 0.976,
+   "dialogue_to_background_db": 9.1,
+   "lr_balance_db": 3.46,
    "pan": 0.25,
    "airborne": true,
    "gain_db": 0.0,
-   "compressor_rms_change_db": -1.38
+   "compressor_rms_change_db": -2.35
   },
   {
    "line": "L077",
@@ -2001,18 +1995,18 @@
    "in_s": 584.775,
    "out_s": 586.15,
    "take_start_sample": 28050000,
-   "rms_first_0.5s_dbfs": -16.8,
-   "rms_line_dbfs": -18.1,
-   "expected_dbfs": -18.1,
+   "rms_first_0.5s_dbfs": -17.8,
+   "rms_line_dbfs": -18.9,
+   "expected_dbfs": -18.9,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.996,
-   "dialogue_to_background_db": 5.6,
-   "lr_balance_db": -0.08,
+   "corr": 0.985,
+   "dialogue_to_background_db": 9.2,
+   "lr_balance_db": -0.07,
    "pan": 0.0,
    "airborne": true,
    "gain_db": -1.5,
-   "compressor_rms_change_db": -1.24
+   "compressor_rms_change_db": -2.42
   },
   {
    "line": "L078",
@@ -2021,375 +2015,1088 @@
    "in_s": 592.9883,
    "out_s": 593.6783,
    "take_start_sample": 28462000,
-   "rms_first_0.5s_dbfs": -14.3,
-   "rms_line_dbfs": -15.7,
-   "expected_dbfs": -15.7,
+   "rms_first_0.5s_dbfs": -14.0,
+   "rms_line_dbfs": -15.4,
+   "expected_dbfs": -15.3,
    "pre_roll_dbfs": -300.0,
    "lag_samples": 0,
-   "corr": 0.998,
+   "corr": 0.999,
    "dialogue_to_background_db": 11.7,
-   "lr_balance_db": 0.09,
+   "lr_balance_db": 0.06,
    "pan": 0.0,
    "airborne": true,
    "gain_db": 1.0,
-   "compressor_rms_change_db": -0.8
+   "compressor_rms_change_db": -0.84
   }
  ],
  "wind_between_airborne_lines": [
   {
    "between": "L043-L044",
    "gap_s": 0.41,
-   "sfx_in_gap_dbfs": -26.5,
-   "sfx_under_lines_dbfs": -22.3,
-   "dialogue_in_gap_dbfs": -149.6
+   "sfx_in_gap_dbfs": -28.2,
+   "sfx_under_lines_dbfs": -26.6,
+   "dialogue_in_gap_dbfs": -153.7
   },
   {
    "between": "L044-L045",
    "gap_s": 0.4,
-   "sfx_in_gap_dbfs": -27.6,
-   "sfx_under_lines_dbfs": -21.9,
-   "dialogue_in_gap_dbfs": -146.8
+   "sfx_in_gap_dbfs": -29.8,
+   "sfx_under_lines_dbfs": -27.0,
+   "dialogue_in_gap_dbfs": -149.3
   },
   {
    "between": "L048-L049",
    "gap_s": 1.7,
-   "sfx_in_gap_dbfs": -22.0,
-   "sfx_under_lines_dbfs": -25.7,
-   "dialogue_in_gap_dbfs": -161.8
+   "sfx_in_gap_dbfs": -22.6,
+   "sfx_under_lines_dbfs": -29.4,
+   "dialogue_in_gap_dbfs": -164.7
   },
   {
    "between": "L049-L050",
    "gap_s": 0.38,
-   "sfx_in_gap_dbfs": -21.8,
-   "sfx_under_lines_dbfs": -27.2,
-   "dialogue_in_gap_dbfs": -149.1
+   "sfx_in_gap_dbfs": -24.4,
+   "sfx_under_lines_dbfs": -30.9,
+   "dialogue_in_gap_dbfs": -153.4
   },
   {
    "between": "L050-L051",
    "gap_s": 0.35,
-   "sfx_in_gap_dbfs": -25.0,
-   "sfx_under_lines_dbfs": -26.2,
-   "dialogue_in_gap_dbfs": -152.7
+   "sfx_in_gap_dbfs": -27.8,
+   "sfx_under_lines_dbfs": -29.2,
+   "dialogue_in_gap_dbfs": -155.3
   },
   {
    "between": "L053-L054",
    "gap_s": 0.36,
-   "sfx_in_gap_dbfs": -31.5,
-   "sfx_under_lines_dbfs": -25.2,
-   "dialogue_in_gap_dbfs": -149.5
+   "sfx_in_gap_dbfs": -34.1,
+   "sfx_under_lines_dbfs": -30.1,
+   "dialogue_in_gap_dbfs": -153.9
   },
   {
    "between": "L054-L055",
    "gap_s": 0.31,
-   "sfx_in_gap_dbfs": -30.2,
-   "sfx_under_lines_dbfs": -24.5,
-   "dialogue_in_gap_dbfs": -146.2
+   "sfx_in_gap_dbfs": -31.5,
+   "sfx_under_lines_dbfs": -28.7,
+   "dialogue_in_gap_dbfs": -149.0
   },
   {
    "between": "L056-L057",
    "gap_s": 0.41,
-   "sfx_in_gap_dbfs": -24.5,
-   "sfx_under_lines_dbfs": -24.6,
-   "dialogue_in_gap_dbfs": -148.7
+   "sfx_in_gap_dbfs": -27.8,
+   "sfx_under_lines_dbfs": -28.5,
+   "dialogue_in_gap_dbfs": -151.2
   },
   {
    "between": "L057-L058",
    "gap_s": 0.21,
-   "sfx_in_gap_dbfs": -20.6,
-   "sfx_under_lines_dbfs": -25.1,
-   "dialogue_in_gap_dbfs": -137.9
+   "sfx_in_gap_dbfs": -24.4,
+   "sfx_under_lines_dbfs": -28.3,
+   "dialogue_in_gap_dbfs": -141.7
   },
   {
    "between": "L058-L059",
    "gap_s": 0.26,
-   "sfx_in_gap_dbfs": -24.4,
-   "sfx_under_lines_dbfs": -24.7,
-   "dialogue_in_gap_dbfs": -145.7
+   "sfx_in_gap_dbfs": -26.9,
+   "sfx_under_lines_dbfs": -27.4,
+   "dialogue_in_gap_dbfs": -148.7
   },
   {
    "between": "L063-L064",
    "gap_s": 0.35,
-   "sfx_in_gap_dbfs": -23.4,
-   "sfx_under_lines_dbfs": -25.6,
-   "dialogue_in_gap_dbfs": -151.1
+   "sfx_in_gap_dbfs": -26.6,
+   "sfx_under_lines_dbfs": -29.4,
+   "dialogue_in_gap_dbfs": -153.9
   },
   {
    "between": "L064-L065",
    "gap_s": 0.27,
-   "sfx_in_gap_dbfs": -22.0,
-   "sfx_under_lines_dbfs": -25.0,
-   "dialogue_in_gap_dbfs": -147.9
+   "sfx_in_gap_dbfs": -25.6,
+   "sfx_under_lines_dbfs": -28.7,
+   "dialogue_in_gap_dbfs": -152.5
   },
   {
    "between": "L065-L066",
    "gap_s": 0.31,
-   "sfx_in_gap_dbfs": -22.2,
-   "sfx_under_lines_dbfs": -24.4,
-   "dialogue_in_gap_dbfs": -147.2
+   "sfx_in_gap_dbfs": -24.9,
+   "sfx_under_lines_dbfs": -27.4,
+   "dialogue_in_gap_dbfs": -149.9
   },
   {
    "between": "L068-L069",
    "gap_s": 0.28,
-   "sfx_in_gap_dbfs": -26.5,
-   "sfx_under_lines_dbfs": -25.3,
-   "dialogue_in_gap_dbfs": -150.0
+   "sfx_in_gap_dbfs": -28.5,
+   "sfx_under_lines_dbfs": -27.9,
+   "dialogue_in_gap_dbfs": -153.3
   },
   {
    "between": "L071-L072",
    "gap_s": 1.12,
-   "sfx_in_gap_dbfs": -22.5,
-   "sfx_under_lines_dbfs": -24.6,
-   "dialogue_in_gap_dbfs": -30.5
+   "sfx_in_gap_dbfs": -23.0,
+   "sfx_under_lines_dbfs": -28.6,
+   "dialogue_in_gap_dbfs": -30.1
   },
   {
    "between": "L072-L073",
    "gap_s": 0.18,
-   "sfx_in_gap_dbfs": -23.7,
-   "sfx_under_lines_dbfs": -25.5,
+   "sfx_in_gap_dbfs": -27.9,
+   "sfx_under_lines_dbfs": -29.9,
    "dialogue_in_gap_dbfs": null
   },
   {
    "between": "L074-L075",
    "gap_s": 0.7,
-   "sfx_in_gap_dbfs": -19.9,
-   "sfx_under_lines_dbfs": -24.4,
-   "dialogue_in_gap_dbfs": -30.2
+   "sfx_in_gap_dbfs": -19.7,
+   "sfx_under_lines_dbfs": -28.5,
+   "dialogue_in_gap_dbfs": -29.8
   },
   {
    "between": "L075-L076",
    "gap_s": 0.24,
-   "sfx_in_gap_dbfs": -30.5,
-   "sfx_under_lines_dbfs": -24.2,
-   "dialogue_in_gap_dbfs": -150.6
+   "sfx_in_gap_dbfs": -31.1,
+   "sfx_under_lines_dbfs": -27.7,
+   "dialogue_in_gap_dbfs": -153.4
   }
  ],
  "music": [
   {
    "cue": "M1",
-   "body_rms_dbfs": -20.1,
+   "body_rms_dbfs": -19.7,
    "after_end_peak": 0.0
   },
   {
    "cue": "M2a",
-   "body_rms_dbfs": -20.0,
+   "body_rms_dbfs": -19.6,
    "after_end_peak": 0.0
   },
   {
    "cue": "M2b",
-   "body_rms_dbfs": -25.3,
+   "body_rms_dbfs": -24.8,
    "after_end_peak": 0.0
   },
   {
    "cue": "M2c",
-   "body_rms_dbfs": -33.5,
+   "body_rms_dbfs": -33.1,
    "after_end_peak": 0.0
   },
   {
    "cue": "M3",
-   "body_rms_dbfs": -22.1,
+   "body_rms_dbfs": -21.7,
    "after_end_peak": 0.0
   }
  ],
  "limiter_regions_s": [
   [
-   16.03,
-   16.731,
-   2.64
-  ],
-  [
-   17.902,
-   18.456,
-   0.88
-  ],
-  [
-   43.145,
-   43.724,
-   1.13
-  ],
-  [
-   43.784,
-   44.397,
-   1.67
-  ],
-  [
-   45.442,
-   46.074,
-   0.48
-  ],
-  [
-   46.101,
-   46.714,
-   1.43
-  ],
-  [
-   47.763,
-   48.229,
-   0.27
-  ],
-  [
-   48.309,
-   48.907,
-   0.6
-  ],
-  [
-   58.69,
-   59.122,
-   0.18
-  ],
-  [
-   62.575,
-   63.302,
-   1.07
-  ],
-  [
-   64.413,
-   65.054,
-   2.91
-  ],
-  [
-   66.796,
-   67.344,
-   0.81
-  ],
-  [
-   68.036,
-   69.343,
-   3.37
-  ],
-  [
-   82.038,
-   82.464,
-   0.17
-  ],
-  [
-   84.477,
-   84.907,
-   0.16
-  ],
-  [
-   90.142,
-   90.702,
-   0.95
-  ],
-  [
-   90.828,
-   91.369,
-   0.75
-  ],
-  [
    106.198,
-   106.794,
-   1.23
+   106.972,
+   2.1
   ],
   [
-   121.44,
-   122.445,
-   3.53
+   121.711,
+   122.397,
+   1.73
   ],
   [
    122.52,
-   122.977,
-   0.23
+   122.906,
+   0.1
   ],
   [
    123.804,
-   124.342,
-   0.71
+   124.238,
+   0.19
   ],
   [
-   125.075,
-   126.359,
-   3.47
-  ],
-  [
-   127.092,
-   127.527,
-   0.15
-  ],
-  [
-   164.53,
-   165.398,
-   3.16
-  ],
-  [
-   184.554,
-   185.355,
-   0.74
-  ],
-  [
-   186.704,
-   187.263,
+   125.076,
+   126.292,
    0.88
   ],
   [
-   192.629,
-   193.214,
-   1.23
+   127.111,
+   127.531,
+   0.15
   ],
   [
-   193.678,
-   194.93,
-   5.02
+   164.548,
+   165.151,
+   0.74
   ],
   [
-   195.055,
-   195.954,
-   4.23
+   184.544,
+   185.401,
+   0.93
+  ],
+  [
+   186.708,
+   187.197,
+   0.38
+  ],
+  [
+   193.696,
+   194.237,
+   0.43
+  ],
+  [
+   194.406,
+   194.719,
+   0.04
   ],
   [
    204.738,
-   205.272,
-   0.53
+   205.226,
+   0.34
   ],
   [
-   206.522,
-   207.447,
-   3.58
+   206.824,
+   207.375,
+   0.77
   ],
   [
-   207.737,
-   208.204,
-   0.28
+   208.718,
+   209.379,
+   0.74
   ],
   [
-   208.671,
-   209.625,
-   2.38
+   210.38,
+   210.818,
+   0.2
   ],
   [
-   209.83,
-   211.289,
-   3.01
-  ],
-  [
-   222.119,
-   223.121,
-   3.47
+   222.12,
+   222.906,
+   0.36
   ],
   [
    224.642,
-   225.454,
-   1.99
+   225.39,
+   0.86
   ],
   [
-   229.012,
-   230.262,
-   4.14
+   229.066,
+   229.438,
+   0.09
   ],
   [
-   231.884,
-   232.721,
-   1.3
+   229.567,
+   230.128,
+   0.52
+  ],
+  [
+   231.967,
+   232.415,
+   0.22
   ],
   [
    237.752,
-   238.962,
-   2.32
+   238.771,
+   1.1
   ],
   [
-   239.238,
-   239.713,
+   240.134,
+   240.499,
+   0.08
+  ],
+  [
+   241.25,
+   241.711,
+   0.27
+  ],
+  [
+   243.369,
+   243.922,
+   0.86
+  ],
+  [
+   288.326,
+   288.704,
+   0.09
+  ],
+  [
+   294.457,
+   295.595,
+   2.83
+  ],
+  [
+   313.524,
+   313.932,
+   0.13
+  ],
+  [
+   314.573,
+   314.942,
+   0.08
+  ],
+  [
+   315.54,
+   315.937,
+   0.12
+  ],
+  [
+   329.84,
+   330.479,
+   2.61
+  ],
+  [
+   332.626,
+   333.237,
+   1.5
+  ],
+  [
+   333.259,
+   333.847,
+   1.13
+  ],
+  [
+   334.51,
+   335.095,
+   1.12
+  ],
+  [
+   335.111,
+   335.715,
+   1.72
+  ],
+  [
+   347.599,
+   349.71,
+   9.02
+  ],
+  [
+   353.009,
+   356.44,
+   4.12
+  ],
+  [
+   356.598,
+   357.14,
+   0.75
+  ],
+  [
+   357.883,
+   358.452,
+   1.07
+  ],
+  [
+   360.342,
+   360.904,
+   0.88
+  ],
+  [
+   361.667,
+   362.232,
+   1.01
+  ],
+  [
+   362.934,
+   363.497,
+   0.4
+  ],
+  [
+   364.298,
+   364.881,
+   1.28
+  ],
+  [
+   367.806,
+   368.296,
+   0.38
+  ],
+  [
+   374.768,
+   375.306,
+   0.71
+  ],
+  [
+   375.367,
+   375.734,
+   0.08
+  ],
+  [
+   376.019,
+   376.539,
+   0.56
+  ],
+  [
+   377.888,
+   378.424,
+   0.59
+  ],
+  [
+   386.494,
+   387.017,
+   0.4
+  ],
+  [
+   387.051,
+   387.696,
+   2.87
+  ],
+  [
+   388.992,
+   389.445,
+   0.24
+  ],
+  [
+   389.662,
+   390.444,
    0.31
+  ],
+  [
+   391.464,
+   391.938,
+   0.31
+  ],
+  [
+   392.736,
+   393.295,
+   0.59
+  ],
+  [
+   403.364,
+   403.957,
+   0.73
+  ],
+  [
+   404.028,
+   405.25,
+   1.58
+  ],
+  [
+   405.259,
+   406.686,
+   2.87
+  ],
+  [
+   407.406,
+   407.93,
+   0.6
+  ],
+  [
+   408.01,
+   408.617,
+   1.77
+  ],
+  [
+   427.598,
+   428.262,
+   0.47
+  ],
+  [
+   429.097,
+   429.678,
+   0.7
+  ],
+  [
+   430.398,
+   430.97,
+   1.11
+  ],
+  [
+   434.516,
+   434.869,
+   0.07
+  ],
+  [
+   435.754,
+   437.617,
+   3.22
+  ],
+  [
+   437.62,
+   438.252,
+   2.53
+  ],
+  [
+   438.472,
+   438.831,
+   0.07
+  ],
+  [
+   445.662,
+   446.261,
+   1.62
+  ],
+  [
+   446.265,
+   446.876,
+   1.8
+  ],
+  [
+   448.718,
+   449.662,
+   4.59
+  ],
+  [
+   450.073,
+   450.994,
+   3.93
+  ],
+  [
+   451.293,
+   452.075,
+   5.5
+  ],
+  [
+   452.591,
+   453.184,
+   0.2
+  ],
+  [
+   455.562,
+   456.099,
+   0.43
+  ],
+  [
+   457.025,
+   457.669,
+   0.71
+  ],
+  [
+   458.731,
+   459.173,
+   0.21
+  ],
+  [
+   459.478,
+   460.001,
+   0.59
+  ],
+  [
+   462.912,
+   463.387,
+   0.28
+  ],
+  [
+   463.52,
+   463.829,
+   0.04
+  ],
+  [
+   464.139,
+   464.659,
+   0.56
+  ],
+  [
+   467.327,
+   467.867,
+   0.73
+  ],
+  [
+   468.222,
+   468.682,
+   0.22
+  ],
+  [
+   468.898,
+   469.219,
+   0.05
+  ],
+  [
+   470.185,
+   470.484,
+   0.03
+  ],
+  [
+   477.393,
+   477.851,
+   0.25
+  ],
+  [
+   478.002,
+   479.156,
+   0.59
+  ],
+  [
+   479.163,
+   479.512,
+   0.06
+  ],
+  [
+   479.824,
+   480.453,
+   1.18
+  ],
+  [
+   480.518,
+   480.982,
+   0.27
+  ],
+  [
+   481.706,
+   482.954,
+   0.43
+  ],
+  [
+   482.957,
+   483.533,
+   0.55
+  ],
+  [
+   484.033,
+   484.4,
+   0.08
+  ],
+  [
+   484.973,
+   485.739,
+   0.88
+  ],
+  [
+   488.052,
+   488.627,
+   1.16
+  ],
+  [
+   488.73,
+   489.121,
+   0.11
+  ],
+  [
+   489.255,
+   489.665,
+   0.14
+  ],
+  [
+   489.744,
+   492.806,
+   3.65
+  ],
+  [
+   493.248,
+   493.777,
+   0.62
+  ],
+  [
+   494.522,
+   495.268,
+   0.18
+  ],
+  [
+   496.704,
+   497.599,
+   1.43
+  ],
+  [
+   497.737,
+   498.123,
+   0.1
+  ],
+  [
+   501.154,
+   501.581,
+   0.17
+  ],
+  [
+   502.182,
+   502.745,
+   0.97
+  ],
+  [
+   506.126,
+   506.751,
+   2.0
+  ],
+  [
+   506.77,
+   507.236,
+   0.28
+  ],
+  [
+   507.462,
+   508.023,
+   0.94
+  ],
+  [
+   508.882,
+   509.253,
+   0.09
+  ],
+  [
+   509.897,
+   511.2,
+   2.53
+  ],
+  [
+   511.409,
+   511.986,
+   1.18
+  ],
+  [
+   512.69,
+   513.348,
+   2.43
+  ],
+  [
+   516.14,
+   520.011,
+   3.06
+  ],
+  [
+   520.487,
+   521.594,
+   1.29
+  ],
+  [
+   522.53,
+   522.962,
+   0.18
+  ],
+  [
+   523.804,
+   524.299,
+   0.41
+  ],
+  [
+   524.654,
+   525.706,
+   0.96
+  ],
+  [
+   526.151,
+   526.743,
+   1.45
+  ],
+  [
+   527.43,
+   527.993,
+   0.98
+  ],
+  [
+   533.924,
+   534.561,
+   2.65
+  ],
+  [
+   537.676,
+   538.491,
+   0.48
+  ],
+  [
+   538.998,
+   539.535,
+   0.63
+  ],
+  [
+   541.818,
+   542.394,
+   1.17
+  ],
+  [
+   546.8,
+   549.933,
+   6.56
+  ],
+  [
+   550.054,
+   551.307,
+   4.4
+  ],
+  [
+   551.348,
+   553.03,
+   1.95
+  ],
+  [
+   553.078,
+   554.809,
+   5.34
+  ],
+  [
+   555.445,
+   556.138,
+   5.54
+  ],
+  [
+   556.272,
+   560.291,
+   5.48
+  ],
+  [
+   562.203,
+   563.091,
+   0.8
+  ],
+  [
+   563.328,
+   564.179,
+   1.46
+  ],
+  [
+   571.712,
+   573.414,
+   1.42
+  ],
+  [
+   576.098,
+   576.617,
+   0.55
+  ],
+  [
+   577.045,
+   578.312,
+   0.74
+  ],
+  [
+   578.651,
+   579.126,
+   0.32
+  ],
+  [
+   579.921,
+   581.023,
+   0.95
+  ],
+  [
+   581.286,
+   581.85,
+   0.71
+  ],
+  [
+   581.893,
+   582.4,
+   0.47
+  ],
+  [
+   584.506,
+   585.169,
+   3.34
+  ],
+  [
+   587.078,
+   587.511,
+   0.19
+  ],
+  [
+   589.856,
+   590.171,
+   0.04
+  ],
+  [
+   593.276,
+   593.865,
+   0.42
+  ],
+  [
+   594.598,
+   595.355,
+   1.61
+  ]
+ ],
+ "master_limiter_on_lines": [
+  [
+   "L006",
+   1.73
+  ],
+  [
+   "L007",
+   0.19
+  ],
+  [
+   "L008",
+   0.88
+  ],
+  [
+   "L009",
+   0.15
+  ],
+  [
+   "L010",
+   0.74
+  ],
+  [
+   "L012",
+   0.93
+  ],
+  [
+   "L013",
+   0.38
+  ],
+  [
+   "L015",
+   0.43
+  ],
+  [
+   "L017",
+   0.34
+  ],
+  [
+   "L018",
+   0.77
+  ],
+  [
+   "L019",
+   0.74
+  ],
+  [
+   "L022",
+   0.36
+  ],
+  [
+   "L024",
+   0.86
+  ],
+  [
+   "L025",
+   0.52
+  ],
+  [
+   "L026",
+   0.22
+  ],
+  [
+   "L027",
+   1.1
+  ],
+  [
+   "L029",
+   0.08
+  ],
+  [
+   "L030",
+   0.27
+  ],
+  [
+   "L031",
+   0.86
+  ],
+  [
+   "L036",
+   0.09
+  ],
+  [
+   "L037",
+   2.83
+  ],
+  [
+   "L039",
+   0.13
+  ],
+  [
+   "L040",
+   0.12
+  ],
+  [
+   "L042",
+   1.28
+  ],
+  [
+   "L043",
+   0.31
+  ],
+  [
+   "L044",
+   0.31
+  ],
+  [
+   "L045",
+   0.59
+  ],
+  [
+   "L046",
+   1.11
+  ],
+  [
+   "L047",
+   0.07
+  ],
+  [
+   "L048",
+   0.2
+  ],
+  [
+   "L049",
+   0.43
+  ],
+  [
+   "L050",
+   0.71
+  ],
+  [
+   "L051",
+   0.59
+  ],
+  [
+   "L052",
+   0.56
+  ],
+  [
+   "L053",
+   0.22
+  ],
+  [
+   "L056",
+   1.18
+  ],
+  [
+   "L057",
+   0.55
+  ],
+  [
+   "L058",
+   0.08
+  ],
+  [
+   "L059",
+   0.88
+  ],
+  [
+   "L060",
+   0.18
+  ],
+  [
+   "L063",
+   1.29
+  ],
+  [
+   "L064",
+   0.18
+  ],
+  [
+   "L065",
+   0.41
+  ],
+  [
+   "L066",
+   0.96
+  ],
+  [
+   "L068",
+   0.48
+  ],
+  [
+   "L069",
+   0.63
+  ],
+  [
+   "L070",
+   5.34
+  ],
+  [
+   "L071",
+   5.48
+  ],
+  [
+   "L073",
+   1.46
+  ],
+  [
+   "L074",
+   0.74
+  ],
+  [
+   "L075",
+   0.32
+  ],
+  [
+   "L076",
+   0.95
+  ],
+  [
+   "L077",
+   3.34
+  ],
+  [
+   "L078",
+   0.42
   ]
  ],
  "subtitles": {

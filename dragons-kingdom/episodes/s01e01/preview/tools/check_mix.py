@@ -58,11 +58,8 @@ def check(name, ok, value, want, warn=False):
 
 
 def dbfs(x):
-    if x.ndim == 2:
-        p = np.mean(x.astype(np.float64) ** 2)
-    else:
-        p = np.mean(x.astype(np.float64) ** 2)
-    return float(10 * np.log10(p + 1e-30))
+    """Mean power over all samples and channels, in dB (stereo: the average channel power)."""
+    return float(10 * np.log10(np.mean(x.astype(np.float64) ** 2) + 1e-30))
 
 
 def seg(x, t0, t1):
@@ -128,7 +125,10 @@ def main():
         ffmpeg("-i", str(master_p), "-c:a", "aac", "-b:a", "256k", str(aac))
         La = ebur128(aac)
     results["loudness_aac256"] = La
-    check("AAC 256k decode: true peak (info)", La["true_peak_dbtp"] <= -1.0, La["true_peak_dbtp"], "<= -1.0 dBTP", warn=True)
+    check("AAC 256k decode (what the render pipeline muxes): true peak", La["true_peak_dbtp"] <= -1.0,
+          La["true_peak_dbtp"], "<= -1.0 dBTP")
+    check("AAC 256k decode: integrated loudness", abs(La["integrated_lufs"] + 16.0) <= 0.5, La["integrated_lufs"],
+          "-16.0 +/- 0.5 LUFS")
     mst = st["mastering"]
     results["mastering"] = {k: mst[k] for k in ("gain1_db", "gain2_db", "stems_gain_db")}
     results["mastering"]["limiter"] = {k: mst["limiter"][k] for k in ("true_peak_in_dbtp", "true_peak_out_dbtp",
@@ -281,6 +281,15 @@ def main():
     res = 10 * np.log10(np.mean(diff ** 2) / (np.mean(ref ** 2) + 1e-30) + 1e-30)
     check("dialogue + music + sfx stems = master (outside limiter regions)", res < -50, round(float(res), 1), "< -50 dB residual")
     results["limiter_regions_s"] = regs
+    touched = []
+    for ln in edl["lines"]:
+        gr = max([r[2] for r in regs if r[0] < ln["speech_out_s"] and r[1] > ln["speech_in_s"]] or [0.0])
+        if gr > 0:
+            touched.append([ln["id"], gr])
+    results["master_limiter_on_lines"] = touched
+    check("master limiter on dialogue (lines touched, worst)", True,
+          f"{len(touched)} of {len(edl['lines'])} lines, worst {max([g for _, g in touched] or [0])} dB "
+          f"({max(touched, key=lambda t: t[1])[0] if touched else '-'})", "info")
 
     # ------------------------------------------------------------------ subtitles
     D = {l["id"]: l for l in json.loads((EP / "dialogue.json").read_text())["lines"]}

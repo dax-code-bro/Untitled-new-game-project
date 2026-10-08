@@ -86,8 +86,8 @@ export async function setup(ctx) {
       members.push(ch);
     }
     if (sh.ground) {
-      const pm = await loadPBR(sh.ground, ctx, { worldSize: 15 });
-      const patch = new THREE.Mesh(new THREE.CircleGeometry(7.5, 64), pm);
+      const pm = await loadPBR(sh.ground, ctx, { worldSize: 24 });
+      const patch = new THREE.Mesh(new THREE.CircleGeometry(12, 64), pm);
       patch.rotation.x = -Math.PI / 2; patch.position.set(cx, 0.004, 0); patch.receiveShadow = true;
       scene.add(patch);
     }

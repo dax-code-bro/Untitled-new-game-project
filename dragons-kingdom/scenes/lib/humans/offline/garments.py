@@ -1015,6 +1015,8 @@ def boots(D, g):
     footv = np.isin(D.cat[old], ['footL', 'footR'])
     Sm = mu.laplacian_smooth_fast(S, nbb, iters=40, lam=0.5, mask=footv.astype(float))
     d_ = np.einsum('ij,ij->i', S - Sm, nS)
+    # (the toe relief kept here is removed afterwards by offline/postfix.py: the foot is pushed
+    # out to its convex hull - plain smoothing shrinks each toe into a claw)
     S = Sm + nS * ((np.maximum(0.0, d_) * 0.7 + 0.0025) * footv)[:, None]
     if not getattr(D, 'seated', False):
         # flatten the underside to the ground plane (the body was lifted by the sole thickness)

@@ -1,1 +1,1 @@
-{ "id": "abby", "accumulate": false, "still": true, "yaw": 0.4, "cam": { "tgt": "head", "off": [0, -0.07, 0.03], "az": 0, "el": 2, "dist": 0.32, "fov": 24, "fstop": 11 } }
+{ "id": "remi", "accumulate": false, "still": true, "cam": { "tgt": [0, 0.1, 0], "az": 30, "el": 12, "dist": 0.9, "fov": 30, "fstop": 11 } }

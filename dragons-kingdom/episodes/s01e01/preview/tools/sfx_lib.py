@@ -854,7 +854,7 @@ def harness_clips(rng, count=3):
         t = 0.18 * i + 0.05 * rng.random()
         click = modal([2400, 3800, 5600], [0.02, 0.015, 0.01], [1, .6, .3], 0.08, rng, 0.04)
         ring = modal([4300, 6100], [0.08, 0.05], [0.3, 0.2], 0.25, rng, 0.03)
-        place(y, click + 0 * ring[: len(click)], ns(t))
+        place(y, click, ns(t))
         place(y, ring, ns(t + 0.002))
     return y, 0.0
 

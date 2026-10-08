@@ -54,7 +54,7 @@ CACHE = MIX / "cache"
 STEMS = MIX / "stems"
 SR, FPS, SPF = fx.SR, fx.FPS, fx.SPF
 TARGET_I, TARGET_TP, TARGET_LRA = -16.0, -1.0, 20.0
-LIMIT_TP = -1.5                     # pre-limiter ceiling, so loudnorm can stay linear with margin
+LIMIT_TP = -2.0                     # pre-limiter ceiling: loudnorm stays linear and an AAC encode stays <= -1 dBTP
 MUSIC_GAIN = {"M1": -5.0, "M2a": -6.0, "M2b": -9.5, "M2c": -9.5, "M3": -7.0}   # dB re dialogue
 MUSIC_DUCK_DB = -9.0                # audio-plan.md tested -6 dB; -9 dB here keeps music 12-18 dB under the voice
 # Dialogue compressor, applied to each take before its line gain (so whisper/quiet/shout levels
@@ -62,6 +62,9 @@ MUSIC_DUCK_DB = -9.0                # audio-plan.md tested -6 dB; -9 dB here kee
 # speech peaks ~3 dB so the master limiter does not have to flatten dialogue.
 DX_COMP = {"threshold_dbfs": -17.0, "ratio": 3.0, "knee_db": 6.0, "attack_s": 0.005, "release_s": 0.12,
            "detector_s": 0.005, "makeup_db": 0.0}
+# then a true-peak limiter per take (take level, before the line gain): speech transients stop at
+# 10 dB above the -20 dBFS speech level, so the master limiter leaves ordinary lines (almost) alone
+DX_TAKE_CEILING_DBTP = -10.0
 DUCK_ATTACK, DUCK_RELEASE, DUCK_LEAD = 0.15, 0.40, 0.15
 REL = lambda p: str(Path(p).resolve().relative_to(REPO))
 
@@ -234,7 +237,7 @@ def alt_targets(tl):
 
 
 # ============================================================================ placement helpers
-def apply_pan(y, p, label=""):
+def apply_pan(y, p):
     if p is None:
         return fx.to_stereo(y, 0.0)
     if isinstance(p, (tuple, list)):
@@ -335,8 +338,11 @@ class Builder:
             assert sr == SR and x.ndim == 1
             dry_db = 10 * np.log10(np.mean(x ** 2) + 1e-20)
             x, gr = compress(x)
+            y2, tl_info = tp_limit(np.stack([x, x], axis=1), DX_TAKE_CEILING_DBTP, release_s=0.05)
+            x = y2[:, 0]
             comp = {"rms_change_db": round(10 * np.log10(np.mean(x ** 2) + 1e-20) - dry_db, 2),
-                    "max_gr_db": round(float(gr.max()), 2)}
+                    "max_gr_db": round(float(gr.max()), 2),
+                    "take_limiter_max_gr_db": tl_info["max_gain_reduction_db"]}
             g = fx.db(ln["mix"]["gain_db"])
             p, why = self.line_pan(ln)
             ev = self.tl.by_id[ln["shot"]]
@@ -553,11 +559,6 @@ class Builder:
                 out.append([e["id"], round(v, 1)])
         return out
 
-    def chamber_span(self):
-        spans = [bed_targets(self.tl, k) for k in ("room", "opening", "lamp")]
-        on = np.where(np.any([d > A.OFF for d in spans], axis=0))[0]
-        return max(0, on[0] - 48), min(self.tl.frames, on[-1] + 49)
-
     def altitude(self):
         log("beds: altitude wind")
         T = alt_targets(self.tl)
@@ -682,7 +683,6 @@ class Builder:
                     "rule": "The sound plays a downstroke at every onset below. If the animation changes, change "
                             "soundtrack_shots.py (HZ, TEMPO, FLIGHT) and rebuild; never retime one side only.",
                     "creatures": {}}
-        dg = None
         beats = Bus(0, self.tl.N)
         for creature in ("leaf", "charcoal"):
             segs = self.onsets(creature)
@@ -859,7 +859,7 @@ class Builder:
             sf.write(str(STEMS / f"{name}.wav"), (self.stem[key].astype(np.float64) * fx.db(total)).astype(np.float32),
                      SR, subtype="FLOAT")
         self.mastering = {"loudnorm_pass1_premaster": m0, "gain1_db": round(g1, 3), "gain1_iterations": iters,
-                          "dialogue_compressor": DX_COMP,
+                          "dialogue_compressor": DX_COMP, "dialogue_take_ceiling_dbtp": DX_TAKE_CEILING_DBTP,
                           "limiter": lim, "loudnorm_pass1_limited": m1, "loudnorm_pass2": m2,
                           "gain2_db": round(g2, 4), "gain2_from": "measured: 10 log10(sum master^2 / sum limited^2)",
                           "gain2_residual_db": round(resid, 1), "stems_gain_db": round(total, 4),
@@ -920,11 +920,11 @@ class Builder:
                       "soundfont": {"path": str(score.SOUNDFONT), "sha256": score.SOUNDFONT_SHA256,
                                     "license": "MIT (Frank Wen), Debian fluid-soundfont-gm 3.1"},
                       "sox": ver(["sox", "--version"])},
-            "build_wall_s": round(wall, 1),
             "problems": self.problems,
             "cues": self.cuesheet,
         }
         (MIX / "soundtrack.json").write_text(json.dumps(doc, indent=1, default=_json_default) + "\n")
+        log(f"wrote mix/soundtrack.json ({len(self.cuesheet)} cue-sheet entries); build took {wall:.0f} s")
 
 
 def _json_default(o):
@@ -1012,7 +1012,7 @@ def tp_limit(x, ceiling_db, block=32, attack_blocks=3, release_s=0.08):
             "max_gain_reduction_db": round(float(-20 * np.log10(gain.min())), 2),
             "active_s": round(float(active.sum() / SR), 2),
             "oversampling": 4, "block": block, "lookahead_ms": round(2 * K * block / SR * 1000, 2), "release_s": release_s}
-    regions, inr = [], False
+    regions = []
     for i in np.where(np.diff(np.concatenate([[0], active.astype(np.int8), [0]])))[0]:
         regions.append(i)
     info["regions"] = [[round(regions[k] / SR, 3), round(regions[k + 1] / SR, 3),

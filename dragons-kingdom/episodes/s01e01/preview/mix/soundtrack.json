@@ -8,10 +8,10 @@
   "dragons-kingdom/episodes/s01e01/preview/edl.json": "04493b33fe330a88b3a204ff55225013f9c953801278f2ae15bac53e9be1b704",
   "dragons-kingdom/episodes/s01e01/preview/render-jobs.json": "289db2c68e936fdf835306e9584ac2514638adfaf80909f2e78a01d67813e475",
   "dragons-kingdom/episodes/s01e01/preview/vo/takes.json": "279623ef9bbd5044d4dabcb14a17750e4ec4afdafb86e79166c840d39e8ec876",
-  "dragons-kingdom/episodes/s01e01/preview/tools/sfx_lib.py": "3249da2375c18a16d751ce2e529525140af9af3df5d4d5ff7ce3d7b2c47fe985",
+  "dragons-kingdom/episodes/s01e01/preview/tools/sfx_lib.py": "54eb1bc3d95fddddb193039e60b4857171e0cdce2ddc81091f3ad67f7dd64afb",
   "dragons-kingdom/episodes/s01e01/preview/tools/score.py": "6a44a1a06c82873377c26c5705540ae4e206bb4d7076748f746e1ef92fba8227",
-  "dragons-kingdom/episodes/s01e01/preview/tools/soundtrack_shots.py": "21a0f42629ac058ee8cfc01dcc47cbb139025ccc93d123b527c0fd17a1a435aa",
-  "dragons-kingdom/episodes/s01e01/preview/tools/build_soundtrack.py": "d3e027b3b4ede44178246f663e5aa45c7a4461863ca6e84f1d3ad707620278cf"
+  "dragons-kingdom/episodes/s01e01/preview/tools/soundtrack_shots.py": "cdf10ef831434de5f03cc23e3eaed6497f54b686644b5d83835a74842f79beb7",
+  "dragons-kingdom/episodes/s01e01/preview/tools/build_soundtrack.py": "81beddb115a3283a32c36ad5c4fa4cdf8c32a0816897b1430c4dc59c0c069e1e"
  },
  "format": {
   "rate": 48000,
@@ -37,7 +37,7 @@
    "music_db": -9.0,
    "altitude_wind_db": -3.0,
    "beds_db": -4.0,
-   "wingbeats_db": -4.0,
+   "wingbeats_db": -10.0,
    "attack_s": 0.15,
    "release_s": 0.4,
    "lead_s": 0.15,
@@ -46,36 +46,30 @@
  },
  "mastering": {
   "loudnorm_pass1_premaster": {
-   "input_i": "-21.43",
+   "input_i": "-21.95",
    "input_tp": "0.81",
-   "input_lra": "17.20",
-   "input_thresh": "-33.13",
-   "output_i": "-16.13",
+   "input_lra": "16.80",
+   "input_thresh": "-33.65",
+   "output_i": "-15.96",
    "output_tp": "-1.00",
-   "output_lra": "15.80",
-   "output_thresh": "-27.65",
+   "output_lra": "15.90",
+   "output_thresh": "-27.48",
    "normalization_type": "dynamic",
-   "target_offset": "0.13"
+   "target_offset": "-0.04"
   },
-  "gain1_db": 5.83,
+  "gain1_db": 6.21,
   "gain1_iterations": [
    {
-    "gain_db": 5.43,
-    "limited_i": -16.34,
-    "limited_tp": -1.49,
-    "limiter_max_gr_db": 7.74
+    "gain_db": 5.95,
+    "limited_i": -16.26,
+    "limited_tp": -1.99,
+    "limiter_max_gr_db": 8.76
    },
    {
-    "gain_db": 5.77,
-    "limited_i": -16.06,
-    "limited_tp": -1.49,
-    "limiter_max_gr_db": 8.08
-   },
-   {
-    "gain_db": 5.83,
-    "limited_i": -16.01,
-    "limited_tp": -1.49,
-    "limiter_max_gr_db": 8.14
+    "gain_db": 6.21,
+    "limited_i": -16.04,
+    "limited_tp": -1.99,
+    "limiter_max_gr_db": 9.02
    }
   ],
   "dialogue_compressor": {
@@ -87,250 +81,748 @@
    "detector_s": 0.005,
    "makeup_db": 0.0
   },
+  "dialogue_take_ceiling_dbtp": -10.0,
   "limiter": {
-   "ceiling_dbtp": -1.5,
-   "true_peak_in_dbtp": 6.64,
-   "true_peak_out_dbtp": -1.5,
-   "max_gain_reduction_db": 8.14,
-   "active_s": 120.48,
+   "ceiling_dbtp": -2.0,
+   "true_peak_in_dbtp": 7.02,
+   "true_peak_out_dbtp": -2.0,
+   "max_gain_reduction_db": 9.02,
+   "active_s": 105.99,
    "oversampling": 4,
    "block": 32,
    "lookahead_ms": 4.0,
    "release_s": 0.08,
    "regions": [
     [
-     16.03,
-     16.731,
-     2.64
-    ],
-    [
-     17.902,
-     18.456,
-     0.88
-    ],
-    [
-     43.145,
-     43.724,
-     1.13
-    ],
-    [
-     43.784,
-     44.397,
-     1.67
-    ],
-    [
-     45.442,
-     46.074,
-     0.48
-    ],
-    [
-     46.101,
-     46.714,
-     1.43
-    ],
-    [
-     47.763,
-     48.229,
-     0.27
-    ],
-    [
-     48.309,
-     48.907,
-     0.6
-    ],
-    [
-     58.69,
-     59.122,
-     0.18
-    ],
-    [
-     62.575,
-     63.302,
-     1.07
-    ],
-    [
-     64.413,
-     65.054,
-     2.91
-    ],
-    [
-     66.796,
-     67.344,
-     0.81
-    ],
-    [
-     68.036,
-     69.343,
-     3.37
-    ],
-    [
-     82.038,
-     82.464,
-     0.17
-    ],
-    [
-     84.477,
-     84.907,
-     0.16
-    ],
-    [
-     90.142,
-     90.702,
-     0.95
-    ],
-    [
-     90.828,
-     91.369,
-     0.75
-    ],
-    [
      106.198,
-     106.794,
-     1.23
+     106.972,
+     2.1
     ],
     [
-     121.44,
-     122.445,
-     3.53
+     121.711,
+     122.397,
+     1.73
     ],
     [
      122.52,
-     122.977,
-     0.23
+     122.906,
+     0.1
     ],
     [
      123.804,
-     124.342,
-     0.71
+     124.238,
+     0.19
     ],
     [
-     125.075,
-     126.359,
-     3.47
-    ],
-    [
-     127.092,
-     127.527,
-     0.15
-    ],
-    [
-     164.53,
-     165.398,
-     3.16
-    ],
-    [
-     184.554,
-     185.355,
-     0.74
-    ],
-    [
-     186.704,
-     187.263,
+     125.076,
+     126.292,
      0.88
     ],
     [
-     192.629,
-     193.214,
-     1.23
+     127.111,
+     127.531,
+     0.15
     ],
     [
-     193.678,
-     194.93,
-     5.02
+     164.548,
+     165.151,
+     0.74
     ],
     [
-     195.055,
-     195.954,
-     4.23
+     184.544,
+     185.401,
+     0.93
+    ],
+    [
+     186.708,
+     187.197,
+     0.38
+    ],
+    [
+     193.696,
+     194.237,
+     0.43
+    ],
+    [
+     194.406,
+     194.719,
+     0.04
     ],
     [
      204.738,
-     205.272,
-     0.53
+     205.226,
+     0.34
     ],
     [
-     206.522,
-     207.447,
-     3.58
+     206.824,
+     207.375,
+     0.77
     ],
     [
-     207.737,
-     208.204,
-     0.28
+     208.718,
+     209.379,
+     0.74
     ],
     [
-     208.671,
-     209.625,
-     2.38
+     210.38,
+     210.818,
+     0.2
     ],
     [
-     209.83,
-     211.289,
-     3.01
-    ],
-    [
-     222.119,
-     223.121,
-     3.47
+     222.12,
+     222.906,
+     0.36
     ],
     [
      224.642,
-     225.454,
-     1.99
+     225.39,
+     0.86
     ],
     [
-     229.012,
-     230.262,
-     4.14
+     229.066,
+     229.438,
+     0.09
     ],
     [
-     231.884,
-     232.721,
-     1.3
+     229.567,
+     230.128,
+     0.52
+    ],
+    [
+     231.967,
+     232.415,
+     0.22
     ],
     [
      237.752,
-     238.962,
-     2.32
+     238.771,
+     1.1
     ],
     [
-     239.238,
-     239.713,
+     240.134,
+     240.499,
+     0.08
+    ],
+    [
+     241.25,
+     241.711,
+     0.27
+    ],
+    [
+     243.369,
+     243.922,
+     0.86
+    ],
+    [
+     288.326,
+     288.704,
+     0.09
+    ],
+    [
+     294.457,
+     295.595,
+     2.83
+    ],
+    [
+     313.524,
+     313.932,
+     0.13
+    ],
+    [
+     314.573,
+     314.942,
+     0.08
+    ],
+    [
+     315.54,
+     315.937,
+     0.12
+    ],
+    [
+     329.84,
+     330.479,
+     2.61
+    ],
+    [
+     332.626,
+     333.237,
+     1.5
+    ],
+    [
+     333.259,
+     333.847,
+     1.13
+    ],
+    [
+     334.51,
+     335.095,
+     1.12
+    ],
+    [
+     335.111,
+     335.715,
+     1.72
+    ],
+    [
+     347.599,
+     349.71,
+     9.02
+    ],
+    [
+     353.009,
+     356.44,
+     4.12
+    ],
+    [
+     356.598,
+     357.14,
+     0.75
+    ],
+    [
+     357.883,
+     358.452,
+     1.07
+    ],
+    [
+     360.342,
+     360.904,
+     0.88
+    ],
+    [
+     361.667,
+     362.232,
+     1.01
+    ],
+    [
+     362.934,
+     363.497,
+     0.4
+    ],
+    [
+     364.298,
+     364.881,
+     1.28
+    ],
+    [
+     367.806,
+     368.296,
+     0.38
+    ],
+    [
+     374.768,
+     375.306,
+     0.71
+    ],
+    [
+     375.367,
+     375.734,
+     0.08
+    ],
+    [
+     376.019,
+     376.539,
+     0.56
+    ],
+    [
+     377.888,
+     378.424,
+     0.59
+    ],
+    [
+     386.494,
+     387.017,
+     0.4
+    ],
+    [
+     387.051,
+     387.696,
+     2.87
+    ],
+    [
+     388.992,
+     389.445,
+     0.24
+    ],
+    [
+     389.662,
+     390.444,
      0.31
+    ],
+    [
+     391.464,
+     391.938,
+     0.31
+    ],
+    [
+     392.736,
+     393.295,
+     0.59
+    ],
+    [
+     403.364,
+     403.957,
+     0.73
+    ],
+    [
+     404.028,
+     405.25,
+     1.58
+    ],
+    [
+     405.259,
+     406.686,
+     2.87
+    ],
+    [
+     407.406,
+     407.93,
+     0.6
+    ],
+    [
+     408.01,
+     408.617,
+     1.77
+    ],
+    [
+     427.598,
+     428.262,
+     0.47
+    ],
+    [
+     429.097,
+     429.678,
+     0.7
+    ],
+    [
+     430.398,
+     430.97,
+     1.11
+    ],
+    [
+     434.516,
+     434.869,
+     0.07
+    ],
+    [
+     435.754,
+     437.617,
+     3.22
+    ],
+    [
+     437.62,
+     438.252,
+     2.53
+    ],
+    [
+     438.472,
+     438.831,
+     0.07
+    ],
+    [
+     445.662,
+     446.261,
+     1.62
+    ],
+    [
+     446.265,
+     446.876,
+     1.8
+    ],
+    [
+     448.718,
+     449.662,
+     4.59
+    ],
+    [
+     450.073,
+     450.994,
+     3.93
+    ],
+    [
+     451.293,
+     452.075,
+     5.5
+    ],
+    [
+     452.591,
+     453.184,
+     0.2
+    ],
+    [
+     455.562,
+     456.099,
+     0.43
+    ],
+    [
+     457.025,
+     457.669,
+     0.71
+    ],
+    [
+     458.731,
+     459.173,
+     0.21
+    ],
+    [
+     459.478,
+     460.001,
+     0.59
+    ],
+    [
+     462.912,
+     463.387,
+     0.28
+    ],
+    [
+     463.52,
+     463.829,
+     0.04
+    ],
+    [
+     464.139,
+     464.659,
+     0.56
+    ],
+    [
+     467.327,
+     467.867,
+     0.73
+    ],
+    [
+     468.222,
+     468.682,
+     0.22
+    ],
+    [
+     468.898,
+     469.219,
+     0.05
+    ],
+    [
+     470.185,
+     470.484,
+     0.03
+    ],
+    [
+     477.393,
+     477.851,
+     0.25
+    ],
+    [
+     478.002,
+     479.156,
+     0.59
+    ],
+    [
+     479.163,
+     479.512,
+     0.06
+    ],
+    [
+     479.824,
+     480.453,
+     1.18
+    ],
+    [
+     480.518,
+     480.982,
+     0.27
+    ],
+    [
+     481.706,
+     482.954,
+     0.43
+    ],
+    [
+     482.957,
+     483.533,
+     0.55
+    ],
+    [
+     484.033,
+     484.4,
+     0.08
+    ],
+    [
+     484.973,
+     485.739,
+     0.88
+    ],
+    [
+     488.052,
+     488.627,
+     1.16
+    ],
+    [
+     488.73,
+     489.121,
+     0.11
+    ],
+    [
+     489.255,
+     489.665,
+     0.14
+    ],
+    [
+     489.744,
+     492.806,
+     3.65
+    ],
+    [
+     493.248,
+     493.777,
+     0.62
+    ],
+    [
+     494.522,
+     495.268,
+     0.18
+    ],
+    [
+     496.704,
+     497.599,
+     1.43
+    ],
+    [
+     497.737,
+     498.123,
+     0.1
+    ],
+    [
+     501.154,
+     501.581,
+     0.17
+    ],
+    [
+     502.182,
+     502.745,
+     0.97
+    ],
+    [
+     506.126,
+     506.751,
+     2.0
+    ],
+    [
+     506.77,
+     507.236,
+     0.28
+    ],
+    [
+     507.462,
+     508.023,
+     0.94
+    ],
+    [
+     508.882,
+     509.253,
+     0.09
+    ],
+    [
+     509.897,
+     511.2,
+     2.53
+    ],
+    [
+     511.409,
+     511.986,
+     1.18
+    ],
+    [
+     512.69,
+     513.348,
+     2.43
+    ],
+    [
+     516.14,
+     520.011,
+     3.06
+    ],
+    [
+     520.487,
+     521.594,
+     1.29
+    ],
+    [
+     522.53,
+     522.962,
+     0.18
+    ],
+    [
+     523.804,
+     524.299,
+     0.41
+    ],
+    [
+     524.654,
+     525.706,
+     0.96
+    ],
+    [
+     526.151,
+     526.743,
+     1.45
+    ],
+    [
+     527.43,
+     527.993,
+     0.98
+    ],
+    [
+     533.924,
+     534.561,
+     2.65
+    ],
+    [
+     537.676,
+     538.491,
+     0.48
+    ],
+    [
+     538.998,
+     539.535,
+     0.63
+    ],
+    [
+     541.818,
+     542.394,
+     1.17
+    ],
+    [
+     546.8,
+     549.933,
+     6.56
+    ],
+    [
+     550.054,
+     551.307,
+     4.4
+    ],
+    [
+     551.348,
+     553.03,
+     1.95
+    ],
+    [
+     553.078,
+     554.809,
+     5.34
+    ],
+    [
+     555.445,
+     556.138,
+     5.54
+    ],
+    [
+     556.272,
+     560.291,
+     5.48
+    ],
+    [
+     562.203,
+     563.091,
+     0.8
+    ],
+    [
+     563.328,
+     564.179,
+     1.46
+    ],
+    [
+     571.712,
+     573.414,
+     1.42
+    ],
+    [
+     576.098,
+     576.617,
+     0.55
+    ],
+    [
+     577.045,
+     578.312,
+     0.74
+    ],
+    [
+     578.651,
+     579.126,
+     0.32
+    ],
+    [
+     579.921,
+     581.023,
+     0.95
+    ],
+    [
+     581.286,
+     581.85,
+     0.71
+    ],
+    [
+     581.893,
+     582.4,
+     0.47
+    ],
+    [
+     584.506,
+     585.169,
+     3.34
+    ],
+    [
+     587.078,
+     587.511,
+     0.19
+    ],
+    [
+     589.856,
+     590.171,
+     0.04
+    ],
+    [
+     593.276,
+     593.865,
+     0.42
+    ],
+    [
+     594.598,
+     595.355,
+     1.61
     ]
    ]
   },
   "loudnorm_pass1_limited": {
-   "input_i": "-16.01",
-   "input_tp": "-1.49",
-   "input_lra": "16.80",
-   "input_thresh": "-27.65",
-   "output_i": "-15.95",
+   "input_i": "-16.04",
+   "input_tp": "-1.99",
+   "input_lra": "16.50",
+   "input_thresh": "-27.70",
+   "output_i": "-15.89",
    "output_tp": "-1.00",
-   "output_lra": "15.50",
-   "output_thresh": "-27.38",
+   "output_lra": "15.60",
+   "output_thresh": "-27.34",
    "normalization_type": "dynamic",
-   "target_offset": "-0.05"
+   "target_offset": "-0.11"
   },
   "loudnorm_pass2": {
-   "input_i": "-15.97",
-   "input_tp": "-1.51",
-   "input_lra": "16.80",
-   "input_thresh": "-27.61",
+   "input_i": "-16.00",
+   "input_tp": "-2.01",
+   "input_lra": "16.40",
+   "input_thresh": "-27.65",
    "output_i": "-15.97",
-   "output_tp": "-1.50",
-   "output_lra": "16.80",
-   "output_thresh": "-27.60",
+   "output_tp": "-1.97",
+   "output_lra": "16.50",
+   "output_thresh": "-27.61",
    "normalization_type": "linear",
    "target_offset": "-0.03"
   },
-  "gain2_db": 0.01,
-  "stems_gain_db": 5.84,
+  "gain2_db": 0.04,
+  "gain2_from": "measured: 10 log10(sum master^2 / sum limited^2)",
+  "gain2_residual_db": -123.2,
+  "stems_gain_db": 6.25,
   "targets": {
    "I": -16.0,
    "TP": -1.0,
    "LRA": 20.0,
-   "pre_limiter_ceiling_dbtp": -1.5
+   "pre_limiter_ceiling_dbtp": -2.0
   },
   "master_samples": 28794000,
   "master_subtype": "PCM_24"
@@ -348,7 +840,6 @@
   },
   "sox": "sox:      SoX v14.4.2"
  },
- "build_wall_s": 517.3,
  "problems": [],
  "cues": [
   {
@@ -367,8 +858,9 @@
    "space": null,
    "send_db": null,
    "compressor": {
-    "rms_change_db": -0.79,
-    "max_gr_db": 2.18
+    "rms_change_db": -1.3,
+    "max_gr_db": 2.18,
+    "take_limiter_max_gr_db": 5.17
    },
    "voice": "bf_emma",
    "voice_license": "Apache-2.0"
@@ -389,8 +881,9 @@
    "space": null,
    "send_db": null,
    "compressor": {
-    "rms_change_db": -0.86,
-    "max_gr_db": 3.47
+    "rms_change_db": -1.48,
+    "max_gr_db": 3.47,
+    "take_limiter_max_gr_db": 4.33
    },
    "voice": "bf_emma",
    "voice_license": "Apache-2.0"
@@ -442,8 +935,9 @@
    "space": null,
    "send_db": null,
    "compressor": {
-    "rms_change_db": -1.05,
-    "max_gr_db": 3.82
+    "rms_change_db": -1.77,
+    "max_gr_db": 3.82,
+    "take_limiter_max_gr_db": 5.98
    },
    "voice": "bf_emma",
    "voice_license": "Apache-2.0"
@@ -464,8 +958,9 @@
    "space": null,
    "send_db": null,
    "compressor": {
-    "rms_change_db": -0.94,
-    "max_gr_db": 2.97
+    "rms_change_db": -1.4,
+    "max_gr_db": 2.97,
+    "take_limiter_max_gr_db": 2.39
    },
    "voice": "bf_emma",
    "voice_license": "Apache-2.0"
@@ -486,8 +981,9 @@
    "space": null,
    "send_db": null,
    "compressor": {
-    "rms_change_db": -0.97,
-    "max_gr_db": 3.53
+    "rms_change_db": -1.62,
+    "max_gr_db": 3.53,
+    "take_limiter_max_gr_db": 3.63
    },
    "voice": "bf_emma",
    "voice_license": "Apache-2.0"
@@ -508,8 +1004,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.41,
-    "max_gr_db": 2.99
+    "rms_change_db": -2.44,
+    "max_gr_db": 2.99,
+    "take_limiter_max_gr_db": 4.26
    },
    "voice": "af_river",
    "voice_license": "Apache-2.0"
@@ -530,8 +1027,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -0.8,
-    "max_gr_db": 1.54
+    "rms_change_db": -1.0,
+    "max_gr_db": 1.54,
+    "take_limiter_max_gr_db": 0.84
    },
    "voice": "af_kore",
    "voice_license": "Apache-2.0"
@@ -552,8 +1050,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -0.89,
-    "max_gr_db": 1.61
+    "rms_change_db": -2.05,
+    "max_gr_db": 1.61,
+    "take_limiter_max_gr_db": 3.88
    },
    "voice": "af_river",
    "voice_license": "Apache-2.0"
@@ -575,7 +1074,8 @@
    "send_db": -13.0,
    "compressor": {
     "rms_change_db": -0.47,
-    "max_gr_db": 0.72
+    "max_gr_db": 0.72,
+    "take_limiter_max_gr_db": -0.0
    },
    "voice": "af_kore",
    "voice_license": "Apache-2.0"
@@ -596,8 +1096,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.13,
-    "max_gr_db": 2.61
+    "rms_change_db": -2.4,
+    "max_gr_db": 2.61,
+    "take_limiter_max_gr_db": 4.85
    },
    "voice": "af_river",
    "voice_license": "Apache-2.0"
@@ -618,8 +1119,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.41,
-    "max_gr_db": 4.22
+    "rms_change_db": -1.86,
+    "max_gr_db": 4.22,
+    "take_limiter_max_gr_db": 1.66
    },
    "voice": "af_kore",
    "voice_license": "Apache-2.0"
@@ -640,8 +1142,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.22,
-    "max_gr_db": 2.31
+    "rms_change_db": -1.47,
+    "max_gr_db": 2.31,
+    "take_limiter_max_gr_db": 1.46
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -662,8 +1165,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -0.73,
-    "max_gr_db": 1.37
+    "rms_change_db": -0.89,
+    "max_gr_db": 1.37,
+    "take_limiter_max_gr_db": 0.66
    },
    "voice": "af_kore",
    "voice_license": "Apache-2.0"
@@ -684,8 +1188,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.01,
-    "max_gr_db": 1.93
+    "rms_change_db": -1.63,
+    "max_gr_db": 1.93,
+    "take_limiter_max_gr_db": 2.32
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -706,8 +1211,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.49,
-    "max_gr_db": 2.67
+    "rms_change_db": -2.55,
+    "max_gr_db": 2.67,
+    "take_limiter_max_gr_db": 5.47
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -728,8 +1234,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -0.58,
-    "max_gr_db": 0.99
+    "rms_change_db": -1.08,
+    "max_gr_db": 0.99,
+    "take_limiter_max_gr_db": 5.26
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -750,8 +1257,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -0.66,
-    "max_gr_db": 1.88
+    "rms_change_db": -0.68,
+    "max_gr_db": 1.88,
+    "take_limiter_max_gr_db": 0.32
    },
    "voice": "af_kore",
    "voice_license": "Apache-2.0"
@@ -772,8 +1280,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.41,
-    "max_gr_db": 3.16
+    "rms_change_db": -2.37,
+    "max_gr_db": 3.16,
+    "take_limiter_max_gr_db": 4.72
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -794,8 +1303,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -0.77,
-    "max_gr_db": 1.94
+    "rms_change_db": -1.86,
+    "max_gr_db": 1.94,
+    "take_limiter_max_gr_db": 3.59
    },
    "voice": "af_river",
    "voice_license": "Apache-2.0"
@@ -816,8 +1326,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.21,
-    "max_gr_db": 2.28
+    "rms_change_db": -1.84,
+    "max_gr_db": 2.28,
+    "take_limiter_max_gr_db": 2.41
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -839,7 +1350,8 @@
    "send_db": -13.0,
    "compressor": {
     "rms_change_db": -1.16,
-    "max_gr_db": 2.03
+    "max_gr_db": 2.03,
+    "take_limiter_max_gr_db": 0.0
    },
    "voice": "af_kore",
    "voice_license": "Apache-2.0"
@@ -860,8 +1372,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.33,
-    "max_gr_db": 3.18
+    "rms_change_db": -2.14,
+    "max_gr_db": 3.18,
+    "take_limiter_max_gr_db": 4.08
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -882,8 +1395,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -0.77,
-    "max_gr_db": 2.3
+    "rms_change_db": -0.86,
+    "max_gr_db": 2.3,
+    "take_limiter_max_gr_db": 0.53
    },
    "voice": "af_kore",
    "voice_license": "Apache-2.0"
@@ -904,8 +1418,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -0.99,
-    "max_gr_db": 1.97
+    "rms_change_db": -1.45,
+    "max_gr_db": 1.97,
+    "take_limiter_max_gr_db": 1.81
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -926,8 +1441,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.07,
-    "max_gr_db": 2.77
+    "rms_change_db": -2.48,
+    "max_gr_db": 2.77,
+    "take_limiter_max_gr_db": 5.36
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -948,8 +1464,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -0.72,
-    "max_gr_db": 1.87
+    "rms_change_db": -0.92,
+    "max_gr_db": 1.87,
+    "take_limiter_max_gr_db": 2.41
    },
    "voice": "af_kore",
    "voice_license": "Apache-2.0"
@@ -970,8 +1487,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.8,
-    "max_gr_db": 3.94
+    "rms_change_db": -2.62,
+    "max_gr_db": 3.94,
+    "take_limiter_max_gr_db": 2.94
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -992,8 +1510,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.73,
-    "max_gr_db": 3.36
+    "rms_change_db": -2.17,
+    "max_gr_db": 3.36,
+    "take_limiter_max_gr_db": 1.65
    },
    "voice": "af_kore",
    "voice_license": "Apache-2.0"
@@ -1014,8 +1533,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.41,
-    "max_gr_db": 2.54
+    "rms_change_db": -1.6,
+    "max_gr_db": 2.54,
+    "take_limiter_max_gr_db": 0.69
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1036,8 +1556,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.08,
-    "max_gr_db": 2.24
+    "rms_change_db": -1.2,
+    "max_gr_db": 2.24,
+    "take_limiter_max_gr_db": 0.83
    },
    "voice": "af_kore",
    "voice_license": "Apache-2.0"
@@ -1058,8 +1579,9 @@
    "space": "chamber",
    "send_db": -13.0,
    "compressor": {
-    "rms_change_db": -1.36,
-    "max_gr_db": 2.6
+    "rms_change_db": -2.01,
+    "max_gr_db": 2.6,
+    "take_limiter_max_gr_db": 1.77
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1080,8 +1602,9 @@
    "space": "grounds",
    "send_db": -20.0,
    "compressor": {
-    "rms_change_db": -1.05,
-    "max_gr_db": 1.69
+    "rms_change_db": -1.35,
+    "max_gr_db": 1.69,
+    "take_limiter_max_gr_db": 2.13
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1102,8 +1625,9 @@
    "space": "grounds",
    "send_db": -20.0,
    "compressor": {
-    "rms_change_db": -2.01,
-    "max_gr_db": 2.81
+    "rms_change_db": -2.65,
+    "max_gr_db": 2.81,
+    "take_limiter_max_gr_db": 1.34
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1124,8 +1648,9 @@
    "space": "grounds",
    "send_db": -20.0,
    "compressor": {
-    "rms_change_db": -0.66,
-    "max_gr_db": 1.34
+    "rms_change_db": -0.88,
+    "max_gr_db": 1.34,
+    "take_limiter_max_gr_db": 1.86
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1146,8 +1671,9 @@
    "space": "grounds",
    "send_db": -20.0,
    "compressor": {
-    "rms_change_db": -1.12,
-    "max_gr_db": 3.68
+    "rms_change_db": -1.56,
+    "max_gr_db": 3.68,
+    "take_limiter_max_gr_db": 3.72
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1168,8 +1694,9 @@
    "space": "grounds",
    "send_db": -20.0,
    "compressor": {
-    "rms_change_db": -1.1,
-    "max_gr_db": 2.17
+    "rms_change_db": -1.48,
+    "max_gr_db": 2.17,
+    "take_limiter_max_gr_db": 2.35
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1191,7 +1718,8 @@
    "send_db": -20.0,
    "compressor": {
     "rms_change_db": -1.04,
-    "max_gr_db": 2.48
+    "max_gr_db": 2.48,
+    "take_limiter_max_gr_db": -0.0
    },
    "voice": "am_fenrir",
    "voice_license": "Apache-2.0"
@@ -1212,8 +1740,9 @@
    "space": "grounds",
    "send_db": -20.0,
    "compressor": {
-    "rms_change_db": -1.28,
-    "max_gr_db": 3.78
+    "rms_change_db": -1.94,
+    "max_gr_db": 3.78,
+    "take_limiter_max_gr_db": 3.0
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1234,8 +1763,9 @@
    "space": "grounds",
    "send_db": -20.0,
    "compressor": {
-    "rms_change_db": -0.59,
-    "max_gr_db": 0.95
+    "rms_change_db": -1.07,
+    "max_gr_db": 0.95,
+    "take_limiter_max_gr_db": 4.14
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1256,8 +1786,9 @@
    "space": "grounds",
    "send_db": -20.0,
    "compressor": {
-    "rms_change_db": -1.38,
-    "max_gr_db": 2.82
+    "rms_change_db": -2.25,
+    "max_gr_db": 2.82,
+    "take_limiter_max_gr_db": 2.98
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1278,8 +1809,9 @@
    "space": "grounds",
    "send_db": -20.0,
    "compressor": {
-    "rms_change_db": -1.36,
-    "max_gr_db": 2.03
+    "rms_change_db": -1.8,
+    "max_gr_db": 2.03,
+    "take_limiter_max_gr_db": 3.87
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1300,8 +1832,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.13,
-    "max_gr_db": 2.71
+    "rms_change_db": -1.6,
+    "max_gr_db": 2.71,
+    "take_limiter_max_gr_db": 2.59
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1322,8 +1855,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.39,
-    "max_gr_db": 3.91
+    "rms_change_db": -2.2,
+    "max_gr_db": 3.91,
+    "take_limiter_max_gr_db": 5.33
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1344,8 +1878,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.41,
-    "max_gr_db": 2.54
+    "rms_change_db": -1.6,
+    "max_gr_db": 2.54,
+    "take_limiter_max_gr_db": 0.69
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1366,8 +1901,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.11,
-    "max_gr_db": 1.82
+    "rms_change_db": -2.35,
+    "max_gr_db": 1.82,
+    "take_limiter_max_gr_db": 3.01
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1388,8 +1924,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.66,
-    "max_gr_db": 5.28
+    "rms_change_db": -2.32,
+    "max_gr_db": 5.28,
+    "take_limiter_max_gr_db": 3.66
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1410,8 +1947,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.75,
-    "max_gr_db": 3.5
+    "rms_change_db": -2.59,
+    "max_gr_db": 3.5,
+    "take_limiter_max_gr_db": 3.26
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1432,8 +1970,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.1,
-    "max_gr_db": 2.35
+    "rms_change_db": -1.57,
+    "max_gr_db": 2.35,
+    "take_limiter_max_gr_db": 2.43
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1454,8 +1993,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.35,
-    "max_gr_db": 3.55
+    "rms_change_db": -2.11,
+    "max_gr_db": 3.55,
+    "take_limiter_max_gr_db": 2.92
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1476,8 +2016,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -0.86,
-    "max_gr_db": 1.5
+    "rms_change_db": -1.54,
+    "max_gr_db": 1.5,
+    "take_limiter_max_gr_db": 4.28
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1498,8 +2039,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.52,
-    "max_gr_db": 4.47
+    "rms_change_db": -2.46,
+    "max_gr_db": 4.47,
+    "take_limiter_max_gr_db": 5.37
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1520,8 +2062,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -0.83,
-    "max_gr_db": 1.75
+    "rms_change_db": -1.1,
+    "max_gr_db": 1.75,
+    "take_limiter_max_gr_db": 2.24
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1542,8 +2085,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.29,
-    "max_gr_db": 2.66
+    "rms_change_db": -2.27,
+    "max_gr_db": 2.66,
+    "take_limiter_max_gr_db": 3.7
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1564,8 +2108,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.59,
-    "max_gr_db": 2.61
+    "rms_change_db": -2.42,
+    "max_gr_db": 2.61,
+    "take_limiter_max_gr_db": 3.46
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1586,8 +2131,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.49,
-    "max_gr_db": 2.94
+    "rms_change_db": -2.52,
+    "max_gr_db": 2.94,
+    "take_limiter_max_gr_db": 4.38
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1608,8 +2154,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -0.91,
-    "max_gr_db": 3.12
+    "rms_change_db": -1.73,
+    "max_gr_db": 3.12,
+    "take_limiter_max_gr_db": 4.36
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1630,8 +2177,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.05,
-    "max_gr_db": 3.66
+    "rms_change_db": -1.88,
+    "max_gr_db": 3.66,
+    "take_limiter_max_gr_db": 4.39
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1652,8 +2200,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -0.99,
-    "max_gr_db": 2.05
+    "rms_change_db": -1.3,
+    "max_gr_db": 2.05,
+    "take_limiter_max_gr_db": 1.59
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1674,8 +2223,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.36,
-    "max_gr_db": 2.52
+    "rms_change_db": -2.12,
+    "max_gr_db": 2.52,
+    "take_limiter_max_gr_db": 2.85
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1696,8 +2246,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.55,
-    "max_gr_db": 3.0
+    "rms_change_db": -2.07,
+    "max_gr_db": 3.0,
+    "take_limiter_max_gr_db": 2.5
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1718,8 +2269,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.0,
-    "max_gr_db": 1.84
+    "rms_change_db": -1.53,
+    "max_gr_db": 1.84,
+    "take_limiter_max_gr_db": 2.27
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1740,8 +2292,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.26,
-    "max_gr_db": 2.93
+    "rms_change_db": -1.95,
+    "max_gr_db": 2.93,
+    "take_limiter_max_gr_db": 2.71
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1762,8 +2315,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.02,
-    "max_gr_db": 2.69
+    "rms_change_db": -1.22,
+    "max_gr_db": 2.69,
+    "take_limiter_max_gr_db": 1.78
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1784,8 +2338,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.17,
-    "max_gr_db": 2.15
+    "rms_change_db": -2.43,
+    "max_gr_db": 2.15,
+    "take_limiter_max_gr_db": 3.42
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1806,8 +2361,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.35,
-    "max_gr_db": 3.22
+    "rms_change_db": -1.67,
+    "max_gr_db": 3.22,
+    "take_limiter_max_gr_db": 1.82
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1828,8 +2384,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.32,
-    "max_gr_db": 2.36
+    "rms_change_db": -2.33,
+    "max_gr_db": 2.36,
+    "take_limiter_max_gr_db": 3.21
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1850,8 +2407,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -0.94,
-    "max_gr_db": 2.08
+    "rms_change_db": -1.35,
+    "max_gr_db": 2.08,
+    "take_limiter_max_gr_db": 2.89
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1872,8 +2430,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.19,
-    "max_gr_db": 2.19
+    "rms_change_db": -1.91,
+    "max_gr_db": 2.19,
+    "take_limiter_max_gr_db": 3.15
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1894,8 +2453,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.41,
-    "max_gr_db": 2.54
+    "rms_change_db": -1.6,
+    "max_gr_db": 2.54,
+    "take_limiter_max_gr_db": 0.69
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1917,7 +2477,8 @@
    "send_db": -30.0,
    "compressor": {
     "rms_change_db": -0.67,
-    "max_gr_db": 1.32
+    "max_gr_db": 1.32,
+    "take_limiter_max_gr_db": -0.0
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1938,8 +2499,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.18,
-    "max_gr_db": 3.19
+    "rms_change_db": -1.19,
+    "max_gr_db": 3.19,
+    "take_limiter_max_gr_db": 0.11
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -1960,8 +2522,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.48,
-    "max_gr_db": 3.53
+    "rms_change_db": -2.09,
+    "max_gr_db": 3.53,
+    "take_limiter_max_gr_db": 3.42
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -1982,8 +2545,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.65,
-    "max_gr_db": 4.28
+    "rms_change_db": -2.48,
+    "max_gr_db": 4.28,
+    "take_limiter_max_gr_db": 3.39
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -2004,8 +2568,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.37,
-    "max_gr_db": 2.7
+    "rms_change_db": -2.47,
+    "max_gr_db": 2.7,
+    "take_limiter_max_gr_db": 3.19
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -2026,8 +2591,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.31,
-    "max_gr_db": 2.49
+    "rms_change_db": -2.56,
+    "max_gr_db": 2.49,
+    "take_limiter_max_gr_db": 5.53
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -2048,8 +2614,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.38,
-    "max_gr_db": 3.26
+    "rms_change_db": -2.35,
+    "max_gr_db": 3.26,
+    "take_limiter_max_gr_db": 5.67
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -2070,8 +2637,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -1.24,
-    "max_gr_db": 2.44
+    "rms_change_db": -2.42,
+    "max_gr_db": 2.44,
+    "take_limiter_max_gr_db": 4.23
    },
    "voice": "af_heart",
    "voice_license": "Apache-2.0"
@@ -2092,8 +2660,9 @@
    "space": "sky",
    "send_db": -30.0,
    "compressor": {
-    "rms_change_db": -0.8,
-    "max_gr_db": 1.42
+    "rms_change_db": -0.84,
+    "max_gr_db": 1.42,
+    "take_limiter_max_gr_db": 0.21
    },
    "voice": "am_michael",
    "voice_license": "Apache-2.0"
@@ -5529,12 +6098,12 @@
      "bright": 0.6
     },
     "1E-04": {
-     "level_db": -11.0,
+     "level_db": -13.0,
      "buffet": 0.9,
      "bright": 0.6
     },
     "1E-05": {
-     "level_db": -12.0,
+     "level_db": -13.0,
      "buffet": 0.8,
      "bright": 0.6
     },
@@ -5544,7 +6113,7 @@
      "bright": 0.5
     },
     "1E-07": {
-     "level_db": -12.0,
+     "level_db": -13.0,
      "buffet": 0.7,
      "bright": 0.6
     },
@@ -5662,7 +6231,7 @@
    "id": "beats:leaf",
    "count": 426,
    "source": "procedural: sfx_lib.leaf_beat",
-   "duck_db": -4.0,
+   "duck_db": -10.0,
    "beats": [
     {
      "frame": 7913.0,
@@ -8648,7 +9217,7 @@
      "sample": 26288000,
      "shot": "1E-04",
      "mode": "uneven",
-     "gain_db": -4.54,
+     "gain_db": -6.54,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8657,7 +9226,7 @@
      "sample": 26303567,
      "shot": "1E-04",
      "mode": "uneven",
-     "gain_db": -3.73,
+     "gain_db": -5.73,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8666,7 +9235,7 @@
      "sample": 26319643,
      "shot": "1E-04",
      "mode": "uneven",
-     "gain_db": -1.28,
+     "gain_db": -3.28,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8675,7 +9244,7 @@
      "sample": 26338151,
      "shot": "1E-04",
      "mode": "uneven",
-     "gain_db": -0.85,
+     "gain_db": -2.85,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8684,7 +9253,7 @@
      "sample": 26361068,
      "shot": "1E-04",
      "mode": "uneven",
-     "gain_db": -3.75,
+     "gain_db": -5.75,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8693,7 +9262,7 @@
      "sample": 26379349,
      "shot": "1E-04",
      "mode": "uneven",
-     "gain_db": -4.35,
+     "gain_db": -6.35,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8702,7 +9271,7 @@
      "sample": 26399029,
      "shot": "1E-04",
      "mode": "uneven",
-     "gain_db": -5.28,
+     "gain_db": -7.28,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8711,7 +9280,7 @@
      "sample": 26414555,
      "shot": "1E-04",
      "mode": "uneven",
-     "gain_db": -1.62,
+     "gain_db": -3.62,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8720,7 +9289,7 @@
      "sample": 26428305,
      "shot": "1E-04",
      "mode": "uneven",
-     "gain_db": -2.3,
+     "gain_db": -4.3,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8729,7 +9298,7 @@
      "sample": 26443751,
      "shot": "1E-05",
      "mode": "uneven",
-     "gain_db": -4.4,
+     "gain_db": -6.4,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8738,7 +9307,7 @@
      "sample": 26460636,
      "shot": "1E-05",
      "mode": "uneven",
-     "gain_db": -1.52,
+     "gain_db": -3.52,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8747,7 +9316,7 @@
      "sample": 26481193,
      "shot": "1E-05",
      "mode": "uneven",
-     "gain_db": -3.39,
+     "gain_db": -5.39,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8756,7 +9325,7 @@
      "sample": 26497609,
      "shot": "1E-05",
      "mode": "uneven",
-     "gain_db": -3.43,
+     "gain_db": -5.43,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8765,7 +9334,7 @@
      "sample": 26513529,
      "shot": "1E-05",
      "mode": "uneven",
-     "gain_db": -1.15,
+     "gain_db": -3.15,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8774,7 +9343,7 @@
      "sample": 26530027,
      "shot": "1E-05",
      "mode": "uneven",
-     "gain_db": -4.34,
+     "gain_db": -6.34,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8783,7 +9352,7 @@
      "sample": 26545152,
      "shot": "1E-05",
      "mode": "uneven",
-     "gain_db": -2.23,
+     "gain_db": -4.23,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8792,7 +9361,7 @@
      "sample": 26558069,
      "shot": "1E-05",
      "mode": "uneven",
-     "gain_db": -1.29,
+     "gain_db": -3.29,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -8801,7 +9370,7 @@
      "sample": 26571272,
      "shot": "1E-05",
      "mode": "uneven",
-     "gain_db": -4.36,
+     "gain_db": -6.36,
      "pan": 0.0,
      "dist": 0.2
     },
@@ -9505,7 +10074,7 @@
    "id": "beats:charcoal",
    "count": 181,
    "source": "procedural: sfx_lib.charcoal_beat",
-   "duck_db": -4.0,
+   "duck_db": -10.0,
    "beats": [
     {
      "frame": 8556.0,

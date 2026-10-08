@@ -19,7 +19,7 @@ const FABRIC = {
   twill: { id: 'pbr/acg_fabric40', base: 'Fabric40', tile: 0.15, sheen: 0.4, rough: 0.86, lum: 0.09 },
   felt: { id: 'pbr/acg_fabric37', base: 'Fabric37', tile: 0.5, sheen: 0.6, rough: 0.95, lum: 0.062 },
   silk: { id: 'pbr/acg_fabric40', base: 'Fabric40', tile: 0.06, sheen: 0.8, rough: 0.5, lum: 0.09 },
-  leather: { id: 'pbr/acg_leather05', base: 'Leather05', tile: 0.35, sheen: 0.0, rough: 0.72, leather: true, lum: 0.031 },
+  leather: { id: 'pbr/acg_leather05', base: 'Leather05', tile: 0.35, sheen: 0.0, rough: 0.84, leather: true, lum: 0.031 },
   blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.35, sheen: 0.0, rough: 0.66, leather: true, lum: 0.0097 },
 };
 
@@ -84,7 +84,8 @@ varying float vAO; varying vec4 vAux; varying vec3 vObjP; varying vec2 vPat; var
   // uneven dye and fading
   float n1 = hFbm(vObjP * 6.0 + uSeed), n2 = hFbm(vObjP * 23.0 + uSeed * 2.0);
   c *= 0.88 + 0.24 * n1;
-  c = mix(c, mix(c, vec3(dot(c, vec3(0.3333))) * 1.2, 0.5), uFade * clamp(vObjN.y * 0.7 + 0.3, 0.0, 1.0) * (0.6 + 0.4 * n2));
+  // sun fading bleaches toward a warm, paler tone (faded dye, not a neutral grey)
+  c = mix(c, mix(c, vec3(dot(c, vec3(0.3333))) * vec3(1.26, 1.2, 1.08), 0.5), uFade * clamp(vObjN.y * 0.7 + 0.3, 0.0, 1.0) * (0.6 + 0.4 * n2));
   // quilting (gambeson): stitched diamond channels
   if (uPattern > 0.5 && uPattern < 1.5) {
     vec2 q = vPat * 18.0; float s = min(abs(fract(q.x + q.y) - 0.5), abs(fract(q.x - q.y) - 0.5));
