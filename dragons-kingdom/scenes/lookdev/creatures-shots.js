@@ -36,7 +36,7 @@ export const SHOTS = [
     pose: { charcoal: { name: 'stand', look: [0.3, 0.0] } },
     // (a crane a little below his eye line: the sky and the far horizon behind the head, not the
     // flat field seen from above)
-    cam: { subject: 'charcoal', bone: 'head', pos: [12.5, -1.6, 11.5], target: [0.3, -0.9, 1.5], mm: 50, fstop: 5.6, focus: 'eye_L' } },
+    cam: { subject: 'charcoal', bone: 'head', pos: [12.5, -1.6, 11.5], target: [0.3, -0.8, 1.5], mm: 45, fstop: 5.6, focus: 'eye_L' } },
   // Charcoal flying side-on (air to air, 40 mm from ~75 m, the downstroke)
   { id: 'charcoal-flight', set: 'air', creatures: ['charcoal'], tack: ['charcoal'], dur: 3, alt: 260, face: -100,
     pose: { charcoal: { name: 'flight', phase: 0.5, look: [0.05, 0.05] } },

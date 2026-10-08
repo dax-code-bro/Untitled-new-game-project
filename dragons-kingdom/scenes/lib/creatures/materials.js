@@ -88,7 +88,7 @@ export function lookParams(THREE, look) {
       crevCol: lin(THREE, 0.8, 0.46, 0.1), crevAmt: 0.12,
       scl: [0.75, 0.42, 0.7, 1.1], tub: [0.0, 2.5, 0.0, 0], skin2: [0.0, 0.15, 0, 0.08], skin3: [0.1, 0.18, 0, 0],
       // amniotic residue: a pale, slimy film in patches and streaks
-      residue: [0.35, 0.8, 0.74, 0.52],
+      residue: [0.24, 0.8, 0.74, 0.52],
       dustAmt: 0.0, saltAmt: 0.0, oral: lin(THREE, 0.5, 0.2, 0.16), oralDark: lin(THREE, 0.14, 0.04, 0.035),
       // the tiny crumpled wings: damp gold skin, satin not mirror (a smooth membrane fold mirrored blue sky)
       membrane: lin(THREE, 0.62, 0.38, 0.1), trans: lin(THREE, 0.5, 0.28, 0.08), vein: lin(THREE, 0.45, 0.12, 0.05), memRough: 0.6,
