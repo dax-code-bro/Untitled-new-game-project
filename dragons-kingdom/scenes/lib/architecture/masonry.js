@@ -37,14 +37,14 @@ export function courses(rnd, H, { min = 0.18, max = 0.34, joint = 0.015, plinth 
 const STYLE = {
   ashlar: { r: [0.006, 0.012], pillow: [0.001, 0.003], noise: 0.0015, nf: 7, chip: 0.004, prot: [0.004, 0.012], tilt: 0.004, len: [1.4, 2.8], j: 0.008, dep: [0.18, 0.32], sizeJit: 0.004, split: 0 },
   squared: { r: [0.007, 0.015], pillow: [0.002, 0.006], noise: 0.006, nf: 4, chip: 0.014, prot: [0.006, 0.018], tilt: 0.012, len: [1.0, 2.6], j: 0.012, dep: [0.15, 0.3], sizeJit: 0.008, split: 0.12, outline: 0.03, shrink: 0.05 },
-  rubble: { r: [0.004, 0.011], pillow: [0.003, 0.011], noise: 0.012, nf: 3.5, chip: 0.03, prot: [0.0, 0.024], tilt: 0.035, len: [0.7, 2.4], j: 0.012, dep: [0.14, 0.28], sizeJit: 0.01, split: 0.25, outline: 0.09, shrink: 0.1 },
+  rubble: { r: [0.004, 0.011], pillow: [0.006, 0.016], noise: 0.014, nf: 4.5, chip: 0.03, prot: [0.0, 0.024], tilt: 0.035, len: [0.7, 2.4], j: 0.012, dep: [0.14, 0.28], sizeJit: 0.01, split: 0.25, outline: 0.09, shrink: 0.1 },
   // rubble under generations of lime wash: the coats fill the joints nearly flush and soften every arris
   washed: { r: [0.01, 0.02], pillow: [0.002, 0.007], noise: 0.01, nf: 3.5, chip: 0.008, prot: [-0.004, 0.006], tilt: 0.015, len: [0.7, 2.4], j: 0.01, dep: [0.14, 0.28], sizeJit: 0.01, split: 0.25, outline: 0.08, shrink: 0.1 },
   dressed: { r: [0.008, 0.014], pillow: [0.001, 0.004], noise: 0.002, nf: 7, chip: 0.006, prot: [0.01, 0.018], tilt: 0.004, len: [1, 1], j: 0.01, dep: [0.2, 0.3], sizeJit: 0.003, split: 0 },
 };
 export const LOD = {
-  hero: { seg: 0.12, rs: 2 },
-  mid: { seg: 0.22, rs: 1 },
+  hero: { seg: 0.07, rs: 2, noct: 1 },
+  mid: { seg: 0.22, rs: 1, noiseMul: 0.7, noct: 1 },
   low: { seg: 9, rs: 1, flat: true },
   far: { seg: 9, rs: 1, flat: true, lenMul: 2.2, courseMul: 1.6, protMul: 0.25 },     // silhouettes far off: big flat blocks, fine joints
 };
@@ -87,7 +87,7 @@ function stone(kit, F, matName, x0, x1, y0, y1, dep, rnd, st, lod, extra = {}) {
   }
   block(acc, Fs, sx, sy, dep, {
     r, rs: lod.rs, seg: [Math.max(lod.seg, w / 6), Math.max(lod.seg, h / 4), 9], skip: 32,
-    seed: rnd(), noise: st.noise * (extra.noiseMul ?? 1), nf: st.nf, pillow: rnd.range(st.pillow[0], st.pillow[1]) * (extra.pillowMul ?? 1),
+    seed: rnd(), noise: st.noise * (extra.noiseMul ?? 1) * (lod.noiseMul ?? 1), noct: lod.noct ?? 2, nf: st.nf, pillow: rnd.range(st.pillow[0], st.pillow[1]) * (extra.pillowMul ?? 1),
     chip: st.chip, aoDepth: prot + 0.025, aoFloor: 0.3, uvMode: 'box', warp, aoOpen: extra.aoOpen,
   });
 }

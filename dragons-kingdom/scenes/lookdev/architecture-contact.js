@@ -24,15 +24,15 @@ const MODELS = [
   { name: 'cling-stone-arch', build: (k, F) => archway(k, F, { lod: 'mid' }) },
   { name: 'cling-gate', build: (k, F) => gateway(k, F, { lod: 'mid', wall: 3.6 }), az: 0.6 },
   { name: 'cling-fountain', build: (k, F) => fountain(k, F, { lod: 'mid' }) },
-  { name: 'cling-stone-support', build: (k, F) => stonePier(k, F, { lod: 'mid' }), extra: 1.15 },
-  { name: 'cling-kings-steps', build: (k, F) => kingsSteps(k, F, { lod: 'mid' }), az: 2.6 },
+  { name: 'cling-stone-support', build: (k, F) => stonePier(k, F, { lod: 'mid' }), extra: 1.7, el: 0.1 },
+  { name: 'cling-kings-steps', build: (k, F) => kingsSteps(k, F, { lod: 'mid' }), az: 2.4, el: 0.42, extra: 0.9 },
   { name: 'verdor-stable', build: (k, F) => stable(k, F, { lod: 'mid' }) },
   { name: 'verdor-keeper-lodge', build: (k, F) => keeperHouse(k, F, { lod: 'mid' }) },
   { name: 'verdor-access-rig', build: (k, F) => accessRig(k, F, { gangwayDrop: 2.0 }), person: 'remi', az: 0.9 },
   { name: 'verdor-leaf-platform', build: (k, F) => leafPlatform(k, F, {}), person: 'keeper1', extra: 1.15 },
   { name: 'verdor-harbour', build: (k, F) => harbor(k, F, { buildings: true }), az: 0.35, el: 0.18, waterline: true },
   { name: 'verdor-palace', build: (k, F) => palace(k, F, {}), el: 0.12 },
-  { name: 'round-tower', build: (k, F) => { const t = roundTower(k, F, { r: 4.2, h: 18, lod: 'mid', mat: 'stonePale', dressedMat: 'stonePale', slits: 3 }); conicalRoof(k, frame([F[0], F[1] + t.top - 0.2, F[2]]), { r: t.R - 0.15, h: 8, eaves: 0.45 }); } },
+  { name: 'round-tower', build: (k, F) => { const t = roundTower(k, F, { r: 4.2, h: 18, lod: 'mid', mat: 'stonePale', dressedMat: 'stonePale', slits: 3 }); conicalRoof(k, frame([F[0], F[1] + t.top - 0.2, F[2]]), { r: t.R - 0.15, h: 8, eaves: 0.45 }); }, extra: 1.25 },
   { name: 'cling-house-row', build: (k, F) => { let x = -10; for (let i = 0; i < 3; i++) { const w = [6.4, 5.6, 7.2][i]; house(k, frame([F[0] + x + w / 2, 0, F[2] + (i % 2) * 0.3]), { w, d: 8.5, storeys: i === 1 ? 2 : 1, roof: i === 2 ? 'side' : 'front', seed: 11 + i * 7, lod: 'mid', party: { left: i > 0, right: i < 2 } }); x += w + 0.05; } } },
 ];
 

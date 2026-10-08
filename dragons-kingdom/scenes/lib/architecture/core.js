@@ -265,6 +265,9 @@ export function block(acc, F, sx, sy, sz, o = {}) {
   const skip = o.skip ?? 0;
   const seed = o.seed ?? 0;
   const na = o.noise ?? 0, nf = o.nf ?? 6, pil = o.pillow ?? 0, chip = o.chip ?? 0;
+  // octaves of the surface noise: keep them to what the tessellation can carry (a finer octave
+  // sampled by a coarse mesh shows as faceted triangles)
+  const noct = o.noct ?? 3;
   const aoD = o.aoDepth ?? 0, aoF = o.aoFloor ?? 0.3;
   const bend = o.bend || null;
   const ad = o.adze ?? 0;
@@ -311,7 +314,7 @@ export function block(acc, F, sx, sy, sz, o = {}) {
       disp += pil * (Math.abs(nx) > 0.5 ? fy * fz : Math.abs(ny) > 0.5 ? fx * fz : fx * fy);
     }
     const wp0 = xf(F, lx, ly, lz);
-    if (na) disp += na * fbm3(wp0[0] * nf + so, wp0[1] * nf, wp0[2] * nf, 3);
+    if (na) disp += na * fbm3(wp0[0] * nf + so, wp0[1] * nf, wp0[2] * nf, noct);
     if (chip && ar) disp -= chip * Math.max(0, vnoise3(wp0[0] * 9 + so, wp0[1] * 9, wp0[2] * 9) * 1.6 - 0.6);
     if (ad) {
       // hewing scallops along the length (local x), on the side faces

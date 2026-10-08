@@ -12,8 +12,9 @@ per-vertex construction data. Designs are provisional until Daxtyn approves them
 |---|---|
 | **masonry** (`masonry.js`) | laid course by course; course heights shared round a building so corners bond; dressed **quoins** alternate long/short at every corner; joints broken against the course below; every stone its own rounded, irregular block (pillowed face, chipped arrises, slight tilt, flush to ~25 mm proud of a recessed lime-mortar core, corners pulled in so the joints open and close like real rubble); rubble courses mix big stones, pairs and pinnings; a `washed` style for interiors (lime coats fill the joints nearly flush) |
 | **openings** | dressed jambs that return into the reveal, lintels with bearing, semicircular **voussoir arches** (keystone, full-depth soffit), projecting sills with a weathered fall; stones are cut/packed round sills, lintels and arch extrados; the mortar core has true reveals through the wall thickness |
-| **timber framing** (`timber.js`) | sill/bressumer, corner and bay posts, studs, mid rails, head plate; straight tension braces that **interrupt** the studs they cross; window framing with its own posts and rails; every member hand-hewn (bow, kink, out-of-square, adze scallops, waney arris); **oak pegs** where each tenon enters; jetty joist ends with end grain; corner brackets on stone corbels |
+| **timber framing** (`timber.js`) | sill/bressumer, corner and bay posts, studs, mid rails, head plate; straight tension braces that **interrupt** the studs they cross; window framing with its own posts and rails; every member hand-hewn (bow, kink, out-of-square, waney arris; adze scallops in the material); **oak pegs** where each tenon enters; jetty joist ends with end grain; corner brackets on stone corbels |
 | **infill** | one lime-plaster surface behind the frame, recessed ~3 cm, shrinking back from the timbers (dark gap, baked occlusion) and bellying out a few mm mid-panel |
+| **paving** (`cling.js`) | the square is laid with setts in rows (each a flat-topped block, tilted, proud or sunk a little), the joints and worn patches showing the earth below; clear of the fountain, the steps and the wall feet (weeds grow there) |
 | **roofs** (`roof.js`) | rafter tails under the eaves, a boarded deck, clay plain tiles double-lapped on a 100 mm gauge or stone slates in diminishing courses, each tile a slightly cambered, slightly turned piece; ridge tiles bedded in mortar; bargeboards / stone coping and kneelers; the ridge sags, slopes hollow, eaves droop |
 | **chimneys** | squared stone stacks through the roof, projecting cap, smoke-blackened top courses |
 | **windows / doors** (`openings.js`) | oak frames set back in the reveal, mullions, **leaded diamond / square quarries** of uneven crown glass with a dim **room behind** (interior mapping: real parallax, no modelled room); ledged plank shutters on strap hinges folded flat, half open on a shutter dog, or closed; ledged oak doors with strap hinges, clench nails, ring handles, open onto a room or closed; worn thresholds |
@@ -31,7 +32,7 @@ per-vertex construction data. Designs are provisional until Daxtyn approves them
 | `roof.js` | `gableRoof` (clay / slate, sag, damage), `chimney`, `pentice` |
 | `openings.js` | `windowUnit`, `door`, `leafFrame`, `glassQuad`, `threshold` |
 | `house.js` | `house` (the Cling townhouse) |
-| `cling.js` | `CLING` (fixed layout), `clingSquare`, `archway`, `gateway`, `fountain`, `stonePier`, `kingsSteps`, `alley`, `wallFootPlacer`, `houseFootSegments` |
+| `cling.js` | `CLING` (fixed layout), `clingSquare`, `archway`, `gateway`, `fountain`, `stonePier`, `kingsSteps`, `alley`, `paving` (cobbled setts, worn patches), `wallFootPlacer`, `houseFootSegments` |
 | `verdor.js` | `stable`, `keeperHouse`, `accessRig`, `leafPlatform`, `palace`, `harbor` |
 | `interiors.js` | `birthingChamber`, `treatmentRoom` (+ `flagFloor`, `beamCeiling`, `nest`, `oilLamp`, `bowl`, `jug`, `foldedCloths`, `bench`, `stool`) |
 
