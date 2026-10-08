@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { WORLD, islandD } from './terrain.js';
 import { buildChunk } from './chunkBuild.js';
+import { terrainMaterial, waterMaterial, oceanGeometry, heightTexture } from './materials.js';
 
 const ROOT = 65536;
 const LEAF = 256;
@@ -11,10 +12,12 @@ const RES = 64;
 const SPLIT = 1.25;
 
 export class Terrain {
-  constructor(scene) {
+  constructor(scene, tex) {
     this.scene = scene;
-    this.material = new THREE.MeshLambertMaterial({ vertexColors: true });
-    this.waterMat = new THREE.MeshStandardMaterial({ color: 0x2c6a6e, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.86 });
+    this.tex = tex;
+    this.material = terrainMaterial(tex.terrain);
+    this.heightTex = heightTexture();
+    this.waterMat = waterMaterial(tex, this.heightTex, { ocean: false });
     this.nodes = new Map();
     this.queue = [];
     this.inflight = 0;
@@ -36,30 +39,21 @@ export class Terrain {
   }
 
   buildOcean() {
-    const cv = document.createElement('canvas');
-    cv.width = cv.height = 128;
-    const g = cv.getContext('2d');
-    const img = g.createImageData(128, 128);
-    for (let j = 0; j < 128; j++) for (let i = 0; i < 128; i++) {
-      const a = Math.sin(i / 128 * Math.PI * 6 + Math.sin(j / 128 * Math.PI * 4) * 2);
-      const b = Math.cos(j / 128 * Math.PI * 8 + Math.sin(i / 128 * Math.PI * 2));
-      const o = (j * 128 + i) * 4;
-      img.data[o] = 128 + a * 40; img.data[o + 1] = 128 + b * 40; img.data[o + 2] = 255; img.data[o + 3] = 255;
-    }
-    g.putImageData(img, 0, 0);
-    const nm = new THREE.CanvasTexture(cv);
-    nm.wrapS = nm.wrapT = THREE.RepeatWrapping;
-    nm.repeat.set(3000, 3000);
-    this.oceanNormal = nm;
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0x1d5f80, roughness: 0.12, metalness: 0.05, transparent: true, opacity: 0.88,
-      normalMap: nm, normalScale: new THREE.Vector2(0.25, 0.25),
-    });
-    this.ocean = new THREE.Mesh(new THREE.PlaneGeometry(200000, 200000), mat);
-    this.ocean.rotation.x = -Math.PI / 2;
+    this.ocean = new THREE.Mesh(oceanGeometry(), waterMaterial(this.tex, this.heightTex, { ocean: true }));
     this.ocean.position.y = WORLD.sea;
     this.ocean.renderOrder = 1;
+    this.ocean.frustumCulled = false;
+    this.ocean.receiveShadow = true;
     this.scene.add(this.ocean);
+    // the water shader needs to know how deep the water is: a heightmap of the whole map, built off-thread
+    if (this.workers[0]) this.workers[0].postMessage({ type: 'heightmap', px: 1024, span: WORLD.size });
+  }
+
+  onHeightmap(m) {
+    const t = new THREE.DataTexture(m.px, m.w, m.w, THREE.RGBAFormat);
+    t.magFilter = t.minFilter = THREE.NearestFilter;
+    t.needsUpdate = true;
+    this.heightTex.value = t;
   }
 
   key(x0, z0, size) { return `${size}|${x0}|${z0}`; }
@@ -109,10 +103,8 @@ export class Terrain {
 
   update(dt, cam) {
     this.time += dt;
-    this.ocean.position.x = Math.round(cam.x / 100) * 100;
-    this.ocean.position.z = Math.round(cam.z / 100) * 100;
-    this.oceanNormal.offset.x += dt * 0.02;
-    this.oceanNormal.offset.y += dt * 0.013;
+    this.ocean.position.x = Math.round(cam.x / 2) * 2;
+    this.ocean.position.z = Math.round(cam.z / 2) * 2;
 
     const leaves = [];
     this.select(cam, -ROOT / 2, -ROOT / 2, ROOT, leaves);
@@ -176,6 +168,7 @@ export class Terrain {
   }
 
   onResult(r) {
+    if (r.type === 'heightmap') { this.onHeightmap(r); return; }
     for (const w of this.workers) if (w.current === r.key) { w.busy = false; w.current = null; }
     const n = this.nodes.get(r.key);
     if (!n || n.state !== 'building') return;
@@ -183,6 +176,8 @@ export class Terrain {
     g.setAttribute('position', new THREE.BufferAttribute(r.pos, 3));
     g.setAttribute('normal', new THREE.BufferAttribute(r.nor, 3));
     g.setAttribute('color', new THREE.BufferAttribute(r.col, 3));
+    g.setAttribute('splatA', new THREE.BufferAttribute(r.sa, 4, true));
+    g.setAttribute('splatB', new THREE.BufferAttribute(r.sb, 4, true));
     g.setIndex(new THREE.BufferAttribute(r.idx, 1));
     g.boundingBox = new THREE.Box3(new THREE.Vector3(0, r.minH - n.size * 0.03, 0), new THREE.Vector3(n.size, r.maxH, n.size));
     g.boundingSphere = g.boundingBox.getBoundingSphere(new THREE.Sphere());

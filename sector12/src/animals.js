@@ -5,9 +5,8 @@ import { ANIMALS, ANIMAL_SPAWN, RABBIT_VARIANTS } from './data/world.js';
 import { heightAt, regionAt } from './terrain.js';
 import { waterLevelAt } from './physics.js';
 import { rand, randi, clamp, wrapAngle } from './rng.js';
+import { QuadRig } from './animalRig.js';
 
-const geo = new Map();
-const bx = (w, h, d) => { const k = `${w.toFixed(3)},${h.toFixed(3)},${d.toFixed(3)}`; if (!geo.has(k)) geo.set(k, new THREE.BoxGeometry(w, h, d)); return geo.get(k); };
 
 export class Animal {
   constructor(game, species, x, z, region) {
@@ -35,45 +34,23 @@ export class Animal {
   }
 
   buildMesh() {
-    const s = this.def.size, g = new THREE.Group();
-    const m = new THREE.MeshLambertMaterial({ color: this.color });
-    const dark = new THREE.MeshLambertMaterial({ color: 0x2a2018 });
-    const add = (gg, mm, x, y, z, p = g) => { const o = new THREE.Mesh(gg, mm); o.position.set(x, y, z); o.castShadow = true; p.add(o); return o; };
-    const legH = s * (this.species === 'rabbit' || this.species === 'squirrel' ? 0.18 : this.species === 'raccoon' ? 0.22 : 0.45);
-    const bodyH = s * 0.32, bodyW = s * 0.3;
-    add(bx(bodyW, bodyH, s), m, 0, legH + bodyH / 2, 0);
-    const headS = s * (this.species === 'rabbit' ? 0.32 : 0.24);
-    this.headY = legH + bodyH * 0.9;
-    this.headZ = -s * 0.55;
-    add(bx(headS * 0.9, headS, headS * 1.2), m, 0, this.headY, this.headZ);
-    if (this.species === 'rabbit') { add(bx(0.04, 0.16, 0.05), m, 0.04, this.headY + 0.15, this.headZ + 0.03); add(bx(0.04, 0.16, 0.05), m, -0.04, this.headY + 0.15, this.headZ + 0.03); }
-    if (this.def.antlers) {
-      const a = this.def.bigAntlers ? 0.9 : 0.5;
-      add(bx(a, 0.06, 0.08), dark, 0, this.headY + headS * 0.7, this.headZ + 0.05);
-      add(bx(0.06, a * 0.6, 0.06), dark, a / 2, this.headY + headS * 0.7 + a * 0.3, this.headZ + 0.05);
-      add(bx(0.06, a * 0.6, 0.06), dark, -a / 2, this.headY + headS * 0.7 + a * 0.3, this.headZ + 0.05);
-    }
-    if (this.species === 'raccoon' || this.species === 'squirrel' || this.species.includes('wolf') || this.species === 'coyote') {
-      const tail = add(bx(s * 0.1, s * 0.1, s * 0.45), this.species === 'raccoon' ? dark : m, 0, legH + bodyH * 0.7, s * 0.65);
-      tail.rotation.x = this.species === 'squirrel' ? -1.1 : 0.4;
-    }
-    this.legs = [];
-    for (const [lx, lz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-      const hip = new THREE.Group(); hip.position.set(lx * bodyW * 0.35, legH, lz * s * 0.38); g.add(hip);
-      add(bx(s * 0.08, legH, s * 0.08), m, 0, -legH / 2, 0, hip);
-      this.legs.push(hip);
-    }
-    g.rotation.order = 'YXZ';
-    this.mesh = g;
-    this.legH = legH;
-    this.bodyH = bodyH;
-    this.game.scene.add(g);
+    this.rig = new QuadRig(this.game.scene, this.species, this.def.size, this.color);
+    Object.assign(this, this.rig.metrics);
+    this.mesh = this.rig.root;
+    this.vel = new THREE.Vector3();
+  }
+
+  rigState(dt) {
+    const P = this.game.player;
+    const alert = this.state === 'wander' && this.dist < 45 && P.alive;
+    return { pos: this.pos, vel: this.vel, fwd: new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)), state: this.state, look: alert || this.state === 'attack' ? P.pos.clone().setY(P.pos.y + 1.4) : null, dist: this.dist ?? 0 };
   }
 
   update(dt) {
     const game = this.game, P = game.player, def = this.def;
     if (this.dead) {
-      if (this.mesh.rotation.z < Math.PI / 2) this.mesh.rotation.z = Math.min(Math.PI / 2, this.mesh.rotation.z + dt * 4);
+      this.dist = Math.hypot(P.pos.x - this.pos.x, P.pos.z - this.pos.z);
+      this.rig.update(dt, { pos: this.pos, dist: this.dist });
       return;
     }
     const dx = P.pos.x - this.pos.x, dz = P.pos.z - this.pos.z, dist = Math.hypot(dx, dz);
@@ -115,31 +92,31 @@ export class Animal {
     const vx = Math.sin(this.yaw) * speed, vz = Math.cos(this.yaw) * speed;
     const nx = this.pos.x + vx * dt, nz = this.pos.z + vz * dt;
     const nh = heightAt(nx, nz);
-    if (waterLevelAt(nx, nz, nh) !== null || nh - this.pos.y > 1.2) { this.yaw += Math.PI * 0.6; this.wanderYaw = this.yaw; }
-    else { this.pos.x = nx; this.pos.z = nz; this.pos.y = nh; }
-    this.phase += speed * dt * (6 / Math.max(0.4, this.def.size));
-    const sw = speed > 0 ? Math.sin(this.phase) * 0.7 : 0;
-    this.legs[0].rotation.x = sw; this.legs[3].rotation.x = sw; this.legs[1].rotation.x = -sw; this.legs[2].rotation.x = -sw;
-    this.mesh.position.copy(this.pos);
-    this.mesh.rotation.y = this.yaw + Math.PI; // model faces -Z
+    if (waterLevelAt(nx, nz, nh) !== null || nh - this.pos.y > 1.2) { this.yaw += Math.PI * 0.6; this.wanderYaw = this.yaw; this.vel.set(0, 0, 0); }
+    else { this.vel.set(vx, 0, vz); this.pos.x = nx; this.pos.z = nz; this.pos.y = nh; }
+    this.mesh.visible = dist < 600;
+    if (this.mesh.visible) this.rig.update(dt, this.rigState(dt));
   }
 
   // ray hit test (axis-aligned, rotation ignored: animals are small)
   hitBoxes() {
     const s = this.def.size, p = this.pos;
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
-    const hx = p.x + fx * s * 0.55, hz = p.z + fz * s * 0.55;
-    const hs = s * 0.18;
+    const hx = p.x + fx * this.headZ, hz = p.z + fz * this.headZ;
+    const hs = Math.max(0.06, s * 0.13);
+    // the body runs from the hips (at pos) forward to the withers
+    const cx = p.x + fx * this.bodyOff, cz = p.z + fz * this.bodyOff;
     const r = Math.max(this.half.x, this.half.z * Math.abs(fx) + this.half.x * Math.abs(fz), this.half.z * Math.abs(fz) + this.half.x * Math.abs(fx));
     return [
       { zone: 'head', min: [hx - hs, p.y + this.headY - hs, hz - hs], max: [hx + hs, p.y + this.headY + hs, hz + hs] },
-      { zone: 'body', min: [p.x - r * 0.9, p.y + this.legH * 0.6, p.z - r * 0.9], max: [p.x + r * 0.9, p.y + this.legH + this.bodyH, p.z + r * 0.9] },
+      { zone: 'body', min: [cx - r * 0.9, p.y + this.legH * 0.6, cz - r * 0.9], max: [cx + r * 0.9, p.y + this.legH + this.bodyH, cz + r * 0.9] },
     ];
   }
 
   // zone: head | vitals | body | leg
   takeDamage(dmg, zone, byPlayer = true) {
     if (this.dead) return { killed: false };
+    this.lastHit = { dmg, zone };
     const mul = { head: 2.5, vitals: 1.8, body: 1, leg: 0.6 }[zone] || 1;
     this.hp -= dmg * mul;
     if (zone !== 'head') this.bleed += zone === 'vitals' ? 4 : zone === 'leg' ? 0.8 : 1.6;
@@ -151,6 +128,10 @@ export class Animal {
   die() {
     this.dead = true;
     this.hp = 0;
+    const P = this.game.player;
+    const dir = new THREE.Vector3(this.pos.x - P.pos.x, 0, this.pos.z - P.pos.z).normalize();
+    const k = Math.min(4, (this.lastHit ? this.lastHit.dmg : 30) / 25) / Math.max(0.5, this.def.size);
+    this.rig.die(dir.multiplyScalar(k).add(this.vel.clone().multiplyScalar(0.6)).setY(0.5));
     this.game.onAnimalKilled(this);
   }
 
@@ -163,7 +144,7 @@ export class Animal {
     return out;
   }
 
-  dispose() { this.game.scene.remove(this.mesh); }
+  dispose() { this.rig.dispose(); }
 }
 
 // Keeps a handful of animals around the player, rolled from the region's spawn table.

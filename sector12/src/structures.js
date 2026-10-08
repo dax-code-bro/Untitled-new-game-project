@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { mulberry32 } from './noise.js';
 import { POIS } from './terrain.js';
+import { detailMaterial } from './materials.js';
 
 const _c = new THREE.Color();
 const CORNERS = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
@@ -86,14 +87,14 @@ class POIBuilder {
   solid(x0, y0, z0, x1, y1, z1, color, collide = true, tint = 0.06) {
     const P = this.poi, Y = this.y;
     this.b.box(P.x + x0, Y + y0, P.z + z0, P.x + x1, Y + y1, P.z + z1, color, tint, this.rng);
-    if (collide) this.physics.addBox([P.x + x0, Y + y0, P.z + z0], [P.x + x1, Y + y1, P.z + z1]);
+    if (collide) this.physics.addBox([P.x + x0, Y + y0, P.z + z0], [P.x + x1, Y + y1, P.z + z1], { mat: surfaceOf(color) });
   }
 
   cyl(x, z, r, h, color, y0 = 0, collide = true, seg = 12) {
     const P = this.poi;
     const m = new THREE.Matrix4().makeTranslation(P.x + x, this.y + y0 + h / 2, P.z + z);
     this.b.geometry(new THREE.CylinderGeometry(r, r, h, seg), m, color, 0.04, this.rng);
-    if (collide) this.physics.addBox([P.x + x - r * 0.85, this.y + y0, P.z + z - r * 0.85], [P.x + x + r * 0.85, this.y + y0 + h, P.z + z + r * 0.85]);
+    if (collide) this.physics.addBox([P.x + x - r * 0.85, this.y + y0, P.z + z - r * 0.85], [P.x + x + r * 0.85, this.y + y0 + h, P.z + z + r * 0.85], { mat: 'metal' });
   }
 
   wallX(a, b, z, h, ops, col, t = 0.35, y0 = 0) {
@@ -345,8 +346,17 @@ class POIBuilder {
   }
 }
 
-export function buildStructures(scene, physics) {
-  physics.structMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+// what a bullet hits, guessed from the colour a piece was built with
+const _hsl = {};
+function surfaceOf(color) {
+  new THREE.Color(color).getHSL(_hsl);
+  if (_hsl.s > 0.25 && _hsl.h > 0.03 && _hsl.h < 0.14 && _hsl.l < 0.6) return 'wood';
+  if ((_hsl.s < 0.15 && _hsl.l < 0.32) || (_hsl.h > 0.5 && _hsl.h < 0.7 && _hsl.s < 0.3 && _hsl.l < 0.5)) return 'metal';
+  return 'concrete';
+}
+
+export function buildStructures(scene, physics, T) {
+  physics.structMat = T ? detailMaterial(T) : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 });
   const out = { loot: [], buildings: [], meshes: [] };
   for (const poi of POIS) {
     const pb = new POIBuilder(poi, physics);

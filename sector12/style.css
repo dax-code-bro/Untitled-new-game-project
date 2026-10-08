@@ -177,3 +177,6 @@ button.wide { width: 100%; margin-top: 8px; }
 .result.ok h2 { color: #4dff7a; } .result.bad h2 { color: var(--red); }
 .result .small { font-size: 12px; color: var(--dim); }
 @media (max-width: 820px) { .tbox .cols, .tsplit { grid-template-columns: 1fr; } .tbox h1 { font-size: 40px; } }
+
+#pause select { background: #0d1a20; color: #cfe; border: 1px solid #2a4a55; padding: 4px 8px; font: inherit; }
+.qnote { font-size: 12px; opacity: 0.6; margin: -4px 0 8px; }

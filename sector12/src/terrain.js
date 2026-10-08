@@ -274,3 +274,29 @@ export function colorAt(x, z, h, ny, out = [0, 0, 0]) {
   }
   return out;
 }
+
+// ------------------------------------------------------------------ ground materials for the terrain shader
+// out[0..7] = forest, jungle, sand, rock, snow, dirt, wet, 0  (grass = whatever is left over)
+export function splatAt(x, z, h, ny, out) {
+  const B = biomeWeights(x, z);
+  const d = islandD(x, z);
+  const v2 = fbm(N7, x / 400, z / 400, 2) * 0.5 + 0.5;
+  const inland = 1 - B.hub;
+  let forest = B.s * inland, jungle = B.e * inland, sand = B.w * inland, snow = 0, dirt = 0, wet = 0;
+  if (snowAt(x, z, h)) snow = B.n; else dirt += B.n * 0.45;
+  if (v2 < 0.35) dirt += forest * (0.35 - v2) * 2.5;
+  if (d > 0.8) {
+    const beachK = smooth(6, 3, h) * smooth(0.8, 0.9, d);
+    forest *= 1 - beachK; jungle *= 1 - beachK; dirt *= 1 - beachK; snow *= 1 - beachK;
+    sand += (1 - sand) * beachK;
+    if (h < 1.5) wet = smooth(1.5, 0.1, h);
+  }
+  if (d < 0.82 && h < WORLD.lake + 1.5) { const k = smooth(WORLD.lake + 1.5, WORLD.lake - 0.5, h); dirt += k; wet = Math.max(wet, k); forest *= 1 - k; jungle *= 1 - k; }
+  let sum = forest + jungle + sand + snow + dirt;
+  if (sum > 1) { forest /= sum; jungle /= sum; sand /= sum; snow /= sum; dirt /= sum; sum = 1; }
+  const rock = smooth(0.84, 0.64, ny) * (1 - smooth(4, 1, h) * (d > 0.85 ? 1 : 0));
+  const k = 1 - rock;
+  out[0] = forest * k; out[1] = jungle * k; out[2] = sand * k; out[3] = rock;
+  out[4] = snow * k + rock * snow * 0.35; out[5] = dirt * k; out[6] = wet; out[7] = 0;
+  return out;
+}

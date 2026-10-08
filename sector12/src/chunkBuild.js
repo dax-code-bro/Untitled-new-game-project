@@ -1,7 +1,8 @@
 // Chunk geometry + map image builders (used by the terrain worker, and on the main thread as a fallback).
-import { heightAt, colorAt, islandD, WORLD } from './terrain.js';
+import { heightAt, colorAt, islandD, splatAt, WORLD } from './terrain.js';
 
 const col = [0, 0, 0];
+const spl = new Float32Array(8);
 
 export function buildChunk(x0, z0, size, res) {
   const n = res + 1, step = size / res, W = n + 2;
@@ -10,6 +11,7 @@ export function buildChunk(x0, z0, size, res) {
   const skirtN = 4 * n;
   const vcount = n * n + skirtN;
   const pos = new Float32Array(vcount * 3), nor = new Float32Array(vcount * 3), cl = new Float32Array(vcount * 3);
+  const sa = new Uint8Array(vcount * 4), sb = new Uint8Array(vcount * 4);
   let minH = Infinity, maxH = -Infinity;
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const h = H[(j + 1) * W + (i + 1)];
@@ -22,6 +24,8 @@ export function buildChunk(x0, z0, size, res) {
     nor[v * 3] = nx; nor[v * 3 + 1] = ny; nor[v * 3 + 2] = nz;
     colorAt(x0 + i * step, z0 + j * step, h, ny, col);
     cl[v * 3] = col[0]; cl[v * 3 + 1] = col[1]; cl[v * 3 + 2] = col[2];
+    splatAt(x0 + i * step, z0 + j * step, h, ny, spl);
+    for (let q = 0; q < 4; q++) { sa[v * 4 + q] = spl[q] * 255; sb[v * 4 + q] = spl[q + 4] * 255; }
     if (h < minH) minH = h;
     if (h > maxH) maxH = h;
   }
@@ -49,6 +53,7 @@ export function buildChunk(x0, z0, size, res) {
       pos[s * 3] = pos[v * 3]; pos[s * 3 + 1] = pos[v * 3 + 1] - skirt; pos[s * 3 + 2] = pos[v * 3 + 2];
       nor[s * 3] = nor[v * 3]; nor[s * 3 + 1] = nor[v * 3 + 1]; nor[s * 3 + 2] = nor[v * 3 + 2];
       cl[s * 3] = cl[v * 3]; cl[s * 3 + 1] = cl[v * 3 + 1]; cl[s * 3 + 2] = cl[v * 3 + 2];
+      for (let q = 0; q < 4; q++) { sa[s * 4 + q] = sa[v * 4 + q]; sb[s * 4 + q] = sb[v * 4 + q]; }
       s++;
     }
     for (let t = 0; t < res; t++) {
@@ -60,7 +65,7 @@ export function buildChunk(x0, z0, size, res) {
   }
   const corners = [islandD(x0, z0), islandD(x0 + size, z0), islandD(x0, z0 + size), islandD(x0 + size, z0 + size)];
   const water = Math.max(...corners) < 0.8 && minH < WORLD.lake;
-  return { pos, nor, col: cl, idx, minH, maxH, water };
+  return { pos, nor, col: cl, sa, sb, idx, minH, maxH, water };
 }
 
 // RGBA top-down map with hill shading. cx, cz: center; span: meters covered.
@@ -81,6 +86,19 @@ export function buildMap(cx, cz, span, px) {
     else if (h < WORLD.lake && islandD(x, z) < 0.8) { r = 0.2; g = 0.45; b = 0.5; }
     const o = (j * px + i) * 4;
     out[o] = r * 255; out[o + 1] = g * 255; out[o + 2] = b * 255; out[o + 3] = 255;
+  }
+  return out;
+}
+
+// 16-bit heightmap of the whole map (R = high byte, G = low byte; h = v * 2700 - 60) for the water shader.
+export function buildHeightmap(px, span) {
+  const out = new Uint8Array(px * px * 4);
+  const step = span / px;
+  for (let j = 0; j < px; j++) for (let i = 0; i < px; i++) {
+    const h = heightAt(-span / 2 + (i + 0.5) * step, -span / 2 + (j + 0.5) * step);
+    const v = Math.max(0, Math.min(65535, Math.round(((h + 60) / 2700) * 65535)));
+    const o = (j * px + i) * 4;
+    out[o] = v >> 8; out[o + 1] = v & 255; out[o + 2] = 0; out[o + 3] = 255;
   }
   return out;
 }

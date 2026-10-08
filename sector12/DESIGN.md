@@ -162,10 +162,17 @@ Spawn chances per roll are kept deliberately low so this doesn't turn into a hun
 6. If you die, you lose what you were carrying.
 7. Leaving the game inside the safe zone keeps your kit; leaving outside it loses your kit. **⚑**
 
+## Look and feel
+
+- **Rendering.** Physically based materials, an atmospheric sky with moving clouds that also lights the world (image-based lighting), cascaded sun shadows, height fog that glows towards the sun, bloom and filmic grading. Four quality presets.
+- **Animation is procedural, not canned.** Operators plant their feet on the terrain and step with a real gait, lean into speed, blade into a rifle stance, keep their hands on the gun through reloads, flinch when hit and go limp into ragdolls. Every animal species has its own gaits, grazes, twitches its ears, flags or wags its tail and ragdolls when killed.
+- **First person.** Detailed guns whose parts move: slides lock back empty, bolts and pumps cycle, hammers fall, revolver cylinders index and swing out, break-actions drop open, empty mags fall to the ground and brass bounces off it.
+- **Ballistics.** Rounds have muzzle velocity, drop and drag; weapons are zeroed (rifles 100 m, the BG 850 at 300 m); far shots take time to arrive; the gunshot is heard after the supersonic crack; rounds penetrate thin cover, splash into water and ricochet off hard surfaces at shallow angles.
+
 ## Not built yet
 
 - **Multiplayer.** "Other players" are AI operators for now. Teams and the kill cam need networking.
-- **Photogrammetry art.** Everything uses procedural placeholders until real scans go through `pipeline/`.
+- **Photogrammetry art.** Everything is procedural (models, textures, animation) until real scans and motion capture go through `pipeline/`. True photorealism needs those assets plus a native engine.
 - **A native or desktop engine** for the full-detail version on a high-end PC.
 
 ---

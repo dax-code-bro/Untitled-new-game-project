@@ -1,6 +1,9 @@
 // One life on Sector 12: world, player, AI, wildlife, weather, caches, combat, POB, extraction.
 import * as THREE from 'three';
 import { Terrain } from './terrainMesh.js';
+import { Graphics } from './graphics.js';
+import { Grass } from './grass.js';
+import { SHARED } from './materials.js';
 import { Physics, rayBox } from './physics.js';
 import { buildStructures } from './structures.js';
 import { Scatter } from './scatter.js';
@@ -13,8 +16,11 @@ import { Player } from './player.js';
 import { Inventory, makeItem, describeItem } from './inventory.js';
 import { Effects } from './effects.js';
 import { ITEMS, KILL_REWARD } from './data/catalog.js';
-import { LOOT_TABLES } from './data/world.js';
-import { POIS, heightAt, regionAt, REGIONS, islandD } from './terrain.js';
+import { LOOT_TABLES, ANIMALS } from './data/world.js';
+import { POIS, heightAt, regionAt, REGIONS, islandD, normalAt, snowAt } from './terrain.js';
+import { setWeaponTextures, buildWeapon } from './weapons.js';
+import { HumanRig, PALETTES } from './rig.js';
+import { QuadRig } from './animalRig.js';
 import { waterLevelAt } from './physics.js';
 import { rand, randi, clamp } from './rng.js';
 
@@ -42,12 +48,18 @@ export class Game {
     this.camera = new THREE.PerspectiveCamera(74, innerWidth / innerHeight, 0.05, 60000);
     this.camera.rotation.order = 'YXZ';
     scene.add(this.camera);
+    this.tex = ctx.textures;
+    this.gfx = new Graphics(this.renderer, scene, this.camera, this.settings.quality || 'high');
     this.physics = new Physics();
-    this.effects = new Effects(scene);
-    this.terrain = new Terrain(scene);
+    this.effects = new Effects(scene, this.audio);
+    setWeaponTextures(this.tex);
+    this.bullets = [];
+    this.later = [];
+    this.terrain = new Terrain(scene, this.tex);
     this.env = new Environment(this);
-    this.structures = buildStructures(scene, this.physics);
-    this.scatter = new Scatter(scene, this.physics);
+    this.structures = buildStructures(scene, this.physics, this.tex);
+    this.scatter = new Scatter(scene, this.physics, this.tex, this.gfx.q);
+    this.grass = new Grass(scene, this.tex, this.gfx.q);
     const pobPoi = POIS.find((p) => p.id === 'pob');
     this.pob = new POB(scene, this.physics, pobPoi, this.save, {
       persist: () => ctx.persist(),
@@ -72,15 +84,53 @@ export class Game {
     for (const it of this.save.carry || []) inv.add(it);
     const sp = this.pob.spawn;
     this.player = new Player(this, inv, { x: sp.x, y: sp.y, z: sp.z, yaw: Math.PI });
+    // brass and magazines from the first-person gun land in the world
+    this.player.vm.onEject = (p, v, kind) => this.effects.casing(p, v, kind);
+    this.player.vm.onDropMag = (obj, p, q, s) => this.effects.debris(obj, p, q, s, new THREE.Vector3(0, -0.5, 0).add(this.player.vel || new THREE.Vector3()));
     this.wasSafe = true;
     this.saveCarry();
   }
 
   async load(onProgress) {
     this.scatter.warmup(this.player.pos);
+    this.grass.update(this.player.pos);
     this.player.update(0, this.input, true);
     this.env.update(0, 0);
     await this.terrain.warmup(this.camera.position, onProgress);
+    await this.warmShaders();
+    this.gfx.patchScene();
+    this.patchT = 1;
+  }
+
+  // Compile every material variant the game will need (people, animals, guns, effects) during the
+  // loading screen, so the first operator / deer / explosion doesn't hitch the game.
+  async warmShaders() {
+    const tmp = new THREE.Group();
+    this.scene.add(tmp);
+    const P = this.player.pos;
+    const rigs = [];
+    const op = new HumanRig(tmp, this.tex, { palette: PALETTES.woodland, skin: 0xc69a74, vest: 8, helmet: 8, pack: 2, goggles: true, cap: false, holster: true, vestColor: 0x3a4030, helmColor: 0x45503a });
+    op.setWeapon(ITEMS.bg850, null);
+    const op2 = new HumanRig(tmp, this.tex, { palette: PALETTES.desert, skin: 0x8a5a3a, vest: 0, helmet: 0, pack: 0, balaclava: true, cap: true, vestColor: 0x3a4030, helmColor: 0x45503a });
+    op2.setWeapon(ITEMS.ka43, null);
+    rigs.push(op, op2);
+    for (const sp of ['deer', 'wolf', 'bear', 'raccoon', 'moose']) rigs.push(new QuadRig(tmp, sp, ANIMALS[sp].size, ANIMALS[sp].color));
+    const s = { pos: new THREE.Vector3(P.x, P.y - 50, P.z), vel: new THREE.Vector3(), yaw: 0, aimYaw: 0, aimPitch: 0, fwd: new THREE.Vector3(0, 0, 1), state: 'wander', dist: 1, grounded: true };
+    for (const r of rigs) { r.update(0.016, s); r.root.position.copy(s.pos); }
+    for (const id of ['xm9', 'trench', 'sixshooter', 'slugthrower', 'knife', 'flaregun']) { const g = buildWeapon(ITEMS[id], { att: { optic: id === 'xm9' ? 'holo' : null } }); g.position.copy(s.pos); tmp.add(g); }
+    const fx = this.effects, here = new THREE.Vector3(P.x, P.y + 1, P.z);
+    fx.impact(here, new THREE.Vector3(0, 1, 0), 'metal', new THREE.Vector3(0, -1, 0));
+    fx.casing(here, new THREE.Vector3(), 'rifle'); fx.casing(here, new THREE.Vector3(), 'shell'); fx.casing(here, new THREE.Vector3(), 'pistol'); fx.casing(here, new THREE.Vector3(), 'big');
+    fx.ring(here, 0.1, 0.2, 0.05, 0xffffff, 0.01);
+    fx.update(0.016, this.camera.position);
+    this.gfx.patchScene();
+    try {
+      if (this.renderer.compileAsync) await this.renderer.compileAsync(this.scene, this.camera);
+      else this.renderer.compile(this.scene, this.camera);
+      this.gfx.render(); // shadow-pass variants too
+    } catch (e) { console.warn('shader warm-up', e); }
+    for (const r of rigs) r.dispose();
+    this.scene.remove(tmp);
   }
 
   // ---------------------------------------------------------------- frame
@@ -88,7 +138,8 @@ export class Game {
     if (this.paused) return;
     if (this.over) {
       this.endT -= dt;
-      this.effects.update(dt);
+      this.updateBullets(dt);
+      this.effects.update(dt, this.camera.position);
       if (this.endT <= 0 && !this.endSent) { this.endSent = true; this.ctx.onExit(this.result); }
       this.clearInput();
       return;
@@ -99,15 +150,25 @@ export class Game {
     if (this.over) { this.clearInput(); return; }
     this.terrain.update(dt, this.camera.position);
     this.scatter.update(dt, P.pos);
+    this.grass.update(P.pos);
+    SHARED.uTime.value += dt;
+    const L = this.env.local;
+    SHARED.uWet.value += ((L.rain > 0.3 ? 1 : 0) - SHARED.uWet.value) * Math.min(1, dt * 0.05);
+    SHARED.uWindStrength.value = 1 + (1 - L.fog) * 2 + L.tornado * 3;
     this.env.update(dt, this.time);
+    this.patchT -= dt;
+    if (this.patchT <= 0) { this.patchT = 1; this.gfx.patchScene(); }
     this.pob.update(dt);
     this.caches.update(dt);
     this.extraction.update(dt);
     this.wildlife.update(dt);
     this.updateOperators(dt);
     this.updateProjectiles(dt);
+    this.updateBullets(dt);
+    for (let i = this.later.length - 1; i >= 0; i--) { const l = this.later[i]; l.t -= dt; if (l.t <= 0) { this.later.splice(i, 1); l.fn(); } }
     this.updateDeployables(dt);
-    this.effects.update(dt);
+    this.effects.setLight(this.gfx.particleLight());
+    this.effects.update(dt, this.camera.position);
     this.updateFocus();
     // safe-zone bookkeeping: carried gear only survives a browser close inside the POB zone
     const safe = this.inSafeZone(P.pos);
@@ -121,8 +182,8 @@ export class Game {
   }
 
   clearInput() { this.input.pressed.clear(); this.input.mdx = this.input.mdy = 0; this.input.wheel = 0; }
-  render() { this.renderer.render(this.scene, this.camera); }
-  resize(w, h) { this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); }
+  render() { this.gfx.render(); }
+  resize(w, h) { this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.gfx.resize(w, h); }
   inSafeZone(p) { return Math.hypot(p.x - this.pob.origin.x, p.z - this.pob.origin.z) < SAFE_ZONE; }
   get hour() { return this.env.hour; }
 
@@ -364,49 +425,147 @@ export class Game {
     return hits.sort((a, b) => a.t - b.t);
   }
 
+  // ---------------------------------------------------------------- ballistics
+  // Bullets are projectiles: they leave the muzzle at the round's velocity, lose speed to drag, drop
+  // under gravity (the bore is angled up so the round crosses the sight line at the weapon's zero)
+  // and take time to arrive. They penetrate thin cover, trees and bodies when they have the power.
+  // b: {origin, dir, muzzle, dmg, pen, ammo, range, explosive, blast, blastDmg, shot, shooter, tracer, def}
   fireBullet(b) {
+    const B = ballistics(b);
+    const dir = b.dir.clone();
+    dir.y += (9.8 * B.zero) / (2 * B.v0 * B.v0);
+    dir.normalize();
+    this.bullets.push({ ...b, pos: b.origin.clone(), vel: dir.multiplyScalar(B.v0), v0: B.v0, drag: B.drag, travelled: 0, life: 4, vis: b.muzzle ? b.muzzle.clone().sub(b.origin) : new THREE.Vector3(), streak: b.tracer ? 1 : 0.35 });
+  }
+
+  updateBullets(dt) {
     const P = this.player;
-    const maxT = Math.min(1500, Math.max(b.range * 6, 250));
-    const world = this.physics.rayAll(b.origin, b.dir, maxT);
-    const ents = this.entityRay(b.origin, b.dir, maxT);
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+      const b = this.bullets[i];
+      b.life -= dt;
+      const speed = b.vel.length();
+      const len = speed * dt;
+      const dir = b.vel.clone().divideScalar(speed || 1);
+      let stop = b.life <= 0 || speed < 60 || b.travelled > 2500;
+      if (!stop) stop = this.resolveSegment(b, b.pos, dir, len);
+      // water: a round entering the water slows to nothing within a metre or so
+      if (!stop) {
+        const nx = b.pos.x + dir.x * len, nz = b.pos.z + dir.z * len, ny = b.pos.y + dir.y * len;
+        const wl = waterLevelAt(nx, nz);
+        if (wl !== null && b.pos.y > wl && ny <= wl) {
+          const t = (b.pos.y - wl) / Math.max(1e-6, b.pos.y - ny);
+          this.effects.splash(new THREE.Vector3(b.pos.x + dir.x * len * t, wl, b.pos.z + dir.z * len * t), b.shot ? 0.25 : 0.5);
+          stop = true;
+        }
+      }
+      // passing close to the player: the supersonic crack
+      if (!stop && b.shooter !== P && !b.cracked) {
+        const toP = new THREE.Vector3(P.pos.x - b.pos.x, P.pos.y + 1.5 - b.pos.y, P.pos.z - b.pos.z);
+        const along = toP.dot(dir);
+        if (along > 0 && along < len) {
+          const miss = toP.addScaledVector(dir, -along).length();
+          if (miss < 4) { b.cracked = true; if (this.audio.crack) this.audio.crack(miss, speed > 340); }
+        }
+      }
+      // visible streak (offset from the eye towards the muzzle at first, converging down range)
+      if (b.streak > 0 && b.travelled < 1200) {
+        const k = Math.max(0, 1 - b.travelled / 12);
+        const p = b.pos.clone().addScaledVector(dir, len * 0.5).addScaledVector(b.vis, k);
+        this.effects.glow.emit({ pos: p, vel: b.vel, color: b.tracer ? [1.6, 1.25, 0.7] : [1.1, 1.0, 0.85], life: dt * 1.2, size: b.tracer ? 0.035 : 0.018, stretch: b.tracer ? 0.012 : 0.006, alpha: b.tracer ? 0.95 : 0.4 * b.streak, fadeIn: 0 });
+      }
+      if (stop) { this.bullets.splice(i, 1); continue; }
+      b.pos.addScaledVector(dir, len);
+      b.travelled += len;
+      b.vel.y -= 9.8 * dt;
+      b.vel.multiplyScalar(Math.exp(-b.drag * dt));
+    }
+  }
+
+  // what a bullet meets along one step; returns true when it stops
+  resolveSegment(b, o, dir, len) {
+    const P = this.player;
+    const world = this.physics.rayAll(o, dir, len);
+    const ents = b.shooter === P ? this.entityRay(o, dir, len) : this.entityRay(o, dir, len).filter((h) => h.kind !== 'op');
     const hits = [...world, ...ents].sort((a, c) => a.t - c.t);
-    let dmg = b.dmg, pen = b.pen, endT = maxT;
-    const point = (t) => b.origin.clone().addScaledVector(b.dir, t);
+    // AI rounds that were rolled to hit the player land when they reach them
+    if (b.hitPlayer && !b.hitDone) {
+      const toP = new THREE.Vector3(P.pos.x - o.x, P.pos.y + P.eye * 0.75 - o.y, P.pos.z - o.z);
+      const along = toP.dot(dir);
+      if (along >= 0 && along <= len && toP.addScaledVector(dir, -along).length() < 0.8 && (!hits.length || hits[0].t > along)) {
+        b.hitDone = true;
+        b.hitPlayer();
+        return true;
+      }
+    }
     for (const h of hits) {
-      const fall = h.t > b.range ? clamp(1 - (h.t - b.range) / (b.range * 2.5), 0.35, 1) : 1;
-      const pt = point(h.t);
+      const dist = b.travelled + h.t;
+      const fall = dist > b.range ? clamp(1 - (dist - b.range) / (b.range * 2.5), 0.35, 1) : 1;
+      // energy left (a slowed round hits softer)
+      const energy = clamp((b.vel.length() / b.v0) ** 2, 0.3, 1);
+      const pt = o.clone().addScaledVector(dir, h.t);
       if (h.kind === 'op') {
         const zone = h.op.zoneAt(pt);
         h.op.airborneAtDeath = false;
-        const r = h.op.takeHit({ dmg: dmg * fall, pen, ammo: b.ammo, zone, explosive: b.explosive, shot: b.shot }, { byPlayer: b.shooter === P, airborne: !P.onGround && P.airTime > 0.25 });
+        const r = h.op.takeHit({ dmg: b.dmg * fall * energy, pen: b.pen, ammo: b.ammo, zone, explosive: b.explosive, shot: b.shot }, { byPlayer: b.shooter === P, airborne: !P.onGround && P.airTime > 0.25, dir });
         this.hud.hitmarker(r.killed, zone === 'head', r.armorHit);
         this.audio.hit(zone === 'head', r.armorHit);
-        this.effects.puff(pt, r.armorHit ? 0x9fc4ff : 0x8a1010, 0.07, 0.25);
-        if (b.explosive) { endT = h.t; this.explode(pt, b.blast, b.blastDmg, b.shooter); break; }
-        if (pen >= 6) { dmg *= 0.5; pen -= 3; continue; }
-        endT = h.t; break;
+        this.effects.impact(pt, dir.clone().negate(), r.armorHit ? 'armor' : 'flesh', dir, b.shot ? 0.5 : 1);
+        if (b.explosive) { this.explode(pt, b.blast, b.blastDmg, b.shooter); return true; }
+        if (b.pen >= 6) { b.dmg *= 0.5; b.pen -= 3; continue; }
+        return true;
       }
       if (h.kind === 'animal') {
         let zone = h.zone;
         if (zone === 'body') {
           const a = h.a, fwd = new THREE.Vector3(Math.sin(a.yaw), 0, Math.cos(a.yaw));
           const rel = pt.clone().sub(a.pos);
-          if (rel.dot(fwd) > a.def.size * 0.1 && rel.y > a.legH + a.bodyH * 0.35) zone = 'vitals';
+          if (rel.dot(fwd) > a.bodyOff + a.def.size * 0.05 && rel.y > a.legH + a.bodyH * 0.35) zone = 'vitals';
           else if (rel.y < a.legH + 0.05) zone = 'leg';
         }
-        const r = h.a.takeDamage(dmg * fall, zone);
-        this.hud.hitmarker(r.killed, zone === 'head' || zone === 'vitals', false);
-        this.effects.puff(pt, 0x8a1010, 0.06, 0.25);
-        if (b.explosive) { endT = h.t; this.explode(pt, b.blast, b.blastDmg, b.shooter); break; }
-        endT = h.t; break;
+        const r = h.a.takeDamage(b.dmg * fall * energy, zone);
+        if (b.shooter === P) this.hud.hitmarker(r.killed, zone === 'head' || zone === 'vitals', false);
+        this.effects.impact(pt, dir.clone().negate(), 'flesh', dir, b.shot ? 0.5 : 1);
+        if (b.explosive) { this.explode(pt, b.blast, b.blastDmg, b.shooter); return true; }
+        return true;
       }
-      if (b.explosive) { endT = h.t; this.explode(pt.addScaledVector(b.dir, -0.2), b.blast, b.blastDmg, b.shooter); break; }
-      this.effects.puff(pt.clone().addScaledVector(b.dir, -0.05), h.kind === 'trunk' ? 0x6a4a2a : 0x9a8a70, 0.06, 0.45, 0.4);
-      if (h.kind === 'box' && h.box.thin && pen >= 4) { dmg *= 0.6; pen -= 2; continue; }
-      if (h.kind === 'trunk' && pen >= 7) { dmg *= 0.5; pen -= 3; continue; }
-      endT = h.t; break;
+      if (b.explosive) { this.explode(pt.addScaledVector(dir, -0.2), b.blast, b.blastDmg, b.shooter); return true; }
+      const { n, surface } = this.surfaceAt(h, pt, dir);
+      this.effects.impact(pt, n, surface, dir, b.shot ? 0.45 : b.pen >= 6 ? 1.4 : 1);
+      if (h.kind === 'box' && h.box.thin && b.pen >= 4) { b.dmg *= 0.6; b.pen -= 2; continue; }
+      if (h.kind === 'trunk' && h.trunk.kind !== 'rock' && b.pen >= 7) { b.dmg *= 0.5; b.pen -= 3; continue; }
+      // shallow hits on hard surfaces ricochet
+      if ((surface === 'rock' || surface === 'metal' || surface === 'concrete') && !b.shot && -dir.dot(n) < 0.25 && !b.ricochet) {
+        b.ricochet = true;
+        b.pos.copy(pt).addScaledVector(n, 0.02);
+        b.vel.addScaledVector(n, -2 * b.vel.dot(n)).multiplyScalar(0.45);
+        b.dmg *= 0.4;
+        b.travelled += h.t;
+        if (this.audio.ricochet) this.audio.ricochet(pt.distanceTo(this.camera.position));
+        return false;
+      }
+      return true;
     }
-    if (b.tracer && Math.random() < 0.6) this.effects.tracer(b.muzzle, point(Math.min(endT, 600)), 0xfff0b0, 0.04);
+    return false;
+  }
+
+  surfaceAt(h, pt, dir) {
+    if (h.kind === 'terrain') {
+      const n = new THREE.Vector3(...normalAt(pt.x, pt.z, 0.5));
+      const reg = regionAt(pt.x, pt.z, pt.y);
+      return { n, surface: snowAt(pt.x, pt.z, pt.y) ? 'snow' : reg === 'w' || reg === 'beach' ? 'sand' : 'terrain' };
+    }
+    if (h.kind === 'trunk') {
+      const t = h.trunk;
+      const n = new THREE.Vector3(pt.x - t.x, 0, pt.z - t.z).normalize();
+      return { n, surface: t.kind === 'rock' ? 'rock' : 'wood' };
+    }
+    const c = h.box;
+    // which face: the axis where the point is closest to the box surface
+    const d = [pt.x - c.min[0], c.max[0] - pt.x, pt.y - c.min[1], c.max[1] - pt.y, pt.z - c.min[2], c.max[2] - pt.z];
+    let k = 0;
+    for (let i = 1; i < 6; i++) if (d[i] < d[k]) k = i;
+    const n = new THREE.Vector3([-1, 1, 0, 0, 0, 0][k], [0, 0, -1, 1, 0, 0][k], [0, 0, 0, 0, -1, 1][k]);
+    return { n, surface: c.mat || 'concrete' };
   }
 
   explode(pos, r, dmg, source) {
@@ -437,7 +596,7 @@ export class Game {
       const r = h.a.takeDamage(dmg, h.zone);
       this.hud.hitmarker(r.killed, false, false);
     }
-    this.effects.puff(pt, 0x8a1010, 0.06, 0.25);
+    this.effects.impact(pt, d.clone().negate(), 'flesh', d, 0.7);
     this.audio.hit(false, false);
   }
 
@@ -472,7 +631,7 @@ export class Game {
       const w = this.physics.raycast(p.pos, dir, len);
       const e = p.type === 'flare' ? null : this.entityRay(p.pos, dir, len)[0];
       if (e && (!w || e.t < w.t)) {
-        if (e.kind === 'op') { const pt = p.pos.clone().addScaledVector(dir, e.t); const zone = e.op.zoneAt(pt); const r = e.op.takeHit({ dmg: p.dmg, pen: 3, ammo: 'light', zone }, { byPlayer: true, airborne: !this.player.onGround }); this.hud.hitmarker(r.killed, zone === 'head', r.armorHit); }
+        if (e.kind === 'op') { const pt = p.pos.clone().addScaledVector(dir, e.t); this.effects.impact(pt, dir.clone().negate(), 'flesh', dir, 0.6); const zone = e.op.zoneAt(pt); const r = e.op.takeHit({ dmg: p.dmg, pen: 3, ammo: 'light', zone }, { byPlayer: true, airborne: !this.player.onGround }); this.hud.hitmarker(r.killed, zone === 'head', r.armorHit); }
         else { const r = e.a.takeDamage(p.dmg, e.zone); this.hud.hitmarker(r.killed, e.zone === 'head', false); }
         this.audio.hit(false, false);
         p.pos.addScaledVector(dir, e.t);
@@ -480,6 +639,8 @@ export class Game {
         continue;
       }
       if (w) {
+        const wp = p.pos.clone().addScaledVector(dir, w.t);
+        if (p.type !== 'flare') { const sf = this.surfaceAt(w, wp, dir); this.effects.impact(wp, sf.n, sf.surface, dir, 0.4); }
         p.pos.addScaledVector(dir, Math.max(0, w.t - 0.05));
         p.mesh.position.copy(p.pos);
         p.stuck = true;
@@ -673,8 +834,24 @@ export class Game {
     this.extraction.clearHeli();
     this.scene.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
-      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { if (m.map) m.map.dispose(); m.dispose(); });
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
     });
+    this.gfx.dispose();
     this.renderer.renderLists.dispose();
   }
+}
+
+// muzzle velocity (m/s), drag and zero range for a round
+function ballistics(b) {
+  const d = b.def || {};
+  const sub = d.sub || '';
+  let v0 = 880, drag = 0.1, zero = 100;
+  if (b.shot) { v0 = 400; drag = 0.9; zero = 25; }
+  else if (b.ammo === 'slug' || b.ammo === 'exp_slug') { v0 = 470; drag = 0.35; zero = 50; }
+  else if (d.id === 'bg850') { v0 = 900; drag = 0.05; zero = 300; }
+  else if (d.id === 'zip22') { v0 = 330; drag = 0.3; zero = 15; }
+  else if (/Pistol|Revolver|Cannon|SMG/.test(sub)) { v0 = d.id === 'guillotine' || d.id === 'd744' ? 470 : 370; drag = 0.25; zero = 25; }
+  else if (d.id === 'ka43') { v0 = 715; drag = 0.13; }
+  if (b.explosive) v0 *= 0.85;
+  return { v0, drag, zero };
 }

@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { ITEMS, fmtDuration } from './data/catalog.js';
 import { buildItemModel } from './viewmodel.js';
+import { compactWeapon } from './weapons.js';
 import { makeItem } from './inventory.js';
 
 const SIZE = 14;      // footprint (m)
@@ -193,18 +194,18 @@ export class POB {
     const d = ITEMS[id];
     let m;
     if (d.shape) {
-      m = buildItemModel(d, null);
+      m = compactWeapon(buildItemModel(d, null));
       m.rotation.y = Math.PI / 2;
       m.scale.setScalar(3.2);
     } else m = genericModel(d);
     const box = new THREE.Box3().setFromObject(m);
     const size = box.getSize(new THREE.Vector3());
     m.position.y = BED + 0.05 - box.min.y;
+    // it's printed in filament: one shared PLA-like material, revealed layer by layer
+    if (!this.printMat) this.printMat = new THREE.MeshStandardMaterial({ color: 0x8fa8a0, roughness: 0.5, metalness: 0, clippingPlanes: [this.clip], clipShadows: true, side: THREE.DoubleSide });
     m.traverse((o) => {
       if (!o.isMesh) return;
-      o.material = o.material.clone();
-      o.material.clippingPlanes = [this.clip];
-      o.material.clipShadows = true;
+      o.material = this.printMat;
       o.castShadow = true;
     });
     this.group.add(m);

@@ -191,6 +191,7 @@ export class Player {
     }
     this.landSpeed = 0;
     game.physics.moveBody(this, dt);
+    if (this.landSpeed > 2) this.justLanded = this.landSpeed;
     if (this.landSpeed > 12 && !ladder) {
       const fall = (this.landSpeed - 12) * 7;
       this.hurt(fall, 'Fall damage');
@@ -261,7 +262,17 @@ export class Player {
       swing: this.swingT > 0 ? 1 - this.swingT / 0.45 : 0,
       pump: this.pumpT > 0 ? 1 - this.pumpT / 0.45 : 0,
       scoped,
+      empty: it && isGun(d) ? this.loaded(it) === 0 : false,
+      trigger: !!inp.lmb && !uiOpen,
+      busyKind: this.busyKind,
+      suit: this.inv.suit ? this.inv.suit.id : null,
+      crouch: this.crouch,
+      airborne: !this.onGround,
+      landed: this.justLanded || 0,
+      tired: this.sprintTired || 0,
     });
+    this.justLanded = 0;
+    if (!uiOpen && inp.pressed && inp.pressed.has('KeyY') && this.busyT <= 0 && this.reloadT <= 0) this.vm.inspect = 1;
   }
 
   // ---------------------------------------------------------------- climate
@@ -400,7 +411,7 @@ export class Player {
       const dir = _d.clone().addScaledVector(_r, Math.cos(a) * rr).addScaledVector(_u, Math.sin(a) * rr).normalize();
       game.fireBullet({
         origin: _o.clone(), dir, muzzle: _m.clone(), dmg, pen: A.pen + (d.penBonus || 0), ammo: type, range,
-        explosive: A.explosive, blast: A.blast, blastDmg: A.blastDmg, shot: pellets > 1, shooter: this, tracer: i === 0,
+        explosive: A.explosive, blast: A.blast, blastDmg: A.blastDmg, shot: pellets > 1, shooter: this, def: d, tracer: i === 0 && (this.shotCount = (this.shotCount || 0) + 1) % 4 === 1,
       });
     }
     const rk = P.recoil * (1 - 0.35 * this.adsT) * rand(0.85, 1.15) * (d.dual ? 0.7 : 1);
@@ -474,6 +485,7 @@ export class Player {
     this.inv.meds[id]--;
     this.reloadT = 0;
     this.busyTotal = this.busyT = med.time;
+    this.busyKind = id;
     this.busyAction = () => this.applyMed(id);
     this.game.hud.toast(`Using ${ITEMS[id].name}…`, '#9fe8ff', med.time);
   }

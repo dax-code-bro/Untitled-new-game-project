@@ -4,55 +4,27 @@ import { TIME, WEATHER, WEATHER_ROLL } from './data/world.js';
 import { heightAt, temperatureAt, smooth } from './terrain.js';
 import { rand, pick } from './rng.js';
 
-const C = (h) => new THREE.Color(h);
-const PALETTE = {
-  day: { top: C(0x3f7fcf), horizon: C(0xc4d8e8), sun: C(0xfff1d6), sunI: 2.7, hemi: 1.15 },
-  dusk: { top: C(0x2a3a6e), horizon: C(0xf09a5a), sun: C(0xff9a5a), sunI: 1.4, hemi: 0.6 },
-  night: { top: C(0x060b18), horizon: C(0x22324e), sun: C(0x9ab6e6), sunI: 0.55, hemi: 0.42 },
-};
-
 const REGION_CENTER = { n: [0, -10000, 9000], s: [0, 10500, 9000], e: [10500, 0, 8500], w: [-10500, 0, 8500], hub: [0, 0, 3500] };
+
+const col = (h) => new THREE.Color(h);
+const SKY = {
+  dayZenith: col(0x2a66c0), dayHorizon: col(0xb7cfe3), nightZenith: col(0x040814), nightHorizon: col(0x17233a),
+  sunset: col(0xf39a5a), sunLow: col(0xff8a4a), sunHigh: col(0xfff4e2), moon: col(0x8ea8e0), overcast: col(0x8a9198),
+  sand: col(0xc9a46a), snow: col(0xdbe4ee),
+};
 
 export class Environment {
   constructor(game) {
     this.game = game;
-    const scene = game.scene;
     this.hour = TIME.startHour;
-    // sky dome
-    this.skyUniforms = {
-      top: { value: new THREE.Color() }, horizon: { value: new THREE.Color() }, sunDir: { value: new THREE.Vector3(0, 1, 0) },
-      sunColor: { value: new THREE.Color() }, haze: { value: 0 },
-    };
-    this.sky = new THREE.Mesh(new THREE.SphereGeometry(40000, 32, 16), new THREE.ShaderMaterial({
-      uniforms: this.skyUniforms, side: THREE.BackSide, depthWrite: false, fog: false,
-      vertexShader: 'varying vec3 vDir; void main(){ vDir = normalize(position); vec4 p = modelViewMatrix * vec4(position,1.0); gl_Position = projectionMatrix * p; gl_Position.z = gl_Position.w * 0.99999; }',
-      fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 sunDir; uniform vec3 sunColor; uniform float haze; varying vec3 vDir;
-        void main(){ float h = clamp(vDir.y, -0.2, 1.0); vec3 c = mix(horizon, top, pow(max(h,0.0), 0.55));
-          float s = max(dot(normalize(vDir), normalize(sunDir)), 0.0);
-          c += sunColor * (pow(s, 900.0) * 3.0 + pow(s, 12.0) * 0.25) * (1.0 - haze);
-          c = mix(c, horizon, haze);
-          gl_FragColor = vec4(c, 1.0); }`,
-    }));
-    this.sky.renderOrder = -1;
-    this.sky.frustumCulled = false;
-    scene.add(this.sky);
-    scene.fog = new THREE.Fog(0xc4d8e8, 400, 9000);
-    this.hemi = new THREE.HemisphereLight(0xffffff, 0x5a5040, 1.1);
-    scene.add(this.hemi);
-    this.sun = new THREE.DirectionalLight(0xffffff, 2.5);
-    this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
-    const sc = this.sun.shadow.camera;
-    sc.left = sc.bottom = -70; sc.right = sc.top = 70; sc.near = 1; sc.far = 600;
-    this.sun.shadow.bias = -0.0004;
-    this.sun.shadow.normalBias = 0.06;
-    scene.add(this.sun, this.sun.target);
-
-    // weather
     this.events = [];
     this.rollT = 20;
     this.local = { rain: 0, snow: 0, sand: 0, tornado: 0, fog: 1, temp: 0, overcast: 0 };
     this.flashT = 0;
+    this.atm = {
+      sunDir: new THREE.Vector3(), moonDir: new THREE.Vector3(), sunColor: new THREE.Color(), lightColor: new THREE.Color(),
+      zenith: new THREE.Color(), horizon: new THREE.Color(), ambientGround: new THREE.Color(),
+    };
     this.buildParticles();
   }
 
@@ -87,51 +59,55 @@ export class Environment {
     this.funnel = t;
   }
 
-  // ----------------------------------------------------------------
   update(dt, time) {
     const g = this.game, cam = g.camera.position;
     this.hour = (TIME.startHour + (time / TIME.dayLength) * 24) % 24;
     this.updateWeather(dt, cam);
-    this.updateSky(cam);
+    this.updateSky(dt, cam);
     this.updateParticles(dt, cam);
   }
 
   get dayKey() { return this.hour >= 6 && this.hour < 18 ? 'day' : 'night'; }
 
-  updateSky(cam) {
+  // Computes the atmosphere for this hour + weather and hands it to the renderer.
+  updateSky(dt, cam) {
+    const A = this.atm, L = this.local;
     const theta = ((this.hour - 6) / 12) * Math.PI;
-    const sy = Math.sin(theta);
-    const dir = new THREE.Vector3(Math.cos(theta), sy, 0.3).normalize();
-    let a, b, k;
-    if (sy > 0.2) { a = PALETTE.day; b = PALETTE.day; k = 0; }
-    else if (sy > -0.05) { a = PALETTE.dusk; b = PALETTE.day; k = smooth(-0.05, 0.2, sy); }
-    else { a = PALETTE.night; b = PALETTE.dusk; k = smooth(-0.25, -0.05, sy); }
-    const L = this.local;
-    const top = a.top.clone().lerp(b.top, k), hor = a.horizon.clone().lerp(b.horizon, k);
-    const grey = new THREE.Color(0x8d939a).multiplyScalar(sy > 0 ? 1 : 0.25);
-    top.lerp(grey, L.overcast * 0.8); hor.lerp(grey, L.overcast * 0.6);
-    let fogCol = hor.clone();
-    if (L.sand > 0) fogCol.lerp(new THREE.Color(0xc9a46a).multiplyScalar(sy > 0 ? 1 : 0.3), Math.min(1, L.sand));
-    if (L.snow > 0.3) fogCol.lerp(new THREE.Color(0xdfe6ee).multiplyScalar(sy > 0 ? 1 : 0.3), Math.min(1, L.snow));
-    const U = this.skyUniforms;
-    U.top.value.copy(top); U.horizon.value.copy(fogCol); U.sunColor.value.copy(a.sun.clone().lerp(b.sun, k)); U.sunDir.value.copy(dir);
-    U.haze.value = Math.min(1, L.overcast * 0.6 + (1 - L.fog) * 0.9);
-    this.sky.position.copy(cam);
-    const scene = this.game.scene;
-    scene.fog.color.copy(fogCol);
-    scene.fog.far = 9000 * L.fog + 60;
-    scene.fog.near = Math.min(400, scene.fog.far * 0.05);
-    // lights: the sun below the horizon becomes the moon
-    const night = sy < -0.05;
-    const ld = night ? dir.clone().multiplyScalar(-1).setY(Math.max(0.35, -sy)) : dir.clone().setY(Math.max(0.08, sy));
-    const p = this.game.player ? this.game.player.pos : cam;
-    this.sun.position.set(p.x + ld.x * 300, p.y + ld.y * 300, p.z + ld.z * 300);
-    this.sun.target.position.set(p.x, p.y, p.z);
-    this.sun.color.copy(a.sun).lerp(b.sun, k);
-    this.sun.intensity = (a.sunI + (b.sunI - a.sunI) * k) * (1 - L.overcast * 0.65);
-    this.hemi.intensity = (a.hemi + (b.hemi - a.hemi) * k) * (1 - L.overcast * 0.3) + (this.flashT > 0 ? 3 : 0);
-    this.hemi.color.copy(top).lerp(new THREE.Color(0xffffff), 0.5);
-    this.flashT -= 0.016;
+    A.sunDir.set(Math.cos(theta), Math.sin(theta), 0.32).normalize();
+    A.moonDir.set(-A.sunDir.x, -A.sunDir.y, -0.2).normalize();
+    const sy = A.sunDir.y;
+    const day = smooth(-0.1, 0.22, sy);
+    const night = 1 - smooth(-0.22, -0.02, sy);
+    const sunset = (1 - smooth(0.04, 0.32, sy)) * smooth(-0.16, 0.0, sy);
+    A.sunColor.copy(SKY.sunLow).lerp(SKY.sunHigh, smooth(0.02, 0.45, sy));
+    A.zenith.copy(SKY.nightZenith).lerp(SKY.dayZenith, day);
+    A.horizon.copy(SKY.nightHorizon).lerp(SKY.dayHorizon, day).lerp(SKY.sunset, sunset * 0.55);
+    // weather greys things out and tints the haze
+    const oc = L.overcast;
+    A.zenith.lerp(SKY.overcast.clone().multiplyScalar(0.25 + day * 0.75), oc * 0.75);
+    A.horizon.lerp(SKY.overcast.clone().multiplyScalar(0.25 + day * 0.75), oc * 0.6);
+    if (L.sand > 0) A.horizon.lerp(SKY.sand.clone().multiplyScalar(0.3 + day * 0.7), Math.min(1, L.sand));
+    if (L.snow > 0.3) A.horizon.lerp(SKY.snow.clone().multiplyScalar(0.3 + day * 0.7), Math.min(1, L.snow));
+    A.lightColor.copy(night > 0.5 ? SKY.moon : A.sunColor);
+    A.sunI = (day * 3.4 * (1 - oc * 0.7) + night * 0.45) * (1 - L.sand * 0.5);
+    A.hemiI = 0.06 + day * 0.18 + night * 0.12;
+    A.envI = 0.12 + day * 0.85;
+    A.ambientGround.copy(A.horizon).multiplyScalar(0.35);
+    A.night = night;
+    A.sunsetK = sunset;
+    A.haze = Math.min(1, oc * 0.5 + (1 - L.fog) * 1.2);
+    A.cloudCover = 0.32 + oc * 0.55 + L.snow * 0.2;
+    // fog: a thin sea-level haze normally, a wall of weather around you in a storm
+    A.fogDensity = 0.00011 / Math.max(0.012, L.fog);
+    const storm = 1 - L.fog;
+    const py = this.game.player ? this.game.player.pos.y : cam.y;
+    A.fogBase = storm * (py - 40);
+    A.fogHeightK = 0.0016 * (1 - storm * 0.8);
+    if (this.flashT > 0) { A.sunI += 6; A.hemiI += 2; }
+    this.flashT -= dt;
+    const focus = this.game.player ? this.game.player.pos : cam;
+    this.game.gfx.setAtmosphere(A, dt, focus);
+    this.game.gfx.grade.cold.value = this.game.player ? Math.min(1, this.game.player.coldEx / 100) * 0.6 : 0;
   }
 
   // ---------------------------------------------------------------- weather

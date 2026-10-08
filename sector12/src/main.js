@@ -4,6 +4,8 @@ import { AudioSys } from './audio.js';
 import * as Save from './save.js';
 import { HUD, esc } from './ui/hud.js';
 import { Game } from './game.js';
+import { buildTextures, arrayTextures } from './textures.js';
+import { QUALITY } from './graphics.js';
 import { ITEMS, fmtDuration } from './data/catalog.js';
 
 const $ = (id) => document.getElementById(id);
@@ -12,13 +14,9 @@ const params = new URLSearchParams(location.search);
 const testMode = params.has('test');
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, logarithmicDepthBuffer: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
 renderer.localClippingEnabled = true; // the POB reveals prints layer by layer
+// (shadows, tone mapping, pixel ratio and post-processing are set up per quality preset in graphics.js)
 
 let save = Save.load();
 if (params.has('fastprint')) save.speed = 0.02; // debug: prints finish ~50x faster
@@ -28,6 +26,9 @@ audio.setVolume(save.settings.volume);
 const hud = new HUD(audio);
 const input = { keys: {}, pressed: new Set(), mdx: 0, mdy: 0, lmb: false, rmb: false, wheel: 0 };
 let game = null;
+let textures = null; // generated once, reused across lives
+if (!save.settings.quality) save.settings.quality = params.get('quality') || 'high';
+if (params.get('quality')) save.settings.quality = params.get('quality');
 
 const locked = () => testMode || document.pointerLockElement === canvas;
 function lock() {
@@ -40,7 +41,7 @@ function setPaused(p) {
   if (!game) return;
   game.paused = p;
   $('pause').classList.toggle('hidden', !p);
-  if (p) { $('sens').value = save.settings.sens; $('vol').value = save.settings.volume; }
+  if (p) { $('sens').value = save.settings.sens; $('vol').value = save.settings.volume; $('quality').value = save.settings.quality || 'high'; }
 }
 const persist = () => Save.store(save);
 
@@ -88,7 +89,14 @@ async function deploy() {
   $('loading').classList.remove('hidden');
   $('loading-detail').textContent = 'Building the island…';
   await new Promise((r) => setTimeout(r, 30));
-  game = new Game({ renderer, audio, hud, input, save, persist, lock, unlock, onExit });
+  const q = QUALITY[save.settings.quality || 'high'] || QUALITY.high;
+  if (!textures || textures.size !== q.texSize) {
+    textures = buildTextures(q.texSize, (i, n, name) => { $('loading-detail').textContent = `Generating materials ${i}/${n} (${name})`; });
+    textures.size = q.texSize;
+    textures.terrain = arrayTextures(textures, ['grass', 'forest', 'jungle', 'sand', 'rock', 'snow', 'dirt']);
+    await new Promise((r) => setTimeout(r, 10));
+  }
+  game = new Game({ renderer, audio, hud, input, save, persist, lock, unlock, onExit, textures });
   window.__game = game;
   await game.load((ready, want) => { $('loading-detail').textContent = `Streaming terrain ${ready}/${want}`; });
   $('loading').classList.add('hidden');
@@ -147,14 +155,16 @@ $('quit').addEventListener('click', () => {
   showTitle();
 });
 $('sens').addEventListener('input', (e) => { save.settings.sens = +e.target.value; persist(); });
+$('quality').addEventListener('change', (e) => { save.settings.quality = e.target.value; persist(); });
 $('vol').addEventListener('input', (e) => { save.settings.volume = +e.target.value; audio.setVolume(save.settings.volume); persist(); });
-addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); if (game) game.resize(innerWidth, innerHeight); });
+addEventListener('resize', () => { if (game) game.resize(innerWidth, innerHeight); else renderer.setSize(innerWidth, innerHeight); });
 
 // ---------------------------------------------------------------- loop
 let last = performance.now(), termT = 0;
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
+  if (window.__freeze) { requestAnimationFrame(frame); return; } // automation renders frames by hand
   if (game) {
     game.update(dt);
     if (game) {

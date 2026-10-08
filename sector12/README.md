@@ -16,6 +16,7 @@ Then open http://localhost:8000 and click **DEPLOY**. A desktop GPU is recommend
 URL flags:
 - `?test` skips pointer lock (for automation).
 - `?fastprint` makes prints finish about 50× faster (for debugging).
+- `?quality=low|medium|high|ultra` overrides the graphics preset (also in the pause menu; applies on the next deploy).
 
 During a session, the live game object is available as `window.__game`.
 
@@ -30,6 +31,7 @@ During a session, the live game object is available as `window.__game`.
 | F / H / Z | Quick-heal (picks the right medical item) / hand warmer / pin a target |
 | E | Interact: POB terminal, deposit crate, loot, harvest, extraction |
 | Tab / M / Esc | Inventory (attachments, camo, placing buildings) / map / pause |
+| Y | Inspect your weapon |
 
 ## How to play
 
@@ -59,7 +61,14 @@ During a session, the live game object is available as `window.__game`.
 | `environment.js` | Sky, 30-minute day/night cycle, regional weather (rain, sandstorm, blizzard, tornado) |
 | `game.js` | The session: combat, loot, interaction, buildings, death and extraction |
 | `ui/hud.js`, `ui/terminal.js` | HUD, map, inventory, POB terminal |
-| `viewmodel.js` | Procedural weapon models and first-person animation |
+| `graphics.js` | Renderer setup per quality preset: atmospheric sky + clouds, image-based lighting, cascaded shadows, height fog, bloom / grade / SMAA post |
+| `textures.js`, `materials.js` | Procedural PBR texture library; terrain splat, water, wind-sway and foliage shaders |
+| `grass.js` | Streamed instanced grass that sways in the wind |
+| `weapons.js` | Detailed real-scale weapon models with named moving parts (mag, bolt, slide, pump, hammer, cylinder, barrel) |
+| `viewmodel.js` | First-person arms and weapon: IK hands, sway / bob / recoil springs, working actions, per-weapon reloads, melee, throws, medical |
+| `rig.js` | Human rig: planted-foot gait, two-bone IK legs and arms, aim stance, reloads, flinches, verlet ragdoll deaths |
+| `animalRig.js` | Quadruped rig for every species: walk / trot / gallop / bound gaits, grazing, ears, tail, ragdoll |
+| `effects.js` | Soft particles, decals, physical casings and dropped mags, impacts per surface, explosions, splashes, blood |
 
 After changing the catalog, regenerate the tables in DESIGN.md with `node tools/catalog-tables.mjs`.
 

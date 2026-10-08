@@ -108,6 +108,44 @@ export class AudioSys {
   ui() { if (this.ctx) this._tone(700, 760, 0.04, 'triangle', 0.12); }
   alert() { if (this.ctx) { this._tone(880, 880, 0.12, 'square', 0.12); this._tone(660, 660, 0.18, 'square', 0.12, 0, 0.14); } }
   success() { if (this.ctx) [523, 659, 784, 1046].forEach((f, i) => this._tone(f, f, 0.25, 'triangle', 0.2, 0, i * 0.11)); }
+  // bullet passing close by: the supersonic crack (or a subsonic whizz)
+  crack(miss = 2, supersonic = true) {
+    if (!this.ctx) return;
+    const v = Math.max(0.15, 1 - miss / 4);
+    if (supersonic) { this._noise(0.035, 'highpass', 2500, 0.9 * v, (Math.random() - 0.5) * 1.4, 0.7); this._tone(2600, 900, 0.05, 'square', 0.12 * v); }
+    else this._noise(0.18, 'bandpass', 1400 + Math.random() * 600, 0.4 * v, (Math.random() - 0.5) * 1.4, 3);
+  }
+  ricochet(dist = 0) {
+    if (!this.ctx) return;
+    const v = 1 / (1 + dist / 25);
+    if (v < 0.05) return;
+    const f = 2400 + Math.random() * 1800;
+    this._tone(f, f * 0.55, 0.32, 'sine', 0.18 * v, (Math.random() - 0.5));
+    this._noise(0.05, 'highpass', 3000, 0.25 * v);
+  }
+  impact(surface, dist = 0) {
+    if (!this.ctx) return;
+    const v = 1 / (1 + dist / 12);
+    if (v < 0.06) return;
+    if (surface === 'metal' || surface === 'armor') { this._tone(1800 + Math.random() * 900, 900, 0.12, 'triangle', 0.18 * v); this._noise(0.04, 'highpass', 3500, 0.3 * v); }
+    else if (surface === 'wood') this._noise(0.08, 'bandpass', 900, 0.45 * v, 0, 2);
+    else if (surface === 'flesh') this._noise(0.06, 'lowpass', 500, 0.5 * v);
+    else if (surface === 'water') this._noise(0.25, 'bandpass', 1200, 0.3 * v, 0, 1.2);
+    else if (surface === 'snow' || surface === 'sand') this._noise(0.07, 'lowpass', 900, 0.3 * v);
+    else this._noise(0.06, 'bandpass', 1600, 0.4 * v, 0, 1.4);
+  }
+  casing(kind = 'rifle', dist = 0) {
+    if (!this.ctx || dist > 15) return;
+    const v = 1 / (1 + dist / 3);
+    if (kind === 'shell') this._noise(0.05, 'bandpass', 700, 0.12 * v, 0, 3);
+    else { const f = kind === 'big' ? 3200 : kind === 'pistol' ? 5200 : 4400; this._tone(f + Math.random() * 600, f * 0.8, 0.09, 'sine', 0.07 * v); this._tone(f * 1.5, f * 1.3, 0.05, 'sine', 0.04 * v, 0, 0.01); }
+  }
+  footstep(p, speed = 2, dist = 0) {
+    if (!this.ctx) return;
+    const v = 1 / (1 + dist / 6) * Math.min(1, 0.4 + speed * 0.12);
+    if (v < 0.04) return;
+    this._noise(0.07, 'lowpass', 380 + speed * 40, 0.16 * v);
+  }
   step(v = 0.08) { if (this.ctx) this._noise(0.06, 'lowpass', 420, v); }
 
   startHeli() {

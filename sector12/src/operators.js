@@ -3,15 +3,14 @@
 import * as THREE from 'three';
 import { ITEMS, AMMO, ammoOptions } from './data/catalog.js';
 import { OPERATOR_TIERS, OPERATOR_NAMES } from './data/world.js';
-import { buildItemModel } from './viewmodel.js';
+import { HumanRig, PALETTES } from './rig.js';
 import { makeItem } from './inventory.js';
 import { applyHit, newStatus, statusDrain, randomZone, zoneFromHit } from './damage.js';
 import { heightAt, regionAt, POIS } from './terrain.js';
 import { rand, randi, pick, clamp, wrapAngle } from './rng.js';
 
-const geo = new Map();
-const bx = (w, h, d) => { const k = `${w},${h},${d}`; if (!geo.has(k)) geo.set(k, new THREE.BoxGeometry(w, h, d)); return geo.get(k); };
-const skin = new THREE.MeshLambertMaterial({ color: 0xb98a64 });
+const SKIN = [0xc69a74, 0x8a5a3a, 0xe0b090, 0x5a3a26, 0xb07850, 0xd8a880];
+const ghostGeo = new THREE.CapsuleGeometry(0.36, 1.2, 4, 10);
 const revealMat = new THREE.MeshBasicMaterial({ color: 0xff2020, transparent: true, opacity: 0.45, depthTest: false });
 
 export const SAFE_ZONE = 150; // m around the POB: operators keep out
@@ -21,6 +20,7 @@ export class Operator {
     this.game = game;
     const tier = OPERATOR_TIERS[region] || OPERATOR_TIERS.hub;
     this.tier = tier;
+    this.region = region;
     this.name = pick(OPERATOR_NAMES) + (Math.random() < 0.4 ? randi(1, 99) : '');
     this.pos = new THREE.Vector3(x, heightAt(x, z), z);
     this.vel = new THREE.Vector3();
@@ -57,45 +57,63 @@ export class Operator {
   }
 
   buildMesh() {
-    const g = new THREE.Group();
-    g.rotation.order = 'YXZ';
-    const uniCol = this.suit === 'camo_winter' ? 0xe6ebef : this.suit === 'camo_desert' ? 0xc9ac78 : pick([0x4f5a3a, 0x5a4f3f, 0x3f4a55, 0x6a6a5a, 0x2f3a2f]);
-    const uni = new THREE.MeshLambertMaterial({ color: uniCol });
-    const vest = new THREE.MeshLambertMaterial({ color: this.vest ? (this.vest.level >= 7 ? 0x1f2422 : 0x3a4030) : uniCol });
-    const add = (gg, m, x, y, z, p = g) => { const o = new THREE.Mesh(gg, m); o.position.set(x, y, z); o.castShadow = true; p.add(o); return o; };
-    this.legs = [];
-    for (const sx of [-0.12, 0.12]) {
-      const hip = new THREE.Group(); hip.position.set(sx, 0.92, 0); g.add(hip);
-      add(bx(0.18, 0.92, 0.2), uni, 0, -0.46, 0, hip);
-      this.legs.push(hip);
-    }
-    add(bx(0.5, 0.62, 0.3), uni, 0, 1.24, 0);
-    if (this.vest) add(bx(0.55, 0.46, 0.36), vest, 0, 1.28, 0);
-    add(bx(0.24, 0.26, 0.24), skin, 0, 1.68, 0);
-    if (this.helmet) add(bx(0.3, 0.14, 0.3), new THREE.MeshLambertMaterial({ color: this.helmet.level >= 6 ? 0x1a1a1a : 0x45503a }), 0, 1.83, 0);
-    add(bx(0.13, 0.13, 0.5), uni, 0.2, 1.33, -0.2).rotation.x = 0.2;
-    add(bx(0.13, 0.13, 0.5), uni, -0.12, 1.3, -0.3).rotation.y = 0.5;
-    const gun = buildItemModel(this.wdef, this.weapon);
-    gun.scale.setScalar(1.2);
-    gun.position.set(0.08, 1.36, -0.45);
-    g.add(gun);
-    this.gunMesh = gun;
+    const region = this.region;
+    const palette = this.suit === 'camo_winter' ? 'winter' : this.suit === 'camo_desert' ? 'desert'
+      : region === 'n' ? pick(['winter', 'urban', 'black']) : region === 'w' ? pick(['desert', 'multicam']) : region === 'e' ? pick(['woodland', 'ranger', 'multicam'])
+      : pick(['woodland', 'ranger', 'multicam', 'urban', 'black']);
+    const vl = this.vest ? this.vest.level : 0, hl = this.helmet ? this.helmet.level : 0;
+    this.rig = new HumanRig(this.game.scene, this.game.tex, {
+      palette: PALETTES[palette], skin: pick(SKIN), vest: vl, helmet: hl, pack: randi(0, 3),
+      goggles: region === 'n' || region === 'w' ? Math.random() < 0.6 : Math.random() < 0.15,
+      balaclava: palette === 'winter' || (region === 'n' && Math.random() < 0.5), cap: !hl && Math.random() < 0.5,
+      holster: this.wdef.sub === 'Pistol' || Math.random() < 0.4,
+      vestColor: vl >= 7 ? 0x1f2422 : palette === 'desert' ? 0x8a7a5a : palette === 'winter' ? 0xcfd6dc : 0x3a4030,
+      helmColor: hl >= 6 ? 0x1a1a1a : palette === 'winter' ? 0xe0e4e8 : palette === 'desert' ? 0x9a8a6a : 0x45503a,
+      gearColor: palette === 'desert' ? 0x6a5a40 : palette === 'winter' ? 0xa8b0b6 : 0x2a2d26,
+    });
+    this.rig.setWeapon(this.wdef, this.weapon);
+    this.rig.onStep = (p, speed) => { if (this.dist < 35 && this.game.audio.footstep) this.game.audio.footstep(p, speed, this.dist); };
     // red outline for flare reveals: a slightly bigger silhouette drawn through walls
-    const ghost = new THREE.Mesh(bx(0.7, 1.95, 0.45), revealMat);
-    ghost.position.y = 0.97; ghost.visible = false; ghost.renderOrder = 10;
-    g.add(ghost);
+    const ghost = new THREE.Mesh(ghostGeo, revealMat);
+    ghost.visible = false; ghost.renderOrder = 10;
+    this.game.scene.add(ghost);
     this.ghost = ghost;
-    this.mesh = g;
-    this.game.scene.add(g);
+    this.mesh = this.rig.root;
+    this.reloadT = 0; this.reloadDur = 1;
+    this.aimPitch = 0;
+  }
+
+  get gunMesh() { return this.rig.gun; }
+
+  rigState(dt, speed) {
+    const P = this.game.player;
+    const aiming = this.state === 'combat' && this.canSee;
+    let aimYaw = this.yaw, aimPitch = 0;
+    if (aiming || this.state === 'combat') {
+      const dx = P.pos.x - this.pos.x, dz = P.pos.z - this.pos.z, dy = P.pos.y + P.eye * 0.75 - (this.pos.y + 1.45);
+      aimYaw = Math.atan2(-dx, -dz);
+      aimPitch = Math.atan2(dy, Math.hypot(dx, dz));
+    }
+    this.aimPitch += (aimPitch - this.aimPitch) * Math.min(1, dt * 8);
+    const ground = heightAt(this.pos.x, this.pos.z);
+    return {
+      pos: this.pos, vel: this.vel, yaw: this.yaw, aimYaw, aimPitch: this.aimPitch,
+      crouch: this.state === 'search' || (aiming && this.dist > this.pref && this.strafeDir === 0 && this.wdef.id === 'bg850'),
+      aiming, sprint: speed > 4, reload: this.reloadT > 0 ? 1 - this.reloadT / this.reloadDur : -1, reloadKind: this.wdef.perRound ? 'shell' : 'mag', rounds: this.wdef.mag,
+      grounded: this.onGround !== false, swim: this.swimming, dist: this.dist ?? 0, floorY: this.pos.y > ground + 0.3 ? this.pos.y : null,
+    };
   }
 
   update(dt) {
     const game = this.game, P = game.player, t = game.time;
     if (this.dead) {
-      if (this.deathT < 1) { this.deathT = Math.min(1, this.deathT + dt * 3); this.mesh.rotation.x = -Math.PI / 2 * this.deathT; this.mesh.position.y = this.pos.y + 0.12 * this.deathT; }
+      this.dist = Math.hypot(P.pos.x - this.pos.x, P.pos.z - this.pos.z);
+      this.rig.update(dt, { pos: this.pos, dist: this.dist });
       return;
     }
     this.ghost.visible = t < this.revealedUntil;
+    if (this.ghost.visible) this.ghost.position.set(this.pos.x, this.pos.y + 0.95, this.pos.z);
+    if (this.reloadT > 0) this.reloadT = Math.max(0, this.reloadT - dt);
     const drain = statusDrain(this.status);
     if (drain > 0) { this.hp -= drain * dt; if (this.hp <= 0) return this.die({ bleed: true }); }
     const dx = P.pos.x - this.pos.x, dz = P.pos.z - this.pos.z;
@@ -160,11 +178,9 @@ export class Operator {
       const d = wrapAngle(want - this.yaw), turn = (this.state === 'combat' ? 6 : 3.5) * dt;
       this.yaw += clamp(d, -turn, turn);
     }
-    if (speed > 0 && moved > 0.001) this.walk += moved * 3.2;
-    const sw = speed > 0 ? Math.sin(this.walk) * 0.6 : 0;
-    this.legs[0].rotation.x = sw; this.legs[1].rotation.x = -sw;
-    this.mesh.position.copy(this.pos);
-    this.mesh.rotation.y = this.yaw;
+    // the rig wants the velocity we actually moved at (blocked bodies shouldn't moonwalk)
+    if (dt > 0) { this.vel.x = (this.pos.x - px) / dt; this.vel.z = (this.pos.z - pz) / dt; }
+    if (this.mesh.visible) this.rig.update(dt, this.rigState(dt, moved / Math.max(dt, 1e-3)));
   }
 
   dirTo(p) {
@@ -249,7 +265,7 @@ export class Operator {
     if (this.shotT > 0) return;
     if (this.weapon.mag <= 0) {
       if (this.wdef.noReload) { this.weapon = makeItem('m1911'); this.wdef = ITEMS.m1911; this.weapon.mag = 7; this.ammoType = 'medium'; }
-      else { this.weapon.mag = this.wdef.mag; this.shotT = this.wdef.reload * (this.wdef.perRound ? this.wdef.mag * 0.6 : 1); }
+      else { this.weapon.mag = this.wdef.mag; this.shotT = this.wdef.reload * (this.wdef.perRound ? this.wdef.mag * 0.6 : 1); this.reloadT = this.reloadDur = Math.max(0.8, this.shotT); }
       return;
     }
     const rpm = Math.min(this.wdef.rpm, this.wdef.mode === 'auto' ? 700 : 240);
@@ -262,7 +278,9 @@ export class Operator {
 
   fire(dist) {
     const game = this.game, P = game.player;
-    const muzzle = this.gunMesh.localToWorld(new THREE.Vector3(0, 0.015, this.gunMesh.userData.muzzleZ));
+    this.rig.fire();
+    const g = this.gunMesh;
+    const muzzle = g ? new THREE.Vector3(0, 0.0, g.userData.muzzleZ).applyMatrix4(g.matrix).add(this.pos) : this.pos.clone().setY(this.pos.y + 1.4);
     const A = AMMO[this.ammoType];
     let p = this.acc * clamp(1.2 - dist / (this.range * 1.1), 0.1, 1);
     if (this.wdef.id === 'bg850') p = this.acc * clamp(1.15 - dist / 600, 0.2, 1);
@@ -274,27 +292,46 @@ export class Operator {
     this.lastShotT = game.time;
     const hit = Math.random() < p;
     const tgt = new THREE.Vector3(P.pos.x, P.pos.y + P.eye * 0.75, P.pos.z);
-    if (!hit) tgt.add(new THREE.Vector3(rand(-1.5, 1.5), rand(-0.6, 1.4), rand(-1.5, 1.5)));
-    game.effects.tracer(muzzle, tgt, 0xffb070, 0.06);
-    game.effects.puff(muzzle, 0xffc070, 0.08, 0.05, 0, 1);
+    // misses go somewhere near you: they kick up dirt, snap past, smack the tree you're behind
+    if (!hit) tgt.add(new THREE.Vector3(rand(-1.6, 1.6), rand(-1.2, 1.4), rand(-1.6, 1.6)));
+    const dir = tgt.clone().sub(muzzle).normalize();
+    game.effects.muzzle(muzzle, dir, this.wdef.id === 'bg850' ? 2 : A.shot ? 1.4 : 1);
+    if (dist < 40 && g && g.userData.eject) {
+      const port = g.userData.eject.clone().applyMatrix4(g.matrix).add(this.pos);
+      const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+      if (g.userData.casing && this.wdef.mode !== 'pump' && this.wdef.mode !== 'bolt') game.effects.casing(port, right.multiplyScalar(2.5).add(new THREE.Vector3(0, 1.8, 0)), g.userData.casing);
+    }
+    // sound arrives at the speed of sound; a supersonic round can beat it
     const ang = Math.atan2(this.pos.x - P.pos.x, this.pos.z - P.pos.z);
-    game.audio.shot(this.ammoType, dist, clamp(-Math.sin(ang - P.yaw), -1, 1) * 0.8, false, this.wdef.id === 'bg850');
+    const pan = clamp(-Math.sin(ang - P.yaw), -1, 1) * 0.8, big = this.wdef.id === 'bg850';
+    const snd = () => game.audio.shot(this.ammoType, dist, pan, false, big);
+    if (dist > 25) game.later.push({ t: dist / 343, fn: snd }); else snd();
     game.noise(this.pos, 90, this);
-    if (!hit) return;
     const pellets = A.shot ? (this.wdef.pellets || 8) : 1;
     const landed = A.shot ? Math.max(1, Math.round(pellets * clamp(1.2 - dist / 25, 0.15, 0.9))) : 1;
     const fall = clamp(1.2 - dist / (Math.max(this.wdef.range, 20) * 2.5), 0.45, 1);
-    for (let i = 0; i < landed; i++) {
-      P.takeHit({ dmg: this.wdef.dmg * fall, pen: A.pen + (this.wdef.penBonus || 0), ammo: this.ammoType, explosive: A.explosive, shot: A.shot }, this.pos, this.name);
-      if (!P.alive) break;
+    const name = this.name, from = this.pos.clone(), wdef = this.wdef, ammo = this.ammoType, self = this;
+    const onHit = () => {
+      for (let i = 0; i < landed; i++) {
+        P.takeHit({ dmg: wdef.dmg * fall, pen: A.pen + (wdef.penBonus || 0), ammo, explosive: A.explosive, shot: A.shot }, from, name);
+        if (!P.alive) break;
+      }
+      if (A.explosive) game.explode(new THREE.Vector3(P.pos.x, P.pos.y + 1, P.pos.z), A.blast, A.blastDmg, self);
+    };
+    const shots = A.shot ? 3 : 1;
+    for (let i = 0; i < shots; i++) {
+      const d = i ? dir.clone().add(new THREE.Vector3(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(this.wdef.spread || 0.05)).normalize() : dir;
+      game.fireBullet({ origin: muzzle.clone(), dir: d, muzzle: muzzle.clone(), dmg: wdef.dmg, pen: A.pen + (wdef.penBonus || 0), ammo, range: wdef.range, explosive: A.explosive && !hit, blast: A.blast, blastDmg: A.blastDmg, shot: !!A.shot, shooter: this, def: wdef, tracer: Math.random() < 0.25, hitPlayer: hit && i === 0 ? onHit : null });
     }
-    if (A.explosive) game.explode(tgt, A.blast, A.blastDmg, this);
   }
 
   // hit: {dmg, pen, ammo, zone, explosive, blast, shot}; info: {byPlayer, airborne}
   takeHit(hit, info = {}) {
     if (this.dead) return { killed: false };
     const r = applyHit(this, hit);
+    const from = this.game.player.pos;
+    this.hitDir = new THREE.Vector3(this.pos.x - from.x, 0, this.pos.z - from.z).normalize();
+    this.rig.hit(this.hitDir, Math.min(2, hit.dmg / 30));
     if (this.state !== 'combat' && info.byPlayer) this.engage(this.game.player.pos, false);
     else if (info.byPlayer) this.lastKnown.copy(this.game.player.pos);
     if (this.hp <= 0) { this.die({ ...info, zone: hit.zone, explosive: hit.explosive || hit.blast }); return { ...r, killed: true }; }
@@ -310,8 +347,12 @@ export class Operator {
     if (this.dead) return;
     this.dead = true;
     this.hp = 0;
-    this.legs[0].rotation.x = this.legs[1].rotation.x = 0;
     this.ghost.visible = false;
+    // the body goes limp: momentum + the hit's push become a ragdoll
+    const dir = this.hitDir || new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    const push = info.explosive ? 7 : info.zone === 'head' ? 3.2 : 2.2;
+    const imp = dir.clone().multiplyScalar(push).setY(info.explosive ? 5 : 0.6);
+    this.rig.die(imp, info.zone === 'head' ? 'head' : info.zone === 'leg' ? 'legs' : 'chest', this.vel);
     this.game.onOperatorKilled(this, info);
   }
 
@@ -331,5 +372,5 @@ export class Operator {
     return out;
   }
 
-  dispose() { this.game.scene.remove(this.mesh); }
+  dispose() { this.rig.dispose(); this.game.scene.remove(this.ghost); }
 }
