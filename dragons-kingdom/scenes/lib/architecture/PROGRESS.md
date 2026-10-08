@@ -78,8 +78,8 @@ Late round-2 fixes (found in the previews, each checked in a re-render):
 
 Round-2 4K finals (session scratchpad arch/final_r2/, *_r2.png + *_1920.jpg + *_crop_*.jpg; the r1
 set stays in arch/final_r1/ for before/after). Render times at native 3840x2160 (final preset, one still
-at a time on 4 vCPU): interiors 150-415 s, Verdor 135-290 s, Cling 310-425 s (23.1 M triangles, 64
-houses), contact tiles ~120-200 s. Plan view labelled with offline/planlabels.mjs.
+at a time on 4 vCPU): interiors 150-415 s, Verdor 133-290 s, Cling 310-425 s (23.1 M triangles, 64
+houses), contact tiles 38-81 s (--cinematic velocity). npm test: 33/33 pass. Plan view labelled with offline/planlabels.mjs.
 
 Open after round 2 (seen in the finals):
 - Oak at 1:1 in sun still reads smooth (little grain/check relief on jetty bressumers and studs).
@@ -90,6 +90,10 @@ Open after round 2 (seen in the finals):
 - Treatment-room sea is a flat band at 1:1 (no waves at 600 m), far shore a thin green strip.
 - Shop-window rooms are flat dim brown; the settle's boards vary too much in tone.
 - Cling kennel reads as a thin brown line from across the square.
+- Road puddles beyond the gate read as flat grey cut-outs from low angles (no reflection of the gate).
+- The palace's far LOD seen from ~60 m (contact tile) shows pale hairline joint dashes; use lod 'mid'
+  for anything closer than ~150 m.
+- The harbour contact tile frames the town houses more than the quay (the hero shot shows the quay).
 
 ## State (2026-10-08, fix round 1 done; 4K finals rendered to the session scratchpad)
 
