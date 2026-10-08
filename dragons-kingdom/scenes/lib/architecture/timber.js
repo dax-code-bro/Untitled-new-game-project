@@ -90,7 +90,9 @@ function segDist(px, py, ax, ay, bx, by) {
 export function infill(kit, F, outline, members, holes, rnd, o = {}) {
   const acc = kit.get(o.mat || 'plaster');
   const step = o.step ?? 0.06;
-  const inset = o.inset ?? 0.028;
+  // lime plaster finished nearly flush with the frame: 10-15 mm back, a few mm of belly, a small
+  // quirk (shrinkage gap) along every timber
+  const inset = o.inset ?? 0.014;
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
   for (const [x, y] of outline) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
   const nx = Math.max(2, Math.ceil((x1 - x0) / step)), ny = Math.max(2, Math.ceil((y1 - y0) / step));
@@ -123,11 +125,25 @@ export function infill(kit, F, outline, members, holes, rnd, o = {}) {
     // distance to the nearest timber edge (negative: behind a member)
     let d = 1e9;
     for (const m of members) d = Math.min(d, segDist(x, y, m.a[0], m.a[1], m.b[0], m.b[1]) - m.w / 2);
-    const bel = smoothstep(0.0, 0.14, d);
-    const z = -inset + bel * (o.belly ?? 0.009) + (d < 0 ? -0.012 : 0) + 0.003 * Math.sin(x * 7.3 + y * 3.1 + seed * 9) * bel;
+    const bel = smoothstep(0.0, 0.18, d);
+    const quirk = d >= 0 ? -0.005 * (1 - smoothstep(0.0, 0.025, d)) : -0.02;
+    const z = -inset + bel * (o.belly ?? 0.004) + quirk + 0.0015 * Math.sin(x * 7.3 + y * 3.1 + seed * 9) * bel;
     pv[0] = F[0] + x * F[3] + y * F[6] + z * F[9]; pv[1] = F[1] + x * F[4] + y * F[7] + z * F[10]; pv[2] = F[2] + x * F[5] + y * F[8] + z * F[11];
-    const ao = 0.35 + 0.65 * smoothstep(-0.005, 0.07, d);
-    ids[j * (nx + 1) + i] = acc.v(pv[0], pv[1], pv[2], x, y, seed, ao, 0, F[3], F[4], F[5]);
+    const ao = 0.35 + 0.65 * smoothstep(-0.005, 0.045, d);
+    // rain runoff from the member above (its underside, within its span): aInfo.z for the plaster
+    let above = 1e9;
+    for (const m of members) {
+      const [ax, ay] = m.a, [bx, by] = m.b;
+      if (x < Math.min(ax, bx) - m.w / 2 || x > Math.max(ax, bx) + m.w / 2) continue;
+      let yc;
+      if (Math.abs(bx - ax) < 1e-3) yc = Math.min(ay, by);
+      else yc = ay + (by - ay) * clamp((x - ax) / (bx - ax), 0, 1);
+      const ang = Math.atan2(Math.abs(by - ay), Math.abs(bx - ax) + 1e-6);
+      const bottom = yc - (m.w / 2) / Math.max(0.2, Math.cos(ang));
+      if (bottom >= y - 0.005) above = Math.min(above, bottom - y);
+    }
+    const run = above < 1e8 ? Math.exp(-Math.max(0, above) / 0.5) : 0;
+    ids[j * (nx + 1) + i] = acc.v(pv[0], pv[1], pv[2], x, y, seed, ao, run, F[3], F[4], F[5]);
   }
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
     const a = ids[j * (nx + 1) + i], b = ids[j * (nx + 1) + i + 1], c = ids[(j + 1) * (nx + 1) + i + 1], d = ids[(j + 1) * (nx + 1) + i];

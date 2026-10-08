@@ -12,7 +12,7 @@
 //
 // Builders usable on their own: archway, gateway, fountain, stonePier, kingsSteps, alley.
 import * as THREE from 'three';
-import { Kit, frame, yawFrame, sub, makeRand, block, tube, xf, lathe, fbm3 } from './core.js';
+import { Kit, frame, yawFrame, sub, makeRand, block, tube, xf, lathe, fbm3, grid } from './core.js';
 import { masonryFace, masonryBox, courses, archRing, steps, LOD } from './masonry.js';
 import { house } from './house.js';
 import { door } from './openings.js';
@@ -108,79 +108,154 @@ export function gateway(kit, F, o = {}) {
   return { w };
 }
 
+/** A straight prism with `sides` flat faces (hard edges) about F's y axis: r0 at y0 .. r1 at y1. */
+function prism(acc, F, sides, r0, r1, y0, y1, seed, o = {}) {
+  const ph = o.phase ?? Math.PI / sides;
+  const ap = (k) => ph + (k / sides) * Math.PI * 2;
+  for (let k = 0; k < sides; k++) {
+    const a0 = ap(k), a1 = ap(k + 1);
+    const nv = Math.max(1, Math.ceil((y1 - y0) / (o.seg ?? 0.3)));
+    // a face: its own vertices (hard edges), a little noise on the dressed face
+    grid(acc, 2, nv, (u, v) => {
+      const a = a0 + (a1 - a0) * u, y = y0 + (y1 - y0) * v, r = r0 + (r1 - r0) * v;
+      const rr = r / Math.cos(a - (a0 + a1) / 2);
+      const p = xf(F, Math.cos(a) * rr, y, Math.sin(a) * rr);
+      return { p, uv: [u * 2 * r * Math.tan(Math.PI / sides), y], seed, ao: o.ao ?? 1 };
+    }, [Math.cos(ap(k) + Math.PI / 2), 0, Math.sin(ap(k) + Math.PI / 2)], true);
+  }
+  if (o.cap !== false) {
+    const c = xf(F, 0, y1, 0);
+    const ci = acc.v(c[0], c[1], c[2], 0, 0, seed, 1, 0, 1, 0, 0);
+    const ids = [];
+    for (let k = 0; k <= sides; k++) { const a = ap(k); const rr = r1 / Math.cos(Math.PI / sides); const p = xf(F, Math.cos(a) * rr, y1, Math.sin(a) * rr); ids.push(acc.v(p[0], p[1], p[2], Math.cos(a) * rr, Math.sin(a) * rr, seed, 1, 0, 1, 0, 0)); }
+    for (let k = 0; k < sides; k++) acc.t(ci, ids[k + 1], ids[k]);
+  }
+}
+
 /**
- * The fountain (the reference landmark): a round basin wall of curved dressed blocks with a
- * projecting coping, a step around it, water, and the central stone pillar - a square plinth,
- * a shaft of stacked drums, a moulded capital and a finial; iron spouts.
- * F: centre of the fountain at ground level.
+ * The fountain (the reference landmark), a town conduit of the period: an octagonal basin of
+ * dressed slabs between corner posts, a moulded coping tied across its joints with leaded iron
+ * cramps, an octagonal step all round (solid to the basin's plinth), and in the water the central
+ * stone pillar - a chamfered base, a monolithic octagonal shaft, a spout course with four carved
+ * spout heads and lead pipes running water into the basin, a moulded capital and a weathered
+ * pinnacle. F: centre of the fountain at ground level. Returns { r, h, pillarH, water, jets }.
  */
 export function fountain(kit, F, o = {}) {
   const rnd = makeRand(o.seed ?? 91);
   const R = o.r ?? 3.0, hW = o.h ?? 0.72, ph = o.pillarH ?? 3.4;
   const lod = LOD[o.lod || 'mid'];
-  const ring = (r0, r1, y0, y1, n, mat, opts = {}) => {
-    const rm = (r0 + r1) / 2, dr = r1 - r0;
-    for (let i = 0; i < n; i++) {
-      const a0 = (i / n) * Math.PI * 2 + (opts.phase || 0), a1 = ((i + 1) / n) * Math.PI * 2 + (opts.phase || 0) - 0.006 / rm;
-      const am = (a0 + a1) / 2, span = (a1 - a0) * rm;
-      const Fb = sub(F, [0, (y0 + y1) / 2, 0]);
-      block(kit.get(mat), Fb, span, y1 - y0 - 0.006, dr, {
-        r: opts.r ?? 0.015, rs: lod.rs, seg: [Math.max(0.1, span / 6), Math.max(lod.seg, (y1 - y0) / 2), Math.max(0.08, dr / 3)], seed: rnd(), noise: 0.003, nf: 6, chip: 0.01, pillow: 0.002,
-        warp: (lx, ly, lz) => { const th = am - lx / rm; const rr = rm + lz + (opts.lip && ly > 0 ? opts.lip * (lz / dr + 0.5) : 0); return [Math.cos(th) * rr, ly + (opts.dome ? opts.dome * (1 - (2 * lz / dr) ** 2) * (ly > 0 ? 1 : 0) : 0), Math.sin(th) * rr]; },
+  const S = 8, cs = Math.cos(Math.PI / S);
+  const corner = (k, r) => { const a = (k / S) * Math.PI * 2; return [Math.cos(a) * r / cs, Math.sin(a) * r / cs]; };    // vertex k of the octagon with apothem r
+  const wallT = 0.24, wy = hW - 0.2;
+  const stoneB = (mat, Fb, sx, sy, sz, extra = {}) => block(kit.get(mat), Fb, sx, sy, sz, { r: 0.012, rs: lod.rs, seg: [Math.max(lod.seg, 0.15), Math.max(lod.seg, sy / 2), Math.max(0.08, sz / 3)], seed: rnd(), noise: 0.0025, nf: 6, chip: 0.008, pillow: 0.0015, uvMode: 'box', ...extra });
+  // per side k (between vertices k and k+1): a frame at the side's middle, x along, z outward
+  const sideF = (k, r, y) => {
+    const a = ((k + 0.5) / S) * Math.PI * 2;
+    return sub(F, [Math.cos(a) * r, y, Math.sin(a) * r], [Math.sin(a), 0, -Math.cos(a)], [0, 1, 0]);     // z outward
+  };
+  const sideLen = (r) => 2 * r * Math.tan(Math.PI / S);
+  // the step round the basin: eight slabs from under the basin's plinth out to R + 0.8, each a
+  // trapezoid (wider outside), worn where feet stand
+  {
+    const rIn = R - 0.12, rOut = R + 0.82, rm = (rIn + rOut) / 2;
+    for (let k = 0; k < S; k++) {
+      stoneB('stoneDressed', sideF(k, rm, 0.08), sideLen(rm) - 0.012, 0.16, rOut - rIn, {
+        r: 0.02, chip: 0.012, skip: 8,
+        warp: (lx, ly, lz) => { const rr = rm + lz; return [lx * (rr / rm), ly - (ly > 0 ? 0.012 * Math.exp(-((lz - 0.2) ** 2) / 0.05) : 0), lz]; },
       });
     }
-    // the bedding and the pointed joints between the segments: a mortar annulus a little inside the stones
-    const e = 0.012;
-    lathe(kit.get('mortar'), F, [[r1 - e, y0 + 0.004], [r1 - e, y1 - e], [r0 + e, y1 - e], [r0 + e, y0 + 0.004], [r1 - e, y0 + 0.004]], 96, { ao: 0.5 });
+  }
+  // an octagon segment slab on side k: centred at apothem rm, depth dep (radially), widening outward
+  // so neighbours meet on the mitre line; extra.warp runs after
+  const octSlab = (mat, k, rm, y, L, h, dep, extra = {}) => {
+    const w2 = extra.warp;
+    stoneB(mat, sideF(k, rm, y), L, h, dep, { ...extra, warp: (lx, ly, lz) => { const q = [lx * ((rm + lz) / rm), ly, lz]; return w2 ? w2(q[0], q[1], q[2]) : q; } });
   };
-  // a step round the basin (two courses of slabs), the basin wall (two courses), the coping
-  ring(R + 0.05, R + 0.75, -0.05, 0.16, 18, 'stoneDressed', { phase: 0.1 });
-  ring(R - 0.38, R, 0.16, 0.48, 16, 'stoneDressed', { phase: 0.0 });
-  ring(R - 0.38, R, 0.48, hW - 0.1, 16, 'stoneDressed', { phase: 0.2 });
-  ring(R - 0.48, R + 0.1, hW - 0.1, hW + 0.06, 14, 'stoneDressed', { phase: 0.35, dome: 0.03 });
-  // basin floor and water
-  block(kit.get('stoneDressed'), sub(F, [0, 0.1, 0]), (R - 0.38) * 2, 0.1, (R - 0.38) * 2, { r: 0.02, seg: [1, 0.1, 1], seed: rnd(), warp: (lx, ly, lz) => { const k = Math.max(Math.abs(lx), Math.abs(lz)) / Math.hypot(lx, lz) || 1; return [lx * k * 0.98, ly, lz * k * 0.98]; } });
-  {
-    const acc = kit.get('water');
-    const n = 48, wy = hW - 0.2;
-    const c = xf(F, 0, wy, 0);
-    const ci = acc.v(c[0], c[1], c[2], 0, 0, 0, 1, 0, 0, 1, 0);
-    const ids = [];
-    for (let i = 0; i <= n; i++) { const a = (i / n) * Math.PI * 2; const p = xf(F, Math.cos(a) * (R - 0.37), wy, Math.sin(a) * (R - 0.37)); ids.push(acc.v(p[0], p[1], p[2], 0, 0, 0, 1, 0, 0, 1, 0)); }
-    for (let i = 0; i < n; i++) acc.t(ci, ids[i + 1], ids[i]);
-  }
-  // the pillar: a square stepped plinth, a shaft of drums, a capital, a finial
-  const sq = (s, y0, y1, mat = 'stoneDressed', taper = 0) => block(kit.get(mat), sub(F, [0, (y0 + y1) / 2, 0], [Math.cos(0.12), 0, Math.sin(0.12)], [0, 1, 0]), s, y1 - y0, s, { r: 0.02, rs: lod.rs, seg: [0.15, Math.max(lod.seg, (y1 - y0) / 2), 0.15], seed: rnd(), noise: 0.003, nf: 6, chip: 0.012, warp: taper ? (lx, ly, lz) => { const k = 1 - taper * (ly / (y1 - y0) + 0.5); return [lx * k, ly, lz * k]; } : undefined });
-  sq(1.5, 0.08, 0.44); sq(1.15, 0.44, 0.8);
-  const shaftR = 0.36;
-  let y = 0.8;
-  sq(0.92, y, y + 0.3, 'stoneDressed', 0.18); y += 0.3;
-  const drums = Math.max(3, Math.round((ph - 1.6) / 0.42));
-  for (let i = 0; i < drums; i++) {
-    const hh = (ph - 1.6) / drums;
-    block(kit.get('stoneDressed'), sub(F, [0, y + hh / 2, 0], [Math.cos(i), 0, Math.sin(i)], [0, 1, 0]), shaftR * 2, hh - 0.008, shaftR * 2, {
-      r: 0.03, rs: lod.rs, seg: [0.08, Math.max(0.1, hh / 2), 0.08], seed: rnd(), noise: 0.003, nf: 6, chip: 0.01,
-      // a square block dressed round (an octagonal arris left here and there)
-      warp: (lx, ly, lz) => { const u = lx / shaftR, v = lz / shaftR; const m = Math.sqrt(Math.max(0, 1 - v * v / 2)), n2 = Math.sqrt(Math.max(0, 1 - u * u / 2)); return [lx * m * (1 - 0.02 * i), ly, lz * n2 * (1 - 0.02 * i)]; },
+  // plinth course, side slabs between corner posts, the coping with cramps
+  const rW = R - wallT / 2;
+  const slabTop = hW - 0.095;
+  for (let k = 0; k < S; k++) {
+    octSlab('stoneDressed', k, rW + 0.04, 0.24, sideLen(rW + 0.04) - 0.012, 0.16, wallT + 0.12, { r: 0.015 });
+    const L = sideLen(rW) - 0.3;
+    stoneB('stoneDressed', sideF(k, rW, 0.32 + (slabTop - 0.32) / 2), L + 0.02, slabTop - 0.32, wallT, { r: 0.01, pillow: 0.004 });
+    // the damp, algae-stained band on the inner face at the water line
+    stoneB('stoneWet', sideF(k, rW - wallT / 2 - 0.006, 0.32 + (wy + 0.05 - 0.32) / 2), L, wy + 0.05 - 0.32, 0.016, { r: 0.004, noise: 0.001, pillow: 0 });
+    // corner post at vertex k
+    const [cx, cz] = corner(k, rW);
+    const a = (k / S) * Math.PI * 2;
+    stoneB('stoneDressed', sub(F, [cx, 0.32 + (slabTop - 0.32) / 2, cz], [-Math.sin(a), 0, Math.cos(a)], [0, 1, 0]), 0.36, slabTop - 0.32, wallT + 0.06, { r: 0.02 });
+    // coping slab (overhangs both faces, a rounded outer arris, a few bucket-worn dips)
+    const Lc = sideLen(rW);
+    const dip = rnd() < 0.6 ? rnd.sym(Lc * 0.3) : 99;
+    octSlab('stoneDressed', k, rW + 0.03, hW - 0.03, Lc - 0.01, 0.13, wallT + 0.32, {
+      r: 0.03, rs: 2, chip: 0.012,
+      warp: (lx, ly, lz) => [lx, ly - (ly > 0 ? 0.012 * Math.exp(-((lx - dip) ** 2) / 0.04) * Math.exp(-(lz * lz) / 0.02) : 0), lz],
     });
-    y += hh;
+    // an iron cramp leaded across the joint at the corner
+    const [vx, vz] = corner(k, rW + 0.03);
+    const t = [-Math.sin(a), 0, Math.cos(a)];
+    block(kit.get('iron'), sub(F, [vx, hW + 0.035, vz], t, [0, 1, 0]), 0.2, 0.01, 0.03, { r: 0.003, seg: [0.08, 0.01, 0.03], seed: rnd() });
+    block(kit.get('lead'), sub(F, [vx, hW + 0.032, vz], t, [0, 1, 0]), 0.24, 0.006, 0.05, { r: 0.004, seg: [0.1, 0.006, 0.05], seed: rnd() });
   }
-  sq(0.86, y, y + 0.16); y += 0.16;
-  sq(1.0, y, y + 0.22); y += 0.22;
-  // finial: a tapering stone with a ball
-  block(kit.get('stoneDressed'), sub(F, [0, y + 0.3, 0], [Math.cos(0.7), 0, Math.sin(0.7)], [0, 1, 0]), 0.5, 0.6, 0.5, { r: 0.03, seg: [0.1, 0.15, 0.1], seed: rnd(), noise: 0.002, warp: (lx, ly, lz) => { const k = 1 - 0.75 * (ly / 0.6 + 0.5); return [lx * k, ly, lz * k]; } });
-  {
-    const acc = kit.get('stoneDressed');
-    const c = [0, y + 0.72, 0];
-    block(acc, sub(F, c), 0.26, 0.26, 0.26, { r: 0.12, rs: 2, seg: [0.05, 0.05, 0.05], seed: rnd(), noise: 0.003, nf: 8 });
-  }
-  // spouts: four iron pipes from the shaft into the basin
+  // basin floor
+  block(kit.get('stoneDressed'), sub(F, [0, 0.27, 0]), (rW - wallT / 2) * 2, 0.1, (rW - wallT / 2) * 2, { r: 0.02, seg: [1, 0.1, 1], seed: rnd() });
+  // ---- the pillar: all octagonal (a stepped base, the shaft, a spout drum, a capital, a pinnacle)
+  const spoutY = hW + 0.75, jets = [];
+  const ph8 = Math.PI / 8 + 0.12;
+  const oct = (r0, r1, y0, y1, seg = 0.2, cap = true) => prism(kit.get('stoneDressed'), F, 8, r0, r1, y0, y1, rnd(), { phase: ph8, seg, cap });
+  oct(0.62, 0.6, 0.32, wy + 0.1);
+  oct(0.6, 0.48, wy + 0.1, wy + 0.2, 0.1);                  // weathered chamfer
+  oct(0.48, 0.47, wy + 0.2, wy + 0.42);
+  oct(0.47, 0.34, wy + 0.42, wy + 0.52, 0.1);
+  oct(0.31, 0.3, wy + 0.52, spoutY - 0.24, 0.25, false);
+  oct(0.3, 0.42, spoutY - 0.24, spoutY - 0.18, 0.06);       // the spout drum: a roll below, a roll above
+  oct(0.42, 0.42, spoutY - 0.18, spoutY + 0.2, 0.12);
+  oct(0.42, 0.3, spoutY + 0.2, spoutY + 0.26, 0.06);
   for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2 + 0.12 + Math.PI / 4;
-    const p0 = xf(F, Math.cos(a) * (shaftR - 0.05), 1.55, Math.sin(a) * (shaftR - 0.05)), p1 = xf(F, Math.cos(a) * (shaftR + 0.28), 1.52, Math.sin(a) * (shaftR + 0.28));
-    tube(kit.get('iron'), [p0, p1], 0.025, { sides: 8, caps: true });
+    const a = ph8 - Math.PI / 8 + Math.PI / 8 + (i / 4) * Math.PI * 2 + Math.PI / 8;
+    const out = [Math.cos(a), 0, Math.sin(a)];
+    const Fh = sub(F, [out[0] * 0.44, spoutY - 0.01, out[2] * 0.44], [out[2], 0, -out[0]], [0, 1, 0]);     // z outward
+    // the head: a block that narrows to a muzzle (worn smooth), the mouth low
+    block(kit.get('stoneDressed'), Fh, 0.24, 0.26, 0.26, { r: 0.05, rs: 2, seg: [0.05, 0.05, 0.05], seed: rnd(), noise: 0.006, nf: 9, chip: 0.006,
+      warp: (lx, ly, lz) => { const f = (lz / 0.26 + 0.5); const k2 = 1 - 0.4 * f; return [lx * k2, ly * (1 - 0.3 * f) - 0.04 * f * f, lz]; } });
+    const m0 = xf(Fh, 0, -0.07, 0.08), m1 = xf(Fh, 0, -0.08, 0.2);
+    tube(kit.get('lead'), [m0, m1], 0.016, { sides: 8, caps: true });
+    // the jet: a falling arc from the pipe into the basin
+    const v0 = 1.2, g = 9.81, pts = [];
+    const yw0 = xf(F, 0, wy, 0)[1];
+    for (let k = 0; k <= 20; k++) {
+      const tt = k * 0.025;
+      const p = xf(Fh, 0, -0.08 - 0.5 * g * tt * tt, 0.2 + v0 * tt);
+      if (p[1] < yw0) { pts.push([p[0], yw0 - 0.005, p[2]]); break; }
+      pts.push(p);
+    }
+    tube(kit.get('jet'), pts, (t) => 0.01 + 0.006 * t, { sides: 7 });
+    jets.push(pts[pts.length - 1]);
   }
-  return { r: R, h: hW, pillarH: y + 0.85 };
+  oct(0.3, 0.29, spoutY + 0.26, ph - 0.62, 0.25, false);
+  const yc = ph - 0.62;
+  oct(0.29, 0.4, yc, yc + 0.14, 0.07);                      // the bell of the capital
+  oct(0.44, 0.44, yc + 0.14, yc + 0.25, 0.1);               // abacus
+  oct(0.2, 0.19, yc + 0.25, yc + 0.42, 0.1);
+  oct(0.19, 0.015, yc + 0.42, ph, 0.08);                    // the pinnacle, its point worn round
+  // water: a fine disc, uv.x = the distance to the nearest jet's impact (ripple rings)
+  {
+    const acc = kit.get('pool');
+    const rin = rW - wallT / 2 + 0.01;
+    const nr = 40, na = 96;
+    const yw = xf(F, 0, wy, 0)[1];
+    grid(acc, na, nr, (u, v) => {
+      const a = u * Math.PI * 2, rr = v * rin / Math.cos(Math.PI / S * 0) ;
+      // clip the disc to the octagonal inner face
+      const ap = Math.cos(((a + Math.PI * 2) % (Math.PI / 4)) - Math.PI / 8);
+      const r2 = Math.min(rr, rin * cs / Math.max(ap, 0.5));
+      const p = xf(F, Math.cos(a) * r2, wy, Math.sin(a) * r2);
+      let dmin = 9;
+      for (const h of jets) dmin = Math.min(dmin, Math.hypot(p[0] - h[0], p[2] - h[2]));
+      return { p: [p[0], yw, p[2]], uv: [dmin, a], seed: 0.5, ao: 1 };
+    }, [1, 0, 0], false);
+  }
+  return { r: R, h: hW, pillarH: ph, water: wy, jets };
 }
 
 /**
@@ -235,24 +310,53 @@ export function stonePier(kit, F, o = {}) {
   tube(kit.get('iron'), [p, xf(F, 0, 1.25, w / 2 - 0.05)], 0.02, { sides: 6, caps: true });
 }
 
-/** The king's steps with a terrace and a low parapet; F at the foot centre, rising toward -z. */
+/**
+ * The king's steps: a flight of dressed steps between stepped cheek walls (stone on both faces,
+ * each section capped), up to a paved terrace held by retaining walls on its sides and back with a
+ * low parapet - a solid stone structure seen from every side. F at the foot centre, rising toward -z.
+ */
 export function kingsSteps(kit, F, o = {}) {
   const rnd = makeRand(o.seed ?? 111);
   const n = o.n ?? 7, w = o.w ?? 14, rise = o.rise ?? 0.24, tread = o.tread ?? 1.0;
-  steps(kit, F, { n, w, rise, tread, lod: o.lod || 'mid', seed: rnd() * 999, mat: 'stoneDressed', wear: 0.03, landing: 0.0 });
-  // cheek walls at both ends of the flight (squared stone) and the terrace front behind
-  const H = n * rise;
+  const lod = o.lod || 'mid';
+  const H = n * rise, depth = o.terrace ?? 5, run = n * tread;
+  const cw = 0.6, para = 0.55;                                   // cheek / retaining wall thickness, parapet above the terrace
+  steps(kit, F, { n, w, rise, tread, lod, seed: rnd() * 999, mat: 'stoneDressed', wear: 0.03, landing: 0.0 });
+  // the flight is solid: a rubble core under every step (it shows nowhere, but closes the flight)
+  for (let i = 1; i < n; i++) block(kit.get('mortar'), sub(F, [0, i * rise / 2 - 0.03, -i * tread - tread / 2 + 0.06]), w - 0.02, i * rise - 0.06, tread, { r: 0, seg: 99, seed: rnd(), skip: 4 });
+  // a wall section with stone on every face (quoined ends) along local x 0..L of frame Fw, h high
+  const wall = (Fw, L, h) => {
+    masonryBox(kit, sub(Fw, [L / 2, 0, 0]), { w: L, d: cw, h, T: cw / 2, style: 'squared', mat: 'stoneGrey', dressedMat: 'stoneDressed', mortar: 'mortar', lod, seed: rnd() * 999, courseMin: 0.22, courseMax: 0.36, quoin: { long: 0.5, short: 0.3 } });
+    // coping: slabs projecting both sides, a weathered ridge
+    const nc = Math.max(1, Math.round(L / 0.85));
+    for (let k = 0; k < nc; k++) {
+      const a = (L * k) / nc - (k === 0 ? 0.05 : 0), b = (L * (k + 1)) / nc - 0.012 + (k === nc - 1 ? 0.05 : 0);
+      block(kit.get('stoneDressed'), sub(Fw, [(a + b) / 2, h + 0.08, 0]), b - a, 0.16, cw + 0.12, { r: 0.02, rs: 1, seg: [0.2, 0.08, 0.2], seed: rnd(), noise: 0.003, nf: 5, chip: 0.012, warp: (lx, ly, lz) => [lx, ly + (ly > 0 ? 0.04 * (1 - Math.abs(lz) / ((cw + 0.12) / 2)) : 0), lz] });
+    }
+  };
+  // stepped cheek walls: one section per two steps, each 0.5 m above the treads it flanks, then
+  // along the terrace (retaining it) with the parapet
   for (const sx of [-1, 1]) {
-    const len = n * tread + 0.4;
-    masonryFace(kit, sx > 0 ? sub(F, [w / 2 + 0.6, 0, 0.2], [0, 0, -1], [0, 1, 0]) : sub(F, [-w / 2 - 0.6, 0, -len + 0.2], [0, 0, 1], [0, 1, 0]), len, H + 0.5, { style: 'squared', mat: 'stoneGrey', dressedMat: 'stoneDressed', mortar: 'mortar', T: 0.6, lod: o.lod || 'mid', seed: rnd() * 999 });
-    block(kit.get('stoneDressed'), sub(F, [sx * (w / 2 + 0.3), H + 0.58, -len / 2 + 0.2]), 0.66, 0.16, len + 0.05, { r: 0.02, seg: [0.2, 0.08, 0.3], seed: rnd(), noise: 0.003, chip: 0.01 });
+    const x = sx * (w / 2 + cw / 2);
+    // wall frame: x runs up the flight (toward -z), its face toward +x on both sides (stone on both faces)
+    const Fw = sub(F, [x, 0, 0.3], [0, 0, -1], [0, 1, 0]);
+    for (let i = 0; i < n; i += 2) {
+      const a = i === 0 ? 0 : i * tread + 0.3, b = Math.min(n, i + 2) * tread + 0.3;
+      const top = Math.min(n, i + 2) * rise + 0.5;
+      wall(sub(Fw, [a, 0, 0]), b - a, top);
+    }
+    wall(sub(Fw, [run + 0.3, 0, 0]), depth, H + para);
   }
-  // the terrace paving at the top (flags)
-  const tz0 = -n * tread, depth = o.terrace ?? 5;
+  // the back retaining wall with its parapet
+  wall(sub(F, [-w / 2 - cw, 0, -run - depth - cw / 2]), w + 2 * cw, H + para);
+  // the terrace paving (flags), over a solid fill
+  const tz0 = -run;
+  block(kit.get('mortar'), sub(F, [0, H / 2 - 0.06, tz0 - depth / 2]), w, H - 0.12, depth, { r: 0, seg: 99, seed: rnd(), skip: 4 });
   for (let z = 0; z < depth; z += 0.62) for (let x = -w / 2; x < w / 2; x += 0.8) {
     const fw = Math.min(0.8, w / 2 - x) - 0.01, fd = Math.min(0.62, depth - z) - 0.01;
     block(kit.get('stoneDressed'), sub(F, [x + fw / 2 + rnd.sym(0.005), H - 0.05 + rnd.sym(0.004), tz0 - z - fd / 2]), fw, 0.1, fd, { r: 0.008, seg: [0.4, 0.1, 0.4], seed: rnd(), noise: 0.002, nf: 5, chip: 0.006, skip: 8 });
   }
+  return { top: H, terrace: [tz0, tz0 - depth] };
 }
 
 /** The alley floor: a lane of setts with a central gutter channel, F at its mouth, running to -z. */

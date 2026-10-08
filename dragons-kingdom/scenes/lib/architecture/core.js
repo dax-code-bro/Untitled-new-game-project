@@ -126,7 +126,9 @@ export class Acc {
     const U = this.U; if (U.n + 2 > U.a.length) U.grow(2);
     U.a[U.n++] = u; U.a[U.n++] = w;
     const I = this.I; if (I.n + 4 > I.a.length) I.grow(4);
-    I.a[I.n++] = s; I.a[I.n++] = ao; I.a[I.n++] = ar; I.a[I.n++] = y - this.baseY;
+    // the seed at the centre of a 1/8192 bucket: the shaders snap it back (materials.js akI), so the
+    // interpolated value hashes identically over the whole piece
+    I.a[I.n++] = (Math.floor(s * 8192) + 0.5) / 8192; I.a[I.n++] = ao; I.a[I.n++] = ar; I.a[I.n++] = y - this.baseY;
     const A = this.A; if (A.n + 3 > A.a.length) A.grow(3);
     A.a[A.n++] = ax; A.a[A.n++] = ay; A.a[A.n++] = az;
     return this.P.n / 3 - 1;
