@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { loadHDRI } from '../lib/assets.js';
 import { terrainMaterial } from '../lib/sets/materials.js';
-import { heightfield, makeNoise, gradedAxis } from '../lib/sets/terrain.js';
+import { heightfield, makeNoise, gradedAxis, smooth } from '../lib/sets/terrain.js';
 import { grassField } from '../lib/sets/grass.js';
 import { clingSquare, CLING, wallFootPlacer, houseFootSegments } from '../lib/architecture/cling.js';
 import { reviewTime } from '../lib/humans/stage.js';
@@ -28,7 +28,7 @@ export const meta = {
   seed: 7,
   cinematic: filmFinish({
     atmosphere: { enabled: true, sky: 'scene', haze: 1.2, apDistanceScale: 1.5 },
-    shadows: { cascades: 3, maxDistance: 120 },
+    shadows: { cascades: 3, maxDistance: 120, bias: -0.0003, normalBias: 2.5 },
     ao: { enabled: true, radius: 0.6 },
     dof: { samples: 48 },
     grade: { exposure: 0.9, whiteBalance: 6000, contrast: 1.04, saturation: 1.0 },
@@ -51,8 +51,13 @@ export async function setup(ctx) {
     xs: gradedAxis(-300, 300, 220, 0, 2), zs: gradedAxis(-300, 300, 220, 0, 2), height: H,
     splat: (x, z) => {
       const inSq = Math.abs(x) < 23 && z > -21 && z < 30;
-      const wear = 0.5 + 0.5 * N.fbm(x * 0.12, z * 0.12, 3);
-      return inSq ? [0.8 * wear + 0.2, 1 - wear, 0.3, 0] : [0, 0.2, 0.1, 0.8];
+      if (!inSq) return [0, 0.2, 0.1, 0.8];
+      // pebble paving worn through to packed earth in patches (sharp-ish edges: a blend of the two
+      // textures would average both to a featureless sand); damp dark earth round the fountain
+      const f = N.fbm(x * 0.09 + 3.1, z * 0.09, 4) + 0.25 * N.fbm(x * 0.6, z * 0.6, 2);
+      const p = 0.04 + 0.96 * smooth(-0.08, 0.06, f);
+      const damp = Math.max(smooth(5.6, 3.4, Math.hypot(x, z + 2)) * 0.9, 0.5 * smooth(0.3, 0.6, N.fbm(x * 0.2 + 9, z * 0.2, 3)));
+      return [p * (1 - 0.6 * damp), (1 - p) * (1 - damp), damp + 0.05, 0];
     },
   });
   const gm = new THREE.Mesh(ground.geometry, await terrainMaterial(ctx, [
@@ -60,7 +65,7 @@ export async function setup(ctx) {
     { id: 'pbr/acg_ground05', scale: 1.0, tint: [0.5, 0.45, 0.38] },
     { id: 'pbr/acg_ground24', scale: 1.2, tint: [0.45, 0.4, 0.34] },
     { id: 'pbr/acg_ground037', scale: 2.0, tint: [0.6, 0.66, 0.5] },
-  ], { macro: 0.45, macroScale: 0.05, detailNear: 40, detailFar: 500, minRoughness: 0.75 }));
+  ], { macro: 0.6, macroScale: 0.05, detailNear: 40, detailFar: 500, minRoughness: 0.75 }));
   gm.receiveShadow = true; scene.add(gm);
   const set = await clingSquare(ctx, { focus: [[-9.5, -18], [-19.6, 16.5], [-7.4, -18]], heroR: 9, far: 40 });
   scene.add(set.group);

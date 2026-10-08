@@ -40,8 +40,9 @@ export function member(kit, F, a, b, w, dep, rnd, o = {}) {
   const ph = rnd() * 10;
   block(kit.get(o.mat || 'oak'), Fm, L, w * rnd.range(0.95, 1.04), dep, {
     r: rnd.range(0.006, 0.016), rs: hero ? 2 : 1,
-    seg: [hero ? 0.12 : lod === 'low' ? 1.0 : 0.4, hero ? Math.max(0.04, w / 3) : w, hero ? Math.max(0.05, dep / 3) : dep],
-    seed, noise: 0.003, nf: 4, chip: 0.006, adze: hero ? 0.0022 : 0.0012,
+    // (hewing scallops ~22 cm long: only where the mesh samples them finely enough, else they alias)
+    seg: [hero ? 0.07 : lod === 'low' ? 1.0 : 0.4, hero ? Math.max(0.04, w / 3) : w, hero ? Math.max(0.05, dep / 3) : dep],
+    seed, noise: 0.003, nf: 4, chip: 0.006, adze: hero ? 0.0022 : 0,
     wane: rnd() < 0.25 ? [rnd() < 0.5 ? 1 : -1, 1] : null,
     axis: [1, 0, 0], skip: 32 * (o.back ? 0 : 0),
     // bow (in the face and out of it), a kink where a knot was, a section that wanders
@@ -282,7 +283,7 @@ export function jetty(kit, F, L, J, o = {}) {
     const len = J + 0.7;
     const Fj = sub(F, [x + rnd.sym(0.01), jh / 2 + rnd.sym(0.008), J - len / 2 + rnd.range(-0.02, 0.01)], [0, 0, 1], [0, 1, 0]);
     block(kit.get(o.mat || 'oakDark'), Fj, len, jh * rnd.range(0.94, 1.05), jw * rnd.range(0.92, 1.05), {
-      r: 0.01, seg: [0.2, jh, jw], seed: rnd(), noise: 0.002, nf: 5, chip: 0.006, axis: [1, 0, 0], adze: 0.0015,
+      r: 0.01, seg: [0.2, jh / 4, jw / 4], seed: rnd(), noise: 0.002, nf: 5, chip: 0.006, axis: [1, 0, 0],
       bend: (lx) => [0, -0.004 * Math.max(0, lx / len) ** 2, 0],
     });
   }

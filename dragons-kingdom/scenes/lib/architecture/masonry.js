@@ -37,7 +37,9 @@ export function courses(rnd, H, { min = 0.18, max = 0.34, joint = 0.015, plinth 
 const STYLE = {
   ashlar: { r: [0.006, 0.012], pillow: [0.001, 0.003], noise: 0.0015, nf: 7, chip: 0.004, prot: [0.004, 0.012], tilt: 0.004, len: [1.4, 2.8], j: 0.008, dep: [0.18, 0.32], sizeJit: 0.004, split: 0 },
   squared: { r: [0.007, 0.015], pillow: [0.002, 0.006], noise: 0.006, nf: 4, chip: 0.014, prot: [0.006, 0.018], tilt: 0.012, len: [1.0, 2.6], j: 0.012, dep: [0.15, 0.3], sizeJit: 0.008, split: 0.12, outline: 0.03, shrink: 0.05 },
-  rubble: { r: [0.008, 0.018], pillow: [0.004, 0.014], noise: 0.012, nf: 3.5, chip: 0.022, prot: [0.004, 0.035], tilt: 0.035, len: [0.7, 2.4], j: 0.012, dep: [0.14, 0.28], sizeJit: 0.01, split: 0.25, outline: 0.045, shrink: 0.1 },
+  rubble: { r: [0.004, 0.011], pillow: [0.003, 0.011], noise: 0.012, nf: 3.5, chip: 0.03, prot: [0.0, 0.024], tilt: 0.035, len: [0.7, 2.4], j: 0.012, dep: [0.14, 0.28], sizeJit: 0.01, split: 0.25, outline: 0.09, shrink: 0.1 },
+  // rubble under generations of lime wash: the coats fill the joints nearly flush and soften every arris
+  washed: { r: [0.01, 0.02], pillow: [0.002, 0.007], noise: 0.01, nf: 3.5, chip: 0.008, prot: [0.0, 0.009], tilt: 0.02, len: [0.7, 2.4], j: 0.01, dep: [0.14, 0.28], sizeJit: 0.01, split: 0.25, outline: 0.08, shrink: 0.1 },
   dressed: { r: [0.008, 0.014], pillow: [0.001, 0.004], noise: 0.002, nf: 7, chip: 0.006, prot: [0.01, 0.018], tilt: 0.004, len: [1, 1], j: 0.01, dep: [0.2, 0.3], sizeJit: 0.003, split: 0 },
 };
 export const LOD = {
@@ -529,9 +531,9 @@ export function roundTower(kit, F, o = {}) {
       const dep = 0.3;
       const Fs = sub(F, [0, c.y + c.h / 2, 0]);
       const prot = rnd.range(0.004, 0.015) * (lod.protMul ?? 1);
-      block(kit.get(mat), Fs, lod.protMul ? span + 0.01 : span, c.h - (lod.protMul ? 0.004 : 0.012), dep, lod.flat ? { r: 0, seg: [Math.max(0.3, span / 2), 9, 9], seed: rnd(), skip: 32, warp: (lx, ly, lz) => { const th = am + lx / R; const rr = R - dep / 2 + prot + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; } } : {
+      block(kit.get(mat), Fs, lod.protMul ? span + 0.01 : span, c.h - (lod.protMul ? 0.004 : 0.012), dep, lod.flat ? { r: 0, seg: [Math.max(0.3, span / 2), 9, 9], seed: rnd(), skip: 32, warp: (lx, ly, lz) => { const th = am - lx / R; const rr = R - dep / 2 + prot + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; } } : {
         r: 0.012, rs: 1, seg: [Math.max(0.12, span / 4), Math.max(lod.seg, c.h / 2), 9], seed: rnd(), noise: 0.004, nf: 5, pillow: 0.004, chip: 0.01, skip: 32, aoDepth: prot + 0.02, aoFloor: 0.35,
-        warp: (lx, ly, lz) => { const th = am + lx / R; const rr = R - dep / 2 + prot + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; },
+        warp: (lx, ly, lz) => { const th = am - lx / R; const rr = R - dep / 2 + prot + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; },
       });
     }
   }
@@ -569,7 +571,7 @@ export function roundTower(kit, F, o = {}) {
       for (let i = 0; i < n2; i++) {
         const a0 = ph + (i / n2) * Math.PI * 2, a1 = ph + ((i + 1) / n2) * Math.PI * 2 - 0.012 / Rp;
         const am = (a0 + a1) / 2, span = (a1 - a0) * Rp;
-        block(kit.get(dmat), sub(F, [0, y0 + hh / 2, 0]), span, hh - 0.01, 0.45, { r: 0.012, seg: [Math.max(0.15, span / 3), 0.2, 0.2], seed: rnd(), noise: 0.003, chip: 0.01, warp: (lx, ly, lz) => { const th = am + lx / Rp; const rr = Rp - 0.2 + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; } });
+        block(kit.get(dmat), sub(F, [0, y0 + hh / 2, 0]), span, hh - 0.01, 0.45, { r: 0.012, seg: [Math.max(0.15, span / 3), 0.2, 0.2], seed: rnd(), noise: 0.003, chip: 0.01, warp: (lx, ly, lz) => { const th = am - lx / Rp; const rr = Rp - 0.2 + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; } });
       }
     }
     top = H + 1.48;

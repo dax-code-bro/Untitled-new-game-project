@@ -63,8 +63,10 @@ export async function setup(ctx) {
   const shots = [];
   for (const [i, m] of MODELS.entries()) {
     const kit = new Kit(0);
+    const t0 = performance.now();
     m.build(kit, yawFrame([i * SPACING, 0, 0], 0));
     const g = kit.build(M, { name: m.name });
+    console.warn(`[arch-contact] ${m.name}: ${g.userData.tris} tris, ${g.children.length} meshes, built in ${Math.round(performance.now() - t0)} ms`);
     scene.add(g);
     const box = new THREE.Box3().setFromObject(g);
     if (m.waterline) {

@@ -22,7 +22,7 @@ const STABLE = [0, -34], RIG = [14, -17], KEEPER = [-26, -14], LEAFP = [-17, -7]
 const PALACE = [-700, -620], HARBOR = [520, 260];
 const SHOTS = [
   { name: 'stable-rig', p: [17.6, 1.6, 8.0], t: [8, 5.9, -26], fl: 24, fstop: 5.6 },
-  { name: 'rig', p: [23, 1.7, -6], t: [13.5, 5.0, -17], fl: 28, fstop: 5.6 },
+  { name: 'rig', p: [26, 1.6, -1], t: [13.5, 3.6, -15], fl: 24, fstop: 5.6 },
   { name: 'keeper', p: [-11.5, 1.6, 4.0], t: [-25, 2.4, -14], fl: 30, fstop: 5.6 },
   { name: 'palace', p: [-430, 14, -300], t: [-700, 40, -620], fl: 85, fstop: 8 },
   { name: 'harbor', p: [508, 3.9, 274], t: [517, 1.2, 258], fl: 28, fstop: 5.6 },
@@ -34,7 +34,7 @@ export const meta = {
   seed: 9,
   cinematic: filmFinish({
     atmosphere: { enabled: true, sky: 'scene', haze: 1.6, apDistanceScale: 1.6 },
-    shadows: { cascades: 3, maxDistance: 160 },
+    shadows: { cascades: 3, maxDistance: 160, bias: -0.0003, normalBias: 2.5 },
     ao: { enabled: true, radius: 0.8 },
     dof: { samples: 48 },
     grade: { exposure: 0.7, whiteBalance: 5800, contrast: 1.05, saturation: 1.0 },

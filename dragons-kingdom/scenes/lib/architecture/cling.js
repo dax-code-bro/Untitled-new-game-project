@@ -12,7 +12,7 @@
 //
 // Builders usable on their own: archway, gateway, fountain, stonePier, kingsSteps, alley.
 import * as THREE from 'three';
-import { Kit, frame, yawFrame, sub, makeRand, block, tube, xf } from './core.js';
+import { Kit, frame, yawFrame, sub, makeRand, block, tube, xf, lathe } from './core.js';
 import { masonryFace, masonryBox, courses, archRing, steps, LOD } from './masonry.js';
 import { house } from './house.js';
 import { door } from './openings.js';
@@ -126,9 +126,12 @@ export function fountain(kit, F, o = {}) {
       const Fb = sub(F, [0, (y0 + y1) / 2, 0]);
       block(kit.get(mat), Fb, span, y1 - y0 - 0.006, dr, {
         r: opts.r ?? 0.015, rs: lod.rs, seg: [Math.max(0.1, span / 6), Math.max(lod.seg, (y1 - y0) / 2), Math.max(0.08, dr / 3)], seed: rnd(), noise: 0.003, nf: 6, chip: 0.01, pillow: 0.002,
-        warp: (lx, ly, lz) => { const th = am + lx / rm; const rr = rm + lz + (opts.lip && ly > 0 ? opts.lip * (lz / dr + 0.5) : 0); return [Math.cos(th) * rr, ly + (opts.dome ? opts.dome * (1 - (2 * lz / dr) ** 2) * (ly > 0 ? 1 : 0) : 0), Math.sin(th) * rr]; },
+        warp: (lx, ly, lz) => { const th = am - lx / rm; const rr = rm + lz + (opts.lip && ly > 0 ? opts.lip * (lz / dr + 0.5) : 0); return [Math.cos(th) * rr, ly + (opts.dome ? opts.dome * (1 - (2 * lz / dr) ** 2) * (ly > 0 ? 1 : 0) : 0), Math.sin(th) * rr]; },
       });
     }
+    // the bedding and the pointed joints between the segments: a mortar annulus a little inside the stones
+    const e = 0.012;
+    lathe(kit.get('mortar'), F, [[r1 - e, y0 + 0.004], [r1 - e, y1 - e], [r0 + e, y1 - e], [r0 + e, y0 + 0.004], [r1 - e, y0 + 0.004]], 96, { ao: 0.5 });
   };
   // a step round the basin (two courses of slabs), the basin wall (two courses), the coping
   ring(R + 0.05, R + 0.75, -0.05, 0.16, 18, 'stoneDressed', { phase: 0.1 });

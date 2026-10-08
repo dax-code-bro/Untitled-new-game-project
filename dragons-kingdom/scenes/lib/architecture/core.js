@@ -302,7 +302,7 @@ export function block(acc, F, sx, sy, sz, o = {}) {
     if (chip && ar) disp -= chip * Math.max(0, vnoise3(wp0[0] * 9 + so, wp0[1] * 9, wp0[2] * 9) * 1.6 - 0.6);
     if (ad) {
       // hewing scallops along the length (local x), on the side faces
-      const sxp = lx * 9.5 + vnoise3(lx * 2 + so, ny * 3, nz * 3) * 2.2;
+      const sxp = lx * 4.5 + vnoise3(lx * 1.5 + so, ny * 3, nz * 3) * 1.4;
       disp -= ad * (0.5 + 0.5 * Math.cos(sxp * Math.PI * 2)) * (1 - Math.abs(nx));
     }
     if (wane && (wane[0] || wane[1])) {

@@ -48,7 +48,7 @@ function roomWalls(w, d) {
 
 /** A floor of flagstones (irregular sizes, slightly uneven, worn). */
 export function flagFloor(kit, F, w, d, rnd, o = {}) {
-  const mat = o.mat || 'stonePale';
+  const mat = o.mat || 'stoneFloor';
   let z = -d / 2;
   while (z < d / 2 - 0.05) {
     const rowD = Math.min(rnd.range(0.45, 0.75), d / 2 - z);
@@ -174,23 +174,28 @@ export function nest(kit, F, rnd, o = {}) {
     const am = (a0 + a1) / 2, span = (a1 - a0) * R, rm = R;
     block(kit.get('stonePale'), sub(F, [0, ch / 2, 0]), span, ch, 0.26, {
       r: 0.025, rs: 1, seg: [Math.max(0.1, span / 4), 0.1, 0.1], seed: rnd(), noise: 0.003, nf: 6, chip: 0.012, pillow: 0.004,
-      warp: (lx, ly, lz) => { const th = am + lx / rm; const rr = rm + lz; return [Math.cos(th) * rr, ly + (ly > 0 ? 0.02 * (1 - (2 * lz / 0.26) ** 2) : 0), Math.sin(th) * rr]; },
+      warp: (lx, ly, lz) => { const th = am - lx / rm; const rr = rm + lz; return [Math.cos(th) * rr, ly + (ly > 0 ? 0.02 * (1 - (2 * lz / 0.26) ** 2) : 0), Math.sin(th) * rr]; },
     });
   }
   // the straw bed: a domed mound filling the curb (its surface strewn with loose straws)
-  grid(kit.get('straw'), 36, 36, (u, v) => {
-    const a = u * Math.PI * 2, r = v * (R - 0.08);
-    const dome = ch * 0.85 + 0.12 * (1 - (r / R) ** 2) + 0.025 * Math.sin(a * 5 + r * 9) * (r / R);
-    const p = xf(F, Math.cos(a) * r, dome, Math.sin(a) * r);
-    return { p, uv: [a * r, r], seed: 0.31, ao: 0.6 + 0.4 * (1 - r / R) };
-  }, [1, 0, 0], true);
+  // (the mound spills over the kerb a little: lumpy, with tufts)
+  const domeAt = (a, r) => ch * 0.85 + 0.12 * (1 - (r / R) ** 2) + 0.03 * Math.sin(a * 5 + r * 9) * (r / R) + 0.02 * Math.sin(a * 11 + 2.0) * Math.sin(r * 13);
+  grid(kit.get('strawBed'), 72, 30, (u, v) => {
+    const a = u * Math.PI * 2, r = v * (R + 0.06);
+    const y = r < R - 0.1 ? domeAt(a, r) : Math.max(domeAt(a, R - 0.1), ch + 0.03) - (r - (R - 0.1)) * 0.3;
+    const p = xf(F, Math.cos(a) * r, y, Math.sin(a) * r);
+    return { p, uv: [a * r, r], seed: 0.31, ao: 0.55 + 0.45 * (1 - (r / R) ** 2) };
+  }, [1, 0, 0], false);
+  // loose stems lying on the bed and strewn round the kerb on the flags
   const acc = kit.get('straw');
-  for (let i = 0; i < (o.straws ?? 700); i++) {
-    const a = rnd() * Math.PI * 2, r = R - 0.3 + Math.pow(rnd(), 0.7) * 0.75;
-    const y0 = r < R - 0.1 ? ch * 0.85 + 0.12 * (1 - (r / R) ** 2) + 0.01 : r < R + 0.15 ? ch + 0.01 : 0.008;
-    const dir = rnd() * Math.PI * 2, l = rnd.range(0.04, 0.14);
-    const p0 = xf(F, Math.cos(a) * r, y0 + rnd() * 0.01, Math.sin(a) * r), p1 = xf(F, Math.cos(a) * r + Math.cos(dir) * l, y0 + rnd() * 0.02, Math.sin(a) * r + Math.sin(dir) * l);
-    tube(acc, [p0, p1], 0.0022, { sides: 3, seed: rnd() });
+  for (let i = 0; i < (o.straws ?? 2600); i++) {
+    const out = rnd() < 0.3;
+    const a = rnd() * Math.PI * 2, r = out ? R + 0.12 + Math.pow(rnd(), 1.6) * 0.7 : Math.sqrt(rnd()) * (R - 0.12);
+    const dir = rnd() * Math.PI * 2, l = rnd.range(0.05, 0.2);
+    const x0 = Math.cos(a) * r, z0 = Math.sin(a) * r, x1 = x0 + Math.cos(dir) * l, z1 = z0 + Math.sin(dir) * l;
+    const yOn = (x, z) => { const rr = Math.hypot(x, z), aa = Math.atan2(z, x); return out ? 0.006 : domeAt(aa, Math.min(rr, R - 0.1)) + 0.004; };
+    const p0 = xf(F, x0, yOn(x0, z0), z0), p1 = xf(F, x1, yOn(x1, z1) + rnd() * 0.01, z1);
+    tube(acc, [p0, p1], rnd.range(0.0015, 0.0026), { sides: 3, seed: rnd() });
   }
   // linen laid over the bed: the cloth-simulated drape (offline/nest_cloth.py) when baked
   if (o.cloth) {
@@ -235,7 +240,7 @@ export function birthingChamber(kit, F, o = {}) {
     if (wl.key === win.wall) ops.push({ x: win.x, y: win.y, w: win.w, h: win.h, head: 'arch', reveal: T, archDepth: T, sill: false });
     if (wl.key === dr.wall) ops.push({ x: dr.x, y: 0, w: dr.w, h: dr.h, head: 'arch', reveal: T * 0.6 });
     // a niche for a lamp
-    masonryFace(local, Fw, wl.L, hw, { courses: C, style: 'rubble', mat: 'stoneWashed', dressedMat: 'stonePale', mortar: 'mortarPale', T, lod, seed: rnd() * 999, openings: ops, back: true, backMat: 'mortarPale', quoinStart: () => 0.04, quoinEnd: () => 0.04 });
+    masonryFace(local, Fw, wl.L, hw, { courses: C, style: 'washed', mat: 'stoneWashed', dressedMat: 'stonePale', mortar: 'mortarWashed', T, lod, seed: rnd() * 999, openings: ops, back: true, backMat: 'mortarPale', quoinStart: () => 0.04, quoinEnd: () => 0.04 });
     if (wl.key === dr.wall) door(local, sub(Fw, [dr.x, 0, 0]), { w: dr.w, h: dr.h, arch: true, inset: T * 0.6, open: dr.open, hingeLeft: false, room: true, wallT: T, seed: rnd() * 999 });
     // a splayed sill for the high window: the bottom of the reveal slopes down into the room
     if (wl.key === win.wall) block(local.get('stonePale'), sub(Fw, [win.x + win.w / 2, win.y - 0.12, -T / 2 + 0.02], [1, 0, 0], [0, Math.cos(0.45), Math.sin(0.45)]), win.w + 0.06, 0.12, T * 1.05, { r: 0.012, seg: [0.2, 0.06, 0.2], seed: rnd(), noise: 0.003, chip: 0.01 });
