@@ -248,6 +248,13 @@ hatchling 12.5-13.5 s, scout 9.7-10.1 s, scale lineup 12.5 s. A still takes
 frequency skin noise is baked per vertex (`aNoise`, `aWarp`), which cut the
 full-frame Charcoal frame from 20.5 s to about 12 s with no visible change.
 
+Measured this session (all nine hero shots in one `creatures-review.js` job at `--preset
+final` with the 8-sub-frame film finish, while other agents rendered on the same 4 vCPU:
+load average 10-17): 9 frames in 44 min 19 s including a ~4 min build, i.e. about 4-5 min
+per finished 4K frame under that load; the 21-frame contact sheet (`creatures-contact.js`,
+no sub-frames) took 11 min 55 s. Review renders at `--fps 1` map the sub-frame offset to a
+24 fps shutter, so the motion blur in them is what a 24 fps camera would record.
+
 ## Known limits (honest list)
 
 * Designs are provisional and were judged only against my own sense of real
@@ -281,6 +288,18 @@ full-frame Charcoal frame from 20.5 s to about 12 s with no visible change.
   loft alone left the nostrils and egg tooth as a knob past the tip - needs the snout
   features moved with it). Out of focus, the metallic body can still sparkle a little in
   the bokeh.
+* Charcoal's propatagium (the membrane in front of the arm) is a straight-edged panel
+  from the shoulder to the wrist; in the downstroke it sits in the shadow of the shoulder
+  and reads as a dark rectangle beside the arm.
+* Riders come from the humans library: the scout's hooded rider straddles a saddle made for
+  wider backs, so on the slim scout the knees stand out wide (the bank shot is therefore
+  shown without the rider); Abby's grab bar is placed at her hands in the rest pose (idle
+  motion can move the hands off it by a few cm).
+* The rest-pose AO bake cannot see crevices a pose creates (a thigh folded against the
+  belly); the wet film is masked on undersides for that reason, the base layer still relies
+  on the runtime's screen-space AO.
+* The Starlight shot's countryside (bush clumps as hedgerows, a plain ground) is a stand-in
+  for a real set; it only provides scale.
 * The velocity motion blur poses the scene at the shutter-open time before
   `update()` has set the shot's lens, so a still uses the previous lens state
   for its shutter (the runtime default, 180 degrees, for a single still). The

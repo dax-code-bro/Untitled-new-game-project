@@ -43,5 +43,15 @@ only the state of the work.
 through a temporary scene `scenes/lookdev/creatures-tmpreview.js` (delete it before commit).
 `scratchpad/cr/dev.sh <cfg.json> <name> preview` renders free views via creatures-dev.json.
 
+## Renders of this session (git-ignored, under dragons-kingdom/output/cr/)
+- `hero4k/png/<shot>.png` (+ `_1920.jpg`, `crop_*.png`): all nine hero shots at 4K, final finish.
+- `rv_f2/`: 4K re-render of the six shots changed after that (charcoal-flight, leaf-flight,
+  starlight-below, hatchling-macro, scout-bank, scout-wingloss).
+- `contact4k/contact_sheet.jpg` (3840 wide) + `png/fNN.png` (4K): the 21-frame contact sheet;
+  the hatchling views f13-f16 were re-rendered after the wet-film fix (`contact4k_h/`).
+
 ## Next
-- check the new renders, then final 4K hero shots + contact sheet, 1:1 crops, README, npm test
+- Daxtyn's approved references (limb layout, horns, colours) -> adjust the provisional designs
+- hatchling: shorter snout with the nostrils/egg tooth moved along; sit-pose wing fold
+- humans domain: a narrower/prone straddle for the scout rider; the watchman's head
+- runtime: frame time during sub-frame updates; SSAO on the clearcoat (see the report)
