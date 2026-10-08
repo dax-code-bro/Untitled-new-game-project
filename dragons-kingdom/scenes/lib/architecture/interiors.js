@@ -221,13 +221,28 @@ export function nest(kit, F, rnd, o = {}) {
   // straw: thousands of stems in clumps (each clump laid one way, its stems bent and crossing),
   // heaped deeper toward the kerb, spilling over it onto the flags; none on the linen
   const acc = kit.get('straw');
-  let cloth = null;
+  // the linen's real footprint (2 cm cells under its draped quads), not its bounding box: the
+  // straw is heaped right up to the cloth's edges (no bare bed round it)
+  let cover = null;
+  const CS = 0.02, cell = (x, z) => Math.floor(x / CS) * 4096 + Math.floor(z / CS);
   if (o.cloth) {
-    const P = o.cloth.positions; let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
-    for (let k = 0; k < P.length; k += 3) { x0 = Math.min(x0, P[k]); x1 = Math.max(x1, P[k]); z0 = Math.min(z0, P[k + 2]); z1 = Math.max(z1, P[k + 2]); }
-    cloth = [x0 + 0.06, x1 - 0.06, z0 + 0.06, z1 - 0.06];
+    const { nx, ny, positions: P } = o.cloth;
+    cover = new Set();
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      let a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9;
+      for (const k of [j * (nx + 1) + i, j * (nx + 1) + i + 1, (j + 1) * (nx + 1) + i, (j + 1) * (nx + 1) + i + 1]) {
+        a0 = Math.min(a0, P[k * 3]); a1 = Math.max(a1, P[k * 3]); b0 = Math.min(b0, P[k * 3 + 2]); b1 = Math.max(b1, P[k * 3 + 2]);
+      }
+      for (let gx = Math.floor(a0 / CS); gx <= Math.floor(a1 / CS); gx++) for (let gz = Math.floor(b0 / CS); gz <= Math.floor(b1 / CS); gz++) cover.add(gx * 4096 + gz);
+    }
   }
-  const onCloth = (x, z) => cloth && x > cloth[0] && x < cloth[1] && z > cloth[2] && z < cloth[3];
+  // (eroded by 6 cm: straws run in under the sheet's edges and lie over them)
+  const onCloth = (x, z) => {
+    if (!cover) return false;
+    const gx = Math.floor(x / CS), gz = Math.floor(z / CS);
+    for (let i = -3; i <= 3; i++) for (let j = -3; j <= 3; j++) if (!cover.has((gx + i) * 4096 + gz + j)) return false;
+    return true;
+  };
   const yOn = (x, z, out) => { const rr = Math.hypot(x, z), aa = Math.atan2(z, x); return out ? 0.006 : rr > R - 0.12 ? ch + 0.03 : domeAt(aa, Math.min(rr, R - 0.1)) + 0.004; };
   const nClumps = o.clumps ?? 2000;
   for (let c = 0; c < nClumps; c++) {
@@ -249,11 +264,25 @@ export function nest(kit, F, rnd, o = {}) {
   // linen laid over the bed: the cloth-simulated drape (offline/nest_cloth.py) when baked
   if (o.cloth) {
     const { nx, ny, positions: P } = o.cloth;
+    // the straw under the sheet lifts it in soft lumps (the bake lay on a smooth dome)
+    const lump = (x, z) => 0.009 * Math.max(0, 0.45 + 0.35 * Math.sin(x * 23.1 + 1.3) * Math.sin(z * 19.7 + 0.4) + 0.3 * Math.sin(x * 41.3 - z * 37.9 + 2.1) + 0.2 * Math.sin(x * 67.1 + z * 59.3));
+    // and it was laid by hand: soft creases running across it (narrow crests between flat runs)
+    const W = [[14, 5, 0.3, 0.008], [-6, 17, 1.1, 0.0065], [21, -13, 2.0, 0.005], [9, 24, 0.7, 0.0045], [31, 8, 1.9, 0.003]];
+    const crease = (x, z) => { let hh = 0; for (const [kx, kz, ph, am] of W) hh += am * Math.pow(1 - Math.abs(Math.sin(kx * x + kz * z + ph)), 3); return hh; };
+    // (never under the straw bed: the bake's collision dome is a little lower than this one in places)
+    const bedY = (x, z) => { const r = Math.hypot(x, z), a = Math.atan2(z, x); return r < R - 0.1 ? domeAt(a, r) : Math.max(domeAt(a, R - 0.1), ch + 0.03) - (r - (R - 0.1)) * 0.3; };
+    const yAt = (k) => Math.max(P[k + 1], bedY(P[k], P[k + 2]) + 0.006) + 0.004 + lump(P[k], P[k + 2]) + crease(P[k], P[k + 2]);
     grid(kit.get('linen'), nx, ny, (u, v) => {
       const i = Math.round(u * nx), j = Math.round(v * ny), k = (j * (nx + 1) + i) * 3;
-      const p = xf(F, P[k], P[k + 1] + 0.004, P[k + 2]);
+      const p = xf(F, P[k], yAt(k), P[k + 2]);
       return { p, uv: [u * 2.0, v * 1.6], seed: 0.62, ao: 0.85 };
     }, [1, 0, 0], false);
+    // a few stray stems lying on the linen
+    for (let s = 0; s < 35; s++) {
+      const i = 3 + Math.floor(rnd() * (nx - 5)), j = 2 + Math.floor(rnd() * (ny - 4)), di = rnd() < 0.5 ? 1 : -1, dj = Math.floor(rnd() * 3) - 1;
+      const k0 = (j * (nx + 1) + i) * 3, k1 = ((j + dj * 2) * (nx + 1) + i + di * 3) * 3, km = (((j + dj)) * (nx + 1) + i + di) * 3;
+      tube(acc, [xf(F, P[k0], yAt(k0) + 0.003, P[k0 + 2]), xf(F, (P[k0] + P[k1]) / 2, yAt(km) + 0.005, (P[k0 + 2] + P[k1 + 2]) / 2), xf(F, P[k1], yAt(k1) + 0.003, P[k1 + 2])], rnd.range(0.0016, 0.0024), { sides: 3, seed: rnd() });
+    }
     return { r: R, top: ch * 0.85 + 0.12 };
   }
   // (procedural fallback) linen in soft folds, a corner hanging over the curb
@@ -291,6 +320,8 @@ export function birthingChamber(kit, F, o = {}) {
     // a niche for a lamp
     masonryFace(local, Fw, wl.L, hw, { courses: C, style: 'washed', mat: 'stoneWashed', dressedMat: 'stonePale', mortar: 'mortarWashed', T, lod, seed: rnd() * 999, openings: ops, back: true, backMat: 'mortarPale', quoinStart: () => 0.04, quoinEnd: () => 0.04 });
     if (wl.key === dr.wall) door(local, sub(Fw, [dr.x, 0, 0]), { w: dr.w, h: dr.h, arch: true, inset: T * 0.6, open: dr.open, hingeLeft: false, room: true, wallT: T, seed: rnd() * 999 });
+    // a threshold slab through the reveal (the floor runs on to the room behind the portal)
+    if (wl.key === dr.wall) block(local.get('stoneFloor'), sub(Fw, [dr.x + dr.w / 2, -0.066, -T / 2]), dr.w + 0.1, 0.14, T, { r: 0.012, seg: [0.2, 0.07, 0.2], seed: 0.37, noise: 0.003, chip: 0.008 });
     // a splayed sill for the high window: the bottom of the reveal slopes down into the room
     if (wl.key === win.wall) block(local.get('stonePale'), sub(Fw, [win.x + win.w / 2, win.y - 0.12, -T / 2 + 0.02], [1, 0, 0], [0, Math.cos(0.45), Math.sin(0.45)]), win.w + 0.06, 0.12, T * 1.05, { r: 0.012, seg: [0.2, 0.06, 0.2], seed: rnd(), noise: 0.003, chip: 0.01 });
   }
@@ -361,6 +392,8 @@ export function treatmentRoom(kit, F, o = {}) {
     masonryFace(local, Fw, wl.L, hw, { courses: C, style: 'washed', mat: 'stoneWashed', dressedMat: 'stoneWashed', mortar: 'mortarWashed', T, lod: 'mid', seed: rnd() * 999, openings: ops, back: true, backMat: 'mortarPale', quoinStart: () => 0.04, quoinEnd: () => 0.04 });
     plasterCoat(local, Fw, wl.L, h, ops, rnd, { inset: 0.03, mat: 'plasterInt' });
     if (wl.key === dr.wall) door(local, sub(Fw, [dr.x, 0, 0]), { w: dr.w, h: dr.h, inset: T * 0.5, open: dr.open, hingeLeft: true, room: true, wallT: T, seed: rnd() * 999 });
+    // a threshold slab through the reveal (the floor runs on to the room behind the portal)
+    if (wl.key === dr.wall) block(local.get('stoneFloor'), sub(Fw, [dr.x + dr.w / 2, -0.066, -T / 2]), dr.w + 0.1, 0.14, T, { r: 0.012, seg: [0.2, 0.07, 0.2], seed: 0.53, noise: 0.003, chip: 0.008 });
     if (wl.key === win.wall) {
       // the deep reveal is plastered; inside shutters folded back against the splay
       const Fo = sub(Fw, [win.x, win.y, 0]);
