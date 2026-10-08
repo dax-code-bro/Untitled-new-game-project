@@ -260,6 +260,7 @@ def assemble(kit, spec, out_dir, opts):
         postfix.fix_pushout(cid + opts.get('suffix', ''))
         postfix.fix_cull(cid + opts.get('suffix', ''))
         postfix.fix_renormal(cid + opts.get('suffix', ''))
+        postfix.fix_reao(cid + opts.get('suffix', ''))
         postfix.fix_props(cid + opts.get('suffix', ''))
     log(f'   {cid}: {sum(len(p.posed) for p in parts)} verts, {size / 1e6:.1f} MB, {time.time() - t0:.0f} s')
 

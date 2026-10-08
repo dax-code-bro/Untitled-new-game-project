@@ -1,7 +1,7 @@
 """Post-fixes applied in place to already built characters (cache/<id>.json + .bin), so a fix
 that only needs the finished meshes does not cost a full rebuild.
 
-    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|pushout|cull|renormal|all id [id ...]   ('all' = every cache)
+    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|pushout|cull|renormal|reao|all id [id ...]   ('all' = every cache)
 
 Each pass records itself in the mesh's 'postfix' list and is not applied twice.
 
@@ -868,6 +868,70 @@ def fix_renormal(cid):
     print(f'{cid}: normals recomputed ({", ".join(done)})', flush=True)
 
 
+def fix_reao(cid, rays=16, max_dist=0.12):
+    """Cloth ambient occlusion re-baked on the final geometry (the build bakes it before these
+    passes: a smoothed pucker kept the dark AO of its old crease - dots on a gown's bust).
+    Same estimator as humanbuild.bake_ao_thickness, against every occluder mesh as cached."""
+    import bpy  # noqa: F401
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    bin_ = bytearray(open(bp, 'rb').read())
+
+    def arrays(m):
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        return P, T[(T[:, 0] != T[:, 1]) | (T[:, 1] != T[:, 2])]
+    todo = [m for m in h['meshes'] if m['kind'] == 'cloth' and 'ao' in m['attrs'] and 'ao2' not in m.get('postfix', [])]
+    if not todo:
+        return
+    allP, allT, off = [], [], 0
+    for m in h['meshes']:
+        if m['kind'] in ('eye', 'lash', 'brow') or not m['material'].get('occluder', True):
+            continue
+        P, T = arrays(m)
+        allP.append(P)
+        allT.append(T + off)
+        off += len(P)
+    tree = BVHTree.FromPolygons(np.concatenate(allP).tolist(), np.concatenate(allT).tolist(), all_triangles=True, epsilon=0.0)
+    rng = np.random.default_rng(7)
+    u1, u2 = rng.random(rays), rng.random(rays)
+    r = np.sqrt(u1)
+    th = 2 * np.pi * u2
+    local = np.stack([r * np.cos(th), r * np.sin(th), np.sqrt(1 - u1)], 1)
+    done = []
+    for m in todo:
+        P, _ = arrays(m)
+        N = view(bin_, m['attrs']['normal']).astype(float)
+        ao = view(bin_, m['attrs']['ao']).astype(float).copy()
+        key = np.round(P / 1e-5).astype(np.int64)
+        _, first, w = np.unique(key, axis=0, return_index=True, return_inverse=True)
+        w = w.reshape(-1)
+        aw = np.ones(len(first))
+        for j, i in enumerate(first):
+            nn = N[i] / max(np.linalg.norm(N[i]), 1e-9)
+            t1 = np.cross(nn, [0, 1, 0] if abs(nn[1]) < 0.9 else [1, 0, 0])
+            t1 /= np.linalg.norm(t1) + 1e-12
+            t2 = np.cross(nn, t1)
+            ov = Vector(P[i] + nn * 0.0015)
+            occ = 0.0
+            for d in local[:, :1] * t1 + local[:, 1:2] * t2 + local[:, 2:3] * nn:
+                hit = tree.ray_cast(ov, Vector(d), max_dist)
+                if hit[0] is not None:
+                    occ += 1.0 - (hit[3] / max_dist) ** 0.5 * 0.6
+            aw[j] = 1.0 - occ / rays
+        put(bin_, m['attrs']['ao'], aw[w])
+        m['postfix'] = m.get('postfix', []) + ['ao2']
+        done.append(m['name'])
+    tmp = bp + '.tmp'
+    open(tmp, 'wb').write(bin_)
+    os.replace(tmp, bp)
+    json.dump(h, open(jp + '.tmp', 'w'), separators=(',', ':'))
+    os.replace(jp + '.tmp', jp)
+    print(f'{cid}: cloth AO re-baked ({", ".join(done)})', flush=True)
+
+
 def main():
     what, ids = sys.argv[1], sys.argv[2:]
     if ids == ['all']:
@@ -887,6 +951,8 @@ def main():
             fix_cull(cid)
         if what in ('renormal', 'all'):
             fix_renormal(cid)
+        if what in ('reao', 'all'):
+            fix_reao(cid)
 
 
 if __name__ == '__main__':

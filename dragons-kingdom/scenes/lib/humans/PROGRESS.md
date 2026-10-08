@@ -96,5 +96,17 @@ Later in session 4:
 - Sling: bands with 9 vertices across (rolled edges, wandering creases, twist), cradle folds and
   an elbow pocket, darker linen. Iron props keep their roughness (no chrome kettle hats).
 
-Next: when the rebuild is through, hero + contact at preview, then final 4K + crops, npm test,
-README numbers. Remi's square shoulders are a known look issue (drape envelope), not touched.
+- More post passes: `cull` (cloth under an opaque outer layer is not drawn - shirts poked
+  through tunics at the nipples/elbows), `renormal` (welded normals over every cloth mesh - the
+  seam between moved and stored normals shaded as dots). The bust is left out of the push
+  colliders (body AND under-layers): pushing cloth out over it shrink-wrapped the breasts.
+- Eyes: build.py dropped every eye face with u > 0.85 to remove the cornea shells - that also cut
+  a wedge out of the RIGHT eyeball (hole in the inner corner when the eye rolls). Fixed (cornea =
+  u > 0.85 AND v < 0.15); characters built before 04:55 UTC are rebuilt by queue C (stamp_eyes).
+- Skin is double-sided (looking into the socket / a cuff showed the hair or sky through the head).
+- Leather: roughness divided by the scan's mean roughness (boots/belts read as wet rubber).
+- Hair: roots fade over the first 3% only (10% bared the temples of long pulled-back hair).
+
+Next: when queues A/B/C are through: `postfix.py all all`, hero + contact at preview, rebuild
+alexandria if her bust still shows dots, then final 4K + crops, npm test, README numbers.
+Remi's square shoulders are a known look issue (drape envelope), not touched.
