@@ -82,5 +82,19 @@ was interrupted but their older caches are valid). Rendered the state, then fixe
   scene render in one run with --fps 1 (frame k = shot k), no double exposure at cuts.
   humans-dev.js has feet (t 6) and hairline (t 7) views.
 
-Next: hero + contact at preview after these fixes -> sling band look, Remi's square shoulders,
-remaining shredded coat edges; then final 4K + crops, npm test, README numbers.
+Later in session 4:
+- LESSON: an in-place pass cannot be undone - the first pucker pass (plain membrane over big
+  regions, body collider over-smoothed) collapsed whole sleeves into strings (guard captain) and
+  let skin / shirts show through. Fixed algorithm: membrane never moves cloth more than 2 mm
+  inward of where it was, collider = Taubin-smoothed body (limbs keep volume) using ALL body
+  triangles (new cache field colliderIndex: the triangles hidden under clothes; runtime ignores
+  it), push-out of every moved vertex, then fix_pushout (cloth outside the body and the layer
+  under it). Because of the in-place damage EVERY character is rebuilt (queue started 04:10 UTC,
+  order in scratchpad humans/logs/s4_full_order.txt, log s4_full.log, stamp stamp_s4full).
+- Hoods rest on the crown (ease 1.4 cm, smoothed more, ear bulges flattened, drape folds,
+  turned-back face edge); hoods and coifs hide the head under them (ears printed through).
+- Sling: bands with 9 vertices across (rolled edges, wandering creases, twist), cradle folds and
+  an elbow pocket, darker linen. Iron props keep their roughness (no chrome kettle hats).
+
+Next: when the rebuild is through, hero + contact at preview, then final 4K + crops, npm test,
+README numbers. Remi's square shoulders are a known look issue (drape envelope), not touched.

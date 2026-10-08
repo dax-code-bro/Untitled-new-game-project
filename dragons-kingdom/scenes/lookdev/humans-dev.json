@@ -1,1 +1,1 @@
-{ "id": "crowd02_t", "accumulate": false, "still": true, "cam": { "tgt": [0, 1.15, 0], "az": 25, "el": 5, "dist": 1.6, "fov": 30, "fstop": 8 } }
+{ "id": "guard_captain", "accumulate": false, "still": true, "cam": { "tgt": [0, 1.15, 0], "az": 15, "el": 5, "dist": 2.2, "fov": 30, "fstop": 8 } }

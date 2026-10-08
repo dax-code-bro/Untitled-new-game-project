@@ -106,7 +106,7 @@ def G_cap(c, **kw):
 
 
 def G_hood(c, cape=0.3, **kw):
-    return dict({'type': 'hood', 'fabric': 'wool', 'color': _c(c), 'ease': 0.032, 'layer': 3, 'cape_length': cape}, **kw)
+    return dict({'type': 'hood', 'fabric': 'wool', 'color': _c(c), 'ease': 0.016, 'layer': 3, 'cape_length': cape}, **kw)
 
 
 def G_veil(c=(0.48, 0.46, 0.4), length=0.5, **kw):

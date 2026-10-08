@@ -292,11 +292,40 @@ def close_toes(P, tris, foot_h=0.085, ease=0.004, toe_room=0.012, spring=0.006, 
     return out[w], normals(out)[w]
 
 
+def body_collider(P, T):
+    """The body as the cloth passes see it: welded, all its triangles (hidden ones too when the
+    cache carries colliderIndex), Taubin-smoothed over ~2 cm - small relief (nipples, navel,
+    knuckles) goes, the volume of the limbs stays (plain Laplacian smoothing shrinks an arm and
+    the cloth sank into it). Returns (positions, triangles) welded."""
+    key = np.round(P / 1e-5).astype(np.int64)
+    _, w = np.unique(key, axis=0, return_inverse=True)
+    w = w.reshape(-1)
+    nW = int(w.max()) + 1
+    Q = np.zeros((nW, 3))
+    Q[w] = P
+    t = w[T]
+    t = t[(t[:, 0] != t[:, 1]) & (t[:, 1] != t[:, 2]) & (t[:, 0] != t[:, 2])]
+    e = np.unique(np.sort(np.concatenate([t[:, [0, 1]], t[:, [1, 2]], t[:, [2, 0]]]), axis=1), axis=0)
+    a, b = np.concatenate([e[:, 0], e[:, 1]]), np.concatenate([e[:, 1], e[:, 0]])
+    deg = np.bincount(a, minlength=nW).astype(float)
+    has = deg > 0
+    deg = np.maximum(deg, 1)
+    el = np.linalg.norm(Q[e[:, 0]] - Q[e[:, 1]], axis=1).mean()
+
+    def U(X):
+        return (np.stack([np.bincount(a, weights=X[b, k], minlength=nW) for k in range(3)], 1) / deg[:, None] - X) * has[:, None]
+    S = Q.copy()
+    for _ in range(int(np.clip(20 * (0.0055 / max(el, 1e-4)) ** 2, 20, 200))):
+        S = S + 0.5 * U(S)
+        S = S - 0.53 * U(S)
+    return S, t
+
+
 # garments whose gathers are made on purpose (cap / coif rims, kerchief knots) are left alone
 NO_PUCKER = ('boots', 'shoes', 'cap', 'coif', 'hood', 'kerchief', 'kerchieftail', 'veil', 'sling')
 
 
-def smooth_puckers(P, tris, thresh=0.08, iters=80, push=None, spots=None):
+def smooth_puckers(P, tris, thresh=0.08, iters=80, push=None, spots=None, normals=None, max_in=0.002):
     """Simulated cloth inherits the body mesh's poles (nipples, navel) and crumples where the
     simulation pinched it (armpits, crossed arms): small radial puckers that read as points
     pushing through the cloth. A fold bends the surface in ONE direction, a pucker in all of
@@ -341,6 +370,10 @@ def smooth_puckers(P, tris, thresh=0.08, iters=80, push=None, spots=None):
     for _ in range(3):
         Nm0 = ring(Nm0)
     Nm0 = Nm0 / np.maximum(np.linalg.norm(Nm0, axis=1, keepdims=True), 1e-12)
+    if normals is not None:                             # outward as built
+        Nw = np.zeros((nW, 3))
+        np.add.at(Nw, w, normals)
+        Nm0 = Nm0 * (1.0 if np.einsum('ij,ij->', Nm0, Nw) >= 0 else -1.0)
     # a pucker is a twisted star of long triangles round a knot of vertices: the whole star is
     # re-made as a smooth membrane spanning it (many Laplacian steps converge to the harmonic
     # fill of its rim), kept outside the body / the layers under it by `push`
@@ -357,6 +390,11 @@ def smooth_puckers(P, tris, thresh=0.08, iters=80, push=None, spots=None):
     # it untwists the star; the regions are small, so it hardly flattens the body's curvature)
     for it in range(iters):
         X = X + (0.7 * s)[:, None] * U(X)
+        # never more than max_in inward of where the cloth was: a membrane over a sleeve-sized
+        # region collapses the tube toward its axis (a guard's sleeves became strings)
+        if normals is not None:
+            dn = np.einsum('ij,ij->i', X - Q, Nm0)
+            X = X + Nm0 * np.maximum(0.0, -max_in - dn)[:, None]
         if push is not None and it % 20 == 19 and len(ch):
             X[ch] = push(X[ch])
     # spots where the body itself printed through (nipples): the cloth there is re-made as the
@@ -453,44 +491,27 @@ def fix_puckers(cid):
     from mathutils import Vector
     from mathutils.bvhtree import BVHTree
 
-    def mesh_arrays(m):
+    def mesh_arrays(m, full=False):
         P = view(bin_, m['attrs']['position']).astype(float)
-        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        ix = m['colliderIndex'] if full and 'colliderIndex' in m else m['index']
+        T = np.frombuffer(bin_, dtype=TYPES[ix['type']], count=ix['count'], offset=ix['offset']).reshape(-1, 3).astype(np.int64)
         return P, T
     # the body as the cloth sees it: smoothed (a nipple or the navel should not print through
-    # cloth - a garment bridges them), and where the body has such detail, the cloth over it is
-    # re-made too
+    # cloth - a garment bridges them); the cloth over the nipples is re-made (smooth_puckers)
     body = [m for m in h['meshes'] if m['kind'] == 'skin']
     trees, pts = [], []
     if body:
-        Pb, Tb = mesh_arrays(body[0])
+        Pb, Tb = mesh_arrays(body[0], full=True)
         key = np.round(Pb / 1e-5).astype(np.int64)
         _, wb = np.unique(key, axis=0, return_inverse=True)
         wb = wb.reshape(-1)
         nB = int(wb.max()) + 1
         Qb = np.zeros((nB, 3))
         Qb[wb] = Pb
-        tb = wb[Tb]
-        eb = np.unique(np.sort(np.concatenate([tb[:, [0, 1]], tb[:, [1, 2]], tb[:, [2, 0]]]), axis=1), axis=0)
-        ab, bb = np.concatenate([eb[:, 0], eb[:, 1]]), np.concatenate([eb[:, 1], eb[:, 0]])
-        degb = np.maximum(np.bincount(ab, minlength=nB), 1).astype(float)
-        Sb = Qb.copy()
-        # smoothed over ~3 cm whatever the mesh density (hero bodies are subdivided: 3 mm edges)
-        elb = np.linalg.norm(Qb[eb[:, 0]] - Qb[eb[:, 1]], axis=1).mean()
-        for _ in range(int(np.clip(30 * (0.0055 / max(elb, 1e-4)) ** 2, 30, 300))):
-            Sb = Sb + 0.5 * (np.stack([np.bincount(ab, weights=Sb[bb, k], minlength=nB) for k in range(3)], 1) / degb[:, None] - Sb)
-        # collider: the body as it is (a smoothed copy shrinks the limbs - cloth sank into the
-        # arms and the skin showed through); its faces under the clothes are hidden anyway, so
-        # the nipples are not in it
-        trees.append((BVHTree.FromPolygons([tuple(v) for v in Qb], [tuple(t) for t in tb], epsilon=0.0), 0.004))
-        # the nipples: where the body stands out most from its smoothed self on the front of the
-        # chest (one each side of the midline)
-        Ns = np.zeros_like(Sb)
-        fnb = np.cross(Sb[tb[:, 1]] - Sb[tb[:, 0]], Sb[tb[:, 2]] - Sb[tb[:, 0]])
-        for k in range(3):
-            np.add.at(Ns, tb[:, k], fnb)
-        Ns /= np.maximum(np.linalg.norm(Ns, axis=1, keepdims=True), 1e-12)
-        detail = np.einsum('ij,ij->i', Qb - Sb, Ns)
+        # collider: the Taubin-smoothed body (no nipples to print through, limbs keep volume)
+        Sc, Tc = body_collider(Pb, Tb)
+        trees.append((BVHTree.FromPolygons(Sc.tolist(), Tc.tolist(), all_triangles=True), 0.004))
+        # the nipples: the breast-weighted point furthest forward, one each side
         # candidates: skin weighted to the breast bones (not the hands, which may be in front)
         names = [b_['name'] for b_ in h['bones']]
         SI = view(bin_, body[0]['attrs']['skinIndex']).astype(int)
@@ -501,8 +522,6 @@ def fix_puckers(cid):
             bi = names.index(bn)
             wv = np.zeros(nB)
             np.maximum.at(wv, wb, (SW * (SI == bi)).sum(1))
-            # (the torso's faces are hidden under the clothes, so no normals there: the apex is
-            # the breast-weighted point furthest forward)
             c_ = np.where(wv > 0.4)[0]
             if len(c_):
                 pts.append(Qb[c_[np.argmax(Qb[c_, 2])]])
@@ -531,7 +550,8 @@ def fix_puckers(cid):
             continue
         A = m['attrs']
         P, tris = mesh_arrays(m)
-        P2, N2, ch = smooth_puckers(P, tris, push=push, spots=pts)
+        N0_ = view(bin_, A['normal']).astype(float)
+        P2, N2, ch = smooth_puckers(P, tris, push=push, spots=pts, normals=N0_)
         N0 = view(bin_, A['normal']).astype(float)
         N2 = N2 * (1.0 if np.einsum('ij,ij->', N0, N2) >= 0 else -1.0)
         N2[~ch] = N0[~ch]
@@ -643,15 +663,18 @@ def fix_pushout(cid, body_ease=0.004, layer_ease=0.0025):
     h = json.load(open(jp))
     bin_ = bytearray(open(bp, 'rb').read())
 
-    def arrays(m):
+    def arrays(m, full=False):
         P = view(bin_, m['attrs']['position']).astype(float)
-        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        ix = m['colliderIndex'] if full and 'colliderIndex' in m else m['index']
+        T = np.frombuffer(bin_, dtype=TYPES[ix['type']], count=ix['count'], offset=ix['offset']).reshape(-1, 3).astype(np.int64)
         return P, T
     trees = []
     for m in h['meshes']:
         if m['kind'] == 'skin':
-            P, T = arrays(m)
-            trees.append((BVHTree.FromPolygons(P.tolist(), T.tolist(), all_triangles=True), body_ease))
+            # the whole body (hidden faces too) when the cache carries it, Taubin-smoothed
+            P, T = arrays(m, full=True)
+            Sc, Tc = body_collider(P, T)
+            trees.append((BVHTree.FromPolygons(Sc.tolist(), Tc.tolist(), all_triangles=True), body_ease))
     done = []
     for m in h['meshes']:
         if m['kind'] != 'cloth' or m['name'] in ('boots', 'shoes'):

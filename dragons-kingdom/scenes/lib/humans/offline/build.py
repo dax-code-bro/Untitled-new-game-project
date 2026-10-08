@@ -141,6 +141,7 @@ def assemble(kit, spec, out_dir, opts):
     else:
         hv = hid_base[body.src]
         keep_tri = ~(hv[body.tris[:, 0]] & hv[body.tris[:, 1]] & hv[body.tris[:, 2]])
+    body.tris_all = body.tris.copy()
     body.tris = body.tris[keep_tri]
     parts = [body]
     eyes_tex = 'human/mh_eyes/materials/' + spec.get('eyes', {}).get('iris', 'brown') + '_eye.png'

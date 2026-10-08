@@ -237,6 +237,10 @@ def to_mesh_dict(p):
         v = np.asarray(v, np.float32)
         attrs[k] = (v, 1 if v.ndim == 1 else v.shape[1], np.float32)
     d = {'name': p.name, 'kind': p.kind, 'material': p.material, 'attrs': attrs, 'index': p.tris.reshape(-1)}
+    if getattr(p, 'tris_all', None) is not None:
+        # every body triangle incl. those hidden under the clothes: a collider for the in-place
+        # cloth passes (offline/postfix.py); the runtime does not read it
+        d['collider_index'] = p.tris_all.reshape(-1)
     if getattr(p, 'posed_morphs', None):
         d['morphs'] = {k: v.astype(np.float32) for k, v in p.posed_morphs.items()}
     return d

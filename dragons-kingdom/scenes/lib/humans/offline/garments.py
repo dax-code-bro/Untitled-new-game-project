@@ -1082,8 +1082,26 @@ def head_shell(D, g):
             dd = Pp - hc
             back = np.clip(-dd[:, 2] / 0.09, 0, 1)
             top = np.clip((Pp[:, 1] - ey) / 0.1, 0, 1)
-            return 0.025 * np.maximum(back, top) * (0.5 + 0.5 * top)
-    S, F, old = D.shell(vm, g.get('ease', 0.006 if kind != 'hood' else 0.022), smooth=g.get('smooth', 30), extra_ease=xe)
+            return 0.014 * np.maximum(back, top) * (0.5 + 0.5 * top)
+    # (a hood at a uniform 3 cm off the head read as a space helmet: it rests on the crown, the
+    # wool only stands off where it falls from the head to the neck - and it is smoothed more,
+    # so the ears do not print through)
+    S, F, old = D.shell(vm, g.get('ease', 0.006 if kind != 'hood' else 0.014), smooth=g.get('smooth', 30 if kind != 'hood' else 60), extra_ease=xe)
+    if kind in ('hood', 'coif'):
+        D.hide_under(old, F, rings=2)          # the ears under it printed through
+    if kind == 'hood':
+        # the shell of the head carried the ears' shape (two bulges): over the ears the hood's
+        # side keeps the width it has just above them, then the area is relaxed
+        dd = S - hc
+        above = (S[:, 1] > ey + 0.03) & (S[:, 1] < ey + 0.06) & (np.abs(dd[:, 2]) < 0.05)
+        r_side = (np.quantile(np.abs(dd[above, 0]), 0.9) if above.sum() > 5 else 0.085) + 0.006
+        zone = np.clip(1 - np.maximum(np.abs(S[:, 1] - (ey - 0.01)) - 0.04, 0) / 0.02, 0, 1) * \
+            np.clip(1 - np.maximum(np.abs(dd[:, 2] + 0.015) - 0.045, 0) / 0.02, 0, 1)
+        over = np.maximum(np.abs(dd[:, 0]) - r_side, 0) * zone
+        S[:, 0] = S[:, 0] - np.sign(dd[:, 0]) * over
+        nbz = mu.neighbours(len(S), F)
+        fixed = zone < 0.05
+        S = mu.laplacian_smooth_fast(S, nbz, iters=30, lam=0.5, fixed=fixed)
     if kind in ('coif', 'kerchief', 'cap'):
         # linen gathered toward the back seam / knot: soft radial folds on the back half, and a
         # little slack (the cloth is not shrink-wrapped to the skull)
@@ -1097,6 +1115,28 @@ def head_shell(D, g):
         wav = np.sin(a_ * 13 + ph[0]) * 0.6 + np.sin(a_ * 7.3 + S[:, 1] * 40 + ph[1]) * 0.4
         amp = (0.0016 if kind != 'cap' else 0.0012) * (0.3 + back) * (0.4 + 0.6 * top)
         S = S + nS * (amp * wav + 0.0015 * back)[:, None]
+    if kind == 'hood':
+        # wool falling from the crown: folds that run down the sides and back, deeper toward the
+        # neck, bunched where the hood meets the cape; the face opening's edge turned back
+        nS = mu.vnormals(S, F)
+        dd = S - hc
+        a_ = np.arctan2(dd[:, 0], dd[:, 2])
+        low = np.clip((ey + 0.03 - S[:, 1]) / 0.13, 0, 1)
+        rng_ = np.random.default_rng(zlib.crc32(b'hood'))
+        ph = rng_.random(3) * 6.28
+        wav = np.sin(a_ * 9.0 + ph[0] + S[:, 1] * 12.0) * 0.6 + np.sin(a_ * 5.3 + S[:, 1] * 35.0 + ph[1]) * 0.4
+        wav += 0.5 * np.sin(a_ * 17.0 + ph[2]) * low ** 2
+        amp = 0.0045 * (0.15 + low)
+        front = np.clip((dd[:, 2] - 0.0) / 0.04, 0, 1)
+        S = S + nS * (amp * wav * (1 - 0.7 * front) + 0.004 * low)[:, None]
+        nb_ = mu.neighbours(len(S), F)
+        edge = np.zeros(len(S))
+        bv = {v for e in mu.boundary_edges(F) for v in e}
+        if bv:
+            edge[list(bv)] = 1.0
+            for _ in range(2):
+                edge = np.maximum(edge, np.array([max([edge[j] for j in nb_[i]] or [0]) * 0.6 for i in range(len(S))]))
+            S = S + nS * (0.004 * edge * front)[:, None] + np.array([0, 0, -0.004]) * (edge * front)[:, None]
     uv = uv_cylinder(S, hc, np.array([0, 1.0, 0]), np.array([0, 0, 1.0]))
     if kind == 'hood':
         # point (liripipe stub) at the back of the hood

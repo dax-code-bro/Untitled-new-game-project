@@ -218,7 +218,9 @@ export function propMaterial(o = {}) {
     tile = 1 / (o.tile ?? p.tile);
     mat.normalMap = libTexture(`${p.id}/${p.base}_nrm.jpg`, { color: false, repeat: true, flipY: true });
     mat.normalScale = new THREE.Vector2(1, -1);
-    mat.roughnessMap = libTexture(`${p.id}/${p.base}_rgh.jpg`, { color: false, repeat: true, flipY: true });
+    // (the forged-iron scan's roughness map is polished-metal low: kettle hats read as chrome -
+    // iron keeps the given roughness, its variation comes from the normal map and the noise)
+    if (!p.metal) mat.roughnessMap = libTexture(`${p.id}/${p.base}_rgh.jpg`, { color: false, repeat: true, flipY: true });
     if (o.useAlbedo !== false && !o.color) mat.map = libTexture(`${p.id}/${p.base}_col.jpg`, { color: true, repeat: true, flipY: true });
     else if (o.useAlbedo !== false) { varAlb = libTexture(`${p.id}/${p.base}_col.jpg`, { color: true, repeat: true, flipY: true }); varLum = p.lum; }
     if (p.metal) { mat.metalnessMap = libTexture(`${p.id}/${p.base}_met.jpg`, { color: false, repeat: true, flipY: true }); mat.metalness = 1; }

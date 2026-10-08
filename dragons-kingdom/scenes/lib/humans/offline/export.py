@@ -32,7 +32,7 @@ def write_character(path_noext, header, meshes):
     pk = Pack()
     out = []
     for m in meshes:
-        e = {k: v for k, v in m.items() if k not in ('attrs', 'index', 'morphs')}
+        e = {k: v for k, v in m.items() if k not in ('attrs', 'index', 'morphs', 'collider_index')}
         e['attrs'] = {}
         for an, (arr, item, dt) in m['attrs'].items():
             d = pk.add(arr, dt)
@@ -42,6 +42,9 @@ def write_character(path_noext, header, meshes):
             e['attrs'][an] = d
         idx = np.asarray(m['index'])
         e['index'] = pk.add(idx, np.uint32 if idx.max(initial=0) > 65535 else np.uint16)
+        if m.get('collider_index') is not None:
+            ci = np.asarray(m['collider_index'])
+            e['colliderIndex'] = pk.add(ci, np.uint32 if ci.max(initial=0) > 65535 else np.uint16)
         e['morphs'] = {mn: pk.add(arr, np.float32) for mn, arr in (m.get('morphs') or {}).items()}
         e['vertexCount'] = int(len(m['attrs']['position'][0]))
         out.append(e)
