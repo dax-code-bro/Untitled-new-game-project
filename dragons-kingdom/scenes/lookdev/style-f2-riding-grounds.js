@@ -74,7 +74,7 @@ export const meta = {
     shadows: { cascades: 3, maxDistance: 400 },
     ao: { enabled: true, radius: 1.6 },
     dof: { samples: 48 },
-    grade: { exposure: 1.75, whiteBalance: 5900, contrast: 1.04, saturation: 1.0 },
+    grade: { exposure: 2.0, whiteBalance: 5900, contrast: 1.04, saturation: 1.0 },
   }),
 };
 
@@ -195,6 +195,23 @@ export async function setup(ctx) {
   const yardG = yard.build(M, { name: 'verdor-yard' });
   yardG.position.y = GROUND - 0.05;
   scene.add(yardG);
+  // the dim stable beyond the open dragon door: a straw floor where the daylight falls in, dark
+  // walls, back and roof timbers (the sky light is not occluded by walls, so the inside surfaces
+  // take only a little of it)
+  {
+    const inside = new THREE.Group();
+    inside.position.set(L.stable.x, GROUND - 0.05, L.stable.z);
+    inside.rotation.y = faceCam + 0.16;
+    const dark = new THREE.MeshStandardMaterial({ color: new THREE.Color(0.035, 0.028, 0.02), roughness: 1, envMapIntensity: 0.12 });
+    const straw = new THREE.MeshStandardMaterial({ color: new THREE.Color(0.2, 0.15, 0.08), roughness: 1, envMapIntensity: 0.2 });
+    const add = (geo, mat, x, y, z, rx = 0, ry = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, 0); m.receiveShadow = true; m.castShadow = true; inside.add(m); };
+    add(new THREE.PlaneGeometry(6.4, 7), dark, 0, 3.5, 1.5);                              // back
+    add(new THREE.PlaneGeometry(4.6, 7), dark, -3.1, 3.5, 3.8, 0, Math.PI / 2);          // sides
+    add(new THREE.PlaneGeometry(4.6, 7), dark, 3.1, 3.5, 3.8, 0, -Math.PI / 2);
+    add(new THREE.PlaneGeometry(6.4, 4.6), dark, 0, 6.9, 3.8, Math.PI / 2);              // roof
+    add(new THREE.PlaneGeometry(6.4, 4.6), straw, 0, 0.06, 3.8, -Math.PI / 2);           // straw floor
+    scene.add(inside);
+  }
 
   // gorse on the slopes behind the buildings
   const foliage = foliageMaterial({ color: [0.04, 0.065, 0.025], leafScale: 4, flower: [0.55, 0.42, 0.04, 0.4] });

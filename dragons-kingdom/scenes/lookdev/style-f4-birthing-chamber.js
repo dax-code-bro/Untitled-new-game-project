@@ -43,7 +43,7 @@ export const meta = {
   cinematic: filmFinish({
     volumetrics: {
       enabled: true, range: 14, near: 0.05, resolution: [192, 108, 64], noiseFilter: true,
-      density: 0.085, heightFalloff: 0.0, fogBase: 0, anisotropy: 0.35, noiseScale: 0.9, noiseAmount: 0.55, wind: [0.03, 0.01, 0.0], shadowSoftness: 0.05,
+      density: 0.14, heightFalloff: 0.0, fogBase: 0, anisotropy: 0.2, noiseScale: 0.9, noiseAmount: 0.55, wind: [0.03, 0.01, 0.0], shadowSoftness: 0.05,
       ambient: [0.0003, 0.00025, 0.0002], intensity: 1.0,
     },
     shadows: { cascades: 0 },
@@ -59,48 +59,6 @@ let S;
 
 function lathe(THREE, prof, seg = 48) {
   return new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), seg);
-}
-
-/**
- * A folded linen cloth: one strip folded back on itself in `layers` layers (an S-fold seen
- * from the side), with rounded folds, a slight sag and creases, a hem darker along the free
- * edges (vertex colour). Size w (across) x d (folded depth), cloth thickness t.
- */
-function foldedLinen(w, d, layers = 3, t = 0.0035) {
-  const gap = t * 1.8, R = gap / 2;
-  const seg = [];                                         // the strip's centre line in x (depth) / y (up)
-  for (let L = 0; L < layers; L++) {
-    const dir = L % 2 === 0 ? 1 : -1, y = L * gap;
-    const x0 = dir > 0 ? -d / 2 : d / 2;
-    for (let i = 0; i <= 24; i++) seg.push([x0 + dir * d * i / 24, y]);
-    if (L < layers - 1) for (let i = 1; i < 10; i++) { const a = -Math.PI / 2 + Math.PI * i / 10; seg.push([dir * (d / 2 + R * Math.cos(a)), y + R + R * Math.sin(a)]); }
-  }
-  const NZ = 28, pos = [], idx = [], col = [];
-  let acc = 0;
-  const arc = seg.map((p, i) => (i ? (acc += Math.hypot(p[0] - seg[i - 1][0], p[1] - seg[i - 1][1])) : 0));
-  const total = acc;
-  seg.forEach(([x, y], i) => {
-    for (let k = 0; k <= NZ; k++) {
-      const z = (k / NZ - 0.5) * w;
-      const crease = 0.0012 * Math.sin(arc[i] * 90 + z * 40) * Math.sin(z * 25 + 1.3) + 0.0008 * Math.sin(arc[i] * 230 - z * 70);
-      const sag = -0.004 * Math.pow(Math.abs(2 * z / w), 3) * (1 - y / (layers * gap + 1e-6));
-      pos.push(x + 0.002 * Math.sin(z * 60 + arc[i] * 20), y + crease + sag, z);
-      const edge = Math.min(Math.abs(Math.abs(z) - w / 2), arc[i], total - arc[i]);
-      const hem = edge < 0.006 ? 0.72 : 1;
-      col.push(hem, hem, hem * 0.97);
-    }
-  });
-  for (let i = 0; i < seg.length - 1; i++) for (let k = 0; k < NZ; k++) {
-    const a = i * (NZ + 1) + k, b = a + 1, c = a + NZ + 1, e = c + 1;
-    idx.push(a, c, b, b, c, e);
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  const uv = []; seg.forEach((_, i) => { for (let k = 0; k <= NZ; k++) uv.push(arc[i] / 0.15, k / NZ * w / 0.15); });
-  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-  g.setIndex(idx); g.computeVertexNormals();
-  return g;
 }
 
 /** The egg: an ellipsoid shell; the broken-open end is cut in the shader (smooth, irregular crack line). */
@@ -145,7 +103,7 @@ export async function setup(ctx) {
 
   // the sun through the high east window (its shadow map covers the room: the walls and the window
   // reveal cut the shaft)
-  const sun = new THREE.DirectionalLight(new THREE.Color(0.9, 0.94, 1.0), 1.7);
+  const sun = new THREE.DirectionalLight(new THREE.Color(0.86, 0.92, 1.0), 2.3);
   sun.castShadow = true;
   sun.shadow.mapSize.set(4096, 4096);
   const sc = sun.shadow.camera; sc.left = -4.5; sc.right = 4.5; sc.top = 4.5; sc.bottom = -4.5; sc.near = 5; sc.far = 40;
@@ -254,16 +212,78 @@ float dkShellD;`)
   // a fresh, bleached linen cloth (whiter than the used bedding linen under it)
   const clothMat = await loadPBR('pbr/acg_fabric36', ctx, { repeat: [3, 3], color: new THREE.Color(1.15, 1.12, 1.05), sheen: { color: 0xffffff, roughness: 0.45 } });
   clothMat.vertexColors = true; clothMat.side = THREE.DoubleSide;
-  const fcloth = new THREE.Mesh(foldedLinen(0.24, 0.26, 4, 0.0045), clothMat);
-  fcloth.castShadow = fcloth.receiveShadow = true;
+  // the cloth she supports it with: a folded linen cloth (two layers, a fold along its left edge
+  // under the hatchling's chest) laid over her hands - its shape is draped every frame over the bed
+  // and over her hands (see drapeCloth), so her fingers are under the cloth, never through it
+  clothMat.vertexColors = false;
+  const CU = 64, CV = 48;
+  const fcloth = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, CU, CV), clothMat);
+  fcloth.castShadow = fcloth.receiveShadow = true; fcloth.frustumCulled = false;
+  fcloth.userData.grid = [CU, CV];
   scene.add(fcloth);
 
-  // birth fluid: a few glistening strands from the shell lip to the hatchling
-  const strandMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.55, 0.42, 0.22), roughness: 0.08, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.02, transparent: true, opacity: 0.55, depthWrite: false });
-  const strands = [0, 1, 2].map(() => { const m = new THREE.Mesh(new THREE.BufferGeometry(), strandMat); m.frustumCulled = false; scene.add(m); return m; });
 
   camera.near = 0.02; camera.far = 60;
-  S = { hatch, egg, frags, alex, fcloth, sun, strands, NY, linenY };
+  S = { hatch, egg, frags, alex, fcloth, sun, NY, linenY };
+}
+
+/**
+ * Drape the cloth grid (PlaneGeometry 1x1, CU x CV) as a folded linen cloth centred at c, w wide
+ * along `across` and d deep along `along`: its height is the bed (linenY) or, where her hands are,
+ * the top of the hands (spheres along the hand bones) plus the cloth's thickness, relaxed a few
+ * times so it drapes between them instead of tenting; soft creases; the left edge (under the
+ * hatchling's chest) is the fold. Everything from the current pose (pure in t).
+ */
+function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch) {
+  const [CU, CV] = mesh.userData.grid;
+  ch.root.updateMatrixWorld(true);
+  const sph = [];
+  const bp = (n) => { const b = ch.bone(n); return b ? new THREE.Vector3().setFromMatrixPosition(b.matrixWorld) : null; };
+  for (const sd of ['L', 'R']) {
+    const pts = [['wrist', 0.03], ['metacarpal1', 0.028], ['metacarpal3', 0.028]];
+    for (let f = 1; f <= 5; f++) for (let k = 1; k <= 3; k++) pts.push([`finger${f}-${k}`, 0.017]);
+    for (const [n, r] of pts) { const p = bp(`${n}.${sd}`); if (p) sph.push([p, r + 0.008]); }
+    // between the bone heads too (finger segments)
+    for (let f = 1; f <= 5; f++) {
+      for (let k = 1; k < 3; k++) { const a = bp(`finger${f}-${k}.${sd}`), b = bp(`finger${f}-${k + 1}.${sd}`); if (a && b) sph.push([a.clone().lerp(b, 0.5), 0.022]); }
+      // the fingertip lies a segment beyond the last bone head
+      const a = bp(`finger${f}-2.${sd}`), b = bp(`finger${f}-3.${sd}`);
+      if (a && b) { const tip = b.clone().addScaledVector(b.clone().sub(a), 0.9); sph.push([b.clone().lerp(tip, 0.5), 0.02]); sph.push([tip, 0.018]); }
+    }
+  }
+  // the hatchling's chest rests on it: the cloth never comes up through the body (its belly
+  // presses it to the bed) - the body's lowest points are below the cloth anyway
+  void hatch;
+  const g = mesh.geometry, P = g.attributes.position;
+  const H = new Float32Array((CU + 1) * (CV + 1)), H0 = new Float32Array(H.length);
+  const X = [], Z = [];
+  for (let j = 0; j <= CV; j++) for (let i = 0; i <= CU; i++) {
+    const u = i / CU - 0.5, v = j / CV - 0.5;
+    const p = c.clone().addScaledVector(across, u * w).addScaledVector(along, v * d);
+    let y = linenY(p.x, p.z) + 0.006;
+    for (const [q, r] of sph) { const dd = Math.hypot(p.x - q.x, p.z - q.z); if (dd < r) y = Math.max(y, q.y + Math.sqrt(r * r - dd * dd)); }
+    const k = j * (CU + 1) + i;
+    H[k] = H0[k] = y; X.push(p.x); Z.push(p.z);
+  }
+  // relax: the cloth spans between the knuckles and slopes down to the bed (never below its support)
+  for (let it = 0; it < 14; it++) {
+    const T = H.slice();
+    for (let j = 1; j < CV; j++) for (let i = 1; i < CU; i++) {
+      const k = j * (CU + 1) + i;
+      const m = (T[k - 1] + T[k + 1] + T[k - CU - 1] + T[k + CU + 1]) / 4;
+      H[k] = Math.max(H0[k], m - 0.0009);
+    }
+  }
+  for (let j = 0; j <= CV; j++) for (let i = 0; i <= CU; i++) {
+    const k = j * (CU + 1) + i, u = i / CU, v = j / CV;
+    // creases running out from the hands, a rolled fold along the left edge
+    const crease = 0.0025 * Math.sin(v * 37 + u * 9) * Math.sin(u * 13 + 1.7) + 0.0015 * Math.sin(u * 51 - v * 23);
+    const fold = 0.006 * Math.exp(-u * 40);
+    P.setXYZ(k, X[k], H[k] + crease * (H[k] - H0[k] > 0.004 ? 1 : 0.4) + fold, Z[k]);
+  }
+  P.needsUpdate = true;
+  g.computeVertexNormals();
+  g.computeBoundingSphere();
 }
 
 // fixed screen geometry: the camera looks along VIEW (north, along the nest: the shaft from the east
@@ -274,7 +294,7 @@ const CAM_R = new THREE.Vector3(-VIEW.z, 0, VIEW.x);                 // screen r
 const FWD = CAM_R.clone().multiplyScalar(-0.55).addScaledVector(VIEW, -0.83).normalize();
 
 export function update(t, ctx) {
-  const { hatch, egg, frags, alex, fcloth, strands, NY } = S;
+  const { hatch, egg, frags, alex, fcloth, NY } = S;
   const T0 = t; if (Math.round(t) > 100) t = 2;
   // the hatchling: half out of the shell, exhausted - head low on the cloth, eyes half closed, one
   // foreleg slipped forward, breathing hard
@@ -292,7 +312,7 @@ export function update(t, ctx) {
     let lift = 0;
     for (const [n, clear] of [['head', 0.03], ['thorax', 0.045], ['lumbar', 0.04]]) {
       const b = new THREE.Vector3().setFromMatrixPosition(hatch.bones[hatch.boneIndex[n]].matrixWorld);
-      lift = Math.max(lift, S.linenY(b.x, b.z) + clear - b.y);
+      lift = Math.max(lift, S.linenY(b.x, b.z) + 0.008 + clear - b.y);
     }
     hatch.root.position.y += lift;
     hatch.root.updateMatrixWorld(true);
@@ -313,59 +333,40 @@ export function update(t, ctx) {
   });
   // the folded cloth under its chest and forelegs, its near-right end lifted on Alexandria's fingers
   const chest = new THREE.Vector3().setFromMatrixPosition(hatch.bones[hatch.boneIndex.thorax].matrixWorld);
-  // the folded linen pad lies under its chest and runs out to screen right, where Alexandria's right
-  // hand has slid under its end (palm up, thumb over the top): she is lifting the cloth to support
-  // the hatchling as it tries to rise. She kneels at screen right, out of frame; her left hand
-  // steadies the pad's far corner.
-  const axisP = chest.clone().addScaledVector(CAM_R, 0.06).addScaledVector(VIEW, -0.01);
-  axisP.y = S.linenY(axisP.x, axisP.z) + 0.004;
-  const lift = 0.16;                                                 // radians: the right end rides up
-  const xAx = CAM_R.clone().add(new THREE.Vector3(0, Math.tan(lift), 0)).normalize();
-  const zAx = xAx.clone().cross(new THREE.Vector3(0, 1, 0)).normalize();
-  const yUp = zAx.clone().cross(xAx).normalize();
-  fcloth.position.copy(axisP);
-  // foldedLinen: x = folded depth (toward screen right), y = layers (up), z = width
-  fcloth.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(xAx, yUp, zAx));
-  const endR = axisP.clone().addScaledVector(xAx, 0.12);
-
+  // Alexandria kneels at screen right, out of frame; both hands, palms up, slide under the
+  // hatchling's chest from the right with the folded cloth over them: she lifts it on the cloth
+  // so it rests instead of slipping against the shell. (The build's fingers keep their own shape;
+  // the cloth is draped over them, so they never show through it.)
   alex.update(t);
   placeCharacter(alex, 0, -0.74, 0, Math.atan2(-CAM_R.x, -CAM_R.z));
   alex.update(t);
+  const across = new THREE.Vector3(CAM_R.x, 0, CAM_R.z).normalize();          // toward her (screen right)
+  const along = across.clone().cross(new THREE.Vector3(0, 1, 0)).normalize();  // away from the camera
+  const base = chest.clone(); base.y = S.linenY(base.x, base.z);
   {
     const shC = new THREE.Vector3().setFromMatrixPosition(alex.bone('upperarm01.L').matrixWorld).add(new THREE.Vector3().setFromMatrixPosition(alex.bone('upperarm01.R').matrixWorld)).multiplyScalar(0.5);
-    const goal = endR.clone().addScaledVector(CAM_R, 0.4).addScaledVector(VIEW, 0.08).add(new THREE.Vector3(0, 0.27, 0));
+    const goal = base.clone().addScaledVector(across, 0.55).add(new THREE.Vector3(0, 0.3, 0));
     alex.root.position.add(goal.sub(shC));
     alex.root.updateMatrixWorld(true);
   }
-  const under = endR.clone().addScaledVector(xAx, 0.07).addScaledVector(yUp, -0.014).addScaledVector(VIEW, -0.015);
-  const steady = endR.clone().addScaledVector(xAx, 0.02).addScaledVector(VIEW, 0.12).addScaledVector(yUp, 0.03);
-  const pole = endR.clone().addScaledVector(CAM_R, 0.3).add(new THREE.Vector3(0, -0.3, 0));
-  limbIK(alex, 'arm', 'R', under, pole.clone().addScaledVector(VIEW, -0.35));
-  limbIK(alex, 'arm', 'L', steady, pole.clone().addScaledVector(VIEW, 0.45));
-  relaxHand(alex, 'R', { fingers: CAM_R.clone().negate().add(new THREE.Vector3(0, 0.1, 0)).normalize(), palm: new THREE.Vector3(0, 1, 0), curl: 0.12, spread: 0.0 });
-  relaxHand(alex, 'L', { fingers: CAM_R.clone().negate().addScaledVector(VIEW, -0.3).normalize(), palm: new THREE.Vector3(0, -1, 0), curl: 0.16, spread: 0.01 });
+  const wA = base.clone().addScaledVector(across, 0.17).addScaledVector(along, -0.06).add(new THREE.Vector3(0, 0.03, 0));
+  const wB = base.clone().addScaledVector(across, 0.17).addScaledVector(along, 0.06).add(new THREE.Vector3(0, 0.03, 0));
+  const aIsR = wA.clone().sub(wB).dot(along) < 0;                     // nearer the camera
+  const pole = base.clone().addScaledVector(across, 0.45).add(new THREE.Vector3(0, -0.3, 0));
+  limbIK(alex, 'arm', aIsR ? 'R' : 'L', aIsR ? wA : wB, pole.clone().addScaledVector(along, -0.35));
+  limbIK(alex, 'arm', aIsR ? 'L' : 'R', aIsR ? wB : wA, pole.clone().addScaledVector(along, 0.35));
+  const under = across.clone().negate().add(new THREE.Vector3(0, -0.12, 0)).normalize();
+  for (const sd of ['L', 'R']) relaxHand(alex, sd, { fingers: under, palm: new THREE.Vector3(0, 1, 0), keepFingers: true });
+  drapeCloth(fcloth, base.clone().addScaledVector(across, 0.1), across, along, 0.36, 0.3, alex, S.linenY, hatch);
+  const endR = base.clone().addScaledVector(across, 0.17).add(new THREE.Vector3(0, 0.03, 0));      // her hands
   lookAtPoint(alex, chest, 0.8);
-
-  // birth-fluid strands from the shell lip to the hatchling's hip and tail, sagging
-  {
-    egg.updateMatrixWorld(true);
-    const tgts = ['lumbar', 'tail_0', 'tail_1'].map((n) => hatch.boneIndex[n] !== undefined ? new THREE.Vector3().setFromMatrixPosition(hatch.bones[hatch.boneIndex[n]].matrixWorld) : hip);
-    strands.forEach((m, i) => {
-      const th = 0.6 + i * 1.7;
-      const a = egg.localToWorld(new THREE.Vector3(Math.cos(th) * 0.092, Math.sin(th) * 0.092, 0.14 * 0.36));
-      const b = tgts[i].clone().add(new THREE.Vector3(0, 0.012 - 0.004 * i, 0));
-      const mid = a.clone().lerp(b, 0.5); mid.y -= 0.025 + 0.01 * i;
-      m.geometry.dispose();
-      m.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([a, a.clone().lerp(mid, 0.5).add(new THREE.Vector3(0, -0.006, 0)), mid, b]), 24, 0.0012 - 0.0003 * i, 5, false);
-    });
-  }
 
   // camera: just above the bedding, close on the hatchling's face, looking along VIEW
   const cam = ctx.camera;
   const head = new THREE.Vector3().setFromMatrixPosition(hatch.bones[hatch.boneIndex.head].matrixWorld);
   const aim = head.clone().lerp(endR, 0.42).addScaledVector(VIEW, 0.05).add(new THREE.Vector3(0, 0.0, 0));
-  cam.position.copy(aim).addScaledVector(VIEW, -0.95).addScaledVector(CAM_R, 0.22).add(new THREE.Vector3(0, 0.52, 0));
-  cam.lookAt(aim.clone().add(new THREE.Vector3(0, 0.03, 0)));
+  cam.position.copy(aim).addScaledVector(VIEW, -0.9).addScaledVector(CAM_R, 0.18).add(new THREE.Vector3(0, 0.22, 0));
+  cam.lookAt(aim.clone().add(new THREE.Vector3(0, 0.07, 0)));
   if (Math.round(T0) === 101) { cam.position.copy(aim).addScaledVector(VIEW, -1.6).addScaledVector(CAM_R, 0.9).add(new THREE.Vector3(0, 1.1, 0)); cam.lookAt(aim); }
   if (Math.round(T0) === 102) { cam.position.set(-2.6, 1.7, 2.2); cam.lookAt(1.5, 1.6, -0.6); }
   cam.updateMatrixWorld(true);

@@ -41,10 +41,10 @@ export const meta = {
   duration: 8,
   seed: 31,
   cinematic: filmFinish({
-    atmosphere: { enabled: true, sky: 'scene', haze: 3.0, apDistanceScale: 2.6 },
+    atmosphere: { enabled: true, sky: 'scene', haze: 1.8, apDistanceScale: 1.3 },
     volumetrics: {
       enabled: true, range: 3000, resolution: [256, 96, 85], noiseFilter: true,
-      density: 0.00008, heightFalloff: 0.01, anisotropy: 0.75, noiseScale: 0.004, noiseAmount: 0.6,
+      density: 0.00004, heightFalloff: 0.01, anisotropy: 0.75, noiseScale: 0.004, noiseAmount: 0.6,
       banks: [
         // a low bank of sea mist far out on the horizon
         { center: [2600, 30, 400], radius: [700, 50, 2400], density: 0.0025, noise: 0.85 },
@@ -54,7 +54,7 @@ export const meta = {
     shadows: { cascades: 2, maxDistance: 900 },
     ao: { enabled: false },
     dof: { samples: 48 },
-    grade: { exposure: 1.75, whiteBalance: 6000, contrast: 1.05, saturation: 1.02 },
+    grade: { exposure: 1.95, whiteBalance: 6000, contrast: 1.2, saturation: 1.0 },
   }),
 };
 

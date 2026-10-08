@@ -115,6 +115,7 @@ export function bonePos(ch, name) { ch.root.updateMatrixWorld(true); return wpos
  * slightly curled hand, and optionally turn the palm toward a world direction:
  *   relaxHand(ch, 'L', { palm: new THREE.Vector3(0, 1, 0), curl: 0.2, spread: 0.05 })
  * o.fingers (world direction): point the hand that way (the wrist bends) instead of continuing the forearm.
+ * o.keepFingers: leave the fingers as the build made them (only the wrist is pointed / turned).
  * Uses the bones' rest-pose head positions in the cast cache (header.bones[i].rest): the rest pose
  * is MakeHuman's, with nearly straight fingers. Each finger's first two segments are aligned with
  * their rest directions carried into the hand's current frame, then curled toward the palm by
@@ -164,6 +165,7 @@ export function relaxHand(ch, side, o = {}) {
       for (const [n, w] of (o.fingers ? [['wrist', 1]] : [['lowerarm02', 0.5], ['wrist', 0.5]])) { const bn = ch.bone(`${n}.${side}`); if (bn) { rotateWorld(bn, _q.setFromAxisAngle(axis, ang * w)); ch.root.updateMatrixWorld(true); } }
     }
   }
+  if (o.keepFingers) { ch.root.updateMatrixWorld(true); return; }    // only point / turn the hand
   const Fc = frameOf(now);
   const R = Fc.clone().multiply(Fr.clone().transpose());       // rest frame -> current frame (rotation)
   const sideC = new THREE.Vector3().setFromMatrixColumn(Fc, 1), upC = new THREE.Vector3().setFromMatrixColumn(Fc, 2).multiplyScalar(palmSign);
