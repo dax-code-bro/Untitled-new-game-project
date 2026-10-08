@@ -64,10 +64,10 @@ export async function setup(ctx) {
     splat: (x, z) => {
       const nearB = Math.min(Math.hypot(x - STABLE[0], z - STABLE[1] - 8), Math.hypot(x - KEEPER[0], z - KEEPER[1] - 5));
       // trodden mud and straw before the stable door and the lodge, a churned ring round the rig
-      // and a cart track between them; the palace rise is rock under thin turf
+      // and a cart track between them; the palace rise is turf with a little rock showing
       const track = smooth(2.6, 1.2, Math.abs((z - STABLE[1] - 6) - (x - STABLE[0]) * 0.75 + 2.0 * Math.sin(x * 0.08)));
       const worn = Math.min(1, smooth(14, 4, nearB) * 0.8 + smooth(10, 4, Math.hypot(x - RIG[0], z - RIG[1])) * 0.85 + track * 0.7 * smooth(60, 30, Math.hypot(x - 15, z + 18)));
-      const rock = 0.5 * smooth(260, 120, Math.hypot(x - PALACE[0], z - PALACE[1])) * smooth(0.0, 0.4, N.fbm(x * 0.03 + 3, z * 0.03, 3) + 0.2);
+      const rock = 0.12 * smooth(260, 120, Math.hypot(x - PALACE[0], z - PALACE[1])) * smooth(0.0, 0.4, N.fbm(x * 0.03 + 3, z * 0.03, 3) + 0.2);
       return [rock, (1 - worn) * 0.6 * (1 - rock), (1 - worn) * 0.4 * (1 - rock), worn * (1 - rock)];
     },
   });

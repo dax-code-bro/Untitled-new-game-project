@@ -131,7 +131,7 @@ export function keeperHouse(kit, F, o = {}) {
   const local = new Kit(0);
   const doorX = w * 0.42, dw = 1.15, dh = 2.25;
   masonryBox(local, frame([0, 0, 0]), {
-    w, d, h, T, style: 'squared', mat: 'stonePale', dressedMat: 'stonePale', mortar: 'mortarPale', lod, seed: rnd() * 999,
+    w, d, h, T, style: 'pointed', mat: 'stonePale', dressedMat: 'stonePale', mortar: 'mortarPale', lod, seed: rnd() * 999,
     courseMin: 0.18, courseMax: 0.3, quoin: { long: 0.5, short: 0.3 },
     faces: {
       front: { openings: [{ x: doorX, y: 0, w: dw, h: dh, head: 'lintel', reveal: 0.3 }, { x: 1.1, y: 0.95, w: 0.95, h: 1.1, head: 'lintel', sill: true, reveal: 0.3 }, { x: w - 2.0, y: 0.95, w: 0.95, h: 1.1, head: 'lintel', sill: true, reveal: 0.3 }] },
@@ -149,8 +149,8 @@ export function keeperHouse(kit, F, o = {}) {
   pentice(local, sub(Ff, [doorX + dw / 2, dh + 0.55, 0]), { L: dw + 0.9, depth: 0.75, drop: 0.35, cover: 'slate', seed: rnd() * 999 });
   // stone gables, the left one carrying the chimney stack
   const pitch = 1.0, rise = (d / 2) * pitch;
-  masonryGable(local, sub(frame([0, 0, 0]), [-w / 2, h, -d / 2], [0, 0, 1], [0, 1, 0]), d, rise, { style: 'squared', mat: 'stonePale', mortar: 'mortarPale', T, lod, seed: rnd() * 999 });
-  masonryGable(local, sub(frame([0, 0, 0]), [w / 2, h, d / 2], [0, 0, -1], [0, 1, 0]), d, rise, { style: 'squared', mat: 'stonePale', mortar: 'mortarPale', T, lod, seed: rnd() * 999 });
+  masonryGable(local, sub(frame([0, 0, 0]), [-w / 2, h, -d / 2], [0, 0, 1], [0, 1, 0]), d, rise, { style: 'pointed', mat: 'stonePale', mortar: 'mortarPale', T, lod, seed: rnd() * 999 });
+  masonryGable(local, sub(frame([0, 0, 0]), [w / 2, h, d / 2], [0, 0, -1], [0, 1, 0]), d, rise, { style: 'pointed', mat: 'stonePale', mortar: 'mortarPale', T, lod, seed: rnd() * 999 });
   gableRoof(local, frame([0, h, 0]), { L: w - 0.2, S: d, pitch, eaves: 0.4, verge: 0.0, gableL: false, gableR: false, cover: 'slate', lod, seed: rnd() * 999 });
   chimney(local, frame([-w / 2 + 0.55, h - 0.2, 0]), { w: 1.0, d: 0.8, h: rise + 1.5, mat: 'stonePale', dressed: 'stonePale', lod: lod === 'hero' ? 'mid' : lod, seed: rnd() * 999 });
   // a lean-to woodshed against the right gable: posts, a slate pent roof, a log pile

@@ -41,6 +41,8 @@ const STYLE = {
   rubble: { r: [0.005, 0.012], pillow: [0.005, 0.014], noise: 0.02, nf: 5.5, chip: 0.035, prot: [0.004, 0.04], tilt: 0.03, len: [0.7, 2.4], j: 0.014, dep: [0.14, 0.28], sizeJit: 0.008, split: 0.25, outline: 0.04, shrink: 0.03 },
   // rubble under generations of lime wash: the coats fill the joints nearly flush and soften every arris
   washed: { r: [0.01, 0.018], pillow: [0.004, 0.01], noise: 0.008, nf: 3.5, chip: 0.003, prot: [-0.006, 0.002], tilt: 0.01, len: [0.7, 2.4], j: 0.012, dep: [0.14, 0.28], sizeJit: 0.006, split: 0.25, outline: 0.025, shrink: 0.02 },
+  // squared stone pointed flush (a lodge, a cottage): tight joints, faces barely proud of the pointing
+  pointed: { r: [0.008, 0.016], pillow: [0.003, 0.008], noise: 0.006, nf: 4, chip: 0.012, prot: [0.0, 0.008], tilt: 0.008, len: [1.0, 2.6], j: 0.01, dep: [0.15, 0.3], sizeJit: 0.008, split: 0.12, outline: 0.035, shrink: 0.018 },
   dressed: { r: [0.008, 0.014], pillow: [0.001, 0.004], noise: 0.002, nf: 7, chip: 0.006, prot: [0.01, 0.018], tilt: 0.004, len: [1, 1], j: 0.01, dep: [0.2, 0.3], sizeJit: 0.003, split: 0 },
 };
 export const LOD = {
@@ -332,7 +334,9 @@ export function masonryFace(kit, F, L, H, o = {}) {
       shape.holes.push(hole);
     }
     const macc = kit.get(o.mortar || 'mortar');
-    shapeFace(macc, F, shape, { seed: rnd() });
+    // (far off the flat stones stand only a few mm proud: the core goes back 3 cm, or the two
+    // z-fight in triangle patches at a few hundred metres)
+    shapeFace(macc, lod.flat ? sub(F, [0, 0, -0.03]) : F, shape, { seed: rnd() });
     if (o.back) shapeFace(kit.get(o.backMat || o.mortar || 'mortar'), sub(F, [0, 0, -T], [1, 0, 0], [0, 1, 0]), shape, { flip: true, seed: rnd() });
     // reveals (the sides / soffit of each opening through the full thickness)
     for (const op of ops) {
@@ -494,7 +498,7 @@ export function masonryGable(kit, F, L, rise, o = {}) {
   // mortar core triangle
   if (o.mortar !== null) {
     const sh = new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(L, 0), new THREE.Vector2(L / 2, rise)]);
-    shapeFace(kit.get(o.mortar || 'mortar'), F, sh, { seed: rnd() });
+    shapeFace(kit.get(o.mortar || 'mortar'), lod.flat ? sub(F, [0, 0, -0.03]) : F, sh, { seed: rnd() });
   }
   if (o.coping !== false) {
     const cm = o.copingMat || dmat;

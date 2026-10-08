@@ -350,7 +350,12 @@ export function mortarMaterial(ctx, opts = {}) {
   vec3 P = vObjP;            // object space (Kit.build centres each set): noise keeps its precision far from the world origin
   float hb = akI.w;
   float g = akR3(P * 260.0), g2 = akR3(P * 60.0), g3 = akF3(P * 9.0);
-  vec3 c = akC * (0.8 + 0.2 * g + 0.25 * (akF3(P * 4.0) - 0.5)) * mix(vec3(1.0), vec3(1.05, 0.98, 0.9), akN3(P * 2.0));
+  // sandy lime: visible grit, blotchy with damp and dirt, eroded into little pits and runs
+  float g4 = akF3(P * 13.0);
+  vec3 c = akC * (0.72 + 0.28 * g + 0.3 * (akF3(P * 4.0) - 0.5) + 0.22 * (g4 - 0.5)) * mix(vec3(1.0), vec3(1.05, 0.98, 0.9), akN3(P * 2.0));
+  vec3 mp = akCell2(vec2(P.x + P.z, P.y) * 70.0);
+  float mpit = (1.0 - smoothstep(0.05, 0.22, mp.x)) * step(0.6, mp.z);
+  c *= 1.0 - 0.3 * mpit;
   float splash = 1.0 - smoothstep(0.0, 0.6, hb);
   c = mix(c, c * vec3(0.6, 0.55, 0.47), splash * 0.75);
   float moss = akMoss * smoothstep(0.55, 0.8, akF3(P * 3.0 + 1.0)) * (0.4 + splash);
@@ -359,7 +364,7 @@ export function mortarMaterial(ctx, opts = {}) {
   c *= mix(1.0, 0.75 + 0.25 * g2, (1.0 - akMAO) / 0.4);
   akAlb = c; akRgh = 0.95; akAO = akMAO;
   float fwm = (akFoot * 1.4);
-  akHt = g * 0.0008 * (1.0 - smoothstep(0.001, 0.003, fwm)) + g3 * 0.006 + g2 * 0.0015;
+  akHt = g * 0.0012 * (1.0 - smoothstep(0.001, 0.003, fwm)) + g3 * 0.008 + g2 * 0.0025 + g4 * 0.003 - mpit * 0.002;
 `,
   });
 }
@@ -925,7 +930,7 @@ export async function archMaterials(ctx, opts = {}) {
       // harbour stone below the tide line: wet, dark, green-brown weed and algae
       stoneMaterial(ctx, { palette: [[0.16, 0.15, 0.12], [0.12, 0.12, 0.09], [0.2, 0.18, 0.14]], variation: 0.25, lichen: 0.0, moss: 0.9, algae: 1.0, tooled: 0.4, splash: 1.0, streaks: 0.8, ...(opts.stoneWet || {}) }),
       // pale stone seen from far off (silhouette LOD): the stone-to-stone variation of a whole wall averages out
-      stoneMaterial(ctx, { palette: [[0.48, 0.45, 0.39], [0.45, 0.42, 0.37], [0.5, 0.47, 0.4]], variation: 0.06, lichen: 0.2, moss: 0.2, tooled: 0.0, streaks: 0.9, ...(opts.stoneFar || {}) }),
+      stoneMaterial(ctx, { texture: 'pbr/acg_ground27', scale: 0.7, palette: [[0.48, 0.45, 0.39], [0.45, 0.42, 0.37], [0.5, 0.47, 0.4]], variation: 0.06, lichen: 0.2, moss: 0.2, tooled: 0.0, streaks: 0.9, ...(opts.stoneFar || {}) }),
       // cobbles / setts of a square: grey-brown, worn, moss in the joints, no splash band
       stoneMaterial(ctx, { texture: 'pbr/acg_ground28', scale: 0.8, palette: [[0.21, 0.195, 0.17], [0.14, 0.13, 0.115], [0.27, 0.235, 0.185]], variation: 0.38, lichen: 0.15, moss: 0.3, algae: 0.0, tooled: 0.1, splash: 0.0, streaks: 0.0, stain: 0.6, ...(opts.stoneSett || {}) }),
       // interiors: worn flagstone floors (no weather: no lichen, algae or splash)

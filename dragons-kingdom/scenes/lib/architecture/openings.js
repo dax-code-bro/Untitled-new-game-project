@@ -135,7 +135,8 @@ export function windowUnit(kit, F, o) {
       if (sh === 'closed') ang = Math.abs(rnd.sym(0.03));
       else if (sh === 'half') ang = rnd.range(1.75, 2.35);
       else ang = Math.PI - rnd.range(0.03, 0.12);
-      const zf = sh === 'closed' ? -0.03 : 0.012;
+      // (on pintles standing out from the face: the folded leaf clears the proudest stones)
+      const zf = sh === 'closed' ? -0.03 : 0.045;
       const lww = lw - 0.006;
       const Fl = leafFrame(F, hx, lww, hinge, ang, true, zf);
       plankLeaf(kit, Fl, lww, h - 0.004, t, rnd, { board: rnd.range(0.12, 0.18), ledges: [0.18, 0.82] });
