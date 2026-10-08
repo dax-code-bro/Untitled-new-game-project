@@ -1,5 +1,39 @@
 # Architecture kit - progress log (for a successor)
 
+## Fix round 2 (in progress, 2026-10-08) - critic round 2
+Done so far (code, previewed at 1920 in scenes/lookdev/architecture-dev.js and the contact scene):
+- Masonry: stones SET IN the mortar (face flat 0-12 mm proud, rounded arrises dive under the bed:
+  irregular outlines, no rim highlight / drop shadow); per-stone arris radius; block() clamps every
+  displacement near an arris to half the rounding radius (the 'stacked paper' slivers were the
+  noise/chip folding the rounding rows); lime mortar with a scanned sand grain (acg_ground05),
+  sparse grit, lime bloom (no pepper pits); stone mottling instead of a camouflage scan; dressed
+  stone more varied; blocked-up openings (masonryFace op.blocked); drip stains under sills.
+- Weathering decals (weathering.js stain/grimeBand, materials stain): dirt, rust, lime, algae.
+- Glass: quarry tilt ~1 deg (no sky/ground checker), per-quarry tint, grime at the leads; oiled
+  linen glazing ('cloth'); houses glazed by wealth (o.rich), most unglazed with shutters or cloth;
+  shop fronts with a let-down counter and a propped hood.
+- Roofs: the gable principals sat 8-17 cm above the rafter line (the grey 'strip' on the tiles) -
+  now 7 cm under it; verges with a bargeboard under the oversailing tiles and a mortar bead; sag
+  carried by the gable walls, eaves-line sag, wandering courses, per-roof tile batch and age; lead
+  flashings round stacks, soot streaks, clay pots.
+- Timber: structural members proud of studs/braces, studs run 3.5 cm behind rails (no gaps),
+  150-260 mm studs at 0.6-0.9 m, bows 20-45 mm, jetty bressumer sag, flush faceted pale pegs
+  (oakPeg), end checks on joist ends, meandering jagged hairline cracks (no Voronoi), worn limewash.
+- Canon: stone support = broad pier 2.6 x 1.5 x 3.4 m on a two-step plinth with a mounting block
+  (centre moved 0.4 m east to x 13.3 to clear the steps' cheek wall); town gate 4.4 m between 4.6 m
+  piers, beam + tiled roof, heavy braced leaves on pintles, rutted threshold, stop stone; access
+  rig: jib/mast/ropes removed - a drawbridge gangway (6 m) on two chains over sheaves on the front
+  posts to a deck windlass, scarfed posts, silver oak, sunk stone pads, lashings; harbour handrail
+  removed (mooring rings), tide zones stronger, waterline foam, goods on the quay, a town behind.
+- Leaf platform: axle trees, turned naves, 12 dished spokes, felloes, iron tyres, mud.
+- Fountain: flush leaded cramps with rust, breaking glassy jets with drops and splash crowns,
+  turbulent ripples, limescale/algae streaks. Cobbles: tight, half buried, walking lines, LOD.
+- Stable: two-stage bonded buttresses; lodge: 15-18 cm copings, bark logs with sawn ends, a hood on
+  wall posts and brackets.
+Next: foam patches too opaque; palace + round tower massing; interiors (chamber door/nest box/
+walls/straw/linen, treatment seat/coast/cloths/basin/spalls); lookdev scenes (map overlay, arch
+exposure, verdor ground, interior shots); 4K finals *_r2.
+
 ## State (2026-10-08, fix round 1 done; 4K finals rendered to the session scratchpad)
 
 Session 1 built the kit (README.md has the API). Fix round 1 answered the critic report:

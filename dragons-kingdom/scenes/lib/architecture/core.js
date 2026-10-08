@@ -323,6 +323,21 @@ export function block(acc, F, sx, sy, sz, o = {}) {
       const sxp = lx * 4.5 + vnoise3(lx * 1.5 + so, ny * 3, nz * 3) * 1.4;
       disp -= ad * (0.5 + 0.5 * Math.cos(sxp * Math.PI * 2)) * (1 - Math.abs(nx));
     }
+    // no folds: near an arris the surface may only move a fraction of the rounding radius (the
+    // rounding rows are displaced along different normals - a larger move crosses them over and
+    // the edge shows as 2-3 stacked slivers, like layered paper); the flat of a face may move more
+    // the further it is from its edges
+    if (disp && o.fold !== false) {
+      let lim;
+      if (ar) lim = 0.5 * Math.max(r, 0.0015);
+      else {
+        const e0 = H[0] - Math.abs(q0), e1 = H[1] - Math.abs(q1), e2 = H[2] - Math.abs(q2);
+        const ax = Math.abs(nx) > 0.5 ? 0 : Math.abs(ny) > 0.5 ? 1 : 2;
+        const dE = ax === 0 ? Math.min(e1, e2) : ax === 1 ? Math.min(e0, e2) : Math.min(e0, e1);
+        lim = 0.5 * Math.max(r, 0.0015) + 0.45 * Math.max(0, dE);
+      }
+      disp = clamp(disp, -lim, lim);
+    }
     if (wane && (wane[0] || wane[1])) {
       // a waney arris: the edge keeps the tree's rounded surface (cut inward)
       const ty = ly * Math.sign(wane[0] || 1), tz = lz * Math.sign(wane[1] || 1);
@@ -448,17 +463,26 @@ export function tube(acc, pts, rad, o = {}) {
       const an = (k / ns) * Math.PI * 2;
       const c = Math.cos(an), s = Math.sin(an);
       const c0 = pts[i];
-      ring.push(acc.v(c0[0] + (N[0] * c + B[0] * s) * rr, c0[1] + (N[1] * c + B[1] * s) * rr, c0[2] + (N[2] * c + B[2] * s) * rr, along, (k / ns) * rr * 6.283, o.seed ?? 0, 1, 0, T[0], T[1], T[2]));
+      // o.rad(k): an irregular section (faceted pegs, split billets)
+      const rk = rr * (o.rad ? o.rad(k % ns) : 1);
+      ring.push(acc.v(c0[0] + (N[0] * c + B[0] * s) * rk, c0[1] + (N[1] * c + B[1] * s) * rk, c0[2] + (N[2] * c + B[2] * s) * rk, along, (k / ns) * rr * 6.283, o.seed ?? 0, 1, 0, T[0], T[1], T[2]));
     }
     rings.push(ring);
   }
   for (let i = 0; i < rings.length - 1; i++) for (let k = 0; k < ns; k++) acc.q(rings[i][k], rings[i + 1][k], rings[i + 1][k + 1], rings[i][k + 1]);
   if (o.caps) {
+    // the caps have their own vertices: uv = (along, distance from the axis) and the tube's axis as
+    // the grain (a log's sawn end shows its rings round the pith); o.capAcc: another material
+    const ca = o.capAcc || acc;
     for (const [ri, sgn] of [[0, -1], [rings.length - 1, 1]]) {
       const ring = rings[ri];
       const c = pts[ri];
-      const ci = acc.v(c[0], c[1], c[2], 0, 0, o.seed ?? 0, 1, 0, 0, 1, 0);
-      for (let k = 0; k < ns; k++) { if (sgn > 0) acc.t(ci, ring[k], ring[k + 1]); else acc.t(ci, ring[k + 1], ring[k]); }
+      const a = pts[Math.max(0, ri - 1)], b = pts[Math.min(pts.length - 1, ri + 1)];
+      const T = norm(subv(b, a));
+      const P = acc.P.a;
+      const ci = ca.v(c[0], c[1], c[2], 0, 0, o.seed ?? 0, 1, 0, T[0], T[1], T[2]);
+      const ids = ring.map((vi) => { const x = P[vi * 3], y = P[vi * 3 + 1], z = P[vi * 3 + 2]; return ca.v(x, y, z, 0, Math.hypot(x - c[0], y - c[1], z - c[2]), o.seed ?? 0, 1, 0, T[0], T[1], T[2]); });
+      for (let k = 0; k < ns; k++) { if (sgn > 0) ca.t(ci, ids[k], ids[k + 1]); else ca.t(ci, ids[k + 1], ids[k]); }
     }
   }
 }

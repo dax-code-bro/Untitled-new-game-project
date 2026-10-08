@@ -16,11 +16,14 @@
 //                              rings and fenders, warehouses behind
 //
 // Frames: origin on the ground at the piece's centre (or as documented), y up.
-import { Kit, frame, yawFrame, sub, makeRand, block, tube, xf, sagLine, curve, lathe, grid } from './core.js';
+import { Kit, frame, yawFrame, sub, makeRand, block, tube, xf, sagLine, curve, lathe, grid, norm, cross, strip } from './core.js';
 import { masonryBox, masonryFace, masonryGable, courses, roundTower, conicalRoof, steps } from './masonry.js';
 import { member, framedWall } from './timber.js';
 import { gableRoof, chimney, pentice } from './roof.js';
 import { door, windowUnit, threshold, glassQuad } from './openings.js';
+import { stain, grimeBand } from './weathering.js';
+import { barrel, crate, sack, coil, handcart } from './dressing.js';
+import { house } from './house.js';
 
 // ------------------------------------------------------------------ stable --
 /**
@@ -58,15 +61,22 @@ export function stable(kit, F, o = {}) {
     courseMin: 0.28, courseMax: 0.38, plinth: 0.45, quoin: { long: 0.7, short: 0.42 },
     faces: { front: { openings: frontOps }, back: { openings: backOps, lod: lod === 'hero' ? 'mid' : lod }, left: { openings: [{ x: d / 2 - 0.6, y: 0, w: 1.2, h: 2.3, head: 'lintel', reveal: T }] }, right: {} },
   });
-  // buttresses between the bays on both long sides: stepped, with sloped weatherings
+  // buttresses between the bays on both long sides: two stages, each set back at a sloped
+  // weathering, bonded into the wall, the upper stage dying into the wall just below the eaves
   for (const side of [1, -1]) {
     for (let i = 1; i < bays; i++) {
       const x = -w / 2 + bayW * i;
       if (side > 0 && Math.abs(x) < dw / 2 + 0.8) continue;
-      const Fb = side > 0 ? frame([x, 0, d / 2 + 0.45]) : frame([x, 0, -d / 2 - 0.45], [-1, 0, 0], [0, 1, 0]);
-      masonryBox(local, Fb, { w: 0.9, d: 0.9, h: h * 0.62, T: 0.45, style: 'ashlar', mat: 'stonePale', dressedMat: 'stonePale', mortar: 'mortarPale', lod: lod === 'hero' ? 'mid' : lod, seed: rnd() * 999, courseMin: 0.28, courseMax: 0.38, plinth: 0.45, quoin: { long: 0.5, short: 0.4 }, faces: { back: { skip: true } } });
-      // the weathering: a sloped capstone shedding water off the buttress
-      block(local.get('stonePale'), sub(Fb, [0, h * 0.62 + 0.2, -0.05]), 1.0, 0.4, 1.0, { r: 0.015, seg: [0.2, 0.2, 0.2], seed: rnd(), noise: 0.003, chip: 0.01, warp: (lx, ly, lz) => [lx, ly - (ly > 0 ? (lz / 1.0 + 0.5) * 0.35 : 0), lz] });
+      const Fb = side > 0 ? frame([x, 0, d / 2]) : frame([x, 0, -d / 2], [-1, 0, 0], [0, 1, 0]);
+      const h1 = h * 0.45, h2 = h * 0.86;
+      const st = [[0, h1, 1.05, 1.15], [h1 + 0.32, h2, 0.92, 0.7]];
+      for (const [k, [y0, y1, bw, bd]] of st.entries()) {
+        masonryBox(local, sub(Fb, [0, y0, bd / 2]), { w: bw, d: bd, h: y1 - y0, T: Math.min(bw, bd) / 2, style: 'ashlar', mat: 'stonePale', dressedMat: 'stonePale', mortar: 'mortarPale', lod: lod === 'hero' ? 'mid' : lod, seed: rnd() * 999, courseMin: 0.28, courseMax: 0.38, plinth: k === 0 ? 0.45 : 0, quoin: { long: 0.42, short: 0.32 }, faces: { back: { skip: true } } });
+        // the weathering: a sloped capstone shedding the water off the stage, set into the wall
+        const top = k === 0 ? st[1][3] : 0;
+        block(local.get('stonePale'), sub(Fb, [0, y1 + 0.16, (bd + top) / 2 + 0.02]), bw + 0.08, 0.32, bd - top + 0.12, { r: 0.012, rs: 1, seg: [0.2, 0.16, 0.2], seed: rnd(), noise: 0.003, chip: 0.02,
+          warp: (lx, ly, lz) => [lx, ly - (ly > 0 ? (lz / (bd - top + 0.12) + 0.5) * 0.3 : 0), lz] });
+      }
     }
   }
   // the dragon door: two ledged oak leaves, one standing open; the dim stable beyond
@@ -172,12 +182,12 @@ export function keeperHouse(kit, F, o = {}) {
           // a half log: the flat split face up or to one side
           const rot = rnd() * Math.PI;
           block(local.get('oak'), frame([x, y - dia * 0.2, zz + dia / 2], [1, 0, 0], [0, Math.cos(rot), Math.sin(rot)]), len, dia * 0.55, dia, { r: dia * 0.25, rs: 1, seg: [0.3, dia / 2, dia / 3], seed: rnd(), noise: 0.004, nf: 5, chip: 0.012, axis: [1, 0, 0] });
-        } else tube(local.get('oakDark'), [[x - len / 2, y, zz + dia / 2], [x + len / 2, y + rnd.sym(0.02), zz + dia / 2 + rnd.sym(0.02)]], dia / 2, { sides: 9, caps: true, seed: rnd() });
+        } else tube(local.get('bark'), [[x - len / 2, y, zz + dia / 2], [x + len / 2, y + rnd.sym(0.02), zz + dia / 2 + rnd.sym(0.02)]], dia / 2, { sides: 10, caps: true, seed: rnd(), capAcc: local.get('oak'), rad: (k) => 1 + 0.05 * Math.sin(k * 2.7 + dia * 40) });
         zz += dia + rnd.range(0.005, 0.03);
       }
     }
     // the chopping block and a few split billets on the ground before it
-    tube(local.get('oakDark'), [[sx + 2.0, 0, -0.6], [sx + 2.0, 0.55, -0.6]], 0.27, { sides: 12, caps: true, seed: rnd() });
+    tube(local.get('bark'), [[sx + 2.0, 0, -0.6], [sx + 2.0, 0.55, -0.6]], 0.27, { sides: 14, caps: true, seed: rnd(), capAcc: local.get('oak') });
     for (let k = 0; k < 5; k++) { const a = rnd() * 6.28; block(local.get('oak'), frame([sx + 2.0 + Math.cos(a) * 0.7, 0.05, -0.6 + Math.sin(a) * 0.7], [Math.cos(a), 0, Math.sin(a)], [0, 1, 0]), 0.45, 0.08, 0.12, { r: 0.02, seg: [0.2, 0.08, 0.12], seed: rnd(), noise: 0.004, axis: [1, 0, 0] }); }
   }
   kit.merge(local, F);
@@ -187,34 +197,53 @@ export function keeperHouse(kit, F, o = {}) {
 // ------------------------------------------------------------------ access rig --
 /**
  * Charcoal's grounded access rig, built the way a 15th-century carpenter would: a framed tower of
- * hewn oak (posts with jowled heads standing on sole plates over dressed stone pads, girts at
- * every storey, curved braces at the storey heads, a long passing brace on two faces, every joint
- * pegged), a boarded stair with closed risers, newel posts and a handrail climbing round three
- * sides to a railed deck, and a railed gangway hinged at the deck, held by hemp falls through
- * wooden blocks from a jib - hauled on a windlass at the foot, eased by a stone counterweight -
- * with a stitched leather bolster where it lies on the dragon.
+ * hewn oak, silvered by the weather (posts with jowled heads, scarfed at mid height, standing on
+ * sole plates over rough stone pads sunk in the trodden ground; girts at every storey, curved
+ * braces at the storey heads, a long passing brace, every joint pegged, a few rope lashings where
+ * the riggers have added to it), a boarded stair with closed risers, newels and a handrail
+ * climbing round three sides to a railed deck - and from the deck a railed gangway let down like a
+ * drawbridge: hinged at the deck on iron straps, its free end hung on two chains that run up over
+ * sheaves at the heads of the two front posts (carried 2.8 m above the deck and braced back to it)
+ * and down to a windlass on the deck. A stitched leather bolster on the end that lies on the
+ * dragon. No jib, no hanging rope.
  * Deck height: Charcoal's seat is ~9.5-9.9 m above the ground lying down (creature domain, F2
  * pose; scenes/lookdev/architecture-probe.js measures it), so the deck is at 10.6 m and the
  * gangway falls ~0.9 m to land at the saddle. F: base centre of the tower; the gangway reaches +z.
- * o: H, size, gangway (length 7.5), gangwayDrop, lod, seed. Returns { deck, gangwayEnd, height }.
+ * o: H, size, gangway (length 6.0), gangwayDrop, lod, seed. Returns { deck, gangwayEnd, height }.
  */
 export function accessRig(kit, F, o = {}) {
   const rnd = makeRand(o.seed ?? 221);
   const H = o.H ?? 10.6, S = o.size ?? 3.4;
   const lod = o.lod || 'mid';
   const local = new Kit(0);
-  const oak = (a, b, w, d, extra = {}) => memberW(local, a, b, w, d, rnd, { mat: 'oak', lod, ...extra });
-  const pegAt = (p, n) => { for (let i = 0; i < 2; i++) { const o2 = (i - 0.5) * 0.08; tube(local.get('oak'), [[p[0] + n[0] * 0.0 + (n[2] ? o2 : 0), p[1] + (n[2] ? 0 : o2), p[2] + (n[0] ? o2 : 0)], [p[0] + n[0] * 0.012 + (n[2] ? o2 : 0), p[1] + (n[2] ? 0 : o2), p[2] + n[2] * 0.012 + (n[0] ? o2 : 0)]], 0.014, { sides: 7, caps: true }); } };
+  // weathered silver-grey oak, a member here and there replaced (warmer, browner)
+  const oak = (a, b, w, d, extra = {}) => memberW(local, a, b, w, d, rnd, { mat: rnd() < 0.18 ? 'oak' : 'oakSilver', lod, ...extra });
+  const pegAt = (p, n) => { for (let i = 0; i < 2; i++) { const o2 = (i - 0.5) * 0.08; tube(local.get('oakPeg'), [[p[0] + (n[2] ? o2 : 0), p[1] + (n[2] ? 0 : o2), p[2] + (n[0] ? o2 : 0)], [p[0] + n[0] * 0.006 + (n[2] ? o2 : 0), p[1] + (n[2] ? 0 : o2), p[2] + n[2] * 0.006 + (n[0] ? o2 : 0)]], 0.015, { sides: 7, caps: true, seed: rnd() }); } };
+  const lash = (p, axis, r = 0.17, turns = 7) => {
+    // a rope lashing: turns of hemp round a joint
+    const pts = [];
+    const u = Math.abs(axis[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0];
+    const A = norm(axis), U = norm(cross(A, u)), V = cross(A, U);
+    for (let i = 0; i <= turns * 12; i++) { const a = (i / 12) * Math.PI * 2, t = (i / (turns * 12) - 0.5) * 0.12; pts.push([p[0] + (U[0] * Math.cos(a) + V[0] * Math.sin(a)) * r + A[0] * t, p[1] + (U[1] * Math.cos(a) + V[1] * Math.sin(a)) * r + A[1] * t, p[2] + (U[2] * Math.cos(a) + V[2] * Math.sin(a)) * r + A[2] * t]); }
+    tube(local.get('rope'), pts, 0.011, { sides: 5 });
+  };
   const bat = (y) => 1 - 0.035 * (y / H);                     // the posts lean in a little (battered tower)
   const posts = [[-S / 2, -S / 2], [S / 2, -S / 2], [S / 2, S / 2], [-S / 2, S / 2]];
-  // dressed stone pads, set into the ground, and sole plates across them
-  for (const [x, z] of posts) block(local.get('stonePale'), frame([x, 0.06, z], [Math.cos(rnd.sym(0.1)), 0, Math.sin(rnd.sym(0.1))], [0, 1, 0]), 0.82, 0.42, 0.82, { r: 0.03, rs: 1, seg: [0.2, 0.15, 0.2], seed: rnd(), noise: 0.012, nf: 4, chip: 0.03, pillow: 0.012 });
-  for (const sz of [-1, 1]) oak([-S / 2 - 0.35, 0.39, sz * S / 2], [S / 2 + 0.35, 0.39, sz * S / 2], 0.3, 0.26, { mat: 'oakDark' });
-  // posts with jowled heads
-  const lv = [0.52, H / 3, (2 * H) / 3, H - 0.14];
+  // rough stone pads sunk into the ground (only their tops show), mud splashed up them; sole plates
+  for (const [x, z] of posts) block(local.get('stoneGrey'), frame([x, -0.1, z], [Math.cos(rnd.sym(0.15)), rnd.sym(0.02), Math.sin(rnd.sym(0.15))], [0, 1, 0]), 0.86, 0.42, 0.86, { r: 0.04, rs: 1, seg: [0.15, 0.14, 0.15], seed: rnd(), noise: 0.018, nf: 4, chip: 0.04, pillow: 0.02 });
+  for (const sz of [-1, 1]) oak([-S / 2 - 0.35, 0.24, sz * S / 2], [S / 2 + 0.35, 0.24, sz * S / 2], 0.28, 0.26, { mat: 'oakDark' });
+  // posts with jowled heads, scarfed at mid height (no oak grows 12 m straight)
+  const lv = [0.37, H / 3, (2 * H) / 3, H - 0.14];
+  const front = (z) => z > 0;
   for (const [x, z] of posts) {
-    oak([x, 0.52, z], [x * bat(H), H + 1.15, z * bat(H)], 0.3, 0.3);
-    for (const y of lv.slice(1)) block(local.get('oak'), frame([x * bat(y), y - 0.18, z * bat(y)]), 0.36, 0.42, 0.36, { r: 0.015, seg: [0.1, 0.14, 0.1], seed: rnd(), noise: 0.002, axis: [0, 1, 0], warp: (lx, ly, lz) => { const f = (ly / 0.42 + 0.5); const k = 0.82 + 0.18 * f; return [lx * k, ly, lz * k]; } });
+    const top = front(z) ? H + 2.85 : H + 1.15;
+    const ys = lv[2] - 0.2;
+    oak([x, 0.37, z], [x * bat(ys + 0.5), ys + 0.5, z * bat(ys + 0.5)], 0.3, 0.3, { bow: rnd.sym(0.02) });
+    oak([x * bat(ys - 0.45), ys - 0.45, z * bat(ys - 0.45)], [x * bat(top), top, z * bat(top)], 0.29, 0.29, { bow: rnd.sym(0.02), offset: 0.008 });
+    // the scarf: pegs through it, two iron bands
+    for (const yy of [ys - 0.3, ys + 0.35]) { const q = [x * bat(yy), yy, z * bat(yy)]; tube(local.get('iron'), [[q[0], yy - 0.03, q[2]], [q[0], yy + 0.03, q[2]]], 0.185, { sides: 8 }); }
+    for (const [yy, n] of [[ys - 0.12, [Math.sign(x), 0, 0]], [ys + 0.12, [Math.sign(x), 0, 0]], [ys, [0, 0, Math.sign(z)]]]) pegAt([x * bat(yy) + n[0] * 0.15, yy, z * bat(yy) + n[2] * 0.15], n);
+    for (const y of lv.slice(1)) block(local.get('oakSilver'), frame([x * bat(y), y - 0.18, z * bat(y)]), 0.36, 0.42, 0.36, { r: 0.015, seg: [0.1, 0.14, 0.1], seed: rnd(), noise: 0.002, axis: [0, 1, 0], warp: (lx, ly, lz) => { const f = (ly / 0.42 + 0.5); const k = 0.82 + 0.18 * f; return [lx * k, ly, lz * k]; } });
   }
   // girts at every storey, curved braces at the storey heads, a passing brace on two faces, pegs
   for (let f = 0; f < 4; f++) {
@@ -222,22 +251,24 @@ export function accessRig(kit, F, o = {}) {
     const nrm = [Math.sign(ax + bx), 0, Math.sign(az + bz)];
     for (let k = 1; k < lv.length; k++) {
       const y = lv[k], sh = bat(y);
-      oak([ax * sh, y, az * sh], [bx * sh, y, bz * sh], 0.24, 0.22, { offset: 0.0 });
+      oak([ax * sh, y, az * sh], [bx * sh, y, bz * sh], 0.24, 0.22, { offset: 0.0, bow: rnd.sym(0.012) });
       pegAt([ax * sh + (bx - ax) * 0.06 + nrm[0] * 0.15, y, az * sh + (bz - az) * 0.06 + nrm[2] * 0.15], nrm);
       pegAt([bx * sh - (bx - ax) * 0.06 + nrm[0] * 0.15, y, bz * sh - (bz - az) * 0.06 + nrm[2] * 0.15], nrm);
-      // arch braces from each post up to the girt
       const y0 = y - 1.05, d = 1.0 / S;
-      oak([ax * bat(y0), y0, az * bat(y0)], [(ax + (bx - ax) * d) * sh, y - 0.1, (az + (bz - az) * d) * sh], 0.15, 0.13, { bow: -0.07, mat: 'oakDark' });
-      oak([bx * bat(y0), y0, bz * bat(y0)], [(bx + (ax - bx) * d) * sh, y - 0.1, (bz + (az - bz) * d) * sh], 0.15, 0.13, { bow: 0.07, mat: 'oakDark' });
+      oak([ax * bat(y0), y0, az * bat(y0)], [(ax + (bx - ax) * d) * sh, y - 0.1, (az + (bz - az) * d) * sh], 0.15, 0.13, { bow: -0.07, mat: 'oakSilver' });
+      oak([bx * bat(y0), y0, bz * bat(y0)], [(bx + (ax - bx) * d) * sh, y - 0.1, (bz + (az - bz) * d) * sh], 0.15, 0.13, { bow: 0.07, mat: 'oakSilver' });
     }
-    if (f % 2 === 0) oak([ax, 0.62, az], [bx * bat(lv[1]), lv[1] - 0.12, bz * bat(lv[1])], 0.16, 0.14, { mat: 'oakDark' });
+    if (f % 2 === 0) oak([ax, 0.5, az], [bx * bat(lv[1]), lv[1] - 0.12, bz * bat(lv[1])], 0.16, 0.14, { mat: 'oakDark' });
   }
+  // two lashings where the riggers strengthened a brace foot
+  lash([-S / 2 * bat(lv[1] - 1.05), lv[1] - 1.0, 0], [0, 0, 1], 0.12, 6);
+  lash([S / 2 * bat(lv[2] - 1.05), lv[2] - 1.0, -S / 2 * bat(lv[2])], [1, 0, 0], 0.12, 6);
   // the deck: joists and close boards, rails on three sides (posts, top and mid rail)
   const D = S * bat(H) + 0.6;
   for (let i = 0; i < 7; i++) oak([-D / 2, H - 0.05, -D / 2 + D * (i + 0.5) / 7], [D / 2, H - 0.05, -D / 2 + D * (i + 0.5) / 7], 0.13, 0.17, { mat: 'oakDark' });
   for (let i = 0; i < Math.round(D / 0.24); i++) {
     const x = -D / 2 + 0.12 + i * (D / Math.round(D / 0.24));
-    block(local.get('oak'), frame([x, H + 0.05, 0], [0, 0, 1], [0, 1, 0]), D + rnd.sym(0.03), 0.045, D / Math.round(D / 0.24) - 0.005, { r: 0.004, seg: [0.5, 0.045, 0.2], seed: rnd(), noise: 0.002, nf: 3 });
+    block(local.get(rnd() < 0.3 ? 'oak' : 'oakSilver'), frame([x, H + 0.05, 0], [0, 0, 1], [0, 1, 0]), D + rnd.sym(0.03), 0.045, D / Math.round(D / 0.24) - 0.005, { r: 0.006, seg: [0.5, 0.045, 0.2], seed: rnd(), noise: 0.002, nf: 3, chip: 0.006, axis: [1, 0, 0] });
   }
   const rail = (a, b) => {
     const n = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[2] - a[2]) / 1.2));
@@ -252,21 +283,19 @@ export function accessRig(kit, F, o = {}) {
   rail([-D / 2, y0, D / 2], [-0.75, y0, D / 2]);
   // the stair: three boarded flights with closed risers round the west, north and east sides
   const flight = (p0, p1, outer) => {
-    // p0 bottom, p1 top: [x, y, z]; outer: unit vector to the open side (the handrail side)
     const dx = p1[0] - p0[0], dz = p1[2] - p0[2], run = Math.hypot(dx, dz), ux = dx / run, uz = dz / run, rise = p1[1] - p0[1];
     const n = Math.max(3, Math.round(rise / 0.21)), gw = 1.05;
-    const side = (s) => [outer[0] * s * gw / 2, 0, outer[2] * s * gw / 2];
-    for (const s of [-1, 1]) { const o2 = side(s); oak([p0[0] + o2[0], p0[1] + 0.05, p0[2] + o2[2]], [p1[0] + o2[0], p1[1] + 0.05, p1[2] + o2[2]], 0.06, 0.3, { mat: 'oakDark' }); }
+    const side = (s2) => [outer[0] * s2 * gw / 2, 0, outer[2] * s2 * gw / 2];
+    for (const s2 of [-1, 1]) { const o2 = side(s2); oak([p0[0] + o2[0], p0[1] + 0.05, p0[2] + o2[2]], [p1[0] + o2[0], p1[1] + 0.05, p1[2] + o2[2]], 0.06, 0.3, { mat: 'oakDark' }); }
     for (let i = 0; i < n; i++) {
       const t0 = i / n, t1 = (i + 1) / n;
       const yT = p0[1] + rise * t1, xm = p0[0] + dx * (t0 + t1) / 2, zm = p0[2] + dz * (t0 + t1) / 2;
       const Ft = frame([xm, yT - 0.02, zm], [outer[0], 0, outer[2]], [0, 1, 0]);
-      block(local.get('oak'), Ft, gw - 0.02, 0.04, run / n + 0.03, { r: 0.004, seg: [0.4, 0.04, 0.15], seed: rnd(), noise: 0.0015, axis: [1, 0, 0] });
-      // the riser board under the front edge of the tread
+      // treads worn hollow in the middle where the boots go
+      block(local.get('oakSilver'), Ft, gw - 0.02, 0.04, run / n + 0.03, { r: 0.006, seg: [0.15, 0.04, 0.15], seed: rnd(), noise: 0.0015, axis: [1, 0, 0], warp: (lx, ly, lz) => [lx, ly - (ly > 0 ? 0.006 * Math.exp(-(lx * lx) / 0.06) : 0), lz] });
       const xr = p0[0] + dx * t0, zr = p0[2] + dz * t0;
       block(local.get('oakDark'), frame([xr, yT - rise / n / 2 - 0.02, zr], [outer[0], 0, outer[2]], [0, 1, 0]), gw - 0.06, rise / n, 0.025, { r: 0.003, seg: [0.4, 0.1, 0.025], seed: rnd(), axis: [1, 0, 0] });
     }
-    // newel posts and the handrail on the open side
     const o2 = side(1);
     const nb = [p0[0] + o2[0] - ux * 0.05, p0[1], p0[2] + o2[2] - uz * 0.05], nt = [p1[0] + o2[0], p1[1], p1[2] + o2[2]];
     oak(nb, [nb[0], nb[1] + 1.15, nb[2]], 0.15, 0.15);
@@ -275,87 +304,107 @@ export function accessRig(kit, F, o = {}) {
     for (let i = 1; i < 4; i++) { const t = i / 4; oak([nb[0] + (nt[0] - nb[0]) * t, nb[1] + rise * t + 0.15, nb[2] + (nt[2] - nb[2]) * t], [nb[0] + (nt[0] - nb[0]) * t, nb[1] + rise * t + 1.0, nb[2] + (nt[2] - nb[2]) * t], 0.06, 0.06); }
   };
   const landing = (x, z, y) => {
-    for (let i = 0; i < 6; i++) block(local.get('oak'), frame([x - 0.6 + 0.1 + i * 0.2, y + 0.02, z], [0, 0, 1], [0, 1, 0]), 1.3, 0.045, 0.195, { r: 0.004, seg: [0.5, 0.045, 0.2], seed: rnd(), noise: 0.002 });
+    for (let i = 0; i < 6; i++) block(local.get('oakSilver'), frame([x - 0.6 + 0.1 + i * 0.2, y + 0.02, z], [0, 0, 1], [0, 1, 0]), 1.3, 0.045, 0.195, { r: 0.005, seg: [0.5, 0.045, 0.2], seed: rnd(), noise: 0.002, axis: [1, 0, 0] });
     oak([x - 0.6, y - 0.1, z - 0.6], [x + 0.6, y - 0.1, z - 0.6], 0.14, 0.14, { mat: 'oakDark' });
     oak([x - 0.6, y - 0.1, z + 0.6], [x + 0.6, y - 0.1, z + 0.6], 0.14, 0.14, { mat: 'oakDark' });
-    // an outer post down to its own pad
     const px = x + Math.sign(x) * 0.5, pz = z + Math.sign(z) * 0.5;
-    oak([px, 0.3, pz], [px, y - 0.05, pz], 0.2, 0.2);
-    block(local.get('stonePale'), frame([px, 0.05, pz]), 0.5, 0.36, 0.5, { r: 0.03, seg: [0.2, 0.15, 0.2], seed: rnd(), noise: 0.01, chip: 0.03 });
+    oak([px, 0.12, pz], [px, y - 0.05, pz], 0.2, 0.2);
+    block(local.get('stoneGrey'), frame([px, -0.08, pz], [Math.cos(rnd.sym(0.2)), 0, Math.sin(rnd.sym(0.2))], [0, 1, 0]), 0.52, 0.36, 0.52, { r: 0.04, seg: [0.15, 0.12, 0.15], seed: rnd(), noise: 0.014, nf: 4, chip: 0.035, pillow: 0.015 });
   };
   const e = S / 2 + 0.7, y1 = lv[1], y2 = lv[2];
   landing(-e, -e, y1); landing(e, -e, y2);
   flight([-e, 0.0, S / 2 + 3.4], [-e, y1, -e + 0.6], [-1, 0, 0]);
   flight([-e + 0.6, y1, -e], [e - 0.6, y2, -e], [0, 0, -1]);
   flight([e, y2, -e + 0.6], [e, H, D / 2 - 0.1], [1, 0, 0]);
+  // a stone at the stair foot to step off from, straw and mud trodden round it
+  block(local.get('stoneGrey'), frame([-e, -0.06, S / 2 + 3.75]), 1.1, 0.24, 0.6, { r: 0.04, seg: [0.15, 0.12, 0.15], seed: rnd(), noise: 0.01, nf: 4, chip: 0.03, pillow: 0.01 });
   // the gangway: two stringers, close boards with cleats, rails on both sides; hinged at the deck
-  const GL = o.gangway ?? 7.5, drop = o.gangwayDrop ?? 0.9;
+  const GL = o.gangway ?? 6.0, drop = o.gangwayDrop ?? 0.9;
   const gz0 = D / 2, gang = Math.asin(Math.min(0.6, drop / GL));
   const gEnd = [0, H + 0.1 - drop, gz0 + Math.cos(gang) * GL];
   const gw = 1.1;
-  for (const sx of [-gw / 2, gw / 2]) oak([sx, H + 0.05, gz0 - 0.1], [sx, gEnd[1], gEnd[2]], 0.1, 0.24, { mat: 'oakDark' });
+  for (const sx of [-gw / 2, gw / 2]) oak([sx, H + 0.05, gz0 - 0.1], [sx, gEnd[1], gEnd[2]], 0.1, 0.24, { mat: 'oakDark', bow: -0.015 });
   const nb = Math.round(GL / 0.22);
   for (let i = 0; i < nb; i++) {
     const t = (i + 0.5) / nb;
     const y = H + 0.05 + (gEnd[1] - H - 0.05) * t + 0.135, z = gz0 + (gEnd[2] - gz0) * t;
-    block(local.get('oak'), frame([0, y, z], [1, 0, 0], [0, Math.cos(gang), Math.sin(gang)]), gw + 0.1, 0.04, GL / nb - 0.006, { r: 0.004, seg: [0.5, 0.04, 0.2], seed: rnd(), noise: 0.002 });
+    block(local.get(rnd() < 0.3 ? 'oak' : 'oakSilver'), frame([0, y, z], [1, 0, 0], [0, Math.cos(gang), Math.sin(gang)]), gw + 0.1, 0.04, GL / nb - 0.006, { r: 0.005, seg: [0.5, 0.04, 0.2], seed: rnd(), noise: 0.002, axis: [1, 0, 0] });
     if (i % 2 === 1) block(local.get('oakDark'), frame([0, y + 0.035, z + 0.04]), gw - 0.12, 0.03, 0.04, { r: 0.004, seg: [0.5, 0.03, 0.04], seed: rnd() });
   }
   for (const sx of [-gw / 2 - 0.02, gw / 2 + 0.02]) {
-    const np = 6, top = [];
+    const np = 5, top = [];
     for (let i = 0; i <= np; i++) { const t = i / np; const y = H + 0.05 + (gEnd[1] - H - 0.05) * t, z = gz0 + (gEnd[2] - gz0) * t; oak([sx, y + 0.15, z], [sx, y + 1.05, z], 0.07, 0.07); top.push([sx, y + 1.05, z]); }
     oak(top[0], top[np], 0.08, 0.06);
+    // the hinge: an iron strap from the stringer onto the deck's edge beam, a pin through both
+    const hz = gz0 - 0.05;
+    block(local.get('iron'), frame([sx, H + 0.12, hz - 0.15], [0, 0, 1], [0, 1, 0]), 0.5, 0.012, 0.07, { r: 0.003, seg: [0.2, 0.012, 0.07], seed: rnd() });
+    tube(local.get('iron'), [[sx - 0.09, H + 0.1, hz], [sx + 0.09, H + 0.1, hz]], 0.022, { sides: 8, caps: true });
   }
+  // the drawbridge chains: from an iron eye on each stringer near the free end, up over a sheave at
+  // the head of each front post, down to the windlass on the deck
+  const chain = (a, b, sag) => {
+    const n = Math.max(4, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / 0.075));
+    const P = sagLine(a, b, sag, n);
+    for (let i = 0; i < n; i++) {
+      const p = P[i], q = P[i + 1];
+      const T = norm([q[0] - p[0], q[1] - p[1], q[2] - p[2]]);
+      const side = i % 2 ? norm(cross(T, [0, 1, 0])) : norm(cross(T, cross(T, [0, 1, 0])));
+      const ring = [];
+      for (let k = 0; k <= 10; k++) {
+        const an = (k / 10) * Math.PI * 2;
+        const c = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2];
+        const L2 = 0.055, R2 = 0.024;
+        ring.push([c[0] + T[0] * Math.cos(an) * L2 + side[0] * Math.sin(an) * R2, c[1] + T[1] * Math.cos(an) * L2 + side[1] * Math.sin(an) * R2, c[2] + T[2] * Math.cos(an) * L2 + side[2] * Math.sin(an) * R2]);
+      }
+      tube(local.get('iron'), ring, 0.0065, { sides: 5 });
+    }
+  };
+  const wl = [0, H + 0.62, -D / 2 + 0.6];
+  for (const sx of [-1, 1]) {
+    const pt = [sx * (S / 2) * bat(H + 2.7), H + 2.7, (S / 2) * bat(H + 2.7)];
+    // the sheave (a wooden wheel in an iron strap) at the post head
+    tube(local.get('oakDark'), [[pt[0] - 0.05, pt[1], pt[2] + 0.2], [pt[0] + 0.05, pt[1], pt[2] + 0.2]], 0.14, { sides: 12, caps: true, seed: rnd() });
+    tube(local.get('iron'), [[pt[0] - 0.08, pt[1], pt[2] + 0.2], [pt[0] + 0.08, pt[1], pt[2] + 0.2]], 0.025, { sides: 6, caps: true });
+    block(local.get('iron'), frame([pt[0], pt[1] + 0.02, pt[2] + 0.1]), 0.12, 0.012, 0.36, { r: 0.003, seg: [0.12, 0.012, 0.12], seed: rnd() });
+    // knee braces from the post's extension back to the deck (no crossbar: two separate posts)
+    oak([pt[0], H + 1.7, pt[2] - 0.05], [pt[0], H + 0.15, pt[2] - 1.15], 0.14, 0.13, { mat: 'oakSilver' });
+    oak([pt[0] - sx * 0.05, H + 1.6, pt[2]], [pt[0] - sx * 1.0, H + 0.15, pt[2]], 0.14, 0.13, { mat: 'oakSilver' });
+    const eye = [sx * (gw / 2 + 0.03), gEnd[1] + 0.3, gEnd[2] - 0.45];
+    tube(local.get('iron'), [[eye[0], eye[1] - 0.05, eye[2]], [eye[0] + sx * 0.06, eye[1] - 0.05, eye[2]]], 0.02, { sides: 6, caps: true });
+    chain(eye, [pt[0], pt[1] + 0.12, pt[2] + 0.2 + 0.12], 0.05);
+    chain([pt[0], pt[1] - 0.05, pt[2] + 0.06], [wl[0] + sx * 0.45, wl[1] + 0.12, wl[2]], 0.03);
+  }
+  // the windlass on the deck: a drum on two cheeks, a pawl, handspikes; the chains wound on it
+  for (const sx of [-0.75, 0.75]) {
+    block(local.get('oakSilver'), frame([wl[0] + sx, H + 0.4, wl[2]]), 0.1, 0.62, 0.55, { r: 0.012, seg: [0.1, 0.2, 0.2], seed: rnd(), noise: 0.002, axis: [0, 1, 0], warp: (lx, ly, lz) => [lx, ly, lz * (1 - 0.35 * (ly / 0.62 + 0.5))] });
+  }
+  tube(local.get('oakSilver'), [[wl[0] - 0.7, wl[1], wl[2]], [wl[0] + 0.7, wl[1], wl[2]]], 0.13, { sides: 10, caps: true, seed: rnd() });
+  for (const sx of [-1, 1]) { const pts = []; for (let i = 0; i <= 70; i++) { const a = i * 0.55; pts.push([wl[0] + sx * (0.32 + i * 0.002), wl[1] + Math.sin(a) * 0.15, wl[2] + Math.cos(a) * 0.15]); } tube(local.get('iron'), pts, 0.014, { sides: 5 }); }
+  for (const a of [0.4, 2.0, 3.6, 5.2]) tube(local.get('oakDark'), [[wl[0] + 0.62, wl[1], wl[2]], [wl[0] + 0.62, wl[1] + Math.sin(a) * 0.8, wl[2] + Math.cos(a) * 0.8]], 0.028, { sides: 6, caps: true });
   // the bolster: stitched leather over straw, a seam along it, straps round it
   {
     const c = [0, gEnd[1] - 0.02, gEnd[2] + 0.1];
     const pts = [];
     for (let i = 0; i <= 14; i++) { const t = i / 14; pts.push([c[0] - 0.85 + 1.7 * t, c[1] + 0.008 * Math.sin(t * 9), c[2] + 0.02 * Math.sin(t * 5)]); }
     tube(local.get('leather'), pts, (t) => 0.17 * (0.82 + 0.18 * Math.sin(Math.PI * t)) * (1 + 0.04 * Math.sin(t * 40)), { sides: 14, caps: true, seed: rnd() });
-    tube(local.get('leather'), pts.map((p) => [p[0], p[1] + 0.165, p[2] - 0.03]), 0.012, { sides: 5 });       // the welted seam
+    tube(local.get('leather'), pts.map((p) => [p[0], p[1] + 0.165, p[2] - 0.03]), 0.012, { sides: 5 });
     for (const x of [-0.55, 0, 0.55]) { const ring = []; for (let k = 0; k <= 12; k++) { const a = (k / 12) * Math.PI * 2; ring.push([c[0] + x, c[1] + Math.cos(a) * 0.178, c[2] + Math.sin(a) * 0.178]); } tube(local.get('leather'), ring, 0.012, { sides: 4 }); }
   }
-  // lifting gear: a gin pole on the deck with a jib, wooden blocks, hemp falls with a sag, the
-  // hauling rope down to a windlass at the foot, a stone counterweight on the back of the pole
-  const mastFoot = [0, H + 0.07, -D / 2 + 0.4], mastTop = [0, H + 4.6, -D / 2 + 0.4];
-  oak(mastFoot, mastTop, 0.24, 0.24);
-  oak([-0.75, H + 0.1, -D / 2 + 0.4], [0, H + 1.8, -D / 2 + 0.4], 0.12, 0.12, { mat: 'oakDark' });
-  oak([0.75, H + 0.1, -D / 2 + 0.4], [0, H + 1.8, -D / 2 + 0.4], 0.12, 0.12, { mat: 'oakDark' });
-  const jibEnd = [0, mastTop[1] - 0.45, gz0 + 2.6];
-  oak([0, mastTop[1] - 1.0, mastTop[2]], jibEnd, 0.16, 0.16);
-  const blockAt = (p, s = 1) => { block(local.get('oakDark'), frame([p[0], p[1], p[2]]), 0.13 * s, 0.3 * s, 0.22 * s, { r: 0.05 * s, rs: 2, seg: [0.05, 0.08, 0.06], seed: rnd(), noise: 0.002 }); tube(local.get('iron'), [[p[0], p[1] + 0.16 * s, p[2]], [p[0], p[1] + 0.26 * s, p[2]]], 0.012, { sides: 6, caps: true }); };
-  const jb = [jibEnd[0], jibEnd[1] - 0.25, jibEnd[2]];
-  blockAt(jb);
-  const ge = [0, gEnd[1] + 1.25, gEnd[2] - 0.6];
-  blockAt(ge, 0.85);
-  for (const sx of [-gw / 2 - 0.02, gw / 2 + 0.02]) tube(local.get('rope'), sagLine([0, ge[1] - 0.12, ge[2]], [sx, gEnd[1] + 1.05, gEnd[2] - 0.6], 0.02, 6), 0.014, { sides: 6 });
-  tube(local.get('rope'), sagLine([0, jb[1] - 0.12, jb[2]], [0, ge[1] + 0.12, ge[2]], 0.03, 10), 0.016, { sides: 6 });
-  // the hauling part: back over a block at the masthead and down the tower's back face to the windlass
-  const mb = [0, mastTop[1] - 0.25, mastTop[2] - 0.12];
-  blockAt(mb);
-  tube(local.get('rope'), sagLine([0, jb[1], jb[2]], [0, mb[1], mb[2]], 0.12, 14), 0.016, { sides: 6 });
-  const wl = [0, 0.95, -S / 2 - 1.6];
-  tube(local.get('rope'), sagLine([0, mb[1] - 0.1, mb[2] - 0.05], [wl[0], wl[1] + 0.2, wl[2] + 0.05], 0.25, 16), 0.016, { sides: 6 });
-  // the windlass: a drum on two trestles, handspikes, rope wound on it
-  for (const sx of [-0.85, 0.85]) {
-    oak([wl[0] + sx, 0.05, wl[2] - 0.45], [wl[0] + sx, wl[1] + 0.05, wl[2]], 0.12, 0.12, { mat: 'oakDark' });
-    oak([wl[0] + sx, 0.05, wl[2] + 0.45], [wl[0] + sx, wl[1] + 0.05, wl[2]], 0.12, 0.12, { mat: 'oakDark' });
-    oak([wl[0] + sx, 0.08, wl[2] - 0.55], [wl[0] + sx, 0.08, wl[2] + 0.55], 0.14, 0.12, { mat: 'oakDark' });
-  }
-  tube(local.get('oak'), [[wl[0] - 0.95, wl[1], wl[2]], [wl[0] + 0.95, wl[1], wl[2]]], 0.17, { sides: 10, caps: true, seed: rnd() });
-  { const pts = []; for (let i = 0; i <= 160; i++) { const a = i * 0.5; pts.push([wl[0] - 0.55 + i * 0.006, wl[1] + Math.sin(a) * 0.19, wl[2] + Math.cos(a) * 0.19]); } tube(local.get('rope'), pts, 0.016, { sides: 5 }); }
-  for (const a of [0.3, 1.87, 3.44, 5.01]) tube(local.get('oakDark'), [[wl[0] + 0.8, wl[1], wl[2]], [wl[0] + 0.8, wl[1] + Math.sin(a) * 0.95, wl[2] + Math.cos(a) * 0.95]], 0.03, { sides: 6, caps: true });
-  // the counterweight: a rough stone in a rope sling hanging behind the pole
-  const cw = [0, H + 1.2, mastTop[2] - 0.75];
-  oak([0, mastTop[1] - 0.6, mastTop[2]], [0, mastTop[1] - 0.6, cw[2] - 0.05], 0.12, 0.12, { mat: 'oakDark' });
-  tube(local.get('rope'), [[0, mastTop[1] - 0.68, cw[2]], [0, cw[1] + 0.3, cw[2]]], 0.016, { sides: 6 });
-  block(local.get('stonePale'), frame(cw), 0.55, 0.5, 0.5, { r: 0.06, rs: 1, seg: [0.15, 0.15, 0.15], seed: rnd(), noise: 0.02, nf: 3, chip: 0.03 });
-  for (const sx of [-0.12, 0.12]) { const ring = []; for (let k = 0; k <= 12; k++) { const a = (k / 12) * Math.PI * 2; ring.push([cw[0] + sx, cw[1] + Math.cos(a) * 0.27, cw[2] + Math.sin(a) * 0.27]); } tube(local.get('rope'), ring, 0.014, { sides: 5 }); }
-  // coils of rope on the deck and by the windlass
-  for (const c of [[0.8, H + 0.1, -0.5], [wl[0] + 1.4, 0.03, wl[2] + 0.6]]) {
+  // coils of rope on the deck and by the stair foot; straw trodden into the mud round the base
+  for (const c of [[0.8, H + 0.1, -0.5], [-e - 1.1, 0.03, S / 2 + 2.6]]) {
     const pts = [];
     for (let i = 0; i <= 90; i++) { const a = i * 0.42; const rr = 0.22 + 0.06 * Math.sin(i * 0.37) + 0.002 * i; pts.push([c[0] + Math.cos(a) * rr, c[1] + 0.022 * Math.floor(i / 15), c[2] + Math.sin(a) * rr]); }
     tube(local.get('rope'), pts, 0.016, { sides: 5 });
+  }
+  {
+    const acc = local.get('straw');
+    for (let i = 0; i < 700; i++) {
+      const near = rnd() < 0.6;
+      const x = near ? -e + rnd.sym(1.6) : rnd.sym(S / 2 + 1.5), z = near ? S / 2 + 3.6 + rnd.sym(1.8) : rnd.sym(S / 2 + 1.5);
+      const a = rnd() * Math.PI, l = rnd.range(0.05, 0.3);
+      const p0 = [x, 0.012, z], p1 = [x + Math.cos(a) * l, 0.012 + rnd() * 0.012, z + Math.sin(a) * l], pm = [(p0[0] + p1[0]) / 2 + rnd.sym(0.02), 0.02, (p0[2] + p1[2]) / 2 + rnd.sym(0.02)];
+      tube(acc, [p0, pm, p1], rnd.range(0.0016, 0.003), { sides: 3, seed: rnd() });
+    }
   }
   kit.merge(local, F);
   return { deck: [0, H + 0.07, 0], gangwayEnd: gEnd, height: H, stairFoot: [-e, 0, S / 2 + 3.4], windlass: wl };
@@ -389,31 +438,57 @@ export function leafPlatform(kit, F, o = {}) {
   const rnd = makeRand(o.seed ?? 231);
   const H = o.H ?? 1.45, W = o.w ?? 2.4, D = o.d ?? 2.0;
   const local = new Kit(0);
-  const oak = (a, b, w, d, extra = {}) => memberW(local, a, b, w, d, rnd, { mat: 'oak', ...extra });
-  // wheels: hub, eight spokes, felloes, an iron tyre; axles across x under the carriage
-  const R = 0.36;
-  for (const sz of [-1, 1]) {
-    const zc = sz * (D / 2 - 0.35);
-    tube(local.get('iron'), [[-W / 2 - 0.22, R, zc], [W / 2 + 0.22, R, zc]], 0.035, { sides: 8, caps: true });
-    oak([-W / 2 + 0.05, R + 0.1, zc], [W / 2 - 0.05, R + 0.1, zc], 0.14, 0.12, { mat: 'oakDark' });
-    for (const sx of [-1, 1]) {
-      const xc = sx * (W / 2 + 0.12);
-      tube(local.get('oakDark'), [[xc - 0.09, R, zc], [xc + 0.09, R, zc]], 0.075, { sides: 10, caps: true, seed: rnd() });
-      const ring = [];
-      for (let k = 0; k <= 24; k++) { const a = (k / 24) * Math.PI * 2; ring.push([xc, R + Math.sin(a) * (R - 0.04), zc + Math.cos(a) * (R - 0.04)]); }
-      tube(local.get('oakDark'), ring, 0.04, { sides: 6, seed: rnd() });
-      tube(local.get('iron'), ring.map((p) => [p[0], R + (p[1] - R) * (R / (R - 0.04)), zc + (p[2] - zc) * (R / (R - 0.04))]), 0.018, { sides: 6 });
-      const ph = rnd() * 1;
-      for (let k = 0; k < 8; k++) { const a = ph + (k / 8) * Math.PI * 2; tube(local.get('oakDark'), [[xc, R + Math.sin(a) * 0.07, zc + Math.cos(a) * 0.07], [xc, R + Math.sin(a) * (R - 0.07), zc + Math.cos(a) * (R - 0.07)]], 0.016, { sides: 5 }); }
+  const oak = (a, b, w, d, extra = {}) => memberW(local, a, b, w, d, rnd, { mat: rnd() < 0.5 ? 'oak' : 'oakSilver', ...extra });
+  // wheels as a wheelwright makes them: a turned elm nave on the arm of an oak axle tree, twelve
+  // spokes leaning out (the dish), six felloes with a gap at each joint, a dark iron tyre shrunk on;
+  // a linchpin through the arm; mud on the lower part of every wheel
+  const R = 0.42;
+  const wheel = (xc, zc, sx) => {
+    // the nave
+    lathe(local.get('oakDark'), frame([xc, R, zc], [0, 1, 0], [sx, 0, 0]), [[0.0, -0.17], [0.075, -0.17], [0.095, -0.12], [0.11, -0.03], [0.11, 0.03], [0.095, 0.1], [0.08, 0.15], [0.0, 0.15]], 14, { seed: rnd(), wobble: 0.01 });
+    for (const yy of [-0.12, 0.1]) tube(local.get('iron'), [[xc + sx * yy - 0.012, R, zc], [xc + sx * yy + 0.012, R, zc]], 0.1 + (yy > 0 ? -0.012 : 0), { sides: 12 });
+    // the linchpin
+    tube(local.get('iron'), [[xc + sx * 0.2, R + 0.06, zc], [xc + sx * 0.2, R - 0.06, zc]], 0.009, { sides: 5, caps: true });
+    // spokes (dished: the rim stands 5 cm outboard of the nave's middle)
+    const ph = rnd() * 0.5;
+    for (let k = 0; k < 12; k++) {
+      const a = ph + (k / 12) * Math.PI * 2;
+      const c = Math.cos(a), sn = Math.sin(a);
+      tube(local.get('oakSilver'), [[xc, R + sn * 0.1, zc + c * 0.1], [xc + sx * 0.05, R + sn * (R - 0.08), zc + c * (R - 0.08)]], (t) => 0.019 - 0.005 * t, { sides: 6, seed: rnd() });
     }
+    // six felloes, a small gap at each joint
+    for (let f = 0; f < 6; f++) {
+      const a0 = ph + (f / 6) * Math.PI * 2 + 0.012, a1 = ph + ((f + 1) / 6) * Math.PI * 2 - 0.012;
+      const ring = [];
+      for (let k = 0; k <= 8; k++) { const a = a0 + (a1 - a0) * k / 8; ring.push([xc + sx * 0.05, R + Math.sin(a) * (R - 0.045), zc + Math.cos(a) * (R - 0.045)]); }
+      tube(local.get(f % 2 ? 'oakSilver' : 'oak'), ring, 0.042, { sides: 6, seed: rnd(), up: [1, 0, 0] });
+    }
+    // the tyre: a flat dark iron band
+    const tyre = [];
+    for (let k = 0; k <= 36; k++) { const a = (k / 36) * Math.PI * 2; tyre.push([xc + sx * 0.05, R + Math.sin(a) * (R - 0.004), zc + Math.cos(a) * (R - 0.004)]); }
+    strip(local.get('iron'), tyre, 0.012, 0.075, { up: [1, 0, 0] });
+    // mud caked on the lower part of the wheel
+    for (let k = 0; k < 14; k++) {
+      const a = -Math.PI / 2 + rnd.sym(1.1);
+      block(local.get('mud'), frame([xc + sx * 0.05 + rnd.sym(0.03), R + Math.sin(a) * (R - 0.03), zc + Math.cos(a) * (R - 0.03)], [0, -Math.sin(a), -Math.cos(a)], [0, Math.cos(a), -Math.sin(a)]), rnd.range(0.05, 0.12), 0.03, 0.09, { r: 0.012, rs: 1, seg: [0.05, 0.03, 0.05], seed: rnd(), noise: 0.006, nf: 30 });
+    }
+  };
+  for (const sz of [-1, 1]) {
+    const zc = sz * (D / 2 - 0.4);
+    // the axle tree: an oak beam right across under the carriage, its arms running into the naves
+    oak([-W / 2 - 0.16, R, zc], [W / 2 + 0.16, R, zc], 0.15, 0.15, { mat: 'oakDark', bow: 0.0 });
+    for (const sx of [-1, 1]) tube(local.get('iron'), [[sx * (W / 2 + 0.1), R, zc], [sx * (W / 2 + 0.4), R, zc]], 0.04, { sides: 8, caps: true });
+    // bolsters on the axle tree carrying the side beams
+    for (const sx of [-1, 1]) block(local.get('oakDark'), frame([sx * (W / 2 - 0.12), R + 0.13, zc]), 0.22, 0.12, 0.2, { r: 0.012, seg: [0.1, 0.06, 0.1], seed: rnd(), noise: 0.002 });
+    for (const sx of [-1, 1]) wheel(sx * (W / 2 + 0.3), zc, sx);
     // chocks under the near wheels
-    if (sz < 0) for (const sx of [-1, 1]) block(local.get('oakDark'), frame([sx * (W / 2 + 0.12), 0.06, zc - R - 0.02]), 0.12, 0.12, 0.2, { r: 0.006, seg: [0.12, 0.12, 0.2], seed: rnd(), warp: (lx, ly, lz) => [lx, ly - (ly > 0 ? (0.5 - lz / 0.2) * 0.07 : 0), lz] });
+    if (sz < 0) for (const sx of [-1, 1]) block(local.get('oakDark'), frame([sx * (W / 2 + 0.35), 0.06, zc - R - 0.02]), 0.12, 0.12, 0.2, { r: 0.006, seg: [0.12, 0.12, 0.2], seed: rnd(), warp: (lx, ly, lz) => [lx, ly - (ly > 0 ? (0.5 - lz / 0.2) * 0.07 : 0), lz] });
   }
   // carriage: side beams, cross beams, posts with braces, the deck
-  for (const sx of [-1, 1]) oak([sx * (W / 2 - 0.12), R + 0.22, -D / 2 - 0.1], [sx * (W / 2 - 0.12), R + 0.22, D / 2 + 0.1], 0.2, 0.18, { mat: 'oakDark' });
+  for (const sx of [-1, 1]) oak([sx * (W / 2 - 0.12), R + 0.29, -D / 2 - 0.1], [sx * (W / 2 - 0.12), R + 0.29, D / 2 + 0.1], 0.2, 0.18, { mat: 'oakDark' });
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    oak([sx * (W / 2 - 0.12), R + 0.3, sz * (D / 2 - 0.08)], [sx * (W / 2 - 0.12), H - 0.05, sz * (D / 2 - 0.08)], 0.15, 0.15);
-    oak([sx * (W / 2 - 0.12), R + 0.35, sz * (D / 2 - 0.55)], [sx * (W / 2 - 0.12), H - 0.2, sz * (D / 2 - 0.1)], 0.09, 0.08, { mat: 'oakDark' });
+    oak([sx * (W / 2 - 0.12), R + 0.37, sz * (D / 2 - 0.08)], [sx * (W / 2 - 0.12), H - 0.05, sz * (D / 2 - 0.08)], 0.15, 0.15);
+    oak([sx * (W / 2 - 0.12), R + 0.4, sz * (D / 2 - 0.55)], [sx * (W / 2 - 0.12), H - 0.2, sz * (D / 2 - 0.1)], 0.09, 0.08, { mat: 'oakDark' });
   }
   for (const sz of [-1, 1]) oak([-W / 2, H - 0.1, sz * (D / 2 - 0.08)], [W / 2, H - 0.1, sz * (D / 2 - 0.08)], 0.16, 0.14, { mat: 'oakDark' });
   for (let i = 0; i < Math.round(W / 0.2); i++) block(local.get('oak'), frame([-W / 2 + 0.1 + i * (W / Math.round(W / 0.2)), H + 0.03, 0], [0, 0, 1], [0, 1, 0]), D + 0.1, 0.045, W / Math.round(W / 0.2) - 0.006, { r: 0.004, seg: [0.5, 0.045, 0.2], seed: rnd(), noise: 0.002 });
@@ -575,14 +650,15 @@ export function harbor(kit, F, o = {}) {
         warp: (lx, ly, lz) => [lx, ly - (ly > 0.05 ? 0.018 * Math.exp(-((lz + 0.25) ** 2) / 0.25) * Math.exp(-((lx + 0.05) ** 2) / 0.02) : 0), lz],
       });
     }
-    // an iron handrail stanchion line along the open edge (bent, rusted)
-    for (let i = 1; i < stepsN - 3; i += 3) {
-      const x = stepsX + (i + 0.5) * run, y = H - rise * (i + 1);
-      tube(local.get('iron'), [[x, y, stepsW - 0.08], [x + rnd.sym(0.02), y + 0.95, stepsW - 0.08 + rnd.sym(0.02)]], 0.016, { sides: 6, caps: true });
+    // (no handrail: a quay stair of the period has none - a mooring ring let into the face beside it)
+    for (const fx of [0.3, 0.62]) {
+      const x = stepsX + stepsLen * fx, y = H - rise * (stepsN * fx + 1) - 0.45;
+      const pts = [];
+      for (let k = 0; k <= 16; k++) { const a = (k / 16) * Math.PI * 2; pts.push([x + Math.sin(a) * 0.11, y - 0.11 + Math.cos(a) * 0.11, stepsW + 0.05 + 0.012 * Math.cos(a)]); }
+      tube(local.get('iron'), pts, 0.016, { sides: 6 });
+      tube(local.get('iron'), [[x, y, stepsW + 0.06], [x, y, stepsW - 0.08]], 0.028, { sides: 6, caps: true });
+      stain(local, frame([0, 0, stepsW]), x, y - 0.2, 0.18, rnd.range(0.6, 1.1), 'rust', { strength: 0.7, seed: rnd(), z: 0.03 });
     }
-    const rail = [];
-    for (let i = 1; i < stepsN - 3; i += 3) rail.push([stepsX + (i + 0.5) * run, H - rise * (i + 1) + 0.95, stepsW - 0.08]);
-    if (rail.length > 1) tube(local.get('iron'), rail, 0.014, { sides: 6, caps: true });
   }
   // bollards on the quay: squat dressed stone posts, a rope-worn waist, a domed head
   for (let x = -L / 2 + 3; x < L / 2 - 2; x += 7.5) {
@@ -604,6 +680,16 @@ export function harbor(kit, F, o = {}) {
     const pts = [[x, base + 0.3, 0.2], [x + rnd.sym(0.03), H - 0.15, 0.2 + rnd.sym(0.02)]];
     tube(local.get('oakDark'), pts, (t) => 0.16 - 0.015 * t, { sides: 9, caps: true, seed: rnd() });
     for (const yb of [0.6, 2.0]) tube(local.get('iron'), [[x, yb, 0.2], [x, yb + 0.07, 0.2]], 0.168, { sides: 9 });
+  }
+  // scum and foam where the sea laps the quay face and the stair
+  if (o.water !== false) {
+    const wy = (o.waterY ?? 0) + 0.006;
+    const fseg = (x0, x1, z0, dirZ) => grid(local.get('foam'), Math.max(2, Math.round((x1 - x0) / 0.5)), 4, (u, v) => ({ p: [x0 + (x1 - x0) * u, wy, z0 + dirZ * v * 1.4], uv: [x0 + (x1 - x0) * u, v * 1.4], seed: 0.5, ao: 0.85 }), [1, 0, 0], dirZ < 0);
+    fseg(-L / 2, stepsX, 0.0, 1);
+    fseg(stepsX, stepsX + stepsLen, stepsW, 1);
+    fseg(stepsX + stepsLen, L / 2, 0.0, 1);
+    // the stair's low end (a short run across x)
+    grid(local.get('foam'), 3, 4, (u, v) => ({ p: [stepsX + stepsLen + v * 1.2, wy, stepsW * u], uv: [stepsW * u, v * 1.2], seed: 0.5, ao: 0.85 }), [0, 0, 1], true);
   }
   // the water surface (with a long chop) out to the harbour mouth
   if (o.water !== false) {
@@ -634,6 +720,34 @@ export function harbor(kit, F, o = {}) {
     };
     bd(-L / 2 + 9, 16, 10, 7.2, 3);
     bd(L / 2 - 11, 18, 11, 8.0, 5);
+    // goods on the quay before the warehouses: barrels on end and on their sides, crates, sacks,
+    // coiled hawsers, a hand cart; (o.dressing === false: a bare quay)
+    if (o.dressing !== false) {
+      const rr = makeRand((o.seed ?? 251) + 77);
+      const spot = (x, z, k) => {
+        const F0 = frame([x, H, z], [Math.cos(rr.sym(0.4)), 0, Math.sin(rr.sym(0.4))], [0, 1, 0]);
+        if (k === 0) { for (let i = 0; i < 3; i++) barrel(local, sub(F0, [i * 0.62 + rr.sym(0.03), 0, rr.sym(0.05)]), rr); barrel(local, sub(F0, [0.31, 0.83, 0.02]), rr); }
+        else if (k === 1) { crate(local, F0, rr, { w: 0.8, d: 0.6, h: 0.55 }); crate(local, sub(F0, [0.05, 0.57, 0.02], [Math.cos(0.2), 0, Math.sin(0.2)], [0, 1, 0]), rr, { w: 0.62, d: 0.5, h: 0.45 }); crate(local, sub(F0, [0.85, 0, 0.1]), rr, { w: 0.7, d: 0.55, h: 0.5 }); }
+        else if (k === 2) { for (let i = 0; i < 4; i++) sack(local, sub(F0, [i * 0.42 + rr.sym(0.05), 0, rr.sym(0.12)]), rr); }
+        else if (k === 3) { coil(local, F0, rr, { r: 0.42, turns: 7, rad: 0.026 }); barrel(local, sub(F0, [1.0, 0, 0.3]), rr, { onSide: true }); }
+        else handcart(local, F0, rr);
+      };
+      spot(-L / 2 + 4.0, -7.2, 0); spot(-L / 2 + 7.5, -6.8, 1); spot(-L / 2 + 12.5, -7.4, 2); spot(-L / 2 + 15.5, -4.5, 3);
+      spot(L / 2 - 17.0, -7.0, 4); spot(L / 2 - 13.0, -7.3, 0); spot(L / 2 - 8.5, -6.9, 1); spot(L / 2 - 5.0, -7.6, 2);
+      spot(stepsX + stepsLen + 2.5, -1.6, 3);
+    }
+    // the town behind: roofs climbing away from the warehouses (no empty field behind the quay)
+    if (o.town !== false) {
+      const tr = makeRand((o.seed ?? 251) + 91);
+      for (let row = 0; row < 2; row++) {
+        let x = -L / 2 - 2 + tr.range(0, 3);
+        while (x < L / 2 + 2) {
+          const w = tr.range(5.5, 8.0), d = tr.range(7, 9);
+          house(local, yawFrame([x + w / 2, H, -24.5 - row * 10 - tr.range(0, 1.2) - d / 2], tr.sym(0.05)), { w, d, storeys: row ? 2 : 1, roof: tr() < 0.5 ? 'side' : 'front', seed: Math.floor(tr() * 9000) + 600, lod: 'low', party: { left: false, right: false }, cover: tr() < 0.6 ? 'slate' : 'clay' });
+          x += w + tr.range(0.0, 1.5);
+        }
+      }
+    }
   }
   kit.merge(local, F);
   kit.merge(town, F);

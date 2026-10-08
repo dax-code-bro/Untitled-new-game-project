@@ -31,7 +31,8 @@ export function member(kit, F, a, b, w, dep, rnd, o = {}) {
   // slightly out of square: the member is turned a hair about its own axis
   const tw = rnd.sym(0.02);
   const Fm = sub(F, [cx, cy, proud - dep / 2], [ux, uy, 0], [-uy, ux, tw]);
-  const bow = o.bow ?? rnd.sym(Math.min(0.025, L * 0.009));
+  // hewn from crooked trees: 20-45 mm of bow over a storey height
+  const bow = o.bow ?? rnd.sym(Math.min(0.04, L * 0.013));
   const bowZ = rnd.sym(Math.min(0.012, L * 0.004));
   const kink = rnd.sym(0.006);
   const lod = o.lod || 'mid';
@@ -59,19 +60,22 @@ export function member(kit, F, a, b, w, dep, rnd, o = {}) {
 /** A pair of oak pegs (trenails) at face point p, along the direction dir of the tenon. */
 export function pegs(kit, F, p, dir, rnd, o = {}) {
   const n = o.n ?? (rnd() < 0.7 ? 2 : 1);
-  const acc = kit.get(o.mat || 'oak');
+  // riven oak trenails driven home and cut off: flush or a few mm proud, faceted (split, then
+  // shaved), paler than the beam (end grain weathers to grey) - never a dark drilled hole
+  const acc = kit.get(o.mat || 'oakPeg');
   const sp = o.spacing ?? 0.07;
   for (let i = 0; i < n; i++) {
-    const off = (i - (n - 1) / 2) * sp;
-    const x = p[0] + dir[0] * off + rnd.sym(0.006), y = p[1] + dir[1] * off + rnd.sym(0.006);
-    const z0 = (o.z ?? 0) - 0.01, z1 = (o.z ?? 0) + rnd.range(0.007, 0.014);
-    const r = rnd.range(0.012, 0.017);
-    const tilt = [rnd.sym(0.08), rnd.sym(0.08)];
+    const off = (i - (n - 1) / 2) * sp + rnd.sym(0.008);
+    const x = p[0] + dir[0] * off + rnd.sym(0.008), y = p[1] + dir[1] * off + rnd.sym(0.008);
+    const z0 = (o.z ?? 0.008) - 0.012, z1 = (o.z ?? 0.008) + rnd.range(0.0, 0.005);
+    const r = rnd.range(0.011, 0.016);
+    const tilt = [rnd.sym(0.05), rnd.sym(0.05)];
     const pts = [[x, y, z0], [x + tilt[0] * (z1 - z0), y + tilt[1] * (z1 - z0), z1]].map((q) => {
       const w = [F[0] + q[0] * F[3] + q[1] * F[6] + q[2] * F[9], F[1] + q[0] * F[4] + q[1] * F[7] + q[2] * F[10], F[2] + q[0] * F[5] + q[1] * F[8] + q[2] * F[11]];
       return w;
     });
-    tube(acc, pts, r, { sides: 7, caps: true, seed: rnd() });
+    const ph = rnd() * 6;
+    tube(acc, pts, r, { sides: rnd() < 0.5 ? 7 : 8, caps: true, seed: rnd(), rad: (k) => 1 + 0.12 * Math.sin(k * 2.3 + ph) });
   }
 }
 
@@ -169,7 +173,11 @@ export function framedWall(kit, F, L, H, o = {}) {
   const lod = o.lod || 'mid';
   const dep = o.dep ?? 0.2;
   // sections vary like real hewn timber: posts 220-300 mm, studs 120-180 mm
-  const postW = o.postW ?? rnd.range(0.22, 0.3), studW = o.studW ?? 0.14, sillH = o.sillH ?? rnd.range(0.2, 0.26), plateH = o.plateH ?? rnd.range(0.18, 0.24);
+  // (round 2: studs 150-260 mm - hewn from small trees, never planks; the structural members -
+  // sill, plate, posts, rails - stand a few mm proud of the studs and braces, whose ends run 3-4
+  // cm in behind them: every stud meets its rail, whatever the bows)
+  const postW = o.postW ?? rnd.range(0.24, 0.32), studW = o.studW ?? rnd.range(0.15, 0.19), sillH = o.sillH ?? rnd.range(0.22, 0.3), plateH = o.plateH ?? rnd.range(0.19, 0.25);
+  const pS = () => rnd.range(0.006, 0.013), pI = () => rnd.range(-0.008, -0.001), hb = () => rnd.sym(0.012);
   const mat = o.mat || 'oak';
   const M = [];
   const add = (a, b, w, extra = {}) => { const m = member(extra.kit || kit, F, a, b, w, extra.dep ?? dep, rnd, { lod, mat, ...extra }); if (m) M.push(m); return m; };
@@ -177,8 +185,8 @@ export function framedWall(kit, F, L, H, o = {}) {
   const peg = (p, dir) => PEG.push([p, dir]);
   const yS = o.sill === false ? 0 : sillH, yP = H - (o.plate === false ? 0 : plateH);
   // (o.sillKit: the sill / bressumer goes into its own kit - a beam that can come down, 3C)
-  if (o.sill !== false) add([0, sillH / 2], [L, sillH / 2], sillH, { dep: dep + 0.03, kit: o.sillKit });
-  if (o.plate !== false) add([0, H - plateH / 2], [L, H - plateH / 2], plateH, { dep: dep + 0.02 });
+  if (o.sill !== false) add([0, sillH / 2], [L, sillH / 2], sillH, { dep: dep + 0.03, kit: o.sillKit, proud: pS(), bow: o.sillBow ?? hb() });
+  if (o.plate !== false) add([0, H - plateH / 2], [L, H - plateH / 2], plateH, { dep: dep + 0.02, proud: pS(), bow: hb() });
   // posts: corners and bay posts
   const bays = o.bays ?? Math.max(1, Math.round(L / 3.2));
   const posts = [];
@@ -189,7 +197,7 @@ export function framedWall(kit, F, L, H, o = {}) {
   const inWin = (x, hw = 0) => wins.find((w) => x + hw > w.x - 0.01 && x - hw < w.x + w.w + 0.01);
   for (const x of posts) {
     if (inWin(x, postW / 2)) continue;
-    add([x, yS], [x, yP], postW, { dep: dep + 0.02 });
+    add([x, yS - 0.04], [x, yP + 0.04], postW, { dep: dep + 0.02, proud: pS() - 0.003 });
     peg([x, yS - sillH / 2], [1, 0]); peg([x, yP + plateH / 2], [1, 0]);
   }
   // braces: from each corner post down to the sill, away from the corner (tension braces)
@@ -200,8 +208,8 @@ export function framedWall(kit, F, L, H, o = {}) {
     if (o.cornerL !== false) braces.push([postW, yP - 0.25, postW + span, yS]);
     if (o.cornerR !== false) braces.push([L - postW, yP - 0.25, L - postW - span, yS]);
     braces = braces.filter((b) => !inWin((b[0] + b[2]) / 2, Math.abs(b[2] - b[0]) / 2));
-    for (const b of braces) { add([b[0] - Math.sign(b[2] - b[0]) * 0.02, b[1]], [b[2], b[3] + 0.02], bw); }
-  } else if (Array.isArray(o.braces)) { braces = o.braces; for (const b of braces) add([b[0], b[1]], [b[2], b[3]], studW * 1.05); }
+    for (const b of braces) { add([b[0] - Math.sign(b[2] - b[0]) * 0.06, b[1]], [b[2], b[3] - 0.03], bw, { proud: rnd.range(0.0, 0.005) }); }
+  } else if (Array.isArray(o.braces)) { braces = o.braces; for (const b of braces) add([b[0], b[1]], [b[2], b[3]], studW * 1.05, { proud: rnd.range(0.0, 0.005) }); }
   const braceAt = (x) => {
     // y-intervals cut out of a stud at x by braces
     const cuts = [];
@@ -221,18 +229,18 @@ export function framedWall(kit, F, L, H, o = {}) {
   // window framing
   for (const w of wins) {
     const wx0 = w.x, wx1 = w.x + w.w, wy0 = w.y, wy1 = w.y + w.h;
-    add([wx0 - studW / 2, yS], [wx0 - studW / 2, yP], studW);
-    add([wx1 + studW / 2, yS], [wx1 + studW / 2, yP], studW);
-    add([wx0 - studW, wy0 - studW / 2], [wx1 + studW, wy0 - studW / 2], studW * 1.1);   // window sill rail
-    add([wx0 - studW, wy1 + studW / 2], [wx1 + studW, wy1 + studW / 2], studW * 1.1);   // head rail
+    add([wx0 - studW / 2, yS - 0.035], [wx0 - studW / 2, yP + 0.035], studW * 1.15, { proud: pI() + 0.004 });
+    add([wx1 + studW / 2, yS - 0.035], [wx1 + studW / 2, yP + 0.035], studW * 1.15, { proud: pI() + 0.004 });
+    add([wx0 - studW, wy0 - studW / 2], [wx1 + studW, wy0 - studW / 2], studW * 1.1, { proud: pS(), bow: rnd.sym(0.006) });   // window sill rail
+    add([wx0 - studW, wy1 + studW / 2], [wx1 + studW, wy1 + studW / 2], studW * 1.1, { proud: pS(), bow: rnd.sym(0.006) });   // head rail
     peg([wx0 - studW / 2, wy0 - studW / 2], [0, 1]); peg([wx1 + studW / 2, wy0 - studW / 2], [0, 1]);
     peg([wx0 - studW / 2, wy1 + studW / 2], [0, 1]); peg([wx1 + studW / 2, wy1 + studW / 2], [0, 1]);
     // short studs under the sill and over the head
     const ns = Math.max(0, Math.round(w.w / (o.studs || 0.6)) - 1);
     for (let k = 1; k <= ns; k++) {
       const x = wx0 + w.w * k / (ns + 1);
-      if (wy0 - studW - yS > 0.08) add([x, yS], [x, wy0 - studW], studW * 0.9);
-      if (yP - (wy1 + studW) > 0.08) add([x, wy1 + studW], [x, yP], studW * 0.9);
+      if (wy0 - studW - yS > 0.08) add([x, yS - 0.035], [x, wy0 - studW + 0.035], studW * 0.9, { proud: pI() });
+      if (yP - (wy1 + studW) > 0.08) add([x, wy1 + studW - 0.035], [x, yP + 0.035], studW * 0.9, { proud: pI() });
     }
   }
   if (railY > 0) {
@@ -251,7 +259,7 @@ export function framedWall(kit, F, L, H, o = {}) {
           const t = (railY - br[1]) / (br[3] - br[1]); const xc = br[0] + (br[2] - br[0]) * t;
           parts = parts.flatMap(([p0, p1]) => (xc > p0 && xc < p1 ? [[p0, xc - studW * 0.8], [xc + studW * 0.8, p1]] : [[p0, p1]]));
         }
-        for (const [p0, p1] of parts) if (p1 - p0 > 0.12) { add([p0, railY], [p1, railY], studW * 1.1); peg([p0 + 0.04, railY], [0, 1]); }
+        for (const [p0, p1] of parts) if (p1 - p0 > 0.12) { add([p0 - 0.03, railY], [p1 + 0.03, railY], studW * 1.15, { proud: pS() - 0.002, bow: hb() }); peg([p0 + 0.05, railY], [0, 1]); }
       }
     }
   }
@@ -271,7 +279,7 @@ export function framedWall(kit, F, L, H, o = {}) {
           let parts = [[s0, s1]];
           for (const [c0, c1] of cuts) parts = parts.flatMap(([p0, p1]) => (c1 <= p0 || c0 >= p1 ? [[p0, p1]] : [[p0, Math.min(p1, c0)], [Math.max(p0, c1), p1]]).filter(([q0, q1]) => q1 - q0 > 0.08));
           for (const [p0, p1] of parts) {
-            add([x, p0], [x, p1], studW * rnd.range(0.86, 1.28));
+            add([x, p0 - 0.035], [x, p1 + 0.035], studW * rnd.range(0.85, 1.45), { proud: pI() });
             if (Math.abs(p0 - yS) < 0.01) peg([x, yS - sillH * 0.5], [1, 0]);
             if (Math.abs(p1 - yP) < 0.01) peg([x, yP + plateH * 0.5], [1, 0]);
           }
@@ -279,7 +287,7 @@ export function framedWall(kit, F, L, H, o = {}) {
       }
     }
   }
-  for (const [p, dir] of PEG) pegs(kit, F, p, dir, rnd, { z: 0.004, n: rnd() < 0.55 ? 1 : 2 });
+  for (const [p, dir] of PEG) pegs(kit, F, p, dir, rnd, { z: 0.009, n: rnd() < 0.55 ? 1 : 2 });
   // plaster infill (one surface behind the frame), with the window holes
   if (o.plaster !== null) {
     infill(kit, F, [[0, 0], [L, 0], [L, H], [0, H]], M, wins.map((w) => ({ x0: w.x + 0.02, y0: w.y + 0.02, x1: w.x + w.w - 0.02, y1: w.y + w.h - 0.02 })), rnd, { mat: o.plaster || 'plaster', step: lod === 'hero' ? 0.05 : lod === 'low' ? 0.2 : 0.09, seed: o.plasterSeed });
@@ -327,9 +335,14 @@ export function gableFrame(kit, F, L, rise, o = {}) {
   const yAt = (x) => rise * (1 - Math.abs(x - L / 2) / (L / 2));       // the rafter line (soffit of the verge)
   const inset = o.inset ?? 0.12;                                           // the members stop under the bargeboards
   const cy = rise * (o.collar ?? 0.55);
-  // principal rafters (the outer frame of the gable; the bargeboards sit outside them)
-  add([0.06, 0.08], [L / 2, rise - 0.08], studW * 1.7, { bow: 0.0 });
-  add([L - 0.06, 0.08], [L / 2, rise - 0.08], studW * 1.7, { bow: 0.0 });
+  // principal rafters (the outer frame of the gable; the bargeboards sit outside them): their
+  // top arris stays 7 cm under the rafter line - the roof's deck and tiles lie over them (a
+  // principal standing up through the tiles read as a grey strip lying on the roof)
+  const pW = studW * 1.7, pAng0 = Math.atan2(rise, L / 2);
+  const pOff = 0.07 + (pW / 2) / Math.cos(pAng0);                       // centre line below the rafter line (vertical)
+  const pX0 = (0.1 + pOff) / (rise / (L / 2));                          // where it sits on the wall plate
+  add([pX0, 0.1], [L / 2, rise - pOff], pW, { bow: 0.0, proud: 0.012 });
+  add([L - pX0, 0.1], [L / 2, rise - pOff], pW, { bow: 0.0, proud: 0.012 });
   const halfAt = (y) => (L / 2) * (1 - y / rise);
   const wins = o.windows || [];
   // a vertical member at x from y0 to y1, stopping short of any window (and its framing)
@@ -339,7 +352,7 @@ export function gableFrame(kit, F, L, rise, o = {}) {
       if (x < wn.x - 0.14 || x > wn.x + wn.w + 0.14) continue;
       parts = parts.flatMap(([a, b]) => [[a, Math.min(b, wn.y - 0.13)], [Math.max(a, wn.y + wn.h + 0.13), b]]).filter(([a, b]) => b - a > 0.08);
     }
-    for (const [a, b] of parts) add([x, a], [x, b], w);
+    for (const [a, b] of parts) add([x, a], [x, b], w, { proud: rnd.range(-0.008, -0.002) });
   };
   const hcut = (y, x0, x1, w) => {
     let parts = [[x0, x1]];
@@ -347,23 +360,23 @@ export function gableFrame(kit, F, L, rise, o = {}) {
       if (y < wn.y - 0.14 || y > wn.y + wn.h + 0.14) continue;
       parts = parts.flatMap(([a, b]) => [[a, Math.min(b, wn.x - 0.13)], [Math.max(a, wn.x + wn.w + 0.13), b]]).filter(([a, b]) => b - a > 0.08);
     }
-    for (const [a, b] of parts) add([a, y], [b, y], w);
+    for (const [a, b] of parts) add([a, y], [b, y], w, { proud: rnd.range(0.004, 0.01), bow: rnd.sym(0.01) });
   };
   hcut(cy, L / 2 - halfAt(cy) + inset, L / 2 + halfAt(cy) - inset, studW * 1.15);       // collar
   if (o.kingPost !== false) vert(L / 2, -0.01, rise - 0.1, studW * 1.25);
   const n = Math.max(0, Math.round((L / 2) / (o.studs ?? 0.6)) - 1);
-  // the studs run up into the principal rafters (their centre line, less half their depth)
-  const pAng = Math.atan2(rise - 0.16, L / 2 - 0.06);
-  const pHalf = (studW * 1.4) / 2 / Math.cos(pAng);
-  const princAt = (x) => { const xx = Math.min(x, L - x); return 0.08 + (rise - 0.16) * (xx - 0.06) / (L / 2 - 0.06); };
+  // the studs run up into the principal rafters: tenoned into its lower arris (they stop 3 cm
+  // inside it, behind its face - no gap, whatever the bows)
+  const pHalf = (pW / 2) / Math.cos(pAng0);
+  const princAt = (x) => { const xx = Math.min(x, L - x); return rise * xx / (L / 2) - pOff; };
   for (let k = 1; k <= n; k++) for (const side of [-1, 1]) {
     const x = L / 2 + side * (L / 2) * k / (n + 1);
-    const top = princAt(x) - pHalf * 0.3;          // tenoned into the principal rafter (no gap under it)
+    const top = princAt(x) - pHalf + 0.035;         // tenoned into the principal rafter (no gap under it)
     if (top < 0.25) continue;
     if (Math.abs(x - L / 2) < 0.2) continue;
-    const sw = studW * rnd.range(0.9, 1.3);
-    if (top > cy + studW) { vert(x, -0.01, cy - studW * 0.55, sw); vert(x, cy + studW * 0.55, top, sw); }
-    else vert(x, -0.01, top, sw);
+    const sw = studW * rnd.range(0.95, 1.5);
+    if (top > cy + studW) { vert(x, -0.04, cy - studW * 0.575 + 0.035, sw); vert(x, cy + studW * 0.575 - 0.035, top, sw); }
+    else vert(x, -0.04, top, sw);
   }
   infill(kit, F, [[0, 0], [L, 0], [L / 2, rise]], M, wins.map((w) => ({ x0: w.x + 0.02, y0: w.y + 0.02, x1: w.x + w.w - 0.02, y1: w.y + w.h - 0.02 })), rnd, { mat: o.plaster || 'plaster', step: lod === 'hero' ? 0.05 : lod === 'low' ? 0.2 : 0.09, seed: o.plasterSeed });
   return { members: M };

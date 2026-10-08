@@ -16,6 +16,7 @@
 // x along the face (0..L), y up, z out of the wall. Stones stand proud by 8-30 mm.
 import * as THREE from 'three';
 import { block, shapeFace, sub, makeRand, clamp, xf, tube } from './core.js';
+import { stain } from './weathering.js';
 
 /** Course heights (bottom up) filling H: [{ y, h }]. */
 export function courses(rnd, H, { min = 0.18, max = 0.34, joint = 0.015, plinth = 0 } = {}) {
@@ -33,17 +34,24 @@ export function courses(rnd, H, { min = 0.18, max = 0.34, joint = 0.015, plinth 
   return out;
 }
 
-// stone styles: rounding, pillow, noise, chips, protrusion, tilt, length factors, depth
+// stone styles: rounding (m, per stone), pillow, noise, chips, protrusion of the face's flat
+// (relative to the mortar bed, m), tilt, length factors, depth.
+// Round 2: the stones are SET IN the mortar, not stuck on it - the flat of a face stands only
+// 0-12 mm proud of the bed, so the rounded arrises dive under it and the visible outline of every
+// stone is where its pillowed, uneven face comes out of the mortar (irregular, never a rounded
+// rectangle with a drop shadow); the rounding radius varies stone to stone (worn / sharp arrises)
 const STYLE = {
-  ashlar: { r: [0.008, 0.016], pillow: [0.001, 0.004], noise: 0.002, nf: 7, chip: 0.008, prot: [0.002, 0.012], tilt: 0.005, len: [1.2, 3.0], j: 0.007, dep: [0.18, 0.32], sizeJit: 0.004, split: 0 },
-  squared: { r: [0.007, 0.015], pillow: [0.002, 0.006], noise: 0.006, nf: 4, chip: 0.014, prot: [0.006, 0.018], tilt: 0.012, len: [1.0, 2.6], j: 0.012, dep: [0.15, 0.3], sizeJit: 0.008, split: 0.12, outline: 0.03, shrink: 0.05 },
-  // (packed tight: 10-25 mm joints, each stone its own projection and a convex, pitched face)
-  rubble: { r: [0.005, 0.012], pillow: [0.005, 0.014], noise: 0.02, nf: 5.5, chip: 0.035, prot: [0.004, 0.04], tilt: 0.03, len: [0.7, 2.4], j: 0.014, dep: [0.14, 0.28], sizeJit: 0.008, split: 0.25, outline: 0.04, shrink: 0.03 },
-  // rubble under generations of lime wash: the coats fill the joints nearly flush and soften every arris
-  washed: { r: [0.01, 0.018], pillow: [0.004, 0.01], noise: 0.008, nf: 3.5, chip: 0.003, prot: [-0.006, 0.002], tilt: 0.01, len: [0.7, 2.4], j: 0.012, dep: [0.14, 0.28], sizeJit: 0.006, split: 0.25, outline: 0.025, shrink: 0.02 },
+  ashlar: { r: [0.003, 0.014], pillow: [0.001, 0.004], noise: 0.002, nf: 7, chip: 0.008, prot: [0.001, 0.007], tilt: 0.004, len: [1.2, 3.0], j: 0.006, dep: [0.18, 0.32], sizeJit: 0.004, split: 0, outline: 0.006 },
+  squared: { r: [0.005, 0.018], pillow: [0.002, 0.007], noise: 0.004, nf: 4, chip: 0.014, prot: [0.001, 0.009], tilt: 0.01, len: [0.8, 2.6], j: 0.009, dep: [0.15, 0.3], sizeJit: 0.008, split: 0.14, outline: 0.03, shrink: 0.05 },
+  // random rubble brought to courses: round-edged field / quarry stones of every size bedded deep
+  // in lime, 15-35 mm of mortar showing between them
+  rubble: { r: [0.008, 0.022], pillow: [0.005, 0.013], noise: 0.006, nf: 5.5, chip: 0.03, prot: [0.0, 0.008], tilt: 0.02, len: [0.6, 2.4], j: 0.009, dep: [0.14, 0.28], sizeJit: 0.01, split: 0.28, outline: 0.06, shrink: 0.04 },
+  // rubble under generations of lime wash: the coats soften every arris but the stones still show
+  // as low lumps under the wash (no wallpaper)
+  washed: { r: [0.018, 0.035], pillow: [0.006, 0.016], noise: 0.006, nf: 3.5, chip: 0.004, prot: [0.0, 0.008], tilt: 0.012, len: [0.7, 2.4], j: 0.014, dep: [0.14, 0.28], sizeJit: 0.008, split: 0.25, outline: 0.05, shrink: 0.03 },
   // squared stone pointed flush (a lodge, a cottage): tight joints, faces barely proud of the pointing
-  pointed: { r: [0.008, 0.016], pillow: [0.003, 0.008], noise: 0.006, nf: 4, chip: 0.012, prot: [0.0, 0.008], tilt: 0.008, len: [1.0, 2.6], j: 0.01, dep: [0.15, 0.3], sizeJit: 0.008, split: 0.12, outline: 0.035, shrink: 0.018 },
-  dressed: { r: [0.008, 0.014], pillow: [0.001, 0.004], noise: 0.002, nf: 7, chip: 0.006, prot: [0.01, 0.018], tilt: 0.004, len: [1, 1], j: 0.01, dep: [0.2, 0.3], sizeJit: 0.003, split: 0 },
+  pointed: { r: [0.008, 0.02], pillow: [0.002, 0.007], noise: 0.004, nf: 4, chip: 0.012, prot: [-0.004, 0.003], tilt: 0.008, len: [0.9, 2.6], j: 0.01, dep: [0.15, 0.3], sizeJit: 0.008, split: 0.14, outline: 0.03, shrink: 0.02 },
+  dressed: { r: [0.004, 0.016], pillow: [0.001, 0.004], noise: 0.002, nf: 7, chip: 0.008, prot: [0.004, 0.012], tilt: 0.004, len: [1, 1], j: 0.008, dep: [0.2, 0.3], sizeJit: 0.003, split: 0, outline: 0.006 },
 };
 export const LOD = {
   hero: { seg: 0.07, rs: 2, noct: 1 },
@@ -67,7 +75,9 @@ function stone(kit, F, matName, x0, x1, y0, y1, dep, rnd, st, lod, extra = {}) {
   const Xr = [X[0], X[1], X[2] + ay], Yr = [Y[0], Y[1], Y[2] + ax];
   const Fs = sub(F, [cx, cy, cz], Xr, Yr);
   const sx = w - rnd.range(0, st.sizeJit), sy = h - rnd.range(0, st.sizeJit);
-  const r = Math.min(rnd.range(st.r[0], st.r[1]) * (extra.rMul ?? 1), 0.4 * Math.min(sx, sy));
+  // every stone its own arris: some sharp, some worn round (a skewed spread: most are mid)
+  const rq = rnd();
+  const r = Math.min((st.r[0] + (st.r[1] - st.r[0]) * (0.5 * rq + 0.5 * rq * rq)) * (extra.rMul ?? 1), 0.4 * Math.min(sx, sy), 0.45 * dep);
   const acc = kit.get(matName);
   let warp = extra.warp;
   if (!warp && st.outline) {
@@ -88,10 +98,12 @@ function stone(kit, F, matName, x0, x1, y0, y1, dep, rnd, st, lod, extra = {}) {
     block(acc, Fs, fx, fy, dep, { r: 0, seg: 9, skip: 32, seed: rnd(), aoDepth: lod.protMul ? 0 : prot + 0.02, aoFloor: 0.35, uvMode: 'box' });
     return;
   }
+  // (baked occlusion: the stone darkens down its rounded arris toward the bed it is set in - dust
+  // and damp collect in the joint; what is below the mortar is hidden anyway)
   block(acc, Fs, sx, sy, dep, {
     r, rs: lod.rs, seg: [Math.max(lod.seg, w / 6), Math.max(lod.seg, h / 4), 9], skip: 32,
     seed: rnd(), noise: st.noise * (extra.noiseMul ?? 1) * (lod.noiseMul ?? 1), noct: lod.noct ?? 2, nf: st.nf, pillow: rnd.range(st.pillow[0], st.pillow[1]) * (extra.pillowMul ?? 1),
-    chip: st.chip, aoDepth: prot + 0.025, aoFloor: 0.3, uvMode: 'box', warp, aoOpen: extra.aoOpen,
+    chip: st.chip, aoDepth: Math.max(0.006, prot + 0.7 * r), aoFloor: 0.45, uvMode: 'box', warp, aoOpen: extra.aoOpen,
   });
 }
 
@@ -220,15 +232,15 @@ export function masonryFace(kit, F, L, H, o = {}) {
         if (yb - ya < 0.05) continue;
         const lng = (ci % 2 === 0) ? jw : jw * 0.6;
         const rng2 = (ci % 2 === 0) ? jw * 0.6 : jw;
-        stone(kit, F, dmat, x0 - lng - j * 0.5, x0, ya, yb - (yb < spring - 0.01 ? 0 : 0.004), rev, rnd, ds, lod, { prot: 0.012, aoOpen: 2 });
-        stone(kit, F, dmat, x1, x1 + rng2 + j * 0.5, ya, yb - (yb < spring - 0.01 ? 0 : 0.004), rev, rnd, ds, lod, { prot: 0.012, aoOpen: 1 });
+        stone(kit, F, dmat, x0 - lng - j * 0.5, x0, ya, yb - (yb < spring - 0.01 ? 0 : 0.004), rev, rnd, ds, lod, { prot: 0.009, aoOpen: 2 });
+        stone(kit, F, dmat, x1, x1 + rng2 + j * 0.5, ya, yb - (yb < spring - 0.01 ? 0 : 0.004), rev, rnd, ds, lod, { prot: 0.009, aoOpen: 1 });
       }
       zones.push({ x0: x0 - jw - j, x1: x1 + jw + j, y0, y1: spring, kind: 'jamb' });
     } else zones.push({ x0, x1, y0, y1: spring, kind: 'void' });
     if (head === 'lintel') {
       const lh = op.lintelH ?? clamp(0.18 + op.w * 0.08, 0.2, 0.4);
       const bear = op.bearing ?? 0.18 + rnd() * 0.08;
-      stone(kit, F, dmat, x0 - bear, x1 + bear, y1 + 0.005, y1 + lh, rev + 0.05, rnd, ds, lod, { prot: 0.016 });
+      stone(kit, F, dmat, x0 - bear, x1 + bear, y1 + 0.005, y1 + lh, rev + 0.05, rnd, ds, lod, { prot: 0.011 });
       zones.push({ x0: x0 - bear, x1: x1 + bear, y0: y1, y1: y1 + lh + 0.01, kind: 'lintel' });
     } else if (isArch) {
       // 'archOpen': the voussoirs come from the other face (they run through the wall)
@@ -246,6 +258,31 @@ export function masonryFace(kit, F, L, H, o = {}) {
         prot: 0.055, warp: (lx, ly, lz) => [lx, ly - Math.max(0, lz - ((rev + 0.06) / 2 - 0.1)) * 0.3 * (ly > 0 ? 1 : 0), lz],
       });
       zones.push({ x0: sx0, x1: sx1, y0: y0 - sh - 0.005, y1: y0, kind: 'sill' });
+      // the rain leaves the sill at its ends and along its drip: dirty streaks down the wall
+      if (o.stains !== false && !lod.flat) {
+        stain(kit, F, sx0 + 0.07, y0 - sh, 0.16, rnd.range(0.4, 1.0), 'dirt', { strength: 0.65, seed: rnd() });
+        stain(kit, F, sx1 - 0.07, y0 - sh, 0.16, rnd.range(0.4, 1.0), 'dirt', { strength: 0.65, seed: rnd() });
+        stain(kit, F, (sx0 + sx1) / 2, y0 - sh, (sx1 - sx0) * 0.85, rnd.range(0.25, 0.6), 'dirt', { strength: 0.4, seed: rnd() });
+      }
+    }
+    // a blocked-up opening (a window walled up long ago): its dressed jambs and head stay, the hole
+    // is filled with smaller, different rubble set back a few cm in its own mortar
+    if (op.blocked) {
+      const Fb = sub(F, [0, 0, -0.03]);
+      const top = isArch ? spring + op.w / 2 * 0.98 : y1;
+      const Cb = courses(rnd, top - y0 - 0.01, { min: 0.11, max: 0.2 });
+      let pj = [];
+      const bst = { ...STYLE.rubble, outline: 0.07 };
+      for (const c of Cb) {
+        const yy = y0 + 0.005 + c.y;
+        // (under an arched head the courses narrow to the intrados)
+        let xa = x0 + 0.012, xb = x1 - 0.012;
+        if (isArch && yy + c.h > spring) { const r = op.w / 2, dy = Math.min(r, yy + c.h - spring); const hw = Math.sqrt(Math.max(0, r * r - dy * dy)) - 0.015; xa = (x0 + x1) / 2 - hw; xb = (x0 + x1) / 2 + hw; }
+        if (xb - xa < 0.12) continue;
+        const jn = [];
+        fillSegment(kit, Fb, op.blockMat || mat, xa, xb, yy, c.h, rnd, bst, lod, pj, jn, [0.1, 0.18]);
+        pj = jn;
+      }
     }
   }
   // ---- regular courses
@@ -297,7 +334,7 @@ export function masonryFace(kit, F, L, H, o = {}) {
     for (const [ci, c] of C.entries()) {
       const a = q.a(ci), b = q.b(ci);
       if (a <= 0) continue;
-      const prot = 0.014;
+      const prot = 0.01;
       // the corner block: x from L - a .. L + prot (face), z from -b .. prot (into the return face)
       const Fq = sub(F, [L - a / 2 + prot / 2, c.y + c.h / 2, -b / 2 + prot / 2]);
       const dep = b + prot;
@@ -341,12 +378,24 @@ export function masonryFace(kit, F, L, H, o = {}) {
     // reveals (the sides / soffit of each opening through the full thickness)
     for (const op of ops) {
       const xa = op.x, xb = op.x + op.w, ya = op.y, yb = op.y + op.h;
-      const strip = (p0, p1) => {  // a quad from face point p0 to p1, extruded along -z by T, facing into the opening
+      // (a blocked opening: the reveal is only as deep as the fill is set back, closed by its own bed)
+      const DT = op.blocked ? 0.03 : T;
+      const strip = (p0, p1) => {  // a quad from face point p0 to p1, extruded along -z by DT, facing into the opening
         const a = macc.vcount;
-        const P = [[...p0, 0], [...p1, 0], [...p1, -T], [...p0, -T]].map((q) => xf(F, q[0], q[1], q[2]));
-        for (const [k, q] of P.entries()) macc.v(q[0], q[1], q[2], k < 2 ? 0 : T, 0, 0.5, 0.5, 0, 1, 0, 0);
+        const P = [[...p0, 0], [...p1, 0], [...p1, -DT], [...p0, -DT]].map((q) => xf(F, q[0], q[1], q[2]));
+        for (const [k, q] of P.entries()) macc.v(q[0], q[1], q[2], k < 2 ? 0 : DT, 0, 0.5, 0.5, 0, 1, 0, 0);
         macc.q(a, a + 1, a + 2, a + 3);
       };
+      if (op.blocked) {
+        const hb = new THREE.Shape();
+        if ((op.head || 'lintel').startsWith('arch')) {
+          const r = op.w / 2, sp = yb - r;
+          hb.moveTo(xa, ya); hb.lineTo(xb, ya); hb.lineTo(xb, sp);
+          for (let k = 1; k <= 16; k++) { const an = (k / 16) * Math.PI; hb.lineTo(xa + r + Math.cos(an) * r, sp + Math.sin(an) * r); }
+          hb.lineTo(xa, ya);
+        } else { hb.moveTo(xa, ya); hb.lineTo(xb, ya); hb.lineTo(xb, yb); hb.lineTo(xa, yb); hb.lineTo(xa, ya); }
+        shapeFace(macc, sub(F, [0, 0, -DT]), hb, { seed: rnd() });
+      }
       if ((op.head || 'lintel').startsWith('arch')) {
         const r = op.w / 2, sp = yb - r;
         strip([xa, sp], [xa, ya]); strip([xb, ya], [xb, sp]);
@@ -378,17 +427,20 @@ export function archRing(kit, F, matName, cx, cy, r, vh, dep, rnd, lod, o = {}) 
     const am = (a0 + a1) / 2;
     const span = (a0 - a1) * rm - j;
     const key = i === (n - 1) / 2;
-    const vhh = vh * (key ? 1.12 : 1) + rnd.sym(0.01);
-    const Fv = sub(F, [cx, cy, prot - dep / 2]);
+    const vhh = vh * (key ? 1.15 : 1) + rnd.sym(0.012);
+    // every voussoir set by hand: its own face plane (a 2-5 mm step to its neighbours), a hair of
+    // twist, a little settled out of the true curve
+    const step = rnd.sym(0.0035), twist = rnd.sym(0.006), drop = rnd.sym(0.003);
+    const Fv = sub(F, [cx, cy + drop, prot + step - dep / 2]);
     // block in (tangent, radial, depth) space, warped into the annular sector
     const warp = (lx, ly, lz) => {
-      const th = am - lx / rm;
+      const th = am - lx / rm + twist * (ly / vhh);
       const rho = rm + ly + (key ? (vhh - vh) / 2 : 0);
       return [Math.cos(th) * rho, Math.sin(th) * rho, lz];
     };
     block(acc, Fv, span, vhh, dep, lod.flat ? { r: 0, seg: 9, seed: rnd(), warp, uvMode: 'box' } : {
-      r: rnd.range(ds.r[0], ds.r[1]), rs: lod.rs, seg: [Math.max(0.05, span / 4), Math.max(lod.seg, vhh / 3), Math.max(lod.seg, dep / 6)],
-      seed: rnd(), noise: ds.noise, nf: ds.nf, pillow: 0.002, chip: 0.007, warp, uvMode: 'box', skip: 0,
+      r: rnd.range(ds.r[0], ds.r[1]) * 1.3, rs: lod.rs, seg: [Math.max(0.05, span / 4), Math.max(lod.seg, vhh / 3), Math.max(lod.seg, dep / 6)],
+      seed: rnd(), noise: ds.noise * 1.5, nf: ds.nf, pillow: rnd.range(0.001, 0.004), chip: 0.012, warp, uvMode: 'box', skip: 0,
     });
   }
 }

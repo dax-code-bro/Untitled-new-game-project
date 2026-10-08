@@ -10,11 +10,12 @@
 //
 // Frame F: the opening's bottom-left corner on the wall face (x along, y up, z out).
 import { block, sub, frame, makeRand, tube, xf, clamp } from './core.js';
+import { member } from './timber.js';
 
 /** Glazing / portal quad in window space: corners in face coords (x0,y0)-(x1,y1) at depth z. */
 export function glassQuad(kit, F, x0, y0, x1, y1, z, o) {
   const acc = kit.get(o.portal ? 'portal' : 'glass');
-  const typ = o.portal ? 0 : o.glazing === 'square' ? 2 : o.glazing === 'plain' ? 3 : 1;
+  const typ = o.portal ? 0 : o.glazing === 'square' ? 2 : o.glazing === 'plain' ? 3 : o.glazing === 'cloth' ? 4 : 1;
   const W = o.W, H = o.H, fb = o.floorBelow ?? 0.9;
   const ox = o.ox ?? 0, oy = o.oy ?? 0;
   const base = acc.vcount;
@@ -45,16 +46,28 @@ export function leafFrame(F, hx, lw, hinge, ang, out, z0) {
 /** A ledged plank leaf (shutter / door) in its own frame: x 0..w (hinge at x=0), y 0..h, z 0..t (front at t). */
 function plankLeaf(kit, Fl, w, h, t, rnd, o = {}) {
   const bw = o.board ?? 0.15;
-  const n = Math.max(2, Math.round(w / bw));
+  // boards of the widths the tree gave (10-25 cm, never two alike), a little shrunk apart
+  const ws = [];
+  let tot = 0;
+  while (tot < w - 0.04) { const b = bw * rnd.range(0.65, 1.5); ws.push(b); tot += b; }
+  const n = Math.max(2, ws.length);
+  if (ws.length < 2) ws.push(bw);
+  const sum = ws.reduce((a, b) => a + b, 0);
   const topAt = o.topAt || (() => h);
+  let xc = 0;
   for (let i = 0; i < n; i++) {
-    const xa = (w * i) / n + 0.002, xb = (w * (i + 1)) / n - 0.002;
+    const wi = (ws[i] / sum) * w;
+    const xa = xc + 0.002 + rnd.range(0, 0.003), xb = xc + wi - 0.002 - rnd.range(0, 0.003);
+    xc += wi;
     const xm = (xa + xb) / 2;
-    const top = Math.min(topAt(xa), topAt(xb), topAt(xm));
+    // the bottom end of a board wears and rots unevenly
+    const bot = rnd.range(0, 0.012);
+    const top = Math.min(topAt(xa), topAt(xb), topAt(xm)) - rnd.range(0, 0.006);
     const topA = topAt(xa), topB = topAt(xb);
     const bw2 = xb - xa;
-    block(kit.get(o.mat || 'oakDark'), sub(Fl, [xm, top / 2, t / 2 + rnd.sym(0.002)], [0, 1, 0], [-1, 0, 0]), top, bw2, t, {
-      r: 0.004, rs: 1, seg: [o.hero ? 0.25 : 0.6, bw2, t], seed: rnd(), noise: 0.0015, nf: 6, chip: 0.004, axis: [1, 0, 0],
+    const mat = o.mat || (o.mixMat && rnd() < 0.3 ? (o.mixMat) : 'oakDark');
+    block(kit.get(mat), sub(Fl, [xm, (top + bot) / 2, t / 2 + rnd.sym(0.002)], [0, 1, 0], [-1, 0, 0]), top - bot, bw2, t, {
+      r: rnd.range(0.004, 0.011), rs: 1, seg: [o.hero ? 0.25 : 0.6, bw2, t], seed: rnd(), noise: 0.0015, nf: 6, chip: 0.008, axis: [1, 0, 0],
       // the board's top follows the head (arched doors): stretch the upper end to the curve
       warp: o.topAt ? (lx, ly, lz) => { const f = (lx / top + 0.5); const x = -ly; const tt = topA + (topB - topA) * (x / bw2 + 0.5); return [lx + (f > 0.5 ? (tt - top) * (f - 0.5) * 2 : 0), ly, lz]; } : undefined,
     });
@@ -148,6 +161,17 @@ export function windowUnit(kit, F, o) {
         tube(kit.get('iron'), [p0, p1], 0.005, { sides: 5 });
       }
     }
+  }
+  // a shop front: the lower leaf let down level with the sill as the counter (on two brackets), the
+  // upper leaf swung up and propped as a hood over it
+  if (o.counter) {
+    const t = 0.035, cd = Math.min(0.5, h * 0.45), hh = h * 0.55;
+    const Fc = sub(F, [0, 0, 0.02], [1, 0, 0], [0, 0, 1]);
+    plankLeaf(kit, Fc, w, cd, t, rnd, { board: rnd.range(0.16, 0.22), ledges: [0.3, 0.85], mixMat: 'oak' });
+    for (const fx of [0.12, 0.88]) member(kit, sub(F, [w * fx, 0, 0], [0, 0, 1], [0, 1, 0]), [0.02, -0.5], [cd - 0.06, -t - 0.03], 0.06, 0.05, rnd, { mat: 'oakDark', proud: 0.025, bow: 0.0 });
+    const a = 0.32, Fh = sub(F, [0, h + 0.01, 0.02], [1, 0, 0], [0, Math.sin(a), Math.cos(a)]);
+    plankLeaf(kit, Fh, w, hh, t, rnd, { board: rnd.range(0.16, 0.22), ledges: [0.2, 0.8], mixMat: 'oak' });
+    for (const fx of [0.1, 0.9]) tube(kit.get('oakDark'), [xf(F, w * fx, h - 0.55, 0.03), xf(Fh, w * fx, hh - 0.04, -0.01)], 0.017, { sides: 6, caps: true, seed: rnd() });
   }
   // a sill board / drip inside the reveal of a stone window (oak, weathered)
   if (o.sillBoard) block(kit.get('oak'), sub(F, [w / 2, -0.015, z + 0.02]), w + 0.04, 0.03, Math.max(0.05, inset), { r: 0.005, seg: [0.3, 0.03, 0.1], seed: rnd(), noise: 0.001, axis: [1, 0, 0] });

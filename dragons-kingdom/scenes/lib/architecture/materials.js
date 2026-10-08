@@ -247,7 +247,9 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   vec3 nScan;
   vec3 sc = akScanTap(P, akN0, sd, akScale, nScan);
   // (the scan is a veined rock: on dressed faces only a hint, or the stone reads as marble)
-  float lum = mix(1.0, akLum(sc), mix(0.6, 0.45, akW.w));
+  float lum = mix(1.0, akLum(sc), mix(0.42, 0.32, akW.w));
+  // the stone's own mottling at a few scales (a scan tiled over every stone reads as camouflage)
+  lum *= (0.86 + 0.28 * akF3(P * 7.0 + sd * 23.0)) * (0.93 + 0.14 * akF3(P * 23.0 + sd * 11.0));
   // bedding: faint bands across the stone (horizontal in the wall), and darker veins
   vec2 pl = akPlanarE(P, akN0, vAxisW);
   float bed = akN2(vec2(pl.x * 0.15 + sd * 40.0, P.y * 34.0 + sd * 17.0 + akN2(pl * 3.0) * 2.0));
@@ -256,9 +258,10 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   // iron staining in patches
   float iron = smoothstep(0.62, 0.85, akF3(P * 3.1 + sd * 20.0)) * akDirt.w;
   c = mix(c, c * vec3(1.12, 0.92, 0.72), iron * 0.4);
-  // worn, paler arrises (and a little rounder: lighter where the weathered skin has gone)
+  // arrises: no bright rim - on rubble the rounded edge runs down into the joint where dust and
+  // damp collect (a little darker); on dressed stone a worn arris is only patchily paler
   float ar = akI.z;
-  c *= 1.0 + 0.12 * ar * (0.5 + akN3(P * 30.0));
+  c *= 1.0 - 0.1 * ar * (1.0 - akW.w) + 0.05 * ar * akW.w * (akN3(P * 30.0) - 0.4);
   // pores / pitting (small round dark pits, solution holes)
   vec3 pc = akCell2(pl * 55.0 + sd * 31.0);
   float pit = (1.0 - smoothstep(0.06, 0.2, pc.x)) * step(0.72, pc.z);
@@ -269,13 +272,16 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   float side = 1.0 - abs(akN0.y);
   float streak = smoothstep(0.55, 0.85, akN2(vec2((P.x + P.z) * 3.7, P.y * 0.35))) * side * akDirt.y;
   c *= 1.0 - 0.28 * streak;
-  // splash zone and damp at the footing; green algae on the low, damp parts
-  float splash = (1.0 - smoothstep(0.0, 0.55, hb + 0.25 * (akN2(P.xz * 3.0 + P.y) - 0.5))) * akDirt.x;
-  float damp = (1.0 - smoothstep(0.0, 0.9, hb + 0.5 * (akF2(vec2(P.x + P.z, P.y) * 1.3) - 0.5))) * akDirt.x;
-  c = mix(c, c * vec3(0.62, 0.55, 0.45), splash * 0.8);
-  c *= 1.0 - 0.25 * damp;
-  float alg = damp * smoothstep(0.4, 0.7, akF3(P * 2.3 + 5.0)) * akW.z;
-  c = mix(c, vec3(0.05, 0.075, 0.03), alg * 0.55);
+  // splash zone and damp at the footing (rain bouncing off the ground throws mud 0-60 cm up the
+  // wall, the wall wicks damp higher); green algae on the low, damp parts - most on the shaded,
+  // north-facing walls (world -z)
+  float north = smoothstep(0.1, -0.7, akN0.z);
+  float splash = (1.0 - smoothstep(0.0, 0.6, hb + 0.22 * (akN2(P.xz * 3.0 + P.y) - 0.5) + 0.12 * (akN2(vec2(P.x + P.z, P.y) * 9.0) - 0.5))) * akDirt.x;
+  float damp = (1.0 - smoothstep(0.0, 1.0 + 0.4 * north, hb + 0.5 * (akF2(vec2(P.x + P.z, P.y) * 1.3) - 0.5))) * akDirt.x;
+  c = mix(c, c * vec3(0.55, 0.48, 0.38) + vec3(0.012, 0.009, 0.005), splash * 0.85);
+  c *= 1.0 - 0.3 * damp;
+  float alg = damp * smoothstep(0.42 - 0.2 * north, 0.7 - 0.2 * north, akF3(P * 2.3 + 5.0)) * akW.z;
+  c = mix(c, vec3(0.04, 0.065, 0.025), alg * (0.5 + 0.25 * north));
   // occlusion baked per vertex (stone sides deep in the joints) also darkens the colour a little (dust)
   float aov = akI.y;
   c *= mix(0.72, 1.0, aov);
@@ -292,7 +298,7 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   // crustose lichen: irregular rosettes of all sizes in colonies, mostly on the tops of ledges and
   // copings, sparse on the faces; low contrast (an old grey crust, a few yellow ones)
   vec3 cl = akLichen(pl, sd * 7.0, 6.5);
-  float up = smoothstep(0.3, 0.9, akN0.y) * 0.75 + 0.25;
+  float up = smoothstep(0.3, 0.9, akN0.y) * 0.75 + 0.25 + 0.35 * north * smoothstep(0.2, 0.8, akN0.y + 0.5);
   float colony = smoothstep(0.42, 0.72, akF3(P * 0.8 + 7.0));
   float lich = cl.x * colony * akW.x * up * smoothstep(0.3, 0.8, aov);
   vec3 lc = cl.z > 0.9 ? vec3(0.36, 0.3, 0.12) : cl.z > 0.72 ? c * vec3(1.25, 1.3, 1.15) : c * vec3(1.45, 1.45, 1.35) + 0.03;
@@ -309,13 +315,18 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   float tideWet = 0.0;
   if (akTide.y > 0.5) {
     float tl = akTide.x;
-    tideWet = 1.0 - smoothstep(tl - 0.12, tl + 0.12, hb + 0.18 * (akN2(vec2(pl.x * 2.0, P.y)) - 0.5));
-    float weed = tideWet * smoothstep(tl - 1.0, tl - 0.25, hb) * smoothstep(0.3, 0.6, akF3(P * 4.0) + 0.25);
-    c *= mix(1.0, 0.5, tideWet);
-    c = mix(c, vec3(0.03, 0.036, 0.012) * (0.7 + 0.6 * akN3(P * 30.0)), weed * 0.85);
+    // (round 2: the zones read from across the harbour - black-green slime low down, a brown-green
+    // weed band, a barnacle crust, a dark wet band up to a sharp high-water line, salt above it)
+    float tw0 = hb + 0.14 * (akN2(vec2(pl.x * 2.0, P.y)) - 0.5) + 0.05 * (akN2(vec2(pl.x * 9.0, P.y * 3.0)) - 0.5);
+    tideWet = 1.0 - smoothstep(tl - 0.04, tl + 0.04, tw0);
+    float slime = 1.0 - smoothstep(tl - 1.6, tl - 1.1, tw0);
+    float weed = tideWet * smoothstep(tl - 1.25, tl - 0.55, tw0) * (1.0 - smoothstep(tl - 0.3, tl - 0.05, tw0)) * smoothstep(0.25, 0.55, akF3(P * 4.0) + 0.3);
+    c *= mix(1.0, 0.38, tideWet);
+    c = mix(c, vec3(0.012, 0.018, 0.008) * (0.7 + 0.6 * akN3(P * 30.0)), slime * 0.9);
+    c = mix(c, vec3(0.045, 0.04, 0.012) * (0.7 + 0.6 * akN3(P * 30.0)), weed * 0.9);
     vec3 bc = akCell2(pl * 70.0 + sd * 13.0);
-    float barn = tideWet * (1.0 - smoothstep(tl - 1.4, tl - 0.5, hb)) * (1.0 - smoothstep(0.1, 0.25, bc.x)) * step(0.5, bc.z);
-    c = mix(c, vec3(0.3, 0.29, 0.25), barn * 0.7);
+    float barn = tideWet * (1.0 - smoothstep(tl - 1.4, tl - 0.6, tw0)) * smoothstep(tl - 2.2, tl - 1.5, tw0) * (1.0 - smoothstep(0.1, 0.25, bc.x)) * step(0.4, bc.z);
+    c = mix(c, vec3(0.28, 0.27, 0.24), barn * 0.75);
     float salt = (1.0 - tideWet) * (1.0 - smoothstep(tl + 0.05, tl + 0.8, hb)) * smoothstep(0.35, 0.65, akF3(P * 3.0 + 2.0));
     c = mix(c, c * 1.3 + 0.035, salt * 0.55);
   }
@@ -341,30 +352,46 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
 }
 
 // ---------------------------------------------------------- mortar --
-export function mortarMaterial(ctx, opts = {}) {
-  const U = { akC: { value: new THREE.Color(...(opts.color || [0.3, 0.285, 0.25])) }, akMoss: { value: opts.moss ?? 0.4 }, akMAO: { value: opts.ao ?? 0.6 } };
+/**
+ * Lime mortar: lime and sharp sand (a photo-scanned dry sandy ground for the grain), sparse coarse
+ * grit, lime bloom, dust and damp; no pinholes. opts: color, moss, ao (recess darkening), scale.
+ */
+export async function mortarMaterial(ctx, opts = {}) {
+  const S = await scan(ctx, opts.texture || 'pbr/acg_ground05');
+  const U = { ...S.uniforms, akC: { value: new THREE.Color(...(opts.color || [0.19, 0.18, 0.16])) }, akMoss: { value: opts.moss ?? 0.4 }, akMAO: { value: opts.ao ?? 0.6 }, akMS: { value: opts.scale ?? 1.7 } };
   return kitMaterial('mortar', {
     uniforms: U, key: opts.key || '',
-    decl: 'uniform vec3 akC; uniform float akMoss; uniform float akMAO;',
+    decl: `${SCAN_DECL}
+uniform vec3 akC; uniform float akMoss; uniform float akMAO; uniform float akMS;`,
     body: /* glsl */ `
   vec3 P = vObjP;            // object space (Kit.build centres each set): noise keeps its precision far from the world origin
   float hb = akI.w;
-  float g = akR3(P * 260.0), g2 = akR3(P * 60.0), g3 = akF3(P * 9.0);
-  // sandy lime: visible grit, blotchy with damp and dirt, eroded into little pits and runs
-  float g4 = akF3(P * 13.0);
-  vec3 c = akC * (0.72 + 0.28 * g + 0.3 * (akF3(P * 4.0) - 0.5) + 0.22 * (g4 - 0.5)) * mix(vec3(1.0), vec3(1.05, 0.98, 0.9), akN3(P * 2.0));
-  vec3 mp = akCell2(vec2(P.x + P.z, P.y) * 70.0);
-  float mpit = (1.0 - smoothstep(0.05, 0.22, mp.x)) * step(0.6, mp.z);
-  c *= 1.0 - 0.3 * mpit;
-  float splash = 1.0 - smoothstep(0.0, 0.6, hb);
-  c = mix(c, c * vec3(0.6, 0.55, 0.47), splash * 0.75);
+  vec2 pl = akPlanar(P, akN0);
+  vec3 nScan;
+  vec3 sc = akScanTap(P, akN0, 0.37, akMS, nScan);
+  float lum = akLum(sc);
+  // lime and sand: the scan's grain, broad blotches of damp and dirt, a warmer and a greyer lime
+  float b1 = akF3(P * 2.2 + 3.0), b2 = akF3(P * 7.0 + 11.0);
+  vec3 c = akC * mix(1.0, clamp(lum, 0.4, 1.8), 0.75) * (0.82 + 0.36 * b1) * (0.94 + 0.12 * b2);
+  c *= mix(vec3(1.0), vec3(1.06, 1.0, 0.9), smoothstep(0.4, 0.8, akF3(P * 0.9 + 21.0)));
+  // coarse grit: sparse 2-6 mm grains, each its own tone (faded before a grain spans < 2 px)
+  vec3 g = akCell2(pl * 150.0 + 3.1);
+  float gaa = 1.0 - smoothstep(0.25, 0.6, 150.0 * akFoot);
+  float grit = (1.0 - smoothstep(0.14, 0.3, g.x)) * step(0.7, g.z) * gaa;
+  c *= mix(1.0, 0.75 + 0.45 * akH1(g.z * 31.7), grit * 0.6);
+  // lime bloom: pale leached patches where the rain runs
+  float bloom = smoothstep(0.62, 0.86, akF3(vec3(P.x + P.z, P.y * 0.5, P.z) * 4.0 + 4.0));
+  c = mix(c, c * 1.22 + 0.015, bloom * 0.35);
+  float splash = 1.0 - smoothstep(0.0, 0.6, hb + 0.2 * (b2 - 0.5));
+  c = mix(c, c * vec3(0.56, 0.5, 0.42), splash * 0.8);
   float moss = akMoss * smoothstep(0.55, 0.8, akF3(P * 3.0 + 1.0)) * (0.4 + splash);
-  c = mix(c, vec3(0.04, 0.055, 0.015), moss);
-  // the joint is recessed: a little darker (dust, the shadow of the stones the shadow map cannot resolve)
-  c *= mix(1.0, 0.75 + 0.25 * g2, (1.0 - akMAO) / 0.4);
+  c = mix(c, vec3(0.04, 0.055, 0.015) * (0.7 + 0.6 * akN3(P * 40.0)), moss);
+  // the joint lies back between the stones: dust settles in it, the stones shade it
+  c *= mix(1.0, 0.78 + 0.22 * akF3(P * 30.0), (1.0 - akMAO) / 0.4);
   akAlb = c; akRgh = 0.95; akAO = akMAO;
-  float fwm = (akFoot * 1.4);
-  akHt = g * 0.0012 * (1.0 - smoothstep(0.001, 0.003, fwm)) + g3 * 0.008 + g2 * 0.0025 + g4 * 0.003 - mpit * 0.002;
+  akNW = normalize(mix(akN0, nScan, 0.35));
+  float fwm = akFoot * 1.4;
+  akHt = grit * 0.0012 + b2 * 0.0025 * (1.0 - smoothstep(0.003, 0.01, fwm)) + b1 * 0.003 - moss * 0.001;
 `,
   });
 }
@@ -446,7 +473,20 @@ export async function oakMaterial(ctx, opts = {}) {
   if (endg > 0.0) {
     er = ringS * ringAA;
     float por = akN3(P * 400.0) * (1.0 - smoothstep(0.0005, 0.0012, fw));
-    c = mix(c, base * 0.72 * (0.85 + 0.25 * er) * (0.9 + 0.2 * por), endg);
+    vec3 ec = base * 0.72 * (0.85 + 0.25 * er) * (0.9 + 0.2 * por);
+    // end checks: one or two dark splits running across the end (the timber dried from the outside)
+    // (straight splits at the piece's own angle, a family 22 cm apart: one or two cross an end; each
+    // wanders a little and dies out along its length)
+    float ea = akH1(sd * 29.3) * 3.1416;
+    vec2 eq = vec2(w1, w2);
+    float ef = dot(eq, vec2(cos(ea), sin(ea))) / 0.22 + akH1(sd * 7.7) + 0.05 * (akN2(eq * 30.0) - 0.5);
+    float ecl = abs(fract(ef) - 0.5), fwe = max(fwidth(ef), 1e-5);
+    float ew = 0.0025 * fwe / max(akFoot, 1e-5);
+    float echk = (1.0 - smoothstep(ew * 0.5, ew * 0.5 + fwe, ecl)) * min(1.0, ew / fwe + 0.3) * step(0.35, akH1(sd * 13.1))
+      * smoothstep(0.3, 0.55, akN2(vec2(dot(eq, vec2(-sin(ea), cos(ea))) * 9.0, floor(ef) * 3.1 + sd * 5.0)));
+    ec = mix(ec, ec * 0.22, echk);
+    // the end grain greys and is soiled darker toward its edges
+    c = mix(c, ec, endg);
   }
   // lichen and algae on the weather faces, splash dirt low down
   float hb = akI.w;
@@ -516,8 +556,8 @@ export function plasterMaterial(ctx, opts = {}) {
   float daub = smoothstep(0.88, 0.92, fl2 + 0.06 * wetZone) * smoothstep(0.7, 0.8, fl) * akAge;
   c = mix(c, c * vec3(0.84, 0.8, 0.72), flake * 0.5);
   // grime: grey-brown weathering in broad soft vertical washes, heavier low down
-  float grime = smoothstep(0.4, 0.85, akF3(P * vec3(0.7, 0.18, 0.7) + sd * 2.0));
-  c = mix(c, c * vec3(0.78, 0.75, 0.68), grime * 0.4 * akAge);
+  float grime = smoothstep(0.35, 0.85, akF3(P * vec3(0.7, 0.18, 0.7) + sd * 2.0));
+  c = mix(c, c * vec3(0.74, 0.71, 0.63), grime * 0.55 * akAge);
   // rain runoff: streaks from the underside of every rail, sill and brace above (aInfo.z = the
   // runoff from the member above: 1 just under it, fading down the panel), dark at the drip line
   float runS = smoothstep(0.42, 0.8, akN2(vec2(pl.x * 16.0 + sd * 9.0, pl.y * 0.9))) * (0.55 + 0.45 * akN2(vec2(pl.x * 45.0, pl.y * 3.0)));
@@ -527,10 +567,19 @@ export function plasterMaterial(ctx, opts = {}) {
   // general grime: dust settles in the texture, darker toward the timbers and under the sills
   c *= 0.86 + 0.14 * akF3(P * 6.0 + sd * 3.0);
   c = mix(c, vec3(0.16, 0.12, 0.08) * (0.8 + 0.4 * akN3(P * 50.0)), daub * 0.85);
-  // hairline cracks (cellular edges, broken up)
-  vec3 ck = akCell2(pl * 3.5 + sd * 2.0);
-  float crack = (1.0 - smoothstep(0.0, 0.02, ck.y - ck.x)) * smoothstep(0.6, 0.8, akN2(pl * 1.7 + 4.0)) * akAge;
-  c *= 1.0 - 0.55 * crack;
+  // hairline cracks: a few long meandering lines (shrinkage, settlement) in some panels - never a
+  // crackle network; ~0.8 mm wide, fainter once narrower than a pixel
+  // (a jagged line: the isoline is pushed about by finer noise, and only short runs of it open)
+  float cf = akF2(pl * vec2(1.25, 0.8) + sd * 3.0 + 0.18 * vec2(akN2(pl * 6.0), akN2(pl * 6.0 + 3.0))) + 0.012 * (akN2(pl * 70.0) - 0.5) + 0.005 * (akN2(pl * 190.0) - 0.5);
+  float cl = abs(cf - 0.5);
+  float fwc = max(fwidth(cf), 1e-5);
+  float tw = 0.0007 * fwc / max(akFoot, 1e-5);
+  float crack = (1.0 - smoothstep(tw * 0.5, tw * 0.5 + fwc, cl)) * min(1.0, tw / fwc + 0.2);
+  crack *= smoothstep(0.66, 0.8, akN2(pl * 0.55 + sd * 5.0 + 7.0)) * smoothstep(0.35, 0.6, akN2(pl * 3.1 + sd * 9.0)) * akAge;
+  c *= 1.0 - 0.38 * crack;
+  // the last lime wash worn through in patches: an older, yellower coat shows
+  float wornW = smoothstep(0.6, 0.74, akF3(P * vec3(1.6, 0.8, 1.6) + sd * 4.0 + 13.0) + 0.12 * wetZone);
+  c = mix(c, tint * vec3(0.9, 0.82, 0.68) * (0.8 + 0.25 * wash), wornW * 0.55 * akAge);
   // damp and splash at the foot
   float splash = 1.0 - smoothstep(0.0, 0.7, hb + 0.3 * (akN2(pl * 3.0) - 0.5));
   c = mix(c, c * vec3(0.55, 0.5, 0.42), splash * 0.85);
@@ -581,6 +630,11 @@ uniform vec3 akP[4]; uniform vec4 akW;`,
   // every tile its own value (+-20 %), and here and there a replacement: newer, brighter clay /
   // a slate from another bed
   base *= 0.8 + 0.4 * akH1(sd * 5.3 + 0.21);
+  // every roof its own batch of clay / bed of slate and its own age (the seed's 1/20 bucket is
+  // the roof: roof.js)
+  float rid = floor(sd * 20.0);
+  float rHue = akH1(rid * 7.31 + 0.5), rVal = akH1(rid * 3.77 + 0.2), rAge = akH1(rid * 5.13 + 0.7);
+  base *= (0.78 + 0.44 * rVal) * (akW.w > 0.5 ? mix(vec3(1.1, 0.93, 0.8), vec3(0.9, 0.97, 1.08), rHue) : mix(vec3(0.94, 0.97, 1.05), vec3(1.06, 1.02, 0.94), rHue));
   float repl = step(0.94, akH1(sd * 9.1 + 0.4));
   base = mix(base, akW.w > 0.5 ? base * vec3(1.35, 1.15, 1.0) : base * vec3(0.85, 0.92, 1.08), repl);
   // uv: x across the tile (m), y down the tile from its head (m); aInfo.y: exposed (1) .. under the next course (0)
@@ -603,12 +657,12 @@ uniform vec3 akP[4]; uniform vec4 akW;`,
   // Xanthoria on a few clay tiles
   vec3 cl = akLichen(tu + vec2(sd * 37.0, sd * 11.0), sd * 3.0, 9.0);
   float colony = smoothstep(0.45, 0.75, akF3(P * 0.5 + 4.0));
-  float lich = cl.x * colony * akW.x * smoothstep(0.55, 0.9, aov);
+  float lich = cl.x * colony * akW.x * smoothstep(0.55, 0.9, aov) * (0.4 + 1.1 * rAge);
   vec3 lc = (cl.z > 0.88 && akW.w > 0.5) ? vec3(0.36, 0.17, 0.035) : c * vec3(1.5, 1.5, 1.4) + 0.012;
   c = mix(c, lc * (0.92 + 0.16 * cl.y), lich * 0.38);
   // moss: cushions in clusters, in the laps and on the shaded (north) slopes
   float north = smoothstep(0.0, -0.6, akN0.z);
-  float mossM = akW.y * smoothstep(0.55, 0.78, akF3(P * 1.9 + 9.0) + 0.22 * (1.0 - aov) + 0.15 * north - 0.05);
+  float mossM = akW.y * smoothstep(0.55, 0.78, akF3(P * 1.9 + 9.0) + 0.22 * (1.0 - aov) + 0.15 * north - 0.05 + 0.12 * (rAge - 0.5));
   vec3 mc = mix(vec3(0.03, 0.045, 0.01), vec3(0.1, 0.11, 0.03), akN3(P * 35.0));
   c = mix(c, mc, clamp(mossM, 0.0, 1.0) * 0.85);
   c *= 1.0 - akW.z * smoothstep(0.4, 0.9, akF3(P * 0.5 + 3.0));
@@ -625,13 +679,15 @@ uniform vec3 akP[4]; uniform vec4 akW;`,
 // ---------------------------------------------------------- iron --
 export function ironMaterial(ctx, opts = {}) {
   return kitMaterial('iron', {
-    uniforms: { akRust: { value: opts.rust ?? 0.5 } },
+    uniforms: { akRust: { value: opts.rust ?? 0.3 } },
     decl: 'uniform float akRust;',
     body: /* glsl */ `
   vec3 P = vObjP;            // object space (Kit.build centres each set): noise keeps its precision far from the world origin
-  float r = smoothstep(0.45, 0.75, akF3(P * 9.0) + 0.3 * akN3(P * 60.0) - 0.3 + akRust * 0.4);
-  vec3 c = mix(vec3(0.035, 0.034, 0.033), vec3(0.11, 0.045, 0.018) * (0.7 + 0.6 * akN3(P * 120.0)), r);
-  akAlb = c; akRgh = mix(0.55, 0.92, r); akMet = mix(0.65, 0.0, r);
+  // old forged iron: a black oxide skin, dull; rust only where it has flaked (a dark brown, never
+  // orange - bright rust is new rust)
+  float r = smoothstep(0.5, 0.8, akF3(P * 9.0) + 0.3 * akN3(P * 60.0) - 0.3 + akRust * 0.4);
+  vec3 c = mix(vec3(0.03, 0.029, 0.028) * (0.8 + 0.4 * akN3(P * 40.0)), vec3(0.065, 0.034, 0.018) * (0.7 + 0.5 * akN3(P * 120.0)), r);
+  akAlb = c; akRgh = mix(0.62, 0.92, r); akMet = mix(0.45, 0.0, r);
   akHt = r * akN3(P * 300.0) * 0.0006 + akN3(P * 40.0) * 0.0005;
 `,
   });
@@ -653,6 +709,26 @@ export function plainMaterial(name, color, opts = {}) {
   akRgh = akR; akAO = mix(0.4, 1.0, akI.y);
   akMet = ${opts.metal ? opts.metal.toFixed(2) : '0.0'};
   akHt = n * akV.z;
+`,
+  });
+}
+
+/** Bark (a log's skin): fissured ridges running along it (uv.x along, uv.y round the log). */
+export function barkMaterial(ctx) {
+  return kitMaterial('bark', {
+    body: /* glsl */ `
+  float u = vMUv.x, v = vMUv.y;
+  float sd = akI.x;
+  float wv = v * 38.0 + 2.2 * akN2(vec2(u * 2.5, v * 6.0 + sd * 9.0));
+  float ridge = abs(sin(wv)) ;
+  float plates = smoothstep(0.25, 0.8, akN2(vec2(u * 7.0, v * 22.0) + sd * 5.0));
+  float fiss = 1.0 - smoothstep(0.0, 0.35, ridge);
+  vec3 c = mix(vec3(0.075, 0.066, 0.055), vec3(0.11, 0.1, 0.085), plates) * (0.8 + 0.35 * akN2(vec2(u * 30.0, v * 60.0)));
+  c = mix(c, vec3(0.02, 0.017, 0.014), fiss * 0.8);
+  // lichen on the old wood
+  c = mix(c, vec3(0.2, 0.21, 0.17), smoothstep(0.7, 0.85, akF2(vec2(u * 3.0, v * 8.0) + sd * 3.0)) * 0.6);
+  akAlb = c * mix(0.6, 1.0, akI.y); akRgh = 0.9; akAO = mix(0.5, 1.0, akI.y);
+  akHt = -fiss * 0.004 * (1.0 - smoothstep(0.004, 0.012, akFoot)) + plates * 0.001;
 `,
   });
 }
@@ -732,9 +808,23 @@ vec3 akInterior(vec3 wpos, vec3 nW, vec2 wuv, vec3 dims, float seed) {
     col = plasterC * (0.85 + 0.25 * akF2(h.xy * 1.3 + seed * 9.0));
     // a dark doorway or a shelf on the back wall
     float door = step(abs(h.x - (W * 0.5 + (akH1(seed * 4.4) - 0.5) * 2.0)), 0.45) * step(h.y, floorY + 2.0);
-    col = mix(col, vec3(0.03, 0.022, 0.015), door * step(0.5, akH1(seed * 8.8)) * step(W, 2.5));
+    col = mix(col, col * 0.35, door * step(0.5, akH1(seed * 8.8)) * step(W, 2.5));
   } else {
     col = plasterC * 0.85 * (0.85 + 0.25 * akF2(h.zy * 1.3 + seed * 5.0));
+  }
+  // a store / warehouse (a wide opening): stacks of goods - crates and barrels - at two depths
+  if (akRoom.z > 0.0 && W >= 2.5) {
+    for (int k = 0; k < 2; k++) {
+      float fk = float(k);
+      float gz = depth * (0.35 + 0.3 * fk + 0.1 * akH1(seed * 3.3 + fk));
+      float tg = gz / d.z;
+      if (tg < t) {
+        vec3 q = o + d * tg;
+        float cx0 = W * (0.15 + 0.5 * akH1(seed * 5.7 + fk * 3.0)), gw = 0.9 + 0.8 * akH1(seed * 2.2 + fk);
+        float gh = floorY + 0.8 + 0.9 * akH1(seed * 8.1 + fk) - 0.35 * step(0.5, fract((q.x - cx0) * 1.6));
+        if (q.x > cx0 && q.x < cx0 + gw && q.y < gh && q.y > floorY) { col = mix(vec3(0.13, 0.09, 0.055), vec3(0.09, 0.075, 0.06), step(0.5, akH1(floor(q.x * 1.6) + fk))) * (0.8 + 0.3 * akN2(q.xy * 12.0)); h = q; t = tg; }
+      }
+    }
   }
   // furniture: a table / bench / chest silhouette standing on the floor part way in
   float fz = depth * (0.35 + 0.3 * akH1(seed * 6.6));
@@ -742,7 +832,7 @@ vec3 akInterior(vec3 wpos, vec3 nW, vec2 wuv, vec3 dims, float seed) {
     float tf = fz / d.z; vec3 q = o + d * tf;
     float fx = W * 0.5 + (akH1(seed * 7.7) - 0.5) * 1.6;
     float fh = floorY + 0.75 + 0.3 * akH1(seed * 2.9);
-    if (abs(q.x - fx) < 0.6 + 0.4 * akH1(seed * 1.9) && q.y < fh && q.y > floorY) { col = vec3(0.07, 0.048, 0.03) * (0.8 + 0.3 * akN2(q.xy * 20.0)); h = q; t = tf; }
+    if (abs(q.x - fx) < 0.6 + 0.4 * akH1(seed * 1.9) && q.y < fh && q.y > floorY) { col = vec3(0.12, 0.085, 0.055) * (0.8 + 0.3 * akN2(q.xy * 20.0)); h = q; t = tf; }
   }
   // light: from the window (falls off with depth and toward the sides), a little bounce
   float lz = h.z;
@@ -759,7 +849,7 @@ vec3 akInterior(vec3 wpos, vec3 nW, vec2 wuv, vec3 dims, float seed) {
  * (0 open portal, 1 diamond quarries, 2 square quarries, 3 plain).
  */
 export function glassMaterial(ctx, opts = {}) {
-  const U = { akRoom: { value: new THREE.Vector4(opts.light ?? 0.16, opts.depth ?? 4.0, opts.furniture ?? 1, opts.warm ?? 0.5) }, akGl: { value: new THREE.Vector3(opts.pane ?? 0.11, opts.came ?? 0.008, opts.tilt ?? 0.07) } };
+  const U = { akRoom: { value: new THREE.Vector4(opts.light ?? 0.16, opts.depth ?? 4.0, opts.furniture ?? 1, opts.warm ?? 0.5) }, akGl: { value: new THREE.Vector3(opts.pane ?? 0.11, opts.came ?? 0.008, opts.tilt ?? 0.02) } };
   const mat = kitMaterial('glass', {
     uniforms: U, physical: true, params: { specularIntensity: 1, ior: 1.52, specularColor: new THREE.Color(0.86, 1.0, 0.9) },
     decl: `${INTERIOR_GLSL}
@@ -770,44 +860,59 @@ float akLead; vec3 akEm;`,
   vec2 wuv = vMUv;
   vec3 dims = vAxisL;    // aAxis carries the window size here, not a direction
   vec3 nW = akN0;
-  // quarries: a lattice of lead cames
-  vec2 q;
-  float lead = 0.0; vec2 cellId = vec2(0.0); vec2 fq = vec2(0.5);
-  float pw = akGl.x, cw = akGl.y;
-  if (typ < 1.5) {   // diamond
-    vec2 r = vec2(wuv.x / pw + wuv.y / (pw * 1.45), wuv.y / (pw * 1.45) - wuv.x / pw);
-    vec2 f = fract(r); cellId = floor(r); fq = f;
-    vec2 e = min(f, 1.0 - f) * vec2(pw, pw * 1.45) * 0.7;
-    lead = 1.0 - smoothstep(cw * 0.45, cw * 0.6, min(e.x, e.y));
-  } else {
-    vec2 r = wuv / vec2(pw * 1.1, pw * 1.4);
-    vec2 f = fract(r); cellId = floor(r); fq = f;
-    vec2 e = min(f, 1.0 - f) * vec2(pw * 1.1, pw * 1.4);
-    lead = 1.0 - smoothstep(cw * 0.45, cw * 0.6, min(e.x, e.y));
-  }
-  // uneven crown glass: every quarry sits at its own small angle, with a ripple
   vec3 Rt = normalize(cross(vec3(0.0, 1.0, 0.0), nW));
-  float a1 = akH2(cellId + sd * 13.0) - 0.5, a2 = akH2(cellId * 1.7 + sd * 7.0) - 0.5;
-  // each quarry is also a little dished or domed (crown glass): the sky slides across it
-  float bulge = (akH2(cellId * 2.3 + sd * 5.0) - 0.5) * 0.22;
-  vec2 fc = fq - 0.5;
-  vec3 nT = normalize(nW + (Rt * a1 + vec3(0.0, 1.0, 0.0) * a2) * akGl.z * (typ < 1.5 ? 2.0 : 1.2)
-    + (Rt * fc.x + vec3(0.0, 1.0, 0.0) * fc.y) * bulge
-    + (Rt * sin(fq.y * 19.0 + a1 * 30.0) + vec3(0.0, 1.0, 0.0) * sin(fq.x * 23.0 + a2 * 20.0)) * 0.012);
-  vec3 interior = akInterior(vWPos, nW, wuv + (vec2(a1, a2) * 0.03), dims, sd);
-  // a faint green-grey body tint and dirt on old glass
-  float dirt = akF2(wuv * 3.0 + sd * 9.0);
-  vec3 tint = vec3(0.78, 0.84, 0.76) * (0.8 + 0.2 * dirt);
-  akLead = lead;
-  // lead cames: dull, dark, oxidised; the glass: smooth, a little dirty, each quarry its own
-  akAlb = mix(vec3(0.0), vec3(0.028, 0.029, 0.03), lead);
-  akRgh = mix(0.03 + 0.05 * akH2(cellId + sd * 3.0) + 0.1 * dirt, 0.5, lead);
-  akMet = 0.0;
-  akNW = mix(nT, nW, lead);
   float ndv = abs(dot(normalize(cameraPosition - vWPos), nW));
-  float F = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);
-  akEm = interior * tint * (1.0 - F) * (1.0 - lead);
-  akAO = 1.0;
+  if (typ > 3.5) {
+    // oiled linen stretched on a lattice of laths (a humble house's window): matte, buff, a weave,
+    // the laths dark; the room behind barely glows through it
+    vec2 lr = wuv / vec2(0.16, 0.2);
+    vec2 lf = abs(fract(lr) - 0.5) * vec2(0.16, 0.2);
+    float lath = 1.0 - smoothstep(0.008, 0.012, min(0.08 - lf.x, 0.1 - lf.y));
+    float weave = 0.5 + 0.25 * (sin(wuv.x * 2200.0) + sin(wuv.y * 2200.0)) * (1.0 - smoothstep(0.1, 0.3, 2200.0 * akFoot / 6.28));
+    float stain = akF2(wuv * 4.0 + sd * 9.0);
+    vec3 cloth = vec3(0.3, 0.25, 0.16) * (0.75 + 0.35 * stain) * (0.94 + 0.12 * weave) * mix(vec3(1.0), vec3(0.8, 0.72, 0.6), smoothstep(0.5, 0.9, akF2(wuv * 9.0 + 3.0)));
+    akAlb = mix(cloth, vec3(0.045, 0.034, 0.024), lath);
+    akRgh = mix(0.7, 0.8, lath); akMet = 0.0; akNW = nW; akAO = 1.0; akLead = lath;
+    akEm = vec3(0.0);
+    akHt = weave * 0.0002 - lath * 0.0;
+  } else {
+    // quarries: a lattice of lead cames
+    float lead = 0.0; vec2 cellId = vec2(0.0); vec2 fq = vec2(0.5); float ed = 1.0;
+    float pw = akGl.x, cw = akGl.y;
+    if (typ < 1.5) {   // diamond
+      vec2 r = vec2(wuv.x / pw + wuv.y / (pw * 1.45), wuv.y / (pw * 1.45) - wuv.x / pw);
+      vec2 f = fract(r); cellId = floor(r); fq = f;
+      vec2 e = min(f, 1.0 - f) * vec2(pw, pw * 1.45) * 0.7;
+      ed = min(e.x, e.y);
+    } else {
+      vec2 r = wuv / vec2(pw * 1.1, pw * 1.4);
+      vec2 f = fract(r); cellId = floor(r); fq = f;
+      vec2 e = min(f, 1.0 - f) * vec2(pw * 1.1, pw * 1.4);
+      ed = min(e.x, e.y);
+    }
+    lead = 1.0 - smoothstep(cw * 0.45, cw * 0.6, ed);
+    // crown glass: every quarry at its own small angle (a degree or so) and gently domed - the
+    // reflections shift a little from pane to pane, never a checker of sky and ground
+    float a1 = akH2(cellId + sd * 13.0) - 0.5, a2 = akH2(cellId * 1.7 + sd * 7.0) - 0.5;
+    float bulge = (akH2(cellId * 2.3 + sd * 5.0) - 0.5) * 0.05;
+    vec2 fc = fq - 0.5;
+    vec3 nT = normalize(nW + (Rt * a1 + vec3(0.0, 1.0, 0.0) * a2) * akGl.z + (Rt * fc.x + vec3(0.0, 1.0, 0.0) * fc.y) * bulge
+      + (Rt * akN2(wuv * 9.0 + sd) + vec3(0.0, 1.0, 0.0) * akN2(wuv * 9.0 + sd + 5.0) - 0.5) * 0.012);
+    vec3 interior = akInterior(vWPos, nW, wuv + vec2(a1, a2) * 0.004, dims, sd);
+    // old glass: each quarry its own green-grey body tint and density; dirt gathers in the corners
+    // against the leads and in a film over the whole light
+    float h3 = akH2(cellId * 3.1 + sd * 2.0);
+    vec3 tint = mix(vec3(0.8, 0.86, 0.76), vec3(0.72, 0.8, 0.74), h3) * (0.85 + 0.2 * akH2(cellId * 0.7 + sd));
+    float grime = (1.0 - smoothstep(cw * 0.6, cw * 3.0, ed)) * 0.6 + 0.35 * akF2(wuv * 3.0 + sd * 9.0);
+    akLead = lead;
+    akAlb = mix(vec3(0.012, 0.011, 0.01) * grime, vec3(0.028, 0.029, 0.03), lead);
+    akRgh = mix(0.05 + 0.04 * h3 + 0.25 * grime * grime, 0.5, lead);
+    akMet = 0.0;
+    akNW = mix(nT, nW, lead);
+    float F = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);
+    akEm = interior * tint * (1.0 - F) * (1.0 - lead) * (1.0 - 0.45 * grime);
+    akAO = 1.0;
+  }
 `,
   });
   // add the interior as emitted light
@@ -821,7 +926,7 @@ float akLead; vec3 akEm;`,
 
 /** An open doorway / unglazed opening onto a room (interior mapping, unlit by the scene). */
 export function portalMaterial(ctx, opts = {}) {
-  const U = { akRoom: { value: new THREE.Vector4(opts.light ?? 0.2, opts.depth ?? 4.0, opts.furniture ?? 1, opts.warm ?? 0.5) } };
+  const U = { akRoom: { value: new THREE.Vector4(opts.light ?? 0.3, opts.depth ?? 4.0, opts.furniture ?? 1, opts.warm ?? 0.5) } };
   const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   mat.name = 'arch:portal';
   mat.userData.dkUniforms = U;
@@ -864,27 +969,95 @@ export function sootMaterial(ctx) {
   return mat;
 }
 
+// ---------------------------------------------------------- stains --
+/**
+ * Weathering stains laid over a surface (weathering.js stain()): a transparent decal of streaks
+ * running down from a source. uv: x across (m), y 0 at the source .. 1 at the end; aInfo.x: the
+ * kind in its quarter (0 dirt / grime, 1 rust, 2 lime / limescale, 3 green algae) + seed;
+ * aInfo.y: strength; aInfo.z: the decal's width (m).
+ */
+export function stainMaterial(ctx) {
+  const mat = kitMaterial('stain', {
+    params: { transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 },
+    decl: 'float akStA;',
+    body: /* glsl */ `
+  float kind = floor(akI.x * 4.0);
+  float sd = fract(akI.x * 4.0);
+  float W = max(akI.z, 0.01);
+  float u = vMUv.x, v = clamp(vMUv.y, 0.0, 1.0);
+  float uN = u / W;
+  // a run of streaks: each its own width and length, wandering a little as it runs down
+  float uu = u + 0.012 * sin(v * 7.0 + sd * 30.0);
+  float st = akN2(vec2(uu * 34.0 + sd * 50.0, v * 0.8 + sd * 3.0)) * 0.65 + akN2(vec2(uu * 90.0 + sd * 17.0, v * 2.0)) * 0.35;
+  float len = 0.35 + 0.65 * akN2(vec2(uu * 11.0 + sd * 13.0, 0.5));
+  float run = smoothstep(0.38, 0.72, st) * (1.0 - smoothstep(len * 0.55, len, v));
+  // a denser wash right under the source, and soft sides
+  float wash = (1.0 - smoothstep(0.0, 0.28, v)) * 0.55;
+  float edge = smoothstep(0.0, 0.2, uN) * smoothstep(1.0, 0.8, uN);
+  akStA = clamp((run * 0.85 + wash) * edge * akI.y, 0.0, 1.0);
+  vec3 c;
+  if (kind < 0.5) c = vec3(0.045, 0.04, 0.032);
+  else if (kind < 1.5) c = vec3(0.1, 0.045, 0.02) * (0.8 + 0.4 * st);
+  else if (kind < 2.5) c = vec3(0.5, 0.49, 0.45) * (0.85 + 0.2 * st);
+  else c = vec3(0.035, 0.055, 0.02) * (0.8 + 0.4 * st);
+  akAlb = c; akRgh = kind > 2.5 ? 0.55 : 0.9; akAO = 1.0;
+`,
+  });
+  const prev = mat.onBeforeCompile;
+  mat.onBeforeCompile = (sh, r) => { prev(sh, r); sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'diffuseColor.a = akStA;\n#include <opaque_fragment>'); };
+  mat.userData.noShadow = true;
+  return mat;
+}
+
+// ---------------------------------------------------------- foam --
+/** Scum and foam where water meets a wall (a strip on the water: uv.x along (m), uv.y out from the wall (m)). */
+export function foamMaterial(ctx) {
+  const U = { akTime: { value: 0 } };
+  const mat = kitMaterial('foam', {
+    uniforms: U, params: { transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 },
+    decl: 'uniform float akTime; float akFoA;',
+    body: /* glsl */ `
+  float u = vMUv.x, v = max(vMUv.y, 0.0), t = akTime;
+  float n = akF2(vec2(u * 3.5 + t * 0.05, v * 6.0 - t * 0.08)) * 0.6 + akF2(vec2(u * 11.0 - t * 0.1, v * 17.0 + t * 0.2)) * 0.4;
+  float lace = smoothstep(0.5, 0.72, n) * exp(-v / 0.35) + 0.65 * exp(-v / 0.05) * (0.6 + 0.4 * n);
+  akFoA = clamp(lace * akI.y, 0.0, 0.9);
+  akAlb = vec3(0.5, 0.52, 0.5) * (0.85 + 0.25 * n);
+  akRgh = 0.6; akAO = 1.0;
+`,
+  });
+  const prev = mat.onBeforeCompile;
+  mat.onBeforeCompile = (sh, r) => { prev(sh, r); sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'diffuseColor.a = akFoA;\n#include <opaque_fragment>'); };
+  mat.userData.noShadow = true;
+  return mat;
+}
+
 // ---------------------------------------------------------- water --
 /**
  * Still water in a basin with ripple rings (uv.x = distance to the nearest jet's impact, m) and a
  * light chop; akTime (s) moves the rings - a scene sets M.pool.userData.dkUniforms.akTime.value = t.
  */
 export function poolMaterial(ctx, opts = {}) {
-  const U = { akTime: { value: 0 }, akCol: { value: new THREE.Color(...(opts.color || [0.012, 0.016, 0.015])) }, akChop: { value: opts.chop ?? 1 } };
+  const U = { akTime: { value: 0 }, akCol: { value: new THREE.Color(...(opts.color || [0.012, 0.016, 0.015])) }, akChop: { value: opts.chop ?? 1 }, akPR: { value: opts.roughness ?? 0.03 } };
   return kitMaterial(opts.name || 'pool', {
     // (the basin's surroundings are not in the environment map: a duller, greener reflection)
     uniforms: U, physical: true, params: { ior: 1.33, specularIntensity: 0.75, specularColor: new THREE.Color(0.8, 0.9, 0.85) },
-    decl: 'uniform float akTime; uniform vec3 akCol; uniform float akChop;',
+    decl: 'uniform float akTime; uniform vec3 akCol; uniform float akChop; uniform float akPR;',
     body: /* glsl */ `
   vec3 P = vObjP;
   float d = vMUv.x;
   float t = akTime;
-  float rings = sin(d * 70.0 - t * 9.0) * exp(-d * 1.6) * 0.0012 + sin(d * 38.0 - t * 5.5 + 1.3) * exp(-d * 0.9) * 0.0009;
+  // where a jet lands: the water boils (short broken chop dying away within a few tens of cm), and
+  // ripples run out from it - bent and broken by the chop, never clean concentric rings
+  float warpR = 2.5 * akN2(P.xz * 7.0 + vec2(t * 0.4, -t * 0.3)) + 1.2 * akN2(P.xz * 19.0 - t * 0.7);
+  float rings = sin(d * 42.0 - t * 6.5 + warpR) * exp(-d * 2.4) * 0.0007 * (0.5 + akN2(P.xz * 11.0 + t))
+              + (akN3(vec3(P.xz * 34.0, t * 3.2)) - 0.5) * exp(-d * 5.0) * 0.003
+              + (akN3(vec3(P.xz * 80.0, t * 5.0)) - 0.5) * exp(-d * 9.0) * 0.0012;
   float chop = ((akN3(vec3(P.xz * 9.0 / akChop, t * 0.7)) - 0.5) * 0.0006 + (akN3(vec3(P.xz * 23.0 / akChop + 3.0, t * 1.3)) - 0.5) * 0.0002) * akChop;
   // open water: wind ripples and a slow swell (low frequencies: never faded)
   float swell = akChop > 1.5 ? (akN3(vec3(P.x * 0.7 + P.z * 0.3, P.z * 1.3, t * 0.4)) - 0.5) * 0.06 + (akN3(vec3(P.x * 2.3, P.z * 3.9, t * 0.9)) - 0.5) * 0.018 + (akN3(vec3(P.x * 6.0 + 1.0, P.z * 9.0, t * 1.6)) - 0.5) * 0.004 : 0.0;
   akAlb = akCol;
-  akRgh = 0.03;
+  // (a puddle: a film of dust and silt on it here and there)
+  akRgh = akPR + (akPR > 0.035 ? 0.25 * smoothstep(0.55, 0.85, akF2(P.xz * 5.0 + 3.0)) : 0.0);
   akHt = rings * (1.0 - smoothstep(0.004, 0.012, akFoot)) + chop * (1.0 - smoothstep(0.004 * akChop, 0.012 * akChop, akFoot)) + swell;
   // a film of dust and the odd leaf near the walls
   akAO = 1.0;
@@ -894,16 +1067,24 @@ export function poolMaterial(ctx, opts = {}) {
 
 /** Falling water (thin jets): bright, streaked, half transparent. */
 export function jetMaterial(ctx) {
+  // clear water: little body colour, a sharp reflection, see-through except where it is aerated
+  // (streaks of white running down the strand)
   const U = { akTime: { value: 0 } };
-  return kitMaterial('jet', {
-    uniforms: U, params: { transparent: true, opacity: 0.6, depthWrite: false },
-    decl: 'uniform float akTime;',
+  const mat = kitMaterial('jet', {
+    uniforms: U, physical: true, params: { transparent: true, depthWrite: false, ior: 1.33, specularIntensity: 1.0 },
+    decl: 'uniform float akTime; float akJA;',
     body: /* glsl */ `
-  float s = akN2(vec2(vMUv.y * 6.0, vMUv.x * 9.0 - akTime * 12.0));
-  akAlb = vec3(0.55, 0.6, 0.6) * (0.6 + 0.8 * s);
-  akRgh = 0.08; akAO = 1.0;
+  float s = akN2(vec2(vMUv.y * 5.0, vMUv.x * 14.0 - akTime * 14.0)) * 0.6 + akN2(vec2(vMUv.y * 11.0 + 3.0, vMUv.x * 30.0 - akTime * 20.0)) * 0.4;
+  float air = smoothstep(0.55, 0.85, s);
+  float ndv = abs(dot(normalize(cameraPosition - vWPos), akN0));
+  akAlb = mix(vec3(0.05, 0.06, 0.06), vec3(0.62, 0.66, 0.66), air);
+  akJA = clamp(0.18 + 0.55 * air + 0.5 * pow(1.0 - ndv, 2.0), 0.0, 0.9);
+  akRgh = mix(0.04, 0.3, air); akAO = 1.0;
 `,
   });
+  const prev = mat.onBeforeCompile;
+  mat.onBeforeCompile = (sh, r) => { prev(sh, r); sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'diffuseColor.a = akJA;\n#include <opaque_fragment>'); };
+  return mat;
 }
 
 // ---------------------------------------------------------- the set --
@@ -915,15 +1096,19 @@ export async function archMaterials(ctx, opts = {}) {
   const key = JSON.stringify(opts);
   if (cache.has(key)) return cache.get(key);
   const p = (async () => {
-    const [stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneSett, stoneFloor, stoneQuay, stoneWashed] = await Promise.all([
+    const [stonePale, stoneGrey, stoneDressed, oak, oakDark, oakPeg, oakSilver, clay, slate, stoneSoot, stoneWet, stoneFar, stoneSett, stoneFloor, stoneQuay, stoneWashed] = await Promise.all([
       // Verdor: weathered pale limestone / sandstone
       stoneMaterial(ctx, { texture: 'pbr/acg_ground27', scale: 0.7, palette: [[0.47, 0.44, 0.37], [0.43, 0.405, 0.345], [0.5, 0.465, 0.39]], variation: 0.13, lichen: 0.7, moss: 0.35, tooled: 0.6, streaks: 0.9, stain: 0.7, ...(opts.stonePale || {}) }),
       // Cling: grey rubble stone
       stoneMaterial(ctx, { texture: 'pbr/acg_ground28', scale: 0.55, palette: [[0.2, 0.185, 0.162], [0.165, 0.155, 0.138], [0.225, 0.198, 0.162]], variation: 0.17, lichen: 0.6, moss: 0.45, tooled: 0.15, ...(opts.stoneGrey || {}) }),
       // dressed grey (quoins, arches, fountain, steps)
-      stoneMaterial(ctx, { texture: 'pbr/acg_ground27', scale: 0.7, palette: [[0.24, 0.23, 0.21], [0.215, 0.207, 0.19], [0.26, 0.243, 0.215]], variation: 0.09, lichen: 0.45, moss: 0.3, tooled: 0.7, ...(opts.stoneDressed || {}) }),
+      stoneMaterial(ctx, { texture: 'pbr/acg_ground27', scale: 0.7, palette: [[0.235, 0.225, 0.205], [0.2, 0.193, 0.178], [0.265, 0.245, 0.212]], variation: 0.2, lichen: 0.55, moss: 0.35, tooled: 0.55, stain: 0.6, ...(opts.stoneDressed || {}) }),
       oakMaterial(ctx, { tone: 0.45, ...(opts.oak || {}) }),
       oakMaterial(ctx, { tone: 0.75, key: 'dark', ...(opts.oakDark || {}) }),
+      // trenails: riven oak, the cut ends weathered grey
+      oakMaterial(ctx, { tone: 0.08, key: 'peg', checks: 0.2, ...(opts.oakPeg || {}) }),
+      // long-weathered structural oak out in the open (the rig, the platform): silver-grey
+      oakMaterial(ctx, { tone: 0.12, key: 'silver', silver: [0.23, 0.215, 0.195], ...(opts.oakSilver || {}) }),
       tileMaterial(ctx, { kind: 'clay', ...(opts.clay || {}) }),
       tileMaterial(ctx, { kind: 'slate', ...(opts.slate || {}) }),
       stoneMaterial(ctx, { palette: [[0.12, 0.11, 0.1], [0.09, 0.085, 0.08], [0.15, 0.13, 0.11]], variation: 0.3, lichen: 0.1, moss: 0.0, tooled: 0.3, soot: 0.6, splash: 0, ...(opts.stoneSoot || {}) }),
@@ -942,12 +1127,12 @@ export async function archMaterials(ctx, opts = {}) {
       stoneMaterial(ctx, { texture: 'pbr/acg_ground27', scale: 0.7, palette: [[0.46, 0.43, 0.37], [0.4, 0.37, 0.32], [0.5, 0.46, 0.39]], variation: 0.15, lichen: 0.0, moss: 0.0, algae: 0.0, tooled: 0.4, splash: 0.25, streaks: 0.15, wash: 0.85, ...(opts.stoneWashed || {}) }),
     ]);
     const M = {
-      stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneSett, stoneFloor, stoneWashed, stoneQuay,
+      stonePale, stoneGrey, stoneDressed, oak, oakDark, oakPeg, oakSilver, clay, slate, stoneSoot, stoneWet, stoneFar, stoneSett, stoneFloor, stoneWashed, stoneQuay,
       leather: plainMaterial('leather', [0.09, 0.05, 0.03], { roughness: 0.6, vary: 0.3, freq: 25, bump: 0.0008 }),
-      mortar: mortarMaterial(ctx, opts.mortar),
-      mortarPale: mortarMaterial(ctx, { color: [0.33, 0.31, 0.27], key: 'pale', ...(opts.mortarPale || {}) }),
+      mortar: await mortarMaterial(ctx, opts.mortar),
+      mortarPale: await mortarMaterial(ctx, { color: [0.3, 0.285, 0.25], key: 'pale', ...(opts.mortarPale || {}) }),
       // interiors: joints filled and lime-washed over with the stones
-      mortarWashed: mortarMaterial(ctx, { color: [0.6, 0.58, 0.52], moss: 0, ao: 0.95, key: 'washed', ...(opts.mortarWashed || {}) }),
+      mortarWashed: await mortarMaterial(ctx, { color: [0.6, 0.58, 0.52], moss: 0, ao: 0.95, key: 'washed', ...(opts.mortarWashed || {}) }),
       plaster: plasterMaterial(ctx, opts.plaster),
       // indoor lime plaster: kept up, cleaner, warmer
       plasterInt: plasterMaterial(ctx, { age: 0.25, tints: [[0.6, 0.56, 0.48], [0.58, 0.54, 0.46], [0.62, 0.57, 0.48], [0.57, 0.54, 0.47], [0.6, 0.55, 0.46], [0.59, 0.56, 0.5]], ...(opts.plasterInt || {}) }),
@@ -957,14 +1142,23 @@ export async function archMaterials(ctx, opts = {}) {
       lead: plainMaterial('lead', [0.12, 0.12, 0.125], { roughness: 0.6, vary: 0.3 }),
       straw: plainMaterial('straw', [0.48, 0.36, 0.16], { roughness: 0.8, vary: 0.45, freq: 40, bump: 0.0005 }),
       strawBed: strawMaterial(ctx),
+      bark: barkMaterial(ctx),
       linen: plainMaterial('linen', [0.62, 0.6, 0.55], { roughness: 0.92, vary: 0.14, freq: 30, bump: 0.0006, params: { side: THREE.DoubleSide } }),
       sootStain: sootMaterial(ctx),
+      stain: stainMaterial(ctx),
+      foam: foamMaterial(ctx),
+      sacking: plainMaterial('sacking', [0.2, 0.155, 0.1], { roughness: 0.95, vary: 0.3, freq: 60, bump: 0.0008 }),
       clayware: plainMaterial('clayware', [0.3, 0.16, 0.08], { roughness: 0.7, vary: 0.2 }),
+      // wet mud / dung caked on wheels, at wall feet
+      mud: plainMaterial('mud', [0.075, 0.058, 0.04], { roughness: 0.75, vary: 0.35, freq: 30, bump: 0.0015 }),
       rope: plainMaterial('rope', [0.22, 0.18, 0.12], { roughness: 0.95, vary: 0.3, freq: 80, bump: 0.001 }),
       soot: plainMaterial('soot', [0.02, 0.018, 0.016], { roughness: 0.95 }),
       pool: poolMaterial(ctx),
       // the harbour's water: a long chop (no planar reflection of the quay: see README)
       sea: poolMaterial(ctx, { name: 'sea', chop: 6, color: [0.01, 0.018, 0.017] }),
+      // standing rain water on a road or a square: silty, brown, a duller sheen
+      puddle: poolMaterial(ctx, { name: 'puddle', chop: 0.4, color: [0.03, 0.024, 0.016], roughness: 0.06 }),
+      wetMud: plainMaterial('wetMud', [0.048, 0.038, 0.027], { roughness: 0.3, vary: 0.45, freq: 14, bump: 0.002 }),
       jet: jetMaterial(ctx),
       water: new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.012, 0.016, 0.016), roughness: 0.03, metalness: 0, transmission: 0, ior: 1.33 }),
     };
@@ -978,6 +1172,7 @@ export async function archMaterials(ctx, opts = {}) {
     M.water.userData.noShadow = true;
     M.pool.userData.noShadow = true;
     M.sea.userData.noShadow = true;
+    M.puddle.userData.noShadow = true;
     M.jet.userData.noShadow = true;
     M.glass.userData.noShadow = true;
     M.portal.userData.noShadow = true;
