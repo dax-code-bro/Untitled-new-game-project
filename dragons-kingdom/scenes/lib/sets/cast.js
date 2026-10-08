@@ -109,3 +109,88 @@ export function lookAtPoint(ch, point, amount = 1, o = {}) {
 
 /** World position of a named bone. */
 export function bonePos(ch, name) { ch.root.updateMatrixWorld(true); return wpos(ch.bone(name)); }
+
+/**
+ * Open a hand from whatever the build's pose made of it (a clasp, a fist, a grip) into a relaxed,
+ * slightly curled hand, and optionally turn the palm toward a world direction:
+ *   relaxHand(ch, 'L', { palm: new THREE.Vector3(0, 1, 0), curl: 0.2, spread: 0.05 })
+ * o.fingers (world direction): point the hand that way (the wrist bends) instead of continuing the forearm.
+ * Uses the bones' rest-pose head positions in the cast cache (header.bones[i].rest): the rest pose
+ * is MakeHuman's, with nearly straight fingers. Each finger's first two segments are aligned with
+ * their rest directions carried into the hand's current frame, then curled toward the palm by
+ * `curl` (radians per joint). Call after limbIK.
+ */
+export function relaxHand(ch, side, o = {}) {
+  const H = ch.header, idx = ch.index;
+  const rest = (n) => { const b = H.bones[idx[`${n}.${side}`]]; return b ? new THREE.Vector3(...b.rest) : null; };
+  const now = (n) => { const b = ch.bone(`${n}.${side}`); return b ? wpos(b) : null; };
+  const knuck = ['finger2-1', 'finger3-1', 'finger4-1', 'finger5-1'];
+  const frameOf = (get) => {
+    const w = get('wrist');
+    const k = knuck.map(get);
+    const avg = k.reduce((a, b) => a.add(b), new THREE.Vector3()).multiplyScalar(1 / 4);
+    const fwd = avg.sub(w).normalize();
+    const sd = k[3].clone().sub(k[0]);
+    sd.addScaledVector(fwd, -sd.dot(fwd)).normalize();
+    const up = fwd.clone().cross(sd).normalize();
+    return new THREE.Matrix4().makeBasis(fwd, sd, up);
+  };
+  ch.root.updateMatrixWorld(true);
+  // the palm side: fingers curl toward it in the rest pose
+  const r1 = rest('finger3-2').sub(rest('finger3-1')).normalize(), r2 = rest('finger3-3').sub(rest('finger3-2')).normalize();
+  const Fr = frameOf(rest);
+  const upR = new THREE.Vector3().setFromMatrixColumn(Fr, 2);
+  const palmSign = r2.clone().sub(r1).dot(upR) >= 0 ? 1 : -1;
+  // straighten the wrist: the hand continues the forearm (a clasp or a grip bends it), with an
+  // optional bend (radians) toward the palm
+  if (o.align !== false) {
+    const Fa = frameOf(now);
+    const f0 = new THREE.Vector3().setFromMatrixColumn(Fa, 0);
+    const fa = o.fingers ? o.fingers.clone().normalize() : now('wrist').sub(now('lowerarm01')).normalize();
+    const wb = ch.bone(`wrist.${side}`);
+    if (wb) { rotateWorld(wb, _q.setFromUnitVectors(f0, fa)); ch.root.updateMatrixWorld(true); }
+  }
+  // turn the wrist about the forearm so the palm faces o.palm
+  if (o.palm) {
+    const Fc = frameOf(now);
+    const up = new THREE.Vector3().setFromMatrixColumn(Fc, 2).multiplyScalar(palmSign);
+    const axis = o.fingers ? new THREE.Vector3().setFromMatrixColumn(frameOf(now), 0) : now('wrist').sub(now('lowerarm01')).normalize();
+    const a = up.clone().addScaledVector(axis, -up.dot(axis)).normalize();
+    const b = o.palm.clone().addScaledVector(axis, -o.palm.dot(axis));
+    if (b.lengthSq() > 1e-6) {
+      b.normalize();
+      const ang = Math.atan2(a.clone().cross(b).dot(axis), a.dot(b));
+      // the forearm's twist bone takes half, the wrist the rest (no candy-wrapper twist)
+      for (const [n, w] of (o.fingers ? [['wrist', 1]] : [['lowerarm02', 0.5], ['wrist', 0.5]])) { const bn = ch.bone(`${n}.${side}`); if (bn) { rotateWorld(bn, _q.setFromAxisAngle(axis, ang * w)); ch.root.updateMatrixWorld(true); } }
+    }
+  }
+  const Fc = frameOf(now);
+  const R = Fc.clone().multiply(Fr.clone().transpose());       // rest frame -> current frame (rotation)
+  const sideC = new THREE.Vector3().setFromMatrixColumn(Fc, 1), upC = new THREE.Vector3().setFromMatrixColumn(Fc, 2).multiplyScalar(palmSign);
+  const curl = o.curl ?? 0.2, spread = o.spread ?? 0;
+  for (let f = 1; f <= 5; f++) {
+    for (let j = 1; j <= 2; j++) {
+      const n0 = `finger${f}-${j}`, n1 = `finger${f}-${j + 1}`;
+      const b = ch.bone(`${n0}.${side}`);
+      if (!b || !ch.bone(`${n1}.${side}`)) continue;
+      const cur = now(n1).sub(now(n0)).normalize();
+      const want = rest(n1).sub(rest(n0)).applyMatrix4(R).normalize();
+      // curl toward the palm about the hand's side axis (the thumb curls less), spread the fingers
+      const c = (f === 1 ? 0.4 : 1) * curl * (j === 1 ? 0.7 : 1.2);
+      const ax = want.clone().cross(upC).normalize();
+      want.applyAxisAngle(ax, c);
+      if (spread && f > 1) want.applyAxisAngle(upC, spread * (f - 3.5));
+      rotateWorld(b, _q.setFromUnitVectors(cur, want));
+      ch.root.updateMatrixWorld(true);
+    }
+    // the last segment follows with a little more curl
+    const b3 = ch.bone(`finger${f}-3.${side}`);
+    if (b3) {
+      const d = now(`finger${f}-3`).sub(now(`finger${f}-2`)).normalize();
+      const ax = d.clone().cross(upC).normalize();
+      rotateWorld(b3, _q.setFromAxisAngle(ax, (f === 1 ? 0.5 : 1.25) * curl));
+      ch.root.updateMatrixWorld(true);
+    }
+  }
+  void sideC;
+}
