@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EXFIL — Extraction Shooter</title>
+<title>Sector 12</title>
 <link rel="stylesheet" href="style.css">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }</script>
 </head>
@@ -12,8 +12,7 @@
 
 <div id="hud" class="hidden">
   <canvas id="compass" width="620" height="50"></canvas>
-  <div id="timer"></div>
-  <div id="contract"></div>
+  <div id="where"></div>
   <canvas id="minimap" width="190" height="190"></canvas>
   <div id="killfeed"></div>
   <div id="toasts"></div>
@@ -23,18 +22,19 @@
   <div id="prompt"></div>
   <div id="exfil"></div>
   <div id="vitals">
-    <div id="armor"><span><i></i></span><span><i></i></span><span><i></i></span></div>
+    <div id="status"></div>
+    <div id="armor"></div>
     <div id="hp"><div id="hpfill"></div></div>
     <div id="kit"></div>
   </div>
-  <div id="weapon"><div id="wname"></div><div id="wammo"></div><div id="wstatus"></div></div>
+  <div id="weapon"><div id="slots"></div><div id="wname"></div><div id="wammo"></div><div id="wstatus"></div></div>
   <div id="scope"></div>
   <div id="vignette"></div>
-  <div id="radtint"></div>
-  <div id="downed"></div>
+  <div id="frost"></div>
+  <div id="heat"></div>
 </div>
 
-<div id="bigmap" class="hidden"><canvas id="bigmap-canvas" width="860" height="860"></canvas><p><kbd>M</kbd> close map</p></div>
+<div id="bigmap" class="hidden"><canvas id="bigmap-canvas" width="900" height="900"></canvas><p><kbd>M</kbd> close map</p></div>
 <div id="panel" class="hidden"></div>
 <div id="banner" class="hidden"></div>
 
@@ -44,13 +44,12 @@
     <button id="resume" class="deploy">RESUME</button>
     <label>Mouse sensitivity <input id="sens" type="range" min="0.2" max="3" step="0.05"></label>
     <label>Volume <input id="vol" type="range" min="0" max="1" step="0.05"></label>
-    <button id="abandon" class="danger">Abandon raid</button>
+    <button id="quit" class="danger">Quit to title</button>
   </div>
 </div>
 
-<div id="loading" class="hidden"><div><h2>INFILTRATING</h2><p id="loading-detail">Generating the zone…</p></div></div>
-
-<div id="hq" class="hidden"></div>
+<div id="loading" class="hidden"><div><h2>SECTOR 12</h2><p id="loading-detail">Building the island…</p></div></div>
+<div id="title" class="hidden"></div>
 
 <script type="module" src="src/main.js"></script>
 </body>

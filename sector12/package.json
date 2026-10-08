@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "name": "sector12",
+  "type": "module",
+  "description": "Sector 12 — survival extraction shooter (static site, no build step)"
+}

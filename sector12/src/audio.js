@@ -56,17 +56,34 @@ export class AudioSys {
     o.start(t); o.stop(t + dur + 0.05);
   }
 
-  shot(ammo, dist = 0, pan = 0, own = false) {
+  shot(ammo, dist = 0, pan = 0, own = false, big = false) {
     if (!this.ctx) return;
-    const v = 1 / (1 + dist / 22);
+    const v = 1 / (1 + dist / (big ? 60 : 22));
     if (v < 0.03) return;
     const far = 1 / (1 + dist / 60);
-    const base = ammo === 'sniper' ? 5200 : ammo === 'shell' ? 2200 : ammo === 'pistol' ? 3400 : 4200;
-    const dur = ammo === 'sniper' ? 0.5 : ammo === 'shell' ? 0.38 : 0.2;
-    this._noise(dur * (1 + dist / 120), 'lowpass', base * far + 250, 0.9 * v, pan);
-    if (own || dist < 30) this._tone(ammo === 'shell' || ammo === 'sniper' ? 120 : 170, 40, 0.14, 'sine', 0.9 * v, pan);
-    if (dist > 60) this._noise(0.8, 'lowpass', 500, 0.25 * v, pan, 0.7, 0.06);
+    const shotgun = ammo === 'shell' || ammo === 'slug' || ammo === 'exp_slug';
+    const base = big ? 5600 : shotgun ? 2200 : ammo.includes('light') ? 3400 : ammo.includes('heavy') ? 4600 : 4000;
+    const dur = big ? 0.9 : shotgun ? 0.38 : ammo.includes('heavy') ? 0.28 : 0.2;
+    this._noise(dur * (1 + dist / 120), 'lowpass', base * far + 250, (big ? 1.2 : 0.9) * v, pan);
+    if (own || dist < 30) this._tone(shotgun || big ? 110 : 170, 38, big ? 0.3 : 0.14, 'sine', (big ? 1.3 : 0.9) * v, pan);
+    if (dist > 60 || big) this._noise(big ? 1.6 : 0.8, 'lowpass', 500, 0.3 * v, pan, 0.7, 0.06);
   }
+
+  explosion(dist = 0) {
+    if (!this.ctx) return;
+    const v = 1 / (1 + dist / 30);
+    this._noise(1.2, 'lowpass', 900 / (1 + dist / 100) + 120, 1.4 * v);
+    this._tone(80, 25, 0.6, 'sine', 1.2 * v);
+  }
+  pump() { if (this.ctx) { this._noise(0.07, 'bandpass', 900, 0.5, 0, 3); this._noise(0.08, 'bandpass', 1400, 0.5, 0, 3, 0.18); } }
+  shell() { if (this.ctx) this._noise(0.05, 'bandpass', 2000, 0.35, 0, 4); }
+  swing() { if (this.ctx) this._noise(0.16, 'bandpass', 700, 0.35, 0, 1.5); }
+  co2() { if (this.ctx) { this._noise(0.12, 'highpass', 2500, 0.6); this._tone(1200, 300, 0.1, 'sawtooth', 0.15); } }
+  armorHit() { if (this.ctx) { this._tone(1900, 1300, 0.07, 'square', 0.15); this._noise(0.05, 'highpass', 3000, 0.25); } }
+  bite() { if (this.ctx) { this._noise(0.1, 'lowpass', 600, 0.6); this._tone(220, 120, 0.15, 'sawtooth', 0.15); } }
+  thunder() { if (this.ctx) { this._noise(2.5, 'lowpass', 220, 0.9); this._noise(1.2, 'lowpass', 500, 0.4, 0, 0.7, 0.2); } }
+  printDone() { if (this.ctx) [880, 1175, 1568].forEach((f, i) => this._tone(f, f, 0.18, 'triangle', 0.18, 0, i * 0.12)); }
+  deposit() { if (this.ctx) { this._noise(0.25, 'bandpass', 600, 0.5, 0, 1); [523, 784].forEach((f, i) => this._tone(f, f, 0.15, 'triangle', 0.18, 0, 0.15 + i * 0.1)); } }
 
   hit(head, armor) {
     if (!this.ctx) return;
