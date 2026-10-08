@@ -65,6 +65,9 @@ to ~0.05-0.1 and let the sun (shadowed) and the sky seen through the openings li
 built hundreds of metres from the world origin keeps fine, stable detail. Build each distant set
 (another room, the harbour, the palace) in its own `Kit`.
 
+**Far sets on a long lens**: set the camera's near plane far out for the shot (the palace shot
+uses 25 m), else the stones and the recessed mortar behind them z-fight.
+
 **LOD**: `'hero'` (close-ups: more rounding/segments), `'mid'` (default), `'low'` (flat blocks,
 party walls, backs), `'far'` (silhouettes: big flat blocks, hairline joints, `stoneFar`).
 **Damage** (3C): `clingSquare(ctx, { damage: (x, y, z) => bool })` removes the roof tiles at

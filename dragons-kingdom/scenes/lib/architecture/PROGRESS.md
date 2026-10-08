@@ -35,14 +35,34 @@ Regenerate the bake:  <bpy python> scenes/lib/architecture/offline/nest_cloth.py
 - Annular warps (fountain rings, nest kerb, round tower, corbels) mirrored the block -> inside-out
   stones; use `th = am - lx / r` (a proper rotation).
 - Oak: the across-grain coordinate came from world position . per-triangle normal -> jagged
-  lines / zebra moire on displaced members; now from the pith distance (uv). Rings are a smooth
-  band (no sawtooth), all fine detail fades by its own screen-space frequency.
+  lines / zebra moire on displaced members; now two directions fixed by the piece's grain axis
+  (the pith distance only on the end grain). Rings are a smooth band (no sawtooth); all fine
+  detail fades by a smooth per-vertex pixel footprint (fwidth() of a varying is per-triangle on
+  a displaced mesh -> patchy anti-aliasing). Adze scallops are in the bump, not the geometry.
 - Noise far from the world origin (rooms at x = -300, the harbour at 520) lost precision ->
   contour "wood grain" swirls on plaster, polka dots on floors; noise now in object space.
 - Cascaded shadows without depth bias -> acne stripes on grazing members: lookdev scenes set
   `shadows: { bias: -0.0003, normalBias: 2.5 }`.
+- Depth precision: a long-lens shot of a far set (the palace at ~400 m) needs a far-out camera
+  near plane (25 m there), else the stones and the recessed mortar z-fight into dark streaks.
+- Plaster losses (treatment room) are cut on a 6 cm grid with the edge vertices moved onto the
+  contour of the loss field, plus the coat's broken edge - no stepped outlines.
+- Lesson: never edit the live materials for an experiment while a render queue runs (two
+  stills picked up an experimental shader; they were re-rendered).
+
+## Measured (this box: 4-core CPU, SwiftShader)
+- Build (setup) per model, triangles: house 0.29-0.32 M (0.5-0.9 s), house row of three 0.70 M,
+  stable 0.59 M, keepers' lodge 0.21 M, access rig 0.05 M, Leaf's platform 7 k, harbour 1.0 M,
+  palace (far LOD) 0.71 M, round tower 0.28 M, arch 72 k, gate 54 k, fountain 32 k, support
+  19 k, king's steps 89 k. The whole Cling square (21 houses, LOD by distance, paving) 8.7-8.9 M
+  triangles in ~20 draw calls.
+- 4K final stills (8 accumulated sub-frames): 2.5-11 min each (interiors 2.5-6, Cling 8-11).
 
 ## Open issues / next
+- Faint triangle-shaped tonal patches with a fine cross-hatch on large flat oak / stone faces in
+  1:1 crops. Isolated to the albedo path (a constant albedo removes them); not the bump, GTAO,
+  contact shadows or shadow bias. Not found yet - start by bisecting the remaining albedo terms
+  (base tone x streak noise alone still shows it) on a COPY of the scene/material.
 - Stones still read a little as separate blocks at mid distance (each stone has its own colour);
   more cross-joint weathering (soot, run-off, lichen colonies across several stones) would help.
 - Plaster flakes / repairs are shader-only; a few real modelled losses (lath and daub showing)
