@@ -21,7 +21,8 @@ import { masonryBox } from './masonry.js';
  * half span), eaves (overhang, m), verge (overhang at the gables, m), cover ('clay'|'slate'),
  * sag ({ ridge, slope, eaves } m), lod, seed, sides ([+1, -1] which slopes), gableL / gableR
  * (bool: verges with bargeboards at -x / +x; false = abutting a neighbour), missing (fraction of
- * slipped / missing tiles), damage (fn(x, s, side) -> bool: tile removed - a hole for 3C).
+ * slipped / missing tiles), damageAt (fn([x, y, z] in the parent frame of F) -> bool: the tile
+ * there is removed - holes in the roofline for 3C).
  * Returns { rise, slope, tiles: [{ side, x, s, tri range }] }.
  */
 export function gableRoof(kit, F, o) {
@@ -44,6 +45,12 @@ export function gableRoof(kit, F, o) {
   const slopeF = (side) => frame([0, rise, 0], [1, 0, 0], [0, ca, side * sa], [0, -sa, side * ca]);
   // (in slopeF: local x along the ridge, y = out of the roof surface, z = distance down the slope)
   const tiles = [];
+  // damage: o.damageAt(point in F's parent frame) -> true removes the tile (holes for 3C)
+  const hit = (x, s2, side) => {
+    if (!o.damageAt) return false;
+    const p = [x, rise - s2 * sa + 0.05, side * s2 * ca];
+    return o.damageAt([F[0] + p[0] * F[3] + p[1] * F[6] + p[2] * F[9], F[1] + p[0] * F[4] + p[1] * F[7] + p[2] * F[10], F[2] + p[0] * F[5] + p[1] * F[8] + p[2] * F[11]]);
+  };
   for (const side of sides) {
     const SF = slopeF(side);
     const Fs = side > 0 ? SF : frame([0, rise, 0], [-1, 0, 0], [0, ca, side * sa]);   // keep right-handed frames
@@ -80,7 +87,7 @@ export function gableRoof(kit, F, o) {
         for (let x = xL - off; x < xR; x += tw + rnd.range(0.002, 0.006)) {
           const xa = Math.max(xL, x), xb = Math.min(xR, x + tw);
           if (xb - xa < 0.05) continue;
-          if (o.damage && o.damage((xa + xb) / 2, tail, side)) continue;
+          if (hit((xa + xb) / 2, tail, side)) continue;
           if (o.missing && rnd() < o.missing) continue;
           const head = Math.max(0.02, tail - tl);
           const t0 = local.get(tileMat).tcount;
@@ -101,7 +108,7 @@ export function gableRoof(kit, F, o) {
         while (x < xR) {
           const w = (0.22 + 0.2 * f) * rnd.range(0.7, 1.4);
           const xa = Math.max(xL, x), xb = Math.min(xR, x + w);
-          if (xb - xa > 0.06 && !(o.damage && o.damage((xa + xb) / 2, tail, side)) && !(o.missing && rnd() < o.missing)) {
+          if (xb - xa > 0.06 && !hit((xa + xb) / 2, tail, side) && !(o.missing && rnd() < o.missing)) {
             const t0 = local.get(tileMat).tcount;
             tile(local.get(tileMat), Fs, X, xa, xb, Math.max(0.02, tail - len), tail, lift, th, rnd, hero, c === 0, 0.012);
             tiles.push({ side, x: (xa + xb) / 2, s: tail, start: t0, end: local.get(tileMat).tcount });
@@ -143,8 +150,8 @@ export function gableRoof(kit, F, o) {
     for (const side of sides) {
       const SF = slopeF(side);
       // a thick board along the verge, below the tiles' edge
-      const Fb = sub(SF, [gx + (gx < 0 ? 0.03 : -0.03), -0.04, slope / 2 + 0.04]);
-      block(local.get('oakDark'), Fb, 0.045, 0.3, slope + 0.1, { r: 0.006, seg: [0.04, 0.1, 0.25], seed: rnd(), noise: 0.003, nf: 3, chip: 0.006, axis: [0, 0, 1] });
+      const Fb = sub(SF, [gx + (gx < 0 ? 0.03 : -0.03), -0.04, slope / 2 + 0.04], [0, 0, 1], [0, 1, 0]);
+      block(local.get('oakDark'), Fb, slope + 0.1, 0.3, 0.045, { r: 0.006, seg: [0.25, 0.1, 0.045], seed: rnd(), noise: 0.003, nf: 3, chip: 0.006 });
     }
   }
   // ---- sag: the ridge dips between the gables, the slopes hollow, the eaves droop

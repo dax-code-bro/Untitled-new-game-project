@@ -244,7 +244,10 @@ export function block(acc, F, sx, sy, sz, o = {}) {
   const r = Math.min(o.r ?? 0.01, 0.45 * Math.min(sx, sy, sz));
   const rs = o.rs ?? 1;
   const segv = Array.isArray(o.seg) ? o.seg : [o.seg ?? 0.3, o.seg ?? 0.3, o.seg ?? 0.3];
+  const skipBits = o.skip ?? 0;
   const C = [axisCoords(sx, r, segv[0], rs), axisCoords(sy, r, segv[1], rs), axisCoords(sz, r, segv[2], rs)];
+  // a hidden back face (-z, stones set in a wall) needs no rounding rows at the back
+  if ((skipBits & 32) && r > 1e-4) { const z = C[2]; C[2] = z.filter((v, i) => i === 0 || v >= sz / 2 - r - 1e-6 || (i > 0 && v > -sz / 2 + r + 1e-6)).filter((v, i, a) => !(i === 1 && Math.abs(v - (-sz / 2 + r)) < 1e-6)); }
   const S = [sx, sy, sz], H = [sx / 2 - r, sy / 2 - r, sz / 2 - r];
   const skip = o.skip ?? 0;
   const seed = o.seed ?? 0;
@@ -255,6 +258,9 @@ export function block(acc, F, sx, sy, sz, o = {}) {
   const wane = o.wane || null;
   const so = seed * 131.7;
   const axL = o.axis || [1, 0, 0];
+  // the pith of the log this piece was hewn from (boxed heart: near the middle; or off-centre)
+  const ph1 = hash3(Math.floor(seed * 1e6), 7), ph2 = hash3(Math.floor(seed * 1e6), 11);
+  const pith = o.pith || [(ph1 - 0.5) * sy * 0.9, (ph2 - 0.5) * sz * 0.9 + (ph1 > 0.7 ? sz * 0.6 : 0)];
   const AX = norm(xd(F, axL[0], axL[1], axL[2]));
   const map = new Map();
   const n1 = C[1].length, n2 = C[2].length;
@@ -320,7 +326,11 @@ export function block(acc, F, sx, sy, sz, o = {}) {
     if (o.uvFn) { const q = o.uvFn(p[0], p[1], p[2]); u = q[0]; vv = q[1]; }
     else if (o.uvMode === 'box') {
       if (Math.abs(nx) > 0.6) { u = lz; vv = ly; } else if (Math.abs(ny) > 0.6) { u = lx; vv = lz; } else { u = lx; vv = ly; }
-    } else { u = lx + sx / 2; vv = Math.atan2(lz / sz, ly / sy) * (sy + sz) / Math.PI; }
+    } else {
+      // 'beam': u along the length, v = distance from the tree's pith (growth rings in the shader)
+      u = lx + sx / 2;
+      vv = Math.hypot(ly - pith[0], lz - pith[1]);
+    }
     id = acc.v(w[0], w[1], w[2], u, vv, seed, ao, ar, AX[0], AX[1], AX[2]);
     map.set(key, id);
     return id;

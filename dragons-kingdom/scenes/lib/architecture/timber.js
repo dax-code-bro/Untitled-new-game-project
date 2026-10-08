@@ -40,7 +40,7 @@ export function member(kit, F, a, b, w, dep, rnd, o = {}) {
   const ph = rnd() * 10;
   block(kit.get(o.mat || 'oak'), Fm, L, w * rnd.range(0.95, 1.04), dep, {
     r: rnd.range(0.006, 0.016), rs: hero ? 2 : 1,
-    seg: [hero ? 0.12 : 0.3, hero ? Math.max(0.04, w / 3) : w, hero ? Math.max(0.05, dep / 3) : dep],
+    seg: [hero ? 0.12 : lod === 'low' ? 1.0 : 0.4, hero ? Math.max(0.04, w / 3) : w, hero ? Math.max(0.05, dep / 3) : dep],
     seed, noise: 0.003, nf: 4, chip: 0.006, adze: hero ? 0.0022 : 0.0012,
     wane: rnd() < 0.25 ? [rnd() < 0.5 ? 1 : -1, 1] : null,
     axis: [1, 0, 0], skip: 32 * (o.back ? 0 : 0),

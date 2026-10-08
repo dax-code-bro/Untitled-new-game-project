@@ -19,7 +19,7 @@ import { windowUnit, door, threshold } from './openings.js';
  * door { x, w, h, arch, open }, shop { x, w, h } (ground-floor window), windows per storey
  * (count), shutters mix, lean (rad), party { left, right } (abutting neighbours: plain faces),
  * oakTone ('oak' | 'oakDark'), chimney (bool | 'left' | 'right'), studs (spacing), rail,
- * damage (fn for roof tiles), sideJetty (bool, corner houses).
+ * damage (fn([x, y, z] in the PARENT frame of F) -> bool: roof tiles removed there).
  * Returns { height, ridge, front (z of the top storey front), doors, windows, roof }.
  */
 export function house(kit, F, o = {}) {
@@ -139,12 +139,12 @@ export function house(kit, F, o = {}) {
     }
     gableFrame(local, sub(frame([0, 0, 0]), [w / 2, y, -d / 2], [-1, 0, 0], [0, 1, 0]), w, rise, { lod: 'low', seed: rnd() * 1000, mat: oak, plasterSeed: (o.seed ?? 1) * 0.0137 });
     const RF = frame([0, y, front - dTop / 2], [0, 0, 1], [0, 1, 0]);
-    roofInfo = gableRoof(local, RF, { L: dTop, S: w, pitch, eaves: rnd.range(0.35, 0.55), verge: rnd.range(0.35, 0.6), cover, lod, seed: rnd() * 1000, damage: o.damage, sag: o.sag });
+    roofInfo = gableRoof(local, RF, { L: dTop, S: w, pitch, eaves: rnd.range(0.35, 0.55), verge: rnd.range(0.35, 0.6), cover, lod, seed: rnd() * 1000, damageAt: o.damage, sag: o.sag });
     ridgeY = y + rise;
   } else {
     const rise = (dTop / 2) * pitch * 0.85;
     const RF = frame([0, y, front - dTop / 2], [1, 0, 0], [0, 1, 0]);
-    roofInfo = gableRoof(local, RF, { L: w, S: dTop, pitch: pitch * 0.85, eaves: rnd.range(0.4, 0.6), verge: party.left || party.right ? 0.12 : 0.35, cover, lod, seed: rnd() * 1000, damage: o.damage, sag: o.sag, gableL: true, gableR: true });
+    roofInfo = gableRoof(local, RF, { L: w, S: dTop, pitch: pitch * 0.85, eaves: rnd.range(0.4, 0.6), verge: party.left || party.right ? 0.12 : 0.35, cover, lod, seed: rnd() * 1000, damageAt: o.damage, sag: o.sag, gableL: true, gableR: true });
     gableFrame(local, sub(frame([0, 0, 0]), [-w / 2, y, -d / 2], [0, 0, 1], [0, 1, 0]), dTop, rise, { lod: party.left ? 'low' : lod, seed: rnd() * 1000, mat: oak, plasterSeed: (o.seed ?? 1) * 0.0137 });
     gableFrame(local, sub(frame([0, 0, 0]), [w / 2, y, front], [0, 0, -1], [0, 1, 0]), dTop, rise, { lod: party.right ? 'low' : lod, seed: rnd() * 1000, mat: oak, plasterSeed: (o.seed ?? 1) * 0.0137 });
     ridgeY = y + rise;

@@ -203,7 +203,8 @@ export function masonryFace(kit, F, L, H, o = {}) {
     const rev = op.reveal ?? Math.min(T * 0.7, 0.35);
     const jw = op.jambW ?? 0.3;
     const x0 = op.x, x1 = op.x + op.w, y0 = op.y, y1 = op.y + op.h;
-    const spring = head === 'arch' ? y1 - op.w / 2 : y1;
+    const isArch = head === 'arch' || head === 'archOpen';
+    const spring = isArch ? y1 - op.w / 2 : y1;
     // jambs: one dressed stone per course, long and short alternately (they return into the reveal)
     if (op.jamb !== false) {
       for (const [ci, c] of C.entries()) {
@@ -221,10 +222,11 @@ export function masonryFace(kit, F, L, H, o = {}) {
       const bear = op.bearing ?? 0.18 + rnd() * 0.08;
       stone(kit, F, dmat, x0 - bear, x1 + bear, y1 + 0.005, y1 + lh, rev + 0.05, rnd, ds, lod, { prot: 0.016 });
       zones.push({ x0: x0 - bear, x1: x1 + bear, y0: y1, y1: y1 + lh + 0.01, kind: 'lintel' });
-    } else if (head === 'arch') {
+    } else if (isArch) {
+      // 'archOpen': the voussoirs come from the other face (they run through the wall)
       const r = op.w / 2, vh = op.archH ?? clamp(0.22 + r * 0.12, 0.25, 0.5);
       const cx = (x0 + x1) / 2, cy = spring;
-      archRing(kit, F, dmat, cx, cy, r, vh, op.archDepth ?? rev, rnd, lod, { n: op.voussoirs, prot: 0.016 });
+      if (head === 'arch') archRing(kit, F, dmat, cx, cy, r, vh, op.archDepth ?? rev, rnd, lod, { n: op.voussoirs, prot: 0.016 });
       zones.push({ kind: 'arch', cx, cy, R: r + vh });
     }
     if (op.sill) {
@@ -293,7 +295,7 @@ export function masonryFace(kit, F, L, H, o = {}) {
     for (const op of ops) {
       const hole = new THREE.Path();
       const xa = op.x, xb = op.x + op.w, ya = op.y, yb = op.y + op.h;
-      if ((op.head || 'lintel') === 'arch') {
+      if ((op.head || 'lintel').startsWith('arch')) {
         const r = op.w / 2, sp = yb - r;
         hole.moveTo(xa, ya); hole.lineTo(xa, sp);
         for (let k = 1; k <= 16; k++) { const an = Math.PI - (k / 16) * Math.PI; hole.lineTo(xa + r + Math.cos(an) * r, sp + Math.sin(an) * r); }
@@ -313,7 +315,7 @@ export function masonryFace(kit, F, L, H, o = {}) {
         for (const [k, q] of P.entries()) macc.v(q[0], q[1], q[2], k < 2 ? 0 : T, 0, 0.5, 0.5, 0, 1, 0, 0);
         macc.q(a, a + 1, a + 2, a + 3);
       };
-      if ((op.head || 'lintel') === 'arch') {
+      if ((op.head || 'lintel').startsWith('arch')) {
         const r = op.w / 2, sp = yb - r;
         strip([xa, sp], [xa, ya]); strip([xb, ya], [xb, sp]);
         for (let k = 0; k < 16; k++) {

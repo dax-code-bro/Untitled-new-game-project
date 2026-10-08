@@ -267,10 +267,8 @@ export function mortarMaterial(ctx, opts = {}) {
 // ---------------------------------------------------------- oak --
 /** Weathered hewn oak. palette [silver-grey, brown, dark]; tone 0..1 (0 silver .. 1 dark brown). */
 export async function oakMaterial(ctx, opts = {}) {
-  const S = await scan(ctx, 'pbr/acg_wood35');
   const U = {
-    ...S.uniforms,
-    akC0: { value: new THREE.Color(...(opts.silver || [0.20, 0.185, 0.165])) },
+    akC0: { value: new THREE.Color(...(opts.silver || [0.2, 0.185, 0.165])) },
     akC1: { value: new THREE.Color(...(opts.brown || [0.105, 0.075, 0.05])) },
     akC2: { value: new THREE.Color(...(opts.dark || [0.045, 0.035, 0.026])) },
     akTone: { value: opts.tone ?? 0.5 },
@@ -279,59 +277,64 @@ export async function oakMaterial(ctx, opts = {}) {
   };
   return kitMaterial('oak', {
     uniforms: U, key: opts.key || '',
-    decl: `${SCAN_DECL}
-uniform vec3 akC0, akC1, akC2; uniform float akTone, akChecks, akLich;`,
+    decl: `uniform vec3 akC0, akC1, akC2; uniform float akTone, akChecks, akLich;`,
     body: /* glsl */ `
   float sd = vInfo.x;
   vec3 P = vWPos;
   vec3 A = normalize(vAxisW + 1e-6);
   float endg = smoothstep(0.65, 0.85, abs(dot(akN0, A)));
   vec3 Bv = normalize(cross(A, akN0) + 1e-6);
-  float u = dot(P, A) + sd * 37.0;          // along the grain
-  float v = dot(P, Bv) + sd * 11.0;         // across
-  // grain: long fibres + growth rings cut obliquely (cathedral figure), scan for fine fibre detail
-  vec2 suv = vec2(u * 0.55, v * 2.2) + sd * 3.0;
-  vec3 ga = texture2D(akScanA, suv).rgb / akScan.z;
-  vec3 gn = texture2D(akScanN, suv).xyz * 2.0 - 1.0;
-  float fib = akN2(vec2(u * 2.5, v * 140.0)) * 0.6 + akN2(vec2(u * 0.7, v * 47.0)) * 0.4;
-  float rings = sin((v * 38.0 + akF2(vec2(u * 0.6, v * 3.0)) * 9.0) ) * 0.5 + 0.5;
+  // u: along the grain (m, from the piece's uv), r: distance from the pith (growth rings),
+  // v: across the face (world)
+  float u = vMUv.x + sd * 37.0;
+  float r = vMUv.y;
+  float v = dot(P, Bv) + sd * 11.0;
+  float fw = length(fwidth(P));
+  // growth rings: ~3.5 mm apart, wandering; seen on a face as long stripes / cathedral figure
+  float rw = r + 0.006 * sin(u * 2.1 + sd * 30.0) + 0.004 * akN2(vec2(u * 0.8, r * 30.0 + sd * 9.0));
+  float ringF = rw / 0.0036;
+  float ringAA = 1.0 - smoothstep(0.25, 0.7, fwidth(ringF));
+  float ring = mix(0.5, smoothstep(0.55, 0.95, fract(ringF)), ringAA);         // latewood: the dark, hard band
+  // fibres: fine lines along the grain (rotated value noise; faded before they alias)
+  float fibAA = 1.0 - smoothstep(0.0012, 0.003, fw);
+  float fib = mix(0.5, 0.5 + 0.22 * sin(v * 900.0 + akN2(vec2(u * 1.5, v * 30.0)) * 6.0) + 0.18 * sin(v * 2300.0 + u * 0.7 + akN2(vec2(u * 4.0, v * 80.0)) * 3.0), fibAA);
   float tone = clamp(akTone + (akH1(sd * 51.3) - 0.5) * 0.5, 0.0, 1.0);
   vec3 base = tone < 0.5 ? mix(akC0, akC1, tone * 2.0) : mix(akC1, akC2, tone * 2.0 - 1.0);
   // the weather side bleaches to silver, the underside and sheltered parts stay brown / dark
   float upf = akN0.y;
-  base = mix(base, akC0 * 1.1, smoothstep(0.2, 1.0, upf) * 0.45);
+  base = mix(base, akC0 * 1.12, smoothstep(0.2, 1.0, upf) * 0.45);
   base = mix(base, base * vec3(0.7, 0.62, 0.55), smoothstep(-0.2, -1.0, upf) * 0.5);
-  vec3 c = base * mix(1.0, akLum(ga), 0.5) * (0.82 + 0.3 * fib) * (0.92 + 0.12 * rings);
+  // broad weathering streaks along the member
+  float streakW = akF2(vec2(u * 0.6, v * 9.0) + sd * 4.0);
+  vec3 c = base * (0.82 + 0.3 * streakW) * (0.9 + 0.16 * fib) * (1.06 - 0.16 * ring);
   // checks: long dark shrinkage splits along the grain, a few per face
   float chk = 0.0;
   {
-    float cv = v * 9.0 + akN2(vec2(u * 0.8, sd * 9.0)) * 1.5;
-    float line = abs(fract(cv) - 0.5);
+    float cv = v * 7.0 + akN2(vec2(u * 0.8, sd * 9.0)) * 1.2;
+    float line = abs(fract(cv) - 0.5) / max(fwidth(cv), 1e-4);
     float pres = smoothstep(0.55, 0.8, akN2(vec2(floor(cv) * 7.3 + sd * 20.0, u * 0.35)));
-    float wdt = 0.035 * pres;
-    chk = (1.0 - smoothstep(wdt * 0.4, wdt, line)) * pres * akChecks * (1.0 - endg);
+    float wdt = (0.6 + 2.5 * pres) * 0.6;
+    chk = (1.0 - smoothstep(wdt * 0.5, wdt, line)) * pres * akChecks * (1.0 - endg);
   }
-  c *= 1.0 - 0.75 * chk;
-  // end grain: rings and radial splits, darker and more porous
+  c *= 1.0 - 0.7 * chk;
+  // end grain: concentric rings round the pith, radial splits, darker and more porous
+  float er = 0.0;
   if (endg > 0.0) {
-    vec2 q = vec2(dot(P, Bv), dot(P, normalize(cross(A, Bv)))) + vec2(akH1(sd * 3.0), akH1(sd * 5.0)) * 0.1;
-    float rr = length(q) * 70.0 + akN2(q * 20.0) * 3.0;
-    float ec = 0.7 + 0.3 * sin(rr);
-    c = mix(c, base * 0.6 * ec, endg);
+    er = smoothstep(0.4, 0.9, fract(ringF)) * ringAA;
+    float por = akN3(P * 400.0) * (1.0 - smoothstep(0.0008, 0.002, fw));
+    c = mix(c, base * 0.5 * (0.85 + 0.25 * er) * (0.9 + 0.2 * por), endg);
   }
-  // green-grey lichen and algae on the weather faces, splash dirt low down
+  // lichen and algae on the weather faces, splash dirt low down
   float hb = vInfo.w;
   float lich = akLich * smoothstep(0.6, 0.8, akF3(P * 3.0 + sd)) * smoothstep(-0.2, 0.8, upf) * smoothstep(0.4, 0.2, akCell2(vec2(u, v) * 6.0).x);
   c = mix(c, vec3(0.2, 0.22, 0.16), lich * 0.6);
   c *= 1.0 - 0.35 * (1.0 - smoothstep(0.0, 0.5, hb));
   c *= mix(0.6, 1.0, vInfo.y);
   akAlb = c;
-  akRgh = 0.78 + 0.14 * fib;
+  akRgh = 0.8 + 0.1 * ring;
   akAO = mix(0.4, 1.0, vInfo.y);
-  vec3 Tg = A, Bg = normalize(cross(akN0, A) + 1e-6);
-  akNW = normalize(akN0 + (Tg * gn.x * 0.25 + Bg * gn.y * akScan.y * 0.6) * (1.0 - endg));
-  float hf = 1.0 - smoothstep(0.003, 0.012, length(fwidth(P)));
-  akHt = (fib * 0.0015 - chk * 0.004) * hf;
+  // weathered oak: the soft earlywood erodes, the latewood rings stand up; fibres; the checks open
+  akHt = (ring * 0.0007 * ringAA + fib * 0.0004 * fibAA - chk * 0.003) * (1.0 - endg) + er * 0.0004 * endg + streakW * 0.0008;
 `,
   });
 }
@@ -393,7 +396,8 @@ export function plasterMaterial(ctx, opts = {}) {
   akRgh = 0.9 - 0.08 * patchM;
   akAO = mix(0.4, 1.0, aov);
   float hf = 1.0 - smoothstep(0.003, 0.015, length(fwidth(P)));
-  akHt = (akN3(P * 90.0) * 0.0005 + brush * 0.0008 - crack * 0.0015 - flake * 0.0015 - daub * 0.003 + patchM * 0.001) * hf;
+  float sand = akR3(P * 520.0) * (1.0 - smoothstep(0.0006, 0.0016, length(fwidth(P))));
+  akHt = (akN3(P * 90.0) * 0.0005 + brush * 0.0008 - crack * 0.0015 - flake * 0.0015 - daub * 0.003 + patchM * 0.001) * hf + sand * 0.00025;
 `,
   });
 }

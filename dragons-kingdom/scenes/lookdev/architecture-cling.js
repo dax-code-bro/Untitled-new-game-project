@@ -1,0 +1,89 @@
+// Architecture - Cling square: hero angles of the set (PROVISIONAL designs). One shot per second:
+//   t 0-1  a house row at eye level, three-quarter (north row, north-east)
+//   t 1-2  the stone arch (escape route 1) from the square
+//   t 2-3  the square from the king's steps (the cling_map view: arch left, gate right)
+//   t 3-4  the gate to the broad road, the fountain
+//   t 4-5  close detail: masonry, jetty, timber, pegs, plaster
+//   node render/render.mjs --still scenes/lookdev/architecture-cling.js --time 0.5 --preset final --png row.png
+import * as THREE from 'three';
+import { loadHDRI } from '../lib/assets.js';
+import { terrainMaterial } from '../lib/sets/materials.js';
+import { heightfield, makeNoise, gradedAxis } from '../lib/sets/terrain.js';
+import { grassField } from '../lib/sets/grass.js';
+import { clingSquare, CLING, wallFootPlacer, houseFootSegments } from '../lib/architecture/cling.js';
+import { reviewTime } from '../lib/humans/stage.js';
+import { filmFinish } from './finish.js';
+
+const SHOTS = [
+  { name: 'row', p: [-1.5, 1.62, -8.5], t: [-9.5, 4.3, -18.5], fl: 24, fstop: 5.6 },
+  { name: 'arch', p: [-11.5, 1.6, 10.0], t: [-19.6, 3.0, 16.0], fl: 24, fstop: 5.6 },
+  { name: 'square', p: [5.9, 3.28, 24.6], t: [-4, 5.0, -20], fl: 24, fstop: 5.6 },
+  { name: 'gate', p: [8.5, 1.65, -3.5], t: [20.4, 2.4, 5.5], fl: 28, fstop: 5.6 },
+  { name: 'detail', p: [-6.2, 3.0, -15.2], t: [-7.4, 3.25, -17.9], fl: 40, fstop: 4 },
+];
+
+export const meta = {
+  title: 'Architecture - Cling square (PROVISIONAL)',
+  duration: SHOTS.length,
+  seed: 7,
+  cinematic: filmFinish({
+    atmosphere: { enabled: true, sky: 'scene', haze: 1.2, apDistanceScale: 1.5 },
+    shadows: { cascades: 3, maxDistance: 120 },
+    ao: { enabled: true, radius: 0.6 },
+    dof: { samples: 48 },
+    grade: { exposure: 0.9, whiteBalance: 6000, contrast: 1.04, saturation: 1.0 },
+  }),
+};
+
+let S;
+export async function setup(ctx) {
+  const { scene, camera } = ctx;
+  const sky = await loadHDRI('hdri/kloofendal_48d_partly_cloudy', ctx, { extractSun: true, rotationY: -1.79 });
+  const sun = sky.apply(scene);
+  sun.intensity *= 1.5;
+  scene.environmentIntensity = 0.8;
+  sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096);
+  scene.add(sun, sun.target);
+  // the square: worn pebble paving and packed earth, grass beyond the town
+  const N = makeNoise(3);
+  const H = (x, z) => 0.03 * N.fbm(x * 0.3, z * 0.3, 3);
+  const ground = heightfield({
+    xs: gradedAxis(-300, 300, 220, 0, 2), zs: gradedAxis(-300, 300, 220, 0, 2), height: H,
+    splat: (x, z) => {
+      const inSq = Math.abs(x) < 23 && z > -21 && z < 30;
+      const wear = 0.5 + 0.5 * N.fbm(x * 0.12, z * 0.12, 3);
+      return inSq ? [0.8 * wear + 0.2, 1 - wear, 0.3, 0] : [0, 0.2, 0.1, 0.8];
+    },
+  });
+  const gm = new THREE.Mesh(ground.geometry, await terrainMaterial(ctx, [
+    { id: 'pbr/ph_floor_pebbles_01', scale: 0.8, tint: [0.5, 0.48, 0.45] },
+    { id: 'pbr/acg_ground05', scale: 1.0, tint: [0.5, 0.45, 0.38] },
+    { id: 'pbr/acg_ground24', scale: 1.2, tint: [0.45, 0.4, 0.34] },
+    { id: 'pbr/acg_ground037', scale: 2.0, tint: [0.6, 0.66, 0.5] },
+  ], { macro: 0.45, macroScale: 0.05, detailNear: 40, detailFar: 500, minRoughness: 0.75 }));
+  gm.receiveShadow = true; scene.add(gm);
+  const set = await clingSquare(ctx, { focus: [[-9.5, -18], [-19.6, 16.5], [-7.4, -18]], heroR: 9, far: 40 });
+  scene.add(set.group);
+  console.warn(`[arch-cling] tris ${set.tris}, houses ${set.houses.length}`);
+  // weeds at the foot of the walls
+  scene.add(grassField({ count: 9000, height: [0.06, 0.3], seed: 4, color: [0.05, 0.075, 0.025], dry: [0.22, 0.19, 0.1], dryAmount: 0.45, place: wallFootPlacer(houseFootSegments(set.houses)) }));
+  camera.near = 0.1; camera.far = 4000;
+  S = { sun, sunDir: sky.sun.direction.clone() };
+}
+
+export function update(t, ctx) {
+  const rt = reviewTime(t, ctx);
+  const sh = SHOTS[Math.min(SHOTS.length - 1, Math.max(0, rt.k))];
+  const cam = ctx.camera;
+  cam.position.set(...sh.p); cam.lookAt(...sh.t);
+  cam.updateMatrixWorld(true);
+  ctx.lens.sensor = 'super35';
+  ctx.lens.focalLength = sh.fl;
+  ctx.lens.fstop = sh.fstop;
+  ctx.lens.focus = new THREE.Vector3(...sh.p).distanceTo(new THREE.Vector3(...sh.t));
+  ctx.lens.shutterAngle = 180;
+  ctx.lens.iso = 400;
+  const { sun, sunDir } = S;
+  sun.target.position.set(0, 0, 0);
+  sun.position.copy(sun.target.position).addScaledVector(sunDir, 200);
+}

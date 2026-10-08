@@ -54,7 +54,7 @@ function plankLeaf(kit, Fl, w, h, t, rnd, o = {}) {
     const topA = topAt(xa), topB = topAt(xb);
     const bw2 = xb - xa;
     block(kit.get(o.mat || 'oakDark'), sub(Fl, [xm, top / 2, t / 2 + rnd.sym(0.002)], [0, 1, 0], [-1, 0, 0]), top, bw2, t, {
-      r: 0.004, rs: 1, seg: [0.25, bw2 / 2, t], seed: rnd(), noise: 0.0015, nf: 6, chip: 0.004, axis: [1, 0, 0], adze: 0.0008,
+      r: 0.004, rs: 1, seg: [o.hero ? 0.25 : 0.6, bw2, t], seed: rnd(), noise: 0.0015, nf: 6, chip: 0.004, axis: [1, 0, 0], adze: 0.0008,
       // the board's top follows the head (arched doors): stretch the upper end to the curve
       warp: o.topAt ? (lx, ly, lz) => { const f = (lx / top + 0.5); const x = -ly; const tt = topA + (topB - topA) * (x / bw2 + 0.5); return [lx + (f > 0.5 ? (tt - top) * (f - 0.5) * 2 : 0), ly, lz]; } : undefined,
     });
