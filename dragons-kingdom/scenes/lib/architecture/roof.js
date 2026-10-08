@@ -98,15 +98,16 @@ export function gableRoof(kit, F, o) {
     } else {
       // stone slates: diminishing courses, random widths, thick
       let tail = slope + 0.05, c = 0;
+      const ssc = o.slateScale ?? (lod === 'far' ? 1.9 : 1);
       while (tail > 0.12) {
         const f = tail / slope;                           // 1 at the eaves .. 0 at the ridge
-        const len = 0.28 + 0.32 * f + rnd.sym(0.03);
+        const len = (0.28 + 0.32 * f + rnd.sym(0.03)) * ssc;
         const g = len * 0.42;
         const th = 0.018 + 0.016 * f;
         const lift = deckT + th * 2;
         let x = xL - rnd.range(0, 0.2);
         while (x < xR) {
-          const w = (0.22 + 0.2 * f) * rnd.range(0.7, 1.4);
+          const w = (0.22 + 0.2 * f) * rnd.range(0.7, 1.4) * ssc;
           const xa = Math.max(xL, x), xb = Math.min(xR, x + w);
           if (xb - xa > 0.06 && !hit((xa + xb) / 2, tail, side) && !(o.missing && rnd() < o.missing)) {
             const t0 = local.get(tileMat).tcount;

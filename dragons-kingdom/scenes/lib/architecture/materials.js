@@ -166,11 +166,12 @@ export async function stoneMaterial(ctx, opts = {}) {
     akW: { value: new THREE.Vector4(opts.lichen ?? 0.5, opts.moss ?? 0.4, opts.algae ?? 0.4, opts.tooled ?? 0.5) },
     akDirt: { value: new THREE.Vector4(opts.splash ?? 0.6, opts.streaks ?? 0.5, opts.soot ?? 0.0, opts.stain ?? 0.4) },
     akScale: { value: opts.scale ?? 0.6 },
+    akWash: { value: opts.wash ?? 0 },
   };
   return kitMaterial('stone', {
-    uniforms: U, key: opts.texture || 'rock26',
+    uniforms: U, key: (opts.texture || 'rock26') + (opts.wash ? '-wash' : ''),
     decl: `${SCAN_DECL}
-uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform vec4 akDirt; uniform float akScale;`,
+uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform vec4 akDirt; uniform float akScale; uniform float akWash;`,
     body: /* glsl */ `
   float sd = vInfo.x;
   vec3 P = vWPos;
@@ -229,6 +230,13 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   c = mix(c, mc, clamp(mossM, 0.0, 1.0));
   // soot (chimney stacks)
   c *= 1.0 - akDirt.z * smoothstep(0.3, 0.9, akF3(P * 1.5));
+  // lime wash: a thin white coat over the stones, worn through on the arrises and in patches,
+  // greyer and thinner low down, settling darker in the joints
+  if (akWash > 0.0) {
+    float cov = smoothstep(0.25, 0.6, akF3(P * 2.2 + sd * 3.0) + 0.35) * (1.0 - 0.6 * ar) * smoothstep(0.0, 0.8, hb + 0.3) * aov;
+    vec3 wc = vec3(0.6, 0.58, 0.53) * (0.9 + 0.12 * akF3(P * 9.0));
+    c = mix(c, wc, clamp(cov * akWash, 0.0, 1.0));
+  }
   akAlb = c;
   akRgh = clamp(0.82 + 0.12 * (1.0 - lum) - 0.12 * damp + 0.1 * mossM, 0.5, 1.0);
   akAO = mix(0.35, 1.0, aov);
@@ -642,7 +650,7 @@ export async function archMaterials(ctx, opts = {}) {
   const key = JSON.stringify(opts);
   if (cache.has(key)) return cache.get(key);
   const p = (async () => {
-    const [stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot] = await Promise.all([
+    const [stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneWashed] = await Promise.all([
       // Verdor: weathered pale limestone / sandstone
       stoneMaterial(ctx, { palette: [[0.50, 0.47, 0.40], [0.44, 0.41, 0.35], [0.55, 0.51, 0.43]], lichen: 0.55, moss: 0.3, tooled: 0.6, ...(opts.stonePale || {}) }),
       // Cling: grey rubble stone
@@ -654,24 +662,39 @@ export async function archMaterials(ctx, opts = {}) {
       tileMaterial(ctx, { kind: 'clay', ...(opts.clay || {}) }),
       tileMaterial(ctx, { kind: 'slate', ...(opts.slate || {}) }),
       stoneMaterial(ctx, { palette: [[0.12, 0.11, 0.1], [0.09, 0.085, 0.08], [0.15, 0.13, 0.11]], variation: 0.3, lichen: 0.1, moss: 0.0, tooled: 0.3, soot: 0.6, splash: 0, ...(opts.stoneSoot || {}) }),
+      // harbour stone below the tide line: wet, dark, green-brown weed and algae
+      stoneMaterial(ctx, { palette: [[0.16, 0.15, 0.12], [0.12, 0.12, 0.09], [0.2, 0.18, 0.14]], variation: 0.25, lichen: 0.0, moss: 0.9, algae: 1.0, tooled: 0.4, splash: 1.0, streaks: 0.8, ...(opts.stoneWet || {}) }),
+      // pale stone seen from far off (silhouette LOD): the stone-to-stone variation of a whole wall averages out
+      stoneMaterial(ctx, { palette: [[0.48, 0.45, 0.39], [0.45, 0.42, 0.37], [0.5, 0.47, 0.4]], variation: 0.06, lichen: 0.2, moss: 0.2, tooled: 0.0, streaks: 0.9, ...(opts.stoneFar || {}) }),
+      // interiors: pale stone under old lime wash
+      stoneMaterial(ctx, { palette: [[0.46, 0.43, 0.37], [0.4, 0.37, 0.32], [0.5, 0.46, 0.39]], variation: 0.15, lichen: 0.0, moss: 0.0, algae: 0.0, tooled: 0.4, splash: 0.25, streaks: 0.15, wash: 0.85, ...(opts.stoneWashed || {}) }),
     ]);
     const M = {
-      stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot,
+      stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneWashed,
+      leather: plainMaterial('leather', [0.09, 0.05, 0.03], { roughness: 0.6, vary: 0.3, freq: 25, bump: 0.0008 }),
       mortar: mortarMaterial(ctx, opts.mortar),
       mortarPale: mortarMaterial(ctx, { color: [0.42, 0.4, 0.35], ...(opts.mortarPale || {}) }),
       plaster: plasterMaterial(ctx, opts.plaster),
+      // indoor lime plaster: kept up, cleaner, warmer
+      plasterInt: plasterMaterial(ctx, { age: 0.25, tints: [[0.6, 0.56, 0.48], [0.58, 0.54, 0.46], [0.62, 0.57, 0.48], [0.57, 0.54, 0.47], [0.6, 0.55, 0.46], [0.59, 0.56, 0.5]], ...(opts.plasterInt || {}) }),
       iron: ironMaterial(ctx, opts.iron),
       glass: glassMaterial(ctx, opts.glass),
       portal: portalMaterial(ctx, opts.portal),
       lead: plainMaterial('lead', [0.12, 0.12, 0.125], { roughness: 0.6, vary: 0.3 }),
       straw: plainMaterial('straw', [0.36, 0.27, 0.12], { roughness: 0.85, vary: 0.5, freq: 40, bump: 0.002 }),
-      linen: plainMaterial('linen', [0.62, 0.6, 0.55], { roughness: 0.9, vary: 0.12, freq: 30, bump: 0.0004 }),
+      linen: plainMaterial('linen', [0.5, 0.48, 0.43], { roughness: 0.92, vary: 0.14, freq: 30, bump: 0.0006 }),
       clayware: plainMaterial('clayware', [0.3, 0.16, 0.08], { roughness: 0.7, vary: 0.2 }),
       rope: plainMaterial('rope', [0.22, 0.18, 0.12], { roughness: 0.95, vary: 0.3, freq: 80, bump: 0.001 }),
       soot: plainMaterial('soot', [0.02, 0.018, 0.016], { roughness: 0.95 }),
       water: new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.012, 0.016, 0.016), roughness: 0.03, metalness: 0, transmission: 0, ior: 1.33 }),
     };
     M.water.name = 'arch:water';
+    // walls must block the sun from both sides (thin mortar beds / plaster coats leak light otherwise)
+    for (const k of ['mortar', 'mortarPale', 'plaster', 'plasterInt']) if (M[k]) M[k].shadowSide = THREE.DoubleSide;
+    // a lamp flame: unlit, bright (HDR), no shadow
+    M.flame = new THREE.MeshBasicMaterial({ color: new THREE.Color(9.0, 4.2, 1.1) });
+    M.flame.name = 'arch:flame';
+    M.flame.userData.noShadow = true;
     M.water.userData.noShadow = true;
     M.glass.userData.noShadow = true;
     M.portal.userData.noShadow = true;

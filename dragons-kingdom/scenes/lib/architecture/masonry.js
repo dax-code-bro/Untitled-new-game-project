@@ -15,7 +15,7 @@
 // Face frame F (core.js frame): origin = bottom-left corner of the face ON the mortar surface,
 // x along the face (0..L), y up, z out of the wall. Stones stand proud by 8-30 mm.
 import * as THREE from 'three';
-import { block, shapeFace, sub, makeRand, clamp, xf } from './core.js';
+import { block, shapeFace, sub, makeRand, clamp, xf, tube } from './core.js';
 
 /** Course heights (bottom up) filling H: [{ y, h }]. */
 export function courses(rnd, H, { min = 0.18, max = 0.34, joint = 0.015, plinth = 0 } = {}) {
@@ -44,13 +44,14 @@ export const LOD = {
   hero: { seg: 0.12, rs: 2 },
   mid: { seg: 0.22, rs: 1 },
   low: { seg: 9, rs: 1, flat: true },
+  far: { seg: 9, rs: 1, flat: true, lenMul: 2.2, courseMul: 1.6, protMul: 0.25 },     // silhouettes far off: big flat blocks, fine joints
 };
 
 /** One stone in face coords: x0..x1, y0..y1 (face), depth dep, extra opts. */
 function stone(kit, F, matName, x0, x1, y0, y1, dep, rnd, st, lod, extra = {}) {
   const w = x1 - x0, h = y1 - y0;
   if (w < 0.03 || h < 0.03) return;
-  const prot = extra.prot ?? rnd.range(st.prot[0], st.prot[1]);
+  const prot = (extra.prot ?? rnd.range(st.prot[0], st.prot[1])) * (lod.protMul ?? 1);
   const cx = (x0 + x1) / 2 + rnd.sym(st.sizeJit * 0.3), cy = (y0 + y1) / 2 + rnd.sym(st.sizeJit * 0.3);
   const cz = prot - dep / 2;
   const tl = st.tilt;
@@ -77,7 +78,9 @@ function stone(kit, F, matName, x0, x1, y0, y1, dep, rnd, st, lod, extra = {}) {
     };
   }
   if (lod.flat) {
-    block(acc, Fs, sx, sy, dep, { r: 0, seg: 9, skip: 32, seed: rnd(), aoDepth: prot + 0.02, aoFloor: 0.35, uvMode: 'box' });
+    // far off the joints are hairlines: the stone nearly fills its cell
+    const fx = lod.protMul ? sx + st.j * 0.6 : sx, fy = lod.protMul ? sy + st.j * 0.6 : sy;
+    block(acc, Fs, fx, fy, dep, { r: 0, seg: 9, skip: 32, seed: rnd(), aoDepth: lod.protMul ? 0 : prot + 0.02, aoFloor: 0.35, uvMode: 'box' });
     return;
   }
   block(acc, Fs, sx, sy, dep, {
@@ -138,7 +141,7 @@ function fillSegment(kit, F, matName, xa, xb, y, h, rnd, st, lod, prevJoints, jo
   const j = st.j;
   let guard = 0;
   while (x < xb - 0.04 && guard++ < 400) {
-    let L = h * rnd.range(st.len[0], st.len[1]);
+    let L = h * rnd.range(st.len[0], st.len[1]) * (lod.lenMul || 1);
     if (L < 0.12) L = 0.12 + rnd() * 0.08;
     // break joints: keep 7 cm away from a perpend below
     for (let k = 0; k < 3; k++) {
@@ -191,7 +194,7 @@ export function masonryFace(kit, F, L, H, o = {}) {
   const ds = STYLE.dressed;
   const lod = LOD[o.lod || 'mid'];
   const mat = o.mat || 'stoneGrey', dmat = o.dressedMat || mat;
-  const C = o.courses || courses(rnd, H, {});
+  const C = o.courses || courses(rnd, H, { min: 0.18 * (lod.courseMul || 1), max: 0.34 * (lod.courseMul || 1) });
   const T = o.T ?? 0.6;
   const j = st.j;
   const qs = o.quoinStart || (() => 0), qe = o.quoinEnd || (() => 0);
@@ -371,7 +374,8 @@ export function masonryBox(kit, F, o) {
   const rnd = makeRand(o.seed ?? 3);
   const { w, d, h } = o;
   const T = o.T ?? 0.6;
-  const C = o.courses || courses(rnd, h, { min: o.courseMin ?? (o.style === 'ashlar' ? 0.28 : 0.17), max: o.courseMax ?? (o.style === 'ashlar' ? 0.36 : 0.33), plinth: o.plinth ?? 0 });
+  const cm = LOD[o.lod || 'mid'].courseMul || 1;
+  const C = o.courses || courses(rnd, h, { min: (o.courseMin ?? (o.style === 'ashlar' ? 0.28 : 0.17)) * cm, max: (o.courseMax ?? (o.style === 'ashlar' ? 0.36 : 0.33)) * cm, plinth: o.plinth ?? 0 });
   const ql = o.quoin?.long ?? 0.55, qsh = o.quoin?.short ?? 0.32;
   const faces = [
     { k: 'front', o: [-w / 2, 0, d / 2], X: [1, 0, 0], L: w },
@@ -441,3 +445,176 @@ export function steps(kit, F, o) {
   }
 }
 const smooth01 = (t) => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
+
+/**
+ * A stone gable (triangle x 0..L, y 0..rise in face coords, apex at L/2) laid in courses that
+ * shorten up the slope; coping stones along both rakes and kneelers at the feet keep the cut
+ * ends dry. o: style, mat, dressedMat, mortar, T, lod, seed, coping (bool), copingMat.
+ */
+export function masonryGable(kit, F, L, rise, o = {}) {
+  const rnd = makeRand(o.seed ?? 17);
+  const st = { ...STYLE[o.style || 'squared'] };
+  const lod = LOD[o.lod || 'mid'];
+  const mat = o.mat || 'stonePale', dmat = o.dressedMat || mat;
+  const C = courses(rnd, rise - 0.15, { min: (o.courseMin ?? 0.2) * (lod.courseMul || 1), max: (o.courseMax ?? 0.34) * (lod.courseMul || 1) });
+  const half = (y) => (L / 2) * (1 - y / rise);
+  let prevJ = [];
+  for (const c of C) {
+    const hw = half(c.y + c.h) - 0.06;               // the course stops under the coping
+    if (hw < 0.15) break;
+    const joints = [];
+    fillSegment(kit, F, mat, L / 2 - hw, L / 2 + hw, c.y, c.h, rnd, st, lod, prevJ, joints, o.depth || st.dep);
+    prevJ = joints;
+  }
+  // mortar core triangle
+  if (o.mortar !== null) {
+    const sh = new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(L, 0), new THREE.Vector2(L / 2, rise)]);
+    shapeFace(kit.get(o.mortar || 'mortar'), F, sh, { seed: rnd() });
+  }
+  if (o.coping !== false) {
+    const cm = o.copingMat || dmat;
+    const T = o.T ?? 0.6;
+    const ang = Math.atan2(rise, L / 2);
+    const slant = Math.hypot(rise, L / 2);
+    const n = Math.max(2, Math.round(slant / 0.7));
+    for (const side of [-1, 1]) {
+      const ca = Math.cos(ang), sa = Math.sin(ang);
+      const X = side < 0 ? [ca, sa, 0] : [-ca, sa, 0];
+      const Y = side < 0 ? [-sa, ca, 0] : [sa, ca, 0];
+      for (let i = 0; i < n; i++) {
+        const t0 = i / n, t1 = (i + 1) / n - 0.012 / slant;
+        const tm = (t0 + t1) / 2;
+        const px = side < 0 ? (L / 2) * tm : L - (L / 2) * tm, py = rise * tm;
+        const Fc = sub(F, [px + Y[0] * 0.06, py + Y[1] * 0.06, -T / 2 + 0.02], X, Y);
+        block(kit.get(cm), Fc, (t1 - t0) * slant, 0.2, T + 0.16, { r: 0.015, rs: 1, seg: [0.25, 0.1, 0.2], seed: rnd(), noise: 0.003, nf: 5, chip: 0.012, warp: (lx, ly, lz) => [lx, ly + (ly > 0 ? 0.05 * (1 - Math.abs(lz) / ((T + 0.16) / 2)) : 0), lz] });
+      }
+      // kneeler at the foot of the rake
+      const kx = side < 0 ? 0.2 : L - 0.2;
+      block(kit.get(cm), sub(F, [kx, 0.18, -T / 2 + 0.02]), 0.5, 0.36, T + 0.16, { r: 0.015, rs: 1, seg: [0.15, 0.12, 0.2], seed: rnd(), noise: 0.003, nf: 5, chip: 0.012 });
+    }
+    // apex stone
+    block(kit.get(cm), sub(F, [L / 2, rise + 0.12, -T / 2 + 0.02]), 0.45, 0.4, T + 0.16, { r: 0.02, rs: 1, seg: [0.15, 0.12, 0.2], seed: rnd(), noise: 0.003, nf: 5, chip: 0.012, warp: (lx, ly, lz) => { const k = 1 - 0.5 * (ly / 0.4 + 0.5); return [lx * k, ly, lz]; } });
+  }
+}
+
+/**
+ * A round tower of coursed stone: stones as curved blocks round the circumference, joints
+ * broken course to course; a corbel table and parapet ring at the top. F at the base centre.
+ * o: r (outer radius), h, lod, mat, dressedMat, seed, slits (number of slit windows per level),
+ * corbel (bool), courseMin/Max. Returns { top } (y of the wall top).
+ */
+export function roundTower(kit, F, o = {}) {
+  const rnd = makeRand(o.seed ?? 19);
+  const R = o.r ?? 4, H = o.h ?? 20;
+  const lod = LOD[o.lod || 'low'];
+  const mat = o.mat || 'stonePale', dmat = o.dressedMat || mat;
+  const C = courses(rnd, H, { min: (o.courseMin ?? 0.3) * (lod.courseMul || 1), max: (o.courseMax ?? 0.45) * (lod.courseMul || 1) });
+  const slits = [];
+  for (let k = 0; k < (o.slits ?? 3); k++) slits.push({ a: rnd() * Math.PI * 2, y0: 3 + k * (H - 6) / Math.max(1, (o.slits ?? 3) - 1), h: 1.3, w: 0.32 });
+  let phase = 0;
+  for (const c of C) {
+    const n = Math.max(8, Math.round((2 * Math.PI * R) / (rnd.range(0.6, 0.9) * (lod.lenMul || 1))));
+    phase += Math.PI / n + rnd.sym(0.05);
+    for (let i = 0; i < n; i++) {
+      const a0 = phase + (i / n) * Math.PI * 2, a1 = phase + ((i + 1) / n) * Math.PI * 2 - 0.012 / R;
+      const am = (a0 + a1) / 2, span = (a1 - a0) * R;
+      // a slit window here?
+      if (slits.some((s) => c.y + c.h > s.y0 && c.y < s.y0 + s.h && Math.abs(((am - s.a + Math.PI * 3) % (Math.PI * 2)) - Math.PI) * R < s.w / 2 + span / 2)) continue;
+      const dep = 0.3;
+      const Fs = sub(F, [0, c.y + c.h / 2, 0]);
+      const prot = rnd.range(0.004, 0.015) * (lod.protMul ?? 1);
+      block(kit.get(mat), Fs, lod.protMul ? span + 0.01 : span, c.h - (lod.protMul ? 0.004 : 0.012), dep, lod.flat ? { r: 0, seg: [Math.max(0.3, span / 2), 9, 9], seed: rnd(), skip: 32, warp: (lx, ly, lz) => { const th = am + lx / R; const rr = R - dep / 2 + prot + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; } } : {
+        r: 0.012, rs: 1, seg: [Math.max(0.12, span / 4), Math.max(lod.seg, c.h / 2), 9], seed: rnd(), noise: 0.004, nf: 5, pillow: 0.004, chip: 0.01, skip: 32, aoDepth: prot + 0.02, aoFloor: 0.35,
+        warp: (lx, ly, lz) => { const th = am + lx / R; const rr = R - dep / 2 + prot + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; },
+      });
+    }
+  }
+  // the core (mortar cylinder) and dark slits
+  {
+    const acc = kit.get(o.mortar || 'mortar');
+    const n = 48;
+    const ring = (y) => { const ids = []; for (let i = 0; i <= n; i++) { const a = (i / n) * Math.PI * 2; const p = xf(F, Math.cos(a) * (R - 0.012), y, Math.sin(a) * (R - 0.012)); ids.push(acc.v(p[0], p[1], p[2], 0, 0, 0.3, 0.6, 0, 0, 1, 0)); } return ids; };
+    const r0 = ring(0), r1 = ring(H);
+    for (let i = 0; i < n; i++) acc.q(r0[i], r0[i + 1], r1[i + 1], r1[i]);
+    for (const s of slits) {
+      const pa = kit.get('portal');
+      const cx = Math.cos(s.a) * (R - 0.2), cz = Math.sin(s.a) * (R - 0.2);
+      const X = [-Math.sin(s.a), 0, Math.cos(s.a)];
+      const base = pa.vcount;
+      for (const [x, y] of [[-s.w / 2, 0], [s.w / 2, 0], [s.w / 2, s.h], [-s.w / 2, s.h]]) { const p = xf(F, cx + X[0] * x, s.y0 + y, cz + X[2] * x); pa.v(p[0], p[1], p[2], x + s.w / 2, y, rnd(), 0, 0, s.w, s.h, 1.0); }
+      // (wound so the portal faces outward)
+      pa.q(base + 3, base + 2, base + 1, base);
+    }
+  }
+  // corbel table + parapet ring
+  let top = H;
+  if (o.corbel !== false) {
+    const n = Math.round((2 * Math.PI * R) / 0.6);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const Fc = sub(F, [Math.cos(a) * (R + 0.12), H + 0.25, Math.sin(a) * (R + 0.12)], [-Math.sin(a), 0, Math.cos(a)], [0, 1, 0]);
+      block(kit.get(dmat), Fc, 0.3, 0.5, 0.45, { r: 0.015, seg: [0.15, 0.25, 0.2], seed: rnd(), noise: 0.003, chip: 0.01, warp: (lx, ly, lz) => [lx, ly, lz * (0.55 + 0.45 * (ly / 0.5 + 0.5))] });
+    }
+    // the parapet ring above the corbels
+    const Rp = R + 0.32;
+    const n2 = Math.round((2 * Math.PI * Rp) / 0.8);
+    for (const [y0, hh] of [[H + 0.5, 0.36], [H + 0.88, 0.36], [H + 1.26, 0.22]]) {
+      const ph = rnd() * 3;
+      for (let i = 0; i < n2; i++) {
+        const a0 = ph + (i / n2) * Math.PI * 2, a1 = ph + ((i + 1) / n2) * Math.PI * 2 - 0.012 / Rp;
+        const am = (a0 + a1) / 2, span = (a1 - a0) * Rp;
+        block(kit.get(dmat), sub(F, [0, y0 + hh / 2, 0]), span, hh - 0.01, 0.45, { r: 0.012, seg: [Math.max(0.15, span / 3), 0.2, 0.2], seed: rnd(), noise: 0.003, chip: 0.01, warp: (lx, ly, lz) => { const th = am + lx / Rp; const rr = Rp - 0.2 + lz; return [Math.cos(th) * rr, ly, Math.sin(th) * rr]; } });
+      }
+    }
+    top = H + 1.48;
+  }
+  return { top, R: o.corbel !== false ? R + 0.32 : R };
+}
+
+/** A conical roof of slates in courses round a cone (eaves overhang, a finial). F at the eaves centre. */
+export function conicalRoof(kit, F, o = {}) {
+  const rnd = makeRand(o.seed ?? 23);
+  const R = o.r ?? 4.5, Hc = o.h ?? 7, over = o.eaves ?? 0.35;
+  const Re = R + over;
+  const slant = Math.hypot(Re, Hc * (Re / R));
+  const ang = Math.atan2(Hc, R);
+  const mat = o.mat || 'slate';
+  // the boarded cone underneath (a dark shell) - visible at the eaves
+  {
+    const acc = kit.get('oakDark');
+    const n = 48;
+    const ids0 = [], ids1 = [];
+    for (let i = 0; i <= n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const p0 = xf(F, Math.cos(a) * Re, -over * Math.tan(ang), Math.sin(a) * Re), p1 = xf(F, 0, Hc, 0);
+      ids0.push(acc.v(p0[0], p0[1], p0[2], a * Re, 0, 0.4, 0.6, 0, 0, 1, 0)); ids1.push(acc.v(p1[0], p1[1] - 0.02, p1[2], a * Re, slant, 0.4, 0.6, 0, 0, 1, 0));
+    }
+    for (let i = 0; i < n; i++) acc.q(ids0[i], ids1[i], ids1[i + 1], ids0[i + 1]);
+  }
+  // slates: courses from the eaves up (s = distance down the slant from the apex)
+  let s = slant + 0.05;
+  const lift = 0.04;
+  const sc = o.slateScale ?? 1;
+  while (s > 0.35) {
+    const len = (0.32 + 0.12 * (s / slant)) * sc, g = len * 0.42;
+    const rr = (s / slant) * Re;
+    const n = Math.max(6, Math.round((2 * Math.PI * rr) / ((0.22 + 0.08 * (s / slant)) * sc)));
+    const ph = rnd() * 6;
+    for (let i = 0; i < n; i++) {
+      const a = ph + (i / n) * Math.PI * 2;
+      const w = (2 * Math.PI * rr) / n - 0.006;
+      // slate frame: x tangential, y out of the cone, z down the slant
+      const down = [Math.cos(a) * Math.cos(ang), -Math.sin(ang), Math.sin(a) * Math.cos(ang)];
+      const out = [Math.cos(a) * Math.sin(ang), Math.cos(ang), Math.sin(a) * Math.sin(ang)];
+      const tan = [-Math.sin(a), 0, Math.cos(a)];
+      const sm = s - len / 2;
+      const c = [Math.cos(a) * (sm / slant) * Re + out[0] * lift, Hc - (sm / slant) * (Hc + over * Math.tan(ang)) + out[1] * lift, Math.sin(a) * (sm / slant) * Re + out[2] * lift];
+      const Fs = sub(F, c, tan, out, down);
+      const tilt = 0.04;
+      block(kit.get(mat), sub(Fs, [0, 0, 0], [1, 0, 0], [0, Math.cos(tilt), -Math.sin(tilt)]), w * (0.94 + 0.04 * rnd()), 0.02, len, { r: 0, seg: [w, 1, len], seed: rnd(), noise: 0.002, skip: 8 | 32, aoFn: (lx, ly, lz) => 0.25 + 0.75 * Math.min(1, Math.max(0, (lz / len + 0.5 - 0.45) / 0.3)), uvFn: (lx, ly, lz) => [lx + w / 2, lz + len / 2] });
+    }
+    s -= g;
+  }
+  // finial
+  tube(kit.get('lead'), [xf(F, 0, Hc - 0.3, 0), xf(F, 0, Hc + 1.2, 0)], (t) => 0.12 * (1 - t * 0.8), { sides: 8, caps: true });
+}

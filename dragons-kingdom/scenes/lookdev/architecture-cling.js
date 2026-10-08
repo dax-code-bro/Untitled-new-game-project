@@ -15,8 +15,8 @@ import { reviewTime } from '../lib/humans/stage.js';
 import { filmFinish } from './finish.js';
 
 const SHOTS = [
-  { name: 'row', p: [-1.5, 1.62, -8.5], t: [-9.5, 4.3, -18.5], fl: 24, fstop: 5.6 },
-  { name: 'arch', p: [-11.5, 1.6, 10.0], t: [-19.6, 3.0, 16.0], fl: 24, fstop: 5.6 },
+  { name: 'row', p: [9.5, 1.62, -5.5], t: [-6.0, 4.6, -19.5], fl: 24, fstop: 5.6 },
+  { name: 'arch', p: [-36.0, 1.65, 18.6], t: [-19.6, 3.4, 16.0], fl: 24, fstop: 5.6 },
   { name: 'square', p: [5.9, 3.28, 24.6], t: [-4, 5.0, -20], fl: 24, fstop: 5.6 },
   { name: 'gate', p: [8.5, 1.65, -3.5], t: [20.4, 2.4, 5.5], fl: 28, fstop: 5.6 },
   { name: 'detail', p: [-6.2, 3.0, -15.2], t: [-7.4, 3.25, -17.9], fl: 40, fstop: 4 },

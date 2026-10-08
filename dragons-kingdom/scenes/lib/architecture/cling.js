@@ -304,6 +304,12 @@ export async function clingSquare(ctx, opts = {}) {
   stonePier(kits.south, frame([CLING.support.x, 0, CLING.support.z]), { lod: lodAt(CLING.support.x, CLING.support.z) });
   kingsSteps(kits.south, yawFrame([st.x, 0, st.z], Math.PI), { n: st.n, w: st.w, rise: st.rise, tread: st.tread, lod: lodAt(st.x, st.z) });
   alley(kits.north, frame([al.x, 0, S.z0 + 0.6]), { w: al.w, length: 16 });
+  // the alley turns: a house closes its far end (seen through the gap from the square)
+  {
+    const hF = yawFrame([al.x + 1.5, 0, S.z0 - 15 - 4.5], 0.04);
+    const info = house(kits.north, hF, { w: 7.0, d: 8.5, storeys: 1, roof: 'side', seed: 977, lod: lodAt(al.x, S.z0 - 15), party: { left: false, right: false } });
+    houses.push({ ...info, frame: hF, center: [al.x, S.z0 - 15], yaw: 0, side: 'north' });
+  }
   const group = new THREE.Group();
   group.name = 'cling-square';
   let tris = 0;

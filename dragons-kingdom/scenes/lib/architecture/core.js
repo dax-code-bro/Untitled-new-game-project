@@ -268,8 +268,11 @@ export function block(acc, F, sx, sy, sz, o = {}) {
   const det = F[3] * (F[7] * F[11] - F[8] * F[10]) - F[4] * (F[6] * F[11] - F[8] * F[9]) + F[5] * (F[6] * F[10] - F[7] * F[9]);
   const mir = det < 0;
   const p = [0, 0, 0];
+  // sharp blocks (no rounding) keep hard edges: their faces do not share vertices
+  const hard = r <= 1e-4;
+  let faceK = 0;
   const vid = (i0, i1, i2) => {
-    const key = (i0 * n1 + i1) * n2 + i2;
+    const key = ((i0 * n1 + i1) * n2 + i2) * (hard ? 8 : 1) + (hard ? faceK : 0);
     let id = map.get(key);
     if (id !== undefined) return id;
     p[0] = C[0][i0]; p[1] = C[1][i1]; p[2] = C[2][i2];
@@ -337,6 +340,7 @@ export function block(acc, F, sx, sy, sz, o = {}) {
   };
   for (let k = 0; k < 6; k++) {
     if (skip & (1 << k)) continue;
+    faceK = k;
     const [na_, a1, a2, sg] = FACE_AX[k];
     const ia = sg > 0 ? C[na_].length - 1 : 0;
     const A1 = C[a1], A2 = C[a2];
@@ -451,4 +455,23 @@ export function sagLine(a, b, sag, n = 16) {
   const out = [];
   for (let i = 0; i <= n; i++) { const f = i / n; out.push([a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f - sag * 4 * f * (1 - f), a[2] + (b[2] - a[2]) * f]); }
   return out;
+}
+
+/**
+ * A surface of revolution about the frame's y axis: profile [[r, y], ...] (bottom to top),
+ * seg sides. uv: (angle * r, y). Used for bowls, jugs, lamps, basins.
+ */
+export function lathe(acc, F, profile, seg = 24, o = {}) {
+  const rings = [];
+  for (const [r, y] of profile) {
+    const ring = [];
+    for (let i = 0; i <= seg; i++) {
+      const a = (i / seg) * Math.PI * 2;
+      const wob = o.wobble ? 1 + o.wobble * Math.sin(a * 3 + (o.seed ?? 0) * 10) : 1;
+      const p = xf(F, Math.cos(a) * r * wob, y, Math.sin(a) * r * wob);
+      ring.push(acc.v(p[0], p[1], p[2], a * Math.max(r, 0.01), y, o.seed ?? 0, o.ao ?? 1, 0, 0, 1, 0));
+    }
+    rings.push(ring);
+  }
+  for (let k = 0; k < rings.length - 1; k++) for (let i = 0; i < seg; i++) acc.q(rings[k][i], rings[k + 1][i], rings[k + 1][i + 1], rings[k][i + 1]);
 }
