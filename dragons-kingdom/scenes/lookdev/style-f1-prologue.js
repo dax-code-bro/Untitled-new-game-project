@@ -9,7 +9,8 @@
 //
 // Cinematography: camera 2.6 m above a living FFT sea (riding the swell, a
 // fresh breeze with whitecaps), 35 mm on Super 35, looking toward a low sun
-// half veiled by a cloud bank, its glitter path running down the sea. The
+// hidden in a bank of sea cloud on the horizon (shot list P-03 / P-06: cold
+// pale dawn, no hard shadows) - a bright patch in the cloud, a soft glow on the sea. The
 // island is 3D terrain whose high ground disappears into a clumped cloud cap
 // (volumetric banks); a small 11th-12th-century trading ship (a one-masted
 // knarr, built procedurally: no period ship exists in the free libraries this
@@ -59,7 +60,8 @@ export const meta = {
         { center: [ISLAND.x - 300, 380, ISLAND.z + 150], radius: [650, 120, 420], density: 0.012, noise: 0.9 },
         { center: [ISLAND.x + 900, 430, ISLAND.z - 300], radius: [800, 140, 500], density: 0.008, noise: 0.9 },
         // the cloud bank the dawn sun is rising behind: veils its lower half
-        { center: [SUN_BANK.x, SUN_BANK.y - 70, SUN_BANK.z], radius: [900, 120, 300], density: 0.01, noise: 0.85 },
+        { center: [SUN_BANK.x, SUN_BANK.y + 40, SUN_BANK.z], radius: [1500, 260, 520], density: 0.03, noise: 0.7 },
+        { center: [SUN_BANK.x + 600, SUN_BANK.y + 180, SUN_BANK.z - 300], radius: [1800, 160, 600], density: 0.012, noise: 0.85 },
         // the mist the shape moves in: a loose, high layer above the sea
         { center: [SHAPE_AT.x + 20, 115, -780], radius: [700, 100, 640], density: 0.0038, noise: 0.55 },
         // sea fog lying on the water in layered banks of different density
@@ -71,7 +73,7 @@ export const meta = {
     shadows: { cascades: 0 },
     ao: { enabled: true, radius: 1.5 },
     dof: { samples: 48 },
-    grade: { whiteBalance: 4300, contrast: 1.04, saturation: 1.0, exposure: -0.45 },
+    grade: { whiteBalance: 3700, contrast: 1.06, saturation: 0.85, exposure: -1.35 },
   }),
 };
 
@@ -100,7 +102,9 @@ export async function setup(ctx) {
   const { scene, camera, quality } = ctx;
 
   // sun: low, behind the fog; its shadow map covers the near sea, the ship and the high mist bank
-  const sun = new THREE.DirectionalLight(0xffffff, 5);
+  // the sun is behind the sea cloud: what reaches the sea is softened (no hard shadows), but enough
+  // light gets through the thinner cloud above it to throw the shape's shadow into the mist
+  const sun = new THREE.DirectionalLight(0xffffff, 2.2);
   sun.castShadow = true;
   sun.shadow.mapSize.set(4096, 4096);
   const sc = sun.shadow.camera;
@@ -166,7 +170,7 @@ export async function setup(ctx) {
   crew[0].root.position.set(-6.2, 0.3 + 0.88, 1.0); crew[0].root.rotation.y = Math.PI / 2 + 0.3;
   crew[1].root.position.set(2.6, -0.1 + 0.88, -0.6); crew[1].root.rotation.y = Math.PI / 2 - 0.4;
   crew[2].root.position.set(5.4, 0.35 + 0.88, 0.4); crew[2].root.rotation.y = -0.6;
-  const ship = await knarr(ctx, { sailFill: 1.15, brace: -0.6, crew: crew.map((c) => c.root) });
+  const ship = await knarr(ctx, { sailFill: 1.6, brace: -0.42, crew: crew.map((c) => c.root) });
   ship.root.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   const shipRoot = ship.root;
   scene.add(shipRoot);
@@ -211,7 +215,7 @@ export function update(t, ctx) {
   const sx = -19 + (t - 3) * 2.6 * hx, sz = -122 + (t - 3) * 2.6 * hz;
   const bow = ocean.heightAt(sx + 7 * hx, sz + 7 * hz), stern = ocean.heightAt(sx - 7 * hx, sz - 7 * hz);
   const port = ocean.heightAt(sx + 2.2 * hz, sz - 2.2 * hx), stbd = ocean.heightAt(sx - 2.2 * hz, sz + 2.2 * hx);
-  shipRoot.position.set(sx, (bow + stern + port + stbd) * 0.25 - 0.1, sz);
+  shipRoot.position.set(sx, (bow + stern + port + stbd) * 0.25 - 0.32, sz);              // laden: she sits down in the water
   _e.set(Math.atan2(port - stbd, 4.4) * 0.8 + 0.11, yaw, Math.atan2(bow - stern, 14) * 0.8, 'YXZ');
   shipRoot.quaternion.setFromEuler(_e);
   shipRoot.updateMatrixWorld(true);

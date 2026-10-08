@@ -70,8 +70,14 @@ function hullGeometry(o) {
   return { g, beam, keelY, sheerY };
 }
 
-/** A square sail hanging from the yard, filled by the wind (curved in both directions). */
-function sailGeometry(wTop, wBot, h, depth, nu = 28, nv = 24) {
+/**
+ * A square sail hanging from the yard, filled by the wind (curved in both directions). Cloth under
+ * load is never a smooth shell: tension lines run from each clew (the sheeted lower corners) up
+ * toward the middle of the yard, the head puckers between the robands that lace it to the yard,
+ * the leeches (the free side edges) shake a little, and the vertical seams of the sewn cloths
+ * pull in (shallow troughs).
+ */
+function sailGeometry(wTop, wBot, h, depth, nu = 56, nv = 44) {
   const g = new THREE.PlaneGeometry(1, 1, nu, nv);
   const p = g.attributes.position, uv = g.attributes.uv;
   for (let i = 0; i < p.count; i++) {
@@ -83,7 +89,20 @@ function sailGeometry(wTop, wBot, h, depth, nu = 28, nv = 24) {
     // the leeches curl a little, the foot sags between the clews
     const curl = 0.12 * depth * Math.pow(Math.abs(u - 0.5) * 2, 4);
     const footSag = 0.35 * Math.sin(Math.PI * u) * Math.pow(1 - v, 6);
-    p.setXYZ(i, belly + curl, (v - 0.5) * h + footSag, z);
+    // tension lines from each clew toward the yard's middle: ridges along those diagonals
+    let crease = 0;
+    for (const cu of [0, 1]) {
+      const dx = u - cu, dy = v;                              // from the clew
+      const dirx = 0.5 - cu, diry = 1;                        // toward the yard's middle
+      const along = (dx * dirx + dy * diry) / Math.hypot(dirx, diry);
+      const across = (dx * diry - dy * dirx) / Math.hypot(dirx, diry);
+      crease += 0.05 * Math.sin(across * 46 + cu * 2.1) * Math.exp(-Math.abs(across) * 3.2) * Math.min(1, along * 3) * (1 - v * 0.6);
+    }
+    // puckers between the robands along the head, a shake in the leeches, the seams pulling in
+    const head = 0.03 * Math.pow(v, 14) * Math.sin(u * Math.PI * 22);
+    const shake = 0.06 * Math.pow(Math.abs(u - 0.5) * 2, 6) * Math.sin(v * 9.0 + u * 3.0);
+    const seam = -0.012 * Math.pow(Math.cos(Math.PI * (z / 0.72)), 24);
+    p.setXYZ(i, belly + curl + crease * depth + head + shake + seam, (v - 0.5) * h + footSag, z);
     uv.setXY(i, z, v * h);
   }
   g.computeVertexNormals();
