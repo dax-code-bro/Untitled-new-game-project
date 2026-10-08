@@ -232,7 +232,7 @@ def crate(w=0.5, h=0.32, d=0.36):
         for sz in (-1, 1):
             parts.append(box(np.array([sx * (w / 2 - 0.03), h / 2, sz * (d / 2 + 0.004)]), (0.045, h, 0.012)))
     P, F = merge(parts)
-    return [piece(P, F, boxuv(P), {'kind': 'pine', 'color': [0.33, 0.26, 0.18], 'tile': 0.8}, 'crate')   # weathered boards]
+    return [piece(P, F, boxuv(P), {'kind': 'pine', 'color': [0.33, 0.26, 0.18], 'tile': 0.8}, 'crate')]   # weathered boards
 
 
 def parcel(w=0.28, h=0.14, d=0.2):

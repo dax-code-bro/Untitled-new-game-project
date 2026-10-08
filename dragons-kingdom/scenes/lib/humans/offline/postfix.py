@@ -1,7 +1,7 @@
 """Post-fixes applied in place to already built characters (cache/<id>.json + .bin), so a fix
 that only needs the finished meshes does not cost a full rebuild.
 
-    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|all id [id ...]   ('all' = every cache)
+    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|pushout|all id [id ...]   ('all' = every cache)
 
 Each pass records itself in the mesh's 'postfix' list and is not applied twice.
 
@@ -350,7 +350,7 @@ def smooth_puckers(P, tris, thresh=0.08, iters=80, push=None, spots=None):
         s = np.maximum(s, mx * (0.95 if k_ < 2 else 0.6))
     s = ring(s[:, None])[:, 0] * (1 - nearb)
     X = Q.copy()
-    ch = np.where(s > 0.3)[0]
+    ch = np.where(s > 0.01)[0]
     def U(Y):
         return np.stack([np.bincount(a, weights=Y[b, k], minlength=nW) for k in range(3)], 1) / deg[:, None] - Y
     # the pucker cores: a membrane (Laplacian steps converge to the harmonic fill of the rim -
@@ -401,7 +401,7 @@ def smooth_puckers(P, tris, thresh=0.08, iters=80, push=None, spots=None):
         X[sel] = X[sel] + (tgt[sel] - X[sel]) * wgt[sel, None]
         s_sp[sel] = np.maximum(s_sp[sel], wgt[sel])
     s = np.maximum(s, s_sp)
-    ch = np.where(s > 0.3)[0]
+    ch = np.where(s > 0.01)[0]
     if push is not None and len(ch):
         X[ch] = push(X[ch])
     changed = s > 1e-3
@@ -479,7 +479,10 @@ def fix_puckers(cid):
         elb = np.linalg.norm(Qb[eb[:, 0]] - Qb[eb[:, 1]], axis=1).mean()
         for _ in range(int(np.clip(30 * (0.0055 / max(elb, 1e-4)) ** 2, 30, 300))):
             Sb = Sb + 0.5 * (np.stack([np.bincount(ab, weights=Sb[bb, k], minlength=nB) for k in range(3)], 1) / degb[:, None] - Sb)
-        trees.append((BVHTree.FromPolygons([tuple(v) for v in Sb], [tuple(t) for t in tb], epsilon=0.0), 0.005))
+        # collider: the body as it is (a smoothed copy shrinks the limbs - cloth sank into the
+        # arms and the skin showed through); its faces under the clothes are hidden anyway, so
+        # the nipples are not in it
+        trees.append((BVHTree.FromPolygons([tuple(v) for v in Qb], [tuple(t) for t in tb], epsilon=0.0), 0.004))
         # the nipples: where the body stands out most from its smoothed self on the front of the
         # chest (one each side of the midline)
         Ns = np.zeros_like(Sb)
@@ -627,6 +630,90 @@ def fix_normals(cid):
     print(f'{cid}: normals re-oriented in {", ".join(done)}', flush=True)
 
 
+def fix_pushout(cid, body_ease=0.004, layer_ease=0.0025):
+    """Cloth that lies inside the skin or inside the garment under it is pushed out (the skin
+    or a shirt showed through in patches - shoulders, elbows - after the pucker pass of the first
+    session-4 caches, whose collider was an over-smoothed, shrunken body). Layers are done
+    inside-out (export order); each push is spread over three rings so the cloth bulges over
+    what is under it instead of spiking."""
+    import bpy  # noqa: F401
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    bin_ = bytearray(open(bp, 'rb').read())
+
+    def arrays(m):
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        return P, T
+    trees = []
+    for m in h['meshes']:
+        if m['kind'] == 'skin':
+            P, T = arrays(m)
+            trees.append((BVHTree.FromPolygons(P.tolist(), T.tolist(), all_triangles=True), body_ease))
+    done = []
+    for m in h['meshes']:
+        if m['kind'] != 'cloth' or m['name'] in ('boots', 'shoes'):
+            continue
+        P, T = arrays(m)
+        if 'pushout' not in m.get('postfix', []) and m['name'] not in NO_PUCKER:
+            key = np.round(P / 1e-5).astype(np.int64)
+            _, w = np.unique(key, axis=0, return_inverse=True)
+            w = w.reshape(-1)
+            nW = int(w.max()) + 1
+            Q = np.zeros((nW, 3))
+            Q[w] = P
+            tw = w[T]
+            e = np.unique(np.sort(np.concatenate([tw[:, [0, 1]], tw[:, [1, 2]], tw[:, [2, 0]]]), axis=1), axis=0)
+            ea, eb = np.concatenate([e[:, 0], e[:, 1]]), np.concatenate([e[:, 1], e[:, 0]])
+            deg = np.maximum(np.bincount(ea, minlength=nW), 1).astype(float)
+            moved = np.zeros(nW, bool)
+            for _round in range(3):
+                D = np.zeros((nW, 3))
+                for tree, ease in trees:
+                    for i in range(nW):
+                        loc, n, _, d = tree.find_nearest(Vector(Q[i] + D[i]), 0.03)
+                        if loc is None:
+                            continue
+                        q, nn = np.array(loc), np.array(n)
+                        dd = np.dot(Q[i] + D[i] - q, nn)
+                        if dd < ease and dd > -0.025:
+                            D[i] += nn * (ease - dd)
+                hit = np.linalg.norm(D, axis=1) > 1e-6
+                if not hit.any():
+                    break
+                moved |= hit
+                # spread: the neighbours follow (max-type spread keeps the full push at the hit)
+                for _ in range(3):
+                    avg = np.stack([np.bincount(ea, weights=D[eb, k], minlength=nW) for k in range(3)], 1) / deg[:, None]
+                    big = np.linalg.norm(avg, axis=1) > np.linalg.norm(D, axis=1)
+                    D[big] = 0.5 * (D[big] + avg[big])
+                Q = Q + D
+                moved |= np.linalg.norm(D, axis=1) > 1e-6
+            if moved.any():
+                P2 = Q[w]
+                N0 = view(bin_, m['attrs']['normal']).astype(float)
+                Nf = fresh_normals(P2, T)
+                Nf *= 1.0 if np.einsum('ij,ij->', N0, Nf) >= 0 else -1.0
+                ch = moved[w]
+                N2 = N0.copy()
+                N2[ch] = Nf[ch]
+                put(bin_, m['attrs']['position'], P2)
+                put(bin_, m['attrs']['normal'], N2)
+                P = P2
+                done.append(f"{m['name']} ({int(moved.sum())} v)")
+            m['postfix'] = m.get('postfix', []) + ['pushout']
+        trees.append((BVHTree.FromPolygons(P.tolist(), T.tolist(), all_triangles=True), layer_ease))
+    tmp = bp + '.tmp'
+    open(tmp, 'wb').write(bin_)
+    os.replace(tmp, bp)
+    json.dump(h, open(jp + '.tmp', 'w'), separators=(',', ':'))
+    os.replace(jp + '.tmp', jp)
+    if done:
+        print(f'{cid}: pushed out {", ".join(done)}', flush=True)
+
+
 def main():
     what, ids = sys.argv[1], sys.argv[2:]
     if ids == ['all']:
@@ -640,6 +727,8 @@ def main():
             fix_props(cid)
         if what in ('normals', 'all'):
             fix_normals(cid)
+        if what in ('pushout', 'all'):
+            fix_pushout(cid)
 
 
 if __name__ == '__main__':

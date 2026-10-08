@@ -253,6 +253,7 @@ def assemble(kit, spec, out_dir, opts):
         regain.regain(cid + opts.get('suffix', ''), 0.006, 0.06)
         postfix.fix_shoes(cid + opts.get('suffix', ''))
         postfix.fix_puckers(cid + opts.get('suffix', ''))
+        postfix.fix_pushout(cid + opts.get('suffix', ''))
         postfix.fix_props(cid + opts.get('suffix', ''))
     log(f'   {cid}: {sum(len(p.posed) for p in parts)} verts, {size / 1e6:.1f} MB, {time.time() - t0:.0f} s')
 
@@ -433,7 +434,11 @@ def build_sling(sk, pt, off, D):
         r = 0.068 + 0.008 * math.sin(t * 7)
         for j in range(n_v):
             a = math.pi * (-0.15 + 1.25 * j / (n_v - 1))     # from the body side, under, up the front
-            P.append(c + (-up * math.sin(a) - side * math.cos(a)) * r - up * 0.008)
+            # the cloth is gathered, not a smooth trough: soft lengthwise folds that die out
+            # toward the hand, and a pocket bunched round the elbow
+            fold = 0.0045 * math.sin(a * 5.0 + t * 2.3) * (1.0 - 0.6 * min(1.0, max(0.0, t)))
+            fold += 0.006 * max(0.0, -t) / 0.14 * math.sin(a * 9.0)
+            P.append(c + (-up * math.sin(a) - side * math.cos(a)) * (r + fold) - up * 0.008)
     P = np.array(P)
     F = mu.grid_faces(n_v, n_u)
     cradle_top_front = P[[i * n_v + (n_v - 1) for i in range(n_u)]]
@@ -476,11 +481,23 @@ def build_sling(sk, pt, off, D):
         nrm = mu.norm(nrm - t * np.einsum('ij,ij->i', nrm, t)[:, None])
         w = np.linspace(0.045, 0.026, len(path))
         sv = mu.norm(np.cross(t, nrm))
-        Ps = np.vstack([path - sv * w[:, None], path + sv * w[:, None]])
-        Ps[1:nn_] = push_outside(Ps[1:nn_], tree, 0.004, axis=axis) if (nn_ := len(path)) else Ps[1:nn_]
-        Ps[nn_ + 1:] = push_outside(Ps[nn_ + 1:], tree, 0.004, axis=axis)
+        # a folded bandage, not a paper strip: 9 vertices across, the edges rolled under toward
+        # the body, two shallow lengthwise creases that wander, a little twist toward the neck
+        nx = 9
         nn = len(path)
-        Fs = [(k, k + 1, nn + k + 1, nn + k) for k in range(nn - 1)]
+        ss = np.linspace(-1.0, 1.0, nx)
+        kk = np.arange(nn) / max(1, nn - 1)
+        rows = []
+        for v in ss:
+            h = -0.0045 * np.clip(np.abs(v) - 0.55, 0, 1) ** 2 / 0.2
+            for cv, ph in ((-0.35, 0.7), (0.3, 2.1)):
+                h = h - 0.0016 * np.exp(-((v - (cv + 0.12 * np.sin(kk * 6.0 + ph))) / 0.12) ** 2) * (0.6 + 0.4 * np.sin(kk * 9.0 + ph))
+            tw = 0.25 * kk ** 2 * v                     # twist: the side toward the neck lifts
+            rows.append(path + sv * (w * v)[:, None] + nrm * (h + tw * w)[:, None])
+        Ps = np.vstack(rows)
+        for r_ in range(nx):
+            Ps[r_ * nn + 1:(r_ + 1) * nn] = push_outside(Ps[r_ * nn + 1:(r_ + 1) * nn], tree, 0.003, axis=axis)
+        Fs = [(r_ * nn + k, r_ * nn + k + 1, (r_ + 1) * nn + k + 1, (r_ + 1) * nn + k) for r_ in range(nx - 1) for k in range(nn - 1)]
         bands.append((Ps, Fs))
     P = push_outside(P, tree, 0.006, axis=axis)
     P2, F2 = pr.merge([(P, F)] + bands)
@@ -489,7 +506,7 @@ def build_sling(sk, pt, off, D):
     part.posed = P2
     part.normals = mu.vnormals(P2, F2)
     part.I, part.W = D.transfer(P2, space='target')
-    part.material = {'fabric': 'linen', 'color': [0.6, 0.57, 0.5], 'wear': 0.3}
+    part.material = {'fabric': 'linen', 'color': [0.52, 0.49, 0.42], 'wear': 0.35, 'dust': 0.3}
     part.attrs['aux'] = np.zeros((len(P2), 4))
     return [part]
 
