@@ -60,14 +60,15 @@ for ob in (mound, curb, floor):
     ob.collision.thickness_outer = 0.006
     ob.collision.cloth_friction = 8.0
 
-# the cloth: linen 2.0 x 1.6 m, offset toward the stool side, dropped from above
-NX, NY = 64, 52
-W, D = 2.0, 1.6
+# the cloth: a linen sheet 1.3 x 1.0 m laid over part of the bed (the straw shows round it), offset
+# toward the stool side so one corner hangs over the kerb, dropped from above
+NX, NY = 52, 40
+W, D = 1.3, 1.0
 verts, faces = [], []
 for j in range(NY + 1):
     for i in range(NX + 1):
-        x = (i / NX - 0.5) * W + 0.25
-        y = (j / NY - 0.5) * D - 0.1
+        x = (i / NX - 0.5) * W + 0.45
+        y = (j / NY - 0.5) * D - 0.25
         # a loose, slightly rucked sheet (laid by hand, not stretched)
         z = 0.75 + 0.03 * math.sin(i * 0.37) * math.cos(j * 0.29) + 0.02 * math.sin((i + j) * 0.21)
         verts.append((x, y, z))

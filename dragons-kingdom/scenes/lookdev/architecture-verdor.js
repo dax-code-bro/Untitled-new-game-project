@@ -22,8 +22,8 @@ const SUN = new THREE.Vector3(0.598, 0.743, -0.300).normalize();
 const STABLE = [0, -34], RIG = [34, -6], KEEPER = [-26, -14], LEAFP = [-17, -7];
 const PALACE = [-700, -620], HARBOR = [520, 260];
 const SHOTS = [
-  { name: 'stable-rig', p: [46, 1.7, 15], t: [12, 6.0, -24], fl: 21, fstop: 5.6 },
-  { name: 'rig', p: [43, 1.6, 9.5], t: [33, 5.5, -5], fl: 21, fstop: 5.6 },
+  { name: 'stable-rig', p: [58, 2.2, 22], t: [14, 7.0, -22], fl: 21, fstop: 5.6 },
+  { name: 'rig', p: [50, 1.7, 15.5], t: [33.5, 6.4, -5.5], fl: 18, fstop: 5.6 },
   { name: 'keeper', p: [-11.5, 1.6, 4.0], t: [-25, 2.4, -14], fl: 30, fstop: 5.6 },
   { name: 'palace', p: [-290, 22, -530], t: [-700, 40, -612], fl: 70, fstop: 8, near: 25 },
   { name: 'harbor', p: [508, 3.9, 274], t: [517, 1.2, 258], fl: 28, fstop: 5.6 },
@@ -39,6 +39,7 @@ export const meta = {
     ao: { enabled: true, radius: 0.8 },
     dof: { samples: 48 },
     grade: { exposure: 0.7, whiteBalance: 5800, contrast: 1.05, saturation: 1.0 },
+    motionBlur: { accumulateSamples: 5 },
   }),
 };
 
@@ -66,7 +67,7 @@ export async function setup(ctx) {
       // and a cart track between them; the palace rise is rock under thin turf
       const track = smooth(2.6, 1.2, Math.abs((z - STABLE[1] - 6) - (x - STABLE[0]) * 0.75 + 2.0 * Math.sin(x * 0.08)));
       const worn = Math.min(1, smooth(14, 4, nearB) * 0.8 + smooth(10, 4, Math.hypot(x - RIG[0], z - RIG[1])) * 0.85 + track * 0.7 * smooth(60, 30, Math.hypot(x - 15, z + 18)));
-      const rock = smooth(260, 120, Math.hypot(x - PALACE[0], z - PALACE[1])) * smooth(0.0, 0.4, N.fbm(x * 0.03 + 3, z * 0.03, 3) + 0.2);
+      const rock = 0.5 * smooth(260, 120, Math.hypot(x - PALACE[0], z - PALACE[1])) * smooth(0.0, 0.4, N.fbm(x * 0.03 + 3, z * 0.03, 3) + 0.2);
       return [rock, (1 - worn) * 0.6 * (1 - rock), (1 - worn) * 0.4 * (1 - rock), worn * (1 - rock)];
     },
   });

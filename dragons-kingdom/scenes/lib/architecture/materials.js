@@ -653,7 +653,7 @@ export function plainMaterial(name, color, opts = {}) {
 /** Straw bedding: layers of strands lying every which way (cells of parallel stems, overlapping). */
 export function strawMaterial(ctx, opts = {}) {
   return kitMaterial('strawbed', {
-    uniforms: { akC: { value: new THREE.Color(...(opts.color || [0.42, 0.31, 0.13])) }, akD: { value: new THREE.Color(...(opts.dark || [0.09, 0.06, 0.03])) } },
+    uniforms: { akC: { value: new THREE.Color(...(opts.color || [0.5, 0.38, 0.17])) }, akD: { value: new THREE.Color(...(opts.dark || [0.16, 0.11, 0.05])) } },
     decl: 'uniform vec3 akC; uniform vec3 akD;',
     body: /* glsl */ `
   vec3 P = vObjP;            // object space (Kit.build centres each set): noise keeps its precision far from the world origin
@@ -927,7 +927,7 @@ export async function archMaterials(ctx, opts = {}) {
       // cobbles / setts of a square: grey-brown, worn, moss in the joints, no splash band
       stoneMaterial(ctx, { palette: [[0.21, 0.195, 0.17], [0.14, 0.13, 0.115], [0.27, 0.235, 0.185]], variation: 0.38, lichen: 0.15, moss: 0.3, algae: 0.0, tooled: 0.1, splash: 0.0, streaks: 0.0, stain: 0.6, ...(opts.stoneSett || {}) }),
       // interiors: worn flagstone floors (no weather: no lichen, algae or splash)
-      stoneMaterial(ctx, { palette: [[0.42, 0.39, 0.33], [0.36, 0.34, 0.29], [0.46, 0.42, 0.35]], variation: 0.2, lichen: 0.0, moss: 0.0, algae: 0.0, tooled: 0.25, splash: 0.0, streaks: 0.0, stain: 0.5, ...(opts.stoneFloor || {}) }),
+      stoneMaterial(ctx, { palette: [[0.42, 0.39, 0.33], [0.36, 0.34, 0.29], [0.46, 0.42, 0.35]], variation: 0.2, lichen: 0.0, moss: 0.0, algae: 0.0, tooled: 0.75, splash: 0.0, streaks: 0.0, stain: 0.5, ...(opts.stoneFloor || {}) }),
       // harbour: pale quay stone with tide zones (the harbour kit's footing is 2.4 m below the
       // water: the tide line at +1.1 m is 3.5 m above it)
       stoneMaterial(ctx, { palette: [[0.45, 0.42, 0.36], [0.41, 0.385, 0.33], [0.48, 0.45, 0.38]], variation: 0.12, lichen: 0.35, moss: 0.25, algae: 0.6, tooled: 0.45, splash: 0.0, streaks: 0.9, stain: 0.8, tide: 3.5, ...(opts.stoneQuay || {}) }),

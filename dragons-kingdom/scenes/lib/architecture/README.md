@@ -14,12 +14,27 @@ per-vertex construction data. Designs are provisional until Daxtyn approves them
 | **openings** | dressed jambs that return into the reveal, lintels with bearing, semicircular **voussoir arches** (keystone, full-depth soffit), projecting sills with a weathered fall; stones are cut/packed round sills, lintels and arch extrados; the mortar core has true reveals through the wall thickness |
 | **timber framing** (`timber.js`) | sill/bressumer, corner and bay posts, studs, mid rails, head plate; straight tension braces that **interrupt** the studs they cross; window framing with its own posts and rails; every member hand-hewn (bow, kink, out-of-square, waney arris; adze scallops in the material); **oak pegs** where each tenon enters; jetty joist ends with end grain; corner brackets on stone corbels |
 | **infill** | one lime-plaster surface behind the frame, recessed ~3 cm, shrinking back from the timbers (dark gap, baked occlusion) and bellying out a few mm mid-panel |
-| **paving** (`cling.js`) | the square is laid with setts in rows (each a flat-topped block, tilted, proud or sunk a little), the joints and worn patches showing the earth below; clear of the fountain, the steps and the wall feet (weeds grow there) |
-| **roofs** (`roof.js`) | rafter tails under the eaves, a boarded deck, clay plain tiles double-lapped on a 100 mm gauge or stone slates in diminishing courses, each tile a slightly cambered, slightly turned piece; ridge tiles bedded in mortar; bargeboards / stone coping and kneelers; the ridge sags, slopes hollow, eaves droop |
-| **chimneys** | squared stone stacks through the roof, projecting cap, smoke-blackened top courses |
+| **paving** (`cling.js`) | rounded field cobbles of mixed size (8-22 cm, low-poly domes) laid in wavering rows and bedded in the soil (earth joints), worn through to the earth in ragged patches, dished along a kennel that carries the fountain's overflow out under the gate, puddles in the hollows; lanes (`lane`) of setts with a dished gutter along any polyline |
+| **roofs** (`roof.js`) | a boarded eaves soffit and fascia (no row of rafter-end teeth), a boarded deck, clay plain tiles double-lapped on a 100 mm gauge or stone slates in diminishing courses, each tile cambered and set +-3 deg off true (bigger tiles on back rows); ridge tiles bedded in mortar; bargeboards / stone coping and kneelers; the ridge dips 6-12 cm, the slopes hollow and undulate, the eaves droop |
+| **chimneys** | squared stone stacks 1-1.4 m above the ridge, projecting cap, mortar flaunching round the flue, smoke-blackened top courses |
 | **windows / doors** (`openings.js`) | oak frames set back in the reveal, mullions, **leaded diamond / square quarries** of uneven crown glass with a dim **room behind** (interior mapping: real parallax, no modelled room); ledged plank shutters on strap hinges folded flat, half open on a shutter dog, or closed; ledged oak doors with strap hinges, clench nails, ring handles, open onto a room or closed; worn thresholds |
-| **houses** (`house.js`) | rubble ground storey (arched door, shop window) + 1-2 jettied framed storeys + front gable or eaves to the street; upper storeys **lean and twist** a little, roofs sag |
-| **weathering** (materials) | per-stone colour, scan micro detail, bedding, iron stains, lichen rosettes, moss in sheltered joints and on ledges, **splash dirt / damp / green algae at the footing** (from each vertex's height above its footing), rain streaks; oak with growth rings, checks, silvered weather faces, dark undersides; plaster washes, repairs, hairline cracks, flaking to the daub, grime; tiles with lichen and moss in the laps; rusty iron |
+| **houses** (`house.js`) | rubble ground storey (arched door, shop window) + 1-2 jettied framed storeys + front gable or eaves to the street; upper storeys **lean and twist** a little, roofs sag; variants: `allStone` (two stone storeys, stone gables with coping), a lime-washed ground storey (`stoneMat: 'stoneWashed'`), `passage` (a gate passage: through arches front and back, rubble passage walls, a joisted ceiling - the Cling stone arch), `beamKit` (the bressumer over the front built into its own kit: the 3C beam can fall) |
+| **weathering** (materials) | (seeds are snapped per piece in the shader - see "Fixed in round 1") |
+| **weathering, cont.** | per-stone colour, scan micro detail, bedding, iron stains, lichen rosettes, moss in sheltered joints and on ledges, **splash dirt / damp / green algae at the footing** (from each vertex's height above its footing), rain streaks; oak with growth rings, checks, silvered weather faces, dark undersides; plaster washes, repairs, hairline cracks, flaking to the daub, grime; tiles with lichen and moss in the laps; rusty iron |
+
+## Fixed in round 1 (critic report) - worth knowing why
+
+* **Triangle-shaped tone patches / fine cross-hatch** on every surface at 1:1: the per-piece seed
+  `aInfo.x` is an interpolated varying, and the old `akH1` was `fract(sin(x) * 43758)`, whose
+  ~1e5 gain turned the last-bit interpolation error into per-triangle noise. Seeds are now written
+  at 1/8192 bucket centres (core.js `Acc.v`) and snapped in the fragment (`akI` replaces `vInfo`
+  in every body); `akH1` is a low-gain fract hash. Planar projections take their axes from the
+  piece (`akPlanarE`), never from the per-fragment normal.
+* **Inside-out king's steps**: the old cheek walls had stone on one face only (seen from inside: a
+  black lattice) and the terrace floated. The flight is now solid (fill under the steps), between
+  stepped cheek walls with stone on every face (`masonryBox` sections), the terrace held by
+  retaining walls with a parapet.
+* `masonryFace(..., { clipTop: (x) => y })` lays courses only under a line (a stair's soffit).
 
 ## Files
 
@@ -32,9 +47,10 @@ per-vertex construction data. Designs are provisional until Daxtyn approves them
 | `roof.js` | `gableRoof` (clay / slate, sag, damage), `chimney`, `pentice` |
 | `openings.js` | `windowUnit`, `door`, `leafFrame`, `glassQuad`, `threshold` |
 | `house.js` | `house` (the Cling townhouse) |
-| `cling.js` | `CLING` (fixed layout), `clingSquare`, `archway`, `gateway`, `fountain`, `stonePier`, `kingsSteps`, `alley`, `paving` (cobbled setts, worn patches), `wallFootPlacer`, `houseFootSegments` |
-| `verdor.js` | `stable`, `keeperHouse`, `accessRig`, `leafPlatform`, `palace`, `harbor` |
-| `interiors.js` | `birthingChamber`, `treatmentRoom` (+ `flagFloor`, `beamCeiling`, `nest`, `oilLamp`, `bowl`, `jug`, `foldedCloths`, `bench`, `stool`) |
+| `cling.js` | `CLING` (fixed layout), `clingSquare` (houses round the square + second rows behind every gap, the gate-passage arch with `set.beam` (the 3C beam's own mesh + its end points), a lane on through the arch, the bent alley with houses closing its vistas, houses along the broad road beyond the gate), `archway` (freestanding variant), `gateway` (silvered oak leaves with ledges, braces, straps, nails, latch, a droop; weathered pier caps; coped walls), `fountain` (octagonal conduit: slabs between corner posts, mitred coping with leaded iron cramps, solid step, octagonal pillar with a spout drum, four heads, lead pipes, falling jets, rippled pool), `stonePier`, `kingsSteps` (solid), `lane`, `alley`, `paving`, `wallFootPlacer` (weeds in corners and by doors, ~a quarter of the wall foot), `houseFootSegments` |
+| `verdor.js` | `stable` (a dragon stable for Leaf-sized dragons: the 5.6 x 6.6 m door admits a subadult Nightwing; Charcoal is mounted outside from the rig), `keeperHouse`, `accessRig` (15th-century carpentry: jowled posts on sole plates over stone pads, girts, arch braces, pegs, boarded stairs with closed risers, newels and handrails, railed deck and gangway, jib, blocks, falls, windlass, counterweight, leather bolster; deck 10.6 m so the gangway lands at Charcoal's lying seat height ~9.5-9.9 m - measured by `scenes/lookdev/architecture-probe.js`), `leafPlatform` (spoked iron-tyred wheels, chocks, padded leather roll on the side that meets Leaf (+x), stair with handrails on BOTH sides: Abby's free right hand finds a rail facing out or facing in; returns `{ deck, stairFoot, leafSide }`), `palace` (crenellated curtain walls, gatehouse with half-round towers, round towers with dressed slit surrounds and a corbelled band), `harbor` (quay with tide zones, a solid landing stair built against the face into the water, stone bollards, oak fender piles, iron rings, its own rippled sea surface) |
+| `interiors.js` | `birthingChamber` (washed rubble, warm 1900-2200 K lamps with soot plumes, irregular worn flags, the nest: a kerb of straight chamfered stones round a polygon, straw in ~900 clumps that keep off the cloth-simulated linen and spill over the kerb), `treatmentRoom` (plaster over rubble, losses with a plaster-coloured broken edge, irregular flags with a worn line from the door, shutters on strap hinges and pintles, the cloth-simulated table cloth, the patient's stool with an arm support at her LEFT - `anchors.seat`, `anchors.armSupport`) (+ `flagFloor`, `beamCeiling`, `nest`, `oilLamp`, `bowl`, `jug`, `foldedCloths`, `bench`, `stool`) |
+| `offline/*.py` | one-time Blender (bpy 4.2) cloth bakes into `cache/` (git-ignored): `nest_cloth.py` (the nest linen), `table_cloth.py` (the treatment-room table cloth) |
 
 ## Use
 
@@ -86,7 +102,8 @@ steps (12.9, 19.4). Sun behind the steps (south).
 * `scenes/lookdev/architecture-verdor.js` - stable + access rig with Remi for scale, the rig, the keepers' lodge + Leaf's platform, the palace far off, the harbour steps.
 * `scenes/lookdev/architecture-interiors.js` - birthing chamber (daylight shaft, lamps, nest), treatment room.
 * `scenes/lookdev/architecture-contact.js` - every model 3/4 under the same daylight, one per second (turntable at 24 fps).
-* `scenes/lookdev/architecture-dev.js` - quick single-piece checks.
+* `scenes/lookdev/architecture-dev.js` - quick single-piece checks; close-ups at the pixel footprint of a 4K frame; `archMaterials(ctx, { debug: n })` (1 constant albedo, 2 no bump, 3 both, 4 albedo unlit, >= 10 oak terms).
+* `scenes/lookdev/architecture-probe.js` - measures Charcoal's seat height (rig deck check).
 
 ## Costs and limits
 

@@ -38,9 +38,9 @@ const STYLE = {
   ashlar: { r: [0.008, 0.016], pillow: [0.001, 0.004], noise: 0.002, nf: 7, chip: 0.008, prot: [0.002, 0.012], tilt: 0.005, len: [1.2, 3.0], j: 0.007, dep: [0.18, 0.32], sizeJit: 0.004, split: 0 },
   squared: { r: [0.007, 0.015], pillow: [0.002, 0.006], noise: 0.006, nf: 4, chip: 0.014, prot: [0.006, 0.018], tilt: 0.012, len: [1.0, 2.6], j: 0.012, dep: [0.15, 0.3], sizeJit: 0.008, split: 0.12, outline: 0.03, shrink: 0.05 },
   // (packed tight: 10-25 mm joints, each stone its own projection and a convex, pitched face)
-  rubble: { r: [0.006, 0.014], pillow: [0.01, 0.026], noise: 0.014, nf: 4.5, chip: 0.03, prot: [0.004, 0.04], tilt: 0.03, len: [0.7, 2.4], j: 0.014, dep: [0.14, 0.28], sizeJit: 0.008, split: 0.25, outline: 0.04, shrink: 0.03 },
+  rubble: { r: [0.005, 0.012], pillow: [0.005, 0.014], noise: 0.02, nf: 5.5, chip: 0.035, prot: [0.004, 0.04], tilt: 0.03, len: [0.7, 2.4], j: 0.014, dep: [0.14, 0.28], sizeJit: 0.008, split: 0.25, outline: 0.04, shrink: 0.03 },
   // rubble under generations of lime wash: the coats fill the joints nearly flush and soften every arris
-  washed: { r: [0.022, 0.04], rs: 2, pillow: [0.008, 0.018], noise: 0.008, nf: 3.5, chip: 0.004, prot: [-0.002, 0.008], tilt: 0.012, len: [0.7, 2.4], j: 0.016, dep: [0.14, 0.28], sizeJit: 0.006, split: 0.25, outline: 0.03, shrink: 0.025 },
+  washed: { r: [0.01, 0.018], pillow: [0.004, 0.01], noise: 0.008, nf: 3.5, chip: 0.003, prot: [-0.006, 0.002], tilt: 0.01, len: [0.7, 2.4], j: 0.012, dep: [0.14, 0.28], sizeJit: 0.006, split: 0.25, outline: 0.025, shrink: 0.02 },
   dressed: { r: [0.008, 0.014], pillow: [0.001, 0.004], noise: 0.002, nf: 7, chip: 0.006, prot: [0.01, 0.018], tilt: 0.004, len: [1, 1], j: 0.01, dep: [0.2, 0.3], sizeJit: 0.003, split: 0 },
 };
 export const LOD = {

@@ -36,6 +36,7 @@ export const meta = {
     ao: { enabled: true, radius: 0.6 },
     dof: { samples: 48 },
     grade: { exposure: 0.9, whiteBalance: 6000, contrast: 1.04, saturation: 1.0 },
+    motionBlur: { accumulateSamples: 5 },
   }),
 };
 

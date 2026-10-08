@@ -229,19 +229,19 @@ export function nest(kit, F, rnd, o = {}) {
   }
   const onCloth = (x, z) => cloth && x > cloth[0] && x < cloth[1] && z > cloth[2] && z < cloth[3];
   const yOn = (x, z, out) => { const rr = Math.hypot(x, z), aa = Math.atan2(z, x); return out ? 0.006 : rr > R - 0.12 ? ch + 0.03 : domeAt(aa, Math.min(rr, R - 0.1)) + 0.004; };
-  const nClumps = o.clumps ?? 900;
+  const nClumps = o.clumps ?? 2000;
   for (let c = 0; c < nClumps; c++) {
     const out = rnd() < 0.22;
-    const a = rnd() * Math.PI * 2, r = out ? R + 0.1 + Math.pow(rnd(), 1.8) * 0.65 : Math.pow(rnd(), 0.6) * (R + 0.02);
+    const a = rnd() * Math.PI * 2, r = out ? R + 0.1 + Math.pow(rnd(), 1.8) * 0.65 : Math.sqrt(rnd()) * (R + 0.02);
     const cx = Math.cos(a) * r, cz = Math.sin(a) * r;
     if (onCloth(cx, cz)) continue;
-    const dir0 = rnd() * Math.PI * 2, ns = out ? 3 + Math.floor(rnd() * 5) : 6 + Math.floor(rnd() * 10);
+    const dir0 = rnd() * Math.PI * 2, ns = out ? 3 + Math.floor(rnd() * 5) : 5 + Math.floor(rnd() * 9);
     for (let i = 0; i < ns; i++) {
-      const dir = dir0 + rnd.sym(0.35), l = rnd.range(0.07, 0.24);
+      const dir = dir0 + rnd.sym(0.8), l = rnd.range(0.06, 0.22);
       const x0 = cx + rnd.sym(0.05), z0 = cz + rnd.sym(0.05), x1 = x0 + Math.cos(dir) * l, z1 = z0 + Math.sin(dir) * l;
       if (onCloth(x1, z1)) continue;
       const bw = rnd.sym(0.3) * l, xm = (x0 + x1) / 2 - Math.sin(dir) * bw * 0.3, zm = (z0 + z1) / 2 + Math.cos(dir) * bw * 0.3;
-      const lift = rnd() * 0.02;
+      const lift = Math.pow(rnd(), 2) * 0.012;
       const p0 = xf(F, x0, yOn(x0, z0, out) + lift * 0.3, z0), pm = xf(F, xm, yOn(xm, zm, out) + 0.004 + lift + rnd() * 0.01, zm), p1 = xf(F, x1, yOn(x1, z1, out) + lift * 0.5 + rnd() * 0.012, z1);
       tube(acc, [p0, pm, p1], rnd.range(0.0016, 0.0028), { sides: 3, seed: rnd() });
     }
