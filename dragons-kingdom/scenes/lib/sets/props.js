@@ -135,3 +135,55 @@ export function goods(kind, mats, seed = 1, o = {}) {
   }
   return grp;
 }
+
+// ---------------------------------------------------------- market stall --
+/**
+ * A festival market stall: an oak trestle frame (four posts, the back pair taller, rails, a
+ * counter of boards on trestles, a front board), a cloth awning sloping to the front with a
+ * valance, goods on the counter, a crate / sack / barrel on the ground beside it.
+ *   timber and dressing go into an architecture Kit (`kit`, built with archMaterials; core.js
+ *   block + dressing.js), the cloth and the goods are returned as a THREE.Group.
+ * at: [x, z] centre, yaw (front = +z rotated by yaw), o: { w, d, h, color, color2, stripe,
+ * goods: ['bread', 'apples', ...], seed }. Needs { block, frame, makeRand } from core.js and
+ * { crate, sack, barrel } from dressing.js (passed in A) so this file stays free of the
+ * architecture import graph.
+ */
+export function marketStall(kit, A, town, food, at, yaw, o = {}) {
+  const { block, yawFrame, sub, makeRand } = A;
+  const rnd = makeRand(o.seed ?? 1);
+  const W = o.w ?? 3.0, D = o.d ?? 1.7, Hf = o.h ?? 2.3;
+  const F = yawFrame([at[0], 0, at[1]], yaw);
+  const oak = (cx, cy, cz, sx, sy, sz, axis = [0, 1, 0], mat = 'oakSilver') => block(kit.get(mat), sub(F, [cx, cy, cz]), sx, sy, sz, { r: 0.008, seg: [0.25, 0.25, 0.25], seed: rnd(), noise: 0.002, nf: 4, chip: 0.004, axis, adze: 0.002 });
+  // posts (front pair lower: the awning slopes to the front), rails at the top
+  for (const [x, z, h] of [[-W / 2, D / 2, Hf], [W / 2, D / 2, Hf], [-W / 2, -D / 2, Hf + 0.45], [W / 2, -D / 2, Hf + 0.45]]) oak(x, h / 2, z, 0.09, h, 0.09);
+  oak(0, Hf - 0.03, D / 2, W + 0.12, 0.07, 0.07, [1, 0, 0]);
+  oak(0, Hf + 0.42, -D / 2, W + 0.12, 0.07, 0.07, [1, 0, 0]);
+  for (const x of [-W / 2, W / 2]) block(kit.get('oakSilver'), sub(F, [x, Hf + 0.2, 0], [0, 0, 1], [0, 1, 0]), Math.hypot(D, 0.45) + 0.1, 0.06, 0.06, { r: 0.006, seg: 0.3, seed: rnd(), axis: [1, 0, 0] });
+  // trestles and the counter boards (three boards, uneven), a front board to the ground
+  for (const x of [-W / 2 + 0.35, W / 2 - 0.35]) { oak(x, 0.42, D * 0.12, 0.06, 0.84, 0.06); oak(x, 0.6, D * 0.12, 0.06, 0.06, D * 0.55, [0, 0, 1], 'oakDark'); }
+  for (let k = 0; k < 3; k++) oak(0, 0.86, D * 0.12 + (k - 1) * 0.24 + (rnd() - 0.5) * 0.01, W + 0.08, 0.035, 0.235, [1, 0, 0], k === 1 ? 'oak' : 'oakSilver');
+  for (let k = 0; k < 3; k++) oak(0, 0.14 + k * 0.24, D / 2 - 0.02, W - 0.1, 0.23, 0.025, [1, 0, 0], 'oakDark');
+  // things on the ground beside it
+  if (A.crate) A.crate(kit, sub(F, [W / 2 + 0.45, 0, 0.1]), rnd, { w: 0.6, d: 0.45, h: 0.42 });
+  if (A.sack) A.sack(kit, sub(F, [-W / 2 - 0.4, 0, 0.25]), rnd);
+  if (A.barrel && rnd() < 0.5) A.barrel(kit, sub(F, [W / 2 + 0.35, 0, -0.55]), rnd);
+  // cloth: the awning (sloping to the front, sagging, a striped dye) and a valance
+  const g = new THREE.Group();
+  g.position.set(at[0], 0, at[1]); g.rotation.y = yaw;
+  const clothM = town.clothMaterial({ color: o.color || [0.3, 0.06, 0.04], color2: o.color2 || [0.45, 0.4, 0.3], stripe: o.stripe ?? 0, wear: 0.4 });
+  const L = Math.hypot(D + 0.4, 0.45);
+  const awn = new THREE.Mesh(town.clothSheet(W + 0.35, L, { sag: -0.12, ripple: 0.025, seed: o.seed ?? 1, nx: 24, ny: 10 }), clothM);
+  awn.position.set(0, Hf + 0.25, 0); awn.rotation.x = -Math.PI / 2 + Math.atan2(0.45, D + 0.4);
+  const val = new THREE.Mesh(town.clothSheet(W + 0.35, 0.28, { ripple: 0.02, folds: 0.01, seed: (o.seed ?? 1) + 3, nx: 24, ny: 3 }), clothM);
+  val.position.set(0, Hf - 0.1, D / 2 + 0.2);
+  for (const m of [awn, val]) { m.castShadow = true; m.receiveShadow = true; g.add(m); }
+  // goods on the counter
+  const kinds = o.goods || ['bread', 'apples', 'rolls'];
+  kinds.forEach((k, i) => {
+    const gd = goods(k, food, (o.seed ?? 1) * 10 + i, { w: Math.min(0.62, (W - 0.3) / kinds.length - 0.06) });
+    gd.position.set(-W / 2 + 0.15 + (W - 0.3) * (i + 0.5) / kinds.length, 0.88, D * 0.12 + (rnd() - 0.5) * 0.08);
+    gd.rotation.y = (rnd() - 0.5) * 0.3;
+    g.add(gd);
+  });
+  return g;
+}
