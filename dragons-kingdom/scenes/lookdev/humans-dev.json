@@ -1,1 +1,1 @@
-{ "id": "remi", "accumulate": false, "still": true, "cam": { "tgt": [0, 0.1, 0], "az": 30, "el": 12, "dist": 0.9, "fov": 30, "fstop": 11 } }
+{ "id": "abby", "accumulate": false, "still": true }

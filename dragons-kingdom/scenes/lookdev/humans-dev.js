@@ -1,6 +1,8 @@
 // Human look-development: one character, fixed camera setups by time (fast iteration).
 //   t 0-1  full figure, front 3/4        t 1-2  face close-up 3/4      t 2-3  face profile
 //   t 3-4  hands                          t 4-5  back 3/4               t 5-6  eye macro
+//   t 6-7  feet / shoes                   t 7-8  hairline from above the brow
+// (all views in one run: --fps 1 --seconds 8; frame k = view k)
 // The character id comes from scenes/lookdev/humans-dev.json ({ "id": "abby" }).
 //   node render/render.mjs --still scenes/lookdev/humans-dev.js --time 1.5 --preset preview --png out.png
 import * as THREE from 'three';
@@ -8,12 +10,13 @@ import { loadHDRI, loadPBR } from '../lib/assets.js';
 import { loadCharacterData, buildCharacter } from '../lib/humans/loader.js';
 import { applyIdle } from '../lib/humans/idle.js';
 import { filmFinish } from './finish.js';
+import { reviewTime } from '../lib/humans/stage.js';
 
 const CFG = await fetch(new URL('./humans-dev.json', import.meta.url)).then((r) => r.json()).catch(() => ({ id: 'dev_test' }));
 
 export const meta = {
   title: 'Humans - look development',
-  duration: 6,
+  duration: 8,
   seed: 3,
   cinematic: filmFinish({
     ...(CFG.accumulate === false ? { motionBlur: { mode: 'off' } } : {}),
@@ -69,14 +72,18 @@ const CAMS = [
   { tgt: 'wrist.R', off: [0, -0.05, 0.02], az: -40, el: 10, dist: 0.6, fov: 26, fstop: 4 },
   { tgt: [0, 1.0, 0], az: 155, el: 5, dist: 3.0, fov: 32 },
   { tgt: 'eye.L', off: [0, 0, 0.0], az: 20, el: 0, dist: 0.16, fov: 22, fstop: 4 },
+  { tgt: [0, 0.07, 0.04], az: 28, el: 14, dist: 0.95, fov: 30, fstop: 5.6 },
+  { tgt: 'head', off: [0, 0.03, 0.03], az: 12, el: 22, dist: 0.5, fov: 24, fstop: 4 },
 ];
 
 export function update(t, ctx) {
   const { camera } = ctx;
   const { ch } = S;
+  const rt = reviewTime(t, ctx);
+  t = rt.lt;
   applyIdle(ch, CFG.still ? 0 : t, { blink: CFG.blink ?? false });
   ch.root.updateMatrixWorld(true);
-  const c = CFG.cam || CAMS[Math.min(CAMS.length - 1, Math.floor(t))];
+  const c = CFG.cam || CAMS[Math.min(CAMS.length - 1, Math.max(0, rt.k))];
   const tgt = new THREE.Vector3();
   if (typeof c.tgt === 'string') { ch.bone(c.tgt).getWorldPosition(tgt); if (c.tgt === 'head') tgt.y += 0.08; tgt.add(new THREE.Vector3(...c.off)); }
   else tgt.set(...c.tgt);

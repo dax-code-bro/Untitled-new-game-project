@@ -10,6 +10,7 @@ import { loadHDRI, loadPBR } from '../lib/assets.js';
 import { createCreature, poses, createSaddle, mountRider } from '../lib/creatures/index.js';
 import { loadHuman, createRider } from '../lib/humans/index.js';
 import { filmFinish } from './finish.js';
+import { reviewTime } from '../lib/humans/stage.js';
 
 export const meta = {
   title: 'Humans - riders at scale (PROVISIONAL)',
@@ -52,9 +53,11 @@ export function update(t, ctx) {
   const { leaf, charcoal, abby, remi, sun, sunDir, sunAz } = S;
   leaf.setPose(poses.stand(leaf, { blink: false, t: 0 }));
   charcoal.setPose(poses.stand(charcoal, { blink: false, t: 0 }));
+  const rt = reviewTime(t, ctx);
+  t = rt.lt;
   abby.update(t); remi.update(t);
   leaf.root.updateMatrixWorld(true); charcoal.root.updateMatrixWorld(true);
-  const k = Math.min(2, Math.floor(t));
+  const k = Math.min(2, Math.max(0, rt.k));
   const rider = k < 2 ? abby : remi;
   const head = new THREE.Vector3();
   rider.character.bone('spine03').getWorldPosition(head);

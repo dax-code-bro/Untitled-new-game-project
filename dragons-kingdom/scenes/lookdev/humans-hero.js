@@ -8,13 +8,14 @@
 //   t 6-7  Abby holding her injured LEFT arm in
 //   t 7-8  Queen Fall, medium
 //   node render/render.mjs --still scenes/lookdev/humans-hero.js --time 0.5 --preset final --png remi-abby.png
+//   or all shots in one run: --fps 1 --seconds 8 (frame k = shot k, posed at its middle)
 // Every group stands in its own spot of one daylit field; the sun (from the HDRI) keys the
 // faces from about 35-50 degrees off the lens axis, the sky fills.
 import * as THREE from 'three';
 import { loadHDRI, loadPBR } from '../lib/assets.js';
 import { loadCharacter, placeCharacter } from '../lib/humans/index.js';
 import { applyIdle } from '../lib/humans/idle.js';
-import { groundMaterial } from '../lib/humans/stage.js';
+import { groundMaterial, reviewTime } from '../lib/humans/stage.js';
 import { filmFinish } from './finish.js';
 
 export const meta = {
@@ -99,7 +100,10 @@ export async function setup(ctx) {
 const _v = new THREE.Vector3();
 export function update(t, ctx) {
   const { camera } = ctx;
-  const k = Math.min(S.shots.length - 1, Math.max(0, Math.floor(t)));
+  // shot from the frame time (stills at k.5, or a 1-fps sequence: frame k = shot k)
+  const rt = reviewTime(t, ctx);
+  const k = Math.min(S.shots.length - 1, Math.max(0, rt.k));
+  t = rt.lt;
   const sh = S.shots[k];
   for (const s of S.shots) for (const ch of s.members) {
     // only this shot's people exist (a low sun reaches across 40 m: Abby's shadow fell into

@@ -48,3 +48,30 @@ float gF(vec2 p) { return gN(p) * 0.55 + gN(p * 2.03 + 7.1) * 0.3 + gN(p * 4.1 +
   mat.needsUpdate = true;
   return mat;
 }
+
+const FPS_SET = [1, 2, 12, 24, 25, 30, 48, 50, 60];
+/**
+ * Shot timing for the review scenes (one shot per second), rendered either as stills at the
+ * shot's middle (--still --time k.5, 24 fps) or as a 1-fps sequence (--fps 1: frame k at t = k).
+ * The film finish renders sub-frames across the shutter (t +- T/2: +-0.25 s at 1 fps), so the
+ * shot must come from the FRAME time, never from the sub-frame time (a cut inside the shutter
+ * is a double exposure). Returns { k: shot index, lt: time to pose at, frac: frame time - k }.
+ * At 1-2 fps the pose is the shot's middle (k + 0.5) and the sub-frame offset is mapped to a
+ * 24-fps shutter (half a second of idle sway would smear the faces).
+ */
+export function reviewTime(t, ctx) {
+  const f = ctx && Number.isFinite(ctx.frame) ? ctx.frame : null;
+  if (f === null) return { k: Math.floor(t), lt: t, frac: t - Math.floor(t) };
+  let fps = 24;
+  if (f > 0 && t > 0.2) {
+    const est = f / t;
+    fps = FPS_SET.reduce((a, b) => (Math.abs(Math.log(b / est)) < Math.abs(Math.log(a / est)) ? b : a));
+  }
+  const tf = f / fps;
+  if (fps <= 2) {
+    const k = Math.round(tf);
+    return { k, lt: k + 0.5 + (t - tf) / 24, frac: 0 };
+  }
+  const k = Math.floor(tf + 1e-6);
+  return { k, lt: t, frac: tf - k };
+}

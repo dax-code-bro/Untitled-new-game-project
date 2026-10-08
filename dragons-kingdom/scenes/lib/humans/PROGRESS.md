@@ -1,6 +1,6 @@
 # Humans - progress log (for a successor)
 
-## State (2026-10-07, session 2, ~02:30 UTC)
+## State (2026-10-08, session 4 - see the newest section at the end first)
 
 Done (code committed; caches are git-ignored and rebuilt with offline/build.py)
 - Offline library committed (was git-ignored as `build/` by the repo-root .gitignore; now `offline/`).
@@ -60,3 +60,27 @@ In flight / next
   `regain.py <those ids>` (all others already regained) - regain must also follow any rebuild.
 - Final 4K renders: humans-hero t = 0.5 .. 7.5, humans-contact t = 0..6, humans-riders t = 0.5,
   1.5, 2.5 -> output/humans/ (1920 downscales + 1:1 crops), npm test, README numbers.
+
+## Session 4 (2026-10-08, from ~03:05 UTC; resumed after a usage-limit stop)
+
+Caches on disk were complete (48 ids, built with the session-3 code; crowd05/crowd14 rebuild
+was interrupted but their older caches are valid). Rendered the state, then fixed in place:
+- offline/postfix.py (in-place passes, each recorded in the mesh's 'postfix' list, never twice;
+  build.py now runs regain + every pass after each build, so a rebuild needs nothing else):
+  - shoes: boots were foot shells with toes (toe socks / claws). Forefoot radius map seen from
+    over the ball of the foot, grey-closed (fills the toe gaps), blurred, toe room added,
+    vertices re-projected + relaxed, flat sole with toe spring -> a last-shaped toe box.
+  - puckers: cloth inherited the body mesh's poles (nipple / navel stars) and sim crumples
+    (armpits, crossed arms, sleeves). Found by the 2nd eigenvalue of the normals' scatter (a
+    fold bends one way, a pucker all ways), filled by a membrane; nipple spots (breast-bone
+    weighted apex) re-made as the quadric fitted round them; push-out from the layers under.
+  - props: crate (was near-white), parcel, kettle hats / spear heads (read as chrome).
+  - normals: orientation voted per mesh, not per vertex (toe-gap vertices came out inward).
+- Hair (cloth.js): narrower Kajiya-Kay lobes, primary tinted by the fibre colour, less shine
+  on the first part of each strand, roots fade in (the grey band + blunt ends at the hairline).
+- Look-dev scenes choose the shot from the FRAME time (stage.js reviewTime): all shots of a
+  scene render in one run with --fps 1 (frame k = shot k), no double exposure at cuts.
+  humans-dev.js has feet (t 6) and hairline (t 7) views.
+
+Next: hero + contact at preview after these fixes -> sling band look, Remi's square shoulders,
+remaining shredded coat edges; then final 4K + crops, npm test, README numbers.

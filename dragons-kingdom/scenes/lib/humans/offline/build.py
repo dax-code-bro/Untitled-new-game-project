@@ -244,6 +244,16 @@ def assemble(kit, spec, out_dir, opts):
               'meta': {'pose': spec.get('pose', 'stand'), 'lod': spec.get('lod', 'mid'), 'height': float(max(p.posed[:, 1].max() for p in parts)),
                        'sole': sole, 'provisional': True, 'notes': spec.get('notes', '')}}
     size = write_character(os.path.join(out_dir, cid + opts.get('suffix', '')), header, [to_mesh_dict(p) for p in parts])
+    # the in-place post passes, so a fresh build needs nothing else: the face albedo de-lighting
+    # at the current scales (regain.py), shoes made on a last, cloth puckers smoothed and prop
+    # colours (postfix.py)
+    if os.path.samefile(out_dir, os.path.join(HERE, '..', 'cache')):
+        import regain
+        import postfix
+        regain.regain(cid + opts.get('suffix', ''), 0.006, 0.06)
+        postfix.fix_shoes(cid + opts.get('suffix', ''))
+        postfix.fix_puckers(cid + opts.get('suffix', ''))
+        postfix.fix_props(cid + opts.get('suffix', ''))
     log(f'   {cid}: {sum(len(p.posed) for p in parts)} verts, {size / 1e6:.1f} MB, {time.time() - t0:.0f} s')
 
 
@@ -332,7 +342,7 @@ def accessories(D, garments, spec, parts):
     tP = np.array([v for q in tail for v in (q + sv, q - sv)])
     tF = [(2 * k, 2 * k + 1, 2 * k + 3, 2 * k + 2) for k in range(len(tail) - 1)]
     for name, (Pp, Fp), mat in (('belt', pr.merge(pieces + [(tP, tF)]), {'kind': 'leather', 'color': bc, 'rough': 0.6, 'tile': 0.25, 'doubleSide': True}),
-                                ('buckle', buckle, {'kind': 'iron', 'color': [0.5, 0.48, 0.45], 'rough': 0.45})):
+                                ('buckle', buckle, {'kind': 'iron', 'color': [0.36, 0.35, 0.34], 'rough': 0.6})):
         part = Part(name, 'prop', Pp, mu.tris_of(Fp), uv=_uv_box(Pp))
         part.posed = Pp
         part.normals = mu.vnormals(Pp, Fp)

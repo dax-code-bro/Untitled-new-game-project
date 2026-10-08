@@ -161,8 +161,8 @@ def boxuv(P):
 # ================================================================ props ==
 # Every builder returns a list of pieces in PROP space (metres), documented per prop.
 WOOD = {'kind': 'wood', 'color': [0.5, 0.4, 0.3], 'rough': 0.7}
-IRON = {'kind': 'iron', 'color': [0.55, 0.52, 0.5], 'rough': 0.58}
-STEEL = {'kind': 'steel', 'color': [0.5, 0.5, 0.52], 'rough': 0.35}
+IRON = {'kind': 'iron', 'color': [0.36, 0.35, 0.34], 'rough': 0.66}       # hand-forged, dulled
+STEEL = {'kind': 'steel', 'color': [0.46, 0.46, 0.47], 'rough': 0.45}
 LEATHER = {'kind': 'leather', 'color': [0.08, 0.05, 0.03], 'rough': 0.6}
 
 
@@ -232,7 +232,7 @@ def crate(w=0.5, h=0.32, d=0.36):
         for sz in (-1, 1):
             parts.append(box(np.array([sx * (w / 2 - 0.03), h / 2, sz * (d / 2 + 0.004)]), (0.045, h, 0.012)))
     P, F = merge(parts)
-    return [piece(P, F, boxuv(P), {'kind': 'pine', 'color': [0.62, 0.52, 0.4], 'tile': 0.8}, 'crate')]
+    return [piece(P, F, boxuv(P), {'kind': 'pine', 'color': [0.33, 0.26, 0.18], 'tile': 0.8}, 'crate')   # weathered boards]
 
 
 def parcel(w=0.28, h=0.14, d=0.2):
@@ -241,7 +241,7 @@ def parcel(w=0.28, h=0.14, d=0.2):
     P = P * np.array([w, h, d])
     rng = np.random.default_rng(3)
     P += (rng.random(P.shape) - 0.5) * 0.004
-    out = [piece(P, F, uv * 2, {'kind': 'linen', 'color': [0.48, 0.42, 0.33], 'rough': 0.85, 'tile': 0.15}, 'cloth')]
+    out = [piece(P, F, uv * 2, {'kind': 'linen', 'color': [0.36, 0.3, 0.22], 'rough': 0.85, 'tile': 0.15}, 'cloth')]
     for ang in (0, math.pi / 2):
         a = np.linspace(0, 2 * math.pi, 40)
         ex, ez = (w * 0.51, d * 0.51) if ang == 0 else (w * 0.51, d * 0.51)
@@ -305,7 +305,7 @@ def kettle_hat(r=0.112):
     """Iron kettle hat, its inner rim centred at the origin (head top above)."""
     prof = [(r * 1.62, -0.03), (r * 1.6, -0.022), (r * 1.03, 0.0), (r * 1.0, 0.05), (r * 0.86, 0.11), (r * 0.45, 0.15), (0.0, 0.158)]
     P, F, uv = lathe(prof, segs=36)
-    return [piece(P, F, uv, dict(IRON, color=[0.45, 0.43, 0.41], rough=0.55), 'hat')]
+    return [piece(P, F, uv, dict(IRON, color=[0.3, 0.29, 0.28], rough=0.62), 'hat')]
 
 
 def circlet(r=0.085, h=0.018, points=0):

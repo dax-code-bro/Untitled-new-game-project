@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { loadHDRI } from '../lib/assets.js';
 import { loadCharacter, placeCharacter, CROWD } from '../lib/humans/index.js';
 import { applyIdle } from '../lib/humans/idle.js';
-import { groundMaterial } from '../lib/humans/stage.js';
+import { groundMaterial, reviewTime } from '../lib/humans/stage.js';
 import { filmFinish } from './finish.js';
 
 export const meta = {
@@ -84,10 +84,11 @@ export function update(t, ctx) {
   const { camera } = ctx;
   // every sub-frame of the film finish (shutter + jitter AA) shows the same pose of the same
   // sheet: quantise to the frame (no ghosting where one sheet hands over to the next at k.0)
-  t = Math.round(t * 24) / 24;
-  const k = Math.min(S.sheets.length - 1, Math.max(0, Math.floor(t)));
+  // (a 1-fps sequence, --fps 1 --seconds 7, shows every sheet from the front)
+  const rt = reviewTime(t, ctx);
+  const k = Math.min(S.sheets.length - 1, Math.max(0, rt.k));
   const sh = S.sheets[k];
-  const yaw = (t - Math.floor(t)) * Math.PI * 2;
+  const yaw = (Math.round(rt.frac * 24) / 24) * Math.PI * 2;
   for (const s of S.sheets) for (const c of s.chars) {
     c.ch.root.visible = s === sh;
     c.ch.root.rotation.y = yaw;

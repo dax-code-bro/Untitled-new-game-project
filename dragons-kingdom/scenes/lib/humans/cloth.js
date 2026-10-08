@@ -141,13 +141,13 @@ vAO = ao; vAux = aux; vT = normalize(normalMatrix * tg); vHairUv = uv;`);
       .replace('#include <common>', `#include <common>
 uniform float uSpec, uShift, uVar; uniform vec3 uTint;
 varying float vAO; varying vec3 vT; varying vec4 vAux; varying vec2 vHairUv;
-vec3 hairT; float hairSub;`)
+vec3 hairT; float hairSub, hairAlong;`)
       .replace('#include <color_fragment>', `#include <color_fragment>
 // per-strand colour (aux.r random, aux.g = along the strand 0 root..1 tip, aux.b = depth in the groom)
 // each ribbon reads as several finer hairs: sub-strands across it with their own tone
 { float x = vHairUv.x * 4.0 + vAux.r * 13.0; float id = floor(x); float f = fract(x);
   float h = fract(sin(id * 12.9898 + vAux.r * 78.233) * 43758.5453);
-  hairSub = h;
+  hairSub = h; hairAlong = vAux.g;
   diffuseColor.rgb *= (1.0 - uVar * 0.5 + uVar * vAux.r) * (0.82 + 0.36 * h) * mix(1.0, 1.15, vAux.g);
   diffuseColor.rgb *= mix(1.0, 0.72, smoothstep(0.35, 0.5, abs(f - 0.5)));
 }
@@ -156,6 +156,8 @@ diffuseColor.rgb *= mix(1.0, 0.5, vAux.b);
 // thinning tips and soft ribbon edges: the film finish's jittered sub-frames resolve the
 // alpha-hash into fine, semi-transparent strand edges instead of hard clumps
 diffuseColor.a = (1.0 - smoothstep(0.75, 1.0, vAux.g) * 0.9) * (1.0 - smoothstep(0.3, 0.5, abs(vHairUv.x - 0.5)) * 0.55);
+// roots fade in: a hairline is a density gradient, not the blunt dark ends of ribbons
+diffuseColor.a *= mix(0.3, 1.0, smoothstep(0.0, 0.1, vAux.g));
 #endif`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 hairT = normalize(vT);
@@ -179,12 +181,16 @@ void RE_Direct_Hair( const in IncidentLight directLight, const in vec3 geometryP
   float d = clamp(ndl * 0.6 + 0.4, 0.0, 1.0);
   reflectedLight.directDiffuse += directLight.color * d * BRDF_Lambert( material.diffuseColor );
   float vis = clamp(ndl * 0.5 + 0.5, 0.0, 1.0);
-  float s1 = hairKK(hairT, directLight.direction, geometryViewDir, -uShift, 90.0);
-  float s2 = hairKK(hairT, directLight.direction, geometryViewDir, uShift * 1.6, 16.0);
+  // narrow lobes: broad ones lay a grey sheen over the whole front of a combed-back head
+  float s1 = hairKK(hairT, directLight.direction, geometryViewDir, -uShift, 160.0);
+  float s2 = hairKK(hairT, directLight.direction, geometryViewDir, uShift * 1.6, 32.0);
   vec3 hc = material.diffuseColor / max(1e-4, max(material.diffuseColor.r, max(material.diffuseColor.g, material.diffuseColor.b)));
   // primary: surface reflection (mostly white, a little of the fibre colour); secondary: through
   // the fibre (hair coloured); hairSub breaks the band up strand by strand
-  reflectedLight.directSpecular += directLight.color * vis * uSpec * (0.4 + 1.0 * hairSub) * (s1 * 0.32 * mix(vec3(1.0), hc, 0.35) + s2 * 0.3 * uTint * hc);
+  // (a white primary at this strength reads as grey dust on brown hair: it takes more of the
+  // fibre colour; the first part of each strand lies flat on the scalp and shines less)
+  float rootK = mix(0.45, 1.0, smoothstep(0.0, 0.2, hairAlong));
+  reflectedLight.directSpecular += directLight.color * vis * uSpec * rootK * (0.4 + 1.0 * hairSub) * (s1 * 0.24 * mix(vec3(1.0), hc, 0.7) + s2 * 0.3 * uTint * hc);
 }
 #undef RE_Direct
 #define RE_Direct RE_Direct_Hair`);

@@ -1,7 +1,9 @@
 """Post-fixes applied in place to already built characters (cache/<id>.json + .bin), so a fix
 that only needs the finished meshes does not cost a full rebuild.
 
-    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes id [id ...]   ('all' = every cache)
+    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|all id [id ...]   ('all' = every cache)
+
+Each pass records itself in the mesh's 'postfix' list and is not applied twice.
 
 shoes: shoes and boots were shells of the foot with the toes' relief kept (they read as toe
 socks). The foot part of every shoe/boot mesh (from the sole up to the ankle) is smoothed into
@@ -122,22 +124,311 @@ def smooth_lasts(P, tris, foot_h=0.08):
     return out[w], normals(out)[w]
 
 
+def _maxf(a, r, axis):
+    """1D max filter (window 2r+1) along axis, edges clamped."""
+    out = a.copy()
+    for k in range(1, r + 1):
+        out = np.maximum(out, np.roll(a, k, axis=axis))
+        out = np.maximum(out, np.roll(a, -k, axis=axis))
+    return out
+
+
+def _minf(a, r, axis):
+    out = a.copy()
+    for k in range(1, r + 1):
+        out = np.minimum(out, np.roll(a, k, axis=axis))
+        out = np.minimum(out, np.roll(a, -k, axis=axis))
+    return out
+
+
+def _blur(a, it=2):
+    for _ in range(it):
+        a = 0.25 * np.roll(a, 1, 0) + 0.5 * a + 0.25 * np.roll(a, -1, 0)
+        a = 0.25 * np.roll(a, 1, 1) + 0.5 * a + 0.25 * np.roll(a, -1, 1)
+    return a
+
+
+def _bilinear(G, fi, fj):
+    i0 = np.clip(np.floor(fi).astype(int), 0, G.shape[0] - 2)
+    j0 = np.clip(np.floor(fj).astype(int), 0, G.shape[1] - 2)
+    a, b = np.clip(fi - i0, 0, 1), np.clip(fj - j0, 0, 1)
+    return (G[i0, j0] * (1 - a) * (1 - b) + G[i0 + 1, j0] * a * (1 - b)
+            + G[i0, j0 + 1] * (1 - a) * b + G[i0 + 1, j0 + 1] * a * b)
+
+
+def close_toes(P, tris, foot_h=0.085, ease=0.004, toe_room=0.012, spring=0.006, seated=False):
+    """A shoe is made on a last, not on a foot: the toes' relief (gaps between the toes on top
+    and between the toe tips in front) is closed and the toe box gets room.
+
+    Per foot, the forefoot is star-shaped seen from a point over the ball of the foot: its surface
+    is a radius map r(azimuth, elevation). That map is grey-closed (max filter then min filter,
+    ~20 degrees: fills every dip narrower than a toe gap but keeps the foot's outline), blurred,
+    and given room (ease all round, more toward the toe tip); the forefoot vertices move along
+    their rays onto it, then are relaxed and re-projected (no clustering where the gaps were).
+    The sole stays flat on the ground (with a little toe spring) unless seated.
+    Returns (positions, normals) per input vertex."""
+    key = np.round(P / 1e-5).astype(np.int64)
+    _, w = np.unique(key, axis=0, return_inverse=True)
+    w = w.reshape(-1)
+    nW = int(w.max()) + 1
+    cnt = np.bincount(w, minlength=nW).astype(float)
+    Q = np.stack([np.bincount(w, weights=P[:, k], minlength=nW) for k in range(3)], 1) / cnt[:, None]
+    tw = w[tris]
+    a = np.concatenate([tw[:, 0], tw[:, 1], tw[:, 2], tw[:, 1], tw[:, 2], tw[:, 0]])
+    b = np.concatenate([tw[:, 1], tw[:, 2], tw[:, 0], tw[:, 0], tw[:, 1], tw[:, 2]])
+    deg = np.maximum(np.bincount(a, minlength=nW), 1).astype(float)
+
+    def normals(X):
+        fn = np.cross(X[tw[:, 1]] - X[tw[:, 0]], X[tw[:, 2]] - X[tw[:, 0]])
+        Nn = np.zeros_like(X)
+        for k in range(3):
+            np.add.at(Nn, tw[:, k], fn)
+        return Nn / np.maximum(np.linalg.norm(Nn, axis=1, keepdims=True), 1e-12)
+    out = Q.copy()
+    # the two feet: split at the widest gap in x
+    xs = np.sort(Q[:, 0])
+    gi = np.argmax(np.diff(xs))
+    xsplit = 0.5 * (xs[gi] + xs[gi + 1]) if len(xs) > 1 else 0.0
+    DA = np.radians(3.0)
+    for side in (Q[:, 0] >= xsplit, Q[:, 0] < xsplit):
+        if side.sum() < 30:
+            continue
+        y0 = Q[side, 1].min()
+        foot = side & (Q[:, 1] < y0 + foot_h)
+        low = side & (Q[:, 1] < y0 + 0.035)
+        if low.sum() < 20:
+            continue
+        cxz = Q[low][:, [0, 2]].mean(0)
+        X = Q[low][:, [0, 2]] - cxz
+        ev, evec = np.linalg.eigh(X.T @ X)
+        f2 = evec[:, -1]
+        u = X @ f2
+        lo, hi = np.quantile(u, 0.01), u.max()
+        # the toe end is the end far from the leg (the ankle stands over the heel end)
+        leg = side & (Q[:, 1] > y0 + foot_h - 0.01) & (Q[:, 1] < y0 + foot_h + 0.03)
+        ua = ((Q[leg][:, [0, 2]] - cxz) @ f2).mean() if leg.sum() > 5 else 0.0
+        if ua > 0.5 * (lo + hi):
+            f2 = -f2
+            u = -u
+            lo, hi = np.quantile(u, 0.01), u.max()
+        l2 = np.array([-f2[1], f2[0]])
+        L = hi - lo
+        uu = (Q[:, [0, 2]] - cxz) @ f2
+        vv = (Q[:, [0, 2]] - cxz) @ l2
+        ub = lo + 0.6 * L                                   # over the ball of the foot
+        sl = foot & (np.abs(uu - ub) < 0.015)
+        vc = 0.5 * (vv[sl].min() + vv[sl].max()) if sl.sum() > 3 else 0.0
+        C = np.array([cxz[0], y0 + 0.032, cxz[1]]) + np.array([f2[0], 0, f2[1]]) * ub + np.array([l2[0], 0, l2[1]]) * vc
+        reg = foot & (uu > lo + 0.42 * L)
+        idx = np.where(reg)[0]
+        if len(idx) < 20:
+            continue
+
+        def sph(Xp):
+            d = Xp - C
+            du = d[:, 0] * f2[0] + d[:, 2] * f2[1]
+            dv = d[:, 0] * l2[0] + d[:, 2] * l2[1]
+            r = np.linalg.norm(d, axis=1)
+            az = np.arctan2(dv, du)
+            el = np.arcsin(np.clip(d[:, 1] / np.maximum(r, 1e-9), -1, 1))
+            return az, el, r, du, dv
+        az, el, r, du, dv = sph(Q[idx])
+        na, ne = int(np.ceil(2 * np.pi / DA)), int(np.ceil(np.pi / DA)) + 1
+        ia = np.clip(((az + np.pi) / DA).astype(int), 0, na - 1)
+        ie = np.clip(((el + np.pi / 2) / DA).astype(int), 0, ne - 1)
+        G = np.full((na, ne), -1.0)
+        np.maximum.at(G, (ia, ie), r)
+        # fill empty cells from their neighbours (azimuth wraps)
+        for _ in range(60):
+            emp = G < 0
+            if not emp.any():
+                break
+            acc = np.zeros_like(G); n_ = np.zeros_like(G)
+            for sh, ax in ((1, 0), (-1, 0), (1, 1), (-1, 1)):
+                Gs = np.roll(G, sh, axis=ax)
+                ok = Gs >= 0
+                acc += np.where(ok, Gs, 0); n_ += ok
+            fill = emp & (n_ > 0)
+            G[fill] = acc[fill] / n_[fill]
+        G[G < 0] = np.median(r)
+        # grey closing: fills dips narrower than ~13 cells (39 deg) - the gaps between the toes
+        Gc = _minf(_minf(_maxf(_maxf(G, 6, 0), 6, 1), 6, 0), 6, 1)
+        Gc = _blur(Gc, 8)
+        # room: ease all round, more toward the toe tip (forward, low)
+        A = (np.arange(na) + 0.5) * DA - np.pi
+        E = (np.arange(ne) + 0.5) * DA - np.pi / 2
+        fwd = np.clip(np.cos(A), 0, 1)[:, None] ** 2 * np.clip(np.cos(E), 0, 1)[None, :] ** 2
+        Gc = Gc + ease + toe_room * fwd
+
+        def project(Xp):
+            az_, el_, r_, _, _ = sph(Xp)
+            fi = (az_ + np.pi) / DA - 0.5
+            fj = (el_ + np.pi / 2) / DA - 0.5
+            rn = _bilinear(Gc, fi % na, np.clip(fj, 0, ne - 1))
+            d = (Xp - C) / np.maximum(r_, 1e-9)[:, None]
+            return C + d * rn[:, None]
+        # blend in from the arch to the ball, and fade out toward the instep top
+        bl = np.clip((uu[idx] - (lo + 0.42 * L)) / (0.12 * L), 0, 1)
+        bl *= np.clip((y0 + foot_h - Q[idx, 1]) / 0.03, 0, 1)
+        bl = bl * bl * (3 - 2 * bl)
+        tgt = project(Q[idx])
+        cur = Q.copy()
+        cur[idx] = Q[idx] + (tgt - Q[idx]) * bl[:, None]
+        # relax tangentially + re-project (vertices bunched where the gaps were spread out)
+        wt = np.zeros(nW); wt[idx] = bl
+        for _ in range(30):
+            avg = np.stack([np.bincount(a, weights=cur[b, k], minlength=nW) for k in range(3)], 1) / deg[:, None]
+            nxt = cur + (0.6 * wt)[:, None] * (avg - cur)
+            pr = project(nxt[idx])
+            nxt[idx] = nxt[idx] + (pr - nxt[idx]) * bl[:, None]
+            cur = nxt
+        if not seated:
+            # flat sole with a little toe spring toward the tip
+            ut = (uu[idx] - (lo + 0.78 * L)) / (0.22 * L)
+            sp = spring * np.clip(ut, 0, 1) ** 2
+            h_ = np.clip(1 - (cur[idx, 1] - y0) / 0.03, 0, 1)
+            cur[idx, 1] = np.maximum(cur[idx, 1], y0) + sp * h_
+        out[idx] = cur[idx]
+    return out[w], normals(out)[w]
+
+
+# garments whose gathers are made on purpose (cap / coif rims, kerchief knots) are left alone
+NO_PUCKER = ('boots', 'shoes', 'cap', 'coif', 'hood', 'kerchief', 'kerchieftail', 'veil', 'sling')
+
+
+def smooth_puckers(P, tris, thresh=0.08, iters=80, push=None, spots=None):
+    """Simulated cloth inherits the body mesh's poles (nipples, navel) and crumples where the
+    simulation pinched it (armpits, crossed arms): small radial puckers that read as points
+    pushing through the cloth. A fold bends the surface in ONE direction, a pucker in all of
+    them: the second eigenvalue of the normals' scatter over two rings finds puckers and not
+    folds. Those spots (plus two rings) are Laplacian-smoothed with the open edges fixed.
+    Returns (positions, normals, changed-mask) per input vertex."""
+    key = np.round(P / 1e-5).astype(np.int64)
+    _, w = np.unique(key, axis=0, return_inverse=True)
+    w = w.reshape(-1)
+    nW = int(w.max()) + 1
+    cnt = np.bincount(w, minlength=nW).astype(float)
+    Q = np.stack([np.bincount(w, weights=P[:, k], minlength=nW) for k in range(3)], 1) / cnt[:, None]
+    tw = w[tris]
+    tw = tw[(tw[:, 0] != tw[:, 1]) & (tw[:, 1] != tw[:, 2]) & (tw[:, 0] != tw[:, 2])]
+    e = np.sort(np.concatenate([tw[:, [0, 1]], tw[:, [1, 2]], tw[:, [2, 0]]]), axis=1)
+    eu, ec = np.unique(e, axis=0, return_counts=True)
+    bnd = np.zeros(nW, bool)
+    bnd[eu[ec == 1].ravel()] = True
+    a = np.concatenate([eu[:, 0], eu[:, 1]])
+    b = np.concatenate([eu[:, 1], eu[:, 0]])
+    deg = np.maximum(np.bincount(a, minlength=nW), 1).astype(float)
+
+    def ring(X):
+        return (np.stack([np.bincount(a, weights=X[b, k], minlength=nW) for k in range(X.shape[1])], 1) + X) / (deg[:, None] + 1)
+
+    def vnorm(X):
+        fn = np.cross(X[tw[:, 1]] - X[tw[:, 0]], X[tw[:, 2]] - X[tw[:, 0]])
+        Nn = np.zeros_like(X)
+        for k in range(3):
+            np.add.at(Nn, tw[:, k], fn)
+        return Nn / np.maximum(np.linalg.norm(Nn, axis=1, keepdims=True), 1e-12)
+    N = vnorm(Q)
+    M = ring(ring(np.einsum('ij,ik->ijk', N, N).reshape(nW, 9)))
+    m1 = ring(ring(N))
+    lam2 = np.linalg.eigvalsh(M.reshape(nW, 3, 3) - np.einsum('ij,ik->ijk', m1, m1))[:, 1]
+    # not at the open edges (hems, cuffs, necklines bend sharply on purpose)
+    nearb = bnd.astype(float)
+    for _ in range(2):
+        nearb = np.maximum(nearb, np.bincount(a, weights=nearb[b], minlength=nW) > 0)
+    s = np.clip((lam2 - thresh) / thresh, 0, 1)
+    Nm0 = vnorm(Q)
+    for _ in range(3):
+        Nm0 = ring(Nm0)
+    Nm0 = Nm0 / np.maximum(np.linalg.norm(Nm0, axis=1, keepdims=True), 1e-12)
+    # a pucker is a twisted star of long triangles round a knot of vertices: the whole star is
+    # re-made as a smooth membrane spanning it (many Laplacian steps converge to the harmonic
+    # fill of its rim), kept outside the body / the layers under it by `push`
+    for k_ in range(3):                                 # dilate three rings, then soften
+        mx = np.zeros(nW)
+        np.maximum.at(mx, a, s[b])
+        s = np.maximum(s, mx * (0.95 if k_ < 2 else 0.6))
+    s = ring(s[:, None])[:, 0] * (1 - nearb)
+    X = Q.copy()
+    ch = np.where(s > 0.3)[0]
+    def U(Y):
+        return np.stack([np.bincount(a, weights=Y[b, k], minlength=nW) for k in range(3)], 1) / deg[:, None] - Y
+    # the pucker cores: a membrane (Laplacian steps converge to the harmonic fill of the rim -
+    # it untwists the star; the regions are small, so it hardly flattens the body's curvature)
+    for it in range(iters):
+        X = X + (0.7 * s)[:, None] * U(X)
+        if push is not None and it % 20 == 19 and len(ch):
+            X[ch] = push(X[ch])
+    # spots where the body itself printed through (nipples): the cloth there is re-made as the
+    # quadric that fits the cloth AROUND the spot (keeps the dome, loses the point), with the
+    # vertices re-spread over it (a 2D harmonic relaxation inside the fitted rim)
+    s_sp = np.zeros(nW)
+    for c in (spots or []):
+        d = np.linalg.norm(X - c, axis=1)
+        near = np.where(d < 0.09)[0]
+        if len(near) < 12:
+            continue
+        n = Nm0[near[d[near] < 0.03]].mean(0) if (d[near] < 0.03).any() else None
+        if n is None or np.linalg.norm(n) < 1e-6:
+            continue
+        n = n / np.linalg.norm(n)
+        t1 = np.cross(n, [0.0, 1.0, 0.0])
+        t1 = t1 / max(np.linalg.norm(t1), 1e-9)
+        t2 = np.cross(n, t1)
+        R = X - c
+        uu, vv, hh = R @ t1, R @ t2, R @ n
+        facing = Nm0 @ n > 0.5
+        r = np.sqrt(uu ** 2 + vv ** 2)
+        Rin = 0.035
+        ann = facing & (r > Rin) & (r < Rin + 0.035) & (np.abs(hh) < 0.05)
+        if ann.sum() < 8:
+            continue
+        A_ = np.stack([np.ones(ann.sum()), uu[ann], vv[ann], uu[ann] ** 2, uu[ann] * vv[ann], vv[ann] ** 2], 1)
+        coef = np.linalg.lstsq(A_, hh[ann], rcond=None)[0]
+        inner = facing & (r < Rin + 0.012) & (np.abs(hh) < 0.05) & ~bnd
+        wgt = np.clip((Rin + 0.012 - r) / 0.024, 0, 1)
+        wgt = wgt * wgt * (3 - 2 * wgt)
+        # re-spread inside (2D harmonic, the outer vertices fixed)
+        U2 = np.stack([uu, vv], 1)
+        free = inner & (r < Rin)
+        for _ in range(150):
+            avg2 = np.stack([np.bincount(a, weights=U2[b, k], minlength=nW) for k in range(2)], 1) / deg[:, None]
+            U2[free] = avg2[free]
+        u2, v2 = U2[:, 0], U2[:, 1]
+        hfit = coef[0] + coef[1] * u2 + coef[2] * v2 + coef[3] * u2 ** 2 + coef[4] * u2 * v2 + coef[5] * v2 ** 2
+        tgt = c + np.outer(u2, t1) + np.outer(v2, t2) + np.outer(hfit, n)
+        sel = inner
+        X[sel] = X[sel] + (tgt[sel] - X[sel]) * wgt[sel, None]
+        s_sp[sel] = np.maximum(s_sp[sel], wgt[sel])
+    s = np.maximum(s, s_sp)
+    ch = np.where(s > 0.3)[0]
+    if push is not None and len(ch):
+        X[ch] = push(X[ch])
+    changed = s > 1e-3
+    N2 = vnorm(X)
+    return X[w], N2[w], changed[w]
+
+
 def fix_shoes(cid):
     jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
     h = json.load(open(jp))
     bin_ = bytearray(open(bp, 'rb').read())
     done = []
+    seated = h['meta'].get('pose', '').startswith('ride')
     for m in h['meshes']:
         if m['kind'] != 'cloth' or m['name'] not in ('boots', 'shoes'):
+            continue
+        if 'lasts2' in m.get('postfix', []):          # already made on a last (not twice: room adds up)
             continue
         A = m['attrs']
         P = view(bin_, A['position']).astype(float)
         tris = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
-        P2, N2 = smooth_lasts(P, tris)
-        # keep the original normal orientation (outward as built)
+        P2, N2 = close_toes(P, tris, seated=seated)
+        m['postfix'] = m.get('postfix', []) + ['lasts2', 'normals2']
+        # keep the original orientation (outward as built) - decided for the whole mesh: a
+        # vertex that sat in a toe gap had a sideways normal, a per-vertex vote turns it inward
         N0 = view(bin_, A['normal']).astype(float)
-        flip = np.sign(np.einsum('ij,ij->i', N0, N2))
-        N2 = N2 * np.where(flip == 0, 1, flip)[:, None]
+        N2 = N2 * (1.0 if np.einsum('ij,ij->', N0, N2) >= 0 else -1.0)
         put(bin_, A['position'], P2)
         put(bin_, A['normal'], N2)
         done.append(m['name'])
@@ -147,8 +438,193 @@ def fix_shoes(cid):
     tmp = bp + '.tmp'
     open(tmp, 'wb').write(bin_)
     os.replace(tmp, bp)
-    os.utime(jp)
-    print(f'{cid}: {", ".join(done)} smoothed into lasts', flush=True)
+    json.dump(h, open(jp + '.tmp', 'w'), separators=(',', ':'))
+    os.replace(jp + '.tmp', jp)
+    print(f'{cid}: {", ".join(done)} made on a last (toes closed, toe room)', flush=True)
+
+
+def fix_puckers(cid):
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    bin_ = bytearray(open(bp, 'rb').read())
+    done = []
+    # colliders: the body, then each garment as it is done (layers are exported inside-out)
+    import bpy  # noqa: F401  (mathutils comes with Blender's module)
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+
+    def mesh_arrays(m):
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        return P, T
+    # the body as the cloth sees it: smoothed (a nipple or the navel should not print through
+    # cloth - a garment bridges them), and where the body has such detail, the cloth over it is
+    # re-made too
+    body = [m for m in h['meshes'] if m['kind'] == 'skin']
+    trees, pts = [], []
+    if body:
+        Pb, Tb = mesh_arrays(body[0])
+        key = np.round(Pb / 1e-5).astype(np.int64)
+        _, wb = np.unique(key, axis=0, return_inverse=True)
+        wb = wb.reshape(-1)
+        nB = int(wb.max()) + 1
+        Qb = np.zeros((nB, 3))
+        Qb[wb] = Pb
+        tb = wb[Tb]
+        eb = np.unique(np.sort(np.concatenate([tb[:, [0, 1]], tb[:, [1, 2]], tb[:, [2, 0]]]), axis=1), axis=0)
+        ab, bb = np.concatenate([eb[:, 0], eb[:, 1]]), np.concatenate([eb[:, 1], eb[:, 0]])
+        degb = np.maximum(np.bincount(ab, minlength=nB), 1).astype(float)
+        Sb = Qb.copy()
+        # smoothed over ~3 cm whatever the mesh density (hero bodies are subdivided: 3 mm edges)
+        elb = np.linalg.norm(Qb[eb[:, 0]] - Qb[eb[:, 1]], axis=1).mean()
+        for _ in range(int(np.clip(30 * (0.0055 / max(elb, 1e-4)) ** 2, 30, 300))):
+            Sb = Sb + 0.5 * (np.stack([np.bincount(ab, weights=Sb[bb, k], minlength=nB) for k in range(3)], 1) / degb[:, None] - Sb)
+        trees.append((BVHTree.FromPolygons([tuple(v) for v in Sb], [tuple(t) for t in tb], epsilon=0.0), 0.005))
+        # the nipples: where the body stands out most from its smoothed self on the front of the
+        # chest (one each side of the midline)
+        Ns = np.zeros_like(Sb)
+        fnb = np.cross(Sb[tb[:, 1]] - Sb[tb[:, 0]], Sb[tb[:, 2]] - Sb[tb[:, 0]])
+        for k in range(3):
+            np.add.at(Ns, tb[:, k], fnb)
+        Ns /= np.maximum(np.linalg.norm(Ns, axis=1, keepdims=True), 1e-12)
+        detail = np.einsum('ij,ij->i', Qb - Sb, Ns)
+        # candidates: skin weighted to the breast bones (not the hands, which may be in front)
+        names = [b_['name'] for b_ in h['bones']]
+        SI = view(bin_, body[0]['attrs']['skinIndex']).astype(int)
+        SW = view(bin_, body[0]['attrs']['skinWeight']).astype(float)
+        for bn in ('breast.L', 'breast.R'):
+            if bn not in names:
+                continue
+            bi = names.index(bn)
+            wv = np.zeros(nB)
+            np.maximum.at(wv, wb, (SW * (SI == bi)).sum(1))
+            # (the torso's faces are hidden under the clothes, so no normals there: the apex is
+            # the breast-weighted point furthest forward)
+            c_ = np.where(wv > 0.4)[0]
+            if len(c_):
+                pts.append(Qb[c_[np.argmax(Qb[c_, 2])]])
+        if os.environ.get('POSTFIX_DEBUG'):
+            print('  nipple points', [p_.round(3).tolist() for p_ in pts])
+
+
+    def push(X):
+        X = X.copy()
+        for tree, ease in trees:
+            for i in range(len(X)):
+                loc, n, _, d = tree.find_nearest(Vector(X[i]), 0.03)
+                if loc is None:
+                    continue
+                q = np.array(loc)
+                nn = np.array(n)
+                dd = np.dot(X[i] - q, nn)
+                if dd < ease:
+                    X[i] = X[i] + nn * (ease - dd)
+        return X
+    for m in h['meshes']:
+        if m['kind'] != 'cloth' or m['name'] in NO_PUCKER or 'puckers' in m.get('postfix', []):
+            if m['kind'] == 'cloth' and m['name'] not in ('boots', 'shoes'):
+                P_, T_ = mesh_arrays(m)
+                trees.append((BVHTree.FromPolygons([tuple(v) for v in P_], [tuple(t) for t in T_], epsilon=0.0), 0.002))
+            continue
+        A = m['attrs']
+        P, tris = mesh_arrays(m)
+        P2, N2, ch = smooth_puckers(P, tris, push=push, spots=pts)
+        N0 = view(bin_, A['normal']).astype(float)
+        N2 = N2 * (1.0 if np.einsum('ij,ij->', N0, N2) >= 0 else -1.0)
+        N2[~ch] = N0[~ch]
+        put(bin_, A['position'], P2)
+        put(bin_, A['normal'], N2)
+        m['postfix'] = m.get('postfix', []) + ['puckers', 'normals2']
+        done.append(f"{m['name']} ({int(ch.sum())} v)")
+        trees.append((BVHTree.FromPolygons([tuple(v) for v in P2], [tuple(t) for t in tris], epsilon=0.0), 0.002))
+    if not done:
+        return
+    tmp = bp + '.tmp'
+    open(tmp, 'wb').write(bin_)
+    os.replace(tmp, bp)
+    json.dump(h, open(jp + '.tmp', 'w'), separators=(',', ':'))
+    os.replace(jp + '.tmp', jp)
+    print(f'{cid}: puckers smoothed in {", ".join(done)}', flush=True)
+
+
+# prop colours corrected after the caches were built (json only): name -> material overrides
+PROP_FIX = {
+    'crate_crate_0': {'color': [0.33, 0.26, 0.18]},           # was near-white (0.62 linear) pine
+    'parcel_cloth_0': {'color': [0.36, 0.3, 0.22]},
+    'kettle_hat_hat_0': {'color': [0.3, 0.29, 0.28], 'rough': 0.62},   # read as chrome
+    'spear_head_1': {'color': [0.46, 0.46, 0.47], 'rough': 0.45},
+    'spear_ferrule_2': {'color': [0.36, 0.35, 0.34], 'rough': 0.66},
+    'sword_guard_1': {'color': [0.36, 0.35, 0.34], 'rough': 0.66},
+    'buckle': {'color': [0.36, 0.35, 0.34], 'rough': 0.6},
+}
+
+
+def fix_props(cid):
+    jp = os.path.join(CACHE, cid + '.json')
+    h = json.load(open(jp))
+    done = []
+    for m in h['meshes']:
+        fx = PROP_FIX.get(m['name'])
+        if m['kind'] == 'prop' and fx and any(m['material'].get(k) != v for k, v in fx.items()):
+            m['material'].update(fx)
+            done.append(m['name'])
+    if done:
+        json.dump(h, open(jp + '.tmp', 'w'), separators=(',', ':'))
+        os.replace(jp + '.tmp', jp)
+        print(f'{cid}: prop colours {", ".join(done)}', flush=True)
+
+
+def fresh_normals(P, tris):
+    key = np.round(P / 1e-5).astype(np.int64)
+    _, w = np.unique(key, axis=0, return_inverse=True)
+    w = w.reshape(-1)
+    nW = int(w.max()) + 1
+    Q = np.zeros((nW, 3))
+    Q[w] = P
+    tw = w[tris]
+    fn = np.cross(Q[tw[:, 1]] - Q[tw[:, 0]], Q[tw[:, 2]] - Q[tw[:, 0]])
+    N = np.zeros_like(Q)
+    for k in range(3):
+        np.add.at(N, tw[:, k], fn)
+    N /= np.maximum(np.linalg.norm(N, axis=1, keepdims=True), 1e-12)
+    return N[w]
+
+
+def fix_normals(cid):
+    """Caches post-fixed before 'normals2': the shoe / pucker passes voted the normal
+    orientation per vertex (toe-gap and pucker vertices came out inward - dark slits). The mesh
+    orientation is voted once for the whole mesh; vertices that disagree with it are turned."""
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    bin_ = bytearray(open(bp, 'rb').read())
+    done = []
+    for m in h['meshes']:
+        pf_ = m.get('postfix', [])
+        if 'normals2' in pf_ or not ({'lasts2', 'puckers'} & set(pf_)):
+            continue
+        A = m['attrs']
+        P = view(bin_, A['position']).astype(float)
+        tris = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        N0 = view(bin_, A['normal']).astype(float)
+        Nf = fresh_normals(P, tris)
+        Nf *= 1.0 if np.einsum('ij,ij->', N0, Nf) >= 0 else -1.0
+        if 'lasts2' in pf_:
+            N2 = Nf
+        else:
+            N2 = N0.copy()
+            bad = np.einsum('ij,ij->i', N0, Nf) < 0
+            N2[bad] = Nf[bad]
+        put(bin_, A['normal'], N2)
+        m['postfix'] = pf_ + ['normals2']
+        done.append(m['name'])
+    if not done:
+        return
+    tmp = bp + '.tmp'
+    open(tmp, 'wb').write(bin_)
+    os.replace(tmp, bp)
+    json.dump(h, open(jp + '.tmp', 'w'), separators=(',', ':'))
+    os.replace(jp + '.tmp', jp)
+    print(f'{cid}: normals re-oriented in {", ".join(done)}', flush=True)
 
 
 def main():
@@ -156,8 +632,14 @@ def main():
     if ids == ['all']:
         ids = sorted(os.path.basename(p)[:-5] for p in glob.glob(os.path.join(CACHE, '*.json')))
     for cid in ids:
-        if what == 'shoes':
+        if what in ('shoes', 'all'):
             fix_shoes(cid)
+        if what in ('puckers', 'all'):
+            fix_puckers(cid)
+        if what in ('props', 'all'):
+            fix_props(cid)
+        if what in ('normals', 'all'):
+            fix_normals(cid)
 
 
 if __name__ == '__main__':
