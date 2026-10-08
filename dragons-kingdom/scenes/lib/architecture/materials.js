@@ -105,6 +105,8 @@ function kitMaterial(name, { uniforms = {}, decl = '', body, physical = false, p
       .replace('#include <map_fragment>', `
 {
   vec3 akN0 = normalize(vWNrm) * (gl_FrontFacing ? 1.0 : -1.0);
+  // pixel footprint on the surface (m), stretched where the surface is seen at a grazing angle
+  float akFoot = vAkFoot / max(abs(dot(akN0, normalize(cameraPosition - vWPos))), 0.25);
   akNW = akN0; akAlb = vec3(0.5); akRgh = 0.9; akHt = 0.0; akAO = 1.0; akMet = 0.0;
   ${body}
   diffuseColor.rgb *= akAlb;
@@ -260,7 +262,7 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   akRgh = clamp(0.82 + 0.12 * (1.0 - lum) - 0.12 * damp + 0.1 * mossM, 0.5, 1.0);
   akAO = mix(0.35, 1.0, aov);
   akNW = normalize(mix(akN0, nScan, 0.16 - 0.08 * akW.w));    // (the scans' normals carry a woven pattern: a hint only)
-  float fw = (vAkFoot * 1.4);
+  float fw = (akFoot * 1.4);
   // erosion: the weathered face is pitted and scaled at the centimetre scale
   float ero = akF3(P * 45.0 + sd * 7.0) - 0.5;
   float hf = 1.0 - smoothstep(0.0015, 0.004, fw);
@@ -288,7 +290,7 @@ export function mortarMaterial(ctx, opts = {}) {
   // the joint is recessed: a little darker (dust, the shadow of the stones the shadow map cannot resolve)
   c *= mix(1.0, 0.75 + 0.25 * g2, (1.0 - akMAO) / 0.4);
   akAlb = c; akRgh = 0.95; akAO = akMAO;
-  float fwm = (vAkFoot * 1.4);
+  float fwm = (akFoot * 1.4);
   akHt = g * 0.0008 * (1.0 - smoothstep(0.001, 0.003, fwm)) + g3 * 0.006 + g2 * 0.0015;
 `,
   });
@@ -323,20 +325,20 @@ export async function oakMaterial(ctx, opts = {}) {
   vec3 Rf2 = cross(A, Rf1);
   float w1 = dot(P, Rf1) + sd * 3.0, w2 = dot(P, Rf2) + sd * 5.0;
   float v = w1 + w2;
-  float fw = (vAkFoot * 1.4);
+  float fw = (akFoot * 1.4);
   // growth rings ~3.5 mm apart: on the side faces long stripes along the grain, wandering a little;
   // on the end grain concentric round the pith. A smooth band (no sawtooth edge to alias), faded
   // out well before a ring spans < 6 px
   float rwS = v + 0.0015 * sin(u * 2.1 + sd * 30.0) + 0.0012 * akN2(vec2(u * 0.8, v * 30.0 + sd * 9.0));
   float ringF = mix(rwS, r, endg) / 0.0036;
-  float ringAA = 1.0 - smoothstep(0.06, 0.17, 330.0 * vAkFoot);
+  float ringAA = 1.0 - smoothstep(0.05, 0.12, 330.0 * akFoot);
   float ringS = 0.5 + 0.5 * sin(6.2832 * ringF);
   float ring = mix(0.5, ringS * ringS, ringAA);                                  // latewood: the dark, hard band
   // fibres: fine lines along the grain, faded before they alias
   float ph1 = w1 * 700.0 + akN2(vec2(u * 1.5, w1 * 30.0)) * 6.0, ph2 = w2 * 700.0 + akN2(vec2(u * 1.5 + 9.0, w2 * 30.0)) * 6.0;
   float ph3 = (w1 - w2) * 1800.0 + u * 0.7 + akN2(vec2(u * 4.0, (w1 - w2) * 80.0)) * 3.0;
-  float fibAA = (1.0 - smoothstep(0.5, 1.1, 700.0 * vAkFoot));
-  float fibAA2 = (1.0 - smoothstep(0.5, 1.1, 2600.0 * vAkFoot));
+  float fibAA = (1.0 - smoothstep(0.18, 0.35, 700.0 * akFoot));
+  float fibAA2 = (1.0 - smoothstep(0.18, 0.35, 2600.0 * akFoot));
   float fib = 0.5 + 0.13 * (sin(ph1) + sin(ph2)) * fibAA + 0.12 * sin(ph3) * fibAA2;
   float tone = clamp(akTone + (akH1(sd * 51.3) - 0.5) * 0.5, 0.0, 1.0);
   vec3 base = tone < 0.5 ? mix(akC0, akC1, tone * 2.0) : mix(akC1, akC2, tone * 2.0 - 1.0);
@@ -348,14 +350,14 @@ export async function oakMaterial(ctx, opts = {}) {
   float streakW = akF2(vec2(u * 0.6, v * 9.0) + sd * 4.0);
   // long fibrous streaks of the weathered surface (open grain, grey and brown bands along the member)
   float gsA = akF2(vec2(u * 0.3, w1 * 45.0) + sd * 7.0), gsB = akF2(vec2(u * 0.3 + 5.0, w2 * 45.0) + sd * 3.0);
-  float gs = mix(0.5, gsA, 1.0 - smoothstep(0.3, 0.9, (45.0 * vAkFoot))) * 0.5 + mix(0.5, gsB, 1.0 - smoothstep(0.3, 0.9, (45.0 * vAkFoot))) * 0.5;
+  float gs = mix(0.5, gsA, 1.0 - smoothstep(0.15, 0.35, (45.0 * akFoot))) * 0.5 + mix(0.5, gsB, 1.0 - smoothstep(0.15, 0.35, (45.0 * akFoot))) * 0.5;
   gs = 0.5 + (gs - 0.5) * 1.8;
   vec3 c = base * (0.82 + 0.3 * streakW) * (0.8 + 0.4 * gs) * (0.92 + 0.12 * fib) * (1.04 - 0.09 * ring);
   // checks: long dark shrinkage splits along the grain, a few per face
   float chk = 0.0;
   {
     float cv = v * 12.0 + akN2(vec2(u * 0.8, sd * 9.0)) * 1.2;
-    float line = abs(fract(cv) - 0.5) / max(17.0 * vAkFoot, 1e-4);
+    float line = abs(fract(cv) - 0.5) / max(17.0 * akFoot, 1e-4);
     float pres = smoothstep(0.55, 0.8, akN2(vec2(floor(cv) * 7.3 + sd * 20.0, u * 0.35)));
     float wdt = (0.6 + 2.5 * pres) * 0.6;
     chk = (1.0 - smoothstep(wdt * 0.5, wdt, line)) * pres * akChecks * (1.0 - endg);
@@ -380,7 +382,7 @@ export async function oakMaterial(ctx, opts = {}) {
   // weathered oak: the soft earlywood erodes, the latewood rings stand up; fibres; the checks open
   // adze scallops along hewn faces (~22 cm, shallow), faded when they get small on screen
   float adz = 0.5 + 0.5 * cos((u * 4.5 + akN2(vec2(u * 1.5, sd * 7.0)) * 1.4) * 6.2832);
-  float adzAA = 1.0 - smoothstep(0.02, 0.06, 4.5 * vAkFoot);
+  float adzAA = 1.0 - smoothstep(0.02, 0.06, 4.5 * akFoot);
   akHt = (ring * 0.00012 * ringAA + fib * 0.0001 * fibAA - chk * 0.002 - adz * 0.0016 * adzAA) * (1.0 - endg) + er * 0.00012 * endg + streakW * 0.0006 + gs * 0.0004 * (1.0 - endg);
 `,
   });
@@ -442,8 +444,8 @@ export function plasterMaterial(ctx, opts = {}) {
   akAlb = c;
   akRgh = 0.9 - 0.08 * patchM;
   akAO = mix(0.4, 1.0, aov);
-  float hf = 1.0 - smoothstep(0.003, 0.015, (vAkFoot * 1.4));
-  float sand = akR3(P * 520.0) * (1.0 - smoothstep(0.0006, 0.0016, (vAkFoot * 1.4)));
+  float hf = 1.0 - smoothstep(0.003, 0.015, (akFoot * 1.4));
+  float sand = akR3(P * 520.0) * (1.0 - smoothstep(0.0006, 0.0016, (akFoot * 1.4)));
   akHt = (akN3(P * 90.0) * 0.0005 + brush * 0.0003 - crack * 0.0015 - flake * 0.0005 - daub * 0.0012 + patchM * 0.0005) * hf + sand * 0.00025;
 `,
   });
@@ -558,9 +560,9 @@ export function strawMaterial(ctx, opts = {}) {
     vec2 dir = vec2(cos(ang), sin(ang));
     float across = dot(f - 0.5, vec2(-dir.y, dir.x)) + 0.08 * sin(dot(f, dir) * 6.0 + ci.x);
     float ph = across * 9.0 + akH2(ci + 5.1) * 3.0;
-    float aa = 1.0 - smoothstep(0.12, 0.3, 9.0 * (11.0 + 5.0 * fk) * vAkFoot);
+    float aa = 1.0 - smoothstep(0.12, 0.3, 9.0 * (11.0 + 5.0 * fk) * akFoot);
     float st = 0.5 + 0.5 * sin(ph * 6.2832);
-    float stem = mix(0.55, st, aa);
+    float stem = mix(0.55, mix(0.55, st, 0.35), aa);       // (the modelled loose stems carry the detail; the bed only a hint)
     // ends of the cell fade so the patches overlap rather than tile
     float edge = smoothstep(0.0, 0.2, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
     float m = stem * mix(0.35, 1.0, edge) * (1.0 - cov * 0.6);

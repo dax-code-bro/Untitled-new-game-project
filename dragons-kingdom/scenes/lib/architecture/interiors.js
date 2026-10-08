@@ -179,7 +179,8 @@ export function nest(kit, F, rnd, o = {}) {
   }
   // the straw bed: a domed mound filling the curb (its surface strewn with loose straws)
   // (the mound spills over the kerb a little: lumpy, with tufts)
-  const domeAt = (a, r) => ch * 0.85 + 0.12 * (1 - (r / R) ** 2) + 0.03 * Math.sin(a * 5 + r * 9) * (r / R) + 0.02 * Math.sin(a * 11 + 2.0) * Math.sin(r * 13);
+  // (the same dome the linen was cloth-simulated over: anything higher pokes through the cloth)
+  const domeAt = (a, r) => ch * 0.85 + 0.12 * (1 - (r / R) ** 2) + 0.025 * Math.sin(a * 5 + r * 9) * (r / R);
   grid(kit.get('strawBed'), 72, 30, (u, v) => {
     const a = u * Math.PI * 2, r = v * (R + 0.06);
     const y = r < R - 0.1 ? domeAt(a, r) : Math.max(domeAt(a, R - 0.1), ch + 0.03) - (r - (R - 0.1)) * 0.3;
@@ -188,7 +189,7 @@ export function nest(kit, F, rnd, o = {}) {
   }, [1, 0, 0], false);
   // loose stems lying on the bed and strewn round the kerb on the flags
   const acc = kit.get('straw');
-  for (let i = 0; i < (o.straws ?? 1700); i++) {
+  for (let i = 0; i < (o.straws ?? 2800); i++) {
     const out = rnd() < 0.3;
     const a = rnd() * Math.PI * 2, r = out ? R + 0.12 + Math.pow(rnd(), 1.6) * 0.7 : Math.sqrt(rnd()) * (R - 0.12);
     const dir = rnd() * Math.PI * 2, l = rnd.range(0.05, 0.2);
