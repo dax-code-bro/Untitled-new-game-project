@@ -562,14 +562,14 @@ export function strawMaterial(ctx, opts = {}) {
     float ph = across * 9.0 + akH2(ci + 5.1) * 3.0;
     float aa = 1.0 - smoothstep(0.12, 0.3, 9.0 * (11.0 + 5.0 * fk) * akFoot);
     float st = 0.5 + 0.5 * sin(ph * 6.2832);
-    float stem = mix(0.55, mix(0.55, st, 0.35), aa);       // (the modelled loose stems carry the detail; the bed only a hint)
+    float stem = mix(0.55, mix(0.55, st, 0.12), aa);       // (the modelled loose stems carry the detail; the bed only a hint)
     // ends of the cell fade so the patches overlap rather than tile
     float edge = smoothstep(0.0, 0.2, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
     float m = stem * mix(0.35, 1.0, edge) * (1.0 - cov * 0.6);
     vec3 sc = akC * (0.7 + 0.5 * akH2(ci + 9.7)) * (0.85 + 0.3 * akN2(q * 3.0 + dir * 20.0));
     col = mix(col, sc * (1.0 - 0.15 * fk), m);
     cov = max(cov, m);
-    ht += stem * (0.0009 - 0.0002 * fk) * aa;
+    ht += stem * (0.0003 - 0.00006 * fk) * aa;
   }
   col *= mix(0.55, 1.0, vInfo.y);
   akAlb = col; akRgh = 0.75; akAO = mix(0.4, 1.0, vInfo.y);
