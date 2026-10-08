@@ -210,7 +210,7 @@ float dkShellD;`)
   const alex = await loadCharacter('alexandria');
   scene.add(alex.root);
   // a fresh, bleached linen cloth (whiter than the used bedding linen under it)
-  const clothMat = await loadPBR('pbr/acg_fabric36', ctx, { repeat: [3, 3], color: new THREE.Color(1.15, 1.12, 1.05), sheen: { color: 0xffffff, roughness: 0.45 } });
+  const clothMat = await loadPBR('pbr/acg_fabric36', ctx, { repeat: [3, 3], color: new THREE.Color(0.86, 0.83, 0.77), sheen: { color: 0xffffff, roughness: 0.45 } });
   clothMat.vertexColors = true; clothMat.side = THREE.DoubleSide;
   // the cloth she supports it with: a folded linen cloth (two layers, a fold along its left edge
   // under the hatchling's chest) laid over her hands - its shape is draped every frame over the bed
@@ -266,7 +266,7 @@ function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch) {
     H[k] = H0[k] = y; X.push(p.x); Z.push(p.z);
   }
   // relax: the cloth spans between the knuckles and slopes down to the bed (never below its support)
-  for (let it = 0; it < 14; it++) {
+  for (let it = 0; it < 24; it++) {
     const T = H.slice();
     for (let j = 1; j < CV; j++) for (let i = 1; i < CU; i++) {
       const k = j * (CU + 1) + i;
@@ -345,20 +345,21 @@ export function update(t, ctx) {
   const base = chest.clone(); base.y = S.linenY(base.x, base.z);
   {
     const shC = new THREE.Vector3().setFromMatrixPosition(alex.bone('upperarm01.L').matrixWorld).add(new THREE.Vector3().setFromMatrixPosition(alex.bone('upperarm01.R').matrixWorld)).multiplyScalar(0.5);
-    const goal = base.clone().addScaledVector(across, 0.55).add(new THREE.Vector3(0, 0.3, 0));
+    const goal = base.clone().addScaledVector(across, 0.6).add(new THREE.Vector3(0, 0.3, 0));
     alex.root.position.add(goal.sub(shC));
     alex.root.updateMatrixWorld(true);
   }
-  const wA = base.clone().addScaledVector(across, 0.17).addScaledVector(along, -0.06).add(new THREE.Vector3(0, 0.03, 0));
-  const wB = base.clone().addScaledVector(across, 0.17).addScaledVector(along, 0.06).add(new THREE.Vector3(0, 0.03, 0));
+  const wA = base.clone().addScaledVector(across, 0.22).addScaledVector(along, -0.065).add(new THREE.Vector3(0, 0.035, 0));
+  const wB = base.clone().addScaledVector(across, 0.22).addScaledVector(along, 0.065).add(new THREE.Vector3(0, 0.035, 0));
   const aIsR = wA.clone().sub(wB).dot(along) < 0;                     // nearer the camera
   const pole = base.clone().addScaledVector(across, 0.45).add(new THREE.Vector3(0, -0.3, 0));
   limbIK(alex, 'arm', aIsR ? 'R' : 'L', aIsR ? wA : wB, pole.clone().addScaledVector(along, -0.35));
   limbIK(alex, 'arm', aIsR ? 'L' : 'R', aIsR ? wB : wA, pole.clone().addScaledVector(along, 0.35));
   const under = across.clone().negate().add(new THREE.Vector3(0, -0.12, 0)).normalize();
   for (const sd of ['L', 'R']) relaxHand(alex, sd, { fingers: under, palm: new THREE.Vector3(0, 1, 0), keepFingers: true });
-  drapeCloth(fcloth, base.clone().addScaledVector(across, 0.1), across, along, 0.36, 0.3, alex, S.linenY, hatch);
-  const endR = base.clone().addScaledVector(across, 0.17).add(new THREE.Vector3(0, 0.03, 0));      // her hands
+  // the cloth ends over her knuckles: the backs of her hands and the wrists show at its right edge
+  drapeCloth(fcloth, base.clone().addScaledVector(across, 0.055), across, along, 0.27, 0.3, alex, S.linenY, hatch);
+  const endR = base.clone().addScaledVector(across, 0.22).add(new THREE.Vector3(0, 0.035, 0));     // her hands
   lookAtPoint(alex, chest, 0.8);
 
   // camera: just above the bedding, close on the hatchling's face, looking along VIEW

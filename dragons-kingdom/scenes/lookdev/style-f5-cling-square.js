@@ -18,8 +18,8 @@
 // cheese and fish, bunting in deep swags, banners, the musicians right of centre with their ring
 // of listeners, children by the vendor stall and the fountain. Most of the crowd has not noticed
 // yet. At the west edge of the square the watchman points north; beyond the north roofs, nearly
-// head-on out of the cumulus, Starlight - her wingspan wider than three houses although she is
-// more than twice as far away as they are. (The south row of houses behind the camera is left
+// head-on over the hills, hazed by ~280 m of air, Starlight - her wingspan wider than the whole
+// north row although she is four times as far away as it is. (The south row of houses behind the camera is left
 // out of this set-up - a 'wild wall', as a crew would strike it for a crane shot.)
 //   node render/render.mjs --still scenes/lookdev/style-f5-cling-square.js --time 2 --preset final --png out.png
 import * as THREE from 'three';
@@ -36,14 +36,14 @@ import { clingSquare, CLING, wallFootPlacer, houseFootSegments } from '../lib/ar
 import { Kit, block, yawFrame, sub, makeRand } from '../lib/architecture/core.js';
 import { crate, sack, barrel } from '../lib/architecture/dressing.js';
 import { createCreature, poses, createSaddle, mountRider } from '../lib/creatures/index.js';
-import { loadCharacter, placeCharacter, joinHands, loadHuman, createRider, CROWD } from '../lib/humans/index.js';
+import { loadCharacter, placeCharacter, joinHands, loadHuman, createRider } from '../lib/humans/index.js';
 import { filmFinish } from './finish.js';
 
 const HDRI_ROT = -1.79;           // the photographed sun south-west, behind the camera (as the map fixes it)
 const CAM_P = [3.5, 13.0, 44.0], CAM_T = [-2.5, 8.6, -12.0], LENS = 18;
 // Starlight: north of the town, ~180 m beyond the north row, gliding in nearly head-on
-const STAR = { x: -14, y: 44, z: -150, yaw: 0.12 };
-const WATCH = { x: -15.2, z: 9.5 };
+const STAR = { x: -24, y: 36, z: -235, yaw: 0.14 };
+const WATCH = { x: -8.2, z: 15.2 };
 
 export const meta = {
   title: 'Style frame F5 - Cling square, the white dragon approaching',
@@ -53,7 +53,7 @@ export const meta = {
     atmosphere: { enabled: true, sky: 'scene', haze: 3.2, apDistanceScale: 3.4 },
     volumetrics: {
       enabled: true, range: 1400, resolution: [192, 108, 72], noiseFilter: true,
-      density: 0.00003, heightFalloff: 0.01, fogBase: 0, anisotropy: 0.6, noiseScale: 0.012, noiseAmount: 0.7,
+      density: 0.0006, heightFalloff: 0.01, fogBase: 0, anisotropy: 0.6, noiseScale: 0.012, noiseAmount: 0.5,
       banks: [],
     },
     shadows: { cascades: 3, maxDistance: 180, bias: -0.0003, normalBias: 2.5 },
@@ -204,23 +204,26 @@ export async function setup(ctx) {
   const parent = await put('parent', CLING.stall.x - 0.7, CLING.stall.z + 1.25, [CLING.stall.x - 0.4, CLING.stall.z]);
   const child = await put('child', CLING.stall.x - 0.25, CLING.stall.z + 1.45, [CLING.stall.x, CLING.stall.z]);
   joinHands(parent, child);
-  // the crowd: villagers at the stalls, round the fountain, listening to the music; children
+  // the crowd: villagers at the stalls, round the fountain, listening to the music; children.
+  // (Only the calm crowd builds: the 'cheer' / 'call' / 'gesture' builds raise an arm, and a square
+  // full of raised arms would steal the watchman's pointing gesture.)
+  const CALM = ['crowd02', 'crowd03', 'crowd05', 'crowd06', 'crowd07', 'crowd08', 'crowd09', 'crowd12', 'crowd14', 'crowd15', 'crowd17', 'crowd13'];
   let a = 98765; const r = () => { a = (Math.imul(a, 1664525) + 1013904223) >>> 0; return a / 4294967296; };
   const spots = [];
   const near = (x, z, d) => spots.some(([sx, sz]) => Math.hypot(x - sx, z - sz) < d);
   const free = (x, z) => Math.hypot(x, z + 2) > 4.1 && !STALLS.some(([sx, sz]) => Math.hypot(x - sx, z - sz) < 1.9) && Math.hypot(x - WATCH.x, z - WATCH.z) > 2.2 && Math.hypot(x - mu.x, z - mu.z) > 1.5 && !near(x, z, 0.85);
   const tryPut = async (id, x, z, face) => { if (!free(x, z)) return false; spots.push([x, z]); await put(id, x, z, face); return true; };
   // listeners round the musicians (they face the music)
-  for (let i = 0; i < 9; i++) { const an = -0.3 + i * 0.55, rr = 2.6 + r() * 0.8; const x = mu.x + Math.cos(an) * rr, z = mu.z + 0.6 + Math.sin(an) * rr; await tryPut(CROWD[(i * 5) % 18], x, z, [mu.x, mu.z]); }
+  for (let i = 0; i < 9; i++) { const an = -0.3 + i * 0.55, rr = 2.6 + r() * 0.8; const x = mu.x + Math.cos(an) * rr, z = mu.z + 0.6 + Math.sin(an) * rr; await tryPut(CALM[(i * 5) % CALM.length], x, z, [mu.x, mu.z]); }
   // at the stalls (in front of the counters, facing them)
   for (let k = 1; k < STALLS.length; k++) {
     const [sx, sz, yaw] = STALLS[k];
-    for (let j = 0; j < 2; j++) { const lx = (j - 0.5) * 1.3 + (r() - 0.5) * 0.4, lz = 1.35 + r() * 0.3; const x = sx + Math.cos(yaw) * lx + Math.sin(yaw) * lz, z = sz - Math.sin(yaw) * lx + Math.cos(yaw) * lz; await tryPut(CROWD[(k * 7 + j * 3) % 18], x, z, [sx, sz]); }
+    for (let j = 0; j < 2; j++) { const lx = (j - 0.5) * 1.3 + (r() - 0.5) * 0.4, lz = 1.35 + r() * 0.3; const x = sx + Math.cos(yaw) * lx + Math.sin(yaw) * lz, z = sz - Math.sin(yaw) * lx + Math.cos(yaw) * lz; await tryPut(CALM[(k * 7 + j * 3) % CALM.length], x, z, [sx, sz]); }
   }
   // round the fountain and crossing the square
   for (let i = 0; i < 16; i++) {
     const x = -16 + r() * 32, z = -14 + r() * 26;
-    const id = CROWD[(i * 11 + 3) % 18];
+    const id = CALM[(i * 11 + 3) % CALM.length];
     await tryPut(id, x, z, r() < 0.5 ? [0, -2] : [x + (r() - 0.5) * 8, z + (r() - 0.5) * 8]);
   }
   // children by the fountain's rim

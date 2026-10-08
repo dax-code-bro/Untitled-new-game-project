@@ -54,7 +54,7 @@ export const meta = {
     shadows: { cascades: 2, maxDistance: 900 },
     ao: { enabled: false },
     dof: { samples: 48 },
-    grade: { exposure: 1.95, whiteBalance: 6000, contrast: 1.2, saturation: 1.0 },
+    grade: { exposure: 2.05, whiteBalance: 6000, contrast: 1.2, saturation: 0.95, lift: [-0.07, -0.07, -0.07] },
   }),
 };
 
