@@ -220,6 +220,11 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   // occlusion baked per vertex (stone sides deep in the joints) also darkens the colour a little (dust)
   float aov = vInfo.y;
   c *= mix(0.72, 1.0, aov);
+  // patina: weathering spreads over the wall regardless of the joints (darker grey-brown clouds,
+  // paler sun-bleached patches) - without it every stone reads as a separate new tile
+  float pat = akF3(P * vec3(0.32, 0.22, 0.32) + 17.0);
+  c *= mix(1.0, 0.72, smoothstep(0.45, 0.8, pat) * akDirt.w);
+  c = mix(c, c * vec3(1.06, 1.05, 1.0), smoothstep(0.42, 0.2, pat) * 0.5);
   // dust and grit settle on the little ledges stones make
   c *= mix(1.0, 0.86, smoothstep(0.55, 0.95, akN0.y) * (1.0 - akW.y * 0.5));
   // runoff: darker streaks running down from ledges, sills and wall tops
@@ -240,7 +245,7 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   // lime wash: a thin white coat over the stones, worn through on the arrises and in patches,
   // greyer and thinner low down, settling darker in the joints
   if (akWash > 0.0) {
-    float cov = smoothstep(0.25, 0.6, akF3(P * 2.2 + sd * 3.0) + 0.35) * (1.0 - 0.6 * ar) * smoothstep(0.0, 0.8, hb + 0.3) * aov;
+    float cov = smoothstep(0.2, 0.55, akF3(P * 2.2 + sd * 3.0) + 0.38) * (1.0 - 0.45 * ar) * smoothstep(0.0, 0.8, hb + 0.3) * mix(0.6, 1.0, aov);
     vec3 wc = vec3(0.6, 0.58, 0.53) * (0.9 + 0.12 * akF3(P * 9.0));
     c = mix(c, wc, clamp(cov * akWash, 0.0, 1.0));
   }
@@ -311,11 +316,14 @@ export async function oakMaterial(ctx, opts = {}) {
   // growth rings: ~3.5 mm apart, wandering; seen on a face as long stripes / cathedral figure
   float rw = r + 0.006 * sin(u * 2.1 + sd * 30.0) + 0.004 * akN2(vec2(u * 0.8, r * 30.0 + sd * 9.0));
   float ringF = rw / 0.0036;
-  float ringAA = 1.0 - smoothstep(0.12, 0.35, fwidth(ringF));
-  float ring = mix(0.5, smoothstep(0.55, 0.95, fract(ringF)), ringAA);         // latewood: the dark, hard band
+  // a smooth periodic band (no sawtooth edge to alias), faded out well before a ring spans < 6 px
+  float ringFw = fwidth(ringF);
+  float ringAA = 1.0 - smoothstep(0.06, 0.17, ringFw);
+  float ringS = 0.5 + 0.5 * sin(6.2832 * ringF);
+  float ring = mix(0.5, ringS * ringS, ringAA);                                  // latewood: the dark, hard band
   // fibres: fine lines along the grain (rotated value noise; faded before they alias)
-  float fibAA = 1.0 - smoothstep(0.0007, 0.0016, fw);
-  float fibAA2 = 1.0 - smoothstep(0.0003, 0.0007, fw);
+  float fibAA = 1.0 - smoothstep(0.00045, 0.0011, fw);
+  float fibAA2 = 1.0 - smoothstep(0.0002, 0.00045, fw);
   float fib = 0.5 + (0.22 * sin(v * 900.0 + akN2(vec2(u * 1.5, v * 30.0)) * 6.0)) * fibAA + 0.18 * sin(v * 2300.0 + u * 0.7 + akN2(vec2(u * 4.0, v * 80.0)) * 3.0) * fibAA2;
   float tone = clamp(akTone + (akH1(sd * 51.3) - 0.5) * 0.5, 0.0, 1.0);
   vec3 base = tone < 0.5 ? mix(akC0, akC1, tone * 2.0) : mix(akC1, akC2, tone * 2.0 - 1.0);
@@ -339,8 +347,8 @@ export async function oakMaterial(ctx, opts = {}) {
   // end grain: concentric rings round the pith, radial splits, darker and more porous
   float er = 0.0;
   if (endg > 0.0) {
-    er = smoothstep(0.4, 0.9, fract(ringF)) * ringAA;
-    float por = akN3(P * 400.0) * (1.0 - smoothstep(0.0008, 0.002, fw));
+    er = ringS * ringAA;
+    float por = akN3(P * 400.0) * (1.0 - smoothstep(0.0005, 0.0012, fw));
     c = mix(c, base * 0.5 * (0.85 + 0.25 * er) * (0.9 + 0.2 * por), endg);
   }
   // lichen and algae on the weather faces, splash dirt low down
@@ -353,7 +361,7 @@ export async function oakMaterial(ctx, opts = {}) {
   akRgh = 0.8 + 0.1 * ring;
   akAO = mix(0.4, 1.0, vInfo.y);
   // weathered oak: the soft earlywood erodes, the latewood rings stand up; fibres; the checks open
-  akHt = (ring * 0.0004 * ringAA + fib * 0.0003 * fibAA - chk * 0.003) * (1.0 - endg) + er * 0.0004 * endg + streakW * 0.0008;
+  akHt = (ring * 0.00012 * ringAA + fib * 0.0001 * fibAA - chk * 0.002) * (1.0 - endg) + er * 0.00012 * endg + streakW * 0.0006;
 `,
   });
 }
@@ -387,8 +395,8 @@ export function plasterMaterial(ctx, opts = {}) {
   // flaking: the wash gone, the coarse render (and here and there the daub) showing
   float fl = akF3(P * 2.6 + 11.0) + 0.25 * akR3(P * 22.0);
   float fl2 = akF3(P * 7.0 + 31.0) + 0.3 * akR3(P * 40.0);
-  float flake = smoothstep(0.74, 0.76, fl2) * smoothstep(0.55, 0.7, fl) * akAge;
-  float daub = smoothstep(0.8, 0.82, fl2) * smoothstep(0.62, 0.75, fl) * akAge;
+  float flake = smoothstep(0.73, 0.78, fl2) * smoothstep(0.55, 0.7, fl) * akAge;
+  float daub = smoothstep(0.83, 0.87, fl2) * smoothstep(0.66, 0.78, fl) * akAge;
   c = mix(c, c * vec3(0.8, 0.75, 0.66), flake * 0.6);
   // grime: grey-brown weathering in broad soft patches, heavier up under the eaves and low down
   float grime = smoothstep(0.35, 0.8, akF3(P * vec3(0.9, 0.35, 0.9) + sd * 2.0));
@@ -416,7 +424,7 @@ export function plasterMaterial(ctx, opts = {}) {
   akAO = mix(0.4, 1.0, aov);
   float hf = 1.0 - smoothstep(0.003, 0.015, length(fwidth(P)));
   float sand = akR3(P * 520.0) * (1.0 - smoothstep(0.0006, 0.0016, length(fwidth(P))));
-  akHt = (akN3(P * 90.0) * 0.0005 + brush * 0.0008 - crack * 0.0015 - flake * 0.0015 - daub * 0.003 + patchM * 0.001) * hf + sand * 0.00025;
+  akHt = (akN3(P * 90.0) * 0.0005 + brush * 0.0008 - crack * 0.0015 - flake * 0.0005 - daub * 0.0012 + patchM * 0.0005) * hf + sand * 0.00025;
 `,
   });
 }
@@ -549,13 +557,13 @@ vec3 akInterior(vec3 wpos, vec3 nW, vec2 wuv, vec3 dims, float seed) {
     col = plasterC * (0.85 + 0.25 * akF2(h.xy * 1.3 + seed * 9.0));
     // a dark doorway or a shelf on the back wall
     float door = step(abs(h.x - (W * 0.5 + (akH1(seed * 4.4) - 0.5) * 2.0)), 0.45) * step(h.y, floorY + 2.0);
-    col = mix(col, vec3(0.03, 0.022, 0.015), door * step(0.5, akH1(seed * 8.8)));
+    col = mix(col, vec3(0.03, 0.022, 0.015), door * step(0.5, akH1(seed * 8.8)) * step(W, 2.5));
   } else {
     col = plasterC * 0.85 * (0.85 + 0.25 * akF2(h.zy * 1.3 + seed * 5.0));
   }
   // furniture: a table / bench / chest silhouette standing on the floor part way in
   float fz = depth * (0.35 + 0.3 * akH1(seed * 6.6));
-  if (akRoom.z > 0.0 && fz / d.z < t) {
+  if (akRoom.z > 0.0 && W < 2.5 && fz / d.z < t) {
     float tf = fz / d.z; vec3 q = o + d * tf;
     float fx = W * 0.5 + (akH1(seed * 7.7) - 0.5) * 1.6;
     float fh = floorY + 0.75 + 0.3 * akH1(seed * 2.9);
@@ -605,7 +613,7 @@ float akLead; vec3 akEm;`,
   // uneven crown glass: every quarry sits at its own small angle, with a ripple
   vec3 Rt = normalize(cross(vec3(0.0, 1.0, 0.0), nW));
   float a1 = akH2(cellId + sd * 13.0) - 0.5, a2 = akH2(cellId * 1.7 + sd * 7.0) - 0.5;
-  vec3 nT = normalize(nW + (Rt * a1 + vec3(0.0, 1.0, 0.0) * a2) * akGl.z * 2.0);
+  vec3 nT = normalize(nW + (Rt * a1 + vec3(0.0, 1.0, 0.0) * a2) * akGl.z * (typ < 1.5 ? 2.0 : 0.9));
   vec3 interior = akInterior(vWPos, nW, wuv + (vec2(a1, a2) * 0.03), dims, sd);
   // a faint green-grey body tint and dirt on old glass
   float dirt = akF2(wuv * 3.0 + sd * 9.0);
@@ -663,7 +671,7 @@ export async function archMaterials(ctx, opts = {}) {
   const p = (async () => {
     const [stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneWashed] = await Promise.all([
       // Verdor: weathered pale limestone / sandstone
-      stoneMaterial(ctx, { palette: [[0.50, 0.47, 0.40], [0.44, 0.41, 0.35], [0.55, 0.51, 0.43]], lichen: 0.55, moss: 0.3, tooled: 0.6, ...(opts.stonePale || {}) }),
+      stoneMaterial(ctx, { palette: [[0.47, 0.44, 0.37], [0.41, 0.38, 0.32], [0.52, 0.48, 0.4]], variation: 0.22, lichen: 0.7, moss: 0.35, tooled: 0.6, streaks: 0.9, stain: 0.7, ...(opts.stonePale || {}) }),
       // Cling: grey rubble stone
       stoneMaterial(ctx, { palette: [[0.19, 0.18, 0.165], [0.14, 0.135, 0.125], [0.23, 0.2, 0.165]], variation: 0.3, lichen: 0.6, moss: 0.45, tooled: 0.15, ...(opts.stoneGrey || {}) }),
       // dressed grey (quoins, arches, fountain, steps)

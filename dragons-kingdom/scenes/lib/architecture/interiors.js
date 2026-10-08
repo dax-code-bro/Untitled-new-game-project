@@ -225,7 +225,7 @@ export function birthingChamber(kit, F, o = {}) {
   const w = o.w ?? 7.2, d = o.d ?? 6.2, h = o.h ?? 6.6, T = 0.9;
   const lod = o.lod || 'mid';
   const local = new Kit(0);
-  const win = { wall: 'east', x: 2.2, y: 4.3, w: 1.1, h: 1.7, ...(o.window || {}) };
+  const win = { wall: 'east', x: 2.2, y: 3.6, w: 1.1, h: 1.7, ...(o.window || {}) };
   const dr = { wall: 'south', x: 4.6, w: 1.4, h: 2.7, open: 0.35, ...(o.door || {}) };
   const hw = h + 0.4;                     // the walls run up past the ceiling boards (no light leaks)
   const C = courses(rnd, hw, { min: 0.2, max: 0.34, plinth: 0.36 });
@@ -235,7 +235,7 @@ export function birthingChamber(kit, F, o = {}) {
     if (wl.key === win.wall) ops.push({ x: win.x, y: win.y, w: win.w, h: win.h, head: 'arch', reveal: T, archDepth: T, sill: false });
     if (wl.key === dr.wall) ops.push({ x: dr.x, y: 0, w: dr.w, h: dr.h, head: 'arch', reveal: T * 0.6 });
     // a niche for a lamp
-    masonryFace(local, Fw, wl.L, hw, { courses: C, style: 'squared', mat: 'stoneWashed', dressedMat: 'stonePale', mortar: 'mortarPale', T, lod, seed: rnd() * 999, openings: ops, back: true, backMat: 'mortarPale', quoinStart: () => 0.04, quoinEnd: () => 0.04 });
+    masonryFace(local, Fw, wl.L, hw, { courses: C, style: 'rubble', mat: 'stoneWashed', dressedMat: 'stonePale', mortar: 'mortarPale', T, lod, seed: rnd() * 999, openings: ops, back: true, backMat: 'mortarPale', quoinStart: () => 0.04, quoinEnd: () => 0.04 });
     if (wl.key === dr.wall) door(local, sub(Fw, [dr.x, 0, 0]), { w: dr.w, h: dr.h, arch: true, inset: T * 0.6, open: dr.open, hingeLeft: false, room: true, wallT: T, seed: rnd() * 999 });
     // a splayed sill for the high window: the bottom of the reveal slopes down into the room
     if (wl.key === win.wall) block(local.get('stonePale'), sub(Fw, [win.x + win.w / 2, win.y - 0.12, -T / 2 + 0.02], [1, 0, 0], [0, Math.cos(0.45), Math.sin(0.45)]), win.w + 0.06, 0.12, T * 1.05, { r: 0.012, seg: [0.2, 0.06, 0.2], seed: rnd(), noise: 0.003, chip: 0.01 });

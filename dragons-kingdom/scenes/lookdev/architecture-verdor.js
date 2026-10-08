@@ -18,11 +18,11 @@ import { reviewTime } from '../lib/humans/stage.js';
 import { filmFinish } from './finish.js';
 
 const SUN = new THREE.Vector3(0.598, 0.743, -0.300).normalize();
-const STABLE = [0, -34], RIG = [18, -15], KEEPER = [-26, -14], LEAFP = [-17, -7];
+const STABLE = [0, -34], RIG = [14, -17], KEEPER = [-26, -14], LEAFP = [-17, -7];
 const PALACE = [-700, -620], HARBOR = [520, 260];
 const SHOTS = [
-  { name: 'stable-rig', p: [38, 1.6, -14], t: [2, 4.8, -33], fl: 28, fstop: 5.6 },
-  { name: 'rig', p: [27, 1.7, -4], t: [17.5, 5.0, -16], fl: 28, fstop: 5.6 },
+  { name: 'stable-rig', p: [17.6, 1.6, 8.0], t: [8, 5.9, -26], fl: 24, fstop: 5.6 },
+  { name: 'rig', p: [23, 1.7, -6], t: [13.5, 5.0, -17], fl: 28, fstop: 5.6 },
   { name: 'keeper', p: [-11.5, 1.6, 4.0], t: [-25, 2.4, -14], fl: 30, fstop: 5.6 },
   { name: 'palace', p: [-430, 14, -300], t: [-700, 40, -620], fl: 85, fstop: 8 },
   { name: 'harbor', p: [508, 3.9, 274], t: [517, 1.2, 258], fl: 28, fstop: 5.6 },
@@ -113,7 +113,7 @@ export async function setup(ctx) {
     if (Math.hypot(x - KEEPER[0], z - KEEPER[1]) < 7) return null;
     return [x, 0.4 * N.fbm(x * 0.02, z * 0.02, 3) - 0.02, z];
   };
-  for (const [cx, cz, R, n] of [[30, -10, 22, 60000], [-16, -2, 18, 40000]]) {
+  for (const [cx, cz, R, n] of [[16, -2, 22, 60000], [-16, -2, 18, 40000]]) {
     scene.add(grassField({ count: n, height: [0.05, 0.2], seed: 5 + cx, color: [0.05, 0.072, 0.022], dry: [0.2, 0.17, 0.085], dryAmount: 0.5, place: place(cx, cz, R) }));
     scene.add(grassField({ count: n / 6, height: [0.18, 0.42], seed: 7 + cx, blades: 10, color: [0.035, 0.055, 0.018], dry: [0.22, 0.19, 0.1], dryAmount: 0.6, place: place(cx, cz, R) }));
   }

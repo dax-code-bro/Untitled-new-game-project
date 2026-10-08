@@ -13,10 +13,10 @@ import { reviewTime } from '../lib/humans/stage.js';
 import { filmFinish } from './finish.js';
 
 // the chamber at the origin, the treatment room 60 m east (same sun: high, from the east)
-const SUN = new THREE.Vector3(0.67, 0.73, -0.1).normalize();     // through the chamber's east opening onto the nest
+const SUN = new THREE.Vector3(0.72, 0.685, -0.11).normalize();     // through the chamber's east opening onto the nest
 const ROOM2 = [-300, 0, 0];
 const SHOTS = [
-  { name: 'chamber', p: [-3.25, 1.45, 2.75], t: [1.2, 2.9, -1.0], fl: 18, fstop: 2.8, room: 0 },
+  { name: 'chamber', p: [-3.35, 1.55, 2.85], t: [-0.3, 1.45, 0.27], fl: 14, fstop: 2.8, room: 0 },
   { name: 'nest', p: [-2.5, 1.2, 2.3], t: [-0.6, 0.55, 0.2], fl: 28, fstop: 2.8, room: 0 },
   { name: 'treatment', p: [-297.8, 1.55, 1.8], t: [-302.3, 1.1, -0.9], fl: 21, fstop: 2.8, room: 1 },
   { name: 'treatment-window', p: [-298.2, 1.45, 0.4], t: [-303.0, 1.5, -0.1], fl: 24, fstop: 2.8, room: 1 },
