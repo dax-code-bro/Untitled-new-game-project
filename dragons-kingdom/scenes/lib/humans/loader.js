@@ -80,6 +80,12 @@ export function buildCharacter(data, opts = {}) {
     // attributes every material expects
     const n = g.attributes.position.count;
     if (!g.attributes.ao) g.setAttribute('ao', new THREE.BufferAttribute(new Float32Array(n).fill(1), 1));
+    else if (m.name === 'caruncle') {
+      // the baked AO in the inner corner of the eye is ~0 (rays hit the lids): a black dot
+      const ao = g.attributes.ao.array.slice();
+      for (let i = 0; i < n; i++) ao[i] = Math.max(ao[i], 0.65);
+      g.setAttribute('ao', new THREE.BufferAttribute(ao, 1));
+    }
     if (m.kind === 'skin') {
       if (!g.attributes.thick) g.setAttribute('thick', new THREE.BufferAttribute(new Float32Array(n).fill(0.3), 1));
       if (!g.attributes.aux) g.setAttribute('aux', new THREE.BufferAttribute(new Float32Array(n * 4), 4));

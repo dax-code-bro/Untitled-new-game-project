@@ -148,7 +148,9 @@ def macro_weights(age=0.5, gender=0.5, muscle=0.5, weight=0.5, height=0.5, propo
                         if hw > 0:
                             out.append((f'height/{gn}-{an}-{mn}-{wn}-{hn}', base * hw))
                     for pn, pw in p:
-                        if pw > 0:
+                        # MakeHuman has no proportions targets for babies (children under ~3 are
+                        # partly 'baby' in the age blend: the child build failed on this)
+                        if pw > 0 and an != 'baby':
                             out.append((f'proportions/{gn}-{an}-{mn}-{wn}-{pn}', base * pw))
     return [(n, x) for n, x in out if x > 1e-6]
 

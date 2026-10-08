@@ -41,8 +41,22 @@ Fixed after rendering the state left by session 2:
 - Look-dev scenes: ground scans were stretched over the whole plane (loadPBR worldSize is
   the size UV 0..1 covers) - fixed; contact sheets quantise t to the frame (ghosting at k.0).
 
+Later in session 3:
+- Bust rounded in the cloth collider (coats tented into two points); asymmetric relaxed arms in
+  the standing recipe; crop hair without the centre parting / forehead tuft.
+- Skin: narrower wrap + translucency only where thin and back-lit (it painted red lids and a pink
+  forehead), less sheen/oil, stronger pores + pore colour, lip grooves, neutral lid margin,
+  lower lashes thinned (loader attribute lw), caruncle AO lifted.
+- Sling: coat sleeve firmer + no self-collision for arm-across poses (shredded coat), band path
+  smoothed / pushed out / lies flat. Alexandria's gown simulated as heavy wool.
+- Child + crowd18 never built (no MakeHuman 'baby' proportions targets): skipped in macro_items.
+- offline/queue.sh (restartable ordered builds), offline/regain.py (recompute the face albedo
+  gain of built caches in place, 6 mm / 6 cm, seconds per character), stage.js (ground scan at
+  real scale without visible repeats).
+
 In flight / next
-- Full rebuild of all 48 ids with this code started 22:12 UTC (3 processes, logs in the
-  scratchpad humans/logs/full{1,2,3}.log). If interrupted: rerun build.py for ids whose
-  cache json is older than offline/*.py.
-- Then contact sheets + hero angles at preview, fix, final 4K + crops, npm test, README.
+- Rebuild queue (scratchpad humans/logs/q*.log) finishing: abby_injured, fall, abby_ride,
+  keeper1, watchman, guard1-3, sailor1-2, crowd18, child. Then run
+  `regain.py <those ids>` (all others already regained) - regain must also follow any rebuild.
+- Final 4K renders: humans-hero t = 0.5 .. 7.5, humans-contact t = 0..6, humans-riders t = 0.5,
+  1.5, 2.5 -> output/humans/ (1920 downscales + 1:1 crops), npm test, README numbers.

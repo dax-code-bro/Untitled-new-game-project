@@ -439,7 +439,8 @@ def build_sling(sk, pt, off, D):
             q = (1 - s) ** 2 * a_end + 2 * (1 - s) * s * (mid + np.array([0, 0, 0.06])) + s * s * nk
             path.append(q)
         path = np.array(path)
-        # snap onto the clothed body (+6 mm)
+        # snap onto the clothed body (+6 mm): the band is under tension, so it lies on the
+        # clothes; only the first points, where it leaves the cradle, may stand off
         from mathutils import Vector
         for k in range(1, len(path)):
             loc, n, _, _ = tree.find_nearest(Vector(path[k]))
@@ -447,18 +448,27 @@ def build_sling(sk, pt, off, D):
             rad = (loc - axis) * np.array([1, 0, 1])
             if np.dot(n, rad) < 0 and loc[1] < nk[1] - 0.02:
                 n = -n
-            # lie on the clothes (the band is under tension): only the first few points, where it
-            # leaves the cradle, may stand off the body
-            path[k] = loc + n * 0.006 if (k >= 4 or np.dot(path[k] - loc, n) < 0.03) else path[k]
+            if k >= 4 or np.dot(path[k] - loc, n) < 0.03:
+                path[k] = loc + n * 0.006
+        # nearest-point snapping jumps between layers (coat / shirt in the V): smooth the path,
+        # then push it back outside the clothes
+        for _ in range(4):
+            path[1:-1] = 0.5 * path[1:-1] + 0.25 * (path[:-2] + path[2:])
+        path[1:] = push_outside(path[1:], tree, 0.006, axis=axis)
         t = mu.norm(np.gradient(path, axis=0))
-        nrm = []
-        for q in path:
-            loc, n, _, _ = tree.find_nearest(Vector(q))
-            nrm.append(mu.norm(q - np.array(loc)) if np.linalg.norm(q - np.array(loc)) > 1e-5 else np.array(n))
-        nrm = np.array(nrm)
-        w = np.linspace(0.05, 0.028, len(path))
+        # the band lies flat on the body: its face normal is the body's outward direction
+        # (radial from the body axis on the chest, turning upward over the shoulder)
+        shy = max(shR[1], shL[1]) - 0.07
+        rad = (path - axis) * np.array([1, 0, 1])
+        rad = rad / np.maximum(np.linalg.norm(rad, axis=1, keepdims=True), 1e-6)
+        upw = np.clip((path[:, 1] - (shy - 0.04)) / 0.06, 0, 1)[:, None] * 1.5
+        nrm = mu.norm(rad + upw * np.array([0, 1.0, 0]))
+        nrm = mu.norm(nrm - t * np.einsum('ij,ij->i', nrm, t)[:, None])
+        w = np.linspace(0.045, 0.026, len(path))
         sv = mu.norm(np.cross(t, nrm))
         Ps = np.vstack([path - sv * w[:, None], path + sv * w[:, None]])
+        Ps[1:nn_] = push_outside(Ps[1:nn_], tree, 0.004, axis=axis) if (nn_ := len(path)) else Ps[1:nn_]
+        Ps[nn_ + 1:] = push_outside(Ps[nn_ + 1:], tree, 0.004, axis=axis)
         nn = len(path)
         Fs = [(k, k + 1, nn + k + 1, nn + k) for k in range(nn - 1)]
         bands.append((Ps, Fs))

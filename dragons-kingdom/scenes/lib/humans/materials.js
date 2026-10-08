@@ -82,7 +82,7 @@ export function skinMaterial(o = {}) {
   const mat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff, roughness: o.rough ?? 0.46, metalness: 0,
     ior: 1.4, specularIntensity: 0.9,
-    sheen: 0.18, sheenRoughness: 0.55, sheenColor: new THREE.Color(0.55, 0.45, 0.4),
+    sheen: 0.07, sheenRoughness: 0.6, sheenColor: new THREE.Color(0.55, 0.45, 0.4),
     clearcoat: o.oil ?? 0.12, clearcoatRoughness: 0.34,
   });
   if (o.map) mat.map = libTexture(o.map);
@@ -144,6 +144,11 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   c = mix(c, c * vec3(0.62, 0.56, 0.55), vAux2.g * uLid);
   // lips (aux.r) a little deeper, nails (aux.g) paler
   c = mix(c, c * vec3(0.98, 0.7, 0.72), vAux.r * 0.75);
+  // pores read in the colour too (a touch darker, shadowed openings) where they are resolved
+  { float fwc = length(fwidth(vObjP));
+    float fp = 1.0 - smoothstep(0.35, 1.0, fwc * 1600.0);
+    float pc = hCell(vObjP * 1600.0 + uSeed);
+    c *= 1.0 - 0.07 * (1.0 - smoothstep(0.0, 0.4, pc)) * fp * (1.0 - vAux.r) * (1.0 - vAux.a); }
   c = mix(c, vec3(l) * vec3(1.15, 1.02, 0.98) + 0.03, vAux.g * 0.55);
   c *= mix(1.0, 0.82, uDirt * hN3(vObjP * 90.0));
   // scalp under the hair takes the hair colour (roots, density), aux.a
@@ -174,8 +179,13 @@ skinSmoothN = normal;
   float h = 0.0;
   if (fadeP > 0.0) {
     float c = hCell(vObjP * poreScale + uSeed);
-    h -= (1.0 - smoothstep(0.0, 0.45, c)) * 0.00006 * fadeP;
-    h += (hN3(vObjP * 3800.0) - 0.5) * 0.000018 * fadeP;
+    h -= (1.0 - smoothstep(0.0, 0.45, c)) * 0.0001 * fadeP * (1.0 - vAux.r);
+    h += (hN3(vObjP * 3800.0) - 0.5) * 0.00003 * fadeP;
+  }
+  // lips (aux.r): fine vertical grooves (~1 mm apart, wavy), not a smooth plastic surface
+  if (vAux.r > 0.01 && fadeP > 0.0) {
+    float g = fract(vObjP.x * 950.0 + hN3(vObjP * 220.0) * 1.6);
+    h -= pow(1.0 - abs(g - 0.5) * 2.0, 5.0) * 0.00007 * vAux.r * fadeP;
   }
   if (fadeL > 0.0) {
     // fine crossing lines (skin "texture"), deeper with age
