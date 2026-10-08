@@ -550,7 +550,9 @@ export function palace(kit, F, o = {}) {
   const lod = o.lod || 'far';
   const local = new Kit(0);
   const stoneM = lod === 'far' ? 'stoneFar' : 'stonePale';
-  const plain = { style: 'ashlar', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', lod };
+  // (far: the joints darker than the stone, as they read at a few hundred metres - pale mortar there
+  // came out as white dashes)
+  const plain = { style: 'ashlar', mat: stoneM, dressedMat: stoneM, mortar: lod === 'far' ? 'mortar' : 'mortarPale', lod };
   // (the masonry starts 2 m under the frame's ground: the base is buried in the hill)
   const sink = 2.0;
   const box = (x, z, w, d, h, yaw, ops = {}) => {
@@ -630,12 +632,12 @@ export function palace(kit, F, o = {}) {
     const fr = sub(fr0, [0, sink, 0]);
     const Lw = L - 10;
     const gate = i === 3;
-    masonryFace(local, sub(fr0, [-Lw / 2, 0, 1.4]), Lw, 12.5 + sink, { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', T: 2.8, lod, seed: rnd() * 999, back: true, openings: gate ? [{ x: Lw / 2 - 2.5, y: sink, w: 5, h: 7.2, head: 'arch', reveal: 1.5, archDepth: 2.83 }] : [] });
-    masonryFace(local, sub(fr0, [Lw / 2, 0, -1.4], [-1, 0, 0], [0, 1, 0]), Lw, 11.0 + sink, { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', T: 2.8, lod, seed: rnd() * 999, openings: gate ? [{ x: Lw / 2 - 2.5, y: sink, w: 5, h: 7.2, head: 'archOpen', reveal: 1.5 }] : [] });
+    masonryFace(local, sub(fr0, [-Lw / 2, 0, 1.4]), Lw, 12.5 + sink, { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: plain.mortar, T: 2.8, lod, seed: rnd() * 999, back: true, openings: gate ? [{ x: Lw / 2 - 2.5, y: sink, w: 5, h: 7.2, head: 'arch', reveal: 1.5, archDepth: 2.83 }] : [] });
+    masonryFace(local, sub(fr0, [Lw / 2, 0, -1.4], [-1, 0, 0], [0, 1, 0]), Lw, 11.0 + sink, { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: plain.mortar, T: 2.8, lod, seed: rnd() * 999, openings: gate ? [{ x: Lw / 2 - 2.5, y: sink, w: 5, h: 7.2, head: 'archOpen', reveal: 1.5 }] : [] });
     const nm = Math.floor(Lw / 2.4);
     for (let k = 0; k < nm; k++) {
       const x0 = -Lw / 2 + (Lw * k) / nm + 0.35, mw = Lw / nm - 0.9 + rnd.sym(0.15);
-      masonryFace(local, sub(fr, [x0, 12.5, 1.4]), mw, 1.35 + rnd.sym(0.08), { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: 'mortarPale', T: 0.7, lod, seed: rnd() * 999, back: true, courseMin: 0.4, courseMax: 0.5 });
+      masonryFace(local, sub(fr, [x0, 12.5, 1.4]), mw, 1.35 + rnd.sym(0.08), { style: 'squared', mat: stoneM, dressedMat: stoneM, mortar: plain.mortar, T: 0.7, lod, seed: rnd() * 999, back: true, courseMin: 0.4, courseMax: 0.5 });
       block(local.get(stoneM), sub(fr, [x0 + mw / 2, 13.92, 1.05]), mw + 0.12, 0.16, 0.82, { r: 0.02, seg: [0.5, 0.16, 0.4], seed: rnd(), noise: 0.004, warp: (lx, ly, lz) => [lx, ly + (ly > 0 ? 0.05 * (1 - Math.abs(lz) / 0.41) : 0), lz] });
     }
     block(local.get(stoneM), sub(fr, [0, 12.42, 0.6]), Lw, 0.2, 1.9, { r: 0.02, seg: [2, 0.2, 0.5], seed: rnd(), noise: 0.003 });
@@ -648,7 +650,7 @@ export function palace(kit, F, o = {}) {
       gableRoof(local, sub(fr, [0, 14.0, 1.3]), { L: 6.4, S: 4.6, pitch: 1.0, eaves: 0.4, verge: 0.3, cover: 'slate', lod, seed: rnd() * 999 });
     }
   }
-  kit.merge(local, F);
+  kit.merge(local, F, { keepFooting: true });
 }
 
 // ------------------------------------------------------------------ harbour --
@@ -667,7 +669,7 @@ export function harbor(kit, F, o = {}) {
   const stepsX = o.stepsX ?? -L * 0.18, stepsW = 1.7, rise = 0.24, run = 0.36;
   const stepsN = Math.round((H - 0.1) / rise) + 3;                 // the lowest three under the water
   const stepsLen = stepsN * run;
-  masonryFace(local, sub(frame([0, 0, 0]), [-L / 2, base, 0]), L, H - 0.4 - base, { courses: courses(rnd, H - 0.4 - base, { min: 0.42, max: 0.6 }), style: 'ashlar', mat: 'stoneQuay', dressedMat: 'stoneQuay', mortar: 'mortarPale', T: 3, lod, seed: rnd() * 999, depth: [0.4, 0.7] });
+  masonryFace(local, sub(frame([0, 0, 0]), [-L / 2, base, 0]), L, H - 0.4 - base, { courses: courses(rnd, H - 0.4 - base, { min: 0.42, max: 0.6 }), style: 'ashlar', mat: 'stoneQuay', dressedMat: 'stoneQuay', mortar: 'mortarQuay', T: 3, lod, seed: rnd() * 999, depth: [0.4, 0.7] });
   // coping: big rounded slabs along the edge, a worn edge, rope grooves here and there
   for (let x = -L / 2; x < L / 2 - 0.1;) {
     const len = Math.min(rnd.range(1.0, 1.7), L / 2 - x);
@@ -692,10 +694,10 @@ export function harbor(kit, F, o = {}) {
   {
     const topAt = (x) => { const i = Math.floor((x - stepsX) / run); return i < 0 ? H : H - rise * (i + 1) - 0.2; };   // under each tread
     const Fo = sub(frame([0, 0, 0]), [stepsX, base, stepsW]);
-    masonryFace(local, Fo, stepsLen, H - base, { courses: courses(rnd, H - base, { min: 0.36, max: 0.52 }), style: 'squared', mat: 'stoneQuay', dressedMat: 'stoneQuay', mortar: 'mortarPale', T: stepsW, lod, seed: rnd() * 999, depth: [0.3, 0.5], clipTop: (x) => topAt(x + stepsX) - base });
+    masonryFace(local, Fo, stepsLen, H - base, { courses: courses(rnd, H - base, { min: 0.36, max: 0.52 }), style: 'squared', mat: 'stoneQuay', dressedMat: 'stoneQuay', mortar: 'mortarQuay', T: stepsW, lod, seed: rnd() * 999, depth: [0.3, 0.5], clipTop: (x) => topAt(x + stepsX) - base });
     // the low end
     const yEnd = H - rise * stepsN - 0.2;
-    masonryFace(local, sub(frame([0, 0, 0]), [stepsX + stepsLen, base, stepsW], [0, 0, -1], [0, 1, 0]), stepsW, yEnd - base, { style: 'squared', mat: 'stoneQuay', dressedMat: 'stoneQuay', mortar: 'mortarPale', T: 1, lod, seed: rnd() * 999, depth: [0.3, 0.5] });
+    masonryFace(local, sub(frame([0, 0, 0]), [stepsX + stepsLen, base, stepsW], [0, 0, -1], [0, 1, 0]), stepsW, yEnd - base, { style: 'squared', mat: 'stoneQuay', dressedMat: 'stoneQuay', mortar: 'mortarQuay', T: 1, lod, seed: rnd() * 999, depth: [0.3, 0.5] });
     for (let i = 0; i < stepsN; i++) {
       const y = H - rise * (i + 1);
       const x0 = stepsX + i * run;
@@ -740,12 +742,12 @@ export function harbor(kit, F, o = {}) {
   // scum and foam where the sea laps the quay face and the stair
   if (o.water !== false) {
     const wy = (o.waterY ?? 0) + 0.006;
-    const fseg = (x0, x1, z0, dirZ) => grid(local.get('foam'), Math.max(2, Math.round((x1 - x0) / 0.5)), 4, (u, v) => ({ p: [x0 + (x1 - x0) * u, wy, z0 + dirZ * v * 1.4], uv: [x0 + (x1 - x0) * u, v * 1.4], seed: 0.5, ao: 0.85, ar: 1 }), [1, 0, 0], dirZ < 0);
+    const fseg = (x0, x1, z0, dirZ) => grid(local.get('foam'), Math.max(2, Math.round((x1 - x0) / 0.5)), 4, (u, v) => ({ p: [x0 + (x1 - x0) * u, wy, z0 + dirZ * v * 1.4], uv: [x0 + (x1 - x0) * u, v * 1.4], seed: 0.5, ao: 0.85, ar: 1 }), [1, 0, 0], dirZ > 0);     // (wound to face up)
     fseg(-L / 2, stepsX, 0.0, 1);
     fseg(stepsX, stepsX + stepsLen, stepsW, 1);
     fseg(stepsX + stepsLen, L / 2, 0.0, 1);
     // the stair's low end (a short run across x)
-    grid(local.get('foam'), 3, 4, (u, v) => ({ p: [stepsX + stepsLen + v * 1.2, wy, stepsW * u], uv: [stepsW * u, v * 1.2], seed: 0.5, ao: 0.85, ar: 1 }), [0, 0, 1], true);
+    grid(local.get('foam'), 3, 4, (u, v) => ({ p: [stepsX + stepsLen + v * 1.2, wy, stepsW * u], uv: [stepsW * u, v * 1.2], seed: 0.5, ao: 0.85, ar: 1 }), [0, 0, 1], false);
   }
   // the water surface (with a long chop) out to the harbour mouth
   if (o.water !== false) {
@@ -805,8 +807,8 @@ export function harbor(kit, F, o = {}) {
       }
     }
   }
-  kit.merge(local, F);
-  kit.merge(town, F);
+  kit.merge(local, F, { keepFooting: true });
+  kit.merge(town, F, { keepFooting: true });
   return { steps: { x: stepsX, w: stepsW, n: stepsN }, top: H };
 }
 void steps; void framedWall; void pentice; void keeperHouse;

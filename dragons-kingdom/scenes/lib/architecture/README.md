@@ -36,20 +36,58 @@ per-vertex construction data. Designs are provisional until Daxtyn approves them
   retaining walls with a parapet.
 * `masonryFace(..., { clipTop: (x) => y })` lays courses only under a line (a stair's soffit).
 
+## Changed in round 2 (critic report 2) - worth knowing why
+
+* **Masonry veneer look**: stones are now SET IN the mortar - each face flat to 0-12 mm proud
+  (per style: `STYLE` in masonry.js), the rounded arrises dive below the mortar plane so the
+  outlines are irregular and there is no rim highlight or drop shadow; per-stone arris radius.
+  The 'stacked paper' slivers on stone sides were noise/chip displacement folding the rounding rows:
+  `block()` now clamps every displacement near an arris to half the rounding radius (`fold: false`
+  turns it off). Lime mortar uses a scanned sand grain (acg_ground05) with sparse grit and lime bloom.
+* **Weathering decals** (`weathering.js`): `stain(kit, F, x, y, w, len, 'dirt'|'rust'|'lime'|'algae',
+  { strength, z, seed })` - a transparent streak a few mm in front of a face (the kind is encoded in
+  the seed's quarter); `grimeBand(kit, F, x0, x1, y, len, rnd, { kind, strength, z })` - overlapping
+  stains under an overhang or along a wall foot. `masonryFace(..., { stains: true })` drops sill drips.
+* **Openings**: `op.blocked` (a blocked-up opening: recessed rubble fill with its own mortar face),
+  `op.niche` (a lamp niche with a back), `op.splay / sillSplay / headSplay` (an inward-splayed reveal,
+  `op.back` the narrow rectangle at the outer face), `o.portals` (a dark room quad behind each window
+  so far buildings are not see-through), `o.aoMul` (scale baked occlusion: passages, soffits).
+* **Glass**: quarries tilted ~1 deg (no sky/ground checker from the interior mapping), per-quarry tint,
+  grime at the leads; glazing type 4 = oiled linen on a lath lattice; houses are glazed by wealth
+  (`house(..., { rich })`), the rest have shutters or cloth.
+* **Roofs**: the gable principals sit 7 cm under the rafter line (they poked through as a grey verge
+  strip), bargeboard + mortar bead at the verge, sag carried by the gable walls, per-roof tile batch,
+  lead flashings round stacks, soot, clay pots (`chimney(..., { pot })`).
+* **Timber**: structural members proud of studs and braces, studs tenon 3.5 cm into the rails (no
+  gaps), varied sections and bows, flush faceted pegs (`oakPeg`), jetty bressumer sag, end checks.
+* **Set dressing** (`dressing.js`): `barrel`, `crate`, `sack`, `coil`, `handcart`.
+* **Canon**: stone support = broad pier 2.6 x 1.5 x 3.4 m on a two-step plinth (`CLING.support` moved
+  to x 13.3 to clear the steps' cheek wall); town gate 4.4 m clear between 4.6 m squared piers, a beam
+  with a tiled roof, braced leaves on pintles, rutted threshold, stop stone (`CLING.gate`); access rig
+  without jib or mast - a drawbridge gangway (6 m) on two chains over sheaves to a deck windlass;
+  harbour handrail removed (mooring rings); birthing chamber door framed, nest = plank bedding frame
+  (no altar plinth); treatment room: Abby's arm chair with the padded LEFT arm rest, Remi's seat,
+  Alexandria's stool, coast visible through a splayed window.
+* **Interiors**: `NEST` / `nestBedY(x, z)` (the bedding frame and the straw bed's height, shared with
+  the bpy bake `offline/nest_cloth.py` v2 - `bed: 2` in the cache), `strawClumps(acc, F, rnd, n, place,
+  yAt, o)` (stalks 4-34 cm, 1.2-2.6 mm, three tone families), `armChair`.
+
 ## Files
 
 | file | contents |
 |---|---|
 | `core.js` | seeded random / noise, frames, `Acc`/`Kit` accumulators (one mesh per material, deform whole buildings, merge sub-kits), primitives: `block` (rounded irregular box with noise, pillow, chips, adze, wane, warp, baked occlusion, grain axis), `grid`, `shapeFace`, `tube`, `strip`, `lathe` |
-| `materials.js` | `archMaterials(ctx)` -> `{ stonePale, stoneGrey, stoneDressed, stoneWashed, stoneWet, stoneSoot, stoneFar, stoneFloor, mortar, mortarPale, mortarWashed, oak, oakDark, plaster, plasterInt, clay, slate, iron, lead, glass, portal, straw, strawBed, linen, leather, clayware, rope, soot, water, flame }` |
+| `materials.js` | `archMaterials(ctx)` -> `{ stonePale, stoneGrey, stoneDressed, stoneWashed, stoneWet, stoneSoot, stoneFar, stoneFloor, stoneQuay, stoneSett, mortar, mortarPale, mortarWashed, oak, oakDark, oakPeg, oakSilver, bark, plaster, plasterInt, clay, slate, iron, lead, glass, portal, straw, strawBed, linen, leather, sacking, clayware, rope, soot, water, pool, puddle, sea, foam, jet, stain, mud, wetMud, earth, flame }` |
+| `weathering.js` | `stain`, `grimeBand` (decals: dirt, rust, lime, algae) |
+| `dressing.js` | `barrel`, `crate`, `sack`, `coil`, `handcart` |
 | `masonry.js` | `courses`, `masonryFace`, `masonryBox`, `archRing`, `masonryGable`, `roundTower`, `conicalRoof`, `steps`, `LOD` |
 | `timber.js` | `member`, `pegs`, `framedWall`, `jetty`, `gableFrame`, `infill` |
 | `roof.js` | `gableRoof` (clay / slate, sag, damage), `chimney`, `pentice` |
 | `openings.js` | `windowUnit`, `door`, `leafFrame`, `glassQuad`, `threshold` |
 | `house.js` | `house` (the Cling townhouse) |
 | `cling.js` | `CLING` (fixed layout), `clingSquare` (houses round the square + second rows behind every gap, the gate-passage arch with `set.beam` (the 3C beam's own mesh + its end points), a lane on through the arch, the bent alley with houses closing its vistas, houses along the broad road beyond the gate), `archway` (freestanding variant), `gateway` (silvered oak leaves with ledges, braces, straps, nails, latch, a droop; weathered pier caps; coped walls), `fountain` (octagonal conduit: slabs between corner posts, mitred coping with leaded iron cramps, solid step, octagonal pillar with a spout drum, four heads, lead pipes, falling jets, rippled pool), `stonePier`, `kingsSteps` (solid), `lane`, `alley`, `paving`, `wallFootPlacer` (weeds in corners and by doors, ~a quarter of the wall foot), `houseFootSegments` |
-| `verdor.js` | `stable` (a dragon stable for Leaf-sized dragons: the 5.6 x 6.6 m door admits a subadult Nightwing; Charcoal is mounted outside from the rig), `keeperHouse`, `accessRig` (15th-century carpentry: jowled posts on sole plates over stone pads, girts, arch braces, pegs, boarded stairs with closed risers, newels and handrails, railed deck and gangway, jib, blocks, falls, windlass, counterweight, leather bolster; deck 10.6 m so the gangway lands at Charcoal's lying seat height ~9.5-9.9 m - measured by `scenes/lookdev/architecture-probe.js`), `leafPlatform` (spoked iron-tyred wheels, chocks, padded leather roll on the side that meets Leaf (+x), stair with handrails on BOTH sides: Abby's free right hand finds a rail facing out or facing in; returns `{ deck, stairFoot, leafSide }`), `palace` (crenellated curtain walls, gatehouse with half-round towers, round towers with dressed slit surrounds and a corbelled band), `harbor` (quay with tide zones, a solid landing stair built against the face into the water, stone bollards, oak fender piles, iron rings, its own rippled sea surface) |
-| `interiors.js` | `birthingChamber` (washed rubble, warm 1900-2200 K lamps with soot plumes, irregular worn flags, the nest: a kerb of straight chamfered stones round a polygon, straw in 2000 clumps that keep off the cloth-simulated linen's real footprint and spill over the kerb; the linen is kept above the straw bed with lumps, creases and stray stems; door thresholds through the reveal), `treatmentRoom` (plaster over rubble, losses with a plaster-coloured broken edge, irregular flags with a worn line from the door, shutters on strap hinges and pintles, the cloth-simulated table cloth, the patient's stool with an arm support at her LEFT - `anchors.seat`, `anchors.armSupport`) (+ `flagFloor`, `beamCeiling`, `nest`, `oilLamp`, `bowl`, `jug`, `foldedCloths`, `bench`, `stool`) |
+| `verdor.js` | `stable` (a dragon stable for Leaf-sized dragons: the 5.6 x 6.6 m door admits a subadult Nightwing; Charcoal is mounted outside from the rig), `keeperHouse`, `accessRig` (15th-century carpentry: silvered oak, scarfed posts with iron bands on sunk stone pads, girts, knee braces, pegs, lashings, boarded stairs with closed risers, newels and handrails, railed deck, a drawbridge gangway (6 m) hung on two chains over sheaves to a windlass on the deck (round 2: no jib, no mast), leather bolster; deck 10.6 m so the gangway lands at Charcoal's lying seat height ~9.5-9.9 m - measured by `scenes/lookdev/architecture-probe.js`), `leafPlatform` (spoked iron-tyred wheels, chocks, padded leather roll on the side that meets Leaf (+x), stair with handrails on BOTH sides: Abby's free right hand finds a rail facing out or facing in; returns `{ deck, stairFoot, leafSide }`), `palace` (round 2: sunk into its rise; a keep with window rows and a stair turret, a hall with tall windows and chimneys, a chapel with a bellcote, lean-to ranges, two battered round towers with string courses and bell-cast conical roofs, two square saddleback towers, crenellated curtain, gatehouse; dark rooms behind every window), `harbor` (quay with tide zones, a solid landing stair built against the face into the water - no handrail, mooring rings beside it -, stone bollards, oak fender piles, iron rings, waterline foam, goods on the quay (`o.dressing`), warehouses, a town behind (`o.town`), built ground (`o.hinterland`), its own rippled sea surface) |
+| `interiors.js` | `birthingChamber` (washed rubble, 5.6 m to a joisted ceiling, the door framed in its reveal, lamp niches with soot fans and an oil stain, a bracket lamp, warm 1900-2200 K lamps, irregular worn flags, the nest: a plank bedding frame with corner posts and pegs round a domed straw bed (1500 clumps inside, spill outside), the cloth-simulated linen baked on that bed), `treatmentRoom` (plaster over rubble, losses with a plaster-coloured broken edge, irregular flags with a worn line from the door, shutters on strap hinges and pintles, the cloth-simulated table cloth, an inward-splayed window with stone sill slabs (the coast and the harbour below), Abby's arm chair with the padded arm rest at her LEFT - `anchors.seat`, `anchors.armSupport` -, Remi's seat and Alexandria's stool) (+ `flagFloor`, `beamCeiling`, `nest`, `oilLamp`, `bowl`, `jug`, `foldedCloths`, `bench`, `stool`) |
 | `offline/*.py` | one-time Blender (bpy 4.2) cloth bakes into `cache/` (git-ignored): `nest_cloth.py` (the nest linen), `table_cloth.py` (the treatment-room table cloth) |
 
 ## Use
@@ -94,13 +132,13 @@ frame F5 - from the king's steps (south edge, looking north): stone arch LEFT (w
 x -19.6 z 16.5), gate to the broad road RIGHT (east, x 20.4 z 4.75), vendor stall left-centre
 (-8.5, 3) with the alley behind it in the north row (x -8.6), music space right-centre (7, 1.5),
 fountain with its central pillar in the middle (0, -2), the separate stone support beside the
-steps (12.9, 19.4). Sun behind the steps (south).
+steps (13.3, 19.4; a 2.6 m broad pier). The gate is 4.4 m clear (`CLING.gate`). Sun behind the steps (south).
 
 ## Look-dev scenes
 
-* `scenes/lookdev/architecture-cling.js` - row 3/4 at eye level, the arch, the square from the steps, the gate, a close detail (one shot per second).
+* `scenes/lookdev/architecture-cling.js` - row 3/4 at eye level, the arch, the square from the steps, the gate, a close detail, the steps, the fountain, the alley, and a plan view from above (north up) with coloured markers on the fixed escape geography - the shot logs `[arch-cling-plan] {name: [u, v]}` for labelling (one shot per second).
 * `scenes/lookdev/architecture-verdor.js` - stable + access rig with Remi for scale, the rig, the keepers' lodge + Leaf's platform, the palace far off, the harbour steps.
-* `scenes/lookdev/architecture-interiors.js` - birthing chamber (daylight shaft, lamps, nest), treatment room.
+* `scenes/lookdev/architecture-interiors.js` - birthing chamber (room, nest, door), treatment room (seats, window with the coast, door).
 * `scenes/lookdev/architecture-contact.js` - every model 3/4 under the same daylight, one per second (turntable at 24 fps).
 * `scenes/lookdev/architecture-dev.js` - quick single-piece checks; close-ups at the pixel footprint of a 4K frame; `archMaterials(ctx, { debug: n })` (1 constant albedo, 2 no bump, 3 both, 4 albedo unlit, >= 10 oak terms).
 * `scenes/lookdev/architecture-probe.js` - measures Charcoal's seat height (rig deck check).

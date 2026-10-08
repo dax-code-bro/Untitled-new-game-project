@@ -30,7 +30,7 @@ const SHOTS = [
   { name: 'stable-rig', p: [58, 2.2, 22], t: [14, 7.0, -22], fl: 21, fstop: 5.6 },
   { name: 'rig', p: [50, 1.7, 15.5], t: [33.5, 6.4, -5.5], fl: 18, fstop: 5.6 },
   { name: 'keeper', p: [-11.5, 1.6, 4.0], t: [-25, 2.4, -14], fl: 30, fstop: 5.6 },
-  { name: 'palace', p: [-290, 22, -530], t: [-700, 40, -612], fl: 70, fstop: 8, near: 25 },
+  { name: 'palace', p: [-290, 9, -530], t: [-700, 37.5, -612], fl: 70, fstop: 8, near: 25 },
   { name: 'harbor', p: hw(-12, 3.9, 14), t: hw(-3, 1.2, -2), fl: 28, fstop: 5.6 },
 ];
 
@@ -79,9 +79,16 @@ export async function setup(ctx) {
       const rock = 0.12 * smooth(260, 120, Math.hypot(x - PALACE[0], z - PALACE[1])) * smooth(0.0, 0.4, N.fbm(x * 0.03 + 3, z * 0.03, 3) + 0.2);
       // the road winding up to the palace gate
       const pd = Math.hypot(x - PALACE[0], z - PALACE[1]);
-      const road = pd < 340 && pd > 40 ? smooth(4.5, 2.0, Math.abs((z - PALACE[1]) - 0.28 * (x - PALACE[0]) - 26 * Math.sin((x - PALACE[0]) * 0.02))) * smooth(40, 60, pd) : 0;
+      // (round 2: no road on the hill - at this distance the terrain's splat resolution (~10 m) only
+      // smeared it into a dark smudge on the lawn)
+      const road = 0 * pd;
       const wr = Math.max(worn, road);
-      return [rock * (1 - road), (1 - wr) * 0.6 * (1 - rock), (1 - wr) * 0.4 * (1 - rock), wr * (1 - rock * (1 - road))];
+      // (round 2: no flat lawn - the two grasses drift in big patches, the field edges and the slope
+      // go drier and rougher)
+      const g1 = 0.2 + 0.65 * smooth(-0.35, 0.35, N.fbm(x * 0.012 + 7.1, z * 0.012 - 3.3, 3)) * (0.8 + 0.2 * N.fbm(x * 0.09, z * 0.09, 2));
+      const dry = 0.18 * smooth(0.1, 0.5, N.fbm(x * 0.03 - 5.0, z * 0.03 + 9.0, 3)) * smooth(60, 160, Math.hypot(x - 15, z + 18));
+      const grass = (1 - wr) * (1 - rock);
+      return [rock * (1 - road), grass * g1 * (1 - dry), grass * (1 - g1) * (1 - dry), Math.min(1, wr * (1 - rock * (1 - road)) + grass * dry)];
     },
   });
   const landMat = await terrainMaterial(ctx, [
@@ -109,21 +116,61 @@ export async function setup(ctx) {
   leafPlatform(kit, yawFrame([LEAFP[0], 0, LEAFP[1]], 2.2), { seed: 6 });
   const far = new Kit(0);
   palace(far, yawFrame([PALACE[0], 24.4, PALACE[1]], 0.5), { seed: 7 });
-  // the town on the slope below the palace (between it and the camera): roofs stepping down the hill
+  // the town on the slope below the palace (between it and the camera): rows of houses along the
+  // contours stepping up the rise to the walls, gardens and trees between them, hedged fields below
+  // (round 2: no toy row of big houses on one line in front of the palace)
   {
     const { house } = await import('../lib/architecture/house.js');
-    const hgt = (x, z) => 0.4 * N.fbm(x * 0.02, z * 0.02, 3) + 24 * smooth(330, 110, Math.hypot(x - PALACE[0], z - PALACE[1])) + 3 * N.fbm(x * 0.006, z * 0.006, 2) * smooth(330, 150, Math.hypot(x - PALACE[0], z - PALACE[1]));
+    const { bushGeometry, foliageMaterial, scatter } = await import('../lib/sets/scatter.js');
+    const pd = (x, z) => Math.hypot(x - PALACE[0], z - PALACE[1]);
+    const hgt = (x, z) => 0.4 * N.fbm(x * 0.02, z * 0.02, 3) + 24 * smooth(330, 110, pd(x, z)) + 3 * N.fbm(x * 0.006, z * 0.006, 2) * smooth(330, 150, pd(x, z));
     const tr = (() => { let a = 77; return () => { a = (a * 16807) % 2147483647; return a / 2147483647; }; })();
     const town = new Kit(0);
-    // (round 2: the town hugs the foot of the palace rise, 75-140 m out, so it reads at the palace's
-    // scale - not big houses standing between the lens and the palace)
-    for (let k = 0; k < 20; k++) {
-      const ang = -0.75 + tr() * 1.5, dist = 75 + tr() * 65;
-      const x = PALACE[0] + Math.cos(ang) * dist, z = PALACE[1] + Math.sin(ang) * dist * 0.8;
-      const y = hgt(x, z) - 0.3;
-      house(town, yawFrame([x, y, z], ang + Math.PI / 2 + (tr() - 0.5) * 0.4), { w: 5.5 + tr() * 3, d: 7 + tr() * 2, storeys: tr() < 0.4 ? 2 : 1, roof: tr() < 0.5 ? 'side' : 'front', seed: 700 + k, lod: 'low', party: { left: false, right: false }, cover: tr() < 0.55 ? 'clay' : 'slate', chimney: tr() < 0.6 });
+    const A0 = Math.atan2(-530 - PALACE[1], -290 - PALACE[0]);          // toward the camera
+    const spots = [];
+    let k = 0;
+    // (the houses stand on the flanks of the rise, about as far from the lens as the palace - so they
+    // read at its scale - and leave the slope in front of the gatehouse open)
+    for (const dist of [98, 116, 134, 152]) {
+      let ang = A0 - 0.95 + tr() * 0.06;
+      while (ang < A0 + 0.95) {
+        const w = 5.5 + tr() * 3, d = 7 + tr() * 2;
+        if (Math.abs(ang - A0) < 0.4) { ang = A0 + 0.4 + tr() * 0.05; continue; }
+        if (tr() < 0.2) { ang += (w + 7 + tr() * 6) / dist; continue; }            // a garden, a lane up the hill
+        const r = dist + (tr() - 0.5) * 5;
+        const x = PALACE[0] + Math.cos(ang) * r, z = PALACE[1] + Math.sin(ang) * r;
+        const yaw = Math.PI / 2 - ang + (tr() - 0.5) * 0.25;
+        // set into the slope: the floor at the downhill front, the back dug into the hill
+        const fx = Math.cos(ang), fz = Math.sin(ang);
+        const y = Math.min(hgt(x + fx * d * 0.5, z + fz * d * 0.5), hgt(x, z)) - 0.15;
+        house(town, yawFrame([x, y, z], yaw), { w, d, storeys: tr() < 0.35 ? 2 : 1, roof: tr() < 0.55 ? 'side' : 'front', seed: 700 + k++, lod: 'low', party: { left: false, right: false }, cover: tr() < 0.5 ? 'clay' : 'slate', chimney: tr() < 0.6 });
+        spots.push([x, z, Math.max(w, d) * 0.6]);
+        ang += (w + 1.0 + tr() * 3.5) / dist;
+      }
     }
     scene.add(town.build(M, { name: 'palace-town' }));
+    // trees: in the gardens among the houses, a wood on the rise behind the walls, hedgerows with
+    // standard trees along the field edges below the town
+    const free = (x, z, r) => { for (const [sx, sz, sr] of spots) if (Math.hypot(x - sx, z - sz) < sr + r) return false; return pd(x, z) > 62; };
+    const fol = foliageMaterial({ color: [0.042, 0.058, 0.026], leafScale: 0.5 });
+    const geos = [bushGeometry(3, 2, 0.9), bushGeometry(3, 5, 1.0), bushGeometry(3, 9, 0.85)];
+    const trees = new THREE.Group();
+    geos.forEach((geo, gi) => trees.add(scatter(geo, fol, 260, (rng) => {
+      const u = rng();
+      let x, z, h;
+      if (u < 0.45) {                                                         // gardens among the houses on the flanks
+        const a = A0 + (rng() < 0.5 ? -1 : 1) * (0.42 + rng() * 0.6), r = 92 + rng() * 75;
+        x = PALACE[0] + Math.cos(a) * r; z = PALACE[1] + Math.sin(a) * r; h = 6 + rng() * 7;
+      } else {                                                                // the wood behind and beside the walls
+        const a = A0 + Math.PI + (rng() - 0.5) * 3.2, r = 60 + rng() * 190;
+        x = PALACE[0] + Math.cos(a) * r; z = PALACE[1] + Math.sin(a) * r; h = 9 + rng() * 9;
+      }
+      const wd = h * (0.75 + rng() * 0.6);
+      if (!free(x, z, wd * 0.5)) return null;
+      const c = 0.75 + rng() * 0.5;
+      return { p: [x, hgt(x, z) - 0.4, z], s: [wd, h, wd * (0.8 + rng() * 0.4)], r: rng() * 6.28, c: [c * (0.9 + 0.2 * rng()), c, c * (0.85 + 0.2 * rng())] };
+    }, 31 + gi * 7)));
+    scene.add(trees);
   }
   const hb = new Kit(0);
   harbor(hb, yawFrame([HARBOR[0], 0, HARBOR[1]], HY), { seed: 8 });

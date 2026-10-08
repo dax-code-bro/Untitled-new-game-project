@@ -25,7 +25,7 @@ const SHOTS = [
   { name: 'fountain', p: [4.6, 1.6, 3.2], t: [0.0, 1.2, -2.0], fl: 28, fstop: 5.6 },
   { name: 'alley', p: [-7.2, 1.62, -5.0], t: [-8.4, 2.6, -28.0], fl: 32, fstop: 5.6 },
   // a plan view from high above (layout check: the fixed escape geography, nothing overlapping)
-  { name: 'plan', p: [0.5, 140, 3.0], t: [0, 0, 2.9], fl: 24, fstop: 11 },
+  { name: 'plan', p: [0.0, 140, 3.0], t: [0, 0, 3.0], fl: 24, fstop: 11 },
 ];
 
 export const meta = {
@@ -110,6 +110,8 @@ export function update(t, ctx) {
   const rt = reviewTime(t, ctx);
   const sh = SHOTS[Math.min(SHOTS.length - 1, Math.max(0, rt.k))];
   const cam = ctx.camera;
+  // (the plan: north (-z) up, east (+x) right - as seen standing on the king's steps looking into the square)
+  if (sh.name === 'plan') cam.up.set(0, 0, -1); else cam.up.set(0, 1, 0);
   cam.position.set(...sh.p); cam.lookAt(...sh.t);
   cam.updateMatrixWorld(true);
   ctx.lens.sensor = 'super35';

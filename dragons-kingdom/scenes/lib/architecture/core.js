@@ -143,7 +143,7 @@ export class Acc {
     for (let i = from * 3; i < this.P.n; i += 3) { const r = fn(a[i], a[i + 1], a[i + 2]); a[i] = r[0]; a[i + 1] = r[1]; a[i + 2] = r[2]; }
   }
   /** Transform the vertices from index `from` by frame F (positions; aAxis as directions). */
-  transform(F, from = 0) {
+  transform(F, from = 0, keepFooting = false) {
     const a = this.P.a, ax = this.A.a;
     for (let i = from * 3; i < this.P.n; i += 3) {
       const x = a[i], y = a[i + 1], z = a[i + 2];
@@ -152,6 +152,11 @@ export class Acc {
       ax[i] = u * F[3] + v * F[6] + w * F[9]; ax[i + 1] = u * F[4] + v * F[7] + w * F[10]; ax[i + 2] = u * F[5] + v * F[8] + w * F[11];
     }
     // height above the footing follows the new positions
+    // (round 2: keepFooting - a whole building placed upright keeps each vertex's height above ITS OWN
+    // footing: a quay built on a footing 2.4 m under the water, a palace on its hill, warehouses on
+    // the quay top keep their splash, damp and tide zones; a roof, a stack, a piece built lying down
+    // take it from their new positions)
+    if (keepFooting) return;
     const I = this.I.a;
     for (let i = from, k = from * 3; k < this.P.n; i++, k += 3) I[i * 4 + 3] = a[k + 1] - this.baseY;
   }
@@ -188,12 +193,12 @@ export class Kit {
   setBase(y) { this.baseY = y; for (const a of Object.values(this.accs)) a.baseY = y; }
   deform(fn) { for (const a of Object.values(this.accs)) a.deform(fn); }
   /** Append another kit (built in its own local frame) transformed by frame F. */
-  merge(other, F = null) {
+  merge(other, F = null, o = {}) {
     for (const [name, acc] of Object.entries(other.accs)) {
       const dst = this.get(name);
       const from = dst.vcount;
       dst.append(acc);
-      if (F) dst.transform(F, from);
+      if (F) dst.transform(F, from, !!o.keepFooting);
     }
     return this;
   }

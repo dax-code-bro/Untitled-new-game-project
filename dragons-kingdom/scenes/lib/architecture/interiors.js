@@ -298,7 +298,7 @@ export function nest(kit, F, rnd, o = {}) {
   grid(kit.get('strawBed'), 60, 48, (u, v) => {
     const x = -A + 2 * A * u, z = -B + 2 * B * v;
     return { p: xf(F, x, nestBedY(x, z) - 0.008, z), uv: [x, z], seed: 0.31, ao: 0.6 + 0.4 * Math.min(1, Math.min(A - Math.abs(x), B - Math.abs(z)) / 0.3) };
-  }, [1, 0, 0], false);
+  }, [1, 0, 0], true);        // (round 2: wound to face up - it faced down and was culled: the floor showed through the stalks)
   // the linen's real footprint (2 cm cells under its draped quads), eroded 6 cm: straw runs in under
   // its edges and lies over them
   let cover = null;

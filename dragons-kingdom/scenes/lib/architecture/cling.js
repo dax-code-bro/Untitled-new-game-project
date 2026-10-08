@@ -246,6 +246,16 @@ export function fountain(kit, F, o = {}) {
       r: 0.03, rs: 2, chip: 0.012,
       warp: (lx, ly, lz) => [lx, ly - (ly > 0 ? 0.012 * Math.exp(-((lx - dip) ** 2) / 0.04) * Math.exp(-(lz * lz) / 0.02) : 0), lz],
     });
+    // weathering on the outer face: a damp grime line under the coping's drip, green streaks where
+    // the overflow runs down, splash dirt along the plinth's foot
+    {
+      const Lw = sideLen(rW) - 0.34;
+      const Fw = sideF(k, R + 0.004, 0);
+      grimeBand(kit, Fw, -Lw / 2, Lw / 2, hW - 0.1, rnd.range(0.12, 0.22), rnd, { kind: 'dirt', strength: 0.45, z: 0.006 });
+      for (let n = 0; n < 2; n++) if (rnd() < 0.7) stain(kit, Fw, rnd.sym(Lw * 0.4), hW - 0.1, rnd.range(0.12, 0.3), rnd.range(0.2, 0.3), 'algae', { strength: 0.55, seed: rnd(), z: 0.007 });
+      const Fp = sideF(k, R + 0.104, 0), Lp = sideLen(R + 0.1);
+      grimeBand(kit, Fp, -Lp / 2, Lp / 2, 0.32, 0.15, rnd, { kind: 'dirt', strength: 0.5, z: 0.005 });
+    }
     // an iron cramp leaded flush into sockets across the joint at the corner; its rust runs down the
     // coping's outer face
     const [vx, vz] = corner(k, rW + 0.03);
@@ -414,7 +424,16 @@ export function paving(kit, x0, x1, z0, z1, o = {}) {
       if (skip(cx, cz)) continue;
       const wn = fbm3(cx * 0.16 + 4.1, 0.3, cz * 0.16 - 2.2, 3);
       const edgeT = 0.66 - 0.35 * wear;
-      if (wn > edgeT + 0.04 || (wn > edgeT - 0.06 && rnd() < (wn - edgeT + 0.06) / 0.1) || rnd() < 0.01) continue;   // worn through to the earth, ragged
+      if (wn > edgeT + 0.04 || (wn > edgeT - 0.06 && rnd() < (wn - edgeT + 0.06) / 0.1) || rnd() < 0.01) {         // worn through to the earth, ragged
+        // (round 2: the patches are not bare decals - stones kicked loose lie in them, tilted, sitting
+        // proud on the trodden earth)
+        if (rnd() < 0.3) {
+          const ly = rnd() * Math.PI * 2, up = [rnd.sym(0.35), 1, rnd.sym(0.35)];
+          cobble(acc, frame([cx + rnd.sym(0.04), 0.004, cz + rnd.sym(0.04)], [Math.cos(ly), 0, -Math.sin(ly)], up), d / 2 * 0.9, w / 2 * 0.9, rnd.range(0.03, 0.05), rnd(), lodAt(cx, cz), 1);
+          n++;
+        }
+        continue;
+      }
       const kd = kenDist(cx, cz);
       const dish = kd < 0.45 ? 0.04 * Math.cos((kd / 0.45) * Math.PI / 2) : 0;
       const pw = pathW(cx, cz);
