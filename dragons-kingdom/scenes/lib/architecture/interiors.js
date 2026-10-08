@@ -15,7 +15,7 @@
 // scene adds the lights (unshadowed point lights: each shadowed point light costs six renders).
 // Frame F: the room's floor centre; walls at x = +-w/2, z = +-d/2.
 import * as THREE from 'three';
-import { Kit, frame, sub, makeRand, block, tube, lathe, xf, grid, curve, sagLine } from './core.js';
+import { Kit, frame, sub, makeRand, block, tube, lathe, xf, grid, curve, sagLine, fbm3 } from './core.js';
 import { masonryFace, courses } from './masonry.js';
 import { member } from './timber.js';
 import { door } from './openings.js';
@@ -354,25 +354,70 @@ export function treatmentRoom(kit, F, o = {}) {
   return { lights: [], anchors: { window: win, door: dr, settle: xf(settle, 0, 0.46, 0), w, d, h, T } };
 }
 
-/** Lime plaster coat on an inward wall face (holes for the openings, bare patches). */
+/**
+ * Lime plaster coat on an inward wall face (holes for the openings, bare patches where it has
+ * fallen). The patches have ragged, smooth outlines (the grid vertices on a patch edge are moved
+ * onto the contour of the "loss" field) and a broken edge with the coat's thickness.
+ */
 function plasterCoat(kit, F, L, H, ops, rnd, o = {}) {
   const acc = kit.get(o.mat || 'plaster');
-  const step = 0.1;
+  const step = 0.06;
   const nx = Math.ceil(L / step), ny = Math.ceil(H / step);
-  const ids = new Int32Array((nx + 1) * (ny + 1)).fill(-1);
   const seed = rnd();
-  const bare = (x, y) => Math.sin(x * 1.3 + seed * 20) * Math.sin(y * 1.7 + seed * 9) + 0.6 * Math.sin(x * 3.1 - y * 2.3) > 1.15 || y < 0.12;
+  const so = seed * 100;
+  // > 0: the plaster has fallen (low down along the floor, and in a few ragged patches)
+  const loss = (x, y) => Math.sin(x * 1.3 + seed * 20) * Math.sin(y * 1.7 + seed * 9) + 0.6 * Math.sin(x * 3.1 - y * 2.3)
+    + 0.45 * fbm3(x * 2.2 + so, y * 2.2, 0.5, 3) - 1.2 + Math.max(0, 0.16 - y) * 12;
+  const inOp = (x, y) => ops.some((op) => x > op.x - 0.02 && x < op.x + op.w + 0.02 && y > op.y - 0.02 && y < op.y + op.h + 0.02);
+  const keep = new Uint8Array(nx * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const cx = Math.min(L, (i + 0.5) * step), cy = Math.min(H, (j + 0.5) * step);
+    keep[j * nx + i] = inOp(cx, cy) ? 0 : loss(cx, cy) > 0 ? 0 : 1;
+  }
+  const kept = (i, j) => i >= 0 && j >= 0 && i < nx && j < ny && keep[j * nx + i] === 1;
+  const lossCell = (i, j) => i >= 0 && j >= 0 && i < nx && j < ny && keep[j * nx + i] === 0 && !inOp(Math.min(L, (i + 0.5) * step), Math.min(H, (j + 0.5) * step));
+  const thick = 0.035;
+  const ids = new Int32Array((nx + 1) * (ny + 1)).fill(-1);
+  const pos = new Float32Array((nx + 1) * (ny + 1) * 2);
   for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
-    const x = Math.min(L, i * step), y = Math.min(H, j * step);
-    const z = 0.035 + 0.004 * Math.sin(x * 5.1 + y * 3.3 + seed) + 0.003 * Math.sin(x * 11 - y * 7);
+    let x = Math.min(L, i * step), y = Math.min(H, j * step);
+    // on a loss edge: move onto the contour (one Newton step along the gradient, clamped)
+    const nK = kept(i - 1, j - 1) + kept(i, j - 1) + kept(i - 1, j) + kept(i, j);
+    const nL = lossCell(i - 1, j - 1) + lossCell(i, j - 1) + lossCell(i - 1, j) + lossCell(i, j);
+    if (nK && nL && x > 0 && x < L && y > 0 && y < H) {
+      const f = loss(x, y), e = 0.01;
+      const gx = (loss(x + e, y) - loss(x - e, y)) / (2 * e), gy = (loss(x, y + e) - loss(x, y - e)) / (2 * e);
+      const g2 = gx * gx + gy * gy;
+      if (g2 > 1e-6) {
+        let dx = -f * gx / g2, dy = -f * gy / g2;
+        const dl = Math.hypot(dx, dy), m = step * 0.49;
+        if (dl > m) { dx *= m / dl; dy *= m / dl; }
+        x += dx; y += dy;
+      }
+    }
+    pos[(j * (nx + 1) + i) * 2] = x; pos[(j * (nx + 1) + i) * 2 + 1] = y;
+    const z = thick + 0.004 * Math.sin(x * 5.1 + y * 3.3 + seed) + 0.003 * Math.sin(x * 11 - y * 7);
     const p = xf(F, x, y, z);
     ids[j * (nx + 1) + i] = acc.v(p[0], p[1], p[2], x, y, seed, 1, 0, F[3], F[4], F[5]);
   }
-  const inOp = (x, y) => ops.some((op) => x > op.x - 0.02 && x < op.x + op.w + 0.02 && y > op.y - 0.02 && y < op.y + op.h + 0.02);
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-    const cx = (i + 0.5) * step, cy = (j + 0.5) * step;
-    if (inOp(cx, cy) || bare(cx, cy)) continue;
+    if (!kept(i, j)) continue;
     acc.q(ids[j * (nx + 1) + i], ids[j * (nx + 1) + i + 1], ids[(j + 1) * (nx + 1) + i + 1], ids[(j + 1) * (nx + 1) + i]);
+  }
+  // the broken edge: the coat's thickness down to the wall along every kept/lost boundary
+  const edge = (a, b) => {
+    const ax = pos[a * 2], ay = pos[a * 2 + 1], bx = pos[b * 2], by = pos[b * 2 + 1];
+    const v = (x, y, z, ao) => { const p = xf(F, x, y, z); return acc.v(p[0], p[1], p[2], x, y + z, seed, ao, 0, F[3], F[4], F[5]); };
+    const a0 = v(ax, ay, thick, 0.9), b0 = v(bx, by, thick, 0.9), a1 = v(ax, ay, 0.004, 0.5), b1 = v(bx, by, 0.004, 0.5);
+    acc.q(a0, b0, b1, a1); acc.q(a0, a1, b1, b0);               // both windings: the side is seen from either way
+  };
+  const vid = (i, j) => j * (nx + 1) + i;
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    if (!kept(i, j)) continue;
+    if (lossCell(i - 1, j)) edge(vid(i, j), vid(i, j + 1));
+    if (lossCell(i + 1, j)) edge(vid(i + 1, j), vid(i + 1, j + 1));
+    if (lossCell(i, j - 1)) edge(vid(i, j), vid(i + 1, j));
+    if (lossCell(i, j + 1)) edge(vid(i, j + 1), vid(i + 1, j + 1));
   }
 }
 void sagLine;

@@ -24,7 +24,7 @@ const SHOTS = [
   { name: 'stable-rig', p: [17.6, 1.6, 8.0], t: [8, 5.9, -26], fl: 24, fstop: 5.6 },
   { name: 'rig', p: [26, 1.6, -1], t: [13.5, 3.6, -15], fl: 24, fstop: 5.6 },
   { name: 'keeper', p: [-11.5, 1.6, 4.0], t: [-25, 2.4, -14], fl: 30, fstop: 5.6 },
-  { name: 'palace', p: [-430, 14, -300], t: [-700, 40, -620], fl: 85, fstop: 8 },
+  { name: 'palace', p: [-430, 14, -300], t: [-700, 40, -620], fl: 85, fstop: 8, near: 25 },
   { name: 'harbor', p: [508, 3.9, 274], t: [517, 1.2, 258], fl: 28, fstop: 5.6 },
 ];
 
@@ -126,6 +126,8 @@ export function update(t, ctx) {
   const sh = SHOTS[Math.min(SHOTS.length - 1, Math.max(0, rt.k))];
   const cam = ctx.camera;
   cam.position.set(...sh.p); cam.lookAt(...sh.t);
+  // (a long lens on a far set: a near plane that far out keeps the depth precision for the joints)
+  cam.near = sh.near ?? 0.1; cam.updateProjectionMatrix();
   cam.updateMatrixWorld(true);
   ctx.lens.sensor = 'super35';
   ctx.lens.focalLength = sh.fl;
