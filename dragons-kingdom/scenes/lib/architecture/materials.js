@@ -128,7 +128,7 @@ vec3 akScanTap(vec3 p, vec3 n, float seed, float scale, out vec3 nw) {
   uv = uv * akScan.x * scale + vec2(akH1(seed * 13.1), akH1(seed * 7.7));
   vec3 c = texture2D(akScanA, uv, 0.5).rgb;
   // (the scans' normal maps carry a fine woven pattern from their generator: read them blurred)
-  vec3 tn = texture2D(akScanN, uv, 1.8).xyz * 2.0 - 1.0; tn.y *= akScan.y;
+  vec3 tn = texture2D(akScanN, uv, 2.6).xyz * 2.0 - 1.0; tn.y *= akScan.y;
   T = normalize(T - n * dot(n, T)); B = normalize(cross(n, T)) * (dot(cross(n, T), B) < 0.0 ? -1.0 : 1.0);
   nw = normalize(T * tn.x + B * tn.y + n * max(tn.z, 0.2));
   return c / akScan.z;
@@ -182,11 +182,13 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   base *= 1.0 + akVar * (h2 - 0.5) * 2.0;
   base *= mix(vec3(1.0), vec3(1.1, 1.0, 0.84), smoothstep(0.6, 1.0, h3));     // warmer, iron-rich stones
   base *= mix(vec3(1.0), vec3(0.92, 0.97, 1.04), smoothstep(0.4, 0.0, h3));   // a few blue-grey ones
-  // the weathered crust is darker than the stone inside: blotchy
-  base *= 0.82 + 0.3 * akF3(P * 1.7 + sd * 13.0);
+  // the weathered crust is darker than the stone inside: blotchy; some stones browner, some greener
+  base *= 0.78 + 0.36 * akF3(P * 1.7 + sd * 13.0);
+  base = mix(base, base * vec3(1.12, 1.0, 0.82), smoothstep(0.55, 0.85, akF3(P * 0.9 + sd * 5.0)) * 0.6);
+  base = mix(base, base * vec3(0.92, 1.0, 0.9), smoothstep(0.6, 0.9, akF3(P * 0.7 + 21.0)) * 0.5);
   vec3 nScan;
   vec3 sc = akScanTap(P, akN0, sd, akScale, nScan);
-  float lum = mix(1.0, akLum(sc), 0.35);
+  float lum = mix(1.0, akLum(sc), 0.6);
   // bedding: faint bands across the stone (horizontal in the wall), and darker veins
   float bed = akN2(vec2(dot(akPlanar(P, akN0), vec2(0.15, 0.0)) + sd * 40.0, P.y * 34.0 + sd * 17.0 + akN2(akPlanar(P, akN0) * 3.0) * 2.0));
   float vein = smoothstep(0.84, 0.95, akN2(mat2(0.8, -0.6, 0.6, 0.8) * vec2(P.x * 2.0 + P.z * 1.3, P.y * 9.0) + sd * 50.0));
@@ -218,6 +220,11 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   // occlusion baked per vertex (stone sides deep in the joints) also darkens the colour a little (dust)
   float aov = vInfo.y;
   c *= mix(0.72, 1.0, aov);
+  // dust and grit settle on the little ledges stones make
+  c *= mix(1.0, 0.86, smoothstep(0.55, 0.95, akN0.y) * (1.0 - akW.y * 0.5));
+  // runoff: darker streaks running down from ledges, sills and wall tops
+  float run = smoothstep(0.6, 0.9, akN2(vec2((P.x + P.z) * 6.0 + sd, P.y * 0.6))) * smoothstep(0.3, 0.8, akN2(vec2((P.x - P.z) * 1.7, P.y * 0.25 + 4.0))) * side;
+  c *= 1.0 - 0.3 * run * akDirt.y;
   // crustose lichen: pale grey-green and yellow rosettes, more on top faces and up the wall
   vec3 cl = akCell2(pl * 7.0 + sd * 3.0);
   float up = smoothstep(0.2, 0.9, akN0.y) + 0.35;
@@ -240,10 +247,13 @@ uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform ve
   akAlb = c;
   akRgh = clamp(0.82 + 0.12 * (1.0 - lum) - 0.12 * damp + 0.1 * mossM, 0.5, 1.0);
   akAO = mix(0.35, 1.0, aov);
-  akNW = normalize(mix(akN0, nScan, 0.6 - 0.25 * akW.w));
+  akNW = normalize(mix(akN0, nScan, 0.35 - 0.15 * akW.w));
   float fw = length(fwidth(P));
+  // erosion: the weathered face is pitted and scaled at the centimetre scale
+  float ero = akF3(P * 45.0 + sd * 7.0) - 0.5;
   float hf = 1.0 - smoothstep(0.0015, 0.004, fw);
-  akHt = (tool * 0.0008 * hf - pit * 0.0006 * (1.0 - smoothstep(0.001, 0.0025, fw))) + mossM * 0.004 * (1.0 - smoothstep(0.004, 0.01, fw));
+  akHt = (tool * 0.0008 * hf - pit * 0.0006 * (1.0 - smoothstep(0.001, 0.0025, fw))) + mossM * 0.004 * (1.0 - smoothstep(0.004, 0.01, fw))
+       + ero * 0.0022 * (1.0 - akW.w * 0.6) * (1.0 - smoothstep(0.002, 0.007, fw));
 `,
   });
 }
@@ -301,11 +311,12 @@ export async function oakMaterial(ctx, opts = {}) {
   // growth rings: ~3.5 mm apart, wandering; seen on a face as long stripes / cathedral figure
   float rw = r + 0.006 * sin(u * 2.1 + sd * 30.0) + 0.004 * akN2(vec2(u * 0.8, r * 30.0 + sd * 9.0));
   float ringF = rw / 0.0036;
-  float ringAA = 1.0 - smoothstep(0.25, 0.7, fwidth(ringF));
+  float ringAA = 1.0 - smoothstep(0.12, 0.35, fwidth(ringF));
   float ring = mix(0.5, smoothstep(0.55, 0.95, fract(ringF)), ringAA);         // latewood: the dark, hard band
   // fibres: fine lines along the grain (rotated value noise; faded before they alias)
-  float fibAA = 1.0 - smoothstep(0.0012, 0.003, fw);
-  float fib = mix(0.5, 0.5 + 0.22 * sin(v * 900.0 + akN2(vec2(u * 1.5, v * 30.0)) * 6.0) + 0.18 * sin(v * 2300.0 + u * 0.7 + akN2(vec2(u * 4.0, v * 80.0)) * 3.0), fibAA);
+  float fibAA = 1.0 - smoothstep(0.0007, 0.0016, fw);
+  float fibAA2 = 1.0 - smoothstep(0.0003, 0.0007, fw);
+  float fib = 0.5 + (0.22 * sin(v * 900.0 + akN2(vec2(u * 1.5, v * 30.0)) * 6.0)) * fibAA + 0.18 * sin(v * 2300.0 + u * 0.7 + akN2(vec2(u * 4.0, v * 80.0)) * 3.0) * fibAA2;
   float tone = clamp(akTone + (akH1(sd * 51.3) - 0.5) * 0.5, 0.0, 1.0);
   vec3 base = tone < 0.5 ? mix(akC0, akC1, tone * 2.0) : mix(akC1, akC2, tone * 2.0 - 1.0);
   // the weather side bleaches to silver, the underside and sheltered parts stay brown / dark
@@ -314,7 +325,7 @@ export async function oakMaterial(ctx, opts = {}) {
   base = mix(base, base * vec3(0.7, 0.62, 0.55), smoothstep(-0.2, -1.0, upf) * 0.5);
   // broad weathering streaks along the member
   float streakW = akF2(vec2(u * 0.6, v * 9.0) + sd * 4.0);
-  vec3 c = base * (0.82 + 0.3 * streakW) * (0.9 + 0.16 * fib) * (1.06 - 0.16 * ring);
+  vec3 c = base * (0.82 + 0.3 * streakW) * (0.92 + 0.12 * fib) * (1.04 - 0.09 * ring);
   // checks: long dark shrinkage splits along the grain, a few per face
   float chk = 0.0;
   {
@@ -342,7 +353,7 @@ export async function oakMaterial(ctx, opts = {}) {
   akRgh = 0.8 + 0.1 * ring;
   akAO = mix(0.4, 1.0, vInfo.y);
   // weathered oak: the soft earlywood erodes, the latewood rings stand up; fibres; the checks open
-  akHt = (ring * 0.0007 * ringAA + fib * 0.0004 * fibAA - chk * 0.003) * (1.0 - endg) + er * 0.0004 * endg + streakW * 0.0008;
+  akHt = (ring * 0.0004 * ringAA + fib * 0.0003 * fibAA - chk * 0.003) * (1.0 - endg) + er * 0.0004 * endg + streakW * 0.0008;
 `,
   });
 }
@@ -459,7 +470,7 @@ uniform vec3 akP[4]; uniform vec4 akW;`,
   akAlb = c;
   akRgh = akW.w > 0.5 ? 0.8 : 0.7 + 0.15 * akN2(tu * 20.0);
   akAO = mix(0.3, 1.0, aov);
-  akNW = normalize(mix(akN0, nScan, 0.45));
+  akNW = normalize(mix(akN0, nScan, 0.25));
   akHt = mossM * 0.006;
 `,
   });

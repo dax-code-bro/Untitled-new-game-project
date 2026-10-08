@@ -19,7 +19,7 @@ const SHOTS = [
   { name: 'arch', p: [-36.0, 1.65, 18.6], t: [-19.6, 3.4, 16.0], fl: 24, fstop: 5.6 },
   { name: 'square', p: [5.9, 3.28, 24.6], t: [-4, 5.0, -20], fl: 24, fstop: 5.6 },
   { name: 'gate', p: [8.5, 1.65, -3.5], t: [20.4, 2.4, 5.5], fl: 28, fstop: 5.6 },
-  { name: 'detail', p: [-6.2, 3.0, -15.2], t: [-7.4, 3.25, -17.9], fl: 40, fstop: 4 },
+  { name: 'detail', p: [1.2, 2.3, -12.6], t: [-2.6, 3.2, -18.2], fl: 35, fstop: 5.6 },
 ];
 
 export const meta = {
