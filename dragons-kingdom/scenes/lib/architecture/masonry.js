@@ -39,7 +39,7 @@ const STYLE = {
   squared: { r: [0.007, 0.015], pillow: [0.002, 0.006], noise: 0.006, nf: 4, chip: 0.014, prot: [0.006, 0.018], tilt: 0.012, len: [1.0, 2.6], j: 0.012, dep: [0.15, 0.3], sizeJit: 0.008, split: 0.12, outline: 0.03, shrink: 0.05 },
   rubble: { r: [0.004, 0.011], pillow: [0.003, 0.011], noise: 0.012, nf: 3.5, chip: 0.03, prot: [0.0, 0.024], tilt: 0.035, len: [0.7, 2.4], j: 0.012, dep: [0.14, 0.28], sizeJit: 0.01, split: 0.25, outline: 0.09, shrink: 0.1 },
   // rubble under generations of lime wash: the coats fill the joints nearly flush and soften every arris
-  washed: { r: [0.01, 0.02], pillow: [0.002, 0.007], noise: 0.01, nf: 3.5, chip: 0.008, prot: [0.0, 0.009], tilt: 0.02, len: [0.7, 2.4], j: 0.01, dep: [0.14, 0.28], sizeJit: 0.01, split: 0.25, outline: 0.08, shrink: 0.1 },
+  washed: { r: [0.01, 0.02], pillow: [0.002, 0.007], noise: 0.01, nf: 3.5, chip: 0.008, prot: [-0.004, 0.006], tilt: 0.015, len: [0.7, 2.4], j: 0.01, dep: [0.14, 0.28], sizeJit: 0.01, split: 0.25, outline: 0.08, shrink: 0.1 },
   dressed: { r: [0.008, 0.014], pillow: [0.001, 0.004], noise: 0.002, nf: 7, chip: 0.006, prot: [0.01, 0.018], tilt: 0.004, len: [1, 1], j: 0.01, dep: [0.2, 0.3], sizeJit: 0.003, split: 0 },
 };
 export const LOD = {

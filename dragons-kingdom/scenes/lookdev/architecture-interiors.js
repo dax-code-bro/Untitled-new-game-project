@@ -51,11 +51,11 @@ export async function setup(ctx) {
   // the daylight comes in through the openings as the sun (shadowed) and the sky seen through them
   scene.environmentIntensity = 0.07;
   const M = await archMaterials(ctx);
-  const kit = new Kit(0);
+  const kit = new Kit(0), kit2 = new Kit(0);       // one kit per room (each built round its own origin)
   const cloth = await loadArchCache('nest_cloth');
   const ch = birthingChamber(kit, frame([0, 0, 0]), { seed: 3, cloth });
-  const tr = treatmentRoom(kit, frame(ROOM2), { seed: 4 });
-  scene.add(kit.build(M, { name: 'interiors' }));
+  const tr = treatmentRoom(kit2, frame(ROOM2), { seed: 4 });
+  scene.add(kit.build(M, { name: 'chamber' }), kit2.build(M, { name: 'treatment' }));
   for (const l of ch.lights) scene.add(l);
   // bounce: the sunlit floor patch lights the room from below (warm), the sky through the window (cool)
   const b1 = new THREE.PointLight(new THREE.Color(1.0, 0.8, 0.6), 0.9, 8, 2); b1.position.set(-0.8, 0.5, -0.2); scene.add(b1);

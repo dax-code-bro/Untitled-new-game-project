@@ -199,11 +199,23 @@ export class Kit {
   build(mats, opts = {}) {
     const grp = new THREE.Group();
     let tris = 0;
+    // the meshes sit at a local origin (the set's centre in x/z, snapped to 64 m so a rebuild with
+    // a few tiles removed keeps it): the materials' procedural noise runs on object-space positions,
+    // which stay small (a set hundreds of metres from the world origin keeps fine, stable noise)
+    let n = 0, sx = 0, sz = 0;
+    for (const acc of Object.values(this.accs)) {
+      const P = acc.P.a;
+      for (let i = 0; i < acc.P.n; i += 3 * 64) { sx += P[i]; sz += P[i + 2]; n++; }
+    }
+    const org = opts.origin || (n ? [Math.round(sx / n / 64) * 64, 0, Math.round(sz / n / 64) * 64] : [0, 0, 0]);
     for (const [name, acc] of Object.entries(this.accs)) {
       if (!acc.tcount) continue;
       const mat = mats[name];
       if (!mat) throw new Error(`architecture: no material "${name}"`);
-      const m = new THREE.Mesh(acc.toGeometry(), mat);
+      const geo = acc.toGeometry();
+      if (org[0] || org[2]) { geo.translate(-org[0], 0, -org[2]); }
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(org[0], 0, org[2]);
       m.name = `${opts.name || 'arch'}:${name}`;
       m.castShadow = mat.userData.noShadow ? false : opts.castShadow ?? true;
       m.receiveShadow = true;
@@ -211,6 +223,7 @@ export class Kit {
       tris += acc.tcount;
     }
     grp.userData.tris = tris;
+    grp.userData.origin = org;
     return grp;
   }
 }

@@ -66,14 +66,14 @@ float akLum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 
 const VERT_DECL = /* glsl */ `
 attribute vec4 aInfo; attribute vec3 aAxis;
-varying vec4 vInfo; varying vec3 vAxisW; varying vec3 vAxisL; varying vec3 vWPos; varying vec3 vWNrm; varying vec2 vMUv;`;
+varying vec4 vInfo; varying vec3 vAxisW; varying vec3 vAxisL; varying vec3 vWPos; varying vec3 vWNrm; varying vec2 vMUv; varying vec3 vObjP;`;
 const VERT_BODY = /* glsl */ `
-vInfo = aInfo; vMUv = uv; vAxisL = aAxis;
+vInfo = aInfo; vMUv = uv; vAxisL = aAxis; vObjP = transformed;
 vAxisW = mat3(modelMatrix) * aAxis;
 vWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;
 vWNrm = normalize(mat3(modelMatrix) * objectNormal);`;
 const FRAG_DECL = /* glsl */ `
-varying vec4 vInfo; varying vec3 vAxisW; varying vec3 vAxisL; varying vec3 vWPos; varying vec3 vWNrm; varying vec2 vMUv;
+varying vec4 vInfo; varying vec3 vAxisW; varying vec3 vAxisL; varying vec3 vWPos; varying vec3 vWNrm; varying vec2 vMUv; varying vec3 vObjP;
 ${ARCH_GLSL}
 vec3 akAlb; float akRgh; float akHt; float akAO; vec3 akNW; float akMet;`;
 
@@ -174,7 +174,7 @@ export async function stoneMaterial(ctx, opts = {}) {
 uniform vec3 akC0, akC1, akC2; uniform float akVar; uniform vec4 akW; uniform vec4 akDirt; uniform float akScale; uniform float akWash;`,
     body: /* glsl */ `
   float sd = vInfo.x;
-  vec3 P = vWPos;
+  vec3 P = vObjP;            // object space (Kit.build centres each set): noise keeps its precision far from the world origin
   float hb = vInfo.w;
   // per-stone colour (each stone was quarried / weathered differently)
   float h1 = akH1(sd * 91.7), h2 = akH1(sd * 37.3 + 1.0), h3 = akH1(sd * 11.9 + 2.0);
@@ -270,7 +270,7 @@ export function mortarMaterial(ctx, opts = {}) {
     uniforms: U, key: opts.key || '',
     decl: 'uniform vec3 akC; uniform float akMoss; uniform float akMAO;',
     body: /* glsl */ `
-  vec3 P = vWPos;
+  vec3 P = vObjP;            // object space (Kit.build centres each set): noise keeps its precision far from the world origin
   float hb = vInfo.w;
   float g = akR3(P * 260.0), g2 = akR3(P * 60.0), g3 = akF3(P * 9.0);
   vec3 c = akC * (0.8 + 0.2 * g + 0.25 * (akF3(P * 4.0) - 0.5)) * mix(vec3(1.0), vec3(1.05, 0.98, 0.9), akN3(P * 2.0));
@@ -303,7 +303,7 @@ export async function oakMaterial(ctx, opts = {}) {
     decl: `uniform vec3 akC0, akC1, akC2; uniform float akTone, akChecks, akLich;`,
     body: /* glsl */ `
   float sd = vInfo.x;
-  vec3 P = vWPos;
+  vec3 P = vObjP;            // object space (Kit.build centres each set): noise keeps its precision far from the world origin
   vec3 A = normalize(vAxisW + 1e-6);
   float endg = smoothstep(0.65, 0.85, abs(dot(akN0, A)));
   // u: along the grain (m, from the piece's uv), r: distance from the pith (growth rings),
@@ -314,7 +314,7 @@ export async function oakMaterial(ctx, opts = {}) {
   float v = r * 1.4 + sd * 11.0;
   float fw = length(fwidth(P));
   // growth rings: ~3.5 mm apart, wandering; seen on a face as long stripes / cathedral figure
-  float rw = r + 0.006 * sin(u * 2.1 + sd * 30.0) + 0.004 * akN2(vec2(u * 0.8, r * 30.0 + sd * 9.0));
+  float rw = r + 0.0015 * sin(u * 2.1 + sd * 30.0) + 0.0012 * akN2(vec2(u * 0.8, r * 30.0 + sd * 9.0));
   float ringF = rw / 0.0036;
   // a smooth periodic band (no sawtooth edge to alias), faded out well before a ring spans < 6 px
   float ringFw = fwidth(ringF);
@@ -335,7 +335,7 @@ export async function oakMaterial(ctx, opts = {}) {
   // broad weathering streaks along the member
   float streakW = akF2(vec2(u * 0.6, v * 9.0) + sd * 4.0);
   // long fibrous streaks of the weathered surface (open grain, grey and brown bands along the member)
-  float gs = akF2(vec2(u * 1.3, v * 55.0) + sd * 7.0);
+  float gs = akF2(vec2(u * 0.3, v * 55.0) + sd * 7.0);
   float gsAA = 1.0 - smoothstep(0.3, 0.9, fwidth(v * 55.0));
   gs = mix(0.5, gs, gsAA);
   vec3 c = base * (0.82 + 0.3 * streakW) * (0.8 + 0.4 * gs) * (0.92 + 0.12 * fib) * (1.04 - 0.09 * ring);
@@ -382,7 +382,7 @@ export function plasterMaterial(ctx, opts = {}) {
     decl: 'uniform vec3 akT[6]; uniform float akAge; uniform float akSoot;',
     body: /* glsl */ `
   float sd = vInfo.x;
-  vec3 P = vWPos;
+  vec3 P = vObjP;            // object space (Kit.build centres each set): noise keeps its precision far from the world origin
   vec2 pl = akPlanar(P, akN0);
   float hb = vInfo.w;
   int ti = int(floor(fract(sd * 7.13) * 5.999));
@@ -453,7 +453,7 @@ export async function tileMaterial(ctx, opts = {}) {
 uniform vec3 akP[4]; uniform vec4 akW;`,
     body: /* glsl */ `
   float sd = vInfo.x;
-  vec3 P = vWPos;
+  vec3 P = vObjP;            // object space (Kit.build centres each set): noise keeps its precision far from the world origin
   float h1 = akH1(sd * 71.3), h2 = akH1(sd * 19.1 + 3.0);
   int pi = int(floor(h1 * 3.999));
   vec3 base = akP[0];
@@ -495,7 +495,7 @@ export function ironMaterial(ctx, opts = {}) {
     uniforms: { akRust: { value: opts.rust ?? 0.5 } },
     decl: 'uniform float akRust;',
     body: /* glsl */ `
-  vec3 P = vWPos;
+  vec3 P = vObjP;            // object space (Kit.build centres each set): noise keeps its precision far from the world origin
   float r = smoothstep(0.45, 0.75, akF3(P * 9.0) + 0.3 * akN3(P * 60.0) - 0.3 + akRust * 0.4);
   vec3 c = mix(vec3(0.035, 0.034, 0.033), vec3(0.11, 0.045, 0.018) * (0.7 + 0.6 * akN3(P * 120.0)), r);
   akAlb = c; akRgh = mix(0.55, 0.92, r); akMet = mix(0.65, 0.0, r);
@@ -514,7 +514,7 @@ export function plainMaterial(name, color, opts = {}) {
     physical: !!opts.physical,
     key: name,
     body: /* glsl */ `
-  vec3 P = vWPos;
+  vec3 P = vObjP;            // object space (Kit.build centres each set): noise keeps its precision far from the world origin
   float n = akF3(P * akV.y + vInfo.x * 30.0);
   akAlb = akC * (1.0 - akV.x * 0.5 + akV.x * n) * (0.9 + 0.2 * akH1(vInfo.x * 17.0)) * mix(0.6, 1.0, vInfo.y);
   akRgh = akR; akAO = mix(0.4, 1.0, vInfo.y);
@@ -530,10 +530,10 @@ export function strawMaterial(ctx, opts = {}) {
     uniforms: { akC: { value: new THREE.Color(...(opts.color || [0.42, 0.31, 0.13])) }, akD: { value: new THREE.Color(...(opts.dark || [0.09, 0.06, 0.03])) } },
     decl: 'uniform vec3 akC; uniform vec3 akD;',
     body: /* glsl */ `
-  vec3 P = vWPos;
+  vec3 P = vObjP;            // object space (Kit.build centres each set): noise keeps its precision far from the world origin
   vec2 pl = akPlanar(P, akN0);
   float top = 0.0, cov = 0.0, ht = 0.0;
-  vec3 col = akD;
+  vec3 col = mix(akD, akC * 0.55, 0.6 + 0.4 * akN2(pl * 7.0));
   // three layers of stems; the upper layer covers the lower where its stems lie
   for (int k = 0; k < 3; k++) {
     float fk = float(k);
@@ -543,8 +543,8 @@ export function strawMaterial(ctx, opts = {}) {
     vec2 dir = vec2(cos(ang), sin(ang));
     float across = dot(f - 0.5, vec2(-dir.y, dir.x)) + 0.08 * sin(dot(f, dir) * 6.0 + ci.x);
     float ph = across * 9.0 + akH2(ci + 5.1) * 3.0;
-    float aa = 1.0 - smoothstep(0.25, 0.6, fwidth(ph));
-    float st = smoothstep(0.15, 0.45, 0.5 + 0.5 * sin(ph * 6.2832));
+    float aa = 1.0 - smoothstep(0.12, 0.3, fwidth(ph));
+    float st = 0.5 + 0.5 * sin(ph * 6.2832);
     float stem = mix(0.55, st, aa);
     // ends of the cell fade so the patches overlap rather than tile
     float edge = smoothstep(0.0, 0.2, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
@@ -552,7 +552,7 @@ export function strawMaterial(ctx, opts = {}) {
     vec3 sc = akC * (0.7 + 0.5 * akH2(ci + 9.7)) * (0.85 + 0.3 * akN2(q * 3.0 + dir * 20.0));
     col = mix(col, sc * (1.0 - 0.15 * fk), m);
     cov = max(cov, m);
-    ht += stem * (0.004 - 0.001 * fk);
+    ht += stem * (0.0009 - 0.0002 * fk) * aa;
   }
   col *= mix(0.55, 1.0, vInfo.y);
   akAlb = col; akRgh = 0.75; akAO = mix(0.4, 1.0, vInfo.y);
@@ -711,7 +711,7 @@ export async function archMaterials(ctx, opts = {}) {
   const key = JSON.stringify(opts);
   if (cache.has(key)) return cache.get(key);
   const p = (async () => {
-    const [stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneFloor, stoneWashed] = await Promise.all([
+    const [stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneSett, stoneFloor, stoneWashed] = await Promise.all([
       // Verdor: weathered pale limestone / sandstone
       stoneMaterial(ctx, { palette: [[0.47, 0.44, 0.37], [0.41, 0.38, 0.32], [0.52, 0.48, 0.4]], variation: 0.22, lichen: 0.7, moss: 0.35, tooled: 0.6, streaks: 0.9, stain: 0.7, ...(opts.stonePale || {}) }),
       // Cling: grey rubble stone
@@ -727,18 +727,20 @@ export async function archMaterials(ctx, opts = {}) {
       stoneMaterial(ctx, { palette: [[0.16, 0.15, 0.12], [0.12, 0.12, 0.09], [0.2, 0.18, 0.14]], variation: 0.25, lichen: 0.0, moss: 0.9, algae: 1.0, tooled: 0.4, splash: 1.0, streaks: 0.8, ...(opts.stoneWet || {}) }),
       // pale stone seen from far off (silhouette LOD): the stone-to-stone variation of a whole wall averages out
       stoneMaterial(ctx, { palette: [[0.48, 0.45, 0.39], [0.45, 0.42, 0.37], [0.5, 0.47, 0.4]], variation: 0.06, lichen: 0.2, moss: 0.2, tooled: 0.0, streaks: 0.9, ...(opts.stoneFar || {}) }),
+      // cobbles / setts of a square: grey-brown, worn, moss in the joints, no splash band
+      stoneMaterial(ctx, { palette: [[0.2, 0.19, 0.17], [0.15, 0.145, 0.135], [0.25, 0.22, 0.18]], variation: 0.4, lichen: 0.15, moss: 0.3, algae: 0.0, tooled: 0.1, splash: 0.0, streaks: 0.0, stain: 0.6, ...(opts.stoneSett || {}) }),
       // interiors: worn flagstone floors (no weather: no lichen, algae or splash)
       stoneMaterial(ctx, { palette: [[0.42, 0.39, 0.33], [0.36, 0.34, 0.29], [0.46, 0.42, 0.35]], variation: 0.2, lichen: 0.0, moss: 0.0, algae: 0.0, tooled: 0.25, splash: 0.0, streaks: 0.0, stain: 0.5, ...(opts.stoneFloor || {}) }),
       // interiors: pale stone under old lime wash
       stoneMaterial(ctx, { palette: [[0.46, 0.43, 0.37], [0.4, 0.37, 0.32], [0.5, 0.46, 0.39]], variation: 0.15, lichen: 0.0, moss: 0.0, algae: 0.0, tooled: 0.4, splash: 0.25, streaks: 0.15, wash: 0.85, ...(opts.stoneWashed || {}) }),
     ]);
     const M = {
-      stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneFloor, stoneWashed,
+      stonePale, stoneGrey, stoneDressed, oak, oakDark, clay, slate, stoneSoot, stoneWet, stoneFar, stoneSett, stoneFloor, stoneWashed,
       leather: plainMaterial('leather', [0.09, 0.05, 0.03], { roughness: 0.6, vary: 0.3, freq: 25, bump: 0.0008 }),
       mortar: mortarMaterial(ctx, opts.mortar),
       mortarPale: mortarMaterial(ctx, { color: [0.42, 0.4, 0.35], key: 'pale', ...(opts.mortarPale || {}) }),
       // interiors: joints filled and lime-washed over with the stones
-      mortarWashed: mortarMaterial(ctx, { color: [0.5, 0.48, 0.43], moss: 0, ao: 0.9, key: 'washed', ...(opts.mortarWashed || {}) }),
+      mortarWashed: mortarMaterial(ctx, { color: [0.6, 0.58, 0.52], moss: 0, ao: 0.95, key: 'washed', ...(opts.mortarWashed || {}) }),
       plaster: plasterMaterial(ctx, opts.plaster),
       // indoor lime plaster: kept up, cleaner, warmer
       plasterInt: plasterMaterial(ctx, { age: 0.25, tints: [[0.6, 0.56, 0.48], [0.58, 0.54, 0.46], [0.62, 0.57, 0.48], [0.57, 0.54, 0.47], [0.6, 0.55, 0.46], [0.59, 0.56, 0.5]], ...(opts.plasterInt || {}) }),
@@ -746,7 +748,7 @@ export async function archMaterials(ctx, opts = {}) {
       glass: glassMaterial(ctx, opts.glass),
       portal: portalMaterial(ctx, opts.portal),
       lead: plainMaterial('lead', [0.12, 0.12, 0.125], { roughness: 0.6, vary: 0.3 }),
-      straw: plainMaterial('straw', [0.36, 0.27, 0.12], { roughness: 0.85, vary: 0.5, freq: 40, bump: 0.002 }),
+      straw: plainMaterial('straw', [0.48, 0.36, 0.16], { roughness: 0.8, vary: 0.45, freq: 40, bump: 0.0005 }),
       strawBed: strawMaterial(ctx),
       linen: plainMaterial('linen', [0.5, 0.48, 0.43], { roughness: 0.92, vary: 0.14, freq: 30, bump: 0.0006, params: { side: THREE.DoubleSide } }),
       clayware: plainMaterial('clayware', [0.3, 0.16, 0.08], { roughness: 0.7, vary: 0.2 }),

@@ -10,7 +10,7 @@ per-vertex construction data. Designs are provisional until Daxtyn approves them
 
 | element | construction logic |
 |---|---|
-| **masonry** (`masonry.js`) | laid course by course; course heights shared round a building so corners bond; dressed **quoins** alternate long/short at every corner; joints broken against the course below; every stone its own rounded, irregular block (pillowed face, chipped arrises, slight tilt, 6-30 mm proud of a recessed lime-mortar core); rubble courses mix big stones, pairs and pinnings |
+| **masonry** (`masonry.js`) | laid course by course; course heights shared round a building so corners bond; dressed **quoins** alternate long/short at every corner; joints broken against the course below; every stone its own rounded, irregular block (pillowed face, chipped arrises, slight tilt, flush to ~25 mm proud of a recessed lime-mortar core, corners pulled in so the joints open and close like real rubble); rubble courses mix big stones, pairs and pinnings; a `washed` style for interiors (lime coats fill the joints nearly flush) |
 | **openings** | dressed jambs that return into the reveal, lintels with bearing, semicircular **voussoir arches** (keystone, full-depth soffit), projecting sills with a weathered fall; stones are cut/packed round sills, lintels and arch extrados; the mortar core has true reveals through the wall thickness |
 | **timber framing** (`timber.js`) | sill/bressumer, corner and bay posts, studs, mid rails, head plate; straight tension braces that **interrupt** the studs they cross; window framing with its own posts and rails; every member hand-hewn (bow, kink, out-of-square, adze scallops, waney arris); **oak pegs** where each tenon enters; jetty joist ends with end grain; corner brackets on stone corbels |
 | **infill** | one lime-plaster surface behind the frame, recessed ~3 cm, shrinking back from the timbers (dark gap, baked occlusion) and bellying out a few mm mid-panel |
@@ -25,7 +25,7 @@ per-vertex construction data. Designs are provisional until Daxtyn approves them
 | file | contents |
 |---|---|
 | `core.js` | seeded random / noise, frames, `Acc`/`Kit` accumulators (one mesh per material, deform whole buildings, merge sub-kits), primitives: `block` (rounded irregular box with noise, pillow, chips, adze, wane, warp, baked occlusion, grain axis), `grid`, `shapeFace`, `tube`, `strip`, `lathe` |
-| `materials.js` | `archMaterials(ctx)` -> `{ stonePale, stoneGrey, stoneDressed, stoneWashed, stoneWet, stoneSoot, stoneFar, mortar, mortarPale, oak, oakDark, plaster, plasterInt, clay, slate, iron, lead, glass, portal, straw, linen, leather, clayware, rope, soot, water, flame }` |
+| `materials.js` | `archMaterials(ctx)` -> `{ stonePale, stoneGrey, stoneDressed, stoneWashed, stoneWet, stoneSoot, stoneFar, stoneFloor, mortar, mortarPale, mortarWashed, oak, oakDark, plaster, plasterInt, clay, slate, iron, lead, glass, portal, straw, strawBed, linen, leather, clayware, rope, soot, water, flame }` |
 | `masonry.js` | `courses`, `masonryFace`, `masonryBox`, `archRing`, `masonryGable`, `roundTower`, `conicalRoof`, `steps`, `LOD` |
 | `timber.js` | `member`, `pegs`, `framedWall`, `jetty`, `gableFrame`, `infill` |
 | `roof.js` | `gableRoof` (clay / slate, sag, damage), `chimney`, `pentice` |
@@ -58,6 +58,11 @@ Interiors return their lamp lights: `const ch = birthingChamber(kit, frame([0,0,
 Image-based light is **not occluded by walls**: inside a room set `scene.environmentIntensity`
 to ~0.05-0.1 and let the sun (shadowed) and the sky seen through the openings light it (see
 `scenes/lookdev/architecture-interiors.js`).
+
+**Origins**: `kit.build()` places its meshes at the set's centre (x/z snapped to 64 m; or pass
+`{ origin: [x, 0, z] }`) and the materials run their procedural noise in object space, so a set
+built hundreds of metres from the world origin keeps fine, stable detail. Build each distant set
+(another room, the harbour, the palace) in its own `Kit`.
 
 **LOD**: `'hero'` (close-ups: more rounding/segments), `'mid'` (default), `'low'` (flat blocks,
 party walls, backs), `'far'` (silhouettes: big flat blocks, hairline joints, `stoneFar`).

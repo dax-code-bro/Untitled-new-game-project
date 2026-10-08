@@ -188,14 +188,16 @@ export function nest(kit, F, rnd, o = {}) {
   }, [1, 0, 0], false);
   // loose stems lying on the bed and strewn round the kerb on the flags
   const acc = kit.get('straw');
-  for (let i = 0; i < (o.straws ?? 2600); i++) {
+  for (let i = 0; i < (o.straws ?? 1700); i++) {
     const out = rnd() < 0.3;
     const a = rnd() * Math.PI * 2, r = out ? R + 0.12 + Math.pow(rnd(), 1.6) * 0.7 : Math.sqrt(rnd()) * (R - 0.12);
     const dir = rnd() * Math.PI * 2, l = rnd.range(0.05, 0.2);
     const x0 = Math.cos(a) * r, z0 = Math.sin(a) * r, x1 = x0 + Math.cos(dir) * l, z1 = z0 + Math.sin(dir) * l;
     const yOn = (x, z) => { const rr = Math.hypot(x, z), aa = Math.atan2(z, x); return out ? 0.006 : domeAt(aa, Math.min(rr, R - 0.1)) + 0.004; };
-    const p0 = xf(F, x0, yOn(x0, z0), z0), p1 = xf(F, x1, yOn(x1, z1) + rnd() * 0.01, z1);
-    tube(acc, [p0, p1], rnd.range(0.0015, 0.0026), { sides: 3, seed: rnd() });
+    // a stem is never quite straight: bowed, sometimes kinked where it was bent
+    const bw = rnd.sym(0.25) * l, xm = (x0 + x1) / 2 - Math.sin(dir) * bw * 0.3, zm = (z0 + z1) / 2 + Math.cos(dir) * bw * 0.3;
+    const p0 = xf(F, x0, yOn(x0, z0), z0), pm = xf(F, xm, yOn(xm, zm) + 0.004 + rnd() * 0.008, zm), p1 = xf(F, x1, yOn(x1, z1) + rnd() * 0.01, z1);
+    tube(acc, [p0, pm, p1], rnd.range(0.0014, 0.0024), { sides: 3, seed: rnd() });
   }
   // linen laid over the bed: the cloth-simulated drape (offline/nest_cloth.py) when baked
   if (o.cloth) {
@@ -317,7 +319,7 @@ export function treatmentRoom(kit, F, o = {}) {
       }
     }
   }
-  flagFloor(local, frame([0, 0, 0]), w, d, rnd, { mat: 'stonePale' });
+  flagFloor(local, frame([0, 0, 0]), w, d, rnd, { mat: 'stoneFloor' });
   beamCeiling(local, frame([0, 0, 0]), w, d, h, rnd, { beamSpacing: 1.3 });
   // a settle (high-backed bench) under the window wall's neighbour, stools, a table
   const settle = frame([-0.9, 0, d / 2 - 0.42], [-1, 0, 0], [0, 1, 0]);

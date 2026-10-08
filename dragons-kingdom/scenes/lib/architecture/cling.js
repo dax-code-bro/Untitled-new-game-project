@@ -12,7 +12,7 @@
 //
 // Builders usable on their own: archway, gateway, fountain, stonePier, kingsSteps, alley.
 import * as THREE from 'three';
-import { Kit, frame, yawFrame, sub, makeRand, block, tube, xf, lathe } from './core.js';
+import { Kit, frame, yawFrame, sub, makeRand, block, tube, xf, lathe, fbm3 } from './core.js';
 import { masonryFace, masonryBox, courses, archRing, steps, LOD } from './masonry.js';
 import { house } from './house.js';
 import { door } from './openings.js';
@@ -183,6 +183,44 @@ export function fountain(kit, F, o = {}) {
   return { r: R, h: hW, pillarH: y + 0.85 };
 }
 
+/**
+ * Cobbled paving (setts laid in rows, joints filled with earth): over x0..x1, z0..z1 (world),
+ * skipping where skip(x, z) is true; worn through to the earth in patches and along the house
+ * walls. Each sett a flat-topped block, a little tilted and proud or sunk - under a low sun the
+ * square reads as stone, not as a texture. o: { mat ('stoneSett'), seed, wear (0..1) }.
+ */
+export function paving(kit, x0, x1, z0, z1, o = {}) {
+  const rnd = makeRand(o.seed ?? 55);
+  const acc = kit.get(o.mat || 'stoneSett');
+  const skip = o.skip || (() => false);
+  const wear = o.wear ?? 0.5;
+  let z = z0, n = 0;
+  while (z < z1 - 0.08) {
+    const d = rnd.range(0.11, 0.16);
+    let x = x0 + rnd.range(0, 0.12);
+    // rows wander a little (the setts were laid by eye)
+    const zr = z + 0.02 * Math.sin(z * 0.7) ;
+    while (x < x1 - 0.08) {
+      const w = rnd.range(0.12, 0.24);
+      const cx = x + w / 2, cz = zr + d / 2;
+      x += w;
+      if (skip(cx, cz)) continue;
+      // worn patches (earth showing), single lost setts
+      const wn = fbm3(cx * 0.16 + 4.1, 0.3, cz * 0.16 - 2.2, 3);
+      if (wn > 0.62 - 0.35 * wear || rnd() < 0.015) continue;
+      const g = rnd.range(0.012, 0.024);
+      const top = 0.025 + rnd.sym(0.008) - Math.max(0, wn) * 0.02;
+      const h = 0.09;
+      const tx = rnd.sym(0.035), tz = rnd.sym(0.035), yaw = rnd.sym(0.05);
+      const F = sub(frame([0, 0, 0]), [cx, top - h / 2, cz], [Math.cos(yaw), tx, -Math.sin(yaw)], [-tx, 1, tz]);
+      block(acc, F, w - g, h, d - g * 0.8, { r: 0, seg: [9, 9, 9], skip: 8, seed: rnd(), uvMode: 'box' });
+      n++;
+    }
+    z += d;
+  }
+  return n;
+}
+
 /** The substantial stone support beside the king's steps: a battered square pier with a cap. */
 export function stonePier(kit, F, o = {}) {
   const rnd = makeRand(o.seed ?? 101);
@@ -313,6 +351,15 @@ export async function clingSquare(ctx, opts = {}) {
     const hF = yawFrame([al.x + 1.5, 0, S.z0 - 15 - 4.5], 0.04);
     const info = house(kits.north, hF, { w: 7.0, d: 8.5, storeys: 1, roof: 'side', seed: 977, lod: lodAt(al.x, S.z0 - 15), party: { left: false, right: false } });
     houses.push({ ...info, frame: hF, center: [al.x, S.z0 - 15], yaw: 0, side: 'north' });
+  }
+  // the square's paving (its own kit: one mesh), clear of the fountain, the steps and the wall feet
+  if (opts.paving !== false) {
+    kits.paving = new Kit(0);
+    const fx = CLING.fountain.x, fz = CLING.fountain.z, fr = CLING.fountain.r + 0.85;
+    paving(kits.paving, S.x0 + 0.45, S.x1 - 0.45, S.z0 + 0.45, st.z - 0.1, {
+      seed: (opts.seed ?? 5) + 55, wear: opts.wear ?? 0.5,
+      skip: (x, z) => Math.hypot(x - fx, z - fz) < fr,
+    });
   }
   const group = new THREE.Group();
   group.name = 'cling-square';
