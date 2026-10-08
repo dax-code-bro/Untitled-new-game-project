@@ -74,4 +74,7 @@ Regenerate the bake:  <bpy python> scenes/lib/architecture/offline/nest_cloth.py
 - Square props (stalls, banners, carts), people and the ground outside the square are other
   domains'.
 
-Final renders: written to the session scratchpad (not in git); paths in the agent report.
+Final renders: written to the session scratchpad (not in git); paths in the agent report. The
+Cling arch / square / gate and the Verdor stable+rig / rig / keeper / harbour stills were
+rendered before the last oak anti-aliasing change (smooth pixel footprint) - re-render them to
+pick it up (the row, detail, palace and interior stills have it). npm test: 33/33 pass.
