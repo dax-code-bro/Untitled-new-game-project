@@ -67,21 +67,83 @@ function lumpy(g, amp, seed, freq = 3) {
   return g;
 }
 
-/** Materials for market food (linear colours; crust, apple skin, onion skin, rind ...). */
+/** Paint a geometry with a per-vertex colour from fn(x, y, z) (local position) -> [r, g, b] (linear). */
+function paint(g, fn) {
+  const p = g.attributes.position, c = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) c.set(fn(p.getX(i), p.getY(i), p.getZ(i)), i * 3);
+  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+  return g;
+}
+
+/** A loaf: a round or oval domed loaf with a slashed top (scores open in the bake), crumb in the cuts. */
+function loafGeometry(seed, pale) {
+  const r = rng32(seed);
+  const g = new THREE.SphereGeometry(0.075, 40, 22);
+  const p = g.attributes.position, sc = r() < 0.5 ? 0.78 : 1 + r() * 0.2, cuts = 2 + Math.floor(r() * 2);
+  const base = pale ? [0.5, 0.33, 0.14] : [0.3, 0.15, 0.05];
+  for (let i = 0; i < p.count; i++) {
+    let x = p.getX(i) * (1.3 * sc), y = p.getY(i), z = p.getZ(i);
+    y = y > 0 ? y * 0.75 : y * 0.25;                              // flat bottom, domed top
+    // diagonal scores across the top
+    const u = (x * 0.8 + z * 0.6) / 0.075;
+    const k = Math.abs(Math.sin(u * Math.PI * cuts / 2.6));
+    const score = y > 0.03 ? Math.exp(-((1 - k) ** 2) / 0.02) * 0.008 : 0;
+    p.setXYZ(i, x, y - score, z);
+  }
+  g.computeVertexNormals();
+  return paint(lumpy(g, 0.05, seed, 2.5), (x, y, z) => {
+    const top = Math.max(0, y / 0.056);
+    const u = (x * 0.8 + z * 0.6) / 0.075, k = Math.abs(Math.sin(u * Math.PI * cuts / 2.6));
+    const cut = y > 0.03 ? Math.exp(-((1 - k) ** 2) / 0.02) : 0;
+    const v = 0.75 + 0.35 * top;
+    const crumb = [0.62, 0.5, 0.3];
+    // flour dusted on the top, rubbed off in patches
+    const flour = pale ? 0 : Math.max(0, Math.sin(x * 90 + 1.3) * Math.sin(z * 70) - 0.2) * top * 0.6;
+    return base.map((c, j) => ((c * (1.25 - 0.45 * top) * v) * (1 - cut * 0.8) + crumb[j] * cut * 0.8) * (1 - flour) + 0.55 * flour);
+  });
+}
+
+/** A whole fish: a fusiform body with a forked tail, dark back, silver belly. */
+function fishGeometry(seed) {
+  const r = rng32(seed);
+  const g = new THREE.SphereGeometry(0.03, 28, 14);
+  const p = g.attributes.position;
+  const L = 6 + r() * 1.5;
+  for (let i = 0; i < p.count; i++) {
+    let x = p.getX(i) * L, y = p.getY(i), z = p.getZ(i);
+    const f = x / (0.03 * L);                                      // -1 tail .. 1 head
+    const taper = f < -0.55 ? 0.25 + 0.75 * Math.pow((f + 1) / 0.45, 1.3) : 1 - 0.25 * Math.max(0, f) ** 2;
+    y *= 0.95 * taper; z *= 0.45 * taper;
+    if (f < -0.85) { const fork = (-0.85 - f) / 0.15; y += Math.sign(y || 1) * fork * 0.018; x -= fork * 0.012 * (1 - Math.abs(y) / 0.03); }
+    p.setXYZ(i, x, y, z);
+  }
+  g.computeVertexNormals();
+  const hx = 0.03 * L * 0.8;
+  return paint(g, (x, y, z) => {
+    const b = Math.min(1, Math.max(0, 0.5 + y / 0.045));
+    const eye = Math.hypot(x - hx, y - 0.004) < 0.0055 && Math.abs(z) > 0.004 ? 1 : 0;
+    const gill = Math.abs(x - hx * 0.72) < 0.002 && Math.abs(y) < 0.018 ? 0.5 : 0;
+    const c = [0.05 + 0.45 * (1 - b), 0.07 + 0.47 * (1 - b), 0.08 + 0.46 * (1 - b)];
+    return c.map((v) => v * (1 - eye * 0.95) * (1 - gill));
+  });
+}
+
+/** Materials for market food (linear colours; crust, apple skin, onion skin, rind ...). Swap in photo
+ * scans where a scene can load them: food.wicker = await loadPBR('pbr/khr_wicker', ...), food.board = ... */
 export function foodMaterials() {
   const M = (c, rough, o = {}) => new THREE.MeshPhysicalMaterial({ color: new THREE.Color(...c), roughness: rough, ...o });
   return {
-    crust: M([0.32, 0.16, 0.055], 0.72, { sheen: 0.3, sheenColor: new THREE.Color(0.6, 0.4, 0.2), sheenRoughness: 0.6 }),
-    crustPale: M([0.46, 0.3, 0.13], 0.8),
+    crust: M([1, 1, 1], 0.72, { vertexColors: true, sheen: 0.3, sheenColor: new THREE.Color(0.6, 0.4, 0.2), sheenRoughness: 0.6 }),
+    crustPale: M([1, 1, 1], 0.8, { vertexColors: true }),
     crumb: M([0.62, 0.52, 0.36], 0.9),
-    appleRed: M([0.32, 0.035, 0.02], 0.38, { clearcoat: 0.25, clearcoatRoughness: 0.45 }),
+    appleRed: M([1, 1, 1], 0.38, { vertexColors: true, clearcoat: 0.25, clearcoatRoughness: 0.45 }),
     appleGreen: M([0.25, 0.3, 0.05], 0.4, { clearcoat: 0.2, clearcoatRoughness: 0.5 }),
     onion: M([0.42, 0.22, 0.08], 0.55, { sheen: 0.4, sheenColor: new THREE.Color(0.8, 0.6, 0.4) }),
     cheese: M([0.55, 0.38, 0.12], 0.6),
     rind: M([0.36, 0.2, 0.06], 0.55),
-    fish: M([0.28, 0.3, 0.31], 0.25, { metalness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.2 }),
-    cabbage: M([0.16, 0.24, 0.07], 0.6),
-    turnip: M([0.6, 0.55, 0.45], 0.6),
+    fish: M([1, 1, 1], 0.32, { vertexColors: true, clearcoat: 0.5, clearcoatRoughness: 0.25 }),
+    cabbage: M([1, 1, 1], 0.55, { vertexColors: true, sheen: 0.3, sheenColor: new THREE.Color(0.7, 0.8, 0.6) }),
+    turnip: M([1, 1, 1], 0.5, { vertexColors: true }),
     wicker: M([0.34, 0.24, 0.12], 0.85),
     cloth: M([0.55, 0.5, 0.42], 0.92, { sheen: 0.4, sheenColor: new THREE.Color(0.8, 0.78, 0.72), sheenRoughness: 0.7 }),
     board: M([0.2, 0.13, 0.075], 0.78),
@@ -108,29 +170,43 @@ export function goods(kind, mats, seed = 1, o = {}) {
     const b = add(new THREE.LatheGeometry(prof, 28), mats.wicker, 0, 0, 0);
     b.scale.set(W, 1, D);
   } else add(new THREE.BoxGeometry(W, 0.03, D), mats.board, 0, 0.015, 0);
-  const n = o.n ?? (kind === 'bread' ? 7 : kind === 'cheese' ? 3 : kind === 'fish' ? 6 : 26);
+  const n = o.n ?? (kind === 'bread' ? 4 : kind === 'cheese' ? 3 : kind === 'fish' ? 6 : kind === 'rolls' ? 14 : 26);
   for (let i = 0; i < n; i++) {
     const u = (r() - 0.5) * W * 0.78, v = (r() - 0.5) * D * 0.7, layer = i / n;
     const y0 = basket ? 0.04 + layer * 0.06 : 0.03;
     if (kind === 'bread') {
-      const g = lumpy(new THREE.SphereGeometry(0.075, 18, 12), 0.08, seed + i);
-      const m = add(g, r() < 0.4 ? mats.crustPale : mats.crust, u, y0 + 0.035, v, 0, r() * 6, 0, [1.25 + r() * 0.4, 0.6 + r() * 0.15, 0.95]);
-      void m;
+      const pale = r() < 0.4;
+      const bx = ((i % 2) - 0.5) * W * 0.42 + (r() - 0.5) * 0.03, bz = (Math.floor(i / 2) - 0.5) * D * 0.42 + (r() - 0.5) * 0.03;
+      add(loafGeometry(seed * 31 + i, pale), pale ? mats.crustPale : mats.crust, bx, 0.035 + (i > 3 ? 0.06 : 0), bz, 0, r() * 6, 0);
     } else if (kind === 'rolls') {
-      add(lumpy(new THREE.SphereGeometry(0.04, 14, 10), 0.08, seed + i), mats.crust, u, y0 + 0.02, v, 0, r() * 6, 0, [1.1, 0.72, 1]);
+      // small round rolls: the loaf shape at half size, crowded in the basket
+      add(loafGeometry(seed * 17 + i, false), mats.crust, u * 0.9, y0 + 0.006, v * 0.9, 0, r() * 6, 0, [0.5, 0.55, 0.5]);
     } else if (kind === 'apples') {
-      add(lumpy(new THREE.SphereGeometry(0.036, 14, 10), 0.05, seed + i, 2), r() < 0.6 ? mats.appleRed : mats.appleGreen, u, y0 + 0.03, v, r(), r() * 6, r(), [1, 0.9, 1]);
+      const red = r() < 0.6, blush = r();
+      const g = lumpy(new THREE.SphereGeometry(0.036, 22, 14), 0.04, seed + i, 2);
+      // an apple's dimple at the stalk and the eye
+      { const P = g.attributes.position; for (let k = 0; k < P.count; k++) { const y = P.getY(k); const d = Math.exp(-((Math.abs(y) - 0.036) ** 2) / 0.00004); P.setY(k, y - Math.sign(y) * 0.006 * d); } g.computeVertexNormals(); }
+      paint(g, (x, y, z) => { const n = 0.5 + 0.5 * Math.sin(x * 140 + z * 90 + blush * 6) * Math.sin(y * 120); return red ? [0.3 + 0.07 * n, 0.018 + 0.03 * (1 - n) * blush, 0.012] : [0.24 + 0.12 * n * blush, 0.32, 0.05]; });
+      add(g, red ? mats.appleRed : mats.appleGreen, u, y0 + 0.03, v, r(), r() * 6, r(), [1, 0.9, 1]);
     } else if (kind === 'onions') {
       add(lumpy(new THREE.SphereGeometry(0.035, 12, 10), 0.06, seed + i, 2), mats.onion, u, y0 + 0.03, v, r(), r() * 6, r(), [1, 0.85, 1]);
     } else if (kind === 'veg') {
-      if (i % 3 === 0) add(lumpy(new THREE.SphereGeometry(0.075, 14, 10), 0.12, seed + i, 4), mats.cabbage, u, y0 + 0.05, v, r(), r() * 6, 0);
-      else add(lumpy(new THREE.SphereGeometry(0.035, 12, 8), 0.06, seed + i), mats.turnip, u, y0 + 0.03, v, r(), r() * 6, r(), [1, 1.2, 1]);
+      if (i % 3 === 0) {
+        // a cabbage: overlapping leaves (lumps at several scales), paler veins toward the heart
+        const g = paint(lumpy(lumpy(new THREE.SphereGeometry(0.075, 30, 20), 0.1, seed + i, 4), 0.04, seed + i + 7, 11), (x, y, z) => { const vein = Math.pow(Math.abs(Math.sin(Math.atan2(z, x) * 7 + y * 30)), 12); const top = Math.max(0, y / 0.075); return [0.12 + 0.12 * vein + 0.1 * top, 0.2 + 0.12 * vein + 0.12 * top, 0.06 + 0.06 * vein]; });
+        add(g, mats.cabbage, u, y0 + 0.05, v, r(), r() * 6, 0);
+      } else {
+        // a turnip: white below, purple shoulders, a tapering root
+        const g = new THREE.SphereGeometry(0.035, 20, 14);
+        { const P = g.attributes.position; for (let k = 0; k < P.count; k++) { const y = P.getY(k); if (y < -0.01) { const f = (-0.01 - y) / 0.025; P.setXYZ(k, P.getX(k) * (1 - 0.7 * f), y - f * 0.02, P.getZ(k) * (1 - 0.7 * f)); } } g.computeVertexNormals(); }
+        paint(lumpy(g, 0.04, seed + i), (x, y) => { const t = Math.min(1, Math.max(0, (y + 0.005) / 0.03)); return [0.62 - 0.36 * t, 0.58 - 0.5 * t, 0.5 - 0.3 * t]; });
+        add(g, mats.turnip, u, y0 + 0.035, v, 0.3 * (r() - 0.5), r() * 6, Math.PI / 2 * (r() < 0.5 ? 1 : 0.3));
+      }
     } else if (kind === 'cheese') {
       const R0 = 0.09 + r() * 0.04;
       add(new THREE.CylinderGeometry(R0, R0 * 1.02, 0.07, 28), mats.rind, u * 0.7, 0.065 + (i ? 0 : 0), v * 0.6, 0, 0, 0);
     } else if (kind === 'fish') {
-      const g = new THREE.SphereGeometry(0.03, 14, 8); g.scale(5.5, 0.9, 1.6);
-      add(g, mats.fish, (i - n / 2) * 0.07, 0.045, (r() - 0.5) * 0.05, 0, Math.PI / 2 + (r() - 0.5) * 0.3, 0.05);
+      add(fishGeometry(seed * 13 + i), mats.fish, (r() - 0.5) * 0.06, 0.042, (i - n / 2 + 0.5) * Math.min(0.062, D / n), Math.PI / 2, (r() - 0.5) * 0.25 + (i % 2 ? Math.PI : 0), 0);
     }
   }
   return grp;

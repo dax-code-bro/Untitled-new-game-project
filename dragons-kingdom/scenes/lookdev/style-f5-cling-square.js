@@ -24,7 +24,7 @@
 //   node render/render.mjs --still scenes/lookdev/style-f5-cling-square.js --time 2 --preset final --png out.png
 import * as THREE from 'three';
 import { applyShake } from 'dk/camera.js';
-import { loadHDRI } from '../lib/assets.js';
+import { loadHDRI, loadPBR } from '../lib/assets.js';
 import { terrainMaterial } from '../lib/sets/materials.js';
 import { heightfield, makeNoise, gradedAxis, smooth } from '../lib/sets/terrain.js';
 import { grassField } from '../lib/sets/grass.js';
@@ -161,6 +161,8 @@ export async function setup(ctx) {
   const town = await townKit(ctx, { slate: null, dark: null }, { groundY: 0 });
   const T = { clothMaterial, clothSheet };
   const food = foodMaterials();
+  food.wicker = await loadPBR('pbr/khr_wicker', ctx, { repeat: [10, 2], color: new THREE.Color(0.75, 0.62, 0.45) });
+  food.board = await loadPBR('pbr/acg_planks21', ctx, { repeat: [1, 1], color: new THREE.Color(0.5, 0.42, 0.34) });
   const props = new Kit(0);
   const A = { block, yawFrame, sub, makeRand, crate, sack, barrel };
   const STALLS = [
