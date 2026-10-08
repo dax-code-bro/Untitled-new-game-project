@@ -1,1 +1,1 @@
-{ "id": "guard_captain", "accumulate": false, "still": true, "cam": { "tgt": [0, 1.15, 0], "az": 15, "el": 5, "dist": 2.2, "fov": 30, "fstop": 8 } }
+{ "id": "abby", "accumulate": false, "still": true, "only": ["eyes"], "cam": { "tgt": "eye.R", "off": [0, 0, 0], "az": 15, "el": 2, "dist": 0.12, "fov": 24, "fstop": 16 } }

@@ -19,8 +19,10 @@ const FABRIC = {
   twill: { id: 'pbr/acg_fabric40', base: 'Fabric40', tile: 0.15, sheen: 0.4, rough: 0.86, lum: 0.09 },
   felt: { id: 'pbr/acg_fabric37', base: 'Fabric37', tile: 0.5, sheen: 0.6, rough: 0.95, lum: 0.062 },
   silk: { id: 'pbr/acg_fabric40', base: 'Fabric40', tile: 0.06, sheen: 0.8, rough: 0.5, lum: 0.09 },
-  leather: { id: 'pbr/acg_leather05', base: 'Leather05', tile: 0.35, sheen: 0.0, rough: 0.84, leather: true, lum: 0.031 },
-  blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.35, sheen: 0.0, rough: 0.66, leather: true, lum: 0.0097 },
+  // rmean: mean of the scan's roughness map (three multiplies it in): the material's roughness is
+  // divided by it, so `rough` is the mean the surface really gets (boots read as wet rubber at 0.45)
+  leather: { id: 'pbr/acg_leather05', base: 'Leather05', tile: 0.35, sheen: 0.0, rough: 0.72, rmean: 0.54, leather: true, lum: 0.031 },
+  blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.35, sheen: 0.0, rough: 0.62, rmean: 0.37, leather: true, lum: 0.0097 },
 };
 
 function sheenTint(c) {
@@ -32,7 +34,7 @@ function sheenTint(c) {
 export function clothMaterial(o = {}) {
   const f = FABRIC[o.fabric || 'wool'] || FABRIC.wool;
   const mat = new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color(...(o.color || [0.3, 0.3, 0.3])), roughness: o.rough ?? f.rough, metalness: 0,
+    color: new THREE.Color(...(o.color || [0.3, 0.3, 0.3])), roughness: Math.min(1, (o.rough ?? f.rough) / (f.rmean || 1)), metalness: 0,
     // fibre sheen takes the dye colour (light scattered inside dyed fibres); a white sheen greys dark cloth
     sheen: o.sheen ?? f.sheen, sheenRoughness: 0.75, sheenColor: sheenTint(o.color || [0.3, 0.3, 0.3]),
     side: THREE.DoubleSide,
@@ -157,7 +159,8 @@ diffuseColor.rgb *= mix(1.0, 0.5, vAux.b);
 // alpha-hash into fine, semi-transparent strand edges instead of hard clumps
 diffuseColor.a = (1.0 - smoothstep(0.75, 1.0, vAux.g) * 0.9) * (1.0 - smoothstep(0.3, 0.5, abs(vHairUv.x - 0.5)) * 0.55);
 // roots fade in: a hairline is a density gradient, not the blunt dark ends of ribbons
-diffuseColor.a *= mix(0.3, 1.0, smoothstep(0.0, 0.1, vAux.g));
+// (over the first few % only: a pulled-back strand is 20-30 cm long, 10% of it bared the temples)
+diffuseColor.a *= mix(0.45, 1.0, smoothstep(0.0, 0.03, vAux.g));
 #endif`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 hairT = normalize(vT);
@@ -201,8 +204,8 @@ void RE_Direct_Hair( const in IncidentLight directLight, const in vec3 geometryP
 // lum: mean linear luminance of the photo albedo (measured) - with an explicit o.color only its
 // variation is used (the scan's own hue, e.g. Leather05's red, never tints the prop)
 const PROP_PBR = {
-  leather: { id: 'pbr/acg_leather05', base: 'Leather05', tile: 0.35, lum: 0.027 },
-  blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.35, lum: 0.0055 },
+  leather: { id: 'pbr/acg_leather05', base: 'Leather05', tile: 0.35, lum: 0.027, rmean: 0.54 },
+  blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.35, lum: 0.0055, rmean: 0.37 },
   iron: { id: 'pbr/acg_metal26', base: 'Metal26', tile: 0.4, metal: true, lum: 0.117 },
   wood: { id: 'pbr/acg_wood35', base: 'Wood35', tile: 0.6, lum: 0.074 },
   pine: { id: 'pbr/acg_planks21', base: 'Planks21', tile: 0.8, lum: 0.425 },
@@ -211,8 +214,8 @@ const PROP_PBR = {
 /** Generic prop / accessory material. o.kind: leather | blackleather | iron | steel | brass | gold | wood | pine | wicker | bread | rope | flat */
 export function propMaterial(o = {}) {
   const k = o.kind || 'flat';
-  const mat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(...(o.color || [0.5, 0.5, 0.5])), roughness: o.rough ?? 0.6, metalness: o.metal ?? 0, side: o.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
   const p = PROP_PBR[k];
+  const mat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(...(o.color || [0.5, 0.5, 0.5])), roughness: Math.min(1, (o.rough ?? 0.6) / ((p && p.rmean) || 1)), metalness: o.metal ?? 0, side: o.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
   let tile = 1, varAlb = null, varLum = 1;
   if (p) {
     tile = 1 / (o.tile ?? p.tile);

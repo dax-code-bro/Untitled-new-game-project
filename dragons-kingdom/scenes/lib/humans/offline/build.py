@@ -148,7 +148,10 @@ def assemble(kit, spec, out_dir, opts):
     eye_rel = 'human/mh_eyes/high-poly/high-poly.mhclo'
     ex = kit.proxy(eye_rel).obj.vt
     eyes = proxy_part(kit, eye_rel, V, 'eyes', 'eye', {'map': eyes_tex, 'irisTint': spec.get('eyes', {}).get('tint', [1, 1, 1])},
-                      keep=lambda f, P: not (ex[list(f[1])][:, 0].min() > 0.85))
+                      # drop the outer (cornea) shells: they sit in the atlas corner u > 0.85,
+                      # v < 0.15. (u > 0.85 alone also cut a wedge out of the RIGHT eyeball,
+                      # whose UVs run to 0.98: a hole in the inner eye corner when it rolls.)
+                      keep=lambda f, P: not (ex[list(f[1])][:, 0].min() > 0.85 and ex[list(f[1])][:, 1].max() < 0.15))
     parts.append(eyes)
     if spec.get('brows'):
         b = spec['brows']
@@ -255,6 +258,8 @@ def assemble(kit, spec, out_dir, opts):
         postfix.fix_shoes(cid + opts.get('suffix', ''))
         postfix.fix_puckers(cid + opts.get('suffix', ''))
         postfix.fix_pushout(cid + opts.get('suffix', ''))
+        postfix.fix_cull(cid + opts.get('suffix', ''))
+        postfix.fix_renormal(cid + opts.get('suffix', ''))
         postfix.fix_props(cid + opts.get('suffix', ''))
     log(f'   {cid}: {sum(len(p.posed) for p in parts)} verts, {size / 1e6:.1f} MB, {time.time() - t0:.0f} s')
 

@@ -39,6 +39,17 @@ per-vertex RGB gain (`albg` = colour blurred over 4.5 cm / colour blurred over 8
 lash line excluded) evens it out, so the renderer's own light does the modelling; pores,
 freckles and lip edges (finer than 8 mm) stay.
 
+Post passes (offline/postfix.py, run by build.py after every build; each records itself in the
+mesh's `postfix` list and never runs twice on a cache): `shoes` - boots and shoes are made on a
+last (the foot shell's toes closed by a grey-closed radius map, toe room, flat sole, toe spring);
+`puckers` - cloth puckers (the body mesh's poles at nipples / navel, sim crumples at armpits and
+crossed arms) found by the second eigenvalue of the normals' scatter (a fold bends one way, a
+pucker every way) and filled by a membrane that may not move cloth more than 2 mm inward, the
+cloth over the nipples re-made as the quadric fitted around them; `pushout` - cloth outside the
+body (Taubin-smoothed, all triangles incl. those hidden under clothes = cache field
+`colliderIndex`, the bust left out: cloth bridges it) and outside the layer under it; `props` -
+prop colour corrections. Hoods and coifs hide the head under them; hoods rest on the crown.
+
 ## Build
 
 ```bash
@@ -97,4 +108,14 @@ scout_ride, sailor1, sailor2, crowd01-crowd18.
 - `scenes/lookdev/humans-hero.js` - the hero angles (Remi + Abby, Abby close-up, Alexandria,
   King, crowd group, Abby sling / injured, Fall).
 - `scenes/lookdev/humans-riders.js` - riders in the saddles at scale (uses the creature library).
-- `scenes/lookdev/humans-dev.js` - one character, fixed views (fast iteration).
+- `scenes/lookdev/humans-dev.js` - one character, fixed views (fast iteration): full figure,
+  face 3/4, profile, hands, back, eye macro, feet, hairline (`humans-dev.json` picks the id).
+
+Every look-dev scene picks its shot from the FRAME time (`stage.js` `reviewTime`), so all shots
+render in one run as a 1-fps sequence (frame k = shot k, posed at its middle) - the film
+finish's sub-frames never straddle a cut:
+
+```bash
+node render/render.mjs scenes/lookdev/humans-hero.js --preset final --fps 1 --seconds 8 --workers 1 --out output/humans/hero
+ffmpeg -i output/humans/hero/hero.mp4 hero_%d.png   # (or --still --time k.5 for one shot)
+```

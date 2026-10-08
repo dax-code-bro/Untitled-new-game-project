@@ -1,7 +1,7 @@
 """Post-fixes applied in place to already built characters (cache/<id>.json + .bin), so a fix
 that only needs the finished meshes does not cost a full rebuild.
 
-    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|pushout|all id [id ...]   ('all' = every cache)
+    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|pushout|cull|renormal|all id [id ...]   ('all' = every cache)
 
 Each pass records itself in the mesh's 'postfix' list and is not applied twice.
 
@@ -292,7 +292,28 @@ def close_toes(P, tris, foot_h=0.085, ease=0.004, toe_room=0.012, spring=0.006, 
     return out[w], normals(out)[w]
 
 
-def body_collider(P, T):
+def breast_weight(h, bin_, m):
+    """Per-vertex skin weight of the breast bones (0 when the rig has none)."""
+    names = [b_['name'] for b_ in h['bones']]
+    SI = view(bin_, m['attrs']['skinIndex']).astype(int)
+    SW = view(bin_, m['attrs']['skinWeight']).astype(float)
+    out = np.zeros(len(SI))
+    for bn in ('breast.L', 'breast.R'):
+        if bn in names:
+            out += (SW * (SI == names.index(bn))).sum(1)
+    return out
+
+
+def layer_skip(h, bin_, m, T):
+    """Faces of a garment layer over the bust (skinned to the breast bones): the layer above it
+    is not pushed out of them (it bridges the bust in the simulation)."""
+    if 'skinIndex' not in m['attrs']:
+        return None
+    bw = breast_weight(h, bin_, m)
+    return (bw[T] > 0.2).any(1)
+
+
+def body_collider(P, T, bw=None):
     """The body as the cloth passes see it: welded, all its triangles (hidden ones too when the
     cache carries colliderIndex), Taubin-smoothed over ~2 cm - small relief (nipples, navel,
     knuckles) goes, the volume of the limbs stays (plain Laplacian smoothing shrinks an arm and
@@ -318,7 +339,14 @@ def body_collider(P, T):
     for _ in range(int(np.clip(20 * (0.0055 / max(el, 1e-4)) ** 2, 20, 200))):
         S = S + 0.5 * U(S)
         S = S - 0.53 * U(S)
-    return S, t
+    # the bust is not a collider surface: cloth over it hangs from the apex (the simulation's
+    # undergarment collider bridged it); pushing cloth out to a few mm over it shrink-wraps it
+    skip = None
+    if bw is not None:
+        bww = np.zeros(nW)
+        np.maximum.at(bww, w, bw)
+        skip = (bww[t] > 0.2).any(1)
+    return S, t, skip
 
 
 # garments whose gathers are made on purpose (cap / coif rims, kerchief knots) are left alone
@@ -417,7 +445,7 @@ def smooth_puckers(P, tris, thresh=0.08, iters=80, push=None, spots=None, normal
         uu, vv, hh = R @ t1, R @ t2, R @ n
         facing = Nm0 @ n > 0.5
         r = np.sqrt(uu ** 2 + vv ** 2)
-        Rin = 0.035
+        Rin = 0.042
         ann = facing & (r > Rin) & (r < Rin + 0.035) & (np.abs(hh) < 0.05)
         if ann.sum() < 8:
             continue
@@ -429,7 +457,7 @@ def smooth_puckers(P, tris, thresh=0.08, iters=80, push=None, spots=None, normal
         # re-spread inside (2D harmonic, the outer vertices fixed)
         U2 = np.stack([uu, vv], 1)
         free = inner & (r < Rin)
-        for _ in range(150):
+        for _ in range(600):
             avg2 = np.stack([np.bincount(a, weights=U2[b, k], minlength=nW) for k in range(2)], 1) / deg[:, None]
             U2[free] = avg2[free]
         u2, v2 = U2[:, 0], U2[:, 1]
@@ -509,8 +537,8 @@ def fix_puckers(cid):
         Qb = np.zeros((nB, 3))
         Qb[wb] = Pb
         # collider: the Taubin-smoothed body (no nipples to print through, limbs keep volume)
-        Sc, Tc = body_collider(Pb, Tb)
-        trees.append((BVHTree.FromPolygons(Sc.tolist(), Tc.tolist(), all_triangles=True), 0.004))
+        Sc, Tc, skip = body_collider(Pb, Tb, breast_weight(h, bin_, body[0]))
+        trees.append((BVHTree.FromPolygons(Sc.tolist(), Tc.tolist(), all_triangles=True), 0.004, skip))
         # the nipples: the breast-weighted point furthest forward, one each side
         # candidates: skin weighted to the breast bones (not the hands, which may be in front)
         names = [b_['name'] for b_ in h['bones']]
@@ -531,10 +559,10 @@ def fix_puckers(cid):
 
     def push(X):
         X = X.copy()
-        for tree, ease in trees:
+        for tree, ease, skip_ in trees:
             for i in range(len(X)):
-                loc, n, _, d = tree.find_nearest(Vector(X[i]), 0.03)
-                if loc is None:
+                loc, n, fi, d = tree.find_nearest(Vector(X[i]), 0.03)
+                if loc is None or (skip_ is not None and skip_[fi]):
                     continue
                 q = np.array(loc)
                 nn = np.array(n)
@@ -546,7 +574,7 @@ def fix_puckers(cid):
         if m['kind'] != 'cloth' or m['name'] in NO_PUCKER or 'puckers' in m.get('postfix', []):
             if m['kind'] == 'cloth' and m['name'] not in ('boots', 'shoes'):
                 P_, T_ = mesh_arrays(m)
-                trees.append((BVHTree.FromPolygons([tuple(v) for v in P_], [tuple(t) for t in T_], epsilon=0.0), 0.002))
+                trees.append((BVHTree.FromPolygons([tuple(v) for v in P_], [tuple(t) for t in T_], epsilon=0.0), 0.002, layer_skip(h, bin_, m, T_)))
             continue
         A = m['attrs']
         P, tris = mesh_arrays(m)
@@ -559,7 +587,7 @@ def fix_puckers(cid):
         put(bin_, A['normal'], N2)
         m['postfix'] = m.get('postfix', []) + ['puckers', 'normals2']
         done.append(f"{m['name']} ({int(ch.sum())} v)")
-        trees.append((BVHTree.FromPolygons([tuple(v) for v in P2], [tuple(t) for t in tris], epsilon=0.0), 0.002))
+        trees.append((BVHTree.FromPolygons([tuple(v) for v in P2], [tuple(t) for t in tris], epsilon=0.0), 0.002, layer_skip(h, bin_, m, tris)))
     if not done:
         return
     tmp = bp + '.tmp'
@@ -673,8 +701,8 @@ def fix_pushout(cid, body_ease=0.004, layer_ease=0.0025):
         if m['kind'] == 'skin':
             # the whole body (hidden faces too) when the cache carries it, Taubin-smoothed
             P, T = arrays(m, full=True)
-            Sc, Tc = body_collider(P, T)
-            trees.append((BVHTree.FromPolygons(Sc.tolist(), Tc.tolist(), all_triangles=True), body_ease))
+            Sc, Tc, skip = body_collider(P, T, breast_weight(h, bin_, m))
+            trees.append((BVHTree.FromPolygons(Sc.tolist(), Tc.tolist(), all_triangles=True), body_ease, skip))
     done = []
     for m in h['meshes']:
         if m['kind'] != 'cloth' or m['name'] in ('boots', 'shoes'):
@@ -694,10 +722,10 @@ def fix_pushout(cid, body_ease=0.004, layer_ease=0.0025):
             moved = np.zeros(nW, bool)
             for _round in range(3):
                 D = np.zeros((nW, 3))
-                for tree, ease in trees:
+                for tree, ease, skip_ in trees:
                     for i in range(nW):
-                        loc, n, _, d = tree.find_nearest(Vector(Q[i] + D[i]), 0.03)
-                        if loc is None:
+                        loc, n, fi, d = tree.find_nearest(Vector(Q[i] + D[i]), 0.03)
+                        if loc is None or (skip_ is not None and skip_[fi]):
                             continue
                         q, nn = np.array(loc), np.array(n)
                         dd = np.dot(Q[i] + D[i] - q, nn)
@@ -727,7 +755,7 @@ def fix_pushout(cid, body_ease=0.004, layer_ease=0.0025):
                 P = P2
                 done.append(f"{m['name']} ({int(moved.sum())} v)")
             m['postfix'] = m.get('postfix', []) + ['pushout']
-        trees.append((BVHTree.FromPolygons(P.tolist(), T.tolist(), all_triangles=True), layer_ease))
+        trees.append((BVHTree.FromPolygons(P.tolist(), T.tolist(), all_triangles=True), layer_ease, layer_skip(h, bin_, m, T)))
     tmp = bp + '.tmp'
     open(tmp, 'wb').write(bin_)
     os.replace(tmp, bp)
@@ -735,6 +763,109 @@ def fix_pushout(cid, body_ease=0.004, layer_ease=0.0025):
     os.replace(jp + '.tmp', jp)
     if done:
         print(f'{cid}: pushed out {", ".join(done)}', flush=True)
+
+
+OPAQUE_OVER = ('coat', 'tunic', 'gown', 'kirtle', 'cloak', 'apron', 'gambeson', 'surcoat', 'hoodcape', 'hood', 'veil', 'sling')
+
+
+def fix_cull(cid):
+    """Cloth under another garment is not drawn where that garment covers it (as the skin under
+    the clothes is not): a shirt cannot poke through a tunic at the nipples or the elbows. A
+    vertex is covered when a ray along its normal (started 1 cm inside) meets an outer layer
+    within 5 cm; triangles whose vertices are all covered, one ring in from any uncovered
+    vertex, become degenerate (the buffer keeps its size)."""
+    import bpy  # noqa: F401
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    bin_ = bytearray(open(bp, 'rb').read())
+    cloth = [m for m in h['meshes'] if m['kind'] == 'cloth' and m['name'] not in ('boots', 'shoes')]
+
+    def arrays(m):
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        return P, T
+    done = []
+    for k, m in enumerate(cloth):
+        if 'cull' in m.get('postfix', []):
+            continue
+        outer = [o for o in cloth[k + 1:] if o['name'] in OPAQUE_OVER or o['name'].startswith(OPAQUE_OVER)]
+        if not outer:
+            m['postfix'] = m.get('postfix', []) + ['cull']
+            continue
+        Ps, Ts, off = [], [], 0
+        for o in outer:
+            P_, T_ = arrays(o)
+            Ps.append(P_)
+            Ts.append(T_ + off)
+            off += len(P_)
+        tree = BVHTree.FromPolygons(np.vstack(Ps).tolist(), np.vstack(Ts).tolist(), all_triangles=True)
+        P, T = arrays(m)
+        N = view(bin_, m['attrs']['normal']).astype(float)
+        cov = np.zeros(len(P), bool)
+        for i in range(len(P)):
+            n = N[i] / max(np.linalg.norm(N[i]), 1e-9)
+            hit = tree.ray_cast(Vector(P[i] - n * 0.01), Vector(n), 0.06)
+            cov[i] = hit[0] is not None
+        # erode one ring (welded): keep a margin round every edge of the outer garment
+        key = np.round(P / 1e-5).astype(np.int64)
+        _, w = np.unique(key, axis=0, return_inverse=True)
+        w = w.reshape(-1)
+        nW = int(w.max()) + 1
+        cw = np.ones(nW, bool)
+        np.logical_and.at(cw, w, cov)
+        tw = w[T]
+        e = np.concatenate([tw[:, [0, 1]], tw[:, [1, 2]], tw[:, [2, 0]]])
+        ok = cw.copy()
+        np.logical_and.at(ok, e[:, 0], cw[e[:, 1]])
+        np.logical_and.at(ok, e[:, 1], cw[e[:, 0]])
+        drop = ok[tw].all(1)
+        if drop.any():
+            T2 = T.copy()
+            T2[drop] = T2[drop][:, :1]
+            put(bin_, m['index'], T2)
+            done.append(f"{m['name']} ({int(drop.sum())}/{len(T)} tris)")
+        m['postfix'] = m.get('postfix', []) + ['cull']
+    tmp = bp + '.tmp'
+    open(tmp, 'wb').write(bin_)
+    os.replace(tmp, bp)
+    json.dump(h, open(jp + '.tmp', 'w'), separators=(',', ':'))
+    os.replace(jp + '.tmp', jp)
+    if done:
+        print(f'{cid}: culled under outer layers: {", ".join(done)}', flush=True)
+
+
+def fix_renormal(cid):
+    """Every cloth mesh gets welded, area-weighted vertex normals from its final positions
+    (the passes above recomputed only the vertices they moved: the seam between new and stored
+    normals shaded as dark marks - on a gown's bust, for one). Orientation voted per mesh."""
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    bin_ = bytearray(open(bp, 'rb').read())
+    done = []
+    for m in h['meshes']:
+        if m['kind'] != 'cloth' or 'normals3' in m.get('postfix', []):
+            continue
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        T = T[(T[:, 0] != T[:, 1]) | (T[:, 1] != T[:, 2])]          # culled triangles are degenerate
+        N0 = view(bin_, m['attrs']['normal']).astype(float)
+        Nf = fresh_normals(P, T)
+        Nf *= 1.0 if np.einsum('ij,ij->', N0, Nf) >= 0 else -1.0
+        bad = np.linalg.norm(Nf, axis=1) < 0.5                       # vertices of culled faces only
+        Nf[bad] = N0[bad]
+        put(bin_, m['attrs']['normal'], Nf)
+        m['postfix'] = m.get('postfix', []) + ['normals3']
+        done.append(m['name'])
+    if not done:
+        return
+    tmp = bp + '.tmp'
+    open(tmp, 'wb').write(bin_)
+    os.replace(tmp, bp)
+    json.dump(h, open(jp + '.tmp', 'w'), separators=(',', ':'))
+    os.replace(jp + '.tmp', jp)
+    print(f'{cid}: normals recomputed ({", ".join(done)})', flush=True)
 
 
 def main():
@@ -752,6 +883,10 @@ def main():
             fix_normals(cid)
         if what in ('pushout', 'all'):
             fix_pushout(cid)
+        if what in ('cull', 'all'):
+            fix_cull(cid)
+        if what in ('renormal', 'all'):
+            fix_renormal(cid)
 
 
 if __name__ == '__main__':

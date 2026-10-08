@@ -84,6 +84,10 @@ export function skinMaterial(o = {}) {
     ior: 1.4, specularIntensity: 0.9,
     sheen: 0.07, sheenRoughness: 0.6, sheenColor: new THREE.Color(0.55, 0.45, 0.4),
     clearcoat: o.oil ?? 0.12, clearcoatRoughness: 0.34,
+    // double-sided: the gap between a rolled eyeball and the inner lid, or a sleeve's cuff,
+    // looks into the head / arm - with back faces culled that showed the hair or the sky
+    // through the skull (a black patch in the inner eye corner)
+    side: THREE.DoubleSide,
   });
   if (o.map) mat.map = libTexture(o.map);
   const U = {
@@ -148,7 +152,9 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   { float fwc = length(fwidth(vObjP));
     float fp = 1.0 - smoothstep(0.35, 1.0, fwc * 1600.0);
     float pc = hCell(vObjP * 1600.0 + uSeed);
-    c *= 1.0 - 0.07 * (1.0 - smoothstep(0.0, 0.4, pc)) * fp * (1.0 - vAux.r) * (1.0 - vAux.a); }
+    c *= 1.0 - 0.1 * (1.0 - smoothstep(0.0, 0.4, pc)) * fp * (1.0 - vAux.r) * (1.0 - vAux.a); }
+  // fine mottling at 2-4 mm (the step between the 1-3 cm blotches and the pores)
+  c *= 1.0 + 0.045 * (hN3(vObjP * 380.0 + uSeed * 7.0) - 0.5);
   c = mix(c, vec3(l) * vec3(1.15, 1.02, 0.98) + 0.03, vAux.g * 0.55);
   c *= mix(1.0, 0.82, uDirt * hN3(vObjP * 90.0));
   // scalp under the hair takes the hair colour (roots, density), aux.a
@@ -167,6 +173,11 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
 {
   float tz = hFbm(vObjP * 40.0 + 9.0);
   roughnessFactor = clamp(roughnessFactor * (0.8 + 0.35 * tz) - vAux.r * 0.2 - vAux.g * 0.25 + vAux.b * 0.15 + vAux.a * 0.35 - vAux2.g * 0.3 - vAux2.r * 0.04, 0.12, 0.95);
+  // pores hold no oil film: the sheen breaks up into a fine stipple where they are resolved
+  { float fwr = length(fwidth(vObjP));
+    float fpr = 1.0 - smoothstep(0.35, 1.0, fwr * 1600.0);
+    float pr = hCell(vObjP * 1600.0 + uSeed);
+    roughnessFactor = min(0.95, roughnessFactor + 0.1 * (1.0 - smoothstep(0.0, 0.45, pr)) * fpr * (1.0 - vAux.r)); }
 }`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 skinSmoothN = normal;
@@ -179,7 +190,7 @@ skinSmoothN = normal;
   float h = 0.0;
   if (fadeP > 0.0) {
     float c = hCell(vObjP * poreScale + uSeed);
-    h -= (1.0 - smoothstep(0.0, 0.45, c)) * 0.0001 * fadeP * (1.0 - vAux.r);
+    h -= (1.0 - smoothstep(0.0, 0.45, c)) * 0.00016 * fadeP * (1.0 - vAux.r);
     h += (hN3(vObjP * 3800.0) - 0.5) * 0.00003 * fadeP;
   }
   // lips (aux.r): fine vertical grooves (~1 mm apart, wavy), not a smooth plastic surface
@@ -277,6 +288,11 @@ uniform vec3 uIrisTint, uScleraTint;
 varying float vAO; varying vec3 vGaze; varying float vIris;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
+  // far from the iris the eye texture's atlas runs into its black background: a rolled eye
+  // showed a black patch in the inner corner. Outside the limbus, dark texels become sclera.
+  { float lt = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+    float far = smoothstep(1.15, 1.35, vIris) * (1.0 - smoothstep(0.25, 0.45, lt));
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.8, 0.74, 0.7), far); }
   float irisW = smoothstep(0.98, 0.9, vIris);           // vIris: angle from the gaze axis / limbus angle
   // irises in daylight read darker and less saturated than the texture (the cornea and the
   // iris' own depth): desaturate a little, then tint
