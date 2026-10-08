@@ -12,7 +12,7 @@
 // DAYLIGHT SHAFT from the high opening - the sun through the east window, made visible by the dust in
 // the air (volumetrics, shadowed by the window reveal), landing on the linen where the hatchling lies.
 //
-// Cinematography (1A-17 insert): a close shot from above the nest's edge, 55 mm on Super 35 at T4, looking north
+// Cinematography (1A-17 insert): a close shot low over the nest, 55 mm on Super 35 at T5.6, looking north
 // along the bed toward the window wall. Key: a clay oil lamp low at frame left rakes the wet gold
 // scales warm; the cool shaft falls through the dusty air behind and onto the linen. Alexandria's
 // hands enter from screen RIGHT (her side of the nest in the chamber map) and hold a folded linen
@@ -230,26 +230,22 @@ float dkShellD;`)
 /**
  * Drape the cloth grid (PlaneGeometry 1x1, CU x CV) as a folded linen cloth centred at c, w wide
  * along `across` and d deep along `along`: its height is the bed (linenY) or, where her hands are,
- * the top of the hands (spheres along the hand bones) plus the cloth's thickness, relaxed a few
+ * the top of the hands (one smooth pad per hand, wrist to fingertips) plus the cloth's thickness, relaxed a few
  * times so it drapes between them instead of tenting; soft creases; the left edge (under the
  * hatchling's chest) is the fold. Everything from the current pose (pure in t).
  */
 function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch) {
   const [CU, CV] = mesh.userData.grid;
   ch.root.updateMatrixWorld(true);
-  const sph = [];
   const bp = (n) => { const b = ch.bone(n); return b ? new THREE.Vector3().setFromMatrixPosition(b.matrixWorld) : null; };
+  // each hand under the cloth is one smooth pad (palm + fingers together, as cloth spans the
+  // knuckles instead of wrapping every finger): an ellipsoid from the wrist to the fingertips
+  const pads = [];
   for (const sd of ['L', 'R']) {
-    const pts = [['wrist', 0.03], ['metacarpal1', 0.028], ['metacarpal3', 0.028]];
-    for (let f = 1; f <= 5; f++) for (let k = 1; k <= 3; k++) pts.push([`finger${f}-${k}`, 0.017]);
-    for (const [n, r] of pts) { const p = bp(`${n}.${sd}`); if (p) sph.push([p, r + 0.008]); }
-    // between the bone heads too (finger segments)
-    for (let f = 1; f <= 5; f++) {
-      for (let k = 1; k < 3; k++) { const a = bp(`finger${f}-${k}.${sd}`), b = bp(`finger${f}-${k + 1}.${sd}`); if (a && b) sph.push([a.clone().lerp(b, 0.5), 0.022]); }
-      // the fingertip lies a segment beyond the last bone head
-      const a = bp(`finger${f}-2.${sd}`), b = bp(`finger${f}-3.${sd}`);
-      if (a && b) { const tip = b.clone().addScaledVector(b.clone().sub(a), 0.9); sph.push([b.clone().lerp(tip, 0.5), 0.02]); sph.push([tip, 0.018]); }
-    }
+    const w = bp(`wrist.${sd}`), k = bp(`finger3-1.${sd}`), tip = bp(`finger3-3.${sd}`);
+    if (!w || !k || !tip) continue;
+    const end = tip.clone().addScaledVector(tip.clone().sub(k), 0.35);
+    pads.push({ a: w, b: end, r: 0.045, h: 0.028 });
   }
   // the hatchling's chest rests on it: the cloth never comes up through the body (its belly
   // presses it to the bed) - the body's lowest points are below the cloth anyway
@@ -261,7 +257,13 @@ function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch) {
     const u = i / CU - 0.5, v = j / CV - 0.5;
     const p = c.clone().addScaledVector(across, u * w).addScaledVector(along, v * d);
     let y = linenY(p.x, p.z) + 0.006;
-    for (const [q, r] of sph) { const dd = Math.hypot(p.x - q.x, p.z - q.z); if (dd < r) y = Math.max(y, q.y + Math.sqrt(r * r - dd * dd)); }
+    for (const { a, b, r, h } of pads) {
+      // distance from p to the wrist->fingertip segment (in plan), the pad's height along it
+      const abx = b.x - a.x, abz = b.z - a.z, L2 = abx * abx + abz * abz;
+      const tt = Math.max(0, Math.min(1, ((p.x - a.x) * abx + (p.z - a.z) * abz) / L2));
+      const dd = Math.hypot(p.x - (a.x + abx * tt), p.z - (a.z + abz * tt));
+      if (dd < r) y = Math.max(y, a.y + (b.y - a.y) * tt + h * Math.sqrt(1 - (dd / r) ** 2) * (1 - 0.5 * tt));
+    }
     const k = j * (CU + 1) + i;
     H[k] = H0[k] = y; X.push(p.x); Z.push(p.z);
   }
@@ -374,7 +376,7 @@ export function update(t, ctx) {
   if (T0 === 2) console.warn('[f4] NY', NY.toFixed(3), 'head', head.toArray().map((v) => v.toFixed(3)).join(','), 'cam', cam.position.toArray().map((v) => v.toFixed(3)).join(','), 'egg', egg.position.toArray().map((v) => v.toFixed(3)).join(','));
   ctx.lens.sensor = 'super35';
   ctx.lens.focalLength = 55;
-  ctx.lens.fstop = 4;
+  ctx.lens.fstop = 5.6;
   // focus between its eye and her hands (both hold focus at T4)
   ctx.lens.focus = cam.position.distanceTo(head.clone().lerp(endR, 0.35));
   ctx.lens.shutterAngle = 180;
