@@ -40,7 +40,7 @@ export function lookParams(THREE, look) {
       dustAmt: 0.7, saltAmt: 0.1, oral: lin(THREE, 0.09, 0.03, 0.035), oralDark: lin(THREE, 0.02, 0.006, 0.008),
       // melanistic: the membrane is pigmented through, so almost no light passes (a faint warm
       // brown where the sun is right behind it, never a red glow)
-      membrane: lin(THREE, 0.02, 0.018, 0.017), trans: lin(THREE, 0.006, 0.0032, 0.002), vein: lin(THREE, 0.025, 0.012, 0.009), memRough: 0.52, memSpec: 0.24,
+      membrane: lin(THREE, 0.014, 0.012, 0.0105), trans: lin(THREE, 0.006, 0.0032, 0.002), vein: lin(THREE, 0.025, 0.012, 0.009), memRough: 0.6, memSpec: 0.24, memSpecD: 0.45,
       horn: [lin(THREE, 0.02, 0.019, 0.018), lin(THREE, 0.11, 0.1, 0.09)], claw: [lin(THREE, 0.018, 0.017, 0.016), lin(THREE, 0.06, 0.055, 0.05)],
       tooth: lin(THREE, 0.36, 0.3, 0.2), iris: [lin(THREE, 0.16, 0.085, 0.024), lin(THREE, 0.045, 0.02, 0.007)], sclera: lin(THREE, 0.02, 0.015, 0.011),
     },
@@ -53,7 +53,7 @@ export function lookParams(THREE, look) {
       hier: [0.9, 1.0, 0.55, 0.0], damp: 0.3, bellyP: [0.42, 0.8, 0.25, 0.3], plateZ: -0.02,
       scl: [0.62, 0.36, 0.7, 1.3], tub: [0.2, 2.8, 0.8, 0], skin2: [0.3, 0.4, 0, 0.32], scl2: [0.62, 0.55, 0, 0],
       dustAmt: 0.6, saltAmt: 0.15, oral: lin(THREE, 0.15, 0.05, 0.045), oralDark: lin(THREE, 0.05, 0.012, 0.012),
-      membrane: lin(THREE, 0.026, 0.04, 0.017), trans: lin(THREE, 0.06, 0.068, 0.032), vein: lin(THREE, 0.05, 0.022, 0.012), memRough: 0.46, memSpec: 0.42,
+      membrane: lin(THREE, 0.026, 0.04, 0.017), trans: lin(THREE, 0.06, 0.068, 0.032), vein: lin(THREE, 0.05, 0.022, 0.012), memRough: 0.56, memSpec: 0.42, memSpecD: 0.75,
       horn: [lin(THREE, 0.05, 0.05, 0.035), lin(THREE, 0.32, 0.29, 0.2)], claw: [lin(THREE, 0.03, 0.03, 0.025), lin(THREE, 0.16, 0.14, 0.1)],
       tooth: lin(THREE, 0.5, 0.44, 0.32), iris: [lin(THREE, 0.26, 0.23, 0.06), lin(THREE, 0.06, 0.065, 0.016)], sclera: lin(THREE, 0.04, 0.036, 0.018),
     },
@@ -366,7 +366,7 @@ void dkSkin(inout vec3 albedo) {
   col *= mix(1.0, uDamp.y, dkDampM);
   // mouth interior: wet gums/palate/tongue
   vec3 oral = mix(uOralDark, uOral, smoothstep(0.2, 0.9, vMask2.x) * (0.7 + 0.3 * n2));
-  if (region > 6.5) oral = mix(uOralDark * 1.4, uBase * 0.8, 0.45);     // eyelid margins: wet, dark, not red
+  if (region > 6.5) oral = mix(uOralDark * 1.4, uBase * 0.8, 0.7);      // eyelid margins: wet, a little darker than the skin, not red
   col = mix(col, oral, dkOralM);
   // wound (detached wing stump): dark, rough
   if (uWoundR > 0.0) {
@@ -458,7 +458,7 @@ function membraneMaterial(THREE, P, ctx) {
   const U = {
     uMemCol: { value: P.membrane }, uTransCol: { value: P.trans }, uVeinCol: { value: P.vein },
     uBillowL: { value: 0 }, uBillowR: { value: 0 }, uBillowScale: { value: ctx.L * 0.06 },
-    uL: { value: ctx.L }, uFold: { value: 0 }, uMemRough: { value: P.memRough }, uMemSpec: { value: P.memSpec ?? 0.55 },
+    uL: { value: ctx.L }, uFold: { value: 0 }, uMemRough: { value: P.memRough }, uMemSpec: { value: P.memSpec ?? 0.55 }, uMemSpecD: { value: P.memSpecD ?? 1.0 },
   };
   mat.userData.dkUniforms = U;
   mat.customProgramCacheKey = () => 'dk-membrane';
@@ -488,7 +488,7 @@ vWing = aWing; vEdge = aEdge; vRest = position;
     let frag = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec4 vWing; varying vec4 vEdge; varying vec3 vRest;
-uniform vec3 uMemCol, uTransCol, uVeinCol; uniform float uL, uFold, uMemRough, uMemSpec;
+uniform vec3 uMemCol, uTransCol, uVeinCol; uniform float uL, uFold, uMemRough, uMemSpec, uMemSpecD;
 ${GLSL_COMMON}
 ${PERTURB}
 float dkVein, dkThin, dkMemH, dkMemR; vec3 dkVeinAtt; vec3 dkMemG;
@@ -591,6 +591,9 @@ normal = dkPerturb(-vViewPosition, normal, dkSlope(dkMemH, -vViewPosition), face
         frag = frag.replace('#include <lights_fragment_begin>', '#include <lights_fragment_begin>\n{\n' + blockSrc + '\n}\n');
       } else console.warn('[creatures] membrane: three.js lights chunk changed - no translucency');
     }
+    // direct (sun) sheen per creature: a melanistic membrane is matte black skin, not a grey tarp
+    frag = frag.replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
+reflectedLight.directSpecular *= uMemSpecD;`);
     frag = frag.replace('#include <lights_fragment_maps>', `#include <lights_fragment_maps>
 #if defined( USE_ENVMAP ) && defined( RE_IndirectSpecular )
   radiance *= uMemSpec;   // skin, not plastic: a satin sheen, no mirror-bright sky at grazing angles

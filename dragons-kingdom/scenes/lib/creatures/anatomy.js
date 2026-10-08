@@ -217,8 +217,9 @@ SPECIES.bashion_hatchling = {
     thumb: [0.011, 0.006, 0.016], r: [0.014, 0.0095, 0.008], fingerR: [0.0046, 0.0022], muscle: 0.35,
     // the membrane's body edge on the surface of the plump flank (not buried in it)
     attach: [[0.02, -0.008, -0.03], [0.034, -0.016, -0.08], [0.04, -0.024, -0.13]], billow: 0.02 },
-  // soft, thick newborn lids (a thin lower lid read as a metal ring round the eye)
-  lid: { rIn: 1.05, rOut: 1.24, reachL: 0.74 },
+  // thin lids that sink into the soft skin round the big eye (thick shells stood off the
+  // domed head like coins); the lower lid sits low
+  lid: { rIn: 1.03, rOut: 1.09, reachL: 0.8, span: 1.15 },
   headShape: {
     // a domed cranium that takes up most of the head, and a short, soft, rounded snout
     upper: [[-0.1, 0.34, 0.3, -0.17], [0.06, 0.41, 0.46, -0.155], [0.24, 0.44, 0.52, -0.145], [0.42, 0.41, 0.46, -0.14], [0.58, 0.33, 0.34, -0.135],
@@ -227,7 +228,7 @@ SPECIES.bashion_hatchling = {
     jaw: [[0.0, 0.31, -0.148, -0.35], [0.15, 0.32, -0.148, -0.36], [0.35, 0.29, -0.148, -0.33], [0.55, 0.25, -0.145, -0.295],
       [0.72, 0.195, -0.142, -0.25], [0.84, 0.15, -0.139, -0.222], [0.92, 0.095, -0.137, -0.19]],
     eye: [0.37, 0.21, 0.42], eyeR: 0.155, eyeInset: 0.5, orbit: 1.45, eyeExpose: 58, brow: 0.35, cheek: 0.45, jawMuscle: 0.35, ridgeR: 0.026, hinge: [0, -0.15, 0.07], gape0: 11 * deg, nostril: 0.6,
-    teethUp: 0, teethSize: 0.0, lipCover: 0.4, tympanum: 0.4, eggTooth: true, soft: true, snoutZ0: 0.46, snoutMul: 0.76,
+    teethUp: 0, teethSize: 0.0, lipCover: 0.4, tympanum: 0.4, eggTooth: true, soft: true, snoutZ0: 0.46, snoutMul: 0.76, jawEnd: 0.84,
   },
   horns: 'buds', crest: { count: 30, h: [0.0015, 0.0026, 0.001], base: 1.0 },
   scale: { body: 0.0034, belly: 0.006, head: 0.0028 },
@@ -820,8 +821,10 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
   const jt = { chain: 'jaw', bone: 'jaw', tag: 'jaw' };
   const secJ = (z) => { const [hw, top, bot] = J(z); const t2 = top + 0.03; return { hw: hw * 0.97, hh: (t2 - bot) / 2, cy: (t2 + bot) / 2 }; };
   const zj = [];
-  for (let z = 0.0; z < 0.95; z += 0.065) zj.push(z);
-  zj.push(1 - 0.5 * Math.sqrt(J(0.98)[0] * (J(0.98)[1] - J(0.98)[2]) / 2));
+  // (jawEnd: where the lower jaw stops - a newborn's chin sits back under the overhanging snout)
+  const jEnd = hs.jawEnd ?? 0.95;
+  for (let z = 0.0; z < jEnd; z += 0.065) zj.push(z);
+  zj.push(Math.min(1 - 0.5 * Math.sqrt(J(0.98)[0] * (J(0.98)[1] - J(0.98)[2]) / 2), jEnd + 0.03));
   const gJ = m.group();
   for (let i = 0; i < zj.length - 1; i++) sectionCone(zj[i], zj[i + 1], secJ(zj[i]), secJ(zj[i + 1]), 0.03, jt, jawPt, jawDir(0, 1, 0), gJ);
   // jaw angle (retroarticular process) behind and below the hinge, and the masseter bulge over it

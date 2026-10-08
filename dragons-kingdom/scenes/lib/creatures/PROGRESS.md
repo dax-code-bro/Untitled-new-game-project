@@ -57,6 +57,13 @@ only the state of the work.
 - Jaw tip: the chin plates and chain-row scales stop where the jaw turns granular (the rows
   converged at the tip and drew a swirl of stripes, seen in the 4K head close-up).
 - README updated (scale grading, membranes, hatchling head, teeth, limits).
+- After the 4K pass (`output/cr/s3final`, `output/cr/s3contact`): Charcoal's membrane darker
+  (albedo 0.014) with a dimmer direct sheen (`memSpecD` 0.45; it read as a grey tarp), Leaf's
+  membrane rougher (0.56, `memSpecD` 0.75: no satin streak), eyelid margins skin-toned, seat
+  leather rougher/darker (grazing sky sheen made it pale), hatchling lids thin and inside the
+  socket (thick shells stood off the domed head like coins: `lid.span` option), hatchling
+  chin set back under the snout (`headShape.jawEnd` 0.84; the jaw tip poked out as a flap).
+- Final 4K re-render of all hero shots + contact sheet: `output/cr/s4final`, `output/cr/s4contact`.
 
 ## Dev loop
 `scratchpad/cr/rv2.sh <name> <shot ids|all> [preset] [cinematic]` renders chosen hero shots
