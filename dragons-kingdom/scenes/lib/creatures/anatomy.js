@@ -217,21 +217,23 @@ SPECIES.bashion_hatchling = {
     thumb: [0.011, 0.006, 0.016], r: [0.014, 0.0095, 0.008], fingerR: [0.0046, 0.0022], muscle: 0.35,
     // the membrane's body edge on the surface of the plump flank (not buried in it)
     attach: [[0.02, -0.008, -0.03], [0.034, -0.016, -0.08], [0.04, -0.024, -0.13]], billow: 0.02 },
-  lid: { rIn: 1.06, rOut: 1.15 },
+  // soft, thick newborn lids (a thin lower lid read as a metal ring round the eye)
+  lid: { rIn: 1.05, rOut: 1.24, reachL: 0.74 },
   headShape: {
     // a domed cranium that takes up most of the head, and a short, soft, rounded snout
     upper: [[-0.1, 0.34, 0.3, -0.17], [0.06, 0.41, 0.46, -0.155], [0.24, 0.44, 0.52, -0.145], [0.42, 0.41, 0.46, -0.14], [0.58, 0.33, 0.34, -0.135],
-      [0.72, 0.26, 0.26, -0.13], [0.84, 0.21, 0.2, -0.12], [0.94, 0.17, 0.155, -0.108], [1.0, 0.12, 0.11, -0.092]],
-    jaw: [[0.0, 0.31, -0.148, -0.35], [0.15, 0.32, -0.148, -0.36], [0.35, 0.29, -0.148, -0.322], [0.55, 0.245, -0.145, -0.272],
-      [0.75, 0.195, -0.142, -0.228], [0.9, 0.152, -0.139, -0.196], [0.98, 0.112, -0.136, -0.176]],
+      [0.72, 0.26, 0.26, -0.135], [0.84, 0.21, 0.2, -0.132], [0.94, 0.17, 0.155, -0.126], [1.0, 0.12, 0.11, -0.112]],
+    // (a full, rounded chin - a thin jaw tip read as a crumpled flap of skin in the macro)
+    jaw: [[0.0, 0.31, -0.148, -0.35], [0.15, 0.32, -0.148, -0.36], [0.35, 0.29, -0.148, -0.33], [0.55, 0.25, -0.145, -0.295],
+      [0.72, 0.195, -0.142, -0.25], [0.84, 0.15, -0.139, -0.222], [0.92, 0.095, -0.137, -0.19]],
     eye: [0.37, 0.21, 0.42], eyeR: 0.155, eyeInset: 0.5, orbit: 1.45, eyeExpose: 58, brow: 0.35, cheek: 0.45, jawMuscle: 0.35, ridgeR: 0.026, hinge: [0, -0.15, 0.07], gape0: 11 * deg, nostril: 0.6,
-    teethUp: 0, teethSize: 0.0, lipCover: 1, tympanum: 0.4, eggTooth: true, soft: true,
+    teethUp: 0, teethSize: 0.0, lipCover: 0.4, tympanum: 0.4, eggTooth: true, soft: true, snoutZ0: 0.46, snoutMul: 0.76,
   },
   horns: 'buds', crest: { count: 30, h: [0.0015, 0.0026, 0.001], base: 1.0 },
   scale: { body: 0.0034, belly: 0.006, head: 0.0028 },
   muscle: { shoulder: 0.45, arm: 0.4, pec: 0.5, thigh: 0.45, tailbase: 0.7, belly: 1.4, neck: 0.6, wing: 0.35 },
   folds: { throat: 2, axilla: 0, stifle: 0, neck: 2, tail: 0, soft: true },
-  surfaceNoise: 0.0016,
+  surfaceNoise: 0.001,
 };
 
 // ------------------------------------------------------------- the builder
@@ -703,7 +705,11 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
   const hs = spec.headShape;
   const pitch = spec.neckPitch + spec.headPitch;
   const ez = [0, Math.sin(pitch), Math.cos(pitch)], ey = [0, Math.cos(pitch), -Math.sin(pitch)], ex = [1, 0, 0];
-  const W = (x, y, z) => [hj[0] + (x * ex[0] + y * ey[0] + z * ez[0]) * H, hj[1] + (x * ex[1] + y * ey[1] + z * ez[1]) * H, hj[2] + (x * ex[2] + y * ey[2] + z * ez[2]) * H];
+  // snoutMul < 1 shortens the snout (in front of snoutZ0) while every feature on it - nostrils,
+  // egg tooth, lips - moves with it (a newborn's short face); the cranium is unchanged
+  const zS0 = hs.snoutZ0 ?? 0.5, zSm = hs.snoutMul ?? 1;
+  const zMap = (z) => (z <= zS0 ? z : zS0 + (z - zS0) * zSm);
+  const W = (x, y, z0) => { const z = zMap(z0); return [hj[0] + (x * ex[0] + y * ey[0] + z * ez[0]) * H, hj[1] + (x * ex[1] + y * ey[1] + z * ez[1]) * H, hj[2] + (x * ex[2] + y * ey[2] + z * ez[2]) * H]; };
   const Wd = (x, y, z) => norm([x * ex[0] + y * ey[0] + z * ez[0], x * ex[1] + y * ey[1] + z * ez[1], x * ex[2] + y * ey[2] + z * ez[2]]);
   const U = (z) => profileAt(hs.upper, z);    // [halfWidth, top, bottom]
   const J = (z) => profileAt(hs.jaw, z);
@@ -713,7 +719,16 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
   const g = hs.gape0;
   const soft = !!hs.soft;
   const rotJ = (y, z, ang) => { const dy = y - hinge[1], dz = z - hinge[2]; const c = Math.cos(ang), s = Math.sin(ang); return [hinge[1] + dy * c - dz * s, hinge[2] + dy * s + dz * c]; };
-  const jawPt = (x, y, z) => { const r = rotJ(y, z, g); return W(x, r[0], r[1]); };
+  // the jaw is built closed and rotated about the hinge in WORLD space (after the snout
+  // mapping), so it is a rigid rotation the jaw bone can undo: the lips meet when it closes
+  const hingeW = W(0, hinge[1], hinge[2]);
+  const rotW = (p, ang) => {
+    const d = [p[0] - hingeW[0], p[1] - hingeW[1], p[2] - hingeW[2]];
+    const dx = d[0] * ex[0] + d[1] * ex[1] + d[2] * ex[2], dy = d[0] * ey[0] + d[1] * ey[1] + d[2] * ey[2], dz = d[0] * ez[0] + d[1] * ez[1] + d[2] * ez[2];
+    const c = Math.cos(ang), s = Math.sin(ang), ny = dy * c - dz * s, nz = dy * s + dz * c;
+    return [0, 1, 2].map((k) => hingeW[k] + ex[k] * dx + ey[k] * ny + ez[k] * nz);
+  };
+  const jawPt = (x, y, z) => (zSm === 1 ? (() => { const r = rotJ(y, z, g); return W(x, r[0], r[1]); })() : rotW(W(x, y, z), g));
   const jawDir = (x, y, z) => { const c = Math.cos(g), s = Math.sin(g); return Wd(x, y * c - z * s, y * s + z * c); };
   const sectionCone = (P0, P1, a, b, k, o, mapPt, upDir, grp = -1) => {
     const ra = Math.sqrt(a.hw * a.hh), rb = Math.sqrt(b.hw * b.hh);
@@ -838,7 +853,7 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
     const s0 = 0.16, s1 = 1.35, sa = Math.sin(midG);
     m.cone(add(apex, scale(axis, s0 * H)), add(apex, scale(axis, s1 * H)), s0 * sa * H, s1 * sa * H, { sx: 12, sy: 1, up: Wd(0, Math.cos(midG), Math.sin(midG)), k: 0.02 * H, op: 'sub', chain: 'jaw', bone: 'jaw', tag: 'mouth' });
   }
-  const cav = (x, y, z) => { const r = rotJ(y, z, midG); return W(x, r[0], r[1]); };
+  const cav = (x, y, z) => (zSm === 1 ? (() => { const r = rotJ(y, z, midG); return W(x, r[0], r[1]); })() : rotW(W(x, y, z), midG));
   const cavDir = (x, y, z) => { const c = Math.cos(midG), s = Math.sin(midG); return Wd(x, y * c - z * s, y * s + z * c); };
   const mouthY = hinge[1];
   m.ell(cav(0, mouthY, 0.5), [0.5 * lipW(0.5) * H, 0.02 * H, 0.36 * H], { ax: ex, ay: cavDir(0, 1, 0), k: 0.03 * H, op: 'sub', chain: 'jaw', bone: 'jaw', tag: 'mouth' });
@@ -901,9 +916,10 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
   for (const sd of [1, -1]) {
     const upper = [], lower = [];
     for (let i = 0; i < nT; i++) {
-      const f = (i + 0.5) / nT;
-      const z = 0.17 + (0.955 - 0.17) * f;
       const hv = (k) => hsh(i * 7 + (sd > 0 ? 1 : 2), k);
+      // uneven spacing: teeth are shed and replaced one by one, never a comb
+      const f = (i + 0.5 + (hv(10) - 0.5) * 0.5) / nT;
+      const z = 0.17 + (0.955 - 0.17) * f;
       if (hv(1) < 0.07 && i > 1 && i < nT - 2) continue;                       // a missing tooth
       const big = Math.exp(-Math.pow((f - 0.74) / 0.06, 2)) * 1.0 + Math.exp(-Math.pow((f - 0.93) / 0.045, 2)) * 0.55;
       const repl = hv(2) < 0.12 ? 0.55 : 1;                                     // replacement tooth growing in
@@ -920,9 +936,9 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
       upper.push(W(x * 1.0, y + size * 0.05, z));
     }
     for (let i = 0; i < nT - 1; i++) {
-      const f = (i + 1) / nT;
-      const z = 0.17 + (0.925 - 0.17) * f;
       const hv = (k) => hsh(i * 5 + (sd > 0 ? 3 : 4), k + 20);
+      const f = (i + 1 + (hv(10) - 0.5) * 0.5) / nT;
+      const z = 0.17 + (0.925 - 0.17) * f;
       if (hv(1) < 0.07 && i > 1 && i < nT - 3) continue;
       const big = Math.exp(-Math.pow((f - 0.84) / 0.055, 2)) * 0.9;
       const repl = hv(2) < 0.12 ? 0.55 : 1;
@@ -933,7 +949,7 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
       const broken = hv(6) < 0.1 ? 0.55 + 0.2 * hv(7) : 1;
       keratin.push({ kind: 'tooth', bone: 'jaw', tag: 'tooth',
         points: [jawPt(x, y - size * 0.5, z), jawPt(x * 0.995, y + size * 0.35, z + size * 0.05), jawPt(x * 0.985, y + size * 1.0 * broken, z - size * curve * broken)],
-        radii: [size * 0.28 * H, size * 0.2 * H, size * (broken < 1 ? 0.1 : 0.012) * H], flat: 0.7, up: ez });
+        radii: [size * 0.28 * H, size * 0.2 * H, size * (broken < 1 ? 0.1 : 0.012) * H], flat: 0.7, up: ez, seedJ: hv(9) });
       lower.push(jawPt(x, y - size * 0.05, z));
     }
     // gums: a fleshy ridge along each tooth row that buries the tooth bases
@@ -972,5 +988,6 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
       horn([sd * 0.12, 0.2, 0.09], [sd * 0.14, 0.23, 0.05], [sd * 0.15, 0.235, 0.01], 0.028, 0.02, 'bud');
     }
   }
-  return { H, frame: { ex, ey, ez, origin: hj }, hinge: W(0, hinge[1], hinge[2]), gape0: g, W, jawPt, U, J, rr, eye: eyeP };
+  const zInv = (z) => (z <= zS0 ? z : zS0 + (z - zS0) / zSm);      // world head z -> profile z (undoes snoutMul)
+  return { H, frame: { ex, ey, ez, origin: hj }, hinge: W(0, hinge[1], hinge[2]), gape0: g, W, jawPt, U, J, rr, eye: eyeP, zInv };
 }

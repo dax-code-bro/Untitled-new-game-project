@@ -404,7 +404,8 @@ export function createSaddle(c, opts = {}) {
   };
   const group = new THREE.Group();
   group.name = `${c.name}:tack`;
-  const leather = leatherMaterial(opts.leatherColor ?? [0.09, 0.05, 0.028]);
+  // dark, oiled, worn leather: rough enough that the sky does not turn the seat pale
+  const leather = leatherMaterial(opts.leatherColor ?? [0.062, 0.034, 0.019], 0.66);
   const strapMat = leatherMaterial([0.055, 0.035, 0.022], 0.6);
   const metal = new THREE.MeshStandardMaterial({ color: new THREE.Color(0.35, 0.33, 0.3), roughness: 0.38, metalness: 1 });
   const geos = [];

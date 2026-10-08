@@ -38,6 +38,23 @@ only the state of the work.
   wing-loss shot; Starlight shot = ground camera, 40 mm, her at ~270 m beside a 27 m tower at
   the same distance, hedgerows/woods 0.4-2.5 km (sets/scatter.js) - she reads 8 towers wide.
 
+## Session 3 (resume after the usage-limit stop)
+- 4K render of the state as committed: `output/cr/s3hero/` (png/, _1920.jpg, crops).
+- Leaf/Starlight: smaller scales on the lower flanks/chest/throat (`scl2.y` 0.55) and on the
+  limbs (`limbScaleMul` 0.72): the chest no longer reads as cobbled plates/breastplate.
+- Membranes: skin folds along every bone, stronger elastin striations, roughness patches,
+  subtler micro creases (they read as felt), per-creature sky reflection `memSpec`
+  (Charcoal 0.24 + memRough 0.52, Leaf 0.42 + 0.46); Starlight translucency lowered (no
+  "glow"), scout translucency less saturated.
+- Hatchling: snout shortened (`snoutMul` 0.76 in front of z 0.46; the jaw is now rotated
+  rigidly in world space so the lips still meet; oral test undoes the mapping), fuller chin,
+  thinner lips, thicker soft lids (lower lid reach 0.74), finer scales (`scaleMul` 0.72),
+  softer grooves, wet film roughness 0.1 (no pin-point sparkle), smoother skin noise, residue
+  a thin slime (not white flakes), amber claws.
+- Charcoal: teeth spaced unevenly, darker stained enamel with a few dark old teeth; dorsal
+  spikes rough weathered keratin; riding rig leather darker/rougher (no pale paper bag).
+- Charcoal head close-up camera below the eye line (sky behind the head, not the flat field).
+
 ## Dev loop
 `scratchpad/cr/rv2.sh <name> <shot ids|all> [preset] [cinematic]` renders chosen hero shots
 through a temporary scene `scenes/lookdev/creatures-tmpreview.js` (delete it before commit).

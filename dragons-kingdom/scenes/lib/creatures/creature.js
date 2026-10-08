@@ -28,9 +28,9 @@ const deg = Math.PI / 180;
 /** The Episode 1 individuals (provisional designs; sizes = the "on-screen area" reading in assets.json). */
 export const CREATURES = {
   charcoal: { species: 'bashion', L: 35.8, look: 'charcoal', flapHz: 0.76, flapAmp: 0.7, scaleMul: 0.6, age: 'giant', title: 'Charcoal (Bashion, melanistic)' },
-  leaf: { species: 'nightwing', L: 8.0, look: 'leaf', flapHz: 1.6, flapAmp: 0.85, age: 'subadult', scaleMul: 0.78, title: 'Leaf (Nightwing, subadult)' },
-  starlight: { species: 'nightwing', L: 50.6, look: 'starlight', flapHz: 0.64, flapAmp: 0.68, scaleMul: 0.55, age: 'giant', title: 'Starlight (Nightwing, albino)' },
-  hatchling: { species: 'bashion_hatchling', L: 0.42, look: 'gold', flapHz: 0, title: 'Gold Bashion hatchling' },
+  leaf: { species: 'nightwing', L: 8.0, look: 'leaf', flapHz: 1.6, flapAmp: 0.85, age: 'subadult', scaleMul: 0.78, limbScaleMul: 0.72, title: 'Leaf (Nightwing, subadult)' },
+  starlight: { species: 'nightwing', L: 50.6, look: 'starlight', flapHz: 0.64, flapAmp: 0.68, scaleMul: 0.55, limbScaleMul: 0.72, age: 'giant', title: 'Starlight (Nightwing, albino)' },
+  hatchling: { species: 'bashion_hatchling', L: 0.42, look: 'gold', flapHz: 0, scaleMul: 0.72, title: 'Gold Bashion hatchling' },
   scout: { species: 'slitherwing', L: 5.6, look: 'scout', flapHz: 2.6, flapAmp: 0.9, detachableLeftWing: true, title: 'Slitherwing scout' },
 };
 
@@ -126,7 +126,7 @@ export async function createCreature(which, opts = {}) {
   log(`[creature ${root.name}] mesh ${mesh.stats.vertices} v / ${mesh.stats.triangles} t, grid ${mesh.stats.NX}x${mesh.stats.NY}x${mesh.stats.NZ}, ${mesh.stats.msTotal} ms`);
   const oral = makeOralTest(anat);
   const sk = computeSkin(anat, mesh, boneIndex, {
-    scaleSize: { spine: spec.scale.body * L * SM, limb: spec.scale.body * L * 0.85 * SM, toe: spec.scale.body * L * 0.45 * SM, jaw: spec.scale.head * L * SM, skull: spec.scale.head * L * 1.1 * SM },
+    scaleSize: { spine: spec.scale.body * L * SM, limb: spec.scale.body * L * 0.85 * SM * (cfg.limbScaleMul ?? 1), toe: spec.scale.body * L * 0.45 * SM, jaw: spec.scale.head * L * SM, skull: spec.scale.head * L * 1.1 * SM },
     eyes: anat.eyes,
     ao: { step: L * 0.004, n: 6 }, oral,
     snoutGranular: snoutRange(anat), chinGranular: chinRange(anat),
@@ -195,7 +195,7 @@ export async function createCreature(which, opts = {}) {
     meshes.push(partMesh(THREE, eg, mats.eye, `${root.name}:eyes`, { aEye: eg.extra, aEyeX: mergeAttr(parts, 'ax', 4), aEyeZ: mergeAttr(parts, 'az', 4) }));
     const lids = [];
     for (const e of eyeData) for (const up of [true, false]) {
-      const g = eyelid(up, { rIn: spec.lid?.rIn ?? 1.07, rOut: spec.lid?.rOut ?? 1.25, span: 1.32, reach: up ? 1.0 : 0.88 });
+      const g = eyelid(up, { rIn: spec.lid?.rIn ?? 1.07, rOut: spec.lid?.rOut ?? 1.25, span: 1.32, reach: up ? (spec.lid?.reachU ?? 1.0) : (spec.lid?.reachL ?? 0.88) });
       transformPart(g, e.toWorld, e.toWorldN, boneIndex[up ? e.lidU : e.lidL]);
       lids.push(g);
     }
@@ -360,6 +360,8 @@ function boxOf(pts, pad) {
 function makeOralTest(anat) {
   const { frame, H, gape0, U, J } = anat.head;
   const hinge = anat.spec.headShape.hinge;
+  // (head coordinates in the mapped space; the snout mapping is undone after un-rotating the jaw)
+  const zInv = anat.head.zInv || ((z) => z);
   const toHead = (p) => { const d = sub(p, frame.origin); return [dot(d, frame.ex) / H, dot(d, frame.ey) / H, dot(d, frame.ez) / H]; };
   const soft = (x, w) => clamp(x / w, 0, 1);
   return (p, tag) => {
@@ -374,6 +376,7 @@ function makeOralTest(anat) {
       if (tag !== 'mouth' || yy < hinge[1] + (zz - hinge[2]) * 0) { y = yy; z = zz; }
       if (tag === 'mouth') { y = q[1]; z = q[2]; }
     }
+    z = zInv(z);
     if (z < 0.12 || z > 1.0) return 0;
     // the lip plane is y = hinge.y in closed coordinates; oral if close to it and medial
     const w = Math.max(U(z)[0], J(z)[0]) * 0.66;
