@@ -1,7 +1,7 @@
 """Post-fixes applied in place to already built characters (cache/<id>.json + .bin), so a fix
 that only needs the finished meshes does not cost a full rebuild.
 
-    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|pushout|cull|renormal|reao|all id [id ...]   ('all' = every cache)
+    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|pushout|cull|renormal|holefill|reao|all id [id ...]   ('all' = every cache)
 
 Each pass records itself in the mesh's 'postfix' list and is not applied twice.
 
@@ -353,7 +353,7 @@ def body_collider(P, T, bw=None):
 NO_PUCKER = ('boots', 'shoes', 'cap', 'coif', 'hood', 'kerchief', 'kerchieftail', 'veil', 'sling')
 
 
-def smooth_puckers(P, tris, thresh=0.08, iters=80, push=None, spots=None, normals=None, max_in=0.002):
+def smooth_puckers(P, tris, thresh=0.08, iters=80, push=None, spots=None, normals=None, max_in=0.002, protect_y=None):
     """Simulated cloth inherits the body mesh's poles (nipples, navel) and crumples where the
     simulation pinched it (armpits, crossed arms): small radial puckers that read as points
     pushing through the cloth. A fold bends the surface in ONE direction, a pucker in all of
@@ -394,6 +394,10 @@ def smooth_puckers(P, tris, thresh=0.08, iters=80, push=None, spots=None, normal
     for _ in range(2):
         nearb = np.maximum(nearb, np.bincount(a, weights=nearb[b], minlength=nW) > 0)
     s = np.clip((lam2 - thresh) / thresh, 0, 1)
+    if protect_y is not None:
+        # band collars and neckline gathers fold sharply on purpose (a membrane over them pulled
+        # the band into the neckline: slits along every collar)
+        s = s * np.clip((protect_y - Q[:, 1]) / 0.02, 0, 1)
     Nm0 = vnorm(Q)
     for _ in range(3):
         Nm0 = ring(Nm0)
@@ -528,6 +532,8 @@ def fix_puckers(cid):
     # cloth - a garment bridges them); the cloth over the nipples is re-made (smooth_puckers)
     body = [m for m in h['meshes'] if m['kind'] == 'skin']
     trees, pts = [], []
+    bones = {b_['name']: b_ for b_ in h['bones']}
+    neck_y = (bones['neck01']['p'][1] - 0.05) if 'neck01' in bones else None
     if body:
         Pb, Tb = mesh_arrays(body[0], full=True)
         key = np.round(Pb / 1e-5).astype(np.int64)
@@ -579,7 +585,7 @@ def fix_puckers(cid):
         A = m['attrs']
         P, tris = mesh_arrays(m)
         N0_ = view(bin_, A['normal']).astype(float)
-        P2, N2, ch = smooth_puckers(P, tris, push=push, spots=pts, normals=N0_)
+        P2, N2, ch = smooth_puckers(P, tris, push=push, spots=pts, normals=N0_, protect_y=neck_y)
         N0 = view(bin_, A['normal']).astype(float)
         N2 = N2 * (1.0 if np.einsum('ij,ij->', N0, N2) >= 0 else -1.0)
         N2[~ch] = N0[~ch]
@@ -808,7 +814,8 @@ def fix_cull(cid):
             n = N[i] / max(np.linalg.norm(N[i]), 1e-9)
             hit = tree.ray_cast(Vector(P[i] - n * 0.01), Vector(n), 0.06)
             cov[i] = hit[0] is not None
-        # erode one ring (welded): keep a margin round every edge of the outer garment
+        # erode two rings (welded): keep a margin round every edge of the outer garment; never
+        # within three rings of this garment's own openings (collar tops, cuffs, hems)
         key = np.round(P / 1e-5).astype(np.int64)
         _, w = np.unique(key, axis=0, return_inverse=True)
         w = w.reshape(-1)
@@ -817,9 +824,21 @@ def fix_cull(cid):
         np.logical_and.at(cw, w, cov)
         tw = w[T]
         e = np.concatenate([tw[:, [0, 1]], tw[:, [1, 2]], tw[:, [2, 0]]])
-        ok = cw.copy()
-        np.logical_and.at(ok, e[:, 0], cw[e[:, 1]])
-        np.logical_and.at(ok, e[:, 1], cw[e[:, 0]])
+        und = np.sort(e, axis=1)
+        _, inv, cnt = np.unique(und, axis=0, return_inverse=True, return_counts=True)
+        near = np.zeros(nW, bool)
+        near[e[cnt[inv.reshape(-1)] == 1].reshape(-1)] = True
+        for _ in range(3):
+            nb_ = near.copy()
+            np.logical_or.at(nb_, e[:, 0], near[e[:, 1]])
+            np.logical_or.at(nb_, e[:, 1], near[e[:, 0]])
+            near = nb_
+        ok = cw & ~near
+        for _ in range(2):
+            o2 = ok.copy()
+            np.logical_and.at(o2, e[:, 0], ok[e[:, 1]])
+            np.logical_and.at(o2, e[:, 1], ok[e[:, 0]])
+            ok = o2
         drop = ok[tw].all(1)
         if drop.any():
             T2 = T.copy()
@@ -836,28 +855,100 @@ def fix_cull(cid):
         print(f'{cid}: culled under outer layers: {", ".join(done)}', flush=True)
 
 
+def orient_faces(T, w):
+    """Consistent winding: faces are flipped so that every manifold edge is traversed in opposite
+    directions by its two faces (breadth-first over each connected patch). Garment parts made
+    separately (a band collar on a neckline) came out wound the other way: with double-sided
+    cloth, a back-facing triangle gets its normal flipped - dark slits along the seam."""
+    tw = w[T]
+    nF = len(T)
+    edges = {}
+    for f in range(nF):
+        a, b, c = tw[f]
+        for u, v in ((a, b), (b, c), (c, a)):
+            edges.setdefault((min(u, v), max(u, v)), []).append((f, u, v))
+    nbr = [[] for _ in range(nF)]
+    for lst in edges.values():
+        if len(lst) == 2:
+            (f1, u1, v1), (f2, u2, v2) = lst
+            same = (u1 == u2)                  # same direction -> windings disagree
+            nbr[f1].append((f2, same))
+            nbr[f2].append((f1, same))
+    flip = np.zeros(nF, bool)
+    seen = np.zeros(nF, bool)
+    from collections import deque
+    for s0 in range(nF):
+        if seen[s0]:
+            continue
+        seen[s0] = True
+        dq = deque([s0])
+        while dq:
+            f = dq.popleft()
+            for g, same in nbr[f]:
+                if not seen[g]:
+                    seen[g] = True
+                    flip[g] = flip[f] ^ same
+                    dq.append(g)
+    T2 = T.copy()
+    T2[flip] = T2[flip][:, [0, 2, 1]]
+    return T2, int(flip.sum())
+
+
 def fix_renormal(cid):
-    """Every cloth mesh gets welded, area-weighted vertex normals from its final positions
-    (the passes above recomputed only the vertices they moved: the seam between new and stored
-    normals shaded as dark marks - on a gown's bust, for one). Orientation voted per mesh."""
+    """Every cloth mesh gets a consistent winding (orient_faces) and welded, area-weighted vertex
+    normals from its final positions (the passes above recomputed only the vertices they moved:
+    the seam between new and stored normals shaded as dark marks). Orientation: outward, voted
+    against the normals as built, per connected patch."""
     jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
     h = json.load(open(jp))
     bin_ = bytearray(open(bp, 'rb').read())
     done = []
     for m in h['meshes']:
-        if m['kind'] != 'cloth' or 'normals3' in m.get('postfix', []):
+        if m['kind'] != 'cloth' or 'normals4' in m.get('postfix', []):
             continue
         P = view(bin_, m['attrs']['position']).astype(float)
-        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
-        T = T[(T[:, 0] != T[:, 1]) | (T[:, 1] != T[:, 2])]          # culled triangles are degenerate
+        Tall = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        live = (Tall[:, 0] != Tall[:, 1]) | (Tall[:, 1] != Tall[:, 2])
+        key = np.round(P / 1e-5).astype(np.int64)
+        _, w = np.unique(key, axis=0, return_inverse=True)
+        w = w.reshape(-1)
+        T, nflip = orient_faces(Tall[live], w)
         N0 = view(bin_, m['attrs']['normal']).astype(float)
         Nf = fresh_normals(P, T)
-        Nf *= 1.0 if np.einsum('ij,ij->', N0, Nf) >= 0 else -1.0
-        bad = np.linalg.norm(Nf, axis=1) < 0.5                       # vertices of culled faces only
+        # the vote per connected patch (a garment may be several pieces)
+        nW = int(w.max()) + 1
+        par = np.arange(nW)
+
+        def find(x):
+            while par[x] != x:
+                par[x] = par[par[x]]
+                x = par[x]
+            return x
+        for a, b, c in w[T]:
+            ra, rb, rc = find(a), find(b), find(c)
+            par[rb] = ra
+            par[find(rc)] = ra
+        compw = np.array([find(x) for x in range(nW)])
+        comp = compw[w]
+        dots = np.einsum('ij,ij->i', N0, Nf)
+        # a patch wound inward is re-wound (not just its normals turned): double-sided shading
+        # flips the normal of every back-facing triangle
+        fcomp = compw[w[T[:, 0]]]
+        for cpt in np.unique(comp):
+            if dots[comp == cpt].sum() < 0:
+                sel = fcomp == cpt
+                T[sel] = T[sel][:, [0, 2, 1]]
+                nflip += int(sel.sum())
+        Nf = fresh_normals(P, T)
+        bad = np.linalg.norm(Nf, axis=1) < 0.5
         Nf[bad] = N0[bad]
         put(bin_, m['attrs']['normal'], Nf)
-        m['postfix'] = m.get('postfix', []) + ['normals3']
-        done.append(m['name'])
+        if nflip:
+            Tout = Tall.copy()
+            Tout[live] = T
+            put(bin_, m['index'], Tout)
+        m['postfix'] = m.get('postfix', []) + ['normals4']
+        done.append(f"{m['name']}" + (f" ({nflip} tris rewound)" if nflip else ''))
     if not done:
         return
     tmp = bp + '.tmp'
@@ -865,7 +956,7 @@ def fix_renormal(cid):
     os.replace(tmp, bp)
     json.dump(h, open(jp + '.tmp', 'w'), separators=(',', ':'))
     os.replace(jp + '.tmp', jp)
-    print(f'{cid}: normals recomputed ({", ".join(done)})', flush=True)
+    print(f'{cid}: winding + normals ({", ".join(done)})', flush=True)
 
 
 def fix_reao(cid, rays=16, max_dist=0.12):
@@ -932,6 +1023,92 @@ def fix_reao(cid, rays=16, max_dist=0.12):
     print(f'{cid}: cloth AO re-baked ({", ".join(done)})', flush=True)
 
 
+def fix_holefill(cid, max_loop=10):
+    """Small holes in cloth (slits in band collars where the extruded rows met the neckline,
+    pin-holes left by the cull) are closed: every boundary loop of at most `max_loop` vertices is
+    fan-triangulated with the winding of its neighbours. The garments' real openings (neck,
+    cuffs, hems, fronts) and the large culled areas under outer layers stay open. The new index
+    buffer is appended to the .bin (the runtime reads buffers by offset)."""
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    bin_ = bytearray(open(bp, 'rb').read())
+    done = []
+    for m in h['meshes']:
+        if m['kind'] != 'cloth' or 'holefill' in m.get('postfix', []):
+            continue
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        keep = (T[:, 0] != T[:, 1]) | (T[:, 1] != T[:, 2])
+        key = np.round(P / 1e-5).astype(np.int64)
+        _, first, w = np.unique(key, axis=0, return_index=True, return_inverse=True)
+        w = w.reshape(-1)
+        tw = w[T[keep]]
+        tw = tw[(tw[:, 0] != tw[:, 1]) & (tw[:, 1] != tw[:, 2]) & (tw[:, 0] != tw[:, 2])]
+        d = np.concatenate([tw[:, [0, 1]], tw[:, [1, 2]], tw[:, [2, 0]]])
+        und = np.sort(d, axis=1)
+        _, inv, cnt = np.unique(und, axis=0, return_inverse=True, return_counts=True)
+        bd = d[cnt[inv.reshape(-1)] == 1]                    # directed boundary edges a->b
+        nxt = {}
+        bad = set()
+        for a, b in bd:
+            if b in nxt:
+                bad.add(b)
+            nxt[int(b)] = int(a)                             # fill runs b->a
+        seen = set()
+        fills = []
+        for s0 in list(nxt):
+            if s0 in seen or s0 in bad:
+                continue
+            loop, v = [], s0
+            while v not in seen and v in nxt and len(loop) <= max_loop + 1:
+                seen.add(v)
+                loop.append(v)
+                v = nxt[v]
+            if v != s0 or len(loop) < 3 or len(loop) > max_loop or any(x in bad for x in loop):
+                continue
+            for k in range(1, len(loop) - 1):
+                fills.append((first[loop[0]], first[loop[k]], first[loop[k + 1]]))
+        # zip seams: open edges that run within 2.5 mm of another open edge (a band collar's
+        # rows against the neckline) are a slit, not an opening - their vertices are joined
+        bv = np.unique(bd.reshape(-1))
+        zipped = 0
+        if len(bv) > 1:
+            Q = np.zeros((int(w.max()) + 1, 3))
+            Q[w] = P
+            B = Q[bv]
+            for i0 in range(0, len(bv), 512):
+                dd = np.linalg.norm(B[i0:i0 + 512, None, :] - B[None, :, :], axis=2)
+                for ii, row in enumerate(dd):
+                    i = i0 + ii
+                    near = np.where((row < 0.0025) & (row > 1e-7))[0]
+                    if len(near):
+                        tgt = (B[i] + B[near].sum(0)) / (1 + len(near))
+                        sel = np.isin(w, [bv[i]])
+                        P[sel] = P[sel] * 0.5 + tgt * 0.5
+                        zipped += 1
+            if zipped:
+                put(bin_, m['attrs']['position'], P)
+        if fills:
+            T2 = np.concatenate([T[keep], np.array(fills, dtype=np.int64)])
+            dt = np.uint32 if T2.max() > 65535 else np.uint16
+            a = np.ascontiguousarray(T2.reshape(-1), dtype=dt).tobytes()
+            bin_ += b'\0' * ((-len(bin_)) % 4)
+            m['index'] = {'offset': len(bin_), 'count': int(T2.size), 'type': 'u32' if dt == np.uint32 else 'u16'}
+            bin_ += a
+            done.append(f"{m['name']} ({len(fills)} tris)")
+        if zipped:
+            done.append(f"{m['name']} seam ({zipped} v zipped)")
+        m['postfix'] = m.get('postfix', []) + ['holefill']
+    h['binBytes'] = len(bin_)
+    tmp = bp + '.tmp'
+    open(tmp, 'wb').write(bin_)
+    os.replace(tmp, bp)
+    json.dump(h, open(jp + '.tmp', 'w'), separators=(',', ':'))
+    os.replace(jp + '.tmp', jp)
+    if done:
+        print(f'{cid}: holes closed in {", ".join(done)}', flush=True)
+
+
 def main():
     what, ids = sys.argv[1], sys.argv[2:]
     if ids == ['all']:
@@ -951,6 +1128,8 @@ def main():
             fix_cull(cid)
         if what in ('renormal', 'all'):
             fix_renormal(cid)
+        if what in ('holefill', 'all'):
+            fix_holefill(cid)
         if what in ('reao', 'all'):
             fix_reao(cid)
 

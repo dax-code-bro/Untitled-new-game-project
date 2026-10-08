@@ -1,1 +1,1 @@
-{ "id": "abby", "accumulate": false, "still": true, "only": ["eyes"], "cam": { "tgt": "eye.R", "off": [0, 0, 0], "az": 15, "el": 2, "dist": 0.12, "fov": 24, "fstop": 16 } }
+{ "id": "fall_c", "accumulate": false, "still": true, "only": ["shirt"], "cam": { "tgt": "neck02", "off": [-0.03, -0.02, 0.05], "az": 0, "el": 5, "dist": 0.12, "fov": 24, "fstop": 16 } }

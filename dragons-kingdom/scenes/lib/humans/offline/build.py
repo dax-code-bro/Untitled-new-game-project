@@ -251,7 +251,7 @@ def assemble(kit, spec, out_dir, opts):
     # the in-place post passes, so a fresh build needs nothing else: the face albedo de-lighting
     # at the current scales (regain.py), shoes made on a last, cloth puckers smoothed and prop
     # colours (postfix.py)
-    if os.path.samefile(out_dir, os.path.join(HERE, '..', 'cache')):
+    if os.path.samefile(out_dir, os.path.join(HERE, '..', 'cache')) and not opts.get('nopost'):
         import regain
         import postfix
         regain.regain(cid + opts.get('suffix', ''), 0.006, 0.06)
@@ -260,6 +260,7 @@ def assemble(kit, spec, out_dir, opts):
         postfix.fix_pushout(cid + opts.get('suffix', ''))
         postfix.fix_cull(cid + opts.get('suffix', ''))
         postfix.fix_renormal(cid + opts.get('suffix', ''))
+        postfix.fix_holefill(cid + opts.get('suffix', ''))
         postfix.fix_reao(cid + opts.get('suffix', ''))
         postfix.fix_props(cid + opts.get('suffix', ''))
     log(f'   {cid}: {sum(len(p.posed) for p in parts)} verts, {size / 1e6:.1f} MB, {time.time() - t0:.0f} s')
@@ -486,7 +487,7 @@ def build_sling(sk, pt, off, D):
         upw = np.clip((path[:, 1] - (shy - 0.04)) / 0.06, 0, 1)[:, None] * 1.5
         nrm = mu.norm(rad + upw * np.array([0, 1.0, 0]))
         nrm = mu.norm(nrm - t * np.einsum('ij,ij->i', nrm, t)[:, None])
-        w = np.linspace(0.045, 0.026, len(path))
+        w = np.linspace(0.034, 0.02, len(path))        # half-widths: a folded bandage, ~7 cm to 4 cm
         sv = mu.norm(np.cross(t, nrm))
         # a folded bandage, not a paper strip: 9 vertices across, the edges rolled under toward
         # the body, two shallow lengthwise creases that wander, a little twist toward the neck
@@ -504,6 +505,15 @@ def build_sling(sk, pt, off, D):
         Ps = np.vstack(rows)
         for r_ in range(nx):
             Ps[r_ * nn + 1:(r_ + 1) * nn] = push_outside(Ps[r_ * nn + 1:(r_ + 1) * nn], tree, 0.003, axis=axis)
+        # the pushes are per row and nearest-point: smooth each row along the band and across it
+        # (jagged, paper-like edges otherwise), then make sure it is still outside
+        G = Ps.reshape(nx, nn, 3)
+        for _ in range(6):
+            G[:, 1:-1] = 0.5 * G[:, 1:-1] + 0.25 * (G[:, :-2] + G[:, 2:])
+            G[1:-1, 1:] = 0.6 * G[1:-1, 1:] + 0.2 * (G[:-2, 1:] + G[2:, 1:])
+        Ps = G.reshape(-1, 3)
+        for r_ in range(nx):
+            Ps[r_ * nn + 1:(r_ + 1) * nn] = push_outside(Ps[r_ * nn + 1:(r_ + 1) * nn], tree, 0.002, axis=axis)
         Fs = [(r_ * nn + k, r_ * nn + k + 1, (r_ + 1) * nn + k + 1, (r_ + 1) * nn + k) for r_ in range(nx - 1) for k in range(nn - 1)]
         bands.append((Ps, Fs))
     P = push_outside(P, tree, 0.006, axis=axis)
@@ -646,6 +656,7 @@ def main():
     ap.add_argument('--dresspose', action='store_true')
     ap.add_argument('--nohair', action='store_true')
     ap.add_argument('--suffix', default='')
+    ap.add_argument('--nopost', action='store_true', help='skip the in-place post passes (debugging)')
     ap.add_argument('--lod', default='', help='override every character\'s lod (hero|mid) for quick tests')
     a = ap.parse_args()
     import characters
@@ -660,7 +671,7 @@ def main():
     names = kit.rig.names
     kit.base_cat = np.array([gm.bone_category(names[b]) for b in np.argmax(kit.Wd, axis=1)])
     os.makedirs(a.out, exist_ok=True)
-    opts = {'quality': a.quality, 'nosim': a.nosim, 'nohair': a.nohair, 'suffix': a.suffix, 'dresspose': a.dresspose, 'lod': a.lod}
+    opts = {'quality': a.quality, 'nosim': a.nosim, 'nohair': a.nohair, 'suffix': a.suffix, 'dresspose': a.dresspose, 'lod': a.lod, 'nopost': a.nopost}
     if a.rays:
         opts['rays'] = a.rays
     fails = []

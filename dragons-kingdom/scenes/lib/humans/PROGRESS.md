@@ -107,6 +107,16 @@ Later in session 4:
 - Leather: roughness divided by the scan's mean roughness (boots/belts read as wet rubber).
 - Hair: roots fade over the first 3% only (10% bared the temples of long pulled-back hair).
 
-Next: when queues A/B/C are through: `postfix.py all all`, hero + contact at preview, rebuild
-alexandria if her bust still shows dots, then final 4K + crops, npm test, README numbers.
-Remi's square shoulders are a known look issue (drape envelope), not touched.
+- Found: the pucker membrane also caught band collars (sharp on purpose) and pulled them into the
+  neckline -> slits along every collar. Pucker smoothing now stops 5 cm below neck01. Also: cloth
+  AO is re-baked after the passes (reao; the old crease AO printed dots), small holes / near
+  seams are closed (holefill), patches wound inward are re-wound (renormal), cull keeps 3 rings
+  round a garment's own openings and erodes 2 rings, sling bands narrower and smoothed.
+- FINAL full rebuild started 05:58 UTC: three lock-aware queues (queue.sh now takes a per-id
+  lock dir, cache/<id>.lock) over all 48 ids, stamp scratchpad humans/stamp_s4final, logs
+  humans/logs/fin_A|B|C.log. After a crash: rmdir cache/*.lock, re-run the same queue command.
+  build.py --nopost skips the post passes (debugging).
+
+Next: when the queues are through: hero + contact + riders at preview, then final 4K + crops,
+npm test, README numbers. Known look issues: Remi's square shoulders (drape envelope); hoods are
+snug coif-like hoods; long pulled-back hairlines are a bit even.
