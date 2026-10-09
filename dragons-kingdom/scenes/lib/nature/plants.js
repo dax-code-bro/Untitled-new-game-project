@@ -159,20 +159,24 @@ export function foliageMaterial(kind, opts = {}) {
 varying float vH; varying vec3 vFW; varying vec3 vFL; uniform float fLeaf; uniform vec4 fFlower; uniform vec3 fTrans; uniform float fVar;
 ${GLSL_NOISE}`)
       .replace('#include <color_fragment>', `#include <color_fragment>
+// octaves fade to their mean once their period nears the pixel footprint (no aliasing speckle at range)
+float fFp = max(length(dFdx(vFW)), length(dFdy(vFW)));
+#define FAA(f) (1.0 - smoothstep(0.22, 0.6, (f) * fFp))
+#define FN3(p, f) mix(0.5, dkVN3((p) * (f)), FAA(f))
 {
-  float n1 = dkVN3(vFW * fLeaf), n2 = dkVN3(vFW * fLeaf * 2.7 + 7.0), n3 = dkVN3(vFW * fLeaf * 0.25 + 3.0);
+  float n1 = FN3(vFW, fLeaf), n2 = FN3(vFW + 7.0 / (fLeaf * 2.7), fLeaf * 2.7), n3 = FN3(vFW + 3.0 / (fLeaf * 0.25), fLeaf * 0.25);
   float leaf = n1 * 0.55 + n2 * 0.45;
   // gaps between sprays are dark (self-shadowed interior), sprays catch light
   diffuseColor.rgb *= mix(0.35, 1.35, smoothstep(0.25, 0.75, leaf)) * (1.0 + fVar * (n3 - 0.5) * 2.0);
   diffuseColor.rgb *= mix(0.45, 1.0, smoothstep(0.0, 0.6, vH));
   // clumps within the mass at the 0.3-1 m scale (sprays, hollows) - still there when the leaf
   // scale has averaged away at range
-  float n4 = dkVN3(vFW * fLeaf * 0.16 + 13.0) * 0.6 + dkVN3(vFW * fLeaf * 0.42 + 17.0) * 0.4;
+  float n4 = FN3(vFW + 2.1, fLeaf * 0.16) * 0.6 + FN3(vFW + 4.4, fLeaf * 0.42) * 0.4;
   diffuseColor.rgb *= 0.55 + 0.9 * smoothstep(0.2, 0.8, n4);
-  float lump = dkVN3(vFW * fLeaf * 0.3 + 21.0);
+  float lump = FN3(vFW + 5.2, fLeaf * 0.3);
   diffuseColor.rgb *= 0.6 + 0.6 * smoothstep(0.2, 0.7, lump);
   // flowers in sprays, not a uniform sprinkle (they show at range as warm flecks)
-  float fl = max(smoothstep(0.62, 0.8, dkVN3(vFW * fLeaf * 1.6 + 11.0)), 0.45 * smoothstep(0.62, 0.8, dkVN3(vFW * fLeaf * 0.35 + 19.0)))
+  float fl = max(smoothstep(0.62, 0.8, FN3(vFW, fLeaf * 1.6)), 0.45 * smoothstep(0.62, 0.8, FN3(vFW + 1.3, fLeaf * 0.35)))
     * smoothstep(0.3, 0.9, vH) * fFlower.w * smoothstep(0.3, 0.7, n3 + 0.3) * 1.6;
   diffuseColor.rgb = mix(diffuseColor.rgb, fFlower.rgb, fl);
 }`)
@@ -181,14 +185,17 @@ ${GLSL_NOISE}`)
   // a ragged, see-through silhouette: toward the outline the mass breaks into sprays with sky and
   // ground between them (a closed smooth hull is what makes a clump read as a pom-pom)
   float facing = abs(dot(normal, normalize(vViewPosition)));
-  float rag = dkVN3(vFW * fLeaf * 0.8 + 2.0) * 0.55 + dkVN3(vFW * fLeaf * 0.25 + 6.0) * 0.45;
+  float fFp2 = max(length(dFdx(vFW)), length(dFdy(vFW)));
+  float rag = mix(0.5, dkVN3(vFW * fLeaf * 0.8 + 2.0), 1.0 - smoothstep(0.22, 0.6, fLeaf * 0.8 * fFp2)) * 0.55
+            + mix(0.5, dkVN3(vFW * fLeaf * 0.25 + 6.0), 1.0 - smoothstep(0.22, 0.6, fLeaf * 0.25 * fFp2)) * 0.45;
   if (rag > 0.22 + 1.5 * facing + 0.6 * smoothstep(0.35, 0.0, vH)) discard;   // (never at the base: no pale rings of ground)
 }
 {
-  vec3 b = vec3(dkVN3(vFW * fLeaf * 1.3) - 0.5, dkVN3(vFW * fLeaf * 1.3 + 5.0) - 0.5, dkVN3(vFW * fLeaf * 1.3 + 9.0) - 0.5);
+  float fFp3 = max(length(dFdx(vFW)), length(dFdy(vFW)));
+  vec3 b = vec3(dkVN3(vFW * fLeaf * 1.3) - 0.5, dkVN3(vFW * fLeaf * 1.3 + 5.0) - 0.5, dkVN3(vFW * fLeaf * 1.3 + 9.0) - 0.5) * (1.0 - smoothstep(0.22, 0.6, fLeaf * 1.3 * fFp3));
   // lumps of foliage at the 10-30 cm scale (the cauliflower surface of a dense bush), resolved at
   // range where the leaf-scale bump has averaged out
-  vec3 bl = vec3(dkVN3(vFW * fLeaf * 0.3 + 1.0) - 0.5, dkVN3(vFW * fLeaf * 0.3 + 6.0) - 0.5, dkVN3(vFW * fLeaf * 0.3 + 11.0) - 0.5);
+  vec3 bl = vec3(dkVN3(vFW * fLeaf * 0.3 + 1.0) - 0.5, dkVN3(vFW * fLeaf * 0.3 + 6.0) - 0.5, dkVN3(vFW * fLeaf * 0.3 + 11.0) - 0.5) * (1.0 - smoothstep(0.22, 0.6, fLeaf * 0.3 * fFp3));
   normal = normalize(normal + (viewMatrix * vec4(b * 0.9 + bl * 1.6, 0.0)).xyz);
 }`);
     const chunk = THREE.ShaderChunk.lights_fragment_begin;
@@ -201,7 +208,7 @@ ${GLSL_NOISE}`)
     }
     sh.fragmentShader = fs;
   };
-  mat.customProgramCacheKey = () => `nature-foliage-v3-${kind}`;
+  mat.customProgramCacheKey = () => `nature-foliage-v4-${kind}`;
   return mat;
 }
 
@@ -255,7 +262,7 @@ export function scatterPlants(ctx, opts) {
   // candidate points on a jittered grid whose spacing grows with distance from the cameras
   const kinds = [
     // colonies, not specimens: low wind-cut cushions that merge into continuous patches
-    { kind: 'gorse', ch: 1, spacing: 1.7, size: [1.2, 3.4], hgt: [0.6, 1.4], lo: 0.18, hi: 0.5 },
+    { kind: 'gorse', ch: 1, spacing: 1.45, size: [1.4, 3.6], hgt: [0.6, 1.5], lo: 0.16, hi: 0.45 },
     { kind: 'heather', ch: 0, spacing: 1.25, size: [1.0, 2.6], hgt: [0.15, 0.35], lo: 0.25, hi: 0.6 },
     { kind: 'bracken', ch: 2, spacing: 1.4, size: [1.2, 2.8], hgt: [0.55, 1.0], lo: 0.22, hi: 0.55 },
     { kind: 'scrub', ch: 3, spacing: 2.6, size: [2.2, 5.5], hgt: [0.9, 2.4], lo: 0.25, hi: 0.6 },

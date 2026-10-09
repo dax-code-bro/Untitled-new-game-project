@@ -66,8 +66,11 @@ vec4 nkBed(float s) {
 void nkTap(int Lr, int ax, vec3 P, vec3 n, float scale, out vec4 alb, out vec3 nw, out float rough) {
   vec2 uv; vec3 T, B;
   dkProj(ax, P * nkTile[Lr] * scale, n, uv, T, B);
-  // smooth domain warp: breaks the photo's repeat grid without seams
-  uv += (vec2(dkVN2(uv * 0.23 + float(Lr) * 3.1), dkVN2(uv * 0.23 + 17.3)) - 0.5) * 1.2;
+  // smooth domain warp: breaks the photo's repeat grid without seams. Large and slow: the warp's
+  // gradient stretches the photo locally, and a strong one (it was 1.2 tiles every 4 tiles) smears
+  // the grain into swirling hair-like streaks; keep the local stretch under ~25 %
+  uv += (vec2(dkVN2(uv * 0.07 + float(Lr) * 3.1), dkVN2(uv * 0.07 + 17.3)) - 0.5) * 0.9
+      + (vec2(dkVN2(uv * 0.29 + 5.7), dkVN2(uv * 0.29 + 11.1)) - 0.5) * 0.14;
   vec3 a = texture(nkAlb, vec3(uv, float(Lr))).rgb;
   vec4 d = texture(nkDat, vec3(uv, float(Lr)));
   vec3 tn = texture(nkNrm, vec3(uv, float(Lr))).xyz * 2.0 - 1.0;
@@ -88,6 +91,18 @@ void nkTri(int Lr, vec3 P, vec3 n, float scale, out vec4 alb, out vec3 nw, out f
   }
   nw = normalize(nw);
 }
+// ground layers: top projection on the flat, triplanar on slopes (a top projection smears into
+// streaks down the fall line of head slopes, banks and talus)
+void nkGround(int Lr, vec3 P, vec3 n, float scale, out vec4 alb, out vec3 nw, out float rough) {
+  if (n.y > 0.9) nkTap(Lr, 1, P, n, scale, alb, nw, rough);
+  else nkTri(Lr, P, n, scale, alb, nw, rough);
+}
+// pixel footprint in metres (set per fragment); an octave of procedural noise fades to its mean once
+// its period approaches the footprint - unfiltered value noise above Nyquist aliases into moire
+// streaks and swirls on oblique ground
+float nkFp = 0.01;
+float nkAA(float f) { return 1.0 - smoothstep(0.22, 0.6, f * nkFp); }
+float nkN3(vec3 p, float f) { return mix(0.5, dkVN3(p * f), nkAA(f)); }
 vec3 nkRockN; float nkRough; float nkWetness; float nkAOv;
 `;
 
@@ -140,7 +155,7 @@ normal = normalize((viewMatrix * vec4(nkRockN, 0.0)).xyz);`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= nkAOv; reflectedLight.indirectSpecular *= nkAOv * nkAOv;`);
   };
-  mat.customProgramCacheKey = () => `nature-landscape-v10${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}`;
+  mat.customProgramCacheKey = () => `nature-landscape-v15${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}`;
   return mat;
 }
 
@@ -150,6 +165,7 @@ vec3 N0 = normalize(vDkN) * (gl_FrontFacing ? 1.0 : -1.0);
 float up = N0.y;
 float y = P.y;
 float camD = length(P - cameraPosition);
+nkFp = max(length(dFdx(P)), length(dFdy(P)));
 float tideH = nkSea.x, tideL = nkSea.y;
 // --- large-scale variation fields
 float m1 = dkFbm3(P * 0.021), m2 = dkFbm3(P * 0.09 + 7.0), m3 = dkVN3(P * 0.45 + 3.0);
@@ -195,7 +211,9 @@ rock = mix(rock, vec3(0.33, 0.17, 0.1) * (0.7 + 0.6 * lumR), bed.a * 0.85);
 #else
 vec3 bedC = t < 0.35 ? mix(pgrey, cream, t / 0.35) : t < 0.7 ? mix(cream, bgrey, (t - 0.35) / 0.35) : mix(bgrey, buff, (t - 0.7) / 0.3);
 bedC = mix(bedC, pgrey, 0.25 + 0.2 * m1);
-vec3 rock = bedC * pow(lumR / 0.58, 1.15) * mix(vec3(1.0), aR.rgb / max(lumR, 0.05), 0.25);
+// (the scan's luminance compressed: its dark veins and creases at full contrast read as marble or
+// crumpled paper on a pale limestone)
+vec3 rock = bedC * pow(lumR / 0.58, 0.8) * mix(vec3(1.0), aR.rgb / max(lumR, 0.05), 0.15);
 // thin shaly partings: darker, browner
 rock = mix(rock, rock * vec3(0.55, 0.52, 0.48), bed.a * 0.8);
 #endif
@@ -225,13 +243,13 @@ rock = mix(rock, vec3(0.045, 0.045, 0.04) * (0.8 + 0.4 * m3), blk * 0.88);
 {
   float zone = smoothstep(blackTop - 1.0, blackTop + 1.5, hS) * (1.0 - smoothstep(12.0, 24.0, hS));
   float cluster = smoothstep(0.42, 0.62, dkFbm3(P * 0.28 + 11.0) + 0.2 * up);
-  float spots = smoothstep(0.6, 0.7, dkVN3(P * 11.0)) + 0.6 * smoothstep(0.62, 0.7, dkVN3(P * 27.0 + 3.0));
+  float spots = smoothstep(0.6, 0.7, nkN3(P, 11.0)) + 0.6 * smoothstep(0.62, 0.7, nkN3(P + 0.111, 27.0));
   float far = smoothstep(25.0, 120.0, camD);
   float amt = zone * cluster * mix(clamp(spots, 0.0, 1.0), 0.33, far) * nkLook.x;
   vec3 lich = mix(vec3(0.78, 0.45, 0.08), vec3(0.82, 0.66, 0.2), m3) * (0.6 + 0.5 * lumR);
-  rock = mix(rock, lich, amt * 0.6);
+  rock = mix(rock, lich, amt * 0.45);
   float hi = smoothstep(7.0, 16.0, hS);
-  float gspots = smoothstep(0.55, 0.66, dkVN3(P * 5.0 + 1.7));
+  float gspots = smoothstep(0.55, 0.66, nkN3(P + 0.34, 5.0));
   float grey = hi * smoothstep(0.45, 0.65, dkFbm3(P * 0.22 + 5.0)) * mix(gspots, 0.4, far) * nkLook.x;
   rock = mix(rock, vec3(0.72, 0.72, 0.68) * (0.85 + 0.3 * lumR), grey * 0.5);
   float moss = hi * smoothstep(0.62, 0.8, dkFbm3(P * 0.35 + 23.0) + 0.45 * vNkCav + 0.25 * max(up, 0.0)) * (0.5 + 0.5 * smoothstep(0.0, -0.8, N0.z));
@@ -242,14 +260,14 @@ rock = mix(rock, vec3(0.045, 0.045, 0.04) * (0.8 + 0.4 * m3), blk * 0.88);
   float vert = smoothstep(0.85, 0.3, abs(up));
   vec2 tg = normalize(vec2(-N0.z, N0.x) + 1e-4);
   float u = dot(P.xz, tg);
-  float st = smoothstep(0.55, 0.85, dkVN2(vec2(u * 0.8, y * 0.045))) * smoothstep(0.35, 0.8, dkVN2(vec2(u * 2.7, y * 0.11 + 3.0)));
+  float st = smoothstep(0.55, 0.85, dkVN2(vec2(u * 0.8, y * 0.045))) * mix(0.5, smoothstep(0.35, 0.8, dkVN2(vec2(u * 2.7, y * 0.11 + 3.0))), nkAA(2.7));
   rock *= 1.0 - vert * st * 0.45 * nkLook.y;
   float seep = smoothstep(0.25, 0.75, dkVN2(vec2(u * 0.35, sB * 0.6))) * smoothstep(0.6, 0.2, bed.g) * vert;
   rock = mix(rock, rock * vec3(0.42, 0.46, 0.38), seep * 0.5 * nkLook.y * (1.0 - damp));
   float col = exp(-dot(P.xz - nkPoint.xy, P.xz - nkPoint.xy) / (nkPoint.z * nkPoint.z));
   float gu = col * smoothstep(5.0, 9.0, hS) * (1.0 - smoothstep(30.0, 45.0, hS)) * smoothstep(0.6, 0.85, dkVN2(vec2(u * 1.7, y * 0.07 + 1.0)));
   // on ledges and stack tops: splashes and crusts in patches, never a white cap like snow
-  float spl = smoothstep(0.45, 0.75, dkVN3(P * 1.3 + 4.0)) * smoothstep(0.55, 0.8, m3);
+  float spl = smoothstep(0.45, 0.75, nkN3(P + 3.08, 1.3)) * smoothstep(0.55, 0.8, m3);
   gu = max(gu, col * smoothstep(0.75, 1.0, up) * smoothstep(5.0, 8.0, hS) * spl * 0.55);
   rock = mix(rock, vec3(0.8, 0.8, 0.76), gu * 0.65 * nkLook.z);
 }
@@ -257,7 +275,7 @@ rock = mix(rock, vec3(0.045, 0.045, 0.04) * (0.8 + 0.4 * m3), blk * 0.88);
 {
   float inter = smoothstep(tideL - 0.5, tideL + 0.3, y) * (1.0 - smoothstep(tideH - 0.3, tideH + 0.4, y));
   float fineFade = 1.0 - smoothstep(20.0, 80.0, camD);
-  float barn = inter * smoothstep(0.45, 0.7, dkVN3(P * 6.0)) * smoothstep(0.3, 0.6, m3 + 0.2);
+  float barn = inter * smoothstep(0.45, 0.7, nkN3(P, 6.0)) * smoothstep(0.3, 0.6, m3 + 0.2);
   rock = mix(rock, vec3(0.62, 0.62, 0.58), barn * mix(0.3, 0.65, fineFade));
   float wrack = smoothstep(tideL - 0.8, tideL, y) * (1.0 - smoothstep(0.2, 1.1, y + 0.6 * (m2 - 0.5))) * smoothstep(-0.2, 0.5, up + 0.4) * smoothstep(0.35, 0.6, m2 + 0.25 * m3);
   rock = mix(rock, vec3(0.09, 0.075, 0.03) * (0.7 + 0.6 * m3), wrack * 0.92);
@@ -285,21 +303,20 @@ if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
   if (wTurf > 0.01) {
     vec4 a2; vec3 n2; float r2;
     // slopes (head slopes, banks) take the turf triplanar: a top projection smears down the fall line
-    if (up > 0.9) { nkTap(1, 1, P, N0, 1.0, a, n, r); nkTap(7, 1, P + 17.0, N0, 0.8, a2, n2, r2); }
-    else { nkTri(1, P, N0, 1.0, a, n, r); nkTri(7, P + 17.0, N0, 0.8, a2, n2, r2); }
+    nkGround(1, P, N0, 1.0, a, n, r); nkGround(7, P + 17.0, N0, 0.8, a2, n2, r2);
     float dry = smoothstep(0.35, 0.75, m1 + 0.3 * m2);
     vec3 c = mix(a.rgb * vec3(0.52, 0.6, 0.36), a2.rgb * vec3(0.62, 0.6, 0.42), dry * 0.55);
     c *= 0.75 + 0.4 * m2;
     c = mix(c, c * vec3(0.8, 0.9, 0.7), smoothstep(0.55, 0.8, dkFbm3(P * 0.05 + 2.0)));
     // mottling at the scales of tussocks, grazing and soil depth: what keeps turf from reading as felt
-    float mt = dkVN3(P * 1.6 + 3.0) * 0.35 + dkVN3(P * 0.42 + 9.0) * 0.4 + dkVN3(P * 0.11 + 1.0) * 0.25;
+    float mt = nkN3(P + 1.875, 1.6) * 0.35 + nkN3(P + 21.4, 0.42) * 0.4 + dkVN3(P * 0.11 + 1.0) * 0.25;
     c *= 0.62 + 0.75 * mt;
     // tussock scale (0.2-0.6 m): tufts and the shadowed gaps between them; dead straw in the tops;
     // what still reads at 5-10 cm a pixel, where the photo texture has averaged out to felt
     float fadeT = 1.0 - smoothstep(150.0, 600.0, camD);
-    float tu = dkVN3(P * 3.1 + 1.3) * 0.6 + dkVN3(P * 7.3 + 4.1) * 0.4;
+    float tu = nkN3(P + 0.42, 3.1) * 0.6 + nkN3(P + 0.56, 7.3) * 0.4;
     c *= mix(1.0, 0.72 + 0.5 * smoothstep(0.25, 0.75, tu), fadeT);
-    float straw = smoothstep(0.58, 0.82, dkVN3(P * 0.9 + 7.7) * 0.6 + tu * 0.4) * smoothstep(0.35, 0.65, m2);
+    float straw = smoothstep(0.58, 0.82, nkN3(P + 8.56, 0.9) * 0.6 + tu * 0.4) * smoothstep(0.35, 0.65, m2);
     c = mix(c, vec3(0.36, 0.33, 0.2) * (0.8 + 0.4 * tu), straw * 0.35);
     // the green is a muted olive, not a lawn
     c = mix(c, vec3(dot(c, vec3(0.3, 0.59, 0.11))), 0.18);
@@ -312,39 +329,39 @@ if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
     c = mix(c, vec3(0.2, 0.14, 0.06) * (0.8 + 0.4 * m3), cov.b * 0.45);
     if (heath > 0.01) {
       vec4 a3; vec3 n3; float r3;
-      nkTap(8, 1, P + 9.0, N0, 1.0, a3, n3, r3);
+      nkGround(8, P + 9.0, N0, 1.0, a3, n3, r3);
       c = mix(c, a3.rgb * vec3(0.5, 0.46, 0.3) * (0.8 + 0.4 * m3) + vec3(0.012, 0.016, 0.004), heath * 0.85);
     }
     float w = wTurf * (1.0 + (a.a - 0.5) * 0.6);
     acc += c * w; nacc += normalize(mix(n, n2, 0.5)) * w; racc += 0.92 * w; wacc += w;
   }
   if (wSoil > 0.01) {
-    nkTap(2, 1, P, N0, 1.0, a, n, r);
+    nkGround(2, P, N0, 1.0, a, n, r);
     vec4 a2; vec3 n2; float r2;
-    nkTap(3, 1, P + 5.0, N0, 1.0, a2, n2, r2);
+    nkGround(3, P + 5.0, N0, 1.0, a2, n2, r2);
     vec3 c = mix(a.rgb * vec3(0.62, 0.68, 0.5), a2.rgb * vec3(0.55, 0.5, 0.42), smoothstep(0.55, 0.8, m3) * 0.6);
     float w = wSoil * (1.0 + (a.a - 0.5));
     acc += c * w; nacc += n * w; racc += 0.9 * w; wacc += w;
   }
   if (wShingle > 0.01) {
-    nkTap(5, 1, P, N0, 1.4, a, n, r);
+    nkGround(5, P, N0, 1.4, a, n, r);
     float w = wShingle * (1.0 + (a.a - 0.5) * 1.5);
     acc += a.rgb * vec3(0.95, 0.95, 0.92) * w; nacc += n * w; racc += r * w; wacc += w;
   }
   if (wSand > 0.01) {
-    nkTap(4, 1, P, N0, 1.0, a, n, r);
+    nkGround(4, P, N0, 1.0, a, n, r);
     float wetS = 1.0 - smoothstep(-0.4, 1.4, y);
     vec3 c = a.rgb * mix(vec3(1.0), vec3(0.62, 0.6, 0.55), wetS);
     float w = wSand;
     acc += c * w; nacc += n * w; racc += mix(r, 0.25, wetS) * w; wacc += w;
   }
   if (wScree > 0.01) {
-    nkTap(6, 1, P, N0, 1.0, a, n, r);
+    nkGround(6, P, N0, 1.0, a, n, r);
     float w = wScree * (1.0 + (a.a - 0.5) * 1.2);
     acc += a.rgb * vec3(1.02, 1.0, 0.95) * w; nacc += n * w; racc += r * w; wacc += w;
   }
   if (wSea > 0.01) {
-    nkTap(4, 1, P, N0, 0.7, a, n, r);
+    nkGround(4, P, N0, 0.7, a, n, r);
     vec3 c = mix(a.rgb * 0.75, vec3(0.10, 0.09, 0.04), smoothstep(0.5, 0.7, m2) * 0.8);
     float w = wSea;
     acc += c * w; nacc += n * w; racc += 0.6 * w; wacc += w;
@@ -365,7 +382,7 @@ if (turfBump > 0.0) {
   float e = 0.35;
   float h0 = dkFbm3(vec3(P.x, 0.0, P.z) * 0.55), hx = dkFbm3(vec3(P.x + e, 0.0, P.z) * 0.55), hz = dkFbm3(vec3(P.x, 0.0, P.z + e) * 0.55);
   float h1 = dkVN2(P.xz * 2.2), h1x = dkVN2((P.xz + vec2(e, 0.0)) * 2.2), h1z = dkVN2((P.xz + vec2(0.0, e)) * 2.2);
-  vec3 bump = vec3(-(hx - h0) - 0.35 * (h1x - h1), 0.0, -(hz - h0) - 0.35 * (h1z - h1)) / e * 0.45;
+  vec3 bump = vec3(-(hx - h0) - 0.35 * nkAA(2.2) * (h1x - h1), 0.0, -(hz - h0) - 0.35 * nkAA(2.2) * (h1z - h1)) / e * 0.45 * mix(0.4, 1.0, nkAA(0.55));
   nrm = normalize(nrm + bump * smoothstep(0.6, 0.9, up));
 }
 #endif
