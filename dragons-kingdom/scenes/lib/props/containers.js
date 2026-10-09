@@ -114,7 +114,15 @@ export function barrel(kit, F, rnd, o = {}) {
   for (const hy of heads) {
     const rr = rAt(hy) - T * 0.55;
     const top = hy > H / 2;
+    const h0 = hb.count;
     lathe(hb, sub(F, [0, hy - (top ? 0 : 0.02), 0]), top ? [[rr, 0], [rr, 0.012], [rr * 0.96, 0.02], [0, 0.02]] : [[0, 0], [rr * 0.96, 0], [rr, 0.008], [rr, 0.02]], { seg: 36, piece: (o.piece ?? 0) + 0.5 + hy });
+    // the head is boards: straight grain running along them (x, the joint lines' direction), not
+    // the lathe's rings - planar uv, the scan's own board seams parallel to the joints
+    for (let i = h0; i < hb.count; i++) {
+      const dx = hb.P.a[3 * i] - F.o.x, dy = hb.P.a[3 * i + 1] - F.o.y, dz = hb.P.a[3 * i + 2] - F.o.z;
+      hb.U.a[2 * i] = dx * F.x.x + dy * F.x.y + dz * F.x.z;
+      hb.U.a[2 * i + 1] = dx * F.z.x + dy * F.z.y + dz * F.z.z;
+    }
     const nb = 4 + Math.floor(rnd() * 2);
     for (let q = 1; q < nb; q++) {
       const z = -rr + (2 * rr * q) / nb + (rnd() - 0.5) * 0.01;

@@ -15,7 +15,7 @@
 //   ship.moorTo([bollardA, bollardB], kit)  // mooring lines (world points)
 import * as THREE from 'three';
 import { loadModel, loadPBR } from '../assets.js';
-import { Kit, Builder, tube, box, lathe, sagLine, catenary, resample, fp, sub, frame, rng, hash, clamp } from './core.js';
+import { Kit, Builder, tube, box, lathe, sagLine, catenary, resample, fp, sub, frame, rng, hash, clamp, fbm } from './core.js';
 import { propMaterials, clothMaterial } from './materials.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -131,19 +131,35 @@ normal = smBump(-vViewPosition, normal, smDl * 0.003);`);
       const furl = (a, b, R, off, overSpar = R * 0.75 + 0.05) => {
         const axis = b.clone().sub(a), L = axis.length(); axis.normalize();
         const ph = rnd() * 6;
-        const rollR = (t) => R * (0.3 + 0.7 * Math.sin(Math.PI * t) ** 0.6) * (1 + 0.1 * Math.sin(t * 37 + ph) + 0.07 * Math.sin(t * 91 + ph * 2));
+        // the gaskets first (irregularly spaced): the roll is cinched at each and bulges between,
+        // each bulge its own size; slow lumps where more or less cloth was gathered
+        const gk = [];
+        for (let s = 0.55; s < L - 0.55; s += 0.62 + rnd() * 0.3) gk.push({ s, bulge: 0.75 + rnd() * 0.5 });
+        const bulgeAt = (s) => {
+          let best = 1, pinch = 0;
+          for (let k = 0; k < gk.length; k++) {
+            const d = Math.abs(s - gk[k].s);
+            pinch = Math.max(pinch, Math.exp(-(d * d) / 0.0035));
+            if (s >= gk[k].s && (k + 1 === gk.length || s < gk[k + 1].s)) best = gk[k].bulge;
+          }
+          return (1 - 0.16 * pinch) * (1 + 0.1 * (best - 1));
+        };
+        const rollR = (t) => {
+          const s = 0.25 + t * (L - 0.5);
+          return R * (0.3 + 0.7 * Math.sin(Math.PI * t) ** 0.6) * bulgeAt(s) * (1 + 0.09 * fbm(s * 1.1 + ph, ph, 0.5, 2) + 0.035 * fbm(s * 4.3, ph * 2, 1.5, 2));
+        };
         const at = (s) => a.clone().addScaledVector(axis, s).add(off);
         const roll = [];
-        for (let k = 0; k <= 40; k++) roll.push(at(0.25 + (k / 40) * (L - 0.5)));
-        tube(fb, roll, (t) => rollR(t) * (1 + 0.05 * Math.sin(t * 173 + ph * 3)), { sides: 16, segments: 120, piece: rnd(), caps: true, ao: (t) => 0.75 + 0.25 * Math.abs(Math.sin(t * 91 + ph * 2)) });
+        for (let k = 0; k <= 60; k++) roll.push(at(0.25 + (k / 60) * (L - 0.5)));
+        tube(fb, roll, (t) => rollR(t), { sides: 16, segments: Math.max(120, Math.round(L * 40)), piece: rnd(), caps: true, ao: (t) => 0.8 + 0.2 * bulgeAt(0.25 + t * (L - 0.5)) });
         let up = V(0, 1, 0).addScaledVector(axis, -axis.y);
         if (up.lengthSq() < 1e-4) up = V(1, 0, 0);
         up.normalize();
         const side = new THREE.Vector3().crossVectors(axis, up).normalize();
-        for (let s = 0.55; s < L - 0.55; s += 0.7 + rnd() * 0.15) {
-          const t = (s - 0.25) / (L - 0.5);
-          const cc = at(s);
-          const r0 = rollR(clamp(t, 0, 1)) * 0.96;
+        for (const g of gk) {
+          const t = (g.s - 0.25) / (L - 0.5);
+          const cc = at(g.s);
+          const r0 = rollR(clamp(t, 0, 1)) * 0.97;
           const ring = [];
           for (let k = 0; k <= 18; k++) {
             const ang = (k / 18) * Math.PI * 2;

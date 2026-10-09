@@ -93,10 +93,13 @@ export function sack(api, kit, F, rnd, o = {}) {
     else if (t < tieT + 0.02) r = R * 0.14;
     else {
       // the tuft: the gathered mouth fanning out above the cord in many small irregular folds
+      // the gathered mouth bunched above the cord: it swells out in soft irregular folds and
+      // closes in again at the top (a puckered opening), never a flat frill
       tuft = (t - tieT - 0.02) / (1 - tieT - 0.02);
-      const ruffle = 0.55 * Math.sin(a * 9 + ph + tuft * 2) + 0.3 * Math.sin(a * 14 + ph2 - tuft * 3) + 0.35 * fbm(Math.cos(a) * 3 + ph, tuft * 2, Math.sin(a) * 3, 2);
-      r = R * (0.14 + 0.36 * Math.pow(tuft, 0.6)) * (1 + 0.45 * ruffle * tuft);
-      y = (tieT + 0.02) * H + (t - tieT - 0.02) * H * (1 - 0.4 * tuft) + 0.012 * ruffle * tuft;
+      const ruffle = 0.5 * Math.sin(a * 7 + ph + tuft * 2.5) + 0.3 * Math.sin(a * 12 + ph2 - tuft * 3) + 0.4 * fbm(Math.cos(a) * 3 + ph, tuft * 2, Math.sin(a) * 3, 2);
+      const swell = Math.sin(Math.PI * Math.min(1, tuft * 1.15)) ** 0.8;
+      r = R * (0.14 + 0.24 * swell - 0.06 * tuft * tuft) * (1 + 0.32 * ruffle * Math.min(1, tuft * 2));
+      y = (tieT + 0.02) * H + (t - tieT - 0.02) * H * 1.15 + 0.01 * ruffle * tuft;
     }
     // gathered pleats into the neck; irregular creases where the cloth sags (no two alike); grain
     // lumps; the side seam
@@ -506,9 +509,11 @@ async function buntingLine(api, a, b, o = {}) {
     // down behind it - a closed channel springing from the pennant's own top line (no gap)
     const lb = B.count;
     const hw = 0.14 * sc, NXs = 6;
-    const prof = [[-0.012, 0.0004], [-0.0068, 0.0033]];
+    // (both faces of the channel come down a few mm over the pennant's own top edge: no slit of
+    // sky between them, whatever the pennant does just below its pinned edge)
+    const prof = [[-0.018, 0.0013], [-0.012, 0.0022], [-0.0068, 0.0035]];
     for (let s = 0; s <= 8; s++) { const f = -0.35 + (s / 8) * (Math.PI + 0.7); prof.push([0.0058 * Math.sin(f), 0.0058 * Math.cos(f)]); }
-    prof.push([-0.0068, -0.0033], [-0.012, -0.0004]);
+    prof.push([-0.0068, -0.0035], [-0.012, -0.0022], [-0.018, -0.0013]);
     for (let s = 0; s < prof.length; s++) {
       for (let i = 0; i <= NXs; i++) {
         const x = (i / NXs - 0.5) * 2 * hw;

@@ -45,7 +45,30 @@ Every design is PROVISIONAL until Daxtyn approves it.
 ## Render notes
 - A detail view switched on by time must be rendered well after its cut (e.g. --time 3 for a cut at
   t = 2): velocity motion blur uses the previous frame's camera.
-- 4K final timings (SwiftShader, 4 cores): see the report / README table.
 
-## Next
-- 4K finals of the reworked heroes, 1:1 crops, contact sheet re-run, README image table, npm test.
+## Images and timings (SwiftShader, 4 cores; output/ is git-ignored)
+All under `output/props/final/` unless noted. "render" is the renderer's own frame time.
+
+| image | scene / time | render | total |
+|---|---|---|---|
+| props-boat-4k.png (+ -1920.jpg, -crop-sail.png, -crop-hull.png) | props-boat 1 | 118.7 s | 137.0 s |
+| props-santa-maria-4k.png (+ -1920.jpg, -crop-stern.png, -crop-furl.png) | props-santa-maria 1 | 169.5 s | 184.0 s |
+| props-stall-4k.png (+ -1920.jpg, -crop-counter.png, -crop-awning.png) | props-stall 1 | 279.4 s | 295.9 s |
+| props-stall-detail-4k.png (+ -1920.jpg, -crop.png) | props-stall 3 | 211.7 s | 224.1 s |
+| props-bunting-4k.png (+ -1920.jpg, -crop-pennants.png) | props-bunting 1 | 347.7 s | 362.9 s |
+| props-bunting-detail-4k.png (+ -1920.jpg, -crop.png) | props-bunting 3 | 239.7 s | 251.9 s |
+| props-crop-4k.png (+ -1920.jpg, -1to1-barrels/-baskets/-sacks.png) | props-crop 1 | 163.0 s | 172.0 s |
+| props-chamber-preview.png (1920x1080) | props-chamber 1 | 95.3 s | 103.9 s |
+| output/props/contact-final/sheet.png (23 groups, 4x6 of 640x360; contact-final.mp4) | props-contact, preview, 1 fps | 23 frames in 79 s (4 workers) | 95 s |
+
+Bakes: pennants 7 s (6 bakes); sails ~25 s each; awnings/banners/counter ~1 min.
+
+## Next (successor)
+- The Santa Maria's own spars, rigging and hull are the CC0 model's (1k texture); ratlines alias to
+  dotted lines at a distance. A closer hero would need re-textured hull planking.
+- Goods (cabbages, turnips) are vertex-coloured procedural shapes: convincing at stall distance,
+  still a little smooth in a close-up.
+- The egg (chamber): its dark shell shows blocky environment reflections under the old_room HDRI -
+  the renderer's prefiltered environment is sampled without filtering on this machine (see the
+  report's RUNTIME REQUEST); satin roughness keeps it down but does not remove it.
+- npm test: 33/33 pass (last run at this checkpoint).

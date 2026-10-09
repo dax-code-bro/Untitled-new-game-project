@@ -28,7 +28,7 @@ async function make(ctx) {
   const M = await propMaterials(ctx);
   const G = await goodsMaterials(ctx);
   const mats = { ...goodsMats(M, G) };
-  mats.shell = await surface(ctx, { name: 'egg-shell', scan: 'pbr/acg_leather26', tile: [0.12, 0.12], detail: 0.35, normalScale: 0.35, color: [0.028, 0.026, 0.024], color2: [0.035, 0.03, 0.026], roughness: 0.42, roughVar: 0.4, pieceVar: 0.15, macro: 0.5, macroF: 9, wear: 0.4, wearColor: [0.06, 0.05, 0.04], clearcoat: 0.3, clearcoatRoughness: 0.35 });
+  mats.shell = await surface(ctx, { name: 'egg-shell', scan: 'pbr/acg_leather26', tile: [0.12, 0.12], detail: 0.35, normalScale: 0.35, color: [0.028, 0.026, 0.024], color2: [0.035, 0.03, 0.026], roughness: 0.68, roughVar: 0.35, pieceVar: 0.15, macro: 0.5, macroF: 9, wear: 0.4, wearColor: [0.06, 0.05, 0.04] });
   mats.membrane = await surface(ctx, { name: 'egg-membrane', scan: null, color: [0.42, 0.36, 0.26], color2: [0.38, 0.33, 0.24], roughness: 0.25, pieceVar: 0.2, macro: 0.3, macroF: 20, wear: 0, clearcoat: 0.8, clearcoatRoughness: 0.12, cloth: { transmission: 0.35, forward: 1.0 }, side: THREE.DoubleSide });
   mats.shellEdge = await surface(ctx, { name: 'egg-shell-edge', scan: null, color: [0.16, 0.14, 0.11], roughness: 0.7, pieceVar: 0.2, wear: 0, side: THREE.DoubleSide });
   mats.water = new THREE.MeshPhysicalMaterial({ name: 'bowl-water', color: new THREE.Color(0.012, 0.014, 0.012), roughness: 0.03, metalness: 0, ior: 1.333, specularIntensity: 1, clearcoat: 0 });
@@ -75,18 +75,26 @@ function egg(api, F, o = {}) {
     seeds.push(V(Math.cos(a) * s, Math.min(1, z), Math.sin(a) * s));
   }
   seeds.push(V(0, -1, 0));                                    // the base (one big cell)
-  const NT = 72, NP = 96;
-  const cellAt = (th, ph) => {
+  // every fragment is cut out of a fine (theta, phi) grid along its true boundary: the score of
+  // each seed at each grid vertex (the direction jittered with noise first - ragged edges), and
+  // each quad clipped to where its own seed wins by a margin (marching squares, linear in the
+  // grid) - smooth, irregular crack lines instead of a staircase of whole quads
+  const NT = 144, NP = 192;
+  const NSd = seeds.length, NV = (NT + 1) * (NP + 1);
+  const score = new Float32Array(NV * NSd);
+  for (let i = 0; i <= NT; i++) for (let j = 0; j <= NP; j++) {
+    const th = (i / NT) * Math.PI, ph = (j / NP) * Math.PI * 2;
     const d = V(Math.cos(ph) * Math.sin(th), Math.cos(th), Math.sin(ph) * Math.sin(th));
-    // ragged boundaries: jitter the direction with noise before the nearest-seed test
     d.x += 0.07 * fbm(d.x * 9 + 3, d.y * 9, d.z * 9, 2); d.y += 0.07 * fbm(d.x * 9, d.y * 9 + 7, d.z * 9, 2); d.z += 0.07 * fbm(d.x * 9, d.y * 9, d.z * 9 + 11, 2);
-    let best = 0, bd = -2;
-    for (let i = 0; i < seeds.length; i++) { const w = i === seeds.length - 1 ? -0.35 : 0; const v = d.dot(seeds[i]) + w; if (v > bd) { bd = v; best = i; } }
-    return best;
-  };
-  const cells = [];
-  for (let i = 0; i <= NT; i++) for (let j = 0; j <= NP; j++) cells.push(cellAt((i / NT) * Math.PI, (j / NP) * Math.PI * 2));
-  const cid = (i, j) => cells[i * (NP + 1) + (j % (NP + 1))];
+    // a fine second wobble along the line (the crack wanders at the millimetre scale too)
+    const wob = 0.006 * fbm(d.x * 40 + 1, d.y * 40, d.z * 40 + 5, 2);
+    const base = (i * (NP + 1) + j) * NSd;
+    for (let k = 0; k < NSd; k++) score[base + k] = d.dot(seeds[k]) + (k === NSd - 1 ? -0.35 : 0) + wob * ((k * 7) % 3 - 1);
+  }
+  const vix = (i, j) => i * (NP + 1) + (j % NP);
+  // f_c at a vertex: its own score minus the best other (> 0 inside the fragment)
+  const fOf = (vi, c) => { let mo = -1e9; const b0 = vi * NSd; for (let k = 0; k < NSd; k++) if (k !== c) mo = Math.max(mo, score[b0 + k]); return score[b0 + c] - mo; };
+  const owner = (vi) => { let best = 0, bv = -1e9; const b0 = vi * NSd; for (let k = 0; k < NSd; k++) if (score[b0 + k] > bv) { bv = score[b0 + k]; best = k; } return best; };
   // per fragment transform for the state
   const frag = new Map();
   for (let c = 0; c < seeds.length; c++) {
@@ -106,50 +114,48 @@ function egg(api, F, o = {}) {
     frag.set(c, m);
   }
   const outer = new Builder(), inner = new Builder(), edge = new Builder();
-  const vtx = new Map();
-  const Pof = (i, j, inset, c) => {
-    const p = shape((i / NT) * Math.PI, ((j % NP) / NP) * Math.PI * 2);
+  // a point of the shell at fractional grid coordinates (fi, fj), pushed in along the normal by inset
+  const Pof = (fi, fj, inset) => {
+    const p = shape((fi / NT) * Math.PI, (fj / NP) * Math.PI * 2);
     const n = p.clone().sub(V(0, H / 2, 0)).normalize();
-    // a fragment boundary sits a hair back from its neighbour: the crack reads as a dark seam
-    const gap = state === 'closed' ? 0.0004 : 0.0007;
-    const p2 = p.addScaledVector(n, -inset);
-    return p2;
+    return p.addScaledVector(n, -inset);
   };
-  for (let i = 0; i < NT; i++) for (let j = 0; j < NP; j++) {
-    const c = cid(i, j);
-    if (cid(i + 1, j) !== c || cid(i, j + 1) !== c || cid(i + 1, j + 1) !== c) continue;   // boundary quads are the crack
+  // half the crack's width in score units (closed: a hairline; opened: a clean break)
+  const g0 = state === 'closed' ? 0.0015 : 0.0025;
+  for (let c = 0; c < NSd; c++) {
     const m = frag.get(c);
     const piece = (c * 0.137) % 1;
-    const corners = [[i, j], [i, j + 1], [i + 1, j + 1], [i + 1, j]];
-    const o4 = corners.map(([a, b]) => outer.v(fp(F, ...Pof(a, b, 0, c).applyMatrix4(m).toArray()), b / NP * 1.4, a / NT * 0.7, piece, 1, 0));
-    outer.q(o4[0], o4[1], o4[2], o4[3]);
-    const i4 = corners.map(([a, b]) => inner.v(fp(F, ...Pof(a, b, T, c).applyMatrix4(m).toArray()), b / NP * 1.4, a / NT * 0.7, piece, 0.8, 0));
-    inner.q(i4[0], i4[3], i4[2], i4[1]);
-    // edges: where the neighbouring quad belongs to another cell (or is a crack quad), wall it
-    const nb = [[i - 1, j, [0, 1]], [i, j + 1, [1, 2]], [i + 1, j, [2, 3]], [i, j - 1, [3, 0]]];
-    for (const [ni, nj, [e0, e1]] of nb) {
-      if (ni < 0 || ni >= NT) continue;
-      const jj = (nj + NP) % NP;
-      const nc = cid(ni, jj);
-      const nq = cid(ni + 1, jj) === nc && cid(ni, jj + 1) === nc && cid(ni + 1, jj + 1) === nc;
-      if (nq && nc === c) continue;
-      const a0 = corners[e0], a1 = corners[e1];
-      const w = [
-        edge.v(fp(F, ...Pof(a0[0], a0[1], 0, c).applyMatrix4(m).toArray()), 0, 0, piece, 0.9, 0),
-        edge.v(fp(F, ...Pof(a1[0], a1[1], 0, c).applyMatrix4(m).toArray()), 0.01, 0, piece, 0.9, 0),
-        edge.v(fp(F, ...Pof(a1[0], a1[1], T, c).applyMatrix4(m).toArray()), 0.01, T, piece, 0.7, 0),
-        edge.v(fp(F, ...Pof(a0[0], a0[1], T, c).applyMatrix4(m).toArray()), 0, T, piece, 0.7, 0),
-      ];
-      edge.q(w[0], w[3], w[2], w[1]);
+    const P = (fi, fj, inset) => fp(F, ...Pof(fi, fj, inset).applyMatrix4(m).toArray());
+    for (let i = 0; i < NT; i++) for (let j = 0; j < NP; j++) {
+      const cs = [[i, j], [i, j + 1], [i + 1, j + 1], [i + 1, j]];
+      const fv = cs.map(([a, b2]) => fOf(vix(a, b2), c) - g0);
+      if (fv[0] < 0 && fv[1] < 0 && fv[2] < 0 && fv[3] < 0) continue;
+      // Sutherland-Hodgman against f >= 0; remember which new edge is the cut
+      const poly = [], cut = [];
+      for (let k = 0; k < 4; k++) {
+        const k2 = (k + 1) % 4, A = cs[k], B = cs[k2], fa = fv[k], fb = fv[k2];
+        if (fa >= 0) poly.push(A);
+        if ((fa >= 0) !== (fb >= 0)) { const t = fa / (fa - fb); poly.push([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]); cut.push(poly.length - 1); }
+      }
+      if (poly.length < 3) continue;
+      const u = (q) => q[1] / NP * 1.4, w = (q) => q[0] / NT * 0.7;
+      const oi = poly.map((q) => outer.v(P(q[0], q[1], 0), u(q), w(q), piece, 1, 0));
+      const ii = poly.map((q) => inner.v(P(q[0], q[1], T), u(q), w(q), piece, 0.8, 0));
+      for (let k = 1; k + 1 < poly.length; k++) { outer.t(oi[0], oi[k], oi[k + 1]); inner.t(ii[0], ii[k + 1], ii[k]); }
+      // the broken edge: a wall of shell thickness along the cut
+      if (cut.length === 2) {
+        const qa = poly[cut[0]], qb = poly[cut[1]];
+        const e = [edge.v(P(qa[0], qa[1], 0), 0, 0, piece, 0.9, 0), edge.v(P(qb[0], qb[1], 0), 0.01, 0, piece, 0.9, 0), edge.v(P(qb[0], qb[1], T), 0.01, T, piece, 0.7, 0), edge.v(P(qa[0], qa[1], T), 0, T, piece, 0.7, 0)];
+        edge.q(e[0], e[1], e[2], e[3]);
+      }
     }
   }
-  // closed / cracked: the crack quads themselves are a dark recessed seam (the old fracture)
+  // closed / cracked: under the cracks a dark recessed surface (the inside of the old fracture)
   if (state === 'closed' || state === 'cracked') {
     for (let i = 0; i < NT; i++) for (let j = 0; j < NP; j++) {
-      const c = cid(i, j);
-      if (cid(i + 1, j) === c && cid(i, j + 1) === c && cid(i + 1, j + 1) === c) continue;
-      const corners = [[i, j], [i, j + 1], [i + 1, j + 1], [i + 1, j]];
-      const q = corners.map(([a, b]) => edge.v(fp(F, ...Pof(a, b, T * 0.6, c).toArray()), 0, 0, 0.5, 0.3, 0));
+      const v0 = vix(i, j), o0 = owner(v0);
+      if (owner(vix(i + 1, j)) === o0 && owner(vix(i, j + 1)) === o0 && owner(vix(i + 1, j + 1)) === o0 && fOf(v0, o0) > 0.03) continue;
+      const q = [[i, j], [i, j + 1], [i + 1, j + 1], [i + 1, j]].map(([a, b2]) => edge.v(fp(F, ...Pof(a, b2, T * 0.6).toArray()), 0, 0, 0.5, 0.3, 0));
       edge.q(q[0], q[1], q[2], q[3]);
     }
   }

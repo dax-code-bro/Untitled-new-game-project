@@ -6,6 +6,9 @@ import { groundMaterial } from '../lib/humans/stage.js';
 import { filmFinish } from './finish.js';
 import { prologueBoat } from '../lib/props/boat.js';
 import { propMaterials } from '../lib/props/materials.js';
+import { festivalKit } from '../lib/props/festival.js';
+import { Kit, rng, yawFrame } from '../lib/props/core.js';
+import { barrel } from '../lib/props/containers.js';
 
 export const meta = {
   title: 'Props - dev',
@@ -14,6 +17,8 @@ export const meta = {
 };
 let S;
 const DEBUG_MESH = false;
+// 'boat' (the prologue vessel) or 'sacks' (close material check: sacks and a keg at 1 m)
+const DEV = 'sacks';
 export async function setup(ctx) {
   const { scene } = ctx;
   const sky = await loadHDRI('hdri/kloofendal_48d_partly_cloudy', ctx, { extractSun: true });
@@ -22,6 +27,17 @@ export async function setup(ctx) {
   scene.add(sun, sun.target);
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), await groundMaterial('pbr/acg_ground03', ctx, [200, 200]));
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+  if (DEV === 'sacks') {
+    const fk = await festivalKit(ctx);
+    const k = new Kit(), r = rng(5);
+    fk.sack(k, yawFrame([-0.3, 0, 0], 0.4), r, { kind: 'full' });
+    fk.sack(k, yawFrame([0.3, 0, 0.05], 1.2), r, { kind: 'slump' });
+    barrel(k, yawFrame([0.0, 0, -0.55], 0.3), r, { h: 0.48, r: 0.18 });
+    const g = fk.build(k, 'dev-sacks');
+    scene.add(g);
+    S = { sun, obj: g };
+    return;
+  }
   const boat = await prologueBoat(ctx, {});
   const lift = 0.66;
   boat.root.position.y = lift;

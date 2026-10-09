@@ -80,6 +80,7 @@ uniform vec4 prDirt;      // y base, height, strength, -
 uniform vec4 prWet;       // waterline y, splash band (m), weed band below (m), strength
 uniform vec4 prPat;       // pattern params (rope lay / stripes / rings)
 uniform vec3 prPatC;      // pattern colour (stripes)
+uniform vec4 prWeave;     // plain weave: thread period (m), relief (m), contrast, -
 uniform vec4 prSeam;      // cloth: seam spacing along u (m), seam width, spacing along v, width
 float prTr = 0.0;         // cloth: transmission at this fragment
 vec3 prTrC = vec3(0.0);   // cloth: transmitted colour
@@ -136,6 +137,29 @@ float prHgt = 0.0;
 {
   float st = step(prPat.y, fract(vPrUv.x / prPat.x));
   prCol = mix(prCol, prPatC * (1.0 + prPieceVar * (prH1(prP * 7.77 + 3.1) - 0.5)), st);
+}
+#endif
+#ifdef PR_WEAVE
+{
+  // coarse plain weave (hessian): warp and weft threads passing over and under each other, each
+  // thread its own thickness and tone (slubs), dark gaps between them; fades out where a thread
+  // gets smaller than about two pixels (no shimmer)
+  // threads are never straight: the lines wander a little, slowly
+  vec2 w = vPrUv / prWeave.x + 0.4 * vec2(prN2(vec2(vPrUv.y * 7.0, vPrUv.x * 1.3 + 3.0)), prN2(vec2(vPrUv.x * 7.0 + 5.0, vPrUv.y * 1.3)));
+  vec2 c = floor(w), f = fract(w);
+  float over = mod(c.x + c.y, 2.0);
+  float slubX = prN2(vec2(c.x * 1.7, w.y * 0.09 + c.x * 3.1)), slubY = prN2(vec2(w.x * 0.09 + c.y * 2.3, c.y * 1.3));
+  float px = 0.5 + 0.34 * (slubX - 0.5), py = 0.5 + 0.34 * (slubY - 0.5);
+  float warp = 1.0 - pow(abs(2.0 * f.x - 1.0) / (2.0 * px) * 1.0, 2.0);
+  float weft = 1.0 - pow(abs(2.0 * f.y - 1.0) / (2.0 * py) * 1.0, 2.0);
+  warp = clamp(warp, 0.0, 1.0); weft = clamp(weft, 0.0, 1.0);
+  // the thread on top at this crossing, bending down at the ends of its float
+  float h = over > 0.5 ? warp * (0.55 + 0.45 * sin(3.1416 * f.y)) : weft * (0.55 + 0.45 * sin(3.1416 * f.x));
+  float tone = over > 0.5 ? 0.85 + 0.3 * slubX : 0.85 + 0.3 * slubY;
+  float fade = clamp(1.8 - 3.6 * max(fwidth(w.x), fwidth(w.y)), 0.0, 1.0);
+  float fuzz = 0.92 + 0.16 * prN2(vPrUv * 1400.0);
+  prCol *= mix(1.0, mix(1.0 - prWeave.z, 1.0, h) * tone * fuzz, fade);
+  prHgt += h * prWeave.y * fade * prBumpK;
 }
 #endif
 vec3 prC = prCol * prDet;
@@ -311,6 +335,7 @@ export async function surface(ctx, o = {}) {
     prWet: { value: new THREE.Vector4(wet.y ?? -1e4, wet.band ?? 0.3, wet.weed ?? 0.3, wet.k ?? 0) },
     prPat: { value: new THREE.Vector4(o.rope ?? (o.rings?.period ?? o.stripes?.period ?? 1), o.rings?.depth ?? o.stripes?.duty ?? 0.5, 0, 0) },
     prPatC: { value: C(o.stripes?.color, [0.5, 0.5, 0.5]) },
+    prWeave: { value: new THREE.Vector4(o.weave?.period ?? 0.0022, o.weave?.depth ?? 0.0005, o.weave?.contrast ?? 0.45, 0) },
     prTrans: { value: o.cloth?.transmission ?? 0 },
     prTransFwd: { value: o.cloth?.forward ?? 1.5 },
     prSeam: { value: new THREE.Vector4(o.seams?.u ?? 0, o.seams?.w ?? 0.03, o.seams?.v ?? 0, o.seams?.vw ?? 0.03) },
@@ -319,8 +344,9 @@ export async function surface(ctx, o = {}) {
   if (o.rope) defines.PR_ROPE = 1;
   if (o.rings) defines.PR_RINGS = 1;
   if (o.stripes) defines.PR_STRIPES = 1;
+  if (o.weave) defines.PR_WEAVE = 1;
   if (o.cloth) defines.PR_CLOTH = 1;
-  if (o.rope || o.rings || o.cloth) defines.PR_BUMP = 1;
+  if (o.rope || o.rings || o.cloth || o.weave) defines.PR_BUMP = 1;
   if (o.macroUV) defines.PR_MACRO_UV = 1;
   mat.defines = { ...(mat.defines || {}), ...defines };
   const key = 'dk-prop-' + Object.keys(defines).sort().join('-') + (o.vertexColors ? '-vc' : '');
@@ -400,7 +426,7 @@ export async function propMaterials(ctx) {
     const ropeTar = await R({ name: 'rope-tar', color: [0.07, 0.055, 0.04], color2: [0.09, 0.07, 0.05], roughness: 0.65 });
     const linen = await clothMaterial(ctx, { name: 'linen', color: [0.58, 0.53, 0.44], color2: [0.62, 0.58, 0.5], transmission: 0.35 });
     const wool = await clothMaterial(ctx, { name: 'wool', scan: 'pbr/acg_fabric37', tile: [0.35, 0.35], color: [0.33, 0.28, 0.21], color2: [0.29, 0.25, 0.19], transmission: 0.22, roughness: 0.95 });
-    const hessian = await surface(ctx, { name: 'hessian', scan: 'pbr/acg_fabric40', tile: [0.36, 0.36], detail: 0.9, normalScale: 2.2, color: [0.3, 0.2, 0.095], color2: [0.26, 0.175, 0.085], roughness: 0.95, pieceVar: 0.2, macro: 0.15, macroF: 4, wear: 0.3, wearColor: [0.4, 0.33, 0.22], sheen: 0.3, sheenColor: [0.6, 0.48, 0.3], dirt: { y: 0, h: 0.12, k: 0.4, color: [0.7, 0.62, 0.5] } });
+    const hessian = await surface(ctx, { name: 'hessian', scan: 'pbr/acg_fabric40', tile: [0.36, 0.36], detail: 0.6, normalScale: 1.0, weave: { period: 0.0024, depth: 0.0006, contrast: 0.42 }, color: [0.33, 0.22, 0.105], color2: [0.29, 0.195, 0.095], roughness: 0.95, pieceVar: 0.2, macro: 0.05, macroF: 1.5, wear: 0.3, wearColor: [0.4, 0.33, 0.22], sheen: 0.3, sheenColor: [0.6, 0.48, 0.3], dirt: { y: 0, h: 0.12, k: 0.4, color: [0.7, 0.62, 0.5] } });
     const straw = await surface(ctx, { name: 'straw', scan: null, color: [0.5, 0.38, 0.17], color2: [0.42, 0.33, 0.17], roughness: 0.42, roughVar: 0.4, pieceVar: 0.55, macro: 0.1, macroF: 8, wear: 0, ao: 0.85, cloth: { transmission: 0.25, forward: 1.0 }, side: THREE.DoubleSide });
     const clay = await surface(ctx, { name: 'clay', scan: 'pbr/acg_ground03', tile: [0.4, 0.4], detail: 0.35, normalScale: 0.25, color: [0.32, 0.15, 0.075], color2: [0.36, 0.19, 0.1], roughness: 0.82, pieceVar: 0.25, macro: 0.15, macroF: 6, wear: 0.5, wearColor: [0.25, 0.13, 0.08], rings: { period: 0.009, depth: 0.0004 } });
     const clayGlaze = await surface(ctx, { name: 'clay-glaze', scan: 'pbr/acg_ground03', tile: [0.4, 0.4], detail: 0.2, normalScale: 0.1, color: [0.13, 0.065, 0.015], color2: [0.045, 0.055, 0.014], roughness: 0.22, roughVar: 0.3, pieceVar: 0.4, macro: 0.25, macroF: 5, wear: 0.6, wearColor: [0.3, 0.15, 0.08], rings: { period: 0.009, depth: 0.0003 }, clearcoat: 0.6, clearcoatRoughness: 0.15 });

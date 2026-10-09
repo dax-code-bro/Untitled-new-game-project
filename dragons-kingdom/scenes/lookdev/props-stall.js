@@ -3,7 +3,7 @@
 // stretched over it (cloth-simulated: sagging between its ties, the valance hanging over the
 // front rail), goods on the counter in woven baskets, onion strings and herb bunches hanging
 // from the rail, sacks, a barrel, a crate of turnips, baskets on the ground; a baker's stall
-// beside it. Morning sun from front left, partly cloudy sky (CC0 HDRI). 32 mm, T4, eye level, 3 m.
+// beside it. Morning sun from front left, partly cloudy sky (CC0 HDRI). 29 mm, T4, eye level, 4 m.
 //
 //   node render/render.mjs --still scenes/lookdev/props-stall.js --time 1 --preset final --png out.png
 import * as THREE from 'three';
@@ -67,11 +67,11 @@ export function update(t, ctx) {
   // t < 2: the hero; t >= 2: a close look at the goods on the counter (render well after the cut)
   const detail = t >= 2;
   if (detail) { cam.position.set(t >= 4 ? 1.3 : 0.95, t >= 4 ? 1.3 : 1.45, t >= 4 ? 1.05 : 1.55); cam.lookAt(t >= 4 ? 1.1 : 0.62, 0.95, 0.3); }
-  else { cam.position.set(0.55, 1.62, 3.35); cam.lookAt(-0.1, 1.08, 0.2); }
+  else { cam.position.set(1.2, 1.65, 4.25); cam.lookAt(-0.1, 1.55, 0); }
   cam.near = 0.05; cam.far = 500;
   ctx.lens.sensor = 'super35';
-  ctx.lens.focalLength = 32;
+  ctx.lens.focalLength = detail ? 32 : 29;
   ctx.lens.fstop = detail ? 8 : 4;
-  ctx.lens.focus = detail ? (t >= 4 ? 0.85 : 1.35) : 3.1;
+  ctx.lens.focus = detail ? (t >= 4 ? 0.85 : 1.35) : 4.0;
   ctx.lens.shutterAngle = 180;
 }

@@ -323,9 +323,9 @@ export function rootVeg(kit, F, rnd, o = {}) {
     // taproot; the leaf stalks cut back to short stubs at the crown
     const R = 0.034 * (0.85 + 0.3 * rnd());
     const ph = rnd() * 6;
-    blob(b, F, 16, 20, (th, phi) => {
+    blob(b, F, 26, 36, (th, phi) => {
       const ct = Math.cos(th), st = Math.sin(th);
-      let r = R * st * (1 + 0.04 * Math.sin(phi * 3 + ph)), y = ct * R * 0.8;
+      let r = R * st * (1 + 0.04 * Math.sin(phi * 3 + ph) + 0.012 * Math.sin(th * 30 + phi * 2)), y = ct * R * 0.8;
       if (ct > 0.7) y -= (ct - 0.7) * R * 0.5;                 // the crown is dished round the stalks
       if (ct < -0.2) { const t = (-0.2 - ct) / 0.8; r *= 1 - 0.75 * t * t; y -= t * t * R * 0.45; }
       const t = smoothstep(-0.15, 0.45, y / R + 0.05 * Math.sin(phi * 5 + ph));
