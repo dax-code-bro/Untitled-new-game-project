@@ -27,9 +27,19 @@ Still provisional, waiting for Daxtyn: body layout (currently four legs plus two
 
 ## Leaf (Abby's dragon)
 
-- Approved: about 25% of Charcoal's size.
-- From the screenplay: green, not fully grown, can sit upright like a dog. Daxtyn has not yet said whether the sitting trait stays now that species are gone.
-- Everything else is provisional.
+Approved by Daxtyn on 2026-10-09:
+
+| Feature | Design |
+|---|---|
+| Size | About **25% of Charcoal's size** |
+| Scales | **Dark green** |
+| Eyes | **Yellow** |
+| Wing membrane | **Light green** |
+| Fire | A unique **purplish-blue fire**. It burns **hotter than normal dragon fire, but not by a lot**. |
+
+From the screenplay (still true): not fully grown. Leaf does not breathe fire on screen in Episode 1.
+
+Still provisional, waiting for Daxtyn: whether Leaf can still sit upright like a dog now that species are gone, body layout, horns, head shape, tail.
 
 ## Starlight (Queen Fall's dragon, "Queen of Dragons")
 
