@@ -47,8 +47,18 @@ crossed arms) found by the second eigenvalue of the normals' scatter (a fold ben
 pucker every way) and filled by a membrane that may not move cloth more than 2 mm inward, the
 cloth over the nipples re-made as the quadric fitted around them; `pushout` - cloth outside the
 body (Taubin-smoothed, all triangles incl. those hidden under clothes = cache field
-`colliderIndex`, the bust left out: cloth bridges it) and outside the layer under it; `props` -
-prop colour corrections. Hoods and coifs hide the head under them; hoods rest on the crown.
+`colliderIndex`, the bust left out: cloth bridges it) and outside the layer under it; `cull` -
+cloth under an opaque outer layer is not drawn (degenerate triangles; 3 rings kept round the
+outer garment's own openings); `renormal` - patches wound inward re-wound, welded normals;
+`holefill` - small holes and near seams closed; `beltband` - the cloth the belt cinches: the
+layers under the belt layer relaxed over the whole band, the belt layer itself below the belt
+only (at most 2 cm, held near its open edges), then pushed out again - the sim's pin band
+crushed it into crumples that folded over themselves (dark tears under the belt); `beltseat` -
+the belt and buckle moved in/out per 5-degree sector so the belt sits 1.5 mm over the cinched
+cloth (a gambeson poked through the belt, riders' belts floated); `reao` - cloth AO re-baked on
+the final geometry; `props` - prop colour corrections; `hairline` - the scalp tint (skin aux.a)
+carried ~9 mm past the strand coverage as a fading gradient (a hairline is a density gradient,
+not an edge). Hoods and coifs hide the head under them; hoods rest on the crown.
 
 ## Build
 
@@ -61,10 +71,14 @@ $PY -I scenes/lib/humans/offline/build.py --only abby,remi  # some (also 'crowd*
 # restartable, in YOUR order (build.py --only always goes in cast order), skipping ids whose
 # cache is newer than a stamp file (touch it when the offline code changes):
 PY=$PY scenes/lib/humans/offline/queue.sh <stamp> abby remi king crowd01 ...
+#  post passes only, on built caches (idempotent): $PY -I scenes/lib/humans/offline/postfix.py all all
 ```
 
-Times on this machine (4 vCPU): close-up characters 4-6 min each, mid characters 1.5-3 min.
-Cache sizes: close-up 30-50 MB, mid 5-20 MB.
+Times on this machine (4 vCPU, shared with other renders, 2026-10-08): close-up characters
+3.5-11 min each (abby_injured 670 s, abby 557 s, fall 453 s, king 347 s, remi 208 s), mid
+characters 1-5 min; all 48 in 52 min with three queues in parallel (`queue.sh` takes a per-id
+lock, so several queues can run over the same list). Cache: ~1.0 GB for the 48 (close-up
+35-57 MB, mid 4-24 MB).
 
 ## Use
 

@@ -1,7 +1,7 @@
 """Post-fixes applied in place to already built characters (cache/<id>.json + .bin), so a fix
 that only needs the finished meshes does not cost a full rebuild.
 
-    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|pushout|cull|renormal|holefill|reao|all id [id ...]   ('all' = every cache)
+    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|pushout|cull|renormal|holefill|reao|beltband|beltseat|hairline|all id [id ...]   ('all' = every cache)
 
 Each pass records itself in the mesh's 'postfix' list and is not applied twice.
 
@@ -761,7 +761,10 @@ def fix_pushout(cid, body_ease=0.004, layer_ease=0.0025):
                 P = P2
                 done.append(f"{m['name']} ({int(moved.sum())} v)")
             m['postfix'] = m.get('postfix', []) + ['pushout']
-        trees.append((BVHTree.FromPolygons(P.tolist(), T.tolist(), all_triangles=True), layer_ease, layer_skip(h, bin_, m, T)))
+        # culled faces (degenerate, fix_cull) are not part of the collider: as points they
+        # pushed the layer over them into spikes
+        Tn = T[(T[:, 0] != T[:, 1]) & (T[:, 1] != T[:, 2]) & (T[:, 0] != T[:, 2])]
+        trees.append((BVHTree.FromPolygons(P.tolist(), Tn.tolist(), all_triangles=True), layer_ease, layer_skip(h, bin_, m, Tn)))
     tmp = bp + '.tmp'
     open(tmp, 'wb').write(bin_)
     os.replace(tmp, bp)
@@ -1109,6 +1112,306 @@ def fix_holefill(cid, max_loop=10):
         print(f'{cid}: holes closed in {", ".join(done)}', flush=True)
 
 
+
+def _weld_graph(P, T):
+    """Welded vertices of a mesh: (w vertex->weld, Q weld positions, ea, eb directed edges,
+    deg, boundary flag per weld, boundary-only edges ba, bb)."""
+    key = np.round(P / 1e-5).astype(np.int64)
+    _, w = np.unique(key, axis=0, return_inverse=True)
+    w = w.reshape(-1)
+    nW = int(w.max()) + 1
+    Q = np.zeros((nW, 3))
+    Q[w] = P
+    t = w[T]
+    t = t[(t[:, 0] != t[:, 1]) & (t[:, 1] != t[:, 2]) & (t[:, 0] != t[:, 2])]
+    es = np.sort(np.concatenate([t[:, [0, 1]], t[:, [1, 2]], t[:, [2, 0]]]), axis=1)
+    e, cnt = np.unique(es, axis=0, return_counts=True)
+    ea, eb = np.concatenate([e[:, 0], e[:, 1]]), np.concatenate([e[:, 1], e[:, 0]])
+    be = e[cnt == 1]
+    bnd = np.zeros(nW, bool)
+    bnd[be.ravel()] = True
+    ba, bb = np.concatenate([be[:, 0], be[:, 1]]), np.concatenate([be[:, 1], be[:, 0]])
+    return w, Q, ea, eb, bnd, ba, bb
+
+
+def _save(h, bin_, jp, bp):
+    tmp = bp + '.tmp'
+    open(tmp, 'wb').write(bin_)
+    os.replace(tmp, bp)
+    json.dump(h, open(jp + '.tmp', 'w'), separators=(',', ':'))
+    os.replace(jp + '.tmp', jp)
+
+
+# not cinched by the belt (they hang over it or are tied on their own)
+BELT_SKIP = ('boots', 'shoes', 'sling', 'cloak', 'hoodcape', 'apron') + NO_PUCKER
+
+
+def fix_beltband(cid, near=0.004, far=0.06, iters=40, max_move=0.02):
+    """The cloth the belt cinches (coat / tunic / gambeson / shirt / hose just under the belt)
+    is smoothed: the simulation's pin band crushed the gathered fabric into tight crumples that
+    fold over themselves - dark tears in a coat just under the belt at 1:1. Laplacian smoothing
+    of the band below the belt (weight 1 from 1 cm under the belt's lower edge, 0 at 6 cm off it),
+    each vertex moving at most 2 cm (the cloth right under the belt stays: it does not float);
+    the cloth above the belt (its blouse-over) is left. Open edges (a coat's front opening) move
+    with the surface they bound (no gap opens between overlapping panels). The layers are then
+    pushed out of each other again and their AO re-baked."""
+    import bpy  # noqa: F401
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    belts = [m for m in h['meshes'] if m['name'].startswith('belt')]
+    todo = [m for m in h['meshes'] if m['kind'] == 'cloth' and m['name'] not in BELT_SKIP and 'belt1' not in m.get('postfix', [])]
+    if not belts or not todo:
+        return
+    bin_ = bytearray(open(bp, 'rb').read())
+
+    def arrays(m):
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        return P, T
+    bP, bT, off = [], [], 0
+    for m in belts:
+        P, T = arrays(m)
+        bP.append(P)
+        bT.append(T + off)
+        off += len(P)
+    BP = np.concatenate(bP)
+    tree = BVHTree.FromPolygons(BP.tolist(), np.concatenate(bT).tolist(), all_triangles=True)
+    # the belt's lower edge height around the waist (per azimuth about its centre)
+    bc = BP.mean(0)
+    az = np.arctan2(BP[:, 0] - bc[0], BP[:, 2] - bc[2])
+    nb = 72
+    ab = ((az + np.pi) / (2 * np.pi) * nb).astype(int) % nb
+    low = np.full(nb, np.nan)
+    for k in range(nb):
+        if (ab == k).any():
+            low[k] = BP[ab == k, 1].min()
+    if np.isnan(low).all():
+        return
+    good = ~np.isnan(low)
+    low = np.interp(np.arange(nb), np.arange(nb)[good], low[good], period=nb)
+    # the layer the belt sits on: the outermost (export order is inside-out) with cloth within
+    # 1.5 cm of the belt; the layers under it are relaxed over the whole band (they are hidden
+    # under it, but the push-out lays it over their crumples again); layers over it (a cloak)
+    # are not cinched and are left
+    def mind(m):
+        P, _ = arrays(m)
+        sub = P[::max(1, len(P) // 4000)]
+        return min((tree.find_nearest(Vector(q), 0.015)[3] or 1.0) if tree.find_nearest(Vector(q), 0.015)[0] is not None else 1.0 for q in sub)
+    cinched = [m for m in todo if mind(m) < 0.015]
+    if not cinched:
+        return
+    outer = cinched[-1]
+    todo = todo[:todo.index(outer) + 1]
+    done = []
+    for m in todo:
+        P, T = arrays(m)
+        w, Q, ea, eb, bnd, ba, bb = _weld_graph(P, T)
+        nW = len(Q)
+        wt = np.zeros(nW)
+        for i in range(nW):
+            loc, n, fi, d = tree.find_nearest(Vector(Q[i]), far)
+            if loc is not None:
+                k = int((np.arctan2(Q[i, 0] - bc[0], Q[i, 2] - bc[2]) + np.pi) / (2 * np.pi) * nb) % nb
+                below = np.clip((low[k] - Q[i, 1]) / 0.01, 0, 1) if m is outer else 1.0
+                wt[i] = np.clip(1 - (d - near) / (far - near), 0, 1) * below
+        m['postfix'] = m.get('postfix', []) + ['belt1']
+        if (wt > 0).sum() < 8:
+            continue
+        wt = wt * wt * (3 - 2 * wt)
+        deg = np.bincount(ea, minlength=nW).astype(float)
+        # vertices of no (non-degenerate) face - culled ones - and open edges stay put while
+        # the surface relaxes; the open edges follow afterwards
+        wt[deg == 0] = 0
+        if m is outer:
+            # the panels of a front opening overlap: one relaxed past the other opened a slit,
+            # so the cloth is held near its open edges (fading in from 1 to 3.5 cm)
+            from mathutils.kdtree import KDTree
+            bi = np.where(bnd & (wt > 0))[0]
+            if len(bi):
+                kd = KDTree(len(bi))
+                for j, i in enumerate(bi):
+                    kd.insert(Q[i], j)
+                kd.balance()
+                for i in np.where(wt > 0)[0]:
+                    _co, _j, dd = kd.find(Q[i])
+                    wt[i] *= np.clip((dd - 0.01) / 0.025, 0, 1)
+        # (open edges of a hidden inner layer are mostly the cull's: they relax with it)
+        wi = wt * ~bnd if m is outer else wt
+        deg = np.maximum(deg, 1)
+
+        def U(X):
+            return np.stack([np.bincount(ea, weights=X[eb, k], minlength=nW) for k in range(3)], 1) / deg[:, None] - X
+        X = Q.copy()
+        for _ in range(iters):
+            X = X + (0.5 * wi)[:, None] * U(X)
+        D = X - Q
+        L = np.linalg.norm(D, axis=1)
+        mm = max_move if m is outer else 0.03
+        D *= (np.minimum(L, mm) / np.maximum(L, 1e-12))[:, None]
+        # open edges: the mean move of their interior neighbours
+        inn = ~bnd[eb]
+        cnt = np.bincount(ea[inn], minlength=nW).astype(float)
+        mD = np.stack([np.bincount(ea[inn], weights=D[eb[inn], k], minlength=nW) for k in range(3)], 1) / np.maximum(cnt, 1)[:, None]
+        e_ = bnd & (cnt > 0) & (wt > 0)
+        if m is outer:
+            D[e_] = mD[e_]
+        mv = np.linalg.norm(D, axis=1)
+        if mv.max() < 1e-5:
+            continue
+        P2 = (Q + D)[w]
+        N0 = view(bin_, m['attrs']['normal']).astype(float)
+        Nf = fresh_normals(P2, T)
+        Nf *= 1.0 if np.einsum('ij,ij->', N0, Nf) >= 0 else -1.0
+        ch = (wt > 0)[w]
+        N2 = N0.copy()
+        N2[ch] = Nf[ch]
+        put(bin_, m['attrs']['position'], P2)
+        put(bin_, m['attrs']['normal'], N2)
+        # layers pushed out of each other again, AO re-baked (both passes skip tagged meshes)
+        m['postfix'] = [x for x in m['postfix'] if x not in ('pushout', 'ao2')]
+        done.append(f"{m['name']} ({int((wt > 0).sum())} v, max {mv.max() * 1000:.1f} mm)")
+    _save(h, bin_, jp, bp)
+    if done:
+        print(f'{cid}: belt band smoothed in {", ".join(done)}', flush=True)
+        fix_pushout(cid)
+        fix_reao(cid)
+
+
+
+def fix_beltseat(cid, nb=72, gap=0.0015):
+    """The belt is fitted to the cloth it cinches (after the belt band and push-out passes):
+    per 5-degree sector around the waist, the belt (and its buckle) moves in or out radially so
+    its inner face sits 1.5 mm over the outermost cinched layer within the belt's height - a
+    quilted gambeson poked through the belt in patches, and riders' belts floated off the coat."""
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    belts = [m for m in h['meshes'] if m['name'].startswith('belt') and 'seat1' not in m.get('postfix', [])]
+    if not belts:
+        return
+    bin_ = bytearray(open(bp, 'rb').read())
+    BP = np.concatenate([view(bin_, m['attrs']['position']).astype(float) for m in belts])
+    bc = BP.mean(0)
+
+    def sector(X):
+        return (((np.arctan2(X[:, 0] - bc[0], X[:, 2] - bc[2]) + np.pi) / (2 * np.pi) * nb).astype(int)) % nb
+
+    def radius(X):
+        return np.hypot(X[:, 0] - bc[0], X[:, 2] - bc[2])
+    kb, rb = sector(BP), radius(BP)
+    # the band's height: per-sector median (the hanging tail and the buckle are few vertices),
+    # half-height from the sectors' spread
+    ymid = np.full(nb, np.nan)
+    rin = np.full(nb, np.nan)
+    spans = []
+    for k in range(nb):
+        sel = kb == k
+        if sel.sum() >= 4:
+            ymid[k] = np.median(BP[sel, 1])
+            near = sel & (np.abs(BP[:, 1] - ymid[k]) < 0.03)
+            rin[k] = rb[near].min()
+            spans.append(np.percentile(BP[near, 1], 90) - np.percentile(BP[near, 1], 10))
+    good = ~np.isnan(ymid)
+    if good.sum() < nb // 3:
+        return
+    ymid = np.interp(np.arange(nb), np.arange(nb)[good], ymid[good], period=nb)
+    rin = np.interp(np.arange(nb), np.arange(nb)[good], rin[good], period=nb)
+    hh = max(0.008, 0.5 * float(np.median(spans)))
+    # outermost cinched cloth per sector within the band height
+    rc = np.full(nb, np.nan)
+    for m in h['meshes']:
+        if m['kind'] != 'cloth' or m['name'] in BELT_SKIP:
+            continue
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3)
+        T = T[(T[:, 0] != T[:, 1]) & (T[:, 1] != T[:, 2])]
+        used = np.zeros(len(P), bool)
+        used[T.ravel()] = True
+        k = sector(P)
+        # the torso's cloth only: a sleeve beside the waist (its inner side faces the body)
+        # is not under the belt
+        N = view(bin_, m['attrs']['normal']).astype(float)
+        u = np.stack([P[:, 0] - bc[0], P[:, 2] - bc[2]], 1)
+        u /= np.maximum(np.linalg.norm(u, axis=1, keepdims=True), 1e-9)
+        out = (N[:, 0] * u[:, 0] + N[:, 2] * u[:, 1]) > 0.3
+        inb = used & out & (np.abs(P[:, 1] - ymid[k]) < hh) & (radius(P) < rin[k] + 0.02)
+        if inb.any():
+            r = radius(P[inb])
+            for kk, rr in zip(k[inb], r):
+                if not rr <= rc[kk]:
+                    rc[kk] = rr
+    has = ~np.isnan(rc)
+    if has.sum() < nb // 3:
+        return
+    rc = np.interp(np.arange(nb), np.arange(nb)[has], rc[has], period=nb)
+    # a sector's neighbours hold it out too (leather does not dip into a 5-degree notch)
+    rc = np.maximum(rc, np.maximum(np.roll(rc, 1), np.roll(rc, -1)))
+    delta = rc + gap - rin
+    for _ in range(3):
+        delta = 0.5 * delta + 0.25 * (np.roll(delta, 1) + np.roll(delta, -1))
+    delta = np.clip(delta, -0.03, 0.03)
+    moved = []
+    for m in h['meshes']:
+        if not (m['name'].startswith('belt') or m['name'] == 'buckle'):
+            continue
+        P = view(bin_, m['attrs']['position']).astype(float)
+        k = sector(P)
+        # sub-sector interpolation (no steps between sectors)
+        f = ((np.arctan2(P[:, 0] - bc[0], P[:, 2] - bc[2]) + np.pi) / (2 * np.pi) * nb) - 0.5
+        k0 = np.floor(f).astype(int) % nb
+        t = f - np.floor(f)
+        d = delta[k0] * (1 - t) + delta[(k0 + 1) % nb] * t
+        u = np.stack([P[:, 0] - bc[0], np.zeros(len(P)), P[:, 2] - bc[2]], 1)
+        u /= np.maximum(np.linalg.norm(u, axis=1, keepdims=True), 1e-9)
+        put(bin_, m['attrs']['position'], P + u * d[:, None])
+        m['postfix'] = m.get('postfix', []) + ['seat1']
+        moved.append(m['name'])
+    _save(h, bin_, jp, bp)
+    print(f'{cid}: belt seated ({", ".join(moved)}; {delta.min() * 1000:+.1f} .. {delta.max() * 1000:+.1f} mm)', flush=True)
+
+
+def fix_hairline(cid, src=0.25, reach=0.009, peak=0.5):
+    """A real hairline is a density gradient, not an edge: the scalp tint (skin aux.a) is
+    carried a few millimetres past the strand coverage, fading out (geodesic distance over the
+    skin) - the forehead under combed-back hair read as a pale band against a hard hair edge."""
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    sk = [m for m in h['meshes'] if m['kind'] == 'skin' and 'aux' in m['attrs'] and 'hairline1' not in m.get('postfix', [])]
+    if not sk:
+        return
+    bin_ = bytearray(open(bp, 'rb').read())
+    done = []
+    for m in sk:
+        m['postfix'] = m.get('postfix', []) + ['hairline1']
+        A = view(bin_, m['attrs']['aux']).astype(float).copy()
+        if (A[:, 3] >= 0.6).sum() < 20:
+            continue
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        w, Q, ea, eb, bnd, ba, bb = _weld_graph(P, T)
+        nW = len(Q)
+        a = np.zeros(nW)
+        np.maximum.at(a, w, A[:, 3])
+        el = np.linalg.norm(Q[ea] - Q[eb], axis=1)
+        d = np.where(a >= src, 0.0, np.inf)
+        for _ in range(int(reach / max(np.median(el), 1e-4)) * 2 + 4):
+            nd = d.copy()
+            np.minimum.at(nd, ea, d[eb] + el)
+            if np.array_equal(nd, d):
+                break
+            d = nd
+        g = peak * np.clip(1 - d / reach, 0, 1) ** 1.5
+        a2 = np.maximum(a, g)
+        n = int((a2 > a + 1e-4).sum())
+        A[:, 3] = np.maximum(A[:, 3], a2[w])
+        put(bin_, m['attrs']['aux'], A)
+        done.append(f"{m['name']} ({n} v)")
+    _save(h, bin_, jp, bp)
+    if done:
+        print(f'{cid}: hairline gradient in {", ".join(done)}', flush=True)
+
+
 def main():
     what, ids = sys.argv[1], sys.argv[2:]
     if ids == ['all']:
@@ -1132,6 +1435,12 @@ def main():
             fix_holefill(cid)
         if what in ('reao', 'all'):
             fix_reao(cid)
+        if what in ('beltband', 'all'):
+            fix_beltband(cid)
+        if what in ('beltseat', 'all'):
+            fix_beltseat(cid)
+        if what in ('hairline', 'all'):
+            fix_hairline(cid)
 
 
 if __name__ == '__main__':
