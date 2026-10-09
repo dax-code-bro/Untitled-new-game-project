@@ -62,7 +62,11 @@ carried ~9 mm past the strand coverage as a fading gradient (a hairline is a den
 not an edge); `cullboots` - hose / trousers inside a boot shaft pulled 3 mm inside it and not
 drawn under it (they poked through as pale streaks); `overbelt` - cloaks and hood capes pushed
 out over the belt (the belt is added after the simulation and printed through the King's
-mantle). Hoods and coifs hide the head under them; hoods rest on the crown.
+mantle; it runs before `reao`, whose bake would keep the dark band); `cloakin` - mantle
+triangles inside a sleeve not drawn. Hoods and coifs hide the head under them; hoods rest on the
+crown. Garment key `bodice_pin` (opt-in): a fitted, laced bodice keeps its cut shape (Alexandria's
+gown crumpled into horizontal ripples without it); non-simulated shirts get shading-only folds
+(runtime `wrinkle`).
 
 ## Build
 
@@ -78,11 +82,12 @@ PY=$PY scenes/lib/humans/offline/queue.sh <stamp> abby remi king crowd01 ...
 #  post passes only, on built caches (idempotent): $PY -I scenes/lib/humans/offline/postfix.py all all
 ```
 
-Times on this machine (4 vCPU, shared with other renders, 2026-10-08): close-up characters
-3.5-11 min each (abby_injured 670 s, abby 557 s, fall 453 s, king 347 s, remi 208 s), mid
-characters 1-5 min; all 48 in 52 min with three queues in parallel (`queue.sh` takes a per-id
-lock, so several queues can run over the same list). Cache: ~1.0 GB for the 48 (close-up
-35-57 MB, mid 4-24 MB).
+Times on this machine (4 vCPU, shared with other renders, 2026-10-09, incl. every post pass):
+close-up characters 4-14 min each (abby_injured 841 s, abby_sling 608 s, fall 508 s, abby 427 s,
+king 413 s, remi 251 s, alexandria 248 s), mid characters 1-4 min (guards 57 s, crowd 72-185 s);
+all 48 in 53 min with three queues in parallel (08:22-09:15 UTC; `queue.sh` takes a per-id lock,
+so several queues can run over the same list). Cache: 986 MB for the 48 (close-up 35-57 MB,
+mid 4-24 MB).
 
 ## Use
 

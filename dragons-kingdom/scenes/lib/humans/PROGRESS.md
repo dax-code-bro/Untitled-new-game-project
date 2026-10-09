@@ -150,5 +150,18 @@ being fixed:
 - FULL REBUILD started 08:22 UTC: queues A/B over all ids (scratchpad humans/logs5/q_A|B.log,
   orders in order.txt / order_rev.txt), alexandria separately (q_C.log); stamp humans/stamp_s5.
   After a restart: rmdir cache/*.lock and re-run the same queue commands (finished ids skip).
-Next: preview hero/contact/riders -> final 4K (scratchpad humans/final5.sh -> output/humans/final5)
-+ 1:1 crops, npm test, README numbers.
+- Rebuild done 09:15 UTC (48 ids, 53 min, 3 queues). Previews (output/humans/s5/c2_*.png
+  contact, h2_*.png hero) showed: King's mantle edges caught by the gesturing arm (ragged dark
+  patches on the sleeves) -> mantle thrown back (gap 2.0) + `cloakin` pass + no 'cull' under
+  cloaks; a dark band across the mantle's back = AO baked while the belt poked through -> cloak
+  passes now run BEFORE reao (build.py) and overbelt re-bakes the cloak AO; crate read as a pale
+  grey box (Planks21 roughness map mean 0.68 not divided out -> rmean), kettle hats / spear heads
+  still chrome-like -> darker oxidised iron/steel (runtime); shirt V reads as a flat bib ->
+  shading-only folds (runtime `wrinkle` for 'shirt'); cloth AO floor 0.3 (black slits).
+- Final 4K (output/humans/final5/): all 8 hero stills + crops, riders + contact sequences
+  (scratchpad humans/final5_rest.sh runs King -> riders -> contact; restartable).
+
+Known (not fixed, for a successor): Abby's sling bands are smooth flat strips (no fabric
+weight); Alexandria's gown has a small hole at the left hip (holefill misses it) and her right
+sleeve bunches behind the arm; band collars still show a thin dark crease line at 4K; long
+pulled-back hairlines are a bit even; riders' boots dangle (no stirrups in the creature saddle).
