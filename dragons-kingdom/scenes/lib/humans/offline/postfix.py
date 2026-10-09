@@ -350,7 +350,7 @@ def body_collider(P, T, bw=None):
 
 
 # garments whose gathers are made on purpose (cap / coif rims, kerchief knots) are left alone
-NO_PUCKER = ('boots', 'shoes', 'cap', 'coif', 'hood', 'kerchief', 'kerchieftail', 'veil', 'sling')
+NO_PUCKER = ('boots', 'shoes', 'cap', 'coif', 'hood', 'kerchief', 'kerchieftail', 'veil', 'sling', 'beltsash', 'wrap', 'gloves')
 
 
 def smooth_puckers(P, tris, thresh=0.08, iters=80, push=None, spots=None, normals=None, max_in=0.002, protect_y=None):
@@ -776,7 +776,7 @@ def fix_pushout(cid, body_ease=0.004, layer_ease=0.0025):
 
 # (no cloaks: a mantle hangs off the shoulders away from the arms - culling the sleeves beside it
 # cut holes along the King's sleeve silhouettes)
-OPAQUE_OVER = ('coat', 'tunic', 'gown', 'kirtle', 'apron', 'gambeson', 'surcoat', 'hoodcape', 'hood', 'veil', 'sling')
+OPAQUE_OVER = ('coat', 'tunic', 'gown', 'kirtle', 'apron', 'gambeson', 'surcoat', 'hoodcape', 'hood', 'veil', 'sling', 'doublet', 'wrap', 'capelet', 'trousers')
 
 
 def fix_cull(cid):

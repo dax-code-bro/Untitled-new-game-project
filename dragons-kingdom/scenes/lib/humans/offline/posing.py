@@ -200,10 +200,11 @@ class PoseBuilder:
                 self.curl_finger(side, k, 0.5 * s * A, 0.55 * s * A, 0.3 * A)
             self.curl_thumb(side, 0.5 * A, 0.2 * A, 0.2 * A, 0.2 * A, opp=0.2 * A)
         elif kind == 'point':
-            self.curl_finger(side, 2, 0.02, 0.04, 0.02)
+            self.curl_finger(side, 2, 0.02, 0.06, 0.03)
             for k, s in ((3, 1.0), (4, 1.05), (5, 1.1)):
-                self.curl_finger(side, k, 1.2 * s, 1.5 * s, 0.8)
-            self.curl_thumb(side, 0.6, 0.2, 0.4, 0.4, opp=0.3)
+                self.curl_finger(side, k, 1.25 * s, 1.55 * s, 0.85)
+            # thumb tucked against the curled middle finger (it stood up: a finger-gun)
+            self.curl_thumb(side, 0.95, 0.45, 0.65, 0.5, opp=0.75)
         return self
 
     # ------------------------------------------------------------- body --

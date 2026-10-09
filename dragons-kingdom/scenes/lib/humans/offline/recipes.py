@@ -42,7 +42,7 @@ def stand(pb, p):
     gy = _ground(pb)
     sgw = 1 if w == 'L' else -1
     # pelvis drops on the free side, chest counter-tilts, head re-levels
-    pb.rotate('root', [0, 0, 1], 0.045 * amt * sgw)
+    pb.rotate('root', [0, 0, 1], 0.07 * amt * sgw)
     pb.rotate('root', [0, 1, 0], p.get('hip_turn', 0.0))
     pb.bend_spine(flex=p.get('flex', 0.02), side=-0.07 * amt * sgw * -1, turn=p.get('turn', 0.0))
     hipw = pb.head(f'upperleg01.{w}')
@@ -57,13 +57,33 @@ def stand(pb, p):
     for s in ('L', 'R'):
         if s in p.get('skip_arms', ()):
             continue
+        if p.get('belt_hand') == s:
+            belt_hand(pb, s)
+            continue
         # not symmetric: the arm on the free-leg side hangs a little forward and more bent,
         # the other one closer to the body (two identical straight arms read as a mannequin)
         fr = 1.0 if s == free else 0.0
         pb.arm_down(s, out=p.get('arm_out', 0.14) - 0.03 * (1 - fr), fwd=p.get('arm_fwd', 0.06) + 0.05 * fr,
-                    elbow=p.get('elbow', 0.22) + 0.1 * fr - 0.03 * (1 - fr), twist=p.get('arm_twist', 0.0))
-        pb.grip(s, p.get('hand', 'relaxed'), p.get('hand_amount', 1.0))
+                    elbow=p.get('elbow', 0.22) + 0.1 * fr - 0.03 * (1 - fr), twist=p.get('arm_twist', 0.0) + 0.15 * fr)
+        # each hand its own curl (one softly open, one more closed)
+        pb.grip(s, p.get('hand', 'relaxed'), p.get('hand_amount', 1.0) * (1.25 if fr else 0.75))
     pb.neck_head(pitch=p.get('head_pitch', 0.02), yaw=p.get('head_yaw', 0.0), roll=p.get('head_roll', 0.03 * amt * sgw))
+    return pb
+
+
+def belt_hand(pb, s):
+    """A hand resting on the belt at the front of the hip, thumb hooked behind it, fingers hanging
+    over the belt (riders, workers: a natural 'at rest' hand that is not a hanging mannequin arm)."""
+    sg = 1.0 if s == 'L' else -1.0
+    lat = pb.side_axis()
+    fwd = pb.fwd_axis()
+    hip = pb.head(f'upperleg01.{s}')
+    tgt = hip + lat * sg * 0.075 + fwd * 0.1 + np.array([0, 0.13, 0])
+    place_hand(pb, s, tgt, pole=pb.head(f'upperarm01.{s}') + lat * sg * 0.45 + np.array([0, -0.25, -0.35]),
+               palm=(np.array([0, -1.0, 0]) + fwd * 0.35 - lat * sg * 0.35, -fwd * 0.8 - lat * sg * 0.2), grip=None)
+    for k, (a1, a2, a3) in ((2, (0.25, 0.35, 0.2)), (3, (0.3, 0.45, 0.25)), (4, (0.35, 0.5, 0.3)), (5, (0.45, 0.55, 0.3))):
+        pb.curl_finger(s, k, a1, a2, a3)
+    pb.curl_thumb(s, -0.15, 0.1, 0.3, 0.3)
     return pb
 
 
@@ -117,8 +137,9 @@ def ride(pb, p):
         if s in p.get('skip_arms', ()):
             continue
         tgt = c + fwd * p.get('reach', 0.3) + np.array([sg * 0.09, -0.04 + p.get('hands_dy', 0.0), 0])
+        # closed fists round the reins, thumbs on top
         place_hand(pb, s, tgt, pole=pb.head(f'upperarm01.{s}') + np.array([sg * 0.35, -0.4, -0.2]),
-                   palm=(fwd + np.array([0, -0.3, 0]), np.array([-sg, -0.3, 0])), grip='fist', amount=0.9)
+                   palm=(fwd + np.array([0, -0.3, 0]), np.array([-sg, -0.3, 0])), grip='fist', amount=1.0)
     return pb
 
 
@@ -232,35 +253,20 @@ def _std_legs(pb, p):
     stand(pb, q)
 
 
-def act_spear(pb, p):
-    """Guard: spear upright beside the right foot, right hand gripping at shoulder height."""
-    _std_legs(pb, dict(p, weight=p.get('weight', 'L')))
-    sh = pb.head('upperarm01.R')
-    fwd = pb.fwd_axis()
-    side = -pb.side_axis()                    # toward the right
-    base = sh * np.array([1, 0, 1]) + side * 0.12 + fwd * 0.28
-    base[1] = pb.head('foot.R')[1] - 0.09
-    G = np.array([base[0], sh[1] - 0.15, base[2]])
-    grip_at(pb, 'R', G, lat_dir=np.array([0, -1.0, 0]), n_dir=(G - sh) * np.array([1, 0, 1]),
-            pole=sh + side * 0.35 + np.array([0, -0.4, -0.2]), grip='cylinder', amount=0.95, radius=0.015)
-    pb.arm_down('L', out=0.12, fwd=0.05, elbow=0.3)
-    pb.grip('L', 'loose')
-    R = np.eye(3)
-    return [place('spear', R, base, 'wrist.R')]
-
-
 def act_point_up(pb, p):
-    """Watchman: right arm raised pointing up and ahead; head tipped back looking along it."""
-    _std_legs(pb, dict(p, head_pitch=-0.35, head_yaw=-0.1))
-    sh = pb.head('upperarm01.R')
+    """Watchman: right arm raised pointing up and ahead; the index finger runs on along the
+    forearm (no finger-gun), thumb tucked against the middle finger; the head looks along it."""
     d = norm(np.array([-0.25, 0.75, 0.6]))
+    _std_legs(pb, dict(p, head_pitch=-0.5, head_yaw=-0.25))
     pb.aim('upperarm01.R', d, to='lowerarm01.R')
-    pb.aim('lowerarm01.R', norm(d + np.array([0, 0.1, 0.1])), to='wrist.R')
+    d2 = norm(d + np.array([0, 0.1, 0.1]))
+    pb.aim('lowerarm01.R', d2, to='wrist.R')
     pb.grip('R', 'point')
-    pb.arm_down('L', out=0.12, fwd=0.05, elbow=0.35)
-    pb.grip('L', 'relaxed')
+    # align the index finger with the forearm
+    pb.aim('wrist.R', d2, to='finger2-2.R')
+    pb.arm_down('L', out=0.14, fwd=0.08, elbow=0.45)
+    pb.grip('L', 'loose', 0.8)
     return []
-
 
 def act_hands_front(pb, p, prop=None, size=None):
     """Both hands in front of the waist (clasped, or holding a folded cloth / bowl / parcel)."""
@@ -316,40 +322,41 @@ def rot_y_np(a):
 
 
 def act_lute(pb, p):
-    """Musician playing a lute held across the body: left hand on the neck, right hand at the rose."""
-    _std_legs(pb, dict(p, head_pitch=0.18, head_yaw=0.25))
+    """Musician playing a lute: the bowl against the belly, the neck rising ~25 deg to the wearer's
+    left; right hand plucking over the rose, left fingertips on the fingerboard, thumb behind."""
+    _std_legs(pb, dict(p, head_pitch=0.2, head_yaw=0.3, head_roll=0.06))
     c = pb.head('spine03')
     fwd = pb.fwd_axis()
     lat = pb.side_axis()
-    # lute centre in front of the belly, neck rising to the wearer's left
-    centre = c + fwd * 0.17 + np.array([0, -0.06, 0]) - lat * 0.04
-    neck_dir = norm(lat * 0.85 + np.array([0, 0.45, 0]) + fwd * 0.15)
-    board_n = norm(fwd - neck_dir * np.dot(fwd, neck_dir))
+    up = np.array([0, 1.0, 0])
+    neck_dir = norm(lat * 0.88 + up * 0.42 + fwd * 0.12)
+    board_n = norm(fwd * 0.92 + up * 0.15 - neck_dir * np.dot(fwd, neck_dir))
+    board_n = norm(board_n - neck_dir * np.dot(board_n, neck_dir))
+    # bowl depth ~ 0.13: the board's centre stands that far in front of the belly
+    centre = c + fwd * 0.2 + np.array([0, -0.08, 0]) - lat * 0.02
     R = np.stack([np.cross(neck_dir, board_n), neck_dir, board_n], 1)
-    neck_pt = centre + neck_dir * 0.36
-    grip_at(pb, 'L', neck_pt, lat_dir=neck_dir, n_dir=-board_n + np.array([0, -0.3, 0]), grip='loose', amount=1.0, radius=0.02,
+    neck_pt = centre + neck_dir * 0.37 - board_n * 0.004
+    grip_at(pb, 'L', neck_pt, lat_dir=-neck_dir, n_dir=board_n * 0.7 - np.cross(neck_dir, board_n) * 0.3 + up * -0.2, grip='loose', amount=1.0, radius=0.019,
             pole=pb.head('upperarm01.L') + lat * 0.3 + np.array([0, -0.45, 0.1]))
-    rose = centre + neck_dir * 0.02 + board_n * 0.04 - lat * 0.03
-    grip_at(pb, 'R', rose, lat_dir=-neck_dir, n_dir=-board_n, grip='relaxed', amount=0.8,
-            pole=pb.head('upperarm01.R') - lat * 0.4 + np.array([0, -0.4, -0.3]), depth=0.035)
-    return [place('lute', R, centre, 'wrist.L')]
-
+    rose = centre + neck_dir * 0.03 + board_n * 0.045 - lat * 0.01
+    grip_at(pb, 'R', rose, lat_dir=-neck_dir, n_dir=-board_n, grip='relaxed', amount=0.7,
+            pole=pb.head('upperarm01.R') - lat * 0.4 + np.array([0, -0.4, -0.3]), depth=0.03)
+    return [place('lute', R, centre, 'spine03')]
 
 def act_recorder(pb, p):
-    _std_legs(pb, dict(p, head_pitch=0.15))
-    head = pb.head('head')
-    fwd = pb.fwd_axis()
-    lat = pb.side_axis()
-    mouth = head + fwd * 0.1 + np.array([0, -0.0, 0])
-    d = norm(np.array([0, -0.85, 0]) + fwd * 0.55)
-    top = mouth + fwd * 0.005
-    for s, k in (('L', 0.07), ('R', 0.17)):
+    """Recorder: the tube points down and forward from the lips, left hand above right; each hand
+    comes from its own side, palm toward the tube, fingers over the front holes, thumb behind."""
+    _std_legs(pb, dict(p, head_pitch=0.12))
+    fwd, lat = pb.fwd_axis(), pb.side_axis()
+    lips = (pb.head('oris05') + pb.head('oris01')) / 2
+    d = norm(np.array([0, -0.82, 0]) + fwd * 0.55)
+    top = lips + fwd * 0.004
+    for s, k in (('L', 0.1), ('R', 0.2)):
         sg = 1 if s == 'L' else -1
-        grip_at(pb, s, top + d * k, lat_dir=d, n_dir=-fwd + lat * 0.0, grip='loose', amount=0.8, radius=0.011,
+        grip_at(pb, s, top + d * k, lat_dir=d, n_dir=-lat * sg - fwd * 0.35, grip='loose', amount=0.8, radius=0.011, depth=0.022,
                 pole=pb.head(f'upperarm01.{s}') + lat * sg * 0.35 + np.array([0, -0.35, -0.1]))
     R = frame_y(-d, fwd)
     return [place('recorder', R, top + d * 0.32, 'wrist.R')]
-
 
 def act_cheer(pb, p):
     """Festival cheer: one or both arms raised, hand open."""
@@ -367,20 +374,27 @@ def act_cheer(pb, p):
 
 
 def act_eat(pb, p):
-    """Eating bread: right hand with a loaf near the chin, left hand loose."""
-    _std_legs(pb, dict(p, head_pitch=0.1))
-    head = pb.head('head')
-    fwd = pb.fwd_axis()
-    lat = pb.side_axis()
-    G = head + fwd * 0.16 + np.array([0, -0.1, 0]) - lat * 0.05
-    grip_at(pb, 'R', G, lat_dir=np.array([0, -1.0, 0.0]), n_dir=lat + fwd * 0.3, grip='cup', amount=0.85,
-            pole=pb.head('upperarm01.R') - lat * 0.3 + np.array([0, -0.4, -0.15]))
+    """Eating a bread roll: the roll held in the right hand, its end just in front of the lips (the
+    loaf sat at the nose with the index finger in a nostril); p['at'] = 'chest' holds it lower,
+    about to take a bite."""
+    _std_legs(pb, dict(p, head_pitch=p.get('head_pitch', 0.06)))
+    fwd, lat = pb.fwd_axis(), pb.side_axis()
+    up = np.array([0, 1.0, 0])
+    lips = (pb.head('oris05') + pb.head('oris01')) / 2
+    if p.get('at') == 'chest':
+        C = pb.head('spine01') + fwd * 0.24 - lat * 0.06 + up * 0.02
+        ax = norm(fwd * 0.4 + lat * 0.6 + up * 0.2)
+    else:
+        # roll axis pointing at the mouth from below-right; its near end 1.5 cm from the lips
+        ax = norm(-fwd * 0.8 + lat * 0.35 + up * 0.35)
+        C = lips - ax * 0.07 + fwd * 0.0
+    pole = pb.head('upperarm01.R') - lat * 0.3 + np.array([0, -0.45, -0.1])
+    # fingers round the far half of the roll, palm facing up and in
+    G = C - ax * 0.015
+    grip_at(pb, 'R', G, lat_dir=-ax, n_dir=up * 0.7 + lat * 0.5, grip='cylinder', amount=0.9, radius=0.026, pole=pole)
     pb.arm_down('L', out=0.12, fwd=0.05, elbow=0.4)
     pb.grip('L', 'relaxed')
-    fw, lt, nn = pb.hand_frame('R')
-    R = frame_y(np.array([0, 1.0, 0]), fw)
-    return [place('loaf', R, G + nn * 0.02 + np.array([0, -0.035, 0]), 'wrist.R', r=0.055, h=0.045)]
-
+    return [place('roll', frame_y(ax, up), C, 'wrist.R')]
 
 def act_drink(pb, p):
     _std_legs(pb, p)
@@ -444,40 +458,59 @@ def act_scroll(pb, p):
 
 
 def act_rope(pb, p):
-    """Sailor hauling a rope: both hands on a rope running forward and up."""
+    """Sailor hauling a rope: leaning back, knees bent; both hands on a rope running forward and up
+    to a block (taut, a slight sag), the slack tail hanging from behind the right hand to the deck."""
     _std_legs(pb, dict(p, flex=-0.05, head_pitch=-0.1))
-    pb.bend_spine(flex=-0.08)
+    pb.bend_spine(flex=-0.1)
     c = pb.head('spine03')
     fwd = pb.fwd_axis()
     lat = pb.side_axis()
+    up = np.array([0, 1.0, 0])
     d = norm(fwd + np.array([0, 0.5, 0]))
     p0 = c + fwd * 0.3 + np.array([0, -0.12, 0])
     for s, k in (('L', 0.18), ('R', 0.0)):
         sg = 1 if s == 'L' else -1
         grip_at(pb, s, p0 + d * k, lat_dir=d * sg * -1, n_dir=np.array([0, -1.0, 0]), grip='cylinder', amount=1.0, radius=0.01,
                 pole=pb.head(f'upperarm01.{s}') + lat * sg * 0.35 + np.array([0, -0.45, -0.1]))
-    return [place('ropeline', frame_y(d, lat), p0 - d * 0.25, 'wrist.R', length=2.0)]
-
+    ground = pb.head('foot.R')[1] - 0.085
+    path = []
+    A = p0 + d * 1.9
+    for t in np.linspace(1, 0, 14):                      # block -> right hand (taut, slight sag)
+        path.append(p0 + (A - p0) * t - up * 0.03 * math.sin(math.pi * t))
+    for t in np.linspace(0, 1, 16)[1:]:                  # slack tail: back, then down to the deck
+        q = p0 - d * 0.18 * t - fwd * 0.05 * t + lat * 0.04 * t
+        q = q + (np.array([0, ground + 0.006, 0]) * np.array([0, 1, 0]) - q * np.array([0, 1, 0])) * t ** 1.6
+        path.append(q)
+    for t in np.linspace(0, 1, 8)[1:]:                   # lying on the deck
+        q = path[-1] + (-fwd * 0.05 + lat * 0.03) * 1.0
+        q[1] = ground + 0.006
+        path.append(q)
+    path = np.array(path) - p0
+    return [place('ropeline', np.eye(3), p0, 'wrist.R', path=path, r=0.01)]
 
 def act_injured_arm(pb, p):
-    """Abby after the pass: LEFT forearm held in against the belly, supported under the elbow by the
-    right hand; shoulders drawn in, head a little down."""
-    _std_legs(pb, dict(p, head_pitch=0.18, flex=0.08, head_roll=0.06))
+    """Abby after the pass: the LEFT forearm held in against the belly, the elbow tucked to the
+    ribs; the RIGHT hand wraps round the left forearm and cradles it; shoulders drawn up and
+    rounded, head tilted toward the hurt side, weight on the right foot."""
+    _std_legs(pb, dict(p, head_pitch=0.2, flex=0.12, head_roll=0.1, head_yaw=0.12))
     c = pb.head('spine04')
     fwd = pb.fwd_axis()
     lat = pb.side_axis()
-    pb.rotate('clavicle.L', fwd, -0.06)
-    # left wrist in front of the belly, slightly right of centre; forearm horizontal across the body
-    wl = c + fwd * 0.2 - lat * 0.05 + np.array([0, 0.03, 0])
-    place_hand(pb, 'L', wl, pole=pb.head('upperarm01.L') + lat * 0.25 + np.array([0, -0.5, 0.1]),
-               palm=(-lat + fwd * 0.2, np.array([0, 0, 0]) - fwd * 0.6 + np.array([0, 0.4, 0])), grip='loose', amount=0.6)
+    up = np.array([0, 1.0, 0])
+    for s, sg in (('L', 1.0), ('R', -1.0)):
+        pb.rotate(f'clavicle.{s}', fwd, -sg * 0.07)                 # shoulders up
+        pb.rotate(f'clavicle.{s}', up, sg * 0.1)                    # and forward (rounded)
+    # left wrist in front of the belly, right of centre; elbow tucked against the ribs
+    wl = c + fwd * 0.17 - lat * 0.06 + np.array([0, 0.05, 0])
+    place_hand(pb, 'L', wl, pole=pb.head('upperarm01.L') + lat * 0.08 + np.array([0, -0.6, 0.0]),
+               palm=(-lat + fwd * 0.2, -fwd * 0.5 + up * 0.5), grip='loose', amount=0.7)
     el = pb.head('lowerarm01.L')
-    fa = norm(pb.head('wrist.L') - el)
-    under = (el * 0.55 + pb.head('wrist.L') * 0.45) + np.array([0, -0.035, 0]) + fwd * 0.005
-    grip_at(pb, 'R', under, lat_dir=fa, n_dir=np.array([0, 1.0, 0]), grip='cup', amount=0.8, depth=0.03,
-            pole=pb.head('upperarm01.R') - lat * 0.35 + np.array([0, -0.5, -0.1]))
+    wr = pb.head('wrist.L')
+    fa = norm(wr - el)
+    G = el * 0.4 + wr * 0.6
+    grip_at(pb, 'R', G, lat_dir=fa, n_dir=up * 0.55 + fwd * 0.45, grip='cylinder', amount=0.9, radius=0.03,
+            pole=pb.head('upperarm01.R') - lat * 0.3 + np.array([0, -0.5, -0.15]))
     return []
-
 
 def act_sling(pb, p):
     """LEFT forearm supported in a sling: elbow bent ~90 deg, forearm across the body, hand relaxed."""
@@ -580,6 +613,127 @@ def act_stand(pb, p):
     return []
 
 
+def palm_centre(pb, side, along=0.03):
+    fw, lt, nn = pb.hand_frame(side)
+    f2, f5 = pb.head(f'finger2-1.{side}'), pb.head(f'finger5-1.{side}')
+    return (f2 + f5) / 2 - fw * along, fw, lt, nn
+
+
+def act_clasp(pb, p):
+    """Hands folded at the waist: the left hand relaxed, palm up and in; the right hand laid over
+    it palm down, its fingers over the left fingers. Contact is solved: the right palm sits a hand's
+    thickness above the left (they interpenetrated, or one hand floated)."""
+    _std_legs(pb, p)
+    c = (pb.head('spine04') + pb.head('spine03')) / 2
+    fwd, lat = pb.fwd_axis(), pb.side_axis()
+    up = np.array([0, 1.0, 0])
+    G = c + fwd * p.get('reach', 0.2) + up * p.get('dy', -0.03)
+    poleL = pb.head('upperarm01.L') + lat * 0.35 + np.array([0, -0.45, -0.25])
+    poleR = pb.head('upperarm01.R') - lat * 0.35 + np.array([0, -0.45, -0.25])
+    palmL = (-lat + fwd * 0.25 - up * 0.1, up * 0.75 - fwd * 0.55)
+    tL = G + lat * 0.055
+    for _ in range(3):
+        place_hand(pb, 'L', tL, pole=poleL, palm=palmL, grip=None)
+        pc, fw, lt, nn = palm_centre(pb, 'L')
+        tL = tL + (G - pc)
+    pb.grip('L', 'relaxed', 0.9)
+    pcL, fwL, ltL, nL = palm_centre(pb, 'L')
+    # right hand: palm down over the left hand, fingers pointing to the left, wrist a little
+    # forward of the left one
+    want = pcL + nL * 0.024 + lat * 0.012 + fwd * 0.01
+    palmR = (lat + fwd * 0.2 - up * 0.15, -nL)
+    tR = want - lat * 0.06
+    for _ in range(3):
+        place_hand(pb, 'R', tR, pole=poleR, palm=palmR, grip=None)
+        pc, fw, lt, nn = palm_centre(pb, 'R')
+        tR = tR + (want - pc)
+    pb.grip('R', 'relaxed', 0.7)
+    return []
+
+
+def act_hands_behind(pb, p):
+    """Hands clasped behind the back (the right wrist held in the left hand): low-key authority."""
+    _std_legs(pb, p)
+    fwd, lat = pb.fwd_axis(), pb.side_axis()
+    sacrum = pb.head('spine05') - fwd * 0.16 + np.array([0, 0.02, 0])
+    place_hand(pb, 'R', sacrum + lat * 0.035 + np.array([0, -0.02, 0]), pole=pb.head('upperarm01.R') - lat * 0.4 - fwd * 0.35 + np.array([0, -0.3, 0]),
+               palm=(lat + np.array([0, -0.4, 0]), -fwd), grip='relaxed', amount=0.9)
+    wr = pb.head('wrist.R') + (pb.head('lowerarm01.R') - pb.head('wrist.R')) * 0.12
+    ax = norm(pb.head('wrist.R') - pb.head('lowerarm01.R'))
+    grip_at(pb, 'L', wr, lat_dir=ax, n_dir=fwd * 0.6 + np.array([0, -0.4, 0]), grip='cylinder', amount=0.9, radius=0.026,
+            pole=pb.head('upperarm01.L') + lat * 0.4 - fwd * 0.35 + np.array([0, -0.3, 0]))
+    return []
+
+
+def _spear_contact(pb, side, base, ax, radius=0.0145):
+    """Move the spear so its shaft runs through the closed hand (the IK lands the hand within a
+    few cm of the target; the fingers then closed on nothing): returns the corrected base."""
+    pc, fw, lt, nn = palm_centre(pb, side, along=-0.012)
+    gc = pc + nn * (radius + 0.013)
+    v = gc - base
+    off = v - ax * np.dot(v, ax)
+    base = base + off
+    wrap_hand(pb, side, gc, ax, radius)
+    return base
+
+
+def act_spear(pb, p):
+    """Guard: spear grounded beside the right foot, right hand round the shaft at shoulder height;
+    the shaft leans a few degrees (no two guards alike)."""
+    _std_legs(pb, dict(p, weight=p.get('weight', 'L')))
+    sh = pb.head('upperarm01.R')
+    fwd = pb.fwd_axis()
+    side = -pb.side_axis()                    # toward the right
+    lean = p.get('lean', 0.03)
+    ax = norm(np.array([0, 1.0, 0]) + side * lean + fwd * lean * 0.5)
+    base = sh * np.array([1, 0, 1]) + side * 0.12 + fwd * 0.26
+    base[1] = pb.head('foot.R')[1] - 0.09
+    G = base + ax * ((sh[1] - 0.15 + p.get('spear_h', 0.0)) - base[1])
+    grip_at(pb, 'R', G, lat_dir=-ax, n_dir=(G - sh) * np.array([1, 0, 1]),
+            pole=sh + side * 0.35 + np.array([0, -0.4, -0.2]), grip='cylinder', amount=0.95, radius=0.0145)
+    base = _spear_contact(pb, 'R', base, ax)
+    pb.arm_down('L', out=0.12, fwd=0.05, elbow=0.3)
+    pb.grip('L', 'loose', 0.8)
+    R = frame_y(ax, fwd)
+    return [place('spear', R, base, 'wrist.R')]
+
+
+def act_spear_lean(pb, p):
+    """Guard leaning on his spear: shaft planted ahead and to the right, both hands stacked on it
+    at chest height (right above left)."""
+    _std_legs(pb, dict(p, flex=0.06))
+    fwd, lat = pb.fwd_axis(), pb.side_axis()
+    sh = pb.head('upperarm01.R')
+    base = pb.head('foot.R') * np.array([1, 0, 1]) - lat * 0.05 + fwd * 0.38
+    base[1] = pb.head('foot.R')[1] - 0.09
+    top = pb.head('spine01') + fwd * 0.3 - lat * 0.1 + np.array([0, 0.05 + p.get('spear_h', 0.0), 0])
+    ax = norm(top - base)
+    for s, h, pole in (('R', 0.0, sh - lat * 0.35 + np.array([0, -0.4, -0.2])), ('L', -0.11, pb.head('upperarm01.L') + lat * 0.3 + np.array([0, -0.4, -0.2]))):
+        G = top + ax * h
+        grip_at(pb, s, G, lat_dir=-ax, n_dir=-fwd * 0.6 + (lat if s == 'R' else -lat) * 0.4, pole=pole, grip='cylinder', radius=0.0145)
+    base = _spear_contact(pb, 'R', base, ax)
+    wrap_hand(pb, 'L', base + ax * np.dot(pb.head('wrist.L') - base, ax), ax, 0.0145)
+    return [place('spear', frame_y(ax, fwd), base, 'wrist.R')]
+
+
+def act_spear_shoulder(pb, p):
+    """Guard with the spear on his right shoulder, point up and back, right hand on the shaft in
+    front of the chest."""
+    _std_legs(pb, p)
+    fwd, lat = pb.fwd_axis(), pb.side_axis()
+    shR = pb.head('upperarm01.R')
+    rest = shR + np.array([0, 0.05, 0]) + lat * 0.03            # the shaft lies on the trapezius
+    G = pb.head('spine02') + fwd * 0.2 - lat * 0.1 + np.array([0, -0.02, 0])
+    ax = norm(rest - G)
+    grip_at(pb, 'R', G, lat_dir=-ax, n_dir=-fwd * 0.3 + np.array([0, 1.0, 0]) * 0.4 + lat * 0.4, pole=shR - lat * 0.3 + np.array([0, -0.45, 0.05]),
+            grip='cylinder', radius=0.0145)
+    base = G - ax * 0.45
+    base = _spear_contact(pb, 'R', base, ax)
+    pb.arm_down('L', out=0.12, fwd=0.04, elbow=0.25)
+    pb.grip('L', 'relaxed', 1.1)
+    return [place('spear', frame_y(ax, fwd), base, 'wrist.R')]
+
+
 ACTIONS = {
     'stand': act_stand, 'spear': act_spear, 'point_up': act_point_up, 'hands_front': act_hands_front,
     'cloth': lambda pb, p: act_hands_front(pb, p, prop='cloth'), 'rope_front': lambda pb, p: act_hands_front(pb, p, prop='rope'), 'bowl': lambda pb, p: act_hands_front(pb, p, prop='bowl'),
@@ -589,4 +743,5 @@ ACTIONS = {
     'hand_on_belt': act_hand_on_belt, 'crate': act_crate, 'scroll': act_scroll, 'rope': act_rope,
     'injured_arm': act_injured_arm, 'sling': act_sling, 'hold_child': act_hold_child, 'child_hand': act_child_hand,
     'call': act_call, 'hurt': act_hurt, 'ride': act_ride, 'ride_injured': act_ride_injured,
+    'clasp': act_clasp, 'hands_behind': act_hands_behind, 'spear_lean': act_spear_lean, 'spear_shoulder': act_spear_shoulder,
 }

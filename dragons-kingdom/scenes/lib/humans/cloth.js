@@ -23,6 +23,9 @@ const FABRIC = {
   // divided by it, so `rough` is the mean the surface really gets (boots read as wet rubber at 0.45)
   leather: { id: 'pbr/acg_leather05', base: 'Leather05', tile: 0.35, sheen: 0.0, rough: 0.72, rmean: 0.54, leather: true, lum: 0.031 },
   blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.35, sheen: 0.0, rough: 0.62, rmean: 0.37, leather: true, lum: 0.0097 },
+  // fur (the King's tippet): no fur scan in the library - the wool scan at a fine scale for the
+  // base, procedural guard hairs combed downward in the shader (uFur), strong soft sheen
+  fur: { id: 'pbr/acg_fabric37', base: 'Fabric37', tile: 0.06, sheen: 1.0, rough: 1.0, lum: 0.062, fur: true },
 };
 
 function sheenTint(c) {
@@ -36,7 +39,7 @@ export function clothMaterial(o = {}) {
   const mat = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(...(o.color || [0.3, 0.3, 0.3])), roughness: Math.min(1, (o.rough ?? f.rough) / (f.rmean || 1)), metalness: 0,
     // fibre sheen takes the dye colour (light scattered inside dyed fibres); a white sheen greys dark cloth
-    sheen: o.sheen ?? f.sheen, sheenRoughness: 0.75, sheenColor: sheenTint(o.color || [0.3, 0.3, 0.3]),
+    sheen: o.sheen ?? f.sheen, sheenRoughness: f.fur ? 0.45 : 0.75, sheenColor: sheenTint(o.color || [0.3, 0.3, 0.3]),
     side: THREE.DoubleSide,
   });
   mat.normalMap = libTexture(`${f.id}/${f.base}_nrm.jpg`, { color: false, repeat: true, flipY: true });
@@ -55,6 +58,7 @@ export function clothMaterial(o = {}) {
     // soft hanging folds as shading only, for the under-layers that are not simulated (shirts):
     // a smooth shell of linen in a V-neck read as a flat plastic bib
     uWrinkle: { value: o.wrinkle ?? 0 },
+    uFur: { value: f.fur ? 1 : 0 },
   };
   mat.userData.cloth = U;
   mat.customProgramCacheKey = () => 'dk-human-cloth';
@@ -76,7 +80,7 @@ vAO = ao; vAux = aux; vObjP = position; vPat = uv; vObjN = normal;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 ${NOISE_GLSL}
-uniform sampler2D uAlb; uniform float uLum; uniform float uAlbMix, uWear, uDust, uFade, uSeed, uTile, uPattern, uLeather, uWrinkle; uniform vec3 uDustCol, uPatCol;
+uniform sampler2D uAlb; uniform float uLum; uniform float uAlbMix, uWear, uDust, uFade, uSeed, uTile, uPattern, uLeather, uWrinkle, uFur; uniform vec3 uDustCol, uPatCol;
 varying float vAO; varying vec4 vAux; varying vec3 vObjP; varying vec2 vPat; varying vec3 vObjN;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
@@ -95,9 +99,31 @@ varying float vAO; varying vec4 vAux; varying vec3 vObjP; varying vec2 vPat; var
   if (uPattern > 0.5 && uPattern < 1.5) {
     vec2 q = vPat * 18.0; float s = min(abs(fract(q.x + q.y) - 0.5), abs(fract(q.x - q.y) - 0.5));
     c *= mix(0.78, 1.0, smoothstep(0.0, 0.06, s));
+  } else if (uPattern > 2.5) {
+    // vertical channel quilting (period gambesons): stitched seams every ~2.5 cm, the padding
+    // puffed between them; uneven stitching and wear on the ridges
+    float q = vPat.x * 40.0 + 0.15 * sin(vPat.y * 9.0 + floor(vPat.x * 40.0) * 1.7);
+    float s = abs(fract(q) - 0.5);
+    c *= mix(0.72, 1.0, smoothstep(0.0, 0.07, 0.5 - s));
+    c *= 1.0 + 0.06 * (smoothstep(0.35, 0.0, s) - 0.5);
   } else if (uPattern > 1.5) {
     float st = step(0.5, fract(vPat.x * 9.0));
     c = mix(c, uPatCol * (0.88 + 0.24 * n1), st * 0.85);
+  }
+  if (uLeather > 0.5) {
+    // sole (aux.b): a dark edge of stacked leather with a paler welt line where it meets the upper
+    float sole = vAux.b;
+    c = mix(c, c * 0.42, smoothstep(0.55, 0.85, sole));
+    c *= 1.0 + 0.35 * smoothstep(0.35, 0.5, sole) * (1.0 - smoothstep(0.5, 0.62, sole));
+    // scuffed toe and heel: lighter, rougher leather
+    c = mix(c, c * 1.35 + 0.01, smoothstep(0.6, 0.95, hFbm(vObjP * 45.0 + 3.0)) * 0.35 * vAux.a);
+  }
+  if (uFur > 0.5) {
+    // guard hairs combed downward: streaks along the fall line, dark between tufts
+    float g1 = hN3(vObjP * vec3(700.0, 90.0, 700.0) + uSeed);
+    float g2 = hN3(vObjP * vec3(1500.0, 220.0, 1500.0) + 7.0);
+    float tuft = hFbm(vObjP * 60.0 + uSeed * 2.0);
+    c *= mix(0.45, 1.35, g1 * 0.65 + g2 * 0.35) * (0.75 + 0.5 * tuft);
   }
   // wear (edges, elbows, knees) and dust toward the hem / on the lower body
   float wear = clamp(vAux.g * (0.6 + 0.8 * n2), 0.0, 1.0) * uWear;
@@ -117,6 +143,20 @@ if (uWrinkle > 0.0) {
 if (uPattern > 0.5 && uPattern < 1.5) {
   vec2 q = vPat * 18.0; float s = min(abs(fract(q.x + q.y) - 0.5), abs(fract(q.x - q.y) - 0.5));
   normal = hBump(normal, -vViewPosition, smoothstep(0.0, 0.12, s) * 0.002, faceDirection);
+} else if (uPattern > 2.5) {
+  float q = vPat.x * 40.0 + 0.15 * sin(vPat.y * 9.0 + floor(vPat.x * 40.0) * 1.7);
+  float s = abs(fract(q) - 0.5);
+  normal = hBump(normal, -vViewPosition, pow(clamp(1.0 - 2.0 * s, 0.0, 1.0), 0.6) * 0.0035, faceDirection);
+}
+if (uLeather > 0.5 && vAux.a > 0.01) {
+  // ankle / instep creases (aux.a): leather boots crease across the flex line, they are not
+  // smooth rubber
+  float cr = sin(vObjP.y * 520.0 + hN3(vObjP * 60.0) * 5.0) * 0.5 + 0.5;
+  normal = hBump(normal, -vViewPosition, -pow(cr, 6.0) * 0.0009 * vAux.a, faceDirection);
+}
+if (uFur > 0.5) {
+  float g1 = hN3(vObjP * vec3(700.0, 90.0, 700.0) + uSeed);
+  normal = hBump(normal, -vViewPosition, (g1 - 0.5) * 0.0018 + (hFbm(vObjP * 60.0) - 0.5) * 0.004, faceDirection);
 }`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 { // floor: thin cloth is lit through and between its layers - a crease baked to 0 printed as a
@@ -154,15 +194,20 @@ vAO = ao; vAux = aux; vT = normalize(normalMatrix * tg); vHairUv = uv;`);
       .replace('#include <common>', `#include <common>
 uniform float uSpec, uShift, uVar; uniform vec3 uTint;
 varying float vAO; varying vec3 vT; varying vec4 vAux; varying vec2 vHairUv;
-vec3 hairT; float hairSub, hairAlong;`)
+vec3 hairT; float hairSub, hairAlong, hairFineK;`)
       .replace('#include <color_fragment>', `#include <color_fragment>
 // per-strand colour (aux.r random, aux.g = along the strand 0 root..1 tip, aux.b = depth in the groom)
 // each ribbon reads as several finer hairs: sub-strands across it with their own tone
 { float x = vHairUv.x * 4.0 + vAux.r * 13.0; float id = floor(x); float f = fract(x);
   float h = fract(sin(id * 12.9898 + vAux.r * 78.233) * 43758.5453);
-  hairSub = h; hairAlong = vAux.g;
+  hairSub = h; hairAlong = vAux.g; hairFineK = 1.0 - 0.85 * step(0.75, vAux.a);
   diffuseColor.rgb *= (1.0 - uVar * 0.5 + uVar * vAux.r) * (0.82 + 0.36 * h) * mix(1.0, 1.15, vAux.g);
   diffuseColor.rgb *= mix(1.0, 0.72, smoothstep(0.35, 0.5, abs(f - 0.5)));
+  // salt-and-pepper (aux.a = 0.5): this strand is grey / white
+  float saltK = step(0.25, vAux.a) * (1.0 - step(0.75, vAux.a));
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.41, 0.39) * (0.8 + 0.4 * h), saltK);
+  // vellus / baby hairs (aux.a = 1): fine and darker than the groom (they read as frost)
+  diffuseColor.rgb *= mix(1.0, 0.6, step(0.75, vAux.a));
 }
 diffuseColor.rgb *= mix(1.0, 0.5, vAux.b);
 #ifdef USE_ALPHAHASH
@@ -172,6 +217,7 @@ diffuseColor.a = (1.0 - smoothstep(0.75, 1.0, vAux.g) * 0.9) * (1.0 - smoothstep
 // roots fade in: a hairline is a density gradient, not the blunt dark ends of ribbons
 // (over the first few % only: a pulled-back strand is 20-30 cm long, 10% of it bared the temples)
 diffuseColor.a *= mix(0.45, 1.0, smoothstep(0.0, 0.03, vAux.g));
+diffuseColor.a *= mix(1.0, 0.6, step(0.75, vAux.a));
 #endif`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 hairT = normalize(vT);
@@ -203,7 +249,7 @@ void RE_Direct_Hair( const in IncidentLight directLight, const in vec3 geometryP
   // the fibre (hair coloured); hairSub breaks the band up strand by strand
   // (a white primary at this strength reads as grey dust on brown hair: it takes more of the
   // fibre colour; the first part of each strand lies flat on the scalp and shines less)
-  float rootK = mix(0.45, 1.0, smoothstep(0.0, 0.2, hairAlong));
+  float rootK = mix(0.45, 1.0, smoothstep(0.0, 0.2, hairAlong)) * hairFineK;
   reflectedLight.directSpecular += directLight.color * vis * uSpec * rootK * (0.4 + 1.0 * hairSub) * (s1 * 0.24 * mix(vec3(1.0), hc, 0.7) + s2 * 0.3 * uTint * hc);
 }
 #undef RE_Direct

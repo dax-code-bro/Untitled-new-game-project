@@ -167,3 +167,33 @@ Known (not fixed, for a successor): Abby's sling bands are smooth flat strips (n
 weight); Alexandria's gown has a small hole at the left hip (holefill misses it) and her right
 sleeve bunches behind the arm; band collars still show a thin dark crease line at 4K; long
 pulled-back hairlines are a bit even; riders' boots dangle (no stirrups in the creature saddle).
+
+## Fix round 1 (2026-10-09, from ~15:05 UTC) - critic r1
+
+Code changes (in progress; test builds use --suffix _t1, cache/<id>_t1.*):
+- characters.py: costume + palette pass (canon first): Remi short muted-blue riding coat over dark
+  trousers + knee boots, male face targets, side-parted crop; Abby coat dye with chroma
+  (lin 0.05/0.085/0.04, hue ~105 deg), trousers, braid over the RIGHT shoulder, parting;
+  Fall fitted near-black doublet (standing collar, short split skirts), gauntlets, tall boots,
+  braided coronet, hands behind back; Alexandria wine gown pooling, girdle with gilt mounts,
+  kerchief + veil over the head, slim fillet, hands folded (true clasp); King madder gown, fur
+  tippet, gold chain of office, slim circlet, clumped salt beard; scout deep hood + face wrap;
+  Cling palette (faded, warm) + second layers (aprons, shawls, capelets), belts and footwear
+  varied, expressions (MakeHuman expression units), stooped/heavy/tall/short villagers.
+- garments.py: trousers (gusset bridge, tuck into boots), skirt front overlap, gloves, face wrap,
+  deep hood, deltoid-bridging sleeves, hands shrunk in the cloth collider (ghost-hand prints),
+  navel bridged in the collider.
+- build.py: belt kit (D-buckle + prong, keeper, curved tongue, girdle mounts, cord/sash knots,
+  purse), chain of office, card QA (brow/lash fragments off the face), hem-rim UVs (striated
+  veil edge), boot sole/crease masks, sling thickness + closed elbow pocket + bands over the neck.
+- hair.py: parting, loose strands, clumping, salt-and-pepper, fine (vellus) flag, side-part crop,
+  beard density falloff + moustache, coronet.
+- recipes.py: belt hand, clasp, hands behind, spear contact + lean/shoulder variants, eat at the
+  lips (bread roll), recorder/lute holds, pointing index along the forearm, injured cradle.
+- props.py: rough board crate with nails, cloth parcel, pear lute with strings/frets/bridge/rose,
+  kettle hat with rolled bead + riveted band, sagging reins / haul rope, bread roll.
+- runtime: cloth.js fur, vertical quilting, boot sole/creases, hair salt/fine flags;
+  materials.js T-zone oil only, wet lid margin, hand zones (aux3), deeper pores, warmer sclera,
+  stronger limbal ring, card alpha cut. humans-review.js (quick side-by-side review scene).
+Next: test builds -> review renders -> fix -> full rebuild (suffix _r1, swap) -> 4K finals in
+output/humans/r1/.

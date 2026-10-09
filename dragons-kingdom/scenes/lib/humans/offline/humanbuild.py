@@ -47,7 +47,24 @@ def shape(kit, spec):
         age=m.get('age', 0.5), gender=m.get('gender', 0.5), muscle=m.get('muscle', 0.5), weight=m.get('weight', 0.5),
         height=m.get('height', 0.5), proportions=m.get('proportions', 0.5), race=tuple(m.get('race', (1 / 3, 1 / 3, 1 / 3))))]
     items += mc.detail_items(kit.tl, spec.get('details', {}))
-    return mc.apply_targets(kit.base.v, items)
+    V = mc.apply_targets(kit.base.v, items)
+    # facial expression units (CC0 MakeHuman / MPFB2): {unit: weight} or {unit: (weight, 'L'|'R')}
+    # - a side limits a symmetric unit to one half of the face (an asymmetric smile)
+    ex = spec.get('expression') or {}
+    race = tuple(m.get('race', (1 / 3, 1 / 3, 1 / 3)))
+    for unit, w in ex.items():
+        side = None
+        if isinstance(w, (tuple, list)):
+            w, side = w
+        idx, d = mc.expression_target(kit.tl, unit, race)
+        if not len(idx):
+            continue
+        k = np.full(len(idx), float(w))
+        if side:
+            x = kit.base.v[idx, 0]
+            k *= np.clip(0.5 + (x if side == 'L' else -x) / 0.02, 0, 1)
+        V[idx] += d * k[:, None]
+    return V
 
 
 # ----------------------------------------------------------- geometry --
@@ -325,8 +342,61 @@ def skin_aux(kit, body, V, skel, skin_map_path):
             aux[sel, 1] = np.maximum(aux[sel, 1], m[sel])
     body.attrs['aux'] = aux
     body.attrs['aux2'] = face_masks(kit, body, V)
+    body.attrs['aux3'] = skin_zones(kit, body, V, skel, nrm)
     body.attrs['albg'] = albedo_gain(kit, body, V, col, aux, body.attrs['aux2'])
     return aux
+
+
+def skin_zones(kit, body, V, skel, nrm):
+    """(T-zone, hand, knuckles, fingertips) per body vertex (rest):
+    T-zone = forehead centre, nose and chin - the oily skin (the oil film elsewhere put a waxy
+    hotspot on cheekbones and an oily sheen on the neck); hand = beyond the wrist; knuckles =
+    the dorsal skin over the finger joints (redder, creased); fingertips = the pads and tips
+    (redder; the baked cavity AO turned curled fingertips purple)."""
+    P = body.P
+    out = np.zeros((len(P), 4))
+    g = lambda name: V[kit.base.group_verts(name)].mean(0)
+    eL, eR = g('joint-l-eye'), g('joint-r-eye')
+    mouth = g('joint-mouth')
+    ey, ez = (eL[1] + eR[1]) / 2, (eL[2] + eR[2]) / 2
+    gauss = lambda c, s: np.exp(-np.sum(((P - c) / s) ** 2, axis=1))
+    front = np.clip((P[:, 2] - (ez - 0.02)) / 0.02, 0, 1)
+    tz = gauss(np.array([0, ey + 0.045, ez + 0.01]), np.array([0.03, 0.028, 0.06]))
+    tz = np.maximum(tz, gauss(np.array([0, (ey + mouth[1]) / 2 + 0.005, ez + 0.03]), np.array([0.011, 0.03, 0.04])))
+    tz = np.maximum(tz, 0.6 * gauss(np.array([0, mouth[1] - 0.04, mouth[2]]), np.array([0.014, 0.012, 0.04])))
+    out[:, 0] = np.clip(tz * front * 1.3, 0, 1)
+    idx = {n: i for i, n in enumerate(skel.names)}
+    H, T = skel.H, skel.T
+    for s in ('L', 'R'):
+        el, wr = H[idx[f'lowerarm01.{s}']], H[idx[f'wrist.{s}']]
+        ax = mc_norm(wr - el)
+        t = (P - wr) @ ax
+        near = np.linalg.norm(P - wr, axis=1) < 0.22
+        hand = np.clip((t + 0.01) / 0.015, 0, 1) * near
+        out[:, 1] = np.maximum(out[:, 1], hand)
+        f2, f5 = H[idx[f'finger2-1.{s}']], H[idx[f'finger5-1.{s}']]
+        fwd = mc_norm((f2 + f5) / 2 - wr)
+        lat = mc_norm(f5 - f2)
+        sg = 1.0 if s == 'L' else -1.0
+        palm = mc_norm(sg * np.cross(lat, fwd))
+        for k in (1, 2, 3, 4, 5):
+            for j in ((2, 3) if k == 1 else (1, 2, 3)):
+                bn = f'finger{k}-{j}.{s}'
+                if bn not in idx:
+                    continue
+                c = H[idx[bn]]
+                d = np.linalg.norm(P - c, axis=1)
+                dors = np.clip(((nrm @ -palm) - 0.1) / 0.4, 0, 1) if k > 1 else 1.0
+                out[:, 2] = np.maximum(out[:, 2], np.clip(1 - (d - 0.004) / 0.008, 0, 1) * dors * hand)
+            tip = T[idx[f'finger{k}-3.{s}']]
+            d = np.linalg.norm(P - tip, axis=1)
+            out[:, 3] = np.maximum(out[:, 3], np.clip(1 - (d - 0.004) / 0.012, 0, 1) * hand)
+    return out
+
+
+def mc_norm(v):
+    v = np.asarray(v, float)
+    return v / max(1e-12, np.linalg.norm(v))
 
 
 def albedo_gain(kit, body, V, col, aux, aux2, r_keep=0.008, r_ref=0.045):

@@ -82,7 +82,7 @@ export function skinMaterial(o = {}) {
   const mat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff, roughness: o.rough ?? 0.46, metalness: 0,
     ior: 1.4, specularIntensity: 0.9,
-    sheen: 0.07, sheenRoughness: 0.6, sheenColor: new THREE.Color(0.55, 0.45, 0.4),
+    sheen: 0.12, sheenRoughness: 0.4, sheenColor: new THREE.Color(0.55, 0.45, 0.4),
     clearcoat: o.oil ?? 0.12, clearcoatRoughness: 0.34,
     // double-sided: the gap between a rolled eyeball and the inner lid, or a sleeve's cuff,
     // looks into the head / arm - with back faces culled that showed the hair or the sky
@@ -110,15 +110,15 @@ export function skinMaterial(o = {}) {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', `#include <common>
-attribute float ao; attribute float thick; attribute vec4 aux; attribute vec4 aux2; attribute vec3 albg;
-varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec3 vAlbG;`)
+attribute float ao; attribute float thick; attribute vec4 aux; attribute vec4 aux2; attribute vec4 aux3; attribute vec3 albg;
+varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG;`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-vObjP = position; vAO = ao; vThick = thick; vAux = aux; vAux2 = aux2; vAlbG = albg;`);
+vObjP = position; vAO = ao; vThick = thick; vAux = aux; vAux2 = aux2; vAux3 = aux3; vAlbG = albg;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 ${NOISE_GLSL}
 uniform vec3 uTone, uScalp, uBeard; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid;
-varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec3 vAlbG;
+varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG;
 vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
@@ -143,7 +143,7 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   // chroma at the same luminance, a touch darker and cooler (thin skin over the orbit).
   { float lumc = dot(c, vec3(0.2126, 0.7152, 0.0722));
     vec3 plain = lumc * vec3(1.17, 0.94, 0.8) * vec3(0.96, 0.95, 0.98) * 0.94;
-    c = mix(c, plain, clamp(vAux2.b * 0.6, 0.0, 0.6)); }
+    c = mix(c, plain, clamp(vAux2.b * 0.85, 0.0, 0.85)); }
   // lid margin: lash line and wet rim of the eye opening (dark, barely red)
   c = mix(c, c * vec3(0.62, 0.56, 0.55), vAux2.g * uLid);
   // lips (aux.r) a little deeper, nails (aux.g) paler
@@ -155,8 +155,16 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
     c *= 1.0 - 0.1 * (1.0 - smoothstep(0.0, 0.4, pc)) * fp * (1.0 - vAux.r) * (1.0 - vAux.a); }
   // fine mottling at 2-4 mm (the step between the 1-3 cm blotches and the pores)
   c *= 1.0 + 0.045 * (hN3(vObjP * 380.0 + uSeed * 7.0) - 0.5);
-  // nails: a little paler and pinker than the finger (blood under the plate), never chalk white
+  // nails: a little paler and pinker than the finger (blood under the plate), never chalk white;
+  // the cuticle at the nail's edge a touch darker
   c = mix(c, vec3(l) * vec3(1.1, 0.92, 0.9) + vec3(0.008, 0.005, 0.005), vAux.g * 0.45);
+  c *= 1.0 - 0.12 * smoothstep(0.1, 0.35, vAux.g) * (1.0 - smoothstep(0.35, 0.6, vAux.g));
+  // hands: redder knuckles and fingertips (blood close under thin skin), knuckle skin a little
+  // darker in its folds (a single even pink read as a rubber glove)
+  { float kn = vAux3.b, tip = vAux3.a;
+    float fold = hN3(vObjP * vec3(1400.0, 1400.0, 1400.0) + 3.0);
+    c *= mix(vec3(1.0), vec3(1.07, 0.9, 0.88), clamp(kn * 0.9 + tip * 0.8, 0.0, 1.0));
+    c *= 1.0 - 0.12 * kn * smoothstep(0.55, 0.9, fold); }
   c *= mix(1.0, 0.82, uDirt * hN3(vObjP * 90.0));
   // scalp under the hair takes the hair colour (roots, density), aux.a
   // (a darkened, hair-tinted skin at partial coverage - a straight mix with the hair colour
@@ -173,7 +181,8 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 {
   float tz = hFbm(vObjP * 40.0 + 9.0);
-  roughnessFactor = clamp(roughnessFactor * (0.8 + 0.35 * tz) - vAux.r * 0.2 - vAux.g * 0.15 + vAux.b * 0.15 + vAux.a * 0.35 - vAux2.g * 0.3 - vAux2.r * 0.04, 0.12, 0.95);
+  roughnessFactor = clamp(roughnessFactor * (0.8 + 0.35 * tz) - vAux.r * 0.2 - vAux.g * 0.05 + vAux.b * 0.15 + vAux.a * 0.35 - vAux2.g * 0.3 - vAux2.r * 0.04
+                          - vAux3.r * 0.1 + (1.0 - vAux3.r) * 0.04 + vAux3.g * 0.05, 0.12, 0.95);
   // pores hold no oil film: the sheen breaks up into a fine stipple where they are resolved
   { float fwr = length(fwidth(vObjP));
     float fpr = 1.0 - smoothstep(0.35, 1.0, fwr * 1600.0);
@@ -186,12 +195,12 @@ skinSmoothN = normal;
   // pores + fine lines, faded out where they would be smaller than ~1.5 pixels
   float fw = length(fwidth(vObjP));
   float poreScale = 1600.0;                       // ~0.6 mm cells
-  float fadeP = 1.0 - smoothstep(0.35, 1.0, fw * poreScale);
+  float fadeP = 1.0 - smoothstep(0.5, 1.5, fw * poreScale);
   float fadeL = 1.0 - smoothstep(0.35, 1.0, fw * 420.0);
   float h = 0.0;
   if (fadeP > 0.0) {
     float c = hCell(vObjP * poreScale + uSeed);
-    h -= (1.0 - smoothstep(0.0, 0.45, c)) * 0.00016 * fadeP * (1.0 - vAux.r);
+    h -= (1.0 - smoothstep(0.0, 0.45, c)) * 0.00023 * fadeP * (1.0 - vAux.r) * (1.0 - 0.5 * vAux3.g);
     h += (hN3(vObjP * 3800.0) - 0.5) * 0.00003 * fadeP;
   }
   // lips (aux.r): fine vertical grooves (~1 mm apart, wavy), not a smooth plastic surface
@@ -205,6 +214,11 @@ skinSmoothN = normal;
     h -= (pow(1.0 - abs(a - 0.5) * 2.0, 6.0) + pow(1.0 - abs(b - 0.5) * 2.0, 6.0)) * (0.00003 + 0.00006 * uAge) * fadeL;
   }
   h += (hFbm(vObjP * 260.0) - 0.5) * 0.00012;   // soft undulation (fat, tendons, skin folds)
+  // knuckle skin: loose, folded (crossing creases), fingertip whorls are below pixel size
+  if (vAux3.b > 0.01) {
+    float k1 = hN3(vObjP * vec3(2200.0, 600.0, 2200.0) + 1.0), k2 = hN3(vObjP * vec3(600.0, 2200.0, 600.0) + 4.0);
+    h -= (pow(1.0 - abs(k1 - 0.5) * 2.0, 5.0) + pow(1.0 - abs(k2 - 0.5) * 2.0, 5.0)) * 0.00012 * vAux3.b * fadeL;
+  }
   h *= uPores * (1.0 - vAux.g);                  // nails stay smooth
   normal = hBump(normal, -vViewPosition, h, faceDirection);
   float thin = exp(-vThick / 0.006);   // ears, nostrils, eyelid rims - not the forehead
@@ -217,11 +231,17 @@ skinSmoothN = normal;
 #endif
 #ifdef USE_CLEARCOAT
   material.clearcoat *= 1.0 - vAux.a;
+  // the oil film lives on the T-zone (an oily sheen on the neck and a waxy hotspot on the
+  // cheekbones read as plastic); the lid margin is wet
+  material.clearcoat *= 0.12 + 0.88 * vAux3.r;
+  material.clearcoat = max(material.clearcoat, 0.9 * vAux2.g);
+  material.clearcoatRoughness = mix(material.clearcoatRoughness, 0.08, vAux2.g);
 #endif
 `)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 {
   float aoV = clamp(vAO, 0.0, 1.0);
+  aoV = mix(aoV, 1.0 - (1.0 - aoV) * 0.55, vAux3.g);   // curled fingers: the baked cavity AO went purple-black
   reflectedLight.indirectDiffuse *= mix(vec3(aoV), vec3(aoV) * vec3(1.0, 0.86, 0.82), 1.0 - aoV);
   reflectedLight.indirectSpecular *= aoV * aoV * (1.0 - 0.85 * vAux.a);
   reflectedLight.directSpecular *= 1.0 - 0.8 * vAux.a;
@@ -268,7 +288,7 @@ export function eyeMaterial(o = {}) {
     clearcoat: 1.0, clearcoatRoughness: 0.02,
   });
   if (o.map) mat.map = libTexture(o.map);
-  const U = { uIrisTint: { value: new THREE.Vector3(...(o.irisTint || [1, 1, 1])) }, uScleraTint: { value: new THREE.Vector3(...(o.scleraTint || [0.97, 0.93, 0.88])) } };
+  const U = { uIrisTint: { value: new THREE.Vector3(...(o.irisTint || [1, 1, 1])) }, uScleraTint: { value: new THREE.Vector3(...(o.scleraTint || [0.93, 0.87, 0.8])) } };
   mat.customProgramCacheKey = () => 'dk-human-eye';
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
@@ -302,7 +322,7 @@ varying float vAO; varying vec3 vGaze; varying float vIris;`)
   diffuseColor.rgb *= mix(uScleraTint, uIrisTint, irisW);
   // sclera: warmer and a little pinker toward the corners (vessels), never paper white
   diffuseColor.rgb *= mix(vec3(1.0), vec3(1.0, 0.86, 0.82), smoothstep(1.6, 2.6, vIris) * (1.0 - irisW));
-  diffuseColor.rgb *= mix(1.0, 0.82, smoothstep(0.85, 1.0, vIris) * smoothstep(1.15, 1.0, vIris)); // limbal ring
+  diffuseColor.rgb *= mix(1.0, 0.68, smoothstep(0.85, 1.0, vIris) * smoothstep(1.18, 1.0, vIris)); // limbal ring
 }`)
       .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>
 {
@@ -358,7 +378,7 @@ uniform float uAlphaChannel, uAlphaGain, uShift, uLower; varying float vAO; vary
 #ifdef USE_ALPHAMAP
   vec4 am = texture2D( alphaMap, vAlphaMapUv );
   float a = uAlphaChannel > 2.5 ? am.a : am.g;
-  diffuseColor.a *= clamp(a * uAlphaGain * mix(1.0, uLower, vLw), 0.0, 1.0);
+  diffuseColor.a *= clamp(smoothstep(0.08, 0.45, a) * uAlphaGain * mix(1.0, uLower, vLw), 0.0, 1.0);
 #endif`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= vAO; reflectedLight.indirectSpecular *= vAO;

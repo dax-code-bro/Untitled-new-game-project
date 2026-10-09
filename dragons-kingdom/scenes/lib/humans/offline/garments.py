@@ -133,6 +133,19 @@ class Dresser:
                 d = np.linalg.norm(R - R[j], axis=1)
                 mask = np.maximum(mask, np.clip(1 - (d - 0.05) / 0.05, 0, 1))
                 core = np.maximum(core, np.clip(1 - (d - 0.04) / 0.025, 0, 1))
+            # the navel: a dimple the cloth bridges (it printed through every tunic)
+            H = self.skel.H
+            names = self.skel.names
+            y5, y3 = H[names.index('spine05')][1], H[names.index('spine03')][1]
+            ax_ = R[(np.abs(R[:, 1] - (y5 + y3) / 2) < 0.03)].mean(0)
+            belly = (np.abs(R[:, 0] - ax_[0]) < 0.02) & (R[:, 1] > y5) & (R[:, 1] < y3) & (R[:, 2] > ax_[2]) & np.isin(self.cat, ['torso', 'pelvis'])
+            if belly.any():
+                cand = np.where(belly)[0]
+                # deepest point relative to its neighbourhood (the smoothed surface lies above it)
+                depth = np.einsum('ij,ij->i', S[cand] - R[cand], nR[cand])
+                j = cand[int(np.argmax(depth))]
+                dn = np.linalg.norm(R - R[j], axis=1)
+                mask = np.maximum(mask, np.clip(1 - (dn - 0.025) / 0.02, 0, 1))
             S = mu.laplacian_smooth_fast(S, self.nb, iters=120, lam=0.5, mask=mask)
             d = np.einsum('ij,ij->i', S - R, nR)
             S = S + nR * (np.maximum(0, -d) * (1 - core))[:, None]
@@ -435,6 +448,14 @@ def collider_rest(D):
     r = np.linalg.norm(d, axis=1)
     re = sample_profile(env, R)
     R = R + d / np.maximum(r[:, None], 1e-9) * (np.maximum(0.0, re - r) * w)[:, None]
+    # hands shrink to a small knot at the wrist: as the arms swept from the dress pose to the
+    # character's pose the fingers dragged through the coat and left a ghost hand pressed into it
+    # (cuffs end at the wrist, so nothing has to rest on the hand itself)
+    for s in ('L', 'R'):
+        hv = D.cat == f'hand{s}'
+        if hv.any():
+            wj = D.skel.H[D.skel.names.index(f'wrist.{s}')]
+            R[hv] = wj + (R[hv] - wj) * 0.2
     D._coll = R
     return R
 
@@ -606,10 +627,15 @@ def sleeve_tubes(D, S, armv, g):
         rad = P - foot
         r = np.linalg.norm(rad, axis=1)
         top = np.percentile(r[(tt > 0.12) & (tt < 0.4)], 60) if np.any((tt > 0.12) & (tt < 0.4)) else r.max()
+        # the sleeve hangs from the shoulder point as wide as the deltoid cap: an arm-shaped upper
+        # sleeve printed the round deltoid through the coat ('padded shoulders', a wetsuit)
+        cap = (tt > 0.02) & (tt < 0.22)
+        if np.any(cap):
+            top = max(top, np.percentile(r[cap], 80) * g.get('cap_bridge', 0.97))
         top *= g.get('sleeve_width', 1.0)
         r_cuff = g.get('sleeve_cuff', top * 0.78)
         R = top + (r_cuff - top) * np.clip((tt - 0.3) / 0.7, 0, 1)
-        w = np.clip((tt - 0.1) / 0.15, 0, 1) * g.get('sleeve_loose', 0.85)
+        w = np.clip((tt - 0.02) / 0.12, 0, 1) * g.get('sleeve_loose', 0.85)
         rn = r + np.maximum(0, R - r) * w
         out[sel] = foot + rad / np.maximum(r[:, None], 1e-9) * rn[:, None]
     return out
@@ -942,6 +968,21 @@ def extrude_skirt(D, S, F, hip, pin, g):
             ring[:, 2] -= train * 0.6 * back * s ** 2
         if split:
             ring = np.vstack([ring, ring[:1]])
+            ov = g.get('overlap', 0.0)
+            if ov and not seated:
+                # the front edges of a riding coat's skirt lap over each other when standing
+                # (they part only astride): column 0 turns past the front centre one way, the
+                # duplicate seam column the other way and a little further out
+                uu = np.concatenate([np.arange(N) / N, [1.0]])
+                ramp = min(1.0, s / 0.25)
+                th = -ov * (1 - 2 * uu) * ramp
+                v_ = ring - np.array([c[0], 0, c[2]])
+                ct, st_ = np.cos(th), np.sin(th)
+                x2 = v_[:, 0] * ct + v_[:, 2] * st_
+                z2 = -v_[:, 0] * st_ + v_[:, 2] * ct
+                outer = 1 + 0.028 * np.clip((uu - 0.78) / 0.22, 0, 1) * ramp
+                ring[:, 0] = c[0] + x2 * outer
+                ring[:, 2] = c[2] + z2 * outer
         if vent:
             ring = np.vstack([ring, ring[ib:ib + 1]])
         rings.append(ring)
@@ -994,13 +1035,72 @@ def leg_garment(D, g):
         an = D.lm(f'foot.{s}')
         yb = an[1] + (bottom if bottom is not None else 0.02)
         vm &= ~(np.isin(D.cat, [f'shin{s}', f'thigh{s}', 'pelvis']) & (P[:, 1] < yb) & ((P[:, 0] > 0) == (s == 'L')))
-    S, F, old = D.shell(vm, g.get('ease', 0.004), smooth=g.get('smooth', 40))
+    trousers = g['type'] == 'trousers'
+    ease = g.get('ease', 0.016 if trousers else 0.004)
+    xe = None
+    tuck_y = {}
+    if trousers and g.get('tuck') is not None:
+        # wool riding trousers go INTO the boots: the ease runs out toward the boot top (3 mm
+        # left inside the shaft), so the loose leg bunches a little above it
+        for s in ('L', 'R'):
+            kn, an = D.lm(f'lowerleg01.{s}'), D.lm(f'foot.{s}')
+            tuck_y[s] = an[1] + (kn[1] - an[1]) * g['tuck']
+
+        def xe(Pp, old_, tuck_y=tuck_y, ease=ease):
+            ty = np.where(Pp[:, 0] > D.axis_y()[0], tuck_y['L'], tuck_y['R'])
+            k = np.clip((ty + 0.05 - Pp[:, 1]) / 0.07, 0, 1)
+            return -(ease - 0.003) * k
+    S, F, old = D.shell(vm, ease, smooth=g.get('smooth', 40), extra_ease=xe)
     D.hide_under(old, F, rings=2)
+    if trousers:
+        S = bridge_crotch(D, S, F, g)
     pin = np.ones(len(S)) if not g.get('sim') else np.zeros(len(S))
     if g.get('sim'):
         pin = np.maximum(pin, np.clip((S[:, 1] - (top - 0.06)) / 0.05, 0, 1))
+        if tuck_y:
+            # inside the boot the trousers follow the leg (held by the shaft)
+            ty = np.where(S[:, 0] > D.axis_y()[0], tuck_y['L'], tuck_y['R'])
+            pin = np.maximum(pin, np.clip((ty - 0.01 - S[:, 1]) / 0.04, 0, 1))
     uv = uv_cylinder(S, D.axis_y(), np.array([0, 1.0, 0]), np.array([0, 0, 1.0]))
     return Garment(g.get('name', g['type']), S, F, uv, pin, g, sim=g.get('sim', False), layer=g.get('layer', 1))
+
+
+def bridge_crotch(D, S, F, g):
+    """Trousers / braies are cut with a gusset: the cloth spans the fork between the legs instead
+    of following the body into it (a shell of the body read as sheer tights that showed the
+    crotch). The fork region is lowered and relaxed into a smooth saddle, then kept outside the
+    body (both legs) by a few millimetres."""
+    import bpy  # noqa: F401
+    from mathutils.bvhtree import BVHTree
+    from mathutils import Vector
+    ax = D.axis_y()
+    mid = np.abs(S[:, 0] - ax[0]) < 0.02
+    hipy = (D.lm('upperleg01.L')[1] + D.lm('upperleg01.R')[1]) / 2
+    cand = mid & (S[:, 1] < hipy + 0.02)
+    yc = S[cand, 1].min() if cand.any() else hipy - 0.08
+    drop = g.get('crotch_drop', 0.035)
+    dx = np.abs(S[:, 0] - ax[0])
+    zone = np.clip(1 - dx / 0.12, 0, 1) * np.clip(1 - np.abs(S[:, 1] - (yc - 0.03)) / 0.11, 0, 1)
+    core = np.clip(1 - dx / 0.07, 0, 1) ** 2 * np.clip(1 - np.abs(S[:, 1] - yc) / 0.06, 0, 1)
+    S = S.copy()
+    S[:, 1] -= drop * core
+    nb = mu.neighbours(len(S), F)
+    bnd = np.zeros(len(S), bool)
+    for l in mu.boundary_loops(F):
+        bnd[l] = True
+    S = mu.laplacian_smooth_fast(S, nb, iters=g.get('crotch_smooth', 80), lam=0.5, fixed=bnd, mask=np.clip(zone * 1.4, 0, 1))
+    # keep outside the (dress pose) body, both legs, by the minimum ease
+    tree = BVHTree.FromPolygons(D.dress.tolist(), mu.tris_of(D.faces).tolist(), all_triangles=True)
+    emin = g.get('crotch_clear', 0.006)
+    for i in np.where(zone > 0.01)[0]:
+        loc, n, _, _ = tree.find_nearest(Vector(S[i]))
+        if loc is None:
+            continue
+        loc, n = np.array(loc), np.array(n)
+        s_ = np.dot(S[i] - loc, n)
+        if s_ < emin:
+            S[i] = S[i] + n * (emin - s_)
+    return mu.laplacian_smooth_fast(S, nb, iters=6, lam=0.4, fixed=bnd, mask=zone)
 
 
 def boots(D, g):
@@ -1033,6 +1133,35 @@ def boots(D, g):
     # a little toe spring and a wider sole edge
     uv = uv_cylinder(S, D.axis_y(), np.array([0, 1.0, 0]), np.array([0, 0, 1.0]))
     return Garment(g.get('name', 'boots'), S, F, uv, np.ones(len(S)), g, sim=False, layer=0)
+
+
+def gloves(D, g):
+    """Leather riding gloves / gauntlets: a thin static shell over the hands (fingers included)
+    and the wrist, flaring into a cuff up the forearm ('cuff': forearm fraction from the wrist).
+    Skinned with the body's own weights (a nearest-vertex transfer mixes neighbouring fingers)."""
+    vm = D.region({'handL', 'handR', 'farmL', 'farmR'})
+    P = D.dress
+    cuff = g.get('cuff', 0.32)
+    flare = g.get('flare', 0.012)
+    tt = np.zeros(len(P))
+    for s in ('L', 'R'):
+        a, b = D.lm(f'lowerarm01.{s}'), D.lm(f'wrist.{s}')
+        ax = b - a
+        L = np.linalg.norm(ax)
+        t = (P - b) @ (-ax / L) / L                   # 0 at the wrist, 1 at the elbow
+        side = np.isin(D.cat, [f'farm{s}', f'hand{s}'])
+        vm &= ~(side & (t > cuff))
+        tt = np.where(side, t, tt)
+
+    def xe(Pp, old_):
+        k = np.clip(tt[old_] / max(cuff, 1e-3), 0, 1)
+        return flare * k ** 1.5
+    S, F, old = D.shell(vm, g.get('ease', 0.0016), smooth=g.get('smooth', 4), extra_ease=xe)
+    D.hide_under(old, F, rings=1)
+    uv = uv_body(D, S) * 1.0
+    G = Garment(g.get('name', 'gloves'), S, F, uv, np.ones(len(S)), g, sim=False, layer=g.get('layer', 1.5))
+    G.weights = (D.I[old], D.W[old])
+    return G
 
 
 def head_cover_depth(D, g, P_rest):
@@ -1082,7 +1211,15 @@ def head_shell(D, g):
         face = (d[:, 2] > 0.02) & (np.abs(d[:, 0]) < 0.075) & (P[:, 1] < ey + 0.06) & (P[:, 1] > ey - 0.1)
         vm &= ~face
         vm |= D.region({'neck'}) & ~face
+    elif kind == 'wrap':
+        # a scarf wound round the lower face and the neck, up to the bridge of the nose
+        vm &= P[:, 1] < ey - g.get('top', 0.018)
     xe = None
+    if kind == 'wrap':
+        def xe(Pp, old_, hc=hc, ey=ey):
+            dd = Pp - hc
+            front = np.clip(dd[:, 2] / 0.09, 0, 1)
+            return 0.003 + 0.011 * front * np.clip((ey - Pp[:, 1]) / 0.05, 0, 1)
     if kind == 'hood':
         def xe(Pp, old_, hc=hc, ey=ey):
             dd = Pp - hc
@@ -1092,9 +1229,17 @@ def head_shell(D, g):
     # (a hood at a uniform 3 cm off the head read as a space helmet: it rests on the crown, the
     # wool only stands off where it falls from the head to the neck - and it is smoothed more,
     # so the ears do not print through)
-    S, F, old = D.shell(vm, g.get('ease', 0.006 if kind != 'hood' else 0.014), smooth=g.get('smooth', 30 if kind != 'hood' else 60), extra_ease=xe)
-    if kind in ('hood', 'coif'):
+    S, F, old = D.shell(vm, g.get('ease', 0.006 if kind != 'hood' else 0.014), smooth=g.get('smooth', 30 if kind not in ('hood', 'wrap') else 60), extra_ease=xe)
+    if kind in ('hood', 'coif', 'wrap'):
         D.hide_under(old, F, rings=2)          # the ears under it printed through
+    if kind == 'wrap':
+        # turns of cloth: soft horizontal folds that wander, deeper under the chin
+        nS = mu.vnormals(S, F)
+        dd = S - hc
+        a_ = np.arctan2(dd[:, 0], dd[:, 2])
+        low = np.clip((ey - 0.06 - S[:, 1]) / 0.06, 0, 1)
+        wav = np.sin(S[:, 1] * 140.0 + a_ * 2.0 + 0.7) * 0.6 + np.sin(S[:, 1] * 230.0 - a_ * 3.0 + 2.0) * 0.4
+        S = S + nS * (0.0018 * (0.5 + low) * wav + 0.002)[:, None]
     if kind == 'hood':
         # the shell of the head carried the ears' shape (two bulges): over the ears the hood's
         # side keeps the width it has just above them, then the area is relaxed
@@ -1143,6 +1288,15 @@ def head_shell(D, g):
             for _ in range(2):
                 edge = np.maximum(edge, np.array([max([edge[j] for j in nb_[i]] or [0]) * 0.6 for i in range(len(S))]))
             S = S + nS * (0.004 * edge * front)[:, None] + np.array([0, 0, -0.004]) * (edge * front)[:, None]
+        if g.get('deep', 0.0) and bv:
+            # a deep hood: the face opening is carried forward (and its top down) so the face
+            # sits back in its shadow - the scout must not be recognisable
+            reach = np.zeros(len(S))
+            reach[list(bv)] = 1.0
+            for _ in range(7):
+                reach = np.maximum(reach, np.array([max([reach[j] for j in nb_[i]] or [0]) * 0.82 for i in range(len(S))]))
+            reach *= front
+            S = S + (np.array([0, 0, 1.0]) * g['deep'] + np.array([0, -0.35, 0]) * g['deep'] * np.clip((S[:, 1] - ey) / 0.05, 0, 1)[:, None]) * reach[:, None] ** 1.5
     uv = uv_cylinder(S, hc, np.array([0, 1.0, 0]), np.array([0, 0, 1.0]))
     if kind == 'hood':
         # point (liripipe stub) at the back of the hood
@@ -1275,7 +1429,7 @@ BUILDERS = {
     'gambeson': upper_garment, 'kirtle': upper_garment, 'doublet': upper_garment,
     'hose': leg_garment, 'trousers': leg_garment,
     'boots': boots, 'shoes': boots,
-    'coif': head_shell, 'cap': head_shell, 'kerchief': head_shell, 'hood': head_shell,
+    'coif': head_shell, 'cap': head_shell, 'kerchief': head_shell, 'hood': head_shell, 'wrap': head_shell, 'gloves': gloves,
     'cloak': cape_panel, 'cape': cape_panel, 'apron': apron_panel, 'veil': veil_panel,
 }
 
@@ -1387,7 +1541,7 @@ def simulate(D, garments, steps=6, settle0=8, trans=None, settle1=None, quality=
     prev = []                                   # simulated garments: (object for collision)
     for g in garments:
         t0 = time.time()
-        g.I, g.W = D.transfer(g.P)
+        g.I, g.W = getattr(g, 'weights', None) or D.transfer(g.P)
         if g.goal is not None and np.any(g.goal):
             fr = [min(1.0, 1.6 * (k / steps)) for k in range(steps + 1)]
             frames = [D.skin_dress_to(g.P + g.goal * f, g.I, g.W, M) for f, M in zip(fr, keys)]

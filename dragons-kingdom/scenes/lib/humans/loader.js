@@ -90,6 +90,7 @@ export function buildCharacter(data, opts = {}) {
       if (!g.attributes.thick) g.setAttribute('thick', new THREE.BufferAttribute(new Float32Array(n).fill(0.3), 1));
       if (!g.attributes.aux) g.setAttribute('aux', new THREE.BufferAttribute(new Float32Array(n * 4), 4));
       if (!g.attributes.aux2) g.setAttribute('aux2', new THREE.BufferAttribute(new Float32Array(n * 4), 4));
+      if (!g.attributes.aux3) g.setAttribute('aux3', new THREE.BufferAttribute(new Float32Array(n * 4), 4));
       if (!g.attributes.albg) g.setAttribute('albg', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
     }
     if (m.kind === 'lash' || m.kind === 'brow' || m.kind === 'haircard') {

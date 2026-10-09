@@ -194,6 +194,7 @@ def assemble(kit, spec, out_dir, opts):
     parts.append(proxy_part(kit, 'human/mh_face_parts/tongue/tongue01/tongue01.mhclo', V, 'tongue', 'tongue',
                             {'map': 'human/mh_face_parts/tongue/tongue01/tongue01_diffuse.png', 'rough': 0.35, 'castShadow': False}))
     skin_aux(kit, body, V, sk, os.path.join(kit.lib, body.material['map']))
+    card_qa(body, parts, sk)
     parts.append(caruncles(kit, body, sk))
     from humanbuild import pose_parts
     pose_parts(sk, pt.local, parts, off_t)
@@ -214,24 +215,44 @@ def assemble(kit, spec, out_dir, opts):
         for _ in range(2):
             hem = np.maximum(hem, np.array([hem[n].max() * 0.6 if len(n) else 0 for n in nb]))
         if thick > 0:
-            P2, F2, nn = mu.hem_rim(P, F, thick, g.spec.get('turn', 0.012), nrm)
+            turn = g.spec.get('turn', 0.012)
+            P2, F2, nn = mu.hem_rim(P, F, thick, turn, nrm)
             src = np.concatenate([np.arange(len(P)), np.zeros(nn, int)])
-            # rim vertices copy the attributes of their boundary vertex
+            # rim vertices copy the attributes of their boundary vertex; their UVs continue past
+            # the edge (metres of fabric: the fold and the turn-up). A copied UV stretched the
+            # weave across the rim into a striated band (veil and coat edges).
+            uv_off = np.zeros((len(P) + nn, 2))
+            bset_ = {v for l in mu.boundary_loops(F) for v in l}
             k = 0
             for l in mu.boundary_loops(F):
                 for v in l:
+                    inn = [u for u in nb[v] if u not in bset_]
+                    du = (uv[inn].mean(0) - uv[v]) if inn else np.zeros(2)
+                    dn = np.linalg.norm(du)
+                    du = du / dn if dn > 1e-9 else np.zeros(2)
                     src[len(P) + k] = v; src[len(P) + k + 1] = v
+                    uv_off[len(P) + k] = -du * thick
+                    uv_off[len(P) + k + 1] = -du * (thick + turn)
                     k += 2
-            uv = uv[src]; I, W = I[src], W[src]; hem = hem[src]
+            uv = uv[src] + uv_off; I, W = I[src], W[src]; hem = hem[src]
             P, F = P2, F2
         tris = mu.tris_of(F)
         part = Part(g.name, 'cloth', P, tris, uv=uv, I=I, W=W)
         part.posed = P
         part.normals = mu.vnormals(P, F)
-        mat = {k: v for k, v in g.spec.items() if k in ('fabric', 'color', 'wear', 'dust', 'fade', 'pattern', 'patternColor', 'weave', 'tile', 'sheen', 'rough', 'albedoMix')}
+        mat = {k: v for k, v in g.spec.items() if k in ('fabric', 'color', 'wear', 'dust', 'fade', 'pattern', 'patternColor', 'weave', 'tile', 'sheen', 'rough', 'albedoMix', 'wrinkle', 'dustColor')}
         part.material = mat
         dust = np.clip((0.3 - P[:, 1]) / 0.3, 0, 1) ** 1.5
-        part.attrs['aux'] = np.stack([dust, hem, np.zeros(len(P)), np.zeros(len(P))], 1)
+        sole = np.zeros(len(P))
+        crease = np.zeros(len(P))
+        if g.spec['type'] in ('boots', 'shoes') and not seated:
+            # sole edge (stacked leather + welt) and the flex creases over the instep / ankle
+            sole = np.clip(1 - (P[:, 1] - 0.002) / 0.016, 0, 1)
+            for s_ in ('L', 'R'):
+                an = D.Jt[f'foot.{s_}']
+                side_ = (P[:, 0] > 0) == (s_ == 'L')
+                crease = np.maximum(crease, side_ * np.clip(1 - np.abs(P[:, 1] - (an[1] - 0.005)) / 0.045, 0, 1))
+        part.attrs['aux'] = np.stack([dust, hem, sole, crease], 1)
         parts.append(part)
     # ---- belts, buckles, pouches (on top of the simulated layers)
     accessories(D, garments, spec, parts)
@@ -301,6 +322,40 @@ def assemble(kit, spec, out_dir, opts):
     log(f'   {cid}: {sum(len(p.posed) for p in parts)} verts, {size / 1e6:.1f} MB, {time.time() - t0:.0f} s')
 
 
+def card_qa(body, parts, sk):
+    """Brow and lash cards: no fragment may float off the face. The fitted MakeHuman cards run
+    past the outer brow / eye corner and stand off the temple once the face is shaped: at 4K, in
+    a 3/4 view, their alpha-hashed ends printed as black specks (and a translucent streak) outside
+    the head's silhouette. Brow triangles more than 2.5 mm off the skin and lash triangles beyond
+    the eye opening (lid margin extent + 2 mm) are removed."""
+    import bpy  # noqa: F401
+    from mathutils.bvhtree import BVHTree
+    from mathutils import Vector
+    tree = BVHTree.FromPolygons(body.P.tolist(), body.tris_all.tolist(), all_triangles=True)
+    lm = body.attrs['aux2'][:, 1]
+    for p in parts:
+        if p.name not in ('brows', 'lashes'):
+            continue
+        P = p.P
+        d = np.array([tree.find_nearest(Vector(q))[3] for q in P])
+        keep = np.ones(len(p.tris), bool)
+        if p.name == 'brows':
+            keep &= d[p.tris].min(1) < 0.0025
+        else:
+            c = P[p.tris].mean(1)
+            for sg in (1.0, -1.0):
+                sel = (lm > 0.5) & (body.P[:, 0] * sg > 0.005)
+                if not sel.any():
+                    continue
+                xs = body.P[sel, 0] * sg
+                lo, hi = xs.min() - 0.002, xs.max() + 0.002
+                side = c[:, 0] * sg > 0.005
+                keep &= ~(side & ((c[:, 0] * sg > hi) | (c[:, 0] * sg < lo)))
+        n0 = len(p.tris)
+        p.tris = p.tris[keep]
+        log(f'    card QA {p.name}: {n0 - len(p.tris)} of {n0} triangles off the face removed')
+
+
 def relax_poles(P, F, iters=8):
     """Soften the star-shaped puckers the cloth simulation leaves around high-valence vertices
     (the body mesh's poles at the nipples and navel are inherited by the garment shells)."""
@@ -354,44 +409,180 @@ def caruncles(kit, body, sk):
 
 
 def accessories(D, garments, spec, parts):
+    """Belt kit on top of the simulated layers. The belted garment's spec picks the style:
+    belt_style 'leather' (strap, D-buckle with a prong, keeper, the tongue passed through it and
+    hanging in a curve), 'girdle' (narrow strap with metal mounts and a long pendant end), 'cord'
+    (rope knotted at the side, two hanging ends), 'sash' (cloth band knotted, two tails);
+    belt_color, belt_width, buckle ('iron'|'brass'), pouch (True: a leather purse at the right
+    hip). Every hanging piece is pushed outside the clothes (the old plank tongue stood off the
+    coat like a black slab)."""
     import props as pr
     belt_g = [g for g in garments if g.spec.get('belt')]
     if not belt_g:
         return
     g = belt_g[-1]
+    st = g.spec.get('belt_style', 'leather')
     allP = np.vstack([x.result[getattr(x, 'region', np.zeros(len(x.result), int)) == 0] for x in garments if x.layer >= 1])
     y = g.result[g.belt_idx][:, 1].mean() if g.belt_idx is not None and len(g.belt_idx) else D.Jt['spine04'][1]
     near = allP[np.abs(allP[:, 1] - y) < 0.03]
     c = np.array([(near[:, 0].min() + near[:, 0].max()) / 2, 0, (near[:, 2].min() + near[:, 2].max()) / 2])
-    bc = g.spec.get('belt_color', [0.085, 0.05, 0.028])
-    P, F, angs, R = pr.belt_ring(allP, y, c, width=g.spec.get('belt_width', 0.032), clearance=0.0015)
-    pieces = [(P, F)]
-    # buckle: a small iron frame at the front, a little to the wearer's left
-    a0 = 0.32
-    rr = np.interp(a0, angs, R) + 0.009
+    defaults = {'leather': ([0.11, 0.06, 0.03], 0.032), 'girdle': ([0.07, 0.04, 0.025], 0.022), 'cord': ([0.3, 0.25, 0.17], 0.011), 'sash': ([0.3, 0.26, 0.2], 0.05)}
+    bc0, bw0 = defaults.get(st, defaults['leather'])
+    bc = g.spec.get('belt_color', bc0)
+    width = g.spec.get('belt_width', bw0)
+    tree = garment_surface(D)
+    axis = D.axis_y()
+    seed = zlib.crc32(spec['id'].encode()) & 0xffff
+    rng = np.random.default_rng(seed)
+    thick = 0.004 if st in ('leather', 'girdle') else (0.01 if st == 'cord' else 0.006)
+    P, F, angs, R = pr.belt_ring(allP, y, c, width=width, thick=thick, clearance=0.0015)
+    pieces_belt, pieces_metal, pieces_cloth, pieces_pouch = [], [], [], []
+    if st == 'cord':
+        # a round cord instead of the flat band: rebuild the ring as a tube
+        ring = np.stack([c[0] + np.sin(angs) * (R + 0.006), np.full(len(angs), y), c[2] + np.cos(angs) * (R + 0.006)], 1)
+        ring = np.vstack([ring, ring[:1]])
+        P, F = pr.tube(ring, 0.0055, sides=8)
+    if st == 'sash':
+        pieces_cloth.append((P, F))
+    else:
+        pieces_belt.append((P, F))
+    a0 = g.spec.get('buckle_angle', 0.32 if st != 'cord' else 0.55)
+    rr = np.interp(a0, angs, R) + 0.0015 + thick
     bpos = np.array([c[0] + math.sin(a0) * rr, y, c[2] + math.cos(a0) * rr])
-    t = np.array([math.cos(a0), 0, -math.sin(a0)])
+    t = np.array([math.cos(a0), 0, -math.sin(a0)])          # along the belt (toward the wearer's right)
     nrm = np.array([math.sin(a0), 0, math.cos(a0)])
-    Rm = np.stack([t, [0, 1.0, 0], nrm], 1)
-    frame = []
-    for (cx, cy, sx, sy) in ((0, 0.021, 0.042, 0.005), (0, -0.021, 0.042, 0.005), (-0.019, 0, 0.005, 0.046), (0.019, 0, 0.005, 0.046)):
-        frame.append(pr.box(bpos + Rm @ np.array([cx, cy, 0]), (sx, sy, 0.004), Rm))
-    buckle = pr.merge(frame)
-    # strap end hanging from the buckle
-    tail = []
-    for k in range(10):
-        s_ = k / 9
-        tail.append(bpos + t * (0.03 + 0.015 * s_) + np.array([0, -0.075 * s_ ** 1.2, 0]) + nrm * (0.003 + 0.003 * s_))
-    sv = np.cross(nrm, [0, 1.0, 0]) * 0.015
-    tP = np.array([v for q in tail for v in (q + sv, q - sv)])
-    tF = [(2 * k, 2 * k + 1, 2 * k + 3, 2 * k + 2) for k in range(len(tail) - 1)]
-    for name, (Pp, Fp), mat in (('belt', pr.merge(pieces + [(tP, tF)]), {'kind': 'leather', 'color': bc, 'rough': 0.6, 'tile': 0.25, 'doubleSide': True}),
-                                ('buckle', buckle, {'kind': 'iron', 'color': [0.36, 0.35, 0.34], 'rough': 0.6})):
-        part = Part(name, 'prop', Pp, mu.tris_of(Fp), uv=_uv_box(Pp))
+    up = np.array([0, 1.0, 0])
+
+    def hanging(start, length, sway, w, out=0.004, curl=0.0, n=14):
+        """A strap / cord end hanging from `start`: leaves along the belt, turns down under its
+        own weight (a curve, not a plank), pushed outside the clothes."""
+        pts = []
+        for k in range(n):
+            s_ = k / (n - 1)
+            turn = min(1.0, s_ * 2.2)
+            d = t * (1 - turn) * 0.6 + (-up) * turn + nrm * (0.08 * math.sin(s_ * math.pi)) + t * sway * s_
+            pts.append(d)
+        pts = np.array(pts)
+        seg = length / (n - 1)
+        path = [start]
+        for k in range(1, n):
+            path.append(path[-1] + mu.norm(pts[k]) * seg)
+        path = np.array(path)
+        if curl:
+            path[-4:] += nrm * np.linspace(0, curl, 4)[:, None]
+        path[1:] = push_outside(path[1:], tree, out + thick, axis=axis)
+        for _ in range(3):
+            path[1:-1] = 0.5 * path[1:-1] + 0.25 * (path[:-2] + path[2:])
+        path[1:] = push_outside(path[1:], tree, out + thick, axis=axis)
+        return path
+
+    def strap(path, w, th):
+        tg = mu.norm(np.gradient(path, axis=0))
+        rad = (path - axis) * np.array([1, 0, 1])
+        nn = mu.norm(rad - tg * np.einsum('ij,ij->i', rad, tg)[:, None])
+        sv = mu.norm(np.cross(tg, nn)) * (w / 2)
+        rows = [path + sv, path - sv, path - sv - nn * th, path + sv - nn * th]
+        Ps = np.vstack(rows)
+        n_ = len(path)
+        Fs = []
+        for a in range(4):
+            b = (a + 1) % 4
+            Fs += [(a * n_ + k, b * n_ + k, b * n_ + k + 1, a * n_ + k + 1) for k in range(n_ - 1)]
+        Fs += [(0, n_, 2 * n_, 3 * n_)[::-1], (n_ - 1, 2 * n_ - 1, 3 * n_ - 1, 4 * n_ - 1)]
+        return Ps, Fs
+
+    Rm = np.stack([t, up, nrm], 1)
+    if st in ('leather', 'girdle'):
+        # D-shaped buckle frame (straight bar on the strap side) + prong across it
+        bw = width + 0.008
+        hx = 0.012 if st == 'leather' else 0.009
+        dpath = [np.array([-hx, -bw / 2, 0.0]) + np.array([0, bw * k / 8, 0]) for k in range(9)]
+        for k in range(1, 12):
+            a = math.pi * k / 12
+            dpath.append(np.array([-hx + math.sin(a) * hx * 2.3, math.cos(a) * bw / 2, 0.0]))
+        dpath.append(dpath[0])
+        dp = np.array([bpos + Rm @ q + nrm * 0.0025 for q in dpath])
+        pieces_metal.append(pr.tube(dp, 0.0022 if st == 'leather' else 0.0017, sides=7))
+        prong = np.array([bpos + Rm @ np.array([-hx + s_ * hx * 2.0, 0, 0.0045 + 0.0015 * math.sin(s_ * math.pi)]) for s_ in np.linspace(0, 1, 6)])
+        pieces_metal.append(pr.tube(prong, 0.0014, sides=6))
+        # keeper: a narrow leather loop just past the buckle
+        kp = bpos + t * 0.03 + nrm * 0.0012
+        pieces_belt.append(pr.box(kp, (0.009, width + 0.005, 0.0075), Rm))
+        # tongue: through the keeper, then hanging (short for a belt, long for a girdle)
+        L = g.spec.get('tongue', 0.09 if st == 'leather' else 0.32)
+        start = bpos + t * 0.045 + nrm * 0.003
+        path = hanging(start, L, sway=0.15 * (rng.random() - 0.5), w=width * 0.85, out=0.003, curl=0.004)
+        pieces_belt.append(strap(path, width * 0.85, 0.0035))
+        if st == 'girdle':
+            # metal mounts every ~4 cm round the strap, and a strap end on the pendant
+            for a in np.arange(-math.pi + 0.05, math.pi, 0.11):
+                if abs(a - a0) < 0.12:
+                    continue
+                r_ = np.interp(a, angs, R) + 0.0015 + thick + 0.0008
+                q = np.array([c[0] + math.sin(a) * r_, y, c[2] + math.cos(a) * r_])
+                tt = np.array([math.cos(a), 0, -math.sin(a)])
+                nn = np.array([math.sin(a), 0, math.cos(a)])
+                pieces_metal.append(pr.box(q, (0.008, width * 0.7, 0.0024), np.stack([tt, up, nn], 1)))
+            te = path[-1]
+            tg = mu.norm(path[-1] - path[-3])
+            pieces_metal.append(pr.box(te + tg * 0.012, (width * 0.8, 0.026, 0.004), pr.frame_from(tg, nrm)))
+    elif st in ('cord', 'sash'):
+        # knot + two hanging ends
+        kn_r = 0.012 if st == 'cord' else 0.018
+        u_, v_ = np.meshgrid(np.linspace(0, math.pi, 7), np.linspace(0, 2 * math.pi, 10, endpoint=False))
+        K = np.stack([np.sin(u_) * np.cos(v_) * kn_r * 1.2, np.cos(u_) * kn_r, np.sin(u_) * np.sin(v_) * kn_r * 0.8], -1).reshape(-1, 3)
+        K = (Rm @ K.T).T + bpos + nrm * kn_r * 0.6
+        KF = [(j * 7 + i, j * 7 + i + 1, ((j + 1) % 10) * 7 + i + 1, ((j + 1) % 10) * 7 + i) for j in range(10) for i in range(6)]
+        (pieces_cloth if st == 'sash' else pieces_belt).append((K, KF))
+        for k_, (L, sw) in enumerate(((0.26 if st == 'sash' else 0.3, 0.25), (0.2 if st == 'sash' else 0.24, -0.15))):
+            path = hanging(bpos + nrm * kn_r + t * (0.008 * (k_ * 2 - 1)), L, sway=sw, w=width, out=0.004)
+            if st == 'cord':
+                pieces_belt.append(pr.tube(path, np.linspace(0.005, 0.0045, len(path)), sides=7))
+                # frayed tuft at the end
+                pieces_belt.append(pr.tube(np.array([path[-1], path[-1] + (path[-1] - path[-2]) * 1.5]), [0.0055, 0.001], sides=7))
+            else:
+                pieces_cloth.append(strap(path, width * 0.75, 0.004))
+    if g.spec.get('pouch'):
+        # leather purse hanging from the belt at the right hip
+        a_p = g.spec.get('pouch_angle', -1.05)
+        r_ = np.interp(a_p, angs, R) + 0.0015 + thick
+        top = np.array([c[0] + math.sin(a_p) * r_, y - 0.012, c[2] + math.cos(a_p) * r_])
+        tt = np.array([math.cos(a_p), 0, -math.sin(a_p)])
+        nn = np.array([math.sin(a_p), 0, math.cos(a_p)])
+        prof = [(0.0, -0.125), (0.03, -0.12), (0.05, -0.1), (0.055, -0.06), (0.048, -0.025), (0.036, -0.005), (0.032, 0.0)]
+        Pp, Fp, _ = pr.lathe(prof, segs=16, close_bottom=False)
+        Pp[:, 2] *= 0.45
+        Pp += (rng.random(Pp.shape) - 0.5) * 0.0015
+        Pp = (np.stack([tt, up, nn], 1) @ Pp.T).T + top + nn * 0.026
+        Pp = push_outside(Pp, tree, 0.003, axis=axis)
+        pieces_pouch.append((Pp, Fp))
+        # its drawstring gathers at the neck
+        a = np.linspace(0, 2 * math.pi, 17)
+        ring = np.stack([np.cos(a) * 0.034, np.full_like(a, -0.012), np.sin(a) * 0.034 * 0.45], 1)
+        ring = (np.stack([tt, up, nn], 1) @ ring.T).T + top + nn * 0.026
+        pieces_pouch.append(pr.tube(ring, 0.003, sides=5))
+    buckle_kind = g.spec.get('buckle', 'brass' if st == 'girdle' else 'iron')
+    metal_mat = {'kind': 'brass', 'color': [0.62, 0.45, 0.22], 'rough': 0.42} if buckle_kind == 'brass' else \
+        ({'kind': 'gold', 'rough': 0.35} if buckle_kind == 'gold' else {'kind': 'iron', 'color': [0.34, 0.33, 0.32], 'rough': 0.62, 'tile': 0.15})
+    out_ = []
+    if pieces_belt:
+        out_.append(('belt', pr.merge(pieces_belt), {'kind': 'leather', 'color': bc, 'rough': 0.66 if st != 'cord' else 0.95, 'tile': 0.25, 'doubleSide': True} if st != 'cord'
+                     else {'kind': 'rope', 'color': bc, 'rough': 0.95, 'doubleSide': True}))
+    if pieces_metal:
+        out_.append(('buckle', pr.merge(pieces_metal), metal_mat))
+    if pieces_pouch:
+        out_.append(('pouch', pr.merge(pieces_pouch), {'kind': 'leather', 'color': [c_ * 0.85 for c_ in bc] if st != 'cord' else [0.09, 0.055, 0.03], 'rough': 0.7, 'tile': 0.25, 'doubleSide': True}))
+    if pieces_cloth:
+        out_.append(('beltsash', pr.merge(pieces_cloth), {'fabric': 'linen', 'color': bc, 'wear': 0.4, 'dust': 0.3}))
+    for name, (Pp, Fp), mat in out_:
+        kind = 'cloth' if name == 'beltsash' else 'prop'
+        part = Part(name, kind, Pp, mu.tris_of(Fp), uv=_uv_box(Pp))
         part.posed = Pp
         part.normals = mu.vnormals(Pp, Fp)
         part.I, part.W = D.transfer(Pp, space='target')
         part.material = mat
+        if kind == 'cloth':
+            part.attrs['aux'] = np.zeros((len(Pp), 4))
         parts.append(part)
 
 
@@ -438,6 +629,8 @@ def add_props(kit, V, sk, pt, off, spec, D, parts):
             R = pr.frame_from(ydir, ro @ np.array([0, 0, 1.0]))
             M = np.eye(4); M[:3, :3] = R; M[:3, 3] = hilt
             places.append({'prop': 'sword', 'M': M, 'bone': 'pelvis.L', 'kw': {}})
+    if any(a['prop'] == 'chain' for a in spec.get('accessories', [])):
+        parts.extend(build_chain(sk, pt, off, D))
     for pl in places:
         if pl['prop'] == 'sling':
             parts.extend(build_sling(sk, pt, off, D))
@@ -475,20 +668,26 @@ def build_sling(sk, pt, off, D):
         t = -0.14 + 1.2 * i / (n_u - 1)
         c = el + ax * L * t
         r = 0.068 + 0.008 * math.sin(t * 7)
+        # the apex of the triangle closes round the elbow (a pocket, not an open trough)
+        if t < 0:
+            r *= math.sqrt(max(0.05, 1.0 - (t / -0.15) ** 2))
         for j in range(n_v):
             a = math.pi * (-0.15 + 1.25 * j / (n_v - 1))     # from the body side, under, up the front
             # the cloth is gathered, not a smooth trough: soft lengthwise folds that die out
-            # toward the hand, and a pocket bunched round the elbow
-            fold = 0.0045 * math.sin(a * 5.0 + t * 2.3) * (1.0 - 0.6 * min(1.0, max(0.0, t)))
-            fold += 0.006 * max(0.0, -t) / 0.14 * math.sin(a * 9.0)
+            # toward the hand, and gathers round the elbow
+            fold = 0.003 * math.sin(a * 5.0 + t * 2.3) * (1.0 - 0.6 * min(1.0, max(0.0, t)))
+            fold += 0.003 * max(0.0, -t) / 0.15 * math.sin(a * 9.0)
             P.append(c + (-up * math.sin(a) - side * math.cos(a)) * (r + fold) - up * 0.008)
     P = np.array(P)
     F = mu.grid_faces(n_v, n_u)
     cradle_top_front = P[[i * n_v + (n_v - 1) for i in range(n_u)]]
     # bands: from the front edge of the cradle (hand end, elbow end) over the chest to the shoulders
     nk = Pj[idx['neck01']] + off + np.array([0, 0.03, -0.07])
-    shR = Pj[idx['shoulder01.R']] + off + np.array([0, 0.07, 0.0])
-    shL = Pj[idx['shoulder01.L']] + off + np.array([0, 0.07, 0.0])
+    # the bands run over the sides of the neck (between neck and shoulder) and round its back -
+    # out at the shoulder joints they hung in front of the coat like loose straps
+    n0 = Pj[idx['neck01']] + off
+    shR = n0 + (Pj[idx['shoulder01.R']] + off - n0) * np.array([0.55, 0.0, 0.55]) + np.array([0, 0.045, 0.0])
+    shL = n0 + (Pj[idx['shoulder01.L']] + off - n0) * np.array([0.55, 0.0, 0.55]) + np.array([0, 0.045, 0.0])
     bands = []
     for a_end, mid in ((cradle_top_front[-3], shR), (cradle_top_front[2], shL)):
         path = []
@@ -553,6 +752,10 @@ def build_sling(sk, pt, off, D):
         bands.append((Ps, Fs))
     P = push_outside(P, tree, 0.006, axis=axis)
     P2, F2 = pr.merge([(P, F)] + bands)
+    # folded linen has thickness: a closed shell 2.5 mm thick with rounded edges (a single-sided
+    # surface read as paper strips, and its open ends showed black and white shards)
+    nrm2 = mu.vnormals(P2, F2)
+    P2, F2, _inner = mu.solidify(P2 + nrm2 * 0.0012, F2, 0.0025, nrm=nrm2)
     uv = np.stack([P2[:, 0] + P2[:, 2], P2[:, 1]], 1)
     part = Part('sling', 'cloth', P2, mu.tris_of(F2), uv=uv)
     part.posed = P2
@@ -560,6 +763,55 @@ def build_sling(sk, pt, off, D):
     part.I, part.W = D.transfer(P2, space='target')
     part.material = {'fabric': 'linen', 'color': [0.4, 0.37, 0.3], 'wear': 0.45, 'dust': 0.4}
     part.attrs['aux'] = np.zeros((len(P2), 4))
+    return [part]
+
+
+def build_chain(sk, pt, off, D, links=64):
+    """A gold chain of office: oval links lying over the shoulders and dipping in a U on the
+    chest, pushed out over the clothes (status without a crown)."""
+    import props as pr
+    idx = {n: i for i, n in enumerate(sk.names)}
+    Q, Pj = sk.world(pt.local)
+    nk = Pj[idx['neck01']] + off
+    fwd = mc.quat_to_mat(Q[idx['spine01']]) @ np.array([0, 0, 1.0])
+    lat = mc.quat_to_mat(Q[idx['spine01']]) @ np.array([1.0, 0, 0])
+    up = np.array([0, 1.0, 0])
+    tree = garment_surface(D)
+    axis = D.axis_y()
+    path = []
+    for k in range(160):
+        a = 2 * math.pi * k / 160
+        ca, sa = math.cos(a), math.sin(a)          # a = 0: front
+        front = max(0.0, ca) ** 2
+        q = nk + fwd * (ca * 0.12 + 0.02) + lat * sa * 0.15 - up * (0.035 + 0.13 * front + 0.03 * max(0.0, -ca))
+        path.append(q)
+    path = np.array(path)
+    for _ in range(3):
+        path = push_outside(path, tree, 0.007, axis=axis)
+        path = 0.5 * path + 0.25 * (np.roll(path, 1, 0) + np.roll(path, -1, 0))
+    path = push_outside(path, tree, 0.007, axis=axis)
+    L = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(np.vstack([path, path[:1]]), axis=0), axis=1))])
+    pieces = []
+    for i in range(links):
+        s = L[-1] * i / links
+        j = int(np.searchsorted(L, s)) - 1
+        j = max(0, min(len(path) - 1, j))
+        t = (s - L[j]) / max(1e-9, L[j + 1] - L[j])
+        c = path[j] * (1 - t) + path[(j + 1) % len(path)] * t
+        tg = mu.norm(path[(j + 1) % len(path)] - path[j])
+        rad = mu.norm((c - axis) * np.array([1, 0, 1]) + up * 0.6)
+        side = mu.norm(np.cross(tg, rad))
+        nrm = rad if i % 2 == 0 else side
+        bn = mu.norm(np.cross(tg, nrm))
+        a = np.linspace(0, 2 * math.pi, 13)
+        ring = np.array([c + tg * math.cos(x) * 0.0085 + bn * math.sin(x) * 0.0055 for x in a])
+        pieces.append(pr.tube(ring, 0.0017, sides=5))
+    P, F = pr.merge(pieces)
+    part = Part('chain', 'prop', P, mu.tris_of(F), uv=_uv_box(P))
+    part.posed = P
+    part.normals = mu.vnormals(P, F)
+    part.I, part.W = D.transfer(P, space='target')
+    part.material = {'kind': 'gold', 'color': [0.85, 0.62, 0.28], 'rough': 0.32}
     return [part]
 
 
@@ -611,36 +863,56 @@ def build_hair(gr, hs, hero, kit, V, body):
     st = hs.get('style', 'crop')
     dens = hs.get('density', 1.0) * (1.0 if hero else 0.45)
     sk = gr.skull
-    if st in ('braid', 'pulled', 'bun'):
-        g = sk + np.array(hs.get('gather', [0.0, -0.035, -0.09]))
+    gr.salt = hs.get('salt', 0.0)
+    gr.part_width = hs.get('part', 0.0)
+    gr.part_x = hs.get('part_x', 0.0)
+    gr.loose = hs.get('loose', 0.012)
+    if st in ('braid', 'pulled', 'bun', 'coronet'):
+        gat = list(hs.get('gather', [0.0, -0.035, -0.09]))
+        if st == 'braid' and hs.get('hang') in ('L', 'R'):
+            # a braid brought forward over a shoulder starts behind that ear, low
+            gat = [0.045 if hs['hang'] == 'L' else -0.045, -0.06, -0.07]
+        g = sk + np.array(gat)
         s_, n_ = gr.surf(g)
         g = s_ + n_ * 0.008
+        i0 = len(gr.strands)
         gr.style_pulled_back(int(hs.get('count', 15000) * dens), g, color_layers=hs.get('loft', 0.008), width=hs.get('width', 0.0009 if hero else 0.0015))
+        gr.clump(i0, len(gr.strands), amount=hs.get('clump', 0.18), per=40, power=1.5)
     elif st == 'crop':
+        i0 = len(gr.strands)
         gr.style_crop(int(hs.get('count', 16000) * dens), length=tuple(hs.get('length', (0.012, 0.045))), flow=hs.get('flow', 'back'), width=hs.get('width', 0.0008 if hero else 0.0013), curl=hs.get('curl', 0.0), loft=hs.get('loft', 0.009))
-    if st in ('braid', 'pulled', 'bun') and hero:
+        gr.clump(i0, len(gr.strands), amount=hs.get('clump', 0.35), per=18)
+    # vellus / baby hairs at the hairline: fewer, finer and flagged (shaded dark, no highlight) -
+    # a band of bright short hairs read as frost along the forehead
+    if st in ('braid', 'pulled', 'bun', 'coronet') and hero:
         G_ = g
 
         def tw(r, G_=G_):
             w = np.clip((r[2] - sk[2] + 0.02) / 0.08, 0, 1)
             W1 = np.array([r[0] * 0.75, sk[1] + 0.1, sk[2] - 0.05])
             return mu.norm((G_ + (W1 - G_) * w) - r)
-        gr.baby_hairs(int(hs.get('baby', 2500)), towards=tw)
+        gr.baby_hairs(int(hs.get('baby', 900)), towards=tw, length=(0.003, 0.009), width=0.00022)
     elif st == 'crop' and hero:
-        gr.baby_hairs(int(hs.get('baby', 1500)), towards=lambda r: np.array([0, 0.6, -1.0]))
+        gr.baby_hairs(int(hs.get('baby', 600)), towards=lambda r: np.array([0, 0.6, -1.0]), length=(0.003, 0.008), width=0.00022)
     n_scalp = len(gr.strands)
-    if st in ('braid', 'pulled', 'bun'):
+    if st in ('braid', 'pulled', 'bun', 'coronet'):
         if st == 'braid':
             gr.braid(g + np.array([0, -0.005, -0.012]), length=hs.get('length', 0.42), strands_per=int(90 * max(0.5, dens)), hang=hs.get('hang', 'back'))
         if st == 'bun':
             gr.bun(g + np.array([0, 0.0, -0.02]), radius=hs.get('bun_radius', 0.035), strands=int(700 * max(0.5, dens)))
+        if st == 'coronet':
+            gr.coronet(strands_per=int(90 * max(0.5, dens)))
     if hs.get('beard'):
         bd = hs['beard']
         m = gr.beard_mask(body.P, moustache=bd.get('moustache', True), coverage=bd.get('coverage', 'full'))
         body.attrs['aux'][:, 2] = np.maximum(body.attrs['aux'][:, 2], m * bd.get('shadow', 1.0))
         body.material['beardColor'] = list(bd.get('color', hs.get('color', [0.05, 0.03, 0.02])))
         if bd.get('count', 0) > 0:
-            gr.style_beard(int(bd.get('count', 6000) * (1.0 if hero else 0.5)), length=tuple(bd.get('length', (0.006, 0.02))), moustache=bd.get('moustache', True), coverage=bd.get('coverage', 'full'), curl=bd.get('curl', 0.4), width=bd.get('width', 0.0007))
+            gr.salt = bd.get('salt', hs.get('salt', 0.0))
+            i0 = len(gr.strands)
+            gr.style_beard(int(bd.get('count', 6000) * (1.0 if hero else 0.5)), length=tuple(bd.get('length', (0.006, 0.02))), moustache=bd.get('moustache', True),
+                           coverage=bd.get('coverage', 'full'), curl=bd.get('curl', 0.4), width=bd.get('width', 0.0007), moustache_len=bd.get('moustache_len'))
+            gr.clump(i0, len(gr.strands), amount=bd.get('clump', 0.45), per=16)
     # the scalp under the hair takes the hair colour (aux.a): exactly where strands cover it, so no
     # bare skin shows between strands; it fades out at the hairline over a few millimetres
     if st != 'none' and n_scalp:
