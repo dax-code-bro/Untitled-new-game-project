@@ -80,8 +80,10 @@ export const SHOTS = [
   { id: 'hatchling-macro', set: 'bed', creatures: ['hatchling'], dur: 3, face: -40,
     // (weak: too tired to hold the head up - chin on the linen, legs splayed, eyes half closed,
     // slow shallow breaths)
-    pose: { hatchling: { name: 'lie', sprawl: 1, raise: -0.5, headDown: 0.2, look: [0.35, -0.1], lidRelax: 0.28, breathe: 0.35 } },
-    cam: { subject: 'hatchling', bone: 'head', pos: [0.36, 0.2, 0.44], target: [0.0, -0.02, -0.07], mm: 85, fstop: 8, focus: 'eye_L' } },
+    pose: { hatchling: { name: 'lie', sprawl: 1, raise: -0.5, headDown: 0.2, look: [0.05, -0.1], lidRelax: 0.28, breathe: 0.35 } },
+    // (low 3/4 side view: the snout, jaw line and eye read in profile, the straw rim of the nest
+    // behind; the earlier high front view foreshortened the head into a dome)
+    cam: { subject: 'hatchling', bone: 'head', pos: [0.56, 0.16, 0.14], target: [0.0, -0.02, 0.0], mm: 85, fstop: 8, focus: 'eye_L' } },
   // the scout banking hard at speed (tracking, 45 mm)
   // (the species study: no rider - a seated adult is as long as the scout's whole trunk and hides
   // it; the rider appears, small, in the wing-loss shot)

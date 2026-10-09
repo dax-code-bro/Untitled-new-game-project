@@ -67,7 +67,9 @@ void main() {
   // temperature: hottest near the mouth and in the middle of each tongue, cooling to the edges
   float heat = clamp((1.0 - age * 1.7) * (0.5 + 0.7 * (1.0 - r)) + (n - 0.5) * 0.35, 0.0, 1.0);
   vec3 col = heat > 0.55 ? mix(uBody, uCore, (heat - 0.55) / 0.45) : mix(uEdge, uBody, heat / 0.55);
-  float fade = smoothstep(0.0, 0.06, age) * (1.0 - smoothstep(0.55, 1.0, age));
+  // (a short fade-in: a longer one left the first sixth of the jet empty, so the fire seemed to
+  // start in the air in front of the mouth)
+  float fade = smoothstep(0.0, 0.012, age) * (1.0 - smoothstep(0.55, 1.0, age));
   gl_FragColor = vec4(col * m * fade * uOn * 0.55, 1.0);
 }`;
 
@@ -167,8 +169,8 @@ export function createFire(opts = {}) {
         const ez = c.anatomy.head.frame.ez;
         const q = hb.getWorldQuaternion(new THREE.Quaternion());
         _d.set(ez[0], ez[1], ez[2]).applyQuaternion(q).normalize();
-        // the jet leaves from just in front of the teeth
-        _o.addScaledVector(_d, c.anatomy.head.H * 0.45);
+        // the jet leaves from between the front teeth (further forward it seemed to start in the air)
+        _o.addScaledVector(_d, c.anatomy.head.H * 0.25);
       } else {
         _o.copy(o.origin); _d.copy(o.dir).normalize();
       }

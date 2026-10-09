@@ -77,9 +77,10 @@ Poses (`poses.js`, all pure functions of `t`):
 * `stand` / `lie` / `sit` fold the wings the way a bat does: humerus back along the top of the
   flank, forearm forward and down so the wrist sits LOW beside the shoulder, the hand back along
   the flank, and every finger folded at its knuckle (56% of its length) so the outer part doubles
-  back along the inner part (`CREATURES.<name>.fingerFold`, default [2.85, 0.2] rad): the folded
-  hand is about as long as the forearm, no finger rods reach past the hips or stick out in front
-  of the chest; the membrane hangs in slack folds (drape.js). `foldVariant: 'high'` keeps the old
+  back along the inner part (`CREATURES.<name>.fingerFold`, default [2.95, 0.12] rad): the folded
+  hand is about as long as the forearm and no finger sticks out in front of the chest; the
+  doubled fingers still end a little behind the thigh as smooth blunt tubes (see Known limits);
+  the membrane hangs in slack folds (drape.js). `foldVariant: 'high'` keeps the old
   gargoyle fold
 * `flight` / `glide` tuck the legs: forelegs folded back against the chest, paws curled,
   hind legs trailing under the tail base with the thigh muscles flattened (bone scale) and
@@ -324,11 +325,13 @@ hatchling 12.5-13.5 s, scout 9.7-10.1 s, scale lineup 12.5 s. A still takes
 frequency skin noise is baked per vertex (`aNoise`, `aWarp`), which cut the
 full-frame Charcoal frame from 20.5 s to about 12 s with no visible change.
 
-Measured this session (all nine hero shots in one `creatures-review.js` job at `--preset
-final` with the 8-sub-frame film finish, while other agents rendered on the same 4 vCPU:
-load average 10-17): 9 frames in 44 min 19 s including a ~4 min build, i.e. about 4-5 min
-per finished 4K frame under that load; the 21-frame contact sheet (`creatures-contact.js`,
-no sub-frames) took 11 min 55 s. Review renders at `--fps 1` map the sub-frame offset to a
+Measured in fix round 1 (all eleven hero shots in one `creatures-review.js` job at `--preset
+final` with the 8-sub-frame film finish, other agents rendering on the same 4 vCPU): 11
+frames in 32 min 51 s wall (30 min 09 s of rendering after the build), i.e. about 2.7 min
+per finished 4K frame under that load; the 24-frame contact sheet (`creatures-contact.js`,
+no sub-frames) took 11 min 54 s wall (9 min 11 s rendering). Later single re-renders of the same
+shots: 6 shots in 26 min 54 s wall, the 2 fire shots in 9 min 13 s, the hatchling macro alone in
+8 min 44 s (1 frame, 7 min 41 s of it rendering, the newborn's hero mesh is the densest). Review renders at `--fps 1` map the sub-frame offset to a
 24 fps shutter, so the motion blur in them is what a 24 fps camera would record.
 
 ## Known limits (honest list)
@@ -340,7 +343,11 @@ no sub-frames) took 11 min 55 s. Review renders at `--fps 1` map the sub-frame o
   of close-ups (the jaw line, toe tips) show smooth curves, not scale bumps.
 * Folded wings are skinned bones + a one-time position-based drape of the membrane (drape.js),
   not a full cloth simulation with self-collision: the doubled-back outer half of the hand
-  lies on the inner half, and the membrane between them can crease sharply.
+  lies on the inner half, and the membrane between them can crease sharply (fine pleats can
+  moire at 4K). Seen from the side the doubled fingers stick out a little behind the thigh as
+  smooth tubes with blunt knuckle ends.
+* Horns use the shared keratin material: under the open daylight HDRI (contact sheet) the long
+  horns can read as polished grey metal rather than dull horn.
 * Linear blend skinning: extreme bends (the dog-sit hips, the tail laid on the
   ground) lose a little volume at the joint.
 * The rider is an untextured MakeHuman body with region-coloured clothes:
@@ -359,8 +366,9 @@ no sub-frames) took 11 min 55 s. Review renders at `--fps 1` map the sub-frame o
 * Eyes in a shaded socket read mostly as the wet reflection of the sky (the
   iris shows in close-ups with light on it, e.g. Leaf's eye macro).
 * The hatchling's 24-karat look is a metallic gold reflection under a wet film; a metallic,
-  finely granular surface can still read as a gold casting in places. Its eyelids are separate
-  shells with a rolled margin (not fused skin), and the closed mouth shows as a dark crease.
+  finely granular surface can still read as a gold casting in places. It has no lid shells
+  (the eye sits in a soft skin socket), the closed mouth shows as a long dark crease, and the
+  small folded wing arm reads as a rod on its back.
 * Where a chain's scale rows converge (the jaw tip, the limb roots) the chain pattern would fan
   out; the jaw tip is granular and the limb roots (junction mask) use the 3D mosaic.
 * The membrane is a single surface: its edge has no geometric thickness (the hem is darker

@@ -18,23 +18,29 @@ only the state of the work.
 - Wings: span ~1.9 L Charcoal / ~1.8 L Leaf / ~1.9 L broad Starlight / ~1.6 L narrow scout;
   plagiopatagium onto the thigh (bone hl_#_0); fingertip tension wrinkles; fold: wrist low by
   the shoulder, hand back along the flank, fingers a closed fan, the outer 44% of every finger
-  doubled back at the knuckle (no rods past the hips / out in front of the chest).
+  doubled back at the knuckle (the long rods past the tail root and the wrist in front of the
+  chest are gone; the folded fingers still stick out a little behind the thigh as smooth tubes
+  with blunt ends - see Next).
 - Starlight reflective (clearcoat 0.7 @ 0.08, crowns ~0.16, facet tilt 1.0, albedo 0.6); shot:
   cool fill from below + haze 3.2; flapHz 0.42.
 - Hatchling: gold F0 metallic (0.8/0.42), granular head tier, no lid shells (eye in a soft
   skin socket; lid shells read as gold caps), dark eye with gold flecks + slit pupil, wings on
   the back (root raised, own fold), sprawled weak `lie` pose, straw nest + opened egg (props
-  library) + mucus strands (creatures-shots.js updateStrands), near-neutral key + cool fill.
+  library) + mucus strands (creatures-shots.js updateStrands), near-neutral key + cool fill;
+  macro camera low at the side (3/4 profile: snout, jaw, eye) - the high front view had
+  foreshortened the head into a dome.
 - Charcoal head: irregular crocodilian lip (lipCover 0.3), bigger nostril, heavier brow, horn
   burrs; Remi at Charcoal's depth; tail curled out sideways.
 - fire.js (new): sprite jet + smoke + light, pure in t; lookdev shots charcoal-fire, leaf-fire.
+  The jet leaves from between the front teeth with a short fade-in (the first 4K pass showed
+  the fire starting in the air a head-length in front of the mouth).
 - tack.js (new): 1400s saddle (wool cloth, padded seat on a tree, welt, cantle/pommel, girth +
   iron buckle, breast strap, stirrups) and giants' rig (timber frame on felt, seat + backrest,
   wooden grab bar, broad bands with buckles, foot boards); straps ignore the legs.
 - Scout wing loss: torn ragged membrane (`uTear`), snapped finger, roll toward the LEFT, drop,
   nose-down, wing flung clear of the body; darker stump.
 - Contact sheet: 24 frames (turntables, lineup, 3 spread-wing glide views).
-- npm test 33/33 pass (run during this round).
+- npm test 33/33 pass (299 s wall, run after the last code change of this round).
 
 ## Done (committed)
 - Charcoal (Bashion): anatomy rework (heavy musculature, head, horns, tail, dorsal ridge), 3D
@@ -107,19 +113,28 @@ through a temporary scene `scenes/lookdev/creatures-tmpreview.js` (delete it bef
 `scratchpad/cr/dev.sh <cfg.json> <name> preview` renders free views via creatures-dev.json.
 
 ## Renders (git-ignored, under dragons-kingdom/output/cr/; older ones deleted for disk)
-- `s4final/`: the nine hero shots at native 4K with the film finish - `png/<shot>.png`,
-  `<shot>_1920.jpg`, `crop_*.png` (1:1 crops). This is the current state.
-- `s4contact/`: the 21-frame contact sheet at 4K - `png/fNN.png`, `contact_sheet.jpg`
-  (3840 wide), `contact_sheet_1920.jpg`, `lineup_1920.jpg` (frame 21, scale lineup).
-- `s3hero/`: the 4K state at the start of session 3 (before this session's fixes), for comparison.
-- `s3final/`: an intermediate 4K pass (1920 jpgs + crops only).
+- `s5final/`: the eleven hero shots of fix round 1 at native 4K with the film finish -
+  `png/<shot>.png`, `<shot>_1920.jpg`, `crop_*.png` (1:1 crops). This is the current state.
+  Shots: charcoal-front, charcoal-head, charcoal-flight, leaf-abby, leaf-flight,
+  starlight-below, charcoal-fire, leaf-fire, hatchling-macro, scout-bank, scout-wingloss.
+  (All from the current code: the three Charcoal shots were re-rendered in a 6-shot pass, the
+  two fire shots after the fire-origin fix and the hatchling after its camera change.)
+- `s5contact/`: the 24-frame contact sheet at 4K under the neutral daylight HDRI -
+  `png/fNN.png`, `contact_sheet.jpg` (3840 wide), `contact_sheet_1920.jpg`, `lineup_1920.jpg`
+  (frame 21, scale lineup), `glide_f22/23/24_1920.jpg` (Charcoal / Leaf / Starlight spread).
+- `s4final/`, `s4contact/`: the state before fix round 1, for comparison.
 
 ## Next (open)
-- the hatchling's lids are still separate shells (a cap read at 4K); its closed mouth reads as
-  a long dark crease - a sculpted lip fold that buries the line would help
-- the groin fan of chain-row scales behind the thigh (small, in shadow in the hero shots)
-- Charcoal's spread wing is the least detailed large surface in the flight shot
-- Daxtyn's approved references (limb layout, horns, colours) -> adjust the provisional designs
-- hatchling: shorter snout with the nostrils/egg tooth moved along; sit-pose wing fold
+- folded wing seen from the side: the doubled-back fingers still read as parallel smooth tubes
+  with bare knuckle ends, and the pleated membrane between them can moire at 4K
+- Charcoal's neck scales still read a little like pavers (flat crowns, even grout)
+- Leaf's head is cute rather than fierce in close-up (round skull + big eye); a harder brow /
+  cheek would help if Daxtyn wants her older-looking
+- Starlight: approved look not yet given; she reads silvery / porcelain at close range.
+  Her size (50.6 m, bigger than Charcoal) is an open question in DRAGONS.md
+- hatchling: still partly reads as a gold casting at macro distance; the wing arm shows as a
+  small rod on the back; the closed mouth is a long crease (a sculpted lip fold would help)
+- tack: straps sit on the hide without compressing it; no stitching normal detail
 - humans domain: a narrower/prone straddle for the scout rider; the watchman's head
-- runtime: frame time during sub-frame updates; SSAO on the clearcoat (see the report)
+- runtime: 8-subframe ghosting on fast wing beats; SSAO on clearcoat; fire sprites carry no
+  velocity for motion blur (see the report)
