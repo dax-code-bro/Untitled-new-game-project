@@ -256,19 +256,40 @@ def bake_pennant(name, strength, yaw):
     Wp, Hp = 0.28, 0.36
     B = lambda x, y, z: (x, -z, y)
     rod('cord', B(-0.4, 0.0, 0), B(0.4, 0.0, 0), r=0.004)
-    NX, NY = 14, 18
-
-    def at(u, v):
-        half = 0.5 * (1 - v * 0.985)
-        return B((u - 0.5) * 2 * half * Wp, -0.012 - v * Hp, 0.001 * math.sin(u * 9 + v * 7))
-    verts, faces = grid(NX, NY, at)
-    pins = [i for i in range(NX + 1)]
+    # a triangular mesh (rows of decreasing length down to a single tip vertex), so the cells
+    # stay roughly square: a grid squeezed to a point crumples its tip like wet tissue
+    NX, NY = 14, 20
+    verts, uv, rows = [], [], []
+    for j in range(NY + 1):
+        v = j / NY
+        n = max(0, round(NX * (1 - v)))
+        half = 0.5 * Wp * (1 - v)
+        row = []
+        for i in range(n + 1):
+            u = 0.5 if n == 0 else i / n
+            x = (u - 0.5) * 2 * half
+            row.append(len(verts))
+            verts.append(B(x, -0.012 - v * Hp, 0.001 * math.sin(x * 60 + v * 7)))
+            uv += [round(x, 4), round(v * Hp, 4)]
+        rows.append(row)
+    faces = []
+    for j in range(NY):
+        A, C = rows[j], rows[j + 1]
+        ia = ic = 0
+        while ia < len(A) - 1 or ic < len(C) - 1:
+            ua = (ia + 1) / (len(A) - 1) if ia < len(A) - 1 else 9
+            uc = (ic + 1) / (len(C) - 1) if ic < len(C) - 1 else 9
+            if ua <= uc:
+                faces.append((A[ia], A[ia + 1], C[ic])); ia += 1
+            else:
+                faces.append((A[ia], C[ic + 1], C[ic])); ic += 1
     ob = mesh_obj(name, verts, faces)
-    cloth_settings(ob, pins, mass=0.0004, tension=8, bending=0.004, frames=90, air=1.0)
+    cloth_settings(ob, rows[0], mass=0.0004, tension=10, bending=0.03, frames=90, air=1.0)
     if strength > 0:
         wind(strength, direction=(math.sin(yaw) * 0.6, math.cos(yaw), 0.15), at=(0, -2, 0), noise=0.8)
     pts = run(ob, 80)
-    write(name, {'nx': NX, 'ny': NY, 'w': Wp, 'h': Hp, 'positions': to_yup(pts), 'note': f'triangular pennant hung from a cord at y = 0, wind {strength}'})
+    index = [i for f in faces for i in f]
+    write(name, {'tri': True, 'w': Wp, 'h': Hp, 'positions': to_yup(pts), 'index': index, 'uv': uv, 'note': f'triangular pennant hung from a cord at y = 0, wind {strength}; uv = (x across, v down) in metres at rest'})
 
 
 # -------------------------------------------------------------------- sacks --

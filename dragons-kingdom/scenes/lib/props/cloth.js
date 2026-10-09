@@ -133,11 +133,12 @@ export function squareSail(data, o = {}) {
         const fu = k / n, i = Math.round(fu * nx);
         const p = at(i, j), nn = nAt(i, j);
         for (const side of [-1, 1]) {
-          const L = 0.22 + 0.08 * rnd(k, ri * 2 + (side > 0 ? 1 : 0));
-          const sway = (rnd(k + 5, ri) - 0.5) * 0.06;
-          const p0 = p.clone().addScaledVector(nn, side * 0.012);
-          const pts = [p0, p0.clone().addScaledVector(nn, side * 0.05).add(new THREE.Vector3(sway * 0.5, -L * 0.45, 0)), p0.clone().addScaledVector(nn, side * 0.06).add(new THREE.Vector3(sway, -L, 0))];
-          tube(rb, pts, 0.0045, { sides: 4, seg: 0.04, piece: 0.3 + 0.01 * k });
+          // a short tie through the reef band, hanging straight down against the cloth
+          const L = 0.12 + 0.05 * rnd(k, ri * 2 + (side > 0 ? 1 : 0));
+          const sway = (rnd(k + 5, ri) - 0.5) * 0.02;
+          const p0 = p.clone().addScaledVector(nn, side * 0.008);
+          const pts = [p0, p0.clone().addScaledVector(nn, side * 0.014).add(new THREE.Vector3(sway * 0.5, -L * 0.5, 0)), p0.clone().addScaledVector(nn, side * 0.016).add(new THREE.Vector3(sway, -L, 0))];
+          tube(rb, pts, 0.0032, { sides: 4, seg: 0.03, piece: 0.3 + 0.01 * k });
         }
       }
     });

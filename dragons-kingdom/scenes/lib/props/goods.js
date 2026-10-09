@@ -22,8 +22,8 @@ export async function goodsMaterials(ctx) {
     return {
       crust: await S({ name: 'crust', roughness: 0.62, roughVar: 0.3, sheen: 0.25, sheenColor: [0.8, 0.6, 0.35] }),
       fruit: await S({ name: 'fruit', roughness: 0.32, roughVar: 0.3, clearcoat: 0.35, clearcoatRoughness: 0.35 }),
-      leaf: await S({ name: 'leaf', roughness: 0.55, roughVar: 0.3, sheen: 0.12, sheenColor: [0.4, 0.5, 0.42], sheenRoughness: 0.5, cloth: { transmission: 0.15, forward: 0.5 }, side: THREE.DoubleSide }),
-      root: await S({ name: 'root', roughness: 0.6, roughVar: 0.3, macro: 0.15, macroF: 60 }),
+      leaf: await S({ name: 'leaf', roughness: 0.68, roughVar: 0.25, sheen: 0.3, sheenColor: [0.5, 0.62, 0.6], sheenRoughness: 0.45, cloth: { transmission: 0.15, forward: 0.5 }, side: THREE.DoubleSide }),
+      root: await S({ name: 'root', roughness: 0.74, roughVar: 0.3, macro: 0.15, macroF: 60 }),
       onion: await S({ name: 'onion', roughness: 0.48, roughVar: 0.4, sheen: 0.5, sheenColor: [0.9, 0.7, 0.45], macro: 0.18, macroF: 40 }),
       fish: await S({ name: 'fish', roughness: 0.22, roughVar: 0.2, clearcoat: 0.8, clearcoatRoughness: 0.12, metalness: 0.15 }),
       cheese: await S({ name: 'cheese', roughness: 0.7, roughVar: 0.2, macro: 0.2, macroF: 25 }),
@@ -57,6 +57,7 @@ class Painter {
 const painters = new WeakMap();
 /** Per-vertex colours for a builder (stored alongside; applied when the kit is built: paintKit()). */
 function colorOf(b) { if (!painters.has(b)) painters.set(b, []); return painters.get(b); }
+const smoothstep = (e0, e1, x) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
 function vc(b, p, u, w, piece, ao, col) { const i = b.v(p, u, w, piece, ao, 0); colorOf(b)[i] = col; return i; }
 /** Build a kit whose builders may carry vertex colours (missing colours = white). */
 export function buildGoods(kit, mats, name = 'goods') {
@@ -223,34 +224,74 @@ export function cabbage(kit, F, rnd, o = {}) {
   const R = (o.r ?? 0.085) * (0.85 + 0.3 * rnd());
   const b = kit.get('leaf');
   const ph = rnd() * 6;
-  // the head
-  blob(b, F, 16, 24, (th, phi) => {
+  const TAU = Math.PI * 2;
+  const wrap = (d) => ((d % TAU) + TAU * 1.5) % TAU - Math.PI;
+  // the head: a dense, slightly flattened ball of tightly wrapped pale leaves. The outermost
+  // wrapped leaves show as broad lobes whose margins run as curved ledges from the crown down
+  // the sides; each has a thick pale midrib rising from the base, raised, with side veins
+  // branching off it toward the margins
+  const margins = [], ribs = [];
+  const nm = 5 + Math.floor(rnd() * 3);
+  for (let k = 0; k < nm; k++) margins.push({ a: (k / nm) * TAU + rnd() * 0.7, tw: 0.8 + rnd() * 0.9, top: 0.06 + rnd() * 0.22 });
+  for (let k = 0; k < nm; k++) {
+    const m0 = margins[k], m1 = margins[(k + 1) % nm];
+    // a midrib half-way between neighbouring margins, from the base up toward the crown
+    let mid = (m0.a + m1.a) / 2 + (k + 1 === nm ? Math.PI : 0);
+    ribs.push({ a: mid, tw: (m0.tw + m1.tw) / 2 - 0.15, top: 0.25 + rnd() * 0.25 });
+  }
+  blob(b, F, 34, 64, (th, phi) => {
     const ct = Math.cos(th), st = Math.sin(th);
-    const r = R * 0.82 * (1 + 0.04 * fbm(phi * 3, th * 3, ph, 2));
-    const vein = Math.pow(Math.abs(Math.sin(phi * 4 + th * 3 + ph)), 18);
-    const c = [0.1 + 0.2 * vein, 0.19 + 0.16 * vein, 0.07 + 0.14 * vein].map((v) => v * (0.8 + 0.4 * (ct * 0.5 + 0.5)));
-    return [V(Math.cos(phi) * st * r, ct * r * 0.9 + R * 0.8, Math.sin(phi) * st * r), c, 0.8];
+    let ledge = 0, rim = 0, shade = 0, ridge = 0, vein = 0;
+    for (const m of margins) {
+      const on = smoothstep(m.top * Math.PI, m.top * Math.PI + 0.25, th);
+      if (on <= 0) continue;
+      const d = wrap(phi - (m.a + m.tw * th));
+      // the overlapping leaf stands proud on one side of its edge: a pale thin rim, a shadow beside it
+      ledge += on * smoothstep(-0.03, 0.01, d) * (1 - smoothstep(0.02, 1.0, d));
+      rim = Math.max(rim, on * Math.exp(-((d - 0.005) ** 2) / 0.0006));
+      shade = Math.max(shade, on * Math.exp(-((d + 0.035) ** 2) / 0.0012));
+    }
+    for (const r of ribs) {
+      const on = smoothstep(r.top * Math.PI, r.top * Math.PI + 0.5, th);
+      if (on <= 0) continue;
+      const d = wrap(phi - (r.a + r.tw * th));
+      const w = 0.016 + 0.03 * smoothstep(1.2, Math.PI, th);              // thicker toward the base
+      ridge = Math.max(ridge, on * Math.exp(-(d * d) / (w * w)));
+      // side veins: running out from the rib, angled up toward the crown, fading out
+      const ad = Math.abs(d);
+      if (ad < 0.9) vein = Math.max(vein, on * Math.pow(Math.abs(Math.sin((th * 1.0 - ad * 0.9) * 13 + r.a * 3)), 26) * smoothstep(0.9, 0.08, ad) * smoothstep(0.02, 0.08, ad));
+    }
+    const r = R * 0.8 * (1 + 0.03 * fbm(phi * 3, th * 3, ph, 2) + 0.035 * ledge + 0.022 * ridge + 0.008 * vein);
+    const crown = smoothstep(0.9, 0.0, th);
+    const base = [0.26 + 0.06 * crown, 0.36 + 0.05 * crown, 0.15 + 0.02 * crown];
+    const pale = Math.min(1, ridge * 1.0 + vein * 0.6 + rim * 0.7);
+    const c = base.map((v, i) => (v + ([0.5, 0.55, 0.36][i] - v) * pale * 0.75) * (1 - 0.45 * shade) * (0.8 + 0.25 * (ct * 0.5 + 0.5)));
+    return [V(Math.cos(phi) * st * r, ct * r * 0.86 + R * 0.72, Math.sin(phi) * st * r), c, 1 - 0.35 * shade];
   }, 0.3);
-  // outer leaves: cupped shells wrapping the head, each with a midrib, opening at the top
-  const nl = 5 + Math.floor(rnd() * 3);
+  // outer leaves: three or four big, darker, bluish leaves cupping the lower half, overlapping,
+  // their wavy upper margins peeling away from the head; a raised pale midrib, side veins
+  const nl = 3 + Math.floor(rnd() * 2);
   for (let k = 0; k < nl; k++) {
-    const a0 = (k / nl) * Math.PI * 2 + rnd() * 0.5;
-    const spread = 1.1 + rnd() * 0.5, open = 0.25 + rnd() * 0.35;
-    const lr = R * (1.0 + 0.12 * (k % 2));
+    const a0 = (k / nl) * TAU + rnd() * 0.6;
+    const spread = 2.1 + rnd() * 0.6, flare = 0.25 + rnd() * 0.3;
+    const thTop = Math.PI * (0.38 + rnd() * 0.12);
+    const lr = R * (0.86 + 0.05 * k);
     const base = b.count;
-    const NU = 10, NV = 10;
+    const NU = 30, NV = 22;
     for (let i = 0; i <= NV; i++) for (let j = 0; j <= NU; j++) {
       const v = i / NV, u = j / NU - 0.5;
-      const th = Math.PI * (0.95 - v * (0.85 - open * 0.4));        // from under the head to the top
+      // the margin is rounded: lower toward the sides of the leaf, and wavy
+      const top = thTop + (Math.PI * 0.93 - thTop) * (1 - Math.cos(u * Math.PI)) * 0.42 + 0.05 * Math.sin(u * 19 + k * 2);
+      const th = Math.PI * 0.97 - v * (Math.PI * 0.97 - top);
       const phi = a0 + u * spread;
       const st = Math.sin(th), ct = Math.cos(th);
-      const ripple = 1 + 0.05 * Math.sin(u * 14 + k) * v + 0.04 * Math.sin(v * 9 + u * 5) + 0.06 * Math.sin(u * 37 + k * 3) * v * v + 0.03 * fbm(u * 6 + k, v * 6, k, 2);
-      const outward = 1 + open * v * v * 0.6;
-      const rr = lr * ripple * outward * (1 - 0.15 * Math.abs(u) * v);
-      const mid = Math.exp(-(u * u) / 0.004);
-      const vein = Math.pow(Math.abs(Math.sin(u * 9 + v * 6)), 14) * 0.5 + mid;
-      const c = [0.08 + 0.26 * vein, 0.16 + 0.2 * vein, 0.07 + 0.18 * vein].map((x) => x * (0.65 + 0.45 * v));
-      vc(b, fp(F, Math.cos(phi) * st * rr, ct * rr * 0.9 + R * 0.8 + mid * 0.004, Math.sin(phi) * st * rr), u * 0.2, v * 0.2, 0.4 + k * 0.05, 0.6 + 0.4 * v, c);
+      const mid = Math.exp(-(u * u) / 0.0016);
+      const side = Math.pow(Math.abs(Math.sin((Math.abs(u) - v * 0.18) * 13)), 22) * (1 - mid) * smoothstep(0.0, 0.2, v);
+      const wave = v * v * (0.07 * Math.sin(u * 23 + k * 2) + 0.04 * Math.sin(u * 51 + k) + 0.03 * Math.sin(u * 87 + v * 5)) + 0.02 * fbm(u * 6 + k, v * 6, k, 2);
+      const peel = flare * Math.pow(v, 2.6) * (1 - 0.5 * Math.abs(u) * 2);
+      const rr = lr * (1.06 + wave + peel + 0.025 * mid + 0.008 * side);
+      const c = [0.15 + 0.26 * mid + 0.12 * side, 0.25 + 0.22 * mid + 0.1 * side, 0.14 + 0.16 * mid + 0.07 * side].map((x) => x * (0.8 + 0.25 * v));
+      vc(b, fp(F, Math.cos(phi) * st * rr, ct * rr * 0.86 + R * 0.72 + mid * 0.003 + peel * R * 0.25, Math.sin(phi) * st * rr), u * 0.2, v * 0.2, 0.4 + k * 0.05, 0.55 + 0.45 * v, c);
     }
     const row = NU + 1;
     for (let i = 0; i < NV; i++) for (let j = 0; j < NU; j++) { const a = base + i * row + j; b.q(a, a + row, a + row + 1, a + 1); }
@@ -267,7 +308,7 @@ export function onion(kit, F, rnd, o = {}) {
     let r = R * (1 - 0.55 * Math.pow(Math.max(0, ct), 4)) * (1 - 0.1 * Math.pow(Math.max(0, -ct), 2));
     let y = ct * R * 0.85 + (ct > 0 ? Math.pow(ct, 8) * R * 0.3 : 0);
     const line = Math.pow(Math.abs(Math.sin(phi * 9 + th)), 8);
-    const base = red ? [0.22, 0.05, 0.06] : [0.38, 0.19, 0.06];
+    const base = red ? [0.26, 0.045, 0.07] : [0.5, 0.235, 0.06];
     const c = base.map((v) => v * (0.85 + 0.3 * line) * (0.9 + 0.2 * vnoise(phi * 9, th * 9, R * 100)));
     return [V(Math.cos(phi) * st * r, y + R * 0.9, Math.sin(phi) * st * r), c, 1];
   }, 0.5);
@@ -278,27 +319,92 @@ export function rootVeg(kit, F, rnd, o = {}) {
   const kind = o.kind ?? 'carrot';
   const b = kit.get('root');
   if (kind === 'turnip') {
-    const R = 0.036 * (0.85 + 0.3 * rnd());
-    blob(b, F, 14, 16, (th, phi) => {
+    // a squat bulb, magenta-purple where it stood out of the soil, cream below; a thin, wiry
+    // taproot; the leaf stalks cut back to short stubs at the crown
+    const R = 0.034 * (0.85 + 0.3 * rnd());
+    const ph = rnd() * 6;
+    blob(b, F, 16, 20, (th, phi) => {
       const ct = Math.cos(th), st = Math.sin(th);
-      let r = R * st, y = ct * R * 0.85;
-      if (ct < -0.3) { const t = (-0.3 - ct) / 0.7; r *= 1 - 0.85 * t; y -= t * t * R * 1.2; }
-      const t = clamp((y / R + 0.2) / 1.0, 0, 1);
-      const c = [0.55 - 0.33 * t, 0.5 - 0.44 * t, 0.42 - 0.24 * t].map((v) => v * (0.9 + 0.2 * vnoise(phi * 8, th * 8, 1)));
-      return [V(Math.cos(phi) * r, y + R, Math.sin(phi) * r), c, 1];
+      let r = R * st * (1 + 0.04 * Math.sin(phi * 3 + ph)), y = ct * R * 0.8;
+      if (ct > 0.7) y -= (ct - 0.7) * R * 0.5;                 // the crown is dished round the stalks
+      if (ct < -0.2) { const t = (-0.2 - ct) / 0.8; r *= 1 - 0.75 * t * t; y -= t * t * R * 0.45; }
+      const t = smoothstep(-0.15, 0.45, y / R + 0.05 * Math.sin(phi * 5 + ph));
+      const cream = [0.62, 0.58, 0.47], crown = [0.21, 0.05, 0.13];
+      const ring = Math.pow(Math.abs(Math.sin(th * 22 + Math.sin(phi * 3) * 0.5)), 30) * 0.12 * (1 - t);
+      const c = cream.map((v, i) => (v + (crown[i] - v) * t) * (0.9 + 0.15 * vnoise(phi * 8, th * 8, 1)) * (1 - ring));
+      return [V(Math.cos(phi) * r, y + R * 1.25, Math.sin(phi) * r), c, 1];
     }, 0.6);
+    const tip = 0;                                            // (the bulb's point sits at the origin)
+    const ta = rnd() * 6, bend = 0.4 + rnd() * 0.6;
+    const tail = [];
+    for (let k = 0; k <= 8; k++) { const q = k / 8; tail.push(fp(F, Math.cos(ta) * q * 0.05 * bend, tip + 0.006 - q * 0.012 * (1 - bend) + 0.002 * Math.sin(q * 9), Math.sin(ta) * q * 0.05 * bend)); }
+    const tb = b.count;
+    tube(b, tail, (q) => 0.0028 * (1 - q) + 0.0004, { sides: 5, piece: 0.65 });
+    const cols = colorOf(b); for (let i = tb; i < b.count; i++) cols[i] = [0.5, 0.45, 0.35];
+    const sb = b.count;
+    for (let k = 0; k < 4; k++) { const a2 = rnd() * 6; tube(b, [fp(F, 0, R * 1.85, 0), fp(F, Math.cos(a2) * 0.006, R * 1.85 + 0.014 + rnd() * 0.008, Math.sin(a2) * 0.006)], 0.0022, { sides: 5, caps: true, piece: 0.7 }); }
+    for (let i = sb; i < b.count; i++) cols[i] = [0.12, 0.2, 0.06];
     return;
   }
-  const L = (kind === 'leek' ? 0.32 : 0.16) * (0.85 + 0.3 * rnd());
-  const R = kind === 'leek' ? 0.016 : 0.014;
+  if (kind === 'leek') {
+    // a cream-white shaft greening upward, closed at the root plate; above it the leaves split
+    // into three flat, keeled blades that fan apart, dark blue-green
+    const L = 0.36 * (0.85 + 0.3 * rnd()), R = 0.015 * (0.9 + 0.2 * rnd());
+    const Ls = 0.5 * L;
+    const NS = 12, NL = 16;
+    const base = b.count;
+    for (let i = 0; i <= NL; i++) {
+      const t = i / NL;
+      const r = R * (1 + 0.08 * t) * (t < 0.04 ? 0.75 + 6 * t : 1);
+      for (let j = 0; j <= NS; j++) {
+        const a = (j / NS) * Math.PI * 2;
+        const lines = 0.93 + 0.07 * Math.sin(a * 23 + t * 3) ** 2;
+        const g = smoothstep(0.45, 1.0, t);
+        const c = [0.6 + (0.22 - 0.6) * g, 0.58 + (0.32 - 0.58) * g, 0.45 + (0.14 - 0.45) * g].map((v) => v * lines);
+        vc(b, fp(F, t * Ls, Math.cos(a) * r + R, Math.sin(a) * r), t * Ls, a * R, 0.3, 1, c);
+      }
+    }
+    for (let i = 0; i < NL; i++) for (let j = 0; j < NS; j++) { const q = base + i * (NS + 1) + j; b.q(q, q + 1, q + NS + 2, q + NS + 1); }
+    const capA = vc(b, fp(F, -0.001, R, 0), 0, 0, 0.3, 0.8, [0.55, 0.5, 0.38]);
+    for (let j = 0; j < NS; j++) b.t(capA, base + j, base + j + 1);
+    const lb = kit.get('leaf');
+    for (let k = 0; k < 3; k++) {
+      const roll = (k - 1) * 0.9 + (rnd() - 0.5) * 0.3, spread = (k - 1) * 0.07 + (rnd() - 0.5) * 0.03, lift = (rnd() - 0.3) * 0.02;
+      const Lb = (0.55 + 0.15 * rnd()) * L;
+      const lbase = lb.count;
+      const NB = 14, NC = 4;
+      for (let i = 0; i <= NB; i++) {
+        const sB = i / NB;
+        const cx = Ls * 0.82 + sB * Lb, cy = R + lift * sB * sB + R * 0.3 * Math.sin(roll) * (1 - sB) * 0, cz = spread * sB * sB + 0.004 * Math.sin(sB * 7 + k);
+        const w = (0.022 + 0.01 * Math.min(1, sB * 4)) * (1 - 0.35 * sB * sB) * (sB > 0.92 ? (1 - sB) / 0.08 * 0.8 + 0.2 : 1);
+        for (let j = 0; j <= NC; j++) {
+          const cc = (j / NC) * 2 - 1;
+          const keel = Math.abs(cc) * 0.004;
+          const wy = Math.sin(roll), wz = Math.cos(roll);
+          const ny = Math.cos(roll), nz = -Math.sin(roll);
+          const mid = Math.exp(-(cc * cc) / 0.05);
+          const c = [0.06 + 0.06 * mid, 0.12 + 0.06 * mid, 0.07 + 0.03 * mid].map((v) => v * (1.15 - 0.3 * sB));
+          vc(lb, fp(F, cx, cy + cc * w / 2 * wy + keel * ny, cz + cc * w / 2 * wz + keel * nz), sB * Lb, cc * w, 0.5 + k * 0.05, 0.75 + 0.25 * sB, c);
+        }
+      }
+      for (let i = 0; i < NB; i++) for (let j = 0; j < NC; j++) { const q = lbase + i * (NC + 1) + j; lb.q(q, q + NC + 1, q + NC + 2, q + 1); }
+    }
+    // the root plate: a tuft of short, pale, wiry roots
+    const rb = b.count;
+    for (let k = 0; k < 9; k++) { const a = rnd() * 6; tube(b, [fp(F, 0.0, R, 0), fp(F, -0.012 - rnd() * 0.012, R + Math.cos(a) * R * 1.1, Math.sin(a) * R * 1.1)], 0.0009, { sides: 3, piece: 0.75 }); }
+    const cols = colorOf(b); for (let i = rb; i < b.count; i++) cols[i] = [0.5, 0.44, 0.32];
+    return;
+  }
+  const L = 0.16 * (0.85 + 0.3 * rnd());
+  const R = 0.014;
   const base = b.count;
   const NS = 10, NL = 24;
   for (let i = 0; i <= NL; i++) {
     const t = i / NL;
-    const r = kind === 'carrot' ? R * Math.pow(1 - t, 0.7) * (1 + 0.06 * Math.sin(t * 60)) : R * (1 + 0.15 * t);
+    const r = R * Math.pow(1 - t, 0.7) * (1 + 0.06 * Math.sin(t * 60));
     for (let j = 0; j <= NS; j++) {
       const a = (j / NS) * Math.PI * 2;
-      const c = kind === 'carrot' ? [0.5, 0.14, 0.02].map((v) => v * (0.85 + 0.15 * Math.sin(t * 80) ** 2)) : t < 0.55 ? [0.6, 0.6, 0.5] : [0.1 + 0.1 * (1 - t), 0.2 + 0.05 * (1 - t), 0.06];
+      const c = [0.5, 0.14, 0.02].map((v) => v * (0.85 + 0.15 * Math.sin(t * 80) ** 2));
       vc(b, fp(F, t * L, Math.cos(a) * r + R, Math.sin(a) * r), t * L, a * R, 0.3, 1, c);
     }
   }

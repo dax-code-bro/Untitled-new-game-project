@@ -36,7 +36,7 @@ export function barrel(kit, F, rnd, o = {}) {
   const w = []; let sum = 0;
   for (let k = 0; k < N; k++) { const v = 0.75 + 0.5 * rnd(); w.push(v); sum += v; }
   let a0 = rnd() * Math.PI * 2;
-  const gap = 0.0025;                               // the joint between staves (radians at r ~ 0.25 -> mm)
+  const gap = 0.0011;                               // the joint between staves (m at the surface)
   const bungK = Math.floor(rnd() * N);
   const NY = 18;
   for (let k = 0; k < N; k++) {
@@ -91,8 +91,8 @@ export function barrel(kit, F, rnd, o = {}) {
       const b4 = sb.count;
       for (let j = 0; j <= NY; j += 3) {
         const y = -chime + (H + 2 * chime) * (j / NY);
-        sb.v(P(a, y, 0.0015), y, 0, piece, 0.4, 0);
-        sb.v(P(a, y, T * 0.6), y, 0.01, piece, 0.2, 0);
+        sb.v(P(a, y, 0.0015), y, 0, piece, 0.12, 0);
+        sb.v(P(a, y, T * 0.6), y, 0.01, piece, 0.05, 0);
       }
       const nj = Math.floor(NY / 3);
       for (let j = 0; j < nj; j++) { const p0 = b4 + j * 2; if (s > 0) sb.q(p0, p0 + 2, p0 + 3, p0 + 1); else sb.q(p0, p0 + 1, p0 + 3, p0 + 2); }
@@ -107,18 +107,19 @@ export function barrel(kit, F, rnd, o = {}) {
     }
     a0 += da;
   }
-  // heads: boards across, set in the croze 3 cm inside the chime
+  // heads: set in the croze 2 cm inside the chime - a disc of boards: one surface (the boards are
+  // planed flush) with the joints between them as thin dark lines, the edge bevelled into the croze
   const heads = o.open ? [0.02] : [0.02, H - 0.02];
   const hb = kit.get(o.headMat || 'stave');
   for (const hy of heads) {
-    const rr = rAt(hy) - T * 0.6;
+    const rr = rAt(hy) - T * 0.55;
+    const top = hy > H / 2;
+    lathe(hb, sub(F, [0, hy - (top ? 0 : 0.02), 0]), top ? [[rr, 0], [rr, 0.012], [rr * 0.96, 0.02], [0, 0.02]] : [[0, 0], [rr * 0.96, 0], [rr, 0.008], [rr, 0.02]], { seg: 36, piece: (o.piece ?? 0) + 0.5 + hy });
     const nb = 4 + Math.floor(rnd() * 2);
-    for (let q = 0; q < nb; q++) {
-      const z0 = -rr + (2 * rr * q) / nb, z1 = -rr + (2 * rr * (q + 1)) / nb;
-      const zc = (z0 + z1) / 2;
-      // the board's ends reach the staves (its corners run into the croze)
-      const len = 2 * Math.sqrt(Math.max(0.0004, rr * rr - Math.min(z0 * z0, z1 * z1))) * 0.995;
-      box(hb, sub(F, [0, hy, zc]), [len, 0.02, (z1 - z0) - 0.002], { grain: 'x', bevel: 0.003, piece: (o.piece ?? 0) + 0.5 + q * 0.07, ao: () => 0.85, seg: 0.08 });
+    for (let q = 1; q < nb; q++) {
+      const z = -rr + (2 * rr * q) / nb + (rnd() - 0.5) * 0.01;
+      const len = 2 * Math.sqrt(Math.max(0, rr * rr - z * z)) * 0.97;
+      box(kit.get('tar'), sub(F, [0, hy + (top ? 0.0202 : -0.0002), z]), [len, 0.0006, 0.0022], { bevel: 0, seg: 0.2, piece: 0.9 });
     }
   }
   // hoops

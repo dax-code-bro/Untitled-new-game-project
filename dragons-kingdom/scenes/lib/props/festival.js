@@ -70,45 +70,45 @@ async function makeKit(ctx) {
  * pleats; the weave sags in shallow horizontal wrinkles; a sewn side seam. kind 'full' (standing,
  * tied), 'slump' (half full: the empty top folded over to one side), 'lying' (on its side).
  */
-function sack(api, kit, F, rnd, o = {}) {
+export function sack(api, kit, F, rnd, o = {}) {
+  // kinds: 'full' (tied at the neck, the gathered cloth ruffled above the cord), 'slump' (opened,
+  // the mouth rolled down into a cuff, the grain showing), 'lying' (a full one on its side)
   const kind = o.kind ?? 'full';
+  const open = kind === 'slump';
   const b = kit.get('hessian');
   const sc = o.scale ?? (0.9 + 0.2 * rnd());
-  const R = (kind === 'slump' ? 0.25 : 0.21) * sc, H = (kind === 'slump' ? 0.6 : 0.66) * sc;
+  const R = (open ? 0.24 : 0.21) * sc, H = (open ? 0.56 : 0.66) * sc;
   const ph = rnd() * 6, ph2 = rnd() * 6;
-  const fold = rnd() * Math.PI * 2;
-  const NT = 44, NP = 48;
-  const fill = kind === 'slump' ? 0.45 : 0.72;            // height (fraction) the grain reaches
-  const axis = new THREE.Vector3(-Math.sin(fold), 0, Math.cos(fold));
+  const NT = open ? 40 : 52, NP = 56;
+  const fill = open ? 0.8 : 0.7;               // height (fraction) the grain reaches
+  const tieT = 0.86;                            // the cord round the neck
+  const cuff = 0.035 * sc;                      // the rolled-down mouth of an open sack
   const pos = (t, a) => {
     // profile: a wide, settled foot, a body bellied by the grain, the shoulder where the grain
-    // stops, the empty cloth gathered into the neck, the tied ears above it
-    let r;
+    // stops, the empty cloth gathered into the neck, the ruffled tuft above the cord
+    let r, y = t * H, tuft = 0;
     if (t < 0.05) r = R * (0.8 + 0.3 * Math.sin((t / 0.05) * Math.PI / 2));
-    else if (t < fill) { const k = (t - 0.05) / (fill - 0.05); r = R * (1.1 - 0.1 * k + 0.05 * Math.sin(Math.PI * k)); }
-    else if (t < 0.93) { const k = (t - fill) / (0.93 - fill); r = R * (0.15 + 0.85 * Math.cos(k * Math.PI / 2) ** 1.2); }
-    else if (t < 0.95) r = R * 0.14;
-    else { const k = (t - 0.95) / 0.05; r = R * (0.14 + 0.2 * k) * (1 + 0.5 * Math.sin(a * 5 + ph) * k); }
+    else if (t < fill || open) { const k = Math.min(1, (t - 0.05) / (fill - 0.05)); r = R * (1.1 - 0.1 * k + 0.05 * Math.sin(Math.PI * k)); }
+    else if (t < tieT - 0.02) { const k = (t - fill) / (tieT - 0.02 - fill); r = R * (0.15 + 0.85 * Math.cos(k * Math.PI / 2) ** 1.2); }
+    else if (t < tieT + 0.02) r = R * 0.14;
+    else {
+      // the tuft: the gathered mouth fanning out above the cord in many small irregular folds
+      tuft = (t - tieT - 0.02) / (1 - tieT - 0.02);
+      const ruffle = 0.55 * Math.sin(a * 9 + ph + tuft * 2) + 0.3 * Math.sin(a * 14 + ph2 - tuft * 3) + 0.35 * fbm(Math.cos(a) * 3 + ph, tuft * 2, Math.sin(a) * 3, 2);
+      r = R * (0.14 + 0.36 * Math.pow(tuft, 0.6)) * (1 + 0.45 * ruffle * tuft);
+      y = (tieT + 0.02) * H + (t - tieT - 0.02) * H * (1 - 0.4 * tuft) + 0.012 * ruffle * tuft;
+    }
     // gathered pleats into the neck; irregular creases where the cloth sags (no two alike); grain
     // lumps; the side seam
-    const pleat = 0.22 * Math.sin(a * 7 + ph + Math.sin(t * 9) * 0.8) * smoothK(fill, 0.93, t) * (0.6 + 0.4 * Math.sin(a * 3 + ph2));
+    const pleat = open ? 0 : 0.22 * Math.sin(a * 7 + ph + Math.sin(t * 9) * 0.8) * smoothK(fill, tieT, t) * (0.6 + 0.4 * Math.sin(a * 3 + ph2)) * (1 - tuft);
     const crease = 0.05 * fbm(Math.cos(a) * 1.5 + ph, t * H * 9, Math.sin(a) * 1.5 + ph2, 3) * (0.5 + smoothK(0.3, fill, t))
       + 0.03 * fbm(Math.cos(a) * 5 + 3, t * H * 3, Math.sin(a) * 5, 2)
       + 0.025 * Math.abs(fbm(Math.cos(a) * 3 + 9, t * H * 14, Math.sin(a) * 3, 2)) * smoothK(0.0, 0.4, t);
     const lump = 0.045 * fbm(Math.cos(a) * 2 + ph, t * 2.5, Math.sin(a) * 2, 2);
     const seam = Math.exp(-((((a + Math.PI) % (Math.PI * 2)) - Math.PI) ** 2) / 0.002);
-    r *= 1 + pleat + crease + lump - 0.015 * seam;
+    r *= 1 + pleat + crease * (1 - 0.6 * tuft) + lump * (1 - tuft) - 0.015 * seam;
     const lean = 0.03 * t * t;
-    const p = new THREE.Vector3(Math.cos(a) * r + lean * Math.cos(fold) * H, Math.max(0.003, t * H - (t < 0.05 ? (0.05 - t) * H * 0.4 : 0)), Math.sin(a) * r + lean * Math.sin(fold) * H);
-    if (kind === 'slump' && t > fill) {
-      // the empty top has fallen over to one side: the part above the shoulder swings round a
-      // horizontal axis through the shoulder, flattening as it lies on the grain
-      const k = smoothK(fill, 1, t);
-      const pivot = new THREE.Vector3(0, fill * H, 0);
-      p.sub(pivot).applyAxisAngle(axis, 1.75 * k).add(pivot);
-      p.y = Math.max(p.y, fill * H * (0.55 + 0.45 * Math.cos(Math.min(1.5, Math.hypot(p.x, p.z) / R))) + 0.01);
-    }
-    return [p.x, p.y, p.z];
+    return [Math.cos(a) * r + lean * H, Math.max(0.003, y - (t < 0.05 ? (0.05 - t) * H * 0.4 : 0)), Math.sin(a) * r];
   };
   const base = b.count;
   for (let i = 0; i <= NT; i++) {
@@ -117,29 +117,61 @@ function sack(api, kit, F, rnd, o = {}) {
       const a = (j / NP) * Math.PI * 2;
       let [x, y, z] = pos(t, a);
       if (kind === 'lying') { const yy = y; y = x + R * 0.95; x = yy - H * 0.45; y = Math.max(0.004, y * (y < R * 0.5 ? 0.85 : 1)); }
-      const fold2 = t > 0.9 ? 0.75 : 1;
+      const fold2 = t > tieT ? 0.8 : 1;
       b.v(fp(F, x, y, z), a * R, t * H, 0.3 + (o.piece ?? rnd() * 0.3), fold2 * (t < 0.04 ? 0.7 : 1), 0);
     }
   }
+  // (outward faces: rows run up the bag; lying swaps x and y - a mirror - so its order flips)
+  const mir = kind === 'lying';
+  const Q = (bb, q0, q1, q2, q3) => (mir ? bb.q(q0, q1, q2, q3) : bb.q(q0, q3, q2, q1));
+  const T3 = (bb, t0, t1, t2) => (mir ? bb.t(t0, t1, t2) : bb.t(t0, t2, t1));
   const row = NP + 1;
-  for (let i = 0; i < NT; i++) for (let j = 0; j < NP; j++) { const q = base + i * row + j; b.q(q, q + 1, q + row + 1, q + row); }
-  // the gathered tuft closing the top
-  const cT = b.v(fp(F, ...(kind === 'lying' ? [0, 0, 0] : pos(0.99, 0).map((v, i) => (i === 1 ? v - 0.01 : 0)))), 0, H, 0.3, 0.5, 0);
-  if (kind !== 'lying') for (let j = 0; j < NP; j++) b.t(cT, base + NT * row + j, base + NT * row + j + 1);
+  for (let i = 0; i < NT; i++) for (let j = 0; j < NP; j++) { const q = base + i * row + j; Q(b, q, q + 1, q + row + 1, q + row); }
   // the foot
   const c0 = b.v(fp(F, ...(kind === 'lying' ? [-H * 0.45, R * 0.95, 0] : [0, 0.003, 0])), 0, 0, 0.3, 0.6, 0);
-  for (let j = 0; j < NP; j++) b.t(c0, base + j + 1, base + j);
-  if (kind !== 'lying') {
-    // the cord tied round the neck, its loose ends
-    const [nx, ny, nz] = pos(0.94, 0);
-    const top = pos(0.94, 0);
-    const cy = kind === 'slump' ? null : top[1];
-    if (cy !== null) {
-      const tie = [];
-      for (let k = 0; k <= 16; k++) { const a = (k / 16) * Math.PI * 2; tie.push(fp(F, Math.cos(a) * R * 0.17, cy + 0.003 * Math.sin(a * 2), Math.sin(a) * R * 0.17)); }
-      tube(kit.get('rope'), tie, 0.005, { sides: 5, closed: true });
-      tube(kit.get('rope'), [fp(F, R * 0.17, cy, 0), fp(F, R * 0.3, cy - 0.06, 0.02), fp(F, R * 0.36, cy - 0.14, 0.04)], 0.004, { sides: 4 });
+  for (let j = 0; j < NP; j++) T3(b, c0, base + j + 1, base + j);
+  if (open) {
+    // the mouth rolled down outward into a thick cuff, and the grain heaped inside it
+    const rb = b.count, NR = 12;
+    const top = (a) => pos(1, a);
+    for (let i = 0; i <= NR; i++) {
+      const phi = Math.PI - (i / NR) * Math.PI * 1.35;
+      for (let j = 0; j <= NP; j++) {
+        const a = (j / NP) * Math.PI * 2;
+        const [x0, y0, z0] = top(a);
+        const r0 = Math.hypot(x0 - 0.03 * H, z0);
+        const wob = 1 + 0.25 * Math.sin(a * 6 + ph) + 0.15 * Math.sin(a * 11 + ph2);
+        const rr = r0 + cuff * wob * (1 + Math.cos(phi)), yy = y0 + cuff * wob * Math.sin(phi);
+        b.v(fp(F, Math.cos(a) * rr + 0.03 * H, yy, Math.sin(a) * rr), a * R, H + i * 0.01, 0.35, i > NR * 0.7 ? 0.75 : 1, 0.2);
+      }
     }
+    for (let i = 0; i < NR; i++) for (let j = 0; j < NP; j++) { const q = rb + i * row + j; Q(b, q, q + 1, q + row + 1, q + row); }
+    // the grain: a low, lumpy heap inside the mouth
+    const g = kit.get('straw'), gb = g.count, NG = 14;
+    for (let i = 0; i <= NG; i++) {
+      const rho = i / NG;
+      for (let j = 0; j <= NP; j++) {
+        const a = (j / NP) * Math.PI * 2;
+        const [x0, y0, z0] = top(a);
+        const r0 = Math.hypot(x0 - 0.03 * H, z0) * 0.995;
+        const h = y0 - 0.025 + 0.045 * sc * (1 - rho * rho) + 0.004 * fbm(Math.cos(a) * rho * 9, Math.sin(a) * rho * 9, ph, 2) + 0.0015 * Math.sin(a * 40 + rho * 31) * Math.sin(rho * 57);
+        g.v(fp(F, Math.cos(a) * r0 * rho + 0.03 * H, h, Math.sin(a) * r0 * rho), Math.cos(a) * rho * R, Math.sin(a) * rho * R, 0.6, 0.85 + 0.15 * (1 - rho), 0);
+      }
+    }
+    for (let i = 0; i < NG; i++) for (let j = 0; j < NP; j++) { const q = gb + i * row + j; g.q(q, q + 1, q + row + 1, q + row); }
+  } else {
+    // the gathered mouth: closed a little down inside the tuft
+    const [, ty] = pos(0.95, 0);
+    const cT = b.v(fp(F, ...(kind === 'lying' ? [ty - H * 0.45, R * 0.95, 0] : [0.03 * H, ty, 0])), 0, H, 0.3, 0.4, 0);
+    for (let j = 0; j < NP; j++) T3(b, cT, base + NT * row + j, base + NT * row + j + 1);
+  }
+  if (kind === 'full') {
+    // the cord tied round the neck, its loose ends
+    const cy = pos(tieT, 0)[1];
+    const tie = [];
+    for (let k = 0; k <= 16; k++) { const a = (k / 16) * Math.PI * 2; tie.push(fp(F, Math.cos(a) * R * 0.16 + 0.03 * tieT * tieT * H, cy + 0.003 * Math.sin(a * 2), Math.sin(a) * R * 0.16)); }
+    tube(kit.get('rope'), tie, 0.005, { sides: 5, closed: true });
+    tube(kit.get('rope'), [fp(F, R * 0.18, cy, 0), fp(F, R * 0.3, cy - 0.06, 0.02), fp(F, R * 0.36, cy - 0.14, 0.04)], 0.004, { sides: 4 });
   }
 }
 const smoothK = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -223,7 +255,8 @@ export function instruments(kit, F, rnd, which = ['tabor', 'pipe', 'lute', 'fram
     } else if (w === 'lute') {
       // a ribbed bowl back, a flat soundboard with a carved rose, a neck, the pegbox bent back
       const Lb = 0.46, Wb = 0.32;
-      const lf = sub(Fi, [0, 0, 0], 0, -Math.PI / 2 + 0.0, 0);
+      // lying on its back: the bowl below (resting on its ridge, rolled a little), the face up
+      const Fl = sub(Fi, [0, Wb * 0.45 * 0.97, 0], 0, 0, 0.1);
       const back = kit.get('dark');
       const ribs = 11;
       for (let r = 0; r < ribs; r++) {
@@ -231,22 +264,22 @@ export function instruments(kit, F, rnd, which = ['tabor', 'pipe', 'lute', 'fram
         for (let j = 0; j <= 16; j++) for (let i = 0; i <= 2; i++) {
           const t = j / 16, a = Math.PI * ((r + i / 2) / ribs);
           const w = Math.sin(Math.PI * t) ** 0.7 * (t < 0.5 ? 1 : 1 - 0.3 * (t - 0.5));
-          back.v(fp(Fi, Math.cos(a) * Wb / 2 * w, 0.0 + Math.sin(a) * Wb * 0.45 * w, (t - 0.45) * Lb), t * Lb, a * 0.1, 0.3 + (r % 2) * 0.25, 0.9, 0);
+          back.v(fp(Fl, Math.cos(a) * Wb / 2 * w, -Math.sin(a) * Wb * 0.45 * w, (t - 0.45) * Lb), t * Lb, a * 0.1, 0.3 + (r % 2) * 0.25, 0.9, 0);
         }
-        for (let j = 0; j < 16; j++) for (let i = 0; i < 2; i++) { const p0 = base + j * 3 + i; back.q(p0, p0 + 1, p0 + 4, p0 + 3); }
+        for (let j = 0; j < 16; j++) for (let i = 0; i < 2; i++) { const p0 = base + j * 3 + i; back.q(p0, p0 + 3, p0 + 4, p0 + 1); }
       }
       const sb = kit.get('pale');
       const base = sb.count;
       for (let j = 0; j <= 16; j++) for (let i = 0; i <= 8; i++) {
         const t = j / 16, w = Math.sin(Math.PI * t) ** 0.7 * (t < 0.5 ? 1 : 1 - 0.3 * (t - 0.5));
         const xx = (i / 8 - 0.5) * Wb * w, zz2 = (t - 0.45) * Lb;
-        sb.v(fp(Fi, xx, 0.001, zz2), xx, zz2, 0.7, Math.hypot(xx, zz2 - 0.02) < 0.04 ? 0.25 : 1, 0);
+        sb.v(fp(Fl, xx, 0.001, zz2), xx, zz2, 0.7, Math.hypot(xx, zz2 - 0.02) < 0.04 ? 0.25 : 1, 0);
       }
       for (let j = 0; j < 16; j++) for (let i = 0; i < 8; i++) { const p0 = base + j * 9 + i; sb.q(p0, p0 + 9, p0 + 10, p0 + 1); }
-      box(kit.get('dark'), sub(Fi, [0, 0.01, -0.45 * Lb - 0.14]), [0.05, 0.022, 0.3], { grain: 'z', bevel: 0.004 });
-      box(kit.get('dark'), sub(Fi, [0, -0.03, -0.45 * Lb - 0.33], 0, 0.9), [0.05, 0.016, 0.14], { grain: 'z', bevel: 0.003 });
-      for (let k = 0; k < 6; k++) tube(kit.get('iron'), [fp(Fi, (k - 2.5) * 0.007, 0.014, 0.55 * Lb - 0.08), fp(Fi, (k - 2.5) * 0.005, 0.024, -0.45 * Lb - 0.27)], 0.0006, { sides: 3 });
-      box(kit.get('dark'), sub(Fi, [0, 0.004, 0.55 * Lb - 0.09]), [0.08, 0.008, 0.012], { grain: 'x', bevel: 0.002 });
+      box(kit.get('dark'), sub(Fl, [0, 0.01, -0.45 * Lb - 0.14]), [0.05, 0.022, 0.3], { grain: 'z', bevel: 0.004 });
+      box(kit.get('dark'), sub(Fl, [0, -0.03, -0.45 * Lb - 0.33], 0, 0.9), [0.05, 0.016, 0.14], { grain: 'z', bevel: 0.003 });
+      for (let k = 0; k < 6; k++) tube(kit.get('iron'), [fp(Fl, (k - 2.5) * 0.007, 0.014, 0.55 * Lb - 0.08), fp(Fl, (k - 2.5) * 0.005, 0.024, -0.45 * Lb - 0.27)], 0.0006, { sides: 3 });
+      box(kit.get('dark'), sub(Fl, [0, 0.004, 0.55 * Lb - 0.09]), [0.08, 0.008, 0.012], { grain: 'x', bevel: 0.002 });
       x += 0.55;
     } else if (w === 'framedrum') {
       const R = 0.2;
@@ -436,17 +469,30 @@ async function buntingLine(api, a, b, o = {}) {
     const base = B.count;
     if (pennants.length) {
       const d = pennants[Math.floor(r(3) * pennants.length) % pennants.length];
-      const nx = d.nx, ny = d.ny;
       const flip = r(4) < 0.5 ? -1 : 1;
-      for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
-        const m = (j * (nx + 1) + i) * 3;
-        const x = d.positions[m] * sc, y = d.positions[m + 1] * sc, z = d.positions[m + 2] * sc * flip;
-        const u = (i / nx) * d.w, v = (j / ny) * d.h;
-        const edge = Math.min(i, nx - i) / nx * d.w * (1 - j / ny);
-        const dbl = Math.max(smooth(0.035, 0.022, v), smooth(0.008, 0.003, edge) * 0.8);
-        B.v(fp(Fp, x, y, z), u + k * 0.37, v, ci * 0.13 + r(5) * 0.05, 1, dbl);
+      const dblAt = (ux, v) => {
+        const edge = 0.5 * d.w * (1 - v / d.h) - Math.abs(ux);
+        return Math.max(smooth(0.035, 0.022, v), smooth(0.008, 0.003, edge) * 0.8);
+      };
+      if (d.index) {
+        // triangle-row bake: uv = (x across, v down) in metres at rest
+        const nv = d.positions.length / 3;
+        for (let m = 0; m < nv; m++) {
+          const x = d.positions[3 * m] * sc, y = d.positions[3 * m + 1] * sc, z = d.positions[3 * m + 2] * sc * flip;
+          const ux = d.uv[2 * m], v = d.uv[2 * m + 1];
+          B.v(fp(Fp, x, y, z), ux + d.w / 2 + k * 0.37, v, ci * 0.13 + r(5) * 0.05, 1, dblAt(ux, v));
+        }
+        for (let m = 0; m < d.index.length; m += 3) B.t(base + d.index[m], base + d.index[m + 2], base + d.index[m + 1]);
+      } else {
+        const nx = d.nx, ny = d.ny;
+        for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
+          const m = (j * (nx + 1) + i) * 3;
+          const x = d.positions[m] * sc, y = d.positions[m + 1] * sc, z = d.positions[m + 2] * sc * flip;
+          const u = (i / nx) * d.w, v = (j / ny) * d.h;
+          B.v(fp(Fp, x, y, z), u + k * 0.37, v, ci * 0.13 + r(5) * 0.05, 1, dblAt(u - d.w / 2, v));
+        }
+        for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const a0 = base + j * (nx + 1) + i; B.q(a0, a0 + nx + 1, a0 + nx + 2, a0 + 1); }
       }
-      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const a0 = base + j * (nx + 1) + i; B.q(a0, a0 + nx + 1, a0 + nx + 2, a0 + 1); }
     } else {
       // analytic fallback: a hanging triangle with a soft belly
       const NU = 8, NV = 10, w = 0.28 * sc, h = 0.36 * sc;
@@ -456,18 +502,21 @@ async function buntingLine(api, a, b, o = {}) {
       }
       for (let j = 0; j < NV; j++) for (let i = 0; i < NU; i++) { const a0 = base + j * (NU + 1) + i; B.q(a0, a0 + NU + 1, a0 + NU + 2, a0 + 1); }
     }
-    // the hem folded over the cord: a short sleeve wrapping it
+    // the hem folded over the cord: the pennant's top edge turned over the cord and stitched
+    // down behind it - a closed channel springing from the pennant's own top line (no gap)
     const lb = B.count;
-    const hw = 0.14 * sc;
-    for (let s = 0; s <= 6; s++) {
-      const ang = (s / 6) * Math.PI * 1.7 - 0.35;
-      for (let i = 0; i <= 2; i++) {
-        const x = (i / 2 - 0.5) * 2 * hw;
-        const rr = 0.0085;
-        B.v(fp(Fp, x, rr * 0.4 - Math.cos(ang) * rr, Math.sin(ang) * rr), x, -0.01, ci * 0.13, 0.85, 1);
+    const hw = 0.14 * sc, NXs = 6;
+    const prof = [[-0.012, 0.0004], [-0.0068, 0.0033]];
+    for (let s = 0; s <= 8; s++) { const f = -0.35 + (s / 8) * (Math.PI + 0.7); prof.push([0.0058 * Math.sin(f), 0.0058 * Math.cos(f)]); }
+    prof.push([-0.0068, -0.0033], [-0.012, -0.0004]);
+    for (let s = 0; s < prof.length; s++) {
+      for (let i = 0; i <= NXs; i++) {
+        const x = (i / NXs - 0.5) * 2 * hw;
+        const pinch = 1 - 0.18 * Math.abs(i / NXs - 0.5) * 2;
+        B.v(fp(Fp, x, prof[s][0] * sc * (prof[s][0] > 0 ? pinch : 1), prof[s][1] * sc * pinch), x, s * 0.004, ci * 0.13, 0.85, 1);
       }
     }
-    for (let s = 0; s < 6; s++) for (let i = 0; i < 2; i++) { const a0 = lb + s * 3 + i; B.q(a0, a0 + 1, a0 + 4, a0 + 3); }
+    for (let s = 0; s < prof.length - 1; s++) for (let i = 0; i < NXs; i++) { const a0 = lb + s * (NXs + 1) + i; B.q(a0, a0 + 1, a0 + NXs + 2, a0 + NXs + 1); }
   }
   builders.forEach((B, i) => {
     if (!B.X.n) return;
@@ -534,7 +583,9 @@ async function stall(api, F, kind = 'bread', o = {}) {
   }
   const cz = D * 0.18, Hc = 0.88;
   const ct = trestleTable(kit, sub(F, [0, 0, cz]), rnd, { w: W - 0.1, d: 0.62, h: Hc, mat: 'pale' });
-  for (let q = 0; q < 3; q++) box(kit.get('silver'), sub(F, [0, 0.13 + q * 0.245, cz + 0.33]), [W - 0.16, 0.235, 0.022], { grain: 'x', bevel: 0.004, piece: rnd(), noise: 0.002, wearEdge: 0.02, ao: (x2, y2) => 1 - 0.3 * smooth(0.0, -0.1, y2) });
+  // the front apron: three boards nailed to the trestles just behind the table's front edge, up
+  // under the top (no gap to see through)
+  for (let q = 0; q < 3; q++) box(kit.get('silver'), sub(F, [0, 0.21 + q * 0.258, cz + 0.285]), [W - 0.16, 0.25, 0.022], { grain: 'x', bevel: 0.004, piece: rnd(), noise: 0.002, wearEdge: 0.02, ao: (x2, y2) => 1 - 0.3 * smooth(0.0, -0.1, y2) });
   // a stool behind the counter, a stepped shelf at the back for the potter / baker
   stool(kit, sub(F, [W * 0.25, 0, -D * 0.25]), rnd);
   // goods on the counter

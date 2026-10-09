@@ -4,7 +4,7 @@
 // library's harbour quay against its fender piles: bow and stern lines and a spring to the stone
 // bollards, rope fenders over the side, a gangplank, the crew's supplies on the quay (barrels,
 // crates, grain sacks, coiled hawsers, a handcart). Calm harbour water (FFT sea, screen-space
-// reflections). Morning sun, partly cloudy. Camera on the quay, 28 mm, T5.6.
+// reflections). Morning sun, partly cloudy. Camera on the quay off the stern quarter, 20 mm, T5.6.
 //
 //   node render/render.mjs --still scenes/lookdev/props-santa-maria.js --time 1 --preset final --png out.png
 import * as THREE from 'three';
@@ -22,14 +22,14 @@ import { filmFinish } from './finish.js';
 
 export const meta = {
   title: 'Props - the Santa Maria at the quay (PROVISIONAL)',
-  duration: 4,
+  duration: 6,
   seed: 9,
   cinematic: filmFinish({
-    atmosphere: { enabled: true, sky: 'scene', haze: 1.2, apDistanceScale: 1.0 },
+    atmosphere: { enabled: true, sky: 'scene', haze: 2.0, apDistanceScale: 1.0 },
     shadows: { cascades: 0 },
     ao: { enabled: true, radius: 0.8 },
     dof: { samples: 48 },
-    grade: { exposure: -0.25, whiteBalance: 5800, contrast: 1.03 },
+    grade: { exposure: -0.45, whiteBalance: 5600, contrast: 1.05, saturation: 0.9 },
   }),
 };
 
@@ -85,6 +85,10 @@ export async function setup(ctx) {
   fk.ropeCoil(k, at(12.6, -1.9), r, { r: 0.42, turns: 9, rope: 0.022 });
   fk.ropeCoil(k, at(3.2, -1.7), r, { r: 0.32, turns: 7, rope: 0.018 });
   handcart(k, at(13.8, -3.6, 2.6), r, {});
+  // by the stern: a hawser coiled down by the bollard, a pair of casks waiting, a broken crate
+  fk.ropeCoil(k, at(-11.4, -1.75), r, { r: 0.4, turns: 8, rope: 0.024 });
+  barrel(k, at(-13.6, -2.7), r, { h: 0.85, r: 0.27 }); barrel(k, at(-14.15, -3.15), r, { h: 0.85, r: 0.27, hoops: 'withy' });
+  crate(k, at(-12.9, -3.4, 0.5), r, {});
   const bk = basket(k, at(5.6, -3.3), r, { r: 0.22, rb: 0.17, h: 0.3, handle: 'ears' });
   scene.add(fk.build(k, 'quay-supplies'));
   // two hands for scale
@@ -104,12 +108,20 @@ export function update(t, ctx) {
   S.ship.root.position.y = h * 0.3;
   S.ship.root.rotation.x = Math.sin(t * 0.5) * 0.006;
   const cam = ctx.camera;
-  cam.position.set(-1.8, 4.45, -5.4);
-  cam.lookAt(10.5, 5.2, 2.4);
+  // t < 2: the hero - on the quay off the ship's stern quarter, the whole ship along the quay;
+  // t >= 2: from the harbour (broadside); t >= 4: close on the quay by the waist (the old hero)
+  const VIEWS = [
+    [[-20, 4.45, -5.6], [8, 7.5, 2.0], 20, 22],
+    [[10.5, 10, 48], [10.5, 7, 3], 24, 45],
+    [[-2.6, 4.15, -3.2], [10.5, 5.6, 2.6], 24, 11],
+  ];
+  const [cp, ct, fl, fd] = VIEWS[Math.min(VIEWS.length - 1, Math.floor(t / 2))];
+  cam.position.set(...cp);
+  cam.lookAt(...ct);
   cam.near = 0.1; cam.far = 3000;
   ctx.lens.sensor = 'super35';
-  ctx.lens.focalLength = 24;
+  ctx.lens.focalLength = fl;
   ctx.lens.fstop = 5.6;
-  ctx.lens.focus = 11;
+  ctx.lens.focus = fd;
   ctx.lens.shutterAngle = 180;
 }

@@ -5,6 +5,7 @@
 // off one facade. Camera at eye level on the cobbles looking up the street, 24 mm, T8.
 //
 //   node render/render.mjs --still scenes/lookdev/props-bunting.js --time 1 --preset final --png out.png
+//   (--time 3: a 50 mm detail of the nearest string; the cut is at t = 2, so render well after it)
 import * as THREE from 'three';
 import { loadHDRI } from '../lib/assets.js';
 import { Kit as ArchKit, yawFrame as archYaw } from '../lib/architecture/core.js';
@@ -68,12 +69,14 @@ export async function setup(ctx) {
 
 export function update(t, ctx) {
   const cam = ctx.camera;
-  cam.position.set(-3.5, 1.6, 0.6);
-  cam.lookAt(8, 5.2, -0.4);
+  // t < 2: the hero (eye level up the street); t >= 2: a detail of the nearest string (hems, folds)
+  const detail = t >= 2;
+  if (detail) { cam.position.set(-0.6, 4.25, 0.5); cam.lookAt(2.75, 4.68, -0.15); }
+  else { cam.position.set(-3.5, 1.6, 0.6); cam.lookAt(8, 5.2, -0.4); }
   cam.near = 0.1; cam.far = 2000;
   ctx.lens.sensor = 'super35';
-  ctx.lens.focalLength = 24;
-  ctx.lens.fstop = 8;
-  ctx.lens.focus = 9;
+  ctx.lens.focalLength = detail ? 50 : 24;
+  ctx.lens.fstop = detail ? 5.6 : 8;
+  ctx.lens.focus = detail ? 3.4 : 9;
   ctx.lens.shutterAngle = 180;
 }

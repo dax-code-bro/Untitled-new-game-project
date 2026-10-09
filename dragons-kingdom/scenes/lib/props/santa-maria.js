@@ -73,13 +73,15 @@ export async function santaMaria(ctx, opts = {}) {
   // plank-scale wood: the scan projected along the strakes (x), across them (y) on the sides,
   // along x / across z on decks; streaks of weathering under the wales; waterline
   vec3 n = normalize(vSmN);
-  vec2 puv = abs(n.y) > 0.6 ? vec2(vSmO.x / 1.6, vSmO.z / 0.35) : vec2(vSmO.x / 1.6, vSmO.y / 0.35);
+  // fine grain along the strakes (the scan squeezed across the grain so only its streaks remain)
+  vec2 puv = abs(n.y) > 0.6 ? vec2(vSmO.x / 2.4, vSmO.z / 0.08) : vec2(vSmO.x / 2.4, vSmO.y / 0.08);
   vec3 d = texture2D(smDetA, puv).rgb;
   float dl = dot(d, vec3(0.3, 0.55, 0.15));
   smDl = dl;
-  diffuseColor.rgb *= mix(1.0, clamp(dl / 0.22, 0.55, 1.5), 0.55);
-  float streak = smN(vec2(vSmO.x * 6.0, vSmO.y * 0.35)) * smN(vec2(vSmO.x * 23.0, vSmO.y * 1.3));
-  diffuseColor.rgb *= 1.0 - 0.35 * smoothstep(0.25, 0.7, streak) * (1.0 - abs(n.y));
+  diffuseColor.rgb *= mix(1.0, clamp(dl / 0.22, 0.7, 1.3), 0.3);
+  // weathering streaks running down the sides (rain, bilge water from the scuppers)
+  float streak = smN(vec2(vSmO.x * 9.0, vSmO.y * 0.5)) * smN(vec2(vSmO.x * 31.0, vSmO.y * 1.5));
+  diffuseColor.rgb *= 1.0 - 0.25 * smoothstep(0.3, 0.7, streak) * (1.0 - abs(n.y));
   float under = 1.0 - smoothstep(smWater - 0.02, smWater + 0.02, vSmW.y);
   float splash = 1.0 - smoothstep(smWater, smWater + 0.5 * (0.6 + smN(vSmW.xz * 2.0)), vSmW.y);
   diffuseColor.rgb *= mix(1.0, 0.55, max(under, splash * 0.8));
@@ -93,7 +95,7 @@ export async function santaMaria(ctx, opts = {}) {
   roughnessFactor = mix(roughnessFactor, 0.25, max(under, splash) * 0.8);
 }`)
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
-normal = smBump(-vViewPosition, normal, smDl * 0.006);`);
+normal = smBump(-vViewPosition, normal, smDl * 0.003);`);
     };
     const pk = mat.customProgramCacheKey?.bind(mat);
     mat.customProgramCacheKey = () => (pk ? pk() : '') + '|sm-hull';
@@ -121,8 +123,36 @@ normal = smBump(-vViewPosition, normal, smDl * 0.006);`);
       model.scene.updateMatrixWorld(true);
       const toRoot = new THREE.Matrix4().copy(root.matrixWorld).invert().multiply(sails.matrixWorld);
       const rnd = rng(opts.seed ?? 4);
-      const canvas = await clothMaterial(ctx, { name: 'sm-furled', scan: 'pbr/acg_fabric37', tile: [0.3, 0.3], color: [0.3, 0.265, 0.2], color2: [0.27, 0.235, 0.18], transmission: 0.08, macro: 0.35, macroF: 1.5, pieceVar: 0.15 });
+      const canvas = await clothMaterial(ctx, { name: 'sm-furled', scan: 'pbr/acg_fabric37', tile: [0.3, 0.3], color: [0.22, 0.19, 0.145], color2: [0.2, 0.17, 0.13], transmission: 0.06, macro: 0.4, macroF: 1.8, pieceVar: 0.15 });
       const fb = new Builder();
+      // a furled sail: a roll of canvas along a..b (shifted by off), tapering to the ends, lumpy
+      // where the cloth was gathered, closed at the ends; gaskets (rope turns pulled tight round
+      // the roll, biting into it, and up over the spar)
+      const furl = (a, b, R, off, overSpar = R * 0.75 + 0.05) => {
+        const axis = b.clone().sub(a), L = axis.length(); axis.normalize();
+        const ph = rnd() * 6;
+        const rollR = (t) => R * (0.3 + 0.7 * Math.sin(Math.PI * t) ** 0.6) * (1 + 0.1 * Math.sin(t * 37 + ph) + 0.07 * Math.sin(t * 91 + ph * 2));
+        const at = (s) => a.clone().addScaledVector(axis, s).add(off);
+        const roll = [];
+        for (let k = 0; k <= 40; k++) roll.push(at(0.25 + (k / 40) * (L - 0.5)));
+        tube(fb, roll, (t) => rollR(t) * (1 + 0.05 * Math.sin(t * 173 + ph * 3)), { sides: 16, segments: 120, piece: rnd(), caps: true, ao: (t) => 0.75 + 0.25 * Math.abs(Math.sin(t * 91 + ph * 2)) });
+        let up = V(0, 1, 0).addScaledVector(axis, -axis.y);
+        if (up.lengthSq() < 1e-4) up = V(1, 0, 0);
+        up.normalize();
+        const side = new THREE.Vector3().crossVectors(axis, up).normalize();
+        for (let s = 0.55; s < L - 0.55; s += 0.7 + rnd() * 0.15) {
+          const t = (s - 0.25) / (L - 0.5);
+          const cc = at(s);
+          const r0 = rollR(clamp(t, 0, 1)) * 0.96;
+          const ring = [];
+          for (let k = 0; k <= 18; k++) {
+            const ang = (k / 18) * Math.PI * 2;
+            const over = Math.max(0, Math.cos(ang)) ** 3 * overSpar;
+            ring.push(cc.clone().addScaledVector(up, Math.cos(ang) * (r0 + over)).addScaledVector(side, Math.sin(ang) * r0 * (1 - 0.3 * Math.max(0, Math.cos(ang)) ** 2)).addScaledVector(axis, (k / 18) * 0.03));
+          }
+          tube(kit.get('rope'), ring, 0.008, { sides: 5, closed: true });
+        }
+      };
       for (const ids of comps.values()) {
         if (ids.length < 50) continue;
         const pts = ids.map((i) => V(P.getX(i), P.getY(i), P.getZ(i)).applyMatrix4(toRoot));
@@ -135,32 +165,55 @@ normal = smBump(-vViewPosition, normal, smDl * 0.006);`);
         const area = (b.distanceTo(a)) * (ymax - ymin);
         const R = clamp(0.06 + Math.sqrt(area) * 0.045, 0.1, 0.32);
         yards.push({ a, b, R });
-        // the furled sail: a roll under and in front of the yard, fatter in the bunt (middle)
-        const axis = b.clone().sub(a), L = axis.length(); axis.normalize();
+        // the roll hangs under and a little before the yard, fatter in the bunt (middle)
+        const axis = b.clone().sub(a).normalize();
         const fwd = V(1, 0, 0).addScaledVector(axis, -axis.x).normalize();
-        const roll = [];
-        for (let k = 0; k <= 40; k++) {
-          const t = k / 40;
-          const c = a.clone().addScaledVector(axis, 0.25 + t * (L - 0.5)).addScaledVector(fwd, 0.1).add(V(0, -R * 0.7 - 0.04, 0));
-          roll.push(c);
+        furl(a, b, R, fwd.multiplyScalar(0.1).add(V(0, -R * 0.7 - 0.04, 0)));
+      }
+      // the source rigging carries two sails of its own already "furled" as flat painted strips
+      // (the lateen mizzen along its slanting yard, the spritsail under the bowsprit): cut them
+      // out of the rigging and roll them like the others
+      if (rigging) {
+        const rg = rigging.geometry, RP = rg.attributes.position, RU = rg.attributes.uv, RI = rg.index;
+        const rn = RP.count, rp = new Int32Array(rn).map((_, i) => i);
+        const rf = (x) => { while (rp[x] !== x) { rp[x] = rp[rp[x]]; x = rp[x]; } return x; };
+        for (let t = 0; t < RI.count; t += 3) {
+          const i0 = RI.getX(t), i1 = RI.getX(t + 1), i2 = RI.getX(t + 2);
+          for (const [u, v] of [[i0, i1], [i1, i2]]) { const ru = rf(u), rv = rf(v); if (ru !== rv) rp[ru] = rv; }
         }
-        const ph = rnd() * 6;
-        tube(fb, roll, (t) => R * (0.62 + 0.38 * Math.sin(Math.PI * t) ** 0.5) * (1 + 0.1 * Math.sin(t * 37 + ph) + 0.06 * Math.sin(t * 91 + ph * 2)), { sides: 14, segments: 80, piece: rnd() });
-        // gaskets: rope turns pulled tight round the roll (biting into it) and over the yard
-        const rollR = (t) => R * (0.62 + 0.38 * Math.sin(Math.PI * t) ** 0.5) * (1 + 0.1 * Math.sin(t * 37 + ph) + 0.06 * Math.sin(t * 91 + ph * 2));
-        for (let s = 0.55; s < L - 0.55; s += 0.7 + rnd() * 0.15) {
-          const t = (s - 0.25) / (L - 0.5);
-          const cc = a.clone().addScaledVector(axis, s).addScaledVector(fwd, 0.1).add(V(0, -R * 0.7 - 0.04, 0));
-          const up = V(0, 1, 0), side = new THREE.Vector3().crossVectors(axis, up).normalize();
-          const r0 = rollR(clamp(t, 0, 1)) * 0.96;
-          const ring = [];
-          for (let k = 0; k <= 18; k++) {
-            const ang = (k / 18) * Math.PI * 2;
-            // round the roll, and up over the yard at the top of the turn
-            const over = Math.max(0, Math.cos(ang)) ** 3 * (R * 0.75 + 0.05);
-            ring.push(cc.clone().addScaledVector(up, Math.cos(ang) * (r0 + over)).addScaledVector(side, Math.sin(ang) * r0 * (1 - 0.3 * Math.max(0, Math.cos(ang)) ** 2)).addScaledVector(axis, (k / 18) * 0.03));
+        const rc = new Map();
+        for (let i = 0; i < rn; i++) { const r = rf(i); if (!rc.has(r)) rc.set(r, []); rc.get(r).push(i); }
+        const toRootR = new THREE.Matrix4().copy(root.matrixWorld).invert().multiply(rigging.matrixWorld);
+        const drop = new Set();
+        for (const [r, ids] of rc) {
+          if (ids.length < 120 || !RU) continue;
+          let umin = 9, vmin = 9, vmax = -9;
+          const lo = V(1e9, 1e9, 1e9), hi = V(-1e9, -1e9, -1e9);
+          for (const i of ids) {
+            umin = Math.min(umin, RU.getX(i)); vmin = Math.min(vmin, RU.getY(i)); vmax = Math.max(vmax, RU.getY(i));
+            const p = V(RP.getX(i), RP.getY(i), RP.getZ(i)); lo.min(p); hi.max(p);
           }
-          tube(kit.get('rope'), ring, 0.008, { sides: 5, closed: true });
+          // the sail strips: the canvas region of the atlas (u > 0.33, v in 0..0.15), metres long
+          if (!(umin > 0.33 && vmin > -0.01 && vmax < 0.15 && hi.distanceTo(lo) > 4)) continue;
+          drop.add(r);
+          const pts = ids.map((i) => V(RP.getX(i), RP.getY(i), RP.getZ(i)).applyMatrix4(toRootR));
+          const c = V(0, 0, 0); pts.forEach((p) => c.add(p)); c.multiplyScalar(1 / pts.length);
+          // its axis: from the extreme vertices along its longest extent (a droop in the middle
+          // does not tilt it)
+          const ext = hi.clone().sub(lo), ax = ext.x > ext.y && ext.x > ext.z ? 'x' : ext.y > ext.z ? 'y' : 'z';
+          const getA = { x: (i) => RP.getX(i), y: (i) => RP.getY(i), z: (i) => RP.getZ(i) }[ax];
+          let k0 = 0, k1 = 0;
+          ids.forEach((i, k) => { if (getA(i) < getA(ids[k0])) k0 = k; if (getA(i) > getA(ids[k1])) k1 = k; });
+          const d = pts[k1].clone().sub(pts[k0]).normalize();
+          let p0 = 1e9, p1 = -1e9;
+          for (const p of pts) { const s2 = p.clone().sub(c).dot(d); p0 = Math.min(p0, s2); p1 = Math.max(p1, s2); }
+          const R = clamp(0.05 + (p1 - p0) * 0.012, 0.09, 0.16);
+          furl(c.clone().addScaledVector(d, p0), c.clone().addScaledVector(d, p1), R, V(0, -R * 0.35, 0), R * 0.6);
+        }
+        if (drop.size) {
+          const keep = [];
+          for (let t = 0; t < RI.count; t += 3) { if (!drop.has(rf(RI.getX(t)))) keep.push(RI.getX(t), RI.getX(t + 1), RI.getX(t + 2)); }
+          rg.setIndex(keep);
         }
       }
       const fm = new THREE.Mesh(fb.geometry(), canvas); fm.castShadow = fm.receiveShadow = true; fm.name = 'furled-sails';

@@ -1,5 +1,5 @@
 // Props - hero angle for a 1:1 crop: a group of barrels, crates, baskets and sacks against a wall
-// on the cobbles of a Cling yard (PROVISIONAL). Coopered staves with iron and bound-withy hoops,
+// on the flagstones of a Cling yard (PROVISIONAL). Coopered staves with iron and bound-withy hoops,
 // nailed board crates (one of apples, one closed), woven willow baskets of onions and turnips,
 // hessian grain sacks, a coiled rope. Low raking morning sun. 50 mm on Super 35, T5.6.
 //
@@ -7,9 +7,9 @@
 //   (then crop 1:1, e.g. ffmpeg -i out.png -vf crop=1920:1080:960:700 crop.png)
 import * as THREE from 'three';
 import { loadHDRI } from '../lib/assets.js';
-import { Kit as ArchKit, yawFrame as archYaw } from '../lib/architecture/core.js';
+import { Kit as ArchKit, yawFrame as archYaw, frame as aframe, makeRand } from '../lib/architecture/core.js';
 import { archMaterials } from '../lib/architecture/materials.js';
-import { paving } from '../lib/architecture/cling.js';
+import { flagFloor } from '../lib/architecture/interiors.js';
 import { house } from '../lib/architecture/house.js';
 import { festivalKit } from '../lib/props/festival.js';
 import { Kit, rng, sub, yawFrame, frame } from '../lib/props/core.js';
@@ -44,7 +44,8 @@ export async function setup(ctx) {
   const AM = await archMaterials(ctx);
   const ak = new ArchKit(0);
   house(ak, archYaw([0.5, 0, -1.2 - 4.5], 0), { w: 7.0, d: 9, storeys: 1, roof: 'side', seed: 41, cover: 'clay', lod: 'mid' });
-  paving(ak, -6, 6, -1.3, 6, { seed: 4 });
+  // the yard: big worn flagstones (the architecture library's floor flags) up to the house wall
+  flagFloor(ak, aframe([0, 0, 2.3]), 12, 7.2, makeRand(9), { mat: 'stoneFloor' });
   scene.add(ak.build(AM, { name: 'yard' }));
   const fk = await festivalKit(ctx);
   const k = new Kit();
