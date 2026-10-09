@@ -437,6 +437,7 @@ export class HumanRig {
   update(dt, s) {
     this.root.position.copy(s.pos);
     if (this.ragdoll) return this.updateRagdoll(dt, s);
+    if (!s.vel) return;
     // cheaper updates far away
     this.lod = s.dist > 140 ? 2 : s.dist > 60 ? 1 : 0;
     this.skip += dt;
@@ -700,7 +701,7 @@ export class HumanRig {
   // ---------------------------------------------------------------- death
   // impulse: world-space velocity kick (m/s) applied at joint `at` ('head' | 'chest' | 'legs')
   die(impulse, at = 'chest', bodyVel = null) {
-    if (this.ragdoll) return;
+    if (this.ragdoll || !this.frame) return;
     const j = this.j;
     const dtGuess = 1 / 60;
     const pts = j.map((p) => ({ p, v: V(), r: 0.07 }));

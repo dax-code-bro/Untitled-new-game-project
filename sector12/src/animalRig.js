@@ -206,6 +206,7 @@ export class QuadRig {
   update(dt, s) {
     this.root.position.copy(s.pos);
     if (this.ragdoll) return this.updateRagdoll(dt, s);
+    if (this.dead || !s.vel) return; // killed before it was ever animated
     const lod = s.dist > 120 ? 2 : s.dist > 50 ? 1 : 0;
     this.skip += dt;
     if (lod === 2 && this.skip < 0.12) return;
