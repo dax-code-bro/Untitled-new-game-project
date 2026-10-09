@@ -11,9 +11,9 @@ const CARDS = [
   { id: 'nuclear',  name: 'Nuclear',        icon: '☢️', corner: 'N',  style: 'dark',     effect: 'Effect not written yet.' },
   { id: 'block',    name: 'Block',          icon: '🛡️', corner: 'B',  style: '',         effect: 'Effect not written yet.' },
   { id: 'reverse',  name: 'Reverse',        icon: '🔄', corner: 'R',  style: '',         effect: 'Effect not written yet.' },
-  { id: 'one',      name: '1',              icon: '1',  corner: '1',  style: '',         effect: 'Effect not written yet.' },
-  { id: 'two',      name: '2',              icon: '2',  corner: '2',  style: '',         effect: 'Effect not written yet.' },
-  { id: 'three',    name: '3',              icon: '3',  corner: '3',  style: '',         effect: 'Effect not written yet.' },
+  { id: 'one',      name: '1',              icon: '1',  corner: '1',  style: '',         effect: 'Secretly shows you if the next round in your gun is live or blank.', peek: 1 },
+  { id: 'two',      name: '2',              icon: '2',  corner: '2',  style: '',         effect: 'Secretly shows you if the 2nd round in your gun is live or blank.', peek: 2 },
+  { id: 'three',    name: '3',              icon: '3',  corner: '3',  style: '',         effect: 'Secretly shows you if the 3rd round in your gun is live or blank.', peek: 3 },
 ];
 
 const CARD_BY_ID = Object.fromEntries(CARDS.map(c => [c.id, c]));

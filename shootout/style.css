@@ -275,3 +275,22 @@ button { font-family: inherit; cursor: pointer; }
   #feed { top: 110px; font-size: 11px; }
   #status { top: 84px; font-size: 13px; width: 90vw; }
 }
+
+/* ---------- your gun (cards 1/2/3 reveal rounds) ---------- */
+#my-gun {
+  position: absolute; left: 16px; top: 46%;
+  display: flex; flex-direction: column; gap: 6px; pointer-events: none;
+}
+.gun-label { font-size: 11px; letter-spacing: 0.15em; color: #a89878; text-shadow: 0 1px 3px #000; }
+.chamber {
+  width: 74px; padding: 4px 6px; border-radius: 4px;
+  background: rgba(10, 6, 3, 0.85); border: 1px solid #5a4a3a;
+  font-size: 14px; font-weight: bold; text-align: center; color: #c8b898;
+}
+.chamber span { display: block; font-size: 9px; font-weight: normal; letter-spacing: 0.1em; opacity: 0.7; }
+.chamber.live { border-color: #ff3a2a; color: #ff3a2a; box-shadow: 0 0 10px rgba(255, 40, 20, 0.5); }
+.chamber.blank { border-color: #9ab0a0; color: #cfe0d0; }
+#feed .blank, #shootout .blank { color: #cfe0d0; }
+#shootout .live { color: #ff3a2a; }
+#feed .secret { font-style: italic; }
+@media (max-width: 640px) { #my-gun { top: 34%; } .chamber { width: 58px; font-size: 12px; } }

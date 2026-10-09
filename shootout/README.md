@@ -26,4 +26,5 @@ Last one alive wins; if you're shot, you lose.
 |---|---|
 | Jack of Trades | 10% of hands get one. Play it and you win instantly. |
 | Bloody Mary | 20% of hands get one. Forces a shootout right away. |
-| Gun, Grenade, Nuclear, Block, Reverse, 1, 2, 3 | Not written yet. |
+| 1, 2, 3 | Secretly shows you if your next / 2nd / 3rd round is live or blank. |
+| Gun, Grenade, Nuclear, Block, Reverse | Not written yet. |

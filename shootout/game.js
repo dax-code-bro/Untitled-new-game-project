@@ -88,9 +88,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // ---------- guns ----------
 
+// A player's gun is the queue of rounds they will fire next. Each round is
+// { live, known }; `known` is set once a 1, 2 or 3 card has revealed it.
 function loadGun() {
   const live = 1 + Math.floor(Math.random() * (CHAMBERS - 1));   // 1..5 live rounds
-  const chambers = Array.from({ length: CHAMBERS }, (_, i) => i < live);
+  const chambers = Array.from({ length: CHAMBERS }, (_, i) => ({ live: i < live, known: false }));
   for (let i = chambers.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [chambers[i], chambers[j]] = [chambers[j], chambers[i]];
@@ -98,10 +100,24 @@ function loadGun() {
   return chambers;
 }
 
+// Make sure at least `n` rounds are queued, reloading a fresh cylinder behind
+// the current one when it is about to run dry.
+function ensureRounds(player, n) {
+  while (player.gun.length < n) player.gun.push(...loadGun());
+}
+
 // Pull the trigger: returns true for a live round, false for a blank.
 function pullTrigger(player) {
-  if (!player.gun.length) player.gun = loadGun();
-  return player.gun.shift();
+  ensureRounds(player, 1);
+  return player.gun.shift().live;
+}
+
+// Cards 1, 2 and 3: reveal whether that upcoming round is live or blank.
+function peekRound(player, n) {
+  ensureRounds(player, n);
+  const round = player.gun[n - 1];
+  round.known = true;
+  return round.live;
 }
 
 // ---------- game flow ----------
@@ -204,6 +220,16 @@ async function resolveCard(player, id) {
       (player.you ? 'You' : 'They') + ' played the Jack of Trades.');
     return false;
   }
+  if (card.peek) {
+    const live = peekRound(player, card.peek);
+    if (player.you) {
+      const which = ['next', '2nd', '3rd'][card.peek - 1];
+      showBanner(live ? 'LIVE' : 'BLANK');
+      log(`<span class="secret">Only you know: your ${which} round is <b class="${live ? 'live' : 'blank'}">${live ? 'LIVE' : 'BLANK'}</b>.</span>`);
+      renderGun();
+      await sleep(1200);
+    }
+  }
   if (card.forcesShootout) {
     await sleep(600);
     return shootout('Bloody Mary');
@@ -230,7 +256,11 @@ async function shootout(reason) {
       setStatus(shooter.name + ' picks up the gun…');
       await sleep(900);
       const others = alive().filter(p => p !== shooter);
-      target = Math.random() < BOT_SELF_SHOT_CHANCE || !others.length
+      // Bots use what their 1/2/3 cards told them: never shoot themself on a
+      // known live round, and play it safe on a known blank.
+      const next = shooter.gun[0];
+      const selfShot = next && next.known ? !next.live : Math.random() < BOT_SELF_SHOT_CHANCE;
+      target = selfShot || !others.length
         ? shooter
         : others[Math.floor(Math.random() * others.length)];
     }
@@ -287,8 +317,11 @@ function endGame(title, reason) {
 function askForTarget(reason) {
   return new Promise(resolve => {
     const panel = $('#shootout');
-    const left = me().gun.length || CHAMBERS;
-    panel.innerHTML = `<h3>SHOOTOUT</h3><p>${reason}. Your revolver has ${left} chamber${left === 1 ? '' : 's'} left — some live, some blank.</p>`;
+    const next = me().gun[0];
+    const hint = next && next.known
+      ? `You know your next round is <b class="${next.live ? 'live' : 'blank'}">${next.live ? 'LIVE' : 'BLANK'}</b>.`
+      : 'You don\'t know if your next round is live or blank.';
+    panel.innerHTML = `<h3>SHOOTOUT</h3><p>${reason}. ${hint}</p>`;
     const choose = target => { hideShootout(); resolve(target); };
     const self = document.createElement('button');
     self.className = 'self';
@@ -362,12 +395,25 @@ function cardEl(id, opts = {}) {
   return el;
 }
 
+// Your gun: the next three rounds, shown as ? until a 1/2/3 card reveals them.
+function renderGun() {
+  const box = $('#my-gun');
+  if (!me()) return;
+  ensureRounds(me(), 3);
+  box.innerHTML = '<div class="gun-label">YOUR GUN</div>' + me().gun.slice(0, 3).map((r, i) => {
+    const cls = r.known ? (r.live ? 'live' : 'blank') : 'unknown';
+    const text = r.known ? (r.live ? 'LIVE' : 'BLANK') : '?';
+    return `<div class="chamber ${cls}"><span>${['NEXT', '2ND', '3RD'][i]}</span>${text}</div>`;
+  }).join('');
+}
+
 function renderAll() {
   $('#round-label').textContent = 'ROUND ' + state.round;
   $('#mode-label').textContent = state.mode.label.toUpperCase() + ' · ' + state.mode.players + (state.mode.players === 1 ? ' PLAYER' : ' PLAYERS');
   renderHand();
   renderOpponents();
   renderPile();
+  renderGun();
 }
 
 function renderHand() {
