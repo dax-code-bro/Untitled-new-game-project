@@ -14,9 +14,6 @@ const MAX_DREAD_ROUND = 8;
 // (always at least one of each). It reloads with a fresh random mix when empty.
 const CHAMBERS = 6;
 
-// Chance a computer player turns the gun on themself instead of someone else.
-const BOT_SELF_SHOT_CHANCE = 0.3;
-
 // players[0] is you; the rest are the opponents around the table.
 const state = {
   mode: null,
@@ -81,6 +78,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#set-music').addEventListener('input', e => Sound.setMusicVolume(e.target.value / 100));
   $('#set-sfx').addEventListener('input', e => Sound.setSfxVolume(e.target.value / 100));
   $('#set-blood').addEventListener('change', e => Room.setBlood(e.target.checked));
+  $('#set-difficulty').addEventListener('change', e => Bots.setDifficulty(e.target.value));
 
   Room.init($('#room-canvas'));
   window.addEventListener('resize', renderOpponents);
@@ -138,7 +136,7 @@ function startGame(modeId) {
   $('#feed').innerHTML = '';
 
   state.players = [{ name: 'You', you: true }];
-  for (let i = 1; i <= state.mode.opponents; i++) state.players.push({ name: 'Opponent ' + i });
+  state.players.push(...Bots.lineup(state.mode.opponents));
   state.players.forEach(p => { p.alive = true; p.hand = dealHand(); p.gun = loadGun(); });
 
   Room.setOpponents(state.mode.opponents);
@@ -191,7 +189,7 @@ async function playSelected() {
     setStatus(opp.name + ' is choosing a card…');
     await sleep(800);
     if (state.over || game !== state.game) return;
-    const [oid] = opp.hand.splice(Math.floor(Math.random() * opp.hand.length), 1);
+    const [oid] = opp.hand.splice(Bots.chooseCard(opp), 1);
     if (!(await resolveCard(opp, oid)) || game !== state.game) return;
   }
 
@@ -255,14 +253,7 @@ async function shootout(reason) {
     } else {
       setStatus(shooter.name + ' picks up the gun…');
       await sleep(900);
-      const others = alive().filter(p => p !== shooter);
-      // Bots use what their 1/2/3 cards told them: never shoot themself on a
-      // known live round, and play it safe on a known blank.
-      const next = shooter.gun[0];
-      const selfShot = next && next.known ? !next.live : Math.random() < BOT_SELF_SHOT_CHANCE;
-      target = selfShot || !others.length
-        ? shooter
-        : others[Math.floor(Math.random() * others.length)];
+      target = Bots.chooseTarget(shooter, alive());
     }
     if (game !== state.game) return false;
     await fire(shooter, target);
@@ -280,6 +271,7 @@ async function fire(shooter, target) {
   await sleep(1100);
 
   const live = pullTrigger(shooter);
+  if (target !== shooter) target.shotBy = shooter;   // vengeful bots remember this
   if (live) {
     Sound.gunshot();
     flash();
@@ -454,7 +446,8 @@ function renderOpponents() {
     if (opp.alive) opp.hand.forEach(() => cards.appendChild(cardEl(null, { back: true, small: true })));
     const name = document.createElement('div');
     name.className = 'opp-name';
-    name.textContent = opp.name.toUpperCase() + (opp.alive ? '' : ' — DEAD');
+    name.innerHTML = opp.name.toUpperCase() + (opp.alive ? '' : ' — DEAD') +
+      `<small>${Bots.label(opp)}</small>`;
     wrap.append(name, cards);
     box.appendChild(wrap);
   });

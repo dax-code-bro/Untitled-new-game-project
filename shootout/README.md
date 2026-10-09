@@ -11,6 +11,7 @@ dependencies. Nothing here is shared with the other projects in this repo.
 | `loading.js` | Loading screen: the revolver fires and the bullet hits the target |
 | `room.js` | The gray room, which gets more wrecked and bloody each round |
 | `audio.js` | Generated music and sound effects; the music gets more intense each round |
+| `bots.js` | Computer opponents: names, personalities and Easy/Normal/Hard difficulty |
 | `cards.js` | Every card and what it does (effects still to be written) |
 | `game.js` | Screen flow, dealing 10 cards, playing cards, rounds |
 

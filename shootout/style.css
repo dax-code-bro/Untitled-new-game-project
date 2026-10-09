@@ -294,3 +294,6 @@ button { font-family: inherit; cursor: pointer; }
 #shootout .live { color: #ff3a2a; }
 #feed .secret { font-style: italic; }
 @media (max-width: 640px) { #my-gun { top: 34%; } .chamber { width: 58px; font-size: 12px; } }
+
+.opp .opp-name small { display: block; font-size: 10px; letter-spacing: 0.15em; color: #8a7a60; text-align: center; }
+.panel select { background: #1a100a; color: #e8dcc4; border: 1px solid #6b4a2a; padding: 4px 8px; font-family: inherit; font-size: 15px; }
