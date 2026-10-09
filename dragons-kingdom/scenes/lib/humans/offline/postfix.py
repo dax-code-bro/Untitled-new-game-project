@@ -1508,7 +1508,7 @@ def fix_beltseat(cid, nb=72, gap=0.0015):
     print(f'{cid}: belt seated ({", ".join(moved)}; {delta.min() * 1000:+.1f} .. {delta.max() * 1000:+.1f} mm)', flush=True)
 
 
-def fix_hairline(cid, src=0.25, reach=0.009, peak=0.5):
+def fix_hairline(cid, src=0.25, reach=0.006, peak=0.4):
     """A real hairline is a density gradient, not an edge: the scalp tint (skin aux.a) is
     carried a few millimetres past the strand coverage, fading out (geodesic distance over the
     skin) - the forehead under combed-back hair read as a pale band against a hard hair edge."""

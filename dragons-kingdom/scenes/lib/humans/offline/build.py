@@ -614,7 +614,7 @@ def build_hair(gr, hs, hero, kit, V, body):
         g = s_ + n_ * 0.008
         gr.style_pulled_back(int(hs.get('count', 15000) * dens), g, color_layers=hs.get('loft', 0.008), width=hs.get('width', 0.0009 if hero else 0.0015))
     elif st == 'crop':
-        gr.style_crop(int(hs.get('count', 16000) * dens), length=tuple(hs.get('length', (0.012, 0.045))), flow=hs.get('flow', 'back'), width=hs.get('width', 0.0008 if hero else 0.0013), curl=hs.get('curl', 0.0), loft=hs.get('loft', 0.006))
+        gr.style_crop(int(hs.get('count', 16000) * dens), length=tuple(hs.get('length', (0.012, 0.045))), flow=hs.get('flow', 'back'), width=hs.get('width', 0.0008 if hero else 0.0013), curl=hs.get('curl', 0.0), loft=hs.get('loft', 0.009))
     if st in ('braid', 'pulled', 'bun') and hero:
         G_ = g
 

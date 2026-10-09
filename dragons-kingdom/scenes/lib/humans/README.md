@@ -10,7 +10,8 @@ sha256 in `assets-lib/manifest.json`). **Every look is PROVISIONAL** until Daxty
 
 1. **Offline build** (`offline/`, Blender's Python module `bpy` 4.2 + numpy, deterministic):
    MakeHuman macro + detail targets -> joints -> a pose recipe (weight shift, relaxed arms,
-   hands that grip props) -> skin (Catmull-Clark level 1 for close-up characters), eyes,
+   hands that grip props; run twice so the clavicles drop with hanging arms and lift with raised
+   ones - the rig's level shoulders gave every coat square, padded shoulders) -> skin (Catmull-Clark level 1 for close-up characters), eyes,
    brows, lashes, teeth, tongue -> **garments simulated with Blender cloth** while the body moves
    from a neutral dress pose into the character's pose (layer by layer: shirt, coat, apron,
    hood, cloak, veil) -> strand hair (pulled back, braids, buns, crops, beards, strand
@@ -58,7 +59,10 @@ the belt and buckle moved in/out per 5-degree sector so the belt sits 1.5 mm ove
 cloth (a gambeson poked through the belt, riders' belts floated); `reao` - cloth AO re-baked on
 the final geometry; `props` - prop colour corrections; `hairline` - the scalp tint (skin aux.a)
 carried ~9 mm past the strand coverage as a fading gradient (a hairline is a density gradient,
-not an edge). Hoods and coifs hide the head under them; hoods rest on the crown.
+not an edge); `cullboots` - hose / trousers inside a boot shaft pulled 3 mm inside it and not
+drawn under it (they poked through as pale streaks); `overbelt` - cloaks and hood capes pushed
+out over the belt (the belt is added after the simulation and printed through the King's
+mantle). Hoods and coifs hide the head under them; hoods rest on the crown.
 
 ## Build
 

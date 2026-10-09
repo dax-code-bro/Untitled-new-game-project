@@ -204,7 +204,8 @@ def cast():
         'skin': {'texture': 'young_lightskinned_male_diffuse2', 'tone': [0.97, 0.92, 0.87], 'saturation': 0.88, 'redness': 0.22, 'flush': 0.5, 'age': 0.2, 'rough': 0.48},
         'eyes': {'iris': 'brownlight', 'tint': [0.5, 0.42, 0.34]},
         'brows': 'eyebrow002', 'lashes': 'eyelashes01',
-        'hair': {'color': HAIR['darkbrown'], 'style': 'crop', 'length': (0.015, 0.065), 'flow': 'back', 'curl': 0.25,
+        # loft: the strands stand off the scalp by up to 1.4 cm (0.6 cm plastered it down like a cap)
+        'hair': {'color': HAIR['darkbrown'], 'style': 'crop', 'length': (0.015, 0.065), 'flow': 'back', 'curl': 0.32, 'loft': 0.014,
                  # stubble as skin shading only: a few thousand strand stubs read as specks, not a shadow
                  'beard': {'count': 0, 'moustache': True, 'shadow': 0.7}},
         'outfit': riding_clothes([0.042, 0.058, 0.09], shirt=DYE['slate'], trousers='charcoal', boots=[0.03, 0.02, 0.014]),
@@ -220,10 +221,15 @@ def cast():
                   hair={'color': HAIR['chestnut'], 'style': 'bun', 'count': 9000, 'loft': 0.005, 'bun_radius': 0.04},
                   eyes=('brownlight', [0.5, 0.42, 0.34]), brows='eyebrow007',
                   outfit=[G_shoes([0.03, 0.022, 0.018]),
+                          # the bodice is cut fitted (hang 1.0: the shell follows the bridged hull, so the
+                          # lacing has nothing to gather) and keeps its cut (bodice_pin): free, it
+                          # crumpled into horizontal ripples as the arms came down
                           G_kirtle([0.045, 0.06, 0.075], hem=0.0, fabric='wool', sim_fabric='heavywool', sheen=0.55, neck=0.07, flare=2.1, train=0.12, folds=13, wear=0.1, dust=0.05,
-                                   name='gown'),
+                                   hang=1.0, torso_smooth=80, cinch_ease=0.012, bodice_pin=0.75, name='gown'),
                           G_veil([0.52, 0.5, 0.45], length=0.45)],
-                  pose='hands_front', pose_params={'weight': 'L', 'contrapposto': 0.4, 'reach': 0.16, 'dy': -0.1}, cloth_subdiv=1,
+                  # hands clasped just below the waist, far enough forward that the forearms clear the
+                  # skirt (at reach 0.16 / dy -0.1 they sank behind it: hands out of the belly)
+                  pose='hands_front', pose_params={'weight': 'L', 'contrapposto': 0.4, 'reach': 0.21, 'dy': -0.035}, cloth_subdiv=1,
                   notes='canon: a restrained formal gown; the veil is a proposal (no crown shown: not in the screenplay)')
     alex['skin'].update({'texture': 'middleage_lightskinned_female_diffuse2', 'age': 0.35})
     C.append(alex)

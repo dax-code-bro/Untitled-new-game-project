@@ -760,6 +760,12 @@ def upper_garment(D, g):
         ds = np.linalg.norm(S - acr, axis=1)
         up = S[:, 1] > ua[1] - 0.01
         pin = np.maximum(pin, np.clip(1 - (ds - 0.045) / 0.05, 0, 1) * up * g.get('pin_shoulder_seam', 0.75))
+    if g.get('bodice_pin'):
+        # a laced, lined bodice keeps its cut shape (stiff, fitted): the torso of the shell above
+        # the waist follows the skinned shell; free cloth there crumpled into horizontal ripples
+        # as the arms came down and in
+        wb = (~armv) * np.clip((S[:, 1] - ycut) / 0.04, 0, 1)
+        pin = np.maximum(pin, g['bodice_pin'] * wb)
     nb = mu.neighbours(len(S), F)
     for l in loops:
         if l is hip:

@@ -155,7 +155,8 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
     c *= 1.0 - 0.1 * (1.0 - smoothstep(0.0, 0.4, pc)) * fp * (1.0 - vAux.r) * (1.0 - vAux.a); }
   // fine mottling at 2-4 mm (the step between the 1-3 cm blotches and the pores)
   c *= 1.0 + 0.045 * (hN3(vObjP * 380.0 + uSeed * 7.0) - 0.5);
-  c = mix(c, vec3(l) * vec3(1.15, 1.02, 0.98) + 0.03, vAux.g * 0.55);
+  // nails: a little paler and pinker than the finger (blood under the plate), never chalk white
+  c = mix(c, vec3(l) * vec3(1.1, 0.92, 0.9) + vec3(0.008, 0.005, 0.005), vAux.g * 0.45);
   c *= mix(1.0, 0.82, uDirt * hN3(vObjP * 90.0));
   // scalp under the hair takes the hair colour (roots, density), aux.a
   // (a darkened, hair-tinted skin at partial coverage - a straight mix with the hair colour
@@ -172,7 +173,7 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 {
   float tz = hFbm(vObjP * 40.0 + 9.0);
-  roughnessFactor = clamp(roughnessFactor * (0.8 + 0.35 * tz) - vAux.r * 0.2 - vAux.g * 0.25 + vAux.b * 0.15 + vAux.a * 0.35 - vAux2.g * 0.3 - vAux2.r * 0.04, 0.12, 0.95);
+  roughnessFactor = clamp(roughnessFactor * (0.8 + 0.35 * tz) - vAux.r * 0.2 - vAux.g * 0.15 + vAux.b * 0.15 + vAux.a * 0.35 - vAux2.g * 0.3 - vAux2.r * 0.04, 0.12, 0.95);
   // pores hold no oil film: the sheen breaks up into a fine stipple where they are resolved
   { float fwr = length(fwidth(vObjP));
     float fpr = 1.0 - smoothstep(0.35, 1.0, fwr * 1600.0);

@@ -141,5 +141,14 @@ being fixed:
   darker, crate weathered (props pass), sling linen darker. Abby's shirt darker linen.
 - King's mantle 1.12 m (was 0.75: a stiff back panel); Alexandria's gown simulated at
   cloth_subdiv 1 (faceted bodice, under-bust ledge); Alexandria hero framed closer.
-Next: test builds (abby_ht, alexandria_sd) -> full rebuild of all 48 (queue.sh, stamp
-humans/stamp_s5) -> preview hero/contact -> final 4K + crops, npm test, README numbers.
+- Tested on single builds (suffix _sh/_ht/_sd, deleted after): shoulders 0.11 -> 0.16 rad
+  (rounder deltoid, sloping trapezius); hairline reads as fine hairs over skin (no notch);
+  Alexandria's gown: subdiv 1 alone crumpled the bodice into horizontal ripples, fixed by a
+  fitted cut (hang 1.0) + `bodice_pin` 0.75 (new opt-in garment key: the torso above the waist
+  follows the skinned shell); her clasped hands moved up/forward (forearms sank behind the skirt).
+  Crop hair loft 0.009 (Remi 0.014: plastered down like a cap before). Nails less chalky (runtime).
+- FULL REBUILD started 08:22 UTC: queues A/B over all ids (scratchpad humans/logs5/q_A|B.log,
+  orders in order.txt / order_rev.txt), alexandria separately (q_C.log); stamp humans/stamp_s5.
+  After a restart: rmdir cache/*.lock and re-run the same queue commands (finished ids skip).
+Next: preview hero/contact/riders -> final 4K (scratchpad humans/final5.sh -> output/humans/final5)
++ 1:1 crops, npm test, README numbers.

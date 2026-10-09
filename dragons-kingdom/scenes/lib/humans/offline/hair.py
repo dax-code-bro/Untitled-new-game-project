@@ -95,12 +95,12 @@ class Groom:
         a, b, cc = P[tri[:, 0]], P[tri[:, 1]], P[tri[:, 2]]
         area = np.linalg.norm(np.cross(b - a, cc - a), axis=1) / 2
         cent = (a + b + cc) / 3
-        # a hairline is a density gradient: sparse at the line itself, full ~7 mm in, then a dense
+        # a hairline is a density gradient: sparse at the line itself, full ~5 mm in, then a dense
         # band (the front shows the most) fading to the normal density 3 cm back
         dy = cent[:, 1] - self.hairline(cent, **(hl_kw or {}))
-        ramp = np.clip(dy / 0.007, 0, 1)
-        band = np.clip(1 - (dy - 0.007) / 0.025, 0, 1)
-        area = area * (0.35 + 0.65 * ramp) * (1 + 1.6 * band)
+        ramp = np.clip(dy / 0.005, 0, 1)
+        band = np.clip(1 - (dy - 0.005) / 0.025, 0, 1)
+        area = area * (0.5 + 0.5 * ramp) * (1 + 1.6 * band)
         pr = area / area.sum()
         pick = self.rng.choice(len(tri), size=n, p=pr)
         u, v = self.rng.random(n), self.rng.random(n)
