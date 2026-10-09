@@ -4,31 +4,37 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
-## Fix round 1 (session 5, after the critic + Daxtyn's DRAGONS.md decisions) - IN PROGRESS
-Done so far (checkpointed):
-- No species any more: anatomy.js `DESIGNS.charcoal/leaf/starlight/hatchling/scout` (each its
-  own preset; Leaf: compact, short neck/tail, round deep skull, own horns; Starlight: broad
-  heavy chest, long neck/tail, broad flat skull, own horn crown); CREATURES use `design`;
-  Leaf L = 9.0 m (25% of Charcoal). `SPECIES` export renamed `DESIGNS`.
-- Approved looks: Charcoal black (albedo ~0.012), BLUE iris, GRAY membrane with BLACK STRIPES
-  (membraneMaterial `uStripe`); Leaf dark green, YELLOW iris, LIGHT GREEN membrane.
-- Scale profile per look `vor` (flat-topped plates + keel, uVor), irregular belly scutes
-  (glsl.js dkPlates), smooth finger skin (no scales on wing fingers), soft neck folds.
-- Wings: span ~1.9 L (Charcoal), ~1.8 L (Leaf/Starlight broad chord), ~1.6 L narrow (scout);
-  plagiopatagium attached to the thigh (4 attach points, last bone hl_#_0); knuckle at 56%
-  of each finger and the fold doubles the outer part back (poses.js wingFold, `fingerFold`),
-  wrist low beside the shoulder: no rods past the tail base, no raised arm.
-- Checkpoint 2: fire.js (orange-red 'standard' / purplish-blue 'leaf' palettes, pure in t) +
-  charcoal-fire / leaf-fire lookdev shots; tack.js (1400s tack: wool cloth, padded seat on a
-  tree with welt, cantle/pommel, girth + iron buckle, breast strap, stirrups; giants: timber
-  frame on felt, seat + backrest, wooden grab bar, broad bands with buckles, foot boards; straps
-  ignore the legs); hatchling: gold F0 metallic, granular head tier, darker eye with gold flecks,
-  sprawled weak pose (`lie` sprawl), nest bedding + opened egg from the props library, mucus
-  strands; scout wing loss: torn ragged membrane (`uTear`), snapped finger, roll to the LEFT,
-  drop, flutter; Starlight shot: cool fill from below + heavier haze; Remi at Charcoal's depth;
-  contact sheet + 3 spread-wing glide frames (21-23); README updated.
-Next: preview review of all shots + contact, then 4K finals (output/cr/s5final, s5contact).
-
+## Fix round 1 (session 5, after the critic + Daxtyn's DRAGONS.md decisions) - DONE
+- No species: anatomy.js `DESIGNS.charcoal/leaf/starlight/hatchling/scout`, each its own preset
+  (Leaf compact: short neck/tail, round deep skull, own horns, L 9.0 m = 25% of Charcoal;
+  Starlight: broad heavy chest, long neck/tail, broad flat skull, horn crown, broad-chord
+  wings). `CREATURES.<name>.design`; `SPECIES` export renamed `DESIGNS`; titles/comments clean.
+- Approved looks (DRAGONS.md): Charcoal black (albedo ~0.012), BLUE iris, GRAY membrane with
+  BLACK STRIPES (membraneMaterial `uStripe`), orange-red fire; Leaf dark green, YELLOW iris,
+  LIGHT GREEN membrane, purplish-blue fire (fire.js palettes).
+- Skin: flat-topped keeled imbricate scale profile per look (`vor`), narrow grooves; irregular
+  belly scutes (glsl.js dkPlates) with a per-plate ragged border; smooth finger skin; soft neck
+  creases (Starlight: none); limb-root junctions use the 3D mosaic (no chain-row pole fan).
+- Wings: span ~1.9 L Charcoal / ~1.8 L Leaf / ~1.9 L broad Starlight / ~1.6 L narrow scout;
+  plagiopatagium onto the thigh (bone hl_#_0); fingertip tension wrinkles; fold: wrist low by
+  the shoulder, hand back along the flank, fingers a closed fan, the outer 44% of every finger
+  doubled back at the knuckle (no rods past the hips / out in front of the chest).
+- Starlight reflective (clearcoat 0.7 @ 0.08, crowns ~0.16, facet tilt 1.0, albedo 0.6); shot:
+  cool fill from below + haze 3.2; flapHz 0.42.
+- Hatchling: gold F0 metallic (0.8/0.42), granular head tier, no lid shells (eye in a soft
+  skin socket; lid shells read as gold caps), dark eye with gold flecks + slit pupil, wings on
+  the back (root raised, own fold), sprawled weak `lie` pose, straw nest + opened egg (props
+  library) + mucus strands (creatures-shots.js updateStrands), near-neutral key + cool fill.
+- Charcoal head: irregular crocodilian lip (lipCover 0.3), bigger nostril, heavier brow, horn
+  burrs; Remi at Charcoal's depth; tail curled out sideways.
+- fire.js (new): sprite jet + smoke + light, pure in t; lookdev shots charcoal-fire, leaf-fire.
+- tack.js (new): 1400s saddle (wool cloth, padded seat on a tree, welt, cantle/pommel, girth +
+  iron buckle, breast strap, stirrups) and giants' rig (timber frame on felt, seat + backrest,
+  wooden grab bar, broad bands with buckles, foot boards); straps ignore the legs.
+- Scout wing loss: torn ragged membrane (`uTear`), snapped finger, roll toward the LEFT, drop,
+  nose-down, wing flung clear of the body; darker stump.
+- Contact sheet: 24 frames (turntables, lineup, 3 spread-wing glide views).
+- npm test 33/33 pass (run during this round).
 
 ## Done (committed)
 - Charcoal (Bashion): anatomy rework (heavy musculature, head, horns, tail, dorsal ridge), 3D

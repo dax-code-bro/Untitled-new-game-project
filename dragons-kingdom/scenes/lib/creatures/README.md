@@ -97,10 +97,10 @@ Lookdev scenes (`scenes/lookdev/`):
 
 | scene | what |
 |---|---|
-| `creatures-hero.js` (= `creatures-turntable.js`) | every hero shot in sequence (shot list in `creatures-shots.js`): Charcoal 3/4 front in daylight with Remi, Charcoal's head, Charcoal flying side-on over the sea, Leaf sitting upright with Abby, Leaf flying with Abby (start of the downstroke, 90-degree shutter), Starlight gliding past a distant 27 m watchtower seen from the ground ~270 m away (a watchman points up; hedgerows and woods to the horizon), the hatchling macro on bedding, the scout banking over the sea, the scout (with its hooded rider) losing its LEFT wing |
+| `creatures-hero.js` (= `creatures-turntable.js`) | every hero shot in sequence (shot list in `creatures-shots.js`): Charcoal 3/4 front in daylight with Remi beside his left forefoot (at his depth, for scale), Charcoal's head, Charcoal flying (from above his left front, early downstroke: both striped wings spread), Leaf sitting upright with Abby, Leaf flying with Abby (both wings raised, 90-degree shutter), Starlight gliding past a distant 27 m watchtower seen from the ground ~270 m away (a watchman points up; hedgerows and woods; cool fill from below, heavy haze), Charcoal's orange-red fire and Leaf's purplish-blue fire (fire.js lookdev), the hatchling macro on the straw nest beside its opened egg (props library), the scout banking over the sea, the scout (with its hooded rider) losing its LEFT wing (torn membrane, snapped finger, rolling left and dropping) |
 | `creatures-turntable-<name>.js` | only one creature's shots (quicker builds) |
 | `creatures-review.js` | every shot for 1 s at its representative moment - one build, `--fps 1` |
-| `creatures-contact.js` | contact sheet: each creature on a turntable (4 views) under one neutral daylight sky, then a scale lineup with a person (t = 20; also `creatures-lineup.js`) |
+| `creatures-contact.js` | contact sheet: each creature on a turntable (4 views) under one neutral daylight sky (t = 0-19), a scale lineup with a person (t = 20; also `creatures-lineup.js`), then Charcoal, Leaf and Starlight gliding with the wings spread, seen from above and in front (t = 21-23) |
 | `creatures-dev.js` + `creatures-dev.json` | free views/poses for look development (`face` = yaw relative to the sun) |
 
 The hero shots are lit by the photographed sky alone (kloofendal_48d_partly_cloudy with its
@@ -297,16 +297,17 @@ purplish-blue fire.
 
 ## Cost (measured on this machine, 4 vCPU, no GPU)
 
-Build in `setup()` (deterministic; Node and the browser give identical meshes),
-measured in Node:
+Build in `setup()` (deterministic; Node and the browser give identical meshes), measured in Node
+on 2026-10-09 while other agents rendered on the same 4 vCPU (load average 5-6); it includes the
+folded-wing drapes, which grew with the bigger wings:
 
 | creature | body mesh at `hero` | build time (hero) |
 |---|---|---|
-| Charcoal | 455k vertices / 905k triangles | 15.8 s |
-| Leaf | 365k / 724k | 12.9 s |
-| Starlight | 341k / 676k | 11.5 s |
-| hatchling | 522k / 1.04M | 18.5 s |
-| scout | 172k / 340k (+ separate left wing) | 6.1 s |
+| Charcoal | 507k vertices / 1.01M triangles (+ 32k membrane vertices) | 32.7 s |
+| Leaf | 461k / 916k (+ 29k) | 26.3 s |
+| Starlight | 385k / 765k (+ 37k) | 24.2 s |
+| hatchling | 879k / 1.75M (+ 2k) | 49.3 s |
+| scout | 157k / 311k (+ 16k; + separate left wing) | 10.7 s |
 
 `standard` quality is about half the triangles and half the time; `draft`
 about a sixth. Use `standard` (or `draft`) for creatures that are small in
