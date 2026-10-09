@@ -537,7 +537,7 @@ export class Viewmodel {
     if (this.medId !== id) { this.dropMed(); this.med = medModel(id); this.med.matrixAutoUpdate = false; this.root.add(this.med); this.medId = id; }
     const k = sm(seg(t, 0, 0.12)) * (1 - sm(seg(t, 0.9, 1)));
     let hand;
-    const base = V(-0.08, -0.22, -0.38);
+    const base = V(-0.07, -0.1, -0.42);
     if (id === 'adrenaline' || id === 'numbing') {
       // into the thigh: raise, stab, push the plunger
       const stab = sm(seg(t, 0.35, 0.45)), out = sm(seg(t, 0.75, 0.85));
@@ -558,7 +558,7 @@ export class Viewmodel {
     } else {
       // bandage / gauze: wind around the limb
       const a = this.t * 7;
-      hand = V().copy(base).add(V(Math.cos(a) * 0.06, -0.08 + Math.sin(a) * 0.05, 0));
+      hand = V().copy(base).add(V(Math.cos(a) * 0.06, -0.03 + Math.sin(a) * 0.04, 0));
       left.fwd = V(Math.cos(a) * 0.4, Math.sin(a) * 0.4, -1).normalize(); left.up = V(0, 1, 0);
       if (this.med.userData.tail) this.med.userData.tail.rotation.x = 0.2 + Math.sin(a * 2) * 0.4;
     }

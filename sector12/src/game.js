@@ -125,7 +125,8 @@ export class Game {
     fx.update(0.016, this.camera.position);
     this.gfx.patchScene();
     try {
-      if (this.renderer.compileAsync) await this.renderer.compileAsync(this.scene, this.camera);
+      // never let a driver that doesn't report parallel-compile status hold up the loading screen
+      if (this.renderer.compileAsync) await Promise.race([this.renderer.compileAsync(this.scene, this.camera), new Promise((r) => setTimeout(r, 6000))]);
       else this.renderer.compile(this.scene, this.camera);
       this.gfx.render(); // shadow-pass variants too
     } catch (e) { console.warn('shader warm-up', e); }
