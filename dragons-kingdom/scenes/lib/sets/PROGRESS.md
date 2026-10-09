@@ -31,7 +31,7 @@ Done so far
   king's steps (18 mm), arch at the left edge, gate at the right, fountain centre; south rows struck
   ('wild wall', dropTriangles with ANY vertex past the cut); 5 marketStall()s with food, bunting,
   banners on the north row; musicians, vendor, parent+child (joinHands), ~30 crowd builds,
-  children by the fountain; watchman at the west edge (x -15.2, z 9.5) pointing by limbIK at
+  children by the fountain; watchman at the west edge (moved to x -8.2, z 15.2 in pass 2) pointing by limbIK at
   Starlight's head; Starlight (hero) ~170 m beyond the north row, 44 m up, nearly head-on; farmland
   hills with hedgerows/copses (scatter) and a field patchwork (heightfield colour).
 - F4 rebuilt in `architecture/interiors.js` birthingChamber (baked nest linen; NEST_C = [-0.6,0,0.3]):

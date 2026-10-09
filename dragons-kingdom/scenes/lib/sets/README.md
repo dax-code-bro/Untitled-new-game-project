@@ -9,7 +9,7 @@ food, straps, posing helpers for the cast):
 
 | frame | creatures (`lib/creatures`) | people (`lib/humans` cast builds) | buildings (`lib/architecture`) | this library |
 |---|---|---|---|---|
-| F1 prologue | a shape in the mist (shadow only) | 3 crew (old placeholder people, tiny at 120 m) | - | `ship.js` knarr, `terrain.js`, `fx.js` |
+| F1 prologue | a shape in the mist (shadow only) | 3 crew: `crowd06`, `sailor1`, `crowd16` (tiny at 120 m) | - | `ship.js` knarr, `terrain.js`, `fx.js` |
 | F2 riding grounds | Charcoal (hero), Leaf (hero), saddles | `remi`, `abby`, `keeper1` | `stable`, `keeperHouse`, `accessRig` | `terrain.js`, `grass.js`, `scatter.js`, `cast.js` IK, `props.js` straps |
 | F3 flight | Charcoal, Leaf (standard) | `remi_ride`, `abby_ride` (riders) | - | `terrain.js`, `kitbash.js` rocks |
 | F4 birthing chamber | gold hatchling (hero) | `alexandria` (arms by IK, hands by `relaxHand`) | `birthingChamber` + baked nest linen | the egg shell, folded linen, lamp |
@@ -27,7 +27,7 @@ food, straps, posing helpers for the cast):
 | `ship.js` | `knarr()`: a one-masted trading ship (clinker hull, square wool sail with tension creases from the clews, robands, leech shake, seams; rigging; side rudder) |
 | `town.js` | `townKit` (older timber houses, stalls, fountain), `bunting`, `banner`, `clothMaterial`, `clothSheet` |
 | `buildings.js` | older stone kit (walls, halls, towers, field walls) |
-| `people.js` | older placeholder people (MakeHuman mannequins) - F1's distant crew only |
+| `people.js` | older placeholder people (MakeHuman mannequins) - no longer used by the style frames |
 | `fx.js` | `silhouetteCard` (the shape in the prologue mist) |
 | `cast.js` | posing the humans library's cast builds in a frame: `limbIK(ch, 'arm'|'leg', 'L'|'R', target, pole)` (two-bone IK from the current pose), `lookAtPoint`, `rotateBone`, `relaxHand(ch, side, { fingers, palm, curl, spread })` (opens a clasped/gripping build hand, points it and turns the palm), `bonePos` |
 | `props.js` | `strapRibbon` (flat leather strap along a curve), `foodMaterials` + `goods(kind)` (scored loaves, rolls, apples, onions, cabbages and turnips, cheeses, fish in wicker baskets / on boards), `marketStall` (oak trestle stall from the architecture kit's `block` + dressing, cloth awning, goods) |
