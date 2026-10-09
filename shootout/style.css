@@ -228,3 +228,50 @@ button { font-family: inherit; cursor: pointer; }
   .circle { width: 96px; height: 96px; }
   .circle span { font-size: 14px; }
 }
+
+/* ---------- turns & shootouts ---------- */
+#status {
+  position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
+  font-size: 16px; letter-spacing: 0.12em; color: #f0e0c0;
+  text-shadow: 0 2px 6px #000; text-align: center; pointer-events: none;
+}
+#feed {
+  position: absolute; top: 90px; right: 16px; width: min(320px, 44vw);
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 13px; line-height: 1.35; color: #d8c8a8; text-align: right;
+  text-shadow: 0 1px 3px #000; pointer-events: none;
+}
+#feed .live { color: #ff3a2a; }
+#feed .shootout { color: #e0b040; letter-spacing: 0.08em; }
+#hand.waiting .card:not(.back) { filter: brightness(0.75); }
+
+#shootout {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 40; width: min(380px, 92vw);
+  background: rgba(14, 4, 2, 0.95); border: 2px solid #8a1a10;
+  box-shadow: 0 0 40px rgba(160, 0, 0, 0.5);
+  padding: 20px; display: flex; flex-direction: column; gap: 10px; text-align: center;
+}
+#shootout h3 { font-size: 30px; letter-spacing: 0.25em; color: #e0c890; text-shadow: 0 0 20px #600; }
+#shootout p { font-size: 14px; color: #c8b898; line-height: 1.4; }
+#shootout button {
+  background: #2a0c08; color: #f0e0c0; border: 1px solid #c08040;
+  padding: 10px; font-size: 16px; letter-spacing: 0.08em; text-transform: uppercase;
+}
+#shootout button:hover { background: #5a1a10; }
+#shootout button.self { border-color: #e0b040; }
+
+#hit-flash {
+  position: absolute; inset: 0; pointer-events: none; z-index: 45;
+  background: radial-gradient(ellipse at center, rgba(255, 220, 160, 0.6), rgba(160, 0, 0, 0.7));
+  opacity: 0;
+}
+#hit-flash.on { animation: hit 0.9s ease-out; }
+@keyframes hit { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+.opp.dead .opp-name { color: #c03020; }
+
+@media (max-width: 640px) {
+  #feed { top: 110px; font-size: 11px; }
+  #status { top: 84px; font-size: 13px; width: 90vw; }
+}

@@ -5,7 +5,7 @@
 
 const CARDS = [
   { id: 'jack',     name: 'Jack of Trades', icon: '🃏', corner: 'J',  style: '',         effect: 'Play it and you win the game on the spot.', instantWin: true },
-  { id: 'bloody',   name: 'Bloody Mary',    icon: '🩸', corner: 'BM', style: 'dark red', effect: 'Effect not written yet.' },
+  { id: 'bloody',   name: 'Bloody Mary',    icon: '🩸', corner: 'BM', style: 'dark red', effect: 'Forces a shootout right now: everyone must shoot themself or someone else.', forcesShootout: true },
   { id: 'gun',      name: 'Gun',            icon: '🔫', corner: 'G',  style: '',         effect: 'Effect not written yet.' },
   { id: 'grenade',  name: 'Grenade',        icon: '💣', corner: 'GR', style: '',         effect: 'Effect not written yet.' },
   { id: 'nuclear',  name: 'Nuclear',        icon: '☢️', corner: 'N',  style: 'dark',     effect: 'Effect not written yet.' },

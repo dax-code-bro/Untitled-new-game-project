@@ -9,6 +9,7 @@ const Room = (() => {
   let ravage = 0;
   let showBlood = true;
   let opponents = 1;
+  let dead = [];              // dead[i] is true once opponent i has been shot
   let running = false;
   let flicker = 1;
 
@@ -339,8 +340,9 @@ const Room = (() => {
     return [far, left, right];
   }
 
-  function drawPerson(sx, sy, scale, light) {
+  function drawPerson(sx, sy, scale, light, isDead) {
     const x = sx * w, y = sy * h, s = (Math.min(w, h) / 700) * scale;
+    if (isDead) { drawBody(x, y, s, light); return; }
     ctx.fillStyle = `rgb(${Math.round(30 * light)},${Math.round(26 * light)},${Math.round(22 * light)})`;
     // shoulders
     ctx.beginPath();
@@ -359,6 +361,28 @@ const Room = (() => {
       ctx.fillRect(x - 10 * s, y + 6 * s, 5 * s, 2 * s);
       ctx.fillRect(x + 5 * s, y + 6 * s, 5 * s, 2 * s);
     }
+  }
+
+  // A shot opponent slumps forward onto the table, hat knocked off.
+  function drawBody(x, y, s, light) {
+    ctx.fillStyle = `rgb(${Math.round(30 * light)},${Math.round(26 * light)},${Math.round(22 * light)})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y + 80 * s, 54 * s, 26 * s, 0, Math.PI, 0);
+    ctx.fill();
+    ctx.fillRect(x - 54 * s, y + 80 * s, 108 * s, 30 * s);
+    if (showBlood) {
+      ctx.fillStyle = 'rgba(110,0,0,0.85)';
+      ctx.beginPath(); ctx.ellipse(x + 14 * s, y + 104 * s, 46 * s, 12 * s, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = `rgb(${Math.round(30 * light)},${Math.round(26 * light)},${Math.round(22 * light)})`;
+    ctx.beginPath(); ctx.ellipse(x + 8 * s, y + 92 * s, 22 * s, 16 * s, 0.3, 0, Math.PI * 2); ctx.fill();
+    // hat on the floor beside the chair
+    ctx.fillStyle = `rgb(${Math.round(20 * light)},${Math.round(14 * light)},${Math.round(10 * light)})`;
+    ctx.save();
+    ctx.translate(x - 70 * s, y + 118 * s); ctx.rotate(-0.5);
+    ctx.beginPath(); ctx.ellipse(0, 0, 40 * s, 7 * s, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillRect(-20 * s, -24 * s, 40 * s, 24 * s);
+    ctx.restore();
   }
 
   function drawTable(light) {
@@ -420,10 +444,11 @@ const Room = (() => {
     drawBlood(g);
 
     // people behind/around the table, far seat drawn before the table
-    const ss = seats(opponents);
-    ss.filter(s => s.y < 0.55).forEach(s => drawPerson(s.x, s.y, s.scale, light));
+    const ss = seats(opponents).map((s, i) => ({ ...s, dead: !!dead[i] }));
+    // the far seat sits behind the table, unless they've slumped forward onto it
+    ss.filter(s => s.y < 0.55 && !s.dead).forEach(s => drawPerson(s.x, s.y, s.scale, light, false));
     drawTable(light);
-    ss.filter(s => s.y >= 0.55).forEach(s => drawPerson(s.x, s.y, s.scale, light));
+    ss.filter(s => s.y >= 0.55 || s.dead).forEach(s => drawPerson(s.x, s.y, s.scale, light, s.dead));
 
     drawLamp(light);
     document.documentElement.style.setProperty('--vig', (0.55 + ravage * 0.35).toFixed(2));
@@ -434,7 +459,8 @@ const Room = (() => {
   function stop() { running = false; }
   function setRavage(v) { ravage = Math.max(0, Math.min(1, v)); }
   function setBlood(v) { showBlood = v; }
-  function setOpponents(n) { opponents = n; }
+  function setOpponents(n) { opponents = n; dead = []; }
+  function setDead(i, v) { dead[i] = v; }
 
-  return { init, start, stop, setRavage, setBlood, setOpponents, seats, resize };
+  return { init, start, stop, setRavage, setBlood, setOpponents, setDead, seats, resize };
 })();

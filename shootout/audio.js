@@ -64,6 +64,23 @@ const Sound = (() => {
     o.start(t); o.stop(t + 0.3);
   }
 
+  // Dry fire: the hammer falls on a blank.
+  function blank() {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    for (const [off, f] of [[0, 3200], [0.05, 1800]]) {
+      const src = ctx.createBufferSource();
+      src.buffer = noiseBuffer(0.04);
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 4;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.9, t + off);
+      g.gain.exponentialRampToValueAtTime(0.001, t + off + 0.04);
+      src.connect(bp).connect(g).connect(sfxGain);
+      src.start(t + off);
+    }
+  }
+
   function impact() {
     if (!ensure()) return;
     const t = ctx.currentTime;
@@ -204,5 +221,5 @@ const Sound = (() => {
     if (sfxGain) sfxGain.gain.value = v;
   }
 
-  return { unlock, gunshot, impact, cardFlick, startMusic, stopMusic, setIntensity, setMusicVolume, setSfxVolume };
+  return { unlock, gunshot, blank, impact, cardFlick, startMusic, stopMusic, setIntensity, setMusicVolume, setSfxVolume };
 })();
