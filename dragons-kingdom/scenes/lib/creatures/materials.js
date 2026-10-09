@@ -32,12 +32,12 @@ export function lookParams(THREE, look) {
       // so the sky reflects in broad bands across many scales (as on a black monitor or
       // crocodile), never one blue-grey highlight per bead; a little field dust low on the legs.
       base: lin(THREE, 0.0125, 0.0122, 0.0125), belly: lin(THREE, 0.017, 0.016, 0.0155), dorsal: lin(THREE, 0.0105, 0.0102, 0.0105),
-      wear: lin(THREE, 0.034, 0.032, 0.03), crev: 0.6, dust: lin(THREE, 0.075, 0.066, 0.055), salt: lin(THREE, 0.4, 0.4, 0.38),
+      wear: lin(THREE, 0.034, 0.032, 0.03), crev: 0.78, dust: lin(THREE, 0.075, 0.066, 0.055), salt: lin(THREE, 0.4, 0.4, 0.38),
       rough: [0.6, 0.12, 0.1, 0.28], amp: 0.17, keel: 0.22, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.18,
       hier: [1.0, 1.0, 0.65, 0.0], damp: 0.35, bellyP: [0.6, 1.25, 0.55, 0.5], scarCol: lin(THREE, 0.03, 0.026, 0.025),
       scl: [0.8, 0.36, 0.75, 1.5], tub: [0.28, 2.7, 0.7, 0], skin2: [0.3, 0.35, 0, 0.28], plateZ: -0.03,
       // body scale profile: flat tops (dome exponent), a keel along each scale, wide soft grooves
-      vor: [6.0, 0.3, 0.32, 0.9],
+      vor: [6.0, 0.3, 0.14, 1.35],
       // old healed scars [a.xyz, halfWidth, b.xyz, strength] in L units (rest pose): left flank, right neck, right shoulder, left thigh
       scars: [[0.066, 0.19, 0.17, 0.0042, 0.061, 0.143, 0.092, 0.9], [-0.027, 0.258, 0.335, 0.003, -0.025, 0.236, 0.298, 0.8],
         [-0.071, 0.172, 0.2, 0.003, -0.069, 0.152, 0.216, 0.75], [0.076, 0.132, 0.03, 0.0026, 0.071, 0.112, -0.012, 0.7]],
@@ -49,7 +49,7 @@ export function lookParams(THREE, look) {
       horn: [lin(THREE, 0.02, 0.019, 0.018), lin(THREE, 0.09, 0.085, 0.078)], claw: [lin(THREE, 0.018, 0.017, 0.016), lin(THREE, 0.06, 0.055, 0.05)],
       tooth: lin(THREE, 0.36, 0.3, 0.2), sclera: lin(THREE, 0.02, 0.018, 0.02),
       // BLUE eyes (a deep slate blue iris with a dark limbal ring; never emissive)
-      iris: [lin(THREE, 0.035, 0.1, 0.28), lin(THREE, 0.006, 0.02, 0.07)],
+      iris: [lin(THREE, 0.026, 0.075, 0.21), lin(THREE, 0.005, 0.016, 0.055)],
       fire: 'standard',
     },
     leaf: {
@@ -60,16 +60,18 @@ export function lookParams(THREE, look) {
       base: lin(THREE, 0.012, 0.04, 0.012), belly: lin(THREE, 0.05, 0.08, 0.03), dorsal: lin(THREE, 0.006, 0.022, 0.007),
       wear: lin(THREE, 0.03, 0.06, 0.025), crev: 0.55, dust: lin(THREE, 0.1, 0.11, 0.07), salt: lin(THREE, 0.5, 0.52, 0.48),
       rough: [0.54, 0.12, 0.1, 0.28], amp: 0.18, keel: 0.14, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.35,
-      hier: [0.9, 1.0, 0.55, 0.0], damp: 0.2, bellyP: [0.42, 0.8, 0.25, 0.3], plateZ: -0.02,
+      // (fewer big scutes on the limbs: plates down the forearm read as gauntlets)
+      hier: [0.55, 1.0, 0.55, 0.0], damp: 0.2, bellyP: [0.42, 0.8, 0.25, 0.3], plateZ: -0.02,
       scl: [0.62, 0.36, 0.7, 1.45], tub: [0.16, 2.8, 0.6, 0], skin2: [0.2, 0.3, 0, 0.3], scl2: [0.62, 0.55, 0, 0],
-      vor: [5.0, 0.24, 0.3, 0.8],
-      dustAmt: 0.2, saltAmt: 0.05, oral: lin(THREE, 0.15, 0.05, 0.045), oralDark: lin(THREE, 0.05, 0.012, 0.012),
+      vor: [5.0, 0.24, 0.15, 1.25],
+      // (dark gums and lip margins: a pink lip line drew a frog's smile)
+      dustAmt: 0.2, saltAmt: 0.05, oral: lin(THREE, 0.07, 0.03, 0.028), oralDark: lin(THREE, 0.025, 0.008, 0.008),
       // LIGHT GREEN membrane; the light through it is limited (thick skin), so it never glows
       membrane: lin(THREE, 0.15, 0.25, 0.08), trans: lin(THREE, 0.15, 0.24, 0.07), vein: lin(THREE, 0.06, 0.11, 0.035), memRough: 0.56, memSpec: 0.4, memSpecD: 0.7,
       horn: [lin(THREE, 0.04, 0.045, 0.03), lin(THREE, 0.24, 0.22, 0.15)], claw: [lin(THREE, 0.03, 0.03, 0.025), lin(THREE, 0.14, 0.12, 0.09)],
       tooth: lin(THREE, 0.5, 0.44, 0.32), sclera: lin(THREE, 0.04, 0.036, 0.012),
       // clear YELLOW eyes
-      iris: [lin(THREE, 0.62, 0.45, 0.03), lin(THREE, 0.2, 0.12, 0.01)],
+      iris: [lin(THREE, 0.42, 0.3, 0.02), lin(THREE, 0.12, 0.07, 0.006)],
       fire: 'leaf',
     },
     starlight: {
@@ -85,7 +87,7 @@ export function lookParams(THREE, look) {
       hier: [0.85, 1.0, 0.5, 0.0], damp: 0.0, bellyP: [0.42, 0.85, 0.15, 0.3], plateZ: -0.02,
       crevCol: lin(THREE, 0.52, 0.47, 0.47), crevAmt: 0.15,
       scl: [0.8, 0.42, 0.75, 1.3], tub: [0.0, 2.5, 0.0, 0], skin2: [0.06, 0.15, 0, 0.14], skin3: [0.35, 0.16, 1.0, 0], scl2: [0.62, 0.55, 0, 0],
-      vor: [8.0, 0.0, 0.26, 0.9],
+      vor: [8.0, 0.0, 0.16, 1.1],
       dustAmt: 0.2, saltAmt: 0.0, oral: lin(THREE, 0.45, 0.16, 0.16), oralDark: lin(THREE, 0.1, 0.03, 0.03),
       // white-grey membranes (albino, but thick enough that blood barely tints them), silver highlights
       membrane: lin(THREE, 0.5, 0.5, 0.505), trans: lin(THREE, 0.07, 0.066, 0.068), vein: lin(THREE, 0.5, 0.32, 0.32), memRough: 0.45, memSpec: 0.6,
@@ -105,11 +107,11 @@ export function lookParams(THREE, look) {
       // partly metallic reflection, the wet film (clearcoat) carries broad highlights
       // gold reads as gold through its tinted reflection: metallic crowns (broad, soft sheen at
       // roughness ~0.4, never pin-point sparkle), less in the soft grooves
-      rough: [0.32, 0.05, 0.04, 0.1], amp: 0.03, keel: 0.0, facet: 0.0, jit: 0.45, metal: [0.88, 0.62], mottle: 0.12,
+      rough: [0.34, 0.05, 0.04, 0.1], amp: 0.03, keel: 0.0, facet: 0.0, jit: 0.45, metal: [0.8, 0.42], mottle: 0.16,
       hier: [0.0, 0.5, 0.3, 0.0], damp: 0.0, bellyP: [0.38, 0.8, 0.15, 0.18], plateZ: -0.03,
-      crevCol: lin(THREE, 0.85, 0.6, 0.22), crevAmt: 0.12,
+      crevCol: lin(THREE, 0.62, 0.36, 0.14), crevAmt: 0.2,
       // soft newborn head scales: a fine granular tier on the head (low relief, still readable)
-      headRelief: 3.2,
+      headRelief: 2.0,
       scl: [0.75, 0.42, 0.7, 1.1], tub: [0.0, 2.5, 0.0, 0], skin2: [0.0, 0.15, 0, 0.08], skin3: [0.1, 0.18, 0, 0],
       // amniotic residue: a pale, slimy film in patches and streaks
       residue: [0.24, 0.8, 0.74, 0.52],
@@ -118,7 +120,8 @@ export function lookParams(THREE, look) {
       membrane: lin(THREE, 0.62, 0.38, 0.1), trans: lin(THREE, 0.5, 0.28, 0.08), vein: lin(THREE, 0.45, 0.12, 0.05), memRough: 0.6,
       // a newborn's claws and egg tooth: soft, translucent amber keratin, not white
       horn: [lin(THREE, 0.5, 0.34, 0.12), lin(THREE, 0.66, 0.52, 0.3)], claw: [lin(THREE, 0.3, 0.18, 0.06), lin(THREE, 0.46, 0.32, 0.14)],
-      tooth: lin(THREE, 0.75, 0.7, 0.58), iris: [lin(THREE, 0.2, 0.11, 0.035), lin(THREE, 0.05, 0.025, 0.012)], sclera: lin(THREE, 0.06, 0.035, 0.02),
+      // a newborn's dark, wet eye: deep bronze-brown iris, a wide pupil in the dim chamber
+      tooth: lin(THREE, 0.75, 0.7, 0.58), iris: [lin(THREE, 0.13, 0.075, 0.025), lin(THREE, 0.03, 0.017, 0.007)], sclera: lin(THREE, 0.04, 0.025, 0.015), pupil: 0.13, fleck: lin(THREE, 0.5, 0.36, 0.1),
       // the wet film: glossy but not a mirror (on the soft, lumpy newborn skin a mirror film
       // broke the window's reflection into pin-point sparkle)
       wet: true, wetRough: 0.1,
@@ -186,7 +189,7 @@ function skinMaterial(THREE, P, ctx) {
     uScl2: { value: new THREE.Vector4(...(P.scl2 || [0.62, 1, 0, 0])) },
     // micro relief on the scales: amount, feature size (x the scale unit)
     uSkin3: { value: new THREE.Vector4(...(P.skin3 || [1, 0.16, 0, 0])) },
-    // belly plates end this far (L) in front of the withers when y = 1 (Nightwings: no chest plates)
+    // belly plates end this far (L) in front of the withers when y = 1 (Leaf, Starlight, hatchling: no chest plates)
     uBellyZ: { value: new THREE.Vector4(P.plateZ ?? 0, P.plateZ !== undefined ? 1 : 0, 0, 0) },
     // crevice dust fill, crown wear (bleached keratin), -, per-scale tone variation
     uSkin2: { value: new THREE.Vector4(...(P.skin2 || [0.4, 0.4, 0, 0.3])) },
@@ -243,7 +246,9 @@ void dkSkin(inout vec3 albedo) {
   DKScale S = dkImbricateL(pw, 0.5, 0.0, uPat.w, uPat.y, uPat.z, vScale.w, neck, region);
   // (no chain-row scales where the jaw turns granular at the chin: the rows converge at the
   // jaw tip and drew a swirl of stripes there)
-  float chainM = S.lv >= 0.0 && isHead < 0.5 && !(region > 3.5 && region < 4.5 && vMask.x > 0.35) ? 1.0 : 0.0;
+  // (nor where a limb chain meets the body: its rows converge there - the radial "pole" fan on
+  // the thigh/stifle - so the junction uses the 3D mosaic)
+  float chainM = S.lv >= 0.0 && isHead < 0.5 && !(region > 3.5 && region < 4.5 && vMask.x > 0.35) && !(region > 1.5 && region < 2.5 && vMask.x > 0.04) ? 1.0 : 0.0;
   dkDetail = 1.0 - smoothstep(0.3, 0.9, fwc * 0.5);
   float latV = vScale.w - vScale.z;                 // lateral distance from the ventral midline (scale units)
   float bellySel = vMask.y + (n2 - 0.5) * 0.25;
@@ -382,7 +387,7 @@ void dkSkin(inout vec3 albedo) {
   col = mix(col, uDorsal * 1.15 + uWearCol * 0.15, (S.lv < 0.5 && S.lv >= 0.0 ? 0.35 : 0.0) * detK * chainM);   // dorsal scutes: weathered
   col = mix(col, uWearCol, clamp(crown * uSkin2.y * detK, 0.0, 1.0));           // rubbed, bleached keratin on the crowns
   col = mix(col, uScarCol, dkScarM * 0.85);
-  col = mix(col, uResidue.yzw * mix(vec3(1.0), col * 1.6, 0.35), dkResM * 0.22);       // a thin translucent slime, not white flakes
+  col = mix(col, uResidue.yzw * mix(vec3(1.0), col * 1.6, 0.35), dkResM * 0.1);        // a thin translucent slime, not white flakes
   // crevices: shaded where occluded, dust-filled where they are open to the sky
   float open = clamp(vMask2.x * 1.15, 0.0, 1.0);
   col *= mix(1.0, uMisc.x, dkCav * (1.0 - 0.55 * open) * (1.0 - uCrev.w));
@@ -409,7 +414,7 @@ void dkSkin(inout vec3 albedo) {
   col = mix(col, oral, dkOralM);
   // wound (detached wing stump): dark, rough
   if (uWoundR > 0.0) {
-    col = mix(col, vec3(0.028, 0.006, 0.005) * (0.7 + 0.6 * vNoise.y), dkWoundM);
+    col = mix(col, vec3(0.016, 0.005, 0.004) * (0.7 + 0.6 * vNoise.y), dkWoundM);
     dkCav = max(dkCav, dkWoundM * 0.3);
   }
   albedo = col;
@@ -510,6 +515,8 @@ function membraneMaterial(THREE, P, ctx) {
     // band width (fraction of a period), noise warp, amount; the wing root and span (rest space)
     uStripe: { value: new THREE.Vector4(...(P.stripe || [0, 0, 0, 0])) }, uStripeCol: { value: P.stripeCol || new THREE.Color(0, 0, 0) },
     uWingRoot: { value: new THREE.Vector4(...wingRootOf(ctx)) },
+    // torn membrane (the scout's lost LEFT wing): 0 = whole, 1 = ripped off the body
+    uTear: { value: 0 },
   };
   mat.userData.dkUniforms = U;
   mat.customProgramCacheKey = () => 'dk-membrane';
@@ -539,7 +546,7 @@ vWing = aWing; vEdge = aEdge; vRest = position;
     let frag = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec4 vWing; varying vec4 vEdge; varying vec3 vRest;
-uniform vec3 uMemCol, uTransCol, uVeinCol, uStripeCol; uniform float uL, uFold, uMemRough, uMemSpec, uMemSpecD; uniform vec4 uStripe, uWingRoot;
+uniform vec3 uMemCol, uTransCol, uVeinCol, uStripeCol; uniform float uL, uFold, uMemRough, uMemSpec, uMemSpecD, uTear; uniform vec4 uStripe, uWingRoot;
 float dkStripeM = 0.0;
 ${GLSL_COMMON}
 ${PERTURB}
@@ -564,6 +571,14 @@ float dkVessels(vec2 uv, float det, float detC) {
 }
 void dkMembrane(inout vec3 col) {
   float a = vWing.x, b = vWing.y, pid = vWing.z;
+  if (uTear > 0.0) {
+    // ripped from the body along a ragged line (the plagiopatagium's body edge, a = 0) and
+    // split from the trailing edge into the wing in a few places
+    float jag = dkVnoise2(vec2(b * 22.0, 1.3)) * 0.6 + dkVnoise2(vec2(b * 70.0, 4.1)) * 0.4;
+    if (pid > 3.5 && a < 0.1 + 0.16 * jag) discard;
+    float split = smoothstep(0.82, 0.97, dkVnoise2(vec2((pid > 3.5 ? a : b) * 9.0 + pid * 3.0, 2.0))) * smoothstep(0.55, 1.0, pid > 3.5 ? b : a);
+    if (split * (0.7 + 0.6 * dkVnoise2(vec2(a, b) * 60.0)) > 0.55) discard;
+  }
   vec2 fp = vec2(a, b);
   float fw = max(length(fwidth(fp)), 1e-5);
   float det = 1.0 - smoothstep(0.012, 0.035, fw);         // vessels resolvable
@@ -617,6 +632,15 @@ void dkMembrane(inout vec3 col) {
   col *= 1.0 - 0.07 * boneFold * det;
   float wrinkle = (sin(across * 70.0 + nn * 9.0 + dkVnoise2(vec2(along * 9.0, across * 4.0)) * 5.0) * 0.5 + 0.5) * 0.0014 * uL * det * uFold;
   dkMemH = crease * (1.0 - uFold) + wrinkle + dkVein * 0.00012 * uL;
+  // tension wrinkles fanning out from the finger tips into the panel (the skin is pulled taut
+  // between the tips of a spread hand)
+  if (pid > 0.5 && pid < 3.5) {
+    float ta = (1.0 - a) * 2.5;
+    float d0 = length(vec2(ta, b)), d1 = length(vec2(ta, 1.0 - b));
+    float th0 = atan(b, ta + 1e-3), th1 = atan(1.0 - b, ta + 1e-3);
+    float tw = (sin(th0 * 16.0 + nn * 2.5) * 0.5 + 0.5) * exp(-d0 * 3.5) + (sin(th1 * 16.0 + nn * 2.5) * 0.5 + 0.5) * exp(-d1 * 3.5);
+    dkMemH += tw * 0.0006 * uL * det * (1.0 - uFold);
+  }
   // leathery micro texture (bat-wing skin): a fine network of creases in rest space with an
   // analytic slope, so the sheen breaks up instead of reading as a smooth sheet
   float sc = uL * 0.0032;
@@ -678,7 +702,8 @@ reflectedLight.directSpecular *= uMemSpecD;`);
 // ------------------------------------------------------------------ eye
 function eyeMaterial(THREE, P, ctx, eyeRadius) {
   const mat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.45, metalness: 0, clearcoat: 1.0, clearcoatRoughness: 0.025, specularIntensity: 0.2 });
-  const U = { uIrisA: { value: P.iris[0] }, uIrisB: { value: P.iris[1] }, uSclera: { value: P.sclera }, uEyeR: { value: eyeRadius }, uPupil: { value: 0.075 } };
+  const U = { uIrisA: { value: P.iris[0] }, uIrisB: { value: P.iris[1] }, uSclera: { value: P.sclera }, uEyeR: { value: eyeRadius }, uPupil: { value: P.pupil ?? 0.075 },
+    uFleck: { value: P.fleck || new THREE.Color(0, 0, 0) }, uFleckAmt: { value: P.fleck ? 0.7 : 0 } };
   mat.userData.dkUniforms = U;
   mat.customProgramCacheKey = () => 'dk-eye';
   mat.onBeforeCompile = (sh) => {
@@ -703,7 +728,7 @@ varying vec3 vEyeC; varying vec3 vEyeX; varying vec3 vEyeZ; varying vec3 vEyeL;`
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec3 vEyeC; varying vec3 vEyeX; varying vec3 vEyeZ; varying vec3 vEyeL;
-uniform vec3 uIrisA, uIrisB, uSclera; uniform float uEyeR, uPupil;
+uniform vec3 uIrisA, uIrisB, uSclera, uFleck; uniform float uEyeR, uPupil, uFleckAmt;
 float dkEyeOcc = 1.0;
 ${GLSL_COMMON}
 vec3 dkIris(vec3 P, vec3 N) {
@@ -725,6 +750,9 @@ vec3 dkIris(vec3 P, vec3 N) {
   float fib = dkVnoise2(vec2(th * 18.0, rho * 3.0)) * 0.6 + dkVnoise2(vec2(th * 55.0, rho * 9.0)) * 0.4;
   vec3 iris = mix(uIrisA, uIrisB, smoothstep(0.15, 1.0, rho));
   iris *= 0.65 + 0.7 * fib;
+  // fine metallic flecks in the iris stroma (reptile eyes; the gold newborn's are gold)
+  float fl = smoothstep(0.78, 0.95, dkVnoise2(vec2(th * 26.0, rho * 14.0) + 3.0)) * smoothstep(0.25, 0.5, rho) * (1.0 - smoothstep(0.85, 0.98, rho));
+  iris = mix(iris, uFleck, fl * uFleckAmt);
   iris *= 1.0 - 0.75 * smoothstep(0.78, 1.0, rho);         // dark limbal ring
   iris *= 1.0 - 0.3 * smoothstep(0.35, 0.0, rho) * 0.0 + 0.18 * (dkVnoise2(vec2(th * 7.0, rho * 2.0)) - 0.5);   // blotches
   iris = mix(iris, uIrisB * 0.4, smoothstep(1.2, 1.6, pu) * 0.0 + (1.0 - smoothstep(1.0, 1.35, pu)) * 0.5);
@@ -848,15 +876,19 @@ export function makeMaterials(THREE, look, ctx) {
     params: P,
     skin, finger: skin, lid: skin,
     membrane: membraneMaterial(THREE, P, ctx),
+    membraneTorn: membraneMaterial(THREE, P, ctx),
     eye: eyeMaterial(THREE, P, ctx, eyeR),
     keratin: keratinMaterial(THREE, P, 'keratin'),
     teeth: keratinMaterial(THREE, P, 'teeth'),
     /** pose-driven uniforms: billowL/billowR (-1..1), pupil (slit width) */
     setPoseUniforms(u) {
-      const m = mats.membrane.userData.dkUniforms;
-      if (u.billowL !== undefined) m.uBillowL.value = u.billowL;
-      if (u.billowR !== undefined) m.uBillowR.value = u.billowR;
-      m.uFold.value = u.drape ? Math.max(u.drape.L ? u.drape.L[1] : 0, u.drape.R ? u.drape.R[1] : 0) : 0;
+      for (const mm of [mats.membrane, mats.membraneTorn]) {
+        const m = mm.userData.dkUniforms;
+        if (u.billowL !== undefined) m.uBillowL.value = u.billowL;
+        if (u.billowR !== undefined) m.uBillowR.value = u.billowR;
+        m.uFold.value = u.drape ? Math.max(u.drape.L ? u.drape.L[1] : 0, u.drape.R ? u.drape.R[1] : 0) : 0;
+      }
+      if (u.tear !== undefined) mats.membraneTorn.userData.dkUniforms.uTear.value = u.tear;
       if (u.pupil !== undefined) mats.eye.userData.dkUniforms.uPupil.value = u.pupil;
       if (u.wound !== undefined) {
         const s = skin.userData.dkUniforms;

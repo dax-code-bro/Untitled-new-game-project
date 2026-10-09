@@ -23,6 +23,7 @@
 //   const tack = createSaddle(charcoal, { });           // adds to charcoal.root
 //   mountRider(charcoal, tack, remi);                    // rider follows the dragon
 import * as THREE from 'three';
+import { buildTack } from './tack.js';
 import { LIB_URL } from '../assets.js';
 
 const ID = 'human/makehuman_base/';
@@ -371,7 +372,9 @@ export function createSaddle(c, opts = {}) {
   const sdf = anat.sdf;
   // the body without the wing arms (in the rest pose the wings are spread sideways, and a girth
   // must not follow them out)
-  const noWing = (l) => l.filter((i) => !/^w_/.test(sdf.prims[i].bone || ''));
+  // (nor the legs: straps go round the trunk; following a leg in the rest pose left a strap hanging
+  // down to the ground once the legs tuck in flight or fold in the sit)
+  const noWing = (l) => l.filter((i) => !/^(w_|fl_|hl_)/.test(sdf.prims[i].bone || ''));
   const f = (x, y, z) => { const l = noWing(sdf.cull(x, y, z, x, y, z, L * 0.05)); return l.length ? Math.min(sdf.evalList(x, y, z, l), L * 0.04) : L * 0.04; };
   // seat position: just behind the neck base, on the dorsal midline
   const sp = anat.bonePos[opts.bone ?? 'neck_0'];
@@ -407,96 +410,27 @@ export function createSaddle(c, opts = {}) {
   // dark, oiled, worn leather: rough enough that the sky does not turn the seat pale
   const leather = leatherMaterial(opts.leatherColor ?? [0.05, 0.028, 0.016], 0.8);
   const strapMat = leatherMaterial([0.055, 0.035, 0.022], 0.6);
-  const metal = new THREE.MeshStandardMaterial({ color: new THREE.Color(0.35, 0.33, 0.3), roughness: 0.38, metalness: 1 });
+  // hand-forged iron: dark, a little rusty and rough (no bright bronze)
+  const metal = ironMaterial();
   const geos = [];
   const H = 1.7;    // human scale (metres) - tack is sized for the rider, not the dragon
 
-  // ---- seat
+  // ---- the tack itself (tack.js): saddle cloth, padded seat on a wooden tree, cantle and
+  // pommel, girth + buckle, breast strap, stirrups; or the giants' riding rig (timber frame on a
+  // felt pad, padded seat and backrest, a wooden grab bar, broad girth bands, foot boards)
   let halfBody = 0;
   for (let x = 0; x < L * 0.2; x += L * 0.002) { if (f(x, seatY - L * 0.01, seatZ) > 0) break; halfBody = x; }
-  const seatLen = kind === 'rig' ? 1.35 : 0.62, seatW = kind === 'rig' ? 0.75 : Math.min(0.5, Math.max(0.3, halfBody * 2.2)), block = kind === 'rig' ? 0.38 : 0.0;
-  {
-    const nu = 28, nv = 22;
-    const P = [], I = [];
-    for (let i = 0; i <= nu; i++) {
-      const u = i / nu;                                    // back (0) -> front (1)
-      const z = seatZ + (u - 0.5) * seatLen;
-      for (let j = 0; j <= nv; j++) {
-        const v = j / nv;                                  // left -> right across
-        const x = (v - 0.5) * seatW * (1 - 0.25 * Math.pow(Math.abs(u - 0.5) * 2, 3));
-        const base = surfY(x, z);
-        // padded top: cantle (back) and pommel (front) raised, seat dished, edges rolled
-        const edge = Math.sin(Math.PI * v);
-        const cant = Math.exp(-Math.pow((u - 0.06) / 0.08, 2)) * 0.11 + Math.exp(-Math.pow((u - 0.94) / 0.06, 2)) * 0.13;
-        const top = block + 0.05 + 0.04 * edge + cant * (0.6 + 0.4 * (1 - Math.abs(v - 0.5) * 2));
-        P.push(x, base + top * Math.pow(edge, 0.35), z);
-      }
-    }
-    for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++) { const a = i * (nv + 1) + j, b = a + nv + 1; I.push(a, b, a + 1, a + 1, b, b + 1); }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setIndex(I); g.computeVertexNormals();
-    geos.push([g, leather]);
-    // saddle flaps / skirts hanging down both sides
-    for (const sd of [1, -1]) {
-      const Pf = [], If = [];
-      const nz = 12, ny = 10;
-      for (let i = 0; i <= nz; i++) {
-        const z = seatZ + (i / nz - 0.5) * seatLen * 0.8;
-        const x0 = sd * seatW * 0.45;
-        for (let j = 0; j <= ny; j++) {
-          // follow the body surface downward from the seat edge
-          const t = j / ny;
-          const a = t * 0.9;
-          let r = L * 0.2;
-          const cx = 0, cy = seatY - L * 0.04;
-          const dx = sd * Math.sin(0.35 + a), dy = Math.cos(0.35 + a);
-          for (let k = 0; k < 80; k++) { const d = f(cx + dx * r, cy + dy * r, z); if (Math.abs(d) < L * 2e-4) break; r -= d * 0.9; }
-          const off = 0.012 + 0.02 * (1 - t);
-          Pf.push(cx + dx * (r + off), cy + dy * (r + off), z);
-          if (j === 0) { Pf[Pf.length - 3] = x0; }
-        }
-      }
-      // keep only the part within ~0.45 m below the seat edge
-      for (let i = 0; i < nz; i++) for (let j = 0; j < ny; j++) { const a = i * (ny + 1) + j, b = a + ny + 1; if (sd > 0) If.push(a, a + 1, b, a + 1, b + 1, b); else If.push(a, b, a + 1, a + 1, b, b + 1); }
-      const gf = new THREE.BufferGeometry(); gf.setAttribute('position', new THREE.Float32BufferAttribute(Pf, 3)); gf.setIndex(If); gf.computeVertexNormals();
-      clipToDistance(gf, new THREE.Vector3(sd * seatW * 0.45, seatY, seatZ), kind === 'rig' ? 0.9 : 0.3);
-      geos.push([gf, leather]);
-    }
-  }
-  // ---- girth strap(s): bands around the real body cross-section
-  const strap = (z, width, thick = 0.008) => {
-    const ring = contour(z);
-    const P = [], I = [];
-    const n = ring.length;
-    // centroid for outward offsets
-    const cen = ring.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(1 / n);
-    for (let i = 0; i <= n; i++) {
-      const p = ring[i % n];
-      const out = p.clone().sub(cen); out.z = 0; out.normalize();
-      const q = p.clone().addScaledVector(out, thick + 0.004);
-      P.push(q.x, q.y, q.z - width / 2, q.x, q.y, q.z + width / 2);
-    }
-    for (let i = 0; i < n; i++) { const a = i * 2; I.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setIndex(I); g.computeVertexNormals();
-    geos.push([g, strapMat]);
+  const built = buildTack({ L, kind, f, seatZ, seatY, halfBody });
+  const MAT = {
+    seat: leather, strap: strapMat, iron: metal,
+    wool: woolMaterial(opts.woolColor ?? [0.07, 0.03, 0.022]),
+    wood: woodMaterial([0.09, 0.055, 0.03]),
   };
-  if (kind === 'rig') { strap(seatZ - 0.35, 0.32); strap(seatZ + 0.45, 0.32); strap(seatZ + 1.6, 0.25); }
-  else { strap(seatZ - Math.max(0.05, L * 0.032), 0.1); }      // one girth, behind the forelegs
-  // ---- stirrups (saddle) / foot boards (rig)
-  if (opts.stirrups) for (const sd of [1, -1]) {
-    const side = new THREE.Vector3(sd * (seatW * 0.5 + (kind === 'rig' ? 0.05 : 0.02)), seatY + block * 0.6, seatZ + 0.02);
-    const drop = kind === 'rig' ? 0.55 : 0.62;
-    const sx = side.x + sd * (kind === 'rig' ? 0.02 : 0.06);
-    const strapG = new THREE.BoxGeometry(0.008, drop, 0.03); strapG.translate(sx, side.y - drop / 2, side.z);
-    geos.push([strapG, strapMat]);
-    const iron = new THREE.TorusGeometry(0.065, 0.007, 6, 20); iron.rotateY(Math.PI / 2); iron.translate(sx, side.y - drop - 0.05, side.z);
-    geos.push([iron, metal]);
-  }
-  if (kind === 'rig') {
-    // grab handle in front of the seat
-    const bar = new THREE.TorusGeometry(0.16, 0.018, 8, 24, Math.PI); bar.rotateY(Math.PI / 2); bar.rotateZ(0); bar.translate(0, seatY + block + 0.12, seatZ + seatLen * 0.45);
-    geos.push([bar, metal]);
-  }
-
+  // one mesh per material (fewer draw calls)
+  const byMat = new Map();
+  for (const [g, k] of built.geos) { const m = MAT[k] || leather; if (!byMat.has(m)) byMat.set(m, []); byMat.get(m).push(g); }
+  for (const [m, list] of byMat) geos.push([mergeGeos(list), m]);
+  const seatLen = built.seatLen, block = built.block, seatW = built.seatW;
   // ---- skin everything to the nearest body vertex of the creature
   const body = c.meshes[0];
   const bp = body.geometry.attributes.position, bsi = body.geometry.attributes.skinIndex, bsw = body.geometry.attributes.skinWeight;
@@ -555,13 +489,35 @@ export function createSaddle(c, opts = {}) {
     sm.bind(c.skeleton, new THREE.Matrix4());
     meshes.push(sm);
   }
-  const seatPoint = new THREE.Vector3(0, seatY + block + 0.07, seatZ - seatLen * 0.08);
+  const seatPoint = new THREE.Vector3(0, (built.seatTop ?? seatY + block) + 0.02, seatZ - seatLen * 0.08);
   // the seat follows the bone that owns the nearest body vertex at the seat
   const sv = nearest(0, seatY, seatZ);
   let seatBone = opts.rigid !== false && c.boneIndex[opts.rigidBone ?? 'thorax'] !== undefined ? c.bones[c.boneIndex[opts.rigidBone ?? 'thorax']]
     : (sv >= 0 ? c.bones[bsi.getComponent(sv, 0)] : c.bones[c.boneIndex['neck_0']]);
   if (/^rib_/.test(seatBone.name)) seatBone = seatBone.parent;      // never ride a breathing (scaled) bone
   return { kind, meshes, seatPoint, seatBone, seatZ, seatY, block, seatLen };
+}
+
+function mergeGeos(list) {
+  let nv = 0, ni = 0;
+  for (const g of list) { nv += g.attributes.position.count; ni += g.index.count; }
+  const P = new Float32Array(nv * 3), N = new Float32Array(nv * 3), U = new Float32Array(nv * 2), I = new Uint32Array(ni);
+  let ov = 0, oi = 0;
+  for (const g of list) {
+    const n = g.attributes.position.count;
+    P.set(g.attributes.position.array, ov * 3);
+    if (g.attributes.normal) N.set(g.attributes.normal.array, ov * 3);
+    if (g.attributes.uv) U.set(g.attributes.uv.array, ov * 2);
+    const id = g.index.array;
+    for (let k = 0; k < id.length; k++) I[oi + k] = id[k] + ov;
+    ov += n; oi += id.length;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(U, 2));
+  g.setIndex(new THREE.BufferAttribute(I, 1));
+  return g;
 }
 
 function clipToDistance(g, center, maxD) {
@@ -574,8 +530,69 @@ function clipToDistance(g, center, maxD) {
   g.setIndex(keep);
 }
 
+function ironMaterial() {
+  const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(0.11, 0.105, 0.1), roughness: 0.55, metalness: 1, side: THREE.DoubleSide });
+  mat.customProgramCacheKey = () => 'dk-iron';
+  mat.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vIP;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvIP = position;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vIP;
+float iH(vec3 p) { p = fract(p * 0.3183 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float iN(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(iH(i), iH(i + vec3(1,0,0)), f.x), mix(iH(i + vec3(0,1,0)), iH(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(iH(i + vec3(0,0,1)), iH(i + vec3(1,0,1)), f.x), mix(iH(i + vec3(0,1,1)), iH(i + vec3(1,1,1)), f.x), f.y), f.z); }
+float dkRust;`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+dkRust = smoothstep(0.55, 0.8, iN(vIP * 60.0) * 0.7 + iN(vIP * 250.0) * 0.3);
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.09, 0.035, 0.015), dkRust);`)
+      .replace('#include <roughnessmap_fragment>', `float roughnessFactor = mix(roughness, 0.9, dkRust);`)
+      .replace('#include <metalnessmap_fragment>', `float metalnessFactor = mix(metalness, 0.0, dkRust);`);
+  };
+  return mat;
+}
+
+/** Wool cloth (the saddle cloth / felt pad): matte, fibrous, a woven twill and a darker worn edge. */
+function woolMaterial(col) {
+  const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(...col), roughness: 0.95, metalness: 0, side: THREE.DoubleSide });
+  mat.customProgramCacheKey = () => 'dk-wool';
+  mat.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvWP = position;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vWP;
+float wH(vec3 p) { p = fract(p * 0.3183 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float wN(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(wH(i), wH(i + vec3(1,0,0)), f.x), mix(wH(i + vec3(0,1,0)), wH(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(wH(i + vec3(0,0,1)), wH(i + vec3(1,0,1)), f.x), mix(wH(i + vec3(0,1,1)), wH(i + vec3(1,1,1)), f.x), f.y), f.z); }`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+{ float tw = sin((vWP.x + vWP.z) * 900.0) * 0.5 + 0.5;
+  float fz = wN(vWP * 300.0) * 0.5 + wN(vWP * 30.0) * 0.5;
+  diffuseColor.rgb *= 0.75 + 0.25 * tw + 0.35 * (fz - 0.5); }`);
+  };
+  return mat;
+}
+
+/** Oiled oak, darkened with handling: grain along the piece, worn paler on the edges. */
+function woodMaterial(col) {
+  const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(...col), roughness: 0.6, metalness: 0, side: THREE.DoubleSide });
+  mat.customProgramCacheKey = () => 'dk-wood';
+  mat.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vDP;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvDP = position;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vDP;
+float dH(vec3 p) { p = fract(p * 0.3183 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float dN(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(dH(i), dH(i + vec3(1,0,0)), f.x), mix(dH(i + vec3(0,1,0)), dH(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(dH(i + vec3(0,0,1)), dH(i + vec3(1,0,1)), f.x), mix(dH(i + vec3(0,1,1)), dH(i + vec3(1,1,1)), f.x), f.y), f.z); }`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+{ float g = dN(vec3(vDP.x * 6.0, vDP.y * 60.0, vDP.z * 60.0) + dN(vDP * 4.0) * 3.0);
+  float ring = sin(g * 18.0) * 0.5 + 0.5;
+  diffuseColor.rgb *= 0.72 + 0.4 * ring * (0.7 + 0.6 * dN(vDP * 90.0)); }`);
+  };
+  return mat;
+}
+
 function leatherMaterial(col, rough = 0.5) {
-  const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(...col), roughness: rough, metalness: 0 });
+  const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(...col), roughness: rough, metalness: 0, side: THREE.DoubleSide });
   mat.customProgramCacheKey = () => 'dk-leather';
   mat.onBeforeCompile = (sh) => {
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vLP;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvLP = position;');

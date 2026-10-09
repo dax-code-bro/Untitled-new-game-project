@@ -3,7 +3,7 @@
 // hashes. Each returns a pose object for creature.setPose().
 //
 //   stand(c, { t, look:[yaw,pitch], jaw, breathe, wingFold })
-//   sit(c, { t, look, jaw })                    dog-like upright sit (Nightwings)
+//   sit(c, { t, look, jaw })                    dog-like upright sit (Leaf; provisional)
 //   lie(c, { t, look })                         resting on the belly, head low
 //   flight(c, { t, hz, amp, phase, look, jaw, corr })   flapping, tempo from size
 //   glide(c, { t, bank, look, jaw })            wings held, small corrections
@@ -365,8 +365,17 @@ export function lie(c, o = {}) {
   const t = o.t ?? 0;
   const pb = new PB(c);
   breathe(pb, t, o.breathe ?? (c.L > 20 ? 0.07 : 0.15), 0.032);
-  pb.sym('fl_#_0', -0.9, 0, 0.05); pb.sym('fl_#_1', 2.2, 0, 0); pb.sym('fl_#_2', -1.25, 0, 0);
-  pb.sym('hl_#_0', -1.1, 0.08, 0.06); pb.sym('hl_#_1', 2.25, 0, 0); pb.sym('hl_#_2', -1.6, 0, 0);
+  if (o.sprawl) {
+    // too weak to tuck the legs under (a newborn): the legs lie splayed out to the sides on
+    // the bedding, elbows and knees bent, palms and soles down
+    const k = o.sprawl;
+    pb.sym('fl_#_0', 0.25 * k, 0.25 * k, 1.05 * k); pb.sym('fl_#_1', -0.35 * k, 0, -0.5 * k); pb.sym('fl_#_2', 0.2 * k, 0, -0.45 * k);
+    pb.sym('hl_#_0', 0.55 * k, -0.2 * k, 1.0 * k); pb.sym('hl_#_1', 0.25 * k, 0, -0.45 * k); pb.sym('hl_#_2', -0.3 * k, 0, -0.5 * k);
+    for (let i = 0; i < 4; i++) { pb.sym(`fl_#_t${i}`, -0.1, 0, 0); pb.sym(`hl_#_t${i}`, -0.1, 0, 0); }
+  } else {
+    pb.sym('fl_#_0', -0.9, 0, 0.05); pb.sym('fl_#_1', 2.2, 0, 0); pb.sym('fl_#_2', -1.25, 0, 0);
+    pb.sym('hl_#_0', -1.1, 0.08, 0.06); pb.sym('hl_#_1', 2.25, 0, 0); pb.sym('hl_#_2', -1.6, 0, 0);
+  }
   carriage(pb, o.raise ?? -0.45, o.headDown ?? 0.15);
   const lk = o.look || [0, 0];
   look(pb, lk[0] + 0.03 * wob(t * 0.2, 4), lk[1]);

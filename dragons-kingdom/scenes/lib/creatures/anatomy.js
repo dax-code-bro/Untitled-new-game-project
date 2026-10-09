@@ -127,8 +127,10 @@ const SKETCH = {
         [0.56, 0.205, 0.132, -0.084], [0.72, 0.185, 0.123, -0.082], [0.86, 0.168, 0.118, -0.08], [1.0, 0.12, 0.085, -0.07]],
       jaw: [[0.0, 0.27, -0.08, -0.32], [0.12, 0.275, -0.08, -0.315], [0.3, 0.25, -0.08, -0.26], [0.5, 0.215, -0.08, -0.21],
         [0.7, 0.188, -0.079, -0.185], [0.86, 0.168, -0.078, -0.172], [0.98, 0.122, -0.076, -0.15]],
-      eye: [0.238, 0.118, 0.27], eyeR: 0.055, eyeInset: 0.5, eyeExpose: 56, brow: 1.75, cheek: 1.15, jawMuscle: 1.2, ridgeR: 0.024, hinge: [0, -0.09, 0.035], gape0: 14 * deg, nostril: 1.15,
-      teethUp: 15, teethSize: 0.06, lipCover: 0.55, tympanum: 1,
+      eye: [0.238, 0.118, 0.27], eyeR: 0.055, eyeInset: 0.5, eyeExpose: 56, brow: 2.0, cheek: 1.15, jawMuscle: 1.2, ridgeR: 0.024, hinge: [0, -0.09, 0.035], gape0: 14 * deg, nostril: 1.5,
+      // (an irregular, crocodilian lip line that leaves the teeth showing - a continuous rolled lip
+      // read as a hand puppet)
+      teethUp: 15, teethSize: 0.06, lipCover: 0.3, lipIrregular: 1, tympanum: 1,
     },
     horns: 'charcoal', crest: { count: 92, h: [0.0085, 0.017, 0.0065], base: 1.15 },
     scale: { body: 0.0042, belly: 0.012, head: 0.0032 },   // scale width in L units at the chain's median radius
@@ -152,7 +154,7 @@ const SKETCH = {
       thumb: [0.01, 0.006, 0.015], r: [0.0158, 0.0098, 0.0076], fingerR: [0.0046, 0.0012], muscle: 1.0,
       attach: [[0.005, -0.012, -0.03], [0.014, -0.032, -0.1], [0.022, -0.05, -0.16], [0.04, -0.075, -0.19]], billow: 0.04 },
     headShape: {
-      // the same reptile plan as the Bashion but lighter: a high brow over big (nocturnal)
+      // the same reptile plan as Charcoal's but lighter: a high brow over big (nocturnal)
       // eyes, a moderate, slightly tapering snout with a little nasal rise (never a horse's
       // long deep face), lips that hide the teeth when the mouth is closed
       upper: [[-0.1, 0.2, 0.13, -0.11], [0.02, 0.24, 0.17, -0.095], [0.15, 0.26, 0.19, -0.087], [0.3, 0.245, 0.175, -0.082], [0.45, 0.2, 0.13, -0.078],
@@ -223,7 +225,7 @@ SKETCH.hatchling = {
     attach: [[0.02, -0.008, -0.03], [0.034, -0.016, -0.08], [0.04, -0.024, -0.13]], billow: 0.02 },
   // thin lids that sink into the soft skin round the big eye (thick shells stood off the
   // domed head like coins); the lower lid sits low
-  lid: { rIn: 1.03, rOut: 1.09, reachL: 0.8, span: 1.15 },
+  lid: { rIn: 1.03, rOut: 1.075, reachL: 0.8, span: 1.22, gran: 0.035 },
   headShape: {
     // a domed cranium that takes up most of the head, and a short, soft, rounded snout
     upper: [[-0.1, 0.34, 0.3, -0.17], [0.06, 0.41, 0.46, -0.155], [0.24, 0.44, 0.52, -0.145], [0.42, 0.41, 0.46, -0.14], [0.58, 0.33, 0.34, -0.135],
@@ -895,10 +897,14 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
     // upper lip: a fleshy labial ridge along the tooth row that half covers the teeth
     const lc = hs.lipCover ?? 0.5;
     if (lc > 0) {
-      const zl = [0.12, 0.3, 0.5, 0.7, 0.88];
+      const irr = hs.lipIrregular ?? 0;
+      const zl = irr ? [0.12, 0.22, 0.33, 0.43, 0.55, 0.66, 0.77, 0.88] : [0.12, 0.3, 0.5, 0.7, 0.88];
       for (let i = 0; i < zl.length - 1; i++) {
         const a = ridgeU(sd, zl[i]), b = ridgeU(sd, zl[i + 1]);
-        m.cone(W(a[0] * 1.06, a[1] + 0.012, a[2]), W(b[0] * 1.06, b[1] + 0.012, b[2]), 0.02 * H * lc, 0.017 * H * lc, { k: 0.02 * H, ...t });
+        // irregular: the lip scalloped over the big teeth, thinner between them
+        const ya = irr * (hsh(i, sd > 0 ? 31 : 37) - 0.5) * 0.02, yb = irr * (hsh(i + 1, sd > 0 ? 31 : 37) - 0.5) * 0.02;
+        const ra = 1 + irr * (hsh(i, sd > 0 ? 41 : 43) - 0.5) * 0.7, rb = 1 + irr * (hsh(i + 1, sd > 0 ? 41 : 43) - 0.5) * 0.7;
+        m.cone(W(a[0] * 1.06, a[1] + 0.012 + ya, a[2]), W(b[0] * 1.06, b[1] + 0.012 + yb, b[2]), 0.02 * H * lc * ra, 0.017 * H * lc * rb, { k: 0.02 * H, ...t });
       }
     }
   }

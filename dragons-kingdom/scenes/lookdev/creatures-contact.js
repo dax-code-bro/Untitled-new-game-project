@@ -4,7 +4,9 @@
 // sun (sun from the front-left of the camera, 48 degrees up) and the creature turns on a
 // turntable, so every view is lit the same way:
 //   t = 0..3 Charcoal, 4..7 Leaf, 8..11 Starlight, 12..15 hatchling, 16..19 scout
-//   (each: front 3/4, left side, rear 3/4, right side), 20 the scale lineup with a person.
+//   (each: front 3/4, left side, rear 3/4, right side), 20 the scale lineup with a person,
+//   21-23 Charcoal, Leaf and Starlight gliding with the wings spread (seen from above-front).
+//   (No species: every dragon is its own design - DRAGONS.md.)
 //   node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 1 --workers 1 --out output/creatures-contact
 // then tile the 21 frames (README in scenes/lib/creatures/ has the ffmpeg line).
 import * as THREE from 'three';
@@ -16,7 +18,7 @@ const VIEWS = [{ yaw: 35, el: 0.16 }, { yaw: 90, el: 0.1 }, { yaw: 145, el: 0.2 
 const D2R = Math.PI / 180;
 
 export const meta = {
-  title: 'Creature contact sheet (provisional designs)', duration: NAMES.length * 4 + 1, seed: 3,
+  title: 'Creature contact sheet (provisional designs)', duration: NAMES.length * 4 + 1 + 3, seed: 3,
   cinematic: { grade: { toneMapping: 'agx', look: 'print', exposure: 0.2 }, grain: { amount: 0.8 }, bloom: { intensity: 0.01 },
     motionBlur: { mode: 'off' }, dof: { enabled: false }, atmosphere: { enabled: true, sky: 'scene', haze: 0.8 } },
 };
@@ -60,7 +62,7 @@ export async function setup(ctx) {
 }
 
 function poseFor(c, name) {
-  if (name === 'hatchling') return poses.lie(c, { t: 0, blink: false, raise: -0.1, headDown: 0.16, look: [0.2, -0.04], lidRelax: 0.42 });
+  if (name === 'hatchling') return poses.lie(c, { t: 0, blink: false, sprawl: 1, raise: -0.5, headDown: 0.2, look: [0.2, -0.08], lidRelax: 0.3 });
   if (name === 'leaf') return poses.sit(c, { t: 0, blink: false, look: [0.2, -0.05] });
   if (name === 'scout') return poses.glide(c, { t: 0, blink: false, bank: 0, dihedral: 0.08 });   // seen in flight only
   return poses.stand(c, { t: 0, blink: false, look: [0.15, -0.02] });
@@ -69,7 +71,8 @@ const AIR = { scout: 0.35 };
 
 export function update(t, ctx) {
   const { camera } = ctx;
-  const k = Math.max(0, Math.min(NAMES.length * 4, Math.round(t)));   // frame time (sub-frames never cross views)
+  const k = Math.max(0, Math.min(NAMES.length * 4 + 3, Math.round(t)));   // frame time (sub-frames never cross views)
+  const GLIDE = ['charcoal', 'leaf', 'starlight'];
   const sunAz = Math.atan2(S.sunDir.x, S.sunDir.z);
   // the camera looks along +z' where the sun comes from 40 degrees to its left and is in front
   const camAz = sunAz + Math.PI + 40 * D2R;
@@ -93,6 +96,24 @@ export function update(t, ctx) {
     const dist = r / Math.tan(15 * D2R) * 0.78;
     camera.position.copy(center).addScaledVector(fwd, -dist);
     camera.position.y = center.y + dist * Math.sin(v.el) + size.y * 0.1;
+    camera.fov = 32;
+    camera.lookAt(center);
+  } else if (k > NAMES.length * 4) {
+    // wings spread: a gliding pose, the camera above and in front (both wings in view)
+    const n = GLIDE[k - NAMES.length * 4 - 1];
+    const c = S.C[n];
+    c.root.visible = true;
+    c.root.position.set(0, 0.6 * c.L, 0);
+    c.root.rotation.set(0, camAz + Math.PI - 30 * D2R, 0);
+    c.setPose(poses.glide(c, { t: 0, blink: false, bank: 0, dihedral: 0.1 }));
+    c.root.updateMatrixWorld(true);
+    const box = boundsOf(c);
+    center = box.getCenter(new THREE.Vector3());
+    size = box.getSize(new THREE.Vector3());
+    const r = 0.5 * Math.max(size.x, size.z, size.y * 1.6);
+    const dist = r / Math.tan(15 * D2R) * 0.8;
+    camera.position.copy(center).addScaledVector(fwd, -dist * 0.85);
+    camera.position.y = center.y + dist * 0.5;
     camera.fov = 32;
     camera.lookAt(center);
   } else {

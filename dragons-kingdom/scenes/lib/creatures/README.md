@@ -6,17 +6,21 @@ placeholder made from the CC0 MakeHuman base mesh. **Every design here is
 provisional** until Daxtyn sends approved references (see "Questions for
 Daxtyn" below).
 
-| creature | species / look | length (provisional) | wingbeat |
-|---|---|---|---|
-| `charcoal` | Bashion, melanistic black, immense, heavy | 35.8 m | 0.76 Hz |
-| `leaf` | Nightwing, green, subadult (bigger head and eyes, shorter horns) | 8.0 m | 1.6 Hz + corrective unevenness |
-| `starlight` | Nightwing, albino white, faceted crystal-like (NOT crystal, no glow) | 50.6 m | 0.64 Hz |
-| `hatchling` | Bashion newborn, 24-karat-gold look, wet | 0.42 m | (does not fly) |
-| `scout` | Slitherwing: long serpentine body, small head, narrow forward-set wings; LEFT wing detachable | 5.6 m | 2.6 Hz |
+Daxtyn scrapped the species (Bashion / Nightwing / Slitherwing) on 2026-10-09
+(`DRAGONS.md`, the authoritative design file): **every dragon is its own design** with its own
+preset in `anatomy.js` `DESIGNS` - its own proportions, skull, horn set, limbs and wings. Leaf
+and Starlight no longer share a body.
 
-Lengths are the "on-screen area" reading from `episodes/s01e01/assets.json`
-(`scale.readings`), snout to tail tip along the spine. Wingbeat tempo follows
-the same file's rule of thumb (frequency ~ 1/sqrt(length)).
+| creature | design (approved = from DRAGONS.md) | length | wingbeat |
+|---|---|---|---|
+| `charcoal` | **approved:** completely black scales, BLUE eyes, GRAY wing membrane with BLACK STRIPES throughout, standard orange-red fire. Provisional: immense, heavy, calm; horns, head, tail | 35.8 m (provisional) | 0.62 Hz |
+| `leaf` | **approved:** about 25% of Charcoal's size, DARK GREEN scales, YELLOW eyes, LIGHT GREEN membrane, purplish-blue fire (hotter). Provisional: compact not-fully-grown build (short neck and tail, round deep skull, big eyes), own horns, the dog-like upright sit (an open question now that species are gone) | 9.0 m (25% of Charcoal) | 1.4 Hz + corrective unevenness |
+| `starlight` | from the screenplay: albino, reflective crystal-like white scales (NOT crystal, no glow). Provisional: broad heavy chest, long neck and tail, broad flat skull, a crown of horns, broad-chord wings | 50.6 m - **OPEN QUESTION**: the screenplay says "about twice Charcoal's size"; 50.6 m is 1.41x his length (~2.8x his mass). If Daxtyn means twice the length she is ~72 m | 0.42 Hz |
+| `hatchling` | from the screenplay: looks like 24-karat gold, newborn, wet and weak, no glow. Provisional: newborn proportions, tiny damp wings | 0.42 m | (does not fly) |
+| `scout` | from the screenplay: small, extremely fast, loses its LEFT wing. Provisional: long serpentine body, small head, narrow swift wings; LEFT wing detachable | 5.6 m | 2.6 Hz |
+
+Lengths are snout to tail tip along the spine. Wingbeat tempo ~ 1/sqrt(length), slowed for
+Starlight so the giant reads heavy.
 
 ## Use
 
@@ -35,6 +39,22 @@ leaf.setPose(poses.sit(leaf, { t, look: [0.3, 0.1] }));
 leaf.root.position.set(x, 0, z);
 ```
 
+Fire (`fire.js`, pure in `t`; only on the "Fire" command):
+
+```js
+import { createFire } from './lib/creatures/index.js';
+const fire = createFire({ palette: 'standard', length: 26, width: 7 });   // 'standard' (Charcoal) | 'leaf'
+scene.add(fire.group);
+fire.update(t, { creature: charcoal, on: 1, start: tFire });   // aims at the open mouth
+```
+
+The jet is camera-facing flame sprites (additive, HDR, stretched along the flow, ragged and
+flickering from two octaves of moving noise; hottest at the mouth: core -> body -> edge colour as
+it cools), a trail of smoke sprites and a flickering point light a third of the way down the jet.
+Palettes: `standard` - yellow-white core, orange body, red tongues, dark sooty smoke;
+`leaf` - blue-white core, blue body, violet fringe, ~12% shorter flame life (hotter), less and
+paler smoke. Nothing on a dragon's body glows.
+
 Poses (`poses.js`, all pure functions of `t`):
 
 * `stand` - wings folded, breathing, neck S-curve, idle head drift, automatic blinks
@@ -45,7 +65,8 @@ Poses (`poses.js`, all pure functions of `t`):
   (the fold is given in the world, so the pitched body never stands the wrist up like a
   raised arm)
 * `lie` - resting on the belly (Charcoal in 1B/2C, the weak hatchling); `raise`/`headDown`
-  set the neck carriage, `lidRelax` how far the lids rest over the eyes
+  set the neck carriage, `lidRelax` how far the lids rest over the eyes; `sprawl: 1` lays the
+  legs out splayed to the sides (the newborn is too weak to tuck them under)
 * `flight` - flapping: downstroke 56% of the cycle, pronation on the downstroke,
   elbow/hand flexed on the upstroke, fingers spread on the downstroke, body lifted
   by each downstroke while the neck keeps the head steady, legs tucked,
@@ -53,10 +74,13 @@ Poses (`poses.js`, all pure functions of `t`):
 * `glide` - wings held with dihedral and small corrections; `bank` rolls the body,
   flexes the inner wing, the head counter-rolls, the tail steers
 * `dive` - wings partly folded (Starlight's attack)
-* `stand` / `lie` fold the wings the way a bird or a bat does: humerus back along the top of
-  the back (the elbow just above the back line), forearm forward so the wrist sits beside the
-  shoulder, fingers back along the flank; the membrane hangs in slack folds (drape.js).
-  `foldVariant: 'high'` keeps the old gargoyle fold
+* `stand` / `lie` / `sit` fold the wings the way a bat does: humerus back along the top of the
+  flank, forearm forward and down so the wrist sits LOW beside the shoulder, the hand back along
+  the flank, and every finger folded at its knuckle (56% of its length) so the outer part doubles
+  back along the inner part (`CREATURES.<name>.fingerFold`, default [2.85, 0.2] rad): the folded
+  hand is about as long as the forearm, no finger rods reach past the hips or stick out in front
+  of the chest; the membrane hangs in slack folds (drape.js). `foldVariant: 'high'` keeps the old
+  gargoyle fold
 * `flight` / `glide` tuck the legs: forelegs folded back against the chest, paws curled,
   hind legs trailing under the tail base with the thigh muscles flattened (bone scale) and
   the toes curled - no paws hanging down, no round haunches seen from behind
@@ -92,8 +116,8 @@ clumps as hedgerows and woods 0.4-2.5 km out) only as scale references. Typical 
 
 ## How it is built (and why it looks the way it does)
 
-1. **Skeleton + sculpt** (`anatomy.js`). One builder for all species, driven by
-   preset proportions. The body is a signed-distance "sculpt": the spine is a
+1. **Skeleton + sculpt** (`anatomy.js`). One builder for every dragon, driven by
+   each dragon's own design preset (`DESIGNS`). The body is a signed-distance "sculpt": the spine is a
    chain of elliptical round cones following a cross-section profile (deep chest,
    tucked waist, tapering tail), plus muscle bellies (thigh, upper arm, flight
    muscles), bony landmarks (elbow, knee, hock, shoulder blades, hip bones),
@@ -142,25 +166,42 @@ clumps as hedgerows and woods 0.4-2.5 km out) only as scale references. Typical 
      the sky; dust held in the micro pits; dust and dried mud on the lower body and legs;
      damp patches; healed scars. On Charcoal that contrast (glossy crowns, matte dusty
      grooves) keeps the black hide readable in daylight.
-   * Nightwings (Leaf, Starlight) and the hatchling have no plates on the chest (`plateZ`):
+   * scale profile per look (`vor`: dome exponent, keel, groove width, tilt): the body scales are
+     FLAT-TOPPED, imbricate plates with a keel down the middle (dome exponent 5-8, not 3), so the
+     sky reflects in broad bands across many scales instead of one highlight per bead (domed
+     beads read as ceramic or cobblestone and turned black Charcoal blue-grey); granular beads
+     only at the joints and round the eyes.
+   * belly scutes (`glsl.js` dkPlates) are not graph paper: rows of uneven length, seams that bow
+     back toward the sides, per-row column widths and stagger, plates narrowing toward the
+     flanks, scratches; the border with the flank scales is decided per plate (ragged along
+     plate edges, no ruled line).
+   * wing fingers have smooth thin skin with soft transverse creases (no body-scale tier: scaled
+     fingers read as rope or scaly tubes).
+   * Leaf, Starlight and the hatchling have no plates on the chest (`plateZ`):
      the belly plates end behind the forelegs, the chest is scales (no breastplate read).
-     On the Nightwings the scales also get smaller down the flanks, over the chest and the
+     On Leaf and Starlight the scales also get smaller down the flanks, over the chest and the
      throat (`scl2.y` 0.55: from about 40% of the way round from the dorsal midline) and on
      the limbs (`CREATURES.<name>.limbScaleMul` 0.72, which sets the limb chains' scale
      unit, so the junction smoothing still grades body into limb) - as on a monitor's chest;
      the big cushions on the chest and upper arm read as plate armour.
-   * Starlight: albino white keratin, each scale a flat polished plate tilted its own way
-     (`skin3.z` facets) - glints from the sky, never emission; only a thin, slightly rough
-     polish coat (clearcoat 0.32 at roughness 0.24: the whole animal must not read as chrome);
-     a faint warm flush in the grooves (thin skin), a warmer pale belly (not grey clay);
-     white-grey membranes with soft vessels, translucency kept low.
+   * Starlight: REFLECTIVE albino white keratin (albedo ~0.6 with faint warm/cool variation),
+     each scale a flat, hard plate tilted its own way (`skin3.z` 1.0 facet tilt, flat-topped
+     profile) under a polish coat (clearcoat 0.7 at roughness 0.08) on a satin base (roughness
+     ~0.16): the sun breaks into many small glints and the sky into a mosaic of reflections -
+     never emission; crevices only a little darker than the scales (no plaster-cast AO); pale
+     grey-white membranes with a silver sheen, vessels only as soft tracery, little light
+     through them (no glow). Her lookdev shot adds a cool fill from below (the bright sky dome
+     and the haze round a flyer light its underside) and heavier aerial haze.
    * scout wound (LEFT wing torn off): an open, dark, wet patch with a ragged rim and no scale
      relief inside; the wing tears off at the humerus (the flight-muscle mass stays on the
      back), so the torn wing ends in the arm, not in a ball joint. Kept small and dark: the
      screenplay wants the loss unambiguous without a close-up of the wound.
-   * gold hatchling: reads as 24-karat gold through its tinted reflection - deep yellow gold
-     (linear 1.0/0.64/0.16, not pale brass), metallic crowns (0.7) and less metallic soft
-     grooves (0.4) at roughness ~0.5 (a broad sheen, no pin-point sparkle; the wet film does
+   * gold hatchling: reads as 24-karat gold through its METALLIC reflection - gold's own F0
+     (linear ~1.0/0.77/0.34; the earlier orange albedo read as brass, bronze or copper),
+     metallic crowns (0.8) and less metallic soft grooves (0.42) at roughness ~0.34, a
+     near-neutral key and a cool fill in its shot (warm light alone turns gold copper), a fine
+     granular scale tier on the head (`headRelief`: no smooth blob), a dark wet eye with gold
+     flecks in the iris and a slit pupil (`fleck`, `pupil`), fine lid granules (`lid.gran`) (a broad sheen, no pin-point sparkle; the wet film does
      not sharpen the base much), very low scale relief (`amp` 0.03), fine scales
      (`scaleMul` 0.72), soft pale-gold grooves instead of dark seams, almost no micro relief
      (soft, not-yet-hardened scales, no embossed cells), a wet clearcoat film on the smooth
@@ -227,24 +268,32 @@ clumps as hedgerows and woods 0.4-2.5 km out) only as scale references. Typical 
 
 ## Limb layout (decided for the provisional designs) - QUESTION FOR DAXTYN
 
-All three species are built **four legs + two wings** (a separate wing girdle
+Every dragon is built **four legs + two wings** (a separate wing girdle
 on the back, just behind and above the front shoulders, powered by a big
-dorsal/pectoral flight-muscle mass). Reasons: the canon says Nightwings "can
-sit upright like dogs" (that needs front legs), the screenplay speaks of
+dorsal/pectoral flight-muscle mass). Reasons: Leaf "can sit upright like a dog"
+in the screenplay (that needs front legs; now an open question in DRAGONS.md), the screenplay speaks of
 "limbs or wings", and Charcoal's takeoff "devastates the ground" (all four
 feet push off). Wings are bat-like: humerus, forearm, wrist, a clawed thumb and
-four long fingers carrying the membrane (propatagium in front of the arm,
-chiropatagium between the fingers, plagiopatagium back to the flank and hip).
-The layout lives in one place (`anatomy.js`), so switching a species to
+four long fingers carrying the membrane (5 digits, as in a bat: propatagium in front of the
+arm, chiropatagium between the fingers with a scalloped trailing edge, plagiopatagium back along
+the flank and down onto the THIGH, skinned to the thigh bone, with a concave free edge). Spans:
+Charcoal ~1.9x his length (wingtip 0.91 L out from the root), Leaf ~1.8x, Starlight ~1.9x with a
+broad chord, the scout ~1.6x with a narrow swift's planform. Charcoal's membrane is grey with
+black stripes (`stripe`: noise-warped bands concentric about the shoulder, swelling, pinching
+and breaking like an animal's pattern; the pigment also blocks the light through the skin).
+The layout lives in one place (`anatomy.js`), so switching a dragon to
 wings-as-forelegs (wyvern) later is a contained change, but it must then stay
 fixed for every shot ("no extra limbs", "no changing horns").
 
-**Please confirm or correct:** Do Bashions, Nightwings and Slitherwings have
-four legs plus wings, or are the wings their front legs? Also still open (from
-assets.md): horn count and placement, eye colours (all provisional here:
-Charcoal amber, Leaf yellow-green, Starlight pale pink-violet, hatchling amber,
-scout pale yellow), the scout's colours and size relative to Leaf, whether a
-Bashion hatches with visible wings, and which "size" reading to use.
+**Please confirm or correct:** do the dragons have four legs plus wings, or are the wings their
+front legs? Also still open: horn count and placement for every dragon, Starlight's and the
+hatchling's and the scout's eye colours (provisional: Starlight pale pink-violet, hatchling dark
+bronze with gold flecks, scout pale yellow), the scout's colours and size, whether the hatchling
+has visible wings, Starlight's size (51 m = 1.41x Charcoal's length vs "about twice his
+size"), how the stripes run on Charcoal's wings, and whether Leaf still sits upright like a dog.
+Approved and built (DRAGONS.md): Charcoal black / blue eyes / grey membrane with black stripes /
+orange-red fire; Leaf 25% of Charcoal / dark green / yellow eyes / light green membrane /
+purplish-blue fire.
 
 ## Cost (measured on this machine, 4 vCPU, no GPU)
 

@@ -173,7 +173,7 @@ export async function createCreature(which, opts = {}) {
       lids.push(g);
     }
     const lg = mergeParts(lids);
-    meshes.push(skinPartMesh(THREE, lg, mats.lid, `${root.name}:lids`, 'granular', anat.eyes[0].radius * 0.11, L));
+    meshes.push(skinPartMesh(THREE, lg, mats.lid, `${root.name}:lids`, 'granular', anat.eyes[0].radius * (spec.lid?.gran ?? 0.11), L));
   }
 
   // wing membranes (one mesh per wing: each gets its own folded-drape morph targets)
@@ -217,7 +217,7 @@ export async function createCreature(which, opts = {}) {
     // the membrane's body edge rides on the wing root, so the whole membrane tears away with the wing
     const mem = membrane({ ...w, attachBones: [`${w.prefix}_0`, `${w.prefix}_0`, `${w.prefix}_0`] }, boneIndex, { res: membraneRes });
     const mgeo = partGeometry(THREE, { ...mem, extra: mem.wing }, { aWing: mem.wing, aEdge: mem.edge, aBGrad: mem.bgrad });
-    const mm = new THREE.SkinnedMesh(mgeo, mats.membrane);
+    const mm = new THREE.SkinnedMesh(mgeo, mats.membraneTorn);
     mm.name = `${root.name}:wingL-membrane`;
     mm.userData.side = 'L';
     memMeshes.push(mm);
@@ -241,7 +241,7 @@ export async function createCreature(which, opts = {}) {
     setPose(p) { applyPose(creature, p); setDrape(memMeshes, p.uniforms && p.uniforms.drape); return creature; },
     membranes: memMeshes,
     /**
-     * Detachable LEFT wing (Slitherwing scout). attachWing() puts the wing's
+     * Detachable LEFT wing (the scout). attachWing() puts the wing's
      * bone subtree back on the thorax; detachWing(parent, worldMatrix) moves it
      * under `parent` (usually the scene) with the given world matrix, so it
      * can tumble away on its own. Pure: callers compute the matrix from t.
@@ -252,7 +252,7 @@ export async function createCreature(which, opts = {}) {
       if (rb.parent !== th) th.add(rb);
       const rp = creature.restPos[rb.name], tp = creature.restPos.thorax;
       rb.position.set(rp[0] - tp[0], rp[1] - tp[1], rp[2] - tp[2]);
-      mats.setPoseUniforms({ wound: { center: rp, radius: L * 0.03, amount: 0 } });
+      mats.setPoseUniforms({ wound: { center: rp, radius: L * 0.03, amount: 0 }, tear: 0 });
     },
     detachWing(parent, worldMatrix) {
       if (!detachable) return;
@@ -262,7 +262,7 @@ export async function createCreature(which, opts = {}) {
       const local = new THREE.Matrix4().copy(parent.matrixWorld).invert().multiply(worldMatrix);
       local.decompose(rb.position, rb.quaternion, rb.scale);
       rb.updateMatrixWorld(true);
-      mats.setPoseUniforms({ wound: { center: creature.restPos[rb.name], radius: L * 0.03, amount: 1 } });
+      mats.setPoseUniforms({ wound: { center: creature.restPos[rb.name], radius: L * 0.03, amount: 1 }, tear: 1 });
     },
   };
   // folded-wing drapes: relax each membrane in the standing, sitting and lying folds (drape.js)

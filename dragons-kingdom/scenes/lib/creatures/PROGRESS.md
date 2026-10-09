@@ -18,8 +18,16 @@ Done so far (checkpointed):
   plagiopatagium attached to the thigh (4 attach points, last bone hl_#_0); knuckle at 56%
   of each finger and the fold doubles the outer part back (poses.js wingFold, `fingerFold`),
   wrist low beside the shoulder: no rods past the tail base, no raised arm.
-Next: hatchling (gold F0, head scales, lids, thigh shell, wings, weak pose, straw), fire.js,
-tack rebuild, scout wing-loss staging, Starlight shot fill/haze, hero framing, renders.
+- Checkpoint 2: fire.js (orange-red 'standard' / purplish-blue 'leaf' palettes, pure in t) +
+  charcoal-fire / leaf-fire lookdev shots; tack.js (1400s tack: wool cloth, padded seat on a
+  tree with welt, cantle/pommel, girth + iron buckle, breast strap, stirrups; giants: timber
+  frame on felt, seat + backrest, wooden grab bar, broad bands with buckles, foot boards; straps
+  ignore the legs); hatchling: gold F0 metallic, granular head tier, darker eye with gold flecks,
+  sprawled weak pose (`lie` sprawl), nest bedding + opened egg from the props library, mucus
+  strands; scout wing loss: torn ragged membrane (`uTear`), snapped finger, roll to the LEFT,
+  drop, flutter; Starlight shot: cool fill from below + heavier haze; Remi at Charcoal's depth;
+  contact sheet + 3 spread-wing glide frames (21-23); README updated.
+Next: preview review of all shots + contact, then 4K finals (output/cr/s5final, s5contact).
 
 
 ## Done (committed)
