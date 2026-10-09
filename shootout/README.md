@@ -25,5 +25,5 @@ Last one alive wins; if you're shot, you lose.
 | Card | Effect |
 |---|---|
 | Jack of Trades | 10% of hands get one. Play it and you win instantly. |
-| Bloody Mary | Forces a shootout right away. |
+| Bloody Mary | 20% of hands get one. Forces a shootout right away. |
 | Gun, Grenade, Nuclear, Block, Reverse, 1, 2, 3 | Not written yet. |

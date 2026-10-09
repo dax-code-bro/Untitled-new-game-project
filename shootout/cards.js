@@ -4,8 +4,8 @@
 // real behaviour will go.
 
 const CARDS = [
-  { id: 'jack',     name: 'Jack of Trades', icon: '🃏', corner: 'J',  style: '',         effect: 'Play it and you win the game on the spot.', instantWin: true },
-  { id: 'bloody',   name: 'Bloody Mary',    icon: '🩸', corner: 'BM', style: 'dark red', effect: 'Forces a shootout right now: everyone must shoot themself or someone else.', forcesShootout: true },
+  { id: 'jack',     name: 'Jack of Trades', icon: '🃏', corner: 'J',  style: '',         effect: 'Play it and you win the game on the spot.', instantWin: true, handChance: 0.10 },
+  { id: 'bloody',   name: 'Bloody Mary',    icon: '🩸', corner: 'BM', style: 'dark red', effect: 'Forces a shootout right now: everyone must shoot themself or someone else.', forcesShootout: true, handChance: 0.20 },
   { id: 'gun',      name: 'Gun',            icon: '🔫', corner: 'G',  style: '',         effect: 'Effect not written yet.' },
   { id: 'grenade',  name: 'Grenade',        icon: '💣', corner: 'GR', style: '',         effect: 'Effect not written yet.' },
   { id: 'nuclear',  name: 'Nuclear',        icon: '☢️', corner: 'N',  style: 'dark',     effect: 'Effect not written yet.' },
@@ -20,19 +20,21 @@ const CARD_BY_ID = Object.fromEntries(CARDS.map(c => [c.id, c]));
 
 const HAND_SIZE = 10;
 
-// Chance that a dealt hand contains the Jack of Trades (at most one per hand).
-const JACK_CHANCE = 0.10;
-
 // Deal a random hand. Regular cards are drawn at random, so a hand can hold
-// repeats; the Jack of Trades is rolled separately so it stays rare.
+// repeats. Rare cards (those with a `handChance`) are rolled separately: each
+// has that chance of showing up once in a hand, and never more than once.
 function dealHand(size = HAND_SIZE) {
-  const regular = CARDS.filter(c => c.id !== 'jack');
+  const regular = CARDS.filter(c => !c.handChance);
   const hand = [];
   for (let i = 0; i < size; i++) {
     hand.push(regular[Math.floor(Math.random() * regular.length)].id);
   }
-  if (Math.random() < JACK_CHANCE) {
-    hand[Math.floor(Math.random() * size)] = 'jack';
+  const freeSlots = [...hand.keys()];
+  for (const rare of CARDS.filter(c => c.handChance)) {
+    if (Math.random() < rare.handChance) {
+      const [slot] = freeSlots.splice(Math.floor(Math.random() * freeSlots.length), 1);
+      hand[slot] = rare.id;
+    }
   }
   return hand;
 }
