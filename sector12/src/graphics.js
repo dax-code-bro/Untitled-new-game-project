@@ -342,9 +342,12 @@ export class Graphics {
       this.cloudU.ambient.value.copy(a.zenith).lerp(a.horizon, 0.5);
     }
     // re-capture the sky for reflections every few seconds
+    // only when the sky has visibly changed (sun moved, weather rolled in), reusing one target
     this.envT -= dt;
-    if (this.envT <= 0) {
+    const sig = a.sunDir.x * 7 + a.sunDir.y * 13 + a.sunDir.z * 17 + a.night * 3 + a.haze * 5 + (a.cloudCover || 0) * 2;
+    if (this.envT <= 0 && (this.envSig === undefined || Math.abs(sig - this.envSig) > 0.08)) {
       this.envT = 4;
+      this.envSig = sig;
       if (this.envRT) this.envRT.dispose();
       this.envRT = this.pmrem.fromScene(this.envScene, 0, 0.1, 100);
       this.scene.environment = this.envRT.texture;
