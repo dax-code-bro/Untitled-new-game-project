@@ -271,7 +271,10 @@ export async function createCreature(which, opts = {}) {
       mats.setPoseUniforms({ wound: { center: creature.restPos[rb.name], radius: L * 0.03, amount: 1 }, tear: 1 });
     },
   };
-  // folded-wing drapes: relax each membrane in the standing, sitting and lying folds (drape.js)
+  // folded-wing drapes: relax each membrane in the standing, sitting and lying folds (drape.js).
+  // The elastic skin contracts hard (shrink ~0.26-0.3) and hardly sags (gravity ~0): it pleats
+  // tight between the bundled fingers - a slack skirt hanging to the knee read as a tarp.
+  // cfg.drapeOpts = { stand|sit|lie: { shrink, gravity } } overrides per dragon.
   if (opts.drape !== false) {
     const td = nowMs();
     const variants = { stand: (c) => P.stand(c, { t: 0, blink: false, breathe: 0 }), sit: (c) => P.sit(c, { t: 0, blink: false, breathe: 0 }), lie: (c) => P.lie(c, { t: 0, blink: false, breathe: 0 }) };
@@ -282,7 +285,7 @@ export async function createCreature(which, opts = {}) {
       applyPose(creature, variants[vn](creature));
       creature.root.updateMatrixWorld(true);
       for (const mm of memMeshes) {
-        const d = drapeMembrane(creature, mm, { res: membraneRes, side: mm.userData.side === 'L' ? 1 : -1, ground: 0, iters: q.drapeIters, ...(vn === 'sit' ? { shrink: 0.36, gravity: 0.02 } : { shrink: 0.34, gravity: 0.03 }) });
+        const d = drapeMembrane(creature, mm, { res: membraneRes, side: mm.userData.side === 'L' ? 1 : -1, ground: 0, iters: q.drapeIters, ...(vn === 'sit' ? { shrink: 0.3, gravity: 0.004 } : { shrink: 0.26, gravity: 0.002 }), ...((cfg.drapeOpts && cfg.drapeOpts[vn]) || {}) });
         res[mm.uuid].pos.push(new THREE.BufferAttribute(d.delta, 3));
         res[mm.uuid].nrm.push(new THREE.BufferAttribute(d.dnormal, 3));
       }
