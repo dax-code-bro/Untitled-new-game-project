@@ -4,6 +4,24 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## Fix round 1 (session 5, after the critic + Daxtyn's DRAGONS.md decisions) - IN PROGRESS
+Done so far (checkpointed):
+- No species any more: anatomy.js `DESIGNS.charcoal/leaf/starlight/hatchling/scout` (each its
+  own preset; Leaf: compact, short neck/tail, round deep skull, own horns; Starlight: broad
+  heavy chest, long neck/tail, broad flat skull, own horn crown); CREATURES use `design`;
+  Leaf L = 9.0 m (25% of Charcoal). `SPECIES` export renamed `DESIGNS`.
+- Approved looks: Charcoal black (albedo ~0.012), BLUE iris, GRAY membrane with BLACK STRIPES
+  (membraneMaterial `uStripe`); Leaf dark green, YELLOW iris, LIGHT GREEN membrane.
+- Scale profile per look `vor` (flat-topped plates + keel, uVor), irregular belly scutes
+  (glsl.js dkPlates), smooth finger skin (no scales on wing fingers), soft neck folds.
+- Wings: span ~1.9 L (Charcoal), ~1.8 L (Leaf/Starlight broad chord), ~1.6 L narrow (scout);
+  plagiopatagium attached to the thigh (4 attach points, last bone hl_#_0); knuckle at 56%
+  of each finger and the fold doubles the outer part back (poses.js wingFold, `fingerFold`),
+  wrist low beside the shoulder: no rods past the tail base, no raised arm.
+Next: hatchling (gold F0, head scales, lids, thigh shell, wings, weak pose, straw), fire.js,
+tack rebuild, scout wing-loss staging, Starlight shot fill/haze, hero framing, renders.
+
+
 ## Done (committed)
 - Charcoal (Bashion): anatomy rework (heavy musculature, head, horns, tail, dorsal ridge), 3D
   Voronoi scale mosaic with size hierarchy, tubercles, dorsal scutes, belly plates, wear,

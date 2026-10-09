@@ -1,13 +1,14 @@
 // Procedural dragon anatomy: skeleton + SDF sculpt + part layout.
 //
-// PROVISIONAL DESIGN (see README.md in this folder): every species uses the
-// same limb layout - FOUR LEGS + TWO WINGS (a hexapod "classic" dragon). The
-// wings are a separate, third girdle on the back, just behind and above the
-// front shoulders, driven by a large dorsal/pectoral flight-muscle mass. This
-// is the layout the canon needs ("Nightwings can sit upright like dogs" with
-// forelegs straight, legs that dig in for takeoff, "limbs or wings" in the
-// screenplay). Whether Daxtyn's species are four-legged + wings or wyverns is
-// an open question for him; the generator keeps limb layout in one place.
+// Every dragon is its OWN design (Daxtyn scrapped the species on 2026-10-09, see
+// DRAGONS.md): DESIGNS.charcoal, .leaf, .starlight, .hatchling and .scout are separate
+// presets with their own proportions, skull, horn set, limbs and wings. PROVISIONAL
+// (see README.md in this folder): every design uses the limb layout FOUR LEGS + TWO
+// WINGS (a hexapod "classic" dragon). The wings are a separate, third girdle on the
+// back, just behind and above the front shoulders, driven by a large dorsal/pectoral
+// flight-muscle mass (legs that dig in for takeoff, an upright dog-sit for Leaf,
+// "limbs or wings" in the screenplay). Whether Daxtyn wants four legs + wings or
+// wyverns is an open question for him; the generator keeps limb layout in one place.
 //
 // Conventions (assets.json): metres, +y up, the creature faces +z, its LEFT is
 // +x. Everything here is in the REST pose: standing, neck raised a little,
@@ -87,7 +88,7 @@ function bez(a, b, c, n) {
 const deg = Math.PI / 180;
 const hsh = (i, k) => { const x = Math.sin(i * 127.1 + k * 311.7 + 0.5) * 43758.5453; return x - Math.floor(x); };
 
-// ------------------------------------------------------------ species presets
+// ------------------------------------------------------------ design presets
 // Lengths: fractions of L. Profiles: [s, halfWidth, halfHeight, drop] where drop
 // moves the cross-section centre below the dorsal spine line (deep chest).
 //   neckProfile s: 0 = behind the head .. 1 = withers; torsoProfile s: 0 = withers .. 1 = pelvis;
@@ -101,9 +102,9 @@ const hsh = (i, k) => { const x = Math.sin(i * 127.1 + k * 311.7 + 0.5) * 43758.
 // Head: loft keys [z, halfWidth, top, bottom] in head lengths (z: 0 = skull
 //       joint, 1 = snout tip); `jaw` the same for the closed lower jaw.
 // muscle: multipliers for the muscle groups (1 = an athletic adult).
-export const SPECIES = {
-  bashion: {
-    species: 'Bashion',
+const SKETCH = {
+  charcoal: {
+    design: 'Charcoal',
     head: 0.118, neck: 0.168, torso: 0.258, neckSegs: 10, tailSegs: 24,
     hipY: 0.214, withersY: 0.232, backArch: 0.01, neckPitch: 26 * deg, headPitch: -27 * deg, tailDroop: 14 * deg, tailCurve: 0.6,
     neckProfile: [[0, 0.023, 0.026, 0.002], [0.3, 0.028, 0.031, 0.004], [0.65, 0.037, 0.043, 0.01], [1, 0.056, 0.066, 0.025]],
@@ -113,10 +114,12 @@ export const SPECIES = {
       r: [0.032, 0.025, 0.0195, 0.017], toeLen: 0.038, toeR: [0.0095, 0.006], toeSpread: 15, toes: 4, muscle: 1.0 },
     hind: { hip: [0.045, -0.026, 0.01], knee: [0.058, 0.128, 0.05], ankle: [0.055, 0.066, -0.022], ball: [0.055, 0.012, 0.002],
       r: [0.037, 0.026, 0.019, 0.017], toeLen: 0.04, toeR: [0.0098, 0.0062], toeSpread: 14, toes: 4, muscle: 1.0 },
-    wing: { root: [0.032, 0.006, 0.8], elbow: [0.152, 0.016, -0.05], wrist: [0.315, 0.025, -0.01],
-      digits: [[0.66, 0.02, 0.035], [0.615, 0.012, -0.135], [0.515, 0.004, -0.255], [0.385, -0.004, -0.325]],
-      thumb: [0.011, 0.007, 0.016], r: [0.0155, 0.0092, 0.0078], fingerR: [0.005, 0.0015], muscle: 0.92,
-      attach: [[0.006, -0.014, -0.03], [0.014, -0.034, -0.11], [0.017, -0.047, -0.19]], billow: 0.035 },
+    // a span of ~1.9 L (an animal this heavy needs it): the wingtip 0.91 L out from the root
+    wing: { root: [0.032, 0.006, 0.8], elbow: [0.17, 0.02, -0.06], wrist: [0.4, 0.03, -0.015],
+      digits: [[0.91, 0.025, 0.0], [0.84, 0.016, -0.2], [0.69, 0.006, -0.37], [0.5, -0.004, -0.46]],
+      thumb: [0.012, 0.008, 0.018], r: [0.0165, 0.0098, 0.0082], fingerR: [0.0056, 0.0014], muscle: 1.0,
+      // the membrane's body edge: armpit, along the flank, down onto the thigh (bat-like)
+      attach: [[0.006, -0.014, -0.03], [0.018, -0.04, -0.11], [0.028, -0.058, -0.17], [0.048, -0.078, -0.2]], billow: 0.035 },
     headShape: {
       // a deep, heavy head: a high crown and brow, a broad deep snout (not a crocodile's flat
       // one) with a nasal bump, a massive lower jaw
@@ -127,13 +130,14 @@ export const SPECIES = {
       eye: [0.238, 0.118, 0.27], eyeR: 0.055, eyeInset: 0.5, eyeExpose: 56, brow: 1.75, cheek: 1.15, jawMuscle: 1.2, ridgeR: 0.024, hinge: [0, -0.09, 0.035], gape0: 14 * deg, nostril: 1.15,
       teethUp: 15, teethSize: 0.06, lipCover: 0.55, tympanum: 1,
     },
-    horns: 'bashion', crest: { count: 92, h: [0.0085, 0.017, 0.0065], base: 1.15 },
+    horns: 'charcoal', crest: { count: 92, h: [0.0085, 0.017, 0.0065], base: 1.15 },
     scale: { body: 0.0042, belly: 0.012, head: 0.0032 },   // scale width in L units at the chain's median radius
     muscle: { shoulder: 1.1, arm: 1.1, pec: 1.05, thigh: 1.05, tailbase: 1.1, belly: 0.62, neck: 1.1, wing: 1.0 },
     folds: { throat: 2, axilla: 0, stifle: 0, neck: 2, tail: 3 },
   },
+  // (the first sketch Leaf and Starlight were derived from; each now has its own preset below)
   nightwing: {
-    species: 'Nightwing',
+    design: 'sketch',
     head: 0.105, neck: 0.155, torso: 0.235, neckSegs: 12, tailSegs: 26,
     hipY: 0.21, withersY: 0.225, backArch: 0.008, neckPitch: 24 * deg, headPitch: -27 * deg, tailDroop: 12 * deg, tailCurve: 0.5,
     neckProfile: [[0, 0.02, 0.026, 0.001], [0.3, 0.025, 0.032, 0.003], [0.7, 0.032, 0.041, 0.008], [1, 0.043, 0.054, 0.017]],
@@ -143,10 +147,10 @@ export const SPECIES = {
       r: [0.026, 0.0185, 0.0135, 0.0122], toeLen: 0.029, toeR: [0.0061, 0.0036], toeSpread: 15, toes: 4, muscle: 1.0 },
     hind: { hip: [0.034, -0.02, 0.008], knee: [0.044, 0.125, 0.05], ankle: [0.042, 0.062, -0.024], ball: [0.042, 0.008, -0.002],
       r: [0.032, 0.0205, 0.0138, 0.0122], toeLen: 0.032, toeR: [0.0063, 0.0037], toeSpread: 14, toes: 4, muscle: 1.0 },
-    wing: { root: [0.027, 0.006, 0.8], elbow: [0.152, 0.016, -0.05], wrist: [0.322, 0.025, -0.01],
-      digits: [[0.765, 0.02, 0.03], [0.71, 0.012, -0.155], [0.59, 0.004, -0.29], [0.44, -0.004, -0.36]],
-      thumb: [0.01, 0.006, 0.015], r: [0.0158, 0.0098, 0.0076], fingerR: [0.0046, 0.0013], muscle: 1.0,
-      attach: [[0.005, -0.012, -0.03], [0.011, -0.028, -0.1], [0.013, -0.04, -0.175]], billow: 0.04 },
+    wing: { root: [0.027, 0.006, 0.8], elbow: [0.165, 0.016, -0.055], wrist: [0.37, 0.025, -0.012],
+      digits: [[0.87, 0.02, 0.02], [0.8, 0.012, -0.185], [0.66, 0.004, -0.34], [0.48, -0.004, -0.42]],
+      thumb: [0.01, 0.006, 0.015], r: [0.0158, 0.0098, 0.0076], fingerR: [0.0046, 0.0012], muscle: 1.0,
+      attach: [[0.005, -0.012, -0.03], [0.014, -0.032, -0.1], [0.022, -0.05, -0.16], [0.04, -0.075, -0.19]], billow: 0.04 },
     headShape: {
       // the same reptile plan as the Bashion but lighter: a high brow over big (nocturnal)
       // eyes, a moderate, slightly tapering snout with a little nasal rise (never a horse's
@@ -163,8 +167,8 @@ export const SPECIES = {
     muscle: { shoulder: 1, arm: 1, pec: 1, thigh: 1, tailbase: 1, belly: 0.9, neck: 1, wing: 1.05 },
     folds: { throat: 3, axilla: 0, stifle: 0, neck: 2, tail: 2 },
   },
-  slitherwing: {
-    species: 'Slitherwing',
+  scout: {
+    design: 'Scout',
     head: 0.062, neck: 0.16, torso: 0.215, neckSegs: 10, tailSegs: 30,
     hipY: 0.1, withersY: 0.106, backArch: 0.004, neckPitch: 12 * deg, headPitch: -14 * deg, tailDroop: 4 * deg, tailCurve: 0.3,
     neckProfile: [[0, 0.0145, 0.0135, 0.0], [0.5, 0.017, 0.0165, 0.002], [1, 0.024, 0.023, 0.006]],
@@ -175,9 +179,9 @@ export const SPECIES = {
     hind: { hip: [0.023, -0.02, 0.0], knee: [0.031, 0.054, 0.028], ankle: [0.029, 0.023, -0.012], ball: [0.029, 0.005, 0.003],
       r: [0.013, 0.008, 0.0052, 0.0046], toeLen: 0.015, toeR: [0.0028, 0.0015], toeSpread: 14, toes: 4, muscle: 0.7 },
     // narrow, swept, high-aspect wings set far forward (a swift's wing, not a bat's)
-    wing: { root: [0.02, 0.007, 1.0], elbow: [0.1, 0.01, -0.05], wrist: [0.235, 0.016, -0.06],
-      digits: [[0.6, 0.012, -0.13], [0.54, 0.008, -0.19], [0.42, 0.004, -0.215], [0.3, 0.0, -0.22]],
-      thumb: [0.014, 0.006, 0.02], r: [0.011, 0.0068, 0.0055], fingerR: [0.0032, 0.0009], muscle: 0.85,
+    wing: { root: [0.02, 0.007, 1.0], elbow: [0.12, 0.01, -0.06], wrist: [0.29, 0.016, -0.075],
+      digits: [[0.78, 0.012, -0.19], [0.69, 0.008, -0.255], [0.52, 0.004, -0.28], [0.36, 0.0, -0.27]],
+      thumb: [0.014, 0.006, 0.02], r: [0.011, 0.0068, 0.0055], fingerR: [0.003, 0.0008], muscle: 0.95,
       attach: [[0.004, -0.007, -0.03], [0.006, -0.012, -0.075], [0.007, -0.015, -0.12]], billow: 0.03 },
     headShape: {
       upper: [[-0.1, 0.16, 0.085, -0.08], [0.05, 0.172, 0.105, -0.066], [0.2, 0.168, 0.112, -0.06], [0.35, 0.146, 0.104, -0.058], [0.5, 0.12, 0.088, -0.056],
@@ -186,22 +190,22 @@ export const SPECIES = {
       eye: [0.15, 0.065, 0.36], eyeR: 0.066, eyeInset: 0.58, brow: 0.6, cheek: 0.5, jawMuscle: 0.6, ridgeR: 0.018, hinge: [0, -0.07, 0.06], gape0: 13 * deg, nostril: 0.7,
       teethUp: 16, teethSize: 0.045, lipCover: 0.45, tympanum: 0.6,
     },
-    horns: 'slitherwing', crest: { count: 120, h: [0.0012, 0.0028, 0.001], base: 1.0 },
+    horns: 'scout', crest: { count: 120, h: [0.0012, 0.0028, 0.001], base: 1.0 },
     scale: { body: 0.0035, belly: 0.008, head: 0.0026 },
     muscle: { shoulder: 0.8, arm: 0.8, pec: 0.85, thigh: 0.8, tailbase: 0.9, belly: 0.6, neck: 0.85, wing: 1.1 },
     folds: { throat: 2, axilla: 1, stifle: 1, neck: 1, tail: 0 },
   },
 };
 
-// Newborn Bashion: a big rounded head with a short snout and huge eyes, a short
+// The gold hatchling (its own design): a big rounded head with a short snout and huge eyes, a short
 // neck, a plump body with a soft belly (yolk scar), short weak legs with soft
 // claws, a short curled tail, tiny damp wings held folded, horn buds and an egg
 // tooth on the snout. Proportions after newborn crocodilians and monitor
 // hatchlings (head about a fifth of the snout-vent length, eyes ~40% of the
 // head height).
-SPECIES.bashion_hatchling = {
-  ...SPECIES.bashion,
-  species: 'Bashion (hatchling)',
+SKETCH.hatchling = {
+  ...SKETCH.charcoal,
+  design: 'Gold hatchling',
   head: 0.17, neck: 0.064, torso: 0.262, neckSegs: 8, tailSegs: 18,
   hipY: 0.128, withersY: 0.136, backArch: 0.018, neckPitch: 18 * deg, headPitch: -22 * deg, tailDroop: 20 * deg, tailCurve: 0.65,
   neckProfile: [[0, 0.05, 0.055, 0.004], [0.5, 0.054, 0.06, 0.009], [1, 0.064, 0.07, 0.02]],
@@ -235,6 +239,85 @@ SPECIES.bashion_hatchling = {
   muscle: { shoulder: 0.45, arm: 0.4, pec: 0.5, thigh: 0.45, tailbase: 0.7, belly: 1.4, neck: 0.6, wing: 0.35 },
   folds: { throat: 2, axilla: 0, stifle: 0, neck: 2, tail: 0, soft: true },
   surfaceNoise: 0.001,
+};
+
+// ------------------------------------------------- per-dragon designs
+/**
+ * Allometry: how a body plan changes with age and size (real animals scale this way).
+ *   young: relatively bigger head and eyes, shorter snout and horns, slimmer neck, lighter muscles
+ *   giant: relatively smaller head and eyes, thicker neck and legs, heavier muscles
+ */
+function grow(spec, a) {
+  const s = JSON.parse(JSON.stringify(spec));
+  for (const k of ['neckPitch', 'headPitch', 'tailDroop']) s[k] = spec[k];
+  s.headShape.gape0 = spec.headShape.gape0;
+  s.head = spec.head * a.head;
+  s.neck = spec.neck * (a.head > 1 ? 0.97 : 1.0);
+  s.headShape.eyeR = spec.headShape.eyeR * a.eye;
+  const sq = (keys) => keys.map(([z, ...r]) => [z > 0.4 ? 0.4 + (z - 0.4) * a.snout : z, ...r]);
+  s.headShape.upper = sq(spec.headShape.upper);
+  s.headShape.jaw = sq(spec.headShape.jaw);
+  s.neckProfile = spec.neckProfile.map(([z, w, h, d]) => [z, w * a.neckW, h * a.neckW, d]);
+  for (const leg of ['front', 'hind']) s[leg].r = spec[leg].r.map((r) => r * a.limb);
+  s.muscle = Object.fromEntries(Object.entries(spec.muscle || {}).map(([k, v]) => [k, v * (k === 'wing' ? 1 : a.muscle)]));
+  s.crest = { ...spec.crest, h: spec.crest.h.map((v) => v * a.crest) };
+  s.hornScale = a.horn;
+  return s;
+}
+const YOUNG = { head: 1.14, eye: 1.18, snout: 0.86, horn: 0.86, neckW: 0.96, limb: 0.94, muscle: 0.88, crest: 0.8 };
+const GIANT = { head: 0.94, eye: 0.84, snout: 1.02, horn: 1.12, neckW: 1.06, limb: 1.08, muscle: 1.06, crest: 1.1 };
+const mapKeys = (keys, f) => keys.map((k) => f(...k));
+
+/** Leaf: a compact, not fully grown dragon - short neck and tail, a round deep skull, big eyes. */
+function leafDesign() {
+  const s = grow(SKETCH.nightwing, YOUNG);
+  s.design = 'Leaf';
+  Object.assign(s, { head: 0.12, neck: 0.13, torso: 0.26, neckSegs: 10, tailSegs: 24, neckPitch: 28 * deg });
+  s.torsoProfile = mapKeys(s.torsoProfile, (z, w, h, d) => [z, w * 1.05, h * 1.03, d]);
+  s.neckProfile = mapKeys(s.neckProfile, (z, w, h, d) => [z, w * 1.04, h * 1.04, d]);
+  s.tailProfile = mapKeys(s.tailProfile, (z, w, h, d) => [z, w * 1.04, h * 1.04, d]);
+  // a rounder, deeper cranium over big eyes; a short snout
+  s.headShape.upper = mapKeys(s.headShape.upper, (z, w, top, bot) => [z, w * (z < 0.4 ? 1.05 : 1.0), top * (z < 0.4 ? 1.12 : 1.04), bot]);
+  s.headShape.eyeR *= 1.04;
+  s.headShape.lipCover = 0.6;          // (0.85 drew a continuous rolled "frog smile")
+  s.headShape.nostril = 0.95;
+  s.horns = 'leaf';
+  s.crest = { ...s.crest, count: 84 };
+  return s;
+}
+
+/** Starlight: an immense albino - broad heavy chest, long neck and tail, a broad flat skull. */
+function starlightDesign() {
+  const s = grow(SKETCH.nightwing, GIANT);
+  s.design = 'Starlight';
+  Object.assign(s, { head: 0.088, neck: 0.172, torso: 0.232, neckSegs: 14, tailSegs: 28, neckPitch: 20 * deg, headPitch: -24 * deg });
+  s.torsoProfile = mapKeys(s.torsoProfile, (z, w, h, d) => [z, w * (z < 0.5 ? 1.18 : 1.08), h * (z < 0.5 ? 1.08 : 1.04), d * (z < 0.5 ? 1.08 : 1)]);
+  s.neckProfile = mapKeys(s.neckProfile, (z, w, h, d) => [z, w * 1.08, h * 0.98, d]);
+  // a broad, flat skull (no long deep "horse face"): wider, lower, a blunt broad snout
+  s.headShape.upper = mapKeys(s.headShape.upper, (z, w, top, bot) => [z, w * (z > 0.5 ? 1.24 : 1.16), top * (z > 0.5 ? 0.8 : 0.86), bot]);
+  s.headShape.jaw = mapKeys(s.headShape.jaw, (z, w, top, bot) => [z, w * (z > 0.5 ? 1.22 : 1.15), top, bot * 0.88]);
+  s.headShape.brow = 1.5;
+  s.headShape.cheek = 1.1;
+  s.headShape.jawMuscle = 1.05;
+  s.headShape.nostril = 1.0;
+  s.headShape.lipCover = 0.55;
+  // a broad-chord wing for the heaviest animal: long fingers, a deep plagiopatagium to the thigh
+  s.wing = { ...s.wing, elbow: [0.17, 0.016, -0.055], wrist: [0.39, 0.025, -0.012],
+    digits: [[0.92, 0.02, 0.0], [0.86, 0.012, -0.24], [0.71, 0.004, -0.43], [0.5, -0.004, -0.52]],
+    attach: [[0.005, -0.012, -0.03], [0.016, -0.034, -0.1], [0.026, -0.054, -0.16], [0.045, -0.08, -0.2]] };
+  s.horns = 'starlight';
+  s.crest = { ...s.crest, count: 124, h: s.crest.h.map((v) => v * 0.9) };
+  s.folds = { ...s.folds, neck: 0 };     // (canon: no wounds - deep neck folds read as gashes)
+  return s;
+}
+
+/** The Episode 1 dragons: each its own design (DRAGONS.md). */
+export const DESIGNS = {
+  charcoal: grow(SKETCH.charcoal, GIANT),
+  leaf: leafDesign(),
+  starlight: starlightDesign(),
+  hatchling: SKETCH.hatchling,
+  scout: SKETCH.scout,
 };
 
 // ------------------------------------------------------------- the builder
@@ -522,11 +605,12 @@ export function buildAnatomy(spec, L, opts = {}) {
       const span = sub(tip, Wr), sl = len(span);
       const bow = (di === 0 ? 0.015 : 0.045) * sl;
       // phalanges shorten toward the tip (bat-like proportions)
-      const pts = [0, 0.44, 0.76, 1].map((f) => add(lerp3(Wr, tip, f), scale(back, bow * Math.sin(Math.PI * f))));
+      // (the knuckle at half the finger: folded, the outer half doubles back along the inner half)
+      const pts = [0, 0.56, 0.84, 1].map((f) => add(lerp3(Wr, tip, f), scale(back, bow * Math.sin(Math.PI * f))));
       const names = [0, 1, 2].map((j) => `${pre}_f${di}_${j}`);
       names.forEach((n, j) => bone(n, j === 0 ? `${pre}_2` : names[j - 1], sv(pts[j])));
       const rr = Wp.fingerR;
-      const radii = [0, 0.44, 0.76, 1].map((f) => S(mix(rr[0] * (di === 0 ? 1.18 : 1 - di * 0.07), rr[1], Math.pow(f, 0.75))));
+      const radii = [0, 0.56, 0.84, 1].map((f) => S(mix(rr[0] * (di === 0 ? 1.18 : 1 - di * 0.07), rr[1], Math.pow(f, 0.75))));
       fingers.push({ names, points: pts.map(sv), radii, tipBone: names[2] });
     });
     // thumb with a claw
@@ -538,7 +622,10 @@ export function buildAnatomy(spec, L, opts = {}) {
       points: [sv(th), sv(add(th, scale(add(thd, [0, 0.4, 0]), Wp.fingerR[0] * 1.6))), sv(add(th, add(scale(thd, Wp.fingerR[0] * 2.6), [0, -Wp.fingerR[0] * 1.3, 0])))],
       radii: [S(Wp.fingerR[0] * 0.95), S(Wp.fingerR[0] * 0.6), S(Wp.fingerR[0] * 0.08)], flat: 0.7, up: [0, 1, 0] });
     const attach = Wp.attach.map((q) => sv(rel(q)));
-    wings.push({ side, sd, prefix: pre, root: sv(R), elbow: sv(E), wrist: sv(Wr), fingers, attach, attachBones: ['thorax', 'rib_body', 'pelvis'],
+    // one bone per attachment segment: chest, flank, and (4 points) the thigh, so the membrane's
+    // trailing root rides on the leg as a bat's does
+    const attachBones = attach.length >= 4 ? ['thorax', 'rib_body', `hl_${side}_0`] : ['thorax', 'rib_body', 'pelvis'];
+    wings.push({ side, sd, prefix: pre, root: sv(R), elbow: sv(E), wrist: sv(Wr), fingers, attach, attachBones,
       thumb: sv(th), billow: S(Wp.billow), detachedSDF: detachable ? target : null });
   }
 
@@ -583,7 +670,8 @@ export function buildAnatomy(spec, L, opts = {}) {
         const a = mix(-0.92, -0.08, k / 8) * Math.PI + (hsh(i, k) - 0.5) * 0.08;
         path.push(add(sc.c, add(scale(sc.side, Math.cos(a) * sc.hw * 1.05), scale(sc.up, Math.sin(a) * sc.hh * 1.05))));
       }
-      fold(path, Math.min(sc.hw, sc.hh) * 0.09 * (soft ? 1.4 : 1), scale(sc.tan, 1), { bone: boneAtD(dAtNeck(s)), tag: 'neck' });
+      // (broad, shallow creases that the scales run into - deep narrow grooves read as gashes)
+      fold(path, Math.min(sc.hw, sc.hh) * 0.15 * (soft ? 1.0 : 1), scale(sc.tan, 1), { bone: boneAtD(dAtNeck(s)), tag: 'neck', depth: 0.2, lip: 0.45 });
     }
     // neck-base folds (where the neck meets the shoulders), lower sides only
     const nNeck = F.neck ?? 0;
@@ -596,7 +684,7 @@ export function buildAnatomy(spec, L, opts = {}) {
           const a = mix(-0.55, 0.25, k / 6) * Math.PI * 0.5;
           path.push(add(sc.c, add(scale(sc.side, sd * Math.cos(a) * sc.hw * 1.05), scale(sc.up, Math.sin(a) * sc.hh * 1.05))));
         }
-        fold(path, Math.min(sc.hw, sc.hh) * 0.08, scale(sc.tan, 1), { bone: boneAtD(dAtNeck(s)), tag: 'neck' });
+        fold(path, Math.min(sc.hw, sc.hh) * 0.14, scale(sc.tan, 1), { bone: boneAtD(dAtNeck(s)), tag: 'neck', depth: 0.18, lip: 0.4 });
       }
     }
     for (const sd of [1, -1]) {
@@ -971,21 +1059,40 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
 
   // ---- horns (fixed arrangement per species; never changes between shots). They sweep
   // back along the line of the neck and curve down at the tip - never up like ears.
-  const horn = (p0, p1, p2, r0, r1, tag = 'horn') => keratin.push({ kind: 'horn', bone: 'head', tag, points: [W(...p0), W(...p1), W(...p2)], radii: [r0 * H, r1 * H, r0 * 0.05 * H], flat: 0.82, up: ey, rings: tag === 'horn' });
+  const horn = (p0, p1, p2, r0, r1, tag = 'horn') => {
+    keratin.push({ kind: 'horn', bone: 'head', tag, points: [W(...p0), W(...p1), W(...p2)], radii: [r0 * H, r1 * H, r0 * 0.05 * H], flat: 0.82, up: ey, rings: tag === 'horn' });
+    // the keratin sheath flares into a rough burr where it grows out of the skin (no cone
+    // simply stuck on); only on real horns
+    if (tag === 'horn' && !hs.soft) {
+      const d = norm(sub(p1, p0)), q0 = [p0[0] - d[0] * r0 * 0.5, p0[1] - d[1] * r0 * 0.5, p0[2] - d[2] * r0 * 0.5], q2 = [p0[0] + d[0] * r0 * 0.9, p0[1] + d[1] * r0 * 0.9, p0[2] + d[2] * r0 * 0.9];
+      keratin.push({ kind: 'horn', bone: 'head', tag: 'burr', points: [W(...q0), W(...p0), W(...q2)], radii: [r0 * 1.32 * H, r0 * 1.22 * H, r0 * 1.02 * H], flat: 0.8, up: ey, rings: true, burr: true });
+    }
+  };
   for (const sd of [1, -1]) {
-    if (spec.horns === 'bashion') {
+    if (spec.horns === 'charcoal') {
       // one heavy pair from the crown, swept back over the neck and curving down at the tips
       // (reads in silhouette), a shorter pair behind the eyes, two spurs on the jaw angle
       horn([sd * 0.13, 0.18, 0.09], [sd * 0.235, 0.27, -0.25], [sd * 0.315, 0.17, -0.66], 0.08, 0.05);
       horn([sd * 0.22, 0.1, 0.05], [sd * 0.29, 0.1, -0.13], [sd * 0.325, 0.0, -0.3], 0.042, 0.026);
       for (let i = 0; i < 2; i++) horn([sd * (0.215 + i * 0.012), -0.2 - i * 0.04, 0.03 - i * 0.07], [sd * (0.26 + i * 0.012), -0.23 - i * 0.04, -0.05 - i * 0.07], [sd * (0.28 + i * 0.012), -0.27 - i * 0.045, -0.13 - i * 0.07], 0.026 - i * 0.004, 0.015, 'spur');
+    } else if (spec.horns === 'leaf') {
+      // Leaf: one short, thick pair from the back of the skull, curving back and down (a young
+      // animal's horns), a small pair behind the eyes; no cheek or jaw spurs
+      horn([sd * 0.12, 0.17, 0.06], [sd * 0.2, 0.2, -0.18], [sd * 0.25, 0.07, -0.45], 0.062, 0.038);
+      horn([sd * 0.185, 0.075, 0.04], [sd * 0.235, 0.065, -0.07], [sd * 0.255, 0.015, -0.17], 0.03, 0.019);
+    } else if (spec.horns === 'starlight') {
+      // Starlight: a broad crown - a wide flat pair sweeping back and OUT from the skull corners,
+      // a slimmer pair above it over the neck, three short blunt spines along each cheek
+      horn([sd * 0.16, 0.12, 0.06], [sd * 0.31, 0.14, -0.2], [sd * 0.4, 0.05, -0.52], 0.058, 0.036);
+      horn([sd * 0.075, 0.15, 0.1], [sd * 0.115, 0.21, -0.15], [sd * 0.13, 0.15, -0.5], 0.04, 0.026);
+      for (let i = 0; i < 3; i++) horn([sd * (0.215 + i * 0.012), -0.07 - i * 0.03, 0.12 - i * 0.07], [sd * (0.265 + i * 0.012), -0.08 - i * 0.03, 0.05 - i * 0.07], [sd * (0.29 + i * 0.012), -0.1 - i * 0.032, -0.02 - i * 0.07], 0.026 - i * 0.003, 0.016, 'spur');
     } else if (spec.horns === 'nightwing') {
       // a long slender pair swept back along the neck line (never raised like ears), a short
       // pair behind the eyes, two jaw spurs - the same arrangement on Leaf and Starlight
       horn([sd * 0.115, 0.16, 0.07], [sd * 0.185, 0.19, -0.26], [sd * 0.235, 0.05, -0.64], 0.05, 0.031);
       horn([sd * 0.175, 0.07, 0.03], [sd * 0.225, 0.06, -0.13], [sd * 0.25, -0.03, -0.28], 0.026, 0.016);
       for (let i = 0; i < 2; i++) horn([sd * (0.19 + i * 0.01), -0.17 - i * 0.03, 0.03 - i * 0.06], [sd * (0.225 + i * 0.01), -0.19 - i * 0.03, -0.03 - i * 0.06], [sd * (0.24 + i * 0.01), -0.22 - i * 0.035, -0.08 - i * 0.06], 0.016 - i * 0.003, 0.01, 'spur');
-    } else if (spec.horns === 'slitherwing') {
+    } else if (spec.horns === 'scout') {
       horn([sd * 0.09, 0.085, 0.08], [sd * 0.12, 0.09, -0.12], [sd * 0.13, 0.04, -0.34], 0.03, 0.018);
     } else if (spec.horns === 'buds') {
       horn([sd * 0.12, 0.2, 0.09], [sd * 0.14, 0.23, 0.05], [sd * 0.15, 0.235, 0.01], 0.028, 0.02, 'bud');

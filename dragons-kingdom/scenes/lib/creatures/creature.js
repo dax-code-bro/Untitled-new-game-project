@@ -12,7 +12,7 @@
 // fixed hashes), so all render workers build identical creatures.
 
 import * as THREE from 'three';
-import { SPECIES, buildAnatomy } from './anatomy.js';
+import { DESIGNS, buildAnatomy } from './anatomy.js';
 import { polygonize } from './mesher.js';
 import { computeSkin, vertexNoise } from './skin.js';
 import { keratin, tubes, eyeball, eyelid, computeNormals } from './parts.js';
@@ -25,47 +25,20 @@ import { add, sub, scale, norm, cross, dot, len, clamp } from './sdf.js';
 
 const deg = Math.PI / 180;
 
-/** The Episode 1 individuals (provisional designs; sizes = the "on-screen area" reading in assets.json). */
-export const CREATURES = {
-  charcoal: { species: 'bashion', L: 35.8, look: 'charcoal', flapHz: 0.76, flapAmp: 0.7, scaleMul: 0.6, age: 'giant', title: 'Charcoal (Bashion, melanistic)' },
-  leaf: { species: 'nightwing', L: 8.0, look: 'leaf', flapHz: 1.6, flapAmp: 0.85, age: 'subadult', scaleMul: 0.78, limbScaleMul: 0.72, title: 'Leaf (Nightwing, subadult)' },
-  starlight: { species: 'nightwing', L: 50.6, look: 'starlight', flapHz: 0.64, flapAmp: 0.68, scaleMul: 0.55, limbScaleMul: 0.72, age: 'giant', title: 'Starlight (Nightwing, albino)' },
-  hatchling: { species: 'bashion_hatchling', L: 0.42, look: 'gold', flapHz: 0, scaleMul: 0.72, title: 'Gold Bashion hatchling' },
-  scout: { species: 'slitherwing', L: 5.6, look: 'scout', flapHz: 2.6, flapAmp: 0.9, detachableLeftWing: true, title: 'Slitherwing scout' },
-};
-
 /**
- * Individual variation within a species (provisional designs). Leaf and Starlight are
- * the SAME species (Nightwing) and share every anatomical feature; only age and size
- * differ, the way real animals scale (allometry):
- *   subadult (Leaf): relatively bigger head and eyes, shorter snout and horns, a
- *     slimmer neck, lighter muscles, slightly shorter wings;
- *   giant adult (Starlight, Charcoal): relatively smaller head and eyes, thicker
- *     neck and legs, heavier muscles - an animal of that size needs them.
+ * The Episode 1 dragons. Every one is its OWN design (DRAGONS.md, 2026-10-09: no species);
+ * `design` names its preset in anatomy.js DESIGNS. Lengths are snout to tail tip (metres):
+ * Charcoal ~36 m (provisional), Leaf about 25% of Charcoal (approved: 9.0 m), Starlight the
+ * 51 m "on-screen" reading (OPEN QUESTION: the screenplay says "about twice Charcoal's size";
+ * 51 m is 1.41x his length, i.e. ~2.8x his mass - see README), the newborn hatchling, the scout.
  */
-function individual(spec, cfg) {
-  const s = JSON.parse(JSON.stringify(spec));
-  for (const k of ['neckPitch', 'headPitch', 'tailDroop']) s[k] = spec[k];
-  s.headShape.gape0 = spec.headShape.gape0;
-  const a = cfg.age === 'subadult' ? { head: 1.14, eye: 1.18, snout: 0.86, horn: 0.86, neckW: 0.96, limb: 0.94, muscle: 0.88, crest: 0.8, wing: 0.96 }
-    : cfg.age === 'giant' ? { head: 0.94, eye: 0.84, snout: 1.02, horn: 1.12, neckW: 1.06, limb: 1.08, muscle: 1.06, crest: 1.1, wing: 1.0 }
-    : null;
-  if (!a) return spec;
-  s.head = spec.head * a.head;
-  s.neck = spec.neck * (a.head > 1 ? 0.97 : 1.0);
-  s.headShape.eyeR = spec.headShape.eyeR * a.eye;
-  // a shorter snout: compress the loft keys in front of the eyes
-  const sq = (keys) => keys.map(([z, ...r]) => [z > 0.4 ? 0.4 + (z - 0.4) * a.snout : z, ...r]);
-  s.headShape.upper = sq(spec.headShape.upper);
-  s.headShape.jaw = sq(spec.headShape.jaw);
-  s.neckProfile = spec.neckProfile.map(([z, w, h, d]) => [z, w * a.neckW, h * a.neckW, d]);
-  for (const leg of ['front', 'hind']) s[leg].r = spec[leg].r.map((r) => r * a.limb);
-  s.muscle = Object.fromEntries(Object.entries(spec.muscle || {}).map(([k, v]) => [k, v * (k === 'wing' ? 1 : a.muscle)]));
-  s.crest = { ...spec.crest, h: spec.crest.h.map((v) => v * a.crest) };
-  s.hornScale = a.horn;
-  s.wing = { ...spec.wing, digits: spec.wing.digits.map(([x, y, z]) => [x * a.wing, y, z * a.wing]) };
-  return s;
-}
+export const CREATURES = {
+  charcoal: { design: 'charcoal', L: 35.8, look: 'charcoal', flapHz: 0.62, flapAmp: 0.7, scaleMul: 0.6, title: 'Charcoal (Remi\'s dragon)' },
+  leaf: { design: 'leaf', L: 9.0, look: 'leaf', flapHz: 1.4, flapAmp: 0.85, scaleMul: 0.78, limbScaleMul: 0.72, title: 'Leaf (Abby\'s dragon, not fully grown)' },
+  starlight: { design: 'starlight', L: 50.6, look: 'starlight', flapHz: 0.42, flapAmp: 0.62, scaleMul: 0.55, limbScaleMul: 0.72, title: 'Starlight (Queen Fall\'s dragon, albino)' },
+  hatchling: { design: 'hatchling', L: 0.42, look: 'gold', flapHz: 0, scaleMul: 0.72, title: 'The gold hatchling (newborn)' },
+  scout: { design: 'scout', L: 5.6, look: 'scout', flapHz: 2.6, flapAmp: 0.9, detachableLeftWing: true, title: 'The scout (Episode 1)' },
+};
 
 const QUALITY = {
   // base cell size = L / res, head region res x headMul
@@ -79,11 +52,11 @@ const QUALITY = {
  */
 export async function createCreature(which, opts = {}) {
   const cfg = typeof which === 'string' ? { name: which, ...CREATURES[which] } : which;
-  if (!cfg || !cfg.species) throw new Error(`unknown creature ${which}`);
+  if (!cfg || !cfg.design) throw new Error(`unknown creature ${which}`);
   const log = opts.log || (() => {});
   const q = QUALITY[opts.quality || 'standard'];
-  let spec = SPECIES[cfg.species];
-  spec = individual(spec, cfg);
+  const spec = cfg.spec || DESIGNS[cfg.design];
+  if (!spec) throw new Error(`unknown design ${cfg.design}`);
   const L = cfg.L;
   // scale size multiplier: a giant reads immense when its scales are fine relative to its body
   const SM = opts.scaleMul ?? cfg.scaleMul ?? 1;
@@ -108,7 +81,7 @@ export async function createCreature(which, opts = {}) {
   });
   const rootBone = bones[boneIndex.body];
   const root = new THREE.Group();
-  root.name = cfg.name || cfg.species;
+  root.name = cfg.name || cfg.design;
   const rig = new THREE.Group();          // root -> rig (ground offset) -> body bone
   rig.name = 'rig';
   root.add(rig);

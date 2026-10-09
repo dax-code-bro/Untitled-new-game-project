@@ -158,27 +158,41 @@ DKScale dkImbricate(vec2 p, float jit, float keel, float facet) { return dkImbri
 
 // ---- belly plates (transverse scutes, symmetric about the ventral midline) ---
 // p.x = lateral distance from the midline, p.y = along; both in scale units.
+// Real ventral scutes are not graph paper: rows differ in length, seams bow back toward the
+// sides (they follow the girth), every row has its own column widths and stagger, and the
+// plates shrink toward the flanks.
 DKScale dkPlates(vec2 p, float plateL, float plateW) {
   DKScale S;
-  float y = p.y / plateL;
+  float xn = p.x / plateW;
+  float y0 = p.y / plateL;
+  // uneven row lengths + seams curving back toward the sides + a little meander
+  float y = y0 + 0.32 * (dkVnoise2(vec2(y0 * 0.45, 2.3)) - 0.5) - 0.05 * xn * xn + 0.1 * (dkVnoise2(vec2(y0 * 0.9, xn * 0.6 + 5.0)) - 0.5);
   float r = floor(y);
   float fy = fract(y);
-  float x = p.x / plateW;
+  vec2 rr = dkH22(vec2(r, 1.7));
+  // per-row column width and stagger; narrower plates toward the flanks
+  float wRow = 0.8 + 0.45 * rr.x;
+  float xs = xn / wRow;
+  xs = sign(xs) * pow(abs(xs), 0.85);
+  float x = xs + (rr.y - 0.5) * 0.6 + 0.5;
   float c = floor(x + 0.5);
   float fx = x - c;             // -0.5 .. 0.5
   vec2 rnd = dkH22(vec2(c, r) + 3.3);
   // rounded-rectangle bevels front/back and at the sides
   float ty = clamp(fy / 0.16, 0.0, 1.0), tb = clamp((1.0 - fy) / 0.05, 0.0, 1.0);
-  float tx = clamp((0.5 - abs(fx)) / 0.12, 0.0, 1.0);
+  float tx = clamp((0.5 - abs(fx)) / (0.1 + 0.06 * rnd.y), 0.0, 1.0);
   float by = ty * ty * (3.0 - 2.0 * ty), bb = tb * tb * (3.0 - 2.0 * tb), bx = tx * tx * (3.0 - 2.0 * tx);
   float rise = 0.35 + 0.65 * fy;              // imbricate: rises toward the free (posterior) edge
   float bev = by * bb * bx;
-  S.h = rise * bev * (0.9 + 0.2 * rnd.x);
+  float a = 0.8 + 0.4 * rnd.x;
+  S.h = rise * bev * a;
   float dby = (ty > 0.0 && ty < 1.0 ? 6.0 * ty * (1.0 - ty) / 0.16 : 0.0) * bb - by * (tb > 0.0 && tb < 1.0 ? 6.0 * tb * (1.0 - tb) / 0.05 : 0.0);
-  float dbx = -(tx > 0.0 && tx < 1.0 ? 6.0 * tx * (1.0 - tx) / 0.12 : 0.0) * sign(fx);
-  S.grad = vec2(rise * by * bb * dbx / plateW, (0.65 * bev + rise * bx * dby) / plateL) * (0.9 + 0.2 * rnd.x);
-  S.cav = 1.0 - bev;
-  S.wear = bev * smoothstep(0.55, 0.95, fy);
+  float dbx = -(tx > 0.0 && tx < 1.0 ? 6.0 * tx * (1.0 - tx) / (0.1 + 0.06 * rnd.y) : 0.0) * sign(fx);
+  S.grad = vec2(rise * by * bb * dbx / (plateW * wRow), (0.65 * bev + rise * bx * dby) / plateL) * a;
+  // worn, scratched plates (the belly drags on the ground)
+  float sc = smoothstep(0.75, 0.95, dkVnoise2(vec2(fx * 3.0 + rnd.x * 9.0, fy * 26.0)));
+  S.cav = max(1.0 - bev, sc * 0.25 * bev);
+  S.wear = bev * smoothstep(0.55, 0.95, fy) * (0.5 + 0.5 * rnd.y);
   S.id = dkH21(vec2(c, r) + 9.7);
   S.q = vec2(fx * 2.0, fy * 2.0 - 1.0);
   S.lv = 3.0;
@@ -222,6 +236,7 @@ export const GLSL_VOR3 = /* glsl */`
 // p: rest position / cell size. Returns height (cell units), its gradient d/dp,
 // cavity, crown (raised, rubbed), two per-scale randoms.
 struct DKV3 { float h; vec3 g; float cav; float crown; float id; float id2; };
+float dkKeel3 = 0.0;   // keel height along each scale (set by the caller)
 // shape: q = d1 / F2s, where F2s is a SMOOTH minimum of the distances to all the other
 // cell points (no creases inside a scale where the second-nearest neighbour changes):
 // 0 at the scale's centre, ~1 on its border -> height 1 - q^k: k = 2 a rounded bead,
@@ -259,6 +274,15 @@ DKV3 dkVor3(vec3 p, vec3 T, float an, float tilt, float k, float cavW, float jit
   float body = 1.0 + tilt * tl;
   V.h = prof * body * amp;
   V.g = (gprof * body + prof * tilt * gtl) * amp;
+  if (dkKeel3 > 0.0) {
+    // a low ridge down the middle of the scale, strongest toward its free (rear) edge
+    vec3 lat = m1 - dot(m1, T) * T;
+    float ll = length(lat) + 1e-5;
+    const float kw = 0.2;
+    float kr = max(0.0, 1.0 - ll / kw) * smoothstep(-0.5, 0.35, tl) * prof;
+    V.h += dkKeel3 * kr * amp;
+    V.g += dkKeel3 * (ll < kw ? (lat / ll) / kw : vec3(0.0)) * smoothstep(-0.5, 0.35, tl) * prof * amp;
+  }
   V.cav = smoothstep(1.0 - cavW, 1.0, q);
   V.crown = prof * prof * clamp(0.6 + tilt * tl * 1.5, 0.0, 1.0) * (0.5 + 0.5 * h3.x);
   V.id = h3.y; V.id2 = h3.z;

@@ -161,7 +161,7 @@ const foldCache = new WeakMap();
 // standing up in front of the chest like a raised arm), and the hand and fingers
 // run back along the flank toward the haunch. The membrane between them hangs in
 // slack folds (drape.js). In the dog-sit the same fold rides on the pitched body.
-const FOLD_DEFAULT = { humerus: [0.3, 0.1, -0.95], forearm: [-0.08, -0.1, 0.99], hand: [0.16, -0.26, -0.95] };
+const FOLD_DEFAULT = { humerus: [0.34, -0.06, -0.94], forearm: [-0.04, -0.3, 0.95], hand: [0.14, -0.06, -0.99] };
 // The dog-sit pitches the body ~55 deg nose-up, so the same fold expressed in the body frame
 // would swing the elbow down to the hip and stand the forearm up like a raised arm. The sit
 // fold is therefore given in the WORLD (humerus back and down along the top of the flank,
@@ -172,7 +172,7 @@ const SIT_PITCH = 0.8;
 const FOLD_SIT = {
   humerus: worldToBody([0.1, -0.55, -0.83], SIT_PITCH),
   forearm: worldToBody([-0.04, 0.32, 0.95], SIT_PITCH),
-  hand: worldToBody([0.07, -0.62, -0.78], SIT_PITCH),
+  hand: worldToBody([0.08, -0.5, -0.86], SIT_PITCH),
 };
 const FOLD_VARIANTS = {
   // the old gargoyle fold (wrist raised above the back) - kept for shots that ask for it
@@ -232,6 +232,15 @@ function wingFold(pb, fold, side = 'both', pitchComp = 0, adduct = 0, variant = 
       const qq = new THREE.Quaternion().slerp(q, f);
       if ((pitchComp || adduct) && n === `w_${sd}_0`) qq.premultiply(qc);
       pb.quat(n, qq.toArray());
+    }
+    // the fingers fold at the knuckle (half way): the outer half doubles back along the inner
+    // half, in the plane of the wing, toward the trailing edge - the folded hand is then about
+    // as long as the forearm (a bat's fold), not a bundle of rods reaching past the tail base
+    const fk = pb.c.config.fingerFold ?? [2.85, 0.2];
+    const s = sd === 'L' ? 1 : -1;
+    for (let d = 0; d < 4; d++) {
+      pb.add(`w_${sd}_f${d}_1`, 0, -s * f * (fk[0] - 0.04 * d), 0);
+      pb.add(`w_${sd}_f${d}_2`, 0, -s * f * fk[1], 0);
     }
     pb.u.drape[sd] = [drape, smooth(0.7, 1.0, f) * (variant === 'high' ? 0 : 1)];
   }

@@ -1,6 +1,17 @@
-{ "creatures": [{ "name": "hatchling", "quality": "standard", "yaw": 0, "pose": { "name": "lie", "raise": -0.1, "headDown": 0.16, "look": [0.2, -0.04], "lidRelax": 0.42 } }],
+{ "creatures": [
+    { "name": "charcoal", "quality": "standard", "face": -55, "at": [0, 0, 0], "pose": { "name": "stand", "look": [0.14, -0.04] } },
+    { "name": "leaf", "quality": "standard", "face": -70, "at": [300, 0, 0], "pose": { "name": "sit", "look": [0.35, -0.12] } },
+    { "name": "starlight", "quality": "standard", "face": -60, "at": [-500, 0, 0], "pose": { "name": "stand" } }
+  ],
   "rotationY": -1.2,
   "views": [
-    { "subject": 0, "cam": [1.1, 0.25, -0.1], "target": [0.0, 0.08, -0.1], "fov": 28 },
-    { "subject": 0, "cam": [0.7, 0.12, -0.3], "target": [0.05, 0.06, -0.15], "fov": 24 }
+    { "subject": 0, "cam": [0.75, 0.12, 1.1], "target": [0.0, 0.2, 0.05], "fov": 34, "hide": [1, 2] },
+    { "subject": 0, "cam": [1.2, 0.3, -0.1], "target": [0.0, 0.18, 0.05], "fov": 34, "hide": [1, 2] },
+    { "subject": 0, "cam": [0.9, 0.55, 0.3], "target": [0.0, 0.0, 0.0], "fov": 50, "poses": { "0": { "name": "flight", "phase": 0.3 } }, "airborne": { "0": 1.0 }, "hide": [1, 2] },
+    { "subject": 1, "cam": [0.9, 0.18, 0.75], "target": [0.0, 0.18, 0.0], "fov": 36, "hide": [0, 2] },
+    { "subject": 1, "cam": [1.1, 0.25, -0.2], "target": [0.0, 0.18, 0.0], "fov": 36, "hide": [0, 2] },
+    { "subject": 1, "cam": [0.8, 0.6, 0.6], "target": [0.0, 0.0, 0.0], "fov": 50, "poses": { "1": { "name": "flight", "phase": 0.3, "corr": 1 } }, "airborne": { "1": 1.0 }, "hide": [0, 2] },
+    { "subject": 2, "cam": [0.8, 0.1, 0.9], "target": [0.0, 0.18, 0.0], "fov": 40, "hide": [0, 1] },
+    { "subject": 2, "cam": [0.2, -1.2, 0.6], "target": [0.0, 0.0, 0.0], "fov": 50, "poses": { "2": { "name": "glide", "bank": -0.08 } }, "airborne": { "2": 1.5 }, "hide": [0, 1] },
+    { "subject": 0, "cam": [0.3, -0.9, 0.5], "target": [0.0, 0.0, 0.0], "fov": 55, "poses": { "0": { "name": "glide" } }, "airborne": { "0": 1.5 }, "hide": [1, 2] }
   ] }

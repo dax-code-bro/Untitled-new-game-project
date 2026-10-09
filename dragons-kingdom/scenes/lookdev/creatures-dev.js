@@ -9,7 +9,7 @@
 //   node render/render.mjs scenes/lookdev/creatures-dev.js --preset preview --fps 1 --seconds N --workers 1 --out <dir>
 import * as THREE from 'three';
 import { loadHDRI, loadPBR } from '../lib/assets.js';
-import { createCreature, CREATURES, SPECIES, poses, loadHuman, createRider, createSaddle, mountRider } from '../lib/creatures/index.js';
+import { createCreature, CREATURES, DESIGNS, poses, loadHuman, createRider, createSaddle, mountRider } from '../lib/creatures/index.js';
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const merge = (a, b) => { const o = { ...a }; for (const [k, v] of Object.entries(b)) o[k] = isObj(v) && isObj(a[k]) ? merge(a[k], v) : v; return o; };
@@ -45,14 +45,13 @@ export async function setup(ctx) {
   const needHuman = (cfg.creatures || []).some((c) => c.rider || c.tack) || (cfg.humans || []).length;
   const human = needHuman ? await loadHuman() : null;
   for (const cc of cfg.creatures) {
-    // "variant": { "patch": { ...species fields } } builds a modified copy of the species (A/B design tests)
+    // "variant": { "patch": { ...design fields } } builds a modified copy of the dragon's design (A/B tests)
     let which = cc.name;
     if (cc.variant) {
       const base = CREATURES[cc.name];
-      const sp = `dev_${C.length}`;
-      SPECIES[sp] = merge(SPECIES[base.species], cc.variant.patch || {});
-      for (const k of ['neckPitch', 'headPitch', 'tailDroop']) if (cc.variant.patch && cc.variant.patch[k + 'Deg'] !== undefined) SPECIES[sp][k] = cc.variant.patch[k + 'Deg'] * Math.PI / 180;
-      which = { ...base, name: `${cc.name}_v${C.length}`, species: sp, ...(cc.variant.cfg || {}) };
+      const spec = merge(DESIGNS[base.design], cc.variant.patch || {});
+      for (const k of ['neckPitch', 'headPitch', 'tailDroop']) if (cc.variant.patch && cc.variant.patch[k + 'Deg'] !== undefined) spec[k] = cc.variant.patch[k + 'Deg'] * Math.PI / 180;
+      which = { ...base, name: `${cc.name}_v${C.length}`, spec, ...(cc.variant.cfg || {}) };
     }
     const c = await createCreature(which, { quality: cc.quality || 'draft', look: cc.look || cfg.look, drape: cc.drape, log: (s) => console.log(s) });
     ctx.scene.add(c.root);
