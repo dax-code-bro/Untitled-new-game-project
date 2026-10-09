@@ -161,7 +161,7 @@ const foldCache = new WeakMap();
 // standing up in front of the chest like a raised arm), and the hand and fingers
 // run back along the flank toward the haunch. The membrane between them hangs in
 // slack folds (drape.js). In the dog-sit the same fold rides on the pitched body.
-const FOLD_DEFAULT = { humerus: [0.34, -0.06, -0.94], forearm: [-0.04, -0.3, 0.95], hand: [0.14, -0.06, -0.99] };
+const FOLD_DEFAULT = { humerus: [0.34, -0.06, -0.94], forearm: [-0.12, -0.28, 0.95], hand: [0.14, -0.06, -0.99] };
 // The dog-sit pitches the body ~55 deg nose-up, so the same fold expressed in the body frame
 // would swing the elbow down to the hip and stand the forearm up like a raised arm. The sit
 // fold is therefore given in the WORLD (humerus back and down along the top of the flank,

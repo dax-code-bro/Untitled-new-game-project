@@ -115,7 +115,9 @@ const SKETCH = {
     hind: { hip: [0.045, -0.026, 0.01], knee: [0.058, 0.128, 0.05], ankle: [0.055, 0.066, -0.022], ball: [0.055, 0.012, 0.002],
       r: [0.037, 0.026, 0.019, 0.017], toeLen: 0.04, toeR: [0.0098, 0.0062], toeSpread: 14, toes: 4, muscle: 1.0 },
     // a span of ~1.9 L (an animal this heavy needs it): the wingtip 0.91 L out from the root
-    wing: { root: [0.032, 0.006, 0.8], elbow: [0.17, 0.02, -0.06], wrist: [0.4, 0.03, -0.015],
+    // (forearm 0.18 L: folded, the wrist must come to rest beside the shoulder, not hang in front
+    // of the chest like a third foreleg)
+    wing: { root: [0.032, 0.006, 0.8], elbow: [0.17, 0.02, -0.06], wrist: [0.35, 0.03, -0.015],
       digits: [[0.91, 0.025, 0.0], [0.84, 0.016, -0.2], [0.69, 0.006, -0.37], [0.5, -0.004, -0.46]],
       thumb: [0.012, 0.008, 0.018], r: [0.0165, 0.0098, 0.0082], fingerR: [0.0056, 0.0014], muscle: 1.0,
       // the membrane's body edge: armpit, along the flank, down onto the thigh (bat-like)
@@ -149,7 +151,7 @@ const SKETCH = {
       r: [0.026, 0.0185, 0.0135, 0.0122], toeLen: 0.029, toeR: [0.0061, 0.0036], toeSpread: 15, toes: 4, muscle: 1.0 },
     hind: { hip: [0.034, -0.02, 0.008], knee: [0.044, 0.125, 0.05], ankle: [0.042, 0.062, -0.024], ball: [0.042, 0.008, -0.002],
       r: [0.032, 0.0205, 0.0138, 0.0122], toeLen: 0.032, toeR: [0.0063, 0.0037], toeSpread: 14, toes: 4, muscle: 1.0 },
-    wing: { root: [0.027, 0.006, 0.8], elbow: [0.165, 0.016, -0.055], wrist: [0.37, 0.025, -0.012],
+    wing: { root: [0.027, 0.006, 0.8], elbow: [0.165, 0.016, -0.055], wrist: [0.33, 0.025, -0.012],
       digits: [[0.87, 0.02, 0.02], [0.8, 0.012, -0.185], [0.66, 0.004, -0.34], [0.48, -0.004, -0.42]],
       thumb: [0.01, 0.006, 0.015], r: [0.0158, 0.0098, 0.0076], fingerR: [0.0046, 0.0012], muscle: 1.0,
       attach: [[0.005, -0.012, -0.03], [0.014, -0.032, -0.1], [0.022, -0.05, -0.16], [0.04, -0.075, -0.19]], billow: 0.04 },
@@ -308,7 +310,7 @@ function starlightDesign() {
   s.headShape.nostril = 1.0;
   s.headShape.lipCover = 0.55;
   // a broad-chord wing for the heaviest animal: long fingers, a deep plagiopatagium to the thigh
-  s.wing = { ...s.wing, elbow: [0.17, 0.016, -0.055], wrist: [0.39, 0.025, -0.012],
+  s.wing = { ...s.wing, elbow: [0.17, 0.016, -0.055], wrist: [0.34, 0.025, -0.012],
     digits: [[0.92, 0.02, 0.0], [0.86, 0.012, -0.24], [0.71, 0.004, -0.43], [0.5, -0.004, -0.52]],
     attach: [[0.005, -0.012, -0.03], [0.016, -0.034, -0.1], [0.026, -0.054, -0.16], [0.045, -0.08, -0.2]] };
   s.horns = 'starlight';
