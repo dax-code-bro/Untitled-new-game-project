@@ -69,7 +69,8 @@ trees, gorse and grass lean toward -x.
 | island bake / Cling bake | ~50 s / ~65 s |
 | SDF evaluation | ~1-1.6 us |
 | coast scene, shot 1 | 663 tiles (L0 153, L1 248, L2 234, L3 28), 4.4 M triangles + 0.34 M heightfield; ~4.1 k rocks; ~100 k plant clumps |
-| 4K final still (8 subframes, film finish) | coast 305-320 s, tree 380 s (85 mm detail 615 s), island 146 s |
+| 4K final still (8 subframes, film finish), alone on the machine | coast 305-320 s, tree 380 s (85 mm detail 615 s), island 146 s, contact 90-120 s, Cling 170-300 s |
+| the same, sharing the 4 cores with another domain's render | roughly 1.6-2x (coast 250-845 s, tree detail 1175 s) |
 
 ## Lookdev
 

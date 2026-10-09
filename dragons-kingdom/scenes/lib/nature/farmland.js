@@ -232,7 +232,7 @@ export async function loadClingLand(ctx, opts = {}) {
       // the clump's long (local z) axis runs ALONG the boundary, i.e. across the line between the sites
       const yaw = Math.atan2(ex, ez) + Math.PI / 2 + (rng() - 0.5) * 0.25;
       // far away only every third cell is kept: those clumps are stretched to keep the hedge unbroken
-      const w = (1.7 + 0.8 * rng()) * (far ? 1.3 : 1), h = (2.0 + 1.0 * rng()) * (far ? 1.15 : 1), len = (3.0 + 1.4 * rng()) * (far ? 2.6 : 1);
+      const w = (2.3 + 0.8 * rng()) * (far ? 1.3 : 1), h = (2.0 + 1.0 * rng()) * (far ? 1.15 : 1), len = (5.2 + 2.0 * rng()) * (far ? 2.2 : 1);   // long: the humps merge into one hedge
       // near the lens the clump is only the dense core: card-built blackthorn and hawthorn shrubs
       // grow through it and make the twiggy, gappy silhouette of a real hedge
       const near = d < 75;

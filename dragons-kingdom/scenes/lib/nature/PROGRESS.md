@@ -22,7 +22,14 @@ See README.md for the API, the bake commands, the geology and measurements.
   boundary further out), hedgerow trees, woods, road and lane.
 - 4K finals of the hero angles and the contact sheet in `output/nature/final/` (not committed).
 
+## Final 4K images (output/nature/final/, not committed; review/ holds 1920 downscales and 1:1 crops)
+coast_t1_inland, coast_t2_cliff_foot, coast_t3_outer_rocks, tree_t1_hawthorn, tree_t2_detail,
+island_t1_dawn, contact_t1_trees, contact_t2_shrubs, contact_t3_rocks, cling_t2_aerial,
+cling_t4_meadow, contact_sheet_4k (2x2 montage). npm test: 33/33 pass.
+
 ## Known weak spots
 - gorse colonies at 80-150 m are still smooth-ish cushions (no card LOD at that range);
 - far hedgerow trees use crown impostors that read as lollipops in an aerial at 1:1;
-- Scots pine crown is sparse; the contact rock material reads a little marbled close up.
+- Scots pine crown is sparse; the rock material reads a little 'crumpled' close up;
+- turf on steep head slopes / banks shows fine fall-line streaks in oblique views;
+- the face seen square-on from the platform still shows long vertical joint planes.
