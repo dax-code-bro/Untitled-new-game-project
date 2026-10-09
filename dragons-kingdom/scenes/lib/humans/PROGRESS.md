@@ -158,8 +158,10 @@ being fixed:
   grey box (Planks21 roughness map mean 0.68 not divided out -> rmean), kettle hats / spear heads
   still chrome-like -> darker oxidised iron/steel (runtime); shirt V reads as a flat bib ->
   shading-only folds (runtime `wrinkle` for 'shirt'); cloth AO floor 0.3 (black slits).
-- Final 4K (output/humans/final5/): all 8 hero stills + crops, riders + contact sequences
-  (scratchpad humans/final5_rest.sh runs King -> riders -> contact; restartable).
+- Final 4K DONE (output/humans/final5/, git-ignored): hero-<shot>-4k.png + _1920.png + 1:1
+  _crop-*.png for remi-abby, abby-cu, alexandria, king, crowd, abby-sling, abby-injured, fall
+  (95-215 s per still); contact-1..7-4k.png (7 sheets, 11 min); riders-1..3-4k.png (7.5 min).
+  npm test 33/33 (341 s) after the last code change.
 
 Known (not fixed, for a successor): Abby's sling bands are smooth flat strips (no fabric
 weight); Alexandria's gown has a small hole at the left hip (holefill misses it) and her right
