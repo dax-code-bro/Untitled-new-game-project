@@ -12,9 +12,11 @@ import { festivalKit, DYES } from '../lib/props/festival.js';
 import { barrel, bucket, crate, basket, trestleTable, bench, stool, handcart } from '../lib/props/containers.js';
 import { loaf, fruit, fruitHeap, cabbage, onion, rootVeg, fish, cheese, egg, pot, clothBolt, herbBunch, onionString } from '../lib/props/goods.js';
 import { prologueBoat } from '../lib/props/boat.js';
+import { santaMaria } from '../lib/props/santa-maria.js';
+import { verdorKit, bowl, foldedCloth, oilLamp, healerBox, groundGear } from '../lib/props/verdor.js';
 import { filmFinish } from './finish.js';
 
-const SPACING = 30;
+const SPACING = 45;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
 const GROUPS = [
@@ -34,6 +36,12 @@ const GROUPS = [
   { name: 'stall-pottery', build: (fk, F) => fk.stall(F, 'pottery', { seed: 8, size: '3', awning: [DYES.ochre, DYES.undyed] }), el: 0.1 },
   { name: 'stall-cloth', build: (fk, F) => fk.stall(F, 'cloth', { seed: 9, size: '24', awning: [DYES.madder, DYES.madder] }), el: 0.1 },
   { name: 'stall-veg', build: (fk, F) => fk.stall(F, 'veg', { seed: 11, size: '3', awning: [DYES.green, DYES.undyed] }), el: 0.1 },
+  { name: 'verdor-egg-states', build: async (fk, F, r, ctx) => { const vk = await verdorKit(ctx); const g = new THREE.Group(); ['closed', 'cracked', 'opened', 'broken'].forEach((st, i) => g.add(vk.egg(sub(F, [-1.2 + i * 0.8, 0, 0]), { state: st, seed: 7 }))); return g; }, el: 0.25 },
+  { name: 'verdor-nest', build: async (fk, F, r, ctx) => { const vk = await verdorKit(ctx); const g = new THREE.Group(); g.add(vk.nest(F, { r: 0.75 })); g.add(vk.egg(sub(F, [0, 0.05, 0]), { state: 'opened', seed: 7 })); return g; }, el: 0.4 },
+  { name: 'verdor-chamber', build: async (fk, F, r, ctx) => { const vk = await verdorKit(ctx); const k = new Kit(); bench(k, F, r, { w: 1.6 }); const T = sub(F, [0, 0.45, 0]); bowl(k, sub(T, [-0.55, 0, 0]), r, {}); bowl(k, sub(T, [-0.25, 0, 0.02]), r, { kind: 'wood', r: 0.12 }); foldedCloth(k, sub(T, [0.15, 0, 0], 0.1), r, {}); foldedCloth(k, sub(T, [0.15, 0.028, 0], -0.05), r, { w: 0.34, d: 0.26 }); foldedCloth(k, sub(T, [0.15, 0.052, 0], 0.12), r, { w: 0.3, d: 0.24, layers: 3 }); oilLamp(k, sub(T, [0.55, 0, 0]), r, { flame: true }); oilLamp(k, sub(F, [0.9, 0, 0.3], 1.2), r, {}); stool(k, sub(F, [-1.2, 0, 0.3]), r, {}); bowl(k, sub(F, [-1.2, 0.42, 0.3]), r, { r: 0.16 }); return vk.build(k, 'chamber'); }, el: 0.35 },
+  { name: 'verdor-healer', build: async (fk, F, r, ctx) => { const vk = await verdorKit(ctx); const k = new Kit(); trestleTable(k, F, r, { w: 1.6, d: 0.7, h: 0.76 }); healerBox(k, sub(F, [-0.1, 0.761, 0]), r, {}); bowl(k, sub(F, [0.55, 0.761, 0.15]), r, { r: 0.15 }); return vk.build(k, 'healer'); }, el: 0.4 },
+  { name: 'verdor-ground-gear', build: async (fk, F, r, ctx) => { const vk = await verdorKit(ctx); const k = new Kit(); groundGear(k, F, r, {}); fk.ropeCoil(k, sub(F, [0.6, 0, 0.8]), r, { r: 0.3, rope: 0.016, laid: true }); bucket(k, sub(F, [-0.6, 0, 0.8]), r, { handle: 'rope' }); return vk.build(k, 'gear'); }, el: 0.2 },
+  { name: 'santa-maria', build: async (fk, F, r, ctx) => { const sm = await santaMaria(ctx, { waterline: 2.15 }); sm.root.position.copy(F.o).add(V(0, 2.15, 0)); return sm.root; }, el: 0.1, az: 2.3, extra: 0.8 },
   { name: 'prologue-boat', build: async (fk, F, r, ctx) => { const b = await prologueBoat(ctx, { brace: -0.35 }); b.root.position.copy(F.o).add(V(0, 0.66, 0)); return b.root; }, el: 0.12, extra: 0.85 },
 ];
 

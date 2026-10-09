@@ -22,7 +22,7 @@ export async function goodsMaterials(ctx) {
     return {
       crust: await S({ name: 'crust', roughness: 0.62, roughVar: 0.3, sheen: 0.25, sheenColor: [0.8, 0.6, 0.35] }),
       fruit: await S({ name: 'fruit', roughness: 0.32, roughVar: 0.3, clearcoat: 0.35, clearcoatRoughness: 0.35 }),
-      leaf: await S({ name: 'leaf', roughness: 0.42, roughVar: 0.3, clearcoat: 0.25, clearcoatRoughness: 0.4, cloth: { transmission: 0.2, forward: 0.5 }, side: THREE.DoubleSide }),
+      leaf: await S({ name: 'leaf', roughness: 0.55, roughVar: 0.3, sheen: 0.12, sheenColor: [0.4, 0.5, 0.42], sheenRoughness: 0.5, cloth: { transmission: 0.15, forward: 0.5 }, side: THREE.DoubleSide }),
       root: await S({ name: 'root', roughness: 0.6, roughVar: 0.3, macro: 0.15, macroF: 60 }),
       onion: await S({ name: 'onion', roughness: 0.48, roughVar: 0.4, sheen: 0.5, sheenColor: [0.9, 0.7, 0.45], macro: 0.18, macroF: 40 }),
       fish: await S({ name: 'fish', roughness: 0.22, roughVar: 0.2, clearcoat: 0.8, clearcoatRoughness: 0.12, metalness: 0.15 }),
@@ -228,7 +228,7 @@ export function cabbage(kit, F, rnd, o = {}) {
     const ct = Math.cos(th), st = Math.sin(th);
     const r = R * 0.82 * (1 + 0.04 * fbm(phi * 3, th * 3, ph, 2));
     const vein = Math.pow(Math.abs(Math.sin(phi * 4 + th * 3 + ph)), 18);
-    const c = [0.16 + 0.12 * vein, 0.26 + 0.1 * vein, 0.07 + 0.08 * vein].map((v) => v * (0.8 + 0.4 * (ct * 0.5 + 0.5)));
+    const c = [0.1 + 0.2 * vein, 0.19 + 0.16 * vein, 0.07 + 0.14 * vein].map((v) => v * (0.8 + 0.4 * (ct * 0.5 + 0.5)));
     return [V(Math.cos(phi) * st * r, ct * r * 0.9 + R * 0.8, Math.sin(phi) * st * r), c, 0.8];
   }, 0.3);
   // outer leaves: cupped shells wrapping the head, each with a midrib, opening at the top
@@ -244,12 +244,12 @@ export function cabbage(kit, F, rnd, o = {}) {
       const th = Math.PI * (0.95 - v * (0.85 - open * 0.4));        // from under the head to the top
       const phi = a0 + u * spread;
       const st = Math.sin(th), ct = Math.cos(th);
-      const ripple = 1 + 0.05 * Math.sin(u * 14 + k) * v + 0.04 * Math.sin(v * 9 + u * 5);
+      const ripple = 1 + 0.05 * Math.sin(u * 14 + k) * v + 0.04 * Math.sin(v * 9 + u * 5) + 0.06 * Math.sin(u * 37 + k * 3) * v * v + 0.03 * fbm(u * 6 + k, v * 6, k, 2);
       const outward = 1 + open * v * v * 0.6;
       const rr = lr * ripple * outward * (1 - 0.15 * Math.abs(u) * v);
       const mid = Math.exp(-(u * u) / 0.004);
       const vein = Math.pow(Math.abs(Math.sin(u * 9 + v * 6)), 14) * 0.5 + mid;
-      const c = [0.12 + 0.2 * vein, 0.22 + 0.14 * vein, 0.06 + 0.1 * vein].map((x) => x * (0.7 + 0.5 * v));
+      const c = [0.08 + 0.26 * vein, 0.16 + 0.2 * vein, 0.07 + 0.18 * vein].map((x) => x * (0.65 + 0.45 * v));
       vc(b, fp(F, Math.cos(phi) * st * rr, ct * rr * 0.9 + R * 0.8 + mid * 0.004, Math.sin(phi) * st * rr), u * 0.2, v * 0.2, 0.4 + k * 0.05, 0.6 + 0.4 * v, c);
     }
     const row = NU + 1;
@@ -264,8 +264,8 @@ export function onion(kit, F, rnd, o = {}) {
   const red = rnd() < 0.25;
   blob(b, F, 14, 18, (th, phi) => {
     const ct = Math.cos(th), st = Math.sin(th);
-    let r = R * (1 - 0.65 * Math.pow(Math.max(0, ct), 3));
-    let y = ct * R * 0.9 + (ct > 0 ? Math.pow(ct, 5) * R * 0.6 : 0);
+    let r = R * (1 - 0.55 * Math.pow(Math.max(0, ct), 4)) * (1 - 0.1 * Math.pow(Math.max(0, -ct), 2));
+    let y = ct * R * 0.85 + (ct > 0 ? Math.pow(ct, 8) * R * 0.3 : 0);
     const line = Math.pow(Math.abs(Math.sin(phi * 9 + th)), 8);
     const base = red ? [0.22, 0.05, 0.06] : [0.38, 0.19, 0.06];
     const c = base.map((v) => v * (0.85 + 0.3 * line) * (0.9 + 0.2 * vnoise(phi * 9, th * 9, R * 100)));

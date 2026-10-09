@@ -226,7 +226,7 @@ def bake_counter(name='counter'):
 
 
 # ------------------------------------------------------------------ banners --
-BANNERS = {'banner_still': 0.0, 'banner_breeze': 8.0, 'banner_gust': 20.0}
+BANNERS = {'banner_still': 0.0, 'banner_breeze': 6.0, 'banner_gust': 15.0}
 
 
 def bake_banner(name, strength):
@@ -236,10 +236,11 @@ def bake_banner(name, strength):
     rod('pole', B(-0.6, Hb + 0.03, 0), B(0.6, Hb + 0.03, 0), r=0.025)
     NX, NY = 18, 64
     # gathered a little on the pole: the cloth starts with soft vertical pleats
-    verts, faces = grid(NX, NY, lambda u, v: B((u - 0.5) * Wb * 0.93, Hb - v * Hb, 0.03 * math.sin(u * math.pi * 5) * (0.4 + 0.6 * v) + 0.002 * math.sin(v * 40)))
+    # heavy wool, hung flat from its sleeve (a few broad folds come from the sag between the ends)
+    verts, faces = grid(NX, NY, lambda u, v: B((u - 0.5) * Wb * 0.97, Hb - v * Hb, 0.006 * math.sin(u * math.pi * 3 + v * 2) + 0.002 * math.sin(v * 40)))
     pins = [i for i in range(NX + 1)]
     ob = mesh_obj(name, verts, faces)
-    cloth_settings(ob, pins, mass=0.004, tension=12, bending=0.08, frames=140, air=1.0)
+    cloth_settings(ob, pins, mass=0.008, tension=20, bending=0.6, frames=140, air=1.0)
     if strength > 0:
         wind(strength, direction=(0.55, 0.0, 0.25), at=(-3, 0, 1.5), noise=1.0, flow=0.0)
     pts = run(ob, 120)

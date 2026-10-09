@@ -58,16 +58,17 @@ export function barrel(kit, F, rnd, o = {}) {
       for (let i = 0; i <= NA; i++) {
         const a = aA + (aB - aA) * (i / NA);
         const edge = Math.min(i, NA - i) === 0 ? 1 : 0;
-        const ao = 1 - 0.25 * edge;
-        sb.v(P(a, y, edge * 0.0015), y, a * R0, piece, ao, edge ? 0.6 : 0.0);
+        const ao = 1 - 0.45 * edge;
+        sb.v(P(a, y, edge * 0.0012), y, a * R0, piece, ao, edge ? 0.15 : 0.0);
       }
     }
     for (let j = 0; j < NY; j++) for (let i = 0; i < NA; i++) {
       const p0 = base + j * (NA + 1) + i;
       sb.q(p0, p0 + NA + 1, p0 + NA + 2, p0 + 1);
     }
-    // inner face (only seen in open tubs)
-    if (o.open) {
+    // inner face (a tub's inside; in a closed cask it shows in the croze above the heads and
+    // between the staves - without it the chime reads as loose teeth)
+    {
       const b2 = sb.count;
       for (let j = 0; j <= NY; j++) {
         const y = -chime + (H + 2 * chime) * (j / NY);
@@ -80,8 +81,8 @@ export function barrel(kit, F, rnd, o = {}) {
       const b3 = sb.count;
       for (let i = 0; i <= NA; i++) {
         const a = aA + (aB - aA) * (i / NA);
-        sb.v(P(a, y, 0), 50 + a * R0, 0, piece, 0.9, 0.9);
-        sb.v(P(a, y - s * 0.012, T), 50 + a * R0, T, piece, 0.8, 0.9);
+        sb.v(P(a, y, 0), 50 + a * R0, 0, piece, 0.75, 0.35);
+        sb.v(P(a, y - s * 0.012, T), 50 + a * R0, T, piece, 0.6, 0.35);
       }
       for (let i = 0; i < NA; i++) { const p0 = b3 + i * 2; if (s > 0) sb.q(p0, p0 + 1, p0 + 3, p0 + 2); else sb.q(p0, p0 + 2, p0 + 3, p0 + 1); }
     }
@@ -110,12 +111,13 @@ export function barrel(kit, F, rnd, o = {}) {
   const heads = o.open ? [0.02] : [0.02, H - 0.02];
   const hb = kit.get(o.headMat || 'stave');
   for (const hy of heads) {
-    const rr = rAt(hy) - T * 0.8;
-    const nb = 3 + Math.floor(rnd() * 2);
+    const rr = rAt(hy) - T * 0.6;
+    const nb = 4 + Math.floor(rnd() * 2);
     for (let q = 0; q < nb; q++) {
       const z0 = -rr + (2 * rr * q) / nb, z1 = -rr + (2 * rr * (q + 1)) / nb;
-      const zc = (z0 + z1) / 2, hw = Math.sqrt(Math.max(0, rr * rr - Math.max(z0 * z0, z1 * z1) * (q === 0 || q === nb - 1 ? 0.6 : 0.2)));
-      const len = 2 * Math.sqrt(Math.max(0.0004, rr * rr - zc * zc)) * 0.985;
+      const zc = (z0 + z1) / 2;
+      // the board's ends reach the staves (its corners run into the croze)
+      const len = 2 * Math.sqrt(Math.max(0.0004, rr * rr - Math.min(z0 * z0, z1 * z1))) * 0.995;
       box(hb, sub(F, [0, hy, zc]), [len, 0.02, (z1 - z0) - 0.002], { grain: 'x', bevel: 0.003, piece: (o.piece ?? 0) + 0.5 + q * 0.07, ao: () => 0.85, seg: 0.08 });
     }
   }

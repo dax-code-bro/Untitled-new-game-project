@@ -360,7 +360,8 @@ export function clothMaterial(ctx, o = {}) {
     scan: o.scan ?? 'pbr/acg_fabric36', tile: o.tile ?? [0.5, 0.5], detail: o.detail ?? 0.6,
     roughness: o.roughness ?? 0.92, roughVar: 0.06, pieceVar: o.pieceVar ?? 0.08, macro: o.macro ?? 0.08, macroF: o.macroF ?? 0.8,
     wear: o.wear ?? 0, ao: o.ao ?? 0.5, normalScale: o.normalScale ?? 0.6,
-    sheen: o.sheen ?? 0.35, sheenRoughness: 0.55, sheenColor: o.sheenColor ?? [0.9, 0.88, 0.82],
+    // (the sheen of dyed cloth is its fibre colour, a little paler - a white sheen reads as plastic)
+    sheen: o.sheen ?? 0.2, sheenRoughness: 0.6, sheenColor: o.sheenColor ?? (o.color ? o.color.map((c) => Math.min(1, c * 0.75 + 0.12)) : [0.7, 0.68, 0.62]),
     cloth: { transmission: o.transmission ?? 0.3, forward: o.forward ?? 1.5 },
     ...o,
   });
@@ -399,7 +400,7 @@ export async function propMaterials(ctx) {
     const ropeTar = await R({ name: 'rope-tar', color: [0.07, 0.055, 0.04], color2: [0.09, 0.07, 0.05], roughness: 0.65 });
     const linen = await clothMaterial(ctx, { name: 'linen', color: [0.58, 0.53, 0.44], color2: [0.62, 0.58, 0.5], transmission: 0.35 });
     const wool = await clothMaterial(ctx, { name: 'wool', scan: 'pbr/acg_fabric37', tile: [0.35, 0.35], color: [0.33, 0.28, 0.21], color2: [0.29, 0.25, 0.19], transmission: 0.22, roughness: 0.95 });
-    const hessian = await surface(ctx, { name: 'hessian', scan: 'pbr/acg_fabric40', tile: [0.18, 0.18], detail: 0.5, normalScale: 1.4, color: [0.33, 0.25, 0.15], color2: [0.28, 0.21, 0.13], roughness: 0.95, pieceVar: 0.2, macro: 0.15, macroF: 4, wear: 0.3, wearColor: [0.4, 0.33, 0.22], sheen: 0.3, sheenColor: [0.7, 0.6, 0.45], dirt: { y: 0, h: 0.15, k: 0.5, color: [0.6, 0.55, 0.48] } });
+    const hessian = await surface(ctx, { name: 'hessian', scan: 'pbr/acg_fabric40', tile: [0.09, 0.09], detail: 0.7, normalScale: 1.6, color: [0.3, 0.2, 0.095], color2: [0.26, 0.175, 0.085], roughness: 0.95, pieceVar: 0.2, macro: 0.15, macroF: 4, wear: 0.3, wearColor: [0.4, 0.33, 0.22], sheen: 0.3, sheenColor: [0.6, 0.48, 0.3], dirt: { y: 0, h: 0.12, k: 0.4, color: [0.7, 0.62, 0.5] } });
     const straw = await surface(ctx, { name: 'straw', scan: null, color: [0.5, 0.38, 0.17], color2: [0.42, 0.33, 0.17], roughness: 0.42, roughVar: 0.4, pieceVar: 0.55, macro: 0.1, macroF: 8, wear: 0, ao: 0.85, cloth: { transmission: 0.25, forward: 1.0 }, side: THREE.DoubleSide });
     const clay = await surface(ctx, { name: 'clay', scan: 'pbr/acg_ground03', tile: [0.4, 0.4], detail: 0.35, normalScale: 0.25, color: [0.32, 0.15, 0.075], color2: [0.36, 0.19, 0.1], roughness: 0.82, pieceVar: 0.25, macro: 0.15, macroF: 6, wear: 0.5, wearColor: [0.25, 0.13, 0.08], rings: { period: 0.009, depth: 0.0004 } });
     const clayGlaze = await surface(ctx, { name: 'clay-glaze', scan: 'pbr/acg_ground03', tile: [0.4, 0.4], detail: 0.2, normalScale: 0.1, color: [0.13, 0.065, 0.015], color2: [0.045, 0.055, 0.014], roughness: 0.22, roughVar: 0.3, pieceVar: 0.4, macro: 0.25, macroF: 5, wear: 0.6, wearColor: [0.3, 0.15, 0.08], rings: { period: 0.009, depth: 0.0003 }, clearcoat: 0.6, clearcoatRoughness: 0.15 });

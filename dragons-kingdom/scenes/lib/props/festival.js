@@ -74,39 +74,41 @@ function sack(api, kit, F, rnd, o = {}) {
   const kind = o.kind ?? 'full';
   const b = kit.get('hessian');
   const sc = o.scale ?? (0.9 + 0.2 * rnd());
-  const R = 0.21 * sc, H = 0.66 * sc;
+  const R = (kind === 'slump' ? 0.25 : 0.21) * sc, H = (kind === 'slump' ? 0.6 : 0.66) * sc;
   const ph = rnd() * 6, ph2 = rnd() * 6;
   const fold = rnd() * Math.PI * 2;
   const NT = 44, NP = 48;
-  const fill = kind === 'slump' ? 0.5 : 0.72;            // height (fraction) the grain reaches
+  const fill = kind === 'slump' ? 0.45 : 0.72;            // height (fraction) the grain reaches
+  const axis = new THREE.Vector3(-Math.sin(fold), 0, Math.cos(fold));
   const pos = (t, a) => {
-    // profile: rounded foot, bellied body, the shoulder where the grain stops, the gathered neck
+    // profile: a wide, settled foot, a body bellied by the grain, the shoulder where the grain
+    // stops, the empty cloth gathered into the neck, the tied ears above it
     let r;
-    if (t < 0.06) r = R * (0.78 + 0.27 * Math.sin((t / 0.06) * Math.PI / 2));
-    else if (t < fill) r = R * (1.05 + 0.04 * Math.sin(Math.PI * (t - 0.06) / (fill - 0.06)) - 0.05 * (t - 0.06));
-    else if (t < 0.93) { const k = (t - fill) / (0.93 - fill); r = R * (0.15 + 0.88 * Math.cos(k * Math.PI / 2) ** 1.3); }
+    if (t < 0.05) r = R * (0.8 + 0.3 * Math.sin((t / 0.05) * Math.PI / 2));
+    else if (t < fill) { const k = (t - 0.05) / (fill - 0.05); r = R * (1.1 - 0.1 * k + 0.05 * Math.sin(Math.PI * k)); }
+    else if (t < 0.93) { const k = (t - fill) / (0.93 - fill); r = R * (0.15 + 0.85 * Math.cos(k * Math.PI / 2) ** 1.2); }
     else if (t < 0.95) r = R * 0.14;
-    else { const k = (t - 0.95) / 0.05; r = R * (0.14 + 0.28 * k) * (1 + 0.45 * Math.sin(a * 5 + ph) * k); }
-    // pleats gathered into the neck, sag wrinkles, grain lumps, the side seam
-    const pleat = 0.2 * Math.sin(a * 7 + ph + Math.sin(t * 9) * 0.6) * smoothK(fill + 0.02, 0.93, t);
-    const sag = 0.022 * Math.sin(t * H * 48 + a * 1.7 + ph2) * (t < fill ? 1 : 0.4) + 0.012 * Math.sin(t * H * 97 - a * 3.1);
-    const lump = 0.05 * fbm(Math.cos(a) * 2 + ph, t * 3, Math.sin(a) * 2, 3);
-    const seam = Math.exp(-((((a + Math.PI) % (Math.PI * 2)) - Math.PI) ** 2) / 0.003);
-    r *= 1 + pleat + sag + lump - 0.02 * seam;
-    let x = Math.cos(a) * r, z = Math.sin(a) * r, y = t * H * (t < 0.06 ? 0.7 : 1) - (t < 0.06 ? 0 : 0.06 * H * 0.3);
-    // the weight of the grain pushes the body out at the foot and settles it
-    y = Math.max(0.004, y);
+    else { const k = (t - 0.95) / 0.05; r = R * (0.14 + 0.2 * k) * (1 + 0.5 * Math.sin(a * 5 + ph) * k); }
+    // gathered pleats into the neck; irregular creases where the cloth sags (no two alike); grain
+    // lumps; the side seam
+    const pleat = 0.22 * Math.sin(a * 7 + ph + Math.sin(t * 9) * 0.8) * smoothK(fill, 0.93, t) * (0.6 + 0.4 * Math.sin(a * 3 + ph2));
+    const crease = 0.05 * fbm(Math.cos(a) * 1.5 + ph, t * H * 9, Math.sin(a) * 1.5 + ph2, 3) * (0.5 + smoothK(0.3, fill, t))
+      + 0.03 * fbm(Math.cos(a) * 5 + 3, t * H * 3, Math.sin(a) * 5, 2)
+      + 0.025 * Math.abs(fbm(Math.cos(a) * 3 + 9, t * H * 14, Math.sin(a) * 3, 2)) * smoothK(0.0, 0.4, t);
+    const lump = 0.045 * fbm(Math.cos(a) * 2 + ph, t * 2.5, Math.sin(a) * 2, 2);
+    const seam = Math.exp(-((((a + Math.PI) % (Math.PI * 2)) - Math.PI) ** 2) / 0.002);
+    r *= 1 + pleat + crease + lump - 0.015 * seam;
+    const lean = 0.03 * t * t;
+    const p = new THREE.Vector3(Math.cos(a) * r + lean * Math.cos(fold) * H, Math.max(0.003, t * H - (t < 0.05 ? (0.05 - t) * H * 0.4 : 0)), Math.sin(a) * r + lean * Math.sin(fold) * H);
     if (kind === 'slump' && t > fill) {
-      // the empty top falls over to one side, folded
-      const k = (t - fill) / (1 - fill);
-      const ang = k * 1.9;
-      const pivot = fill * H;
-      const dx = Math.cos(fold), dz = Math.sin(fold);
-      const along = (y - pivot);
-      x += dx * Math.sin(ang) * along * 1.1; z += dz * Math.sin(ang) * along * 1.1;
-      y = pivot + Math.cos(ang) * along * 0.7 - k * k * 0.05;
+      // the empty top has fallen over to one side: the part above the shoulder swings round a
+      // horizontal axis through the shoulder, flattening as it lies on the grain
+      const k = smoothK(fill, 1, t);
+      const pivot = new THREE.Vector3(0, fill * H, 0);
+      p.sub(pivot).applyAxisAngle(axis, 1.75 * k).add(pivot);
+      p.y = Math.max(p.y, fill * H * (0.55 + 0.45 * Math.cos(Math.min(1.5, Math.hypot(p.x, p.z) / R))) + 0.01);
     }
-    return [x, y, z];
+    return [p.x, p.y, p.z];
   };
   const base = b.count;
   for (let i = 0; i <= NT; i++) {
@@ -121,6 +123,9 @@ function sack(api, kit, F, rnd, o = {}) {
   }
   const row = NP + 1;
   for (let i = 0; i < NT; i++) for (let j = 0; j < NP; j++) { const q = base + i * row + j; b.q(q, q + 1, q + row + 1, q + row); }
+  // the gathered tuft closing the top
+  const cT = b.v(fp(F, ...(kind === 'lying' ? [0, 0, 0] : pos(0.99, 0).map((v, i) => (i === 1 ? v - 0.01 : 0)))), 0, H, 0.3, 0.5, 0);
+  if (kind !== 'lying') for (let j = 0; j < NP; j++) b.t(cT, base + NT * row + j, base + NT * row + j + 1);
   // the foot
   const c0 = b.v(fp(F, ...(kind === 'lying' ? [-H * 0.45, R * 0.95, 0] : [0, 0.003, 0])), 0, 0, 0.3, 0.6, 0);
   for (let j = 0; j < NP; j++) b.t(c0, base + j + 1, base + j);
