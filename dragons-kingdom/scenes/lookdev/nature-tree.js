@@ -77,7 +77,9 @@ export function update(t, ctx) {
   const { sun, SUN, ocean, tx, ty, tz, cam1, cam2 } = S;
   ocean.update(t);
   const cam = ctx.camera;
-  const two = t >= 2;
+  // shots switch a quarter second before each whole second, so a still at t = N (whose motion-blur
+  // subframes straddle N) never mixes two shots
+  const two = t >= 1.75;
   // detail: the leaning stems where they fork into limbs, with the underside of the crown above
   const p = two ? [tx + 3.2, ty + 1.25, tz + 10.5] : cam1;
   const look = two ? [tx - 1.0, ty + 1.9, tz] : [tx - 0.6, ty + 2.3, tz];

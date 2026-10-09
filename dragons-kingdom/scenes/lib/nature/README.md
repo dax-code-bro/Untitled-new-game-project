@@ -60,6 +60,17 @@ Frames: Verdor uses the coast frame of the F2/F3 style frames (sea at +x, land a
 travel +z, the inland camera on -x sees the right sides). The wind blows from the sea (+x) inland:
 trees, gorse and grass lean toward -x.
 
+## Measurements (this container: 4-core CPU, SwiftShader)
+
+| step | time / size |
+|---|---|
+| land bake (800k droplets + 60 stream-power steps, 3600 x 4800 m at 4 m) | ~50 s |
+| cliff bake, 3 workers, LOD 0-3 | 271 s, 2652 tiles, 8.6 M vertices / 16.8 M triangles, 272 MB |
+| island bake / Cling bake | ~50 s / ~65 s |
+| SDF evaluation | ~1-1.6 us |
+| coast scene, shot 1 | 663 tiles (L0 153, L1 248, L2 234, L3 28), 4.4 M triangles + 0.34 M heightfield; ~4.1 k rocks; ~100 k plant clumps |
+| 4K final still (8 subframes, film finish) | coast 305-320 s, tree 380 s (85 mm detail 615 s), island 146 s |
+
 ## Lookdev
 
 | scene | t | shot |
@@ -72,6 +83,9 @@ trees, gorse and grass lean toward -x.
 | `nature-tree.js` | 1 / 2 | clifftop hawthorn 32 mm / 85 mm detail |
 | `nature-island.js` | 1 / 2 / 3 | prologue island at dawn in mist (P-03 framing) / closer / P-12 |
 | `nature-cling.js` | 1 / 2 / 3 / 4 | from the king's steps / aerial over the closes / on the road / meadow + hedgerow oak |
+
+Shots switch a quarter second before each whole second, so `--time N` (whose motion-blur subframes
+straddle N) always shows shot N alone.
 
 Textures: ambientCG / Poly Haven CC0 sets already in `assets-lib/manifest.json`, plus four ambientCG
 bark sets (`pbr/acg_bark001/004/006/014`, CC0) added for the trees. Leaf, gorse, heather and bracken

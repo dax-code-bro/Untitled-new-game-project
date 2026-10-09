@@ -34,7 +34,7 @@ export const meta = {
 
 let S, S0;
 const ROW_TREES = ['hawthorn', 'hawthorn', 'sycamore', 'oak', 'ash', 'pine'];
-const TREE_X = (i) => i * 13 - 32.5;
+const TREE_X = (i) => i * 11 - 27.5;
 
 export async function setup(ctx) {
   const { scene, camera } = ctx;
@@ -111,10 +111,12 @@ export async function setup(ctx) {
 
 export function update(t, ctx) {
   const cam = ctx.camera;
-  const i = Math.floor(t);
+  // shots switch a quarter second before each whole second, so a still at t = N (whose motion-blur
+  // subframes straddle N) never mixes two shots
+  const i = Math.floor(t + 0.25);
   let pos, look, f = 35;
   const hx = TREE_X(0), pl = S0.PL;
-  if (i <= 1) { pos = [0, 4.5, 80]; look = [0, 7.5, 0]; f = 24; }
+  if (i <= 1) { pos = [0, 4.5, 62]; look = [0, 7.5, 0]; f = 22; }   // in front of the rock plinth (z 65..76)
   else if (i === 2) { pos = [0, 2.9, 57]; look = [0, 0.5, 41]; f = 22; }
   else if (i === 3) { pos = [0, pl + 10.5, 88.5]; look = [0, pl + 0.6, 71]; f = 26; }
   else if (i === 4) { pos = [hx + 6.5, 2.2, 9.5]; look = [hx, 2.6, 0]; f = 35; }

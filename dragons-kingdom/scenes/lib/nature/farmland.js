@@ -229,14 +229,16 @@ export async function loadClingLand(ctx, opts = {}) {
       const lod = d < 80 ? 0 : d < 450 ? 1 : 2;
       // a hedge is a continuous laid-and-trimmed wall of shrubs: clumps elongated along the line
       const ex = f.other.x - f.site.x, ez = f.other.z - f.site.z;
-      const yaw = Math.atan2(ex, ez) + (rng() - 0.5) * 0.25;
-      const w = (1.7 + 0.8 * rng()) * (far ? 1.4 : 1), h = (2.0 + 1.0 * rng()) * (far ? 1.15 : 1), len = (3.4 + 1.6 * rng()) * (far ? 1.5 : 1);
+      // the clump's long (local z) axis runs ALONG the boundary, i.e. across the line between the sites
+      const yaw = Math.atan2(ex, ez) + Math.PI / 2 + (rng() - 0.5) * 0.25;
+      // far away only every third cell is kept: those clumps are stretched to keep the hedge unbroken
+      const w = (1.7 + 0.8 * rng()) * (far ? 1.3 : 1), h = (2.0 + 1.0 * rng()) * (far ? 1.15 : 1), len = (3.0 + 1.4 * rng()) * (far ? 2.6 : 1);
       // near the lens the clump is only the dense core: card-built blackthorn and hawthorn shrubs
       // grow through it and make the twiggy, gappy silhouette of a real hedge
       const near = d < 75;
       const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y - 0.25, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(w * (near ? 0.5 : 1), h * (near ? 0.55 : 1), len * (near ? 0.85 : 1)));
-      lists[lod].push(m);
-      if (near) hedgeCards.push({ x: x + (rng() - 0.5) * 0.8, y, z: z + (rng() - 0.5) * 0.8, variant: Math.floor(rng() * 3), yaw: rng() * 6.28, scale: (h / 2.4) * (0.85 + 0.3 * rng()), thorn: rng() < 0.3 });
+      if (!near) lists[lod].push(m);
+      if (near) hedgeCards.push({ x: x + (rng() - 0.5) * 0.8, y, z: z + (rng() - 0.5) * 0.8, variant: Math.floor(rng() * 3), yaw: rng() * 6.28, scale: (h / 2.1) * (0.85 + 0.3 * rng()), thorn: rng() < 0.3 });
       if (hash2(Math.round(x / 3), Math.round(z / 3), 11) < (far ? 0.05 : 0.03)) treeSpots.push([x, y, z]);
     }
     const geos = [shrubGeometry('scrub', 7, 3), shrubGeometry('scrub', 8, 2), shrubGeometry('scrub', 9, 1)];
@@ -284,7 +286,7 @@ export async function loadClingLand(ctx, opts = {}) {
     const R = opts.grass.radius ?? 60;
     const centers = views.filter((v) => v.y - W.height(v.x, v.z) < 8);
     for (const [ci, c] of (centers.length ? centers : [v0]).entries()) {
-      group.add(grassField({ count: opts.grass.count ?? 50000, seed: 2 + ci, height: [0.1, 0.4], place: (rr) => {
+      group.add(grassField({ count: opts.grass.count ?? 50000, seed: 2 + ci, height: opts.grass.height ?? [0.1, 0.4], place: (rr) => {
         const a = rr() * 6.283, d = R * Math.sqrt(rr());
         const x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d;
         if (W.roadD(x, z) < 4.5 || Math.hypot(x, z) < 110) return null;

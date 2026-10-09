@@ -40,7 +40,7 @@ export async function setup(ctx) {
   sun.intensity *= 1.4; scene.environmentIntensity = 0.9;
   sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
   scene.add(sun, sun.target);
-  const land = await loadClingLand(ctx, { views: SHOTS.filter(Boolean).map((s) => s.pos), grass: { radius: 45 } });
+  const land = await loadClingLand(ctx, { views: SHOTS.filter(Boolean).map((s) => s.pos), grass: { radius: 32, count: 140000, height: [0.15, 0.5] } });
   scene.add(land.group);
   for (const s of SHOTS) if (s?.eye) s.pos[1] = land.heightAt(s.pos[0], s.pos[2]) + s.eye;
   camera.near = 0.2; camera.far = 30000;
@@ -48,7 +48,9 @@ export async function setup(ctx) {
 }
 
 export function update(t, ctx) {
-  const i = Math.min(SHOTS.length - 1, Math.max(1, Math.floor(t)));
+  // shots switch a quarter second before each whole second, so a still at t = N (whose motion-blur
+  // subframes straddle N) never mixes two shots
+  const i = Math.min(SHOTS.length - 1, Math.max(1, Math.floor(t + 0.25)));
   const s = SHOTS[i];
   const cam = ctx.camera;
   cam.position.set(...s.pos); cam.lookAt(...s.look); cam.updateMatrixWorld(true);

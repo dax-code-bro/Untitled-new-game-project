@@ -73,12 +73,12 @@ export const SPECIES = {
     height: [12, 18], stems: [1, 1], trunkFrac: 0.62, lean: 0.12,
     crown: { center: 0.78, rx: 0.32, ry: 0.24, base: 0.55 },
     levels: [
-      { segs: 12, kids: 16, start: 0.5, down: [75, 10], len: 0.36, rad: 0.45, curve: 0.12, up: 0.06 },
-      { segs: 5, kids: 8, start: 0.2, down: [50, 15], len: 0.5, rad: 0.5, curve: 0.2, up: 0.1 },
+      { segs: 12, kids: 22, start: 0.5, down: [75, 10], len: 0.36, rad: 0.45, curve: 0.12, up: 0.06 },
+      { segs: 5, kids: 10, start: 0.2, down: [50, 15], len: 0.5, rad: 0.5, curve: 0.2, up: 0.1 },
       { segs: 3, kids: 4, start: 0.2, down: [45, 15], len: 0.45, rad: 0.5, curve: 0.2, up: 0.12 },
       { segs: 2, kids: 0, start: 0.1, down: [40, 15], len: 0.45, rad: 0.5, curve: 0.2, up: 0.1 },
     ],
-    radius: 0.28, leaf: { kind: 'pine', size: 0.55, perM: 14, fromLevel: 1 }, bark: 'pbr/acg_bark014', barkTint: [0.75, 0.62, 0.55],
+    radius: 0.28, leaf: { kind: 'pine', size: 0.6, perM: 20, fromLevel: 1 }, bark: 'pbr/acg_bark014', barkTint: [0.75, 0.62, 0.55],
     leafCol: [0.05, 0.08, 0.03],
   },
   // shrubs grown the same way (many stems from the ground, dense small foliage cards)
@@ -538,8 +538,9 @@ export async function barkMaterial(ctx, S) {
   const U = { tMoss: { value: 0.6 } };
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vTW; varying vec3 vTN;')
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aLevel; varying vec3 vTW; varying vec3 vTN; varying float vLvl;')
       .replace('#include <project_vertex>', `#include <project_vertex>
+vLvl = aLevel;
 { vec4 w = vec4(transformed, 1.0);
 #ifdef USE_INSTANCING
   w = instanceMatrix * w;
@@ -551,10 +552,14 @@ export async function barkMaterial(ctx, S) {
 #endif
   vTN = normalize(m * objectNormal); }`);
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
-varying vec3 vTW; varying vec3 vTN; uniform float tMoss;
+varying vec3 vTW; varying vec3 vTN; varying float vLvl; uniform float tMoss;
 ${GLSL_NOISE}`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
+  // young shoots and twigs: smooth dark red-brown / purple-grey bark, not the pale grey of the
+  // old stems (thin pale twigs read as wires against the leaves)
+  float tw = clamp((vLvl - 0.6) / 1.6, 0.0, 1.0);
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.16, 0.115, 0.09) * (0.8 + 0.4 * dkVN3(vTW * 13.0)), tw * 0.85);
   // moss and green algae on the upper and windward (sea) side, grey-orange lichen patches
   float upw = smoothstep(-0.1, 0.8, vTN.y) * 0.6 + smoothstep(0.0, 0.9, dot(vTN, normalize(vec3(1.0, 0.0, 0.25)))) * 0.5;
   float m = smoothstep(0.45, 0.75, dkVN3(vTW * 6.0) * 0.6 + dkVN3(vTW * 1.5) * 0.4 + upw * 0.35 - 0.2) * tMoss;
@@ -563,12 +568,12 @@ ${GLSL_NOISE}`)
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.62, 0.55), li * 0.35);
 }`);
   };
-  mat.customProgramCacheKey = () => `nature-bark-${S.bark}`;
+  mat.customProgramCacheKey = () => `nature-bark-v2-${S.bark}`;
   return mat;
 }
 
 export function leafMaterial(S, atlas) {
-  const mat = new THREE.MeshStandardMaterial({ map: atlas, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.52, metalness: 0, color: 0xffffff, envMapIntensity: 0.9 });
+  const mat = new THREE.MeshStandardMaterial({ map: atlas, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.62, metalness: 0, color: 0xffffff, envMapIntensity: 0.75 });
   const U = { lTrans: { value: new THREE.Color(0.42, 0.55, 0.12) }, lTint: { value: new THREE.Color(0.74, 0.78, 0.6) } };
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
@@ -576,7 +581,11 @@ export function leafMaterial(S, atlas) {
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSh = aShade;');
     let fs = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vSh; uniform vec3 lTrans; uniform vec3 lTint;')
       .replace('#include <color_fragment>', `#include <color_fragment>
-diffuseColor.rgb *= lTint * (0.32 + 0.85 * vSh);`);
+diffuseColor.rgb *= lTint * (0.32 + 0.85 * vSh);`)
+      // leaf cuticle sheen is weak and broken up by the leaf's microrelief: the grazing-angle Fresnel of
+      // a smooth dielectric turns edge-on cards into white flecks (reads as blossom from a distance)
+      .replace('#include <aomap_fragment>', `#include <aomap_fragment>
+reflectedLight.indirectSpecular *= 0.3; reflectedLight.directSpecular *= 0.55;`);
     // light through the leaf toward the camera (sun behind the foliage): the brightest thing in a
     // real backlit tree
     const chunk = THREE.ShaderChunk.lights_fragment_begin;
@@ -589,7 +598,7 @@ diffuseColor.rgb *= lTint * (0.32 + 0.85 * vSh);`);
     }
     sh.fragmentShader = fs;
   };
-  mat.customProgramCacheKey = () => `nature-leaf-${S.leaf.kind}`;
+  mat.customProgramCacheKey = () => `nature-leaf-v2-${S.leaf.kind}`;
   return mat;
 }
 

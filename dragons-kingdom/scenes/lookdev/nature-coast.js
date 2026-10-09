@@ -107,7 +107,9 @@ export async function setup(ctx) {
 export function update(t, ctx) {
   const { sun, SUN, ocean, SH } = S;
   ocean.update(t);
-  const i = Math.min(SH.length - 1, Math.max(1, Math.floor(t)));
+  // shots switch a quarter second before each whole second, so a still at t = N (whose motion-blur
+  // subframes straddle N) never mixes two shots
+  const i = Math.min(SH.length - 1, Math.max(1, Math.floor(t + 0.25)));
   const s = SH[i];
   const cam = ctx.camera;
   cam.position.set(...s.pos);

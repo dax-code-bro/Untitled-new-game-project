@@ -169,8 +169,10 @@ ${GLSL_NOISE}`)
   // scale has averaged away at range
   float n4 = dkVN3(vFW * fLeaf * 0.16 + 13.0) * 0.6 + dkVN3(vFW * fLeaf * 0.42 + 17.0) * 0.4;
   diffuseColor.rgb *= 0.55 + 0.9 * smoothstep(0.2, 0.8, n4);
+  float lump = dkVN3(vFW * fLeaf * 0.3 + 21.0);
+  diffuseColor.rgb *= 0.6 + 0.6 * smoothstep(0.2, 0.7, lump);
   // flowers in sprays, not a uniform sprinkle (they show at range as warm flecks)
-  float fl = max(smoothstep(0.62, 0.8, dkVN3(vFW * fLeaf * 1.6 + 11.0)), 0.8 * smoothstep(0.6, 0.78, dkVN3(vFW * fLeaf * 0.35 + 19.0)))
+  float fl = max(smoothstep(0.62, 0.8, dkVN3(vFW * fLeaf * 1.6 + 11.0)), 0.45 * smoothstep(0.62, 0.8, dkVN3(vFW * fLeaf * 0.35 + 19.0)))
     * smoothstep(0.3, 0.9, vH) * fFlower.w * smoothstep(0.3, 0.7, n3 + 0.3) * 1.6;
   diffuseColor.rgb = mix(diffuseColor.rgb, fFlower.rgb, fl);
 }`)
@@ -180,11 +182,14 @@ ${GLSL_NOISE}`)
   // ground between them (a closed smooth hull is what makes a clump read as a pom-pom)
   float facing = abs(dot(normal, normalize(vViewPosition)));
   float rag = dkVN3(vFW * fLeaf * 0.8 + 2.0) * 0.55 + dkVN3(vFW * fLeaf * 0.25 + 6.0) * 0.45;
-  if (rag > 0.18 + 1.5 * facing + 0.5 * (1.0 - vH)) discard;
+  if (rag > 0.22 + 1.5 * facing + 0.6 * smoothstep(0.35, 0.0, vH)) discard;   // (never at the base: no pale rings of ground)
 }
 {
   vec3 b = vec3(dkVN3(vFW * fLeaf * 1.3) - 0.5, dkVN3(vFW * fLeaf * 1.3 + 5.0) - 0.5, dkVN3(vFW * fLeaf * 1.3 + 9.0) - 0.5);
-  normal = normalize(normal + (viewMatrix * vec4(b * 0.9, 0.0)).xyz);
+  // lumps of foliage at the 10-30 cm scale (the cauliflower surface of a dense bush), resolved at
+  // range where the leaf-scale bump has averaged out
+  vec3 bl = vec3(dkVN3(vFW * fLeaf * 0.3 + 1.0) - 0.5, dkVN3(vFW * fLeaf * 0.3 + 6.0) - 0.5, dkVN3(vFW * fLeaf * 0.3 + 11.0) - 0.5);
+  normal = normalize(normal + (viewMatrix * vec4(b * 0.9 + bl * 1.6, 0.0)).xyz);
 }`);
     const chunk = THREE.ShaderChunk.lights_fragment_begin;
     const a0 = chunk.indexOf('#if ( NUM_DIR_LIGHTS > 0 ) && defined( RE_Direct )');
@@ -196,7 +201,7 @@ ${GLSL_NOISE}`)
     }
     sh.fragmentShader = fs;
   };
-  mat.customProgramCacheKey = () => `nature-foliage-v2-${kind}`;
+  mat.customProgramCacheKey = () => `nature-foliage-v3-${kind}`;
   return mat;
 }
 

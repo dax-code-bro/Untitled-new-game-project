@@ -140,7 +140,7 @@ normal = normalize((viewMatrix * vec4(nkRockN, 0.0)).xyz);`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= nkAOv; reflectedLight.indirectSpecular *= nkAOv * nkAOv;`);
   };
-  mat.customProgramCacheKey = () => `nature-landscape-v9${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}`;
+  mat.customProgramCacheKey = () => `nature-landscape-v10${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}`;
   return mat;
 }
 
@@ -283,23 +283,24 @@ if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
   vec4 a; vec3 n; float r;
   vec3 acc = vec3(0.0); vec3 nacc = vec3(0.0); float racc = 0.0; float wacc = 0.0;
   if (wTurf > 0.01) {
-    nkTap(1, 1, P, N0, 1.0, a, n, r);
     vec4 a2; vec3 n2; float r2;
-    nkTap(7, 1, P + 17.0, N0, 0.8, a2, n2, r2);
+    // slopes (head slopes, banks) take the turf triplanar: a top projection smears down the fall line
+    if (up > 0.9) { nkTap(1, 1, P, N0, 1.0, a, n, r); nkTap(7, 1, P + 17.0, N0, 0.8, a2, n2, r2); }
+    else { nkTri(1, P, N0, 1.0, a, n, r); nkTri(7, P + 17.0, N0, 0.8, a2, n2, r2); }
     float dry = smoothstep(0.35, 0.75, m1 + 0.3 * m2);
     vec3 c = mix(a.rgb * vec3(0.52, 0.6, 0.36), a2.rgb * vec3(0.62, 0.6, 0.42), dry * 0.55);
     c *= 0.75 + 0.4 * m2;
     c = mix(c, c * vec3(0.8, 0.9, 0.7), smoothstep(0.55, 0.8, dkFbm3(P * 0.05 + 2.0)));
     // mottling at the scales of tussocks, grazing and soil depth: what keeps turf from reading as felt
-    float mt = dkVN2(P.xz * 1.6 + 3.0) * 0.35 + dkVN2(P.xz * 0.42 + 9.0) * 0.4 + dkVN2(P.xz * 0.11 + 1.0) * 0.25;
+    float mt = dkVN3(P * 1.6 + 3.0) * 0.35 + dkVN3(P * 0.42 + 9.0) * 0.4 + dkVN3(P * 0.11 + 1.0) * 0.25;
     c *= 0.62 + 0.75 * mt;
     // tussock scale (0.2-0.6 m): tufts and the shadowed gaps between them; dead straw in the tops;
     // what still reads at 5-10 cm a pixel, where the photo texture has averaged out to felt
     float fadeT = 1.0 - smoothstep(150.0, 600.0, camD);
-    float tu = dkVN2(P.xz * 3.1 + 1.3) * 0.6 + dkVN2(P.xz * 7.3 + 4.1) * 0.4;
-    c *= mix(1.0, 0.7 + 0.55 * smoothstep(0.25, 0.75, tu), fadeT);
-    float straw = smoothstep(0.55, 0.8, dkVN2(P.xz * 0.9 + 7.7) * 0.6 + tu * 0.4) * smoothstep(0.35, 0.65, m2);
-    c = mix(c, vec3(0.42, 0.38, 0.24) * (0.8 + 0.4 * tu), straw * 0.55);
+    float tu = dkVN3(P * 3.1 + 1.3) * 0.6 + dkVN3(P * 7.3 + 4.1) * 0.4;
+    c *= mix(1.0, 0.72 + 0.5 * smoothstep(0.25, 0.75, tu), fadeT);
+    float straw = smoothstep(0.58, 0.82, dkVN3(P * 0.9 + 7.7) * 0.6 + tu * 0.4) * smoothstep(0.35, 0.65, m2);
+    c = mix(c, vec3(0.36, 0.33, 0.2) * (0.8 + 0.4 * tu), straw * 0.35);
     // the green is a muted olive, not a lawn
     c = mix(c, vec3(dot(c, vec3(0.3, 0.59, 0.11))), 0.18);
     c = mix(c, c * vec3(1.25, 1.12, 0.7), smoothstep(0.62, 0.8, dkVN2(P.xz * 0.06 + 5.0)) * 0.6);   // sun-scorched thin soil
