@@ -45,7 +45,7 @@ export function lookParams(THREE, look) {
       // GRAY membrane with BLACK STRIPES throughout: noise-warped bands across every panel
       // (stripes block the light, the grey skin between them lets a little through)
       membrane: lin(THREE, 0.1, 0.1, 0.104), trans: lin(THREE, 0.05, 0.05, 0.052), vein: lin(THREE, 0.06, 0.05, 0.05), memRough: 0.55, memSpec: 0.32, memSpecD: 0.6,
-      stripe: [9.0, 0.3, 0.6, 1.0], stripeCol: lin(THREE, 0.009, 0.009, 0.01),
+      stripe: [7.0, 0.36, 0.6, 1.0], stripeCol: lin(THREE, 0.009, 0.009, 0.01),
       horn: [lin(THREE, 0.02, 0.019, 0.018), lin(THREE, 0.09, 0.085, 0.078)], claw: [lin(THREE, 0.018, 0.017, 0.016), lin(THREE, 0.06, 0.055, 0.05)],
       tooth: lin(THREE, 0.36, 0.3, 0.2), sclera: lin(THREE, 0.02, 0.018, 0.02),
       // BLUE eyes (a deep slate blue iris with a dark limbal ring; never emissive)
@@ -605,15 +605,19 @@ void dkMembrane(inout vec3 col) {
   // the pigment is in the skin, so the bands also block the light coming through
   if (uStripe.w > 0.0) {
     vec2 q = vec2(abs(vRest.x) - uWingRoot.x, vRest.z - uWingRoot.z) / uWingRoot.w;
-    float r = length(q * vec2(1.0, 1.25));
+    // bands run ALONG the fingers (out from the wrist toward the trailing edge), wavy, tapered
+    // and broken, two or three per panel: bands across the radiating fingers - concentric or
+    // straight - drew a spider's web
+    float across = pid > 3.5 ? a : b;
+    float r = across * (pid > 0.5 && pid < 3.5 ? 2.0 : 3.0) + pid * 0.37;
     float w1 = dkVnoise2(q * 3.0 + 4.0) - 0.5, w2 = dkVnoise2(q * 9.0 + 1.3) - 0.5;
-    float ph = r * uStripe.x + (w1 * 1.6 + w2 * 0.45) * uStripe.z * 2.5;
+    float ph = r + (w1 * 1.2 + w2 * 0.35) * uStripe.z;
     float band = 0.5 - 0.5 * cos(ph * 6.2832);                         // 0 between bands .. 1 at a band centre
     float wv = uStripe.y * (0.25 + 1.3 * dkVnoise2(q * vec2(5.0, 9.0) + 9.0) * dkVnoise2(q * 13.0 + 2.0));   // bands swell, taper and pinch
     float edge = fwidth(ph) * 1.5 + 0.09;          // (soft pigment edges, not a printed graphic)
     dkStripeM = smoothstep(1.0 - wv - edge, 1.0 - wv + edge, band) * uStripe.w;
-    dkStripeM *= smoothstep(0.25, 0.5, dkVnoise2(q * vec2(7.0, 3.5) + 2.7) + 0.2 * band);    // bands break and fork
-    dkStripeM *= smoothstep(0.02, 0.08, r);                             // no band on the shoulder itself
+    dkStripeM *= smoothstep(0.18, 0.42, dkVnoise2(q * vec2(7.0, 3.5) + 2.7) + 0.2 * band);   // bands break and fork
+    dkStripeM *= smoothstep(0.03, 0.12, length(q));                     // no band on the shoulder itself
     col = mix(col, uStripeCol * (0.85 + 0.3 * mot), dkStripeM);
     dkThin *= 1.0 - 0.85 * dkStripeM;
   }

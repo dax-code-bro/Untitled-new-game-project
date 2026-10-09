@@ -279,8 +279,9 @@ arm, chiropatagium between the fingers with a scalloped trailing edge, plagiopat
 the flank and down onto the THIGH, skinned to the thigh bone, with a concave free edge). Spans:
 Charcoal ~1.9x his length (wingtip 0.91 L out from the root), Leaf ~1.8x, Starlight ~1.9x with a
 broad chord, the scout ~1.6x with a narrow swift's planform. Charcoal's membrane is grey with
-black stripes (`stripe`: noise-warped bands concentric about the shoulder, swelling, pinching
-and breaking like an animal's pattern; the pigment also blocks the light through the skin).
+black stripes (`stripe`: wavy bands running ALONG the fingers, two or three per panel, swelling,
+tapering and breaking like an animal's pattern; bands across the radiating fingers - concentric
+or straight - drew a spider's web; the pigment also blocks the light through the skin).
 The layout lives in one place (`anatomy.js`), so switching a dragon to
 wings-as-forelegs (wyvern) later is a contained change, but it must then stay
 fixed for every shot ("no extra limbs", "no changing horns").

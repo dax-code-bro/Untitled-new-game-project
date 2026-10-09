@@ -38,7 +38,9 @@ export const CREATURES = {
   starlight: { design: 'starlight', L: 50.6, look: 'starlight', flapHz: 0.42, flapAmp: 0.62, scaleMul: 0.55, limbScaleMul: 0.72, title: 'Starlight (Queen Fall\'s dragon, albino)' },
   // (tiny damp wings pressed flat on the back and upper flank, fingers only a little curled)
   hatchling: { design: 'hatchling', L: 0.42, look: 'gold', flapHz: 0, scaleMul: 0.72, title: 'The gold hatchling (newborn)',
-    fold: { humerus: [0.55, 0.05, -0.83], forearm: [-0.15, -0.1, 0.98], hand: [0.35, -0.2, -0.92] }, fingerFold: [0.5, 0.3] },
+    fold: { humerus: [0.55, 0.05, -0.83], forearm: [-0.15, -0.1, 0.98], hand: [0.35, -0.2, -0.92] }, fingerFold: [2.4, 0.4],
+    // (the newborn's damp membrane stays loose and crumpled over the folded hand)
+    drapeOpts: { lie: { shrink: 0.5, gravity: 0.02 }, stand: { shrink: 0.5, gravity: 0.02 } } },
   scout: { design: 'scout', L: 5.6, look: 'scout', flapHz: 2.6, flapAmp: 0.9, detachableLeftWing: true, title: 'The scout (Episode 1)' },
 };
 
