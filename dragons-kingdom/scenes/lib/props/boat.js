@@ -177,16 +177,7 @@ function planking(kit, H, o) {
         }
         const row = nr + 1;
         for (let c = 0; c < cols.length - 1; c++) {
-          if (cols[c + 1].seam) continue;       // the two columns at a scarf are not joined to each other
-          for (let r = 0; r < nr; r++) {
-            const a = base + c * row + r, a2 = a + row;
-            const flip = f.kind === 'edge' ? side < 0 : side > 0;
-            if (flip) b.q(a, a2, a2 + 1, a + 1); else b.q(a, a + 1, a2 + 1, a2);
-          }
-        }
-        // the scarf's joint itself: the two ends meet (no gap) - fill between the duplicated columns
-        for (let c = 0; c < cols.length - 1; c++) {
-          if (!cols[c + 1].seam) continue;
+          if (cols[c].seam) continue;       // the end of one plank length and the start of the next share a station
           for (let r = 0; r < nr; r++) {
             const a = base + c * row + r, a2 = a + row;
             const flip = f.kind === 'edge' ? side < 0 : side > 0;
@@ -337,7 +328,8 @@ export async function prologueBoat(ctx, opts = {}) {
     for (let k = 0; k <= 40; k++) {
       const x = -3.7 + (7.4 * k) / 40;
       const y = thwartY(x) - 0.05;
-      const z = breadthAt(H, x, y) - 0.035;
+      // (its outer face at its lower arris - where the flaring side is narrowest - stays inside the planking)
+      const z = Math.min(breadthAt(H, x - 0.1, y - 0.03), breadthAt(H, x + 0.1, y - 0.03)) - 0.04;
       rp.push(V(x, y, side * z)); ru.push(V(0, 0, -side));
     }
     sweepRect(inner, rp, ru, 0.045, 0.06, { piece: rnd(), bevel: 0.006, ao: () => 0.8 });
@@ -354,12 +346,13 @@ export async function prologueBoat(ctx, opts = {}) {
   const thwarts = [-2.6, -1.0, mastX, 2.1];
   for (const x of thwarts) {
     const y = thwartY(x);
-    const z = breadthAt(H, x, y) - 0.03;
+    // (the hull narrows toward the ends: the thwart's ends must clear it at its forward and after edges)
+    const z = Math.min(breadthAt(H, x - 0.16, y - 0.01), breadthAt(H, x + 0.16, y - 0.01), breadthAt(H, x, y - 0.01)) - 0.035;
     const isMast = Math.abs(x - mastX) < 1e-6;
     box(inner, frame(V(x, y + 0.02, 0)), [isMast ? 0.3 : 0.24, 0.045, 2 * z], { grain: 'z', bevel: 0.006, piece: rnd(), noise: 0.002, nf: 3, ao: (a, bb) => (bb < 0 ? 0.6 : 1) });
     for (const side of [-1, 1]) {
       // a hanging knee under each thwart end
-      const kp = [V(x, y - 0.0, side * (z - 0.2)), V(x, y - 0.06, side * (z - 0.08)), V(x, y - 0.25, side * (breadthAt(H, x, y - 0.25) - 0.04))];
+      const kp = [V(x, y - 0.0, side * (z - 0.22)), V(x, y - 0.07, side * (breadthAt(H, x, y - 0.07) - 0.075)), V(x, y - 0.25, side * (breadthAt(H, x, y - 0.25) - 0.065))];
       sweepRect(inner, new THREE.CatmullRomCurve3(kp).getPoints(8), Array(9).fill(V(1, 0, 0)), 0.05, 0.06, { piece: rnd(), bevel: 0.006, ao: () => 0.7 });
     }
   }

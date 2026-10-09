@@ -13,6 +13,7 @@ export const meta = {
   cinematic: filmFinish({ atmosphere: { enabled: true, sky: 'scene', haze: 0.6 }, shadows: { cascades: 0 }, ao: { enabled: true, radius: 0.6 }, grade: { exposure: 0.55, whiteBalance: 6000 }, motionBlur: { accumulateSamples: 4 } }),
 };
 let S;
+const DEBUG_MESH = false;
 export async function setup(ctx) {
   const { scene } = ctx;
   const sky = await loadHDRI('hdri/kloofendal_48d_partly_cloudy', ctx, { extractSun: true });
@@ -27,6 +28,10 @@ export async function setup(ctx) {
   const M = await propMaterials(ctx);
   M.wood.hull.userData.prop.prWet.value.x = lift;
   scene.add(boat.root);
+  if (DEBUG_MESH) {
+    const cols = { 'boat:hull': 0xff0000, 'boat:hullIn': 0x00ff00, 'boat:oak': 0x0000ff, 'boat:iron': 0xffff00, 'boat:pale': 0xff00ff, 'boat:spar': 0x00ffff, 'boat:rope': 0xffffff, 'boat:ropeTar': 0x808080, 'boat:stave': 0x804000, 'boat:withy': 0x008040, 'boat:dark': 0x400080 };
+    boat.root.traverse((o) => { if (o.isMesh) { o.material = new THREE.MeshStandardMaterial({ color: cols[o.name] ?? 0x222222, roughness: 0.9 }); console.warn('[mesh]', o.name); } });
+  }
   console.warn('[props-dev] boat tris', boat.root.userData.tris);
   S = { sun, obj: boat.root };
 }

@@ -75,7 +75,7 @@ varying float vPrPiece; varying float vPrAO; varying float vPrWear;
 varying vec2 vPrUv; varying vec3 vPrW; varying vec3 vPrO;
 uniform vec3 prC1, prC2, prMean, prWearC, prDirtC, prAlgaeC;
 uniform vec2 prTile;
-uniform float prDetail, prPieceVar, prMacro, prMacroF, prWear, prAOk, prRoughVar, prTexRough, prBumpK;
+uniform float prDetail, prPieceVar, prMacro, prMacroF, prWear, prAOk, prRoughVar, prTexRough, prBumpK, prGrain;
 uniform vec4 prDirt;      // y base, height, strength, -
 uniform vec4 prWet;       // waterline y, splash band (m), weed band below (m), strength
 uniform vec4 prPat;       // pattern params (rope lay / stripes / rings)
@@ -107,6 +107,13 @@ float prMac = prF3(vPrO * prMacroF + prP * 17.0);
 #endif
 prCol *= 1.0 + prMacro * (prMac - 0.5) * 2.0;
 float prHgt = 0.0;
+#ifdef PR_MACRO_UV
+{
+  // fine streaks along the grain (late wood / early wood), a few darker lines
+  float gr = prN2(vec2(vPrUv.x * 2.2 + prP * 31.0, vPrUv.y * 140.0 + prP * 17.0)) * 0.65 + prN2(vec2(vPrUv.x * 6.0, vPrUv.y * 420.0)) * 0.35;
+  prCol *= 1.0 + prGrain * (gr - 0.5) * 2.0;
+}
+#endif
 #ifdef PR_ROPE
 {
   // laid rope: three strands twisted right-handed; prPat.x = lay (m per turn), v = 0..1 round
@@ -200,7 +207,11 @@ const CLOTH_COLOR = /* glsl */ `
   prTr = prTrans * mix(1.0, prTrans * 1.5, dbl) * clamp(1.6 - 0.6 * weave, 0.6, 1.4);
   prTr *= mix(1.0, 0.6, clamp(prDirtM + prWm, 0.0, 1.0));
   // what comes through is the dye, deepened (light crosses the coloured fibres)
-  prTrC = pow(max(prC, vec3(1e-4)), vec3(1.25)) * 2.2;
+  vec3 prCv = prC;
+#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )
+  prCv *= vColor.rgb;
+#endif
+  prTrC = pow(max(prCv, vec3(1e-4)), vec3(1.25)) * 2.2;
 }
 `;
 const CLOTH_BACKSKY = /* glsl */ `
@@ -295,6 +306,7 @@ export async function surface(ctx, o = {}) {
     prRoughVar: { value: o.roughVar ?? 0.15 },
     prTexRough: { value: o.texRough ?? 1 },
     prBumpK: { value: o.bump ?? 1 },
+    prGrain: { value: o.grain ?? 0.18 },
     prDirt: { value: new THREE.Vector4(dirt.y ?? -100, dirt.h ?? 0.3, dirt.k ?? 0, 0) },
     prWet: { value: new THREE.Vector4(wet.y ?? -1e4, wet.band ?? 0.3, wet.weed ?? 0.3, wet.k ?? 0) },
     prPat: { value: new THREE.Vector4(o.rope ?? (o.rings?.period ?? o.stripes?.period ?? 1), o.rings?.depth ?? o.stripes?.duty ?? 0.5, 0, 0) },
@@ -368,17 +380,17 @@ const sets = new WeakMap();
 export async function propMaterials(ctx) {
   if (sets.has(ctx)) return sets.get(ctx);
   const p = (async () => {
-    const W = (o) => surface(ctx, { scan: 'pbr/acg_wood35', tile: [0.9, 0.25], detail: 0.9, macroUV: true, macro: 0.18, macroF: 2.0, ...o });
+    const W = (o) => surface(ctx, { scan: 'pbr/acg_wood35', tile: [0.9, 0.25], detail: 0.55, macroUV: true, macro: 0.12, macroF: 2.0, grain: 0.2, ...o });
     const [tar, oak, silver, pale, dark, stave, spar, withy, hull] = await Promise.all([
-      W({ name: 'wood-tar', color: [0.07, 0.045, 0.028], color2: [0.09, 0.06, 0.035], roughness: 0.55, roughVar: 0.35, wear: 0.9, wearColor: [0.2, 0.14, 0.09], pieceVar: 0.3 }),
+      W({ name: 'wood-tar', color: [0.07, 0.045, 0.028], color2: [0.09, 0.06, 0.035], roughness: 0.55, roughVar: 0.35, wear: 0.9, wearColor: [0.2, 0.14, 0.09], pieceVar: 0.4, detail: 0.6, macro: 0.1 }),
       W({ name: 'wood-oak', color: [0.2, 0.13, 0.075], color2: [0.25, 0.17, 0.1], roughness: 0.78, wear: 0.7, wearColor: [0.34, 0.25, 0.16] }),
-      W({ name: 'wood-silver', color: [0.22, 0.2, 0.17], color2: [0.18, 0.15, 0.12], roughness: 0.85, wear: 0.5, wearColor: [0.32, 0.29, 0.25], pieceVar: 0.35, macro: 0.18 }),
+      W({ name: 'wood-silver', color: [0.2, 0.18, 0.155], color2: [0.17, 0.145, 0.115], roughness: 0.85, wear: 0.5, wearColor: [0.3, 0.27, 0.23], pieceVar: 0.3, macro: 0.07, grain: 0.28 }),
       W({ name: 'wood-pale', color: [0.42, 0.32, 0.2], color2: [0.36, 0.26, 0.15], roughness: 0.75, wear: 0.4, wearColor: [0.5, 0.4, 0.27] }),
       W({ name: 'wood-dark', color: [0.09, 0.055, 0.032], color2: [0.12, 0.075, 0.04], roughness: 0.6, wear: 0.8, wearColor: [0.22, 0.15, 0.09] }),
       W({ name: 'wood-stave', color: [0.17, 0.11, 0.065], color2: [0.23, 0.155, 0.09], roughness: 0.72, wear: 0.8, wearColor: [0.32, 0.23, 0.15], pieceVar: 0.4, tile: [0.7, 0.18] }),
       W({ name: 'wood-spar', color: [0.24, 0.16, 0.09], color2: [0.2, 0.13, 0.075], roughness: 0.6, wear: 0.5, wearColor: [0.33, 0.24, 0.15], tile: [1.4, 0.3] }),
       W({ name: 'wood-withy', color: [0.26, 0.17, 0.09], color2: [0.2, 0.12, 0.06], roughness: 0.55, wear: 0.0, pieceVar: 0.45, tile: [0.6, 0.05], detail: 0.5, macro: 0.05 }),
-      W({ name: 'wood-hull', color: [0.06, 0.04, 0.026], color2: [0.08, 0.052, 0.032], roughness: 0.5, roughVar: 0.4, wear: 1.0, wearColor: [0.17, 0.12, 0.08], pieceVar: 0.3, wet: { y: 0.0, band: 0.35, weed: 0.4, k: 1 }, algae: [0.035, 0.045, 0.018] }),
+      W({ name: 'wood-hull', color: [0.055, 0.038, 0.025], color2: [0.085, 0.056, 0.034], roughness: 0.5, roughVar: 0.4, wear: 1.0, wearColor: [0.17, 0.12, 0.08], pieceVar: 0.45, detail: 0.6, macro: 0.1, wet: { y: 0.0, band: 0.35, weed: 0.4, k: 1 }, algae: [0.035, 0.045, 0.018] }),
     ]);
     const iron = await surface(ctx, { name: 'iron', scan: 'pbr/acg_metal26', tile: [0.35, 0.35], detail: 0.45, color: [0.045, 0.036, 0.03], color2: [0.07, 0.045, 0.028], metalness: 0.3, roughness: 0.7, roughVar: 0.3, wear: 0.6, wearColor: [0.1, 0.095, 0.09], pieceVar: 0.4 });
     const ironDark = await surface(ctx, { name: 'iron-dark', scan: 'pbr/acg_metal26', tile: [0.35, 0.35], detail: 0.25, color: [0.03, 0.028, 0.026], metalness: 0.4, roughness: 0.55, wear: 0.6, wearColor: [0.12, 0.11, 0.1] });
@@ -390,7 +402,7 @@ export async function propMaterials(ctx) {
     const hessian = await surface(ctx, { name: 'hessian', scan: 'pbr/acg_fabric40', tile: [0.18, 0.18], detail: 0.5, normalScale: 1.4, color: [0.33, 0.25, 0.15], color2: [0.28, 0.21, 0.13], roughness: 0.95, pieceVar: 0.2, macro: 0.15, macroF: 4, wear: 0.3, wearColor: [0.4, 0.33, 0.22], sheen: 0.3, sheenColor: [0.7, 0.6, 0.45], dirt: { y: 0, h: 0.15, k: 0.5, color: [0.6, 0.55, 0.48] } });
     const straw = await surface(ctx, { name: 'straw', scan: null, color: [0.5, 0.38, 0.17], color2: [0.42, 0.33, 0.17], roughness: 0.42, roughVar: 0.4, pieceVar: 0.55, macro: 0.1, macroF: 8, wear: 0, ao: 0.85, cloth: { transmission: 0.25, forward: 1.0 }, side: THREE.DoubleSide });
     const clay = await surface(ctx, { name: 'clay', scan: 'pbr/acg_ground03', tile: [0.4, 0.4], detail: 0.35, normalScale: 0.25, color: [0.32, 0.15, 0.075], color2: [0.36, 0.19, 0.1], roughness: 0.82, pieceVar: 0.25, macro: 0.15, macroF: 6, wear: 0.5, wearColor: [0.25, 0.13, 0.08], rings: { period: 0.009, depth: 0.0004 } });
-    const clayGlaze = await surface(ctx, { name: 'clay-glaze', scan: 'pbr/acg_ground03', tile: [0.4, 0.4], detail: 0.2, normalScale: 0.1, color: [0.16, 0.13, 0.03], color2: [0.09, 0.11, 0.03], roughness: 0.22, roughVar: 0.3, pieceVar: 0.4, macro: 0.25, macroF: 5, wear: 0.6, wearColor: [0.3, 0.15, 0.08], rings: { period: 0.009, depth: 0.0003 }, clearcoat: 0.6, clearcoatRoughness: 0.15 });
+    const clayGlaze = await surface(ctx, { name: 'clay-glaze', scan: 'pbr/acg_ground03', tile: [0.4, 0.4], detail: 0.2, normalScale: 0.1, color: [0.13, 0.065, 0.015], color2: [0.045, 0.055, 0.014], roughness: 0.22, roughVar: 0.3, pieceVar: 0.4, macro: 0.25, macroF: 5, wear: 0.6, wearColor: [0.3, 0.15, 0.08], rings: { period: 0.009, depth: 0.0003 }, clearcoat: 0.6, clearcoatRoughness: 0.15 });
     const clayDark = await surface(ctx, { name: 'clay-dark', scan: 'pbr/acg_ground03', tile: [0.4, 0.4], detail: 0.3, normalScale: 0.2, color: [0.07, 0.055, 0.045], color2: [0.09, 0.07, 0.05], roughness: 0.55, roughVar: 0.3, wear: 0.6, wearColor: [0.2, 0.12, 0.07], rings: { period: 0.009, depth: 0.0003 } });
     const leather = await surface(ctx, { name: 'leather', scan: 'pbr/acg_leather26', tile: [0.3, 0.3], detail: 0.5, color: [0.12, 0.065, 0.035], color2: [0.15, 0.085, 0.045], roughness: 0.55, roughVar: 0.3, wear: 0.8, wearColor: [0.24, 0.15, 0.09] });
     const wax = await surface(ctx, { name: 'wax', scan: null, color: [0.62, 0.55, 0.38], roughness: 0.35, wear: 0, pieceVar: 0.1, cloth: { transmission: 0.5, forward: 0.6 } });

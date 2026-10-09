@@ -177,7 +177,7 @@ export function ensureAttrs(g, p = 0) {
 /** A set of builders keyed by material name -> one Group of meshes. */
 export class Kit {
   constructor() { this.b = {}; }
-  get(name) { return this.b[name] || (this.b[name] = new Builder()); }
+  get(name) { if (!this.b[name]) { this.b[name] = new Builder(); this.b[name].name = name; } return this.b[name]; }
   build(mats, { name = 'prop', castShadow = true, receiveShadow = true } = {}) {
     const g = new THREE.Group(); g.name = name;
     let tris = 0;
@@ -282,6 +282,8 @@ export function tube(b, pts, radius, o = {}) {
   const n = o.segments ?? Math.max(2, Math.ceil(len / (o.seg ?? 0.06)));
   const frames = curve.computeFrenetFrames(n, !!o.closed);
   const R = typeof radius === 'function' ? radius : () => radius;
+  // ropes: v = 0..1 round the rope (the rope shader twists its strands with it)
+  const vNorm = o.vNorm ?? (typeof b.name === 'string' && b.name.startsWith('rope'));
   const base = b.count;
   const P = new THREE.Vector3(), N = new THREE.Vector3();
   for (let i = 0; i <= n; i++) {
@@ -291,7 +293,7 @@ export function tube(b, pts, radius, o = {}) {
     for (let k = 0; k <= sides; k++) {
       const a = (k / sides) * Math.PI * 2 + (o.twist ?? 0) * t * len;
       N.copy(frames.normals[i]).multiplyScalar(Math.cos(a)).addScaledVector(frames.binormals[i], Math.sin(a));
-      b.v(P.clone().addScaledVector(N, r), t * len * (o.uScale ?? 1), (k / sides) * 2 * Math.PI * r, piece, o.ao ? o.ao(t, a) : 1, o.wear ?? 0);
+      b.v(P.clone().addScaledVector(N, r), t * len * (o.uScale ?? 1), vNorm ? k / sides : (k / sides) * 2 * Math.PI * r, piece, o.ao ? o.ao(t, a) : 1, o.wear ?? 0);
     }
   }
   const row = sides + 1;

@@ -116,7 +116,7 @@ export function squareSail(data, o = {}) {
   const nAt = (i, j) => { const k = clamp(j, 0, ny) * (nx + 1) + clamp(i, 0, nx); return new THREE.Vector3(NA.getX(k), NA.getY(k), NA.getZ(k)); };
   const pointAt = (fu, fv) => at(Math.round(fu * nx), Math.round(fv * ny)).clone();
   if (o.ropeMaterial) {
-    const rb = new Builder();
+    const rb = new Builder(); rb.name = 'rope';
     // bolt rope sewn round the edges (on the after side of the sail: -z, the windward face)
     const edge = [];
     for (let i = 0; i <= nx; i++) edge.push(at(i, 0));
