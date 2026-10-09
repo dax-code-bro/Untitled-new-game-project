@@ -1106,7 +1106,18 @@ def leg_tubes(D, S, old, g, tuck_y):
         rad = P - foot_
         r = np.linalg.norm(rad, axis=1)
         top = np.percentile(r[(tt > 0.12) & (tt < 0.3)], 75) if np.any((tt > 0.12) & (tt < 0.3)) else r.max()
-        R = top * (1.0 - g.get('taper', 0.3) * np.clip((tt - 0.2) / 0.6, 0, 1))
+        R = top * (1.0 - g.get('taper', 0.45) * np.clip((tt - 0.2) / 0.6, 0, 1))
+        # never more than ~1.5 cm off the leg's own girth at that height (a cone from the thigh's
+        # girth stood 2-3 cm off the knee all round and the tucked legs ballooned into jodhpurs)
+        edges = np.linspace(0, 1, 21)
+        cen, gir = [], []
+        for a0, a1 in zip(edges[:-1], edges[1:]):
+            m_ = (tt >= a0) & (tt < a1)
+            if m_.sum() > 8:
+                cen.append((a0 + a1) / 2)
+                gir.append(np.percentile(r[m_], 80))
+        if len(cen) > 2:
+            R = np.minimum(R, np.interp(tt, cen, gir) + g.get('leg_ease', 0.014))
         w = np.clip((tt - 0.14) / 0.1, 0, 1)
         if tuck_y:
             w = w * np.clip((P[:, 1] - (tuck_y[s] + 0.1)) / 0.06, 0, 1)
@@ -1283,7 +1294,8 @@ def head_shell(D, g):
     # (a hood at a uniform 3 cm off the head read as a space helmet: it rests on the crown, the
     # wool only stands off where it falls from the head to the neck - and it is smoothed more,
     # so the ears do not print through)
-    S, F, old = D.shell(vm, g.get('ease', 0.006 if kind != 'hood' else 0.014), smooth=g.get('smooth', 30 if kind not in ('hood', 'wrap') else 60), extra_ease=xe)
+    # (a hood at 1.4 cm read as a tight balaclava / helmet: it is cut loose over the crown)
+    S, F, old = D.shell(vm, g.get('ease', 0.006 if kind != 'hood' else 0.02), smooth=g.get('smooth', 30 if kind not in ('hood', 'wrap') else 60), extra_ease=xe)
     if kind in ('hood', 'coif', 'wrap'):
         D.hide_under(old, F, rings=2)          # the ears under it printed through
     if kind == 'wrap':
@@ -1331,7 +1343,7 @@ def head_shell(D, g):
         ph = rng_.random(3) * 6.28
         wav = np.sin(a_ * 9.0 + ph[0] + S[:, 1] * 12.0) * 0.6 + np.sin(a_ * 5.3 + S[:, 1] * 35.0 + ph[1]) * 0.4
         wav += 0.5 * np.sin(a_ * 17.0 + ph[2]) * low ** 2
-        amp = 0.0045 * (0.15 + low)
+        amp = 0.006 * (0.25 + low)
         front = np.clip((dd[:, 2] - 0.0) / 0.04, 0, 1)
         S = S + nS * (amp * wav * (1 - 0.7 * front) + 0.004 * low)[:, None]
         nb_ = mu.neighbours(len(S), F)
@@ -1354,7 +1366,7 @@ def head_shell(D, g):
     if kind in ('coif', 'kerchief', 'cap', 'wrap') and g.get('soften', True):
         # one level of subdivision + a light relax: at mid detail the head cloth showed the body
         # mesh's flat facets and read as a folded paper box
-        S, F, _ = mu.subdivide_quads_linear(S, F)
+        S, F, _ = mu.subdivide_quads_linear(S, F, extra=[np.zeros(len(S))])
         nb_ = mu.neighbours(len(S), F)
         bnd_ = np.zeros(len(S), bool)
         for l in mu.boundary_loops(F):

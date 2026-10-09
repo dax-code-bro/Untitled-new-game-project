@@ -112,11 +112,14 @@ varying float vAO; varying vec4 vAux; varying vec3 vObjP; varying vec2 vPat; var
   }
   if (uLeather > 0.5) {
     // sole (aux.b): a dark edge of stacked leather with a paler welt line where it meets the upper
+    // (about 1 cm of dark edge above the ground, then a 2 mm paler welt)
     float sole = vAux.b;
-    c = mix(c, c * 0.42, smoothstep(0.55, 0.85, sole));
-    c *= 1.0 + 0.35 * smoothstep(0.35, 0.5, sole) * (1.0 - smoothstep(0.5, 0.62, sole));
-    // scuffed toe and heel: lighter, rougher leather
-    c = mix(c, c * 1.35 + 0.01, smoothstep(0.6, 0.95, hFbm(vObjP * 45.0 + 3.0)) * 0.35 * vAux.a);
+    c = mix(c, c * 0.45, smoothstep(0.3, 0.45, sole));
+    c *= 1.0 + 0.3 * smoothstep(0.16, 0.24, sole) * (1.0 - smoothstep(0.24, 0.32, sole));
+    // scuffed toe and heel: broad soft patches of paler, drier leather low on the boot (small
+    // hard-edged blotches read as stains or as toes printed through)
+    float low = 1.0 - smoothstep(0.03, 0.09, vObjP.y);
+    c = mix(c, c * 1.22 + 0.006, smoothstep(0.45, 0.85, hFbm(vObjP * 24.0 + 3.0)) * 0.22 * low * step(0.001, vAux.b + vAux.a));
   }
   if (uFur > 0.5) {
     // guard hairs combed downward: streaks along the fall line, dark between tufts
@@ -128,7 +131,9 @@ varying float vAO; varying vec4 vAux; varying vec3 vObjP; varying vec2 vPat; var
   // wear (edges, elbows, knees) and dust toward the hem / on the lower body
   float wear = clamp(vAux.g * (0.6 + 0.8 * n2), 0.0, 1.0) * uWear;
   c = mix(c, mix(c, vec3(dot(c, vec3(0.3333))), 0.4) * 1.3, wear * (1.0 - uLeather));
-  c = mix(c, c * 0.55, wear * uLeather * 0.6);
+  // (leather darkens with wear at the top edge; not round the sole, where the hem noise printed
+  // dark stains over the toe)
+  c = mix(c, c * 0.55, wear * uLeather * 0.6 * smoothstep(0.07, 0.13, vObjP.y));
   float dust = clamp(vAux.r * (0.5 + n2), 0.0, 1.0) * uDust;
   c = mix(c, max(c, uDustCol * 0.8), dust * 0.35);
   diffuseColor.rgb = c;
@@ -150,9 +155,13 @@ if (uPattern > 0.5 && uPattern < 1.5) {
 }
 if (uLeather > 0.5 && vAux.a > 0.01) {
   // ankle / instep creases (aux.a): leather boots crease across the flex line, they are not
-  // smooth rubber
-  float cr = sin(vObjP.y * 520.0 + hN3(vObjP * 60.0) * 5.0) * 0.5 + 0.5;
-  normal = hBump(normal, -vViewPosition, -pow(cr, 6.0) * 0.0009 * vAux.a, faceDirection);
+  // smooth rubber - but only a few broken flex lines over the front of the ankle and the vamp
+  // behind the toe cap (unbroken rings all round read as wrinkled skin, lines on the toe box as toes)
+  float ph = vObjP.y * 430.0 + vObjP.x * 50.0 + hN3(vObjP * 40.0) * 4.0;
+  float cr = pow(sin(ph) * 0.5 + 0.5, 8.0);
+  float brk = smoothstep(0.42, 0.72, hFbm(vObjP * vec3(26.0, 8.0, 26.0) + 11.0));
+  float where = smoothstep(-0.3, 0.5, vObjN.z) * smoothstep(0.055, 0.075, vObjP.y);
+  normal = hBump(normal, -vViewPosition, -cr * brk * where * 0.0008 * vAux.a, faceDirection);
 }
 if (uFur > 0.5) {
   float g1 = hN3(vObjP * vec3(700.0, 90.0, 700.0) + uSeed);

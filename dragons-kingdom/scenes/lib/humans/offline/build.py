@@ -210,6 +210,10 @@ def assemble(kit, spec, out_dir, opts):
         I, W = g.I, g.W
         hem = np.zeros(len(P))
         for l in mu.boundary_loops(F):
+            # (a tucked trouser leg ends inside the boot: no worn, paler hem there - it printed as
+            # a light scalloped band round the boot top)
+            if g.spec.get('tuck') and np.mean(P[l, 1]) < P[:, 1].min() + 0.25 * np.ptp(P[:, 1]):
+                continue
             hem[l] = 1
         nb = mu.neighbours(len(P), F)
         for _ in range(2):

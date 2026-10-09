@@ -133,7 +133,7 @@ def G_cap(c, **kw):
 
 
 def G_hood(c, cape=0.3, **kw):
-    return dict({'type': 'hood', 'fabric': 'wool', 'color': _c(c), 'ease': 0.016, 'layer': 3, 'cape_length': cape}, **kw)
+    return dict({'type': 'hood', 'fabric': 'wool', 'color': _c(c), 'ease': 0.022, 'layer': 3, 'cape_length': cape}, **kw)
 
 
 def G_wrap(c, **kw):
@@ -295,7 +295,8 @@ def cast():
         # dark riding clothes show (a knee-length coat read as a blue robe)
         'outfit': riding_clothes([0.046, 0.058, 0.082], shirt=[0.05, 0.05, 0.052], trousers='charcoal', boots=LEATHER_C['dark'], hem=0.74,
                                  boot_h=0.86, belt_style='leather', belt_color=[0.15, 0.085, 0.045], pouch=True, flare=1.35, tongue=0.065),
-        'pose': 'stand', 'pose_params': {'weight': 'L', 'contrapposto': 1.0, 'head_yaw': 0.2, 'belt_hand': 'R', 'free_fwd': 0.09},
+        # (his left hand on the belt, Abby's right: the two-shot is not one pose mirrored twice)
+        'pose': 'stand', 'pose_params': {'weight': 'L', 'contrapposto': 1.0, 'head_yaw': 0.2, 'belt_hand': 'L', 'free_fwd': 0.09, 'elbow': 0.3},
         'notes': 'canon: dark riding clothes with a muted blue outer layer',
     }
     C.append(remi)
@@ -338,7 +339,9 @@ def cast():
                   hair={'color': HAIR['black'], 'style': 'coronet', 'length': 0.5, 'loft': 0.006},
                   eyes=('grey', IRIS_TINT['grey']), brows='eyebrow005', outfit=fall_out,
                   expression={'eyebrows-left-down': 0.15, 'eyebrows-right-down': 0.12, 'eye-left-slit': 0.15, 'eye-right-slit': 0.15, 'mouth-compression': 0.15},
-                  pose='hands_behind', pose_params={'weight': 'L', 'contrapposto': 0.8, 'head_pitch': 0.06, 'head_yaw': -0.15},
+                  # (hands clasped behind the back read as a figure without arms from the front: a gloved
+                  # hand set on the belt, the other arm easy, chin a little up)
+                  pose='stand', pose_params={'weight': 'L', 'contrapposto': 0.8, 'head_pitch': 0.06, 'head_yaw': -0.15, 'belt_hand': 'L', 'elbow': 0.3, 'arm_out': 0.16},
                   notes='canon: fitted riding clothes suitable for command')
     C.append(fall)
     C.append(variant(fall, 'fall_ride', pose='ride', pose_params={'lean': 0.18, 'reach': 0.3}, lod='mid',
@@ -485,9 +488,9 @@ def cast():
                     hair={'color': HAIR['brown'], 'style': 'none'},
                     outfit=[G_trousers([0.06, 0.055, 0.045], tuck=0.79), G_boots(LEATHER_C['dark'], height=0.85), G_shirt('undyed'),
                             G_coat([0.1, 0.09, 0.07], hem=0.5, neck=0.05, neck_shape='round', belt_style='leather', belt_color=LEATHER_C['dark']),
-                            G_wrap([0.07, 0.065, 0.055]),
-                            G_hood([0.08, 0.075, 0.06], cape=0.3, ease=0.03, deep=0.05), G_gloves([0.05, 0.035, 0.022], cuff=0.3)],
-                    pose='ride', pose_params={'lean': 0.3, 'reach': 0.34, 'head_pitch': 0.38}, notes='face never shown: deep hood, face wrap, head down; no markings'))
+                            G_wrap([0.07, 0.065, 0.055], top=0.006),
+                            G_hood([0.08, 0.075, 0.06], cape=0.3, ease=0.03, deep=0.075), G_gloves([0.05, 0.035, 0.022], cuff=0.3)],
+                    pose='ride', pose_params={'lean': 0.3, 'reach': 0.34, 'head_pitch': 0.45}, notes='face never shown: deep hood, face wrap, head down; no markings'))
     C.append(person('sailor1', 'Sailor', 1.0, 0.5, 'tan', muscle=0.7, weight=0.45, height=0.5,
                     details={'nose/nose-hump': 0.3, 'chin/chin-prominent': 0.2, 'asym/asym-nose-1': 0.3},
                     hair={'color': HAIR['dirtyblond'], 'style': 'crop', 'length': (0.02, 0.06), 'curl': 0.5, 'clump': 0.6,

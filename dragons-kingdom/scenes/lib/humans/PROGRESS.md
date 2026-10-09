@@ -197,3 +197,22 @@ Code changes (in progress; test builds use --suffix _t1, cache/<id>_t1.*):
   stronger limbal ring, card alpha cut. humans-review.js (quick side-by-side review scene).
 Next: test builds -> review renders -> fix -> full rebuild (suffix _r1, swap) -> 4K finals in
 output/humans/r1/.
+- 16:20 UTC: test builds reviewed (output/humans/r1/rev_*: remi/abby/fall/king/alexandria/guards/
+  recorder/sling/vendor/scout/parent/crowd), fixes applied (leg tubes, boot-rim cull, fitted circlet,
+  girdle rosettes, doublet ease + buttons, sling offsets + darker linen, sword low + angled back,
+  softer quilting, closed shawls, injured forearm above the belt band, scout deeper hood/wrap).
+- FULL REBUILD started 16:20 UTC into suffixed caches (cache/<id>_r1.*, live caches untouched):
+  three queues (scratchpad humans/r1logs/full_q1..3.log, stamp humans/stamp_r1):
+    PY=<bpy> SUFFIX=_r1 sh scenes/lib/humans/offline/queue.sh <stamp> <ids...>
+  After a restart: rmdir scenes/lib/humans/cache/*_r1.lock, re-run the same commands (done ids
+  skip). When all 48 are built and reviewed: scenes/lib/humans/offline/swap.sh _r1 (old caches kept
+  as *.prev.* until swap.sh _r1 --clean), then the 4K finals (scratchpad humans/finals.sh hero |
+  contact | riders) into output/humans/r1/ (*-r1.png, *_1920.png, crops).
+- 16:40 UTC: first _r1 outputs reviewed (rev_r1a): tucked trousers ballooned at the knee (leg tube
+  now capped at the leg's own girth + 1.4 cm, taper 0.45), a pale scalloped hem band at the boot
+  tops (no hem wear on the tucked rim), boots with ring wrinkles and dark blotches at the toe
+  (cloth.js: creases only over the instep, broken; scuff broad and soft; no wear darkening round
+  the sole), Fall's hands-behind read armless from the front (now a gloved hand on the belt),
+  Remi's belt hand moved to his left (the two-shot is not one pose mirrored). abby, remi, fall,
+  abby_ride_injured _r1 caches deleted so the queues rebuild them; abby_sling (started before the
+  fix) to be rebuilt after (stamp humans/stamp_r1b).

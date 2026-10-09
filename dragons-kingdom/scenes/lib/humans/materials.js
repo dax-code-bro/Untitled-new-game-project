@@ -146,8 +146,12 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
     c = mix(c, plain, clamp(vAux2.b * 0.85, 0.0, 0.85)); }
   // lid margin: lash line and wet rim of the eye opening (dark, barely red)
   c = mix(c, c * vec3(0.62, 0.56, 0.55), vAux2.g * uLid);
-  // lips (aux.r) a little deeper, nails (aux.g) paler
+  // lips (aux.r) a little deeper, nails (aux.g) paler; the lips are not one even peach: a
+  // fine vertical mottling, a slightly darker vermilion border and a deeper centre line
   c = mix(c, c * vec3(0.98, 0.7, 0.72), vAux.r * 0.75);
+  { float lm1 = hN3(vObjP * vec3(700.0, 2500.0, 700.0) + 4.0) - 0.5;
+    c *= 1.0 + vAux.r * (0.12 * lm1);
+    c *= 1.0 - 0.1 * smoothstep(0.15, 0.4, vAux.r) * (1.0 - smoothstep(0.4, 0.7, vAux.r)); }
   // pores read in the colour too (a touch darker, shadowed openings) where they are resolved
   { float fwc = length(fwidth(vObjP));
     float fp = 1.0 - smoothstep(0.35, 1.0, fwc * 1600.0);
