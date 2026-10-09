@@ -13,7 +13,7 @@
 // on a canvas (lobed hawthorn, palmate sycamore, lobed oak, pinnate ash, needle tufts for pine),
 // lit with light through the leaves; bark is a scanned ambientCG bark (CC0) with moss and lichen.
 import * as THREE from 'three';
-import { mulberry, makeNoise, smoothstep, clamp } from './noise.js';
+import { mulberry, makeNoise, smoothstep, clamp, hash3 } from './noise.js';
 import { loadPBR } from '../assets.js';
 import { GLSL_NOISE } from '../sets/materials.js';
 
@@ -35,9 +35,9 @@ export const SPECIES = {
   },
   sycamore: {
     height: [11, 16], stems: [1, 1], trunkFrac: 0.32, lean: 0.12,
-    crown: { center: 0.58, rx: 0.5, ry: 0.44, base: 0.25 },
+    crown: { center: 0.54, rx: 0.62, ry: 0.46, base: 0.18 },
     levels: [
-      { segs: 12, kids: 12, start: 0.28, down: [62, 12], len: 0.62, rad: 0.55, curve: 0.1, up: 0.05 },
+      { segs: 12, kids: 13, start: 0.22, down: [64, 12], len: 0.8, rad: 0.55, curve: 0.1, up: 0.03 },
       { segs: 7, kids: 9, start: 0.15, down: [48, 15], len: 0.55, rad: 0.5, curve: 0.15, up: 0.05 },
       { segs: 4, kids: 8, start: 0.12, down: [45, 15], len: 0.5, rad: 0.5, curve: 0.2, up: 0.04 },
       { segs: 2, kids: 0, start: 0.1, down: [50, 15], len: 0.45, rad: 0.5, curve: 0.25, up: 0.05 },
@@ -47,9 +47,9 @@ export const SPECIES = {
   },
   oak: {
     height: [9, 14], stems: [1, 1], trunkFrac: 0.25, lean: 0.15,
-    crown: { center: 0.55, rx: 0.66, ry: 0.44, base: 0.2 },
+    crown: { center: 0.48, rx: 0.8, ry: 0.46, base: 0.15 },
     levels: [
-      { segs: 12, kids: 10, start: 0.25, down: [65, 12], len: 0.7, rad: 0.58, curve: 0.25, up: 0.02 },
+      { segs: 12, kids: 11, start: 0.2, down: [68, 12], len: 0.9, rad: 0.58, curve: 0.25, up: 0.0 },
       { segs: 8, kids: 9, start: 0.12, down: [50, 18], len: 0.55, rad: 0.5, curve: 0.3, up: 0.02 },
       { segs: 4, kids: 8, start: 0.1, down: [50, 20], len: 0.5, rad: 0.5, curve: 0.35, up: 0.03 },
       { segs: 2, kids: 0, start: 0.1, down: [50, 20], len: 0.45, rad: 0.5, curve: 0.35, up: 0.0 },
@@ -59,9 +59,9 @@ export const SPECIES = {
   },
   ash: {
     height: [12, 18], stems: [1, 1], trunkFrac: 0.38, lean: 0.1,
-    crown: { center: 0.65, rx: 0.36, ry: 0.4, base: 0.35 },
+    crown: { center: 0.58, rx: 0.48, ry: 0.42, base: 0.25 },
     levels: [
-      { segs: 12, kids: 10, start: 0.35, down: [48, 10], len: 0.58, rad: 0.5, curve: 0.08, up: 0.1 },
+      { segs: 12, kids: 11, start: 0.28, down: [55, 10], len: 0.72, rad: 0.5, curve: 0.08, up: 0.06 },
       { segs: 7, kids: 8, start: 0.18, down: [42, 12], len: 0.55, rad: 0.5, curve: 0.12, up: 0.08 },
       { segs: 4, kids: 8, start: 0.14, down: [45, 15], len: 0.5, rad: 0.5, curve: 0.2, up: 0.06 },
       { segs: 2, kids: 0, start: 0.1, down: [45, 15], len: 0.5, rad: 0.5, curve: 0.2, up: 0.05 },
@@ -185,7 +185,7 @@ export function generateTree(speciesName, opts = {}) {
         // cards face outward from the crown centre, tipped toward the sky
         const cc = new THREE.Vector3(0, C.center * H, 0);
         const n0 = pos.clone().sub(cc).normalize().lerp(up, 0.35 + 0.3 * r()).normalize();
-        leaves.push({ p: pos, n: n0, s: S.leaf.size * (0.7 + 0.6 * r()), r: r() * Math.PI * 2, v: Math.floor(r() * 4), shade: r() });
+        leaves.push({ p: pos, n: n0, s: S.leaf.size * (0.7 + 0.6 * r()), r: r() * Math.PI * 2, v: Math.floor(r() * 4), shade: r(), depth: env(pos) });
       }
     }
     if (level + 1 >= S.levels.length) return;
@@ -298,9 +298,13 @@ export function leafGeometry(tree, lod = 0) {
   const up = new THREE.Vector3(0, 1, 0);
   let i = 0;
   const r = mulberry(1234 + lod);
+  let li = -1;
   for (const L of tree.leaves) {
+    li++;
     if (r() > keep) continue;
-    const n = L.n.clone();
+    // each card tilted at random off the crown-outward normal: real sprays face every way, and a
+    // coherent orientation shows as rows of edge-on slivers wherever the crown turns away
+    const n = L.n.clone().add(new THREE.Vector3(hash3(li, 1, 0, 77) - 0.5, hash3(li, 2, 0, 77) - 0.5, hash3(li, 3, 0, 77) - 0.5).multiplyScalar(1.1)).normalize();
     const t = new THREE.Vector3().crossVectors(Math.abs(n.y) < 0.95 ? up : new THREE.Vector3(1, 0, 0), n).normalize();
     t.applyAxisAngle(n, L.r);
     const b = new THREE.Vector3().crossVectors(n, t);
@@ -315,7 +319,7 @@ export function leafGeometry(tree, lod = 0) {
       pos.push(c.x + t.x * a * s + b.x * bb * s + n.x * bend, c.y + t.y * a * s + b.y * bb * s + n.y * bend, c.z + t.z * a * s + b.z * bb * s + n.z * bend);
       nrm.push(n.x, n.y, n.z);
       uv.push(u0 + (a + 0.5) * 0.5, v0 + (bb + 0.5) * 0.5);
-      shade.push(L.shade);
+      shade.push(0.35 * L.shade + 0.65 * smoothstep(0.35, 1.0, L.depth ?? 1));
     }
     idx.push(i, i + 1, i + 2, i, i + 2, i + 3);
     i += 4;
@@ -564,15 +568,15 @@ ${GLSL_NOISE}`)
 }
 
 export function leafMaterial(S, atlas) {
-  const mat = new THREE.MeshStandardMaterial({ map: atlas, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.7, metalness: 0, color: 0xffffff, envMapIntensity: 0.7 });
-  const U = { lTrans: { value: new THREE.Color(0.42, 0.55, 0.12) }, lTint: { value: new THREE.Color(0.82, 0.86, 0.72) } };
+  const mat = new THREE.MeshStandardMaterial({ map: atlas, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.52, metalness: 0, color: 0xffffff, envMapIntensity: 0.9 });
+  const U = { lTrans: { value: new THREE.Color(0.42, 0.55, 0.12) }, lTint: { value: new THREE.Color(0.74, 0.78, 0.6) } };
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aShade; varying float vSh;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSh = aShade;');
     let fs = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vSh; uniform vec3 lTrans; uniform vec3 lTint;')
       .replace('#include <color_fragment>', `#include <color_fragment>
-diffuseColor.rgb *= lTint * (0.7 + 0.6 * vSh);`);
+diffuseColor.rgb *= lTint * (0.32 + 0.85 * vSh);`);
     // light through the leaf toward the camera (sun behind the foliage): the brightest thing in a
     // real backlit tree
     const chunk = THREE.ShaderChunk.lights_fragment_begin;
@@ -589,7 +593,86 @@ diffuseColor.rgb *= lTint * (0.7 + 0.6 * vSh);`);
   return mat;
 }
 
+/** far-crown material: foliage-mass shading (gaps, darker inside and below), light through the edge */
+export function crownMaterial(S) {
+  const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(...S.leafCol).multiplyScalar(1.4), roughness: 0.8, metalness: 0, envMapIntensity: 0.6 });
+  const U = { cLeaf: { value: 1.6 / Math.max(0.2, S.leaf.size) }, cTrans: { value: new THREE.Color(0.18, 0.26, 0.05) } };
+  mat.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, U);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aH; attribute float aTrunk; varying float vH; varying float vTr; varying vec3 vCW;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvH = aH; vTr = aTrunk;')
+      .replace('#include <project_vertex>', `#include <project_vertex>
+{ vec4 w = vec4(transformed, 1.0);
+#ifdef USE_INSTANCING
+  w = instanceMatrix * w;
+#endif
+  vCW = (modelMatrix * w).xyz; }`);
+    let fs = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying float vH; varying float vTr; varying vec3 vCW; uniform float cLeaf; uniform vec3 cTrans;
+${GLSL_NOISE}`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+{
+  float n1 = dkVN3(vCW * cLeaf), n2 = dkVN3(vCW * cLeaf * 2.6 + 7.0), n3 = dkVN3(vCW * 0.35 + 3.0);
+  diffuseColor.rgb *= mix(0.3, 1.3, smoothstep(0.25, 0.75, n1 * 0.6 + n2 * 0.4)) * (0.8 + 0.4 * n3);
+  diffuseColor.rgb *= mix(0.45, 1.05, smoothstep(0.0, 0.8, vH));
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.05, 0.04, 0.03), vTr);
+}`)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{
+  vec3 b = vec3(dkVN3(vCW * cLeaf * 1.2) - 0.5, dkVN3(vCW * cLeaf * 1.2 + 5.0) - 0.5, dkVN3(vCW * cLeaf * 1.2 + 9.0) - 0.5);
+  normal = normalize(normal + (viewMatrix * vec4(b * 1.1 * (1.0 - vTr), 0.0)).xyz);
+}`);
+    const chunk = THREE.ShaderChunk.lights_fragment_begin;
+    const a0 = chunk.indexOf('#if ( NUM_DIR_LIGHTS > 0 ) && defined( RE_Direct )');
+    const b0 = a0 >= 0 ? chunk.indexOf('#endif', chunk.indexOf('#pragma unroll_loop_end', a0)) : -1;
+    if (a0 >= 0 && b0 > a0) {
+      let block = chunk.slice(a0, b0 + '#endif'.length);
+      block = block.replace(/RE_Direct\(\s*directLight[^;]*;/, 'reflectedLight.directDiffuse += directLight.color * cTrans * diffuseColor.rgb * 2.5 * pow(saturate(dot(-geometryViewDir, directLight.direction)), 2.0) * (1.0 - vTr) * RECIPROCAL_PI;');
+      fs = fs.replace('#include <lights_fragment_begin>', '#include <lights_fragment_begin>\n{\n' + block + '\n}\n');
+    }
+    sh.fragmentShader = fs;
+  };
+  mat.customProgramCacheKey = () => `nature-crown-${S.leaf.kind}`;
+  return mat;
+}
+
 // ------------------------------------------------------------------ kits ---
+/** far LOD: the crown as a lobed foliage mass (from the leaf positions) on a simple trunk */
+export function crownGeometry(tree) {
+  const pts = tree.leaves.map((l) => l.p);
+  const bb = new THREE.Box3().setFromPoints(pts.length ? pts : [new THREE.Vector3(0, tree.height * 0.6, 0)]);
+  const c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3());
+  const N = makeNoise(5);
+  let g = new THREE.IcosahedronGeometry(0.5, 3);
+  const p = g.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.set(p.getX(i), p.getY(i), p.getZ(i)).normalize();
+    const k = 0.85 + 0.25 * N.n3(v.x * 2.5, v.y * 2.5, v.z * 2.5) + 0.12 * N.n3(v.x * 6, v.y * 6, v.z * 6);
+    p.setXYZ(i, c.x + v.x * sz.x * 0.5 * k, c.y + v.y * sz.y * 0.5 * k, c.z + v.z * sz.z * 0.5 * k);
+  }
+  g.computeVertexNormals();
+  const aH = new Float32Array(p.count);
+  for (let i = 0; i < p.count; i++) aH[i] = clamp((p.getY(i) - bb.min.y) / Math.max(sz.y, 0.1), 0, 1);
+  g.setAttribute('aH', new THREE.BufferAttribute(aH, 1));
+  const trunkH = Math.max(0.5, bb.min.y + sz.y * 0.25);
+  const r0 = tree.branches[0].rad[0];
+  const trunk = new THREE.CylinderGeometry(r0 * 0.7, r0, trunkH, 6, 1, true).translate(0, trunkH / 2, 0);
+  trunk.setAttribute('aH', new THREE.BufferAttribute(new Float32Array(trunk.attributes.position.count), 1));
+  g = g.toNonIndexed(); const t2 = trunk.toNonIndexed();
+  const merged = new THREE.BufferGeometry();
+  for (const name of ['position', 'normal', 'aH']) {
+    const a = g.attributes[name], b = t2.attributes[name];
+    const arr = new Float32Array(a.array.length + b.array.length); arr.set(a.array); arr.set(b.array, a.array.length);
+    merged.setAttribute(name, new THREE.BufferAttribute(arr, a.itemSize));
+  }
+  const nTrunk = t2.attributes.position.count, nAll = merged.attributes.position.count;
+  const isTrunk = new Float32Array(nAll); for (let i = nAll - nTrunk; i < nAll; i++) isTrunk[i] = 1;
+  merged.setAttribute('aTrunk', new THREE.BufferAttribute(isTrunk, 1));
+  merged.computeBoundingSphere();
+  return merged;
+}
+
 const kitCache = new Map();
 /**
  * A species kit: variants x LODs of bark + leaf geometry with shared materials.
@@ -607,10 +690,11 @@ export async function treeKit(ctx, species, opts = {}) {
   for (let v = 0; v < nv; v++) {
     const tree = generateTree(species, { seed: (opts.seed ?? 0) * 100 + v + 1, exposure: opts.exposure ?? 0, scale: opts.scale ?? 1 });
     const lods = [0, 1, 2].map((l) => ({ bark: barkGeometry(tree, l), leaves: leafGeometry(tree, l) }));
+    lods.push({ crown: crownGeometry(tree) });
     vars.push({ tree, lods });
   }
   const kit = {
-    species, S, bark, leaf, atlas, variants: vars,
+    species, S, bark, leaf, atlas, variants: vars, crown: crownMaterial(S),
     instance(lod = 0, v = 0) {
       const g = new THREE.Group();
       const L = vars[v % nv].lods[lod];
@@ -634,7 +718,7 @@ export function scatterTrees(placements, opts = {}) {
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
   for (const pl of placements) {
     let d = Infinity; for (const v of views) d = Math.min(d, Math.hypot(v.x - pl.x, v.y - pl.y, v.z - pl.z));
-    const lod = d < (opts.lod0 ?? 60) ? 0 : d < (opts.lod1 ?? 300) ? 1 : 2;
+    const lod = d < (opts.lod0 ?? 60) ? 0 : d < (opts.lod1 ?? 300) ? 1 : d < (opts.lod2 ?? 650) ? 2 : 3;
     const vi = pl.variant ?? 0;
     const key = `${pl.kit.species}|${pl.kit.S === SPECIES[pl.kit.species] ? '' : ''}${lod}|${vi % pl.kit.variants.length}|${groups.size && 0}`;
     const k2 = `${key}|${pl.kit.variants.length}|${pl.kit.leaf.uuid}`;
@@ -648,11 +732,12 @@ export function scatterTrees(placements, opts = {}) {
   group.name = 'trees';
   for (const { kit, lod, v, list } of groups.values()) {
     const L = kit.variants[v].lods[lod];
-    for (const [geo, mat] of [[L.bark, kit.bark], [L.leaves, kit.leaf]]) {
+    const parts = lod === 3 ? [[L.crown, kit.crown]] : [[L.bark, kit.bark], [L.leaves, kit.leaf]];
+    for (const [geo, mat] of parts) {
       const mesh = new THREE.InstancedMesh(geo, mat, list.length);
       list.forEach((mm, i) => mesh.setMatrixAt(i, mm));
       mesh.instanceMatrix.needsUpdate = true;
-      mesh.castShadow = true; mesh.receiveShadow = true;
+      mesh.castShadow = lod < 3 || opts.farShadows !== false; mesh.receiveShadow = true;
       mesh.computeBoundingSphere();
       group.add(mesh);
     }

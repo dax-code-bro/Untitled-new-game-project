@@ -1,37 +1,26 @@
 # Nature domain - progress (landscape models)
 
 Owner paths: `scenes/lib/nature/` and `scenes/lookdev/nature-*.js`. All designs PROVISIONAL.
+See README.md for the API, the bake commands and the geology.
 
 ## Done
 - Bark textures: 4 ambientCG CC0 sets (Bark001/004/006/014, 1K) via the dgreenheck/ez-tree Git LFS
-  mirror, recorded in `assets-lib/manifest.json` (sha256), fetched with `node assets-lib/fetch.mjs --only pbr/acg_bark`.
-  Poly Haven / ambientCG / makehuman hosts re-tested 2026-10-09: still refused (HTTP 403 from the proxy).
-- `noise.js` (shared seeded noise), `heightmap.js` (DKHM heightmap codec + bicubic sampler), `tiles.js` (DKTL tile meshes).
-- `verdor-world.js`: ONE geology for Verdor - pale bedded limestone. Strata table (beds with
-  hardness, pre-filtered weathering recess), two joint sets, whole joint blocks that stand or fall,
-  exposed-side weathering only (no slots on internal joints), wave-cut notch, slope-over-wall heads,
-  rockfall scars + lean per block, chimneys on open joints, geos on weak joints, sea caves along
-  joints, the arch at z = -900, stacks (unions of jointed convex pieces), the OUTER ROCKS chain off
-  the point (z ~ 700), wave-cut platform on a bedding plane with grikes, talus aprons, beach (shingle
-  berm + sand) in the southern bay (z ~ -1500), sea bed.
-- `offline/erosion.mjs`: stream-power (FastScape-style implicit, priority-flood drainage) + droplet
-  hydraulic + thermal erosion. `offline/bake-verdor-land.mjs` -> `cache/verdor/land.dkhm`.
-- `offline/mesher.mjs`: narrow-band surface nets (coarse-to-fine), grid-projected vertices, SDF AO.
-  `offline/bake-verdor-cliffs.mjs` -> `cache/verdor/tiles/L0..L3/*.dktl` + `cliffs.json`.
-- Runtime: `texarray.js` (photo layers in texture arrays), `materials.js` (landscape shader: bedding,
-  tidal/lichen zonation, streaks, seeps, guano, turf/soil/shingle/sand/scree), `coast.js`
-  (`loadVerdorCoast`: tiles by LOD from the shot's camera list + heightfield land/sea bed).
-- Lookdev: `scenes/lookdev/nature-coast.js` (5 hero angles by time 1..5).
+  mirror, recorded in `assets-lib/manifest.json` (sha256). Poly Haven / ambientCG / makehuman hosts
+  re-tested 2026-10-09: still refused by the proxy.
+- Verdor coast: one coherent limestone geology (strata, two joint sets, standing/fallen joint blocks,
+  overhangs, notch, caves, geos, arch, stacks, OUTER ROCKS off the point, wave-cut platform, talus,
+  beach), eroded land (stream power + droplets + thermal), irregular slope-over-wall clifftop edge,
+  surface-nets tiles in 4 LODs, texture-array landscape shader with tidal/lichen zonation.
+- Rocks kit (blocks, slabs, cobbles, outcrops) scattered by zone; land cover (heath/gorse/bracken/
+  scrub colonies) shared by the plants and the ground shader; grass from sets/grass.js.
+- Procedural trees: hawthorn, sycamore, oak, ash, pine (+ card shrubs gorse, heather, bracken,
+  blackthorn), wind-shaped, bark PBR + moss, translucent leaf cards, LOD 0-2 + crown impostors.
+- Prologue island: basalt lava-flow plateau with sea cliffs, eroded, stacks; dawn mist lookdev.
+- Land around Cling: eroded rolling farmland, Voronoi closes and strip furlongs (ridge and furrow),
+  crops, hedgerows with oaks/ashes, woods, the broad road and a lane (hollow ways).
+- Lookdev scenes: nature-contact, nature-coast, nature-tree, nature-island, nature-cling.
 
 ## Next
-- review renders, fix shape/material issues; full bake of all tiles
-- rocks/boulders library (talus, platform blocks, beach), shrubs (gorse, heather, bracken, thrift),
-  procedural trees (hawthorn, sycamore/ash, oak, pine) with bark + leaf cards, grass reuse
-- prologue island (eroded heightfield, high ground in cloud), Cling farmland (fields, hedgerows, road)
-- contact sheet scene, 4K finals + crops, README
-
-## Rebuild the caches
-```
-node scenes/lib/nature/offline/bake-verdor-land.mjs --drops 800000 --sp 60 --K 0.004   # ~1 min
-node scenes/lib/nature/offline/bake-verdor-cliffs.mjs --workers 3                      # all tiles, LOD 0-3
-```
+- 4K finals of the hero angles + contact sheet, 1:1 crops, npm test, report.
+- Known weak spots: near hedges are clumps (no card hedge LOD 0 yet), the face seen square-on from
+  the sea is still somewhat regular, leaves a little saturated.

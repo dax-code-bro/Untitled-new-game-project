@@ -15,6 +15,9 @@ import { createOcean } from 'dk/ocean.js';
 import { loadHDRI } from '../lib/assets.js';
 import { loadVerdorCoast, verdorWorld } from '../lib/nature/coast.js';
 import { scatterCoastRocks } from '../lib/nature/rocks.js';
+import { landCover, scatterPlants } from '../lib/nature/plants.js';
+import { treeKit, scatterTrees } from '../lib/nature/trees.js';
+import { mulberry } from '../lib/nature/noise.js';
 import { filmFinish } from './finish.js';
 
 // the same photographed sky and sun as style frames F2 / F3 (continuity)
@@ -72,6 +75,28 @@ export async function setup(ctx) {
   const views = SH.filter(Boolean).map((s) => s.pos);
   const rocks = await scatterCoastRocks(ctx, coast, { views });
   scene.add(rocks.group);
+  // the clifftop: land cover (salt turf at the edge, gorse belt, heath, bracken, scrub in hollows)
+  const xs = views.map((v) => v[0]), zs = views.map((v) => v[2]);
+  const region = { x: [Math.min(...xs) - 700, Math.max(...xs) + 300], z: [Math.min(...zs) - 900, Math.max(...zs) + 900] };
+  const inland = (x, z) => W.footF(x, z) + 2 - W.coastF(x, z);          // metres back from the face
+  const H = (x, z) => coast.surfaceAt(x, z);
+  const slope = (x, z) => { const a = H(x - 1, z), b = H(x + 1, z), c = H(x, z - 1), d = H(x, z + 1); return 1 / Math.hypot((b - a) / 2, 1, (d - c) / 2); };
+  const cover = landCover({ ...region, cell: 3, height: H, coastF: (x, z) => -inland(x, z), flow: (x, z) => W.landMap.layer('flow', x, z) * 1.6 - 0.75 });
+  coast.material.userData.setCover(cover);
+  const plants = scatterPlants(ctx, { cover, views, height: H, slope, region, edge: inland, grass: false, maxDistance: 1800 });
+  scene.add(plants.group);
+  // wind-flagged hawthorns crouched in the hollows behind the edge
+  const thorn = await treeKit(ctx, 'hawthorn', { variants: 3, exposure: 0.9 });
+  const rr = mulberry(808), places = [];
+  for (let i = 0; i < 400 && places.length < 60; i++) {
+    const x = region.x[0] + rr() * (region.x[1] - region.x[0]), z = region.z[0] + rr() * (region.z[1] - region.z[0]);
+    const e = inland(x, z);
+    if (e < 25 || e > 400) continue;
+    const c = cover.sample(x, z);
+    if (c[3] < 0.3 && rr() > 0.05) continue;
+    places.push({ kit: thorn, x, y: H(x, z), z, variant: Math.floor(rr() * 3), yaw: (rr() - 0.5) * 0.4, scale: 0.8 + 0.5 * rr() });
+  }
+  scene.add(scatterTrees(places, { views }).group);
   const ocean = createOcean(ctx, { windSpeed: 7, windDirection: 190, swell: 0.55, choppiness: 1.2, seed: 9, depth: 30, mipFilter: 'trilinear', roughness: 0.05, foamThreshold: 0.7, shoreFoam: 1.0, shoreFoamWidth: 1.6, surf: 0.85 });
   ocean.mesh.position.y = -1.1;     // a falling tide: the platform and the black lichen band show
   scene.add(ocean.mesh);

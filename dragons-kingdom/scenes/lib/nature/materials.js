@@ -32,7 +32,7 @@ export function bedTexture(W) {
   const data = new Uint8Array(w * w * 4);
   for (let i = 0; i < n; i++) {
     const s = s0 + (i + 0.5) * ds, k = W.bedAt(s), b = W.beds[k];
-    const thin = (b.b1 - b.b0) < 0.45 && b.hard < 0.35 ? 1 : 0;
+    const thin = b.bole !== undefined ? (b.bole && s > b.b1 - 1.2 ? 1 : 0) : ((b.b1 - b.b0) < 0.45 && b.hard < 0.35 ? 1 : 0);
     data[i * 4] = Math.round(b.tint * 255);
     data[i * 4 + 1] = Math.round(W.hardAt(s) * 255);
     data[i * 4 + 2] = Math.round(Math.min(1, W.recessAt(s) / 4) * 255);
@@ -50,12 +50,13 @@ uniform sampler2DArray nkAlb; uniform sampler2DArray nkNrm; uniform sampler2DArr
 uniform float nkTile[9];
 uniform sampler2D nkBeds; uniform vec4 nkBedR;
 uniform vec4 nkSea;        // tide high, tide low, splash height, beach bay z
+uniform vec4 nkDipLin;     // linear dip (x, z, offset, 1 = use it instead of Verdor's fold)
 uniform vec4 nkLook;       // lichen amount, streaks, guano, turf height offset
 uniform vec3 nkPoint;      // the point (outer rocks) x, z, radius of the bird colony
 uniform sampler2D nkCover; uniform vec4 nkCoverXf; uniform float nkHasCover;   // land cover: heath, gorse, bracken, scrub
 varying float vNkAO; varying float vNkCav;
 
-float nkDip(vec2 p) { return 0.034 * p.y + 7.0 * sin(p.y * 0.0021 + 0.9) - 9.0 * exp(-pow((p.y - 700.0) / 500.0, 2.0)) + 0.006 * p.x; }
+float nkDip(vec2 p) { if (nkDipLin.w > 0.5) return nkDipLin.x * p.x + nkDipLin.y * p.y + nkDipLin.z; return 0.034 * p.y + 7.0 * sin(p.y * 0.0021 + 0.9) - 9.0 * exp(-pow((p.y - 700.0) / 500.0, 2.0)) + 0.006 * p.x; }
 vec4 nkBed(float s) {
   float i = clamp(floor((s - nkBedR.x) / nkBedR.y), 0.0, nkBedR.w - 1.0);
   vec2 uv = (vec2(mod(i, nkBedR.z), floor(i / nkBedR.z)) + 0.5) / nkBedR.z;
@@ -105,6 +106,7 @@ export async function landscapeMaterial(ctx, opts = {}) {
     nkTile: { value: tiles },
     nkBeds: { value: beds.texture }, nkBedR: { value: beds.range },
     nkSea: { value: new THREE.Vector4(W.VERDOR.tide.high, W.VERDOR.tide.low, 4.5, W.VERDOR.beachBay.z) },
+    nkDipLin: { value: new THREE.Vector4(...(opts.dipLinear || [0, 0, 0, 0])) },
     nkLook: { value: new THREE.Vector4(opts.lichen ?? 1, opts.streaks ?? 1, opts.guano ?? 1, opts.turfOffset ?? 0) },
     nkPoint: { value: new THREE.Vector3(W.xc(W.VERDOR.point.z) + 120, W.VERDOR.point.z + 30, 260) },
     nkCover: { value: blankCover() }, nkCoverXf: { value: new THREE.Vector4(0, 0, 1, 1) }, nkHasCover: { value: 0 },
@@ -121,6 +123,7 @@ export async function landscapeMaterial(ctx, opts = {}) {
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 ${opts.rockOnly ? '#define NK_ROCK_ONLY' : ''}
+${opts.profile === 'basalt' ? '#define NK_BASALT' : ''}
 varying vec3 vDkW; varying vec3 vDkN;
 ${GLSL_NOISE}
 void dkProj(int ax, vec3 p, vec3 n, out vec2 uv, out vec3 T, out vec3 B) {
@@ -137,7 +140,7 @@ normal = normalize((viewMatrix * vec4(nkRockN, 0.0)).xyz);`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= nkAOv; reflectedLight.indirectSpecular *= nkAOv * nkAOv;`);
   };
-  mat.customProgramCacheKey = () => `nature-landscape-v4${opts.rockOnly ? '-rock' : ''}`;
+  mat.customProgramCacheKey = () => `nature-landscape-v7${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}`;
   return mat;
 }
 
@@ -156,13 +159,14 @@ vec4 bed = nkBed(sB);
 // --- zone weights
 float bay = exp(-pow((P.z - nkSea.w) / 170.0, 2.0));
 float turfLine = 7.0 + 5.0 * m1 - 3.0 * bay + nkLook.w;
-float gentle = smoothstep(0.5, 0.8, up + 0.18 * (m2 - 0.5));
+float gentle = smoothstep(0.34, 0.66, up + 0.18 * (m2 - 0.5));
 float midSlope = smoothstep(0.32, 0.6, up + 0.15 * (m3 - 0.5));
 float aboveSpray = smoothstep(turfLine, turfLine + 4.0, y);
 // ledges on the face (sky partly hidden by the face above) carry turf only in places
 float ledge = 1.0 - smoothstep(0.72, 0.93, vNkAO);
 float wTurf = gentle * aboveSpray * (1.0 - ledge * smoothstep(0.35, 0.6, m3 + 0.3 * m2));
-float wSoil = midSlope * (1.0 - gentle) * aboveSpray * 0.85;
+float turfBump = 0.0;
+float wSoil = midSlope * (1.0 - gentle) * aboveSpray * 0.6;
 float wShingle = bay * smoothstep(0.5, 0.8, up) * smoothstep(1.4, 2.6, y + m3) * (1.0 - smoothstep(5.5, 8.0, y));
 float wSand = bay * smoothstep(0.55, 0.85, up) * (1.0 - smoothstep(1.6, 2.8, y + m3));
 float talusZ = smoothstep(1.0, 2.5, y) * (1.0 - smoothstep(14.0, 22.0, y)) * smoothstep(0.42, 0.72, up) * (1.0 - bay);
@@ -183,11 +187,18 @@ nkTri(0, P, N0, 1.0, aR, nR, rR);
 float lumR = dot(aR.rgb, vec3(0.2126, 0.7152, 0.0722));
 vec3 cream = vec3(0.58, 0.55, 0.47), pgrey = vec3(0.52, 0.52, 0.50), buff = vec3(0.57, 0.50, 0.40), bgrey = vec3(0.44, 0.47, 0.48);
 float t = bed.r;
+#ifdef NK_BASALT
+// stacked lava flows: dark grey-brown basalt, paler weathered tops, red-brown bole between flows
+vec3 bedC = mix(vec3(0.15, 0.14, 0.13), vec3(0.24, 0.22, 0.2), t) * (0.85 + 0.3 * m1);
+vec3 rock = bedC * pow(lumR / 0.58, 1.25);
+rock = mix(rock, vec3(0.33, 0.17, 0.1) * (0.7 + 0.6 * lumR), bed.a * 0.85);
+#else
 vec3 bedC = t < 0.35 ? mix(pgrey, cream, t / 0.35) : t < 0.7 ? mix(cream, bgrey, (t - 0.35) / 0.35) : mix(bgrey, buff, (t - 0.7) / 0.3);
 bedC = mix(bedC, pgrey, 0.25 + 0.2 * m1);
 vec3 rock = bedC * pow(lumR / 0.58, 1.15) * mix(vec3(1.0), aR.rgb / max(lumR, 0.05), 0.25);
 // thin shaly partings: darker, browner
 rock = mix(rock, rock * vec3(0.55, 0.52, 0.48), bed.a * 0.8);
+#endif
 // macro variation (sun-bleached faces, stains)
 rock *= 0.92 + 0.22 * m1 + 0.1 * (m2 - 0.5);
 // bedding bump: the face steps back where the recess grows upward
@@ -252,6 +263,8 @@ rock = mix(rock, vec3(0.045, 0.045, 0.04) * (0.8 + 0.4 * m3), blk * 0.88);
   rock = mix(rock, vec3(0.13, 0.30, 0.06), alg * 0.8);
 }
 rock *= mix(1.0, 0.82, vNkCav);                // grime in the crevices
+// rock that faces the sky above the spray (pavement, outcrops in the turf) weathers darker grey
+rock = mix(rock, rock * vec3(0.7, 0.72, 0.7), smoothstep(0.45, 0.85, up) * smoothstep(10.0, 18.0, hS));
 // --- other layers (top projection), height-blended over the rock
 vec3 col = rock; vec3 nrm = nR; float rgh = mix(rR * 0.95 + 0.05, 0.85, 0.3);
 float hRock = aR.a;
@@ -269,8 +282,11 @@ if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
     vec3 c = mix(a.rgb * vec3(0.52, 0.6, 0.36), a2.rgb * vec3(0.62, 0.6, 0.42), dry * 0.55);
     c *= 0.75 + 0.4 * m2;
     c = mix(c, c * vec3(0.8, 0.9, 0.7), smoothstep(0.55, 0.8, dkFbm3(P * 0.05 + 2.0)));
-    // mottling at the scale of tussocks and grazing, and darker heath (heather, rush, bracken) patches
-    c *= 0.82 + 0.36 * dkVN2(P.xz * 0.35 + 3.0);
+    // mottling at the scales of tussocks, grazing and soil depth: what keeps turf from reading as felt
+    float mt = dkVN2(P.xz * 1.6 + 3.0) * 0.35 + dkVN2(P.xz * 0.42 + 9.0) * 0.4 + dkVN2(P.xz * 0.11 + 1.0) * 0.25;
+    c *= 0.62 + 0.75 * mt;
+    c = mix(c, c * vec3(1.25, 1.12, 0.7), smoothstep(0.62, 0.8, dkVN2(P.xz * 0.06 + 5.0)) * 0.6);   // sun-scorched thin soil
+    turfBump = 1.0;
     vec4 cov = nkHasCover > 0.5 ? texture2D(nkCover, (P.xz - nkCoverXf.xy) * nkCoverXf.zw) : vec4(0.0);
     float heath = nkHasCover > 0.5 ? cov.r : smoothstep(0.52, 0.66, dkFbm3(vec3(P.x, 0.0, P.z) * 0.008 + 4.0) + 0.15 * m2);
     // the ground under gorse and scrub (litter, shade) and under bracken (last year's fronds)
@@ -279,7 +295,7 @@ if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
     if (heath > 0.01) {
       vec4 a3; vec3 n3; float r3;
       nkTap(8, 1, P + 9.0, N0, 1.0, a3, n3, r3);
-      c = mix(c, a3.rgb * vec3(0.55, 0.5, 0.45) * (0.8 + 0.4 * m3), heath * 0.85);
+      c = mix(c, a3.rgb * vec3(0.5, 0.46, 0.3) * (0.8 + 0.4 * m3) + vec3(0.012, 0.016, 0.004), heath * 0.85);
     }
     float w = wTurf * (1.0 + (a.a - 0.5) * 0.6);
     acc += c * w; nacc += normalize(mix(n, n2, 0.5)) * w; racc += 0.92 * w; wacc += w;
@@ -323,6 +339,16 @@ if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
     nrm = normalize(mix(nrm, nacc / wacc, hb));
     rgh = mix(rgh, racc / wacc, hb);
   }
+}
+#endif
+// tussocks and hummocks in the turf: a procedural bump the photo texture is too fine to give at range
+#ifndef NK_ROCK_ONLY
+if (turfBump > 0.0) {
+  float e = 0.35;
+  float h0 = dkFbm3(vec3(P.x, 0.0, P.z) * 0.55), hx = dkFbm3(vec3(P.x + e, 0.0, P.z) * 0.55), hz = dkFbm3(vec3(P.x, 0.0, P.z + e) * 0.55);
+  float h1 = dkVN2(P.xz * 2.2), h1x = dkVN2((P.xz + vec2(e, 0.0)) * 2.2), h1z = dkVN2((P.xz + vec2(0.0, e)) * 2.2);
+  vec3 bump = vec3(-(hx - h0) - 0.35 * (h1x - h1), 0.0, -(hz - h0) - 0.35 * (h1z - h1)) / e * 0.45;
+  nrm = normalize(nrm + bump * smoothstep(0.6, 0.9, up));
 }
 #endif
 // wetness: dark, glossy

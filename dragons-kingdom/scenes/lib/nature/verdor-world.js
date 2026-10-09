@@ -304,11 +304,15 @@ export function createVerdorWorld(opts = {}) {
   }
   // block-level character: rockfall scars (the upper face set back), lean, chimneys along joints
   function blockTraits(i, j) {
-    const h1 = hash2(i, j, seed + 101), h2 = hash2(i, j, seed + 103), h3 = hash2(i, j, seed + 107);
+    // rockfall scars and lean come in patches that span several blocks (a fall takes a section of
+    // face, not one joint block), with a little per-block variation on top
+    const [cx, cz] = blockCenter(i, j);
+    const h1 = hash2(i, j, seed + 101), h2 = hash2(i, j, seed + 103);
+    const scar = smoothstep(0.05, 0.45, N2.fbm2(cx / 42 + 11, cz / 42, 3));
     return {
-      scarD: h1 > 0.55 ? (h1 - 0.55) / 0.45 * 7 : 0,          // up to 7 m set back above the scar
-      scarH: 4 + h2 * 40,
-      lean: -0.05 + 0.2 * h3 * h3,
+      scarD: scar * (4 + 4 * h1),
+      scarH: 6 + 34 * (0.5 + 0.5 * N3.fbm2(cx / 55 + 3, cz / 55, 2)) + (h2 - 0.5) * 4,
+      lean: -0.04 + 0.2 * smoothstep(-0.4, 0.5, N.fbm2(cx / 75 + 5, cz / 75, 2)),
     };
   }
   function tunnel(lx, ly, hw, hh, y0) {
@@ -397,7 +401,7 @@ export function createVerdorWorld(opts = {}) {
     let plan = 1e9;
     for (const bl of c.blocks) {
       const pk = Math.floor((s + 7 * hash2(bl.i, bl.j, seed + 9)) / (4 + 6 * hash2(bl.i, bl.j, seed + 11)));
-      const per = (hash3(bl.i, bl.j, pk, seed + 5) - 0.5) * 1.6 + (hash3(bl.i, bl.j, k, seed + 6) - 0.5) * 0.6 * (1.1 - hard);
+      const per = (hash3(bl.i, bl.j, pk, seed + 5) - 0.5) * 0.9 + (hash3(bl.i, bl.j, k, seed + 6) - 0.5) * 0.5 * (1.1 - hard);
       const tr = bl.tr;
       const Rb = R + per + tr.scarD * smoothstep(tr.scarH - 1.2, tr.scarH + 1.2, y) + tr.lean * Math.max(0, y - 2);
       let d = -1e9;
@@ -413,9 +417,9 @@ export function createVerdorWorld(opts = {}) {
     // stacks: convex jointed pillars, capped (stepped tops by block)
     for (const st of c.stacks) {
       for (const pc of st.pieces) {
-        const sp = stackPlan(x, z, pc) + R * 0.85 + 0.35 * N.n2(x / 5 + st.z, z / 5);
+        const sp = stackPlan(x, z, pc) + R * 0.4 + 0.6 * N2.facet3(x / 3, y / 3.5, z / 3) + 0.35 * N.n2(x / 5 + st.z, z / 5) + 0.12 * Math.max(0, y - 2) * (0.5 + 0.5 * N3.n2(st.x * 0.1, y / 12));
         const cap = pc.top + 0.9 * N.n2(x / 6, z / 6 + st.x) - 2.2 * hash2(Math.floor(c.u / 4), Math.floor(c.v / 4), Math.round(pc.x));
-        plan = Math.min(plan, smax(sp, y - cap, 1.8));
+        plan = Math.min(plan, smax(sp, y - cap, 1.0));
       }
     }
     plan = smax(plan, -c.geo, 0.6);

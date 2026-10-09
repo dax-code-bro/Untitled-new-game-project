@@ -70,7 +70,7 @@ export function landCover(opts) {
 // ------------------------------------------------------------------ shrub geometry ---
 const SHRUBS = {
   // lobes, flattening, leeward shear, base spread, leaf scale (1/m), colours, flowers
-  gorse: { lobes: [4, 8], flat: 0.7, shear: 0.45, leaf: 14, col: [0.055, 0.075, 0.025], var: 0.25, flower: [0.95, 0.72, 0.06, 0.32] },
+  gorse: { lobes: [4, 8], flat: 0.7, shear: 0.45, leaf: 14, col: [0.032, 0.048, 0.016], var: 0.25, flower: [0.85, 0.62, 0.05, 0.16] },
   heather: { lobes: [3, 6], flat: 0.38, shear: 0.25, leaf: 22, col: [0.07, 0.065, 0.04], var: 0.3, flower: [0.32, 0.12, 0.22, 0.0] },
   bracken: { lobes: [5, 9], flat: 0.55, shear: 0.3, leaf: 7, col: [0.16, 0.2, 0.05], var: 0.35, flower: [0.3, 0.18, 0.06, 0.0] },
   scrub: { lobes: [6, 11], flat: 0.62, shear: 0.6, leaf: 10, col: [0.045, 0.06, 0.03], var: 0.2, flower: [0.9, 0.9, 0.85, 0.06] },
@@ -142,7 +142,7 @@ export function foliageMaterial(kind, opts = {}) {
   const U = {
     fLeaf: { value: opts.leafScale ?? S.leaf },
     fFlower: { value: new THREE.Vector4(...(opts.flower || S.flower)) },
-    fTrans: { value: new THREE.Color(...(opts.translucency || [0.25, 0.35, 0.06])) },
+    fTrans: { value: new THREE.Color(...(opts.translucency || [0.14, 0.2, 0.035])) },
     fVar: { value: S.var },
   };
   mat.onBeforeCompile = (sh) => {
@@ -236,34 +236,37 @@ export function scatterPlants(ctx, opts) {
   const dens = opts.density ?? 1;
   // candidate points on a jittered grid whose spacing grows with distance from the cameras
   const kinds = [
-    { kind: 'gorse', ch: 1, spacing: 2.6, size: [0.6, 2.4], hgt: [0.45, 1.1] },
-    { kind: 'heather', ch: 0, spacing: 1.4, size: [0.35, 1.2], hgt: [0.18, 0.4] },
-    { kind: 'bracken', ch: 2, spacing: 1.6, size: [0.6, 1.5], hgt: [0.5, 1.0] },
-    { kind: 'scrub', ch: 3, spacing: 4.0, size: [1.5, 4.5], hgt: [0.8, 2.6] },
+    // colonies, not specimens: low wind-cut cushions that merge into continuous patches
+    { kind: 'gorse', ch: 1, spacing: 1.7, size: [1.2, 3.4], hgt: [0.6, 1.4], lo: 0.18, hi: 0.5 },
+    { kind: 'heather', ch: 0, spacing: 1.25, size: [1.0, 2.6], hgt: [0.15, 0.35], lo: 0.25, hi: 0.6 },
+    { kind: 'bracken', ch: 2, spacing: 1.4, size: [1.2, 2.8], hgt: [0.55, 1.0], lo: 0.22, hi: 0.55 },
+    { kind: 'scrub', ch: 3, spacing: 2.6, size: [2.2, 5.5], hgt: [0.9, 2.4], lo: 0.25, hi: 0.6 },
   ];
   for (const K of kinds) {
     let n = 0;
     const base = K.spacing / Math.sqrt(dens);
     for (let z = z0; z < z1; z += base) for (let x = x0; x < x1; x += base) {
-      const jx = x + (rng() - 0.5) * base, jz = z + (rng() - 0.5) * base;
+      const jx = x + (rng() - 0.5) * base * 1.2, jz = z + (rng() - 0.5) * base * 1.2;
       const c = cover.sample(jx, jz)[K.ch];
-      if (c < 0.05) continue;
+      // inside a colony nearly every cell is filled; outside it, almost nothing (no lone dots)
+      const fill = smoothstep(K.lo, K.hi, c);
+      if (fill < 0.02 || rng() > fill) continue;
       const y = H(jx, jz);
       if (y == null || !(y > 0)) continue;
       const d = nearest(jx, y, jz);
       if (d > maxD) continue;
-      // thin out with distance: keep 1 in (d/250)^2 beyond 250 m, scaled up so the mass reads the same
-      const keep = Math.min(1, (250 / Math.max(d, 1)) ** 2);
-      if (rng() > c * Math.max(keep, 0.04)) continue;
+      // far away keep fewer, bigger clumps (the colony still reads as one mass)
+      const keep = Math.min(1, (220 / Math.max(d, 1)) ** 2);
+      if (rng() > Math.max(keep, 0.06)) continue;
       if (opts.exclude && opts.exclude(jx, jz)) continue;
-      const scaleUp = 1 / Math.sqrt(Math.max(keep, 0.04)) * 0.8 + 0.2;
-      const w = (K.size[0] + (K.size[1] - K.size[0]) * Math.pow(rng(), 1.5)) * Math.min(scaleUp, 2.2) * (0.7 + 0.5 * c);
-      const hh = (K.hgt[0] + (K.hgt[1] - K.hgt[0]) * rng()) * (0.75 + 0.5 * c) * Math.min(scaleUp, 1.6);
+      const grow = Math.min(1 / Math.sqrt(Math.max(keep, 0.06)), 3.2);
+      const w = (K.size[0] + (K.size[1] - K.size[0]) * Math.pow(rng(), 1.3)) * (0.75 + 0.45 * fill) * grow;
+      const hh = (K.hgt[0] + (K.hgt[1] - K.hgt[0]) * rng()) * (0.7 + 0.5 * fill) * Math.min(grow, 1.5);
       const ny = opts.slope ? opts.slope(jx, jz) : 1;
       if (ny < 0.6) continue;
       const lod = d < 70 ? 0 : d < 400 ? 1 : 2;
       q.setFromAxisAngle(up, (rng() - 0.5) * 0.6);      // keep the wind combing coherent
-      m4.compose(p.set(jx, y - 0.05 * hh, jz), q, s.set(w, hh, w * (0.8 + 0.4 * rng())));
+      m4.compose(p.set(jx, y - 0.08 * hh, jz), q, s.set(w, hh, w * (0.7 + 0.5 * rng())));
       push(K.kind, lod, Math.floor(rng() * 4), m4.clone());
       n++;
     }
