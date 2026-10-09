@@ -12,6 +12,9 @@ namespace shaders {
 // ---------------------------------------------------------------------------
 static const char* COMMON_FRAG_HEAD = R"(#version 300 es
 precision highp float;
+precision highp int;          // int defaults to mediump in fragment but highp
+                              // in vertex; a uniform shared across both stages
+                              // fails to link unless we say so explicitly
 precision highp sampler2D;
 precision highp sampler2DArray;
 )";
@@ -174,7 +177,9 @@ uniform float     uShadowTexel2;
 // Point lights: headlights, street lamps, windows. Tight budget, big payoff.
 uniform sampler2DArray uMatAlbedo;   // rgb albedo, a roughness
 uniform sampler2DArray uMatNormal;   // rg normal.xy, b height, a cavity
-uniform float uTexScale;             // world units per texture tile
+uniform int   uSway;                 // same uniform the vertex stage uses
+uniform vec4  uMatInfo[12];          // xyz = layer mean albedo, w = metres per tile
+uniform float uTexScale;             // global multiplier on the per-layer tiling
 uniform int   uTexOn;                // 0 = flat vertex colour, 1 = textured
 uniform int   uTriplanar;            // 0 = top projection only (cheap), 1 = full
 uniform int   uDetailTile;           // second finer tile up close (expensive)
@@ -253,6 +258,22 @@ void main(){
       fragColour = oob ? vec4(1.0,0.0,0.0,1.0) : vec4(pr.xy, pr.z, 1.0);
       return;
     }
+    if(uDebugMode == 5){
+      float L = vMat;
+      if(uSway == 0 && vExtra >= 0.0) L = vExtra;
+      if(L < 0.0){ fragColour = vec4(1.0, 0.0, 1.0, 1.0); return; }   // magenta = untextured
+      // distinct colour per layer index
+      vec3 c = vec3(fract(L * 0.3717 + 0.12),
+                    fract(L * 0.6131 + 0.47),
+                    fract(L * 0.8923 + 0.81));
+      fragColour = vec4(c, 1.0);
+      return;
+    }
+    if(uDebugMode == 6){
+      // is texturing even enabled for this fragment?
+      fragColour = (uTexOn == 1) ? vec4(0.0,1.0,0.0,1.0) : vec4(1.0,0.0,0.0,1.0);
+      return;
+    }
     if(uDebugMode == 4){
       // what the cascade-0 map actually stores at this fragment
       vec4 lp = uLightVP0 * vec4(vWorld, 1.0);
@@ -274,20 +295,22 @@ void main(){
     vec3 bl = abs(N);
     bl = pow(bl, vec3(4.0));
     bl /= max(bl.x + bl.y + bl.z, 1e-4);
+
+    // A non-swaying instance may override the mesh's material, which is how
+    // one building mesh becomes brick, render or panel without duplicating it.
     float layer = vMat;
-    float sc = 1.0 / max(uTexScale, 0.01);
+    if(uSway == 0 && vExtra >= 0.0) layer = vExtra;
+    int li = int(clamp(layer, 0.0, 11.0) + 0.5);
+    vec4 info = uMatInfo[li];
+    float sc = 1.0 / max(info.w * uTexScale, 0.01);
 
     vec4 a = triAlbedo(vWorld, bl, layer, sc);
     // Divide by the layer's own mean so the material contributes VARIATION
     // around 1.0 instead of replacing the surface colour. Without this a dark
     // asphalt material turned every concrete building near-black.
-    vec3 meanA = layer < 0.5  ? vec3(0.23, 0.30, 0.14)     // vegetation
-               : layer < 1.5  ? vec3(0.34, 0.32, 0.30)     // rock
-               : layer < 2.5  ? vec3(0.49, 0.44, 0.33)     // sand
-                              : vec3(0.19, 0.19, 0.19);    // manmade
-    vec3 detail = a.rgb / max(meanA, vec3(1e-3));
-    albedo = albedo * mix(vec3(1.0), detail, 0.88);
-    rough  = clamp(rough * 0.45 + a.a * 0.55, 0.045, 1.0);
+    vec3 detail = a.rgb / max(info.rgb, vec3(1e-3));
+    albedo = albedo * mix(vec3(1.0), detail, 0.92);
+    rough  = clamp(rough * 0.35 + a.a * 0.65, 0.045, 1.0);
 
     vec4 nr = triNormalRaw(vWorld, bl, layer, sc);
     cavity  = mix(1.0, nr.a, 0.75);

@@ -55,7 +55,7 @@ static gfx::FullscreenQuad fsq;
 static gfx::Program        progGen;
 static texgen::MaterialArray gMaterials;
 static int   gTexRes      = 1024;    // per-layer texture resolution
-static float gTexScale    = 2.0f;    // world metres per material tile
+static float gTexScale    = 1.0f;   // multiplier on each layer's own tiling    // world metres per material tile
 static bool  gTexOn       = true;
 static bool  gTriplanar   = true;
 static bool  gAOOn        = true;
@@ -290,12 +290,15 @@ static void buildChunk(Chunk& ch, int gx, int gz){
       v.joint = 0.0f;
       v.rough = (b == world::B_SAND) ? 0.80f : (b == world::B_MOUNTAIN) ? 0.92f : 0.88f;
       v.metal = 0.0f;
-      v.mat   = (b == world::B_SAND) ? (float)texgen::MAT_SAND
-              : (b == world::B_MOUNTAIN) ? (float)texgen::MAT_ROCK
-              : world::World::isUrbanB((uint8_t)b) ? (float)texgen::MAT_MANMADE
-              : (float)texgen::MAT_VEG;
-      // steep ground shows rock whatever the biome says
-      if(slope > 0.55f) v.mat = (float)texgen::MAT_ROCK;
+      v.mat   = (b == world::B_SAND)     ? (float)texgen::MAT_SAND
+              : (b == world::B_MOUNTAIN)   ? (float)texgen::MAT_ROCK
+              : (b == world::B_FOREST)     ? (float)texgen::MAT_DIRT
+              : world::World::isUrbanB((uint8_t)b) ? (float)texgen::MAT_CONCRETE
+              : (float)texgen::MAT_GRASS;
+      // steep ground shows rock whatever the biome says, and bare earth
+      // appears on moderate slopes where grass would not hold
+      if(slope > 0.55f)      v.mat = (float)texgen::MAT_ROCK;
+      else if(slope > 0.34f && b != world::B_SAND) v.mat = (float)texgen::MAT_DIRT;
       verts.push_back(v);
     }
   }
@@ -313,7 +316,7 @@ static void buildChunk(Chunk& ch, int gx, int gz){
   std::vector<Mesh::Instance> one(1);
   one[0].xform = m4::identity();
   one[0].tint  = v3{1, 1, 1};
-  one[0].extra = 0.0f;
+  one[0].extra = -1.0f;
   ch.mesh.updateInstances(one);
   ch.built = true;
   ch.cx = ox + CHUNK_M * 0.5f;
@@ -340,10 +343,11 @@ static void buildFarTerrain(){
       v.nrm = nr;
       v.col = biomeColour(b, h, 1.0f - nr.y, m::hash2(x, z));
       v.ao = 1.0f; v.joint = 0.0f; v.rough = 0.90f; v.metal = 0.0f;
-      v.mat = (b == world::B_SAND) ? (float)texgen::MAT_SAND
+      v.mat = (b == world::B_SAND)   ? (float)texgen::MAT_SAND
             : (b == world::B_MOUNTAIN) ? (float)texgen::MAT_ROCK
-            : world::World::isUrbanB((uint8_t)b) ? (float)texgen::MAT_MANMADE
-            : (float)texgen::MAT_VEG;
+            : (b == world::B_FOREST)   ? (float)texgen::MAT_DIRT
+            : world::World::isUrbanB((uint8_t)b) ? (float)texgen::MAT_CONCRETE
+            : (float)texgen::MAT_GRASS;
       verts.push_back(v);
     }
   }
@@ -451,7 +455,7 @@ static void buildRoadTileGeometry(const std::vector<int>& edgeIds,
         v.joint = 0.0f;
         v.rough = isKerb ? 0.80f : 0.56f;
         v.metal = 0.0f;
-        v.mat   = (float)texgen::MAT_MANMADE;
+        v.mat   = isKerb ? (float)texgen::MAT_CONCRETE : (float)texgen::MAT_ASPHALT;
         verts.push_back(v);
       }
     }
@@ -686,7 +690,9 @@ static void gatherScene(const SunState& sun){
       Mesh::Instance in;
       in.xform = m4::trs({b.x, b.y, b.z}, quat::axisAngle({0,1,0}, b.rotY), {b.w, b.h, b.d});
       in.tint  = b.tint;
-      in.extra = b.litSeed;
+      // facade material, chosen per building: this is what stops a street
+      // from being forty copies of the same grey wall
+      in.extra = (float)b.facade;
       switch(b.type){
         case world::BT_TOWER: tower[b.meshVariant & 1].push_back(in); break;
         case world::BT_HOUSE: house[b.meshVariant & 1].push_back(in); break;
@@ -734,6 +740,7 @@ static void gatherScene(const SunState& sun){
       Mesh::Instance in;
       in.xform = m4::trs({f.x, f.y, f.z}, quat::axisAngle({0,1,0}, f.rot), v3(1.0f));
       in.tint  = v3{1, 1, 1};
+      in.extra = -1.0f;
       switch(f.kind){
         case 0: bench.push_back(in); break;
         case 1: hyd.push_back(in);   break;
@@ -935,6 +942,17 @@ static void setCommonUniforms(const gfx::Program& pr, const SunState& sun){
   gMaterials.bind(3, 4);
   pr.set("uMatAlbedo", 3);
   pr.set("uMatNormal", 4);
+  {
+    const float* mean = texgen::layerMeans();
+    float info[texgen::MAT_COUNT * 4];
+    for(int i = 0; i < texgen::MAT_COUNT; i++){
+      info[i*4+0] = mean[i*3+0];
+      info[i*4+1] = mean[i*3+1];
+      info[i*4+2] = mean[i*3+2];
+      info[i*4+3] = texgen::layerScale(i);
+    }
+    glUniform4fv(pr.loc("uMatInfo"), texgen::MAT_COUNT, info);
+  }
   pr.set("uTexScale", gTexScale);
   pr.set("uTexOn", (gTexOn && gMaterials.ready) ? 1 : 0);
   pr.set("uTriplanar", gTriplanar ? 1 : 0);
@@ -1021,7 +1039,7 @@ static void drawSceneGeometry(const gfx::Program& pr, bool shadowPass){
     std::vector<Mesh::Instance> one(1);
     one[0].xform = s.xform;
     one[0].tint  = s.tint;
-    one[0].extra = 0.0f;
+    one[0].extra = -1.0f;
     s.mesh->updateInstances(one);
     s.mesh->drawInstanced();
   }
@@ -1991,6 +2009,15 @@ extern "C" {
   EMSCRIPTEN_KEEPALIVE int   getSafeTextureRes(int want){
     return texgen::MaterialArray::largestWithinBudget(want);
   }
+  // --- hooks for dropping real photoscanned PBR maps over a generated layer.
+  // JS fetches and decodes the image, then writes it straight into the array
+  // via GL.textures[], because the emscripten GL context IS the page's.
+  EMSCRIPTEN_KEEPALIVE int   getMaterialAlbedoTex(){ return (int)gMaterials.albedo; }
+  EMSCRIPTEN_KEEPALIVE int   getMaterialNormalTex(){ return (int)gMaterials.normal; }
+  EMSCRIPTEN_KEEPALIVE int   getMaterialLayerCount(){ return texgen::MAT_COUNT; }
+  EMSCRIPTEN_KEEPALIVE void  refreshMaterialMips(){ gMaterials.refreshMips(); }
+  EMSCRIPTEN_KEEPALIVE void  noteExternalLayers(int n){ gMaterials.externalLayers = n; }
+  EMSCRIPTEN_KEEPALIVE int   getExternalLayers(){ return gMaterials.externalLayers; }
   EMSCRIPTEN_KEEPALIVE int   getMaxTextureSize(){
     GLint m = 0; glGetIntegerv(GL_MAX_TEXTURE_SIZE, &m); return (int)m;
   }
@@ -2002,7 +2029,17 @@ extern "C" {
     gAORadius = radius; gAOStrength = strength;
   }
   EMSCRIPTEN_KEEPALIVE int   getAO(){ return gAOOn ? 1 : 0; }
-  EMSCRIPTEN_KEEPALIVE void  setAutoQuality(int on){ gAutoQuality = on != 0; gAutoLevel = 0; gSlowFor = 0.0f; }
+  EMSCRIPTEN_KEEPALIVE void  setAutoQuality(int on){
+    gAutoQuality = on != 0;
+    // Switching the guard off must give back everything it took, otherwise
+    // the picture silently stays degraded with nothing to explain why.
+    if(!gAutoQuality && gAutoLevel > 0){
+      gTexOn = true; gTriplanar = true; gAOOn = true; gFXAA = true;
+      gRenderScale = 1.0f; resizeTargets();
+      autoNote("restored quality");
+    }
+    gAutoLevel = 0; gSlowFor = 0.0f; gFastFor = 0.0f;
+  }
   EMSCRIPTEN_KEEPALIVE void  setTexScale(float m){ gTexScale = m < 0.2f ? 0.2f : m; }
   EMSCRIPTEN_KEEPALIVE void  setGrade(float contrast, float sat, float lift){
     gContrast = contrast; gSaturation = sat; gLift = lift;
@@ -2081,6 +2118,36 @@ extern "C" {
     gFreeCam = true; gFreeCamPos = eye; gFreeYaw = yaw; gFreePitch = pitch;
   }
   EMSCRIPTEN_KEEPALIVE void  dbgFreezeAnimals(int on){ gFreezeAnimals = on != 0; }
+  // Aim the camera at the wall of a building using the given facade material,
+  // so each material can be inspected on real geometry.
+  EMSCRIPTEN_KEEPALIVE int   dbgLookAtFacade(int mat, float dist){
+    const world::Building* best = nullptr;
+    float bd = 1e18f;
+    for(const auto& b : W.buildings){
+      if(b.facade != mat) continue;
+      float dx = b.x - P.pos.x, dz = b.z - P.pos.z;
+      float d = dx*dx + dz*dz;
+      if(d < bd){ bd = d; best = &b; }
+    }
+    if(!best) return 0;
+    // stand off the face that points along +x of the building's rotation
+    float c = std::cos(best->rotY), sn = std::sin(best->rotY);
+    v3 nrm{ c, 0.0f, -sn };
+    v3 target{ best->x, best->y + std::min(best->h * 0.35f, 6.0f), best->z };
+    // offset along the building's local +X, so clear the HALF-WIDTH, not depth
+    v3 eye = target + nrm * (best->w * 0.5f + dist);
+    eye.y = target.y + 1.0f;
+    float yaw = std::atan2(target.x - eye.x, target.z - eye.z);
+    float flat = std::sqrt((target.x-eye.x)*(target.x-eye.x) + (target.z-eye.z)*(target.z-eye.z));
+    float pitch = std::atan2(target.y - eye.y, flat);
+    gFreeCam = true; gFreeCamPos = eye; gFreeYaw = yaw; gFreePitch = pitch;
+    return 1;
+  }
+  EMSCRIPTEN_KEEPALIVE int   dbgCountFacade(int mat){
+    int n = 0;
+    for(const auto& b : W.buildings) if(b.facade == mat) n++;
+    return n;
+  }
   EMSCRIPTEN_KEEPALIVE void  dbgWarpToAnimal(){
     if(gAnimals.empty()) return;
     P.pos = gAnimals[0].pos + v3{14.0f, 0.0f, 14.0f};

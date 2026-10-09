@@ -266,3 +266,28 @@ response.
 - The 3D build is a **renderer and world**, not yet the full sandbox. The
   gameplay systems (crime, org founding, property, fishing, wildlife tagging)
   currently live in the 2D build at `/city.html`.
+
+---
+
+## Why more texture detail did not fix "flat and boring"
+
+A real finding from testing, worth recording because it is counter-intuitive.
+
+Load a material with an unmistakable pattern — a hard orange-and-black checker
+at 30 cm per square — onto a building, then stand 26 m away. It renders as flat
+brown. Nothing is broken: at that distance one screen pixel covers roughly
+forty texels, so the mip chain averages the checker to its mean, which is
+exactly what mipmapping is for. The alternative is shimmering noise.
+
+The consequence is that **fine material detail only exists up close**. Brick
+grain, aggregate, trowel marks — all of it is gone by the far side of a street.
+Resolution does not change this; an 8K brick averages to the same brown.
+
+What survives distance is *structure* at the scale of metres: window rows,
+floor divisions, shopfront bands, parapets, balconies, varied rooflines,
+colour differences between neighbouring buildings. That is why a blank
+well-textured box still reads as a greybox, and why the fix for a flat-looking
+street is architecture, not texels.
+
+Both halves matter — scanned materials make a wall convincing when you walk up
+to it, and large-scale structure makes the street convincing from across it.

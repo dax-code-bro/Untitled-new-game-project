@@ -140,7 +140,9 @@ struct Mesh {
   struct Instance {
     m::m4 xform;
     m::v3 tint{1,1,1};
-    float extra = 0.0f;      // per-instance scalar (window-lit seed, sway phase, ...)
+    // Per-instance scalar. When the mesh sways it is the wind phase; otherwise
+    // it is a material override (>=0) or -1 to keep the mesh's own material.
+    float extra = -1.0f;
   };
 
   void setupInstancing(int maxInstances){

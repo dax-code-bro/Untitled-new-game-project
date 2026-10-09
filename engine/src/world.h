@@ -119,6 +119,7 @@ struct Building {
   int   district;
   int   zone;
   int   meshVariant;
+  int   facade;             // texgen material layer for the walls
 };
 
 struct Prop {
@@ -550,6 +551,24 @@ struct World {
       {0.40f,0.46f,0.53f},{0.58f,0.52f,0.46f},{0.49f,0.54f,0.52f}
     };
 
+    // Palettes keyed to the facade material. Multiplying a warm brick texture
+    // by a cool grey tint was turning every brick wall grey-blue.
+    static const v3 BRICK_TINT[] = {
+      {0.96f,0.74f,0.62f},{0.88f,0.64f,0.54f},{1.02f,0.80f,0.66f},
+      {0.80f,0.58f,0.50f},{0.92f,0.70f,0.58f},{0.74f,0.56f,0.52f}
+    };
+    static const v3 STUCCO_TINT[] = {
+      {1.02f,0.98f,0.88f},{0.96f,0.92f,0.84f},{1.00f,0.90f,0.76f},
+      {0.88f,0.90f,0.86f},{1.04f,0.94f,0.80f},{0.92f,0.86f,0.80f},
+      {0.86f,0.88f,0.92f}
+    };
+    static const v3 CONCRETE_TINT[] = {
+      {0.94f,0.93f,0.90f},{0.86f,0.86f,0.86f},{0.98f,0.96f,0.92f},{0.80f,0.82f,0.84f}
+    };
+    static const v3 PANEL_TINT[] = {
+      {0.84f,0.88f,0.94f},{0.90f,0.92f,0.95f},{0.76f,0.82f,0.90f},{0.94f,0.94f,0.92f}
+    };
+
     for(const auto& e : edges){
       if(e.bridge) continue;
       if(e.zone > 2 && rng.f() > 0.10f) continue;
@@ -590,13 +609,21 @@ struct World {
           B.zone = e.zone;
           B.district = terr.district[idx2((int)(bx / HSTEP), (int)(bz / HSTEP))];
           B.litSeed = rng.f();
+          // Pick a facade material. Downtown leans to panel and concrete,
+          // the suburbs to brick and render — the way real cities stratify.
+          {
+            float fr = rng.f();
+            if(high)      B.facade = fr < 0.42f ? 5 : fr < 0.70f ? 4 : fr < 0.86f ? 6 : 7;
+            else if(mid)  B.facade = fr < 0.34f ? 5 : fr < 0.62f ? 6 : fr < 0.84f ? 4 : 7;
+            else          B.facade = fr < 0.48f ? 5 : fr < 0.86f ? 6 : 4;
+          }
           float roll = rng.f();
           if(high){
             if(roll < 0.34f){ B.type = BT_TOWER; B.h = rng.range(45, 118); B.tint = TOWER_COLS[rng.next() % 7]; B.meshVariant = rng.irange(0,1); }
             else if(roll < 0.72f){ B.type = BT_APT; B.h = rng.range(26, 58); B.tint = MID_COLS[rng.next() % 6]; B.meshVariant = rng.irange(0,1); }
-            else { B.type = BT_SHOP; B.h = rng.range(11, 17); B.tint = MID_COLS[rng.next() % 6]; B.meshVariant = 0; }
+            else { B.type = BT_SHOP; B.h = rng.range(7, 10); B.tint = MID_COLS[rng.next() % 6]; B.meshVariant = 0; }
           } else if(mid){
-            if(roll < 0.30f){ B.type = BT_SHOP; B.h = rng.range(9, 15); B.tint = MID_COLS[rng.next() % 6]; B.meshVariant = 0; }
+            if(roll < 0.30f){ B.type = BT_SHOP; B.h = rng.range(6.5f, 9.5f); B.tint = MID_COLS[rng.next() % 6]; B.meshVariant = 0; }
             else if(roll < 0.62f){ B.type = BT_APT; B.h = rng.range(20, 46); B.tint = MID_COLS[rng.next() % 6]; B.meshVariant = rng.irange(0,1); }
             else if(roll < 0.80f){ B.type = BT_TOWER; B.h = rng.range(24, 46); B.tint = TOWER_COLS[rng.next() % 7]; B.meshVariant = rng.irange(0,1); }
             else { B.type = BT_HOUSE; B.h = rng.range(7, 11); B.tint = HOUSE_COLS[rng.next() % 8]; B.meshVariant = 1; }
@@ -609,6 +636,12 @@ struct World {
             } else {
               B.type = BT_SHOP; B.h = rng.range(7, 11); B.tint = MID_COLS[rng.next() % 6]; B.meshVariant = 0;
             }
+          }
+          switch(B.facade){
+            case 5:  B.tint = BRICK_TINT[rng.next() % 6];    break;
+            case 6:  B.tint = STUCCO_TINT[rng.next() % 7];   break;
+            case 7:  B.tint = PANEL_TINT[rng.next() % 4];    break;
+            default: B.tint = CONCRETE_TINT[rng.next() % 4]; break;
           }
           buildings.push_back(B);
           t += along + gap;

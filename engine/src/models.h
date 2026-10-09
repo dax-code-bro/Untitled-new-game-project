@@ -412,7 +412,7 @@ inline void buildWheel(gfx::Mesh& out, float r, float w){
 inline void buildTower(gfx::Mesh& out, int floors, bool setback){
   Builder b;
   b.mat(0.42f, 0.10f);
-  b.surface(3.0f);          // MAT_MANMADE: concrete / render
+  b.surface(4.0f);          // MAT_CONCRETE (enum was renumbered)
   const v3 wall{1,1,1};
   const v3 glass{0.14f, 0.19f, 0.26f};
   const v3 dark {0.20f, 0.21f, 0.24f};
@@ -432,7 +432,7 @@ inline void buildTower(gfx::Mesh& out, int floors, bool setback){
     b.box({ hx, y + fh * 0.58f, 0}, {0.008f, fh * 0.30f, hz * 0.92f}, glass);
     b.box({-hx, y + fh * 0.58f, 0}, {0.008f, fh * 0.30f, hz * 0.92f}, glass);
     // floor slab lip
-    b.mat(0.55f, 0.05f); b.surface(3.0f);
+    b.mat(0.55f, 0.05f); b.surface(4.0f);
     b.box({0, y + fh * 0.03f, 0}, {hx * 1.012f, fh * 0.035f, hz * 1.012f}, dark);
     y += fh;
   }
@@ -447,7 +447,7 @@ inline void buildTower(gfx::Mesh& out, int floors, bool setback){
 
 inline void buildHouse(gfx::Mesh& out, bool twoStorey){
   Builder b;
-  b.surface(3.0f);
+  b.surface(4.0f);
   const v3 wall{1,1,1};
   const v3 roofc{0.30f, 0.20f, 0.17f};
   const v3 door {0.32f, 0.20f, 0.13f};
@@ -482,7 +482,7 @@ inline void buildHouse(gfx::Mesh& out, bool twoStorey){
   b.mat(0.25f, 0.8f);
   b.box({0.052f, 0.118f, 0.515f}, {0.012f, 0.012f, 0.006f}, {0.8f,0.7f,0.3f});
   // chimney
-  b.mat(0.75f, 0.0f); b.surface(3.0f);
+  b.mat(0.75f, 0.0f); b.surface(4.0f);
   b.box({0.30f, bodyTop + 0.22f, -0.22f}, {0.055f, 0.14f, 0.055f}, {0.42f,0.31f,0.27f});
   b.finish(out);
 }
@@ -504,6 +504,37 @@ inline void buildShop(gfx::Mesh& out){
   // sign band
   b.mat(0.40f, 0.1f);
   b.box({0, 0.565f, 0.512f}, {0.36f, 0.045f, 0.012f}, {1.5f, 1.35f, 0.75f});
+
+  // Glazing and a shopfront on EVERY side. Large-scale features like these
+  // are what still read from across a street; fine brick does not survive
+  // the mip chain at that distance.
+  const v3 glass{0.13f, 0.18f, 0.24f};
+  const v3 band {0.30f, 0.30f, 0.32f};
+  struct Side { float sx, sz, rot; };
+  const Side sides[4] = { {0,-1, m::PI}, {1,0, m::PI*0.5f}, {-1,0, -m::PI*0.5f}, {0,1,0} };
+  for(int i = 0; i < 4; i++){
+    const Side& S = sides[i];
+    quat r = quat::axisAngle({0,1,0}, S.rot);
+    v3 n{ S.sx * 0.503f, 0.0f, S.sz * 0.503f };
+    if(i == 3) continue;                    // front already has its shopfront
+    b.mat(0.08f, 0.35f); b.surface(-1.0f);
+    b.box({n.x, 0.26f, n.z}, {0.40f, 0.17f, 0.008f}, glass, r);
+    b.mat(0.55f, 0.05f); b.surface(4.0f);
+    b.box({n.x, 0.455f, n.z}, {0.46f, 0.030f, 0.010f}, band, r);   // fascia
+    b.box({n.x, 0.075f, n.z}, {0.46f, 0.075f, 0.010f}, band, r);   // stall riser
+  }
+  // upper-floor window row, so a two-storey shop is not a blank slab
+  for(int i = 0; i < 4; i++){
+    const Side& S = sides[i];
+    quat r = quat::axisAngle({0,1,0}, S.rot);
+    v3 n{ S.sx * 0.504f, 0.0f, S.sz * 0.504f };
+    b.mat(0.10f, 0.30f); b.surface(-1.0f);
+    for(int w = -1; w <= 1; w++){
+      v3 off = r.rotate(v3{ w * 0.28f, 0.0f, 0.0f });
+      b.box({n.x + off.x, 0.475f, n.z + off.z}, {0.095f, 0.055f, 0.008f}, glass, r);
+    }
+  }
+  b.mat(0.60f, 0.05f); b.surface(4.0f);
   b.finish(out);
 }
 
@@ -512,7 +543,7 @@ inline void buildApartment(gfx::Mesh& out, int floors){
   const v3 wall{1,1,1};
   float fh = 1.0f / floors;
   b.mat(0.58f, 0.04f);
-  b.surface(3.0f);
+  b.surface(4.0f);
   b.box({0, 0.5f, 0}, {0.5f, 0.5f, 0.5f}, wall);
   // balconies + window bands per floor
   for(int f = 0; f < floors; f++){
@@ -521,7 +552,7 @@ inline void buildApartment(gfx::Mesh& out, int floors){
     b.box({0, y, 0.502f}, {0.40f, fh * 0.26f, 0.008f}, {0.15f, 0.20f, 0.27f});
     b.box({0, y, -0.502f}, {0.40f, fh * 0.26f, 0.008f}, {0.15f, 0.20f, 0.27f});
     if(f > 0){
-      b.mat(0.55f, 0.1f); b.surface(3.0f);
+      b.mat(0.55f, 0.1f); b.surface(4.0f);
       b.box({0, y - fh * 0.28f, 0.565f}, {0.42f, 0.010f, 0.065f}, {0.60f,0.60f,0.62f});
       b.box({0, y - fh * 0.20f, 0.628f}, {0.42f, 0.055f, 0.008f}, {0.52f,0.53f,0.56f});
     }

@@ -200,6 +200,7 @@
     document.getElementById('gearToggle').classList.add('show');
     if(isTouch) document.getElementById('touch').classList.add('show');
     setTimeout(refreshTexInfo, 120);
+    setTimeout(function(){ loadScannedMaterials(); }, 200);
     // the overlay swallows the click, so tell the engine directly
     try { Module._startGame(); } catch(e){}
     document.getElementById('canvas').focus();
@@ -220,6 +221,70 @@
       try { Module._setQuality(parseInt(btn.dataset.q, 10)); } catch(e){}
     });
   });
+
+  // ---------- real photoscanned materials (optional) ----------
+  // Drop CC0 PBR maps into site/moor/tex/ as <name>_albedo.jpg and
+  // <name>_normal.jpg and they replace the generated layer of the same name.
+  // Sources that work: ambientCG, Poly Haven, any CC0 PBR library.
+  var MATERIAL_NAMES = ['grass','rock','sand','asphalt','concrete','brick',
+                        'stucco','panel','metal','wood','gravel','dirt'];
+
+  async function loadScannedMaterials(){
+    var albedoTex, normalTex, size, count;
+    try {
+      albedoTex = Module._getMaterialAlbedoTex();
+      normalTex = Module._getMaterialNormalTex();
+      size      = Module._getTextureRes();
+      count     = Module._getMaterialLayerCount();
+    } catch(e){ return; }
+    if(!albedoTex || !size) return;
+    if(typeof GL === 'undefined' || typeof GLctx === 'undefined') return;
+
+    var gl = GLctx;
+    var loaded = 0;
+
+    async function tryLayer(layer, name, which){
+      var url = 'tex/' + name + '_' + (which === 0 ? 'albedo' : 'normal') + '.jpg';
+      var res;
+      try { res = await fetch(url, {cache:'force-cache'}); } catch(e){ return false; }
+      if(!res.ok) return false;
+      var blob = await res.blob();
+      var bmp;
+      try {
+        // resize on decode so it matches the array exactly
+        bmp = await createImageBitmap(blob, {resizeWidth:size, resizeHeight:size, resizeQuality:'high'});
+      } catch(e){ return false; }
+      var texId = which === 0 ? albedoTex : normalTex;
+      var tex = GL.textures[texId];
+      if(!tex) return false;
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, layer,
+                       size, size, 1, gl.RGBA, gl.UNSIGNED_BYTE, bmp);
+      bmp.close && bmp.close();
+      return true;
+    }
+
+    for(var i = 0; i < count && i < MATERIAL_NAMES.length; i++){
+      var okA = await tryLayer(i, MATERIAL_NAMES[i], 0);
+      if(okA){ await tryLayer(i, MATERIAL_NAMES[i], 1); loaded++; }
+    }
+    if(loaded > 0){
+      try {
+        Module._refreshMaterialMips();      // also re-measures the layer means
+        Module._noteExternalLayers(loaded);
+      } catch(e){}
+      var e2 = document.getElementById('autonote');
+      if(e2){
+        e2.textContent = loaded + ' scanned material' + (loaded===1?'':'s') + ' loaded';
+        e2.style.opacity = 1;
+        setTimeout(function(){ e2.style.opacity = 0; }, 4000);
+      }
+      console.log('[materials] replaced ' + loaded + ' generated layers with scans');
+    } else {
+      console.log('[materials] no scans in tex/ — using generated materials');
+    }
+  }
 
   // ---------- texture resolution ----------
   function refreshTexInfo(){
