@@ -73,7 +73,8 @@ def G_shoes(c, **kw):
 
 
 def G_shirt(c='linen', collar=0.012, **kw):
-    return dict({'type': 'shirt', 'fabric': 'linen', 'color': _c(c), 'ease': 0.005, 'sleeves': 'long', 'sim': False, 'layer': 1, 'neck': 0.0,
+    # (sleeves end inside the outer sleeve: a shirt cuff showing at the wrist read as a wristwatch)
+    return dict({'type': 'shirt', 'fabric': 'linen', 'color': _c(c), 'ease': 0.005, 'sleeves': 'long', 'sleeve_frac': 0.84, 'sim': False, 'layer': 1, 'neck': 0.0,
                  'collar': collar, 'drape': False, 'thickness': 0.0015}, **kw)
 
 
@@ -86,7 +87,7 @@ def G_tunic(c, hem=0.5, belt=True, sleeves='long', **kw):
 def G_coat(c, hem=0.5, split=True, **kw):
     # sleeves cut with ease (1.5-2 cm more than the arm): tight sleeves printed the deltoids and
     # upper arms through the coat like a wetsuit
-    return dict({'type': 'coat', 'fabric': 'wool', 'color': _c(c), 'ease': 0.016, 'loose': 0.02, 'hang': 0.25, 'sleeves': 'long', 'sleeve_frac': 0.97, 'arm_ease': 0.008,
+    return dict({'type': 'coat', 'fabric': 'wool', 'color': _c(c), 'ease': 0.016, 'loose': 0.02, 'hang': 0.25, 'sleeves': 'long', 'sleeve_frac': 0.97, 'arm_ease': 0.003, 'cap_bridge': 0.92,
                  'stack': 0.035, 'hem': hem, 'flare': 1.5, 'prefold': 0.035, 'folds': 9, 'pin_hips': 0.5, 'split': 'both' if split else 'none',
                  'belt': True, 'neck_shape': 'v', 'neck': 0.15, 'neck_width': 0.075, 'layer': 2, 'thickness': 0.003, 'wear': 0.55, 'dust': 0.45}, **kw)
 
@@ -94,9 +95,11 @@ def G_coat(c, hem=0.5, split=True, **kw):
 def G_doublet(c, hem=0.68, **kw):
     """A fitted riding doublet / arming coat: cut close (no blousing), standing collar, closed
     front, short split skirts to the upper thigh."""
-    return dict({'type': 'doublet', 'fabric': 'wool', 'sim_fabric': 'heavywool', 'color': _c(c), 'ease': 0.008, 'loose': 0.0, 'hang': 1.0,
-                 'torso_smooth': 60, 'bodice_pin': 0.7, 'sleeves': 'long', 'sleeve_frac': 0.97, 'arm_ease': -0.002, 'stack': 0.02, 'hem': hem,
-                 'flare': 1.25, 'prefold': 0.02, 'folds': 8, 'pin_hips': 0.6, 'split': 'both', 'overlap': 0.05, 'belt': True,
+    # (cut close but not a second skin: at 8 mm ease, pinned to the body, it read as a wetsuit with
+    # the navel showing; buttons down the front give it construction)
+    return dict({'type': 'doublet', 'fabric': 'wool', 'sim_fabric': 'heavywool', 'color': _c(c), 'ease': 0.014, 'loose': 0.004, 'hang': 0.6,
+                 'torso_smooth': 90, 'bodice_pin': 0.45, 'sleeves': 'long', 'sleeve_frac': 0.97, 'arm_ease': 0.002, 'stack': 0.025, 'hem': hem,
+                 'flare': 1.3, 'prefold': 0.025, 'folds': 8, 'pin_hips': 0.6, 'split': 'both', 'overlap': 0.09, 'belt': True, 'buttons': 14,
                  'neck_shape': 'round', 'neck': 0.015, 'collar': 0.03, 'layer': 2, 'thickness': 0.0035, 'wear': 0.4, 'dust': 0.35}, **kw)
 
 
@@ -160,7 +163,8 @@ def G_capelet(c, length=0.27, fabric='wool', **kw):
 
 def G_shawl(c, length=0.36, **kw):
     """A wool shawl over the shoulders, open at the front."""
-    return dict({'type': 'cape', 'fabric': 'wool', 'sim_fabric': 'wool', 'color': _c(c), 'closed': False, 'gap': 0.7, 'length': length,
+    # (closed: an open shawl's front corners stood off the shoulders like flaps)
+    return dict({'type': 'cape', 'fabric': 'wool', 'sim_fabric': 'wool', 'color': _c(c), 'closed': True, 'gap': 0.0, 'length': length,
                  'flare': 0.2, 'depth': 0.12, 'layer': 4, 'name': 'capeshawl'}, **kw)
 
 
@@ -242,7 +246,7 @@ def cast():
         'brows': 'eyebrow006', 'lashes': 'eyelashes02',
         # braid brought forward over the RIGHT shoulder (her LEFT arm is the injured one): it reads
         # from the front, and the hair is parted (not slicked back like a cap)
-        'hair': {'color': HAIR['brown'], 'style': 'braid', 'hang': 'R', 'part': 0.012, 'loft': 0.011, 'length': 0.4, 'loose': 0.03},
+        'hair': {'color': HAIR['brown'], 'style': 'braid', 'hang': 'R', 'part': 0.0045, 'loft': 0.011, 'length': 0.4, 'loose': 0.03, 'count': 18000},
         # a daylight squint and a slight asymmetric set of the mouth (a blank stare reads as a doll)
         'expression': {'eye-left-slit': 0.22, 'eye-right-slit': 0.18, 'mouth-corner-puller': (0.18, 'R'), 'eyebrows-left-inner-up': 0.12},
         'outfit': riding_clothes(ABBY_GREEN, shirt=[0.31, 0.275, 0.21], trousers=[0.085, 0.06, 0.042], boots=LEATHER_C['brown'], hem=0.6,
@@ -284,13 +288,13 @@ def cast():
         'eyes': {'iris': 'brownlight', 'tint': IRIS_TINT['brown']},
         'brows': 'eyebrow002', 'lashes': 'eyelashes01',
         # a short, textured crop with a side part - his own, not Abby's slicked-back look
-        'hair': {'color': HAIR['darkbrown'], 'style': 'crop', 'length': (0.02, 0.06), 'flow': 'side', 'part_x': 0.028, 'curl': 0.45, 'loft': 0.016,
-                 'clump': 0.6, 'beard': {'count': 0, 'moustache': True, 'shadow': 0.9}},
+        'hair': {'color': HAIR['darkbrown'], 'style': 'crop', 'length': (0.03, 0.075), 'flow': 'side', 'part_x': 0.028, 'curl': 0.12, 'loft': 0.008,
+                 'clump': 0.3, 'beard': {'count': 0, 'moustache': True, 'shadow': 0.9}},
         'expression': {'eye-left-slit': 0.15, 'eye-right-slit': 0.12, 'mouth-corner-puller': (0.1, 'L')},
         # a short (upper-thigh) riding coat in muted blue over dark trousers and knee boots: the
         # dark riding clothes show (a knee-length coat read as a blue robe)
         'outfit': riding_clothes([0.046, 0.058, 0.082], shirt=[0.05, 0.05, 0.052], trousers='charcoal', boots=LEATHER_C['dark'], hem=0.74,
-                                 boot_h=0.86, belt_style='leather', belt_color=[0.075, 0.045, 0.026], pouch=True, flare=1.35),
+                                 boot_h=0.86, belt_style='leather', belt_color=[0.15, 0.085, 0.045], pouch=True, flare=1.35, tongue=0.065),
         'pose': 'stand', 'pose_params': {'weight': 'L', 'contrapposto': 1.0, 'head_yaw': 0.2, 'belt_hand': 'R', 'free_fwd': 0.09},
         'notes': 'canon: dark riding clothes with a muted blue outer layer',
     }
@@ -308,14 +312,14 @@ def cast():
                           # restrained but costly: deep wine fine wool, a fitted laced bodice (bodice_pin),
                           # a full gored skirt pooling on the floor with a short train, a low girdle with
                           # gilt mounts and a long pendant end (a slate tube read as a nun or a maid)
-                          G_kirtle([0.1, 0.022, 0.03], hem=-0.05, fabric='wool', sim_fabric='heavywool', sheen=0.6, neck=0.07, flare=2.7, train=0.16, folds=15,
+                          G_kirtle([0.075, 0.016, 0.03], hem=-0.05, fabric='wool', sim_fabric='heavywool', sheen=0.6, neck=0.07, flare=2.7, train=0.16, folds=15,
                                    prefold=0.06, wear=0.08, dust=0.05, hang=1.0, torso_smooth=80, cinch_ease=0.012, bodice_pin=0.75, name='gown',
                                    belt=True, belt_style='girdle', belt_dy=-0.075, belt_color=[0.05, 0.03, 0.02], buckle='gold', tongue=0.4, pin_sleeves=0.6),
                           # the veil is pinned over a fine linen kerchief that covers the crown and the
                           # hair (a veil hanging off the back of a bare head read as a sheet)
                           G_kerchief([0.56, 0.54, 0.5], front=0.07, tail=False, ease=0.007, fabric='linen'),
                           G_veil([0.54, 0.52, 0.47], length=0.55)],
-                  accessories=[{'prop': 'circlet', 'dy': 0.072, 'tilt': -0.12, 'kw': {'r': 0.093, 'h': 0.011}}],
+                  accessories=[{'prop': 'circlet', 'dy': 0.05, 'tilt': -0.12, 'fit': 0.012, 'kw': {'h': 0.01}}],
                   # hands folded at the waist: the right hand laid over the left (true contact)
                   pose='clasp', pose_params={'weight': 'L', 'contrapposto': 0.5, 'reach': 0.2, 'dy': -0.02, 'head_yaw': -0.08}, cloth_subdiv=1,
                   notes='canon: a restrained formal gown; the veil and the slim gold fillet holding it are proposals (no crown in the screenplay)')
@@ -326,7 +330,7 @@ def cast():
     # a close near-black wool doublet with a standing collar and short split skirts, leather
     # gauntlets, fitted trousers, tall boots; braided coronet. No heraldry.
     fall_out = [G_trousers([0.026, 0.025, 0.028], tuck=0.92, ease=0.011), G_boots(LEATHER_C['black'], height=0.98),
-                G_doublet([0.024, 0.024, 0.029], hem=0.66, belt_style='girdle', belt_color=LEATHER_C['black'], buckle='iron', tongue=0.12),
+                G_doublet([0.03, 0.03, 0.035], hem=0.66, belt_style='leather', belt_color=[0.05, 0.035, 0.026], buckle='iron', tongue=0.07, belt_width=0.028),
                 G_gloves([0.03, 0.022, 0.018], cuff=0.4)]
     fall = person('fall', 'Queen Fall', 0.0, 0.55, 'light', lod='hero', muscle=0.6, weight=0.4, height=0.6,
                   details={'nose/nose-hump': 0.3, 'nose/nose-scale-horiz': -0.1, 'chin/chin-prominent': 0.3, 'cheek/l-cheek-bones': 0.4, 'cheek/r-cheek-bones': 0.4,
@@ -348,17 +352,17 @@ def cast():
                            'cheek/r-cheek-volume': 0.3, 'eyes/l-eye-bag': 0.4, 'eyes/r-eye-bag': 0.4, 'head/head-round': 0.3, 'asym/asym-nose-1': 0.2},
                   # grey hair and beard of ONE colour family (salt-and-pepper per strand); a full beard
                   # in clumps with a moustache over the lip, thinning on the cheeks
-                  hair={'color': HAIR['salt'], 'style': 'crop', 'length': (0.018, 0.045), 'flow': 'back', 'curl': 0.3, 'loft': 0.012, 'clump': 0.5,
-                        'salt': 0.45,
-                        'beard': {'count': 14000, 'length': (0.012, 0.03), 'curl': 0.35, 'shadow': 0.8, 'color': HAIR['salt'], 'clump': 0.7,
-                                  'moustache_len': 0.019, 'salt': 0.5}},
+                  hair={'color': [0.11, 0.1, 0.09], 'style': 'crop', 'length': (0.02, 0.05), 'flow': 'back', 'curl': 0.15, 'loft': 0.009, 'clump': 0.3,
+                        'salt': 0.3,
+                        'beard': {'count': 14000, 'length': (0.01, 0.026), 'curl': 0.22, 'shadow': 0.8, 'color': [0.11, 0.1, 0.09], 'clump': 0.4,
+                                  'moustache_len': 0.017, 'salt': 0.32}},
                   eyes=('brown', IRIS_TINT['brown']), brows='eyebrow004',
                   expression={'mouth-corner-puller': 0.35, 'eye-left-slit': 0.2, 'eye-right-slit': 0.2, 'eyebrows-left-inner-up': 0.1},
                   outfit=[G_hose([0.09, 0.05, 0.035]), G_shoes(LEATHER_C['dark']), G_shirt('undyed', collar=0.0),
-                          G_tunic([0.16, 0.032, 0.03], hem=0.28, flare=1.75, ease=0.024, neck=0.035, wear=0.15, dust=0.1, sheen=0.5, name='gown',
-                                  belt_style='leather', belt_color=[0.06, 0.035, 0.02], buckle='gold', pouch=True),
-                          G_capelet([0.15, 0.12, 0.095], length=0.25, fabric='fur')],
-                  accessories=[{'prop': 'chain'}, {'prop': 'circlet', 'dy': 0.068, 'tilt': -0.1, 'kw': {'r': 0.09, 'h': 0.012}}],
+                          G_tunic([0.12, 0.042, 0.022], hem=0.28, flare=1.75, ease=0.024, neck=0.035, wear=0.15, dust=0.1, sheen=0.5, name='gown',
+                                  belt_style='leather', belt_color=[0.14, 0.08, 0.04], buckle='gold', pouch=True),
+                          G_capelet([0.11, 0.075, 0.045], length=0.25, fabric='fur')],
+                  accessories=[{'prop': 'chain'}, {'prop': 'circlet', 'dy': 0.05, 'tilt': -0.1, 'fit': 0.01, 'kw': {'h': 0.012}}],
                   pose='gesture', pose_params={'weight': 'R', 'contrapposto': 0.7, 'head_yaw': 0.1, 'head_roll': 0.04},
                   notes='screenplay: approachable; crown optional and never a prop gag (a slim circlet is a proposal). Warm festival clothes are a proposal')
     king['skin'].update({'texture': 'middleage_lightskinned_male_diffuse', 'redness': 0.35})
@@ -399,7 +403,7 @@ def cast():
     C.append(keeper)
     C.append(person('keeper2', 'Ground keeper (2)', 0.0, 0.52, 'light', muscle=0.62, weight=0.55, height=0.52,
                     details={'nose/nose-hump': 0.2, 'chin/chin-prominent': 0.2, 'asym/asym-eye-3': 0.3},
-                    hair={'color': HAIR['auburn'], 'style': 'braid', 'length': 0.3, 'count': 9000, 'hang': 'L', 'part': 0.01},
+                    hair={'color': HAIR['auburn'], 'style': 'braid', 'length': 0.3, 'count': 9000, 'hang': 'L', 'part': 0.004},
                     outfit=[G_trousers(CLING['greybrown'], tuck=0.54), G_boots(LEATHER_C['brown'], height=0.6), G_shirt('linen'),
                             G_tunic(CLING['sage'], hem=0.5, belt_style='cord', belt_color=[0.3, 0.25, 0.17])],
                     pose='rope_front', pose_params={'weight': 'R', 'contrapposto': 0.7, 'head_yaw': 0.12}, notes='suggested: sturdy work clothes'))
@@ -421,7 +425,7 @@ def cast():
     C.append(parent)
     C.append(person('child', 'Child', 0.0, 0.12, 'olive', lod='hero', muscle=0.5, weight=0.45, height=0.5,
                     details={'head/head-round': 0.3, 'nose/nose-scale-vert': -0.1},
-                    hair={'color': HAIR['brown'], 'style': 'braid', 'length': 0.2, 'count': 8000, 'part': 0.01},
+                    hair={'color': HAIR['brown'], 'style': 'braid', 'length': 0.2, 'count': 8000, 'part': 0.004},
                     expression={'mouth-corner-puller': 0.3, 'eyebrows-left-inner-up': 0.15, 'eyebrows-right-inner-up': 0.15},
                     outfit=[G_hose(CLING['greybrown']), G_shoes(LEATHER_C['tan']), G_tunic(CLING['sage'], hem=0.25, flare=1.5, ease=0.014, belt_style='cord')],
                     pose='child_hand', pose_params={'weight': 'L', 'contrapposto': 0.5, 'hand_target': [-0.2, 0.8, 0.08]},
@@ -511,7 +515,7 @@ def crowd():
     out = []
     K = CLING
     rows = [
-        ('crowd01', 0.0, 0.42, 'fair', (0.45, 0.45, 0.5), {'style': 'braid', 'color': HAIR['blond'], 'length': 0.34, 'hang': 'L', 'part': 0.01},
+        ('crowd01', 0.0, 0.42, 'fair', (0.45, 0.45, 0.5), {'style': 'braid', 'color': HAIR['blond'], 'length': 0.34, 'hang': 'L', 'part': 0.004},
          ('kirtle', 'fadedwoad'), None, 'cheer', dict(layer='apron', foot='shoes', ex='laugh', pp={'head_yaw': 0.25})),
         ('crowd02', 1.0, 0.5, 'light', (0.55, 0.55, 0.52), {'style': 'crop', 'color': HAIR['brown'], 'length': (0.015, 0.04), 'clump': 0.5},
          ('tunic', 'brick'), ('cap', 'moss'), 'drink', dict(belt='leather', pouch=True, foot='ankle', ex='smile', pp={'head_yaw': -0.35})),
@@ -523,7 +527,7 @@ def crowd():
          ('kirtle', 'ochre'), ('kerchief', 'brick'), 'basket_front', dict(layer='apron', foot='shoes', ex='smile', pp={'head_yaw': 0.3})),
         ('crowd06', 1.0, 0.78, 'light', (0.35, 0.45, 0.42), {'style': 'none', 'color': HAIR['white'], 'beard': {'count': 7000, 'length': (0.012, 0.035), 'curl': 0.4, 'color': HAIR['white'], 'clump': 0.7}},
          ('tunic', 'greybrown'), ('hood', 'russet'), 'stand', dict(belt='cord', foot='shoes', ex='smile', hem=0.32, pp={'flex': 0.22, 'head_pitch': -0.12, 'elbow': 0.4})),
-        ('crowd07', 0.0, 0.3, 'olive', (0.45, 0.4, 0.45), {'style': 'braid', 'color': HAIR['darkbrown'], 'length': 0.4, 'hang': 'R', 'part': 0.01},
+        ('crowd07', 0.0, 0.3, 'olive', (0.45, 0.4, 0.45), {'style': 'braid', 'color': HAIR['darkbrown'], 'length': 0.4, 'hang': 'R', 'part': 0.004},
          ('kirtle', 'sage'), None, 'eat', dict(layer='shawl', shawl='madderpink', foot='shoes', ex='smile', pp={'at': 'chest', 'head_pitch': 0.12})),
         ('crowd08', 1.0, 0.46, 'tan', (0.65, 0.65, 0.5), {'style': 'crop', 'color': HAIR['brown'], 'length': (0.008, 0.02), 'beard': {'count': 6000, 'length': (0.006, 0.016), 'curl': 0.5, 'clump': 0.6}},
          ('tunic', 'brick'), None, 'parcel_front', dict(layer='apron', apron=[0.2, 0.15, 0.1], belt='leather', foot='ankle', ex='smile')),
@@ -535,7 +539,7 @@ def crowd():
          ('kirtle', 'straw'), ('kerchief', 'rust'), 'gesture', dict(foot='shoes', ex='smile', belt='sash', sash='brick', pp={'head_yaw': 0.2})),
         ('crowd12', 1.0, 0.58, 'olive', (0.45, 0.95, 0.42), {'style': 'none', 'color': HAIR['darkbrown'], 'beard': {'count': 6000, 'length': (0.005, 0.012), 'curl': 0.5, 'clump': 0.5}},
          ('tunic', 'oatmeal'), ('cap', 'brick'), 'eat', dict(belt='leather', pouch=True, foot='ankle', ex=None, layer='apron', apron=[0.42, 0.39, 0.33])),
-        ('crowd13', 0.0, 0.2, 'light', (0.45, 0.4, 0.45), {'style': 'braid', 'color': HAIR['auburn'], 'length': 0.36, 'part': 0.01},
+        ('crowd13', 0.0, 0.2, 'light', (0.45, 0.4, 0.45), {'style': 'braid', 'color': HAIR['auburn'], 'length': 0.36, 'part': 0.004},
          ('kirtle', 'madderpink'), None, 'stand', dict(foot='shoes', ex='smile', belt='cord', pp={'head_yaw': 0.4, 'head_pitch': -0.1})),
         ('crowd14', 1.0, 0.4, 'brown', (0.78, 0.72, 0.18), {'style': 'crop', 'color': HAIR['black'], 'length': (0.004, 0.01), 'curl': 0.7},
          ('tunic', 'ochre'), None, 'drink', dict(belt='leather', foot='ankle', ex='laugh', layer='rolled')),

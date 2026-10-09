@@ -155,7 +155,7 @@ function materialFor(m, header, opts) {
   switch (m.kind) {
     case 'skin': return skinMaterial({ ...mt, seed: hashStr(header.id) % 997 });
     case 'eye': return eyeMaterial(mt);
-    case 'brow': case 'lash': case 'haircard': return cardMaterial({ ...mt, colorMap: m.kind === 'haircard' });
+    case 'brow': case 'lash': case 'haircard': return cardMaterial({ ...mt, colorMap: m.kind === 'haircard', cut: m.kind === 'brow' ? [0.0, 0.03] : [0.06, 0.3] });
     case 'hair': return hairStrandMaterial(mt);
     case 'teeth': case 'tongue': return simpleTexturedMaterial(mt);
     case 'cloth': return clothMaterial({ ...mt, wrinkle: mt.wrinkle ?? (m.name === 'shirt' ? 1 : 0) });

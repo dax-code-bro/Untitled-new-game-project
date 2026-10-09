@@ -102,10 +102,10 @@ varying float vAO; varying vec4 vAux; varying vec3 vObjP; varying vec2 vPat; var
   } else if (uPattern > 2.5) {
     // vertical channel quilting (period gambesons): stitched seams every ~2.5 cm, the padding
     // puffed between them; uneven stitching and wear on the ridges
-    float q = vPat.x * 40.0 + 0.15 * sin(vPat.y * 9.0 + floor(vPat.x * 40.0) * 1.7);
+    float q = vPat.x * 27.0 + 0.2 * sin(vPat.y * 7.0 + floor(vPat.x * 27.0) * 1.7) + 0.1 * hN3(vec3(vPat * 9.0, 1.0));
     float s = abs(fract(q) - 0.5);
-    c *= mix(0.72, 1.0, smoothstep(0.0, 0.07, 0.5 - s));
-    c *= 1.0 + 0.06 * (smoothstep(0.35, 0.0, s) - 0.5);
+    c *= mix(0.84, 1.0, smoothstep(0.0, 0.05, 0.5 - s));
+    c *= 1.0 + 0.04 * (smoothstep(0.35, 0.0, s) - 0.5);
   } else if (uPattern > 1.5) {
     float st = step(0.5, fract(vPat.x * 9.0));
     c = mix(c, uPatCol * (0.88 + 0.24 * n1), st * 0.85);
@@ -144,9 +144,9 @@ if (uPattern > 0.5 && uPattern < 1.5) {
   vec2 q = vPat * 18.0; float s = min(abs(fract(q.x + q.y) - 0.5), abs(fract(q.x - q.y) - 0.5));
   normal = hBump(normal, -vViewPosition, smoothstep(0.0, 0.12, s) * 0.002, faceDirection);
 } else if (uPattern > 2.5) {
-  float q = vPat.x * 40.0 + 0.15 * sin(vPat.y * 9.0 + floor(vPat.x * 40.0) * 1.7);
+  float q = vPat.x * 27.0 + 0.2 * sin(vPat.y * 7.0 + floor(vPat.x * 27.0) * 1.7) + 0.1 * hN3(vec3(vPat * 9.0, 1.0));
   float s = abs(fract(q) - 0.5);
-  normal = hBump(normal, -vViewPosition, pow(clamp(1.0 - 2.0 * s, 0.0, 1.0), 0.6) * 0.0035, faceDirection);
+  normal = hBump(normal, -vViewPosition, pow(clamp(1.0 - 2.0 * s, 0.0, 1.0), 0.45) * 0.0022, faceDirection);
 }
 if (uLeather > 0.5 && vAux.a > 0.01) {
   // ankle / instep creases (aux.a): leather boots crease across the flex line, they are not

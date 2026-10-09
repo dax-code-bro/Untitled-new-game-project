@@ -118,7 +118,7 @@ def place_hand(pb, side, target, pole=None, palm=None, grip='cylinder', amount=1
 
 def ride(pb, p):
     """Astride a saddle: thighs forward and spread, knees bent, heels down, hands forward at the reins."""
-    spread = p.get('spread', 0.55)
+    spread = p.get('spread', 0.45)
     lean = p.get('lean', 0.12)
     for s, sg in (('L', 1), ('R', -1)):
         hip = pb.head(f'upperleg01.{s}')
@@ -126,8 +126,9 @@ def ride(pb, p):
         pb.aim(f'upperleg01.{s}', norm(np.array([sg * spread, -0.75, 0.55])), to=f'lowerleg01.{s}')
         kn = pb.head(f'lowerleg01.{s}')
         pb.aim(f'lowerleg01.{s}', norm(np.array([sg * 0.18, -1.0, -0.08])), to=f'foot.{s}')
-        pb.foot_flat(s, yaw=0.25)
-        pb.rotate(f'foot.{s}', [1, 0, 0], -0.15)
+        pb.foot_flat(s, yaw=0.18)
+        # heels down, toes up and a little out (a rider's foot; it hung like a dancer's en pointe)
+        pb.rotate(f'foot.{s}', [1, 0, 0], -0.38)
     pb.bend_spine(flex=lean, side=0.0, turn=p.get('turn', 0.0))
     pb.neck_head(pitch=-lean * 0.8 + p.get('head_pitch', 0.0), yaw=p.get('head_yaw', 0.0))
     # hands: reins in front of the belly
@@ -277,13 +278,13 @@ def act_hands_front(pb, p, prop=None, size=None):
     G = c + fwd * p.get('reach', 0.22) + np.array([0, p.get('dy', -0.06), 0])
     out = []
     if prop in ('cloth', 'bowl', 'parcel', 'loaf', 'crate', 'basket2', 'rope'):
-        w = {'cloth': 0.13, 'bowl': 0.1, 'parcel': 0.15, 'loaf': 0.08, 'crate': 0.27, 'basket2': 0.19, 'rope': 0.12}[prop]
+        w = {'cloth': 0.13, 'bowl': 0.1, 'parcel': 0.15, 'loaf': 0.08, 'crate': 0.27, 'basket2': 0.19, 'rope': 0.07}[prop]
         for s, sg in (('L', 1), ('R', -1)):
             grip_at(pb, s, G + lat * sg * w + np.array([0, -0.01, 0]), lat_dir=fwd * 0.3 + np.array([0, 0, 0]) + lat * 0.0 + fwd,
                     n_dir=-lat * sg + np.array([0, 0.6, 0]), grip='cup', amount=0.7,
                     pole=pb.head(f'upperarm01.{s}') + lat * sg * 0.3 + np.array([0, -0.4, -0.3]))
         R = frame_y(np.array([0, 1.0, 0]), fwd)
-        yoff = {'cloth': -0.04, 'bowl': -0.03, 'parcel': -0.0, 'loaf': -0.03, 'crate': -0.17, 'basket2': -0.12, 'rope': -0.02}[prop]
+        yoff = {'cloth': -0.04, 'bowl': -0.03, 'parcel': -0.0, 'loaf': -0.03, 'crate': -0.17, 'basket2': -0.12, 'rope': 0.01}[prop]
         name = 'basket' if prop == 'basket2' else prop
         out.append(place(name, R, G + np.array([0, yoff, 0]), 'wrist.R'))
     else:
@@ -500,8 +501,10 @@ def act_injured_arm(pb, p):
     for s, sg in (('L', 1.0), ('R', -1.0)):
         pb.rotate(f'clavicle.{s}', fwd, -sg * 0.07)                 # shoulders up
         pb.rotate(f'clavicle.{s}', up, sg * 0.1)                    # and forward (rounded)
-    # left wrist in front of the belly, right of centre; elbow tucked against the ribs
-    wl = c + fwd * 0.17 - lat * 0.06 + np.array([0, 0.05, 0])
+    # left wrist in front of the upper belly, right of centre, ABOVE the belt (the belt's pinned
+    # band of coat cannot be pushed aside in the cloth simulation: at belt height the forearm
+    # ended up under the coat); elbow tucked against the ribs
+    wl = c + fwd * 0.19 - lat * 0.05 + np.array([0, 0.12, 0])
     place_hand(pb, 'L', wl, pole=pb.head('upperarm01.L') + lat * 0.08 + np.array([0, -0.6, 0.0]),
                palm=(-lat + fwd * 0.2, -fwd * 0.5 + up * 0.5), grip='loose', amount=0.7)
     el = pb.head('lowerarm01.L')
@@ -655,13 +658,15 @@ def act_hands_behind(pb, p):
     """Hands clasped behind the back (the right wrist held in the left hand): low-key authority."""
     _std_legs(pb, p)
     fwd, lat = pb.fwd_axis(), pb.side_axis()
-    sacrum = pb.head('spine05') - fwd * 0.16 + np.array([0, 0.02, 0])
-    place_hand(pb, 'R', sacrum + lat * 0.035 + np.array([0, -0.02, 0]), pole=pb.head('upperarm01.R') - lat * 0.4 - fwd * 0.35 + np.array([0, -0.3, 0]),
+    sacrum = pb.head('spine05') - fwd * 0.16 + np.array([0, -0.03, 0])
+    # elbows out to the sides and back (from the front the upper arms still frame the body;
+    # tucked elbows read as a figure without arms)
+    place_hand(pb, 'R', sacrum + lat * 0.035 + np.array([0, -0.02, 0]), pole=pb.head('upperarm01.R') - lat * 0.7 - fwd * 0.25 + np.array([0, -0.25, 0]),
                palm=(lat + np.array([0, -0.4, 0]), -fwd), grip='relaxed', amount=0.9)
     wr = pb.head('wrist.R') + (pb.head('lowerarm01.R') - pb.head('wrist.R')) * 0.12
     ax = norm(pb.head('wrist.R') - pb.head('lowerarm01.R'))
     grip_at(pb, 'L', wr, lat_dir=ax, n_dir=fwd * 0.6 + np.array([0, -0.4, 0]), grip='cylinder', amount=0.9, radius=0.026,
-            pole=pb.head('upperarm01.L') + lat * 0.4 - fwd * 0.35 + np.array([0, -0.3, 0]))
+            pole=pb.head('upperarm01.L') + lat * 0.7 - fwd * 0.25 + np.array([0, -0.25, 0]))
     return []
 
 

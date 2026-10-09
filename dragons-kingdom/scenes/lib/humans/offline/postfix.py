@@ -890,22 +890,52 @@ def fix_cullboots(cid, reach=0.035, margin=1):
             T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
             N = view(bin_, m['attrs']['normal']).astype(float)
             cov = np.zeros(len(P), bool)
-            ytop = max(o_[:, 1].max() for o_ in Ps)
+            # the shaft top per boot (left / right of the feet's centre): only hose below it is
+            # culled - a tapered trouser leg's normals point down onto the shaft's rim from above,
+            # so the ray test alone culled a ragged band of visible trousers over the boot top
+            FP = np.vstack(Ps)
+            FT = np.vstack(Ts)
+            # the shaft's top rim (its open edge): per hose vertex, the rim height at the nearest
+            # rim point round the leg - a shoe's collar is lower at the heel than at the instep,
+            # one height per boot culled the hose above the heel collar (holes showed the ankle)
+            key = np.round(FP / 1e-5).astype(np.int64)
+            _, wf = np.unique(key, axis=0, return_inverse=True)
+            wf = wf.reshape(-1)
+            TW = wf[FT[(FT[:, 0] != FT[:, 1]) & (FT[:, 1] != FT[:, 2])]]
+            E = np.sort(np.concatenate([TW[:, [0, 1]], TW[:, [1, 2]], TW[:, [2, 0]]]), axis=1)
+            u_, c_ = np.unique(E, axis=0, return_counts=True)
+            QW = np.zeros((int(wf.max()) + 1, 3))
+            QW[wf] = FP
+            rimv = np.unique(u_[c_ == 1].ravel())
+            rim = QW[rimv]
+            # keep the upper edge only (the sole has no open edge; drop stray low loops)
+            fx = FP[:, 0].mean()
+            keep_ = np.zeros(len(rim), bool)
+            for sgn in (1, -1):
+                sd = (rim[:, 0] - fx) * sgn > 0
+                if sd.any():
+                    keep_ |= sd & (rim[:, 1] > rim[sd, 1].max() - 0.12)
+            rim = rim[keep_] if keep_.any() else rim
+            ytop_v = np.full(len(P), FP[:, 1].max())
+            if len(rim):
+                d2 = ((P[:, None, 0] - rim[None, :, 0]) ** 2 + (P[:, None, 2] - rim[None, :, 2]) ** 2)
+                ytop_v = rim[np.argmin(d2, axis=1), 1]
+            ytop = float(FP[:, 1].max())
             moved = 0
             for i in range(len(P)):
                 n = N[i] / max(np.linalg.norm(N[i]), 1e-9)
                 hit = tree.ray_cast(Vector(P[i] - n * 0.01), Vector(n), reach + 0.01)
-                cov[i] = hit[0] is not None
+                cov[i] = hit[0] is not None and P[i, 1] < ytop_v[i] - 0.004
                 # the hose inside a boot shaft stays 3 mm inside it (it poked out by up to 6 mm:
                 # the margin ring the cull keeps showed as pale streaks); below the shaft's top
                 # only, fading over the last 1.5 cm so the hose still leaves the boot
-                if P[i, 1] < ytop:
+                if P[i, 1] < ytop_v[i]:
                     loc, bn, _, dist = tree.find_nearest(Vector(P[i]))
                     if loc is not None and dist < 0.012:
                         bn = np.array(bn)
                         sd = float(np.dot(P[i] - np.array(loc), bn))
                         if sd > -0.003 and (cov[i] or sd > 0):
-                            fade = float(np.clip((ytop - P[i, 1]) / 0.015, 0, 1))
+                            fade = float(np.clip((ytop_v[i] - P[i, 1]) / 0.015, 0, 1))
                             P[i] -= bn * (sd + 0.003) * fade
                             moved += 1
             if moved:
@@ -1526,6 +1556,9 @@ def fix_beltseat(cid, nb=72, gap=0.0015):
         if sel.sum() >= 4:
             ymid[k] = np.median(BP[sel, 1])
             near = sel & (np.abs(BP[:, 1] - ymid[k]) < 0.03)
+            if not near.any():
+                ymid[k] = np.nan
+                continue
             rin[k] = rb[near].min()
             spans.append(np.percentile(BP[near, 1], 90) - np.percentile(BP[near, 1], 10))
     good = ~np.isnan(ymid)

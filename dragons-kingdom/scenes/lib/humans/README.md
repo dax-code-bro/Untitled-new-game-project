@@ -68,6 +68,47 @@ crown. Garment key `bodice_pin` (opt-in): a fitted, laced bodice keeps its cut s
 gown crumpled into horizontal ripples without it); non-simulated shirts get shading-only folds
 (runtime `wrinkle`).
 
+## Costume, pose and face kit (fix round 1, 2026-10-09)
+
+Garment / spec keys (offline/characters.py, offline/garments.py, offline/build.py):
+- `trousers` (G_trousers): simulated wool trousers / braies. The legs are cut as tubes that hang
+  from the seat and thigh (`leg_tubes`), the fork is bridged by a gusset (`bridge_crotch`: the
+  crotch lowered + relaxed, kept outside both legs), and `tuck` (boot height) tapers them into the
+  boot shaft 3 cm above its rim; `bottom` ends them above the ankle (rolled sailors' trousers).
+  A shell of the leg read as sheer tights.
+- `overlap` (coats, doublets): the front edges of a split skirt lap over each other when
+  standing (riders' variants set 0: they part astride).
+- `doublet` (G_doublet): fitted riding doublet, standing collar, short split skirts, `buttons` n
+  (a row of domed buttons ray-cast onto the front). `gloves` (G_gloves): leather gauntlets, a
+  thin shell skinned with the body's own weights. `wrap` (G_wrap): a scarf round the lower face
+  and neck; hood `deep`: the face opening carried forward (the scout is unrecognisable).
+- `cape` with `closed` (G_capelet / G_shawl): shoulder capes and shawls; fabric `fur` (procedural
+  guard hairs in cloth.js, no fur scan in the library).
+- Belt kit (`belt_style` on the belted garment): `leather` (D-buckle with a prong, keeper, the
+  tongue through it hanging in a curve), `girdle` (gilt rosettes, long pendant end), `cord`
+  (knotted, frayed ends), `sash` (cloth band and tails); `belt_color`, `belt_width`, `buckle`
+  (iron | brass | gold), `tongue` (m), `pouch` (purse at the right hip). Accessories `chain`
+  (gold chain of office) and `circlet` with `fit` (fitted to the head's cross-section).
+- `expression`: CC0 MakeHuman expression units, `{unit: weight}` or `{unit: (weight, 'L'|'R')}`
+  for one side of the face (an asymmetric mouth corner); squints, smiles, laughs, pain.
+- Hair keys: `part` (centre parting width), `part_x` + flow `side` (side-parted crop), `loose`
+  (strands lifting off a tied groom), `clump` (tips gather into clumps), `salt` (fraction of grey
+  strands), braid `hang` 'L'|'R' (over a shoulder), style `coronet` (braided crown); beards
+  `clump`, `moustache_len`, density falling off at the cheek line. Vellus hairs are flagged and
+  shaded dark without highlight (they read as frost along the hairline).
+- Poses (offline/recipes.py): `belt_hand` (stand), `clasp` (right hand laid over the left, contact
+  solved), `hands_behind`, `spear` (shaft moved into the closed hand, `lean`, `spear_h`),
+  `spear_lean`, `spear_shoulder`, `eat` (bread roll at the lips, or `at: 'chest'`), recorder and
+  lute holds, `point_up` (index along the forearm, thumb tucked), injured arm cradled by the
+  other hand, riders' heels down.
+- Skin zones (attribute `aux3`: T-zone, hand, knuckles, fingertips): the oil film only on the
+  T-zone, redder knuckles and fingertips, softer cavity AO on the hands; the lid margin is wet.
+- `offline/qa.py <ids>`: integrity report run after every build (hand props within 2 cm of the
+  grip centre, brow / lash fragments off the skin). Brow / lash cards are trimmed at build time
+  (`card_qa`).
+- `scenes/lookdev/humans-review.js` (+ `.json` ids): a quick side-by-side review of a few builds
+  (front, 3/4, back, medium and face close-up of each) for iteration.
+
 ## Build
 
 ```bash

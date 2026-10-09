@@ -3,7 +3,7 @@
 //   t 1-2  Abby, face close-up
 //   t 2-3  Queen Alexandria, 3/4
 //   t 3-4  King of Cling, medium
-//   t 4-5  festival crowd group (9 villagers, mixed festival poses)
+//   t 4-5  festival crowd group (9 villagers + the lute player, staged in groups that interact)
 //   t 5-6  Abby with her LEFT arm in a sling
 //   t 6-7  Abby holding her injured LEFT arm in
 //   t 7-8  Queen Fall, medium
@@ -38,10 +38,14 @@ const SHOTS = [
   { name: 'alexandria', members: [['alexandria', 0, 0, -0.75]], cam: { y: 1.36, dist: 2.35, el: 3, fov: 30, fstop: 3.5, key: 30 } },
   { name: 'king', members: [['king', 0, 0, 0.2]], cam: { y: 1.4, dist: 2.6, el: 1, fov: 30, fstop: 3.5, key: 40 } },
   {
+    // staged in groups that look at each other (an even row facing the lens read as a mannequin
+    // line-up): two men toasting, two women talking over a basket, listeners turned to the lute
+    // player, an old man watching, a man eating; staggered depth, yaw + = turned to screen right
     name: 'crowd',
-    members: [['crowd01', -1.6, 0.4, 0.5], ['crowd02', -0.8, -0.3, 0.2], ['crowd04', 0.1, 0.5, -0.2], ['crowd05', 0.9, -0.2, -0.3],
-      ['crowd07', 1.8, 0.35, -0.5], ['crowd08', -2.2, -1.0, 0.8], ['crowd11', -0.4, -1.3, 0.1], ['crowd12', 0.9, -1.5, -0.4], ['crowd14', 2.0, -1.0, -0.9]],
-    cam: { y: 1.25, dist: 7.0, el: 4, fov: 34, fstop: 5.6, key: 45 },
+    members: [['crowd02', -1.75, 0.15, 1.0], ['crowd04', -1.0, 0.0, -0.75], ['crowd05', 0.15, 0.55, 0.85], ['crowd09', 0.85, 0.35, -0.95],
+      ['crowd07', -0.35, -0.85, 0.75], ['crowd01', 0.7, -1.3, 0.55], ['musician', 1.95, -0.75, -0.65], ['crowd06', -2.45, -0.9, 0.55],
+      ['crowd12', 1.55, 0.9, -0.35], ['crowd14', -0.95, -1.75, 0.3]],
+    cam: { y: 1.2, dist: 7.2, el: 4, fov: 34, fstop: 5.6, key: 45 },
     ground: 'pbr/ph_floor_pebbles_01',
   },
   { name: 'abby-sling', members: [['abby_sling', 0, 0, 0.35]], cam: { y: 1.25, dist: 2.4, el: 2, fov: 30, fstop: 3.5, key: 40 } },

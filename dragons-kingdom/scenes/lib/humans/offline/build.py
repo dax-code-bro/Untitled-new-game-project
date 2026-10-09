@@ -215,7 +215,8 @@ def assemble(kit, spec, out_dir, opts):
         for _ in range(2):
             hem = np.maximum(hem, np.array([hem[n].max() * 0.6 if len(n) else 0 for n in nb]))
         if thick > 0:
-            turn = g.spec.get('turn', 0.012)
+            # (a 1.2 cm turn-up showed its shaded inner side as a dark band at cuffs - 'a wristwatch')
+            turn = g.spec.get('turn', 0.007)
             P2, F2, nn = mu.hem_rim(P, F, thick, turn, nrm)
             src = np.concatenate([np.arange(len(P)), np.zeros(nn, int)])
             # rim vertices copy the attributes of their boundary vertex; their UVs continue past
@@ -319,6 +320,13 @@ def assemble(kit, spec, out_dir, opts):
         postfix.fix_props(cid + opts.get('suffix', ''))
         postfix.fix_hairline(cid + opts.get('suffix', ''))
         postfix.fix_cullboots(cid + opts.get('suffix', ''))
+        # integrity report (grips, brow / lash cards): printed with the build, never fatal
+        try:
+            import qa
+            pr_ = qa.check(cid + opts.get('suffix', ''))
+            log(f"   QA {cid}: {'OK' if not pr_ else '; '.join(pr_)}")
+        except Exception as e:  # noqa: BLE001
+            log(f'   QA {cid}: failed ({e})')
     log(f'   {cid}: {sum(len(p.posed) for p in parts)} verts, {size / 1e6:.1f} MB, {time.time() - t0:.0f} s')
 
 
@@ -515,14 +523,15 @@ def accessories(D, garments, spec, parts):
         pieces_belt.append(strap(path, width * 0.85, 0.0035))
         if st == 'girdle':
             # metal mounts every ~4 cm round the strap, and a strap end on the pendant
-            for a in np.arange(-math.pi + 0.05, math.pi, 0.11):
-                if abs(a - a0) < 0.12:
+            for a in np.arange(-math.pi + 0.1, math.pi, 0.32):
+                if abs(a - a0) < 0.2:
                     continue
-                r_ = np.interp(a, angs, R) + 0.0015 + thick + 0.0008
+                r_ = np.interp(a, angs, R) + 0.0015 + thick + 0.0006
                 q = np.array([c[0] + math.sin(a) * r_, y, c[2] + math.cos(a) * r_])
-                tt = np.array([math.cos(a), 0, -math.sin(a)])
                 nn = np.array([math.sin(a), 0, math.cos(a)])
-                pieces_metal.append(pr.box(q, (0.008, width * 0.7, 0.0024), np.stack([tt, up, nn], 1)))
+                # a small domed rosette (gilt), not a row of bright studs
+                Pm, Fm, _ = pr.lathe([(0.0, 0.0), (width * 0.32, 0.0), (width * 0.26, 0.0015), (width * 0.12, 0.0028), (0.0, 0.003)], segs=8)
+                pieces_metal.append((Pm @ pr.frame_from(nn, up).T + q, Fm))
             te = path[-1]
             tg = mu.norm(path[-1] - path[-3])
             pieces_metal.append(pr.box(te + tg * 0.012, (width * 0.8, 0.026, 0.004), pr.frame_from(tg, nrm)))
@@ -619,18 +628,47 @@ def add_props(kit, V, sk, pt, off, spec, D, parts):
             M = np.eye(4)
             M[:3, :3] = hR @ tilt
             M[:3, 3] = hR @ c + ht
-            places.append({'prop': kind, 'M': M, 'bone': 'head', 'kw': acc.get('kw', {})})
+            kw = dict(acc.get('kw', {}))
+            if kind == 'circlet' and acc.get('fit') is not None:
+                # fitted to the head (rest space, in the band's tilted plane): per azimuth the head's
+                # radius + hair / cover allowance - a fixed oval floated off the head like a halo
+                Rt = tilt
+                Hv = V[np.isin(kit.base_cat, ['head'])]
+                L_ = (Hv - c) @ Rt                         # into the band's frame
+                near = np.abs(L_[:, 1]) < 0.012
+                ang_ = np.arctan2(L_[near, 2], L_[near, 0])
+                rad_ = np.hypot(L_[near, 0], L_[near, 2])
+                bins = ((ang_ + math.pi) / (2 * math.pi) * 64).astype(int) % 64
+                prof = np.zeros(64)
+                np.maximum.at(prof, bins, rad_)
+                for _ in range(64):
+                    z_ = prof == 0
+                    if not z_.any():
+                        break
+                    prof[z_] = np.maximum(np.roll(prof, 1)[z_], np.roll(prof, -1)[z_])
+                for _ in range(4):
+                    prof = np.maximum(prof, (np.roll(prof, 1) + np.roll(prof, -1)) / 2)
+                # the band's angles: a = 0 .. 2pi from +x toward +z (circlet()), bins from -pi
+                aa = np.linspace(0, 2 * math.pi, 64, endpoint=False)
+                kk = ((np.where(aa > math.pi, aa - 2 * math.pi, aa) + math.pi) / (2 * math.pi) * 64).astype(int) % 64
+                kw['profile'] = prof[kk] + float(acc['fit'])
+            places.append({'prop': kind, 'M': M, 'bone': 'head', 'kw': kw})
         elif kind == 'sword':
             lat = np.array([1.0, 0, 0])
             hipL = Pj[idx['upperleg01.L']]
             ro = mc.quat_to_mat(Q[idx['root']])
-            hilt = hipL + ro @ np.array([0.11, 0.17, 0.02])
-            ydir = ro @ mu.norm(np.array([0.12, 1.0, 0.45]))
+            # hung low from the belt, angled back ~30 deg (hilt at the hip, not beside the elbow,
+            # where the cross-guard stuck out either side of the arm like two nubs)
+            hilt = hipL + ro @ np.array([0.115, 0.06, 0.035])
+            ydir = ro @ mu.norm(np.array([0.16, 1.0, 0.58]))
             R = pr.frame_from(ydir, ro @ np.array([0, 0, 1.0]))
             M = np.eye(4); M[:3, :3] = R; M[:3, 3] = hilt
             places.append({'prop': 'sword', 'M': M, 'bone': 'pelvis.L', 'kw': {}})
     if any(a['prop'] == 'chain' for a in spec.get('accessories', [])):
         parts.extend(build_chain(sk, pt, off, D))
+    for g in spec.get('outfit', []):
+        if g.get('buttons'):
+            parts.extend(build_buttons(sk, pt, off, D, g['buttons']))
     for pl in places:
         if pl['prop'] == 'sling':
             parts.extend(build_sling(sk, pt, off, D))
@@ -706,12 +744,14 @@ def build_sling(sk, pt, off, D):
             if np.dot(n, rad) < 0 and loc[1] < nk[1] - 0.02:
                 n = -n
             if k >= 4 or np.dot(path[k] - loc, n) < 0.03:
-                path[k] = loc + n * 0.006
+                path[k] = loc + n * 0.011
         # nearest-point snapping jumps between layers (coat / shirt in the V): smooth the path,
         # then push it back outside the clothes
         for _ in range(4):
             path[1:-1] = 0.5 * path[1:-1] + 0.25 * (path[:-2] + path[2:])
-        path[1:] = push_outside(path[1:], tree, 0.006, axis=axis)
+        # (1.1 cm off the clothes: the post passes push the coat out a few mm afterwards and it
+        # came through the band in patches)
+        path[1:] = push_outside(path[1:], tree, 0.011, axis=axis)
         t = mu.norm(np.gradient(path, axis=0))
         # the band lies flat on the body: its face normal is the body's outward direction
         # (radial from the body axis on the chest, turning upward over the shoulder)
@@ -738,7 +778,7 @@ def build_sling(sk, pt, off, D):
             rows.append(path + sv * (w * v)[:, None] + nrm * (h + tw * w)[:, None])
         Ps = np.vstack(rows)
         for r_ in range(nx):
-            Ps[r_ * nn + 1:(r_ + 1) * nn] = push_outside(Ps[r_ * nn + 1:(r_ + 1) * nn], tree, 0.003, axis=axis)
+            Ps[r_ * nn + 1:(r_ + 1) * nn] = push_outside(Ps[r_ * nn + 1:(r_ + 1) * nn], tree, 0.008, axis=axis)
         # the pushes are per row and nearest-point: smooth each row along the band and across it
         # (jagged, paper-like edges otherwise), then make sure it is still outside
         G = Ps.reshape(nx, nn, 3)
@@ -747,10 +787,10 @@ def build_sling(sk, pt, off, D):
             G[1:-1, 1:] = 0.6 * G[1:-1, 1:] + 0.2 * (G[:-2, 1:] + G[2:, 1:])
         Ps = G.reshape(-1, 3)
         for r_ in range(nx):
-            Ps[r_ * nn + 1:(r_ + 1) * nn] = push_outside(Ps[r_ * nn + 1:(r_ + 1) * nn], tree, 0.002, axis=axis)
+            Ps[r_ * nn + 1:(r_ + 1) * nn] = push_outside(Ps[r_ * nn + 1:(r_ + 1) * nn], tree, 0.007, axis=axis)
         Fs = [(r_ * nn + k, r_ * nn + k + 1, (r_ + 1) * nn + k + 1, (r_ + 1) * nn + k) for r_ in range(nx - 1) for k in range(nn - 1)]
         bands.append((Ps, Fs))
-    P = push_outside(P, tree, 0.006, axis=axis)
+    P = push_outside(P, tree, 0.009, axis=axis)
     P2, F2 = pr.merge([(P, F)] + bands)
     # folded linen has thickness: a closed shell 2.5 mm thick with rounded edges (a single-sided
     # surface read as paper strips, and its open ends showed black and white shards)
@@ -761,8 +801,45 @@ def build_sling(sk, pt, off, D):
     part.posed = P2
     part.normals = mu.vnormals(P2, F2)
     part.I, part.W = D.transfer(P2, space='target')
-    part.material = {'fabric': 'linen', 'color': [0.4, 0.37, 0.3], 'wear': 0.45, 'dust': 0.4}
+    # (unbleached linen, soft shading folds: a smooth pale trough read as a plaster cast)
+    part.material = {'fabric': 'linen', 'color': [0.3, 0.27, 0.21], 'wear': 0.5, 'dust': 0.45, 'wrinkle': 1.4}
     part.attrs['aux'] = np.zeros((len(P2), 4))
+    return [part]
+
+
+def build_buttons(sk, pt, off, D, n=14):
+    """A row of small domed buttons down the closed front (doublet), from the collar to the belt,
+    sitting on the cloth."""
+    import props as pr
+    idx = {n_: i for i, n_ in enumerate(sk.names)}
+    Q, Pj = sk.world(pt.local)
+    fwd = mc.quat_to_mat(Q[idx['spine01']]) @ np.array([0, 0, 1.0])
+    top = Pj[idx['neck01']] + off + np.array([0, -0.01, 0])
+    bot = Pj[idx['spine04']] + off + np.array([0, 0.03, 0])
+    tree = garment_surface(D)
+    axis = D.axis_y()
+    pieces = []
+    for k in range(n):
+        q = top + (bot - top) * (k / max(1, n - 1)) + fwd * 0.25
+        # cast back onto the clothes from the front
+        from mathutils import Vector
+        hit = tree.ray_cast(Vector(q), Vector(-fwd))
+        if hit[0] is None:
+            continue
+        loc, nn = np.array(hit[0]), np.array(hit[1])
+        if np.dot(nn, fwd) < 0:
+            nn = -nn
+        Pb, Fb, _ = pr.lathe([(0.0, 0.0), (0.0058, 0.0), (0.0055, 0.0018), (0.0035, 0.0034), (0.0, 0.0038)], segs=10)
+        R = pr.frame_from(nn, np.array([0, 1.0, 0]))
+        pieces.append((Pb @ R.T + loc + nn * 0.0005, Fb))
+    if not pieces:
+        return []
+    P, F = pr.merge(pieces)
+    part = Part('buttons', 'prop', P, mu.tris_of(F), uv=_uv_box(P))
+    part.posed = P
+    part.normals = mu.vnormals(P, F)
+    part.I, part.W = D.transfer(P, space='target')
+    part.material = {'kind': 'leather', 'color': [0.04, 0.03, 0.025], 'rough': 0.45}
     return [part]
 
 

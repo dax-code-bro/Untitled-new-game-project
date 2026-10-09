@@ -55,5 +55,6 @@ def write_character(path_noext, header, meshes):
     with open(path_noext + '.bin', 'wb') as f:
         f.write(pk.bytes())
     with open(path_noext + '.json', 'w') as f:
-        json.dump(header, f, separators=(',', ':'))
+        # (numpy values that reach a material - colours computed from arrays - are written as lists)
+        json.dump(header, f, separators=(',', ':'), default=lambda o: o.tolist() if hasattr(o, 'tolist') else float(o))
     return pk.size

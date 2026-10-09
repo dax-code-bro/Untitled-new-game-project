@@ -823,8 +823,9 @@ def upper_garment(D, g):
         pin[:] = 1
     # skirt extrusion from the hip loop
     hem = g.get('hem')
+    vfix = np.full(len(S), np.nan)
     if hem is not None:
-        S, F, pin, info2 = extrude_skirt(D, S, F, hip, pin, g)
+        S, F, pin, vfix = extrude_skirt(D, S, F, hip, pin, g)
         goal = np.vstack([goal, np.zeros((len(S) - len(goal), 3))])
     armv2 = np.concatenate([armv, np.zeros(len(S) - len(armv), bool)])
     if (g.get('belt') or g.get('cinch')) and g.get('sim', True):
@@ -845,11 +846,15 @@ def upper_garment(D, g):
         belt_idx = np.where((bw > 0.7))[0]
     region = armv2.astype(float)
     sub = g.get('subdiv', getattr(D, 'subdiv', 0))
+    vfix0 = np.nan_to_num(vfix, nan=-99.0)
     for _ in range(sub):
-        S, F, (pin, region, goal) = mu.subdivide_quads_linear(S, F, extra=[pin, region, goal])
+        S, F, (pin, region, goal, vfix0) = mu.subdivide_quads_linear(S, F, extra=[pin, region, goal, vfix0])
     if not g.get('sim', True) and g.get('gathers', 0.0024) > 0:
         S = shirt_gathers(D, S, F, region > 0.5, g)
     uv = uv_body(D, S)
+    if getattr(D, 'seated', False):
+        okv = vfix0 > -1.0          # (subdivision midpoints toward the -99 sentinel fall below)
+        uv[okv, 1] = vfix0[okv]
     G = Garment(g.get('name', g['type']), S, F, uv, pin, g, sim=g.get('sim', True), layer=g.get('layer', 2))
     G.region = (region > 0.5).astype(int)
     G.belt_idx = belt_idx
@@ -1020,7 +1025,11 @@ def extrude_skirt(D, S, F, hip, pin, g):
     for j in range(1, min(3, rows) + 1):
         sl_ = slice(base + (j - 1) * cols, base + j * cols)
         pin2[sl_] = np.maximum(pin2[sl_], 0.5 * (1 - (j - 1) / 3) * g.get('pin_hips', 1.0))
-    return P2, F2, pin2, None
+    # the weave's v runs down the skirt by cloth length: a seated skirt starts as a flat ring
+    # (all rows at one height), so height-based UVs smeared the weave over the thighs
+    vfix = np.full(len(P2), np.nan)
+    vfix[base:] = np.repeat(y0 - L * np.arange(1, rows + 1) / rows, cols)
+    return P2, F2, pin2, vfix
 
 
 def leg_garment(D, g):
@@ -1047,12 +1056,15 @@ def leg_garment(D, g):
             tuck_y[s] = an[1] + (kn[1] - an[1]) * g['tuck']
 
         def xe(Pp, old_, tuck_y=tuck_y, ease=ease):
+            # fully tapered 3 cm above the boot top (at the top it sat on the shaft: a jagged,
+            # z-fighting edge)
             ty = np.where(Pp[:, 0] > D.axis_y()[0], tuck_y['L'], tuck_y['R'])
-            k = np.clip((ty + 0.05 - Pp[:, 1]) / 0.07, 0, 1)
+            k = np.clip((ty + 0.1 - Pp[:, 1]) / 0.07, 0, 1)
             return -(ease - 0.003) * k
     S, F, old = D.shell(vm, ease, smooth=g.get('smooth', 40), extra_ease=xe)
     D.hide_under(old, F, rings=2)
     if trousers:
+        S = leg_tubes(D, S, old, g, tuck_y)
         S = bridge_crotch(D, S, F, g)
     pin = np.ones(len(S)) if not g.get('sim') else np.zeros(len(S))
     if g.get('sim'):
@@ -1063,6 +1075,48 @@ def leg_garment(D, g):
             pin = np.maximum(pin, np.clip((ty - 0.01 - S[:, 1]) / 0.04, 0, 1))
     uv = uv_cylinder(S, D.axis_y(), np.array([0, 1.0, 0]), np.array([0, 0, 1.0]))
     return Garment(g.get('name', g['type']), S, F, uv, pin, g, sim=g.get('sim', False), layer=g.get('layer', 1))
+
+
+def leg_tubes(D, S, old, g, tuck_y):
+    """Trouser legs are cut as tubes that hang from the seat and thigh, not as a skin of the leg:
+    below the fork every leg vertex is pushed out (never in) to a gently tapering cone round the
+    leg's axis - from the upper thigh's girth to a narrower knee and calf - stopping short of the
+    other leg and of the boot top (shell-of-the-leg trousers read as tights)."""
+    out = S.copy()
+    ax0 = D.axis_y()[0]
+    for s in ('L', 'R'):
+        hip, kn, an = D.lm(f'upperleg01.{s}'), D.lm(f'lowerleg01.{s}'), D.lm(f'foot.{s}')
+        sel = np.where(np.isin(D.cat[old], [f'thigh{s}', f'shin{s}']))[0]
+        if not len(sel):
+            continue
+        P = S[sel]
+        L1, L2 = np.linalg.norm(kn - hip), np.linalg.norm(an - kn)
+        best = np.full(len(P), 1e9)
+        foot_ = np.zeros_like(P)
+        tt = np.zeros(len(P))
+        for a_, b_, t0, L in ((hip, kn, 0.0, L1), (kn, an, L1, L2)):
+            ab = b_ - a_
+            u = np.clip((P - a_) @ ab / (L * L), 0, 1)
+            f = a_ + np.outer(u, ab)
+            d = np.linalg.norm(P - f, axis=1)
+            m = d < best
+            best[m] = d[m]
+            foot_[m] = f[m]
+            tt[m] = (t0 + u[m] * L) / (L1 + L2)
+        rad = P - foot_
+        r = np.linalg.norm(rad, axis=1)
+        top = np.percentile(r[(tt > 0.12) & (tt < 0.3)], 75) if np.any((tt > 0.12) & (tt < 0.3)) else r.max()
+        R = top * (1.0 - g.get('taper', 0.3) * np.clip((tt - 0.2) / 0.6, 0, 1))
+        w = np.clip((tt - 0.14) / 0.1, 0, 1)
+        if tuck_y:
+            w = w * np.clip((P[:, 1] - (tuck_y[s] + 0.1)) / 0.06, 0, 1)
+        rn = r + np.maximum(0, R - r) * w
+        Q = foot_ + rad / np.maximum(r[:, None], 1e-9) * rn[:, None]
+        # never across the midline (into the other leg)
+        sg = 1.0 if s == 'L' else -1.0
+        Q[:, 0] = ax0 + sg * np.maximum(sg * (Q[:, 0] - ax0), np.minimum(sg * (P[:, 0] - ax0), 0.012))
+        out[sel] = Q
+    return out
 
 
 def bridge_crotch(D, S, F, g):
@@ -1297,6 +1351,15 @@ def head_shell(D, g):
                 reach = np.maximum(reach, np.array([max([reach[j] for j in nb_[i]] or [0]) * 0.82 for i in range(len(S))]))
             reach *= front
             S = S + (np.array([0, 0, 1.0]) * g['deep'] + np.array([0, -0.35, 0]) * g['deep'] * np.clip((S[:, 1] - ey) / 0.05, 0, 1)[:, None]) * reach[:, None] ** 1.5
+    if kind in ('coif', 'kerchief', 'cap', 'wrap') and g.get('soften', True):
+        # one level of subdivision + a light relax: at mid detail the head cloth showed the body
+        # mesh's flat facets and read as a folded paper box
+        S, F, _ = mu.subdivide_quads_linear(S, F)
+        nb_ = mu.neighbours(len(S), F)
+        bnd_ = np.zeros(len(S), bool)
+        for l in mu.boundary_loops(F):
+            bnd_[l] = True
+        S = mu.laplacian_smooth_fast(S, nb_, iters=4, lam=0.45, fixed=bnd_)
     uv = uv_cylinder(S, hc, np.array([0, 1.0, 0]), np.array([0, 0, 1.0]))
     if kind == 'hood':
         # point (liripipe stub) at the back of the hood

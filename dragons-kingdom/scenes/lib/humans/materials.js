@@ -361,7 +361,10 @@ export function cardMaterial(o = {}) {
   mat.userData.dkNoSSAO = false;
   // uLower: opacity of the LOWER lashes relative to the upper ones (attribute lw = 1 there): the
   // MakeHuman lash cards draw them as thick as the upper row, which reads as eyeliner
-  const U = { uAlphaChannel: { value: o.alphaChannel ?? 3 }, uAlphaGain: { value: o.alphaGain ?? 1.0 }, uShift: { value: o.shift ?? 0.08 }, uLower: { value: o.lower ?? 0.4 } };
+  // uCut: alpha below the first value is dropped, full at the second (faint card texels printed
+  // translucent streaks past the eye corner; brows keep a fainter cut so their soft card stays)
+  const U = { uAlphaChannel: { value: o.alphaChannel ?? 3 }, uAlphaGain: { value: o.alphaGain ?? 1.0 }, uShift: { value: o.shift ?? 0.08 }, uLower: { value: o.lower ?? 0.4 },
+    uCut: { value: new THREE.Vector2(...(o.cut || [0.08, 0.45])) } };
   mat.userData.card = U;
   mat.customProgramCacheKey = () => 'dk-human-card';
   mat.onBeforeCompile = (sh) => {
@@ -373,12 +376,12 @@ attribute float ao; attribute float lw; varying float vAO; varying float vLw;`)
 vAO = ao; vLw = lw;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
-uniform float uAlphaChannel, uAlphaGain, uShift, uLower; varying float vAO; varying float vLw;`)
+uniform float uAlphaChannel, uAlphaGain, uShift, uLower; uniform vec2 uCut; varying float vAO; varying float vLw;`)
       .replace('#include <alphamap_fragment>', `
 #ifdef USE_ALPHAMAP
   vec4 am = texture2D( alphaMap, vAlphaMapUv );
   float a = uAlphaChannel > 2.5 ? am.a : am.g;
-  diffuseColor.a *= clamp(smoothstep(0.08, 0.45, a) * uAlphaGain * mix(1.0, uLower, vLw), 0.0, 1.0);
+  diffuseColor.a *= clamp(a * smoothstep(uCut.x, uCut.y, a) * uAlphaGain * mix(1.0, uLower, vLw), 0.0, 1.0);
 #endif`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= vAO; reflectedLight.indirectSpecular *= vAO;

@@ -411,13 +411,18 @@ def kettle_hat(r=0.112, seed=3):
     return out
 
 
-def circlet(r=0.085, h=0.018, points=0):
+def circlet(r=0.085, h=0.018, points=0, aspect=1.15, profile=None):
+    """Slim gold band (fillet / circlet); `profile` (64 radii) fits it to the head it sits on."""
     a = np.linspace(0, 2 * math.pi, 64, endpoint=False)
     P = []
     for y in (0, h):
-        for ang in a:
+        for k, ang in enumerate(a):
             bump = h * 0.8 * max(0, math.cos(ang * points)) ** 6 if points and y > 0 else 0
-            P.append((math.cos(ang) * r, y + bump, math.sin(ang) * r * 1.15))
+            if profile is not None:
+                rr = profile[k] + 0.0008 * (y > 0)
+                P.append((math.cos(ang) * rr, y + bump, math.sin(ang) * rr))
+            else:
+                P.append((math.cos(ang) * r, y + bump, math.sin(ang) * r * aspect))
     P = np.array(P)
     F = mu.grid_faces(64, 2, wrap_u=True)
     return [piece(P, F, boxuv(P), {'kind': 'gold', 'rough': 0.32, 'doubleSide': True}, 'circlet')]
@@ -439,15 +444,24 @@ def sword_sheathed(l=0.95):
     return out
 
 
-def rope_coil(r=0.13, turns=6, thick=0.012):
+def rope_coil(r=0.13, turns=6, thick=0.012, seed=4):
+    """A coil of rope held at its top (the origin): loose loops hanging below the hand, each a
+    little different, with UVs along the rope for the twisted-strand shading (a flat helix read
+    as a tray with a black line drawn round it)."""
+    rng = np.random.default_rng(seed)
     pts = []
-    for k in range(turns * 40):
-        a = k / 40 * 2 * math.pi
-        rr = r + 0.004 * math.sin(a * 3) + (k / (turns * 40)) * 0.01
-        pts.append((math.cos(a) * rr, (k % 40) / 40 * 0.0 + (k // 40) * thick * 0.9 * 0.3, math.sin(a) * rr))
-    P, F = tube(np.array(pts), thick / 2, sides=6)
-    return [piece(P, F, boxuv(P) * 4, {'kind': 'flat', 'color': [0.38, 0.32, 0.22], 'rough': 0.9}, 'rope')]
-
+    for k in range(turns):
+        rk = r * (0.85 + 0.25 * rng.random())
+        ph = (rng.random() - 0.5) * 0.25
+        zk = (k - turns / 2) * thick * 0.95
+        for i in range(48):
+            a = 2 * math.pi * i / 48
+            pts.append((math.sin(a + ph) * rk * 0.55, -rk * (1 - math.cos(a)) * 0.95, zk + 0.004 * math.sin(a * 3 + k)))
+    path = np.array(pts)
+    P, F = tube(path, thick / 2, sides=7)
+    L = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))])
+    uv = np.stack([np.tile(np.arange(7) / 7 * math.pi * thick, len(path)), np.repeat(L, 7)], 1)
+    return [piece(P, F, uv, {'kind': 'rope', 'color': [0.36, 0.3, 0.2], 'rough': 0.9}, 'rope')]
 
 def scroll(l=0.24, r=0.016):
     P, F, uv = lathe([(0.0, -l / 2), (r, -l / 2), (r, l / 2), (0.0, l / 2)], segs=14)
