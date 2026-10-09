@@ -1,7 +1,7 @@
 """Post-fixes applied in place to already built characters (cache/<id>.json + .bin), so a fix
 that only needs the finished meshes does not cost a full rebuild.
 
-    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|pushout|cull|renormal|holefill|reao|beltband|beltseat|hairline|all id [id ...]   ('all' = every cache)
+    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|pushout|cull|renormal|holefill|reao|beltband|beltseat|hairline|cullboots|overbelt|all id [id ...]   ('all' = every cache)
 
 Each pass records itself in the mesh's 'postfix' list and is not applied twice.
 
@@ -606,10 +606,10 @@ def fix_puckers(cid):
 
 # prop colours corrected after the caches were built (json only): name -> material overrides
 PROP_FIX = {
-    'crate_crate_0': {'color': [0.33, 0.26, 0.18]},           # was near-white (0.62 linear) pine
+    'crate_crate_0': {'color': [0.2, 0.15, 0.095]},           # was near-white (0.62 linear) pine; weathered
     'parcel_cloth_0': {'color': [0.36, 0.3, 0.22]},
     'kettle_hat_hat_0': {'color': [0.3, 0.29, 0.28], 'rough': 0.62},   # read as chrome
-    'spear_head_1': {'color': [0.46, 0.46, 0.47], 'rough': 0.45},
+    'spear_head_1': {'color': [0.3, 0.3, 0.3], 'rough': 0.52},       # bright steel read as chrome
     'spear_ferrule_2': {'color': [0.36, 0.35, 0.34], 'rough': 0.66},
     'sword_guard_1': {'color': [0.36, 0.35, 0.34], 'rough': 0.66},
     'buckle': {'color': [0.36, 0.35, 0.34], 'rough': 0.6},
@@ -856,6 +856,143 @@ def fix_cull(cid):
     os.replace(jp + '.tmp', jp)
     if done:
         print(f'{cid}: culled under outer layers: {", ".join(done)}', flush=True)
+
+
+def fix_cullboots(cid, reach=0.035, margin=1):
+    """Hose / trousers under a boot shaft are not drawn: with the boots made on a last and the
+    hose pushed out of the body, the hose poked through the boot shafts as pale streaks (the
+    'cull' pass leaves boots and shoes out). Same test as 'cull': a ray along the hose normal,
+    started 1 cm inside, meets the boot within `reach`; one ring of margin is kept."""
+    import bpy  # noqa: F401
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    bin_ = bytearray(open(bp, 'rb').read())
+    feet = [m for m in h['meshes'] if m['kind'] == 'cloth' and m['name'] in ('boots', 'shoes')]
+    legs = [m for m in h['meshes'] if m['kind'] == 'cloth' and m['name'].startswith(('hose', 'trousers', 'braies')) and 'cullb2' not in m.get('postfix', [])]
+    if not legs:
+        return
+    done = []
+    if feet:
+        Ps, Ts, off = [], [], 0
+        for o in feet:
+            P_ = view(bin_, o['attrs']['position']).astype(float)
+            T_ = np.frombuffer(bin_, dtype=TYPES[o['index']['type']], count=o['index']['count'], offset=o['index']['offset']).reshape(-1, 3).astype(np.int64)
+            Ps.append(P_)
+            Ts.append(T_ + off)
+            off += len(P_)
+        tree = BVHTree.FromPolygons(np.vstack(Ps).tolist(), np.vstack(Ts).tolist(), all_triangles=True)
+        for m in legs:
+            P = view(bin_, m['attrs']['position']).astype(float)
+            T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+            N = view(bin_, m['attrs']['normal']).astype(float)
+            cov = np.zeros(len(P), bool)
+            ytop = max(o_[:, 1].max() for o_ in Ps)
+            moved = 0
+            for i in range(len(P)):
+                n = N[i] / max(np.linalg.norm(N[i]), 1e-9)
+                hit = tree.ray_cast(Vector(P[i] - n * 0.01), Vector(n), reach + 0.01)
+                cov[i] = hit[0] is not None
+                # the hose inside a boot shaft stays 3 mm inside it (it poked out by up to 6 mm:
+                # the margin ring the cull keeps showed as pale streaks); below the shaft's top
+                # only, fading over the last 1.5 cm so the hose still leaves the boot
+                if P[i, 1] < ytop:
+                    loc, bn, _, dist = tree.find_nearest(Vector(P[i]))
+                    if loc is not None and dist < 0.012:
+                        bn = np.array(bn)
+                        sd = float(np.dot(P[i] - np.array(loc), bn))
+                        if sd > -0.003 and (cov[i] or sd > 0):
+                            fade = float(np.clip((ytop - P[i, 1]) / 0.015, 0, 1))
+                            P[i] -= bn * (sd + 0.003) * fade
+                            moved += 1
+            if moved:
+                put(bin_, m['attrs']['position'], P.astype(np.float32))
+            key = np.round(P / 1e-5).astype(np.int64)
+            _, w = np.unique(key, axis=0, return_inverse=True)
+            w = w.reshape(-1)
+            nW = int(w.max()) + 1
+            ok = np.ones(nW, bool)
+            np.logical_and.at(ok, w, cov)
+            tw = w[T]
+            e = np.concatenate([tw[:, [0, 1]], tw[:, [1, 2]], tw[:, [2, 0]]])
+            for _ in range(margin):
+                o2 = ok.copy()
+                np.logical_and.at(o2, e[:, 0], ok[e[:, 1]])
+                np.logical_and.at(o2, e[:, 1], ok[e[:, 0]])
+                ok = o2
+            drop = ok[tw].all(1) & (T[:, 0] != T[:, 1])
+            if drop.any():
+                T2 = T.copy()
+                T2[drop] = T2[drop][:, :1]
+                put(bin_, m['index'], T2)
+                done.append(f"{m['name']} ({int(drop.sum())}/{len(T)} tris)")
+    for m in legs:
+        m['postfix'] = m.get('postfix', []) + ['cullb2']
+    _save(h, bin_, jp, bp)
+    if done:
+        print(f'{cid}: hose culled under the boots: {", ".join(done)}', flush=True)
+
+
+def fix_overbelt(cid, nb=72, clear=0.004, fade=0.05):
+    """Cloaks and hood capes hang OVER the belt: the belt is added after the cloth simulation, so a
+    cloak lying close to the back had the belt printing through it (two black bars across the
+    King's mantle). Per 5-degree sector, cloak vertices within the belt's height (+ a fade) that
+    are inside the belt's outer radius + `clear` are pushed out to it."""
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    belts = [m for m in h['meshes'] if m['name'].startswith('belt') or m['name'] == 'buckle']
+    capes = [m for m in h['meshes'] if m['kind'] == 'cloth' and m['name'].startswith(('cloak', 'hoodcape', 'cape')) and 'overbelt' not in m.get('postfix', [])]
+    if not capes:
+        return
+    bin_ = bytearray(open(bp, 'rb').read())
+    done = []
+    if belts:
+        BP = np.concatenate([view(bin_, m['attrs']['position']).astype(float) for m in belts])
+        bc = BP.mean(0)
+
+        def ang(X):
+            return (np.arctan2(X[:, 0] - bc[0], X[:, 2] - bc[2]) + np.pi) / (2 * np.pi) * nb
+
+        rb = np.hypot(BP[:, 0] - bc[0], BP[:, 2] - bc[2])
+        kb = ang(BP).astype(int) % nb
+        rout = np.full(nb, np.nan)
+        ylo = np.full(nb, np.nan)
+        yhi = np.full(nb, np.nan)
+        for k in range(nb):
+            sel = kb == k
+            if sel.sum() >= 3:
+                rout[k] = rb[sel].max()
+                ylo[k], yhi[k] = np.percentile(BP[sel, 1], 5), np.percentile(BP[sel, 1], 95)
+        good = ~np.isnan(rout)
+        if good.sum() >= nb // 3:
+            idx = np.arange(nb)
+            rout = np.interp(idx, idx[good], rout[good], period=nb)
+            ylo = np.interp(idx, idx[good], ylo[good], period=nb)
+            yhi = np.interp(idx, idx[good], yhi[good], period=nb)
+            rout = np.maximum(rout, np.maximum(np.roll(rout, 1), np.roll(rout, -1)))
+            for m in capes:
+                P = view(bin_, m['attrs']['position']).astype(float)
+                f = ang(P) - 0.5
+                k0 = np.floor(f).astype(int) % nb
+                t = f - np.floor(f)
+                ro = rout[k0] * (1 - t) + rout[(k0 + 1) % nb] * t + clear
+                lo = ylo[k0] * (1 - t) + ylo[(k0 + 1) % nb] * t
+                hi = yhi[k0] * (1 - t) + yhi[(k0 + 1) % nb] * t
+                dy = np.maximum(lo - P[:, 1], P[:, 1] - hi)
+                w = np.clip(1 - dy / fade, 0, 1) ** 2
+                r = np.hypot(P[:, 0] - bc[0], P[:, 2] - bc[2])
+                push = np.maximum(0.0, ro - r) * w
+                if (push > 1e-4).any():
+                    u = np.stack([P[:, 0] - bc[0], np.zeros(len(P)), P[:, 2] - bc[2]], 1) / np.maximum(r[:, None], 1e-9)
+                    P = P + u * push[:, None]
+                    put(bin_, m['attrs']['position'], P.astype(np.float32))
+                    done.append(f"{m['name']} ({int((push > 1e-4).sum())} v, max {push.max() * 1000:.0f} mm)")
+    for m in capes:
+        m['postfix'] = m.get('postfix', []) + ['overbelt']
+    _save(h, bin_, jp, bp)
+    if done:
+        print(f'{cid}: cloak over the belt: {", ".join(done)}', flush=True)
 
 
 def orient_faces(T, w):
@@ -1441,6 +1578,10 @@ def main():
             fix_beltseat(cid)
         if what in ('hairline', 'all'):
             fix_hairline(cid)
+        if what in ('cullboots', 'all'):
+            fix_cullboots(cid)
+        if what in ('overbelt', 'all'):
+            fix_overbelt(cid)
 
 
 if __name__ == '__main__':

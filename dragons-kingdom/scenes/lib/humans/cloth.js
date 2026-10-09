@@ -226,7 +226,13 @@ export function propMaterial(o = {}) {
     if (!p.metal) mat.roughnessMap = libTexture(`${p.id}/${p.base}_rgh.jpg`, { color: false, repeat: true, flipY: true });
     if (o.useAlbedo !== false && !o.color) mat.map = libTexture(`${p.id}/${p.base}_col.jpg`, { color: true, repeat: true, flipY: true });
     else if (o.useAlbedo !== false) { varAlb = libTexture(`${p.id}/${p.base}_col.jpg`, { color: true, repeat: true, flipY: true }); varLum = p.lum; }
-    if (p.metal) { mat.metalnessMap = libTexture(`${p.id}/${p.base}_met.jpg`, { color: false, repeat: true, flipY: true }); mat.metalness = 1; }
+    if (p.metal) {
+      mat.metalnessMap = libTexture(`${p.id}/${p.base}_met.jpg`, { color: false, repeat: true, flipY: true }); mat.metalness = 1;
+      // working iron is oxidised and dull: at full strength the forged scan's hammer relief read as
+      // crumpled foil and the bare metal colour as chrome against the sky (kettle hats, spear heads)
+      mat.normalScale.set(0.35, -0.35);
+      mat.color.multiplyScalar(o.oxide ?? 0.62);
+    }
   } else if (k === 'wicker') {
     tile = 1 / (o.tile ?? 0.25);
     mat.map = libTexture('pbr/khr_wicker/wicker_basecolor.png', { repeat: true, flipY: false });

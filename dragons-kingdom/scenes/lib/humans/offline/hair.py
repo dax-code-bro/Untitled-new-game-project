@@ -70,7 +70,9 @@ class Groom:
         # about the top of the ear (no bare temples), then drops behind the ear to the nape.
         xs = np.array([0.0, 0.45, 0.78, 1.02, 1.22, 1.45, 1.8, math.pi])
         ys = np.array([front, front - 0.002, temple, temple - 0.016, ear, ear - 0.012, ear - 0.04, nape])
-        wob = 0.0035 * np.sin(a * 23.0 + 1.3) + 0.0025 * np.sin(a * 41.0 + 0.4)
+        # small aperiodic irregularity (the old 23/41-cycle wave of +-6 mm cut a notch into the
+        # middle of the forehead and read as a saw-tooth edge)
+        wob = 0.0012 * np.sin(a * 17.0 + 0.7) + 0.0008 * np.sin(a * 31.0 + 2.1) + 0.0006 * np.sin(a * 53.0 + 4.0)
         return self.eye_y + np.interp(ang, xs, ys) + wob
 
     def sample_scalp(self, n, hl_kw=None, region=None):
@@ -93,8 +95,12 @@ class Groom:
         a, b, cc = P[tri[:, 0]], P[tri[:, 1]], P[tri[:, 2]]
         area = np.linalg.norm(np.cross(b - a, cc - a), axis=1) / 2
         cent = (a + b + cc) / 3
-        band = np.clip(1 - (cent[:, 1] - self.hairline(cent, **(hl_kw or {}))) / 0.03, 0, 1)
-        area = area * (1 + 2.5 * band)            # denser near the hairline (it shows the most)
+        # a hairline is a density gradient: sparse at the line itself, full ~7 mm in, then a dense
+        # band (the front shows the most) fading to the normal density 3 cm back
+        dy = cent[:, 1] - self.hairline(cent, **(hl_kw or {}))
+        ramp = np.clip(dy / 0.007, 0, 1)
+        band = np.clip(1 - (dy - 0.007) / 0.025, 0, 1)
+        area = area * (0.35 + 0.65 * ramp) * (1 + 1.6 * band)
         pr = area / area.sum()
         pick = self.rng.choice(len(tri), size=n, p=pr)
         u, v = self.rng.random(n), self.rng.random(n)
@@ -174,10 +180,10 @@ class Groom:
                 t = max(0.0, (i / (k - 1) - 0.75) / 0.25)
                 pts[i] = pts[i] * (1 - t * 0.7) + (G + nrms[i] * 0.004) * t * 0.7
             wmul = 0.3 + 0.7 * edge[ri] ** 1.5
-            if self.rng.random() < 0.012 and edge[ri] > 0.8:   # a stray hair lifting off the groom
-                lift = np.linspace(0, 1, k) ** 2 * (0.003 + 0.006 * self.rng.random())
+            if self.rng.random() < 0.006 and edge[ri] > 0.8:   # a stray hair lifting off the groom
+                lift = np.linspace(0, 1, k) ** 2 * (0.002 + 0.004 * self.rng.random())
                 pts = pts + nrms * lift[:, None] + mu.norm(np.cross(nrms[0], pts[-1] - pts[0])) * lift[:, None] * (self.rng.random() - 0.5)
-                wmul *= 0.35
+                wmul *= 0.25
             self.add(pts, nrms, np.full(len(pts), width * wmul), depth=1 - layer / max(color_layers, 1e-6))
 
     def baby_hairs(self, n, width=0.00035, length=(0.004, 0.014), towards=None, hl_kw=None):

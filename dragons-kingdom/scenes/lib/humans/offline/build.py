@@ -51,14 +51,41 @@ def blink_morphs(kit, race):
     return out
 
 
-def make_pose(sk, recipe, params):
+def _run_pose(sk, recipe, params, pre=None):
     pb = PoseBuilder(sk)
+    for name, axis, ang in (pre or ()):
+        pb.rotate(name, axis, ang)
     if recipe in recipes.RECIPES and recipe not in recipes.ACTIONS:
         recipes.RECIPES[recipe](pb, params or {})
         pb.placements = []
     else:
         pb.placements = recipes.ACTIONS[recipe](pb, params or {}) or []
     return pb
+
+
+def shoulder_settle(pb, down=0.16, up=0.16):
+    """Clavicle rotations that go with the arm (scapulohumeral rhythm): a hanging arm lets the
+    shoulder girdle drop (the rig's rest shoulders are level with the arms out - lowering only the
+    upper arm left a flat trapezius and a square deltoid corner: 'padded' coat shoulders), a raised
+    arm lifts it. Returns [(bone, world axis, angle)] for the clavicles."""
+    out = []
+    fwd = pb.fwd_axis()
+    for s, sg in (('L', 1.0), ('R', -1.0)):
+        d = pb.direction(f'upperarm01.{s}', f'lowerarm01.{s}')
+        e = math.asin(max(-1.0, min(1.0, float(d[1]))))      # arm elevation (rad), -pi/2 = hanging
+        amt = down * float(np.clip((-e - 0.3) / 0.9, 0, 1)) - up * float(np.clip((e - 0.15) / 1.0, 0, 1))
+        if abs(amt) > 1e-4:
+            # +amt drops the outer end of the clavicle (about the forward axis)
+            out.append((f'clavicle.{s}', fwd, -sg * amt))
+    return out
+
+
+def make_pose(sk, recipe, params):
+    """Pose from a recipe, run twice: the first run tells where the arms end up, the second starts
+    from the shoulder girdle that goes with them (so IK targets and grips stay exact)."""
+    pb = _run_pose(sk, recipe, params)
+    pre = shoulder_settle(pb)
+    return _run_pose(sk, recipe, params, pre) if pre else pb
 
 
 def ground_offset(sk, pose, V, kit, sole):
@@ -266,6 +293,8 @@ def assemble(kit, spec, out_dir, opts):
         postfix.fix_reao(cid + opts.get('suffix', ''))
         postfix.fix_props(cid + opts.get('suffix', ''))
         postfix.fix_hairline(cid + opts.get('suffix', ''))
+        postfix.fix_cullboots(cid + opts.get('suffix', ''))
+        postfix.fix_overbelt(cid + opts.get('suffix', ''))
     log(f'   {cid}: {sum(len(p.posed) for p in parts)} verts, {size / 1e6:.1f} MB, {time.time() - t0:.0f} s')
 
 
@@ -526,7 +555,7 @@ def build_sling(sk, pt, off, D):
     part.posed = P2
     part.normals = mu.vnormals(P2, F2)
     part.I, part.W = D.transfer(P2, space='target')
-    part.material = {'fabric': 'linen', 'color': [0.52, 0.49, 0.42], 'wear': 0.35, 'dust': 0.3}
+    part.material = {'fabric': 'linen', 'color': [0.4, 0.37, 0.3], 'wear': 0.45, 'dust': 0.4}
     part.attrs['aux'] = np.zeros((len(P2), 4))
     return [part]
 

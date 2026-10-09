@@ -35,7 +35,7 @@ export const meta = {
 const SHOTS = [
   { name: 'remi-abby', members: [['remi', -0.42, 0, 0.32], ['abby', 0.42, 0.05, -0.38]], cam: { y: 1.38, dist: 3.4, el: 1, fov: 30, fstop: 4, key: 38 } },
   { name: 'abby-cu', members: [['abby', 0, 0, 0.3]], cam: { bone: 'head', bid: 'abby', dy: 0.025, dz: 0.03, dist: 0.85, el: 1, fov: 24, fstop: 2.8, key: 58 } },
-  { name: 'alexandria', members: [['alexandria', 0, 0, -0.75]], cam: { y: 1.2, dist: 3.6, el: 3, fov: 30, fstop: 4, key: 30 } },
+  { name: 'alexandria', members: [['alexandria', 0, 0, -0.75]], cam: { y: 1.36, dist: 2.35, el: 3, fov: 30, fstop: 3.5, key: 30 } },
   { name: 'king', members: [['king', 0, 0, 0.2]], cam: { y: 1.4, dist: 2.6, el: 1, fov: 30, fstop: 3.5, key: 40 } },
   {
     name: 'crowd',

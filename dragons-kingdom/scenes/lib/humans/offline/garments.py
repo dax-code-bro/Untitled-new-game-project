@@ -550,7 +550,7 @@ def add_collar(D, S, F, old, armv, height=0.025):
         rt = rt + 0.005
         # stand up from the neckline and lean in toward the neck (never flare out: that is the
         # plate look); a shelf straight in to the neck would read as a dark ledge
-        rn = np.where(r > rt, r - (r - rt) * (0.3 if k == 1 else 0.55), rt)
+        rn = np.where(r > rt, r - (r - rt) * (0.14 if k == 1 else 0.5), rt)
         Q = cq + u * rn[:, None] + np.outer((Q - cq) @ ax_, ax_)
         for _ in range(3):
             Q = 0.5 * Q + 0.25 * (np.roll(Q, 1, 0) + np.roll(Q, -1, 0))

@@ -177,7 +177,8 @@ def cast():
         'eyes': {'iris': 'brownlight', 'tint': [0.6, 0.55, 0.5]},
         'brows': 'eyebrow006', 'lashes': 'eyelashes02',
         'hair': {'color': HAIR['brown'], 'style': 'braid'},
-        'outfit': riding_clothes([0.065, 0.082, 0.055], shirt='undyed', trousers='walnut', boots=[0.045, 0.028, 0.017]),
+        # unbleached linen shirt, darker than 'undyed' wool: at 0.42 it glared beside her face in close-ups
+        'outfit': riding_clothes([0.065, 0.082, 0.055], shirt=[0.31, 0.275, 0.21], trousers='walnut', boots=[0.045, 0.028, 0.017]),
         'pose': 'stand', 'pose_params': {'weight': 'R', 'head_yaw': 0.05},
         'notes': 'canon: riding clothes with a muted green outer layer; LEFT arm is the injured one',
     }
@@ -222,7 +223,7 @@ def cast():
                           G_kirtle([0.045, 0.06, 0.075], hem=0.0, fabric='wool', sim_fabric='heavywool', sheen=0.55, neck=0.07, flare=2.1, train=0.12, folds=13, wear=0.1, dust=0.05,
                                    name='gown'),
                           G_veil([0.52, 0.5, 0.45], length=0.45)],
-                  pose='hands_front', pose_params={'weight': 'L', 'contrapposto': 0.4, 'reach': 0.16, 'dy': -0.1}, cloth_subdiv=0,
+                  pose='hands_front', pose_params={'weight': 'L', 'contrapposto': 0.4, 'reach': 0.16, 'dy': -0.1}, cloth_subdiv=1,
                   notes='canon: a restrained formal gown; the veil is a proposal (no crown shown: not in the screenplay)')
     alex['skin'].update({'texture': 'middleage_lightskinned_female_diffuse2', 'age': 0.35})
     C.append(alex)
@@ -247,7 +248,8 @@ def cast():
                   eyes=('brown', [0.55, 0.45, 0.36]), brows='eyebrow004',
                   outfit=[G_hose('russet'), G_shoes([0.05, 0.032, 0.02]), G_shirt('linen'),
                           G_tunic([0.24, 0.08, 0.04], hem=0.32, flare=1.6, ease=0.024, neck=0.04, wear=0.25),
-                          G_cloak([0.12, 0.09, 0.05], length=0.75, gap=1.3)],
+                          # a mantle to the calf (at 0.75 m it hung to the hip like a stiff back panel)
+                          G_cloak([0.12, 0.09, 0.05], length=1.12, gap=1.1, flare=0.34)],
                   pose='gesture', pose_params={'weight': 'R', 'contrapposto': 0.5, 'head_yaw': 0.1},
                   notes='screenplay: approachable; crown optional (none shown) and never a prop gag. Warm festival clothes are a proposal')
     king['skin'].update({'texture': 'middleage_lightskinned_male_diffuse', 'redness': 0.35})

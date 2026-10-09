@@ -120,3 +120,26 @@ Later in session 4:
 Next: when the queues are through: hero + contact + riders at preview, then final 4K + crops,
 npm test, README numbers. Known look issues: Remi's square shoulders (drape envelope); hoods are
 snug coif-like hoods; long pulled-back hairlines are a bit even.
+
+## Session 5 (2026-10-09, from ~08:00 UTC; resumed after the second usage-limit stop)
+
+State found: all 48 caches built by the session-4 final queues + the beltband/beltseat/hairline
+passes (07:18-07:27 on 10-08). Rendered hero + contact at preview (output/humans/s5/). Seen and
+being fixed:
+- Square "padded" shoulders on everyone: the rig lowers only the upper arm, the shoulder girdle
+  stayed level (flat trapezius, a deltoid corner the coats followed). build.make_pose now runs a
+  recipe twice: the 1st run gives the arm elevation, the 2nd starts from clavicles dropped (arm
+  hanging, 0.16 rad) or lifted (arm raised) - IK targets and grips stay exact.
+- Hairline: a 23/41-cycle wave cut a notch into the forehead (saw-tooth edge) and the roots were
+  3.5x DENSER at the line (hard edge). Now small aperiodic wobble, density ramp 0.35 -> 1 over
+  7 mm then a dense band, fewer/finer stray hairs (they read as black hooks at 4K).
+- Band collars: first row leans in less (the crease printed a black slit under the collar).
+- Hose poked through boot shafts (pale streaks): new pass `cullboots` (hose pulled 3 mm inside
+  the shaft + culled under it). King's mantle printed the belt through it: new pass `overbelt`.
+  Both run after every build (build.py) and were applied in place to the existing caches.
+- Iron props read as chrome / crumpled foil (runtime: normal 0.35, oxide darkening), spear heads
+  darker, crate weathered (props pass), sling linen darker. Abby's shirt darker linen.
+- King's mantle 1.12 m (was 0.75: a stiff back panel); Alexandria's gown simulated at
+  cloth_subdiv 1 (faceted bodice, under-bust ledge); Alexandria hero framed closer.
+Next: test builds (abby_ht, alexandria_sd) -> full rebuild of all 48 (queue.sh, stamp
+humans/stamp_s5) -> preview hero/contact -> final 4K + crops, npm test, README numbers.
