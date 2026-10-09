@@ -440,10 +440,11 @@ function fieldGrass(S, shot) {
   const cam = shot.cam;
   const g = new THREE.Group();
   const cx = cam.pos[0], cz = cam.pos[2];
-  const d = Math.hypot(cx, cz);
-  const dirA = Math.atan2(-cx, -cz);                       // camera -> subject
+  const tx = cam.target ? cam.target[0] : 0, tz = cam.target ? cam.target[2] : 0;
+  const d = Math.hypot(cx - tx, cz - tz);
+  const dirA = Math.atan2(tx - cx, tz - cz);               // camera -> its target (the view's centre)
   const rMin = 1.2, rMax = d + L * 0.7 + (shot.fire ? 120 : 0);   // (fire shots look far down the field)
-  const half = (Math.atan(24.89 / 2 / cam.mm) + 0.25);
+  const half = (Math.atan(24.89 / 2 / cam.mm) + (shot.fire ? 0.6 : 0.25));
   const place = (rng) => {
     const r = rMin * Math.pow(rMax / rMin, rng());
     const a = dirA + (rng() * 2 - 1) * half;

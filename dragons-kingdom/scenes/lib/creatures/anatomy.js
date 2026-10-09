@@ -1077,7 +1077,9 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
     // simply stuck on); only on real horns
     if (tag === 'horn' && !hs.soft) {
       const d = norm(sub(p1, p0)), q0 = [p0[0] - d[0] * r0 * 0.5, p0[1] - d[1] * r0 * 0.5, p0[2] - d[2] * r0 * 0.5], q2 = [p0[0] + d[0] * r0 * 0.9, p0[1] + d[1] * r0 * 0.9, p0[2] + d[2] * r0 * 0.9];
-      keratin.push({ kind: 'horn', bone: 'head', tag: 'burr', points: [W(...q0), W(...p0), W(...q2)], radii: [r0 * 1.32 * H, r0 * 1.22 * H, r0 * 1.02 * H], flat: 0.8, up: ey, rings: true, burr: true });
+      // (shaded as dark base keratin - the horn shader's pale tip tone made the burr read as a
+      // metal collar)
+      keratin.push({ kind: 'claw', bone: 'head', tag: 'burr', points: [W(...q0), W(...p0), W(...q2)], radii: [r0 * 1.22 * H, r0 * 1.14 * H, r0 * 1.02 * H], flat: 0.8, up: ey, burr: true });
     }
   };
   for (const sd of [1, -1]) {
