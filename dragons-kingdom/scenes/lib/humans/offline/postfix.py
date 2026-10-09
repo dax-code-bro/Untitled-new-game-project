@@ -774,7 +774,9 @@ def fix_pushout(cid, body_ease=0.004, layer_ease=0.0025):
         print(f'{cid}: pushed out {", ".join(done)}', flush=True)
 
 
-OPAQUE_OVER = ('coat', 'tunic', 'gown', 'kirtle', 'cloak', 'apron', 'gambeson', 'surcoat', 'hoodcape', 'hood', 'veil', 'sling')
+# (no cloaks: a mantle hangs off the shoulders away from the arms - culling the sleeves beside it
+# cut holes along the King's sleeve silhouettes)
+OPAQUE_OVER = ('coat', 'tunic', 'gown', 'kirtle', 'apron', 'gambeson', 'surcoat', 'hoodcape', 'hood', 'veil', 'sling')
 
 
 def fix_cull(cid):
@@ -934,7 +936,7 @@ def fix_cullboots(cid, reach=0.035, margin=1):
         print(f'{cid}: hose culled under the boots: {", ".join(done)}', flush=True)
 
 
-def fix_overbelt(cid, nb=72, clear=0.004, fade=0.05):
+def fix_overbelt(cid, nb=72, clear=0.004, fade=0.12):
     """Cloaks and hood capes hang OVER the belt: the belt is added after the cloth simulation, so a
     cloak lying close to the back had the belt printing through it (two black bars across the
     King's mantle). Per 5-degree sector, cloak vertices within the belt's height (+ a fade) that
@@ -979,8 +981,12 @@ def fix_overbelt(cid, nb=72, clear=0.004, fade=0.05):
                 ro = rout[k0] * (1 - t) + rout[(k0 + 1) % nb] * t + clear
                 lo = ylo[k0] * (1 - t) + ylo[(k0 + 1) % nb] * t
                 hi = yhi[k0] * (1 - t) + yhi[(k0 + 1) % nb] * t
-                dy = np.maximum(lo - P[:, 1], P[:, 1] - hi)
-                w = np.clip(1 - dy / fade, 0, 1) ** 2
+                # the cloak drapes over the belt like a tent: it comes out gradually from the
+                # shoulder blades down to the belt and hangs straight on below it (a push over the
+                # band only left a horizontal ridge - a dark slot across the King's back)
+                above = P[:, 1] - hi
+                t_ = np.clip(1 - above / fade, 0, 1)
+                w = np.where(P[:, 1] <= hi, 1.0, t_ * t_ * (3 - 2 * t_))
                 r = np.hypot(P[:, 0] - bc[0], P[:, 2] - bc[2])
                 push = np.maximum(0.0, ro - r) * w
                 if (push > 1e-4).any():

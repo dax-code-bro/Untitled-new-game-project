@@ -252,10 +252,11 @@ def cast():
                   hair={'color': HAIR['salt'], 'style': 'crop', 'length': (0.012, 0.035), 'flow': 'back', 'curl': 0.35,
                         'beard': {'count': 9000, 'length': (0.008, 0.02), 'curl': 0.45, 'shadow': 0.8, 'color': HAIR['grey']}},
                   eyes=('brown', [0.55, 0.45, 0.36]), brows='eyebrow004',
-                  outfit=[G_hose('russet'), G_shoes([0.05, 0.032, 0.02]), G_shirt('linen'),
+                  # shirt without a band collar (a white linen band stood round his neck like a plate)
+                  outfit=[G_hose('russet'), G_shoes([0.05, 0.032, 0.02]), G_shirt('undyed', collar=0.0),
                           G_tunic([0.24, 0.08, 0.04], hem=0.32, flare=1.6, ease=0.024, neck=0.04, wear=0.25),
                           # a mantle to the calf (at 0.75 m it hung to the hip like a stiff back panel)
-                          G_cloak([0.12, 0.09, 0.05], length=1.12, gap=1.1, flare=0.34)],
+                          G_cloak([0.12, 0.09, 0.05], length=1.12, gap=1.1, flare=0.34, sim_fabric='wool')],
                   pose='gesture', pose_params={'weight': 'R', 'contrapposto': 0.5, 'head_yaw': 0.1},
                   notes='screenplay: approachable; crown optional (none shown) and never a prop gag. Warm festival clothes are a proposal')
     king['skin'].update({'texture': 'middleage_lightskinned_male_diffuse', 'redness': 0.35})

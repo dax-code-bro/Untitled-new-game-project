@@ -52,6 +52,9 @@ export function clothMaterial(o = {}) {
     uPattern: { value: o.pattern ?? 0 },     // 1 = quilted (gambeson), 2 = stripes
     uPatCol: { value: new THREE.Vector3(...(o.patternColor || [0, 0, 0])) },
     uLeather: { value: f.leather ? 1 : 0 },
+    // soft hanging folds as shading only, for the under-layers that are not simulated (shirts):
+    // a smooth shell of linen in a V-neck read as a flat plastic bib
+    uWrinkle: { value: o.wrinkle ?? 0 },
   };
   mat.userData.cloth = U;
   mat.customProgramCacheKey = () => 'dk-human-cloth';
@@ -73,7 +76,7 @@ vAO = ao; vAux = aux; vObjP = position; vPat = uv; vObjN = normal;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 ${NOISE_GLSL}
-uniform sampler2D uAlb; uniform float uLum; uniform float uAlbMix, uWear, uDust, uFade, uSeed, uTile, uPattern, uLeather; uniform vec3 uDustCol, uPatCol;
+uniform sampler2D uAlb; uniform float uLum; uniform float uAlbMix, uWear, uDust, uFade, uSeed, uTile, uPattern, uLeather, uWrinkle; uniform vec3 uDustCol, uPatCol;
 varying float vAO; varying vec4 vAux; varying vec3 vObjP; varying vec2 vPat; varying vec3 vObjN;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
@@ -105,12 +108,20 @@ varying float vAO; varying vec4 vAux; varying vec3 vObjP; varying vec2 vPat; var
   diffuseColor.rgb = c;
 }`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+if (uWrinkle > 0.0) {
+  // long soft folds (about 3 cm across, 10 cm along, mostly vertical) and a few finer creases
+  float wf = hFbm(vObjP * vec3(32.0, 9.0, 32.0) + uSeed) - 0.5;
+  float wc = hN3(vObjP * vec3(90.0, 30.0, 90.0) + uSeed * 3.0) - 0.5;
+  normal = hBump(normal, -vViewPosition, (wf * 0.0065 + wc * 0.0008) * uWrinkle, faceDirection);
+}
 if (uPattern > 0.5 && uPattern < 1.5) {
   vec2 q = vPat * 18.0; float s = min(abs(fract(q.x + q.y) - 0.5), abs(fract(q.x - q.y) - 0.5));
   normal = hBump(normal, -vViewPosition, smoothstep(0.0, 0.12, s) * 0.002, faceDirection);
 }`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
-{ float aoV = clamp(vAO, 0.0, 1.0);
+{ // floor: thin cloth is lit through and between its layers - a crease baked to 0 printed as a
+  // black slit (under band collars, at coat edges)
+  float aoV = clamp(vAO, 0.3, 1.0);
   reflectedLight.indirectDiffuse *= aoV; reflectedLight.indirectSpecular *= aoV * aoV;
   reflectedLight.directDiffuse *= mix(1.0, aoV, 0.35); }`);
   };
@@ -207,15 +218,17 @@ const PROP_PBR = {
   leather: { id: 'pbr/acg_leather05', base: 'Leather05', tile: 0.35, lum: 0.027, rmean: 0.54 },
   blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.35, lum: 0.0055, rmean: 0.37 },
   iron: { id: 'pbr/acg_metal26', base: 'Metal26', tile: 0.4, metal: true, lum: 0.117 },
-  wood: { id: 'pbr/acg_wood35', base: 'Wood35', tile: 0.6, lum: 0.074 },
-  pine: { id: 'pbr/acg_planks21', base: 'Planks21', tile: 0.8, lum: 0.425 },
+  // rmean: mean of the scan's roughness map (three multiplies it in) - without it the crate's
+  // planks came out at roughness 0.41 and mirrored the sky (a pale grey box)
+  wood: { id: 'pbr/acg_wood35', base: 'Wood35', tile: 0.6, lum: 0.074, rmean: 0.6 },
+  pine: { id: 'pbr/acg_planks21', base: 'Planks21', tile: 0.8, lum: 0.425, rmean: 0.684, rough: 0.82 },
   linen: { id: 'pbr/acg_fabric36', base: 'Fabric36', tile: 0.12, lum: 0.5 },
 };
 /** Generic prop / accessory material. o.kind: leather | blackleather | iron | steel | brass | gold | wood | pine | wicker | bread | rope | flat */
 export function propMaterial(o = {}) {
   const k = o.kind || 'flat';
   const p = PROP_PBR[k];
-  const mat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(...(o.color || [0.5, 0.5, 0.5])), roughness: Math.min(1, (o.rough ?? 0.6) / ((p && p.rmean) || 1)), metalness: o.metal ?? 0, side: o.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
+  const mat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(...(o.color || [0.5, 0.5, 0.5])), roughness: Math.min(1, (o.rough ?? (p && p.rough) ?? 0.6) / ((p && p.rmean) || 1)), metalness: o.metal ?? 0, side: o.doubleSide ? THREE.DoubleSide : THREE.FrontSide });
   let tile = 1, varAlb = null, varLum = 1;
   if (p) {
     tile = 1 / (o.tile ?? p.tile);
@@ -230,14 +243,14 @@ export function propMaterial(o = {}) {
       mat.metalnessMap = libTexture(`${p.id}/${p.base}_met.jpg`, { color: false, repeat: true, flipY: true }); mat.metalness = 1;
       // working iron is oxidised and dull: at full strength the forged scan's hammer relief read as
       // crumpled foil and the bare metal colour as chrome against the sky (kettle hats, spear heads)
-      mat.normalScale.set(0.35, -0.35);
-      mat.color.multiplyScalar(o.oxide ?? 0.62);
+      mat.normalScale.set(0.22, -0.22);
+      mat.color.multiplyScalar(o.oxide ?? 0.45);
     }
   } else if (k === 'wicker') {
     tile = 1 / (o.tile ?? 0.25);
     mat.map = libTexture('pbr/khr_wicker/wicker_basecolor.png', { repeat: true, flipY: false });
     mat.normalMap = libTexture('pbr/khr_wicker/wicker_normal.png', { color: false, repeat: true, flipY: false });
-  } else if (k === 'steel') { mat.metalness = 1; mat.roughness = o.rough ?? 0.32; mat.color.setRGB(...(o.color || [0.55, 0.55, 0.56])); }
+  } else if (k === 'steel') { mat.metalness = 1; mat.roughness = o.rough ?? 0.32; mat.color.setRGB(...(o.color || [0.55, 0.55, 0.56])).multiplyScalar(o.oxide ?? 0.75); }
   else if (k === 'brass' || k === 'gold') { mat.metalness = 1; mat.roughness = o.rough ?? 0.3; mat.color.setRGB(...(o.color || (k === 'gold' ? [0.95, 0.72, 0.32] : [0.75, 0.55, 0.28]))); }
   const U = { uTile: { value: tile }, uSeed: { value: (o.seed ?? 1) * 0.29 }, uKind: { value: ['flat', 'bread', 'rope', 'apple'].indexOf(k) },
     uVarAlb: { value: varAlb }, uVarLum: { value: varLum }, uUseVar: { value: varAlb ? 1 : 0 } };
