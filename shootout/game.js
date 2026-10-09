@@ -18,6 +18,7 @@ const state = {
   pile: [],
   selected: -1,
   covered: false,
+  over: false,
 };
 
 const $ = sel => document.querySelector(sel);
@@ -57,6 +58,14 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#btn-next-round').addEventListener('click', nextRound);
   $('#btn-quit').addEventListener('click', quitGame);
   $('#btn-cover').addEventListener('click', toggleCover);
+  $('#btn-again').addEventListener('click', () => {
+    $('#game-over').classList.add('hidden');
+    startGame(state.modeId);
+  });
+  $('#btn-menu').addEventListener('click', () => {
+    $('#game-over').classList.add('hidden');
+    quitGame();
+  });
 
   $('#set-music').addEventListener('input', e => Sound.setMusicVolume(e.target.value / 100));
   $('#set-sfx').addEventListener('input', e => Sound.setSfxVolume(e.target.value / 100));
@@ -70,8 +79,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function startGame(modeId) {
   Sound.unlock();
+  state.modeId = modeId;
   state.mode = MODES[modeId];
   state.round = 1;
+  state.over = false;
   state.covered = false;
   $('#hand').classList.remove('covered');
   $('#btn-cover').textContent = 'Cover cards';
@@ -98,6 +109,7 @@ function dealRound() {
 }
 
 function nextRound() {
+  if (state.over) return;
   state.round++;
   applyDread();
   dealRound();
@@ -219,26 +231,36 @@ function selectCard(i) {
   info.classList.remove('hidden');
 }
 
-// Card effects aren't written yet, so playing a card just puts it on the table
-// and each opponent answers with a random card of their own.
+// Playing a card puts it on the table and each opponent answers with a random
+// card of their own. Only the Jack of Trades has an effect so far.
 function playSelected() {
-  if (state.selected < 0) return;
+  if (state.selected < 0 || state.over) return;
   const [id] = state.hand.splice(state.selected, 1);
   state.pile.push({ id, rot: (Math.random() - 0.5) * 30 });
   Sound.cardFlick();
   selectCard(-1);
+  renderAll();
+  if (CARD_BY_ID[id].instantWin) { endGame('YOU WIN', 'You played the Jack of Trades.'); return; }
 
   const round = state.round;
   state.oppHands.forEach((h, i) => {
     if (!h.length) return;
     setTimeout(() => {
-      if (state.round !== round || !h.length) return;   // a new round was dealt meanwhile
+      if (state.over || state.round !== round || !h.length) return;   // game ended or a new round was dealt
       const [oid] = h.splice(Math.floor(Math.random() * h.length), 1);
       state.pile.push({ id: oid, rot: (Math.random() - 0.5) * 30 });
       Sound.cardFlick();
       renderOpponents();
       renderPile();
+      if (CARD_BY_ID[oid].instantWin) endGame('OPPONENT ' + (i + 1) + ' WINS', 'They played the Jack of Trades.');
     }, 600 * (i + 1));
   });
-  renderAll();
+}
+
+function endGame(title, reason) {
+  state.over = true;
+  Sound.gunshot();
+  $('#game-over-title').textContent = title;
+  $('#game-over-reason').textContent = reason;
+  setTimeout(() => $('#game-over').classList.remove('hidden'), 500);
 }
