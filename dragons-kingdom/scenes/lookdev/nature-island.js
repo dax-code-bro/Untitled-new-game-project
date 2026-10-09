@@ -26,7 +26,7 @@ export const meta = {
   cinematic: filmFinish({
     atmosphere: { enabled: true, haze: 2.2, mieG: 0.8, sunDirection: SUN.toArray(), sunIlluminance: 5, apDistanceScale: 1.0, environment: false },
     volumetrics: {
-      enabled: true, range: 3600, near: 1, resolution: [256, 96, 85], intensity: 1.5, noiseFilter: true, shadowSoftness: 6,
+      enabled: true, range: 3600, near: 1, resolution: [320, 128, 64], intensity: 1.5, noiseFilter: true, shadowSoftness: 16,
       density: 0.00032, heightFalloff: 0.016, fogBase: 0, anisotropy: 0.72, noiseScale: 0.006, noiseAmount: 0.75, wind: [3, 0, 1],
       banks: [
         // the cloud cap on the high ground, wrapping the summits and trailing off to leeward

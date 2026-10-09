@@ -140,7 +140,7 @@ normal = normalize((viewMatrix * vec4(nkRockN, 0.0)).xyz);`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= nkAOv; reflectedLight.indirectSpecular *= nkAOv * nkAOv;`);
   };
-  mat.customProgramCacheKey = () => `nature-landscape-v7${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}`;
+  mat.customProgramCacheKey = () => `nature-landscape-v9${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}`;
   return mat;
 }
 
@@ -159,7 +159,7 @@ vec4 bed = nkBed(sB);
 // --- zone weights
 float bay = exp(-pow((P.z - nkSea.w) / 170.0, 2.0));
 float turfLine = 7.0 + 5.0 * m1 - 3.0 * bay + nkLook.w;
-float gentle = smoothstep(0.34, 0.66, up + 0.18 * (m2 - 0.5));
+float gentle = smoothstep(0.24, 0.52, up + 0.18 * (m2 - 0.5));
 float midSlope = smoothstep(0.32, 0.6, up + 0.15 * (m3 - 0.5));
 float aboveSpray = smoothstep(turfLine, turfLine + 4.0, y);
 // ledges on the face (sky partly hidden by the face above) carry turf only in places
@@ -225,11 +225,11 @@ rock = mix(rock, vec3(0.045, 0.045, 0.04) * (0.8 + 0.4 * m3), blk * 0.88);
 {
   float zone = smoothstep(blackTop - 1.0, blackTop + 1.5, hS) * (1.0 - smoothstep(12.0, 24.0, hS));
   float cluster = smoothstep(0.42, 0.62, dkFbm3(P * 0.28 + 11.0) + 0.2 * up);
-  float spots = smoothstep(0.58, 0.68, dkVN3(P * 7.0)) + 0.6 * smoothstep(0.62, 0.7, dkVN3(P * 19.0 + 3.0));
+  float spots = smoothstep(0.6, 0.7, dkVN3(P * 11.0)) + 0.6 * smoothstep(0.62, 0.7, dkVN3(P * 27.0 + 3.0));
   float far = smoothstep(25.0, 120.0, camD);
   float amt = zone * cluster * mix(clamp(spots, 0.0, 1.0), 0.33, far) * nkLook.x;
   vec3 lich = mix(vec3(0.78, 0.45, 0.08), vec3(0.82, 0.66, 0.2), m3) * (0.6 + 0.5 * lumR);
-  rock = mix(rock, lich, amt * 0.8);
+  rock = mix(rock, lich, amt * 0.6);
   float hi = smoothstep(7.0, 16.0, hS);
   float gspots = smoothstep(0.55, 0.66, dkVN3(P * 5.0 + 1.7));
   float grey = hi * smoothstep(0.45, 0.65, dkFbm3(P * 0.22 + 5.0)) * mix(gspots, 0.4, far) * nkLook.x;
@@ -248,8 +248,10 @@ rock = mix(rock, vec3(0.045, 0.045, 0.04) * (0.8 + 0.4 * m3), blk * 0.88);
   rock = mix(rock, rock * vec3(0.42, 0.46, 0.38), seep * 0.5 * nkLook.y * (1.0 - damp));
   float col = exp(-dot(P.xz - nkPoint.xy, P.xz - nkPoint.xy) / (nkPoint.z * nkPoint.z));
   float gu = col * smoothstep(5.0, 9.0, hS) * (1.0 - smoothstep(30.0, 45.0, hS)) * smoothstep(0.6, 0.85, dkVN2(vec2(u * 1.7, y * 0.07 + 1.0)));
-  gu = max(gu, col * smoothstep(0.75, 1.0, up) * smoothstep(5.0, 8.0, hS) * smoothstep(0.5, 0.7, m3));
-  rock = mix(rock, vec3(0.86, 0.86, 0.82), gu * 0.7 * nkLook.z);
+  // on ledges and stack tops: splashes and crusts in patches, never a white cap like snow
+  float spl = smoothstep(0.45, 0.75, dkVN3(P * 1.3 + 4.0)) * smoothstep(0.55, 0.8, m3);
+  gu = max(gu, col * smoothstep(0.75, 1.0, up) * smoothstep(5.0, 8.0, hS) * spl * 0.55);
+  rock = mix(rock, vec3(0.8, 0.8, 0.76), gu * 0.65 * nkLook.z);
 }
 // intertidal: barnacles, wrack weed, green algae; wet darkening
 {
@@ -263,8 +265,14 @@ rock = mix(rock, vec3(0.045, 0.045, 0.04) * (0.8 + 0.4 * m3), blk * 0.88);
   rock = mix(rock, vec3(0.13, 0.30, 0.06), alg * 0.8);
 }
 rock *= mix(1.0, 0.82, vNkCav);                // grime in the crevices
-// rock that faces the sky above the spray (pavement, outcrops in the turf) weathers darker grey
-rock = mix(rock, rock * vec3(0.7, 0.72, 0.7), smoothstep(0.45, 0.85, up) * smoothstep(10.0, 18.0, hS));
+// rock that is not a sheer wall, above the spray (the lip under the turf, steps in the head slope,
+// pavement, outcrops in the turf) holds soil, lichen and moss: it weathers to a dull mid grey, never
+// the fresh cream of a new rockfall scar
+{
+  float lie = smoothstep(0.22, 0.6, up) * smoothstep(10.0, 18.0, hS);
+  vec3 grey = rock * vec3(0.56, 0.58, 0.54) + vec3(0.012, 0.016, 0.006) * (0.6 + 0.8 * m3);
+  rock = mix(rock, grey, lie * (0.75 + 0.25 * m2));
+}
 // --- other layers (top projection), height-blended over the rock
 vec3 col = rock; vec3 nrm = nR; float rgh = mix(rR * 0.95 + 0.05, 0.85, 0.3);
 float hRock = aR.a;
@@ -285,6 +293,15 @@ if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
     // mottling at the scales of tussocks, grazing and soil depth: what keeps turf from reading as felt
     float mt = dkVN2(P.xz * 1.6 + 3.0) * 0.35 + dkVN2(P.xz * 0.42 + 9.0) * 0.4 + dkVN2(P.xz * 0.11 + 1.0) * 0.25;
     c *= 0.62 + 0.75 * mt;
+    // tussock scale (0.2-0.6 m): tufts and the shadowed gaps between them; dead straw in the tops;
+    // what still reads at 5-10 cm a pixel, where the photo texture has averaged out to felt
+    float fadeT = 1.0 - smoothstep(150.0, 600.0, camD);
+    float tu = dkVN2(P.xz * 3.1 + 1.3) * 0.6 + dkVN2(P.xz * 7.3 + 4.1) * 0.4;
+    c *= mix(1.0, 0.7 + 0.55 * smoothstep(0.25, 0.75, tu), fadeT);
+    float straw = smoothstep(0.55, 0.8, dkVN2(P.xz * 0.9 + 7.7) * 0.6 + tu * 0.4) * smoothstep(0.35, 0.65, m2);
+    c = mix(c, vec3(0.42, 0.38, 0.24) * (0.8 + 0.4 * tu), straw * 0.55);
+    // the green is a muted olive, not a lawn
+    c = mix(c, vec3(dot(c, vec3(0.3, 0.59, 0.11))), 0.18);
     c = mix(c, c * vec3(1.25, 1.12, 0.7), smoothstep(0.62, 0.8, dkVN2(P.xz * 0.06 + 5.0)) * 0.6);   // sun-scorched thin soil
     turfBump = 1.0;
     vec4 cov = nkHasCover > 0.5 ? texture2D(nkCover, (P.xz - nkCoverXf.xy) * nkCoverXf.zw) : vec4(0.0);

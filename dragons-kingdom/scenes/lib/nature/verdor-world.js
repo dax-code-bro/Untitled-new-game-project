@@ -118,7 +118,8 @@ export function createVerdorWorld(opts = {}) {
     while (u < 4200) { out.push(u); u += mean * (0.45 + r() * 1.1) * (r() < 0.12 ? 0.45 : 1); }
     return Float64Array.from(out);
   }
-  const UA = jointLines(8, 0.6, seed + 31), UB = jointLines(10.5, 0.6, seed + 37);
+  // spacing: a few metres to ~20 m (wide-spaced master joints with the odd close pair)
+  const UA = jointLines(12, 0.6, seed + 31), UB = jointLines(13, 0.6, seed + 37);
   const weakA = new Uint8Array(UA.length);  // weak joints -> geos and caves
   for (let i = 0; i < UA.length; i++) weakA[i] = hash2(i, 3, seed) < 0.05 ? 1 : 0;
   const findIdx = (arr, u) => { let lo = 0, hi = arr.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (arr[m] <= u) lo = m; else hi = m; } return lo; };
@@ -401,25 +402,34 @@ export function createVerdorWorld(opts = {}) {
     let plan = 1e9;
     for (const bl of c.blocks) {
       const pk = Math.floor((s + 7 * hash2(bl.i, bl.j, seed + 9)) / (4 + 6 * hash2(bl.i, bl.j, seed + 11)));
-      const per = (hash3(bl.i, bl.j, pk, seed + 5) - 0.5) * 0.9 + (hash3(bl.i, bl.j, k, seed + 6) - 0.5) * 0.5 * (1.1 - hard);
+      const per = (hash3(bl.i, bl.j, pk, seed + 5) - 0.5) * 0.6 + (hash3(bl.i, bl.j, k, seed + 6) - 0.5) * 0.45 * (1.1 - hard);
       const tr = bl.tr;
       const Rb = R + per + tr.scarD * smoothstep(tr.scarH - 1.2, tr.scarH + 1.2, y) + tr.lean * Math.max(0, y - 2);
       let d = -1e9;
       for (let q = 0; q < 4; q++) {
-        if (!bl.ex[q]) { d = Math.max(d, bl.d[q] - EXPAND); continue; }
-        // joint faces are neither flat nor vertical: they wander and lean a little
+        // joints do not run straight through the whole cliff: they end at bedding planes and step
+        // sideways from one bed package to the next (staggered joints), so a joint reads as a broken,
+        // offset crack - not a ruled vertical line from the top to the sea (the 'piano keys')
         const jid = q < 2 ? bl.i + q : bl.j + q - 2 + 5000;
+        const kp = Math.floor((k + 3 * hash2(jid, 9, seed + 20)) / 3);
+        const stag = hash3(jid, kp, 0, seed + 22) < 0.6 ? (hash3(jid, kp, 1, seed + 21) - 0.5) * (q < 2 ? 2.6 : 1.4) : 0;
+        const dq = bl.d[q] + (q === 0 || q === 2 ? stag : -stag);
+        if (!bl.ex[q]) { d = Math.max(d, dq - EXPAND); continue; }
+        // joint faces are neither flat nor vertical: they wander and lean a little
         const wav = 0.7 * N3.n2(y / 4.5 + jid * 0.37, jid * 1.7) + 0.3 * N3.n2(y / 1.7, jid * 3.1 + 9) + (hash2(jid, q, seed + 15) - 0.5) * 0.24 * (y - 20);
-        d = Math.max(d, bl.d[q] + Rb + wav);
+        d = Math.max(d, dq + Rb + wav);
       }
       if (d < plan) plan = d;
     }
-    // stacks: convex jointed pillars, capped (stepped tops by block)
+    // stacks: convex jointed pillars, capped (stepped tops by block). They stand on their own: the
+    // land surface, the head slope, geos and chimneys belong to the mainland and must not clip them
+    // (out at sea the land height is the sea bed - that used to cut the outer rocks down to stumps)
+    let stk = 1e9;
     for (const st of c.stacks) {
       for (const pc of st.pieces) {
         const sp = stackPlan(x, z, pc) + R * 0.4 + 0.6 * N2.facet3(x / 3, y / 3.5, z / 3) + 0.35 * N.n2(x / 5 + st.z, z / 5) + 0.12 * Math.max(0, y - 2) * (0.5 + 0.5 * N3.n2(st.x * 0.1, y / 12));
         const cap = pc.top + 0.9 * N.n2(x / 6, z / 6 + st.x) - 2.2 * hash2(Math.floor(c.u / 4), Math.floor(c.v / 4), Math.round(pc.x));
-        plan = Math.min(plan, smax(sp, y - cap, 1.0));
+        stk = Math.min(stk, smax(sp, y - cap, 1.0));
       }
     }
     plan = smax(plan, -c.geo, 0.6);
@@ -430,6 +440,7 @@ export function createVerdorWorld(opts = {}) {
       const g = (y - c.wallTop) - (c.footF - F) * c.slopeT + c.headN;
       f = smax(f, g / Math.sqrt(1 + c.slopeT * c.slopeT), 1.6);
     }
+    if (stk < 1e8) f = smin(f, stk, 0.6);
     // sea caves (along their joints) and the arch
     for (const cv of caves) {
       if (Math.abs(z - cv.z) > 70) continue;

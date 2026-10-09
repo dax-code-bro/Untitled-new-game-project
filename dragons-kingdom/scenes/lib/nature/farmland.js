@@ -203,7 +203,7 @@ export async function loadClingLand(ctx, opts = {}) {
   // ------------------------------------------------------------------ hedgerows ---
   if (opts.hedges !== false) {
     const lists = [[], [], []];
-    const treeSpots = [];
+    const treeSpots = [], hedgeCards = [];
     const step = 2.2;
     const [x0, x1] = region.x, [z0, z1] = region.z;
     // walk a grid; where the nearest field changes between two cells, there is a field boundary
@@ -231,8 +231,12 @@ export async function loadClingLand(ctx, opts = {}) {
       const ex = f.other.x - f.site.x, ez = f.other.z - f.site.z;
       const yaw = Math.atan2(ex, ez) + (rng() - 0.5) * 0.25;
       const w = (1.7 + 0.8 * rng()) * (far ? 1.4 : 1), h = (2.0 + 1.0 * rng()) * (far ? 1.15 : 1), len = (3.4 + 1.6 * rng()) * (far ? 1.5 : 1);
-      const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y - 0.25, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(w, h, len));
+      // near the lens the clump is only the dense core: card-built blackthorn and hawthorn shrubs
+      // grow through it and make the twiggy, gappy silhouette of a real hedge
+      const near = d < 75;
+      const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y - 0.25, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(w * (near ? 0.5 : 1), h * (near ? 0.55 : 1), len * (near ? 0.85 : 1)));
       lists[lod].push(m);
+      if (near) hedgeCards.push({ x: x + (rng() - 0.5) * 0.8, y, z: z + (rng() - 0.5) * 0.8, variant: Math.floor(rng() * 3), yaw: rng() * 6.28, scale: (h / 2.4) * (0.85 + 0.3 * rng()), thorn: rng() < 0.3 });
       if (hash2(Math.round(x / 3), Math.round(z / 3), 11) < (far ? 0.05 : 0.03)) treeSpots.push([x, y, z]);
     }
     const geos = [shrubGeometry('scrub', 7, 3), shrubGeometry('scrub', 8, 2), shrubGeometry('scrub', 9, 1)];
@@ -248,6 +252,13 @@ export async function loadClingLand(ctx, opts = {}) {
       group.add(mesh);
     });
     counts.hedge = lists.reduce((a, L) => a + L.length, 0);
+    if (hedgeCards.length) {
+      const bt = await treeKit(ctx, 'blackthorn', { variants: 3, exposure: 0.15, seed: 5 });
+      const hw = await treeKit(ctx, 'hawthorn', { variants: 2, exposure: 0, seed: 6, scale: 0.6 });
+      const pl = hedgeCards.map((c) => ({ ...c, kit: c.thorn ? hw : bt, variant: c.thorn ? c.variant % 2 : c.variant, scale: c.thorn ? c.scale * 0.9 : c.scale }));
+      group.add(scatterTrees(pl, { views: opts.views, lod0: 35, lod1: 120, lod2: 400 }).group);
+      counts.hedgeShrubs = pl.length;
+    }
     // hedgerow trees: oaks and ashes standing out of the hedges
     const oak = await treeKit(ctx, 'oak', { variants: 3, seed: 2 }), ash = await treeKit(ctx, 'ash', { variants: 2, seed: 3 });
     const places = treeSpots.map(([x, y, z], i) => ({ kit: hash2(i, 1, 9) < 0.6 ? oak : ash, x, y, z, variant: i % 3, yaw: hash2(i, 2, 9) * 6.28, scale: 0.85 + 0.4 * hash2(i, 3, 9) }));
@@ -269,13 +280,17 @@ export async function loadClingLand(ctx, opts = {}) {
     group.add(scatterTrees(places, { views: opts.views, lod0: 40, lod1: 160, lod2: 420 }).group);
   }
   if (opts.grass) {
+    // around every view near the ground (eye-level views may be passed with y = 0 before grading)
     const R = opts.grass.radius ?? 60;
-    group.add(grassField({ count: opts.grass.count ?? 50000, seed: 2, height: [0.1, 0.4], place: (rr) => {
-      const a = rr() * 6.283, d = R * Math.sqrt(rr());
-      const x = v0.x + Math.cos(a) * d, z = v0.z + Math.sin(a) * d;
-      if (W.roadD(x, z) < 4.5 || Math.hypot(x, z) < 110) return null;
-      return [x, W.height(x, z) - 0.02, z];
-    } }));
+    const centers = views.filter((v) => v.y - W.height(v.x, v.z) < 8);
+    for (const [ci, c] of (centers.length ? centers : [v0]).entries()) {
+      group.add(grassField({ count: opts.grass.count ?? 50000, seed: 2 + ci, height: [0.1, 0.4], place: (rr) => {
+        const a = rr() * 6.283, d = R * Math.sqrt(rr());
+        const x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d;
+        if (W.roadD(x, z) < 4.5 || Math.hypot(x, z) < 110) return null;
+        return [x, W.height(x, z) - 0.02, z];
+      } }));
+    }
   }
   console.warn(`[nature] cling land: ${Object.entries(counts).map(([k, n]) => `${k} ${n}`).join(', ')}`);
   return { group, world: W, heightAt: (x, z) => W.height(x, z), material, map };

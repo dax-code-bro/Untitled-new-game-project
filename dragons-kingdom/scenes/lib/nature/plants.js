@@ -70,7 +70,7 @@ export function landCover(opts) {
 // ------------------------------------------------------------------ shrub geometry ---
 const SHRUBS = {
   // lobes, flattening, leeward shear, base spread, leaf scale (1/m), colours, flowers
-  gorse: { lobes: [4, 8], flat: 0.7, shear: 0.45, leaf: 14, col: [0.032, 0.048, 0.016], var: 0.25, flower: [0.85, 0.62, 0.05, 0.16] },
+  gorse: { lobes: [4, 8], flat: 0.7, shear: 0.45, leaf: 14, col: [0.032, 0.048, 0.016], var: 0.25, flower: [0.85, 0.62, 0.05, 0.08] },
   heather: { lobes: [3, 6], flat: 0.38, shear: 0.25, leaf: 22, col: [0.07, 0.065, 0.04], var: 0.3, flower: [0.32, 0.12, 0.22, 0.0] },
   bracken: { lobes: [5, 9], flat: 0.55, shear: 0.3, leaf: 7, col: [0.16, 0.2, 0.05], var: 0.35, flower: [0.3, 0.18, 0.06, 0.0] },
   scrub: { lobes: [6, 11], flat: 0.62, shear: 0.6, leaf: 10, col: [0.045, 0.06, 0.03], var: 0.2, flower: [0.9, 0.9, 0.85, 0.06] },
@@ -125,7 +125,7 @@ export function shrubGeometry(kind, seed = 1, detail = 3) {
   const nr = g.attributes.normal;
   for (let i = 0; i < p.count; i++) {
     v.set(p.getX(i), p.getY(i) - 0.15, p.getZ(i)).normalize();
-    const nn = new THREE.Vector3(nr.getX(i), nr.getY(i), nr.getZ(i)).lerp(v, 0.55).normalize();
+    const nn = new THREE.Vector3(nr.getX(i), nr.getY(i), nr.getZ(i)).lerp(v, 0.4).lerp(new THREE.Vector3(0, 1, 0), 0.3).normalize();
     nr.setXYZ(i, nn.x, nn.y, nn.z);
   }
   g.computeBoundingSphere();
@@ -165,10 +165,23 @@ ${GLSL_NOISE}`)
   // gaps between sprays are dark (self-shadowed interior), sprays catch light
   diffuseColor.rgb *= mix(0.35, 1.35, smoothstep(0.25, 0.75, leaf)) * (1.0 + fVar * (n3 - 0.5) * 2.0);
   diffuseColor.rgb *= mix(0.45, 1.0, smoothstep(0.0, 0.6, vH));
-  float fl = smoothstep(0.62, 0.8, dkVN3(vFW * fLeaf * 1.6 + 11.0)) * smoothstep(0.3, 0.9, vH) * fFlower.w * smoothstep(0.3, 0.7, n3 + 0.3);
+  // clumps within the mass at the 0.3-1 m scale (sprays, hollows) - still there when the leaf
+  // scale has averaged away at range
+  float n4 = dkVN3(vFW * fLeaf * 0.16 + 13.0) * 0.6 + dkVN3(vFW * fLeaf * 0.42 + 17.0) * 0.4;
+  diffuseColor.rgb *= 0.55 + 0.9 * smoothstep(0.2, 0.8, n4);
+  // flowers in sprays, not a uniform sprinkle (they show at range as warm flecks)
+  float fl = max(smoothstep(0.62, 0.8, dkVN3(vFW * fLeaf * 1.6 + 11.0)), 0.8 * smoothstep(0.6, 0.78, dkVN3(vFW * fLeaf * 0.35 + 19.0)))
+    * smoothstep(0.3, 0.9, vH) * fFlower.w * smoothstep(0.3, 0.7, n3 + 0.3) * 1.6;
   diffuseColor.rgb = mix(diffuseColor.rgb, fFlower.rgb, fl);
 }`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{
+  // a ragged, see-through silhouette: toward the outline the mass breaks into sprays with sky and
+  // ground between them (a closed smooth hull is what makes a clump read as a pom-pom)
+  float facing = abs(dot(normal, normalize(vViewPosition)));
+  float rag = dkVN3(vFW * fLeaf * 0.8 + 2.0) * 0.55 + dkVN3(vFW * fLeaf * 0.25 + 6.0) * 0.45;
+  if (rag > 0.18 + 1.5 * facing + 0.5 * (1.0 - vH)) discard;
+}
 {
   vec3 b = vec3(dkVN3(vFW * fLeaf * 1.3) - 0.5, dkVN3(vFW * fLeaf * 1.3 + 5.0) - 0.5, dkVN3(vFW * fLeaf * 1.3 + 9.0) - 0.5);
   normal = normalize(normal + (viewMatrix * vec4(b * 0.9, 0.0)).xyz);
@@ -183,7 +196,7 @@ ${GLSL_NOISE}`)
     }
     sh.fragmentShader = fs;
   };
-  mat.customProgramCacheKey = () => `nature-foliage-${kind}`;
+  mat.customProgramCacheKey = () => `nature-foliage-v2-${kind}`;
   return mat;
 }
 
@@ -255,13 +268,17 @@ export function scatterPlants(ctx, opts) {
       if (y == null || !(y > 0)) continue;
       const d = nearest(jx, y, jz);
       if (d > maxD) continue;
+      // heather is a fine carpet: as instances it only helps near the lens; further out the ground
+      // shader's heath tint (land-cover map) carries it (flat clumps at range read as dark dashes)
+      if (K.kind === 'heather' && d > 70) continue;
       // far away keep fewer, bigger clumps (the colony still reads as one mass)
-      const keep = Math.min(1, (220 / Math.max(d, 1)) ** 2);
-      if (rng() > Math.max(keep, 0.06)) continue;
+      // (thinned gently: a few huge clumps read as topiary pom-poms, many small ones as a thicket)
+      const keep = Math.min(1, (380 / Math.max(d, 1)) ** 2);
+      if (rng() > Math.max(keep, 0.12)) continue;
       if (opts.exclude && opts.exclude(jx, jz)) continue;
-      const grow = Math.min(1 / Math.sqrt(Math.max(keep, 0.06)), 3.2);
+      const grow = Math.min(1 / Math.sqrt(Math.max(keep, 0.12)), 2.0);
       const w = (K.size[0] + (K.size[1] - K.size[0]) * Math.pow(rng(), 1.3)) * (0.75 + 0.45 * fill) * grow;
-      const hh = (K.hgt[0] + (K.hgt[1] - K.hgt[0]) * rng()) * (0.7 + 0.5 * fill) * Math.min(grow, 1.5);
+      const hh = (K.hgt[0] + (K.hgt[1] - K.hgt[0]) * rng()) * (0.7 + 0.5 * fill) * Math.min(grow, 1.2);
       const ny = opts.slope ? opts.slope(jx, jz) : 1;
       if (ny < 0.6) continue;
       const lod = d < 70 ? 0 : d < 400 ? 1 : 2;

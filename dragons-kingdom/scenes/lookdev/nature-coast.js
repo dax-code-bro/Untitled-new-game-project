@@ -51,7 +51,7 @@ function shots(W) {
     // 2: the cliff foot from the platform, looking along the face (north) into the low sun-side light
     { pos: [xc(500) + 16, 1.9, 500], look: [xc(600) + 6, 10, 600], f: 24 },
     // 3: the outer rocks from above
-    { pos: [tip - 60, 230, 520], look: [tip + 170, 0, 735], f: 24 },
+    { pos: [tip + 10, 250, 590], look: [tip + 185, 0, 735], f: 24 },
     // 4: the arch headland and the bay
     { pos: [xc(-1150) - 40, 70, -1150], look: [xc(-900) + 10, 8, -880], f: 35 },
     // 5: a boat off the face: caves, joints, beds
