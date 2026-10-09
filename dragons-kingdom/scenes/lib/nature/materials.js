@@ -52,6 +52,7 @@ uniform sampler2D nkBeds; uniform vec4 nkBedR;
 uniform vec4 nkSea;        // tide high, tide low, splash height, beach bay z
 uniform vec4 nkLook;       // lichen amount, streaks, guano, turf height offset
 uniform vec3 nkPoint;      // the point (outer rocks) x, z, radius of the bird colony
+uniform sampler2D nkCover; uniform vec4 nkCoverXf; uniform float nkHasCover;   // land cover: heath, gorse, bracken, scrub
 varying float vNkAO; varying float vNkCav;
 
 float nkDip(vec2 p) { return 0.034 * p.y + 7.0 * sin(p.y * 0.0021 + 0.9) - 9.0 * exp(-pow((p.y - 700.0) / 500.0, 2.0)) + 0.006 * p.x; }
@@ -89,6 +90,9 @@ void nkTri(int Lr, vec3 P, vec3 n, float scale, out vec4 alb, out vec3 nw, out f
 vec3 nkRockN; float nkRough; float nkWetness; float nkAOv;
 `;
 
+let blank = null;
+const blankCover = () => blank || (blank = Object.assign(new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat), { needsUpdate: true }));
+
 export async function landscapeMaterial(ctx, opts = {}) {
   const W = opts.world;
   const T = await textureLayers(ctx, LAYERS, { size: opts.textureSize ?? 1024 });
@@ -103,8 +107,11 @@ export async function landscapeMaterial(ctx, opts = {}) {
     nkSea: { value: new THREE.Vector4(W.VERDOR.tide.high, W.VERDOR.tide.low, 4.5, W.VERDOR.beachBay.z) },
     nkLook: { value: new THREE.Vector4(opts.lichen ?? 1, opts.streaks ?? 1, opts.guano ?? 1, opts.turfOffset ?? 0) },
     nkPoint: { value: new THREE.Vector3(W.xc(W.VERDOR.point.z) + 120, W.VERDOR.point.z + 30, 260) },
+    nkCover: { value: blankCover() }, nkCoverXf: { value: new THREE.Vector4(0, 0, 1, 1) }, nkHasCover: { value: 0 },
   };
   mat.userData.nkUniforms = U;
+  /** the plants' land-cover map (plants.js landCover): the ground under each community */
+  mat.userData.setCover = (cover) => { U.nkCover.value = cover.texture; U.nkCoverXf.value.copy(cover.xf); U.nkHasCover.value = 1; };
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
     worldVaryings(sh);
@@ -113,6 +120,7 @@ export async function landscapeMaterial(ctx, opts = {}) {
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvNkAO = aAO; vNkCav = aCav;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
+${opts.rockOnly ? '#define NK_ROCK_ONLY' : ''}
 varying vec3 vDkW; varying vec3 vDkN;
 ${GLSL_NOISE}
 void dkProj(int ax, vec3 p, vec3 n, out vec2 uv, out vec3 T, out vec3 B) {
@@ -129,7 +137,7 @@ normal = normalize((viewMatrix * vec4(nkRockN, 0.0)).xyz);`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= nkAOv; reflectedLight.indirectSpecular *= nkAOv * nkAOv;`);
   };
-  mat.customProgramCacheKey = () => 'nature-landscape-v2';
+  mat.customProgramCacheKey = () => `nature-landscape-v4${opts.rockOnly ? '-rock' : ''}`;
   return mat;
 }
 
@@ -148,10 +156,12 @@ vec4 bed = nkBed(sB);
 // --- zone weights
 float bay = exp(-pow((P.z - nkSea.w) / 170.0, 2.0));
 float turfLine = 7.0 + 5.0 * m1 - 3.0 * bay + nkLook.w;
-float gentle = smoothstep(0.62, 0.86, up + 0.18 * (m2 - 0.5));
+float gentle = smoothstep(0.5, 0.8, up + 0.18 * (m2 - 0.5));
 float midSlope = smoothstep(0.32, 0.6, up + 0.15 * (m3 - 0.5));
 float aboveSpray = smoothstep(turfLine, turfLine + 4.0, y);
-float wTurf = gentle * aboveSpray;
+// ledges on the face (sky partly hidden by the face above) carry turf only in places
+float ledge = 1.0 - smoothstep(0.72, 0.93, vNkAO);
+float wTurf = gentle * aboveSpray * (1.0 - ledge * smoothstep(0.35, 0.6, m3 + 0.3 * m2));
 float wSoil = midSlope * (1.0 - gentle) * aboveSpray * 0.85;
 float wShingle = bay * smoothstep(0.5, 0.8, up) * smoothstep(1.4, 2.6, y + m3) * (1.0 - smoothstep(5.5, 8.0, y));
 float wSand = bay * smoothstep(0.55, 0.85, up) * (1.0 - smoothstep(1.6, 2.8, y + m3));
@@ -247,6 +257,7 @@ vec3 col = rock; vec3 nrm = nR; float rgh = mix(rR * 0.95 + 0.05, 0.85, 0.3);
 float hRock = aR.a;
 float wsum = 0.0;
 // turf / soil / shingle / sand / scree / sea bed
+#ifndef NK_ROCK_ONLY
 if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
   vec4 a; vec3 n; float r;
   vec3 acc = vec3(0.0); vec3 nacc = vec3(0.0); float racc = 0.0; float wacc = 0.0;
@@ -258,6 +269,18 @@ if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
     vec3 c = mix(a.rgb * vec3(0.52, 0.6, 0.36), a2.rgb * vec3(0.62, 0.6, 0.42), dry * 0.55);
     c *= 0.75 + 0.4 * m2;
     c = mix(c, c * vec3(0.8, 0.9, 0.7), smoothstep(0.55, 0.8, dkFbm3(P * 0.05 + 2.0)));
+    // mottling at the scale of tussocks and grazing, and darker heath (heather, rush, bracken) patches
+    c *= 0.82 + 0.36 * dkVN2(P.xz * 0.35 + 3.0);
+    vec4 cov = nkHasCover > 0.5 ? texture2D(nkCover, (P.xz - nkCoverXf.xy) * nkCoverXf.zw) : vec4(0.0);
+    float heath = nkHasCover > 0.5 ? cov.r : smoothstep(0.52, 0.66, dkFbm3(vec3(P.x, 0.0, P.z) * 0.008 + 4.0) + 0.15 * m2);
+    // the ground under gorse and scrub (litter, shade) and under bracken (last year's fronds)
+    c = mix(c, c * vec3(0.55, 0.5, 0.42), max(cov.g, cov.a) * 0.7);
+    c = mix(c, vec3(0.2, 0.14, 0.06) * (0.8 + 0.4 * m3), cov.b * 0.45);
+    if (heath > 0.01) {
+      vec4 a3; vec3 n3; float r3;
+      nkTap(8, 1, P + 9.0, N0, 1.0, a3, n3, r3);
+      c = mix(c, a3.rgb * vec3(0.55, 0.5, 0.45) * (0.8 + 0.4 * m3), heath * 0.85);
+    }
     float w = wTurf * (1.0 + (a.a - 0.5) * 0.6);
     acc += c * w; nacc += normalize(mix(n, n2, 0.5)) * w; racc += 0.92 * w; wacc += w;
   }
@@ -265,7 +288,7 @@ if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
     nkTap(2, 1, P, N0, 1.0, a, n, r);
     vec4 a2; vec3 n2; float r2;
     nkTap(3, 1, P + 5.0, N0, 1.0, a2, n2, r2);
-    vec3 c = mix(a.rgb, a2.rgb * vec3(0.95, 0.9, 0.85), smoothstep(0.4, 0.7, m3));
+    vec3 c = mix(a.rgb * vec3(0.62, 0.68, 0.5), a2.rgb * vec3(0.55, 0.5, 0.42), smoothstep(0.55, 0.8, m3) * 0.6);
     float w = wSoil * (1.0 + (a.a - 0.5));
     acc += c * w; nacc += n * w; racc += 0.9 * w; wacc += w;
   }
@@ -301,6 +324,7 @@ if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
     rgh = mix(rgh, racc / wacc, hb);
   }
 }
+#endif
 // wetness: dark, glossy
 float wetAll = max(wet, damp * 0.35);
 col *= mix(1.0, 0.55, wet) * mix(1.0, 0.88, damp * (1.0 - wet));

@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { createVerdorWorld, VERDOR } from '../verdor-world.js';
 import { decodeHeightmap, heightSampler } from '../heightmap.js';
-import { meshTile } from './mesher.mjs';
+import { meshTile } from '../mesher.js';
 import { encodeTile } from '../tiles.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));

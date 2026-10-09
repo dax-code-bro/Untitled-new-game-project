@@ -107,5 +107,22 @@ export function makeNoise(seed = 1) {
     }
     return [f1, f2, id];
   }
-  return { n2, n3, fbm2, fbm3, ridged2, cell2, seed };
+  /**
+   * Fractured-rock displacement: the nearest Voronoi cell's own random plane, evaluated at p.
+   * Piecewise planar facets with small steps where cells meet (broken rock), in about [-1, 1].
+   */
+  function facet3(x, y, z) {
+    const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+    let best = 9, bx = 0, by = 0, bz = 0, bi = 0, bj = 0, bk = 0;
+    for (let k = -1; k <= 1; k++) for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+      const cx = xi + i, cy = yi + j, cz = zi + k;
+      const px = cx + hash3(cx, cy, cz, seed), py = cy + hash3(cx, cy, cz, seed + 1), pz = cz + hash3(cx, cy, cz, seed + 2);
+      const d = (px - x) ** 2 + (py - y) ** 2 + (pz - z) ** 2;
+      if (d < best) { best = d; bx = px; by = py; bz = pz; bi = cx; bj = cy; bk = cz; }
+    }
+    const a = hash3(bi, bj, bk, seed + 3) * 6.2832, b = hash3(bi, bj, bk, seed + 4) * 2 - 1, r = Math.sqrt(1 - b * b);
+    const nx = r * Math.cos(a), ny = b, nz = r * Math.sin(a);
+    return ((x - bx) * nx + (y - by) * ny + (z - bz) * nz) * 1.2 + (hash3(bi, bj, bk, seed + 5) - 0.5);
+  }
+  return { n2, n3, fbm2, fbm3, ridged2, cell2, facet3, seed };
 }

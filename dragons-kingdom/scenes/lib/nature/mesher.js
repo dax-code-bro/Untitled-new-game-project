@@ -1,4 +1,4 @@
-// Narrow-band surface nets for an SDF world (offline bakes).
+// Narrow-band surface nets for an SDF world (offline bakes, and small runtime meshes such as boulders).
 //
 //   const m = meshTile(world, { x0, z0, size, h, apron, ylo, yhi, coarse })
 //   -> { positions: Float32Array, normals: Int8Array (xyz + pad), ao: Uint8Array, cavity: Uint8Array,
@@ -120,7 +120,7 @@ export function meshTile(world, o) {
   // ---- ambient occlusion along the normal (grid where possible, exact SDF outside the grid)
   const sampleF = (x, y, z) => {
     const gi = (x - X0) / h, gj = (y - Y0) / h, gk = (z - Z0) / h;
-    if (gj > ny - 1) return y - (Y0 + (ny - 1) * h) + 0.5 * (o.aoOpenAbove ?? 4);   // above the tile: open sky
+    if (gj > ny - 1) return 1e3;   // above everything in the tile: open sky
     if (gi >= 0 && gk >= 0 && gi <= nx - 1 && gk <= nz - 1 && gj >= 0) { G(gi, gj, gk, tmp); return tmp[0]; }
     return world.sdf(x, y, z);
   };

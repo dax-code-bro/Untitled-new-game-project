@@ -14,6 +14,7 @@ import * as THREE from 'three';
 import { createOcean } from 'dk/ocean.js';
 import { loadHDRI } from '../lib/assets.js';
 import { loadVerdorCoast, verdorWorld } from '../lib/nature/coast.js';
+import { scatterCoastRocks } from '../lib/nature/rocks.js';
 import { filmFinish } from './finish.js';
 
 // the same photographed sky and sun as style frames F2 / F3 (continuity)
@@ -47,7 +48,7 @@ function shots(W) {
     // 2: the cliff foot from the platform, looking along the face (north) into the low sun-side light
     { pos: [xc(500) + 16, 1.9, 500], look: [xc(600) + 6, 10, 600], f: 24 },
     // 3: the outer rocks from above
-    { pos: [tip + 60, 260, 540], look: [tip + 170, 0, 735], f: 24 },
+    { pos: [tip - 60, 230, 520], look: [tip + 170, 0, 735], f: 24 },
     // 4: the arch headland and the bay
     { pos: [xc(-1150) - 40, 70, -1150], look: [xc(-900) + 10, 8, -880], f: 35 },
     // 5: a boat off the face: caves, joints, beds
@@ -68,7 +69,11 @@ export async function setup(ctx) {
   scene.add(sun, sun.target);
   const coast = await loadVerdorCoast(ctx, { views: SH.filter(Boolean).map((s) => s.pos), radius: 5000, terrain: DEBUG_NO_TERRAIN ? false : undefined });
   scene.add(coast.group);
+  const views = SH.filter(Boolean).map((s) => s.pos);
+  const rocks = await scatterCoastRocks(ctx, coast, { views });
+  scene.add(rocks.group);
   const ocean = createOcean(ctx, { windSpeed: 7, windDirection: 190, swell: 0.55, choppiness: 1.2, seed: 9, depth: 30, mipFilter: 'trilinear', roughness: 0.05, foamThreshold: 0.7, shoreFoam: 1.0, shoreFoamWidth: 1.6, surf: 0.85 });
+  ocean.mesh.position.y = -1.1;     // a falling tide: the platform and the black lichen band show
   scene.add(ocean.mesh);
   camera.near = 0.3; camera.far = 30000;
   S = { sun, SUN: sky.sun.direction.clone(), ocean, SH, W };

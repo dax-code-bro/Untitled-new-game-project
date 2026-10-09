@@ -103,7 +103,7 @@ export function createVerdorWorld(opts = {}) {
       return out;
     };
     const f1 = blur(raw, 0.2), f2 = blur(raw, 1.5), h1 = blur(hr, 0.3);
-    for (let i = 0; i < RN; i++) { recessLut[i] = 1.3 * f1[i] + 1.0 * f2[i]; hardLut[i] = h1[i]; }
+    for (let i = 0; i < RN; i++) { recessLut[i] = 0.75 * f1[i] + 1.0 * f2[i]; hardLut[i] = h1[i]; }
   }
   const lutAt = (lut, s) => { const f = clamp((s - RS0) / RSR, 0, RN - 1.001), i = Math.floor(f), t = f - i; return lut[i] + (lut[i + 1] - lut[i]) * t; };
   const recessAt = (s) => lutAt(recessLut, s), hardAt = (s) => lutAt(hardLut, s);
@@ -131,7 +131,7 @@ export function createVerdorWorld(opts = {}) {
     L -= 4 * Math.exp(-(((cz + 1500) / 260) ** 2));
     return L;
   }
-  const EXPAND = 0.8;   // blocks overlap their neighbours a little (no hairline gaps on internal joints)
+  const EXPAND = 4.0;   // internal joints: blocks overlap their neighbours (no grooves or slots along closed joints)
 
   // ------------------------------------------------------------- stacks, arch, caves ---
   // convex jointed pillars: { x, z, r (m), top (m), facets }, + the outer rocks off the point
@@ -365,8 +365,8 @@ export function createVerdorWorld(opts = {}) {
       const i = B.ia + di;
       if (i < 0 || i >= UA.length) continue;
       const hc = hash2(i, 77, seed);
-      if (hc > 0.32) continue;
-      const w = 0.45 + 1.6 * hash2(i, 78, seed), reach = 3 + 11 * hash2(i, 79, seed);
+      if (hc > 0.16) continue;
+      const w = 0.35 + 1.3 * hash2(i, 78, seed), reach = 2 + 8 * hash2(i, 79, seed);
       chim = Math.min(chim, Math.max(Math.abs(B.u - UA[i]) - w, (ff - F) - reach));
     }
     return {
@@ -389,16 +389,25 @@ export function createVerdorWorld(opts = {}) {
     // wave-cut notch, the slope-over-wall top (vegetated head slope above a vertical wall)
     let R = recessAt(s) * c.expo;
     R += c.notchD * Math.exp(-(((y - 1.0) / 1.7) ** 2));          // the wave-cut notch
-    R += (0.55 + 0.45 * soft) * N.fbm3(x / 6.5, y / 2.2, z / 6.5, 3) * 1.4 + 0.3 * soft * N3.n3(x / 1.6, y / 1.1, z / 1.6) + 0.1 * N3.n3(x / 0.6, y / 0.6, z / 0.6);
+    R += (0.55 + 0.45 * soft) * N.fbm3(x / 7, y / 2.6, z / 7, 3) * 1.1 + 0.3 * soft * N3.n3(x / 1.6, y / 1.1, z / 1.6);
+    // fractured faces: piecewise planar facets (broken rock) at two sizes
+    R += 0.8 * N2.facet3(x / 4.5, y / 3.2, z / 4.5) + 0.35 * N.facet3(x / 1.9, y / 1.6, z / 1.9) + 0.15 * N3.facet3(x / 0.8, y / 0.8, z / 0.8);
     // mainland: union of standing joint blocks; only sides that face fallen ground weather back
     // (internal joints stay closed); per block and bed: old falls and fresh scars
     let plan = 1e9;
     for (const bl of c.blocks) {
-      const per = (hash3(bl.i, bl.j, k, seed + 5) - 0.5) * 2.4 * (1.1 - hard);
+      const pk = Math.floor((s + 7 * hash2(bl.i, bl.j, seed + 9)) / (4 + 6 * hash2(bl.i, bl.j, seed + 11)));
+      const per = (hash3(bl.i, bl.j, pk, seed + 5) - 0.5) * 1.6 + (hash3(bl.i, bl.j, k, seed + 6) - 0.5) * 0.6 * (1.1 - hard);
       const tr = bl.tr;
       const Rb = R + per + tr.scarD * smoothstep(tr.scarH - 1.2, tr.scarH + 1.2, y) + tr.lean * Math.max(0, y - 2);
       let d = -1e9;
-      for (let q = 0; q < 4; q++) d = Math.max(d, bl.d[q] + (bl.ex[q] ? Rb : -EXPAND));
+      for (let q = 0; q < 4; q++) {
+        if (!bl.ex[q]) { d = Math.max(d, bl.d[q] - EXPAND); continue; }
+        // joint faces are neither flat nor vertical: they wander and lean a little
+        const jid = q < 2 ? bl.i + q : bl.j + q - 2 + 5000;
+        const wav = 0.7 * N3.n2(y / 4.5 + jid * 0.37, jid * 1.7) + 0.3 * N3.n2(y / 1.7, jid * 3.1 + 9) + (hash2(jid, q, seed + 15) - 0.5) * 0.24 * (y - 20);
+        d = Math.max(d, bl.d[q] + Rb + wav);
+      }
       if (d < plan) plan = d;
     }
     // stacks: convex jointed pillars, capped (stepped tops by block)
@@ -410,7 +419,7 @@ export function createVerdorWorld(opts = {}) {
       }
     }
     plan = smax(plan, -c.geo, 0.6);
-    plan = smax(plan, -(c.chim + 0.25 * N3.n3(x / 2, y / 3, z / 2)), 0.35);
+    plan = smax(plan, -(c.chim + 0.9 * N3.n3(x / 2.5, y / 4, z / 2.5) + 1.2 * smoothstep(0.2, 0.6, N2.n2(y / 9 + x * 0.01, z * 0.01))), 0.3);
     let f = smax(plan, y - top, 2.2);                              // rounded cliff-top edge
     // slope-over-wall: above the wall the face lies back as a head slope (soil and turf over rubble)
     {
