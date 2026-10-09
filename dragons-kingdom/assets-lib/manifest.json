@@ -1,7 +1,7 @@
 {
  "schema": 1,
  "name": "Dragon's Kingdom free asset library",
- "updated": "2026-10-06",
+ "updated": "2026-10-09",
  "rules": [
   "Free / open licences only (CC0 preferred; CC BY only with a CREDITS line). Every file has a source URL and a sha256.",
   "Binaries are git-ignored: run `node assets-lib/fetch.mjs` to (re)download them. Commit only manifest.json, fetch.mjs, README.md, CREDITS.md, .gitignore.",
@@ -11648,6 +11648,218 @@
    ],
    "use": "Stool for Alexandria; stall seating.",
    "files": []
+  },
+  {
+   "id": "pbr/acg_bark001",
+   "kind": "pbr",
+   "title": "Grey fissured bark (Bark001)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG)",
+   "origin": {
+    "provider": "ambientCG",
+    "legacy_id": "Bark001",
+    "url": "https://ambientcg.com/view?id=Bark001"
+   },
+   "via": "GitHub (Git LFS) dgreenheck/ez-tree @ dcf309b (ambientCG's own 1K-JPG files, unmodified names; the repo vendors them for its bark textures)",
+   "resolution": "512 x 1024 px",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.verdor_riding_grounds",
+    "set.cling_village_square"
+   ],
+   "use": "Hawthorn / oak trunks and limbs of the wind-shaped coastal trees and hedgerow trees (grey, deeply fissured).",
+   "files": [
+    {
+     "path": "pbr/acg_bark001/Bark001_1K-JPG_Color.jpg",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/bark/Bark001_1K-JPG/Bark001_1K-JPG_Color.jpg",
+     "sha256": "2a7e8c742aa0110057d7a3ff0e8ec193c26ef23b77bc778fb9258c0e41b29474",
+     "bytes": 831490
+    },
+    {
+     "path": "pbr/acg_bark001/Bark001_1K-JPG_NormalGL.jpg",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/bark/Bark001_1K-JPG/Bark001_1K-JPG_NormalGL.jpg",
+     "sha256": "d7a275aa573a701d8814d7378abd8ea227f651ae6da33f8c57a6b862419e621e",
+     "bytes": 1270807
+    },
+    {
+     "path": "pbr/acg_bark001/Bark001_1K-JPG_Roughness.jpg",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/bark/Bark001_1K-JPG/Bark001_1K-JPG_Roughness.jpg",
+     "sha256": "2c0829e7a04b78234357ac6eb93173667fab9191c4340343ce88dddfcca1e6fd",
+     "bytes": 397062
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_bark001/Bark001_1K-JPG_Color.jpg",
+     "normal": "pbr/acg_bark001/Bark001_1K-JPG_NormalGL.jpg",
+     "roughness": "pbr/acg_bark001/Bark001_1K-JPG_Roughness.jpg"
+    },
+    "tile_m": 0.35,
+    "tile_m_v": 0.7,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "gl",
+    "normal_convention_evidence": "ambientCG NormalGL file"
+   }
+  },
+  {
+   "id": "pbr/acg_bark006",
+   "kind": "pbr",
+   "title": "Grey bark with orange lichen (Bark006)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG)",
+   "origin": {
+    "provider": "ambientCG",
+    "legacy_id": "Bark006",
+    "url": "https://ambientcg.com/view?id=Bark006"
+   },
+   "via": "GitHub (Git LFS) dgreenheck/ez-tree @ dcf309b (ambientCG's own 1K-JPG files, unmodified names; the repo vendors them for its bark textures)",
+   "resolution": "1024 px",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.verdor_riding_grounds",
+    "set.cling_village_square"
+   ],
+   "use": "Sea-exposed trunks (grey smooth-plated bark with Xanthoria lichen) - sycamore/ash on the Verdor clifftop.",
+   "files": [
+    {
+     "path": "pbr/acg_bark006/Bark006_1K-JPG_Color.jpg",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/bark/Bark006_1K-JPG/Bark006_1K-JPG_Color.jpg",
+     "sha256": "f9a3a95bcfbb92cc9615bf04d8f4e3b033ce5791d5d7c9c6a486ef6efa8b9915",
+     "bytes": 1866671
+    },
+    {
+     "path": "pbr/acg_bark006/Bark006_1K-JPG_NormalGL.jpg",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/bark/Bark006_1K-JPG/Bark006_1K-JPG_NormalGL.jpg",
+     "sha256": "77556c40964453ba50e3e24a63213b0f647556b2083f4e5409af7b98139b8f00",
+     "bytes": 2306105
+    },
+    {
+     "path": "pbr/acg_bark006/Bark006_1K-JPG_Roughness.jpg",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/bark/Bark006_1K-JPG/Bark006_1K-JPG_Roughness.jpg",
+     "sha256": "78553f8b3bd82ed383bbc86062c60a1fb31e079b301ae07c65f14e7e3eddcbe0",
+     "bytes": 611090
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_bark006/Bark006_1K-JPG_Color.jpg",
+     "normal": "pbr/acg_bark006/Bark006_1K-JPG_NormalGL.jpg",
+     "roughness": "pbr/acg_bark006/Bark006_1K-JPG_Roughness.jpg"
+    },
+    "tile_m": 0.6,
+    "tile_m_v": 0.6,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "gl",
+    "normal_convention_evidence": "ambientCG NormalGL file"
+   }
+  },
+  {
+   "id": "pbr/acg_bark014",
+   "kind": "pbr",
+   "title": "Red-brown scaly bark (Bark014)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG)",
+   "origin": {
+    "provider": "ambientCG",
+    "legacy_id": "Bark014",
+    "url": "https://ambientcg.com/view?id=Bark014"
+   },
+   "via": "GitHub (Git LFS) dgreenheck/ez-tree @ dcf309b (ambientCG's own 1K-JPG files, unmodified names; the repo vendors them for its bark textures)",
+   "resolution": "1024 px",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.verdor_riding_grounds",
+    "set.cling_village_square"
+   ],
+   "use": "Scots pine trunks (upper red-brown scaly bark).",
+   "files": [
+    {
+     "path": "pbr/acg_bark014/Bark014_1K-JPG_Color.jpg",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/bark/Bark014_1K-JPG/Bark014_1K-JPG_Color.jpg",
+     "sha256": "da297aff93460d294a6a7b2976fbf1029de27127a66ba56a3cf0ef21ac77c493",
+     "bytes": 1673314
+    },
+    {
+     "path": "pbr/acg_bark014/Bark014_1K-JPG_NormalGL.jpg",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/bark/Bark014_1K-JPG/Bark014_1K-JPG_NormalGL.jpg",
+     "sha256": "04c449835e79c8829190ea07af41efec46655e347da4048c49b3b0f0d8538a2e",
+     "bytes": 1739655
+    },
+    {
+     "path": "pbr/acg_bark014/Bark014_1K-JPG_Roughness.jpg",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/bark/Bark014_1K-JPG/Bark014_1K-JPG_Roughness.jpg",
+     "sha256": "a7e174d0e65de45a397fecf23d0a62a228bf3589fcf79eb0428b231db5e26a05",
+     "bytes": 802004
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_bark014/Bark014_1K-JPG_Color.jpg",
+     "normal": "pbr/acg_bark014/Bark014_1K-JPG_NormalGL.jpg",
+     "roughness": "pbr/acg_bark014/Bark014_1K-JPG_Roughness.jpg"
+    },
+    "tile_m": 0.6,
+    "tile_m_v": 0.6,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "gl",
+    "normal_convention_evidence": "ambientCG NormalGL file"
+   }
+  },
+  {
+   "id": "pbr/acg_bark004",
+   "kind": "pbr",
+   "title": "Grey-pink plated bark (Bark004)",
+   "status": "available",
+   "license": "CC0-1.0",
+   "author": "Lennart Demes (ambientCG)",
+   "origin": {
+    "provider": "ambientCG",
+    "legacy_id": "Bark004",
+    "url": "https://ambientcg.com/view?id=Bark004"
+   },
+   "via": "GitHub (Git LFS) dgreenheck/ez-tree @ dcf309b (ambientCG's own 1K-JPG files, unmodified names; the repo vendors them for its bark textures)",
+   "resolution": "1024 px",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.verdor_riding_grounds",
+    "set.cling_village_square"
+   ],
+   "use": "Old pine / larch lower trunks (thick grey plates).",
+   "files": [
+    {
+     "path": "pbr/acg_bark004/Bark004_1K-JPG_Color.jpg",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/bark/Bark004_1K-JPG/Bark004_1K-JPG_Color.jpg",
+     "sha256": "63efa0c70f9a93edc15a3c568026066a55dc2c26de096b7b5aa327d5e9c6eee1",
+     "bytes": 1587888
+    },
+    {
+     "path": "pbr/acg_bark004/Bark004_1K-JPG_NormalGL.jpg",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/bark/Bark004_1K-JPG/Bark004_1K-JPG_NormalGL.jpg",
+     "sha256": "197e9ba1317517433d59f327cb7c8fac04b91b27b2f54ba16a58c4b2e329a180",
+     "bytes": 2368990
+    },
+    {
+     "path": "pbr/acg_bark004/Bark004_1K-JPG_Roughness.jpg",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/bark/Bark004_1K-JPG/Bark004_1K-JPG_Roughness.jpg",
+     "sha256": "e508b7dbf618087badc628ef6271290e5ecbe8163a2f6bc83957a1c9687b357a",
+     "bytes": 608369
+    }
+   ],
+   "params": {
+    "maps": {
+     "albedo": "pbr/acg_bark004/Bark004_1K-JPG_Color.jpg",
+     "normal": "pbr/acg_bark004/Bark004_1K-JPG_NormalGL.jpg",
+     "roughness": "pbr/acg_bark004/Bark004_1K-JPG_Roughness.jpg"
+    },
+    "tile_m": 0.6,
+    "tile_m_v": 0.6,
+    "tile_m_note": "estimated from the photo content, not measured",
+    "normal_convention": "gl",
+    "normal_convention_evidence": "ambientCG NormalGL file"
+   }
   }
  ]
 }

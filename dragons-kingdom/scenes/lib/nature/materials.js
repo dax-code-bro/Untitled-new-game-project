@@ -1,0 +1,312 @@
+// The landscape shader for the nature library: ONE material for the cliff tiles, the platform, the
+// beach, the sea bed and the land behind the coast (so the baked 3D band and the heightfield beyond
+// it shade identically where they meet).
+//
+//   const mat = await landscapeMaterial(ctx, { world: W });   // W: createVerdorWorld()
+//   mesh geometry needs: position, normal, aAO (0..1 sky visibility), aCav (0..1 crevice)
+//
+// What a real pale limestone coast shows, and what this shader does about it:
+//   * the rock: a scanned pale weathered rock (ambientCG Rock26) at two scales, tinted per BED from
+//     the same strata table the cliff geometry was carved from (cream / pale grey / buff beds, thin
+//     dark shaly partings), with a bump from each bed's weathering recess (grooves finer than the mesh);
+//   * zonation by height above the sea: wet dark rock and wrack weed / barnacles / green algae in the
+//     intertidal; the black lichen band (Verrucaria) just above high water; orange-yellow lichen
+//     (Xanthoria / Caloplaca) in the splash zone; grey crustose lichen and moss higher up;
+//   * water: rain streaks down faces, dark seeps under shaly beds, whitewash under seabird ledges;
+//   * cover: turf on tops and broad ledges (above the spray), soil and grass on the head slopes,
+//     scree on the talus aprons, shingle berm + sand on the beach, sand and weed on the sea bed;
+//   * light: the bake's sky visibility (caves, notches, joints) darkens only the sky light, the
+//     crevice term darkens the albedo a little (dirt and damp collect there).
+import * as THREE from 'three';
+import { textureLayers } from './texarray.js';
+import { worldVaryings, GLSL_NOISE } from '../sets/materials.js';
+
+export const LAYERS = ['pbr/acg_rock26', 'pbr/acg_ground037', 'pbr/acg_ground03', 'pbr/acg_ground05', 'pbr/acg_ground27', 'pbr/ph_floor_pebbles_01', 'pbr/acg_ground28', 'pbr/acg_ground13', 'pbr/acg_ground36'];
+// layer roles
+const L = { rock: 0, turf: 1, turf2: 2, soil: 3, sand: 4, shingle: 5, scree: 6, dry: 7, heath: 8 };
+
+/** The strata table as a texture: s = y + dipH(x, z) -> r tint, g hardness, b recess/4, a parting */
+export function bedTexture(W) {
+  const s0 = W.beds[0].b0, s1 = W.beds[W.beds.length - 1].b1, ds = 0.1;
+  const n = Math.ceil((s1 - s0) / ds), w = Math.ceil(Math.sqrt(n));
+  const data = new Uint8Array(w * w * 4);
+  for (let i = 0; i < n; i++) {
+    const s = s0 + (i + 0.5) * ds, k = W.bedAt(s), b = W.beds[k];
+    const thin = (b.b1 - b.b0) < 0.45 && b.hard < 0.35 ? 1 : 0;
+    data[i * 4] = Math.round(b.tint * 255);
+    data[i * 4 + 1] = Math.round(W.hardAt(s) * 255);
+    data[i * 4 + 2] = Math.round(Math.min(1, W.recessAt(s) / 4) * 255);
+    data[i * 4 + 3] = thin * 255;
+  }
+  const t = new THREE.DataTexture(data, w, w, THREE.RGBAFormat);
+  t.magFilter = t.minFilter = THREE.NearestFilter;
+  t.needsUpdate = true;
+  return { texture: t, range: new THREE.Vector4(s0, ds, w, n) };
+}
+
+const GLSL = /* glsl */ `
+precision highp sampler2DArray;
+uniform sampler2DArray nkAlb; uniform sampler2DArray nkNrm; uniform sampler2DArray nkDat;
+uniform float nkTile[9];
+uniform sampler2D nkBeds; uniform vec4 nkBedR;
+uniform vec4 nkSea;        // tide high, tide low, splash height, beach bay z
+uniform vec4 nkLook;       // lichen amount, streaks, guano, turf height offset
+uniform vec3 nkPoint;      // the point (outer rocks) x, z, radius of the bird colony
+varying float vNkAO; varying float vNkCav;
+
+float nkDip(vec2 p) { return 0.034 * p.y + 7.0 * sin(p.y * 0.0021 + 0.9) - 9.0 * exp(-pow((p.y - 700.0) / 500.0, 2.0)) + 0.006 * p.x; }
+vec4 nkBed(float s) {
+  float i = clamp(floor((s - nkBedR.x) / nkBedR.y), 0.0, nkBedR.w - 1.0);
+  vec2 uv = (vec2(mod(i, nkBedR.z), floor(i / nkBedR.z)) + 0.5) / nkBedR.z;
+  return texture2D(nkBeds, uv);
+}
+// one layer, one planar projection: albedo (rgb) + height (a); world normal; roughness
+void nkTap(int Lr, int ax, vec3 P, vec3 n, float scale, out vec4 alb, out vec3 nw, out float rough) {
+  vec2 uv; vec3 T, B;
+  dkProj(ax, P * nkTile[Lr] * scale, n, uv, T, B);
+  // smooth domain warp: breaks the photo's repeat grid without seams
+  uv += (vec2(dkVN2(uv * 0.23 + float(Lr) * 3.1), dkVN2(uv * 0.23 + 17.3)) - 0.5) * 1.2;
+  vec3 a = texture(nkAlb, vec3(uv, float(Lr))).rgb;
+  vec4 d = texture(nkDat, vec3(uv, float(Lr)));
+  vec3 tn = texture(nkNrm, vec3(uv, float(Lr))).xyz * 2.0 - 1.0;
+  alb = vec4(a, d.g);
+  nw = normalize(T * tn.x + B * tn.y + n * max(tn.z, 0.15));
+  rough = d.r;
+}
+// triplanar (sharpened weights; small weights skipped)
+void nkTri(int Lr, vec3 P, vec3 n, float scale, out vec4 alb, out vec3 nw, out float rough) {
+  vec3 w = pow(abs(n), vec3(5.0)); w /= (w.x + w.y + w.z);
+  alb = vec4(0.0); nw = vec3(0.0); rough = 0.0;
+  for (int ax = 0; ax < 3; ax++) {
+    float wi = ax == 0 ? w.x : ax == 1 ? w.y : w.z;
+    if (wi < 0.02) continue;
+    vec4 a; vec3 nn; float r;
+    nkTap(Lr, ax, P, n, scale, a, nn, r);
+    alb += a * wi; nw += nn * wi; rough += r * wi;
+  }
+  nw = normalize(nw);
+}
+vec3 nkRockN; float nkRough; float nkWetness; float nkAOv;
+`;
+
+export async function landscapeMaterial(ctx, opts = {}) {
+  const W = opts.world;
+  const T = await textureLayers(ctx, LAYERS, { size: opts.textureSize ?? 1024 });
+  const beds = bedTexture(W);
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0 });
+  mat.name = 'nature:landscape';
+  const tiles = LAYERS.map((id) => 1 / (T.tile[T.index[id]] || 2));
+  const U = {
+    nkAlb: { value: T.albedo }, nkNrm: { value: T.normal }, nkDat: { value: T.data },
+    nkTile: { value: tiles },
+    nkBeds: { value: beds.texture }, nkBedR: { value: beds.range },
+    nkSea: { value: new THREE.Vector4(W.VERDOR.tide.high, W.VERDOR.tide.low, 4.5, W.VERDOR.beachBay.z) },
+    nkLook: { value: new THREE.Vector4(opts.lichen ?? 1, opts.streaks ?? 1, opts.guano ?? 1, opts.turfOffset ?? 0) },
+    nkPoint: { value: new THREE.Vector3(W.xc(W.VERDOR.point.z) + 120, W.VERDOR.point.z + 30, 260) },
+  };
+  mat.userData.nkUniforms = U;
+  mat.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, U);
+    worldVaryings(sh);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aAO; attribute float aCav; varying float vNkAO; varying float vNkCav;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvNkAO = aAO; vNkCav = aCav;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+varying vec3 vDkW; varying vec3 vDkN;
+${GLSL_NOISE}
+void dkProj(int ax, vec3 p, vec3 n, out vec2 uv, out vec3 T, out vec3 B) {
+  if (ax == 0) { float s = n.x >= 0.0 ? 1.0 : -1.0; uv = vec2(-s * p.z, p.y); T = vec3(0.0, 0.0, -s); }
+  else if (ax == 1) { float s = n.y >= 0.0 ? 1.0 : -1.0; uv = vec2(p.x, -s * p.z); T = vec3(1.0, 0.0, 0.0); }
+  else { float s = n.z >= 0.0 ? 1.0 : -1.0; uv = vec2(s * p.x, p.y); T = vec3(s, 0.0, 0.0); }
+  T = normalize(T - n * dot(n, T)); B = cross(n, T);
+}
+${GLSL}`)
+      .replace('#include <map_fragment>', MAP_FRAGMENT)
+      .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = clamp(nkRough, 0.04, 1.0);')
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+normal = normalize((viewMatrix * vec4(nkRockN, 0.0)).xyz);`)
+      .replace('#include <aomap_fragment>', `#include <aomap_fragment>
+reflectedLight.indirectDiffuse *= nkAOv; reflectedLight.indirectSpecular *= nkAOv * nkAOv;`);
+  };
+  mat.customProgramCacheKey = () => 'nature-landscape-v2';
+  return mat;
+}
+
+const MAP_FRAGMENT = /* glsl */ `
+vec3 P = vDkW;
+vec3 N0 = normalize(vDkN) * (gl_FrontFacing ? 1.0 : -1.0);
+float up = N0.y;
+float y = P.y;
+float camD = length(P - cameraPosition);
+float tideH = nkSea.x, tideL = nkSea.y;
+// --- large-scale variation fields
+float m1 = dkFbm3(P * 0.021), m2 = dkFbm3(P * 0.09 + 7.0), m3 = dkVN3(P * 0.45 + 3.0);
+// --- strata
+float sB = y + nkDip(P.xz);
+vec4 bed = nkBed(sB);
+// --- zone weights
+float bay = exp(-pow((P.z - nkSea.w) / 170.0, 2.0));
+float turfLine = 7.0 + 5.0 * m1 - 3.0 * bay + nkLook.w;
+float gentle = smoothstep(0.62, 0.86, up + 0.18 * (m2 - 0.5));
+float midSlope = smoothstep(0.32, 0.6, up + 0.15 * (m3 - 0.5));
+float aboveSpray = smoothstep(turfLine, turfLine + 4.0, y);
+float wTurf = gentle * aboveSpray;
+float wSoil = midSlope * (1.0 - gentle) * aboveSpray * 0.85;
+float wShingle = bay * smoothstep(0.5, 0.8, up) * smoothstep(1.4, 2.6, y + m3) * (1.0 - smoothstep(5.5, 8.0, y));
+float wSand = bay * smoothstep(0.55, 0.85, up) * (1.0 - smoothstep(1.6, 2.8, y + m3));
+float talusZ = smoothstep(1.0, 2.5, y) * (1.0 - smoothstep(14.0, 22.0, y)) * smoothstep(0.42, 0.72, up) * (1.0 - bay);
+float wScree = talusZ * (1.0 - wTurf) * smoothstep(0.25, 0.6, m2 + 0.3);
+float wSea = smoothstep(0.55, 0.85, up) * (1.0 - smoothstep(-2.2, -1.0, y)) * (1.0 - bay);
+float wRock = 1.0;
+// --- rock (always computed: it is the base everything else sits on)
+vec4 aR; vec3 nR; float rR;
+nkTri(0, P, N0, 1.0, aR, nR, rR);
+{
+  vec4 a2; vec3 n2; float r2;
+  nkTri(0, P.zyx * vec3(1.0, 1.0, -1.0) + 31.0, N0.zyx * vec3(1.0, 1.0, -1.0), 0.27, a2, n2, r2);
+  n2 = n2.zyx * vec3(-1.0, 1.0, 1.0);
+  float mixw = 0.45;
+  aR = mix(aR, a2, mixw); nR = normalize(mix(nR, n2, 0.35)); rR = mix(rR, r2, mixw);
+}
+// limestone palette per bed: pale grey, cream, buff, blue-grey; detail from the scan's luminance
+float lumR = dot(aR.rgb, vec3(0.2126, 0.7152, 0.0722));
+vec3 cream = vec3(0.58, 0.55, 0.47), pgrey = vec3(0.52, 0.52, 0.50), buff = vec3(0.57, 0.50, 0.40), bgrey = vec3(0.44, 0.47, 0.48);
+float t = bed.r;
+vec3 bedC = t < 0.35 ? mix(pgrey, cream, t / 0.35) : t < 0.7 ? mix(cream, bgrey, (t - 0.35) / 0.35) : mix(bgrey, buff, (t - 0.7) / 0.3);
+bedC = mix(bedC, pgrey, 0.25 + 0.2 * m1);
+vec3 rock = bedC * pow(lumR / 0.58, 1.15) * mix(vec3(1.0), aR.rgb / max(lumR, 0.05), 0.25);
+// thin shaly partings: darker, browner
+rock = mix(rock, rock * vec3(0.55, 0.52, 0.48), bed.a * 0.8);
+// macro variation (sun-bleached faces, stains)
+rock *= 0.92 + 0.22 * m1 + 0.1 * (m2 - 0.5);
+// bedding bump: the face steps back where the recess grows upward
+{
+  float r0 = nkBed(sB - 0.1).b, r1 = nkBed(sB + 0.1).b;
+  float dR = (r1 - r0) * 4.0 / 0.2;
+  vec3 hz = normalize(vec3(N0.x, 0.0, N0.z) + 1e-4);
+  float vert = 1.0 - abs(up);
+  nR = normalize(nR + vec3(0.0, 1.0, 0.0) * clamp(dR, -2.0, 2.0) * 0.45 * vert);
+}
+// --- weathering of the rock by height above the sea
+float hS = y - tideH;
+float expoN = 0.6 + 0.8 * m1;
+// wet rock (intertidal) and damp spray zone
+float wet = 1.0 - smoothstep(-0.2, 0.7, hS + 0.3 * m3);
+float damp = 1.0 - smoothstep(0.5, 4.0 * expoN, hS);
+// black lichen band just above high water
+float blackTop = 2.2 + 3.2 * expoN + 1.2 * (m2 - 0.5);
+float blk = smoothstep(-0.6, 0.3, hS) * (1.0 - smoothstep(blackTop - 0.6, blackTop + 0.5, hS));
+blk *= smoothstep(0.25, 0.55, m3 + 0.25) * nkLook.x;
+rock = mix(rock, vec3(0.045, 0.045, 0.04) * (0.8 + 0.4 * m3), blk * 0.88);
+// orange / yellow lichens in the splash zone: rosettes and speckle clustered in zones (seen from
+// afar only as a warm cast), grey-white crustose lichen and moss higher up
+{
+  float zone = smoothstep(blackTop - 1.0, blackTop + 1.5, hS) * (1.0 - smoothstep(12.0, 24.0, hS));
+  float cluster = smoothstep(0.42, 0.62, dkFbm3(P * 0.28 + 11.0) + 0.2 * up);
+  float spots = smoothstep(0.58, 0.68, dkVN3(P * 7.0)) + 0.6 * smoothstep(0.62, 0.7, dkVN3(P * 19.0 + 3.0));
+  float far = smoothstep(25.0, 120.0, camD);
+  float amt = zone * cluster * mix(clamp(spots, 0.0, 1.0), 0.33, far) * nkLook.x;
+  vec3 lich = mix(vec3(0.78, 0.45, 0.08), vec3(0.82, 0.66, 0.2), m3) * (0.6 + 0.5 * lumR);
+  rock = mix(rock, lich, amt * 0.8);
+  float hi = smoothstep(7.0, 16.0, hS);
+  float gspots = smoothstep(0.55, 0.66, dkVN3(P * 5.0 + 1.7));
+  float grey = hi * smoothstep(0.45, 0.65, dkFbm3(P * 0.22 + 5.0)) * mix(gspots, 0.4, far) * nkLook.x;
+  rock = mix(rock, vec3(0.72, 0.72, 0.68) * (0.85 + 0.3 * lumR), grey * 0.5);
+  float moss = hi * smoothstep(0.62, 0.8, dkFbm3(P * 0.35 + 23.0) + 0.45 * vNkCav + 0.25 * max(up, 0.0)) * (0.5 + 0.5 * smoothstep(0.0, -0.8, N0.z));
+  rock = mix(rock, vec3(0.07, 0.09, 0.035), moss * 0.6);
+}
+// rain streaks down the faces, seeps below shaly beds, whitewash under the seabird ledges
+{
+  float vert = smoothstep(0.85, 0.3, abs(up));
+  vec2 tg = normalize(vec2(-N0.z, N0.x) + 1e-4);
+  float u = dot(P.xz, tg);
+  float st = smoothstep(0.55, 0.85, dkVN2(vec2(u * 0.8, y * 0.045))) * smoothstep(0.35, 0.8, dkVN2(vec2(u * 2.7, y * 0.11 + 3.0)));
+  rock *= 1.0 - vert * st * 0.45 * nkLook.y;
+  float seep = smoothstep(0.25, 0.75, dkVN2(vec2(u * 0.35, sB * 0.6))) * smoothstep(0.6, 0.2, bed.g) * vert;
+  rock = mix(rock, rock * vec3(0.42, 0.46, 0.38), seep * 0.5 * nkLook.y * (1.0 - damp));
+  float col = exp(-dot(P.xz - nkPoint.xy, P.xz - nkPoint.xy) / (nkPoint.z * nkPoint.z));
+  float gu = col * smoothstep(5.0, 9.0, hS) * (1.0 - smoothstep(30.0, 45.0, hS)) * smoothstep(0.6, 0.85, dkVN2(vec2(u * 1.7, y * 0.07 + 1.0)));
+  gu = max(gu, col * smoothstep(0.75, 1.0, up) * smoothstep(5.0, 8.0, hS) * smoothstep(0.5, 0.7, m3));
+  rock = mix(rock, vec3(0.86, 0.86, 0.82), gu * 0.7 * nkLook.z);
+}
+// intertidal: barnacles, wrack weed, green algae; wet darkening
+{
+  float inter = smoothstep(tideL - 0.5, tideL + 0.3, y) * (1.0 - smoothstep(tideH - 0.3, tideH + 0.4, y));
+  float fineFade = 1.0 - smoothstep(20.0, 80.0, camD);
+  float barn = inter * smoothstep(0.45, 0.7, dkVN3(P * 6.0)) * smoothstep(0.3, 0.6, m3 + 0.2);
+  rock = mix(rock, vec3(0.62, 0.62, 0.58), barn * mix(0.3, 0.65, fineFade));
+  float wrack = smoothstep(tideL - 0.8, tideL, y) * (1.0 - smoothstep(0.2, 1.1, y + 0.6 * (m2 - 0.5))) * smoothstep(-0.2, 0.5, up + 0.4) * smoothstep(0.35, 0.6, m2 + 0.25 * m3);
+  rock = mix(rock, vec3(0.09, 0.075, 0.03) * (0.7 + 0.6 * m3), wrack * 0.92);
+  float alg = inter * smoothstep(0.65, 0.85, up) * smoothstep(0.62, 0.78, dkFbm3(P * 0.5 + 9.0));
+  rock = mix(rock, vec3(0.13, 0.30, 0.06), alg * 0.8);
+}
+rock *= mix(1.0, 0.82, vNkCav);                // grime in the crevices
+// --- other layers (top projection), height-blended over the rock
+vec3 col = rock; vec3 nrm = nR; float rgh = mix(rR * 0.95 + 0.05, 0.85, 0.3);
+float hRock = aR.a;
+float wsum = 0.0;
+// turf / soil / shingle / sand / scree / sea bed
+if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
+  vec4 a; vec3 n; float r;
+  vec3 acc = vec3(0.0); vec3 nacc = vec3(0.0); float racc = 0.0; float wacc = 0.0;
+  if (wTurf > 0.01) {
+    nkTap(1, 1, P, N0, 1.0, a, n, r);
+    vec4 a2; vec3 n2; float r2;
+    nkTap(7, 1, P + 17.0, N0, 0.8, a2, n2, r2);
+    float dry = smoothstep(0.35, 0.75, m1 + 0.3 * m2);
+    vec3 c = mix(a.rgb * vec3(0.52, 0.6, 0.36), a2.rgb * vec3(0.62, 0.6, 0.42), dry * 0.55);
+    c *= 0.75 + 0.4 * m2;
+    c = mix(c, c * vec3(0.8, 0.9, 0.7), smoothstep(0.55, 0.8, dkFbm3(P * 0.05 + 2.0)));
+    float w = wTurf * (1.0 + (a.a - 0.5) * 0.6);
+    acc += c * w; nacc += normalize(mix(n, n2, 0.5)) * w; racc += 0.92 * w; wacc += w;
+  }
+  if (wSoil > 0.01) {
+    nkTap(2, 1, P, N0, 1.0, a, n, r);
+    vec4 a2; vec3 n2; float r2;
+    nkTap(3, 1, P + 5.0, N0, 1.0, a2, n2, r2);
+    vec3 c = mix(a.rgb, a2.rgb * vec3(0.95, 0.9, 0.85), smoothstep(0.4, 0.7, m3));
+    float w = wSoil * (1.0 + (a.a - 0.5));
+    acc += c * w; nacc += n * w; racc += 0.9 * w; wacc += w;
+  }
+  if (wShingle > 0.01) {
+    nkTap(5, 1, P, N0, 1.4, a, n, r);
+    float w = wShingle * (1.0 + (a.a - 0.5) * 1.5);
+    acc += a.rgb * vec3(0.95, 0.95, 0.92) * w; nacc += n * w; racc += r * w; wacc += w;
+  }
+  if (wSand > 0.01) {
+    nkTap(4, 1, P, N0, 1.0, a, n, r);
+    float wetS = 1.0 - smoothstep(-0.4, 1.4, y);
+    vec3 c = a.rgb * mix(vec3(1.0), vec3(0.62, 0.6, 0.55), wetS);
+    float w = wSand;
+    acc += c * w; nacc += n * w; racc += mix(r, 0.25, wetS) * w; wacc += w;
+  }
+  if (wScree > 0.01) {
+    nkTap(6, 1, P, N0, 1.0, a, n, r);
+    float w = wScree * (1.0 + (a.a - 0.5) * 1.2);
+    acc += a.rgb * vec3(1.02, 1.0, 0.95) * w; nacc += n * w; racc += r * w; wacc += w;
+  }
+  if (wSea > 0.01) {
+    nkTap(4, 1, P, N0, 0.7, a, n, r);
+    vec3 c = mix(a.rgb * 0.75, vec3(0.10, 0.09, 0.04), smoothstep(0.5, 0.7, m2) * 0.8);
+    float w = wSea;
+    acc += c * w; nacc += n * w; racc += 0.6 * w; wacc += w;
+  }
+  // height blend against the rock: crisp, natural edges (rock knobs poke through turf, pebbles crown)
+  float cover = clamp(wacc, 0.0, 1.0);
+  float hb = smoothstep(0.0, 1.0, clamp((cover - 0.5) * 2.2 + 0.5 + (0.5 - hRock) * 0.8, 0.0, 1.0));
+  if (wacc > 0.0) {
+    col = mix(col, acc / wacc, hb);
+    nrm = normalize(mix(nrm, nacc / wacc, hb));
+    rgh = mix(rgh, racc / wacc, hb);
+  }
+}
+// wetness: dark, glossy
+float wetAll = max(wet, damp * 0.35);
+col *= mix(1.0, 0.55, wet) * mix(1.0, 0.88, damp * (1.0 - wet));
+rgh = mix(rgh, 0.22, wet * 0.85);
+nkRockN = nrm;
+nkRough = rgh;
+nkAOv = mix(1.0, vNkAO, 0.92);
+diffuseColor.rgb *= col;
+`;
