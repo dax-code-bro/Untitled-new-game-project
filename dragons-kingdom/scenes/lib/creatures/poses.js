@@ -204,7 +204,8 @@ function foldedWing(c, sd, variant = '') {
   const handT = hand.clone().normalize();
   const down = new THREE.Vector3().crossVectors(out, handT).normalize();
   if (down.y > 0) down.negate();
-  const fan = [0.0, 0.025, 0.05, 0.075];
+  // (a closed fan: the fingers lie almost together - spread apart they read as a broom of rods)
+  const fan = [0.0, 0.008, 0.016, 0.024];
   for (let d = 0; d < 4; d++) {
     const n0 = `w_${sd}_f${d}_0`;
     const dir0 = tip(d).sub(W);
@@ -236,10 +237,10 @@ function wingFold(pb, fold, side = 'both', pitchComp = 0, adduct = 0, variant = 
     // the fingers fold at the knuckle (half way): the outer half doubles back along the inner
     // half, in the plane of the wing, toward the trailing edge - the folded hand is then about
     // as long as the forearm (a bat's fold), not a bundle of rods reaching past the tail base
-    const fk = pb.c.config.fingerFold ?? [2.85, 0.2];
+    const fk = pb.c.config.fingerFold ?? [2.95, 0.12];
     const s = sd === 'L' ? 1 : -1;
     for (let d = 0; d < 4; d++) {
-      pb.add(`w_${sd}_f${d}_1`, 0, -s * f * (fk[0] - 0.04 * d), 0);
+      pb.add(`w_${sd}_f${d}_1`, 0, -s * f * fk[0], 0);
       pb.add(`w_${sd}_f${d}_2`, 0, -s * f * fk[1], 0);
     }
     pb.u.drape[sd] = [drape, smooth(0.7, 1.0, f) * (variant === 'high' ? 0 : 1)];

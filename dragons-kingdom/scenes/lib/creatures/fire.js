@@ -22,7 +22,7 @@ export const FIRE_PALETTES = {
     smoke: [0.035, 0.03, 0.027], smokeAmt: 1.0, light: [1.0, 0.5, 0.18], lightI: 1.0, temp: 1.0,
   },
   leaf: {
-    core: [0.5, 0.64, 1.0], coreI: 2.6, body: [0.2, 0.24, 1.0], bodyI: 1.8, edge: [0.55, 0.12, 1.0], edgeI: 1.3,
+    core: [0.48, 0.58, 1.0], coreI: 1.9, body: [0.24, 0.2, 1.0], bodyI: 1.6, edge: [0.6, 0.1, 1.0], edgeI: 1.4,
     smoke: [0.07, 0.068, 0.08], smokeAmt: 0.45, light: [0.55, 0.5, 1.0], lightI: 1.15, temp: 1.12,
   },
 };

@@ -36,7 +36,9 @@ export const CREATURES = {
   charcoal: { design: 'charcoal', L: 35.8, look: 'charcoal', flapHz: 0.62, flapAmp: 0.7, scaleMul: 0.6, title: 'Charcoal (Remi\'s dragon)' },
   leaf: { design: 'leaf', L: 9.0, look: 'leaf', flapHz: 1.4, flapAmp: 0.85, scaleMul: 0.78, limbScaleMul: 0.72, title: 'Leaf (Abby\'s dragon, not fully grown)' },
   starlight: { design: 'starlight', L: 50.6, look: 'starlight', flapHz: 0.42, flapAmp: 0.62, scaleMul: 0.55, limbScaleMul: 0.72, title: 'Starlight (Queen Fall\'s dragon, albino)' },
-  hatchling: { design: 'hatchling', L: 0.42, look: 'gold', flapHz: 0, scaleMul: 0.72, title: 'The gold hatchling (newborn)' },
+  // (tiny damp wings pressed flat on the back and upper flank, fingers only a little curled)
+  hatchling: { design: 'hatchling', L: 0.42, look: 'gold', flapHz: 0, scaleMul: 0.72, title: 'The gold hatchling (newborn)',
+    fold: { humerus: [0.55, 0.05, -0.83], forearm: [-0.15, -0.1, 0.98], hand: [0.35, -0.2, -0.92] }, fingerFold: [0.5, 0.3] },
   scout: { design: 'scout', L: 5.6, look: 'scout', flapHz: 2.6, flapAmp: 0.9, detachableLeftWing: true, title: 'The scout (Episode 1)' },
 };
 
@@ -167,13 +169,17 @@ export async function createCreature(which, opts = {}) {
     const eg = mergeParts(parts);
     meshes.push(partMesh(THREE, eg, mats.eye, `${root.name}:eyes`, { aEye: eg.extra, aEyeX: mergeAttr(parts, 'ax', 4), aEyeZ: mergeAttr(parts, 'az', 4) }));
     const lids = [];
-    for (const e of eyeData) for (const up of [true, false]) {
+    // (spec.lid.none: no separate lid shells - the newborn's eye sits in a soft socket of head
+    // skin; thin lid shells over its big domed eye read as gold caps clamped on)
+    if (!spec.lid?.none) for (const e of eyeData) for (const up of [true, false]) {
       const g = eyelid(up, { rIn: spec.lid?.rIn ?? 1.07, rOut: spec.lid?.rOut ?? 1.25, span: spec.lid?.span ?? 1.32, reach: up ? (spec.lid?.reachU ?? 1.0) : (spec.lid?.reachL ?? 0.88) });
       transformPart(g, e.toWorld, e.toWorldN, boneIndex[up ? e.lidU : e.lidL]);
       lids.push(g);
     }
-    const lg = mergeParts(lids);
-    meshes.push(skinPartMesh(THREE, lg, mats.lid, `${root.name}:lids`, 'granular', anat.eyes[0].radius * (spec.lid?.gran ?? 0.11), L));
+    if (lids.length) {
+      const lg = mergeParts(lids);
+      meshes.push(skinPartMesh(THREE, lg, mats.lid, `${root.name}:lids`, 'granular', anat.eyes[0].radius * (spec.lid?.gran ?? 0.11), L));
+    }
   }
 
   // wing membranes (one mesh per wing: each gets its own folded-drape morph targets)

@@ -39,12 +39,13 @@ export const SHOTS = [
     // (a crane a little below his eye line: the sky and the far horizon behind the head, not the
     // flat field seen from above)
     cam: { subject: 'charcoal', bone: 'head', pos: [12.5, -1.6, 11.5], target: [0.3, -0.8, 1.5], mm: 45, fstop: 5.6, focus: 'eye_L' } },
-  // Charcoal flying side-on (air to air, 40 mm from ~75 m, the downstroke)
+  // Charcoal flying (air to air from above his left front, 32 mm from ~100 m, early downstroke:
+  // both wings spread and seen, the striped grey membranes against the sea)
   { id: 'charcoal-flight', set: 'air', creatures: ['charcoal'], tack: ['charcoal'], dur: 3, alt: 260, face: -100,
     // (the start of the downstroke, near the stroke reversal: both wings raised and spread, so
     // neither hides the other and the slow wing does not smear; the camera a little above him)
-    pose: { charcoal: { name: 'flight', phase: 0.15, look: [0.05, 0.05] } },
-    cam: { subject: 'charcoal', pos: [92, 30, 10], target: [0, 8, 0], mm: 32, fstop: 8, focus: 'target' } },
+    pose: { charcoal: { name: 'flight', phase: 0.24, look: [0.05, 0.05] } },
+    cam: { subject: 'charcoal', pos: [78, 42, 58], target: [0, 2, 2], mm: 32, fstop: 8, focus: 'target' } },
   // Leaf sitting upright like a dog, Abby beside his chest (40 mm, eye height, f/4)
   { id: 'leaf-abby', set: 'field', creatures: ['leaf'], tack: ['leaf'], dur: 3, face: -70,
     people: [{ id: 'abby', at: [2.1, 0, 0.9], yaw: 70 }],
@@ -441,7 +442,7 @@ function fieldGrass(S, shot) {
   const cx = cam.pos[0], cz = cam.pos[2];
   const d = Math.hypot(cx, cz);
   const dirA = Math.atan2(-cx, -cz);                       // camera -> subject
-  const rMin = 1.2, rMax = d + L * 0.7;
+  const rMin = 1.2, rMax = d + L * 0.7 + (shot.fire ? 120 : 0);   // (fire shots look far down the field)
   const half = (Math.atan(24.89 / 2 / cam.mm) + 0.25);
   const place = (rng) => {
     const r = rMin * Math.pow(rMax / rMin, rng());

@@ -331,12 +331,14 @@ no sub-frames) took 11 min 55 s. Review renders at `--fps 1` map the sub-frame o
 
 ## Known limits (honest list)
 
-* Designs are provisional and were judged only against my own sense of real
+* Designs are provisional except what DRAGONS.md approves (Charcoal's and Leaf's colours,
+  membranes, eyes and fire; Leaf's size), and were judged only against my own sense of real
   animals (no approved references, no reference photos available here).
 * Skin detail is procedural shading on a ~0.5-1 M triangle mesh: silhouettes
   of close-ups (the jaw line, toe tips) show smooth curves, not scale bumps.
-* Folded wings are a rigid-skinned bunch of membrane, not a cloth simulation:
-  they read as folded sails, not as soft crumpled skin.
+* Folded wings are skinned bones + a one-time position-based drape of the membrane (drape.js),
+  not a full cloth simulation with self-collision: the doubled-back outer half of the hand
+  lies on the inner half, and the membrane between them can crease sharply.
 * Linear blend skinning: extreme bends (the dog-sit hips, the tail laid on the
   ground) lose a little volume at the joint.
 * The rider is an untextured MakeHuman body with region-coloured clothes:
@@ -347,28 +349,22 @@ no sub-frames) took 11 min 55 s. Review renders at `--fps 1` map the sub-frame o
 * Render cost of full-frame hero creatures at 4K (~10-15 s/frame) is high; for
   an episode, most creature shots should use `standard` meshes and the
   turntable's settings are lookdev settings, not production settings.
-* Folded wings: the standing fold keeps the wrist beside the shoulder and the
-  fingers along the flank, the sitting fold raises the wrists beside the
-  shoulders (gargoyle-like). From the front a raised wrist with its finger
-  bundle can read like a lifted arm, from some angles a standing wrist and
-  thumb stick out in front of the chest, and the folded membrane reads as
-  stiff panels.
+* Fire (fire.js) is a sprite effect (additive flame puffs + alpha smoke + a point light), not
+  a fluid simulation; it does not cast shadows or ignite anything, and with the runtime's
+  velocity motion blur the sprites carry no velocity (the film finish's sub-frames blur them).
 * Leaf's chest is small scales now (smaller than on his back); check the overall scale size
   against "no decorative armor" with Daxtyn's references.
 * Eyes in a shaded socket read mostly as the wet reflection of the sky (the
   iris shows in close-ups with light on it, e.g. Leaf's eye macro).
-* The hatchling's gold is a partly metallic layer under a wet film: in the out-of-focus
-  bokeh of the macro the wet highlights on the lumpy body still show as soft pale blotches;
-  its eyelids are separate shells (the upper lid still reads a little like a cap at 4K), and
-  the closed mouth shows as a dark crease along its whole length.
-* Where a chain's scale rows converge (the jaw tip, the groin behind the thigh) the chain
-  pattern fans out; the jaw tip is now granular, the small fan in the groin (in shadow in
-  the hero shots) is not fixed.
-* Charcoal's spread wing in full sun is a smooth dark membrane with bone folds: at 4K it is
-  plausible skin but still the least detailed large surface in the flight shot.
-* Charcoal's propatagium (the membrane in front of the arm) is a straight-edged panel
-  from the shoulder to the wrist; in the downstroke it sits in the shadow of the shoulder
-  and reads as a dark rectangle beside the arm.
+* The hatchling's 24-karat look is a metallic gold reflection under a wet film; a metallic,
+  finely granular surface can still read as a gold casting in places. Its eyelids are separate
+  shells with a rolled margin (not fused skin), and the closed mouth shows as a dark crease.
+* Where a chain's scale rows converge (the jaw tip, the limb roots) the chain pattern would fan
+  out; the jaw tip is granular and the limb roots (junction mask) use the 3D mosaic.
+* The membrane is a single surface: its edge has no geometric thickness (the hem is darker
+  and thicker in shading only); stripes and vessels are shading, not geometry.
+* Tack (tack.js) is procedural geometry skinned to the trunk; straps do not press into the hide
+  (no skin compression under them), and the riders' leg poses come from the humans library.
 * Riders come from the humans library: the scout's hooded rider straddles a saddle made for
   wider backs, so on the slim scout the knees stand out wide (the bank shot is therefore
   shown without the rider); Abby's grab bar is placed at her hands in the rest pose (idle

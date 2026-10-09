@@ -218,14 +218,18 @@ SKETCH.hatchling = {
   hind: { hip: [0.054, -0.03, 0.0], knee: [0.07, 0.056, 0.04], ankle: [0.068, 0.024, -0.008], ball: [0.068, 0.009, 0.012],
     r: [0.034, 0.022, 0.0165, 0.0155], toeLen: 0.026, toeR: [0.0085, 0.0055], toeSpread: 16, toes: 4, muscle: 1.0 },
   // tiny, still-crumpled wings: short soft fingers, the membrane not yet stretched
-  wing: { root: [0.042, 0.012, 0.74], elbow: [0.062, 0.01, -0.022], wrist: [0.118, 0.014, -0.004],
+  // (the root on the dorsal surface of the plump body: set lower, the folded arm was buried in
+  // the flank and only a bone end stuck out like a drumstick)
+  wing: { root: [0.044, 0.04, 0.74], elbow: [0.062, 0.01, -0.022], wrist: [0.118, 0.014, -0.004],
     digits: [[0.215, 0.01, 0.012], [0.205, 0.007, -0.036], [0.185, 0.004, -0.075], [0.155, 0.0, -0.1]],
     thumb: [0.011, 0.006, 0.016], r: [0.014, 0.0095, 0.008], fingerR: [0.0046, 0.0022], muscle: 0.35,
     // the membrane's body edge on the surface of the plump flank (not buried in it)
     attach: [[0.02, -0.008, -0.03], [0.034, -0.016, -0.08], [0.04, -0.024, -0.13]], billow: 0.02 },
   // thin lids that sink into the soft skin round the big eye (thick shells stood off the
   // domed head like coins); the lower lid sits low
-  lid: { rIn: 1.03, rOut: 1.075, reachL: 0.8, span: 1.22, gran: 0.035 },
+  // (lid granules the size of the head's, a thicker rolled margin: smooth thin shells read as
+  // gold caps clamped on the eye)
+  lid: { rIn: 1.03, rOut: 1.13, reachL: 0.8, span: 1.25, gran: 0.09, none: true },
   headShape: {
     // a domed cranium that takes up most of the head, and a short, soft, rounded snout
     upper: [[-0.1, 0.34, 0.3, -0.17], [0.06, 0.41, 0.46, -0.155], [0.24, 0.44, 0.52, -0.145], [0.42, 0.41, 0.46, -0.14], [0.58, 0.33, 0.34, -0.135],
@@ -233,7 +237,7 @@ SKETCH.hatchling = {
     // (a full, rounded chin - a thin jaw tip read as a crumpled flap of skin in the macro)
     jaw: [[0.0, 0.31, -0.148, -0.35], [0.15, 0.32, -0.148, -0.36], [0.35, 0.29, -0.148, -0.33], [0.55, 0.25, -0.145, -0.295],
       [0.72, 0.195, -0.142, -0.25], [0.84, 0.15, -0.139, -0.222], [0.92, 0.095, -0.137, -0.19]],
-    eye: [0.37, 0.21, 0.42], eyeR: 0.155, eyeInset: 0.5, orbit: 1.45, eyeExpose: 58, brow: 0.35, cheek: 0.45, jawMuscle: 0.35, ridgeR: 0.026, hinge: [0, -0.15, 0.07], gape0: 11 * deg, nostril: 0.6,
+    eye: [0.37, 0.21, 0.42], eyeR: 0.155, eyeInset: 0.5, orbit: 1.55, eyeExpose: 46, brow: 0.35, cheek: 0.45, jawMuscle: 0.35, ridgeR: 0.026, hinge: [0, -0.15, 0.07], gape0: 11 * deg, nostril: 0.6,
     teethUp: 0, teethSize: 0.0, lipCover: 0.4, tympanum: 0.4, eggTooth: true, soft: true, snoutZ0: 0.46, snoutMul: 0.76, jawEnd: 0.84,
   },
   horns: 'buds', crest: { count: 30, h: [0.0015, 0.0026, 0.001], base: 1.0 },

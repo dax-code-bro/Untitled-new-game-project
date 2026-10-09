@@ -609,10 +609,10 @@ void dkMembrane(inout vec3 col) {
     float w1 = dkVnoise2(q * 3.0 + 4.0) - 0.5, w2 = dkVnoise2(q * 9.0 + 1.3) - 0.5;
     float ph = r * uStripe.x + (w1 * 1.6 + w2 * 0.45) * uStripe.z * 2.5;
     float band = 0.5 - 0.5 * cos(ph * 6.2832);                         // 0 between bands .. 1 at a band centre
-    float wv = uStripe.y * (0.55 + 0.9 * dkVnoise2(q * vec2(4.0, 7.0) + 9.0));       // bands swell and pinch
+    float wv = uStripe.y * (0.25 + 1.3 * dkVnoise2(q * vec2(5.0, 9.0) + 9.0) * dkVnoise2(q * 13.0 + 2.0));   // bands swell, taper and pinch
     float edge = fwidth(ph) * 1.5 + 0.09;          // (soft pigment edges, not a printed graphic)
     dkStripeM = smoothstep(1.0 - wv - edge, 1.0 - wv + edge, band) * uStripe.w;
-    dkStripeM *= smoothstep(0.18, 0.42, dkVnoise2(q * vec2(6.0, 3.0) + 2.7) + 0.25 * band);   // some bands break or fork
+    dkStripeM *= smoothstep(0.25, 0.5, dkVnoise2(q * vec2(7.0, 3.5) + 2.7) + 0.2 * band);    // bands break and fork
     dkStripeM *= smoothstep(0.02, 0.08, r);                             // no band on the shoulder itself
     col = mix(col, uStripeCol * (0.85 + 0.3 * mot), dkStripeM);
     dkThin *= 1.0 - 0.85 * dkStripeM;
