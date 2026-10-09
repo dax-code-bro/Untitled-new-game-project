@@ -1,0 +1,3 @@
+# offline bakes (regenerate with the scripts in offline/, see README.md)
+cache/
+__pycache__/
