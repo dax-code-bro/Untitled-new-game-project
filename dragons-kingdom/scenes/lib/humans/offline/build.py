@@ -290,11 +290,14 @@ def assemble(kit, spec, out_dir, opts):
         postfix.fix_holefill(cid + opts.get('suffix', ''))
         postfix.fix_beltband(cid + opts.get('suffix', ''))
         postfix.fix_beltseat(cid + opts.get('suffix', ''))
+        # (the cloak passes before the AO bake: baked while the belt still poked through the
+        # mantle, its AO printed a dark band across the King's back)
+        postfix.fix_overbelt(cid + opts.get('suffix', ''))
+        postfix.fix_cloakin(cid + opts.get('suffix', ''))
         postfix.fix_reao(cid + opts.get('suffix', ''))
         postfix.fix_props(cid + opts.get('suffix', ''))
         postfix.fix_hairline(cid + opts.get('suffix', ''))
         postfix.fix_cullboots(cid + opts.get('suffix', ''))
-        postfix.fix_overbelt(cid + opts.get('suffix', ''))
     log(f'   {cid}: {sum(len(p.posed) for p in parts)} verts, {size / 1e6:.1f} MB, {time.time() - t0:.0f} s')
 
 

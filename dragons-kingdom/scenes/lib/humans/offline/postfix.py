@@ -1,7 +1,7 @@
 """Post-fixes applied in place to already built characters (cache/<id>.json + .bin), so a fix
 that only needs the finished meshes does not cost a full rebuild.
 
-    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|pushout|cull|renormal|holefill|reao|beltband|beltseat|hairline|cullboots|overbelt|all id [id ...]   ('all' = every cache)
+    <bpy python> -I scenes/lib/humans/offline/postfix.py shoes|puckers|props|normals|pushout|cull|renormal|holefill|reao|beltband|beltseat|hairline|cullboots|overbelt|cloakin|all id [id ...]   ('all' = every cache)
 
 Each pass records itself in the mesh's 'postfix' list and is not applied twice.
 
@@ -995,10 +995,83 @@ def fix_overbelt(cid, nb=72, clear=0.004, fade=0.12):
                     put(bin_, m['attrs']['position'], P.astype(np.float32))
                     done.append(f"{m['name']} ({int((push > 1e-4).sum())} v, max {push.max() * 1000:.0f} mm)")
     for m in capes:
-        m['postfix'] = m.get('postfix', []) + ['overbelt']
+        # the AO was baked with the belt poking through the mantle: bake it again
+        m['postfix'] = [x for x in m.get('postfix', []) if x != 'ao2'] + ['overbelt']
     _save(h, bin_, jp, bp)
     if done:
         print(f'{cid}: cloak over the belt: {", ".join(done)}', flush=True)
+    fix_reao(cid)
+
+
+def fix_cloakin(cid, reach=0.12):
+    """A mantle's edge that the arm pushed INTO a sleeve (the cloak is simulated against the body,
+    the sleeves stand off the arm): its inner side printed through the King's sleeves as dark
+    ragged patches. Cloak vertices inside another garment (at least 5 of 6 axis rays meet a back
+    face of the garments within `reach`) are not drawn (all three corners inside, then one ring
+    dilated)."""
+    import bpy  # noqa: F401
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    capes = [m for m in h['meshes'] if m['kind'] == 'cloth' and m['name'].startswith(('cloak', 'cape')) and 'cloakin' not in m.get('postfix', [])]
+    if not capes:
+        return
+    bin_ = bytearray(open(bp, 'rb').read())
+
+    def arrays(m, idx='index'):
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m[idx]['type']], count=m[idx]['count'], offset=m[idx]['offset']).reshape(-1, 3).astype(np.int64)
+        return P, T
+    # garments only (from between the arm and its sleeve a ray toward the arm must go on to the
+    # far side of the sleeve)
+    others = [m for m in h['meshes'] if m['kind'] == 'cloth' and not m['name'].startswith(('cloak', 'cape', 'boots', 'shoes', 'hose'))]
+    Ps, Ts, off = [], [], 0
+    for o in others:
+        P_, T_ = arrays(o)
+        if o['kind'] == 'skin' and 'colliderIndex' in o:
+            T_ = np.vstack([T_, arrays(o, 'colliderIndex')[1]])
+        T_ = T_[(T_[:, 0] != T_[:, 1]) & (T_[:, 1] != T_[:, 2])]
+        Ps.append(P_)
+        Ts.append(T_ + off)
+        off += len(P_)
+    if not Ps:
+        return
+    tree = BVHTree.FromPolygons(np.vstack(Ps).tolist(), np.vstack(Ts).tolist(), all_triangles=True)
+    done = []
+    for m in capes:
+        P, T = arrays(m)
+        N = view(bin_, m['attrs']['normal']).astype(float)
+        inside = np.zeros(len(P), bool)
+        dirs = [np.array(v, float) for v in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))]
+        for i in range(len(P)):
+            back = 0
+            for d in dirs:
+                loc, fn_, _, dist = tree.ray_cast(Vector(P[i] + d * 1e-4), Vector(d), reach)
+                if loc is not None and np.dot(np.array(fn_), d) > 0:
+                    back += 1
+            inside[i] = back >= 5
+        key = np.round(P / 1e-5).astype(np.int64)
+        _, w = np.unique(key, axis=0, return_inverse=True)
+        w = w.reshape(-1)
+        nW = int(w.max()) + 1
+        iw = np.zeros(nW, bool)
+        np.logical_or.at(iw, w, inside)
+        tw = w[T]
+        drop = iw[tw].all(1)
+        ring = np.zeros(nW, bool)
+        ring[tw[drop].ravel()] = True
+        drop |= ring[tw].sum(1) >= 2
+        drop &= T[:, 0] != T[:, 1]
+        if drop.any():
+            T2 = T.copy()
+            T2[drop] = T2[drop][:, :1]
+            put(bin_, m['index'], T2)
+            done.append(f"{m['name']} ({int(drop.sum())}/{len(T)} tris)")
+        m['postfix'] = m.get('postfix', []) + ['cloakin']
+    _save(h, bin_, jp, bp)
+    if done:
+        print(f'{cid}: cloak inside sleeves not drawn: {", ".join(done)}', flush=True)
 
 
 def orient_faces(T, w):
@@ -1588,6 +1661,8 @@ def main():
             fix_cullboots(cid)
         if what in ('overbelt', 'all'):
             fix_overbelt(cid)
+        if what in ('cloakin', 'all'):
+            fix_cloakin(cid)
 
 
 if __name__ == '__main__':
