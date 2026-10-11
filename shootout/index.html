@@ -7,10 +7,10 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<canvas id="gl"></canvas>
 
 <!-- 1. LOADING SCREEN: revolver fires, bullet hits the target -->
 <section id="screen-loading" class="screen active">
-  <canvas id="loading-canvas"></canvas>
   <div class="loading-text">LOADING<span class="dots"></span></div>
 </section>
 
@@ -42,16 +42,12 @@
 
 <!-- 4. THE ROOM / CARD TABLE -->
 <section id="screen-game" class="screen">
-  <canvas id="room-canvas"></canvas>
   <div class="vignette"></div>
   <div class="hud">
     <div id="round-label">ROUND 1</div>
     <div id="mode-label"></div>
   </div>
-  <div id="opponent-hands"></div>
-  <div id="table-pile"></div>
   <div id="card-info" class="hidden"></div>
-  <div id="hand"></div>
   <div class="game-buttons">
     <button id="btn-cover" title="Cover your cards so nobody can see them">Cover cards</button>
     <button id="btn-quit">Quit</button>
@@ -110,11 +106,15 @@
 
 <div id="fade"></div>
 
+<script src="vendor/three.min.js"></script>
+<script src="engine.js"></script>
 <script src="cards.js"></script>
 <script src="bots.js"></script>
 <script src="audio.js"></script>
-<script src="loading.js"></script>
-<script src="room.js"></script>
+<script src="models.js"></script>
+<script src="fx.js"></script>
+<script src="stages.js"></script>
+<script src="table.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

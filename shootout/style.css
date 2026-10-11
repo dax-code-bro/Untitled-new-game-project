@@ -14,7 +14,7 @@ html, body {
 button { font-family: inherit; cursor: pointer; }
 
 .screen {
-  position: fixed; inset: 0;
+  position: fixed; inset: 0; z-index: 1;
   display: none;
   align-items: center; justify-content: center;
 }
@@ -30,7 +30,6 @@ button { font-family: inherit; cursor: pointer; }
 #fade.on { opacity: 1; }
 
 /* ---------- loading ---------- */
-#loading-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .loading-text {
   position: absolute; bottom: 8%;
   letter-spacing: 0.5em; font-size: 14px; color: #8a7a60;
@@ -44,8 +43,7 @@ button { font-family: inherit; cursor: pointer; }
 .menu-bg {
   position: absolute; inset: 0;
   background:
-    radial-gradient(ellipse at 50% 40%, rgba(120, 30, 20, 0.35), transparent 60%),
-    linear-gradient(#140d08, #050302);
+    radial-gradient(ellipse at 50% 45%, rgba(10, 5, 2, 0.55), rgba(10, 5, 2, 0.15) 45%, rgba(0, 0, 0, 0.8) 100%);
 }
 .title {
   position: relative;
@@ -109,7 +107,6 @@ button { font-family: inherit; cursor: pointer; }
 .soon { color: #8a7a60; font-style: italic; }
 
 /* ---------- game ---------- */
-#room-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .vignette {
   position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, var(--vig, 0.55)) 100%);
@@ -135,64 +132,6 @@ button { font-family: inherit; cursor: pointer; }
   transition: opacity 0.6s;
 }
 #round-banner.show { opacity: 1; }
-
-/* ---------- cards ---------- */
-#hand {
-  position: absolute; bottom: 10px; left: 50%;
-  transform: translateX(-50%);
-  display: flex; justify-content: center;
-  width: 96vw; height: 170px;
-}
-#hand.covered .card .face { visibility: hidden; }
-#hand.covered .card { background: repeating-linear-gradient(45deg, #5a1010, #5a1010 6px, #3a0808 6px, #3a0808 12px); }
-
-.card {
-  position: relative;
-  width: 96px; height: 140px;
-  margin: 0 -14px;
-  border-radius: 8px;
-  background: linear-gradient(#f5ead2, #dccaa4);
-  border: 2px solid #3a2410;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
-  color: #2a1a0a;
-  transform-origin: 50% 120%;
-  transition: transform 0.15s, margin 0.15s;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.card:hover { transform: translateY(-34px) scale(1.12) !important; z-index: 10; margin: 0 4px; }
-.card.selected { outline: 3px solid #e0b040; transform: translateY(-46px) scale(1.12) !important; z-index: 11; }
-.card .face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 8px 4px; }
-.card .icon { font-size: 40px; line-height: 1; }
-.card .name { font-size: 12px; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.1; }
-.card .corner { font-size: 11px; align-self: flex-start; padding-left: 4px; opacity: 0.7; }
-.card.red { color: #7a0a0a; }
-.card.dark { background: linear-gradient(#2a2a2a, #111); color: #e0d0b0; border-color: #000; }
-.card.dark.red { color: #ff4a3a; }
-
-.card.back {
-  background: repeating-linear-gradient(45deg, #5a1010, #5a1010 6px, #3a0808 6px, #3a0808 12px);
-  border-color: #1a0505; cursor: default;
-}
-.card.back:hover { transform: none !important; margin: 0 -14px; }
-.card.small { width: 46px; height: 68px; margin: 0 -12px; border-width: 1px; border-radius: 5px; }
-.card.small:hover { margin: 0 -12px; }
-
-#opponent-hands { position: absolute; inset: 0; pointer-events: none; }
-.opp {
-  position: absolute; transform: translateX(-50%);
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-}
-.opp .opp-cards { display: flex; }
-.opp .opp-name { font-size: 12px; color: #c8b898; text-shadow: 0 1px 3px #000; letter-spacing: 0.1em; }
-
-#table-pile {
-  position: absolute; top: 64.5%; left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex; gap: 6px; pointer-events: none;
-}
-#table-pile .card { margin: 0 -14px; cursor: default; transform: rotate(var(--rot, 0deg)) scale(0.65); }
-#table-pile .card:hover { transform: rotate(var(--rot, 0deg)) scale(0.65) !important; }
 
 #card-info {
   position: absolute; top: 90px; left: 16px;
@@ -223,17 +162,13 @@ button { font-family: inherit; cursor: pointer; }
 .game-over-buttons button:hover { background: #4a1a10; border-color: #c08040; }
 
 @media (max-width: 640px) {
-  .card { width: 68px; height: 100px; margin: 0 -16px; }
-  .card .icon { font-size: 28px; }
-  .card .name { font-size: 9px; }
-  #hand { height: 120px; }
   .circle { width: 96px; height: 96px; }
   .circle span { font-size: 14px; }
 }
 
 /* ---------- turns & shootouts ---------- */
 #status {
-  position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
   font-size: 16px; letter-spacing: 0.12em; color: #f0e0c0;
   text-shadow: 0 2px 6px #000; text-align: center; pointer-events: none;
 }
@@ -245,7 +180,6 @@ button { font-family: inherit; cursor: pointer; }
 }
 #feed .live { color: #ff3a2a; }
 #feed .shootout { color: #e0b040; letter-spacing: 0.08em; }
-#hand.waiting .card:not(.back) { filter: brightness(0.75); }
 
 #shootout {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -271,7 +205,6 @@ button { font-family: inherit; cursor: pointer; }
 #hit-flash.on { animation: hit 0.9s ease-out; }
 @keyframes hit { 0% { opacity: 1; } 100% { opacity: 0; } }
 
-.opp.dead .opp-name { color: #c03020; }
 
 @media (max-width: 640px) {
   #feed { top: 110px; font-size: 11px; }
@@ -297,5 +230,10 @@ button { font-family: inherit; cursor: pointer; }
 #feed .secret { font-style: italic; }
 @media (max-width: 640px) { #my-gun { top: 34%; } .chamber { width: 58px; font-size: 12px; } }
 
-.opp .opp-name small { display: block; font-size: 10px; letter-spacing: 0.15em; color: #8a7a60; text-align: center; }
 .panel select { background: #1a100a; color: #e8dcc4; border: 1px solid #6b4a2a; padding: 4px 8px; font-family: inherit; font-size: 15px; }
+
+/* ---------- 3D canvas ---------- */
+#gl { position: fixed; inset: 0; z-index: 0; display: block; }
+#screen-game { pointer-events: none; }
+#screen-game .game-buttons, #screen-game #card-info, #screen-game #shootout, #screen-game #game-over { pointer-events: auto; }
+.panel { background: rgba(18, 11, 6, 0.92); }

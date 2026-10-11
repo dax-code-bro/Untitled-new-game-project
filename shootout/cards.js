@@ -1,7 +1,6 @@
 // Shootout — card definitions.
-// Every card in the game lives here. The `effect` text is a placeholder
-// until each card's rules are written; `play()` hooks are where the
-// real behaviour will go.
+// Every card in the game lives here. Cards without rules yet say so in
+// their `effect` text.
 
 const CARDS = [
   { id: 'jack',     name: 'Jack of Trades', icon: '🃏', corner: 'J',  style: '',         effect: 'Play it and you win the game on the spot.', instantWin: true, handChance: 0.10 },
@@ -18,7 +17,7 @@ const CARDS = [
 
 const CARD_BY_ID = Object.fromEntries(CARDS.map(c => [c.id, c]));
 
-const HAND_SIZE = 10;
+const HAND_SIZE = 3;
 
 // Deal a random hand. Regular cards are drawn at random, so a hand can hold
 // repeats. Rare cards (those with a `handChance`) are rolled separately: each

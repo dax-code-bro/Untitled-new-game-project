@@ -64,6 +64,23 @@ const Sound = (() => {
     o.start(t); o.stop(t + 0.3);
   }
 
+  // Hammer drawn back and the cylinder turning one chamber.
+  function cock() {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    for (const [off, f, v] of [[0, 2400, 0.5], [0.12, 1500, 0.7]]) {
+      const src = ctx.createBufferSource();
+      src.buffer = noiseBuffer(0.03);
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 6;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(v, t + off);
+      g.gain.exponentialRampToValueAtTime(0.001, t + off + 0.03);
+      src.connect(bp).connect(g).connect(sfxGain);
+      src.start(t + off);
+    }
+  }
+
   // Dry fire: the hammer falls on a blank.
   function blank() {
     if (!ensure()) return;
@@ -221,5 +238,5 @@ const Sound = (() => {
     if (sfxGain) sfxGain.gain.value = v;
   }
 
-  return { unlock, gunshot, blank, impact, cardFlick, startMusic, stopMusic, setIntensity, setMusicVolume, setSfxVolume };
+  return { unlock, gunshot, cock, blank, impact, cardFlick, startMusic, stopMusic, setIntensity, setMusicVolume, setSfxVolume };
 })();

@@ -1,4 +1,6 @@
-// Shootout — screens, menus and the card table.
+// Shootout — screens, menus and the rules of the table.
+// All drawing and animation lives in the 3D modules (engine, table, stages);
+// this file runs the game: turns, cards, guns and shootouts.
 
 const MODES = {
   solo:   { label: 'Solo',        players: 1, opponents: 1 },
@@ -14,12 +16,11 @@ const MAX_DREAD_ROUND = 8;
 // (always at least one of each). It reloads with a fresh random mix when empty.
 const CHAMBERS = 6;
 
-// players[0] is you; the rest are the opponents around the table.
+// players[0] is you; the rest are the bots around the table.
 const state = {
   mode: null,
   round: 1,
   players: [],
-  pile: [],
   selected: -1,
   covered: false,
   over: false,
@@ -31,13 +32,18 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const me = () => state.players[0];
 const opponents = () => state.players.slice(1);
 const alive = () => state.players.filter(p => p.alive);
+const seatOf = p => state.players.indexOf(p);
 
 // ---------- screen switching with a fade ----------
+
+const MENU_SCREENS = ['menu', 'mode', 'settings', 'gunsmith', 'loadout'];
 
 function showScreen(name, fade = true) {
   const go = () => {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     $('#screen-' + name).classList.add('active');
+    if (MENU_SCREENS.includes(name)) MenuStage.show();
+    if (name === 'game') Table.show();
   };
   if (!fade) { go(); return; }
   const f = $('#fade');
@@ -48,7 +54,8 @@ function showScreen(name, fade = true) {
 // ---------- boot ----------
 
 window.addEventListener('DOMContentLoaded', () => {
-  runLoadingScreen($('#loading-canvas'), () => showScreen('menu'));
+  Engine.init($('#gl'));
+  runLoadingStage(() => showScreen('menu'));
 
   // Browsers only allow sound after the first click/tap.
   window.addEventListener('pointerdown', () => Sound.unlock(), { once: true });
@@ -77,11 +84,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
   $('#set-music').addEventListener('input', e => Sound.setMusicVolume(e.target.value / 100));
   $('#set-sfx').addEventListener('input', e => Sound.setSfxVolume(e.target.value / 100));
-  $('#set-blood').addEventListener('change', e => Room.setBlood(e.target.checked));
+  $('#set-blood').addEventListener('change', e => Table.setBlood(e.target.checked));
   $('#set-difficulty').addEventListener('change', e => Bots.setDifficulty(e.target.value));
 
-  Room.init($('#room-canvas'));
-  window.addEventListener('resize', renderOpponents);
+  Table.onCardClick = i => {
+    if (state.covered || state.over) return;
+    Sound.cardFlick();
+    selectCard(state.selected === i ? -1 : i);
+  };
 });
 
 // ---------- guns ----------
@@ -122,16 +132,17 @@ function peekRound(player, n) {
 
 function startGame(modeId) {
   Sound.unlock();
-  state.game = (state.game || 0) + 1;   // lets stale timers from a previous game bail out
+  state.game = (state.game || 0) + 1;   // lets a previous game's async steps bail out
+  const game = state.game;
   state.modeId = modeId;
   state.mode = MODES[modeId];
   state.round = 1;
   state.over = false;
   state.covered = false;
-  state.pile = [];
   state.selected = -1;
-  $('#hand').classList.remove('covered');
+  state.myTurn = false;
   $('#btn-cover').textContent = 'Cover cards';
+  $('#card-info').classList.add('hidden');
   hideShootout();
   $('#feed').innerHTML = '';
 
@@ -139,57 +150,73 @@ function startGame(modeId) {
   state.players.push(...Bots.lineup(state.mode.opponents));
   state.players.forEach(p => { p.alive = true; p.hand = dealHand(); p.gun = loadGun(); });
 
-  Room.setOpponents(state.mode.opponents);
+  Table.setup(state.players);
   applyDread();
+  renderAll();
+  setStatus('');
 
   showScreen('game');
-  const game = state.game;
-  setTimeout(() => {
+  setTimeout(async () => {
     if (game !== state.game) return;
-    Room.resize();
-    Room.start();
     Sound.startMusic();
-    renderAll();
     showBanner('ROUND 1');
+    // deal round-robin, one card at a time
+    for (let k = 0; k < HAND_SIZE; k++) {
+      for (let i = 0; i < state.players.length; i++) {
+        if (game !== state.game) return;
+        await Table.deal(i, [state.players[i].hand[k]]);
+      }
+    }
+    if (game !== state.game) return;
     beginTurn();
-  }, 800);
+  }, 900);
 }
 
 function quitGame() {
   state.over = true;
   state.game++;
   Sound.stopMusic();
-  Room.stop();
   hideShootout();
+  $('#card-info').classList.add('hidden');
   showScreen('menu');
 }
 
 // Your turn to play a card.
-function beginTurn() {
+async function beginTurn() {
   if (state.over) return;
+  const game = state.game;
   // Anyone who has run out of cards is dealt a fresh hand.
-  alive().forEach(p => { if (!p.hand.length) p.hand = dealHand(); });
+  for (const p of alive()) {
+    if (p.hand.length) continue;
+    p.hand = dealHand();
+    await Table.deal(seatOf(p), p.hand);
+    if (game !== state.game) return;
+  }
   state.myTurn = true;
   renderAll();
-  setStatus('Your turn — play a card');
+  setStatus('Your turn — pick a card');
 }
 
-// Playing a card: you go first, then each living opponent plays one.
+// Playing a card: you go first, then each living bot plays one.
 // Once everyone has played, the round ends in a shootout.
 async function playSelected() {
   if (state.selected < 0 || state.over || !state.myTurn) return;
   const game = state.game;
   state.myTurn = false;
-  const [id] = me().hand.splice(state.selected, 1);
+  const index = state.selected;
+  const [id] = me().hand.splice(index, 1);
   selectCard(-1);
+  await Table.play(0, index);
   if (!(await resolveCard(me(), id)) || game !== state.game) return;
 
   for (const opp of opponents()) {
     if (!opp.alive) continue;
     setStatus(opp.name + ' is choosing a card…');
-    await sleep(800);
+    await sleep(600);
     if (state.over || game !== state.game) return;
-    const [oid] = opp.hand.splice(Bots.chooseCard(opp), 1);
+    const oi = Bots.chooseCard(opp);
+    const [oid] = opp.hand.splice(oi, 1);
+    await Table.play(seatOf(opp), oi);
     if (!(await resolveCard(opp, oid)) || game !== state.game) return;
   }
 
@@ -198,38 +225,39 @@ async function playSelected() {
 
   state.round++;
   applyDread();
+  renderAll();
   showBanner('ROUND ' + state.round);
-  await sleep(1200);
+  await sleep(1400);
   if (game !== state.game) return;
   beginTurn();
 }
 
-// Put a card on the table and apply its effect.
-// Returns false if the game ended because of it.
+// Apply a played card's effect. Returns false if the game ended because of it.
 async function resolveCard(player, id) {
   const card = CARD_BY_ID[id];
-  state.pile.push({ id, rot: (Math.random() - 0.5) * 30 });
-  Sound.cardFlick();
   log(`${player.name} played <b>${card.name}</b>.`);
   renderAll();
 
   if (card.instantWin) {
+    await Table.jackGlow();
     endGame(player.you ? 'YOU WIN' : player.name.toUpperCase() + ' WINS',
       (player.you ? 'You' : 'They') + ' played the Jack of Trades.');
     return false;
   }
   if (card.peek) {
     const live = peekRound(player, card.peek);
+    if (!player.you) setStatus(`${player.name} checks their cylinder…`);
+    await Table.peek(seatOf(player), card.peek, live);
     if (player.you) {
       const which = ['next', '2nd', '3rd'][card.peek - 1];
       showBanner(live ? 'LIVE' : 'BLANK');
       log(`<span class="secret">Only you know: your ${which} round is <b class="${live ? 'live' : 'blank'}">${live ? 'LIVE' : 'BLANK'}</b>.</span>`);
       renderGun();
-      await sleep(1200);
+      await sleep(900);
     }
   }
   if (card.forcesShootout) {
-    await sleep(600);
+    await Table.bloodyMary();
     return shootout('Bloody Mary');
   }
   return true;
@@ -241,7 +269,8 @@ async function shootout(reason) {
   const game = state.game;
   showBanner('SHOOTOUT');
   log(`<span class="shootout">— Shootout: ${reason} —</span>`);
-  await sleep(1400);
+  await Table.drawGuns();
+  await sleep(500);
 
   for (const shooter of state.players) {
     if (state.over || game !== state.game) return false;
@@ -251,8 +280,8 @@ async function shootout(reason) {
     if (shooter.you) {
       target = await askForTarget(reason);
     } else {
-      setStatus(shooter.name + ' picks up the gun…');
-      await sleep(900);
+      setStatus(shooter.name + ' is deciding…');
+      await sleep(700);
       target = Bots.chooseTarget(shooter, alive());
     }
     if (game !== state.game) return false;
@@ -260,6 +289,7 @@ async function shootout(reason) {
     if (checkGameOver()) return false;
   }
   setStatus('');
+  await Table.holsterGuns();
   return true;
 }
 
@@ -268,7 +298,9 @@ async function fire(shooter, target) {
     ? (shooter.you ? 'yourself' : 'themself')
     : (target.you ? 'YOU' : target.name);
   setStatus(`${shooter.name} ${shooter.you ? 'aim' : 'aims'} at ${who}…`);
-  await sleep(1100);
+  const si = seatOf(shooter), ti = seatOf(target);
+  await Table.aim(si, ti);
+  await sleep(700);   // let it hang
 
   const live = pullTrigger(shooter);
   if (target !== shooter) target.shotBy = shooter;   // vengeful bots remember this
@@ -276,14 +308,15 @@ async function fire(shooter, target) {
     Sound.gunshot();
     flash();
     target.alive = false;
-    if (!target.you) Room.setDead(state.players.indexOf(target) - 1, true);
     log(`${shooter.name} shot ${who} — <b class="live">BANG!</b> ${target.you ? 'You are' : target.name + ' is'} dead.`);
   } else {
     Sound.blank();
     log(`${shooter.name} shot ${who} — <i>click.</i> A blank.`);
   }
-  renderAll();
-  await sleep(1000);
+  renderGun();
+  await Table.shoot(si, ti, live);
+  if (shooter.alive) await Table.recover(si, ti, live);
+  await sleep(300);
 }
 
 function checkGameOver() {
@@ -298,10 +331,10 @@ function endGame(title, reason) {
   state.myTurn = false;
   hideShootout();
   setStatus('');
-  if (title !== 'YOU DIED') Sound.gunshot();
+  $('#card-info').classList.add('hidden');
   $('#game-over-title').textContent = title;
   $('#game-over-reason').textContent = reason;
-  setTimeout(() => $('#game-over').classList.remove('hidden'), 900);
+  setTimeout(() => $('#game-over').classList.remove('hidden'), 1200);
 }
 
 // ---------- shootout choice panel ----------
@@ -338,7 +371,7 @@ function hideShootout() { $('#shootout').classList.add('hidden'); }
 // Music and the room both follow the same "dread" level.
 function applyDread() {
   const dread = Math.min(1, (state.round - 1) / (MAX_DREAD_ROUND - 1));
-  Room.setRavage(dread);
+  Table.setRavage(dread);
   Sound.setIntensity(dread);
 }
 
@@ -368,24 +401,12 @@ function flash() {
 
 function toggleCover() {
   state.covered = !state.covered;
-  $('#hand').classList.toggle('covered', state.covered);
+  Table.setCovered(state.covered);
   $('#btn-cover').textContent = state.covered ? 'Show cards' : 'Cover cards';
   if (state.covered) selectCard(-1);
 }
 
-// ---------- rendering ----------
-
-function cardEl(id, opts = {}) {
-  const el = document.createElement('div');
-  if (opts.back) {
-    el.className = 'card back' + (opts.small ? ' small' : '');
-    return el;
-  }
-  const c = CARD_BY_ID[id];
-  el.className = 'card ' + c.style;
-  el.innerHTML = `<div class="face"><div class="corner">${c.corner}</div><div class="icon">${c.icon}</div><div class="name">${c.name}</div></div>`;
-  return el;
-}
+// ---------- HUD ----------
 
 // Your gun: the next three rounds, shown as ? until a 1/2/3 card reveals them.
 function renderGun() {
@@ -402,70 +423,12 @@ function renderGun() {
 function renderAll() {
   $('#round-label').textContent = 'ROUND ' + state.round;
   $('#mode-label').textContent = state.mode.label.toUpperCase() + ' · ' + state.mode.players + (state.mode.players === 1 ? ' PLAYER' : ' PLAYERS');
-  renderHand();
-  renderOpponents();
-  renderPile();
   renderGun();
-}
-
-function renderHand() {
-  const hand = $('#hand');
-  hand.innerHTML = '';
-  hand.classList.toggle('waiting', !state.myTurn);
-  const cards = me() ? me().hand : [];
-  const n = cards.length;
-  cards.forEach((id, i) => {
-    const el = cardEl(id);
-    // fan the cards out
-    const spread = n > 1 ? (i - (n - 1) / 2) / ((n - 1) / 2) : 0;
-    el.style.transform = `rotate(${spread * 14}deg) translateY(${Math.abs(spread) * 14}px)`;
-    if (i === state.selected) el.classList.add('selected');
-    el.addEventListener('click', () => {
-      if (state.covered) return;
-      Sound.cardFlick();
-      selectCard(state.selected === i ? -1 : i);
-    });
-    hand.appendChild(el);
-  });
-}
-
-function renderOpponents() {
-  const box = $('#opponent-hands');
-  if (!state.mode) return;
-  box.innerHTML = '';
-  const seats = Room.seats(state.mode.opponents);
-  opponents().forEach((opp, i) => {
-    const seat = seats[i];
-    const wrap = document.createElement('div');
-    wrap.className = 'opp' + (opp.alive ? '' : ' dead');
-    // far seat: cards on the far edge of the table; side seats: held in front of them
-    wrap.style.left = (seat.x * 100) + '%';
-    wrap.style.top = ((seat.y < 0.55 ? 0.52 : 0.655) * 100) + '%';
-    const cards = document.createElement('div');
-    cards.className = 'opp-cards';
-    if (opp.alive) opp.hand.forEach(() => cards.appendChild(cardEl(null, { back: true, small: true })));
-    const name = document.createElement('div');
-    name.className = 'opp-name';
-    name.innerHTML = opp.name.toUpperCase() + (opp.alive ? '' : ' — DEAD') +
-      `<small>${Bots.label(opp)}</small>`;
-    wrap.append(name, cards);
-    box.appendChild(wrap);
-  });
-}
-
-function renderPile() {
-  const pile = $('#table-pile');
-  pile.innerHTML = '';
-  state.pile.slice(-3).forEach(p => {
-    const el = cardEl(p.id);
-    el.style.setProperty('--rot', p.rot + 'deg');
-    pile.appendChild(el);
-  });
 }
 
 function selectCard(i) {
   state.selected = i;
-  renderHand();
+  Table.select(i);
   const info = $('#card-info');
   if (i < 0) { info.classList.add('hidden'); return; }
   const c = CARD_BY_ID[me().hand[i]];

@@ -1,19 +1,23 @@
 # Shootout
 
-A standalone card-table shootout game. Plain HTML/CSS/JS with no build step and no
-dependencies. Nothing here is shared with the other projects in this repo.
+A standalone 3D card-table shootout game. Plain HTML/CSS/JS with no build step; the only
+library is three.js, vendored in `vendor/`. Nothing here is shared with the other projects in this repo.
 
-**Run it:** open `shootout/index.html` in a browser.
+**Run it:** open `shootout/index.html` in a browser (needs WebGL).
 
 | File | What's in it |
 |---|---|
 | `index.html` | All screens: loading, main menu, mode select, table, settings, gunsmith, loadout |
-| `loading.js` | Loading screen: the revolver fires and the bullet hits the target |
-| `room.js` | The gray room, which gets more wrecked and bloody each round |
+| `engine.js` | 3D renderer, animation clock and tweens (three.js) |
+| `models.js` | Every 3D model: revolver, outlaws, cards, table, chairs, shelves, desks, door, lamp, target |
+| `fx.js` | Muzzle flash, gun smoke, sparks, splinters, blood |
+| `stages.js` | 3D loading screen (bullet-time shot) and the menu background |
+| `table.js` | The 3D card table: dealing, playing, peeking, aiming, firing, deaths, the room falling apart |
 | `audio.js` | Generated music and sound effects; the music gets more intense each round |
 | `bots.js` | Computer opponents: names, personalities and Easy/Normal/Hard difficulty |
-| `cards.js` | Every card and what it does (effects still to be written) |
-| `game.js` | Screen flow, dealing 10 cards, playing cards, rounds |
+| `cards.js` | Every card and what it does; hands are 3 cards |
+| `game.js` | Screens, turns, guns and shootouts |
+| `vendor/three.min.js` | three.js r128 (MIT licence in `vendor/three-LICENSE`) |
 
 ## How a round works
 Everyone at the table plays one card. Then comes a **shootout**: every living
