@@ -56,6 +56,7 @@ uniform vec3 nkPoint;      // the point (outer rocks) x, z, radius of the bird c
 uniform sampler2D nkCover; uniform vec4 nkCoverXf; uniform float nkHasCover;   // land cover: heath, gorse, bracken, scrub
 uniform vec2 nkWater;      // the sea surface height in this shot, 1 = the geometry carries aTop
 uniform float nkZoneY;     // added to the height for the zonation (lookdev: show a rock as it weathers at that height)
+uniform float nkSurf;      // surf breaking white against the rock foot (open-ocean island)
 varying vec3 vNkO;          // the object's origin (rock kit: one bed per fallen block)
 varying float vNkAO; varying float vNkCav; varying float vNkTop; varying float vNkPin; varying float vNkBare;
 
@@ -136,6 +137,7 @@ export async function landscapeMaterial(ctx, opts = {}) {
     nkCover: { value: blankCover() }, nkCoverXf: { value: new THREE.Vector4(0, 0, 1, 1) }, nkHasCover: { value: 0 },
     nkWater: { value: new THREE.Vector2(opts.seaLevel ?? -1.1, opts.topAttr ? 1 : 0) },
     nkZoneY: { value: opts.zoneY ?? 0 },
+    nkSurf: { value: opts.surf ?? 0 },
   };
   mat.userData.nkUniforms = U;
   /** the plants' land-cover map (plants.js landCover): the ground under each community */
@@ -177,7 +179,7 @@ normal = normalize((viewMatrix * vec4(nkRockN, 0.0)).xyz);`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= nkAOv; reflectedLight.indirectSpecular *= nkAOv * nkAOv;`);
   };
-  mat.customProgramCacheKey = () => `nature-landscape-v21${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}${opts.crease === false ? '-nc' : ''}`;
+  mat.customProgramCacheKey = () => `nature-landscape-v24${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}${opts.crease === false ? '-nc' : ''}`;
   return mat;
 }
 
@@ -337,6 +339,8 @@ rock = mix(rock, rock * vec3(1.12, 1.1, 1.04) + vec3(0.04, 0.035, 0.025), scar *
   float barn = inter * smoothstep(0.3, 0.6, m3 + 0.2) * mix(0.5, smoothstep(0.45, 0.7, nkN3(P, 23.0)) * 0.7 + smoothstep(0.5, 0.75, nkN3(P + 0.3, 7.0)) * 0.5, nkAA(23.0));
   rock = mix(rock, vec3(0.6, 0.6, 0.56), barn * mix(0.3, 0.7, fineFade));
   float wrack = smoothstep(tideL - 0.8, tideL, y) * (1.0 - smoothstep(0.2, 1.1, y + 0.6 * (m2 - 0.5) + 0.4 * rag)) * smoothstep(-0.2, 0.5, up + 0.4) * smoothstep(0.35, 0.6, m2 + 0.25 * m3);
+  // rocks awash (skerries, reef tops, the platform's seaward edge): mats of wrack over most of them
+  wrack = max(wrack, smoothstep(-0.4, 0.2, hW) * (1.0 - smoothstep(0.9, 1.8, hW + 0.5 * rag)) * smoothstep(0.35, 0.7, up) * smoothstep(0.25, 0.45, m3 + 0.3 * m2) * 0.95);
   rock = mix(rock, vec3(0.09, 0.075, 0.03) * (0.7 + 0.6 * m3), wrack * 0.92);
   float alg = inter * smoothstep(0.65, 0.85, up) * smoothstep(0.62, 0.78, dkFbm3(P * 0.5 + 9.0));
   rock = mix(rock, vec3(0.13, 0.30, 0.06), alg * 0.8);
@@ -356,13 +360,21 @@ float pool = nkWater.y > 0.5 ? smoothstep(0.35, 0.6, vNkCav) * smoothstep(0.75, 
   vec3 grey = rock * vec3(0.74, 0.76, 0.72) + vec3(0.012, 0.016, 0.006) * (0.6 + 0.8 * m3);
   rock = mix(rock, grey, lie * (0.7 + 0.3 * m2));
 }
+// bare outcrops on the head slope and inland (bed nosings, pavement) are old weathered surfaces:
+// lichen-grey, never the fresh cream of a sea-cut face
+if (nkWater.y > 0.5) {
+  float oc = vNkBare * smoothstep(8.0, 14.0, hS);
+  rock = mix(rock, rock * vec3(0.72, 0.74, 0.7) + vec3(0.015, 0.018, 0.01), oc * 0.75);
+}
 // the soil lip: 0.3-1 m of brown soil, rubble and roots under the turf where it meets the face
 #ifndef NK_ROCK_ONLY
 if (nkWater.y > 0.5) {
   vec2 tg2 = normalize(vec2(-N0.z, N0.x) + 1e-4);
   float u2 = dot(P.xz, tg2);
   float lipD = 0.3 + 0.7 * dkVN2(vec2(u2 * 0.6, 2.0)) + 0.15 * (nkN3(P + 2.2, 3.0) - 0.5);
-  float lip = (1.0 - smoothstep(lipD * 0.75, lipD, vNkTop)) * smoothstep(0.75, 0.45, up) * smoothstep(6.0, 9.0, hS) * (1.0 - vNkBare);
+  // (only on the steep face under the edge: on the head slope's soil surface the depth below the
+  // soil is ~0 too, and the lip colour showed through the turf as dark dots)
+  float lip = (1.0 - smoothstep(lipD * 0.75, lipD, vNkTop)) * smoothstep(0.45, 0.15, up) * smoothstep(6.0, 9.0, hS) * (1.0 - vNkBare);
   vec3 soilC = mix(vec3(0.17, 0.12, 0.075), vec3(0.3, 0.25, 0.18), smoothstep(0.4, 0.8, nkN3(P, 4.0))) * (0.75 + 0.5 * lumR);
   // pale stones in the rubble, dark root mats near the turf
   soilC = mix(soilC, rock * 0.9, smoothstep(0.62, 0.75, nkN3(P + 5.0, 6.0)) * 0.6);
@@ -487,6 +499,15 @@ rgh = mix(rgh, 0.55, sub);
 col = mix(col, col * 0.3, pool);
 rgh = mix(rgh, 0.04, pool);
 nrm = normalize(mix(nrm, vec3(0.0, 1.0, 0.0) + 0.04 * vec3(dkVN2(P.xz * 3.0) - 0.5, 0.0, dkVN2(P.xz * 3.0 + 7.0) - 0.5), pool));
+// surf: white water breaking against the foot of the cliffs, in bursts along the shore (an open
+// ocean island seen from far off reads its waterline by this white line)
+if (nkSurf > 0.0) {
+  float burst = smoothstep(0.35, 0.75, dkVN2(vec2(dot(P.xz, vec2(0.6, 0.8)) * 0.045, 1.3)) + 0.3 * dkVN2(P.xz * 0.21));
+  float hgt = 1.0 + 4.5 * burst * (0.6 + 0.4 * expoN);
+  float sf = smoothstep(-0.6, 0.0, hW) * (1.0 - smoothstep(hgt * 0.4, hgt, hW + 0.6 * rag)) * smoothstep(0.35, 0.6, dkVN2(P.xz * 0.6 + vec2(0.0, P.y * 0.8)) * 0.7 + burst * 0.5);
+  col = mix(col, vec3(0.82, 0.84, 0.85), sf * nkSurf);
+  rgh = mix(rgh, 0.6, sf * nkSurf);
+}
 nkRockN = nrm;
 nkRough = rgh;
 // (sky visibility from the bake darkens the fill only partly: a pale limestone in shade is a light

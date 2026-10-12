@@ -262,15 +262,22 @@ export async function loadClingLand(ctx, opts = {}) {
       const far = d > 900;
       if (far && rng() > 0.35) continue;
       const f = W.fieldAt(x, z);
-      if (!f || !f.other) continue;
-      if (Math.abs(f.edge) > G * 0.55) continue;
       if (Math.hypot(x, z) < 125) continue;
       if (W.wood(x, z) > 0.45) continue;
-      if (W.roadD(x, z) < 7 || W.laneD(x, z) < 4.5) continue;               // gaps where the road crosses
+      // hedges on the banks either side of the hollow ways
+      const rdR = W.roadD(x, z), rdL = W.laneD(x, z);
+      const onBank = (rdR > 6.2 && rdR < 6.2 + G) || (rdL > 4.4 && rdL < 4.4 + G);
+      if (!onBank) {
+        if (!f || !f.other) continue;
+        if (Math.abs(f.edge) > G * 0.55) continue;
+        if (rdR < 7 || rdL < 4.5) continue;                                   // gaps where the road crosses
+      }
       // furlongs were open: only some of their boundaries carry hedges; closes are all hedged
-      const both = f.site.kind === 'furlong' && f.other.kind === 'furlong';
-      const hk = hash2(Math.min(f.site.id, f.other.id), Math.max(f.site.id, f.other.id), 7);
-      if (both && hk > 0.45) continue;
+      if (!onBank) {
+        const both = f.site.kind === 'furlong' && f.other.kind === 'furlong';
+        const hk = hash2(Math.min(f.site.id, f.other.id), Math.max(f.site.id, f.other.id), 7);
+        if (both && hk > 0.45) continue;
+      }
       // gateways, and gaps where the hedge has died back or been grubbed out
       if (hash2(Math.round(x / 9), Math.round(z / 9), 3) < 0.04) continue;
       const hn = W.N3.fbm2(x / 23 + 7, z / 23, 2), hn2 = W.N2.n2(x / 7, z / 7);
@@ -278,7 +285,9 @@ export async function loadClingLand(ctx, opts = {}) {
       const y = W.height(x, z);
       const lod = d < 80 ? 0 : d < 450 ? 1 : 2;
       // a hedge is a continuous laid-and-trimmed wall of shrubs: clumps elongated along the line
-      const ex = f.other.x - f.site.x, ez = f.other.z - f.site.z;
+      let ex, ez;
+      if (onBank) { const rd = rdR < rdL ? W.roadD : W.laneD; ex = rd(x + 1, z) - rd(x - 1, z); ez = rd(x, z + 1) - rd(x, z - 1); }
+      else { ex = f.other.x - f.site.x; ez = f.other.z - f.site.z; }
       // the clump's long (local z) axis runs ALONG the boundary, i.e. across the line between the sites
       const yaw = Math.atan2(ex, ez) + Math.PI / 2 + (rng() - 0.5) * 0.25;
       // far away only every third cell is kept: those clumps are stretched to keep the hedge unbroken
@@ -343,7 +352,7 @@ export async function loadClingLand(ctx, opts = {}) {
       group.add(grassField({ count: opts.grass.count ?? 50000, seed: 2 + ci, height: opts.grass.height ?? [0.1, 0.4], place: (rr) => {
         const a = rr() * 6.283, d = R * Math.sqrt(rr());
         const x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d;
-        if (W.roadD(x, z) < 4.5 || Math.hypot(x, z) < 110) return null;
+        if (W.roadD(x, z) < 2.4 || W.laneD(x, z) < 1.4 || Math.hypot(x, z) < 110) return null;      // (grass up the banks, not on the trodden way)
         return [x, W.height(x, z) - 0.02, z];
       } }));
     }

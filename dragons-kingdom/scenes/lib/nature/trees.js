@@ -32,7 +32,7 @@ export const SPECIES = {
       { segs: 4, kids: 8, start: 0.1, down: [52, 20], len: 0.5, rad: 0.5, curve: 0.3, up: 0.0, kink: 0.3 },
       { segs: 2, kids: 0, start: 0.1, down: [55, 20], len: 0.5, rad: 0.5, curve: 0.35, up: 0.0 },
     ],
-    radius: 0.16, leaf: { kind: 'hawthorn', size: 0.32, perM: 24, fromLevel: 2 }, bark: 'pbr/acg_bark001', barkTint: [0.55, 0.53, 0.5],
+    radius: 0.16, leaf: { kind: 'hawthorn', size: 0.32, perM: 24, fromLevel: 2 }, bark: 'pbr/acg_bark001', barkTint: [0.44, 0.4, 0.36],
     leafCol: [0.07, 0.11, 0.035],
   },
   // sycamore: dense upswept dome on a straight bole, smooth grey-pink flaking bark
@@ -506,7 +506,7 @@ export async function photoLeafAtlas(kind, size = 1024) {
       if (P.keepChroma > 0) { const c = P.keepChroma * 0.5; o = [o[0] * (1 - c) + R * c * P.col[0] / 70, o[1] * (1 - c) + Gc * c * P.col[1] / 110, o[2] * (1 - c) + Bc * c * P.col[2] / 60]; }
       // a muted, photographic green (a saturated leaf colour read as Kelly-green clip-art)
       const lo = 0.3 * o[0] + 0.59 * o[1] + 0.11 * o[2];
-      o = [o[0] * 0.85 + lo * 0.15, o[1] * 0.85 + lo * 0.15, o[2] * 0.85 + lo * 0.15];
+      o = [(o[0] * 0.75 + lo * 0.25) * 0.92, (o[1] * 0.75 + lo * 0.25) * 0.92, (o[2] * 0.75 + lo * 0.25) * 0.92];
     }
     d[i] = Math.min(255, o[0]); d[i + 1] = Math.min(255, o[1]); d[i + 2] = Math.min(255, o[2]);
   }
@@ -882,7 +882,7 @@ export function crownGeometry(tree) {
     const c = A.s.clone().multiplyScalar(1 / A.n);
     const v = A.q.clone().multiplyScalar(1 / A.n).sub(new THREE.Vector3(c.x * c.x, c.y * c.y, c.z * c.z));
     const rx = Math.sqrt(Math.max(v.x, 0.01)) * 1.9, ry = Math.sqrt(Math.max(v.y, 0.01)) * 1.8, rz = Math.sqrt(Math.max(v.z, 0.01)) * 1.9;
-    const g = new THREE.IcosahedronGeometry(1, 2);
+    const g = new THREE.IcosahedronGeometry(1, 1);
     const p = g.attributes.position, w = new THREE.Vector3();
     for (let i = 0; i < p.count; i++) {
       w.set(p.getX(i), p.getY(i), p.getZ(i)).normalize();

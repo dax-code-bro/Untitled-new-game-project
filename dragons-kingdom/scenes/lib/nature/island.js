@@ -35,7 +35,7 @@ export async function loadPrologueIsland(ctx, opts = {}) {
   g.setAttribute('aAO', new THREE.BufferAttribute(new Uint8Array(nv).fill(255), 1, true));
   g.setAttribute('aCav', new THREE.BufferAttribute(new Uint8Array(nv), 1, true));
   const material = opts.material || await landscapeMaterial(ctx, {
-    world: W, profile: 'basalt', dipLinear: [0.012, -0.008, -0.012 * cx + 0.008 * cz, 1], guano: 0.4, lichen: 0.6, ...opts.look,
+    world: W, profile: 'basalt', dipLinear: [0.012, -0.008, -0.012 * cx + 0.008 * cz, 1], guano: 0.4, lichen: 0.6, seaLevel: opts.seaLevel ?? 0, surf: 1, ...opts.look,
   });
   const group = new THREE.Group();
   group.name = 'prologue-island';

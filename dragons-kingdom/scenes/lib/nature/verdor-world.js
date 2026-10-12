@@ -448,7 +448,9 @@ export function createVerdorWorld(opts = {}) {
     const soilD = 0.32 + 0.45 * smoothstep(-0.3, 0.4, N.fbm2(x / 17 + 4, z / 17, 2));
     // limestone pavement / outcrop patches breaking through the turf inland
     const outcH = 1.7 * smoothstep(0.38, 0.62, N2.fbm2(x / 34 + 5, z / 34 - 2, 3)) * (0.6 + 0.4 * smoothstep(0, 0.4, N3.fbm2(x / 7, z / 7, 2)));
-    const delta = 0.05 + 1.5 * N2.fbm2(x / 21 + 9, z / 21, 2);
+    // crag bands come in coherent stretches of slope (tens of metres), with plain turf between -
+    // not a dashed line of nosings everywhere
+    const delta = -0.65 + 2.5 * smoothstep(-0.05, 0.35, N2.fbm2(x / 48 + 9, z / 48, 3)) + 0.3 * N3.n2(x / 9, z / 9);
     const tHead = slopeY + delta, tLand = top - soilD + outcH;
     const T = Math.min(tHead, tLand);
     const headness = smoothstep(-0.5, 2.5, tLand - tHead);
@@ -487,8 +489,10 @@ export function createVerdorWorld(opts = {}) {
     R += (0.3 + 0.25 * soft) * N.fbm3(x / 9, y / 5, z / 9, 2);
     // fracture relief: broken rock is planar facets with sharp steps at a few scales, plus
     // conchoidal ridges (0.3-1 m, 5-15 cm deep) - not round bulges
-    R += 0.38 * N2.facet3(x / 5, y / 3.6, z / 5) + 0.14 * N.facet3(x / 2.1, y / 1.7, z / 2.1);
-    { const q = 1 - Math.abs(N3.n3(x / 0.75, y / 0.9, z / 0.75)); R -= 0.13 * q * q; }
+    // (big planar facets carry the fracture look; the small ones are kept faint - at full strength
+    // every face read as crumpled foil)
+    R += 0.55 * N2.facet3(x / 5.5, y / 3.8, z / 5.5) + 0.06 * N.facet3(x / 2.1, y / 1.7, z / 2.1);
+    { const q = 1 - Math.abs(N3.n3(x / 0.75, y / 0.9, z / 0.75)); R -= 0.05 * q * q; }
     // mainland: union of standing joint blocks; only sides that face fallen ground weather back
     // (internal joints stay closed); per block and bed: old falls and fresh scars
     let plan = 1e9;
@@ -523,9 +527,10 @@ export function createVerdorWorld(opts = {}) {
         sp += (1.2 + 1.1 * Math.max(0, (x - st.x) / (st.r + 1))) * Math.exp(-(((y - 0.4) / 1.25) ** 2));
         let d;
         if (st.skerry) {
-          // wave-worn skerry: low, rounded on top, jointed in plan
-          sp += 0.5 * N.n2(x / 3 + st.z, z / 3);
-          const cap = pc.top + 0.5 * N.n2(x / 4, z / 4 + st.x) - 0.35 * ((x - pc.x) ** 2 + (z - pc.z) ** 2) / (pc.r * pc.r + 1);
+          // wave-worn skerry: low, awash, rounded and ragged in plan (a jointed square block top read
+          // as a sugar cube on the sea)
+          sp += 0.5 * N.n2(x / 3 + st.z, z / 3) + 1.8 * N2.fbm2(x / 7 + st.x, z / 7, 2) - 0.25 * pc.r * smoothstep(0.4, 1, Math.hypot(x - pc.x, z - pc.z) / pc.r);
+          const cap = pc.top - 0.7 + 0.6 * N.n2(x / 4, z / 4 + st.x) + 0.25 * N3.n2(x / 1.3, z / 1.3) - 0.5 * ((x - pc.x) ** 2 + (z - pc.z) ** 2) / (pc.r * pc.r + 1);
           d = smax(sp, y - cap, 0.9);
         } else {
           sp += 0.45 * N2.facet3(x / 3, y / 3.5, z / 3) + 0.25 * N.n2(x / 5 + st.z, z / 5);
