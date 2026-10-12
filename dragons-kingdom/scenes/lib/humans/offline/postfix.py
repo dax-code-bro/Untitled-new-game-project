@@ -1005,6 +1005,49 @@ def fix_shirtarms(cid, wmin=0.6):
     print(f'{cid}: shirt sleeves under the outer sleeves hidden ({done} tris)', flush=True)
 
 
+def fix_braidfill(cid, widen=2.3, head_w=0.5):
+    """Braids read as a sparse black zig-zag: their ribbons (1.3 mm) covered a fraction of the
+    plait, so the dark coat showed through between the strands, and the tip fade (the last 25% of
+    a strand's length) thinned the lower quarter of the plait. Hair hanging off the head (skinned
+    mostly to the body, i.e. braids and long falls) gets ribbons `widen` times wider and its
+    along-coordinate squared (the fade only at the tuft)."""
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    hm = [m for m in h['meshes'] if m['name'] == 'hair' and 'braidfill' not in m.get('postfix', [])]
+    if not hm:
+        return
+    sp = _spec(cid) or {}
+    if (sp.get('hair') or {}).get('style') not in ('braid', 'coronet'):
+        return
+    bin_ = bytearray(open(bp, 'rb').read())
+    names = [b_['name'] for b_ in h['bones']]
+    headb = np.array([n in ('head', 'neck03', 'jaw') or n.startswith(('eye', 'special', 'temporalis', 'oculi', 'levator', 'orbicularis')) for n in names])
+    done = 0
+    for m in hm:
+        P = view(bin_, m['attrs']['position']).astype(float)
+        SI = view(bin_, m['attrs']['skinIndex']).astype(int).reshape(-1, 4)
+        SW = view(bin_, m['attrs']['skinWeight']).astype(float).reshape(-1, 4)
+        A = view(bin_, m['attrs']['aux']).astype(float).reshape(-1, 4)
+        hw = (SW * headb[SI]).sum(1)
+        n2 = len(P) // 2
+        ev, od = np.arange(n2) * 2, np.arange(n2) * 2 + 1
+        sel = (hw[ev] < head_w) & (hw[od] < head_w)
+        if sel.sum() < 10:
+            continue
+        a, b_ = P[ev[sel]], P[od[sel]]
+        mid = (a + b_) / 2
+        P[ev[sel]] = mid + (a - mid) * widen
+        P[od[sel]] = mid + (b_ - mid) * widen
+        for ix in (ev[sel], od[sel]):
+            A[ix, 1] = A[ix, 1] ** 2
+        put(bin_, m['attrs']['position'], P.astype(np.float32))
+        put(bin_, m['attrs']['aux'], A)
+        m['postfix'] = m.get('postfix', []) + ['braidfill']
+        done += int(sel.sum())
+    _save(h, bin_, jp, bp)
+    print(f'{cid}: braid ribbons widened ({done} segments)', flush=True)
+
+
 def fix_eyesplit(cid):
     """Eye attributes recomputed with every vertex given to the NEARER eyeball: the build split
     the eyes at x = 0, so with the head turned / shifted part of one eyeball took the other
@@ -2431,6 +2474,8 @@ def main():
             fix_matpatch(cid)
         if what in ('shirtarms', 'all'):
             fix_shirtarms(cid)
+        if what in ('braidfill', 'all'):
+            fix_braidfill(cid)
         if what in ('eyesplit', 'all'):
             fix_eyesplit(cid)
         if what in ('toebox', 'all'):

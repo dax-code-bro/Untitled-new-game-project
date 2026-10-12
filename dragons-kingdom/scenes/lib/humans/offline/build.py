@@ -329,6 +329,7 @@ def assemble(kit, spec, out_dir, opts):
         postfix.fix_props(cid + opts.get('suffix', ''))
         postfix.fix_hairline(cid + opts.get('suffix', ''))
         postfix.fix_cullboots(cid + opts.get('suffix', ''))
+        postfix.fix_braidfill(cid + opts.get('suffix', ''))
         postfix.fix_shirtarms(cid + opts.get('suffix', ''))
         postfix.fix_toebox(cid + opts.get('suffix', ''))
         postfix.fix_hidefeet(cid + opts.get('suffix', ''))

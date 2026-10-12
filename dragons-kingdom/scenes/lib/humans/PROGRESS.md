@@ -252,3 +252,16 @@ Next: finish queues -> preview review of every id (review.sh in scratchpad human
   `injured_arm`: right hand wraps the left forearm from above, the hurt hand hangs limp; new passes
   `toebox` (riders' boots followed the toes: read as bare feet) and `hidefeet` (skin feet never
   drawn inside footwear); caruncles no longer crash on a laughing squint (crowd10 failed).
+- 02:15 UTC: all 48 caches rebuilt with the fix-round code and swapped in (old ones kept as
+  cache/*.prev.* - delete with `rm scenes/lib/humans/cache/*.prev*` once the round is accepted;
+  ~1 GB). Further passes applied in place to every cache: `eyesplit` (white iris-less eyes on
+  turned heads), `shirtarms` (shirt sleeves poked through coat elbows as grey patches),
+  `braidfill` (braids read as a sparse black zig-zag), dye remap in `matpatch` (faded woad read
+  cobalt, straw read chartreuse; Abby's coat measured at hue 133 deg in daylight -> dye
+  [0.06, 0.085, 0.03], measured 102 deg in the hero render). Sling cradle ends at the hand's heel
+  (its open end showed faceted black/white shards); hand in the sling curled. Crowd hero restaged
+  (two heads lined up read as a kiss). Hair AO floor 0.35, wool wear toned down.
+- Final 4K renders of this round: output/humans/r1/ (*-r1.png, *_1920.png, *_crop-*.png).
+Next (for a successor): reins / stirrups belong to the creatures saddle (riders' hands open on a
+bar); braids in shade still read near-black (hair albedo + no multiple scattering); King's beard
+still pad-like at 4K; faces are still MakeHuman faces (expression units help, no sculpted detail).

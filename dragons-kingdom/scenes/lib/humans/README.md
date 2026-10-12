@@ -123,6 +123,8 @@ run on existing caches: `postfix.py <pass> <ids>`):
   band of trouser hem showed above every boot). Boots only.
 - `toebox` - riders' boots relaxed into one toe box (they followed the toes: read as bare feet);
   `hidefeet` - the skin foot is never drawn inside footwear.
+- `shirtarms` - a shirt's sleeves under long outer sleeves are not drawn (they poked through at
+  the elbow as grey patches); `braidfill` - braid ribbons 2.3x wider, tip fade only at the tuft.
 - `eyesplit` - eye attributes with every vertex given to the nearer eyeball (the x = 0 split gave
   half an eyeball to the other eye when the head was turned: a white, iris-less eye); fixed in
   humanbuild.eye_attrs for new builds too.
