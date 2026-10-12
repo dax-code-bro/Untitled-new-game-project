@@ -57,7 +57,7 @@ const FARM_GLSL = /* glsl */ `
 precision highp sampler2DArray;
 uniform sampler2DArray nkAlb; uniform sampler2DArray nkNrm; uniform sampler2DArray nkDat;
 uniform float nkTile[9];
-uniform sampler2D fMap; uniform sampler2D fMapL; uniform sampler2D fEdge; uniform vec4 fMapXf; uniform vec2 fMapN;
+uniform sampler2D fMap; uniform sampler2D fMapL; uniform sampler2D fEdge; uniform vec4 fMapXf; uniform vec2 fMapN; uniform vec4 fFocus;
 void dkProj2(int ax, vec3 p, vec3 n, out vec2 uv, out vec3 T, out vec3 B) {
   if (ax == 0) { float s = n.x >= 0.0 ? 1.0 : -1.0; uv = vec2(-s * p.z, p.y); T = vec3(0.0, 0.0, -s); }
   else if (ax == 1) { float s = n.y >= 0.0 ? 1.0 : -1.0; uv = vec2(p.x, -s * p.z); T = vec3(1.0, 0.0, 0.0); }
@@ -106,7 +106,8 @@ fTap(1, P, N0, 1.0, grassA, nA, hA);
 vec3 col; vec3 nrm = nA; float rough = 0.9;
 bool strips = crop >= 2.0 && crop <= 5.0;
 if (crop < 0.5) {            // pasture: grazed turf, darker tussocks, sheep-cropped paler patches
-  col = grassA * vec3(0.4, 0.5, 0.27) * (0.75 + 0.5 * m3) * (0.85 + 0.3 * m2);
+  col = grassA * vec3(0.4, 0.47, 0.28) * (0.75 + 0.5 * m3) * (0.85 + 0.3 * m2);
+  col = mix(col, vec3(dot(col, vec3(0.3, 0.59, 0.11))), 0.12);
 } else if (crop < 1.5) {     // hay meadow: long grass, seed heads, flowers
   vec3 a2; vec3 n2; float h2; fTap(7, P + 3.0, N0, 0.8, a2, n2, h2);
   col = mix(grassA * vec3(0.45, 0.55, 0.3), a2 * vec3(0.6, 0.58, 0.4), 0.35 + 0.2 * m3) * (0.85 + 0.3 * m2);
@@ -147,9 +148,11 @@ if (crop < 0.5) {            // pasture: grazed turf, darker tussocks, sheep-cro
 if ((strips || crop < 0.5) && furlong > 0.5) {
   float amp = (0.4 + 0.4 * fract(rnd * 7.31)) * smoothstep(3.0, 12.0, edgeD);
   float dh = -4.0 * amp * (2.0 * su - 1.0) / sw;
-  nrm = normalize(nrm - vec3(sd.x, 0.0, sd.y) * dh * smoothstep(120.0, 350.0, camD) * (1.0 - smoothstep(1500.0, 3000.0, camD)));
-  col *= mix(0.88, 1.05, prof * smoothstep(3.0, 12.0, edgeD));
-  col = mix(col, col * vec3(0.85, 1.0, 0.8), (1.0 - prof) * 0.3);
+  // (where the geometry carries no ridges; gentler under standing crops than under grass)
+  float rfN = smoothstep(fFocus.z, fFocus.w, length(P.xz - fFocus.xy)) * (1.0 - smoothstep(1500.0, 3000.0, camD)) * (crop < 0.5 ? 0.5 : 0.28);
+  nrm = normalize(nrm - vec3(sd.x, 0.0, sd.y) * dh * rfN);
+  col *= mix(0.94, 1.03, prof * smoothstep(3.0, 12.0, edgeD));
+  col = mix(col, col * vec3(0.88, 1.0, 0.85), (1.0 - prof) * 0.2);
 }
 // field margins and headlands: a 1-3 m band of rough grass, docks and nettles along every boundary
 {
@@ -193,14 +196,14 @@ fNrm = nrm; fRough = rough;
 diffuseColor.rgb *= col;
 `;
 
-export async function farmlandMaterial(ctx, map) {
+export async function farmlandMaterial(ctx, map, opts = {}) {
   const T = await textureLayers(ctx, LAYERS, { size: 1024 });
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0 });
   mat.name = 'nature:farmland';
   const U = {
     nkAlb: { value: T.albedo }, nkNrm: { value: T.normal }, nkDat: { value: T.data },
     nkTile: { value: LAYERS.map((id) => 1 / (T.tile[T.index[id]] || 2)) },
-    fMap: { value: map.texture }, fMapL: { value: map.linear }, fEdge: { value: map.edge }, fMapXf: { value: map.xf }, fMapN: { value: new THREE.Vector2(map.nx, map.nz) },
+    fMap: { value: map.texture }, fMapL: { value: map.linear }, fEdge: { value: map.edge }, fFocus: { value: new THREE.Vector4(...(opts.ridgeFocus || [0, 0, 160, 290])) }, fMapXf: { value: map.xf }, fMapN: { value: new THREE.Vector2(map.nx, map.nz) },
   };
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
@@ -211,7 +214,7 @@ export async function farmlandMaterial(ctx, map) {
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = fRough;')
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\nnormal = normalize((viewMatrix * vec4(fNrm, 0.0)).xyz);`);
   };
-  mat.customProgramCacheKey = () => 'nature-farmland-v2';
+  mat.customProgramCacheKey = () => 'nature-farmland-v3';
   return mat;
 }
 
@@ -227,8 +230,10 @@ export async function loadClingLand(ctx, opts = {}) {
   W.installLand({ sample: (x, z) => (hm.inside(x, z) ? hm.sample(x, z) : W.base(x, z)) });
   const views = (opts.views || [[0, 20, 20]]).map((v) => new THREE.Vector3(...v));
   const region = opts.region || { x: CLING_LAND.x, z: CLING_LAND.z };
+  // the terrain grid is ~2.3-2.8 m within ~300 m of the first view: geometric ridge and furrow there
+  W.setRidgeFocus([views[0].x, views[0].z, 160, 290]);
   const map = fieldMap(W, region, opts.mapCell ?? 4);
-  const material = await farmlandMaterial(ctx, map);
+  const material = await farmlandMaterial(ctx, map, { ridgeFocus: [views[0].x, views[0].z, 160, 290] });
   const group = new THREE.Group();
   group.name = 'cling-land';
   const v0 = views[0];
@@ -285,7 +290,7 @@ export async function loadClingLand(ctx, opts = {}) {
       // the twiggy, gappy silhouette of a real hedge. The switch lies beyond 140 m, so the far proxy
       // never shows behind the card hedge in a ground-level shot.
       const near = d < 140;
-      const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y - 0.25, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(w * (near ? 0.8 : 1), h * (near ? 0.62 : 1), len * (near ? 0.9 : 1)));
+      const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y - 0.25, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(w * (near ? 0.62 : 1), h * (near ? 0.36 : 1), len * (near ? 0.9 : 1)));
       lists[lod].push(m);
       if (near) hedgeCards.push({ x: x + (rng() - 0.5) * 0.8, y, z: z + (rng() - 0.5) * 0.8, variant: Math.floor(rng() * 3), yaw: rng() * 6.28, scale: (h / 2.4) * (0.85 + 0.3 * rng()), thorn: rng() < 0.3 });
       if (hash2(Math.round(x / 3), Math.round(z / 3), 11) < (far ? 0.05 : 0.03)) treeSpots.push([x, y, z]);

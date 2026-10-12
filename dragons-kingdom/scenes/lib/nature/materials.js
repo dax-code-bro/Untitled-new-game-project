@@ -177,7 +177,7 @@ normal = normalize((viewMatrix * vec4(nkRockN, 0.0)).xyz);`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= nkAOv; reflectedLight.indirectSpecular *= nkAOv * nkAOv;`);
   };
-  mat.customProgramCacheKey = () => `nature-landscape-v19${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}${opts.crease === false ? '-nc' : ''}`;
+  mat.customProgramCacheKey = () => `nature-landscape-v21${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}${opts.crease === false ? '-nc' : ''}`;
   return mat;
 }
 
@@ -400,6 +400,18 @@ if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
     // the green is a muted olive, not a lawn
     c = mix(c, vec3(dot(c, vec3(0.3, 0.59, 0.11))), 0.18);
     c = mix(c, c * vec3(1.25, 1.12, 0.7), smoothstep(0.62, 0.8, dkVN2(P.xz * 0.06 + 5.0)) * 0.6);   // sun-scorched thin soil
+    // sheep and rabbit tracks: narrow wandering paths of worn turf and bare soil (isolines of a slow
+    // field, so they meander and fork), and the odd scrape of bare earth
+    {
+      float tf = dkVN2(P.xz * 0.018 + 3.3) * 0.7 + dkVN2(P.xz * 0.05 + 7.1) * 0.3;
+      float tw = fwidth(tf) * 0.5 + 1e-4;
+      float trk = 1.0 - smoothstep(0.0, max(0.0035, tw * 1.5), abs(fract(tf * 3.0) - 0.5) / 3.0 - 0.0015);
+      trk *= smoothstep(0.5, 0.75, dkVN2(P.xz * 0.011 + 1.7)) * smoothstep(0.82, 0.95, up) * (1.0 - smoothstep(200.0, 600.0, camD));
+      vec3 bare = vec3(0.2, 0.15, 0.09) * (0.8 + 0.4 * m3);
+      c = mix(c, mix(c * vec3(0.85, 0.8, 0.6), bare, 0.55), trk * 0.85);
+      float scrape = smoothstep(0.78, 0.86, dkVN2(P.xz * 0.21 + 9.0)) * smoothstep(0.5, 0.7, dkVN2(P.xz * 0.03)) * (1.0 - smoothstep(150.0, 450.0, camD));
+      c = mix(c, bare * 1.1, scrape * 0.8);
+    }
     turfBump = 1.0;
     vec4 cov = nkHasCover > 0.5 ? texture2D(nkCover, (P.xz - nkCoverXf.xy) * nkCoverXf.zw) : vec4(0.0);
     float heath = nkHasCover > 0.5 ? cov.r : smoothstep(0.52, 0.66, dkFbm3(vec3(P.x, 0.0, P.z) * 0.008 + 4.0) + 0.15 * m2);
@@ -437,7 +449,10 @@ if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
   if (wScree > 0.01) {
     nkGround(6, P, N0, 1.0, a, n, r);
     float w = wScree * (1.0 + (a.a - 0.5) * 1.2);
-    acc += a.rgb * vec3(1.02, 1.0, 0.95) * w; nacc += n * w; racc += r * w; wacc += w;
+    // weathered limestone scree: grey, lichen-dulled and mixed with the rock colour (the raw photo
+    // gravel at full albedo read as a snow patch in the shade at the cliff foot)
+    vec3 sc = mix(a.rgb * vec3(0.66, 0.65, 0.62), rock * 0.85, 0.35) * (0.8 + 0.35 * m3);
+    acc += sc * w; nacc += n * w; racc += r * w; wacc += w;
   }
   if (wSea > 0.01) {
     nkGround(4, P, N0, 0.7, a, n, r);

@@ -141,6 +141,7 @@ export function meshTile(world, o) {
     w[0] = a[0]; w[1] = a[4]; w[2] = a[8];
   };
   const dcN = [0, 0, 0];
+  let dcUsed = 0;
   for (let j = 0; j < ny - 1; j++) for (let k = 0; k < nz - 1; k++) for (let i = 0; i < nx - 1; i++) {
     let neg = 0;
     for (let c = 0; c < 8; c++) { cv[c] = f[idx(i + (c & 1), j + ((c >> 1) & 1), k + ((c >> 2) & 1))]; if (cv[c] < 0) neg++; }
@@ -165,6 +166,7 @@ export function meshTile(world, o) {
       }
     }
     let gi = i + sx / n, gj = j + sy / n, gk = k + sz / n;
+    let dcOk = false;
     if (dc) {
       // QEF about the mass point m: x = m + pinv(AtA) (Atb - AtA m), small eigenvalues truncated
       ATA[3] = ATA[1]; ATA[6] = ATA[2]; ATA[7] = ATA[5];
@@ -195,15 +197,13 @@ export function meshTile(world, o) {
           err = Math.max(err, Math.abs(e));
         }
       }
-      if (inside && err < 0.3) {
-        const nl = Math.hypot(dcN[0], dcN[1], dcN[2]) || 1;
-        cellV[cidx(i, j, k)] = P.length / 3;
-        P.push(X0 + di * h, Y0 + dj * h, Z0 + dk * h); Nn.push(dcN[0] / nl, dcN[1] / nl, dcN[2] / nl);
-        continue;
-      }
+      // accept only a well-posed corner / edge close to the mass point: on noisy (fractured) faces
+      // a far QEF solution makes saw-teeth; there the smooth surface-nets placement is better
+      const far = Math.hypot(di - gi, dj - gj, dk - gk);
+      if (inside && err < 0.12 && far < 0.65) { gi = di; gj = dj; gk = dk; dcOk = true; dcUsed++; }
     }
     // project onto the interpolated surface (stay inside the cell's neighbourhood)
-    for (let it = 0; it < 3; it++) {
+    for (let it = 0; it < 3 && !dcOk; it++) {
       G(gi, gj, gk, tmp);
       const gl2 = tmp[1] * tmp[1] + tmp[2] * tmp[2] + tmp[3] * tmp[3];
       if (gl2 < 1e-8) break;
@@ -322,6 +322,6 @@ export function meshTile(world, o) {
   for (let v = 0; v < nv; v++) { normals[v * 4] = Math.round(Nn[v * 3] * 127); normals[v * 4 + 1] = Math.round(Nn[v * 3 + 1] * 127); normals[v * 4 + 2] = Math.round(Nn[v * 3 + 2] * 127); }
   return {
     positions: Float32Array.from(P), normals, ao: Uint8Array.from(AO, (a) => Math.round(a * 255)), cavity: Uint8Array.from(CAV, (a) => Math.round(a * 255)),
-    indices: Uint32Array.from(I), top: { n: tn, h, heights: top }, evals, grid: [nx, ny, nz], extTop, extPin,
+    indices: Uint32Array.from(I), top: { n: tn, h, heights: top }, evals, grid: [nx, ny, nz], extTop, extPin, dcUsed,
   };
 }

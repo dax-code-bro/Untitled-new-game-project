@@ -292,8 +292,10 @@ export function createVerdorWorld(opts = {}) {
   const footF = (x, z) => 9 * N2.fbm2(x / 95, z / 95, 3);
   // hard-bed tops (stratigraphic s): the only levels a ledge, a head-slope step or a pavement can
   // have (a bedding plane parts there); thin ones closer than 0.35 m merge
+  // (only the tops of thick, hard beds make outcrop ledges; one every metre or more - every parting
+  // as a ledge made the head slope a stack of vineyard terraces)
   const treadS = [];
-  for (const b of beds) if (b.hard > 0.5 && (!treadS.length || b.b1 - treadS[treadS.length - 1] > 0.35)) treadS.push(b.b1);
+  for (const b of beds) if (b.hard > 0.62 && b.b1 - b.b0 > 0.8 && (!treadS.length || b.b1 - treadS[treadS.length - 1] > 1.1)) treadS.push(b.b1);
   const treadAt = (s) => { let lo = 0, hi = treadS.length - 1; if (s < treadS[0]) return -1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (treadS[m] <= s) lo = m; else hi = m; } return treadS[hi] <= s ? hi : lo; };
   /** the joint blocks around (x, z) with their side distances (outside > 0) */
   function blocksAt(x, z) {
@@ -446,7 +448,7 @@ export function createVerdorWorld(opts = {}) {
     const soilD = 0.32 + 0.45 * smoothstep(-0.3, 0.4, N.fbm2(x / 17 + 4, z / 17, 2));
     // limestone pavement / outcrop patches breaking through the turf inland
     const outcH = 1.7 * smoothstep(0.38, 0.62, N2.fbm2(x / 34 + 5, z / 34 - 2, 3)) * (0.6 + 0.4 * smoothstep(0, 0.4, N3.fbm2(x / 7, z / 7, 2)));
-    const delta = 0.35 + 1.3 * N2.fbm2(x / 21 + 9, z / 21, 2);
+    const delta = 0.05 + 1.5 * N2.fbm2(x / 21 + 9, z / 21, 2);
     const tHead = slopeY + delta, tLand = top - soilD + outcH;
     const T = Math.min(tHead, tLand);
     const headness = smoothstep(-0.5, 2.5, tLand - tHead);
@@ -555,7 +557,9 @@ export function createVerdorWorld(opts = {}) {
     // the soil mantle: up to the slope / land surface, lying on the rock (an overhanging sod lip of
     // 0.15-0.5 m at the edge, a soil band 0.3-1 m thick in the top of the face; no skin further down)
     const soil = Math.max(y - c.soilY, plan - c.ovh, Math.min(c.soilY - 1.1 - y, -(plan + 1.2)));
-    let f = Math.min(rock, soil);
+    // (a soft union: where a buried tread runs just under the soil surface the two merge into one
+    // surface instead of a film of slivers and pinholes)
+    let f = smin(rock, soil, 0.3);
     if (stk < 1e8) f = smin(f, stk, 0.35);
     // sea caves (along their joints) and the arch
     for (const cv of caves) {

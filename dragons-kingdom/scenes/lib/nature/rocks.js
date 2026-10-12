@@ -55,9 +55,8 @@ function rockSdf(kind, seed) {
     if (K.bed) d += K.bed * smoothstep(0.55, 0.9, Math.sin((y + tilt * x) * bedK) * 0.5 + 0.5);
     if (K.karren && y > hy * 0.4) {
       // solution pits and runnels on the exposed top
-      const pit = N.cell2 ? N.cell2(x * 7, z * 7) : null;
-      const f1 = pit ? pit[0] : 0.5;
-      d += 0.035 * smoothstep(0.35, 0.05, f1) + 0.02 * smoothstep(0.75, 0.95, 1 - Math.abs(N.n2(x * 3 + 1, z * 9)));
+      const pit = N.cell2(x * 4.5, z * 4.5);
+      d += 0.03 * smoothstep(0.24, 0.04, pit[0]) * (pit[2] < 0.55 ? 1 : 0) + 0.018 * smoothstep(0.8, 0.96, 1 - Math.abs(N.n2(x * 3 + 1, z * 9)));
     }
     return d;
   };

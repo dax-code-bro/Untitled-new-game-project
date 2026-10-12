@@ -36,11 +36,30 @@ vertical texture and the stacks were a different, red-brown rock. Now:
   scout falls) built as unions of jointed convex pieces, a wave-cut platform on a bedding plane with
   grikes, talus aprons and a shingle/sand beach in the bay at z ~ -1500.
 - **Clifftop**: the land is eroded (stream power + droplets + thermal, `offline/erosion.mjs`) and
-  meets the face through a slope-over-wall head, so the edge is irregular and rounded, not a
-  straight ruled line.
-- **Prologue island** (`island-world.js`): a different place (far ocean) - stepped basalt lava
-  flows (red bole partings), plateau ringed by 45-195 m sea cliffs, a NW-SE ridge and a corrie;
-  its high ground sits inside the cloud base in the dawn shot.
+  meets the face through a slope-over-wall head (a vertical wall, then a head slope 0-27 m high).
+  The ROCK under the head is a staircase whose treads are the tops of thick hard beds and whose
+  risers follow the slope contours, jogging at the cross joints; a smooth SOIL mantle lies on it
+  (`column()` / `sdf()` in verdor-world.js). Outcrop nosings poke through the turf as short ledges,
+  the lip has a 0.15-0.5 m sod overhang over a 0.3-1 m soil band, and limestone pavement patches
+  break the turf inland. Nothing slices the vertical joint blocks diagonally any more.
+- **Meshing**: dual contouring (`meshTile(..., { dc: true })`): every sign-change edge carries the
+  exact SDF normal and the cell vertex solves the QEF, so joint faces, bed tops and arrises meet at
+  sharp edges (surface nets rounded every arris over ~1 cell: the 'stacked mattress' look). Cells
+  where the planes do not meet cleanly (noisy fractured faces, features smaller than a cell) keep
+  the surface-nets vertex; shading normals stay smooth and the landscape shader switches to the
+  triangle's own plane at creases (`NK_CREASE`).
+- **Prologue island** (`island-world.js`): a different place (far ocean, unnamed; NOT Verdor, whose
+  rock is pale limestone) - stepped basalt lava flows (red bole partings) eroded into flat benches
+  and steep scarps, a plateau ringed by sheer 45-195 m sea cliffs standing on a boulder apron and
+  reef (what the surf breaks on), a NW-SE ridge and a corrie; its high ground sits inside a layered
+  cloud cap in the dawn shot. Oak and pine woodland on the lee benches reaches the cliff edge (the
+  montage's "forest reaching a cliff").
+- **Land around Cling** (`cling-world.js`, `farmland.js`): the broad road and the lane are earth
+  HOLLOW WAYS worn 0.5-1.5 m into the land between hedge banks (cart ruts, a grass crown, puddles,
+  verges) - no pale gravel strip; furlongs carry geometric ridge and furrow (6-10 m strips, 0.4-0.8 m,
+  straight or reverse-S, headlands where the plough turned); closes are hedged with 2-4 m hedges that
+  have gaps and irregular tops; crops take photographic values (no cream fields); every field has a
+  rough margin.
 
 ## Runtime API
 
@@ -76,18 +95,30 @@ trees, gorse and grass lean toward -x.
 
 | scene | t | shot |
 |---|---|---|
-| `nature-contact.js` | 1 / 2 / 3 / 4 / 5 | trees row / shrubs + grass / rock kit / hawthorn close / turntable (neutral kloofendal daylight) |
+| `nature-contact.js` | 1 / 2 / 3 / 4 / 5 | trees row / shrubs + grass / rock kit set in turf (front row weathered as talus, back row as clifftop) / hawthorn close / turntable (neutral kloofendal daylight) |
+| `nature-dev.js` | 1..7 | fast geometry check of the coast (no plants, rocks, trees): the nature-coast cameras + the tree shot's background |
 | `nature-coast.js` | 1 | Verdor coast side-on from the inland side, 86 m up, toward the point |
 | | 2 | cliff foot: wave-cut platform and surf |
 | | 3 | the outer rocks from above |
 | | 4 / 5 | arch headland and the bay / the face from a boat |
 | `nature-tree.js` | 1 / 2 | clifftop hawthorn 32 mm / 85 mm detail |
-| `nature-island.js` | 1 / 2 / 3 | prologue island at dawn in mist (P-03 framing) / closer / P-12 |
+| `nature-island.js` | 1 / 2 / 3 / 4 | prologue island at dawn in mist (P-03 framing) / closer / P-12 / "a forest reaching a cliff" (montage) |
 | `nature-cling.js` | 1 / 2 / 3 / 4 | from the king's steps / aerial over the closes / on the road / meadow + hedgerow oak |
 
 Shots switch a quarter second before each whole second, so `--time N` (whose motion-blur subframes
 straddle N) always shows shot N alone.
 
 Textures: ambientCG / Poly Haven CC0 sets already in `assets-lib/manifest.json`, plus four ambientCG
-bark sets (`pbr/acg_bark001/004/006/014`, CC0) added for the trees. Leaf, gorse, heather and bracken
-cards are drawn procedurally on a canvas (no downloads).
+bark sets (`pbr/acg_bark001/004/006/014`, CC0) added for the trees, and photographed leaf sprays
+(`texture/eztree_leaves`: oak, ash, aspen, spruce cut-outs from EZ-Tree, MIT licence) that
+`photoLeafAtlas()` builds into per-species 2x2 atlases (hawthorn and blackthorn: small-leaved fanned
+sprays; sycamore: the aspen spray recoloured green; heather: the spruce shoots tiny and olive;
+bracken: the pinnate ash spray). Gorse and thrift cards are still drawn on a canvas.
+
+Trees (`trees.js`): hawthorn grows ONE flared, buttressed trunk that forks at 0.5-1.2 m into 2-3
+unequal stems (pipe model), with kinked zig-zag twigs, surface roots, a leaf cluster at every tip,
+dead silver twigs on the windward side and a salt-pruned wedge crown when exposed; oak has a short
+bole and 3-5 heavy near-horizontal limbs, ash an open upswept crown, sycamore an upswept dome, Scots
+pine a tall bare bole with dead drooping lower limbs and a flat crown. Crowns have sky gaps (3D
+noise culls leaf clusters). The far LOD is 4-10 foliage masses clustered from the real leaf
+positions on the tree's own trunk and main limbs (no lollipops).

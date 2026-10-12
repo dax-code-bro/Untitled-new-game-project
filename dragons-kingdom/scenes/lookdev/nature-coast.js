@@ -83,7 +83,12 @@ export async function setup(ctx) {
   const slope = (x, z) => { const a = H(x - 1, z), b = H(x + 1, z), c = H(x, z - 1), d = H(x, z + 1); return 1 / Math.hypot((b - a) / 2, 1, (d - c) / 2); };
   const cover = landCover({ ...region, cell: 3, height: H, coastF: (x, z) => -inland(x, z), flow: (x, z) => W.landMap.layer('flow', x, z) * 1.6 - 0.75 });
   coast.material.userData.setCover(cover);
-  const plants = scatterPlants(ctx, { cover, views, height: H, slope, region, edge: inland, grass: false, maxDistance: 1800 });
+  // thrift also on the turf caps of the stacks (edge() < 14 m means 'thrift zone' to the scatter)
+  const edge = (x, z) => {
+    for (const st of W.stacks) if (!st.skerry && st.top > 6 && (x - st.x) ** 2 + (z - st.z) ** 2 < (st.r * 0.85) ** 2) return 4;
+    return inland(x, z);
+  };
+  const plants = scatterPlants(ctx, { cover, views, height: H, slope, region, edge, grass: false, maxDistance: 1800 });
   scene.add(plants.group);
   // wind-flagged hawthorns crouched in the hollows behind the edge
   const thorn = await treeKit(ctx, 'hawthorn', { variants: 3, exposure: 0.9 });

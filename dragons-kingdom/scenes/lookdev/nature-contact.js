@@ -3,7 +3,8 @@
 // One view per second:
 //   t = 1  trees: hawthorn (clifftop, wind-flagged), hawthorn (sheltered), sycamore, oak, ash, Scots pine
 //   t = 2  shrubs: gorse, heather, bracken, blackthorn scrub, thrift; geometry grass
-//   t = 3  rocks: fallen limestone blocks, slabs, sea-worn cobbles, clifftop outcrops (rock-only landscape shader)
+//   t = 3  rocks: fallen limestone blocks, slabs, sea-worn cobbles, clifftop outcrops (rock-only landscape
+//          shader), set into turf: front row weathered as on the talus, back row as on the clifftop
 //   t = 4  the hawthorn (clifftop form) close, three-quarter back light
 //   t = 5  turntable of the clifftop hawthorn (t 5..6 = one turn)
 //
@@ -78,32 +79,51 @@ export async function setup(ctx) {
     scene.add(m);
   }
   const th = thriftGeometry(2);
-  const headMat = new THREE.MeshStandardMaterial({ color: 0xd98aa6, roughness: 0.8 });
+  const headMat = new THREE.MeshStandardMaterial({ color: new THREE.Color().setRGB(0.72, 0.42, 0.52), roughness: 0.85 });
   for (let v = 0; v < 7; v++) {
     const c = new THREE.Mesh(th.cushion, foliageMaterial('thrift')); c.scale.setScalar(0.2 + 0.05 * (v % 3)); c.position.set(COL(4) - 0.9 + (v % 4) * 0.55, 0, 43.6 - Math.floor(v / 4) * 0.7); c.receiveShadow = c.castShadow = true; scene.add(c);
     for (const hg of th.heads) { const hh = new THREE.Mesh(hg, headMat); hh.scale.copy(c.scale); hh.position.copy(c.position); hh.castShadow = true; scene.add(hh); }
   }
   scene.add(grassField({ count: 9000, seed: 3, height: [0.08, 0.32], place: (r) => [COL(4) - 1.4 + r() * 2.8, 0, 37 + r() * 4.8] }));
-  // rocks on a plinth whose top stands 7.5 m above high water (the splash zone: the same
-  // lichen zonation as the talus at the cliff foot); one column per kind, four variants each
+  // each thrift cushion is a dense tuft of fine leaves (the same as on the coast)
+  scene.add(grassField({ count: 5000, seed: 13, height: [0.04, 0.09], place: (r) => {
+    const v = Math.floor(r() * 7), w = 0.2 + 0.05 * (v % 3), cx = COL(4) - 0.9 + (v % 4) * 0.55, cz = 43.6 - Math.floor(v / 4) * 0.7;
+    const a = r() * Math.PI * 2, rd = w * 0.45 * Math.sqrt(r());
+    return [cx + Math.cos(a) * rd, 0.02 + w * 0.25 * (1 - rd / (w * 0.45)), cz + Math.sin(a) * rd];
+  } }));
+  // rocks set into the turf (sunk 20-30 %, grass growing up round them), shaded as they weather on
+  // the coast: the front row as fallen blocks on the talus 6 m above high water, the back row as
+  // clifftop rock 25 m up (zoneY moves the landscape shader's height zonation, nothing else)
   const W = await verdorWorld();
-  const rmat = await landscapeMaterial(ctx, { world: W, rockOnly: true });
   const kit = rockKit({ variants: 4 });
   const kinds = ['block', 'slab', 'cobble', 'outcrop'];
-  const PL = W.VERDOR.tide.high + 7.5;
-  for (const [i, k] of kinds.entries()) for (let v = 0; v < 4; v++) {
-    const g = kit.get(k, v, 0);
-    const m = new THREE.Mesh(g, rmat);
-    const s = k === 'cobble' ? 0.55 : k === 'outcrop' ? 2.8 : k === 'slab' ? 2.2 : 2.0;
+  const PL = 0;
+  const rows = [
+    { mat: await landscapeMaterial(ctx, { world: W, rockOnly: true, zoneY: W.VERDOR.tide.high + 6 }), z: 69 },
+    { mat: await landscapeMaterial(ctx, { world: W, rockOnly: true, zoneY: W.VERDOR.tide.high + 25 }), z: 74.2 },
+  ];
+  const rockSpots = [];
+  for (const [ri, row] of rows.entries()) for (const [i, k] of kinds.entries()) for (let v = 0; v < 2; v++) {
+    const vv = v + 2 * ri;
+    const g = kit.get(k, vv, 0);
+    const m = new THREE.Mesh(g, row.mat);
+    const s = k === 'cobble' ? 0.9 : k === 'outcrop' ? 2.8 : k === 'slab' ? 2.2 : 2.0;
     m.scale.setScalar(s);
-    m.rotation.y = v * 1.3 + 0.4;
+    m.rotation.set((vv - 1.5) * 0.08, vv * 1.3 + 0.4, (vv % 2 - 0.5) * 0.1);
     const col = [-7.5, -2.6, 1.6, 6.4][i];
-    m.position.set(col + (v % 2) * (k === 'cobble' ? 0.9 : 2.3), PL - g.boundingBox.min.y * s - (k === 'outcrop' ? 0.12 * s : 0.03), 69 + Math.floor(v / 2) * (k === 'cobble' ? 0.9 : 2.4));
+    const hgt = (g.boundingBox.max.y - g.boundingBox.min.y) * s;
+    const x = col + v * (k === 'cobble' ? 1.2 : 2.3), z = row.z + (v ? 0.6 : -0.4);
+    m.position.set(x, PL - g.boundingBox.min.y * s - hgt * (k === 'outcrop' ? 0.45 : k === 'cobble' ? 0.2 : 0.27), z);
     m.castShadow = m.receiveShadow = true;
     scene.add(m);
+    rockSpots.push([x, z, (g.boundingBox.max.x - g.boundingBox.min.x) * s * 0.5]);
   }
-  const plinth = new THREE.Mesh(new THREE.BoxGeometry(26, 1, 10), new THREE.MeshStandardMaterial({ color: 0x77776f, roughness: 0.92 }));
-  plinth.position.set(0, PL - 0.5, 70.5); plinth.receiveShadow = true; scene.add(plinth);
+  // turf and grass tufts crowding the rock bases
+  scene.add(grassField({ count: 26000, seed: 9, height: [0.06, 0.28], place: (r) => {
+    const [x, z, rad] = rockSpots[Math.floor(r() * rockSpots.length)];
+    const a = r() * Math.PI * 2, d = rad * (0.75 + 0.7 * Math.sqrt(r()));
+    return [x + Math.cos(a) * d, 0, z + Math.sin(a) * d];
+  } }));
   S0 = { PL };
   camera.near = 0.1; camera.far = 5000;
   S = { sun, SUN: sky.sun.direction.clone() };
@@ -118,8 +138,8 @@ export function update(t, ctx) {
   const hx = TREE_X(0), pl = S0.PL;
   if (i <= 1) { pos = [0, 4.5, 62]; look = [0, 7.5, 0]; f = 22; }   // in front of the rock plinth (z 65..76)
   else if (i === 2) { pos = [0, 2.9, 57]; look = [0, 0.5, 41]; f = 22; }
-  else if (i === 3) { pos = [0, pl + 10.5, 88.5]; look = [0, pl + 0.6, 71]; f = 26; }
-  else if (i === 4) { pos = [hx + 6.5, 2.2, 9.5]; look = [hx, 2.6, 0]; f = 35; }
+  else if (i === 3) { pos = [0, pl + 7.5, 88.5]; look = [0, pl + 0.4, 71.5]; f = 26; }
+  else if (i === 4) { pos = [hx + 7.5, 1.8, 10.5]; look = [hx, 1.95, 0]; f = 30; }
   else { const a = (t - 5) * Math.PI * 2; pos = [hx + Math.sin(a) * 12, 3.5, Math.cos(a) * 12]; look = [hx, 2.5, 0]; f = 35; }
   cam.position.set(...pos); cam.lookAt(...look); cam.updateMatrixWorld(true);
   const tgt = new THREE.Vector3(...look);

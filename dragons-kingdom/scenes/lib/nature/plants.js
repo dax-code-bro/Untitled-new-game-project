@@ -71,7 +71,7 @@ export function landCover(opts) {
 const SHRUBS = {
   // lobes, flattening, leeward shear, base spread, leaf scale (1/m), colours, flowers
   // (in flower: clusters of bright yellow over 30-70 % of the bush, more on the sunny top)
-  gorse: { lobes: [4, 8], flat: 0.7, shear: 0.45, leaf: 14, col: [0.032, 0.048, 0.016], var: 0.25, flower: [0.87, 0.6, 0.025, 0.42] },
+  gorse: { lobes: [4, 8], flat: 0.7, shear: 0.45, leaf: 14, col: [0.042, 0.058, 0.02], var: 0.25, flower: [0.87, 0.6, 0.025, 0.42] },
   heather: { lobes: [3, 6], flat: 0.38, shear: 0.25, leaf: 22, col: [0.07, 0.065, 0.04], var: 0.3, flower: [0.32, 0.12, 0.22, 0.0] },
   bracken: { lobes: [5, 9], flat: 0.55, shear: 0.3, leaf: 7, col: [0.16, 0.2, 0.05], var: 0.35, flower: [0.3, 0.18, 0.06, 0.0] },
   scrub: { lobes: [6, 11], flat: 0.62, shear: 0.6, leaf: 10, col: [0.045, 0.06, 0.03], var: 0.2, flower: [0.9, 0.9, 0.85, 0.06] },

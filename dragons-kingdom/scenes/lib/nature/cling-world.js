@@ -78,9 +78,19 @@ export function createClingWorld() {
     h -= sink * smoothstep(110, 160, Math.hypot(x, z));     // not inside the town
     h -= 0.11 * Math.exp(-(((rdR - 0.95) / 0.22) ** 2)) + 0.08 * Math.exp(-(((rdL - 0.7) / 0.2) ** 2));
     h += (0.45 * Math.exp(-(((rdR - 6.2) / 1.5) ** 2)) + 0.3 * Math.exp(-(((rdL - 4.3) / 1.1) ** 2))) * smoothstep(130, 180, Math.hypot(x, z));
-    h += ridgeAt(x, z);
+    // ridge and furrow as geometry only where the terrain grid is fine enough to carry 6-10 m ridges
+    // (around ridgeFocus; beyond it a coarse grid aliased them into wavy dune-like moire - the
+    // farmland shader shades them through the normal there instead)
+    if (ridgeFocus) {
+      const fd = Math.hypot(x - ridgeFocus[0], z - ridgeFocus[1]);
+      const k = 1 - smoothstep(ridgeFocus[2], ridgeFocus[3], fd);
+      if (k > 0) h += ridgeAt(x, z) * k;
+    }
     return h + 0.12 * N3.n2(x / 3, z / 3);
   };
+  let ridgeFocus = null;
+  /** where the terrain grid is fine: [x, z, full-amplitude radius, zero radius] (null: no geometry) */
+  const setRidgeFocus = (f) => { ridgeFocus = f; };
 
   // ------------------------------------------------------------- field system ---
   // sites: small closes near the town, big furlongs further out, each with a use
@@ -131,5 +141,5 @@ export function createClingWorld() {
     const w = smoothstep(0.15, 0.4, N.fbm2(x / 380 + 3, z / 380, 4) + 0.35 * smoothstep(400, 2400, -z) - 0.2);
     return w * smoothstep(250, 600, Math.hypot(x, z));
   }
-  return { N, N2, N3, base, height, installLand, road, lane, roadD, laneD, sites, fieldAt, wood, distToPolyline, ridgeAt, stripW, stripDir };
+  return { N, N2, N3, base, height, installLand, road, lane, roadD, laneD, sites, fieldAt, wood, distToPolyline, ridgeAt, stripW, stripDir, setRidgeFocus };
 }

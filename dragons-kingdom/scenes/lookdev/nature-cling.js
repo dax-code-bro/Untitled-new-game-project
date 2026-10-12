@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { loadHDRI } from '../lib/assets.js';
 import { loadClingLand } from '../lib/nature/farmland.js';
+import { createClingWorld } from '../lib/nature/cling-world.js';
 import { filmFinish } from './finish.js';
 
 const SUN_H = new THREE.Vector3(0.6, 0, -0.8).normalize();
@@ -40,8 +41,20 @@ export async function setup(ctx) {
   sun.intensity *= 1.4; scene.environmentIntensity = 0.9;
   sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
   scene.add(sun, sun.target);
+  // the road shot stands IN the hollow way (on the road's meandering centreline), looking up it
+  {
+    const W = createClingWorld(), onRoad = (x0, z0) => {
+      let best = [x0, z0], bd = Infinity;
+      for (let dz = -30; dz <= 30; dz += 1) for (let dx = -30; dx <= 30; dx += 1) { const d = W.roadD(x0 + dx, z0 + dz); if (d < bd) { bd = d; best = [x0 + dx, z0 + dz]; } }
+      return best;
+    };
+    const a = onRoad(330, -50), b = onRoad(470, -120);
+    SHOTS[3].pos = [a[0], 0, a[1]];
+    SHOTS[3].look = [b[0], 0, b[1]];
+  }
   const land = await loadClingLand(ctx, { views: SHOTS.filter(Boolean).map((s) => s.pos), grass: { radius: 32, count: 140000, height: [0.15, 0.5] } });
   scene.add(land.group);
+  SHOTS[3].look[1] = land.heightAt(SHOTS[3].look[0], SHOTS[3].look[2]) + 2.5;
   for (const s of SHOTS) if (s?.eye) s.pos[1] = land.heightAt(s.pos[0], s.pos[2]) + s.eye;
   camera.near = 0.2; camera.far = 30000;
   S = { sun, SUN: sky.sun.direction.clone(), land };

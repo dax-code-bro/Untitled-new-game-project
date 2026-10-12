@@ -85,7 +85,7 @@ export const SPECIES = {
       { segs: 3, kids: 5, start: 0.2, down: [45, 15], len: 0.45, rad: 0.5, curve: 0.2, up: 0.12 },
       { segs: 2, kids: 0, start: 0.1, down: [40, 15], len: 0.45, rad: 0.5, curve: 0.2, up: 0.1 },
     ],
-    radius: 0.3, leaf: { kind: 'pine', size: 0.55, perM: 16, fromLevel: 2 }, bark: 'pbr/acg_bark014', barkTint: [0.8, 0.6, 0.48],
+    radius: 0.3, leaf: { kind: 'pine', size: 0.6, perM: 26, fromLevel: 1 }, bark: 'pbr/acg_bark014', barkTint: [0.8, 0.6, 0.48],
     leafCol: [0.05, 0.08, 0.03],
   },
   // shrubs grown the same way (many stems from the ground, dense small foliage cards)
@@ -111,12 +111,12 @@ export const SPECIES = {
     leafCol: [0.06, 0.06, 0.035],
   },
   bracken: {
-    height: [0.7, 1.3], stems: [5, 9], trunkFrac: 0, lean: 0.15, spread: 0.7,
+    height: [0.7, 1.3], stems: [10, 16], trunkFrac: 0, lean: 0.15, spread: 0.85,
     crown: { center: 0.5, rx: 1.2, ry: 0.7, base: 0.0 },
     levels: [
       { segs: 6, kids: 0, start: 0.4, down: [30, 10], len: 0.5, rad: 0.5, curve: 0.25, up: -0.12 },
     ],
-    radius: 0.006, leaf: { kind: 'bracken', size: 0.75, perM: 2.2, fromLevel: 0 }, bark: 'pbr/acg_bark001', barkTint: [0.35, 0.4, 0.2],
+    radius: 0.006, leaf: { kind: 'bracken', size: 0.8, perM: 3.2, fromLevel: 0 }, bark: 'pbr/acg_bark001', barkTint: [0.35, 0.4, 0.2],
     leafCol: [0.11, 0.15, 0.04],
   },
   blackthorn: {
@@ -437,8 +437,6 @@ const PHOTO_LEAVES = {
   blackthorn: { src: 'ash', scale: 0.55, n: 3, col: [48, 66, 32], keepChroma: 0.25 },
   // heather (ling): the fine scale-leaved shoots of the spruce photo, small and fanned, dark olive
   heather: { src: 'pine', scale: 0.5, n: 3, col: [64, 64, 40], keepChroma: 0.15 },
-  // bracken: the pinnate ash spray stands in for a frond's pinnae, yellow-green
-  bracken: { src: 'ash', scale: 1.0, n: 1, col: [96, 118, 44], keepChroma: 0.2 },
 };
 const photoCache = new Map();
 async function photoBitmap(name) {
@@ -496,13 +494,19 @@ export async function photoLeafAtlas(kind, size = 1024) {
     const R = d[i], Gc = d[i + 1], Bc = d[i + 2];
     const L = (0.3 * R + 0.59 * Gc + 0.11 * Bc) / meanL;
     const t = tints[(x >= half ? 1 : 0) + (y >= half ? 2 : 0)];
-    const twig = R > Gc * 1.15 && P.src !== 'pine' ? 1 : P.src === 'pine' && R > Gc * 1.05 ? 1 : 0;
+    // twigs: redder than green - but the aspen's autumn leaves are yellow-orange too, so there a twig
+    // must also be darker than the leaves
+    const Lr = 0.3 * R + 0.59 * Gc + 0.11 * Bc;
+    const twig = P.src === 'aspen' ? (R > Gc * 1.12 && Lr < meanL * 0.62 ? 1 : 0) : P.src === 'pine' ? (R > Gc * 1.05 ? 1 : 0) : (R > Gc * 1.15 ? 1 : 0);
     let o;
     if (twig) o = [R * 0.55, Gc * 0.5, Bc * 0.45];
     else {
       const k = Math.pow(L, 1.1) * t[3];
       o = [P.col[0] * t[0] * k, P.col[1] * t[1] * k, P.col[2] * t[2] * k];
-      if (P.keepChroma > 0) { const c = P.keepChroma; o = [o[0] * (1 - c) + R * c * P.col[0] / 70, o[1] * (1 - c) + Gc * c * P.col[1] / 110, o[2] * (1 - c) + Bc * c * P.col[2] / 60]; }
+      if (P.keepChroma > 0) { const c = P.keepChroma * 0.5; o = [o[0] * (1 - c) + R * c * P.col[0] / 70, o[1] * (1 - c) + Gc * c * P.col[1] / 110, o[2] * (1 - c) + Bc * c * P.col[2] / 60]; }
+      // a muted, photographic green (a saturated leaf colour read as Kelly-green clip-art)
+      const lo = 0.3 * o[0] + 0.59 * o[1] + 0.11 * o[2];
+      o = [o[0] * 0.85 + lo * 0.15, o[1] * 0.85 + lo * 0.15, o[2] * 0.85 + lo * 0.15];
     }
     d[i] = Math.min(255, o[0]); d[i + 1] = Math.min(255, o[1]); d[i + 2] = Math.min(255, o[2]);
   }
@@ -627,7 +631,7 @@ function drawCluster(g, kind, S, r) {
         drawLeaf(g, kind, cx + (bx - cx) * t, cy + (by - cy) * t, Math.PI + a, S * (0.05 + 0.05 * r()), r, r());
       }
       // in flower: dense clusters of pea-flowers along the outer half of the shoots
-      const nfl = c % 2 ? 26 : 12;
+      const nfl = c % 2 ? 15 : 5;
       for (let i = 0; i < nfl; i++) {
         const t = 0.45 + 0.55 * r();
         const fx = cx + (bx - cx) * t + (r() - 0.5) * S * 0.07, fy = cy + (by - cy) * t + (r() - 0.5) * S * 0.07;
@@ -658,7 +662,9 @@ function drawCluster(g, kind, S, r) {
   if (kind === 'bracken') {
     // one frond: a rachis with pinnae, each cut into pinnules, the tip curling over
     const len = S * 0.95;
-    g.strokeStyle = 'rgb(110,120,50)'; g.lineWidth = S * 0.01;
+    // one card in three: last year's dead frond, rusty brown, under the green ones
+    const dead = r() < 0.3;
+    g.strokeStyle = dead ? 'rgb(105,70,40)' : 'rgb(110,120,50)'; g.lineWidth = S * 0.01;
     g.beginPath(); g.moveTo(cx, cy); g.quadraticCurveTo(cx + S * 0.05, cy - len * 0.5, cx + S * 0.02, cy - len); g.stroke();
     for (let i = 1; i <= 11; i++) {
       const t = i / 12, py = cy - len * t, px = cx + S * 0.05 * Math.sin(t * 3);
@@ -672,7 +678,7 @@ function drawCluster(g, kind, S, r) {
           const u = k / 9, w = pl * 0.16 * (1 - u * 0.7);
           for (const s2 of [-1, 1]) {
             const k2 = 0.8 + 0.4 * r();
-            g.fillStyle = `rgb(${92 * k2 | 0},${132 * k2 | 0},${40 * k2 | 0})`;
+            g.fillStyle = dead ? `rgb(${128 * k2 | 0},${82 * k2 | 0},${42 * k2 | 0})` : `rgb(${92 * k2 | 0},${132 * k2 | 0},${40 * k2 | 0})`;
             g.beginPath(); g.ellipse(s2 * w * 0.55, -pl * u, w * 0.5, w * 0.24, s2 * 0.5, 0, Math.PI * 2); g.fill();
           }
         }
@@ -770,7 +776,7 @@ export function leafMaterial(S, atlas) {
       .replace('#include <color_fragment>', `#include <color_fragment>
 // crown depth (baked per card): the inside of a crown is in its own shade; the undersides of the
 // leaves are a paler, yellower green (never the grey of a back-lit card)
-diffuseColor.rgb *= lTint * (0.2 + 0.95 * vSh);
+diffuseColor.rgb *= lTint * (0.4 + 0.68 * vSh);
 if (!gl_FrontFacing) diffuseColor.rgb *= vec3(1.06, 1.1, 0.9);`)
       // leaf cuticle sheen is weak and broken up by the leaf's microrelief: the grazing-angle Fresnel of
       // a smooth dielectric turns edge-on cards into white flecks (reads as blossom from a distance)
