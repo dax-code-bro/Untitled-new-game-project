@@ -265,3 +265,6 @@ Next: finish queues -> preview review of every id (review.sh in scratchpad human
 Next (for a successor): reins / stirrups belong to the creatures saddle (riders' hands open on a
 bar); braids in shade still read near-black (hair albedo + no multiple scattering); King's beard
 still pad-like at 4K; faces are still MakeHuman faces (expression units help, no sculpted detail).
+- 03:15 UTC: DONE for this round. Final 4K in output/humans/r1/ (hero-*-r1, contact-1..7-r1,
+  riders-1..3-r1 + _1920 + _crop-*); npm test 33/33 (234 s). Old caches (*.prev) deleted; the
+  review renders (output/humans/r1c) deleted. Timings in README.

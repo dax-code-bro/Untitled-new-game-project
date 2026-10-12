@@ -158,6 +158,13 @@ all 48 in 53 min with three queues in parallel (08:22-09:15 UTC; `queue.sh` take
 so several queues can run over the same list). Cache: 986 MB for the 48 (close-up 35-57 MB,
 mid 4-24 MB).
 
+Fix round 1 (2026-10-12, 4-7 builds in parallel on the shared 4 vCPU, so slower per build):
+abby 862 s, abby_injured 1106-1214 s, alexandria 595-785 s, king 491-727 s, fall 579 s, remi 496 s,
+abby_sling 477-567 s, riders 431-475 s, child 1588 s, crowd / work cast 81-865 s (median ~300 s);
+all 48 ids + the re-builds in ~2 h 10 min wall clock. Cache after the round: 1.1 GB (git-ignored).
+4K finals (output/humans/r1/, 1 worker): hero 8 stills 27 min (~200 s each), contact sheets 7 in
+20 min, riders 3 in 7 min 51 s. Previews (1920x1080): hero 8 in 8.5 min, contact 7 in 10.5 min.
+
 ## Use
 
 ```js
