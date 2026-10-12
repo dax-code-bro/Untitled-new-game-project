@@ -28,7 +28,10 @@ export function meshTile(world, o) {
   const cols = new Array(nx * nz);
   const colAt = (i, k) => cols[k * nx + i] || (cols[k * nx + i] = world.column(X0 + i * h, Z0 + k * h));
   let evals = 0;
-  const ev = (i, j, k) => { const q = idx(i, j, k); if (!done[q]) { f[q] = world.sdf(X0 + i * h, Y0 + j * h, Z0 + k * h, colAt(i, k)); done[q] = 1; evals++; } return f[q]; };
+  // (a node filled by a far coarse cell's trilinear guess (done 2) is re-evaluated exactly when a
+  // near cell needs it - it used to keep the guess, and a guess with the wrong sign next to the
+  // surface made stray slivers)
+  const ev = (i, j, k) => { const q = idx(i, j, k); if (done[q] !== 1) { f[q] = world.sdf(X0 + i * h, Y0 + j * h, Z0 + k * h, colAt(i, k)); done[q] = 1; evals++; } return f[q]; };
 
   if (C > 1) {
     // coarse pass

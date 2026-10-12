@@ -202,7 +202,15 @@ export function generateTree(speciesName, opts = {}) {
     if (!dead && level >= 2 && expo > 0.5) {
       const tip = pts[pts.length - 1];
       const into = (d.x * WIND_FROM.x + d.z * WIND_FROM.z) / Math.max(0.2, Math.hypot(d.x, d.z));
-      if (into > 0.2 && env(tip) > 0.8 && r() < 0.75 * expo) dead = true;
+      if (into > 0.2 && env(tip) > 0.8 && r() < 0.75 * expo) {
+        dead = true;
+        // a salt-killed twig is broken back to a short grey snag (full length, bare and straight,
+        // they stood out of the crown like spines)
+        const keep = Math.max(2, Math.ceil(pts.length * (0.35 + 0.25 * r())));
+        pts.length = keep; rad.length = keep;
+        rad[keep - 1] *= 0.6;
+        flags = { ...flags, dead: true, noKids: r() < 0.6 };
+      }
     }
     const br = { pts, rad, level, dead };
     branches.push(br);
@@ -241,7 +249,7 @@ export function generateTree(speciesName, opts = {}) {
       if (len < 0.05) continue;
       const rl = radiusAt(rad, t);
       const crad = Math.min(rl * 0.8, rl * Math.pow(len / Math.max(length, 0.01), 1.1) * 1.25) * L.rad * 1.6;
-      grow(level + 1, pos, cd, len, Math.max(crad, 0.004), phase + 3.7 * (k + 1), lowDead ? { dead: true, droop: true, noKids: r() < 0.5 } : {});
+      grow(level + 1, pos, cd, dead ? len * 0.5 : len, Math.max(crad, 0.004), phase + 3.7 * (k + 1), dead ? { dead: true, noKids: true } : lowDead ? { dead: true, droop: true, noKids: r() < 0.5 } : {});
     }
   }
   const r0 = S.radius * (H / ((S.height[0] + S.height[1]) / 2)) * (opts.girth ?? 1);

@@ -179,7 +179,7 @@ normal = normalize((viewMatrix * vec4(nkRockN, 0.0)).xyz);`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= nkAOv; reflectedLight.indirectSpecular *= nkAOv * nkAOv;`);
   };
-  mat.customProgramCacheKey = () => `nature-landscape-v24${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}${opts.crease === false ? '-nc' : ''}`;
+  mat.customProgramCacheKey = () => `nature-landscape-v26${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}${opts.crease === false ? '-nc' : ''}`;
   return mat;
 }
 
@@ -308,7 +308,9 @@ rock = mix(rock, rock * vec3(1.12, 1.1, 1.04) + vec3(0.04, 0.035, 0.025), scar *
 // water on the faces: runoff streaks hanging from the turf lip and from ledges (grey-black organic,
 // a few iron-orange), green seepage lines at the shaly partings, whitewash under some ledges
 {
-  float vert = smoothstep(0.85, 0.3, abs(up));
+  // (faces only: on a turfed head slope the streaked rock under the turf showed through the height
+  // blend as rows of dark dashes)
+  float vert = smoothstep(0.62, 0.3, abs(up));
   vec2 tg = normalize(vec2(-N0.z, N0.x) + 1e-4);
   float u = dot(P.xz, tg);
   // each streak: a width (0.2-2 m) and a length (2-15 m) from where the water leaves the lip
@@ -421,7 +423,12 @@ if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
       trk *= smoothstep(0.5, 0.75, dkVN2(P.xz * 0.011 + 1.7)) * smoothstep(0.82, 0.95, up) * (1.0 - smoothstep(200.0, 600.0, camD));
       vec3 bare = vec3(0.2, 0.15, 0.09) * (0.8 + 0.4 * m3);
       c = mix(c, mix(c * vec3(0.85, 0.8, 0.6), bare, 0.55), trk * 0.85);
-      float scrape = smoothstep(0.78, 0.86, dkVN2(P.xz * 0.21 + 9.0)) * smoothstep(0.5, 0.7, dkVN2(P.xz * 0.03)) * (1.0 - smoothstep(150.0, 450.0, camD));
+      // (a single high threshold on lattice value noise put a scrape on every lattice point: rows of
+      // dark dots on a 4.8 m grid across the head slope. Rotated, warped, two incommensurate octaves.)
+      vec2 sq = mat2(0.8, -0.6, 0.6, 0.8) * P.xz;
+      vec2 sw = vec2(dkVN2(P.xz * 0.047 + 2.0), dkVN2(P.xz * 0.047 + 6.3)) * 2.2;
+      float sn = dkVN2(sq * 0.17 + sw + 9.0) * 0.62 + dkVN2(P.xz * 0.437 + sw.yx + 3.1) * 0.38;
+      float scrape = smoothstep(0.7, 0.78, sn) * smoothstep(0.6, 0.8, dkVN2(P.xz * 0.019 + 4.4)) * (1.0 - smoothstep(150.0, 450.0, camD));
       c = mix(c, bare * 1.1, scrape * 0.8);
     }
     turfBump = 1.0;

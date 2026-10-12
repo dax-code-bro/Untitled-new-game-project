@@ -29,18 +29,17 @@ export const meta = {
       enabled: true, range: 3600, near: 1, resolution: [320, 128, 64], intensity: 1.5, noiseFilter: true, shadowSoftness: 16,
       density: 0.00032, heightFalloff: 0.016, fogBase: 0, anisotropy: 0.72, noiseScale: 0.006, noiseAmount: 0.75, wind: [3, 0, 1],
       banks: [
-        // the cloud cap on the high ground: a dense core hugging the summits, then layered, thinner
-        // lobes at different heights (a ragged, feathered base instead of one ellipsoid's flat sheet)
-        // trailing off to leeward, and wisps clinging lower on the slopes
+        // (the runtime takes at most 8 banks)
+        // the cloud cap on the high ground: a dense core hugging the summits, then thinner lobes at
+        // different heights (a ragged base, not one ellipsoid's flat sheet) trailing to leeward
         { center: [I.cx + 150, 560, I.cz - 40], radius: [1050, 210, 760], density: 0.028, noise: 0.9 },
-        { center: [I.cx - 150, 520, I.cz + 80], radius: [620, 120, 420], density: 0.014, noise: 0.95 },
-        { center: [I.cx + 520, 505, I.cz - 160], radius: [700, 110, 460], density: 0.012, noise: 0.95 },
-        { center: [I.cx - 350, 440, I.cz + 160], radius: [520, 90, 330], density: 0.009, noise: 1.0 },
-        { center: [I.cx + 900, 455, I.cz - 300], radius: [760, 120, 500], density: 0.007, noise: 1.0 },
-        { center: [I.cx + 260, 395, I.cz + 260], radius: [380, 60, 220], density: 0.006, noise: 1.0 },
-        { center: [I.cx - 600, 330, I.cz + 300], radius: [300, 45, 160], density: 0.005, noise: 1.0 },
-        // the sea cloud the dawn sun sits behind
-        { center: [SUN_BANK.x, SUN_BANK.y + 40, SUN_BANK.z], radius: [1500, 260, 520], density: 0.03, noise: 0.7 },
+        { center: [I.cx - 150, 500, I.cz + 80], radius: [650, 150, 450], density: 0.014, noise: 0.95 },
+        { center: [I.cx + 600, 480, I.cz - 200], radius: [800, 150, 520], density: 0.011, noise: 0.95 },
+        { center: [I.cx - 350, 400, I.cz + 200], radius: [500, 90, 320], density: 0.008, noise: 1.0 },
+        // the sea cloud the dawn sun sits behind: thick and thin layers so its underside feathers out
+        // instead of drawing one hard diagonal edge across the sky
+        { center: [SUN_BANK.x, SUN_BANK.y + 60, SUN_BANK.z], radius: [1700, 380, 600], density: 0.02, noise: 0.95 },
+        { center: [SUN_BANK.x + 250, SUN_BANK.y - 160, SUN_BANK.z + 200], radius: [1600, 220, 520], density: 0.007, noise: 1.0 },
         // mist lying on the sea under the cliffs and in layered banks
         { center: [I.cx - 200, 25, I.cz + 700], radius: [1400, 40, 260], density: 0.006, noise: 0.9 },
         { center: [-300, 7, -1150], radius: [1500, 18, 260], density: 0.005, noise: 0.9 },

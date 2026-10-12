@@ -442,7 +442,9 @@ export function createVerdorWorld(opts = {}) {
     const sw = sow(x, z), dh = dipH(x, z);
     const headH = lerp(1.0, 27, sw), slopeT = lerp(0.5, 1.25, sw);
     const wallTop = Math.max(top - headH, Math.min(top - 1, 9));
-    const jog = (hash2(B.ia, 17, seed + 141) - 0.5) * 3.0;          // risers step at the cross joints
+    // risers wander along the coast (continuous: a jump in the field at each cross joint broke the
+    // mesher's coarse pass into stray slivers)
+    const jog = 1.6 * N3.n2(projA(x, z) / 11 + 3.3, 7.7);
     const dIn = ff - F + 2.2 * N3.fbm2(x / 13 + 3, z / 13, 2) + jog;
     const slopeY = wallTop + slopeT * Math.max(dIn, -4) + 0.45 * N.fbm2(x / 8 + 1, z / 8, 2);
     const soilD = 0.32 + 0.45 * smoothstep(-0.3, 0.4, N.fbm2(x / 17 + 4, z / 17, 2));
@@ -450,7 +452,8 @@ export function createVerdorWorld(opts = {}) {
     const outcH = 1.7 * smoothstep(0.38, 0.62, N2.fbm2(x / 34 + 5, z / 34 - 2, 3)) * (0.6 + 0.4 * smoothstep(0, 0.4, N3.fbm2(x / 7, z / 7, 2)));
     // crag bands come in coherent stretches of slope (tens of metres), with plain turf between -
     // not a dashed line of nosings everywhere
-    const delta = -0.65 + 2.5 * smoothstep(-0.05, 0.35, N2.fbm2(x / 48 + 9, z / 48, 3)) + 0.3 * N3.n2(x / 9, z / 9);
+    const crag = smoothstep(0.08, 0.2, N2.fbm2(x / 48 + 9, z / 48, 3));
+    const delta = -0.7 + 2.3 * crag + 0.2 * N3.n2(x / 9, z / 9);
     const tHead = slopeY + delta, tLand = top - soilD + outcH;
     const T = Math.min(tHead, tLand);
     const headness = smoothstep(-0.5, 2.5, tLand - tHead);
@@ -465,7 +468,12 @@ export function createVerdorWorld(opts = {}) {
     // the tread that forms the rock top here
     let rockTop = tr.length ? tr[0] - 6 : T;
     for (const yk of tr) if (yk <= T) rockTop = yk;
+    // outside the crag stretches and the pavement patches the rock lies at least 0.6 m under the soil
+    // (a tread just under the turf left rows of slivers and dark pinholes along every contour)
+    const exposed = Math.max(crag, smoothstep(0.25, 0.6, outcH));
+    const rockLim = soilY - 0.6 + 60 * exposed;
     return {
+      rockLim,
       x, z, F, top, floor, plat: platLevel(x, z), platPlan, grike, ph, phd, geo, blocks: B.list.filter((b) => b.st === 2), u: B.u, v: B.v,
       stacks: nearStacks(x, z, 8), notchD: 1.8 + 2.0 * N2.fbm2(x / 60, z / 60, 2), dh,
       expo: 0.75 + 0.5 * smoothstep(-0.4, 0.4, N2.fbm2(x / 220, z / 220, 2)),
@@ -547,9 +555,15 @@ export function createVerdorWorld(opts = {}) {
         // a reef ledge around the base, awash at low water: something for the surf to break on
         // (mostly 0.4-1 m under the water at mid-falling tide, a few knobs awash; ragged in plan -
         // a large flat pale raft at the surface read as a tile floating on the sea)
-        const rp = stackPlan(x, z, { ...st.pieces[0], facets: st.pieces[0].facets.map(([a, b, r]) => [a, b, r * 1.3 + 3]) }) + 3.5 * N2.fbm2(x / 12, z / 12, 3) + 1.2 * N3.fbm2(x / 4, z / 4, 2);
-        const rtop = -2.15 + 0.4 * N3.n2(x / 6, z / 6) + 0.75 * smoothstep(0.25, 0.7, N.n2(x / 3.3 + 2, z / 3.3)) + 0.2 * N.n2(x / 1.4, z / 1.4);
-        stk = smin(stk, smax(rp, y - rtop, 0.6), 0.8);
+        const dc = Math.hypot(x - st.x, z - st.z);
+        const rp = dc - (st.r * 1.25 + 3) + 4.5 * N2.fbm2(x / 12, z / 12, 3) + 1.4 * N3.fbm2(x / 4, z / 4, 2);
+        const knob = 1.6 * smoothstep(0.35, 0.8, N.n2(x / 3.3 + 2, z / 3.3)) + 0.5 * N3.n2(x / 6, z / 6) + 0.2 * N.n2(x / 1.4, z / 1.4);
+        // the ledge top falls away from the rock (knobs awash close in, 3-4 m down at its edge) and the
+        // ledge ends in a rubble slope to the sea bed: a flat-topped ledge with vertical sides drew a
+        // pale square of shallow water round every skerry. (A height field, scaled to a distance; it
+        // is down on the sea bed before the column's stack list drops this stack.)
+        const hR = -1.9 - 0.11 * Math.max(0, dc - st.r) + knob - Math.max(0, rp) - 2 * Math.max(0, dc - (st.r * 2.6 + 4));
+        stk = smin(stk, (y - hR) * 0.6, 0.8);
       }
     }
     plan = smax(plan, -c.geo, 0.6);
@@ -558,13 +572,13 @@ export function createVerdorWorld(opts = {}) {
     // y < y_k where the target surface T stands above y_k (distance to its riser ~ (y_k - T) / |grad T|)
     let stair = c.tr.length ? y - (c.tr[0] - 6) : y - c.T;
     for (const yk of c.tr) stair = Math.min(stair, Math.max(y - yk, (yk - c.T) / c.gT));
-    const rock = Math.max(plan, stair);
+    const rock = Math.max(plan, stair, y - c.rockLim);
     // the soil mantle: up to the slope / land surface, lying on the rock (an overhanging sod lip of
     // 0.15-0.5 m at the edge, a soil band 0.3-1 m thick in the top of the face; no skin further down)
     const soil = Math.max(y - c.soilY, plan - c.ovh, Math.min(c.soilY - 1.1 - y, -(plan + 1.2)));
     // (a soft union: where a buried tread runs just under the soil surface the two merge into one
     // surface instead of a film of slivers and pinholes)
-    let f = smin(rock, soil, 0.3);
+    let f = smin(rock, soil, 0.15);
     if (stk < 1e8) f = smin(f, stk, 0.35);
     // sea caves (along their joints) and the arch
     for (const cv of caves) {
@@ -594,8 +608,9 @@ export function createVerdorWorld(opts = {}) {
   function surfaceInfo(x, y, z, col) {
     const c = col || column(x, z);
     const s0 = y + c.dh;
-    const covered = c.soilY >= c.rockTop - 0.05;
-    return [Math.max(0, Math.max(c.rockTop, c.soilY) - y), pinch(x, z, s0), covered ? 0 : 1];
+    const rt = Math.min(c.rockTop, c.rockLim);
+    const covered = c.soilY >= rt - 0.05;
+    return [Math.max(0, Math.max(rt, c.soilY) - y), pinch(x, z, s0), covered ? 0 : 1];
   }
 
   /** the height of the visible ground surface in plan (for scattering and the far heightfield) */

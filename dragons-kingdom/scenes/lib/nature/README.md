@@ -102,7 +102,8 @@ trees, gorse and grass lean toward -x.
 | | 3 | the outer rocks from above |
 | | 4 / 5 | arch headland and the bay / the face from a boat |
 | `nature-tree.js` | 1 / 2 | clifftop hawthorn 32 mm / 85 mm detail |
-| `nature-island.js` | 1 / 2 / 3 / 4 | prologue island at dawn in mist (P-03 framing) / closer / P-12 / "a forest reaching a cliff" (montage) |
+| `nature-island.js` | 1 / 2 / 3 | prologue island at dawn in mist (P-03 framing) / closer / P-12 |
+| `nature-forest.js` | 1 / 2 | "a forest reaching a cliff" (prologue montage): oak wood with ash, sycamore and salt-shorn thorn scrub over the Verdor limestone, from a boat 420 m out / closer along the edge, 50 mm |
 | `nature-cling.js` | 1 / 2 / 3 / 4 | from the king's steps / aerial over the closes / on the road / meadow + hedgerow oak |
 
 Shots switch a quarter second before each whole second, so `--time N` (whose motion-blur subframes
@@ -112,8 +113,9 @@ Textures: ambientCG / Poly Haven CC0 sets already in `assets-lib/manifest.json`,
 bark sets (`pbr/acg_bark001/004/006/014`, CC0) added for the trees, and photographed leaf sprays
 (`texture/eztree_leaves`: oak, ash, aspen, spruce cut-outs from EZ-Tree, MIT licence) that
 `photoLeafAtlas()` builds into per-species 2x2 atlases (hawthorn and blackthorn: small-leaved fanned
-sprays; sycamore: the aspen spray recoloured green; heather: the spruce shoots tiny and olive;
-bracken: the pinnate ash spray). Gorse and thrift cards are still drawn on a canvas.
+sprays; sycamore: the aspen spray recoloured green; heather: the spruce shoots tiny and olive).
+Gorse, thrift and bracken cards (pinnate fronds, a third of them last year's dead brown) are drawn
+on a canvas.
 
 Trees (`trees.js`): hawthorn grows ONE flared, buttressed trunk that forks at 0.5-1.2 m into 2-3
 unequal stems (pipe model), with kinked zig-zag twigs, surface roots, a leaf cluster at every tip,

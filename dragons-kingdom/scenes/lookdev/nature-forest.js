@@ -74,18 +74,22 @@ export async function setup(ctx) {
   for (let z = Z0 - 380; z < Z0 + 290; z += G) for (let x = xc(z) - 470; x < xc(z) + 30; x += G) {
     const jx = x + (rr() - 0.5) * G * 0.9, jz = z + (rr() - 0.5) * G * 0.9;
     const e = inland(jx, jz);
-    if (e < 2.5 || e > 460) continue;
+    if (e < 1 || e > 460) continue;
     // the wood's inland edge is ragged; glades here and there
     if (e > 330 + 120 * rr()) continue;
     if (W.N.fbm2(jx / 70 + 3, jz / 70, 3) < -0.32) continue;
     const y = coast.surfaceAt(jx, jz);
     if (!(y > 6)) continue;
     const gx = coast.surfaceAt(jx + 1.5, jz) - coast.surfaceAt(jx - 1.5, jz), gz = coast.surfaceAt(jx, jz + 1.5) - coast.surfaceAt(jx, jz - 1.5);
-    if (Math.hypot(gx, gz) / 3 > 0.8) continue;                 // not on the face or the steep head
+    const sl = Math.hypot(gx, gz) / 3;
+    if (sl > 1.4) continue;                                      // not on the face
     const edge = 1 - smoothstep(6, 40, e);                       // the salt-pruned fringe
     const u = rr();
     let kit, scale;
-    if (edge > 0.6) { kit = u < 0.45 ? thorn : u < 0.75 ? sloe : oakW; scale = 0.7 + 0.4 * rr(); }
+    // the steep turfed head above the face: thorn scrub and stunted oak hanging over the edge (the
+    // wood has to be seen to reach the cliff from a boat below, not stop at the top of the head)
+    if (sl > 0.8) { kit = u < 0.4 ? thorn : u < 0.7 ? sloe : oakW; scale = 0.75 + 0.35 * rr(); }
+    else if (edge > 0.6) { kit = u < 0.35 ? thorn : u < 0.6 ? sloe : oakW; scale = 0.8 + 0.4 * rr(); }
     else if (edge > 0.15) { kit = u < 0.6 ? oakW : u < 0.8 ? thorn : oak; scale = 0.75 + 0.35 * rr(); }
     else { kit = u < 0.68 ? oak : u < 0.86 ? ash : syc; scale = (0.8 + 0.45 * rr()) * (0.85 + 0.15 * smoothstep(40, 160, e)); }
     places.push({ kit, x: jx, y, z: jz, variant: Math.floor(rr() * 3), yaw: (rr() - 0.5) * (edge > 0.15 ? 0.5 : 6.28), scale });
