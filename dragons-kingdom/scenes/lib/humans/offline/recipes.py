@@ -623,34 +623,23 @@ def palm_centre(pb, side, along=0.03):
 
 
 def act_clasp(pb, p):
-    """Hands folded at the waist: the left hand relaxed, palm up and in; the right hand laid over
-    it palm down, its fingers over the left fingers. Contact is solved: the right palm sits a hand's
-    thickness above the left (they interpenetrated, or one hand floated)."""
+    """Hands held loosely at the waist: the left hand hangs relaxed in front of the lower belly
+    (palm toward the body, fingers down and across), the right hand holds the left wrist from in
+    front, its fingers closed round it. One hand holding the other wrist is a contact the solver
+    closes exactly (two palms laid flat over each other read as an awkward, splayed gesture)."""
     _std_legs(pb, p)
     c = (pb.head('spine04') + pb.head('spine03')) / 2
     fwd, lat = pb.fwd_axis(), pb.side_axis()
     up = np.array([0, 1.0, 0])
-    G = c + fwd * p.get('reach', 0.2) + up * p.get('dy', -0.03)
-    poleL = pb.head('upperarm01.L') + lat * 0.35 + np.array([0, -0.45, -0.25])
-    poleR = pb.head('upperarm01.R') - lat * 0.35 + np.array([0, -0.45, -0.25])
-    palmL = (-lat + fwd * 0.25 - up * 0.1, up * 0.75 - fwd * 0.55)
-    tL = G + lat * 0.055
-    for _ in range(3):
-        place_hand(pb, 'L', tL, pole=poleL, palm=palmL, grip=None)
-        pc, fw, lt, nn = palm_centre(pb, 'L')
-        tL = tL + (G - pc)
-    pb.grip('L', 'relaxed', 0.9)
-    pcL, fwL, ltL, nL = palm_centre(pb, 'L')
-    # right hand: palm down over the left hand, fingers pointing to the left, wrist a little
-    # forward of the left one
-    want = pcL + nL * 0.024 + lat * 0.012 + fwd * 0.01
-    palmR = (lat + fwd * 0.2 - up * 0.15, -nL)
-    tR = want - lat * 0.06
-    for _ in range(3):
-        place_hand(pb, 'R', tR, pole=poleR, palm=palmR, grip=None)
-        pc, fw, lt, nn = palm_centre(pb, 'R')
-        tR = tR + (want - pc)
-    pb.grip('R', 'relaxed', 0.7)
+    G = c + fwd * p.get('reach', 0.17) + up * p.get('dy', -0.06)
+    poleL = pb.head('upperarm01.L') + lat * 0.3 + np.array([0, -0.5, -0.2])
+    poleR = pb.head('upperarm01.R') - lat * 0.3 + np.array([0, -0.5, -0.2])
+    place_hand(pb, 'L', G - lat * 0.03, pole=poleL, palm=(-lat * 0.5 - up * 0.85 + fwd * 0.1, -fwd * 0.85 - lat * 0.15),
+               grip='loose', amount=0.45)
+    el, wr = pb.head('lowerarm01.L'), pb.head('wrist.L')
+    fa = norm(wr - el)
+    Gw = el * 0.12 + wr * 0.88
+    grip_at(pb, 'R', Gw, lat_dir=fa, n_dir=-fwd * 0.75 + up * 0.25, grip='cylinder', amount=0.9, radius=0.026, pole=poleR)
     return []
 
 

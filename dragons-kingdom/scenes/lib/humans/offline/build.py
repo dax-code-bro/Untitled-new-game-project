@@ -327,6 +327,9 @@ def assemble(kit, spec, out_dir, opts):
         postfix.fix_props(cid + opts.get('suffix', ''))
         postfix.fix_hairline(cid + opts.get('suffix', ''))
         postfix.fix_cullboots(cid + opts.get('suffix', ''))
+        postfix.fix_legdrape(cid + opts.get('suffix', ''))
+        postfix.fix_boottop(cid + opts.get('suffix', ''))
+        postfix.fix_matpatch(cid + opts.get('suffix', ''))
         # integrity report (grips, brow / lash cards): printed with the build, never fatal
         try:
             import qa
@@ -1001,6 +1004,7 @@ def build_hair(gr, hs, hero, kit, V, body):
             gr.style_beard(int(bd.get('count', 6000) * (1.0 if hero else 0.5)), length=tuple(bd.get('length', (0.006, 0.02))), moustache=bd.get('moustache', True),
                            coverage=bd.get('coverage', 'full'), curl=bd.get('curl', 0.4), width=bd.get('width', 0.0007), moustache_len=bd.get('moustache_len'))
             gr.clump(i0, len(gr.strands), amount=bd.get('clump', 0.45), per=16)
+            body.material['beardFull'] = 1.0       # skin under the strands takes the beard colour (materials.js)
     # the scalp under the hair takes the hair colour (aux.a): exactly where strands cover it, so no
     # bare skin shows between strands; it fades out at the hairline over a few millimetres
     if st != 'none' and n_scalp:

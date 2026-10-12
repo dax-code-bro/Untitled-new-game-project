@@ -12,7 +12,7 @@ Colours are linear RGB of natural dyes (woad, madder, weld, walnut, undyed linen
 
 # ---------------------------------------------------------------- palette --
 DYE = {
-    'undyed': [0.42, 0.37, 0.29], 'linen': [0.5, 0.47, 0.4], 'oatmeal': [0.36, 0.31, 0.23], 'walnut': [0.11, 0.07, 0.045],
+    'undyed': [0.42, 0.37, 0.29], 'linen': [0.36, 0.335, 0.28], 'oatmeal': [0.36, 0.31, 0.23], 'walnut': [0.11, 0.07, 0.045],
     'russet': [0.2, 0.07, 0.035], 'madder': [0.32, 0.07, 0.045], 'woad': [0.07, 0.11, 0.2], 'darkwoad': [0.035, 0.05, 0.1],
     'weld': [0.42, 0.33, 0.08], 'sage': [0.12, 0.15, 0.1], 'moss': [0.08, 0.1, 0.045], 'grey': [0.15, 0.145, 0.14],
     'black': [0.02, 0.018, 0.018], 'ochre': [0.34, 0.2, 0.07], 'plum': [0.12, 0.05, 0.07], 'teal': [0.04, 0.09, 0.09],
@@ -58,7 +58,7 @@ def G_trousers(c, tuck=None, bottom=None, **kw):
     the boots at `tuck` (boot height as a shin fraction) or ending at `bottom` (m above the
     ankle: rolled-up sailors' trousers)."""
     d = {'type': 'trousers', 'fabric': 'wool', 'color': _c(c), 'ease': 0.017, 'sim': True, 'sim_fabric': 'wool', 'layer': 0.5,
-         'wear': 0.55, 'dust': 0.5, 'thickness': 0.002, 'tuck': tuck}
+         'wear': 0.55, 'dust': 0.5, 'thickness': 0.002, 'tuck': tuck, 'wrinkle': 1.0}
     if bottom is not None:
         d['bottom'] = bottom
     return dict(d, **kw)
@@ -120,7 +120,7 @@ def G_apron(c='linen', width=0.5, length=0.6, **kw):
     return dict({'type': 'apron', 'fabric': 'linen', 'color': _c(c), 'width': width, 'length': length, 'layer': 4, 'wear': 0.7, 'dust': 0.5}, **kw)
 
 
-def G_coif(c=(0.5, 0.48, 0.42), **kw):
+def G_coif(c=(0.38, 0.36, 0.31), **kw):
     return dict({'type': 'coif', 'fabric': 'linen', 'color': _c(c), 'front': 0.058, 'ease': 0.008, 'layer': 3}, **kw)
 
 
@@ -145,7 +145,7 @@ def G_gloves(c, cuff=0.32, **kw):
     return dict({'type': 'gloves', 'fabric': 'leather', 'color': _c(c), 'cuff': cuff, 'layer': 1.5, 'wear': 0.5, 'thickness': 0.0015, 'turn': 0.006}, **kw)
 
 
-def G_veil(c=(0.48, 0.46, 0.4), length=0.5, **kw):
+def G_veil(c=(0.37, 0.355, 0.31), length=0.5, **kw):
     # thin, with a narrow turned hem (a 1.2 cm turn-up with copied UVs read as a striated band)
     return dict({'type': 'veil', 'fabric': 'linen', 'sim_fabric': 'fine', 'color': _c(c), 'length': length, 'layer': 5,
                  'thickness': 0.0009, 'turn': 0.004}, **kw)
@@ -218,13 +218,15 @@ def variant(base, cid, **kw):
     return v
 
 
+# (undyed / bleached linen at linear luminance ~0.31-0.34: at 0.45-0.6 aprons, coifs and the
+# folded cloth clipped to flat paper-white in daylight and lost their weave and folds)
 # warm, ordinary Cling cloth: dyes faded and dulled by sun and washing (the bright woad blue, weld
 # chartreuse, madder salmon, teal and plum read as modern costume colours at distance)
 CLING = {
     'brick': [0.2, 0.075, 0.045], 'rust': [0.2, 0.085, 0.045], 'russet': [0.17, 0.08, 0.05], 'fadedwoad': [0.075, 0.088, 0.11],
     'straw': [0.33, 0.27, 0.15], 'ochre': [0.27, 0.17, 0.085], 'sage': [0.12, 0.14, 0.1], 'moss': [0.085, 0.095, 0.055],
     'oatmeal': [0.34, 0.3, 0.23], 'undyed': [0.4, 0.36, 0.29], 'walnut': [0.1, 0.066, 0.045], 'greybrown': [0.13, 0.115, 0.095],
-    'plumbrown': [0.11, 0.065, 0.06], 'madderpink': [0.26, 0.12, 0.09], 'linen': [0.46, 0.43, 0.37], 'darkgrey': [0.06, 0.058, 0.056],
+    'plumbrown': [0.11, 0.065, 0.06], 'madderpink': [0.26, 0.12, 0.09], 'linen': [0.35, 0.325, 0.275], 'darkgrey': [0.06, 0.058, 0.056],
 }
 LEATHER_C = {'tan': [0.2, 0.11, 0.05], 'brown': [0.11, 0.06, 0.03], 'dark': [0.05, 0.032, 0.02], 'black': [0.025, 0.02, 0.018]}
 IRIS_TINT = {'grey': [0.42, 0.44, 0.45], 'blue': [0.42, 0.47, 0.52], 'bluegreen': [0.44, 0.5, 0.48], 'green': [0.5, 0.55, 0.45],
@@ -319,9 +321,9 @@ def cast():
                           # hair dressed low in a knot at the nape under a slim gold fillet (a kerchief +
                           # veil read as a white swim cap with a stiff flap, strands through the linen)
                           ],
-                  accessories=[{'prop': 'circlet', 'dy': 0.05, 'tilt': -0.12, 'fit': 0.004, 'kw': {'h': 0.009}}],
+                  accessories=[{'prop': 'circlet', 'dy': 0.064, 'tilt': -0.16, 'fit': 0.004, 'kw': {'h': 0.009}}],
                   # hands folded at the waist: the right hand laid over the left (true contact)
-                  pose='clasp', pose_params={'weight': 'L', 'contrapposto': 0.5, 'reach': 0.2, 'dy': -0.02, 'head_yaw': -0.08}, cloth_subdiv=1,
+                  pose='clasp', pose_params={'weight': 'L', 'contrapposto': 0.5, 'reach': 0.21, 'dy': -0.03, 'head_yaw': -0.08}, cloth_subdiv=1,
                   notes='canon: a restrained formal gown; the dressed hair and the slim gold fillet are proposals (no crown in the screenplay)')
     alex['skin'].update({'texture': 'middleage_lightskinned_female_diffuse2', 'age': 0.35})
     C.append(alex)
@@ -329,7 +331,7 @@ def cast():
     # fitted command riding clothes, cut and coloured nothing like the Verdor siblings' coats:
     # a close near-black wool doublet with a standing collar and short split skirts, leather
     # gauntlets, fitted trousers, tall boots; braided coronet. No heraldry.
-    fall_out = [G_trousers([0.026, 0.025, 0.028], tuck=0.92, ease=0.011), G_boots(LEATHER_C['black'], height=0.98),
+    fall_out = [G_trousers([0.026, 0.025, 0.028], tuck=0.92, ease=0.011, legdrape=False), G_boots(LEATHER_C['black'], height=0.98),
                 G_doublet([0.03, 0.03, 0.035], hem=0.66, belt_style='leather', belt_color=[0.05, 0.035, 0.026], buckle='iron', tongue=0.07, belt_width=0.028),
                 G_gloves([0.03, 0.022, 0.018], cuff=0.4)]
     fall = person('fall', 'Queen Fall', 0.0, 0.55, 'light', lod='hero', muscle=0.6, weight=0.4, height=0.6,
@@ -354,17 +356,17 @@ def cast():
                            'cheek/r-cheek-volume': 0.3, 'eyes/l-eye-bag': 0.4, 'eyes/r-eye-bag': 0.4, 'head/head-round': 0.3, 'asym/asym-nose-1': 0.2},
                   # grey hair and beard of ONE colour family (salt-and-pepper per strand); a full beard
                   # in clumps with a moustache over the lip, thinning on the cheeks
-                  hair={'color': [0.11, 0.1, 0.09], 'style': 'crop', 'length': (0.02, 0.05), 'flow': 'back', 'curl': 0.15, 'loft': 0.009, 'clump': 0.3,
+                  hair={'color': [0.11, 0.1, 0.09], 'style': 'crop', 'length': (0.015, 0.038), 'flow': 'back', 'curl': 0.1, 'loft': 0.005, 'clump': 0.5,
                         'salt': 0.3,
                         'beard': {'count': 14000, 'length': (0.01, 0.026), 'curl': 0.22, 'shadow': 0.8, 'color': [0.11, 0.1, 0.09], 'clump': 0.4,
                                   'moustache_len': 0.017, 'salt': 0.32}},
                   eyes=('brown', IRIS_TINT['brown']), brows='eyebrow004',
                   expression={'mouth-corner-puller': 0.35, 'eye-left-slit': 0.2, 'eye-right-slit': 0.2, 'eyebrows-left-inner-up': 0.1},
                   outfit=[G_hose([0.09, 0.05, 0.035]), G_shoes(LEATHER_C['dark']), G_shirt('undyed', collar=0.0),
-                          G_tunic([0.15, 0.028, 0.022], hem=0.28, flare=1.75, ease=0.024, neck=0.035, wear=0.15, dust=0.1, sheen=0.5, name='gown',
+                          G_tunic([0.11, 0.022, 0.02], hem=0.28, flare=1.75, ease=0.024, neck=0.035, wear=0.15, dust=0.1, sheen=0.5, name='gown',
                                   belt_style='leather', belt_color=[0.14, 0.08, 0.04], buckle='gold', pouch=True),
                           G_capelet([0.065, 0.038, 0.02], length=0.25, fabric='fur')],
-                  accessories=[{'prop': 'chain'}, {'prop': 'circlet', 'dy': 0.05, 'tilt': -0.1, 'fit': 0.01, 'kw': {'h': 0.012}}],
+                  accessories=[{'prop': 'chain'}, {'prop': 'circlet', 'dy': 0.066, 'tilt': -0.15, 'fit': 0.01, 'kw': {'h': 0.012}}],
                   pose='gesture', pose_params={'weight': 'R', 'contrapposto': 0.7, 'head_yaw': 0.1, 'head_roll': 0.04},
                   notes='screenplay: approachable; crown optional and never a prop gag (a slim circlet is a proposal). Warm festival clothes are a proposal')
     king['skin'].update({'texture': 'middleage_lightskinned_male_diffuse', 'redness': 0.35})
@@ -382,7 +384,7 @@ def cast():
                     hair={'color': HAIR['salt'], 'style': 'pulled', 'count': 5000, 'loft': 0.003},
                     eyes=('grey', IRIS_TINT['grey']), brows='eyebrow007',
                     outfit=[G_shoes(LEATHER_C['brown']), G_kirtle(CLING['russet'], hem=0.03, sleeves='rolled'), G_apron(CLING['linen'], width=0.52, length=0.62),
-                            G_kerchief([0.5, 0.48, 0.42], front=0.064, tail=True)],
+                            G_kerchief([0.38, 0.36, 0.31], front=0.064, tail=True)],
                     pose='bowl', pose_params={'weight': 'L', 'contrapposto': 0.6, 'head_pitch': 0.1, 'flex': 0.06}, notes='suggested: clean work clothes, apron')
     healer['skin'].update({'texture': 'old_lightskinned_female_diffuse2'})
     C.append(healer)
@@ -421,7 +423,7 @@ def cast():
                     details={'nose/nose-scale-vert': 0.1, 'mouth/mouth-scale-horiz': 0.1, 'head/head-oval': 0.3, 'asym/asym-eye-2': 0.3},
                     hair={'color': HAIR['darkbrown'], 'style': 'pulled', 'count': 5000, 'loft': 0.003},
                     outfit=[G_shoes(LEATHER_C['brown']), G_kirtle(CLING['brick'], hem=0.05), G_apron(CLING['undyed'], width=0.46, length=0.55),
-                            G_kerchief([0.5, 0.46, 0.37], tail=True)],
+                            G_kerchief([0.37, 0.34, 0.28], tail=True)],
                     expression={'mouth-corner-puller': 0.2},
                     pose='hold_child', pose_params={'weight': 'R', 'contrapposto': 0.6, 'hand_out': 0.2, 'head_pitch': 0.14, 'head_yaw': 0.15}, notes='drops the parcel later in 3C')
     C.append(parent)

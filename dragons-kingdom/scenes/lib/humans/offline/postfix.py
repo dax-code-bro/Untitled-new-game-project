@@ -970,6 +970,243 @@ def fix_cullboots(cid, reach=0.035, margin=1):
         print(f'{cid}: hose culled under the boots: {", ".join(done)}', flush=True)
 
 
+def fix_legdrape(cid, taper=0.06, maxgain=0.022, na=40, dy=0.01):
+    """Loose trouser legs hang from the thigh: the simulated legs still followed the knee cap and
+    the thigh muscles like tights. Per leg, in horizontal slices round the leg's axis (hip -> knee
+    -> ankle), the cloth's radius per azimuth is carried DOWN the leg from the slice above, losing
+    only `taper` per metre (cloth falls from the widest point, it does not wrap into the hollow above
+    the knee), at most `maxgain` out from where it was, never closer than 4 mm to an outer garment
+    (coat skirts), fading in below the fork and out at the boot top (the boot-top pass then seats the
+    shaft over it). Standing poses only."""
+    import bpy  # noqa: F401
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    if h['meta'].get('pose', '').startswith('ride'):
+        return
+    legs = [m for m in h['meshes'] if m['kind'] == 'cloth' and m['name'].startswith('trousers') and 'legdrape' not in m.get('postfix', [])]
+    sp = _spec(cid) or {}
+    if any(g.get('type') == 'trousers' and g.get('legdrape') is False for g in sp.get('outfit', [])):
+        return                                  # fitted (Queen Fall's breeches)
+    if not legs:
+        return
+    bones = {b_['name']: np.array(b_['p']) for b_ in h['bones']}
+    need = ['upperleg01.L', 'lowerleg01.L', 'foot.L', 'upperleg01.R', 'lowerleg01.R', 'foot.R']
+    if not all(n in bones for n in need):
+        return
+    bin_ = bytearray(open(bp, 'rb').read())
+
+    def arrs(m):
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        return P, T
+    boots = [arrs(m)[0] for m in h['meshes'] if m['kind'] == 'cloth' and m['name'] in ('boots', 'shoes')]
+    outer = [m for m in h['meshes'] if m['kind'] == 'cloth' and m['name'] not in ('boots', 'shoes', 'shirt') and not m['name'].startswith(('trousers', 'hose'))]
+    tree = None
+    if outer:
+        OP, OT, off = [], [], 0
+        for o in outer:
+            P_, T_ = arrs(o)
+            T_ = T_[(T_[:, 0] != T_[:, 1]) & (T_[:, 1] != T_[:, 2])]
+            OP.append(P_); OT.append(T_ + off); off += len(P_)
+        tree = BVHTree.FromPolygons(np.vstack(OP).tolist(), np.vstack(OT).tolist(), all_triangles=True)
+    done = []
+    for m in legs:
+        P, T = arrs(m)
+        P0 = P.copy()
+        for side, sg in (('L', 1.0), ('R', -1.0)):
+            hip, knee, ank = bones[f'upperleg01.{side}'], bones[f'lowerleg01.{side}'], bones[f'foot.{side}']
+            other = bones[f'upperleg01.{"R" if side == "L" else "L"}']
+            # which leg: nearer this leg's hip->knee->ankle polyline
+            def segd(Q, a, b):
+                ab = b - a
+                t = np.clip(((Q - a) @ ab) / max(ab @ ab, 1e-9), 0, 1)
+                return np.linalg.norm(Q - (a + np.outer(t, ab)), axis=1)
+            d_me = np.minimum(segd(P, hip, knee), segd(P, knee, ank))
+            ok_ = bones[f'upperleg01.{"R" if side == "L" else "L"}']
+            d_ot = np.minimum(segd(P, ok_, bones[f'lowerleg01.{"R" if side == "L" else "L"}']), segd(P, bones[f'lowerleg01.{"R" if side == "L" else "L"}'], bones[f'foot.{"R" if side == "L" else "L"}']))
+            crotch = hip[1] - 0.07
+            ytop_boot = -1.0
+            if boots:
+                B = np.vstack(boots)
+                bs = (B[:, 0] - (hip[0] + other[0]) / 2) * np.sign(hip[0] - other[0]) > 0
+                if bs.any():
+                    ytop_boot = B[bs, 1].max()
+            sel = (d_me < d_ot) & (P[:, 1] < crotch) & (P[:, 1] > max(ank[1] + 0.05, ytop_boot - 0.02))
+            if sel.sum() < 30:
+                continue
+            # the axis at height y: hip->knee->ankle interpolated in y
+            ys = np.array([ank[1], knee[1], hip[1]])
+            ax_x = np.array([ank[0], knee[0], hip[0]])
+            ax_z = np.array([ank[2], knee[2], hip[2]])
+            idx = np.where(sel)[0]
+            cx = np.interp(P[idx, 1], ys, ax_x)
+            cz = np.interp(P[idx, 1], ys, ax_z)
+            dxz = np.stack([P[idx, 0] - cx, P[idx, 2] - cz], 1)
+            r = np.linalg.norm(dxz, axis=1)
+            a = np.arctan2(dxz[:, 1], dxz[:, 0])
+            ai = ((a + np.pi) / (2 * np.pi) * na).astype(int) % na
+            y0 = P[idx, 1].max()
+            yi = np.floor((y0 - P[idx, 1]) / dy).astype(int)
+            ny = int(yi.max()) + 1
+            R = np.full((na, ny), np.nan)
+            for a_, y_, r_ in zip(ai, yi, r):
+                if not (R[a_, y_] >= r_):
+                    R[a_, y_] = r_
+            # fill gaps round the slice, then carry down the leg
+            for k in range(ny):
+                col = R[:, k]
+                if np.isnan(col).all():
+                    if k:
+                        R[:, k] = R[:, k - 1]
+                    continue
+                for _ in range(na):
+                    z = np.isnan(col)
+                    if not z.any():
+                        break
+                    col[z] = np.fmax(np.roll(col, 1), np.roll(col, -1))[z]
+                R[:, k] = col
+            if np.isnan(R).any():
+                R = np.where(np.isnan(R), np.nanmin(R), R)
+            E = R.copy()
+            for k in range(1, ny):
+                E[:, k] = np.maximum(R[:, k], E[:, k - 1] - taper * dy)
+            for _ in range(2):
+                E = 0.25 * np.roll(E, 1, 0) + 0.5 * E + 0.25 * np.roll(E, -1, 0)
+                E[:, 1:-1] = 0.25 * E[:, :-2] + 0.5 * E[:, 1:-1] + 0.25 * E[:, 2:]
+            # bilinear read-back
+            fa_ = (a + np.pi) / (2 * np.pi) * na - 0.5
+            a0 = np.floor(fa_).astype(int) % na
+            ta = fa_ - np.floor(fa_)
+            fy = (y0 - P[idx, 1]) / dy - 0.5
+            y0i = np.clip(np.floor(fy).astype(int), 0, ny - 1)
+            y1i = np.clip(y0i + 1, 0, ny - 1)
+            ty = np.clip(fy - np.floor(fy), 0, 1)
+            re = (E[a0, y0i] * (1 - ta) + E[(a0 + 1) % na, y0i] * ta) * (1 - ty) + (E[a0, y1i] * (1 - ta) + E[(a0 + 1) % na, y1i] * ta) * ty
+            gain = np.clip(re - r, 0, maxgain)
+            wt = np.clip((crotch - P[idx, 1]) / 0.06, 0, 1) * np.clip((P[idx, 1] - (ytop_boot + 0.005)) / 0.03, 0, 1) if ytop_boot > 0 else np.clip((crotch - P[idx, 1]) / 0.06, 0, 1)
+            gain *= wt
+            if tree is not None:
+                for j, i in enumerate(idx):
+                    if gain[j] <= 1e-5:
+                        continue
+                    hit = tree.find_nearest(Vector(P[i]), gain[j] + 0.006)
+                    if hit[0] is not None:
+                        gain[j] = max(0.0, min(gain[j], hit[3] - 0.004))
+            dn = dxz / np.maximum(r, 1e-6)[:, None]
+            P[idx, 0] += dn[:, 0] * gain
+            P[idx, 2] += dn[:, 1] * gain
+        mv = np.linalg.norm(P - P0, axis=1)
+        m['postfix'] = m.get('postfix', []) + ['legdrape']
+        if mv.max() < 1e-5:
+            continue
+        put(bin_, m['attrs']['position'], P.astype(np.float32))
+        N0 = view(bin_, m['attrs']['normal']).astype(float)
+        Nf = fresh_normals(P, T)
+        Nf *= 1.0 if np.einsum('ij,ij->', N0, Nf) >= 0 else -1.0
+        ch = mv > 1e-6
+        N2 = N0.copy(); N2[ch] = Nf[ch]
+        put(bin_, m['attrs']['normal'], N2)
+        m['material']['wrinkle'] = max(m['material'].get('wrinkle', 0), 1.0)
+        done.append(f"{m['name']} ({int(ch.sum())} v, max {mv.max() * 1000:.1f} mm)")
+    if done:
+        # the boot tops are seated again over the looser legs
+        for m in h['meshes']:
+            if m['name'] == 'boots':
+                m['postfix'] = [x for x in m.get('postfix', []) if x != 'boottop']
+    _save(h, bin_, jp, bp)
+    if done:
+        print(f'{cid}: trouser legs hang from the thigh: {", ".join(done)}', flush=True)
+
+
+def fix_boottop(cid, band=0.05, clear=0.003, flare=0.0025, nb=48):
+    """The boot's top rim stands OUTSIDE the leg cloth: tucked trousers / hose bulged out over the
+    last centimetres of the shaft and the shaft's rim showed through them as a pale, scalloped
+    band (the cloth's hem dust) above every boot. Per boot and per azimuth / 1 cm height bin, the
+    shaft within `band` of its rim is pushed out to the leg cloth's radius there + `clear`, plus a
+    slight flare at the mouth (leather stands off the leg at the top), fading in from below."""
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    feet = [m for m in h['meshes'] if m['kind'] == 'cloth' and m['name'] == 'boots' and 'boottop' not in m.get('postfix', [])]
+    legs = [m for m in h['meshes'] if m['kind'] == 'cloth' and m['name'].startswith(('hose', 'trousers', 'braies'))]
+    sp = _spec(cid) or {}
+    if not any(g.get('type') == 'boots' for g in sp.get('outfit', [])):
+        return                                  # shoes: the collar stays on the ankle
+    if not feet or not legs:
+        return
+    bin_ = bytearray(open(bp, 'rb').read())
+
+    def arrs(m):
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        return P, T
+    LP = np.vstack([arrs(m)[0] for m in legs])
+    done = []
+    for m in feet:
+        P, T = arrs(m)
+        P0 = P.copy()
+        fx = P[:, 0].mean()
+        for sgn in (1.0, -1.0):
+            sd = (P[:, 0] - fx) * sgn > 0
+            if sd.sum() < 20:
+                continue
+            ytop = P[sd, 1].max()
+            top = sd & (P[:, 1] > ytop - band)
+            ring = sd & (P[:, 1] > ytop - 0.1)
+            c = P[ring][:, [0, 2]].mean(0)
+            lsd = ((LP[:, 0] - fx) * sgn > 0) & (LP[:, 1] > ytop - band - 0.01) & (LP[:, 1] < ytop + 0.015)
+            if lsd.sum() < 10:
+                continue
+            Lq = LP[lsd]
+            la = np.arctan2(Lq[:, 2] - c[1], Lq[:, 0] - c[0])
+            lr = np.hypot(Lq[:, 2] - c[1], Lq[:, 0] - c[0])
+            ok = lr < 0.12
+            la, lr, ly = la[ok], lr[ok], Lq[ok, 1]
+            ab = ((la + np.pi) / (2 * np.pi) * nb).astype(int) % nb
+            yb = np.floor((ly - (ytop - band - 0.01)) / 0.01).astype(int)
+            ny = int(np.ceil((band + 0.025) / 0.01)) + 1
+            R = np.full((nb, ny), np.nan)
+            for a_, y_, r_ in zip(ab, np.clip(yb, 0, ny - 1), lr):
+                if not (R[a_, y_] >= r_):
+                    R[a_, y_] = r_
+            # (the cloth just above the rim counts too: the rim must clear what bulges over it)
+            Rm = np.copy(R)
+            for k in range(ny):
+                Rm[:, k] = np.nanmax(R[:, max(0, k - 1):min(ny, k + 3)], axis=1)
+            Rm = np.fmax(Rm, np.roll(Rm, 1, 0))
+            Rm = np.fmax(Rm, np.roll(Rm, -1, 0))
+            idx = np.where(top)[0]
+            dx, dz = P[idx, 0] - c[0], P[idx, 2] - c[1]
+            a = np.arctan2(dz, dx)
+            r = np.hypot(dx, dz)
+            ai = ((a + np.pi) / (2 * np.pi) * nb).astype(int) % nb
+            yi = np.clip(np.floor((P[idx, 1] - (ytop - band - 0.01)) / 0.01).astype(int), 0, ny - 1)
+            rt = Rm[ai, yi]
+            w = np.clip((P[idx, 1] - (ytop - band)) / (band * 0.7), 0, 1) ** 1.5
+            want = np.minimum(np.where(np.isnan(rt), r, np.maximum(r, rt + clear)), r + 0.012) + flare * w
+            rn = r + (want - r) * w
+            k = rn / np.maximum(r, 1e-6)
+            P[idx, 0] = c[0] + dx * k
+            P[idx, 2] = c[1] + dz * k
+        mv = np.linalg.norm(P - P0, axis=1)
+        if mv.max() < 1e-5:
+            m['postfix'] = m.get('postfix', []) + ['boottop']
+            continue
+        put(bin_, m['attrs']['position'], P.astype(np.float32))
+        N0 = view(bin_, m['attrs']['normal']).astype(float)
+        Nf = fresh_normals(P, T[(T[:, 0] != T[:, 1]) & (T[:, 1] != T[:, 2])] if False else T)
+        Nf *= 1.0 if np.einsum('ij,ij->', N0, Nf) >= 0 else -1.0
+        ch = mv > 1e-6
+        N2 = N0.copy(); N2[ch] = Nf[ch]
+        put(bin_, m['attrs']['normal'], N2)
+        m['postfix'] = m.get('postfix', []) + ['boottop']
+        done.append(f"{m['name']} ({int(ch.sum())} v, max {mv.max() * 1000:.1f} mm)")
+    _save(h, bin_, jp, bp)
+    if done:
+        print(f'{cid}: boot tops over the leg cloth: {", ".join(done)}', flush=True)
+
+
 def fix_overbelt(cid, nb=72, clear=0.004, fade=0.12):
     """Cloaks and hood capes hang OVER the belt: the belt is added after the cloth simulation, so a
     cloak lying close to the back had the belt printing through it (two black bars across the
@@ -1927,6 +2164,52 @@ def fix_valleys(cid, iters=120, lam=0.5, cap=0.015, clear=0.012):
         print(f'{cid}: valleys filled in {", ".join(done)}', flush=True)
 
 
+_SPECS = None
+
+
+def _spec(cid):
+    """The character spec (offline/characters.py) of a cache id (build suffixes stripped)."""
+    global _SPECS
+    if _SPECS is None:
+        if HERE not in sys.path:
+            sys.path.insert(0, HERE)
+        import characters
+        _SPECS = {c['id']: c for c in characters.cast()}
+    base = cid
+    while base not in _SPECS and '_' in base:
+        base = base.rsplit('_', 1)[0]
+    return _SPECS.get(base)
+
+
+def fix_matpatch(cid, linen_lum=0.31, prop_lum=0.34):
+    """Material values that changed after a cache was built, patched into its JSON (no geometry):
+    - a grown beard (strands): the skin under it takes the beard colour (`beardFull`, materials.js);
+    - linen at linear luminance > 0.34 brought down to ~0.31 (aprons, coifs, veils, kerchiefs and
+      the folded cloth prop clipped to flat paper-white in daylight). Idempotent."""
+    jp = os.path.join(CACHE, cid + '.json')
+    h = json.load(open(jp))
+    sp = _spec(cid) or {}
+    hs = sp.get('hair') or {}
+    bd = hs.get('beard') or {}
+    done = []
+    lum = lambda c: 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    for m in h['meshes']:
+        mt = m.get('material') or {}
+        if m['kind'] == 'skin' and bd.get('count', 0) > 0 and mt.get('beardFull') != 1.0:
+            mt['beardFull'] = 1.0
+            done.append('beardFull')
+        lin = (m['kind'] == 'cloth' and mt.get('fabric') == 'linen') or (m['kind'] == 'prop' and mt.get('kind') == 'linen')
+        if lin and isinstance(mt.get('color'), list) and len(mt['color']) == 3:
+            L, tgt = lum(mt['color']), (linen_lum if m['kind'] == 'cloth' else prop_lum)
+            if L > tgt + 0.03:
+                mt['color'] = [round(x * tgt / L, 4) for x in mt['color']]
+                done.append(m['name'])
+    if done:
+        json.dump(h, open(jp + '.tmp', 'w'), separators=(',', ':'))
+        os.replace(jp + '.tmp', jp)
+        print(f'{cid}: materials patched ({", ".join(done)})', flush=True)
+
+
 def main():
     what, ids = sys.argv[1], sys.argv[2:]
     if ids == ['all']:
@@ -1968,6 +2251,12 @@ def main():
             fix_hairunder(cid)
         if what in ('valleys', 'all'):
             fix_valleys(cid)
+        if what in ('matpatch', 'all'):
+            fix_matpatch(cid)
+        if what in ('legdrape', 'all'):
+            fix_legdrape(cid)
+        if what in ('boottop', 'all'):
+            fix_boottop(cid)
 
 
 if __name__ == '__main__':

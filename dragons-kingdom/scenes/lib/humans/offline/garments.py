@@ -1296,6 +1296,11 @@ def head_shell(D, g):
     # so the ears do not print through)
     # (a hood at 1.4 cm read as a tight balaclava / helmet: it is cut loose over the crown)
     S, F, old = D.shell(vm, g.get('ease', 0.006 if kind != 'hood' else 0.02), smooth=g.get('smooth', 30 if kind not in ('hood', 'wrap') else 60), extra_ease=xe)
+    # openings on a smooth curve: a head cloth cut from the body mesh's vertices kept its edges'
+    # staircase (1 cm steps along the hood's face opening at 4K)
+    for l_ in mu.boundary_loops(F):
+        if len(l_) >= 8:
+            S = snap_loop(S, l_, lambda Q: Q, iters=14)
     if kind in ('hood', 'coif', 'wrap'):
         D.hide_under(old, F, rings=2)          # the ears under it printed through
     if kind == 'wrap':

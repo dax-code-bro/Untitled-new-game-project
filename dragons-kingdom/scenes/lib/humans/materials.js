@@ -103,6 +103,7 @@ export function skinMaterial(o = {}) {
     uLid: { value: o.lid ?? 0.5 },
     uScalp: { value: new THREE.Vector3(...(o.scalpColor || [0.05, 0.03, 0.02])) },
     uBeard: { value: new THREE.Vector3(...(o.beardColor || [0.04, 0.025, 0.015])) },
+    uBeardFull: { value: o.beardFull ?? 0.0 },
   };
   mat.userData.skin = U;
   mat.customProgramCacheKey = () => 'dk-human-skin';
@@ -117,7 +118,7 @@ vObjP = position; vAO = ao; vThick = thick; vAux = aux; vAux2 = aux2; vAux3 = au
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 ${NOISE_GLSL}
-uniform vec3 uTone, uScalp, uBeard; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid;
+uniform vec3 uTone, uScalp, uBeard; uniform float uBeardFull; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid;
 varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG;
 vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
@@ -180,6 +181,10 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   // stubble / shaved beard shadow (aux.b): fine dark dots in a soft tint
   { float dots = smoothstep(0.55, 0.9, hN3(vObjP * 2600.0 + 3.0));
     c = mix(c, c * mix(vec3(1.0), uBeard / max(0.02, dot(uBeard, vec3(0.333))) * 0.35, 0.6), vAux.b * (0.55 + 0.45 * dots)); }
+  // a grown beard (strands, beardFull): the skin under it takes the beard colour like the scalp
+  // under the hair - the strands read as one mass (orange skin between short strands read as a
+  // speckled stubble pad); the beard mask's soft edge keeps the cheek line fading out
+  c = mix(c, uBeard * (0.7 + 0.6 * hN3(vObjP * 900.0 + 5.0)), smoothstep(0.15, 0.85, vAux.b) * uBeardFull * 0.9);
   diffuseColor.rgb = c;
 }`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>

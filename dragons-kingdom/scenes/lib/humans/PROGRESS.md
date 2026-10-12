@@ -216,3 +216,32 @@ output/humans/r1/.
   Remi's belt hand moved to his left (the two-shot is not one pose mirrored). abby, remi, fall,
   abby_ride_injured _r1 caches deleted so the queues rebuild them; abby_sling (started before the
   fix) to be rebuilt after (stamp humans/stamp_r1b).
+
+## Fix round 1, resumed (2026-10-12, from 00:01 UTC, after a container restart)
+
+State found: 21 of 48 `_r1` caches built (16:37-17:02 on 10-09); the other 27 and the post passes
+added after them (circlet, hairunder, valleys) never ran. Stale locks removed, `_t*` test caches
+deleted. Rebuild queues (scratchpad humans/r1c/q_A..G.log, stamps humans/stamp_r1c..f):
+`PY=<bpy> SUFFIX=_r1 sh scenes/lib/humans/offline/queue.sh <stamp> <ids>` (NOTE: an in-place
+post pass bumps a cache's mtime, so the queue then treats it as up to date - touch a new stamp
+before queueing a rebuild of a post-fixed id).
+
+New this session (each seen in a preview render, output/humans/r1c/):
+- `beardFull` (materials.js + build.py + matpatch): the skin under a grown beard takes the beard
+  colour (the watchman's beard read as orange skin speckled with short strands).
+- Linen at linear luminance ~0.31 (aprons, coifs, kerchiefs, veils, folded cloth): `matpatch`
+  pass patches existing caches (they clipped to flat paper white).
+- Leather (cloth.js): warm brown under the grime, dust only low on the foot, finer flatter grain
+  (boots read as grey rubber wellingtons / lumpy molten rubber).
+- `boottop` pass: the boot shaft's top 5 cm seated over the leg cloth + slight flare (a pale
+  scalloped band of trouser hem showed above every boot top). Boots only (not shoes).
+- `legdrape` pass: trouser legs carried down from the thigh (taper 6 cm/m, at most 2.2 cm out,
+  clear of coat skirts), runtime `wrinkle` folds: riding trousers instead of tights. Opt-out per
+  garment `legdrape: False` (Queen Fall's fitted breeches). Runs before `boottop`.
+- Head cloths (garments.head_shell): every opening's boundary relaxed along its loop (the hood's
+  face opening was a 1 cm staircase cut from body-mesh vertices).
+- Alexandria: `clasp` re-done as the right hand holding the left wrist (two splayed palms read as
+  an odd gesture); fillet raised onto the hair (dy 0.064, tilt -0.16). King: deeper madder gown,
+  shorter flatter crop (spiky grey hedgehog), circlet raised onto the hair.
+Next: finish queues -> preview review of every id (review.sh in scratchpad humans/r1c) -> fixes
+-> swap.sh _r1 -> 4K finals with r1 names in output/humans/r1/ -> npm test -> report.

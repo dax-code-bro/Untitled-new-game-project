@@ -21,8 +21,8 @@ const FABRIC = {
   silk: { id: 'pbr/acg_fabric40', base: 'Fabric40', tile: 0.06, sheen: 0.8, rough: 0.5, lum: 0.09 },
   // rmean: mean of the scan's roughness map (three multiplies it in): the material's roughness is
   // divided by it, so `rough` is the mean the surface really gets (boots read as wet rubber at 0.45)
-  leather: { id: 'pbr/acg_leather05', base: 'Leather05', tile: 0.35, sheen: 0.0, rough: 0.72, rmean: 0.54, leather: true, lum: 0.031 },
-  blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.35, sheen: 0.0, rough: 0.62, rmean: 0.37, leather: true, lum: 0.0097 },
+  leather: { id: 'pbr/acg_leather05', base: 'Leather05', tile: 0.16, sheen: 0.0, rough: 0.72, rmean: 0.54, leather: true, lum: 0.031 },
+  blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.16, sheen: 0.0, rough: 0.62, rmean: 0.37, leather: true, lum: 0.0097 },
   // fur (the King's tippet): no fur scan in the library - the wool scan at a fine scale for the
   // base, procedural guard hairs combed downward in the shader (uFur), strong soft sheen
   fur: { id: 'pbr/acg_fabric37', base: 'Fabric37', tile: 0.06, sheen: 0.55, rough: 1.0, lum: 0.062, fur: true },
@@ -43,7 +43,10 @@ export function clothMaterial(o = {}) {
     side: THREE.DoubleSide,
   });
   mat.normalMap = libTexture(`${f.id}/${f.base}_nrm.jpg`, { color: false, repeat: true, flipY: true });
-  mat.normalScale = new THREE.Vector2(o.weave ?? 0.9, -(o.weave ?? 0.9));   // DirectX-convention maps
+  // (leather: the scan's pebbled grain at 0.35 m and full strength read as lumpy molten rubber on
+  // a boot - finer and flatter)
+  const wv = o.weave ?? (f.leather ? 0.4 : 0.9);
+  mat.normalScale = new THREE.Vector2(wv, -wv);   // DirectX-convention maps
   mat.roughnessMap = libTexture(`${f.id}/${f.base}_rgh.jpg`, { color: false, repeat: true, flipY: true });
   const albedo = libTexture(`${f.id}/${f.base}_col.jpg`, { color: true, repeat: true, flipY: true });
   const U = {
@@ -135,7 +138,12 @@ varying float vAO; varying vec4 vAux; varying vec3 vObjP; varying vec2 vPat; var
   // dark stains over the toe)
   c = mix(c, c * 0.55, wear * uLeather * 0.6 * smoothstep(0.07, 0.13, vObjP.y));
   float dust = clamp(vAux.r * (0.5 + n2), 0.0, 1.0) * uDust;
+  // (leather takes road dust only as a warm film low on the foot - the grey dust lift over the
+  // whole shaft turned brown boots into grey rubber wellingtons)
+  dust *= mix(1.0, 0.4 * (1.0 - smoothstep(0.04, 0.16, vObjP.y)), uLeather);
   c = mix(c, max(c, uDustCol * 0.8), dust * 0.35);
+  // vegetable-tanned leather keeps a warm brown under its grime (the scan + grey dust read neutral)
+  c = mix(c, c * vec3(1.12, 0.98, 0.82), uLeather * 0.8);
   diffuseColor.rgb = c;
 }`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
@@ -270,8 +278,8 @@ void RE_Direct_Hair( const in IncidentLight directLight, const in vec3 geometryP
 // lum: mean linear luminance of the photo albedo (measured) - with an explicit o.color only its
 // variation is used (the scan's own hue, e.g. Leather05's red, never tints the prop)
 const PROP_PBR = {
-  leather: { id: 'pbr/acg_leather05', base: 'Leather05', tile: 0.35, lum: 0.027, rmean: 0.54 },
-  blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.35, lum: 0.0055, rmean: 0.37 },
+  leather: { id: 'pbr/acg_leather05', base: 'Leather05', tile: 0.16, lum: 0.027, rmean: 0.54 },
+  blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.16, lum: 0.0055, rmean: 0.37 },
   iron: { id: 'pbr/acg_metal26', base: 'Metal26', tile: 0.4, metal: true, lum: 0.117 },
   // rmean: mean of the scan's roughness map (three multiplies it in) - without it the crate's
   // planks came out at roughness 0.41 and mirrored the sky (a pale grey box)

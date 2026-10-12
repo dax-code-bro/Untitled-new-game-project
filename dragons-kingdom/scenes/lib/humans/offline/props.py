@@ -294,7 +294,7 @@ def parcel(w=0.28, h=0.14, d=0.2, seed=7):
     return out
 
 
-def folded_cloth(w=0.3, h=0.05, d=0.22, color=(0.6, 0.57, 0.5)):
+def folded_cloth(w=0.3, h=0.05, d=0.22, color=(0.4, 0.375, 0.32)):
     P, F, uv = lathe([(0.0, 0.0), (0.46, 0.0), (0.5, 0.2), (0.5, 0.8), (0.46, 1.0), (0.0, 1.0)], segs=4)
     R = rot_y(math.pi / 4)
     P = (P @ R.T) * np.array([w * 1.41, h, d * 1.41])
