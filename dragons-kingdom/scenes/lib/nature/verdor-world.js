@@ -290,33 +290,11 @@ export function createVerdorWorld(opts = {}) {
   const sow = (x, z) => smoothstep(-0.05, 0.35, N3.fbm2(x / 260 + 7, z / 260, 3));
   // the smooth part of the block survival distance (where the face foot is, on average)
   const footF = (x, z) => 9 * N2.fbm2(x / 95, z / 95, 3);
-  const wallTopAt = (top, sw) => Math.max(top - lerp(4, 27, sw), Math.min(top - 3, 9));
-  // Each joint block near the edge is capped at the top of a HARD bed (ledges are bedding planes):
-  // the clifftop steps down block by block over the head instead of a smooth soil ramp slicing the
-  // blocks diagonally (the triangular rock shards sticking out of the turf). Infinity: no cap.
-  const capT = new Float64Array(UA.length * NBJ).fill(NaN);
-  function blockCap(i, j) {
-    if (i < 0 || j < 0 || i >= UA.length - 1 || j >= NBJ - 1) return Infinity;
-    const k = i * NBJ + j;
-    let v = capT[k];
-    if (v === v) return v;
-    v = Infinity;
-    if (blockState(i, j) === 2) {
-      const [cx, cz] = blockCenter(i, j);
-      const F = coastF(cx, cz), ff = footF(cx, cz) + 2, top = landHeight(cx, cz), sw = sow(cx, cz);
-      const slopeT = lerp(0.45, 1.25, sw);
-      // the head slope at the block's front third sets the block's height
-      const ySl = wallTopAt(top, sw) + Math.max(0, ff - F - 3) * slopeT + 1.5 * (hash2(i, j, seed + 113) - 0.5);
-      if (ySl < top - 1.2) {
-        const s0 = ySl + dipH(cx, cz), sS = s0 + pinch(cx, cz, s0);
-        let kb = bedAt(sS);
-        while (kb > 0 && !(beds[kb].b1 <= sS + 0.01 && beds[kb].hard > 0.5)) kb--;
-        v = beds[kb].b1;
-      }
-    }
-    capT[k] = v;
-    return v;
-  }
+  // hard-bed tops (stratigraphic s): the only levels a ledge, a head-slope step or a pavement can
+  // have (a bedding plane parts there); thin ones closer than 0.35 m merge
+  const treadS = [];
+  for (const b of beds) if (b.hard > 0.5 && (!treadS.length || b.b1 - treadS[treadS.length - 1] > 0.35)) treadS.push(b.b1);
+  const treadAt = (s) => { let lo = 0, hi = treadS.length - 1; if (s < treadS[0]) return -1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (treadS[m] <= s) lo = m; else hi = m; } return treadS[hi] <= s ? hi : lo; };
   /** the joint blocks around (x, z) with their side distances (outside > 0) */
   function blocksAt(x, z) {
     const u = projA(x, z), v = projB(x, z);
@@ -334,9 +312,6 @@ export function createVerdorWorld(opts = {}) {
           d: [UA[i] - u, u - UA[i + 1], UB[j] - v, v - UB[j + 1]],
           ex: [!isCliff(i - 1, j), !isCliff(i + 1, j), !isCliff(i, j - 1), !isCliff(i, j + 1)],
           exP: [!isRock(i - 1, j), !isRock(i + 1, j), !isRock(i, j - 1), !isRock(i, j + 1)],
-          cap: st === 2 ? blockCap(i, j) : Infinity,
-          // a side whose neighbour is capped lower is exposed above that neighbour's cap
-          nc: [blockCap(i - 1, j), blockCap(i + 1, j), blockCap(i, j - 1), blockCap(i, j + 1)],
           tr: blockTraits(i, j),
         });
       }
@@ -455,17 +430,47 @@ export function createVerdorWorld(opts = {}) {
       const w = 0.35 + 1.3 * hash2(i, 78, seed), reach = 2 + 8 * hash2(i, 79, seed);
       chim = Math.min(chim, Math.max(Math.abs(B.u - UA[i]) - w, (ff - F) - reach));
     }
+    // ---- the head of the cliff and the land surface: rock under a soil mantle.
+    // A vertical wall up to wallTop, then (where sow > 0) a head slope rising inland. The ROCK under
+    // it is a staircase whose treads are hard-bed tops (bedding planes) and whose risers follow the
+    // slope contours, jogging at the cross joints; the SOIL is a smooth mantle at the slope surface.
+    // Bed nosings poke through the turf as horizontal outcrop bands where the stair stands proud
+    // (delta), and the slope is plain turf elsewhere - never a soil plane slicing the vertical joint
+    // blocks diagonally (the old triangular shards) or a field of bare capped blocks.
+    const sw = sow(x, z), dh = dipH(x, z);
+    const headH = lerp(1.0, 27, sw), slopeT = lerp(0.5, 1.25, sw);
+    const wallTop = Math.max(top - headH, Math.min(top - 1, 9));
+    const jog = (hash2(B.ia, 17, seed + 141) - 0.5) * 3.0;          // risers step at the cross joints
+    const dIn = ff - F + 2.2 * N3.fbm2(x / 13 + 3, z / 13, 2) + jog;
+    const slopeY = wallTop + slopeT * Math.max(dIn, -4) + 0.45 * N.fbm2(x / 8 + 1, z / 8, 2);
+    const soilD = 0.32 + 0.45 * smoothstep(-0.3, 0.4, N.fbm2(x / 17 + 4, z / 17, 2));
+    // limestone pavement / outcrop patches breaking through the turf inland
+    const outcH = 1.7 * smoothstep(0.38, 0.62, N2.fbm2(x / 34 + 5, z / 34 - 2, 3)) * (0.6 + 0.4 * smoothstep(0, 0.4, N3.fbm2(x / 7, z / 7, 2)));
+    const delta = 0.35 + 1.3 * N2.fbm2(x / 21 + 9, z / 21, 2);
+    const tHead = slopeY + delta, tLand = top - soilD + outcH;
+    const T = Math.min(tHead, tLand);
+    const headness = smoothstep(-0.5, 2.5, tLand - tHead);
+    const gT = lerp(0.35, Math.max(0.35, slopeT), headness);
+    const soilY = Math.min(top, slopeY - 0.25);
+    // candidate treads around T, in world y (pinch evaluated once at T)
+    const s0T = T + dh, pT = pinch(x, z, s0T), sT = s0T + pT;
+    const tr = [];
+    let kT = treadAt(sT + 5);
+    while (kT >= 0 && treadS[kT] > sT - 14) { tr.push(treadS[kT] - dh - pT); kT--; }
+    tr.reverse();
+    // the tread that forms the rock top here
+    let rockTop = tr.length ? tr[0] - 6 : T;
+    for (const yk of tr) if (yk <= T) rockTop = yk;
     return {
       x, z, F, top, floor, plat: platLevel(x, z), platPlan, grike, ph, phd, geo, blocks: B.list.filter((b) => b.st === 2), u: B.u, v: B.v,
-      stacks: nearStacks(x, z, 8), notchD: 1.8 + 2.0 * N2.fbm2(x / 60, z / 60, 2), dh: dipH(x, z),
+      stacks: nearStacks(x, z, 8), notchD: 1.8 + 2.0 * N2.fbm2(x / 60, z / 60, 2), dh,
       expo: 0.75 + 0.5 * smoothstep(-0.4, 0.4, N2.fbm2(x / 220, z / 220, 2)),
       footF: ff, chim,
+      T, gT, tr, rockTop, soilY, wallTop,
+      ovh: 0.15 + 0.35 * smoothstep(-0.2, 0.5, N3.fbm2(x / 6 + 2, z / 6, 2)),     // sod overhang at the lip
     };
   }
 
-  // side channel of the last sdf() call: the effective top of the rock mass at that point (the
-  // land surface, or the cap of the block that defines the surface) - read by surfaceInfo()
-  let lastTop = 0;
   /** Signed distance to rock (m), negative inside. col: column(x, z) for the same x, z (optional). */
   function sdf(x, y, z, col) {
     const c = col || column(x, z);
@@ -484,7 +489,7 @@ export function createVerdorWorld(opts = {}) {
     { const q = 1 - Math.abs(N3.n3(x / 0.75, y / 0.9, z / 0.75)); R -= 0.13 * q * q; }
     // mainland: union of standing joint blocks; only sides that face fallen ground weather back
     // (internal joints stay closed); per block and bed: old falls and fresh scars
-    let plan = 1e9, winTop = top;
+    let plan = 1e9;
     for (const bl of c.blocks) {
       const pk = Math.floor((s + 7 * hash2(bl.i, bl.j, seed + 9)) / (4 + 6 * hash2(bl.i, bl.j, seed + 11)));
       const per = (hash3(bl.i, bl.j, pk, seed + 5) - 0.5) * 0.6 + (hash3(bl.i, bl.j, k, seed + 6) - 0.5) * 0.45 * (1.1 - hard);
@@ -499,15 +504,12 @@ export function createVerdorWorld(opts = {}) {
         const kp = Math.floor((k + 3 * hash2(jid, 9, seed + 20)) / 3);
         const stag = hash3(jid, kp, 0, seed + 22) < 0.6 ? (hash3(jid, kp, 1, seed + 21) - 0.5) * (q < 2 ? 2.6 : 1.4) : 0;
         const dq = bl.d[q] + (q === 0 || q === 2 ? stag : -stag);
-        // a side is exposed where the neighbour has fallen, or above the neighbour's lower cap
-        if (!bl.ex[q] && !(s > bl.nc[q] + 0.05)) { d = Math.max(d, dq - EXPAND); continue; }
+        if (!bl.ex[q]) { d = Math.max(d, dq - EXPAND); continue; }
         // joint faces are neither flat nor vertical: they wander and lean a little
         const wav = 0.7 * N3.n2(y / 4.5 + jid * 0.37, jid * 1.7) + 0.3 * N3.n2(y / 1.7, jid * 3.1 + 9) + (hash2(jid, q, seed + 15) - 0.5) * 0.24 * (y - 20);
         d = Math.max(d, dq + Rb + wav);
       }
-      // the block's cap: a bedding plane, with a small arris chamfer
-      if (bl.cap < 1e8) d = smax(d, (s - bl.cap) * 0.98, 0.2);
-      if (d < plan) { plan = d; winTop = Math.min(top, bl.cap < 1e8 ? y - (s - bl.cap) : top); }
+      if (d < plan) plan = d;
     }
     // stacks: convex jointed pillars, capped on a bedding plane. They stand on their own: the
     // land surface, the head slope, geos and chimneys belong to the mainland and must not clip them
@@ -536,14 +538,24 @@ export function createVerdorWorld(opts = {}) {
       }
       if (st.outer || st.skerry) {
         // a reef ledge around the base, awash at low water: something for the surf to break on
-        const rp = stackPlan(x, z, { ...st.pieces[0], facets: st.pieces[0].facets.map(([a, b, r]) => [a, b, r * 1.55 + 5]) }) + 2.2 * N2.fbm2(x / 9, z / 9, 2);
-        const rtop = -1.35 + 0.35 * N3.n2(x / 5, z / 5) + 0.25 * Math.max(0, N.n2(x / 1.6, z / 1.6));
+        // (mostly 0.4-1 m under the water at mid-falling tide, a few knobs awash; ragged in plan -
+        // a large flat pale raft at the surface read as a tile floating on the sea)
+        const rp = stackPlan(x, z, { ...st.pieces[0], facets: st.pieces[0].facets.map(([a, b, r]) => [a, b, r * 1.3 + 3]) }) + 3.5 * N2.fbm2(x / 12, z / 12, 3) + 1.2 * N3.fbm2(x / 4, z / 4, 2);
+        const rtop = -2.15 + 0.4 * N3.n2(x / 6, z / 6) + 0.75 * smoothstep(0.25, 0.7, N.n2(x / 3.3 + 2, z / 3.3)) + 0.2 * N.n2(x / 1.4, z / 1.4);
         stk = smin(stk, smax(rp, y - rtop, 0.6), 0.8);
       }
     }
     plan = smax(plan, -c.geo, 0.6);
     plan = smax(plan, -(c.chim + 0.9 * N3.n3(x / 2.5, y / 4, z / 2.5) + 1.2 * smoothstep(0.2, 0.6, N2.n2(y / 9 + x * 0.01, z * 0.01))), 0.3);
-    let f = smax(plan, y - top, 0.7);                              // the cliff-top edge (a small round)
+    // the rock top: a staircase of bed-top treads (see column()); each tread k is the region
+    // y < y_k where the target surface T stands above y_k (distance to its riser ~ (y_k - T) / |grad T|)
+    let stair = c.tr.length ? y - (c.tr[0] - 6) : y - c.T;
+    for (const yk of c.tr) stair = Math.min(stair, Math.max(y - yk, (yk - c.T) / c.gT));
+    const rock = Math.max(plan, stair);
+    // the soil mantle: up to the slope / land surface, lying on the rock (an overhanging sod lip of
+    // 0.15-0.5 m at the edge, a soil band 0.3-1 m thick in the top of the face; no skin further down)
+    const soil = Math.max(y - c.soilY, plan - c.ovh, Math.min(c.soilY - 1.1 - y, -(plan + 1.2)));
+    let f = Math.min(rock, soil);
     if (stk < 1e8) f = smin(f, stk, 0.35);
     // sea caves (along their joints) and the arch
     for (const cv of caves) {
@@ -566,15 +578,15 @@ export function createVerdorWorld(opts = {}) {
     if (c.ph < 0.3) pl = smax(pl, -Math.max(c.ph, (c.plat - c.phd) - y), 0.15);
     f = smin(f, pl, 0.25);
     f = smin(f, y - c.floor, 0.8);
-    lastTop = winTop;
     return f;
   }
-  /** per-vertex extras for the bake: [depth below the rock mass's top (m), bed pinch (m)] */
+  /** per-vertex extras for the bake: [depth below the top of the rock mass or the soil on it (m),
+   *  bed pinch (m), 1 = bare rock top (an outcrop nosing, no soil lip)] */
   function surfaceInfo(x, y, z, col) {
     const c = col || column(x, z);
-    sdf(x, y, z, c);
     const s0 = y + c.dh;
-    return [Math.max(0, lastTop - y), pinch(x, z, s0)];
+    const covered = c.soilY >= c.rockTop - 0.05;
+    return [Math.max(0, Math.max(c.rockTop, c.soilY) - y), pinch(x, z, s0), covered ? 0 : 1];
   }
 
   /** the height of the visible ground surface in plan (for scattering and the far heightfield) */
@@ -589,6 +601,6 @@ export function createVerdorWorld(opts = {}) {
   return {
     seed, VERDOR, N, beds, bedAt, dipH, UA, UB, nA, nB, stacks, caves, arch,
     xc, coastF, baseLand, installLand, landHeight, turf, seabed, platLevel, platWidth, beachW,
-    column, sdf, surfaceHeight, surfaceInfo, recessAt, hardAt, sow, blockState, blockCenter, blockCap, projA, projB, findIdx, weakA, talus, footF, pinch,
+    column, sdf, surfaceHeight, surfaceInfo, recessAt, hardAt, sow, blockState, blockCenter, projA, projB, findIdx, weakA, talus, footF, pinch,
   };
 }

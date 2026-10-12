@@ -48,11 +48,37 @@ export function createClingWorld() {
   }
   let land = null;
   const installLand = (s) => { land = s; };
+  /** ridge and furrow (see ridgeAt): strip width 6-10 m, height 0.4-0.8 m, straight or reverse-S */
+  const RF = { crops: new Set(['wheat', 'barley', 'fallow', 'plough', 'pasture']) };
+  const stripW = (s) => 6 + 4 * s.h;
+  const stripDir = (s) => ((s.dir % Math.PI) + Math.PI) % Math.PI;
+  function ridgeAt(x, z, f) {
+    f = f || fieldAt(x, z);
+    if (!f || f.site.kind !== 'furlong' || !RF.crops.has(f.site.crop)) return 0;
+    const s = f.site, d = stripDir(s), sw = stripW(s);
+    const cx = Math.cos(d), cz = Math.sin(d);
+    const along = -x * cz + z * cx;
+    // reverse-S: the plough team swung out before the headland (half the furlongs)
+    const across = x * cx + z * cz + (s.h > 0.45 ? 5.5 * Math.sin(along / 38 + s.h * 20) : 0);
+    const u = across / sw - Math.floor(across / sw);
+    const amp = 0.4 + 0.4 * ((s.h * 7.31) % 1);
+    const prof = 1 - (2 * u - 1) * (2 * u - 1);               // broad round ridges, sharp furrows
+    const e = Math.abs(f.edge);
+    // the ridges die out at the furlong's edge into a headland bank where the plough turned
+    return amp * (prof - 0.5) * smoothstep(3, 12, e) + 0.35 * Math.exp(-(((e - 4) / 2.5) ** 2));
+  }
   const height = (x, z) => {
     let h = land ? land.sample(x, z) : base(x, z);
-    // the road and the lane are cut a little into the slopes (hollow ways) and graded
-    const rd = Math.min(roadD(x, z), laneD(x, z));
-    h -= 0.6 * Math.exp(-((rd / 4) ** 2));
+    // hollow ways: the broad road (~5 m) and the lane (~3 m) worn 0.5-1.5 m down into the land by
+    // centuries of hooves and wheels, banks thrown up either side, two cart ruts in the road
+    const rdR = roadD(x, z), rdL = laneD(x, z);
+    const deepR = 0.55 + 0.9 * smoothstep(-0.3, 0.5, N2.fbm2(x / 230, z / 230, 2));
+    const deepL = 0.4 + 0.6 * smoothstep(-0.3, 0.5, N2.fbm2(x / 180 + 4, z / 180, 2));
+    const sink = Math.max(deepR * (1 - smoothstep(2.6, 5.0, rdR)), deepL * (1 - smoothstep(1.5, 3.4, rdL)));
+    h -= sink * smoothstep(110, 160, Math.hypot(x, z));     // not inside the town
+    h -= 0.11 * Math.exp(-(((rdR - 0.95) / 0.22) ** 2)) + 0.08 * Math.exp(-(((rdL - 0.7) / 0.2) ** 2));
+    h += (0.45 * Math.exp(-(((rdR - 6.2) / 1.5) ** 2)) + 0.3 * Math.exp(-(((rdL - 4.3) / 1.1) ** 2))) * smoothstep(130, 180, Math.hypot(x, z));
+    h += ridgeAt(x, z);
     return h + 0.12 * N3.n2(x / 3, z / 3);
   };
 
@@ -105,5 +131,5 @@ export function createClingWorld() {
     const w = smoothstep(0.15, 0.4, N.fbm2(x / 380 + 3, z / 380, 4) + 0.35 * smoothstep(400, 2400, -z) - 0.2);
     return w * smoothstep(250, 600, Math.hypot(x, z));
   }
-  return { N, N2, N3, base, height, installLand, road, lane, roadD, laneD, sites, fieldAt, wood, distToPolyline };
+  return { N, N2, N3, base, height, installLand, road, lane, roadD, laneD, sites, fieldAt, wood, distToPolyline, ridgeAt, stripW, stripDir };
 }

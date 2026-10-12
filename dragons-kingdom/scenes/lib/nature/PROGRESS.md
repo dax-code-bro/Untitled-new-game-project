@@ -3,33 +3,32 @@
 Owner paths: `scenes/lib/nature/` and `scenes/lookdev/nature-*.js`. All designs PROVISIONAL.
 See README.md for the API, the bake commands, the geology and measurements.
 
-## Done
-- Bark textures: 4 ambientCG CC0 sets (Bark001/004/006/014, 1K) via the dgreenheck/ez-tree Git LFS
-  mirror, recorded in `assets-lib/manifest.json` (sha256). Poly Haven / ambientCG / makehuman hosts
-  re-tested 2026-10-09: still refused by the proxy.
-- Verdor coast: one coherent limestone geology (strata, two joint sets with joints that end at bedding
-  planes and step sideways between bed packages - no ruled vertical 'piano keys' -, standing/fallen
-  joint blocks, overhangs, notch, caves, geos, arch, free-standing stacks and the OUTER ROCKS chain
-  off the point, wave-cut platform, talus, beach), eroded land, irregular slope-over-wall clifftop,
-  surface-nets tiles in 4 LODs, texture-array landscape shader (tidal/lichen zonation; turf with
-  tussock-scale detail, triplanar on slopes; weathered grey rock wherever it is not a sheer wall).
-- Rocks kit; land cover (heath/gorse/bracken/scrub colonies) shared by plants and ground shader;
-  foliage clumps with ragged silhouettes and lumpy surfaces; grass from sets/grass.js.
-- Procedural trees (hawthorn, sycamore, oak, ash, pine; card shrubs gorse, heather, bracken,
-  blackthorn), dark young twigs, damped leaf sheen.
-- Prologue island (basalt plateau, eroded, stacks, dawn mist; finer froxels, no stair-step cloud edge).
-- Land around Cling: fields/strips/crops, hedgerows (card shrubs near the lens, clumps along the
-  boundary further out), hedgerow trees, woods, road and lane.
-- 4K finals of the hero angles and the contact sheet in `output/nature/final/` (not committed).
+## Fix round 1 (critic r1) - in progress
+Done in code (2026-10-12, second fixer; the first was stopped by a usage limit):
+- Cliff head: the per-block caps of the first fixer (a 'quarry' of bare capped blocks) are replaced by
+  a bed-quantised STAIR under a smooth SOIL mantle (verdor-world.js column()/sdf()): treads are
+  hard-bed tops, risers follow the head-slope contours and jog at the cross joints; outcrop nosings
+  poke through the turf; sod overhang + soil band at the lip; limestone pavement patches inland.
+  No more soil plane slicing joint blocks (the triangular shards).
+- Dual contouring in mesher.js (`dc: true`, used by the cliff bake and the rock kit): sharp arrises
+  instead of the ~1-cell 'pillow' round of surface nets; crease shading in materials.js (NK_CREASE).
+- Tiles carry depth below the rock/soil top + a bare-rock flag (soil lip only under real soil).
+- Outer rocks: two stacks + low skerries (first fixer) on a ragged reef mostly 0.4-1 m under water.
+- Shader: multi-bounce AO for pale rock (no slate-dark shade), per-block bed tint for the rock kit,
+  damp-only moss, zoneY for lookdev; first fixer's wet band / submerged rock / pools / streaks kept.
+- Trees: photographed leaf sprays (texture/eztree_leaves, MIT, manifest) for hawthorn, oak, ash,
+  sycamore, pine, blackthorn, heather, bracken; hawthorn = one flared trunk forking into 2-3 unequal
+  stems, kinks, windward dieback, salt-pruned wedge; species presets (oak limbs, ash open, pine bole +
+  dead lower limbs); crown gaps; root flare + buttresses; far LOD = 4-10 foliage masses on real limbs.
+- Plants: gorse bloom, colony outliers, thrift only on <35 deg ground with blade tufts, paler heads,
+  basal foliage on shrubs.
+- Cling: earth hollow-way road (sunk 0.5-1.5 m, banks, ruts, grass crown, puddles, verges), geometric
+  ridge and furrow (6-10 m, 0.4-0.8 m, reverse-S, headlands), photographic crop colours, plough
+  slices/clods, field margins, gentler UV warp, taller gappy hedges, hedge proxy switch at 140 m.
+- Island: sheer sea cliffs, boulder apron/reef at the foot (surf), stronger lava-flow terraces,
+  feathered cloud cap, new shot t=4 "forest reaching a cliff" (oak/pine woodland on the lee shore).
 
-## Final 4K images (output/nature/final/, not committed; review/ holds 1920 downscales and 1:1 crops)
-coast_t1_inland, coast_t2_cliff_foot, coast_t3_outer_rocks, tree_t1_hawthorn, tree_t2_detail,
-island_t1_dawn, contact_t1_trees, contact_t2_shrubs, contact_t3_rocks, cling_t2_aerial,
-cling_t4_meadow, contact_sheet_4k (2x2 montage). npm test: 33/33 pass.
-
-## Known weak spots
-- gorse colonies at 80-150 m are still smooth-ish cushions (no card LOD at that range);
-- far hedgerow trees use crown impostors that read as lollipops in an aerial at 1:1;
-- Scots pine crown is sparse; the rock material reads a little 'crumpled' close up;
-- turf on steep head slopes / banks shows fine fall-line streaks in oblique views;
-- the face seen square-on from the platform still shows long vertical joint planes.
+## Next
+- Full cliff rebake with DC (region z 100..900 baked; the rest is stale), then render all hero
+  angles at preview, fix, then 4K finals with new names (output/nature/r1fix/final/).
+- Contact sheet restage (rocks embedded in turf, no plinth), README update, npm test.

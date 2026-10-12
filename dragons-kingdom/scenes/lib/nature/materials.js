@@ -55,7 +55,9 @@ uniform vec4 nkLook;       // lichen amount, streaks, guano, turf height offset
 uniform vec3 nkPoint;      // the point (outer rocks) x, z, radius of the bird colony
 uniform sampler2D nkCover; uniform vec4 nkCoverXf; uniform float nkHasCover;   // land cover: heath, gorse, bracken, scrub
 uniform vec2 nkWater;      // the sea surface height in this shot, 1 = the geometry carries aTop
-varying float vNkAO; varying float vNkCav; varying float vNkTop; varying float vNkPin;
+uniform float nkZoneY;     // added to the height for the zonation (lookdev: show a rock as it weathers at that height)
+varying vec3 vNkO;          // the object's origin (rock kit: one bed per fallen block)
+varying float vNkAO; varying float vNkCav; varying float vNkTop; varying float vNkPin; varying float vNkBare;
 
 float nkDip(vec2 p) { if (nkDipLin.w > 0.5) return nkDipLin.x * p.x + nkDipLin.y * p.y + nkDipLin.z; return 0.034 * p.y + 7.0 * sin(p.y * 0.0021 + 0.9) - 9.0 * exp(-pow((p.y - 700.0) / 500.0, 2.0)) + 0.006 * p.x; }
 vec4 nkBed(float s) {
@@ -133,6 +135,7 @@ export async function landscapeMaterial(ctx, opts = {}) {
     nkPoint: { value: new THREE.Vector3(W.xc(W.VERDOR.point.z) + 120, W.VERDOR.point.z + 30, 260) },
     nkCover: { value: blankCover() }, nkCoverXf: { value: new THREE.Vector4(0, 0, 1, 1) }, nkHasCover: { value: 0 },
     nkWater: { value: new THREE.Vector2(opts.seaLevel ?? -1.1, opts.topAttr ? 1 : 0) },
+    nkZoneY: { value: opts.zoneY ?? 0 },
   };
   mat.userData.nkUniforms = U;
   /** the plants' land-cover map (plants.js landCover): the ground under each community */
@@ -143,12 +146,21 @@ export async function landscapeMaterial(ctx, opts = {}) {
     Object.assign(sh.uniforms, U);
     worldVaryings(sh);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aAO; attribute float aCav; attribute float aTop; attribute float aPin; varying float vNkAO; varying float vNkCav; varying float vNkTop; varying float vNkPin;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvNkAO = aAO; vNkCav = aCav; vNkTop = aTop * 12.75; vNkPin = aPin * 2.54;');
+      .replace('#include <common>', '#include <common>\nattribute float aAO; attribute float aCav; attribute float aTop; attribute float aPin; varying float vNkAO; varying float vNkCav; varying float vNkTop; varying float vNkPin; varying float vNkBare; varying vec3 vNkO;')
+      .replace('#include <project_vertex>', `#include <project_vertex>
+{
+  vec4 o = vec4(0.0, 0.0, 0.0, 1.0);
+#ifdef USE_INSTANCING
+  o = instanceMatrix * o;
+#endif
+  vNkO = (modelMatrix * o).xyz;
+}`)
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvNkAO = aAO; vNkCav = aCav; { float tq = floor(aTop * 255.0 + 0.5); vNkBare = step(127.5, tq); vNkTop = mod(tq, 128.0) * 0.1; } vNkPin = aPin * 2.54;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 ${opts.rockOnly ? '#define NK_ROCK_ONLY' : ''}
 ${opts.profile === 'basalt' ? '#define NK_BASALT' : ''}
+${opts.crease === false ? '' : '#define NK_CREASE'}
 varying vec3 vDkW; varying vec3 vDkN;
 ${GLSL_NOISE}
 void dkProj(int ax, vec3 p, vec3 n, out vec2 uv, out vec3 T, out vec3 B) {
@@ -165,22 +177,38 @@ normal = normalize((viewMatrix * vec4(nkRockN, 0.0)).xyz);`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= nkAOv; reflectedLight.indirectSpecular *= nkAOv * nkAOv;`);
   };
-  mat.customProgramCacheKey = () => `nature-landscape-v16${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}`;
+  mat.customProgramCacheKey = () => `nature-landscape-v19${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}${opts.crease === false ? '-nc' : ''}`;
   return mat;
 }
 
 const MAP_FRAGMENT = /* glsl */ `
 vec3 P = vDkW;
 vec3 N0 = normalize(vDkN) * (gl_FrontFacing ? 1.0 : -1.0);
+#ifdef NK_CREASE
+// creases: the dual-contoured tiles have sharp arrises, but a vertex ON an arris carries the mean of
+// its two faces' normals, so smooth interpolation rounds the shading off again over a whole cell;
+// where the triangle's own plane disagrees strongly with the interpolated normal, use the plane
+{
+  vec3 fN = normalize(cross(dFdx(vDkW), dFdy(vDkW)));
+  if (dot(fN, N0) < 0.0) fN = -fN;
+  N0 = normalize(mix(N0, fN, smoothstep(0.93, 0.75, dot(fN, N0))));
+}
+#endif
 float up = N0.y;
-float y = P.y;
+float y = P.y + nkZoneY;
 float camD = length(P - cameraPosition);
 nkFp = max(length(dFdx(P)), length(dFdy(P)));
 float tideH = nkSea.x, tideL = nkSea.y;
 // --- large-scale variation fields
 float m1 = dkFbm3(P * 0.021), m2 = dkFbm3(P * 0.09 + 7.0), m3 = dkVN3(P * 0.45 + 3.0);
 // --- strata
+#ifdef NK_ROCK_ONLY
+// a fallen block came from ONE bed: its tint is the bed at its origin (plus a per-block shuffle),
+// not bands of the in-situ strata running through it
+float sB = vNkO.y + nkDip(vNkO.xz) + 37.0 * fract(sin(dot(vNkO.xz, vec2(12.9898, 78.233))) * 43758.5453);
+#else
 float sB = y + nkDip(P.xz) + vNkPin;
+#endif
 vec4 bed = nkBed(sB);
 // --- zone weights
 float bay = exp(-pow((P.z - nkSea.w) / 170.0, 2.0));
@@ -270,7 +298,8 @@ float scar = smoothstep(0.58, 0.72, dkFbm3(P * vec3(0.045, 0.03, 0.045) + 19.0))
   float gspots = smoothstep(0.55, 0.66, nkN3(P + 0.34, 5.0));
   float grey = hi * smoothstep(0.45, 0.65, dkFbm3(P * 0.22 + 5.0)) * mix(gspots, 0.4, far) * nkLook.x * (1.0 - scar);
   rock = mix(rock, vec3(0.74, 0.74, 0.7) * (0.85 + 0.3 * lumR), grey * 0.45);
-  float moss = hi * smoothstep(0.62, 0.8, dkFbm3(P * 0.35 + 23.0) + 0.45 * vNkCav + 0.25 * max(up, 0.0)) * (0.5 + 0.5 * smoothstep(0.0, -0.8, N0.z)) * (1.0 - scar);
+  // moss only in damp places: crevices and the shaded (north, -z) faces, never as a cap on every top
+  float moss = hi * smoothstep(0.66, 0.84, dkFbm3(P * 0.35 + 23.0) + 0.5 * vNkCav) * (0.25 + 0.75 * smoothstep(0.0, -0.8, N0.z)) * (1.0 - scar);
   rock = mix(rock, vec3(0.07, 0.09, 0.035), moss * 0.5);
 }
 rock = mix(rock, rock * vec3(1.12, 1.1, 1.04) + vec3(0.04, 0.035, 0.025), scar * 0.8);
@@ -333,7 +362,7 @@ if (nkWater.y > 0.5) {
   vec2 tg2 = normalize(vec2(-N0.z, N0.x) + 1e-4);
   float u2 = dot(P.xz, tg2);
   float lipD = 0.3 + 0.7 * dkVN2(vec2(u2 * 0.6, 2.0)) + 0.15 * (nkN3(P + 2.2, 3.0) - 0.5);
-  float lip = (1.0 - smoothstep(lipD * 0.75, lipD, vNkTop)) * smoothstep(0.75, 0.45, up) * smoothstep(6.0, 9.0, hS);
+  float lip = (1.0 - smoothstep(lipD * 0.75, lipD, vNkTop)) * smoothstep(0.75, 0.45, up) * smoothstep(6.0, 9.0, hS) * (1.0 - vNkBare);
   vec3 soilC = mix(vec3(0.17, 0.12, 0.075), vec3(0.3, 0.25, 0.18), smoothstep(0.4, 0.8, nkN3(P, 4.0))) * (0.75 + 0.5 * lumR);
   // pale stones in the rubble, dark root mats near the turf
   soilC = mix(soilC, rock * 0.9, smoothstep(0.62, 0.75, nkN3(P + 5.0, 6.0)) * 0.6);
@@ -448,5 +477,12 @@ nkRough = rgh;
 // (sky visibility from the bake darkens the fill only partly: a pale limestone in shade is a light
 // blue-grey, not slate)
 nkAOv = mix(1.0, vNkAO, 0.75);
+// multi-bounce (Jimenez et al. 2016): light bouncing between pale rock faces fills the occluded
+// parts; a pale limestone in shade stays a light grey instead of going slate-dark
+{
+  float al = clamp(dot(col, vec3(0.3, 0.59, 0.11)), 0.0, 1.0);
+  float a = 2.0404 * al - 0.3324, b = -4.7951 * al + 0.6417, c = 2.7552 * al + 0.6903;
+  nkAOv = max(nkAOv, ((nkAOv * a + b) * nkAOv + c) * nkAOv);
+}
 diffuseColor.rgb *= col;
 `;

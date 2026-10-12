@@ -48,8 +48,9 @@ function tileGeometry(t) {
   g.setAttribute('normal', new THREE.BufferAttribute(n3, 3, true));
   g.setAttribute('aAO', new THREE.BufferAttribute(t.ao, 1, true));
   g.setAttribute('aCav', new THREE.BufferAttribute(t.cavity, 1, true));
-  // depth below the rock mass's top (0..12.75 m, for the soil lip and the runoff streaks under it)
-  // and the beds' lateral pinch (so the shader's strata match the carved ones)
+  // depth below the top of the rock / its soil (0..12.7 m in 0.1 m, +128 where the top is bare rock:
+  // for the soil lip and the runoff streaks under it) and the beds' lateral pinch (so the shader's
+  // strata match the carved ones)
   g.setAttribute('aTop', new THREE.BufferAttribute(t.extTop || new Uint8Array(t.nv).fill(255), 1, true));
   g.setAttribute('aPin', new THREE.BufferAttribute(t.extPin || new Int8Array(t.nv), 1, true));
   g.setIndex(new THREE.BufferAttribute(t.indices, 1));
@@ -156,7 +157,7 @@ export async function loadVerdorCoast(ctx, opts = {}) {
     const pos = g.attributes.position, n = pos.count;
     g.setAttribute('aAO', new THREE.BufferAttribute(new Uint8Array(n).fill(255), 1, true));
     g.setAttribute('aCav', new THREE.BufferAttribute(new Uint8Array(n), 1, true));
-    g.setAttribute('aTop', new THREE.BufferAttribute(new Uint8Array(n).fill(0), 1, true));
+    g.setAttribute('aTop', new THREE.BufferAttribute(new Uint8Array(n).fill(255), 1, true));
     g.setAttribute('aPin', new THREE.BufferAttribute(new Int8Array(n), 1, true));
     // remove triangles whose three corners are all well inside band tiles
     const idx = g.index.array, keep = [];

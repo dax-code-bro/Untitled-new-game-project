@@ -70,7 +70,8 @@ export function landCover(opts) {
 // ------------------------------------------------------------------ shrub geometry ---
 const SHRUBS = {
   // lobes, flattening, leeward shear, base spread, leaf scale (1/m), colours, flowers
-  gorse: { lobes: [4, 8], flat: 0.7, shear: 0.45, leaf: 14, col: [0.032, 0.048, 0.016], var: 0.25, flower: [0.85, 0.62, 0.05, 0.08] },
+  // (in flower: clusters of bright yellow over 30-70 % of the bush, more on the sunny top)
+  gorse: { lobes: [4, 8], flat: 0.7, shear: 0.45, leaf: 14, col: [0.032, 0.048, 0.016], var: 0.25, flower: [0.87, 0.6, 0.025, 0.42] },
   heather: { lobes: [3, 6], flat: 0.38, shear: 0.25, leaf: 22, col: [0.07, 0.065, 0.04], var: 0.3, flower: [0.32, 0.12, 0.22, 0.0] },
   bracken: { lobes: [5, 9], flat: 0.55, shear: 0.3, leaf: 7, col: [0.16, 0.2, 0.05], var: 0.35, flower: [0.3, 0.18, 0.06, 0.0] },
   scrub: { lobes: [6, 11], flat: 0.62, shear: 0.6, leaf: 10, col: [0.045, 0.06, 0.03], var: 0.2, flower: [0.9, 0.9, 0.85, 0.06] },
@@ -219,13 +220,13 @@ export function thriftGeometry(seed = 1) {
   const parts = [];
   const cushion = shrubGeometry('thrift', seed, 2);
   cushion.scale(1, 0.6, 1);
-  const n = 5 + Math.floor(r() * 8);
+  const n = 15 + Math.floor(r() * 22);
   const heads = [];
   for (let i = 0; i < n; i++) {
-    const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 0.35, h = 0.55 + r() * 0.6;
-    const stalk = new THREE.CylinderGeometry(0.008, 0.01, h, 3, 1, true);
+    const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 0.35, h = 0.5 + r() * 0.7;
+    const stalk = new THREE.CylinderGeometry(0.006, 0.008, h, 3, 1, true);
     stalk.translate(Math.cos(a) * d, h / 2 + 0.1, Math.sin(a) * d);
-    const head = new THREE.IcosahedronGeometry(0.055 + 0.03 * r(), 1);
+    const head = new THREE.IcosahedronGeometry(0.04 + 0.025 * r(), 1);
     head.translate(Math.cos(a) * d, h + 0.1, Math.sin(a) * d);
     heads.push(stalk, head);
   }
@@ -273,9 +274,11 @@ export function scatterPlants(ctx, opts) {
     for (let z = z0; z < z1; z += base) for (let x = x0; x < x1; x += base) {
       const jx = x + (rng() - 0.5) * base * 1.2, jz = z + (rng() - 0.5) * base * 1.2;
       const c = cover.sample(jx, jz)[K.ch];
-      // inside a colony nearly every cell is filled; outside it, almost nothing (no lone dots)
-      const fill = smoothstep(K.lo, K.hi, c);
-      if (fill < 0.02 || rng() > fill) continue;
+      // inside a colony nearly every cell is filled; toward its edge the bushes thin and shrink over
+      // several metres, with a few outliers seeded beyond it (an edge cut like a decal reads as CG)
+      let fill = smoothstep(K.lo, K.hi, c);
+      if (fill < 0.02) { if (c > K.lo * 0.35 && rng() < 0.035) fill = 0.25; else continue; }
+      if (rng() > fill) continue;
       const y = H(jx, jz);
       if (y == null || !(y > 0)) continue;
       const d = nearest(jx, y, jz);
@@ -317,7 +320,7 @@ export function scatterPlants(ctx, opts) {
   // thrift cushions along the edge, near the cameras
   if (opts.edge) {
     const T = thriftGeometry(3);
-    const cm = [], hm = [];
+    const cm = [], hm = [], tuft = [];
     for (let z = z0; z < z1; z += 0.6) for (let x = x0; x < x1; x += 0.6) {
       const jx = x + (rng() - 0.5) * 0.6, jz = z + (rng() - 0.5) * 0.6;
       const e = opts.edge(jx, jz);
@@ -327,20 +330,35 @@ export function scatterPlants(ctx, opts) {
       const d = nearest(jx, y, jz);
       if (d > 140) continue;
       if (rng() > 0.35 * (1 - e / 14)) continue;
+      // only on ground under ~35 degrees (turf at the edge, ledges, crevice tops), never on a face
+      if (opts.slope && opts.slope(jx, jz) < 0.82) continue;
+      { const a = H(jx + 0.6, jz), b = H(jx - 0.6, jz), c2 = H(jx, jz + 0.6), d2 = H(jx, jz - 0.6);
+        if ([a, b, c2, d2].some((v) => v == null || Math.abs(v - y) > 0.42)) continue; }
       const w = 0.12 + 0.18 * rng();
       q.setFromAxisAngle(up, rng() * 6.28);
       m4.compose(p.set(jx, y - 0.01, jz), q, s.set(w, w, w));
       cm.push(m4.clone());
       if (rng() < 0.75) hm.push(m4.clone());
+      if (d < 45) tuft.push([jx, y, jz, w]);
     }
     if (cm.length) {
       const c = new THREE.InstancedMesh(T.cushion, foliage('thrift'), cm.length); cm.forEach((mm, i) => c.setMatrixAt(i, mm));
       c.receiveShadow = true; c.computeBoundingSphere(); group.add(c);
       const merged = mergeGeos(T.heads);
-      const hmat = new THREE.MeshStandardMaterial({ color: 0xd98aa6, roughness: 0.8 });
+      // pale papery pink heads (sRGB ~220,170,190), not saturated magenta balls
+      const hmat = new THREE.MeshStandardMaterial({ color: new THREE.Color().setRGB(0.72, 0.42, 0.52), roughness: 0.85 });
       const h = new THREE.InstancedMesh(merged, hmat, hm.length); hm.forEach((mm, i) => h.setMatrixAt(i, mm));
       h.receiveShadow = true; h.computeBoundingSphere(); group.add(h);
       counts.thrift = cm.length;
+      // near the lens each cushion is a dense tuft of fine grass-like leaves (the set library's
+      // blades, 4-9 cm), the smooth cushion only its core
+      if (tuft.length) {
+        group.add(grassField({ count: Math.min(60000, tuft.length * 140), seed: 17, height: [0.04, 0.09], place: (rr) => {
+          const [tx, ty, tz, tw] = tuft[Math.floor(rr() * tuft.length)];
+          const a = rr() * Math.PI * 2, rd = tw * 0.45 * Math.sqrt(rr());
+          return [tx + Math.cos(a) * rd, ty + 0.02 + tw * 0.25 * (1 - rd / (tw * 0.45)), tz + Math.sin(a) * rd];
+        } }));
+      }
     }
   }
   // geometry grass near the cameras (the set library's tufts: already convincing at ground level)

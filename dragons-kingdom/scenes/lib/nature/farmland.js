@@ -25,10 +25,12 @@ const CROPS = ['pasture', 'meadow', 'wheat', 'barley', 'fallow', 'plough', 'road
 function fieldMap(W, region, cell) {
   const [x0, x1] = region.x, [z0, z1] = region.z;
   const nx = Math.ceil((x1 - x0) / cell) + 1, nz = Math.ceil((z1 - z0) / cell) + 1;
-  const data = new Uint8Array(nx * nz * 4);
+  const data = new Uint8Array(nx * nz * 4), edge = new Uint8Array(nx * nz * 4);
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
     const x = x0 + i * cell, z = z0 + j * cell, k = (j * nx + i) * 4;
     const f = W.fieldAt(x, z);
+    edge[k] = f ? Math.min(255, Math.round(Math.abs(f.edge) * 25)) : 255;
+    edge[k + 1] = f && f.site.kind === 'furlong' ? 255 : 0;
     let crop = f ? CROPS.indexOf(f.site.crop) : 0;
     if (W.wood(x, z) > 0.5) crop = 7;
     if (Math.hypot(x, z) < 120) crop = 8;
@@ -44,14 +46,18 @@ function fieldMap(W, region, cell) {
   const lin = new THREE.DataTexture(data, nx, nz, THREE.RGBAFormat);
   lin.magFilter = THREE.LinearFilter; lin.minFilter = THREE.LinearFilter;
   lin.needsUpdate = true;
-  return { texture: t, linear: lin, data, nx, nz, xf: new THREE.Vector4(x0, z0, 1 / ((nx - 1) * cell), 1 / ((nz - 1) * cell)), cell, x0, z0 };
+  // distance to the field edge (r, 0.04 m units) and furlong flag (g), linearly filtered
+  const ed = new THREE.DataTexture(edge, nx, nz, THREE.RGBAFormat);
+  ed.magFilter = THREE.LinearFilter; ed.minFilter = THREE.LinearFilter;
+  ed.needsUpdate = true;
+  return { texture: t, linear: lin, edge: ed, data, nx, nz, xf: new THREE.Vector4(x0, z0, 1 / ((nx - 1) * cell), 1 / ((nz - 1) * cell)), cell, x0, z0 };
 }
 
 const FARM_GLSL = /* glsl */ `
 precision highp sampler2DArray;
 uniform sampler2DArray nkAlb; uniform sampler2DArray nkNrm; uniform sampler2DArray nkDat;
 uniform float nkTile[9];
-uniform sampler2D fMap; uniform sampler2D fMapL; uniform vec4 fMapXf; uniform vec2 fMapN;
+uniform sampler2D fMap; uniform sampler2D fMapL; uniform sampler2D fEdge; uniform vec4 fMapXf; uniform vec2 fMapN;
 void dkProj2(int ax, vec3 p, vec3 n, out vec2 uv, out vec3 T, out vec3 B) {
   if (ax == 0) { float s = n.x >= 0.0 ? 1.0 : -1.0; uv = vec2(-s * p.z, p.y); T = vec3(0.0, 0.0, -s); }
   else if (ax == 1) { float s = n.y >= 0.0 ? 1.0 : -1.0; uv = vec2(p.x, -s * p.z); T = vec3(1.0, 0.0, 0.0); }
@@ -61,7 +67,8 @@ void dkProj2(int ax, vec3 p, vec3 n, out vec2 uv, out vec3 T, out vec3 B) {
 void fTap(int L, vec3 P, vec3 n, float scale, out vec3 alb, out vec3 nw, out float h) {
   vec2 uv; vec3 T, B;
   dkProj2(1, P * nkTile[L] * scale, n, uv, T, B);
-  uv += (vec2(dkVN2(uv * 0.23 + float(L) * 3.1), dkVN2(uv * 0.23 + 17.3)) - 0.5) * 1.2;
+  // a slow, gentle warp (a strong one smeared the photo into swirls over whole pastures)
+  uv += (vec2(dkVN2(uv * 0.07 + float(L) * 3.1), dkVN2(uv * 0.07 + 17.3)) - 0.5) * 0.35;
   alb = texture(nkAlb, vec3(uv, float(L))).rgb;
   vec3 tn = texture(nkNrm, vec3(uv, float(L))).xyz * 2.0 - 1.0;
   nw = normalize(T * tn.x + B * tn.y + n * max(tn.z, 0.15));
@@ -79,72 +86,108 @@ float crop = floor(fm.r * 255.0 / 20.0 + 0.01);
 float dir = fm.g * 3.14159265;
 float rnd = fm.b;
 float road = texture2D(fMapL, fuv).a;
+vec4 fe = texture2D(fEdge, fuv);
+float edgeD = fe.r * 10.2;
+float furlong = step(0.5, fe.g);
 float camD = length(P - cameraPosition);
 float m1 = dkFbm3(P * 0.02), m2 = dkFbm3(P * 0.11 + 4.0), m3 = dkVN2(P.xz * 0.9);
-// strips across the furlong: a strip index (each holder's strip a little different), ridge and furrow
+// the strips of a furlong (same construction as cling-world.js ridgeAt): width 6-10 m, straight or
+// reverse-S, ridge and furrow 0.4-0.8 m with broad round ridges and sharp furrows
 vec2 sd = vec2(cos(dir), sin(dir));
-float across = dot(P.xz, sd);
-float sw = 11.0 + 6.0 * rnd;
+float alongS = dot(P.xz, vec2(-sd.y, sd.x));
+float sw = 6.0 + 4.0 * rnd;
+float across = dot(P.xz, sd) + (rnd > 0.45 ? 5.5 * sin(alongS / 38.0 + rnd * 20.0) : 0.0);
 float strip = floor(across / sw);
 float sh = fract(sin(strip * 12.9898 + rnd * 78.233) * 43758.5453);
-float ridge = sin(fract(across / sw) * 6.2831853);
+float su = fract(across / sw);
+float prof = 1.0 - (2.0 * su - 1.0) * (2.0 * su - 1.0);
 vec3 grassA; vec3 nA; float hA;
 fTap(1, P, N0, 1.0, grassA, nA, hA);
 vec3 col; vec3 nrm = nA; float rough = 0.9;
 bool strips = crop >= 2.0 && crop <= 5.0;
 if (crop < 0.5) {            // pasture: grazed turf, darker tussocks, sheep-cropped paler patches
-  col = grassA * vec3(0.5, 0.6, 0.36) * (0.75 + 0.5 * m3) * (0.85 + 0.3 * m2);
+  col = grassA * vec3(0.4, 0.5, 0.27) * (0.75 + 0.5 * m3) * (0.85 + 0.3 * m2);
 } else if (crop < 1.5) {     // hay meadow: long grass, seed heads, flowers
   vec3 a2; vec3 n2; float h2; fTap(7, P + 3.0, N0, 0.8, a2, n2, h2);
-  col = mix(grassA * vec3(0.55, 0.66, 0.36), a2 * vec3(0.75, 0.72, 0.5), 0.35 + 0.2 * m3) * (0.85 + 0.3 * m2);
-  col = mix(col, vec3(0.75, 0.68, 0.3), smoothstep(0.78, 0.9, dkVN2(P.xz * 3.0)) * 0.3);
-} else if (crop < 2.5 || (crop < 3.5)) {   // wheat / barley: standing grain, golden-green, strips in step
+  col = mix(grassA * vec3(0.45, 0.55, 0.3), a2 * vec3(0.6, 0.58, 0.4), 0.35 + 0.2 * m3) * (0.85 + 0.3 * m2);
+  col = mix(col, vec3(0.6, 0.55, 0.3), smoothstep(0.78, 0.9, dkVN2(P.xz * 3.0)) * 0.25);
+} else if (crop < 3.5) {     // wheat / barley: standing grain turning from green to gold, strips in step
   vec3 a2; vec3 n2; float h2; fTap(7, P, N0, 1.6, a2, n2, h2);
-  vec3 grain = crop < 2.5 ? vec3(0.34, 0.28, 0.13) : vec3(0.4, 0.35, 0.2);
-  col = grain * (0.75 + 0.5 * clamp(dot(a2, vec3(0.33)) / 0.35, 0.0, 1.5)) * (0.8 + 0.25 * sh + 0.15 * m2);
-  col = mix(col, col * vec3(0.8, 1.05, 0.7), 0.25 * sh);     // a greener, later strip here and there
+  vec3 grain = crop < 2.5 ? vec3(0.25, 0.21, 0.085) : vec3(0.28, 0.25, 0.12);
+  float tx = clamp(dot(a2, vec3(0.33)) / 0.3, 0.4, 1.6);
+  col = grain * (0.6 + 0.45 * tx) * (0.82 + 0.22 * sh + 0.14 * m2);
+  col = mix(col, col * vec3(0.72, 1.0, 0.6), 0.45 * sh * sh);     // a greener, later-sown strip here and there
+  // standing crop: wind-flattened (lodged) patches are paler, the tramlines of weeds darker
+  col *= 1.0 - 0.12 * smoothstep(0.62, 0.8, dkVN2(P.xz * 0.12 + rnd * 9.0));
   nrm = normalize(mix(n2, N0, 0.4));
   rough = 0.85;
 } else if (crop < 4.5) {     // fallow: weedy grass and bare patches
   vec3 a2; vec3 n2; float h2; fTap(2, P, N0, 1.0, a2, n2, h2);
-  col = mix(grassA * vec3(0.55, 0.6, 0.38), a2 * vec3(0.7, 0.65, 0.5), 0.5 + 0.3 * sh) * (0.85 + 0.3 * m3);
-} else if (crop < 5.5) {     // ploughed: furrows along the strip
+  col = mix(grassA * vec3(0.45, 0.5, 0.3), a2 * vec3(0.55, 0.5, 0.38), 0.5 + 0.3 * sh) * (0.85 + 0.3 * m3);
+} else if (crop < 5.5) {     // ploughed: turned slices (asymmetric), clods, stubble left in the soil
   vec3 a2; vec3 n2; float h2; fTap(3, P, N0, 1.0, a2, n2, h2);
-  float furrow = sin(across * 6.2831853 / 0.55);
-  col = a2 * vec3(0.55, 0.45, 0.36) * (0.75 + 0.2 * furrow + 0.2 * sh);
-  nrm = normalize(n2 + vec3(sd.x, 0.0, sd.y) * furrow * 0.35 * (1.0 - smoothstep(30.0, 150.0, camD)));
+  float fs = fract(across / 0.3);
+  float slope = fs < 0.72 ? 0.9 : -2.4;                       // the slice's long back, its steep face
+  float clod = dkVN2(P.xz * 6.0 + 3.0) - 0.5, clod2 = dkVN2(P.xz * 15.0) - 0.5;
+  float fine = 1.0 - smoothstep(25.0, 120.0, camD);
+  col = a2 * vec3(0.42, 0.34, 0.26) * (0.8 + 0.25 * sh) * (1.0 + 0.25 * clod * fine) * (1.0 - 0.12 * step(0.72, fs) * fine);
+  col = mix(col, vec3(0.45, 0.4, 0.27), smoothstep(0.86, 0.95, dkVN2(P.xz * 9.0 + 1.0)) * 0.6 * fine);   // straw
+  nrm = normalize(n2 + (vec3(sd.x, 0.0, sd.y) * slope * 0.25 + vec3(clod, 0.0, clod2) * 0.6) * fine);
 } else if (crop < 6.5) {
-  col = grassA * vec3(0.5, 0.55, 0.38);
+  col = grassA * vec3(0.42, 0.47, 0.3);
 } else if (crop < 7.5) {     // wood floor (mostly hidden under trees): leaf litter, moss
   vec3 a2; vec3 n2; float h2; fTap(8, P, N0, 1.0, a2, n2, h2);
-  col = mix(a2 * vec3(0.5, 0.42, 0.3), grassA * vec3(0.35, 0.42, 0.25), 0.4 * m3);
+  col = mix(a2 * vec3(0.45, 0.37, 0.26), grassA * vec3(0.3, 0.36, 0.2), 0.4 * m3);
 } else {                     // the town shelf: trodden grass and earth (the architecture covers most of it)
   vec3 a2; vec3 n2; float h2; fTap(2, P, N0, 1.0, a2, n2, h2);
-  col = mix(grassA * vec3(0.5, 0.55, 0.38), a2 * vec3(0.7, 0.62, 0.5), 0.4 + 0.3 * m3);
+  col = mix(grassA * vec3(0.42, 0.47, 0.3), a2 * vec3(0.6, 0.53, 0.42), 0.4 + 0.3 * m3);
 }
-// ridge and furrow: the old ploughed strips stay as long waves under every furlong (shading)
-if (strips || crop < 0.5) {
-  float amp = strips ? 0.22 : 0.12;
-  nrm = normalize(nrm + vec3(sd.x, 0.0, sd.y) * cos(fract(across / sw) * 6.2831853) * amp * (1.0 - smoothstep(400.0, 1500.0, camD)));
-  col *= 1.0 + 0.06 * ridge;
+// ridge and furrow (furlongs): the furrows hold the wet - greener and darker; far away, where the
+// terrain grid cannot carry the 6-10 m ridges, they are shaded through the normal
+if ((strips || crop < 0.5) && furlong > 0.5) {
+  float amp = (0.4 + 0.4 * fract(rnd * 7.31)) * smoothstep(3.0, 12.0, edgeD);
+  float dh = -4.0 * amp * (2.0 * su - 1.0) / sw;
+  nrm = normalize(nrm - vec3(sd.x, 0.0, sd.y) * dh * smoothstep(120.0, 350.0, camD) * (1.0 - smoothstep(1500.0, 3000.0, camD)));
+  col *= mix(0.88, 1.05, prof * smoothstep(3.0, 12.0, edgeD));
+  col = mix(col, col * vec3(0.85, 1.0, 0.8), (1.0 - prof) * 0.3);
 }
-// the road and the lane: rutted earth and stone, a grass crown, worn verges
+// field margins and headlands: a 1-3 m band of rough grass, docks and nettles along every boundary
+{
+  float mg = 1.0 - smoothstep(0.8, 1.6 + 1.6 * rnd, edgeD + 0.6 * (m3 - 0.5));
+  vec3 rg = grassA * vec3(0.38, 0.46, 0.26) * (0.7 + 0.6 * dkVN2(P.xz * 1.7));
+  rg = mix(rg, vec3(0.32, 0.28, 0.16), smoothstep(0.72, 0.85, dkVN2(P.xz * 2.3 + 4.0)) * 0.5);
+  col = mix(col, rg, mg * step(0.5, 7.5 - crop) * step(1.5, crop + 0.0) * 0.9 + mg * 0.4 * step(crop, 1.5));
+}
+// the road and the lane: a sunken earth hollow way - rutted brown-grey earth and puddles, a grass
+// strip down the middle between the wheel ruts, hoof-churned mud, grass verges up the banks
 if (road > 0.01) {
   vec3 a2; vec3 n2; float h2; fTap(3, P, N0, 1.0, a2, n2, h2);
-  vec3 a3; vec3 n3; float h3; fTap(6, P + 7.0, N0, 1.0, a3, n3, h3);
-  vec3 dirt = mix(a2 * vec3(0.62, 0.55, 0.45), a3 * 0.8, 0.45 + 0.3 * m3);
-  float ruts = road > 0.55 ? smoothstep(0.65, 0.95, abs(sin(road * 9.0))) : 0.0;
-  dirt *= 1.0 - 0.18 * ruts;
-  float crown = smoothstep(0.88, 0.97, road) * 0.6;
-  vec3 rc = mix(dirt, grassA * vec3(0.45, 0.5, 0.32), crown);
-  float w = smoothstep(0.02, 0.35, road + 0.15 * (m3 - 0.5));
+  vec3 a3; vec3 n3; float h3; fTap(8, P + 7.0, N0, 1.0, a3, n3, h3);
+  vec3 dirt = mix(a2 * vec3(0.36, 0.31, 0.25), a3 * vec3(0.5, 0.45, 0.38), 0.4 + 0.3 * m3);
+  dirt *= 0.85 + 0.3 * dkVN2(P.xz * 0.6);
+  float hoof = smoothstep(0.55, 0.8, dkVN2(P.xz * 4.0 + 2.0));
+  dirt = mix(dirt, dirt * 0.62, hoof * 0.5);
+  // the wheel ruts (0.95 m either side of the crown) and the water standing in them
+  float rd = (1.0 - road) * 5.5;
+  float rut = exp(-pow((rd - 0.95) / 0.28, 2.0)) * step(0.5, road);
+  float puddle = rut * smoothstep(0.5, 0.75, dkVN2(P.xz * 0.35 + 9.0));
+  dirt *= 1.0 - 0.25 * rut;
+  float crownG = (1.0 - smoothstep(0.32, 0.5, rd + 0.12 * (m3 - 0.5))) * step(0.5, road);
+  vec3 rc = mix(dirt, grassA * vec3(0.36, 0.42, 0.24), crownG * 0.85);
+  // verges: lusher grass between the trodden way and the hedge banks
+  float way = smoothstep(0.42, 0.55, road + 0.08 * (m3 - 0.5));
+  rc = mix(grassA * vec3(0.4, 0.5, 0.28) * (0.75 + 0.5 * m3), rc, way);
+  float w = smoothstep(0.02, 0.2, road);
   col = mix(col, rc, w);
-  nrm = normalize(mix(nrm, n2, w));
-  rough = mix(rough, 0.95, w);
+  nrm = normalize(mix(nrm, mix(n2, N0, 0.3), w * way));
+  rough = mix(rough, 0.92, w);
+  col = mix(col, col * 0.35, puddle * way);
+  rough = mix(rough, 0.05, puddle * way);
+  nrm = normalize(mix(nrm, N0, puddle * way));
 }
 // steep banks show the soil and the stone
 float steep = smoothstep(0.75, 0.55, N0.y);
-if (steep > 0.01) { vec3 a2; vec3 n2; float h2; fTap(0, P, N0, 0.6, a2, n2, h2); col = mix(col, a2 * vec3(0.55, 0.52, 0.48), steep); nrm = normalize(mix(nrm, n2, steep)); }
+if (steep > 0.01) { vec3 a2; vec3 n2; float h2; fTap(3, P, N0, 0.6, a2, n2, h2); col = mix(col, mix(a2 * vec3(0.4, 0.34, 0.27), grassA * vec3(0.4, 0.46, 0.28), 0.4), steep); nrm = normalize(mix(nrm, n2, steep)); }
 col *= 0.9 + 0.2 * m1;
 fNrm = nrm; fRough = rough;
 diffuseColor.rgb *= col;
@@ -157,7 +200,7 @@ export async function farmlandMaterial(ctx, map) {
   const U = {
     nkAlb: { value: T.albedo }, nkNrm: { value: T.normal }, nkDat: { value: T.data },
     nkTile: { value: LAYERS.map((id) => 1 / (T.tile[T.index[id]] || 2)) },
-    fMap: { value: map.texture }, fMapL: { value: map.linear }, fMapXf: { value: map.xf }, fMapN: { value: new THREE.Vector2(map.nx, map.nz) },
+    fMap: { value: map.texture }, fMapL: { value: map.linear }, fEdge: { value: map.edge }, fMapXf: { value: map.xf }, fMapN: { value: new THREE.Vector2(map.nx, map.nz) },
   };
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
@@ -168,7 +211,7 @@ export async function farmlandMaterial(ctx, map) {
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = fRough;')
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\nnormal = normalize((viewMatrix * vec4(fNrm, 0.0)).xyz);`);
   };
-  mat.customProgramCacheKey = () => 'nature-farmland-v1';
+  mat.customProgramCacheKey = () => 'nature-farmland-v2';
   return mat;
 }
 
@@ -223,8 +266,10 @@ export async function loadClingLand(ctx, opts = {}) {
       const both = f.site.kind === 'furlong' && f.other.kind === 'furlong';
       const hk = hash2(Math.min(f.site.id, f.other.id), Math.max(f.site.id, f.other.id), 7);
       if (both && hk > 0.45) continue;
-      // gateways
+      // gateways, and gaps where the hedge has died back or been grubbed out
       if (hash2(Math.round(x / 9), Math.round(z / 9), 3) < 0.04) continue;
+      const hn = W.N3.fbm2(x / 23 + 7, z / 23, 2), hn2 = W.N2.n2(x / 7, z / 7);
+      if (hn < -0.38 + 0.1 * hn2) continue;
       const y = W.height(x, z);
       const lod = d < 80 ? 0 : d < 450 ? 1 : 2;
       // a hedge is a continuous laid-and-trimmed wall of shrubs: clumps elongated along the line
@@ -232,13 +277,17 @@ export async function loadClingLand(ctx, opts = {}) {
       // the clump's long (local z) axis runs ALONG the boundary, i.e. across the line between the sites
       const yaw = Math.atan2(ex, ez) + Math.PI / 2 + (rng() - 0.5) * 0.25;
       // far away only every third cell is kept: those clumps are stretched to keep the hedge unbroken
-      const w = (2.3 + 0.8 * rng()) * (far ? 1.3 : 1), h = (2.0 + 1.0 * rng()) * (far ? 1.15 : 1), len = (5.2 + 2.0 * rng()) * (far ? 2.2 : 1);   // long: the humps merge into one hedge
-      // near the lens the clump is only the dense core: card-built blackthorn and hawthorn shrubs
-      // grow through it and make the twiggy, gappy silhouette of a real hedge
-      const near = d < 75;
-      const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y - 0.25, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(w * (near ? 0.5 : 1), h * (near ? 0.55 : 1), len * (near ? 0.85 : 1)));
-      if (!near) lists[lod].push(m);
-      if (near) hedgeCards.push({ x: x + (rng() - 0.5) * 0.8, y, z: z + (rng() - 0.5) * 0.8, variant: Math.floor(rng() * 3), yaw: rng() * 6.28, scale: (h / 2.1) * (0.85 + 0.3 * rng()), thorn: rng() < 0.3 });
+      // a real hedge: 2-4 m tall, 2-3 m wide, an irregular top (laid in some years, grown out in others)
+      const tall = 2.4 + 1.3 * smoothstep(-0.4, 0.5, hn) + 0.5 * hn2;
+      const w = (2.4 + 0.8 * rng()) * (far ? 1.3 : 1), h = tall * (0.85 + 0.3 * rng()) * (far ? 1.1 : 1), len = (5.2 + 2.0 * rng()) * (far ? 2.2 : 1);   // long: the humps merge into one hedge
+      // near the lens the clump is the dense lower core (it fills the hedge base to the ground, no
+      // stems on stilts): card-built blackthorn and hawthorn shrubs grow through and over it and make
+      // the twiggy, gappy silhouette of a real hedge. The switch lies beyond 140 m, so the far proxy
+      // never shows behind the card hedge in a ground-level shot.
+      const near = d < 140;
+      const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y - 0.25, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(w * (near ? 0.8 : 1), h * (near ? 0.62 : 1), len * (near ? 0.9 : 1)));
+      lists[lod].push(m);
+      if (near) hedgeCards.push({ x: x + (rng() - 0.5) * 0.8, y, z: z + (rng() - 0.5) * 0.8, variant: Math.floor(rng() * 3), yaw: rng() * 6.28, scale: (h / 2.4) * (0.85 + 0.3 * rng()), thorn: rng() < 0.3 });
       if (hash2(Math.round(x / 3), Math.round(z / 3), 11) < (far ? 0.05 : 0.03)) treeSpots.push([x, y, z]);
     }
     const geos = [shrubGeometry('scrub', 7, 3), shrubGeometry('scrub', 8, 2), shrubGeometry('scrub', 9, 1)];
@@ -258,7 +307,7 @@ export async function loadClingLand(ctx, opts = {}) {
       const bt = await treeKit(ctx, 'blackthorn', { variants: 3, exposure: 0.15, seed: 5 });
       const hw = await treeKit(ctx, 'hawthorn', { variants: 2, exposure: 0, seed: 6, scale: 0.6 });
       const pl = hedgeCards.map((c) => ({ ...c, kit: c.thorn ? hw : bt, variant: c.thorn ? c.variant % 2 : c.variant, scale: c.thorn ? c.scale * 0.9 : c.scale }));
-      group.add(scatterTrees(pl, { views: opts.views, lod0: 35, lod1: 120, lod2: 400 }).group);
+      group.add(scatterTrees(pl, { views: opts.views, lod0: 35, lod1: 150, lod2: 400 }).group);
       counts.hedgeShrubs = pl.length;
     }
     // hedgerow trees: oaks and ashes standing out of the hedges

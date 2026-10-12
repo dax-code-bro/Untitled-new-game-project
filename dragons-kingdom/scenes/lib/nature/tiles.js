@@ -3,7 +3,8 @@
 // 'DKTL' | u32 headerBytes | JSON header (padded to 4) | positions f32x3 | normals i8x4 (xyz, pad) |
 // ao u8 (padded to 4) | cavity u8 (padded to 4) | indices (u16 or u32) | top heights f32 (topN^2)
 // header: { nv, ni, i16, bbox: [x0,y0,z0,x1,y1,z1], topN, topH, x0, z0, size, lod, ext }
-// ext (optional): + depth below the rock top u8 (0.05 m units, padded to 4) + bed pinch i8 (0.02 m, padded)
+// ext (optional): + depth below the rock / soil top u8 (0.1 m units, +128 = bare rock top; padded to 4)
+//   + bed pinch i8 (0.02 m, padded)
 
 const pad4 = (n) => (n + 3) & ~3;
 

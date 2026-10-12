@@ -4,6 +4,7 @@
 //
 //   node scenes/lib/nature/offline/bake-verdor-cliffs.mjs [--workers 3] [--lods 0,1,2,3]
 //        [--region x0,z0,x1,z1]   (only tiles touching this box; for tests)
+//        [--no-dc]                (plain surface nets instead of dual contouring: rounder arrises)
 //
 // Needs cache/verdor/land.dkhm first (bake-verdor-land.mjs). Writes cache/verdor/tiles/L<lod>/<tx>_<tz>.dktl
 // and cache/verdor/cliffs.json (the tile index the runtime reads). Everything is deterministic: the
@@ -79,7 +80,7 @@ if (isMainThread) {
   await new Promise((resolve, reject) => {
     let alive = 0;
     for (let w = 0; w < nW; w++) {
-      const wk = new Worker(fileURLToPath(import.meta.url), { workerData: { id: w } });
+      const wk = new Worker(fileURLToPath(import.meta.url), { workerData: { id: w, dc: !process.argv.includes('--no-dc') } });
       alive++;
       const feed = () => { if (next < tasks.length) wk.postMessage(tasks[next++]); else wk.postMessage(null); };
       wk.on('message', (m) => { results.set(`${m.lod}:${m.tx}:${m.tz}`, m); doneN++; report(); feed(); });
@@ -112,7 +113,7 @@ if (isMainThread) {
   parentPort.on('message', (t) => {
     if (!t) { process.exit(0); }
     const L = LODS[t.lod];
-    const m = meshTile(W, { x0: t.x0, z0: t.z0, size: t.size, h: L.h, apron: L.apron, coarse: L.coarse, ylo: t.ylo, yhi: t.yhi, aoDistances: L.ao });
+    const m = meshTile(W, { x0: t.x0, z0: t.z0, size: t.size, h: L.h, apron: L.apron, coarse: L.coarse, ylo: t.ylo, yhi: t.yhi, aoDistances: L.ao, dc: workerData.dc });
     const rel = `tiles/L${t.lod}/${t.tx}_${t.tz}.dktl`;
     const bin = encodeTile({ x0: t.x0, z0: t.z0, size: t.size, lod: t.lod }, m);
     fs.writeFileSync(path.join(CACHE, rel), bin);

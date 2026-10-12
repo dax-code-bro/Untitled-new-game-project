@@ -86,19 +86,122 @@ export function meshTile(world, o) {
   const P = [], Nn = [], AO = [], CAV = [];
   const EDGES = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
   const cv = new Float64Array(8), tmp = [0, 0, 0, 0], g = [0, 0, 0];
+  // dual contouring (o.dc): each crossing carries the exact surface normal (finite differences of the
+  // world SDF), and the cell's vertex minimises the distance to the crossings' tangent planes (QEF).
+  // Joint faces, bed tops and arrises then meet at sharp edges instead of the ~1-cell round that
+  // plain surface nets leaves (the 'pillow' / 'stacked mattress' look at every LOD).
+  const dc = !!o.dc;
+  const hermite = dc ? new Map() : null;
+  const DE = Math.min(0.02, h * 0.04);
+  const herm = (ia, ja, ka, axis, t) => {
+    const key = idx(ia, ja, ka) * 3 + axis;
+    let r = hermite.get(key);
+    if (r) return r;
+    const px = X0 + (ia + (axis === 0 ? t : 0)) * h, py = Y0 + (ja + (axis === 1 ? t : 0)) * h, pz = Z0 + (ka + (axis === 2 ? t : 0)) * h;
+    const c0 = axis === 1 ? colAt(ia, ka) : world.column(px, pz);
+    const cx = world.column(px + DE, pz), cz = world.column(px, pz + DE);
+    const fyp = world.sdf(px, py + DE, pz, c0), fym = world.sdf(px, py - DE, pz, c0);
+    const f0 = world.sdf(px, py, pz, c0);
+    let gx = (world.sdf(px + DE, py, pz, cx) - f0) / DE, gy = (fyp - fym) / (2 * DE), gz = (world.sdf(px, py, pz + DE, cz) - f0) / DE;
+    evals += 5;
+    const gl = Math.hypot(gx, gy, gz);
+    if (!(gl > 1e-6)) { gx = 0; gy = 1; gz = 0; } else { gx /= gl; gy /= gl; gz /= gl; }
+    r = [ia + (axis === 0 ? t : 0), ja + (axis === 1 ? t : 0), ka + (axis === 2 ? t : 0), gx, gy, gz];
+    hermite.set(key, r);
+    return r;
+  };
+  const ATA = new Float64Array(9), ATB = new Float64Array(3), EV = new Float64Array(9), EW = new Float64Array(3);
+  // symmetric 3x3 eigen decomposition (cyclic Jacobi): a (row-major, destroyed) -> values w, vectors v (columns)
+  const jacobi3 = (a, w, v) => {
+    v.fill(0); v[0] = v[4] = v[8] = 1;
+    for (let sweep = 0; sweep < 12; sweep++) {
+      const off = a[1] * a[1] + a[2] * a[2] + a[5] * a[5];
+      if (off < 1e-14) break;
+      for (const [p, q] of [[0, 1], [0, 2], [1, 2]]) {
+        const apq = a[p * 3 + q];
+        if (Math.abs(apq) < 1e-12) continue;
+        const app = a[p * 3 + p], aqq = a[q * 3 + q];
+        const th = 0.5 * (aqq - app) / apq;
+        const tt = Math.sign(th || 1) / (Math.abs(th) + Math.sqrt(th * th + 1));
+        const c = 1 / Math.sqrt(tt * tt + 1), s = tt * c;
+        for (let r = 0; r < 3; r++) {          // A <- A J
+          const arp = a[r * 3 + p], arq = a[r * 3 + q];
+          a[r * 3 + p] = c * arp - s * arq; a[r * 3 + q] = s * arp + c * arq;
+        }
+        for (let r = 0; r < 3; r++) {          // A <- J^T A
+          const apr = a[p * 3 + r], aqr = a[q * 3 + r];
+          a[p * 3 + r] = c * apr - s * aqr; a[q * 3 + r] = s * apr + c * aqr;
+        }
+        for (let r = 0; r < 3; r++) {          // V <- V J
+          const vrp = v[r * 3 + p], vrq = v[r * 3 + q];
+          v[r * 3 + p] = c * vrp - s * vrq; v[r * 3 + q] = s * vrp + c * vrq;
+        }
+      }
+    }
+    w[0] = a[0]; w[1] = a[4]; w[2] = a[8];
+  };
+  const dcN = [0, 0, 0];
   for (let j = 0; j < ny - 1; j++) for (let k = 0; k < nz - 1; k++) for (let i = 0; i < nx - 1; i++) {
     let neg = 0;
     for (let c = 0; c < 8; c++) { cv[c] = f[idx(i + (c & 1), j + ((c >> 1) & 1), k + ((c >> 2) & 1))]; if (cv[c] < 0) neg++; }
     if (neg === 0 || neg === 8) continue;
     let sx = 0, sy = 0, sz = 0, n = 0;
+    if (dc) { ATA.fill(0); ATB.fill(0); dcN[0] = dcN[1] = dcN[2] = 0; }
     for (const [a, b] of EDGES) {
       const fa = cv[a], fb = cv[b];
       if ((fa < 0) === (fb < 0)) continue;
       const t = fa / (fa - fb);
       sx += (a & 1) + (((b & 1) - (a & 1)) * t); sy += ((a >> 1) & 1) + ((((b >> 1) & 1) - ((a >> 1) & 1)) * t); sz += ((a >> 2) & 1) + ((((b >> 2) & 1) - ((a >> 2) & 1)) * t);
       n++;
+      if (dc) {
+        // the edge runs from corner a along one axis (b - a is 1, 2 or 4)
+        const axis = (b - a) === 1 ? 0 : (b - a) === 2 ? 1 : 2;
+        const H = herm(i + (a & 1), j + ((a >> 1) & 1), k + ((a >> 2) & 1), axis, t);
+        const nx_ = H[3], ny_ = H[4], nz_ = H[5];
+        const d = nx_ * H[0] + ny_ * H[1] + nz_ * H[2];
+        ATA[0] += nx_ * nx_; ATA[1] += nx_ * ny_; ATA[2] += nx_ * nz_; ATA[4] += ny_ * ny_; ATA[5] += ny_ * nz_; ATA[8] += nz_ * nz_;
+        ATB[0] += nx_ * d; ATB[1] += ny_ * d; ATB[2] += nz_ * d;
+        dcN[0] += nx_; dcN[1] += ny_; dcN[2] += nz_;
+      }
     }
     let gi = i + sx / n, gj = j + sy / n, gk = k + sz / n;
+    if (dc) {
+      // QEF about the mass point m: x = m + pinv(AtA) (Atb - AtA m), small eigenvalues truncated
+      ATA[3] = ATA[1]; ATA[6] = ATA[2]; ATA[7] = ATA[5];
+      const rx = ATB[0] - (ATA[0] * gi + ATA[1] * gj + ATA[2] * gk);
+      const ry = ATB[1] - (ATA[3] * gi + ATA[4] * gj + ATA[5] * gk);
+      const rz = ATB[2] - (ATA[6] * gi + ATA[7] * gj + ATA[8] * gk);
+      jacobi3(ATA, EW, EV);
+      const wmax = Math.max(EW[0], EW[1], EW[2]);
+      let qx = 0, qy = 0, qz = 0;
+      for (let e = 0; e < 3; e++) {
+        if (EW[e] < 0.1 * wmax) continue;
+        const vx = EV[e], vy = EV[3 + e], vz = EV[6 + e];
+        const s = (vx * rx + vy * ry + vz * rz) / EW[e];
+        qx += vx * s; qy += vy * s; qz += vz * s;
+      }
+      const lo = -0.02, hi = 1.02;
+      const di = gi + qx, dj = gj + qy, dk = gk + qz;
+      const inside = di >= i + lo && di <= i + hi && dj >= j + lo && dj <= j + hi && dk >= k + lo && dk <= k + hi;
+      // the planes must (nearly) meet at the solution; else the cell holds two separate sheets or a
+      // feature smaller than the cell (a grike, a chip) - keep the surface-nets placement there
+      let err = 0;
+      if (inside) {
+        for (const [a, b] of EDGES) {
+          if ((cv[a] < 0) === (cv[b] < 0)) continue;
+          const axis = (b - a) === 1 ? 0 : (b - a) === 2 ? 1 : 2;
+          const Hh = hermite.get(idx(i + (a & 1), j + ((a >> 1) & 1), k + ((a >> 2) & 1)) * 3 + axis);
+          const e = Hh[3] * (di - Hh[0]) + Hh[4] * (dj - Hh[1]) + Hh[5] * (dk - Hh[2]);
+          err = Math.max(err, Math.abs(e));
+        }
+      }
+      if (inside && err < 0.3) {
+        const nl = Math.hypot(dcN[0], dcN[1], dcN[2]) || 1;
+        cellV[cidx(i, j, k)] = P.length / 3;
+        P.push(X0 + di * h, Y0 + dj * h, Z0 + dk * h); Nn.push(dcN[0] / nl, dcN[1] / nl, dcN[2] / nl);
+        continue;
+      }
+    }
     // project onto the interpolated surface (stay inside the cell's neighbourhood)
     for (let it = 0; it < 3; it++) {
       G(gi, gj, gk, tmp);
@@ -147,6 +250,24 @@ export function meshTile(world, o) {
   const quad = (a, b, c, d, flip) => {
     if (a < 0 || b < 0 || c < 0 || d < 0) return;
     if (flip) { const t = b; b = d; d = t; }
+    if (dc) {
+      // sharp features: take the split whose two triangles agree best with their corners' normals
+      // (the diagonal then runs along a crease instead of across it)
+      const fit = (p, q, r) => {
+        const ux = P[q * 3] - P[p * 3], uy = P[q * 3 + 1] - P[p * 3 + 1], uz = P[q * 3 + 2] - P[p * 3 + 2];
+        const vx = P[r * 3] - P[p * 3], vy = P[r * 3 + 1] - P[p * 3 + 1], vz = P[r * 3 + 2] - P[p * 3 + 2];
+        let cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx;
+        const l = Math.hypot(cx, cy, cz);
+        if (l < 1e-12) return -3;
+        cx /= l; cy /= l; cz /= l;
+        let s = 0;
+        for (const w of [p, q, r]) s += cx * Nn[w * 3] + cy * Nn[w * 3 + 1] + cz * Nn[w * 3 + 2];
+        return s;
+      };
+      const s1 = fit(a, b, c) + fit(a, c, d), s2 = fit(a, b, d) + fit(b, c, d);
+      if (s1 >= s2) I.push(a, b, c, a, c, d); else I.push(a, b, d, b, c, d);
+      return;
+    }
     // split along the shorter diagonal
     const d1 = (P[a * 3] - P[c * 3]) ** 2 + (P[a * 3 + 1] - P[c * 3 + 1]) ** 2 + (P[a * 3 + 2] - P[c * 3 + 2]) ** 2;
     const d2 = (P[b * 3] - P[d * 3]) ** 2 + (P[b * 3 + 1] - P[d * 3 + 1]) ** 2 + (P[b * 3 + 2] - P[d * 3 + 2]) ** 2;
@@ -183,7 +304,7 @@ export function meshTile(world, o) {
     top[k * tn + i] = y;
   }
   const nv = P.length / 3;
-  // optional per-vertex extras from the world (verdor: depth below the rock mass's top, bed pinch),
+  // optional per-vertex extras from the world (verdor: depth below the top of the rock / its soil, bare flag, bed pinch),
   // evaluated with the nearest node's column
   let extTop = null, extPin = null;
   if (world.surfaceInfo) {
@@ -191,8 +312,9 @@ export function meshTile(world, o) {
     for (let v = 0; v < nv; v++) {
       const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2];
       const ii = Math.min(nx - 1, Math.max(0, Math.round((x - X0) / h))), kk = Math.min(nz - 1, Math.max(0, Math.round((z - Z0) / h)));
-      const [dt, pn] = world.surfaceInfo(x, y, z, colAt(ii, kk));
-      extTop[v] = Math.max(0, Math.min(255, Math.round(dt / 0.05)));
+      const [dt, pn, bare] = world.surfaceInfo(x, y, z, colAt(ii, kk));
+      // depth in 0.1 m (0..12.7 m) + 128 when the rock top above is bare (an outcrop, no soil lip)
+      extTop[v] = Math.max(0, Math.min(127, Math.round(dt / 0.1))) + (bare ? 128 : 0);
       extPin[v] = Math.max(-127, Math.min(127, Math.round(pn / 0.02)));
     }
   }

@@ -11860,6 +11860,56 @@
     "normal_convention": "gl",
     "normal_convention_evidence": "ambientCG NormalGL file"
    }
+  },
+  {
+   "id": "texture/eztree_leaves",
+   "kind": "texture",
+   "title": "Photographed leaf sprays (oak, ash, aspen, spruce) with alpha",
+   "status": "available",
+   "license": "MIT",
+   "author": "Daniel Greenheck (EZ-Tree)",
+   "origin": {
+    "provider": "GitHub",
+    "url": "https://github.com/dgreenheck/ez-tree/tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/leaves"
+   },
+   "via": "GitHub (Git LFS) dgreenheck/ez-tree @ dcf309b; src/app/public/textures/LICENSE.md: the leaf textures are licensed under the project's own licence (MIT, Copyright (c) 2024 Daniel Greenheck)",
+   "resolution": "1024 x 1024 px (8-bit palette PNG with alpha)",
+   "sets": [
+    "set.verdor_coast_sky",
+    "set.verdor_riding_grounds",
+    "set.cling_village_square",
+    "set.prologue"
+   ],
+   "use": "Leaf-spray cards for the procedural trees and shrubs (nature domain): oak spray for oak and (scaled down, recoloured) hawthorn / blackthorn; ash spray for ash; aspen spray recoloured green for sycamore; spruce spray for the conifers.",
+   "files": [
+    {
+     "path": "texture/eztree_leaves/oak.png",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/leaves/oak.png",
+     "sha256": "24451223cf396d22910a4932b8bb996a7274e63d81e24128c96a430ab67822b1",
+     "bytes": 238115
+    },
+    {
+     "path": "texture/eztree_leaves/ash.png",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/leaves/ash.png",
+     "sha256": "5ec987db3829a839856c32c79b18a33a78f209e911cad55c65abfb77f30e2d29",
+     "bytes": 181423
+    },
+    {
+     "path": "texture/eztree_leaves/aspen.png",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/leaves/aspen.png",
+     "sha256": "6c8cbfa3eda0f070df6ebb3c8ec6899400f3c966d1658fcfd9ae518347c2dcb9",
+     "bytes": 142116
+    },
+    {
+     "path": "texture/eztree_leaves/pine.png",
+     "url": "https://media.githubusercontent.com/media/dgreenheck/ez-tree/dcf309bd86bd521083d9c70f01f2de45fdc7c457/src/app/public/textures/leaves/pine.png",
+     "sha256": "88be36a2387554ac4b7c7d1549eae454a37ad896e8e33a7d6ae5956bd169ab08",
+     "bytes": 303684
+    }
+   ],
+   "params": {
+    "note": "MIT licence: keep the copyright notice (CREDITS.md)"
+   }
   }
  ]
 }

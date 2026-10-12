@@ -36,7 +36,7 @@ export async function setup(ctx) {
   const W = await verdorWorld();
   // the tree: 22 m back from the face on the south flank of the point
   const tz = 470, tx = W.xc(tz) - 22;
-  const ty = W.landHeight(tx, tz);
+  let ty = W.landHeight(tx, tz);
   // looking south-ish toward the sun: backlit leaves, the sea on the right, the crown streaming left (leeward)
   const cam1 = [tx + 1.5, ty + 1.3, tz + 14];
   const sky = await loadHDRI('hdri/kloofendal_48d_partly_cloudy', ctx, { extractSun: true, rotationY: Math.atan2(SUN_H.x, SUN_H.z) - KLOOF_AZ0 + 0.55, horizonFill: { above: 3.5, below: -1.5, blend: 1.5 } });
@@ -45,8 +45,10 @@ export async function setup(ctx) {
   sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
   scene.add(sun, sun.target);
   const cam2 = [tx + 3.2, ty + 1.25, tz + 10.5];
-  const coast = await loadVerdorCoast(ctx, { views: [cam1, cam2], radius: 3000, lodDist: [90, 300, 900] });
+  const coast = await loadVerdorCoast(ctx, { views: [cam1, cam2], radius: 3000, lodDist: [90, 300, 900], seaLevel: -0.6 });
   scene.add(coast.group);
+  // stand the tree (and the cameras) on the baked ground, not the land map under its soil
+  { const g = coast.surfaceAt(tx, tz); const dy = g - ty; ty = g; cam1[1] += dy; }
   const ocean = createOcean(ctx, { windSpeed: 7, windDirection: 190, swell: 0.55, choppiness: 1.2, seed: 9, depth: 30, mipFilter: 'trilinear', roughness: 0.05, foamThreshold: 0.7, shoreFoam: 1.0, shoreFoamWidth: 1.6, surf: 0.85 });
   ocean.mesh.position.y = -0.6;
   scene.add(ocean.mesh);

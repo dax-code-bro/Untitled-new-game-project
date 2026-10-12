@@ -16,10 +16,13 @@ import { landscapeMaterial } from './materials.js';
 
 const KINDS = {
   // half extents (x is the long axis), corner rounding, fracture cuts, roughness, bedding
-  block: { ext: [[0.5, 0.5], [0.28, 0.45], [0.3, 0.45]], round: [0.03, 0.09], cuts: [1, 3], facet: 0.045, bed: 0.018 },
-  slab: { ext: [[0.5, 0.5], [0.1, 0.18], [0.3, 0.48]], round: [0.03, 0.06], cuts: [1, 3], facet: 0.03, bed: 0.008 },
-  cobble: { ext: [[0.5, 0.5], [0.22, 0.38], [0.3, 0.45]], round: [0.2, 0.3], cuts: [0, 0], facet: 0.008, bed: 0.0, worn: true },
-  outcrop: { ext: [[0.5, 0.5], [0.12, 0.2], [0.35, 0.5]], round: [0.05, 0.1], cuts: [2, 4], facet: 0.035, bed: 0.012 },
+  // (crisp arrises: a fresh limestone block breaks along planes with a few-cm chamfer, not a pillow)
+  block: { ext: [[0.5, 0.5], [0.28, 0.45], [0.3, 0.45]], round: [0.012, 0.035], cuts: [2, 4], facet: 0.03, bed: 0.018 },
+  slab: { ext: [[0.5, 0.5], [0.1, 0.18], [0.3, 0.48]], round: [0.01, 0.025], cuts: [2, 4], facet: 0.02, bed: 0.008 },
+  // sea-worn cobbles: flattened, chipped, all shapes - not eggs
+  cobble: { ext: [[0.5, 0.5], [0.14, 0.3], [0.24, 0.45]], round: [0.2, 0.3], cuts: [0, 2], facet: 0.012, bed: 0.0, worn: true },
+  // clifftop outcrops: a bed top with solution pits and runnels (karren)
+  outcrop: { ext: [[0.5, 0.5], [0.12, 0.2], [0.35, 0.5]], round: [0.015, 0.04], cuts: [2, 4], facet: 0.03, bed: 0.012, karren: true },
 };
 
 function rockSdf(kind, seed) {
@@ -39,9 +42,10 @@ function rockSdf(kind, seed) {
   return (x, y, z) => {
     let d;
     if (K.worn) {
-      // sea-worn: a soft ellipsoid
-      const q = Math.hypot(x / hx, y / hy, z / hz);
-      d = (q - 1) * Math.min(hx, hy, hz);
+      // sea-worn: a soft flattened ellipsoid (a superellipse in plan), knocked by a chip or two
+      const q = Math.pow(Math.pow(Math.abs(x / hx), 2.6) + Math.pow(Math.abs(z / hz), 2.6), 1 / 2.6);
+      d = (Math.hypot(q, y / hy) - 1) * Math.min(hx, hy, hz);
+      for (const c of cuts) d = Math.max(d, (x * c[0] + y * c[1] + z * c[2] - c[3] * 1.15) * 0.9);
     } else {
       const qx = Math.abs(x) - hx + rr, qy = Math.abs(y) - hy + rr, qz = Math.abs(z) - hz + rr;
       d = Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qy, qz), 0) - rr;
@@ -49,6 +53,12 @@ function rockSdf(kind, seed) {
     }
     d += K.facet * N.facet3(x * 4, y * 4, z * 4) + 0.6 * K.facet * N.fbm3(x * 9, y * 9, z * 9, 2);
     if (K.bed) d += K.bed * smoothstep(0.55, 0.9, Math.sin((y + tilt * x) * bedK) * 0.5 + 0.5);
+    if (K.karren && y > hy * 0.4) {
+      // solution pits and runnels on the exposed top
+      const pit = N.cell2 ? N.cell2(x * 7, z * 7) : null;
+      const f1 = pit ? pit[0] : 0.5;
+      d += 0.035 * smoothstep(0.35, 0.05, f1) + 0.02 * smoothstep(0.75, 0.95, 1 - Math.abs(N.n2(x * 3 + 1, z * 9)));
+    }
     return d;
   };
 }
@@ -80,7 +90,8 @@ export function rockKit(opts = {}) {
     for (let v = 0; v < nV; v++) {
       const f = rockSdf(kind, v * 31 + kind.length * 1000);
       const world = { column: () => null, sdf: (x, y, z) => f(x, y, z) };
-      kit.geo[kind].push(res.map((n) => toGeometry(meshTile(world, { x0: -0.62, z0: -0.62, size: 1.24, h: 1.24 / n, apron: 1, coarse: 1, ylo: -0.62, yhi: 0.62, aoDistances: [0.04, 0.12, 0.3] }))));
+      // dual contouring: the fracture planes meet in sharp arrises
+      kit.geo[kind].push(res.map((n) => toGeometry(meshTile(world, { x0: -0.62, z0: -0.62, size: 1.24, h: 1.24 / n, apron: 1, coarse: 1, ylo: -0.62, yhi: 0.62, aoDistances: [0.04, 0.12, 0.3], dc: true }))));
     }
   }
   kit.get = (kind, v, lod) => kit.geo[kind][v % nV][lod];

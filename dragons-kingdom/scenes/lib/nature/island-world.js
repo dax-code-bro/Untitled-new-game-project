@@ -31,13 +31,20 @@ export function createIslandWorld(opts = {}) {
     return Math.hypot(dx, dz) * wob;
   }
   /** base (uneroded) height: a plateau island ringed by sea cliffs, a jagged mountain interior */
+  // the foot of the sea cliffs: a rough boulder apron and reef shelving from just awash to the deep
+  // (what the surf breaks on - a cliff standing straight in deep water had no surf line)
+  function apron(x, z, r) {
+    const shelf = -0.8 - 3.5 * smoothstep(1.0, 1.035, r) - 26 * smoothstep(1.03, 1.12, r);
+    return shelf + 1.6 * Math.max(0, N2.ridged2(x / 18, z / 18, 3) - 0.35) * (1 - smoothstep(1.0, 1.06, r)) + 0.6 * N3.fbm2(x / 7, z / 7, 2);
+  }
   function base(x, z) {
     const r = radial(x, z);
     if (r > 1.25) return -40 - 30 * smoothstep(1.25, 1.6, r);
     const ux = (x - I.cx) / I.rx, uz = (z - I.cz) / I.rz;
     const weather = 0.5 + 0.5 * Math.cos(Math.atan2(uz, ux) - 2.4);
     const cliffTop = 45 + 150 * weather * (0.55 + 0.45 * N2.fbm2(x / 220, z / 220, 3));
-    const land = smoothstep(1.03, 0.985, r);
+    // sheer sea cliffs: the land ends within ~10-20 m
+    const land = smoothstep(1.006, 0.99, r);
     // the interior: a NW-SE main ridge with summits and cols, spurs, a corrie bitten out of its NE side
     const along = ux * 0.6 + uz * 0.8, across = -ux * 0.8 + uz * 0.6;
     const ridge = Math.exp(-((across + 0.08 * Math.sin(along * 5)) ** 2) / 0.12);
@@ -50,7 +57,7 @@ export function createIslandWorld(opts = {}) {
     if (h > plat) h = plat + (h - plat) * 0.25;
     const corrie = Math.exp(-(((ux - 0.18) ** 2) / 0.02 + ((uz + 0.22) ** 2) / 0.015));
     h -= 220 * corrie * inner;
-    return lerp(-30, Math.max(h, cliffTop * land * 0.92), land);
+    return lerp(apron(x, z, r), Math.max(h, cliffTop * land * 0.92), land);
   }
   /** terraced (trap) relief: benches on flow tops, scarps on the hard cores */
   function terrace(x, z, h, slope) {
@@ -60,8 +67,9 @@ export function createIslandWorld(opts = {}) {
     const t = (s - b.b0) / (b.b1 - b.b0);
     // within a flow the ground is pulled toward the flow top on gentle slopes (a bench) and
     // steepened into a scarp on the hard core
-    const step = b.b0 + (b.b1 - b.b0) * smoothstep(0.1, 0.9, t) ** (1.6 - 0.8 * b.hard);
-    const amt = smoothstep(0.1, 0.4, slope) * (0.35 + 0.45 * smoothstep(-0.3, 0.4, N.fbm2(x / 300, z / 300, 2)));
+    // (a flat bench over most of the flow, the hard core a steep scarp: the stepped 'trap' profile)
+    const step = b.b0 + (b.b1 - b.b0) * smoothstep(0.45, 0.88, t) ** (1.3 - 0.5 * b.hard);
+    const amt = smoothstep(0.06, 0.3, slope) * (0.6 + 0.4 * smoothstep(-0.3, 0.4, N.fbm2(x / 300, z / 300, 2)));
     return lerp(h, step - dipH(x, z), amt);
   }
   return { I, N, N2, N3, beds, bedAt, hardAt, recessAt, dipH, radial, base, terrace, VERDOR: { tide: { high: 1.6, low: -1.6 }, beachBay: { z: 1e6 }, point: { z: 1e6 } }, xc: () => 1e6 };
