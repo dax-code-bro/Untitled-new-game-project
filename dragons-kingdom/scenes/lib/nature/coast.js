@@ -48,6 +48,10 @@ function tileGeometry(t) {
   g.setAttribute('normal', new THREE.BufferAttribute(n3, 3, true));
   g.setAttribute('aAO', new THREE.BufferAttribute(t.ao, 1, true));
   g.setAttribute('aCav', new THREE.BufferAttribute(t.cavity, 1, true));
+  // depth below the rock mass's top (0..12.75 m, for the soil lip and the runoff streaks under it)
+  // and the beds' lateral pinch (so the shader's strata match the carved ones)
+  g.setAttribute('aTop', new THREE.BufferAttribute(t.extTop || new Uint8Array(t.nv).fill(255), 1, true));
+  g.setAttribute('aPin', new THREE.BufferAttribute(t.extPin || new Int8Array(t.nv), 1, true));
   g.setIndex(new THREE.BufferAttribute(t.indices, 1));
   const b = t.bbox;
   g.boundingBox = new THREE.Box3(new THREE.Vector3(b[0], b[1], b[2]), new THREE.Vector3(b[3], b[4], b[5]));
@@ -58,7 +62,8 @@ function tileGeometry(t) {
 /**
  * opts: views [[x,y,z]...] (required), radius (m, tiles beyond are not loaded; default 4500),
  * lodDist [L0, L1, L2] (m; default [170, 480, 1300]), terrain: false | { x: [x0,x1], z: [z0,z1], n: [nx,nz] },
- * shadows (cast from cliffs, default true), material (reuse one).
+ * shadows (cast from cliffs, default true), material (reuse one), seaLevel (the ocean height of the
+ * shot: wet band, submerged rock and rock pools are relative to it; default -1.1).
  */
 export async function loadVerdorCoast(ctx, opts = {}) {
   const W = await verdorWorld();
@@ -66,7 +71,7 @@ export async function loadVerdorCoast(ctx, opts = {}) {
   const views = (opts.views || [[0, 80, 0]]).map((v) => new THREE.Vector3(...v));
   const radius = opts.radius ?? 4500;
   const lodDist = opts.lodDist ?? [170, 480, 1300];
-  const material = opts.material || await landscapeMaterial(ctx, { world: W, ...opts.look });
+  const material = opts.material || await landscapeMaterial(ctx, { world: W, topAttr: true, seaLevel: opts.seaLevel ?? -1.1, ...opts.look });
   const group = new THREE.Group();
   group.name = 'verdor-coast';
   const box = new THREE.Box3();
@@ -128,10 +133,22 @@ export async function loadVerdorCoast(ctx, opts = {}) {
     const c = views[0];
     const xr = tr.x || [c.x - 3500, c.x + 3500], zr = tr.z || [c.z - 3500, c.z + 3500];
     const nn = tr.n || [420, 420];
-    const sink = (x, z) => (inBand(x, z) ? 0.35 : 0);
+    // inside the band the heightfield is only a backstop: it must stay UNDER the baked band surface
+    // everywhere (its 18 m land-to-sea ramp used to poke out in front of recessed faces and read as
+    // turf rolling into the sea); the lowest band surface around the vertex, minus a margin
+    const underBand = (x, z) => {
+      const o = outsideHeight(x, z);
+      if (!inBand(x, z)) return o;
+      let m = o;
+      for (const [dx, dz] of [[0, 0], [-7, 0], [7, 0], [0, -7], [0, 7], [-5, -5], [5, 5], [-5, 5], [5, -5]]) {
+        const b = bandTop(x + dx, z + dz);
+        if (b != null) m = Math.min(m, b);
+      }
+      return m - 2.5;
+    };
     const hf = heightfield({
       xs: gradedAxis(xr[0], xr[1], nn[0], c.x, 2.4), zs: gradedAxis(zr[0], zr[1], nn[1], c.z, 2.4),
-      height: (x, z) => outsideHeight(x, z) - sink(x, z),
+      height: underBand,
       // drop cells that lie entirely inside band tiles (the tiles cover them)
       skip: null,
     });
@@ -139,6 +156,8 @@ export async function loadVerdorCoast(ctx, opts = {}) {
     const pos = g.attributes.position, n = pos.count;
     g.setAttribute('aAO', new THREE.BufferAttribute(new Uint8Array(n).fill(255), 1, true));
     g.setAttribute('aCav', new THREE.BufferAttribute(new Uint8Array(n), 1, true));
+    g.setAttribute('aTop', new THREE.BufferAttribute(new Uint8Array(n).fill(0), 1, true));
+    g.setAttribute('aPin', new THREE.BufferAttribute(new Int8Array(n), 1, true));
     // remove triangles whose three corners are all well inside band tiles
     const idx = g.index.array, keep = [];
     const deep = (i) => { const x = pos.getX(i), z = pos.getZ(i); return inBand(x - 2, z - 2) && inBand(x + 2, z + 2) && inBand(x - 2, z + 2) && inBand(x + 2, z - 2); };

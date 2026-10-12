@@ -322,7 +322,7 @@ def lute(body_l=0.46, body_w=0.32):
     P = np.array(P)
     F = [tuple(reversed(f)) for f in mu.grid_faces(len(v), len(u))]
     # staves: alternating ribs in the bowl (dark seams between them)
-    out.append(piece(P, F, np.stack([np.repeat(u, len(v)) * body_l, np.tile(v, len(u)) * 0.1], 1), dict(WOOD, color=[0.2, 0.1, 0.05], rough=0.4), 'bowl'))
+    out.append(piece(P, F, np.stack([np.repeat(u, len(v)) * body_l, np.tile(v, len(u)) * 0.1], 1), dict(WOOD, color=[0.2, 0.1, 0.05], rough=0.4, tile=0.3), 'bowl'))
     a = np.linspace(0, 2 * math.pi, 48, endpoint=False)
     ys = np.linspace(-body_l / 2, body_l / 2, 48)
     rim = []
@@ -334,7 +334,7 @@ def lute(body_l=0.46, body_w=0.32):
     Pc = np.vstack([[[0, -0.02, 0.0]], np.stack([ring[:, 0], ring[:, 1], np.zeros(len(ring))], 1)])
     nr = len(ring)
     Fc = [(0, i + 1, (i + 1) % nr + 1) for i in range(nr)]
-    out.append(piece(Pc, Fc, boxuv(Pc), dict(WOOD, color=[0.42, 0.3, 0.17], rough=0.5), 'board'))
+    out.append(piece(Pc, Fc, boxuv(Pc), dict(WOOD, color=[0.3, 0.2, 0.1], rough=0.42, tile=0.22), 'board'))
     # rose: dark ring of carved openings (a lattice ring, not a flat black disc)
     ry = 0.06
     rr_ = []

@@ -613,6 +613,10 @@ PROP_FIX = {
     'spear_ferrule_2': {'color': [0.36, 0.35, 0.34], 'rough': 0.66},
     'sword_guard_1': {'color': [0.36, 0.35, 0.34], 'rough': 0.66},
     'buckle': {'color': [0.36, 0.35, 0.34], 'rough': 0.6},
+    # lute: the plank scan at 0.6 m read as burlap on a 30 cm soundboard - finer grain, aged
+    # varnished spruce; the ribbed bowl a little finer too
+    'lute_board_1': {'color': [0.3, 0.2, 0.1], 'rough': 0.42, 'tile': 0.22},
+    'lute_bowl_0': {'tile': 0.3},
 }
 
 
@@ -1661,6 +1665,268 @@ def fix_hairline(cid, src=0.25, reach=0.006, peak=0.4):
         print(f'{cid}: hairline gradient in {", ".join(done)}', flush=True)
 
 
+def fix_circlet(cid, clear=0.002, nb=72):
+    """Seat a circlet / fillet on what it is worn over: per azimuth in the band's own plane, the
+    radius of the skin (+ clearance), of a head cloth under it (kerchief / veil / coif: + 1.5 mm)
+    and of the hair, pressed (the 60th percentile of the hair there - a band beds into hair); the
+    largest wins, smoothed round the ring. Both edges of the band take the profile (the top one
+    0.8 mm out, as built). A band fitted to a profile that included the base mesh's helper cap
+    stood 1.5-4 cm off the temples and read as a halo."""
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    rings = [m for m in h['meshes'] if m['kind'] == 'prop' and m['name'].startswith('circlet')]
+    if not rings:
+        return
+    bin_ = bytearray(open(bp, 'rb').read())
+
+    def pos(m):
+        return view(bin_, m['attrs']['position']).astype(float)
+    skin = [pos(m) for m in h['meshes'] if m['kind'] == 'skin'][:1]
+    hair = [pos(m) for m in h['meshes'] if m['name'] in ('hair',)]
+    cloth = [pos(m) for m in h['meshes'] if m['kind'] == 'cloth' and m['name'] in ('kerchief', 'veil', 'coif', 'cap', 'hood', 'wrap')]
+    if not skin:
+        return
+    for m in rings:
+        P = pos(m)
+        c = P.mean(0)
+        X = P - c
+        ev, evec = np.linalg.eigh(X.T @ X)
+        n = evec[:, 0] * (1.0 if evec[1, 0] >= 0 else -1.0)
+        e1 = np.array([1.0, 0, 0]) - n * n[0]
+        e1 /= np.linalg.norm(e1)
+        e2 = np.cross(n, e1)
+        hv = X @ n
+        lo, hi = hv.min() - 0.006, hv.max() + 0.006
+        top = hv > 0.5 * (hv.min() + hv.max())
+        az = np.arctan2(X @ e2, X @ e1)
+
+        def prof(Qs, q=None, near=None):
+            out = np.full(nb, np.nan)
+            if not Qs:
+                return out
+            Q = np.concatenate(Qs) - c
+            hy = Q @ n
+            k = (hy > lo) & (hy < hi)
+            Q = Q[k]
+            if not len(Q):
+                return out
+            a = np.arctan2(Q @ e2, Q @ e1)
+            r = np.hypot(Q @ e1, Q @ e2)
+            ok = r < 0.16                                   # the head, not a shoulder or a veil's fall
+            a, r = a[ok], r[ok]
+            b = ((a + np.pi) / (2 * np.pi) * nb).astype(int) % nb
+            for i in range(nb):
+                rr = r[b == i]
+                if len(rr):
+                    out[i] = rr.max() if q is None else np.percentile(rr, q)
+            return out
+        ps, ph, pc = prof(skin), prof(hair, 60), prof(cloth)
+        R = np.nanmax(np.stack([ps + clear, ph, pc + 0.0015]), axis=0)
+        for _ in range(nb):                                 # fill bins nothing fell in
+            z = np.isnan(R)
+            if not z.any():
+                break
+            R[z] = np.fmax(np.roll(R, 1), np.roll(R, -1))[z]
+        if np.isnan(R).any():
+            continue
+        for _ in range(3):                                  # no dents between bins, then soften
+            R = np.maximum(R, (np.roll(R, 1) + np.roll(R, -1)) / 2)
+        for _ in range(2):
+            R = 0.25 * np.roll(R, 1) + 0.5 * R + 0.25 * np.roll(R, -1)
+        fb = (az + np.pi) / (2 * np.pi) * nb - 0.5
+        i0 = np.floor(fb).astype(int) % nb
+        t = fb - np.floor(fb)
+        Rv = R[i0] * (1 - t) + R[(i0 + 1) % nb] * t + 0.0008 * top
+        d = X - np.outer(hv, n)
+        d /= np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-9)
+        P2 = c + np.outer(hv, n) + d * Rv[:, None]
+        old = np.median(np.hypot(X @ e1, X @ e2) - Rv)
+        put(bin_, m['attrs']['position'], P2)
+        if 'normal' in m['attrs']:
+            T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+            N0 = view(bin_, m['attrs']['normal']).astype(float)
+            N2 = fresh_normals(P2, T)
+            N2 *= np.where(np.einsum('ij,ij->i', N0, N2) < 0, -1.0, 1.0)[:, None]
+            put(bin_, m['attrs']['normal'], N2)
+        m['postfix'] = m.get('postfix', []) + ['seated']
+        print(f'{cid}: {m["name"]} seated on the head (moved in {old * 1000:.1f} mm median)', flush=True)
+    _save(h, bin_, jp, bp)
+
+
+def fix_hairunder(cid, covers=('kerchief', 'coif', 'cap', 'hood', 'wrap', 'veil', 'kerchieftail'), reach=0.13, gap=0.0008):
+    """Hair under a head cloth: strands grown at the hairline and pulled back over the crown came
+    out through a kerchief / coif / veil (dark streaks across white linen). Every hair vertex
+    within `reach` of the skull centre that is NOT inside the cloths - a ray from the skull centre
+    through it meets a cloth before it, or just past it - loses its triangles (degenerate; the
+    index count is kept). The part of a strand under the cloth stays (it is never seen)."""
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    cl = [m for m in h['meshes'] if m['kind'] == 'cloth' and m['name'] in covers]
+    hm = [m for m in h['meshes'] if m['name'] == 'hair']
+    if not cl or not hm:
+        return
+    import bpy  # noqa: F401
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    bin_ = bytearray(open(bp, 'rb').read())
+
+    def arrs(m):
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        return P, T
+    bones = {b_['name']: np.array(b_['p']) for b_ in h['bones']}
+    if 'eye.L' not in bones:
+        return
+    eye = (bones['eye.L'] + bones['eye.R']) / 2
+    S, _ = arrs([m for m in h['meshes'] if m['kind'] == 'skin'][0])
+    cr = S[(np.linalg.norm(S - eye, axis=1) < 0.13) & (S[:, 1] > eye[1] - 0.01)]
+    c = cr.mean(0) if len(cr) > 50 else eye + np.array([0, 0.01, 0])
+    PP, TT, off = [], [], 0
+    for m in cl:
+        P, T = arrs(m)
+        PP.append(P); TT.append(T + off); off += len(P)
+    tree = BVHTree.FromPolygons(np.concatenate(PP).tolist(), np.concatenate(TT).tolist(), all_triangles=True)
+    total = 0
+    for m in hm:
+        H, T = arrs(m)
+        d = np.linalg.norm(H - c, axis=1)
+        cand = np.where(d < reach)[0]
+        bad = np.zeros(len(H), bool)
+        for i in cand:
+            dirv = Vector((H[i] - c) / max(d[i], 1e-9))
+            loc, _, _, dist = tree.ray_cast(Vector(c), dirv, d[i] + 0.03)
+            if loc is not None and dist < d[i] + gap:
+                bad[i] = True
+        kill = bad[T].any(axis=1)
+        if kill.any():
+            T2 = T.copy()
+            T2[kill] = T2[kill][:, :1]
+            ix = m['index']
+            arr = np.frombuffer(bin_, dtype=TYPES[ix['type']], count=ix['count'], offset=ix['offset'])
+            bin_[ix['offset']:ix['offset'] + arr.nbytes] = T2.reshape(-1).astype(TYPES[ix['type']]).tobytes()
+            total += int(kill.sum())
+    if total:
+        _save(h, bin_, jp, bp)
+    print(f'{cid}: hair under {"/".join(m["name"] for m in cl)}: {total} triangles through the cloth removed', flush=True)
+
+
+TORSO_CLOTH = ('tunic', 'kirtle', 'gown', 'dress', 'shirt', 'gambeson', 'coat', 'doublet', 'smock')
+
+
+def fix_valleys(cid, iters=120, lam=0.5, cap=0.015, clear=0.012):
+    """No anatomy through the cloth: a wool tunic or kirtle that the simulation laid onto the body
+    printed the pectorals, the abdominals and the navel (the attendant's grey kirtle read as a
+    bare torso). Over the torso (skinned to the spine / pelvis / breast bones, between the hips
+    and the collarbones) every vertex that lies below the average of its neighbours is lifted
+    along its normal toward it - valleys fill, the big convex forms (bust, shoulder blades,
+    belly) stay - at most `cap`: cloth under tension spans the hollows between the hills, it is
+    never pulled down onto them (smoothing + pushing back out to the body shrink-wrapped the bust). Vertices with another layer within `clear` outside them, or
+    within 3 cm of a belt, are left alone (nothing can be pushed through what lies over it)."""
+    import bpy  # noqa: F401
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    if h['meta'].get('pose', '').startswith('ride'):
+        return
+    bin_ = bytearray(open(bp, 'rb').read())
+    names = [b_['name'] for b_ in h['bones']]
+    bones = {b_['name']: np.array(b_['p']) for b_ in h['bones']}
+    torso_b = np.array([n.startswith(('spine', 'root', 'pelvis', 'breast')) for n in names])
+    y0 = max(bones.get('upperleg01.L', np.zeros(3))[1], bones.get('upperleg01.R', np.zeros(3))[1]) + 0.04
+    y1 = bones['neck01'][1] - 0.05 if 'neck01' in bones else 1.4
+
+    def arrays(m):
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        return P, T
+    cl = [m for m in h['meshes'] if m['kind'] == 'cloth']
+    belts = [arrays(m)[0] for m in h['meshes'] if m['kind'] == 'prop' and m['name'] in ('belt', 'buckle', 'pouch', 'beltsash')]
+    belts += [arrays(m)[0] for m in cl if m['name'] in ('beltsash',)]
+    done = []
+    for k, m in enumerate(cl):
+        if m['name'] not in TORSO_CLOTH or 'valleys2' in m.get('postfix', []) or 'skinIndex' not in m['attrs']:
+            continue
+        P, T = arrays(m)
+        T = T[(T[:, 0] != T[:, 1]) & (T[:, 1] != T[:, 2]) & (T[:, 0] != T[:, 2])]
+        SI = view(bin_, m['attrs']['skinIndex']).astype(int).reshape(-1, 4)
+        SW = view(bin_, m['attrs']['skinWeight']).astype(float).reshape(-1, 4)
+        wt = (SW * torso_b[SI]).sum(1)
+        msk = (wt > 0.85) & (P[:, 1] > y0) & (P[:, 1] < y1)
+        if belts:
+            B = np.concatenate(belts)
+            from mathutils.kdtree import KDTree
+            kd = KDTree(len(B))
+            for i_, b_ in enumerate(B):
+                kd.insert(b_, i_)
+            kd.balance()
+            for i in np.where(msk)[0]:
+                if kd.find(P[i])[2] < 0.03:
+                    msk[i] = False
+        outer = [arrays(o) for o in cl[k + 1:] if o['name'] not in ('boots', 'shoes')]
+        if outer:
+            OP = np.concatenate([o[0] for o in outer])
+            OT, off = [], 0
+            for o in outer:
+                t_ = o[1][(o[1][:, 0] != o[1][:, 1]) & (o[1][:, 1] != o[1][:, 2])]
+                OT.append(t_ + off)
+                off += len(o[0])
+            tree = BVHTree.FromPolygons(OP.tolist(), np.concatenate(OT).tolist(), all_triangles=True)
+            for i in np.where(msk)[0]:
+                if tree.find_nearest(Vector(P[i]), clear)[0] is not None:
+                    msk[i] = False
+        if msk.sum() < 20:
+            continue
+        key = np.round(P / 1e-5).astype(np.int64)
+        _, w = np.unique(key, axis=0, return_inverse=True)
+        w = w.reshape(-1)
+        nW = int(w.max()) + 1
+        Q = np.zeros((nW, 3)); Q[w] = P
+        mW = np.zeros(nW, bool); np.logical_or.at(mW, w, msk)
+        allW = np.ones(nW, bool); np.logical_and.at(allW, w, msk)   # every copy of a welded vertex
+        mW &= allW
+        tw = w[T]
+        e = np.unique(np.sort(np.concatenate([tw[:, [0, 1]], tw[:, [1, 2]], tw[:, [2, 0]]]), axis=1), axis=0)
+        ea, eb = np.concatenate([e[:, 0], e[:, 1]]), np.concatenate([e[:, 1], e[:, 0]])
+        deg = np.maximum(np.bincount(ea, minlength=nW), 1).astype(float)
+        # soft edge of the region (no step where the fill stops)
+        f = mW.astype(float)
+        for _ in range(3):
+            f = np.minimum(f, np.bincount(ea, weights=f[eb], minlength=nW) / deg)
+        N0w = np.zeros((nW, 3)); N0w[w] = view(bin_, m['attrs']['normal']).astype(float)
+        tot = np.zeros(nW)
+        for it in range(iters):
+            if it % 5 == 0:
+                fn = np.cross(Q[tw[:, 1]] - Q[tw[:, 0]], Q[tw[:, 2]] - Q[tw[:, 0]])
+                Nn = np.zeros_like(Q)
+                for j in range(3):
+                    np.add.at(Nn, tw[:, j], fn)
+                Nn /= np.maximum(np.linalg.norm(Nn, axis=1, keepdims=True), 1e-12)
+                Nn *= np.where(np.einsum('ij,ij->i', Nn, N0w) < 0, -1.0, 1.0)[:, None]
+            avg = np.stack([np.bincount(ea, weights=Q[eb, j], minlength=nW) for j in range(3)], 1) / deg[:, None]
+            d = np.einsum('ij,ij->i', avg - Q, Nn)
+            st = np.clip(d, 0, None) * lam * f
+            st = np.minimum(st, np.maximum(cap - tot, 0))
+            Q += Nn * st[:, None]
+            tot += st
+        if tot.max() < 1e-5:
+            continue
+        P2 = Q[w]
+        N0 = view(bin_, m['attrs']['normal']).astype(float)
+        Nf = fresh_normals(P2, arrays(m)[1])
+        Nf *= 1.0 if np.einsum('ij,ij->', N0, Nf) >= 0 else -1.0
+        ch = tot[w] > 1e-5
+        N2 = N0.copy(); N2[ch] = Nf[ch]
+        put(bin_, m['attrs']['position'], P2)
+        put(bin_, m['attrs']['normal'], N2)
+        # (the AO baked on the old valleys must go: fix_reao re-bakes meshes without 'ao2')
+        m['postfix'] = [x for x in m.get('postfix', []) if x != 'ao2'] + ['valleys2']
+        done.append(f"{m['name']} ({int((tot > 1e-4).sum())} v, max {tot.max() * 1000:.1f} mm)")
+    if done:
+        _save(h, bin_, jp, bp)
+        print(f'{cid}: valleys filled in {", ".join(done)}', flush=True)
+
+
 def main():
     what, ids = sys.argv[1], sys.argv[2:]
     if ids == ['all']:
@@ -1696,6 +1962,12 @@ def main():
             fix_overbelt(cid)
         if what in ('cloakin', 'all'):
             fix_cloakin(cid)
+        if what in ('circlet', 'all'):
+            fix_circlet(cid)
+        if what in ('hairunder', 'all'):
+            fix_hairunder(cid)
+        if what in ('valleys', 'all'):
+            fix_valleys(cid)
 
 
 if __name__ == '__main__':

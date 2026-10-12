@@ -183,10 +183,23 @@ export function meshTile(world, o) {
     top[k * tn + i] = y;
   }
   const nv = P.length / 3;
+  // optional per-vertex extras from the world (verdor: depth below the rock mass's top, bed pinch),
+  // evaluated with the nearest node's column
+  let extTop = null, extPin = null;
+  if (world.surfaceInfo) {
+    extTop = new Uint8Array(nv); extPin = new Int8Array(nv);
+    for (let v = 0; v < nv; v++) {
+      const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2];
+      const ii = Math.min(nx - 1, Math.max(0, Math.round((x - X0) / h))), kk = Math.min(nz - 1, Math.max(0, Math.round((z - Z0) / h)));
+      const [dt, pn] = world.surfaceInfo(x, y, z, colAt(ii, kk));
+      extTop[v] = Math.max(0, Math.min(255, Math.round(dt / 0.05)));
+      extPin[v] = Math.max(-127, Math.min(127, Math.round(pn / 0.02)));
+    }
+  }
   const normals = new Int8Array(nv * 4);
   for (let v = 0; v < nv; v++) { normals[v * 4] = Math.round(Nn[v * 3] * 127); normals[v * 4 + 1] = Math.round(Nn[v * 3 + 1] * 127); normals[v * 4 + 2] = Math.round(Nn[v * 3 + 2] * 127); }
   return {
     positions: Float32Array.from(P), normals, ao: Uint8Array.from(AO, (a) => Math.round(a * 255)), cavity: Uint8Array.from(CAV, (a) => Math.round(a * 255)),
-    indices: Uint32Array.from(I), top: { n: tn, h, heights: top }, evals, grid: [nx, ny, nz],
+    indices: Uint32Array.from(I), top: { n: tn, h, heights: top }, evals, grid: [nx, ny, nz], extTop, extPin,
   };
 }

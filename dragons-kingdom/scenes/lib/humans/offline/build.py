@@ -320,6 +320,9 @@ def assemble(kit, spec, out_dir, opts):
         # mantle, its AO printed a dark band across the King's back)
         postfix.fix_overbelt(cid + opts.get('suffix', ''))
         postfix.fix_cloakin(cid + opts.get('suffix', ''))
+        postfix.fix_circlet(cid + opts.get('suffix', ''))
+        postfix.fix_hairunder(cid + opts.get('suffix', ''))
+        postfix.fix_valleys(cid + opts.get('suffix', ''))
         postfix.fix_reao(cid + opts.get('suffix', ''))
         postfix.fix_props(cid + opts.get('suffix', ''))
         postfix.fix_hairline(cid + opts.get('suffix', ''))
@@ -637,7 +640,11 @@ def add_props(kit, V, sk, pt, off, spec, D, parts):
                 # fitted to the head (rest space, in the band's tilted plane): per azimuth the head's
                 # radius + hair / cover allowance - a fixed oval floated off the head like a halo
                 Rt = tilt
-                Hv = V[np.isin(kit.base_cat, ['head'])]
+                # (skin verts only: the base mesh's helper geometry - the hair helper cap round the
+                # head - also weighs to 'head' and held the band 1-3 cm off the temples)
+                bodyv = np.zeros(len(V), bool)
+                bodyv[np.unique(np.concatenate([np.asarray(f[0]) for f in kit.body_faces]))] = True
+                Hv = V[np.isin(kit.base_cat, ['head']) & bodyv]
                 L_ = (Hv - c) @ Rt                         # into the band's frame
                 near = np.abs(L_[:, 1]) < 0.012
                 ang_ = np.arctan2(L_[near, 2], L_[near, 0])

@@ -306,7 +306,7 @@ def cast():
     alex = person('alexandria', 'Queen Alexandria', 0.0, 0.62, 'fair', lod='hero', muscle=0.4, weight=0.45, height=0.55,
                   details=_merge(VERDOR_FACE, {'nose/nose-scale-vert': 0.1, 'chin/chin-height': 0.1, 'cheek/l-cheek-bones': 0.35, 'cheek/r-cheek-bones': 0.32,
                                                'eyes/l-eye-bag': 0.2, 'eyes/r-eye-bag': 0.2, 'mouth/mouth-scale-horiz': -0.05}),
-                  hair={'color': HAIR['chestnut'], 'style': 'pulled', 'count': 9000, 'loft': 0.005},
+                  hair={'color': HAIR['chestnut'], 'style': 'bun', 'count': 14000, 'loft': 0.006, 'part': 0.0045},
                   eyes=('brownlight', IRIS_TINT['brownlight']), brows='eyebrow007',
                   expression={'mouth-corner-puller': (0.08, 'L'), 'eye-left-slit': 0.08, 'eye-right-slit': 0.08},
                   outfit=[G_shoes(LEATHER_C['dark']),
@@ -316,14 +316,13 @@ def cast():
                           G_kirtle([0.075, 0.016, 0.03], hem=-0.05, fabric='wool', sim_fabric='heavywool', sheen=0.6, neck=0.07, flare=2.7, train=0.16, folds=15,
                                    prefold=0.06, wear=0.08, dust=0.05, hang=1.0, torso_smooth=80, cinch_ease=0.012, bodice_pin=0.75, name='gown',
                                    belt=True, belt_style='girdle', belt_dy=-0.075, belt_color=[0.05, 0.03, 0.02], buckle='gold', tongue=0.4, pin_sleeves=0.6),
-                          # the veil is pinned over a fine linen kerchief that covers the crown and the
-                          # hair (a veil hanging off the back of a bare head read as a sheet)
-                          G_kerchief([0.56, 0.54, 0.5], front=0.07, tail=False, ease=0.007, fabric='linen'),
-                          G_veil([0.54, 0.52, 0.47], length=0.55)],
-                  accessories=[{'prop': 'circlet', 'dy': 0.05, 'tilt': -0.12, 'fit': 0.012, 'kw': {'h': 0.01}}],
+                          # hair dressed low in a knot at the nape under a slim gold fillet (a kerchief +
+                          # veil read as a white swim cap with a stiff flap, strands through the linen)
+                          ],
+                  accessories=[{'prop': 'circlet', 'dy': 0.05, 'tilt': -0.12, 'fit': 0.004, 'kw': {'h': 0.009}}],
                   # hands folded at the waist: the right hand laid over the left (true contact)
                   pose='clasp', pose_params={'weight': 'L', 'contrapposto': 0.5, 'reach': 0.2, 'dy': -0.02, 'head_yaw': -0.08}, cloth_subdiv=1,
-                  notes='canon: a restrained formal gown; the veil and the slim gold fillet holding it are proposals (no crown in the screenplay)')
+                  notes='canon: a restrained formal gown; the dressed hair and the slim gold fillet are proposals (no crown in the screenplay)')
     alex['skin'].update({'texture': 'middleage_lightskinned_female_diffuse2', 'age': 0.35})
     C.append(alex)
     # ========================================================== Queen Fall
@@ -362,9 +361,9 @@ def cast():
                   eyes=('brown', IRIS_TINT['brown']), brows='eyebrow004',
                   expression={'mouth-corner-puller': 0.35, 'eye-left-slit': 0.2, 'eye-right-slit': 0.2, 'eyebrows-left-inner-up': 0.1},
                   outfit=[G_hose([0.09, 0.05, 0.035]), G_shoes(LEATHER_C['dark']), G_shirt('undyed', collar=0.0),
-                          G_tunic([0.12, 0.042, 0.022], hem=0.28, flare=1.75, ease=0.024, neck=0.035, wear=0.15, dust=0.1, sheen=0.5, name='gown',
+                          G_tunic([0.15, 0.028, 0.022], hem=0.28, flare=1.75, ease=0.024, neck=0.035, wear=0.15, dust=0.1, sheen=0.5, name='gown',
                                   belt_style='leather', belt_color=[0.14, 0.08, 0.04], buckle='gold', pouch=True),
-                          G_capelet([0.11, 0.075, 0.045], length=0.25, fabric='fur')],
+                          G_capelet([0.065, 0.038, 0.02], length=0.25, fabric='fur')],
                   accessories=[{'prop': 'chain'}, {'prop': 'circlet', 'dy': 0.05, 'tilt': -0.1, 'fit': 0.01, 'kw': {'h': 0.012}}],
                   pose='gesture', pose_params={'weight': 'R', 'contrapposto': 0.7, 'head_yaw': 0.1, 'head_roll': 0.04},
                   notes='screenplay: approachable; crown optional and never a prop gag (a slim circlet is a proposal). Warm festival clothes are a proposal')

@@ -70,14 +70,17 @@ export function createVerdorWorld(opts = {}) {
   const beds = [];   // { b0, b1, hard, tint, recess }
   {
     const r = mulberry(seed + 5);
+    // bed thickness is log-normal (many thin beds, a few very thick ones: 0.06-6.5 m), not uniform
+    const gauss = () => Math.sqrt(-2 * Math.log(Math.max(1e-9, r()))) * Math.cos(2 * Math.PI * r());
+    const logn = (med, sd, lo, hi) => clamp(med * Math.exp(sd * gauss()), lo, hi);
     let s = -220, pkg = 0, pkgLeft = 0;
     while (s < 420) {
-      if (pkgLeft <= 0) { pkg = r() < 0.55 ? 1 : 0; pkgLeft = 8 + r() * 22; }       // 1 = massive package, 0 = thin-bedded
+      if (pkgLeft <= 0) { pkg = r() < 0.5 ? 1 : 0; pkgLeft = 6 + r() * 26; }       // 1 = massive package, 0 = thin-bedded
       let t, hard;
       const q = r();
-      if (q < (pkg ? 0.1 : 0.28)) { t = 0.08 + r() * 0.3; hard = 0.05 + r() * 0.2; }            // shaly parting
-      else if (q < (pkg ? 0.45 : 0.9)) { t = 0.5 + r() * 1.7; hard = 0.45 + r() * 0.4; }        // ordinary bed
-      else { t = 2.2 + r() * 5.5; hard = 0.82 + r() * 0.18; }                                  // massive bed
+      if (q < (pkg ? 0.1 : 0.3)) { t = logn(0.14, 0.6, 0.06, 0.5); hard = 0.05 + r() * 0.2; }       // shaly parting
+      else if (q < (pkg ? 0.42 : 0.9)) { t = logn(0.75, 0.65, 0.15, 3.0); hard = 0.45 + r() * 0.4; } // ordinary bed
+      else { t = logn(2.8, 0.45, 1.4, 6.5); hard = 0.82 + r() * 0.18; }                           // massive bed
       const tint = r();
       beds.push({ b0: s, b1: s + t, hard, tint, recess: (1 - hard) * (1 - hard) * 2.4 + r() * 0.25 });
       s += t; pkgLeft -= t;
@@ -102,8 +105,10 @@ export function createVerdorWorld(opts = {}) {
       for (let i = 0; i < RN; i++) { let a = 0; for (let k = -r; k <= r; k++) a += src[clamp(i + k, 0, RN - 1)] * w[k + r]; out[i] = a / ws; }
       return out;
     };
-    const f1 = blur(raw, 0.2), f2 = blur(raw, 1.5), h1 = blur(hr, 0.3);
-    for (let i = 0; i < RN; i++) { recessLut[i] = 0.75 * f1[i] + 1.0 * f2[i]; hardLut[i] = h1[i]; }
+    // bed-scale relief stays crisp (hard beds stand proud with square arrises, partings cut in
+    // sharply); only a little package-scale relief (the broad bulges read as stacked mattresses)
+    const f1 = blur(raw, 0.09), f2 = blur(raw, 1.5), h1 = blur(hr, 0.12);
+    for (let i = 0; i < RN; i++) { recessLut[i] = 0.95 * f1[i] + 0.35 * f2[i]; hardLut[i] = h1[i]; }
   }
   const lutAt = (lut, s) => { const f = clamp((s - RS0) / RSR, 0, RN - 1.001), i = Math.floor(f), t = f - i; return lut[i] + (lut[i + 1] - lut[i]) * t; };
   const recessAt = (s) => lutAt(recessLut, s), hardAt = (s) => lutAt(hardLut, s);
@@ -139,13 +144,16 @@ export function createVerdorWorld(opts = {}) {
   const stacks = [];
   {
     const tip = xcRaw(700);
-    // the outer rocks: a chain leading out from the point to the north-east, tops falling seaward
+    // the OUTER ROCKS off the point (screenplay: "beyond the outer rocks", the coastal outcrop the
+    // scout banks round): not a parade of tall stacks but what a real limestone point leaves behind -
+    // two stacks close to the point, a broken stump, then low wave-worn skerries and reef ledges
+    // awash at mid tide, scattered irregularly over ~330 m; open, navigable water beyond them
     const chain = [
-      [tip + 34, 705, 15, 42], [tip + 72, 690, 11, 33], [tip + 104, 724, 13, 27], [tip + 150, 708, 9, 16],
-      [tip + 186, 735, 12, 22], [tip + 232, 752, 7, 7], [tip + 268, 770, 9, 4.5], [tip + 300, 742, 5, 2.4],
-      [tip + 128, 668, 6, 9], [tip + 210, 690, 5, 3.2], [tip + 330, 790, 6, 2.0],
+      [tip + 40, 712, 14, 38], [tip + 96, 674, 10, 19], [tip + 152, 742, 8, 5.5],
+      [tip + 128, 704, 7, 0.6], [tip + 186, 664, 9, 0.2], [tip + 207, 776, 6, 0.9], [tip + 246, 718, 11, -0.3],
+      [tip + 291, 688, 5, 0.4], [tip + 318, 762, 8, -0.5], [tip + 176, 820, 5, 0.5], [tip + 262, 632, 6, 0.1],
     ];
-    for (const [x, z, r, top] of chain) stacks.push({ x, z, r, top, outer: true });
+    for (const [x, z, r, top] of chain) stacks.push({ x, z, r, top, outer: true, skerry: top < 2.5 });
     // scattered stacks and stumps along the coast
     const r = mulberry(seed + 77);
     for (const zc of [-1720, -1180, -620, -40, 260, 1040, 1560, 1950]) {
@@ -275,6 +283,40 @@ export function createVerdorWorld(opts = {}) {
   }
   const isCliff = (i, j) => blockState(i, j) === 2;
   const isRock = (i, j) => blockState(i, j) >= 2;
+  // the lateral pinch-out of the beds: the stratigraphic height s = y + dipH + pinch, so beds
+  // thicken and thin along the coast instead of running as parallel ruled bands
+  const pinch = (x, z, s0) => 1.4 * N3.fbm3(x / 260, s0 / 16, z / 260, 2);
+  // where the upper cliff is a vegetated head over a vertical wall (0..1)
+  const sow = (x, z) => smoothstep(-0.05, 0.35, N3.fbm2(x / 260 + 7, z / 260, 3));
+  // the smooth part of the block survival distance (where the face foot is, on average)
+  const footF = (x, z) => 9 * N2.fbm2(x / 95, z / 95, 3);
+  const wallTopAt = (top, sw) => Math.max(top - lerp(4, 27, sw), Math.min(top - 3, 9));
+  // Each joint block near the edge is capped at the top of a HARD bed (ledges are bedding planes):
+  // the clifftop steps down block by block over the head instead of a smooth soil ramp slicing the
+  // blocks diagonally (the triangular rock shards sticking out of the turf). Infinity: no cap.
+  const capT = new Float64Array(UA.length * NBJ).fill(NaN);
+  function blockCap(i, j) {
+    if (i < 0 || j < 0 || i >= UA.length - 1 || j >= NBJ - 1) return Infinity;
+    const k = i * NBJ + j;
+    let v = capT[k];
+    if (v === v) return v;
+    v = Infinity;
+    if (blockState(i, j) === 2) {
+      const [cx, cz] = blockCenter(i, j);
+      const F = coastF(cx, cz), ff = footF(cx, cz) + 2, top = landHeight(cx, cz), sw = sow(cx, cz);
+      const slopeT = lerp(0.45, 1.25, sw);
+      // the head slope at the block's front third sets the block's height
+      const ySl = wallTopAt(top, sw) + Math.max(0, ff - F - 3) * slopeT + 1.5 * (hash2(i, j, seed + 113) - 0.5);
+      if (ySl < top - 1.2) {
+        const s0 = ySl + dipH(cx, cz), sS = s0 + pinch(cx, cz, s0);
+        let kb = bedAt(sS);
+        while (kb > 0 && !(beds[kb].b1 <= sS + 0.01 && beds[kb].hard > 0.5)) kb--;
+        v = beds[kb].b1;
+      }
+    }
+    capT[k] = v;
+    return v;
+  }
   /** the joint blocks around (x, z) with their side distances (outside > 0) */
   function blocksAt(x, z) {
     const u = projA(x, z), v = projB(x, z);
@@ -292,6 +334,9 @@ export function createVerdorWorld(opts = {}) {
           d: [UA[i] - u, u - UA[i + 1], UB[j] - v, v - UB[j + 1]],
           ex: [!isCliff(i - 1, j), !isCliff(i + 1, j), !isCliff(i, j - 1), !isCliff(i, j + 1)],
           exP: [!isRock(i - 1, j), !isRock(i + 1, j), !isRock(i, j - 1), !isRock(i, j + 1)],
+          cap: st === 2 ? blockCap(i, j) : Infinity,
+          // a side whose neighbour is capped lower is exposed above that neighbour's cap
+          nc: [blockCap(i - 1, j), blockCap(i + 1, j), blockCap(i, j - 1), blockCap(i, j + 1)],
           tr: blockTraits(i, j),
         });
       }
@@ -310,10 +355,14 @@ export function createVerdorWorld(opts = {}) {
     const [cx, cz] = blockCenter(i, j);
     const h1 = hash2(i, j, seed + 101), h2 = hash2(i, j, seed + 103);
     const scar = smoothstep(0.05, 0.45, N2.fbm2(cx / 42 + 11, cz / 42, 3));
+    // one block in five has moved on its own: set back 0.1-1.5 m along its joints and leaning out
+    // 0.5-3 degrees (blocks toppling away from the face)
+    const h3 = hash2(i, j, seed + 107), own = h3 < 0.2;
     return {
       scarD: scar * (4 + 4 * h1),
       scarH: 6 + 34 * (0.5 + 0.5 * N3.fbm2(cx / 55 + 3, cz / 55, 2)) + (h2 - 0.5) * 4,
-      lean: -0.04 + 0.2 * smoothstep(-0.4, 0.5, N.fbm2(cx / 75 + 5, cz / 75, 2)),
+      lean: -0.04 + 0.2 * smoothstep(-0.4, 0.5, N.fbm2(cx / 75 + 5, cz / 75, 2)) + (own ? -(0.01 + 0.04 * hash2(i, j, seed + 109)) : 0),
+      setback: own ? 0.1 + 1.4 * hash2(i, j, seed + 111) : 0,
     };
   }
   function tunnel(lx, ly, hw, hh, y0) {
@@ -322,9 +371,7 @@ export function createVerdorWorld(opts = {}) {
     if (ly > yc) return (Math.hypot(lx / hw, (ly - yc) / (hh * 0.65)) - 1) * Math.min(hw, hh * 0.65);
     return Math.max(Math.abs(lx) - hw, (y0 - 2.5) - ly);
   }
-  const nearStacks = (x, z, pad) => stacks.filter((s) => Math.abs(x - s.x) < s.r * 2.2 + pad && Math.abs(z - s.z) < s.r * 2.2 + pad);
-  // the smooth part of the block survival distance (where the face foot is, on average)
-  const footF = (x, z) => 9 * N2.fbm2(x / 95, z / 95, 3);
+  const nearStacks = (x, z, pad) => stacks.filter((s) => Math.abs(x - s.x) < s.r * 2.6 + pad && Math.abs(z - s.z) < s.r * 2.6 + pad);
   /** talus: debris aprons banked against the foot, thicker under high faces and in patches */
   function talus(x, z, F, top) {
     const d = F - footF(x, z) + 3;
@@ -333,26 +380,62 @@ export function createVerdorWorld(opts = {}) {
     const hgt = clamp((top - 10) / 45, 0, 1);
     return (0.2 + 7.5 * patch * hgt) * Math.exp(-Math.max(0, d) / (4 + 7 * patch)) * smoothstep(-30, -4, d);
   }
+  // minor joints (platform fissures only): 0-2 extra lines inside each master interval
+  const minorA = (i) => { const n = Math.floor(hash2(i, 41, seed) * 3); const out = []; for (let k = 0; k < n; k++) out.push(UA[i] + (0.2 + 0.6 * hash2(i, 42 + k, seed)) * (UA[i + 1] - UA[i])); return out; };
+  const minorB = (j) => { const n = Math.floor(hash2(j, 51, seed) * 3); const out = []; for (let k = 0; k < n; k++) out.push(UB[j] + (0.2 + 0.6 * hash2(j, 52 + k, seed)) * (UB[j + 1] - UB[j])); return out; };
+  /** platform fissures (grikes): open only along some joints, broken into en-echelon segments
+   *  that step sideways along the joint, widths 0.1-0.6 m (a grid of continuous slots reads as a
+   *  ruined slipway) */
+  function grikeDist(u, v, ia, ib) {
+    let best = 1e9;
+    const one = (line, along, id, fam) => {
+      if (hash2(id, fam, seed + 8) > (fam === 1 ? 0.62 : 0.5)) return;
+      const segL = 4 + 7 * hash2(id, fam + 2, seed + 8);
+      const sg = Math.floor(along / segL + hash2(id, fam + 4, seed));
+      if (hash3(id, sg, fam, seed + 9) < 0.35) return;                 // a closed stretch
+      const off = (hash3(id, sg, fam, seed + 10) - 0.5) * 0.9;          // en-echelon step
+      const w = 0.05 + 0.28 * hash3(id, sg, fam, seed + 11) * (0.6 + 0.4 * N3.n2(along / 3 + id, fam));
+      const fr = (along / segL + hash2(id, fam + 4, seed)) - sg;       // 0..1 along the segment
+      const taper = smoothstep(0, 0.15, fr) * smoothstep(1, 0.85, fr);  // segments taper shut at their ends
+      best = Math.min(best, Math.abs(line + off) - w * taper);
+    };
+    for (let di = 0; di <= 1; di++) { const i = ia + di; if (i >= 0 && i < UA.length) one(u - UA[i], v, i, 1); }
+    for (let dj = 0; dj <= 1; dj++) { const j = ib + dj; if (j >= 0 && j < UB.length) one(v - UB[j], u, j + 7000, 2); }
+    if (ia >= 0 && ia < UA.length - 1) for (const m of minorA(ia)) one(u - m, v, ia * 7 + 3 + Math.round(m), 3);
+    if (ib >= 0 && ib < UB.length - 1) for (const m of minorB(ib)) one(v - m, u, ib * 7 + 5 + Math.round(m), 4);
+    return best;
+  }
+  /** potholes in the platform (scoured by trapped cobbles): [plan distance, depth] */
+  function pothole(x, z) {
+    const g = 3.2, xi = Math.floor(x / g), zi = Math.floor(z / g);
+    let best = 1e9, dep = 0;
+    for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
+      const cx = xi + a, cz = zi + b;
+      if (hash2(cx, cz, seed + 131) > 0.16) continue;
+      const px = (cx + hash2(cx, cz, seed + 132)) * g, pz = (cz + hash2(cx, cz, seed + 133)) * g;
+      const r = 0.25 + 0.7 * hash2(cx, cz, seed + 134);
+      const d = Math.hypot(x - px, z - pz) - r;
+      if (d < best) { best = d; dep = 0.25 + 0.5 * hash2(cx, cz, seed + 135); }
+    }
+    return [best, dep];
+  }
 
-  // where the upper cliff is a vegetated head slope over a vertical wall (0..1)
-  const sow = (x, z) => smoothstep(-0.05, 0.35, N3.fbm2(x / 260 + 7, z / 260, 3));
   /** per-(x, z) values shared by every y of a column (the mesher evaluates columns) */
   function column(x, z) {
     const F = coastF(x, z);
     const top = landHeight(x, z);
     const B = blocksAt(x, z);
-    // the platform: every standing block (cliff or platform-only), outline with small chips
-    let platPlan = 1e9;
-    for (const b of B.list) {
-      let d = -1e9;
-      for (let q = 0; q < 4; q++) d = Math.max(d, b.d[q] + (b.exP[q] ? 0 : -EXPAND));
-      platPlan = Math.min(platPlan, d);
-    }
-    platPlan += 0.45 * N3.n2(x / 3, z / 3) + 0.25 * N3.n2(x / 1.1, z / 1.1 + 5);
-    // grikes along both joint sets on the platform
-    const du = Math.min(B.u - UA[B.ia], UA[B.ia + 1] - B.u), dv = Math.min(B.v - UB[B.ib], UB[B.ib + 1] - B.v);
-    const nu = B.u - UA[B.ia] < UA[B.ia + 1] - B.u ? B.ia : B.ia + 1, nv = B.v - UB[B.ib] < UB[B.ib + 1] - B.v ? B.ib : B.ib + 1;
-    const grike = Math.min(du - (0.2 + 0.35 * hash2(nu, 1, seed + 8)), dv - (0.16 + 0.3 * hash2(nv, 2, seed + 8)));
+    const ff = footF(x, z) + 2;
+    // the platform: a ragged outline (not the joint-block grid, which read as a slipway) with
+    // joint-aligned bites, carved by fissures and potholes
+    const pw = platWidth(z);
+    let platPlan = F - (ff + pw + 7 * N2.fbm2(x / 30 + 3, z / 30, 3) + 2.5 * N3.fbm2(x / 8, z / 8, 2));
+    // a few bites along weak A joints at the seaward edge (channels the sea has opened)
+    { const du = Math.min(B.u - UA[B.ia], UA[B.ia + 1] - B.u), ji = B.u - UA[B.ia] < UA[B.ia + 1] - B.u ? B.ia : B.ia + 1;
+      if (hash2(ji, 61, seed) < 0.3) platPlan = Math.max(platPlan, Math.min(1.2 + 1.5 * hash2(ji, 62, seed) - du, platPlan + 5 + 8 * hash2(ji, 63, seed))); }
+    platPlan += 0.3 * N3.n2(x / 2.2, z / 2.2);
+    const grike = grikeDist(B.u, B.v, B.ia, B.ib);
+    const [ph, phd] = pothole(x, z);
     // weak joints: geos
     let geo = 1e9;
     for (let di = 0; di <= 1; di++) {
@@ -362,10 +445,8 @@ export function createVerdorWorld(opts = {}) {
       geo = Math.min(geo, Math.max(Math.abs(B.u - UA[i]) - gw * (0.75 + 0.5 * smoothstep(-len, 0, F)), -F - len));
     }
     const floor = seabed(x, z) + talus(x, z, F, top);
-    const sw = sow(x, z);
     // chimneys: open joints in the face (A set), a few metres deep from the front
     let chim = 1e9;
-    const ff = footF(x, z) + 2;
     for (let di = 0; di <= 1; di++) {
       const i = B.ia + di;
       if (i < 0 || i >= UA.length) continue;
@@ -375,36 +456,40 @@ export function createVerdorWorld(opts = {}) {
       chim = Math.min(chim, Math.max(Math.abs(B.u - UA[i]) - w, (ff - F) - reach));
     }
     return {
-      x, z, F, top, floor, plat: platLevel(x, z), platPlan, grike, geo, blocks: B.list.filter((b) => b.st === 2), u: B.u, v: B.v,
+      x, z, F, top, floor, plat: platLevel(x, z), platPlan, grike, ph, phd, geo, blocks: B.list.filter((b) => b.st === 2), u: B.u, v: B.v,
       stacks: nearStacks(x, z, 8), notchD: 1.8 + 2.0 * N2.fbm2(x / 60, z / 60, 2), dh: dipH(x, z),
       expo: 0.75 + 0.5 * smoothstep(-0.4, 0.4, N2.fbm2(x / 220, z / 220, 2)),
-      wallTop: top - lerp(4, 27, sw), slopeT: lerp(0.45, 1.25, sw), footF: ff, chim,
-      headN: 0.6 * N3.fbm2(x / 9, z / 9, 3),
+      footF: ff, chim,
     };
   }
 
+  // side channel of the last sdf() call: the effective top of the rock mass at that point (the
+  // land surface, or the cap of the block that defines the surface) - read by surfaceInfo()
+  let lastTop = 0;
   /** Signed distance to rock (m), negative inside. col: column(x, z) for the same x, z (optional). */
   function sdf(x, y, z, col) {
     const c = col || column(x, z);
     const F = c.F, top = c.top;
-    const s = y + c.dh;
+    const s0 = y + c.dh, s = s0 + pinch(x, z, s0);
     const k = bedAt(s);
     const hard = hardAt(s), soft = 1.35 - hard;
     // the face's recess: bed weathering (pre-filtered profile, stronger where exposed), the
-    // wave-cut notch, the slope-over-wall top (vegetated head slope above a vertical wall)
+    // wave-cut notch, gentle undulation of the joint faces
     let R = recessAt(s) * c.expo;
     R += c.notchD * Math.exp(-(((y - 1.0) / 1.7) ** 2));          // the wave-cut notch
-    R += (0.55 + 0.45 * soft) * N.fbm3(x / 7, y / 2.6, z / 7, 3) * 1.1 + 0.3 * soft * N3.n3(x / 1.6, y / 1.1, z / 1.6);
-    // fractured faces: piecewise planar facets (broken rock) at two sizes
-    R += 0.8 * N2.facet3(x / 4.5, y / 3.2, z / 4.5) + 0.35 * N.facet3(x / 1.9, y / 1.6, z / 1.9) + 0.15 * N3.facet3(x / 0.8, y / 0.8, z / 0.8);
+    R += (0.3 + 0.25 * soft) * N.fbm3(x / 9, y / 5, z / 9, 2);
+    // fracture relief: broken rock is planar facets with sharp steps at a few scales, plus
+    // conchoidal ridges (0.3-1 m, 5-15 cm deep) - not round bulges
+    R += 0.38 * N2.facet3(x / 5, y / 3.6, z / 5) + 0.14 * N.facet3(x / 2.1, y / 1.7, z / 2.1);
+    { const q = 1 - Math.abs(N3.n3(x / 0.75, y / 0.9, z / 0.75)); R -= 0.13 * q * q; }
     // mainland: union of standing joint blocks; only sides that face fallen ground weather back
     // (internal joints stay closed); per block and bed: old falls and fresh scars
-    let plan = 1e9;
+    let plan = 1e9, winTop = top;
     for (const bl of c.blocks) {
       const pk = Math.floor((s + 7 * hash2(bl.i, bl.j, seed + 9)) / (4 + 6 * hash2(bl.i, bl.j, seed + 11)));
       const per = (hash3(bl.i, bl.j, pk, seed + 5) - 0.5) * 0.6 + (hash3(bl.i, bl.j, k, seed + 6) - 0.5) * 0.45 * (1.1 - hard);
       const tr = bl.tr;
-      const Rb = R + per + tr.scarD * smoothstep(tr.scarH - 1.2, tr.scarH + 1.2, y) + tr.lean * Math.max(0, y - 2);
+      const Rb = R + per + tr.setback + tr.scarD * smoothstep(tr.scarH - 0.6, tr.scarH + 0.6, y) + tr.lean * Math.max(0, y - 2);
       let d = -1e9;
       for (let q = 0; q < 4; q++) {
         // joints do not run straight through the whole cliff: they end at bedding planes and step
@@ -414,33 +499,52 @@ export function createVerdorWorld(opts = {}) {
         const kp = Math.floor((k + 3 * hash2(jid, 9, seed + 20)) / 3);
         const stag = hash3(jid, kp, 0, seed + 22) < 0.6 ? (hash3(jid, kp, 1, seed + 21) - 0.5) * (q < 2 ? 2.6 : 1.4) : 0;
         const dq = bl.d[q] + (q === 0 || q === 2 ? stag : -stag);
-        if (!bl.ex[q]) { d = Math.max(d, dq - EXPAND); continue; }
+        // a side is exposed where the neighbour has fallen, or above the neighbour's lower cap
+        if (!bl.ex[q] && !(s > bl.nc[q] + 0.05)) { d = Math.max(d, dq - EXPAND); continue; }
         // joint faces are neither flat nor vertical: they wander and lean a little
         const wav = 0.7 * N3.n2(y / 4.5 + jid * 0.37, jid * 1.7) + 0.3 * N3.n2(y / 1.7, jid * 3.1 + 9) + (hash2(jid, q, seed + 15) - 0.5) * 0.24 * (y - 20);
         d = Math.max(d, dq + Rb + wav);
       }
-      if (d < plan) plan = d;
+      // the block's cap: a bedding plane, with a small arris chamfer
+      if (bl.cap < 1e8) d = smax(d, (s - bl.cap) * 0.98, 0.2);
+      if (d < plan) { plan = d; winTop = Math.min(top, bl.cap < 1e8 ? y - (s - bl.cap) : top); }
     }
-    // stacks: convex jointed pillars, capped (stepped tops by block). They stand on their own: the
+    // stacks: convex jointed pillars, capped on a bedding plane. They stand on their own: the
     // land surface, the head slope, geos and chimneys belong to the mainland and must not clip them
-    // (out at sea the land height is the sea bed - that used to cut the outer rocks down to stumps)
     let stk = 1e9;
     for (const st of c.stacks) {
       for (const pc of st.pieces) {
-        const sp = stackPlan(x, z, pc) + R * 0.4 + 0.6 * N2.facet3(x / 3, y / 3.5, z / 3) + 0.35 * N.n2(x / 5 + st.z, z / 5) + 0.12 * Math.max(0, y - 2) * (0.5 + 0.5 * N3.n2(st.x * 0.1, y / 12));
-        const cap = pc.top + 0.9 * N.n2(x / 6, z / 6 + st.x) - 2.2 * hash2(Math.floor(c.u / 4), Math.floor(c.v / 4), Math.round(pc.x));
-        stk = Math.min(stk, smax(sp, y - cap, 1.0));
+        let sp = stackPlan(x, z, pc) + R * 0.4 + 0.12 * Math.max(0, y - 2) * (0.5 + 0.5 * N3.n2(st.x * 0.1, y / 12));
+        // undercut notch at the waterline (deeper on the seaward side)
+        sp += (1.2 + 1.1 * Math.max(0, (x - st.x) / (st.r + 1))) * Math.exp(-(((y - 0.4) / 1.25) ** 2));
+        let d;
+        if (st.skerry) {
+          // wave-worn skerry: low, rounded on top, jointed in plan
+          sp += 0.5 * N.n2(x / 3 + st.z, z / 3);
+          const cap = pc.top + 0.5 * N.n2(x / 4, z / 4 + st.x) - 0.35 * ((x - pc.x) ** 2 + (z - pc.z) ** 2) / (pc.r * pc.r + 1);
+          d = smax(sp, y - cap, 0.9);
+        } else {
+          sp += 0.45 * N2.facet3(x / 3, y / 3.5, z / 3) + 0.25 * N.n2(x / 5 + st.z, z / 5);
+          // the top steps down block by block on hard-bed tops
+          const want = pc.top + 0.9 * N.n2(x / 6, z / 6 + st.x) - 3.0 * hash2(Math.floor(c.u / 5), Math.floor(c.v / 5), Math.round(pc.x));
+          const s0w = want + c.dh;
+          let kb = bedAt(s0w);
+          while (kb > 0 && !(beds[kb].b1 <= s0w + 0.01 && beds[kb].hard > 0.5)) kb--;
+          d = smax(sp, s - beds[kb].b1, 0.25);
+        }
+        stk = Math.min(stk, d);
+      }
+      if (st.outer || st.skerry) {
+        // a reef ledge around the base, awash at low water: something for the surf to break on
+        const rp = stackPlan(x, z, { ...st.pieces[0], facets: st.pieces[0].facets.map(([a, b, r]) => [a, b, r * 1.55 + 5]) }) + 2.2 * N2.fbm2(x / 9, z / 9, 2);
+        const rtop = -1.35 + 0.35 * N3.n2(x / 5, z / 5) + 0.25 * Math.max(0, N.n2(x / 1.6, z / 1.6));
+        stk = smin(stk, smax(rp, y - rtop, 0.6), 0.8);
       }
     }
     plan = smax(plan, -c.geo, 0.6);
     plan = smax(plan, -(c.chim + 0.9 * N3.n3(x / 2.5, y / 4, z / 2.5) + 1.2 * smoothstep(0.2, 0.6, N2.n2(y / 9 + x * 0.01, z * 0.01))), 0.3);
-    let f = smax(plan, y - top, 2.2);                              // rounded cliff-top edge
-    // slope-over-wall: above the wall the face lies back as a head slope (soil and turf over rubble)
-    {
-      const g = (y - c.wallTop) - (c.footF - F) * c.slopeT + c.headN;
-      f = smax(f, g / Math.sqrt(1 + c.slopeT * c.slopeT), 1.6);
-    }
-    if (stk < 1e8) f = smin(f, stk, 0.6);
+    let f = smax(plan, y - top, 0.7);                              // the cliff-top edge (a small round)
+    if (stk < 1e8) f = smin(f, stk, 0.35);
     // sea caves (along their joints) and the arch
     for (const cv of caves) {
       if (Math.abs(z - cv.z) > 70) continue;
@@ -456,12 +560,21 @@ export function createVerdorWorld(opts = {}) {
       const tv = tunnel(x - arch.x + 2 * Math.sin(z * 0.05), y, arch.hw, arch.hh, arch.y0) + 0.5 * N.n3(x / 3, y / 3, z / 3);
       f = smax(f, -tv, 1.0);
     }
-    // the wave-cut platform (a bedding-plane surface), its grikes, and the sea bed / beach / talus
+    // the wave-cut platform (a bedding-plane surface), its fissures and potholes, and the sea bed / beach / talus
     let pl = Math.max(y - c.plat, c.platPlan);
-    pl = smax(pl, -Math.max(-c.grike, (c.plat - 0.8) - y), 0.1);
-    f = smin(f, pl, 0.45);
+    pl = smax(pl, -Math.max(c.grike, (c.plat - 0.9) - y), 0.06);
+    if (c.ph < 0.3) pl = smax(pl, -Math.max(c.ph, (c.plat - c.phd) - y), 0.15);
+    f = smin(f, pl, 0.25);
     f = smin(f, y - c.floor, 0.8);
+    lastTop = winTop;
     return f;
+  }
+  /** per-vertex extras for the bake: [depth below the rock mass's top (m), bed pinch (m)] */
+  function surfaceInfo(x, y, z, col) {
+    const c = col || column(x, z);
+    sdf(x, y, z, c);
+    const s0 = y + c.dh;
+    return [Math.max(0, lastTop - y), pinch(x, z, s0)];
   }
 
   /** the height of the visible ground surface in plan (for scattering and the far heightfield) */
@@ -476,6 +589,6 @@ export function createVerdorWorld(opts = {}) {
   return {
     seed, VERDOR, N, beds, bedAt, dipH, UA, UB, nA, nB, stacks, caves, arch,
     xc, coastF, baseLand, installLand, landHeight, turf, seabed, platLevel, platWidth, beachW,
-    column, sdf, surfaceHeight, recessAt, hardAt, sow, blockState, blockCenter, projA, projB, findIdx, weakA, talus, footF,
+    column, sdf, surfaceHeight, surfaceInfo, recessAt, hardAt, sow, blockState, blockCenter, blockCap, projA, projB, findIdx, weakA, talus, footF, pinch,
   };
 }

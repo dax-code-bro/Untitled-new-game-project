@@ -25,7 +25,7 @@ const FABRIC = {
   blackleather: { id: 'pbr/acg_leather26', base: 'Leather26', tile: 0.35, sheen: 0.0, rough: 0.62, rmean: 0.37, leather: true, lum: 0.0097 },
   // fur (the King's tippet): no fur scan in the library - the wool scan at a fine scale for the
   // base, procedural guard hairs combed downward in the shader (uFur), strong soft sheen
-  fur: { id: 'pbr/acg_fabric37', base: 'Fabric37', tile: 0.06, sheen: 1.0, rough: 1.0, lum: 0.062, fur: true },
+  fur: { id: 'pbr/acg_fabric37', base: 'Fabric37', tile: 0.06, sheen: 0.55, rough: 1.0, lum: 0.062, fur: true },
 };
 
 function sheenTint(c) {
@@ -49,7 +49,7 @@ export function clothMaterial(o = {}) {
   const U = {
     uTile: { value: 1 / (o.tile ?? f.tile) },
     uAlb: { value: albedo }, uAlbMix: { value: o.albedoMix ?? (f.leather ? 0.65 : 0.45) }, uLum: { value: f.lum },
-    uWear: { value: o.wear ?? 0.4 }, uDust: { value: o.dust ?? 0.35 }, uFade: { value: o.fade ?? 0.25 },
+    uWear: { value: o.wear ?? 0.4 }, uDust: { value: o.dust ?? 0.35 }, uFade: { value: o.fade ?? (f.fur ? 0.04 : 0.25) },   // (fur does not sun-fade like dyed wool: the King's tippet went grey-olive)
     uSeed: { value: (o.seed ?? 1) * 0.37 },
     uDustCol: { value: new THREE.Vector3(...(o.dustColor || [0.2, 0.17, 0.13])) },
     uPattern: { value: o.pattern ?? 0 },     // 1 = quilted (gambeson), 2 = stripes
