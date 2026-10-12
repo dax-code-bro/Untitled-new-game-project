@@ -970,6 +970,41 @@ def fix_cullboots(cid, reach=0.035, margin=1):
         print(f'{cid}: hose culled under the boots: {", ".join(done)}', flush=True)
 
 
+def fix_shirtarms(cid, wmin=0.6):
+    """A shirt's sleeves under a long-sleeved outer garment are never seen (the shirt sleeve ends
+    inside the outer sleeve): they are not drawn. Where the outer sleeve bends (the elbow) the
+    shirt poked through it as a pale grey patch. Only when every outer torso garment has long
+    sleeves (rolled / short sleeves show the shirt)."""
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    sp = _spec(cid) or {}
+    outer = [g for g in sp.get('outfit', []) if g.get('type') in ('coat', 'tunic', 'doublet', 'gambeson', 'kirtle')]
+    if not outer or any(g.get('sleeves', 'long') != 'long' for g in outer):
+        return
+    shirts = [m for m in h['meshes'] if m['kind'] == 'cloth' and m['name'] == 'shirt' and 'shirtarms' not in m.get('postfix', [])]
+    if not shirts:
+        return
+    bin_ = bytearray(open(bp, 'rb').read())
+    names = [b_['name'] for b_ in h['bones']]
+    armb = np.array([n.startswith(('upperarm', 'lowerarm', 'wrist', 'finger', 'metacarpal')) for n in names])
+    done = 0
+    for m in shirts:
+        SI = view(bin_, m['attrs']['skinIndex']).astype(int).reshape(-1, 4)
+        SW = view(bin_, m['attrs']['skinWeight']).astype(float).reshape(-1, 4)
+        wa = (SW * armb[SI]).sum(1) > wmin
+        ix = m['index']
+        T = np.frombuffer(bin_, dtype=TYPES[ix['type']], count=ix['count'], offset=ix['offset']).reshape(-1, 3).astype(np.int64)
+        kill = wa[T].all(1) & (T[:, 0] != T[:, 1])
+        if kill.any():
+            T2 = T.copy()
+            T2[kill] = T2[kill][:, :1]
+            put(bin_, ix, T2)
+            done += int(kill.sum())
+        m['postfix'] = m.get('postfix', []) + ['shirtarms']
+    _save(h, bin_, jp, bp)
+    print(f'{cid}: shirt sleeves under the outer sleeves hidden ({done} tris)', flush=True)
+
+
 def fix_eyesplit(cid):
     """Eye attributes recomputed with every vertex given to the NEARER eyeball: the build split
     the eyes at x = 0, so with the head turned / shifted part of one eyeball took the other
@@ -2327,7 +2362,7 @@ def fix_matpatch(cid, linen_lum=0.31, prop_lum=0.34):
     lum = lambda c: 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
     # dyes re-mixed after the build (characters.CLING): faded woad still read cobalt, straw read
     # chartreuse in daylight
-    REMAP = {(0.075, 0.088, 0.11): [0.082, 0.088, 0.1], (0.33, 0.27, 0.15): [0.32, 0.245, 0.13]}
+    REMAP = {(0.075, 0.088, 0.11): [0.082, 0.088, 0.1], (0.33, 0.27, 0.15): [0.32, 0.245, 0.13], (0.05, 0.085, 0.04): [0.06, 0.085, 0.03]}
     for m in h['meshes']:
         mt = m.get('material') or {}
         c_ = mt.get('color')
@@ -2394,6 +2429,8 @@ def main():
             fix_valleys(cid)
         if what in ('matpatch', 'all'):
             fix_matpatch(cid)
+        if what in ('shirtarms', 'all'):
+            fix_shirtarms(cid)
         if what in ('eyesplit', 'all'):
             fix_eyesplit(cid)
         if what in ('toebox', 'all'):

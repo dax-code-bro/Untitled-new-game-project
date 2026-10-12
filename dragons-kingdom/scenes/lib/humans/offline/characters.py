@@ -240,7 +240,9 @@ def cast():
     # ================================================================ Abby
     # coat dye with real chroma (linear 0.065/0.082/0.055 took on the light: teal-grey in daylight,
     # near-black in the flight frames); sRGB about (63, 81, 56), hue ~105 deg
-    ABBY_GREEN = [0.05, 0.085, 0.04]
+    # (measured in the daylight hero render: [0.05, 0.085, 0.04] came out at hue ~133 deg - the sky
+    # fill pushes it toward teal; the dye leans yellow so the rendered coat stays at ~95-120 deg)
+    ABBY_GREEN = [0.06, 0.085, 0.03]
     abby = {
         'id': 'abby', 'name': 'Abby', 'lod': 'hero',
         'macro': {'gender': 0.0, 'age': 0.43, 'muscle': 0.58, 'weight': 0.42, 'height': 0.55, 'proportions': 0.75, 'race': VERDOR_RACE},

@@ -526,7 +526,7 @@ def act_sling(pb, p):
     lat = pb.side_axis()
     wl = c + fwd * 0.2 - lat * 0.06 + np.array([0, 0.02, 0])
     place_hand(pb, 'L', wl, pole=pb.head('upperarm01.L') + lat * 0.2 + np.array([0, -0.6, 0.0]),
-               palm=(-lat + fwd * 0.25 + np.array([0, 0.05, 0]), -fwd * 0.3 + np.array([0, -0.2, 0]) - lat * 0.0 + np.array([0, 0, 0]) + np.array([0, 0, -1.0])), grip='relaxed', amount=0.8)
+               palm=(-lat + fwd * 0.25 + np.array([0, 0.05, 0]), -fwd * 0.3 + np.array([0, -0.2, 0]) - lat * 0.0 + np.array([0, 0, 0]) + np.array([0, 0, -1.0])), grip='loose', amount=0.65)
     pb.arm_down('R', out=0.12, fwd=0.05, elbow=0.3)
     pb.grip('R', 'relaxed')
     return [{'prop': 'sling', 'M': np.eye(4), 'bone': 'lowerarm01.L', 'kw': {}}]

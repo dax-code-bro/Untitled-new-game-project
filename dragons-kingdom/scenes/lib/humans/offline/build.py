@@ -329,6 +329,7 @@ def assemble(kit, spec, out_dir, opts):
         postfix.fix_props(cid + opts.get('suffix', ''))
         postfix.fix_hairline(cid + opts.get('suffix', ''))
         postfix.fix_cullboots(cid + opts.get('suffix', ''))
+        postfix.fix_shirtarms(cid + opts.get('suffix', ''))
         postfix.fix_toebox(cid + opts.get('suffix', ''))
         postfix.fix_hidefeet(cid + opts.get('suffix', ''))
         postfix.fix_legdrape(cid + opts.get('suffix', ''))
@@ -726,14 +727,19 @@ def build_sling(sk, pt, off, D):
     L = np.linalg.norm(kn - el)
     P = []
     for i in range(n_u):
-        t = -0.14 + 1.2 * i / (n_u - 1)
+        # (ends at the hand's heel: a trough running on past the knuckles showed its open end -
+        # the inside, faceted black and white - with the fingers splayed over it)
+        t = -0.14 + 1.02 * i / (n_u - 1)
         c = el + ax * L * t
         r = 0.068 + 0.008 * math.sin(t * 7)
         # the apex of the triangle closes round the elbow (a pocket, not an open trough)
         if t < 0:
             r *= math.sqrt(max(0.05, 1.0 - (t / -0.15) ** 2))
+        # toward the hand the linen is gathered in under the wrist: narrower, its front edge lower
+        hand_k = min(1.0, max(0.0, (t - 0.6) / 0.28))
+        r *= 1.0 - 0.22 * hand_k ** 1.5
         for j in range(n_v):
-            a = math.pi * (-0.15 + 1.25 * j / (n_v - 1))     # from the body side, under, up the front
+            a = math.pi * (-0.15 + (1.25 - 0.35 * hand_k) * j / (n_v - 1))     # from the body side, under, up the front
             # the cloth is gathered, not a smooth trough: soft lengthwise folds that die out
             # toward the hand, and gathers round the elbow
             fold = 0.003 * math.sin(a * 5.0 + t * 2.3) * (1.0 - 0.6 * min(1.0, max(0.0, t)))

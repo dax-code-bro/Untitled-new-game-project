@@ -137,7 +137,8 @@ varying float vAO; varying vec4 vAux; varying vec3 vObjP; varying vec2 vPat; var
   }
   // wear (edges, elbows, knees) and dust toward the hem / on the lower body
   float wear = clamp(vAux.g * (0.6 + 0.8 * n2), 0.0, 1.0) * uWear;
-  c = mix(c, mix(c, vec3(dot(c, vec3(0.3333))), 0.4) * 1.3, wear * (1.0 - uLeather));
+  // (rubbed wool lightens and greys a little; at 0.4 / x1.3 a worn elbow read as a grey patch sewn on)
+  c = mix(c, mix(c, vec3(dot(c, vec3(0.3333))), 0.25) * 1.15, wear * 0.75 * (1.0 - uLeather));
   // (leather darkens with wear at the top edge; not round the sole, where the hem noise printed
   // dark stains over the toe)
   c = mix(c, c * 0.55, wear * uLeather * 0.6 * smoothstep(0.07, 0.13, vObjP.y));
@@ -232,7 +233,7 @@ vec3 hairT; float hairSub, hairAlong, hairFineK;`)
   // vellus / baby hairs (aux.a = 1): fine and darker than the groom (they read as frost)
   diffuseColor.rgb *= mix(1.0, 0.6, step(0.75, vAux.a));
 }
-diffuseColor.rgb *= mix(1.0, 0.5, vAux.b);
+diffuseColor.rgb *= mix(1.0, 0.7, vAux.b);
 #ifdef USE_ALPHAHASH
 // thinning tips and soft ribbon edges: the film finish's jittered sub-frames resolve the
 // alpha-hash into fine, semi-transparent strand edges instead of hard clumps
@@ -249,7 +250,9 @@ hairT = normalize(vT);
 // shade a strand as a cylinder: the normal is the view vector made perpendicular to the strand
 { vec3 v = normalize(vViewPosition); vec3 nn = normalize(v - hairT * dot(v, hairT)); normal = normalize(mix(nn, normal, 0.35)); }`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
-{ float aoV = clamp(vAO, 0.0, 1.0); reflectedLight.indirectDiffuse *= aoV;
+// (floor 0.35: light scatters through hair - a braid's inner strands baked to AO ~0 rendered as a
+// black zig-zag rope in shade)
+{ float aoV = clamp(vAO, 0.35, 1.0); reflectedLight.indirectDiffuse *= aoV;
   // sky reflection on hair is weak and takes the hair's colour (light scatters inside the fibre)
   vec3 htint = mix(vec3(1.0), diffuseColor.rgb / max(1e-4, max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b))), 0.6);
   reflectedLight.indirectSpecular *= aoV * aoV * 0.12 * htint; reflectedLight.directDiffuse *= mix(1.0, aoV, 0.4); }`)

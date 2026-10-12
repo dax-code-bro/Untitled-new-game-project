@@ -43,8 +43,10 @@ const SHOTS = [
     // player, an old man watching, a man eating; staggered depth, yaw + = turned to screen right
     name: 'crowd',
     members: [['crowd02', -1.75, 0.15, 1.0], ['crowd04', -1.0, 0.0, -0.75], ['crowd05', 0.15, 0.55, 0.85], ['crowd09', 0.85, 0.35, -0.95],
-      ['crowd07', -0.35, -0.85, 0.75], ['crowd01', 0.7, -1.3, 0.55], ['musician', 1.95, -0.75, -0.65], ['crowd06', -2.45, -0.9, 0.55],
-      ['crowd12', 1.55, 0.9, -0.35], ['crowd14', -0.95, -1.75, 0.3]],
+      // (the blonde behind the two women talking moved left - her head lined up with the kerchiefed
+      // woman's and read as a kiss; the lute player moved out from behind the man eating)
+      ['crowd07', -0.35, -0.85, 0.75], ['crowd01', 0.2, -1.45, 0.55], ['musician', 2.55, -0.55, -0.75], ['crowd06', -2.45, -0.9, 0.55],
+      ['crowd12', 1.35, 0.9, -0.35], ['crowd14', -0.95, -1.75, 0.3]],
     cam: { y: 1.2, dist: 7.2, el: 4, fov: 34, fstop: 5.6, key: 45 },
     ground: 'pbr/ph_floor_pebbles_01',
   },
