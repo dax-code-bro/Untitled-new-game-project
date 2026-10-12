@@ -227,7 +227,8 @@ vec3 hairT; float hairSub, hairAlong, hairFineK;`)
   diffuseColor.rgb *= mix(1.0, 0.72, smoothstep(0.35, 0.5, abs(f - 0.5)));
   // salt-and-pepper (aux.a = 0.5): this strand is grey / white
   float saltK = step(0.25, vAux.a) * (1.0 - step(0.75, vAux.a));
-  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.41, 0.39) * (0.8 + 0.4 * h), saltK);
+  // (grey, not white: at 0.42 the salt strands glared as a frosty hedgehog on the King)
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.27, 0.265, 0.255) * (0.8 + 0.4 * h), saltK);
   // vellus / baby hairs (aux.a = 1): fine and darker than the groom (they read as frost)
   diffuseColor.rgb *= mix(1.0, 0.6, step(0.75, vAux.a));
 }

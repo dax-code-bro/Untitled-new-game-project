@@ -615,7 +615,7 @@ PROP_FIX = {
     'buckle': {'color': [0.36, 0.35, 0.34], 'rough': 0.6},
     # lute: the plank scan at 0.6 m read as burlap on a 30 cm soundboard - finer grain, aged
     # varnished spruce; the ribbed bowl a little finer too
-    'lute_board_1': {'color': [0.3, 0.2, 0.1], 'rough': 0.42, 'tile': 0.22},
+    'lute_board_1': {'color': [0.19, 0.115, 0.05], 'rough': 0.38, 'tile': 0.09},
     'lute_bowl_0': {'tile': 0.3},
 }
 
@@ -968,6 +968,47 @@ def fix_cullboots(cid, reach=0.035, margin=1):
     _save(h, bin_, jp, bp)
     if done:
         print(f'{cid}: hose culled under the boots: {", ".join(done)}', flush=True)
+
+
+def fix_eyesplit(cid):
+    """Eye attributes recomputed with every vertex given to the NEARER eyeball: the build split
+    the eyes at x = 0, so with the head turned / shifted part of one eyeball took the other
+    eye's centre and its iris angle came out wrong (a white, iris-less eye). The gaze axis of an
+    eye is the one most of its own vertices carry."""
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    eyes = [m for m in h['meshes'] if m['kind'] == 'eye' and 'eyesplit' not in m.get('postfix', [])]
+    bones = {b_['name']: np.array(b_['p']) for b_ in h['bones']}
+    if not eyes or 'eye.L' not in bones:
+        return
+    bin_ = bytearray(open(bp, 'rb').read())
+    for m in eyes:
+        if 'gaze' not in m['attrs'] or 'iris' not in m['attrs']:
+            continue
+        P = view(bin_, m['attrs']['position']).astype(float)
+        G = view(bin_, m['attrs']['gaze']).astype(float).reshape(-1, 3)
+        I = view(bin_, m['attrs']['iris']).astype(float).reshape(-1)
+        cL, cR = bones['eye.L'], bones['eye.R']
+        nearL = np.linalg.norm(P - cL, axis=1) < np.linalg.norm(P - cR, axis=1)
+        G2, I2 = G.copy(), I.copy()
+        moved = 0
+        for sel, c in ((nearL, cL), (~nearL, cR)):
+            if not sel.any():
+                continue
+            # this eye's gaze: the median of the gaze vectors its vertices carry
+            d = np.median(G[sel], axis=0)
+            d /= max(np.linalg.norm(d), 1e-9)
+            v = P[sel] - c
+            v /= np.linalg.norm(v, axis=1, keepdims=True) + 1e-12
+            ang = np.arccos(np.clip(v @ d, -1, 1)) / np.radians(29.0)
+            moved += int((np.abs(ang - I[sel]) > 0.05).sum())
+            G2[sel] = d
+            I2[sel] = ang
+        put(bin_, m['attrs']['gaze'], G2)
+        put(bin_, m['attrs']['iris'], I2)
+        m['postfix'] = m.get('postfix', []) + ['eyesplit']
+        print(f'{cid}: eye attributes re-split ({moved} vertices changed)', flush=True)
+    _save(h, bin_, jp, bp)
 
 
 def fix_toebox(cid, iters=40):
@@ -2284,8 +2325,17 @@ def fix_matpatch(cid, linen_lum=0.31, prop_lum=0.34):
     bd = hs.get('beard') or {}
     done = []
     lum = lambda c: 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    # dyes re-mixed after the build (characters.CLING): faded woad still read cobalt, straw read
+    # chartreuse in daylight
+    REMAP = {(0.075, 0.088, 0.11): [0.082, 0.088, 0.1], (0.33, 0.27, 0.15): [0.32, 0.245, 0.13]}
     for m in h['meshes']:
         mt = m.get('material') or {}
+        c_ = mt.get('color')
+        if m['kind'] == 'cloth' and isinstance(c_, list) and len(c_) == 3:
+            for k_, v_ in REMAP.items():
+                if max(abs(a - b) for a, b in zip(c_, k_)) < 1e-4:
+                    mt['color'] = list(v_)
+                    done.append(m['name'] + ' dye')
         if m['kind'] == 'skin' and bd.get('count', 0) > 0 and mt.get('beardFull') != 1.0:
             mt['beardFull'] = 1.0
             done.append('beardFull')
@@ -2344,6 +2394,8 @@ def main():
             fix_valleys(cid)
         if what in ('matpatch', 'all'):
             fix_matpatch(cid)
+        if what in ('eyesplit', 'all'):
+            fix_eyesplit(cid)
         if what in ('toebox', 'all'):
             fix_toebox(cid)
         if what in ('hidefeet', 'all'):

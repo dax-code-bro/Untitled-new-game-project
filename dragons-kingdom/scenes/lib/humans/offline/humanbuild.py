@@ -287,12 +287,16 @@ def eye_attrs(part, skel, pose, off):
     idx = {n: i for i, n in enumerate(skel.names)}
     g = np.zeros((len(part.posed), 3))
     iris = np.full(len(part.posed), 2.0)
+    # each vertex belongs to the NEARER eyeball (split by x > 0 assigned part of one eye to the
+    # other when the head was turned or shifted off the centre line: a white, iris-less eye)
+    cL, cR = P[idx['eye.L']] + off, P[idx['eye.R']] + off
+    nearL = np.linalg.norm(part.posed - cL, axis=1) < np.linalg.norm(part.posed - cR, axis=1)
     for side in ('L', 'R'):
         i = idx[f'eye.{side}']
         c = P[i] + off
         d = quat_to_mat(Q[i]) @ (skel.T[i] - skel.H[i])
         d /= np.linalg.norm(d)
-        sel = part.posed[:, 0] > 0 if side == 'L' else part.posed[:, 0] <= 0
+        sel = nearL if side == 'L' else ~nearL
         v = part.posed[sel] - c
         v /= np.linalg.norm(v, axis=1, keepdims=True) + 1e-12
         ang = np.arccos(np.clip(v @ d, -1, 1))

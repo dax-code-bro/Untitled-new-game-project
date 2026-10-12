@@ -1302,7 +1302,9 @@ def head_shell(D, g):
         if len(l_) >= 8:
             S = snap_loop(S, l_, lambda Q: Q, iters=14)
     if kind in ('hood', 'coif', 'wrap'):
-        D.hide_under(old, F, rings=2)          # the ears under it printed through
+        # (4 rings kept: with the opening relaxed off the body's staircase, 2 rings left hidden
+        # skin uncovered - a dark stepped gap along the hood's face opening)
+        D.hide_under(old, F, rings=4)          # the ears under it printed through
     if kind == 'wrap':
         # turns of cloth: soft horizontal folds that wander, deeper under the chin
         nS = mu.vnormals(S, F)

@@ -416,6 +416,10 @@ class Groom:
             mo = r[1] > mouth[1] - 0.004
             edge_ = float(np.clip((self.eye_y - 0.045 - r[1]) / 0.015, 0, 1)) * float(np.clip((0.075 - abs(r[0] - self.skull[0])) / 0.015, 0, 1))
             L = (length[0] + (length[1] - length[0]) * self.rng.random()) * (0.45 + 0.55 * edge_)
+            # longer at the chin, shorter toward the jaw corners, every strand its own length: a
+            # beard of one length hugging the jaw read as a rectangular grey pad
+            chin_k = float(np.clip(1.0 - abs(r[0] - self.skull[0]) / 0.055, 0.0, 1.0))
+            L *= (0.6 + 0.65 * chin_k) * (0.75 + 0.5 * self.rng.random())
             if mo:
                 L = (moustache_len or L / 0.6 * 0.6) * (0.7 + 0.5 * self.rng.random())
             side = 1.0 if r[0] > 0 else -1.0

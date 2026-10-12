@@ -85,7 +85,8 @@ export function skinMaterial(o = {}) {
     // cheeks in 3/4 daylight - it read as concealer under the eyes)
     ior: 1.4, specularIntensity: 0.62,
     sheen: 0.05, sheenRoughness: 0.4, sheenColor: new THREE.Color(0.55, 0.45, 0.4),
-    clearcoat: o.oil ?? 0.12, clearcoatRoughness: 0.34,
+    // (a T-zone oil film at 0.12 and roughness -0.1 there put a big plastic hotspot on dark skin)
+    clearcoat: o.oil ?? 0.07, clearcoatRoughness: 0.38,
     // double-sided: the gap between a rolled eyeball and the inner lid, or a sleeve's cuff,
     // looks into the head / arm - with back faces culled that showed the hair or the sky
     // through the skull (a black patch in the inner eye corner)
@@ -207,7 +208,7 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
 {
   float tz = hFbm(vObjP * 40.0 + 9.0);
   roughnessFactor = clamp(roughnessFactor * (0.8 + 0.35 * tz) - vAux.r * 0.2 - vAux.g * 0.05 + vAux.b * 0.15 + vAux.a * 0.35 - vAux2.g * 0.3 - vAux2.r * 0.04
-                          - vAux3.r * 0.1 + (1.0 - vAux3.r) * 0.09 + vAux3.g * 0.05, 0.12, 0.95);
+                          - vAux3.r * 0.04 + (1.0 - vAux3.r) * 0.09 + vAux3.g * 0.05, 0.12, 0.95);
   // pores hold no oil film: the sheen breaks up into a fine stipple where they are resolved
   { float fwr = length(fwidth(vObjP));
     float fpr = 1.0 - smoothstep(0.35, 1.0, fwr * 1600.0);

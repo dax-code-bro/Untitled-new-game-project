@@ -109,6 +109,32 @@ Garment / spec keys (offline/characters.py, offline/garments.py, offline/build.p
 - `scenes/lookdev/humans-review.js` (+ `.json` ids): a quick side-by-side review of a few builds
   (front, 3/4, back, medium and face close-up of each) for iteration.
 
+## Fix round 1, second pass (2026-10-12)
+
+Post passes added (offline/postfix.py; all run by build.py after every build, idempotent, and can be
+run on existing caches: `postfix.py <pass> <ids>`):
+- `matpatch` - material values that changed after a build, patched into the JSON: `beardFull` (the
+  skin under a grown beard takes the beard colour - short strands over orange skin read as a speckled
+  pad) and linen brought to linear luminance ~0.31 (aprons / coifs / kerchiefs clipped to paper white).
+- `legdrape` - trouser legs hang from the thigh (radius carried down the leg per azimuth, at most
+  2.2 cm out, clear of coat skirts) + runtime fold shading: riding trousers, not tights. Garment key
+  `legdrape: False` keeps fitted breeches (Queen Fall).
+- `boottop` - a boot shaft's top 5 cm sits over the leg cloth with a slight flare (a scalloped pale
+  band of trouser hem showed above every boot). Boots only.
+- `toebox` - riders' boots relaxed into one toe box (they followed the toes: read as bare feet);
+  `hidefeet` - the skin foot is never drawn inside footwear.
+- `eyesplit` - eye attributes with every vertex given to the nearer eyeball (the x = 0 split gave
+  half an eyeball to the other eye when the head was turned: a white, iris-less eye); fixed in
+  humanbuild.eye_attrs for new builds too.
+Build / runtime changes: head-cloth openings relaxed along the loop (no 1 cm staircase at the hood's
+face edge; 4 rings of skin kept visible under hoods / coifs); kerchiefs without the stiff tail panel;
+beards longer at the chin, every strand its own length; salt strands grey, not white; vellus
+hairline hairs not drawn (frost band); skin specular 0.62 / sheen 0.05; the periorbital skin takes
+the surrounding skin's chroma and luminance (mip-blurred photo) - no pale concealer band; leather
+warmer, finer grain, dust only low on the foot; gambeson quilting filtered (no staircase moire);
+`clasp` = one hand holding the other wrist; `injured_arm` = the right hand wraps the hurt forearm
+from above; spearmen carry no sword; caruncles survive a laughing squint.
+
 ## Build
 
 ```bash

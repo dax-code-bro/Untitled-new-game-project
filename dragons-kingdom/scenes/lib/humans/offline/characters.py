@@ -125,6 +125,8 @@ def G_coif(c=(0.38, 0.36, 0.31), **kw):
 
 
 def G_kerchief(c, **kw):
+    # (no loose tail panel: simulated or not, it stood off the head as two stiff flat flaps -
+    # a paper cornette)
     return dict({'type': 'kerchief', 'fabric': 'linen', 'color': _c(c), 'front': 0.062, 'ease': 0.009, 'layer': 3}, **kw)
 
 
@@ -223,8 +225,8 @@ def variant(base, cid, **kw):
 # warm, ordinary Cling cloth: dyes faded and dulled by sun and washing (the bright woad blue, weld
 # chartreuse, madder salmon, teal and plum read as modern costume colours at distance)
 CLING = {
-    'brick': [0.2, 0.075, 0.045], 'rust': [0.2, 0.085, 0.045], 'russet': [0.17, 0.08, 0.05], 'fadedwoad': [0.075, 0.088, 0.11],
-    'straw': [0.33, 0.27, 0.15], 'ochre': [0.27, 0.17, 0.085], 'sage': [0.12, 0.14, 0.1], 'moss': [0.085, 0.095, 0.055],
+    'brick': [0.2, 0.075, 0.045], 'rust': [0.2, 0.085, 0.045], 'russet': [0.17, 0.08, 0.05], 'fadedwoad': [0.082, 0.088, 0.1],
+    'straw': [0.32, 0.245, 0.13], 'ochre': [0.27, 0.17, 0.085], 'sage': [0.12, 0.14, 0.1], 'moss': [0.085, 0.095, 0.055],
     'oatmeal': [0.34, 0.3, 0.23], 'undyed': [0.4, 0.36, 0.29], 'walnut': [0.1, 0.066, 0.045], 'greybrown': [0.13, 0.115, 0.095],
     'plumbrown': [0.11, 0.065, 0.06], 'madderpink': [0.26, 0.12, 0.09], 'linen': [0.35, 0.325, 0.275], 'darkgrey': [0.06, 0.058, 0.056],
 }
@@ -357,9 +359,9 @@ def cast():
                   # grey hair and beard of ONE colour family (salt-and-pepper per strand); a full beard
                   # in clumps with a moustache over the lip, thinning on the cheeks
                   hair={'color': [0.11, 0.1, 0.09], 'style': 'crop', 'length': (0.015, 0.038), 'flow': 'back', 'curl': 0.1, 'loft': 0.005, 'clump': 0.5,
-                        'salt': 0.3,
-                        'beard': {'count': 14000, 'length': (0.01, 0.026), 'curl': 0.22, 'shadow': 0.8, 'color': [0.11, 0.1, 0.09], 'clump': 0.4,
-                                  'moustache_len': 0.017, 'salt': 0.32}},
+                        'salt': 0.24,
+                        'beard': {'count': 14000, 'length': (0.012, 0.03), 'curl': 0.22, 'shadow': 0.8, 'color': [0.11, 0.1, 0.09], 'clump': 0.5,
+                                  'moustache_len': 0.009, 'salt': 0.26}},
                   eyes=('brown', IRIS_TINT['brown']), brows='eyebrow004',
                   expression={'mouth-corner-puller': 0.35, 'eye-left-slit': 0.2, 'eye-right-slit': 0.2, 'eyebrows-left-inner-up': 0.1},
                   outfit=[G_hose([0.09, 0.05, 0.035]), G_shoes(LEATHER_C['dark']), G_shirt('undyed', collar=0.0),
@@ -384,7 +386,7 @@ def cast():
                     hair={'color': HAIR['salt'], 'style': 'pulled', 'count': 5000, 'loft': 0.003},
                     eyes=('grey', IRIS_TINT['grey']), brows='eyebrow007',
                     outfit=[G_shoes(LEATHER_C['brown']), G_kirtle(CLING['russet'], hem=0.03, sleeves='rolled'), G_apron(CLING['linen'], width=0.52, length=0.62),
-                            G_kerchief([0.38, 0.36, 0.31], front=0.064, tail=True)],
+                            G_kerchief([0.38, 0.36, 0.31], front=0.064, tail=False)],
                     pose='bowl', pose_params={'weight': 'L', 'contrapposto': 0.6, 'head_pitch': 0.1, 'flex': 0.06}, notes='suggested: clean work clothes, apron')
     healer['skin'].update({'texture': 'old_lightskinned_female_diffuse2'})
     C.append(healer)
@@ -423,7 +425,7 @@ def cast():
                     details={'nose/nose-scale-vert': 0.1, 'mouth/mouth-scale-horiz': 0.1, 'head/head-oval': 0.3, 'asym/asym-eye-2': 0.3},
                     hair={'color': HAIR['darkbrown'], 'style': 'pulled', 'count': 5000, 'loft': 0.003},
                     outfit=[G_shoes(LEATHER_C['brown']), G_kirtle(CLING['brick'], hem=0.05), G_apron(CLING['undyed'], width=0.46, length=0.55),
-                            G_kerchief([0.37, 0.34, 0.28], tail=True)],
+                            G_kerchief([0.37, 0.34, 0.28], tail=False)],
                     expression={'mouth-corner-puller': 0.2},
                     pose='hold_child', pose_params={'weight': 'R', 'contrapposto': 0.6, 'hand_out': 0.2, 'head_pitch': 0.14, 'head_yaw': 0.15}, notes='drops the parcel later in 3C')
     C.append(parent)
@@ -445,7 +447,7 @@ def cast():
     C.append(person('musician2', 'Musician (recorder)', 0.0, 0.48, 'brown', muscle=0.45, weight=0.5, height=0.5,
                     details={'nose/nose-flaring': 0.2, 'mouth/mouth-lowerlip-volume': 0.3, 'head/head-oval': 0.3},
                     hair={'color': HAIR['black'], 'style': 'pulled', 'count': 5000, 'loft': 0.003},
-                    outfit=[G_shoes(LEATHER_C['brown']), G_kirtle(CLING['moss'], hem=0.05), G_shawl(CLING['ochre'], length=0.34), G_kerchief(CLING['straw'], tail=True)],
+                    outfit=[G_shoes(LEATHER_C['brown']), G_kirtle(CLING['moss'], hem=0.05), G_shawl(CLING['ochre'], length=0.34), G_kerchief(CLING['straw'], tail=False)],
                     pose='recorder', pose_params={'weight': 'L', 'contrapposto': 0.6}, notes='instrument is a proposal'))
     # ================================================================== guards
     def guard(cid, name, tone, age, details, hair, pose, accessories, gambeson=(0.38, 0.33, 0.24), hose='walnut', hat=True, lod='mid', pp=None, **kw):
@@ -592,7 +594,7 @@ def crowd():
             if k == 'coif+veil':
                 out_ += [G_coif(), G_veil(length=0.45)]
             elif k == 'kerchief':
-                out_.append(G_kerchief(K[c], tail=True))
+                out_.append(G_kerchief(K[c], tail=False))
             elif k == 'cap':
                 out_.append(G_cap(K[c]))
             elif k == 'hood':
