@@ -454,20 +454,21 @@ def cast():
                       outfit=[G_hose(hose), G_boots(LEATHER_C['brown'], height=0.7), G_gambeson(gambeson, belt_style='leather', belt_color=LEATHER_C['dark'])],
                       accessories=acc, pose=pose, pose_params=dict({'weight': 'L', 'contrapposto': 0.6}, **(pp or {})),
                       notes='plain guard gear, no badges or insignia', **kw)
-    # gambesons in undyed linen, ochre, brown - vertical quilted channels (period), worn unevenly
+    # gambesons in undyed linen, ochre, brown - vertical quilted channels (period), worn unevenly;
+    # spearmen carry no sword (a hilt standing off the hip read as a peg; canon gives guards spears)
     C.append(guard('guard_captain', 'Guard Captain', 'light', 0.66, {'nose/nose-hump': 0.4, 'chin/chin-prominent': 0.3, 'head/head-square': 0.4, 'eyes/l-eye-bag': 0.3, 'eyes/r-eye-bag': 0.3},
                    {'color': HAIR['salt'], 'style': 'crop', 'length': (0.008, 0.02), 'beard': {'count': 6000, 'length': (0.004, 0.01), 'curl': 0.4, 'shadow': 0.8, 'clump': 0.5}},
                    'hand_on_belt', [], gambeson=(0.17, 0.12, 0.08), hose='charcoal', hat=False,
                    expression={'eyebrows-left-down': 0.2, 'eyebrows-right-down': 0.2, 'mouth-compression': 0.2}))
     C.append(guard('guard1', 'Guard', 'olive', 0.55, {'nose/nose-scale-horiz': 0.25, 'nose/nose-flaring': 0.2, 'chin/chin-width': 0.25, 'head/head-square': 0.4, 'asym/asym-nose-3': 0.4},
                    {'color': HAIR['black'], 'style': 'crop', 'length': (0.008, 0.02), 'flow': 'forward', 'beard': {'count': 6000, 'length': (0.006, 0.016), 'curl': 0.5, 'shadow': 0.8, 'clump': 0.5}},
-                   'spear', [{'prop': 'sword'}], gambeson=(0.27, 0.19, 0.1), pp={'spear_h': 0.0, 'lean': 0.04}))
+                   'spear', [], gambeson=(0.27, 0.19, 0.1), pp={'spear_h': 0.0, 'lean': 0.04}))
     C.append(guard('guard2', 'Guard (2)', 'light', 0.48, {'nose/nose-scale-vert': 0.2, 'chin/chin-height': 0.2, 'head/head-oval': 0.3},
                    {'color': HAIR['dirtyblond'], 'style': 'crop', 'length': (0.01, 0.03), 'beard': {'count': 0, 'shadow': 0.6}},
-                   'spear_shoulder', [{'prop': 'sword'}], gambeson=(0.36, 0.32, 0.25), pp={'weight': 'R'}))
+                   'spear_shoulder', [], gambeson=(0.36, 0.32, 0.25), pp={'weight': 'R'}))
     C.append(guard('guard3', 'Guard (3)', 'brown', 0.52, {'nose/nose-flaring': 0.3, 'mouth/mouth-scale-horiz': 0.1, 'head/head-square': 0.2},
                    {'color': HAIR['black'], 'style': 'crop', 'length': (0.004, 0.01), 'curl': 0.6, 'beard': {'count': 5000, 'length': (0.003, 0.008), 'curl': 0.7, 'shadow': 0.8}},
-                   'spear_lean', [{'prop': 'sword'}], gambeson=(0.15, 0.11, 0.075), pp={'spear_h': 0.05}))
+                   'spear_lean', [], gambeson=(0.15, 0.11, 0.075), pp={'spear_h': 0.05}))
     C.append(person('watchman', 'Watchman', 1.0, 0.62, 'light', lod='hero', muscle=0.55, weight=0.5, height=0.5,
                     details={'nose/nose-scale-horiz': 0.2, 'nose/nose-point-width': 0.3, 'chin/chin-width': 0.2, 'head/head-rectangular': 0.3, 'asym/asym-jaw-2': 0.3, 'asym/asym-eye-3': 0.3},
                     hair={'color': HAIR['brown'], 'style': 'none', 'beard': {'count': 9000, 'length': (0.006, 0.016), 'curl': 0.4, 'shadow': 0.8, 'clump': 0.6, 'salt': 0.2}},

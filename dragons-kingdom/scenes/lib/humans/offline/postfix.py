@@ -970,6 +970,97 @@ def fix_cullboots(cid, reach=0.035, margin=1):
         print(f'{cid}: hose culled under the boots: {", ".join(done)}', flush=True)
 
 
+def fix_toebox(cid, iters=40):
+    """Riders' boots: the last is made for a standing foot, so a seated rider's boot still followed
+    the separate toes (a brown boot with toes read as a bare foot). Vertices skinned to the toes
+    (and the front of the foot) are relaxed into one rounded toe box: Taubin smoothing (no shrink)
+    weighted by their toe weight, the welted copies kept together. Seated poses only."""
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    if not h['meta'].get('pose', '').startswith('ride'):
+        return
+    feet = [m for m in h['meshes'] if m['kind'] == 'cloth' and m['name'] in ('boots', 'shoes') and 'toebox' not in m.get('postfix', [])]
+    if not feet:
+        return
+    bin_ = bytearray(open(bp, 'rb').read())
+    names = [b_['name'] for b_ in h['bones']]
+    toeb = np.array([n.startswith('toe') for n in names])
+    footb = np.array([n.startswith('foot.') for n in names])
+    for m in feet:
+        P = view(bin_, m['attrs']['position']).astype(float)
+        T = np.frombuffer(bin_, dtype=TYPES[m['index']['type']], count=m['index']['count'], offset=m['index']['offset']).reshape(-1, 3).astype(np.int64)
+        SI = view(bin_, m['attrs']['skinIndex']).astype(int).reshape(-1, 4)
+        SW = view(bin_, m['attrs']['skinWeight']).astype(float).reshape(-1, 4)
+        wt = np.clip((SW * toeb[SI]).sum(1) * 1.6 + (SW * footb[SI]).sum(1) * 0.25, 0, 1)
+        key = np.round(P / 1e-5).astype(np.int64)
+        _, w = np.unique(key, axis=0, return_inverse=True)
+        w = w.reshape(-1)
+        nW = int(w.max()) + 1
+        Q = np.zeros((nW, 3)); Q[w] = P
+        Wt = np.zeros(nW); np.maximum.at(Wt, w, wt)
+        tw = w[T[(T[:, 0] != T[:, 1]) & (T[:, 1] != T[:, 2])]]
+        e = np.unique(np.sort(np.concatenate([tw[:, [0, 1]], tw[:, [1, 2]], tw[:, [2, 0]]]), axis=1), axis=0)
+        ea, eb = np.concatenate([e[:, 0], e[:, 1]]), np.concatenate([e[:, 1], e[:, 0]])
+        deg = np.maximum(np.bincount(ea, minlength=nW), 1).astype(float)
+        for it in range(iters):
+            for lam in (0.55, -0.58):
+                avg = np.stack([np.bincount(ea, weights=Q[eb, j], minlength=nW) for j in range(3)], 1) / deg[:, None]
+                Q += (avg - Q) * (lam * Wt)[:, None]
+        P2 = Q[w]
+        mv = np.linalg.norm(P2 - P, axis=1)
+        put(bin_, m['attrs']['position'], P2.astype(np.float32))
+        N0 = view(bin_, m['attrs']['normal']).astype(float)
+        Nf = fresh_normals(P2, T)
+        Nf *= 1.0 if np.einsum('ij,ij->', N0, Nf) >= 0 else -1.0
+        ch = mv > 1e-6
+        N2 = N0.copy(); N2[ch] = Nf[ch]
+        put(bin_, m['attrs']['normal'], N2)
+        m['postfix'] = m.get('postfix', []) + ['toebox']
+        print(f"{cid}: {m['name']} toe box relaxed ({int(ch.sum())} v, max {mv.max() * 1000:.1f} mm)", flush=True)
+    _save(h, bin_, jp, bp)
+
+
+def fix_hidefeet(cid, wmin=0.5):
+    """No skin toes through the footwear: the body's foot (foot / toe bones, weight > wmin) is not
+    drawn when the character wears boots or shoes. The lasts are made for a standing foot; a
+    rider's pointed or flexed foot came out of the boot's sole as bare toes (and the boot hid
+    under them). Degenerate triangles; the index count is kept."""
+    jp, bp = os.path.join(CACHE, cid + '.json'), os.path.join(CACHE, cid + '.bin')
+    h = json.load(open(jp))
+    feet = [m for m in h['meshes'] if m['kind'] == 'cloth' and m['name'] in ('boots', 'shoes')]
+    skin = [m for m in h['meshes'] if m['kind'] == 'skin' and 'hidefeet' not in m.get('postfix', [])]
+    if not feet or not skin:
+        return
+    bin_ = bytearray(open(bp, 'rb').read())
+    names = [b_['name'] for b_ in h['bones']]
+    footb = np.array([n.startswith(('foot.', 'toe')) for n in names])
+    done = 0
+    for m in skin:
+        SI = view(bin_, m['attrs']['skinIndex']).astype(int).reshape(-1, 4)
+        SW = view(bin_, m['attrs']['skinWeight']).astype(float).reshape(-1, 4)
+        wf = (SW * footb[SI]).sum(1) > wmin
+        # only below the footwear's own top (per side): a low shoe's collar is under the ankle
+        S = view(bin_, m['attrs']['position']).astype(float)
+        FP = np.vstack([view(bin_, f_['attrs']['position']).astype(float) for f_ in feet])
+        fx = FP[:, 0].mean()
+        for sg in (1.0, -1.0):
+            sd = (FP[:, 0] - fx) * sg > 0
+            if sd.any():
+                yt = FP[sd, 1].max() - 0.015
+                wf &= ~(((S[:, 0] - fx) * sg > 0) & (S[:, 1] > yt))
+        ix = m['index']
+        T = np.frombuffer(bin_, dtype=TYPES[ix['type']], count=ix['count'], offset=ix['offset']).reshape(-1, 3).astype(np.int64)
+        kill = wf[T].all(1) & (T[:, 0] != T[:, 1])
+        if kill.any():
+            T2 = T.copy()
+            T2[kill] = T2[kill][:, :1]
+            put(bin_, ix, T2)
+            done += int(kill.sum())
+        m['postfix'] = m.get('postfix', []) + ['hidefeet']
+    _save(h, bin_, jp, bp)
+    print(f'{cid}: bare feet under the footwear hidden ({done} tris)', flush=True)
+
+
 def fix_legdrape(cid, taper=0.06, maxgain=0.022, na=40, dy=0.01):
     """Loose trouser legs hang from the thigh: the simulated legs still followed the knee cap and
     the thigh muscles like tights. Per leg, in horizontal slices round the leg's axis (hip -> knee
@@ -2253,6 +2344,10 @@ def main():
             fix_valleys(cid)
         if what in ('matpatch', 'all'):
             fix_matpatch(cid)
+        if what in ('toebox', 'all'):
+            fix_toebox(cid)
+        if what in ('hidefeet', 'all'):
+            fix_hidefeet(cid)
         if what in ('legdrape', 'all'):
             fix_legdrape(cid)
         if what in ('boottop', 'all'):

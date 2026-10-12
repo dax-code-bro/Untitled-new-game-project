@@ -195,7 +195,9 @@ def assemble(kit, spec, out_dir, opts):
                             {'map': 'human/mh_face_parts/tongue/tongue01/tongue01_diffuse.png', 'rough': 0.35, 'castShadow': False}))
     skin_aux(kit, body, V, sk, os.path.join(kit.lib, body.material['map']))
     card_qa(body, parts, sk)
-    parts.append(caruncles(kit, body, sk))
+    cr_ = caruncles(kit, body, sk)
+    if cr_ is not None:
+        parts.append(cr_)
     from humanbuild import pose_parts
     pose_parts(sk, pt.local, parts, off_t)
     # ---- garments as parts (already in the drape pose)
@@ -327,6 +329,8 @@ def assemble(kit, spec, out_dir, opts):
         postfix.fix_props(cid + opts.get('suffix', ''))
         postfix.fix_hairline(cid + opts.get('suffix', ''))
         postfix.fix_cullboots(cid + opts.get('suffix', ''))
+        postfix.fix_toebox(cid + opts.get('suffix', ''))
+        postfix.fix_hidefeet(cid + opts.get('suffix', ''))
         postfix.fix_legdrape(cid + opts.get('suffix', ''))
         postfix.fix_boottop(cid + opts.get('suffix', ''))
         postfix.fix_matpatch(cid + opts.get('suffix', ''))
@@ -406,6 +410,9 @@ def caruncles(kit, body, sk):
         c = sk.H[sk.names.index(nm)]
         sel = np.where((lm > 0.5) & ((P[:, 0] * sg) > 0) & (np.abs(P[:, 1] - c[1]) < 0.008))[0]
         if not len(sel):
+            # (a laughing squint moves the lid rim off the eye centre's height: crowd10 failed)
+            sel = np.where((lm > 0.3) & ((P[:, 0] * sg) > 0) & (np.abs(P[:, 1] - c[1]) < 0.016))[0]
+        if not len(sel):
             continue
         q = P[sel[np.argmin(np.abs(P[sel, 0]))]]
         p = q + (c - q) * np.array([0.12, 0.0, 0.25])
@@ -413,6 +420,8 @@ def caruncles(kit, body, sk):
         E = np.stack([np.sin(u) * np.cos(v) * 0.0024, np.cos(u) * 0.002, np.sin(u) * np.sin(v) * 0.0022], -1).reshape(-1, 3) + p
         F = [(j * 7 + i, j * 7 + i + 1, ((j + 1) % 12) * 7 + i + 1, ((j + 1) % 12) * 7 + i) for j in range(12) for i in range(6)]
         pieces.append((E, F))
+    if not pieces:
+        return None
     Pm, Fm = pr.merge(pieces)
     tris = mu.tris_of(Fm)
     # skin weights from the nearest eyelash/eye vertices' source: use the head bone fully

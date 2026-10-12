@@ -81,8 +81,10 @@ vec3 hBump(vec3 n, vec3 viewPos, float h, float facing) {
 export function skinMaterial(o = {}) {
   const mat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff, roughness: o.rough ?? 0.46, metalness: 0,
-    ior: 1.4, specularIntensity: 0.9,
-    sheen: 0.12, sheenRoughness: 0.4, sheenColor: new THREE.Color(0.55, 0.45, 0.4),
+    // (specular 0.9 + a 0.12 sheen laid a pale, bluish band of sky reflection across the upper
+    // cheeks in 3/4 daylight - it read as concealer under the eyes)
+    ior: 1.4, specularIntensity: 0.62,
+    sheen: 0.05, sheenRoughness: 0.4, sheenColor: new THREE.Color(0.55, 0.45, 0.4),
     clearcoat: o.oil ?? 0.12, clearcoatRoughness: 0.34,
     // double-sided: the gap between a rolled eyeball and the inner lid, or a sleeve's cuff,
     // looks into the head / arm - with back faces culled that showed the hair or the sky
@@ -142,8 +144,22 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   // periorbital skin (upper lid, crease, under-eye; aux2.b): the photo albedo carries make-up
   // there (reddish lid shadow, pale concealer under the eye). Replace its colour by plain skin
   // chroma at the same luminance, a touch darker and cooler (thin skin over the orbit).
+  // The luminance too is pulled to that of the surrounding skin (the photo's mip ~4.5 levels down:
+  // a ~2 cm average): kept at the pixel's own value, the pale concealer band under the eyes and
+  // the dark lid crease stayed (a made-up, doll-like face in 3/4 daylight).
+  // Its chroma is that of the surrounding skin too, flushed like it (a fixed 'plain' tint
+  // desaturated the band under the eyes against the flushed cheeks: a pale concealer stripe).
   { float lumc = dot(c, vec3(0.2126, 0.7152, 0.0722));
-    vec3 plain = lumc * vec3(1.17, 0.94, 0.8) * vec3(0.96, 0.95, 0.98) * 0.94;
+    vec3 cref = vec3(1.17, 0.94, 0.8) * 0.3;
+#ifdef USE_MAP
+    { vec3 cb = texture2D(map, vMapUv, 4.5).rgb * vAlbG * uTone;
+      float lb = dot(cb, vec3(0.2126, 0.7152, 0.0722));
+      cb = max(vec3(0.0), mix(vec3(lb), cb, uSat));
+      cref = mix(cb, cb * vec3(1.1, 0.84, 0.84), vAux2.r * uFlush * 0.8); }
+#endif
+    float lref = dot(cref, vec3(0.2126, 0.7152, 0.0722));
+    float lt = mix(lumc, lref * 0.95, 0.75 * smoothstep(0.1, 0.6, vAux2.b));
+    vec3 plain = lt * (cref / max(lref, 1e-4)) * vec3(0.98, 0.97, 0.99);
     c = mix(c, plain, clamp(vAux2.b * 0.85, 0.0, 0.85)); }
   // lid margin: lash line and wet rim of the eye opening (dark, barely red)
   c = mix(c, c * vec3(0.62, 0.56, 0.55), vAux2.g * uLid);
@@ -191,7 +207,7 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
 {
   float tz = hFbm(vObjP * 40.0 + 9.0);
   roughnessFactor = clamp(roughnessFactor * (0.8 + 0.35 * tz) - vAux.r * 0.2 - vAux.g * 0.05 + vAux.b * 0.15 + vAux.a * 0.35 - vAux2.g * 0.3 - vAux2.r * 0.04
-                          - vAux3.r * 0.1 + (1.0 - vAux3.r) * 0.04 + vAux3.g * 0.05, 0.12, 0.95);
+                          - vAux3.r * 0.1 + (1.0 - vAux3.r) * 0.09 + vAux3.g * 0.05, 0.12, 0.95);
   // pores hold no oil film: the sheen breaks up into a fine stipple where they are resolved
   { float fwr = length(fwidth(vObjP));
     float fpr = 1.0 - smoothstep(0.35, 1.0, fwr * 1600.0);

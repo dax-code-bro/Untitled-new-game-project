@@ -245,3 +245,10 @@ New this session (each seen in a preview render, output/humans/r1c/):
   shorter flatter crop (spiky grey hedgehog), circlet raised onto the hair.
 Next: finish queues -> preview review of every id (review.sh in scratchpad humans/r1c) -> fixes
 -> swap.sh _r1 -> 4K finals with r1 names in output/humans/r1/ -> npm test -> report.
+- 01:15 UTC: more fixes (each seen in a preview): skin under the eyes takes the surrounding skin's
+  chroma + luminance (mip-blurred photo; the fixed 'plain' tint made a pale concealer band), skin
+  specular 0.62 / sheen 0.05; vellus hairline hairs not drawn (frosty fuzz band); gambeson quilting
+  anti-aliased (staircase lines on the shoulders); spearmen without swords (hilt read as a peg);
+  `injured_arm`: right hand wraps the left forearm from above, the hurt hand hangs limp; new passes
+  `toebox` (riders' boots followed the toes: read as bare feet) and `hidefeet` (skin feet never
+  drawn inside footwear); caruncles no longer crash on a laughing squint (crowd10 failed).

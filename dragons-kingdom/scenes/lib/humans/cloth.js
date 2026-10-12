@@ -107,8 +107,12 @@ varying float vAO; varying vec4 vAux; varying vec3 vObjP; varying vec2 vPat; var
     // puffed between them; uneven stitching and wear on the ridges
     float q = vPat.x * 27.0 + 0.2 * sin(vPat.y * 7.0 + floor(vPat.x * 27.0) * 1.7) + 0.1 * hN3(vec3(vPat * 9.0, 1.0));
     float s = abs(fract(q) - 0.5);
-    c *= mix(0.84, 1.0, smoothstep(0.0, 0.05, 0.5 - s));
-    c *= 1.0 + 0.04 * (smoothstep(0.35, 0.0, s) - 0.5);
+    // filtered: where the channels get finer than ~3 pixels (or the pattern's UVs jump at a seam)
+    // the stitch lines fade to their average instead of aliasing into staircases
+    float qw = fwidth(q);
+    float aa = 1.0 - smoothstep(0.12, 0.35, qw);
+    c *= mix(1.0, mix(0.84, 1.0, smoothstep(0.0, 0.05 + qw, 0.5 - s)), aa) * mix(1.0, 0.97, 1.0 - aa);
+    c *= 1.0 + 0.04 * aa * (smoothstep(0.35, 0.0, s) - 0.5);
   } else if (uPattern > 1.5) {
     float st = step(0.5, fract(vPat.x * 9.0));
     c = mix(c, uPatCol * (0.88 + 0.24 * n1), st * 0.85);
@@ -159,7 +163,8 @@ if (uPattern > 0.5 && uPattern < 1.5) {
 } else if (uPattern > 2.5) {
   float q = vPat.x * 27.0 + 0.2 * sin(vPat.y * 7.0 + floor(vPat.x * 27.0) * 1.7) + 0.1 * hN3(vec3(vPat * 9.0, 1.0));
   float s = abs(fract(q) - 0.5);
-  normal = hBump(normal, -vViewPosition, pow(clamp(1.0 - 2.0 * s, 0.0, 1.0), 0.45) * 0.0022, faceDirection);
+  float aaN = 1.0 - smoothstep(0.12, 0.35, fwidth(q));
+  normal = hBump(normal, -vViewPosition, pow(clamp(1.0 - 2.0 * s, 0.0, 1.0), 0.45) * 0.0022 * aaN, faceDirection);
 }
 if (uLeather > 0.5 && vAux.a > 0.01) {
   // ankle / instep creases (aux.a): leather boots crease across the flex line, they are not
@@ -234,7 +239,9 @@ diffuseColor.a = (1.0 - smoothstep(0.75, 1.0, vAux.g) * 0.9) * (1.0 - smoothstep
 // roots fade in: a hairline is a density gradient, not the blunt dark ends of ribbons
 // (over the first few % only: a pulled-back strand is 20-30 cm long, 10% of it bared the temples)
 diffuseColor.a *= mix(0.45, 1.0, smoothstep(0.0, 0.03, vAux.g));
-diffuseColor.a *= mix(1.0, 0.6, step(0.75, vAux.a));
+// vellus / baby hairs (aux.a = 1) are not drawn: however dark and fine, at 4K they read as a
+// frosty band of fuzz along the hairline - the scalp tint's gradient makes the soft edge
+diffuseColor.a *= 1.0 - step(0.75, vAux.a);
 #endif`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 hairT = normalize(vT);

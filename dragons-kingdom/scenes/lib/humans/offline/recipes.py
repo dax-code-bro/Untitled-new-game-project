@@ -504,15 +504,18 @@ def act_injured_arm(pb, p):
     # left wrist in front of the upper belly, right of centre, ABOVE the belt (the belt's pinned
     # band of coat cannot be pushed aside in the cloth simulation: at belt height the forearm
     # ended up under the coat); elbow tucked against the ribs
-    wl = c + fwd * 0.19 - lat * 0.05 + np.array([0, 0.12, 0])
+    wl = c + fwd * 0.18 - lat * 0.06 + np.array([0, 0.09, 0])
+    # the hurt hand hangs limp off the forearm, palm to the body (an open palm held up read as a
+    # gesture, and the supporting hand hidden under the forearm read as floating)
     place_hand(pb, 'L', wl, pole=pb.head('upperarm01.L') + lat * 0.08 + np.array([0, -0.6, 0.0]),
-               palm=(-lat + fwd * 0.2, -fwd * 0.5 + up * 0.5), grip='loose', amount=0.7)
+               palm=(-lat * 0.75 - up * 0.45 + fwd * 0.1, -fwd * 0.8 - up * 0.2), grip='loose', amount=0.55)
     el = pb.head('lowerarm01.L')
     wr = pb.head('wrist.L')
     fa = norm(wr - el)
-    G = el * 0.4 + wr * 0.6
-    grip_at(pb, 'R', G, lat_dir=fa, n_dir=up * 0.55 + fwd * 0.45, grip='cylinder', amount=0.9, radius=0.03,
-            pole=pb.head('upperarm01.R') - lat * 0.3 + np.array([0, -0.5, -0.15]))
+    G = el * 0.42 + wr * 0.58
+    # the right hand wraps the forearm from above and in front (palm down onto it): seen holding it
+    grip_at(pb, 'R', G, lat_dir=fa, n_dir=-up * 0.7 - fwd * 0.3, grip='cylinder', amount=0.9, radius=0.03,
+            pole=pb.head('upperarm01.R') - lat * 0.35 + np.array([0, -0.45, -0.1]))
     return []
 
 def act_sling(pb, p):
