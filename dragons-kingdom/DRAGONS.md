@@ -8,6 +8,10 @@ This file holds Daxtyn's own decisions about every dragon. Anything written here
 
 - Open question: the Episode 1 dialogue still names the species. That includes Abby's [ORIGINAL] line "Why couldn't I get a Bashion?" and the proposed lines L053–L055 ("Nightwings are faster…", "And Bashions?", "Better for war.") and L109 ("A Slitherwing."). Daxtyn decides the new wording. Until then the lines stay as written.
 
+**Every dragon has two legs and horns (decided 2026-10-14).** All dragons have **only two legs**, not four, and **every dragon has horns**. The wings are the front limbs, like a bat's or a pterosaur's. On the ground a dragon stands on its two hind legs and can lean on its folded wings (the wrist joint) when it walks, as bats and pterosaurs do. There are no separate front legs.
+
+**Bodies designed by Claude (decided 2026-10-14).** Daxtyn gives the colours and key facts. He asked Claude to design each dragon's actual body to look as realistic as possible, based on how real animals are built. Those body designs are shown to Daxtyn as pictures, and he can change anything.
+
 **Leaf's size (decided 2026-10-09).** Leaf is about **one quarter (25%) of Charcoal's size**, not tiny. This replaces the screenplay's "about one-twentieth Charcoal's size or smaller". Working reading: Leaf's body length is about 25% of Charcoal's.
 
 ## Charcoal (Remi's dragon)
@@ -23,7 +27,7 @@ Approved by Daxtyn on 2026-10-09:
 
 From the screenplay (still true): immense, generally calm, slow to anger. His takeoff devastates the ground.
 
-Still provisional, waiting for Daxtyn: body layout (currently four legs plus two wings), horns, head shape, size in metres (currently about 36 m long), tail, how the stripes run on the wings.
+Body (Claude designs it; Daxtyn reviews pictures): two legs, wings as front limbs, horns. Size about 36 m long. The black stripes run along the wing's finger bones.
 
 ## Leaf (Abby's dragon)
 
@@ -39,7 +43,7 @@ Approved by Daxtyn on 2026-10-09:
 
 From the screenplay (still true): not fully grown. Leaf does not breathe fire on screen in Episode 1.
 
-Still provisional, waiting for Daxtyn: whether Leaf can still sit upright like a dog now that species are gone, body layout, horns, head shape, tail.
+Body (Claude designs it; Daxtyn reviews pictures): two legs, wings as front limbs, horns. Still open: whether Leaf sits upright like a dog (with two legs, he sits back on his haunches with his wings folded).
 
 ## Starlight (Queen Fall's dragon, "Queen of Dragons")
 
