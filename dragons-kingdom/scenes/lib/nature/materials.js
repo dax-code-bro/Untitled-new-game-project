@@ -179,7 +179,7 @@ normal = normalize((viewMatrix * vec4(nkRockN, 0.0)).xyz);`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= nkAOv; reflectedLight.indirectSpecular *= nkAOv * nkAOv;`);
   };
-  mat.customProgramCacheKey = () => `nature-landscape-v26${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}${opts.crease === false ? '-nc' : ''}`;
+  mat.customProgramCacheKey = () => `nature-landscape-v27${opts.rockOnly ? '-rock' : ''}${opts.profile || ''}${opts.crease === false ? '-nc' : ''}`;
   return mat;
 }
 
@@ -344,8 +344,9 @@ rock = mix(rock, rock * vec3(1.12, 1.1, 1.04) + vec3(0.04, 0.035, 0.025), scar *
   // rocks awash (skerries, reef tops, the platform's seaward edge): mats of wrack over most of them
   wrack = max(wrack, smoothstep(-0.4, 0.2, hW) * (1.0 - smoothstep(0.9, 1.8, hW + 0.5 * rag)) * smoothstep(0.35, 0.7, up) * smoothstep(0.25, 0.45, m3 + 0.3 * m2) * 0.95);
   rock = mix(rock, vec3(0.09, 0.075, 0.03) * (0.7 + 0.6 * m3), wrack * 0.92);
-  float alg = inter * smoothstep(0.65, 0.85, up) * smoothstep(0.62, 0.78, dkFbm3(P * 0.5 + 9.0));
-  rock = mix(rock, vec3(0.13, 0.30, 0.06), alg * 0.8);
+  // (green weed at seepages: dull olive and broken up - the saturated flat green read as paint)
+  float alg = inter * smoothstep(0.65, 0.85, up) * smoothstep(0.66, 0.82, dkFbm3(P * 0.5 + 9.0)) * (0.55 + 0.45 * smoothstep(0.3, 0.7, nkN3(P + 4.4, 2.3)));
+  rock = mix(rock, vec3(0.075, 0.13, 0.035) * (0.8 + 0.4 * m3), alg * 0.65);
 }
 rock *= mix(1.0, 0.85, vNkCav);                // grime in the crevices
 // below the water of this shot: kelp, coralline crust and silt, never the bare pale rock (seen
@@ -413,7 +414,7 @@ if (wTurf + wSoil + wShingle + wSand + wScree + wSea > 0.01) {
     c = mix(c, vec3(0.36, 0.33, 0.2) * (0.8 + 0.4 * tu), straw * 0.35);
     // the green is a muted olive, not a lawn
     c = mix(c, vec3(dot(c, vec3(0.3, 0.59, 0.11))), 0.18);
-    c = mix(c, c * vec3(1.25, 1.12, 0.7), smoothstep(0.62, 0.8, dkVN2(P.xz * 0.06 + 5.0)) * 0.6);   // sun-scorched thin soil
+    c = mix(c, c * vec3(1.25, 1.12, 0.7), smoothstep(0.62, 0.8, dkVN2(P.xz * 0.06 + 5.0 + 1.3 * vec2(dkVN2(P.xz * 0.021), dkVN2(P.xz * 0.021 + 3.7)))) * 0.6);   // sun-scorched thin soil (warped off the lattice)
     // sheep and rabbit tracks: narrow wandering paths of worn turf and bare soil (isolines of a slow
     // field, so they meander and fork), and the odd scrape of bare earth
     {

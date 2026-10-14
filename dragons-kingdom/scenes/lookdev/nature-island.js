@@ -41,8 +41,8 @@ export const meta = {
         { center: [SUN_BANK.x, SUN_BANK.y + 60, SUN_BANK.z], radius: [1700, 380, 600], density: 0.02, noise: 0.95 },
         { center: [SUN_BANK.x + 250, SUN_BANK.y - 160, SUN_BANK.z + 200], radius: [1600, 220, 520], density: 0.007, noise: 1.0 },
         // mist lying on the sea under the cliffs and in layered banks
-        { center: [I.cx - 200, 25, I.cz + 700], radius: [1400, 40, 260], density: 0.006, noise: 0.9 },
-        { center: [-300, 7, -1150], radius: [1500, 18, 260], density: 0.005, noise: 0.9 },
+        { center: [I.cx - 200, 30, I.cz + 640], radius: [1500, 60, 330], density: 0.011, noise: 0.9 },
+        { center: [-300, 9, -1250], radius: [1600, 26, 300], density: 0.008, noise: 0.9 },
       ],
     },
     shadows: { cascades: 0 },

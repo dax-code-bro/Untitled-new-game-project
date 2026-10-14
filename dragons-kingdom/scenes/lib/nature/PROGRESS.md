@@ -13,12 +13,18 @@ Done in code (2026-10-12, second fixer; the first was stopped by a usage limit):
 - Dual contouring in mesher.js (`dc: true`, used by the cliff bake and the rock kit): sharp arrises
   instead of the ~1-cell 'pillow' round of surface nets; crease shading in materials.js (NK_CREASE).
 - Tiles carry depth below the rock/soil top + a bare-rock flag (soil lip only under real soil).
-- Outer rocks: two stacks + low skerries (first fixer) on a ragged reef mostly 0.4-1 m under water.
+- Outer rocks: two stacks + low, rounded, ragged skerries (wrack-covered, awash) on reef ledges that
+  fall away from the rock into a rubble slope (the flat-topped vertical-sided ledge read as a pale
+  square of shallow water round every skerry).
+- Head slope: crag stretches are coherent (bimodal mask); outside them the rock lies >= 0.6 m under
+  the soil (no slivers/pinholes along the contours); risers wander continuously along the coast.
+  The grid of dark dots on the turf was the shader's bare-earth 'scrape' (one high threshold on
+  lattice value noise = a dot on every lattice point): now warped, rotated, two octaves.
 - Shader: multi-bounce AO for pale rock (no slate-dark shade), per-block bed tint for the rock kit,
   damp-only moss, zoneY for lookdev; first fixer's wet band / submerged rock / pools / streaks kept.
 - Trees: photographed leaf sprays (texture/eztree_leaves, MIT, manifest) for hawthorn, oak, ash,
-  sycamore, pine, blackthorn, heather, bracken; hawthorn = one flared trunk forking into 2-3 unequal
-  stems, kinks, windward dieback, salt-pruned wedge; species presets (oak limbs, ash open, pine bole +
+  sycamore, pine, blackthorn, heather (bracken fronds drawn); hawthorn = one flared trunk forking into 2-3 unequal
+  stems, kinks, windward dieback (salt-killed twigs broken back to short grey snags), salt-pruned wedge; species presets (oak limbs, ash open, pine bole +
   dead lower limbs); crown gaps; root flare + buttresses; far LOD = 4-10 foliage masses on real limbs.
 - Plants: gorse bloom, colony outliers, thrift only on <35 deg ground with blade tufts, paler heads,
   basal foliage on shrubs.
@@ -26,9 +32,12 @@ Done in code (2026-10-12, second fixer; the first was stopped by a usage limit):
   ridge and furrow (6-10 m, 0.4-0.8 m, reverse-S, headlands), photographic crop colours, plough
   slices/clods, field margins, gentler UV warp, taller gappy hedges, hedge proxy switch at 140 m.
 - Island: sheer sea cliffs, boulder apron/reef at the foot (surf), stronger lava-flow terraces,
-  feathered cloud cap, new shot t=4 "forest reaching a cliff" (oak/pine woodland on the lee shore).
+  feathered cloud cap (8 volumetric banks: the runtime's limit).
+- "A forest reaching a cliff" (prologue montage) is its own scene, nature-forest.js: sessile oak wood
+  with ash and sycamore over the Verdor limestone (the island version was a steep wall with orchard
+  rows), salt-shorn oak and thorn scrub out over the head to the lip, seen from a boat.
+- Contact sheet: rock kit set in turf (no plinth), front row as talus, back row as clifftop.
 
 ## Next
-- Full cliff rebake with DC (region z 100..900 baked; the rest is stale), then render all hero
-  angles at preview, fix, then 4K finals with new names (output/nature/r1fix/final/).
-- Contact sheet restage (rocks embedded in turf, no plinth), README update, npm test.
+- Full cliff rebake with DC (running), 4K finals with new names (output/nature/r1fix/final/),
+  1920 review copies + 1:1 crops (output/nature/r1fix/review/), README timings, npm test.
