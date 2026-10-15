@@ -47,7 +47,8 @@ export function lookParams(THREE, look) {
       // (DESIGN 2.7: sRGB ~#7d8086, linear ~0.2 - it must read clearly GRAY next to the black body)
       membrane: lin(THREE, 0.19, 0.2, 0.215), trans: lin(THREE, 0.1, 0.1, 0.105), vein: lin(THREE, 0.12, 0.09, 0.09), memRough: 0.58, memSpec: 0.34, memSpecD: 0.55,
       stripe: [1.0, 0.22, 0.6, 1.0], stripeCol: lin(THREE, 0.011, 0.011, 0.012),
-      horn: [lin(THREE, 0.02, 0.019, 0.018), lin(THREE, 0.09, 0.085, 0.078)], claw: [lin(THREE, 0.018, 0.017, 0.016), lin(THREE, 0.06, 0.055, 0.05)],
+      // horns: rough, dull, ridged old keratin (water buffalo), a little lighter where worn
+      horn: [lin(THREE, 0.02, 0.019, 0.018), lin(THREE, 0.075, 0.07, 0.064)], hornR: [0.82, 0.6, 2.2], claw: [lin(THREE, 0.018, 0.017, 0.016), lin(THREE, 0.06, 0.055, 0.05)],
       tooth: lin(THREE, 0.36, 0.3, 0.2), sclera: lin(THREE, 0.02, 0.018, 0.02),
       // BLUE eyes (a deep slate blue iris with a dark limbal ring; never emissive)
       iris: [lin(THREE, 0.026, 0.075, 0.21), lin(THREE, 0.005, 0.016, 0.055)],
@@ -69,7 +70,7 @@ export function lookParams(THREE, look) {
       dustAmt: 0.2, saltAmt: 0.05, oral: lin(THREE, 0.07, 0.03, 0.028), oralDark: lin(THREE, 0.025, 0.008, 0.008),
       // LIGHT GREEN membrane; the light through it is limited (thick skin), so it never glows
       membrane: lin(THREE, 0.3, 0.52, 0.15), trans: lin(THREE, 0.26, 0.42, 0.1), vein: lin(THREE, 0.1, 0.2, 0.05), memRough: 0.56, memSpec: 0.4, memSpecD: 0.7,
-      horn: [lin(THREE, 0.04, 0.045, 0.03), lin(THREE, 0.24, 0.22, 0.15)], claw: [lin(THREE, 0.03, 0.03, 0.025), lin(THREE, 0.14, 0.12, 0.09)],
+      horn: [lin(THREE, 0.04, 0.045, 0.03), lin(THREE, 0.24, 0.22, 0.15)], hornR: [0.62, 0.45, 1.2], claw: [lin(THREE, 0.03, 0.03, 0.025), lin(THREE, 0.14, 0.12, 0.09)],
       tooth: lin(THREE, 0.5, 0.44, 0.32), sclera: lin(THREE, 0.04, 0.036, 0.012),
       // clear YELLOW eyes
       iris: [lin(THREE, 0.42, 0.3, 0.02), lin(THREE, 0.12, 0.07, 0.006)],
@@ -91,10 +92,10 @@ export function lookParams(THREE, look) {
       vor: [8.0, 0.0, 0.16, 1.1],
       dustAmt: 0.2, saltAmt: 0.0, oral: lin(THREE, 0.45, 0.16, 0.16), oralDark: lin(THREE, 0.1, 0.03, 0.03),
       // white-grey membranes (albino, but thick enough that blood barely tints them), silver highlights
-      membrane: lin(THREE, 0.6, 0.55, 0.5), trans: lin(THREE, 0.12, 0.085, 0.075), vein: lin(THREE, 0.55, 0.3, 0.3), memRough: 0.5, memSpec: 0.55,
+      membrane: lin(THREE, 0.66, 0.63, 0.6), trans: lin(THREE, 0.3, 0.22, 0.2), vein: lin(THREE, 0.55, 0.3, 0.3), memRough: 0.5, memSpec: 0.55,
       // a hard polish on the scale plates (the glints) over a satin base - not a chrome coat
       clearcoat: 0.7, clearcoatRough: 0.08,
-      horn: [lin(THREE, 0.62, 0.6, 0.55), lin(THREE, 0.78, 0.77, 0.74)], claw: [lin(THREE, 0.5, 0.48, 0.44), lin(THREE, 0.75, 0.74, 0.7)],
+      horn: [lin(THREE, 0.62, 0.6, 0.55), lin(THREE, 0.78, 0.77, 0.74)], hornR: [0.42, 0.3, 0.6], claw: [lin(THREE, 0.5, 0.48, 0.44), lin(THREE, 0.75, 0.74, 0.7)],
       tooth: lin(THREE, 0.66, 0.62, 0.52), iris: [lin(THREE, 0.5, 0.3, 0.34), lin(THREE, 0.2, 0.06, 0.1)], sclera: lin(THREE, 0.22, 0.14, 0.14),
     },
     gold: {
@@ -120,7 +121,7 @@ export function lookParams(THREE, look) {
       // the tiny crumpled wings: damp gold skin, satin not mirror (a smooth membrane fold mirrored blue sky)
       membrane: lin(THREE, 0.62, 0.38, 0.1), trans: lin(THREE, 0.5, 0.28, 0.08), vein: lin(THREE, 0.45, 0.12, 0.05), memRough: 0.6,
       // a newborn's claws and egg tooth: soft, translucent amber keratin, not white
-      horn: [lin(THREE, 0.5, 0.34, 0.12), lin(THREE, 0.66, 0.52, 0.3)], claw: [lin(THREE, 0.3, 0.18, 0.06), lin(THREE, 0.46, 0.32, 0.14)],
+      horn: [lin(THREE, 0.5, 0.34, 0.12), lin(THREE, 0.66, 0.52, 0.3)], hornR: [0.5, 0.42, 0.3], claw: [lin(THREE, 0.3, 0.18, 0.06), lin(THREE, 0.46, 0.32, 0.14)],
       // a newborn's dark, wet eye: deep bronze-brown iris, a wide pupil in the dim chamber
       tooth: lin(THREE, 0.75, 0.7, 0.58), iris: [lin(THREE, 0.13, 0.075, 0.025), lin(THREE, 0.03, 0.017, 0.007)], sclera: lin(THREE, 0.04, 0.025, 0.015), pupil: 0.13, fleck: lin(THREE, 0.5, 0.36, 0.1),
       // the wet film: glossy but not a mirror (on the soft, lumpy newborn skin a mirror film
@@ -134,7 +135,7 @@ export function lookParams(THREE, look) {
       hier: [0.6, 1.0, 0.4, 0.0], damp: 0.15, bellyP: [0.7, 1.8, 0.85, 0.55],
       dustAmt: 0.25, saltAmt: 0.3, oral: lin(THREE, 0.25, 0.07, 0.07), oralDark: lin(THREE, 0.05, 0.012, 0.012),
       membrane: lin(THREE, 0.068, 0.05, 0.042), trans: lin(THREE, 0.16, 0.1, 0.07), vein: lin(THREE, 0.06, 0.025, 0.015), memRough: 0.55,
-      horn: [lin(THREE, 0.04, 0.038, 0.034), lin(THREE, 0.2, 0.18, 0.15)], claw: [lin(THREE, 0.03, 0.028, 0.025), lin(THREE, 0.12, 0.11, 0.09)],
+      horn: [lin(THREE, 0.04, 0.038, 0.034), lin(THREE, 0.2, 0.18, 0.15)], hornR: [0.66, 0.5, 1.0], claw: [lin(THREE, 0.03, 0.028, 0.025), lin(THREE, 0.12, 0.11, 0.09)],
       tooth: lin(THREE, 0.55, 0.48, 0.35), iris: [lin(THREE, 0.45, 0.38, 0.12), lin(THREE, 0.14, 0.11, 0.025)], sclera: lin(THREE, 0.04, 0.035, 0.02),
     },
   };
@@ -800,7 +801,8 @@ reflectedLight.directDiffuse *= mix(0.6, 1.0, dkEyeOcc);`);
 function keratinMaterial(THREE, P, kind) {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0 });
   const isTooth = kind === 'teeth';
-  const U = { uHornA: { value: P.horn[0] }, uHornB: { value: P.horn[1] }, uClawA: { value: P.claw[0] }, uClawB: { value: P.claw[1] }, uTooth: { value: P.tooth }, uGum: { value: P.oral } };
+  const hr = P.hornR || [0.55, 0.3, 1.0];
+  const U = { uHornR: { value: new THREE.Vector3(hr[0], hr[1], hr[2]) }, uHornA: { value: P.horn[0] }, uHornB: { value: P.horn[1] }, uClawA: { value: P.claw[0] }, uClawB: { value: P.claw[1] }, uTooth: { value: P.tooth }, uGum: { value: P.oral } };
   mat.userData.dkUniforms = U;
   mat.customProgramCacheKey = () => `dk-keratin-${isTooth}`;
   mat.onBeforeCompile = (sh) => {
@@ -813,7 +815,7 @@ vKer = aKer; vKuv = uv;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec4 vKer; varying vec2 vKuv;
-uniform vec3 uHornA, uHornB, uClawA, uClawB, uTooth, uGum;
+uniform vec3 uHornA, uHornB, uClawA, uClawB, uTooth, uGum, uHornR;
 ${GLSL_COMMON}
 ${PERTURB}
 float dkKR; vec2 dkKS;
@@ -824,7 +826,7 @@ float dkKHf(float t, float ar, float kind, float seed, float rad, float fs, floa
   float rings = sin(t * 110.0 + seed * 30.0 + stri * 1.2) * 0.5 + 0.5;          // fine growth lines
   float ridges = smoothstep(-0.3, 1.0, sin(t * 34.0 + seed * 6.0));              // broad ridges (also in the geometry)
   ${isTooth ? `return stri * rad * 0.02;` : `
-  if (kind < 0.5) return ((ridges * 0.5 + rings * 0.3 * fr) * (1.0 - t) + stri * 0.12) * rad * 0.06;
+  if (kind < 0.5) return ((ridges * 0.5 * uHornR.z + rings * 0.3 * fr) * (1.0 - t * 0.85) + stri * 0.12 * uHornR.z) * rad * 0.06;
   if (kind < 1.5) return stri * rad * 0.05;
   return (stri * 0.6 + rings * fr * 0.2 * (1.0 - t)) * rad * 0.06;`}
 }
@@ -868,7 +870,7 @@ vec3 dkKeratin() {
   if (kind < 0.5) {          // horn: growth rings toward the base, polished tip
     col = mix(uHornA, uHornB, pow(t, 1.4));
     col *= 0.8 + 0.35 * stri;
-    dkKR = mix(0.55, 0.3, t) + 0.1 * (stri - 0.5);
+    dkKR = mix(uHornR.x, uHornR.y, t) + 0.1 * (stri - 0.5);
   } else if (kind < 1.5) {   // claw
     col = mix(uClawA, uClawB, pow(t, 1.6));
     col *= 0.85 + 0.3 * stri;

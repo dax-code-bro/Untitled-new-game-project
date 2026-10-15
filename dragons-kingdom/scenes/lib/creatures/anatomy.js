@@ -99,20 +99,21 @@ const ortho = (v, a) => { const d = dot(v, a); return norm([v[0] - a[0] * d, v[1
 export const DESIGNS = {
   charcoal: {
     name: 'Charcoal', L: 36, skull: 3.6, neck: 6.9, trunk: 9.3, tail: 16.2, neckBones: 11, tailBones: 28,
-    head: [[0, 1.8, 1.55], [0.25, 1.8, 1.52], [0.5, 1.45, 1.16], [0.75, 1.16, 0.9], [1, 0.86, 0.62]],
-    neckP: [[0, 1, 1.5], [0.5, 1.3, 2], [1, 1.85, 2.9]],
+    // a deep, heavy skull that stands clear of the neck (the neck narrows behind the jaws)
+    head: [[0, 1.8, 1.85], [0.25, 1.8, 1.8], [0.5, 1.45, 1.36], [0.75, 1.16, 1.02], [1, 0.86, 0.68]],
+    neckP: [[0, 0.95, 1.22], [0.5, 1.3, 1.9], [1, 1.85, 2.9]],
     trunkP: [[0, 2.7, 4.2], [0.25, 2.9, 4.5], [0.6, 2.4, 3.4], [0.85, 2.2, 2.8], [1, 2.35, 2.6]],
     tailP: [[0, 1.95, 2.15], [0.15, 1.5, 1.7], [0.35, 0.95, 1.1], [0.6, 0.48, 0.56], [0.85, 0.19, 0.23], [1, 0.04, 0.04]],
-    stand: { hip: 7.0, shoulder: 7.5, forearmLean: 12, humerusRise: 12, neckRise: 30, neckTop: 4, headPitch: -16, tailDroop: 22 },
+    stand: { hip: 7.0, shoulder: 7.5, forearmLean: 12, humerusRise: 12, neckRise: 25, neckTop: 0, headPitch: -14, tailDroop: 22 },
     fold: { curl: [8, 60, 108] }, bulk: { leg: 1.38, arm: 1.32, neck: 1.12 },
     // semi-digitigrade with a fibro-fatty heel pad (elephant); claws thick, blunt, chipped
-    leg: { femur: 3.1, tibia: 3.4, mt: 1.5, toe: 1.3, claw: 0.42, d: [1.5, 0.85, 0.8, 0.48, 0.4], mtAng: 40, heelPad: 1.0, hallux: 0.48, toeR: 0.19, blunt: 1 },
+    leg: { femur: 3.1, tibia: 3.4, mt: 1.5, toe: 1.3, claw: 0.42, d: [1.7, 1.05, 1.0, 0.62, 0.52], mtAng: 40, heelPad: 1.0, hallux: 0.48, toeR: 0.19, blunt: 1 },
     wing: { humerus: 4.2, forearm: 8.4, d: [1.6, 1.15, 0.8, 0.45],
       fingers: [['III', 7.4, [5.2, 3.9, 2.3], -6], ['IV', 6.8, [5, 3.4, 1.6], -32], ['V', 6.2, [4.6, 2.9, 1.2], -64]],
       thumb: { mc: 0.7, ph: 0.55, claw: 0.6 }, to: 'ankle', glide: { humerus: -16, forearm: 12 }, legSplay: 24, thick: 0.007 },
     eye: 0.29, snout: 0.58, teeth: [15, 14], toothMax: 0.3, jawMax: 50,
     body: { hump: 0.75, keel: 1.0, belly: 1.0, pec: 1.1, arm: 1.15, thigh: 1.05, tailbase: 1.1, neck: 1.1 },
-    headX: { brow: 2.0, cheek: 1.15, jawMuscle: 1.3, nostril: 1.4, lipCover: 0.3, lipIrregular: 1, tympanum: 1, ridgeR: 0.024, chin: 1 },
+    headX: { brow: 1.6, cheek: 1.15, jawMuscle: 1.3, nostril: 1.4, lipCover: 0.3, lipIrregular: 1, tympanum: 1, ridgeR: 0.024, chin: 1 },
     horns: 'charcoal', crest: { tail: 0.32, back: 0.12 },
     scale: { body: 0.0042, belly: 0.012, head: 0.0032 },
     folds: { throat: 3, neck: 2, tail: 3, axilla: 1, stifle: 1 },
@@ -149,7 +150,7 @@ export const DESIGNS = {
     // (albatross: the long folded wings lie along the back, the tips crossing over the tail base)
     fold: { curl: [-4, 2, 6], inward: 0.16, wrap: 0.1, outUp: 0.5 }, bulk: { leg: 1.2, arm: 1.15, neck: 1.0 },
     // raptor feet: long toes, big curved talons, a large opposable hallux with the biggest talon
-    leg: { femur: 5.8, tibia: 7, mt: 3.8, toe: 3.6, claw: 1.3, d: [2.4, 1.3, 1.15, 0.62, 0.52], mtAng: 55, heelPad: 0.4, hallux: 0.62, toeR: 0.3, raptor: 1 },
+    leg: { femur: 5.8, tibia: 7, mt: 3.8, toe: 3.6, claw: 1.3, d: [3.0, 1.75, 1.55, 0.92, 0.76], mtAng: 55, heelPad: 0.4, hallux: 0.62, toeR: 0.3, raptor: 1 },
     wing: { humerus: 8, forearm: 17, d: [2.6, 1.9, 1.3, 0.75],
       fingers: [['II', 14.5, [5, 2.5], 2], ['III', 15.5, [11.5, 8.5, 5], -5], ['IV', 14, [10.5, 7.2, 3.4], -28], ['V', 12.8, [9, 6, 2.6], -52]],
       thumb: { mc: 1.3, ph: 0.9, claw: 1 }, to: 'ankle', glide: { humerus: -15, forearm: 12 }, legSplay: 30, thick: 0.014 },
@@ -183,7 +184,7 @@ export const DESIGNS = {
   },
   hatchling: {
     name: 'Gold hatchling', L: 1.0, skull: 0.19, neck: 0.13, trunk: 0.27, tail: 0.41, neckBones: 8, tailBones: 20,
-    head: [[0, 0.15, 0.15], [0.3, 0.155, 0.155], [0.55, 0.12, 0.11], [0.8, 0.085, 0.075], [1, 0.055, 0.045]],
+    head: [[0, 0.15, 0.15], [0.3, 0.165, 0.17], [0.55, 0.14, 0.13], [0.8, 0.11, 0.095], [1, 0.08, 0.065]],
     neckP: [[0, 0.085, 0.095], [0.5, 0.095, 0.105], [1, 0.13, 0.15]],
     trunkP: [[0, 0.15, 0.17], [0.3, 0.19, 0.2], [0.6, 0.2, 0.2], [0.85, 0.16, 0.16], [1, 0.13, 0.13]],
     tailP: [[0, 0.1, 0.1], [0.15, 0.075, 0.078], [0.35, 0.05, 0.052], [0.6, 0.028, 0.03], [0.85, 0.012, 0.013], [1, 0.004, 0.004]],
@@ -193,7 +194,7 @@ export const DESIGNS = {
     wing: { humerus: 0.07, forearm: 0.12, d: [0.038, 0.026, 0.02, 0.016],
       fingers: [['III', 0.08, [0.05, 0.035, 0.02], -10], ['IV', 0.07, [0.035, 0.02, 0.01], -48], ['V', 0.06, [0.025, 0.015, 0.008], -80]],
       thumb: { mc: 0.016, ph: 0.014, claw: 0.02 }, to: 'knee', glide: { humerus: -16, forearm: 12 }, legSplay: 22, thick: 0.0006 },
-    eye: 0.036, snout: 0.38, teeth: [0, 0], toothMax: 0, jawMax: 30, newborn: 1,
+    eye: 0.036, snout: 0.27, teeth: [0, 0], toothMax: 0, jawMax: 30, newborn: 1,
     body: { hump: 0, keel: 0.4, belly: 1.6, pec: 0.5, arm: 0.45, thigh: 0.55, tailbase: 0.7, neck: 0.7 },
     headX: { brow: 0.35, cheek: 0.45, jawMuscle: 0.35, nostril: 0.6, lipCover: 0.4, tympanum: 0.4, ridgeR: 0.026, soft: true, eggTooth: true },
     horns: 'buds', crest: { tail: 0.0, back: 0.0 },
@@ -909,7 +910,7 @@ function makeHeadShape(D, H) {
   const hinge = [0, lipY(ez - 0.2) - 0.005, Math.max(0.02, ez - eyeD * 0.5 - 0.12)];
   const nT = D.teeth[0] | 0;
   return {
-    upper, jaw, eye, eyeR: eyeD * 0.5, eyeInset: X.soft ? 0.5 : 0.52, eyeExpose: X.soft ? 46 : X.young ? 58 : 54,
+    upper, jaw, eye, eyeR: eyeD * 0.5, eyeInset: X.soft ? 0.5 : 0.52, eyeExpose: X.soft ? 46 : X.young ? 60 : 62,
     brow: X.brow ?? 1, cheek: X.cheek ?? 1, jawMuscle: X.jawMuscle ?? 1, ridgeR: X.ridgeR ?? 0.022, hinge, gape0: (X.soft ? 11 : 13) * deg,
     nostril: X.nostril ?? 1, teethUp: nT, teethSize: nT ? (D.toothMax / D.skull) * 0.5 : 0, lipCover: X.lipCover ?? 0.5, lipIrregular: X.lipIrregular ?? 0,
     tympanum: X.tympanum ?? 1, eggTooth: !!X.eggTooth, soft: !!X.soft, gazeForward: D.gazeForward ?? (X.young ? 0.28 : 0.2),
@@ -1021,7 +1022,8 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
       }
     }
   }
-  if (soft) for (const sd of [1, -1]) m.ell(W(sd * U(0.24)[0] * 0.62, -0.07, 0.24), [0.08 * H, 0.07 * H, 0.1 * H], { ax: ex, ay: ey, k: 0.06 * H, ...t });
+  // a newborn's puffy cheeks: above the lip line (they belong to the skull, not the jaw)
+  if (soft) for (const sd of [1, -1]) m.ell(W(sd * U(0.24)[0] * 0.62, -0.025, 0.22), [0.075 * H, 0.05 * H, 0.1 * H], { ax: ex, ay: ey, k: 0.06 * H, ...t });
 
   // ---- lower jaw (closed config, rotated open by gape0)
   const jt = { chain: 'jaw', bone: 'jaw', tag: 'jaw' };
@@ -1035,8 +1037,9 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
   for (const sd of [1, -1]) {
     const [hw0, , b0] = J(0.06);
     // jaw angle (retroarticular process) and the masseter bulge over it
-    m.cone(jawPt(sd * hw0 * 0.8, b0 + 0.06, hinge[2] + 0.08), jawPt(sd * hw0 * 0.82, hinge[1] - 0.075, hinge[2] - 0.1), 0.048 * H, 0.03 * H, { k: 0.03 * H, ...jt });
-    m.ell(jawPt(sd * hw0 * 0.86, b0 + 0.1, hinge[2] + 0.14), [0.048 * H * hs.jawMuscle, 0.068 * H, 0.1 * H], { ax: ex, ay: jawDir(0, 1, 0), k: 0.035 * H, ...jt });
+    // (a newborn's is a soft nub: no hanging lobe behind the jaw)
+    if (!soft) m.cone(jawPt(sd * hw0 * 0.8, b0 + 0.06, hinge[2] + 0.08), jawPt(sd * hw0 * 0.82, hinge[1] - 0.075, hinge[2] - 0.1), 0.048 * H, 0.03 * H, { k: 0.03 * H, ...jt });
+    m.ell(jawPt(sd * hw0 * 0.86, b0 + 0.1, hinge[2] + 0.14), [0.048 * H * hs.jawMuscle, 0.068 * H * Math.sqrt(hs.jawMuscle), 0.1 * H * Math.sqrt(hs.jawMuscle)], { ax: ex, ay: jawDir(0, 1, 0), k: 0.035 * H, ...jt });
     const lc = hs.lipCover ?? 0.5;
     if (lc > 0) {
       const z0 = hinge[2] + 0.08;
@@ -1075,7 +1078,7 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
   }
   for (const sd of [1, -1]) {
     m.ell(W(sd * eyeP[0], eyeP[1], eyeP[2]), [ER * H * 1.045, ER * H * 1.045, ER * H * 1.06], { ax: gW(sd), ay: ey, k: 0.008 * H, op: 'sub', ...t, tag: 'eyesocket' });
-    m.ell(W(sd * U(0.93)[0] * 0.45, U(0.93)[1] - 0.012, 0.93), [0.019 * H * hs.nostril, 0.012 * H * hs.nostril, 0.03 * H * hs.nostril], { ax: Wd(1, 0.7, 0.15 * sd), ay: Wd(-0.7, 1, 0), k: 0.008 * H, op: 'sub', ...t, tag: 'nostril' });
+    m.ell(W(sd * U(0.93)[0] * 0.45, U(0.93)[1] - 0.004, 0.93), [0.017 * H * hs.nostril, 0.009 * H * hs.nostril, 0.028 * H * hs.nostril], { ax: Wd(1, 0.7, 0.15 * sd), ay: Wd(-0.7, 1, 0), k: 0.01 * H, op: 'sub', ...t, tag: 'nostril' });
     if (hs.tympanum) m.ell(W(sd * U(hinge[2] - 0.05)[0] * 0.92, 0.02, hinge[2] - 0.05), [0.02 * H, 0.045 * H * hs.tympanum, 0.032 * H * hs.tympanum], { ax: Wd(1, 0, -0.25 * sd), ay: ey, k: 0.015 * H, op: 'sub', ...t, tag: 'head' });
   }
   let gOpen = gL;
@@ -1186,10 +1189,10 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
       // 1. main pair from the rear corners of the skull roof: back along the neck line, then out
       // and down, the tips turning a little forward (water buffalo / mouflon), annual ridges;
       // the LEFT tip broken off ~0.12 m (an old break, rounded by wear)
-      const r0 = Hn(0.185);
+      const r0 = Hn(0.23);
       const path = [[hwB * 0.62, top0 - 0.03, 0.03], [hwB * 0.98, top0 + 0.0, -0.13], [hwB * 1.42, top0 - 0.06, -0.26], [hwB * 1.75, top0 - 0.19, -0.3], [hwB * 1.88, top0 - 0.32, -0.22], [hwB * 1.84, top0 - 0.4, -0.1]].map(X);
       const broken = sd > 0;
-      horn(broken ? path.slice(0, -1).concat([lerp3(path[4], path[5], 0.5)]) : path, broken ? [r0, r0 * 0.88, r0 * 0.72, r0 * 0.52, r0 * 0.33, r0 * 0.22] : [r0, r0 * 0.88, r0 * 0.72, r0 * 0.52, r0 * 0.3, r0 * 0.04], { flat: 0.78 });
+      horn(broken ? path.slice(0, -1).concat([lerp3(path[4], path[5], 0.5)]) : path, broken ? [r0, r0 * 0.92, r0 * 0.8, r0 * 0.6, r0 * 0.4, r0 * 0.27] : [r0, r0 * 0.92, r0 * 0.8, r0 * 0.6, r0 * 0.36, r0 * 0.05], { flat: 0.78 });
       // 2. brow pair: behind and above the eyes, conical, up and back at 35 deg to the skull line
       const b0 = [eye[0] * 0.85, eye[1] + ER * 1.1, eye[2] - ER * 1.6];
       const bl = Hn(0.7), bd = norm([0.25, Math.sin(35 * deg), -Math.cos(35 * deg)]);

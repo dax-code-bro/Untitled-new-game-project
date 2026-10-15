@@ -33,29 +33,29 @@ export const SHOTS = [
     cam: { subject: 'charcoal', pos: [33, 1.7, 44], target: [2.5, 6.8, 6], mm: 35, fstop: 8, focus: 'target' } },
   // Charcoal's head: a crane a little below his eye line, 3/4 front (50 mm), the horns against the sky
   { id: 'charcoal-head', set: 'field', creatures: ['charcoal'], dur: 3, face: -60,
-    pose: { charcoal: { name: 'stand', look: [0.35, 0.05] } },
+    pose: { charcoal: { name: 'stand', look: [0.35, 0.05], blink: false, lidRelax: 0.05 } },
     cam: { subject: 'charcoal', bone: 'head', pos: [9.5, -1.0, 9.0], target: [0.2, -0.6, 1.4], mm: 50, fstop: 5.6, focus: 'eye_L' } },
   // the take-off (1C): the first heavy downstroke after the vault - the downwash blasts a ring of
   // dust and grass, clods fly, the wrist-pad craters and claw furrows in the turf (24 mm, low, ~90 m)
   { id: 'charcoal-takeoff', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], riders: { charcoal: 'remi' }, dur: 4, face: -40, stage: 'takeoff', still: 1.0,
-    pose: { charcoal: { name: 'launch', t0: 3.5, look: [0.0, 0.15] } },
+    pose: { charcoal: { name: 'launch', t0: 2.9, look: [0.0, 0.15] } },
     cam: { subject: 'charcoal', pos: [62, 2.2, 70], target: [0, 9, 4], mm: 24, fstop: 8, focus: 'target', fixed: true } },
   // Charcoal and Leaf side by side (1C/1D): Leaf beside Charcoal's head, ahead of his wing, the
   // riders close enough to talk; side-on from ~140 m (50 mm). Charcoal 0.42 Hz, Leaf ~1 Hz
   { id: 'pair-flight', set: 'air', creatures: ['charcoal', 'leaf'], riders: { charcoal: 'remi', leaf: 'abby' }, dur: 3, alt: 240, face: -90,
-    place: { leaf: [13, 4.5, 16, 0] },
-    pose: { charcoal: { name: 'flight', phase: 0.92, look: [0.25, 0.02] }, leaf: { name: 'flight', hz: 1.0, phase: 0.08, corr: 0.4, look: [-0.3, 0.05] } },
-    cam: { subject: 'charcoal', pos: [78, 26, 8], target: [5, 7, 11], mm: 50, fstop: 8, focus: 'target', shutter: 90 } },
+    place: { leaf: [14, 3.0, 20, 0] },
+    pose: { charcoal: { name: 'flight', phase: 0.45, look: [0.25, 0.02] }, leaf: { name: 'flight', hz: 1.0, phase: 0.4, corr: 0.4, look: [-0.3, 0.05] } },
+    cam: { subject: 'charcoal', pos: [75, 40, 85], target: [4, 4, 10], mm: 38, fstop: 8, focus: 'target', shutter: 90 } },
   // the head-in-mouth (1D): Charcoal's neck curled round, Leaf's whole head held in his jaws at a
   // 25-degree holding gape, snout first; Abby on Leaf's saddle stays clear (32 mm, ~34 m)
   { id: 'head-in-mouth', set: 'air', creatures: ['charcoal', 'leaf'], riders: { charcoal: 'remi', leaf: 'abby' }, dur: 3, alt: 220, face: -110, stage: 'mouth',
-    pose: { charcoal: { name: 'mouthHold', t0: 2.0, side: 1, turn: 1.25, pitch: 0.05 }, leaf: { name: 'glide', look: [-1.15, 0.05], lidRelax: 0.05, blink: false, corr: 0.6 } },
+    pose: { charcoal: { name: 'mouthHold', t0: 2.0, side: 1, turn: 1.65, pitch: 0.05 }, leaf: { name: 'glide', look: [-1.45, 0.05], lidRelax: 0.05, blink: false, corr: 0.6 } },
     cam: { subject: 'charcoal', pos: [24, 22, 34], target: [6, 8.5, 13], mm: 32, fstop: 8, focus: 'target' } },
   // Leaf sitting upright like a dog (1B), Abby beside his chest (35 mm, eye height, f/5.6)
   { id: 'leaf-abby', set: 'field', creatures: ['leaf'], tack: ['leaf'], dur: 3, face: -70,
     people: [{ id: 'abby', at: [1.9, 0, 1.5], yaw: 75 }],
     pose: { leaf: { name: 'sit', look: [0.4, -0.08], eyes: [0.12, -0.05] } },
-    cam: { subject: 'leaf', pos: [7.2, 1.55, 8.4], target: [0.5, 1.75, 0.5], mm: 35, fstop: 5.6, focus: 'target' } },
+    cam: { subject: 'leaf', pos: [9.5, 1.6, 10.5], target: [0.4, 2.1, 0.5], mm: 32, fstop: 5.6, focus: 'target' } },
   // FIRE (DRAGONS.md): Charcoal's standard orange-red fire - head low, a 26 m jet (32 mm, 3/4 side)
   { id: 'charcoal-fire', set: 'field', creatures: ['charcoal'], dur: 3, face: -80, fire: { charcoal: { palette: 'standard', length: 26, width: 7 } },
     pose: { charcoal: { name: 'fire', t0: 1.6, aim: [0.05, -0.05] } },
@@ -74,10 +74,10 @@ export const SHOTS = [
     cam: { ground: true, pos: [0, 1.0, 0], lookAt: [-12, 92, 390], mm: 40, fstop: 4 } },
   // Starlight's dive-bomb (3C): the half-folded "M" stoop, steep, toward the ground (35 mm from below)
   { id: 'starlight-dive', set: 'ground', creatures: ['starlight'], dur: 3, face: 160, haze: 2.4, fill: true,
-    flyer: { name: 'starlight', at: [40, 150, 330], heading: 200, pitch: 52, roll: 0.15 },
+    flyer: { name: 'starlight', at: [20, 115, 215], heading: -125, pitch: 50, roll: 0.1 },
     tower: { at: [-40, 0, 300], r: 3.6, h: 21, capH: 6.5 }, trees: true,
-    pose: { starlight: { name: 'dive', fold: 0.62, look: [0, 0.35] } },
-    cam: { ground: true, pos: [0, 1.2, 0], lookAt: [32, 140, 320], mm: 35, fstop: 4 } },
+    pose: { starlight: { name: 'dive', fold: 0.85, look: [0, 0.35] } },
+    cam: { ground: true, pos: [0, 1.2, 0], lookAt: [12, 100, 205], mm: 28, fstop: 4 } },
   // the gold hatchling on the bedding (1A): 85 mm macro, focus on the eye; weak, pushing up on its
   // wrists, head too heavy
   { id: 'hatchling-macro', set: 'bed', creatures: ['hatchling'], dur: 3, face: -40,
@@ -392,7 +392,8 @@ function stageTakeoff(S, shot, lt) {
   const tl = lt + (po.t0 ?? 0);
   const sc = Math.sqrt(c.L / 36), T1 = 1.5 * sc, T2 = T1 + 0.6 * sc, T3 = T2 + 1.2 * sc;
   const hz = (c.config.flapHz ?? 0.42) * 1.12;
-  const bursts = [T3 + 0.45, T3 + 0.45 + 1 / hz, T3 + 0.45 + 2 / hz, T3 + 0.45 + 3 / hz];
+  // the half-opened wings' first push at the top of the vault, then every downstroke
+  const bursts = [T2 + 0.7 * sc, T3 + 0.45, T3 + 0.45 + 1 / hz, T3 + 0.45 + 2 / hz, T3 + 0.45 + 3 / hz];
   const yaw = c.root.rotation.y;
   const fwd = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
   // the contacts of the crouch (computed once: a pure function of the shot)

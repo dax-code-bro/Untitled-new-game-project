@@ -275,13 +275,17 @@ function eyes(pb, yaw = 0, pitch = 0) {
 function tailCurve(pb, t, o = {}) {
   const ts = tailNames(pb.c);
   const n = ts.length;
-  const sway = o.sway ?? 0.05, curl = o.curl ?? 0, droop = o.droop ?? 0, lift = o.lift ?? 0;
+  const sway = o.sway ?? 0.05, curl = o.curl ?? 0, droop = o.droop ?? 0, lift = o.lift ?? 0, sag = o.sag ?? 0;
+  // sag: a further bend down spread over the first ~60% of the tail (a heavy tail hangs in an
+  // arc and its end lies on the ground; groundTail lays it along the ground)
+  const sw = ts.map((_, i) => { const f = i / (n - 1); return f < 0.03 || f > 0.5 ? 0 : Math.sin(Math.PI * (f - 0.03) / 0.47); });
+  const swS = sw.reduce((a, b) => a + b, 0) || 1;
   ts.forEach((name, i) => {
     const f = i / (n - 1);
     const s = Math.sin(t * TAU * (o.swayHz ?? 0.07) - i * 0.22);
     // (a positive x rotation RAISES a backward-pointing bone: droop is negative)
     const base = i < 6 ? -(droop - 5 * deg) / 6 : 0;
-    pb.add(name, base + lift * (1 - f) * 2 / n, (sway * s + curl * f) * 2.5 / n, 0);
+    pb.add(name, base - sag * sw[i] / swS + lift * (1 - f) * 2 / n, (sway * s + curl * f) * 2.5 / n, 0);
   });
 }
 
@@ -305,7 +309,7 @@ export function rest(c, o = {}) {
 /** Stand parameters per dragon (DESIGN stand: neck rise, head pitch, tail droop) */
 function standParams(c) {
   const s = c.anatomy.design.stand;
-  return { neckRise: s.neckRise * deg, neckTop: (s.neckTop ?? s.neckRise - 25) * deg, headPitch: s.headPitch * deg, tailDroop: s.tailDroop * deg, lean: s.forearmLean * deg, rise: s.humerusRise * deg };
+  return { neckRise: s.neckRise * deg, neckTop: (s.neckTop ?? s.neckRise - 25) * deg, headPitch: s.headPitch * deg, tailDroop: s.tailDroop * deg, tailSag: (s.tailSag ?? 62) * deg, lean: s.forearmLean * deg, rise: s.humerusRise * deg };
 }
 
 /**
@@ -362,7 +366,7 @@ export function stand(c, o = {}) {
   const lk = o.look || [0, 0];
   const calm = o.drapeBuild ? 0 : 1;
   look(pb, lk[0] + 0.03 * wob(t * 0.3, 1) * calm, lk[1] + 0.015 * br + 0.015 * wob(t * 0.25, 2) * calm);
-  tailCurve(pb, t, { sway: 0.05 * calm, droop: o.tailDroop ?? sp.tailDroop, curl: o.tailCurl ?? 0.3, swayHz: 0.05 });
+  tailCurve(pb, t, { sway: 0.05 * calm, droop: o.tailDroop ?? sp.tailDroop, sag: o.tailSag ?? sp.tailSag, curl: o.tailCurl ?? 0.3, swayHz: 0.05 });
   plantAll(pb, o);
   common(pb, { ...o, jaw: (o.jaw ?? 0) + 0.012 * br }, t);
   drape(pb, 'stand');
@@ -688,6 +692,11 @@ export function dive(c, o = {}) {
     pb.add(`w_${sd}_2`, 0, s * 1.95 * f, s * -0.08 * f, 'YZX');
     const nF = c.anatomy.wings[0].fingers.length;
     for (let d = 0; d < nF; d++) pb.add(`w_${sd}_f${d}_0`, 0, s * -0.12 * f * d, 0, 'YZX');
+    // the legs drawn in tight under the tail base, the feet clenched (a stooping raptor)
+    pb.add(`hl_${sd}_0`, 0.2 * f, s * 0.32 * f, 0);
+    pb.add(`hl_${sd}_1`, -0.25 * f, 0, 0);
+    pb.add(`hl_${sd}_2`, 0.35 * f, 0, 0);
+    for (let i = 0; i < 4; i++) pb.add(`hl_${sd}_t${i}`, i === 0 ? -0.35 * f : 0.6 * f, 0, 0);
   }
   pb.u.billowL = pb.u.billowR = 0.1 + 0.2 * (1 - f);
   pb.rig = { ...p.rig };

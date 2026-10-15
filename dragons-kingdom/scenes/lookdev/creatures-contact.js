@@ -1,11 +1,13 @@
-// Contact sheet / turntable of every Episode 1 creature (PROVISIONAL designs) under one
+// Contact sheet / turntable of every Episode 1 dragon (scenes/lib/creatures/DESIGN.md: two hind
+// legs, the wings are the front limbs and carry weight on the wrist pads, horns) under one
 // neutral daylight sky: Poly Haven kloofendal_48d_partly_cloudy (CC0), its sun extracted into
 // a shadow-casting light, on plain photographed ground. The camera stays put relative to the
 // sun (sun from the front-left of the camera, 48 degrees up) and the creature turns on a
 // turntable, so every view is lit the same way:
-//   t = 0..3 Charcoal, 4..7 Leaf, 8..11 Starlight, 12..15 hatchling, 16..19 scout
-//   (each: front 3/4, left side, rear 3/4, right side), 20 the scale lineup with a person,
-//   21-23 Charcoal, Leaf and Starlight gliding with the wings spread (seen from above-front).
+//   t = 0..3 Charcoal (36 m), 4..7 Leaf (9 m, sitting like a dog), 8..11 Starlight (72 m),
+//   12..15 the gold hatchling (1 m, lying weak), 16..19 the scout (6.8 m)
+//   (each: front 3/4, left side, rear 3/4, right side), 20 the scale lineup with a 1.8 m person,
+//   21-24 Charcoal, Leaf, Starlight and the scout gliding, wings spread (seen from above-front).
 //   (No species: every dragon is its own design - DRAGONS.md.)
 //   node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 1 --workers 1 --out output/creatures-contact
 // then tile the 21 frames (README in scenes/lib/creatures/ has the ffmpeg line).
@@ -18,7 +20,7 @@ const VIEWS = [{ yaw: 35, el: 0.16 }, { yaw: 90, el: 0.1 }, { yaw: 145, el: 0.2 
 const D2R = Math.PI / 180;
 
 export const meta = {
-  title: 'Creature contact sheet (provisional designs)', duration: NAMES.length * 4 + 1 + 3, seed: 3,
+  title: 'Dragon contact sheet', duration: NAMES.length * 4 + 1 + 4, seed: 3,
   cinematic: { grade: { toneMapping: 'agx', look: 'print', exposure: 0.2 }, grain: { amount: 0.8 }, bloom: { intensity: 0.01 },
     motionBlur: { mode: 'off' }, dof: { enabled: false }, atmosphere: { enabled: true, sky: 'scene', haze: 0.8 } },
 };
@@ -64,15 +66,13 @@ export async function setup(ctx) {
 function poseFor(c, name) {
   if (name === 'hatchling') return poses.lie(c, { t: 0, blink: false, sprawl: 1, raise: -0.5, headDown: 0.2, look: [0.2, -0.08], lidRelax: 0.3 });
   if (name === 'leaf') return poses.sit(c, { t: 0, blink: false, look: [0.2, -0.05] });
-  if (name === 'scout') return poses.glide(c, { t: 0, blink: false, bank: 0, dihedral: 0.08 });   // seen in flight only
   return poses.stand(c, { t: 0, blink: false, look: [0.15, -0.02] });
 }
-const AIR = { scout: 0.35 };
 
 export function update(t, ctx) {
   const { camera } = ctx;
-  const k = Math.max(0, Math.min(NAMES.length * 4 + 3, Math.round(t)));   // frame time (sub-frames never cross views)
-  const GLIDE = ['charcoal', 'leaf', 'starlight'];
+  const k = Math.max(0, Math.min(NAMES.length * 4 + 4, Math.round(t)));   // frame time (sub-frames never cross views)
+  const GLIDE = ['charcoal', 'leaf', 'starlight', 'scout'];
   const sunAz = Math.atan2(S.sunDir.x, S.sunDir.z);
   // the camera looks along +z' where the sun comes from 40 degrees to its left and is in front
   const camAz = sunAz + Math.PI + 40 * D2R;
@@ -84,7 +84,7 @@ export function update(t, ctx) {
     const n = NAMES[Math.floor(k / 4)], v = VIEWS[k % 4];
     const c = S.C[n];
     c.root.visible = true;
-    c.root.position.set(0, (AIR[n] ?? 0) * c.L, 0);
+    c.root.position.set(0, 0, 0);
     // turntable: the creature turns, the camera and the sun stay
     c.root.rotation.set(0, camAz + Math.PI - v.yaw * D2R, 0);
     c.setPose(poseFor(c, n));
@@ -136,13 +136,16 @@ export function update(t, ctx) {
     S.human.root.visible = true;
     S.place(hp.x, hp.z, Math.atan2(-fwd.x, -fwd.z));
     const total = x + 2;
-    center = side.clone().multiplyScalar(-total * 0.5).setY(9);
-    const dist = total * 0.5 / Math.tan(24 * D2R);
-    camera.position.copy(center).addScaledVector(fwd, -dist);
-    camera.position.y = 4;
+    // a level camera (verticals stay vertical) far enough back to hold the whole row, the ground
+    // line low in the frame
     camera.fov = 30;
-    camera.lookAt(center.clone().setY(10));
-    size = new THREE.Vector3(total, 20, 60);
+    const halfH = Math.tan(15 * D2R), halfW = halfH * (camera.aspect || 16 / 9);
+    const dist = total * 0.5 * 1.04 / halfW;
+    const frameH = 2 * dist * halfH;
+    center = side.clone().multiplyScalar(-total * 0.5).setY(frameH * 0.5 - frameH * 0.12);
+    camera.position.copy(center).addScaledVector(fwd, -dist);
+    camera.lookAt(center);
+    size = new THREE.Vector3(total, 40, 60);
   }
   camera.near = Math.max(0.01, camera.position.distanceTo(center) * 0.02);
   camera.far = 20000;
