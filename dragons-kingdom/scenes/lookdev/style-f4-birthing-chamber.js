@@ -186,7 +186,7 @@ float dkShellD;`)
   }
 
   // ---- the hatchling (provisional design: 24-karat-gold look, wet, no glow)
-  const hatch = await createCreature('hatchling', { quality: 'hero' });
+  const hatch = await createCreature('hatchling', { quality: ctx.preset === 'final' || ctx.preset === 'final-fast' ? 'hero' : 'standard' });
   scene.add(hatch.root);
 
   // ---- the key: a clay oil lamp on the nest's frame at frame left, low and close; warm
@@ -293,16 +293,22 @@ function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch) {
 // screen-left and a little toward camera; Alexandria kneels at screen right (east)
 const VIEW = new THREE.Vector3(0.12, 0, -1).normalize();
 const CAM_R = new THREE.Vector3(-VIEW.z, 0, VIEW.x);                 // screen right (horizontal)
-const FWD = CAM_R.clone().multiplyScalar(-0.55).addScaledVector(VIEW, -0.83).normalize();
+// (the wyvern newborn, 1 m long with a big head: its head points screen-left and a little toward
+// the lens - a three-quarter profile, so the snout, the mouth line and the near eye read; seen
+// square on, the domed newborn head foreshortens into a ball)
+const FWD = CAM_R.clone().multiplyScalar(-0.82).addScaledVector(VIEW, -0.57).normalize();
+// camera variants (--time 100..): distance from the aim point (m), lens (mm), height above the
+// head (m), sideways offset (m, + = screen right)
+const CAMS = { 100: { d: 1.55, mm: 55, h: 0.12, r: 0.1 }, 103: { d: 2.1, mm: 40, h: 0.18, r: 0.1 }, 104: { d: 1.55, mm: 55, h: 0.35, r: 0.25 } };
 
 export function update(t, ctx) {
   const { hatch, egg, frags, alex, fcloth, NY } = S;
-  const T0 = t; if (Math.round(t) > 100) t = 2;
-  // the hatchling: half out of the shell, exhausted - head low on the cloth, eyes half closed, one
-  // foreleg slipped forward, breathing hard
-  const p = poses.lie(hatch, { t, raise: -0.1, headDown: 0.16, look: [0.3, -0.04], lidRelax: 0.5, breathe: 0.55 });
-  if (p.bones['fl_L_0']) { p.bones['fl_L_0'][0] += 0.55; p.bones['fl_L_0'][2] += 0.25; }
-  if (p.bones['fl_L_1']) p.bones['fl_L_1'][0] -= 0.9;
+  const T0 = t; if (t >= 99.5) t = 2;
+  const CV = CAMS[Math.round(T0)] || CAMS[100];
+  // the hatchling: out of the shell, exhausted - pushing weakly up on its wrists with its chest on
+  // the cloth, the head too heavy and low, eyes half closed, breathing hard (poses.pushUp: the
+  // newborn's sprawl, its wings folded on its back, two legs splayed)
+  const p = poses.pushUp(hatch, { t, k: 0.3, tremble: 0.6, look: [0.25, -0.06], lidRelax: 0.5, breathe: 0.55 });
   p.groundBones = [];
   hatch.setPose(p);
   const yaw = Math.atan2(FWD.x, FWD.z);
@@ -364,21 +370,24 @@ export function update(t, ctx) {
   const endR = base.clone().addScaledVector(across, 0.22).add(new THREE.Vector3(0, 0.035, 0));     // her hands
   lookAtPoint(alex, chest, 0.8);
 
-  // camera: just above the bedding, close on the hatchling's face, looking along VIEW
+  // camera: low over the bedding (a little above the head), framing the head and her hands with
+  // the folded cloth, the shell behind; looking along VIEW
   const cam = ctx.camera;
   const head = new THREE.Vector3().setFromMatrixPosition(hatch.bones[hatch.boneIndex.head].matrixWorld);
-  const aim = head.clone().lerp(endR, 0.42).addScaledVector(VIEW, 0.05).add(new THREE.Vector3(0, 0.0, 0));
-  cam.position.copy(aim).addScaledVector(VIEW, -0.9).addScaledVector(CAM_R, 0.18).add(new THREE.Vector3(0, 0.22, 0));
-  cam.lookAt(aim.clone().add(new THREE.Vector3(0, 0.07, 0)));
+  const aim = head.clone().lerp(endR, 0.45);
+  cam.position.copy(aim).addScaledVector(VIEW, -CV.d).addScaledVector(CAM_R, CV.r).setY(head.y + CV.h);
+  cam.lookAt(aim.clone().add(new THREE.Vector3(0, 0.03, 0)));
   if (Math.round(T0) === 101) { cam.position.copy(aim).addScaledVector(VIEW, -1.6).addScaledVector(CAM_R, 0.9).add(new THREE.Vector3(0, 1.1, 0)); cam.lookAt(aim); }
   if (Math.round(T0) === 102) { cam.position.set(-2.6, 1.7, 2.2); cam.lookAt(1.5, 1.6, -0.6); }
   cam.updateMatrixWorld(true);
   if (T0 === 2) console.warn('[f4] NY', NY.toFixed(3), 'head', head.toArray().map((v) => v.toFixed(3)).join(','), 'cam', cam.position.toArray().map((v) => v.toFixed(3)).join(','), 'egg', egg.position.toArray().map((v) => v.toFixed(3)).join(','));
   ctx.lens.sensor = 'super35';
-  ctx.lens.focalLength = 55;
+  ctx.lens.focalLength = Math.round(T0) === 101 || Math.round(T0) === 102 ? 35 : CV.mm;
   ctx.lens.fstop = 5.6;
-  // focus between its eye and her hands (both hold focus at T4)
-  ctx.lens.focus = cam.position.distanceTo(head.clone().lerp(endR, 0.35));
+  // focus on its near eye (her hands, a little nearer, stay within the depth of field at T5.6)
+  const eyeB = hatch.boneIndex.eye_L !== undefined ? hatch.bones[hatch.boneIndex.eye_L] : null;
+  const eyeP = eyeB ? new THREE.Vector3().setFromMatrixPosition(eyeB.matrixWorld) : head;
+  ctx.lens.focus = cam.position.distanceTo(eyeP.clone().lerp(endR, 0.25));
   ctx.lens.shutterAngle = 180;
   ctx.lens.iso = 1600;
 }

@@ -74,7 +74,7 @@ export const meta = {
     shadows: { cascades: 3, maxDistance: 400 },
     ao: { enabled: true, radius: 1.6 },
     dof: { samples: 48 },
-    grade: { exposure: 2.0, whiteBalance: 5900, contrast: 1.04, saturation: 1.0 },
+    grade: { exposure: 1.7, whiteBalance: 5900, contrast: 1.04, saturation: 1.0 },
   }),
 };
 
@@ -224,7 +224,9 @@ export async function setup(ctx) {
   }, 9));
 
   // ---- the dragons (provisional designs)
-  const [charcoal, leaf] = await Promise.all([createCreature('charcoal', { quality: 'hero' }), createCreature('leaf', { quality: 'hero' })]);
+  // (hero meshes for the 4K frame; the standard build for look checks at lower presets)
+  const q = ctx.preset === 'final' || ctx.preset === 'final-fast' ? 'hero' : 'standard';
+  const [charcoal, leaf] = await Promise.all([createCreature('charcoal', { quality: q }), createCreature('leaf', { quality: q })]);
   scene.add(charcoal.root, leaf.root);
   const rig = createSaddle(charcoal, {});
   createSaddle(leaf, {});                                    // Abby is fixing a strap on it
@@ -288,17 +290,30 @@ export async function setup(ctx) {
   scene.add(strap, breast);
 
   camera.near = 0.3; camera.far = 30000;
-  S = { sun, SUN, ocean, charcoal, leaf, rig, seatW, remi, abby, keeper, strap, breast, H, cdir, nearSide, toCam };
+  // the gangway in world space (accessRig's own geometry: hinged at the deck edge z = D/2, its
+  // boards dropping DROP over GL toward the bolster on his back): a point on the walking surface
+  // at fraction u of its length and x metres across it
+  const gyaw = Math.atan2(gz.x, gz.z);
+  const gX = new THREE.Vector3(Math.cos(gyaw), 0, -Math.sin(gyaw));
+  const gang = Math.asin(Math.min(0.6, DROP / GL));
+  const onGangway = (u, x = 0) => {
+    const z = deckD / 2 + Math.cos(gang) * GL * u;
+    const y = rigGround + rigH + 0.205 + (0.05 - DROP) * u;
+    return rigO.clone().addScaledVector(gz, z).addScaledVector(gX, x).setY(y);
+  };
+  S = { sun, SUN, ocean, charcoal, leaf, rig, seatW, remi, abby, keeper, strap, breast, H, cdir, nearSide, toCam, onGangway, gz, gX };
   console.warn('[f2] sun', SUN.toArray().map((v) => v.toFixed(3)).join(','), 'rigH', rigH.toFixed(2), 'seat', seat0.toArray().map((v) => v.toFixed(2)).join(','));
 }
 
-// close-up checks (not part of the frame): --time 101 Leaf + Abby, 102 Remi, 103 the rig
-const DEBUG = { 101: 'leaf', 102: 'remi', 103: 'rig' };
+// close-up checks (not part of the frame), all frozen at t = 2: --time 100 the frame itself,
+// 101 Leaf + Abby, 102 Remi on the gangway, 103 the rig, 104 Charcoal's near side, 105 his head.
+// One job renders them all: --preset draft --fps 1 --start 100 --seconds 6
+const DEBUG = { 101: 'leaf', 102: 'remi', 103: 'rig', 104: 'side', 105: 'head' };
 
 export function update(t, ctx) {
-  const DEBUG_CAM = DEBUG[Math.round(t)] || null;
-  if (DEBUG_CAM) t = 2;
-  const { sun, SUN, ocean, charcoal, leaf, remi, abby, keeper, strap, breast, H, cdir, nearSide, toCam } = S;
+  const DEBUG_CAM = t >= 99.5 ? DEBUG[Math.round(t)] || null : null;
+  if (t >= 99.5) t = 2;
+  const { sun, SUN, ocean, charcoal, leaf, remi, abby, keeper, strap, breast, H, cdir, nearSide, toCam, onGangway, gz, gX } = S;
   ocean.update(t);
   // Charcoal breathes (the pose's breathing only; he lies still)
   const lp0 = poses.lie(charcoal, { t, raise: -0.62, headDown: 0.32, look: [0.3, 0.02], lidRelax: 0.42 });
@@ -307,25 +322,35 @@ export function update(t, ctx) {
   charcoal.root.updateMatrixWorld(true);
   const cp = L.charcoal;
 
-  // Remi beside the foreleg on the near side, reaching up for the hanging strap end
+  // Remi at the access rig: down the gangway from the deck, two steps from its lower end on
+  // Charcoal's back, he reaches for the mounting strap that hangs from the riding rig's frame
+  // (he faces down the gangway, toward the lens; the seat is at his right hand)
   const seat = S.seatW();
-  const shoulder = cp.clone().addScaledVector(cdir, 7.6).addScaledVector(nearSide, 5.4);
-  const ry = H(shoulder.x, shoulder.z);
-  const faceDir = cp.clone().addScaledVector(cdir, 7.0).sub(shoulder).setY(0).normalize();
+  const foot = onGangway(0.92, -0.12);
+  const ry = foot.y;
   remi.update(t);
-  placeCharacter(remi, shoulder.x, ry, shoulder.z, Math.atan2(faceDir.x, faceDir.z) - 0.35);
+  const fwd = gz.clone();
+  placeCharacter(remi, foot.x, ry, foot.z, Math.atan2(fwd.x, fwd.z) + 0.25);
   remi.update(t);
-  const grip = shoulder.clone().addScaledVector(faceDir, 0.42).setY(ry + 2.12).addScaledVector(nearSide, -0.05);
-  limbIK(remi, 'arm', 'R', grip, grip.clone().addScaledVector(faceDir, -0.6).add(new THREE.Vector3(0, -0.5, 0)).addScaledVector(nearSide, 0.4));
-  lookAtPoint(remi, grip.clone().add(new THREE.Vector3(0, 0.3, 0)), 0.8);
-  // the strap: from the seat over the shoulder, down the flank, its end just above his hand
+  const shoulder = bonePos(remi, 'upperarm01.R');
+  const strapTop = seat.clone().add(new THREE.Vector3(0, 0.95, 0)).addScaledVector(nearSide, -0.55);
+  // (the arm reaches out ~0.55 m toward the strap's top, above shoulder height)
+  const grip = shoulder.clone().addScaledVector(strapTop.clone().sub(shoulder).setY(0).normalize(), 0.45).add(new THREE.Vector3(0, 0.3, 0));
+  limbIK(remi, 'arm', 'R', grip, shoulder.clone().add(new THREE.Vector3(0, -0.6, 0)).addScaledVector(fwd, -0.3).addScaledVector(gX, 0.3));
+  // the other hand on the gangway's rail
   {
-    const top = seat.clone().addScaledVector(nearSide, 1.6).add(new THREE.Vector3(0, -0.3, 0));
+    const railP = onGangway(0.88, -0.62).add(new THREE.Vector3(0, 0.98, 0));
+    const shL = bonePos(remi, 'upperarm01.L');
+    limbIK(remi, 'arm', 'L', railP, shL.clone().add(new THREE.Vector3(0, -0.5, 0)).addScaledVector(gX, -0.4));
+  }
+  lookAtPoint(remi, grip.clone().add(new THREE.Vector3(0, 0.15, 0)), 0.8);
+  // the strap: from the rig's frame over his hand, its free end hanging below it
+  {
     const hand = bonePos(remi, 'wrist.R');
-    const mid = top.clone().lerp(hand, 0.45).addScaledVector(nearSide, 1.6);
-    const pts = [seat.clone().addScaledVector(nearSide, 0.6), top, mid, hand.clone().add(new THREE.Vector3(0, 0.05, 0)), hand.clone().add(new THREE.Vector3(0, -0.35, 0)).addScaledVector(nearSide, 0.05)];
+    const mid = strapTop.clone().lerp(hand, 0.5).add(new THREE.Vector3(0, -0.12, 0));
+    const pts = [strapTop, mid, hand.clone().add(new THREE.Vector3(0, 0.05, 0)), hand.clone().add(new THREE.Vector3(0, -0.4, 0)).addScaledVector(fwd, 0.04)];
     strap.geometry.dispose();
-    strap.geometry = strapRibbon(new THREE.CatmullRomCurve3(pts), 0.075, 0.008, 64, nearSide);
+    strap.geometry = strapRibbon(new THREE.CatmullRomCurve3(pts), 0.06, 0.008, 48, gX);
   }
 
   // Leaf sitting upright in front of the stable door, three-quarters to camera, wings folded
@@ -376,8 +401,10 @@ export function update(t, ctx) {
   cam.lookAt(look.x, H(look.x, look.z) + 3.6, look.z);
   applyShake(cam, t, { kind: 'handheld', amount: 0.12, seed: 2 });
   if (DEBUG_CAM === 'leaf') { const q = lp.clone().addScaledVector(ldir, 4).addScaledVector(lside, -9); cam.position.set(q.x, gy + 2.2, q.z); cam.lookAt(lp.x, gy + 1.6, lp.z); }
-  if (DEBUG_CAM === 'remi') { const q = shoulder.clone().addScaledVector(toCam, 9); cam.position.set(q.x, ry + 1.8, q.z); cam.lookAt(shoulder.x, ry + 1.6, shoulder.z); }
-  if (DEBUG_CAM === 'rig') { const q = cp.clone().addScaledVector(toCam, 40).addScaledVector(cdir, 10); cam.position.set(q.x, ry + 6, q.z); cam.lookAt(cp.x, ry + 6, cp.z); }
+  if (DEBUG_CAM === 'remi') { const q = foot.clone().addScaledVector(toCam, 10).add(new THREE.Vector3(0, 1.5, 0)); cam.position.copy(q); cam.lookAt(foot.x, ry + 1.0, foot.z); }
+  if (DEBUG_CAM === 'rig') { const q = cp.clone().addScaledVector(toCam, 40).addScaledVector(cdir, 10); cam.position.set(q.x, H(cp.x, cp.z) + 6, q.z); cam.lookAt(cp.x, H(cp.x, cp.z) + 5, cp.z); }
+  if (DEBUG_CAM === 'side') { const q = cp.clone().addScaledVector(toCam, 34).addScaledVector(cdir, 2); cam.position.set(q.x, H(q.x, q.z) + 1.8, q.z); cam.lookAt(cp.x, H(cp.x, cp.z) + 2.5, cp.z); }
+  if (DEBUG_CAM === 'head') { const hb = new THREE.Vector3().setFromMatrixPosition(charcoal.bones[charcoal.boneIndex.head].matrixWorld); const q = hb.clone().addScaledVector(toCam, 9).addScaledVector(cdir, 3); cam.position.set(q.x, H(q.x, q.z) + 1.4, q.z); cam.lookAt(hb.x, hb.y - 0.3, hb.z); }
   cam.updateMatrixWorld(true);
   if (t === 2) {
     cam.updateProjectionMatrix();
@@ -390,8 +417,9 @@ export function update(t, ctx) {
 
   ctx.lens.sensor = 'super35';
   ctx.lens.focalLength = DEBUG_CAM ? 35 : 50;
-  ctx.lens.fstop = 4;
+  ctx.lens.fstop = DEBUG_CAM ? 11 : 4;
   ctx.lens.focusTarget = DEBUG_CAM === 'leaf' ? leaf.root : remi.root;
+  if (DEBUG_CAM === 'side' || DEBUG_CAM === 'head' || DEBUG_CAM === 'rig') ctx.lens.focusTarget = charcoal.root;
   ctx.lens.shutterAngle = 180;
   ctx.lens.iso = 400;
 }

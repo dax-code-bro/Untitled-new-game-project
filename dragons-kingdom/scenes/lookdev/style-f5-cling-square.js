@@ -18,8 +18,8 @@
 // cheese and fish, bunting in deep swags, banners, the musicians right of centre with their ring
 // of listeners, children by the vendor stall and the fountain. Most of the crowd has not noticed
 // yet. At the west edge of the square the watchman points north; beyond the north roofs, nearly
-// head-on over the hills, hazed by ~280 m of air, Starlight - her wingspan wider than the whole
-// north row although she is four times as far away as it is. (The south row of houses behind the camera is left
+// head-on over the hills, hazed by ~195 m of air, Starlight - her wingspan wider than the whole
+// north row although she is three times as far away as it is. (The south row of houses behind the camera is left
 // out of this set-up - a 'wild wall', as a crew would strike it for a crane shot.)
 //   node render/render.mjs --still scenes/lookdev/style-f5-cling-square.js --time 2 --preset final --png out.png
 import * as THREE from 'three';
@@ -41,8 +41,10 @@ import { filmFinish } from './finish.js';
 
 const HDRI_ROT = -1.79;           // the photographed sun south-west, behind the camera (as the map fixes it)
 const CAM_P = [3.5, 13.0, 44.0], CAM_T = [-2.5, 8.6, -12.0], LENS = 18;
-// Starlight: north of the town, ~180 m beyond the north row, gliding in nearly head-on
-const STAR = { x: -24, y: 36, z: -235, yaw: 0.14 };
+// Starlight: north of the town, ~120 m beyond the north row, gliding in nearly head-on. (Two-legged
+// wyvern build, 72 m, ~137 m span: from ~195 m her spread wings are wider on screen than the whole
+// north row of houses ~60 m from the lens - immense, still clearly beyond the roofs.)
+const STAR = { x: -20, y: 34, z: -150, yaw: 0.14 };
 const WATCH = { x: -8.2, z: 15.2 };
 
 export const meta = {
@@ -234,7 +236,7 @@ export async function setup(ctx) {
   scene.add(watchman.root);
 
   // ---- Starlight with Queen Fall in the riding rig (provisional designs; no glow)
-  const star = await createCreature('starlight', { quality: 'hero' });
+  const star = await createCreature('starlight', { quality: ctx.preset === 'final' || ctx.preset === 'final-fast' ? 'hero' : 'standard' });
   scene.add(star.root);
   const human = await loadHuman();
   mountRider(star, createSaddle(star, {}), createRider(human, { outfit: 'fall', lean: 0.25 }));

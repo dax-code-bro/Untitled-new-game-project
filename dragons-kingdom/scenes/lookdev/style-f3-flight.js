@@ -142,56 +142,75 @@ export async function setup(ctx) {
   for (const [n, list] of Object.entries(rocks)) if (list.length) scene.add(kit.instance(n, list));
 
   // the dragons and their riders (provisional designs; riders from the humans cast builds)
-  const [charcoal, leaf] = await Promise.all([createCreature('charcoal', { quality: 'standard' }), createCreature('leaf', { quality: 'standard' })]);
+  const q = ctx.preset === 'final' || ctx.preset === 'final-fast' ? 'hero' : 'standard';
+  const [charcoal, leaf] = await Promise.all([createCreature('charcoal', { quality: q }), createCreature('leaf', { quality: q })]);
   scene.add(charcoal.root, leaf.root);
   const human = await loadHuman();
   const remi = createRider(human, { outfit: 'remi', lean: 0.15 });
   const abby = createRider(human, { outfit: 'abby', lean: 0.18, reach: 0.45 });
-  mountRider(charcoal, createSaddle(charcoal, {}), remi);
-  mountRider(leaf, createSaddle(leaf, {}), abby);
+  const tackC = createSaddle(charcoal, {}), tackL = createSaddle(leaf, {});
+  mountRider(charcoal, tackC, remi);
+  mountRider(leaf, tackL, abby);
+  // a seated rider carries stirrups under the fitted boots (rider.js): the saddle's own hanging
+  // pair is hidden, as in the creature library's shots
+  for (const tk of [tackC, tackL]) for (const m of tk.meshes) if (m.userData.stirrup && tk.riderStirrups) m.visible = false;
 
   camera.near = 0.5; camera.far = 30000;
   S = { sun, SUN, ocean, charcoal, leaf, remi, abby, H, N };
 }
 
-// the wingbeat phase that puts cycle position `c` (0 top, 0.28 wings level on the downstroke) at t = 2
+// the wingbeat phase that puts cycle position `c` (0 top of the upstroke, 0.57 the bottom of the
+// downstroke) at t = 2
 const atCycle = (cr, c) => c - 2 * (cr.config.flapHz ?? 1);
 const shadowOn = (p, L) => new THREE.Vector3(p.x - p.y / L.y * L.x, 0, p.z - p.y / L.y * L.z);
+// The stroke at the frame. Charcoal has drawn level and coasts on his spread wings between beats
+// (a 36 m animal glides wherever it can - DESIGN 2.8), so nothing of his 64 m span smears across
+// the 180-degree shutter and the grey membrane with its black stripes reads whole from above;
+// Leaf works to keep station with quick beats - here late in the downstroke (wings below the
+// body, the rider clear above them). --time 100.. renders alternatives (frozen at t = 2).
+const STROKE = { c: 'glide', l: 0.45 };
+const VARIANTS = { 101: { c: 'glide', l: 0.62 }, 102: { c: 'glide', l: 0.75 }, 103: { c: 0.5, l: 0.45 }, 104: { c: 'glide', l: 0.3 } };
 
 export function update(t, ctx) {
+  const st = t >= 99.5 ? (VARIANTS[Math.round(t)] || STROKE) : STROKE;
+  if (t >= 99.5) t = 2;
   const { sun, SUN, ocean, charcoal, leaf, remi, abby, N } = S;
   ocean.update(t);
   const z0 = SPEED * (t - 2);                 // the formation's travel along the coast (+z)
   const cx = coastX(N, z0);
 
-  // Charcoal: farther out, drawn level with Leaf; slow heavy beats (the downstroke)
-  charcoal.setPose(poses.flight(charcoal, { t, phase: atCycle(charcoal, 0.3), bank: 0.02, bodyPitch: -0.02, look: [-0.18, 0.02] }));
-  charcoal.root.position.set(cx + 330, 28 + 0.8 * Math.sin(t * 0.6), z0 + 14);
+  // Charcoal: farther out, drawn level with Leaf; slow heavy beats
+  charcoal.setPose(st.c === 'glide'
+    ? poses.glide(charcoal, { t, bank: 0.03, dihedral: 0.08, droop: 0.06, bodyPitch: -0.02, look: [-0.22, 0.02] })
+    : poses.flight(charcoal, { t, phase: atCycle(charcoal, st.c), bank: 0.02, bodyPitch: -0.02, look: [-0.22, 0.02] }));
+  charcoal.root.position.set(cx + 290, 30 + 0.8 * Math.sin(t * 0.6), z0 + 12);
   charcoal.root.rotation.set(0, 0.02, 0);
-  // Leaf: nearer the island, a length behind; quick corrective beats, glancing across at Charcoal
-  leaf.setPose(poses.flight(leaf, { t, corr: 1, phase: atCycle(leaf, 0.22), bank: 0.04, look: [-0.5, 0.05] }));
-  leaf.root.position.set(cx + 262, 24 + 0.6 * Math.sin(t * 1.3 + 1), z0 - 6);
+  // Leaf: nearer the island, half a length of Charcoal behind; quick corrective beats, glancing
+  // across at Charcoal
+  leaf.setPose(poses.flight(leaf, { t, corr: 1, phase: atCycle(leaf, st.l), bank: 0.04, look: [-0.5, 0.05] }));
+  leaf.root.position.set(cx + 225, 26 + 0.6 * Math.sin(t * 1.3 + 1), z0 - 8);
   leaf.root.rotation.set(0, -0.03, 0);
   remi.update(t); abby.update(t);
 
-  // camera ship: ~40 m off the cliffs, ~60 m up, matching speed, looking out to sea
+  // camera ship: ~20 m off the cliffs, 120 m up, matching their speed, looking out to sea and down
+  // on them (their right sides and backs, the riders, the sea floor and Charcoal's shadow)
   const cam = ctx.camera;
-  cam.position.set(cx + 20, 150, z0);
-  cam.lookAt(cx + 300, 29, z0 + 21);
-  applyShake(cam, t, { kind: 'aerial', amount: 0.3, seed: 4 });
+  cam.position.set(cx + 20, 120, z0 - 2);
+  cam.lookAt(cx + 265, 3, z0 + 10);
+  applyShake(cam, t, { kind: 'aerial', amount: 0.25, seed: 4 });
   cam.updateMatrixWorld(true);
   if (t === 2) {
-    cam.updateProjectionMatrix();
+    cam.filmGauge = 24.89; cam.setFocalLength(60); cam.updateProjectionMatrix();
     const scr = (p) => { const v = p.clone().project(cam); return [+(0.5 + v.x / 2).toFixed(3), +(0.5 - v.y / 2).toFixed(3)]; };
     console.warn('[f3] screen', JSON.stringify({ charcoal: scr(charcoal.root.position), leaf: scr(leaf.root.position), cShadow: scr(shadowOn(charcoal.root.position, SUN)), lShadow: scr(shadowOn(leaf.root.position, SUN)) }));
   }
 
   // sun shadow map around the pair and their shadows (the cascades cover the view)
-  sun.target.position.set(cx + 260, 0, z0);
+  sun.target.position.set(cx + 250, 0, z0 + 5);
   sun.position.copy(sun.target.position).addScaledVector(SUN, 600);
 
   ctx.lens.sensor = 'super35';
-  ctx.lens.focalLength = 58;
+  ctx.lens.focalLength = 60;
   ctx.lens.fstop = 5.6;
   ctx.lens.focusTarget = charcoal.root;
   ctx.lens.shutterAngle = 180;
