@@ -45,10 +45,10 @@ export function lookParams(THREE, look) {
       // GRAY membrane with BLACK STRIPES throughout: noise-warped bands across every panel
       // (stripes block the light, the grey skin between them lets a little through)
       // (DESIGN 2.7: sRGB ~#7d8086, linear ~0.2 - it must read clearly GRAY next to the black body)
-      membrane: lin(THREE, 0.19, 0.2, 0.215), trans: lin(THREE, 0.1, 0.1, 0.105), vein: lin(THREE, 0.12, 0.09, 0.09), memRough: 0.58, memSpec: 0.34, memSpecD: 0.55,
+      membrane: lin(THREE, 0.15, 0.158, 0.17), trans: lin(THREE, 0.08, 0.08, 0.085), vein: lin(THREE, 0.12, 0.09, 0.09), memRough: 0.58, memSpec: 0.34, memSpecD: 0.55,
       stripe: [1.0, 0.22, 0.6, 1.0], stripeCol: lin(THREE, 0.011, 0.011, 0.012),
       // horns: rough, dull, ridged old keratin (water buffalo), a little lighter where worn
-      horn: [lin(THREE, 0.02, 0.019, 0.018), lin(THREE, 0.075, 0.07, 0.064)], hornR: [0.82, 0.6, 2.2], claw: [lin(THREE, 0.018, 0.017, 0.016), lin(THREE, 0.06, 0.055, 0.05)],
+      horn: [lin(THREE, 0.016, 0.015, 0.014), lin(THREE, 0.05, 0.047, 0.043)], hornR: [0.82, 0.62, 2.2], claw: [lin(THREE, 0.018, 0.017, 0.016), lin(THREE, 0.06, 0.055, 0.05)],
       tooth: lin(THREE, 0.36, 0.3, 0.2), sclera: lin(THREE, 0.02, 0.018, 0.02),
       // BLUE eyes (a deep slate blue iris with a dark limbal ring; never emissive)
       iris: [lin(THREE, 0.026, 0.075, 0.21), lin(THREE, 0.005, 0.016, 0.055)],

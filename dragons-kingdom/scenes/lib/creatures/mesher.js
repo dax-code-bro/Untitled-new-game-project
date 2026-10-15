@@ -292,6 +292,28 @@ export function polygonize(model, opts) {
     if (d2(a, c) <= d2(b, d)) { tri(a, b, c); tri(a, c, d); } else { tri(a, b, d); tri(b, c, d); }
   }
   index = out.slice(0, nO);
+  // drop small disconnected islands: fragments a subtraction (the mouth cut, a socket) can leave
+  // floating; they ride with their bone and show as stray blobs (a lobe under the newborn's jaw).
+  // Every component smaller than 2% of the largest goes.
+  if (opts.dropIslands !== false && nO) {
+    const par = new Int32Array(nV);
+    for (let i = 0; i < nV; i++) par[i] = i;
+    const find = (a) => { while (par[a] !== a) { par[a] = par[par[a]]; a = par[a]; } return a; };
+    const unite = (a, b) => { a = find(a); b = find(b); if (a !== b) par[b] = a; };
+    for (let q = 0; q < nO; q += 3) { unite(index[q], index[q + 1]); unite(index[q], index[q + 2]); }
+    const cnt = new Map();
+    for (let q = 0; q < nO; q += 3) { const r = find(index[q]); cnt.set(r, (cnt.get(r) || 0) + 1); }
+    let big = 0;
+    for (const v of cnt.values()) big = Math.max(big, v);
+    const keep = new Set([...cnt.entries()].filter(([, v]) => v >= big * 0.02).map(([k]) => k));
+    if (keep.size < cnt.size) {
+      const out2 = new Uint32Array(nO);
+      let m = 0;
+      for (let q = 0; q < nO; q += 3) if (keep.has(find(index[q]))) { out2[m++] = index[q]; out2[m++] = index[q + 1]; out2[m++] = index[q + 2]; }
+      index = out2.slice(0, m);
+      nO = m;
+    }
+  }
 
   return {
     positions, normals, index,

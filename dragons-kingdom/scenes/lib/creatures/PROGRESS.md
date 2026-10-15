@@ -4,27 +4,40 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
-## Wyvern rework (2026-10-15, Daxtyn: TWO legs, wings = front limbs, horns; DESIGN.md) - IN PROGRESS
-Build plan of DESIGN.md section 8; state:
-- DONE anatomy.js rewritten: `DESIGNS` = appendix A in metres (+ build extras: `body` muscle/fat,
-  `bulk` leg/arm/neck mass for the giants, `fold.curl` finger curl, `headX`, `folds`, `crest`).
-  REST pose = glide planform (wings spread, legs trailing); SCULPT pose = legs standing (2-bone IK
-  at the design hip height), wing-arms half folded; `sculptLocal` carries rest -> sculpt.
-  Helper bones w_#_sh / hl_#_h follow half the humerus / femur (pose.js driveHelpers).
-  Wing arm on the shoulder: keel + pectoralis, hump, scapula, forearm column, wrist pad (sole),
-  thumb + claw; fingers per design (2-4, MC + phalanges, bones w_#_f<d>_<j>); hind legs with
-  hallux + 3 toes, heel pad; head lofted from the design head table; horn sets per DESIGN as
-  spline paths (parts.js keratin `path`); tail scute crest (double -> single); scout tail vane.
-- DONE kin.js (quaternions, FK, 2-bone IK, chain locals), creature.js (two skeletons: body and
-  solids bound in the SCULPT pose, membranes + finger tubes in the REST pose), wing.js (variable
-  fingers, propatagium root on the neck base), pose.js (helpers, grounding on toe/heel/wrist pads).
-- DONE poses.js rewritten (IK): stand (wing-walk), walk, rear, sit, crouch, lie (+sprawl), pushUp,
-  struggle, fire, flight, glide, dive, strike, sprint, mouthHold, launch, land, blend.
-- NEXT: materials (Charcoal membrane gray #7d8086 + black bands along every finger bone, wrist
-  pad callus), Leaf sit check, Starlight neck, scout membrane fin, hatchling head, tack (seat
-  over the notarium, girth groove), new lookdev shots + contact sheet, 4K renders.
-- Dev loop: scratchpad dragons2/tools/dev.sh <cfg.json> <name> [preset] [cols] (creatures-dev.js);
-  tools/build.mjs builds in Node and runs every pose.
+## Wyvern rework (2026-10-14/15, Daxtyn: TWO legs, wings = front limbs, horns; DESIGN.md)
+State (all committed; latest renders listed in README / the report):
+- DONE anatomy.js: `DESIGNS` = DESIGN appendix A in metres (+ build extras: `body` muscle/fat,
+  `bulk` limb mass, `fold.curl`, `headX`, `folds`, `crest`, `stand` incl. `tailSag`). REST pose =
+  glide planform (membranes + finger tubes bound there); SCULPT pose = standing legs (2-bone IK,
+  feet at `dims.footX` = max(1.06 hipX, 0.62 toeL) so the inner toes never meet) + half-folded
+  wing-arms (body and solids bound there); `sculptLocal` maps rest -> sculpt. Helper bones
+  w_#_sh / hl_#_h. Head lofted from the design table; horns as spline paths.
+- DONE kin.js, creature.js (two skeletons share the bones), wing.js, pose.js (helpers, grounding),
+  drape.js (stand/sit/lie/crouch drapes), dust.js (take-off dust, clods, scars).
+- DONE poses.js (IK): rest, stand (tail hangs in an arc, end on the ground: `tailSag`), walk,
+  rear, sit, crouch, lie (+sprawl), pushUp, struggle, fire, flight, glide, dive (legs drawn in,
+  feet clenched), strike, sprint, mouthHold, launch, land, blend, contactsOf. Flight/glide: legs
+  drawn together under the tail, toes clenched (negative x flexes toes toward the sole).
+- DONE rev. 1 after the first full renders (DESIGN 0 lists it): deeper/broader Charcoal skull,
+  neck narrower behind the jaws, thicker horn bases, thicker legs on Charcoal and Starlight,
+  blunter newborn snout (no hanging lobes: soft heads skip the retroarticular process, masseter
+  scaled), shallow nostrils (deep subtractions showed the sky through), eyes seated with more
+  eyeball showing (`eyeExpose` 62 adults), dull rough horn keratin per dragon (`hornR`),
+  Starlight's membrane ivory with a rose flush against the light.
+- DONE rider.js `fitStraddle`: abducts the humans-library rider's thighs until knee/shin/boot
+  clear the trunk SDF (+0.1 m), then brings the shin back along the flank; re-applied after every
+  rider.update(). (Stirrups still hang where the tack put them.)
+- DONE lookdev: creatures-shots.js 13 shots (pair flight is now an air-to-air chase camera),
+  creatures-contact.js (5 turntables, lineup with a level camera, 4 glide views = 25 frames).
+- Checked: every scene that uses the library (style-f1..f5, humans-riders, architecture-probe)
+  renders without errors at draft (stills in scratch). F4's framing now has the bigger newborn
+  head filling the left of frame (composition is the style frame's, not changed here).
+- Dev loop (scratch, not committed): dragons2/tools/dev.sh <cfg.json> <name> (creatures-dev.js
+  views), rv.sh <name> <ids|all> [preset] (shots through a temp scene, deleted after),
+  contact.sh <name> (contact sheet), build.mjs (Node build + every pose), headdepth/headprof.mjs
+  (SDF head measurements), toes.mjs, bar.mjs.
+- NEXT (ideas, not started): stirrups that follow the fitted rider foot; Leaf's sit haunch
+  visibility; a real contact solver for the head-in-mouth; uneven-ground IK targets.
 
 ## (before the wyvern rework)
 ## Fix round 1 (session 5, after the critic + Daxtyn's DRAGONS.md decisions) - DONE

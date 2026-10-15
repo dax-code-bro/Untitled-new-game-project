@@ -1039,8 +1039,10 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
     // jaw angle (retroarticular process) and the masseter bulge over it
     // (a newborn's is a soft nub: no hanging lobe behind the jaw)
     if (!soft) m.cone(jawPt(sd * hw0 * 0.8, b0 + 0.06, hinge[2] + 0.08), jawPt(sd * hw0 * 0.82, hinge[1] - 0.075, hinge[2] - 0.1), 0.048 * H, 0.03 * H, { k: 0.03 * H, ...jt });
-    m.ell(jawPt(sd * hw0 * 0.86, b0 + 0.1, hinge[2] + 0.14), [0.048 * H * hs.jawMuscle, 0.068 * H * Math.sqrt(hs.jawMuscle), 0.1 * H * Math.sqrt(hs.jawMuscle)], { ax: ex, ay: jawDir(0, 1, 0), k: 0.035 * H, ...jt });
-    const lc = hs.lipCover ?? 0.5;
+    // the masseter bulge over the jaw angle (a newborn has no muscle definition: on its soft, slim
+    // jaw the bulge stood below the jaw as a hanging lobe) and the labial scale ridge
+    if (!soft) m.ell(jawPt(sd * hw0 * 0.86, b0 + 0.1, hinge[2] + 0.14), [0.048 * H * hs.jawMuscle, 0.068 * H * Math.sqrt(hs.jawMuscle), 0.1 * H * Math.sqrt(hs.jawMuscle)], { ax: ex, ay: jawDir(0, 1, 0), k: 0.035 * H, ...jt });
+    const lc = soft ? 0 : (hs.lipCover ?? 0.5);
     if (lc > 0) {
       const z0 = hinge[2] + 0.08;
       for (const [fa, fb] of [[0, 0.33], [0.33, 0.66], [0.66, 1]]) {
@@ -1177,8 +1179,9 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
     keratin.push({ kind: 'horn', bone: 'head', tag: o.tag ?? 'horn', path: pts.map((p) => W(...p)), rad: radii.map((r) => r * H), flat: o.flat ?? 0.82, up: ey, rings: o.rings ?? true, tipR: o.tipR });
     if (!soft && (o.burr ?? true)) {
       const p0 = pts[0], d = norm(sub(pts[1], pts[0])), r0 = radii[0];
-      const q0 = sub(p0, scale(d, r0 * 0.5)), q2 = add(p0, scale(d, r0 * 0.9));
-      keratin.push({ kind: 'claw', bone: 'head', tag: 'burr', points: [W(...q0), W(...p0), W(...q2)], radii: [r0 * 1.22 * H, r0 * 1.14 * H, r0 * 1.02 * H], flat: 0.8, up: ey, burr: true });
+      // (a low, rough flare where the sheath leaves the skin - not a proud collar)
+      const q0 = sub(p0, scale(d, r0 * 0.45)), q2 = add(p0, scale(d, r0 * 0.45));
+      keratin.push({ kind: 'claw', bone: 'head', tag: 'burr', points: [W(...q0), W(...p0), W(...q2)], radii: [r0 * 1.12 * H, r0 * 1.07 * H, r0 * 1.0 * H], flat: 0.8, up: ey, burr: true });
     }
   };
   const Hn = (m0) => m0 / H;                   // metres -> head units

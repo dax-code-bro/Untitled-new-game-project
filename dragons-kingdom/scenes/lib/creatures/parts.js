@@ -108,8 +108,39 @@ export function keratin(items, boneIndex, opts = {}) {
         B.v(p, nn, [j / around, t], [b], [1], [t, KIND[it.kind] ?? 0, seed, r]);
       }
     }
+    // a blunt end (a broken or worn horn tip): round it off with a dome of a few rings, so the
+    // tube is never seen open at its end
+    let rings = segs;
+    {
+      const rEnd = sp ? sp.r(1) : it.radii[2];
+      const rStart = sp ? sp.r(0) : it.radii[0];
+      if (rEnd > rStart * 0.12) {
+        const c1 = sp ? sp.at(1) : bezier(p0, p1, p2, 1);
+        const tg = norm(sp ? sp.tan(1) : bezierTan(p0, p1, p2, 1));
+        let ux = sub(up0, scale(tg, dot(up0, tg)));
+        if (len(ux) < 1e-5) ux = Math.abs(tg[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+        ux = norm(ux);
+        const vx = cross(tg, ux);
+        const fa = it.flat ?? 1;
+        const nCap = 6;
+        for (let k = 1; k <= nCap; k++) {
+          const th = (k / nCap) * Math.PI / 2;
+          const cc = add(c1, scale(tg, rEnd * Math.sin(th) * 0.7));
+          const rr = Math.max(rEnd * Math.cos(th), rEnd * 0.02);
+          for (let j = 0; j <= around; j++) {
+            const a = (j / around) * Math.PI * 2;
+            const ca = Math.cos(a), sa = Math.sin(a);
+            const ax = it.flatAxis === 'side' ? rr * ca * fa : rr * ca, ay = it.flatAxis === 'side' ? rr * sa : rr * sa * fa;
+            const pp = add(cc, add(scale(vx, ax), scale(ux, ay)));
+            const nn = norm(add(scale(tg, Math.sin(th)), scale(norm(add(scale(vx, ca), scale(ux, sa))), Math.cos(th))));
+            B.v(pp, nn, [j / around, 1], [b], [1], [1, KIND[it.kind] ?? 0, seed, rr]);
+          }
+          rings++;
+        }
+      }
+    }
     const row = around + 1;
-    for (let i = 0; i < segs; i++) for (let j = 0; j < around; j++) {
+    for (let i = 0; i < rings; i++) for (let j = 0; j < around; j++) {
       const a = base + i * row + j, c = a + row;
       B.idx.push(a, c, a + 1, a + 1, c, c + 1);
     }
