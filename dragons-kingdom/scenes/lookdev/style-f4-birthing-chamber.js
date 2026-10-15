@@ -12,11 +12,13 @@
 // DAYLIGHT SHAFT from the high opening - the sun through the east window, made visible by the dust in
 // the air (volumetrics, shadowed by the window reveal), landing on the linen where the hatchling lies.
 //
-// Cinematography (1A-17 insert): a close shot low over the nest, 55 mm on Super 35 at T5.6, looking north
-// along the bed toward the window wall. Key: a clay oil lamp low at frame left rakes the wet gold
-// scales warm; the cool shaft falls through the dusty air behind and onto the linen. Alexandria's
-// hands enter from screen RIGHT (her side of the nest in the chamber map) and hold a folded linen
-// cloth under the hatchling's chest; her face stays out of frame. Models: the gold hatchling
+// Cinematography (1A-17 insert): a close shot low over the nest, 55 mm on Super 35 at T5.6 from
+// ~1.9 m, looking north along the bed toward the window wall. Key: a clay oil lamp low at frame left
+// rakes the wet gold scales warm; the cool daylight falls through the dusty air behind and onto the
+// far wall. The newborn (round 4: a two-legged wyvern with its wings folded on its back and two horn
+// buds) lies in three-quarter profile, head toward screen left, pushing weakly up with its chest on
+// a folded linen cloth; Alexandria's hands come in from screen RIGHT (her side of the nest in the
+// chamber map), palms up under the cloth; her face stays out of frame. Models: the gold hatchling
 // (creatures), Alexandria (humans cast build, arms placed by IK), the chamber (architecture).
 //
 //   node render/render.mjs --still scenes/lookdev/style-f4-birthing-chamber.js --time 2 --preset final --png out.png
@@ -119,14 +121,45 @@ export async function setup(ctx) {
   const ch = birthingChamber(kit, frame([0, 0, 0]), { seed: 3, cloth, nest: NEST_C });
   scene.add(kit.build(M, { name: 'chamber' }));
   for (const l of ch.lights) { l.intensity *= 0.6; scene.add(l); }
-  // the height of the linen surface (the cloth bake, nest-local): the hatchling and the egg lie on it
-  const linenY = (x, z) => {
-    if (!cloth) return NEST.TOP + 0.13;
+  // the height of the linen surface (the cloth bake, nest-local): the hatchling, the egg and the folded
+  // cloth lie on it. The baked triangles are rasterised once into a 1 cm height grid and read back
+  // bilinearly (the nearest bake vertex alone gave a stepped height: the folded cloth draped on it
+  // showed stair-steps along its edge).
+  const linenY = (() => {
+    if (!cloth) return () => NEST.TOP + 0.13;
     const { nx, ny, positions: P } = cloth;
-    let best = 1e9, y = 0.45;
-    for (let k = 0; k < (nx + 1) * (ny + 1); k++) { const d = (P[k * 3] - (x - NEST_C[0])) ** 2 + (P[k * 3 + 2] - (z - NEST_C[2])) ** 2; if (d < best) { best = d; y = P[k * 3 + 1]; } }
-    return y + 0.004;
-  };
+    const V = (i, j) => { const k = (j * (nx + 1) + i) * 3; return [P[k], P[k + 1], P[k + 2]]; };
+    let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+    for (let k = 0; k < P.length; k += 3) { x0 = Math.min(x0, P[k]); x1 = Math.max(x1, P[k]); z0 = Math.min(z0, P[k + 2]); z1 = Math.max(z1, P[k + 2]); }
+    const C = 0.01, GX = Math.ceil((x1 - x0) / C) + 2, GZ = Math.ceil((z1 - z0) / C) + 2;
+    const G = new Float32Array(GX * GZ).fill(-1e9);
+    const tri = (a, b, c) => {
+      const ia = Math.max(0, Math.floor((Math.min(a[0], b[0], c[0]) - x0) / C)), ib = Math.min(GX - 1, Math.ceil((Math.max(a[0], b[0], c[0]) - x0) / C));
+      const ja = Math.max(0, Math.floor((Math.min(a[2], b[2], c[2]) - z0) / C)), jb = Math.min(GZ - 1, Math.ceil((Math.max(a[2], b[2], c[2]) - z0) / C));
+      const det = (b[2] - c[2]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[2] - c[2]);
+      if (Math.abs(det) < 1e-12) return;
+      for (let j = ja; j <= jb; j++) for (let i = ia; i <= ib; i++) {
+        const x = x0 + i * C, z = z0 + j * C;
+        const l1 = ((b[2] - c[2]) * (x - c[0]) + (c[0] - b[0]) * (z - c[2])) / det, l2 = ((c[2] - a[2]) * (x - c[0]) + (a[0] - c[0]) * (z - c[2])) / det, l3 = 1 - l1 - l2;
+        if (l1 < -0.02 || l2 < -0.02 || l3 < -0.02) continue;
+        G[j * GX + i] = Math.max(G[j * GX + i], l1 * a[1] + l2 * b[1] + l3 * c[1]);
+      }
+    };
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const a = V(i, j), b = V(i + 1, j), c = V(i, j + 1), d = V(i + 1, j + 1); tri(a, b, d); tri(a, d, c); }
+    // cells the cloth does not cover take their nearest covered neighbour's height
+    for (let pass = 0; pass < 40; pass++) for (let j = 0; j < GZ; j++) for (let i = 0; i < GX; i++) {
+      if (G[j * GX + i] > -1e8) continue;
+      let m = -1e9; for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const ii = i + di, jj = j + dj; if (ii >= 0 && jj >= 0 && ii < GX && jj < GZ) m = Math.max(m, G[jj * GX + ii]); }
+      if (m > -1e8) G[j * GX + i] = m;
+    }
+    const at = (i, j) => { const v = G[Math.min(GZ - 1, Math.max(0, j)) * GX + Math.min(GX - 1, Math.max(0, i))]; return v > -1e8 ? v : NEST.TOP + 0.09; };
+    return (x, z) => {
+      const u = (x - NEST_C[0] - x0) / C, v = (z - NEST_C[2] - z0) / C;
+      const i = Math.floor(u), j = Math.floor(v), fu = u - i, fv = v - j;
+      const y = (at(i, j) * (1 - fu) + at(i + 1, j) * fu) * (1 - fv) + (at(i, j + 1) * (1 - fu) + at(i + 1, j + 1) * fu) * fv;
+      return y + 0.004;
+    };
+  })();
   const NY = linenY(HATCH.x, HATCH.z);
 
   const rx0 = 0.1, ry0 = 0.1, rz0 = 0.14;
@@ -268,12 +301,20 @@ function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch) {
     H[k] = H0[k] = y; X.push(p.x); Z.push(p.z);
   }
   // relax: the cloth spans between the knuckles and slopes down to the bed (never below its support)
-  for (let it = 0; it < 24; it++) {
+  // (enough passes for the cloth to spread ~6 cm from a hand: it slopes off her knuckles instead of
+  // standing in walls round them)
+  // (every cell relaxes, the border rows too - held at the bed they stood up as a stepped wall where
+  // the cloth's edge crosses her knuckles)
+  for (let it = 0; it < 220; it++) {
     const T = H.slice();
-    for (let j = 1; j < CV; j++) for (let i = 1; i < CU; i++) {
+    for (let j = 0; j <= CV; j++) for (let i = 0; i <= CU; i++) {
       const k = j * (CU + 1) + i;
-      const m = (T[k - 1] + T[k + 1] + T[k - CU - 1] + T[k + CU + 1]) / 4;
-      H[k] = Math.max(H0[k], m - 0.0009);
+      let m = 0, n = 0;
+      if (i > 0) { m += T[k - 1]; n++; }
+      if (i < CU) { m += T[k + 1]; n++; }
+      if (j > 0) { m += T[k - CU - 1]; n++; }
+      if (j < CV) { m += T[k + CU + 1]; n++; }
+      H[k] = Math.max(H0[k], m / n - 0.0004);
     }
   }
   for (let j = 0; j <= CV; j++) for (let i = 0; i <= CU; i++) {
@@ -299,7 +340,7 @@ const CAM_R = new THREE.Vector3(-VIEW.z, 0, VIEW.x);                 // screen r
 const FWD = CAM_R.clone().multiplyScalar(-0.82).addScaledVector(VIEW, -0.57).normalize();
 // camera variants (--time 100..): distance from the aim point (m), lens (mm), height above the
 // head (m), sideways offset (m, + = screen right)
-const CAMS = { 100: { d: 1.85, mm: 55, h: 0.1, r: -0.15 }, 102: { d: 1.6, mm: 55, h: 0.12, r: -0.05 }, 103: { d: 2.1, mm: 55, h: 0.12, r: -0.2 }, 104: { d: 1.85, mm: 55, h: 0.2, r: -0.05 } };
+const CAMS = { 100: { d: 1.85, mm: 55, h: 0.17, r: -0.12 }, 102: { d: 1.6, mm: 55, h: 0.12, r: -0.05 }, 103: { d: 2.1, mm: 55, h: 0.12, r: -0.2 }, 104: { d: 1.85, mm: 55, h: 0.2, r: -0.05 }, 105: { d: 0.8, mm: 55, h: 0.12, r: 0.0 } };
 
 export function update(t, ctx) {
   const { hatch, egg, frags, alex, fcloth, NY } = S;
@@ -354,22 +395,25 @@ export function update(t, ctx) {
   alex.update(t);
   {
     const shC = new THREE.Vector3().setFromMatrixPosition(alex.bone('upperarm01.L').matrixWorld).add(new THREE.Vector3().setFromMatrixPosition(alex.bone('upperarm01.R').matrixWorld)).multiplyScalar(0.5);
-    // (close and low over the nest, so her hands reach the bedding with the elbows bent)
-    const goal = base.clone().addScaledVector(near, 0.4).addScaledVector(CAM_R, 0.26).addScaledVector(up, 0.2);
+    // (close and low over the nest at its right side, so her forearms come in from the right along the
+    // hatchling's near side and her hands reach the bedding with the elbows bent)
+    const goal = base.clone().addScaledVector(near, 0.22).addScaledVector(CAM_R, 0.38).addScaledVector(up, 0.16);
     alex.root.position.add(goal.sub(shC));
     alex.root.updateMatrixWorld(true);
   }
-  const wA = base.clone().addScaledVector(near, 0.19).addScaledVector(fwd, 0.055).addScaledVector(up, 0.025);
-  const wB = base.clone().addScaledVector(near, 0.19).addScaledVector(fwd, -0.07).addScaledVector(up, 0.025);
+  // (the two hands side by side, palms up, under the front of the chest)
+  const wA = base.clone().addScaledVector(near, 0.19).addScaledVector(fwd, 0.06).addScaledVector(up, 0.02);
+  const wB = base.clone().addScaledVector(near, 0.2).addScaledVector(fwd, -0.015).addScaledVector(up, 0.02);
   // her right hand is the one toward screen right
   const aIsR = wA.clone().sub(wB).dot(CAM_R) > 0;
-  const pole = base.clone().addScaledVector(near, 0.4).addScaledVector(CAM_R, 0.32).addScaledVector(up, -0.1);
+  const pole = base.clone().addScaledVector(near, 0.32).addScaledVector(CAM_R, 0.4).addScaledVector(up, -0.1);
   limbIK(alex, 'arm', aIsR ? 'R' : 'L', wA, pole.clone().addScaledVector(fwd, 0.25));
   limbIK(alex, 'arm', aIsR ? 'L' : 'R', wB, pole.clone().addScaledVector(fwd, -0.25));
   const under = near.clone().negate().addScaledVector(up, -0.1).normalize();
   for (const sd of ['L', 'R']) relaxHand(alex, sd, { fingers: under, palm: up, keepFingers: true });
   // the cloth: folded edge under the chest, the rest over her hands toward the lens
-  drapeCloth(fcloth, base.clone().addScaledVector(near, 0.08), near, fwd.clone().setY(0).normalize(), 0.3, 0.3, alex, S.linenY, hatch);
+  // (it ends over her knuckles: the backs of her hands and her wrists show at its near edge)
+  drapeCloth(fcloth, base.clone().addScaledVector(near, 0.055), near, fwd.clone().setY(0).normalize(), 0.24, 0.3, alex, S.linenY, hatch);
   const endR = base.clone().addScaledVector(near, 0.2).addScaledVector(up, 0.03);     // her hands
   lookAtPoint(alex, chest, 0.8);
   if (T0 === 2) { const wr = ['L', 'R'].map((sd) => bonePos(alex, `wrist.${sd}`)); console.warn('[f4] wrists', wr.map((w) => (w.y - base.y).toFixed(3) + '@' + w.distanceTo(wA).toFixed(2) + '/' + w.distanceTo(wB).toFixed(2)).join(' '), 'base', base.toArray().map((v) => v.toFixed(3)).join(',')); }
@@ -378,7 +422,7 @@ export function update(t, ctx) {
   // the folded cloth, the shell behind; looking along VIEW
   const cam = ctx.camera;
   const head = new THREE.Vector3().setFromMatrixPosition(hatch.bones[hatch.boneIndex.head].matrixWorld);
-  const aim = head.clone().lerp(endR, 0.45);
+  const aim = Math.round(T0) === 105 ? endR.clone() : head.clone().lerp(endR, 0.45);
   cam.position.copy(aim).addScaledVector(VIEW, -CV.d).addScaledVector(CAM_R, CV.r).setY(head.y + CV.h);
   cam.lookAt(aim.clone().add(new THREE.Vector3(0, 0.03, 0)));
   if (Math.round(T0) === 101) { cam.position.copy(aim).addScaledVector(VIEW, -1.6).addScaledVector(CAM_R, 0.9).add(new THREE.Vector3(0, 1.1, 0)); cam.lookAt(aim); }

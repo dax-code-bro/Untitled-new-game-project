@@ -19,10 +19,17 @@
 //
 // Cinematography: a long lens from far back (50 mm on Super 35 from ~75 m, eye height in the
 // grass, T4): the compression stacks Charcoal's hide across the right of frame, his access rig (a
-// braced oak tower with a drawbridge gangway lowered onto his back) at his shoulder, and Remi a
-// small figure at his foreleg reaching up for the mounting strap that hangs from the riding rig.
-// Across the field (left, farther) Leaf sits upright with Abby at his chest fastening the breast
-// strap; the keeper waits far left outside the launch space.
+// braced oak tower with a drawbridge gangway lowered onto his back) behind his shoulder, and Remi a
+// small figure at the gangway's foot on Charcoal's back, taking the mounting strap from the riding
+// rig's grab bar. Across the field (left, farther) Leaf sits upright with Abby at his chest fastening
+// the breast strap; the keeper waits far left outside the launch space.
+//
+// The dragons (round 4, DRAGONS.md 2026-10-14: two legs, the wings are the front limbs, horns):
+// Charcoal rests in the sphinx lie of his design (DESIGN.md 2.8) - belly down, both hind legs folded
+// under, the folded wings along his flanks with the forearms (the wing's wrist) forward on the grass,
+// the neck curved round and the head resting on its chin, turned a little to the lens so his mouth
+// line, nostril and blue eye read. Leaf sits back on his haunches like a dog, on his two legs, the
+// wings folded against his body.
 //
 // Models: creatures (scenes/lib/creatures), people (scenes/lib/humans cast builds: remi, abby,
 // keeper1), buildings (scenes/lib/architecture verdor.js: stable, keepers' lodge, access rig).
@@ -234,7 +241,7 @@ export async function setup(ctx) {
   createSaddle(leaf, {});                                    // Abby is fixing a strap on it
 
   // Charcoal's pose is fixed for the frame: lying with his weight down, chin near the grass
-  const cdir = new THREE.Vector3().addScaledVector(R, -0.88).addScaledVector(F, -0.47).normalize();
+  const cdir = new THREE.Vector3().addScaledVector(R, -0.8).addScaledVector(F, -0.66).normalize();
   const cyaw = Math.atan2(cdir.x, cdir.z);
   const lp0 = poses.lie(charcoal, { t: 2, raise: -0.62, headDown: 0.32, look: [0.3, 0.02], lidRelax: 0.42 });
   lp0.groundBones = [];
@@ -310,9 +317,12 @@ export async function setup(ctx) {
 // close-up checks (not part of the frame), all frozen at t = 2: --time 100 the frame itself,
 // 101 Leaf + Abby, 102 Remi on the gangway, 103 the rig, 104 Charcoal's near side, 105 his head.
 // One job renders them all: --preset draft --fps 1 --start 100 --seconds 6
-const DEBUG = { 101: 'leaf', 102: 'remi', 103: 'rig', 104: 'side', 105: 'head' };
+const DEBUG = { 101: 'leaf', 102: 'remi', 103: 'rig', 104: 'side', 105: 'head', 106: 'side', 107: 'side', 108: 'side' };
+// (look-dev of the folded wing's drape in the lie, seen from the side: 106-108)
+const DRAPE_TEST = { 106: ['crouch', 1], 107: ['lie', 0.55], 108: ['stand', 1] };
 
 export function update(t, ctx) {
+  const T0 = t;
   const DEBUG_CAM = t >= 99.5 ? DEBUG[Math.round(t)] || null : null;
   if (t >= 99.5) t = 2;
   const { sun, SUN, ocean, charcoal, leaf, remi, abby, keeper, strap, breast, H, cdir, nearSide, toCam, onGangway, gz, gX } = S;
@@ -320,6 +330,8 @@ export function update(t, ctx) {
   // Charcoal breathes (the pose's breathing only; he lies still)
   const lp0 = poses.lie(charcoal, { t, raise: -0.62, headDown: 0.32, look: [0.3, 0.02], lidRelax: 0.42 });
   lp0.groundBones = [];
+  const dt = T0 >= 99.5 ? DRAPE_TEST[Math.round(T0)] : null;
+  if (dt) lp0.uniforms.drape = { L: dt, R: dt };
   charcoal.setPose(lp0);
   charcoal.root.updateMatrixWorld(true);
   const cp = L.charcoal;

@@ -11,13 +11,17 @@
 // behind them and high (the same photographed sky and sun elevation as F2): a three-quarter
 // back light - along their backs and wings, the right sides in sky and sea fill.
 //
-// Cinematography: air-to-air from a camera ship holding station ~40 m off the cliffs, ~60 m up,
-// on a 45 mm lens on Super 35, looking out to sea across a shallow sandy bay. From ~230-300 m the
-// perspective keeps their true size difference (Charcoal ~36 m, Leaf ~8 m) with Remi and Abby
-// small on their backs. Below them the bay shelves from turquoise over pale sand to deep blue;
-// Charcoal's shadow lies on the shallows ahead of and inshore of him (the sun is behind them
-// and seaward), Leaf's small one beside it. The camera ship matches their speed: the dragons are sharp, the sea streaks a
+// Cinematography: air-to-air from a camera ship holding station ~20 m off the cliffs, ~120 m up,
+// on a 55 mm lens on Super 35, looking out to sea and down across a shallow sandy bay. From ~230-
+// 290 m the perspective keeps their true size difference (Charcoal 36 m, Leaf 9 m) with Remi and
+// Abby small in their saddles. Below them the bay shelves from turquoise over pale sand to deep
+// blue; Charcoal's shadow lies on the shallows ahead of and inshore of him (the sun is behind them
+// and seaward). The camera ship matches their speed: the dragons are sharp, the sea streaks a
 // little with the 180-degree shutter.
+//
+// The dragons (round 4: two legs, the wings are the front limbs, horns): Charcoal coasts level with
+// Leaf on his spread wings between beats, legs drawn up under the tail; Leaf flaps hard to keep
+// station (see STROKE below for why each is at that point of its stroke).
 //   node render/render.mjs --still scenes/lookdev/style-f3-flight.js --time 2 --preset final --png out.png
 import * as THREE from 'three';
 import { createOcean } from 'dk/ocean.js';
@@ -54,9 +58,10 @@ export const meta = {
     shadows: { cascades: 2, maxDistance: 900 },
     ao: { enabled: false },
     dof: { samples: 48 },
-    // (exposed for the sunlit grey membrane on Charcoal's spread wings - at +2 EV it read white -
-    // the sea a little darker, as it is under a high sun from this height)
-    grade: { exposure: 1.6, whiteBalance: 6000, contrast: 1.15, saturation: 0.95, lift: [-0.045, -0.045, -0.045] },
+    // (exposed for the sunlit grey membrane on Charcoal's spread wings, as a mid-grey card in the sun
+    // would be - at +2 EV it read white; the open sea then reads dark navy and the shallows a muted
+    // turquoise, as they photograph from this height under a high sun)
+    grade: { exposure: 1.1, whiteBalance: 6000, contrast: 1.15, saturation: 0.95, lift: [-0.045, -0.045, -0.045] },
   }),
 };
 
