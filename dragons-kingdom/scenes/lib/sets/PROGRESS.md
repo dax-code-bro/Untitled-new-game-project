@@ -53,12 +53,14 @@ make.sh, this machine: 4 vCPU, SwiftShader, no other renders running unless note
 |---|---:|---:|---|
 | F2 riding grounds | 434.7 | 541.1 | Charcoal + Leaf hero meshes, 3 cast builds, stable/lodge/rig, 77k grass tufts (an earlier pass with draft jobs running beside it: 576.3 / 690.1) |
 | F3 flight | 131.0 | 235.4 | two hero creatures, riders, FFT ocean (with a draft job beside it: 236.2 / 343.0) |
-| F4 birthing chamber | 461.8 | 562.4 | hero newborn (the densest mesh), chamber, Alexandria, 96-tap DOF, dust volumetrics (with jobs beside it: 897.3 / 1010.7) |
+| F4 birthing chamber | 428.7 | 524.4 | hero newborn (the densest mesh), chamber, Alexandria, 96-tap DOF, dust volumetrics, the 128 x 96 cloth drape per sub-frame (earlier passes: 461.8 / 562.4 alone, 897.3 / 1010.7 with jobs beside it) |
 | F5 Cling square | 821.5 | 923.4 | ~23 M tris town, ~40 cast builds, Starlight hero + rider (an F2 job ran beside it part of the time) |
 
 Review images (git-ignored): output/lookdev/style-frames/review-r4/ (1920 downscales + 1:1 4K
 crops: Charcoal's head, Remi at the rig, Leaf+Abby, the folded wing, Charcoal+Remi in flight,
 Leaf+Abby in flight, Starlight, the watchman; F4 head and hands).
+
+npm test: 33/33 (180 s) after the last code change of round 4.
 
 Open issues seen in the round-4 finals (all PROVISIONAL):
 - F2: between Charcoal's forearm and thigh the folded wing's drape shows as a smooth pale-grey sheet

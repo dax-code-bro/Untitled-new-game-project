@@ -33,5 +33,7 @@ bash episodes/s01e01/style-frames/make.sh            # all five (or: make.sh F2 
 ```
 
 The scenes are `scenes/lookdev/style-f1-prologue.js` ... `style-f5-cling-square.js`; the camera,
-lens, light and grade of each are described in the file header. The set-building library they use
+lens, light and grade of each are described in the file header. Render times per 4K frame (round 4,
+this machine): F2 434.7 s, F3 131.0 s, F4 428.7 s, F5 821.5 s of rendering (541, 235, 524 and 923 s
+with the scene build); see `scenes/lib/sets/PROGRESS.md`. The set-building library they use
 (`scenes/lib/sets/`) has its own contact sheet, `scenes/lookdev/style-contact.js`.
