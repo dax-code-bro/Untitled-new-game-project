@@ -249,7 +249,7 @@ float dkShellD;`)
   // under the hatchling's chest) laid over her hands - its shape is draped every frame over the bed
   // and over her hands (see drapeCloth), so her fingers are under the cloth, never through it
   clothMat.vertexColors = false;
-  const CU = 64, CV = 48;
+  const CU = 128, CV = 96;
   const fcloth = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, CU, CV), clothMat);
   fcloth.castShadow = fcloth.receiveShadow = true; fcloth.frustumCulled = false;
   fcloth.userData.grid = [CU, CV];
@@ -305,7 +305,9 @@ function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch) {
   // standing in walls round them)
   // (every cell relaxes, the border rows too - held at the bed they stood up as a stepped wall where
   // the cloth's edge crosses her knuckles)
-  for (let it = 0; it < 220; it++) {
+  // (the grid is 128 x 96: the same spread and sag as the old 64 x 48 drape take 4x the passes and
+  // a quarter of the per-pass sag, as diffusion goes with the cell size squared)
+  for (let it = 0; it < 880; it++) {
     const T = H.slice();
     for (let j = 0; j <= CV; j++) for (let i = 0; i <= CU; i++) {
       const k = j * (CU + 1) + i;
@@ -314,7 +316,7 @@ function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch) {
       if (i < CU) { m += T[k + 1]; n++; }
       if (j > 0) { m += T[k - CU - 1]; n++; }
       if (j < CV) { m += T[k + CU + 1]; n++; }
-      H[k] = Math.max(H0[k], m / n - 0.0004);
+      H[k] = Math.max(H0[k], m / n - 0.0001);
     }
   }
   for (let j = 0; j <= CV; j++) for (let i = 0; i <= CU; i++) {
@@ -322,7 +324,10 @@ function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch) {
     // creases running out from the hands, a rolled fold along the left edge
     const crease = 0.0025 * Math.sin(v * 37 + u * 9) * Math.sin(u * 13 + 1.7) + 0.0015 * Math.sin(u * 51 - v * 23);
     const fold = 0.006 * Math.exp(-u * 40);
-    P.setXYZ(k, X[k], H[k] + crease * (H[k] - H0[k] > 0.004 ? 1 : 0.4) + fold, Z[k]);
+    // (the creases fade in smoothly where the cloth lifts off the bed: a hard switch at 4 mm drew a
+    // jagged contour line along the cloth's drop from her hands)
+    const lifted = Math.min(1, Math.max(0, (H[k] - H0[k]) / 0.01));
+    P.setXYZ(k, X[k], H[k] + crease * (0.4 + 0.6 * lifted * lifted * (3 - 2 * lifted)) + fold, Z[k]);
   }
   P.needsUpdate = true;
   g.computeVertexNormals();
@@ -413,7 +418,9 @@ export function update(t, ctx) {
   for (const sd of ['L', 'R']) relaxHand(alex, sd, { fingers: under, palm: up, keepFingers: true });
   // the cloth: folded edge under the chest, the rest over her hands toward the lens
   // (it ends over her knuckles: the backs of her hands and her wrists show at its near edge)
-  drapeCloth(fcloth, base.clone().addScaledVector(near, 0.055), near, fwd.clone().setY(0).normalize(), 0.24, 0.3, alex, S.linenY, hatch);
+  // (only a few cm past the outer hands: a heightfield cloth cannot hang, and a long drop off a hand
+  // to the bed showed as stretched bands)
+  drapeCloth(fcloth, base.clone().addScaledVector(near, 0.055).addScaledVector(fwd, 0.022), near, fwd.clone().setY(0).normalize(), 0.24, 0.2, alex, S.linenY, hatch);
   const endR = base.clone().addScaledVector(near, 0.2).addScaledVector(up, 0.03);     // her hands
   lookAtPoint(alex, chest, 0.8);
   if (T0 === 2) { const wr = ['L', 'R'].map((sd) => bonePos(alex, `wrist.${sd}`)); console.warn('[f4] wrists', wr.map((w) => (w.y - base.y).toFixed(3) + '@' + w.distanceTo(wA).toFixed(2) + '/' + w.distanceTo(wB).toFixed(2)).join(' '), 'base', base.toArray().map((v) => v.toFixed(3)).join(',')); }

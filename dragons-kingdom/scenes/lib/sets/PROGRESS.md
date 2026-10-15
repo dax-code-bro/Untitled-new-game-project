@@ -4,6 +4,77 @@ Owned paths: `scenes/lookdev/style-*.js`, `scenes/lookdev/finish.js`, `scenes/li
 `episodes/s01e01/style-frames/`. Renders go to `output/lookdev/style-frames/` (git-ignored);
 scratch renders to the session scratchpad `sf/`.
 
+## Round 4 (2026-10-15): F2-F5 with the two-legged, horned dragons (DRAGONS.md 2026-10-14)
+
+State: DONE - all four re-staged, rendered at native 4K, looked at (1920 + 1:1 crops), previews
+overwritten. F1 has no dragon on screen (a shadow in the mist) and was not touched.
+
+What changed per frame (each scene's header says why):
+- F2: Charcoal in his design's sphinx lie (poses.lie: belly down, hind legs folded under, folded
+  wings along the flanks, forearms on the grass) with the head resting on its chin; turned ~40 deg
+  toward the lens (cdir) so the face reads 3/4 (mouth line, nostril, blue eye) and the folded wing's
+  drape - a pale grey sheet on the grass between elbow and thigh - is mostly hidden behind the
+  forearm. Remi on the access rig: at the gangway's foot on Charcoal's back, right hand taking the
+  mounting strap looped on the riding rig's grab bar (tack.js geometry: bar 0.55 m ahead of the
+  seat point, 0.23 m up), left hand on the gangway rail (`onGangway(u, x)` gives the walking
+  surface from accessRig's own numbers). Exposure 2.0 -> 1.6 (the black hide read slate grey).
+  Leaf's dog sit (poses.sit, wings folded) and Abby at his chest unchanged. Hero meshes only at
+  --preset final (standard below, for quick looks). Debug views (all frozen at t = 2, one job:
+  --preset draft --fps 1 --start 100 --seconds 9): 100 frame, 101 Leaf+Abby, 102 Remi, 103 rig,
+  104 Charcoal's near side, 105 his head, 106-108 drape look-dev (crouch/stand drapes on the lie
+  break the membrane; the default 'lie' drape is the best of them).
+- F3: Charcoal coasts level with Leaf on spread wings (poses.glide) - nothing of his 30 m
+  half-span smears across the 180-degree shutter; Leaf flaps at mid-downstroke (late downstroke
+  hung his near wing below him like a sail); stroke variants at --time 100..104. Camera ship
+  120 m up ~20 m off the cliffs, 55 mm, framing Charcoal upper right, Leaf lower left, Charcoal's
+  shadow on the shallows lower right. Exposure 2.05 -> 1.1 (exposed for the sunlit grey membrane as
+  for a grey card; at +2 EV it read white), lift -0.07 -> -0.045. The saddles' own hanging stirrups
+  are hidden under the mounted riders (rider.js puts stirrups under their boots).
+- F4: the wyvern newborn in poses.pushUp (k 0.3: weak, chest a little up), 3/4 profile head to
+  screen left (FWD), camera from the head/hands midpoint (CAMS: 100 frame, 103/104 alternatives,
+  105 close on the hands; 101 overview). Alexandria's forearms come in from the right along the
+  newborn's near side, hands low on the bedding under the chest (shoulders placed for reach), the
+  folded cloth draped over both hands. The linen height is now a 1 cm grid rasterised from the
+  cloth bake (bilinear; the nearest-vertex lookup stepped), the cloth grid is 128 x 96 and relaxes
+  to its borders (held at the bed they stood up as walls), its creases fade in smoothly where it
+  lifts (a hard 4 mm switch drew a jagged contour), and it ends a few cm past her outer hands (a
+  heightfield cannot hang: a long drop off a hand stretched the weave into bands).
+- F5: Starlight closer (z -150, y 29: ~195 m) - her ~137 m span is wider on screen than the north
+  row; hero mesh only at final.
+
+Look-dev loop (scratch, not committed): sf/rs.sh <F2..F5> <name> [time] [preset] none (one still),
+sf/rj.sh <F#> <name> <start> <count> [preset] (one job, one setup, frames -> PNG),
+sf/lum.py (display-luminance percentiles of regions).
+
+Measurements (native 4K, --preset final, the 8-sub-frame film finish, one --still per frame via
+make.sh, this machine: 4 vCPU, SwiftShader, no other renders running unless noted):
+
+| frame | render (s) | total incl. build (s) | notes |
+|---|---:|---:|---|
+| F2 riding grounds | 434.7 | 541.1 | Charcoal + Leaf hero meshes, 3 cast builds, stable/lodge/rig, 77k grass tufts (an earlier pass with draft jobs running beside it: 576.3 / 690.1) |
+| F3 flight | 131.0 | 235.4 | two hero creatures, riders, FFT ocean (with a draft job beside it: 236.2 / 343.0) |
+| F4 birthing chamber | 461.8 | 562.4 | hero newborn (the densest mesh), chamber, Alexandria, 96-tap DOF, dust volumetrics (with jobs beside it: 897.3 / 1010.7) |
+| F5 Cling square | 821.5 | 923.4 | ~23 M tris town, ~40 cast builds, Starlight hero + rider (an F2 job ran beside it part of the time) |
+
+Review images (git-ignored): output/lookdev/style-frames/review-r4/ (1920 downscales + 1:1 4K
+crops: Charcoal's head, Remi at the rig, Leaf+Abby, the folded wing, Charcoal+Remi in flight,
+Leaf+Abby in flight, Starlight, the watchman; F4 head and hands).
+
+Open issues seen in the round-4 finals (all PROVISIONAL):
+- F2: between Charcoal's forearm and thigh the folded wing's drape shows as a smooth pale-grey sheet
+  lying on the grass (creatures domain: drape.js 'lie'; the crouch/stand drapes are worse on a lying
+  body, see views 106-108). The riding rig's seat and grab bar read a little like furniture from 75 m.
+  Leaf and Abby are small at the far stable door (as in round 3).
+- F3: the membranes in flight have no visible veins from 250 m; Leaf's wings blur a little in his
+  mid-downstroke (true motion blur, no ghost copies).
+- F4: the folded cloth is a heightfield drape (it cannot hang or fold over itself): its edge is a
+  little wavy where it leaves her fingers; her sleeves are boxy (humans domain); the newborn's gold
+  can read as a casting (creatures domain, noted there). Next: a bpy cloth bake of the cloth over
+  her posed hands (one bake per shot).
+- F5: Starlight from below-front at ~195 m reads clearly as a two-legged horned white wyvern but her
+  folded-up feet and hands are small dark claws against the bright sky; the crowd figures are small
+  (as in round 3).
+
 ## Session 5 (2026-10-08, from ~20:40 UTC): re-render F1-F5 with the new domain models
 
 Goal: the five style frames built from the NEW models (creatures, humans cast builds,
