@@ -379,12 +379,14 @@ thick forearms like columns, a thick tail base. At a distance: a black mass with
   3. **Jaw knobs:** 3 blunt osteoderm horns along each jaw angle, 0.18 / 0.26 / 0.34 m, pointing
      back.
 
-### 2.4 Neck, trunk and tail shape (full width x depth, metres)
+### 2.4 Head, neck, trunk and tail shape
 
-| neck (head end -> base) | 1.0 x 1.5 | 1.3 x 2.0 (middle) | 1.85 x 2.9 | | |
-|---|---|---|---|---|---|
-| **trunk** (shoulder -> hip, s = 0, 0.25, 0.6, 0.85, 1) | 2.7 x 4.2 | 2.9 x 4.5 | 2.4 x 3.4 | 2.2 x 2.8 | 2.35 x 2.6 |
-| **tail** (base, 0.15, 0.35, 0.6, 0.85, tip) | 1.95 x 2.15 | 1.5 x 1.7 | 0.95 x 1.1 | 0.48 x 0.56 | 0.19 x 0.23 -> 0.04 |
+| part | full width x depth at each station (m) |
+|---|---|
+| head, back of skull -> snout tip (s = 0, 0.25, 0.5, 0.75, 1) | 1.7 x 1.55 / 1.65 x 1.5 / 1.2 x 1.1 / 0.95 x 0.82 / 0.68 x 0.52 |
+| neck, head end -> base (s = 0, 0.5, 1) | 1 x 1.5 / 1.3 x 2 / 1.85 x 2.9 |
+| trunk, shoulder -> hip (s = 0, 0.25, 0.6, 0.85, 1) | 2.7 x 4.2 / 2.9 x 4.5 / 2.4 x 3.4 / 2.2 x 2.8 / 2.35 x 2.6 |
+| tail, base -> tip (s = 0, 0.15, 0.35, 0.6, 0.85, 1) | 1.95 x 2.15 / 1.5 x 1.7 / 0.95 x 1.1 / 0.48 x 0.56 / 0.19 x 0.23 / 0.04 x 0.04 |
 
 The neck is deep and laterally flattened (a horse's or a crocodile's neck), carried low and
 forward in an S; the tail is taller than wide, thick for its first fifth (caudofemoralis and fat),
@@ -614,10 +616,12 @@ Next to Charcoal: about a quarter of his length and 1/73 of his mass.
 
 ### 3.4 Shape (full width x depth, metres)
 
-| neck (head end -> base) | 0.30 x 0.37 | 0.35 x 0.43 | 0.48 x 0.62 | | |
-|---|---|---|---|---|---|
-| **trunk** (s = 0, 0.25, 0.6, 0.85, 1) | 0.66 x 0.92 | 0.70 x 0.96 | 0.56 x 0.74 | 0.50 x 0.60 | 0.52 x 0.56 |
-| **tail** (base, 0.15, 0.35, 0.6, 0.85, tip) | 0.44 x 0.48 | 0.33 x 0.37 | 0.21 x 0.24 | 0.11 x 0.13 | 0.045 x 0.05 -> 0.01 |
+| part | full width x depth at each station (m) |
+|---|---|
+| head, back of skull -> snout tip (s = 0, 0.3, 0.55, 0.8, 1) | 0.54 x 0.54 / 0.52 x 0.52 / 0.38 x 0.34 / 0.28 x 0.24 / 0.19 x 0.16 |
+| neck, head end -> base (s = 0, 0.5, 1) | 0.3 x 0.37 / 0.35 x 0.43 / 0.48 x 0.62 |
+| trunk, shoulder -> hip (s = 0, 0.25, 0.6, 0.85, 1) | 0.66 x 0.92 / 0.7 x 0.96 / 0.56 x 0.74 / 0.5 x 0.6 / 0.52 x 0.56 |
+| tail, base -> tip (s = 0, 0.15, 0.35, 0.6, 0.85, 1) | 0.44 x 0.48 / 0.33 x 0.37 / 0.21 x 0.24 / 0.11 x 0.13 / 0.045 x 0.05 / 0.01 x 0.01 |
 
 ### 3.5 Muscles and fat
 
@@ -820,10 +824,12 @@ cross back over the tail base like an albatross's. Pale against any sky.
 
 ### 4.4 Shape (full width x depth, metres)
 
-| neck (head end -> base) | 1.5 x 1.75 | 1.95 x 2.3 | 2.9 x 3.6 | | |
-|---|---|---|---|---|---|
-| **trunk** (s = 0, 0.25, 0.6, 0.85, 1) | 4.2 x 5.8 | 4.5 x 6.1 | 3.7 x 4.7 | 3.3 x 3.8 | 3.5 x 3.6 |
-| **tail** (base, 0.15, 0.35, 0.6, 0.85, tip) | 2.9 x 3.2 | 2.2 x 2.45 | 1.4 x 1.6 | 0.72 x 0.82 | 0.27 x 0.30 -> 0.05 |
+| part | full width x depth at each station (m) |
+|---|---|
+| head, back of skull -> snout tip (s = 0, 0.25, 0.5, 0.75, 1) | 2.4 x 2.1 / 2.4 x 2.05 / 1.8 x 1.4 / 1.4 x 1 / 0.95 x 0.66 |
+| neck, head end -> base (s = 0, 0.5, 1) | 1.5 x 1.75 / 1.95 x 2.3 / 2.9 x 3.6 |
+| trunk, shoulder -> hip (s = 0, 0.25, 0.6, 0.85, 1) | 4.2 x 5.8 / 4.5 x 6.1 / 3.7 x 4.7 / 3.3 x 3.8 / 3.5 x 3.6 |
+| tail, base -> tip (s = 0, 0.15, 0.35, 0.6, 0.85, 1) | 2.9 x 3.2 / 2.2 x 2.45 / 1.4 x 1.6 / 0.72 x 0.82 / 0.27 x 0.3 / 0.05 x 0.05 |
 
 ### 4.5 Muscles
 
@@ -969,6 +975,15 @@ tail that cannot hold itself up.
   soft amber claws (newborn bats are born with near-adult thumbs and feet - to cling).
 * **Leg:** femur 0.075, tibia 0.08, metatarsus 0.045, toes 0.065 m - big feet; soft claws.
 * Membrane to the knee.
+
+Shape (plump trunk, a head nearly as wide as the chest):
+
+| part | full width x depth at each station (m) |
+|---|---|
+| head, back of skull -> snout tip (s = 0, 0.3, 0.55, 0.8, 1) | 0.15 x 0.15 / 0.155 x 0.155 / 0.12 x 0.11 / 0.085 x 0.075 / 0.055 x 0.045 |
+| neck, head end -> base (s = 0, 0.5, 1) | 0.085 x 0.095 / 0.095 x 0.105 / 0.13 x 0.15 |
+| trunk, shoulder -> hip (s = 0, 0.3, 0.6, 0.85, 1) | 0.15 x 0.17 / 0.19 x 0.2 / 0.2 x 0.2 / 0.16 x 0.16 / 0.13 x 0.13 |
+| tail, base -> tip (s = 0, 0.15, 0.35, 0.6, 0.85, 1) | 0.1 x 0.1 / 0.075 x 0.078 / 0.05 x 0.052 / 0.028 x 0.03 / 0.012 x 0.013 / 0.004 x 0.004 |
 
 ### 5.3 Head and horns
 
@@ -1146,10 +1161,12 @@ bat's), tiny feet, a long thin whip tail with a diamond-shaped vane at the tip.
 
 ### 6.4 Shape (full width x depth, metres)
 
-| neck (head end -> base) | 0.15 x 0.17 | 0.19 x 0.22 | 0.29 x 0.37 | | |
-|---|---|---|---|---|---|
-| **trunk** (s = 0, 0.25, 0.6, 0.85, 1) | 0.42 x 0.62 | 0.47 x 0.67 | 0.36 x 0.48 | 0.30 x 0.34 | 0.30 x 0.30 |
-| **tail** (base, 0.15, 0.35, 0.6, 0.85, tip) | 0.25 x 0.27 | 0.15 x 0.17 | 0.085 x 0.095 | 0.05 x 0.055 | 0.03 -> 0.01 + vane |
+| part | full width x depth at each station (m) |
+|---|---|
+| head, back of skull -> snout tip (s = 0, 0.3, 0.55, 0.8, 1) | 0.25 x 0.25 / 0.24 x 0.23 / 0.17 x 0.15 / 0.11 x 0.1 / 0.06 x 0.05 |
+| neck, head end -> base (s = 0, 0.5, 1) | 0.15 x 0.17 / 0.19 x 0.22 / 0.29 x 0.37 |
+| trunk, shoulder -> hip (s = 0, 0.25, 0.6, 0.85, 1) | 0.42 x 0.62 / 0.47 x 0.67 / 0.36 x 0.48 / 0.3 x 0.34 / 0.3 x 0.3 |
+| tail, base -> tip (s = 0, 0.15, 0.35, 0.6, 0.85, 1) | 0.25 x 0.27 / 0.15 x 0.17 / 0.085 x 0.095 / 0.05 x 0.055 / 0.03 x 0.03 / 0.01 x 0.01 |
 
 ### 6.5 Skin and colour (all proposed - the screenplay gives none)
 
