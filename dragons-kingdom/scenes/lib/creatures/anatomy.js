@@ -105,15 +105,15 @@ export const DESIGNS = {
     trunkP: [[0, 2.7, 4.2], [0.25, 2.9, 4.5], [0.6, 2.4, 3.4], [0.85, 2.2, 2.8], [1, 2.35, 2.6]],
     tailP: [[0, 1.95, 2.15], [0.15, 1.5, 1.7], [0.35, 0.95, 1.1], [0.6, 0.48, 0.56], [0.85, 0.19, 0.23], [1, 0.04, 0.04]],
     stand: { hip: 7.0, shoulder: 7.5, forearmLean: 12, humerusRise: 12, neckRise: 25, neckTop: 0, headPitch: -14, tailDroop: 22 },
-    fold: { curl: [8, 60, 108] }, bulk: { leg: 1.38, arm: 1.32, neck: 1.12 },
+    fold: { curl: [8, 60, 108] }, bulk: { leg: 1.38, arm: 1.12, neck: 1.12 },
     // semi-digitigrade with a fibro-fatty heel pad (elephant); claws thick, blunt, chipped
     leg: { femur: 3.1, tibia: 3.4, mt: 1.5, toe: 1.3, claw: 0.42, d: [1.7, 1.05, 1.0, 0.62, 0.52], mtAng: 40, heelPad: 1.0, hallux: 0.48, toeR: 0.19, blunt: 1 },
-    wing: { humerus: 5.4, forearm: 7.2, d: [1.6, 1.15, 0.8, 0.45],
+    wing: { humerus: 5.4, forearm: 7.2, d: [1.55, 1.0, 0.62, 0.42],
       fingers: [['III', 7.4, [5.2, 3.9, 2.3], -6], ['IV', 6.8, [5, 3.4, 1.6], -32], ['V', 6.2, [4.6, 2.9, 1.2], -64]],
       thumb: { mc: 0.7, ph: 0.55, claw: 0.6 }, to: 'ankle', glide: { humerus: -16, forearm: 12 }, legSplay: 24, thick: 0.007 },
-    eye: 0.29, snout: 0.58, teeth: [15, 14], toothMax: 0.3, jawMax: 50,
+    eye: 0.29, snout: 0.58, teeth: [15, 14], toothMax: 0.4, jawMax: 50,
     body: { hump: 0.75, keel: 1.0, belly: 1.0, pec: 1.1, arm: 1.15, thigh: 1.05, tailbase: 1.1, neck: 1.1 },
-    headX: { brow: 1.6, cheek: 1.15, jawMuscle: 1.3, nostril: 1.4, lipCover: 0.3, lipIrregular: 1, tympanum: 1, ridgeR: 0.024, chin: 1 },
+    headX: { brow: 1.6, cheek: 1.15, jawMuscle: 1.45, nostril: 1.0, lipCover: 0.22, lipIrregular: 1, tympanum: 1, ridgeR: 0.024, chin: 1 },
     horns: 'charcoal', crest: { tail: 0.32, back: 0.12 },
     scale: { body: 0.0042, belly: 0.012, head: 0.0032 },
     folds: { throat: 3, neck: 2, tail: 3, axilla: 1, stifle: 1 },
@@ -151,7 +151,7 @@ export const DESIGNS = {
     fold: { curl: [-4, 2, 6], inward: 0.16, wrap: 0.1, outUp: 0.5 }, bulk: { leg: 1.2, arm: 1.15, neck: 1.0 },
     // raptor feet: long toes, big curved talons, a large opposable hallux with the biggest talon
     leg: { femur: 5.8, tibia: 7, mt: 3.8, toe: 3.6, claw: 1.3, d: [3.6, 2.3, 2.15, 1.4, 1.2], mtAng: 55, heelPad: 0.4, hallux: 0.62, toeR: 0.3, raptor: 1 },
-    wing: { humerus: 10.2, forearm: 14.8, d: [3.0, 2.25, 1.55, 0.9],
+    wing: { humerus: 10.2, forearm: 14.8, d: [3.0, 2.0, 1.25, 0.85],
       fingers: [['II', 14.5, [5, 2.5], 2], ['III', 15.5, [11.5, 8.5, 5], -5], ['IV', 14, [10.5, 7.2, 3.4], -28], ['V', 12.8, [9, 6, 2.6], -52]],
       thumb: { mc: 1.3, ph: 0.9, claw: 1 }, to: 'ankle', glide: { humerus: -15, forearm: 12 }, legSplay: 30, thick: 0.014 },
     eye: 0.39, snout: 0.6, teeth: [18, 17], toothMax: 0.36, jawMax: 45,
@@ -194,12 +194,12 @@ export const DESIGNS = {
     wing: { humerus: 0.085, forearm: 0.105, d: [0.038, 0.026, 0.02, 0.016],
       fingers: [['III', 0.08, [0.05, 0.035, 0.02], -10], ['IV', 0.07, [0.035, 0.02, 0.01], -48], ['V', 0.06, [0.025, 0.015, 0.008], -80]],
       thumb: { mc: 0.016, ph: 0.014, claw: 0.02 }, to: 'knee', glide: { humerus: -16, forearm: 12 }, legSplay: 22, thick: 0.0006 },
-    eye: 0.036, snout: 0.27, teeth: [0, 0], toothMax: 0, jawMax: 30, newborn: 1,
+    eye: 0.042, snout: 0.2, teeth: [0, 0], toothMax: 0, jawMax: 30, newborn: 1,
     body: { hump: 0, keel: 0.4, belly: 1.6, pec: 0.5, arm: 0.45, thigh: 0.55, tailbase: 0.7, neck: 0.7 },
-    headX: { brow: 0.35, cheek: 0.45, jawMuscle: 0.35, nostril: 0.6, lipCover: 0.4, tympanum: 0.4, ridgeR: 0.026, soft: true, eggTooth: true },
+    headX: { brow: 0.35, cheek: 0.45, jawMuscle: 0.35, nostril: 0.6, lipCover: 0.0, tympanum: 0.4, ridgeR: 0.026, soft: true, eggTooth: true },
     horns: 'buds', crest: { tail: 0.0, back: 0.0 },
     scale: { body: 0.0034, belly: 0.006, head: 0.0028 },
-    folds: { throat: 2, neck: 2, tail: 0, axilla: 0, stifle: 0, soft: true },
+    folds: { throat: 0, neck: 1, tail: 0, axilla: 0, stifle: 0, soft: true },
     lid: { rIn: 1.03, rOut: 1.13, reachL: 0.8, span: 1.25, gran: 0.09, none: true },
     surfaceNoise: 0.0009,
     flapHz: 0, flapAmp: 0,
@@ -756,6 +756,7 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
       const th = L * 0.0017;
       const A = add(sc.c, scale(sc.tan, vl * 0.42)), M = add(sc.c, scale(sc.tan, -vl * 0.05)), B = add(sc.c, scale(sc.tan, -vl * 0.58));
       const rM = vw * 0.5;
+      m.quiet.push(...M, vl * 0.75);
       m.cone(A, M, th * 1.2, rM, { sx: th / rM, sy: 1, up: sc.up, k: th * 1.5, bone: boneAtD(dTip), chain: 'spine', tag: 'vane' });
       m.cone(M, B, rM, th, { sx: th / rM, sy: 1, up: sc.up, k: th * 1.5, bone: boneAtD(dAtTail(0.985)), chain: 'spine', tag: 'vane' });
     }
@@ -918,7 +919,8 @@ function makeHeadShape(D, H) {
     const fu = mix(X.young || X.soft ? 0.6 : 0.56, 0.6, s);
     // the mandible: deep at the back (jaw muscles), a knobby chin on Charcoal
     const chin = (X.chin ?? 0) * 0.02 * Math.exp(-Math.pow((z - 0.9) / 0.07, 2));
-    jaw.push([z, W * 0.485, lipY(z) + 0.01, lipY(z) - (1 - fu) * Dp - chin]);
+    // (a newborn's lower jaw sits inside the upper one - an overbite, no protruding rim)
+    jaw.push([z, W * (X.soft ? 0.4 : 0.485), lipY(z) + 0.01, lipY(z) - (1 - fu) * Dp * (X.soft ? 0.72 : 1) - chin]);
   }
   const eyeD = D.eye / D.skull;                    // eyeball diameter / skull length
   const eyeS = 1 - D.snout - eyeD * 0.5;
@@ -931,10 +933,10 @@ function makeHeadShape(D, H) {
   const nT = D.teeth[0] | 0;
   return {
     upper, jaw, eye, eyeR: eyeD * 0.5, eyeInset: X.soft ? 0.5 : 0.52, eyeExpose: X.soft ? 46 : X.young ? 60 : 62,
-    brow: X.brow ?? 1, cheek: X.cheek ?? 1, jawMuscle: X.jawMuscle ?? 1, ridgeR: X.ridgeR ?? 0.022, hinge, gape0: (X.soft ? 11 : 13) * deg,
+    brow: X.brow ?? 1, cheek: X.cheek ?? 1, jawMuscle: X.jawMuscle ?? 1, ridgeR: X.ridgeR ?? 0.022, hinge, gape0: (X.soft ? 6 : 13) * deg,
     nostril: X.nostril ?? 1, teethUp: nT, teethSize: nT ? (D.toothMax / D.skull) * 0.5 : 0, lipCover: X.lipCover ?? 0.5, lipIrregular: X.lipIrregular ?? 0,
     tympanum: X.tympanum ?? 1, eggTooth: !!X.eggTooth, soft: !!X.soft, gazeForward: D.gazeForward ?? (X.young ? 0.28 : 0.2),
-    jawEnd: X.soft ? 0.86 : 0.95, orbit: X.soft ? 1.45 : 1.36, young: !!X.young, long: !!X.long,
+    jawEnd: X.soft ? 0.82 : 0.95, orbit: X.soft ? 1.45 : 1.36, young: !!X.young, long: !!X.long,
   };
 }
 
@@ -1043,7 +1045,7 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
     }
   }
   // a newborn's puffy cheeks: above the lip line (they belong to the skull, not the jaw)
-  if (soft) for (const sd of [1, -1]) m.ell(W(sd * U(0.24)[0] * 0.62, -0.025, 0.22), [0.075 * H, 0.05 * H, 0.1 * H], { ax: ex, ay: ey, k: 0.06 * H, ...t });
+  // (rev. 2: no puffy cheeks above the lip line - with the jaw below they made a clamshell "duck bill")
 
   // ---- lower jaw (closed config, rotated open by gape0)
   const jt = { chain: 'jaw', bone: 'jaw', tag: 'jaw' };
@@ -1092,7 +1094,7 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
   const cavDir = (x, y, z) => { const c = Math.cos(midG), s = Math.sin(midG); return Wd(x, y * c - z * s, y * s + z * c); };
   const mouthY = hinge[1];
   const zMid = (hinge[2] + 1) * 0.5;
-  m.ell(cav(0, mouthY, zMid), [0.5 * lipW(zMid) * H, 0.02 * H, (1 - hinge[2]) * 0.38 * H], { ax: ex, ay: cavDir(0, 1, 0), k: 0.03 * H, op: 'sub', chain: 'jaw', bone: 'jaw', tag: 'mouth' });
+  m.ell(cav(0, mouthY, zMid), [0.5 * lipW(zMid) * H * (soft ? 0.7 : 1), 0.02 * H * (soft ? 0.5 : 1), (1 - hinge[2]) * 0.38 * H], { ax: ex, ay: cavDir(0, 1, 0), k: 0.03 * H, op: 'sub', chain: 'jaw', bone: 'jaw', tag: 'mouth' });
   m.ell(cav(0, mouthY - 0.005, hinge[2] + 0.12), [0.08 * H, 0.035 * H, 0.12 * H], { ax: ex, ay: cavDir(0, 1, 0), k: 0.03 * H, op: 'sub', chain: 'jaw', bone: 'jaw', tag: 'mouth' });
   m.cone(jawPt(0, J(hinge[2] + 0.15)[1] - 0.035, hinge[2] + 0.1), jawPt(0, J(0.7)[1] - 0.03, 0.72), 0.04 * H, 0.022 * H, { sx: 1.45, sy: 0.5, up: jawDir(0, 1, 0), k: 0.012 * H, chain: 'jaw', bone: 'jaw', tag: 'tongue' });
   for (const sd of [1, -1]) {
@@ -1101,7 +1103,7 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
   }
   for (const sd of [1, -1]) {
     m.ell(W(sd * eyeP[0], eyeP[1], eyeP[2]), [ER * H * 1.045, ER * H * 1.045, ER * H * 1.06], { ax: gW(sd), ay: ey, k: 0.008 * H, op: 'sub', ...t, tag: 'eyesocket' });
-    m.ell(W(sd * U(0.93)[0] * 0.45, U(0.93)[1] - 0.004, 0.93), [0.017 * H * hs.nostril, 0.009 * H * hs.nostril, 0.028 * H * hs.nostril], { ax: Wd(1, 0.7, 0.15 * sd), ay: Wd(-0.7, 1, 0), k: 0.01 * H, op: 'sub', ...t, tag: 'nostril' });
+    m.ell(W(sd * U(0.93)[0] * 0.45, U(0.93)[1] - 0.004, 0.93), [0.011 * H * hs.nostril, 0.0065 * H * hs.nostril, 0.034 * H * hs.nostril], { ax: Wd(1, 0.7, 0.15 * sd), ay: Wd(-0.7, 1, 0), k: 0.01 * H, op: 'sub', ...t, tag: 'nostril' });
     if (hs.tympanum) m.ell(W(sd * U(hinge[2] - 0.05)[0] * 0.92, 0.02, hinge[2] - 0.05), [0.02 * H, 0.045 * H * hs.tympanum, 0.032 * H * hs.tympanum], { ax: Wd(1, 0, -0.25 * sd), ay: ey, k: 0.015 * H, op: 'sub', ...t, tag: 'head' });
   }
   let gOpen = gL;
@@ -1161,7 +1163,7 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
       const tipY = y - size * 1.05 * broken;
       keratin.push({ kind: 'tooth', bone: 'head', tag: 'tooth',
         points: [W(x, y + size * 0.5, z), W(x * (0.995 + lean * 0.05), y - size * 0.35, z + size * 0.06), W(x * (0.985 + lean * 0.1), tipY, z - size * curve * broken)],
-        radii: [size * (0.3 + 0.06 * big) * H, size * 0.21 * H, size * (broken < 1 ? 0.11 : 0.012) * H], flat: 0.7 + 0.1 * hv(8), up: ez, seedJ: hv(9) });
+        radii: [size * (0.4 + 0.08 * big) * H, size * 0.27 * H, size * (broken < 1 ? 0.14 : 0.015) * H], flat: 0.72 + 0.1 * hv(8), up: ez, seedJ: hv(9) });
     }
     const nL = D.teeth[1] | 0;
     for (let i = 0; i < nL; i++) {
@@ -1179,11 +1181,11 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
       const broken = hv(6) < 0.1 ? 0.55 + 0.2 * hv(7) : 1;
       keratin.push({ kind: 'tooth', bone: 'jaw', tag: 'tooth',
         points: [jawPt(x, y - size * 0.5, z), jawPt(x * 0.995, y + size * 0.35, z + size * 0.05), jawPt(x * 0.985, y + size * 1.0 * broken, z - size * curve * broken)],
-        radii: [size * 0.28 * H, size * 0.2 * H, size * (broken < 1 ? 0.1 : 0.012) * H], flat: 0.7, up: ez, seedJ: hv(9) });
+        radii: [size * 0.38 * H, size * 0.26 * H, size * (broken < 1 ? 0.13 : 0.015) * H], flat: 0.72, up: ez, seedJ: hv(9) });
     }
     if (nT > 0) {
       const gz = [0, 0.18, 0.36, 0.54, 0.72, 0.88, 1].map((f) => mix(zT0 - 0.02, 0.96, f));
-      const gr = hs.teethSize * 0.2 * H;
+      const gr = hs.teethSize * 0.13 * H;   // (a thin gum margin: a thick one drew a red line along the jaw)
       gums.push({ bone: 'head', pts: gz.map((z) => { const r = ridgeU(sd, z); return W(r[0] * 0.95, r[1] + hs.teethSize * 0.28, z); }), r: gr * 0.9 });
       gums.push({ bone: 'jaw', pts: gz.slice(0, -1).map((z) => { const r = ridgeJ(sd, z); return jawPt(r[0] * 0.93, r[1] - hs.teethSize * 0.32, z); }), r: gr * 0.85 });
     }

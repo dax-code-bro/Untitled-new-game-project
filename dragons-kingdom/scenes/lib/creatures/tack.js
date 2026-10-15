@@ -197,12 +197,12 @@ export function buildTack(o) {
       const drop = 0.5;
       const bot = top.clone().add(new THREE.Vector3(sd * 0.1, -drop, 0.03));
       const lp = [top, top.clone().lerp(bot, 0.5).add(new THREE.Vector3(sd * 0.03, 0, 0)), bot];
-      geos.push([sweep(lp, roundRect(0.03, 0.005, 0.3, 2), () => new THREE.Vector3(sd, 0, 0)), 'strap']);
+      geos.push([sweep(lp, roundRect(0.03, 0.005, 0.3, 2), () => new THREE.Vector3(sd, 0, 0)), 'stirrupStrap']);
       const st = [];
       for (let k = 0; k <= 14; k++) { const t = k / 14 * Math.PI; st.push(bot.clone().add(new THREE.Vector3(0, -0.02 - Math.sin(t) * 0.11, -Math.cos(t) * 0.065))); }
-      geos.push([sweep(st, circle(0.007, 6), () => new THREE.Vector3(sd, 0, 0)), 'iron']);
+      geos.push([sweep(st, circle(0.007, 6), () => new THREE.Vector3(sd, 0, 0)), 'stirrupIron']);
       const tread = [st[0].clone(), st[st.length - 1].clone()];
-      geos.push([sweep([tread[0], tread[0].clone().lerp(tread[1], 0.5).add(new THREE.Vector3(0, -0.006, 0)), tread[1]], roundRect(0.05, 0.01, 0.3, 2), () => new THREE.Vector3(0, 1, 0)), 'iron']);
+      geos.push([sweep([tread[0], tread[0].clone().lerp(tread[1], 0.5).add(new THREE.Vector3(0, -0.006, 0)), tread[1]], roundRect(0.05, 0.01, 0.3, 2), () => new THREE.Vector3(0, 1, 0)), 'stirrupIron']);
     }
   } else {
     // --------------------------------------------------------------- rig

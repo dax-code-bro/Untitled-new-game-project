@@ -47,7 +47,7 @@ void main() {
 export function createDust(opts = {}) {
   const R = opts.radius ?? 30;
   const seed = opts.seed ?? 1;
-  const NP = opts.puffs ?? 900, NC = opts.clods ?? 260;
+  const NP = opts.puffs ?? 1100, NC = opts.clods ?? 620;
   const col = opts.color ?? [0.42, 0.37, 0.29];
   const group = new THREE.Group();
   group.name = 'dragon-dust';
@@ -98,19 +98,30 @@ export function createDust(opts = {}) {
           m.position.set(s.at[0] + d.x * s.len * 0.5, 0.012, s.at[1] + d.y * s.len * 0.5);
           // the turned soil heaped along the furrow's end
           const heap = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), rim);
-          heap.scale.set((s.w ?? 0.35) * 1.3, (s.w ?? 0.35) * 0.45, (s.w ?? 0.35) * 1.1);
+          heap.scale.set((s.w ?? 0.35) * 1.6, (s.w ?? 0.35) * 0.9, (s.w ?? 0.35) * 1.4);
           heap.position.set(s.at[0] + d.x * s.len, 0.0, s.at[1] + d.y * s.len);
           heap.castShadow = heap.receiveShadow = true;
           scarGroup.add(heap);
         } else {
           m.scale.set(s.r, s.r, 1);
           m.position.set(s.at[0], 0.01, s.at[1]);
-          const lip = new THREE.Mesh(new THREE.TorusGeometry(1, 0.12, 6, 32), rim);
+          // (rev. 2) the thrown-up rim stands out of the grass: heaped soil and torn turf slabs
+          const lip = new THREE.Mesh(new THREE.TorusGeometry(1, 0.2, 8, 40), rim);
           lip.rotation.x = -Math.PI / 2;
-          lip.scale.set(s.r * 1.05, s.r * 1.05, s.r * 0.9);
-          lip.position.set(s.at[0], 0.0, s.at[1]);
+          lip.scale.set(s.r * 1.12, s.r * 1.12, s.r * 1.6);
+          lip.position.set(s.at[0], 0.02, s.at[1]);
           lip.castShadow = lip.receiveShadow = true;
           scarGroup.add(lip);
+          for (let q = 0; q < 9; q++) {
+            const a = (q / 9) * Math.PI * 2 + hash(q + i * 13, 8);
+            const slab = new THREE.Mesh(new THREE.BoxGeometry(1, 0.25, 0.7), q % 3 ? soil : rim);
+            const rr = s.r * (1.2 + 0.5 * hash(q + i * 13, 9));
+            slab.scale.setScalar(s.r * (0.35 + 0.4 * hash(q + i * 13, 10)));
+            slab.position.set(s.at[0] + Math.cos(a) * rr, s.r * 0.08, s.at[1] + Math.sin(a) * rr);
+            slab.rotation.set((hash(q, 11) - 0.5) * 1.2, a, (hash(q, 12) - 0.5) * 1.0);
+            slab.castShadow = slab.receiveShadow = true;
+            scarGroup.add(slab);
+          }
         }
         scarGroup.add(m);
       });
@@ -139,12 +150,13 @@ export function createDust(opts = {}) {
           const ang = h1 * Math.PI * 2;
           const r0 = R * 0.12 * (0.3 + h2);
           const r = r0 + R * (0.9 + 0.5 * h2) * (1 - Math.exp(-2.6 * age / 2.2)) * strength;
-          const y = (0.6 + 2.2 * h3) * (R / 30) * (0.3 + age * 0.6) * (1 - 0.3 * f);
+          // the wall jet rolls up into a dome: puffs further out climb higher and swell
+          const y = (0.6 + 2.2 * h3) * (R / 30) * (0.3 + age * 0.6) * (1 - 0.3 * f) + (r / R) * (R / 30) * 3.5 * h3 * Math.min(1, age / 3);
           dummy.position.set(C.x + Math.cos(ang) * r, C.y + y, C.z + Math.sin(ang) * r);
           dummy.updateMatrix();
           puffs.setMatrixAt(k, dummy.matrix);
           const size = (R / 30) * (1.2 + 3.5 * h2) * (0.4 + 1.6 * Math.sqrt(age / 2));
-          const alpha = 0.55 * strength * Math.min(1, age * 4) * (1 - f) * (1 - f);
+          const alpha = 0.62 * strength * Math.min(1, age * 4) * (1 - f) * (1 - f);
           aP.setXYZW(k, f, h1, size, alpha);
         }
       });
@@ -157,15 +169,24 @@ export function createDust(opts = {}) {
         const kp = pts.length ? pts[i % pts.length] : [C.x, C.z];
         const age = o.kick !== undefined ? t - o.kick - h4 * 0.3 : -1;
         if (age <= 0) { dummy.position.set(0, -1e4, 0); dummy.scale.setScalar(0.001); dummy.updateMatrix(); clods.setMatrixAt(i, dummy.matrix); continue; }
-        const ang = h1 * Math.PI * 2;
-        const v = (6 + 14 * h2) * Math.sqrt(R / 30);
-        const vy = (4 + 10 * h3) * Math.sqrt(R / 30);
-        const tf = Math.min(age, (2 * vy) / 9.81);
-        const x = kp[0] + Math.cos(ang) * v * tf * 0.85, z = kp[1] + Math.sin(ang) * v * tf * 0.85;
-        const y = Math.max(0.05, vy * tf - 0.5 * 9.81 * tf * tf);
+        // (rev. 2) sizes from a power law - a spray of crumbs and grass roots, some fist-sized
+        // clods, a few torn slabs of turf a metre across - thrown on arcs of different heights;
+        // the big ones fly lower and land nearer, then skid
+        const big = Math.pow(h3, 5);
+        const sc = (0.025 + 0.95 * big + 0.08 * h3 * h3) * Math.sqrt(R / 30);
+        const ang = h1 * Math.PI * 2 + (hash(i + seed * 71, 6) - 0.5) * 0.4;
+        const v = (5 + 17 * h2 * (1 - 0.6 * big)) * Math.sqrt(R / 30);
+        const vy = (2.5 + 14 * hash(i + seed * 71, 5) * (1 - 0.7 * big)) * Math.sqrt(R / 30);
+        const tFly = (2 * vy) / 9.81;
+        const tf = Math.min(age, tFly);
+        const skid = Math.max(0, age - tFly);
+        const sd = v * 0.3 * (1 - Math.exp(-3 * skid));
+        const x = kp[0] + Math.cos(ang) * (v * tf * 0.85 + sd), z = kp[1] + Math.sin(ang) * (v * tf * 0.85 + sd);
+        const y = Math.max(sc * 0.35, vy * tf - 0.5 * 9.81 * tf * tf);
         dummy.position.set(x, y, z);
-        dummy.rotation.set(age * 7 * h1, age * 5 * h2, age * 3);
-        dummy.scale.setScalar((0.06 + 0.32 * h3 * h3) * Math.sqrt(R / 30));
+        const spin = age < tFly ? age : tFly + 0.3 * (1 - Math.exp(-3 * skid));
+        dummy.rotation.set(spin * 7 * h1, spin * 5 * h2, spin * 3);
+        dummy.scale.set(sc * (0.8 + 0.5 * h1), sc * (big > 0.2 ? 0.35 : 0.7), sc * (0.8 + 0.5 * h2));
         dummy.updateMatrix();
         clods.setMatrixAt(i, dummy.matrix);
       }

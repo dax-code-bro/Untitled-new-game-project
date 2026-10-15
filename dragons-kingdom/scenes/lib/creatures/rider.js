@@ -423,8 +423,11 @@ export function createSaddle(c, opts = {}) {
   let halfBody = 0;
   for (let x = 0; x < L * 0.2; x += L * 0.002) { if (f(x, seatY - L * 0.01, seatZ) > 0) break; halfBody = x; }
   const built = buildTack({ L, kind, f, seatZ, seatY, halfBody });
+  // (the hanging stirrups are their own meshes: hidden while a rider sits in the saddle - the
+  // mounted rider carries stirrups under the soles of the fitted feet instead)
+  const stirrupStrapMat = leatherMaterial([0.055, 0.035, 0.022], 0.6), stirrupIronMat = ironMaterial();
   const MAT = {
-    seat: leather, strap: strapMat, iron: metal,
+    seat: leather, strap: strapMat, iron: metal, stirrupStrap: stirrupStrapMat, stirrupIron: stirrupIronMat,
     wool: woolMaterial(opts.woolColor ?? [0.07, 0.03, 0.022]),
     wood: woodMaterial([0.09, 0.055, 0.03]),
   };
@@ -489,6 +492,7 @@ export function createSaddle(c, opts = {}) {
     sm.frustumCulled = false;
     c.root.add(sm);
     sm.bind(c.skeletonSculpt || c.skeleton, new THREE.Matrix4());
+    if (m === stirrupStrapMat || m === stirrupIronMat) sm.userData.stirrup = true;
     meshes.push(sm);
   }
   const seatPoint = new THREE.Vector3(0, (built.seatTop ?? seatY + block) + 0.02, seatZ - seatLen * 0.08);
@@ -643,8 +647,59 @@ export function mountRider(c, tack, rider, opts = {}) {
   c.root.updateMatrixWorld(true);
   if (opts.straddle !== false) fitStraddle(c, bone, restWorld, rider, holder, opts);
   if (opts.grip !== false) addGrip(tack, rider, holder);
+  if (tack.kind === 'saddle' && opts.stirrups !== false) addStirrups(tack, rider, holder);
   c.root.updateMatrixWorld(true);
   return holder;
+}
+
+/**
+ * Stirrups where the fitted rider's feet are (rev. 2): an iron under the ball of each boot and a
+ * leather from it up to the saddle's flap, built once after the straddle fit (the feet of the
+ * humans-library riders are posed by the build, so the saddle's own hanging stirrups ended beside
+ * them). tack.hideStirrups(true) hides the saddle's own pair while the rider is seated.
+ */
+function addStirrups(tack, rider, holder) {
+  const find = (n) => (rider.character?.bone ? rider.character.bone(n) : null) || (rider.bones || []).find((b) => b.name === n);
+  rider.update?.(0);
+  holder.updateMatrixWorld(true);
+  rider.root.updateMatrixWorld(true);
+  const leather = leatherMaterial([0.055, 0.035, 0.022], 0.6), iron = ironMaterial();
+  const g = new THREE.Group();
+  g.name = 'stirrups';
+  for (const sd of ['L', 'R']) {
+    const foot = find(`foot.${sd}`), toe = find(`toe1-1.${sd}`) || find(`toe2-1.${sd}`);
+    if (!foot) continue;
+    const a = rider.root.worldToLocal(foot.getWorldPosition(new THREE.Vector3()));
+    const b = toe ? rider.root.worldToLocal(toe.getWorldPosition(new THREE.Vector3())) : a.clone().add(new THREE.Vector3(0, -0.05, 0.15));
+    const along = b.clone().sub(a).normalize();
+    const ball = a.clone().lerp(b, 0.72);
+    // the sole is ~6 cm below the foot bones; the iron hangs round the ball of the foot
+    const down = new THREE.Vector3(0, -1, 0).addScaledVector(along, along.y).normalize();
+    const side = new THREE.Vector3().crossVectors(along, down).normalize();
+    const tread = ball.clone().addScaledVector(down, 0.075);
+    const top = ball.clone().addScaledVector(down, -0.075);
+    const pts = [];
+    for (let k = 0; k <= 16; k++) { const t = k / 16 * Math.PI; pts.push(tread.clone().addScaledVector(side, Math.cos(t) * 0.065).addScaledVector(down, -Math.sin(t) * 0.15 + 0.0)); }
+    const arc = new THREE.CatmullRomCurve3(pts);
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(arc, 24, 0.007, 6, false), iron));
+    const tr = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.008, 0.045), iron);
+    tr.position.copy(tread);
+    tr.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), side);
+    g.add(tr);
+    // the leather from the top of the iron up to the flap under the rider's thigh
+    const thigh = find(`upperleg01.${sd}`);
+    const hip = thigh ? rider.root.worldToLocal(thigh.getWorldPosition(new THREE.Vector3())) : new THREE.Vector3(0, 0.1, 0);
+    const flap = hip.clone().add(new THREE.Vector3(0, -0.12, 0.05));
+    flap.x = hip.x * 0.8;
+    const d = flap.clone().sub(top), l = d.length();
+    const st = new THREE.Mesh(new THREE.BoxGeometry(0.03, l, 0.006), leather);
+    st.position.copy(top).add(flap).multiplyScalar(0.5);
+    st.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+    g.add(st);
+  }
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } });
+  rider.root.add(g);
+  tack.riderStirrups = true;
 }
 
 /**

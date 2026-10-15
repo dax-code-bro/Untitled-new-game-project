@@ -94,7 +94,8 @@ export function keratin(items, boneIndex, opts = {}) {
       const vx = cross(tg, ux);
       // radius profile: quadratic through r0, r1, r2 (with a slight bulge near the base)
       const r = sp ? sp.r(t) : t < 0.5 ? mix(it.radii[0], it.radii[1], t / 0.5) : mix(it.radii[1], it.radii[2], Math.pow((t - 0.5) / 0.5, 0.9));
-      const ring = it.rings ? 1 + 0.05 * Math.max(0, Math.sin(t * 34 + seed * 6)) * (1 - t) : 1;
+      // (rev. 2: deeper annual growth ridges, uneven in spacing - smooth tubes read as plastic)
+      const ring = it.rings ? 1 + 0.085 * Math.max(0, Math.sin(t * 34 + seed * 6 + 1.4 * Math.sin(t * 9 + seed))) * (1 - t * 0.9) : 1;
       const fa = it.flat ?? 1;
       // the flat axis: by default the section is squashed along `ux` (spikes: sideways)
       for (let j = 0; j <= around; j++) {

@@ -17,13 +17,17 @@
 import * as THREE from 'three';
 
 export const FIRE_PALETTES = {
+  // (rev. 2: the additive tongues piled up into a cream-white beam; the gain per tongue is lower
+  // and the colours deeper, so the jet reads orange-red with a yellow core only near the mouth)
   standard: {
-    core: [1.0, 0.78, 0.45], coreI: 3.2, body: [1.0, 0.34, 0.05], bodyI: 1.7, edge: [0.85, 0.11, 0.02], edgeI: 1.0,
-    smoke: [0.035, 0.03, 0.027], smokeAmt: 1.0, light: [1.0, 0.5, 0.18], lightI: 1.0, temp: 1.0,
+    core: [1.0, 0.62, 0.2], coreI: 2.2, body: [1.0, 0.27, 0.025], bodyI: 1.5, edge: [0.75, 0.07, 0.01], edgeI: 1.0,
+    smoke: [0.03, 0.026, 0.024], smokeAmt: 1.15, light: [1.0, 0.42, 0.12], lightI: 1.0, temp: 1.0, gain: 0.3,
   },
+  // purplish-blue (hue ~255): a white-violet core, saturated blue-violet body, violet fringe
   leaf: {
-    core: [0.55, 0.55, 1.0], coreI: 1.3, body: [0.32, 0.16, 1.0], bodyI: 1.25, edge: [0.62, 0.08, 0.95], edgeI: 1.25,
-    smoke: [0.07, 0.068, 0.08], smokeAmt: 0.45, light: [0.55, 0.5, 1.0], lightI: 1.15, temp: 1.12,
+    // (kept well below the tone curve's shoulder: bright saturated blue desaturates to white there)
+    core: [0.6, 0.55, 1.0], coreI: 1.3, body: [0.24, 0.12, 1.0], bodyI: 1.2, edge: [0.45, 0.06, 0.95], edgeI: 1.1,
+    smoke: [0.07, 0.068, 0.08], smokeAmt: 0.4, light: [0.42, 0.36, 1.0], lightI: 1.3, temp: 1.12, gain: 0.12,
   },
 };
 
@@ -50,7 +54,7 @@ void main() {
 
 const FRAG_FLAME = /* glsl */`
 varying vec2 vUv; varying vec4 vP;
-uniform vec3 uCore, uBody, uEdge; uniform float uT, uOn;
+uniform vec3 uCore, uBody, uEdge; uniform float uT, uOn, uGain;
 float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }
@@ -62,7 +66,7 @@ void main() {
   float n = vn(np) * 0.65 + vn(np * 2.3 + 4.1) * 0.35;
   float r = length(q * vec2(1.0, 1.15));
   // billows: each sprite a ragged puff, so the stream breaks into rolling tongues
-  float m = smoothstep(0.75, 0.15, r + (n - 0.5) * 1.2) * (0.5 + 0.9 * n);
+  float m = smoothstep(0.75, 0.15, r + (n - 0.5) * 1.5) * (0.35 + 1.1 * n * n);
   if (m <= 0.002) discard;
   // temperature: hottest near the mouth and in the middle of each tongue, cooling to the edges
   float heat = clamp((1.0 - age * 1.7) * (0.5 + 0.7 * (1.0 - r)) + (n - 0.5) * 0.35, 0.0, 1.0);
@@ -70,7 +74,7 @@ void main() {
   // (a short fade-in: a longer one left the first sixth of the jet empty, so the fire seemed to
   // start in the air in front of the mouth)
   float fade = smoothstep(0.0, 0.012, age) * (1.0 - smoothstep(0.55, 1.0, age));
-  gl_FragColor = vec4(col * m * fade * uOn * 0.55, 1.0);
+  gl_FragColor = vec4(col * m * fade * uOn * uGain, 1.0);
 }`;
 
 const FRAG_SMOKE = /* glsl */`
@@ -118,17 +122,22 @@ export function createFire(opts = {}) {
     return { m, aP };
   };
   const col = (c, i) => new THREE.Vector3(c[0] * i, c[1] * i, c[2] * i);
-  const F = mkInst(NF, FRAG_FLAME, { uCore: { value: col(P.core, P.coreI) }, uBody: { value: col(P.body, P.bodyI) }, uEdge: { value: col(P.edge, P.edgeI) } }, THREE.AdditiveBlending);
+  const F = mkInst(NF, FRAG_FLAME, { uCore: { value: col(P.core, P.coreI) }, uBody: { value: col(P.body, P.bodyI) }, uEdge: { value: col(P.edge, P.edgeI) }, uGain: { value: P.gain ?? 0.55 } }, THREE.AdditiveBlending);
   const Sm = mkInst(NS, FRAG_SMOKE, { uSmoke: { value: new THREE.Vector3(...P.smoke) }, uAmt: { value: P.smokeAmt } }, THREE.NormalBlending);
   Sm.m.renderOrder = 4;
   group.add(Sm.m, F.m);
+  // two lights: one down the jet (the ground, the chest) and one at the mouth (the jaws, the head
+  // and neck) - the fire must light its surroundings, not only glow
   const light = new THREE.PointLight(new THREE.Color(...P.light), 0, len * 2.2, 2);
   light.castShadow = false;
-  group.add(light);
+  const mouthLight = new THREE.PointLight(new THREE.Color(...P.light), 0, len * 0.9, 2);
+  mouthLight.castShadow = false;
+  group.add(light, mouthLight);
 
   const dummy = new THREE.Object3D();
   const _o = new THREE.Vector3(), _d = new THREE.Vector3(), _s = new THREE.Vector3(), _u = new THREE.Vector3(), _w = new THREE.Vector3();
   const lifeF = 0.62 / P.temp, lifeS = 2.1;
+  let groundY = null;
   const speed = len / (lifeF * 0.72);
 
   /** Path of a particle of age a (seconds) emitted from o along d (unit), lateral basis s/u. */
@@ -145,20 +154,30 @@ export function createFire(opts = {}) {
     const rise = (kind === 0 ? 0.12 : 0.5) * len * f * f;      // hot gas rises as it slows
     _w.copy(o).addScaledVector(d, x).addScaledVector(s, Math.cos(ang) * lat).addScaledVector(u, Math.sin(ang) * lat);
     _w.y += rise;
+    const spark = kind === 0 && i % 9 === 0;
+    if (spark) {
+      // embers: thrown wider, falling as they cool
+      _w.addScaledVector(s, Math.cos(ang) * width * 0.6 * f).addScaledVector(u, Math.sin(ang) * width * 0.6 * f);
+      _w.y -= 0.35 * len * f * f;
+    }
     dummy.position.copy(_w);
     dummy.updateMatrix();
     inst.m.setMatrixAt(k, dummy.matrix);
-    const size = kind === 0 ? (0.022 * len + 0.42 * width * Math.pow(f, 1.2)) * (0.7 + 0.6 * h3) : (0.1 * len + 0.55 * width * f) * (0.7 + 0.6 * h3);
-    inst.aP.setXYZW(k, f, h1, size, kind === 0 ? 1.8 * (1 - f) : 0.2);
+    let size = kind === 0 ? (0.022 * len + 0.42 * width * Math.pow(f, 1.2)) * (0.45 + 1.1 * h3 * h3) : (0.1 * len + 0.55 * width * f) * (0.7 + 0.6 * h3);
+    if (spark) size = 0.0035 * len * (0.6 + 0.8 * h3);
+    // (nothing sinks below the ground: a camera-facing puff cut by the ground showed a ruled edge)
+    if (groundY !== null) { const lo = groundY + size * 0.75; if (_w.y < lo) { _w.y = lo; dummy.position.copy(_w); dummy.updateMatrix(); inst.m.setMatrixAt(k, dummy.matrix); } }
+    inst.aP.setXYZW(k, spark ? Math.min(f, 0.3) : f, h1, size, spark ? 7.0 : kind === 0 ? 1.8 * (1 - f) : 0.2);
   }
 
   const api = {
-    group, light, palette: P,
+    group, light, mouthLight, palette: P,
     /** Pure in t. o: { creature, on (0..1), origin, dir } */
     update(t, o = {}) {
       const on = Math.max(0, Math.min(1, o.on ?? 1));
+      groundY = o.groundY ?? null;
       group.visible = on > 0.001;
-      if (!group.visible) { light.intensity = 0; return; }
+      if (!group.visible) { light.intensity = 0; mouthLight.intensity = 0; return; }
       if (o.creature) {
         const c = o.creature;
         c.root.updateMatrixWorld(true);
@@ -198,8 +217,11 @@ export function createFire(opts = {}) {
       // the light sits a third of the way down the jet, flickering
       light.position.copy(_o).addScaledVector(_d, len * 0.3);
       const flick = 0.85 + 0.1 * Math.sin(t * 23.0) + 0.05 * Math.sin(t * 37.0 + 1.3);
-      light.intensity = P.lightI * on * flick * len * len * 0.08;
+      light.intensity = P.lightI * on * flick * len * len * 0.45;
       light.distance = len * 2.2;
+      mouthLight.position.copy(_o).addScaledVector(_d, len * 0.06);
+      mouthLight.intensity = P.lightI * on * (0.9 + 0.1 * Math.sin(t * 29.0 + 0.4)) * len * len * 0.05;
+      mouthLight.distance = len * 0.9;
     },
   };
   return api;

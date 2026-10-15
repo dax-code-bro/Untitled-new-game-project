@@ -25,21 +25,21 @@ import { filmFinish } from './finish.js';
 const D2R = Math.PI / 180;
 
 export const SHOTS = [
-  // Charcoal 3/4 front in daylight, standing on his feet and the wrist pads of his folded wings;
-  // Remi beside his left wrist for scale (35 mm from ~55 m, eye height)
+  // Charcoal 3/4 front in daylight, standing on his two legs, wings folded against his flanks
+  // (DESIGN rev. 2); Remi beside his left foot for scale (32 mm from ~55 m, eye height)
   { id: 'charcoal-front', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], dur: 3, face: -55,
-    people: [{ id: 'remi', at: [6.2, 0, 9.0], yaw: 40 }],
-    pose: { charcoal: { name: 'stand', look: [0.22, -0.02], tailCurl: 0.7 } },
-    cam: { subject: 'charcoal', pos: [33, 1.7, 44], target: [2.5, 6.8, 6], mm: 35, fstop: 8, focus: 'target' } },
+    people: [{ id: 'remi', at: [6.8, 0, 5.8], yaw: 40 }],
+    pose: { charcoal: { name: 'upright', look: [0.22, -0.02], tailCurl: 0.5 } },
+    cam: { subject: 'charcoal', pos: [33, 1.7, 44], target: [2.0, 8.5, 5], mm: 32, fstop: 8, focus: 'target' } },
   // Charcoal's head: a crane a little below his eye line, 3/4 front (50 mm), the horns against the sky
   { id: 'charcoal-head', set: 'field', creatures: ['charcoal'], dur: 3, face: -60,
-    pose: { charcoal: { name: 'stand', look: [0.35, 0.05], blink: false, lidRelax: 0.05 } },
+    pose: { charcoal: { name: 'upright', look: [0.35, 0.05], blink: false, lidRelax: 0.05 } },
     cam: { subject: 'charcoal', bone: 'head', pos: [9.5, -1.0, 9.0], target: [0.2, -0.6, 1.4], mm: 50, fstop: 5.6, focus: 'eye_L' } },
   // the take-off (1C): the first heavy downstroke after the vault - the downwash blasts a ring of
   // dust and grass, clods fly, the wrist-pad craters and claw furrows in the turf (24 mm, low, ~90 m)
   { id: 'charcoal-takeoff', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], riders: { charcoal: 'remi' }, dur: 4, face: -40, stage: 'takeoff', still: 1.0,
-    pose: { charcoal: { name: 'launch', t0: 2.9, look: [0.0, 0.15] } },
-    cam: { subject: 'charcoal', pos: [62, 2.2, 70], target: [0, 9, 4], mm: 24, fstop: 8, focus: 'target', fixed: true } },
+    pose: { charcoal: { name: 'launch', t0: 2.05, look: [0.0, 0.15] } },
+    cam: { subject: 'charcoal', pos: [46, 5.0, 52], target: [0, 6, 2], mm: 21, fstop: 8, focus: 'target', fixed: true, shutter: 120 } },
   // Charcoal and Leaf side by side (1C/1D): Leaf beside Charcoal's head, ahead of his wing, the
   // riders close enough to talk (~13 m); an air-to-air chase camera above and behind Charcoal's
   // left wing (35 mm), both at the bottom of a downstroke. Charcoal 0.42 Hz, Leaf ~1 Hz
@@ -49,9 +49,13 @@ export const SHOTS = [
     cam: { subject: 'charcoal', pos: [42, 28, -48], target: [5, 5, 12], mm: 35, fstop: 8, focus: 'target', shutter: 90 } },
   // the head-in-mouth (1D): Charcoal's neck curled round, Leaf's whole head held in his jaws at a
   // 25-degree holding gape, snout first; Abby on Leaf's saddle stays clear (32 mm, ~34 m)
-  { id: 'head-in-mouth', set: 'air', creatures: ['charcoal', 'leaf'], riders: { charcoal: 'remi', leaf: 'abby' }, dur: 3, alt: 220, face: -110, stage: 'mouth',
-    pose: { charcoal: { name: 'mouthHold', t0: 2.0, side: 1, turn: 1.65, pitch: 0.05 }, leaf: { name: 'glide', look: [-1.45, 0.05], lidRelax: 0.05, blink: false, corr: 0.6 } },
-    cam: { subject: 'charcoal', pos: [24, 22, 34], target: [6, 8.5, 13], mm: 32, fstop: 8, focus: 'target' } },
+  // (rev. 2) seen from ahead of the pair, square on to Charcoal's turned head: his jaws in profile
+  // closed to a gentle holding gape round Leaf's whole head (snout, eyes and horns inside the
+  // lips), Leaf's neck leaving the front of the mouth; Leaf's wings half folded (he is held, not
+  // flying), clear of Charcoal's neck; Abby in her saddle (50 mm)
+  { id: 'head-in-mouth', set: 'air', creatures: ['charcoal', 'leaf'], riders: { charcoal: 'remi', leaf: 'abby' }, dur: 3, alt: 220, face: -110, stage: 'mouth', mouthDepth: 1.85,
+    pose: { charcoal: { name: 'mouthHold', t0: 2.0, side: 1, turn: 1.65, pitch: 0.05, hold: 0.5 }, leaf: { name: 'dive', fold: 0.55, look: [-1.45, 0.05], lidRelax: 0.05, blink: false, corr: 0.3 } },
+    cam: { subject: 'charcoal', bone: 'head', pos: [3.4, -0.9, 16.5], target: [2.6, -0.7, 0.2], mm: 45, fstop: 8, focus: 'target' } },
   // Leaf sitting upright like a dog (1B), Abby beside his chest (35 mm, eye height, f/5.6)
   { id: 'leaf-abby', set: 'field', creatures: ['leaf'], tack: ['leaf'], dur: 3, face: -70,
     people: [{ id: 'abby', at: [1.9, 0, 1.5], yaw: 75 }],
@@ -67,18 +71,26 @@ export const SHOTS = [
     cam: { subject: 'leaf', pos: [11.5, 1.2, 8.0], target: [0, 1.4, 5.5], mm: 32, fstop: 8, focus: 'target' } },
   // Starlight gliding high over open country, seen from the ground (~400 m away, ~95 m up): a 27 m
   // watchtower at her distance for scale, a watchman pointing; haze between (40 mm)
-  { id: 'starlight-below', set: 'ground', creatures: ['starlight'], tack: ['starlight'], dur: 3, face: 160, haze: 3.0, fill: true,
+  { id: 'starlight-below', set: 'ground', creatures: ['starlight'], tack: ['starlight'], riders: { starlight: 'fall' }, dur: 3, face: 160, haze: 3.0, fill: true,
     flyer: { name: 'starlight', at: [-30, 95, 400], heading: -125 },
     tower: { at: [16, 0, 380], r: 3.6, h: 21, capH: 6.5 }, trees: true,
     people: [{ id: 'watchman', ground: [-0.95, 0, 4.6], yaw: -12 }],
     pose: { starlight: { name: 'glide', bank: -0.1, dihedral: 0.1, look: [0.1, -0.2] } },
     cam: { ground: true, pos: [0, 1.0, 0], lookAt: [-12, 92, 390], mm: 40, fstop: 4 } },
   // Starlight's dive-bomb (3C): the half-folded "M" stoop, steep, toward the ground (35 mm from below)
-  { id: 'starlight-dive', set: 'ground', creatures: ['starlight'], dur: 3, face: 160, haze: 2.4, fill: true,
+  // (rev. 2: Queen Fall in the rig on her back - the screenplay has her riding the dive; a longer
+  // lens so the rider reads)
+  { id: 'starlight-dive', set: 'ground', creatures: ['starlight'], riders: { starlight: 'fall' }, dur: 3, face: 160, haze: 2.4, fill: true,
     flyer: { name: 'starlight', at: [20, 115, 215], heading: -125, pitch: 50, roll: 0.1 },
     tower: { at: [-40, 0, 300], r: 3.6, h: 21, capH: 6.5 }, trees: true,
     pose: { starlight: { name: 'dive', fold: 0.85, look: [0, 0.35] } },
-    cam: { ground: true, pos: [0, 1.2, 0], lookAt: [12, 100, 205], mm: 28, fstop: 4 } },
+    cam: { ground: true, pos: [0, 1.2, 0], lookAt: [16, 104, 208], mm: 55, fstop: 4 } },
+  // (rev. 2) Queen Fall in her riding rig on Starlight's withers, gliding high over the sea: an
+  // air-to-air camera above and behind her left wing root (45 mm) - the rider seated, her neck
+  // and crown of horns ahead, the long broad wing below
+  { id: 'starlight-rider', set: 'air', creatures: ['starlight'], riders: { starlight: 'fall' }, dur: 3, alt: 320, face: -100, haze: 1.6,
+    pose: { starlight: { name: 'glide', bank: -0.08, dihedral: 0.1, look: [0.15, -0.05] } },
+    cam: { subject: 'starlight', pos: [16, 27, -4], target: [0, 17, 16], mm: 40, fstop: 8, focus: 'target' } },
   // the gold hatchling on the bedding (1A): 85 mm macro, focus on the eye; weak, pushing up on its
   // wrists, head too heavy
   { id: 'hatchling-macro', set: 'bed', creatures: ['hatchling'], dur: 3, face: -40,
@@ -89,10 +101,12 @@ export const SHOTS = [
     pose: { scout: { name: 'glide', bank: 0.85, look: [0.3, 0.0], dihedral: 0.05 } },
     cam: { subject: 'scout', pos: [9.0, 1.2, 7.5], target: [0, 0.2, 0.6], mm: 45, fstop: 8, focus: 'target' } },
   // the scout loses its LEFT wing (0.5 s after the tear): the wing tumbles away in the wake, the
-  // body rolls to the lost side and drops (tracks the midpoint, without the roll; silhouette)
+  // body rolls to the lost side and drops. (rev. 2) Seen from behind and above, the rider's back
+  // to us, so the lost wing is unmistakably on the LEFT of frame; a 60-degree shutter keeps the
+  // shapes readable
   { id: 'scout-wingloss', set: 'air', creatures: ['scout'], riders: { scout: 'scout' }, dur: 4, alt: 200, face: -130, detachAt: 0.6, still: 1.1,
     pose: { scout: { name: 'sprint' } },
-    cam: { subject: 'scout', track: 'wingloss', pos: [19, 5, -3.0], target: [0, -0.4, 0], mm: 35, fstop: 8, focus: 'target' } },
+    cam: { subject: 'scout', track: 'wingloss', pos: [2.5, 5.5, -17], target: [0.3, -0.6, 0.5], mm: 35, fstop: 8, focus: 'target', shutter: 60 } },
 ];
 
 /** Build a scene module for the given shot ids (default: all). */
@@ -207,7 +221,8 @@ export function makeTurntable(opts = {}) {
       for (const [n, outfit] of Object.entries(s.riders || {})) {
         if (S.riders[n]) continue;
         const tack = S.tacks[n] || (S.tacks[n] = createSaddle(S.C[n], {}));
-        const rider = H.rider(outfit, outfit === 'scout' ? { lean: 0.55 } : { lean: n === 'charcoal' ? 0.2 : 0.15 });
+        // (the scout's rider crouches low along the neck - a jockey at a gallop)
+        const rider = H.rider(outfit, outfit === 'scout' ? { lean: 1.0 } : { lean: n === 'charcoal' ? 0.2 : 0.15 });
         mountRider(S.C[n], tack, rider);
         S.riders[n] = { tack, rider };
       }
@@ -234,7 +249,7 @@ export function makeTurntable(opts = {}) {
     for (const [n, c] of Object.entries(S.C)) c.root.visible = shot.creatures.includes(n);
     for (const h of S.people) h.root.visible = false;
     for (const p of shot._people || []) p.h.root.visible = true;
-    for (const [n, tk] of Object.entries(S.tacks)) for (const m of tk.meshes) m.visible = (shot.tack || []).includes(n) || !!(shot.riders && shot.riders[n]);
+    for (const [n, tk] of Object.entries(S.tacks)) for (const m of tk.meshes) m.visible = ((shot.tack || []).includes(n) || !!(shot.riders && shot.riders[n])) && !(m.userData.stirrup && tk.riderStirrups && shot.riders && shot.riders[n]);
     for (const [n, r] of Object.entries(S.riders)) r.rider.root.visible = !!(shot.riders && shot.riders[n]);
     if (S.bed) S.bed.visible = shot.set === 'bed';
     for (const s of shots) if (s._tower) s._tower.visible = s === shot;
@@ -289,8 +304,8 @@ export function makeTurntable(opts = {}) {
     if (shot.set === 'bed' && S.C.hatchling) updateStrands(S.bed, S.C.hatchling);
     for (const s of shots) for (const f of s._fires || []) {
       const po = s.pose[f.n] || {};
-      if (s === shot) f.fire.update(lt, { creature: S.C[f.n], on: smoothstepJS(0.95, 1.1, lt + (po.t0 ?? 0)) });
-      else { f.fire.group.visible = false; f.fire.light.intensity = 0; }
+      if (s === shot) f.fire.update(lt, { creature: S.C[f.n], on: smoothstepJS(0.95, 1.1, lt + (po.t0 ?? 0)), groundY: s.set === 'field' ? 0 : null });
+      else { f.fire.group.visible = false; f.fire.light.intensity = 0; f.fire.mouthLight.intensity = 0; }
     }
     if (shot.detachAt !== undefined) scoutWingLoss(S.C.scout, shot, lt, faceYaw, scene);
     for (const r of Object.values(S.riders)) r.rider.update?.(lt);
@@ -374,7 +389,7 @@ function stageMouth(S, shot) {
   ch.root.updateMatrixWorld(true); lf.root.updateMatrixWorld(true);
   const dC = headAxis(ch);
   const front = sockW(ch, ch.anatomy.sockets.mouthFront);
-  const target = front.clone().addScaledVector(dC, -1.1);                 // where Leaf's snout tip goes
+  const target = front.clone().addScaledVector(dC, -(shot.mouthDepth ?? 1.1));   // where Leaf's snout tip goes
   // turn Leaf about the vertical so his head axis points against Charcoal's
   const dL = headAxis(lf);
   const a0 = Math.atan2(dL.x, dL.z), a1 = Math.atan2(-dC.x, -dC.z);
@@ -406,7 +421,7 @@ function stageTakeoff(S, shot, lt) {
     const pads = ct.filter((x) => x.wrist).map((x) => [x.world.x, x.world.z]);
     const toes = ct.filter((x) => /_t[123]$/.test(x.bone)).map((x) => [x.world.x, x.world.z]);
     shot._scars = { pads, toes };
-    S.dust.setScars([...pads.map((p) => ({ at: p, r: 1.1, kind: 'crater' })), ...toes.map((p) => ({ at: [p[0] - fwd.x * 0.4, p[1] - fwd.z * 0.4], dir: [-fwd.x, -fwd.z], len: 3.0, w: 0.35, kind: 'furrow' }))]);
+    S.dust.setScars([...pads.map((p) => ({ at: p, r: 1.6, kind: 'crater' })), ...toes.map((p) => ({ at: [p[0] - fwd.x * 0.4, p[1] - fwd.z * 0.4], dir: [-fwd.x, -fwd.z], len: 5.0, w: 0.6, kind: 'furrow' }))]);
     c.root.position.copy(keep);
     c.setPose(poses[po.name](c, { ...po, t: tl }));
     c.root.updateMatrixWorld(true);

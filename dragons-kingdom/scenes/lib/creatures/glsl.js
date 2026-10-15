@@ -162,35 +162,45 @@ DKScale dkImbricate(vec2 p, float jit, float keel, float facet) { return dkImbri
 // sides (they follow the girth), every row has its own column widths and stagger, and the
 // plates shrink toward the flanks.
 DKScale dkPlates(vec2 p, float plateL, float plateW) {
+  // (rev. 2) transverse ventral scutes as on a snake or a monitor's belly: ONE wide scute spans
+  // the middle of the belly in each row, with a few smaller, narrowing scutes at its ends grading
+  // into the flank scales; rows of uneven length whose seams sweep back toward the sides (the
+  // first version tiled the belly in columns - a brick wall)
   DKScale S;
   float xn = p.x / plateW;
+  float ax = abs(xn);
   float y0 = p.y / plateL;
-  // uneven row lengths + seams curving back toward the sides + a little meander
-  float y = y0 + 0.32 * (dkVnoise2(vec2(y0 * 0.45, 2.3)) - 0.5) - 0.05 * xn * xn + 0.1 * (dkVnoise2(vec2(y0 * 0.9, xn * 0.6 + 5.0)) - 0.5);
+  float y = y0 + 0.3 * (dkVnoise2(vec2(y0 * 0.45, 2.3)) - 0.5) - 0.11 * ax * ax + 0.08 * (dkVnoise2(vec2(y0 * 0.9, xn * 0.6 + 5.0)) - 0.5);
   float r = floor(y);
   float fy = fract(y);
   vec2 rr = dkH22(vec2(r, 1.7));
-  // per-row column width and stagger; narrower plates toward the flanks
-  float wRow = 0.8 + 0.45 * rr.x;
-  float xs = xn / wRow;
-  xs = sign(xs) * pow(abs(xs), 0.85);
-  float x = xs + (rr.y - 0.5) * 0.6 + 0.5;
-  float c = floor(x + 0.5);
-  float fx = x - c;             // -0.5 .. 0.5
+  float cw = 1.25 + 0.35 * rr.x;               // half-width of the row's central scute (plate widths)
+  float c, fx, wx;
+  if (ax < cw) { c = 0.0; fx = xn / (2.0 * cw); wx = 2.0 * cw; }
+  else {
+    float w2 = 0.55 + 0.25 * rr.y;              // the side scutes narrow toward the flank
+    float x = (ax - cw) / w2;
+    float k = floor(x);
+    c = (k + 1.0) * sign(xn);
+    fx = (x - k - 0.5) * sign(xn);
+    wx = w2;
+  }
   vec2 rnd = dkH22(vec2(c, r) + 3.3);
-  // rounded-rectangle bevels front/back and at the sides
-  float ty = clamp(fy / 0.16, 0.0, 1.0), tb = clamp((1.0 - fy) / 0.05, 0.0, 1.0);
-  float tx = clamp((0.5 - abs(fx)) / (0.1 + 0.06 * rnd.y), 0.0, 1.0);
+  // rounded bevels front/back and at the ends
+  float ty = clamp(fy / 0.18, 0.0, 1.0), tb = clamp((1.0 - fy) / 0.06, 0.0, 1.0);
+  float edge = (0.08 + 0.05 * rnd.y) / max(wx, 0.5);
+  float tx = clamp((0.5 - abs(fx)) / edge, 0.0, 1.0);
   float by = ty * ty * (3.0 - 2.0 * ty), bb = tb * tb * (3.0 - 2.0 * tb), bx = tx * tx * (3.0 - 2.0 * tx);
   float rise = 0.35 + 0.65 * fy;              // imbricate: rises toward the free (posterior) edge
+  float bow = 1.0 - 0.35 * fx * fx;           // a broad scute is a little domed across
   float bev = by * bb * bx;
-  float a = 0.8 + 0.4 * rnd.x;
+  float a = (0.8 + 0.4 * rnd.x) * bow;
   S.h = rise * bev * a;
-  float dby = (ty > 0.0 && ty < 1.0 ? 6.0 * ty * (1.0 - ty) / 0.16 : 0.0) * bb - by * (tb > 0.0 && tb < 1.0 ? 6.0 * tb * (1.0 - tb) / 0.05 : 0.0);
-  float dbx = -(tx > 0.0 && tx < 1.0 ? 6.0 * tx * (1.0 - tx) / (0.1 + 0.06 * rnd.y) : 0.0) * sign(fx);
-  S.grad = vec2(rise * by * bb * dbx / (plateW * wRow), (0.65 * bev + rise * bx * dby) / plateL) * a;
-  // worn, scratched plates (the belly drags on the ground)
-  float sc = smoothstep(0.75, 0.95, dkVnoise2(vec2(fx * 3.0 + rnd.x * 9.0, fy * 26.0)));
+  float dby = (ty > 0.0 && ty < 1.0 ? 6.0 * ty * (1.0 - ty) / 0.18 : 0.0) * bb - by * (tb > 0.0 && tb < 1.0 ? 6.0 * tb * (1.0 - tb) / 0.06 : 0.0);
+  float dbx = -(tx > 0.0 && tx < 1.0 ? 6.0 * tx * (1.0 - tx) / edge : 0.0) * sign(fx);
+  S.grad = vec2(rise * by * bb * dbx / (plateW * wx), (0.65 * bev + rise * bx * dby) / plateL) * a;
+  // worn, scratched scutes (the belly drags on the ground), fine growth lines along the rows
+  float sc = smoothstep(0.75, 0.95, dkVnoise2(vec2(fx * 3.0 * wx + rnd.x * 9.0, fy * 26.0)));
   S.cav = max(1.0 - bev, sc * 0.25 * bev);
   S.wear = bev * smoothstep(0.55, 0.95, fy) * (0.5 + 0.5 * rnd.y);
   S.id = dkH21(vec2(c, r) + 9.7);

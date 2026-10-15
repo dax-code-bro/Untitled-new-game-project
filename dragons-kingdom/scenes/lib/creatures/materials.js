@@ -33,25 +33,28 @@ export function lookParams(THREE, look) {
       // crocodile), never one blue-grey highlight per bead; a little field dust low on the legs.
       base: lin(THREE, 0.0125, 0.0122, 0.0125), belly: lin(THREE, 0.017, 0.016, 0.0155), dorsal: lin(THREE, 0.0105, 0.0102, 0.0105),
       wear: lin(THREE, 0.034, 0.032, 0.03), crev: 0.78, dust: lin(THREE, 0.075, 0.066, 0.055), salt: lin(THREE, 0.4, 0.4, 0.38),
-      rough: [0.6, 0.12, 0.1, 0.28], amp: 0.17, keel: 0.22, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.18,
+      // (rev. 2: rougher with less crown polish - a sky highlight on every scale read slate grey)
+      rough: [0.74, 0.1, 0.05, 0.2], amp: 0.17, keel: 0.22, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.18,
       hier: [1.0, 1.0, 0.65, 0.0], damp: 0.35, bellyP: [0.6, 1.25, 0.55, 0.5], scarCol: lin(THREE, 0.03, 0.026, 0.025),
-      scl: [0.8, 0.36, 0.75, 1.5], tub: [0.28, 2.7, 0.7, 0], skin2: [0.3, 0.35, 0, 0.28], plateZ: -0.03,
+      scl: [0.8, 0.36, 0.75, 1.5], tub: [0.28, 2.7, 0.7, 0], skin2: [0.5, 0.16, 0, 0.22], plateZ: -0.03,
       // body scale profile: flat tops (dome exponent), a keel along each scale, wide soft grooves
       vor: [6.0, 0.3, 0.14, 1.35],
       // old healed scars [a.xyz, halfWidth, b.xyz, strength] in L units (rest pose): left flank, right neck, right shoulder, left thigh
       scars: [[0.066, 0.19, 0.17, 0.0042, 0.061, 0.143, 0.092, 0.9], [-0.027, 0.258, 0.335, 0.003, -0.025, 0.236, 0.298, 0.8],
         [-0.071, 0.172, 0.2, 0.003, -0.069, 0.152, 0.216, 0.75], [0.076, 0.132, 0.03, 0.0026, 0.071, 0.112, -0.012, 0.7]],
-      dustAmt: 0.35, saltAmt: 0.05, oral: lin(THREE, 0.09, 0.03, 0.035), oralDark: lin(THREE, 0.02, 0.006, 0.008),
+      dustAmt: 0.45, saltAmt: 0.05, oral: lin(THREE, 0.09, 0.03, 0.035), oralDark: lin(THREE, 0.02, 0.006, 0.008),
       // GRAY membrane with BLACK STRIPES throughout: noise-warped bands across every panel
       // (stripes block the light, the grey skin between them lets a little through)
       // (DESIGN 2.7: sRGB ~#7d8086, linear ~0.2 - it must read clearly GRAY next to the black body)
-      membrane: lin(THREE, 0.15, 0.158, 0.17), trans: lin(THREE, 0.08, 0.08, 0.085), vein: lin(THREE, 0.12, 0.09, 0.09), memRough: 0.58, memSpec: 0.34, memSpecD: 0.55,
-      stripe: [1.0, 0.22, 0.6, 1.0], stripeCol: lin(THREE, 0.011, 0.011, 0.012),
+      // (rev. 2: neutral grey and a duller sheen - the folded wing mirrored the sky as navy satin)
+      membrane: lin(THREE, 0.165, 0.163, 0.158), trans: lin(THREE, 0.085, 0.08, 0.075), vein: lin(THREE, 0.12, 0.09, 0.09), memRough: 0.68, memSpec: 0.18, memSpecD: 0.38,
+      stripe: [1.0, 0.2, 1.15, 1.0], stripeCol: lin(THREE, 0.011, 0.011, 0.012),
       // horns: rough, dull, ridged old keratin (water buffalo), a little lighter where worn
       horn: [lin(THREE, 0.016, 0.015, 0.014), lin(THREE, 0.05, 0.047, 0.043)], hornR: [0.82, 0.62, 2.2], claw: [lin(THREE, 0.018, 0.017, 0.016), lin(THREE, 0.06, 0.055, 0.05)],
       tooth: lin(THREE, 0.36, 0.3, 0.2), sclera: lin(THREE, 0.02, 0.018, 0.02),
       // BLUE eyes (a deep slate blue iris with a dark limbal ring; never emissive)
-      iris: [lin(THREE, 0.026, 0.075, 0.21), lin(THREE, 0.005, 0.016, 0.055)],
+      // (rev. 2: a less saturated steel blue with paler flecks - the pure cobalt disc read as a decal)
+      iris: [lin(THREE, 0.05, 0.095, 0.17), lin(THREE, 0.008, 0.016, 0.034)], fleck: lin(THREE, 0.16, 0.2, 0.24),
       fire: 'standard',
     },
     leaf: {
@@ -59,7 +62,7 @@ export function lookParams(THREE, look) {
       // a unique purplish-blue fire (fire.js; not used on screen in Episode 1).
       // Dark green like an emerald tree monitor in shade: a darker back, a paler green belly,
       // mottled, never a toy's flat saturated green; little (greenish) dust
-      base: lin(THREE, 0.012, 0.04, 0.012), belly: lin(THREE, 0.05, 0.08, 0.03), dorsal: lin(THREE, 0.006, 0.022, 0.007),
+      base: lin(THREE, 0.0095, 0.027, 0.0105), belly: lin(THREE, 0.036, 0.056, 0.026), dorsal: lin(THREE, 0.0055, 0.016, 0.0065),
       wear: lin(THREE, 0.03, 0.06, 0.025), crev: 0.55, dust: lin(THREE, 0.1, 0.11, 0.07), salt: lin(THREE, 0.5, 0.52, 0.48),
       rough: [0.54, 0.12, 0.1, 0.28], amp: 0.18, keel: 0.14, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.35,
       // (fewer big scutes on the limbs: plates down the forearm read as gauntlets)
@@ -69,7 +72,7 @@ export function lookParams(THREE, look) {
       // (dark gums and lip margins: a pink lip line drew a frog's smile)
       dustAmt: 0.2, saltAmt: 0.05, oral: lin(THREE, 0.07, 0.03, 0.028), oralDark: lin(THREE, 0.025, 0.008, 0.008),
       // LIGHT GREEN membrane; the light through it is limited (thick skin), so it never glows
-      membrane: lin(THREE, 0.3, 0.52, 0.15), trans: lin(THREE, 0.26, 0.42, 0.1), vein: lin(THREE, 0.1, 0.2, 0.05), memRough: 0.56, memSpec: 0.4, memSpecD: 0.7,
+      membrane: lin(THREE, 0.2, 0.34, 0.1), trans: lin(THREE, 0.2, 0.33, 0.08), vein: lin(THREE, 0.1, 0.16, 0.05), memRough: 0.64, memSpec: 0.24, memSpecD: 0.45,
       // dark olive-brown keratin (DESIGN 3.3), a little paler toward the tips
       horn: [lin(THREE, 0.026, 0.026, 0.013), lin(THREE, 0.085, 0.075, 0.04)], hornR: [0.62, 0.45, 1.2], claw: [lin(THREE, 0.03, 0.03, 0.025), lin(THREE, 0.14, 0.12, 0.09)],
       tooth: lin(THREE, 0.5, 0.44, 0.32), sclera: lin(THREE, 0.04, 0.036, 0.012),
@@ -84,18 +87,20 @@ export function lookParams(THREE, look) {
       // the sun breaks into many small glints and the sky into a mosaic of cool and warm
       // reflections - never emission, never one chrome sheet. Albedo ~0.6 with faint warm/cool
       // variation; the crevices only a little darker than the scales (no plaster-cast AO).
-      base: lin(THREE, 0.6, 0.6, 0.605), belly: lin(THREE, 0.58, 0.57, 0.565), dorsal: lin(THREE, 0.62, 0.62, 0.635),
+      base: lin(THREE, 0.66, 0.655, 0.65), belly: lin(THREE, 0.64, 0.625, 0.615), dorsal: lin(THREE, 0.68, 0.675, 0.68),
       wear: lin(THREE, 0.7, 0.7, 0.7), crev: 0.9, dust: lin(THREE, 0.45, 0.43, 0.4), salt: lin(THREE, 0.8, 0.8, 0.78),
-      rough: [0.16, 0.06, 0.07, 0.25], amp: 0.18, keel: 0.0, facet: 1.0, jit: 0.25, metal: [0, 0], mottle: 0.06,
+      rough: [0.2, 0.05, 0.08, 0.2], amp: 0.14, keel: 0.0, facet: 1.0, jit: 0.25, metal: [0, 0], mottle: 0.06,
       hier: [0.85, 1.0, 0.5, 0.0], damp: 0.0, bellyP: [0.42, 0.85, 0.15, 0.3], plateZ: -0.02,
       crevCol: lin(THREE, 0.52, 0.47, 0.47), crevAmt: 0.15,
-      scl: [0.8, 0.42, 0.75, 1.3], tub: [0.0, 2.5, 0.0, 0], skin2: [0.06, 0.15, 0, 0.14], skin3: [0.35, 0.16, 1.0, 0], scl2: [0.62, 0.55, 0, 0],
-      vor: [8.0, 0.0, 0.16, 1.1],
+      // (rev. 2: broad plates each tilted its own way - the sky breaks into a mosaic - with little micro relief: the fine relief sparkled like plaster grit)
+      scl: [0.8, 0.42, 0.75, 1.3], tub: [0.0, 2.5, 0.0, 0], skin2: [0.06, 0.15, 0, 0.12], skin3: [0.08, 0.16, 1.5, 0], scl2: [0.62, 0.7, 0, 0],
+      // flat plates with hairline joints (wide grooves read as cobbles or a plaster cast)
+      vor: [10.0, 0.0, 0.07, 0.6],
       dustAmt: 0.2, saltAmt: 0.0, oral: lin(THREE, 0.45, 0.16, 0.16), oralDark: lin(THREE, 0.1, 0.03, 0.03),
       // white-grey membranes (albino, but thick enough that blood barely tints them), silver highlights
       membrane: lin(THREE, 0.66, 0.63, 0.6), trans: lin(THREE, 0.3, 0.22, 0.2), vein: lin(THREE, 0.55, 0.3, 0.3), memRough: 0.5, memSpec: 0.55,
       // a hard polish on the scale plates (the glints) over a satin base - not a chrome coat
-      clearcoat: 0.7, clearcoatRough: 0.08,
+      clearcoat: 0.55, clearcoatRough: 0.1,
       horn: [lin(THREE, 0.62, 0.6, 0.55), lin(THREE, 0.78, 0.77, 0.74)], hornR: [0.42, 0.3, 0.6], claw: [lin(THREE, 0.5, 0.48, 0.44), lin(THREE, 0.75, 0.74, 0.7)],
       tooth: lin(THREE, 0.66, 0.62, 0.52), iris: [lin(THREE, 0.5, 0.3, 0.34), lin(THREE, 0.2, 0.06, 0.1)], sclera: lin(THREE, 0.22, 0.14, 0.14),
     },
@@ -104,20 +109,22 @@ export function lookParams(THREE, look) {
       // sheen in a living skin - only a little metallic tint; a newborn's soft scales, wet
       // (gold's own reflectance, F0 ~ linear (1.0, 0.77, 0.34): metallic, so this IS the
       // reflection colour; the earlier orange albedo read as brass/bronze/copper)
-      base: lin(THREE, 1.0, 0.77, 0.34), belly: lin(THREE, 1.0, 0.8, 0.44), dorsal: lin(THREE, 0.97, 0.73, 0.29),
+      // (rev. 2: a saturated yellow that stays gold under a blue sky and a warm room alike: more
+      // yellow pigment, a little less metal - fully metallic it turned champagne outdoors and brass indoors)
+      base: lin(THREE, 0.95, 0.64, 0.14), belly: lin(THREE, 0.98, 0.72, 0.24), dorsal: lin(THREE, 0.92, 0.6, 0.11),
       wear: lin(THREE, 1.0, 0.84, 0.5), crev: 0.9, dust: lin(THREE, 0.3, 0.25, 0.18), salt: lin(THREE, 0.7, 0.7, 0.68),
       // soft, not-yet-hardened scales: low relief, broad soft sheen; the gold shows as a
       // partly metallic reflection, the wet film (clearcoat) carries broad highlights
       // gold reads as gold through its tinted reflection: metallic crowns (broad, soft sheen at
       // roughness ~0.4, never pin-point sparkle), less in the soft grooves
-      rough: [0.34, 0.05, 0.04, 0.1], amp: 0.03, keel: 0.0, facet: 0.0, jit: 0.45, metal: [0.8, 0.42], mottle: 0.16,
+      rough: [0.3, 0.05, 0.04, 0.1], amp: 0.03, keel: 0.0, facet: 0.0, jit: 0.45, metal: [0.62, 0.35], mottle: 0.12,
       hier: [0.0, 0.5, 0.3, 0.0], damp: 0.0, bellyP: [0.38, 0.8, 0.15, 0.18], plateZ: -0.03,
       crevCol: lin(THREE, 0.62, 0.36, 0.14), crevAmt: 0.2,
       // soft newborn head scales: a fine granular tier on the head (low relief, still readable)
       headRelief: 2.0,
       scl: [0.75, 0.42, 0.7, 1.1], tub: [0.0, 2.5, 0.0, 0], skin2: [0.0, 0.15, 0, 0.08], skin3: [0.1, 0.18, 0, 0],
       // amniotic residue: a pale, slimy film in patches and streaks
-      residue: [0.24, 0.8, 0.74, 0.52],
+      residue: [0.24, 0.8, 0.74, 0.52], bellyMetalCut: 0.12,
       dustAmt: 0.0, saltAmt: 0.0, oral: lin(THREE, 0.5, 0.2, 0.16), oralDark: lin(THREE, 0.14, 0.04, 0.035),
       // the tiny crumpled wings: damp gold skin, satin not mirror (a smooth membrane fold mirrored blue sky)
       membrane: lin(THREE, 0.62, 0.38, 0.1), trans: lin(THREE, 0.5, 0.28, 0.08), vein: lin(THREE, 0.45, 0.12, 0.05), memRough: 0.6,
@@ -180,7 +187,9 @@ function skinMaterial(THREE, P, ctx) {
     uHier: { value: new THREE.Vector4(...(P.hier || [1, 1, 0.6, 0.35])) },
     uZones: { value: new THREE.Vector4(ctx.zones?.withersZ ?? ctx.L * 0.25, ctx.zones?.pelvisZ ?? 0, ctx.L * 0.06, ctx.L) },
     uBellyP: { value: new THREE.Vector4(...(P.bellyP || [0.85, 3.0, 0.75, 0.75])) },   // plate length, width (scale units), seam darkness, relief
-    uDamp: { value: new THREE.Vector4(P.damp ?? 0, 0.72, 0.45, 0) },
+    // (w: how much less metallic the belly is - the gold newborn's belly is gold too: a matte
+    // belly read as a hole with a hard edge)
+    uDamp: { value: new THREE.Vector4(P.damp ?? 0, 0.72, 0.45, P.bellyMetalCut ?? 0.75) },
     uScarA: { value: [0, 1, 2, 3].map(() => new THREE.Vector4(0, 0, 0, 0)) },
     uScarB: { value: [0, 1, 2, 3].map(() => new THREE.Vector4(0, 0, 0, 0)) },
     uScarCol: { value: P.scarCol || lin(THREE, 0.1, 0.085, 0.08) },
@@ -440,7 +449,7 @@ void dkSkin(inout vec3 albedo) {
   r = mix(r, 0.22, dkWoundM);                                                            // wet
   r = mix(r, 0.88, dkPadM);
   dkRoughOut = clamp(r, 0.06, 1.0);
-  dkMetalOut = mix(uMisc.z, uMisc.w, clamp(dkCav * 1.4 + dust, 0.0, 1.0)) * (1.0 - dkOralM) * (1.0 - 0.75 * smoothstep(0.35, 0.85, vMask.y)) * (1.0 - 0.25 * dkResM);
+  dkMetalOut = mix(uMisc.z, uMisc.w, clamp(dkCav * 1.4 + dust, 0.0, 1.0)) * (1.0 - dkOralM) * (1.0 - uDamp.w * smoothstep(0.35, 0.85, vMask.y)) * (1.0 - 0.25 * dkResM);
   dkAO = vMask2.x * (1.0 - 0.55 * dkCav);
   // wet film (hatchling): mostly wet, streaks running down the body and a few drying patches
   dkWetK = 1.0;
@@ -637,13 +646,13 @@ void dkMembrane(inout vec3 col) {
     float kL = uL / 36.0;
     // bands on the bones (metric: distance to the nearest bone)
     float wB = (0.12 + 0.05 * along * uStripe.x) * kL * swell;
-    float onBone = 1.0 - smoothstep(wB * 0.5, wB * 0.5 + 0.06 * kL + fwidth(vEdge.x), vEdge.x);
+    float onBone = 1.0 - smoothstep(wB * 0.35, wB * 0.5 + 0.16 * kL + fwidth(vEdge.x), vEdge.x + (w2 * 0.12) * kL);
     // bands between the bones (parametric: two per finger panel, three across the plagiopatagium)
     float n = pid > 3.5 ? 4.0 : (pid > 0.5 ? 3.0 : 0.0);
     float acr = (pid > 3.5 ? a : b) * n + (w1 * 0.45 + w2 * 0.15) * uStripe.z;
     float fr = abs(fract(acr) - 0.5) * 2.0;                       // 0 between bands .. 1 at a band centre
     float hw = uStripe.y * (0.35 + 0.9 * along) * swell;         // widen toward the trailing edge
-    float edge = fwidth(acr) * 1.5 + 0.07;
+    float edge = fwidth(acr) * 1.5 + 0.16;
     float mid = smoothstep(1.0 - hw - edge, 1.0 - hw + edge, fr);
     mid *= step(0.5, n) * smoothstep(0.15, 0.4, dkVnoise2(q * vec2(7.0, 3.5) + 2.7) + 0.25 * fr);   // bands break and fork
     // the propatagium (leading edge) is black
@@ -658,15 +667,22 @@ void dkMembrane(inout vec3 col) {
   // elastin fibres: fine ridges spanning the panel (bat wings show them as striations)
   float fib = along * 90.0 + nn * 14.0 + dkVnoise2(vec2(across * 4.0, along * 7.0)) * 10.0;
   float fibA = smoothstep(0.35, 0.75, dkVnoise2(vec2(across * 2.5 + 7.0, along * 3.0)));      // in patches, not everywhere
-  float crease = (sin(fib) * 0.5 + 0.5) * 0.0005 * uL * detC * fibA + (sin(along * 23.0 + nn * 6.0) * 0.5 + 0.5) * 0.00025 * uL * det;
-  col *= 1.0 - 0.09 * (sin(fib) * 0.5 + 0.5) * detC * fibA;
+  float crease = (sin(fib) * 0.5 + 0.5) * 0.0005 * uL * detC * fibA * (1.0 - uFold) + (sin(along * 23.0 + nn * 6.0) * 0.5 + 0.5) * 0.00025 * uL * det * (1.0 - uFold);
+  col *= 1.0 - 0.09 * (sin(fib) * 0.5 + 0.5) * detC * fibA * (1.0 - uFold);
   // the skin gathers in a few soft folds running along each bone (it slides over the bone as
   // the fingers spread and flex), fading out a hand's breadth from it
   float fdB = vEdge.x / (uL * 0.0045);
   float boneFold = (sin(fdB * 6.2832 + nn * 2.5) * 0.5 + 0.5) * (1.0 - smoothstep(0.4, 3.2, fdB)) * smoothstep(0.0, 0.35, fdB);
   crease += boneFold * 0.0007 * uL * det;
   col *= 1.0 - 0.07 * boneFold * det;
-  float wrinkle = (sin(across * 70.0 + nn * 9.0 + dkVnoise2(vec2(along * 9.0, across * 4.0)) * 5.0) * 0.5 + 0.5) * 0.0014 * uL * det * uFold;
+  // (rev. 2) folded: the elastin gathers the skin into fine irregular crinkles - band-limited
+  // rest-space noise that fades out before it gets smaller than a pixel (a regular sine wrinkle
+  // aliased into zebra moire at 4K)
+  float wsc = uL * 0.0022;
+  float wfw = length(fwidth(vRest)) / wsc;
+  float wrinkle = (dkVnoise2(vec2(dot(vRest, vec3(0.8, 0.3, 0.5)), dot(vRest, vec3(-0.2, 0.9, 0.4))) / wsc) * 0.7
+    + dkVnoise2(vec2(dot(vRest, vec3(0.3, -0.6, 0.7)), dot(vRest, vec3(0.9, 0.1, -0.4))) / (wsc * 0.45)) * 0.3 * (1.0 - smoothstep(0.2, 0.5, wfw * 2.2)))
+    * 0.0011 * uL * (1.0 - smoothstep(0.25, 0.6, wfw)) * uFold;
   dkMemH = crease * (1.0 - uFold) + wrinkle + dkVein * 0.00012 * uL;
   // tension wrinkles fanning out from the finger tips into the panel (the skin is pulled taut
   // between the tips of a spread hand)
@@ -862,7 +878,7 @@ vec3 dkKeratin() {
   if (kind > 3.5) {
     // gums: wet, fleshy, a little lumpy, darker in the folds between the teeth
     float lump = dkVnoise2(vec2(ar * 9.0, t * 6.0 + seed * 13.0));
-    col = uGum * (0.9 + 0.5 * lump) * vec3(1.15, 0.9, 0.85);
+    col = uGum * (0.55 + 0.35 * lump) * vec3(1.0, 0.85, 0.85);
     dkKR = 0.32 + 0.12 * lump;
   } else {
     // teeth: every tooth its own shade; stained brown-yellow at the gum line (tartar), ivory

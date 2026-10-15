@@ -411,12 +411,13 @@ function foldUp(pb, F, side, o = {}) {
   const dist = Math.sqrt(d.hum * d.hum + d.fore * d.fore - 2 * d.hum * d.fore * Math.cos(el));
   // (directions in the root frame - level ground, whatever the trunk's pitch: the forearm rises
   // ~25 degrees from the elbow low on the flank to the wrist beside the base of the neck)
-  const wd = norm(o.wristDir ?? U.wrist ?? [0.4, 0.4, 0.82]);
+  const wd = norm(o.wristDir ?? U.wrist ?? [0.48, 0.28, 0.8]);
   const W = add(S, scale([sd * wd[0], wd[1], wd[2]], dist));
   const pole = norm([sd * (o.poleOut ?? U.poleOut ?? 0.45), -0.6, -0.65]);
   const arm = armIK(pb, F, side, W, pole, o.minTwist ?? true);
   foldHand(pb, side, arm, qT, { handBack: U.handBack ?? 4, mcFan: U.mcFan ?? 0.3, fanDown: U.fanDown ?? 0.0, curl: U.curl ?? [-12, 6, 28], inward: U.inward ?? 0.06, wrap: U.wrap ?? 0.04, outUp: U.outUp ?? 0.45, ...o });
-  pb.add(`w_${side}_th`, -0.25, sd * 0.1, 0);
+  // the thumb folded back against the wrist (toward the elbow): raised forward it read as a fist
+  pb.add(`w_${side}_th`, 0.1, sd * -(o.thumbFold ?? U.thumbFold ?? 1.9), 0);
   return arm;
 }
 
@@ -575,7 +576,7 @@ export function sit(c, o = {}) {
     } else {
       // (DESIGN rev. 2) the wings stay folded against the body, off the ground: he sits back on
       // his haunches on his two legs (planted wrists read as a dog's front legs - four legs)
-      foldUp(pb, F, side, { curl: [-26, -8, 18], wristDir: [0.4, 0.3, 0.86], ...(o.fold || {}) });
+      foldUp(pb, F, side, { curl: [-26, -8, 18], wristDir: [0.5, 0.15, 0.85], ...(o.fold || {}) });
     }
   }
   common(pb, { ...o, jaw: (o.jaw ?? 0) + 0.01 * br }, t);
@@ -679,7 +680,9 @@ export function fire(c, o = {}) {
   const inhale = smooth(0, 0.8, t) * (1 - smooth(0.9, 1.2, t));
   const open = smooth(0.75, 1.0, t) * (o.gape ?? 0.48);
   const aim = o.aim || [0, 0];
-  const p = stand(c, { ...o, t, breathe: 0, neckRise: (o.neckRise ?? 0.22), neckTop: o.neckTop ?? 0.0, headPitch: (o.headPitch ?? -0.1) + aim[1], look: [aim[0], 0], jaw: open, blink: false, lidRelax: 0.45 });
+  // (rev. 2) on the two legs: the trunk lowered toward level, the neck stretched forward and
+  // low along the line of fire, the folded wings off the ground
+  const p = upright(c, { ...o, t, breathe: 0, pitch: o.pitch ?? 0.26, neckBase: o.neckBase ?? 20, neckTop: o.neckTop ?? -2, headPitch: (o.headPitch ?? -6) + aim[1] / deg, look: [aim[0], 0], jaw: open, blink: false, lidRelax: 0.45 });
   const k = 1 + 0.05 * inhale;
   p.scale.rib_thorax = [k, 1 + 0.07 * inhale, 1];
   p.scale.rib_body = [1 + 0.035 * inhale, 1 + 0.045 * inhale, 1];
@@ -857,7 +860,8 @@ export function mouthHold(c, o = {}) {
   const sd = o.side ?? 1;
   const turn = smooth(0, 0.8, t) * (o.turn ?? 1.6);
   const rel = o.release !== undefined ? smooth(o.release, o.release + 0.4, t) : 0;
-  const gape = mix(smooth(0.6, 1.0, t) * 0.8 - smooth(1.0, 1.4, t) * (0.8 - 0.44), 0.7, rel);
+  const hold = o.hold ?? 0.44;
+  const gape = mix(smooth(0.6, 1.0, t) * 0.8 - smooth(1.0, 1.4, t) * (0.8 - hold), 0.7, rel);
   const p = glide(c, { ...o, yaw: 0, look: [sd * turn, (o.pitch ?? 0.05)], jaw: gape, blink: false, lidRelax: 0.35 });
   return p;
 }
