@@ -153,23 +153,24 @@ motion blur, print grade, grain). People and riders come from `scenes/lib/humans
 
 Measured on this machine (4 vCPU, no GPU, SwiftShader), 2026-10-15.
 
-Build in `setup()` (deterministic; Node and the browser give identical meshes), Node, `draft`:
-Charcoal 6.0 s (75k body vertices), Leaf 5.0 s (67k), Starlight 5.6 s (87k), scout 2.8 s (34k),
-hatchling 10.3 s (180k: the newborn's head is meshed finest).
-Charcoal at `standard`: 216k vertices in 16.0 s; at `hero`: 431k in 31.8 s (measured while `npm test`
-ran on the same CPUs). The hero shots build at `hero`, the contact sheet at `hero` too.
+Build in `setup()` (deterministic; Node and the browser give identical meshes), Node, `draft`
+(rev. 2b, with the seam feathering): Charcoal 8.0 s (69k body vertices), Leaf 7.2 s (67k),
+Starlight 9.9 s (97k), scout 4.3 s (35k), hatchling 13.3 s (173k: the newborn's head is meshed
+finest). Charcoal at `standard`: 216k vertices in 16.0 s; at `hero`: 431k in 31.8 s (rev. 1
+numbers, measured while `npm test` ran on the same CPUs). The hero shots build at `hero`, the
+contact sheet at `hero` too.
 
-Render at native 4K (`--preset final`, the 8-sub-frame film finish), one browser:
-all 13 hero shots in one `creatures-review.js` job: 23 min 13 s of rendering (26 min 52 s wall with
-the builds), about 1.8 min per finished 4K frame; the 25-frame contact sheet (`creatures-contact.js`,
-no sub-frames): 4 min 55 s (8 min 24 s wall). One 4K frame of the take-off or the hatchling macro
-takes the longest (~2.5 min: dust sprites, the densest mesh).
+Render at native 4K (`--preset final`, the 8-sub-frame film finish), one browser, rev. 2b:
+all 14 hero shots in one `creatures-review.js` job: 36 min 58 s of rendering (41 min 37 s wall
+with the builds; a 47.0 MB H.264 job video), about 2.6 min per finished 4K frame; the 27-frame contact
+sheet (`creatures-contact.js`, no sub-frames): 7 min 02 s (11 min 30 s wall, 98.4 MB). One 4K frame of the
+take-off or the hatchling macro takes the longest (dust sprites, the densest mesh).
 
 Commands (outputs are git-ignored):
 
 ```
-node render/render.mjs scenes/lookdev/creatures-review.js  --preset final --fps 1 --workers 1 --out output/dragons-wyvern/hero-job
-node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 1 --workers 1 --out output/dragons-wyvern/contact-job
+node render/render.mjs scenes/lookdev/creatures-review.js  --preset final --fps 1 --workers 1 --out output/dragons-wyvern/fix1b/hero-job --stall-timeout 2400
+node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 1 --workers 1 --out output/dragons-wyvern/fix1b/contact-job --stall-timeout 2400
 ```
 
 ## Known limits
@@ -197,5 +198,17 @@ node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 
   them (Charcoal's reads a little like a stack of awning poles; a cloth simulation of the fold
   would crumple it more naturally). Starlight's folded wing tips run back past the hip by design
   (albatross), so from behind they read as long blades.
-* Stirrups hang where the tack put them; the straddle fit moves the rider's legs out to clear the
-  flanks, so on Leaf the feet can sit beside, not in, the stirrups.
+* Stirrups are placed under each rider's feet after the straddle fit (rider.js `addStirrups`,
+  rev. 2), so the leathers run from the saddle flap to wherever the foot ended up - not a fitted
+  length; on a slim back they hang at a slant.
+* (rev. 2) Under a fully folded arm a small dark crease can remain in the armpit; the far wing's
+  wrist knob, folded high in front of the chest, can read as a small fist in a front view; the
+  membrane's thigh root can show as a grey patch over the knee in the upright stance.
+* (rev. 2) Starlight's flank scales seen from a few metres (the rider shot) read as large white
+  cobbles, a stray scale plate can catch the light on its own, and the upper side of her membrane
+  shows a jigsaw-like wrinkle pattern; her folded wing reads as a bundle of pale rods. In a glide
+  the feathered shoulder seam stretches the scales there into long ovals (no torn "curtain" any
+  more, but a visibly stretched band on Starlight). Membranes in flight show no visible
+  veins or hem from a distance. The newborn's mouth still reads a little lip-like.
+* (rev. 2) The fire jet is pale orange near the mouth (additive sprites over a bright sky) and
+  turns into orange billows and black smoke further out; a little haze where the tongues start.

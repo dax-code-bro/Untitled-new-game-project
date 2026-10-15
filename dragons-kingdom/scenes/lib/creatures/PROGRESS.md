@@ -27,8 +27,11 @@ Done (committed; renders under output/dragons-wyvern/fix1/, git-ignored, file na
   (Starlight 499 -> 386, all in the elbow/wrist folds). Horn paths start inside the skull (no open
   sheath rim at the skin). Fire: young tongues get 0.8x gain (1.3x further out) and a more
   saturated core - the near-mouth jet is pale orange, no longer cream-white, and still starts at
-  the lips. starlight-rider camera further off. Final renders: output/dragons-wyvern/fix1b/
-  (file names end in -fix1b; the -fix1 set in fix1/ still shows the curtain - compare).
+  the lips. starlight-rider camera further off. Final renders (all looked at, 1920 + 1:1 4K
+  crops): output/dragons-wyvern/fix1b/hero/{4k,1920,crops}/*-fix1b.* (14 shots via
+  creatures-review.js, 36m58s render) and fix1b/contact/{4k,1920,crops} + contact-sheet-fix1b-*.jpg
+  (27 frames, 7m02s). The -fix1 hero set in fix1/ still shows the curtain - compare
+  starlight-rider and pair-flight. npm test 33/33 after the code changes.
 - Materials: Charcoal blacker (rougher, little crown polish), neutral grey membrane with softer
   wavy stripes, steel-blue iris with flecks; Leaf darker green, duller membrane, olive-brown horns;
   Starlight broad flat plates (scaleMul 0.5, hairline joints, little micro relief); newborn yellow
