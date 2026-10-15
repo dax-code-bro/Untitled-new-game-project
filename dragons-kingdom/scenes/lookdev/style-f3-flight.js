@@ -54,7 +54,9 @@ export const meta = {
     shadows: { cascades: 2, maxDistance: 900 },
     ao: { enabled: false },
     dof: { samples: 48 },
-    grade: { exposure: 2.05, whiteBalance: 6000, contrast: 1.2, saturation: 0.95, lift: [-0.07, -0.07, -0.07] },
+    // (exposed for the sunlit grey membrane on Charcoal's spread wings - at +2 EV it read white -
+    // the sea a little darker, as it is under a high sun from this height)
+    grade: { exposure: 1.6, whiteBalance: 6000, contrast: 1.15, saturation: 0.95, lift: [-0.045, -0.045, -0.045] },
   }),
 };
 
@@ -166,10 +168,12 @@ const shadowOn = (p, L) => new THREE.Vector3(p.x - p.y / L.y * L.x, 0, p.z - p.y
 // The stroke at the frame. Charcoal has drawn level and coasts on his spread wings between beats
 // (a 36 m animal glides wherever it can - DESIGN 2.8), so nothing of his 64 m span smears across
 // the 180-degree shutter and the grey membrane with its black stripes reads whole from above;
-// Leaf works to keep station with quick beats - here late in the downstroke (wings below the
-// body, the rider clear above them). --time 100.. renders alternatives (frozen at t = 2).
-const STROKE = { c: 'glide', l: 0.45 };
-const VARIANTS = { 101: { c: 'glide', l: 0.62 }, 102: { c: 'glide', l: 0.75 }, 103: { c: 0.5, l: 0.45 }, 104: { c: 'glide', l: 0.3 } };
+// Leaf works to keep station with quick beats - here in mid-downstroke, both wings spread near
+// level (late in the downstroke the near wing hung below him like a sail; Leaf is small, so even at
+// the stroke's fastest his wingtips move only ~25 px at 4K across the shutter). --time 100..
+// renders alternatives (frozen at t = 2).
+const STROKE = { c: 'glide', l: 0.3 };
+const VARIANTS = { 101: { c: 'glide', l: 0.45 }, 102: { c: 'glide', l: 0.22 }, 103: { c: 0.5, l: 0.3 }, 104: { c: 'glide', l: 0.36 } };
 
 export function update(t, ctx) {
   const st = t >= 99.5 ? (VARIANTS[Math.round(t)] || STROKE) : STROKE;
@@ -196,11 +200,11 @@ export function update(t, ctx) {
   // on them (their right sides and backs, the riders, the sea floor and Charcoal's shadow)
   const cam = ctx.camera;
   cam.position.set(cx + 20, 120, z0 - 2);
-  cam.lookAt(cx + 265, 3, z0 + 10);
+  cam.lookAt(cx + 270, 26.5, z0 + 5);
   applyShake(cam, t, { kind: 'aerial', amount: 0.25, seed: 4 });
   cam.updateMatrixWorld(true);
   if (t === 2) {
-    cam.filmGauge = 24.89; cam.setFocalLength(60); cam.updateProjectionMatrix();
+    cam.filmGauge = 24.89; cam.setFocalLength(55); cam.updateProjectionMatrix();
     const scr = (p) => { const v = p.clone().project(cam); return [+(0.5 + v.x / 2).toFixed(3), +(0.5 - v.y / 2).toFixed(3)]; };
     console.warn('[f3] screen', JSON.stringify({ charcoal: scr(charcoal.root.position), leaf: scr(leaf.root.position), cShadow: scr(shadowOn(charcoal.root.position, SUN)), lShadow: scr(shadowOn(leaf.root.position, SUN)) }));
   }
@@ -210,7 +214,7 @@ export function update(t, ctx) {
   sun.position.copy(sun.target.position).addScaledVector(SUN, 600);
 
   ctx.lens.sensor = 'super35';
-  ctx.lens.focalLength = 60;
+  ctx.lens.focalLength = 55;
   ctx.lens.fstop = 5.6;
   ctx.lens.focusTarget = charcoal.root;
   ctx.lens.shutterAngle = 180;

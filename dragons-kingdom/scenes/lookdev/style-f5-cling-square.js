@@ -44,7 +44,7 @@ const CAM_P = [3.5, 13.0, 44.0], CAM_T = [-2.5, 8.6, -12.0], LENS = 18;
 // Starlight: north of the town, ~120 m beyond the north row, gliding in nearly head-on. (Two-legged
 // wyvern build, 72 m, ~137 m span: from ~195 m her spread wings are wider on screen than the whole
 // north row of houses ~60 m from the lens - immense, still clearly beyond the roofs.)
-const STAR = { x: -20, y: 34, z: -150, yaw: 0.14 };
+const STAR = { x: -20, y: 29, z: -150, yaw: 0.14 };
 const WATCH = { x: -8.2, z: 15.2 };
 
 export const meta = {

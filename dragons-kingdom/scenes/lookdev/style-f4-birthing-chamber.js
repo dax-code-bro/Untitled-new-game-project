@@ -22,7 +22,7 @@
 //   node render/render.mjs --still scenes/lookdev/style-f4-birthing-chamber.js --time 2 --preset final --png out.png
 import * as THREE from 'three';
 import { loadPBR } from '../lib/assets.js';
-import { limbIK, lookAtPoint, rotateBone, relaxHand } from '../lib/sets/cast.js';
+import { limbIK, lookAtPoint, rotateBone, relaxHand, bonePos } from '../lib/sets/cast.js';
 import { createCreature, poses } from '../lib/creatures/index.js';
 import { loadCharacter, placeCharacter } from '../lib/humans/index.js';
 import { Kit, frame } from '../lib/architecture/core.js';
@@ -299,7 +299,7 @@ const CAM_R = new THREE.Vector3(-VIEW.z, 0, VIEW.x);                 // screen r
 const FWD = CAM_R.clone().multiplyScalar(-0.82).addScaledVector(VIEW, -0.57).normalize();
 // camera variants (--time 100..): distance from the aim point (m), lens (mm), height above the
 // head (m), sideways offset (m, + = screen right)
-const CAMS = { 100: { d: 1.55, mm: 55, h: 0.12, r: 0.1 }, 103: { d: 2.1, mm: 40, h: 0.18, r: 0.1 }, 104: { d: 1.55, mm: 55, h: 0.35, r: 0.25 } };
+const CAMS = { 100: { d: 1.85, mm: 55, h: 0.1, r: -0.15 }, 102: { d: 1.6, mm: 55, h: 0.12, r: -0.05 }, 103: { d: 2.1, mm: 55, h: 0.12, r: -0.2 }, 104: { d: 1.85, mm: 55, h: 0.2, r: -0.05 } };
 
 export function update(t, ctx) {
   const { hatch, egg, frags, alex, fcloth, NY } = S;
@@ -339,36 +339,40 @@ export function update(t, ctx) {
     f.position.set(egg.position.x + Math.sin(ang) * r, NY + 0.004, egg.position.z + Math.cos(ang) * r);
     f.rotation.set(1.2 + i, i * 2.1, 0.4 * i);
   });
-  // the folded cloth under its chest and forelegs, its near-right end lifted on Alexandria's fingers
+  // the folded cloth under its chest, lifted on Alexandria's fingers
   const chest = new THREE.Vector3().setFromMatrixPosition(hatch.bones[hatch.boneIndex.thorax].matrixWorld);
-  // Alexandria kneels at screen right, out of frame; both hands, palms up, slide under the
-  // hatchling's chest from the right with the folded cloth over them: she lifts it on the cloth
-  // so it rests instead of slipping against the shell. (The build's fingers keep their own shape;
-  // the cloth is draped over them, so they never show through it.)
-  alex.update(t);
-  placeCharacter(alex, 0, -0.74, 0, Math.atan2(-CAM_R.x, -CAM_R.z));
-  alex.update(t);
-  const across = new THREE.Vector3(CAM_R.x, 0, CAM_R.z).normalize();          // toward her (screen right)
-  const along = across.clone().cross(new THREE.Vector3(0, 1, 0)).normalize();  // away from the camera
+  // Alexandria kneels at screen right, in front of the nest, out of frame: her forearms come in from
+  // the right foreground and both hands, palms up, slide under the hatchling's chest from its near
+  // side with the folded cloth over them - she lifts it on the cloth so it rests instead of slipping
+  // against the shell. (The build's fingers keep their own shape; the cloth is draped over them, so
+  // they never show through it.)
+  const near = far.clone().negate();                                   // its side toward the lens
   const base = chest.clone(); base.y = S.linenY(base.x, base.z);
+  const up = new THREE.Vector3(0, 1, 0);
+  alex.update(t);
+  placeCharacter(alex, 0, -0.74, 0, Math.atan2(-near.x - CAM_R.x * 0.6, -near.z - CAM_R.z * 0.6));
+  alex.update(t);
   {
     const shC = new THREE.Vector3().setFromMatrixPosition(alex.bone('upperarm01.L').matrixWorld).add(new THREE.Vector3().setFromMatrixPosition(alex.bone('upperarm01.R').matrixWorld)).multiplyScalar(0.5);
-    const goal = base.clone().addScaledVector(across, 0.6).add(new THREE.Vector3(0, 0.3, 0));
+    // (close and low over the nest, so her hands reach the bedding with the elbows bent)
+    const goal = base.clone().addScaledVector(near, 0.4).addScaledVector(CAM_R, 0.26).addScaledVector(up, 0.2);
     alex.root.position.add(goal.sub(shC));
     alex.root.updateMatrixWorld(true);
   }
-  const wA = base.clone().addScaledVector(across, 0.22).addScaledVector(along, -0.065).add(new THREE.Vector3(0, 0.035, 0));
-  const wB = base.clone().addScaledVector(across, 0.22).addScaledVector(along, 0.065).add(new THREE.Vector3(0, 0.035, 0));
-  const aIsR = wA.clone().sub(wB).dot(along) < 0;                     // nearer the camera
-  const pole = base.clone().addScaledVector(across, 0.45).add(new THREE.Vector3(0, -0.3, 0));
-  limbIK(alex, 'arm', aIsR ? 'R' : 'L', aIsR ? wA : wB, pole.clone().addScaledVector(along, -0.35));
-  limbIK(alex, 'arm', aIsR ? 'L' : 'R', aIsR ? wB : wA, pole.clone().addScaledVector(along, 0.35));
-  const under = across.clone().negate().add(new THREE.Vector3(0, -0.12, 0)).normalize();
-  for (const sd of ['L', 'R']) relaxHand(alex, sd, { fingers: under, palm: new THREE.Vector3(0, 1, 0), keepFingers: true });
-  // the cloth ends over her knuckles: the backs of her hands and the wrists show at its right edge
-  drapeCloth(fcloth, base.clone().addScaledVector(across, 0.055), across, along, 0.27, 0.3, alex, S.linenY, hatch);
-  const endR = base.clone().addScaledVector(across, 0.22).add(new THREE.Vector3(0, 0.035, 0));     // her hands
+  const wA = base.clone().addScaledVector(near, 0.19).addScaledVector(fwd, 0.055).addScaledVector(up, 0.025);
+  const wB = base.clone().addScaledVector(near, 0.19).addScaledVector(fwd, -0.07).addScaledVector(up, 0.025);
+  // her right hand is the one toward screen right
+  const aIsR = wA.clone().sub(wB).dot(CAM_R) > 0;
+  const pole = base.clone().addScaledVector(near, 0.4).addScaledVector(CAM_R, 0.32).addScaledVector(up, -0.1);
+  limbIK(alex, 'arm', aIsR ? 'R' : 'L', wA, pole.clone().addScaledVector(fwd, 0.25));
+  limbIK(alex, 'arm', aIsR ? 'L' : 'R', wB, pole.clone().addScaledVector(fwd, -0.25));
+  const under = near.clone().negate().addScaledVector(up, -0.1).normalize();
+  for (const sd of ['L', 'R']) relaxHand(alex, sd, { fingers: under, palm: up, keepFingers: true });
+  // the cloth: folded edge under the chest, the rest over her hands toward the lens
+  drapeCloth(fcloth, base.clone().addScaledVector(near, 0.08), near, fwd.clone().setY(0).normalize(), 0.3, 0.3, alex, S.linenY, hatch);
+  const endR = base.clone().addScaledVector(near, 0.2).addScaledVector(up, 0.03);     // her hands
   lookAtPoint(alex, chest, 0.8);
+  if (T0 === 2) { const wr = ['L', 'R'].map((sd) => bonePos(alex, `wrist.${sd}`)); console.warn('[f4] wrists', wr.map((w) => (w.y - base.y).toFixed(3) + '@' + w.distanceTo(wA).toFixed(2) + '/' + w.distanceTo(wB).toFixed(2)).join(' '), 'base', base.toArray().map((v) => v.toFixed(3)).join(',')); }
 
   // camera: low over the bedding (a little above the head), framing the head and her hands with
   // the folded cloth, the shell behind; looking along VIEW
@@ -378,11 +382,10 @@ export function update(t, ctx) {
   cam.position.copy(aim).addScaledVector(VIEW, -CV.d).addScaledVector(CAM_R, CV.r).setY(head.y + CV.h);
   cam.lookAt(aim.clone().add(new THREE.Vector3(0, 0.03, 0)));
   if (Math.round(T0) === 101) { cam.position.copy(aim).addScaledVector(VIEW, -1.6).addScaledVector(CAM_R, 0.9).add(new THREE.Vector3(0, 1.1, 0)); cam.lookAt(aim); }
-  if (Math.round(T0) === 102) { cam.position.set(-2.6, 1.7, 2.2); cam.lookAt(1.5, 1.6, -0.6); }
   cam.updateMatrixWorld(true);
   if (T0 === 2) console.warn('[f4] NY', NY.toFixed(3), 'head', head.toArray().map((v) => v.toFixed(3)).join(','), 'cam', cam.position.toArray().map((v) => v.toFixed(3)).join(','), 'egg', egg.position.toArray().map((v) => v.toFixed(3)).join(','));
   ctx.lens.sensor = 'super35';
-  ctx.lens.focalLength = Math.round(T0) === 101 || Math.round(T0) === 102 ? 35 : CV.mm;
+  ctx.lens.focalLength = Math.round(T0) === 101 ? 35 : CV.mm;
   ctx.lens.fstop = 5.6;
   // focus on its near eye (her hands, a little nearer, stay within the depth of field at T5.6)
   const eyeB = hatch.boneIndex.eye_L !== undefined ? hatch.bones[hatch.boneIndex.eye_L] : null;

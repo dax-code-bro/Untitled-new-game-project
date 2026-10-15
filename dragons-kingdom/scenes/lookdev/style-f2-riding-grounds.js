@@ -74,7 +74,9 @@ export const meta = {
     shadows: { cascades: 3, maxDistance: 400 },
     ao: { enabled: true, radius: 1.6 },
     dof: { samples: 48 },
-    grade: { exposure: 1.7, whiteBalance: 5900, contrast: 1.04, saturation: 1.0 },
+    // (exposed for the sunlit field - grass ~0.35 on the display, sky ~0.65 - so Charcoal's hide reads
+    // black with its glossy crowns catching the sky, not a slate grey)
+    grade: { exposure: 1.6, whiteBalance: 5900, contrast: 1.04, saturation: 1.0 },
   }),
 };
 
@@ -322,35 +324,37 @@ export function update(t, ctx) {
   charcoal.root.updateMatrixWorld(true);
   const cp = L.charcoal;
 
-  // Remi at the access rig: down the gangway from the deck, two steps from its lower end on
-  // Charcoal's back, he reaches for the mounting strap that hangs from the riding rig's frame
-  // (he faces down the gangway, toward the lens; the seat is at his right hand)
+  // Remi at the access rig: down the gangway from the deck to its lower end, where it rests on
+  // Charcoal's back beside the riding rig, he leans to the rig's grab bar and takes the mounting
+  // strap looped on it (he faces down the gangway toward the seat, i.e. toward the lens side)
   const seat = S.seatW();
-  const foot = onGangway(0.92, -0.12);
+  const up = new THREE.Vector3(0, 1, 0);
+  // the grab bar's far end (tack.js riding rig: ~0.55 m ahead of the seat point, 0.23 m above it,
+  // 0.3 m to each side), the end nearer the gangway
+  const grabEnd = seat.clone().addScaledVector(cdir, 0.55).addScaledVector(up, 0.23).addScaledVector(nearSide, -0.3);
+  const foot = onGangway(0.98, 0.05);
   const ry = foot.y;
   remi.update(t);
-  const fwd = gz.clone();
-  placeCharacter(remi, foot.x, ry, foot.z, Math.atan2(fwd.x, fwd.z) + 0.25);
+  const toBar = grabEnd.clone().sub(foot).setY(0).normalize();
+  placeCharacter(remi, foot.x, ry, foot.z, Math.atan2(toBar.x, toBar.z) - 0.2);
   remi.update(t);
   const shoulder = bonePos(remi, 'upperarm01.R');
-  const strapTop = seat.clone().add(new THREE.Vector3(0, 0.95, 0)).addScaledVector(nearSide, -0.55);
-  // (the arm reaches out ~0.55 m toward the strap's top, above shoulder height)
-  const grip = shoulder.clone().addScaledVector(strapTop.clone().sub(shoulder).setY(0).normalize(), 0.45).add(new THREE.Vector3(0, 0.3, 0));
-  limbIK(remi, 'arm', 'R', grip, shoulder.clone().add(new THREE.Vector3(0, -0.6, 0)).addScaledVector(fwd, -0.3).addScaledVector(gX, 0.3));
-  // the other hand on the gangway's rail
+  const grip = shoulder.clone().addScaledVector(grabEnd.clone().sub(shoulder).normalize(), 0.6);
+  limbIK(remi, 'arm', 'R', grip, shoulder.clone().addScaledVector(toBar, -0.3).add(new THREE.Vector3(0, -0.2, 0)).addScaledVector(gX, -0.4));
+  // the other hand on the gangway's rail (his left)
   {
-    const railP = onGangway(0.88, -0.62).add(new THREE.Vector3(0, 0.98, 0));
+    const railP = onGangway(0.93, 0.57).add(new THREE.Vector3(0, 0.86, 0));
     const shL = bonePos(remi, 'upperarm01.L');
-    limbIK(remi, 'arm', 'L', railP, shL.clone().add(new THREE.Vector3(0, -0.5, 0)).addScaledVector(gX, -0.4));
+    limbIK(remi, 'arm', 'L', railP, shL.clone().add(new THREE.Vector3(0, -0.5, 0)).addScaledVector(gX, 0.4));
   }
-  lookAtPoint(remi, grip.clone().add(new THREE.Vector3(0, 0.15, 0)), 0.8);
-  // the strap: from the rig's frame over his hand, its free end hanging below it
+  lookAtPoint(remi, grabEnd, 0.85);
+  // the mounting strap: looped round the grab bar's end, up into his fist, its tail hanging
   {
-    const hand = bonePos(remi, 'wrist.R');
-    const mid = strapTop.clone().lerp(hand, 0.5).add(new THREE.Vector3(0, -0.12, 0));
-    const pts = [strapTop, mid, hand.clone().add(new THREE.Vector3(0, 0.05, 0)), hand.clone().add(new THREE.Vector3(0, -0.4, 0)).addScaledVector(fwd, 0.04)];
+    const hand = bonePos(remi, 'wrist.R').addScaledVector(grabEnd.clone().sub(shoulder).normalize(), 0.08);
+    const mid = grabEnd.clone().lerp(hand, 0.5).add(new THREE.Vector3(0, -0.03, 0));
+    const pts = [grabEnd.clone().add(new THREE.Vector3(0, -0.06, 0)), mid, hand, hand.clone().add(new THREE.Vector3(0, -0.22, 0)).addScaledVector(toBar, -0.04)];
     strap.geometry.dispose();
-    strap.geometry = strapRibbon(new THREE.CatmullRomCurve3(pts), 0.06, 0.008, 48, gX);
+    strap.geometry = strapRibbon(new THREE.CatmullRomCurve3(pts), 0.045, 0.007, 32, null);
   }
 
   // Leaf sitting upright in front of the stable door, three-quarters to camera, wings folded
