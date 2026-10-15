@@ -134,7 +134,26 @@ motion blur, print grade, grain). People and riders come from `scenes/lib/humans
 
 ## Cost
 
-COST_PLACEHOLDER
+Measured on this machine (4 vCPU, no GPU, SwiftShader), 2026-10-15.
+
+Build in `setup()` (deterministic; Node and the browser give identical meshes), Node, `draft`:
+Charcoal 6.0 s (75k body vertices), Leaf 5.0 s (67k), Starlight 5.6 s (87k), scout 2.8 s (34k),
+hatchling 10.3 s (180k: the newborn's head is meshed finest).
+Charcoal at `standard`: 216k vertices in 16.0 s; at `hero`: 431k in 31.8 s (measured while `npm test`
+ran on the same CPUs). The hero shots build at `hero`, the contact sheet at `hero` too.
+
+Render at native 4K (`--preset final`, the 8-sub-frame film finish), one browser:
+all 13 hero shots in one `creatures-review.js` job: 23 min 13 s of rendering (26 min 52 s wall with
+the builds), about 1.8 min per finished 4K frame; the 25-frame contact sheet (`creatures-contact.js`,
+no sub-frames): 4 min 55 s (8 min 24 s wall). One 4K frame of the take-off or the hatchling macro
+takes the longest (~2.5 min: dust sprites, the densest mesh).
+
+Commands (outputs are git-ignored):
+
+```
+node render/render.mjs scenes/lookdev/creatures-review.js  --preset final --fps 1 --workers 1 --out output/dragons-wyvern/hero-job
+node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 1 --workers 1 --out output/dragons-wyvern/contact-job
+```
 
 ## Known limits
 
@@ -157,3 +176,9 @@ COST_PLACEHOLDER
 * Leaf's head in Charcoal's mouth (head-in-mouth) is placed by `stageMouth` in the shot, not by a
   contact solver: other framings may need the snout offset retuned.
 * Tack does not compress the hide; the riders' leg poses come from the humans library.
+* Seen side-on, a folded wing shows its fingers as parallel ridges with the drape hanging between
+  them (Charcoal's reads a little like a stack of awning poles; a cloth simulation of the fold
+  would crumple it more naturally). Starlight's folded wing tips run back past the hip by design
+  (albatross), so from behind they read as long blades.
+* Stirrups hang where the tack put them; the straddle fit moves the rider's legs out to clear the
+  flanks, so on Leaf the feet can sit beside, not in, the stirrups.

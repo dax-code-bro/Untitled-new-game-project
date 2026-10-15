@@ -36,6 +36,13 @@ State (all committed; latest renders listed in README / the report):
   views), rv.sh <name> <ids|all> [preset] (shots through a temp scene, deleted after),
   contact.sh <name> (contact sheet), build.mjs (Node build + every pose), headdepth/headprof.mjs
   (SDF head measurements), toes.mjs, bar.mjs.
+- DONE final native 4K renders (2026-10-15 ~03:10 UTC, git-ignored): output/dragons-wyvern/hero/4k/<shot>.png
+  (13 shots), hero/1920/*.jpg downscales, hero/crops/*.png (1:1 crops), hero/hero-sheet.jpg;
+  contact/4k/NN-<name>.png (25 frames), contact/contact-sheet-4k.jpg, contact/crops/*.png. Also after
+  the final review: islands dropped in mesher.js (a stray lobe under the newborn's jaw), newborn
+  without masseter bulge / lip ridge, keratin tubes capped with a dome at blunt ends (the broken left
+  horn read as an open tube), lower horn burrs, Charcoal's horns and membrane a little darker.
+- npm test 33/33 pass (180 s, after the last code change).
 - NEXT (ideas, not started): stirrups that follow the fitted rider foot; Leaf's sit haunch
   visibility; a real contact solver for the head-in-mouth; uneven-ground IK targets.
 
