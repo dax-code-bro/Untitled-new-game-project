@@ -41,11 +41,12 @@ export const SHOTS = [
     pose: { charcoal: { name: 'launch', t0: 2.9, look: [0.0, 0.15] } },
     cam: { subject: 'charcoal', pos: [62, 2.2, 70], target: [0, 9, 4], mm: 24, fstop: 8, focus: 'target', fixed: true } },
   // Charcoal and Leaf side by side (1C/1D): Leaf beside Charcoal's head, ahead of his wing, the
-  // riders close enough to talk; side-on from ~140 m (50 mm). Charcoal 0.42 Hz, Leaf ~1 Hz
+  // riders close enough to talk (~13 m); an air-to-air chase camera above and behind Charcoal's
+  // left wing (35 mm), both at the bottom of a downstroke. Charcoal 0.42 Hz, Leaf ~1 Hz
   { id: 'pair-flight', set: 'air', creatures: ['charcoal', 'leaf'], riders: { charcoal: 'remi', leaf: 'abby' }, dur: 3, alt: 240, face: -90,
-    place: { leaf: [14, 3.0, 20, 0] },
+    place: { leaf: [12, 6.0, 17, 0] },
     pose: { charcoal: { name: 'flight', phase: 0.45, look: [0.25, 0.02] }, leaf: { name: 'flight', hz: 1.0, phase: 0.4, corr: 0.4, look: [-0.3, 0.05] } },
-    cam: { subject: 'charcoal', pos: [75, 40, 85], target: [4, 4, 10], mm: 38, fstop: 8, focus: 'target', shutter: 90 } },
+    cam: { subject: 'charcoal', pos: [42, 28, -48], target: [5, 5, 12], mm: 35, fstop: 8, focus: 'target', shutter: 90 } },
   // the head-in-mouth (1D): Charcoal's neck curled round, Leaf's whole head held in his jaws at a
   // 25-degree holding gape, snout first; Abby on Leaf's saddle stays clear (32 mm, ~34 m)
   { id: 'head-in-mouth', set: 'air', creatures: ['charcoal', 'leaf'], riders: { charcoal: 'remi', leaf: 'abby' }, dur: 3, alt: 220, face: -110, stage: 'mouth',

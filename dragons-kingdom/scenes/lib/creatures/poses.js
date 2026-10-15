@@ -614,9 +614,10 @@ function wingFlap(pb, cyc, o = {}) {
 
 /** Legs carried in flight: trailing back under the tail (the rest pose), toes curled, a little stroke-coupled motion. */
 function flightLegs(pb, o = {}) {
-  const k = o.tuck ?? 1;
+  const k = o.tuck ?? -1;          // toes clenched (negative x flexes them toward the sole)
   const s = o.stroke ?? 0;
-  pb.sym('hl_#_0', -0.06 * s, 0, 0);
+  // the legs drawn together under the tail (the rest pose spreads them for the membrane)
+  pb.sym('hl_#_0', -0.06 * s, 0.18 * (o.together ?? 1), 0);
   pb.sym('hl_#_1', 0.05 * s, 0, 0);
   for (let i = 0; i < 4; i++) pb.sym(`hl_#_t${i}`, i === 0 ? -0.3 * k : 0.55 * k, 0, 0);
 }
@@ -631,7 +632,7 @@ export function flight(c, o = {}) {
   const asym = corr * 0.16 * wob(t * hz * 0.7, 5);
   const ampJ = 1 + corr * 0.15 * wob(t * hz * 0.9, 6);
   const w = wingFlap(pb, cyc, { amp: (o.amp ?? c.config.flapAmp ?? 0.8) * ampJ, center: o.center ?? 0.06, asym, flex: o.flex });
-  flightLegs(pb, { stroke: Math.cos(w.phi) });
+  flightLegs(pb, { stroke: Math.cos(w.phi), tuck: o.legTuck, together: o.legsTogether });
   // the body: lifted during the downstroke, a slight pitch oscillation; the neck keeps the head steady
   const bob = Math.sin(w.phi - 0.7);
   const pitch = 0.04 * Math.cos(w.phi);
@@ -665,7 +666,7 @@ export function glide(c, o = {}) {
     for (let d = 0; d < nF; d++) pb.add(`w_${sd}_f${d}_1`, 0, 0, s * -0.03, 'YZX');
   }
   pb.u.billowL = 0.35; pb.u.billowR = 0.35;
-  flightLegs(pb, {});
+  flightLegs(pb, { tuck: o.legTuck, together: o.legsTogether });
   pb.rig.rotation = [o.bodyPitch ?? 0, o.yaw ?? 0, bank];
   neckCurve(pb, (o.neckBase ?? 0.1), (o.neckTop ?? 0.05), (o.headPitch ?? -0.05), -(o.bodyPitch ?? 0));
   const lk = o.look || [0, 0];

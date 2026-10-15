@@ -641,9 +641,77 @@ export function mountRider(c, tack, rider, opts = {}) {
   bone.add(holder);
   void restWorld;
   c.root.updateMatrixWorld(true);
+  if (opts.straddle !== false) fitStraddle(c, bone, restWorld, rider, holder, opts);
   if (opts.grip !== false) addGrip(tack, rider, holder);
   c.root.updateMatrixWorld(true);
   return holder;
+}
+
+/**
+ * A dragon's back is wider than a horse's (Leaf's ~1 m against a horse's 0.6 m): the rider's legs
+ * (built for a horse-width straddle) would pass through the flanks. Abduct each thigh until the
+ * knee, shin and boot clear the trunk's surface (the body distance field in the bind pose, trunk
+ * prims only), then bring the shin back in as far as it stays clear, so the lower leg hangs along
+ * the flank. The angles are applied after every rider.update() (the humans idle resets the bones).
+ */
+function fitStraddle(c, seatBone, restWorld, rider, holder, opts = {}) {
+  const sdf = c.anatomy?.sdf;
+  const find = (n) => (rider.character?.bone ? rider.character.bone(n) : null) || (rider.bones || []).find((b) => b.name === n);
+  if (!sdf || !find('upperleg01.L')) return;
+  const L = c.L;
+  const trunk = (l) => l.filter((i) => !/^(w_|fl_|hl_)/.test(sdf.prims[i].bone || ''));
+  const dist = (p) => { const l = trunk(sdf.cull(p.x, p.y, p.z, p.x, p.y, p.z, L * 0.05)); return l.length ? sdf.evalList(p.x, p.y, p.z, l) : L * 0.05; };
+  const margin = opts.legClear ?? 0.1;                      // joint centre to the trouser and boot surface + a little air
+  const toBind = new THREE.Matrix4();
+  const tmp = new THREE.Vector3();
+  const bindPos = (b) => {
+    b.getWorldPosition(tmp);
+    seatBone.worldToLocal(tmp);                             // the seat bone's frame (= its bind frame)
+    return tmp.applyMatrix4(toBind.copy(restWorld));
+  };
+  const qp = new THREE.Quaternion(), qh = new THREE.Quaternion(), qa = new THREE.Quaternion();
+  const rotAbout = (b, axisWorld, ang) => {
+    b.parent.getWorldQuaternion(qp);
+    const ax = axisWorld.clone().applyQuaternion(qp.invert());
+    b.quaternion.premultiply(qa.setFromAxisAngle(ax, ang));
+  };
+  const fwd = () => { holder.getWorldQuaternion(qh); return new THREE.Vector3(0, 0, 1).applyQuaternion(qh); };
+  const clearOf = (sd) => {
+    c.root.updateMatrixWorld(true);
+    const knee = find(`lowerleg01.${sd}`), shin = find(`lowerleg02.${sd}`), foot = find(`foot.${sd}`);
+    let worst = Infinity;
+    for (const b of [knee, shin, foot]) if (b) worst = Math.min(worst, dist(bindPos(b)));
+    return worst;
+  };
+  const fit = {};
+  rider.update?.(0);
+  for (const [sd, sg] of [['L', 1], ['R', -1]]) {
+    const thigh = find(`upperleg01.${sd}`), knee = find(`lowerleg01.${sd}`);
+    let a = 0;
+    const q0 = thigh.quaternion.clone();
+    while (clearOf(sd) < margin && a < 0.7) { a += 0.025; thigh.quaternion.copy(q0); rotAbout(thigh, fwd(), sg * a); }
+    let b = 0;
+    if (a > 0 && knee) {
+      const k0 = knee.quaternion.clone();
+      while (b < a * 0.8) { knee.quaternion.copy(k0); rotAbout(knee, fwd(), -sg * (b + 0.025)); if (clearOf(sd) < margin) break; b += 0.025; }
+      knee.quaternion.copy(k0); rotAbout(knee, fwd(), -sg * b);
+    }
+    fit[sd] = [a, b];
+  }
+  rider.straddle = fit;
+  const upd = rider.update;
+  if (upd) {
+    rider.update = (t = 0, o = {}) => {
+      upd(t, o);
+      for (const [sd, sg] of [['L', 1], ['R', -1]]) {
+        const [a, b] = fit[sd];
+        if (a) rotAbout(find(`upperleg01.${sd}`), fwd(), sg * a);
+        if (b) rotAbout(find(`lowerleg01.${sd}`), fwd(), -sg * b);
+      }
+      rider.root.updateMatrixWorld(true);
+    };
+    rider.update(0);
+  }
 }
 
 /**

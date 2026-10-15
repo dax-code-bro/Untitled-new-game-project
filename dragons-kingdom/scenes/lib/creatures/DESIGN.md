@@ -19,6 +19,13 @@ references, sketches, the code changes the new layout needs and a step-by-step b
   lengths, horn sets, skin, the scout's and Starlight's colours where the screenplay is silent,
   the sizes not fixed by `DRAGONS.md`, the motion. It becomes canon only when Daxtyn approves the
   pictures (`SERIES.md` section 5). Open questions are collected in section 9.
+* **Revision 1 (2026-10-15, after the first renders of the built models):** Charcoal's skull is
+  deeper and broader and his neck narrower behind the jaws (the skull read as the tapering end of
+  the neck, an anteater); his main horns are thicker at the base; Charcoal's and Starlight's legs
+  are thicker (bone and muscle sized for 40 t and 170 t per leg; the first legs read as a
+  stork's); the newborn's snout is shorter and blunter; every adult's tail hangs in an arc with
+  its end on the ground when standing (2.4); the feet stand a little wider than the hips so the
+  inner toes never meet. Marked "rev. 1" where the numbers changed.
 * The screenplay (`episodes/s01e01/screenplay.md`) stays binding for events: section 1.13 lists
   every story beat the bodies have to make possible and how each design does it.
 * Every number below comes from a small calculator (lofted elliptical cross-sections, an assumed
@@ -369,7 +376,7 @@ thick forearms like columns, a thick tail base. At a distance: a black mass with
   pupil (round-ish oval when dilated), a nictitating membrane that sweeps across in flight.
 * **Ear:** a tympanum behind the jaw hinge under a scaly flap. Throat: loose gular folds.
 * **Horns - 10, fixed in every shot:**
-  1. **Main pair** from the rear corners of the skull roof: base oval 0.42 x 0.32 m, 2.6 m along
+  1. **Main pair** from the rear corners of the skull roof: base oval 0.48 x 0.36 m (rev. 1), 2.6 m along
      the curve; they sweep **back along the neck line**, then curve **out and down**, the tips
      turning slightly forward (water buffalo / mouflon sweep). Annual growth ridges, rough dull
      keratin, worn tips; the **LEFT horn's tip is broken off** (~12 cm, an old break, rounded by
@@ -383,8 +390,8 @@ thick forearms like columns, a thick tail base. At a distance: a black mass with
 
 | part | full width x depth at each station (m) |
 |---|---|
-| head, back of skull -> snout tip (s = 0, 0.25, 0.5, 0.75, 1) | 1.7 x 1.55 / 1.65 x 1.5 / 1.2 x 1.1 / 0.95 x 0.82 / 0.68 x 0.52 |
-| neck, head end -> base (s = 0, 0.5, 1) | 1 x 1.5 / 1.3 x 2 / 1.85 x 2.9 |
+| head, back of skull -> snout tip (s = 0, 0.25, 0.5, 0.75, 1) | 1.8 x 1.85 / 1.8 x 1.8 / 1.45 x 1.36 / 1.16 x 1.02 / 0.86 x 0.68 (rev. 1: deeper and broader, so the skull stands clear of the neck) |
+| neck, head end -> base (s = 0, 0.5, 1) | 0.95 x 1.22 / 1.3 x 1.9 / 1.85 x 2.9 (rev. 1: the neck narrows behind the jaws) |
 | trunk, shoulder -> hip (s = 0, 0.25, 0.6, 0.85, 1) | 2.7 x 4.2 / 2.9 x 4.5 / 2.4 x 3.4 / 2.2 x 2.8 / 2.35 x 2.6 |
 | tail, base -> tip (s = 0, 0.15, 0.35, 0.6, 0.85, 1) | 1.95 x 2.15 / 1.5 x 1.7 / 0.95 x 1.1 / 0.48 x 0.56 / 0.19 x 0.23 / 0.04 x 0.04 |
 
@@ -968,7 +975,7 @@ tail that cannot hold itself up.
 ### 5.2 Skeleton and proportions
 
 * Same plan as the adults (two legs, wing-arms, 3 long fingers + thumb), newborn proportions:
-  head 19% of the length (adults 8-11%), eye 19% of the skull, snout 38% of the skull, short neck,
+  head 19% of the length (adults 8-11%), eye 19% of the skull, snout 27% of the skull (rev. 1; 38% read as a lizard's), short neck,
   short trunk, the tail 41%.
 * **Wing:** humerus 0.07, forearm 0.12 m, fingers III 0.18 / IV 0.14 / V 0.11 m (metacarpal +
   phalanges), soft, the membrane wet, wrinkled and stuck to itself; **thumbs big** with curved
@@ -980,7 +987,7 @@ Shape (plump trunk, a head nearly as wide as the chest):
 
 | part | full width x depth at each station (m) |
 |---|---|
-| head, back of skull -> snout tip (s = 0, 0.3, 0.55, 0.8, 1) | 0.15 x 0.15 / 0.155 x 0.155 / 0.12 x 0.11 / 0.085 x 0.075 / 0.055 x 0.045 |
+| head, back of skull -> snout tip (s = 0, 0.3, 0.55, 0.8, 1) | 0.15 x 0.15 / 0.165 x 0.17 / 0.14 x 0.13 / 0.11 x 0.095 / 0.08 x 0.065 (rev. 1: a blunter, rounder newborn snout) |
 | neck, head end -> base (s = 0, 0.5, 1) | 0.085 x 0.095 / 0.095 x 0.105 / 0.13 x 0.15 |
 | trunk, shoulder -> hip (s = 0, 0.3, 0.6, 0.85, 1) | 0.15 x 0.17 / 0.19 x 0.2 / 0.2 x 0.2 / 0.16 x 0.16 / 0.13 x 0.13 |
 | tail, base -> tip (s = 0, 0.15, 0.35, 0.6, 0.85, 1) | 0.1 x 0.1 / 0.075 x 0.078 / 0.05 x 0.052 / 0.028 x 0.03 / 0.012 x 0.013 / 0.004 x 0.004 |
@@ -1427,8 +1434,8 @@ export const DESIGN = {
     tail: 16.2,
     cervicals: 11,
     caudals: 38,
-    head: [[0, 1.7, 1.55], [0.25, 1.65, 1.5], [0.5, 1.2, 1.1], [0.75, 0.95, 0.82], [1, 0.68, 0.52]],
-    neckProfile: [[0, 1, 1.5], [0.5, 1.3, 2], [1, 1.85, 2.9]],
+    head: [[0, 1.8, 1.85], [0.25, 1.8, 1.8], [0.5, 1.45, 1.36], [0.75, 1.16, 1.02], [1, 0.86, 0.68]],
+    neckProfile: [[0, 0.95, 1.22], [0.5, 1.3, 1.9], [1, 1.85, 2.9]],
     trunkProfile: [[0, 2.7, 4.2], [0.25, 2.9, 4.5], [0.6, 2.4, 3.4], [0.85, 2.2, 2.8], [1, 2.35, 2.6]],
     tailProfile: [[0, 1.95, 2.15], [0.15, 1.5, 1.7], [0.35, 0.95, 1.1], [0.6, 0.48, 0.56], [0.85, 0.19, 0.23], [1, 0.04, 0.04]],
     leg: {
@@ -1437,7 +1444,7 @@ export const DESIGN = {
       metatarsus: 1.5,
       toeIII: 1.3,
       claw: 0.42,
-      diameters_thigh_knee_shank_ankle_foot: [1.5, 0.85, 0.8, 0.48, 0.4],
+      diameters_thigh_knee_shank_ankle_foot: [1.7, 1.05, 1.0, 0.62, 0.52],   // rev. 1: load-bearing columns
       toes: "3 forward + hallux"
     },
     wing: {
@@ -1595,7 +1602,7 @@ export const DESIGN = {
       metatarsus: 3.8,
       toeIII: 3.6,
       claw: 1.3,
-      diameters_thigh_knee_shank_ankle_foot: [2.4, 1.3, 1.15, 0.62, 0.52],
+      diameters_thigh_knee_shank_ankle_foot: [3.0, 1.75, 1.55, 0.92, 0.76],  // rev. 1: 170 t per leg
       toes: "3 forward + opposable hallux (raptor)"
     },
     wing: {
@@ -1737,7 +1744,7 @@ export const DESIGN = {
     tail: 0.41,
     cervicals: 10,
     caudals: 34,
-    head: [[0, 0.15, 0.15], [0.3, 0.155, 0.155], [0.55, 0.12, 0.11], [0.8, 0.085, 0.075], [1, 0.055, 0.045]],
+    head: [[0, 0.15, 0.15], [0.3, 0.165, 0.17], [0.55, 0.14, 0.13], [0.8, 0.11, 0.095], [1, 0.08, 0.065]],
     neckProfile: [[0, 0.085, 0.095], [0.5, 0.095, 0.105], [1, 0.13, 0.15]],
     trunkProfile: [[0, 0.15, 0.17], [0.3, 0.19, 0.2], [0.6, 0.2, 0.2], [0.85, 0.16, 0.16], [1, 0.13, 0.13]],
     tailProfile: [[0, 0.1, 0.1], [0.15, 0.075, 0.078], [0.35, 0.05, 0.052], [0.6, 0.028, 0.03], [0.85, 0.012, 0.013], [1, 0.004, 0.004]],
