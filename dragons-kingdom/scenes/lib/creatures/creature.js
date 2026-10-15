@@ -34,13 +34,13 @@ const deg = Math.PI / 180;
  * flapAmp: half the peak-to-peak stroke (rad).
  */
 export const CREATURES = {
-  charcoal: { design: 'charcoal', L: 36, look: 'charcoal', flapHz: 0.42, flapAmp: 0.74, scaleMul: 0.6, title: 'Charcoal (Remi\'s dragon)' },
-  leaf: { design: 'leaf', L: 9.0, look: 'leaf', flapHz: 0.8, flapAmp: 0.92, scaleMul: 0.66, limbScaleMul: 0.8, title: 'Leaf (Abby\'s dragon, not fully grown)' },
-  starlight: { design: 'starlight', L: 72, look: 'starlight', flapHz: 0.24, flapAmp: 0.65, scaleMul: 0.4, limbScaleMul: 0.8, resMul: 1.35, title: 'Starlight (Queen Fall\'s dragon, albino)' },
+  charcoal: { design: 'charcoal', L: 36, look: 'charcoal', flapHz: 0.42, flapAmp: 0.74, scaleMul: 0.6, seatBack: 1.2, title: 'Charcoal (Remi\'s dragon)' },
+  leaf: { design: 'leaf', L: 9.0, look: 'leaf', flapHz: 0.8, flapAmp: 0.92, scaleMul: 0.66, seatBack: 0.38, limbScaleMul: 0.8, title: 'Leaf (Abby\'s dragon, not fully grown)' },
+  starlight: { design: 'starlight', L: 72, look: 'starlight', flapHz: 0.24, flapAmp: 0.65, scaleMul: 0.4, seatBack: 2.0, limbScaleMul: 0.8, resMul: 1.35, title: 'Starlight (Queen Fall\'s dragon, albino)' },
   hatchling: { design: 'hatchling', L: 1.0, look: 'gold', flapHz: 0, flapAmp: 0, scaleMul: 1.0, title: 'The gold hatchling (newborn)',
     // (the newborn's damp membrane stays loose and crumpled over the folded hand)
     drapeOpts: { lie: { shrink: 0.5, gravity: 0.02 }, stand: { shrink: 0.5, gravity: 0.02 }, crouch: { shrink: 0.5, gravity: 0.02 } } },
-  scout: { design: 'scout', L: 6.8, look: 'scout', flapHz: 1.1, flapAmp: 0.83, scaleMul: 0.55, detachableLeftWing: true, title: 'The scout (Episode 1)' },
+  scout: { design: 'scout', L: 6.8, look: 'scout', flapHz: 1.1, flapAmp: 0.83, scaleMul: 0.55, seatBack: 0.3, detachableLeftWing: true, title: 'The scout (Episode 1)' },
 };
 
 const QUALITY = {
@@ -243,13 +243,14 @@ export async function createCreature(which, opts = {}) {
     weldNormals(fl);
     const fm = skinPartMesh(THREE, fl, mats.finger, `${root.name}:wingL-fingers`, 'tube', 0, L);
     // the membrane's body edge rides on the wing root, so the whole membrane tears away with the wing
-    const mem = membrane({ ...w, attachBones: w.attachBones.map(() => `${w.prefix}_0`) }, boneIndex, { res: membraneRes });
+    const mem = membrane(w, boneIndex, { res: membraneRes });
     const mgeo = partGeometry(THREE, { ...mem, extra: mem.wing }, { aWing: mem.wing, aEdge: mem.edge, aBGrad: mem.bgrad });
     const mm = new THREE.SkinnedMesh(mgeo, mats.membraneTorn);
     mm.name = `${root.name}:wingL-membrane`;
     mm.userData.side = 'L';
     memMeshes.push(mm);
-    detachable = { side: 'L', meshes: [arm, kLm, fm, mm], rootBone: bones[boneIndex[`${w.prefix}_0`]] };
+    detachable = { side: 'L', meshes: [arm, kLm, fm, mm], rootBone: bones[boneIndex[`${w.prefix}_0`]],
+      memRoots: (w.memRoots || []).map((r) => ({ bone: bones[boneIndex[r.name]], parent: bones[boneIndex[r.parent]], name: r.name, parentName: r.parent })) };
     meshes.push(arm, kLm, fm, mm);
   }
 
@@ -279,11 +280,20 @@ export async function createCreature(which, opts = {}) {
       if (rb.parent !== th) th.add(rb);
       const rp = creature.restPos[rb.name], tp = creature.restPos.thorax;
       rb.position.set(rp[0] - tp[0], rp[1] - tp[1], rp[2] - tp[2]);
+      for (const m of detachable.memRoots) {
+        if (m.bone.parent !== m.parent) m.parent.add(m.bone);
+        const a = creature.restPos[m.name], b = creature.restPos[m.parentName];
+        m.bone.position.set(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+        m.bone.quaternion.identity(); m.bone.scale.set(1, 1, 1);
+      }
       mats.setPoseUniforms({ wound: { center: rp, radius: anat.dims.rA[0] * 1.3, amount: 0 }, tear: 0 });
     },
     detachWing(parent, worldMatrix) {
       if (!detachable) return;
       const rb = detachable.rootBone;
+      // the membrane's torn body edge leaves with the wing (keeps its current world placement)
+      root.updateMatrixWorld(true);
+      for (const m of detachable.memRoots) if (m.bone.parent !== rb) rb.attach(m.bone);
       if (rb.parent !== parent) parent.add(rb);
       parent.updateMatrixWorld(true);
       const local = new THREE.Matrix4().copy(parent.matrixWorld).invert().multiply(worldMatrix);
@@ -302,6 +312,7 @@ export async function createCreature(which, opts = {}) {
       stand: (c) => P.stand(c, { t: 0, blink: false, breathe: 0, drapeBuild: true }),
       sit: (c) => P.sit(c, { t: 0, blink: false, breathe: 0, drapeBuild: true }),
       lie: (c) => P.lie(c, { t: 0, blink: false, breathe: 0, drapeBuild: true }),
+      crouch: (c) => P.crouch(c, { t: 0, blink: false, breathe: 0, drapeBuild: true, k: 1 }),
     };
     const names = Object.keys(variants);
     const res = {};

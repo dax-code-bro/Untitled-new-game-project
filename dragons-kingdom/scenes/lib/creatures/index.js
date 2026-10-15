@@ -5,3 +5,4 @@ export { applyPose, restPose, groundRig } from './pose.js';
 export * as poses from './poses.js';
 export { loadHuman, parseHuman, createRider, createSaddle, mountRider, ridePose, standPose, applyRiderPose } from './rider.js';
 export { createFire, FIRE_PALETTES } from './fire.js';
+export { createDust } from './dust.js';

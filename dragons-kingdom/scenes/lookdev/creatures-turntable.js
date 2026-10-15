@@ -3,7 +3,7 @@
 //   node render/render.mjs --still scenes/lookdev/creatures-turntable.js --time 1 --preset final --png out.png
 import { makeTurntable } from './creatures-shots.js';
 
-const T = makeTurntable({ title: 'Creature hero shots (provisional designs)' });
+const T = makeTurntable({ title: 'Dragon hero shots' });
 export const meta = T.meta;
 export const setup = T.setup;
 export const update = T.update;

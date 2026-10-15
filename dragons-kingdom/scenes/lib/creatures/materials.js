@@ -44,8 +44,9 @@ export function lookParams(THREE, look) {
       dustAmt: 0.35, saltAmt: 0.05, oral: lin(THREE, 0.09, 0.03, 0.035), oralDark: lin(THREE, 0.02, 0.006, 0.008),
       // GRAY membrane with BLACK STRIPES throughout: noise-warped bands across every panel
       // (stripes block the light, the grey skin between them lets a little through)
-      membrane: lin(THREE, 0.1, 0.1, 0.104), trans: lin(THREE, 0.05, 0.05, 0.052), vein: lin(THREE, 0.06, 0.05, 0.05), memRough: 0.55, memSpec: 0.32, memSpecD: 0.6,
-      stripe: [7.0, 0.36, 0.6, 1.0], stripeCol: lin(THREE, 0.009, 0.009, 0.01),
+      // (DESIGN 2.7: sRGB ~#7d8086, linear ~0.2 - it must read clearly GRAY next to the black body)
+      membrane: lin(THREE, 0.19, 0.2, 0.215), trans: lin(THREE, 0.1, 0.1, 0.105), vein: lin(THREE, 0.12, 0.09, 0.09), memRough: 0.58, memSpec: 0.34, memSpecD: 0.55,
+      stripe: [1.0, 0.22, 0.6, 1.0], stripeCol: lin(THREE, 0.011, 0.011, 0.012),
       horn: [lin(THREE, 0.02, 0.019, 0.018), lin(THREE, 0.09, 0.085, 0.078)], claw: [lin(THREE, 0.018, 0.017, 0.016), lin(THREE, 0.06, 0.055, 0.05)],
       tooth: lin(THREE, 0.36, 0.3, 0.2), sclera: lin(THREE, 0.02, 0.018, 0.02),
       // BLUE eyes (a deep slate blue iris with a dark limbal ring; never emissive)
@@ -67,7 +68,7 @@ export function lookParams(THREE, look) {
       // (dark gums and lip margins: a pink lip line drew a frog's smile)
       dustAmt: 0.2, saltAmt: 0.05, oral: lin(THREE, 0.07, 0.03, 0.028), oralDark: lin(THREE, 0.025, 0.008, 0.008),
       // LIGHT GREEN membrane; the light through it is limited (thick skin), so it never glows
-      membrane: lin(THREE, 0.15, 0.25, 0.08), trans: lin(THREE, 0.15, 0.24, 0.07), vein: lin(THREE, 0.06, 0.11, 0.035), memRough: 0.56, memSpec: 0.4, memSpecD: 0.7,
+      membrane: lin(THREE, 0.3, 0.52, 0.15), trans: lin(THREE, 0.26, 0.42, 0.1), vein: lin(THREE, 0.1, 0.2, 0.05), memRough: 0.56, memSpec: 0.4, memSpecD: 0.7,
       horn: [lin(THREE, 0.04, 0.045, 0.03), lin(THREE, 0.24, 0.22, 0.15)], claw: [lin(THREE, 0.03, 0.03, 0.025), lin(THREE, 0.14, 0.12, 0.09)],
       tooth: lin(THREE, 0.5, 0.44, 0.32), sclera: lin(THREE, 0.04, 0.036, 0.012),
       // clear YELLOW eyes
@@ -90,7 +91,7 @@ export function lookParams(THREE, look) {
       vor: [8.0, 0.0, 0.16, 1.1],
       dustAmt: 0.2, saltAmt: 0.0, oral: lin(THREE, 0.45, 0.16, 0.16), oralDark: lin(THREE, 0.1, 0.03, 0.03),
       // white-grey membranes (albino, but thick enough that blood barely tints them), silver highlights
-      membrane: lin(THREE, 0.5, 0.5, 0.505), trans: lin(THREE, 0.07, 0.066, 0.068), vein: lin(THREE, 0.5, 0.32, 0.32), memRough: 0.45, memSpec: 0.6,
+      membrane: lin(THREE, 0.6, 0.55, 0.5), trans: lin(THREE, 0.12, 0.085, 0.075), vein: lin(THREE, 0.55, 0.3, 0.3), memRough: 0.5, memSpec: 0.55,
       // a hard polish on the scale plates (the glints) over a satin base - not a chrome coat
       clearcoat: 0.7, clearcoatRough: 0.08,
       horn: [lin(THREE, 0.62, 0.6, 0.55), lin(THREE, 0.78, 0.77, 0.74)], claw: [lin(THREE, 0.5, 0.48, 0.44), lin(THREE, 0.75, 0.74, 0.7)],
@@ -127,12 +128,12 @@ export function lookParams(THREE, look) {
       wet: true, wetRough: 0.1,
     },
     scout: {
-      base: lin(THREE, 0.055, 0.05, 0.045), belly: lin(THREE, 0.17, 0.15, 0.12), dorsal: lin(THREE, 0.035, 0.034, 0.033),
+      base: lin(THREE, 0.075, 0.088, 0.105), belly: lin(THREE, 0.3, 0.31, 0.31), dorsal: lin(THREE, 0.06, 0.07, 0.085),
       wear: lin(THREE, 0.1, 0.095, 0.085), crev: 0.5, dust: lin(THREE, 0.2, 0.18, 0.15), salt: lin(THREE, 0.6, 0.6, 0.58),
-      rough: [0.4, 0.12, 0.08, 0.3], amp: 0.26, keel: 0.25, facet: 0.0, jit: 0.25, metal: [0, 0], mottle: 0.3,
+      rough: [0.58, 0.12, 0.08, 0.3], amp: 0.2, keel: 0.15, facet: 0.0, jit: 0.25, metal: [0, 0], mottle: 0.3,
       hier: [0.6, 1.0, 0.4, 0.0], damp: 0.15, bellyP: [0.7, 1.8, 0.85, 0.55],
       dustAmt: 0.25, saltAmt: 0.3, oral: lin(THREE, 0.25, 0.07, 0.07), oralDark: lin(THREE, 0.05, 0.012, 0.012),
-      membrane: lin(THREE, 0.05, 0.045, 0.04), trans: lin(THREE, 0.3, 0.16, 0.09), vein: lin(THREE, 0.06, 0.025, 0.015), memRough: 0.55,
+      membrane: lin(THREE, 0.068, 0.05, 0.042), trans: lin(THREE, 0.16, 0.1, 0.07), vein: lin(THREE, 0.06, 0.025, 0.015), memRough: 0.55,
       horn: [lin(THREE, 0.04, 0.038, 0.034), lin(THREE, 0.2, 0.18, 0.15)], claw: [lin(THREE, 0.03, 0.028, 0.025), lin(THREE, 0.12, 0.11, 0.09)],
       tooth: lin(THREE, 0.55, 0.48, 0.35), iris: [lin(THREE, 0.45, 0.38, 0.12), lin(THREE, 0.14, 0.11, 0.025)], sclera: lin(THREE, 0.04, 0.035, 0.02),
     },
@@ -408,6 +409,13 @@ void dkSkin(inout vec3 albedo) {
   // damp patches (dew, wet grass, mud) on the lower body: darker, glossier
   dkDampM = uDamp.x * smoothstep(0.52, 0.68, vNoise.z * 0.8 + low * 0.35 + (n2 - 0.5) * 0.2) * (1.0 - dust);
   col *= mix(1.0, uDamp.y, dkDampM);
+  // wrist pad (folded wing's "foot"): a thick cracked callus, rubbed paler, dust ground into it
+  float dkPadM = region > 7.5 ? 1.0 : 0.0;
+  if (dkPadM > 0.0) {
+    float cr = smoothstep(0.55, 0.8, dkVnoise2(vRest.xz / max(vMask2.z, 1e-4) * 0.35)) * 0.5 + 0.5 * dkCav;
+    col = mix(col, mix(uWearCol * 1.6, uDustCol, 0.55), 0.55);
+    col *= 1.0 - 0.35 * cr;
+  }
   // mouth interior: wet gums/palate/tongue
   vec3 oral = mix(uOralDark, uOral, smoothstep(0.2, 0.9, vMask2.x) * (0.7 + 0.3 * n2));
   if (region > 6.5) oral = mix(uOralDark * 1.4, uBase * 0.8, 0.7);      // eyelid margins: wet, a little darker than the skin, not red
@@ -426,6 +434,7 @@ void dkSkin(inout vec3 albedo) {
   r = mix(r, 0.32, dkScarM * 0.7);                                                       // scar tissue: smooth, shiny
   r = mix(r, 0.3, dkResM);                                                               // slimy residue: soft sheen (the wet film carries the highlights)
   r = mix(r, 0.22, dkWoundM);                                                            // wet
+  r = mix(r, 0.88, dkPadM);
   dkRoughOut = clamp(r, 0.06, 1.0);
   dkMetalOut = mix(uMisc.z, uMisc.w, clamp(dkCav * 1.4 + dust, 0.0, 1.0)) * (1.0 - dkOralM) * (1.0 - 0.75 * smoothstep(0.35, 0.85, vMask.y)) * (1.0 - 0.25 * dkResM);
   dkAO = vMask2.x * (1.0 - 0.55 * dkCav);
@@ -604,22 +613,32 @@ void dkMembrane(inout vec3 col) {
   // every band crosses several panels), forking and pinching like an animal's pattern;
   // the pigment is in the skin, so the bands also block the light coming through
   if (uStripe.w > 0.0) {
+    // Charcoal (canon: GRAY with BLACK stripes throughout; DESIGN 2.7): a black band follows every
+    // finger bone and the forearm, two more run between neighbouring fingers and three across
+    // the plagiopatagium, fanning out from the wrist; ~0.15 m wide at the wrist, widening to ~6%
+    // of their length at the trailing edge; wavy soft edges that swell, taper and now and then
+    // break - an animal's pattern, not paint. The pigment also blocks the light through the skin.
     vec2 q = vec2(abs(vRest.x) - uWingRoot.x, vRest.z - uWingRoot.z) / uWingRoot.w;
-    // bands run ALONG the fingers (out from the wrist toward the trailing edge), wavy, tapered
-    // and broken, two or three per panel: bands across the radiating fingers - concentric or
-    // straight - drew a spider's web
-    float across = pid > 3.5 ? a : b;
-    float r = across * (pid > 0.5 && pid < 3.5 ? 2.0 : 3.0) + pid * 0.37;
     float w1 = dkVnoise2(q * 3.0 + 4.0) - 0.5, w2 = dkVnoise2(q * 9.0 + 1.3) - 0.5;
-    float ph = r + (w1 * 1.2 + w2 * 0.35) * uStripe.z;
-    float band = 0.5 - 0.5 * cos(ph * 6.2832);                         // 0 between bands .. 1 at a band centre
-    float wv = uStripe.y * (0.25 + 1.3 * dkVnoise2(q * vec2(5.0, 9.0) + 9.0) * dkVnoise2(q * 13.0 + 2.0));   // bands swell, taper and pinch
-    float edge = fwidth(ph) * 1.5 + 0.09;          // (soft pigment edges, not a printed graphic)
-    dkStripeM = smoothstep(1.0 - wv - edge, 1.0 - wv + edge, band) * uStripe.w;
-    dkStripeM *= smoothstep(0.18, 0.42, dkVnoise2(q * vec2(7.0, 3.5) + 2.7) + 0.2 * band);   // bands break and fork
-    dkStripeM *= smoothstep(0.03, 0.12, length(q));                     // no band on the shoulder itself
+    float swell = 0.65 + 0.75 * dkVnoise2(q * vec2(5.0, 9.0) + 9.0);
+    float kL = uL / 36.0;
+    // bands on the bones (metric: distance to the nearest bone)
+    float wB = (0.12 + 0.05 * along * uStripe.x) * kL * swell;
+    float onBone = 1.0 - smoothstep(wB * 0.5, wB * 0.5 + 0.06 * kL + fwidth(vEdge.x), vEdge.x);
+    // bands between the bones (parametric: two per finger panel, three across the plagiopatagium)
+    float n = pid > 3.5 ? 4.0 : (pid > 0.5 ? 3.0 : 0.0);
+    float acr = (pid > 3.5 ? a : b) * n + (w1 * 0.45 + w2 * 0.15) * uStripe.z;
+    float fr = abs(fract(acr) - 0.5) * 2.0;                       // 0 between bands .. 1 at a band centre
+    float hw = uStripe.y * (0.35 + 0.9 * along) * swell;         // widen toward the trailing edge
+    float edge = fwidth(acr) * 1.5 + 0.07;
+    float mid = smoothstep(1.0 - hw - edge, 1.0 - hw + edge, fr);
+    mid *= step(0.5, n) * smoothstep(0.15, 0.4, dkVnoise2(q * vec2(7.0, 3.5) + 2.7) + 0.25 * fr);   // bands break and fork
+    // the propatagium (leading edge) is black
+    float pro = pid < 0.5 ? 1.0 : 0.0;
+    dkStripeM = clamp(max(max(onBone, mid), pro), 0.0, 1.0) * uStripe.w;
+    dkStripeM *= smoothstep(0.02, 0.08, length(q));
     col = mix(col, uStripeCol * (0.85 + 0.3 * mot), dkStripeM);
-    dkThin *= 1.0 - 0.85 * dkStripeM;
+    dkThin *= 1.0 - 0.9 * dkStripeM;
   }
   // relief: vessels raised a little, fine stretch creases across the span; a folded wing
   // gathers into many soft wrinkles running along the bones

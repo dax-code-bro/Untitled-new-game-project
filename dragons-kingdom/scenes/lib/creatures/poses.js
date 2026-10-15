@@ -156,7 +156,7 @@ function foldHand(pb, side, arm, qT, o = {}) {
   const fg0 = w.fingers[0].points;
   const Wh = aimQ(norm(sub(fg0[1], fg0[0])), [0, 1, 0], handDir, dors);
   pb.quat(`${pre}_2`, qMul(qInv(arm.qF), Wh));
-  const outW = norm(qRot(qT, [sd, o.outUp ?? 0.15, 0]));
+  const outW = norm(qRot(qT, [sd, o.outUp ?? A.design.fold?.outUp ?? 0.15, 0]));
   w.fingers.forEach((fg, di) => {
     const pts = fg.points;
     const rd = (j) => norm(sub(pts[j + 1], pts[j]));
@@ -170,7 +170,8 @@ function foldHand(pb, side, arm, qT, o = {}) {
     const curl = o.curl ?? A.design.fold?.curl ?? [8, 58, 105];
     for (let j = 1; j < fg.names.length; j++) {
       const a = (curl[Math.min(j - 1, curl.length - 1)] + (o.fanDown ?? 3) * di) * deg + (o.p1Down ?? 0) * (j === 1 ? 1 : 0);
-      const inw = (o.inward ?? 0.04) + (j > 1 ? (o.wrap ?? 0.14) : 0);
+      const F = A.design.fold || {};
+      const inw = (o.inward ?? F.inward ?? 0.04) + (j > 1 ? (o.wrap ?? F.wrap ?? 0.14) : 0);
       const dB = norm([-sd * inw, -Math.sin(a), -Math.cos(a)]);
       const dW = qRot(qT, dB);
       const Wj = aimQ(rd(j), [0, 1, 0], dW, outW);
@@ -334,7 +335,7 @@ function plantAll(pb, o = {}) {
     const lf = (o.feet && o.feet[side]) || {};
     const hip = F.P[`hl_${side}_0`];
     const ma = (lf.mtAng ?? D.leg.mtAng) * deg;
-    const ball = [sd * d.hipX * 1.08 + (lf.dx ?? 0), (lf.lift ?? 0) + d.toeL * 0.13, hip[2] - d.fem * 0.04 + d.mtl * Math.cos(ma) + (lf.dz ?? 0)];
+    const ball = [sd * Math.max(d.hipX * 1.08, d.footX ?? 0) + (lf.dx ?? 0), (lf.lift ?? 0) + d.toeL * 0.13, hip[2] - d.fem * 0.04 + d.mtl * Math.cos(ma) + (lf.dz ?? 0)];
     if (lf.at) { ball[0] = lf.at[0]; ball[1] = lf.at[1] + d.toeL * 0.13; ball[2] = lf.at[2]; }
     res[`foot${side}`] = legIK(pb, F, side, ball, { mtAng: lf.mtAng, fwd: lf.fwd ?? [sd * 0.1, 0, 1], pole: lf.pole, curl: lf.curl, toeDown: lf.toeDown });
     // wrist pads: a little outside the shoulder and behind it (the forearm leaning ~forearmLean)
@@ -412,7 +413,7 @@ export function rear(c, o = {}) {
   const F = solveFK(pb);
   for (const [side, sd] of sides) {
     const hip = F.P[`hl_${side}_0`];
-    legIK(pb, F, side, [sd * d.hipX * 1.2, d.toeL * 0.13, hip[2] + d.mtl * 0.4], { mtAng: 50 });
+    legIK(pb, F, side, [sd * Math.max(d.hipX * 1.2, (d.footX ?? 0) * 1.1), d.toeL * 0.13, hip[2] + d.mtl * 0.4], { mtAng: 50 });
   }
   // wings half open for balance (blended toward the spread wing)
   const half = o.wingOpen ?? 0.5;
@@ -454,7 +455,7 @@ export function sit(c, o = {}) {
   for (const [side, sd] of sides) {
     // feet flat beside the haunch, toes forward: the thigh folds forward along the flank
     const hip = F.P[`hl_${side}_0`];
-    legIK(pb, F, side, [sd * d.hipX * 1.35, d.toeL * 0.13, hip[2] + d.fem * 0.85], { mtAng: 8, fwd: [sd * 0.15, 0, 1], pole: [sd * 0.45, 0.8, 0.4], curl: 0.08 });
+    legIK(pb, F, side, [sd * Math.max(d.hipX * 1.35, (d.footX ?? 0) * 1.2), d.toeL * 0.13, hip[2] + d.fem * 0.85], { mtAng: 8, fwd: [sd * 0.15, 0, 1], pole: [sd * 0.45, 0.8, 0.4], curl: 0.08 });
     // wrists planted in front like a dog's forelegs, forearms vertical
     const S = F.P[`w_${side}_0`];
     const w = A.wings.find((x) => x.side === side);
@@ -479,6 +480,7 @@ export function crouch(c, o = {}) {
     feet: { L: { dz: -d.mtl * 0.3 * k, mtAng: mix(c.anatomy.design.leg.mtAng, 25, k) }, R: { dz: -d.mtl * 0.3 * k, mtAng: mix(c.anatomy.design.leg.mtAng, 25, k) } },
     wrists: { L: { dz: d.fore * 0.32 * k, dx: d.wristR * 1.5 * k }, R: { dz: d.fore * 0.32 * k, dx: d.wristR * 1.5 * k } },
   });
+  if (k > 0.5) p.uniforms.drape = { L: ['crouch', 1], R: ['crouch', 1] };
   return p;
 }
 
@@ -511,7 +513,7 @@ export function lie(c, o = {}) {
       plantWing(pb, F, side, [S[0] + sd * d.hum * 0.95, w.padDist * 0.9, S[2] + d.fore * 0.25], { pole: [sd * 0.6, 0.5, -0.6], outUp: 0.4, p1Down: 0.0, inward: -0.1, ...(o.fold || {}) });
     } else {
       // folded under: the foot flat beside the belly, the knee forward and up along the flank
-      legIK(pb, F, side, [sd * (d.hipX * 1.25), d.toeL * 0.13, hip[2] + d.fem * 0.75], { mtAng: 4, fwd: [sd * 0.12, 0, 1], pole: [sd * 0.5, 0.75, 0.45], curl: 0.05 });
+      legIK(pb, F, side, [sd * Math.max(d.hipX * 1.25, (d.footX ?? 0) * 1.15), d.toeL * 0.13, hip[2] + d.fem * 0.75], { mtAng: 4, fwd: [sd * 0.12, 0, 1], pole: [sd * 0.5, 0.75, 0.45], curl: 0.05 });
       // the forearm along the ground beside the chest, wrist pad forward under the chest
       plantWing(pb, F, side, [S[0] + sd * d.wristR * 0.6, w.padDist * 0.75, S[2] + d.fore * 0.62], { pole: [sd * 0.5, 0.35, -1], outUp: 0.35, p1Down: 0.02, ...(o.fold || {}) });
     }
@@ -681,9 +683,11 @@ export function dive(c, o = {}) {
   const pb = new PB(c);
   copyInto(pb, p);
   for (const [sd, s] of sides) {
-    pb.add(`w_${sd}_0`, 0.05 * f, s * 0.75 * f, s * 0.12 * f, 'YZX');
-    pb.add(`w_${sd}_1`, 0, s * -1.05 * f, s * 0.1 * f, 'YZX');
-    pb.add(`w_${sd}_2`, 0, s * 1.15 * f, s * -0.05 * f, 'YZX');
+    pb.add(`w_${sd}_0`, 0.08 * f, s * 1.1 * f, s * 0.1 * f, 'YZX');
+    pb.add(`w_${sd}_1`, 0, s * -1.75 * f, s * 0.12 * f, 'YZX');
+    pb.add(`w_${sd}_2`, 0, s * 1.95 * f, s * -0.08 * f, 'YZX');
+    const nF = c.anatomy.wings[0].fingers.length;
+    for (let d = 0; d < nF; d++) pb.add(`w_${sd}_f${d}_0`, 0, s * -0.12 * f * d, 0, 'YZX');
   }
   pb.u.billowL = pb.u.billowR = 0.1 + 0.2 * (1 - f);
   pb.rig = { ...p.rig };
@@ -729,10 +733,10 @@ export function sprint(c, o = {}) {
 export function mouthHold(c, o = {}) {
   const t = o.t ?? 0;
   const sd = o.side ?? 1;
-  const turn = smooth(0, 0.8, t) * (o.yaw ?? 1.6);
+  const turn = smooth(0, 0.8, t) * (o.turn ?? 1.6);
   const rel = o.release !== undefined ? smooth(o.release, o.release + 0.4, t) : 0;
   const gape = mix(smooth(0.6, 1.0, t) * 0.8 - smooth(1.0, 1.4, t) * (0.8 - 0.44), 0.7, rel);
-  const p = glide(c, { ...o, look: [sd * turn, (o.pitch ?? 0.05)], jaw: gape, blink: false, lidRelax: 0.35 });
+  const p = glide(c, { ...o, yaw: 0, look: [sd * turn, (o.pitch ?? 0.05)], jaw: gape, blink: false, lidRelax: 0.35 });
   return p;
 }
 

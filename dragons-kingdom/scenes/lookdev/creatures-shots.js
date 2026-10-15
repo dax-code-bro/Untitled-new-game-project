@@ -1,101 +1,97 @@
-// Hero look-development shots for the Episode 1 creatures (PROVISIONAL designs).
-// Used by creatures-hero.js (every shot), creatures-review.js (1 s per shot, fast checks)
-// and the per-creature wrappers creatures-turntable-<name>.js, which build only what
-// their shots need. The all-creature contact sheet is creatures-contact.js.
+// Hero look-development shots for the Episode 1 dragons (DESIGN.md: two legs, the wings are the
+// front limbs, horns; every dragon its own design). Used by creatures-hero.js (every shot),
+// creatures-review.js (1 s per shot, fast checks) and the per-creature wrappers
+// creatures-turntable-<name>.js, which build only what their shots need. The all-creature contact
+// sheet is creatures-contact.js.
 //
-// Every shot is framed like a real camera setup: a lens in mm on a Super 35 sensor, a stop,
-// the focus on the subject's eye or body, a 180-degree shutter (true sub-frame motion blur
-// with the film finish), the photographed sky as the only light (Poly Haven
-// kloofendal_48d_partly_cloudy, CC0: its sun extracted into a shadow-casting light with the
-// measured energy, or old_room's window light indoors). Sets:
-//   field  open grassland (CC0 photo turf + geometry grass tufts around the subject and in
-//          front of the camera), the dragon on the ground in daylight
-//   air    the sky and the open sea 150-300 m below (the runtime's FFT ocean), hazed by the atmosphere
+// Every shot is framed like a real camera setup: a lens in mm on a Super 35 sensor, a stop, the
+// focus on the subject's eye or body, a 180-degree shutter (true sub-frame motion blur with the
+// film finish), the photographed sky as the only light (Poly Haven kloofendal_48d_partly_cloudy,
+// CC0: its sun extracted into a shadow-casting light, or old_room's window light indoors). Sets:
+//   field  open grassland (CC0 photo turf + geometry grass tufts), a dragon on the ground
+//   air    the sky and the open sea 150-300 m below (the runtime's FFT ocean), hazed
 //   ground a camera on the ground looking up at a flyer, a person in the foreground
-//   bed    the straw nest (props library) with the opened egg, indoor window light + cool fill
+//   bed    the straw nest (props library) with the opened egg, window light + cool fill
 // Camera and people positions are metres in the subject's frame (x = its left, y = up,
-// z = forward); `face` turns the subject relative to the sun's azimuth (0 = facing the sun,
-// -90 = its LEFT side to the sun). Every frame is a pure function of t.
+// z = forward); `face` turns the subject relative to the sun's azimuth (0 = facing the sun).
+// `place` puts a second dragon in the subject's frame ([x, y, z, yaw deg]); `stage` names a
+// staging function (the head-in-mouth hold, the take-off's dust). Every frame is a pure function of t.
 import * as THREE from 'three';
 import { loadHDRI, loadPBR } from '../lib/assets.js';
-import { createCreature, createFire, poses, loadHuman as loadPlaceholderHuman, createRider as createPlaceholderRider, createSaddle, mountRider } from '../lib/creatures/index.js';
+import { createCreature, createFire, createDust, poses, loadHuman as loadPlaceholderHuman, createRider as createPlaceholderRider, createSaddle, mountRider } from '../lib/creatures/index.js';
 import { grassField } from '../lib/sets/grass.js';
 import { filmFinish } from './finish.js';
 
 const D2R = Math.PI / 180;
 
 export const SHOTS = [
-  // Charcoal 3/4 front in daylight: the sun rakes across his left side so the scale relief
-  // reads; Remi stands by the left forefoot for scale (32 mm from 64 m, eye height)
+  // Charcoal 3/4 front in daylight, standing on his feet and the wrist pads of his folded wings;
+  // Remi beside his left wrist for scale (35 mm from ~55 m, eye height)
   { id: 'charcoal-front', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], dur: 3, face: -55,
-    // (Remi beside the left forefoot, at the dragon's own depth, so his height measures the 36 m
-    // animal; the tail curves out on the ground, never straight down behind a leg)
-    people: [{ id: 'remi', at: [4.4, 0, 8.6], yaw: 55 }],
-    pose: { charcoal: { name: 'stand', look: [0.14, -0.04], jaw: 0.02, tailCurl: 0.9 } },
-    cam: { subject: 'charcoal', pos: [27, 1.7, 41], target: [1, 7.5, 4], mm: 35, fstop: 8, focus: 'target' } },
-  // Charcoal's head: 85 mm close-up on the eye
-  { id: 'charcoal-head', set: 'field', creatures: ['charcoal'], dur: 3, face: -55,
-    pose: { charcoal: { name: 'stand', look: [0.3, 0.0] } },
-    // (a crane a little below his eye line: the sky and the far horizon behind the head, not the
-    // flat field seen from above)
-    cam: { subject: 'charcoal', bone: 'head', pos: [12.5, -1.6, 11.5], target: [0.3, -0.8, 1.5], mm: 45, fstop: 5.6, focus: 'eye_L' } },
-  // Charcoal flying (air to air from above his left front, 32 mm from ~100 m, early downstroke:
-  // both wings spread and seen, the striped grey membranes against the sea)
-  { id: 'charcoal-flight', set: 'air', creatures: ['charcoal'], tack: ['charcoal'], dur: 3, alt: 260, face: -100,
-    // (the start of the downstroke, near the stroke reversal: both wings raised and spread, so
-    // neither hides the other and the slow wing does not smear; the camera a little above him)
-    pose: { charcoal: { name: 'flight', phase: 0.24, look: [0.05, 0.05] } },
-    cam: { subject: 'charcoal', pos: [78, 42, 58], target: [0, 2, 2], mm: 32, fstop: 8, focus: 'target' } },
-  // Leaf sitting upright like a dog, Abby beside his chest (40 mm, eye height, f/4)
+    people: [{ id: 'remi', at: [6.2, 0, 9.0], yaw: 40 }],
+    pose: { charcoal: { name: 'stand', look: [0.22, -0.02], tailCurl: 0.7 } },
+    cam: { subject: 'charcoal', pos: [33, 1.7, 44], target: [2.5, 6.8, 6], mm: 35, fstop: 8, focus: 'target' } },
+  // Charcoal's head: a crane a little below his eye line, 3/4 front (50 mm), the horns against the sky
+  { id: 'charcoal-head', set: 'field', creatures: ['charcoal'], dur: 3, face: -60,
+    pose: { charcoal: { name: 'stand', look: [0.35, 0.05] } },
+    cam: { subject: 'charcoal', bone: 'head', pos: [9.5, -1.0, 9.0], target: [0.2, -0.6, 1.4], mm: 50, fstop: 5.6, focus: 'eye_L' } },
+  // the take-off (1C): the first heavy downstroke after the vault - the downwash blasts a ring of
+  // dust and grass, clods fly, the wrist-pad craters and claw furrows in the turf (24 mm, low, ~90 m)
+  { id: 'charcoal-takeoff', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], riders: { charcoal: 'remi' }, dur: 4, face: -40, stage: 'takeoff', still: 1.0,
+    pose: { charcoal: { name: 'launch', t0: 3.5, look: [0.0, 0.15] } },
+    cam: { subject: 'charcoal', pos: [62, 2.2, 70], target: [0, 9, 4], mm: 24, fstop: 8, focus: 'target', fixed: true } },
+  // Charcoal and Leaf side by side (1C/1D): Leaf beside Charcoal's head, ahead of his wing, the
+  // riders close enough to talk; side-on from ~140 m (50 mm). Charcoal 0.42 Hz, Leaf ~1 Hz
+  { id: 'pair-flight', set: 'air', creatures: ['charcoal', 'leaf'], riders: { charcoal: 'remi', leaf: 'abby' }, dur: 3, alt: 240, face: -90,
+    place: { leaf: [13, 4.5, 16, 0] },
+    pose: { charcoal: { name: 'flight', phase: 0.92, look: [0.25, 0.02] }, leaf: { name: 'flight', hz: 1.0, phase: 0.08, corr: 0.4, look: [-0.3, 0.05] } },
+    cam: { subject: 'charcoal', pos: [78, 26, 8], target: [5, 7, 11], mm: 50, fstop: 8, focus: 'target', shutter: 90 } },
+  // the head-in-mouth (1D): Charcoal's neck curled round, Leaf's whole head held in his jaws at a
+  // 25-degree holding gape, snout first; Abby on Leaf's saddle stays clear (32 mm, ~34 m)
+  { id: 'head-in-mouth', set: 'air', creatures: ['charcoal', 'leaf'], riders: { charcoal: 'remi', leaf: 'abby' }, dur: 3, alt: 220, face: -110, stage: 'mouth',
+    pose: { charcoal: { name: 'mouthHold', t0: 2.0, side: 1, turn: 1.25, pitch: 0.05 }, leaf: { name: 'glide', look: [-1.15, 0.05], lidRelax: 0.05, blink: false, corr: 0.6 } },
+    cam: { subject: 'charcoal', pos: [24, 22, 34], target: [6, 8.5, 13], mm: 32, fstop: 8, focus: 'target' } },
+  // Leaf sitting upright like a dog (1B), Abby beside his chest (35 mm, eye height, f/5.6)
   { id: 'leaf-abby', set: 'field', creatures: ['leaf'], tack: ['leaf'], dur: 3, face: -70,
-    people: [{ id: 'abby', at: [2.1, 0, 0.9], yaw: 70 }],
-    pose: { leaf: { name: 'sit', look: [0.35, -0.12], eyes: [0.1, -0.05] } },
-    cam: { subject: 'leaf', pos: [8.0, 1.55, 9.5], target: [0.6, 1.75, 0.6], mm: 35, fstop: 5.6, focus: 'target' } },
-  // Leaf flying with Abby riding (50 mm air to air, slightly above, behind the shoulder)
-  { id: 'leaf-flight', set: 'air', creatures: ['leaf'], riders: { leaf: 'abby' }, dur: 3, alt: 160, face: -110,
-    // (the bottom of the downstroke: wings spread low, still cambered, slow at the turn so they
-    // read - at mid-stroke a 1.6 Hz wing is a smear even at a 90-degree shutter, and at the
-    // top of the stroke the near wing hides the rider)
-    pose: { leaf: { name: 'flight', corr: 1, phase: 0.15, look: [-0.25, 0.05] } },
-    cam: { subject: 'leaf', pos: [22, 8.5, 9.5], target: [0, 2.2, 0.0], mm: 32, fstop: 8, focus: 'target', shutter: 90 } },
-  // Starlight gliding past a distant watchtower, seen from the ground (~260 m away, ~60 m up):
-  // the tower (25 m) is as far away as she is, so her span reads as eight towers wide; a
-  // watchman in the foreground points up at her; the haze between softens both
-  { id: 'starlight-below', set: 'ground', creatures: ['starlight'], tack: ['starlight'], dur: 3, face: 160, haze: 3.2, fill: true,
-    flyer: { name: 'starlight', at: [-22, 45, 268], heading: -130 },
-    tower: { at: [10, 0, 252], r: 3.6, h: 21, capH: 6.5 }, trees: true,
-    people: [{ id: 'watchman', ground: [-0.95, 0, 4.6], yaw: -12 }],
-    pose: { starlight: { name: 'glide', bank: -0.08, dihedral: 0.1, look: [0.1, -0.15] } },
-    cam: { ground: true, pos: [0, 1.0, 0], lookAt: [-6, 49, 262], mm: 40, fstop: 4 } },
-  // FIRE (lookdev of the effect; DRAGONS.md): Charcoal's standard orange-red fire on the "Fire"
-  // command - head low, a 26 m jet across the field (35 mm, 3/4 side)
+    people: [{ id: 'abby', at: [1.9, 0, 1.5], yaw: 75 }],
+    pose: { leaf: { name: 'sit', look: [0.4, -0.08], eyes: [0.12, -0.05] } },
+    cam: { subject: 'leaf', pos: [7.2, 1.55, 8.4], target: [0.5, 1.75, 0.5], mm: 35, fstop: 5.6, focus: 'target' } },
+  // FIRE (DRAGONS.md): Charcoal's standard orange-red fire - head low, a 26 m jet (32 mm, 3/4 side)
   { id: 'charcoal-fire', set: 'field', creatures: ['charcoal'], dur: 3, face: -80, fire: { charcoal: { palette: 'standard', length: 26, width: 7 } },
-    pose: { charcoal: { name: 'stand', look: [0.05, 0.12], jaw: 0.75, headDown: 0.3, raise: 0.05 } },
-    cam: { subject: 'charcoal', pos: [44, 3.0, 26], target: [0, 5.0, 22], mm: 32, fstop: 8, focus: 'target' } },
-  // Leaf's purplish-blue fire (a little hotter than normal; not used on screen in Episode 1)
+    pose: { charcoal: { name: 'fire', t0: 1.6, aim: [0.05, -0.05] } },
+    cam: { subject: 'charcoal', pos: [46, 3.0, 30], target: [0, 5.0, 22], mm: 32, fstop: 8, focus: 'target' } },
+  // Leaf's purplish-blue fire (a little hotter than normal; not on screen in Episode 1)
   { id: 'leaf-fire', set: 'field', creatures: ['leaf'], dur: 3, face: -80, fire: { leaf: { palette: 'leaf', length: 8, width: 2.2 } },
-    pose: { leaf: { name: 'stand', look: [0.05, 0.1], jaw: 0.75, headDown: 0.3, raise: 0.05 } },
-    cam: { subject: 'leaf', pos: [11, 1.2, 7.5], target: [0, 1.3, 6.0], mm: 32, fstop: 8, focus: 'target' } },
-  // the gold hatchling on the bedding: 100 mm macro, T2.8, focus on the eye
+    pose: { leaf: { name: 'fire', t0: 1.6, aim: [0.05, -0.05] } },
+    cam: { subject: 'leaf', pos: [11.5, 1.2, 8.0], target: [0, 1.4, 5.5], mm: 32, fstop: 8, focus: 'target' } },
+  // Starlight gliding high over open country, seen from the ground (~400 m away, ~95 m up): a 27 m
+  // watchtower at her distance for scale, a watchman pointing; haze between (40 mm)
+  { id: 'starlight-below', set: 'ground', creatures: ['starlight'], tack: ['starlight'], dur: 3, face: 160, haze: 3.0, fill: true,
+    flyer: { name: 'starlight', at: [-30, 95, 400], heading: -125 },
+    tower: { at: [16, 0, 380], r: 3.6, h: 21, capH: 6.5 }, trees: true,
+    people: [{ id: 'watchman', ground: [-0.95, 0, 4.6], yaw: -12 }],
+    pose: { starlight: { name: 'glide', bank: -0.1, dihedral: 0.1, look: [0.1, -0.2] } },
+    cam: { ground: true, pos: [0, 1.0, 0], lookAt: [-12, 92, 390], mm: 40, fstop: 4 } },
+  // Starlight's dive-bomb (3C): the half-folded "M" stoop, steep, toward the ground (35 mm from below)
+  { id: 'starlight-dive', set: 'ground', creatures: ['starlight'], dur: 3, face: 160, haze: 2.4, fill: true,
+    flyer: { name: 'starlight', at: [40, 150, 330], heading: 200, pitch: 52, roll: 0.15 },
+    tower: { at: [-40, 0, 300], r: 3.6, h: 21, capH: 6.5 }, trees: true,
+    pose: { starlight: { name: 'dive', fold: 0.62, look: [0, 0.35] } },
+    cam: { ground: true, pos: [0, 1.2, 0], lookAt: [32, 140, 320], mm: 35, fstop: 4 } },
+  // the gold hatchling on the bedding (1A): 85 mm macro, focus on the eye; weak, pushing up on its
+  // wrists, head too heavy
   { id: 'hatchling-macro', set: 'bed', creatures: ['hatchling'], dur: 3, face: -40,
-    // (weak: too tired to hold the head up - chin on the linen, legs splayed, eyes half closed,
-    // slow shallow breaths)
-    pose: { hatchling: { name: 'lie', sprawl: 1, raise: -0.5, headDown: 0.2, look: [0.05, -0.1], lidRelax: 0.28, breathe: 0.35 } },
-    // (low 3/4 side view: the snout, jaw line and eye read in profile, the straw rim of the nest
-    // behind; the earlier high front view foreshortened the head into a dome)
-    cam: { subject: 'hatchling', bone: 'head', pos: [0.56, 0.16, 0.14], target: [0.0, -0.02, 0.0], mm: 85, fstop: 8, focus: 'eye_L' } },
-  // the scout banking hard at speed (tracking, 45 mm)
-  // (the species study: no rider - a seated adult is as long as the scout's whole trunk and hides
-  // it; the rider appears, small, in the wing-loss shot)
-  { id: 'scout-bank', set: 'air', creatures: ['scout'], dur: 3, alt: 200, face: -130,
+    pose: { hatchling: { name: 'struggle', t0: 2.9, look: [0.2, -0.06] } },
+    cam: { subject: 'hatchling', bone: 'head', pos: [1.3, 0.34, 0.42], target: [0.0, -0.07, 0.06], mm: 85, fstop: 8, focus: 'eye_L' } },
+  // the scout banking hard at speed, its hooded rider low along the neck (tracking, 45 mm)
+  { id: 'scout-bank', set: 'air', creatures: ['scout'], riders: { scout: 'scout' }, dur: 3, alt: 200, face: -130,
     pose: { scout: { name: 'glide', bank: 0.85, look: [0.3, 0.0], dihedral: 0.05 } },
-    cam: { subject: 'scout', pos: [5.5, 2.2, 6.0], target: [0, 0, 0.4], mm: 45, fstop: 8, focus: 'target' } },
-  // the scout loses its LEFT wing (0.4 s after the tear): the wing tumbles away in the wake
-  // (the camera tracks the midpoint between the falling body and the tumbling wing, without
-  // the body's roll; the wing separates in silhouette, no close-up of the wound)
+    cam: { subject: 'scout', pos: [9.0, 1.2, 7.5], target: [0, 0.2, 0.6], mm: 45, fstop: 8, focus: 'target' } },
+  // the scout loses its LEFT wing (0.5 s after the tear): the wing tumbles away in the wake, the
+  // body rolls to the lost side and drops (tracks the midpoint, without the roll; silhouette)
   { id: 'scout-wingloss', set: 'air', creatures: ['scout'], riders: { scout: 'scout' }, dur: 4, alt: 200, face: -130, detachAt: 0.6, still: 1.1,
-    pose: { scout: { name: 'flight' } },
-    cam: { subject: 'scout', track: 'wingloss', pos: [9.5, 3.0, -1.0], target: [0, -0.3, 0], mm: 24, fstop: 8, focus: 'target' } },
+    pose: { scout: { name: 'sprint' } },
+    cam: { subject: 'scout', track: 'wingloss', pos: [19, 5, -3.0], target: [0, -0.4, 0], mm: 35, fstop: 8, focus: 'target' } },
 ];
 
 /** Build a scene module for the given shot ids (default: all). */
@@ -106,12 +102,10 @@ export function makeTurntable(opts = {}) {
   const total = start;
   const need = [...new Set(shots.flatMap((s) => s.creatures))];
   const needSets = new Set(shots.map((s) => s.set));
-  const S = { C: {}, riders: {}, tacks: {}, people: [], sun: null, sunDir: null, sky: null, ground: null, grass: null, bed: null };
+  const S = { C: {}, riders: {}, tacks: {}, people: [], sun: null, sunDir: null, sky: null, ground: null, grass: null, bed: null, dust: null };
 
   const meta = {
-    title: opts.title || 'Creature hero shots (provisional designs)', duration: total, seed: 7,
-    // the shared photographic finish (8 sub-frames: supersampling + true motion blur), aerial
-    // haze from the photographed sky; use --cinematic preview for fast checks
+    title: opts.title || 'Dragon hero shots (DESIGN.md wyverns)', duration: total, seed: 7,
     cinematic: opts.cinematic ?? filmFinish({
       atmosphere: { enabled: true, sky: 'scene', haze: 1.4, apDistanceScale: 1.0 },
       grade: { exposure: 0.2 },
@@ -124,7 +118,6 @@ export function makeTurntable(opts = {}) {
     const q = opts.quality || (ctx.preset === 'final' || ctx.preset === 'final-fast' ? 'hero' : ctx.preset === 'preview' ? 'standard' : 'draft');
     const outdoor = [...needSets].some((s) => s !== 'bed');
     if (outdoor) {
-      // the photographer's horizon (a suburb) is matte-painted out with a haze band
       const sky = await loadHDRI('hdri/kloofendal_48d_partly_cloudy', ctx, { extractSun: true, rotationY: opts.hdriRotation ?? -1.2, horizonFill: { above: 4, below: -2, blend: 2 } });
       S.sky = sky;
       const sun = sky.apply(scene);
@@ -133,7 +126,6 @@ export function makeTurntable(opts = {}) {
       sun.shadow.bias = -0.0002;
       scene.add(sun, sun.target);
       S.sun = sun; S.sunDir = sky.sun.direction.clone();
-      // open land to the horizon (the air shots fly over it, hazed by the atmosphere)
       const groundMat = await loadPBR('pbr/acg_ground13', ctx, { worldSize: 16000 });
       breakTiling(groundMat);
       const ground = new THREE.Mesh(new THREE.CircleGeometry(9000, 256), groundMat);
@@ -142,8 +134,6 @@ export function makeTurntable(opts = {}) {
       scene.add(ground);
       S.ground = ground;
     }
-    // the air shots fly over the sea off the coast (as the episode's flights and the pursuit
-    // do): the runtime's FFT ocean, which follows the camera, instead of a tiled ground plane
     if (needSets.has('air')) {
       const { createOcean } = await import('dk/ocean.js');
       S.ocean = createOcean(ctx, { windSpeed: 8, windDirection: 30, swell: 0.45, choppiness: 1.1, seed: 4, roughness: 0.05 });
@@ -154,8 +144,6 @@ export function makeTurntable(opts = {}) {
       if (!outdoor) S.room.apply(ctx.scene);
       S.bed = await buildBed(ctx);
     }
-    // a cool fill from below for the shots that ask for it (the underside of a white flyer seen
-    // from the ground is lit by the bright sky dome and haze round it - not grey clay)
     if (shots.some((x) => x.fill)) {
       S.fill = new THREE.DirectionalLight(new THREE.Color(0.72, 0.8, 0.95), 0.9);
       S.fill.position.set(0, -1, 0.2);
@@ -164,7 +152,6 @@ export function makeTurntable(opts = {}) {
       S.fill.visible = false;
       scene.add(S.fill, S.fill.target);
     }
-    // a stone watchtower for scale (shared set kit), shown only in the shots that ask for it
     const towerShots = shots.filter((x) => x.tower);
     if (towerShots.length) {
       const { buildingKit } = await import('../lib/sets/buildings.js');
@@ -177,7 +164,6 @@ export function makeTurntable(opts = {}) {
         sh._tower = tw;
       }
     }
-    // countryside for the ground shots: hedgerows and copses from 400 m to the horizon
     if (shots.some((x) => x.trees)) {
       const { bushGeometry, foliageMaterial, scatter } = await import('../lib/sets/scatter.js');
       S.trees = treeBand(bushGeometry, foliageMaterial, scatter);
@@ -190,7 +176,6 @@ export function makeTurntable(opts = {}) {
       c.root.visible = false;
       S.C[name] = c;
     }
-    // dragon fire (fire.js), only for the shots that ask for it
     for (const sh of shots.filter((x) => x.fire)) {
       sh._fires = Object.entries(sh.fire).map(([n, f]) => {
         const fire = createFire({ palette: f.palette, length: f.length, width: f.width, seed: 3 });
@@ -199,18 +184,20 @@ export function makeTurntable(opts = {}) {
         return { n, fire };
       });
     }
-    // grass around the field subjects and in front of the camera (built once per subject)
+    if (shots.some((x) => x.stage === 'takeoff')) {
+      S.dust = createDust({ radius: 34, seed: 2, color: [0.4, 0.36, 0.28] });
+      S.dust.group.visible = false;
+      scene.add(S.dust.group);
+    }
     if (needSets.has('field')) {
       S.grass = {};
       for (const s of shots.filter((x) => x.set === 'field')) {
-        // (one patch per shot, laid out in that shot's view: a shared patch showed its edge)
         const g = fieldGrass(S, s);
         g.visible = false;
         scene.add(g);
         S.grass[s.id] = g;
       }
     }
-    // people: the humans library's cast builds when present, else the placeholder rider
     const ppl = shots.flatMap((s) => (s.people || []).map((p) => p.id));
     const riderOutfits = shots.flatMap((s) => Object.values(s.riders || {}));
     const H = (ppl.length || riderOutfits.length) ? await loadPeople(ppl, riderOutfits) : null;
@@ -219,7 +206,7 @@ export function makeTurntable(opts = {}) {
       for (const [n, outfit] of Object.entries(s.riders || {})) {
         if (S.riders[n]) continue;
         const tack = S.tacks[n] || (S.tacks[n] = createSaddle(S.C[n], {}));
-        const rider = H.rider(outfit, outfit === 'scout' ? { lean: 0.5 } : {});
+        const rider = H.rider(outfit, outfit === 'scout' ? { lean: 0.55 } : { lean: n === 'charcoal' ? 0.2 : 0.15 });
         mountRider(S.C[n], tack, rider);
         S.riders[n] = { tack, rider };
       }
@@ -235,22 +222,14 @@ export function makeTurntable(opts = {}) {
   }
 
   const camFocus = new THREE.Vector3();
-  const _v = new THREE.Vector3(), _q = new THREE.Quaternion();
   const toWorld = (c, p) => new THREE.Vector3(p[0], p[1], p[2]).applyQuaternion(c.root.quaternion).add(c.root.position);
 
   function update(t, ctx) {
     const { camera, scene } = ctx;
-    // The film finish renders sub-frames across the shutter (t +- T/2), so the shot is chosen by
-    // the FRAME time, never by the sub-frame time: otherwise the first frame of every shot is a
-    // double exposure with the end of the previous one (a cut inside the shutter). Review
-    // renders (opts.step, 1 fps) round to the whole second and map the sub-frame offset to a
-    // 24 fps shutter (a 180-degree shutter at 1 fps would be half a second of blur).
     const tf = opts.step ? Math.round(t) : Math.round(t * 24) / 24;
     let shot = tf < 0 ? shots[0] : shots[shots.length - 1];
     for (const s of shots) if (tf >= s._start - 1e-6 && tf < s._start + s.dur - 1e-6) { shot = s; break; }
-    // review renders show each shot at its representative moment
     const lt = opts.step ? (shot.still ?? 0) + (tf - shot._start) + (t - tf) / 24 : t - shot._start;
-    // visibility
     for (const [n, c] of Object.entries(S.C)) c.root.visible = shot.creatures.includes(n);
     for (const h of S.people) h.root.visible = false;
     for (const p of shot._people || []) p.h.root.visible = true;
@@ -265,7 +244,7 @@ export function makeTurntable(opts = {}) {
     if (S.bed && S.bed.userData.lights) for (const l of S.bed.userData.lights) l.visible = shot.set === 'bed';
     if (S.sun) S.sun.visible = shot.set !== 'bed';
     if (S.fill) S.fill.visible = !!shot.fill;
-    // the photographed sky outdoors, the photographed room (window light) indoors
+    if (S.dust) S.dust.group.visible = shot.stage === 'takeoff';
     {
       const env = shot.set === 'bed' ? S.room : S.sky;
       const rot = shot.set === 'bed' ? 0.6 : (opts.hdriRotation ?? -1.2);
@@ -280,6 +259,7 @@ export function makeTurntable(opts = {}) {
     // ---------------------------------------------------------- poses
     const sunAz = S.sunDir ? Math.atan2(S.sunDir.x, S.sunDir.z) : 0;
     const faceYaw = sunAz + (shot.face ?? 0) * D2R;
+    const main = S.C[shot.creatures[0]];
     for (const n of shot.creatures) {
       const c = S.C[n];
       const po = shot.pose[n] || { name: 'stand' };
@@ -291,27 +271,34 @@ export function makeTurntable(opts = {}) {
       if (shot.alt) c.root.position.y = shot.alt;
       if (shot.flyer && shot.flyer.name === n) {
         c.root.position.set(...shot.flyer.at);
-        c.root.rotation.y = (shot.flyer.heading ?? 0) * D2R;
+        c.root.rotation.set(0, 0, 0);
+        c.root.rotation.order = 'YXZ';
+        c.root.rotation.set((shot.flyer.pitch ?? 0) * D2R, (shot.flyer.heading ?? 0) * D2R, shot.flyer.roll ?? 0);   // pitch: nose down (deg)
+      }
+      if (shot.place && shot.place[n] && c !== main) {
+        const pl = shot.place[n];
+        const w = toWorld(main, pl);
+        c.root.position.copy(w);
+        c.root.rotation.set(0, faceYaw + (pl[3] ?? 0) * D2R, 0);
       }
       c.root.updateMatrixWorld(true);
     }
+    if (shot.stage === 'mouth') stageMouth(S, shot);
+    if (shot.stage === 'takeoff') stageTakeoff(S, shot, lt);
     if (shot.set === 'bed' && S.C.hatchling) updateStrands(S.bed, S.C.hatchling);
     for (const s of shots) for (const f of s._fires || []) {
-      if (s === shot) f.fire.update(lt, { creature: S.C[f.n], on: 1 });
+      const po = s.pose[f.n] || {};
+      if (s === shot) f.fire.update(lt, { creature: S.C[f.n], on: smoothstepJS(0.95, 1.1, lt + (po.t0 ?? 0)) });
       else { f.fire.group.visible = false; f.fire.light.intensity = 0; }
     }
-    // scout: the LEFT wing tears away at detachAt and tumbles; the body rolls toward the lost side
     if (shot.detachAt !== undefined) scoutWingLoss(S.C.scout, shot, lt, faceYaw, scene);
     for (const r of Object.values(S.riders)) r.rider.update?.(lt);
-    // people
     for (const p of shot._people || []) {
       const h = p.h;
-      if (p.ground) {       // world position (ground-camera shots)
-        h.place(p.ground[0], 0, p.ground[2], (p.yaw ?? 0) * D2R);
-      } else {
-        const c = S.C[shot.creatures[0]];
-        const w = toWorld(c, p.at);
-        h.place(w.x, 0, w.z, c.root.rotation.y + (p.yaw ?? 180) * D2R);
+      if (p.ground) h.place(p.ground[0], 0, p.ground[2], (p.yaw ?? 0) * D2R);
+      else {
+        const w = toWorld(main, p.at);
+        h.place(w.x, 0, w.z, main.root.rotation.y + (p.yaw ?? 180) * D2R);
       }
       h.update(lt);
     }
@@ -324,15 +311,15 @@ export function makeTurntable(opts = {}) {
       target = new THREE.Vector3(...cm.lookAt);
       camera.lookAt(target);
       if (cm.tilt) camera.rotateZ(cm.tilt);
-      const c = S.C[shot.creatures[0]];
-      camFocus.copy(c.root.position);
+      camFocus.copy(main.root.position);
     } else {
       const c = S.C[cm.subject];
       c.root.updateMatrixWorld(true);
       let base = c.root.position.clone(), q = c.root.quaternion;
-      if (cm.bone) { base = new THREE.Vector3().setFromMatrixPosition(c.bones[c.boneIndex[cm.bone]].matrixWorld); }
+      // (fixed: the camera stays where it was at the start of the move, a locked-off take)
+      if (cm.fixed) base = new THREE.Vector3(0, c.root.position.y, 0);
+      if (cm.bone) base = new THREE.Vector3().setFromMatrixPosition(c.bones[c.boneIndex[cm.bone]].matrixWorld);
       if (cm.track === 'wingloss' && c.detachable) {
-        // midpoint of the body and the torn wing, in the heading frame (no roll)
         const wp = new THREE.Vector3().setFromMatrixPosition(c.detachable.rootBone.matrixWorld);
         base = c.root.position.clone().lerp(wp, 0.5);
         q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), faceYaw);
@@ -347,11 +334,10 @@ export function makeTurntable(opts = {}) {
     camera.near = Math.max(0.01, Math.min(dist * 0.02, 1.0));
     camera.far = 20000;
     camera.updateProjectionMatrix();
-    // the sun's shadow frustum around what the camera looks at
     if (S.sun) {
-      const c = S.C[shot.creatures[0]];
-      const R = shot.set === 'field' ? c.L * 0.9 : c.L * 0.75;
-      fitShadow(S, cm.ground ? c.root.position.clone() : (cm.bone ? c.root.position.clone().add(new THREE.Vector3(0, c.L * 0.15, 0)) : target.clone()), R);
+      const R = shot.set === 'field' ? main.L * 1.0 : shot.creatures.length > 1 ? main.L * 1.1 : main.L * 0.85;
+      const ctr = cm.ground ? main.root.position.clone() : (cm.bone ? main.root.position.clone().add(new THREE.Vector3(0, main.L * 0.15, 0)) : target.clone());
+      fitShadow(S, shot.stage === 'takeoff' ? main.root.position.clone().setY(main.L * 0.25) : ctr, shot.stage === 'takeoff' ? main.L * 1.5 : R);
     }
     if (ctx.lens) {
       ctx.lens.focalLength = cm.mm;
@@ -362,40 +348,95 @@ export function makeTurntable(opts = {}) {
       camera.filmGauge = 24.89;
       camera.setFocalLength(cm.mm);
     }
-    if (ctx.cinematic?.ao) ctx.cinematic.ao.radius = Math.max(0.01, S.C[shot.creatures[0]].L * 0.03);
+    if (ctx.cinematic?.ao) ctx.cinematic.ao.radius = Math.max(0.01, main.L * 0.03);
   }
   return { meta, setup, update, shots };
+}
+
+const smoothstepJS = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+/**
+ * The head-in-mouth hold (1D): Leaf is placed so that his head lies snout first in Charcoal's
+ * mouth (the snout tip ~1.1 m inside the front teeth, Leaf's head axis turned against
+ * Charcoal's). Pure: both poses are already set; only Leaf's root moves.
+ */
+function stageMouth(S, shot) {
+  const ch = S.C.charcoal, lf = S.C.leaf;
+  if (!ch || !lf) return;
+  const headAxis = (c) => {
+    const hb = c.bones[c.boneIndex.head];
+    const q = hb.getWorldQuaternion(new THREE.Quaternion());
+    const ez = c.anatomy.head.frame.ez;
+    return new THREE.Vector3(ez[0], ez[1], ez[2]).applyQuaternion(q).normalize();
+  };
+  const sockW = (c, s) => new THREE.Vector3(...s.pos).applyMatrix4(c.skeleton.boneInverses[c.boneIndex[s.bone]]).applyMatrix4(c.bones[c.boneIndex[s.bone]].matrixWorld);
+  ch.root.updateMatrixWorld(true); lf.root.updateMatrixWorld(true);
+  const dC = headAxis(ch);
+  const front = sockW(ch, ch.anatomy.sockets.mouthFront);
+  const target = front.clone().addScaledVector(dC, -1.1);                 // where Leaf's snout tip goes
+  // turn Leaf about the vertical so his head axis points against Charcoal's
+  const dL = headAxis(lf);
+  const a0 = Math.atan2(dL.x, dL.z), a1 = Math.atan2(-dC.x, -dC.z);
+  lf.root.rotation.y += a1 - a0;
+  lf.root.updateMatrixWorld(true);
+  const tip = sockW(lf, lf.anatomy.sockets.mouthFront);
+  lf.root.position.add(target.clone().sub(tip));
+  lf.root.updateMatrixWorld(true);
+}
+
+/** The take-off's ground effects (dust rings under every downstroke, clods from the kick, scars). */
+function stageTakeoff(S, shot, lt) {
+  const c = S.C.charcoal;
+  if (!c || !S.dust) return;
+  const po = shot.pose.charcoal;
+  const tl = lt + (po.t0 ?? 0);
+  const sc = Math.sqrt(c.L / 36), T1 = 1.5 * sc, T2 = T1 + 0.6 * sc, T3 = T2 + 1.2 * sc;
+  const hz = (c.config.flapHz ?? 0.42) * 1.12;
+  const bursts = [T3 + 0.45, T3 + 0.45 + 1 / hz, T3 + 0.45 + 2 / hz, T3 + 0.45 + 3 / hz];
+  const yaw = c.root.rotation.y;
+  const fwd = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+  // the contacts of the crouch (computed once: a pure function of the shot)
+  if (!shot._scars) {
+    const keep = c.root.position.clone();
+    c.setPose(poses.crouch(c, { t: 0, k: 1 }));
+    c.root.updateMatrixWorld(true);
+    const ct = poses.contactsOf(c);
+    const pads = ct.filter((x) => x.wrist).map((x) => [x.world.x, x.world.z]);
+    const toes = ct.filter((x) => /_t[123]$/.test(x.bone)).map((x) => [x.world.x, x.world.z]);
+    shot._scars = { pads, toes };
+    S.dust.setScars([...pads.map((p) => ({ at: p, r: 1.1, kind: 'crater' })), ...toes.map((p) => ({ at: [p[0] - fwd.x * 0.4, p[1] - fwd.z * 0.4], dir: [-fwd.x, -fwd.z], len: 3.0, w: 0.35, kind: 'furrow' }))]);
+    c.root.position.copy(keep);
+    c.setPose(poses[po.name](c, { ...po, t: tl }));
+    c.root.updateMatrixWorld(true);
+  }
+  const center = c.root.position.clone().setY(0).addScaledVector(fwd, 6);
+  S.dust.update(tl, { center, bursts, kick: T1 + 0.25, kickPoints: [...shot._scars.pads, ...shot._scars.toes], strength: 1.0 });
 }
 
 /** The scout's LEFT wing tears away at shot.detachAt and tumbles in the wake (pure in lt). */
 function scoutWingLoss(c, shot, lt, faceYaw, scene) {
   const td = shot.detachAt;
   if (lt < td) return;
-  c.setPose(poses.flight(c, { t: td }));
+  c.setPose(poses.sprint(c, { t: td }));
   c.root.updateMatrixWorld(true);
   const M0 = c.detachable.rootBone.matrixWorld.clone();
   const dt = lt - td;
   const fwd = new THREE.Vector3(Math.sin(faceYaw), 0, Math.cos(faceYaw));
-  // the body: only the right wing still lifts, so the body rolls toward the lost LEFT side
-  // (left side down: a negative roll about the forward axis), pitches nose-down and drops
-  c.setPose(poses.flight(c, { t: lt, bank: -(0.5 * dt + 0.15), amp: 0.6, bodyPitch: 0.25 * dt }));
+  // the body: only the right wing still lifts, so it rolls toward the lost LEFT side, pitches
+  // nose-down and drops; the right wing flails
+  c.setPose(poses.flight(c, { t: lt, hz: 1.8, bank: -(0.6 * dt + 0.2), amp: 0.75, bodyPitch: 0.3 * dt, corr: 1 }));
   c.root.position.y = (shot.alt ?? 0) - 0.5 * 9.81 * dt * dt * 0.6;
-  c.root.position.addScaledVector(fwd, 7 * dt);
-  c.root.rotateZ(-1.2 * dt);
-  // the wing: ballistic, tumbling, left behind in the wake
+  c.root.position.addScaledVector(fwd, 9 * dt);
+  c.root.rotateZ(-1.3 * dt);
   const side = new THREE.Vector3(Math.cos(faceYaw), 0, -Math.sin(faceYaw));
-  // (drag: it falls far slower than the body and is flung out to the side and back - clear of
-  // the body's silhouette, never trailing off the tail like a fin)
-  const g = side.multiplyScalar(3.2 * dt).addScaledVector(fwd, -3.0 * dt).add(new THREE.Vector3(0, 1.4 * dt - 0.5 * 9.81 * dt * dt * 0.12, 0));
+  const g = side.multiplyScalar(3.6 * dt).addScaledVector(fwd, -3.5 * dt).add(new THREE.Vector3(0, 1.5 * dt - 0.5 * 9.81 * dt * dt * 0.12, 0));
   const spin = new THREE.Quaternion().setFromEuler(new THREE.Euler(2.0 * dt, 0.7 * dt, 2.6 * dt));
   const p = new THREE.Vector3().setFromMatrixPosition(M0);
   const M = new THREE.Matrix4().compose(p.add(g), new THREE.Quaternion().setFromRotationMatrix(M0).premultiply(spin), new THREE.Vector3(1, 1, 1));
   c.detachWing(scene, M);
-  // the torn wing goes limp: half folded
-  for (const n of ['w_L_1', 'w_L_2']) { const b = c.bones[c.boneIndex[n]]; b.quaternion.setFromEuler(new THREE.Euler(0, n === 'w_L_1' ? -0.9 : 0.8, 0.3)); }
-  // a finger snapped in the tear: its outer half hangs at a wrong angle
-  { const b = c.bones[c.boneIndex.w_L_f2_1]; if (b) b.quaternion.setFromEuler(new THREE.Euler(0.9, -0.7, 0.4)); }
-  // flutter: the loose membrane shivers as it tumbles
+  // the torn wing goes limp: half folded, a finger snapped
+  for (const n of ['w_L_1', 'w_L_2']) { const b = c.bones[c.boneIndex[n]]; if (b) b.quaternion.setFromEuler(new THREE.Euler(0, n === 'w_L_1' ? -0.9 : 0.8, 0.3)); }
+  { const b = c.bones[c.boneIndex.w_L_f1_1]; if (b) b.quaternion.setFromEuler(new THREE.Euler(0.9, -0.7, 0.4)); }
   c.materials.setPoseUniforms({ billowL: 0.5 * Math.sin(lt * 31.0) });
 }
 

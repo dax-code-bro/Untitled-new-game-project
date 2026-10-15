@@ -277,8 +277,10 @@ export function computeSkin(anat, mesh, boneIndex, opts = {}) {
     if (W[v * 4 + 1] > 0.05 && (parentOf[b0] === b1 || parentOf[b1] === b0)) wr = clamp(4 * W[v * 4] * W[v * 4 + 1], 0, 1);
     mask[v * 4] = g; mask[v * 4 + 1] = belly; mask[v * 4 + 2] = dorsal; mask[v * 4 + 3] = wr;
     // region id for the shader: 0 torso/neck/tail, 1 head, 2 limb, 3 toe, 4 jaw, 5 wing arm
-    const region = isHead ? 1 : kind === 'limb' ? (chainNames[c].startsWith('w_') ? 5 : 2) : kind === 'toe' ? 3 : kind === 'jaw' ? 4 : 0;
+    // 8 = the wrist pad of a folded wing (a weight-bearing callus: granular, cracked, dusty)
+    const region = tag === 'wpad' ? 8 : isHead ? 1 : kind === 'limb' ? (chainNames[c].startsWith('w_') ? 5 : 2) : kind === 'toe' ? 3 : kind === 'jaw' ? 4 : 0;
     mask2[v * 4 + 3] = region;
+    if (region === 8) mask[v * 4] = Math.max(mask[v * 4], 0.85);
     // world size of one scale unit here (for anti-aliasing and normal strength)
     // (from the chain's smoothed cross-section radius at this point, not the vertex's own
     // distance: muscle bulges must not make the scales jump in size)

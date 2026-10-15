@@ -379,7 +379,9 @@ export function createSaddle(c, opts = {}) {
   // seat position: just behind the neck base, on the dorsal midline
   const sp = anat.bonePos[opts.bone ?? 'neck_0'];
   const fwd = new THREE.Vector3(0, 0, 1);
-  const seatZ = sp[2] + (opts.offsetZ ?? (kind === 'rig' ? -0.022 : -0.062)) * L;
+  // the seat sits on the withers over the notarium (the fused, stiffest part of the spine between the
+  // wing roots; DESIGN 1.11): `seatBack` metres behind the neck base (per dragon, creature.js)
+  const seatZ = sp[2] + (opts.offsetZ !== undefined ? opts.offsetZ * L : -(c.config?.seatBack ?? (kind === 'rig' ? 0.022 * L : 0.062 * L)));
   // find the dorsal surface height above (x, z) by marching down
   let seatY0 = null;
   const surfY = (x, z) => {
@@ -486,7 +488,7 @@ export function createSaddle(c, opts = {}) {
     sm.castShadow = sm.receiveShadow = true;
     sm.frustumCulled = false;
     c.root.add(sm);
-    sm.bind(c.skeleton, new THREE.Matrix4());
+    sm.bind(c.skeletonSculpt || c.skeleton, new THREE.Matrix4());
     meshes.push(sm);
   }
   const seatPoint = new THREE.Vector3(0, (built.seatTop ?? seatY + block) + 0.02, seatZ - seatLen * 0.08);

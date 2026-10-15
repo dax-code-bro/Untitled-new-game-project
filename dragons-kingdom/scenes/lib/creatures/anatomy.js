@@ -145,8 +145,9 @@ export const DESIGNS = {
     neckP: [[0, 1.5, 1.75], [0.5, 1.95, 2.3], [1, 2.9, 3.6]],
     trunkP: [[0, 4.2, 5.8], [0.25, 4.5, 6.1], [0.6, 3.7, 4.7], [0.85, 3.3, 3.8], [1, 3.5, 3.6]],
     tailP: [[0, 2.9, 3.2], [0.15, 2.2, 2.45], [0.35, 1.4, 1.6], [0.6, 0.72, 0.82], [0.85, 0.27, 0.3], [1, 0.05, 0.05]],
-    stand: { hip: 14.4, shoulder: 14.8, forearmLean: 10, humerusRise: 16, neckRise: 48, neckTop: 16, headPitch: -12, tailDroop: 18 },
-    fold: { curl: [4, 16, 28] }, bulk: { leg: 1.2, arm: 1.15, neck: 1.0 },
+    stand: { hip: 14.4, shoulder: 14.8, forearmLean: 10, humerusRise: 16, neckRise: 40, neckTop: 10, headPitch: -12, tailDroop: 18 },
+    // (albatross: the long folded wings lie along the back, the tips crossing over the tail base)
+    fold: { curl: [-4, 2, 6], inward: 0.16, wrap: 0.1, outUp: 0.5 }, bulk: { leg: 1.2, arm: 1.15, neck: 1.0 },
     // raptor feet: long toes, big curved talons, a large opposable hallux with the biggest talon
     leg: { femur: 5.8, tibia: 7, mt: 3.8, toe: 3.6, claw: 1.3, d: [2.4, 1.3, 1.15, 0.62, 0.52], mtAng: 55, heelPad: 0.4, hallux: 0.62, toeR: 0.3, raptor: 1 },
     wing: { humerus: 8, forearm: 17, d: [2.6, 1.9, 1.3, 0.75],
@@ -366,6 +367,7 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
   const toeR = K(LG.toeR);
   const hipSec = section(dAtTorso(1));
   const hipX = hipSec.hw * 0.62;
+  const footX = Math.max(hipX * 1.06, toeL * 0.62);
   const legs = [];
   const sculptLocal = {};
   const sculptWorld = {};                     // bone -> world rotation in the sculpt pose (limb bones)
@@ -379,7 +381,8 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
     const mtDir = [0, Math.sin(ma), -Math.cos(ma)];                     // from the ball up-back to the ankle
     const ballY = toeR * 1.05;
     const ankZ = Hj[2] - fem * 0.04;
-    const Bs = [sd * hipX * 1.06, ballY, ankZ + mtl * Math.cos(ma)];
+    // the feet a little wider than the hips: the inner toes must never meet under the body
+    const Bs = [sd * footX, ballY, ankZ + mtl * Math.cos(ma)];
     const As = add(Bs, scale(mtDir, mtl));
     const ik = ik2(Hj, As, fem, tib, [sd * 0.18, 0.05, 1]);
     const Ks = ik.B, As2 = ik.C;
@@ -512,9 +515,9 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
     // toes: hallux (back, inward, raised; gripping) + II, III, IV forward
     const toeDef = [
       { n: 0, ang: sd * 160, l: toeL * (LG.hallux ?? 0.45), r: 0.85, up: 0.6 },
-      { n: 1, ang: sd * 22, l: toeL * 0.82, r: 0.92, up: 0 },
-      { n: 2, ang: 0, l: toeL, r: 1.0, up: 0 },
-      { n: 3, ang: -sd * 24, l: toeL * 0.86, r: 0.9, up: 0 },
+      { n: 1, ang: sd * 28, l: toeL * 0.82, r: 0.92, up: 0 },
+      { n: 2, ang: sd * 5, l: toeL, r: 1.0, up: 0 },
+      { n: 3, ang: -sd * 16, l: toeL * 0.86, r: 0.9, up: 0 },
     ];
     for (const td of toeDef) {
       const a = td.ang * deg;
@@ -684,11 +687,22 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
     else if (WG.to === 'knee') { attach = [A0, A1, hipA, kneeA]; attachBones = ['rib_thorax', 'rib_lumbar', `hl_${side}_0`]; }
     else if (WG.to === 'shank') { attach = [A0, A1, hipA, kneeA, shankA]; attachBones = ['rib_thorax', 'rib_lumbar', `hl_${side}_0`, `hl_${side}_1`]; }
     else { attach = [A0, A1, hipA, kneeA, ankA]; attachBones = ['rib_thorax', 'rib_lumbar', `hl_${side}_0`, `hl_${side}_1`]; }
+    // a detachable wing (the scout's LEFT): the membrane's body edge rides on its own small bones,
+    // children of the body bones while attached; creature.detachWing() moves them onto the torn wing
+    let memRoots = null;
+    if (detachable) {
+      memRoots = attachBones.map((b, i) => {
+        const n = `${pre}_m${i}`;
+        bone(n, b, attach[i]);
+        return { name: n, parent: b };
+      });
+      attachBones = memRoots.map((r) => r.name);
+    }
     // the propatagium's root: the side of the neck base, in front of and above the shoulder
     const nb = section(dAtNeck(0.88));
     const proRoot = add(nb.c, add(scale(nb.side, sd * nb.hw * 0.75), scale(nb.up, nb.hh * 0.15)));
     wings.push({ side, sd, prefix: pre, root: S, proRoot, elbow: w.Er, wrist: w.Wr, fingers, attach, attachBones, nF, thumbRest: w.thumbRest, padDist: rA[2] * 1.03,
-      thumb: w.Wr, billow: L * 0.03, detachedSDF: detachable ? target : null, thickness: K(WG.thick ?? 0.005) });
+      thumb: w.Wr, billow: L * 0.03, detachedSDF: detachable ? target : null, thickness: K(WG.thick ?? 0.005), memRoots });
   }
 
   // ------------------------------------------- tail crest and the scout's vane
@@ -718,7 +732,12 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
       const vl = K(D.tailVane.length), vw = K(D.tailVane.width);
       const dTip = dAtTail(0.94);
       const sc = section(dTip);
-      m.ell(add(sc.c, scale(sc.tan, -vl * 0.12)), [L * 0.0016, vw * 0.5, vl * 0.5], { ax: sc.side, ay: sc.up, k: L * 0.002, bone: boneAtD(dTip), chain: 'spine', tag: 'vane' });
+      // a vertical diamond: two flat cones front -> widest -> rear point
+      const th = L * 0.0017;
+      const A = add(sc.c, scale(sc.tan, vl * 0.42)), M = add(sc.c, scale(sc.tan, -vl * 0.05)), B = add(sc.c, scale(sc.tan, -vl * 0.58));
+      const rM = vw * 0.5;
+      m.cone(A, M, th * 1.2, rM, { sx: th / rM, sy: 1, up: sc.up, k: th * 1.5, bone: boneAtD(dTip), chain: 'spine', tag: 'vane' });
+      m.cone(M, B, rM, th, { sx: th / rM, sy: 1, up: sc.up, k: th * 1.5, bone: boneAtD(dAtTail(0.985)), chain: 'spine', tag: 'vane' });
     }
   }
 
@@ -837,7 +856,7 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
   return {
     L, spec: specOut, design: D, bones, bonePos, sculptLocal, sculptWorld, sculptPos: sculptPosOfBone, sdf: m, chains, keratin, eyes, wings, legs, sockets, head, helpers,
     contacts: restContacts, tailR,
-    dims: { hipH, shH, topSh, topHip, T, N, H, TL, hum, fore, fem, tib, mtl, toeL, rA, rLeg, wristR: rA[2], shoulderX: shX, hipX, neckPitch,
+    dims: { hipH, shH, topSh, topHip, T, N, H, TL, hum, fore, fem, tib, mtl, toeL, rA, rLeg, wristR: rA[2], shoulderX: shX, hipX, footX, neckPitch,
       trunkAt: (s) => { const sc = section(dAtTorso(s)); return { c: sc.c, hw: sc.hw, hh: sc.hh, top: sc.top }; } },
     spineInfo: { total: spine.total, dTail, dWithers },
   };
