@@ -1,24 +1,41 @@
-// Pose library. Every function is a PURE function of its arguments (time t
-// included): no state is kept between frames, randomness comes from fixed
-// hashes. Each returns a pose object for creature.setPose().
+// Pose library for the two-legged, wing-armed dragons (DESIGN.md 1.5-1.7, per-dragon motion).
+// Every function is a PURE function of its arguments (time t included): no state between
+// frames, randomness from fixed hashes. Each returns a pose object for creature.setPose().
 //
-//   stand(c, { t, look:[yaw,pitch], jaw, breathe, wingFold })
-//   sit(c, { t, look, jaw })                    dog-like upright sit (Leaf; provisional)
-//   lie(c, { t, look })                         resting on the belly, head low
-//   flight(c, { t, hz, amp, phase, look, jaw, corr })   flapping, tempo from size
-//   glide(c, { t, bank, look, jaw })            wings held, small corrections
-//   dive(c, { t, fold })                        partly folded descent
-// Common options: look = [yaw, pitch] (radians, head relative to body),
-// eyes = [yaw, pitch] (eyes relative to head), jaw (0 = closed ... 0.9),
-// blink = true (automatic blinks from t), breathe (breaths per second).
+//   ground (IK: feet and wrist pads planted on y = 0 of the root frame)
+//     stand(c, o)      wing-walk stance: feet + the folded wings' wrist pads, elbows high
+//     walk(c, o)       lateral-sequence walk (o.speed m/s; the scene moves the root by speed * t)
+//     rear(c, o)       up on the hind legs, tail on the ground, wings half open
+//     sit(c, o)        dog-like sit on the haunches, wrists planted in front (Leaf)
+//     crouch(c, o)     sphinx crouch, chest low between the wrists (mounting, before a launch)
+//     lie(c, o)        sphinx rest; o.sprawl = 1 for the newborn (legs splayed, too weak)
+//     pushUp(c, o)     the newborn pushes up on its wrists (o.k 0..1, trembling)
+//     struggle(c, o)   the newborn's weak struggle as a function of t (lie, push, slip, rest)
+//     fire(c, o)       the fire posture and tells (inhale, jaw 25-30 deg), o.t from the command
+//   air
+//     flight(c, o)     flapping at the size-based tempo (config.flapHz), o.corr = uneven beats
+//     glide(c, o)      wings spread, dihedral, corrections; o.bank rolls the body
+//     dive(c, o)       the half-folded "M" stoop (o.fold)
+//     strike(c, o)     talons forward (Starlight's strike), o.k 0..1
+//     sprint(c, o)     the scout's fast pass: short quick beats, neck pulled back in an S
+//     mouthHold(c, o)  Charcoal holding Leaf's head: neck curled round, gape schedule
+//   transitions (time from the start of the move)
+//     launch(c, o)     crouch, kick and vault, wings unfold, first downstroke, heavy beats
+//     land(c, o)       flare, feet reach forward, wrist pads come down, run-out
+//   blend(c, a, b, w)  slerp two poses
+// Common options: look = [yaw, pitch] (head relative to the body), eyes, jaw (0 = closed,
+// radians of gape), blink (default true), lidClose, breathe (breaths/s).
 //
-// Bones have identity rest orientations, so rotations are about the
-// creature's own axes: x = its left (pitch), y = up (yaw), z = forward (roll).
-// "Nose up" is a NEGATIVE x rotation. Right-side bones are mirrored
-// automatically by sym() (y and z rotations flip sign).
+// Bones have identity rest orientations (the REST pose = the glide planform: wings spread,
+// legs trailing), so rotations are about the creature's own axes: x = its left (pitch: a
+// positive x rotation tips the nose DOWN), y = up (yaw toward its left), z = forward (roll:
+// positive raises the left side). Right-side bones are mirrored by sym().
 import * as THREE from 'three';
+import { qMul, qInv, qRot, qEuler, qSlerp, aimQ, fk, ik2, chainLocals, QI, v3, qAxis } from './kin.js';
 
+const { add, sub, scale, dot, cross, len, norm, lerp } = v3;
 const TAU = Math.PI * 2;
+const deg = Math.PI / 180;
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const mix = (a, b, t) => a + (b - a) * t;
@@ -40,7 +57,7 @@ class PB {
   /** base contains '#', replaced by L and R; the right side is mirrored */
   sym(base, x = 0, y = 0, z = 0, order) { this.add(base.replace('#', 'L'), x, y, z, order); this.add(base.replace('#', 'R'), x, -y, -z, order); return this; }
   scale(n, sx, sy, sz) { if (this.has(n)) this.s[n] = [sx, sy, sz]; return this; }
-  quat(n, q) { if (this.has(n)) this.q[n] = q; return this; }
+  quat(n, q) { if (this.has(n)) { this.q[n] = q; delete this.e[n]; } return this; }
   out(extra = {}) {
     const bones = {};
     for (const [n, v] of Object.entries(this.e)) bones[n] = [v[0], v[1], v[2], this.o[n] || 'XYZ'];
@@ -51,12 +68,135 @@ class PB {
 
 const neckNames = (c) => c.bones.filter((b) => /^neck_\d+$/.test(b.name)).map((b) => b.name);
 const tailNames = (c) => c.bones.filter((b) => /^tail_\d+$/.test(b.name)).map((b) => b.name);
+const sides = [['L', 1], ['R', -1]];
+
+// ------------------------------------------------------------ kinematics helpers
+function pbLocals(pb) {
+  const out = {};
+  for (const [n, v] of Object.entries(pb.e)) out[n] = qEuler(v[0], v[1], v[2], pb.o[n] || 'XYZ');
+  for (const [n, q] of Object.entries(pb.q)) out[n] = q;
+  return out;
+}
+function rigQ(pb) { if (pb.rig.quaternion) return pb.rig.quaternion; const r = pb.rig.rotation; return qEuler(r[0], r[1], r[2], 'YXZ'); }
+/** world (root-frame) joint positions and rotations of the pose built so far */
+function solveFK(pb) { return fk(pb.c.anatomy.bones, pbLocals(pb), { pos: pb.rig.position, q: rigQ(pb) }); }
+
+/**
+ * Hind leg IK: the ball of the foot at `ball` (root frame), the metatarsus at mtAng (deg from
+ * the ground, rising back to the ankle), the knee toward `pole`, the foot pointing along
+ * `fwd` (root frame, horizontal). Toes: o.curl (rad, + = grip down).
+ */
+function legIK(pb, F, side, ball, o = {}) {
+  const c = pb.c, A = c.anatomy, d = A.dims;
+  const sd = side === 'L' ? 1 : -1;
+  const lg = A.legs.find((l) => l.side === side);
+  const names = lg.names;
+  const Hj = F.P[names[0]];
+  const ma = (o.mtAng ?? A.design.leg.mtAng) * deg;
+  const fwd = norm(o.fwd ?? [sd * 0.08, 0, 1]);
+  const mtDir = norm(add(scale(fwd, -Math.cos(ma)), [0, Math.sin(ma), 0]));
+  const Ank0 = add(ball, scale(mtDir, d.mtl));
+  const pole = o.pole ?? add(fwd, [sd * 0.25, 0.15, 0]);
+  const ik = ik2(Hj, Ank0, d.fem, d.tib, pole);
+  const Ank = ik.C;
+  const B = sub(Ank, scale(mtDir, d.mtl));
+  const footDir = norm(add(fwd, [0, -(o.toeDown ?? 0), 0]));
+  const r = lg.rest;
+  const restJ = [r.hip, r.knee, r.ankle, r.ball, r.foot];
+  const newJ = [Hj, ik.B, Ank, B, add(B, scale(footDir, d.toeL))];
+  const ups = [[1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0]];
+  const cl = chainLocals(names, restJ, newJ, ups, ups, F.Q.pelvis);
+  names.forEach((n) => pb.quat(n, cl.local[n]));
+  const curl = o.curl ?? 0.05;
+  for (const tn of lg.toes) {
+    const i = +tn.slice(-1);
+    // the hallux grips back-down; the forward toes press flat with a slight grip at the claws
+    pb.add(tn, i === 0 ? -curl * 0.5 : curl, i === 1 ? sd * 0.04 : i === 3 ? -sd * 0.04 : 0, 0);
+  }
+  return { hip: Hj, knee: ik.B, ankle: Ank, ball: B };
+}
+
+/**
+ * Wing-arm IK (the folded wing as a front leg): the wrist joint at `wrist` (root frame), the
+ * elbow toward `pole`. Returns the joints and the arm's dorsal direction (the wing's upper
+ * surface: outward when folded).
+ */
+function armIK(pb, F, side, wrist, pole) {
+  const c = pb.c, A = c.anatomy, d = A.dims;
+  const sd = side === 'L' ? 1 : -1;
+  const w = A.wings.find((x) => x.side === side);
+  const pre = `w_${side}`;
+  const S = F.P[`${pre}_0`];
+  const ik = ik2(S, wrist, d.hum, d.fore, pole);
+  const E = ik.B, W = ik.C;
+  let dors = scale(norm(cross(sub(E, S), sub(W, E))), -sd);
+  if (!(len(dors) > 0.5)) dors = qRot(F.Q.thorax, [sd, 0, 0]);
+  const cl = chainLocals([`${pre}_0`, `${pre}_1`], [w.root, w.elbow, w.wrist], [S, E, W], [[0, 1, 0], [0, 1, 0]], [dors, dors], F.Q.thorax);
+  pb.quat(`${pre}_0`, cl.local[`${pre}_0`]);
+  pb.quat(`${pre}_1`, cl.local[`${pre}_1`]);
+  return { S, E, W, dors, qF: cl.world[1] };
+}
+
+/**
+ * The hand folded along the trailing side of the forearm (the metacarpals run up toward the
+ * elbow, the knuckles end just below it) and the fingers laid back along the upper flank like
+ * a closed fan (III on top), the outer phalanges bending down (DESIGN 1.5). `qT` is the
+ * thorax's world rotation (the flank's frame).
+ */
+function foldHand(pb, side, arm, qT, o = {}) {
+  const c = pb.c, A = c.anatomy;
+  const sd = side === 'L' ? 1 : -1;
+  const w = A.wings.find((x) => x.side === side);
+  const pre = `w_${side}`;
+  const f = norm(sub(arm.W, arm.E));
+  const dors = arm.dors;
+  const lead = scale(norm(cross(f, dors)), sd);
+  const beta = (o.handBack ?? 9) * deg;
+  const handDir = norm(add(scale(f, -Math.cos(beta)), scale(lead, -Math.sin(beta))));
+  const fg0 = w.fingers[0].points;
+  const Wh = aimQ(norm(sub(fg0[1], fg0[0])), [0, 1, 0], handDir, dors);
+  pb.quat(`${pre}_2`, qMul(qInv(arm.qF), Wh));
+  const outW = norm(qRot(qT, [sd, o.outUp ?? 0.15, 0]));
+  w.fingers.forEach((fg, di) => {
+    const pts = fg.points;
+    const rd = (j) => norm(sub(pts[j + 1], pts[j]));
+    const fan = (o.mcFan ?? 2.2) * deg * di;
+    const mcDir = norm(add(scale(handDir, Math.cos(fan)), scale(lead, -Math.sin(fan))));
+    const Wmc = aimQ(rd(0), [0, 1, 0], mcDir, dors);
+    pb.quat(fg.names[0], qMul(qInv(Wh), Wmc));
+    let Wp = Wmc;
+    // the first phalanx runs back along the upper flank, the outer ones curl down beside the
+    // thigh (IP flexion) so the tips end over the hip and thigh, never as rods past the tail
+    const curl = o.curl ?? A.design.fold?.curl ?? [8, 58, 105];
+    for (let j = 1; j < fg.names.length; j++) {
+      const a = (curl[Math.min(j - 1, curl.length - 1)] + (o.fanDown ?? 3) * di) * deg + (o.p1Down ?? 0) * (j === 1 ? 1 : 0);
+      const inw = (o.inward ?? 0.04) + (j > 1 ? (o.wrap ?? 0.14) : 0);
+      const dB = norm([-sd * inw, -Math.sin(a), -Math.cos(a)]);
+      const dW = qRot(qT, dB);
+      const Wj = aimQ(rd(j), [0, 1, 0], dW, outW);
+      pb.quat(fg.names[j], qMul(qInv(Wp), Wj));
+      Wp = Wj;
+    }
+  });
+  // the thumb: forward and down, its claw planted ahead of the wrist pad (weight-bearing)
+  pb.add(`${pre}_th`, 0, sd * (o.thumbOut ?? 0.15), 0);
+}
+
+/** One folded wing planted as a front leg (IK + fold). */
+function plantWing(pb, F, side, wristP, o = {}) {
+  const sd = side === 'L' ? 1 : -1;
+  const qT = F.Q.thorax;
+  const pole = o.pole ?? add(qRot(qT, [sd * 0.35, 0.75, -0.6]), [0, 0.3, 0]);
+  const arm = armIK(pb, F, side, wristP, pole);
+  foldHand(pb, side, arm, qT, o);
+  return arm;
+}
 
 // ------------------------------------------------------------ shared layers
 /** Breathing: slow ribcage expansion (inhale ~40% of the cycle, exhale 60%). */
 function breathe(pb, t, rate = 0.12, amp = 0.025) {
-  const c = fract(t * rate);
-  const b = c < 0.4 ? smooth(0, 0.4, c) : 1 - smooth(0.4, 1.0, c);
+  const cy = fract(t * rate);
+  const b = cy < 0.4 ? smooth(0, 0.4, cy) : 1 - smooth(0.4, 1.0, cy);
   pb.scale('rib_thorax', 1 + amp * b, 1 + amp * 1.25 * b, 1);
   pb.scale('rib_body', 1 + amp * 0.85 * b, 1 + amp * 1.1 * b, 1);
   pb.scale('rib_lumbar', 1 + amp * 0.4 * b, 1 + amp * 0.5 * b, 1);
@@ -74,25 +214,25 @@ function look(pb, yaw = 0, pitch = 0, roll = 0) {
   pb.add('head', pitch * headShare, yaw * headShare, 0);
 }
 
-/** Neck carriage: raise the base, bring the head back to level (S-curve). */
 /**
- * Neck carriage as an S-curve: the neck's direction changes smoothly from its base
- * (rest pitch + raise) to its top (rest pitch + raise - 1.3 * headDown), the bend
- * mostly in the upper half, like a real long-necked animal; headTilt pitches the
- * head on the neck (positive = nose down).
+ * Neck carriage: the neck's direction changes smoothly from `base` at the withers to `top` at
+ * the head (radians above the horizontal, in the world, given the body pitch `bodyUp`), the bend
+ * mostly in the upper half; the head is carried at `head` (absolute pitch, + = nose up).
+ * The rest neck rises at the anatomy's neckPitch with a level head.
  */
-function carriage(pb, raise = 0.3, headDown = 0.25, headTilt = headDown * 0.45) {
+function neckCurve(pb, base, top, head, bodyUp = 0) {
   const ns = neckNames(pb.c);
   const n = ns.length;
-  const A = raise, B = raise - 1.3 * headDown;
-  const dir = (f) => A + (B - A) * Math.pow(f, 1.4);
-  let prev = 0;
+  const rest = pb.c.anatomy.dims.neckPitch;
+  let prev = rest + bodyUp;
   ns.forEach((name, i) => {
-    const d = dir(n > 1 ? i / (n - 1) : 0);
-    pb.add(name, -(d - prev), 0, 0);
-    prev = d;
+    const f = n > 1 ? i / (n - 1) : 0;
+    const a = base + (top - base) * Math.pow(f, 1.5);
+    pb.add(name, -(a - prev), 0, 0);
+    prev = a;
   });
-  pb.add('head', headTilt, 0, 0);
+  // rest: the head is level while the neck rises at `rest`
+  pb.add('head', -(head - (prev - rest)), 0, 0);
 }
 
 function jaw(pb, open = 0) {
@@ -100,7 +240,7 @@ function jaw(pb, open = 0) {
   pb.add('jaw', -g + open, 0, 0);
 }
 
-/** Lids: blink automatically from t (a quick close/open every few seconds), or a fixed closure 0..1. */
+/** Lids: blink automatically from t, or a fixed closure 0..1. */
 function lids(pb, t, o = {}) {
   let close = o.lidClose ?? 0;
   if (o.blink !== false) {
@@ -111,7 +251,7 @@ function lids(pb, t, o = {}) {
     const bl = d >= 0 && d < 0.32 ? (d < 0.11 ? smooth(0, 0.11, d) : 1 - smooth(0.11, 0.32, d)) : 0;
     close = Math.max(close, bl);
   }
-  const relax = o.lidRelax ?? 0.3;     // resting lids lowered over the top of the eye (a calm look)
+  const relax = o.lidRelax ?? 0.3;
   for (const e of pb.c.eyes) {
     const ax = new THREE.Vector3(...e.gx);
     const up = mix(relax, 1.15, close), lo = mix(relax * 0.55, 0.4, close);
@@ -130,262 +270,349 @@ function eyes(pb, yaw = 0, pitch = 0) {
   }
 }
 
+/** Tail: droop at the base (rad), sway, curl to one side, lift. */
 function tailCurve(pb, t, o = {}) {
   const ts = tailNames(pb.c);
   const n = ts.length;
-  const sway = o.sway ?? 0.05, lift = o.lift ?? 0, curl = o.curl ?? 0;
+  const sway = o.sway ?? 0.05, curl = o.curl ?? 0, droop = o.droop ?? 0, lift = o.lift ?? 0;
   ts.forEach((name, i) => {
     const f = i / (n - 1);
     const s = Math.sin(t * TAU * (o.swayHz ?? 0.07) - i * 0.22);
-    pb.add(name, (lift * (1 - f) - (o.droop ?? 0) * (1 - f)) * 2 / n, (sway * s + curl * f) * 2.5 / n, 0);
+    // (a positive x rotation RAISES a backward-pointing bone: droop is negative)
+    const base = i < 6 ? -(droop - 5 * deg) / 6 : 0;
+    pb.add(name, base + lift * (1 - f) * 2 / n, (sway * s + curl * f) * 2.5 / n, 0);
   });
 }
 
-// ----------------------------------------------------------------- wings
-// Folding by aiming bone frames: each wing bone gets a target direction and a
-// "dorsal up" hint (in the body frame), converted to local rotations down the
-// chain. The folded wing lies flat against the flank, dorsal side out.
-const _V = (a) => new THREE.Vector3(a[0], a[1], a[2]);
-function frameQ(dir, up) {
-  const z = dir.clone().normalize();
-  const y = up.clone().addScaledVector(z, -up.dot(z)).normalize();
-  const x = new THREE.Vector3().crossVectors(y, z);
-  return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
-}
-function aimQ(d0, u0, d1, u1) { return frameQ(d1, u1).multiply(frameQ(d0, u0).invert()); }
-const foldCache = new WeakMap();
-// Fold targets (directions in the body frame, left wing; mirrored for the right).
-// The default is the anatomical Z-fold of a bat/bird wing on a quadruped: the
-// humerus runs back and down from the wing root along the top of the flank, the
-// forearm comes forward so the wrist sits beside the shoulder blade (never
-// standing up in front of the chest like a raised arm), and the hand and fingers
-// run back along the flank toward the haunch. The membrane between them hangs in
-// slack folds (drape.js). In the dog-sit the same fold rides on the pitched body.
-const FOLD_DEFAULT = { humerus: [0.34, -0.06, -0.94], forearm: [-0.12, -0.28, 0.95], hand: [0.14, -0.06, -0.99] };
-// The dog-sit pitches the body ~55 deg nose-up, so the same fold expressed in the body frame
-// would swing the elbow down to the hip and stand the forearm up like a raised arm. The sit
-// fold is therefore given in the WORLD (humerus back and down along the top of the flank,
-// forearm forward and a little up so the wrist lies against the shoulder, hand and fingers
-// back and down along the flank toward the haunch) and converted to the body frame here.
-function worldToBody(v, a) { const c = Math.cos(a), s = Math.sin(a); return [v[0], v[1] * c - v[2] * s, v[1] * s + v[2] * c]; }
-const SIT_PITCH = 0.8;
-const FOLD_SIT = {
-  humerus: worldToBody([0.1, -0.55, -0.83], SIT_PITCH),
-  forearm: worldToBody([-0.04, 0.32, 0.95], SIT_PITCH),
-  hand: worldToBody([0.08, -0.5, -0.86], SIT_PITCH),
-};
-const FOLD_VARIANTS = {
-  // the old gargoyle fold (wrist raised above the back) - kept for shots that ask for it
-  high: { humerus: [0.28, -0.24, -0.93], forearm: [0.17, 0.3, 0.94], hand: [0.07, -0.3, -0.95] },
-  sit: FOLD_SIT, sitFlank: FOLD_SIT,
-};
-function foldedWing(c, sd, variant = '') {
-  let cache = foldCache.get(c);
-  if (!cache) { cache = {}; foldCache.set(c, cache); }
-  const key = sd + variant;
-  if (cache[key]) return cache[key];
-  const s = sd === 'L' ? 1 : -1;
-  const rp = c.restPos;
-  const P = (n) => _V(rp[`w_${sd}_${n}`]);
-  const R = P(0), E = P(1), W = P(2);
-  const w = c.anatomy.wings.find((x) => x.side === sd);
-  const tip = (d) => _V(w.fingers[d].points[3]);
-  const up0 = new THREE.Vector3(0, 1, 0);
-  const tgt = { ...FOLD_DEFAULT, ...(c.config.fold || {}), ...(FOLD_VARIANTS[variant] || {}) };
-  const hum = _V(tgt.humerus).multiply(new THREE.Vector3(s, 1, 1));
-  const fore = _V(tgt.forearm).multiply(new THREE.Vector3(s, 1, 1));
-  const hand = _V(tgt.hand).multiply(new THREE.Vector3(s, 1, 1));
-  const out = _V([s * 0.94, 0.3, 0.05]);
-  const Qh = aimQ(E.clone().sub(R), up0, hum, out);
-  const Qf = aimQ(W.clone().sub(E), up0, fore, _V([s * 0.97, -0.05, -0.12]));
-  const Qw = aimQ(tip(1).sub(W), up0, hand, out);
-  const res = { [`w_${sd}_0`]: Qh.clone(), [`w_${sd}_1`]: Qh.clone().invert().multiply(Qf), [`w_${sd}_2`]: Qf.clone().invert().multiply(Qw) };
-  // fingers stacked along the hand like a closed fan, the lower ones fanned a little downward
-  const handT = hand.clone().normalize();
-  const down = new THREE.Vector3().crossVectors(out, handT).normalize();
-  if (down.y > 0) down.negate();
-  // (a closed fan: the fingers lie almost together - spread apart they read as a broom of rods)
-  const fan = [0.0, 0.008, 0.016, 0.024];
-  for (let d = 0; d < 4; d++) {
-    const n0 = `w_${sd}_f${d}_0`;
-    const dir0 = tip(d).sub(W);
-    const dir1 = handT.clone().multiplyScalar(Math.cos(fan[d])).addScaledVector(down, Math.sin(fan[d]));
-    const Qd = aimQ(dir0, up0, dir1, out);
-    res[n0] = Qw.clone().invert().multiply(Qd);
-  }
-  cache[key] = res;
-  return res;
-}
-/**
- * Folded wing (fold 0 = spread rest, 1 = fully folded against the body). Overrides other
- * rotations of the wing bones. `drape` names the pre-relaxed membrane drape (creature.js:
- * 'stand' | 'sit' | 'lie') that fades in as the wing closes.
- */
-function wingFold(pb, fold, side = 'both', pitchComp = 0, adduct = 0, variant = '', drape = 'stand') {
-  const f = clamp(fold, 0, 1);
-  pb.u.drape = pb.u.drape || {};
-  for (const sd of side === 'both' ? ['L', 'R'] : [side]) {
-    const F = foldedWing(pb.c, sd, variant);
-    // pitchComp: tilt the folded wing up when the body is pitched nose-up;
-    // adduct: swing it in against the flank (yaw about the shoulder)
-    const qc = new THREE.Quaternion().setFromEuler(new THREE.Euler(pitchComp, (sd === 'L' ? 1 : -1) * adduct, 0, 'YXZ'));
-    for (const [n, q] of Object.entries(F)) {
-      const qq = new THREE.Quaternion().slerp(q, f);
-      if ((pitchComp || adduct) && n === `w_${sd}_0`) qq.premultiply(qc);
-      pb.quat(n, qq.toArray());
-    }
-    // the fingers fold at the knuckle (half way): the outer half doubles back along the inner
-    // half, in the plane of the wing, toward the trailing edge - the folded hand is then about
-    // as long as the forearm (a bat's fold), not a bundle of rods reaching past the tail base
-    const fk = pb.c.config.fingerFold ?? [2.95, 0.12];
-    const s = sd === 'L' ? 1 : -1;
-    for (let d = 0; d < 4; d++) {
-      pb.add(`w_${sd}_f${d}_1`, 0, -s * f * fk[0], 0);
-      pb.add(`w_${sd}_f${d}_2`, 0, -s * f * fk[1], 0);
-    }
-    pb.u.drape[sd] = [drape, smooth(0.7, 1.0, f) * (variant === 'high' ? 0 : 1)];
-  }
-}
+/** the drape (pre-relaxed folded membrane) for a ground fold */
+function drape(pb, kind, amount = 1) { pb.u.drape = { L: [kind, amount], R: [kind, amount] }; pb.u.billowL = 0; pb.u.billowR = 0; }
 
-/**
- * Flapping wings at cycle position cyc (0..1, 0 = top of the upstroke).
- * Downstroke takes `down` of the cycle; the elbow and hand flex during the
- * upstroke (less drag), fingers spread on the downstroke, the wing pronates
- * (leading edge down) on the downstroke. Returns {phi, upFold} for body motion.
- */
-function wingFlap(pb, cyc, o = {}) {
-  const D = o.down ?? 0.56;
-  const amp = o.amp ?? 0.85, center = o.center ?? 0.12;
-  const phi = cyc < D ? Math.PI * cyc / D : Math.PI + Math.PI * (cyc - D) / (1 - D);
-  const lag = (dc) => { const c2 = fract(cyc - dc); return c2 < D ? Math.PI * c2 / D : Math.PI + Math.PI * (c2 - D) / (1 - D); };
-  const elev = center + amp * Math.cos(phi);
-  const sweep = -0.16 * Math.sin(phi);
-  const pron = 0.22 * Math.sin(phi);
-  const pu = lag(0.06);
-  const up = pu > Math.PI ? Math.sin(pu - Math.PI) : 0;          // upstroke flexion 0..1
-  const pd = lag(0.03);
-  const downSpread = pd < Math.PI ? Math.sin(pd) : 0;
-  const asym = o.asym ?? 0;                                       // corrective beats: left/right differ
-  for (const sd of ['L', 'R']) {
-    const k = sd === 'L' ? 1 + asym : 1 - asym;
-    const s = sd === 'L' ? 1 : -1;
-    pb.add(`w_${sd}_0`, pron, s * (sweep + 0.18 * up), s * elev * k, 'YZX');
-    pb.add(`w_${sd}_1`, 0, s * (-0.55 * up - 0.05), s * (0.25 * up), 'YZX');
-    pb.add(`w_${sd}_2`, 0, s * (0.75 * up + 0.04), s * (-0.35 * up), 'YZX');
-    const fan = [0.0, 0.1, 0.22, 0.32];
-    for (let d = 0; d < 4; d++) pb.add(`w_${sd}_f${d}_0`, 0.04 * d * downSpread, s * (fan[d] * up - 0.04 * d * downSpread), s * (-0.05 * up * d), 'YZX');
-  }
-  pb.u.billowL = 0.6 * downSpread - 0.4 * up;
-  pb.u.billowR = 0.6 * downSpread - 0.4 * up;
-  return { phi, up, downSpread };
-}
-
-/**
- * Legs tucked for flight, as flying animals carry them: forelegs folded tight under the
- * chest (upper arm back, forearm forward against it, wrist flexed so the paw points back),
- * hind legs trailing straight back along the tail base with the soles turned up.
- */
-function tuckLegs(pb, k = 1) {
-  // forelegs: upper arm swung back along the chest, forearm folded forward against it,
-  // wrist flexed so the paw lies back against the chest, toes curled (no paws hanging down)
-  pb.sym('fl_#_0', 0.82 * k, -0.04 * k, -0.06 * k); pb.sym('fl_#_1', -1.78 * k, 0, 0); pb.sym('fl_#_2', 2.55 * k, 0, 0);
-  // hind legs trail back under the tail base: thigh back, shin and foot streamlined behind,
-  // soles turned up and toes curled
-  pb.sym('hl_#_0', 1.2 * k, 0, -0.06 * k); pb.sym('hl_#_1', -0.4 * k, 0, 0); pb.sym('hl_#_2', 1.5 * k, 0, 0);
-  // the thigh muscles stretch flat when the femur swings back (linear skinning would keep
-  // them as round lumps behind the hips)
-  pb.scale('hl_L_0', 1 - 0.18 * k, 1, 1 - 0.22 * k); pb.scale('hl_R_0', 1 - 0.18 * k, 1, 1 - 0.22 * k);
-  for (let i = 0; i < 4; i++) { pb.sym(`fl_#_t${i}`, 0.95 * k, 0, 0); pb.sym(`hl_#_t${i}`, 1.25 * k, 0, 0); }
-}
-
-/** Lift the tail out of its resting droop so it streams straight behind (flight). */
-function tailStraight(pb, k = 1) {
-  const ts = tailNames(pb.c);
-  const droop = pb.c.spec.tailDroop ?? 0.2;
-  for (let i = 0; i < Math.min(6, ts.length); i++) pb.add(ts[i], -droop * 1.15 * k / 6, 0, 0);
+function common(pb, o, t) {
+  jaw(pb, o.jaw ?? 0);
+  eyes(pb, ...(o.eyes || [0, 0]));
+  lids(pb, t, o);
 }
 
 // --------------------------------------------------------------- poses
+/** The rest pose (glide planform), mouth at its sculpted gape. */
 export function rest(c, o = {}) {
   const pb = new PB(c);
   jaw(pb, o.jaw ?? c.anatomy.head.gape0);
   return pb.out({ ground: false });
 }
 
+/** Stand parameters per dragon (DESIGN stand: neck rise, head pitch, tail droop) */
+function standParams(c) {
+  const s = c.anatomy.design.stand;
+  return { neckRise: s.neckRise * deg, neckTop: (s.neckTop ?? s.neckRise - 25) * deg, headPitch: s.headPitch * deg, tailDroop: s.tailDroop * deg, lean: s.forearmLean * deg, rise: s.humerusRise * deg };
+}
+
+/**
+ * The ground stance with the body placed by `body` = { y (rig height offset), pitch (nose up,
+ * rad), roll, yaw, z }, feet and wrist pads at the given offsets. Used by stand, walk, crouch,
+ * lie, sit, rear, launch and land.
+ */
+function groundBase(c, o, t) {
+  const pb = new PB(c);
+  const A = c.anatomy, d = A.dims;
+  const b = o.body || {};
+  pb.rig.position = [b.x ?? 0, b.y ?? 0, b.z ?? 0];
+  pb.rig.rotation = [-(b.pitch ?? 0), b.yaw ?? 0, b.roll ?? 0];
+  if (b.lumbar) pb.add('lumbar', -b.lumbar, 0, 0);
+  if (b.chest) pb.add('thorax', -b.chest, 0, 0);
+  return pb;
+}
+
+/** Feet + wrist pads for a stance; offsets in metres relative to the defaults (root frame). */
+function plantAll(pb, o = {}) {
+  const c = pb.c, A = c.anatomy, d = A.dims, D = A.design;
+  const F = solveFK(pb);
+  const sp = standParams(c);
+  const res = {};
+  for (const [side, sd] of sides) {
+    // feet under the hips (the heel below the hip joint)
+    const lf = (o.feet && o.feet[side]) || {};
+    const hip = F.P[`hl_${side}_0`];
+    const ma = (lf.mtAng ?? D.leg.mtAng) * deg;
+    const ball = [sd * d.hipX * 1.08 + (lf.dx ?? 0), (lf.lift ?? 0) + d.toeL * 0.13, hip[2] - d.fem * 0.04 + d.mtl * Math.cos(ma) + (lf.dz ?? 0)];
+    if (lf.at) { ball[0] = lf.at[0]; ball[1] = lf.at[1] + d.toeL * 0.13; ball[2] = lf.at[2]; }
+    res[`foot${side}`] = legIK(pb, F, side, ball, { mtAng: lf.mtAng, fwd: lf.fwd ?? [sd * 0.1, 0, 1], pole: lf.pole, curl: lf.curl, toeDown: lf.toeDown });
+    // wrist pads: a little outside the shoulder and behind it (the forearm leaning ~forearmLean)
+    const wf = (o.wrists && o.wrists[side]) || {};
+    const S = F.P[`w_${side}_0`];
+    const w = A.wings.find((x) => x.side === side);
+    const dzDef = -d.hum * Math.cos(sp.rise) + d.fore * Math.sin(sp.lean);
+    const wy = (wf.lift ?? 0) + w.padDist * 0.92;
+    const wp = wf.at ? [wf.at[0], wf.at[1] + w.padDist * 0.92, wf.at[2]] : [S[0] + sd * (d.wristR * 1.6 + (wf.dx ?? 0)), wy, S[2] + dzDef + (wf.dz ?? 0)];
+    res[`wrist${side}`] = plantWing(pb, F, side, wp, { pole: wf.pole, ...(o.fold || {}) });
+  }
+  return res;
+}
+
+/** Wing-walk stance: weight on the feet and the folded wings' wrist pads, elbows high. */
 export function stand(c, o = {}) {
   const t = o.t ?? 0;
-  const pb = new PB(c);
-  const b = breathe(pb, t, o.breathe ?? (c.L > 20 ? 0.09 : 0.18));
-  carriage(pb, o.raise ?? -0.06, o.headDown ?? 0.2, o.headTilt ?? 0.06);
+  const sp = standParams(c);
+  const pb = groundBase(c, { body: { y: o.bodyY ?? 0, pitch: o.bodyPitch ?? 0, ...(o.body || {}) } }, t);
+  const br = o.drapeBuild ? 0 : breathe(pb, t, o.breathe ?? (c.L > 20 ? 0.085 : c.L > 3 ? 0.16 : 0.4), c.L > 20 ? 0.02 : 0.025);
+  const rise = (o.neckRise ?? sp.neckRise) + (o.raise ?? 0);
+  const top = (o.neckTop ?? (sp.neckTop + (o.neckRise !== undefined ? o.neckRise - sp.neckRise : 0))) + (o.raise ?? 0) * 0.5;
+  neckCurve(pb, rise, top - (o.headDown ?? 0) * 1.4, (o.headPitch ?? sp.headPitch) - (o.headDown ?? 0) * 0.6, o.bodyPitch ?? 0);
   const lk = o.look || [0, 0];
-  look(pb, lk[0] + 0.03 * wob(t * 0.3, 1), lk[1] + 0.02 * b + 0.02 * wob(t * 0.25, 2));
-  jaw(pb, (o.jaw ?? 0) + 0.015 * b);
-  eyes(pb, ...(o.eyes || [0, 0]));
-  lids(pb, t, o);
-  wingFold(pb, o.wingFold ?? 1, 'both', 0, o.wingAdduct ?? 0, o.foldVariant ?? '', 'stand');
-  tailCurve(pb, t, { sway: 0.06, droop: 0.9, curl: o.tailCurl ?? 0.25 });
+  const calm = o.drapeBuild ? 0 : 1;
+  look(pb, lk[0] + 0.03 * wob(t * 0.3, 1) * calm, lk[1] + 0.015 * br + 0.015 * wob(t * 0.25, 2) * calm);
+  tailCurve(pb, t, { sway: 0.05 * calm, droop: o.tailDroop ?? sp.tailDroop, curl: o.tailCurl ?? 0.3, swayHz: 0.05 });
+  plantAll(pb, o);
+  common(pb, { ...o, jaw: (o.jaw ?? 0) + 0.012 * br }, t);
+  drape(pb, 'stand');
   return pb.out({ groundTail: true });
 }
 
-/** Dog-like upright sit: haunches down, forelegs straight, chest up, tail curled on the ground. */
+/**
+ * Lateral-sequence walk (left foot, left wrist, right foot, right wrist; duty factor ~0.7; the
+ * wrist pads land outside the feet). The root stays: the scene moves it forward by speed * t
+ * (the planted feet then stay still on the ground). o.speed (m/s; default from the size).
+ */
+export function walk(c, o = {}) {
+  const t = o.t ?? 0;
+  const L = c.L;
+  const speed = o.speed ?? (L > 20 ? 2.0 : L > 5 ? 1.6 : 0.5);
+  const freq = o.freq ?? (L > 50 ? 0.23 : L > 20 ? 0.32 : L > 5 ? 0.6 : 0.8);
+  const stride = speed / freq;
+  const duty = o.duty ?? 0.7;
+  const ph = (off) => fract(t * freq + off);
+  // contact offset along z for a limb at phase p: stance moves back linearly, swing comes forward
+  const zOff = (p) => p < duty ? stride * (0.5 - p / duty) : stride * (-0.5 + (p - duty) / (1 - duty));
+  const lift = (p, h) => p < duty ? 0 : h * Math.sin(Math.PI * (p - duty) / (1 - duty));
+  const d = c.anatomy.dims;
+  const feet = {}, wrists = {};
+  for (const [side, off] of [['L', 0], ['R', 0.5]]) {
+    const pf = ph(off), pw = ph(off + 0.25);
+    feet[side] = { dz: zOff(pf), lift: lift(pf, d.toeL * 0.35) };
+    wrists[side] = { dz: zOff(pw), lift: lift(pw, d.wristR * 1.4) };
+  }
+  // the body rolls and pitches a little with the steps; the neck counter-swings, the tail swings
+  const sway = Math.sin(TAU * t * freq) * 0.025;
+  const bob = Math.cos(TAU * t * freq * 2) * L * 0.0015;
+  const p = stand(c, { ...o, body: { roll: sway, y: bob, pitch: 0.01 * Math.sin(TAU * t * freq * 2) }, feet, wrists, look: [(o.look?.[0] ?? 0) - sway * 1.5, o.look?.[1] ?? 0], tailCurl: (o.tailCurl ?? 0.1) - sway * 6 });
+  return p;
+}
+
+/** Up on the hind legs (look over something, threaten, the start of a landing flare). o.k 0..1 */
+export function rear(c, o = {}) {
+  const t = o.t ?? 0;
+  const k = clamp(o.k ?? 1, 0, 1);
+  const d = c.anatomy.dims;
+  const pitch = (o.pitch ?? 0.95) * k;
+  const pb = groundBase(c, { body: { pitch, y: Math.sin(pitch) * d.T * 0.12 } }, t);
+  breathe(pb, t, 0.25, 0.03);
+  neckCurve(pb, mix(0.6, 0.2, k), mix(0.95, 0.5, k), (o.headPitch ?? -0.15), pitch);
+  look(pb, ...(o.look || [0, 0]));
+  tailCurve(pb, t, { sway: 0.02, droop: mix(0.4, 0.95, k), curl: 0.1 });
+  const F = solveFK(pb);
+  for (const [side, sd] of sides) {
+    const hip = F.P[`hl_${side}_0`];
+    legIK(pb, F, side, [sd * d.hipX * 1.2, d.toeL * 0.13, hip[2] + d.mtl * 0.4], { mtAng: 50 });
+  }
+  // wings half open for balance (blended toward the spread wing)
+  const half = o.wingOpen ?? 0.5;
+  for (const [side, sd] of sides) {
+    pb.add(`w_${side}_0`, 0.1, sd * 0.6 * (1 - half), sd * (0.35 - 0.4 * half), 'YZX');
+    pb.add(`w_${side}_1`, 0, sd * -0.9 * (1 - half), 0, 'YZX');
+    pb.add(`w_${side}_2`, 0, sd * 1.4 * (1 - half), 0, 'YZX');
+  }
+  pb.u.billowL = pb.u.billowR = 0.1;
+  common(pb, o, t);
+  return pb.out({ groundTail: true });
+}
+
+/** Dog-like sit on the haunches (Leaf, 1B): trunk pitched up, wrists planted in front, tail curled round. */
 export function sit(c, o = {}) {
   const t = o.t ?? 0;
-  const pb = new PB(c);
-  const a = o.pitch ?? SIT_PITCH;        // body pitch (nose up): the chest high, haunches on the ground
-  pb.rig.rotation = [-a, 0, 0];
-  const b = breathe(pb, t, o.breathe ?? 0.2);
-  // forelegs: counter the body pitch so they stand vertical and straight
-  pb.sym('fl_#_0', a - 0.12, 0, 0.04); pb.sym('fl_#_1', 0.08, 0, 0); pb.sym('fl_#_2', -0.05, 0, 0);
-  for (let i = 0; i < 4; i++) pb.sym(`fl_#_t${i}`, -0.15, 0, 0);
-  // hind legs folded: thigh forward, shin back, metatarsus flat on the ground
-  // (thigh along the flank, knee forward beside the elbow, a little out: the haunch reads as a
-  // folded leg, not a ball; o.hind = [thigh, knee, ankle, abduction] overrides)
-  const hl = o.hind || [-0.6, 1.7, -1.75, 0.3];
-  pb.sym('hl_#_0', hl[0] + a, hl[3] ?? 0.12, 0.1); pb.sym('hl_#_1', hl[1], 0, 0); pb.sym('hl_#_2', hl[2], 0, 0);
-  for (let i = 0; i < 4; i++) pb.sym(`hl_#_t${i}`, 0.25, 0, 0);
-  // neck forward-up in an S, head level (the body pitch already raises the neck)
-  carriage(pb, o.raise ?? -0.62, o.headDown ?? 0.22, o.headTilt ?? 0.08);
+  const A = c.anatomy, d = A.dims;
+  const pitch = o.pitch ?? 55 * deg;
+  // the hip joint sinks to the haunch height (thighs folded forward, metatarsi flat on the ground)
+  const hipY = (o.hipY ?? 0.36) * (d.fem + d.tib) * 0.5;
+  const pb = groundBase(c, { body: { pitch } }, t);
+  // place the rig so the hip joint lands at hipY, the trunk pitched up about it
+  {
+    const F = solveFK(pb);
+    const hip = F.P.hl_L_0;
+    pb.rig.position = [0, hipY - hip[1], -hip[2] - d.T * 0.05];
+  }
+  const br = o.drapeBuild ? 0 : breathe(pb, t, o.breathe ?? 0.2, 0.025);
+  neckCurve(pb, (o.neckBase ?? 0.62) + (o.raise ?? 0), (o.neckTop ?? 0.95) - (o.headDown ?? 0) * 1.2, (o.headPitch ?? -0.18) - (o.headDown ?? 0) * 0.5, pitch);
   const lk = o.look || [0, 0];
-  look(pb, lk[0] + 0.04 * wob(t * 0.35, 3), lk[1] + 0.02 * b);
-  jaw(pb, (o.jaw ?? 0) + 0.01 * b);
-  eyes(pb, ...(o.eyes || [0, 0]));
-  lids(pb, t, o);
-  wingFold(pb, 1, 'both', o.wingComp ?? 0, o.wingAdduct ?? 0.06, o.foldVariant ?? 'sit', 'sit');
-  // tail: down to the ground and curled around the side
+  look(pb, lk[0] + 0.04 * wob(t * 0.35, 3) * (o.drapeBuild ? 0 : 1), lk[1] + 0.02 * br);
+  // tail: down to the ground and curled round the side
   const ts = tailNames(c);
-  const droop = c.spec.tailDroop ?? 0.2;
   ts.forEach((n, i) => {
     const f = i / (ts.length - 1);
-    pb.add(n, (i < 3 ? -0.08 : 0.0) - droop * 1.3 / ts.length, (0.11 + 0.02 * Math.sin(t * 0.6 - i * 0.3)) * f * 1.6, 0);
+    pb.add(n, i < 4 ? (pitch * 0.85) / 4 : 0.0, (o.tailCurl ?? 0.13 + 0.02 * Math.sin(t * 0.6 - i * 0.3)) * f * 1.7, 0);
   });
+  const F = solveFK(pb);
+  for (const [side, sd] of sides) {
+    // feet flat beside the haunch, toes forward: the thigh folds forward along the flank
+    const hip = F.P[`hl_${side}_0`];
+    legIK(pb, F, side, [sd * d.hipX * 1.35, d.toeL * 0.13, hip[2] + d.fem * 0.85], { mtAng: 8, fwd: [sd * 0.15, 0, 1], pole: [sd * 0.45, 0.8, 0.4], curl: 0.08 });
+    // wrists planted in front like a dog's forelegs, forearms vertical
+    const S = F.P[`w_${side}_0`];
+    const w = A.wings.find((x) => x.side === side);
+    const wp = [S[0] + sd * d.wristR * 1.2, w.padDist * 0.92, S[2] + (o.wristFwd ?? 0.05) * d.fore];
+    plantWing(pb, F, side, wp, { pole: [sd * 0.25, 0.4, -1], outUp: 0.05, p1Down: 0.15, ...(o.fold || {}) });
+  }
+  common(pb, { ...o, jaw: (o.jaw ?? 0) + 0.01 * br }, t);
+  drape(pb, 'sit');
   return pb.out({ groundTail: true });
 }
 
-/** Resting on the belly: legs folded under, neck low, chin near the ground. */
+/** Sphinx crouch: chest lowered between the wrists (mounting; the first move of a launch). o.k 0..1 */
+export function crouch(c, o = {}) {
+  const t = o.t ?? 0;
+  const k = clamp(o.k ?? 1, 0, 1);
+  const d = c.anatomy.dims;
+  const sp = standParams(c);
+  const drop = k * (o.depth ?? 0.42) * d.shH;
+  const p = stand(c, {
+    ...o, bodyY: -drop * 0.75, bodyPitch: -0.12 * k,
+    neckRise: mix(sp.neckRise, 0.2, k), headPitch: mix(sp.headPitch, -0.25, k),
+    feet: { L: { dz: -d.mtl * 0.3 * k, mtAng: mix(c.anatomy.design.leg.mtAng, 25, k) }, R: { dz: -d.mtl * 0.3 * k, mtAng: mix(c.anatomy.design.leg.mtAng, 25, k) } },
+    wrists: { L: { dz: d.fore * 0.32 * k, dx: d.wristR * 1.5 * k }, R: { dz: d.fore * 0.32 * k, dx: d.wristR * 1.5 * k } },
+  });
+  return p;
+}
+
+/**
+ * Resting on the belly (sphinx): hind legs folded under, wrists forward under the chest, the
+ * folded wings like a tent along the flanks, the neck curved round, chin low. o.sprawl = 1:
+ * too weak to tuck the legs under (the newborn): legs splayed out to the sides.
+ */
 export function lie(c, o = {}) {
   const t = o.t ?? 0;
-  const pb = new PB(c);
-  breathe(pb, t, o.breathe ?? (c.L > 20 ? 0.07 : 0.15), 0.032);
-  if (o.sprawl) {
-    // too weak to tuck the legs under (a newborn): the legs lie splayed out to the sides on
-    // the bedding, elbows and knees bent, palms and soles down
-    const k = o.sprawl;
-    pb.sym('fl_#_0', 0.25 * k, 0.25 * k, 1.05 * k); pb.sym('fl_#_1', -0.35 * k, 0, -0.5 * k); pb.sym('fl_#_2', 0.2 * k, 0, -0.45 * k);
-    pb.sym('hl_#_0', 0.55 * k, -0.2 * k, 1.0 * k); pb.sym('hl_#_1', 0.25 * k, 0, -0.45 * k); pb.sym('hl_#_2', -0.3 * k, 0, -0.5 * k);
-    for (let i = 0; i < 4; i++) { pb.sym(`fl_#_t${i}`, -0.1, 0, 0); pb.sym(`hl_#_t${i}`, -0.1, 0, 0); }
-  } else {
-    pb.sym('fl_#_0', -0.9, 0, 0.05); pb.sym('fl_#_1', 2.2, 0, 0); pb.sym('fl_#_2', -1.25, 0, 0);
-    pb.sym('hl_#_0', -1.1, 0.08, 0.06); pb.sym('hl_#_1', 2.25, 0, 0); pb.sym('hl_#_2', -1.6, 0, 0);
-  }
-  carriage(pb, o.raise ?? -0.45, o.headDown ?? 0.15);
+  const A = c.anatomy, d = A.dims;
+  // lower the body until the chest and belly rest on the ground
+  const sc = d.trunkAt(0.45);
+  const bellyY = sc.c[1] - sc.hh;
+  const pb = groundBase(c, { body: { y: -bellyY + d.T * 0.012, pitch: o.bodyPitch ?? 0.02 } }, t);
+  const br = o.drapeBuild ? 0 : breathe(pb, t, o.breathe ?? (c.L > 20 ? 0.07 : c.L > 3 ? 0.15 : 0.6), 0.032);
+  neckCurve(pb, (o.neckBase ?? 0.25) + (o.raise ?? 0), (o.neckTop ?? 0.2) - (o.headDown ?? 0.1), (o.headPitch ?? -0.12) - (o.headDown ?? 0.1) * 0.5, o.bodyPitch ?? 0.02);
   const lk = o.look || [0, 0];
-  look(pb, lk[0] + 0.03 * wob(t * 0.2, 4), lk[1]);
-  jaw(pb, o.jaw ?? 0);
-  eyes(pb, ...(o.eyes || [0, 0]));
-  lids(pb, t, { ...o, lidRelax: o.lidRelax ?? 0.6 });
-  wingFold(pb, 1, 'both', 0, o.wingAdduct ?? 0, o.foldVariant ?? '', 'lie');
-  tailCurve(pb, t, { sway: 0.03, droop: 0.45, curl: 0.5, swayHz: 0.04 });
+  look(pb, lk[0] + 0.03 * wob(t * 0.2, 4) * (o.drapeBuild ? 0 : 1), lk[1]);
+  tailCurve(pb, t, { sway: 0.025, droop: 0.15, curl: o.tailCurl ?? 0.55, swayHz: 0.04 });
+  const F = solveFK(pb);
+  const sprawl = o.sprawl ?? 0;
+  for (const [side, sd] of sides) {
+    const hip = F.P[`hl_${side}_0`];
+    const S = F.P[`w_${side}_0`];
+    const w = A.wings.find((x) => x.side === side);
+    if (sprawl) {
+      // splayed out to the sides, soles down, toes slack
+      legIK(pb, F, side, [sd * (d.hipX + d.fem * 1.1), d.toeL * 0.13, hip[2] + d.fem * 0.25], { mtAng: 10, fwd: [sd * 0.7, 0, 0.7], pole: [sd, 0.6, 0.2], curl: -0.05 });
+      plantWing(pb, F, side, [S[0] + sd * d.hum * 0.95, w.padDist * 0.9, S[2] + d.fore * 0.25], { pole: [sd * 0.6, 0.5, -0.6], outUp: 0.4, p1Down: 0.0, inward: -0.1, ...(o.fold || {}) });
+    } else {
+      // folded under: the foot flat beside the belly, the knee forward and up along the flank
+      legIK(pb, F, side, [sd * (d.hipX * 1.25), d.toeL * 0.13, hip[2] + d.fem * 0.75], { mtAng: 4, fwd: [sd * 0.12, 0, 1], pole: [sd * 0.5, 0.75, 0.45], curl: 0.05 });
+      // the forearm along the ground beside the chest, wrist pad forward under the chest
+      plantWing(pb, F, side, [S[0] + sd * d.wristR * 0.6, w.padDist * 0.75, S[2] + d.fore * 0.62], { pole: [sd * 0.5, 0.35, -1], outUp: 0.35, p1Down: 0.02, ...(o.fold || {}) });
+    }
+  }
+  common(pb, { ...o, lidRelax: o.lidRelax ?? 0.5 }, t);
+  drape(pb, 'lie');
   return pb.out({ groundTail: true, groundBody: true });
+}
+
+/** The newborn pushes up on its wrists and thumbs, trembling (o.k 0..1 = how far up). */
+export function pushUp(c, o = {}) {
+  const t = o.t ?? 0;
+  const k = clamp(o.k ?? 1, 0, 1);
+  const d = c.anatomy.dims;
+  const tremble = (o.tremble ?? 1) * (Math.sin(t * 37) * 0.6 + Math.sin(t * 53 + 1) * 0.4) * 0.012 * k;
+  const p = lie(c, { ...o, sprawl: 1, body: undefined, bodyPitch: 0.15 * k + tremble, raise: 0.25 * k, headDown: mix(0.15, -0.05, k) });
+  p.rig.position = [p.rig.position[0], p.rig.position[1] + k * d.shH * 0.45, p.rig.position[2]];
+  return p;
+}
+
+/**
+ * The newborn's weak struggle (1A), pure in t: lies sprawled and breathes fast, tries to push up
+ * (the arms tremble, the head too heavy), lifts the chest a few cm, a wrist slips and it rolls a
+ * little onto its side, rests; repeats more weakly.
+ */
+export function struggle(c, o = {}) {
+  const t = o.t ?? 0;
+  const cyc = o.period ?? 6.5;
+  const u = fract(t / cyc), n = Math.floor(t / cyc);
+  const strength = Math.pow(0.7, n);
+  const up = u < 0.15 ? 0 : u < 0.45 ? smooth(0.15, 0.45, u) : u < 0.55 ? 1 : u < 0.62 ? 1 - smooth(0.55, 0.62, u) : 0;
+  const k = up * strength * (o.k ?? 1);
+  const slip = u > 0.55 && u < 0.85 ? Math.sin(Math.PI * (u - 0.55) / 0.3) : 0;
+  const p = pushUp(c, { ...o, k, breathe: mix(0.65, 0.45, k), look: [(o.look?.[0] ?? 0.2) + 0.15 * slip, (o.look?.[1] ?? -0.05) - 0.1 * slip], lidRelax: 0.45 });
+  // the slip: rolls a little onto its side
+  p.rig.rotation = [p.rig.rotation[0], p.rig.rotation[1], (p.rig.rotation[2] || 0) + 0.18 * slip * strength];
+  return p;
+}
+
+/**
+ * The fire posture (1.10 / 1F): head low and forward along the line of fire, a deep inhale
+ * first (the chest rises), the jaw opening to 25-30 deg, then the jet (fire.js). o.t = time
+ * from the command; o.aim = [yaw, pitch].
+ */
+export function fire(c, o = {}) {
+  const t = o.t ?? 0;
+  const inhale = smooth(0, 0.8, t) * (1 - smooth(0.9, 1.2, t));
+  const open = smooth(0.75, 1.0, t) * (o.gape ?? 0.48);
+  const aim = o.aim || [0, 0];
+  const p = stand(c, { ...o, t, breathe: 0, neckRise: (o.neckRise ?? 0.22), neckTop: o.neckTop ?? 0.0, headPitch: (o.headPitch ?? -0.1) + aim[1], look: [aim[0], 0], jaw: open, blink: false, lidRelax: 0.45 });
+  const k = 1 + 0.05 * inhale;
+  p.scale.rib_thorax = [k, 1 + 0.07 * inhale, 1];
+  p.scale.rib_body = [1 + 0.035 * inhale, 1 + 0.045 * inhale, 1];
+  return p;
+}
+
+// ----------------------------------------------------------------- air
+/**
+ * Flapping at cycle position cyc (0..1, 0 = top of the upstroke). The downstroke takes `down`
+ * of the cycle with the wing pronated (leading edge down); on the upstroke the elbow and wrist
+ * flex and the hand sweeps up and back; fingers spread on the downstroke.
+ */
+function wingFlap(pb, cyc, o = {}) {
+  const D = o.down ?? 0.57;
+  const amp = o.amp ?? 0.8, center = o.center ?? 0.08;
+  const nF = pb.c.anatomy.wings[0].fingers.length;
+  const phiOf = (cy) => { const c2 = fract(cy); return c2 < D ? Math.PI * c2 / D : Math.PI + Math.PI * (c2 - D) / (1 - D); };
+  const phi = phiOf(cyc);
+  const elev = center + amp * Math.cos(phi);
+  const sweep = -0.12 * Math.sin(phi);
+  const pron = 0.2 * Math.sin(phi);
+  const pu = phiOf(cyc - 0.06);
+  const up = pu > Math.PI ? Math.sin(pu - Math.PI) : 0;
+  const pd = phiOf(cyc - 0.03);
+  const downSpread = pd < Math.PI ? Math.sin(pd) : 0;
+  const asym = o.asym ?? 0;
+  const flex = o.flex ?? 1;
+  for (const [sd, s] of sides) {
+    const k = sd === 'L' ? 1 + asym : 1 - asym;
+    pb.add(`w_${sd}_0`, pron, s * (sweep + 0.16 * up * flex), s * elev * k, 'YZX');
+    pb.add(`w_${sd}_1`, 0, s * (-0.5 * up * flex - 0.04), s * (0.22 * up * flex), 'YZX');
+    pb.add(`w_${sd}_2`, 0, s * (0.7 * up * flex + 0.03), s * (-0.32 * up * flex), 'YZX');
+    for (let d = 0; d < nF; d++) {
+      const f = nF > 1 ? d / (nF - 1) : 0;
+      pb.add(`w_${sd}_f${d}_0`, 0.04 * f * downSpread, s * (0.3 * f * up * flex - 0.05 * f * downSpread), s * (-0.05 * up * f), 'YZX');
+      // the outer phalanges bend a little up at the bottom of the downstroke (load), back on the upstroke
+      pb.add(`w_${sd}_f${d}_1`, 0, s * 0.06 * up * flex, s * 0.04 * downSpread, 'YZX');
+    }
+  }
+  pb.u.billowL = 0.6 * downSpread - 0.35 * up;
+  pb.u.billowR = 0.6 * downSpread - 0.35 * up;
+  return { phi, up, downSpread };
+}
+
+/** Legs carried in flight: trailing back under the tail (the rest pose), toes curled, a little stroke-coupled motion. */
+function flightLegs(pb, o = {}) {
+  const k = o.tuck ?? 1;
+  const s = o.stroke ?? 0;
+  pb.sym('hl_#_0', -0.06 * s, 0, 0);
+  pb.sym('hl_#_1', 0.05 * s, 0, 0);
+  for (let i = 0; i < 4; i++) pb.sym(`hl_#_t${i}`, i === 0 ? -0.3 * k : 0.55 * k, 0, 0);
 }
 
 /** Flapping flight. Tempo from the creature's size (config.flapHz) unless o.hz is given. */
@@ -394,72 +621,246 @@ export function flight(c, o = {}) {
   const pb = new PB(c);
   const hz = o.hz ?? c.config.flapHz ?? 1;
   const cyc = fract(t * hz + (o.phase ?? 0));
-  const corr = o.corr ?? 0;            // corrective unevenness (Leaf), 0..1
-  const asym = corr * 0.18 * wob(t * hz * 0.7, 5);
+  const corr = o.corr ?? 0;
+  const asym = corr * 0.16 * wob(t * hz * 0.7, 5);
   const ampJ = 1 + corr * 0.15 * wob(t * hz * 0.9, 6);
-  const w = wingFlap(pb, cyc, { amp: (o.amp ?? c.config.flapAmp ?? 0.8) * ampJ, center: o.center ?? 0.12, asym });
-  tuckLegs(pb, 1);
-  tailStraight(pb, 1);
-  // body: lifted during the downstroke, slight pitch oscillation; the neck
-  // counters it so the head stays steady (as flying animals do)
+  const w = wingFlap(pb, cyc, { amp: (o.amp ?? c.config.flapAmp ?? 0.8) * ampJ, center: o.center ?? 0.06, asym, flex: o.flex });
+  flightLegs(pb, { stroke: Math.cos(w.phi) });
+  // the body: lifted during the downstroke, a slight pitch oscillation; the neck keeps the head steady
   const bob = Math.sin(w.phi - 0.7);
-  const pitch = 0.05 * Math.cos(w.phi);
-  pb.rig.position = [0, -(o.bobAmp ?? 0.012) * c.L * bob, 0];
-  pb.rig.rotation = [(o.bodyPitch ?? 0) + pitch, 0, o.bank ?? 0];
-  carriage(pb, -0.2, 0.05);
+  const pitch = 0.04 * Math.cos(w.phi);
+  pb.rig.position = [0, -(o.bobAmp ?? 0.01) * c.L * bob, 0];
+  pb.rig.rotation = [(o.bodyPitch ?? 0) + pitch, o.yaw ?? 0, o.bank ?? 0];
+  neckCurve(pb, (o.neckBase ?? 0.12), (o.neckTop ?? 0.06), (o.headPitch ?? -0.05), -((o.bodyPitch ?? 0) + pitch));
   const lk = o.look || [0, 0];
-  look(pb, lk[0], lk[1] - pitch * 0.9 - (o.bodyPitch ?? 0) * 0.6, -(o.bank ?? 0) * 0.5);
-  jaw(pb, o.jaw ?? 0);
-  eyes(pb, ...(o.eyes || [0, 0]));
-  lids(pb, t, { ...o, lidRelax: 0.3 });
-  breathe(pb, t, hz * 0.5, 0.02);
+  look(pb, lk[0], lk[1], -(o.bank ?? 0) * 0.5);
+  common(pb, { ...o, lidRelax: o.lidRelax ?? 0.3 }, t);
+  breathe(pb, t, hz * 0.5, 0.018);
   const ts = tailNames(c);
   ts.forEach((n, i) => {
     const f = i / (ts.length - 1);
-    pb.add(n, (0.05 * Math.sin(w.phi - 1.2 - i * 0.25)) * f * 2 / ts.length * 4 - 0.04 / ts.length, (o.bank ?? 0) * 0.6 * f * 2 / ts.length, 0);
+    pb.add(n, 0.05 * Math.sin(w.phi - 1.2 - i * 0.25) * f * 8 / ts.length - 0.03 / ts.length, (o.bank ?? 0) * 0.6 * f * 2 / ts.length, 0);
   });
   return pb.out({ ground: false });
 }
 
-/** Glide: wings held out with slight dihedral, small corrections; bank rolls the body. */
+/** Glide: wings held out with dihedral at the arm and a droop at the hand, small corrections; bank rolls the body. */
 export function glide(c, o = {}) {
   const t = o.t ?? 0;
   const pb = new PB(c);
   const bank = o.bank ?? 0;
-  const cr = (o.corr ?? 1) * 0.04;
-  for (const sd of ['L', 'R']) {
-    const s = sd === 'L' ? 1 : -1;
+  const cr = (o.corr ?? 1) * 0.03;
+  const nF = c.anatomy.wings[0].fingers.length;
+  for (const [sd, s] of sides) {
     const inner = (bank > 0) === (sd === 'L') ? Math.abs(bank) : 0;    // inner wing of the turn flexes a little
-    pb.add(`w_${sd}_0`, 0.04 + cr * wob(t * 0.8, sd === 'L' ? 1 : 2), s * (0.04 + 0.15 * inner), s * ((o.dihedral ?? 0.12) + cr * wob(t * 0.6, sd === 'L' ? 3 : 4) - 0.2 * inner), 'YZX');
-    pb.add(`w_${sd}_1`, 0, s * (-0.06 - 0.2 * inner), 0, 'YZX');
-    pb.add(`w_${sd}_2`, 0, s * (0.05 + 0.25 * inner), 0, 'YZX');
+    pb.add(`w_${sd}_0`, 0.03 + cr * wob(t * 0.8, sd === 'L' ? 1 : 2), s * (0.03 + 0.14 * inner), s * ((o.dihedral ?? 0.1) + cr * wob(t * 0.6, sd === 'L' ? 3 : 4) - 0.18 * inner), 'YZX');
+    pb.add(`w_${sd}_1`, 0, s * (-0.05 - 0.2 * inner), 0, 'YZX');
+    pb.add(`w_${sd}_2`, 0, s * (0.04 + 0.24 * inner), s * -(o.droop ?? 0.05), 'YZX');
+    for (let d = 0; d < nF; d++) pb.add(`w_${sd}_f${d}_1`, 0, 0, s * -0.03, 'YZX');
   }
   pb.u.billowL = 0.35; pb.u.billowR = 0.35;
-  tuckLegs(pb, 1);
-  tailStraight(pb, 1);
-  pb.rig.rotation = [o.bodyPitch ?? 0, 0, bank];
-  carriage(pb, -0.2, 0.05);
+  flightLegs(pb, {});
+  pb.rig.rotation = [o.bodyPitch ?? 0, o.yaw ?? 0, bank];
+  neckCurve(pb, (o.neckBase ?? 0.1), (o.neckTop ?? 0.05), (o.headPitch ?? -0.05), -(o.bodyPitch ?? 0));
   const lk = o.look || [0, 0];
-  look(pb, lk[0] + 0.02 * wob(t * 0.4, 7), lk[1] - (o.bodyPitch ?? 0) * 0.6, -bank * 0.55);
-  jaw(pb, o.jaw ?? 0);
-  eyes(pb, ...(o.eyes || [0, 0]));
-  lids(pb, t, { ...o, lidRelax: 0.3 });
+  look(pb, lk[0] + 0.02 * wob(t * 0.4, 7), lk[1], -bank * 0.55);
+  common(pb, { ...o, lidRelax: o.lidRelax ?? 0.3 }, t);
   breathe(pb, t, 0.25, 0.015);
   const ts = tailNames(c);
   ts.forEach((n, i) => { const f = i / (ts.length - 1); pb.add(n, 0.01 * Math.sin(t * 0.9 - i * 0.2) * f, bank * 0.7 * f * 2 / ts.length, 0); });
   return pb.out({ ground: false });
 }
 
-/** Dive with the wings partly folded (Starlight's attack). fold 0..1. */
+/**
+ * The stoop (Starlight's dive-bomb, 3C): wings half folded into an "M" - elbows in, the hands
+ * swept back (a peregrine's / gannet's stoop). o.fold 0 (glide) .. 1 (tight).
+ */
 export function dive(c, o = {}) {
-  const p = glide(c, { ...o, dihedral: 0.0 });
+  const f = clamp(o.fold ?? 0.6, 0, 1);
+  const p = glide(c, { ...o, dihedral: 0.04 });
   const pb = new PB(c);
-  Object.assign(pb.e, JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(p.bones).filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, v.slice(0, 3)])))));
-  for (const [k, v] of Object.entries(p.bones)) if (Array.isArray(v) && v[3]) pb.o[k] = v[3];
-  for (const [k, v] of Object.entries(p.bones)) if (!Array.isArray(v)) pb.q[k] = v.q;
-  Object.assign(pb.s, p.scale);
-  pb.u = { billowL: 0.15, billowR: 0.15 };
-  wingFold(pb, (o.fold ?? 0.55) * 0.6);
-  pb.rig = p.rig;
+  copyInto(pb, p);
+  for (const [sd, s] of sides) {
+    pb.add(`w_${sd}_0`, 0.05 * f, s * 0.75 * f, s * 0.12 * f, 'YZX');
+    pb.add(`w_${sd}_1`, 0, s * -1.05 * f, s * 0.1 * f, 'YZX');
+    pb.add(`w_${sd}_2`, 0, s * 1.15 * f, s * -0.05 * f, 'YZX');
+  }
+  pb.u.billowL = pb.u.billowR = 0.1 + 0.2 * (1 - f);
+  pb.rig = { ...p.rig };
   return pb.out({ ground: false });
+}
+
+/**
+ * The strike (Starlight over Cling, 3C): legs swung forward under the body, raptor toes spread
+ * (k 0..0.6) then closing (k -> 1); wings opened hard (the "crushing" spread); tail low.
+ */
+export function strike(c, o = {}) {
+  const t = o.t ?? 0;
+  const k = clamp(o.k ?? 0.5, 0, 1);
+  const p = flight(c, { ...o, phase: o.phase ?? 0.35, amp: (c.config.flapAmp ?? 0.7) * 0.9, bodyPitch: -(o.pitchUp ?? 0.35) });
+  const pb = new PB(c);
+  copyInto(pb, p);
+  const d = c.anatomy.dims;
+  pb.rig = { ...p.rig };
+  const F = solveFK(pb);
+  for (const [side, sd] of sides) {
+    const hip = F.P[`hl_${side}_0`];
+    // talons reach forward and down below the chest (in the body's frame)
+    const qb = F.Q.pelvis;
+    const tgt = add(hip, qRot(qb, [sd * d.hipX * 0.6, -(d.fem + d.tib) * 0.7, (d.fem + d.tib) * 0.55]));
+    legIK(pb, F, side, tgt, { mtAng: 70, fwd: qRot(qb, [sd * 0.1, -0.5, 1]), pole: qRot(qb, [sd * 0.3, 0.6, 1]), curl: mix(-0.35, 0.9, smooth(0.6, 1, k)) });
+  }
+  const ts = tailNames(c);
+  ts.forEach((n, i) => { if (i < 8) pb.add(n, 0.05, 0, 0); });
+  return pb.out({ ground: false });
+}
+
+/** The scout's sprint: short fast beats (1.4-1.6 Hz), the neck pulled back in an S, legs streamlined. */
+export function sprint(c, o = {}) {
+  return flight(c, { ...o, hz: o.hz ?? 1.5, amp: o.amp ?? 0.55, flex: 0.7, neckBase: -0.05, neckTop: 0.18, headPitch: -0.04, bobAmp: 0.005 });
+}
+
+/**
+ * Charcoal holding Leaf's head (1D): in a glide, the neck curls round so the head faces Leaf
+ * beside it (o.side 1 = to his left), the jaws open to 45 deg and close to a 25 deg holding gape
+ * (o.t from the move: 0-0.6 s turn, 0.6-1.0 open, 1.0-1.4 close and hold; o.release from
+ * which the jaws open again).
+ */
+export function mouthHold(c, o = {}) {
+  const t = o.t ?? 0;
+  const sd = o.side ?? 1;
+  const turn = smooth(0, 0.8, t) * (o.yaw ?? 1.6);
+  const rel = o.release !== undefined ? smooth(o.release, o.release + 0.4, t) : 0;
+  const gape = mix(smooth(0.6, 1.0, t) * 0.8 - smooth(1.0, 1.4, t) * (0.8 - 0.44), 0.7, rel);
+  const p = glide(c, { ...o, look: [sd * turn, (o.pitch ?? 0.05)], jaw: gape, blink: false, lidRelax: 0.35 });
+  return p;
+}
+
+// ---------------------------------------------------------- transitions
+/**
+ * Take-off (DESIGN 2.8 / 1.7), o.t from the start: (1) crouch, the chest drops between the
+ * wrists, the hind legs gather; (2) the kick and the forearms' vault; (3) the wings unfold at
+ * the top of the vault; (4) the first downstroke; (5) heavy beats in ground effect, climbing.
+ * Timing scales with size (Charcoal: crouch 1.5 s, vault 0.6 s, unfold 1.2 s). Returns the pose
+ * with rig.position = the body's travel (root frame), and pose.launch = { phase, vaultY, z }.
+ */
+export function launch(c, o = {}) {
+  const t = o.t ?? 0;
+  const s = Math.sqrt(c.L / 36);                          // time scale (dynamic similarity)
+  const T1 = 1.5 * s, T2 = T1 + 0.6 * s, T3 = T2 + 1.2 * s;
+  const hz = (c.config.flapHz ?? 0.4) * 1.12;
+  const d = c.anatomy.dims;
+  const vaultH = o.vaultH ?? d.shH * 0.8;
+  let pose, phase;
+  if (t < T1) {
+    phase = 'crouch';
+    pose = crouch(c, { ...o, t, k: smooth(0, T1, t), blink: false });
+  } else if (t < T2) {
+    phase = 'vault';
+    const u = (t - T1) / (T2 - T1);
+    const a = crouch(c, { ...o, t, k: 1 - u, blink: false });
+    const b = flight(c, { ...o, t, phase: 0.5, amp: 0.2, center: 0.6 });
+    pose = blend(c, a, b, smooth(0.35, 1, u) * 0.5);
+    pose.ground = u < 0.5;
+    pose.rig.position = [0, (u < 0.5 ? 0 : 1) * vaultH * smooth(0.3, 1, u), d.T * 0.3 * u];
+    pose.uniforms.drape = { L: ['stand', 1 - u * 0.6], R: ['stand', 1 - u * 0.6] };
+  } else {
+    // in the air: unfold to the top of the upstroke, then heavy beats, climbing slowly
+    const ta = t - T2;
+    const unfold = smooth(0, T3 - T2, ta);
+    const cyc0 = 0.0;                                  // the first beat starts at the top of the upstroke
+    const tb = Math.max(0, ta - (T3 - T2));
+    const fl = flight(c, { ...o, t: tb, hz, phase: cyc0, amp: (c.config.flapAmp ?? 0.8) * 1.15, bodyPitch: -0.28 + 0.1 * smooth(0, 6, tb) });
+    const folded = crouch(c, { ...o, t, k: 0, blink: false });
+    pose = blend(c, folded, fl, unfold);
+    pose.ground = false;
+    phase = ta < T3 - T2 ? 'unfold' : 'beats';
+    const climb = 0.5 * d.shH * tb;
+    pose.rig.position = [0, vaultH * (1 - 0.15 * smooth(0, 1.5, ta)) + climb + (pose.rig.position[1] || 0), d.T * 0.3 + d.T * 0.6 * ta + 6 * s * tb * tb * 0.3];
+    pose.uniforms.drape = { L: ['stand', (1 - unfold) * 0.4], R: ['stand', (1 - unfold) * 0.4] };
+  }
+  pose.launch = { phase, T1, T2, T3 };
+  return pose;
+}
+
+/** Landing (1.7 / 2A), o.t from the flare: flare, feet reach forward and touch, wrist pads come down, run-out. */
+export function land(c, o = {}) {
+  const t = o.t ?? 0;
+  const s = Math.sqrt(c.L / 36);
+  const T1 = 1.0 * s, T2 = T1 + 0.5 * s, T3 = T2 + 1.0 * s;
+  const d = c.anatomy.dims;
+  let pose;
+  if (t < T1) {
+    const fl = glide(c, { ...o, t, bodyPitch: -0.75 * smooth(0, T1, t), dihedral: 0.2 });
+    const r = rear(c, { ...o, t, k: 1, wingOpen: 1 });
+    pose = blend(c, fl, r, smooth(0.3 * T1, T1, t) * 0.6);
+    pose.ground = false;
+    pose.rig.position = [0, d.hipH * (1.0 - smooth(0, T1, t)), -d.T * (1 - t / T1)];
+  } else if (t < T2) {
+    pose = rear(c, { ...o, t, k: 1 - 0.5 * smooth(T1, T2, t), wingOpen: 1 - smooth(T1, T2, t) * 0.6 });
+  } else {
+    const u = smooth(T2, T3, t);
+    const r = rear(c, { ...o, t, k: 0.5 * (1 - u), wingOpen: 0.4 * (1 - u) });
+    const st = stand(c, { ...o, t });
+    pose = blend(c, r, st, u);
+    pose.ground = true;
+  }
+  return pose;
+}
+
+// --------------------------------------------------------------- blending
+function toQuatMap(c, p) {
+  const out = {};
+  for (const [n, v] of Object.entries(p.bones || {})) {
+    if (v.q) out[n] = v.q;
+    else out[n] = qEuler(v[0] || 0, v[1] || 0, v[2] || 0, v[3] || 'XYZ');
+  }
+  return out;
+}
+/** Blend two poses (bone rotations slerped, rig and scales lerped, uniforms lerped). w = 0 -> a, 1 -> b. */
+export function blend(c, a, b, w) {
+  const qa = toQuatMap(c, a), qb = toQuatMap(c, b);
+  const bones = {};
+  for (const n of new Set([...Object.keys(qa), ...Object.keys(qb)])) bones[n] = { q: qSlerp(qa[n] || QI(), qb[n] || QI(), w) };
+  const scl = {};
+  for (const n of new Set([...Object.keys(a.scale || {}), ...Object.keys(b.scale || {})])) {
+    const x = (a.scale || {})[n] || [1, 1, 1], y = (b.scale || {})[n] || [1, 1, 1];
+    scl[n] = [mix(x[0], y[0], w), mix(x[1], y[1], w), mix(x[2], y[2], w)];
+  }
+  const ra = a.rig || {}, rb = b.rig || {};
+  const qra = ra.quaternion || qEuler(...(ra.rotation || [0, 0, 0]), 'YXZ'), qrb = rb.quaternion || qEuler(...(rb.rotation || [0, 0, 0]), 'YXZ');
+  const pa = ra.position || [0, 0, 0], pbp = rb.position || [0, 0, 0];
+  const ua = a.uniforms || {}, ub = b.uniforms || {};
+  const uniforms = {};
+  for (const k of ['billowL', 'billowR']) uniforms[k] = mix(ua[k] ?? 0, ub[k] ?? 0, w);
+  const da = ua.drape || {}, db = ub.drape || {};
+  uniforms.drape = {};
+  for (const s of ['L', 'R']) {
+    const ea = da[s], eb = db[s];
+    const kind = (w < 0.5 ? (ea || eb) : (eb || ea))?.[0] ?? 'stand';
+    uniforms.drape[s] = [kind, mix(ea ? ea[1] : 0, eb ? eb[1] : 0, w)];
+  }
+  return { bones, scale: scl, rig: { quaternion: qSlerp(qra, qrb, w), position: [mix(pa[0], pbp[0], w), mix(pa[1], pbp[1], w), mix(pa[2], pbp[2], w)] }, uniforms,
+    ground: w < 0.5 ? a.ground : b.ground, groundTail: w < 0.5 ? a.groundTail : b.groundTail, groundBody: w < 0.5 ? a.groundBody : b.groundBody };
+}
+
+function copyInto(pb, p) {
+  for (const [k, v] of Object.entries(p.bones)) {
+    if (Array.isArray(v)) { pb.e[k] = v.slice(0, 3); if (v[3]) pb.o[k] = v[3]; } else pb.q[k] = v.q;
+  }
+  Object.assign(pb.s, p.scale);
+  pb.u = { ...p.uniforms };
+}
+
+/** World (root-frame) contact points of a posed creature: feet and wrist pads (for footprints, dust). */
+export function contactsOf(c) {
+  const out = [];
+  const inv = new THREE.Matrix4().copy(c.root.matrixWorld).invert();
+  for (const ct of c.anatomy.contacts) {
+    const b = c.bones[c.boneIndex[ct.bone]];
+    if (!b) continue;
+    const v = new THREE.Vector3(...ct.off).applyMatrix4(b.matrixWorld);
+    out.push({ bone: ct.bone, world: v.clone(), local: v.clone().applyMatrix4(inv), wrist: ct.wrist });
+  }
+  return out;
 }

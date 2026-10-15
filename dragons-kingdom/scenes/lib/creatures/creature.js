@@ -26,22 +26,21 @@ import { add, sub, scale, norm, cross, dot, len, clamp } from './sdf.js';
 const deg = Math.PI / 180;
 
 /**
- * The Episode 1 dragons. Every one is its OWN design (DRAGONS.md, 2026-10-09: no species);
- * `design` names its preset in anatomy.js DESIGNS. Lengths are snout to tail tip (metres):
- * Charcoal ~36 m (provisional), Leaf about 25% of Charcoal (approved: 9.0 m), Starlight the
- * 51 m "on-screen" reading (OPEN QUESTION: the screenplay says "about twice Charcoal's size";
- * 51 m is 1.41x his length, i.e. ~2.8x his mass - see README), the newborn hatchling, the scout.
+ * The Episode 1 dragons. Every one is its OWN design (DRAGONS.md: no species; two legs, the
+ * wings are the front limbs, horns), built to DESIGN.md; `design` names its preset in
+ * anatomy.js DESIGNS. Lengths (snout to tail tip): Charcoal 36 m (canon ~36), Leaf 9 m (25% of
+ * Charcoal, canon), Starlight 72 m (proposed: twice Charcoal's length - open question 9.1),
+ * the hatchling 1.0 m and the scout 6.8 m (proposed). flapHz: Pennycuick 1990 (DESIGN 1.7);
+ * flapAmp: half the peak-to-peak stroke (rad).
  */
 export const CREATURES = {
-  charcoal: { design: 'charcoal', L: 35.8, look: 'charcoal', flapHz: 0.62, flapAmp: 0.7, scaleMul: 0.6, title: 'Charcoal (Remi\'s dragon)' },
-  leaf: { design: 'leaf', L: 9.0, look: 'leaf', flapHz: 1.4, flapAmp: 0.85, scaleMul: 0.78, limbScaleMul: 0.72, title: 'Leaf (Abby\'s dragon, not fully grown)' },
-  starlight: { design: 'starlight', L: 50.6, look: 'starlight', flapHz: 0.42, flapAmp: 0.62, scaleMul: 0.55, limbScaleMul: 0.72, title: 'Starlight (Queen Fall\'s dragon, albino)' },
-  // (tiny damp wings pressed flat on the back and upper flank, fingers only a little curled)
-  hatchling: { design: 'hatchling', L: 0.42, look: 'gold', flapHz: 0, scaleMul: 0.72, title: 'The gold hatchling (newborn)',
-    fold: { humerus: [0.55, 0.05, -0.83], forearm: [-0.15, -0.1, 0.98], hand: [0.35, -0.2, -0.92] }, fingerFold: [2.4, 0.4],
+  charcoal: { design: 'charcoal', L: 36, look: 'charcoal', flapHz: 0.42, flapAmp: 0.74, scaleMul: 0.6, title: 'Charcoal (Remi\'s dragon)' },
+  leaf: { design: 'leaf', L: 9.0, look: 'leaf', flapHz: 0.8, flapAmp: 0.92, scaleMul: 0.66, limbScaleMul: 0.8, title: 'Leaf (Abby\'s dragon, not fully grown)' },
+  starlight: { design: 'starlight', L: 72, look: 'starlight', flapHz: 0.24, flapAmp: 0.65, scaleMul: 0.4, limbScaleMul: 0.8, resMul: 1.35, title: 'Starlight (Queen Fall\'s dragon, albino)' },
+  hatchling: { design: 'hatchling', L: 1.0, look: 'gold', flapHz: 0, flapAmp: 0, scaleMul: 1.0, title: 'The gold hatchling (newborn)',
     // (the newborn's damp membrane stays loose and crumpled over the folded hand)
-    drapeOpts: { lie: { shrink: 0.5, gravity: 0.02 }, stand: { shrink: 0.5, gravity: 0.02 } } },
-  scout: { design: 'scout', L: 5.6, look: 'scout', flapHz: 2.6, flapAmp: 0.9, detachableLeftWing: true, title: 'The scout (Episode 1)' },
+    drapeOpts: { lie: { shrink: 0.5, gravity: 0.02 }, stand: { shrink: 0.5, gravity: 0.02 }, crouch: { shrink: 0.5, gravity: 0.02 } } },
+  scout: { design: 'scout', L: 6.8, look: 'scout', flapHz: 1.1, flapAmp: 0.83, scaleMul: 0.55, detachableLeftWing: true, title: 'The scout (Episode 1)' },
 };
 
 const QUALITY = {
@@ -61,18 +60,16 @@ export async function createCreature(which, opts = {}) {
   const q = QUALITY[opts.quality || 'standard'];
   const spec = cfg.spec || DESIGNS[cfg.design];
   if (!spec) throw new Error(`unknown design ${cfg.design}`);
-  const L = cfg.L;
   // scale size multiplier: a giant reads immense when its scales are fine relative to its body
   const SM = opts.scaleMul ?? cfg.scaleMul ?? 1;
   const t0 = nowMs();
-  const anat = buildAnatomy(spec, L, { omitWing: cfg.detachableLeftWing ? { L: true } : {} });
-  if (spec.hornScale) for (const k of anat.keratin) if (k.kind === 'horn') {
-    const [p0, p1, p2] = k.points;
-    k.points = [p0, add(p0, scale(sub(p1, p0), spec.hornScale)), add(p0, scale(sub(p2, p0), spec.hornScale))];
-    k.radii = k.radii.map((r) => r * (0.6 + 0.4 * spec.hornScale));
-  }
+  const anat = buildAnatomy(spec, cfg.L, { omitWing: cfg.detachableLeftWing ? { L: true } : {} });
+  const L = anat.L;
 
   // ---------------------------------------------------------------- bones
+  // Two skeletons share the bones: `skeleton` binds in the REST pose (wings spread, legs trailing:
+  // membranes and finger tubes are built there), `skeletonSculpt` binds in the SCULPT pose (legs
+  // standing, wing-arms half folded: the body mesh and every solid part are built there).
   const boneIndex = {};
   const bones = anat.bones.map((b, i) => { boneIndex[b.name] = i; const bone = new THREE.Bone(); bone.name = b.name; return bone; });
   anat.bones.forEach((b, i) => {
@@ -92,13 +89,29 @@ export async function createCreature(which, opts = {}) {
   rig.add(rootBone);
   root.updateMatrixWorld(true);
   const skeleton = new THREE.Skeleton(bones);
+  for (const [n, qq] of Object.entries(anat.sculptLocal)) bones[boneIndex[n]].quaternion.set(qq[0], qq[1], qq[2], qq[3]);
+  root.updateMatrixWorld(true);
+  const skeletonSculpt = new THREE.Skeleton(bones);
+  for (const b of bones) b.quaternion.identity();
+  root.updateMatrixWorld(true);
 
   // ---------------------------------------------------------------- body
-  const h = L / q.res;
-  const H = anat.head.H, hf = anat.head.frame;
-  const headPts = [anat.head.W(0, 0, -0.25), anat.head.W(0, 0, 1.08), anat.head.W(0.35, 0.3, 0.4), anat.head.W(-0.35, -0.35, 0.4), anat.head.W(0, -0.3, 0.9)];
-  const hb = boxOf(headPts, H * 0.08);
+  const h = L / (q.res * (cfg.resMul ?? 1));
+  const H = anat.head.H;
+  const headPts = [anat.head.W(0, 0, -0.25), anat.head.W(0, 0, 1.08), anat.head.W(0.4, 0.35, 0.4), anat.head.W(-0.4, -0.38, 0.4), anat.head.W(0, -0.32, 0.9)];
+  const hb = boxOf(headPts, H * 0.1);
   const regions = [{ min: hb[0], max: hb[1], h: h / q.headMul }];
+  // finer cells where the animal meets the ground and close-ups look: feet, wrist pads, thumbs
+  for (const lg of anat.legs) {
+    const pts = [lg.sculpt.ankle, lg.sculpt.ball, ...lg.toes.map((tn) => anat.chains[tn].points[2])];
+    const bb = boxOf(pts, anat.dims.rLeg[3] * 1.6);
+    regions.push({ min: bb[0], max: bb[1], h: h / 1.7 });
+  }
+  for (const w of anat.wings) {
+    const P = anat.sculptPos[`${w.prefix}_1`] ? anat.chains[w.prefix].points[2] : w.wrist;
+    const bb = boxOf([P], anat.dims.wristR * 3.2);
+    regions.push({ min: bb[0], max: bb[1], h: h / 1.7 });
+  }
   const mesh = polygonize(anat.sdf, { h, regions });
   log(`[creature ${root.name}] mesh ${mesh.stats.vertices} v / ${mesh.stats.triangles} t, grid ${mesh.stats.NX}x${mesh.stats.NY}x${mesh.stats.NZ}, ${mesh.stats.msTotal} ms`);
   const oral = makeOralTest(anat);
@@ -110,7 +123,7 @@ export async function createCreature(which, opts = {}) {
   });
   log(`[creature ${root.name}] skin ${nowMs() - t0} ms total so far, chains N=${JSON.stringify(Object.fromEntries(sk.chainNames.map((c, i) => [c, sk.chainN[i]])))}`);
 
-  const mats = makeMaterials(THREE, opts.look ?? cfg.look, { L, anat, spec, eyeRadius: anat.eyes[0].radius, zones: { withersZ: anat.bonePos.neck_0[2], pelvisZ: anat.bonePos.pelvis[2] } });
+  const mats = makeMaterials(THREE, opts.look ?? cfg.look, { L, anat, spec: anat.spec, eyeRadius: anat.eyes[0].radius, zones: { withersZ: anat.bonePos.neck_0[2], pelvisZ: anat.bonePos.pelvis[2] } });
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(sk.positions, 3));
@@ -126,25 +139,29 @@ export async function createCreature(which, opts = {}) {
   geo.setIndex(new THREE.BufferAttribute(sk.index, 1));
   const body = new THREE.SkinnedMesh(geo, mats.skin);
   body.name = `${root.name}:body`;
+  body.userData.sculpt = true;
   const meshes = [body];
 
-  // ---------------------------------------------------------- rigid parts
-  const ker = keratin(anat.keratin.filter((k) => k.kind !== 'tooth' && k.kind !== 'gum'), boneIndex);
+  // ---------------------------------------------------------- rigid parts (sculpt space)
+  const ker = keratin(anat.keratin.filter((k) => k.kind !== 'tooth' && k.kind !== 'gum' && !(cfg.detachableLeftWing && k.side === 'L')), boneIndex);
   weldNormals(ker);
-  meshes.push(partMesh(THREE, ker, mats.keratin, `${root.name}:keratin`, { aKer: ker.extra }));
+  const kerMesh = partMesh(THREE, ker, mats.keratin, `${root.name}:keratin`, { aKer: ker.extra });
+  kerMesh.userData.sculpt = true;
+  meshes.push(kerMesh);
   const teeth = keratin(anat.keratin.filter((k) => k.kind === 'tooth' || k.kind === 'gum'), boneIndex);
   weldNormals(teeth);
-  meshes.push(partMesh(THREE, teeth, mats.teeth, `${root.name}:teeth`, { aKer: teeth.extra }));
+  const teethMesh = partMesh(THREE, teeth, mats.teeth, `${root.name}:teeth`, { aKer: teeth.extra });
+  teethMesh.userData.sculpt = true;
+  meshes.push(teethMesh);
 
-  // fingers (skin material, plain tubes; their own small mesh with the skin shader's tube mode)
+  // fingers (skin material, plain tubes; REST space, bound with the rest skeleton)
   const fingerItems = [];
   for (const w of anat.wings) for (const f of w.fingers) fingerItems.push({ points: f.points, radii: f.radii, names: f.names, side: w.side });
-  const wingLeftParts = { fingers: [], membrane: null };
-  const fing = tubes(fingerItems.filter((f) => !(cfg.detachableLeftWing && f.side === 'L')), boneIndex, { around: 12, segPer: 10 });
+  const fing = tubes(fingerItems.filter((f) => !(cfg.detachableLeftWing && f.side === 'L')), boneIndex, { around: 14, segPer: 12 });
   weldNormals(fing);
   meshes.push(skinPartMesh(THREE, fing, mats.finger, `${root.name}:fingers`, 'tube', 0, L));
 
-  // eyes and lids
+  // eyes and lids (head bones: the same in both binds)
   const eyeData = [];
   for (const e of anat.eyes) {
     const gz = norm(e.look), gx = norm(cross(e.up, gz)), gy = cross(gz, gx);
@@ -171,8 +188,6 @@ export async function createCreature(which, opts = {}) {
     const eg = mergeParts(parts);
     meshes.push(partMesh(THREE, eg, mats.eye, `${root.name}:eyes`, { aEye: eg.extra, aEyeX: mergeAttr(parts, 'ax', 4), aEyeZ: mergeAttr(parts, 'az', 4) }));
     const lids = [];
-    // (spec.lid.none: no separate lid shells - the newborn's eye sits in a soft socket of head
-    // skin; thin lid shells over its big domed eye read as gold caps clamped on)
     if (!spec.lid?.none) for (const e of eyeData) for (const up of [true, false]) {
       const g = eyelid(up, { rIn: spec.lid?.rIn ?? 1.07, rOut: spec.lid?.rOut ?? 1.25, span: spec.lid?.span ?? 1.32, reach: up ? (spec.lid?.reachU ?? 1.0) : (spec.lid?.reachL ?? 0.88) });
       transformPart(g, e.toWorld, e.toWorldN, boneIndex[up ? e.lidU : e.lidL]);
@@ -184,7 +199,7 @@ export async function createCreature(which, opts = {}) {
     }
   }
 
-  // wing membranes (one mesh per wing: each gets its own folded-drape morph targets)
+  // wing membranes (one mesh per wing, REST space: each gets its own folded-drape morph targets)
   const membraneRes = L * q.membraneRes;
   const memMeshes = [];
   for (const w of anat.wings) {
@@ -198,13 +213,13 @@ export async function createCreature(which, opts = {}) {
     memMeshes.push(mm);
   }
 
-  // detachable LEFT wing (scout): its own SDF arm, fingers and membrane on the same skeleton
+  // detachable LEFT wing (scout): its own SDF arm (sculpt space), fingers and membrane (rest)
   let detachable = null;
   if (cfg.detachableLeftWing) {
     const w = anat.wings.find((x) => x.side === 'L');
     const wmesh = polygonize(w.detachedSDF.compile(), { h: h * 0.8 });
     const wanat = { ...anat, sdf: w.detachedSDF, chains: { [w.prefix]: anat.chains[w.prefix] } };
-    const wsk = computeSkin(wanat, wmesh, boneIndex, { scaleSize: { limb: spec.scale.body * L * 0.55 }, ao: { step: L * 0.004, n: 4 } });
+    const wsk = computeSkin(wanat, wmesh, boneIndex, { scaleSize: { limb: spec.scale.body * L * 0.55 * SM }, ao: { step: L * 0.004, n: 4 } });
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(wsk.positions, 3));
     g.setAttribute('normal', new THREE.BufferAttribute(wsk.normals, 3));
@@ -219,40 +234,44 @@ export async function createCreature(which, opts = {}) {
     g.setIndex(new THREE.BufferAttribute(wsk.index, 1));
     const arm = new THREE.SkinnedMesh(g, mats.skin);
     arm.name = `${root.name}:wingL-arm`;
-    const fl = tubes(fingerItems.filter((f) => f.side === 'L'), boneIndex, { around: 12, segPer: 10 });
+    arm.userData.sculpt = true;
+    const kL = keratin(anat.keratin.filter((k) => k.side === 'L'), boneIndex);
+    weldNormals(kL);
+    const kLm = partMesh(THREE, kL, mats.keratin, `${root.name}:wingL-claw`, { aKer: kL.extra });
+    kLm.userData.sculpt = true;
+    const fl = tubes(fingerItems.filter((f) => f.side === 'L'), boneIndex, { around: 14, segPer: 12 });
     weldNormals(fl);
     const fm = skinPartMesh(THREE, fl, mats.finger, `${root.name}:wingL-fingers`, 'tube', 0, L);
     // the membrane's body edge rides on the wing root, so the whole membrane tears away with the wing
-    const mem = membrane({ ...w, attachBones: [`${w.prefix}_0`, `${w.prefix}_0`, `${w.prefix}_0`] }, boneIndex, { res: membraneRes });
+    const mem = membrane({ ...w, attachBones: w.attachBones.map(() => `${w.prefix}_0`) }, boneIndex, { res: membraneRes });
     const mgeo = partGeometry(THREE, { ...mem, extra: mem.wing }, { aWing: mem.wing, aEdge: mem.edge, aBGrad: mem.bgrad });
     const mm = new THREE.SkinnedMesh(mgeo, mats.membraneTorn);
     mm.name = `${root.name}:wingL-membrane`;
     mm.userData.side = 'L';
     memMeshes.push(mm);
-    detachable = { side: 'L', meshes: [arm, fm, mm], rootBone: bones[boneIndex[`${w.prefix}_0`]] };
-    meshes.push(arm, fm, mm);
+    detachable = { side: 'L', meshes: [arm, kLm, fm, mm], rootBone: bones[boneIndex[`${w.prefix}_0`]] };
+    meshes.push(arm, kLm, fm, mm);
   }
 
   for (const m of meshes) {
     m.castShadow = true; m.receiveShadow = true;
     m.frustumCulled = false;          // bones move vertices far from the bind pose
     root.add(m);
-    m.bind(skeleton, new THREE.Matrix4());
+    m.bind(m.userData.sculpt ? skeletonSculpt : skeleton, new THREE.Matrix4());
   }
   root.updateMatrixWorld(true);
 
   const creature = {
-    name: root.name, config: cfg, spec, L, root, rig, skeleton, bones, boneIndex, anatomy: anat, materials: mats, meshes, detachable,
+    name: root.name, config: cfg, spec: anat.spec, L, root, rig, skeleton, skeletonSculpt, bones, boneIndex, anatomy: anat, materials: mats, meshes, detachable,
     eyes: eyeData, stats: { vertices: sk.positions.length / 3, triangles: sk.index.length / 3, buildMs: nowMs() - t0, mesh: mesh.stats },
     restPos: Object.fromEntries(anat.bones.map((b) => [b.name, b.pos])),
     /** Pose: see pose.js. Pure function of its argument. */
     setPose(p) { applyPose(creature, p); setDrape(memMeshes, p.uniforms && p.uniforms.drape); return creature; },
     membranes: memMeshes,
     /**
-     * Detachable LEFT wing (the scout). attachWing() puts the wing's
-     * bone subtree back on the thorax; detachWing(parent, worldMatrix) moves it
-     * under `parent` (usually the scene) with the given world matrix, so it
-     * can tumble away on its own. Pure: callers compute the matrix from t.
+     * Detachable LEFT wing (the scout). attachWing() puts the wing's bone subtree back on the
+     * thorax; detachWing(parent, worldMatrix) moves it under `parent` (usually the scene) with
+     * the given world matrix, so it can tumble away on its own. Pure: callers compute the matrix.
      */
     attachWing() {
       if (!detachable) return;
@@ -260,7 +279,7 @@ export async function createCreature(which, opts = {}) {
       if (rb.parent !== th) th.add(rb);
       const rp = creature.restPos[rb.name], tp = creature.restPos.thorax;
       rb.position.set(rp[0] - tp[0], rp[1] - tp[1], rp[2] - tp[2]);
-      mats.setPoseUniforms({ wound: { center: rp, radius: L * 0.03, amount: 0 }, tear: 0 });
+      mats.setPoseUniforms({ wound: { center: rp, radius: anat.dims.rA[0] * 1.3, amount: 0 }, tear: 0 });
     },
     detachWing(parent, worldMatrix) {
       if (!detachable) return;
@@ -270,16 +289,20 @@ export async function createCreature(which, opts = {}) {
       const local = new THREE.Matrix4().copy(parent.matrixWorld).invert().multiply(worldMatrix);
       local.decompose(rb.position, rb.quaternion, rb.scale);
       rb.updateMatrixWorld(true);
-      mats.setPoseUniforms({ wound: { center: creature.restPos[rb.name], radius: L * 0.03, amount: 1 }, tear: 1 });
+      mats.setPoseUniforms({ wound: { center: creature.restPos[rb.name], radius: anat.dims.rA[0] * 1.3, amount: 1 }, tear: 1 });
     },
   };
-  // folded-wing drapes: relax each membrane in the standing, sitting and lying folds (drape.js).
-  // The elastic skin contracts hard (shrink ~0.26-0.3) and hardly sags (gravity ~0): it pleats
-  // tight between the bundled fingers - a slack skirt hanging to the knee read as a tarp.
-  // cfg.drapeOpts = { stand|sit|lie: { shrink, gravity } } overrides per dragon.
+  // folded-wing drapes: relax each membrane in the ground folds (drape.js). The elastic skin
+  // contracts hard (elastin: shrink ~0.26-0.3) and hardly sags (gravity ~0): it pleats tight
+  // between the bundled fingers - a slack skirt read as a tarp.
+  // cfg.drapeOpts = { stand|sit|lie|crouch: { shrink, gravity } } overrides per dragon.
   if (opts.drape !== false) {
     const td = nowMs();
-    const variants = { stand: (c) => P.stand(c, { t: 0, blink: false, breathe: 0 }), sit: (c) => P.sit(c, { t: 0, blink: false, breathe: 0 }), lie: (c) => P.lie(c, { t: 0, blink: false, breathe: 0 }) };
+    const variants = {
+      stand: (c) => P.stand(c, { t: 0, blink: false, breathe: 0, drapeBuild: true }),
+      sit: (c) => P.sit(c, { t: 0, blink: false, breathe: 0, drapeBuild: true }),
+      lie: (c) => P.lie(c, { t: 0, blink: false, breathe: 0, drapeBuild: true }),
+    };
     const names = Object.keys(variants);
     const res = {};
     for (const mm of memMeshes) res[mm.uuid] = { pos: [], nrm: [] };
@@ -287,7 +310,7 @@ export async function createCreature(which, opts = {}) {
       applyPose(creature, variants[vn](creature));
       creature.root.updateMatrixWorld(true);
       for (const mm of memMeshes) {
-        const d = drapeMembrane(creature, mm, { res: membraneRes, side: mm.userData.side === 'L' ? 1 : -1, ground: 0, iters: q.drapeIters, ...(vn === 'sit' ? { shrink: 0.3, gravity: 0.004 } : { shrink: 0.26, gravity: 0.002 }), ...((cfg.drapeOpts && cfg.drapeOpts[vn]) || {}) });
+        const d = drapeMembrane(creature, mm, { res: membraneRes, side: mm.userData.side === 'L' ? 1 : -1, ground: 0, iters: q.drapeIters, ...(vn === 'sit' ? { shrink: 0.3, gravity: 0.004 } : { shrink: 0.27, gravity: 0.002 }), ...((cfg.drapeOpts && cfg.drapeOpts[vn]) || {}) });
         res[mm.uuid].pos.push(new THREE.BufferAttribute(d.delta, 3));
         res[mm.uuid].nrm.push(new THREE.BufferAttribute(d.dnormal, 3));
       }

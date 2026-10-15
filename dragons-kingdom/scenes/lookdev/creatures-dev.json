@@ -1,10 +1,10 @@
 { "creatures": [
-    { "name": "charcoal", "quality": "standard", "face": -60, "at": [0, 0, 0], "pose": { "name": "stand" } },
-    { "name": "starlight", "quality": "standard", "face": -60, "at": [-500, 0, 0], "pose": { "name": "stand" } }
+    { "name": "charcoal", "quality": "standard", "face": -70, "at": [0, 0, 0], "pose": { "name": "stand" } }
   ],
   "rotationY": -1.2,
   "views": [
-    { "subject": 0, "cam": [1.1, 0.25, 0.0], "target": [0.0, 0.17, 0.05], "fov": 34, "hide": [1] },
-    { "subject": 1, "cam": [1.1, 0.25, 0.0], "target": [0.0, 0.17, 0.05], "fov": 34, "hide": [0] },
-    { "subject": 0, "cam": [0.5, 0.75, 0.6], "target": [0.0, 0.0, 0.0], "fov": 50, "poses": { "0": { "name": "glide" } }, "airborne": { "0": 0.6 }, "hide": [1] }
+    { "subject": 0, "bone": "head", "cam": [0.25, 0.0, 0.05], "target": [0.0, -0.01, 0.045], "fov": 34 },
+    { "subject": 0, "bone": "head", "cam": [0.17, 0.05, 0.17], "target": [0.0, -0.01, 0.04], "fov": 34 },
+    { "subject": 0, "bone": "head", "cam": [0.0, 0.26, 0.03], "target": [0.0, 0.0, 0.03], "fov": 34 },
+    { "subject": 0, "bone": "head", "cam": [0.02, 0.03, 0.26], "target": [0.0, 0.0, 0.03], "fov": 34 }
   ] }

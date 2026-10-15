@@ -4,6 +4,29 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## Wyvern rework (2026-10-15, Daxtyn: TWO legs, wings = front limbs, horns; DESIGN.md) - IN PROGRESS
+Build plan of DESIGN.md section 8; state:
+- DONE anatomy.js rewritten: `DESIGNS` = appendix A in metres (+ build extras: `body` muscle/fat,
+  `bulk` leg/arm/neck mass for the giants, `fold.curl` finger curl, `headX`, `folds`, `crest`).
+  REST pose = glide planform (wings spread, legs trailing); SCULPT pose = legs standing (2-bone IK
+  at the design hip height), wing-arms half folded; `sculptLocal` carries rest -> sculpt.
+  Helper bones w_#_sh / hl_#_h follow half the humerus / femur (pose.js driveHelpers).
+  Wing arm on the shoulder: keel + pectoralis, hump, scapula, forearm column, wrist pad (sole),
+  thumb + claw; fingers per design (2-4, MC + phalanges, bones w_#_f<d>_<j>); hind legs with
+  hallux + 3 toes, heel pad; head lofted from the design head table; horn sets per DESIGN as
+  spline paths (parts.js keratin `path`); tail scute crest (double -> single); scout tail vane.
+- DONE kin.js (quaternions, FK, 2-bone IK, chain locals), creature.js (two skeletons: body and
+  solids bound in the SCULPT pose, membranes + finger tubes in the REST pose), wing.js (variable
+  fingers, propatagium root on the neck base), pose.js (helpers, grounding on toe/heel/wrist pads).
+- DONE poses.js rewritten (IK): stand (wing-walk), walk, rear, sit, crouch, lie (+sprawl), pushUp,
+  struggle, fire, flight, glide, dive, strike, sprint, mouthHold, launch, land, blend.
+- NEXT: materials (Charcoal membrane gray #7d8086 + black bands along every finger bone, wrist
+  pad callus), Leaf sit check, Starlight neck, scout membrane fin, hatchling head, tack (seat
+  over the notarium, girth groove), new lookdev shots + contact sheet, 4K renders.
+- Dev loop: scratchpad dragons2/tools/dev.sh <cfg.json> <name> [preset] [cols] (creatures-dev.js);
+  tools/build.mjs builds in Node and runs every pose.
+
+## (before the wyvern rework)
 ## Fix round 1 (session 5, after the critic + Daxtyn's DRAGONS.md decisions) - DONE
 - No species: anatomy.js `DESIGNS.charcoal/leaf/starlight/hatchling/scout`, each its own preset
   (Leaf compact: short neck/tail, round deep skull, own horns, L 9.0 m = 25% of Charcoal;

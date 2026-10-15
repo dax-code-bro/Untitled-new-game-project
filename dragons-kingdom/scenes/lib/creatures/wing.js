@@ -56,6 +56,9 @@ export function membrane(wing, boneIndex, opts = {}) {
     ...fingers.map((f) => ({ pts: f.points, bones: f.names })),
     { pts: wing.attach, bones: wing.attachBones },
   ];
+  // the propatagium's root on the side of the neck base rides on the chest, not on the arm
+  const proRoot = wing.proRoot || add(wing.root, [0, 0, len(sub(wing.elbow, wing.root)) * 0.22]);
+  const proHolder = { pts: [proRoot, lerp3(proRoot, wing.root, 0.5)], bones: [wing.proBone || 'thorax'] };
   const freeEdges = [];
 
   const weightsAt = (p, use) => {
@@ -143,7 +146,7 @@ export function membrane(wing, boneIndex, opts = {}) {
 
   // ---- propatagium: in front of the arm, from the shoulder to the wrist
   {
-    const neckSide = add(wing.root, [0, 0, len(sub(wing.elbow, wing.root)) * 0.22]);
+    const neckSide = proRoot;
     const leadE = (a) => lerp3(neckSide, wing.wrist, a);
     const armE = (a) => polyAt(armPts, a).p;
     const l = len(sub(wing.wrist, wing.root));
@@ -152,7 +155,7 @@ export function membrane(wing, boneIndex, opts = {}) {
       const q = lerp3(pa, pl, b);
       return add(q, [0, -0.02 * l * Math.sin(Math.PI * b) * Math.sin(Math.PI * a), 0]);
     };
-    grid(steps(l), Math.max(3, steps(len(sub(wing.elbow, lerp3(neckSide, wing.wrist, 0.5)))) >> 1), P, [holders[0]], 0,
+    grid(steps(l), Math.max(3, steps(len(sub(wing.elbow, lerp3(neckSide, wing.wrist, 0.5)))) >> 1), P, [holders[0], proHolder], 0,
       (a, b) => Math.sin(Math.PI * a) * b * 0.6, (a, b) => len(sub(P(a, b), P(a, 1))),
       true);   // b runs forward here (backward in the other patches): flip so every patch faces the same way
   }

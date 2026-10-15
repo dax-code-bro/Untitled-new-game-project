@@ -20,9 +20,9 @@ import * as THREE from 'three';
 const _m = new THREE.Matrix4();
 
 /** Bone skinning matrices relative to the creature root: S_k = root^-1 * bone_k.world * boneInverse_k (column-major 16). */
-function skinMatrices(c) {
+function skinMatrices(c, skel = c.skeleton) {
   const rootInv = new THREE.Matrix4().copy(c.root.matrixWorld).invert();
-  return c.bones.map((b, i) => new THREE.Matrix4().multiplyMatrices(rootInv, b.matrixWorld).multiply(c.skeleton.boneInverses[i]).elements.slice());
+  return c.bones.map((b, i) => new THREE.Matrix4().multiplyMatrices(rootInv, b.matrixWorld).multiply(skel.boneInverses[i]).elements.slice());
 }
 
 function lbs(S, pos, si, sw, n, out) {
@@ -132,7 +132,8 @@ export function drapeMembrane(c, mesh, opts = {}) {
   const box = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
   for (let v = 0; v < n; v++) for (let k = 0; k < 3; k++) { box[k] = Math.min(box[k], X0[v * 3 + k]); box[3 + k] = Math.max(box[3 + k], X0[v * 3 + k]); }
   const span = Math.max(box[3] - box[0], box[4] - box[1], box[5] - box[2]);
-  const col = bodyColliders(c, S, box, span * 0.6);
+  // (the body sculpt is bound in the SCULPT pose: its primitives move with the sculpt inverses)
+  const col = bodyColliders(c, c.skeletonSculpt ? skinMatrices(c, c.skeletonSculpt) : S, box, span * 0.6);
   const nc = col.length / 4;
   const pad = opts.pad ?? res * 0.6;
   // uniform grid over the colliders (each sphere listed in every cell it touches)

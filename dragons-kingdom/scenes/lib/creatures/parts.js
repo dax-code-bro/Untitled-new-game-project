@@ -17,6 +17,36 @@ function bezierTan(p0, p1, p2, t) {
   return norm([2 * (1 - t) * (p1[0] - p0[0]) + 2 * t * (p2[0] - p1[0]), 2 * (1 - t) * (p1[1] - p0[1]) + 2 * t * (p2[1] - p1[1]), 2 * (1 - t) * (p1[2] - p0[2]) + 2 * t * (p2[2] - p1[2])]);
 }
 
+/** Arc-length parametrised Catmull-Rom spline through pts with radii per point: {at(t), tan(t), r(t)}. */
+function spline(pts, rad) {
+  const n = pts.length;
+  const P = (i) => pts[Math.max(0, Math.min(n - 1, i))];
+  const seg = (i, u) => {
+    const p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2);
+    const u2 = u * u, u3 = u2 * u;
+    return [0, 1, 2].map((k) => 0.5 * (2 * p1[k] + (-p0[k] + p2[k]) * u + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * u2 + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * u3));
+  };
+  const S = [], cum = [0];
+  const M = 24;
+  for (let i = 0; i < n - 1; i++) for (let j = 0; j < M; j++) S.push({ p: seg(i, j / M), i, u: j / M });
+  S.push({ p: pts[n - 1], i: n - 2, u: 1 });
+  for (let k = 1; k < S.length; k++) cum.push(cum[k - 1] + len(sub(S[k].p, S[k - 1].p)));
+  const total = cum[cum.length - 1] || 1;
+  const find = (t) => {
+    const d = clamp(t, 0, 1) * total;
+    let k = 0;
+    while (k < S.length - 2 && cum[k + 1] < d) k++;
+    const f = (d - cum[k]) / Math.max(1e-12, cum[k + 1] - cum[k]);
+    return { k, f };
+  };
+  return {
+    at: (t) => { const { k, f } = find(t); return lerp3(S[k].p, S[k + 1].p, f); },
+    tan: (t) => { const { k } = find(t); return norm(sub(S[k + 1].p, S[k].p)); },
+    r: (t) => { const { k, f } = find(t); const a = S[k], b = S[k + 1]; const ra = mix(rad[a.i], rad[Math.min(n - 1, a.i + 1)], a.u), rb = mix(rad[b.i], rad[Math.min(n - 1, b.i + 1)], b.u); return mix(ra, rb, f); },
+    total,
+  };
+}
+
 class Builder {
   constructor() { this.pos = []; this.nrm = []; this.uv = []; this.idx = []; this.si = []; this.sw = []; this.ex = []; this.tan = []; }
   get n() { return this.pos.length / 3; }
@@ -42,7 +72,9 @@ export function keratin(items, boneIndex, opts = {}) {
   const B = new Builder();
   const KIND = { horn: 0, claw: 1, tooth: 2, spike: 3, gum: 4 };
   items.forEach((it, n) => {
-    const [p0, p1, p2] = it.points;
+    // a horn may be a path of N control points (centripetal Catmull-Rom) with a radius per point
+    const sp = it.path ? spline(it.path, it.rad) : null;
+    const [p0, p1, p2] = it.points || [it.path[0], it.path[1], it.path[it.path.length - 1]];
     // dense enough for 4K close-ups (horn growth ridges are geometry, ~6 segments per ridge)
     const segs = it.kind === 'tooth' ? 12 : it.kind === 'gum' ? 10 : it.kind === 'spike' ? 12 : it.kind === 'claw' ? 24 : 72;
     const around = it.kind === 'tooth' ? 14 : it.kind === 'gum' ? 12 : it.kind === 'spike' ? 10 : it.kind === 'claw' ? 16 : 36;
@@ -54,14 +86,14 @@ export function keratin(items, boneIndex, opts = {}) {
     const seed = ((n * 2654435761) >>> 0) / 4294967296;
     for (let i = 0; i <= segs; i++) {
       const t = i / segs;
-      const c = bezier(p0, p1, p2, t);
-      const tg = bezierTan(p0, p1, p2, t);
+      const c = sp ? sp.at(t) : bezier(p0, p1, p2, t);
+      const tg = sp ? sp.tan(t) : bezierTan(p0, p1, p2, t);
       let ux = sub(up0, scale(tg, dot(up0, tg)));
       if (len(ux) < 1e-5) ux = Math.abs(tg[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
       ux = norm(ux);
       const vx = cross(tg, ux);
       // radius profile: quadratic through r0, r1, r2 (with a slight bulge near the base)
-      const r = t < 0.5 ? mix(it.radii[0], it.radii[1], t / 0.5) : mix(it.radii[1], it.radii[2], Math.pow((t - 0.5) / 0.5, 0.9));
+      const r = sp ? sp.r(t) : t < 0.5 ? mix(it.radii[0], it.radii[1], t / 0.5) : mix(it.radii[1], it.radii[2], Math.pow((t - 0.5) / 0.5, 0.9));
       const ring = it.rings ? 1 + 0.05 * Math.max(0, Math.sin(t * 34 + seed * 6)) * (1 - t) : 1;
       const fa = it.flat ?? 1;
       // the flat axis: by default the section is squashed along `ux` (spikes: sideways)

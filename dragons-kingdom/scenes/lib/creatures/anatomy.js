@@ -1,35 +1,35 @@
-// Procedural dragon anatomy: skeleton + SDF sculpt + part layout.
+// Procedural dragon anatomy: skeleton + SDF sculpt + part layout - the WYVERN layout of
+// DESIGN.md (Daxtyn, 2026-10-14: every dragon has TWO legs and HORNS; the wings ARE the front
+// limbs, as in bats and pterosaurs). Every dragon is its own design (no species): DESIGNS holds
+// the numbers of DESIGN.md appendix A in metres plus the few build choices the appendix leaves
+// open (muscle masses, skin folds, scale sizes).
 //
-// Every dragon is its OWN design (Daxtyn scrapped the species on 2026-10-09, see
-// DRAGONS.md): DESIGNS.charcoal, .leaf, .starlight, .hatchling and .scout are separate
-// presets with their own proportions, skull, horn set, limbs and wings. PROVISIONAL
-// (see README.md in this folder): every design uses the limb layout FOUR LEGS + TWO
-// WINGS (a hexapod "classic" dragon). The wings are a separate, third girdle on the
-// back, just behind and above the front shoulders, driven by a large dorsal/pectoral
-// flight-muscle mass (legs that dig in for takeoff, an upright dog-sit for Leaf,
-// "limbs or wings" in the screenplay). Whether Daxtyn wants four legs + wings or
-// wyverns is an open question for him; the generator keeps limb layout in one place.
+// Conventions (assets.json): metres, +y up, the creature faces +z, its LEFT is +x.
 //
-// Conventions (assets.json): metres, +y up, the creature faces +z, its LEFT is
-// +x. Everything here is in the REST pose: standing, neck raised a little,
-// tail straight back, wings spread, mouth slightly open (so the mouth interior
-// exists as geometry).
+// Two configurations of one skeleton:
+//   REST (bind of the wing membranes, every bone at identity rotation): the glide planform -
+//     wings spread flat at the shoulders (DESIGN 10), legs trailing back and spread under the
+//     tail (the plagiopatagium runs to the ankle), neck forward and a little up, tail straight.
+//   SCULPT (bind of the body mesh and every solid part): legs STANDING (feet flat, knees
+//     forward, from two-bone IK at the design's hip height) and the wing-arms half folded (half
+//     way between the glide and the wing-walk stance), so that both the stance and the spread
+//     wing are a moderate bend away from the bind pose. `sculptLocal` holds the local rotations
+//     that carry REST onto SCULPT; creature.js binds the body with the sculpt inverses.
+// Helper bones (w_#_sh at the shoulder, hl_#_h at the hip) follow half of the humerus / femur
+// rotation (pose.js), so the shoulder and the hip bend over a wider band of skin (no collapse).
 //
-// The sculpt follows real vertebrate anatomy rather than tubes: a deep
-// ribcage, shoulder blades on the sides of the chest, the upper arm and thigh
-// inside the body's skin envelope (the visible leg starts at the elbow/knee),
-// triceps, biceps, pectorals, forearm extensors/flexors, glutes, quadriceps,
-// hamstrings, the reptilian caudofemoralis from the tail base to the thigh,
-// calf and Achilles tendon, a hanging belly, loose skin folds at the throat,
-// armpits and flanks (projected onto the sculpted surface), a continuous
-// dorsal crest, and a reptilian head (wide temporal jaw muscles, a gape that
-// runs back past the eye, a bony brow over a lateral eye, horns swept back
-// along the line of the neck).
-//
-// All proportions are fractions of the total length L (snout tip to tail tip
-// measured along the rest spine).
+// The sculpt follows real anatomy: a deep keeled chest (sternum + pectoralis, the downstroke
+// muscle), the upstroke muscles as a hump over the shoulder blades (the giants), the forearm as
+// a weight-bearing limb (thick at the elbow, tendons at the wrist) ending in a callused wrist
+// pad with a robust clawed thumb, bird/theropod hind legs (knee forward, mesotarsal ankle,
+// scutellate metatarsus, three toes forward and a gripping hallux, a fibro-fatty heel pad on
+// the giants), the reptile's caudofemoralis from the tail base to the thigh, a crocodilian
+// head (gape back below the eye, brow shelf, labial scales over the teeth), skin folds at the
+// throat, neck base, armpit and flank, and a double crest of keeled osteoderm scutes at the
+// tail base that merges into a single crest along the tail.
 
 import { SDFModel, add, sub, scale, dot, cross, norm, len, lerp3, clamp, mix } from './sdf.js';
+import { qMul, qInv, qRot, chainLocals, fk, ik2, QI } from './kin.js';
 
 // ------------------------------------------------------------- utilities
 /** Monotone-ish cubic interpolation through keys [[s, ...values]] at s. */
@@ -75,7 +75,6 @@ export function polyline(points) {
   return { points, cum, total, at };
 }
 
-/** Quadratic Bezier sampled into n+1 points. */
 function bez(a, b, c, n) {
   const out = [];
   for (let i = 0; i <= n; i++) {
@@ -87,331 +86,228 @@ function bez(a, b, c, n) {
 
 const deg = Math.PI / 180;
 const hsh = (i, k) => { const x = Math.sin(i * 127.1 + k * 311.7 + 0.5) * 43758.5453; return x - Math.floor(x); };
+const ortho = (v, a) => { const d = dot(v, a); return norm([v[0] - a[0] * d, v[1] - a[1] * d, v[2] - a[2] * d]); };
 
 // ------------------------------------------------------------ design presets
-// Lengths: fractions of L. Profiles: [s, halfWidth, halfHeight, drop] where drop
-// moves the cross-section centre below the dorsal spine line (deep chest).
-//   neckProfile s: 0 = behind the head .. 1 = withers; torsoProfile s: 0 = withers .. 1 = pelvis;
-//   tailProfile s: 0 = tail base .. 1 = tip.
-// Legs: front.shoulder = [x, dy from withersY, z as fraction of torso];
-//       elbow/wrist/ball = [x, y above ground, dz from the shoulder].
-//       hind.hip = [x, dy from hipY, z]; knee/ankle/ball = [x, y, z] absolute.
-// Wings: root = [x, dy from withersY, z as fraction of torso]; elbow, wrist,
-//       digit tips and membrane attachment = offsets from the root
-//       ([lateral, up, forward], mirrored per side); thumb = offset from the wrist.
-// Head: loft keys [z, halfWidth, top, bottom] in head lengths (z: 0 = skull
-//       joint, 1 = snout tip); `jaw` the same for the closed lower jaw.
-// muscle: multipliers for the muscle groups (1 = an athletic adult).
-const SKETCH = {
+// Numbers from DESIGN.md appendix A (metres, degrees). Profiles: [s, full width, full depth];
+// neck s 0 = head end .. 1 = base; trunk s 0 = shoulder .. 1 = hip; tail s 0 = base .. 1 = tip;
+// head s 0 = back of the skull .. 1 = snout tip. Fingers: [name, metacarpal, [phalanges],
+// spread from lateral in the glide (negative = swept back)].
+// Build choices (not in the appendix): body = muscle/fat masses (1 = an athletic adult),
+// headX = head sculpt features, folds = skin folds, crest = tail scute height (m), scale =
+// scale width in L units at the chain's median radius.
+export const DESIGNS = {
   charcoal: {
-    design: 'Charcoal',
-    head: 0.118, neck: 0.168, torso: 0.258, neckSegs: 10, tailSegs: 24,
-    hipY: 0.214, withersY: 0.232, backArch: 0.01, neckPitch: 26 * deg, headPitch: -27 * deg, tailDroop: 14 * deg, tailCurve: 0.6,
-    neckProfile: [[0, 0.023, 0.026, 0.002], [0.3, 0.028, 0.031, 0.004], [0.65, 0.037, 0.043, 0.01], [1, 0.056, 0.066, 0.025]],
-    torsoProfile: [[0, 0.058, 0.066, 0.032], [0.2, 0.068, 0.078, 0.046], [0.45, 0.064, 0.068, 0.042], [0.7, 0.057, 0.057, 0.032], [0.88, 0.052, 0.05, 0.02], [1, 0.054, 0.05, 0.014]],
-    tailProfile: [[0, 0.055, 0.054, 0.012], [0.12, 0.046, 0.047, 0.007], [0.35, 0.029, 0.031, 0.003], [0.65, 0.0145, 0.0155, 0], [1, 0.0025, 0.0025, 0]],
-    front: { shoulder: [0.044, -0.07, 0.86], elbow: [0.053, 0.108, -0.04], wrist: [0.052, 0.042, -0.01], ball: [0.053, 0.012, 0.016],
-      r: [0.032, 0.025, 0.0195, 0.017], toeLen: 0.038, toeR: [0.0095, 0.006], toeSpread: 15, toes: 4, muscle: 1.0 },
-    hind: { hip: [0.045, -0.026, 0.01], knee: [0.058, 0.128, 0.05], ankle: [0.055, 0.066, -0.022], ball: [0.055, 0.012, 0.002],
-      r: [0.037, 0.026, 0.019, 0.017], toeLen: 0.04, toeR: [0.0098, 0.0062], toeSpread: 14, toes: 4, muscle: 1.0 },
-    // a span of ~1.9 L (an animal this heavy needs it): the wingtip 0.91 L out from the root
-    // (forearm 0.18 L: folded, the wrist must come to rest beside the shoulder, not hang in front
-    // of the chest like a third foreleg)
-    wing: { root: [0.032, 0.006, 0.8], elbow: [0.17, 0.02, -0.06], wrist: [0.35, 0.03, -0.015],
-      digits: [[0.91, 0.025, 0.0], [0.84, 0.016, -0.2], [0.69, 0.006, -0.37], [0.5, -0.004, -0.46]],
-      thumb: [0.012, 0.008, 0.018], r: [0.0165, 0.0098, 0.0082], fingerR: [0.0056, 0.0014], muscle: 1.0,
-      // the membrane's body edge: armpit, along the flank, down onto the thigh (bat-like)
-      attach: [[0.006, -0.014, -0.03], [0.018, -0.04, -0.11], [0.028, -0.058, -0.17], [0.048, -0.078, -0.2]], billow: 0.035 },
-    headShape: {
-      // a deep, heavy head: a high crown and brow, a broad deep snout (not a crocodile's flat
-      // one) with a nasal bump, a massive lower jaw
-      upper: [[-0.1, 0.22, 0.14, -0.12], [0.0, 0.26, 0.18, -0.1], [0.12, 0.275, 0.205, -0.09], [0.26, 0.265, 0.198, -0.088], [0.4, 0.232, 0.152, -0.086],
-        [0.56, 0.205, 0.132, -0.084], [0.72, 0.185, 0.123, -0.082], [0.86, 0.168, 0.118, -0.08], [1.0, 0.12, 0.085, -0.07]],
-      jaw: [[0.0, 0.27, -0.08, -0.32], [0.12, 0.275, -0.08, -0.315], [0.3, 0.25, -0.08, -0.26], [0.5, 0.215, -0.08, -0.21],
-        [0.7, 0.188, -0.079, -0.185], [0.86, 0.168, -0.078, -0.172], [0.98, 0.122, -0.076, -0.15]],
-      eye: [0.238, 0.118, 0.27], eyeR: 0.055, eyeInset: 0.5, eyeExpose: 56, brow: 2.0, cheek: 1.15, jawMuscle: 1.2, ridgeR: 0.024, hinge: [0, -0.09, 0.035], gape0: 14 * deg, nostril: 1.5,
-      // (an irregular, crocodilian lip line that leaves the teeth showing - a continuous rolled lip
-      // read as a hand puppet)
-      teethUp: 15, teethSize: 0.06, lipCover: 0.3, lipIrregular: 1, tympanum: 1,
-    },
-    horns: 'charcoal', crest: { count: 92, h: [0.0085, 0.017, 0.0065], base: 1.15 },
-    scale: { body: 0.0042, belly: 0.012, head: 0.0032 },   // scale width in L units at the chain's median radius
-    muscle: { shoulder: 1.1, arm: 1.1, pec: 1.05, thigh: 1.05, tailbase: 1.1, belly: 0.62, neck: 1.1, wing: 1.0 },
-    folds: { throat: 2, axilla: 0, stifle: 0, neck: 2, tail: 3 },
+    name: 'Charcoal', L: 36, skull: 3.6, neck: 6.9, trunk: 9.3, tail: 16.2, neckBones: 11, tailBones: 28,
+    head: [[0, 1.8, 1.55], [0.25, 1.8, 1.52], [0.5, 1.45, 1.16], [0.75, 1.16, 0.9], [1, 0.86, 0.62]],
+    neckP: [[0, 1, 1.5], [0.5, 1.3, 2], [1, 1.85, 2.9]],
+    trunkP: [[0, 2.7, 4.2], [0.25, 2.9, 4.5], [0.6, 2.4, 3.4], [0.85, 2.2, 2.8], [1, 2.35, 2.6]],
+    tailP: [[0, 1.95, 2.15], [0.15, 1.5, 1.7], [0.35, 0.95, 1.1], [0.6, 0.48, 0.56], [0.85, 0.19, 0.23], [1, 0.04, 0.04]],
+    stand: { hip: 7.0, shoulder: 7.5, forearmLean: 12, humerusRise: 12, neckRise: 30, neckTop: 4, headPitch: -16, tailDroop: 22 },
+    fold: { curl: [8, 60, 108] }, bulk: { leg: 1.38, arm: 1.32, neck: 1.12 },
+    // semi-digitigrade with a fibro-fatty heel pad (elephant); claws thick, blunt, chipped
+    leg: { femur: 3.1, tibia: 3.4, mt: 1.5, toe: 1.3, claw: 0.42, d: [1.5, 0.85, 0.8, 0.48, 0.4], mtAng: 40, heelPad: 1.0, hallux: 0.48, toeR: 0.19, blunt: 1 },
+    wing: { humerus: 4.2, forearm: 8.4, d: [1.6, 1.15, 0.8, 0.45],
+      fingers: [['III', 7.4, [5.2, 3.9, 2.3], -6], ['IV', 6.8, [5, 3.4, 1.6], -32], ['V', 6.2, [4.6, 2.9, 1.2], -64]],
+      thumb: { mc: 0.7, ph: 0.55, claw: 0.6 }, to: 'ankle', glide: { humerus: -16, forearm: 12 }, legSplay: 24, thick: 0.007 },
+    eye: 0.29, snout: 0.58, teeth: [15, 14], toothMax: 0.3, jawMax: 50,
+    body: { hump: 0.75, keel: 1.0, belly: 1.0, pec: 1.1, arm: 1.15, thigh: 1.05, tailbase: 1.1, neck: 1.1 },
+    headX: { brow: 2.0, cheek: 1.15, jawMuscle: 1.3, nostril: 1.4, lipCover: 0.3, lipIrregular: 1, tympanum: 1, ridgeR: 0.024, chin: 1 },
+    horns: 'charcoal', crest: { tail: 0.32, back: 0.12 },
+    scale: { body: 0.0042, belly: 0.012, head: 0.0032 },
+    folds: { throat: 3, neck: 2, tail: 3, axilla: 1, stifle: 1 },
+    flapHz: 0.42, flapAmp: 85,
   },
-  // (the first sketch Leaf and Starlight were derived from; each now has its own preset below)
-  nightwing: {
-    design: 'sketch',
-    head: 0.105, neck: 0.155, torso: 0.235, neckSegs: 12, tailSegs: 26,
-    hipY: 0.21, withersY: 0.225, backArch: 0.008, neckPitch: 24 * deg, headPitch: -27 * deg, tailDroop: 12 * deg, tailCurve: 0.5,
-    neckProfile: [[0, 0.02, 0.026, 0.001], [0.3, 0.025, 0.032, 0.003], [0.7, 0.032, 0.041, 0.008], [1, 0.043, 0.054, 0.017]],
-    torsoProfile: [[0, 0.044, 0.054, 0.025], [0.2, 0.049, 0.063, 0.038], [0.45, 0.047, 0.054, 0.034], [0.7, 0.041, 0.044, 0.025], [0.88, 0.037, 0.039, 0.016], [1, 0.037, 0.037, 0.01]],
-    tailProfile: [[0, 0.038, 0.039, 0.008], [0.14, 0.03, 0.032, 0.005], [0.4, 0.018, 0.019, 0.001], [0.7, 0.0088, 0.0095, 0], [1, 0.0015, 0.0015, 0]],
-    front: { shoulder: [0.033, -0.06, 0.85], elbow: [0.039, 0.115, -0.03], wrist: [0.038, 0.042, -0.004], ball: [0.038, 0.008, 0.016],
-      r: [0.026, 0.0185, 0.0135, 0.0122], toeLen: 0.029, toeR: [0.0061, 0.0036], toeSpread: 15, toes: 4, muscle: 1.0 },
-    hind: { hip: [0.034, -0.02, 0.008], knee: [0.044, 0.125, 0.05], ankle: [0.042, 0.062, -0.024], ball: [0.042, 0.008, -0.002],
-      r: [0.032, 0.0205, 0.0138, 0.0122], toeLen: 0.032, toeR: [0.0063, 0.0037], toeSpread: 14, toes: 4, muscle: 1.0 },
-    wing: { root: [0.027, 0.006, 0.8], elbow: [0.165, 0.016, -0.055], wrist: [0.33, 0.025, -0.012],
-      digits: [[0.87, 0.02, 0.02], [0.8, 0.012, -0.185], [0.66, 0.004, -0.34], [0.48, -0.004, -0.42]],
-      thumb: [0.01, 0.006, 0.015], r: [0.0158, 0.0098, 0.0076], fingerR: [0.0046, 0.0012], muscle: 1.0,
-      attach: [[0.005, -0.012, -0.03], [0.014, -0.032, -0.1], [0.022, -0.05, -0.16], [0.04, -0.075, -0.19]], billow: 0.04 },
-    headShape: {
-      // the same reptile plan as Charcoal's but lighter: a high brow over big (nocturnal)
-      // eyes, a moderate, slightly tapering snout with a little nasal rise (never a horse's
-      // long deep face), lips that hide the teeth when the mouth is closed
-      upper: [[-0.1, 0.2, 0.13, -0.11], [0.02, 0.24, 0.17, -0.095], [0.15, 0.26, 0.19, -0.087], [0.3, 0.245, 0.175, -0.082], [0.45, 0.2, 0.13, -0.078],
-        [0.6, 0.168, 0.105, -0.075], [0.76, 0.145, 0.092, -0.071], [0.89, 0.128, 0.086, -0.067], [1.0, 0.095, 0.066, -0.056]],
-      jaw: [[0.0, 0.226, -0.08, -0.25], [0.12, 0.23, -0.08, -0.255], [0.3, 0.205, -0.08, -0.21], [0.5, 0.17, -0.078, -0.17],
-        [0.7, 0.142, -0.075, -0.145], [0.88, 0.122, -0.072, -0.132], [0.98, 0.09, -0.07, -0.118]],
-      eye: [0.215, 0.11, 0.32], eyeR: 0.068, eyeInset: 0.5, eyeExpose: 58, brow: 1.25, cheek: 0.85, jawMuscle: 0.9, ridgeR: 0.021, hinge: [0, -0.09, 0.04], gape0: 14 * deg, nostril: 0.85,
-      teethUp: 14, teethSize: 0.03, lipCover: 0.85, tympanum: 1,
-    },
-    horns: 'nightwing', crest: { count: 104, h: [0.0048, 0.011, 0.0038], base: 1.1 },
+  leaf: {
+    name: 'Leaf', L: 9, skull: 1.0, neck: 1.6, trunk: 2.3, tail: 4.1, neckBones: 10, tailBones: 26,
+    head: [[0, 0.54, 0.54], [0.3, 0.52, 0.52], [0.55, 0.38, 0.34], [0.8, 0.28, 0.24], [1, 0.19, 0.16]],
+    neckP: [[0, 0.3, 0.37], [0.5, 0.35, 0.43], [1, 0.48, 0.62]],
+    trunkP: [[0, 0.66, 0.92], [0.25, 0.7, 0.96], [0.6, 0.56, 0.74], [0.85, 0.5, 0.6], [1, 0.52, 0.56]],
+    tailP: [[0, 0.44, 0.48], [0.15, 0.33, 0.37], [0.35, 0.21, 0.24], [0.6, 0.11, 0.13], [0.85, 0.045, 0.05], [1, 0.01, 0.01]],
+    stand: { hip: 2.05, shoulder: 1.9, forearmLean: 10, humerusRise: 14, neckRise: 46, neckTop: 22, headPitch: -12, tailDroop: 24 },
+    fold: { curl: [8, 58, 105] }, bulk: { leg: 1.12, arm: 1.12, neck: 1.0 },
+    // digitigrade, a longer springier metatarsus than Charcoal's; claws sharp
+    leg: { femur: 0.85, tibia: 0.98, mt: 0.52, toe: 0.36, claw: 0.1, d: [0.34, 0.19, 0.17, 0.1, 0.085], mtAng: 58, heelPad: 0.3, hallux: 0.42, toeR: 0.042 },
+    wing: { humerus: 1.05, forearm: 2.15, d: [0.36, 0.25, 0.17, 0.1],
+      fingers: [['III', 1.9, [1.35, 1, 0.6], -6], ['IV', 1.75, [1.25, 0.85, 0.4], -33], ['V', 1.6, [1.1, 0.72, 0.3], -65]],
+      thumb: { mc: 0.18, ph: 0.13, claw: 0.14 }, to: 'shank', glide: { humerus: -16, forearm: 12 }, legSplay: 24, thick: 0.0018 },
+    eye: 0.11, snout: 0.48, teeth: [16, 15], toothMax: 0.05, jawMax: 55,
+    body: { hump: 0.0, keel: 0.8, belly: 0.55, pec: 0.9, arm: 0.95, thigh: 0.95, tailbase: 0.95, neck: 0.9 },
+    headX: { brow: 1.0, cheek: 0.75, jawMuscle: 0.8, nostril: 0.9, lipCover: 0.6, tympanum: 0.9, ridgeR: 0.021, young: 1 },
+    horns: 'leaf', crest: { tail: 0.035, back: 0.0 },
     scale: { body: 0.0045, belly: 0.0095, head: 0.003 },
-    muscle: { shoulder: 1, arm: 1, pec: 1, thigh: 1, tailbase: 1, belly: 0.9, neck: 1, wing: 1.05 },
-    folds: { throat: 3, axilla: 0, stifle: 0, neck: 2, tail: 2 },
+    folds: { throat: 2, neck: 1, tail: 1, axilla: 1, stifle: 1 },
+    flapHz: 0.8, flapAmp: 105,
+  },
+  starlight: {
+    name: 'Starlight', L: 72, skull: 5.6, neck: 16, trunk: 16, tail: 34.4, neckBones: 14, tailBones: 30,
+    head: [[0, 2.4, 2.1], [0.25, 2.4, 2.05], [0.5, 1.8, 1.4], [0.75, 1.4, 1], [1, 0.95, 0.66]],
+    neckP: [[0, 1.5, 1.75], [0.5, 1.95, 2.3], [1, 2.9, 3.6]],
+    trunkP: [[0, 4.2, 5.8], [0.25, 4.5, 6.1], [0.6, 3.7, 4.7], [0.85, 3.3, 3.8], [1, 3.5, 3.6]],
+    tailP: [[0, 2.9, 3.2], [0.15, 2.2, 2.45], [0.35, 1.4, 1.6], [0.6, 0.72, 0.82], [0.85, 0.27, 0.3], [1, 0.05, 0.05]],
+    stand: { hip: 14.4, shoulder: 14.8, forearmLean: 10, humerusRise: 16, neckRise: 48, neckTop: 16, headPitch: -12, tailDroop: 18 },
+    fold: { curl: [4, 16, 28] }, bulk: { leg: 1.2, arm: 1.15, neck: 1.0 },
+    // raptor feet: long toes, big curved talons, a large opposable hallux with the biggest talon
+    leg: { femur: 5.8, tibia: 7, mt: 3.8, toe: 3.6, claw: 1.3, d: [2.4, 1.3, 1.15, 0.62, 0.52], mtAng: 55, heelPad: 0.4, hallux: 0.62, toeR: 0.3, raptor: 1 },
+    wing: { humerus: 8, forearm: 17, d: [2.6, 1.9, 1.3, 0.75],
+      fingers: [['II', 14.5, [5, 2.5], 2], ['III', 15.5, [11.5, 8.5, 5], -5], ['IV', 14, [10.5, 7.2, 3.4], -28], ['V', 12.8, [9, 6, 2.6], -52]],
+      thumb: { mc: 1.3, ph: 0.9, claw: 1 }, to: 'ankle', glide: { humerus: -15, forearm: 12 }, legSplay: 30, thick: 0.014 },
+    eye: 0.39, snout: 0.6, teeth: [18, 17], toothMax: 0.36, jawMax: 45,
+    body: { hump: 0.25, keel: 1.1, belly: 0.5, pec: 1.0, arm: 1.0, thigh: 0.95, tailbase: 1.0, neck: 1.0 },
+    headX: { brow: 1.5, cheek: 1.0, jawMuscle: 1.0, nostril: 1.0, lipCover: 0.75, tympanum: 0.9, ridgeR: 0.022, long: 1 },
+    horns: 'starlight', crest: { tail: 0.3, back: 0.0 },
+    scale: { body: 0.0045, belly: 0.0095, head: 0.003 },
+    folds: { throat: 2, neck: 0, tail: 1, axilla: 1, stifle: 1 },
+    flapHz: 0.24, flapAmp: 75,
   },
   scout: {
-    design: 'Scout',
-    head: 0.062, neck: 0.16, torso: 0.215, neckSegs: 10, tailSegs: 30,
-    hipY: 0.1, withersY: 0.106, backArch: 0.004, neckPitch: 12 * deg, headPitch: -14 * deg, tailDroop: 4 * deg, tailCurve: 0.3,
-    neckProfile: [[0, 0.0145, 0.0135, 0.0], [0.5, 0.017, 0.0165, 0.002], [1, 0.024, 0.023, 0.006]],
-    torsoProfile: [[0, 0.026, 0.026, 0.008], [0.3, 0.03, 0.032, 0.013], [0.6, 0.029, 0.03, 0.012], [0.85, 0.025, 0.025, 0.008], [1, 0.024, 0.023, 0.006]],
-    tailProfile: [[0, 0.022, 0.021, 0.005], [0.2, 0.0155, 0.0145, 0.002], [0.5, 0.0085, 0.008, 0], [0.8, 0.0042, 0.0042, 0], [1, 0.0011, 0.0011, 0]],
-    front: { shoulder: [0.022, -0.026, 0.8], elbow: [0.028, 0.054, -0.016], wrist: [0.028, 0.02, 0.003], ball: [0.028, 0.005, 0.014],
-      r: [0.0105, 0.0068, 0.0048, 0.0044], toeLen: 0.014, toeR: [0.0026, 0.0015], toeSpread: 16, toes: 4, muscle: 0.7 },
-    hind: { hip: [0.023, -0.02, 0.0], knee: [0.031, 0.054, 0.028], ankle: [0.029, 0.023, -0.012], ball: [0.029, 0.005, 0.003],
-      r: [0.013, 0.008, 0.0052, 0.0046], toeLen: 0.015, toeR: [0.0028, 0.0015], toeSpread: 14, toes: 4, muscle: 0.7 },
-    // narrow, swept, high-aspect wings set far forward (a swift's wing, not a bat's)
-    wing: { root: [0.02, 0.007, 1.0], elbow: [0.12, 0.01, -0.06], wrist: [0.29, 0.016, -0.075],
-      digits: [[0.78, 0.012, -0.19], [0.69, 0.008, -0.255], [0.52, 0.004, -0.28], [0.36, 0.0, -0.27]],
-      thumb: [0.014, 0.006, 0.02], r: [0.011, 0.0068, 0.0055], fingerR: [0.003, 0.0008], muscle: 0.95,
-      attach: [[0.004, -0.007, -0.03], [0.006, -0.012, -0.075], [0.007, -0.015, -0.12]], billow: 0.03 },
-    headShape: {
-      upper: [[-0.1, 0.16, 0.085, -0.08], [0.05, 0.172, 0.105, -0.066], [0.2, 0.168, 0.112, -0.06], [0.35, 0.146, 0.104, -0.058], [0.5, 0.12, 0.088, -0.056],
-        [0.7, 0.096, 0.07, -0.054], [0.88, 0.076, 0.054, -0.05], [1.0, 0.05, 0.036, -0.04]],
-      jaw: [[0.0, 0.15, -0.065, -0.15], [0.15, 0.15, -0.065, -0.158], [0.35, 0.125, -0.064, -0.138], [0.6, 0.094, -0.062, -0.112], [0.85, 0.068, -0.06, -0.097], [0.98, 0.048, -0.058, -0.088]],
-      eye: [0.15, 0.065, 0.36], eyeR: 0.066, eyeInset: 0.58, brow: 0.6, cheek: 0.5, jawMuscle: 0.6, ridgeR: 0.018, hinge: [0, -0.07, 0.06], gape0: 13 * deg, nostril: 0.7,
-      teethUp: 16, teethSize: 0.045, lipCover: 0.45, tympanum: 0.6,
-    },
-    horns: 'scout', crest: { count: 120, h: [0.0012, 0.0028, 0.001], base: 1.0 },
+    name: 'Scout', L: 6.8, skull: 0.5, neck: 1.1, trunk: 1.6, tail: 3.6, neckBones: 9, tailBones: 28,
+    head: [[0, 0.25, 0.25], [0.3, 0.24, 0.23], [0.55, 0.17, 0.15], [0.8, 0.11, 0.1], [1, 0.06, 0.05]],
+    neckP: [[0, 0.15, 0.17], [0.5, 0.19, 0.22], [1, 0.29, 0.37]],
+    trunkP: [[0, 0.42, 0.62], [0.25, 0.47, 0.67], [0.6, 0.36, 0.48], [0.85, 0.3, 0.34], [1, 0.3, 0.3]],
+    tailP: [[0, 0.25, 0.27], [0.15, 0.15, 0.17], [0.35, 0.085, 0.095], [0.6, 0.05, 0.055], [0.85, 0.03, 0.03], [1, 0.01, 0.01]],
+    stand: { hip: 1.1, shoulder: 1.25, forearmLean: 14, humerusRise: 10, neckRise: 32, neckTop: 10, headPitch: -10, tailDroop: 16 },
+    fold: { curl: [6, 40, 80] }, bulk: { leg: 1.05, arm: 1.05, neck: 1.0 },
+    leg: { femur: 0.45, tibia: 0.54, mt: 0.26, toe: 0.17, claw: 0.05, d: [0.17, 0.09, 0.08, 0.05, 0.045], mtAng: 60, heelPad: 0.2, hallux: 0.4, toeR: 0.02 },
+    wing: { humerus: 0.55, forearm: 1.35, d: [0.27, 0.18, 0.11, 0.065],
+      fingers: [['III', 1.3, [1.05, 0.8, 0.45], -12], ['IV', 1.15, [0.9, 0.5], -46]],
+      thumb: { mc: 0.08, ph: 0.06, claw: 0.06 }, to: 'hip', glide: { humerus: -20, forearm: 6 }, legSplay: 10, thick: 0.0011 },
+    eye: 0.055, snout: 0.55, teeth: [20, 19], toothMax: 0.015, jawMax: 60, gazeForward: 0.45,
+    body: { hump: 0.0, keel: 1.15, belly: 0.4, pec: 1.15, arm: 0.9, thigh: 0.7, tailbase: 0.8, neck: 0.85 },
+    headX: { brow: 0.7, cheek: 0.55, jawMuscle: 0.6, nostril: 0.7, lipCover: 0.45, tympanum: 0.6, ridgeR: 0.018 },
+    horns: 'scout', crest: { tail: 0.0, back: 0.0 }, tailVane: { length: 0.42, width: 0.28 },
     scale: { body: 0.0035, belly: 0.008, head: 0.0026 },
-    muscle: { shoulder: 0.8, arm: 0.8, pec: 0.85, thigh: 0.8, tailbase: 0.9, belly: 0.6, neck: 0.85, wing: 1.1 },
-    folds: { throat: 2, axilla: 1, stifle: 1, neck: 1, tail: 0 },
+    folds: { throat: 1, neck: 1, tail: 0, axilla: 1, stifle: 1 },
+    flapHz: 1.09, flapAmp: 95,
   },
-};
-
-// The gold hatchling (its own design): a big rounded head with a short snout and huge eyes, a short
-// neck, a plump body with a soft belly (yolk scar), short weak legs with soft
-// claws, a short curled tail, tiny damp wings held folded, horn buds and an egg
-// tooth on the snout. Proportions after newborn crocodilians and monitor
-// hatchlings (head about a fifth of the snout-vent length, eyes ~40% of the
-// head height).
-SKETCH.hatchling = {
-  ...SKETCH.charcoal,
-  design: 'Gold hatchling',
-  head: 0.17, neck: 0.064, torso: 0.262, neckSegs: 8, tailSegs: 18,
-  hipY: 0.128, withersY: 0.136, backArch: 0.018, neckPitch: 18 * deg, headPitch: -22 * deg, tailDroop: 20 * deg, tailCurve: 0.65,
-  neckProfile: [[0, 0.05, 0.055, 0.004], [0.5, 0.054, 0.06, 0.009], [1, 0.064, 0.07, 0.02]],
-  torsoProfile: [[0, 0.068, 0.072, 0.028], [0.3, 0.082, 0.086, 0.046], [0.6, 0.086, 0.088, 0.052], [0.85, 0.074, 0.076, 0.04], [1, 0.064, 0.064, 0.022]],
-  tailProfile: [[0, 0.056, 0.054, 0.014], [0.2, 0.038, 0.037, 0.006], [0.5, 0.02, 0.02, 0.001], [0.8, 0.0095, 0.0095, 0], [1, 0.003, 0.003, 0]],
-  front: { shoulder: [0.054, -0.042, 0.8], elbow: [0.068, 0.054, -0.012], wrist: [0.066, 0.022, 0.006], ball: [0.066, 0.009, 0.024],
-    r: [0.028, 0.021, 0.0165, 0.0155], toeLen: 0.024, toeR: [0.0082, 0.0055], toeSpread: 18, toes: 4, muscle: 1.0 },
-  hind: { hip: [0.054, -0.03, 0.0], knee: [0.07, 0.056, 0.04], ankle: [0.068, 0.024, -0.008], ball: [0.068, 0.009, 0.012],
-    r: [0.034, 0.022, 0.0165, 0.0155], toeLen: 0.026, toeR: [0.0085, 0.0055], toeSpread: 16, toes: 4, muscle: 1.0 },
-  // tiny, still-crumpled wings: short soft fingers, the membrane not yet stretched
-  // (the root on the dorsal surface of the plump body: set lower, the folded arm was buried in
-  // the flank and only a bone end stuck out like a drumstick)
-  wing: { root: [0.044, 0.04, 0.74], elbow: [0.062, 0.01, -0.022], wrist: [0.118, 0.014, -0.004],
-    digits: [[0.215, 0.01, 0.012], [0.205, 0.007, -0.036], [0.185, 0.004, -0.075], [0.155, 0.0, -0.1]],
-    thumb: [0.011, 0.006, 0.016], r: [0.014, 0.0095, 0.008], fingerR: [0.0046, 0.0022], muscle: 0.35,
-    // the membrane's body edge on the surface of the plump flank (not buried in it)
-    attach: [[0.02, -0.008, -0.03], [0.034, -0.016, -0.08], [0.04, -0.024, -0.13]], billow: 0.02 },
-  // thin lids that sink into the soft skin round the big eye (thick shells stood off the
-  // domed head like coins); the lower lid sits low
-  // (lid granules the size of the head's, a thicker rolled margin: smooth thin shells read as
-  // gold caps clamped on the eye)
-  lid: { rIn: 1.03, rOut: 1.13, reachL: 0.8, span: 1.25, gran: 0.09, none: true },
-  headShape: {
-    // a domed cranium that takes up most of the head, and a short, soft, rounded snout
-    upper: [[-0.1, 0.34, 0.3, -0.17], [0.06, 0.41, 0.46, -0.155], [0.24, 0.44, 0.52, -0.145], [0.42, 0.41, 0.46, -0.14], [0.58, 0.33, 0.34, -0.135],
-      [0.72, 0.26, 0.26, -0.135], [0.84, 0.21, 0.2, -0.132], [0.94, 0.17, 0.155, -0.126], [1.0, 0.12, 0.11, -0.112]],
-    // (a full, rounded chin - a thin jaw tip read as a crumpled flap of skin in the macro)
-    jaw: [[0.0, 0.31, -0.148, -0.35], [0.15, 0.32, -0.148, -0.36], [0.35, 0.29, -0.148, -0.33], [0.55, 0.25, -0.145, -0.295],
-      [0.72, 0.195, -0.142, -0.25], [0.84, 0.15, -0.139, -0.222], [0.92, 0.095, -0.137, -0.19]],
-    eye: [0.37, 0.21, 0.42], eyeR: 0.155, eyeInset: 0.5, orbit: 1.55, eyeExpose: 46, brow: 0.35, cheek: 0.45, jawMuscle: 0.35, ridgeR: 0.026, hinge: [0, -0.15, 0.07], gape0: 11 * deg, nostril: 0.6,
-    teethUp: 0, teethSize: 0.0, lipCover: 0.4, tympanum: 0.4, eggTooth: true, soft: true, snoutZ0: 0.46, snoutMul: 0.76, jawEnd: 0.84,
+  hatchling: {
+    name: 'Gold hatchling', L: 1.0, skull: 0.19, neck: 0.13, trunk: 0.27, tail: 0.41, neckBones: 8, tailBones: 20,
+    head: [[0, 0.15, 0.15], [0.3, 0.155, 0.155], [0.55, 0.12, 0.11], [0.8, 0.085, 0.075], [1, 0.055, 0.045]],
+    neckP: [[0, 0.085, 0.095], [0.5, 0.095, 0.105], [1, 0.13, 0.15]],
+    trunkP: [[0, 0.15, 0.17], [0.3, 0.19, 0.2], [0.6, 0.2, 0.2], [0.85, 0.16, 0.16], [1, 0.13, 0.13]],
+    tailP: [[0, 0.1, 0.1], [0.15, 0.075, 0.078], [0.35, 0.05, 0.052], [0.6, 0.028, 0.03], [0.85, 0.012, 0.013], [1, 0.004, 0.004]],
+    stand: { hip: 0.17, shoulder: 0.14, forearmLean: 22, humerusRise: -12, neckRise: 20, neckTop: 5, headPitch: -25, tailDroop: 30 },
+    fold: { curl: [15, 70, 110] }, bulk: { leg: 1.25, arm: 1.2, neck: 1.0 },
+    leg: { femur: 0.075, tibia: 0.08, mt: 0.045, toe: 0.065, claw: 0.018, d: [0.05, 0.035, 0.03, 0.022, 0.02], mtAng: 30, heelPad: 0.5, hallux: 0.45, toeR: 0.0085, soft: 1 },
+    wing: { humerus: 0.07, forearm: 0.12, d: [0.038, 0.026, 0.02, 0.016],
+      fingers: [['III', 0.08, [0.05, 0.035, 0.02], -10], ['IV', 0.07, [0.035, 0.02, 0.01], -48], ['V', 0.06, [0.025, 0.015, 0.008], -80]],
+      thumb: { mc: 0.016, ph: 0.014, claw: 0.02 }, to: 'knee', glide: { humerus: -16, forearm: 12 }, legSplay: 22, thick: 0.0006 },
+    eye: 0.036, snout: 0.38, teeth: [0, 0], toothMax: 0, jawMax: 30, newborn: 1,
+    body: { hump: 0, keel: 0.4, belly: 1.6, pec: 0.5, arm: 0.45, thigh: 0.55, tailbase: 0.7, neck: 0.7 },
+    headX: { brow: 0.35, cheek: 0.45, jawMuscle: 0.35, nostril: 0.6, lipCover: 0.4, tympanum: 0.4, ridgeR: 0.026, soft: true, eggTooth: true },
+    horns: 'buds', crest: { tail: 0.0, back: 0.0 },
+    scale: { body: 0.0034, belly: 0.006, head: 0.0028 },
+    folds: { throat: 2, neck: 2, tail: 0, axilla: 0, stifle: 0, soft: true },
+    lid: { rIn: 1.03, rOut: 1.13, reachL: 0.8, span: 1.25, gran: 0.09, none: true },
+    surfaceNoise: 0.0009,
+    flapHz: 0, flapAmp: 0,
   },
-  horns: 'buds', crest: { count: 30, h: [0.0015, 0.0026, 0.001], base: 1.0 },
-  scale: { body: 0.0034, belly: 0.006, head: 0.0028 },
-  muscle: { shoulder: 0.45, arm: 0.4, pec: 0.5, thigh: 0.45, tailbase: 0.7, belly: 1.4, neck: 0.6, wing: 0.35 },
-  folds: { throat: 2, axilla: 0, stifle: 0, neck: 2, tail: 0, soft: true },
-  surfaceNoise: 0.001,
-};
-
-// ------------------------------------------------- per-dragon designs
-/**
- * Allometry: how a body plan changes with age and size (real animals scale this way).
- *   young: relatively bigger head and eyes, shorter snout and horns, slimmer neck, lighter muscles
- *   giant: relatively smaller head and eyes, thicker neck and legs, heavier muscles
- */
-function grow(spec, a) {
-  const s = JSON.parse(JSON.stringify(spec));
-  for (const k of ['neckPitch', 'headPitch', 'tailDroop']) s[k] = spec[k];
-  s.headShape.gape0 = spec.headShape.gape0;
-  s.head = spec.head * a.head;
-  s.neck = spec.neck * (a.head > 1 ? 0.97 : 1.0);
-  s.headShape.eyeR = spec.headShape.eyeR * a.eye;
-  const sq = (keys) => keys.map(([z, ...r]) => [z > 0.4 ? 0.4 + (z - 0.4) * a.snout : z, ...r]);
-  s.headShape.upper = sq(spec.headShape.upper);
-  s.headShape.jaw = sq(spec.headShape.jaw);
-  s.neckProfile = spec.neckProfile.map(([z, w, h, d]) => [z, w * a.neckW, h * a.neckW, d]);
-  for (const leg of ['front', 'hind']) s[leg].r = spec[leg].r.map((r) => r * a.limb);
-  s.muscle = Object.fromEntries(Object.entries(spec.muscle || {}).map(([k, v]) => [k, v * (k === 'wing' ? 1 : a.muscle)]));
-  s.crest = { ...spec.crest, h: spec.crest.h.map((v) => v * a.crest) };
-  s.hornScale = a.horn;
-  return s;
-}
-const YOUNG = { head: 1.14, eye: 1.18, snout: 0.86, horn: 0.86, neckW: 0.96, limb: 0.94, muscle: 0.88, crest: 0.8 };
-const GIANT = { head: 0.94, eye: 0.84, snout: 1.02, horn: 1.12, neckW: 1.06, limb: 1.08, muscle: 1.06, crest: 1.1 };
-const mapKeys = (keys, f) => keys.map((k) => f(...k));
-
-/** Leaf: a compact, not fully grown dragon - short neck and tail, a round deep skull, big eyes. */
-function leafDesign() {
-  const s = grow(SKETCH.nightwing, YOUNG);
-  s.design = 'Leaf';
-  Object.assign(s, { head: 0.12, neck: 0.13, torso: 0.26, neckSegs: 10, tailSegs: 24, neckPitch: 28 * deg });
-  s.torsoProfile = mapKeys(s.torsoProfile, (z, w, h, d) => [z, w * 1.05, h * 1.03, d]);
-  s.neckProfile = mapKeys(s.neckProfile, (z, w, h, d) => [z, w * 1.04, h * 1.04, d]);
-  s.tailProfile = mapKeys(s.tailProfile, (z, w, h, d) => [z, w * 1.04, h * 1.04, d]);
-  // a rounder, deeper cranium over big eyes; a short snout
-  s.headShape.upper = mapKeys(s.headShape.upper, (z, w, top, bot) => [z, w * (z < 0.4 ? 1.05 : 1.0), top * (z < 0.4 ? 1.12 : 1.04), bot]);
-  s.headShape.eyeR *= 1.04;
-  s.headShape.lipCover = 0.6;          // (0.85 drew a continuous rolled "frog smile")
-  s.headShape.nostril = 0.95;
-  s.horns = 'leaf';
-  s.crest = { ...s.crest, count: 84 };
-  return s;
-}
-
-/** Starlight: an immense albino - broad heavy chest, long neck and tail, a broad flat skull. */
-function starlightDesign() {
-  const s = grow(SKETCH.nightwing, GIANT);
-  s.design = 'Starlight';
-  Object.assign(s, { head: 0.088, neck: 0.172, torso: 0.232, neckSegs: 14, tailSegs: 28, neckPitch: 20 * deg, headPitch: -24 * deg });
-  s.torsoProfile = mapKeys(s.torsoProfile, (z, w, h, d) => [z, w * (z < 0.5 ? 1.18 : 1.08), h * (z < 0.5 ? 1.08 : 1.04), d * (z < 0.5 ? 1.08 : 1)]);
-  s.neckProfile = mapKeys(s.neckProfile, (z, w, h, d) => [z, w * 1.08, h * 0.98, d]);
-  // a broad, flat skull (no long deep "horse face"): wider, lower, a blunt broad snout
-  s.headShape.upper = mapKeys(s.headShape.upper, (z, w, top, bot) => [z, w * (z > 0.5 ? 1.24 : 1.16), top * (z > 0.5 ? 0.8 : 0.86), bot]);
-  s.headShape.jaw = mapKeys(s.headShape.jaw, (z, w, top, bot) => [z, w * (z > 0.5 ? 1.22 : 1.15), top, bot * 0.88]);
-  s.headShape.brow = 1.5;
-  s.headShape.cheek = 1.1;
-  s.headShape.jawMuscle = 1.05;
-  s.headShape.nostril = 1.0;
-  s.headShape.lipCover = 0.55;
-  // a broad-chord wing for the heaviest animal: long fingers, a deep plagiopatagium to the thigh
-  s.wing = { ...s.wing, elbow: [0.17, 0.016, -0.055], wrist: [0.34, 0.025, -0.012],
-    digits: [[0.92, 0.02, 0.0], [0.86, 0.012, -0.24], [0.71, 0.004, -0.43], [0.5, -0.004, -0.52]],
-    attach: [[0.005, -0.012, -0.03], [0.016, -0.034, -0.1], [0.026, -0.054, -0.16], [0.045, -0.08, -0.2]] };
-  s.horns = 'starlight';
-  s.crest = { ...s.crest, count: 124, h: s.crest.h.map((v) => v * 0.9) };
-  s.folds = { ...s.folds, neck: 0 };     // (canon: no wounds - deep neck folds read as gashes)
-  return s;
-}
-
-/** The Episode 1 dragons: each its own design (DRAGONS.md). */
-export const DESIGNS = {
-  charcoal: grow(SKETCH.charcoal, GIANT),
-  leaf: leafDesign(),
-  starlight: starlightDesign(),
-  hatchling: SKETCH.hatchling,
-  scout: SKETCH.scout,
 };
 
 // ------------------------------------------------------------- the builder
 /**
- * Build the anatomy for a species preset at total length L (metres).
- * Returns { L, spec, bones:[{name,parent,pos}], sdf: SDFModel, chains, eyes, keratin, wings, sockets }.
+ * Build the anatomy of a design at total length L (metres; default the design's).
+ * Returns { L, spec, bones:[{name,parent,pos}], bonePos, sculptLocal, sdf, chains, keratin,
+ * eyes, wings, legs, sockets, head, helpers, contacts, dims, spineInfo }.
  */
-export function buildAnatomy(spec, L, opts = {}) {
-  const S = (v) => v * L;
-  const sv = (a) => a.map((x) => x * L);
+export function buildAnatomy(spec, Lreq, opts = {}) {
+  const D = spec;
+  const k = (Lreq ?? D.L) / D.L;
+  const L = D.L * k;
+  const K = (v) => v * k;
   const m = new SDFModel();
-  // sculpted irregularity (no animal is a perfect blend of ellipsoids)
-  m.noise = { amp: L * (spec.surfaceNoise ?? 0.0011), freq: 1 / (L * 0.016) };
+  m.noise = { amp: L * (D.surfaceNoise ?? 0.0011), freq: 1 / (L * 0.016) };
   const bones = [];
   const bonePos = {};
   const bone = (name, parent, pos) => { bones.push({ name, parent, pos: [...pos] }); bonePos[name] = [...pos]; return name; };
   const chains = {};
-  const keratin = [];     // {kind, bone, points:[...], radii:[...], flat?, tag}
+  const keratin = [];
   const eyes = [];
   const sockets = {};
-  const MU = { shoulder: 1, arm: 1, pec: 1, thigh: 1, tailbase: 1, belly: 1, neck: 1, wing: 1, ...(spec.muscle || {}) };
+  const contacts = [];
+  const helpers = [];
+  const MU = { hump: 0, keel: 1, belly: 1, pec: 1, arm: 1, thigh: 1, tailbase: 1, neck: 1, ...(D.body || {}) };
+  const omitWing = opts.omitWing || {};
 
-  // ---------------------------------------------------------------- spine
-  const T = spec.torso, N = spec.neck, Hn = spec.head;
-  const tailLen = Math.max(0.1, 1 - T - N - Hn);
-  // torso joints from pelvis (z=0) forward
-  const torsoF = [0, 0.3, 0.55, 0.8, 1];
-  const torsoPts = torsoF.map((f) => [0, mix(spec.hipY, spec.withersY, f) + spec.backArch * Math.sin(Math.PI * f), f * T]);
-  // neck: straight at neckPitch from the withers (poses curve it)
-  const nd = [0, Math.sin(spec.neckPitch), Math.cos(spec.neckPitch)];
+  // ------------------------------------------------------------- spine
+  const H = K(D.skull), N = K(D.neck), T = K(D.trunk), TL = K(D.tail);
+  const st = D.stand;
+  const hipH = K(st.hip), shH = K(st.shoulder);
+  const prT = (s) => profileAt(D.trunkP, s).map(K);           // [W, depth] metres
+  const BK = { leg: 1, arm: 1, neck: 1, ...(D.bulk || {}) };
+  const prN = (s) => profileAt(D.neckP, s).map((v) => K(v) * mix(BK.neck, 1, s * s));
+  const prL = (s) => profileAt(D.tailP, s).map(K);
+  const COL_T = 0.16, COL_N = 0.4, COL_L = 0.4;                // vertebral column depth below the dorsal surface (fraction)
+  const sSh = 0.06;                                            // trunk station of the shoulder joint
+  const topHip = hipH + 0.45 * prT(1)[1];
+  const topSh = shH + 0.3 * prT(sSh)[1];
+  const topAt = (s) => mix(topSh, topHip, (s - sSh) / (1 - sSh));
+  const zAt = (s) => (1 - s) * T;                              // hip joint at z = 0, shoulder forward
+  const spineY = (s) => topAt(s) - COL_T * prT(s)[1];
+  const torsoS = [1, 0.72, 0.45, 0.18, 0];
+  const torsoPts = torsoS.map((s) => [0, spineY(s), zAt(s)]);
+  const neckPitch = 20 * deg;                                 // rest: forward and a little up
+  const nd = [0, Math.sin(neckPitch), Math.cos(neckPitch)];
+  const nB = D.neckBones;
   const neckPts = [];
-  for (let i = 0; i <= spec.neckSegs; i++) neckPts.push(add(torsoPts[4], scale(nd, N * i / spec.neckSegs)));
-  const headJoint = neckPts[spec.neckSegs];
-  // tail: droops then levels off (quadratic), from the pelvis backward
-  const tailPts = [];
-  const tdir0 = [0, -Math.sin(spec.tailDroop), -Math.cos(spec.tailDroop)];
-  const tailEnd = add(torsoPts[0], [0, -Math.sin(spec.tailDroop) * tailLen * (1 - spec.tailCurve), -tailLen * 0.985]);
-  const tailCtl = add(torsoPts[0], scale(tdir0, tailLen * 0.5));
+  for (let i = 0; i <= nB; i++) neckPts.push(add(torsoPts[4], scale(nd, N * i / nB)));
+  const headJoint = neckPts[nB];
+  // tail: straight back with a slight droop (the glide), from the pelvis
+  const tB = D.tailBones;
+  const droop0 = 5 * deg;
+  const tailEnd = add(torsoPts[0], [0, -Math.sin(droop0) * TL * 0.7, -TL * 0.995]);
+  const tailCtl = add(torsoPts[0], [0, -Math.sin(droop0) * TL * 0.4, -TL * 0.5]);
   const tailCurve = polyline(bez(torsoPts[0], tailCtl, tailEnd, 64));
   const segLens = [];
-  { let w = 0; for (let i = 0; i < spec.tailSegs; i++) { const l = Math.pow(0.975, i); segLens.push(l); w += l; } for (let i = 0; i < spec.tailSegs; i++) segLens[i] *= tailCurve.total / w; }
-  { let d = 0; tailPts.push(tailCurve.at(0).p); for (let i = 0; i < spec.tailSegs; i++) { d += segLens[i]; tailPts.push(tailCurve.at(d).p); } }
+  { let w = 0; for (let i = 0; i < tB; i++) { const l = Math.pow(0.972, i); segLens.push(l); w += l; } for (let i = 0; i < tB; i++) segLens[i] *= tailCurve.total / w; }
+  const tailPts = [tailCurve.at(0).p];
+  { let d = 0; for (let i = 0; i < tB; i++) { d += segLens[i]; tailPts.push(tailCurve.at(d).p); } }
 
-  // bones (normalized -> metres via sv); hierarchy rooted at 'body'
-  const tp = (p) => sv(p);
-  bone('body', null, tp(torsoPts[2]));
-  bone('lumbar', 'body', tp(torsoPts[1]));
-  bone('pelvis', 'lumbar', tp(torsoPts[0]));
-  bone('thorax', 'body', tp(torsoPts[3]));
-  bone('rib_lumbar', 'lumbar', tp(torsoPts[1]));
-  bone('rib_body', 'body', tp(torsoPts[2]));
-  bone('rib_thorax', 'thorax', tp(torsoPts[3]));
-  for (let i = 0; i < spec.neckSegs; i++) bone(`neck_${i}`, i === 0 ? 'thorax' : `neck_${i - 1}`, tp(neckPts[i]));
-  bone('head', `neck_${spec.neckSegs - 1}`, tp(headJoint));
-  for (let i = 0; i < spec.tailSegs; i++) bone(`tail_${i}`, i === 0 ? 'lumbar' : `tail_${i - 1}`, tp(tailPts[i]));
+  bone('body', null, torsoPts[2]);
+  bone('lumbar', 'body', torsoPts[1]);
+  bone('pelvis', 'lumbar', torsoPts[0]);
+  bone('thorax', 'body', torsoPts[3]);
+  bone('rib_lumbar', 'lumbar', torsoPts[1]);
+  bone('rib_body', 'body', torsoPts[2]);
+  bone('rib_thorax', 'thorax', torsoPts[3]);
+  for (let i = 0; i < nB; i++) bone(`neck_${i}`, i === 0 ? 'thorax' : `neck_${i - 1}`, neckPts[i]);
+  bone('head', `neck_${nB - 1}`, headJoint);
+  for (let i = 0; i < tB; i++) bone(`tail_${i}`, i === 0 ? 'lumbar' : `tail_${i - 1}`, tailPts[i]);
 
-  // the spine as ONE polyline from tail tip to head joint (normalized units)
+  // the spine as ONE polyline from the tail tip to the head joint
   const spinePts = [...tailPts.slice().reverse(), ...torsoPts.slice(1), ...neckPts.slice(1)];
   const segBone = [];
-  for (let i = spec.tailSegs - 1; i >= 0; i--) segBone.push(`tail_${i}`);
+  for (let i = tB - 1; i >= 0; i--) segBone.push(`tail_${i}`);
   segBone.push('rib_lumbar', 'rib_body', 'rib_body', 'rib_thorax');
-  for (let i = 0; i < spec.neckSegs; i++) segBone.push(`neck_${i}`);
+  for (let i = 0; i < nB; i++) segBone.push(`neck_${i}`);
   const spine = polyline(spinePts);
-  const dTail = spine.cum[spec.tailSegs], dWithers = spine.cum[spec.tailSegs + 4];
+  const dTail = spine.cum[tB], dWithers = spine.cum[tB + 4];
+  // profiles: blended across the joins (hip -> tail base, chest -> neck base), no step
+  const sec3 = (W, Dp, col) => [W / 2, Dp / 2, Dp / 2 - col * Dp];
   const profile = (d) => {
-    if (d <= dTail) { const s = 1 - d / dTail; return profileAt(spec.tailProfile, s); }
-    if (d <= dWithers) { const s = 1 - (d - dTail) / (dWithers - dTail); return profileAt(spec.torsoProfile, s); }
-    const s = 1 - (d - dWithers) / (spine.total - dWithers); return profileAt(spec.neckProfile, s);
+    if (d <= dTail) {
+      const s = 1 - d / dTail;
+      const a = sec3(...prL(s), COL_L);
+      if (s < 0.07) { const b = sec3(...prT(1), COL_T); const f = smooth01(s / 0.07); return [mix(b[0], a[0], f), mix(b[1], a[1], f), mix(b[2], a[2], f)]; }
+      return a;
+    }
+    if (d <= dWithers) { const s = 1 - (d - dTail) / (dWithers - dTail); return sec3(...prT(s), COL_T); }
+    const s = 1 - (d - dWithers) / (spine.total - dWithers);
+    const a = sec3(...prN(s), COL_N);
+    if (s > 0.86) { const b = sec3(...prT(0), COL_T); const f = smooth01((s - 0.86) / 0.14); return [mix(a[0], b[0] * 0.92, f), mix(a[1], b[1] * 0.9, f), mix(a[2], b[2] * 0.9, f)]; }
+    return a;
   };
-  const upAt = (tan) => norm([0, tan[2], -tan[1]]);   // dorsal direction in the sagittal plane (tan points headward)
+  const upAt = (tan) => norm([0, tan[2], -tan[1]]);
   const boneAtD = (d) => segBone[Math.min(spine.at(d).seg, segBone.length - 1)];
   const tagAtD = (d) => d < dTail ? 'tail' : d < dWithers ? 'torso' : 'neck';
-  /** cross-section frame at spine arc length d: centre, up, side, tangent, [hw, hh] */
   const section = (d) => {
     const a = spine.at(d), pr = profile(d), up = upAt(a.tan);
-    return { c: sub(a.p, scale(up, pr[2])), up, side: norm(cross(up, a.tan)), tan: a.tan, hw: pr[0], hh: pr[1], drop: pr[2], spineP: a.p };
+    return { c: sub(a.p, scale(up, pr[2])), up, side: norm(cross(up, a.tan)), tan: a.tan, hw: pr[0], hh: pr[1], drop: pr[2], spineP: a.p, top: add(sub(a.p, scale(up, pr[2])), scale(up, pr[1])) };
   };
-  // dense round cones along the spine
   {
     let d = 0;
     const samples = [];
-    while (d < spine.total) {
-      const pr = profile(d);
-      samples.push(d);
-      d += Math.max(0.0035, Math.min(0.02, 0.55 * Math.min(pr[0], pr[1])));
-    }
+    while (d < spine.total) { const pr = profile(d); samples.push(d); d += Math.max(L * 0.0035, Math.min(L * 0.02, 0.55 * Math.min(pr[0], pr[1]))); }
     samples.push(spine.total);
     const gSpine = m.group();
     for (let i = 0; i < samples.length - 1; i++) {
@@ -423,232 +319,416 @@ export function buildAnatomy(spec, L, opts = {}) {
       const ra = Math.sqrt(pa[0] * pa[1]), rb = Math.sqrt(pb[0] * pb[1]);
       const sx = 0.5 * (pa[0] / ra + pb[0] / rb), sy = 0.5 * (pa[1] / ra + pb[1] / rb);
       const mid = spine.at(0.5 * (d0 + d1));
-      m.cone(sv(ca), sv(cb), S(ra), S(rb), { sx, sy, up: norm(add(ua, ub)), k: S(0.004), grp: gSpine, bone: segBone[Math.min(mid.seg, segBone.length - 1)],
-        chain: 'spine', s0: S(d0), s1: S(d1), tag: tagAtD(d0) });
+      m.cone(ca, cb, ra, rb, { sx, sy, up: norm(add(ua, ub)), k: L * 0.004, grp: gSpine, bone: segBone[Math.min(mid.seg, segBone.length - 1)], chain: 'spine', s0: d0, s1: d1, tag: tagAtD(d0) });
     }
   }
-  chains.spine = { points: spinePts.map(sv), refUp: [0, 1, 0], kind: 'spine' };
-  sockets.withers = { bone: 'neck_0', pos: sv(add(torsoPts[4], [0, 0.0, 0])) };
-  const dAtTorso = (s) => dWithers - s * (dWithers - dTail);    // torso s (0 withers .. 1 pelvis) -> arc length
-  const dAtNeck = (s) => spine.total - s * (spine.total - dWithers); // neck s (0 head .. 1 withers)
-  const dAtTail = (s) => (1 - s) * dTail;                            // tail s (0 base .. 1 tip)
+  chains.spine = { points: spinePts, refUp: [0, 1, 0], kind: 'spine' };
+  sockets.withers = { bone: 'neck_0', pos: torsoPts[4] };
+  const dAtTorso = (s) => dWithers - s * (dWithers - dTail);
+  const dAtNeck = (s) => spine.total - s * (spine.total - dWithers);
+  const dAtTail = (s) => (1 - s) * dTail;
+  const ts = { chain: 'spine', tag: 'torso' };
 
   // ------------------------------------------------------- torso sculpt
-  const thoraxP = torsoPts[3], bodyP = torsoPts[2], pelvisP = torsoPts[0];
-  const ts = { chain: 'spine', tag: 'torso' };
-  // hanging belly between the chest and the hips
+  // hanging belly between the chest and the hips (fat on the giants, little on the young)
   {
-    const sc = section(dAtTorso(0.5));
+    const sc = section(dAtTorso(0.52));
     const mb = MU.belly;
-    m.ell(sv(add(sc.c, scale(sc.up, -sc.hh * 0.52))), sv([sc.hw * 0.78 * Math.sqrt(mb), sc.hh * 0.5 * mb, T * 0.22]), { ax: sc.side, ay: sc.up, k: S(sc.hh * 0.5), bone: 'rib_body', ...ts });
+    if (mb > 0) m.ell(sub(sc.c, scale(sc.up, sc.hh * 0.42)), [sc.hw * 0.8 * Math.sqrt(mb), sc.hh * 0.5 * Math.sqrt(mb), T * 0.22], { ax: sc.side, ay: sc.up, k: sc.hh * 0.5, bone: 'rib_body', ...ts });
   }
-  // sternum / chest keel and the pectorals in front of and between the forelegs
-  const prT = profileAt(spec.torsoProfile, 0.12);
-  const chestC = section(dAtTorso(0.1));
-  const sternum = add(chestC.c, add(scale(chestC.up, -chestC.hh * 0.62), scale(chestC.tan, chestC.hw * 0.55)));
-  m.ell(sv(sternum), sv([chestC.hw * 0.42, chestC.hh * 0.38, T * 0.09]), { ax: [1, 0, 0], ay: chestC.up, k: S(chestC.hh * 0.4), bone: 'rib_thorax', ...ts });
-  // hip bones (ilium crests) and the sacrum
-  for (const sd of [1, -1]) {
-    const pp = spec.torsoProfile[spec.torsoProfile.length - 1][1] / 0.05;
-    m.ell(sv(add(pelvisP, [sd * 0.024 * pp, 0.003, 0.016])), sv([0.016 * pp, 0.013 * pp, 0.034 * pp]), { k: S(0.016 * pp), bone: 'pelvis', ...ts });
+  // the keeled sternum: a deep blade along the ventral midline of the chest (the downstroke
+  // muscle is anchored on it), its front (manubrium) under the neck base
+  const chest = section(dAtTorso(0.2));
+  {
+    const kk = MU.keel;
+    m.ell(sub(chest.c, scale(chest.up, chest.hh * 0.56)), [chest.hw * 0.3, chest.hh * 0.5 * kk, T * 0.3], { ax: [1, 0, 0], ay: chest.up, k: chest.hh * 0.35, bone: 'rib_thorax', ...ts });
+    const f0 = section(dAtTorso(0.0));
+    m.ell(add(sub(f0.c, scale(f0.up, f0.hh * 0.42)), scale(f0.tan, f0.hw * 0.22)), [f0.hw * 0.42, f0.hh * 0.45, T * 0.13], { ax: [1, 0, 0], ay: f0.up, k: f0.hh * 0.4, bone: 'rib_thorax', ...ts });
+  }
+  // hip bones (ilium crests) either side of the sacrum
+  {
+    const sp = section(dAtTorso(0.95));
+    for (const sd of [1, -1]) m.ell(add(add(sp.c, scale(sp.up, sp.hh * 0.55)), scale(sp.side, sd * sp.hw * 0.55)), [sp.hw * 0.26, sp.hh * 0.22, T * 0.1], { k: sp.hw * 0.3, bone: 'pelvis', ...ts });
+  }
+  // the hump: the upstroke muscles over the shoulder blades (the giants' "bison hump")
+  if (MU.hump > 0) {
+    const sh = section(dAtTorso(0.14));
+    const hp = K(MU.hump);
+    const ry = sh.hh * 0.3 + hp;
+    m.ell(sub(sh.top, scale(sh.up, sh.hh * 0.3)), [sh.hw * 0.62, ry, T * 0.17], { ax: [1, 0, 0], ay: sh.up, k: sh.hh * 0.45, bone: 'thorax', ...ts });
   }
 
-  // ------------------------------------------------------------- legs
+  // ------------------------------------------------------- hind legs
+  const LG = D.leg;
+  const fem = K(LG.femur), tib = K(LG.tibia), mtl = K(LG.mt), toeL = K(LG.toe);
+  const dl = LG.d.map(K);                     // diameters: thigh, knee, shank, ankle, foot
+  const rLeg = [dl[0] * 0.3, dl[1] * 0.5, dl[3] * 0.5, dl[4] * 0.5];   // bone-core radii at hip, knee, ankle, ball
+  const toeR = K(LG.toeR);
+  const hipSec = section(dAtTorso(1));
+  const hipX = hipSec.hw * 0.62;
   const legs = [];
-  const buildLeg = (kind, P, sd) => {
+  const sculptLocal = {};
+  const sculptWorld = {};                     // bone -> world rotation in the sculpt pose (limb bones)
+  const legRest = {};
+  for (const sd of [1, -1]) {
     const side = sd > 0 ? 'L' : 'R';
-    const pre = `${kind}_${side}`;
-    let J;
-    if (kind === 'fl') {
-      const sh = [P.shoulder[0], spec.withersY + P.shoulder[1], T * P.shoulder[2]];
-      J = [sh, ...[P.elbow, P.wrist, P.ball].map((q) => [q[0], q[1], sh[2] + q[2]])];
-    } else {
-      J = [[P.hip[0], spec.hipY + P.hip[1], P.hip[2]], P.knee, P.ankle, P.ball];
-    }
-    J = J.map((q) => [sd * q[0], q[1], q[2]]);
-    const parent = kind === 'fl' ? 'thorax' : 'pelvis';
+    const pre = `hl_${side}`;
+    const Hj = [sd * hipX, hipH, 0];
+    // SCULPT (standing): metatarsus at mtAng from horizontal, heel under the hip, knee forward
+    const ma = LG.mtAng * deg;
+    const mtDir = [0, Math.sin(ma), -Math.cos(ma)];                     // from the ball up-back to the ankle
+    const ballY = toeR * 1.05;
+    const ankZ = Hj[2] - fem * 0.04;
+    const Bs = [sd * hipX * 1.06, ballY, ankZ + mtl * Math.cos(ma)];
+    const As = add(Bs, scale(mtDir, mtl));
+    const ik = ik2(Hj, As, fem, tib, [sd * 0.18, 0.05, 1]);
+    const Ks = ik.B, As2 = ik.C;
+    const Bs2 = sub(As2, scale(mtDir, mtl));
+    const footDirS = [0, 0, 1];
+    // REST (glide): femur back, down a little and out, knee slightly bent, foot trailing, toes curled
+    const spl = (LG.splay ?? D.wing.legSplay ?? 24) * deg;
+    const fd = norm([sd * Math.sin(spl), -0.28, -Math.cos(spl)]);
+    const td = norm([sd * Math.sin(spl) * 1.05, -0.12, -Math.cos(spl)]);
+    const md = norm([sd * Math.sin(spl) * 0.9, -0.05, -1]);
+    const footDirR = norm([sd * 0.15, -0.55, -0.8]);
+    const Kr = add(Hj, scale(fd, fem)), Ar = add(Kr, scale(td, tib)), Br = add(Ar, scale(md, mtl));
     const names = [0, 1, 2, 3].map((i) => `${pre}_${i}`);
-    names.forEach((n, i) => bone(n, i === 0 ? parent : names[i - 1], sv(J[i])));
-    const r = P.r;
-    const mus = P.muscle ?? 1;
-    const lt = (i) => ({ bone: names[i], chain: pre, tag: `${kind}${i}` });
-    // bones as round cones
-    const gLeg = m.group();
-    for (let i = 0; i < 3; i++) m.cone(sv(J[i]), sv(J[i + 1]), S(r[i]), S(r[i + 1]), { k: S(r[0] * 0.9), grp: gLeg, ...lt(i), s0: 0, s1: 0 });
-    const seg = (i) => sub(J[i + 1], J[i]);
-    const segL = (i) => len(seg(i)), segD = (i) => norm(seg(i));
-    const out = [sd, 0, 0], back = [0, 0, -1], fwd = [0, 0, 1], up = [0, 1, 0];
-    const ortho = (v, a) => norm(sub(v, scale(a, dot(v, a))));
-    if (kind === 'fl') {
-      const ms = MU.shoulder * mus, ma = MU.arm * mus;
-      const sc = section(dAtTorso(0.12));
-      // shoulder blade: a long flat plate on the side of the chest, from below the withers
-      // down and forward to the point of the shoulder; infraspinatus/deltoid bulge on it
-      const top = [sd * sc.hw * 0.62, spec.withersY - 0.004, J[0][2] - T * 0.11];
-      const scapAx = norm(sub(J[0], top));
-      const scapN = ortho(out, scapAx);
-      const scl = len(sub(J[0], top));
-      m.ell(sv(lerp3(top, J[0], 0.45)), sv([r[0] * 0.32 * ms, scl * 0.55, r[0] * 1.15 * ms]), { ax: scapN, ay: scapAx, k: S(r[0] * 0.6), bone: 'thorax', chain: 'spine', tag: 'torso' });
-      m.ell(sv(add(lerp3(top, J[0], 0.68), scale(scapN, r[0] * 0.25))), sv([r[0] * 0.55 * ms, scl * 0.33, r[0] * 0.9 * ms]), { ax: scapN, ay: scapAx, k: S(r[0] * 0.55), bone: names[0], chain: 'spine', tag: 'torso' });
-      // triceps: the big mass behind the upper arm, from the back edge of the blade to the elbow point
-      const olec = add(J[1], scale(back, r[1] * 0.85));
-      const triTop = add(lerp3(top, J[0], 0.55), scale(back, r[0] * 0.75));
-      const triAx = norm(sub(olec, triTop));
-      m.ell(sv(add(lerp3(triTop, olec, 0.5), scale(out, r[0] * 0.18))), sv([r[0] * 0.8 * ma, len(sub(olec, triTop)) * 0.5, r[0] * 0.95 * ma]), { ax: ortho(out, triAx), ay: triAx, k: S(r[0] * 0.7), ...lt(0) });
-      // biceps / brachialis in front of the humerus
-      m.ell(sv(add(lerp3(J[0], J[1], 0.42), add(scale(fwd, r[0] * 0.45), scale(out, r[0] * 0.15)))), sv([r[0] * 0.62 * ma, segL(0) * 0.4, r[0] * 0.6 * ma]), { ax: ortho(out, segD(0)), ay: segD(0), k: S(r[0] * 0.5), ...lt(0) });
-      // pectoral: from the sternum to the front of the upper arm
-      const pecA = add(sternum, [sd * chestC.hw * 0.18, 0, 0]);
-      const pecB = add(lerp3(J[0], J[1], 0.3), scale(fwd, r[0] * 0.2));
-      const pecAx = norm(sub(pecB, pecA));
-      m.ell(sv(lerp3(pecA, pecB, 0.48)), sv([r[0] * 0.95 * MU.pec, len(sub(pecB, pecA)) * 0.56, r[0] * 0.8 * MU.pec]), { ax: ortho(fwd, pecAx), ay: pecAx, k: S(r[0] * 0.8), bone: 'thorax', chain: 'spine', tag: 'torso' });
-      // forearm: extensors (front-outside) and flexors (back-inside), thick at the elbow, tendons at the wrist
-      const fa = segD(1), fl = segL(1);
-      m.ell(sv(add(lerp3(J[1], J[2], 0.3), add(scale(fwd, r[1] * 0.3), scale(out, r[1] * 0.25)))), sv([r[1] * 0.85 * ma, fl * 0.34, r[1] * 0.9 * ma]), { ax: ortho(out, fa), ay: fa, k: S(r[1] * 0.5), ...lt(1) });
-      m.ell(sv(add(lerp3(J[1], J[2], 0.28), add(scale(back, r[1] * 0.45), scale(out, -r[1] * 0.12)))), sv([r[1] * 0.78 * ma, fl * 0.3, r[1] * 0.75 * ma]), { ax: ortho(out, fa), ay: fa, k: S(r[1] * 0.45), ...lt(1) });
-      // elbow point (olecranon) and the wrist knob (pisiform behind it)
-      m.ell(sv(olec), sv([r[1] * 0.55, r[1] * 0.75, r[1] * 0.5]), { k: S(r[1] * 0.4), ...lt(1) });
-      m.ell(sv(add(J[2], scale(back, r[2] * 0.55))), sv([r[2] * 0.7, r[2] * 0.75, r[2] * 0.6]), { k: S(r[2] * 0.4), ...lt(2) });
-      m.ell(sv(add(J[2], scale(fwd, r[2] * 0.15))), sv([r[2] * 1.12, r[2] * 0.85, r[2] * 0.95]), { k: S(r[2] * 0.4), ...lt(2) });
-    } else {
-      const mt = MU.thigh * mus;
-      // glutes over the hip joint
-      m.ell(sv(add(J[0], [sd * r[0] * 0.12, r[0] * 0.55, -r[0] * 0.4])), sv([r[0] * 0.55 * mt, r[0] * 0.6 * mt, r[0] * 1.1 * mt]), { k: S(r[0] * 0.7), bone: 'pelvis', chain: 'spine', tag: 'torso' });
-      // quadriceps (front of the femur), hamstrings (from the ischium behind the hip to below the knee)
-      const qa = segD(0);
-      m.ell(sv(add(lerp3(J[0], J[1], 0.48), add(scale(fwd, r[0] * 0.42), scale(out, r[0] * 0.2)))), sv([r[0] * 0.78 * mt, segL(0) * 0.5, r[0] * 0.78 * mt]), { ax: ortho(out, qa), ay: qa, k: S(r[0] * 0.65), ...lt(0) });
-      const isch = add(J[0], [sd * r[0] * 0.1, -r[0] * 0.1, -r[0] * 1.5]);
-      const hamB = add(J[1], add(scale(back, r[1] * 0.9), [0, -r[1] * 0.5, 0]));
-      const ha = norm(sub(hamB, isch));
-      m.ell(sv(add(lerp3(isch, hamB, 0.45), scale(out, r[0] * 0.25))), sv([r[0] * 0.78 * mt, len(sub(hamB, isch)) * 0.52, r[0] * 0.85 * mt]), { ax: ortho(out, ha), ay: ha, k: S(r[0] * 0.7), ...lt(0) });
-      // caudofemoralis: the reptile's big tail-to-thigh muscle under the tail base
-      const tb = section(dAtTail(0.07));
-      const cfA = add(tb.c, add(scale(tb.up, -tb.hh * 0.45), scale(tb.side, sd * tb.hw * 0.35)));
-      const cfB = add(lerp3(J[0], J[1], 0.3), scale(back, r[0] * 0.4));
-      m.cone(sv(cfA), sv(cfB), S(tb.hh * 0.42 * MU.tailbase), S(r[0] * 0.6 * MU.tailbase), { k: S(r[0] * 0.8), bone: 'pelvis', chain: 'spine', tag: 'tail' });
-      // knee cap
-      m.ell(sv(add(J[1], scale(fwd, r[1] * 0.62))), sv([r[1] * 0.68, r[1] * 0.7, r[1] * 0.5]), { k: S(r[1] * 0.4), ...lt(1) });
-      // calf (gastrocnemius) high behind the shin, tapering into the Achilles tendon to the heel
-      const heel = add(J[2], scale(back, r[2] * 0.8));
-      const sa = segD(1);
-      m.ell(sv(add(lerp3(J[1], J[2], 0.28), scale(back, r[1] * 0.75))), sv([r[1] * 0.78 * mt, segL(1) * 0.3, r[1] * 0.85 * mt]), { ax: ortho(out, sa), ay: sa, k: S(r[1] * 0.5), ...lt(1) });
-      m.cone(sv(add(lerp3(J[1], J[2], 0.45), scale(back, r[1] * 0.8))), sv(add(heel, [0, r[2] * 0.6, 0])), S(r[1] * 0.42), S(r[2] * 0.4), { k: S(r[2] * 0.5), ...lt(1) });
-      m.ell(sv(add(heel, [0, r[2] * 0.2, 0])), sv([r[2] * 0.62, r[2] * 1.0, r[2] * 0.6]), { k: S(r[2] * 0.4), ...lt(2) });
-      // shin front (tibialis)
-      m.ell(sv(add(lerp3(J[1], J[2], 0.32), scale(fwd, r[1] * 0.25))), sv([r[1] * 0.6, segL(1) * 0.28, r[1] * 0.5]), { ax: ortho(out, sa), ay: sa, k: S(r[1] * 0.4), ...lt(1) });
-    }
-    // foot: a broad pad under the ball, toes with knuckles
-    const ball = J[3];
-    m.ell(sv(add(ball, [0, -r[3] * 0.2, r[3] * 0.35])), sv([r[3] * 1.45, r[3] * 0.78, r[3] * 1.5]), { k: S(r[3] * 0.6), ...lt(3) });
-    m.ell(sv(add(ball, [0, -r[3] * 0.35, -r[3] * 0.65])), sv([r[3] * 0.9, r[3] * 0.55, r[3] * 0.8]), { k: S(r[3] * 0.5), ...lt(3) });     // heel pad
-    const toes = [];
-    const nT = P.toes;
-    for (let t = 0; t < nT; t++) {
-      const f = nT === 1 ? 0 : t / (nT - 1) - 0.5;      // -0.5 (inner) .. 0.5 (outer)
-      const ang = sd * f * 2 * P.toeSpread * deg;
-      const tl = P.toeLen * (1 - 0.24 * Math.abs(f * 2) ** 1.5) * (f * sd > 0.2 ? 0.92 : 1) * (0.94 + 0.12 * hsh(t + (kind === 'fl' ? 0 : 7), 3));
-      const dir = norm([Math.sin(ang), -0.1, Math.cos(ang)]);
-      const base = add(ball, [Math.sin(ang) * r[3] * 0.7, -r[3] * 0.15, Math.cos(ang) * r[3] * 0.5]);
-      const knuckle = add(base, scale(dir, tl * 0.5));
-      const tip = add(base, scale([dir[0], -0.35, dir[2]], tl));
-      const tipP = [tip[0], Math.max(P.toeR[1] * 0.9, tip[1]), tip[2]];
-      const kn = add(knuckle, [0, P.toeR[0] * 0.35, 0]);
-      const tname = `${pre}_t${t}`;
-      bone(tname, names[3], sv(base));
-      m.cone(sv(base), sv(kn), S(P.toeR[0]), S(P.toeR[0] * 0.82), { k: S(P.toeR[0] * 0.8), bone: tname, chain: `${pre}_t${t}`, tag: 'toe' });
-      m.cone(sv(kn), sv(tipP), S(P.toeR[0] * 0.82), S(P.toeR[1]), { k: S(P.toeR[1] * 0.6), bone: tname, chain: `${pre}_t${t}`, tag: 'toe' });
-      // knuckle and toe pads
-      m.ell(sv(add(kn, [0, P.toeR[0] * 0.15, 0])), sv([P.toeR[0] * 0.95, P.toeR[0] * 0.8, P.toeR[0] * 0.75]), { k: S(P.toeR[0] * 0.4), bone: tname, chain: `${pre}_t${t}`, tag: 'toe' });
-      m.ell(sv(add(lerp3(base, tipP, 0.72), [0, -P.toeR[0] * 0.55, 0])), sv([P.toeR[0] * 0.8, P.toeR[0] * 0.5, P.toeR[0] * 0.9]), { k: S(P.toeR[0] * 0.4), bone: tname, chain: `${pre}_t${t}`, tag: 'toe' });
-      chains[`${pre}_t${t}`] = { points: [sv(base), sv(kn), sv(tipP)], refUp: [0, 1, 0], kind: 'toe' };
-      // claw: curved keratin from the toe tip, pointing forward-down; thick and blunt-tipped on adults
-      const cdir = norm([dir[0], -0.62, dir[2]]);
-      const cl = P.toeR[0] * (spec.headShape.soft ? 1.6 : 2.5) * (0.9 + 0.2 * hsh(t, kind === 'fl' ? 11 : 13));
-      keratin.push({ kind: 'claw', bone: tname, tag: 'claw',
-        points: [sv(add(tipP, scale(dir, -P.toeR[1] * 0.8))), sv(add(tipP, scale(norm([dir[0], 0.05, dir[2]]), cl * 0.55))), sv(add(add(tipP, scale(cdir, cl)), [0, -P.toeR[1] * 0.4, 0]))],
-        radii: [S(P.toeR[1] * 1.2), S(P.toeR[1] * 0.8), S(P.toeR[1] * (spec.headShape.soft ? 0.25 : 0.1))], flat: 0.78, up: [0, 1, 0] });
-      toes.push(tname);
-    }
-    chains[pre] = { points: J.map(sv), refUp: [0, 0, 1], kind: 'limb' };
-    legs.push({ kind, side, names, toes, joints: J.map(sv) });
-  };
-  for (const sd of [1, -1]) { buildLeg('fl', spec.front, sd); buildLeg('hl', spec.hind, sd); }
+    bone(names[0], 'pelvis', Hj); bone(names[1], names[0], Kr); bone(names[2], names[1], Ar); bone(names[3], names[2], Br);
+    bone(`${pre}_h`, 'pelvis', Hj);
+    const restJ = [Hj, Kr, Ar, Br, add(Br, scale(footDirR, toeL))];
+    const sculJ = [Hj, Ks, As2, Bs2, add(Bs2, scale(footDirS, toeL))];
+    const ups = [[1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0]];
+    const cl = chainLocals(names, restJ, sculJ, ups, ups, QI());
+    Object.assign(sculptLocal, cl.local);
+    names.forEach((n, i) => { sculptWorld[n] = cl.world[i]; });
+    sculptLocal[`${pre}_h`] = cl.local[names[0]];
+    sculptWorld[`${pre}_h`] = cl.world[0];
+    helpers.push({ bone: `${pre}_h`, driver: names[0], k: 0.5 });
+    legRest[side] = { hip: Hj, knee: Kr, ankle: Ar, ball: Br, foot: add(Br, scale(footDirR, toeL)) };
+    legs.push({ side, sd, names, sculpt: { hip: Hj, knee: Ks, ankle: As2, ball: Bs2 }, rest: legRest[side], toes: [] });
+  }
 
-  // ------------------------------------------------------------- wings
-  const wings = [];
-  const Wp = spec.wing;
-  const omitWing = opts.omitWing || {};
+  // ------------------------------------------------------- wing arms (rest + sculpt)
+  const WG = D.wing;
+  const hum = K(WG.humerus), fore = K(WG.forearm);
+  const dw = WG.d.map(K);
+  const rA = [dw[0] * 0.5, dw[1] * 0.5 * BK.arm, dw[2] * 0.5 * BK.arm, dw[3] * 0.5];
+  const shSec = section(dAtTorso(sSh));
+  const shX = shSec.hw * 0.5;
+  const wingData = [];
   for (const sd of [1, -1]) {
     const side = sd > 0 ? 'L' : 'R';
     const pre = `w_${side}`;
-    const R = [sd * Wp.root[0], spec.withersY + Wp.root[1], T * Wp.root[2]];
-    const rel = (q) => [R[0] + sd * q[0], R[1] + q[1], R[2] + q[2]];
-    const E = rel(Wp.elbow);
-    const Wr = rel(Wp.wrist);
-    bone(`${pre}_0`, 'thorax', sv(R));
-    bone(`${pre}_1`, `${pre}_0`, sv(E));
-    bone(`${pre}_2`, `${pre}_1`, sv(Wr));
+    const S = [sd * shX, shH, zAt(sSh)];
+    // REST: the glide planform (DESIGN 10): humerus swept back, forearm forward, fingers fanned
+    const ah = WG.glide.humerus * deg, af = WG.glide.forearm * deg;
+    const dirAt = (a) => [sd * Math.cos(a), 0, Math.sin(a)];
+    const Er = add(S, scale(dirAt(ah), hum));
+    const Wr = add(Er, scale(dirAt(af), fore));
+    // SCULPT: half way between the glide and the wing-walk stance (out, back and down; the
+    // forearm down and out), the dorsal side of the wing turned half way out
+    const hS = norm([sd * 0.55, -0.22, -0.8]), fS = norm([sd * 0.62, -0.72, 0.25]);
+    const Es = add(S, scale(hS, hum)), Wsc = add(Es, scale(fS, fore));
+    const dorsS = norm([sd * 0.7, 0.7, 0]);
+    const cl = chainLocals([`${pre}_0`, `${pre}_1`], [S, Er, Wr], [S, Es, Wsc], [[0, 1, 0], [0, 1, 0]], [dorsS, dorsS], QI());
+    bone(`${pre}_sh`, 'thorax', S);
+    bone(`${pre}_0`, 'thorax', S);
+    bone(`${pre}_1`, `${pre}_0`, Er);
+    bone(`${pre}_2`, `${pre}_1`, Wr);
+    sculptLocal[`${pre}_0`] = cl.local[`${pre}_0`]; sculptLocal[`${pre}_1`] = cl.local[`${pre}_1`];
+    sculptWorld[`${pre}_0`] = cl.world[0]; sculptWorld[`${pre}_1`] = cl.world[1];
+    sculptLocal[`${pre}_sh`] = cl.local[`${pre}_0`]; sculptWorld[`${pre}_sh`] = cl.world[0];
+    sculptWorld[`${pre}_2`] = cl.world[1];
+    helpers.push({ bone: `${pre}_sh`, driver: `${pre}_0`, k: 0.5 });
+    wingData.push({ side, sd, pre, S, Er, Wr, Es, Ws: Wsc, qH: cl.world[0], qF: cl.world[1] });
+  }
+
+  // ---------- sculpt-space helper: a rest point rigidly attached to a limb bone, in the sculpt
+  const restOf = (b) => bonePos[b];
+  const sculptPosOfBone = {};
+  const toSculpt = (b, pRest) => {
+    // bone positions in the sculpt (the chain joints computed above)
+    const P = sculptPosOfBone[b] || restOf(b), q = sculptWorld[b] || QI();
+    return add(P, qRot(q, sub(pRest, restOf(b))));
+  };
+  for (const lg of legs) { lg.names.forEach((n, i) => { sculptPosOfBone[n] = [lg.sculpt.hip, lg.sculpt.knee, lg.sculpt.ankle, lg.sculpt.ball][i]; }); sculptPosOfBone[`hl_${lg.side}_h`] = lg.sculpt.hip; }
+  for (const w of wingData) { sculptPosOfBone[`${w.pre}_0`] = w.S; sculptPosOfBone[`${w.pre}_sh`] = w.S; sculptPosOfBone[`${w.pre}_1`] = w.Es; sculptPosOfBone[`${w.pre}_2`] = w.Ws; }
+
+  // ------------------------------------------------- leg sculpt (standing)
+  for (const lg of legs) {
+    const { sd, side, names } = lg;
+    const pre = `hl_${side}`;
+    const J = [lg.sculpt.hip, lg.sculpt.knee, lg.sculpt.ankle, lg.sculpt.ball];
+    const r = rLeg;
+    const lt = (i) => ({ bone: names[i], chain: pre, tag: `hl${i}` });
+    const seg = (i) => sub(J[i + 1], J[i]);
+    const segL = (i) => len(seg(i)), segD = (i) => norm(seg(i));
+    const out = [sd, 0, 0], back = [0, 0, -1], fwd = [0, 0, 1];
+    const gLeg = m.group();
+    for (let i = 0; i < 3; i++) m.cone(J[i], J[i + 1], r[i], r[i + 1], { k: r[0] * 0.9, grp: gLeg, ...lt(i) });
+    const mt = MU.thigh;
+    const R0 = dl[0] * 0.5 * BK.leg;          // the thigh's visible radius (bulk: the giants' mass)
+    // glutes over the hip joint (helper bone: follows half the femur)
+    m.ell(add(J[0], [sd * R0 * 0.1, R0 * 0.42, -R0 * 0.35]), [R0 * 0.5 * mt, R0 * 0.55 * mt, R0 * 0.95 * mt], { k: R0 * 0.6, bone: `${pre}_h`, chain: 'spine', tag: 'torso' });
+    // quadriceps (front of the femur), hamstrings (ischium behind the hip -> below the knee)
+    const qa = segD(0);
+    m.ell(add(lerp3(J[0], J[1], 0.45), add(scale(fwd, R0 * 0.32), scale(out, R0 * 0.12))), [R0 * 0.62 * mt, segL(0) * 0.5, R0 * 0.62 * mt], { ax: ortho(out, qa), ay: qa, k: R0 * 0.55, ...lt(0) });
+    const isch = add(J[0], [sd * R0 * 0.08, -R0 * 0.08, -R0 * 1.25]);
+    const hamB = add(J[1], add(scale(back, r[1] * 0.9), [0, -r[1] * 0.45, 0]));
+    const ha = norm(sub(hamB, isch));
+    m.ell(add(lerp3(isch, hamB, 0.45), scale(out, R0 * 0.2)), [R0 * 0.62 * mt, len(sub(hamB, isch)) * 0.52, R0 * 0.7 * mt], { ax: ortho(out, ha), ay: ha, k: R0 * 0.6, ...lt(0) });
+    // the thigh's outer mass (iliotibialis), the upper part on the hip helper
+    m.ell(add(lerp3(J[0], J[1], 0.3), scale(out, R0 * 0.35)), [R0 * 0.5 * mt, segL(0) * 0.36, R0 * 0.75 * mt], { ax: ortho(out, qa), ay: qa, k: R0 * 0.5, bone: `${pre}_h`, chain: pre, tag: 'hl0' });
+    // caudofemoralis: the reptile's big tail-to-thigh muscle under the tail base
+    const tb = section(dAtTail(0.08));
+    const cfA = add(tb.c, add(scale(tb.up, -tb.hh * 0.42), scale(tb.side, sd * tb.hw * 0.35)));
+    const cfB = add(lerp3(J[0], J[1], 0.25), scale(back, R0 * 0.35));
+    m.cone(cfA, cfB, tb.hh * 0.42 * MU.tailbase, R0 * 0.5 * MU.tailbase, { k: R0 * 0.7, bone: 'pelvis', chain: 'spine', tag: 'tail' });
+    // knee cap
+    m.ell(add(J[1], scale(fwd, r[1] * 0.6)), [r[1] * 0.66, r[1] * 0.7, r[1] * 0.48], { k: r[1] * 0.4, ...lt(1) });
+    // calf (gastrocnemius) high behind the shank, tapering into the Achilles tendon to the heel
+    const heel = add(J[2], scale(back, r[2] * 0.85));
+    const sa = segD(1);
+    const Rk = dl[2] * 0.5 * Math.sqrt(BK.leg);
+    m.ell(add(lerp3(J[1], J[2], 0.26), scale(back, Rk * 0.55)), [Rk * 0.78 * mt, segL(1) * 0.3, Rk * 0.85 * mt], { ax: ortho(out, sa), ay: sa, k: Rk * 0.5, ...lt(1) });
+    m.cone(add(lerp3(J[1], J[2], 0.45), scale(back, Rk * 0.6)), add(heel, [0, r[2] * 0.5, 0]), Rk * 0.4, r[2] * 0.42, { k: r[2] * 0.5, ...lt(1) });
+    m.ell(add(J[1], [0, 0, 0]), [Rk * 0.95, Rk * 0.9, Rk * 0.9], { k: Rk * 0.5, ...lt(1) });
+    m.ell(add(lerp3(J[1], J[2], 0.32), scale(fwd, Rk * 0.25)), [Rk * 0.6, segL(1) * 0.28, Rk * 0.5], { ax: ortho(out, sa), ay: sa, k: Rk * 0.4, ...lt(1) });
+    // the hock (intertarsal joint) and the heel
+    m.ell(add(heel, [0, r[2] * 0.15, 0]), [r[2] * 0.62, r[2] * 1.0, r[2] * 0.62], { k: r[2] * 0.4, ...lt(2) });
+    m.ell(J[2], [r[2] * 1.12, r[2] * 1.05, r[2] * 1.0], { k: r[2] * 0.4, ...lt(2) });
+    // the big fibro-fatty heel pad under the ankle (elephant; the giants), a smaller pad on the others
+    const hp = LG.heelPad ?? 0.3;
+    {
+      const ma = LG.mtAng * deg;
+      const under = [0, Math.max(r[3] * 0.9, (J[2][1] - r[2]) * 0.5), J[2][2] + r[2] * 0.2];
+      const pc = [J[2][0], under[1], mix(J[2][2], J[3][2], 0.35)];
+      m.ell(pc, [r[3] * 1.25 * (0.6 + 0.6 * hp), Math.max(r[3] * 0.6, (J[2][1] - r[2] * 0.4) * 0.55 * hp + r[3] * 0.4), mtl * Math.cos(ma) * 0.5 * (0.5 + 0.6 * hp)], { k: r[3] * 0.7, ...lt(3) });
+      contacts.push({ bone: names[2], p: [pc[0], r[3] * 0.35, pc[2]], r: 0 });
+    }
+    // the foot: a broad pad under the ball
+    const ball = J[3];
+    m.ell(add(ball, [0, -r[3] * 0.2, r[3] * 0.3]), [r[3] * 1.55, r[3] * 0.8, r[3] * 1.5], { k: r[3] * 0.6, ...lt(3) });
+    // toes: hallux (back, inward, raised; gripping) + II, III, IV forward
+    const toeDef = [
+      { n: 0, ang: sd * 160, l: toeL * (LG.hallux ?? 0.45), r: 0.85, up: 0.6 },
+      { n: 1, ang: sd * 22, l: toeL * 0.82, r: 0.92, up: 0 },
+      { n: 2, ang: 0, l: toeL, r: 1.0, up: 0 },
+      { n: 3, ang: -sd * 24, l: toeL * 0.86, r: 0.9, up: 0 },
+    ];
+    for (const td of toeDef) {
+      const a = td.ang * deg;
+      const dir = norm([Math.sin(a), td.up ? 0.25 : -0.06, Math.cos(a)]);
+      const tr = toeR * td.r;
+      const base = add(ball, [Math.sin(a) * r[3] * 0.7, td.up ? r[3] * 0.25 : -r[3] * 0.12, Math.cos(a) * r[3] * 0.55]);
+      const knuckle = add(base, scale(dir, td.l * 0.48));
+      const tip = add(base, scale([dir[0], td.up ? -0.05 : -0.3, dir[2]], td.l));
+      const tipP = [tip[0], Math.max(tr * 0.72, tip[1]), tip[2]];
+      const kn = add(knuckle, [0, tr * 0.32, 0]);
+      const tname = `${pre}_t${td.n}`;
+      const tchain = `${pre}_t${td.n}`;
+      // toe bones are children of the ball bone with the ball's sculpt rotation: rest position
+      const restBase = add(legRest[side].ball, qRot(qInv(sculptWorld[names[3]]), sub(base, J[3])));
+      bone(tname, names[3], restBase);
+      sculptPosOfBone[tname] = base; sculptWorld[tname] = sculptWorld[names[3]];
+      m.cone(base, kn, tr, tr * 0.82, { k: tr * 0.8, bone: tname, chain: tchain, tag: 'toe' });
+      m.cone(kn, tipP, tr * 0.82, tr * 0.62, { k: tr * 0.6, bone: tname, chain: tchain, tag: 'toe' });
+      m.ell(add(kn, [0, tr * 0.12, 0]), [tr * 0.98, tr * 0.8, tr * 0.75], { k: tr * 0.4, bone: tname, chain: tchain, tag: 'toe' });
+      // digital pads under the toe (tuberculate)
+      for (const f of [0.35, 0.72]) m.ell(add(lerp3(base, tipP, f), [0, -tr * 0.5, 0]), [tr * 0.85, tr * 0.5, tr * 0.85], { k: tr * 0.4, bone: tname, chain: tchain, tag: 'toe' });
+      chains[tchain] = { points: [base, kn, tipP], refUp: [0, 1, 0], kind: 'toe' };
+      // claw: curved keratin from the toe tip; the giants' thick, blunt and chipped; raptor talons
+      const cdir = norm([dir[0], td.up ? -0.35 : -0.6, dir[2]]);
+      const raptor = LG.raptor ? (td.n === 0 ? 1.45 : 1.2) : 1;
+      const cl = K(LG.claw) * (td.n === 0 ? 0.9 : td.n === 2 ? 1 : 0.85) * raptor * (0.92 + 0.16 * hsh(td.n, sd > 0 ? 13 : 17));
+      const blunt = LG.blunt ? 0.22 : 0.08;
+      const curl = LG.raptor ? 0.9 : 0.4;
+      keratin.push({ kind: 'claw', bone: tname, tag: 'claw',
+        points: [add(tipP, scale(dir, -tr * 0.55)), add(tipP, scale(norm([dir[0], 0.12, dir[2]]), cl * 0.5)), add(add(tipP, scale(cdir, cl)), [0, -tr * 0.3 - cl * curl * 0.25, 0])],
+        radii: [tr * 0.88, tr * 0.6, tr * (LG.soft ? 0.25 : blunt)], flat: 0.8, up: [0, 1, 0] });
+      contacts.push({ bone: tname, p: lerp3(base, tipP, 0.72), r: tr * 0.5 });
+      lg.toes.push(tname);
+    }
+    chains[pre] = { points: J, refUp: [0, 0, 1], kind: 'limb' };
+  }
+
+  // ------------------------------------------------- wing-arm sculpt (half folded)
+  const wings = [];
+  for (const w of wingData) {
+    const { sd, side, pre, S } = w;
+    const E = w.Es, Wr = w.Ws;
     const detachable = !!omitWing[side];
     const target = detachable ? new SDFModel() : m;
-    const mus = (Wp.muscle ?? 1) * MU.wing;
-    const k21 = Wp.r[0] / 0.021;
-    // flight muscle mass on the back (the wing's "shoulder"), + arm bones with biceps/triceps
-    // (a detachable wing leaves this mass on the body: the wing tears off at the humerus, so
-    // the torn wing ends in the arm, not in a ball joint, and the stump stays on the back)
-    (detachable ? m : target).ell(sv(add(R, [-sd * 0.007, -0.005, -0.006])), sv([0.03 * mus * k21, 0.021 * mus * k21, 0.045 * mus * k21]),
-      { k: S(0.02 * k21), bone: detachable ? 'thorax' : `${pre}_0`, chain: detachable ? 'spine' : pre, tag: detachable ? 'torso' : 'wingroot' });
-    target.cone(sv(R), sv(E), S(Wp.r[0]), S(Wp.r[1]), { k: S(Wp.r[0] * 0.6), bone: `${pre}_0`, chain: pre, tag: 'warm' });
-    target.ell(sv(lerp3(R, E, 0.32)), sv([Wp.r[0] * 0.78 * mus, len(sub(E, R)) * 0.34, Wp.r[0] * 1.0 * mus]), { ax: [0, 1, 0], ay: norm(sub(E, R)), k: S(Wp.r[0] * 0.45), bone: `${pre}_0`, chain: pre, tag: 'warm' });
-    // the elbow: a bony point behind the joint (olecranon), the arm's narrowest part before it
-    target.ell(sv(add(E, scale(norm(sub(E, R)), Wp.r[1] * 0.55))), sv([Wp.r[1] * 0.75, Wp.r[1] * 0.7, Wp.r[1] * 0.95]), { ax: [0, 1, 0], ay: norm(sub(E, R)), k: S(Wp.r[1] * 0.3), bone: `${pre}_1`, chain: pre, tag: 'warm' });
-    target.cone(sv(E), sv(Wr), S(Wp.r[1]), S(Wp.r[2]), { k: S(Wp.r[1] * 0.5), bone: `${pre}_1`, chain: pre, tag: 'warm' });
-    target.ell(sv(lerp3(E, Wr, 0.18)), sv([Wp.r[1] * 0.95, len(sub(Wr, E)) * 0.2, Wp.r[1] * 1.15]), { ax: [0, 1, 0], ay: norm(sub(Wr, E)), k: S(Wp.r[1] * 0.35), bone: `${pre}_1`, chain: pre, tag: 'warm' });
-    target.ell(sv(Wr), sv([Wp.r[2] * 1.45, Wp.r[2] * 1.12, Wp.r[2] * 1.35]), { k: S(Wp.r[2] * 0.5), bone: `${pre}_2`, chain: pre, tag: 'warm' });
-    chains[pre] = { points: [R, E, Wr].map(sv), refUp: [0, 1, 0], kind: 'limb' };
-    // fingers: 3 phalanges each, gently bowed toward the trailing edge
-    const fingers = [];
-    const back = norm([0, 0, -1]);
-    Wp.digits.forEach((tipN, di) => {
-      const tip = rel(tipN);
-      const span = sub(tip, Wr), sl = len(span);
-      const bow = (di === 0 ? 0.015 : 0.045) * sl;
-      // phalanges shorten toward the tip (bat-like proportions)
-      // (the knuckle at half the finger: folded, the outer half doubles back along the inner half)
-      const pts = [0, 0.56, 0.84, 1].map((f) => add(lerp3(Wr, tip, f), scale(back, bow * Math.sin(Math.PI * f))));
-      const names = [0, 1, 2].map((j) => `${pre}_f${di}_${j}`);
-      names.forEach((n, j) => bone(n, j === 0 ? `${pre}_2` : names[j - 1], sv(pts[j])));
-      const rr = Wp.fingerR;
-      const radii = [0, 0.56, 0.84, 1].map((f) => S(mix(rr[0] * (di === 0 ? 1.18 : 1 - di * 0.07), rr[1], Math.pow(f, 0.75))));
-      fingers.push({ names, points: pts.map(sv), radii, tipBone: names[2] });
-    });
-    // thumb with a claw
-    const th = [Wr[0] + sd * Wp.thumb[0], Wr[1] + Wp.thumb[1], Wr[2] + Wp.thumb[2]];
-    bone(`${pre}_th`, `${pre}_2`, sv(Wr));
-    target.cone(sv(Wr), sv(th), S(Wp.r[2] * 0.7), S(Wp.fingerR[0] * 0.95), { k: S(Wp.r[2] * 0.4), bone: `${pre}_th`, chain: pre, tag: 'warm' });
-    const thd = norm(sub(th, Wr));
+    const along0 = norm(sub(E, S)), along1 = norm(sub(Wr, E));
+    const dors0 = qRot(w.qH, [0, 1, 0]), lead0 = qRot(w.qH, [0, 0, 1]);
+    const dors1 = qRot(w.qF, [0, 1, 0]), lead1 = qRot(w.qF, [0, 0, 1]);
+    const ma = MU.arm;
+    const hl = len(sub(E, S)), fl = len(sub(Wr, E));
+    const wt = (b) => ({ bone: b, chain: pre, tag: 'warm' });
+    // ---- on the body (the shoulder helper; stays on the scout when its wing tears off)
+    // shoulder cap (deltoid) round the joint
+    m.ell(add(S, add(scale(dors0, rA[0] * 0.25), scale(along0, rA[0] * 0.15))), [rA[0] * 1.0, rA[0] * 0.95, rA[0] * 1.08], { ax: ortho(lead0, along0), ay: along0, k: rA[0] * 0.55, bone: `${pre}_sh`, chain: 'spine', tag: 'torso' });
+    // pectoralis: from the keel to the deltopectoral crest of the humerus (the downstroke muscle)
+    const pk = add(sub(chest.c, scale(chest.up, chest.hh * 0.5)), [sd * chest.hw * 0.22, 0, 0]);
+    const crest = add(add(S, scale(along0, hl * 0.28)), add(scale(lead0, rA[0] * 0.35), scale(dors0, -rA[0] * 0.45)));
+    const pa = norm(sub(crest, pk)), pl = len(sub(crest, pk));
+    m.ell(lerp3(pk, crest, 0.38), [chest.hw * 0.3 * MU.pec, pl * 0.48, chest.hh * 0.36 * MU.pec], { ax: ortho([sd, 0, 0], pa), ay: pa, k: rA[0] * 0.7, bone: 'rib_thorax', chain: 'spine', tag: 'torso' });
+    m.ell(lerp3(pk, crest, 0.78), [rA[0] * 0.75 * MU.pec, pl * 0.3, rA[0] * 0.8 * MU.pec], { ax: ortho([sd, 0, 0], pa), ay: pa, k: rA[0] * 0.6, bone: `${pre}_sh`, chain: 'spine', tag: 'torso' });
+    // shoulder blade: a long plate from the joint up and back toward the spine, the upstroke
+    // muscles over it (supracoracoideus / spinodeltoid as in bats)
+    const scTop = add(section(dAtTorso(0.26)).top, [sd * chest.hw * 0.38, -chest.hh * 0.18, 0]);
+    const sa = norm(sub(scTop, S)), sl = len(sub(scTop, S));
+    m.ell(lerp3(S, scTop, 0.55), [rA[0] * 0.38, sl * 0.55, rA[0] * 0.85], { ax: ortho([sd, 0.3, 0], sa), ay: sa, k: rA[0] * 0.6, bone: 'thorax', chain: 'spine', tag: 'torso' });
+    m.ell(add(lerp3(S, scTop, 0.3), scale(dors0, rA[0] * 0.2)), [rA[0] * 0.55 * ma, sl * 0.36, rA[0] * 0.75 * ma], { ax: ortho([sd, 0.3, 0], sa), ay: sa, k: rA[0] * 0.55, bone: `${pre}_sh`, chain: 'spine', tag: 'torso' });
+    // ---- the arm itself (comes away with the scout's torn wing)
+    target.cone(S, E, rA[0] * 0.78, rA[1] * 0.82, { k: rA[0] * 0.5, ...wt(`${pre}_0`) });
+    // triceps on the trailing-dorsal side, biceps on the leading-ventral side, the
+    // deltopectoral crest under the front of the upper humerus
+    const trail0 = scale(lead0, -1);
+    target.ell(add(lerp3(S, E, 0.5), add(scale(trail0, rA[0] * 0.42), scale(dors0, rA[0] * 0.18))), [rA[0] * 0.66 * ma, hl * 0.44, rA[0] * 0.72 * ma], { ax: ortho(dors0, along0), ay: along0, k: rA[0] * 0.5, ...wt(`${pre}_0`) });
+    target.ell(add(lerp3(S, E, 0.45), add(scale(lead0, rA[0] * 0.38), scale(dors0, -rA[0] * 0.22))), [rA[0] * 0.55 * ma, hl * 0.38, rA[0] * 0.55 * ma], { ax: ortho(dors0, along0), ay: along0, k: rA[0] * 0.45, ...wt(`${pre}_0`) });
+    target.ell(add(lerp3(S, E, 0.26), add(scale(lead0, rA[0] * 0.35), scale(dors0, -rA[0] * 0.3))), [rA[0] * 0.5, hl * 0.22, rA[0] * 0.48], { ax: ortho(dors0, along0), ay: along0, k: rA[0] * 0.4, ...wt(`${pre}_0`) });
+    // the elbow: the bony olecranon behind the joint, the joint knob
+    const trail1 = scale(lead1, -1);
+    target.ell(add(E, add(scale(trail1, rA[1] * 0.55), scale(along0, rA[1] * 0.35))), [rA[1] * 0.55, rA[1] * 0.75, rA[1] * 0.55], { ax: ortho(dors1, along0), ay: along0, k: rA[1] * 0.35, ...wt(`${pre}_1`) });
+    target.ell(E, [rA[1] * 1.0, rA[1] * 0.95, rA[1] * 1.0], { ax: ortho(dors1, along1), ay: along1, k: rA[1] * 0.4, ...wt(`${pre}_1`) });
+    // forearm: a weight-bearing limb - thick at the elbow (extensors leading-dorsal, flexors
+    // trailing-ventral), tendons at the wrist
+    target.cone(E, Wr, rA[1] * 0.8, rA[2] * 0.84, { k: rA[1] * 0.45, ...wt(`${pre}_1`) });
+    target.ell(add(lerp3(E, Wr, 0.27), add(scale(lead1, rA[1] * 0.3), scale(dors1, rA[1] * 0.25))), [rA[1] * 0.78 * ma, fl * 0.29, rA[1] * 0.82 * ma], { ax: ortho(dors1, along1), ay: along1, k: rA[1] * 0.45, ...wt(`${pre}_1`) });
+    target.ell(add(lerp3(E, Wr, 0.25), add(scale(trail1, rA[1] * 0.38), scale(dors1, -rA[1] * 0.2))), [rA[1] * 0.72 * ma, fl * 0.27, rA[1] * 0.7 * ma], { ax: ortho(dors1, along1), ay: along1, k: rA[1] * 0.45, ...wt(`${pre}_1`) });
+    target.cone(add(lerp3(E, Wr, 0.45), scale(lead1, rA[1] * 0.22)), add(Wr, scale(lead1, rA[2] * 0.3)), rA[1] * 0.3, rA[2] * 0.28, { k: rA[2] * 0.4, ...wt(`${pre}_1`) });
+    // the wrist: the carpal knob, the pisiform behind it, and the WRIST PAD - a thick cracked
+    // callus at the end of the folded wrist (the "foot" of the wing-walk, camel knee / vampire
+    // bat thumb pad)
+    target.ell(sub(Wr, scale(along1, rA[2] * 0.1)), [rA[2] * 1.06, rA[2] * 1.22, rA[2] * 1.1], { ax: ortho(dors1, along1), ay: along1, k: rA[2] * 0.5, ...wt(`${pre}_1`) });
+    target.ell(add(Wr, scale(trail1, rA[2] * 0.6)), [rA[2] * 0.6, rA[2] * 0.75, rA[2] * 0.55], { ax: ortho(dors1, along1), ay: along1, k: rA[2] * 0.35, ...wt(`${pre}_1`) });
+    // (a broad flattened sole: the column of the forearm spreads into it, like an elephant's foot)
+    const padC = add(Wr, scale(along1, rA[2] * 0.55));
+    target.ell(padC, [rA[2] * 1.3, rA[2] * 0.5, rA[2] * 1.22], { ax: ortho(dors1, along1), ay: along1, k: rA[2] * 0.5, bone: `${pre}_1`, chain: pre, tag: 'wpad' });
+    // the thumb: a robust digit on the leading edge of the wrist, a big blunt weight-bearing claw
+    const th = WG.thumb;
+    const thR = rA[2] * 0.42;
+    const tbase = add(Wr, add(scale(lead1, rA[2] * 0.7), scale(along1, rA[2] * 0.25)));
+    const tdir = norm(add(add(scale(lead1, 0.72), scale(along1, 0.55)), scale(dors1, -0.25)));
+    const t1 = add(tbase, scale(tdir, K(th.mc)));
+    const tdir2 = norm(add(tdir, scale(dors1, -0.35)));
+    const t2 = add(t1, scale(tdir2, K(th.ph)));
+    target.cone(tbase, t1, thR, thR * 0.82, { k: thR * 0.6, bone: `${pre}_th`, chain: pre, tag: 'warm' });
+    target.cone(t1, t2, thR * 0.82, thR * 0.66, { k: thR * 0.5, bone: `${pre}_th`, chain: pre, tag: 'warm' });
+    target.ell(t1, [thR * 0.95, thR * 0.9, thR * 0.95], { k: thR * 0.4, bone: `${pre}_th`, chain: pre, tag: 'warm' });
+    chains[pre] = { points: [S, E, Wr], refUp: lead0, kind: 'limb' };
+    // thumb claw (keratin, sculpt space)
+    const cdir = norm(add(tdir2, scale(dors1, -0.8)));
+    const cl = K(th.claw);
     keratin.push({ kind: 'claw', bone: `${pre}_th`, tag: 'claw', side,
-      points: [sv(th), sv(add(th, scale(add(thd, [0, 0.4, 0]), Wp.fingerR[0] * 1.6))), sv(add(th, add(scale(thd, Wp.fingerR[0] * 2.6), [0, -Wp.fingerR[0] * 1.3, 0])))],
-      radii: [S(Wp.fingerR[0] * 0.95), S(Wp.fingerR[0] * 0.6), S(Wp.fingerR[0] * 0.08)], flat: 0.7, up: [0, 1, 0] });
-    const attach = Wp.attach.map((q) => sv(rel(q)));
-    // one bone per attachment segment: chest, flank, and (4 points) the thigh, so the membrane's
-    // trailing root rides on the leg as a bat's does
-    const attachBones = attach.length >= 4 ? ['thorax', 'rib_body', `hl_${side}_0`] : ['thorax', 'rib_body', 'pelvis'];
-    wings.push({ side, sd, prefix: pre, root: sv(R), elbow: sv(E), wrist: sv(Wr), fingers, attach, attachBones,
-      thumb: sv(th), billow: S(Wp.billow), detachedSDF: detachable ? target : null });
+      points: [add(t2, scale(tdir2, -thR * 0.4)), add(t2, scale(norm(add(tdir2, scale(dors1, 0.25))), cl * 0.5)), add(t2, scale(cdir, cl))],
+      radii: [thR * 0.85, thR * 0.55, thR * (D.newborn ? 0.25 : 0.16)], flat: 0.75, up: dors1 });
+    // bones of the wrist pad and the thumb (children of the forearm; rest positions from sculpt)
+    const qFi = qInv(w.qF);
+    const toRestF = (p) => add(w.Wr, qRot(qFi, sub(p, Wr)));
+    const padContact = add(Wr, scale(along1, rA[2] * 1.03));
+    bone(`${pre}_pad`, `${pre}_1`, toRestF(padContact));
+    bone(`${pre}_th`, `${pre}_1`, toRestF(tbase));
+    sculptPosOfBone[`${pre}_pad`] = padContact; sculptWorld[`${pre}_pad`] = w.qF;
+    sculptPosOfBone[`${pre}_th`] = tbase; sculptWorld[`${pre}_th`] = w.qF;
+    contacts.push({ bone: `${pre}_pad`, p: padContact, r: rA[2] * 0.08, wrist: true });
+    w.thumbRest = { base: toRestF(tbase), tip: toRestF(t2) };
+    contacts.push({ bone: `${pre}_th`, p: t2, r: thR * 0.6, thumb: true });
+
+    // ---- fingers (REST space: bound with the rest skeleton, like the membrane)
+    const lat = [sd, 0, 0];
+    const fingers = [];
+    const nF = WG.fingers.length;
+    WG.fingers.forEach((fd, di) => {
+      const [fname, mc, ph, spread] = fd;
+      const a = spread * deg;
+      let dir = [sd * Math.cos(a), 0, Math.sin(a)];
+      const pts = [w.Wr];
+      let p = add(w.Wr, scale(dir, K(mc)));
+      pts.push(p);
+      ph.forEach((pl, j) => {
+        // the phalanges curve back toward the trailing edge (bats), the outer ones more
+        const b = a + sumBend(j, di);
+        dir = [sd * Math.cos(b), 0, Math.sin(b)];
+        p = add(p, scale(dir, K(pl)));
+        pts.push(p);
+      });
+      const names = pts.slice(0, -1).map((_, j) => `${pre}_f${di}_${j}`);
+      names.forEach((n, j) => bone(n, j === 0 ? `${pre}_2` : names[j - 1], pts[j]));
+      // radii: robust metacarpals, tapering phalanges (the leading finger thickest)
+      const rr0 = rA[3] * (1 - di * 0.1);
+      const radii = pts.map((_, j) => rr0 * (j === 0 ? 1.0 : j === 1 ? 0.62 : Math.max(0.12, 0.62 * Math.pow(0.62, j - 1))));
+      radii[radii.length - 1] = rr0 * 0.1;
+      fingers.push({ name: fname, names, points: pts, radii, tipBone: names[names.length - 1] });
+    });
+    // membrane attachment line (REST space): from behind the armpit along the lower flank to the
+    // hip, then down the outside of the trailing leg to `to` (DESIGN 1.4); one bone per segment
+    const gap = rA[0] * 1.15 + T * 0.035;
+    const flankPt = (s, frac) => {
+      const sc = section(dAtTorso(s));
+      const dy = -sc.hh * frac;
+      const x = sc.hw * Math.sqrt(Math.max(0, 1 - frac * frac)) * 0.98;
+      return [sd * x, sc.c[1] + dy, sc.c[2]];
+    };
+    const sGap = sSh + gap / T;
+    const A0 = flankPt(sGap, 0.18), A1 = flankPt(0.55, 0.32), A2r = legRest[side];
+    const thR2 = dl[0] * 0.4;
+    const outL = (p, r) => add(p, [sd * r, r * 0.3, 0]);
+    const hipA = outL(lerp3(A2r.hip, A2r.knee, 0.18), thR2);
+    const kneeA = outL(A2r.knee, dl[1] * 0.45);
+    const ankA = outL(A2r.ankle, dl[3] * 0.5);
+    const shankA = lerp3(kneeA, ankA, 0.45);
+    let attach, attachBones;
+    if (WG.to === 'hip') { attach = [A0, A1, hipA]; attachBones = ['rib_thorax', 'rib_lumbar']; }
+    else if (WG.to === 'knee') { attach = [A0, A1, hipA, kneeA]; attachBones = ['rib_thorax', 'rib_lumbar', `hl_${side}_0`]; }
+    else if (WG.to === 'shank') { attach = [A0, A1, hipA, kneeA, shankA]; attachBones = ['rib_thorax', 'rib_lumbar', `hl_${side}_0`, `hl_${side}_1`]; }
+    else { attach = [A0, A1, hipA, kneeA, ankA]; attachBones = ['rib_thorax', 'rib_lumbar', `hl_${side}_0`, `hl_${side}_1`]; }
+    // the propatagium's root: the side of the neck base, in front of and above the shoulder
+    const nb = section(dAtNeck(0.88));
+    const proRoot = add(nb.c, add(scale(nb.side, sd * nb.hw * 0.75), scale(nb.up, nb.hh * 0.15)));
+    wings.push({ side, sd, prefix: pre, root: S, proRoot, elbow: w.Er, wrist: w.Wr, fingers, attach, attachBones, nF, thumbRest: w.thumbRest, padDist: rA[2] * 1.03,
+      thumb: w.Wr, billow: L * 0.03, detachedSDF: detachable ? target : null, thickness: K(WG.thick ?? 0.005) });
+  }
+
+  // ------------------------------------------- tail crest and the scout's vane
+  // keeled osteoderm scutes: a double row at the tail base that merges into a single row (crocodile)
+  {
+    const ch = K(D.crest?.tail ?? 0);
+    if (ch > 0) {
+      const n = Math.round(46 + 30 * Math.min(1, TL / 20));
+      for (let i = 0; i < n; i++) {
+        const f = (i + 0.5) / n;                              // 0 tail base .. 1 tip
+        const d = dAtTail(f * 0.92);
+        const sc = section(d);
+        const hgt = ch * Math.pow(1 - f, 0.8) * (0.85 + 0.3 * hsh(i, 7)) * (f < 0.06 ? f / 0.06 : 1);
+        if (hgt < L * 0.0008) continue;
+        const spacing = dTail * 0.92 / n;
+        const dbl = f < 0.38;
+        const off = dbl ? sc.hw * 0.42 * (1 - f / 0.45) : 0;
+        for (const sd of dbl ? [1, -1] : [0]) {
+          const base = add(sc.top, add(scale(sc.side, sd * off), scale(sc.up, -hgt * 0.35)));
+          const tip = add(base, add(scale(sc.up, hgt * 1.25), scale(sc.tan, -spacing * 0.2)));
+          m.ell(lerp3(base, tip, 0.45), [hgt * 0.22 + L * 0.0004, hgt * 0.62, spacing * 0.62], { ax: sc.side, ay: norm(sub(tip, base)), k: hgt * 0.3, bone: boneAtD(d), chain: 'spine', tag: 'crest' });
+        }
+      }
+    }
+    if (D.tailVane) {
+      // Rhamphorhynchus: a keratin-stiffened diamond of skin at the tail tip, vertical (a rudder)
+      const vl = K(D.tailVane.length), vw = K(D.tailVane.width);
+      const dTip = dAtTail(0.94);
+      const sc = section(dTip);
+      m.ell(add(sc.c, scale(sc.tan, -vl * 0.12)), [L * 0.0016, vw * 0.5, vl * 0.5], { ax: sc.side, ay: sc.up, k: L * 0.002, bone: boneAtD(dTip), chain: 'spine', tag: 'vane' });
+    }
   }
 
   // ------------------------------------------------- skin folds (projected)
-  // Loose skin gathers where the body bends: transverse folds under the throat and
-  // across the neck base, the armpit fold behind the elbow, the flank (stifle) fold
-  // from the knee to the belly, and wrinkles over the tail base. Each fold is a
-  // groove (smooth subtraction) with a rolled lip of skin beside it, laid along a
-  // path projected onto the sculpted surface.
   {
-    const F = spec.folds || {};
+    const F = D.folds || {};
     const soft = !!F.soft;
     m.compile();
     const proj = (p) => {
-      let q = sv(p);
+      let q = [...p];
       for (let it = 0; it < 8; it++) {
         const e = L * 2e-4;
         const f0 = m.evalList(q[0], q[1], q[2], m.all);
@@ -663,77 +743,68 @@ export function buildAnatomy(spec, L, opts = {}) {
       return { p: q, n: g };
     };
     const folds = [];
-    // fold: path of normalized points (projected), groove radius g (L units), lip shift direction (normalized vector)
     const fold = (path, g, lipDir, o = {}) => {
       const P = path.map(proj);
-      folds.push({ P, g: S(g), lipDir, bone: o.bone, chain: o.chain ?? 'spine', tag: o.tag ?? 'torso', depth: o.depth ?? 0.45, lip: o.lip ?? 0.7 });
+      folds.push({ P, g, lipDir, bone: o.bone, chain: o.chain ?? 'spine', tag: o.tag ?? 'torso', depth: o.depth ?? 0.45, lip: o.lip ?? 0.7 });
     };
-    // throat / gular folds: arcs across the underside of the neck, behind the jaw and at the neck base
-    const nThroat = F.throat ?? 0;
-    for (let i = 0; i < nThroat; i++) {
-      const s = (soft ? 0.12 : 0.06) + i * (soft ? 0.2 : 0.13);
+    // throat (gular) folds: transverse arcs under the neck behind the jaw
+    for (let i = 0; i < (F.throat ?? 0); i++) {
+      const s = (soft ? 0.12 : 0.05) + i * (soft ? 0.2 : 0.1);
       const sc = section(dAtNeck(s));
       const path = [];
-      for (let k = 0; k <= 8; k++) {
-        const a = mix(-0.92, -0.08, k / 8) * Math.PI + (hsh(i, k) - 0.5) * 0.08;
+      for (let q = 0; q <= 8; q++) {
+        const a = mix(-0.92, -0.08, q / 8) * Math.PI + (hsh(i, q) - 0.5) * 0.08;
         path.push(add(sc.c, add(scale(sc.side, Math.cos(a) * sc.hw * 1.05), scale(sc.up, Math.sin(a) * sc.hh * 1.05))));
       }
-      // (broad, shallow creases that the scales run into - deep narrow grooves read as gashes)
-      fold(path, Math.min(sc.hw, sc.hh) * 0.15 * (soft ? 1.0 : 1), scale(sc.tan, 1), { bone: boneAtD(dAtNeck(s)), tag: 'neck', depth: 0.2, lip: 0.45 });
+      fold(path, Math.min(sc.hw, sc.hh) * 0.15, scale(sc.tan, 1), { bone: boneAtD(dAtNeck(s)), tag: 'neck', depth: 0.2, lip: 0.45 });
     }
-    // neck-base folds (where the neck meets the shoulders), lower sides only
-    const nNeck = F.neck ?? 0;
-    for (let i = 0; i < nNeck; i++) {
-      const s = 0.82 + i * 0.07;
+    // neck-base folds, lower sides only
+    for (let i = 0; i < (F.neck ?? 0); i++) {
+      const s = 0.8 + i * 0.07;
       const sc = section(dAtNeck(s));
       for (const sd of [1, -1]) {
         const path = [];
-        for (let k = 0; k <= 6; k++) {
-          const a = mix(-0.55, 0.25, k / 6) * Math.PI * 0.5;
+        for (let q = 0; q <= 6; q++) {
+          const a = mix(-0.55, 0.25, q / 6) * Math.PI * 0.5;
           path.push(add(sc.c, add(scale(sc.side, sd * Math.cos(a) * sc.hw * 1.05), scale(sc.up, Math.sin(a) * sc.hh * 1.05))));
         }
-        fold(path, Math.min(sc.hw, sc.hh) * 0.14, scale(sc.tan, 1), { bone: boneAtD(dAtNeck(s)), tag: 'neck', depth: 0.18, lip: 0.4 });
+        fold(path, Math.min(sc.hw, sc.hh) * 0.13, scale(sc.tan, 1), { bone: boneAtD(dAtNeck(s)), tag: 'neck', depth: 0.18, lip: 0.4 });
       }
     }
-    for (const sd of [1, -1]) {
-      const fl = legs.find((l) => l.kind === 'fl' && l.sd === undefined && l.side === (sd > 0 ? 'L' : 'R'));
-      const hl = legs.find((l) => l.kind === 'hl' && l.side === (sd > 0 ? 'L' : 'R'));
-      const fJ = fl.joints.map((p) => scale(p, 1 / L)), hJ = hl.joints.map((p) => scale(p, 1 / L));
-      // armpit: from behind the elbow up and back onto the chest wall
+    for (const lg of legs) {
+      const sd = lg.sd;
+      // armpit fold behind the shoulder (the skin between the humerus and the chest wall)
       if (F.axilla) {
-        const sc = section(dAtTorso(0.3));
-        const a0 = add(fJ[1], [0, spec.front.r[1] * 0.6, -spec.front.r[1] * 1.3]);
-        const a2 = add(sc.c, add(scale(sc.side, sd * sc.hw * 0.85), scale(sc.up, -sc.hh * 0.4)));
-        fold([a0, lerp3(a0, a2, 0.5), a2], spec.front.r[1] * 0.16, [0, 0, -1], { bone: 'thorax' });
+        const w = wingData.find((x) => x.sd === sd);
+        const sc = section(dAtTorso(sSh + 0.12));
+        const a0 = add(w.S, [sd * rA[0] * 0.5, -rA[0] * 0.75, -rA[0] * 0.9]);
+        const a2 = add(sc.c, add(scale(sc.side, sd * sc.hw * 0.9), scale(sc.up, -sc.hh * 0.35)));
+        fold([a0, lerp3(a0, a2, 0.5), a2], rA[0] * 0.14, [0, 0, -1], { bone: 'rib_thorax' });
       }
       // flank (stifle) fold: from the front of the knee up and forward onto the belly
       if (F.stifle) {
-        const sc = section(dAtTorso(0.68));
-        const b0 = add(hJ[1], [0, spec.hind.r[1] * 0.8, spec.hind.r[1] * 0.9]);
-        const b2 = add(sc.c, add(scale(sc.side, sd * sc.hw * 0.8), scale(sc.up, -sc.hh * 0.55)));
-        fold([b0, lerp3(b0, b2, 0.5), b2], spec.hind.r[1] * 0.18, [0, 0, 1], { bone: 'rib_lumbar' });
+        const sc = section(dAtTorso(0.7));
+        const b0 = add(lg.sculpt.knee, [0, rLeg[1] * 0.8, rLeg[1] * 0.9]);
+        const b2 = add(sc.c, add(scale(sc.side, sd * sc.hw * 0.82), scale(sc.up, -sc.hh * 0.55)));
+        fold([b0, lerp3(b0, b2, 0.5), b2], rLeg[1] * 0.2, [0, 0, 1], { bone: 'rib_lumbar' });
       }
     }
-    // wrinkles across the top of the tail base
     for (let i = 0; i < (F.tail ?? 0); i++) {
-      const s = 0.04 + i * 0.035;
+      const s = 0.05 + i * 0.035;
       const sc = section(dAtTail(s));
       const path = [];
-      for (let k = 0; k <= 6; k++) {
-        const a = mix(0.12, 0.88, k / 6) * Math.PI;
+      for (let q = 0; q <= 6; q++) {
+        const a = mix(0.12, 0.88, q / 6) * Math.PI;
         path.push(add(sc.c, add(scale(sc.side, Math.cos(a) * sc.hw * 1.05), scale(sc.up, Math.sin(a) * sc.hh * 1.05))));
       }
       fold(path, Math.min(sc.hw, sc.hh) * 0.06, scale(sc.tan, -1), { bone: boneAtD(dAtTail(s)), tag: 'tail' });
     }
-    // grooves first (subtract), then the rolled lips (add), so the lip is not cut away
-    for (const f of folds) {
-      for (let i = 0; i < f.P.length - 1; i++) {
-        const a = f.P[i], b = f.P[i + 1];
-        const taper = (j) => Math.sin(Math.PI * (j / (f.P.length - 1)) * 0.92 + 0.12);
-        const ga = f.g * taper(i), gb = f.g * taper(i + 1);
-        const ca = sub(a.p, scale(a.n, -ga * (1 - f.depth))), cb = sub(b.p, scale(b.n, -gb * (1 - f.depth)));
-        m.cone(ca, cb, ga, gb, { k: f.g * 0.8, op: 'sub', bone: f.bone, chain: f.chain, tag: f.tag });
-      }
+    for (const f of folds) for (let i = 0; i < f.P.length - 1; i++) {
+      const a = f.P[i], b = f.P[i + 1];
+      const taper = (j) => Math.sin(Math.PI * (j / (f.P.length - 1)) * 0.92 + 0.12);
+      const ga = f.g * taper(i), gb = f.g * taper(i + 1);
+      const ca = sub(a.p, scale(a.n, -ga * (1 - f.depth))), cb = sub(b.p, scale(b.n, -gb * (1 - f.depth)));
+      m.cone(ca, cb, ga, gb, { k: f.g * 0.8, op: 'sub', bone: f.bone, chain: f.chain, tag: f.tag });
     }
     for (const f of folds) {
       const ld = norm(f.lipDir);
@@ -741,91 +812,113 @@ export function buildAnatomy(spec, L, opts = {}) {
         const a = f.P[i], b = f.P[i + 1];
         const taper = (j) => Math.sin(Math.PI * (j / (f.P.length - 1)) * 0.92 + 0.12);
         const ga = f.g * taper(i) * f.lip, gb = f.g * taper(i + 1) * f.lip;
-        const off = (q, gg) => add(sub(q.p, scale(q.n, gg * 0.55)), scale(ld, L * 0 + gg * 1.9));
+        const off = (q, gg) => add(sub(q.p, scale(q.n, gg * 0.55)), scale(ld, gg * 1.9));
         m.cone(off(a, ga / f.lip), off(b, gb / f.lip), ga, gb, { k: f.g * 0.9, bone: f.bone, chain: f.chain, tag: f.tag });
       }
     }
   }
 
   // ------------------------------------------------------------- head
-  const head = buildHead(m, spec, L, sv(headJoint), bone, keratin, eyes, chains, sockets, opts);
+  const headShape = makeHeadShape(D, H);
+  const head = buildHead(m, { headShape, horns: D.horns, lid: D.lid, newborn: !!D.newborn }, H, neckPitch, -neckPitch, headJoint, bone, keratin, eyes, chains, sockets, D);
 
-  // ------------------------------------------- dorsal crest (keratin plates)
-  // A continuous ridge of broad, overlapping, raked plates from the back of the
-  // skull to the tail tip (not a row of thin spikes): tallest over the shoulders
-  // and the hips, low on the neck, shrinking down the tail. Plates vary in height,
-  // spacing, rake and lean, and about one in nine is chipped or worn blunt.
-  const crest = spec.crest || spec.spikes;
-  if (crest && crest.count > 0) {
-    const n = crest.count;
-    const d0 = spine.total * 0.035, d1 = spine.total - 0.008 * (spec.head / 0.1);
-    for (let i = 0; i < n; i++) {
-      const f = Math.min(1, Math.max(0, (i + (i > 0 && i < n - 1 ? (hsh(i, 1) - 0.5) * 0.35 : 0)) / (n - 1)));
-      const d = mix(d0, d1, f);
-      const at = spine.at(d);
-      const pr = profile(d);
-      const up = upAt(at.tan);
-      // height: low near the tail tip, tallest over the back (two humps: shoulders and hips), low on the neck
-      const region = d < dTail ? d / dTail : d < dWithers ? 1 : 1 - (d - dWithers) / (spine.total - dWithers);
-      const torsoBump = d >= dTail && d < dWithers ? 0.85 + 0.15 * Math.cos(2 * Math.PI * (d - dTail) / (dWithers - dTail)) : 1;
-      const hh = (d < dTail ? mix(crest.h[2], crest.h[1], Math.pow(region, 0.6)) : d < dWithers ? crest.h[1] * torsoBump : mix(crest.h[0], crest.h[1] * 0.8, Math.pow(region, 1.4)));
-      const base = add(at.p, scale(up, -pr[2] + pr[1] * 0.9));
-      const side = norm(cross(up, at.tan));
-      const rake = 1.0 + (hsh(i, 2) - 0.5) * 0.4;
-      const tipDir = norm(add(add(up, scale(at.tan, -rake)), scale(side, (hsh(i, 3) - 0.5) * 0.18)));
-      const broken = hsh(i, 4) < 0.11;
-      const h0 = hh * (0.8 + 0.4 * hsh(i, 5));
-      const h1 = broken ? h0 * (0.5 + 0.2 * hsh(i, 6)) : h0;
-      const spacing = (d1 - d0) / n;
-      const bl = Math.max(h0 * 1.25, spacing * 1.1) * (crest.base ?? 1);
-      // the plate's base is long along the spine (sits in the skin), its blade thin across
-      keratin.push({ kind: 'spike', bone: segBone[Math.min(at.seg, segBone.length - 1)], tag: 'spike',
-        points: [sv(add(base, scale(up, -h0 * 0.45))), sv(add(base, scale(tipDir, h1 * 0.42))), sv(add(base, scale(tipDir, h1)))],
-        radii: [S(bl * 0.5), S(bl * (broken ? 0.3 : 0.24)), S(bl * (broken ? 0.12 : 0.025))], flat: 0.3, up: at.tan, flatAxis: 'side' });
-    }
+  // body contacts in REST-relative offsets (pose.js groundRig): offset in the bone's own frame
+  const restContacts = contacts.map((c) => {
+    const P = sculptPosOfBone[c.bone] || bonePos[c.bone], q = sculptWorld[c.bone] || QI();
+    return { bone: c.bone, off: qRot(qInv(q), sub(c.p, P)), r: c.r, wrist: !!c.wrist, thumb: !!c.thumb };
+  });
+
+  // compatibility fields for the rest of the library (materials, tack, older scenes)
+  const specOut = {
+    ...D, design: D.name, scale: D.scale, lid: D.lid, headShape,
+    hipY: hipH / L, withersY: topSh / L, tailDroop: st.tailDroop * deg,
+  };
+  const tailR = (s) => { const [W, Dp] = prL(s); return Math.sqrt(W * Dp) * 0.5; };
+  return {
+    L, spec: specOut, design: D, bones, bonePos, sculptLocal, sculptWorld, sculptPos: sculptPosOfBone, sdf: m, chains, keratin, eyes, wings, legs, sockets, head, helpers,
+    contacts: restContacts, tailR,
+    dims: { hipH, shH, topSh, topHip, T, N, H, TL, hum, fore, fem, tib, mtl, toeL, rA, rLeg, wristR: rA[2], shoulderX: shX, hipX, neckPitch,
+      trunkAt: (s) => { const sc = section(dAtTorso(s)); return { c: sc.c, hw: sc.hw, hh: sc.hh, top: sc.top }; } },
+    spineInfo: { total: spine.total, dTail, dWithers },
+  };
+}
+
+function smooth01(x) { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); }
+// cumulative extra sweep of phalanx j of finger di (radians, toward the trailing edge)
+function sumBend(j, di) {
+  let s = 0;
+  for (let q = 0; q <= j; q++) s -= (3 + 3 * q) * deg * (di === 0 ? 0.6 : 1);
+  return s;
+}
+
+// ------------------------------------------------------------ head shape
+/**
+ * Loft keys for buildHead from the design's head table ([s, width, depth] metres; s 0 = back of
+ * the skull .. 1 = snout tip): `upper` [z, halfWidth, top, bottom] and `jaw` [z, hw, top, bottom]
+ * in head lengths (z 0 = the skull joint, 1 = the snout tip), the lip line between them.
+ */
+function makeHeadShape(D, H) {
+  const X = D.headX || {};
+  const zS = (s) => -0.08 + 1.08 * s;
+  const sZ = (z) => clamp((z + 0.08) / 1.08, 0, 1);
+  const lipY = (z) => -0.09 + 0.022 * z;
+  const tab = (z) => profileAt(D.head, sZ(z)).map((v) => v / H);
+  const zs = [-0.1, -0.02, 0.06, 0.16, 0.28, 0.4, 0.52, 0.64, 0.76, 0.88, 0.95, 1.0];
+  const upper = [], jaw = [];
+  for (const z of zs) {
+    const [W, Dp] = tab(z);
+    const s = sZ(z);
+    const fu = mix(X.young || X.soft ? 0.6 : 0.56, 0.6, s);
+    const occ = z < -0.05 ? 0.86 : 1;
+    upper.push([z, W * 0.5 * occ, lipY(z) + fu * Dp * occ, lipY(z)]);
   }
-
-  return { L, spec, bones, bonePos, sdf: m, chains, keratin, eyes, wings, legs, sockets, head,
-    spineInfo: { total: S(spine.total), dTail: S(dTail), dWithers: S(dWithers) } };
+  for (const z of [0.0, 0.1, 0.22, 0.36, 0.5, 0.64, 0.78, 0.9, 0.98]) {
+    const [W, Dp] = tab(z);
+    const s = sZ(z);
+    const fu = mix(X.young || X.soft ? 0.6 : 0.56, 0.6, s);
+    // the mandible: deep at the back (jaw muscles), a knobby chin on Charcoal
+    const chin = (X.chin ?? 0) * 0.02 * Math.exp(-Math.pow((z - 0.9) / 0.07, 2));
+    jaw.push([z, W * 0.485, lipY(z) + 0.01, lipY(z) - (1 - fu) * Dp - chin]);
+  }
+  const eyeD = D.eye / D.skull;                    // eyeball diameter / skull length
+  const eyeS = 1 - D.snout - eyeD * 0.5;
+  const ez = zS(eyeS);
+  const [We, De] = tab(ez);
+  const fuE = 0.58;
+  const eye = [We * 0.5 * 0.86, lipY(ez) + fuE * De * 0.74, ez];
+  // the jaw hinge (quadrate) below the back corner of the eye: the gape runs back to it
+  const hinge = [0, lipY(ez - 0.2) - 0.005, Math.max(0.02, ez - eyeD * 0.5 - 0.12)];
+  const nT = D.teeth[0] | 0;
+  return {
+    upper, jaw, eye, eyeR: eyeD * 0.5, eyeInset: X.soft ? 0.5 : 0.52, eyeExpose: X.soft ? 46 : X.young ? 58 : 54,
+    brow: X.brow ?? 1, cheek: X.cheek ?? 1, jawMuscle: X.jawMuscle ?? 1, ridgeR: X.ridgeR ?? 0.022, hinge, gape0: (X.soft ? 11 : 13) * deg,
+    nostril: X.nostril ?? 1, teethUp: nT, teethSize: nT ? (D.toothMax / D.skull) * 0.5 : 0, lipCover: X.lipCover ?? 0.5, lipIrregular: X.lipIrregular ?? 0,
+    tympanum: X.tympanum ?? 1, eggTooth: !!X.eggTooth, soft: !!X.soft, gazeForward: D.gazeForward ?? (X.young ? 0.28 : 0.2),
+    jawEnd: X.soft ? 0.86 : 0.95, orbit: X.soft ? 1.45 : 1.36, young: !!X.young, long: !!X.long,
+  };
 }
 
 // ---------------------------------------------------------------- head
-// The head is lofted from cross-sections (side + top silhouettes are set by
-// the preset's `upper`/`jaw` keys), then sculpted: maxilla/dentary ridges
-// carry the tooth rows, a vaulted palate and mouth floor are carved between
-// them, brow ridges overhang the lateral eyes, cheek bones and big jaw muscles
-// widen the back, the gape runs back past the eye, a tympanum sits behind the
-// jaw joint. The lower jaw is built closed and rotated open by gape0, so the
-// rest mesh has a real mouth interior.
-function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
-  const H = spec.head * L;
+// The head is lofted from cross-sections (side + top silhouettes from the design's head
+// table), then sculpted: brow shelf over the lateral eye, canthus ridges, cheek bones, big jaw
+// muscles behind the eye, the gape running back below the eye to the quadrate hinge, labial
+// scales over the teeth, nostrils on a raised boss near the tip, a tympanum behind the hinge.
+// The lower jaw is built closed and rotated open by gape0, so the rest mesh has a real mouth.
+function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, chains, sockets, D) {
+  const H = Hm;
   const hs = spec.headShape;
-  const pitch = spec.neckPitch + spec.headPitch;
+  const pitch = neckPitch + headPitch;
   const ez = [0, Math.sin(pitch), Math.cos(pitch)], ey = [0, Math.cos(pitch), -Math.sin(pitch)], ex = [1, 0, 0];
-  // snoutMul < 1 shortens the snout (in front of snoutZ0) while every feature on it - nostrils,
-  // egg tooth, lips - moves with it (a newborn's short face); the cranium is unchanged
-  const zS0 = hs.snoutZ0 ?? 0.5, zSm = hs.snoutMul ?? 1;
-  const zMap = (z) => (z <= zS0 ? z : zS0 + (z - zS0) * zSm);
-  const W = (x, y, z0) => { const z = zMap(z0); return [hj[0] + (x * ex[0] + y * ey[0] + z * ez[0]) * H, hj[1] + (x * ex[1] + y * ey[1] + z * ez[1]) * H, hj[2] + (x * ex[2] + y * ey[2] + z * ez[2]) * H]; };
+  const W = (x, y, z) => [hj[0] + (x * ex[0] + y * ey[0] + z * ez[0]) * H, hj[1] + (x * ex[1] + y * ey[1] + z * ez[1]) * H, hj[2] + (x * ex[2] + y * ey[2] + z * ez[2]) * H];
   const Wd = (x, y, z) => norm([x * ex[0] + y * ey[0] + z * ez[0], x * ex[1] + y * ey[1] + z * ez[1], x * ex[2] + y * ey[2] + z * ez[2]]);
-  const U = (z) => profileAt(hs.upper, z);    // [halfWidth, top, bottom]
+  const U = (z) => profileAt(hs.upper, z);
   const J = (z) => profileAt(hs.jaw, z);
-  const rr = hs.ridgeR;
   const t = { chain: 'skull', bone: 'head', tag: 'head' };
   const hinge = hs.hinge;
   const g = hs.gape0;
   const soft = !!hs.soft;
   const rotJ = (y, z, ang) => { const dy = y - hinge[1], dz = z - hinge[2]; const c = Math.cos(ang), s = Math.sin(ang); return [hinge[1] + dy * c - dz * s, hinge[2] + dy * s + dz * c]; };
-  // the jaw is built closed and rotated about the hinge in WORLD space (after the snout
-  // mapping), so it is a rigid rotation the jaw bone can undo: the lips meet when it closes
-  const hingeW = W(0, hinge[1], hinge[2]);
-  const rotW = (p, ang) => {
-    const d = [p[0] - hingeW[0], p[1] - hingeW[1], p[2] - hingeW[2]];
-    const dx = d[0] * ex[0] + d[1] * ex[1] + d[2] * ex[2], dy = d[0] * ey[0] + d[1] * ey[1] + d[2] * ey[2], dz = d[0] * ez[0] + d[1] * ez[1] + d[2] * ez[2];
-    const c = Math.cos(ang), s = Math.sin(ang), ny = dy * c - dz * s, nz = dy * s + dz * c;
-    return [0, 1, 2].map((k) => hingeW[k] + ex[k] * dx + ey[k] * ny + ez[k] * nz);
-  };
-  const jawPt = (x, y, z) => (zSm === 1 ? (() => { const r = rotJ(y, z, g); return W(x, r[0], r[1]); })() : rotW(W(x, y, z), g));
+  const jawPt = (x, y, z) => { const r = rotJ(y, z, g); return W(x, r[0], r[1]); };
   const jawDir = (x, y, z) => { const c = Math.cos(g), s = Math.sin(g); return Wd(x, y * c - z * s, y * s + z * c); };
   const sectionCone = (P0, P1, a, b, k, o, mapPt, upDir, grp = -1) => {
     const ra = Math.sqrt(a.hw * a.hh), rb = Math.sqrt(b.hw * b.hh);
@@ -833,7 +926,7 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
     m.cone(mapPt(0, a.cy, P0), mapPt(0, b.cy, P1), ra * H, rb * H, { sx, sy, up: upDir, k: k * H, grp, ...o });
   };
 
-  // ---- upper loft (cranium + snout); the ellipse bottom is raised so the ridges form the lip line
+  // ---- upper loft (cranium + snout)
   const zs = [];
   for (let z = -0.1; z < 0.999; z += 0.05) zs.push(z);
   const lastZ = 1 - 0.55 * Math.sqrt(U(1)[0] * (U(1)[1] - U(1)[2]) / 2);
@@ -841,12 +934,9 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
   const secU = (z) => { const [hw, top, bot] = U(z); const b2 = bot - 0.035; return { hw, hh: (top - b2) / 2, cy: (top + b2) / 2 }; };
   const gU = m.group();
   for (let i = 0; i < zs.length - 1; i++) sectionCone(zs[i], zs[i + 1], secU(zs[i]), secU(zs[i + 1]), 0.05, t, W, ey, gU);
-  // eye placement: the eyeball sits so the head surface meets it at `eyeExpose` degrees from
-  // the gaze (a real eye shows its front cap; lids and skin wrap the rest - never a bead stuck
-  // on, never a hole). The gaze is lateral, turned a little forward (hs.gaze); the surface is
-  // found on the plain head loft, before the brows are added.
+  // eye placement (the eyeball sits so the head surface meets it at `eyeExpose` degrees from the gaze)
   const nrmL = (v) => { const l = Math.hypot(...v); return v.map((x) => x / l); };
-  let gL = nrmL(hs.gaze || [0.9, 0.04, 0.42]);
+  let gL = nrmL([0.9, 0.04, 0.42]);
   const eye0 = [hs.eye[0] - hs.eyeR * (hs.eyeInset ?? 0.55), hs.eye[1] - hs.eyeR * 0.1, hs.eye[2]];
   const eyeP = [...eye0];
   {
@@ -864,9 +954,7 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
     };
     let surf = surfAlong(gL);
     if (surf !== null) {
-      // the gaze follows the loft's surface normal there (so the exposed cap IS the cornea),
-      // turned a little forward and kept mostly lateral
-      const p = [0, 1, 2].map((k) => eye0[k] + gL[k] * surf), e = hs.eyeR * 0.05, f0 = sdfL(p);
+      const p = [0, 1, 2].map((q) => eye0[q] + gL[q] * surf), e = hs.eyeR * 0.05, f0 = sdfL(p);
       const n = nrmL([sdfL([p[0] + e, p[1], p[2]]) - f0, sdfL([p[0], p[1] + e, p[2]]) - f0, sdfL([p[0], p[1], p[2] + e]) - f0]);
       const fw = hs.gazeForward ?? 0.2;
       gL = nrmL([Math.max(n[0], 0.6), n[1] * 0.6, n[2] + fw]);
@@ -874,109 +962,103 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
     }
     if (surf !== null) {
       const shift = surf - hs.eyeR * Math.cos((hs.eyeExpose ?? 50) * deg);
-      for (let k = 0; k < 3; k++) eyeP[k] = eye0[k] + gL[k] * shift;
+      for (let q = 0; q < 3; q++) eyeP[q] = eye0[q] + gL[q] * shift;
     }
   }
   const gW = (sd) => Wd(sd * gL[0], gL[1], gL[2]);
   for (const sd of [1, -1]) m.quiet.push(...W(sd * eyeP[0], eyeP[1], eyeP[2]), hs.eyeR * H * 1.5);
   const lipW = (z) => { const s2 = secU(z); const q = (U(z)[2] - s2.cy) / s2.hh; return s2.hw * Math.sqrt(Math.max(0, 1 - q * q)); };
   const ridgeU = (sd, z) => [sd * 0.86 * lipW(z), U(z)[2], z];
-  // eye position (eyeInset: how deep the eyeball sits in its orbit)
   const eye = eyeP;
   const ER = hs.eyeR;
+  const ezE = eye[2];
   for (const sd of [1, -1]) {
     // flat skull table between the eyes and the horn bases (a reptile's cranial platform)
-    m.ell(W(sd * 0.06, U(0.15)[1] - 0.03, 0.12), [0.075 * H, 0.035 * H, 0.16 * H], { ax: ex, ay: ey, k: 0.04 * H, ...t });
+    m.ell(W(sd * U(0.12)[0] * 0.3, U(0.12)[1] - 0.03, Math.min(0.12, ezE - 0.1)), [U(0.12)[0] * 0.32 * H, 0.035 * H, 0.16 * H], { ax: ex, ay: ey, k: 0.04 * H, ...t });
     // brow ridge: a bony shelf overhanging the eye
-    m.ell(W(sd * (eye[0] - 0.025 + ER * 0.3), eye[1] + ER * 0.95, eye[2] - 0.01), [0.045 * H * Math.sqrt(hs.brow), 0.024 * H * hs.brow, 0.15 * H], { ax: Wd(1, 0.3 * sd, 0.1 * sd), ay: Wd(-0.3 * sd, 1, 0.05), k: 0.013 * H, ...t });
+    m.ell(W(sd * (eye[0] - 0.02 + ER * 0.3), eye[1] + ER * 0.95, eye[2] - 0.01), [0.042 * H * Math.sqrt(hs.brow), 0.022 * H * hs.brow, 0.14 * H], { ax: Wd(1, 0.3 * sd, 0.1 * sd), ay: Wd(-0.3 * sd, 1, 0.05), k: 0.013 * H, ...t });
     // canthus: bony ridge from the brow toward the nostril
-    m.cone(W(sd * (eye[0] - 0.03), eye[1] + ER * 0.9, eye[2] + 0.07), W(sd * 0.065, U(0.86)[1] - 0.012, 0.86), 0.022 * H * hs.brow, 0.011 * H, { k: 0.025 * H, ...t });
-    // horn boss on the back corner of the skull (a low ridge, not a knob)
-    m.ell(W(sd * 0.125, U(0.04)[1] - 0.045, 0.06), [0.04 * H * Math.sqrt(hs.brow), 0.028 * H, 0.08 * H], { ax: ex, ay: ey, k: 0.03 * H, ...t });
+    m.cone(W(sd * (eye[0] - 0.03), eye[1] + ER * 0.85, eye[2] + 0.06), W(sd * U(0.86)[0] * 0.5, U(0.86)[1] - 0.012, 0.86), 0.02 * H * Math.min(1.6, hs.brow), 0.01 * H, { k: 0.025 * H, ...t });
+    // horn boss on the back corner of the skull
+    m.ell(W(sd * U(0.0)[0] * 0.55, U(0.0)[1] - 0.04, 0.02), [0.04 * H * Math.sqrt(hs.brow), 0.03 * H, 0.08 * H], { ax: ex, ay: ey, k: 0.03 * H, ...t });
     // temporal jaw muscles: the widest part of the head, behind and below the eye
-    m.ell(W(sd * 0.14 * hs.jawMuscle ** 0.4, -0.03, 0.1), [0.08 * H * hs.jawMuscle, 0.11 * H, 0.14 * H], { ax: ex, ay: ey, k: 0.05 * H, ...t });
+    m.ell(W(sd * U(0.1)[0] * 0.62 * hs.jawMuscle ** 0.3, -0.035, Math.max(0.06, ezE - 0.22)), [0.075 * H * hs.jawMuscle, 0.1 * H, 0.13 * H], { ax: ex, ay: ey, k: 0.05 * H, ...t });
     // cheek bone (jugal) under the eye toward the jaw joint
-    m.cone(W(sd * (eye[0] + 0.004), eye[1] - ER * 1.3, eye[2] + 0.1), W(sd * (0.175 + 0.012 * hs.cheek), -0.05, 0.04), 0.022 * H * hs.cheek, 0.034 * H * hs.cheek, { k: 0.014 * H, ...t });
-    // nostril mound on top of the snout tip
-    const zN = 0.9;
-    m.ell(W(sd * 0.055, U(zN)[1] - 0.02, zN), [0.032 * H * hs.nostril, 0.02 * H * hs.nostril, 0.05 * H * hs.nostril], { ax: ex, ay: ey, k: 0.03 * H, ...t });
-    // upper lip: a fleshy labial ridge along the tooth row that half covers the teeth
+    m.cone(W(sd * (eye[0] + 0.004), eye[1] - ER * 1.3, eye[2] + 0.08), W(sd * (U(hinge[2])[0] * 0.78 + 0.01 * hs.cheek), hinge[1] + 0.03, hinge[2] + 0.02), 0.02 * H * hs.cheek, 0.03 * H * hs.cheek, { k: 0.014 * H, ...t });
+    // nostril boss on top of the snout tip
+    const zN = 0.91;
+    m.ell(W(sd * U(zN)[0] * 0.42, U(zN)[1] - 0.018, zN), [0.03 * H * hs.nostril, 0.019 * H * hs.nostril, 0.046 * H * hs.nostril], { ax: ex, ay: ey, k: 0.03 * H, ...t });
+    // upper lip: a fleshy labial ridge along the tooth row
     const lc = hs.lipCover ?? 0.5;
     if (lc > 0) {
       const irr = hs.lipIrregular ?? 0;
-      const zl = irr ? [0.12, 0.22, 0.33, 0.43, 0.55, 0.66, 0.77, 0.88] : [0.12, 0.3, 0.5, 0.7, 0.88];
+      const z0 = hinge[2] + 0.06;
+      const zl = (irr ? [0, 0.12, 0.25, 0.37, 0.5, 0.62, 0.75, 0.88, 1] : [0, 0.25, 0.5, 0.75, 1]).map((f) => mix(z0, 0.92, f));
       for (let i = 0; i < zl.length - 1; i++) {
         const a = ridgeU(sd, zl[i]), b = ridgeU(sd, zl[i + 1]);
-        // irregular: the lip scalloped over the big teeth, thinner between them
         const ya = irr * (hsh(i, sd > 0 ? 31 : 37) - 0.5) * 0.02, yb = irr * (hsh(i + 1, sd > 0 ? 31 : 37) - 0.5) * 0.02;
         const ra = 1 + irr * (hsh(i, sd > 0 ? 41 : 43) - 0.5) * 0.7, rb = 1 + irr * (hsh(i + 1, sd > 0 ? 41 : 43) - 0.5) * 0.7;
         m.cone(W(a[0] * 1.06, a[1] + 0.012 + ya, a[2]), W(b[0] * 1.06, b[1] + 0.012 + yb, b[2]), 0.02 * H * lc * ra, 0.017 * H * lc * rb, { k: 0.02 * H, ...t });
       }
     }
   }
-  // soft newborn head: puffy cheeks below and behind the eyes
-  if (soft) for (const sd of [1, -1]) m.ell(W(sd * 0.25, -0.07, 0.24), [0.08 * H, 0.07 * H, 0.1 * H], { ax: ex, ay: ey, k: 0.06 * H, ...t });
+  if (soft) for (const sd of [1, -1]) m.ell(W(sd * U(0.24)[0] * 0.62, -0.07, 0.24), [0.08 * H, 0.07 * H, 0.1 * H], { ax: ex, ay: ey, k: 0.06 * H, ...t });
 
   // ---- lower jaw (closed config, rotated open by gape0)
   const jt = { chain: 'jaw', bone: 'jaw', tag: 'jaw' };
   const secJ = (z) => { const [hw, top, bot] = J(z); const t2 = top + 0.03; return { hw: hw * 0.97, hh: (t2 - bot) / 2, cy: (t2 + bot) / 2 }; };
   const zj = [];
-  // (jawEnd: where the lower jaw stops - a newborn's chin sits back under the overhanging snout)
   const jEnd = hs.jawEnd ?? 0.95;
   for (let z = 0.0; z < jEnd; z += 0.065) zj.push(z);
   zj.push(Math.min(1 - 0.5 * Math.sqrt(J(0.98)[0] * (J(0.98)[1] - J(0.98)[2]) / 2), jEnd + 0.03));
   const gJ = m.group();
   for (let i = 0; i < zj.length - 1; i++) sectionCone(zj[i], zj[i + 1], secJ(zj[i]), secJ(zj[i + 1]), 0.03, jt, jawPt, jawDir(0, 1, 0), gJ);
-  // jaw angle (retroarticular process) behind and below the hinge, and the masseter bulge over it
   for (const sd of [1, -1]) {
     const [hw0, , b0] = J(0.06);
-    m.cone(jawPt(sd * hw0 * 0.8, b0 + 0.06, 0.12), jawPt(sd * hw0 * 0.82, hinge[1] - 0.075, hinge[2] - 0.1), 0.05 * H, 0.032 * H, { k: 0.03 * H, ...jt });
-    m.ell(jawPt(sd * hw0 * 0.86, b0 + 0.11, 0.17), [0.05 * H * hs.jawMuscle, 0.07 * H, 0.1 * H], { ax: ex, ay: jawDir(0, 1, 0), k: 0.035 * H, ...jt });
-    // lower lip (labial ridge)
+    // jaw angle (retroarticular process) and the masseter bulge over it
+    m.cone(jawPt(sd * hw0 * 0.8, b0 + 0.06, hinge[2] + 0.08), jawPt(sd * hw0 * 0.82, hinge[1] - 0.075, hinge[2] - 0.1), 0.048 * H, 0.03 * H, { k: 0.03 * H, ...jt });
+    m.ell(jawPt(sd * hw0 * 0.86, b0 + 0.1, hinge[2] + 0.14), [0.048 * H * hs.jawMuscle, 0.068 * H, 0.1 * H], { ax: ex, ay: jawDir(0, 1, 0), k: 0.035 * H, ...jt });
     const lc = hs.lipCover ?? 0.5;
-    if (lc > 0) for (const [za, zb] of [[0.14, 0.35], [0.35, 0.6], [0.6, 0.86]]) {
-      const pa = [sd * 0.84 * J(za)[0] * 1.03, J(za)[1] - 0.012, za], pb = [sd * 0.84 * J(zb)[0] * 1.03, J(zb)[1] - 0.012, zb];
-      m.cone(jawPt(...pa), jawPt(...pb), 0.016 * H * lc, 0.014 * H * lc, { k: 0.018 * H, ...jt });
+    if (lc > 0) {
+      const z0 = hinge[2] + 0.08;
+      for (const [fa, fb] of [[0, 0.33], [0.33, 0.66], [0.66, 1]]) {
+        const za = mix(z0, 0.88, fa), zb = mix(z0, 0.88, fb);
+        const pa = [sd * 0.84 * J(za)[0] * 1.03, J(za)[1] - 0.012, za], pb = [sd * 0.84 * J(zb)[0] * 1.03, J(zb)[1] - 0.012, zb];
+        m.cone(jawPt(...pa), jawPt(...pb), 0.016 * H * lc, 0.014 * H * lc, { k: 0.018 * H, ...jt });
+      }
     }
   }
   const lipWJ = (z) => { const s2 = secJ(z); const q = (J(z)[1] - s2.cy) / s2.hh; return s2.hw * Math.sqrt(Math.max(0, 1 - q * q)); };
   const ridgeJ = (sd, z) => [sd * 0.84 * lipWJ(z), J(z)[1], z];
-  // throat skin: jaw part follows the jaw, neck part follows the head; a loose dewlap under the throat
+  // throat skin: jaw part follows the jaw, neck part follows the head
   const j0 = J(0.05);
-  m.cone(jawPt(0, j0[2] + 0.05, 0.16), jawPt(0, j0[2] + 0.06, 0.0), 0.065 * H, 0.075 * H, { sx: 1.4, sy: 0.7, up: jawDir(0, 1, 0), k: 0.04 * H, chain: 'jaw', bone: 'jaw', tag: 'throat' });
-  m.cone(W(0, j0[2] + 0.1, -0.04), W(0, U(-0.1)[2] - 0.03, -0.2), 0.08 * H, 0.115 * H, { sx: 1.3, sy: 0.78, up: ey, k: 0.05 * H, chain: 'spine', bone: 'head', tag: 'throat' });
+  m.cone(jawPt(0, j0[2] + 0.05, 0.16), jawPt(0, j0[2] + 0.06, 0.0), 0.06 * H, 0.07 * H, { sx: 1.4, sy: 0.7, up: jawDir(0, 1, 0), k: 0.04 * H, chain: 'jaw', bone: 'jaw', tag: 'throat' });
+  m.cone(W(0, j0[2] + 0.1, -0.04), W(0, U(-0.1)[2] - 0.03, -0.2), 0.075 * H, 0.105 * H, { sx: 1.3, sy: 0.78, up: ey, k: 0.05 * H, chain: 'spine', bone: 'head', tag: 'throat' });
 
-  // ---- mouth: a wedge with its apex at the hinge and the rest gape as opening
-  // angle cuts both jaws; its two faces become the lip lines, which meet
-  // exactly when the jaw closes (rotation about the same apex).
+  // ---- mouth: a wedge with its apex at the hinge cuts both jaws
   const midG = g * 0.5;
   {
     const axis = Wd(0, -Math.sin(midG), Math.cos(midG));
     const apex = W(0, hinge[1], hinge[2]);
-    const s0 = 0.16, s1 = 1.35, sa = Math.sin(midG);
+    const s0 = 0.12, s1 = 1.35, sa = Math.sin(midG);
     m.cone(add(apex, scale(axis, s0 * H)), add(apex, scale(axis, s1 * H)), s0 * sa * H, s1 * sa * H, { sx: 12, sy: 1, up: Wd(0, Math.cos(midG), Math.sin(midG)), k: 0.02 * H, op: 'sub', chain: 'jaw', bone: 'jaw', tag: 'mouth' });
   }
-  const cav = (x, y, z) => (zSm === 1 ? (() => { const r = rotJ(y, z, midG); return W(x, r[0], r[1]); })() : rotW(W(x, y, z), midG));
+  const cav = (x, y, z) => { const r = rotJ(y, z, midG); return W(x, r[0], r[1]); };
   const cavDir = (x, y, z) => { const c = Math.cos(midG), s = Math.sin(midG); return Wd(x, y * c - z * s, y * s + z * c); };
   const mouthY = hinge[1];
-  m.ell(cav(0, mouthY, 0.5), [0.5 * lipW(0.5) * H, 0.02 * H, 0.36 * H], { ax: ex, ay: cavDir(0, 1, 0), k: 0.03 * H, op: 'sub', chain: 'jaw', bone: 'jaw', tag: 'mouth' });
-  m.ell(cav(0, mouthY - 0.005, 0.16), [0.08 * H, 0.035 * H, 0.12 * H], { ax: ex, ay: cavDir(0, 1, 0), k: 0.03 * H, op: 'sub', chain: 'jaw', bone: 'jaw', tag: 'mouth' });
-  m.cone(jawPt(0, J(0.2)[1] - 0.035, 0.12), jawPt(0, J(0.7)[1] - 0.03, 0.72), 0.042 * H, 0.024 * H, { sx: 1.45, sy: 0.5, up: jawDir(0, 1, 0), k: 0.012 * H, chain: 'jaw', bone: 'jaw', tag: 'tongue' });
-  // eye sockets, nostrils, ear openings. A puffy skin mound around each eye first (the socket
-  // then hollows it into a soft rim that the lids sit in), so the eye is set in the head
+  const zMid = (hinge[2] + 1) * 0.5;
+  m.ell(cav(0, mouthY, zMid), [0.5 * lipW(zMid) * H, 0.02 * H, (1 - hinge[2]) * 0.38 * H], { ax: ex, ay: cavDir(0, 1, 0), k: 0.03 * H, op: 'sub', chain: 'jaw', bone: 'jaw', tag: 'mouth' });
+  m.ell(cav(0, mouthY - 0.005, hinge[2] + 0.12), [0.08 * H, 0.035 * H, 0.12 * H], { ax: ex, ay: cavDir(0, 1, 0), k: 0.03 * H, op: 'sub', chain: 'jaw', bone: 'jaw', tag: 'mouth' });
+  m.cone(jawPt(0, J(hinge[2] + 0.15)[1] - 0.035, hinge[2] + 0.1), jawPt(0, J(0.7)[1] - 0.03, 0.72), 0.04 * H, 0.022 * H, { sx: 1.45, sy: 0.5, up: jawDir(0, 1, 0), k: 0.012 * H, chain: 'jaw', bone: 'jaw', tag: 'tongue' });
   for (const sd of [1, -1]) {
     const orb = hs.orbit ?? 1.36;
     m.ell(W(sd * (eyeP[0] - gL[0] * ER * 0.45), eyeP[1] - gL[1] * ER * 0.45, eyeP[2] - gL[2] * ER * 0.45), [ER * H * orb * 0.85, ER * H * orb, ER * H * orb * 1.15], { ax: gW(sd), ay: ey, k: 0.035 * H, ...t, tag: 'head' });
   }
   for (const sd of [1, -1]) {
-    // the socket hugs the eyeball and opens along its gaze (outward and a little forward)
     m.ell(W(sd * eyeP[0], eyeP[1], eyeP[2]), [ER * H * 1.045, ER * H * 1.045, ER * H * 1.06], { ax: gW(sd), ay: ey, k: 0.008 * H, op: 'sub', ...t, tag: 'eyesocket' });
-    m.ell(W(sd * 0.062, U(0.92)[1] - 0.012, 0.92), [0.02 * H * hs.nostril, 0.013 * H * hs.nostril, 0.032 * H * hs.nostril], { ax: Wd(1, 0.7, 0.15 * sd), ay: Wd(-0.7, 1, 0), k: 0.008 * H, op: 'sub', ...t, tag: 'nostril' });
-    if (hs.tympanum) m.ell(W(sd * 0.2, 0.03, -0.02), [0.02 * H, 0.05 * H * hs.tympanum, 0.035 * H * hs.tympanum], { ax: Wd(1, 0, -0.25 * sd), ay: ey, k: 0.015 * H, op: 'sub', ...t, tag: 'head' });
+    m.ell(W(sd * U(0.93)[0] * 0.45, U(0.93)[1] - 0.012, 0.93), [0.019 * H * hs.nostril, 0.012 * H * hs.nostril, 0.03 * H * hs.nostril], { ax: Wd(1, 0.7, 0.15 * sd), ay: Wd(-0.7, 1, 0), k: 0.008 * H, op: 'sub', ...t, tag: 'nostril' });
+    if (hs.tympanum) m.ell(W(sd * U(hinge[2] - 0.05)[0] * 0.92, 0.02, hinge[2] - 0.05), [0.02 * H, 0.045 * H * hs.tympanum, 0.032 * H * hs.tympanum], { ax: Wd(1, 0, -0.25 * sd), ay: ey, k: 0.015 * H, op: 'sub', ...t, tag: 'head' });
   }
-
-  // the cornea faces the middle of the opening the skin actually leaves around the eyeball
-  // (found on the finished sculpt), so the iris is what shows - never the side of the eyeball
   let gOpen = gL;
   {
     m.compile();
@@ -985,12 +1067,11 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
     let cnt = 0;
     for (let i = 0; i < 24; i++) for (let j = 0; j < 48; j++) {
       const th = (i + 0.5) / 24 * Math.PI * 0.6, ph = (j / 48) * Math.PI * 2;
-      // directions around the placement gaze (local head frame)
       const t1 = nrmL([gL[1], -gL[0], 0]), t2 = [gL[1] * t1[2] - gL[2] * t1[1], gL[2] * t1[0] - gL[0] * t1[2], gL[0] * t1[1] - gL[1] * t1[0]];
-      const dl = [0, 1, 2].map((k) => gL[k] * Math.cos(th) + (t1[k] * Math.cos(ph) + t2[k] * Math.sin(ph)) * Math.sin(th));
+      const dl = [0, 1, 2].map((q) => gL[q] * Math.cos(th) + (t1[q] * Math.cos(ph) + t2[q] * Math.sin(ph)) * Math.sin(th));
       const dw = Wd(dl[0], dl[1], dl[2]);
-      const q = [0, 1, 2].map((k) => c0[k] + dw[k] * ER * H * 1.08);
-      if (m.evalList(q[0], q[1], q[2], m.all) > 0) { for (let k = 0; k < 3; k++) acc[k] += dl[k] * Math.sin(th); cnt += Math.sin(th); }
+      const q = [0, 1, 2].map((qq) => c0[qq] + dw[qq] * ER * H * 1.08);
+      if (m.evalList(q[0], q[1], q[2], m.all) > 0) { for (let qq = 0; qq < 3; qq++) acc[qq] += dl[qq] * Math.sin(th); cnt += Math.sin(th); }
     }
     if (cnt > 0 && Math.hypot(...acc) > 1e-6) gOpen = nrmL(acc);
   }
@@ -1004,48 +1085,49 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
     bone(`eye_${side}`, 'head', c);
     bone(`lidU_${side}`, 'head', c);
     bone(`lidL_${side}`, 'head', c);
-    const look = gO(sd);
-    eyes.push({ side, sd, center: c, radius: ER * H, look, bone: `eye_${side}`, lidU: `lidU_${side}`, lidL: `lidL_${side}`, up: ey });
+    eyes.push({ side, sd, center: c, radius: ER * H, look: gO(sd), bone: `eye_${side}`, lidU: `lidU_${side}`, lidL: `lidL_${side}`, up: ey });
   }
   chains.jaw = { points: [W(0, hinge[1], hinge[2]), jawPt(0, J(0.9)[1] - 0.05, 0.98)], refUp: jawDir(0, 1, 0), kind: 'jaw' };
   chains.skull = { points: [W(0, 0.02, -0.15), W(0, 0.04, 0.35), W(0, U(1)[1] * 0.3, 1.0)], refUp: ey, kind: 'skull' };
   sockets.mouth = { bone: 'jaw', pos: cav(0, mouthY, 0.55) };
+  sockets.mouthFront = { bone: 'head', pos: W(0, mouthY + 0.01, 0.97) };
   sockets.headFrame = { ex, ey, ez, origin: hj, H };
 
-  // ---- teeth: varied - big caniniform teeth in the front third, small worn ones at the
-  // back, recurved, leaning, a few broken or missing, replacement teeth half grown
+  // ---- teeth: varied, recurved, a few broken or missing, replacement teeth half grown
   const nT = hs.teethUp | 0;
   const gums = [];
+  const zT0 = hinge[2] + 0.1;
   for (const sd of [1, -1]) {
-    const upper = [], lower = [];
     for (let i = 0; i < nT; i++) {
-      const hv = (k) => hsh(i * 7 + (sd > 0 ? 1 : 2), k);
-      // uneven spacing: teeth are shed and replaced one by one, never a comb
+      const hv = (q) => hsh(i * 7 + (sd > 0 ? 1 : 2), q);
       const f = (i + 0.5 + (hv(10) - 0.5) * 0.5) / nT;
-      const z = 0.17 + (0.955 - 0.17) * f;
-      if (hv(1) < 0.07 && i > 1 && i < nT - 2) continue;                       // a missing tooth
-      const big = Math.exp(-Math.pow((f - 0.74) / 0.06, 2)) * 1.0 + Math.exp(-Math.pow((f - 0.93) / 0.045, 2)) * 0.55;
-      const repl = hv(2) < 0.12 ? 0.55 : 1;                                     // replacement tooth growing in
-      const size = hs.teethSize * (0.45 + 0.5 * f + 0.75 * big) * (0.8 + 0.4 * hv(3)) * repl;
+      const z = zT0 + (0.955 - zT0) * f;
+      if (hv(1) < 0.07 && i > 1 && i < nT - 2) continue;
+      // the 4th upper (from the front) is the biggest, crocodile-like; another big pair near the tip
+      const fFront = 1 - f;
+      const big = Math.exp(-Math.pow((fFront - 3.5 / nT) / 0.05, 2)) * 1.0 + Math.exp(-Math.pow((fFront - 9.5 / nT) / 0.06, 2)) * 0.45;
+      const repl = hv(2) < 0.12 ? 0.55 : 1;
+      const size = hs.teethSize * (0.4 + 0.45 * f + 0.95 * big) * (0.82 + 0.36 * hv(3)) * repl;
       const r = ridgeU(sd, z);
       const x = r[0], y = r[1] + size * 0.12;
-      const curve = 0.2 + 0.35 * hv(4) + 0.25 * big;                            // recurved toward the throat
-      const lean = (hv(5) - 0.5) * 0.25;                                       // outward/inward
+      const curve = 0.2 + 0.35 * hv(4) + 0.25 * big;
+      const lean = (hv(5) - 0.5) * 0.25;
       const broken = hv(6) < 0.1 ? 0.55 + 0.2 * hv(7) : 1;
       const tipY = y - size * 1.05 * broken;
       keratin.push({ kind: 'tooth', bone: 'head', tag: 'tooth',
         points: [W(x, y + size * 0.5, z), W(x * (0.995 + lean * 0.05), y - size * 0.35, z + size * 0.06), W(x * (0.985 + lean * 0.1), tipY, z - size * curve * broken)],
         radii: [size * (0.3 + 0.06 * big) * H, size * 0.21 * H, size * (broken < 1 ? 0.11 : 0.012) * H], flat: 0.7 + 0.1 * hv(8), up: ez, seedJ: hv(9) });
-      upper.push(W(x * 1.0, y + size * 0.05, z));
     }
-    for (let i = 0; i < nT - 1; i++) {
-      const hv = (k) => hsh(i * 5 + (sd > 0 ? 3 : 4), k + 20);
-      const f = (i + 1 + (hv(10) - 0.5) * 0.5) / nT;
-      const z = 0.17 + (0.925 - 0.17) * f;
-      if (hv(1) < 0.07 && i > 1 && i < nT - 3) continue;
-      const big = Math.exp(-Math.pow((f - 0.84) / 0.055, 2)) * 0.9;
+    const nL = D.teeth[1] | 0;
+    for (let i = 0; i < nL; i++) {
+      const hv = (q) => hsh(i * 5 + (sd > 0 ? 3 : 4), q + 20);
+      const f = (i + 1 + (hv(10) - 0.5) * 0.5) / (nL + 1);
+      const z = zT0 + (0.925 - zT0) * f;
+      if (hv(1) < 0.07 && i > 1 && i < nL - 2) continue;
+      const fFront = 1 - f;
+      const big = Math.exp(-Math.pow((fFront - 3.8 / nL) / 0.05, 2)) * 0.9;
       const repl = hv(2) < 0.12 ? 0.55 : 1;
-      const size = hs.teethSize * 0.9 * (0.45 + 0.5 * f + 0.75 * big) * (0.8 + 0.4 * hv(3)) * repl;
+      const size = hs.teethSize * 0.9 * (0.4 + 0.45 * f + 0.95 * big) * (0.82 + 0.36 * hv(3)) * repl;
       const r = ridgeJ(sd, z);
       const x = r[0], y = r[1] - size * 0.12;
       const curve = 0.2 + 0.3 * hv(4) + 0.2 * big;
@@ -1053,11 +1135,9 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
       keratin.push({ kind: 'tooth', bone: 'jaw', tag: 'tooth',
         points: [jawPt(x, y - size * 0.5, z), jawPt(x * 0.995, y + size * 0.35, z + size * 0.05), jawPt(x * 0.985, y + size * 1.0 * broken, z - size * curve * broken)],
         radii: [size * 0.28 * H, size * 0.2 * H, size * (broken < 1 ? 0.1 : 0.012) * H], flat: 0.7, up: ez, seedJ: hv(9) });
-      lower.push(jawPt(x, y - size * 0.05, z));
     }
-    // gums: a fleshy ridge along each tooth row that buries the tooth bases
     if (nT > 0) {
-      const gz = [0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 0.96];
+      const gz = [0, 0.18, 0.36, 0.54, 0.72, 0.88, 1].map((f) => mix(zT0 - 0.02, 0.96, f));
       const gr = hs.teethSize * 0.2 * H;
       gums.push({ bone: 'head', pts: gz.map((z) => { const r = ridgeU(sd, z); return W(r[0] * 0.95, r[1] + hs.teethSize * 0.28, z); }), r: gr * 0.9 });
       gums.push({ bone: 'jaw', pts: gz.slice(0, -1).map((z) => { const r = ridgeJ(sd, z); return jawPt(r[0] * 0.93, r[1] - hs.teethSize * 0.32, z); }), r: gr * 0.85 });
@@ -1066,52 +1146,73 @@ function buildHead(m, spec, L, hj, bone, keratin, eyes, chains, sockets, opts) {
   for (const gm of gums) for (let i = 0; i < gm.pts.length - 1; i++) {
     keratin.push({ kind: 'gum', bone: gm.bone, tag: 'gum', points: [gm.pts[i], lerp3(gm.pts[i], gm.pts[i + 1], 0.5), gm.pts[i + 1]], radii: [gm.r, gm.r * 1.05, gm.r], flat: 0.75, up: ez, open: true });
   }
-  // egg tooth (newborns): a small pale keratin point on the tip of the snout
   if (hs.eggTooth) keratin.push({ kind: 'horn', bone: 'head', tag: 'eggtooth', points: [W(0, U(0.99)[1] - 0.03, 0.985), W(0, U(0.99)[1] + 0.0, 1.0), W(0, U(0.99)[1] + 0.012, 1.02)], radii: [0.022 * H, 0.014 * H, 0.002 * H], flat: 0.8, up: ey });
 
-  // ---- horns (fixed arrangement per species; never changes between shots). They sweep
-  // back along the line of the neck and curve down at the tip - never up like ears.
-  const horn = (p0, p1, p2, r0, r1, tag = 'horn') => {
-    keratin.push({ kind: 'horn', bone: 'head', tag, points: [W(...p0), W(...p1), W(...p2)], radii: [r0 * H, r1 * H, r0 * 0.05 * H], flat: 0.82, up: ey, rings: tag === 'horn' });
-    // the keratin sheath flares into a rough burr where it grows out of the skin (no cone
-    // simply stuck on); only on real horns
-    if (tag === 'horn' && !hs.soft) {
-      const d = norm(sub(p1, p0)), q0 = [p0[0] - d[0] * r0 * 0.5, p0[1] - d[1] * r0 * 0.5, p0[2] - d[2] * r0 * 0.5], q2 = [p0[0] + d[0] * r0 * 0.9, p0[1] + d[1] * r0 * 0.9, p0[2] + d[2] * r0 * 0.9];
-      // (shaded as dark base keratin - the horn shader's pale tip tone made the burr read as a
-      // metal collar)
+  // ---- horns (DESIGN 2.3 / 3.3 / 4.3 / 5.3 / 6.3; fixed in every shot). A horn is a path of
+  // control points (head units: x out, y up, z forward) with radii; keratin builds it as a smooth
+  // spline with growth ridges. The sheath flares into a rough burr where it leaves the skin.
+  const horn = (pts, radii, o = {}) => {
+    keratin.push({ kind: 'horn', bone: 'head', tag: o.tag ?? 'horn', path: pts.map((p) => W(...p)), rad: radii.map((r) => r * H), flat: o.flat ?? 0.82, up: ey, rings: o.rings ?? true, tipR: o.tipR });
+    if (!soft && (o.burr ?? true)) {
+      const p0 = pts[0], d = norm(sub(pts[1], pts[0])), r0 = radii[0];
+      const q0 = sub(p0, scale(d, r0 * 0.5)), q2 = add(p0, scale(d, r0 * 0.9));
       keratin.push({ kind: 'claw', bone: 'head', tag: 'burr', points: [W(...q0), W(...p0), W(...q2)], radii: [r0 * 1.22 * H, r0 * 1.14 * H, r0 * 1.02 * H], flat: 0.8, up: ey, burr: true });
     }
   };
+  const Hn = (m0) => m0 / H;                   // metres -> head units
+  const top0 = U(0.02)[1], hwB = U(0.02)[0];
   for (const sd of [1, -1]) {
+    const X = (p) => [sd * p[0], p[1], p[2]];
     if (spec.horns === 'charcoal') {
-      // one heavy pair from the crown, swept back over the neck and curving down at the tips
-      // (reads in silhouette), a shorter pair behind the eyes, two spurs on the jaw angle
-      horn([sd * 0.13, 0.18, 0.09], [sd * 0.235, 0.27, -0.25], [sd * 0.315, 0.17, -0.66], 0.08, 0.05);
-      horn([sd * 0.22, 0.1, 0.05], [sd * 0.29, 0.1, -0.13], [sd * 0.325, 0.0, -0.3], 0.042, 0.026);
-      for (let i = 0; i < 2; i++) horn([sd * (0.215 + i * 0.012), -0.2 - i * 0.04, 0.03 - i * 0.07], [sd * (0.26 + i * 0.012), -0.23 - i * 0.04, -0.05 - i * 0.07], [sd * (0.28 + i * 0.012), -0.27 - i * 0.045, -0.13 - i * 0.07], 0.026 - i * 0.004, 0.015, 'spur');
+      // 1. main pair from the rear corners of the skull roof: back along the neck line, then out
+      // and down, the tips turning a little forward (water buffalo / mouflon), annual ridges;
+      // the LEFT tip broken off ~0.12 m (an old break, rounded by wear)
+      const r0 = Hn(0.185);
+      const path = [[hwB * 0.62, top0 - 0.03, 0.03], [hwB * 0.98, top0 + 0.0, -0.13], [hwB * 1.42, top0 - 0.06, -0.26], [hwB * 1.75, top0 - 0.19, -0.3], [hwB * 1.88, top0 - 0.32, -0.22], [hwB * 1.84, top0 - 0.4, -0.1]].map(X);
+      const broken = sd > 0;
+      horn(broken ? path.slice(0, -1).concat([lerp3(path[4], path[5], 0.5)]) : path, broken ? [r0, r0 * 0.88, r0 * 0.72, r0 * 0.52, r0 * 0.33, r0 * 0.22] : [r0, r0 * 0.88, r0 * 0.72, r0 * 0.52, r0 * 0.3, r0 * 0.04], { flat: 0.78 });
+      // 2. brow pair: behind and above the eyes, conical, up and back at 35 deg to the skull line
+      const b0 = [eye[0] * 0.85, eye[1] + ER * 1.1, eye[2] - ER * 1.6];
+      const bl = Hn(0.7), bd = norm([0.25, Math.sin(35 * deg), -Math.cos(35 * deg)]);
+      horn([b0, add(b0, scale(bd, bl * 0.5)), add(add(b0, scale(bd, bl)), [0, -bl * 0.08, 0])].map(X), [Hn(0.11), Hn(0.075), Hn(0.008)], { flat: 0.9 });
+      // 3. jaw knobs: three blunt osteoderm horns along each jaw angle, pointing back
+      [0.18, 0.26, 0.34].forEach((l, i) => {
+        const p0 = [U(hinge[2])[0] * (0.86 + i * 0.04), hinge[1] - 0.06 - i * 0.045, hinge[2] - 0.02 - i * 0.07];
+        const d = norm([0.35, -0.12, -1]);
+        horn([p0, add(p0, scale(d, Hn(l) * 0.55)), add(p0, scale(d, Hn(l)))].map(X), [Hn(0.09 + i * 0.015), Hn(0.06 + i * 0.01), Hn(0.025)], { tag: 'spur', rings: false, flat: 0.85 });
+      });
     } else if (spec.horns === 'leaf') {
-      // Leaf: one short, thick pair from the back of the skull, curving back and down (a young
-      // animal's horns), a small pair behind the eyes; no cheek or jaw spurs
-      horn([sd * 0.12, 0.17, 0.06], [sd * 0.2, 0.2, -0.18], [sd * 0.25, 0.07, -0.45], 0.062, 0.038);
-      horn([sd * 0.185, 0.075, 0.04], [sd * 0.235, 0.065, -0.07], [sd * 0.255, 0.015, -0.17], 0.03, 0.019);
+      // a short smooth pointed pair from the back corners of the skull, back along the neck line and a
+      // little up, the tips dipping (no growth ridges yet); small brow nubs over the eyes
+      const r0 = Hn(0.035);
+      horn([[hwB * 0.58, top0 - 0.02, 0.0], [hwB * 0.68, top0 + 0.06, -0.14], [hwB * 0.76, top0 + 0.08, -0.28], [hwB * 0.8, top0 + 0.04, -0.4]].map(X), [r0, r0 * 0.78, r0 * 0.45, r0 * 0.06], { rings: false, flat: 0.86 });
+      const b0 = [eye[0] * 0.82, eye[1] + ER * 1.05, eye[2] - ER * 0.8];
+      horn([b0, add(b0, [0.012, 0.03, -0.02]), add(b0, [0.018, 0.05, -0.05])].map(X), [Hn(0.022), Hn(0.014), Hn(0.003)], { rings: false, burr: false });
     } else if (spec.horns === 'starlight') {
-      // Starlight: a broad crown - a wide flat pair sweeping back and OUT from the skull corners,
-      // a slimmer pair above it over the neck, three short blunt spines along each cheek
-      horn([sd * 0.16, 0.12, 0.06], [sd * 0.31, 0.14, -0.2], [sd * 0.4, 0.05, -0.52], 0.058, 0.036);
-      horn([sd * 0.075, 0.15, 0.1], [sd * 0.115, 0.21, -0.15], [sd * 0.13, 0.15, -0.5], 0.04, 0.026);
-      for (let i = 0; i < 3; i++) horn([sd * (0.215 + i * 0.012), -0.07 - i * 0.03, 0.12 - i * 0.07], [sd * (0.265 + i * 0.012), -0.08 - i * 0.03, 0.05 - i * 0.07], [sd * (0.29 + i * 0.012), -0.1 - i * 0.032, -0.02 - i * 0.07], 0.026 - i * 0.003, 0.016, 'spur');
-    } else if (spec.horns === 'nightwing') {
-      // a long slender pair swept back along the neck line (never raised like ears), a short
-      // pair behind the eyes, two jaw spurs - the same arrangement on Leaf and Starlight
-      horn([sd * 0.115, 0.16, 0.07], [sd * 0.185, 0.19, -0.26], [sd * 0.235, 0.05, -0.64], 0.05, 0.031);
-      horn([sd * 0.175, 0.07, 0.03], [sd * 0.225, 0.06, -0.13], [sd * 0.25, -0.03, -0.28], 0.026, 0.016);
-      for (let i = 0; i < 2; i++) horn([sd * (0.19 + i * 0.01), -0.17 - i * 0.03, 0.03 - i * 0.06], [sd * (0.225 + i * 0.01), -0.19 - i * 0.03, -0.03 - i * 0.06], [sd * (0.24 + i * 0.01), -0.22 - i * 0.035, -0.08 - i * 0.06], 0.016 - i * 0.003, 0.01, 'spur');
+      // 1. main pair: long, slender, gently S-curved - back and UP above the neck line, then back
+      // and down at the tips (sable antelope's scimitar, longer)
+      const r0 = Hn(0.18);
+      horn([[hwB * 0.5, top0 - 0.02, 0.04], [hwB * 0.6, top0 + 0.16, -0.2], [hwB * 0.72, top0 + 0.3, -0.5], [hwB * 0.84, top0 + 0.3, -0.8], [hwB * 0.94, top0 + 0.16, -1.05], [hwB * 1.0, top0 - 0.02, -1.18]].map(X),
+        [r0, r0 * 0.86, r0 * 0.66, r0 * 0.46, r0 * 0.26, r0 * 0.03], { flat: 0.86 });
+      // 2. the crown: three pairs along the back edge of the skull fanning out and back like a frill
+      [[2.4, 0.2, 0.0], [1.7, 0.17, 1], [1.1, 0.14, 2]].forEach(([l, b, i]) => {
+        const p0 = [hwB * (0.78 + i * 0.1), top0 - 0.05 - i * 0.06, 0.02 - i * 0.03];
+        const d = norm([0.55 + i * 0.25, 0.18 - i * 0.1, -1]);
+        const ln = Hn(l);
+        horn([p0, add(p0, add(scale(d, ln * 0.5), [0, 0.02, 0])), add(p0, add(scale(d, ln), [0, -ln * 0.08, 0]))].map(X), [Hn(b * 0.5), Hn(b * 0.33), Hn(0.012)], { flat: 0.8 });
+      });
     } else if (spec.horns === 'scout') {
-      horn([sd * 0.09, 0.085, 0.08], [sd * 0.12, 0.09, -0.12], [sd * 0.13, 0.04, -0.34], 0.03, 0.018);
+      // one pair of long thin straight horns laid back flat along the top of the neck (~10 deg above it)
+      const r0 = Hn(0.0175), ln = Hn(0.48);
+      const p0 = [hwB * 0.5, top0 - 0.02, 0.02];
+      const d = norm([0.12, Math.sin(10 * deg), -1]);
+      horn([p0, add(p0, scale(d, ln * 0.5)), add(p0, scale(d, ln))].map(X), [r0, r0 * 0.6, r0 * 0.05], { rings: true, flat: 0.88 });
     } else if (spec.horns === 'buds') {
-      horn([sd * 0.12, 0.2, 0.09], [sd * 0.14, 0.23, 0.05], [sd * 0.15, 0.235, 0.01], 0.028, 0.02, 'bud');
+      // soft horn buds at the back corners of the skull: 2.5 cm pale cones, back and up
+      const p0 = [hwB * 0.62, top0 - 0.03, 0.04];
+      const ln = Hn(0.025);
+      horn([p0, add(p0, [0.01, ln * 0.6, -ln * 0.45]), add(p0, [0.02, ln * 0.95, -ln * 0.75])].map(X), [Hn(0.0065), Hn(0.0045), Hn(0.001)], { tag: 'bud', rings: false, burr: false });
     }
   }
-  const zInv = (z) => (z <= zS0 ? z : zS0 + (z - zS0) / zSm);      // world head z -> profile z (undoes snoutMul)
-  return { H, frame: { ex, ey, ez, origin: hj }, hinge: W(0, hinge[1], hinge[2]), gape0: g, W, jawPt, U, J, rr, eye: eyeP, zInv };
+  return { H, frame: { ex, ey, ez, origin: hj }, hinge: W(0, hinge[1], hinge[2]), gape0: g, W, jawPt, U, J, eye: eyeP, zInv: (z) => z };
 }

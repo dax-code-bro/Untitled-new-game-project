@@ -33,9 +33,11 @@ export function applyPose(c, p) {
     c.bones[i].scale.set(s[0], s[1], s[2]);
   }
   if (p.rig) {
-    if (p.rig.rotation) { _e.set(p.rig.rotation[0] || 0, p.rig.rotation[1] || 0, p.rig.rotation[2] || 0, 'YXZ'); c.rig.quaternion.setFromEuler(_e); }
+    if (p.rig.quaternion) c.rig.quaternion.set(...p.rig.quaternion);
+    else if (p.rig.rotation) { _e.set(p.rig.rotation[0] || 0, p.rig.rotation[1] || 0, p.rig.rotation[2] || 0, 'YXZ'); c.rig.quaternion.setFromEuler(_e); }
     if (p.rig.position) c.rig.position.set(...p.rig.position);
   }
+  driveHelpers(c);
   c.root.updateMatrixWorld(true);
   if (p.ground) groundRig(c, p.groundBones, p.groundBody);
   if (p.groundTail) groundTail(c);
@@ -44,28 +46,51 @@ export function applyPose(c, p) {
 }
 
 /**
- * Move the rig vertically so the lowest contact point sits on y = 0 of the
- * root's frame. Contacts: toe pads (always), and with `body` the underside of
- * the chest and belly (for lying down).
+ * Helper bones (anatomy.helpers): each follows a fraction k of its driver's rotation away from
+ * the SCULPT bind (the shoulder / hip skin then bends over a wider band - no collapse):
+ *   q_helper = slerp(I, q_driver * q_driverSculpt^-1, k) * q_driverSculpt
+ */
+const _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion(), _qi = new THREE.Quaternion();
+export function driveHelpers(c) {
+  const H = c.anatomy && c.anatomy.helpers;
+  if (!H) return;
+  for (const h of H) {
+    const hb = c.bones[c.boneIndex[h.bone]], db = c.bones[c.boneIndex[h.driver]];
+    if (!hb || !db) continue;
+    const qs = c.anatomy.sculptLocal[h.driver];
+    _qb.set(qs[0], qs[1], qs[2], qs[3]);
+    _qa.copy(db.quaternion).multiply(_qb.clone().invert());
+    _qi.identity().slerp(_qa, h.k);
+    hb.quaternion.copy(_qi).multiply(_qb);
+  }
+}
+
+/**
+ * Move the rig vertically so the lowest contact sits on y = 0 of the root's frame. Contacts
+ * (anatomy.contacts): toe pads, heel pads, the wrist pads and thumb claws of the folded wings;
+ * `names` limits them to the given bones; with `body` the underside of the chest and belly
+ * count too (lying down).
  */
 export function groundRig(c, names, body = false) {
   const inv = _m.copy(c.root.matrixWorld).invert();
   let minY = Infinity;
-  const list = names || c.bones.filter((b) => /_(t\d)$/.test(b.name)).map((b) => b.name);
-  const pad = c.spec.front.toeR[0] * c.L * 0.9;
-  for (const n of list) {
-    const b = c.bones[c.boneIndex[n]];
+  const list = c.anatomy.contacts || [];
+  for (const ct of list) {
+    if (names && !names.includes(ct.bone)) continue;
+    const b = c.bones[c.boneIndex[ct.bone]];
     if (!b) continue;
-    _v.setFromMatrixPosition(b.matrixWorld).applyMatrix4(inv);
-    minY = Math.min(minY, _v.y - pad);
+    if (c.detachable && !isAttached(c, b)) continue;
+    _v.set(ct.off[0], ct.off[1], ct.off[2]).applyMatrix4(b.matrixWorld).applyMatrix4(inv);
+    minY = Math.min(minY, _v.y - ct.r);
   }
   if (body) {
-    const tp = c.spec.torsoProfile;
-    for (const [n, s] of [['rib_thorax', 0.22], ['rib_body', 0.5], ['rib_lumbar', 0.78]]) {
+    const d = c.anatomy.dims;
+    for (const [n, s] of [['rib_thorax', 0.25], ['rib_body', 0.5], ['rib_lumbar', 0.78]]) {
       const b = c.bones[c.boneIndex[n]];
       if (!b) continue;
-      const pr = profileKey(tp, s);
-      _v.set(0, -(pr[2] + pr[1]) * c.L * 0.97, 0).applyMatrix4(b.matrixWorld).applyMatrix4(inv);
+      const sc = d.trunkAt(s);
+      const rp = c.restPos[n];
+      _v.set(sc.c[0] - rp[0], sc.c[1] - sc.hh * 0.97 - rp[1], sc.c[2] - rp[2]).applyMatrix4(b.matrixWorld).applyMatrix4(inv);
       minY = Math.min(minY, _v.y);
     }
   }
@@ -73,6 +98,7 @@ export function groundRig(c, names, body = false) {
   c.rig.position.y += -minY;
   c.root.updateMatrixWorld(true);
 }
+function isAttached(c, b) { let o = b; while (o) { if (o === c.root) return true; o = o.parent; } return false; }
 
 function profileKey(keys, s) {
   let i = 0;
@@ -101,7 +127,7 @@ export function groundTail(c) {
     _p0.setFromMatrixPosition(b.matrixWorld).applyMatrix4(inv);
     if (next) _p1.setFromMatrixPosition(next.matrixWorld).applyMatrix4(inv);
     else { _p1.copy(b.position).normalize().multiplyScalar(b.position.length()).applyMatrix4(b.matrixWorld).applyMatrix4(inv); }
-    const r = profileKey(tp, (i + 1) / tails.length)[1] * c.L * 0.9;
+    const r = c.anatomy.tailR ? c.anatomy.tailR((i + 1) / tails.length) * 0.9 : profileKey(tp, (i + 1) / tails.length)[1] * c.L * 0.9;
     const seg = _p1.clone().sub(_p0);
     const L = seg.length();
     if (L < 1e-6) continue;
