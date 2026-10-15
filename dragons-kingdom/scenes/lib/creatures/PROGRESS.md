@@ -16,9 +16,19 @@ Done (committed; renders under output/dragons-wyvern/fix1/, git-ignored, file na
 - Armpit "hole" (Starlight): skin weights kept within their part (skin.js 2b), AO baked per part,
   minimal-twist arm IK (`armIK(..., minTwist)`), double-sided skin, relief faded where skinning
   compresses the skin (materials.js dkComp), an axillary web in the sculpt. A small dark crease can
-  remain under a fully folded arm. Diagnostics: scratch tools flip.mjs (inverted triangles per pose),
-  twist.mjs (bone swing/twist vs the sculpt), creatures-dev.json `debugBones` / `debugAttr` /
+  remain under a fully folded arm. Diagnostics: tools/flip.mjs (inverted triangles per pose),
+  tools/stretch.mjs (stretched edges per pose), creatures-dev.json `debugBones` / `debugAttr` /
   `hideMembranes` / `hideParts`, pose `sculpt`.
+- rev. 2b (after the first -fix1 4K pass): the hard body/limb weight seam left by 2b opened into a
+  metres-tall "curtain" of stretched triangles at the shoulders and hips whenever the arm swung far
+  from the sculpt (glide, dive, sit; worst on Starlight). skin.js 2c feathers the seams (Jacobi
+  relaxation in a band 0.03 L either side). stretch.mjs, Starlight draft: edges > 15x the median
+  edge glide 836 -> 2, sit 671 -> 0; Charcoal glide -> 0; flipped triangles in `upright` fell too
+  (Starlight 499 -> 386, all in the elbow/wrist folds). Horn paths start inside the skull (no open
+  sheath rim at the skin). Fire: young tongues get 0.8x gain (1.3x further out) and a more
+  saturated core - the near-mouth jet is pale orange, no longer cream-white, and still starts at
+  the lips. starlight-rider camera further off. Final renders: output/dragons-wyvern/fix1b/
+  (file names end in -fix1b; the -fix1 set in fix1/ still shows the curtain - compare).
 - Materials: Charcoal blacker (rougher, little crown polish), neutral grey membrane with softer
   wavy stripes, steel-blue iris with flecks; Leaf darker green, duller membrane, olive-brown horns;
   Starlight broad flat plates (scaleMul 0.5, hairline joints, little micro relief); newborn yellow

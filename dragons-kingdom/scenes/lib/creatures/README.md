@@ -127,7 +127,7 @@ motion blur, print grade, grain). People and riders come from `scenes/lib/humans
    folded); then the seams between body and limb skin are feathered (rev. 2b: Jacobi relaxation
    of the weights in a band `seamFeather` = 0.03 L either side of the seam, the rest held fixed -
    a hard seam opened into a "curtain" of stretched triangles at the shoulder when gliding;
-   scratch tool stretch.mjs counts edges stretched beyond 6x / 15x the median edge per pose);
+   tools/stretch.mjs counts edges stretched beyond 6x / 15x the median edge per pose);
    AO baked per part (the limbs do not darken the body: that occlusion belonged to the
    sculpt pose only);
    chain coordinates for the scale rows; the wrist pad is its own region (callus); AO baked from
