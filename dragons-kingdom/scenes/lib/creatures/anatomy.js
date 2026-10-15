@@ -1199,7 +1199,15 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
   // control points (head units: x out, y up, z forward) with radii; keratin builds it as a smooth
   // spline with growth ridges. The sheath flares into a rough burr where it leaves the skin.
   const horn = (pts, radii, o = {}) => {
-    keratin.push({ kind: 'horn', bone: 'head', tag: o.tag ?? 'horn', path: pts.map((p) => W(...p)), rad: radii.map((r) => r * H), flat: o.flat ?? 0.82, up: ey, rings: o.rings ?? true, tipR: o.tipR, broken: !!o.broken });
+    // (rev. 2b: the path starts about a base radius INSIDE the skull - starting at the skin left
+    // the open end of the sheath standing proud as a thin flange)
+    let path = pts, rad = radii;
+    if (o.bury ?? true) {
+      const d0 = norm(sub(pts[1], pts[0]));
+      path = [add(sub(pts[0], scale(d0, radii[0] * 1.1)), [0, -radii[0] * 0.6, 0]), ...pts];
+      rad = [radii[0] * 0.92, ...radii];
+    }
+    keratin.push({ kind: 'horn', bone: 'head', tag: o.tag ?? 'horn', path: path.map((p) => W(...p)), rad: rad.map((r) => r * H), flat: o.flat ?? 0.82, up: ey, rings: o.rings ?? true, tipR: o.tipR, broken: !!o.broken });
     // (rev. 2: no burr collar - its separate ring read as a texture seam at the horn base)
     if (!soft && (o.burr ?? false)) {
       const p0 = pts[0], d = norm(sub(pts[1], pts[0])), r0 = radii[0];

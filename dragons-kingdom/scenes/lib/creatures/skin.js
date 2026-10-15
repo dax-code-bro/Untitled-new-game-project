@@ -161,7 +161,7 @@ export function computeSkin(anat, mesh, boneIndex, opts = {}) {
   // directly - a humerus / femur weight goes to its helper (half the limb's rotation), any other
   // limb bone to the helper too - and a limb vertex rides only its own limb's bones plus the bones
   // it hangs from (thorax + shoulder helper; pelvis + lumbar + hip helper).
-  {
+  if (opts.partWeights ?? true) {
     const spineC = chainId.spine;
     const boneName = Object.keys(boneIndex).reduce((a, n) => { a[boneIndex[n]] = n; return a; }, []);
     const partOfBone = (n) => { const m = /^(w_[LR]|hl_[LR])_/.exec(n); return m ? m[1] : null; };
@@ -200,6 +200,79 @@ export function computeSkin(anat, mesh, boneIndex, opts = {}) {
       const ent = [...acc.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
       const sum = ent.reduce((q, e) => q + e[1], 0) || 1;
       for (let k = 0; k < 4; k++) { if (k < ent.length) { I[v * 4 + k] = ent[k][0]; W[v * 4 + k] = ent[k][1] / sum; } else { I[v * 4 + k] = ent[0][0]; W[v * 4 + k] = 0; } }
+    }
+  }
+
+  // ---------------------------------------------------- 2c) feather the part seams
+  // (rev. 2b) 2b leaves a hard seam where body skin meets limb skin: across it one vertex rides
+  // the thorax, the next the humerus. When the arm swings far from the sculpt pose (gliding,
+  // sitting) the seam opened into a "curtain" of stretched triangles metres tall. Here the weights
+  // in a band either side of every body/limb seam (surface distance <= seamFeather) are relaxed
+  // towards a smooth blend - Jacobi iterations over the mesh with the vertices outside the band
+  // held fixed - so the shoulder and hip skin stretch over a hand's breadth instead of one triangle.
+  const feather = opts.seamFeather ?? L * 0.03;
+  if ((opts.partWeights ?? true) && feather > 0) {
+    const spineC = chainId.spine;
+    const cls = new Int8Array(nV).fill(-1);      // -1 other, 0 body, 1 limb
+    for (let v = 0; v < nV; v++) {
+      const c = domChain[v];
+      if (c < 0) continue;
+      if (c === spineC) cls[v] = 0; else if (/^(w_[LR]|hl_[LR])/.test(chainNames[c])) cls[v] = 1;
+    }
+    // surface distance from the seams (Dijkstra over mesh edges, cut off at `feather`)
+    const dist = new Float64Array(nV).fill(Infinity);
+    const heap = [];
+    const push = (v, d) => { heap.push([d, v]); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+    const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = i * 2 + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+    const elen = (a, b) => Math.hypot(positions[a * 3] - positions[b * 3], positions[a * 3 + 1] - positions[b * 3 + 1], positions[a * 3 + 2] - positions[b * 3 + 2]);
+    for (let v = 0; v < nV; v++) {
+      if (cls[v] < 0) continue;
+      for (let e = adj.start[v]; e < adj.start[v + 1]; e++) {
+        const u = adj.nb[e];
+        if (cls[u] >= 0 && cls[u] !== cls[v]) { const d = elen(u, v) * 0.5; if (d < dist[v]) { dist[v] = d; push(v, d); } }
+      }
+    }
+    while (heap.length) {
+      const [d, v] = pop();
+      if (d > dist[v]) continue;
+      for (let e = adj.start[v]; e < adj.start[v + 1]; e++) {
+        const u = adj.nb[e];
+        const nd = d + elen(u, v);
+        if (nd < dist[u] && nd <= feather) { dist[u] = nd; push(u, nd); }
+      }
+    }
+    const band = [];
+    for (let v = 0; v < nV; v++) if (dist[v] <= feather) band.push(v);
+    if (band.length) {
+      // dense weights over the bones that occur in the band and its first outside ring
+      const slot = new Int32Array(nV).fill(-1);
+      const rows = [];
+      const addRow = (v) => { if (slot[v] < 0) { slot[v] = rows.length; rows.push(v); } };
+      for (const v of band) { addRow(v); for (let e = adj.start[v]; e < adj.start[v + 1]; e++) addRow(adj.nb[e]); }
+      const col = new Map();
+      for (const v of rows) for (let k = 0; k < 4; k++) if (W[v * 4 + k] > 0 && !col.has(I[v * 4 + k])) col.set(I[v * 4 + k], col.size);
+      const nb = col.size, nR = rows.length;
+      let cur = new Float32Array(nR * nb), nxt = new Float32Array(nR * nb);
+      rows.forEach((v, r) => { for (let k = 0; k < 4; k++) { const w = W[v * 4 + k]; if (w > 0) cur[r * nb + col.get(I[v * 4 + k])] += w; } });
+      nxt.set(cur);
+      const iters = opts.seamIters ?? 80;
+      for (let it = 0; it < iters; it++) {
+        for (const v of band) {
+          const r = slot[v], s0 = adj.start[v], s1 = adj.start[v + 1], f = 0.7 / Math.max(1, s1 - s0);
+          for (let j = 0; j < nb; j++) nxt[r * nb + j] = cur[r * nb + j] * 0.3;
+          for (let e = s0; e < s1; e++) { const q = slot[adj.nb[e]] * nb; for (let j = 0; j < nb; j++) nxt[r * nb + j] += cur[q + j] * f; }
+        }
+        const tmp = cur; cur = nxt; nxt = tmp;     // (rows outside the band hold their start values in both)
+      }
+      const bones = [...col.keys()];
+      for (const v of band) {
+        const r = slot[v];
+        const ent = [];
+        for (let j = 0; j < nb; j++) if (cur[r * nb + j] > 1e-4) ent.push([bones[j], cur[r * nb + j]]);
+        ent.sort((a, b) => b[1] - a[1]);
+        const top = ent.slice(0, 4), sum = top.reduce((q, e) => q + e[1], 0) || 1;
+        for (let k = 0; k < 4; k++) { if (k < top.length) { I[v * 4 + k] = top[k][0]; W[v * 4 + k] = top[k][1] / sum; } else { I[v * 4 + k] = top[0][0]; W[v * 4 + k] = 0; } }
+      }
     }
   }
 

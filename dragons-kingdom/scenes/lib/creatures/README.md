@@ -116,14 +116,19 @@ motion blur, print grade, grain). People and riders come from `scenes/lib/humans
    ridge, cheek bone, jaw muscles, the gape running back to the quadrate hinge, labial scales,
    nostrils on a boss near the tip, the eye seated so a set angle of the eyeball shows, a
    tympanum; the lower jaw is built closed and rotated open, so the lips meet. Horns are spline
-   paths (`parts.js` keratin) with growth ridges and a burr at the base.
+   paths (`parts.js` keratin) with growth ridges; each path starts a base radius inside the skull
+   (rev. 2b), so no open sheath rim stands at the skin.
 2. **Mesh** (`mesher.js`): narrow-band surface nets on a warped grid (finer at the head, feet and
    wrists), projected onto the iso-surface with exact SDF normals.
 3. **Skin** (`skin.js`): weights from the sculpt (every primitive belongs to a bone), smoothed,
    then kept within their part (rev. 2: a body vertex never rides a humerus or femur directly -
    that weight goes to the half-following helper bone - and a limb vertex rides only its own limb
    and the bones it hangs from; mixed weights turned the shoulder skin inside out when the arm
-   folded); AO baked per part (the limbs do not darken the body: that occlusion belonged to the
+   folded); then the seams between body and limb skin are feathered (rev. 2b: Jacobi relaxation
+   of the weights in a band `seamFeather` = 0.03 L either side of the seam, the rest held fixed -
+   a hard seam opened into a "curtain" of stretched triangles at the shoulder when gliding;
+   scratch tool stretch.mjs counts edges stretched beyond 6x / 15x the median edge per pose);
+   AO baked per part (the limbs do not darken the body: that occlusion belonged to the
    sculpt pose only);
    chain coordinates for the scale rows; the wrist pad is its own region (callus); AO baked from
    the SDF.

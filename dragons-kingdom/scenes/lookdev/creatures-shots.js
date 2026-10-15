@@ -90,7 +90,8 @@ export const SHOTS = [
   // and crown of horns ahead, the long broad wing below
   { id: 'starlight-rider', set: 'air', creatures: ['starlight'], riders: { starlight: 'fall' }, dur: 3, alt: 320, face: -100, haze: 1.6,
     pose: { starlight: { name: 'glide', bank: -0.08, dihedral: 0.1, look: [0.15, -0.05] } },
-    cam: { subject: 'starlight', pos: [16, 27, -4], target: [0, 17, 16], mm: 40, fstop: 8, focus: 'target' } },
+    // (fix 1b: a little further off - closer, each flank scale read as a cobble the size of her boot)
+    cam: { subject: 'starlight', pos: [21, 31, -10], target: [0, 17, 16], mm: 40, fstop: 8, focus: 'target' } },
   // the gold hatchling on the bedding (1A): 85 mm macro, focus on the eye; weak, pushing up on its
   // wrists, head too heavy
   { id: 'hatchling-macro', set: 'bed', creatures: ['hatchling'], dur: 3, face: -40,

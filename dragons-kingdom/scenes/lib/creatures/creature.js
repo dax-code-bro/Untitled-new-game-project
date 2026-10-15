@@ -120,6 +120,7 @@ export async function createCreature(which, opts = {}) {
     eyes: anat.eyes,
     ao: { step: L * 0.004, n: 6 }, oral,
     snoutGranular: snoutRange(anat), chinGranular: chinRange(anat),
+    ...(opts.skin ?? {}),     // (debug: { partWeights, seamFeather, seamIters })
   });
   log(`[creature ${root.name}] skin ${nowMs() - t0} ms total so far, chains N=${JSON.stringify(Object.fromEntries(sk.chainNames.map((c, i) => [c, sk.chainN[i]])))}`);
 

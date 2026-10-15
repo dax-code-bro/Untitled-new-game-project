@@ -20,14 +20,14 @@ export const FIRE_PALETTES = {
   // (rev. 2: the additive tongues piled up into a cream-white beam; the gain per tongue is lower
   // and the colours deeper, so the jet reads orange-red with a yellow core only near the mouth)
   standard: {
-    core: [1.0, 0.62, 0.2], coreI: 2.2, body: [1.0, 0.27, 0.025], bodyI: 1.5, edge: [0.75, 0.07, 0.01], edgeI: 1.0,
+    core: [1.0, 0.5, 0.09], coreI: 2.2, body: [1.0, 0.27, 0.025], bodyI: 1.5, edge: [0.75, 0.07, 0.01], edgeI: 1.0,
     smoke: [0.03, 0.026, 0.024], smokeAmt: 1.15, light: [1.0, 0.42, 0.12], lightI: 1.0, temp: 1.0, gain: 0.26,
   },
   // purplish-blue (hue ~255): a white-violet core, saturated blue-violet body, violet fringe
   leaf: {
     // (kept well below the tone curve's shoulder: bright saturated blue desaturates to white there)
     core: [0.6, 0.55, 1.0], coreI: 1.3, body: [0.24, 0.12, 1.0], bodyI: 1.2, edge: [0.45, 0.06, 0.95], edgeI: 1.1,
-    smoke: [0.07, 0.068, 0.08], smokeAmt: 0.4, light: [0.42, 0.36, 1.0], lightI: 1.3, temp: 1.12, gain: 0.09,
+    smoke: [0.07, 0.068, 0.08], smokeAmt: 0.4, light: [0.42, 0.36, 1.0], lightI: 1.3, temp: 1.12, gain: 0.11,
   },
 };
 
@@ -76,7 +76,7 @@ void main() {
   float fade = smoothstep(0.0, 0.012, age) * (1.0 - smoothstep(0.55, 1.0, age));
   // (rev. 2) the young, dense tongues near the mouth overlap many times over: they get less gain
   // than the billows further out, so the sum stays orange instead of clipping to cream-white
-  gl_FragColor = vec4(col * m * fade * uOn * uGain * (0.3 + 1.3 * smoothstep(0.0, 0.7, age)), 1.0);
+  gl_FragColor = vec4(col * m * fade * uOn * uGain * (0.8 + 0.5 * smoothstep(0.0, 0.6, age)), 1.0);
 }`;
 
 const FRAG_SMOKE = /* glsl */`
