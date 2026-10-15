@@ -4,6 +4,43 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## Fix round 1 after the critics (2026-10-15, DESIGN "rev. 2") - state
+Done (committed; renders under output/dragons-wyvern/fix1/, git-ignored, file names end in -fix1):
+- TWO LEGS: new resting stance `poses.upright` (trunk raised 30-34 deg, feet ahead of the hips,
+  tail level then laid on the ground, wings folded off the ground by `foldUp`); Leaf's `sit` keeps
+  the wings folded (`plantWrists: true` for the old dog-forelegs version); `fire` stands on two legs.
+  `stand` (wing-walk) stays the base of walk / crouch / launch / land. Contact sheet + charcoal-front
+  + charcoal-head use `upright`. New drape variant 'upright' (creature.js).
+- Arm bones rebalanced (humerus ~0.75 of the forearm, span unchanged) so the fold is compact;
+  forearms taper to a narrower wrist. DESIGN 0 / 1.1 / 1.5b and appendix A updated.
+- Armpit "hole" (Starlight): skin weights kept within their part (skin.js 2b), AO baked per part,
+  minimal-twist arm IK (`armIK(..., minTwist)`), double-sided skin, relief faded where skinning
+  compresses the skin (materials.js dkComp), an axillary web in the sculpt. A small dark crease can
+  remain under a fully folded arm. Diagnostics: scratch tools flip.mjs (inverted triangles per pose),
+  twist.mjs (bone swing/twist vs the sculpt), creatures-dev.json `debugBones` / `debugAttr` /
+  `hideMembranes` / `hideParts`, pose `sculpt`.
+- Materials: Charcoal blacker (rougher, little crown polish), neutral grey membrane with softer
+  wavy stripes, steel-blue iris with flecks; Leaf darker green, duller membrane, olive-brown horns;
+  Starlight broad flat plates (scaleMul 0.5, hairline joints, little micro relief); newborn yellow
+  gold (more pigment, less metal, gold belly); transverse ventral scutes (glsl.js dkPlates);
+  folded-membrane wrinkle is band-limited noise (no sine moire).
+- Heads/horns: Charcoal's horns swing out clear of the neck, no burr collars, broken tip = rough
+  fracture; bigger croc teeth, thin gums, slit nostrils; Leaf no jaw lobe; scout horns laid back;
+  Starlight horn bases 0.28-0.4 m; newborn short snout, big eye, overbite, no lip ridge.
+- Effects/staging: fire palettes (orange-red; violet-blue under the tone curve's shoulder), embers,
+  two fire lights, puffs kept above the ground; take-off clods on a power law + skidding, dust dome,
+  bigger craters/furrows, earlier frame (vault); head-in-mouth seen square on to Charcoal's head with
+  Leaf's whole head inside (hold 0.5 rad, snout 1.85 m in), Leaf's wings half folded; Queen Fall
+  rides Starlight (dive + new shot `starlight-rider`); scout rider crouched (lean 1.0); stirrups
+  under the riders' feet (rider.js addStirrups; the saddle's own pair hides while mounted); scout
+  wing loss: the propatagium root tears away with the wing (`w_L_mp`), camera from behind, 60-deg
+  shutter; scout tail vane without surface noise.
+- Contact sheet: 27 frames (adds Charcoal walking on feet + wrists, Leaf standing on two legs).
+- NEXT (not done): the newborn's mouth still reads a little lip-like; Starlight's folded wing is a
+  bundle of pale rods with flat folded membrane; membranes in flight still lack visible veins and a
+  hem; flattened grass under the take-off; style frames (not owned) still use `stand`/`sit` and now
+  get the new sit fold and arm proportions - their compositions were not rechecked at 4K.
+
 ## Wyvern rework (2026-10-14/15, Daxtyn: TWO legs, wings = front limbs, horns; DESIGN.md)
 State (all committed; latest renders listed in README / the report):
 - DONE anatomy.js: `DESIGNS` = DESIGN appendix A in metres (+ build extras: `body` muscle/fat,

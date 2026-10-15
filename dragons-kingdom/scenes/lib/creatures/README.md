@@ -9,8 +9,11 @@ would be built, and on 2026-10-14 he asked for exactly that, with **horns on eve
 
 **The body plan (every dragon): a wyvern built like a bat and a pterosaur.** Two hind legs
 (semi-digitigrade, three toes forward and a gripping hallux, a heel pad); **the wings are the
-front limbs**: on the ground the wing folds and the dragon walks on its **wrist pad and thumb**
-(as vampire bats and pterosaurs did), elbows high. No extra limbs. Every dragon has its own
+front limbs**. (DESIGN rev. 2) **At rest a dragon stands on its two legs** like a big ground bird
+or a theropod - trunk raised ~30 degrees, feet under the centre of mass, the tail as counterweight
+and prop - with the wings folded off the ground (`poses.upright`); Leaf sits back on his haunches
+with his wings folded. Walking, the take-off crouch and the landing use the wrist pads and thumbs
+of the folded wings (as vampire bats and pterosaurs did). No extra limbs. Every dragon has its own
 fixed horn set.
 
 | creature | canon look (Daxtyn / screenplay) | length | wingbeat | horns (fixed in every shot) |
@@ -44,19 +47,21 @@ Poses (`poses.js`; IK on the feet and wrist pads, so planted contacts stay plant
 
 | pose | what |
 |---|---|
-| `stand` | wing-walk stance: weight on the feet and the folded wings' wrist pads, elbows high, neck in an S, breathing, idle head drift, blinks; the heavy tail hangs in an arc and its end lies on the ground |
+| `upright` | (rev. 2, the resting stance) on the TWO legs: trunk raised 30-34 deg, feet ahead of the hips, neck in a tall S, the wings folded off the ground (upper arm back along the chest, forearm up to the wrist beside the neck base, the hand back along it, the fingers in one bundle along the flank), the tail level from the hips and laid on the ground from its middle; breathing, idle head drift, blinks |
+| `stand` | wing-walk stance (the quadrupedal walk's base; not the resting stance any more): weight on the feet and the folded wings' wrist pads, elbows high, the heavy tail hangs in an arc and its end lies on the ground |
 | `walk` | lateral-sequence walk (foot, wrist, foot, wrist; duty ~0.7), speed from size; the scene moves the root by `speed * t` |
-| `sit` | Leaf's dog-like sit: haunches down, trunk up, wrists planted in front, tail curled round |
+| `sit` | Leaf's dog-like sit: haunches down, trunk up, the wings folded off the ground (rev. 2; `plantWrists: true` puts the wrists down in front), tail curled round |
 | `crouch`, `lie` | sphinx crouch (mounting, the start of a launch); lying on the belly, `sprawl: 1` for the newborn |
 | `rear` | up on the hind legs (`k` 0..1) |
 | `pushUp`, `struggle` | the newborn pushing up on its wrists and thumbs; the full weak struggle of 1A (trembles, lifts the chest a few cm, a wrist slips, rests) |
-| `fire` | inhale, head low along the line of fire, jaw 25-30 deg; drive `createFire` with it |
+| `fire` | on the two legs: inhale, trunk lowered toward level, head low along the line of fire, jaw 25-30 deg; drive `createFire` with it |
 | `flight` | flapping (tempo from size, `hz`, `phase`, `amp`, `corr` for Leaf's uneven beats, `bank`, `bodyPitch`); the neck keeps the head steady, legs trail with the toes curled |
 | `glide` | wings held with dihedral at the arm and droop at the hand; `bank` rolls the body, the head counter-rolls |
 | `dive` | Starlight's stoop: wings half folded into an "M", legs drawn in tight, feet clenched (`fold` 0..1) |
 | `strike` | talons forward under the body, toes spread then closing, wings opened hard |
 | `sprint` | the scout's short fast beats, neck pulled back |
-| `mouthHold` | Charcoal turns his head round and takes Leaf's whole head in his jaws: open to 45 deg, close to a 25 deg holding gape (`turn`, `side`, `release`) |
+| `mouthHold` | Charcoal turns his head round and takes Leaf's whole head in his jaws: open to 45 deg, close to a holding gape (`hold`, rad; the shot uses 0.5 with Leaf's snout 1.85 m inside the front teeth) (`turn`, `side`, `release`) |
+| `sculpt` | the SCULPT bind configuration (debugging the body sculpt) |
 | `launch` | heavy take-off: crouch, leg vault, unfold, the first downstroke, beats in ground effect (timing scales with size; `pose.launch` gives the phases) |
 | `land` | flare, feet reach forward, wrist pads come down, run-out |
 | `blend`, `contactsOf` | slerp two poses; world contact points (footprints, dust) |
@@ -64,7 +69,9 @@ Poses (`poses.js`; IK on the feet and wrist pads, so planted contacts stay plant
 Common options: `look: [yaw, pitch]`, `eyes`, `jaw`, `blink: false`, `lidRelax`, `breathe`.
 
 Effects: `createFire({ palette: 'standard' | 'leaf', length, width })` (camera-facing flame and
-smoke sprites + a point light, pure in t; nothing on a body glows), `createDust({ radius })`
+smoke sprites with embers, a light down the jet and one at the mouth that light the head, chest and
+ground; `update(t, { creature, on, groundY })` keeps the puffs above the ground; pure in t; nothing
+on a body glows), `createDust({ radius })`
 (Charcoal's take-off: downwash dust rings per downstroke, thrown clods, wrist-pad craters and
 claw furrows; see `stageTakeoff` in `scenes/lookdev/creatures-shots.js`).
 
@@ -76,10 +83,10 @@ computed as a pure function of `t` in `creatures-shots.js` (`scoutWingLoss`).
 
 | scene | what |
 |---|---|
-| `creatures-hero.js` (= `creatures-turntable.js`) | the 13 hero shots of `creatures-shots.js`: Charcoal 3/4 front with Remi; Charcoal's head; Charcoal's take-off (dust, clods, craters); Charcoal and Leaf flying side by side with Remi and Abby in the saddles; the head-in-mouth hold (Leaf's head in Charcoal's jaws, Abby clear); Leaf sitting with Abby; Charcoal's fire; Leaf's fire; Starlight gliding seen from the ground (a watchman points, a 27 m tower for scale); Starlight's dive; the hatchling macro on the straw nest; the scout banking with its rider; the scout losing its LEFT wing |
+| `creatures-hero.js` (= `creatures-turntable.js`) | the 14 hero shots of `creatures-shots.js`: Charcoal standing on two legs 3/4 front with Remi; Charcoal's head; Charcoal's take-off (dust dome, a power-law spray of clods and turf, craters); Charcoal and Leaf flying side by side with Remi and Abby in the saddles; the head-in-mouth hold seen square on to Charcoal's head (Leaf's whole head inside the jaws, Abby clear); Leaf sitting with Abby; Charcoal's fire; Leaf's fire; Starlight gliding seen from the ground (a watchman points, a 27 m tower for scale); Starlight's dive with Queen Fall riding; Queen Fall in the rig on Starlight (air to air); the hatchling macro on the straw nest; the scout banking with its crouched rider; the scout losing its LEFT wing seen from behind |
 | `creatures-turntable-<name>.js` | only one dragon's shots (quicker builds) |
 | `creatures-review.js` | every shot for 1 s (`--fps 1`) |
-| `creatures-contact.js` | contact sheet: each dragon on a turntable (4 views, t = 0-19), the scale lineup with a 1.8 m person (t = 20, also `creatures-lineup.js`), then Charcoal, Leaf, Starlight and the scout gliding (t = 21-24) |
+| `creatures-contact.js` | contact sheet: each dragon on a turntable (4 views, t = 0-19; standing on two legs, Leaf sitting, the newborn lying), the scale lineup with a 1.8 m person (t = 20, also `creatures-lineup.js`), Charcoal, Leaf, Starlight and the scout gliding (t = 21-24), Charcoal walking on his feet and wrists (t = 25), Leaf standing on two legs (t = 26) |
 | `creatures-dev.js` + `creatures-dev.json` | free views/poses for look development |
 
 Shots are lit by the photographed sky alone (Poly Haven kloofendal_48d_partly_cloudy, CC0, its
@@ -112,7 +119,12 @@ motion blur, print grade, grain). People and riders come from `scenes/lib/humans
    paths (`parts.js` keratin) with growth ridges and a burr at the base.
 2. **Mesh** (`mesher.js`): narrow-band surface nets on a warped grid (finer at the head, feet and
    wrists), projected onto the iso-surface with exact SDF normals.
-3. **Skin** (`skin.js`): weights from the sculpt (every primitive belongs to a bone), smoothed;
+3. **Skin** (`skin.js`): weights from the sculpt (every primitive belongs to a bone), smoothed,
+   then kept within their part (rev. 2: a body vertex never rides a humerus or femur directly -
+   that weight goes to the half-following helper bone - and a limb vertex rides only its own limb
+   and the bones it hangs from; mixed weights turned the shoulder skin inside out when the arm
+   folded); AO baked per part (the limbs do not darken the body: that occlusion belonged to the
+   sculpt pose only);
    chain coordinates for the scale rows; the wrist pad is its own region (callus); AO baked from
    the SDF.
 4. **Wings** (`wing.js`, `drape.js`): finger bones per design (2-4 long fingers + thumb), the

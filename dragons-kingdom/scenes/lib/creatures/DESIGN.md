@@ -26,6 +26,31 @@ references, sketches, the code changes the new layout needs and a step-by-step b
   stork's); the newborn's snout is shorter and blunter; every adult's tail hangs in an arc with
   its end on the ground when standing (2.4); the feet stand a little wider than the hips so the
   inner toes never meet. Marked "rev. 1" where the numbers changed.
+* **Revision 2 (2026-10-15, after the two critics' reviews of the rev. 1 renders):** marked
+  "rev. 2".
+  * **The resting stance is on the TWO legs** (section 1.5b). On the wrists the folded wing-arm
+    read as a front leg in every ground frame - a four-legged animal, against Daxtyn's own words.
+    Now every dragon stands like a big ground bird or a theropod: the trunk raised 30-34 degrees,
+    the feet well ahead of the hips under the centre of mass, the tail carried level from the
+    hips and laid on the ground from its middle as a counterweight and prop. The wings fold off the
+    ground (a resting bat's fold). They still walk and crouch on the wrists (the wing-walk is kept
+    for walking, the take-off crouch and the landing run-out).
+  * **Leaf's dog-like sit keeps the wings folded** against his body (wrists off the ground): he sits
+    back on his haunches on his two legs. Planted wrists read as a dog's front legs.
+  * **Arm bones rebalanced** (the span is unchanged): humerus longer, forearm shorter - ratio about
+    1.3, a bat's - so the folded wing is compact. Charcoal 5.4 / 7.2 m (was 4.2 / 8.4), Leaf 1.35 /
+    1.85, Starlight 10.2 / 14.8, scout 0.72 / 1.18, hatchling 0.085 / 0.105. A forearm twice the
+    humerus put the folded wrist far above the shoulders or far in front of the chest. The forearm
+    tapers more to the wrist (Charcoal 1.0 m at the elbow, 0.62 m at the wrist).
+  * Starlight heavier (neck, tail base, legs and arms: elephantine shanks for ~170 t per leg),
+    crown horns 0.28-0.4 m across at the base; the scout's shanks thicker; the scout's horns laid
+    back below the skull line; Leaf's horns dark olive-brown, back along the neck, tips dipping;
+    Charcoal's main horns swing OUT before they curl down and forward (the first hoop rested on the
+    neck); no burr collar on any horn; the broken left horn tip ends in a low, rough fracture face.
+  * Belly: transverse ventral scutes (one wide scute per row with narrowing side scutes), not
+    a grid. Teeth bigger (Charcoal toothMax 0.4 m), thin dark gum margins. Nostrils are slits.
+  * The newborn: snout 20% of the skull, eye 0.042 m (22%), an overbite (the lower jaw inside the
+    upper), no labial ridge or puffy cheeks, no throat groove (it read as a helmet seam).
 * The screenplay (`episodes/s01e01/screenplay.md`) stays binding for events: section 1.13 lists
   every story beat the bodies have to make possible and how each design does it.
 * Every number below comes from a small calculator (lofted elliptical cross-sections, an assumed
@@ -66,8 +91,9 @@ carries its own scale.
 
 * **Two legs** (the hind legs) and **two wings that ARE the front limbs** - nothing else. No
   extra limbs, ever (screenplay dragon policy).
-* On the ground every dragon stands and walks **on its two feet and on the wrists of its folded
-  wings**, the way vampire bats and pterosaurs do. The folded wing becomes a front leg: the
+* (rev. 2) At rest every dragon **stands on its two feet** with the wings folded off the ground
+  (1.5b). It **walks on its two feet and on the wrists of its folded wings**, the way vampire bats
+  and pterosaurs do. The folded wing becomes a front leg: the
   forearm is the "shin", a thick callused **wrist pad** and the **thumb claw** are the "foot".
   Pterosaur trackways show exactly this: hand prints (three short fingers and the wrist) set
   a little outside and ahead of the foot prints.
@@ -76,10 +102,10 @@ carries its own scale.
   drops almost vertically to the wrist pad. This keeps the back level (shoulders only a little
   higher than the hips) and gives every dragon the cloaked wyvern silhouette: the folded wings
   stand up beside the withers like the shoulders of a cape.
-* They can also **rear up on the two legs** (bird / theropod posture, the long tail as a
-  counterweight) for a few seconds: to look over something, as the first move of a landing flare,
-  to threaten. They do not walk bipedally for long; the giants do it only in the launch and the
-  landing.
+* (rev. 2) **At rest they stand on the two legs** (section 1.5b): bird / theropod posture, the
+  long tail as a counterweight and a prop, the wings folded off the ground. They walk on the feet
+  and the wrists (above), and **rear up** further (trunk 45-70 deg) to look over something, as the
+  first move of a landing flare, to threaten.
 
 ### 1.2 Skeleton (every dragon; the numbers per dragon are in its section)
 
@@ -147,7 +173,7 @@ the flank and, on Starlight and the scout, over the tail base). That is what let
   the inner wing, exactly as in bats), the thumb sets the leading edge, the fingers spread or
   close the chiropatagium.
 
-### 1.5 The fold (every ground pose)
+### 1.5 The wing-walk fold (walking, the crouch, lying; rev. 2: not the resting stance - see 1.5b)
 
 1. **Elbow**: the upper arm swings back and up along the side of the shoulders.
 2. **Wrist** flexes: the metacarpals run up along the back edge of the forearm, so the knuckles
@@ -162,6 +188,28 @@ the flank and, on Starlight and the scout, over the tail base). That is what let
 Seen from the side the folded wing reads as: the forearm as a front leg, a bony "shoulder" (the
 elbow and knuckles) standing up beside the withers, and a smooth closed fan lying along the flank.
 Nothing sticks out in front of the chest; no bare finger ends hang free.
+
+### 1.5b The standing fold (rev. 2: the resting stance on two legs)
+
+A resting bat's or a vulture's fold, sized for the rebalanced arm (humerus about 0.75 of the
+forearm):
+
+1. **Upper arm** back and down along the side of the chest, the elbow low behind the shoulder
+   (elbow angle ~30 deg).
+2. **Forearm** up and forward from the elbow, rising ~25 deg (level ground, whatever the trunk's
+   pitch), so the **wrist sits beside the base of the neck**, a little outside the chest; the
+   **thumb folded back** against the wrist (raised forward it read as a fist).
+3. **Hand**: the metacarpals fold back down along the forearm, the knuckles end by the elbow; the
+   **fingers lie pressed together in one bundle** back along the flank toward the thigh and the tail
+   base (Starlight's longer, crossing over the tail base - her albatross wing).
+4. The membrane gathers between the bundle, the arm and the flank (the elastin pulls it into
+   crinkles); the plagiopatagium hangs from the bundle to the thigh and shank.
+
+The trunk is raised 30 deg (giants) to 34 deg, the hip joint at ~0.9 of the standing hip height,
+the balls of the feet ~0.36 of the trunk length ahead of the hip joint (under the centre of mass),
+the neck rising ~48 deg at its base to ~14 deg at the head, the head pitched down ~16 deg; the tail
+carried level from the hips for its first fifth, bending down over its middle third and lying on
+the ground for the rest, sweeping a little to one side. Code: `poses.upright` (`foldUp`).
 
 ### 1.6 Moving on the ground
 
@@ -346,7 +394,7 @@ thick forearms like columns, a thick tail base. At a distance: a black mass with
 ### 2.2 Skeleton
 
 * **Neck:** 11 cervicals (~0.63 m each). **Tail:** 38 caudals, the outer 18 stiffened.
-* **Wing:** humerus 4.2 m; radius/ulna 8.4 m; three long fingers - **III** (wing tip):
+* **Wing:** humerus 5.4 m; radius/ulna 7.2 m (rev. 2; was 4.2 / 8.4); three long fingers - **III** (wing tip):
   metacarpal 7.4 + phalanges 5.2 / 3.9 / 2.3 = 18.8 m; **IV**: 6.8 + 5.0 / 3.4 / 1.6 = 16.8 m;
   **V**: 6.2 + 4.6 / 2.9 / 1.2 = 14.9 m. Digit II is short and bound into the leading edge
   beside III (as in bats). **Thumb:** metacarpal 0.7, phalanx 0.55, claw 0.6 m (thick, blunt,
@@ -598,7 +646,7 @@ Next to Charcoal: about a quarter of his length and 1/73 of his mass.
 
 * **Neck:** 10 cervicals. **Tail:** 36 caudals, the outer half only partly stiffened (young) - it
   can curl round in the sit.
-* **Wing:** humerus 1.05 m; forearm 2.15 m; **III** 1.9 + 1.35 / 1.0 / 0.6 = 4.85 m; **IV** 1.75 +
+* **Wing:** humerus 1.35 m; forearm 1.85 m (rev. 2); **III** 1.9 + 1.35 / 1.0 / 0.6 = 4.85 m; **IV** 1.75 +
   1.25 / 0.85 / 0.4 = 4.25 m; **V** 1.6 + 1.1 / 0.72 / 0.3 = 3.72 m; thumb 0.18 + 0.13, claw 0.14 m
   (sharp, little worn). Spread angles III -6, IV -33, V -65 deg.
 * **Leg:** femur 0.85, tibia 0.98, metatarsus 0.52, toe III 0.36 m + claw 0.10 m; digitigrade
@@ -653,8 +701,9 @@ develops with age), little fat, thin loose skin at the throat and in the armpits
 ### 3.7 Movement and behaviour
 
 * **The dog-like sit (1B):** haunches down - the thighs folded forward along the flanks, the
-  shanks back, the metatarsi flat on the ground; the trunk pitched up ~55 deg; the **folded
-  wings' wrists planted in front like a dog's forelegs**, forearms vertical; neck up in an S, head
+  shanks back, the metatarsi flat on the ground; the trunk pitched up ~55 deg; (rev. 2) the
+  **wings stay folded against the body, the wrists off the ground** (planted wrists read as a
+  dog's front legs - four legs); neck up in an S, head
   level; the tail along the ground curling round the side. Proportions:
 
 ```
@@ -802,7 +851,7 @@ cross back over the tail base like an albatross's. Pale against any sky.
 ### 4.2 Skeleton
 
 * **Neck:** 14 cervicals (~1.15 m each). **Tail:** 42 caudals, the outer half stiffened.
-* **Wing - four long fingers** (the broadest wing): humerus 8.0 m; forearm 17.0 m; **II** (free,
+* **Wing - four long fingers** (the broadest wing): humerus 10.2 m; forearm 14.8 m (rev. 2); **II** (free,
   along the leading edge) 14.5 + 5.0 / 2.5 = 22 m; **III** (tip) 15.5 + 11.5 / 8.5 / 5.0 = 40.5 m;
   **IV** 14.0 + 10.5 / 7.2 / 3.4 = 35.1 m; **V** 12.8 + 9.0 / 6.0 / 2.6 = 30.4 m; thumb 1.3 + 0.9,
   claw 1.0 m. Spread angles: II +2, III -5, IV -28, V -52 deg. Membrane to the **ankle**.
@@ -977,7 +1026,7 @@ tail that cannot hold itself up.
 * Same plan as the adults (two legs, wing-arms, 3 long fingers + thumb), newborn proportions:
   head 19% of the length (adults 8-11%), eye 19% of the skull, snout 27% of the skull (rev. 1; 38% read as a lizard's), short neck,
   short trunk, the tail 41%.
-* **Wing:** humerus 0.07, forearm 0.12 m, fingers III 0.18 / IV 0.14 / V 0.11 m (metacarpal +
+* **Wing:** humerus 0.085, forearm 0.105 m (rev. 2), fingers III 0.18 / IV 0.14 / V 0.11 m (metacarpal +
   phalanges), soft, the membrane wet, wrinkled and stuck to itself; **thumbs big** with curved
   soft amber claws (newborn bats are born with near-adult thumbs and feet - to cling).
 * **Leg:** femur 0.075, tibia 0.08, metatarsus 0.045, toes 0.065 m - big feet; soft claws.
@@ -1147,7 +1196,7 @@ bat's), tiny feet, a long thin whip tail with a diamond-shaped vane at the tip.
 
 * **Neck:** 9 cervicals; **tail:** 40 caudals, stiff for its outer 70% (ossified tendons), ending in
   a keratin-stiffened skin vane (*Rhamphorhynchus*) - a rudder.
-* **Wing - two long fingers** (a high-aspect wing): humerus 0.55 m; forearm 1.35 m; **III** 1.3 +
+* **Wing - two long fingers** (a high-aspect wing): humerus 0.72 m; forearm 1.18 m (rev. 2); **III** 1.3 +
   1.05 / 0.8 / 0.45 = 3.6 m; **IV** 1.15 + 0.9 / 0.5 = 2.55 m; thumb 0.08 + 0.06, claw 0.06 m.
   Spread angles III -12, IV -46 deg (swept). The membrane carries fine chordwise stiffening fibres
   (the *actinofibrils* of pterosaur wings) so the narrow outer wing does not flutter at speed.
@@ -1448,8 +1497,8 @@ export const DESIGN = {
       toes: "3 forward + hallux"
     },
     wing: {
-      humerus: 4.2,
-      forearm: 8.4,
+      humerus: 5.4,   // rev. 2 (was 4.2)
+      forearm: 7.2,   // rev. 2 (was 8.4)
       diameters_shoulder_elbow_wrist_hand: [1.6, 1.15, 0.8, 0.45],
       fingers: [["III", 7.4, [5.2, 3.9, 2.3], -6], ["IV", 6.8, [5, 3.4, 1.6], -32], ["V", 6.2, [4.6, 2.9, 1.2], -64]],
       thumb: { mc: 0.7, ph: 0.55, claw: 0.6 },
@@ -1533,8 +1582,8 @@ export const DESIGN = {
       toes: "3 forward + hallux"
     },
     wing: {
-      humerus: 1.05,
-      forearm: 2.15,
+      humerus: 1.35,  // rev. 2 (was 1.05)
+      forearm: 1.85,  // rev. 2 (was 2.15)
       diameters_shoulder_elbow_wrist_hand: [0.36, 0.25, 0.17, 0.1],
       fingers: [
         ["III", 1.9, [1.35, 1, 0.6], -6],
@@ -1606,8 +1655,8 @@ export const DESIGN = {
       toes: "3 forward + opposable hallux (raptor)"
     },
     wing: {
-      humerus: 8,
-      forearm: 17,
+      humerus: 10.2,  // rev. 2 (was 8)
+      forearm: 14.8,  // rev. 2 (was 17)
       diameters_shoulder_elbow_wrist_hand: [2.6, 1.9, 1.3, 0.75],
       fingers: [
         ["II", 14.5, [5, 2.5], 2],
@@ -1688,8 +1737,8 @@ export const DESIGN = {
       toes: "3 forward + hallux, small (swift-like)"
     },
     wing: {
-      humerus: 0.55,
-      forearm: 1.35,
+      humerus: 0.72,  // rev. 2 (was 0.55)
+      forearm: 1.18,  // rev. 2 (was 1.35)
       diameters_shoulder_elbow_wrist_hand: [0.27, 0.18, 0.11, 0.065],
       fingers: [["III", 1.3, [1.05, 0.8, 0.45], -12], ["IV", 1.15, [0.9, 0.5], -46]],
       thumb: { mc: 0.08, ph: 0.06, claw: 0.06 },
@@ -1758,8 +1807,8 @@ export const DESIGN = {
       toes: "3 forward + hallux, oversized"
     },
     wing: {
-      humerus: 0.07,
-      forearm: 0.12,
+      humerus: 0.085, // rev. 2 (was 0.07)
+      forearm: 0.105, // rev. 2 (was 0.12)
       diameters_shoulder_elbow_wrist_hand: [0.038, 0.026, 0.02, 0.016],
       fingers: [
         ["III", 0.08, [0.05, 0.035, 0.02], -10],
