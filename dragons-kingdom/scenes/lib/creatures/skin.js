@@ -153,6 +153,56 @@ export function computeSkin(anat, mesh, boneIndex, opts = {}) {
     W.set(W2); I.set(I2);
   }
 
+  // ---------------------------------------------------- 2b) weights stay within their part
+  // (rev. 2) The raw weights come from primitive distances in the sculpt pose, where the upper arm
+  // lies against the flank: arm skin picked up trunk bones and flank skin arm bones, and when the
+  // arm folded the other way the shoulder skin turned inside out (hundreds of inverted triangles,
+  // a black "hole" in Starlight's armpit). Now a body (spine-chain) vertex never rides a limb bone
+  // directly - a humerus / femur weight goes to its helper (half the limb's rotation), any other
+  // limb bone to the helper too - and a limb vertex rides only its own limb's bones plus the bones
+  // it hangs from (thorax + shoulder helper; pelvis + lumbar + hip helper).
+  {
+    const spineC = chainId.spine;
+    const boneName = Object.keys(boneIndex).reduce((a, n) => { a[boneIndex[n]] = n; return a; }, []);
+    const partOfBone = (n) => { const m = /^(w_[LR]|hl_[LR])_/.exec(n); return m ? m[1] : null; };
+    const helperOf = (part) => boneIndex[part.startsWith('w_') ? `${part}_sh` : `${part}_h`];
+    const rootOf = (part) => boneIndex[part.startsWith('w_') ? `${part}_0` : `${part}_0`];
+    const hangs = { w: ['thorax', 'rib_thorax'], hl: ['pelvis', 'lumbar'] };
+    const chainPartName = chainNames.map((nm) => { const m = /^(w_[LR]|hl_[LR])/.exec(nm); return m ? m[1] : null; });
+    for (let v = 0; v < nV; v++) {
+      const c = domChain[v];
+      if (c < 0) continue;
+      const part = chainPartName[c];
+      if (c !== spineC && !part) continue;
+      acc.clear();
+      let best = -1, bestW = -1;
+      for (let k = 0; k < 4; k++) {
+        const w = W[v * 4 + k];
+        if (!(w > 0)) continue;
+        const bi = I[v * 4 + k], bn = boneName[bi];
+        let to = bi;
+        const bp = partOfBone(bn);
+        if (c === spineC) {
+          if (bp && !/_(sh|h)$/.test(bn)) to = helperOf(bp) ?? bi;
+        } else {
+          const kind = part.startsWith('w_') ? 'w' : 'hl';
+          const own = bp === part;
+          if (!own && !hangs[kind].includes(bn)) to = -1;      // reassigned below
+        }
+        if (to >= 0) { acc.set(to, (acc.get(to) || 0) + w); if (w > bestW && to !== -1 && partOfBone(boneName[to]) === part) { bestW = w; best = to; } }
+        else acc.set(-1, (acc.get(-1) || 0) + w);
+      }
+      if (acc.has(-1)) {
+        const lost = acc.get(-1); acc.delete(-1);
+        const tgt = best >= 0 ? best : rootOf(part);
+        acc.set(tgt, (acc.get(tgt) || 0) + lost);
+      }
+      const ent = [...acc.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+      const sum = ent.reduce((q, e) => q + e[1], 0) || 1;
+      for (let k = 0; k < 4; k++) { if (k < ent.length) { I[v * 4 + k] = ent[k][0]; W[v * 4 + k] = ent[k][1] / sum; } else { I[v * 4 + k] = ent[0][0]; W[v * 4 + k] = 0; } }
+    }
+  }
+
   // ---------------------------------------------------- 3) chain coordinates
   const frames = chainNames.map((c) => chainFrames(anat.chains[c].points, anat.chains[c].refUp));
   const proj = new Array(nV);
@@ -352,14 +402,29 @@ export function computeSkin(anat, mesh, boneIndex, opts = {}) {
   }
 
   // ---------------------------------------------------- 5) ambient occlusion from the SDF
+  // (rev. 2) occlusion only from the vertex's own part: the body is not darkened by the limbs and
+  // a limb not by the body or the other limbs. The bake is made in the sculpt pose, so occlusion
+  // between parts belongs to that one pose: the armpit stayed black when the arm folded away from
+  // it (it read as a hole). The runtime's screen-space AO supplies the pose's real contact shadow.
   const aoSteps = opts.ao?.n ?? 6, aoStep = opts.ao?.step ?? L * 0.006;
+  const partOfChain = (name) => { if (!name) return 0; const m = /^(w_[LR]|hl_[LR])/.exec(name); return m ? m[1] : 0; };
+  const chainPart = chainNames.map(partOfChain);
+  const pPart = prims.map((p) => partOfChain(p.chain));
+  const fbuf = new Int32Array(Math.max(16, nP));
+  const aoQuery = (x, y, z, part) => {
+    const list = mesh.listFor(x, y, z);
+    let n = 0;
+    for (let q = 0; q < list.length; q++) if (pPart[list[q]] === part) fbuf[n++] = list[q];
+    return n ? sdf.evalList(x, y, z, fbuf, 0, n) : 1e3;
+  };
   for (let v = 0; v < nV; v++) {
     const x = positions[v * 3], y = positions[v * 3 + 1], z = positions[v * 3 + 2];
     const nx = normals[v * 3], ny = normals[v * 3 + 1], nz = normals[v * 3 + 2];
+    const part = domChain[v] >= 0 ? chainPart[domChain[v]] : 0;
     let occ = 0, wsum = 0, w = 1;
     for (let i = 1; i <= aoSteps; i++) {
       const d = aoStep * i * i * 0.5 + aoStep * 0.5 * i;
-      const f = mesh.query(x + nx * d, y + ny * d, z + nz * d);
+      const f = aoQuery(x + nx * d, y + ny * d, z + nz * d, part);
       occ += w * clamp((d - f) / d, 0, 1);
       wsum += w;
       w *= 0.72;

@@ -105,7 +105,7 @@ export function keratin(items, boneIndex, opts = {}) {
         // spikes and claws get a sharper back edge (keel)
         const p = add(c, add(scale(vx, ax), scale(ux, ay)));
         const nn = norm(add(scale(vx, ca / Math.max(fa, 0.2) * (it.flatAxis === 'side' ? 1 : fa)), scale(ux, sa * (it.flatAxis === 'side' ? fa : 1 / Math.max(fa, 0.2)))));
-        B.v(p, nn, [j / around, t], [b], [1], [t, KIND[it.kind] ?? 0, seed, r]);
+        B.v(p, nn, [j / around, t], [b], [1], [it.broken ? t * 0.82 : t, KIND[it.kind] ?? 0, seed, r]);
       }
     }
     // a blunt end (a broken or worn horn tip): round it off with a dome of a few rings, so the
@@ -126,14 +126,17 @@ export function keratin(items, boneIndex, opts = {}) {
         for (let k = 1; k <= nCap; k++) {
           const th = (k / nCap) * Math.PI / 2;
           const cc = add(c1, scale(tg, rEnd * Math.sin(th) * 0.7));
-          const rr = Math.max(rEnd * Math.cos(th), rEnd * 0.02);
+          // (a broken tip: a low, rough fracture face, not a smooth dome)
+          const brk = it.broken ? 1 + 0.22 * Math.sin(k * 2.1 + seed * 9) * Math.sin(th) : 1;
+          const rr = Math.max(rEnd * Math.cos(th) * (it.broken ? 1 : 1), rEnd * 0.02);
           for (let j = 0; j <= around; j++) {
             const a = (j / around) * Math.PI * 2;
             const ca = Math.cos(a), sa = Math.sin(a);
             const ax = it.flatAxis === 'side' ? rr * ca * fa : rr * ca, ay = it.flatAxis === 'side' ? rr * sa : rr * sa * fa;
-            const pp = add(cc, add(scale(vx, ax), scale(ux, ay)));
+            const jag = it.broken ? 1 + 0.18 * (Math.sin(a * 5 + seed * 13) * 0.6 + Math.sin(a * 11 + k) * 0.4) * Math.sin(th) : 1;
+            const pp = add(add(cc, scale(tg, it.broken ? -rEnd * 0.45 * Math.sin(th) * (1 - 0.6 * jag * 0.5) : 0)), add(scale(vx, ax * brk), scale(ux, ay * brk)));
             const nn = norm(add(scale(tg, Math.sin(th)), scale(norm(add(scale(vx, ca), scale(ux, sa))), Math.cos(th))));
-            B.v(pp, nn, [j / around, 1], [b], [1], [1, KIND[it.kind] ?? 0, seed, rr]);
+            B.v(pp, nn, [j / around, 1], [b], [1], [it.broken ? 0.8 : 1, KIND[it.kind] ?? 0, seed, rr]);
           }
           rings++;
         }

@@ -7,7 +7,10 @@
 //   t = 0..3 Charcoal (36 m), 4..7 Leaf (9 m, sitting like a dog), 8..11 Starlight (72 m),
 //   12..15 the gold hatchling (1 m, lying weak), 16..19 the scout (6.8 m)
 //   (each: front 3/4, left side, rear 3/4, right side), 20 the scale lineup with a 1.8 m person,
-//   21-24 Charcoal, Leaf, Starlight and the scout gliding, wings spread (seen from above-front).
+//   21-24 Charcoal, Leaf, Starlight and the scout gliding, wings spread (seen from above-front),
+//   25 Charcoal walking on his feet and folded wrists (side on), 26 Leaf standing on two legs.
+//   (rev. 2: the turntables stand on the TWO legs - `upright` - with the wings folded off the
+//   ground; Leaf sits back on his haunches, wings folded.)
 //   (No species: every dragon is its own design - DRAGONS.md.)
 //   node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 1 --workers 1 --out output/creatures-contact
 // then tile the 21 frames (README in scenes/lib/creatures/ has the ffmpeg line).
@@ -20,7 +23,7 @@ const VIEWS = [{ yaw: 35, el: 0.16 }, { yaw: 90, el: 0.1 }, { yaw: 145, el: 0.2 
 const D2R = Math.PI / 180;
 
 export const meta = {
-  title: 'Dragon contact sheet', duration: NAMES.length * 4 + 1 + 4, seed: 3,
+  title: 'Dragon contact sheet', duration: NAMES.length * 4 + 1 + 4 + 2, seed: 3,
   cinematic: { grade: { toneMapping: 'agx', look: 'print', exposure: 0.2 }, grain: { amount: 0.8 }, bloom: { intensity: 0.01 },
     motionBlur: { mode: 'off' }, dof: { enabled: false }, atmosphere: { enabled: true, sky: 'scene', haze: 0.8 } },
 };
@@ -66,12 +69,13 @@ export async function setup(ctx) {
 function poseFor(c, name) {
   if (name === 'hatchling') return poses.lie(c, { t: 0, blink: false, sprawl: 1, raise: -0.5, headDown: 0.2, look: [0.2, -0.08], lidRelax: 0.3 });
   if (name === 'leaf') return poses.sit(c, { t: 0, blink: false, look: [0.2, -0.05] });
-  return poses.stand(c, { t: 0, blink: false, look: [0.15, -0.02] });
+  // (rev. 2) standing on the two legs, wings folded off the ground
+  return poses.upright(c, { t: 0, blink: false, look: [0.15, -0.02] });
 }
 
 export function update(t, ctx) {
   const { camera } = ctx;
-  const k = Math.max(0, Math.min(NAMES.length * 4 + 4, Math.round(t)));   // frame time (sub-frames never cross views)
+  const k = Math.max(0, Math.min(NAMES.length * 4 + 6, Math.round(t)));   // frame time (sub-frames never cross views)
   const GLIDE = ['charcoal', 'leaf', 'starlight', 'scout'];
   const sunAz = Math.atan2(S.sunDir.x, S.sunDir.z);
   // the camera looks along +z' where the sun comes from 40 degrees to its left and is in front
@@ -96,6 +100,25 @@ export function update(t, ctx) {
     const dist = r / Math.tan(15 * D2R) * 0.78;
     camera.position.copy(center).addScaledVector(fwd, -dist);
     camera.position.y = center.y + dist * Math.sin(v.el) + size.y * 0.1;
+    camera.fov = 32;
+    camera.lookAt(center);
+  } else if (k > NAMES.length * 4 + 4) {
+    // 25: Charcoal walking on his feet and the wrists of his folded wings (the bat / pterosaur
+    // gait, side on); 26: Leaf standing on his two legs (side on)
+    const n = k === NAMES.length * 4 + 5 ? 'charcoal' : 'leaf';
+    const c = S.C[n];
+    c.root.visible = true;
+    c.root.position.set(0, 0, 0);
+    c.root.rotation.set(0, camAz + Math.PI - 90 * D2R, 0);
+    c.setPose(n === 'charcoal' ? poses.walk(c, { t: 1.2, blink: false }) : poses.upright(c, { t: 0, blink: false, look: [0.2, -0.05] }));
+    c.root.updateMatrixWorld(true);
+    const box = boundsOf(c);
+    center = box.getCenter(new THREE.Vector3());
+    size = box.getSize(new THREE.Vector3());
+    const r = 0.5 * Math.max(size.x, size.z, size.y * 1.6);
+    const dist = r / Math.tan(15 * D2R) * 0.78;
+    camera.position.copy(center).addScaledVector(fwd, -dist);
+    camera.position.y = center.y + dist * Math.sin(0.1) + size.y * 0.1;
     camera.fov = 32;
     camera.lookAt(center);
   } else if (k > NAMES.length * 4) {
@@ -125,7 +148,7 @@ export function update(t, ctx) {
     for (const n of order) {
       const c = S.C[n];
       c.root.visible = true;
-      c.setPose(n === 'leaf' ? poses.stand(c, { t: 0, blink: false }) : poseFor(c, n));
+      c.setPose(n === 'leaf' ? poses.upright(c, { t: 0, blink: false }) : poseFor(c, n));
       // side on to the camera, heads to the left of frame
       c.root.rotation.set(0, Math.atan2(-side.x, -side.z), 0);
       const p = side.clone().multiplyScalar(-(x + c.L * 0.5));

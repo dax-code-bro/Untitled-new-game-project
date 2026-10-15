@@ -108,7 +108,7 @@ export const DESIGNS = {
     fold: { curl: [8, 60, 108] }, bulk: { leg: 1.38, arm: 1.32, neck: 1.12 },
     // semi-digitigrade with a fibro-fatty heel pad (elephant); claws thick, blunt, chipped
     leg: { femur: 3.1, tibia: 3.4, mt: 1.5, toe: 1.3, claw: 0.42, d: [1.7, 1.05, 1.0, 0.62, 0.52], mtAng: 40, heelPad: 1.0, hallux: 0.48, toeR: 0.19, blunt: 1 },
-    wing: { humerus: 4.2, forearm: 8.4, d: [1.6, 1.15, 0.8, 0.45],
+    wing: { humerus: 5.4, forearm: 7.2, d: [1.6, 1.15, 0.8, 0.45],
       fingers: [['III', 7.4, [5.2, 3.9, 2.3], -6], ['IV', 6.8, [5, 3.4, 1.6], -32], ['V', 6.2, [4.6, 2.9, 1.2], -64]],
       thumb: { mc: 0.7, ph: 0.55, claw: 0.6 }, to: 'ankle', glide: { humerus: -16, forearm: 12 }, legSplay: 24, thick: 0.007 },
     eye: 0.29, snout: 0.58, teeth: [15, 14], toothMax: 0.3, jawMax: 50,
@@ -129,7 +129,7 @@ export const DESIGNS = {
     fold: { curl: [8, 58, 105] }, bulk: { leg: 1.12, arm: 1.12, neck: 1.0 },
     // digitigrade, a longer springier metatarsus than Charcoal's; claws sharp
     leg: { femur: 0.85, tibia: 0.98, mt: 0.52, toe: 0.36, claw: 0.1, d: [0.34, 0.19, 0.17, 0.1, 0.085], mtAng: 58, heelPad: 0.3, hallux: 0.42, toeR: 0.042 },
-    wing: { humerus: 1.05, forearm: 2.15, d: [0.36, 0.25, 0.17, 0.1],
+    wing: { humerus: 1.35, forearm: 1.85, d: [0.36, 0.25, 0.17, 0.1],
       fingers: [['III', 1.9, [1.35, 1, 0.6], -6], ['IV', 1.75, [1.25, 0.85, 0.4], -33], ['V', 1.6, [1.1, 0.72, 0.3], -65]],
       thumb: { mc: 0.18, ph: 0.13, claw: 0.14 }, to: 'shank', glide: { humerus: -16, forearm: 12 }, legSplay: 24, thick: 0.0018 },
     eye: 0.11, snout: 0.48, teeth: [16, 15], toothMax: 0.05, jawMax: 55,
@@ -143,15 +143,15 @@ export const DESIGNS = {
   starlight: {
     name: 'Starlight', L: 72, skull: 5.6, neck: 16, trunk: 16, tail: 34.4, neckBones: 14, tailBones: 30,
     head: [[0, 2.4, 2.1], [0.25, 2.4, 2.05], [0.5, 1.8, 1.4], [0.75, 1.4, 1], [1, 0.95, 0.66]],
-    neckP: [[0, 1.5, 1.75], [0.5, 1.95, 2.3], [1, 2.9, 3.6]],
+    neckP: [[0, 1.7, 2.0], [0.5, 2.35, 2.8], [1, 3.5, 4.3]],
     trunkP: [[0, 4.2, 5.8], [0.25, 4.5, 6.1], [0.6, 3.7, 4.7], [0.85, 3.3, 3.8], [1, 3.5, 3.6]],
-    tailP: [[0, 2.9, 3.2], [0.15, 2.2, 2.45], [0.35, 1.4, 1.6], [0.6, 0.72, 0.82], [0.85, 0.27, 0.3], [1, 0.05, 0.05]],
+    tailP: [[0, 3.4, 3.7], [0.15, 2.6, 2.9], [0.35, 1.6, 1.8], [0.6, 0.72, 0.82], [0.85, 0.27, 0.3], [1, 0.05, 0.05]],
     stand: { hip: 14.4, shoulder: 14.8, forearmLean: 10, humerusRise: 16, neckRise: 40, neckTop: 10, headPitch: -12, tailDroop: 18 },
     // (albatross: the long folded wings lie along the back, the tips crossing over the tail base)
     fold: { curl: [-4, 2, 6], inward: 0.16, wrap: 0.1, outUp: 0.5 }, bulk: { leg: 1.2, arm: 1.15, neck: 1.0 },
     // raptor feet: long toes, big curved talons, a large opposable hallux with the biggest talon
-    leg: { femur: 5.8, tibia: 7, mt: 3.8, toe: 3.6, claw: 1.3, d: [3.0, 1.75, 1.55, 0.92, 0.76], mtAng: 55, heelPad: 0.4, hallux: 0.62, toeR: 0.3, raptor: 1 },
-    wing: { humerus: 8, forearm: 17, d: [2.6, 1.9, 1.3, 0.75],
+    leg: { femur: 5.8, tibia: 7, mt: 3.8, toe: 3.6, claw: 1.3, d: [3.6, 2.3, 2.15, 1.4, 1.2], mtAng: 55, heelPad: 0.4, hallux: 0.62, toeR: 0.3, raptor: 1 },
+    wing: { humerus: 10.2, forearm: 14.8, d: [3.0, 2.25, 1.55, 0.9],
       fingers: [['II', 14.5, [5, 2.5], 2], ['III', 15.5, [11.5, 8.5, 5], -5], ['IV', 14, [10.5, 7.2, 3.4], -28], ['V', 12.8, [9, 6, 2.6], -52]],
       thumb: { mc: 1.3, ph: 0.9, claw: 1 }, to: 'ankle', glide: { humerus: -15, forearm: 12 }, legSplay: 30, thick: 0.014 },
     eye: 0.39, snout: 0.6, teeth: [18, 17], toothMax: 0.36, jawMax: 45,
@@ -170,8 +170,8 @@ export const DESIGNS = {
     tailP: [[0, 0.25, 0.27], [0.15, 0.15, 0.17], [0.35, 0.085, 0.095], [0.6, 0.05, 0.055], [0.85, 0.03, 0.03], [1, 0.01, 0.01]],
     stand: { hip: 1.1, shoulder: 1.25, forearmLean: 14, humerusRise: 10, neckRise: 32, neckTop: 10, headPitch: -10, tailDroop: 16 },
     fold: { curl: [6, 40, 80] }, bulk: { leg: 1.05, arm: 1.05, neck: 1.0 },
-    leg: { femur: 0.45, tibia: 0.54, mt: 0.26, toe: 0.17, claw: 0.05, d: [0.17, 0.09, 0.08, 0.05, 0.045], mtAng: 60, heelPad: 0.2, hallux: 0.4, toeR: 0.02 },
-    wing: { humerus: 0.55, forearm: 1.35, d: [0.27, 0.18, 0.11, 0.065],
+    leg: { femur: 0.45, tibia: 0.54, mt: 0.26, toe: 0.17, claw: 0.05, d: [0.2, 0.12, 0.105, 0.068, 0.06], mtAng: 60, heelPad: 0.2, hallux: 0.4, toeR: 0.02 },
+    wing: { humerus: 0.72, forearm: 1.18, d: [0.27, 0.18, 0.11, 0.065],
       fingers: [['III', 1.3, [1.05, 0.8, 0.45], -12], ['IV', 1.15, [0.9, 0.5], -46]],
       thumb: { mc: 0.08, ph: 0.06, claw: 0.06 }, to: 'hip', glide: { humerus: -20, forearm: 6 }, legSplay: 10, thick: 0.0011 },
     eye: 0.055, snout: 0.55, teeth: [20, 19], toothMax: 0.015, jawMax: 60, gazeForward: 0.45,
@@ -191,7 +191,7 @@ export const DESIGNS = {
     stand: { hip: 0.17, shoulder: 0.14, forearmLean: 22, humerusRise: -12, neckRise: 20, neckTop: 5, headPitch: -25, tailDroop: 30 },
     fold: { curl: [15, 70, 110] }, bulk: { leg: 1.25, arm: 1.2, neck: 1.0 },
     leg: { femur: 0.075, tibia: 0.08, mt: 0.045, toe: 0.065, claw: 0.018, d: [0.05, 0.035, 0.03, 0.022, 0.02], mtAng: 30, heelPad: 0.5, hallux: 0.45, toeR: 0.0085, soft: 1 },
-    wing: { humerus: 0.07, forearm: 0.12, d: [0.038, 0.026, 0.02, 0.016],
+    wing: { humerus: 0.085, forearm: 0.105, d: [0.038, 0.026, 0.02, 0.016],
       fingers: [['III', 0.08, [0.05, 0.035, 0.02], -10], ['IV', 0.07, [0.035, 0.02, 0.01], -48], ['V', 0.06, [0.025, 0.015, 0.008], -80]],
       thumb: { mc: 0.016, ph: 0.014, claw: 0.02 }, to: 'knee', glide: { humerus: -16, forearm: 12 }, legSplay: 22, thick: 0.0006 },
     eye: 0.036, snout: 0.27, teeth: [0, 0], toothMax: 0, jawMax: 30, newborn: 1,
@@ -431,7 +431,7 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
     const Wr = add(Er, scale(dirAt(af), fore));
     // SCULPT: half way between the glide and the wing-walk stance (out, back and down; the
     // forearm down and out), the dorsal side of the wing turned half way out
-    const hS = norm([sd * 0.55, -0.22, -0.8]), fS = norm([sd * 0.62, -0.72, 0.25]);
+    const hS = norm([sd * 0.5, -0.32, -0.8]), fS = norm([sd * 0.62, -0.72, 0.25]);
     const Es = add(S, scale(hS, hum)), Wsc = add(Es, scale(fS, fore));
     const dorsS = norm([sd * 0.7, 0.7, 0]);
     const cl = chainLocals([`${pre}_0`, `${pre}_1`], [S, Er, Wr], [S, Es, Wsc], [[0, 1, 0], [0, 1, 0]], [dorsS, dorsS], QI());
@@ -443,7 +443,7 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
     sculptWorld[`${pre}_0`] = cl.world[0]; sculptWorld[`${pre}_1`] = cl.world[1];
     sculptLocal[`${pre}_sh`] = cl.local[`${pre}_0`]; sculptWorld[`${pre}_sh`] = cl.world[0];
     sculptWorld[`${pre}_2`] = cl.world[1];
-    helpers.push({ bone: `${pre}_sh`, driver: `${pre}_0`, k: 0.5 });
+    helpers.push({ bone: `${pre}_sh`, driver: `${pre}_0`, k: 0.3 });
     wingData.push({ side, sd, pre, S, Er, Wr, Es, Ws: Wsc, qH: cl.world[0], qF: cl.world[1] });
   }
 
@@ -584,6 +584,18 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
     const sa = norm(sub(scTop, S)), sl = len(sub(scTop, S));
     m.ell(lerp3(S, scTop, 0.55), [rA[0] * 0.38, sl * 0.55, rA[0] * 0.85], { ax: ortho([sd, 0.3, 0], sa), ay: sa, k: rA[0] * 0.6, bone: 'thorax', chain: 'spine', tag: 'torso' });
     m.ell(add(lerp3(S, scTop, 0.3), scale(dors0, rA[0] * 0.2)), [rA[0] * 0.55 * ma, sl * 0.36, rA[0] * 0.75 * ma], { ax: ortho([sd, 0.3, 0], sa), ay: sa, k: rA[0] * 0.55, bone: `${pre}_sh`, chain: 'spine', tag: 'torso' });
+    // the axillary web (rev. 2): skin and muscle filling the armpit between the back of the upper
+    // arm and the chest wall (latissimus / the root of the plagiopatagium in bats). Without it the
+    // armpit closed into a deep, dark pocket whenever the arm swung back against the body, and
+    // read as a wound on Starlight's white hide.
+    {
+      const H1 = add(S, scale(along0, hl * 0.42));
+      const cw = section(dAtTorso(sSh + 0.13));
+      const Cw = add(cw.c, add(scale(cw.side, sd * cw.hw * 0.8), scale(cw.up, cw.hh * 0.05)));
+      const wa = norm(sub(Cw, H1)), wl = len(sub(Cw, H1));
+      const mid = add(lerp3(H1, Cw, 0.45), scale(trailOf(w.qH), rA[0] * 0.15));
+      m.ell(mid, [rA[0] * 0.62, wl * 0.62, hl * 0.32], { ax: ortho(norm(cross(wa, along0)), wa), ay: wa, k: rA[0] * 0.8, bone: `${pre}_sh`, chain: 'spine', tag: 'torso' });
+    }
     // ---- the arm itself (comes away with the scout's torn wing)
     target.cone(S, E, rA[0] * 0.78, rA[1] * 0.82, { k: rA[0] * 0.5, ...wt(`${pre}_0`) });
     // triceps on the trailing-dorsal side, biceps on the leading-ventral side, the
@@ -702,8 +714,15 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
     // the propatagium's root: the side of the neck base, in front of and above the shoulder
     const nb = section(dAtNeck(0.88));
     const proRoot = add(nb.c, add(scale(nb.side, sd * nb.hw * 0.75), scale(nb.up, nb.hh * 0.15)));
+    let proBone = null;
+    if (detachable) {
+      // (the propatagium's root too: left on the thorax it stretched a band from the neck to the torn wing)
+      proBone = `${pre}_mp`;
+      bone(proBone, 'thorax', proRoot);
+      memRoots.push({ name: proBone, parent: 'thorax' });
+    }
     wings.push({ side, sd, prefix: pre, root: S, proRoot, elbow: w.Er, wrist: w.Wr, fingers, attach, attachBones, nF, thumbRest: w.thumbRest, padDist: rA[2] * 1.03,
-      thumb: w.Wr, billow: L * 0.03, detachedSDF: detachable ? target : null, thickness: K(WG.thick ?? 0.005), memRoots });
+      thumb: w.Wr, billow: L * 0.03, detachedSDF: detachable ? target : null, thickness: K(WG.thick ?? 0.005), memRoots, proBone });
   }
 
   // ------------------------------------------- tail crest and the scout's vane
@@ -794,7 +813,7 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
     for (const lg of legs) {
       const sd = lg.sd;
       // armpit fold behind the shoulder (the skin between the humerus and the chest wall)
-      if (F.axilla) {
+      if (F.axilla && F.axillaOK) {
         const w = wingData.find((x) => x.sd === sd);
         const sc = section(dAtTorso(sSh + 0.12));
         const a0 = add(w.S, [sd * rA[0] * 0.5, -rA[0] * 0.75, -rA[0] * 0.9]);
@@ -863,6 +882,7 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
   };
 }
 
+function trailOf(q) { return qRot(q, [0, 0, -1]); }
 function smooth01(x) { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); }
 // cumulative extra sweep of phalanx j of finger di (radians, toward the trailing edge)
 function sumBend(j, di) {
@@ -1038,10 +1058,11 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
     const [hw0, , b0] = J(0.06);
     // jaw angle (retroarticular process) and the masseter bulge over it
     // (a newborn's is a soft nub: no hanging lobe behind the jaw)
-    if (!soft) m.cone(jawPt(sd * hw0 * 0.8, b0 + 0.06, hinge[2] + 0.08), jawPt(sd * hw0 * 0.82, hinge[1] - 0.075, hinge[2] - 0.1), 0.048 * H, 0.03 * H, { k: 0.03 * H, ...jt });
+    // (and not on the young Leaf: on his slim jaw it hung below the jaw angle as a lobe and a bolt)
+    if (!soft && !hs.young) m.cone(jawPt(sd * hw0 * 0.8, b0 + 0.06, hinge[2] + 0.08), jawPt(sd * hw0 * 0.82, hinge[1] - 0.075, hinge[2] - 0.1), 0.048 * H, 0.03 * H, { k: 0.03 * H, ...jt });
     // the masseter bulge over the jaw angle (a newborn has no muscle definition: on its soft, slim
     // jaw the bulge stood below the jaw as a hanging lobe) and the labial scale ridge
-    if (!soft) m.ell(jawPt(sd * hw0 * 0.86, b0 + 0.1, hinge[2] + 0.14), [0.048 * H * hs.jawMuscle, 0.068 * H * Math.sqrt(hs.jawMuscle), 0.1 * H * Math.sqrt(hs.jawMuscle)], { ax: ex, ay: jawDir(0, 1, 0), k: 0.035 * H, ...jt });
+    if (!soft && !hs.young) m.ell(jawPt(sd * hw0 * 0.86, b0 + 0.1, hinge[2] + 0.14), [0.048 * H * hs.jawMuscle, 0.068 * H * Math.sqrt(hs.jawMuscle), 0.1 * H * Math.sqrt(hs.jawMuscle)], { ax: ex, ay: jawDir(0, 1, 0), k: 0.035 * H, ...jt });
     const lc = soft ? 0 : (hs.lipCover ?? 0.5);
     if (lc > 0) {
       const z0 = hinge[2] + 0.08;
@@ -1176,8 +1197,9 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
   // control points (head units: x out, y up, z forward) with radii; keratin builds it as a smooth
   // spline with growth ridges. The sheath flares into a rough burr where it leaves the skin.
   const horn = (pts, radii, o = {}) => {
-    keratin.push({ kind: 'horn', bone: 'head', tag: o.tag ?? 'horn', path: pts.map((p) => W(...p)), rad: radii.map((r) => r * H), flat: o.flat ?? 0.82, up: ey, rings: o.rings ?? true, tipR: o.tipR });
-    if (!soft && (o.burr ?? true)) {
+    keratin.push({ kind: 'horn', bone: 'head', tag: o.tag ?? 'horn', path: pts.map((p) => W(...p)), rad: radii.map((r) => r * H), flat: o.flat ?? 0.82, up: ey, rings: o.rings ?? true, tipR: o.tipR, broken: !!o.broken });
+    // (rev. 2: no burr collar - its separate ring read as a texture seam at the horn base)
+    if (!soft && (o.burr ?? false)) {
       const p0 = pts[0], d = norm(sub(pts[1], pts[0])), r0 = radii[0];
       // (a low, rough flare where the sheath leaves the skin - not a proud collar)
       const q0 = sub(p0, scale(d, r0 * 0.45)), q2 = add(p0, scale(d, r0 * 0.45));
@@ -1193,9 +1215,11 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
       // and down, the tips turning a little forward (water buffalo / mouflon), annual ridges;
       // the LEFT tip broken off ~0.12 m (an old break, rounded by wear)
       const r0 = Hn(0.23);
-      const path = [[hwB * 0.62, top0 - 0.03, 0.03], [hwB * 0.98, top0 + 0.0, -0.13], [hwB * 1.42, top0 - 0.06, -0.26], [hwB * 1.75, top0 - 0.19, -0.3], [hwB * 1.88, top0 - 0.32, -0.22], [hwB * 1.84, top0 - 0.4, -0.1]].map(X);
+      // (rev. 2: the curl swings OUT sideways before it turns down and forward - the first hoop
+      // came down onto the neck and seemed to grow into it)
+      const path = [[hwB * 0.62, top0 - 0.03, 0.03], [hwB * 1.02, top0 + 0.02, -0.12], [hwB * 1.6, top0 - 0.01, -0.21], [hwB * 2.12, top0 - 0.12, -0.2], [hwB * 2.36, top0 - 0.27, -0.08], [hwB * 2.34, top0 - 0.35, 0.06]].map(X);
       const broken = sd > 0;
-      horn(broken ? path.slice(0, -1).concat([lerp3(path[4], path[5], 0.5)]) : path, broken ? [r0, r0 * 0.92, r0 * 0.8, r0 * 0.6, r0 * 0.4, r0 * 0.27] : [r0, r0 * 0.92, r0 * 0.8, r0 * 0.6, r0 * 0.36, r0 * 0.05], { flat: 0.78 });
+      horn(broken ? path.slice(0, -1).concat([lerp3(path[4], path[5], 0.5)]) : path, broken ? [r0, r0 * 0.9, r0 * 0.76, r0 * 0.58, r0 * 0.42, r0 * 0.3] : [r0, r0 * 0.9, r0 * 0.74, r0 * 0.56, r0 * 0.34, r0 * 0.05], { flat: 0.78, broken });
       // 2. brow pair: behind and above the eyes, conical, up and back at 35 deg to the skull line
       const b0 = [eye[0] * 0.85, eye[1] + ER * 1.1, eye[2] - ER * 1.6];
       const bl = Hn(0.7), bd = norm([0.25, Math.sin(35 * deg), -Math.cos(35 * deg)]);
@@ -1210,27 +1234,29 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
       // a short smooth pointed pair from the back corners of the skull, back along the neck line and a
       // little up, the tips dipping (no growth ridges yet); small brow nubs over the eyes
       const r0 = Hn(0.035);
-      horn([[hwB * 0.58, top0 - 0.02, 0.0], [hwB * 0.68, top0 + 0.06, -0.14], [hwB * 0.76, top0 + 0.08, -0.28], [hwB * 0.8, top0 + 0.04, -0.4]].map(X), [r0, r0 * 0.78, r0 * 0.45, r0 * 0.06], { rings: false, flat: 0.86 });
+      horn([[hwB * 0.58, top0 - 0.02, 0.0], [hwB * 0.7, top0 + 0.02, -0.15], [hwB * 0.8, top0 + 0.015, -0.3], [hwB * 0.86, top0 - 0.03, -0.42]].map(X), [r0, r0 * 0.78, r0 * 0.45, r0 * 0.06], { rings: false, flat: 0.86 });
       const b0 = [eye[0] * 0.82, eye[1] + ER * 1.05, eye[2] - ER * 0.8];
       horn([b0, add(b0, [0.012, 0.03, -0.02]), add(b0, [0.018, 0.05, -0.05])].map(X), [Hn(0.022), Hn(0.014), Hn(0.003)], { rings: false, burr: false });
     } else if (spec.horns === 'starlight') {
       // 1. main pair: long, slender, gently S-curved - back and UP above the neck line, then back
       // and down at the tips (sable antelope's scimitar, longer)
-      const r0 = Hn(0.18);
+      const r0 = Hn(0.26);
       horn([[hwB * 0.5, top0 - 0.02, 0.04], [hwB * 0.6, top0 + 0.16, -0.2], [hwB * 0.72, top0 + 0.3, -0.5], [hwB * 0.84, top0 + 0.3, -0.8], [hwB * 0.94, top0 + 0.16, -1.05], [hwB * 1.0, top0 - 0.02, -1.18]].map(X),
         [r0, r0 * 0.86, r0 * 0.66, r0 * 0.46, r0 * 0.26, r0 * 0.03], { flat: 0.86 });
       // 2. the crown: three pairs along the back edge of the skull fanning out and back like a frill
-      [[2.4, 0.2, 0.0], [1.7, 0.17, 1], [1.1, 0.14, 2]].forEach(([l, b, i]) => {
+      // (rev. 2: bases 0.28-0.4 m across - thin whips read as an insect's antennae)
+      [[2.4, 0.4, 0.0], [1.7, 0.34, 1], [1.1, 0.28, 2]].forEach(([l, b, i]) => {
         const p0 = [hwB * (0.78 + i * 0.1), top0 - 0.05 - i * 0.06, 0.02 - i * 0.03];
         const d = norm([0.55 + i * 0.25, 0.18 - i * 0.1, -1]);
         const ln = Hn(l);
-        horn([p0, add(p0, add(scale(d, ln * 0.5), [0, 0.02, 0])), add(p0, add(scale(d, ln), [0, -ln * 0.08, 0]))].map(X), [Hn(b * 0.5), Hn(b * 0.33), Hn(0.012)], { flat: 0.8 });
+        horn([p0, add(p0, add(scale(d, ln * 0.5), [0, 0.02, 0])), add(p0, add(scale(d, ln), [0, -ln * 0.08, 0]))].map(X), [Hn(b * 0.5), Hn(b * 0.3), Hn(0.014)], { flat: 0.8 });
       });
     } else if (spec.horns === 'scout') {
       // one pair of long thin straight horns laid back flat along the top of the neck (~10 deg above it)
       const r0 = Hn(0.0175), ln = Hn(0.48);
       const p0 = [hwB * 0.5, top0 - 0.02, 0.02];
-      const d = norm([0.12, Math.sin(10 * deg), -1]);
+      // (rev. 2: below the skull line - the head is carried pitched down, so 10 deg above it stood the horns up)
+      const d = norm([0.12, Math.sin(-6 * deg), -1]);
       horn([p0, add(p0, scale(d, ln * 0.5)), add(p0, scale(d, ln))].map(X), [r0, r0 * 0.6, r0 * 0.05], { rings: true, flat: 0.88 });
     } else if (spec.horns === 'buds') {
       // soft horn buds at the back corners of the skull: 2.5 cm pale cones, back and up

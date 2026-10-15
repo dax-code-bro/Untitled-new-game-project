@@ -70,7 +70,8 @@ export function lookParams(THREE, look) {
       dustAmt: 0.2, saltAmt: 0.05, oral: lin(THREE, 0.07, 0.03, 0.028), oralDark: lin(THREE, 0.025, 0.008, 0.008),
       // LIGHT GREEN membrane; the light through it is limited (thick skin), so it never glows
       membrane: lin(THREE, 0.3, 0.52, 0.15), trans: lin(THREE, 0.26, 0.42, 0.1), vein: lin(THREE, 0.1, 0.2, 0.05), memRough: 0.56, memSpec: 0.4, memSpecD: 0.7,
-      horn: [lin(THREE, 0.04, 0.045, 0.03), lin(THREE, 0.24, 0.22, 0.15)], hornR: [0.62, 0.45, 1.2], claw: [lin(THREE, 0.03, 0.03, 0.025), lin(THREE, 0.14, 0.12, 0.09)],
+      // dark olive-brown keratin (DESIGN 3.3), a little paler toward the tips
+      horn: [lin(THREE, 0.026, 0.026, 0.013), lin(THREE, 0.085, 0.075, 0.04)], hornR: [0.62, 0.45, 1.2], claw: [lin(THREE, 0.03, 0.03, 0.025), lin(THREE, 0.14, 0.12, 0.09)],
       tooth: lin(THREE, 0.5, 0.44, 0.32), sclera: lin(THREE, 0.04, 0.036, 0.012),
       // clear YELLOW eyes
       iris: [lin(THREE, 0.42, 0.3, 0.02), lin(THREE, 0.12, 0.07, 0.006)],
@@ -134,7 +135,7 @@ export function lookParams(THREE, look) {
       rough: [0.58, 0.12, 0.08, 0.3], amp: 0.2, keel: 0.15, facet: 0.0, jit: 0.25, metal: [0, 0], mottle: 0.3,
       hier: [0.6, 1.0, 0.4, 0.0], damp: 0.15, bellyP: [0.7, 1.8, 0.85, 0.55],
       dustAmt: 0.25, saltAmt: 0.3, oral: lin(THREE, 0.25, 0.07, 0.07), oralDark: lin(THREE, 0.05, 0.012, 0.012),
-      membrane: lin(THREE, 0.068, 0.05, 0.042), trans: lin(THREE, 0.16, 0.1, 0.07), vein: lin(THREE, 0.06, 0.025, 0.015), memRough: 0.55,
+      membrane: lin(THREE, 0.068, 0.05, 0.042), trans: lin(THREE, 0.16, 0.1, 0.07), vein: lin(THREE, 0.06, 0.025, 0.015), memRough: 0.62, memSpec: 0.28, memSpecD: 0.45,
       horn: [lin(THREE, 0.04, 0.038, 0.034), lin(THREE, 0.2, 0.18, 0.15)], hornR: [0.66, 0.5, 1.0], claw: [lin(THREE, 0.03, 0.028, 0.025), lin(THREE, 0.12, 0.11, 0.09)],
       tooth: lin(THREE, 0.55, 0.48, 0.35), iris: [lin(THREE, 0.45, 0.38, 0.12), lin(THREE, 0.14, 0.11, 0.025)], sclera: lin(THREE, 0.04, 0.035, 0.02),
     },
@@ -159,7 +160,9 @@ vec2 dkSlope(float h, vec3 pos) { return vec2(dFdx(h) / max(length(dFdx(pos)), 1
 function skinMaterial(THREE, P, ctx) {
   const physical = !!P.wet || !!P.clearcoat;
   const Mat = physical ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
-  const mat = new Mat({ color: 0xffffff, roughness: 1, metalness: P.metal[0] > 0 ? 1 : 0 });
+  // (double-sided: where linear-blend skinning folds the skin over itself - an acutely bent elbow,
+  // a fold against the flank - the inverted triangles show skin, not a see-through black hole)
+  const mat = new Mat({ color: 0xffffff, roughness: 1, metalness: P.metal[0] > 0 ? 1 : 0, side: THREE.DoubleSide, shadowSide: THREE.FrontSide });
   if (P.wet) { mat.clearcoat = 1.0; mat.clearcoatRoughness = 0.04; }   // wet film (hatchling), varied per pixel below
   else if (P.clearcoat) { mat.clearcoat = P.clearcoat; mat.clearcoatRoughness = P.clearcoatRough ?? 0.12; }   // hard, polished scale crowns (Starlight)
   mat.defines = { USE_TANGENT: '' };
@@ -466,12 +469,20 @@ void dkSkin(inout vec3 albedo) {
   T = normalize(T - normal * dot(normal, T));
   vec3 Bc = cross(normal, T);
   B = Bc * sign(dot(B, Bc) + 1e-6);
-  vec3 n1 = normalize(normal - dkGrad.x * B - dkGrad.y * T);
-  if (dkGranM > 0.0) {
-    vec3 pv = -vViewPosition;
+  // (rev. 2) where skinning compresses or folds the skin (the rest-space footprint of a pixel much
+  // larger than its posed one: an armpit squeezed by the folded arm) the relief is faded out - its
+  // slopes blew up there and turned the normals away from the light: black "holes"
+  vec3 pvC = -vViewPosition;
+  float dkComp = max(length(dFdx(vRest)) / max(length(dFdx(pvC)), 1e-7), length(dFdy(vRest)) / max(length(dFdy(pvC)), 1e-7));
+  float dkRel = 1.0 - smoothstep(1.5, 2.8, dkComp);
+  vec3 n1 = normalize(normal - (dkGrad.x * B + dkGrad.y * T) * dkRel);
+  if (dkGranM > 0.0 && dkRel > 0.0) {
+    vec3 pv = pvC;
     vec2 sl = vec2(dot(dkGranG, dFdx(vRest)) / max(length(dFdx(pv)), 1e-7), dot(dkGranG, dFdy(vRest)) / max(length(dFdy(pv)), 1e-7));
+    sl *= dkRel / max(1.0, length(sl) / 2.5);
     n1 = dkPerturb(pv, n1, sl, faceDirection);
   }
+  if (dot(n1, n1) < 0.5 || n1 != n1) n1 = normal;
   normal = n1;
 }`)
       .replace('#include <aomap_fragment>', `
@@ -586,6 +597,7 @@ void dkMembrane(inout vec3 col) {
     // split from the trailing edge into the wing in a few places
     float jag = dkVnoise2(vec2(b * 22.0, 1.3)) * 0.6 + dkVnoise2(vec2(b * 70.0, 4.1)) * 0.4;
     if (pid > 3.5 && a < 0.1 + 0.16 * jag) discard;
+    if (pid < 0.5 && a < (0.06 + 0.12 * jag) * smoothstep(0.2, 1.0, b)) discard;
     float split = smoothstep(0.82, 0.97, dkVnoise2(vec2((pid > 3.5 ? a : b) * 9.0 + pid * 3.0, 2.0))) * smoothstep(0.55, 1.0, pid > 3.5 ? b : a);
     if (split * (0.7 + 0.6 * dkVnoise2(vec2(a, b) * 60.0)) > 0.55) discard;
   }

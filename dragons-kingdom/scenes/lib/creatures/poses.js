@@ -31,7 +31,7 @@
 // positive x rotation tips the nose DOWN), y = up (yaw toward its left), z = forward (roll:
 // positive raises the left side). Right-side bones are mirrored by sym().
 import * as THREE from 'three';
-import { qMul, qInv, qRot, qEuler, qSlerp, aimQ, fk, ik2, chainLocals, QI, v3, qAxis } from './kin.js';
+import { qMul, qInv, qRot, qEuler, qSlerp, aimQ, arcQ, fk, ik2, chainLocals, QI, v3, qAxis } from './kin.js';
 
 const { add, sub, scale, dot, cross, len, norm, lerp } = v3;
 const TAU = Math.PI * 2;
@@ -121,7 +121,7 @@ function legIK(pb, F, side, ball, o = {}) {
  * elbow toward `pole`. Returns the joints and the arm's dorsal direction (the wing's upper
  * surface: outward when folded).
  */
-function armIK(pb, F, side, wrist, pole) {
+function armIK(pb, F, side, wrist, pole, minTwist = false) {
   const c = pb.c, A = c.anatomy, d = A.dims;
   const sd = side === 'L' ? 1 : -1;
   const w = A.wings.find((x) => x.side === side);
@@ -129,6 +129,18 @@ function armIK(pb, F, side, wrist, pole) {
   const S = F.P[`${pre}_0`];
   const ik = ik2(S, wrist, d.hum, d.fore, pole);
   const E = ik.B, W = ik.C;
+  if (minTwist) {
+    // (rev. 2) the arm swung from its sculpt orientation by the shortest arc (no twist about the
+    // bone): a twisted humerus pinched the shoulder skin into a slit that read as a wound
+    const qT = F.Q.thorax;
+    const hW0 = qMul(qT, A.sculptLocal[`${pre}_0`]);
+    const hW = qMul(arcQ(qRot(hW0, norm(sub(w.elbow, w.root))), norm(sub(E, S))), hW0);
+    const fW0 = qMul(hW, A.sculptLocal[`${pre}_1`]);
+    const fW = qMul(arcQ(qRot(fW0, norm(sub(w.wrist, w.elbow))), norm(sub(W, E))), fW0);
+    pb.quat(`${pre}_0`, qMul(qInv(qT), hW));
+    pb.quat(`${pre}_1`, qMul(qInv(hW), fW));
+    return { S, E, W, dors: norm(qRot(fW, [0, 1, 0])), qF: fW };
+  }
   let dors = scale(norm(cross(sub(E, S), sub(W, E))), -sd);
   if (!(len(dors) > 0.5)) dors = qRot(F.Q.thorax, [sd, 0, 0]);
   const cl = chainLocals([`${pre}_0`, `${pre}_1`], [w.root, w.elbow, w.wrist], [S, E, W], [[0, 1, 0], [0, 1, 0]], [dors, dors], F.Q.thorax);
@@ -188,7 +200,7 @@ function plantWing(pb, F, side, wristP, o = {}) {
   const sd = side === 'L' ? 1 : -1;
   const qT = F.Q.thorax;
   const pole = o.pole ?? add(qRot(qT, [sd * 0.35, 0.75, -0.6]), [0, 0.3, 0]);
-  const arm = armIK(pb, F, side, wristP, pole);
+  const arm = armIK(pb, F, side, wristP, pole, o.minTwist ?? true);
   foldHand(pb, side, arm, qT, o);
   return arm;
 }
@@ -306,6 +318,14 @@ export function rest(c, o = {}) {
   return pb.out({ ground: false });
 }
 
+/** The SCULPT bind configuration (debugging the body sculpt without skinning). */
+export function sculpt(c, o = {}) {
+  const pb = new PB(c);
+  for (const [n, q] of Object.entries(c.anatomy.sculptLocal)) pb.quat(n, q);
+  jaw(pb, o.jaw ?? 0);
+  return pb.out({ ground: true });
+}
+
 /** Stand parameters per dragon (DESIGN stand: neck rise, head pitch, tail droop) */
 function standParams(c) {
   const s = c.anatomy.design.stand;
@@ -370,6 +390,92 @@ export function stand(c, o = {}) {
   plantAll(pb, o);
   common(pb, { ...o, jaw: (o.jaw ?? 0) + 0.012 * br }, t);
   drape(pb, 'stand');
+  return pb.out({ groundTail: true });
+}
+
+/**
+ * The wing folded tight against the body for standing on the two legs (DESIGN rev. 2, a
+ * vulture's or a resting bat's fold): the upper arm back and down along the side of the chest,
+ * the elbow low behind the shoulder, the forearm up and forward so the wrist (with the thumb
+ * claw) sits high beside the neck base; the hand folded back down along the forearm, the
+ * knuckles by the elbow, the fingers pressed together in one bundle back along the flank to the
+ * thigh, the membrane gathered between them. Nothing touches the ground.
+ */
+function foldUp(pb, F, side, o = {}) {
+  const c = pb.c, A = c.anatomy, d = A.dims, D = A.design;
+  const sd = side === 'L' ? 1 : -1;
+  const qT = F.Q.thorax;
+  const S = F.P[`w_${side}_0`];
+  const U = D.fold?.up || {};
+  const el = (o.elbow ?? U.elbow ?? 30) * deg;
+  const dist = Math.sqrt(d.hum * d.hum + d.fore * d.fore - 2 * d.hum * d.fore * Math.cos(el));
+  // (directions in the root frame - level ground, whatever the trunk's pitch: the forearm rises
+  // ~25 degrees from the elbow low on the flank to the wrist beside the base of the neck)
+  const wd = norm(o.wristDir ?? U.wrist ?? [0.4, 0.4, 0.82]);
+  const W = add(S, scale([sd * wd[0], wd[1], wd[2]], dist));
+  const pole = norm([sd * (o.poleOut ?? U.poleOut ?? 0.45), -0.6, -0.65]);
+  const arm = armIK(pb, F, side, W, pole, o.minTwist ?? true);
+  foldHand(pb, side, arm, qT, { handBack: U.handBack ?? 4, mcFan: U.mcFan ?? 0.3, fanDown: U.fanDown ?? 0.0, curl: U.curl ?? [-12, 6, 28], inward: U.inward ?? 0.06, wrap: U.wrap ?? 0.04, outUp: U.outUp ?? 0.45, ...o });
+  pb.add(`w_${side}_th`, -0.25, sd * 0.1, 0);
+  return arm;
+}
+
+/**
+ * Standing on the TWO legs (DESIGN rev. 2: the resting stance - the wings stay folded off the
+ * ground, so a viewer counts two legs): the trunk raised 20-30 degrees and balanced over the
+ * feet (bird / theropod), the neck in a tall S, the folded wings against the chest and flanks
+ * (foldUp), the heavy tail carried out behind as the counterweight and laid on the ground from
+ * about its middle in a gentle curve (a third support for the giants). o.pitch (rad) overrides
+ * the trunk angle; feet, look, tailCurl as in stand().
+ */
+export function upright(c, o = {}) {
+  const t = o.t ?? 0;
+  const A = c.anatomy, d = A.dims, D = A.design;
+  const U = D.stand.up || {};
+  const pitch = o.pitch ?? (U.pitch ?? (c.L > 20 ? 30 : 34)) * deg;
+  const pb = groundBase(c, { body: { pitch } }, t);
+  {
+    const F0 = solveFK(pb);
+    const hip = F0.P.hl_L_0;
+    pb.rig.position = [0, d.hipH * (U.hipK ?? 0.9) - hip[1], -hip[2]];
+  }
+  const calm = o.drapeBuild ? 0 : 1;
+  const br = o.drapeBuild ? 0 : breathe(pb, t, o.breathe ?? (c.L > 20 ? 0.085 : c.L > 3 ? 0.16 : 0.4), c.L > 20 ? 0.02 : 0.025);
+  const nb = (o.neckBase ?? U.neckBase ?? 48) * deg + (o.raise ?? 0), nt = (o.neckTop ?? U.neckTop ?? 14) * deg - (o.headDown ?? 0) * 1.4 + (o.raise ?? 0) * 0.5;
+  neckCurve(pb, nb, nt, (o.headPitch ?? U.headPitch ?? -16) * deg - (o.headDown ?? 0) * 0.6, pitch);
+  const lk = o.look || [0, 0];
+  look(pb, lk[0] + 0.03 * wob(t * 0.3, 1) * calm, lk[1] + 0.015 * br + 0.015 * wob(t * 0.25, 2) * calm);
+  // the tail: the base carried level with the trunk line (lifted against the pitch), the middle
+  // sagging to the ground, the outer part lying along it with a sideways sweep
+  {
+    // (a straight tail from the hip to the ground read as a prop or a ramp: the base is carried
+    // level, the arc down to the ground is spread over the middle third)
+    const ts = tailNames(c), n = ts.length;
+    const lift = (o.tailLift ?? U.tailLift ?? 1.0) * pitch + 4 * deg;
+    const sag = (o.tailSag ?? U.tailSag ?? 46) * deg;
+    const curl = o.tailCurl ?? 0.35;
+    const sw = ts.map((_, i) => { const f = i / (n - 1); return f < 0.18 || f > 0.72 ? 0 : Math.sin(Math.PI * (f - 0.18) / 0.54); });
+    const swS = sw.reduce((a, b) => a + b, 0) || 1;
+    ts.forEach((name, i) => {
+      const f = i / (n - 1);
+      const s = Math.sin(t * TAU * 0.05 - i * 0.22) * 0.03 * calm;
+      pb.add(name, (i < 4 ? lift / 4 : 0) - sag * sw[i] / swS, (s + curl * Math.max(0, f - 0.35)) * 2.5 / n, 0);
+    });
+  }
+  const F = solveFK(pb);
+  for (const [side, sd] of sides) {
+    const lf = (o.feet && o.feet[side]) || {};
+    const hip = F.P[`hl_${side}_0`];
+    const ma = (lf.mtAng ?? U.mtAng ?? D.leg.mtAng) * deg;
+    // the feet well ahead of the hip joint, under the centre of mass (the trunk, neck and head
+    // are in front of the hips; the femur swings forward as in a bird, the knee under the belly)
+    const ball = [sd * Math.max(d.hipX * 1.1, d.footX ?? 0) + (lf.dx ?? 0), d.toeL * 0.13 + (lf.lift ?? 0), hip[2] + d.T * (U.footFwd ?? 0.36) + (lf.dz ?? 0)];
+    legIK(pb, F, side, ball, { mtAng: lf.mtAng ?? U.mtAng, fwd: lf.fwd ?? [sd * 0.12, 0, 1], pole: lf.pole, curl: lf.curl ?? 0.08 });
+    foldUp(pb, F, side, o.fold || {});
+  }
+  if (o.debugSculptBones) for (const n of o.debugSculptBones) if (A.sculptLocal[n]) pb.quat(n, A.sculptLocal[n]);
+  common(pb, { ...o, jaw: (o.jaw ?? 0) + 0.012 * br }, t);
+  drape(pb, 'upright');
   return pb.out({ groundTail: true });
 }
 
@@ -460,11 +566,17 @@ export function sit(c, o = {}) {
     // feet flat beside the haunch, toes forward: the thigh folds forward along the flank
     const hip = F.P[`hl_${side}_0`];
     legIK(pb, F, side, [sd * Math.max(d.hipX * 1.35, (d.footX ?? 0) * 1.2), d.toeL * 0.13, hip[2] + d.fem * 0.85], { mtAng: 8, fwd: [sd * 0.15, 0, 1], pole: [sd * 0.45, 0.8, 0.4], curl: 0.08 });
-    // wrists planted in front like a dog's forelegs, forearms vertical
-    const S = F.P[`w_${side}_0`];
-    const w = A.wings.find((x) => x.side === side);
-    const wp = [S[0] + sd * d.wristR * 1.2, w.padDist * 0.92, S[2] + (o.wristFwd ?? 0.05) * d.fore];
-    plantWing(pb, F, side, wp, { pole: [sd * 0.25, 0.4, -1], outUp: 0.05, p1Down: 0.15, ...(o.fold || {}) });
+    if (o.plantWrists) {
+      // wrists planted in front like a dog's forelegs, forearms vertical
+      const S = F.P[`w_${side}_0`];
+      const w = A.wings.find((x) => x.side === side);
+      const wp = [S[0] + sd * d.wristR * 1.2, w.padDist * 0.92, S[2] + (o.wristFwd ?? 0.05) * d.fore];
+      plantWing(pb, F, side, wp, { pole: [sd * 0.25, 0.4, -1], outUp: 0.05, p1Down: 0.15, ...(o.fold || {}) });
+    } else {
+      // (DESIGN rev. 2) the wings stay folded against the body, off the ground: he sits back on
+      // his haunches on his two legs (planted wrists read as a dog's front legs - four legs)
+      foldUp(pb, F, side, { curl: [-26, -8, 18], wristDir: [0.4, 0.3, 0.86], ...(o.fold || {}) });
+    }
   }
   common(pb, { ...o, jaw: (o.jaw ?? 0) + 0.01 * br }, t);
   drape(pb, 'sit');

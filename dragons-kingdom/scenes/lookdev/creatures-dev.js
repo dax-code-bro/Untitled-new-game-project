@@ -55,6 +55,30 @@ export async function setup(ctx) {
     }
     const c = await createCreature(which, { quality: cc.quality || 'draft', look: cc.look || cfg.look, drape: cc.drape, log: (s) => console.log(s) });
     ctx.scene.add(c.root);
+    if (cc.hideMembranes) for (const mm of c.membranes) mm.visible = false;
+    if (cc.debugAttr) {
+      // debug: grey = one component of a body attribute (e.g. ["aMask2", 0] = baked AO)
+      const body = c.meshes[0], g = body.geometry, a = g.attributes[cc.debugAttr[0]], n = a.count, col = new Float32Array(n * 3);
+      const sc = cc.debugAttr[2] ?? 1;
+      for (let v = 0; v < n; v++) { const x = a.getComponent(v, cc.debugAttr[1]) * sc; col[v * 3] = col[v * 3 + 1] = col[v * 3 + 2] = x; }
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      body.material = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    }
+    if (cc.debugBones) {
+      // debug: colour the body by bone weight (red/green/blue = the listed bones, grey = others)
+      const body = c.meshes[0], g = body.geometry, n = g.attributes.position.count;
+      const si = g.attributes.skinIndex.array, sw = g.attributes.skinWeight.array, col = new Float32Array(n * 3);
+      const ids = cc.debugBones.map((b) => c.boneIndex[b]);
+      const pal = [[1, 0.1, 0.1], [0.1, 1, 0.1], [0.2, 0.3, 1], [1, 1, 0.1], [1, 0.2, 1], [0.1, 1, 1]];
+      for (let v = 0; v < n; v++) {
+        let r = 0.25, gg = 0.25, b = 0.25;
+        for (let k = 0; k < 4; k++) { const j = ids.indexOf(si[v * 4 + k]); const w = sw[v * 4 + k]; if (j >= 0 && w > 0) { r += pal[j][0] * w; gg += pal[j][1] * w; b += pal[j][2] * w; } }
+        col[v * 3] = r; col[v * 3 + 1] = gg; col[v * 3 + 2] = b;
+      }
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      body.material = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    }
+    if (cc.hideParts) for (const mm of c.meshes) if (cc.hideParts.some((s) => mm.name.includes(s))) mm.visible = false;
     if (cc.tack || cc.rider) {
       const tack = createSaddle(c, {});
       if (cc.rider) mountRider(c, tack, createRider(human, { outfit: cc.rider, lean: 0.12 }));
