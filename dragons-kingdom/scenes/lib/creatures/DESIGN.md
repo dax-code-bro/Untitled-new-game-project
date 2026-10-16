@@ -268,6 +268,19 @@ heavy, ordinary animal - a crouching big cat, a crocodile in the high walk, a Ko
 6. **Alive.** A slow side-to-side weight shift, one foot and the opposite wrist a little ahead,
    breathing, small head movements and blinks (all pure functions of time).
 
+Measured in the posed models (`poses.stand`, metres above the ground; chest = the trunk's
+underside at station 0.25, back = its top there):
+
+| | hip joint | knee | chest underside (x chest depth) | back | elbow | head joint |
+|---|---|---|---|---|---|---|
+| Charcoal (36 m) | 4.15 | 3.31 | 1.59 (0.35) | 6.08 | 7.85 | 6.79 |
+| Leaf (9 m) | 1.06 | 0.97 | 0.42 (0.44) | 1.37 | 2.17 | 1.62 |
+| Starlight (72 m) | 6.57 | 6.50 | 3.09 (0.51) | 9.18 | 14.90 | 11.16 |
+| scout (6.8 m) | 0.59 | 0.67 | 0.25 (0.37) | 0.92 | 1.31 | 1.12 |
+
+(rev. 2 for comparison: Charcoal's hip joint 7.0 m with the trunk raised 30 degrees, his chest
+underside ~4.3 m up.) The newborn does not stand: it lies sprawled or pushes up weakly (5.5).
+
 Flight balance: the legs hang from the middle of the trunk and trail back under the tail base in
 flight (as a bird's or a bat's), the plagiopatagium still runs from the flank over the thigh to
 the ankle; the hip moving forward and the shorter inner wing chord both move the centre of mass
@@ -1091,19 +1104,21 @@ tail that cannot hold itself up.
 * Same plan as the adults (two legs, wing-arms, 3 long fingers + thumb), newborn proportions:
   head 19% of the length (adults 8-11%), eye 19% of the skull, snout 27% of the skull (rev. 1; 38% read as a lizard's), short neck,
   short trunk, the tail 41%.
-* **Wing:** humerus 0.085, forearm 0.105 m (rev. 2), fingers III 0.18 / IV 0.14 / V 0.11 m (metacarpal +
+* **Wing:** humerus 0.072, forearm 0.118 m (rev. 3; rev. 2: 0.085 / 0.105), fingers III 0.18 / IV 0.14 / V 0.11 m (metacarpal +
   phalanges), soft, the membrane wet, wrinkled and stuck to itself; **thumbs big** with curved
   soft amber claws (newborn bats are born with near-adult thumbs and feet - to cling).
 * **Leg:** femur 0.075, tibia 0.08, metatarsus 0.045, toes 0.065 m - big feet; soft claws.
 * Membrane to the knee.
 
-Shape (plump trunk, a head nearly as wide as the chest):
+Shape (rev. 3: a slim hatchling-lizard trunk with a modest yolk belly - the rev. 2 trunk, as wide
+and deep as it was long, read as a gold ball or a squeeze toy; slimmer limbs; the hip joint under
+the middle of the trunk as on the adults):
 
 | part | full width x depth at each station (m) |
 |---|---|
-| head, back of skull -> snout tip (s = 0, 0.3, 0.55, 0.8, 1) | 0.15 x 0.15 / 0.165 x 0.17 / 0.14 x 0.13 / 0.11 x 0.095 / 0.08 x 0.065 (rev. 1: a blunter, rounder newborn snout) |
-| neck, head end -> base (s = 0, 0.5, 1) | 0.085 x 0.095 / 0.095 x 0.105 / 0.13 x 0.15 |
-| trunk, shoulder -> hip (s = 0, 0.3, 0.6, 0.85, 1) | 0.15 x 0.17 / 0.19 x 0.2 / 0.2 x 0.2 / 0.16 x 0.16 / 0.13 x 0.13 |
+| head, back of skull -> snout tip (s = 0, 0.3, 0.55, 0.8, 1) | 0.15 x 0.14 / 0.165 x 0.145 / 0.14 x 0.112 / 0.108 x 0.08 / 0.078 x 0.055 (rev. 3: flatter - the tall dome read as a toy's; rev. 1: a blunter newborn snout) |
+| neck, head end -> base (s = 0, 0.5, 1) | 0.078 x 0.088 / 0.086 x 0.095 / 0.112 x 0.128 (rev. 3) |
+| trunk, shoulder -> tail base (s = 0, 0.3, 0.6, 0.85, 1) | 0.13 x 0.15 / 0.155 x 0.165 / 0.16 x 0.155 / 0.13 x 0.125 / 0.11 x 0.105 (rev. 3; rev. 2: up to 0.2 x 0.2) |
 | tail, base -> tip (s = 0, 0.15, 0.35, 0.6, 0.85, 1) | 0.1 x 0.1 / 0.075 x 0.078 / 0.05 x 0.052 / 0.028 x 0.03 / 0.012 x 0.013 / 0.004 x 0.004 |
 
 ### 5.3 Head and horns
@@ -1779,7 +1794,7 @@ export const DESIGN = {
       aspect: 6.9,
       wingLoading: 1331,
       stall: 34.8,
-      hipHeight: 14.41,
+      hipHeight: 14.41,   // rev. 2 sculpt; rev. 3 sculpt (bind) hip 10.6 with the shorter legs
       shoulderHeight: 14.8,
       elbowHeight: 17
     }

@@ -190,8 +190,9 @@ export const DESIGNS = {
     name: 'Gold hatchling', L: 1.0, skull: 0.19, neck: 0.13, trunk: 0.27, tail: 0.41, neckBones: 8, tailBones: 20,
     // (rev. 3: a flatter, longer-browed skull - the tall dome read as a toy's)
     head: [[0, 0.15, 0.14], [0.3, 0.165, 0.145], [0.55, 0.14, 0.112], [0.8, 0.108, 0.08], [1, 0.078, 0.055]],
-    neckP: [[0, 0.085, 0.095], [0.5, 0.095, 0.105], [1, 0.13, 0.15]],
-    trunkP: [[0, 0.15, 0.17], [0.3, 0.19, 0.2], [0.6, 0.2, 0.2], [0.85, 0.16, 0.16], [1, 0.13, 0.13]],
+    neckP: [[0, 0.078, 0.088], [0.5, 0.086, 0.095], [1, 0.112, 0.128]],
+    // (rev. 3: a slimmer hatchling-lizard trunk - as wide and deep as it was long it read as a gold ball / squeeze toy)
+    trunkP: [[0, 0.13, 0.15], [0.3, 0.155, 0.165], [0.6, 0.16, 0.155], [0.85, 0.13, 0.125], [1, 0.11, 0.105]],
     tailP: [[0, 0.1, 0.1], [0.15, 0.075, 0.078], [0.35, 0.05, 0.052], [0.6, 0.028, 0.03], [0.85, 0.012, 0.013], [1, 0.004, 0.004]],
     stand: { hip: 0.17, shoulder: 0.14, forearmLean: 22, humerusRise: -12, neckRise: 20, neckTop: 5, headPitch: -25, tailDroop: 30 },
     // (rev. 3: slimmer limbs and a smaller yolk belly - the bloated body and stubby thick limbs read as a squeeze toy)
