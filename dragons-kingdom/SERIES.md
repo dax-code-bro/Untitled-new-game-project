@@ -103,3 +103,18 @@ Daxtyn writes the main story with ChatGPT. That story is ahead of production (ar
 - Episodes are produced in order, starting with Season 1, Episode 1, until production catches up with the story.
 - Once production catches up, Daxtyn continues the story and sends each new episode's full description as it is written.
 - Characters, dragons, places and props are built once and reused in every episode they appear in, so each one looks the same everywhere. An episode's breakdown lists which existing models it reuses and which new ones it needs.
+
+## 8. Rating and content (decided by Daxtyn on 2026-10-16)
+
+The show is for mature audiences, like a TV-MA fantasy drama. Daxtyn listed what it contains:
+
+- drug references and drug use, tobacco, alcohol
+- strong language
+- dark humor and ordinary humor
+- suggestive material
+- intense violence, strong blood and gore
+
+Production limits that always apply:
+- Suggestive material stays non-explicit, and only ever involves adults. It never involves children or characters who could be children (for example Abby, who the Episode 1 screenplay calls a child, or the child in Cling).
+- Children are never shown using drugs, tobacco or alcohol.
+- Violence and gore are shown as in a live-action drama. They serve the story and are not instructions for real-world harm.

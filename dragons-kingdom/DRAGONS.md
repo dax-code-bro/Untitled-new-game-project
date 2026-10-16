@@ -10,6 +10,8 @@ This file holds Daxtyn's own decisions about every dragon. Anything written here
 
 **Every dragon has two legs and horns (decided 2026-10-14).** All dragons have **only two legs**, not four, and **every dragon has horns**. The wings are the front limbs, like a bat's or a pterosaur's. On the ground a dragon stands on its two hind legs and can lean on its folded wings (the wrist joint) when it walks, as bats and pterosaurs do. There are no separate front legs.
 
+**Low, normal stance (decided 2026-10-16).** Daxtyn wants the dragons to look more normal: **low to the ground, with the two legs placed more toward the center of the body** (under the middle of the body, not at the back). The body stays roughly level and low, like a big animal crouching, with the folded wings' wrists touching down in front for support when walking or resting. They do not stand tall and upright like a rearing horse.
+
 **Bodies designed by Claude (decided 2026-10-14).** Daxtyn gives the colours and key facts. He asked Claude to design each dragon's actual body to look as realistic as possible, based on how real animals are built. Those body designs are shown to Daxtyn as pictures, and he can change anything.
 
 **Leaf's size (decided 2026-10-09).** Leaf is about **one quarter (25%) of Charcoal's size**, not tiny. This replaces the screenplay's "about one-twentieth Charcoal's size or smaller". Working reading: Leaf's body length is about 25% of Charcoal's.
