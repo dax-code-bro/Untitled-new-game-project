@@ -3,7 +3,7 @@
 Every shot of the whole episode in order, made from `screenplay-final.md` by `tools/shotlist/final_build.py`. **Plan only: nothing has been rendered for this script.** The times are estimates for an animatic; the real length is known only once an animatic is timed (`SERIES.md` section 1).
 
 - **726 shots**: 331 from the handoff shot list (`../shotlist.json`, with the final script's changes), 352 in the proposed additions, 43 in the proposed rating pass. Everything proposed is in the script by default and is not canon until Daxtyn accepts it.
-- **Estimated length: 54:14 expected** (tight cut 44:08, loose cut 68:50), 78096 frames at 24 fps. `tools/check_final.py` gives the same estimate, because the shots use its timing tables.
+- **Estimated length: 54:14 expected** (tight cut 44:08, loose cut 68:50), 78096 frames at 24 fps. The shots use `tools/check_final.py`'s timing tables, which estimate 54:22; the few seconds between the two are the duplicate beats played once (1B-11, X7-drop) and rounding each shot to half a second.
 - **385 spoken lines**, each placed in exactly one shot (ids from `dialogue.json`).
 - **167 hard shots** (difficulty 4-5). **452 shots carry a realism strategy** (faces, crowds, blood, gore, the dead).
 - Dropped as duplicates: 1B-11 (played by X3); X7-drop (played by 1F-05).

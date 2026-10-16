@@ -177,6 +177,18 @@ def main(argv):
         fail('final/dialogue.json is stale (the script changed): run tools/extract_final_dialogue.py first')
     LINES = {x['id']: x for x in DL['lines']}
     order_ids = [x['id'] for x in DL['lines']]
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        jp = os.path.join(tmp, 'cf.json')
+        sys.stdout = open(os.devnull, 'w')
+        try:
+            rc = cf.main(['--json', jp])
+        finally:
+            sys.stdout.close()
+            sys.stdout = _stdout
+        if rc != 0:
+            fail('tools/check_final.py fails on the final script: fix that first')
+        CF = json.load(open(jp, encoding='utf-8'))['totals']
 
     L = final_raw.split('\n')
     top, nodes, errors = cf.parse(L)
@@ -497,6 +509,7 @@ def main(argv):
             'lens': 'Full-frame-equivalent focal length suggested per shot: default by shot size (EWS 24, WS 35, MS 50, CU 85, INS 100 macro), long lenses where two dragons share the frame.',
             'native_4k_s_per_frame': 'Seconds of rendering per 4K frame on this 4-vCPU CPU-only machine, one browser, velocity motion blur: MEASURED style-frame figures and estimates derived from them (see render-schedule.md).',
             'dropped_shots': dropped,
+            'check_final_estimate_s': {'low': CF['low_s'], 'expected': CF['expected_s'], 'high': CF['high_s']},
         },
         'sets': [{'id': k, 'description': v, 'shots': sum(1 for s in shots if s['set'] == k),
                   'expected_s': sum(s['est_seconds'] for s in shots if s['set'] == k),
@@ -559,8 +572,10 @@ def build_md(d):
     w('')
     w('- **%d shots**: %d from the handoff shot list (`../shotlist.json`, with the final script\'s changes), %d in the proposed additions, %d in the proposed rating pass. Everything proposed is in the script by default and is not canon until Daxtyn accepts it.' % (
         T['shots'], T['shots_by_origin']['handoff'], T['shots_by_origin']['addition'], T['shots_by_origin']['rating_pass']))
-    w('- **Estimated length: %s expected** (tight cut %s, loose cut %s), %d frames at 24 fps. `tools/check_final.py` gives the same estimate, because the shots use its timing tables.' % (
-        mm(T['expected_s']), mm(T['low_s']), mm(T['high_s']), T['frames_expected']))
+    cfe = d['meta']['check_final_estimate_s']
+    w('- **Estimated length: %s expected** (tight cut %s, loose cut %s), %d frames at 24 fps. The shots use `tools/check_final.py`\'s timing tables, which estimate %s; the few seconds between the two are the duplicate beats played once (%s) and rounding each shot to half a second.' % (
+        mm(T['expected_s']), mm(T['low_s']), mm(T['high_s']), T['frames_expected'], mm(cfe['expected']),
+        ', '.join(x['id'] for x in d['meta']['dropped_shots'])))
     w('- **%d spoken lines**, each placed in exactly one shot (ids from `dialogue.json`).' % T['spoken_lines'])
     w('- **%d hard shots** (difficulty 4-5). **%d shots carry a realism strategy** (faces, crowds, blood, gore, the dead).' % (T['hard_shots'], T['shots_with_realism_strategy']))
     w('- Dropped as duplicates: %s.' % '; '.join('%s (played by %s)' % (x['id'], x['played_by']) for x in d['meta']['dropped_shots']))

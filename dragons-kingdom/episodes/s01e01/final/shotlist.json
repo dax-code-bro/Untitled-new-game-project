@@ -25,7 +25,12 @@
     "played_by": "1F-05",
     "what": "(proposal shot 'The rider looks back' is played by the handoff's 1F-05)"
    }
-  ]
+  ],
+  "check_final_estimate_s": {
+   "low": 2655.5,
+   "expected": 3261.5,
+   "high": 4133.5
+  }
  },
  "sets": [
   {

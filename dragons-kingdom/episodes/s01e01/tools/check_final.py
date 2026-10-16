@@ -787,7 +787,8 @@ def main(argv):
           % (tuple(ce.mmss(tot[k]) for k in K) + tuple(tot[k] for k in K) + ("yes" if in_range else "NO",)))
     for s_ in over60:
         print("  over 60? %-46s -> expected %s, loose-cut bound %s" % (s_["step"], ce.mmss(s_["expected_after_s"]), ce.mmss(s_["loose_after_s"])))
-    print("frames at %d fps: %d expected; native-4K render %.0f-%.0f h (expected cut), up to %.0f h (loose cut)"
+    print("frames at %d fps: %d expected; at the BENCHMARK scene's speed native 4K would take %.0f-%.0f h (up to %.0f h, loose cut); "
+          "the real sets are far heavier: see final/render-schedule.md"
           % (ce.FPS, frames["expected_s"], render_h["best_case_h"], render_h["worst_case_h"], render_h["loose_cut_worst_h"]))
     if "--markdown" in argv:
         print("\n| Start | Part | What | Tight cut | Expected | Loose cut |\n|---:|---|---|---:|---:|---:|")

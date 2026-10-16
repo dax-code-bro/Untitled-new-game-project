@@ -34,10 +34,31 @@ a CHANGED block on a PENDING line.
 1. `python3 tools/check_final.py --update-timing --clean` (from `episodes/s01e01/`), then `python3 tools/check_final.py` must exit 0.
 2. If you add, cut or renumber a block, update `RATING_SHOTS`, `CHANGE_SHOTS`, `RATING_DEPENDS` or `PENDING_LINES` in
    `tools/check_final.py`, the closing note's link paragraphs, and `CHANGES.md`.
-3. Rebuild the breakdown (next section).
+3. `python3 tools/build_final_breakdown.py` (rebuilds the breakdown below; `--check` verifies it is current).
 
-## Breakdown of the final script (in progress, see below for status)
+## Breakdown of the final script (done 2026-10-16)
 
-Generated into this folder from `screenplay-final.md`:
-`dialogue.json`, `dialogue.md`, `onscreen-text.json`, `shotlist.json`, `shotlist.md`, `voices.json`, `assets-delta.md`,
-`render-schedule.md`.
+Generated into this folder from `screenplay-final.md` (`tools/build_final_breakdown.py --check` exits 0):
+- `dialogue.json` / `dialogue.md`: 385 spoken lines (198 handoff, 171 additions, 16 rating pass), 26 speakers,
+  4 PENDING lines, est. 12:52 of speech. `onscreen-text.json`: 12 cards (T11 Cling caption in X5, T12 optional hull name in X4).
+- `voices.json`: 26 roles; the 18 handoff roles keep `../voices.json` (ADULT VILLAGER recast male: the additions make
+  him a man); 8 new roles (YOUNG ATTENDANT af_sky, LOOKOUT af_jessica, SAILOR bf_alice, OLD WOMAN bf_isabella, PARTNER
+  af_sarah, and blends for SHIP'S MASTER, KEEPER, INSTRUCTOR, ADULT VILLAGER because all nine allowed male voices were
+  taken). Blends are NOT auditioned yet.
+- `shotlist.json` / `shotlist.md`: 726 shots (331 handoff incl. 3 CHANGED extras, 352 additions, 43 rating pass),
+  54:14 expected (44:08-68:50); 1B-11 and X7's last shot are played once (duplicates). check_final says 54:22.
+- `render-schedule.md` / `render-jobs.json`: ~2,580 h one browser (1,956-3,545), ~2,366 h wall with 2 browsers
+  (~99 days) from the MEASURED round-4 style-frame speeds x the measured velocity-blur ratio; 723 jobs, chunks
+  0.25-2 s; scene-by-scene delivery (intermediates 21-42 GB total, never all on disk at once).
+- `assets-delta.md` (hand-written): sets S1-S9, people H1-H12, dragons D1-D7, props P1-P12, effects F1-F10,
+  animation A1-A7 that do not exist in `scenes/lib/` yet.
+
+## Open (needs Daxtyn or a later step)
+
+- CHANGES.md questions 1-10 (species wording, dog-sit, Remi's age, deaths, wine, the drug's name, the verse,
+  language, new roles, which additions to keep).
+- Audition the four blended voices and the eight new roles; record the sung verse (R13-01), Abby's cry (X12) and the
+  rider's scream with people.
+- Pilot renders to replace the s/frame estimates (`final_build.py` SPF), then rebuild the schedule.
+- When Daxtyn accepts an addition, SERIES.md section 5 says remove its markers: check_final.py's proofs 1b/2 then need an
+  "accepted text" mode (not built).

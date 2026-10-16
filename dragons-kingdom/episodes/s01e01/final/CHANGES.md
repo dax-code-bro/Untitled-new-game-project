@@ -269,7 +269,7 @@ These are estimates for an animatic, not measured footage. They use the same tim
 | | **Total** | | **44:16** | **54:22** | **68:54** |
 
 - **Where the time comes from:** the handoff screenplay 25:16, the 28 additions 25:21 and the rating pass 3:45. The dragon wording changes add no time. The rating pass adds 16 spoken lines (125 words) and about 2¾ minutes of pictures. Rows can differ from the total by a second because of rounding.
-- **Render cost** if every frame is made at native 4K (`SERIES.md` section 2): about 78,300 frames, or roughly 43 to 70 hours at the speeds measured on the benchmark scene. The real sets are heavier; `render-schedule.md` plans with the slower speeds measured on the style frames.
+- **Render cost** if every frame is made at native 4K (`SERIES.md` section 2): about 78,000 frames. At the speed of the simple benchmark scene that would be 43 to 70 hours, but the real sets are far heavier: the five style frames took 131 to 822 seconds per 4K frame on this machine. `render-schedule.md` plans with those measurements: about 2,600 hours of rendering, roughly 99 days of continuous rendering on this one machine, delivered to you scene by scene. A second machine would shorten it; the faster render settings are not allowed for the finished episode.
 
 ## 8. Review fixes (16 October 2026)
 
