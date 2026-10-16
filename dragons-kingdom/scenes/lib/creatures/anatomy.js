@@ -147,12 +147,13 @@ export const DESIGNS = {
     neckP: [[0, 1.7, 2.0], [0.5, 2.35, 2.8], [1, 3.5, 4.3]],
     trunkP: [[0, 4.2, 5.8], [0.25, 4.5, 6.1], [0.6, 3.7, 4.7], [0.85, 3.3, 3.8], [1, 3.5, 3.6]],
     tailP: [[0, 3.4, 3.7], [0.15, 2.6, 2.9], [0.35, 1.6, 1.8], [0.6, 0.72, 0.82], [0.85, 0.27, 0.3], [1, 0.05, 0.05]],
-    stand: { hip: 14.4, shoulder: 14.8, forearmLean: 10, humerusRise: 16, neckRise: 40, neckTop: 10, headPitch: -12, tailDroop: 18,
-      low: { belly: 0.4, mtAng: 52, wristFwd: 0.22, wristOut: 0.08, pole: [0.15, 0.3, -1] } },
+    // (rev. 3: the sculpt (bind) hip height follows the shorter legs)
+    stand: { hip: 10.6, shoulder: 11.0, forearmLean: 10, humerusRise: 16, neckRise: 40, neckTop: 10, headPitch: -12, tailDroop: 18,
+      low: { belly: 0.5, mtAng: 54, wristFwd: 0.22, wristLift: 0.65, wristOut: 0.08, pole: [0.15, 0.3, -1] } },
     // (albatross: the long folded wings lie along the back, the tips crossing over the tail base)
     fold: { curl: [-4, 2, 6], inward: 0.16, wrap: 0.1, outUp: 0.5, lowCurl: [6, 12, 20], low: { outUp: 0.15, inward: 0.12, wrap: 0.06, mcFan: 0.8, fanDown: 1.2 } }, bulk: { leg: 1.2, arm: 1.15, neck: 1.0 },
     // raptor feet: long toes, big curved talons, a large opposable hallux with the biggest talon
-    leg: { femur: 4.9, tibia: 5.9, mt: 3.2, toe: 3.4, claw: 1.3, d: [3.6, 2.3, 2.15, 1.4, 1.2], mtAng: 55, heelPad: 0.4, hallux: 0.62, toeR: 0.3, raptor: 1 },
+    leg: { femur: 4.0, tibia: 4.8, mt: 2.8, toe: 3.1, claw: 1.3, d: [3.6, 2.3, 2.15, 1.4, 1.2], mtAng: 55, heelPad: 0.4, hallux: 0.62, toeR: 0.3, raptor: 1 },
     wing: { humerus: 8.6, forearm: 16.4, d: [3.0, 2.0, 1.25, 0.85],
       fingers: [['II', 14.5, [5, 2.5], 2], ['III', 15.5, [11.5, 8.5, 5], -5], ['IV', 14, [10.5, 7.2, 3.4], -28], ['V', 12.8, [9, 6, 2.6], -52]],
       thumb: { mc: 1.3, ph: 0.9, claw: 1 }, to: 'ankle', glide: { humerus: -15, forearm: 12 }, legSplay: 30, thick: 0.014 },
@@ -737,7 +738,7 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
       memRoots.push({ name: proBone, parent: 'thorax' });
     }
     wings.push({ side, sd, prefix: pre, root: S, proRoot, elbow: w.Er, wrist: w.Wr, fingers, attach, attachBones, nF, thumbRest: w.thumbRest, padDist: rA[2] * 1.03,
-      thumbSculpt: { dir: tdir, up: dors1, q: w.qF },
+      thumbSculpt: { dir: tdir, up: dors1, q: w.qF, base: tbase, tipOff: sub(t2, tbase), tipR: thR * 0.6 },
       thumb: w.Wr, billow: L * 0.03, detachedSDF: detachable ? target : null, thickness: K(WG.thick ?? 0.005), memRoots, proBone });
   }
 

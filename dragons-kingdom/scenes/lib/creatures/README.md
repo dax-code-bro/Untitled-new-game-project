@@ -9,12 +9,14 @@ would be built, and on 2026-10-14 he asked for exactly that, with **horns on eve
 
 **The body plan (every dragon): a wyvern built like a bat and a pterosaur.** Two hind legs
 (semi-digitigrade, three toes forward and a gripping hallux, a heel pad); **the wings are the
-front limbs**. (DESIGN rev. 2) **At rest a dragon stands on its two legs** like a big ground bird
-or a theropod - trunk raised ~30 degrees, feet under the centre of mass, the tail as counterweight
-and prop - with the wings folded off the ground (`poses.upright`); Leaf sits back on his haunches
-with his wings folded. Walking, the take-off crouch and the landing use the wrist pads and thumbs
-of the folded wings (as vampire bats and pterosaurs did). No extra limbs. Every dragon has its own
-fixed horn set.
+front limbs**. (DESIGN rev. 3, Daxtyn 2026-10-16: *"make them low to the ground with their legs
+more towards the center of their body"*) **The hip joints sit under the middle of the body** and
+**every dragon stands, walks and rests LOW** like a big, heavy, ordinary animal: the trunk carried
+low and nearly level, the knees bent in a deep crouch with the feet under the centre of mass, the
+folded wings' wrist pads and thumb claws down under the shoulders as front supports (the elbows
+stand up beside the withers like a cloak), the neck forward and low, the tail low behind
+(`poses.stand`, DESIGN 1.5c). Leaf can sit like a dog, rump on the ground, wrists in front. No
+extra limbs. Every dragon has its own fixed horn set.
 
 | creature | canon look (Daxtyn / screenplay) | length | wingbeat | horns (fixed in every shot) |
 |---|---|---|---|---|
@@ -47,14 +49,14 @@ Poses (`poses.js`; IK on the feet and wrist pads, so planted contacts stay plant
 
 | pose | what |
 |---|---|
-| `upright` | (rev. 2, the resting stance) on the TWO legs: trunk raised 30-34 deg, feet ahead of the hips, neck in a tall S, the wings folded off the ground (upper arm back along the chest, forearm up to the wrist beside the neck base, the hand back along it, the fingers in one bundle along the flank), the tail level from the hips and laid on the ground from its middle; breathing, idle head drift, blinks |
-| `stand` | wing-walk stance (the quadrupedal walk's base; not the resting stance any more): weight on the feet and the folded wings' wrist pads, elbows high, the heavy tail hangs in an arc and its end lies on the ground |
-| `walk` | lateral-sequence walk (foot, wrist, foot, wrist; duty ~0.7), speed from size; the scene moves the root by `speed * t` |
-| `sit` | Leaf's dog-like sit: haunches down, trunk up, the wings folded off the ground (rev. 2; `plantWrists: true` puts the wrists down in front), tail curled round |
-| `crouch`, `lie` | sphinx crouch (mounting, the start of a launch); lying on the belly, `sprawl: 1` for the newborn |
-| `rear` | up on the hind legs (`k` 0..1) |
+| `stand` | (rev. 3) the LOW stance, the resting carriage: chest underside ~1/3 of the chest depth above the ground (`belly`), trunk ~level, feet under the middle of the body, wrist pads + thumbs down under the shoulders, elbows up beside the withers, the fingers in one bundle back along the flank, neck forward and low, tail low with its outer half on the ground; breathing, a slow weight shift, idle head drift, blinks. Per-dragon overrides in `design.stand.low` |
+| `upright` | (rev. 3) retired: an alias of `stand` |
+| `walk` | lateral-sequence low walk (foot, wrist, foot, wrist; duty ~0.7), speed from size; the scene moves the root by `speed * t` and the planted contacts stay put |
+| `sit` | Leaf's dog-like sit: the rump behind the hips on the ground, chest ~30 deg up, wrists planted in front (`plantWrists: false` folds the wings off the ground), tail curled round |
+| `crouch`, `lie` | the low stance sinking to the chest (mounting, the start of a launch); lying on the belly, legs folded under, `sprawl: 1` for the newborn |
+| `rear` | up on the hind legs (`k` 0..1) - only for a moment (to look over something, to threaten) |
 | `pushUp`, `struggle` | the newborn pushing up on its wrists and thumbs; the full weak struggle of 1A (trembles, lifts the chest a few cm, a wrist slips, rests) |
-| `fire` | on the two legs: inhale, trunk lowered toward level, head low along the line of fire, jaw 25-30 deg; drive `createFire` with it |
+| `fire` | from the low stance: inhale, chest lifted a little on the planted wrists, neck stretched forward and low along the line of fire, jaw 25-30 deg; drive `createFire` with it |
 | `flight` | flapping (tempo from size, `hz`, `phase`, `amp`, `corr` for Leaf's uneven beats, `bank`, `bodyPitch`); the neck keeps the head steady, legs trail with the toes curled |
 | `glide` | wings held with dihedral at the arm and droop at the hand; `bank` rolls the body, the head counter-rolls |
 | `dive` | Starlight's stoop: wings half folded into an "M", legs drawn in tight, feet clenched (`fold` 0..1) |
@@ -63,7 +65,7 @@ Poses (`poses.js`; IK on the feet and wrist pads, so planted contacts stay plant
 | `mouthHold` | Charcoal turns his head round and takes Leaf's whole head in his jaws: open to 45 deg, close to a holding gape (`hold`, rad; the shot uses 0.5 with Leaf's snout 1.85 m inside the front teeth) (`turn`, `side`, `release`) |
 | `sculpt` | the SCULPT bind configuration (debugging the body sculpt) |
 | `launch` | heavy take-off: crouch, leg vault, unfold, the first downstroke, beats in ground effect (timing scales with size; `pose.launch` gives the phases) |
-| `land` | flare, feet reach forward, wrist pads come down, run-out |
+| `land` | (rev. 3) a low approach: a short ~25 deg flare, the feet touch down under the middle of the body, the wrist pads come down, the wings fold into the low stance |
 | `blend`, `contactsOf` | slerp two poses; world contact points (footprints, dust) |
 
 Common options: `look: [yaw, pitch]`, `eyes`, `jaw`, `blink: false`, `lidRelax`, `breathe`.
@@ -83,10 +85,10 @@ computed as a pure function of `t` in `creatures-shots.js` (`scoutWingLoss`).
 
 | scene | what |
 |---|---|
-| `creatures-hero.js` (= `creatures-turntable.js`) | the 14 hero shots of `creatures-shots.js`: Charcoal standing on two legs 3/4 front with Remi; Charcoal's head; Charcoal's take-off (dust dome, a power-law spray of clods and turf, craters); Charcoal and Leaf flying side by side with Remi and Abby in the saddles; the head-in-mouth hold seen square on to Charcoal's head (Leaf's whole head inside the jaws, Abby clear); Leaf sitting with Abby; Charcoal's fire; Leaf's fire; Starlight gliding seen from the ground (a watchman points, a 27 m tower for scale); Starlight's dive with Queen Fall riding; Queen Fall in the rig on Starlight (air to air); the hatchling macro on the straw nest; the scout banking with its crouched rider; the scout losing its LEFT wing seen from behind |
+| `creatures-hero.js` (= `creatures-turntable.js`) | the 17 hero shots of `creatures-shots.js`: Charcoal in the low stance 3/4 front with Remi; Charcoal's head; Charcoal's low walk side on (feet + wrist pads); Charcoal resting (lying); Charcoal's take-off (dust dome, a power-law spray of clods and turf, craters); Charcoal and Leaf flying side by side with Remi and Abby in the saddles; the head-in-mouth hold seen square on to Charcoal's head (Leaf's whole head inside the jaws, Abby clear); Leaf sitting with Abby; Leaf landing (feet down, wrists coming down); Charcoal's fire; Leaf's fire; Starlight gliding seen from the ground (a watchman points, a 27 m tower for scale); Starlight's dive with Queen Fall riding; Queen Fall in the rig on Starlight (air to air); the hatchling macro on the straw nest; the scout banking with its crouched rider; the scout losing its LEFT wing seen from behind |
 | `creatures-turntable-<name>.js` | only one dragon's shots (quicker builds) |
 | `creatures-review.js` | every shot for 1 s (`--fps 1`) |
-| `creatures-contact.js` | contact sheet: each dragon on a turntable (4 views, t = 0-19; standing on two legs, Leaf sitting, the newborn lying), the scale lineup with a 1.8 m person (t = 20, also `creatures-lineup.js`), Charcoal, Leaf, Starlight and the scout gliding (t = 21-24), Charcoal walking on his feet and wrists (t = 25), Leaf standing on two legs (t = 26) |
+| `creatures-contact.js` | contact sheet (29 frames): each dragon on a turntable (4 views, t = 0-19; the low stance, the newborn lying), the scale lineup with a 1.8 m person (t = 20, also `creatures-lineup.js`), Charcoal, Leaf, Starlight and the scout gliding (t = 21-24), Charcoal's low walk on his feet and wrists (t = 25), Leaf sitting (t = 26), Charcoal lying (t = 27), Charcoal crouched for the take-off (t = 28) |
 | `creatures-dev.js` + `creatures-dev.json` | free views/poses for look development |
 
 Shots are lit by the photographed sky alone (Poly Haven kloofendal_48d_partly_cloudy, CC0, its

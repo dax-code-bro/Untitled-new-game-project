@@ -90,7 +90,7 @@ export function lookParams(THREE, look) {
       base: lin(THREE, 0.66, 0.655, 0.65), belly: lin(THREE, 0.64, 0.625, 0.615), dorsal: lin(THREE, 0.68, 0.675, 0.68),
       wear: lin(THREE, 0.7, 0.7, 0.7), crev: 0.9, dust: lin(THREE, 0.45, 0.43, 0.4), salt: lin(THREE, 0.8, 0.8, 0.78),
       // (rev. 3: lower relief and a light crevice occlusion - domed plates with dark grout read as a pebble mosaic)
-      rough: [0.2, 0.05, 0.08, 0.2], amp: 0.09, keel: 0.0, facet: 1.0, jit: 0.25, metal: [0, 0], mottle: 0.06, cavAO: 0.2,
+      rough: [0.2, 0.05, 0.08, 0.2], amp: 0.06, keel: 0.0, facet: 0.55, jit: 0.25, metal: [0, 0], mottle: 0.06, cavAO: 0.12,
       // (rev. 3: fewer, smaller dorsal plates - the big ones read as white cobbles from a rider's distance)
       hier: [0.4, 1.0, 0.5, 0.0], damp: 0.0, bellyP: [0.42, 0.85, 0.15, 0.3], plateZ: -0.02,
       crevCol: lin(THREE, 0.56, 0.52, 0.52), crevAmt: 0.1,
@@ -98,7 +98,7 @@ export function lookParams(THREE, look) {
       scl: [0.8, 0.42, 0.75, 1.3], tub: [0.0, 2.5, 0.0, 0], skin2: [0.06, 0.15, 0, 0.12], skin3: [0.08, 0.16, 1.5, 0], scl2: [0.62, 0.7, 0, 0],
       // flat plates with hairline joints (wide grooves read as cobbles or a plaster cast)
       // (rev. 3: lower imbricate lift and narrower joints - each plate's raised rear edge made a pillow)
-      vor: [10.0, 0.0, 0.05, 0.3],
+      vor: [12.0, 0.0, 0.03, 0.25],
       dustAmt: 0.2, saltAmt: 0.0, oral: lin(THREE, 0.45, 0.16, 0.16), oralDark: lin(THREE, 0.1, 0.03, 0.03),
       // white-grey membranes (albino, but thick enough that blood barely tints them), silver highlights
       membrane: lin(THREE, 0.66, 0.63, 0.6), trans: lin(THREE, 0.3, 0.22, 0.2), vein: lin(THREE, 0.55, 0.3, 0.3), memRough: 0.5, memSpec: 0.55,
@@ -705,10 +705,11 @@ void dkMembrane(inout vec3 col) {
   float lf = (1.0 - smoothstep(0.3, 0.8, fwr / sc));
   float lf2 = (1.0 - smoothstep(0.3, 0.8, fwr / (sc * 0.42)));
   // (kept subtle: stronger, it reads as felt or cloth instead of skin)
-  dkMemG = (-2.0 * sign(l1.x - 0.5) * l1.yzw * 0.03 * lf + l2.yzw * 0.015 * lf2) * (1.0 + uFold);
+  // (rev. 3: a smooth step instead of sign() - its iso-contours drew a jigsaw over Starlight's white membrane)
+  dkMemG = (-2.0 * clamp((l1.x - 0.5) * 6.0, -1.0, 1.0) * l1.yzw * 0.03 * lf + l2.yzw * 0.015 * lf2) * (1.0 + uFold);
   float cr = 1.0 - 2.0 * abs(l1.x - 0.5);
   col *= 1.0 - 0.18 * smoothstep(0.75, 1.0, cr) * lf;           // creases a little darker
-  dkMemR = clamp(uMemRough * (0.8 + 0.45 * l2.x) * (0.72 + 0.6 * mot) + 0.1 * cr * lf + 0.08 * hem + 0.12 * nearBone, 0.15, 1.0);
+  dkMemR = clamp(uMemRough * (0.8 + 0.45 * l2.x) * (0.84 + 0.32 * mot) + 0.1 * cr * lf + 0.08 * hem + 0.12 * nearBone, 0.15, 1.0);
 }
 vec3 dkTransmit(vec3 lightCol, vec3 L, vec3 N, vec3 V) {
   float back = saturate(-dot(N, L));

@@ -218,12 +218,28 @@ function aimThumb(pb, side, arm, qT, dir) {
   const sd = side === 'L' ? 1 : -1;
   const w = A.wings.find((x) => x.side === side);
   if (!w || !w.thumbSculpt) return;
-  const d = dir || [0.35, 0.08, 1];
+  const T = w.thumbSculpt;
+  const d = dir || [0.35, null, 1];
   const f = qRot(qT, [sd * d[0], 0, d[2]]);
-  const want = norm([f[0], -d[1] * Math.hypot(f[0], f[2]), f[2]]);
-  const R = aimQ(w.thumbSculpt.dir, w.thumbSculpt.up, want, [0, 1, 0]);
-  const qNow = qMul(R, w.thumbSculpt.q);
-  pb.quat(`w_${side}_th`, qMul(qInv(arm.qF), qNow));
+  const fl = Math.hypot(f[0], f[2]) || 1;
+  // the thumb's base where the forearm carries it (sculpt -> now)
+  const baseW = add(arm.E, qRot(arm.qF, sub(w.thumbRest.base, w.elbow)));
+  const pick = (down) => {
+    const want = norm([f[0] / fl, -down, f[2] / fl]);
+    const R = aimQ(T.dir, T.up, want, [0, 1, 0]);
+    return { R, tipY: add(baseW, qRot(R, T.tipOff))[1] };
+  };
+  let best;
+  if (d[1] !== null && d[1] !== undefined) best = pick(d[1]);
+  else {
+    // the pitch that sets the thumb tip on the ground (y = its contact radius), within -0.5..0.5
+    for (let k = -10; k <= 10; k++) {
+      const p = pick(k * 0.05);
+      const e = Math.abs(p.tipY - T.tipR);
+      if (!best || e < best.e) best = { ...p, e };
+    }
+  }
+  pb.quat(`w_${side}_th`, qMul(qInv(arm.qF), qMul(best.R, T.q)));
 }
 
 // ------------------------------------------------------------ shared layers
@@ -497,7 +513,7 @@ function plantLow(pb, o, LP) {
     const wf = (o.wrists && o.wrists[side]) || {};
     const S = F.P[`w_${side}_0`];
     const w = A.wings.find((x) => x.side === side);
-    const wy = (wf.lift ?? 0) + w.padDist * 0.92;
+    const wy = (wf.lift ?? 0) + w.padDist * 0.92 + (LP.wristLift ?? 0) * d.wristR;
     const wp = wf.at ? [wf.at[0], wf.at[1] + w.padDist * 0.92, wf.at[2]] : [S[0] + sd * (d.fore * LP.wristOut + (wf.dx ?? 0)), wy, S[2] + d.fore * (LP.wristFwd - 0.04 * asym) + (wf.dz ?? 0)];
     const qT = F.Q.thorax;
     const pl = wf.pole ?? LP.pole;

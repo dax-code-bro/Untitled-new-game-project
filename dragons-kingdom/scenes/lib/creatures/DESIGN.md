@@ -72,8 +72,9 @@ references, sketches, the code changes the new layout needs and a step-by-step b
     ground with the elbow swung out sideways or back over the hips; a short humerus puts the
     elbow up beside the withers and the forearm down to a wrist under the shoulder - the
     pterosaur / bat carriage of section 1.1.
-  * Starlight's legs 15% shorter (femur 4.9, tibia 5.9, metatarsus 3.2 m) and Leaf's 8% shorter
-    (0.78 / 0.9 / 0.48 m): folded into the low crouch the longer legs stood out like a grasshopper's.
+  * Starlight's legs ~30% shorter (femur 4.0, tibia 4.8, metatarsus 2.8 m: femur + tibia 1.44x her
+    chest depth, as Charcoal's) and Leaf's 8% shorter (0.78 / 0.9 / 0.48 m): folded into the low
+    crouch the longer legs put the knee above the hip, like a grasshopper's.
   * Leaf's dog-sit is lower (chest ~30 degrees up): the rump behind the hips rests on the ground,
     the wrists are planted in front.
 * The screenplay (`episodes/s01e01/screenplay.md`) stays binding for events: section 1.13 lists
@@ -1714,9 +1715,9 @@ export const DESIGN = {
     trunkProfile: [[0, 4.2, 5.8], [0.25, 4.5, 6.1], [0.6, 3.7, 4.7], [0.85, 3.3, 3.8], [1, 3.5, 3.6]],
     tailProfile: [[0, 2.9, 3.2], [0.15, 2.2, 2.45], [0.35, 1.4, 1.6], [0.6, 0.72, 0.82], [0.85, 0.27, 0.3], [1, 0.05, 0.05]],
     leg: {
-      femur: 4.9,     // rev. 3 (was 5.8)
-      tibia: 5.9,     // rev. 3 (was 7)
-      metatarsus: 3.2, // rev. 3 (was 3.8)
+      femur: 4.0,     // rev. 3 (was 5.8)
+      tibia: 4.8,     // rev. 3 (was 7)
+      metatarsus: 2.8, // rev. 3 (was 3.8)
       toeIII: 3.6,
       claw: 1.3,
       diameters_thigh_knee_shank_ankle_foot: [3.0, 1.75, 1.55, 0.92, 0.76],  // rev. 1: 170 t per leg
