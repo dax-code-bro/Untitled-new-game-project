@@ -1757,15 +1757,15 @@ He stands holding the empty bucket, looking at the great jaw, for longer than he
 
 NOTE (not spoken): [RATING PASS] Dark humor and alcohol among the adult keepers. They keep their voices down.
 
-PICTURE: Further back, two keepers watch the prince at the jaw. One of them takes a flask from inside his coat, drinks and passes it to the other.
+PICTURE: The GROUND KEEPER leaves the prince to it and walks back to where another keeper stands watching. That keeper takes a flask from inside his coat, drinks and passes it over.
 
 GROUND KEEPER [low]:
-"Twenty years I've fed him."
+"Years I've fed him."
 
 KEEPER [low]:
 "And he's never once eaten you. Don't spoil it."
 
-The first keeper takes the flask back and drinks again.
+The ground keeper drinks, longer than he meant to, and hands the flask back.
 
 [RATING PASS R10 — end]
 

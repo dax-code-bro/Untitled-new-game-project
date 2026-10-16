@@ -117,7 +117,7 @@ RATING_SHOTS = {
     "R9": {"title": "2C: the crew's dark joke", "key": "Keep your fingers where you can count them", "shots": [
         ("Master hears the order, pipe in teeth; pours the ale over the side", 5, 0), ("Crew exchange", 0.5, 0.5)]},
     "R10": {"title": "X15: the keepers' flask", "key": "never once eaten you", "shots": [
-        ("Two keepers watch; the flask passes", 3.5, 0), ("Flask exchange", 0.5, 0), ("He drinks again", 1.5, 0.5)]},
+        ("The ground keeper walks back to another keeper; the flask passes", 4, 0), ("Flask exchange", 0.5, 0), ("He drinks, longer than he meant to", 1.5, 0.5)]},
     "R11": {"title": "X20: the couple's joke; ale and pipes", "key": "That's what I keep telling you", "shots": [
         ("He laughs into his cup; she meant it", 2.5, 0), ("Ale, cider and pipe smoke along the table", 3, 0)]},
     "R12": {"title": "3A: the king's toast", "key": "To the person behind you", "shots": [
