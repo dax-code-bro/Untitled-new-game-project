@@ -187,18 +187,20 @@ export const DESIGNS = {
   },
   hatchling: {
     name: 'Gold hatchling', L: 1.0, skull: 0.19, neck: 0.13, trunk: 0.27, tail: 0.41, neckBones: 8, tailBones: 20,
-    head: [[0, 0.15, 0.15], [0.3, 0.165, 0.17], [0.55, 0.14, 0.13], [0.8, 0.11, 0.095], [1, 0.08, 0.065]],
+    // (rev. 3: a flatter, longer-browed skull - the tall dome read as a toy's)
+    head: [[0, 0.15, 0.14], [0.3, 0.165, 0.145], [0.55, 0.14, 0.112], [0.8, 0.108, 0.08], [1, 0.078, 0.055]],
     neckP: [[0, 0.085, 0.095], [0.5, 0.095, 0.105], [1, 0.13, 0.15]],
     trunkP: [[0, 0.15, 0.17], [0.3, 0.19, 0.2], [0.6, 0.2, 0.2], [0.85, 0.16, 0.16], [1, 0.13, 0.13]],
     tailP: [[0, 0.1, 0.1], [0.15, 0.075, 0.078], [0.35, 0.05, 0.052], [0.6, 0.028, 0.03], [0.85, 0.012, 0.013], [1, 0.004, 0.004]],
     stand: { hip: 0.17, shoulder: 0.14, forearmLean: 22, humerusRise: -12, neckRise: 20, neckTop: 5, headPitch: -25, tailDroop: 30 },
-    fold: { curl: [15, 70, 110] }, bulk: { leg: 1.25, arm: 1.2, neck: 1.0 },
+    // (rev. 3: slimmer limbs and a smaller yolk belly - the bloated body and stubby thick limbs read as a squeeze toy)
+    fold: { curl: [15, 70, 110] }, bulk: { leg: 1.05, arm: 1.0, neck: 1.0 },
     leg: { femur: 0.075, tibia: 0.08, mt: 0.045, toe: 0.065, claw: 0.018, d: [0.05, 0.035, 0.03, 0.022, 0.02], mtAng: 30, heelPad: 0.5, hallux: 0.45, toeR: 0.0085, soft: 1 },
     wing: { humerus: 0.072, forearm: 0.118, d: [0.038, 0.026, 0.02, 0.016],
       fingers: [['III', 0.08, [0.05, 0.035, 0.02], -10], ['IV', 0.07, [0.035, 0.02, 0.01], -48], ['V', 0.06, [0.025, 0.015, 0.008], -80]],
       thumb: { mc: 0.016, ph: 0.014, claw: 0.02 }, to: 'knee', glide: { humerus: -16, forearm: 12 }, legSplay: 22, thick: 0.0006 },
     eye: 0.042, snout: 0.2, teeth: [0, 0], toothMax: 0, jawMax: 30, newborn: 1,
-    body: { hump: 0, keel: 0.4, belly: 1.6, pec: 0.5, arm: 0.45, thigh: 0.55, tailbase: 0.7, neck: 0.7 },
+    body: { hump: 0, keel: 0.4, belly: 1.2, pec: 0.5, arm: 0.45, thigh: 0.55, tailbase: 0.7, neck: 0.7 },
     headX: { brow: 0.35, cheek: 0.45, jawMuscle: 0.35, nostril: 0.6, lipCover: 0.0, tympanum: 0.4, ridgeR: 0.026, soft: true, eggTooth: true },
     horns: 'buds', crest: { tail: 0.0, back: 0.0 },
     scale: { body: 0.0034, belly: 0.006, head: 0.0028 },

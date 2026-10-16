@@ -51,6 +51,31 @@ references, sketches, the code changes the new layout needs and a step-by-step b
     a grid. Teeth bigger (Charcoal toothMax 0.4 m), thin dark gum margins. Nostrils are slits.
   * The newborn: snout 20% of the skull, eye 0.042 m (22%), an overbite (the lower jaw inside the
     upper), no labial ridge or puffy cheeks, no throat groove (it read as a helmet seam).
+* **Revision 3 (2026-10-16, Daxtyn's feedback on the rev. 2 renders, quoted: *"Make them look
+  more normal like put their legs, so make them low to the ground with their legs more towards
+  the center of their body"*; recorded in `DRAGONS.md`):** marked "rev. 3". This replaces the
+  rev. 2 resting stance (the trunk raised 30-34 degrees on two legs at the rear read as a rearing
+  horse or a kangaroo).
+  * **The hip joint is under the middle of the body** (section 1.5c): the acetabulum moved from
+    the tail base (trunk station 1.0) forward to station 0.68 of the shoulder-to-tail-base
+    trunk, as in a bird, whose hip sits about two thirds of the way along the synsacrum. The trunk
+    behind it (pelvis, ischium, the caudofemoralis) flows into the heavy tail base, so seen from
+    the side the two legs come out of the middle of the animal.
+  * **The ground stance is LOW and level** (1.5c): the chest carried with its underside about a
+    third of the chest depth above the ground, the knees bent in a deep crouch, the feet under the
+    centre of mass, the folded wings' wrist pads and thumb claws down under the shoulders as front
+    supports, the neck forward and low, the tail low behind with its outer half on the ground.
+    Never an upright biped; the rev. 2 `upright` stance is retired.
+  * **Arm bones rebalanced again** (the span is unchanged): humerus about 0.55 of the forearm
+    (Charcoal 4.5 / 8.1 m, Leaf 1.12 / 2.08, Starlight 8.6 / 16.4, scout 0.62 / 1.28, hatchling
+    0.072 / 0.118). With the shoulder only ~5 m up, the rev. 2 humerus (5.4 m) could only reach the
+    ground with the elbow swung out sideways or back over the hips; a short humerus puts the
+    elbow up beside the withers and the forearm down to a wrist under the shoulder - the
+    pterosaur / bat carriage of section 1.1.
+  * Starlight's legs 15% shorter (femur 4.9, tibia 5.9, metatarsus 3.2 m) and Leaf's 8% shorter
+    (0.78 / 0.9 / 0.48 m): folded into the low crouch the longer legs stood out like a grasshopper's.
+  * Leaf's dog-sit is lower (chest ~30 degrees up): the rump behind the hips rests on the ground,
+    the wrists are planted in front.
 * The screenplay (`episodes/s01e01/screenplay.md`) stays binding for events: section 1.13 lists
   every story beat the bodies have to make possible and how each design does it.
 * Every number below comes from a small calculator (lofted elliptical cross-sections, an assumed
@@ -91,9 +116,10 @@ carries its own scale.
 
 * **Two legs** (the hind legs) and **two wings that ARE the front limbs** - nothing else. No
   extra limbs, ever (screenplay dragon policy).
-* (rev. 2) At rest every dragon **stands on its two feet** with the wings folded off the ground
-  (1.5b). It **walks on its two feet and on the wrists of its folded wings**, the way vampire bats
-  and pterosaurs do. The folded wing becomes a front leg: the
+* (rev. 3) On the ground every dragon carries its body **low and level** on its two feet, which
+  stand under the middle of the body, and on the **wrists of its folded wings** planted under its
+  shoulders (1.5c). It **walks the same way**, the way vampire bats and pterosaurs do (the rev. 2
+  upright stance of 1.5b is retired). The folded wing becomes a front leg: the
   forearm is the "shin", a thick callused **wrist pad** and the **thumb claw** are the "foot".
   Pterosaur trackways show exactly this: hand prints (three short fingers and the wrist) set
   a little outside and ahead of the foot prints.
@@ -102,10 +128,9 @@ carries its own scale.
   drops almost vertically to the wrist pad. This keeps the back level (shoulders only a little
   higher than the hips) and gives every dragon the cloaked wyvern silhouette: the folded wings
   stand up beside the withers like the shoulders of a cape.
-* (rev. 2) **At rest they stand on the two legs** (section 1.5b): bird / theropod posture, the
-  long tail as a counterweight and a prop, the wings folded off the ground. They walk on the feet
-  and the wrists (above), and **rear up** further (trunk 45-70 deg) to look over something, as the
-  first move of a landing flare, to threaten.
+* (rev. 3) **At rest they stand low** on the two legs and the two wrists (section 1.5c). They
+  **rear up** (trunk 45-70 deg) only for a moment: the landing flare, to look over something, to
+  threaten.
 
 ### 1.2 Skeleton (every dragon; the numbers per dragon are in its section)
 
@@ -173,7 +198,7 @@ the flank and, on Starlight and the scout, over the tail base). That is what let
   the inner wing, exactly as in bats), the thumb sets the leading edge, the fingers spread or
   close the chiropatagium.
 
-### 1.5 The wing-walk fold (walking, the crouch, lying; rev. 2: not the resting stance - see 1.5b)
+### 1.5 The wing-walk fold (walking, the crouch, lying; rev. 3: also the resting stance - see 1.5c)
 
 1. **Elbow**: the upper arm swings back and up along the side of the shoulders.
 2. **Wrist** flexes: the metacarpals run up along the back edge of the forearm, so the knuckles
@@ -189,7 +214,7 @@ Seen from the side the folded wing reads as: the forearm as a front leg, a bony 
 elbow and knuckles) standing up beside the withers, and a smooth closed fan lying along the flank.
 Nothing sticks out in front of the chest; no bare finger ends hang free.
 
-### 1.5b The standing fold (rev. 2: the resting stance on two legs)
+### 1.5b The standing fold (rev. 2: the resting stance on two legs - RETIRED in rev. 3, see 1.5c; the fold itself is still used for Leaf's sit with `plantWrists: false`)
 
 A resting bat's or a vulture's fold, sized for the rebalanced arm (humerus about 0.75 of the
 forearm):
@@ -211,10 +236,49 @@ the neck rising ~48 deg at its base to ~14 deg at the head, the head pitched dow
 carried level from the hips for its first fifth, bending down over its middle third and lying on
 the ground for the rest, sweeping a little to one side. Code: `poses.upright` (`foldUp`).
 
+### 1.5c The low stance (rev. 3: the resting and walking carriage)
+
+Daxtyn, 2026-10-16: *"make them low to the ground with their legs more towards the center of
+their body"*. Every dragon (the newborn apart: it cannot stand yet) carries itself like a big,
+heavy, ordinary animal - a crouching big cat, a crocodile in the high walk, a Komodo dragon:
+
+1. **Hips under the middle of the body.** The hip joint sits at trunk station 0.68 (shoulder 0,
+   tail base 1), ~0.42 of the trunk depth below the back. The femur runs forward and down from it,
+   so the knee sits under the belly and the hock behind it; the thigh muscles fill the lower
+   flank (a bird's "drumstick" inside the body contour) and the visible leg comes out of the
+   middle of the animal.
+2. **Low and level.** The chest's underside stands ~0.34 of the chest depth above the ground
+   (Starlight and Leaf ~0.4, the scout ~0.36); the trunk is pitched up only ~4 degrees; the knees
+   are bent in a deep crouch (Charcoal: hip joint 4.2 m up for a 7.6 m leg), the balls of the feet
+   ~0.16 trunk lengths ahead of the hip joint, under the centre of mass, a little wider than the
+   hips.
+3. **Wings as front supports.** The wrist pad sits on the ground beside and just ahead of the
+   shoulder joint, the thumb laid forward along the ground with its claw in the turf; the forearm
+   rises from it to the elbow, which stands up beside the withers (Charcoal: 1.8 m above the back);
+   the humerus runs from the elbow forward and down to the shoulder joint. The hand folds back
+   along the forearm, the knuckles end by the elbow, the fingers lie pressed together in one
+   bundle back along the upper flank toward the hips (a closed cape, not a fan); the membrane
+   gathers between them.
+4. **Neck forward and low.** The neck leaves the withers rising ~14 degrees (Leaf 20, the scout
+   18) and levels out; the head is carried about at the height of the back, pitched ~8 degrees
+   down - never the rev. 2 giraffe neck.
+5. **Tail low.** The base continues the trunk line, sags over its first half and lies on the
+   ground from about its middle, sweeping a little to one side: a counterweight, not a prop.
+6. **Alive.** A slow side-to-side weight shift, one foot and the opposite wrist a little ahead,
+   breathing, small head movements and blinks (all pure functions of time).
+
+Flight balance: the legs hang from the middle of the trunk and trail back under the tail base in
+flight (as a bird's or a bat's), the plagiopatagium still runs from the flank over the thigh to
+the ankle; the hip moving forward and the shorter inner wing chord both move the centre of mass
+and the wing's aerodynamic centre forward together, so the balance of 1.8 holds.
+
+Code: `poses.stand` (the low stance; design overrides in `stand.low`), `walk`, `crouch`, `lie`,
+`sit`, `fire`, `launch`, `land` are built on it; `upright` is kept only as an alias of `stand`.
+
 ### 1.6 Moving on the ground
 
-* **Stance:** weight about 55% on the feet, 45% on the wrist pads (giants), wrists a little
-  outside and behind or under the shoulder joint, feet under the hips.
+* **Stance (rev. 3):** weight about 60% on the feet, 40% on the wrist pads (giants), wrists a
+  little outside and just ahead of the shoulder joint, feet under the middle of the body (1.5c).
 * **Walk:** a lateral-sequence quadrupedal walk (left foot, left wrist, right foot, right
   wrist), duty factor 0.65-0.75, the wrist pads land outside the line of the feet (pterosaur
   trackways). The neck counter-swings, the tail swings opposite to the hips.
@@ -1474,6 +1538,10 @@ Appendix A holds every input, so the build does not depend on those tools.
 // halfHeight = depth / (2 L). Fingers: [name, metacarpal, [phalanges], spread from lateral
 // in the glide (negative = swept back)]. stand: forearm lean from vertical, humerus rise above
 // horizontal running back from the shoulder (elbows high), neck rise, head pitch, tail droop.
+// (rev. 3) Every design also has hipStation 0.68 (trunk s of the hip joint; code: stand.hipS) and
+// a LOW stance (1.5c; code: stand.low): chest underside at `belly` x the chest depth (0.34 by
+// default; Starlight, Leaf 0.4; scout 0.36). The `derived` heights below are the SCULPT (bind)
+// pose's; the low-stance heights are in section 1.5c's table.
 export const DESIGN = {
   charcoal: {
     L: 36,
@@ -1497,8 +1565,8 @@ export const DESIGN = {
       toes: "3 forward + hallux"
     },
     wing: {
-      humerus: 5.4,   // rev. 2 (was 4.2)
-      forearm: 7.2,   // rev. 2 (was 8.4)
+      humerus: 4.5,   // rev. 3 (rev. 2: 5.4, rev. 1: 4.2)
+      forearm: 8.1,   // rev. 3 (rev. 2: 7.2, rev. 1: 8.4)
       diameters_shoulder_elbow_wrist_hand: [1.6, 1.15, 0.8, 0.45],
       fingers: [["III", 7.4, [5.2, 3.9, 2.3], -6], ["IV", 6.8, [5, 3.4, 1.6], -32], ["V", 6.2, [4.6, 2.9, 1.2], -64]],
       thumb: { mc: 0.7, ph: 0.55, claw: 0.6 },
@@ -1573,17 +1641,17 @@ export const DESIGN = {
     trunkProfile: [[0, 0.66, 0.92], [0.25, 0.7, 0.96], [0.6, 0.56, 0.74], [0.85, 0.5, 0.6], [1, 0.52, 0.56]],
     tailProfile: [[0, 0.44, 0.48], [0.15, 0.33, 0.37], [0.35, 0.21, 0.24], [0.6, 0.11, 0.13], [0.85, 0.045, 0.05], [1, 0.01, 0.01]],
     leg: {
-      femur: 0.85,
-      tibia: 0.98,
-      metatarsus: 0.52,
+      femur: 0.78,    // rev. 3 (was 0.85)
+      tibia: 0.9,     // rev. 3 (was 0.98)
+      metatarsus: 0.48, // rev. 3 (was 0.52)
       toeIII: 0.36,
       claw: 0.1,
       diameters_thigh_knee_shank_ankle_foot: [0.34, 0.19, 0.17, 0.1, 0.085],
       toes: "3 forward + hallux"
     },
     wing: {
-      humerus: 1.35,  // rev. 2 (was 1.05)
-      forearm: 1.85,  // rev. 2 (was 2.15)
+      humerus: 1.12,  // rev. 3 (rev. 2: 1.35, rev. 1: 1.05)
+      forearm: 2.08,  // rev. 3 (rev. 2: 1.85, rev. 1: 2.15)
       diameters_shoulder_elbow_wrist_hand: [0.36, 0.25, 0.17, 0.1],
       fingers: [
         ["III", 1.9, [1.35, 1, 0.6], -6],
@@ -1646,17 +1714,17 @@ export const DESIGN = {
     trunkProfile: [[0, 4.2, 5.8], [0.25, 4.5, 6.1], [0.6, 3.7, 4.7], [0.85, 3.3, 3.8], [1, 3.5, 3.6]],
     tailProfile: [[0, 2.9, 3.2], [0.15, 2.2, 2.45], [0.35, 1.4, 1.6], [0.6, 0.72, 0.82], [0.85, 0.27, 0.3], [1, 0.05, 0.05]],
     leg: {
-      femur: 5.8,
-      tibia: 7,
-      metatarsus: 3.8,
+      femur: 4.9,     // rev. 3 (was 5.8)
+      tibia: 5.9,     // rev. 3 (was 7)
+      metatarsus: 3.2, // rev. 3 (was 3.8)
       toeIII: 3.6,
       claw: 1.3,
       diameters_thigh_knee_shank_ankle_foot: [3.0, 1.75, 1.55, 0.92, 0.76],  // rev. 1: 170 t per leg
       toes: "3 forward + opposable hallux (raptor)"
     },
     wing: {
-      humerus: 10.2,  // rev. 2 (was 8)
-      forearm: 14.8,  // rev. 2 (was 17)
+      humerus: 8.6,   // rev. 3 (rev. 2: 10.2, rev. 1: 8)
+      forearm: 16.4,  // rev. 3 (rev. 2: 14.8, rev. 1: 17)
       diameters_shoulder_elbow_wrist_hand: [2.6, 1.9, 1.3, 0.75],
       fingers: [
         ["II", 14.5, [5, 2.5], 2],
@@ -1737,8 +1805,8 @@ export const DESIGN = {
       toes: "3 forward + hallux, small (swift-like)"
     },
     wing: {
-      humerus: 0.72,  // rev. 2 (was 0.55)
-      forearm: 1.18,  // rev. 2 (was 1.35)
+      humerus: 0.62,  // rev. 3 (rev. 2: 0.72, rev. 1: 0.55)
+      forearm: 1.28,  // rev. 3 (rev. 2: 1.18, rev. 1: 1.35)
       diameters_shoulder_elbow_wrist_hand: [0.27, 0.18, 0.11, 0.065],
       fingers: [["III", 1.3, [1.05, 0.8, 0.45], -12], ["IV", 1.15, [0.9, 0.5], -46]],
       thumb: { mc: 0.08, ph: 0.06, claw: 0.06 },
@@ -1807,8 +1875,8 @@ export const DESIGN = {
       toes: "3 forward + hallux, oversized"
     },
     wing: {
-      humerus: 0.085, // rev. 2 (was 0.07)
-      forearm: 0.105, // rev. 2 (was 0.12)
+      humerus: 0.072, // rev. 3 (rev. 2: 0.085, rev. 1: 0.07)
+      forearm: 0.118, // rev. 3 (rev. 2: 0.105, rev. 1: 0.12)
       diameters_shoulder_elbow_wrist_hand: [0.038, 0.026, 0.02, 0.016],
       fingers: [
         ["III", 0.08, [0.05, 0.035, 0.02], -10],

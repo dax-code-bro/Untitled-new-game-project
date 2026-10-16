@@ -405,7 +405,7 @@ function plantAll(pb, o = {}) {
 function lowParams(c) {
   const D = c.anatomy.design;
   return { belly: 0.34, pitch: 4, footFwd: 0.16, footOut: 1.12, mtAng: D.leg.mtAng, wristFwd: 0.02, wristOut: 0.1, neckBase: 14, neckTop: 2, headPitch: -8, tailLift: 2, tailSag: 26, tailCurl: 0.3,
-    pole: [0.25, 1, -0.4], curl: D.fold?.lowCurl ?? [2, 16, 34], ...(D.stand.low || {}) };
+    pole: [0.25, 1, -0.4], curl: D.fold?.lowCurl ?? [5, 18, 34], ...(D.stand.low || {}) };
 }
 
 /**
@@ -427,7 +427,9 @@ export function stand(c, o = {}) {
   const LP = lowParams(c);
   const b = o.body || {};
   const pitch = (o.bodyPitch ?? LP.pitch * deg) + (b.pitch ?? 0);
-  const pb = groundBase(c, { body: { pitch, roll: b.roll, yaw: b.yaw, lumbar: b.lumbar, chest: b.chest } }, t);
+  // (a slow weight shift from side to side while standing: a living animal is never still)
+  const idle = o.drapeBuild || o.asym === 0 ? 0 : 1;
+  const pb = groundBase(c, { body: { pitch, roll: (b.roll ?? 0) + 0.012 * wob(t * 0.19, 5) * idle, yaw: (b.yaw ?? 0) + 0.01 * wob(t * 0.13, 8) * idle, lumbar: b.lumbar, chest: b.chest } }, t);
   const ma0 = LP.mtAng * deg;
   const legH = d.fem + d.tib + d.mtl * Math.sin(ma0) + d.toeL * 0.13;
   {
@@ -484,7 +486,10 @@ function plantLow(pb, o, LP) {
     const ma = (lf.mtAng ?? LP.mtAng) * deg;
     // the ball of the foot a little ahead of the hip joint (the knee forward under the belly,
     // the hock behind), the feet a little wider than the hips
-    const ball = [sd * Math.max(d.hipX * LP.footOut, d.footX ?? 0) + (lf.dx ?? 0), d.toeL * 0.13 + (lf.lift ?? 0), hip[2] + d.T * LP.footFwd + (lf.dz ?? 0)];
+    // (a little asymmetry - one foot and the opposite wrist slightly ahead - a mirror-symmetric
+    // stance read as a statue)
+    const asym = (o.asym ?? LP.asym ?? 1) * sd;
+    const ball = [sd * Math.max(d.hipX * LP.footOut, d.footX ?? 0) + (lf.dx ?? 0), d.toeL * 0.13 + (lf.lift ?? 0), hip[2] + d.T * (LP.footFwd + 0.035 * asym) + (lf.dz ?? 0)];
     if (lf.at) { ball[0] = lf.at[0]; ball[1] = lf.at[1] + d.toeL * 0.13; ball[2] = lf.at[2]; }
     res[`foot${side}`] = legIK(pb, F, side, ball, { mtAng: lf.mtAng ?? LP.mtAng, fwd: lf.fwd ?? [sd * 0.1, 0, 1], pole: lf.pole ?? [sd * 0.3, 0.1, 1], curl: lf.curl ?? 0.06, toeDown: lf.toeDown });
     // the wrist pad on the ground beside and a little ahead of the shoulder joint; the elbow up
@@ -493,11 +498,12 @@ function plantLow(pb, o, LP) {
     const S = F.P[`w_${side}_0`];
     const w = A.wings.find((x) => x.side === side);
     const wy = (wf.lift ?? 0) + w.padDist * 0.92;
-    const wp = wf.at ? [wf.at[0], wf.at[1] + w.padDist * 0.92, wf.at[2]] : [S[0] + sd * (d.fore * LP.wristOut + (wf.dx ?? 0)), wy, S[2] + d.fore * LP.wristFwd + (wf.dz ?? 0)];
+    const wp = wf.at ? [wf.at[0], wf.at[1] + w.padDist * 0.92, wf.at[2]] : [S[0] + sd * (d.fore * LP.wristOut + (wf.dx ?? 0)), wy, S[2] + d.fore * (LP.wristFwd - 0.04 * asym) + (wf.dz ?? 0)];
     const qT = F.Q.thorax;
     const pl = wf.pole ?? LP.pole;
     const pole = add(qRot(qT, [sd * pl[0], pl[1], pl[2]]), [0, 0.3, 0]);
-    res[`wrist${side}`] = plantWing(pb, F, side, wp, { pole, curl: LP.curl, ...(D.fold?.low || {}), ...(o.fold || {}) });
+    // (the fingers pressed together in one bundle along the flank, not fanned)
+    res[`wrist${side}`] = plantWing(pb, F, side, wp, { pole, curl: LP.curl, mcFan: 1.0, fanDown: 1.4, ...(D.fold?.low || {}), ...(o.fold || {}) });
   }
   return res;
 }
@@ -552,8 +558,11 @@ export function walk(c, o = {}) {
   const stride = speed / freq;
   const duty = o.duty ?? 0.7;
   const ph = (off) => fract(t * freq + off);
-  // contact offset along z for a limb at phase p: stance moves back linearly, swing comes forward
-  const zOff = (p) => p < duty ? stride * (0.5 - p / duty) : stride * (-0.5 + (p - duty) / (1 - duty));
+  // contact offset along z for a limb at phase p: in stance the contact moves back at exactly the
+  // walking speed (so it stays put on the ground while the root moves), the swing brings it forward
+  // (rev. 3: the stance used to slide back at speed / duty - the planted feet skated)
+  const exc = stride * duty;
+  const zOff = (p) => p < duty ? exc * (0.5 - p / duty) : exc * (-0.5 + (p - duty) / (1 - duty));
   const lift = (p, h) => p < duty ? 0 : h * Math.sin(Math.PI * (p - duty) / (1 - duty));
   const d = c.anatomy.dims;
   const feet = {}, wrists = {};
@@ -565,7 +574,7 @@ export function walk(c, o = {}) {
   // the body rolls and pitches a little with the steps; the neck counter-swings, the tail swings
   const sway = Math.sin(TAU * t * freq) * 0.025;
   const bob = Math.cos(TAU * t * freq * 2) * L * 0.0015;
-  const p = stand(c, { ...o, body: { roll: sway, y: bob, pitch: 0.01 * Math.sin(TAU * t * freq * 2) }, feet, wrists, look: [(o.look?.[0] ?? 0) - sway * 1.5, o.look?.[1] ?? 0], tailCurl: (o.tailCurl ?? 0.1) - sway * 6 });
+  const p = stand(c, { ...o, asym: 0, body: { roll: sway, y: bob, pitch: 0.01 * Math.sin(TAU * t * freq * 2) }, feet, wrists, look: [(o.look?.[0] ?? 0) - sway * 1.5, o.look?.[1] ?? 0], tailCurl: (o.tailCurl ?? 0.1) - sway * 6 });
   return p;
 }
 
@@ -607,10 +616,11 @@ export function rear(c, o = {}) {
 export function sit(c, o = {}) {
   const t = o.t ?? 0;
   const A = c.anatomy, d = A.dims;
-  const pitch = o.pitch ?? 46 * deg;
+  // (a lazy, low dog's sit: the chest only ~30 degrees up, so he never reads as an upright biped)
+  const pitch = o.pitch ?? 30 * deg;
   const pb = groundBase(c, { body: { pitch } }, t);
   const br = o.drapeBuild ? 0 : breathe(pb, t, o.breathe ?? 0.2, 0.025);
-  neckCurve(pb, (o.neckBase ?? 0.52) + (o.raise ?? 0), (o.neckTop ?? 0.62) - (o.headDown ?? 0) * 1.2, (o.headPitch ?? -0.2) - (o.headDown ?? 0) * 0.5, pitch);
+  neckCurve(pb, (o.neckBase ?? 0.42) + (o.raise ?? 0), (o.neckTop ?? 0.45) - (o.headDown ?? 0) * 1.2, (o.headPitch ?? -0.2) - (o.headDown ?? 0) * 0.5, pitch);
   const lk = o.look || [0, 0];
   look(pb, lk[0] + 0.04 * wob(t * 0.35, 3) * (o.drapeBuild ? 0 : 1), lk[1] + 0.02 * br);
   // tail: the base laid back down along the ground behind the rump, then curled round the side
@@ -643,7 +653,7 @@ export function sit(c, o = {}) {
       const w = A.wings.find((x) => x.side === side);
       const wp = [S[0] + sd * d.wristR * 1.6, w.padDist * 0.92, S[2] + (o.wristFwd ?? 0.12) * d.fore];
       const pole = add(qRot(F.Q.thorax, [sd * 0.25, 0.5, -1]), [0, 0.2, 0]);
-      plantWing(pb, F, side, wp, { pole, curl: [2, 16, 34], ...(o.fold || {}) });
+      plantWing(pb, F, side, wp, { pole, curl: [5, 18, 34], mcFan: 1.0, fanDown: 1.4, ...(o.fold || {}) });
     } else {
       foldUp(pb, F, side, { curl: [-26, -8, 18], wristDir: [0.5, 0.15, 0.85], ...(o.fold || {}) });
     }
@@ -982,26 +992,51 @@ export function launch(c, o = {}) {
   return pose;
 }
 
-/** Landing (1.7 / 2A), o.t from the flare: flare, feet reach forward and touch, wrist pads come down, run-out. */
+/**
+ * Landing (1.7 / 2A), o.t from the flare (rev. 3: a low approach, no rearing up): (1) the glide
+ * flares to ~25 degrees nose-up with the wings cupped, the feet swing forward under the middle of
+ * the body; (2) touchdown on the feet, knees soaking up the weight, wings still half open;
+ * (3) the wrist pads come down in front and the wings fold into the low stance. Timing scales
+ * with size (Charcoal: 1.0 s + 0.5 s + 1.0 s). The rig travels forward and down to the root.
+ */
 export function land(c, o = {}) {
   const t = o.t ?? 0;
   const s = Math.sqrt(c.L / 36);
   const T1 = 1.0 * s, T2 = T1 + 0.5 * s, T3 = T2 + 1.0 * s;
   const d = c.anatomy.dims;
+  const LP = lowParams(c);
+  // the touchdown carriage: on the feet, chest raised ~25 deg, a little higher than the stance
+  const touch = (tt, k) => stand(c, { ...o, t: tt, bodyPitch: mix(0.42, LP.pitch * deg, k), belly: mix(0.62, LP.belly, k), asym: 0, raise: 0.15 * (1 - k) });
+  const wingsFrom = (p, src, w) => {
+    const qa = toQuatMap(c, p), qb = toQuatMap(c, src);
+    for (const n of Object.keys({ ...qa, ...qb })) if (/^w_/.test(n)) p.bones[n] = { q: qSlerp(qa[n] || QI(), qb[n] || QI(), w) };
+    p.uniforms.billowL = mix(p.uniforms.billowL ?? 0, src.uniforms?.billowL ?? 0, w); p.uniforms.billowR = p.uniforms.billowL;
+    return p;
+  };
   let pose;
   if (t < T1) {
-    const fl = glide(c, { ...o, t, bodyPitch: -0.75 * smooth(0, T1, t), dihedral: 0.2 });
-    const r = rear(c, { ...o, t, k: 1, wingOpen: 1 });
-    pose = blend(c, fl, r, smooth(0.3 * T1, T1, t) * 0.6);
+    const u = t / T1;
+    const fl = glide(c, { ...o, t, bodyPitch: -0.44 * smooth(0, 1, u), dihedral: 0.22, droop: 0.12 });
+    const tp = touch(t, 0);
+    pose = blend(c, fl, tp, smooth(0.35, 1, u) * 0.75);
+    wingsFrom(pose, fl, 1);
     pose.ground = false;
-    pose.rig.position = [0, d.hipH * (1.0 - smooth(0, T1, t)), -d.T * (1 - t / T1)];
+    // gliding in low over the ground, the last metres of the descent
+    const fall = (1 - u) * (1 - u);
+    pose.rig.position = [pose.rig.position[0], pose.rig.position[1] + d.shH * 0.9 * fall, pose.rig.position[2] - d.T * 1.6 * (1 - u)];
   } else if (t < T2) {
-    pose = rear(c, { ...o, t, k: 1 - 0.5 * smooth(T1, T2, t), wingOpen: 1 - smooth(T1, T2, t) * 0.6 });
+    const u = smooth(T1, T2, t);
+    const tp = touch(t, 0.25 * u);
+    const fl = glide(c, { ...o, t, bodyPitch: -0.44, dihedral: 0.3, droop: 0.2 });
+    pose = wingsFrom(tp, fl, 1 - 0.45 * u);
+    pose.uniforms.drape = { L: ['stand', 0], R: ['stand', 0] };
+    pose.ground = true;
   } else {
     const u = smooth(T2, T3, t);
-    const r = rear(c, { ...o, t, k: 0.5 * (1 - u), wingOpen: 0.4 * (1 - u) });
-    const st = stand(c, { ...o, t });
-    pose = blend(c, r, st, u);
+    const tp = touch(t, 0.25 + 0.75 * u);
+    const fl = glide(c, { ...o, t, bodyPitch: -0.44, dihedral: 0.3, droop: 0.2 });
+    pose = wingsFrom(tp, fl, 0.55 * (1 - u) * (1 - u));
+    pose.uniforms.drape = { L: ['stand', u], R: ['stand', u] };
     pose.ground = true;
   }
   return pose;

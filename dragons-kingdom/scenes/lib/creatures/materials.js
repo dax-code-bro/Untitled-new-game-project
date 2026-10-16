@@ -89,13 +89,16 @@ export function lookParams(THREE, look) {
       // variation; the crevices only a little darker than the scales (no plaster-cast AO).
       base: lin(THREE, 0.66, 0.655, 0.65), belly: lin(THREE, 0.64, 0.625, 0.615), dorsal: lin(THREE, 0.68, 0.675, 0.68),
       wear: lin(THREE, 0.7, 0.7, 0.7), crev: 0.9, dust: lin(THREE, 0.45, 0.43, 0.4), salt: lin(THREE, 0.8, 0.8, 0.78),
-      rough: [0.2, 0.05, 0.08, 0.2], amp: 0.14, keel: 0.0, facet: 1.0, jit: 0.25, metal: [0, 0], mottle: 0.06,
-      hier: [0.85, 1.0, 0.5, 0.0], damp: 0.0, bellyP: [0.42, 0.85, 0.15, 0.3], plateZ: -0.02,
-      crevCol: lin(THREE, 0.52, 0.47, 0.47), crevAmt: 0.15,
+      // (rev. 3: lower relief and a light crevice occlusion - domed plates with dark grout read as a pebble mosaic)
+      rough: [0.2, 0.05, 0.08, 0.2], amp: 0.09, keel: 0.0, facet: 1.0, jit: 0.25, metal: [0, 0], mottle: 0.06, cavAO: 0.2,
+      // (rev. 3: fewer, smaller dorsal plates - the big ones read as white cobbles from a rider's distance)
+      hier: [0.4, 1.0, 0.5, 0.0], damp: 0.0, bellyP: [0.42, 0.85, 0.15, 0.3], plateZ: -0.02,
+      crevCol: lin(THREE, 0.56, 0.52, 0.52), crevAmt: 0.1,
       // (rev. 2: broad plates each tilted its own way - the sky breaks into a mosaic - with little micro relief: the fine relief sparkled like plaster grit)
       scl: [0.8, 0.42, 0.75, 1.3], tub: [0.0, 2.5, 0.0, 0], skin2: [0.06, 0.15, 0, 0.12], skin3: [0.08, 0.16, 1.5, 0], scl2: [0.62, 0.7, 0, 0],
       // flat plates with hairline joints (wide grooves read as cobbles or a plaster cast)
-      vor: [10.0, 0.0, 0.07, 0.6],
+      // (rev. 3: lower imbricate lift and narrower joints - each plate's raised rear edge made a pillow)
+      vor: [10.0, 0.0, 0.05, 0.3],
       dustAmt: 0.2, saltAmt: 0.0, oral: lin(THREE, 0.45, 0.16, 0.16), oralDark: lin(THREE, 0.1, 0.03, 0.03),
       // white-grey membranes (albino, but thick enough that blood barely tints them), silver highlights
       membrane: lin(THREE, 0.66, 0.63, 0.6), trans: lin(THREE, 0.3, 0.22, 0.2), vein: lin(THREE, 0.55, 0.3, 0.3), memRough: 0.5, memSpec: 0.55,
@@ -183,7 +186,7 @@ function skinMaterial(THREE, P, ctx) {
     uMisc: { value: new THREE.Vector4(P.crev, P.mottle, P.metal[0], P.metal[1]) },
     uWound: { value: new THREE.Vector4(0, 0, 0, 0) }, uWoundR: { value: 0 },
     uCrev: { value: new THREE.Vector4(...(P.crevCol ? [P.crevCol.r, P.crevCol.g, P.crevCol.b, P.crevAmt ?? 0.6] : [0, 0, 0, 0])) },
-    uWet: { value: new THREE.Vector4(P.wet ? 1 : 0, P.wetRough ?? 0.035, 0.3, 0) },   // wet film amount, wet roughness, dry-patch roughness
+    uWet: { value: new THREE.Vector4(P.wet ? 1 : 0, P.wetRough ?? 0.035, 0.3, P.cavAO ?? 0) },   // wet film amount, wet roughness, dry-patch roughness, crevice occlusion (0 = default 0.55)
     uHier: { value: new THREE.Vector4(...(P.hier || [1, 1, 0.6, 0.35])) },
     uZones: { value: new THREE.Vector4(ctx.zones?.withersZ ?? ctx.L * 0.25, ctx.zones?.pelvisZ ?? 0, ctx.L * 0.06, ctx.L) },
     uBellyP: { value: new THREE.Vector4(...(P.bellyP || [0.85, 3.0, 0.75, 0.75])) },   // plate length, width (scale units), seam darkness, relief
@@ -450,7 +453,7 @@ void dkSkin(inout vec3 albedo) {
   r = mix(r, 0.88, dkPadM);
   dkRoughOut = clamp(r, 0.06, 1.0);
   dkMetalOut = mix(uMisc.z, uMisc.w, clamp(dkCav * 1.4 + dust, 0.0, 1.0)) * (1.0 - dkOralM) * (1.0 - uDamp.w * smoothstep(0.35, 0.85, vMask.y)) * (1.0 - 0.25 * dkResM);
-  dkAO = vMask2.x * (1.0 - 0.55 * dkCav);
+  dkAO = vMask2.x * (1.0 - (uWet.w > 0.0 ? uWet.w : 0.55) * dkCav);
   // wet film (hatchling): mostly wet, streaks running down the body and a few drying patches
   dkWetK = 1.0;
   if (uWet.x > 0.0) {

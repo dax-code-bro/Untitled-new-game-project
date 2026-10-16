@@ -19,7 +19,15 @@ Done so far (code):
   wrists planted in front) rewritten; thumbs aimed forward along the ground (`aimThumb`).
 - drape.js: inverse skinning by damped least squares (near-singular blends threw the membrane hundreds of metres in the walk).
 - creature.js: the 'upright' drape variant dropped.
-NEXT: shots/contact updated for the low stance (+ walk, rest, landing shots), render review, open issues, 4K to output/dragons-low/.
+- Also: `walk` stance contacts move back at exactly the walking speed (the feet skated at speed/duty
+  before); `land` rewritten as a low approach (short ~25 deg flare, feet under the middle, wrists down,
+  wings fold) - no rearing; `sit` lower (chest ~30 deg); stance asymmetry + slow weight shift (stiff
+  poses); Starlight scales smaller/flatter with light crevice AO (cobbles); newborn skull flatter,
+  limbs slimmer, smaller yolk belly (toy look).
+- Shots (creatures-shots.js): 17 = the 14 before + charcoal-walk, charcoal-rest, leaf-landing; the
+  contact sheet has 29 frames (turntables in the low stance, + Leaf sit, Charcoal lying, crouch).
+- DESIGN.md: rev. 3 status bullet, section 1.5c (the low stance), 1.1/1.6 updated, appendix A bones.
+NEXT: preview review of the new shots, style frames at draft, 4K to output/dragons-low/, crops, README.
 
 ## Fix round 1 after the critics (2026-10-15, DESIGN "rev. 2") - state
 Done (committed; renders under output/dragons-wyvern/fix1/, git-ignored, file names end in -fix1):

@@ -25,16 +25,29 @@ import { filmFinish } from './finish.js';
 const D2R = Math.PI / 180;
 
 export const SHOTS = [
-  // Charcoal 3/4 front in daylight, standing on his two legs, wings folded against his flanks
-  // (DESIGN rev. 2); Remi beside his left foot for scale (32 mm from ~55 m, eye height)
+  // Charcoal 3/4 front in daylight in the LOW stance (rev. 3): body carried low and level, the two
+  // legs under the middle of his body, the folded wings' wrists and thumbs down under his
+  // shoulders, the elbows up beside the withers; Remi beside his left wrist for scale (32 mm, ~50 m)
   { id: 'charcoal-front', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], dur: 3, face: -55,
-    people: [{ id: 'remi', at: [6.8, 0, 5.8], yaw: 40 }],
-    pose: { charcoal: { name: 'upright', look: [0.22, -0.02], tailCurl: 0.5 } },
-    cam: { subject: 'charcoal', pos: [33, 1.7, 44], target: [2.0, 8.5, 5], mm: 32, fstop: 8, focus: 'target' } },
-  // Charcoal's head: a crane a little below his eye line, 3/4 front (50 mm), the horns against the sky
+    people: [{ id: 'remi', at: [5.6, 0, 11.5], yaw: 50 }],
+    pose: { charcoal: { name: 'stand', look: [0.25, -0.03], tailCurl: 0.45 } },
+    cam: { subject: 'charcoal', pos: [30, 1.7, 42], target: [1.0, 4.2, 7], mm: 32, fstop: 8, focus: 'target' } },
+  // Charcoal's head: a camera a little below his eye line, 3/4 front (50 mm), the horns against the sky
   { id: 'charcoal-head', set: 'field', creatures: ['charcoal'], dur: 3, face: -60,
-    pose: { charcoal: { name: 'upright', look: [0.35, 0.05], blink: false, lidRelax: 0.05 } },
-    cam: { subject: 'charcoal', bone: 'head', pos: [9.5, -1.0, 9.0], target: [0.2, -0.6, 1.4], mm: 50, fstop: 5.6, focus: 'eye_L' } },
+    pose: { charcoal: { name: 'stand', look: [0.35, 0.08], blink: false, lidRelax: 0.05 } },
+    cam: { subject: 'charcoal', bone: 'head', pos: [9.5, -1.6, 9.0], target: [0.2, -0.5, 1.4], mm: 50, fstop: 5.6, focus: 'eye_L' } },
+  // (rev. 3) the low walk side on: feet under the middle of the body, the folded wings' wrist pads
+  // and thumbs planted ahead (a lateral-sequence walk, ~2 m/s); Remi in the foreground (40 mm)
+  { id: 'charcoal-walk', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], dur: 4, face: -100, move: 2.0, still: 1.4,
+    people: [{ id: 'remi', at: [15, 0, 4], yaw: 160, fixed: true }],
+    pose: { charcoal: { name: 'walk', speed: 2.0, look: [0.1, -0.02] } },
+    cam: { subject: 'charcoal', pos: [62, 2.2, 10], target: [0, 4.0, 6.5], mm: 40, fstop: 8, focus: 'target', fixed: true, follow: 1 } },
+  // (rev. 3) resting: lying on his belly, legs folded under, wrists forward, chin low on the turf
+  // (35 mm, low 3/4 front)
+  { id: 'charcoal-rest', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], dur: 3, face: -40,
+    people: [{ id: 'remi', at: [6.5, 0, 17], yaw: 30 }],
+    pose: { charcoal: { name: 'lie', look: [0.35, 0.0], raise: -0.25, headDown: 0.2, lidRelax: 0.35 } },
+    cam: { subject: 'charcoal', pos: [26, 1.6, 40], target: [1.0, 2.8, 9], mm: 35, fstop: 8, focus: 'target' } },
   // the take-off (1C): the first heavy downstroke after the vault - the downwash blasts a ring of
   // dust and grass, clods fly, the wrist-pad craters and claw furrows in the turf (24 mm, low, ~90 m)
   { id: 'charcoal-takeoff', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], riders: { charcoal: 'remi' }, dur: 4, face: -40, stage: 'takeoff', still: 1.0,
@@ -56,19 +69,25 @@ export const SHOTS = [
   { id: 'head-in-mouth', set: 'air', creatures: ['charcoal', 'leaf'], riders: { charcoal: 'remi', leaf: 'abby' }, dur: 3, alt: 220, face: -110, stage: 'mouth', mouthDepth: 1.85,
     pose: { charcoal: { name: 'mouthHold', t0: 2.0, side: 1, turn: 1.65, pitch: 0.05, hold: 0.5 }, leaf: { name: 'dive', fold: 0.55, look: [-1.45, 0.05], lidRelax: 0.05, blink: false, corr: 0.3 } },
     cam: { subject: 'charcoal', bone: 'head', pos: [3.4, -0.9, 16.5], target: [2.6, -0.7, 0.2], mm: 45, fstop: 8, focus: 'target' } },
-  // Leaf sitting upright like a dog (1B), Abby beside his chest (35 mm, eye height, f/5.6)
+  // Leaf sitting like a dog (1B): rump on the ground, wrists planted in front, Abby beside his
+  // chest (35 mm, eye height, f/5.6)
   { id: 'leaf-abby', set: 'field', creatures: ['leaf'], tack: ['leaf'], dur: 3, face: -70,
-    people: [{ id: 'abby', at: [1.9, 0, 1.5], yaw: 75 }],
-    pose: { leaf: { name: 'sit', look: [0.4, -0.08], eyes: [0.12, -0.05] } },
-    cam: { subject: 'leaf', pos: [9.5, 1.6, 10.5], target: [0.4, 2.1, 0.5], mm: 32, fstop: 5.6, focus: 'target' } },
+    people: [{ id: 'abby', at: [-1.0, 0, 2.9], yaw: 150 }],
+    pose: { leaf: { name: 'sit', look: [0.45, -0.1], eyes: [0.12, -0.05] } },
+    cam: { subject: 'leaf', pos: [9.0, 1.5, 10.5], target: [0.4, 1.6, 1.2], mm: 32, fstop: 5.6, focus: 'target' } },
+  // (rev. 3) Leaf landing (2A): the flare done, feet down under the middle of his body, the wrist
+  // pads coming down, wings still half open (40 mm, low side, f/8)
+  { id: 'leaf-landing', set: 'field', creatures: ['leaf'], tack: ['leaf'], dur: 3, face: -95,
+    pose: { leaf: { name: 'land', t0: 0.92, look: [0.1, 0.05] } },
+    cam: { subject: 'leaf', pos: [15, 1.3, 4], target: [0, 1.8, 1.5], mm: 40, fstop: 8, focus: 'target', fixed: true } },
   // FIRE (DRAGONS.md): Charcoal's standard orange-red fire - head low, a 26 m jet (32 mm, 3/4 side)
   { id: 'charcoal-fire', set: 'field', creatures: ['charcoal'], dur: 3, face: -80, fire: { charcoal: { palette: 'standard', length: 26, width: 7 } },
     pose: { charcoal: { name: 'fire', t0: 1.6, aim: [0.05, -0.05] } },
-    cam: { subject: 'charcoal', pos: [46, 3.0, 30], target: [0, 5.0, 22], mm: 32, fstop: 8, focus: 'target' } },
+    cam: { subject: 'charcoal', pos: [46, 2.4, 30], target: [0, 4.0, 21], mm: 32, fstop: 8, focus: 'target' } },
   // Leaf's purplish-blue fire (a little hotter than normal; not on screen in Episode 1)
   { id: 'leaf-fire', set: 'field', creatures: ['leaf'], dur: 3, face: -80, fire: { leaf: { palette: 'leaf', length: 8, width: 2.2 } },
     pose: { leaf: { name: 'fire', t0: 1.6, aim: [0.05, -0.05] } },
-    cam: { subject: 'leaf', pos: [11.5, 1.2, 8.0], target: [0, 1.4, 5.5], mm: 32, fstop: 8, focus: 'target' } },
+    cam: { subject: 'leaf', pos: [11.5, 1.0, 8.0], target: [0, 1.1, 5.2], mm: 32, fstop: 8, focus: 'target' } },
   // Starlight gliding high over open country, seen from the ground (~400 m away, ~95 m up): a 27 m
   // watchtower at her distance for scale, a watchman pointing; haze between (40 mm)
   { id: 'starlight-below', set: 'ground', creatures: ['starlight'], tack: ['starlight'], riders: { starlight: 'fall' }, dur: 3, face: 160, haze: 3.0, fill: true,
@@ -284,6 +303,8 @@ export function makeTurntable(opts = {}) {
       c.root.rotation.set(0, faceYaw, 0);
       if (c.detachable) c.attachWing();
       c.setPose(poses[po.name](c, { ...po, t: lt + (po.t0 ?? 0) }));
+      // (rev. 3) a walking subject: the root moves forward at the gait's speed (the planted feet stay put)
+      if (shot.move && c === main) c.root.position.set(Math.sin(faceYaw) * shot.move * lt, 0, Math.cos(faceYaw) * shot.move * lt);
       if (shot.set === 'bed') c.root.position.y = S.bed.userData.top;
       if (shot.alt) c.root.position.y = shot.alt;
       if (shot.flyer && shot.flyer.name === n) {
@@ -314,7 +335,7 @@ export function makeTurntable(opts = {}) {
       const h = p.h;
       if (p.ground) h.place(p.ground[0], 0, p.ground[2], (p.yaw ?? 0) * D2R);
       else {
-        const w = toWorld(main, p.at);
+        const w = p.fixed ? new THREE.Vector3(...p.at).applyQuaternion(main.root.quaternion) : toWorld(main, p.at);
         h.place(w.x, 0, w.z, main.root.rotation.y + (p.yaw ?? 180) * D2R);
       }
       h.update(lt);
@@ -335,6 +356,9 @@ export function makeTurntable(opts = {}) {
       let base = c.root.position.clone(), q = c.root.quaternion;
       // (fixed: the camera stays where it was at the start of the move, a locked-off take)
       if (cm.fixed) base = new THREE.Vector3(0, c.root.position.y, 0);
+      // (a panning camera on a fixed tripod: the target follows the walking subject)
+      let follow = null;
+      if (cm.follow) follow = c.root.position.clone().setY(0).multiplyScalar(cm.follow);
       if (cm.bone) base = new THREE.Vector3().setFromMatrixPosition(c.bones[c.boneIndex[cm.bone]].matrixWorld);
       if (cm.track === 'wingloss' && c.detachable) {
         const wp = new THREE.Vector3().setFromMatrixPosition(c.detachable.rootBone.matrixWorld);
@@ -342,6 +366,7 @@ export function makeTurntable(opts = {}) {
         q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), faceYaw);
       }
       target = base.clone().add(new THREE.Vector3(...cm.target).applyQuaternion(q));
+      if (follow) target.add(follow);
       camera.position.copy(base).add(new THREE.Vector3(...cm.pos).applyQuaternion(q));
       camera.lookAt(target);
       camFocus.copy(target);
