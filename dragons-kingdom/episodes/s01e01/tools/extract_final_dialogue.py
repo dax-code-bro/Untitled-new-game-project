@@ -481,9 +481,9 @@ def build_md(d, o):
             if x["original"]:
                 tags.append("**ORIGINAL, say exactly.**")
             if x["pending"]:
-                tags.append("**PENDING (%s): record as written.** Proposed alternative, only if Daxtyn picks it: \"%s\"." % (x["pending"], x["pending_alternative"]))
+                tags.append("**PENDING (%s): record as written.** Proposed alternative, only if Daxtyn picks it: \"%s\"" % (x["pending"], x["pending_alternative"]))
             if x["changed_by"]:
-                tags.append("**CHANGED %s** (was: \"%s\")." % (x["changed_by"], x["was_text"]))
+                tags.append("**CHANGED %s** (was: \"%s\")" % (x["changed_by"], x["was_text"]))
             if x["origin"] == "addition" and not x["rating_pass"]:
                 tags.append("ADD.")
             if x["origin"] == "rating_pass":
@@ -495,7 +495,7 @@ def build_md(d, o):
             how = []
             if x["performance_note"]:
                 how.append("*%s.*" % x["performance_note"].capitalize())
-            if x["addressee"] and x["addressee_source"] in (ed.BR, ed.SD):
+            if x["addressee"] and x["addressee_source"] in (ed.BR, ed.SD) and x["addressee"].lower() not in ("him", "her", "them"):
                 who = x["addressee"]
                 if who not in ed.NAMED and not re.match(r"^(the|his|her|their|himself|herself) ?", who):
                     who = "the " + who

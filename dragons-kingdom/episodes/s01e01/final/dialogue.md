@@ -213,8 +213,8 @@ These appear in the picture, not in the voice track. Full details are in `onscre
 | L050 | ABBY | I know I have Leaf. | Quick, a little defensive. | 1.9 |
 | L051 | REMI | Then don't ask like he isn't right here. | A gentle scold on Leaf's behalf. | 3.1 |
 | L052 | ABBY | I didn't mean it like that. | To Leaf. Affectionate apology, touching Leaf; he turns one eye toward her. | 2.3 |
-| L053 | REMI | Nightwings are faster. More versatile. | **PENDING (P1): record as written.** Proposed alternative, only if Daxtyn picks it: "Smaller ones are faster. More versatile.". Matter-of-fact. | 2.2 |
-| L054 | ABBY | And Bashions? | **PENDING (P1): record as written.** Proposed alternative, only if Daxtyn picks it: "And big ones?". Curious. | 0.8 |
+| L053 | REMI | Nightwings are faster. More versatile. | **PENDING (P1): record as written.** Proposed alternative, only if Daxtyn picks it: "Smaller ones are faster. More versatile." Matter-of-fact. | 2.2 |
+| L054 | ABBY | And Bashions? | **PENDING (P1): record as written.** Proposed alternative, only if Daxtyn picks it: "And big ones?" Curious. | 0.8 |
 | L055 | REMI | Better for war. | Plain statement, not a boast. Leave a little quiet after it. | 1.2 |
 | L056 | ABBY | I was thinking about being able to move the ground every time I leave. | Lighter; she means Charcoal's ground-shaking takeoff. | 5.4 |
 | L057 | REMI | Someone has to mend it afterward. | Dry. | 2.3 |
@@ -257,7 +257,7 @@ These appear in the picture, not in the voice track. Full details are in `onscre
 | X7-01 | REMI | Can't catch it flat. | ADD. To himself. Under his breath, working it out. | 1.5 |
 | L079 | REMI | Again. | **CMD** (direction, not an official command). After Charcoal's jaws close on empty air; sending him at the scout again. A rider instruction, not a canonical command word. | 0.8 |
 | | | ***X8*** | proposed addition | |
-| X8-01 | REMI | There you are, you little bastard. | **CHANGED C13** (was: "There you are."). ADD. (strong language) To himself. Then he looks down instead. On the bright water far below, a small dark shape is racing across the waves: the scout's shadow. | 2.3 |
+| X8-01 | REMI | There you are, you little bastard. | **CHANGED C13** (was: "There you are.") ADD. (strong language) To himself. Then he looks down instead. On the bright water far below, a small dark shape is racing across the waves: the scout's shadow. | 2.3 |
 | L080 | REMI | Fire. | **CMD** (official command). The scout rider is exposed to Charcoal's line of fire. Fire means breath weapon; a brief flame only. | 0.8 |
 | L081 | REMI | Hold— | **CMD** (official command). Begun mid-struggle while he is jolted in the rig; cut off as the scout's LEFT wing tears loose. | 0.6 |
 | L082 | REMI | Hold! | **CMD** (official command). *Firm, complete.* Charcoal releases at once and stops. Hold means halt. | 0.8 |
@@ -312,7 +312,7 @@ These appear in the picture, not in the voice track. Full details are in `onscre
 | L106 | ALEXANDRIA | What do you know? | To the Healer. Controlled, economical. | 1.5 |
 | L107 | HEALER | Her arm is broken. It needs support and rest. | Plain report. No miracle cure. | 3.7 |
 | L108 | ALEXANDRIA | Tell me. | To Remi. Level voice. | 0.8 |
-| L109 | REMI | We were off the coast. Flying together. Something came past Leaf. A Slitherwing. | **PENDING (P2): record as written.** Proposed alternative, only if Daxtyn picks it: "We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast.". Reporting in short pieces: only what he saw. | 5.8 |
+| L109 | REMI | We were off the coast. Flying together. Something came past Leaf. A Slitherwing. | **PENDING (P2): record as written.** Proposed alternative, only if Daxtyn picks it: "We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast." Reporting in short pieces: only what he saw. | 5.8 |
 | L110 | ALEXANDRIA | With a rider? | Sharp but level. | 1.2 |
 | L111 | REMI | Yes. | Plain. | 0.6 |
 | L112 | ALEXANDRIA | Did it strike her? | Level. | 1.5 |
@@ -381,7 +381,7 @@ These appear in the picture, not in the voice track. Full details are in `onscre
 | X12-14 | HEALER | She should rest now. | ADD. Alexandria looks to the healer. | 1.5 |
 | X12-15 | ALEXANDRIA | Stay with her. | ADD. To Remi. Alexandria looks to the healer. | 1.2 |
 | X12-16 | REMI | I will. | ADD. Alexandria looks to the healer. | 0.8 |
-| X12-17 | HEALER | Sit down, Your Highness. You're in my bloody light. | **CHANGED C21** (was: "Sit down, Your Highness. You're in my light."). ADD. (strong language) To Remi. Alexandria releases Abby's hand and rises. She leaves with the young attendant. She does not hurry until she is past the door. | 3.7 |
+| X12-17 | HEALER | Sit down, Your Highness. You're in my bloody light. | **CHANGED C21** (was: "Sit down, Your Highness. You're in my light.") ADD. (strong language) To Remi. Alexandria releases Abby's hand and rises. She leaves with the young attendant. She does not hurry until she is past the door. | 3.7 |
 | | | ***X13: THE QUEEN AND THE HATCHLING (cutaway within 2C)*** | proposed addition | |
 | X13-01 | YOUNG ATTENDANT | It tried once. Then it stopped trying. | ADD. A shallow bowl of water and a bowl of soft prepared food sit beside the nest, barely touched. Keep the food generic; what this newborn eats has not been established. | 2.9 |
 | X13-02 | ALEXANDRIA | Give me the cloth. | ADD. Alexandria lowers herself beside the nest, as she did that morning. | 1.5 |
@@ -436,7 +436,7 @@ These appear in the picture, not in the voice track. Full details are in `onscre
 | X17-08 | ABBY | Remi says I should tell you. | ADD. Abby puts her right hand flat against the side of Leaf's face. His breath stirs the loose hair at her temple. For a moment she doesn't say anything. | 2.3 |
 | X17-09 | ABBY | You brought me home. I couldn't hold on properly, so you flew for both of us. | ADD. Leaf's eye turns to her. | 6.4 |
 | X17-10 | ABBY | Thank you. | ADD. Leaf presses his head very gently against her hand. | 0.8 |
-| X17-11 | ABBY | I still want a Bashion. | **PENDING (P3): record as written.** Proposed alternative, only if Daxtyn picks it: "I still want one like Charcoal.". ADD. She stays there. Then, sounding more like herself: | 1.9 |
+| X17-11 | ABBY | I still want a Bashion. | **PENDING (P3): record as written.** Proposed alternative, only if Daxtyn picks it: "I still want one like Charcoal." ADD. She stays there. Then, sounding more like herself: | 1.9 |
 | X17-12 | ABBY | Not instead of you. | ADD. Leaf blinks, slowly. | 1.5 |
 | | | ***X18: THE QUEEN AND THE RIDER (end of 2C)*** | proposed addition | |
 | X18-01 | ALEXANDRIA | Did he stop when you told him? | ADD. Alexandria stops beside Charcoal. Up close he is immense, and she is small beside his head. He regards her calmly. She does not step back. | 2.7 |
@@ -475,7 +475,7 @@ These appear in the picture, not in the voice track. Full details are in `onscre
 | X20-01 | PARTNER | Leave some for the king. | ADD. A long shared table along one side of the square fills as people arrive: loaves, fruit, small cakes, jugs. Everyone puts something down; everyone takes something. | 1.9 |
 | X20-02 | ADULT VILLAGER | Then he should come faster. | ADD. A long shared table along one side of the square fills as people arrive: loaves, fruit, small cakes, jugs. Everyone puts something down; everyone takes something. | 1.9 |
 | | | ***R11 (in X20)*** | proposed rating pass | |
-| R11-01 | PARTNER | Some of us like a man who takes his time. | RATING (suggestive). *Low.* To the him. Close on the couple at the table. Their two children are long gone into the crowd; no child is in this shot. | 4.8 |
+| R11-01 | PARTNER | Some of us like a man who takes his time. | RATING (suggestive). *Low.* Close on the couple at the table. Their two children are long gone into the crowd; no child is in this shot. | 4.8 |
 | | | ***X20*** | proposed addition | |
 | X20-03 | PARENT | Stay where I can see you. | ADD. The music space. The musician and a SECOND MUSICIAN play a quick tune. The CHILD slips the PARENT's hand to get closer to them. | 2.3 |
 | X20-04 | PARENT | What do you say? | ADD. The vendor sees the child staring at his tray of small honey cakes. He holds one out. The child looks up at the parent for permission. The parent nods. | 1.5 |
@@ -562,7 +562,7 @@ These appear in the picture, not in the voice track. Full details are in `onscre
 | L189 | GUARD | She's turning. | Looking up; the warning is true. | 0.8 |
 | L190 | VENDOR | Leave it! Come on! | To the Musician. Crawling clear of the wrecked stall. | 1.8 |
 | | | ***X26*** | proposed addition | |
-| X26-01 | WATCHMAN | She's coming round! Get under stone! Fucking move! | **CHANGED C35** (was: "She's coming round! Get under stone!"). ADD. (strong language) The watchman is still on his post, exposed, gripping the rail. He has not left it. He tracks Starlight's bank with his whole body and shouts down into the square. | 3.6 |
+| X26-01 | WATCHMAN | She's coming round! Get under stone! Fucking move! | **CHANGED C35** (was: "She's coming round! Get under stone!") ADD. (strong language) The watchman is still on his post, exposed, gripping the rail. He has not left it. He tracks Starlight's bank with his whole body and shouts down into the square. | 3.6 |
 | L191 | ADULT VILLAGER | My family— | Injured, conscious, frightened; the king cuts in. | 0.8 |
 | L192 | KING OF CLING | Tell the guard where they were. He'll look. | Practical; no empty promise that everyone is safe. | 3.3 |
 | L193 | GUARD | I'll look. | To the King of Cling. The acknowledgement the king waits for. | 0.8 |
