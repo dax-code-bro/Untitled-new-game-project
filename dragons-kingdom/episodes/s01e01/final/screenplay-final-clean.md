@@ -63,9 +63,9 @@ WHAT HAS CHANGED SINCE THE HANDOFF WAS WRITTEN (read with the CANON LOCK and PRO
 The handoff's front matter above and its closing checks at the end are kept word for word. Where they disagree with a later decision by Daxtyn, his decision wins, as follows.
 
 Dragons (DRAGONS.md, Daxtyn's decisions):
-- No species (2026-10-09). Bashion, Nightwing and Slitherwing are scrapped, and every dragon is its own design. Where the CANON LOCK, the policies or the closing checks name a species, read it as the handoff's old wording for that one dragon: Charcoal, Leaf, Starlight, the gold hatchling or the scout. Species words are gone from every stage direction and from every line not marked [ORIGINAL] (see the CHANGED blocks). Abby's [ORIGINAL] line "Why couldn't I get a Bashion?" is kept word for word; what the word means now is an open question for Daxtyn (final/CHANGES.md).
+- No species (2026-10-09). Bashion, Nightwing and Slitherwing are scrapped, and every dragon is its own design. Where the CANON LOCK, the policies or the closing checks name a species, read it as the handoff's old wording for that one dragon: Charcoal, Leaf, Starlight, the gold hatchling or the scout. Species words are gone from every stage direction (see the CHANGED blocks). In the dialogue, DRAGONS.md keeps them as written until Daxtyn chooses new wording: his [ORIGINAL] line "Why couldn't I get a Bashion?", the proposed lines just after it (L053, L054), Remi's report in 2B (L109) and Abby's proposed line in X17. Those lines are shot as written; the three proposed ones are marked PENDING, with a proposed alternative that is used only if he picks it (final/CHANGES.md question 1).
 - Two legs, wings as forelimbs and horns on every dragon (2026-10-14). No dragon has front legs.
-- A low, normal stance (2026-10-16): low to the ground, the two legs under the middle of the body, the body roughly level, the folded wings' wrists touching down in front for support when walking or resting. No dragon stands tall and upright like a rearing horse. "Sitting like a dog" now means sitting back on the haunches, low, with the folded wings braced in front; whether Leaf sits that way is still open in DRAGONS.md.
+- A low, normal stance (2026-10-16): low to the ground, the two legs under the middle of the body, the body roughly level, the folded wings' wrists touching down in front for support when walking or resting. No dragon stands tall and upright like a rearing horse. Every dragon at rest in this script uses that decided stance: it crouches or lies low and level, belly near the ground, its two legs folded under the middle of its body, the wrists of its folded wings on the ground in front. DRAGONS.md still leaves open whether Leaf may also sit back on his haunches like a dog; this script does not use that pose, and it is offered to Daxtyn only as an alternative (final/CHANGES.md question 2).
 - Leaf is about a quarter of Charcoal's size (2026-10-09), not one-twentieth.
 - Charcoal: completely black scales, blue eyes, grey wing membrane with black stripes along the finger bones, standard orange-red fire. Leaf: dark green scales, yellow eyes, light green membrane; his purplish-blue fire is not shown in Episode 1.
 
@@ -92,7 +92,7 @@ EDITING PLAN — THREE MAIN SCENES WITH SUBSEQUENCES
 47:00–49:00  Scene 3D: aftermath and cliffhanger
 49:00–50:00  End credits, adjusted to actual credits available
 
-The editing plan above is the handoff's 50-minute plan, kept word for word. It does not include the additions or the rating pass. This script's estimated runtime, from tools/check_final.py with the shot list's timing model: expected 54:06, tight-cut bound 44:03, loose-cut bound 68:34. These are estimates for an animatic, not measured footage (SERIES.md section 1). The scene-by-scene table is in final/CHANGES.md.
+The editing plan above is the handoff's 50-minute plan, kept word for word. It does not include the additions or the rating pass. This script's estimated runtime, from tools/check_final.py with the shot list's timing model: expected 54:22, tight-cut bound 44:16, loose-cut bound 68:54. These are estimates for an animatic, not measured footage (SERIES.md section 1). The scene-by-scene table is in final/CHANGES.md.
 
 SCREENPLAY
 
@@ -296,7 +296,7 @@ She shoves his arm without breaking stride. He lets her. They go out into the mo
 
 EXT. VERDOR RIDING GROUNDS, LEAF'S END OF THE FIELD — MORNING
 
-PICTURE: Leaf is waiting where he always waits. He sees Abby coming and starts toward her too fast, low and quick on his two legs with his folded wings swinging forward to take his weight, then remembers himself and drops back onto his haunches like a dog, wings braced in front of him, quivering with the effort of sitting still. Remi walks on past them toward the far end of the field, where something very large breathes out of frame.
+PICTURE: Leaf is waiting where he always waits. He sees Abby coming and starts toward her too fast, low and quick on his two legs with his folded wings swinging forward to take his weight, then remembers himself and crouches low, belly near the grass, his two legs folded under the middle of his body, the wrists of his folded wings on the ground in front of him, quivering with the effort of keeping still. Remi walks on past them toward the far end of the field, where something very large breathes out of frame.
 
 PICTURE: Abby goes over Leaf the way she does every morning, before anything else. The routine is practised and unhurried: each wing joint in turn, each foot, the soft skin under his jaw where the straps sit. She finds an old scrape on one foot pad, presses beside it and watches his eye. He doesn't flinch. She is satisfied.
 
@@ -329,7 +329,7 @@ PICTURE: Begin close enough to mistake Charcoal's black hide for dark terrain. M
 
 Charcoal rests with the ease of something that does not expect to be threatened. His breathing moves the air around Remi. Black scales have texture and natural highlights; do not flatten him into an unreadable silhouette.
 
-Farther across the field, Leaf sits back on his haunches like a dog, low to the ground, his folded wings braced on their wrists in front of him. Abby stands in front of the green dragon and straightens part of her riding equipment. Leaf turns toward a noise and briefly pulls the equipment out of reach.
+Farther across the field, Leaf crouches low, belly near the grass, his two legs folded under the middle of his body, the wrists of his folded wings on the ground in front of him. Abby stands in front of the green dragon and straightens part of her riding equipment. Leaf turns toward a noise and briefly pulls the equipment out of reach.
 
 ABBY:
 "Leaf. Here."
@@ -401,7 +401,7 @@ Charcoal's eye half closes and opens again. The keeper climbs down. The keepers 
 PICTURE: At the edge of the launch space the speaking GROUND KEEPER takes a short clay pipe from his teeth, knocks it out against his heel and grinds the ember into the turf. He looks down at the turf under his boot with something close to grief.
 
 GROUND KEEPER [low, to the keeper beside him]:
-"Every bloody morning I lay that turf."
+"Every damned morning I lay that turf."
 
 The other keeper doesn't answer. He hears it every morning.
 
@@ -463,7 +463,7 @@ PICTURE: The coast bends and the harbor opens below them: a curved stone wall, a
 
 Leaf drops lower and flies along the harbor wall. Charcoal stays high; his shadow reaches the town before he does.
 
-PICTURE: Ordinary life with dragons, shown in a few specific actions rather than a montage of wonders. On the quay, a working dragon about Leaf's size crouches low on its haunches beside a fishing crew, folded wings braced on the stones, watching the catch being sorted and waiting for its share. Two boats bring in a heavy net between them; a second small dragon takes the slack line in its jaws and walks it up the slipway, low on its two legs and the wrists of its folded wings, in time with the crew's pull. On a terraced hillside, a farmer leans on a tool and watches the royal riders pass, not especially impressed.
+PICTURE: Ordinary life with dragons, shown in a few specific actions rather than a montage of wonders. On the quay, a working dragon about Leaf's size crouches low and level beside a fishing crew, folded wings' wrists on the stones, watching the catch being sorted and waiting for its share. Two boats bring in a heavy net between them; a second small dragon takes the slack line in its jaws and walks it up the slipway, low on its two legs and the wrists of its folded wings, in time with the crew's pull. On a terraced hillside, a farmer leans on a tool and watches the royal riders pass, not especially impressed.
 
 In the market street, Charcoal's shadow crosses the stalls. People glance up, recognize him and go back to their business. One or two lift a hand. Nobody runs. A dragon overhead is part of the day here.
 
@@ -483,7 +483,7 @@ REMI:
 
 Abby pretends not to hear and pats Leaf's neck.
 
-PICTURE: On a grassy field above the harbor, young riders are learning on small dragons under the eye of an INSTRUCTOR: a wobbling takeoff, a rider clinging on with both arms, one young dragon settling down on its haunches in the middle of the lesson and refusing to move. Abby laughs. Do not give any of the riders a name or an age.
+PICTURE: On a grassy field above the harbor, young riders are learning on small dragons under the eye of an INSTRUCTOR: a wobbling takeoff, a rider clinging on with both arms, one young dragon lying down flat in the middle of the lesson and refusing to move. Abby laughs. Do not give any of the riders a name or an age.
 
 PICTURE: Beyond the town, on its high ground, the palace: weathered pale stone, practical rather than ornamental, with the birthing chamber's high opening a dark shape near the top. No banners with emblems. Abby is looking at the town. Remi looks up at the chamber's opening and sees a figure standing in it: Alexandria, watching them pass. He lifts a hand. She does not wave back. She watches until they are past.
 
@@ -537,6 +537,8 @@ MUSICIAN:
 "It'll hold until tonight."
 
 They have had some version of this conversation for years. Let the audience feel the friendship without being told its history. This sets up 3A, where he is seen repairing that loose fastening.
+
+PICTURE: At the house near the arch, the parent calls the child in from the doorway, and the door swings shut.
 
 PICTURE: The musician takes a small pipe from his coat and lights it. The smoke that drifts across the fountain is thicker and sweeter than tobacco, and the vendor knows exactly what it is.
 
@@ -605,7 +607,7 @@ PICTURE: Two ways of flying, side by side. Leaf goes low and fast, skimming the 
 
 Charcoal cannot follow. He climbs and goes over the top of the stacks, slow and enormous. His downwash flattens the water around the rocks into a pale ring and lifts every seabird off its ledge at once. Spray climbs the stone. Remi stays low in the saddle. On the far side Charcoal folds his wings and comes down the slope of the air, and for a moment the height he has climbed becomes speed and it looks as if he might get there first.
 
-PICTURE: Leaf bursts out of the gap on the seaward side, low over open water, swings up in a tight turn and lands on the flat top of a lower stack. He settles low on his haunches, folded wings braced on the rock in front of him, Abby on his back, the whole of him fitting on the rock with room to spare. Charcoal arrives a moment later, out of his dive, and checks above the stack with one huge beat that sends the last birds wheeling. His shadow covers the whole stack and the dragon sitting on it.
+PICTURE: Leaf bursts out of the gap on the seaward side, low over open water, swings up in a tight turn and lands on the flat top of a lower stack. He settles there low and level, the wrists of his folded wings braced on the rock, Abby on his back, the whole of him fitting on the rock with room to spare. Charcoal arrives a moment later, out of his dive, and checks above the stack with one huge beat that sends the last birds wheeling. His shadow covers the whole stack and the dragon crouched on it.
 
 ABBY:
 "Again?"
@@ -660,10 +662,10 @@ ABBY [to Leaf]:
 "I didn't mean it like that."
 
 REMI:
-"Smaller ones are faster. More versatile."
+"Nightwings are faster. More versatile."
 
 ABBY:
-"And big ones?"
+"And Bashions?"
 
 REMI:
 "Better for war."
@@ -847,7 +849,7 @@ REMI:
 
 Charcoal releases a brief directed breath of flame. Do not make the blast endlessly sustained or portray it as an unexplained explosive power. The scout tries to slip beneath it. Flame reaches the rider and scorches the riding position.
 
-PICTURE: The orange-red flame wraps the rider for a heartbeat. Outer cloth and leather catch; the rider screams, and this time the wind does not take the sound. One close, brief shot shows the damage plainly: a sleeve burned away, the skin of the forearm and the side of the neck blistered raw and blackened at the edges, smoke streaming off the rider in the slipstream. Helmet and face covering still hide who it is. The rider beats out the flames with a gloved hand. The rider remains strapped on and moving afterward, conscious. Do not imply death.
+PICTURE: The orange-red flame wraps the rider for a heartbeat. Outer cloth and leather catch; the rider screams, a raw, wordless sound loud enough to carry over the wind; keep the voice unidentifiable. One close, brief shot shows the damage plainly: a sleeve burned away, the skin of the forearm and the side of the neck blistered raw and blackened at the edges, smoke streaming off the rider in the slipstream. Helmet and face covering still hide who it is. The rider beats out the flames with a gloved hand. The rider remains strapped on and moving afterward, conscious. Do not imply death.
 
 The smaller dragon's turn loses coordination. Charcoal gets close enough for physical contact. The camera returns wide before contact so the viewer understands which dragon is on which side.
 
@@ -856,7 +858,7 @@ He catches the scout in his jaws, across the root of its left wing. Teeth go thr
 REMI:
 "Hold—"
 
-The command begins amid the struggle. Charcoal's movement and the scout's desperate twist tear the scout's left wing loose: the membrane splits, the bones snap at the shoulder, and the wing tears free in a burst of blood that the slipstream throws across the water. Show the wing separating against bright water and falling away on its own, turning over; then the raw, pumping stump as the scout tips; then Remi's reaction, the scout's blood running on his face; then the sudden imbalance of the falling dragon. Do not reverse which wing is lost in a later shot.
+The command begins amid the struggle. Charcoal's movement and the scout's desperate twist tear the scout's left wing loose: the membrane splits, the bones snap at the shoulder, and the wing tears free in a burst of blood that the slipstream throws across the water. Show the wing separating against bright water and falling away on its own, turning over; then the torn, bleeding shoulder where the wing was, as the scout tips; then Remi's reaction, the scout's blood running on his face; then the sudden imbalance of the falling dragon. Do not reverse which wing is lost in a later shot.
 
 REMI [firm, complete]:
 "Hold!"
@@ -865,7 +867,7 @@ Charcoal releases and checks his next movement. His violence stops with the comm
 
 PICTURE: The scout drops toward the sea near the coast. Its remaining wing cannot restore controlled flight. Remi watches for where it will come down. Charcoal circles once at a distance, giving the audience a clear position relative to the outcrop without requiring a precise map.
 
-The impact is seen from above: a burst of water, a broken trail across the surface, then movement, and a dark red stain spreading from the scout's torn shoulder into the bright water. The rider's secured form remains with the dragon and is still moving. The dragon makes a weak effort to keep itself above water. We do not decide their future here.
+The impact is seen from above: a burst of water, a broken trail across the surface, then movement, and a red stain in the water around the scout's torn shoulder. The rider's secured form remains with the dragon and is still moving. The dragon makes a weak effort to keep itself above water. We do not decide their future here.
 
 Remi looks inland. Leaf is a diminishing shape approaching home. He looks back down, fixes the location in his mind, then directs Charcoal toward Verdor.
 
@@ -906,7 +908,7 @@ SHIP'S MASTER:
 PICTURE: The master's eye falls on the jug at the crew's feet.
 
 SHIP'S MASTER:
-"And cork that bloody jug. Nobody drinks till we know what this is."
+"And cork that jug, for pity's sake. Nobody drinks till we know what this is."
 
 PICTURE: The jug is corked. The dice go into a pocket. Nobody argues.
 
@@ -978,7 +980,9 @@ Charcoal's shadow crosses the field. Everyone outside the assistance group clear
 
 Remi dismounts by the established rig and hurries to Abby. Charcoal watches from behind him, his quiet manner restored.
 
-PICTURE: Charcoal's lower jaw and the scales of his throat are dark and wet with the scout's blood. The keepers nearest him stop where they are. Remi's face and hands are streaked with it. One keeper starts toward him with a cloth; Remi doesn't see him.
+PICTURE: Charcoal's lower jaw and the scales of his throat are dark and wet with the scout's blood. The keepers nearest him stop where they are. Remi's face and hands are streaked with it. A keeper holds out a cloth as he passes; Remi takes it without looking and scrubs at his face as he crosses to Abby. It gets most of it. Streaks stay at his hairline and down his neck, and his hands and sleeves are still dark with it.
+
+PICTURE: Abby's eyes go to his hands and stay there. She doesn't ask. He doesn't explain.
 
 REMI:
 "Abby."
@@ -1025,6 +1029,8 @@ HEALER:
 
 He steps back. The door opens and Alexandria enters. Her first look is at Abby's face, her second at the arm, her third at Remi.
 
+PICTURE: Her look finds the blood on him, sees that he is standing and steady, and goes back to her daughter.
+
 ALEXANDRIA:
 "Abby?"
 
@@ -1048,7 +1054,7 @@ ALEXANDRIA [to Remi]:
 "Tell me."
 
 REMI:
-"We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast."
+"We were off the coast. Flying together. Something came past Leaf. A Slitherwing."
 
 ALEXANDRIA:
 "With a rider?"
@@ -1203,7 +1209,7 @@ REMI:
 ALEXANDRIA:
 "Look at me."
 
-He does. She sees that he is not, at least not anywhere a healer could help: none of the blood on him is his. She takes a cloth from the healer's bowl and wipes it off his face herself, then his hands, without a word, the way she has not done since he was small. The water in the bowl turns pink. Then she touches his face once, briefly, and lets him go back to his sister.
+He does. She sees that he is not, at least not anywhere a healer could help: none of the blood on him is his. She takes a cloth from the healer's bowl and wipes what is left of it from his hairline and neck herself, then his hands, without a word, the way she has not done since he was small. The water in the bowl turns pink. Then she touches his face once, briefly, and lets him go back to his sister.
 
 PICTURE: Brief harbor intercut. The messenger runs down weathered steps, reaches a waiting crew, and delivers the order without repeating the whole scene. Show the Santa Maria's name on a restrained identification card or its hull only if the production design supports legible lettering. This is the story's vessel, not an excuse to import historical Earth figures.
 
@@ -1405,6 +1411,8 @@ They try again, together this time, more or less. The child concentrates hard. F
 
 BACK IN THE TREATMENT ROOM: Abby now has her left arm supported in a sling. Remi sits nearby. With the orders out of the way, he has no task to hide inside.
 
+PICTURE: Remi's hands are clean now and red from scrubbing. On the stand beside him, the healer's bowl holds pink water and a wrung-out cloth. He turns his hands over once, checking under the nails, then lets them rest.
+
 REMI:
 "I'm sorry."
 
@@ -1560,7 +1568,7 @@ ABBY:
 She stays there. Then, sounding more like herself:
 
 ABBY:
-"I still want one like Charcoal."
+"I still want a Bashion."
 
 Leaf blinks, slowly.
 
@@ -1714,10 +1722,12 @@ PARTNER:
 ADULT VILLAGER:
 "Then he should come faster."
 
-PARTNER [low, to him]:
-"That's what I keep telling you."
+PICTURE: Close on the couple at the table. Their two children are long gone into the crowd; no child is in this shot.
 
-PICTURE: He laughs into his cup. She lets him see that she meant it. Along the table the jugs are ale and cider now, and the two old neighbors are still arguing about bread through a haze of pipe smoke.
+PARTNER [low, to him]:
+"Some of us like a man who takes his time."
+
+PICTURE: He laughs into his cup.
 
 PICTURE: The music space. The musician and a SECOND MUSICIAN play a quick tune. The CHILD slips the PARENT's hand to get closer to them. The parent, the parcel in one arm, follows through the crowd and catches up.
 
@@ -1812,7 +1822,7 @@ PICTURE: Someone puts a cup of ale into the king's hand. He looks at it, then li
 KING OF CLING:
 "To the person behind you."
 
-PICTURE: The grown-ups in the square drink. So does the king.
+PICTURE: The grown-ups around the steps drink. So does the king. No child is in either shot: the toast is framed on the adults around the steps.
 
 PICTURE: The king comes down off the steps instead of taking the seat prepared for him. The guard captain follows, resigned. People make room for him at the shared table without ceremony, and he takes a piece of bread like anyone else.
 
@@ -1862,15 +1872,17 @@ GUARD CAPTAIN:
 KING OF CLING:
 "I said I'd be brief."
 
-PICTURE: The far end of the shared table, where the jugs have been going round longest. The vendor stands, cup raised, and sings to the adults around him.
+PICTURE: The alley end of the shared table, where the jugs have been going round longest. Across the square, every child is on the steps around the old woman, eating; none of them is in this shot. The musician sits beside the vendor with a plate, eating at last. The vendor, on his feet at the end of the bench, leans in, cup raised, and sings low, for this end of the table only.
 
-VENDOR [singing]:
+VENDOR [singing, low]:
 "The miller's wife had flour to sell and sold it twice a day, and the miller never asked her why the baker came to stay."
 
-PICTURE: The table roars. The PARTNER hides her face against the villager's shoulder, laughing. At the music space the musician has stopped playing to stare at the vendor.
+PICTURE: The adults around him laugh helplessly. The PARTNER hides her face in her hands, laughing. The musician puts down his bread and stares at the vendor.
 
 MUSICIAN:
 "Not that one."
+
+PICTURE: The musician gets up and goes back across the square to the music space.
 
 PICTURE: The shared meal. People sit and stand along the table. The vendor, off his feet for the first time all day, sits on an upturned crate and calls across to the musician.
 
@@ -1883,7 +1895,7 @@ MUSICIAN:
 VENDOR:
 "Everybody knows the words."
 
-PICTURE: The musician plays a slow, old tune. For a few bars he plays alone. Then one voice joins, an old one, then several, then most of the table, some singing, most humming. The vendor, three cups in, sings badly and loudly. The king, at the far end of the table, listens without singing. On his platform, the watchman hums along without taking his eyes off the sky. At the gate, the guard and the ADULT VILLAGER, working on the hinge together with borrowed tools, stop to listen, then go back to work.
+PICTURE: The musician plays a slow, old tune. For a few bars he plays alone. Then one voice joins, an old one, then several, then most of the table, some singing, most humming. The vendor sings badly and loudly. The king, at the far end of the table, listens without singing. On his platform, the watchman hums along without taking his eyes off the sky. At the gate, the guard and the ADULT VILLAGER, working on the hinge together with borrowed tools, stop to listen, then go back to work.
 
 ADULT VILLAGER:
 "You'll want grease on that."
@@ -1924,7 +1936,7 @@ EXT. CLING SQUARE / SKY — CONTINUOUS
 
 PICTURE: A WATCHMAN looks up from the edge of the square. Something white lies against the cloud. It appears still because it is coming nearly toward him.
 
-PICTURE: He takes it for cloud. He looks down at the square for a moment, and the audience sees what he sees, a little longer than he does: the vendor counting coins into a cloth; the king laughing at something the old woman has said; the child, still out of breath from the dance, leaning against the parent. Then he looks back up. The white is larger. It is still almost motionless, but larger. He gets to his feet. The bread in his hand drops onto the platform, and beside it goes his cup of ale, still full: he has not touched it since the vendor sent it up.
+PICTURE: He takes it for cloud. He looks down at the square for a moment, and the audience sees what he sees, a little longer than he does: the vendor counting coins into a cloth; the king laughing at something the old woman has said; the child, still out of breath from the dance, leaning against the parent. Then he looks back up. The white is larger. It is still almost motionless, but larger. He gets to his feet. The bread in his hand drops onto the platform. Close on the platform boards: his cup of ale goes over beside the bread, still full. He has not touched it since the vendor sent it up.
 
 Do not immediately cut to a fully revealed monster shot. Let its changing size expose its approach. A white wing briefly separates from the cloud behind it.
 
@@ -2057,7 +2069,7 @@ The musician abandons the last loose festival equipment and follows. Their earli
 PICTURE: The watchman is still on his post, exposed, gripping the rail. He has not left it. He tracks Starlight's bank with his whole body and shouts down into the square.
 
 WATCHMAN:
-"She's coming round! Get under the fucking stone!"
+"She's coming round! Get under stone! Fucking move!"
 
 PICTURE: At the broad-road gate, a guard hauls it open. It swings freely on its mended hinge. People stream through onto the road instead of crushing toward the arch. The guard captain sees it and, for half a second, looks toward the king.
 
@@ -2073,9 +2085,9 @@ Starlight makes a second low pass. This second pass is a proposed staging additi
 
 The camera stays with the people for much of this pass. We see the shadow, a white expanse between roofs, the shock of air, and debris striking empty ground where people stood moments earlier. Reserve a single exterior wide shot to establish the actual physical damage.
 
-PICTURE: As the white body passes over, a guard of the king's escort, caught in the open at the far side of the square, is lifted off his feet by the blast of air and thrown against the stone front of a house. He slides down it and leaves a long dark smear on the stone. His spear skids away across the paving.
+PICTURE: Most of it finds empty ground. Not all of it. The timber stage of the music space comes apart, and its broken boards scythe across the open paving. One of them takes the ADULT VILLAGER's legs out from under him in the middle of the square, and he goes down hard on the stone and does not get up.
 
-PICTURE: The timber stage of the music space comes apart, and its broken boards scythe across the open paving. One of them takes the ADULT VILLAGER's legs out from under him in the middle of the square, and he goes down hard on the stone and does not get up.
+PICTURE: As the white body passes over, a guard of the escort who has had no lines, posted alone at the far side of the square, is lifted off his feet by the blast of air and thrown against the stone front of a house. He slides down it, leaves a long dark smear on the stone and does not move again. His spear skids away across the paving.
 
 The king helps the guard captain pull an injured ADULT VILLAGER into shelter. The villager is conscious and frightened. No permanent named casualty is invented.
 
@@ -2109,7 +2121,7 @@ SOUND: Ringing ears slowly gives way to coughing, broken wood settling, distant 
 
 The same route used for the opening festival shot is now blocked. The camera moves only as far as it safely can, showing familiar places changed: the torn stall, the silent music space, the empty steps, the stone arch still standing.
 
-PICTURE: And the people who did not get out of the open. The arm under the roof timbers. The woman by the steps, face down where she fell, the dust on her already darkening. Near the fountain a man sits on the paving with someone across his lap whose head is a ruin of blood, rocking, saying nothing. A banner torn down in the first pass lies over a shape in the middle of the square, soaked dark through at its center.
+PICTURE: And the people who did not get out of the open. The arm under the roof timbers. The woman by the steps, face down where she fell, the dust on her already darkening. Near the fountain a man sits on the paving with a grown woman across his lap whose head is a ruin of blood, rocking, saying nothing. A banner torn down in the first pass lies over a man-sized shape in the middle of the square, soaked dark through at its center.
 
 The parent sits with the child under shelter. Both are alive. The child looks toward the opening but the parent gently turns their attention away from falling dust.
 
@@ -2164,7 +2176,7 @@ The captain leaves to act. The king remains a moment, looking at the damaged squ
 
 PICTURE: Under the captain's direction, the injured are carried in under the stone of the arch, as the king ordered.
 
-PICTURE: Along the wall beside the arch, the dead are laid in a row, five of them at least, covered with whatever festival cloth is left. The banners are not long enough. From under one of them a pair of boots shows, a festival ribbon still tied through one lace.
+PICTURE: Along the wall below the steps, across the square from the arch and out of sight of the shelter beneath it, the dead are laid in a row, every one of them a grown man or woman, covered with whatever festival cloth is left. The banners are not long enough. From under one of them a pair of men's boots shows, a festival ribbon still tied through one lace.
 
 PICTURE: The watchman climbs back up to his post. His hands are not steady on the ladder. At the top he stands where he stood all morning and looks out at the same sky. Far off, the white shape is still there, smaller. He does not take his eyes off it. Below, the guard captain looks up at him. The watchman gives one small nod without looking down, and the captain nods back.
 
@@ -2236,18 +2248,18 @@ If an approved visual reference is unavailable, label the resulting design provi
 
 CONTINUITY CHECK FOR THE FINAL SCRIPT (additions, dragon changes and rating pass)
 
-Canon: no addition or rating-pass beat names an unnamed character. The King of Cling, the scout rider, the hatchling, the ship's master, the sailor, the keepers, the dead of Cling and every extra stay unnamed, and nobody is given an exact age. The King of Cling first appears in 3A, as written. The hatchling is gold, weak, unnamed, has no rider, does not glow and is alive at the end; news of it stays inside the palace. The scout rider is burned and screaming but conscious, moving and still strapped on when last seen; the scout dragon has lost its LEFT wing and is bleeding, struggling to keep itself above water. Neither is shown after 1F, and nobody says whether they live. The Santa Maria is seen leaving the harbor and later as a far-off sail, never arriving. No addition or rating-pass beat decides how the pair would be brought aboard or where they would be cared for; the crew's jokes in 2C decide nothing. Word to King Fallen is ordered, as written, and never shown leaving or arriving. No Water Gliders, no Episode 2 material, no war mobilization or flying ban, no new villain, no identity reveal, and no line that points at more scouts coming. Verdor is never described as part of Tara. Starlight's actions are unchanged: white, no fire, no wounds; the dead of Cling are killed by her dive, her wings and what they throw. Queen Fall says only "Attack." and gains one wordless close shot of her hand on Starlight's neck (X28).
+Canon: no addition or rating-pass beat names an unnamed character. The King of Cling, the scout rider, the hatchling, the ship's master, the sailor, the keepers, the dead of Cling and every extra stay unnamed, and nobody is given an exact age. The King of Cling first appears in 3A, as written. The hatchling is gold, weak, unnamed, has no rider, does not glow and is alive at the end; news of it stays inside the palace. The scout rider is burned and screaming but conscious, moving and still strapped on when last seen; the scout dragon has lost its LEFT wing and is bleeding, struggling to keep itself above water. Neither is shown after 1F, and nobody says whether they live. The Santa Maria is seen leaving the harbor and later as a far-off sail, never arriving. No addition or rating-pass beat decides how the pair would be brought aboard or where they would be cared for; the crew's jokes in 2C decide nothing. Word to King Fallen is ordered, as written, and never shown leaving or arriving. No Water Gliders, no Episode 2 material, no war mobilization or flying ban, no new villain, no identity reveal, and no line that points at more scouts coming. Verdor is never described as part of Tara. Starlight's actions are unchanged: white, no fire, no wounds; the dead of Cling are killed by her dive, her wings and what they throw. Queen Fall says only "Attack." and gains one wordless close shot of her hand on Starlight's neck (X28). The scout's wound is shown as a torn, bleeding shoulder and a red stain in the water, not as a death sentence.
 
-Dragons: no species word is used in any stage direction or in any line except Abby's [ORIGINAL] line. Every dragon has two legs, wings as forelimbs and horns, and is staged low, its legs under the middle of its body and its folded wings' wrists touching down in front when it walks or rests. Leaf sits back on his haunches like a dog, low, folded wings braced in front of him (still open in DRAGONS.md). The hatchling pushes itself up on its wing wrists and its two legs (X18). The scout is a small, fast dragon of its own design.
+Dragons: no species word is used in any stage direction. In dialogue, species words remain only where DRAGONS.md keeps the lines as written until Daxtyn chooses new wording: Abby's [ORIGINAL] line in 1D and the PENDING lines L053, L054, L109 and Abby's line in X17 (P1-P3). Every dragon has two legs, wings as forelimbs and horns, and is staged low, its legs under the middle of its body and its folded wings' wrists touching down in front when it walks or rests. Leaf and every other dragon at rest crouch or lie low and level; none sits back on its haunches. Whether Leaf may also sit like a dog is still open in DRAGONS.md and is offered to Daxtyn only as an alternative (final/CHANGES.md question 2). The hatchling pushes itself up on its wing wrists and its two legs (X18). The scout is a small, fast dragon of its own design.
 
 People: Abby's LEFT arm is the injured arm in every scene after 1E. She uses only her right hand, and the sling supports her left arm. Before the pass she uses both hands freely, as 1C asks (X3, X4, X6). Abby never answers the succession question, and nothing raises it again. Dragons have no human dialogue. No addition or rating-pass beat gives a dragon a spoken order: riders steer by weight and touch, Abby stops Leaf with a raised hand (X17), and the only words spoken to dragons as orders are the screenplay's own. No canonical command (Attack, Fire, Hold, Skit, Free fire) is added; X18 only talks about the commands Remi already gave, and Remi answers honestly that Charcoal stopped when the full "Hold!" was finished.
 
-Blood continuity: from 1F the scout's blood is on Charcoal's jaw and throat and on Remi's face, hands and sleeves (X10, 2A, 2B and 2C up to X11). Alexandria cleans Remi's face and hands in X11; if X11 is cut, Remi is clean from the "BACK IN THE TREATMENT ROOM" picture on. Charcoal's jaws stay bloody until Remi washes them in X15; if X15 is cut, they are clean when we next see him. In Cling, the injured adult villager has a split scalp and an open fracture of his RIGHT leg below the knee from the second pass to the end; his leg is splinted in X27.
+Blood continuity: from 1F the scout's blood is on Charcoal's jaw and throat and on Remi's face, hands and sleeves (X10). In 2A Remi scrubs most of it off his face with a keeper's cloth as he crosses to Abby; streaks stay at his hairline and neck, and his hands and sleeves stay dark (R8). Abby and then Alexandria see it and say nothing (R8, R8b). Alexandria wipes his hairline, neck and hands in X11. In the "BACK IN THE TREATMENT ROOM" picture his hands are scrubbed clean at the healer's bowl (R9b), whether or not X11 is kept; his sleeves stay stained for the rest of the day. Charcoal's jaws stay bloody until Remi washes them in X15; if X15 is cut, they are clean when we next see him. In Cling, the injured adult villager has a split scalp and an open fracture of his RIGHT leg below the knee from the second pass to the end; his leg is splinted in X27.
 
-Rating limits: suggestive material is non-explicit and only between adults (R11, R13). No drug, tobacco or alcohol beat involves Abby, Remi, the Cling child, the young attendant, the young riders or any other child; in every such beat the children are elsewhere or out of frame. Abby's fracture is still shown without a graphic bone image. Nothing shows how to prepare or use a drug, and no violence is staged as instruction.
+Rating limits: suggestive material is non-explicit and only between adults (R11, R13). No drug, tobacco or alcohol beat involves Abby, Remi, the Cling child, the young attendant, the young riders or any other child: no child drinks, smokes or takes part in a suggestive beat, and no such beat frames a child. Where children are nearby, the picture itself says where they are (R3, R11, R12, R13), and the watchman's cup (C34) is its own close shot on his platform. Every one of the dead in Cling is an adult (R15, R16b, R18, R20, R21). Abby's fracture is still shown without a graphic bone image. Nothing shows how to prepare or use a drug, and no violence is staged as instruction.
 
 Places: the outer rocks, the gap and the mist bank lying against the rocks' seaward side in X6 must match X8 and 1F, so the scout falls close to the coast, beyond the outer rocks. The Cling map in X5, X14 and X20–X28 must match 3A–3D: fountain with central pillar, steps, arch, gate onto the broad road, alley, music space, watchman's post. The launch scar is torn in 1C and being mended in X19. Cling has no fire from Starlight and no fire montage: the only flames in Cling are pipe embers before the attack, no fire starts in the attack, and the festival food is not cooked over open flames on screen. Cling's first visit (X5) is in the same morning hour as the flight, so no cut goes back in time.
 
 Links between additions (each is also stated in that addition's first note): X8's gap beat leans on X6. X13 reads best after X12. The three lines of X17 starting "You told me to go." lean on X12. X19 leans on X17. X22's gate beat and X26's gate picture lean on X21. X24 and X25 lean on the farm family, who are introduced in both X14 and X20, so they need at least one of those two. Every other addition stands on its own. Some echo an earlier addition when both are kept, and each still reads without it: the harbor, lookout, instructor and quay dragon of X4 in X9, X10 and X16; Abby's morning routine with Leaf from X2 in X17; the race's dive from X6 in X7; the hatchling's struggle from X13 in X18; the dance and the old woman of X14 in X22; the parcel of X5 in X14; the farm family of X14 and X20 in X27.
 
-Rating-pass links (each is also stated in that block's first note or in its CHANGED reason): R7, R8, C20, C23, C24 and C25 lean on C15. R5 leans on R4. R18 and R21 lean on R15. R19 leans on R18. C36 leans on R17. A rating-pass block or change inside an addition goes with that addition if it is cut.
+Rating-pass links (each is also stated in that block's first note or in its CHANGED reason): R7, R8, R8b, R9b, C20, C23, C24 and C25 lean on C15. R5 leans on R4. R16b, R18, R20 and R21 lean on R15, the deaths in Cling: if Daxtyn wants no deaths, cut R15, R16b, R18, R19, R20 and R21 together. R19 leans on R18. C36 leans on R17. A rating-pass block or change inside an addition goes with that addition if it is cut.

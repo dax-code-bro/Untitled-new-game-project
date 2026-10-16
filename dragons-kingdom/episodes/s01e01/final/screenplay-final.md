@@ -3,16 +3,17 @@
 DRAGON'S KINGDOM — SEASON 1, EPISODE 1 — LOCKED SHOOTING SCRIPT
 
 Status on 2026-10-16. This is the script production works from. It is screenplay.md, the Episode 1 handoff, with three things added on top:
-1. the 28 additions from screenplay-extended.md, accepted by default so that the episode reaches the length Daxtyn asked for ("most episodes only range 50 minutes to an hour", 2026-10-06). He has not said yes to them yet, and he may cut any of them;
-2. Daxtyn's dragon decisions from DRAGONS.md: no species (2026-10-09); two legs, wings as forelimbs and horns on every dragon (2026-10-14); a low, normal stance with the legs toward the center of the body (2026-10-16);
-3. the rating pass for the mature rating Daxtyn set in SERIES.md section 8 (2026-10-16).
+1. the 28 proposed additions from screenplay-extended.md. They are in the shooting script by default so that the episode reaches the length Daxtyn asked for ("most episodes only range 50 minutes to an hour", 2026-10-06). He has not accepted any of them: none is canon until he says yes, and he may cut any of them;
+2. Daxtyn's dragon decisions from DRAGONS.md: no species (2026-10-09); two legs, wings as forelimbs and horns on every dragon (2026-10-14); a low, normal stance with the legs toward the center of the body (2026-10-16). The decisions are his; the wording that carries them out is proposed. Dialogue that still names a species stays as written until he chooses new wording (DRAGONS.md), and is marked PENDING;
+3. the proposed rating pass for the mature rating Daxtyn set in SERIES.md section 8 (2026-10-16).
 "Locked" means production works from this text. It does not make any proposed material canon: only Daxtyn makes canon (SERIES.md section 5). final/CHANGES.md lists every change in plain language, and each one can be cut on its own.
 
 How to read the markers:
 - Text outside every marked block is screenplay.md, word for word and in order.
-- "[ADDITION X# — accepted by default 2026-10-16, Daxtyn may cut — begin]" ... "[ADDITION X# — end]": one of the 28 additions, as proposed in expansion-proposal.md. Each still opens with its production NOTE, and its dependency notes still say what else goes if Daxtyn cuts it.
-- "[RATING PASS R# — begin]" ... "[RATING PASS R# — end]": new material from the rating pass. Each opens with a NOTE marked [RATING PASS] that says what it adds and what it leans on. Some sit inside an addition and go with it if it is cut.
-- "[CHANGED C# — reason — WAS (kept for the record, not shot):]", then "[CHANGED C# — NOW (shoot this):]", then "[CHANGED C# — end]": a changed line. The old text stays in the file word for word, so nothing is lost and any change can be undone. Shoot only the NOW text. The reason names the rule behind the change: DRAGONS.md, or [RATING PASS].
+- "[PROPOSED ADDITION X# — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]" ... "[PROPOSED ADDITION X# — end]": one of the 28 additions, as proposed in expansion-proposal.md. Each still opens with its production NOTE, and its dependency notes still say what else goes if Daxtyn cuts it. Being in the shooting script is not acceptance. Only Daxtyn's own yes makes an addition canon; then record what he accepted and when, and remove its markers (SERIES.md section 5).
+- "[PROPOSED RATING PASS R# — begin]" ... "[PROPOSED RATING PASS R# — end]": proposed new material from the rating pass. Each opens with a NOTE marked [PROPOSED RATING PASS] that says what it adds and what it leans on. Some sit inside an addition and go with it if it is cut. Ids with a letter (R8b, R9b, R16b) were added in the review of 2026-10-16 between existing blocks, so that the other ids stay the same.
+- "[CHANGED C# — reason — WAS (kept for the record, not shot):]", then "[CHANGED C# — NOW (shoot this):]", then "[CHANGED C# — end]": a changed line. The old text stays in the file word for word, so nothing is lost and any change can be undone. Shoot only the NOW text. The reason names the rule behind the change: DRAGONS.md, or [PROPOSED RATING PASS]. The missing numbers (C9, C19, C30, C33) are changes withdrawn in the review of 2026-10-16.
+- "[PENDING P# — Daxtyn wording — DRAGONS.md L9 — begin]" ... "[PENDING P# — end]": sits right after dialogue that DRAGONS.md says stays as written until Daxtyn chooses new wording. That dialogue is shot as written. The block holds only a NOTE with the proposed alternative wording, which is never shot unless he picks it.
 - "[FINAL SCRIPT NOTE — begin]" ... "[FINAL SCRIPT NOTE — end]": notes about the document, like this one. They are not story.
 
 Spoken text follows the handoff's own rules: only text after a named speaker or NARRATOR is spoken; bracketed notes, NOTE lines, markers and WAS text are never spoken or subtitled; dragons have no human dialogue. The four lines marked [ORIGINAL] are unchanged. tools/check_final.py proves all of this, lints the canon and the rating limits, and estimates the runtime; run it after every edit. "python3 tools/check_final.py --clean" rebuilds final/screenplay-final-clean.md, a reading copy without markers, notes or WAS text.
@@ -82,9 +83,9 @@ WHAT HAS CHANGED SINCE THE HANDOFF WAS WRITTEN (read with the CANON LOCK and PRO
 The handoff's front matter above and its closing checks at the end are kept word for word. Where they disagree with a later decision by Daxtyn, his decision wins, as follows.
 
 Dragons (DRAGONS.md, Daxtyn's decisions):
-- No species (2026-10-09). Bashion, Nightwing and Slitherwing are scrapped, and every dragon is its own design. Where the CANON LOCK, the policies or the closing checks name a species, read it as the handoff's old wording for that one dragon: Charcoal, Leaf, Starlight, the gold hatchling or the scout. Species words are gone from every stage direction and from every line not marked [ORIGINAL] (see the CHANGED blocks). Abby's [ORIGINAL] line "Why couldn't I get a Bashion?" is kept word for word; what the word means now is an open question for Daxtyn (final/CHANGES.md).
+- No species (2026-10-09). Bashion, Nightwing and Slitherwing are scrapped, and every dragon is its own design. Where the CANON LOCK, the policies or the closing checks name a species, read it as the handoff's old wording for that one dragon: Charcoal, Leaf, Starlight, the gold hatchling or the scout. Species words are gone from every stage direction (see the CHANGED blocks). In the dialogue, DRAGONS.md keeps them as written until Daxtyn chooses new wording: his [ORIGINAL] line "Why couldn't I get a Bashion?", the proposed lines just after it (L053, L054), Remi's report in 2B (L109) and Abby's proposed line in X17. Those lines are shot as written; the three proposed ones are marked PENDING, with a proposed alternative that is used only if he picks it (final/CHANGES.md question 1).
 - Two legs, wings as forelimbs and horns on every dragon (2026-10-14). No dragon has front legs.
-- A low, normal stance (2026-10-16): low to the ground, the two legs under the middle of the body, the body roughly level, the folded wings' wrists touching down in front for support when walking or resting. No dragon stands tall and upright like a rearing horse. "Sitting like a dog" now means sitting back on the haunches, low, with the folded wings braced in front; whether Leaf sits that way is still open in DRAGONS.md.
+- A low, normal stance (2026-10-16): low to the ground, the two legs under the middle of the body, the body roughly level, the folded wings' wrists touching down in front for support when walking or resting. No dragon stands tall and upright like a rearing horse. Every dragon at rest in this script uses that decided stance: it crouches or lies low and level, belly near the ground, its two legs folded under the middle of its body, the wrists of its folded wings on the ground in front. DRAGONS.md still leaves open whether Leaf may also sit back on his haunches like a dog; this script does not use that pose, and it is offered to Daxtyn only as an alternative (final/CHANGES.md question 2).
 - Leaf is about a quarter of Charcoal's size (2026-10-09), not one-twentieth.
 - Charcoal: completely black scales, blue eyes, grey wing membrane with black stripes along the finger bones, standard orange-red fire. Leaf: dark green scales, yellow eyes, light green membrane; his purplish-blue fire is not shown in Episode 1.
 
@@ -115,7 +116,7 @@ EDITING PLAN — THREE MAIN SCENES WITH SUBSEQUENCES
 
 [FINAL SCRIPT NOTE — begin]
 
-The editing plan above is the handoff's 50-minute plan, kept word for word. It does not include the additions or the rating pass. This script's estimated runtime, from tools/check_final.py with the shot list's timing model: expected 54:06, tight-cut bound 44:03, loose-cut bound 68:34. These are estimates for an animatic, not measured footage (SERIES.md section 1). The scene-by-scene table is in final/CHANGES.md.
+The editing plan above is the handoff's 50-minute plan, kept word for word. It does not include the additions or the rating pass. This script's estimated runtime, from tools/check_final.py with the shot list's timing model: expected 54:22, tight-cut bound 44:16, loose-cut bound 68:54. These are estimates for an animatic, not measured footage (SERIES.md section 1). The scene-by-scene table is in final/CHANGES.md.
 
 [FINAL SCRIPT NOTE — end]
 
@@ -164,7 +165,7 @@ PICTURE: Close on the egg. A fine crack extends from an existing fracture. It st
 
 The chamber is warm, practical, and carefully maintained. Lamps provide subdued light; daylight enters high above. Keep the precise incubation method generic because it has not been established. Soft prepared bedding surrounds the egg. Bowls of water and folded cloth suggest attendants have waited a long time. No magical apparatus appears.
 
-[ADDITION X1 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X1 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed short insert inside 1A. Before Alexandria walks into the chamber, we see that she has been waiting all night. It gives her a private side from her first scene, without explaining "My pretty little weapon" in advance.
 
@@ -172,13 +173,13 @@ PICTURE: A YOUNG ATTENDANT, sent by the attendant at the nest, hurries out of th
 
 INT. QUEEN ALEXANDRIA'S ROOM — EARLY MORNING
 
-[RATING PASS R1 — begin]
+[PROPOSED RATING PASS R1 — begin]
 
-NOTE (not spoken): [RATING PASS] Alcohol, adult only. One picture says how her night went before we see her: wine, poured hours ago, then left alone. Nobody else is in the room. A choice about Alexandria for Daxtyn to check (final/CHANGES.md).
+NOTE (not spoken): [PROPOSED RATING PASS] Alcohol, adult only. One picture says how her night went before we see her: wine, drunk slowly and alone through the night. Nobody else is in the room. A choice about Alexandria for Daxtyn to check (final/CHANGES.md).
 
 PICTURE: Close on the window sill in the grey first light: a jug of wine, nearly empty, and one cup with a dark ring dried inside it.
 
-[RATING PASS R1 — end]
+[PROPOSED RATING PASS R1 — end]
 
 PICTURE: Alexandria stands at a window, already dressed in her restrained formal gown. Behind her, the bed has not been slept in. Through the window, the first light lies on the sea. She turns before the young attendant has finished knocking.
 
@@ -190,7 +191,7 @@ ALEXANDRIA:
 
 PICTURE: She walks the corridor quickly, the young attendant falling behind. At the chamber door she stops for a moment, lets her face settle into composure, and goes in.
 
-[ADDITION X1 — end]
+[PROPOSED ADDITION X1 — end]
 
 An ATTENDANT looks toward the opening door. Queen Alexandria enters without an announcement. The attendant starts to bow; Alexandria stops the gesture with a small raised hand because the egg has moved.
 
@@ -298,7 +299,7 @@ REMI:
 
 PICTURE: Abby looks back once at the gold hatchling. Then the children leave. Alexandria stays. Her hand rests near the newborn without restraining it.
 
-[ADDITION X2 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X2 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed insert at the end of 1A. Alexandria's one private word to her son, the siblings on their way out, Abby's morning routine with Leaf, then Alexandria with the hatchling. Abby caring for Leaf here is turned around in X17, when Leaf has flown for both of them; each reads without the other. In the riding-grounds picture keep Charcoal out of frame, so that 1B still reveals him. The news of the gold hatchling stays inside the palace: nobody outside the chamber talks about it in this episode. The young attendant who takes the next watch here is the one who brings word in X12 and helps in X13. It ends where the original cut begins, on the hatchling's breathing, so the cut to Charcoal's side still works.
 
@@ -340,7 +341,7 @@ EXT. VERDOR RIDING GROUNDS, LEAF'S END OF THE FIELD — MORNING
 [CHANGED C1 — DRAGONS.md: two legs, wings as forelimbs, low stance (2026-10-14, 2026-10-16) — WAS (kept for the record, not shot):]
 PICTURE: Leaf is waiting where he always waits. He sees Abby coming and starts toward her too fast, then remembers himself and sits upright like a dog, quivering with the effort of sitting still. Remi walks on past them toward the far end of the field, where something very large breathes out of frame.
 [CHANGED C1 — NOW (shoot this):]
-PICTURE: Leaf is waiting where he always waits. He sees Abby coming and starts toward her too fast, low and quick on his two legs with his folded wings swinging forward to take his weight, then remembers himself and drops back onto his haunches like a dog, wings braced in front of him, quivering with the effort of sitting still. Remi walks on past them toward the far end of the field, where something very large breathes out of frame.
+PICTURE: Leaf is waiting where he always waits. He sees Abby coming and starts toward her too fast, low and quick on his two legs with his folded wings swinging forward to take his weight, then remembers himself and crouches low, belly near the grass, his two legs folded under the middle of his body, the wrists of his folded wings on the ground in front of him, quivering with the effort of keeping still. Remi walks on past them toward the far end of the field, where something very large breathes out of frame.
 [CHANGED C1 — end]
 
 PICTURE: Abby goes over Leaf the way she does every morning, before anything else. The routine is practised and unhurried: each wing joint in turn, each foot, the soft skin under his jaw where the straps sit. She finds an old scrape on one foot pad, presses beside it and watches his eye. He doesn't flinch. She is satisfied.
@@ -365,7 +366,7 @@ ALEXANDRIA:
 
 The attendant goes. In the doorway she passes the YOUNG ATTENDANT, coming in with fresh water to take the next watch, who settles quietly by the door. Alexandria does not speak to the hatchling. She watches it breathe.
 
-[ADDITION X2 — end]
+[PROPOSED ADDITION X2 — end]
 
 Cut on the tiny rise of its breathing to the immense rise of Charcoal's side outside.
 
@@ -379,7 +380,7 @@ Charcoal rests with the ease of something that does not expect to be threatened.
 [CHANGED C2 — DRAGONS.md: no species (2026-10-09); low stance (2026-10-16) — WAS (kept for the record, not shot):]
 Farther across the field, Leaf sits upright. Abby stands in front of the green Nightwing and straightens part of her riding equipment. Leaf turns toward a noise and briefly pulls the equipment out of reach.
 [CHANGED C2 — NOW (shoot this):]
-Farther across the field, Leaf sits back on his haunches like a dog, low to the ground, his folded wings braced on their wrists in front of him. Abby stands in front of the green dragon and straightens part of her riding equipment. Leaf turns toward a noise and briefly pulls the equipment out of reach.
+Farther across the field, Leaf crouches low, belly near the grass, his two legs folded under the middle of his body, the wrists of his folded wings on the ground in front of him. Abby stands in front of the green dragon and straightens part of her riding equipment. Leaf turns toward a noise and briefly pulls the equipment out of reach.
 [CHANGED C2 — end]
 
 ABBY:
@@ -408,7 +409,7 @@ GROUND KEEPER:
 
 Remi acknowledges with a raised hand. He checks that Abby is mounted before finishing his own preparations. The mounting method should match approved dragon designs and consistent riding equipment; use a grounded platform or existing access rig if the model's scale requires one. Do not have people jump implausibly onto a gigantic dragon's back.
 
-[ADDITION X3 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X3 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed addition inside 1B. It shows how a rider actually gets onto an animal the size of Charcoal, so his scale is felt through an ordinary working routine instead of being announced. It also shows Leaf's habit of getting too close to Charcoal, which Remi mentions a moment later ("Leaf doesn't always remember") and which leads to the nip in 1D.
 
@@ -453,20 +454,20 @@ REMI [quietly, to Charcoal]:
 
 Charcoal's eye half closes and opens again. The keeper climbs down. The keepers draw the stair back on its runners, well clear of the launch space, and step away.
 
-[RATING PASS R2 — begin]
+[PROPOSED RATING PASS R2 — begin]
 
-NOTE (not spoken): [RATING PASS] Tobacco, strong language and ordinary humor among the adult keepers, at the edge of the launch space. It sets up what Charcoal's takeoff does to the field in 1C and the mending in X19.
+NOTE (not spoken): [PROPOSED RATING PASS] Tobacco, strong language and ordinary humor among the adult keepers, at the edge of the launch space. It sets up what Charcoal's takeoff does to the field in 1C and the mending in X19.
 
 PICTURE: At the edge of the launch space the speaking GROUND KEEPER takes a short clay pipe from his teeth, knocks it out against his heel and grinds the ember into the turf. He looks down at the turf under his boot with something close to grief.
 
 GROUND KEEPER [low, to the keeper beside him]:
-"Every bloody morning I lay that turf."
+"Every damned morning I lay that turf."
 
 The other keeper doesn't answer. He hears it every morning.
 
-[RATING PASS R2 — end]
+[PROPOSED RATING PASS R2 — end]
 
-[ADDITION X3 — end]
+[PROPOSED ADDITION X3 — end]
 
 REMI:
 "Stay clear when he lifts."
@@ -519,7 +520,7 @@ Show three details that will later change: Abby using both hands comfortably; Le
 
 The score introduces a lighter version of the main theme. It should feel like private freedom, not a military procession.
 
-[ADDITION X4 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X4 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 [CHANGED C3 — DRAGONS.md: no species (2026-10-09) — WAS (kept for the record, not shot):]
 NOTE (not spoken): Proposed new scene between 1C and 1D. It shows the island the siblings belong to — its harbor, its town, its ordinary Nightwings — and puts the Santa Maria and the palace in the audience's mind before the story needs them. Nightwings working beside fishermen and a riding school for young riders are new world details, not canon; they are listed for Daxtyn in expansion-proposal.md. 1D's opening ("as though continuing a conversation") still follows naturally.
@@ -537,7 +538,7 @@ Leaf drops lower and flies along the harbor wall. Charcoal stays high; his shado
 [CHANGED C4 — DRAGONS.md: no species (2026-10-09); low stance (2026-10-16) — WAS (kept for the record, not shot):]
 PICTURE: Ordinary life with dragons, shown in a few specific actions rather than a montage of wonders. On the quay, a common Nightwing sits upright like a dog beside a fishing crew, watching the catch being sorted and waiting for its share. Two boats bring in a heavy net between them; a second Nightwing takes the slack line in its jaws and walks it up the slipway in time with the crew's pull. On a terraced hillside, a farmer leans on a tool and watches the royal riders pass, not especially impressed.
 [CHANGED C4 — NOW (shoot this):]
-PICTURE: Ordinary life with dragons, shown in a few specific actions rather than a montage of wonders. On the quay, a working dragon about Leaf's size crouches low on its haunches beside a fishing crew, folded wings braced on the stones, watching the catch being sorted and waiting for its share. Two boats bring in a heavy net between them; a second small dragon takes the slack line in its jaws and walks it up the slipway, low on its two legs and the wrists of its folded wings, in time with the crew's pull. On a terraced hillside, a farmer leans on a tool and watches the royal riders pass, not especially impressed.
+PICTURE: Ordinary life with dragons, shown in a few specific actions rather than a montage of wonders. On the quay, a working dragon about Leaf's size crouches low and level beside a fishing crew, folded wings' wrists on the stones, watching the catch being sorted and waiting for its share. Two boats bring in a heavy net between them; a second small dragon takes the slack line in its jaws and walks it up the slipway, low on its two legs and the wrists of its folded wings, in time with the crew's pull. On a terraced hillside, a farmer leans on a tool and watches the royal riders pass, not especially impressed.
 [CHANGED C4 — end]
 
 In the market street, Charcoal's shadow crosses the stalls. People glance up, recognize him and go back to their business. One or two lift a hand. Nobody runs. A dragon overhead is part of the day here.
@@ -565,7 +566,7 @@ Abby pretends not to hear and pats Leaf's neck.
 [CHANGED C6 — DRAGONS.md: no species (2026-10-09); low stance (2026-10-16) — WAS (kept for the record, not shot):]
 PICTURE: On a grassy field above the harbor, young riders are learning on Nightwings under the eye of an INSTRUCTOR: a wobbling takeoff, a rider clinging on with both arms, one Nightwing sitting down in the middle of the lesson and refusing to move. Abby laughs. Do not give any of the riders a name or an age.
 [CHANGED C6 — NOW (shoot this):]
-PICTURE: On a grassy field above the harbor, young riders are learning on small dragons under the eye of an INSTRUCTOR: a wobbling takeoff, a rider clinging on with both arms, one young dragon settling down on its haunches in the middle of the lesson and refusing to move. Abby laughs. Do not give any of the riders a name or an age.
+PICTURE: On a grassy field above the harbor, young riders are learning on small dragons under the eye of an INSTRUCTOR: a wobbling takeoff, a rider clinging on with both arms, one young dragon lying down flat in the middle of the lesson and refusing to move. Abby laughs. Do not give any of the riders a name or an age.
 [CHANGED C6 — end]
 
 PICTURE: Beyond the town, on its high ground, the palace: weathered pale stone, practical rather than ornamental, with the birthing chamber's high opening a dark shape near the top. No banners with emblems. Abby is looking at the town. Remi looks up at the chamber's opening and sees a figure standing in it: Alexandria, watching them pass. He lifts a hand. She does not wave back. She watches until they are past.
@@ -591,9 +592,9 @@ He doesn't answer. He looks away from the town toward the sea, like someone caug
 
 PICTURE: The dragons leave the harbor behind and follow the coast toward its far end, where the outer rocks stand in the sea.
 
-[ADDITION X4 — end]
+[PROPOSED ADDITION X4 — end]
 
-[ADDITION X5 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X5 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed intercut. Cling is introduced here, hours before its festival, through the same ordinary people who will guide the audience through the attack. The King of Cling does NOT appear; Scene 3A still introduces him, as CANON LOCK 13 requires. It is set in the same morning hour as the flight, so the edit cuts away to another place without going back in time. This intercut makes Cling's festival the same day as Abby's flight; that is a decision for Daxtyn (see expansion-proposal.md). Scene 3A keeps its own location caption as written; after the long Verdor stretch it re-anchors the audience.
 
@@ -627,9 +628,11 @@ MUSICIAN:
 
 They have had some version of this conversation for years. Let the audience feel the friendship without being told its history. This sets up 3A, where he is seen repairing that loose fastening.
 
-[RATING PASS R3 — begin]
+[PROPOSED RATING PASS R3 — begin]
 
-NOTE (not spoken): [RATING PASS] Drug use and ordinary humor between two adults. Nothing shows how anything is prepared. The CHILD is across the square at the doorway and stays out of frame for this beat.
+NOTE (not spoken): [PROPOSED RATING PASS] Drug use and ordinary humor between two adults. Nothing shows how anything is prepared. The child is called indoors and the door shuts first (the first picture shows it), so no child is in the shot or in sight of it.
+
+PICTURE: At the house near the arch, the parent calls the child in from the doorway, and the door swings shut.
 
 PICTURE: The musician takes a small pipe from his coat and lights it. The smoke that drifts across the fountain is thicker and sweeter than tobacco, and the vendor knows exactly what it is.
 
@@ -647,7 +650,7 @@ MUSICIAN:
 
 The vendor shakes his head and goes back to his stall. The musician smokes with his eyes closed and the instrument across his knees.
 
-[RATING PASS R3 — end]
+[PROPOSED RATING PASS R3 — end]
 
 PICTURE: At the edge of the square, the WATCHMAN climbs to his post: a raised platform on the wall with a clear line of sight over the roofs to the far sky. He wraps his cloak against the morning chill and settles in. A GUARD below calls up without much interest.
 
@@ -667,9 +670,9 @@ PICTURE: The watchman's view: the roofs of Cling, the fields beyond, a road, and
 
 The first banner unrolls across the square and lifts in the breeze.
 
-[ADDITION X5 — end]
+[PROPOSED ADDITION X5 — end]
 
-[ADDITION X6 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X6 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 [CHANGED C7 — DRAGONS.md: no species (2026-10-09) — WAS (kept for the record, not shot):]
 NOTE (not spoken): Proposed new scene, still before 1D. A playful race that shows, before Remi says it in 1D, that Nightwings are faster and more versatile than Bashions. It fixes the outer rocks, the gap between two of them and the bank of sea mist lying against their seaward side in the audience's mind, because the pursuit in 1F returns to exactly this place, close to the coast. It also gives Leaf the confidence that leads to his nip in 1D. It stands on its own; if X5 is kept, cut to it from the watchman's quiet sky.
@@ -713,7 +716,7 @@ Charcoal cannot follow. He climbs and goes over the top of the stacks, slow and 
 [CHANGED C8 — DRAGONS.md: two legs, wings as forelimbs, low stance (2026-10-14, 2026-10-16) — WAS (kept for the record, not shot):]
 PICTURE: Leaf bursts out of the gap on the seaward side, low over open water, swings up in a tight turn and lands on the flat top of a lower stack. He sits upright like a dog, Abby on his back, the whole of him fitting on the rock with room to spare. Charcoal arrives a moment later, out of his dive, and checks above the stack with one huge beat that sends the last birds wheeling. His shadow covers the whole stack and the dragon sitting on it.
 [CHANGED C8 — NOW (shoot this):]
-PICTURE: Leaf bursts out of the gap on the seaward side, low over open water, swings up in a tight turn and lands on the flat top of a lower stack. He settles low on his haunches, folded wings braced on the rock in front of him, Abby on his back, the whole of him fitting on the rock with room to spare. Charcoal arrives a moment later, out of his dive, and checks above the stack with one huge beat that sends the last birds wheeling. His shadow covers the whole stack and the dragon sitting on it.
+PICTURE: Leaf bursts out of the gap on the seaward side, low over open water, swings up in a tight turn and lands on the flat top of a lower stack. He settles there low and level, the wrists of his folded wings braced on the rock, Abby on his back, the whole of him fitting on the rock with room to spare. Charcoal arrives a moment later, out of his dive, and checks above the stack with one huge beat that sends the last birds wheeling. His shadow covers the whole stack and the dragon crouched on it.
 [CHANGED C8 — end]
 
 ABBY:
@@ -732,7 +735,7 @@ Leaf turns one eye toward Charcoal without any fear at all and flies a little hi
 
 PICTURE: The dragons turn back along the coast side by side, Leaf a little behind and on the near side, as established for 1D. Behind them, the mist still lies against the seaward side of the rocks. Ahead, the whole island lies in the morning light: the harbor, the town, the palace on its high ground. For a while nobody speaks. Let the camera travel with them, as 1C asks, without spinning around them.
 
-[ADDITION X6 — end]
+[PROPOSED ADDITION X6 — end]
 
 SCENE 1D — BROTHER, SISTER, AND TWO DRAGONS
 EXT. SKY OFF VERDOR — DAY
@@ -758,7 +761,7 @@ ABBY [ORIGINAL]:
 
 [FINAL SCRIPT NOTE — begin]
 
-Open question for Daxtyn (final/CHANGES.md): the line above is his own [ORIGINAL] line and is kept word for word. Since he scrapped the species (DRAGONS.md, 2026-10-09), "Bashion" no longer names a kind of dragon. Until he decides on new wording, perform it as written. The changed lines that follow make the contrast smaller dragons against big ones like Charcoal.
+Open question for Daxtyn (final/CHANGES.md question 1): the line above is his own [ORIGINAL] line and is kept word for word. Since he scrapped the species (DRAGONS.md, 2026-10-09), "Bashion" no longer names a kind of dragon. Until he decides on new wording, perform it as written. DRAGONS.md keeps the proposed lines that follow (L053-L055), Remi's report in 2B (L109) and Abby's line in X17 as written too; the ones that name a species are marked PENDING, each with a proposed alternative.
 
 [FINAL SCRIPT NOTE — end]
 
@@ -776,19 +779,17 @@ Abby touches Leaf affectionately. Leaf turns one eye toward her voice.
 ABBY [to Leaf]:
 "I didn't mean it like that."
 
-[CHANGED C9 — DRAGONS.md: no species (2026-10-09); species words in dialogue L053-L054, L055 "Better for war." kept — WAS (kept for the record, not shot):]
 REMI:
 "Nightwings are faster. More versatile."
 
 ABBY:
 "And Bashions?"
-[CHANGED C9 — NOW (shoot this):]
-REMI:
-"Smaller ones are faster. More versatile."
 
-ABBY:
-"And big ones?"
-[CHANGED C9 — end]
+[PENDING P1 — Daxtyn wording — DRAGONS.md L9 — begin]
+
+NOTE (not spoken): [PENDING Daxtyn wording — DRAGONS.md L9] The two lines above (dialogue L053 and L054) still use the scrapped dragon names. DRAGONS.md says they stay as written until Daxtyn chooses new wording, so they are shot as written. Proposed alternative, used only if he picks it (final/CHANGES.md question 1): REMI "Smaller ones are faster. More versatile." / ABBY "And big ones?". Remi's "Better for war." stays either way.
+
+[PENDING P1 — end]
 
 REMI:
 "Better for war."
@@ -926,7 +927,7 @@ PICTURE: Establish all three paths once: Leaf moving inland, the scout heading a
 
 The scout banks around a coastal outcrop or low bank of sea mist. Charcoal takes the inside angle. His large turn is deliberate and expensive; the air shakes under each correction. Remi stays low.
 
-[ADDITION X7 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X7 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed short extension early in the pursuit. It shows how Charcoal gets close enough for his first reach without being faster: he trades height for speed. If X6 is kept, the audience has already seen this trick in the race; it reads without X6. Remi steers with his weight and his seat, not with words; no new spoken order to a dragon is added.
 
@@ -941,7 +942,7 @@ The scout turns.
 
 PICTURE: Remi leans forward, flat to the rig. Charcoal folds his wings partway and comes down the long slope of the air. The height he paid for becomes speed. The wind roars. The gap closes from above, and for the first time the scout's rider has to look back.
 
-[ADDITION X7 — end]
+[PROPOSED ADDITION X7 — end]
 
 The scout rider looks back. Use distance and helmet/clothing obstruction to leave identity unresolved. No recognizable face, named insignia, or villain speech. The rider directs the smaller dragon away from Charcoal's first reach.
 
@@ -950,7 +951,7 @@ Charcoal's jaws close on empty air. He has missed. The miss keeps the struggle p
 REMI:
 "Again."
 
-[ADDITION X8 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X8 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 [CHANGED C12 — DRAGONS.md: no species (2026-10-09) — WAS (kept for the record, not shot):]
 NOTE (not spoken): Proposed extension of the pursuit. Charcoal still does not outfly the Slitherwing. He gains because Remi reads the scout's shadow, because Remi knows where the gap in the outer rocks comes out, and because Charcoal can track the smaller dragon by sound inside the mist. This leans on X6: the rocks and the gap come from there. If X6 is rejected, keep the sun and mist beats and drop the gap beat: the scout runs low for the outer rocks and goes straight into the mist lying against them. The mist lies against the seaward side of the outer rocks, so the fall in 1F stays close to the coast, beyond the outer rocks, as 2B and 2C report it. Remi steers by weight and touch; no new spoken order to a dragon is added.
@@ -962,7 +963,7 @@ PICTURE: The scout climbs hard toward the sun. Remi looks up after it and the gl
 
 Then he looks down instead. On the bright water far below, a small dark shape is racing across the waves: the scout's shadow. It shows exactly where the scout is and which way it is turning.
 
-[CHANGED C13 — [RATING PASS] strong language under stress — WAS (kept for the record, not shot):]
+[CHANGED C13 — [PROPOSED RATING PASS] strong language under stress — WAS (kept for the record, not shot):]
 REMI [to himself]:
 "There you are."
 [CHANGED C13 — NOW (shoot this):]
@@ -988,7 +989,7 @@ Charcoal's head turns before Remi's does. His eye moves. He has heard it. Remi f
 
 PICTURE: Charcoal banks into the white. For a moment, nothing. Then both dragons break out of the mist into bright air just seaward of the outer rocks, the stacks close behind them, the scout ahead and below, Charcoal above and behind it, closer than at any point so far. The water under them is blinding.
 
-[ADDITION X8 — end]
+[PROPOSED ADDITION X8 — end]
 
 PICTURE: The scout drops; Charcoal turns across rather than copying the entire maneuver. Water now fills the background. The larger dragon's shadow briefly swallows the smaller one.
 
@@ -1001,15 +1002,15 @@ REMI:
 
 Charcoal releases a brief directed breath of flame. Do not make the blast endlessly sustained or portray it as an unexplained explosive power. The scout tries to slip beneath it. Flame reaches the rider and scorches the riding position.
 
-[CHANGED C14 — [RATING PASS] the burn shown plainly; the rider lives — WAS (kept for the record, not shot):]
+[CHANGED C14 — [PROPOSED RATING PASS] the burn shown plainly; the rider lives — WAS (kept for the record, not shot):]
 PICTURE: One short flash of burning outer cloth, a flinch, a cry lost in the wind. Cut away before lingering on the rider's skin. The rider remains strapped on and moving afterward. Do not imply death.
 [CHANGED C14 — NOW (shoot this):]
-PICTURE: The orange-red flame wraps the rider for a heartbeat. Outer cloth and leather catch; the rider screams, and this time the wind does not take the sound. One close, brief shot shows the damage plainly: a sleeve burned away, the skin of the forearm and the side of the neck blistered raw and blackened at the edges, smoke streaming off the rider in the slipstream. Helmet and face covering still hide who it is. The rider beats out the flames with a gloved hand. The rider remains strapped on and moving afterward, conscious. Do not imply death.
+PICTURE: The orange-red flame wraps the rider for a heartbeat. Outer cloth and leather catch; the rider screams, a raw, wordless sound loud enough to carry over the wind; keep the voice unidentifiable. One close, brief shot shows the damage plainly: a sleeve burned away, the skin of the forearm and the side of the neck blistered raw and blackened at the edges, smoke streaming off the rider in the slipstream. Helmet and face covering still hide who it is. The rider beats out the flames with a gloved hand. The rider remains strapped on and moving afterward, conscious. Do not imply death.
 [CHANGED C14 — end]
 
 The smaller dragon's turn loses coordination. Charcoal gets close enough for physical contact. The camera returns wide before contact so the viewer understands which dragon is on which side.
 
-[CHANGED C15 — [RATING PASS] the bite shown with blood; the scout's blood marks Charcoal and Remi — WAS (kept for the record, not shot):]
+[CHANGED C15 — [PROPOSED RATING PASS] the bite shown with blood; the scout's blood marks Charcoal and Remi — WAS (kept for the record, not shot):]
 He catches the scout in his jaws. The sound is hide, equipment, and a dreadful stressed movement—not a prolonged gore effect. The scout struggles. Remi is jolted and catches himself against the riding rig.
 [CHANGED C15 — NOW (shoot this):]
 He catches the scout in his jaws, across the root of its left wing. Teeth go through hide; something in the wing gives with a crack the audience feels. Blood sprays over Charcoal's black jaw, and the slipstream carries a fine spray of it all the way back along his neck to Remi's face and hands. The sound is hide, equipment, bone and the scout's scream. Keep it fast and violent rather than lingering. The scout struggles. Remi is jolted and catches himself against the riding rig.
@@ -1018,10 +1019,10 @@ He catches the scout in his jaws, across the root of its left wing. Teeth go thr
 REMI:
 "Hold—"
 
-[CHANGED C16 — [RATING PASS] the LEFT wing torn loose with blood — WAS (kept for the record, not shot):]
+[CHANGED C16 — [PROPOSED RATING PASS] the LEFT wing torn loose with blood — WAS (kept for the record, not shot):]
 The command begins amid the struggle. Charcoal's movement and the scout's desperate twist tear the scout's left wing loose. Show the wing separating in silhouette against bright water, then cut to Remi's reaction and the sudden imbalance of the falling dragon. Do not reverse which wing is lost in a later shot.
 [CHANGED C16 — NOW (shoot this):]
-The command begins amid the struggle. Charcoal's movement and the scout's desperate twist tear the scout's left wing loose: the membrane splits, the bones snap at the shoulder, and the wing tears free in a burst of blood that the slipstream throws across the water. Show the wing separating against bright water and falling away on its own, turning over; then the raw, pumping stump as the scout tips; then Remi's reaction, the scout's blood running on his face; then the sudden imbalance of the falling dragon. Do not reverse which wing is lost in a later shot.
+The command begins amid the struggle. Charcoal's movement and the scout's desperate twist tear the scout's left wing loose: the membrane splits, the bones snap at the shoulder, and the wing tears free in a burst of blood that the slipstream throws across the water. Show the wing separating against bright water and falling away on its own, turning over; then the torn, bleeding shoulder where the wing was, as the scout tips; then Remi's reaction, the scout's blood running on his face; then the sudden imbalance of the falling dragon. Do not reverse which wing is lost in a later shot.
 [CHANGED C16 — end]
 
 REMI [firm, complete]:
@@ -1031,10 +1032,10 @@ Charcoal releases and checks his next movement. His violence stops with the comm
 
 PICTURE: The scout drops toward the sea near the coast. Its remaining wing cannot restore controlled flight. Remi watches for where it will come down. Charcoal circles once at a distance, giving the audience a clear position relative to the outcrop without requiring a precise map.
 
-[CHANGED C17 — [RATING PASS] blood in the water; both still alive — WAS (kept for the record, not shot):]
+[CHANGED C17 — [PROPOSED RATING PASS] blood in the water; both still alive — WAS (kept for the record, not shot):]
 The impact is seen from above and far enough away to avoid graphic detail: a burst of water, a broken trail across the surface, then movement. The rider's secured form remains with the dragon. The dragon makes a weak effort to keep itself above water. We do not decide their future here.
 [CHANGED C17 — NOW (shoot this):]
-The impact is seen from above: a burst of water, a broken trail across the surface, then movement, and a dark red stain spreading from the scout's torn shoulder into the bright water. The rider's secured form remains with the dragon and is still moving. The dragon makes a weak effort to keep itself above water. We do not decide their future here.
+The impact is seen from above: a burst of water, a broken trail across the surface, then movement, and a red stain in the water around the scout's torn shoulder. The rider's secured form remains with the dragon and is still moving. The dragon makes a weak effort to keep itself above water. We do not decide their future here.
 [CHANGED C17 — end]
 
 Remi looks inland. Leaf is a diminishing shape approaching home. He looks back down, fixes the location in his mind, then directs Charcoal toward Verdor.
@@ -1046,7 +1047,7 @@ This is ordinary directional speech, not a newly defined canonical command. Char
 
 PICTURE: The sea closes over the last drifting trace of smoke. Cut to Abby's right hand holding fast. The contrast is between two injured parties, not a victory celebration.
 
-[ADDITION X9 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X9 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed short insert between 1F and 2A. It continues from Abby's right hand holding fast and stays as short as 1F asks her returns to be: no journey montage, no new danger. Its one job is to show the harbor seeing her come in alone, which is why the Santa Maria's crew is already aboard and waiting when the messenger arrives in 2C. If X4 is kept, this is the same harbor and the same lookout; it does not need X4.
 
@@ -1060,13 +1061,13 @@ ABBY [through pain, to herself]:
 
 She makes herself lift her head.
 
-[RATING PASS R4 — begin]
+[PROPOSED RATING PASS R4 — begin]
 
-NOTE (not spoken): [RATING PASS] Alcohol, tobacco and gambling among the adult crew: an ordinary afternoon aboard, a moment before it stops being one.
+NOTE (not spoken): [PROPOSED RATING PASS] Alcohol, tobacco and gambling among the adult crew: an ordinary late morning aboard, a moment before it stops being one.
 
 PICTURE: On the Santa Maria's deck, in the shade of a furled sail, the off-watch crew sit on coiled rope around a jug of ale and a cup of dice. The SHIP'S MASTER leans on the rail with his pipe going and watches them lose their wages to each other.
 
-[RATING PASS R4 — end]
+[PROPOSED RATING PASS R4 — end]
 
 [CHANGED C18 — DRAGONS.md: no species (2026-10-09) — WAS (kept for the record, not shot):]
 PICTURE: The LOOKOUT at the Santa Maria's masthead turns at the sound of Leaf's wingbeats, which are wrong, too quick and too uneven, and sees the green Nightwing low over the harbor, alone, his rider bent over the saddle.
@@ -1087,36 +1088,36 @@ Nobody on the quay can answer. The master looks out to sea, toward the outer roc
 SHIP'S MASTER:
 "Everyone stays aboard."
 
-[RATING PASS R5 — begin]
+[PROPOSED RATING PASS R5 — begin]
 
-NOTE (not spoken): [RATING PASS] Strong language and alcohol, adult crew. Leans on R4 (the jug).
+NOTE (not spoken): [PROPOSED RATING PASS] Alcohol, adult crew. Leans on R4 (the jug).
 
 PICTURE: The master's eye falls on the jug at the crew's feet.
 
 SHIP'S MASTER:
-"And cork that bloody jug. Nobody drinks till we know what this is."
+"And cork that jug, for pity's sake. Nobody drinks till we know what this is."
 
 PICTURE: The jug is corked. The dice go into a pocket. Nobody argues.
 
-[RATING PASS R5 — end]
+[PROPOSED RATING PASS R5 — end]
 
 PICTURE: Leaf passes low over the roofs toward the riding grounds. Nobody waves.
 
-[ADDITION X9 — end]
+[PROPOSED ADDITION X9 — end]
 
 SCENE 2A — THE LANDING
 EXT. VERDOR RIDING GROUNDS — DAY
 
 PICTURE: Ground keepers see Leaf returning alone and too urgently. One raises a hand; another notices Abby hunched over the saddle. The mood changes before anyone hears her.
 
-[RATING PASS R6 — begin]
+[PROPOSED RATING PASS R6 — begin]
 
-NOTE (not spoken): [RATING PASS] Strong language, an adult keeper, under his breath.
+NOTE (not spoken): [PROPOSED RATING PASS] Strong language, an adult keeper, under his breath.
 
 KEEPER [under his breath]:
 "Oh, shit."
 
-[RATING PASS R6 — end]
+[PROPOSED RATING PASS R6 — end]
 
 GROUND KEEPER:
 "Clear the approach!"
@@ -1153,7 +1154,7 @@ ABBY:
 GROUND KEEPER:
 "I know. We have you."
 
-[ADDITION X10 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X10 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed short insert inside 2A. Remi's first moment alone since the fight, seen in the air as he returns. It also explains why Charcoal lands well away from Abby and Leaf. Remi steers by weight and touch; no new spoken order to a dragon is added. It stands on its own.
 
@@ -1161,13 +1162,13 @@ PICTURE: Above the coast, Remi on Charcoal, alone, coming home. The speed of the
 
 Close on Remi's hands on the riding rig. They are shaking. He looks at them as if they belonged to someone else and grips harder to make them stop. They don't.
 
-[RATING PASS R7 — begin]
+[PROPOSED RATING PASS R7 — begin]
 
-NOTE (not spoken): [RATING PASS] Blood continuity. Leans on C15: the scout's blood is on Remi from 1F until his mother cleans him up in X11. None of it is his.
+NOTE (not spoken): [PROPOSED RATING PASS] Blood continuity. Leans on C15: the scout's blood is on Remi from 1F until his mother cleans him up in X11. None of it is his.
 
 PICTURE: The scout's blood is drying dark and tacky in the creases of his knuckles and under his nails. There is more on his sleeves, spattered up his neck and across his face. He wipes his face with the back of his wrist and only spreads it.
 
-[RATING PASS R7 — end]
+[PROPOSED RATING PASS R7 — end]
 
 He looks back once toward the outer rocks. From here they are only a dark cluster on the bright water. He cannot see the place where the pair came down.
 
@@ -1182,19 +1183,21 @@ REMI [low, to Charcoal]:
 
 He leans forward and puts his hand flat on Charcoal's neck. Then he shifts his weight and turns him, gently, toward the far side of the field. Charcoal adjusts his wings and begins a wide, careful descent, well away from Abby and Leaf.
 
-[ADDITION X10 — end]
+[PROPOSED ADDITION X10 — end]
 
 Charcoal's shadow crosses the field. Everyone outside the assistance group clears back. His landing is a heavy disturbance, but he comes down away from Abby and Leaf. Do not bury the injured child in his landing dust.
 
 Remi dismounts by the established rig and hurries to Abby. Charcoal watches from behind him, his quiet manner restored.
 
-[RATING PASS R8 — begin]
+[PROPOSED RATING PASS R8 — begin]
 
-NOTE (not spoken): [RATING PASS] Blood continuity. Leans on C15. It is seen, not explained: Abby hears what happened only in 2B, as the screenplay intends.
+NOTE (not spoken): [PROPOSED RATING PASS] Blood continuity. Leans on C15. It is seen, not explained: Abby hears what happened only in 2B, as the screenplay intends. Neither of them speaks about it.
 
-PICTURE: Charcoal's lower jaw and the scales of his throat are dark and wet with the scout's blood. The keepers nearest him stop where they are. Remi's face and hands are streaked with it. One keeper starts toward him with a cloth; Remi doesn't see him.
+PICTURE: Charcoal's lower jaw and the scales of his throat are dark and wet with the scout's blood. The keepers nearest him stop where they are. Remi's face and hands are streaked with it. A keeper holds out a cloth as he passes; Remi takes it without looking and scrubs at his face as he crosses to Abby. It gets most of it. Streaks stay at his hairline and down his neck, and his hands and sleeves are still dark with it.
 
-[RATING PASS R8 — end]
+PICTURE: Abby's eyes go to his hands and stay there. She doesn't ask. He doesn't explain.
+
+[PROPOSED RATING PASS R8 — end]
 
 REMI:
 "Abby."
@@ -1241,6 +1244,14 @@ HEALER:
 
 He steps back. The door opens and Alexandria enters. Her first look is at Abby's face, her second at the arm, her third at Remi.
 
+[PROPOSED RATING PASS R8b — begin]
+
+NOTE (not spoken): [PROPOSED RATING PASS] Blood continuity. Leans on C15: the scout's blood is still on Remi's hands, neck and sleeves. Wordless, so that 2B still carries the news.
+
+PICTURE: Her look finds the blood on him, sees that he is standing and steady, and goes back to her daughter.
+
+[PROPOSED RATING PASS R8b — end]
+
 ALEXANDRIA:
 "Abby?"
 
@@ -1263,13 +1274,14 @@ The healer continues without providing a real-world instructional demonstration.
 ALEXANDRIA [to Remi]:
 "Tell me."
 
-[CHANGED C19 — DRAGONS.md: no species (2026-10-09); species word in dialogue L109 — WAS (kept for the record, not shot):]
 REMI:
 "We were off the coast. Flying together. Something came past Leaf. A Slitherwing."
-[CHANGED C19 — NOW (shoot this):]
-REMI:
-"We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast."
-[CHANGED C19 — end]
+
+[PENDING P2 — Daxtyn wording — DRAGONS.md L9 — begin]
+
+NOTE (not spoken): [PENDING Daxtyn wording — DRAGONS.md L9] The last words of Remi's line above (dialogue L109) still use a scrapped dragon name. DRAGONS.md says the line stays as written until Daxtyn chooses new wording, so it is shot as written. Proposed alternative, used only if he picks it (final/CHANGES.md question 1): "We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast."
+
+[PENDING P2 — end]
 
 ALEXANDRIA:
 "With a rider?"
@@ -1397,7 +1409,7 @@ ROYAL MESSENGER:
 
 The messenger leaves immediately. No debate about whether injured enemies deserve retrieval is needed; Alexandria's order is clear.
 
-[ADDITION X11 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X11 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed small insert inside 2C. Remi wants to go back out and guide the ship himself; his mother refuses. "You've done enough today." can be heard as thanks or as blame, and nothing explains which; it also prepares the original's "You are both staying here for now." Then, with the order given, Alexandria looks at her son for the first time as his mother. The real conversation comes later (X18, if kept). It stands on its own.
 
@@ -1428,21 +1440,21 @@ REMI:
 ALEXANDRIA:
 "Look at me."
 
-[CHANGED C20 — [RATING PASS] blood continuity, leans on C15 — WAS (kept for the record, not shot):]
+[CHANGED C20 — [PROPOSED RATING PASS] blood continuity, leans on C15 — WAS (kept for the record, not shot):]
 He does. She sees that he is not, at least not anywhere a healer could help. She touches his face once, briefly, and lets him go back to his sister.
 [CHANGED C20 — NOW (shoot this):]
-He does. She sees that he is not, at least not anywhere a healer could help: none of the blood on him is his. She takes a cloth from the healer's bowl and wipes it off his face herself, then his hands, without a word, the way she has not done since he was small. The water in the bowl turns pink. Then she touches his face once, briefly, and lets him go back to his sister.
+He does. She sees that he is not, at least not anywhere a healer could help: none of the blood on him is his. She takes a cloth from the healer's bowl and wipes what is left of it from his hairline and neck herself, then his hands, without a word, the way she has not done since he was small. The water in the bowl turns pink. Then she touches his face once, briefly, and lets him go back to his sister.
 [CHANGED C20 — end]
 
-[ADDITION X11 — end]
+[PROPOSED ADDITION X11 — end]
 
 PICTURE: Brief harbor intercut. The messenger runs down weathered steps, reaches a waiting crew, and delivers the order without repeating the whole scene. Show the Santa Maria's name on a restrained identification card or its hull only if the production design supports legible lettering. This is the story's vessel, not an excuse to import historical Earth figures.
 
 Ropes are handled. Supplies are brought aboard. A lookout turns seaward. End the harbor insert with preparations beginning; do not show the entire rescue or resolve the wounded pair's fate in this episode.
 
-[RATING PASS R9 — begin]
+[PROPOSED RATING PASS R9 — begin]
 
-NOTE (not spoken): [RATING PASS] Dark humor, tobacco and alcohol among the adult crew. It decides nothing about the retrieval: no method, no care, no fate. If X9 is kept, the jug is the one the master had corked.
+NOTE (not spoken): [PROPOSED RATING PASS] Dark humor, tobacco and alcohol among the adult crew. It decides nothing about the retrieval: no method, no care, no fate. If X9 is kept, the jug is the one the master had corked.
 
 PICTURE: The SHIP'S MASTER hears the order out with his pipe in his teeth. When the messenger has gone, he picks up the crew's ale jug, pulls the cork and pours the ale over the side.
 
@@ -1452,9 +1464,9 @@ SAILOR:
 SHIP'S MASTER:
 "So would you be. Keep your fingers where you can count them."
 
-[RATING PASS R9 — end]
+[PROPOSED RATING PASS R9 — end]
 
-[ADDITION X12 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X12 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed. Between the harbor insert and the sling, Abby's arm has to be set. This shows it through faces and hands, never through technique. It also gives Alexandria a reason to be away from the room during the siblings' conversation that follows, as she is in the original. She goes only after the arm is set and only because Abby sends her; whether she should go at all is one of the Alexandria questions put to Daxtyn in expansion-proposal.md. Nothing here decides where the burned rider would be cared for; that belongs outside this episode.
 
@@ -1526,7 +1538,7 @@ REMI:
 
 Alexandria releases Abby's hand and rises. She leaves with the young attendant. She does not hurry until she is past the door.
 
-[CHANGED C21 — [RATING PASS] strong language, adult healer — WAS (kept for the record, not shot):]
+[CHANGED C21 — [PROPOSED RATING PASS] strong language, adult healer — WAS (kept for the record, not shot):]
 HEALER [to Remi]:
 "Sit down, Your Highness. You're in my light."
 [CHANGED C21 — NOW (shoot this):]
@@ -1536,9 +1548,9 @@ HEALER [to Remi]:
 
 Remi sits.
 
-[ADDITION X12 — end]
+[PROPOSED ADDITION X12 — end]
 
-[ADDITION X13 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X13 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed. Alexandria alone with the hatchling, away from her children and her court. The scene keeps both readings of "My pretty little weapon" open; it neither explains the line nor softens it away. The hatchling stays fragile. It is not named, has no rider, does not glow, and does not die. It reads best after X12, which brings the message; on its own it plays as Alexandria checking on the hatchling while the healer works, and its first picture still stands.
 
@@ -1612,9 +1624,9 @@ ALEXANDRIA:
 
 She rises. At the door she looks back once, the way Abby looked back that morning. The hatchling's side rises and falls.
 
-[ADDITION X13 — end]
+[PROPOSED ADDITION X13 — end]
 
-[ADDITION X14 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X14 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed second Cling intercut. Small setups for Scene 3, all with people the attack will reach: the stuck gate (with the villager who will be hurt in 3C and the guard who will promise to look for that villager's family), the guard captain's worry about the banners (which he acts on in 3A), the old woman who teaches the children's dance, and the parcel the child is finally allowed to carry. The farm family is shown again in X20, which also introduces them on its own, so X24 and X25 work if either X14 or X20 is kept. The King of Cling still does not appear. It stands on its own. After it, the story returns to Verdor with "BACK IN THE TREATMENT ROOM", which also covers the time Abby's sling needs.
 
@@ -1665,9 +1677,17 @@ OLD WOMAN:
 
 They try again, together this time, more or less. The child concentrates hard. From the fountain's rim, the musician plays them a few bars to dance to.
 
-[ADDITION X14 — end]
+[PROPOSED ADDITION X14 — end]
 
 BACK IN THE TREATMENT ROOM: Abby now has her left arm supported in a sling. Remi sits nearby. With the orders out of the way, he has no task to hide inside.
+
+[PROPOSED RATING PASS R9b — begin]
+
+NOTE (not spoken): [PROPOSED RATING PASS] Blood continuity. Leans on C15. Remi has scrubbed the last of the scout's blood off his hands at the healer's bowl, so he is clean from here on whether or not X11 is kept. His sleeves stay stained.
+
+PICTURE: Remi's hands are clean now and red from scrubbing. On the stand beside him, the healer's bowl holds pink water and a wrung-out cloth. He turns his hands over once, checking under the nails, then lets them rest.
+
+[PROPOSED RATING PASS R9b — end]
 
 REMI:
 "I'm sorry."
@@ -1718,9 +1738,9 @@ ALEXANDRIA:
 
 PICTURE: Outside, Leaf and Charcoal occupy separate parts of the grounds. Leaf watches the doorway. Charcoal lies still, breathing slowly. The same calm that was amusing in the sky is more complicated after what we have seen him do.
 
-[ADDITION X15 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X15 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
-[CHANGED C23 — [RATING PASS] blood shown, leans on C15 — WAS (kept for the record, not shot):]
+[CHANGED C23 — [PROPOSED RATING PASS] blood shown, leans on C15 — WAS (kept for the record, not shot):]
 NOTE (not spoken): Proposed. Taking the rig off an animal this size is real work, and it shows what the fight has changed: the keepers now hesitate at Charcoal's head, and Remi does that part himself. No wound, blood or gore is shown. Remi is "staying here" as his mother ordered; the riding grounds are part of here. It is kept separate from X18 so that each can be accepted on its own. It stands on its own.
 [CHANGED C23 — NOW (shoot this):]
 NOTE (not spoken): Proposed. Taking the rig off an animal this size is real work, and it shows what the fight has changed: the keepers now hesitate at Charcoal's head, and Remi does that part himself. The scout's blood is shown plainly on the rig and in the water ([RATING PASS], leaning on C15); Charcoal himself has no wound. Remi is "staying here" as his mother ordered; the riding grounds are part of here. It is kept separate from X18 so that each can be accepted on its own. It stands on its own.
@@ -1731,7 +1751,7 @@ EXT. VERDOR RIDING GROUNDS — DAY
 
 PICTURE: Keepers on ladders lower Charcoal's heavy saddle on ropes to a wheeled stand. Charcoal shifts his weight to let the last straps come free without being asked. Remi comes out of the building, crosses the field and takes a rope with them. Nobody tells him he doesn't need to.
 
-[CHANGED C24 — [RATING PASS] blood on the rig, leans on C15 — WAS (kept for the record, not shot):]
+[CHANGED C24 — [PROPOSED RATING PASS] blood on the rig, leans on C15 — WAS (kept for the record, not shot):]
 PICTURE: As the rig comes down, the front straps show a dark smear of soot from Charcoal's own fire. A keeper rubs at it with his thumb and stops.
 [CHANGED C24 — NOW (shoot this):]
 PICTURE: As the rig comes down, the front straps show a dark smear of soot from Charcoal's own fire, and over it a crust of blood that is not his. A keeper rubs at it with his thumb, looks at his thumb, and stops.
@@ -1739,7 +1759,7 @@ PICTURE: As the rig comes down, the front straps show a dark smear of soot from 
 
 PICTURE: Keepers with buckets and cloths come to Charcoal's head and slow down. Nobody moves first. They are not afraid of him exactly. They have just heard what his jaws did this morning.
 
-[CHANGED C25 — [RATING PASS] the scout's blood washed off Charcoal's jaws, leans on C15 — WAS (kept for the record, not shot):]
+[CHANGED C25 — [PROPOSED RATING PASS] the scout's blood washed off Charcoal's jaws, leans on C15 — WAS (kept for the record, not shot):]
 Remi takes a bucket and a cloth and washes Charcoal's jaws himself, carefully, along the outside of the lips only, never into the mouth. Charcoal lowers his head to make it easier. The water running off into the grass is darker for a moment, then clear. Do not show what it washes away.
 [CHANGED C25 — NOW (shoot this):]
 Remi takes a bucket and a cloth and washes Charcoal's jaws himself, carefully, along the outside of the lips only, never into the mouth. Charcoal lowers his head to make it easier. The water runs off into the grass red, then pink, then clear. Caught between two of the great teeth at the lip is a torn strip of the scout's wing membrane. Remi works it free with his fingers, looks at it, and drops it into the bucket.
@@ -1753,9 +1773,9 @@ REMI:
 
 He stands holding the empty bucket, looking at the great jaw, for longer than he needs to.
 
-[RATING PASS R10 — begin]
+[PROPOSED RATING PASS R10 — begin]
 
-NOTE (not spoken): [RATING PASS] Dark humor and alcohol among the adult keepers. They keep their voices down.
+NOTE (not spoken): [PROPOSED RATING PASS] Dark humor and alcohol among the adult keepers. They keep their voices down.
 
 PICTURE: The GROUND KEEPER leaves the prince to it and walks back to where another keeper stands watching. That keeper takes a flask from inside his coat, drinks and passes it over.
 
@@ -1767,13 +1787,13 @@ KEEPER [low]:
 
 The ground keeper drinks, longer than he meant to, and hands the flask back.
 
-[RATING PASS R10 — end]
+[PROPOSED RATING PASS R10 — end]
 
 PICTURE: Keepers wheel the feed cart over. Charcoal eats slowly and calmly, exactly as he would on any other day. The keepers watch him eat. Nobody says anything.
 
-[ADDITION X15 — end]
+[PROPOSED ADDITION X15 — end]
 
-[ADDITION X16 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X16 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 [CHANGED C26 — DRAGONS.md: no species (2026-10-09) — WAS (kept for the record, not shot):]
 NOTE (not spoken): Proposed. The Santa Maria finishes preparing and leaves the harbor, and ordinary Verdor people feel the day. Her gear stays generic (rope, canvas, the ship's boat): nothing here decides how the fallen pair would be brought aboard or where they would be cared for, because the rescue, the care and the scout dragon's later fate belong outside this episode. We see her clear the harbor wall and no further. Nobody is named. The instructor ends the lesson as a personal caution, not as an order to the island. If X4 is kept, this is the same quay, the same instructor and the same quay Nightwing; it does not need X4.
@@ -1806,9 +1826,9 @@ The young riders lead their Nightwings off the field on foot, looking up at the 
 The young riders lead their dragons off the field on foot, looking up at the sky as they go. In the market, a gull swoops low over the stalls and every head jerks up. Somebody laughs at himself. Nobody else does.
 [CHANGED C28 — end]
 
-[ADDITION X16 — end]
+[PROPOSED ADDITION X16 — end]
 
-[ADDITION X17 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X17 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed. Pays off Alexandria's "Later. With help." and the siblings' "You should tell him." / "I will." Here the help is the healer and Alexandria herself, which gives mother and daughter a private moment the original has no room for. The three lines starting "You told me to go." lean on X12; if X12 is rejected, cut those three lines and the rest stands. Alexandria's answer stays open on purpose: she neither admits nor denies that she wanted to go.
 
@@ -1873,13 +1893,14 @@ ABBY:
 
 She stays there. Then, sounding more like herself:
 
-[CHANGED C30 — DRAGONS.md: no species (2026-10-09); species word in dialogue — WAS (kept for the record, not shot):]
 ABBY:
 "I still want a Bashion."
-[CHANGED C30 — NOW (shoot this):]
-ABBY:
-"I still want one like Charcoal."
-[CHANGED C30 — end]
+
+[PENDING P3 — Daxtyn wording — DRAGONS.md L9 — begin]
+
+NOTE (not spoken): [PENDING Daxtyn wording — DRAGONS.md L9] Abby's line above still uses a scrapped dragon name. It is a proposed line, but it belongs to the same open question as Daxtyn's own line for her in 1D (see the open question there), so it stays as written until Daxtyn chooses the wording, and it is shot as written. Proposed alternative, used only if he picks it (final/CHANGES.md question 1): "I still want one like Charcoal."
+
+[PENDING P3 — end]
 
 Leaf blinks, slowly.
 
@@ -1892,9 +1913,9 @@ PICTURE: Then Abby starts on him the way she does every morning, one-handed now:
 
 Alexandria watches her daughter with the green dragon for a moment longer. As she passes Leaf, she lays her hand briefly on his neck, the way she would thank a person, without a word. Then she crosses the field toward her son.
 
-[ADDITION X17 — end]
+[PROPOSED ADDITION X17 — end]
 
-[ADDITION X18 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X18 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed. The queen and her son beside Charcoal. In 2B Alexandria offered "no immediate approval or condemnation". Here she still gives no verdict, but she tells Remi plainly that what Charcoal did on his commands belongs to him, and so does the moment Charcoal stopped. The command words are only talked about; no command is given. Remi answers honestly about the moment in 1F when the wing tore loose while his first "Hold—" was still being spoken. It ends with Alexandria looking in on the hatchling, which pays off X13 if both are kept; the hatchling is still weak and still unnamed, and nobody speaks in that picture. It stands on its own: with or without X17, Alexandria can simply come out of the building.
 
@@ -1961,9 +1982,9 @@ PICTURE: Alexandria stops in the doorway of the birthing chamber. Inside, the yo
 
 The young attendant sees the queen and starts to rise. Alexandria shakes her head slightly: go on. She does not go in. She watches a moment longer, then leaves.
 
-[ADDITION X18 — end]
+[PROPOSED ADDITION X18 — end]
 
-[ADDITION X19 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X19 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 [CHANGED C32 — DRAGONS.md: no species (2026-10-09) — WAS (kept for the record, not shot):]
 NOTE (not spoken): Proposed end of the Verdor day. It shows, without comment, the three details from 1C after they have changed: Abby can no longer use both hands, Leaf no longer looks at Charcoal without fear, and Remi now searches the sky instead of looking at the island. It also pays off 1D's "Someone has to mend it afterward." The siblings do not go back over the fight; the scene is about what has changed. Abby's last question is about the unknown rider and stays unanswered, as the original keeps it; it does not point at more Slitherwings or at a war. Remi's silence at the end mirrors Abby's silence in 1D. The succession question is not raised again, and Abby does not answer it. This leans on X17, because Abby has to be outdoors; if X17 is rejected, this addition goes too. The sail far out works with or without X16, since the ship was ordered out in 2C.
@@ -2023,7 +2044,7 @@ PICTURE: Remi doesn't answer. Do not let him answer it for himself, as he did wi
 
 Hold the siblings and both dragons in one wide frame, with the sail far out on the water and the half-mended turf at their feet.
 
-[ADDITION X19 — end]
+[PROPOSED ADDITION X19 — end]
 
 The sound of a harbor bell carries over the image. Match it to a brighter festival bell elsewhere.
 
@@ -2047,7 +2068,7 @@ VENDOR:
 
 The musician smiles and helps straighten the cloth. The exchange gives the village familiarity without a lengthy comic diversion.
 
-[ADDITION X20 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X20 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed. More of the festival itself, seen through the people the attack will reach. Nothing here is a joke at anyone's expense, and nothing foreshadows Starlight. The King of Cling has not yet appeared. It stands on its own: it introduces the farm family itself (if X14 is kept, the audience has met them at the gate). The children's dance is saved for X22, so there is no dance here.
 
@@ -2059,16 +2080,18 @@ PARTNER:
 ADULT VILLAGER:
 "Then he should come faster."
 
-[RATING PASS R11 — begin]
+[PROPOSED RATING PASS R11 — begin]
 
-NOTE (not spoken): [RATING PASS] Suggestive banter between two adults, a couple, plus alcohol and tobacco along the table. Non-explicit. Their two children have already vanished into the crowd and are out of frame for this beat.
+NOTE (not spoken): [PROPOSED RATING PASS] Suggestive banter between two adults, a couple. Non-explicit. Their two children have already vanished into the crowd; the picture says so, and no child is in the shot.
+
+PICTURE: Close on the couple at the table. Their two children are long gone into the crowd; no child is in this shot.
 
 PARTNER [low, to him]:
-"That's what I keep telling you."
+"Some of us like a man who takes his time."
 
-PICTURE: He laughs into his cup. She lets him see that she meant it. Along the table the jugs are ale and cider now, and the two old neighbors are still arguing about bread through a haze of pipe smoke.
+PICTURE: He laughs into his cup.
 
-[RATING PASS R11 — end]
+[PROPOSED RATING PASS R11 — end]
 
 PICTURE: The music space. The musician and a SECOND MUSICIAN play a quick tune. The CHILD slips the PARENT's hand to get closer to them. The parent, the parcel in one arm, follows through the crowd and catches up.
 
@@ -2102,7 +2125,7 @@ WATCHMAN:
 
 The child thinks about this, looks up at the sky too, finds nothing in it, and goes back to the cake. The parent arrives and steers the child back toward the music.
 
-[ADDITION X20 — end]
+[PROPOSED ADDITION X20 — end]
 
 PICTURE: The King of Cling enters the square with a small escort. Do not invent his personal name. His arrival produces respectful movement rather than universal kneeling that stops the festival. This draft portrays him as accessible; that characterization is proposed.
 
@@ -2160,20 +2183,20 @@ KING OF CLING:
 
 The musicians lift their hands in exaggerated gratitude, then return to the tune. This is the last entirely untroubled stretch of the episode.
 
-[RATING PASS R12 — begin]
+[PROPOSED RATING PASS R12 — begin]
 
-NOTE (not spoken): [RATING PASS] Alcohol among adults: a toast. The speech itself is unchanged.
+NOTE (not spoken): [PROPOSED RATING PASS] Alcohol among adults: a toast. The speech itself is unchanged. The toast is framed on the adults around the steps; no child is in either shot.
 
 PICTURE: Someone puts a cup of ale into the king's hand. He looks at it, then lifts it.
 
 KING OF CLING:
 "To the person behind you."
 
-PICTURE: The grown-ups in the square drink. So does the king.
+PICTURE: The grown-ups around the steps drink. So does the king. No child is in either shot: the toast is framed on the adults around the steps.
 
-[RATING PASS R12 — end]
+[PROPOSED RATING PASS R12 — end]
 
-[ADDITION X21 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X21 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed. The king among his people after the speech: accessible, and practical in small ways that matter later. The stuck gate he notices here is the gate the guard checks at the end of 3A and one of the two escape routes in 3C. No season is named. It stands on its own.
 
@@ -2225,27 +2248,29 @@ GUARD CAPTAIN:
 KING OF CLING:
 "I said I'd be brief."
 
-[ADDITION X21 — end]
+[PROPOSED ADDITION X21 — end]
 
-[ADDITION X22 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X22 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed. The festival's happiest stretch: an old song everyone knows and the children's dance (practised at midday, if X14 is kept). The gate beat (the guard and the villager freeing the hinge, four lines) leans on X21's order to fix the gate; if X21 is rejected, cut that beat and the rest stands. This is the "last entirely untroubled stretch" the original asks for, made long enough for the audience to belong to it. No lyrics are written here; if the song is sung rather than hummed, its words must be newly written for the series. Nothing foreshadows Starlight.
 
-[RATING PASS R13 — begin]
+[PROPOSED RATING PASS R13 — begin]
 
-NOTE (not spoken): [RATING PASS] Suggestive humor and alcohol among adults at the far end of the shared table. The children are off at the other end of the square, out of earshot and out of frame for this beat. The verse is newly written for the series and stays non-explicit.
+NOTE (not spoken): [PROPOSED RATING PASS] Suggestive humor and alcohol among adults at the alley end of the shared table, the opposite end from the king. The verse is sung low, for that end of the table only. Every child in the square is across it on the steps with the old woman, out of earshot and out of the shot. The musician has come over to eat, as the king asked in 3A, and goes back to the music space afterward. The verse is newly written for the series and stays non-explicit.
 
-PICTURE: The far end of the shared table, where the jugs have been going round longest. The vendor stands, cup raised, and sings to the adults around him.
+PICTURE: The alley end of the shared table, where the jugs have been going round longest. Across the square, every child is on the steps around the old woman, eating; none of them is in this shot. The musician sits beside the vendor with a plate, eating at last. The vendor, on his feet at the end of the bench, leans in, cup raised, and sings low, for this end of the table only.
 
-VENDOR [singing]:
+VENDOR [singing, low]:
 "The miller's wife had flour to sell and sold it twice a day, and the miller never asked her why the baker came to stay."
 
-PICTURE: The table roars. The PARTNER hides her face against the villager's shoulder, laughing. At the music space the musician has stopped playing to stare at the vendor.
+PICTURE: The adults around him laugh helplessly. The PARTNER hides her face in her hands, laughing. The musician puts down his bread and stares at the vendor.
 
 MUSICIAN:
 "Not that one."
 
-[RATING PASS R13 — end]
+PICTURE: The musician gets up and goes back across the square to the music space.
+
+[PROPOSED RATING PASS R13 — end]
 
 PICTURE: The shared meal. People sit and stand along the table. The vendor, off his feet for the first time all day, sits on an upturned crate and calls across to the musician.
 
@@ -2258,11 +2283,7 @@ MUSICIAN:
 VENDOR:
 "Everybody knows the words."
 
-[CHANGED C33 — [RATING PASS] alcohol, adults — WAS (kept for the record, not shot):]
 PICTURE: The musician plays a slow, old tune. For a few bars he plays alone. Then one voice joins, an old one, then several, then most of the table, some singing, most humming. The vendor sings badly and loudly. The king, at the far end of the table, listens without singing. On his platform, the watchman hums along without taking his eyes off the sky. At the gate, the guard and the ADULT VILLAGER, working on the hinge together with borrowed tools, stop to listen, then go back to work.
-[CHANGED C33 — NOW (shoot this):]
-PICTURE: The musician plays a slow, old tune. For a few bars he plays alone. Then one voice joins, an old one, then several, then most of the table, some singing, most humming. The vendor, three cups in, sings badly and loudly. The king, at the far end of the table, listens without singing. On his platform, the watchman hums along without taking his eyes off the sky. At the gate, the guard and the ADULT VILLAGER, working on the hinge together with borrowed tools, stop to listen, then go back to work.
-[CHANGED C33 — end]
 
 ADULT VILLAGER:
 "You'll want grease on that."
@@ -2296,7 +2317,7 @@ PARENT:
 
 The parent takes the child's hand. This is the walk toward the stone arch that the next picture follows.
 
-[ADDITION X22 — end]
+[PROPOSED ADDITION X22 — end]
 
 PICTURE: Follow a small sequence of ordinary actions to establish the escape geography: the parent and child move from the square toward a stone arch; the vendor stores an empty crate in an alley; a guard checks a gate opening onto a broader road. These routes must remain in the same positions during the attack.
 
@@ -2305,17 +2326,17 @@ EXT. CLING SQUARE / SKY — CONTINUOUS
 
 PICTURE: A WATCHMAN looks up from the edge of the square. Something white lies against the cloud. It appears still because it is coming nearly toward him.
 
-[ADDITION X23 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X23 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed small insert inside 3B. It carries out the original instruction "Let its changing size expose its approach" through the watchman's own slow understanding, before he speaks.
 
-[CHANGED C34 — [RATING PASS] alcohol: the watchman's untouched cup — WAS (kept for the record, not shot):]
+[CHANGED C34 — [PROPOSED RATING PASS] alcohol: the watchman's untouched cup — WAS (kept for the record, not shot):]
 PICTURE: He takes it for cloud. He looks down at the square for a moment, and the audience sees what he sees, a little longer than he does: the vendor counting coins into a cloth; the king laughing at something the old woman has said; the child, still out of breath from the dance, leaning against the parent. Then he looks back up. The white is larger. It is still almost motionless, but larger. He gets to his feet. The bread in his hand drops onto the platform.
 [CHANGED C34 — NOW (shoot this):]
-PICTURE: He takes it for cloud. He looks down at the square for a moment, and the audience sees what he sees, a little longer than he does: the vendor counting coins into a cloth; the king laughing at something the old woman has said; the child, still out of breath from the dance, leaning against the parent. Then he looks back up. The white is larger. It is still almost motionless, but larger. He gets to his feet. The bread in his hand drops onto the platform, and beside it goes his cup of ale, still full: he has not touched it since the vendor sent it up.
+PICTURE: He takes it for cloud. He looks down at the square for a moment, and the audience sees what he sees, a little longer than he does: the vendor counting coins into a cloth; the king laughing at something the old woman has said; the child, still out of breath from the dance, leaning against the parent. Then he looks back up. The white is larger. It is still almost motionless, but larger. He gets to his feet. The bread in his hand drops onto the platform. Close on the platform boards: his cup of ale goes over beside the bread, still full. He has not touched it since the vendor sent it up.
 [CHANGED C34 — end]
 
-[ADDITION X23 — end]
+[PROPOSED ADDITION X23 — end]
 
 Do not immediately cut to a fully revealed monster shot. Let its changing size expose its approach. A white wing briefly separates from the cloud behind it.
 
@@ -2352,7 +2373,7 @@ GUARD CAPTAIN:
 
 The music falters one instrument at a time. The vendor looks up, then puts down what he is holding. The parent pulls the child closer.
 
-[ADDITION X24 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X24 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed small insert inside 3B. Where our festival people are at the moment the music stops, so their paths through the attack can be followed, and then the same square as it looks from Starlight's height, just before the original cuts to Queen Fall. It leans on the farm family, who are introduced in X14 and in X20; keep at least one of those, or cut the two family pictures and keep the rest.
 
@@ -2364,7 +2385,7 @@ PICTURE: Pulled close against the parent, the child stares up at the white shape
 
 PICTURE: From very high above: the square straight below, small; a ring of tiny figures breaking apart by the fountain; banners like threads. The edge of a white wing crosses the bottom of the frame.
 
-[ADDITION X24 — end]
+[PROPOSED ADDITION X24 — end]
 
 PICTURE: Cut high above the village to Queen Fall riding Starlight. Introduce her face in a controlled close shot, then re-establish her smallness against her dragon. Do not label her Alexandria. A brief non-spoken identification in the production notes is enough; an on-screen name is optional.
 
@@ -2392,14 +2413,14 @@ KING OF CLING:
 
 The captain redirects guards to widen the flow. The audience can now recognize the escape routes shown during the festival. Keep crowd motion coherent: some people go toward the arch, others toward the broad road. They do not all run in circles.
 
-[RATING PASS R14 — begin]
+[PROPOSED RATING PASS R14 — begin]
 
-NOTE (not spoken): [RATING PASS] Strong language under stress.
+NOTE (not spoken): [PROPOSED RATING PASS] Strong language under stress.
 
 GUARD CAPTAIN [to his guards]:
 "Don't stand there gawping! Get them through, for fuck's sake!"
 
-[RATING PASS R14 — end]
+[PROPOSED RATING PASS R14 — end]
 
 PICTURE: The vendor's stall cloth tears free and wraps across his view. He fights it aside. The musician helps a fallen person rise. The parent loses hold of the parcel and lets it go rather than letting go of the child.
 
@@ -2414,23 +2435,23 @@ KING OF CLING:
 
 For several seconds the image is dust, cloth, and moving feet. Keep at least one continuous point of reference—a stone pillar or fountain edge—so the audience knows where the action is.
 
-[RATING PASS R15 — begin]
+[PROPOSED RATING PASS R15 — begin]
 
-NOTE (not spoken): [RATING PASS] The first pass kills. Intense violence and strong blood, shown as in a live-action drama. The dead are unnamed and are none of the people the audience has followed: the vendor, the musicians, the parent and child, the farm family, the old woman, the watchman and the guards who speak all live. Keep the fountain's pillar in frame as the reference point.
+NOTE (not spoken): [PROPOSED RATING PASS] The first pass kills. Intense violence and strong blood, shown as in a live-action drama. The dead are unnamed and are none of the people the audience has followed: the vendor, the musicians, the parent and child, the farm family, the old woman, the watchman and the guards who speak all live. Every one of the dead is an adult. If Daxtyn wants no deaths, cut R15, R16b, R18, R19, R20 and R21 together; the checker flags any of them left behind. Keep the fountain's pillar in frame as the reference point.
 
 PICTURE: Out of the dust, low to the ground: a man who was standing under the adjoining roofline when it came down is under it now. Only his arm shows beneath the timbers and broken tiles, and it does not move. Blood runs out from under the wreckage and along the joints between the paving stones toward the fountain.
 
 PICTURE: A woman near the steps turns to run, and a flying length of roof timber takes her across the back of the head. She drops face down and stays down. Someone stumbles over her in the dust and keeps going.
 
-[RATING PASS R15 — end]
+[PROPOSED RATING PASS R15 — end]
 
-[ADDITION X25 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X25 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed. In the dust of the first pass, the farm-cart family is pulled apart. It leans on the family introduced in X14 and in X20; it needs at least one of those. This is why the injured villager says "My family—" a little later, and why the audience knows a little more than he does. It does not say here whether they are safe; X27 answers that, if it is kept. Keep the fountain's pillar in frame as the reference point.
 
 PICTURE: In the dust, the crowd keeps the farm-cart family apart. The partner, a child on each hand, is carried toward the stone arch. The villager, fighting across the square toward them from the gate, is pushed back toward the steps. For a moment they can see each other across the fountain. Then the dust closes between them.
 
-[ADDITION X25 — end]
+[PROPOSED ADDITION X25 — end]
 
 The parent reaches the arch with the child. A fallen beam obstructs part of the route. Two guards and the musician push it enough for people to pass. This is a brief effort under danger, not a long technical rescue procedure.
 
@@ -2469,18 +2490,18 @@ VENDOR:
 
 The musician abandons the last loose festival equipment and follows. Their earlier joke about moving the festival has become a physical ruin; nobody repeats it.
 
-[ADDITION X26 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X26 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed. Short beats between Starlight's two passes that pay off the festival's people and places. Keep them fast; the attack must not slow down. The gate picture leans on X21 (the mended hinge); if X21 is rejected, cut that one picture and the rest stands. The adult villager's run across the open square is why the second pass catches him; his "My family—" in 3C says what he was running for. The crate in the alley is the one the vendor stores there at the end of 3A.
 
 PICTURE: The watchman is still on his post, exposed, gripping the rail. He has not left it. He tracks Starlight's bank with his whole body and shouts down into the square.
 
-[CHANGED C35 — [RATING PASS] strong language under stress — WAS (kept for the record, not shot):]
+[CHANGED C35 — [PROPOSED RATING PASS] strong language under stress — WAS (kept for the record, not shot):]
 WATCHMAN:
 "She's coming round! Get under stone!"
 [CHANGED C35 — NOW (shoot this):]
 WATCHMAN:
-"She's coming round! Get under the fucking stone!"
+"She's coming round! Get under stone! Fucking move!"
 [CHANGED C35 — end]
 
 PICTURE: At the broad-road gate, a guard hauls it open. It swings freely on its mended hinge. People stream through onto the road instead of crushing toward the arch. The guard captain sees it and, for half a second, looks toward the king.
@@ -2493,31 +2514,37 @@ PICTURE: Beyond the arch, running at the parent's side, the child looks back at 
 
 The watchman drops flat on his platform as the shadow comes.
 
-[ADDITION X26 — end]
+[PROPOSED ADDITION X26 — end]
 
 Starlight makes a second low pass. This second pass is a proposed staging addition expanding the established dive-bombing attack. It must not give her later wounds or introduce a defending dragon fleet.
 
 The camera stays with the people for much of this pass. We see the shadow, a white expanse between roofs, the shock of air, and debris striking empty ground where people stood moments earlier. Reserve a single exterior wide shot to establish the actual physical damage.
 
-[RATING PASS R16 — begin]
+[PROPOSED RATING PASS R16 — begin]
 
-NOTE (not spoken): [RATING PASS] The second pass, at the same strength. Not everything it throws lands on empty ground. The dead and hurt are unnamed.
+NOTE (not spoken): [PROPOSED RATING PASS] The second pass, at the same strength. Most of what it throws lands on empty ground, as the line above says; not all of it. The adult villager is hurt, and he lives (R17, X27).
 
-PICTURE: As the white body passes over, a guard of the king's escort, caught in the open at the far side of the square, is lifted off his feet by the blast of air and thrown against the stone front of a house. He slides down it and leaves a long dark smear on the stone. His spear skids away across the paving.
+PICTURE: Most of it finds empty ground. Not all of it. The timber stage of the music space comes apart, and its broken boards scythe across the open paving. One of them takes the ADULT VILLAGER's legs out from under him in the middle of the square, and he goes down hard on the stone and does not get up.
 
-PICTURE: The timber stage of the music space comes apart, and its broken boards scythe across the open paving. One of them takes the ADULT VILLAGER's legs out from under him in the middle of the square, and he goes down hard on the stone and does not get up.
+[PROPOSED RATING PASS R16 — end]
 
-[RATING PASS R16 — end]
+[PROPOSED RATING PASS R16b — begin]
+
+NOTE (not spoken): [PROPOSED RATING PASS] A death in the second pass. Leans on R15, the deaths in Cling: if Daxtyn wants no deaths, cut R15, R16b, R18, R19, R20 and R21 together. The guard is a grown man of the king's escort who has no lines, visibly not the guard who reached the king, not the guard from the gate and not the guard captain. He dies, and he is one of the dead laid out in X28 (R21).
+
+PICTURE: As the white body passes over, a guard of the escort who has had no lines, posted alone at the far side of the square, is lifted off his feet by the blast of air and thrown against the stone front of a house. He slides down it, leaves a long dark smear on the stone and does not move again. His spear skids away across the paving.
+
+[PROPOSED RATING PASS R16b — end]
 
 The king helps the guard captain pull an injured ADULT VILLAGER into shelter. The villager is conscious and frightened. No permanent named casualty is invented.
 
-[RATING PASS R17 — begin]
+[PROPOSED RATING PASS R17 — begin]
 
-NOTE (not spoken): [RATING PASS] His injuries, shown plainly. He lives: X27 brings his family to him.
+NOTE (not spoken): [PROPOSED RATING PASS] His injuries, shown plainly. He lives: X27 brings his family to him.
 
 PICTURE: His scalp is split, and blood sheets down one side of his face into his collar. Below the knee his RIGHT leg is broken so badly that the bone shows white through the torn trouser. He hasn't looked at it yet. The king has, and keeps his eyes on the man's face instead.
 
-[RATING PASS R17 — end]
+[PROPOSED RATING PASS R17 — end]
 
 ADULT VILLAGER:
 "My family—"
@@ -2547,27 +2574,27 @@ SOUND: Ringing ears slowly gives way to coughing, broken wood settling, distant 
 
 The same route used for the opening festival shot is now blocked. The camera moves only as far as it safely can, showing familiar places changed: the torn stall, the silent music space, the empty steps, the stone arch still standing.
 
-[RATING PASS R18 — begin]
+[PROPOSED RATING PASS R18 — begin]
 
-NOTE (not spoken): [RATING PASS] What the attack cost, shown. Unnamed dead only, no lingering close-ups for their own sake. Leans on R15 (the arm under the timbers, the woman by the steps).
+NOTE (not spoken): [PROPOSED RATING PASS] What the attack cost, shown. Leans on R15 (the arm under the timbers, the woman by the steps). Unnamed dead only, no lingering close-ups for their own sake. Every one of the dead is an adult.
 
-PICTURE: And the people who did not get out of the open. The arm under the roof timbers. The woman by the steps, face down where she fell, the dust on her already darkening. Near the fountain a man sits on the paving with someone across his lap whose head is a ruin of blood, rocking, saying nothing. A banner torn down in the first pass lies over a shape in the middle of the square, soaked dark through at its center.
+PICTURE: And the people who did not get out of the open. The arm under the roof timbers. The woman by the steps, face down where she fell, the dust on her already darkening. Near the fountain a man sits on the paving with a grown woman across his lap whose head is a ruin of blood, rocking, saying nothing. A banner torn down in the first pass lies over a man-sized shape in the middle of the square, soaked dark through at its center.
 
-[RATING PASS R18 — end]
+[PROPOSED RATING PASS R18 — end]
 
 The parent sits with the child under shelter. Both are alive. The child looks toward the opening but the parent gently turns their attention away from falling dust.
 
-[RATING PASS R19 — begin]
+[PROPOSED RATING PASS R19 — begin]
 
-NOTE (not spoken): [RATING PASS] The child sees none of the dead; the audience does. Leans on R18 (the shape under the banner).
+NOTE (not spoken): [PROPOSED RATING PASS] The child sees none of the dead; the audience does. Leans on R18 (the shape under the banner).
 
 PICTURE: Over the parent's shoulder, through the opening, the banner-covered shape lies in the square. The parent keeps the child's face turned the other way.
 
-[RATING PASS R19 — end]
+[PROPOSED RATING PASS R19 — end]
 
 The vendor finds the musician and takes his arm to check that he is standing. They say nothing. The absence of their earlier ease does the work.
 
-[ADDITION X27 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X27 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed. A few more survivors' moments before the king's orders, without inventing a named casualty. It pays off the original's own promise in 3C ("Tell the guard where they were. He'll look." / "I'll look."): the guard keeps looking and brings the injured villager's family to him, alive. Keep that moment short and quiet, with no music: nothing musical returns, and the festival tune does not resume. It stands on its own; if X14 or X20 is kept, the audience recognizes the family.
 
@@ -2583,13 +2610,13 @@ PICTURE: The GUARD who told the injured villager "I'll look" is looking. He move
 GUARD:
 "Anyone here? Call out if you can hear me."
 
-[RATING PASS R20 — begin]
+[PROPOSED RATING PASS R20 — begin]
 
-NOTE (not spoken): [RATING PASS] The search finds the dead before it finds the living. Unnamed.
+NOTE (not spoken): [PROPOSED RATING PASS] The search finds the dead before it finds the living. Leans on R15, the deaths in Cling. Unnamed; a grown man.
 
 PICTURE: In the mouth of the alley he lifts a fallen awning and stops, the way a man stops for someone he knows. Under it a man lies dead, his chest crushed in under a fallen beam. The guard looks at him for one breath, lays the awning back over his face, and stands up.
 
-[RATING PASS R20 — end]
+[PROPOSED RATING PASS R20 — end]
 
 No answer yet. He moves on to the next doorway. Under stone cover across the square, the injured villager watches him go from doorway to doorway.
 
@@ -2597,13 +2624,13 @@ PICTURE: The musician picks his instrument out of the wreck of the music space. 
 
 PICTURE: Festival food lies in the dust beside the parent's dropped parcel. Nobody picks it up. Hold for one beat only.
 
-[CHANGED C36 — [RATING PASS] his injury continuity, leans on R17 — WAS (kept for the record, not shot):]
+[CHANGED C36 — [PROPOSED RATING PASS] his injury continuity, leans on R17 — WAS (kept for the record, not shot):]
 PICTURE: The guard comes back through the stone arch. Behind him, grey with dust, come a PARTNER and two small children. Under the stone cover, the injured villager sees them and tries to get up. The partner reaches him first; the children press in against him. Nobody speaks. The guard steps back and goes to look for the next person.
 [CHANGED C36 — NOW (shoot this):]
 PICTURE: The guard comes back through the stone arch. Behind him, grey with dust, come a PARTNER and two small children. Under the stone cover, the injured villager sees them and tries to sit up, his broken leg splinted with a length of banner pole. The partner reaches him first; the children press in against him. Nobody speaks. The guard steps back and goes to look for the next person.
 [CHANGED C36 — end]
 
-[ADDITION X27 — end]
+[PROPOSED ADDITION X27 — end]
 
 The king walks into the edge of the square with the guard captain. Dust marks his clothing. His crown or formal headwear, if used, should not become a distracting prop gag. He is no longer making an appearance; he has work to do.
 
@@ -2628,19 +2655,19 @@ This messenger order is a proposed ending bridge. It prepares for the next episo
 
 The captain leaves to act. The king remains a moment, looking at the damaged square. A faint gust moves one surviving strip of festival cloth.
 
-[ADDITION X28 — accepted by default 2026-10-16, Daxtyn may cut — begin]
+[PROPOSED ADDITION X28 — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
 
 NOTE (not spoken): Proposed. Carries out the king's orders that can be shown without reaching into Episode 2: the injured are brought under stone cover and someone watches the sky again. Word to King Fallen stays exactly where the original leaves it: the captain goes to act on the order, and this episode does not show the message leaving, how it travels or who carries it. The child's question is the audience's question; the king answers it honestly, as he answered the injured villager. Just before the final picture, one close shot of Queen Fall's hand on Starlight's neck, the gesture Remi uses with Charcoal; it is not explained, and it is a decision for Daxtyn because it shows something of Queen Fall. The final picture that follows is unchanged. It stands on its own.
 
 PICTURE: Under the captain's direction, the injured are carried in under the stone of the arch, as the king ordered.
 
-[RATING PASS R21 — begin]
+[PROPOSED RATING PASS R21 — begin]
 
-NOTE (not spoken): [RATING PASS] The dead, unnamed. Leans on R15.
+NOTE (not spoken): [PROPOSED RATING PASS] The dead, unnamed. Leans on R15. Every one of the dead is an adult. They are laid out below the steps, across the square from the arch, so the child sheltering under the arch sees none of them (R19).
 
-PICTURE: Along the wall beside the arch, the dead are laid in a row, five of them at least, covered with whatever festival cloth is left. The banners are not long enough. From under one of them a pair of boots shows, a festival ribbon still tied through one lace.
+PICTURE: Along the wall below the steps, across the square from the arch and out of sight of the shelter beneath it, the dead are laid in a row, every one of them a grown man or woman, covered with whatever festival cloth is left. The banners are not long enough. From under one of them a pair of men's boots shows, a festival ribbon still tied through one lace.
 
-[RATING PASS R21 — end]
+[PROPOSED RATING PASS R21 — end]
 
 PICTURE: The watchman climbs back up to his post. His hands are not steady on the ladder. At the top he stands where he stood all morning and looks out at the same sky. Far off, the white shape is still there, smaller. He does not take his eyes off it. Below, the guard captain looks up at him. The watchman gives one small nod without looking down, and the captain nods back.
 
@@ -2660,7 +2687,7 @@ KING OF CLING:
 
 PICTURE: The king crouches beside two villagers at a fallen beam, sets his shoulder against it with them, and lifts.
 
-[CHANGED C37 — [RATING PASS] alcohol among adults in grief — WAS (kept for the record, not shot):]
+[CHANGED C37 — [PROPOSED RATING PASS] alcohol among adults in grief — WAS (kept for the record, not shot):]
 PICTURE: Further on, he passes the wreck of the vendor's stall. The vendor is sitting at the mouth of the alley on the empty crate he stored there before the attack, looking at what is left of his stall. The king puts a hand on his shoulder as he passes. Neither of them speaks.
 [CHANGED C37 — NOW (shoot this):]
 PICTURE: Further on, he passes the wreck of the vendor's stall. The vendor is sitting at the mouth of the alley on the empty crate he stored there before the attack, looking at what is left of his stall, with a jug that came through the wreck unbroken in his hands. He holds it up to the king without a word. The king takes it, drinks, hands it back, and puts a hand on his shoulder as he passes. Neither of them speaks.
@@ -2680,7 +2707,7 @@ The parent nods. The king rises and looks up, past the roofs, toward the white s
 
 PICTURE: Far above, close on Queen Fall's hand as she lays it flat on Starlight's neck, once, the way Remi lays his on Charcoal's. Starlight's breathing fills the shot. Do not explain the gesture: it can read as thanks, as praise or as habit. No words.
 
-[ADDITION X28 — end]
+[PROPOSED ADDITION X28 — end]
 
 FINAL PICTURE: Wide from above the roofs. The village is small within its landscape. Far beyond it, Starlight is a white moving shape, beautiful again at a distance. The audience now understands what that beauty can do.
 
@@ -2720,20 +2747,20 @@ If an approved visual reference is unavailable, label the resulting design provi
 
 CONTINUITY CHECK FOR THE FINAL SCRIPT (additions, dragon changes and rating pass)
 
-Canon: no addition or rating-pass beat names an unnamed character. The King of Cling, the scout rider, the hatchling, the ship's master, the sailor, the keepers, the dead of Cling and every extra stay unnamed, and nobody is given an exact age. The King of Cling first appears in 3A, as written. The hatchling is gold, weak, unnamed, has no rider, does not glow and is alive at the end; news of it stays inside the palace. The scout rider is burned and screaming but conscious, moving and still strapped on when last seen; the scout dragon has lost its LEFT wing and is bleeding, struggling to keep itself above water. Neither is shown after 1F, and nobody says whether they live. The Santa Maria is seen leaving the harbor and later as a far-off sail, never arriving. No addition or rating-pass beat decides how the pair would be brought aboard or where they would be cared for; the crew's jokes in 2C decide nothing. Word to King Fallen is ordered, as written, and never shown leaving or arriving. No Water Gliders, no Episode 2 material, no war mobilization or flying ban, no new villain, no identity reveal, and no line that points at more scouts coming. Verdor is never described as part of Tara. Starlight's actions are unchanged: white, no fire, no wounds; the dead of Cling are killed by her dive, her wings and what they throw. Queen Fall says only "Attack." and gains one wordless close shot of her hand on Starlight's neck (X28).
+Canon: no addition or rating-pass beat names an unnamed character. The King of Cling, the scout rider, the hatchling, the ship's master, the sailor, the keepers, the dead of Cling and every extra stay unnamed, and nobody is given an exact age. The King of Cling first appears in 3A, as written. The hatchling is gold, weak, unnamed, has no rider, does not glow and is alive at the end; news of it stays inside the palace. The scout rider is burned and screaming but conscious, moving and still strapped on when last seen; the scout dragon has lost its LEFT wing and is bleeding, struggling to keep itself above water. Neither is shown after 1F, and nobody says whether they live. The Santa Maria is seen leaving the harbor and later as a far-off sail, never arriving. No addition or rating-pass beat decides how the pair would be brought aboard or where they would be cared for; the crew's jokes in 2C decide nothing. Word to King Fallen is ordered, as written, and never shown leaving or arriving. No Water Gliders, no Episode 2 material, no war mobilization or flying ban, no new villain, no identity reveal, and no line that points at more scouts coming. Verdor is never described as part of Tara. Starlight's actions are unchanged: white, no fire, no wounds; the dead of Cling are killed by her dive, her wings and what they throw. Queen Fall says only "Attack." and gains one wordless close shot of her hand on Starlight's neck (X28). The scout's wound is shown as a torn, bleeding shoulder and a red stain in the water, not as a death sentence.
 
-Dragons: no species word is used in any stage direction or in any line except Abby's [ORIGINAL] line. Every dragon has two legs, wings as forelimbs and horns, and is staged low, its legs under the middle of its body and its folded wings' wrists touching down in front when it walks or rests. Leaf sits back on his haunches like a dog, low, folded wings braced in front of him (still open in DRAGONS.md). The hatchling pushes itself up on its wing wrists and its two legs (X18). The scout is a small, fast dragon of its own design.
+Dragons: no species word is used in any stage direction. In dialogue, species words remain only where DRAGONS.md keeps the lines as written until Daxtyn chooses new wording: Abby's [ORIGINAL] line in 1D and the PENDING lines L053, L054, L109 and Abby's line in X17 (P1-P3). Every dragon has two legs, wings as forelimbs and horns, and is staged low, its legs under the middle of its body and its folded wings' wrists touching down in front when it walks or rests. Leaf and every other dragon at rest crouch or lie low and level; none sits back on its haunches. Whether Leaf may also sit like a dog is still open in DRAGONS.md and is offered to Daxtyn only as an alternative (final/CHANGES.md question 2). The hatchling pushes itself up on its wing wrists and its two legs (X18). The scout is a small, fast dragon of its own design.
 
 People: Abby's LEFT arm is the injured arm in every scene after 1E. She uses only her right hand, and the sling supports her left arm. Before the pass she uses both hands freely, as 1C asks (X3, X4, X6). Abby never answers the succession question, and nothing raises it again. Dragons have no human dialogue. No addition or rating-pass beat gives a dragon a spoken order: riders steer by weight and touch, Abby stops Leaf with a raised hand (X17), and the only words spoken to dragons as orders are the screenplay's own. No canonical command (Attack, Fire, Hold, Skit, Free fire) is added; X18 only talks about the commands Remi already gave, and Remi answers honestly that Charcoal stopped when the full "Hold!" was finished.
 
-Blood continuity: from 1F the scout's blood is on Charcoal's jaw and throat and on Remi's face, hands and sleeves (X10, 2A, 2B and 2C up to X11). Alexandria cleans Remi's face and hands in X11; if X11 is cut, Remi is clean from the "BACK IN THE TREATMENT ROOM" picture on. Charcoal's jaws stay bloody until Remi washes them in X15; if X15 is cut, they are clean when we next see him. In Cling, the injured adult villager has a split scalp and an open fracture of his RIGHT leg below the knee from the second pass to the end; his leg is splinted in X27.
+Blood continuity: from 1F the scout's blood is on Charcoal's jaw and throat and on Remi's face, hands and sleeves (X10). In 2A Remi scrubs most of it off his face with a keeper's cloth as he crosses to Abby; streaks stay at his hairline and neck, and his hands and sleeves stay dark (R8). Abby and then Alexandria see it and say nothing (R8, R8b). Alexandria wipes his hairline, neck and hands in X11. In the "BACK IN THE TREATMENT ROOM" picture his hands are scrubbed clean at the healer's bowl (R9b), whether or not X11 is kept; his sleeves stay stained for the rest of the day. Charcoal's jaws stay bloody until Remi washes them in X15; if X15 is cut, they are clean when we next see him. In Cling, the injured adult villager has a split scalp and an open fracture of his RIGHT leg below the knee from the second pass to the end; his leg is splinted in X27.
 
-Rating limits: suggestive material is non-explicit and only between adults (R11, R13). No drug, tobacco or alcohol beat involves Abby, Remi, the Cling child, the young attendant, the young riders or any other child; in every such beat the children are elsewhere or out of frame. Abby's fracture is still shown without a graphic bone image. Nothing shows how to prepare or use a drug, and no violence is staged as instruction.
+Rating limits: suggestive material is non-explicit and only between adults (R11, R13). No drug, tobacco or alcohol beat involves Abby, Remi, the Cling child, the young attendant, the young riders or any other child: no child drinks, smokes or takes part in a suggestive beat, and no such beat frames a child. Where children are nearby, the picture itself says where they are (R3, R11, R12, R13), and the watchman's cup (C34) is its own close shot on his platform. Every one of the dead in Cling is an adult (R15, R16b, R18, R20, R21). Abby's fracture is still shown without a graphic bone image. Nothing shows how to prepare or use a drug, and no violence is staged as instruction.
 
 Places: the outer rocks, the gap and the mist bank lying against the rocks' seaward side in X6 must match X8 and 1F, so the scout falls close to the coast, beyond the outer rocks. The Cling map in X5, X14 and X20–X28 must match 3A–3D: fountain with central pillar, steps, arch, gate onto the broad road, alley, music space, watchman's post. The launch scar is torn in 1C and being mended in X19. Cling has no fire from Starlight and no fire montage: the only flames in Cling are pipe embers before the attack, no fire starts in the attack, and the festival food is not cooked over open flames on screen. Cling's first visit (X5) is in the same morning hour as the flight, so no cut goes back in time.
 
 Links between additions (each is also stated in that addition's first note): X8's gap beat leans on X6. X13 reads best after X12. The three lines of X17 starting "You told me to go." lean on X12. X19 leans on X17. X22's gate beat and X26's gate picture lean on X21. X24 and X25 lean on the farm family, who are introduced in both X14 and X20, so they need at least one of those two. Every other addition stands on its own. Some echo an earlier addition when both are kept, and each still reads without it: the harbor, lookout, instructor and quay dragon of X4 in X9, X10 and X16; Abby's morning routine with Leaf from X2 in X17; the race's dive from X6 in X7; the hatchling's struggle from X13 in X18; the dance and the old woman of X14 in X22; the parcel of X5 in X14; the farm family of X14 and X20 in X27.
 
-Rating-pass links (each is also stated in that block's first note or in its CHANGED reason): R7, R8, C20, C23, C24 and C25 lean on C15. R5 leans on R4. R18 and R21 lean on R15. R19 leans on R18. C36 leans on R17. A rating-pass block or change inside an addition goes with that addition if it is cut.
+Rating-pass links (each is also stated in that block's first note or in its CHANGED reason): R7, R8, R8b, R9b, C20, C23, C24 and C25 lean on C15. R5 leans on R4. R16b, R18, R20 and R21 lean on R15, the deaths in Cling: if Daxtyn wants no deaths, cut R15, R16b, R18, R19, R20 and R21 together. R19 leans on R18. C36 leans on R17. A rating-pass block or change inside an addition goes with that addition if it is cut.
 
 [FINAL SCRIPT NOTE — end]
