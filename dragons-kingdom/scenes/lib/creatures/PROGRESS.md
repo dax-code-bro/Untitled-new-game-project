@@ -4,7 +4,7 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
-## LOW STANCE round (rev. 3, 2026-10-16, Daxtyn: "make them low to the ground with their legs more towards the center of their body") - IN PROGRESS
+## LOW STANCE round (rev. 3, 2026-10-16, Daxtyn: "make them low to the ground with their legs more towards the center of their body") - DONE
 Dev loop (scratch): scratchpad/ep1p1/creatures-low/tools/ (dev.sh <cfg.json> <name> = creatures-dev.js views -> r/dev_<name>/sheet.jpg;
 build.mjs, clear.mjs (belly clearance / joint heights per pose), contacts.mjs, membox.mjs (membrane bounds), armdbg.mjs).
 Done so far (code):
@@ -27,7 +27,25 @@ Done so far (code):
 - Shots (creatures-shots.js): 17 = the 14 before + charcoal-walk, charcoal-rest, leaf-landing; the
   contact sheet has 29 frames (turntables in the low stance, + Leaf sit, Charcoal lying, crouch).
 - DESIGN.md: rev. 3 status bullet, section 1.5c (the low stance), 1.1/1.6 updated, appendix A bones.
-NEXT: preview review of the new shots, style frames at draft, 4K to output/dragons-low/, crops, README.
+Results (all looked at at 1920 and as 1:1 4K crops; output/ is git-ignored):
+- Hero: output/dragons-low/hero/{4k/*.png, 1920/*.jpg, crops/*.png, hero-sheet-low.jpg}, file names end in -low,
+  17 shots (creatures-review.js, the SHOTS of creatures-shots.js), render 52m04s (~3.1 min/frame, SwiftShader, final preset), job video 58.6 MB.
+- Contact: output/dragons-low/contact/{4k, 1920, crops, contact-sheet-low-3200.jpg, -1920.jpg}, 29 frames, 7m35s.
+- Measured low stance (m, stand at t=0): Charcoal hip 4.15 / knee 3.31 / chest underside 1.59 (0.35 of chest depth) /
+  back 6.08 / folded elbow 7.85 / head 6.79 (rev. 2 upright: hip 7.0, chest underside ~4.3, trunk +30 deg);
+  Leaf 1.06 / 0.97 / 0.42 (0.44) / 1.37 / 2.17 / 1.62; Starlight 6.57 / 6.50 / 3.09 (0.51) / 9.18 / 14.90 / 11.16;
+  scout 0.59 / 0.67 / 0.25 (0.37) / 0.92 / 1.31 / 1.12. Hip at trunk station 0.68 (shoulder -> tail base).
+- Every scene importing the library renders at draft: style-f1 66s, f2 231s, f3 119s, f4 174s, f5 444s,
+  humans-riders 72s, architecture-probe 14s. F2 (Abby at Leaf's breast strap) needed no re-staging.
+  npm test 33/33 (207 s).
+OPEN (seen in the 1:1 crops, not fixed this round):
+- Starlight: plates still read as a polished pebble mosaic in close-ups (starlight-rider); soft large blotches on the
+  top of the membrane; the folded elbow "cloak" stands ~5 m above her back.
+- Charcoal's chest scales read as paving slabs at 1:1; folded membrane shows angular grey panels near the hip in walk.
+- Newborn: a flat drape sheet of folded membrane on the flank under the arm (contact 13 crop); still a bit plump at
+  full-body scale.
+- leaf-landing: heavy motion blur on the wings at the flare hides the fold.
+- Transitions are kinematic (stand <-> walk <-> launch are pose blends), ground is assumed flat (no foot IK on slopes).
 
 ## Fix round 1 after the critics (2026-10-15, DESIGN "rev. 2") - state
 Done (committed; renders under output/dragons-wyvern/fix1/, git-ignored, file names end in -fix1):

@@ -162,6 +162,11 @@ finest). Charcoal at `standard`: 216k vertices in 16.0 s; at `hero`: 431k in 31.
 numbers, measured while `npm test` ran on the same CPUs). The hero shots build at `hero`, the
 contact sheet at `hero` too.
 
+(rev. 3, 2026-10-16) All 17 hero shots in one `creatures-review.js` job at native 4K: 52 min 04 s
+wall for the job (builds included; ~3.1 min per finished frame; a 58.6 MB H.264 job video) on an
+otherwise idle machine; the 29-frame contact sheet 7 min 35 s of rendering (12 min wall).
+Renders: `output/dragons-low/` (git-ignored).
+
 Render at native 4K (`--preset final`, the 8-sub-frame film finish), one browser, rev. 2b:
 all 14 hero shots in one `creatures-review.js` job: 36 min 58 s of rendering (41 min 37 s wall
 with the builds; a 47.0 MB H.264 job video), about 2.6 min per finished 4K frame; the 27-frame contact
@@ -171,8 +176,8 @@ take-off or the hatchling macro takes the longest (dust sprites, the densest mes
 Commands (outputs are git-ignored):
 
 ```
-node render/render.mjs scenes/lookdev/creatures-review.js  --preset final --fps 1 --workers 1 --out output/dragons-wyvern/fix1b/hero-job --stall-timeout 2400
-node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 1 --workers 1 --out output/dragons-wyvern/fix1b/contact-job --stall-timeout 2400
+node render/render.mjs scenes/lookdev/creatures-review.js  --preset final --fps 1 --workers 1 --out output/dragons-low/hero-job --stall-timeout 2400
+node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 1 --workers 1 --out output/dragons-low/contact-job --stall-timeout 2400
 ```
 
 ## Known limits
@@ -203,12 +208,18 @@ node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 
 * Stirrups are placed under each rider's feet after the straddle fit (rider.js `addStirrups`,
   rev. 2), so the leathers run from the saddle flap to wherever the foot ended up - not a fitted
   length; on a slim back they hang at a slant.
-* (rev. 2) Under a fully folded arm a small dark crease can remain in the armpit; the far wing's
-  wrist knob, folded high in front of the chest, can read as a small fist in a front view; the
-  membrane's thigh root can show as a grey patch over the knee in the upright stance.
-* (rev. 2) Starlight's flank scales seen from a few metres (the rider shot) read as large white
-  cobbles, a stray scale plate can catch the light on its own, and the upper side of her membrane
-  shows a jigsaw-like wrinkle pattern; her folded wing reads as a bundle of pale rods. In a glide
+* (rev. 2) Under a fully folded arm a small dark crease can remain in the armpit. (rev. 3: the
+  "fist" wrist and the grey thigh patch belonged to the retired upright stance; in the low stance
+  the wrists are on the ground.)
+* (rev. 3) The low stance's folded wing stands elbow-high above the back by design (Charcoal
+  ~1.8 m, Starlight ~5 m: her 16 m forearms); from a low camera it can read as a hump or cloak.
+  The landing, the take-off vault and the walk are kinematic blends (IK on flat ground), not a
+  physics or contact solve; the walk's planted feet stay put only on flat ground at the root's
+  height. Leaf's dog-sit is a provisional answer to an open question in DRAGONS.md.
+* (rev. 2, eased in rev. 3) Starlight's plates are smaller and flatter with hairline joints and
+  her membrane's jigsaw wrinkle (a hard sign() contour) is smoothed, but from a rider's distance
+  the back still reads as a fine mosaic of polished plates; her folded wing reads as a bundle of
+  pale rods. In a glide
   the feathered shoulder seam stretches the scales there into long ovals (no torn "curtain" any
   more, but a visibly stretched band on Starlight). Membranes in flight show no visible
   veins or hem from a distance. The newborn's mouth still reads a little lip-like.

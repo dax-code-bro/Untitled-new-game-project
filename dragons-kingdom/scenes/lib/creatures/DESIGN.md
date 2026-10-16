@@ -77,6 +77,11 @@ references, sketches, the code changes the new layout needs and a step-by-step b
     crouch the longer legs put the knee above the hip, like a grasshopper's.
   * Leaf's dog-sit is lower (chest ~30 degrees up): the rump behind the hips rests on the ground,
     the wrists are planted in front.
+  * The landing is a low approach (a ~25 degree flare, the feet touch down under the middle of the
+    body, then the wrists), no rearing; the walk keeps its planted feet still on the ground.
+  * Skin: Starlight's plates smaller (scale size x0.56) and flatter with hairline joints (they read
+    as white cobbles); the newborn slimmer (trunk, limbs, yolk belly) with a flatter skull (it read
+    as a toy).
 * The screenplay (`episodes/s01e01/screenplay.md`) stays binding for events: section 1.13 lists
   every story beat the bodies have to make possible and how each design does it.
 * Every number below comes from a small calculator (lofted elliptical cross-sections, an assumed
@@ -1001,8 +1006,9 @@ smooth thigh muscles, tendinous lower legs, no visible fat, little loose skin.
   the whole body working; she never hovers.
 * **Bank (3C)** wide and slow, the whiteness catching the light; the **second pass** the same
   way. **No fire.**
-* **On the ground (later episodes):** like a heron or a crane - upright, the neck high, she prefers
-  to stand bipedally for short spells and walks quadrupedally, a slow regal walk.
+* **On the ground (later episodes):** (rev. 3) low like the others (1.5c), her long neck carried
+  forward and a little higher than Charcoal's; a slow regal walk on her feet and wrists. Her folded
+  wings stand ~5 m above her back (the 16 m forearms), a white cloak.
 
 ### 4.8 Riding rig (Queen Fall)
 

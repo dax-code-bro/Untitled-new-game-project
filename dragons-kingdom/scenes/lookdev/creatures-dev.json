@@ -1,19 +1,9 @@
 { "creatures": [
-    { "name": "charcoal", "quality": "draft", "face": -70, "at": [0, 0, 0], "pose": { "name": "stand" } },
-    { "name": "starlight", "quality": "draft", "face": -70, "at": [400, 0, 0], "pose": { "name": "stand" } }
+    { "name": "hatchling", "quality": "standard", "face": -70, "at": [0, 0, 0], "pose": { "name": "lie", "sprawl": 1, "raise": -0.5, "headDown": 0.2, "look": [0.2, -0.08], "lidRelax": 0.3 } }
   ],
   "rotationY": -1.2,
   "views": [
-    { "subject": 0, "cam": [1.3, 0.15, 0.3], "target": [0.0, 0.15, 0.2], "fov": 34, "poses": { "0": { "name": "launch", "t": 1.0 } }, "hide": [1] },
-    { "subject": 0, "cam": [1.3, 0.15, 0.3], "target": [0.0, 0.25, 0.2], "fov": 34, "poses": { "0": { "name": "launch", "t": 1.9 } }, "hide": [1] },
-    { "subject": 0, "cam": [1.3, 0.15, 0.3], "target": [0.0, 0.35, 0.3], "fov": 34, "poses": { "0": { "name": "launch", "t": 3.0 } }, "hide": [1] },
-    { "subject": 0, "cam": [1.3, 0.15, 0.3], "target": [0.0, 0.25, 0.0], "fov": 34, "poses": { "0": { "name": "land", "t": 0.8 } }, "hide": [1] },
-    { "subject": 0, "cam": [1.3, 0.15, 0.3], "target": [0.0, 0.2, 0.0], "fov": 34, "poses": { "0": { "name": "land", "t": 1.3 } }, "hide": [1] },
-    { "subject": 0, "cam": [1.3, 0.15, 0.3], "target": [0.0, 0.15, 0.0], "fov": 34, "poses": { "0": { "name": "land", "t": 2.3 } }, "hide": [1] },
-    { "subject": 0, "cam": [1.3, -0.1, 0.0], "target": [0.0, 0.0, 0.0], "fov": 34, "poses": { "0": { "name": "glide" } }, "airborne": { "0": 0.5 }, "hide": [1] },
-    { "subject": 0, "cam": [0.6, -0.5, -0.8], "target": [0.0, 0.0, 0.0], "fov": 40, "poses": { "0": { "name": "flight", "t": 0.3 } }, "airborne": { "0": 0.5 }, "hide": [1] },
-    { "subject": 1, "cam": [1.0, 0.2, 0.3], "target": [0.0, 0.0, 0.0], "fov": 40, "poses": { "1": { "name": "dive", "fold": 0.85 } }, "airborne": { "1": 0.5 }, "hide": [0] },
-    { "subject": 1, "cam": [1.0, 0.0, 0.5], "target": [0.0, 0.0, 0.1], "fov": 40, "poses": { "1": { "name": "strike", "k": 0.7 } }, "airborne": { "1": 0.5 }, "hide": [0] },
-    { "subject": 0, "cam": [1.2, 0.2, 0.3], "target": [0.0, 0.1, 0.2], "fov": 34, "poses": { "0": { "name": "fire", "t": 1.6 } }, "hide": [1] },
-    { "subject": 0, "cam": [0.9, 0.12, 0.6], "target": [0.0, 0.1, 0.1], "fov": 34, "poses": { "0": { "name": "walk", "t": 2.0 } }, "hide": [1] }
+    { "subject": 0, "cam": [1.1, 0.25, 0.3], "target": [0.0, 0.05, 0.1], "fov": 34 },
+    { "subject": 0, "cam": [0.7, 0.45, 0.9], "target": [0.0, 0.05, 0.15], "fov": 34 },
+    { "subject": 0, "cam": [0.7, 0.45, 0.9], "target": [0.0, 0.05, 0.15], "fov": 34, "poses": { "0": { "name": "struggle", "t": 2.9, "look": [0.2, -0.06] } } }
   ] }
