@@ -108,7 +108,7 @@ export const DESIGNS = {
     fold: { curl: [8, 60, 108] }, bulk: { leg: 1.38, arm: 1.12, neck: 1.12 },
     // semi-digitigrade with a fibro-fatty heel pad (elephant); claws thick, blunt, chipped
     leg: { femur: 3.1, tibia: 3.4, mt: 1.5, toe: 1.3, claw: 0.42, d: [1.7, 1.05, 1.0, 0.62, 0.52], mtAng: 40, heelPad: 1.0, hallux: 0.48, toeR: 0.19, blunt: 1 },
-    wing: { humerus: 5.4, forearm: 7.2, d: [1.55, 1.0, 0.62, 0.42],
+    wing: { humerus: 4.5, forearm: 8.1, d: [1.55, 1.0, 0.62, 0.42],
       fingers: [['III', 7.4, [5.2, 3.9, 2.3], -6], ['IV', 6.8, [5, 3.4, 1.6], -32], ['V', 6.2, [4.6, 2.9, 1.2], -64]],
       thumb: { mc: 0.7, ph: 0.55, claw: 0.6 }, to: 'ankle', glide: { humerus: -16, forearm: 12 }, legSplay: 24, thick: 0.007 },
     eye: 0.29, snout: 0.58, teeth: [15, 14], toothMax: 0.4, jawMax: 50,
@@ -125,11 +125,12 @@ export const DESIGNS = {
     neckP: [[0, 0.3, 0.37], [0.5, 0.35, 0.43], [1, 0.48, 0.62]],
     trunkP: [[0, 0.66, 0.92], [0.25, 0.7, 0.96], [0.6, 0.56, 0.74], [0.85, 0.5, 0.6], [1, 0.52, 0.56]],
     tailP: [[0, 0.44, 0.48], [0.15, 0.33, 0.37], [0.35, 0.21, 0.24], [0.6, 0.11, 0.13], [0.85, 0.045, 0.05], [1, 0.01, 0.01]],
-    stand: { hip: 2.05, shoulder: 1.9, forearmLean: 10, humerusRise: 14, neckRise: 46, neckTop: 22, headPitch: -12, tailDroop: 24 },
+    stand: { hip: 2.05, shoulder: 1.9, forearmLean: 10, humerusRise: 14, neckRise: 46, neckTop: 22, headPitch: -12, tailDroop: 24,
+      low: { belly: 0.4, mtAng: 48, neckBase: 20, neckTop: 6 } },
     fold: { curl: [8, 58, 105] }, bulk: { leg: 1.12, arm: 1.12, neck: 1.0 },
     // digitigrade, a longer springier metatarsus than Charcoal's; claws sharp
-    leg: { femur: 0.85, tibia: 0.98, mt: 0.52, toe: 0.36, claw: 0.1, d: [0.34, 0.19, 0.17, 0.1, 0.085], mtAng: 58, heelPad: 0.3, hallux: 0.42, toeR: 0.042 },
-    wing: { humerus: 1.35, forearm: 1.85, d: [0.36, 0.25, 0.17, 0.1],
+    leg: { femur: 0.78, tibia: 0.9, mt: 0.48, toe: 0.36, claw: 0.1, d: [0.34, 0.19, 0.17, 0.1, 0.085], mtAng: 58, heelPad: 0.3, hallux: 0.42, toeR: 0.042 },
+    wing: { humerus: 1.12, forearm: 2.08, d: [0.36, 0.25, 0.17, 0.1],
       fingers: [['III', 1.9, [1.35, 1, 0.6], -6], ['IV', 1.75, [1.25, 0.85, 0.4], -33], ['V', 1.6, [1.1, 0.72, 0.3], -65]],
       thumb: { mc: 0.18, ph: 0.13, claw: 0.14 }, to: 'shank', glide: { humerus: -16, forearm: 12 }, legSplay: 24, thick: 0.0018 },
     eye: 0.11, snout: 0.48, teeth: [16, 15], toothMax: 0.05, jawMax: 55,
@@ -146,12 +147,13 @@ export const DESIGNS = {
     neckP: [[0, 1.7, 2.0], [0.5, 2.35, 2.8], [1, 3.5, 4.3]],
     trunkP: [[0, 4.2, 5.8], [0.25, 4.5, 6.1], [0.6, 3.7, 4.7], [0.85, 3.3, 3.8], [1, 3.5, 3.6]],
     tailP: [[0, 3.4, 3.7], [0.15, 2.6, 2.9], [0.35, 1.6, 1.8], [0.6, 0.72, 0.82], [0.85, 0.27, 0.3], [1, 0.05, 0.05]],
-    stand: { hip: 14.4, shoulder: 14.8, forearmLean: 10, humerusRise: 16, neckRise: 40, neckTop: 10, headPitch: -12, tailDroop: 18 },
+    stand: { hip: 14.4, shoulder: 14.8, forearmLean: 10, humerusRise: 16, neckRise: 40, neckTop: 10, headPitch: -12, tailDroop: 18,
+      low: { belly: 0.4, mtAng: 52, wristFwd: 0.22, wristOut: 0.08, pole: [0.15, 0.3, -1] } },
     // (albatross: the long folded wings lie along the back, the tips crossing over the tail base)
-    fold: { curl: [-4, 2, 6], inward: 0.16, wrap: 0.1, outUp: 0.5 }, bulk: { leg: 1.2, arm: 1.15, neck: 1.0 },
+    fold: { curl: [-4, 2, 6], inward: 0.16, wrap: 0.1, outUp: 0.5, lowCurl: [6, 12, 20], low: { outUp: 0.15, inward: 0.12, wrap: 0.06, mcFan: 0.8, fanDown: 1.2 } }, bulk: { leg: 1.2, arm: 1.15, neck: 1.0 },
     // raptor feet: long toes, big curved talons, a large opposable hallux with the biggest talon
-    leg: { femur: 5.8, tibia: 7, mt: 3.8, toe: 3.6, claw: 1.3, d: [3.6, 2.3, 2.15, 1.4, 1.2], mtAng: 55, heelPad: 0.4, hallux: 0.62, toeR: 0.3, raptor: 1 },
-    wing: { humerus: 10.2, forearm: 14.8, d: [3.0, 2.0, 1.25, 0.85],
+    leg: { femur: 4.9, tibia: 5.9, mt: 3.2, toe: 3.4, claw: 1.3, d: [3.6, 2.3, 2.15, 1.4, 1.2], mtAng: 55, heelPad: 0.4, hallux: 0.62, toeR: 0.3, raptor: 1 },
+    wing: { humerus: 8.6, forearm: 16.4, d: [3.0, 2.0, 1.25, 0.85],
       fingers: [['II', 14.5, [5, 2.5], 2], ['III', 15.5, [11.5, 8.5, 5], -5], ['IV', 14, [10.5, 7.2, 3.4], -28], ['V', 12.8, [9, 6, 2.6], -52]],
       thumb: { mc: 1.3, ph: 0.9, claw: 1 }, to: 'ankle', glide: { humerus: -15, forearm: 12 }, legSplay: 30, thick: 0.014 },
     eye: 0.39, snout: 0.6, teeth: [18, 17], toothMax: 0.36, jawMax: 45,
@@ -168,10 +170,11 @@ export const DESIGNS = {
     neckP: [[0, 0.15, 0.17], [0.5, 0.19, 0.22], [1, 0.29, 0.37]],
     trunkP: [[0, 0.42, 0.62], [0.25, 0.47, 0.67], [0.6, 0.36, 0.48], [0.85, 0.3, 0.34], [1, 0.3, 0.3]],
     tailP: [[0, 0.25, 0.27], [0.15, 0.15, 0.17], [0.35, 0.085, 0.095], [0.6, 0.05, 0.055], [0.85, 0.03, 0.03], [1, 0.01, 0.01]],
-    stand: { hip: 1.1, shoulder: 1.25, forearmLean: 14, humerusRise: 10, neckRise: 32, neckTop: 10, headPitch: -10, tailDroop: 16 },
+    stand: { hip: 1.1, shoulder: 1.25, forearmLean: 14, humerusRise: 10, neckRise: 32, neckTop: 10, headPitch: -10, tailDroop: 16,
+      low: { belly: 0.36, mtAng: 56, neckBase: 18, neckTop: 4 } },
     fold: { curl: [6, 40, 80] }, bulk: { leg: 1.05, arm: 1.05, neck: 1.0 },
     leg: { femur: 0.45, tibia: 0.54, mt: 0.26, toe: 0.17, claw: 0.05, d: [0.2, 0.12, 0.105, 0.068, 0.06], mtAng: 60, heelPad: 0.2, hallux: 0.4, toeR: 0.02 },
-    wing: { humerus: 0.72, forearm: 1.18, d: [0.27, 0.18, 0.11, 0.065],
+    wing: { humerus: 0.62, forearm: 1.28, d: [0.27, 0.18, 0.11, 0.065],
       fingers: [['III', 1.3, [1.05, 0.8, 0.45], -12], ['IV', 1.15, [0.9, 0.5], -46]],
       thumb: { mc: 0.08, ph: 0.06, claw: 0.06 }, to: 'hip', glide: { humerus: -20, forearm: 6 }, legSplay: 10, thick: 0.0011 },
     eye: 0.055, snout: 0.55, teeth: [20, 19], toothMax: 0.015, jawMax: 60, gazeForward: 0.45,
@@ -191,7 +194,7 @@ export const DESIGNS = {
     stand: { hip: 0.17, shoulder: 0.14, forearmLean: 22, humerusRise: -12, neckRise: 20, neckTop: 5, headPitch: -25, tailDroop: 30 },
     fold: { curl: [15, 70, 110] }, bulk: { leg: 1.25, arm: 1.2, neck: 1.0 },
     leg: { femur: 0.075, tibia: 0.08, mt: 0.045, toe: 0.065, claw: 0.018, d: [0.05, 0.035, 0.03, 0.022, 0.02], mtAng: 30, heelPad: 0.5, hallux: 0.45, toeR: 0.0085, soft: 1 },
-    wing: { humerus: 0.085, forearm: 0.105, d: [0.038, 0.026, 0.02, 0.016],
+    wing: { humerus: 0.072, forearm: 0.118, d: [0.038, 0.026, 0.02, 0.016],
       fingers: [['III', 0.08, [0.05, 0.035, 0.02], -10], ['IV', 0.07, [0.035, 0.02, 0.01], -48], ['V', 0.06, [0.025, 0.015, 0.008], -80]],
       thumb: { mc: 0.016, ph: 0.014, claw: 0.02 }, to: 'knee', glide: { humerus: -16, forearm: 12 }, legSplay: 22, thick: 0.0006 },
     eye: 0.042, snout: 0.2, teeth: [0, 0], toothMax: 0, jawMax: 30, newborn: 1,
@@ -241,6 +244,12 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
   const prL = (s) => profileAt(D.tailP, s).map(K);
   const COL_T = 0.16, COL_N = 0.4, COL_L = 0.4;                // vertebral column depth below the dorsal surface (fraction)
   const sSh = 0.06;                                            // trunk station of the shoulder joint
+  // (rev. 3, Daxtyn 2026-10-16: "low to the ground, with the legs more towards the center of the
+  // body") the hip joint sits well forward of the tail base, under the middle of the body, as in
+  // a bird (the acetabulum at ~2/3 of the synsacrum): the trunk behind it (pelvis, ischium, the
+  // caudofemoralis) flows into the heavy tail base, so the legs come out of the middle of the
+  // animal and the feet stand under its centre of mass
+  const sHip = st.hipS ?? 0.68;                               // trunk station of the hip joint
   const topHip = hipH + 0.45 * prT(1)[1];
   const topSh = shH + 0.3 * prT(sSh)[1];
   const topAt = (s) => mix(topSh, topHip, (s - sSh) / (1 - sSh));
@@ -267,7 +276,8 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
 
   bone('body', null, torsoPts[2]);
   bone('lumbar', 'body', torsoPts[1]);
-  bone('pelvis', 'lumbar', torsoPts[0]);
+  // (rev. 3) the pelvis bone pivots at the hip station (the legs hang from it), not at the tail base
+  bone('pelvis', 'lumbar', [0, spineY(sHip), zAt(sHip)]);
   bone('thorax', 'body', torsoPts[3]);
   bone('rib_lumbar', 'lumbar', torsoPts[1]);
   bone('rib_body', 'body', torsoPts[2]);
@@ -334,7 +344,8 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
   // ------------------------------------------------------- torso sculpt
   // hanging belly between the chest and the hips (fat on the giants, little on the young)
   {
-    const sc = section(dAtTorso(0.52));
+    // (rev. 3) between the shoulders and the forward hips
+    const sc = section(dAtTorso(mix(sSh, sHip, 0.55)));
     const mb = MU.belly;
     if (mb > 0) m.ell(sub(sc.c, scale(sc.up, sc.hh * 0.42)), [sc.hw * 0.8 * Math.sqrt(mb), sc.hh * 0.5 * Math.sqrt(mb), T * 0.22], { ax: sc.side, ay: sc.up, k: sc.hh * 0.5, bone: 'rib_body', ...ts });
   }
@@ -349,7 +360,7 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
   }
   // hip bones (ilium crests) either side of the sacrum
   {
-    const sp = section(dAtTorso(0.95));
+    const sp = section(dAtTorso(Math.min(0.97, sHip + 0.05)));
     for (const sd of [1, -1]) m.ell(add(add(sp.c, scale(sp.up, sp.hh * 0.55)), scale(sp.side, sd * sp.hw * 0.55)), [sp.hw * 0.26, sp.hh * 0.22, T * 0.1], { k: sp.hw * 0.3, bone: 'pelvis', ...ts });
   }
   // the hump: the upstroke muscles over the shoulder blades (the giants' "bison hump")
@@ -366,8 +377,10 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
   const dl = LG.d.map(K);                     // diameters: thigh, knee, shank, ankle, foot
   const rLeg = [dl[0] * 0.3, dl[1] * 0.5, dl[3] * 0.5, dl[4] * 0.5];   // bone-core radii at hip, knee, ankle, ball
   const toeR = K(LG.toeR);
-  const hipSec = section(dAtTorso(1));
+  const hipSec = section(dAtTorso(sHip));
   const hipX = hipSec.hw * 0.62;
+  // (rev. 3) the acetabulum ~0.42 of the trunk depth below the back at the hip station
+  const hipJY = hipSec.top[1] - hipSec.hh * 0.84, hipJZ = zAt(sHip);
   const footX = Math.max(hipX * 1.06, toeL * 0.62);
   const legs = [];
   const sculptLocal = {};
@@ -376,7 +389,7 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
   for (const sd of [1, -1]) {
     const side = sd > 0 ? 'L' : 'R';
     const pre = `hl_${side}`;
-    const Hj = [sd * hipX, hipH, 0];
+    const Hj = [sd * hipX, hipJY, hipJZ];
     // SCULPT (standing): metatarsus at mtAng from horizontal, heel under the hip, knee forward
     const ma = LG.mtAng * deg;
     const mtDir = [0, Math.sin(ma), -Math.cos(ma)];                     // from the ball up-back to the ankle
@@ -688,7 +701,7 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
       return [sd * x, sc.c[1] + dy, sc.c[2]];
     };
     const sGap = sSh + gap / T;
-    const A0 = flankPt(sGap, 0.18), A1 = flankPt(0.55, 0.32), A2r = legRest[side];
+    const A0 = flankPt(sGap, 0.18), A1 = flankPt(Math.min(0.55, sHip - 0.12), 0.32), A2r = legRest[side];
     const thR2 = dl[0] * 0.4;
     const outL = (p, r) => add(p, [sd * r, r * 0.3, 0]);
     const hipA = outL(lerp3(A2r.hip, A2r.knee, 0.18), thR2);
@@ -722,6 +735,7 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
       memRoots.push({ name: proBone, parent: 'thorax' });
     }
     wings.push({ side, sd, prefix: pre, root: S, proRoot, elbow: w.Er, wrist: w.Wr, fingers, attach, attachBones, nF, thumbRest: w.thumbRest, padDist: rA[2] * 1.03,
+      thumbSculpt: { dir: tdir, up: dors1, q: w.qF },
       thumb: w.Wr, billow: L * 0.03, detachedSDF: detachable ? target : null, thickness: K(WG.thick ?? 0.005), memRoots, proBone });
   }
 
@@ -823,7 +837,7 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
       }
       // flank (stifle) fold: from the front of the knee up and forward onto the belly
       if (F.stifle) {
-        const sc = section(dAtTorso(0.7));
+        const sc = section(dAtTorso(sHip - 0.1));
         const b0 = add(lg.sculpt.knee, [0, rLeg[1] * 0.8, rLeg[1] * 0.9]);
         const b2 = add(sc.c, add(scale(sc.side, sd * sc.hw * 0.82), scale(sc.up, -sc.hh * 0.55)));
         fold([b0, lerp3(b0, b2, 0.5), b2], rLeg[1] * 0.2, [0, 0, 1], { bone: 'rib_lumbar' });
@@ -877,7 +891,7 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
   return {
     L, spec: specOut, design: D, bones, bonePos, sculptLocal, sculptWorld, sculptPos: sculptPosOfBone, sdf: m, chains, keratin, eyes, wings, legs, sockets, head, helpers,
     contacts: restContacts, tailR,
-    dims: { hipH, shH, topSh, topHip, T, N, H, TL, hum, fore, fem, tib, mtl, toeL, rA, rLeg, wristR: rA[2], shoulderX: shX, hipX, footX, neckPitch,
+    dims: { hipH: hipJY, hipZ: hipJZ, sHip, hipH0: hipH, shH, topSh, topHip, T, N, H, TL, hum, fore, fem, tib, mtl, toeL, rA, rLeg, wristR: rA[2], shoulderX: shX, hipX, footX, neckPitch,
       trunkAt: (s) => { const sc = section(dAtTorso(s)); return { c: sc.c, hw: sc.hw, hh: sc.hh, top: sc.top }; } },
     spineInfo: { total: spine.total, dTail, dWithers },
   };

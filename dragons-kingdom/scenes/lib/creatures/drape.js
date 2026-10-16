@@ -223,11 +223,26 @@ export function drapeMembrane(c, mesh, opts = {}) {
     const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
     for (const q of [a, b, cc]) { nr[q * 3] += nx; nr[q * 3 + 1] += ny; nr[q * 3 + 2] += nz; }
   }
-  // inverse skinning -> bind-space morph delta
+  // inverse skinning -> bind-space morph delta. (rev. 3) Damped least squares instead of the
+  // plain inverse: where a vertex blends bones turned far apart (the plagiopatagium between the
+  // folded fingers and the crouched leg) the blended skin matrix is near-singular, its inverse
+  // gave deltas of hundreds of metres, and any pose but the drape pose threw the membrane across
+  // the sky. Well-conditioned vertices are solved exactly (lambda ~ 0).
   const delta = new Float32Array(n * 3), dnormal = new Float32Array(n * 3);
   const rn = g.attributes.normal.array;
-  const M = new THREE.Matrix4(), Mi = new THREE.Matrix4(), N3 = new THREE.Matrix3();
-  const pv = new THREE.Vector3(), nv = new THREE.Vector3();
+  const solve = (m, lam, r, out) => {
+    // (M^T M + lam I) d = M^T r, M column-major 3x3 in m[0..2], m[4..6], m[8..10]
+    const c0 = [m[0], m[1], m[2]], c1 = [m[4], m[5], m[6]], c2 = [m[8], m[9], m[10]];
+    const dt = (u, w) => u[0] * w[0] + u[1] * w[1] + u[2] * w[2];
+    const a00 = dt(c0, c0) + lam, a01 = dt(c0, c1), a02 = dt(c0, c2), a11 = dt(c1, c1) + lam, a12 = dt(c1, c2), a22 = dt(c2, c2) + lam;
+    const b0 = dt(c0, r), b1 = dt(c1, r), b2 = dt(c2, r);
+    const i00 = a11 * a22 - a12 * a12, i01 = a02 * a12 - a01 * a22, i02 = a01 * a12 - a02 * a11;
+    const i11 = a00 * a22 - a02 * a02, i12 = a01 * a02 - a00 * a12, i22 = a00 * a11 - a01 * a01;
+    const det = a00 * i00 + a01 * i01 + a02 * i02 || 1e-12;
+    out[0] = (i00 * b0 + i01 * b1 + i02 * b2) / det; out[1] = (i01 * b0 + i11 * b1 + i12 * b2) / det; out[2] = (i02 * b0 + i12 * b1 + i22 * b2) / det;
+    return out;
+  };
+  const dv = [0, 0, 0], nb = [0, 0, 0];
   for (let v = 0; v < n; v++) {
     const e = new Float64Array(16);
     for (let k = 0; k < 4; k++) {
@@ -236,14 +251,23 @@ export function drapeMembrane(c, mesh, opts = {}) {
       const s = S[si[v * 4 + k]];
       for (let j = 0; j < 16; j++) e[j] += w * s[j];
     }
-    M.fromArray(e);
-    Mi.copy(M).invert();
-    pv.set(x[v * 3], x[v * 3 + 1], x[v * 3 + 2]).applyMatrix4(Mi);
-    delta[v * 3] = pv.x - pos[v * 3]; delta[v * 3 + 1] = pv.y - pos[v * 3 + 1]; delta[v * 3 + 2] = pv.z - pos[v * 3 + 2];
-    N3.setFromMatrix4(Mi);
-    nv.set(nr[v * 3], nr[v * 3 + 1], nr[v * 3 + 2]).applyMatrix3(N3).normalize();
-    if (!(nv.lengthSq() > 0.5)) nv.set(rn[v * 3], rn[v * 3 + 1], rn[v * 3 + 2]);
-    dnormal[v * 3] = nv.x - rn[v * 3]; dnormal[v * 3 + 1] = nv.y - rn[v * 3 + 1]; dnormal[v * 3 + 2] = nv.z - rn[v * 3 + 2];
+    const det3 = e[0] * (e[5] * e[10] - e[9] * e[6]) - e[4] * (e[1] * e[10] - e[9] * e[2]) + e[8] * (e[1] * e[6] - e[5] * e[2]);
+    const ad = Math.abs(det3);
+    const lam = ad > 0.6 ? 0 : 0.08 * Math.min(1, (0.6 - ad) / 0.5) + 1e-6;
+    const px = pos[v * 3], py = pos[v * 3 + 1], pz = pos[v * 3 + 2];
+    // residual of the draped point against the skinned rest point: M (p + d) = x  ->  M3 d = x - M p
+    const r = [x[v * 3] - (e[0] * px + e[4] * py + e[8] * pz + e[12]), x[v * 3 + 1] - (e[1] * px + e[5] * py + e[9] * pz + e[13]), x[v * 3 + 2] - (e[2] * px + e[6] * py + e[10] * pz + e[14])];
+    solve(e, lam, r, dv);
+    delta[v * 3] = dv[0]; delta[v * 3 + 1] = dv[1]; delta[v * 3 + 2] = dv[2];
+    const nl = Math.hypot(nr[v * 3], nr[v * 3 + 1], nr[v * 3 + 2]);
+    let ok = false;
+    if (nl > 1e-12) {
+      solve(e, Math.max(lam, 1e-6), [nr[v * 3] / nl, nr[v * 3 + 1] / nl, nr[v * 3 + 2] / nl], nb);
+      const l = Math.hypot(nb[0], nb[1], nb[2]);
+      if (l > 1e-9) { nb[0] /= l; nb[1] /= l; nb[2] /= l; ok = true; }
+    }
+    if (!ok) { nb[0] = rn[v * 3]; nb[1] = rn[v * 3 + 1]; nb[2] = rn[v * 3 + 2]; }
+    dnormal[v * 3] = nb[0] - rn[v * 3]; dnormal[v * 3 + 1] = nb[1] - rn[v * 3 + 1]; dnormal[v * 3 + 2] = nb[2] - rn[v * 3 + 2];
   }
   void _m;
   return { delta, dnormal, colliders: nc };

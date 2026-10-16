@@ -4,6 +4,23 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## LOW STANCE round (rev. 3, 2026-10-16, Daxtyn: "make them low to the ground with their legs more towards the center of their body") - IN PROGRESS
+Dev loop (scratch): scratchpad/ep1p1/creatures-low/tools/ (dev.sh <cfg.json> <name> = creatures-dev.js views -> r/dev_<name>/sheet.jpg;
+build.mjs, clear.mjs (belly clearance / joint heights per pose), contacts.mjs, membox.mjs (membrane bounds), armdbg.mjs).
+Done so far (code):
+- anatomy.js: hip joint moved forward to trunk station `stand.hipS` (default 0.68, was 1.0 = the tail base): the legs hang
+  under the middle of the body; the pelvis bone pivots there; belly mass, ilium crests, stifle fold and the membrane's flank
+  point follow. Arm bones rebalanced again (humerus ~0.55 of the forearm, span unchanged: Charcoal 4.5 / 8.1 m) so the folded
+  wing can stand elbow-high beside the withers with the wrist down under the shoulder at a LOW shoulder height. Starlight's
+  legs -15% (4.9 / 5.9 / 3.2), Leaf's -8%.
+- poses.js: `stand` = the LOW stance (chest underside at `belly` x chest depth, default 0.34; trunk ~level; feet under the
+  middle; wrist pads + thumbs down under the shoulders; neck forward and low; tail low, outer half on the ground);
+  per-design `stand.low` overrides. `upright` = alias of `stand` (retired). `crouch`, `fire`, `sit` (rump on the ground,
+  wrists planted in front) rewritten; thumbs aimed forward along the ground (`aimThumb`).
+- drape.js: inverse skinning by damped least squares (near-singular blends threw the membrane hundreds of metres in the walk).
+- creature.js: the 'upright' drape variant dropped.
+NEXT: shots/contact updated for the low stance (+ walk, rest, landing shots), render review, open issues, 4K to output/dragons-low/.
+
 ## Fix round 1 after the critics (2026-10-15, DESIGN "rev. 2") - state
 Done (committed; renders under output/dragons-wyvern/fix1/, git-ignored, file names end in -fix1):
 - TWO LEGS: new resting stance `poses.upright` (trunk raised 30-34 deg, feet ahead of the hips,

@@ -202,7 +202,28 @@ function plantWing(pb, F, side, wristP, o = {}) {
   const pole = o.pole ?? add(qRot(qT, [sd * 0.35, 0.75, -0.6]), [0, 0.3, 0]);
   const arm = armIK(pb, F, side, wristP, pole, o.minTwist ?? true);
   foldHand(pb, side, arm, qT, o);
+  if (o.thumbAim !== false) aimThumb(pb, side, arm, qT, o.thumbDir);
   return arm;
+}
+
+/**
+ * (rev. 3) The thumb of a planted wing laid forward along the ground ahead of the wrist pad,
+ * a little outward, its claw curving down into the turf (a bat's thumb on the ground): with the
+ * forearm sloping down to the wrist the sculpted thumb pointed straight down and the claw became
+ * the lowest contact (the animal stood on its thumb tips). `dir` = [out, down, fwd] in the
+ * trunk's frame.
+ */
+function aimThumb(pb, side, arm, qT, dir) {
+  const c = pb.c, A = c.anatomy;
+  const sd = side === 'L' ? 1 : -1;
+  const w = A.wings.find((x) => x.side === side);
+  if (!w || !w.thumbSculpt) return;
+  const d = dir || [0.35, 0.08, 1];
+  const f = qRot(qT, [sd * d[0], 0, d[2]]);
+  const want = norm([f[0], -d[1] * Math.hypot(f[0], f[2]), f[2]]);
+  const R = aimQ(w.thumbSculpt.dir, w.thumbSculpt.up, want, [0, 1, 0]);
+  const qNow = qMul(R, w.thumbSculpt.q);
+  pb.quat(`w_${side}_th`, qMul(qInv(arm.qF), qNow));
 }
 
 // ------------------------------------------------------------ shared layers
@@ -374,23 +395,111 @@ function plantAll(pb, o = {}) {
   return res;
 }
 
-/** Wing-walk stance: weight on the feet and the folded wings' wrist pads, elbows high. */
+/**
+ * (rev. 3) Parameters of the LOW stance per dragon (DESIGN 1.5c; design.stand.low overrides):
+ * hipK = hip-joint height as a fraction of the leg's standing height (femur + tibia + the
+ * metatarsus' rise), pitch = trunk pitch (deg, nose up), footFwd = ball of the foot ahead of the
+ * hip joint (x trunk length), wristFwd / wristOut = the wrist pad ahead of / outside the shoulder
+ * joint (x forearm length), neck base / top / head pitch (deg, world), tail sag (deg).
+ */
+function lowParams(c) {
+  const D = c.anatomy.design;
+  return { belly: 0.34, pitch: 4, footFwd: 0.16, footOut: 1.12, mtAng: D.leg.mtAng, wristFwd: 0.02, wristOut: 0.1, neckBase: 14, neckTop: 2, headPitch: -8, tailLift: 2, tailSag: 26, tailCurl: 0.3,
+    pole: [0.25, 1, -0.4], curl: D.fold?.lowCurl ?? [2, 16, 34], ...(D.stand.low || {}) };
+}
+
+/**
+ * The LOW stance (rev. 3, Daxtyn 2026-10-16: "make them low to the ground with their legs more
+ * towards the center of their body"): the trunk carried low and nearly level, the two legs
+ * planted under the middle of the body in a powerful crouch (knees forward under the belly,
+ * hocks behind, the feet under the centre of mass), the folded wings' wrist pads and thumb claws
+ * down in front beside the chest as supports (a bat's / pterosaur's / Game of Thrones wyvern's
+ * carriage: the elbows stand up beside the withers like a cloak), the neck carried forward and
+ * low, the heavy tail held low behind as the counterweight, its outer half on the ground.
+ * Also the base of walk / crouch / launch / land. Options: bodyY (m, + = higher), bodyPitch
+ * (rad, replaces the default), body {x, y, z, pitch, roll, yaw} (added), hipK, feet / wrists
+ * ({ L|R: { dx, dz, lift, mtAng, at, fwd, pole } }), neckRise/neckTop/headPitch (rad), raise,
+ * headDown, look, tailCurl, tailSag (rad).
+ */
 export function stand(c, o = {}) {
   const t = o.t ?? 0;
-  const sp = standParams(c);
-  const pb = groundBase(c, { body: { y: o.bodyY ?? 0, pitch: o.bodyPitch ?? 0, ...(o.body || {}) } }, t);
-  const br = o.drapeBuild ? 0 : breathe(pb, t, o.breathe ?? (c.L > 20 ? 0.085 : c.L > 3 ? 0.16 : 0.4), c.L > 20 ? 0.02 : 0.025);
-  const rise = (o.neckRise ?? sp.neckRise) + (o.raise ?? 0);
-  const top = (o.neckTop ?? (sp.neckTop + (o.neckRise !== undefined ? o.neckRise - sp.neckRise : 0))) + (o.raise ?? 0) * 0.5;
-  neckCurve(pb, rise, top - (o.headDown ?? 0) * 1.4, (o.headPitch ?? sp.headPitch) - (o.headDown ?? 0) * 0.6, o.bodyPitch ?? 0);
-  const lk = o.look || [0, 0];
+  const A = c.anatomy, d = A.dims, D = A.design;
+  const LP = lowParams(c);
+  const b = o.body || {};
+  const pitch = (o.bodyPitch ?? LP.pitch * deg) + (b.pitch ?? 0);
+  const pb = groundBase(c, { body: { pitch, roll: b.roll, yaw: b.yaw, lumbar: b.lumbar, chest: b.chest } }, t);
+  const ma0 = LP.mtAng * deg;
+  const legH = d.fem + d.tib + d.mtl * Math.sin(ma0) + d.toeL * 0.13;
+  {
+    // place the rig: the chest carried low - its underside `belly` x the chest depth above the
+    // ground (o.hipK instead puts the hip joint at that fraction of the leg's height) - the hip
+    // joint at its rest station along z
+    const F0 = solveFK(pb);
+    const hip = F0.P.hl_L_0;
+    let dy;
+    if (o.hipK !== undefined) dy = o.hipK * legH - hip[1];
+    else {
+      const sc = d.trunkAt(0.25), rp = A.bonePos.rib_thorax, q = F0.Q.rib_thorax, P0 = F0.P.rib_thorax;
+      const under = add(P0, qRot(q, [sc.c[0] - rp[0], sc.c[1] - sc.hh - rp[1], sc.c[2] - rp[2]]));
+      dy = (o.belly ?? LP.belly) * 2 * sc.hh - under[1];
+    }
+    pb.rig.position = [b.x ?? 0, dy + (o.bodyY ?? 0) + (b.y ?? 0), d.hipZ - hip[2] + (b.z ?? 0)];
+  }
   const calm = o.drapeBuild ? 0 : 1;
+  const br = o.drapeBuild ? 0 : breathe(pb, t, o.breathe ?? (c.L > 20 ? 0.085 : c.L > 3 ? 0.16 : 0.4), c.L > 20 ? 0.02 : 0.025);
+  const rise = (o.neckRise ?? LP.neckBase * deg) + (o.raise ?? 0);
+  const top = (o.neckTop ?? LP.neckTop * deg) + (o.raise ?? 0) * 0.5 - (o.headDown ?? 0) * 1.4;
+  neckCurve(pb, rise, top, (o.headPitch ?? LP.headPitch * deg) - (o.headDown ?? 0) * 0.6, pitch);
+  const lk = o.look || [0, 0];
   look(pb, lk[0] + 0.03 * wob(t * 0.3, 1) * calm, lk[1] + 0.015 * br + 0.015 * wob(t * 0.25, 2) * calm);
-  tailCurve(pb, t, { sway: 0.05 * calm, droop: o.tailDroop ?? sp.tailDroop, sag: o.tailSag ?? sp.tailSag, curl: o.tailCurl ?? 0.3, swayHz: 0.05 });
-  plantAll(pb, o);
+  // the tail: the base carried low along the trunk line, sagging over its first half until the
+  // outer part lies on the ground (groundTail), sweeping to one side
+  {
+    const ts = tailNames(c), n = ts.length;
+    const lift = (o.tailLift ?? LP.tailLift * deg) + pitch;
+    const sag = o.tailSag ?? LP.tailSag * deg;
+    const curl = o.tailCurl ?? LP.tailCurl;
+    const sw = ts.map((_, i) => { const f = i / (n - 1); return f < 0.04 || f > 0.6 ? 0 : Math.sin(Math.PI * (f - 0.04) / 0.56); });
+    const swS = sw.reduce((a, q) => a + q, 0) || 1;
+    ts.forEach((name, i) => {
+      const f = i / (n - 1);
+      const s = Math.sin(t * TAU * 0.05 - i * 0.22) * 0.03 * calm;
+      pb.add(name, (i < 4 ? lift / 4 : 0) - sag * sw[i] / swS, (s + curl * Math.max(0, f - 0.25)) * 2.5 / n, 0);
+    });
+  }
+  plantLow(pb, o, LP);
   common(pb, { ...o, jaw: (o.jaw ?? 0) + 0.012 * br }, t);
   drape(pb, 'stand');
   return pb.out({ groundTail: true });
+}
+
+/** Feet under the middle of the body and the wrist pads down in front (the low stance's contacts). */
+function plantLow(pb, o, LP) {
+  const c = pb.c, A = c.anatomy, d = A.dims, D = A.design;
+  const F = solveFK(pb);
+  const res = {};
+  for (const [side, sd] of sides) {
+    const lf = (o.feet && o.feet[side]) || {};
+    const hip = F.P[`hl_${side}_0`];
+    const ma = (lf.mtAng ?? LP.mtAng) * deg;
+    // the ball of the foot a little ahead of the hip joint (the knee forward under the belly,
+    // the hock behind), the feet a little wider than the hips
+    const ball = [sd * Math.max(d.hipX * LP.footOut, d.footX ?? 0) + (lf.dx ?? 0), d.toeL * 0.13 + (lf.lift ?? 0), hip[2] + d.T * LP.footFwd + (lf.dz ?? 0)];
+    if (lf.at) { ball[0] = lf.at[0]; ball[1] = lf.at[1] + d.toeL * 0.13; ball[2] = lf.at[2]; }
+    res[`foot${side}`] = legIK(pb, F, side, ball, { mtAng: lf.mtAng ?? LP.mtAng, fwd: lf.fwd ?? [sd * 0.1, 0, 1], pole: lf.pole ?? [sd * 0.3, 0.1, 1], curl: lf.curl ?? 0.06, toeDown: lf.toeDown });
+    // the wrist pad on the ground beside and a little ahead of the shoulder joint; the elbow up
+    // and back beside the withers, the hand folded back along the forearm
+    const wf = (o.wrists && o.wrists[side]) || {};
+    const S = F.P[`w_${side}_0`];
+    const w = A.wings.find((x) => x.side === side);
+    const wy = (wf.lift ?? 0) + w.padDist * 0.92;
+    const wp = wf.at ? [wf.at[0], wf.at[1] + w.padDist * 0.92, wf.at[2]] : [S[0] + sd * (d.fore * LP.wristOut + (wf.dx ?? 0)), wy, S[2] + d.fore * LP.wristFwd + (wf.dz ?? 0)];
+    const qT = F.Q.thorax;
+    const pl = wf.pole ?? LP.pole;
+    const pole = add(qRot(qT, [sd * pl[0], pl[1], pl[2]]), [0, 0.3, 0]);
+    res[`wrist${side}`] = plantWing(pb, F, side, wp, { pole, curl: LP.curl, ...(D.fold?.low || {}), ...(o.fold || {}) });
+  }
+  return res;
 }
 
 /**
@@ -422,62 +531,12 @@ function foldUp(pb, F, side, o = {}) {
 }
 
 /**
- * Standing on the TWO legs (DESIGN rev. 2: the resting stance - the wings stay folded off the
- * ground, so a viewer counts two legs): the trunk raised 20-30 degrees and balanced over the
- * feet (bird / theropod), the neck in a tall S, the folded wings against the chest and flanks
- * (foldUp), the heavy tail carried out behind as the counterweight and laid on the ground from
- * about its middle in a gentle curve (a third support for the giants). o.pitch (rad) overrides
- * the trunk angle; feet, look, tailCurl as in stand().
+ * (rev. 3) RETIRED as a resting stance: Daxtyn asked for low dragons with the legs under the
+ * middle of the body (2026-10-16), so the rev. 2 upright, trunk-raised stance is gone. Kept as an
+ * alias of the low stance for older callers.
  */
 export function upright(c, o = {}) {
-  const t = o.t ?? 0;
-  const A = c.anatomy, d = A.dims, D = A.design;
-  const U = D.stand.up || {};
-  const pitch = o.pitch ?? (U.pitch ?? (c.L > 20 ? 30 : 34)) * deg;
-  const pb = groundBase(c, { body: { pitch } }, t);
-  {
-    const F0 = solveFK(pb);
-    const hip = F0.P.hl_L_0;
-    pb.rig.position = [0, d.hipH * (U.hipK ?? 0.9) - hip[1], -hip[2]];
-  }
-  const calm = o.drapeBuild ? 0 : 1;
-  const br = o.drapeBuild ? 0 : breathe(pb, t, o.breathe ?? (c.L > 20 ? 0.085 : c.L > 3 ? 0.16 : 0.4), c.L > 20 ? 0.02 : 0.025);
-  const nb = (o.neckBase ?? U.neckBase ?? 48) * deg + (o.raise ?? 0), nt = (o.neckTop ?? U.neckTop ?? 14) * deg - (o.headDown ?? 0) * 1.4 + (o.raise ?? 0) * 0.5;
-  neckCurve(pb, nb, nt, (o.headPitch ?? U.headPitch ?? -16) * deg - (o.headDown ?? 0) * 0.6, pitch);
-  const lk = o.look || [0, 0];
-  look(pb, lk[0] + 0.03 * wob(t * 0.3, 1) * calm, lk[1] + 0.015 * br + 0.015 * wob(t * 0.25, 2) * calm);
-  // the tail: the base carried level with the trunk line (lifted against the pitch), the middle
-  // sagging to the ground, the outer part lying along it with a sideways sweep
-  {
-    // (a straight tail from the hip to the ground read as a prop or a ramp: the base is carried
-    // level, the arc down to the ground is spread over the middle third)
-    const ts = tailNames(c), n = ts.length;
-    const lift = (o.tailLift ?? U.tailLift ?? 1.0) * pitch + 4 * deg;
-    const sag = (o.tailSag ?? U.tailSag ?? 46) * deg;
-    const curl = o.tailCurl ?? 0.35;
-    const sw = ts.map((_, i) => { const f = i / (n - 1); return f < 0.18 || f > 0.72 ? 0 : Math.sin(Math.PI * (f - 0.18) / 0.54); });
-    const swS = sw.reduce((a, b) => a + b, 0) || 1;
-    ts.forEach((name, i) => {
-      const f = i / (n - 1);
-      const s = Math.sin(t * TAU * 0.05 - i * 0.22) * 0.03 * calm;
-      pb.add(name, (i < 4 ? lift / 4 : 0) - sag * sw[i] / swS, (s + curl * Math.max(0, f - 0.35)) * 2.5 / n, 0);
-    });
-  }
-  const F = solveFK(pb);
-  for (const [side, sd] of sides) {
-    const lf = (o.feet && o.feet[side]) || {};
-    const hip = F.P[`hl_${side}_0`];
-    const ma = (lf.mtAng ?? U.mtAng ?? D.leg.mtAng) * deg;
-    // the feet well ahead of the hip joint, under the centre of mass (the trunk, neck and head
-    // are in front of the hips; the femur swings forward as in a bird, the knee under the belly)
-    const ball = [sd * Math.max(d.hipX * 1.1, d.footX ?? 0) + (lf.dx ?? 0), d.toeL * 0.13 + (lf.lift ?? 0), hip[2] + d.T * (U.footFwd ?? 0.36) + (lf.dz ?? 0)];
-    legIK(pb, F, side, ball, { mtAng: lf.mtAng ?? U.mtAng, fwd: lf.fwd ?? [sd * 0.12, 0, 1], pole: lf.pole, curl: lf.curl ?? 0.08 });
-    foldUp(pb, F, side, o.fold || {});
-  }
-  if (o.debugSculptBones) for (const n of o.debugSculptBones) if (A.sculptLocal[n]) pb.quat(n, A.sculptLocal[n]);
-  common(pb, { ...o, jaw: (o.jaw ?? 0) + 0.012 * br }, t);
-  drape(pb, 'upright');
-  return pb.out({ groundTail: true });
+  return stand(c, o);
 }
 
 /**
@@ -538,44 +597,54 @@ export function rear(c, o = {}) {
   return pb.out({ groundTail: true });
 }
 
-/** Dog-like sit on the haunches (Leaf, 1B): trunk pitched up, wrists planted in front, tail curled round. */
+/**
+ * Dog-like sit on the haunches (Leaf, 1B). (rev. 3) With the hips under the middle of the body
+ * the rump behind them (pelvis, tail base) rests on the ground, the trunk raised ~45 degrees
+ * about it, the thighs folded forward along the flanks, the feet flat beside the haunches, the
+ * folded wings' wrists planted in front like a dog's forelegs (the same wing-walk fold as the
+ * low stance; o.plantWrists = false folds them off the ground instead), the tail curled round.
+ */
 export function sit(c, o = {}) {
   const t = o.t ?? 0;
   const A = c.anatomy, d = A.dims;
-  const pitch = o.pitch ?? 55 * deg;
-  // the hip joint sinks to the haunch height (thighs folded forward, metatarsi flat on the ground)
-  const hipY = (o.hipY ?? 0.36) * (d.fem + d.tib) * 0.5;
+  const pitch = o.pitch ?? 46 * deg;
   const pb = groundBase(c, { body: { pitch } }, t);
-  // place the rig so the hip joint lands at hipY, the trunk pitched up about it
-  {
-    const F = solveFK(pb);
-    const hip = F.P.hl_L_0;
-    pb.rig.position = [0, hipY - hip[1], -hip[2] - d.T * 0.05];
-  }
   const br = o.drapeBuild ? 0 : breathe(pb, t, o.breathe ?? 0.2, 0.025);
-  neckCurve(pb, (o.neckBase ?? 0.62) + (o.raise ?? 0), (o.neckTop ?? 0.95) - (o.headDown ?? 0) * 1.2, (o.headPitch ?? -0.18) - (o.headDown ?? 0) * 0.5, pitch);
+  neckCurve(pb, (o.neckBase ?? 0.52) + (o.raise ?? 0), (o.neckTop ?? 0.62) - (o.headDown ?? 0) * 1.2, (o.headPitch ?? -0.2) - (o.headDown ?? 0) * 0.5, pitch);
   const lk = o.look || [0, 0];
   look(pb, lk[0] + 0.04 * wob(t * 0.35, 3) * (o.drapeBuild ? 0 : 1), lk[1] + 0.02 * br);
-  // tail: down to the ground and curled round the side
+  // tail: the base laid back down along the ground behind the rump, then curled round the side
   const ts = tailNames(c);
   ts.forEach((n, i) => {
     const f = i / (ts.length - 1);
-    pb.add(n, i < 4 ? (pitch * 0.85) / 4 : 0.0, (o.tailCurl ?? 0.13 + 0.02 * Math.sin(t * 0.6 - i * 0.3)) * f * 1.7, 0);
+    pb.add(n, i < 3 ? (pitch * 0.95) / 3 : 0.0, (o.tailCurl ?? 0.16 + 0.02 * Math.sin(t * 0.6 - i * 0.3)) * f * 1.7, 0);
   });
+  // the rump on the ground: the lowest point of the trunk behind the hips and of the tail base
+  {
+    const F0 = solveFK(pb);
+    let minY = Infinity;
+    for (const s of [0.75, 0.88, 1.0]) {
+      const sc = d.trunkAt(s), rp = A.bonePos.rib_lumbar;
+      const p = add(F0.P.rib_lumbar, qRot(F0.Q.rib_lumbar, [sc.c[0] - rp[0], sc.c[1] - sc.hh - rp[1], sc.c[2] - rp[2]]));
+      minY = Math.min(minY, p[1]);
+    }
+    for (let i = 0; i < 4; i++) minY = Math.min(minY, F0.P[ts[i]][1] - c.anatomy.tailR(i / ts.length) * 0.95);
+    const hip = F0.P.hl_L_0;
+    pb.rig.position = [0, -minY + d.T * 0.01, d.hipZ - hip[2] - d.T * 0.08];
+  }
   const F = solveFK(pb);
   for (const [side, sd] of sides) {
     // feet flat beside the haunch, toes forward: the thigh folds forward along the flank
     const hip = F.P[`hl_${side}_0`];
-    legIK(pb, F, side, [sd * Math.max(d.hipX * 1.35, (d.footX ?? 0) * 1.2), d.toeL * 0.13, hip[2] + d.fem * 0.85], { mtAng: 8, fwd: [sd * 0.15, 0, 1], pole: [sd * 0.45, 0.8, 0.4], curl: 0.08 });
-    if (o.plantWrists) {
-      // wrists planted in front like a dog's forelegs, forearms vertical
+    legIK(pb, F, side, [sd * Math.max(d.hipX * 1.35, (d.footX ?? 0) * 1.2), d.toeL * 0.13, hip[2] + d.fem * 0.8], { mtAng: 10, fwd: [sd * 0.15, 0, 1], pole: [sd * 0.45, 0.8, 0.4], curl: 0.08 });
+    if (o.plantWrists !== false) {
+      // wrists planted in front like a dog's forelegs, the elbows up beside the withers
       const S = F.P[`w_${side}_0`];
       const w = A.wings.find((x) => x.side === side);
-      const wp = [S[0] + sd * d.wristR * 1.2, w.padDist * 0.92, S[2] + (o.wristFwd ?? 0.05) * d.fore];
-      plantWing(pb, F, side, wp, { pole: [sd * 0.25, 0.4, -1], outUp: 0.05, p1Down: 0.15, ...(o.fold || {}) });
+      const wp = [S[0] + sd * d.wristR * 1.6, w.padDist * 0.92, S[2] + (o.wristFwd ?? 0.12) * d.fore];
+      const pole = add(qRot(F.Q.thorax, [sd * 0.25, 0.5, -1]), [0, 0.2, 0]);
+      plantWing(pb, F, side, wp, { pole, curl: [2, 16, 34], ...(o.fold || {}) });
     } else {
-      // (DESIGN rev. 2) the wings stay folded against the body, off the ground: he sits back on
-      // his haunches on his two legs (planted wrists read as a dog's front legs - four legs)
       foldUp(pb, F, side, { curl: [-26, -8, 18], wristDir: [0.5, 0.15, 0.85], ...(o.fold || {}) });
     }
   }
@@ -584,18 +653,17 @@ export function sit(c, o = {}) {
   return pb.out({ groundTail: true });
 }
 
-/** Sphinx crouch: chest lowered between the wrists (mounting; the first move of a launch). o.k 0..1 */
+/** Crouch: the low stance sinking further, chest down between the wrists, legs gathered (mounting; the first move of a launch). o.k 0..1 */
 export function crouch(c, o = {}) {
-  const t = o.t ?? 0;
   const k = clamp(o.k ?? 1, 0, 1);
   const d = c.anatomy.dims;
-  const sp = standParams(c);
-  const drop = k * (o.depth ?? 0.42) * d.shH;
+  const LP = lowParams(c);
+  const ma = mix(LP.mtAng, LP.crouchMt ?? 28, k);
   const p = stand(c, {
-    ...o, bodyY: -drop * 0.75, bodyPitch: -0.12 * k,
-    neckRise: mix(sp.neckRise, 0.2, k), headPitch: mix(sp.headPitch, -0.25, k),
-    feet: { L: { dz: -d.mtl * 0.3 * k, mtAng: mix(c.anatomy.design.leg.mtAng, 25, k) }, R: { dz: -d.mtl * 0.3 * k, mtAng: mix(c.anatomy.design.leg.mtAng, 25, k) } },
-    wrists: { L: { dz: d.fore * 0.32 * k, dx: d.wristR * 1.5 * k }, R: { dz: d.fore * 0.32 * k, dx: d.wristR * 1.5 * k } },
+    ...o, belly: mix(LP.belly, LP.crouchBelly ?? 0.08, k), bodyPitch: mix(LP.pitch * deg, -0.05, k),
+    neckRise: mix(LP.neckBase * deg, 0.1, k), neckTop: mix(LP.neckTop * deg, 0.04, k), headPitch: mix(LP.headPitch * deg, -0.22, k),
+    feet: { L: { dz: -d.mtl * 0.2 * k, mtAng: ma }, R: { dz: -d.mtl * 0.2 * k, mtAng: ma } },
+    wrists: { L: { dz: d.fore * 0.1 * k, dx: d.wristR * 1.2 * k }, R: { dz: d.fore * 0.1 * k, dx: d.wristR * 1.2 * k } },
   });
   if (k > 0.5) p.uniforms.drape = { L: ['crouch', 1], R: ['crouch', 1] };
   return p;
@@ -680,9 +748,10 @@ export function fire(c, o = {}) {
   const inhale = smooth(0, 0.8, t) * (1 - smooth(0.9, 1.2, t));
   const open = smooth(0.75, 1.0, t) * (o.gape ?? 0.48);
   const aim = o.aim || [0, 0];
-  // (rev. 2) on the two legs: the trunk lowered toward level, the neck stretched forward and
-  // low along the line of fire, the folded wings off the ground
-  const p = upright(c, { ...o, t, breathe: 0, pitch: o.pitch ?? 0.26, neckBase: o.neckBase ?? 20, neckTop: o.neckTop ?? -2, headPitch: (o.headPitch ?? -6) + aim[1] / deg, look: [aim[0], 0], jaw: open, blink: false, lidRelax: 0.45 });
+  // (rev. 3) from the low stance: the chest lifted a little on the planted wrists, the neck
+  // stretched forward and low along the line of fire, the head level with it
+  const p = stand(c, { ...o, t, breathe: 0, bodyPitch: (o.pitch ?? 0.1) + 0.04 * inhale, bodyY: o.bodyY ?? 0, neckRise: (o.neckBase ?? 16) * deg, neckTop: (o.neckTop ?? -2) * deg,
+    headPitch: ((o.headPitch ?? -4) * deg) + aim[1], look: [aim[0], 0], jaw: open, blink: false, lidRelax: 0.45 });
   const k = 1 + 0.05 * inhale;
   p.scale.rib_thorax = [k, 1 + 0.07 * inhale, 1];
   p.scale.rib_body = [1 + 0.035 * inhale, 1 + 0.045 * inhale, 1];

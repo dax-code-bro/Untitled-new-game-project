@@ -311,7 +311,6 @@ export async function createCreature(which, opts = {}) {
     const td = nowMs();
     const variants = {
       stand: (c) => P.stand(c, { t: 0, blink: false, breathe: 0, drapeBuild: true }),
-      upright: (c) => P.upright(c, { t: 0, blink: false, breathe: 0, drapeBuild: true }),
       sit: (c) => P.sit(c, { t: 0, blink: false, breathe: 0, drapeBuild: true }),
       lie: (c) => P.lie(c, { t: 0, blink: false, breathe: 0, drapeBuild: true }),
       crouch: (c) => P.crouch(c, { t: 0, blink: false, breathe: 0, drapeBuild: true, k: 1 }),
