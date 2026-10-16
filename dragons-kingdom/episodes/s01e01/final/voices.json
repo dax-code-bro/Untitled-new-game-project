@@ -1,0 +1,1996 @@
+{
+  "schema": "dragons-kingdom/voices v0.2 (final script)",
+  "episode": "S01E01",
+  "series": "Dragon's Kingdom",
+  "status": "PROVISIONAL casting for the locked shooting script. Nothing here is approved by Daxtyn. No final dialogue has been recorded. The 18 handoff roles keep their ../voices.json voices, except the ADULT VILLAGER (recast, see his entry); the 8 new roles are cast here and have not been auditioned.",
+  "generated_by": "episodes/s01e01/tools/final_voices.py",
+  "source": {
+    "dialogue": "episodes/s01e01/final/dialogue.json",
+    "dialogue_source_sha256": "756a7152764f9bb97c49f3df91630d6dcc5bd6fc384dedef3c908bb3b54c0bc3",
+    "casting_base": "episodes/s01e01/voices.json",
+    "preview_takes": "episodes/s01e01/preview/vo/takes.json"
+  },
+  "rules": [
+    "Role keys are the speaker names exactly as in dialogue.json.",
+    "One voice per role for the whole episode. Never change a role's voice between scenes, and never let two roles share a voice.",
+    "The text sent to TTS is final/dialogue.json 'text' with the 'pronunciation' respellings applied (and a leading or trailing em dash removed). Subtitles always use the unmodified 'text'.",
+    "[ORIGINAL] lines L011, L046, L047, L048 are spoken word for word.",
+    "PENDING lines (L053, L054, L109, X17-11) are recorded as written; see special_lines.",
+    "Never speak bracketed notes, delivery notes, speaker names or the [ORIGINAL] marker.",
+    "Dragons never speak. Their sounds are in creature_vocals.",
+    "A human recording, when one exists for a line, always replaces the TTS take (see human_recordings).",
+    "An approved take is a file. Keep it. Do not regenerate approved lines (Piper differs on every run; Kokoro repeats exactly only with the same model, text, voice and speed).",
+    "Blended voices (primary.blend) are new: audition each against every role in its scenes before approving a take.",
+    "Only Kokoro English voices with Apache-2.0 weights are used, and not the ones ../voices.json avoids (named after a commercial product's voice, or am_santa)."
+  ],
+  "engines": {
+    "kokoro": {
+      "role": "PRIMARY for all roles (better quality than Piper in these tests; license-clean)",
+      "model": "Kokoro-82M v1.0, ONNX int8 export (kokoro-v1.0.int8.onnx, 92 MB) + voices-v1.0.bin (28 MB)",
+      "download": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/",
+      "runtime": "pip: kokoro-onnx 0.6.1 (MIT), onnxruntime 1.30 (MIT); system espeak-ng 1.51 (GPL-3.0, used as a tool for phonemes)",
+      "license": "Model weights Apache-2.0 (commercial use allowed). kokoro-onnx MIT.",
+      "caution": "Kokoro's model card (hosted on Hugging Face, blocked here, so not re-checked from this machine) describes its training audio as public-domain and permissively licensed recordings plus synthetic audio from closed commercial TTS models. To stay clear of imitating a commercial product's voice, this casting does not use the voices named after one (af_alloy, af_nova, am_echo, am_onyx, bm_fable) or am_santa.",
+      "sample_rate": 24000,
+      "controls": "voice, speed (0.5-2.0), lang (en-us / en-gb). No pitch control: pitch_semitones is applied afterwards with SoX ('pitch <cents>'). Voices can also be blended (weighted average of the 510x256 style arrays) if more distinct voices are needed.",
+      "deterministic": true
+    },
+    "piper_libritts": {
+      "role": "FALLBACK (faster, lower quality; 904 speakers in one model)",
+      "model": "Piper voice en-us-libritts-high (rhasspy/piper v0.0.2 release, 121 MB)",
+      "download": "https://github.com/rhasspy/piper/releases/download/v0.0.2/voice-en-us-libritts-high.tar.gz",
+      "runtime": "pip: piper-tts 1.8.0 (GPL-3.0-or-later; the license applies to the program, not to audio you make with it)",
+      "license": "Dataset LibriTTS (OpenSLR 60), CC BY 4.0: commercial use allowed WITH attribution. Trained from scratch (not fine-tuned from a restricted voice).",
+      "attribution_text": "Some voices synthesized with Piper (rhasspy) using a model trained on LibriTTS (Zen et al., CC BY 4.0).",
+      "sample_rate": 22050,
+      "deterministic": false
+    },
+    "not_recommended": [
+      {
+        "voice": "piper en-us-ryan-medium / ryan-high",
+        "reason": "Dataset RyanSpeech is CC BY-NC-SA 4.0: NON-COMMERCIAL only (and share-alike)."
+      },
+      {
+        "voice": "piper en-us-lessac-medium",
+        "reason": "Dataset is the Blizzard 2013 Lessac corpus under its own CSTR licence (the licence page was blocked here). That corpus is distributed for research use - treat as NON-COMMERCIAL."
+      },
+      {
+        "voice": "piper en-us-kathleen-low",
+        "reason": "Dataset is CC0, but the model card says it was fine-tuned from the Ryan voice (CC BY-NC-SA data): treat as NON-COMMERCIAL."
+      },
+      {
+        "voice": "piper en-gb-southern_english_female-low",
+        "reason": "Dataset OpenSLR 83 is CC BY-SA 4.0, but fine-tuned from Ryan (CC BY-NC-SA): treat as NON-COMMERCIAL. Also 16 kHz."
+      },
+      {
+        "voice": "piper en-us-amy-low, en-us-danny-low",
+        "reason": "Model card says 'License: see URL' (MycroftAI mimic3-voices) and no per-voice licence file was found; fine-tuned from Ryan. Unclear - avoid."
+      },
+      {
+        "voice": "piper en-gb-alan-low",
+        "reason": "Source voice (Mycroft mimic3 'apope') LICENSE reads 'Copyright 2022 Mycroft AI, All Rights Reserved'. Do not use."
+      },
+      {
+        "voice": "espeak-ng",
+        "reason": "Free (GPL-3.0 program) but robotic. Placeholder/temp only."
+      },
+      {
+        "voice": "any paid or online TTS API",
+        "reason": "Budget is free; none used or needed."
+      }
+    ]
+  },
+  "render_defaults": {
+    "working_format": "mono WAV per line, 48000 Hz, 24-bit PCM",
+    "resample": "ffmpeg -af aresample=48000:resampler=soxr  (or: sox in.wav -b 24 out.wav rate -v 48k)",
+    "pitch_shift": "sox in.wav out.wav pitch <semitones*100>   (apply each role's primary.pitch_semitones; roles with a non-zero shift: CHILD +4, WATCHMAN +2, QUEEN FALL -2, GUARD -2)",
+    "sentence_gap_s": {
+      "default": 0.3,
+      "NARRATOR": 0.6,
+      "urgent_or_shouted": 0.12
+    },
+    "how_to_split": "Synthesize each sentence of a line separately and join with sentence_gap_s of silence; this gives control over pauses that TTS does not.",
+    "trim": "Trim leading/trailing silence to 40 ms, then add a 5 ms fade at both ends.",
+    "line_level": "Normalize every line to the same speech level (-20 dBFS RMS over the voiced part, peak below -3 dBFS). Performance level (quiet, whisper, shout) is set in the mix, not in the file.",
+    "output_path": "episodes/s01e01/audio/vo/tts/<role-slug>/<line_id>.wav  (role-slug = lowercase, spaces to '-', e.g. king-of-cling)"
+  },
+  "pronunciation": [
+    {
+      "word": "Bashion",
+      "in_lines": [
+        "L048",
+        "X17-11"
+      ],
+      "espeak_default_ipa": "bˈæʃən",
+      "sounds_like": "BASH-un",
+      "tts_respelling": null,
+      "status": "ASK DAXTYN how he says it (e.g. BASH-un or BASH-ee-on). L048 is an [ORIGINAL] line."
+    },
+    {
+      "word": "Bashions",
+      "in_lines": [
+        "L054"
+      ],
+      "espeak_default_ipa": "bˈæʃənz",
+      "sounds_like": "BASH-unz",
+      "tts_respelling": null,
+      "status": "Same answer as Bashion."
+    },
+    {
+      "word": "Nightwings",
+      "in_lines": [
+        "L053"
+      ],
+      "sounds_like": "NITE-wingz",
+      "tts_respelling": null,
+      "status": "Ordinary English reading; the line is PENDING (DRAGONS.md)."
+    },
+    {
+      "word": "Slitherwing",
+      "in_lines": [
+        "L109"
+      ],
+      "espeak_default_ipa": "slˈɪðɚwəɪŋ",
+      "sounds_like": "SLITHER-wuh-ing (wrong vowel)",
+      "tts_respelling": "Slither-wing",
+      "respelled_ipa": "slˈɪðɚwˈɪŋ",
+      "status": "Respell for TTS input only; confirm with Daxtyn."
+    },
+    {
+      "word": "Verdor",
+      "in_lines": [
+        "L003"
+      ],
+      "espeak_default_ipa": "vˈɜːdoːɹ",
+      "sounds_like": "VER-dor",
+      "tts_respelling": null,
+      "status": "ASK DAXTYN."
+    },
+    {
+      "word": "Tara",
+      "in_lines": [
+        "L003"
+      ],
+      "espeak_default_ipa": "tˈɑːɹə",
+      "sounds_like": "TAR-uh",
+      "tts_respelling": null,
+      "status": "ASK DAXTYN (TAR-uh or TAIR-uh?)."
+    },
+    {
+      "word": "Nightwings, Charcoal, Starlight, Cling, Scrapper, Santa Maria, Fallen, Citadel, Proxy, Leaf",
+      "status": "Read as ordinary English; no change needed."
+    },
+    {
+      "word": "Remi, Alexandria",
+      "status": "Not spoken in any line of this episode (no pronunciation needed yet)."
+    }
+  ],
+  "roles": {
+    "NARRATOR": {
+      "display_name": "Narrator",
+      "provisional": true,
+      "lines": 5,
+      "words": 78,
+      "est_seconds": 39.9,
+      "scenes": [
+        "PROLOGUE"
+      ],
+      "gender_basis": "Not specified by the screenplay. Cast female here so the prologue voice is not confused with any male character; Daxtyn may prefer a male narrator or to narrate himself.",
+      "direction": "Clear, restrained, sparse (screenplay voice policy). Slow, with long pauses between sentences.",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "bf_emma",
+        "speed": 0.85,
+        "lang": "en-gb",
+        "pitch_semitones": 0.0,
+        "measured_f0_median_hz_at_speed_1": 184.6,
+        "measured_pitch_span_semitones": 6.2
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 780,
+        "length_scale": 1.3,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 183.0,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L001",
+      "human_recording_priority": 2,
+      "sentence_gap_s": 0.6,
+      "why": "bf_emma had the narrowest pitch movement of the British voices measured (6.2 semitones), which suits 'restrained'. Not used for any other role.",
+      "audition_measured": {
+        "line": "L001",
+        "settings_used": {
+          "voice": "bf_emma",
+          "speed": 0.85,
+          "pitch_semitones": 0.0
+        },
+        "take_seconds": 4.84,
+        "dialogue_json_est_seconds": 5.7,
+        "f0_median_hz": 186,
+        "generation_seconds_1_thread_busy_machine": 11.08
+      },
+      "parts": [],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)",
+      "preview_takes": "5 preview take(s) already use this voice (preview/vo/takes.json)"
+    },
+    "YOUNG ATTENDANT": {
+      "display_name": "Young Attendant",
+      "provisional": true,
+      "lines": 6,
+      "words": 32,
+      "est_seconds": 13.3,
+      "scenes": [
+        "1A",
+        "2C"
+      ],
+      "parts": [
+        "X1",
+        "X12",
+        "X13"
+      ],
+      "gender_basis": "The script calls her 'her' (X12: 'Alexandria reads her face'). Young; no age is set.",
+      "direction": "Quick and careful; a junior servant who has run and is trying not to show it (X1), and who brings bad news to a room she should not interrupt (X12). Quiet with the hatchling (X13).",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "af_sky",
+        "speed": 1.05,
+        "lang": "en-us",
+        "pitch_semitones": 0.0
+      },
+      "license": "Apache-2.0 (Kokoro-82M v1.0 voice pack, hexgrad; ONNX export by thewh1teagle/kokoro-onnx)",
+      "audition_line": "X12-10",
+      "human_recording_priority": 4,
+      "why": "af_sky is the lightest unused allowed female voice; it sits apart from the ATTENDANT (af_river), who shares 1A with her.",
+      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "casting_source": "new role in the final script"
+    },
+    "ALEXANDRIA": {
+      "display_name": "Alexandria",
+      "provisional": true,
+      "lines": 61,
+      "words": 309,
+      "est_seconds": 125.9,
+      "scenes": [
+        "1A",
+        "2B",
+        "2C"
+      ],
+      "gender_basis": "Screenplay: Queen Alexandria, mother of Remi and Abby.",
+      "direction": "Controlled, economical; more intimate with her children than with servants. Her [ORIGINAL] line L011 is WHISPERED (see special_lines).",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "af_kore",
+        "speed": 0.9,
+        "lang": "en-us",
+        "pitch_semitones": 0.0,
+        "measured_f0_median_hz_at_speed_1": 161.1,
+        "measured_pitch_span_semitones": 12.4
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 120,
+        "length_scale": 1.2,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 164.6,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L007",
+      "human_recording_priority": 1,
+      "why": "Lowest-pitched of the higher-quality American female voices measured (161 Hz): reads older than Abby's voice. Must never be mistaken for Queen Fall, so Queen Fall uses a British voice.",
+      "audition_measured": {
+        "line": "L007",
+        "settings_used": {
+          "voice": "af_kore",
+          "speed": 0.9,
+          "pitch_semitones": 0.0
+        },
+        "take_seconds": 1.29,
+        "dialogue_json_est_seconds": 1.5,
+        "f0_median_hz": 197,
+        "generation_seconds_1_thread_busy_machine": 3.29
+      },
+      "parts": [
+        "X1",
+        "X2",
+        "X11",
+        "X12",
+        "X13",
+        "X17",
+        "X18"
+      ],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)",
+      "preview_takes": "10 preview take(s) already use this voice (preview/vo/takes.json)"
+    },
+    "ATTENDANT": {
+      "display_name": "Attendant",
+      "provisional": true,
+      "lines": 5,
+      "words": 19,
+      "est_seconds": 7.7,
+      "scenes": [
+        "1A"
+      ],
+      "gender_basis": "Not specified by the screenplay (no pronoun). Cast female, provisional.",
+      "direction": "Quiet, careful, practical; a servant speaking in the queen's presence.",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "af_river",
+        "speed": 0.95,
+        "lang": "en-us",
+        "pitch_semitones": 0.0,
+        "measured_f0_median_hz_at_speed_1": 186.8,
+        "measured_pitch_span_semitones": 6.8
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 384,
+        "length_scale": 1.2,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 177.8,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L006",
+      "human_recording_priority": 4,
+      "audition_measured": {
+        "line": "L006",
+        "settings_used": {
+          "voice": "af_river",
+          "speed": 0.95,
+          "pitch_semitones": 0.0
+        },
+        "take_seconds": 1.57,
+        "dialogue_json_est_seconds": 1.9,
+        "f0_median_hz": 179,
+        "generation_seconds_1_thread_busy_machine": 3.6
+      },
+      "parts": [
+        "X2"
+      ],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)",
+      "preview_takes": "4 preview take(s) already use this voice (preview/vo/takes.json)"
+    },
+    "ABBY": {
+      "display_name": "Abby",
+      "provisional": true,
+      "lines": 79,
+      "words": 306,
+      "est_seconds": 123.4,
+      "scenes": [
+        "1A",
+        "1B",
+        "1C",
+        "1D",
+        "1E",
+        "1F",
+        "2A",
+        "2B",
+        "2C"
+      ],
+      "gender_basis": "Screenplay: Queen Alexandria's daughter, Remi's younger sister (addressed \"Your Highness\"). Age not established (do not invent it).",
+      "direction": "Direct, quick, unafraid to question her brother; pain narrows her voice without eliminating her personality (1E onward).",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "af_heart",
+        "speed": 1.0,
+        "lang": "en-us",
+        "pitch_semitones": 0.0,
+        "measured_f0_median_hz_at_speed_1": 211.5,
+        "measured_pitch_span_semitones": 7.6
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 180,
+        "length_scale": 1.15,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 229.7,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L048",
+      "human_recording_priority": 1,
+      "why": "af_heart is the top-rated voice in the Kokoro project's voice list (not re-checked here) and Abby has the most emotionally varied lines. TTS cannot perform her pain convincingly: record Abby with a real person if at all possible.",
+      "audition_measured": {
+        "line": "L048",
+        "settings_used": {
+          "voice": "af_heart",
+          "speed": 1.0,
+          "pitch_semitones": 0.0
+        },
+        "take_seconds": 1.38,
+        "dialogue_json_est_seconds": 2.3,
+        "f0_median_hz": 210,
+        "generation_seconds_1_thread_busy_machine": 3.22
+      },
+      "parts": [
+        "X2",
+        "X3",
+        "X4",
+        "X6",
+        "X9",
+        "X12",
+        "X17",
+        "X19"
+      ],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)",
+      "preview_takes": "28 preview take(s) already use this voice (preview/vo/takes.json)"
+    },
+    "REMI": {
+      "display_name": "Remi",
+      "provisional": true,
+      "lines": 84,
+      "words": 373,
+      "est_seconds": 154.0,
+      "scenes": [
+        "1A",
+        "1B",
+        "1C",
+        "1D",
+        "1E",
+        "1F",
+        "2A",
+        "2B",
+        "2C"
+      ],
+      "gender_basis": "Screenplay: Prince Remi IV, Abby's older brother.",
+      "direction": "Conversational and dry with Abby; clipped when afraid (1E/1F). Commands are short and firm; 'That's enough' and 'Back' are quiet.",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "am_michael",
+        "speed": 0.95,
+        "lang": "en-us",
+        "pitch_semitones": 0.0,
+        "measured_f0_median_hz_at_speed_1": 122.1,
+        "measured_pitch_span_semitones": 9.5
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 72,
+        "length_scale": 1.2,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 117.9,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L046",
+      "human_recording_priority": 1,
+      "why": "Most lines in the episode (56). am_michael measured 122 Hz with moderate pitch movement; tested on Remi's [ORIGINAL] line L046.",
+      "audition_measured": {
+        "line": "L046",
+        "settings_used": {
+          "voice": "am_michael",
+          "speed": 0.95,
+          "pitch_semitones": 0.0
+        },
+        "take_seconds": 5.8,
+        "dialogue_json_est_seconds": 7.8,
+        "f0_median_hz": 115,
+        "generation_seconds_1_thread_busy_machine": 13.39
+      },
+      "parts": [
+        "X2",
+        "X3",
+        "X4",
+        "X6",
+        "X7",
+        "X8",
+        "X10",
+        "X11",
+        "X12",
+        "X15",
+        "X18",
+        "X19"
+      ],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)",
+      "preview_takes": "30 preview take(s) already use this voice (preview/vo/takes.json)"
+    },
+    "GROUND KEEPER": {
+      "display_name": "Ground Keeper",
+      "provisional": true,
+      "lines": 14,
+      "words": 60,
+      "est_seconds": 25.6,
+      "scenes": [
+        "1B",
+        "2A",
+        "2C"
+      ],
+      "gender_basis": "Not specified (no pronoun). Cast male, provisional. One voice covers every GROUND KEEPER cue in 1B and 2A.",
+      "direction": "Practical, calm; raised voice across the field ('The field's clear.', 'Clear the approach!').",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "am_fenrir",
+        "speed": 0.95,
+        "lang": "en-us",
+        "pitch_semitones": 0.0,
+        "measured_f0_median_hz_at_speed_1": 146.8,
+        "measured_pitch_span_semitones": 12.7
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 24,
+        "length_scale": 1.2,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 136.1,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L037",
+      "human_recording_priority": 3,
+      "audition_measured": {
+        "line": "L037",
+        "settings_used": {
+          "voice": "am_fenrir",
+          "speed": 0.95,
+          "pitch_semitones": 0.0
+        },
+        "take_seconds": 0.98,
+        "dialogue_json_est_seconds": 1.2,
+        "f0_median_hz": 181,
+        "generation_seconds_1_thread_busy_machine": 3.75
+      },
+      "parts": [
+        "R2",
+        "R10",
+        "X3",
+        "X15",
+        "X17"
+      ],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)",
+      "preview_takes": "1 preview take(s) already use this voice (preview/vo/takes.json)"
+    },
+    "MUSICIAN": {
+      "display_name": "Musician",
+      "provisional": true,
+      "lines": 7,
+      "words": 22,
+      "est_seconds": 8.5,
+      "scenes": [
+        "1C",
+        "3A"
+      ],
+      "gender_basis": "Screenplay pronoun: 'he' (the vendor 'takes his arm').",
+      "direction": "Teasing, one line.",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "bm_lewis",
+        "speed": 1.0,
+        "lang": "en-gb",
+        "pitch_semitones": 0.0,
+        "measured_f0_median_hz_at_speed_1": 102.3,
+        "measured_pitch_span_semitones": 10.1
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 360,
+        "length_scale": 1.2,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 107.0,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L157",
+      "human_recording_priority": 4,
+      "audition_measured": {
+        "line": "L157",
+        "settings_used": {
+          "voice": "bm_lewis",
+          "speed": 1.0,
+          "pitch_semitones": 0.0
+        },
+        "take_seconds": 1.05,
+        "dialogue_json_est_seconds": 1.2,
+        "f0_median_hz": 110,
+        "generation_seconds_1_thread_busy_machine": 7.72
+      },
+      "parts": [
+        "R3",
+        "R13",
+        "X5",
+        "X22"
+      ],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)"
+    },
+    "VENDOR": {
+      "display_name": "Vendor",
+      "provisional": true,
+      "lines": 14,
+      "words": 85,
+      "est_seconds": 35.4,
+      "scenes": [
+        "1C",
+        "3A",
+        "3C"
+      ],
+      "gender_basis": "Screenplay pronoun: 'he'.",
+      "direction": "Friendly grumbling; a heckle ('You are!'); urgent in the attack ('Leave it! Come on!').",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "am_puck",
+        "speed": 1.0,
+        "lang": "en-us",
+        "pitch_semitones": 0.0,
+        "measured_f0_median_hz_at_speed_1": 122.4,
+        "measured_pitch_span_semitones": 8.5
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 480,
+        "length_scale": 1.2,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 109.7,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L156",
+      "human_recording_priority": 3,
+      "audition_measured": {
+        "line": "L156",
+        "settings_used": {
+          "voice": "am_puck",
+          "speed": 1.0,
+          "pitch_semitones": 0.0
+        },
+        "take_seconds": 2.95,
+        "dialogue_json_est_seconds": 4.1,
+        "f0_median_hz": 123,
+        "generation_seconds_1_thread_busy_machine": 9.46
+      },
+      "parts": [
+        "R3",
+        "R13",
+        "X5",
+        "X20",
+        "X21",
+        "X22"
+      ],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)"
+    },
+    "GUARD": {
+      "display_name": "Guard",
+      "provisional": true,
+      "lines": 8,
+      "words": 29,
+      "est_seconds": 11.6,
+      "scenes": [
+        "1C",
+        "2C",
+        "3A",
+        "3C",
+        "3D"
+      ],
+      "gender_basis": "Screenplay pronoun: 'he' ('He'll look').",
+      "direction": "Urgent ('She's turning.'), then a simple promise ('I'll look.').",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "am_liam",
+        "speed": 1.0,
+        "lang": "en-us",
+        "pitch_semitones": -2.0,
+        "measured_f0_median_hz_at_speed_1": 123.7,
+        "measured_pitch_span_semitones": 13.3
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 744,
+        "length_scale": 1.2,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 126.4,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L187",
+      "human_recording_priority": 4,
+      "why": "-2 semitones separates him from the Vendor (am_puck), who is in the same attack scene.",
+      "audition_measured": {
+        "line": "L187",
+        "settings_used": {
+          "voice": "am_liam",
+          "speed": 1.0,
+          "pitch_semitones": -2.0
+        },
+        "take_seconds": 1.67,
+        "dialogue_json_est_seconds": 1.5,
+        "f0_median_hz": 108,
+        "generation_seconds_1_thread_busy_machine": 3.71
+      },
+      "parts": [
+        "X5",
+        "X14",
+        "X22",
+        "X27"
+      ],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)"
+    },
+    "WATCHMAN": {
+      "display_name": "Watchman",
+      "provisional": true,
+      "lines": 8,
+      "words": 22,
+      "est_seconds": 9.7,
+      "scenes": [
+        "1C",
+        "2C",
+        "3A",
+        "3B",
+        "3C"
+      ],
+      "gender_basis": "Screenplay pronoun: 'him'.",
+      "direction": "'Dragon.' at normal volume (swallowed by the music), then raised: 'Dragon approaching!'",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "am_adam",
+        "speed": 1.05,
+        "lang": "en-us",
+        "pitch_semitones": 2.0,
+        "measured_f0_median_hz_at_speed_1": 125.0,
+        "measured_pitch_span_semitones": 12.1
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 852,
+        "length_scale": 1.2,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 132.8,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L174",
+      "human_recording_priority": 4,
+      "why": "+2 semitones separates him from the Vendor (am_puck) and Guard (am_liam), which measured within 3 Hz of am_adam.",
+      "audition_measured": {
+        "line": "L174",
+        "settings_used": {
+          "voice": "am_adam",
+          "speed": 1.05,
+          "pitch_semitones": 2.0
+        },
+        "take_seconds": 1.08,
+        "dialogue_json_est_seconds": 0.8,
+        "f0_median_hz": 149,
+        "generation_seconds_1_thread_busy_machine": 2.92
+      },
+      "parts": [
+        "X5",
+        "X14",
+        "X20",
+        "X26"
+      ],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)"
+    },
+    "LOOKOUT": {
+      "display_name": "Lookout",
+      "provisional": true,
+      "lines": 1,
+      "words": 3,
+      "est_seconds": 1.4,
+      "scenes": [
+        "1F"
+      ],
+      "parts": [
+        "X9"
+      ],
+      "gender_basis": "Not specified (no pronoun). Cast female, provisional.",
+      "direction": "Shouted down from the masthead: 'Master! The princess!' Alarm, not panic.",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "af_jessica",
+        "speed": 1.05,
+        "lang": "en-us",
+        "pitch_semitones": 0.0
+      },
+      "license": "Apache-2.0 (Kokoro-82M v1.0 voice pack, hexgrad; ONNX export by thewh1teagle/kokoro-onnx)",
+      "audition_line": "X9-02",
+      "human_recording_priority": 5,
+      "why": "af_jessica is free because the final script makes the ADULT VILLAGER a man (recast below); it has only one line and shares no scene with the PARTNER.",
+      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "casting_source": "new role in the final script"
+    },
+    "SHIP'S MASTER": {
+      "display_name": "Ship's Master",
+      "provisional": true,
+      "lines": 5,
+      "words": 35,
+      "est_seconds": 14.1,
+      "scenes": [
+        "1F",
+        "2C"
+      ],
+      "parts": [
+        "R5",
+        "R9",
+        "X9",
+        "X16"
+      ],
+      "gender_basis": "The script says 'his crew'. A man; no age set.",
+      "direction": "A weathered working master: orders without speeches (X9, X16), dry dark humor with his crew (R9), a pipe in his teeth.",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "am_fenrir:0.55+bm_george:0.45",
+        "blend": [
+          {
+            "voice": "am_fenrir",
+            "weight": 0.55
+          },
+          {
+            "voice": "bm_george",
+            "weight": 0.45
+          }
+        ],
+        "blend_how": "style = sum(weight x voices-v1.0.bin[voice]) (each a 510x256 array); pass the array as the voice to kokoro-onnx create().",
+        "speed": 0.92,
+        "lang": "en-gb",
+        "pitch_semitones": -2.5
+      },
+      "license": "Apache-2.0 (Kokoro-82M v1.0 voice pack, hexgrad; ONNX export by thewh1teagle/kokoro-onnx)",
+      "audition_line": "R5-01",
+      "human_recording_priority": 4,
+      "why": "Blend of two allowed male voices whose roles never share his scenes (GROUND KEEPER is on the riding grounds, KING OF CLING in Cling), shifted 2.5 semitones down so it sits below both.",
+      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "casting_source": "new role in the final script"
+    },
+    "KEEPER": {
+      "display_name": "Keeper",
+      "provisional": true,
+      "lines": 2,
+      "words": 11,
+      "est_seconds": 5.3,
+      "scenes": [
+        "2A",
+        "2C"
+      ],
+      "parts": [
+        "R6",
+        "R10"
+      ],
+      "gender_basis": "The script says 'his coat' (R10). A man; no age set.",
+      "direction": "A second ground keeper: 'Oh, shit.' under his breath (R6); dry and low with the flask (R10).",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "am_liam:0.50+bm_lewis:0.50",
+        "blend": [
+          {
+            "voice": "am_liam",
+            "weight": 0.5
+          },
+          {
+            "voice": "bm_lewis",
+            "weight": 0.5
+          }
+        ],
+        "blend_how": "style = sum(weight x voices-v1.0.bin[voice]) (each a 510x256 array); pass the array as the voice to kokoro-onnx create().",
+        "speed": 1.0,
+        "lang": "en-us",
+        "pitch_semitones": 1.0
+      },
+      "license": "Apache-2.0 (Kokoro-82M v1.0 voice pack, hexgrad; ONNX export by thewh1teagle/kokoro-onnx)",
+      "audition_line": "R10-02",
+      "human_recording_priority": 5,
+      "why": "Blend of two allowed male voices whose roles are in Cling (GUARD, MUSICIAN); he speaks only on the riding grounds, next to the GROUND KEEPER (am_fenrir), whom it must not resemble. Pitched up a semitone.",
+      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "casting_source": "new role in the final script"
+    },
+    "HEALER": {
+      "display_name": "Healer",
+      "provisional": true,
+      "lines": 12,
+      "words": 69,
+      "est_seconds": 27.1,
+      "scenes": [
+        "2B",
+        "2C"
+      ],
+      "gender_basis": "Not specified (no pronoun). Cast female, provisional.",
+      "direction": "Calm, professional, firm with Remi ('Give her room.').",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "af_nicole",
+        "speed": 0.9,
+        "lang": "en-us",
+        "pitch_semitones": 0.0,
+        "measured_f0_median_hz_at_speed_1": 147.2,
+        "measured_pitch_span_semitones": 5.3
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 228,
+        "length_scale": 1.2,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 200.5,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L099",
+      "human_recording_priority": 3,
+      "why": "af_nicole is a soft, close-sounding voice (narrow 5.3-semitone pitch span). Same scene as Alexandria (af_kore) and Abby (af_heart): distinct timbres, but af_nicole's pitch (147 Hz) is near Alexandria's - if they sound alike, swap to af_sarah.",
+      "alternates": [
+        "af_sarah"
+      ],
+      "audition_measured": {
+        "line": "L099",
+        "settings_used": {
+          "voice": "af_nicole",
+          "speed": 0.9,
+          "pitch_semitones": 0.0
+        },
+        "take_seconds": 1.97,
+        "dialogue_json_est_seconds": 2.3,
+        "f0_median_hz": 149,
+        "generation_seconds_1_thread_busy_machine": 6.94
+      },
+      "parts": [
+        "X12",
+        "X19"
+      ],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)"
+    },
+    "ROYAL MESSENGER": {
+      "display_name": "Royal Messenger",
+      "provisional": true,
+      "lines": 2,
+      "words": 6,
+      "est_seconds": 2.4,
+      "scenes": [
+        "2C"
+      ],
+      "gender_basis": "Not specified (no pronoun). Cast male, provisional.",
+      "direction": "Prompt, brief.",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "am_eric",
+        "speed": 1.05,
+        "lang": "en-us",
+        "pitch_semitones": 0.0,
+        "measured_f0_median_hz_at_speed_1": 157.4,
+        "measured_pitch_span_semitones": 14.4
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 504,
+        "length_scale": 1.2,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 128.9,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L138",
+      "human_recording_priority": 4,
+      "why": "Measured 157 Hz: clearly higher than Remi (122 Hz), who speaks to him in 2C.",
+      "audition_measured": {
+        "line": "L138",
+        "settings_used": {
+          "voice": "am_eric",
+          "speed": 1.05,
+          "pitch_semitones": 0.0
+        },
+        "take_seconds": 1.28,
+        "dialogue_json_est_seconds": 1.2,
+        "f0_median_hz": 173,
+        "generation_seconds_1_thread_busy_machine": 3.64
+      },
+      "parts": [],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)"
+    },
+    "SAILOR": {
+      "display_name": "Sailor",
+      "provisional": true,
+      "lines": 1,
+      "words": 8,
+      "est_seconds": 3.3,
+      "scenes": [
+        "2C"
+      ],
+      "parts": [
+        "R9"
+      ],
+      "gender_basis": "Not specified (no pronoun). Cast female, provisional.",
+      "direction": "One dark joke, said low on deck so the master hears it: 'One wing gone. It'll be in a mood.'",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "bf_alice",
+        "speed": 1.0,
+        "lang": "en-gb",
+        "pitch_semitones": 0.0
+      },
+      "license": "Apache-2.0 (Kokoro-82M v1.0 voice pack, hexgrad; ONNX export by thewh1teagle/kokoro-onnx)",
+      "audition_line": "R9-01",
+      "human_recording_priority": 5,
+      "why": "bf_alice is an unused allowed voice; the master is a lowered male blend, so the exchange in R9 has two clearly different voices.",
+      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "casting_source": "new role in the final script"
+    },
+    "ADULT VILLAGER": {
+      "display_name": "Adult Villager",
+      "provisional": true,
+      "lines": 5,
+      "words": 20,
+      "est_seconds": 7.7,
+      "scenes": [
+        "2C",
+        "3A",
+        "3C"
+      ],
+      "parts": [
+        "X14",
+        "X20",
+        "X22"
+      ],
+      "gender_basis": "The final script makes the villager a man ('his family', 'him', 'He laughs into his cup'; X14, X20, R11, X25, X26, R16). ../voices.json cast the handoff's single line female because the handoff gave no pronoun; that casting had no recorded take.",
+      "direction": "A farmer with a cart and a family: grumbling at the gate (X14), teasing at the table (X20), then injured, conscious and frightened ('My family—', 3C).",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "am_eric:0.60+am_fenrir:0.40",
+        "blend": [
+          {
+            "voice": "am_eric",
+            "weight": 0.6
+          },
+          {
+            "voice": "am_fenrir",
+            "weight": 0.4
+          }
+        ],
+        "blend_how": "style = sum(weight x voices-v1.0.bin[voice]) (each a 510x256 array); pass the array as the voice to kokoro-onnx create().",
+        "speed": 1.0,
+        "lang": "en-us",
+        "pitch_semitones": -1.0
+      },
+      "license": "Apache-2.0 (Kokoro-82M v1.0 voice pack, hexgrad; ONNX export by thewh1teagle/kokoro-onnx)",
+      "audition_line": "X14-01",
+      "human_recording_priority": 4,
+      "why": "Blend of two allowed male voices whose roles speak only in Verdor (ROYAL MESSENGER, GROUND KEEPER), a semitone down.",
+      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "casting_source": "recast for the final script (was af_jessica in ../voices.json)"
+    },
+    "CHILD": {
+      "display_name": "Child",
+      "provisional": true,
+      "lines": 9,
+      "words": 25,
+      "est_seconds": 10.3,
+      "scenes": [
+        "2C",
+        "3A",
+        "3C",
+        "3D"
+      ],
+      "gender_basis": "Not specified (screenplay uses 'their'). Do not invent a gender or age.",
+      "direction": "Excited, curious ('Are there going to be dragons?'); frightened in the attack ('I can't see.').",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "af_bella",
+        "speed": 1.0,
+        "lang": "en-us",
+        "pitch_semitones": 4.0,
+        "measured_f0_median_hz_at_speed_1": 205.1,
+        "measured_pitch_span_semitones": 7.1
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 408,
+        "length_scale": 1.2,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 222.7,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use.",
+        "pitch_semitones": 3.0
+      },
+      "audition_line": "L164",
+      "human_recording_priority": 2,
+      "why": "No free child voice exists in Kokoro or Piper. An adult voice is raised 4 semitones (SoX 'pitch 400', which also raises formants - closer to a child's shorter vocal tract than a formant-preserving shift). This will sound synthetic. Best: a real child, recorded with a parent's permission.",
+      "audition_measured": {
+        "line": "L164",
+        "settings_used": {
+          "voice": "af_bella",
+          "speed": 1.0,
+          "pitch_semitones": 4.0
+        },
+        "take_seconds": 1.41,
+        "dialogue_json_est_seconds": 2.3,
+        "f0_median_hz": 264,
+        "generation_seconds_1_thread_busy_machine": 3.65
+      },
+      "parts": [
+        "X14",
+        "X20",
+        "X22",
+        "X28"
+      ],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)"
+    },
+    "PARENT": {
+      "display_name": "Parent",
+      "provisional": true,
+      "lines": 7,
+      "words": 27,
+      "est_seconds": 11.1,
+      "scenes": [
+        "2C",
+        "3A",
+        "3C"
+      ],
+      "gender_basis": "Not specified (no pronoun). Cast female, provisional.",
+      "direction": "Polite hush to the child; then urgent, protective ('Stay with me. Don't stop.').",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "af_aoede",
+        "speed": 0.95,
+        "lang": "en-us",
+        "pitch_semitones": 0.0,
+        "measured_f0_median_hz_at_speed_1": 189.7,
+        "measured_pitch_span_semitones": 19.3
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 96,
+        "length_scale": 1.2,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 186.1,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L165",
+      "human_recording_priority": 3,
+      "audition_measured": {
+        "line": "L165",
+        "settings_used": {
+          "voice": "af_aoede",
+          "speed": 0.95,
+          "pitch_semitones": 0.0
+        },
+        "take_seconds": 1.07,
+        "dialogue_json_est_seconds": 1.5,
+        "f0_median_hz": 201,
+        "generation_seconds_1_thread_busy_machine": 2.86
+      },
+      "parts": [
+        "X14",
+        "X20",
+        "X22"
+      ],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)"
+    },
+    "GUARD CAPTAIN": {
+      "display_name": "Guard Captain",
+      "provisional": true,
+      "lines": 16,
+      "words": 80,
+      "est_seconds": 32.3,
+      "scenes": [
+        "2C",
+        "3A",
+        "3B",
+        "3C",
+        "3D"
+      ],
+      "gender_basis": "Screenplay pronoun: 'he'.",
+      "direction": "Watchful; then shouted crowd orders (L179, L181).",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "bm_daniel",
+        "speed": 1.0,
+        "lang": "en-gb",
+        "pitch_semitones": 0.0,
+        "measured_f0_median_hz_at_speed_1": 127.0,
+        "measured_pitch_span_semitones": 10.7
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 576,
+        "length_scale": 1.2,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 134.0,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L179",
+      "human_recording_priority": 2,
+      "audition_measured": {
+        "line": "L179",
+        "settings_used": {
+          "voice": "bm_daniel",
+          "speed": 1.0,
+          "pitch_semitones": 0.0
+        },
+        "take_seconds": 4.35,
+        "dialogue_json_est_seconds": 4.0,
+        "f0_median_hz": 138,
+        "generation_seconds_1_thread_busy_machine": 8.92
+      },
+      "parts": [
+        "R14",
+        "X14",
+        "X21",
+        "X28"
+      ],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)"
+    },
+    "OLD WOMAN": {
+      "display_name": "Old Woman",
+      "provisional": true,
+      "lines": 3,
+      "words": 6,
+      "est_seconds": 3.0,
+      "scenes": [
+        "2C",
+        "3A",
+        "3D"
+      ],
+      "parts": [
+        "X14",
+        "X22",
+        "X27"
+      ],
+      "gender_basis": "The script: an old woman.",
+      "direction": "Teaches the children's dance with patient authority ('Not faster. Together.'); calls 'Together!' over the music; whispers 'Stay close.' after the attack.",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "bf_isabella",
+        "speed": 0.88,
+        "lang": "en-gb",
+        "pitch_semitones": -1.5
+      },
+      "license": "Apache-2.0 (Kokoro-82M v1.0 voice pack, hexgrad; ONNX export by thewh1teagle/kokoro-onnx)",
+      "audition_line": "X14-08",
+      "human_recording_priority": 4,
+      "why": "bf_isabella is an unused allowed voice; slowed and lowered for age.",
+      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "casting_source": "new role in the final script"
+    },
+    "INSTRUCTOR": {
+      "display_name": "Instructor",
+      "provisional": true,
+      "lines": 1,
+      "words": 7,
+      "est_seconds": 2.9,
+      "scenes": [
+        "2C"
+      ],
+      "parts": [
+        "X16"
+      ],
+      "gender_basis": "The script says 'claps his hands' (X16). A man; no age set.",
+      "direction": "A riding instructor ending a lesson as a personal caution, not an order to the island: 'That's enough for today. Walk them home.'",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "am_adam:0.50+bm_daniel:0.50",
+        "blend": [
+          {
+            "voice": "am_adam",
+            "weight": 0.5
+          },
+          {
+            "voice": "bm_daniel",
+            "weight": 0.5
+          }
+        ],
+        "blend_how": "style = sum(weight x voices-v1.0.bin[voice]) (each a 510x256 array); pass the array as the voice to kokoro-onnx create().",
+        "speed": 0.95,
+        "lang": "en-gb",
+        "pitch_semitones": -1.0
+      },
+      "license": "Apache-2.0 (Kokoro-82M v1.0 voice pack, hexgrad; ONNX export by thewh1teagle/kokoro-onnx)",
+      "audition_line": "X16-02",
+      "human_recording_priority": 5,
+      "why": "Blend of two allowed male voices used only in Cling (WATCHMAN, GUARD CAPTAIN); he speaks once, at the Verdor harbor.",
+      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "casting_source": "new role in the final script"
+    },
+    "PARTNER": {
+      "display_name": "Partner",
+      "provisional": true,
+      "lines": 2,
+      "words": 15,
+      "est_seconds": 6.7,
+      "scenes": [
+        "3A"
+      ],
+      "parts": [
+        "R11",
+        "X20"
+      ],
+      "gender_basis": "The script says 'her' (X22, R13).",
+      "direction": "Warm, teasing, comfortable with her husband: 'Leave some for the king.' and, low, for him only, 'Some of us like a man who takes his time.'",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "af_sarah",
+        "speed": 1.0,
+        "lang": "en-us",
+        "pitch_semitones": 0.0
+      },
+      "license": "Apache-2.0 (Kokoro-82M v1.0 voice pack, hexgrad; ONNX export by thewh1teagle/kokoro-onnx)",
+      "audition_line": "R11-01",
+      "human_recording_priority": 4,
+      "why": "af_sarah is an unused allowed voice and differs from the PARENT (af_aoede), the other mother in the square.",
+      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "casting_source": "new role in the final script"
+    },
+    "KING OF CLING": {
+      "display_name": "King of Cling",
+      "provisional": true,
+      "lines": 27,
+      "words": 220,
+      "est_seconds": 88.6,
+      "scenes": [
+        "3A",
+        "3B",
+        "3C",
+        "3D"
+      ],
+      "gender_basis": "Screenplay: the King of Cling (personal name not supplied - never invent one).",
+      "direction": "Approachable and light at the festival; practical under pressure; quiet on 'Starlight.' (L176). Has the episode's longest speech (L171).",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "bm_george",
+        "speed": 0.95,
+        "lang": "en-gb",
+        "pitch_semitones": 0.0,
+        "measured_f0_median_hz_at_speed_1": 144.1,
+        "measured_pitch_span_semitones": 12.8
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 300,
+        "length_scale": 1.2,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 139.6,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L159",
+      "human_recording_priority": 1,
+      "why": "Widest natural pitch movement of the British male voices (12.8 semitones): sounds less formal, fits 'approachable'.",
+      "audition_measured": {
+        "line": "L159",
+        "settings_used": {
+          "voice": "bm_george",
+          "speed": 0.95,
+          "pitch_semitones": 0.0
+        },
+        "take_seconds": 1.81,
+        "dialogue_json_est_seconds": 1.5,
+        "f0_median_hz": 161,
+        "generation_seconds_1_thread_busy_machine": 8.42
+      },
+      "parts": [
+        "R12",
+        "X21",
+        "X28"
+      ],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)"
+    },
+    "QUEEN FALL": {
+      "display_name": "Queen Fall",
+      "provisional": true,
+      "lines": 1,
+      "words": 1,
+      "est_seconds": 1.0,
+      "scenes": [
+        "3B"
+      ],
+      "gender_basis": "Screenplay: Queen Fall of Tara, Starlight's rider. A different person from Queen Alexandria - the voices must never be confusable.",
+      "direction": "Low-key authority; the threat does not require shouting. One word: 'Attack.'",
+      "primary": {
+        "engine": "kokoro",
+        "voice": "bf_lily",
+        "speed": 0.85,
+        "lang": "en-gb",
+        "pitch_semitones": -2.0,
+        "measured_f0_median_hz_at_speed_1": 181.8,
+        "measured_pitch_span_semitones": 12.2
+      },
+      "fallback": {
+        "engine": "piper_libritts",
+        "speaker_id": 696,
+        "length_scale": 1.35,
+        "noise_scale": 0.6,
+        "noise_w": 0.7,
+        "measured_f0_median_hz": 157.5,
+        "note": "Chosen only by measured pitch from a 76-speaker sample; not listened to. Audition before use."
+      },
+      "audition_line": "L180",
+      "human_recording_priority": 2,
+      "why": "British accent and a different timbre from Alexandria's American af_kore. Slow speed for quiet command. Lowered 2 semitones because the unshifted audition of 'Attack.' measured 207 Hz - higher than Alexandria's 197 Hz - which works against 'low-key authority'.",
+      "audition_measured": {
+        "line": "L180",
+        "settings_used": {
+          "voice": "bf_lily",
+          "speed": 0.85,
+          "pitch_semitones": 0.0
+        },
+        "take_seconds": 1.13,
+        "dialogue_json_est_seconds": 1.0,
+        "f0_median_hz": 207,
+        "generation_seconds_1_thread_busy_machine": 2.42
+      },
+      "parts": [],
+      "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)"
+    }
+  },
+  "special_lines": {
+    "L011": {
+      "speaker": "ALEXANDRIA",
+      "text": "My pretty little weapon",
+      "original": true,
+      "type": "whisper",
+      "how": "Synthesize with the role's own voice at speed 0.8, then whisper DSP: replace the voiced source with noise shaped by the speech's smoothed spectral envelope (cepstral lifter ~1.5 ms), keep ~10% of the voiced signal for intelligibility, high-pass 250 Hz. Mix 10-12 dB below normal dialogue, close and dry (no room reverb).",
+      "honesty": "TTS cannot really whisper. This DSP imitation keeps the voice's identity but will sound processed. Strongly recommended: record this line with a real person.",
+      "note": "[ORIGINAL] - exact words 'My pretty little weapon', no extra word, no punctuation added. Spoken for the hatchling, not the room."
+    },
+    "L046": {
+      "speaker": "REMI",
+      "text": "You're going to be queen when I'm gone. Least I think that's how that works. You good with that?",
+      "original": true,
+      "type": "original_exact",
+      "how": "Speak byte-exact (screenplay [ORIGINAL]). Only pronunciation respelling of 'Bashion' is allowed in the TTS input; the subtitle text never changes."
+    },
+    "L047": {
+      "speaker": "REMI",
+      "text": "Yeah, you're good.",
+      "original": true,
+      "type": "original_exact",
+      "how": "Speak byte-exact (screenplay [ORIGINAL]). Only pronunciation respelling of 'Bashion' is allowed in the TTS input; the subtitle text never changes."
+    },
+    "L048": {
+      "speaker": "ABBY",
+      "text": "Why couldn't I get a Bashion?",
+      "original": true,
+      "type": "original_exact",
+      "how": "Speak byte-exact (screenplay [ORIGINAL]). Only pronunciation respelling of 'Bashion' is allowed in the TTS input; the subtitle text never changes."
+    },
+    "L020": {
+      "speaker": "ABBY",
+      "text": "There.",
+      "original": false,
+      "type": "quiet",
+      "how": "speed x0.92 of the role speed; mix 5-6 dB below normal dialogue; less reverb."
+    },
+    "L062": {
+      "speaker": "REMI",
+      "text": "That's enough.",
+      "original": false,
+      "type": "quiet",
+      "how": "speed x0.92 of the role speed; mix 5-6 dB below normal dialogue; less reverb."
+    },
+    "L176": {
+      "speaker": "KING OF CLING",
+      "text": "Starlight.",
+      "original": false,
+      "type": "quiet",
+      "how": "speed x0.92 of the role speed; mix 5-6 dB below normal dialogue; less reverb."
+    },
+    "L083": {
+      "speaker": "REMI",
+      "text": "Back.",
+      "original": false,
+      "type": "quiet",
+      "how": "speed x0.92 of the role speed; mix 5-6 dB below normal dialogue; less reverb."
+    },
+    "L075": {
+      "speaker": "ABBY",
+      "text": "Yes.",
+      "original": false,
+      "type": "through_pain",
+      "how": "speed x0.9; prepend a short inhale/breath (recorded or synthetic); 1-2 dB quieter; slight high-pass (narrower voice). Keep personality (screenplay).",
+      "honesty": "TTS cannot cry out or sound hurt. These lines lose most of their emotion with TTS - Abby's 1E/2A lines are the strongest case for a human recording."
+    },
+    "L086": {
+      "speaker": "ABBY",
+      "text": "My arm. Don't pull it.",
+      "original": false,
+      "type": "through_pain",
+      "how": "speed x0.9; prepend a short inhale/breath (recorded or synthetic); 1-2 dB quieter; slight high-pass (narrower voice). Keep personality (screenplay).",
+      "honesty": "TTS cannot cry out or sound hurt. These lines lose most of their emotion with TTS - Abby's 1E/2A lines are the strongest case for a human recording."
+    },
+    "L100": {
+      "speaker": "ABBY",
+      "text": "Here. And when I move it.",
+      "original": false,
+      "type": "through_pain",
+      "how": "speed x0.9; prepend a short inhale/breath (recorded or synthetic); 1-2 dB quieter; slight high-pass (narrower voice). Keep personality (screenplay).",
+      "honesty": "TTS cannot cry out or sound hurt. These lines lose most of their emotion with TTS - Abby's 1E/2A lines are the strongest case for a human recording."
+    },
+    "L072": {
+      "speaker": "ABBY",
+      "text": "My arm—",
+      "original": false,
+      "type": "through_pain+cut_off",
+      "how": "Synthesize the words without the dash; cut 60-90 ms before the natural end of the last word with a 10-15 ms fade-out; start the interrupting line 0-150 ms before the cut.",
+      "honesty": "TTS cannot cry out or sound hurt. These lines lose most of their emotion with TTS - Abby's 1E/2A lines are the strongest case for a human recording."
+    },
+    "L070": {
+      "speaker": "REMI",
+      "text": "Abby!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "speed x1.08; +3 dB presence boost around 2-4 kHz; gentle saturation; +3 to +4 dB in the mix; let wind/crowd partly cover it.",
+      "honesty": "TTS 'shouts' sound like loud reading, not a raised voice. Acceptable for crowd orders; weak for 'Abby!'."
+    },
+    "L071": {
+      "speaker": "REMI",
+      "text": "Look at me. Abby!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "speed x1.08; +3 dB presence boost around 2-4 kHz; gentle saturation; +3 to +4 dB in the mix; let wind/crowd partly cover it.",
+      "honesty": "TTS 'shouts' sound like loud reading, not a raised voice. Acceptable for crowd orders; weak for 'Abby!'."
+    },
+    "L037": {
+      "speaker": "GROUND KEEPER",
+      "text": "The field's clear.",
+      "original": false,
+      "type": "raised_voice",
+      "how": "speed x1.08; +3 dB presence boost around 2-4 kHz; gentle saturation; +3 to +4 dB in the mix; let wind/crowd partly cover it.",
+      "honesty": "TTS 'shouts' sound like loud reading, not a raised voice. Acceptable for crowd orders; weak for 'Abby!'."
+    },
+    "L084": {
+      "speaker": "GROUND KEEPER",
+      "text": "Clear the approach!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "speed x1.08; +3 dB presence boost around 2-4 kHz; gentle saturation; +3 to +4 dB in the mix; let wind/crowd partly cover it.",
+      "honesty": "TTS 'shouts' sound like loud reading, not a raised voice. Acceptable for crowd orders; weak for 'Abby!'."
+    },
+    "L170": {
+      "speaker": "VENDOR",
+      "text": "You are!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "speed x1.08; +3 dB presence boost around 2-4 kHz; gentle saturation; +3 to +4 dB in the mix; let wind/crowd partly cover it.",
+      "honesty": "TTS 'shouts' sound like loud reading, not a raised voice. Acceptable for crowd orders; weak for 'Abby!'."
+    },
+    "L174": {
+      "speaker": "WATCHMAN",
+      "text": "Dragon approaching!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "speed x1.08; +3 dB presence boost around 2-4 kHz; gentle saturation; +3 to +4 dB in the mix; let wind/crowd partly cover it.",
+      "honesty": "TTS 'shouts' sound like loud reading, not a raised voice. Acceptable for crowd orders; weak for 'Abby!'."
+    },
+    "L179": {
+      "speaker": "GUARD CAPTAIN",
+      "text": "Through the arch! Keep the center clear! Move now!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "speed x1.08; +3 dB presence boost around 2-4 kHz; gentle saturation; +3 to +4 dB in the mix; let wind/crowd partly cover it.",
+      "honesty": "TTS 'shouts' sound like loud reading, not a raised voice. Acceptable for crowd orders; weak for 'Abby!'."
+    },
+    "L181": {
+      "speaker": "GUARD CAPTAIN",
+      "text": "Off the steps!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "speed x1.08; +3 dB presence boost around 2-4 kHz; gentle saturation; +3 to +4 dB in the mix; let wind/crowd partly cover it.",
+      "honesty": "TTS 'shouts' sound like loud reading, not a raised voice. Acceptable for crowd orders; weak for 'Abby!'."
+    },
+    "L182": {
+      "speaker": "KING OF CLING",
+      "text": "Open both sides! Don't let them crowd the arch!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "speed x1.08; +3 dB presence boost around 2-4 kHz; gentle saturation; +3 to +4 dB in the mix; let wind/crowd partly cover it.",
+      "honesty": "TTS 'shouts' sound like loud reading, not a raised voice. Acceptable for crowd orders; weak for 'Abby!'."
+    },
+    "L183": {
+      "speaker": "KING OF CLING",
+      "text": "Down!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "speed x1.08; +3 dB presence boost around 2-4 kHz; gentle saturation; +3 to +4 dB in the mix; let wind/crowd partly cover it.",
+      "honesty": "TTS 'shouts' sound like loud reading, not a raised voice. Acceptable for crowd orders; weak for 'Abby!'."
+    },
+    "L190": {
+      "speaker": "VENDOR",
+      "text": "Leave it! Come on!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "speed x1.08; +3 dB presence boost around 2-4 kHz; gentle saturation; +3 to +4 dB in the mix; let wind/crowd partly cover it.",
+      "honesty": "TTS 'shouts' sound like loud reading, not a raised voice. Acceptable for crowd orders; weak for 'Abby!'."
+    },
+    "L081": {
+      "speaker": "REMI",
+      "text": "Hold—",
+      "original": false,
+      "type": "cut_off",
+      "how": "Synthesize the words without the dash; cut 60-90 ms before the natural end of the last word with a 10-15 ms fade-out; start the interrupting line 0-150 ms before the cut."
+    },
+    "L130": {
+      "speaker": "REMI",
+      "text": "I don't know. A scout, perhaps. If they knew who we were—",
+      "original": false,
+      "type": "cut_off",
+      "how": "Synthesize the words without the dash; cut 60-90 ms before the natural end of the last word with a 10-15 ms fade-out; start the interrupting line 0-150 ms before the cut."
+    },
+    "L169": {
+      "speaker": "KING OF CLING",
+      "text": "All right. Before someone tells me I am delaying the food—",
+      "original": false,
+      "type": "cut_off",
+      "how": "Synthesize the words without the dash; cut 60-90 ms before the natural end of the last word with a 10-15 ms fade-out; start the interrupting line 0-150 ms before the cut."
+    },
+    "L191": {
+      "speaker": "ADULT VILLAGER",
+      "text": "My family—",
+      "original": false,
+      "type": "cut_off",
+      "how": "Synthesize the words without the dash; cut 60-90 ms before the natural end of the last word with a 10-15 ms fade-out; start the interrupting line 0-150 ms before the cut."
+    },
+    "L171": {
+      "speaker": "KING OF CLING",
+      "text": "—I will be brief. Thank you for coming. Thank you to everyone who built this, cooked for it, and will still be here putting it back together when the rest of us have gone home.",
+      "original": false,
+      "type": "continues",
+      "how": "Picks up L169 after the vendor's heckle (L170). Synthesize without the leading dash.",
+      "continues": "L169"
+    },
+    "L078": {
+      "speaker": "REMI",
+      "text": "Attack.",
+      "original": false,
+      "type": "dragon_command",
+      "how": "Short, firm, no exclamation unless written. The subtitle shows the word exactly; the dragon's reaction (sound) follows on the next beat."
+    },
+    "L079": {
+      "speaker": "REMI",
+      "text": "Again.",
+      "original": false,
+      "type": "dragon_command",
+      "how": "Short, firm, no exclamation unless written. The subtitle shows the word exactly; the dragon's reaction (sound) follows on the next beat."
+    },
+    "L080": {
+      "speaker": "REMI",
+      "text": "Fire.",
+      "original": false,
+      "type": "dragon_command",
+      "how": "Short, firm, no exclamation unless written. The subtitle shows the word exactly; the dragon's reaction (sound) follows on the next beat."
+    },
+    "L082": {
+      "speaker": "REMI",
+      "text": "Hold!",
+      "original": false,
+      "type": "dragon_command",
+      "how": "Short, firm, no exclamation unless written. The subtitle shows the word exactly; the dragon's reaction (sound) follows on the next beat."
+    },
+    "L180": {
+      "speaker": "QUEEN FALL",
+      "text": "Attack.",
+      "original": false,
+      "type": "dragon_command",
+      "how": "Queen Fall: quiet authority, speed 0.85, no shout, slightly closer and drier than the surrounding chaos. Attack = physical dive (no fire)."
+    },
+    "L173": {
+      "speaker": "WATCHMAN",
+      "text": "Dragon.",
+      "original": false,
+      "type": "masked",
+      "how": "Normal volume; the festival music partly covers it (screenplay: 'swallowed by the music'). The subtitle still shows it."
+    },
+    "L042": {
+      "speaker": "ABBY",
+      "text": "You could have warned the grass.",
+      "original": false,
+      "type": "clear_aside",
+      "how": "A close, intelligible aside: record or mix it close on Abby (POV intimacy), with the wind under it at normal flight-dialogue level. The joke is for Abby and the viewer, so the audience must hear it plainly (screenplay). Remi's not hearing it is shown by the distance and his lack of reply, not by masking the line. No shouted reply."
+    },
+    "X3-01": {
+      "speaker": "GROUND KEEPER",
+      "text": "Your Highness. The line.",
+      "original": false,
+      "type": "raised_voice",
+      "how": "As L070 in ../voices.json: speed x1.08, +3 dB presence at 2-4 kHz, gentle saturation, +3 to +4 dB in the mix; let the wind, the crowd or the music partly cover it."
+    },
+    "X3-07": {
+      "speaker": "REMI",
+      "text": "Morning.",
+      "original": false,
+      "type": "quiet",
+      "how": "Speed x0.95, -4 to -6 dB in the mix, close and dry. Kokoro has no 'quiet' control; the level and closeness carry it."
+    },
+    "R2-01": {
+      "speaker": "GROUND KEEPER",
+      "text": "Every damned morning I lay that turf.",
+      "original": false,
+      "type": "quiet",
+      "how": "Speed x0.95, -4 to -6 dB in the mix, close and dry. Kokoro has no 'quiet' control; the level and closeness carry it."
+    },
+    "X6-10": {
+      "speaker": "REMI",
+      "text": "You won.",
+      "original": false,
+      "type": "raised_voice",
+      "how": "As L070 in ../voices.json: speed x1.08, +3 dB presence at 2-4 kHz, gentle saturation, +3 to +4 dB in the mix; let the wind, the crowd or the music partly cover it."
+    },
+    "X9-01": {
+      "speaker": "ABBY",
+      "text": "Stay awake. Stay awake.",
+      "original": false,
+      "type": "pain",
+      "how": "As L072 in ../voices.json: a breath before the line, breathy and shaky, slightly higher pitch, narrower tone."
+    },
+    "X9-02": {
+      "speaker": "LOOKOUT",
+      "text": "Master! The princess!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "As L070 in ../voices.json: speed x1.08, +3 dB presence at 2-4 kHz, gentle saturation, +3 to +4 dB in the mix; let the wind, the crowd or the music partly cover it."
+    },
+    "R6-01": {
+      "speaker": "KEEPER",
+      "text": "Oh, shit.",
+      "original": false,
+      "type": "quiet",
+      "how": "Speed x0.95, -4 to -6 dB in the mix, close and dry. Kokoro has no 'quiet' control; the level and closeness carry it."
+    },
+    "X10-01": {
+      "speaker": "REMI",
+      "text": "She's standing.",
+      "original": false,
+      "type": "quiet",
+      "how": "Speed x0.95, -4 to -6 dB in the mix, close and dry. Kokoro has no 'quiet' control; the level and closeness carry it."
+    },
+    "X11-05": {
+      "speaker": "ALEXANDRIA",
+      "text": "Are you hurt?",
+      "original": false,
+      "type": "quiet",
+      "how": "Speed x0.95, -4 to -6 dB in the mix, close and dry. Kokoro has no 'quiet' control; the level and closeness carry it."
+    },
+    "X12-05": {
+      "speaker": "ABBY",
+      "text": "Was that it?",
+      "original": false,
+      "type": "pain",
+      "how": "As L072 in ../voices.json: a breath before the line, breathy and shaky, slightly higher pitch, narrower tone."
+    },
+    "X13-03": {
+      "speaker": "YOUNG ATTENDANT",
+      "text": "It took it.",
+      "original": false,
+      "type": "quiet",
+      "how": "Speed x0.95, -4 to -6 dB in the mix, close and dry. Kokoro has no 'quiet' control; the level and closeness carry it."
+    },
+    "X13-05": {
+      "speaker": "ALEXANDRIA",
+      "text": "Not today. Do you hear me? Not today.",
+      "original": false,
+      "type": "quiet",
+      "how": "Speed x0.95, -4 to -6 dB in the mix, close and dry. Kokoro has no 'quiet' control; the level and closeness carry it."
+    },
+    "X15-01": {
+      "speaker": "GROUND KEEPER",
+      "text": "He let you.",
+      "original": false,
+      "type": "quiet",
+      "how": "Speed x0.95, -4 to -6 dB in the mix, close and dry. Kokoro has no 'quiet' control; the level and closeness carry it."
+    },
+    "R10-01": {
+      "speaker": "GROUND KEEPER",
+      "text": "Years I've fed him.",
+      "original": false,
+      "type": "quiet",
+      "how": "Speed x0.95, -4 to -6 dB in the mix, close and dry. Kokoro has no 'quiet' control; the level and closeness carry it."
+    },
+    "R10-02": {
+      "speaker": "KEEPER",
+      "text": "And he's never once eaten you. Don't spoil it.",
+      "original": false,
+      "type": "quiet",
+      "how": "Speed x0.95, -4 to -6 dB in the mix, close and dry. Kokoro has no 'quiet' control; the level and closeness carry it."
+    },
+    "X16-01": {
+      "speaker": "SHIP'S MASTER",
+      "text": "Cast off!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "As L070 in ../voices.json: speed x1.08, +3 dB presence at 2-4 kHz, gentle saturation, +3 to +4 dB in the mix; let the wind, the crowd or the music partly cover it."
+    },
+    "R11-01": {
+      "speaker": "PARTNER",
+      "text": "Some of us like a man who takes his time.",
+      "original": false,
+      "type": "quiet",
+      "how": "Speed x0.95, -4 to -6 dB in the mix, close and dry. Kokoro has no 'quiet' control; the level and closeness carry it."
+    },
+    "R13-01": {
+      "speaker": "VENDOR",
+      "text": "The miller's wife had flour to sell and sold it twice a day, and the miller never asked her why the baker came to stay.",
+      "original": false,
+      "type": "sung",
+      "how": "Kokoro cannot sing. Record this line with a person (recommended), or use a spoken-rhythm TTS take labelled TEMP in the animatic. The tune is newly written for the series; no existing song may be used."
+    },
+    "X22-07": {
+      "speaker": "OLD WOMAN",
+      "text": "Together!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "As L070 in ../voices.json: speed x1.08, +3 dB presence at 2-4 kHz, gentle saturation, +3 to +4 dB in the mix; let the wind, the crowd or the music partly cover it."
+    },
+    "R14-01": {
+      "speaker": "GUARD CAPTAIN",
+      "text": "Don't stand there gawping! Get them through, for fuck's sake!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "As L070 in ../voices.json: speed x1.08, +3 dB presence at 2-4 kHz, gentle saturation, +3 to +4 dB in the mix; let the wind, the crowd or the music partly cover it."
+    },
+    "X26-01": {
+      "speaker": "WATCHMAN",
+      "text": "She's coming round! Get under stone! Fucking move!",
+      "original": false,
+      "type": "raised_voice",
+      "how": "As L070 in ../voices.json: speed x1.08, +3 dB presence at 2-4 kHz, gentle saturation, +3 to +4 dB in the mix; let the wind, the crowd or the music partly cover it."
+    },
+    "X27-01": {
+      "speaker": "OLD WOMAN",
+      "text": "Stay close.",
+      "original": false,
+      "type": "whisper",
+      "how": "As L011 in ../voices.json: the role's voice at speed 0.8, then the whisper DSP (noise shaped by the smoothed spectral envelope, ~10% voiced, high-pass 250 Hz); mix 10-12 dB under dialogue. A real whisper recorded by a person is better."
+    },
+    "L053": {
+      "speaker": "REMI",
+      "text": "Nightwings are faster. More versatile.",
+      "original": false,
+      "pending": "DRAGONS.md keeps this line as written until Daxtyn chooses new wording: record it as written. If he picks the proposed alternative, record that too: \"Smaller ones are faster. More versatile.\"."
+    },
+    "L054": {
+      "speaker": "ABBY",
+      "text": "And Bashions?",
+      "original": false,
+      "pending": "DRAGONS.md keeps this line as written until Daxtyn chooses new wording: record it as written. If he picks the proposed alternative, record that too: \"And big ones?\"."
+    },
+    "L109": {
+      "speaker": "REMI",
+      "text": "We were off the coast. Flying together. Something came past Leaf. A Slitherwing.",
+      "original": false,
+      "pending": "DRAGONS.md keeps this line as written until Daxtyn chooses new wording: record it as written. If he picks the proposed alternative, record that too: \"We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast.\"."
+    },
+    "X17-11": {
+      "speaker": "ABBY",
+      "text": "I still want a Bashion.",
+      "original": false,
+      "pending": "DRAGONS.md keeps this line as written until Daxtyn chooses new wording: record it as written. If he picks the proposed alternative, record that too: \"I still want one like Charcoal.\"."
+    }
+  },
+  "non_verbal_human": {
+    "rider_scream_1F": "C14: the burned scout rider screams, a raw, wordless sound loud enough to carry over the wind. Keep the voice unidentifiable (no gender or age cue that could point at an identity; CANON LOCK 11): a processed human scream layered with wind, not a TTS line.",
+    "scout_cry_1F": "C15/C16: the scout dragon's scream as the wing tears (creature_vocals.SCOUT).",
+    "abby_cry_X12": "X12: Abby's short, sharp cry as the arm is set, cut off by her own breath. Human recording strongly recommended; TTS cannot do it.",
+    "crowd_3C": "3C/X25/X26: crowd screams and calls, built from many short human takes (a volunteer group recording, or CC0 crowd libraries recorded in the manifest), never one looped scream.",
+    "breaths": "Breaths and efforts (the climb in X3, the gate in X14, the beam in X28) are recorded or taken from CC0 libraries, not synthesized."
+  },
+  "creature_vocals": {
+    "rule": "No dragon speaks. Dragons communicate by posture, breath, growls, calls and eye movement (screenplay). These are sound-design settings, not TTS.",
+    "method": "Procedural synthesis in Python (numpy/scipy) - prototypes exist - optionally layered with Daxtyn's own recorded growls/breaths pitched down. No downloaded animal recordings unless each file is checked CC0.",
+    "CHARCOAL": {
+      "species": "Bashion (melanistic, black)",
+      "character": "immense, calm, slow to anger",
+      "wingbeat": {
+        "source": "assets.json scale.readings[<chosen reading>].wingbeat_hz_charcoal; period_s = 1 / that value. Same number the animation uses.",
+        "period_s_by_reading": {
+          "volume": 1.03,
+          "silhouette_area": 1.32,
+          "length": 2.78
+        },
+        "period_s_at_recommended_reading": 1.32,
+        "recommended_reading": "silhouette_area (assets.json recommendation; Daxtyn chooses after the lineup still)",
+        "prototype_timed_at_s": 2.8,
+        "todo": "Re-time the prototype to the chosen reading's period before use; do not keep the prototype's tempo."
+      },
+      "breath": "slow, very low; rest cycle ~5-6 s",
+      "growl_f0_hz": [
+        25,
+        35
+      ],
+      "formants_hz": [
+        170,
+        410,
+        930,
+        2100
+      ],
+      "beats": [
+        "takeoff: ground-devastation layers (turf tearing, stones, rolling dust whoosh) under the first beats",
+        "the nip (1D): NO roar - a slow head turn, jaw movement, low breath",
+        "brief directed fire breath on 'Fire.' (L080) - short, not sustained",
+        "jaws/hide/equipment strain when catching the scout (1F)"
+      ],
+      "prototype": "charcoal_wingbeats_immense.wav, charcoal_breath_low_growl.wav"
+    },
+    "LEAF": {
+      "species": "Nightwing, green, subadult",
+      "character": "quick, playful, then protective",
+      "wingbeat": {
+        "source": "assets.json scale.readings[<chosen reading>].wingbeat_hz_leaf; period_s = 1 / that value. Same number the animation uses.",
+        "period_s_by_reading": {
+          "volume": 0.62,
+          "silhouette_area": 0.62,
+          "length": 0.62
+        },
+        "period_s_at_recommended_reading": 0.62,
+        "recommended_reading": "silhouette_area (assets.json recommendation; Daxtyn chooses after the lineup still)",
+        "prototype_timed_at_s": [
+          0.37,
+          0.44
+        ],
+        "todo": "Re-time the prototype to the chosen reading's period before use; do not keep the prototype's tempo."
+      },
+      "corrections": "occasional double beats ~0.2 s apart on top of the cruise period; after the pass 'rapid and uneven'",
+      "calls": "short chuffs/chirps, higher (pitched human vocalizations -3 to -5 semitones, or synth f0 120-300 Hz)",
+      "prototype": "leaf_wingbeats_quick_corrective.wav"
+    },
+    "STARLIGHT": {
+      "species": "Nightwing, albino ('Queen of Dragons'), about twice Charcoal's size",
+      "wingbeat": {
+        "source": "assets.json scale.readings[<chosen reading>].wingbeat_hz_starlight; period_s = 1 / that value. Same number the animation uses.",
+        "period_s_by_reading": {
+          "volume": 1.15,
+          "silhouette_area": 1.56,
+          "length": 4.0
+        },
+        "period_s_at_recommended_reading": 1.56,
+        "recommended_reading": "silhouette_area (assets.json recommendation; Daxtyn chooses after the lineup still)",
+        "prototype_timed_at_s": [
+          3.5,
+          4.0
+        ],
+        "todo": "Re-time the prototype to the chosen reading's period before use; do not keep the prototype's tempo."
+      },
+      "push_hz": [
+        26,
+        30
+      ],
+      "breath": "audible in the high aerial shot (3D)",
+      "do_not": [
+        "no fire/breath-weapon sound (none in this episode)",
+        "no magical shimmer or 'crystal' sound - her look is reflective scales, not magic",
+        "no later-episode wing injury sounds"
+      ],
+      "prototype": "scale the Charcoal wingbeat: longer period, lower push, broader whoosh"
+    },
+    "SCOUT": {
+      "species": "Slitherwing (small, extremely fast)",
+      "sound": "thin hiss, rapid wing flutter (~8-12 beats/s), the sharp pass crack (1E), distress when caught, weak effort in the water",
+      "prototype": "scout_pass_sharp_crack.wav (enters RIGHT, exits LEFT, matching the shot list's pass direction)",
+      "pass_geometry": "shotlist.json conventions.the_pass_1E: the scout comes head-on from ahead and passes through the gap between Leaf and Charcoal, on Leaf's LEFT (seaward) side = the FAR side from the inland camera, never between Leaf and the camera. Pan R -> L, slightly behind Leaf in the image (a little less direct than a camera-side pass); the wake then surrounds the listener. In the 1E-04 front shot the wake comes from screen RIGHT (Abby's left)."
+    },
+    "HATCHLING": {
+      "species": "Bashion, 24-karat gold",
+      "sound": "faint effortful sounds, tiny breaths, scrapes inside the shell; fragile, never cute squeaks",
+      "prototype": "egg_scratch_then_crack.wav"
+    }
+  },
+  "human_recordings": {
+    "recommended_first": [
+      "ABBY",
+      "REMI",
+      "ALEXANDRIA",
+      "KING OF CLING"
+    ],
+    "why": "These four carry the emotion (pain, fear, whisper, command, warmth). TTS is fine for temporary animatic audio and acceptable for minor roles.",
+    "path": "episodes/s01e01/audio/vo/human/<role-slug>/<line_id>_take<N>.wav  e.g. audio/vo/human/abby/L072_take2.wav",
+    "choice_file": "episodes/s01e01/audio/vo/takes.json  {\"L072\": \"human/abby/L072_take2.wav\", ...}; a line not listed uses the TTS take",
+    "format": "WAV preferred (48 kHz, 24-bit). Phone recordings (m4a) are fine - they get converted with ffmpeg.",
+    "consent": "Get each person's OK to use their voice in the published episode; a parent's OK for anyone under 18. Credit them by name only if they want, in the end titles (the screenplay says credit only real contributors)."
+  },
+  "voice_pool": {
+    "kokoro_english_voices": 28,
+    "avoided": [
+      "af_alloy",
+      "af_nova",
+      "am_echo",
+      "am_onyx",
+      "am_santa",
+      "bm_fable"
+    ],
+    "plain_voices_used": 22,
+    "blends": 4,
+    "allowed_and_still_unused": [],
+    "note": "All nine allowed male voices were already cast; any further male role needs another blend or a human recording."
+  },
+  "totals": {
+    "roles": 26,
+    "lines": 385,
+    "est_seconds": 772.2
+  }
+}
