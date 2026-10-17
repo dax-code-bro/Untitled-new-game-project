@@ -163,6 +163,11 @@ finest). Charcoal at `standard`: 216k vertices in 16.0 s; at `hero`: 431k in 31.
 numbers, measured while `npm test` ran on the same CPUs). The hero shots build at `hero`, the
 contact sheet at `hero` too.
 
+(rev. 3b, 2026-10-17) All 19 hero shots in one `creatures-review.js` job at native 4K: 57 min 27 s
+of rendering (62 min wall with the builds; ~3.0 min per finished frame; a 65.6 MB job video); the
+29-frame contact sheet 6 min 58 s of rendering. Renders: `output/dragons-low/fix1/` (git-ignored;
+file names end in -fix1).
+
 (rev. 3, 2026-10-16) All 17 hero shots in one `creatures-review.js` job at native 4K: 52 min 04 s
 wall for the job (builds included; ~3.1 min per finished frame; a 58.6 MB H.264 job video) on an
 otherwise idle machine; the 29-frame contact sheet 7 min 35 s of rendering (12 min wall).
@@ -177,8 +182,8 @@ take-off or the hatchling macro takes the longest (dust sprites, the densest mes
 Commands (outputs are git-ignored):
 
 ```
-node render/render.mjs scenes/lookdev/creatures-review.js  --preset final --fps 1 --workers 1 --out output/dragons-low/hero-job --stall-timeout 2400
-node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 1 --workers 1 --out output/dragons-low/contact-job --stall-timeout 2400
+node render/render.mjs scenes/lookdev/creatures-review.js  --preset final --fps 1 --workers 1 --out output/dragons-low/fix1/hero-job --stall-timeout 2400
+node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 1 --workers 1 --out output/dragons-low/fix1/contact-job --stall-timeout 2400
 ```
 
 ## Known limits
@@ -226,5 +231,13 @@ node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 
   the feathered shoulder seam stretches the scales there into long ovals (no torn "curtain" any
   more, but a visibly stretched band on Starlight). Membranes in flight show no visible
   veins or hem from a distance. The newborn's mouth still reads a little lip-like.
+* (rev. 3b) The folded membrane is one drape per ground pose (built in `stand`); in the walk, while
+  a wing-hand is lifted in its swing, the drape no longer fits and a membrane flap can stand up
+  above the back - the hero and contact walk frames use a moment with both hands down (0.6 s).
+  At 1:1 the folded membrane between the stacked fingers still shows a few angular panels near the
+  knee. Starlight's plates still read as a glazed mosaic up close (the nacre film is faint); the
+  fire is still a smooth stream near the mouth under 8-sub-frame motion blur; the scout's torn
+  wing ends in a smooth rounded stump (shaded as blood, not torn geometry); the newborn shows a
+  flat fold of membrane on its flank.
 * (rev. 2) The fire jet is pale orange near the mouth (additive sprites over a bright sky) and
   turns into orange billows and black smoke further out; a little haze where the tongues start.

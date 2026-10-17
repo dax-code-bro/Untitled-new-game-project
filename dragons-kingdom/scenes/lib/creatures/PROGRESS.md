@@ -4,7 +4,7 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
-## FIX ROUND 1 of the low stance (rev. 3b, 2026-10-17, after the critics) - IN PROGRESS
+## FIX ROUND 1 of the low stance (rev. 3b, 2026-10-17, after the critics) - DONE
 Dev loop (scratch): scratchpad/ep1p1/creatures-fr1/tools/ (copies of the creatures-low tools + arm.mjs: wing-arm joint
 positions per pose; dev.sh, rv.sh <name> <ids|all> [preset], contact.sh, clear.mjs, build.mjs).
 Done (code, committed):
@@ -32,7 +32,19 @@ Done (code, committed):
 - DESIGN.md rev. 3b (status bullet, 1.5, 1.5c + measured table).
 Measured (stand, t=0, m): elbow Charcoal 5.30 (back 6.05; rev. 3: 7.85), Leaf 1.17 (1.35), Starlight 8.51 (9.16),
 scout 0.77 (0.91). Walk: Charcoal's elbow 2.6-6.0 over the cycle.
-NEXT: final 4K hero (output/dragons-low/fix1/hero, names *-fix1) + contact, crops, style frames at draft, npm test.
+Results (looked at at 1920 and as 1:1 4K crops; output/ is git-ignored):
+- Hero: output/dragons-low/fix1/hero/{4k,1920,crops}/*-fix1.*, hero-sheet-fix1.jpg; 19 shots in one creatures-review.js
+  job, 57m27s render (62 min wall, ~3.0 min/frame); charcoal-walk re-rendered alone at 0.6 s (the first pass at 1.4 s
+  showed the far wing's drape flap standing above the back while that hand was lifted).
+- Contact: output/dragons-low/fix1/contact/{4k,1920,crops}, contact-sheet-fix1-{3200,1920}.jpg, 29 frames, 6m58s; frame
+  25 (walk) re-rendered alone at t 0.6 (--still --time 25); frame 26 = Leaf's dog-sit ALTERNATIVE.
+- Every scene importing the library renders at draft: style-f1 49s, f2 185s, f3 111s, f4 146s, f5 386s, humans-riders
+  67s, architecture-probe 13s (F2 needed no re-staging). npm test 33/33 (205 s).
+OPEN (seen in the crops): the stand drape does not fit a lifted wing-hand in the walk (pick frames with both hands
+down, or build per-phase drapes); a few angular membrane panels near the knee at 1:1; Starlight's plates still a
+glazed mosaic up close; the fire jet still smooth near the mouth under motion blur; the scout's torn wing ends in a
+smooth rounded stump (blood shading only); the newborn's flank shows a flat membrane fold; leaf-landing's half-open
+wing reads as a flat green sheet.
 
 ## LOW STANCE round (rev. 3, 2026-10-16, Daxtyn: "make them low to the ground with their legs more towards the center of their body") - DONE
 Dev loop (scratch): scratchpad/ep1p1/creatures-low/tools/ (dev.sh <cfg.json> <name> = creatures-dev.js views -> r/dev_<name>/sheet.jpg;
