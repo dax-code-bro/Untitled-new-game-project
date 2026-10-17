@@ -502,7 +502,7 @@ export function stand(c, o = {}) {
   }
   plantLow(pb, o, LP);
   common(pb, { ...o, jaw: (o.jaw ?? 0) + 0.012 * br }, t);
-  drape(pb, 'stand');
+  drape(pb, 'stand', o.drapeAmt ?? 1);
   return pb.out({ groundTail: true });
 }
 

@@ -45,7 +45,9 @@ export const SHOTS = [
     cam: { subject: 'charcoal', bone: 'head', pos: [9.5, -1.6, 9.0], target: [0.2, -0.5, 1.4], mm: 50, fstop: 5.6, focus: 'eye_L' } },
   // (rev. 3) the low walk side on: feet under the middle of the body, the folded wings' wrist pads
   // and thumbs planted ahead (a lateral-sequence walk, ~2 m/s); Remi in the foreground (40 mm)
-  { id: 'charcoal-walk', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], dur: 4, face: -100, move: 2.0, still: 1.4,
+  // (fix round 1: the frame at 0.6 s - with a wing-hand lifted in its swing the stand-built drape
+  // stood a membrane flap up above the back)
+  { id: 'charcoal-walk', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], dur: 4, face: -100, move: 2.0, still: 0.6,
     people: [{ id: 'remi', at: [15, 0, 4], yaw: 160, fixed: true }],
     pose: { charcoal: { name: 'walk', speed: 2.0, look: [0.1, -0.02] } },
     cam: { subject: 'charcoal', pos: [62, 2.2, 10], target: [0, 4.0, 6.5], mm: 40, fstop: 8, focus: 'target', fixed: true, follow: 1 } },

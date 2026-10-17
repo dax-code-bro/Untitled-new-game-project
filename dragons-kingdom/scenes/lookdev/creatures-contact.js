@@ -114,7 +114,7 @@ export function update(t, ctx) {
     c.root.visible = true;
     c.root.position.set(0, 0, 0);
     c.root.rotation.set(0, camAz + Math.PI - (j === 2 ? 60 : 90) * D2R, 0);
-    c.setPose(j === 0 ? poses.walk(c, { t: 1.2, blink: false }) : j === 1 ? poses.sit(c, { t: 0, blink: false, look: [0.2, -0.05] })
+    c.setPose(j === 0 ? poses.walk(c, { t: 0.6, blink: false }) : j === 1 ? poses.sit(c, { t: 0, blink: false, look: [0.2, -0.05] })
       : j === 2 ? poses.lie(c, { t: 0, blink: false, look: [0.3, 0], raise: -0.25, headDown: 0.2 }) : poses.crouch(c, { t: 0, blink: false, k: 1 }));
     c.root.updateMatrixWorld(true);
     const box = boundsOf(c);
