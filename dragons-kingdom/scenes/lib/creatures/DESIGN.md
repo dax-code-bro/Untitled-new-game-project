@@ -156,11 +156,12 @@ carries its own scale.
   forearm is the "shin", a thick callused **wrist pad** and the **thumb claw** are the "foot".
   Pterosaur trackways show exactly this: hand prints (three short fingers and the wrist) set
   a little outside and ahead of the foot prints.
-* **Elbows-high stance** (bat and pterosaur posture): from the shoulder the upper arm runs
-  BACK and a little UP to the elbow, which sits beside the top of the shoulders; the forearm
-  drops almost vertically to the wrist pad. This keeps the back level (shoulders only a little
-  higher than the hips) and gives every dragon the cloaked wyvern silhouette: the folded wings
-  stand up beside the withers like the shoulders of a cape.
+* **Elbows-back stance** (rev. 3b; bat and quadrupedal pterosaur posture): from the shoulder the
+  upper arm runs BACK (a little out) along the side of the chest to the elbow, which sits on the
+  upper flank below the back line; the forearm slopes forward and down to the wrist pad ahead of
+  the shoulder. This keeps the back level and the silhouette low - nothing stands above the back.
+  (rev. 1-3 had the elbow up beside or above the withers like the shoulders of a cape; from the
+  front it read as two raised arms.)
 * (rev. 3) **At rest they stand low** on the two legs and the two wrists (section 1.5c). They
   **rear up** (trunk 45-70 deg) only for a moment: the landing flare, to look over something, to
   threaten.
@@ -451,7 +452,9 @@ pads, belly, sides of the toes), dust in the grooves, dried mud on the lower leg
      of the neck.
 * **Saddle types:** Leaf and the scout - a real straddle saddle (their backs are narrow enough);
   Charcoal and Starlight - a **riding rig**: a padded seat on a timber frame strapped to the
-  withers, backrest, grab bar, foot boards, lap strap (nobody straddles a 3-5 m wide back).
+  withers under a leather skirt, a low cantle roll behind and a pommel roll with a hand loop in
+  front (rev. 3b: no backrest board or grab-bar posts - they read as a chair), foot boards, lap
+  strap (nobody straddles a 3-5 m wide back).
 * **Mounting:** the giants by the ground keepers' access rig / platform (screenplay 1B, 2A);
   Leaf lowers his chest to the ground (the sphinx crouch) and the rider steps on his forearm.
 

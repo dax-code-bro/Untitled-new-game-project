@@ -28,7 +28,7 @@ Done (code, committed):
 - creatures-shots.js: + charcoal-level (level camera), leaf-abby = LOW crouch, + leaf-sit-alt (dog-sit, labelled
   the ALTERNATIVE for the open question), leaf-fire -> leaf-fire-lookdev (not Episode 1), head-in-mouth camera
   higher (Remi whole) and Leaf's wings folded, scout-wingloss closer/later/faster separation, takeoff 0.5 s later +
-  downwash flattening of the grass (flattenGrass, pure in t). 20 hero shots.
+  downwash flattening of the grass (flattenGrass, pure in t). 19 hero shots.
 - DESIGN.md rev. 3b (status bullet, 1.5, 1.5c + measured table).
 Measured (stand, t=0, m): elbow Charcoal 5.30 (back 6.05; rev. 3: 7.85), Leaf 1.17 (1.35), Starlight 8.51 (9.16),
 scout 0.77 (0.91). Walk: Charcoal's elbow 2.6-6.0 over the cycle.

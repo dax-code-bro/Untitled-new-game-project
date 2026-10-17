@@ -444,8 +444,8 @@ function lowParams(c) {
  * towards the center of their body"): the trunk carried low and nearly level, the two legs
  * planted under the middle of the body in a powerful crouch (knees forward under the belly,
  * hocks behind, the feet under the centre of mass), the folded wings' wrist pads and thumb claws
- * down in front beside the chest as supports (a bat's / pterosaur's / Game of Thrones wyvern's
- * carriage: the elbows stand up beside the withers like a cloak), the neck carried forward and
+ * down in front beside the chest as supports (a bat's / quadrupedal pterosaur's carriage; rev. 3b:
+ * the elbows folded back along the flanks below the back line - `plantBack`), the neck carried forward and
  * low, the heavy tail held low behind as the counterweight, its outer half on the ground.
  * Also the base of walk / crouch / launch / land. Options: bodyY (m, + = higher), bodyPitch
  * (rad, replaces the default), body {x, y, z, pitch, roll, yaw} (added), hipK, feet / wrists
