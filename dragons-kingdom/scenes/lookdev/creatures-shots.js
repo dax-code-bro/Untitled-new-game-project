@@ -26,12 +26,19 @@ const D2R = Math.PI / 180;
 
 export const SHOTS = [
   // Charcoal 3/4 front in daylight in the LOW stance (rev. 3): body carried low and level, the two
-  // legs under the middle of his body, the folded wings' wrists and thumbs down under his
-  // shoulders, the elbows up beside the withers; Remi beside his left wrist for scale (32 mm, ~50 m)
+  // legs under the middle of his body, the folded wings' wrists and thumbs down ahead of his
+  // shoulders; (fix round 1) the upper arms folded back along the flanks, the elbows below the
+  // back line, the forearms sloping forward and down; Remi beside his left wrist (32 mm, ~50 m)
   { id: 'charcoal-front', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], dur: 3, face: -55,
     people: [{ id: 'remi', at: [5.6, 0, 11.5], yaw: 50 }],
     pose: { charcoal: { name: 'stand', look: [0.25, -0.03], tailCurl: 0.45 } },
     cam: { subject: 'charcoal', pos: [30, 1.7, 42], target: [1.0, 4.2, 7], mm: 32, fstop: 8, focus: 'target' } },
+  // (fix round 1) the same stance from a LEVEL camera at his mid-body height (no low angle making
+  // him read tall): 35 mm, ~55 m, the horizon through his chest
+  { id: 'charcoal-level', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], dur: 3, face: -55,
+    people: [{ id: 'remi', at: [5.6, 0, 11.5], yaw: 50 }],
+    pose: { charcoal: { name: 'stand', look: [0.25, -0.03], tailCurl: 0.45 } },
+    cam: { subject: 'charcoal', pos: [34, 3.8, 46], target: [0.5, 3.8, 4], mm: 35, fstop: 8, focus: 'target' } },
   // Charcoal's head: a camera a little below his eye line, 3/4 front (50 mm), the horns against the sky
   { id: 'charcoal-head', set: 'field', creatures: ['charcoal'], dur: 3, face: -60,
     pose: { charcoal: { name: 'stand', look: [0.35, 0.08], blink: false, lidRelax: 0.05 } },
@@ -42,15 +49,17 @@ export const SHOTS = [
     people: [{ id: 'remi', at: [15, 0, 4], yaw: 160, fixed: true }],
     pose: { charcoal: { name: 'walk', speed: 2.0, look: [0.1, -0.02] } },
     cam: { subject: 'charcoal', pos: [62, 2.2, 10], target: [0, 4.0, 6.5], mm: 40, fstop: 8, focus: 'target', fixed: true, follow: 1 } },
-  // (rev. 3) resting: lying on his belly, legs folded under, wrists forward, chin low on the turf
-  // (35 mm, low 3/4 front)
+  // (rev. 3) resting: lying on his belly, legs folded under, chin low on the turf; (fix round 1)
+  // the wings folded back along the flanks, the forearms sloping down beside the chest - no
+  // lion's forelegs laid out in front (35 mm, low 3/4 front)
   { id: 'charcoal-rest', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], dur: 3, face: -40,
     people: [{ id: 'remi', at: [6.5, 0, 17], yaw: 30 }],
     pose: { charcoal: { name: 'lie', look: [0.35, 0.0], raise: -0.25, headDown: 0.2, lidRelax: 0.35 } },
     cam: { subject: 'charcoal', pos: [26, 1.6, 40], target: [1.0, 2.8, 9], mm: 35, fstop: 8, focus: 'target' } },
   // the take-off (1C): the first heavy downstroke after the vault - the downwash blasts a ring of
   // dust and grass, clods fly, the wrist-pad craters and claw furrows in the turf (24 mm, low, ~90 m)
-  { id: 'charcoal-takeoff', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], riders: { charcoal: 'remi' }, dur: 4, face: -40, stage: 'takeoff', still: 1.0,
+  // (fix round 1: 0.5 s later - the dust wall has risen, the downwash flattens the grass outward)
+  { id: 'charcoal-takeoff', set: 'field', creatures: ['charcoal'], tack: ['charcoal'], riders: { charcoal: 'remi' }, dur: 4, face: -40, stage: 'takeoff', still: 1.5,
     pose: { charcoal: { name: 'launch', t0: 2.05, look: [0.0, 0.15] } },
     cam: { subject: 'charcoal', pos: [46, 5.0, 52], target: [0, 6, 2], mm: 21, fstop: 8, focus: 'target', fixed: true, shutter: 120 } },
   // Charcoal and Leaf side by side (1C/1D): Leaf beside Charcoal's head, ahead of his wing, the
@@ -66,12 +75,21 @@ export const SHOTS = [
   // closed to a gentle holding gape round Leaf's whole head (snout, eyes and horns inside the
   // lips), Leaf's neck leaving the front of the mouth; Leaf's wings half folded (he is held, not
   // flying), clear of Charcoal's neck; Abby in her saddle (50 mm)
+  // (fix round 1: the camera higher and further back, so Remi shows whole in his seat behind the
+  // head instead of a head peering over the horn; Leaf's wings folded tighter - the half-open
+  // wing passed through Charcoal's jaw)
   { id: 'head-in-mouth', set: 'air', creatures: ['charcoal', 'leaf'], riders: { charcoal: 'remi', leaf: 'abby' }, dur: 3, alt: 220, face: -110, stage: 'mouth', mouthDepth: 1.85,
-    pose: { charcoal: { name: 'mouthHold', t0: 2.0, side: 1, turn: 1.65, pitch: 0.05, hold: 0.5 }, leaf: { name: 'dive', fold: 0.55, look: [-1.45, 0.05], lidRelax: 0.05, blink: false, corr: 0.3 } },
-    cam: { subject: 'charcoal', bone: 'head', pos: [3.4, -0.9, 16.5], target: [2.6, -0.7, 0.2], mm: 45, fstop: 8, focus: 'target' } },
-  // Leaf sitting like a dog (1B): rump on the ground, wrists planted in front, Abby beside his
-  // chest (35 mm, eye height, f/5.6)
+    pose: { charcoal: { name: 'mouthHold', t0: 2.0, side: 1, turn: 1.65, pitch: 0.05, hold: 0.5 }, leaf: { name: 'dive', fold: 0.92, look: [-1.45, 0.05], lidRelax: 0.05, blink: false, corr: 0.3 } },
+    cam: { subject: 'charcoal', bone: 'head', pos: [3.6, 3.2, 19.0], target: [2.0, 0.2, -1.0], mm: 40, fstop: 8, focus: 'target' } },
+  // (fix round 1) Leaf with Abby (1B), the LOW version: crouched low for her, chest near the
+  // ground, neck forward, head turned to her, wrists down in front (35 mm, eye height, f/5.6)
   { id: 'leaf-abby', set: 'field', creatures: ['leaf'], tack: ['leaf'], dur: 3, face: -70,
+    people: [{ id: 'abby', at: [1.7, 0, 2.5], yaw: -46 }],
+    pose: { leaf: { name: 'crouch', k: 0.7, look: [0.45, 0.06], eyes: [0.1, 0.02] } },
+    cam: { subject: 'leaf', pos: [9.0, 1.5, 10.5], target: [0.4, 1.1, 1.4], mm: 32, fstop: 5.6, focus: 'target' } },
+  // ALTERNATIVE for Daxtyn (DRAGONS.md still lists it as OPEN whether Leaf sits upright like a
+  // dog): the same moment with Leaf sitting back on his haunches, wrists planted in front
+  { id: 'leaf-sit-alt', set: 'field', creatures: ['leaf'], tack: ['leaf'], dur: 3, face: -70,
     people: [{ id: 'abby', at: [-1.0, 0, 2.9], yaw: 150 }],
     pose: { leaf: { name: 'sit', look: [0.45, -0.1], eyes: [0.12, -0.05] } },
     cam: { subject: 'leaf', pos: [9.0, 1.5, 10.5], target: [0.4, 1.6, 1.2], mm: 32, fstop: 5.6, focus: 'target' } },
@@ -84,8 +102,9 @@ export const SHOTS = [
   { id: 'charcoal-fire', set: 'field', creatures: ['charcoal'], dur: 3, face: -80, fire: { charcoal: { palette: 'standard', length: 26, width: 7 } },
     pose: { charcoal: { name: 'fire', t0: 1.6, aim: [0.05, -0.05] } },
     cam: { subject: 'charcoal', pos: [46, 2.4, 30], target: [0, 4.0, 21], mm: 32, fstop: 8, focus: 'target' } },
-  // Leaf's purplish-blue fire (a little hotter than normal; not on screen in Episode 1)
-  { id: 'leaf-fire', set: 'field', creatures: ['leaf'], dur: 3, face: -80, fire: { leaf: { palette: 'leaf', length: 8, width: 2.2 } },
+  // Leaf's purplish-blue fire (a little hotter than normal). LOOK-DEV ONLY: DRAGONS.md - Leaf does
+  // not breathe fire on screen in Episode 1, so this frame must not feed an Episode 1 shot
+  { id: 'leaf-fire-lookdev', set: 'field', creatures: ['leaf'], dur: 3, face: -80, fire: { leaf: { palette: 'leaf', length: 8, width: 2.2 } },
     pose: { leaf: { name: 'fire', t0: 1.6, aim: [0.05, -0.05] } },
     cam: { subject: 'leaf', pos: [11.5, 1.0, 8.0], target: [0, 1.1, 5.2], mm: 32, fstop: 8, focus: 'target' } },
   // Starlight gliding high over open country, seen from the ground (~400 m away, ~95 m up): a 27 m
@@ -124,9 +143,12 @@ export const SHOTS = [
   // body rolls to the lost side and drops. (rev. 2) Seen from behind and above, the rider's back
   // to us, so the lost wing is unmistakably on the LEFT of frame; a 60-degree shutter keeps the
   // shapes readable
-  { id: 'scout-wingloss', set: 'air', creatures: ['scout'], riders: { scout: 'scout' }, dur: 4, alt: 200, face: -130, detachAt: 0.6, still: 1.1,
+  // (fix round 1: the frame did not read - closer, from behind and above the LEFT side, earlier
+  // (0.35 s after the tear) so the torn wing is still near the body, the ragged membrane edge,
+  // the bare stump and the blood readable; the rider whole on its back)
+  { id: 'scout-wingloss', set: 'air', creatures: ['scout'], riders: { scout: 'scout' }, dur: 4, alt: 200, face: -130, detachAt: 0.6, still: 1.15,
     pose: { scout: { name: 'sprint' } },
-    cam: { subject: 'scout', track: 'wingloss', pos: [2.5, 5.5, -17], target: [0.3, -0.6, 0.5], mm: 35, fstop: 8, focus: 'target', shutter: 60 } },
+    cam: { subject: 'scout', track: 'wingloss', pos: [3.5, 4.2, -9.5], target: [0.6, -0.3, 0.6], mm: 40, fstop: 8, focus: 'target', shutter: 45 } },
 ];
 
 /** Build a scene module for the given shot ids (default: all). */
@@ -454,6 +476,47 @@ function stageTakeoff(S, shot, lt) {
   }
   const center = c.root.position.clone().setY(0).addScaledVector(fwd, 6);
   S.dust.update(tl, { center, bursts, kick: T1 + 0.25, kickPoints: [...shot._scars.pads, ...shot._scars.toes], strength: 1.0 });
+  flattenGrass(S.grass && S.grass[shot.id], tl, bursts, [0, 6]);
+}
+
+/**
+ * (fix round 1, the critics: the grass under a 36 m dragon's downwash stayed untouched) every
+ * downstroke's blast races out over the ground as a ring (~24 m/s, slowing) and lays the tufts
+ * flat AWAY from the centre - hardest near it, springing partly back after the front has passed.
+ * `ctr` = [x, z] in the grass group's frame (the subject's frame). Pure in t.
+ */
+const _gm = new THREE.Matrix4(), _gq = new THREE.Quaternion(), _gp = new THREE.Vector3(), _gs = new THREE.Vector3(), _gax = new THREE.Vector3(), _gt = new THREE.Quaternion(), _gm2 = new THREE.Matrix4();
+function flattenGrass(g, t, bursts, ctr) {
+  if (!g || !g.userData.tufts) return;
+  const fronts = bursts.filter((b) => b <= t).map((b, i) => ({ r: 34 * (1 - Math.exp(-(t - b) / 1.3)), age: t - b, k: Math.pow(0.85, i) }));
+  for (const { mesh, base } of g.userData.tufts) {
+    const a = mesh.instanceMatrix.array;
+    const n = base.length / 16;
+    for (let i = 0; i < n; i++) {
+      _gm.fromArray(base, i * 16);
+      if (!fronts.length) { _gm.toArray(a, i * 16); continue; }
+      _gm.decompose(_gp, _gq, _gs);
+      const dx = _gp.x - ctr[0], dz = _gp.z - ctr[1];
+      const r = Math.hypot(dx, dz);
+      let lay = 0;
+      for (const f of fronts) {
+        if (r > f.r + 2) continue;
+        // behind the front: laid flat, then springing partly back; strongest near the centre
+        const behind = Math.min(1, (f.r + 2 - r) / 4);
+        const near = Math.exp(-r / 26);
+        const back = Math.exp(-Math.max(0, f.age - r / 24) / 2.5);
+        lay = Math.max(lay, f.k * behind * (0.35 + 0.65 * back) * (0.45 + 0.55 * near));
+      }
+      if (lay <= 0.001) { _gm.toArray(a, i * 16); continue; }
+      const ang = lay * 1.25 + 0.06 * Math.sin(i * 1.7 + t * 9);
+      _gax.set(dz, 0, -dx).normalize();          // tilt outward about the tangent
+      _gt.setFromAxisAngle(_gax, ang);
+      _gq.premultiply(_gt);
+      _gs.y *= 1 - 0.25 * lay;
+      _gm2.compose(_gp, _gq, _gs).toArray(a, i * 16);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  }
 }
 
 /** The scout's LEFT wing tears away at shot.detachAt and tumbles in the wake (pure in lt). */
@@ -472,7 +535,8 @@ function scoutWingLoss(c, shot, lt, faceYaw, scene) {
   c.root.position.addScaledVector(fwd, 9 * dt);
   c.root.rotateZ(-1.3 * dt);
   const side = new THREE.Vector3(Math.cos(faceYaw), 0, -Math.sin(faceYaw));
-  const g = side.multiplyScalar(3.6 * dt).addScaledVector(fwd, -3.5 * dt).add(new THREE.Vector3(0, 1.5 * dt - 0.5 * 9.81 * dt * dt * 0.12, 0));
+  // (fix round 1: thrown clear faster - at 3.6 m/s it still seemed attached half a second later)
+  const g = side.multiplyScalar(6.0 * dt).addScaledVector(fwd, -4.5 * dt).add(new THREE.Vector3(0, 1.5 * dt - 0.5 * 9.81 * dt * dt * 0.12, 0));
   const spin = new THREE.Quaternion().setFromEuler(new THREE.Euler(2.0 * dt, 0.7 * dt, 2.6 * dt));
   const p = new THREE.Vector3().setFromMatrixPosition(M0);
   const M = new THREE.Matrix4().compose(p.add(g), new THREE.Quaternion().setFromRotationMatrix(M0).premultiply(spin), new THREE.Vector3(1, 1, 1));
@@ -539,6 +603,11 @@ function fieldGrass(S, shot) {
   g.add(grassField({ count: 70000, height: [0.07, 0.24], seed: 5, color: [0.05, 0.072, 0.022], dry: [0.2, 0.17, 0.085], dryAmount: 0.5, place }));
   g.add(grassField({ count: 14000, height: [0.2, 0.45], seed: 7, blades: 12, width: 1.1, color: [0.035, 0.055, 0.018], dry: [0.22, 0.19, 0.1], dryAmount: 0.65, place }));
   g.add(grassField({ count: 3000, height: [0.4, 0.7], seed: 11, blades: 3, width: 0.5, color: [0.16, 0.135, 0.065], dry: [0.26, 0.22, 0.12], dryAmount: 0.8, place }));
+  // (fix round 1) keep every tuft's own transform, so a downwash can lay the grass flat (takeoff)
+  if (shot.stage === 'takeoff') {
+    g.userData.tufts = [];
+    g.traverse((o) => { if (o.isInstancedMesh) g.userData.tufts.push({ mesh: o, base: Float32Array.from(o.instanceMatrix.array) }); });
+  }
   const sunAz = S.sunDir ? Math.atan2(S.sunDir.x, S.sunDir.z) : 0;
   g.rotation.y = sunAz + (shot.face ?? 0) * D2R;
   return g;

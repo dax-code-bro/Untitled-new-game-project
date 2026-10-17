@@ -12,10 +12,12 @@
 //   on), 27 Charcoal lying down resting, 28 Charcoal crouched for the take-off.
 //   (rev. 3, Daxtyn 2026-10-16: the turntables show the LOW stance - `stand`: the body carried
 //   low and level, the two legs under the middle of the body, the folded wings' wrists and thumbs
-//   down under the shoulders.)
+//   down ahead of the shoulders; rev. 3b: the elbows folded back along the flanks, below the
+//   back line.) Frame 26 (Leaf's dog-sit) is the ALTERNATIVE for an open question in
+//   DRAGONS.md, not a decided pose.
 //   (No species: every dragon is its own design - DRAGONS.md.)
 //   node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 1 --workers 1 --out output/creatures-contact
-// then tile the 21 frames (README in scenes/lib/creatures/ has the ffmpeg line).
+// then tile the 29 frames (README in scenes/lib/creatures/ has the ffmpeg line).
 import * as THREE from 'three';
 import { loadHDRI, loadPBR } from '../lib/assets.js';
 import { createCreature, poses } from '../lib/creatures/index.js';

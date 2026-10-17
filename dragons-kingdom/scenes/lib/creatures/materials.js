@@ -34,7 +34,9 @@ export function lookParams(THREE, look) {
       base: lin(THREE, 0.0125, 0.0122, 0.0125), belly: lin(THREE, 0.017, 0.016, 0.0155), dorsal: lin(THREE, 0.0105, 0.0102, 0.0105),
       wear: lin(THREE, 0.034, 0.032, 0.03), crev: 0.78, dust: lin(THREE, 0.075, 0.066, 0.055), salt: lin(THREE, 0.4, 0.4, 0.38),
       // (rev. 2: rougher with less crown polish - a sky highlight on every scale read slate grey)
-      rough: [0.74, 0.1, 0.05, 0.2], amp: 0.17, keel: 0.22, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.18,
+      // (fix round 1: more spread in roughness from scale to scale and polish on the worn crowns, so
+      // the sky breaks up across the scales instead of one even matte sheet)
+      rough: [0.66, 0.2, 0.13, 0.25], amp: 0.17, keel: 0.22, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.22,
       hier: [1.0, 1.0, 0.65, 0.0], damp: 0.35, bellyP: [0.6, 1.25, 0.55, 0.5], scarCol: lin(THREE, 0.03, 0.026, 0.025),
       scl: [0.8, 0.36, 0.75, 1.5], tub: [0.28, 2.7, 0.7, 0], skin2: [0.5, 0.16, 0, 0.22], plateZ: -0.03,
       // body scale profile: flat tops (dome exponent), a keel along each scale, wide soft grooves
@@ -42,7 +44,8 @@ export function lookParams(THREE, look) {
       // old healed scars [a.xyz, halfWidth, b.xyz, strength] in L units (rest pose): left flank, right neck, right shoulder, left thigh
       scars: [[0.066, 0.19, 0.17, 0.0042, 0.061, 0.143, 0.092, 0.9], [-0.027, 0.258, 0.335, 0.003, -0.025, 0.236, 0.298, 0.8],
         [-0.071, 0.172, 0.2, 0.003, -0.069, 0.152, 0.216, 0.75], [0.076, 0.132, 0.03, 0.0026, 0.071, 0.112, -0.012, 0.7]],
-      dustAmt: 0.45, saltAmt: 0.05, oral: lin(THREE, 0.09, 0.03, 0.035), oralDark: lin(THREE, 0.02, 0.006, 0.008),
+      // (fix round 1: a fleshier mouth - the dark purple read as a painted slab)
+      dustAmt: 0.45, saltAmt: 0.05, oral: lin(THREE, 0.17, 0.06, 0.052), oralDark: lin(THREE, 0.03, 0.009, 0.009),
       // GRAY membrane with BLACK STRIPES throughout: noise-warped bands across every panel
       // (stripes block the light, the grey skin between them lets a little through)
       // (DESIGN 2.7: sRGB ~#7d8086, linear ~0.2 - it must read clearly GRAY next to the black body)
@@ -65,7 +68,8 @@ export function lookParams(THREE, look) {
       // a unique purplish-blue fire (fire.js; not used on screen in Episode 1).
       // Dark green like an emerald tree monitor in shade: a darker back, a paler green belly,
       // mottled, never a toy's flat saturated green; little (greenish) dust
-      base: lin(THREE, 0.0095, 0.027, 0.0105), belly: lin(THREE, 0.036, 0.056, 0.026), dorsal: lin(THREE, 0.0055, 0.016, 0.0065),
+      // (fix round 1: countershading - a clearly paler yellow-green belly under the dark back)
+      base: lin(THREE, 0.0095, 0.027, 0.0105), belly: lin(THREE, 0.075, 0.095, 0.042), dorsal: lin(THREE, 0.0055, 0.016, 0.0065),
       wear: lin(THREE, 0.03, 0.06, 0.025), crev: 0.55, dust: lin(THREE, 0.1, 0.11, 0.07), salt: lin(THREE, 0.5, 0.52, 0.48),
       rough: [0.54, 0.12, 0.1, 0.28], amp: 0.18, keel: 0.14, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.35,
       // (fewer big scutes on the limbs: plates down the forearm read as gauntlets)
@@ -133,14 +137,16 @@ export function lookParams(THREE, look) {
       // partly metallic reflection, the wet film (clearcoat) carries broad highlights
       // gold reads as gold through its tinted reflection: metallic crowns (broad, soft sheen at
       // roughness ~0.4, never pin-point sparkle), less in the soft grooves
-      rough: [0.3, 0.05, 0.04, 0.1], amp: 0.03, keel: 0.0, facet: 0.0, jit: 0.45, metal: [0.62, 0.35], mottle: 0.12,
+      // (fix round 1: a little more scale relief - the smooth gold read as a cast toy)
+      rough: [0.3, 0.05, 0.04, 0.1], amp: 0.045, keel: 0.0, facet: 0.0, jit: 0.45, metal: [0.62, 0.35], mottle: 0.12,
       hier: [0.0, 0.5, 0.3, 0.0], damp: 0.0, bellyP: [0.38, 0.8, 0.15, 0.18], plateZ: -0.03,
       crevCol: lin(THREE, 0.62, 0.36, 0.14), crevAmt: 0.2,
       // soft newborn head scales: a fine granular tier on the head (low relief, still readable)
       headRelief: 2.0,
       scl: [0.75, 0.42, 0.7, 1.1], tub: [0.0, 2.5, 0.0, 0], skin2: [0.0, 0.15, 0, 0.08], skin3: [0.1, 0.18, 0, 0],
       // amniotic residue: a pale, slimy film in patches and streaks
-      residue: [0.24, 0.8, 0.74, 0.52], bellyMetalCut: 0.12,
+      // (fix round 1: more birth fluid - a newborn glistens all over)
+      residue: [0.4, 0.8, 0.74, 0.52], bellyMetalCut: 0.12,
       dustAmt: 0.0, saltAmt: 0.0, oral: lin(THREE, 0.5, 0.2, 0.16), oralDark: lin(THREE, 0.14, 0.04, 0.035),
       // the tiny crumpled wings: damp gold skin, satin not mirror (a smooth membrane fold mirrored blue sky)
       membrane: lin(THREE, 0.62, 0.38, 0.1), trans: lin(THREE, 0.5, 0.28, 0.08), vein: lin(THREE, 0.45, 0.12, 0.05), memRough: 0.6,
@@ -150,13 +156,15 @@ export function lookParams(THREE, look) {
       tooth: lin(THREE, 0.75, 0.7, 0.58), iris: [lin(THREE, 0.13, 0.075, 0.025), lin(THREE, 0.03, 0.017, 0.007)], sclera: lin(THREE, 0.04, 0.025, 0.015), pupil: 0.13, fleck: lin(THREE, 0.5, 0.36, 0.1),
       // the wet film: glossy but not a mirror (on the soft, lumpy newborn skin a mirror film
       // broke the window's reflection into pin-point sparkle)
-      wet: true, wetRough: 0.1,
+      // (fix round 1: a slicker film - the critics saw a dry casting with one drool strand)
+      wet: true, wetRough: 0.06,
     },
     scout: {
       base: lin(THREE, 0.075, 0.088, 0.105), belly: lin(THREE, 0.3, 0.31, 0.31), dorsal: lin(THREE, 0.06, 0.07, 0.085),
       wear: lin(THREE, 0.1, 0.095, 0.085), crev: 0.5, dust: lin(THREE, 0.2, 0.18, 0.15), salt: lin(THREE, 0.6, 0.6, 0.58),
       rough: [0.58, 0.12, 0.08, 0.3], amp: 0.2, keel: 0.15, facet: 0.0, jit: 0.25, metal: [0, 0], mottle: 0.3,
-      hier: [0.6, 1.0, 0.4, 0.0], damp: 0.15, bellyP: [0.7, 1.8, 0.85, 0.55],
+      // (fix round 1: smaller, less regular belly scutes with softer seams - a brick grid before)
+      hier: [0.6, 1.0, 0.4, 0.0], damp: 0.15, bellyP: [0.5, 1.15, 0.45, 0.35],
       dustAmt: 0.25, saltAmt: 0.3, oral: lin(THREE, 0.25, 0.07, 0.07), oralDark: lin(THREE, 0.05, 0.012, 0.012),
       membrane: lin(THREE, 0.068, 0.05, 0.042), trans: lin(THREE, 0.16, 0.1, 0.07), vein: lin(THREE, 0.06, 0.025, 0.015), memRough: 0.62, memSpec: 0.28, memSpecD: 0.45,
       horn: [lin(THREE, 0.04, 0.038, 0.034), lin(THREE, 0.2, 0.18, 0.15)], hornR: [0.66, 0.5, 1.0], claw: [lin(THREE, 0.03, 0.028, 0.025), lin(THREE, 0.12, 0.11, 0.09)],
@@ -393,9 +401,10 @@ void dkSkin(inout vec3 albedo) {
     dkResM = smoothstep(0.5, 0.66, rn + 0.08 * (vMask.y - 0.5)) * uResidue.x;
   }
   // torn wing root (scout): an open, wet, dark wound - no scale relief inside, a ragged rim
-  float dkWoundM = 0.0;
+  float dkWoundM = 0.0, dkWoundD = 1e9;
   if (uWoundR > 0.0) {
     float wd = length(vRest - uWound.xyz) + (n2 - 0.5) * uWoundR * 0.6 + (dkVnoise2(vRest.xz / uWoundR * 6.0) - 0.5) * uWoundR * 0.3;
+    dkWoundD = wd;
     dkWoundM = smoothstep(uWoundR, uWoundR * 0.7, wd) * uWound.w;
   }
   float soften = (1.0 - dkScarM) * (1.0 - 0.75 * dkResM) * (1.0 - 0.9 * dkWoundM);
@@ -452,7 +461,15 @@ void dkSkin(inout vec3 albedo) {
   col = mix(col, oral, dkOralM);
   // wound (detached wing stump): dark, rough
   if (uWoundR > 0.0) {
-    col = mix(col, vec3(0.016, 0.005, 0.004) * (0.7 + 0.6 * vNoise.y), dkWoundM);
+    // (fix round 1: the stump read as a grey cylinder with a dark cap) torn flesh and blood: deep
+    // red, wet, ragged - darker clotted patches, brighter fresh blood running out over the scales
+    // below the wound (the rim), torn muscle streaks
+    float tornF = dkVnoise2(vRest.xz / max(uWoundR * 0.25, 1e-4) + 3.1);
+    vec3 flesh = mix(vec3(0.035, 0.003, 0.003), vec3(0.11, 0.008, 0.006), smoothstep(0.35, 0.8, tornF)) * (0.6 + 0.6 * vNoise.y);
+    col = mix(col, flesh, dkWoundM);
+    float run = smoothstep(uWoundR * 1.9, uWoundR * 0.9, dkWoundD) * (1.0 - dkWoundM) * uWound.w * smoothstep(0.45, 0.7, dkVnoise2(vRest.xz / max(uWoundR * 0.12, 1e-4) * vec2(1.0, 0.25)));
+    col = mix(col, vec3(0.12, 0.008, 0.006), run * 0.85);
+    dkWoundM = max(dkWoundM, run * 0.8);
     dkCav = max(dkCav, dkWoundM * 0.3);
   }
   albedo = col;
@@ -463,7 +480,7 @@ void dkSkin(inout vec3 albedo) {
   r = mix(r, r * uDamp.z, dkDampM);
   r = mix(r, 0.32, dkScarM * 0.7);                                                       // scar tissue: smooth, shiny
   r = mix(r, 0.3, dkResM);                                                               // slimy residue: soft sheen (the wet film carries the highlights)
-  r = mix(r, 0.22, dkWoundM);                                                            // wet
+  r = mix(r, 0.18 + 0.25 * smoothstep(0.4, 0.8, n2), dkWoundM);                          // wet blood, clotted in places
   r = mix(r, 0.88, dkPadM);
   dkRoughOut = clamp(r, 0.06, 1.0);
   dkMetalOut = mix(uMisc.z, uMisc.w, clamp(dkCav * 1.4 + dust, 0.0, 1.0)) * (1.0 - dkOralM) * (1.0 - uDamp.w * smoothstep(0.35, 0.85, vMask.y)) * (1.0 - 0.25 * dkResM);

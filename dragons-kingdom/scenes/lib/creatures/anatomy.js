@@ -173,7 +173,7 @@ export const DESIGNS = {
     trunkP: [[0, 0.42, 0.62], [0.25, 0.47, 0.67], [0.6, 0.36, 0.48], [0.85, 0.3, 0.34], [1, 0.3, 0.3]],
     tailP: [[0, 0.26, 0.28], [0.15, 0.18, 0.2], [0.35, 0.12, 0.13], [0.6, 0.075, 0.08], [0.85, 0.04, 0.042], [1, 0.012, 0.012]],
     stand: { hip: 1.1, shoulder: 1.25, forearmLean: 14, humerusRise: 10, neckRise: 32, neckTop: 10, headPitch: -10, tailDroop: 16,
-      low: { belly: 0.36, mtAng: 56, neckBase: 18, neckTop: 4 } },
+      low: { belly: 0.36, mtAng: 56, neckBase: 18, neckTop: 4, hum: [0.45, -0.12, 0.88] } },
     fold: { curl: [6, 40, 80] }, bulk: { leg: 1.05, arm: 1.05, neck: 1.0 },
     leg: { femur: 0.45, tibia: 0.54, mt: 0.26, toe: 0.17, claw: 0.05, d: [0.2, 0.12, 0.105, 0.068, 0.06], mtAng: 60, heelPad: 0.2, hallux: 0.4, toeR: 0.02 },
     wing: { humerus: 0.62, forearm: 1.28, d: [0.27, 0.18, 0.11, 0.065],
@@ -1116,7 +1116,11 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
   const zMid = (hinge[2] + 1) * 0.5;
   m.ell(cav(0, mouthY, zMid), [0.5 * lipW(zMid) * H * (soft ? 0.7 : 1), 0.02 * H * (soft ? 0.5 : 1), (1 - hinge[2]) * 0.38 * H], { ax: ex, ay: cavDir(0, 1, 0), k: 0.03 * H, op: 'sub', chain: 'jaw', bone: 'jaw', tag: 'mouth' });
   m.ell(cav(0, mouthY - 0.005, hinge[2] + 0.12), [0.08 * H, 0.035 * H, 0.12 * H], { ax: ex, ay: cavDir(0, 1, 0), k: 0.03 * H, op: 'sub', chain: 'jaw', bone: 'jaw', tag: 'mouth' });
-  m.cone(jawPt(0, J(hinge[2] + 0.15)[1] - 0.035, hinge[2] + 0.1), jawPt(0, J(0.7)[1] - 0.03, 0.72), 0.04 * H, 0.022 * H, { sx: 1.45, sy: 0.5, up: jawDir(0, 1, 0), k: 0.012 * H, chain: 'jaw', bone: 'jaw', tag: 'tongue' });
+  // (fix round 1: a real tongue - broad, thick, lying in the floor of the mouth with a rounded
+  // free tip; the thin rod left the mouth a flat slab)
+  const tgK = soft ? 0.6 : 1;
+  m.cone(jawPt(0, J(hinge[2] + 0.15)[1] - 0.05, hinge[2] + 0.08), jawPt(0, J(0.66)[1] - 0.04, 0.66), 0.075 * H * tgK, 0.05 * H * tgK, { sx: 1.55, sy: 0.42, up: jawDir(0, 1, 0), k: 0.02 * H, chain: 'jaw', bone: 'jaw', tag: 'tongue' });
+  m.ell(jawPt(0, J(0.7)[1] - 0.042, 0.7), [0.07 * H * tgK, 0.02 * H * tgK, 0.06 * H * tgK], { ax: ex, ay: jawDir(0, 1, 0), k: 0.02 * H, chain: 'jaw', bone: 'jaw', tag: 'tongue' });
   for (const sd of [1, -1]) {
     const orb = hs.orbit ?? 1.36;
     m.ell(W(sd * (eyeP[0] - gL[0] * ER * 0.45), eyeP[1] - gL[1] * ER * 0.45, eyeP[2] - gL[2] * ER * 0.45), [ER * H * orb * 0.85, ER * H * orb, ER * H * orb * 1.15], { ax: gW(sd), ay: ey, k: 0.035 * H, ...t, tag: 'head' });
@@ -1227,7 +1231,7 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
       path = [add(sub(pts[0], scale(d0, radii[0] * 1.1)), [0, -radii[0] * 0.6, 0]), ...pts];
       rad = [radii[0] * 0.92, ...radii];
     }
-    keratin.push({ kind: 'horn', bone: 'head', tag: o.tag ?? 'horn', path: path.map((p) => W(...p)), rad: rad.map((r) => r * H), flat: o.flat ?? 0.82, up: ey, rings: o.rings ?? true, tipR: o.tipR, broken: !!o.broken });
+    keratin.push({ kind: 'horn', bone: 'head', tag: o.tag ?? 'horn', path: path.map((p) => W(...p)), rad: rad.map((r) => r * H), flat: o.flat ?? 0.82, up: ey, rings: o.rings ?? true, ringAmp: o.ringAmp, tipR: o.tipR, broken: !!o.broken });
     // (rev. 2: no burr collar - its separate ring read as a texture seam at the horn base)
     if (!soft && (o.burr ?? false)) {
       const p0 = pts[0], d = norm(sub(pts[1], pts[0])), r0 = radii[0];
@@ -1247,9 +1251,12 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
       const r0 = Hn(0.23);
       // (rev. 2: the curl swings OUT sideways before it turns down and forward - the first hoop
       // came down onto the neck and seemed to grow into it)
-      const path = [[hwB * 0.62, top0 - 0.03, 0.03], [hwB * 1.02, top0 + 0.02, -0.12], [hwB * 1.6, top0 - 0.01, -0.21], [hwB * 2.12, top0 - 0.12, -0.2], [hwB * 2.36, top0 - 0.27, -0.08], [hwB * 2.34, top0 - 0.35, 0.06]].map(X);
+      // (fix round 1: the hoop down behind the skull with an even girth read as a hose or a handle
+      // - a broad crescent sweeping OUT and back, a heavy base tapering hard to a worn point, the
+      // tip lifting a little forward (water buffalo); deeper, uneven growth rings)
+      const path = [[hwB * 0.6, top0 - 0.03, 0.03], [hwB * 1.08, top0 + 0.05, -0.13], [hwB * 1.72, top0 + 0.03, -0.25], [hwB * 2.3, top0 - 0.07, -0.27], [hwB * 2.7, top0 - 0.15, -0.17], [hwB * 2.9, top0 - 0.12, -0.03]].map(X);
       const broken = sd > 0;
-      horn(broken ? path.slice(0, -1).concat([lerp3(path[4], path[5], 0.5)]) : path, broken ? [r0, r0 * 0.9, r0 * 0.76, r0 * 0.58, r0 * 0.42, r0 * 0.3] : [r0, r0 * 0.9, r0 * 0.74, r0 * 0.56, r0 * 0.34, r0 * 0.05], { flat: 0.78, broken });
+      horn(broken ? path.slice(0, -1).concat([lerp3(path[4], path[5], 0.35)]) : path, broken ? [r0 * 1.3, r0 * 1.0, r0 * 0.72, r0 * 0.5, r0 * 0.33, r0 * 0.24] : [r0 * 1.3, r0 * 1.0, r0 * 0.72, r0 * 0.48, r0 * 0.26, r0 * 0.035], { flat: 0.78, broken, ringAmp: 0.14 });
       // 2. brow pair: behind and above the eyes, conical, up and back at 35 deg to the skull line
       const b0 = [eye[0] * 0.85, eye[1] + ER * 1.1, eye[2] - ER * 1.6];
       const bl = Hn(0.7), bd = norm([0.25, Math.sin(35 * deg), -Math.cos(35 * deg)]);
@@ -1291,8 +1298,9 @@ function buildHead(m, spec, Hm, neckPitch, headPitch, hj, bone, keratin, eyes, c
     } else if (spec.horns === 'buds') {
       // soft horn buds at the back corners of the skull: 2.5 cm pale cones, back and up
       const p0 = [hwB * 0.62, top0 - 0.03, 0.04];
-      const ln = Hn(0.025);
-      horn([p0, add(p0, [0.01, ln * 0.6, -ln * 0.45]), add(p0, [0.02, ln * 0.95, -ln * 0.75])].map(X), [Hn(0.0065), Hn(0.0045), Hn(0.001)], { tag: 'bud', rings: false, burr: false });
+      // (fix round 1: a little longer, so they read in the macro hero)
+      const ln = Hn(0.034);
+      horn([p0, add(p0, [0.01, ln * 0.6, -ln * 0.45]), add(p0, [0.02, ln * 0.95, -ln * 0.75])].map(X), [Hn(0.0075), Hn(0.005), Hn(0.0012)], { tag: 'bud', rings: false, burr: false });
     }
   }
   return { H, frame: { ex, ey, ez, origin: hj }, hinge: W(0, hinge[1], hinge[2]), gape0: g, W, jawPt, U, J, eye: eyeP, zInv: (z) => z };

@@ -82,6 +82,33 @@ references, sketches, the code changes the new layout needs and a step-by-step b
   * Skin: Starlight's plates smaller (scale size x0.56) and flatter with hairline joints (they read
     as white cobbles); the newborn slimmer (trunk, limbs, yolk belly) with a flatter skull (it read
     as a toy).
+* **Revision 3b (2026-10-17, fix round 1 of rev. 3 after the critics; same Daxtyn direction):**
+  * **The wing-arm folds BACK, not up** (1.5, 1.5c): in rev. 3 the upper arm pointed straight up
+    from the shoulder and the elbow stood ~1.8 m above Charcoal's back - two posts or "rabbit ears"
+    from the front and rear 3/4. Now the upper arm runs back (a little out) along the side of the
+    chest, the **elbow sits on the upper flank below the back line**, and the forearm slopes
+    forward and down from it to the wrist pad on the ground ahead of the shoulder, as in a
+    quadrupedal pterosaur or a vampire bat. The hand folds back up along the forearm with every
+    knuckle at the same height, the fingers **stacked side by side** (a closed fan seen edge-on)
+    and laid back along the upper flank; the membrane gathers in soft pleats between them. Lying
+    and Leaf's sit use the same fold. Measured in 1.5c.
+  * **Charcoal's membrane (canon "gray with black stripes throughout"; DRAGONS.md: "the black
+    stripes run along the wing's finger bones"):** a lighter neutral grey (sRGB ~#86858a), broad
+    black bands ALONG every finger bone and the forearm (~0.75 m wide at the wrist to ~1.9 m at the
+    tips), no bands between the bones; the grey reads when the wing is folded too.
+  * Membranes: no crease-network maze on Starlight's white skin, less mottle; Leaf's light green
+    one value with less light through it (it glowed lime against the sky).
+  * Starlight's plates: overlapping plates with hairline joints, smoother and tilted further apart,
+    a clear coat and a faint nacre film (thin-film iridescence) - "reflective crystal-like" in any
+    light, never a glow; no dark outline round each plate.
+  * Charcoal: horns a broad crescent with a heavy tapering base, deeper uneven growth rings and a
+    worn point (the even hoop read as a hose); a broad tongue; a fleshier mouth.
+  * The scout's tail is shorter (2.7 m, L 5.9 m) and thicker, its tip vane small with thickness;
+    the belly scutes smaller and less regular. Leaf: a paler yellow-green belly (countershading).
+  * The newborn: its wings folded back along the body like the adults' (no splayed rake), wetter
+    skin, longer horn buds.
+  * Tack: the giants' rig loses its backrest board and grab-bar posts (a chair): a leather skirt,
+    a low cantle roll and a pommel roll with a hand loop.
 * The screenplay (`episodes/s01e01/screenplay.md`) stays binding for events: section 1.13 lists
   every story beat the bodies have to make possible and how each design does it.
 * Every number below comes from a small calculator (lofted elliptical cross-sections, an assumed
@@ -206,19 +233,27 @@ the flank and, on Starlight and the scout, over the tail base). That is what let
 
 ### 1.5 The wing-walk fold (walking, the crouch, lying; rev. 3: also the resting stance - see 1.5c)
 
-1. **Elbow**: the upper arm swings back and up along the side of the shoulders.
-2. **Wrist** flexes: the metacarpals run up along the back edge of the forearm, so the knuckles
-   end just below the elbow.
-3. **Fingers**: from the knuckles the first phalanx of every long finger runs **back along the
-   upper flank**, the outer phalanges bend a little down; the fingers lie together like a closed
-   fan with the chiropatagium pleated between them. Where they end is part of each silhouette:
-   Charcoal and Leaf - over the hip and thigh; Starlight - well back over the tail base (her long
-   crossed wingtips, like an albatross); scout - just past the hip.
-4. **Plagiopatagium** gathers in elastic pleats between the finger bundle and the flank/leg.
+(rev. 3b: the elbow folds BACK along the flank - in rev. 3 it stood up beside the withers.)
 
-Seen from the side the folded wing reads as: the forearm as a front leg, a bony "shoulder" (the
-elbow and knuckles) standing up beside the withers, and a smooth closed fan lying along the flank.
-Nothing sticks out in front of the chest; no bare finger ends hang free.
+1. **Elbow**: the upper arm runs **back** (and a little out) along the side of the chest, so the
+   elbow sits on the upper flank behind the shoulder, **below the back line** (a quadrupedal
+   pterosaur's or a vampire bat's carriage). The forearm slopes forward and down from the elbow
+   to the wrist pad on the ground ahead of the shoulder (Charcoal: ~37 degrees, the wrist ~2.2 m
+   ahead of the shoulder joint - an 8.1 m forearm cannot reach the ground under the shoulder
+   without lifting the elbow above the back).
+2. **Wrist** flexes: the metacarpals run back up along the trailing edge of the forearm; each is
+   aimed so its knuckle ends at the height of the leading finger's, near the elbow.
+3. **Fingers**: the fingers lie **side by side** (stacked outward, a closed fan seen edge-on - not
+   one above the other like the slats of a deck chair) and run back along the upper flank, the
+   outer phalanges curling a little down. Where they end is part of each silhouette: Charcoal and
+   Leaf - past the hip, beside the tail base; Starlight - well back along the tail base (her
+   long crossed wingtips, like an albatross); scout - just past the hip.
+4. **Plagiopatagium** gathers in soft pleats between the finger bundle and the flank/leg (the
+   draped membrane plus pleat shading in the membrane shader when folded).
+
+Seen from the side the folded wing reads as: the forearm as a sloping front leg, the elbow a low
+bony point on the upper flank, and a closed fan with the membrane pleated along the flank. Nothing
+stands above the back; no bare finger ends hang free. Code: `plantBack` in poses.js.
 
 ### 1.5b The standing fold (rev. 2: the resting stance on two legs - RETIRED in rev. 3, see 1.5c; the fold itself is still used for Leaf's sit with `plantWrists: false`)
 
@@ -258,13 +293,13 @@ heavy, ordinary animal - a crouching big cat, a crocodile in the high walk, a Ko
    are bent in a deep crouch (Charcoal: hip joint 4.2 m up for a 7.6 m leg), the balls of the feet
    ~0.16 trunk lengths ahead of the hip joint, under the centre of mass, a little wider than the
    hips.
-3. **Wings as front supports.** The wrist pad sits on the ground beside and just ahead of the
-   shoulder joint, the thumb laid forward along the ground with its claw in the turf; the forearm
-   rises from it to the elbow, which stands up beside the withers (Charcoal: 1.8 m above the back);
-   the humerus runs from the elbow forward and down to the shoulder joint. The hand folds back
-   along the forearm, the knuckles end by the elbow, the fingers lie pressed together in one
-   bundle back along the upper flank toward the hips (a closed cape, not a fan); the membrane
-   gathers between them.
+3. **Wings as front supports.** (rev. 3b) The upper arm runs back along the side of the chest
+   from the shoulder joint, so the elbow sits on the upper flank **below the back line**; the
+   forearm slopes forward and down to the wrist pad on the ground ahead of the shoulder, the thumb
+   laid forward along the ground with its claw in the turf. The hand folds back up along the
+   forearm, the knuckles level by the elbow, the fingers stacked side by side back along the
+   upper flank (1.5); the membrane gathers in pleats between them. (rev. 3 had the elbow standing
+   ~1.8 m above Charcoal's back - from the front it read as two raised arms.)
 4. **Neck forward and low.** The neck leaves the withers rising ~14 degrees (Leaf 20, the scout
    18) and levels out; the head is carried about at the height of the back, pitched ~8 degrees
    down - never the rev. 2 giraffe neck.
@@ -276,12 +311,18 @@ heavy, ordinary animal - a crouching big cat, a crocodile in the high walk, a Ko
 Measured in the posed models (`poses.stand`, metres above the ground; chest = the trunk's
 underside at station 0.25, back = its top there):
 
-| | hip joint | knee | chest underside (x chest depth) | back | elbow | head joint |
-|---|---|---|---|---|---|---|
-| Charcoal (36 m) | 4.15 | 3.31 | 1.59 (0.35) | 6.08 | 7.85 | 6.79 |
-| Leaf (9 m) | 1.06 | 0.97 | 0.42 (0.44) | 1.37 | 2.17 | 1.62 |
-| Starlight (72 m) | 6.57 | 6.50 | 3.09 (0.51) | 9.18 | 14.90 | 11.16 |
-| scout (6.8 m) | 0.59 | 0.67 | 0.25 (0.37) | 0.92 | 1.31 | 1.12 |
+| | hip joint | knee | chest underside (x chest depth) | back | elbow (rev. 3 in brackets) | wrist pad ahead of the shoulder joint | head joint |
+|---|---|---|---|---|---|---|---|
+| Charcoal (36 m) | 4.12 | 3.55 | 1.56 (0.35) | 6.05 | **5.30** (7.85) | 2.2 | 6.76 |
+| Leaf (9 m) | 1.04 | 1.04 | 0.39 (0.41) | 1.35 | **1.17** (2.17) | 0.72 | 1.60 |
+| Starlight (72 m) | 6.56 | 6.86 | 3.08 (0.50) | 9.16 | **8.51** (14.90) | 6.2 | 11.14 |
+| scout (5.9 m) | 0.58 | 0.70 | 0.24 (0.36) | 0.91 | **0.77** (1.31) | 0.49 | 1.12 |
+
+(rev. 3b) The elbow is now below the back line beside it (Charcoal 0.5 m below the back where the
+elbow sits, 4.5 m behind the shoulder joint; rev. 3 had it 1.8 m above the back). In the walk the
+humerus swings fore and aft with the wrist's step and the wrists step in a range shifted a little
+forward (a shorter wrist stance, duty ~0.55), so the elbow never rises above the back (Charcoal
+2.6-6.0 m over the cycle).
 
 (rev. 2 for comparison: Charcoal's hip joint 7.0 m with the trunk raised 30 degrees, his chest
 underside ~4.3 m up.) The newborn does not stand: it lies sprawled or pushes up weakly (5.5).

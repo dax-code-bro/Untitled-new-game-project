@@ -524,7 +524,12 @@ function plantBack(pb, F, side, o = {}) {
   const w = A.wings.find((x) => x.side === side);
   const qT = F.Q.thorax;
   const hb = o.hum || [0.42, 0.1, 0.9];
+  // a step (o.dz, the walk) swings the whole arm fore and aft about the shoulder - the elbow moves
+  // with the wrist (o.swing of the offset) - instead of folding the elbow up above the back when
+  // the wrist is behind its rest place (or flattening the arm when it is ahead)
+  const sw = (o.dz ?? 0) * (o.swing ?? 0.8);
   const hDir = norm(qRot(qT, [sd * hb[0], hb[1], -hb[2]]));
+  const hDirS = norm(qRot(qT, [sd * hb[0], hb[1], -hb[2] - sw / d.hum]));
   const E0 = add(S, scale(hDir, d.hum));
   const padY = w.padDist * (o.padK ?? 0.92) + (o.padLift ?? 0) * d.wristR;
   const dyF = E0[1] - padY;
@@ -535,7 +540,8 @@ function plantBack(pb, F, side, o = {}) {
   const fz = norm([f3[0], 0, f3[2]]);
   const wp = o.at ? [o.at[0], o.at[1] + w.padDist * 0.92, o.at[2]]
     : [E0[0] + dxF + fz[0] * horiz + sd * (o.dx ?? 0), padY + (o.lift ?? 0), E0[2] + fz[2] * horiz + (o.dz ?? 0)];
-  const pole = o.pole ? add(qRot(qT, [sd * o.pole[0], o.pole[1], o.pole[2]]), [0, 0.3, 0]) : sub(E0, S);
+  // (the wrist lands exactly where the gait puts it; the swung humerus only steers the elbow)
+  const pole = o.pole ? add(qRot(qT, [sd * o.pole[0], o.pole[1], o.pole[2]]), [0, 0.3, 0]) : scale(hDirS, d.hum);
   return plantWing(pb, F, side, wp, { pole, ...(o.fold || {}) });
 }
 
@@ -611,7 +617,7 @@ export function walk(c, o = {}) {
   const t = o.t ?? 0;
   const L = c.L;
   const speed = o.speed ?? (L > 20 ? 2.0 : L > 5 ? 1.6 : 0.5);
-  const freq = o.freq ?? (L > 50 ? 0.23 : L > 20 ? 0.32 : L > 5 ? 0.6 : 0.8);
+  const freq = o.freq ?? (L > 50 ? 0.23 : L > 20 ? 0.32 : L > 5 ? 0.85 : 0.8);   // (fix round 1: Leaf 0.6 -> 0.85 Hz, shorter steps for the folded-back arm)
   const stride = speed / freq;
   const duty = o.duty ?? 0.7;
   const ph = (off) => fract(t * freq + off);
@@ -626,7 +632,14 @@ export function walk(c, o = {}) {
   for (const [side, off] of [['L', 0], ['R', 0.5]]) {
     const pf = ph(off), pw = ph(off + 0.25);
     feet[side] = { dz: zOff(pf), lift: lift(pf, d.toeL * 0.35) };
-    wrists[side] = { dz: zOff(pw), lift: lift(pw, d.wristR * 1.4) };
+    // (fix round 1) the wrists step in a range shifted forward: with the elbow folded back, a wrist
+    // set down behind its resting place forces the elbow up above the back (the forearm is far
+    // longer than the shoulder height)
+    // a shorter wrist stance (duty ~0.55: the wing-hand is lifted longer) keeps the reach in range
+    const dW = o.wristDuty ?? 0.55, excW = stride * dW;
+    const zW = (p) => p < dW ? excW * (0.5 - p / dW) : excW * (-0.5 + (p - dW) / (1 - dW));
+    const liftW = (p, h) => p < dW ? 0 : h * Math.sin(Math.PI * (p - dW) / (1 - dW));
+    wrists[side] = { dz: zW(pw) + excW * (o.wristShift ?? 0.22), lift: liftW(pw, d.wristR * 1.4) };
   }
   // the body rolls and pitches a little with the steps; the neck counter-swings, the tail swings
   const sway = Math.sin(TAU * t * freq) * 0.025;

@@ -27,7 +27,9 @@ export const FIRE_PALETTES = {
   leaf: {
     // (kept well below the tone curve's shoulder: bright saturated blue desaturates to white there)
     core: [0.6, 0.55, 1.0], coreI: 1.3, body: [0.24, 0.12, 1.0], bodyI: 1.2, edge: [0.45, 0.06, 0.95], edgeI: 1.1,
-    smoke: [0.07, 0.068, 0.08], smokeAmt: 0.4, light: [0.42, 0.36, 1.0], lightI: 1.3, temp: 1.12, gain: 0.11,
+    // (fix round 1: more tongue structure and gain in the jet, a weaker light - the glow on the
+    // grass outshone the thin hazy beam that was meant to cause it)
+    smoke: [0.07, 0.068, 0.08], smokeAmt: 0.45, light: [0.42, 0.36, 1.0], lightI: 0.7, temp: 1.12, gain: 0.15, spread: 1.25,
   },
 };
 
@@ -61,12 +63,16 @@ float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
 void main() {
   vec2 q = vUv * 2.0 - 1.0;
   float age = vP.x, sd = vP.y;
-  // ragged, flickering tongue: radial falloff broken up by two octaves of moving noise
-  vec2 np = q * 1.7 + vec2(sd * 17.0, sd * 9.0 - uT * 3.0);
-  float n = vn(np) * 0.65 + vn(np * 2.3 + 4.1) * 0.35;
+  // ragged, flickering tongue: radial falloff broken up by three octaves of domain-warped moving
+  // noise (fix round 1: two soft octaves summed into an airbrushed cone - now each sprite is a
+  // torn tongue with dark gaps, so the jet reads as rolling, licking flame)
+  vec2 np = q * 1.8 + vec2(sd * 17.0, sd * 9.0 - uT * 3.4);
+  vec2 wq = vec2(vn(np * 0.7 + 3.3), vn(np * 0.7 + 8.1)) - 0.5;
+  np += wq * 1.6;
+  float n = vn(np) * 0.55 + vn(np * 2.3 + 4.1) * 0.3 + vn(np * 5.1 + 9.7) * 0.15;
   float r = length(q * vec2(1.0, 1.15));
   // billows: each sprite a ragged puff, so the stream breaks into rolling tongues
-  float m = smoothstep(0.75, 0.15, r + (n - 0.5) * 1.5) * (0.35 + 1.1 * n * n);
+  float m = smoothstep(0.62, 0.05, r + (n - 0.5) * 2.0) * (0.2 + 1.5 * pow(n, 2.2));
   if (m <= 0.002) discard;
   // temperature: hottest near the mouth and in the middle of each tongue, cooling to the edges
   float heat = clamp((1.0 - age * 1.7) * (0.5 + 0.7 * (1.0 - r)) + (n - 0.5) * 0.35, 0.0, 1.0);
@@ -88,9 +94,11 @@ float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
 void main() {
   vec2 q = vUv * 2.0 - 1.0;
   float age = vP.x, sd = vP.y;
-  vec2 np = q * 1.3 + vec2(sd * 13.0, sd * 5.0 - uT * 0.8);
-  float n = vn(np) * 0.6 + vn(np * 2.1 + 7.3) * 0.4;
-  float m = smoothstep(1.0, 0.1, length(q) + (n - 0.5) * 0.8);
+  vec2 np = q * 1.4 + vec2(sd * 13.0, sd * 5.0 - uT * 0.8);
+  np += (vec2(vn(np * 0.8 + 2.0), vn(np * 0.8 + 6.0)) - 0.5) * 1.2;
+  float n = vn(np) * 0.5 + vn(np * 2.1 + 7.3) * 0.3 + vn(np * 4.7 + 1.1) * 0.2;
+  // (fix round 1: rolling, cauliflower edges - the soft blobs read as a black blur)
+  float m = smoothstep(0.95, 0.25, length(q) + (n - 0.5) * 1.3);
   float a = m * smoothstep(0.0, 0.25, age) * (1.0 - smoothstep(0.5, 1.0, age)) * 0.65 * uAmt * uOn;
   if (a <= 0.003) discard;
   gl_FragColor = vec4(uSmoke * (0.8 + 0.4 * n), a);
@@ -104,7 +112,7 @@ void main() {
 export function createFire(opts = {}) {
   const P = typeof opts.palette === 'object' ? opts.palette : FIRE_PALETTES[opts.palette || 'standard'];
   const len = opts.length ?? 20, width = opts.width ?? len * 0.28;
-  const NF = opts.flames ?? 420, NS = opts.smoke ?? 140;
+  const NF = opts.flames ?? 760, NS = opts.smoke ?? 200;
   const seed = opts.seed ?? 1;
   const group = new THREE.Group();
   group.name = 'dragon-fire';
@@ -152,9 +160,15 @@ export function createFire(opts = {}) {
     // cone spread grows with distance; each particle has its own angle; turbulence wobbles it
     const ang = h1 * Math.PI * 2, rad = Math.sqrt(h2) * (width * 0.5) * (kind === 0 ? 0.12 + 0.88 * f : 1.6);
     const wob = (Math.sin(t * 7.0 + i * 1.7) * 0.5 + Math.sin(t * 11.3 + i * 0.7) * 0.3) * width * 0.08 * f;
-    const lat = rad + wob;
+    const lat = (rad + wob) * (P.spread ?? 1);
+    // (fix round 1) coherent turbulence: a slow field along the jet that every particle at the same
+    // distance shares, so the stream snakes and bulges into tongues instead of a smooth cone
+    const xf = x / len;
+    const tw = width * (kind === 0 ? 0.45 : 0.55) * Math.min(1, f * 1.6);
+    const tx = (Math.sin(xf * 7.3 - t * 5.1 + seed) * 0.6 + Math.sin(xf * 13.7 - t * 8.3 + seed * 2.1) * 0.4) * tw;
+    const ty = (Math.sin(xf * 6.1 - t * 4.3 + seed * 3.3) * 0.6 + Math.sin(xf * 15.1 - t * 9.7 + seed * 1.3) * 0.4) * tw;
     const rise = (kind === 0 ? 0.12 : 0.5) * len * f * f;      // hot gas rises as it slows
-    _w.copy(o).addScaledVector(d, x).addScaledVector(s, Math.cos(ang) * lat).addScaledVector(u, Math.sin(ang) * lat);
+    _w.copy(o).addScaledVector(d, x).addScaledVector(s, Math.cos(ang) * lat + tx).addScaledVector(u, Math.sin(ang) * lat + ty);
     _w.y += rise;
     const spark = kind === 0 && i % 9 === 0;
     if (spark) {
@@ -165,7 +179,10 @@ export function createFire(opts = {}) {
     dummy.position.copy(_w);
     dummy.updateMatrix();
     inst.m.setMatrixAt(k, dummy.matrix);
-    let size = kind === 0 ? (0.022 * len + 0.42 * width * Math.pow(f, 1.2)) * (0.45 + 1.1 * h3 * h3) : (0.1 * len + 0.55 * width * f) * (0.7 + 0.6 * h3);
+    let size = kind === 0 ? (0.02 * len + 0.36 * width * Math.pow(f, 1.2)) * (0.45 + 1.1 * h3 * h3) : (0.1 * len + 0.55 * width * f) * (0.7 + 0.6 * h3);
+    // (fix round 1) the stream comes in surges: tongues bunch into billows with thinner necks
+    // between them (a pulse travelling down the jet), so it never reads as one airbrushed cone
+    if (kind === 0) { const pu = 0.5 + 0.5 * Math.sin(xf * 9.0 - t * 13.0 + seed * 1.7) * Math.sin(xf * 4.1 - t * 6.3 + seed); size *= 0.45 + 1.0 * pu; }
     if (spark) size = 0.0035 * len * (0.6 + 0.8 * h3);
     // (nothing sinks below the ground: a camera-facing puff cut by the ground showed a ruled edge)
     if (groundY !== null) { const lo = groundY + size * 0.75; if (_w.y < lo) { _w.y = lo; dummy.position.copy(_w); dummy.updateMatrix(); inst.m.setMatrixAt(k, dummy.matrix); } }

@@ -61,10 +61,30 @@ export function createDust(opts = {}) {
   const puffs = new THREE.InstancedMesh(g, mat, NP);
   puffs.frustumCulled = false; puffs.renderOrder = 4; puffs.userData.dkNoVelocity = true;
   group.add(puffs);
-  // clods: irregular lumps of turf and soil (lit, shadow casting)
-  const cg = new THREE.IcosahedronGeometry(1, 0);
-  { const p = cg.attributes.position; for (let i = 0; i < p.count; i++) { const k = 0.7 + 0.6 * hash(i, 5); p.setXYZ(i, p.getX(i) * k, p.getY(i) * k * 0.7, p.getZ(i) * k); } cg.computeVertexNormals(); }
-  const cm = new THREE.MeshStandardMaterial({ color: new THREE.Color(0.06, 0.045, 0.03), roughness: 0.95 });
+  // clods: irregular lumps of turf and soil (lit, shadow casting). (fix round 1: the 20-face
+  // flattened icosahedra read as polygon confetti) a subdivided lump with a lumpy, crumbly surface
+  // (low-frequency + crumb displacement, smooth normals), a grass-green turf top on half of them
+  // (instance colour), real thickness
+  const cg = new THREE.IcosahedronGeometry(1, 3);
+  {
+    const p = cg.attributes.position;
+    const col = new Float32Array(p.count * 3);
+    const v = new THREE.Vector3();
+    for (let i = 0; i < p.count; i++) {
+      v.fromBufferAttribute(p, i).normalize();
+      const lo = Math.sin(v.x * 2.3 + 1.1) * Math.sin(v.y * 1.9 + 0.4) * Math.sin(v.z * 2.7 + 2.0);
+      const hi = Math.sin(v.x * 9.1 + v.y * 3.3) * Math.sin(v.z * 8.3 - v.x * 2.1) * Math.sin(v.y * 7.7 + v.z * 1.7);
+      const k = 0.82 + 0.28 * lo + 0.07 * hi;
+      p.setXYZ(i, v.x * k, v.y * k * 0.78, v.z * k);
+      // turf on top: matted roots and grass over dark soil
+      const top = THREE.MathUtils.smoothstep(v.y, 0.25, 0.6);
+      const g = 0.5 + 0.5 * hi;
+      col[i * 3] = THREE.MathUtils.lerp(0.075 + 0.02 * g, 0.06, top); col[i * 3 + 1] = THREE.MathUtils.lerp(0.055 + 0.015 * g, 0.075, top); col[i * 3 + 2] = THREE.MathUtils.lerp(0.035 + 0.01 * g, 0.025, top);
+    }
+    cg.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    cg.computeVertexNormals();
+  }
+  const cm = new THREE.MeshStandardMaterial({ color: new THREE.Color(1, 1, 1), vertexColors: true, roughness: 0.96 });
   const clods = new THREE.InstancedMesh(cg, cm, NC);
   clods.frustumCulled = false; clods.castShadow = true; clods.receiveShadow = true;
   group.add(clods);
@@ -151,7 +171,10 @@ export function createDust(opts = {}) {
           const r0 = R * 0.12 * (0.3 + h2);
           const r = r0 + R * (0.9 + 0.5 * h2) * (1 - Math.exp(-2.6 * age / 2.2)) * strength;
           // the wall jet rolls up into a dome: puffs further out climb higher and swell
-          const y = (0.6 + 2.2 * h3) * (R / 30) * (0.3 + age * 0.6) * (1 - 0.3 * f) + (r / R) * (R / 30) * 3.5 * h3 * Math.min(1, age / 3);
+          // (fix round 1: the ring read as a flat disc) the wall jet's front rolls up into a
+          // billowing wall several metres high, the puffs behind it settling lower
+          const front = Math.exp(-Math.pow((h2 - 0.75) * 3.0, 2));
+          const y = (0.6 + 2.2 * h3) * (R / 30) * (0.3 + age * 0.75) * (1 - 0.3 * f) + (r / R) * (R / 30) * (3.5 + 6.0 * front) * h3 * Math.min(1, age / 2.5);
           dummy.position.set(C.x + Math.cos(ang) * r, C.y + y, C.z + Math.sin(ang) * r);
           dummy.updateMatrix();
           puffs.setMatrixAt(k, dummy.matrix);
@@ -186,7 +209,7 @@ export function createDust(opts = {}) {
         dummy.position.set(x, y, z);
         const spin = age < tFly ? age : tFly + 0.3 * (1 - Math.exp(-3 * skid));
         dummy.rotation.set(spin * 7 * h1, spin * 5 * h2, spin * 3);
-        dummy.scale.set(sc * (0.8 + 0.5 * h1), sc * (big > 0.2 ? 0.35 : 0.7), sc * (0.8 + 0.5 * h2));
+        dummy.scale.set(sc * (0.8 + 0.5 * h1), sc * (big > 0.2 ? 0.55 : 0.75), sc * (0.8 + 0.5 * h2));
         dummy.updateMatrix();
         clods.setMatrixAt(i, dummy.matrix);
       }

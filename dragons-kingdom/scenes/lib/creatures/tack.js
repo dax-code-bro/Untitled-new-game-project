@@ -5,8 +5,9 @@
 //     wooden tree inside, leather over it); a girth with an iron buckle and a breast strap round
 //     the chest; stirrup leathers with iron stirrups.
 //   rig (Charcoal, Starlight - nobody straddles a 4.5 m back): a wooden frame of two rails and
-//     cross bars on a thick felt pad, a padded leather seat with a backrest, a leather-wrapped
-//     wooden grab bar on two uprights, broad girth bands with iron buckles, foot boards.
+//     cross bars on a thick felt pad under a leather skirt, a padded leather seat between a low
+//     cantle roll and a pommel roll with a hand loop (fix round 1: no backrest board or grab-bar
+//     posts - they read as a chair), broad girth bands with iron buckles, foot boards.
 //
 // Everything is built in the creature's rest pose from its distance field (`f`), so straps
 // follow the real body cross-section; rider.js skins it to the trunk.
@@ -242,25 +243,30 @@ export function buildTack(o) {
       return top;
     };
     cushion(seatZ - 0.05, 0.7, 0.75, 0.12);
-    // backrest: an upright board with a pad, at the back of the seat
+    // (fix round 1, the critics: the backrest board and the grab bar on two posts read as a wooden
+    // dining chair with a pole) a riding rig, not furniture: a leather skirt over the frame, a low
+    // padded leather cantle roll curving round the back of the seat, a pommel roll in front with
+    // a stitched leather hand loop - everything low and snug on the back
     {
-      const bz = seatZ - 0.5, P = [];
-      const nX = 12, nY = 8;
-      for (let i = 0; i < nY; i++) for (let j = 0; j < nX; j++) {
-        const u = i / (nY - 1), v = j / (nX - 1);
-        P.push((v - 0.5) * 0.62, sTop + 0.05 + u * 0.42, bz - 0.08 * u + 0.03 * Math.pow(Math.sin(Math.PI * u) * Math.sin(Math.PI * v), 0.4));
-      }
-      geos.push([gridGeo(P, nY, nX, false), 'seat']);
-      const back = [];
-      for (let i = 0; i < nY; i++) for (let j = 0; j < nX; j++) { const k = (i * nX + j) * 3; back.push(P[k], P[k + 1], P[k + 2] - 0.05); }
-      geos.push([gridGeo(back, nY, nX, true), 'wood']);
-      for (const sd of [1, -1]) geos.push([sweep([new THREE.Vector3(sd * 0.31, sTop - 0.05, bz + 0.02), new THREE.Vector3(sd * 0.31, sTop + 0.25, bz - 0.04), new THREE.Vector3(sd * 0.31, sTop + 0.5, bz - 0.09)], roundRect(0.06, 0.06, 0.25, 2), () => new THREE.Vector3(0, 0, 1)), 'wood']);
-    }
-    // grab bar: a leather-wrapped wooden bar on two uprights at the front of the seat
-    {
-      const gz = seatZ + 0.5;
-      for (const sd of [1, -1]) geos.push([sweep([new THREE.Vector3(sd * 0.26, sTop - 0.08, gz), new THREE.Vector3(sd * 0.26, sTop + 0.15, gz + 0.04), new THREE.Vector3(sd * 0.25, sTop + 0.34, gz + 0.06)], roundRect(0.05, 0.05, 0.3, 2), () => new THREE.Vector3(0, 0, 1)), 'wood']);
-      geos.push([sweep([new THREE.Vector3(-0.3, sTop + 0.34, gz + 0.06), new THREE.Vector3(0, sTop + 0.35, gz + 0.065), new THREE.Vector3(0.3, sTop + 0.34, gz + 0.06)], circle(0.022, 10), () => new THREE.Vector3(0, 1, 0)), 'seat']);
+      const skirt = sheet(seatZ - 0.95, seatZ + 0.85, (u) => 0.62 + 0.08 * Math.sin(Math.PI * u), 16, 22, (u, v) => 0.205 + 0.012 * Math.sin(Math.PI * u) * Math.sin(Math.PI * v));
+      slab(skirt, () => 0.014, 'seat');
+      const roll = (cz, rx, rz, up, prof, key) => {
+        const path = [];
+        for (let k = 0; k <= 16; k++) {
+          const a = -Math.PI * 0.62 + (k / 16) * Math.PI * 1.24;
+          path.push(new THREE.Vector3(Math.sin(a) * rx, sTop + up * (0.55 + 0.45 * Math.cos(a)), cz - Math.cos(a) * rz));
+        }
+        geos.push([sweep(path, prof, () => new THREE.Vector3(0, 1, 0)), key]);
+        return path;
+      };
+      // cantle: behind the rider, ~0.16 m proud of the seat
+      roll(seatZ - 0.36, 0.36, 0.12, 0.13, roundRect(0.13, 0.16, 0.45, 3), 'seat');
+      // pommel: in front, lower, with a hand loop
+      const pm = roll(seatZ + 0.36, -0.3, -0.1, 0.09, roundRect(0.11, 0.13, 0.45, 3), 'seat');
+      const mid = pm[8];
+      const loop = [];
+      for (let k = 0; k <= 12; k++) { const a = (k / 12) * Math.PI; loop.push(new THREE.Vector3(-Math.cos(a) * 0.12, mid.y + 0.05 + Math.sin(a) * 0.13, mid.z + 0.02)); }
+      geos.push([sweep(loop, roundRect(0.035, 0.012, 0.3, 2), () => new THREE.Vector3(0, 0, 1)), 'strap']);
     }
     seatTop = sTop + 0.1;
     // broad girth bands round the chest with iron buckles, a lighter band behind
