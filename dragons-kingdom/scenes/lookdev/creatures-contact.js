@@ -5,7 +5,7 @@
 // sun (sun from the front-left of the camera, 48 degrees up) and the creature turns on a
 // turntable, so every view is lit the same way:
 //   t = 0..3 Charcoal (36 m), 4..7 Leaf (9 m, sitting like a dog), 8..11 Starlight (72 m),
-//   12..15 the gold hatchling (1 m, lying weak), 16..19 the scout (6.8 m)
+//   12..15 the gold hatchling (1 m, lying weak), 16..19 the scout (5.9 m)
 //   (each: front 3/4, left side, rear 3/4, right side), 20 the scale lineup with a 1.8 m person,
 //   21-24 Charcoal, Leaf, Starlight and the scout gliding, wings spread (seen from above-front),
 //   25 Charcoal walking on his feet and folded wrists (side on), 26 Leaf sitting like a dog (side

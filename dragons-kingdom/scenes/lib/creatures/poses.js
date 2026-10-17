@@ -169,11 +169,25 @@ function foldHand(pb, side, arm, qT, o = {}) {
   const Wh = aimQ(norm(sub(fg0[1], fg0[0])), [0, 1, 0], handDir, dors);
   pb.quat(`${pre}_2`, qMul(qInv(arm.qF), Wh));
   const outW = norm(qRot(qT, [sd, o.outUp ?? A.design.fold?.outUp ?? 0.15, 0]));
+  // (fix round 1) o.levelK: the metacarpals aimed so every knuckle sits at the height of the
+  // leading finger's, the fingers stacked OUTWARD (o.gapK x their radius apart) instead of one
+  // above the other - a closed fan seen edge-on (one bundle, the skin pleated between), not a
+  // deck chair of parallel slats
+  const K0 = add(arm.W, scale(handDir, len(sub(fg0[1], fg0[0]))));
+  const hK = K0[1] - arm.W[1];
+  const hh = norm([handDir[0], 0, handDir[2]]);
+  const dorsH = norm([dors[0], 0, dors[2]]);
   w.fingers.forEach((fg, di) => {
     const pts = fg.points;
     const rd = (j) => norm(sub(pts[j + 1], pts[j]));
     const fan = (o.mcFan ?? 2.2) * deg * di;
-    const mcDir = norm(add(scale(handDir, Math.cos(fan)), scale(lead, -Math.sin(fan))));
+    let mcDir = norm(add(scale(handDir, Math.cos(fan)), scale(lead, -Math.sin(fan))));
+    if (o.levelK) {
+      const mcl = len(sub(pts[1], pts[0]));
+      const off = (o.gapK ?? 2.2) * (fg.radii[1] ?? 0) * di;
+      const sh = mcl * mcl - hK * hK - off * off;
+      if (sh > 0) mcDir = norm(add(add([0, hK, 0], scale(dorsH, off)), scale(hh, Math.sqrt(sh))));
+    }
     const Wmc = aimQ(rd(0), [0, 1, 0], mcDir, dors);
     pb.quat(fg.names[0], qMul(qInv(Wh), Wmc));
     let Wp = Wmc;
@@ -183,7 +197,8 @@ function foldHand(pb, side, arm, qT, o = {}) {
     for (let j = 1; j < fg.names.length; j++) {
       const a = (curl[Math.min(j - 1, curl.length - 1)] + (o.fanDown ?? 3) * di) * deg + (o.p1Down ?? 0) * (j === 1 ? 1 : 0);
       const F = A.design.fold || {};
-      const inw = (o.inward ?? F.inward ?? 0.04) + (j > 1 ? (o.wrap ?? F.wrap ?? 0.14) : 0);
+      // (o.inwardJ: per-phalanx lateral lean, e.g. a Z-fold whose layers lie side by side)
+      const inw = o.inwardJ ? o.inwardJ[Math.min(j - 1, o.inwardJ.length - 1)] : (o.inward ?? F.inward ?? 0.04) + (j > 1 ? (o.wrap ?? F.wrap ?? 0.14) : 0);
       const dB = norm([-sd * inw, -Math.sin(a), -Math.cos(a)]);
       const dW = qRot(qT, dB);
       const Wj = aimQ(rd(j), [0, 1, 0], dW, outW);
@@ -420,8 +435,8 @@ function plantAll(pb, o = {}) {
  */
 function lowParams(c) {
   const D = c.anatomy.design;
-  return { belly: 0.34, pitch: 4, footFwd: 0.16, footOut: 1.12, mtAng: D.leg.mtAng, wristFwd: 0.02, wristOut: 0.1, neckBase: 14, neckTop: 2, headPitch: -8, tailLift: 2, tailSag: 26, tailCurl: 0.3,
-    pole: [0.25, 1, -0.4], curl: D.fold?.lowCurl ?? [5, 18, 34], ...(D.stand.low || {}) };
+  return { belly: 0.34, pitch: 4, footFwd: 0.16, footOut: 1.12, mtAng: D.leg.mtAng, neckBase: 14, neckTop: 2, headPitch: -8, tailLift: 2, tailSag: 26, tailCurl: 0.3,
+    hum: [0.42, -0.02, 0.9], reach: 0.97, wristIn: 0.02, curl: D.fold?.lowCurl ?? [-6, 6, 18], inwardJ: D.fold?.lowInJ, ...(D.stand.low || {}) };
 }
 
 /**
@@ -491,6 +506,39 @@ export function stand(c, o = {}) {
   return pb.out({ groundTail: true });
 }
 
+/**
+ * (fix round 1, the critics: the elbows stood up beside the withers like two posts / rabbit ears)
+ * One folded wing planted the way a quadrupedal pterosaur or a vampire bat carries it: the upper
+ * arm runs BACK (a little out, and up or down by hum[1]) along the side of the chest, so the
+ * elbow sits on the upper flank below the back line; the forearm angles forward and down from it
+ * to the wrist pad on the ground ahead of the shoulder (thumb forward along the ground); the hand
+ * folds back up along the forearm and the fingers lie back along the flank in one bundle.
+ * o.hum = [out, up, back] (trunk frame) gives the elbow target E0 = shoulder + humerus x dir; the
+ * wrist goes where the forearm (x o.reach, < 1 leaves the elbow some slack) meets the ground from
+ * E0, o.wristIn x forearm outside the elbow; o.dz/dx/lift offset it (walk), o.at places it.
+ */
+function plantBack(pb, F, side, o = {}) {
+  const c = pb.c, A = c.anatomy, d = A.dims;
+  const sd = side === 'L' ? 1 : -1;
+  const S = F.P[`w_${side}_0`];
+  const w = A.wings.find((x) => x.side === side);
+  const qT = F.Q.thorax;
+  const hb = o.hum || [0.42, 0.1, 0.9];
+  const hDir = norm(qRot(qT, [sd * hb[0], hb[1], -hb[2]]));
+  const E0 = add(S, scale(hDir, d.hum));
+  const padY = w.padDist * (o.padK ?? 0.92) + (o.padLift ?? 0) * d.wristR;
+  const dyF = E0[1] - padY;
+  const dxF = sd * d.fore * (o.wristIn ?? 0.02);
+  const fr = d.fore * (o.reach ?? 0.97);
+  const horiz = Math.sqrt(Math.max((fr * 0.2) ** 2, fr * fr - dyF * dyF - dxF * dxF));
+  const f3 = qRot(qT, [0, 0, 1]);
+  const fz = norm([f3[0], 0, f3[2]]);
+  const wp = o.at ? [o.at[0], o.at[1] + w.padDist * 0.92, o.at[2]]
+    : [E0[0] + dxF + fz[0] * horiz + sd * (o.dx ?? 0), padY + (o.lift ?? 0), E0[2] + fz[2] * horiz + (o.dz ?? 0)];
+  const pole = o.pole ? add(qRot(qT, [sd * o.pole[0], o.pole[1], o.pole[2]]), [0, 0.3, 0]) : sub(E0, S);
+  return plantWing(pb, F, side, wp, { pole, ...(o.fold || {}) });
+}
+
 /** Feet under the middle of the body and the wrist pads down in front (the low stance's contacts). */
 function plantLow(pb, o, LP) {
   const c = pb.c, A = c.anatomy, d = A.dims, D = A.design;
@@ -508,18 +556,11 @@ function plantLow(pb, o, LP) {
     const ball = [sd * Math.max(d.hipX * LP.footOut, d.footX ?? 0) + (lf.dx ?? 0), d.toeL * 0.13 + (lf.lift ?? 0), hip[2] + d.T * (LP.footFwd + 0.035 * asym) + (lf.dz ?? 0)];
     if (lf.at) { ball[0] = lf.at[0]; ball[1] = lf.at[1] + d.toeL * 0.13; ball[2] = lf.at[2]; }
     res[`foot${side}`] = legIK(pb, F, side, ball, { mtAng: lf.mtAng ?? LP.mtAng, fwd: lf.fwd ?? [sd * 0.1, 0, 1], pole: lf.pole ?? [sd * 0.3, 0.1, 1], curl: lf.curl ?? 0.06, toeDown: lf.toeDown });
-    // the wrist pad on the ground beside and a little ahead of the shoulder joint; the elbow up
-    // and back beside the withers, the hand folded back along the forearm
+    // the wrist pad on the ground ahead of the shoulder; the elbow back on the upper flank below
+    // the back line, the hand folded back up along the forearm (plantBack)
     const wf = (o.wrists && o.wrists[side]) || {};
-    const S = F.P[`w_${side}_0`];
-    const w = A.wings.find((x) => x.side === side);
-    const wy = (wf.lift ?? 0) + w.padDist * 0.92 + (LP.wristLift ?? 0) * d.wristR;
-    const wp = wf.at ? [wf.at[0], wf.at[1] + w.padDist * 0.92, wf.at[2]] : [S[0] + sd * (d.fore * LP.wristOut + (wf.dx ?? 0)), wy, S[2] + d.fore * (LP.wristFwd - 0.04 * asym) + (wf.dz ?? 0)];
-    const qT = F.Q.thorax;
-    const pl = wf.pole ?? LP.pole;
-    const pole = add(qRot(qT, [sd * pl[0], pl[1], pl[2]]), [0, 0.3, 0]);
-    // (the fingers pressed together in one bundle along the flank, not fanned)
-    res[`wrist${side}`] = plantWing(pb, F, side, wp, { pole, curl: LP.curl, mcFan: 1.0, fanDown: 1.4, ...(D.fold?.low || {}), ...(o.fold || {}) });
+    res[`wrist${side}`] = plantBack(pb, F, side, { hum: LP.hum, reach: LP.reach, wristIn: LP.wristIn, padLift: (LP.wristLift ?? 0), dz: (wf.dz ?? 0) - 0.04 * asym * d.fore, dx: wf.dx, lift: wf.lift, at: wf.at, pole: wf.pole,
+      fold: { curl: LP.curl, inwardJ: LP.inwardJ, mcFan: 0, fanDown: 0, handBack: 3, levelK: true, ...(D.fold?.low || {}), ...(o.fold || {}) } });
   }
   return res;
 }
@@ -664,12 +705,9 @@ export function sit(c, o = {}) {
     const hip = F.P[`hl_${side}_0`];
     legIK(pb, F, side, [sd * Math.max(d.hipX * 1.35, (d.footX ?? 0) * 1.2), d.toeL * 0.13, hip[2] + d.fem * 0.8], { mtAng: 10, fwd: [sd * 0.15, 0, 1], pole: [sd * 0.45, 0.8, 0.4], curl: 0.08 });
     if (o.plantWrists !== false) {
-      // wrists planted in front like a dog's forelegs, the elbows up beside the withers
-      const S = F.P[`w_${side}_0`];
-      const w = A.wings.find((x) => x.side === side);
-      const wp = [S[0] + sd * d.wristR * 1.6, w.padDist * 0.92, S[2] + (o.wristFwd ?? 0.12) * d.fore];
-      const pole = add(qRot(F.Q.thorax, [sd * 0.25, 0.5, -1]), [0, 0.2, 0]);
-      plantWing(pb, F, side, wp, { pole, curl: [5, 18, 34], mcFan: 1.0, fanDown: 1.4, ...(o.fold || {}) });
+      // wrists planted in front, the elbows back along the flanks (fix round 1: not up beside
+      // the withers), the fingers back along the flank
+      plantBack(pb, F, side, { hum: o.hum ?? [0.5, 0.05, 0.85], reach: 0.96, wristIn: 0.0, fold: { curl: [-26, -10, 10], mcFan: 0, fanDown: 0, handBack: 3, levelK: true, ...(o.fold || {}) } });
     } else {
       foldUp(pb, F, side, { curl: [-26, -8, 18], wristDir: [0.5, 0.15, 0.85], ...(o.fold || {}) });
     }
@@ -721,12 +759,18 @@ export function lie(c, o = {}) {
     if (sprawl) {
       // splayed out to the sides, soles down, toes slack
       legIK(pb, F, side, [sd * (d.hipX + d.fem * 1.1), d.toeL * 0.13, hip[2] + d.fem * 0.25], { mtAng: 10, fwd: [sd * 0.7, 0, 0.7], pole: [sd, 0.6, 0.2], curl: -0.05 });
-      plantWing(pb, F, side, [S[0] + sd * d.hum * 0.95, w.padDist * 0.9, S[2] + d.fore * 0.25], { pole: [sd * 0.6, 0.5, -0.6], outUp: 0.4, p1Down: 0.0, inward: -0.1, ...(o.fold || {}) });
+      // (fix round 1: the splayed arm showed the fingers as a rake beside a flat flap) the wing
+      // folded back along the flank like the adults', the wrist and thumb down a little out to
+      // the side (too weak to gather the elbows in)
+      plantBack(pb, F, side, { hum: [0.75, -0.1, 0.65], reach: 0.95, wristIn: 0.12, padK: 0.85, fold: { curl: [-8, 10, 30], mcFan: 0, fanDown: 0, handBack: 3, levelK: true, outUp: 0.3, ...(o.fold || {}) } });
     } else {
       // folded under: the foot flat beside the belly, the knee forward and up along the flank
       legIK(pb, F, side, [sd * Math.max(d.hipX * 1.25, (d.footX ?? 0) * 1.15), d.toeL * 0.13, hip[2] + d.fem * 0.75], { mtAng: 4, fwd: [sd * 0.12, 0, 1], pole: [sd * 0.5, 0.75, 0.45], curl: 0.05 });
-      // the forearm along the ground beside the chest, wrist pad forward under the chest
-      plantWing(pb, F, side, [S[0] + sd * d.wristR * 0.6, w.padDist * 0.75, S[2] + d.fore * 0.62], { pole: [sd * 0.5, 0.35, -1], outUp: 0.35, p1Down: 0.02, ...(o.fold || {}) });
+      // (fix round 1: the forearms lay forward like a lion's forelegs - a sphinx) the upper arm
+      // back along the flank, the forearm low along the side of the chest to the wrist pad beside
+      // the base of the neck, the hand folded back along it, the fingers back along the flank
+      plantBack(pb, F, side, { hum: o.hum ?? [0.5, 0.1, 0.86], reach: 0.98, wristIn: -0.02, padK: 0.75, fold: { curl: [-2, 14, 30], mcFan: 0, fanDown: 0, handBack: 3, levelK: true, outUp: 0.35, ...(o.fold || {}) } });
+      void S; void w;
     }
   }
   common(pb, { ...o, lidRelax: o.lidRelax ?? 0.5 }, t);

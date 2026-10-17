@@ -149,9 +149,9 @@ export const DESIGNS = {
     tailP: [[0, 3.4, 3.7], [0.15, 2.6, 2.9], [0.35, 1.6, 1.8], [0.6, 0.72, 0.82], [0.85, 0.27, 0.3], [1, 0.05, 0.05]],
     // (rev. 3: the sculpt (bind) hip height follows the shorter legs)
     stand: { hip: 10.6, shoulder: 11.0, forearmLean: 10, humerusRise: 16, neckRise: 40, neckTop: 10, headPitch: -12, tailDroop: 18,
-      low: { belly: 0.5, mtAng: 54, wristFwd: 0.22, wristLift: 0.65, wristOut: 0.08, pole: [0.15, 0.3, -1] } },
+      low: { belly: 0.5, mtAng: 54 } },
     // (albatross: the long folded wings lie along the back, the tips crossing over the tail base)
-    fold: { curl: [-4, 2, 6], inward: 0.16, wrap: 0.1, outUp: 0.5, lowCurl: [6, 12, 20], low: { outUp: 0.15, inward: 0.12, wrap: 0.06, mcFan: 0.8, fanDown: 1.2 } }, bulk: { leg: 1.2, arm: 1.15, neck: 1.0 },
+    fold: { curl: [-4, 2, 6], inward: 0.16, wrap: 0.1, outUp: 0.5, lowCurl: [-6, 4, 16], low: { outUp: 0.15, inward: 0.12, wrap: 0.06 } }, bulk: { leg: 1.2, arm: 1.15, neck: 1.0 },
     // raptor feet: long toes, big curved talons, a large opposable hallux with the biggest talon
     leg: { femur: 4.0, tibia: 4.8, mt: 2.8, toe: 3.1, claw: 1.3, d: [3.6, 2.3, 2.15, 1.4, 1.2], mtAng: 55, heelPad: 0.4, hallux: 0.62, toeR: 0.3, raptor: 1 },
     wing: { humerus: 8.6, forearm: 16.4, d: [3.0, 2.0, 1.25, 0.85],
@@ -166,11 +166,12 @@ export const DESIGNS = {
     flapHz: 0.24, flapAmp: 75,
   },
   scout: {
-    name: 'Scout', L: 6.8, skull: 0.5, neck: 1.1, trunk: 1.6, tail: 3.6, neckBones: 9, tailBones: 28,
+    // (fix round 1: a shorter, thicker tail - the whip twice the body's length read as a rat's tail)
+    name: 'Scout', L: 5.9, skull: 0.5, neck: 1.1, trunk: 1.6, tail: 2.7, neckBones: 9, tailBones: 22,
     head: [[0, 0.25, 0.25], [0.3, 0.24, 0.23], [0.55, 0.17, 0.15], [0.8, 0.11, 0.1], [1, 0.06, 0.05]],
     neckP: [[0, 0.15, 0.17], [0.5, 0.19, 0.22], [1, 0.29, 0.37]],
     trunkP: [[0, 0.42, 0.62], [0.25, 0.47, 0.67], [0.6, 0.36, 0.48], [0.85, 0.3, 0.34], [1, 0.3, 0.3]],
-    tailP: [[0, 0.25, 0.27], [0.15, 0.15, 0.17], [0.35, 0.085, 0.095], [0.6, 0.05, 0.055], [0.85, 0.03, 0.03], [1, 0.01, 0.01]],
+    tailP: [[0, 0.26, 0.28], [0.15, 0.18, 0.2], [0.35, 0.12, 0.13], [0.6, 0.075, 0.08], [0.85, 0.04, 0.042], [1, 0.012, 0.012]],
     stand: { hip: 1.1, shoulder: 1.25, forearmLean: 14, humerusRise: 10, neckRise: 32, neckTop: 10, headPitch: -10, tailDroop: 16,
       low: { belly: 0.36, mtAng: 56, neckBase: 18, neckTop: 4 } },
     fold: { curl: [6, 40, 80] }, bulk: { leg: 1.05, arm: 1.05, neck: 1.0 },
@@ -181,7 +182,7 @@ export const DESIGNS = {
     eye: 0.055, snout: 0.55, teeth: [20, 19], toothMax: 0.015, jawMax: 60, gazeForward: 0.45,
     body: { hump: 0.0, keel: 1.15, belly: 0.4, pec: 1.15, arm: 0.9, thigh: 0.7, tailbase: 0.8, neck: 0.85 },
     headX: { brow: 0.7, cheek: 0.55, jawMuscle: 0.6, nostril: 0.7, lipCover: 0.45, tympanum: 0.6, ridgeR: 0.018 },
-    horns: 'scout', crest: { tail: 0.0, back: 0.0 }, tailVane: { length: 0.42, width: 0.28 },
+    horns: 'scout', crest: { tail: 0.0, back: 0.0 }, tailVane: { length: 0.24, width: 0.13, thick: 0.0045 },
     scale: { body: 0.0035, belly: 0.008, head: 0.0026 },
     folds: { throat: 1, neck: 1, tail: 0, axilla: 1, stifle: 1 },
     flapHz: 1.09, flapAmp: 95,
@@ -771,7 +772,8 @@ export function buildAnatomy(spec, Lreq, opts = {}) {
       const dTip = dAtTail(0.94);
       const sc = section(dTip);
       // a vertical diamond: two flat cones front -> widest -> rear point
-      const th = L * 0.0017;
+      // (fix round 1: smaller and thicker - the broad thin vane read as a cardboard paddle)
+      const th = L * (D.tailVane.thick ?? 0.0017);
       const A = add(sc.c, scale(sc.tan, vl * 0.42)), M = add(sc.c, scale(sc.tan, -vl * 0.05)), B = add(sc.c, scale(sc.tan, -vl * 0.58));
       const rM = vw * 0.5;
       m.quiet.push(...M, vl * 0.75);

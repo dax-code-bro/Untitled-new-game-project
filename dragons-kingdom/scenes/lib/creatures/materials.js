@@ -47,8 +47,11 @@ export function lookParams(THREE, look) {
       // (stripes block the light, the grey skin between them lets a little through)
       // (DESIGN 2.7: sRGB ~#7d8086, linear ~0.2 - it must read clearly GRAY next to the black body)
       // (rev. 2: neutral grey and a duller sheen - the folded wing mirrored the sky as navy satin)
-      membrane: lin(THREE, 0.165, 0.163, 0.158), trans: lin(THREE, 0.085, 0.08, 0.075), vein: lin(THREE, 0.12, 0.09, 0.09), memRough: 0.68, memSpec: 0.18, memSpecD: 0.38,
-      stripe: [1.0, 0.2, 1.15, 1.0], stripeCol: lin(THREE, 0.011, 0.011, 0.012),
+      // (fix round 1, canon: the critics measured the folded wing as near-black navy with no
+      // stripes: a lighter neutral grey, the black stripes RUN ALONG THE FINGER BONES (DRAGONS.md),
+      // no bands between them; a neutral grey light through it, not brown)
+      membrane: lin(THREE, 0.24, 0.236, 0.228), trans: lin(THREE, 0.075, 0.074, 0.072), vein: lin(THREE, 0.14, 0.12, 0.12), memRough: 0.7, memSpec: 0.14, memSpecD: 0.42,
+      stripe: [1.0, 0.2, 1.15, 1.0], stripeCol: lin(THREE, 0.011, 0.011, 0.012), stripeW: [0.38, 0.95], memX: [0.7, 0.8, 1.0, 0.0],
       // horns: rough, dull, ridged old keratin (water buffalo), a little lighter where worn
       horn: [lin(THREE, 0.016, 0.015, 0.014), lin(THREE, 0.05, 0.047, 0.043)], hornR: [0.82, 0.62, 2.2], claw: [lin(THREE, 0.018, 0.017, 0.016), lin(THREE, 0.06, 0.055, 0.05)],
       tooth: lin(THREE, 0.36, 0.3, 0.2), sclera: lin(THREE, 0.02, 0.018, 0.02),
@@ -72,7 +75,9 @@ export function lookParams(THREE, look) {
       // (dark gums and lip margins: a pink lip line drew a frog's smile)
       dustAmt: 0.2, saltAmt: 0.05, oral: lin(THREE, 0.07, 0.03, 0.028), oralDark: lin(THREE, 0.025, 0.008, 0.008),
       // LIGHT GREEN membrane; the light through it is limited (thick skin), so it never glows
-      membrane: lin(THREE, 0.2, 0.34, 0.1), trans: lin(THREE, 0.2, 0.33, 0.08), vein: lin(THREE, 0.1, 0.16, 0.05), memRough: 0.64, memSpec: 0.24, memSpecD: 0.45,
+      // (fix round 1: one light-green value in every shot; less light through it - against the sky
+      // it glowed neon lime - with the veins and the thinner trailing half carrying the translucency)
+      membrane: lin(THREE, 0.2, 0.33, 0.1), trans: lin(THREE, 0.11, 0.17, 0.045), vein: lin(THREE, 0.07, 0.09, 0.03), memRough: 0.62, memSpec: 0.26, memSpecD: 0.5, memX: [0.8, 0.9, 1.0, 1.0],
       // dark olive-brown keratin (DESIGN 3.3), a little paler toward the tips
       horn: [lin(THREE, 0.026, 0.026, 0.013), lin(THREE, 0.085, 0.075, 0.04)], hornR: [0.62, 0.45, 1.2], claw: [lin(THREE, 0.03, 0.03, 0.025), lin(THREE, 0.14, 0.12, 0.09)],
       tooth: lin(THREE, 0.5, 0.44, 0.32), sclera: lin(THREE, 0.04, 0.036, 0.012),
@@ -90,20 +95,28 @@ export function lookParams(THREE, look) {
       base: lin(THREE, 0.66, 0.655, 0.65), belly: lin(THREE, 0.64, 0.625, 0.615), dorsal: lin(THREE, 0.68, 0.675, 0.68),
       wear: lin(THREE, 0.7, 0.7, 0.7), crev: 0.9, dust: lin(THREE, 0.45, 0.43, 0.4), salt: lin(THREE, 0.8, 0.8, 0.78),
       // (rev. 3: lower relief and a light crevice occlusion - domed plates with dark grout read as a pebble mosaic)
-      rough: [0.2, 0.05, 0.08, 0.2], amp: 0.06, keel: 0.0, facet: 0.55, jit: 0.25, metal: [0, 0], mottle: 0.06, cavAO: 0.12,
+      // (fix round 1, canon "reflective crystal-like": the critics saw chalk under an overcast sky,
+      // chrome under a blue one and bubble wrap up close - harder, smoother plates tilted further
+      // apart (a mosaic of sky reflections in any light), a faint nacre film (thin-film
+      // iridescence: mother-of-pearl, never a glow), no dark outline round every plate)
+      rough: [0.13, 0.04, 0.06, 0.15], amp: 0.05, keel: 0.0, facet: 0.85, jit: 0.25, metal: [0, 0], mottle: 0.05, cavAO: 0.05,
       // (rev. 3: fewer, smaller dorsal plates - the big ones read as white cobbles from a rider's distance)
       hier: [0.4, 1.0, 0.5, 0.0], damp: 0.0, bellyP: [0.42, 0.85, 0.15, 0.3], plateZ: -0.02,
-      crevCol: lin(THREE, 0.56, 0.52, 0.52), crevAmt: 0.1,
+      crevCol: lin(THREE, 0.6, 0.58, 0.58), crevAmt: 0.05,
       // (rev. 2: broad plates each tilted its own way - the sky breaks into a mosaic - with little micro relief: the fine relief sparkled like plaster grit)
       scl: [0.8, 0.42, 0.75, 1.3], tub: [0.0, 2.5, 0.0, 0], skin2: [0.06, 0.15, 0, 0.12], skin3: [0.08, 0.16, 1.5, 0], scl2: [0.62, 0.7, 0, 0],
       // flat plates with hairline joints (wide grooves read as cobbles or a plaster cast)
       // (rev. 3: lower imbricate lift and narrower joints - each plate's raised rear edge made a pillow)
-      vor: [12.0, 0.0, 0.03, 0.25],
+      // (fix round 1: overlapping plates - each rear edge laps over the next as a step, the joints
+      // hairlines; the rounded cells with grout read as bubble wrap)
+      vor: [16.0, 0.0, 0.018, 0.6],
       dustAmt: 0.2, saltAmt: 0.0, oral: lin(THREE, 0.45, 0.16, 0.16), oralDark: lin(THREE, 0.1, 0.03, 0.03),
       // white-grey membranes (albino, but thick enough that blood barely tints them), silver highlights
-      membrane: lin(THREE, 0.66, 0.63, 0.6), trans: lin(THREE, 0.3, 0.22, 0.2), vein: lin(THREE, 0.55, 0.3, 0.3), memRough: 0.5, memSpec: 0.55,
+      // (fix round 1: no crease network - its iso-lines drew a jigsaw maze on the white skin - and
+      // little mottle - large soft blotches)
+      membrane: lin(THREE, 0.66, 0.64, 0.62), trans: lin(THREE, 0.3, 0.23, 0.21), vein: lin(THREE, 0.55, 0.32, 0.32), memRough: 0.5, memSpec: 0.5, memX: [0.0, 0.25, 0.8, 1.0],
       // a hard polish on the scale plates (the glints) over a satin base - not a chrome coat
-      clearcoat: 0.55, clearcoatRough: 0.1,
+      clearcoat: 0.8, clearcoatRough: 0.05, iridescence: 0.3, iridescenceIOR: 1.35, iridescenceRange: [180, 420],
       horn: [lin(THREE, 0.62, 0.6, 0.55), lin(THREE, 0.78, 0.77, 0.74)], hornR: [0.42, 0.3, 0.6], claw: [lin(THREE, 0.5, 0.48, 0.44), lin(THREE, 0.75, 0.74, 0.7)],
       tooth: lin(THREE, 0.66, 0.62, 0.52), iris: [lin(THREE, 0.5, 0.3, 0.34), lin(THREE, 0.2, 0.06, 0.1)], sclera: lin(THREE, 0.22, 0.14, 0.14),
     },
@@ -175,6 +188,7 @@ function skinMaterial(THREE, P, ctx) {
   const mat = new Mat({ color: 0xffffff, roughness: 1, metalness: P.metal[0] > 0 ? 1 : 0, side: THREE.DoubleSide, shadowSide: THREE.FrontSide });
   if (P.wet) { mat.clearcoat = 1.0; mat.clearcoatRoughness = 0.04; }   // wet film (hatchling), varied per pixel below
   else if (P.clearcoat) { mat.clearcoat = P.clearcoat; mat.clearcoatRoughness = P.clearcoatRough ?? 0.12; }   // hard, polished scale crowns (Starlight)
+  if (P.iridescence && 'iridescence' in mat) { mat.iridescence = P.iridescence; mat.iridescenceIOR = P.iridescenceIOR ?? 1.3; mat.iridescenceThicknessRange = P.iridescenceRange ?? [100, 400]; }
   mat.defines = { USE_TANGENT: '' };
   const lowY = (ctx.spec.hipY ?? 0.2) * ctx.L * 0.55;
   const U = {
@@ -550,6 +564,11 @@ function membraneMaterial(THREE, P, ctx) {
     uWingRoot: { value: new THREE.Vector4(...wingRootOf(ctx)) },
     // torn membrane (the scout's lost LEFT wing): 0 = whole, 1 = ripped off the body
     uTear: { value: 0 },
+    // (fix round 1) per-look membrane detail: [leathery crease network, mottle, folded pleats,
+    // bands BETWEEN the bones (0 = stripes only along the bones, canon for Charcoal)]
+    uMemX: { value: new THREE.Vector4(...(P.memX || [1, 1, 1, 1])) },
+    // stripe half-width along the bones at the wrist / at the finger tips (m at L = 36)
+    uStripeW: { value: new THREE.Vector2(...(P.stripeW || [0.12, 0.17])) },
   };
   mat.userData.dkUniforms = U;
   mat.customProgramCacheKey = () => 'dk-membrane';
@@ -579,7 +598,7 @@ vWing = aWing; vEdge = aEdge; vRest = position;
     let frag = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec4 vWing; varying vec4 vEdge; varying vec3 vRest;
-uniform vec3 uMemCol, uTransCol, uVeinCol, uStripeCol; uniform float uL, uFold, uMemRough, uMemSpec, uMemSpecD, uTear; uniform vec4 uStripe, uWingRoot;
+uniform vec3 uMemCol, uTransCol, uVeinCol, uStripeCol; uniform float uL, uFold, uMemRough, uMemSpec, uMemSpecD, uTear; uniform vec4 uStripe, uWingRoot, uMemX; uniform vec2 uStripeW;
 float dkStripeM = 0.0;
 ${GLSL_COMMON}
 ${PERTURB}
@@ -632,7 +651,7 @@ void dkMembrane(inout vec3 col) {
   float mot2 = dkFbm(vRest / uL * 90.0 + 4.1);
   // in reflected light the vessels show as a faint darker tracery, the skin is mottled, darker
   // and thicker along the bones and at the hem, a little paler where it is thinnest
-  col = mix(uMemCol, uVeinCol, dkVein * 0.14) * (0.78 + 0.3 * mot + 0.16 * mot2) * (1.0 - 0.35 * hem) * (1.0 - 0.15 * uFold);
+  col = mix(uMemCol, uVeinCol, dkVein * 0.14) * mix(1.0, 0.78 + 0.3 * mot + 0.16 * mot2, uMemX.y) * (1.0 - 0.35 * hem) * (1.0 - 0.15 * uFold);
   col *= mix(1.0, 0.68, nearBone) * (0.9 + 0.2 * smoothstep(0.3, 1.0, dkThin));
   // pigment stripes: noise-warped bands across the span (concentric about the shoulder, so
   // every band crosses several panels), forking and pinching like an animal's pattern;
@@ -648,8 +667,10 @@ void dkMembrane(inout vec3 col) {
     float swell = 0.65 + 0.75 * dkVnoise2(q * vec2(5.0, 9.0) + 9.0);
     float kL = uL / 36.0;
     // bands on the bones (metric: distance to the nearest bone)
-    float wB = (0.12 + 0.05 * along * uStripe.x) * kL * swell;
-    float onBone = 1.0 - smoothstep(wB * 0.35, wB * 0.5 + 0.16 * kL + fwidth(vEdge.x), vEdge.x + (w2 * 0.12) * kL);
+    // (fix round 1: the canon stripes RUN ALONG THE FINGER BONES - broad black bands on every
+    // bone, widening toward the tips, the grey skin between them clear)
+    float wB = mix(uStripeW.x, uStripeW.y, along) * kL * swell;
+    float onBone = 1.0 - smoothstep(wB * 0.7, wB * 1.15 + 0.03 * kL + fwidth(vEdge.x), vEdge.x + (w2 * 0.25) * wB);
     // bands between the bones (parametric: two per finger panel, three across the plagiopatagium)
     float n = pid > 3.5 ? 4.0 : (pid > 0.5 ? 3.0 : 0.0);
     float acr = (pid > 3.5 ? a : b) * n + (w1 * 0.45 + w2 * 0.15) * uStripe.z;
@@ -657,7 +678,7 @@ void dkMembrane(inout vec3 col) {
     float hw = uStripe.y * (0.35 + 0.9 * along) * swell;         // widen toward the trailing edge
     float edge = fwidth(acr) * 1.5 + 0.16;
     float mid = smoothstep(1.0 - hw - edge, 1.0 - hw + edge, fr);
-    mid *= step(0.5, n) * smoothstep(0.15, 0.4, dkVnoise2(q * vec2(7.0, 3.5) + 2.7) + 0.25 * fr);   // bands break and fork
+    mid *= step(0.5, n) * smoothstep(0.15, 0.4, dkVnoise2(q * vec2(7.0, 3.5) + 2.7) + 0.25 * fr) * uMemX.w;   // bands break and fork
     // the propatagium (leading edge) is black
     float pro = pid < 0.5 ? 1.0 : 0.0;
     dkStripeM = clamp(max(max(onBone, mid), pro), 0.0, 1.0) * uStripe.w;
@@ -686,7 +707,14 @@ void dkMembrane(inout vec3 col) {
   float wrinkle = (dkVnoise2(vec2(dot(vRest, vec3(0.8, 0.3, 0.5)), dot(vRest, vec3(-0.2, 0.9, 0.4))) / wsc) * 0.7
     + dkVnoise2(vec2(dot(vRest, vec3(0.3, -0.6, 0.7)), dot(vRest, vec3(0.9, 0.1, -0.4))) / (wsc * 0.45)) * 0.3 * (1.0 - smoothstep(0.2, 0.5, wfw * 2.2)))
     * 0.0011 * uL * (1.0 - smoothstep(0.25, 0.6, wfw)) * uFold;
-  dkMemH = crease * (1.0 - uFold) + wrinkle + dkVein * 0.00012 * uL;
+  // (fix round 1) folded: the slack skin gathers into a few broad pleats running along the bones
+  // (a closed fan / a bat's folded wing), with darker valleys - the folded wing read as flat
+  // panels between rigid slats
+  float plA = across * (pid > 3.5 ? 9.0 : 5.0) + (dkVnoise2(vec2(along * 3.0, across * 2.0 + pid)) - 0.5) * 1.6;
+  float pl = abs(fract(plA) - 0.5) * 2.0;
+  float pleat = (1.0 - pl * pl) * uFold * uMemX.z * (1.0 - smoothstep(0.25, 0.8, fwidth(plA)));
+  col *= 1.0 - 0.32 * smoothstep(0.55, 1.0, pleat) * uFold * uMemX.z;
+  dkMemH = crease * (1.0 - uFold) + wrinkle + dkVein * 0.00012 * uL + pleat * 0.0035 * uL;
   // tension wrinkles fanning out from the finger tips into the panel (the skin is pulled taut
   // between the tips of a spread hand)
   if (pid > 0.5 && pid < 3.5) {
@@ -706,9 +734,11 @@ void dkMembrane(inout vec3 col) {
   float lf2 = (1.0 - smoothstep(0.3, 0.8, fwr / (sc * 0.42)));
   // (kept subtle: stronger, it reads as felt or cloth instead of skin)
   // (rev. 3: a smooth step instead of sign() - its iso-contours drew a jigsaw over Starlight's white membrane)
-  dkMemG = (-2.0 * clamp((l1.x - 0.5) * 6.0, -1.0, 1.0) * l1.yzw * 0.03 * lf + l2.yzw * 0.015 * lf2) * (1.0 + uFold);
+  // (fix round 1: the crease network - iso-contours of one noise - drew a maze / jigsaw on a pale
+  // membrane; uMemX.x scales it per look, 0 for Starlight)
+  dkMemG = (-2.0 * clamp((l1.x - 0.5) * 6.0, -1.0, 1.0) * l1.yzw * 0.03 * lf * uMemX.x + l2.yzw * 0.015 * lf2) * (1.0 + uFold);
   float cr = 1.0 - 2.0 * abs(l1.x - 0.5);
-  col *= 1.0 - 0.18 * smoothstep(0.75, 1.0, cr) * lf;           // creases a little darker
+  col *= 1.0 - 0.18 * smoothstep(0.75, 1.0, cr) * lf * uMemX.x;           // creases a little darker
   dkMemR = clamp(uMemRough * (0.8 + 0.45 * l2.x) * (0.84 + 0.32 * mot) + 0.1 * cr * lf + 0.08 * hem + 0.12 * nearBone, 0.15, 1.0);
 }
 vec3 dkTransmit(vec3 lightCol, vec3 L, vec3 N, vec3 V) {

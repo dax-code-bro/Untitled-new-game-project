@@ -30,7 +30,7 @@ const deg = Math.PI / 180;
  * wings are the front limbs, horns), built to DESIGN.md; `design` names its preset in
  * anatomy.js DESIGNS. Lengths (snout to tail tip): Charcoal 36 m (canon ~36), Leaf 9 m (25% of
  * Charcoal, canon), Starlight 72 m (proposed: twice Charcoal's length - open question 9.1),
- * the hatchling 1.0 m and the scout 6.8 m (proposed). flapHz: Pennycuick 1990 (DESIGN 1.7);
+ * the hatchling 1.0 m and the scout 5.9 m (proposed; 6.8 m before fix round 1 shortened its tail). flapHz: Pennycuick 1990 (DESIGN 1.7);
  * flapAmp: half the peak-to-peak stroke (rad).
  */
 export const CREATURES = {
@@ -40,7 +40,7 @@ export const CREATURES = {
   hatchling: { design: 'hatchling', L: 1.0, look: 'gold', flapHz: 0, flapAmp: 0, scaleMul: 1.0, title: 'The gold hatchling (newborn)',
     // (the newborn's damp membrane stays loose and crumpled over the folded hand)
     drapeOpts: { lie: { shrink: 0.5, gravity: 0.02 }, stand: { shrink: 0.5, gravity: 0.02 }, crouch: { shrink: 0.5, gravity: 0.02 } } },
-  scout: { design: 'scout', L: 6.8, look: 'scout', flapHz: 1.1, flapAmp: 0.83, scaleMul: 0.55, seatBack: 0.3, detachableLeftWing: true, title: 'The scout (Episode 1)' },
+  scout: { design: 'scout', L: 5.9, look: 'scout', flapHz: 1.1, flapAmp: 0.83, scaleMul: 0.55, seatBack: 0.3, detachableLeftWing: true, title: 'The scout (Episode 1)' },
 };
 
 const QUALITY = {
