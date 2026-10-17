@@ -4,6 +4,36 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## FIX ROUND 1 of the low stance (rev. 3b, 2026-10-17, after the critics) - IN PROGRESS
+Dev loop (scratch): scratchpad/ep1p1/creatures-fr1/tools/ (copies of the creatures-low tools + arm.mjs: wing-arm joint
+positions per pose; dev.sh, rv.sh <name> <ids|all> [preset], contact.sh, clear.mjs, build.mjs).
+Done (code, committed):
+- poses.js `plantBack`: the wing-arm folds BACK - upper arm back along the chest, elbow on the upper flank BELOW the
+  back line, forearm sloping forward-down to the wrist pad ahead of the shoulder (LP.hum [out, up, back], reach,
+  wristIn; per-dragon `stand.low.hum`). Used by the low stance (stand/walk/crouch/fire/land/launch), `sit`, `lie` and
+  the newborn's sprawl. foldHand `levelK`: knuckles level, fingers stacked side by side (no deck-chair slats);
+  `inwardJ` per-phalanx lean (a Z-fold was tried - too hidden, the wing vanished). Walk: the humerus swings with
+  the wrist's step (pole only; the wrist lands exactly), wrists step in a forward-shifted range with a shorter
+  stance (duty 0.55) so the elbow never rises above the back; Leaf's step 0.85 Hz.
+- materials.js: Charcoal's membrane lighter neutral grey, canon black stripes ALONG the finger bones (stripeW),
+  no between-bone bands (memX.w); membrane pleats when folded (memX.z); crease-network maze off for Starlight
+  (memX.x 0) + low mottle; Leaf's membrane one value, less transmission; Starlight plates smoother, more facet
+  tilt, clearcoat 0.8 + iridescence 0.3 (nacre), no dark outlines; Charcoal roughness spread; Leaf countershading;
+  scout belly scutes; newborn wetter + more relief; the scout's wound torn flesh + blood running out.
+- anatomy.js: scout tail 2.7 m (L 5.9), thicker, small thick vane; Charcoal horns a crescent with heavy taper and
+  deeper saw-tooth rings (parts.js ringAmp); a real tongue; newborn horn buds longer.
+- fire.js: domain-warped torn tongues, coherent turbulence field, surges (pulse-modulated sizes), cauliflower
+  smoke; Leaf's light weaker. dust.js: subdivided lumpy turf clods (vertex colour), taller billowing dust wall.
+- tack.js: the giants' rig without backrest board / grab-bar posts: leather skirt, cantle roll, pommel roll + loop.
+- creatures-shots.js: + charcoal-level (level camera), leaf-abby = LOW crouch, + leaf-sit-alt (dog-sit, labelled
+  the ALTERNATIVE for the open question), leaf-fire -> leaf-fire-lookdev (not Episode 1), head-in-mouth camera
+  higher (Remi whole) and Leaf's wings folded, scout-wingloss closer/later/faster separation, takeoff 0.5 s later +
+  downwash flattening of the grass (flattenGrass, pure in t). 20 hero shots.
+- DESIGN.md rev. 3b (status bullet, 1.5, 1.5c + measured table).
+Measured (stand, t=0, m): elbow Charcoal 5.30 (back 6.05; rev. 3: 7.85), Leaf 1.17 (1.35), Starlight 8.51 (9.16),
+scout 0.77 (0.91). Walk: Charcoal's elbow 2.6-6.0 over the cycle.
+NEXT: final 4K hero (output/dragons-low/fix1/hero, names *-fix1) + contact, crops, style frames at draft, npm test.
+
 ## LOW STANCE round (rev. 3, 2026-10-16, Daxtyn: "make them low to the ground with their legs more towards the center of their body") - DONE
 Dev loop (scratch): scratchpad/ep1p1/creatures-low/tools/ (dev.sh <cfg.json> <name> = creatures-dev.js views -> r/dev_<name>/sheet.jpg;
 build.mjs, clear.mjs (belly clearance / joint heights per pose), contacts.mjs, membox.mjs (membrane bounds), armdbg.mjs).

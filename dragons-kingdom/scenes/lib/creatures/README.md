@@ -13,8 +13,9 @@ front limbs**. (DESIGN rev. 3, Daxtyn 2026-10-16: *"make them low to the ground 
 more towards the center of their body"*) **The hip joints sit under the middle of the body** and
 **every dragon stands, walks and rests LOW** like a big, heavy, ordinary animal: the trunk carried
 low and nearly level, the knees bent in a deep crouch with the feet under the centre of mass, the
-folded wings' wrist pads and thumb claws down under the shoulders as front supports (the elbows
-stand up beside the withers like a cloak), the neck forward and low, the tail low behind
+folded wings' wrist pads and thumb claws down ahead of the shoulders as front supports (rev. 3b:
+the upper arms fold back along the flanks, the elbows sit below the back line and the forearms
+slope forward and down - a quadrupedal pterosaur's carriage), the neck forward and low, the tail low behind
 (`poses.stand`, DESIGN 1.5c). Leaf can sit like a dog, rump on the ground, wrists in front. No
 extra limbs. Every dragon has its own fixed horn set.
 
@@ -49,7 +50,7 @@ Poses (`poses.js`; IK on the feet and wrist pads, so planted contacts stay plant
 
 | pose | what |
 |---|---|
-| `stand` | (rev. 3) the LOW stance, the resting carriage: chest underside ~1/3 of the chest depth above the ground (`belly`), trunk ~level, feet under the middle of the body, wrist pads + thumbs down under the shoulders, elbows up beside the withers, the fingers in one bundle back along the flank, neck forward and low, tail low with its outer half on the ground; breathing, a slow weight shift, idle head drift, blinks. Per-dragon overrides in `design.stand.low` |
+| `stand` | (rev. 3) the LOW stance, the resting carriage: chest underside ~1/3 of the chest depth above the ground (`belly`), trunk ~level, feet under the middle of the body, wrist pads + thumbs down ahead of the shoulders, (rev. 3b) the elbows folded back below the back line (`plantBack`, `stand.low.hum`), the fingers stacked side by side back along the flank, neck forward and low, tail low with its outer half on the ground; breathing, a slow weight shift, idle head drift, blinks. Per-dragon overrides in `design.stand.low` |
 | `upright` | (rev. 3) retired: an alias of `stand` |
 | `walk` | lateral-sequence low walk (foot, wrist, foot, wrist; duty ~0.7), speed from size; the scene moves the root by `speed * t` and the planted contacts stay put |
 | `sit` | Leaf's dog-like sit: the rump behind the hips on the ground, chest ~30 deg up, wrists planted in front (`plantWrists: false` folds the wings off the ground), tail curled round |
@@ -196,7 +197,9 @@ node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 
 * The hatchling's 24-karat look is a metallic gold reflection under a wet film; in places it can
   read as a gold casting rather than skin.
 * Fire and take-off dust are sprite effects (camera-facing puffs, a point light, instanced clods),
-  not fluid simulations; grass is not flattened by the downwash.
+  not fluid simulations; (rev. 3b) the take-off shot lays the grass tufts flat outward behind each
+  downwash front (`flattenGrass` in creatures-shots.js, the shot's own tufts only), there is no heat
+  haze (no refraction pass).
 * The scout's rider straddles a saddle built for wider backs (knees wide on the slim scout).
 * Leaf's head in Charcoal's mouth (head-in-mouth) is placed by `stageMouth` in the shot, not by a
   contact solver: other framings may need the snout offset retuned.
@@ -211,9 +214,9 @@ node render/render.mjs scenes/lookdev/creatures-contact.js --preset final --fps 
 * (rev. 2) Under a fully folded arm a small dark crease can remain in the armpit. (rev. 3: the
   "fist" wrist and the grey thigh patch belonged to the retired upright stance; in the low stance
   the wrists are on the ground.)
-* (rev. 3) The low stance's folded wing stands elbow-high above the back by design (Charcoal
-  ~1.8 m, Starlight ~5 m: her 16 m forearms); from a low camera it can read as a hump or cloak.
-  The landing, the take-off vault and the walk are kinematic blends (IK on flat ground), not a
+* (rev. 3b) With the elbow folded back below the back line the long forearm puts the wrist pad
+  ahead of the shoulder (Charcoal ~2.2 m, Starlight ~6 m): from the side the forearms read as
+  sloping front legs. The landing, the take-off vault and the walk are kinematic blends (IK on flat ground), not a
   physics or contact solve; the walk's planted feet stay put only on flat ground at the root's
   height. Leaf's dog-sit is a provisional answer to an open question in DRAGONS.md.
 * (rev. 2, eased in rev. 3) Starlight's plates are smaller and flatter with hairline joints and

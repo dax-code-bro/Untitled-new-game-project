@@ -103,7 +103,7 @@ export function lookParams(THREE, look) {
       // chrome under a blue one and bubble wrap up close - harder, smoother plates tilted further
       // apart (a mosaic of sky reflections in any light), a faint nacre film (thin-film
       // iridescence: mother-of-pearl, never a glow), no dark outline round every plate)
-      rough: [0.13, 0.04, 0.06, 0.15], amp: 0.05, keel: 0.0, facet: 0.85, jit: 0.25, metal: [0, 0], mottle: 0.05, cavAO: 0.05,
+      rough: [0.13, 0.04, 0.06, 0.15], amp: 0.022, keel: 0.0, facet: 1.1, jit: 0.25, metal: [0, 0], mottle: 0.05, cavAO: 0.05,
       // (rev. 3: fewer, smaller dorsal plates - the big ones read as white cobbles from a rider's distance)
       hier: [0.4, 1.0, 0.5, 0.0], damp: 0.0, bellyP: [0.42, 0.85, 0.15, 0.3], plateZ: -0.02,
       crevCol: lin(THREE, 0.6, 0.58, 0.58), crevAmt: 0.05,
@@ -113,7 +113,7 @@ export function lookParams(THREE, look) {
       // (rev. 3: lower imbricate lift and narrower joints - each plate's raised rear edge made a pillow)
       // (fix round 1: overlapping plates - each rear edge laps over the next as a step, the joints
       // hairlines; the rounded cells with grout read as bubble wrap)
-      vor: [16.0, 0.0, 0.018, 0.6],
+      vor: [16.0, 0.0, 0.012, 0.3],
       dustAmt: 0.2, saltAmt: 0.0, oral: lin(THREE, 0.45, 0.16, 0.16), oralDark: lin(THREE, 0.1, 0.03, 0.03),
       // white-grey membranes (albino, but thick enough that blood barely tints them), silver highlights
       // (fix round 1: no crease network - its iso-lines drew a jigsaw maze on the white skin - and
@@ -465,7 +465,7 @@ void dkSkin(inout vec3 albedo) {
     // red, wet, ragged - darker clotted patches, brighter fresh blood running out over the scales
     // below the wound (the rim), torn muscle streaks
     float tornF = dkVnoise2(vRest.xz / max(uWoundR * 0.25, 1e-4) + 3.1);
-    vec3 flesh = mix(vec3(0.035, 0.003, 0.003), vec3(0.11, 0.008, 0.006), smoothstep(0.35, 0.8, tornF)) * (0.6 + 0.6 * vNoise.y);
+    vec3 flesh = mix(vec3(0.022, 0.002, 0.002), vec3(0.075, 0.006, 0.005), smoothstep(0.35, 0.8, tornF)) * (0.6 + 0.6 * vNoise.y);
     col = mix(col, flesh, dkWoundM);
     float run = smoothstep(uWoundR * 1.9, uWoundR * 0.9, dkWoundD) * (1.0 - dkWoundM) * uWound.w * smoothstep(0.45, 0.7, dkVnoise2(vRest.xz / max(uWoundR * 0.12, 1e-4) * vec2(1.0, 0.25)));
     col = mix(col, vec3(0.12, 0.008, 0.006), run * 0.85);
@@ -480,7 +480,7 @@ void dkSkin(inout vec3 albedo) {
   r = mix(r, r * uDamp.z, dkDampM);
   r = mix(r, 0.32, dkScarM * 0.7);                                                       // scar tissue: smooth, shiny
   r = mix(r, 0.3, dkResM);                                                               // slimy residue: soft sheen (the wet film carries the highlights)
-  r = mix(r, 0.18 + 0.25 * smoothstep(0.4, 0.8, n2), dkWoundM);                          // wet blood, clotted in places
+  r = mix(r, 0.32 + 0.3 * smoothstep(0.4, 0.8, n2), dkWoundM);                          // wet blood, clotted in places
   r = mix(r, 0.88, dkPadM);
   dkRoughOut = clamp(r, 0.06, 1.0);
   dkMetalOut = mix(uMisc.z, uMisc.w, clamp(dkCav * 1.4 + dust, 0.0, 1.0)) * (1.0 - dkOralM) * (1.0 - uDamp.w * smoothstep(0.35, 0.85, vMask.y)) * (1.0 - 0.25 * dkResM);

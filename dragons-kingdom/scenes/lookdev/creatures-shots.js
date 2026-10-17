@@ -85,7 +85,7 @@ export const SHOTS = [
   // ground, neck forward, head turned to her, wrists down in front (35 mm, eye height, f/5.6)
   { id: 'leaf-abby', set: 'field', creatures: ['leaf'], tack: ['leaf'], dur: 3, face: -70,
     people: [{ id: 'abby', at: [1.7, 0, 2.5], yaw: -46 }],
-    pose: { leaf: { name: 'crouch', k: 0.7, look: [0.45, 0.06], eyes: [0.1, 0.02] } },
+    pose: { leaf: { name: 'crouch', k: 0.7, look: [1.05, 0.08], eyes: [0.12, 0.02] } },
     cam: { subject: 'leaf', pos: [9.0, 1.5, 10.5], target: [0.4, 1.1, 1.4], mm: 32, fstop: 5.6, focus: 'target' } },
   // ALTERNATIVE for Daxtyn (DRAGONS.md still lists it as OPEN whether Leaf sits upright like a
   // dog): the same moment with Leaf sitting back on his haunches, wrists planted in front
