@@ -53,7 +53,7 @@ export function lookParams(THREE, look) {
       // (fix round 1, canon: the critics measured the folded wing as near-black navy with no
       // stripes: a lighter neutral grey, the black stripes RUN ALONG THE FINGER BONES (DRAGONS.md),
       // no bands between them; a neutral grey light through it, not brown)
-      membrane: lin(THREE, 0.24, 0.236, 0.228), trans: lin(THREE, 0.075, 0.074, 0.072), vein: lin(THREE, 0.14, 0.12, 0.12), memRough: 0.7, memSpec: 0.14, memSpecD: 0.42,
+      membrane: lin(THREE, 0.24, 0.236, 0.228), trans: lin(THREE, 0.075, 0.074, 0.072), vein: lin(THREE, 0.14, 0.12, 0.12), memRough: 0.78, memSpec: 0.12, memSpecD: 0.25,
       stripe: [1.0, 0.2, 1.15, 1.0], stripeCol: lin(THREE, 0.011, 0.011, 0.012), stripeW: [0.38, 0.95], memX: [0.7, 0.8, 1.0, 0.0],
       // horns: rough, dull, ridged old keratin (water buffalo), a little lighter where worn
       horn: [lin(THREE, 0.016, 0.015, 0.014), lin(THREE, 0.05, 0.047, 0.043)], hornR: [0.82, 0.62, 2.2], claw: [lin(THREE, 0.018, 0.017, 0.016), lin(THREE, 0.06, 0.055, 0.05)],
@@ -730,8 +730,9 @@ void dkMembrane(inout vec3 col) {
   float plA = across * (pid > 3.5 ? 9.0 : 5.0) + (dkVnoise2(vec2(along * 3.0, across * 2.0 + pid)) - 0.5) * 1.6;
   float pl = abs(fract(plA) - 0.5) * 2.0;
   float pleat = (1.0 - pl * pl) * uFold * uMemX.z * (1.0 - smoothstep(0.25, 0.8, fwidth(plA)));
-  col *= 1.0 - 0.32 * smoothstep(0.55, 1.0, pleat) * uFold * uMemX.z;
-  dkMemH = crease * (1.0 - uFold) + wrinkle + dkVein * 0.00012 * uL + pleat * 0.0035 * uL;
+  // (soft: at 4K steep pleats mirrored the sky as white streaks with stair-stepped edges)
+  col *= 1.0 - 0.18 * smoothstep(0.3, 1.0, pleat) * uFold * uMemX.z;
+  dkMemH = crease * (1.0 - uFold) + wrinkle + dkVein * 0.00012 * uL + pleat * 0.0011 * uL;
   // tension wrinkles fanning out from the finger tips into the panel (the skin is pulled taut
   // between the tips of a spread hand)
   if (pid > 0.5 && pid < 3.5) {
@@ -792,7 +793,7 @@ normal = dkPerturb(-vViewPosition, normal, dkSlope(dkMemH, -vViewPosition), face
 reflectedLight.directSpecular *= uMemSpecD;`);
     frag = frag.replace('#include <lights_fragment_maps>', `#include <lights_fragment_maps>
 #if defined( USE_ENVMAP ) && defined( RE_IndirectSpecular )
-  radiance *= uMemSpec;   // skin, not plastic: a satin sheen, no mirror-bright sky at grazing angles
+  radiance *= uMemSpec * (1.0 - 0.45 * uFold);   // skin, not plastic: a satin sheen, no mirror-bright sky at grazing angles (duller still when folded and gathered)
 #endif
 #if defined( USE_ENVMAP ) && defined( RE_IndirectDiffuse )
   reflectedLight.indirectDiffuse += uTransCol * dkVeinAtt * dkThin * getIBLIrradiance( -geometryNormal ) * 0.3 * RECIPROCAL_PI;
