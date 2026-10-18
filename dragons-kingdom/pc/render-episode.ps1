@@ -26,7 +26,7 @@ if (-not ($Rest -contains '--no-pull') -and -not $statusOnly -and (Get-Command g
 }
 if (-not $statusOnly) {
   Write-Host '== checking the caches' -ForegroundColor Cyan
-  & node pc\build-caches.mjs
+  & node pc/build-caches.mjs
   if ($LASTEXITCODE -ne 0) { Write-Host '   some caches are not ready - the episode runner will say what is missing' -ForegroundColor Yellow }
 }
 
@@ -39,7 +39,7 @@ try {
 } catch { Write-Verbose $_.Exception.Message }
 if ($awake -and -not $statusOnly) { Write-Host '== the PC will not go to sleep while this window is open' -ForegroundColor Cyan }
 
-& node render\episode.mjs @args2
+& node render/episode.mjs @args2
 $code = $LASTEXITCODE
 if ($awake) { [void][DK.Power]::SetThreadExecutionState([uint32]'0x80000000') }
 exit $code

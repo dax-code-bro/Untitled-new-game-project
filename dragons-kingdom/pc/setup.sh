@@ -131,7 +131,8 @@ ok "node $(node --version) ($(command -v node))"
 
 # ---- 3. ffmpeg --------------------------------------------------------------------------------
 step "ffmpeg (with libx264)"
-ff_ok() { local f="${1:-ffmpeg}"; "$f" -hide_banner -encoders 2>/dev/null | grep -q libx264; }
+# (output captured first: with pipefail, "ffmpeg | grep -q" fails when grep stops reading early)
+ff_ok() { local f="${1:-ffmpeg}" out; out="$("$f" -hide_banner -encoders 2>/dev/null)" || return 1; case "$out" in *libx264*) return 0;; esac; return 1; }
 FF=""
 if [ -x "$TOOLS/ffmpeg/bin/ffmpeg" ] && ff_ok "$TOOLS/ffmpeg/bin/ffmpeg"; then FF="$TOOLS/ffmpeg/bin/ffmpeg"
 elif have ffmpeg && have ffprobe && ff_ok ffmpeg; then FF="$(command -v ffmpeg)"
@@ -151,6 +152,7 @@ else
     URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-$FA-gpl.tar.xz"
     echo "   downloading a static ffmpeg build ($URL)"
     mkdir -p "$TOOLS/ffmpeg" && dl "$URL" "$TOOLS/ffmpeg.tar.xz" && tar -xJf "$TOOLS/ffmpeg.tar.xz" -C "$TOOLS/ffmpeg" --strip-components 1 && rm -f "$TOOLS/ffmpeg.tar.xz"
+    rm -f "$TOOLS/ffmpeg/bin/ffplay"     # the player is not needed (saves ~170 MB)
     FF="$TOOLS/ffmpeg/bin/ffmpeg"
   fi
 fi
@@ -210,6 +212,9 @@ else
   BPY="$VPY"; ok "bpy $("$VPY" -c 'import bpy;print(bpy.app.version_string)') ready"
 fi
 
+# remember a bpy Python outside pc/.venv-bpy for later runs of pc/build-caches.mjs
+if [ "$BPY" != "$VPY" ]; then echo "$BPY" > "$PROJ/pc/.bpy-python"; else rm -f "$PROJ/pc/.bpy-python"; fi
+
 # ---- 6. caches -----------------------------------------------------------------------------------
 if [ "$CACHES" = 1 ]; then
   step "caches: asset downloads, landscape bakes, human characters, cloth bakes (first time: 1-3 hours)"
@@ -234,8 +239,8 @@ elif [ "$GPU_RC" != 0 ]; then
 else
   echo " Setup finished."
 fi
-echo " Next:   cd \"$PROJ\" && npm run episode"
-echo " Status: npm run episode -- --status"
+echo " Render: bash \"$PROJ/pc/render-episode.sh\"   (git pull + caches + npm run episode; Ctrl+C stops, run again to continue)"
+echo " Status: bash \"$PROJ/pc/render-episode.sh\" --status"
 echo " Log:    $LOG"
 echo "=================================================================="
 rm -f "$TMPLOG"

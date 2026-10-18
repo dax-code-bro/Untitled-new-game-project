@@ -96,13 +96,14 @@ function Get-NodeMajor {
 
 function Test-Ffmpeg([string]$Exe) {
   if (-not $Exe) { return $false }
-  $out = & $Exe -hide_banner -encoders 2>$null
+  if (-not (Test-Path $Exe) -and -not (Test-Cmd $Exe)) { return $false }   # not there (yet)
+  try { $out = & $Exe -hide_banner -encoders 2>$null } catch { return $false }
   return ($LASTEXITCODE -eq 0) -and ($null -ne ($out | Select-String -SimpleMatch 'libx264'))
 }
 
 function Test-Bpy([string]$Py) {
   if (-not $Py -or -not (Test-Path $Py)) { return $false }
-  & $Py -c 'import bpy, numpy; assert bpy.app.version[:2] == (4, 2)' 2>$null | Out-Null
+  try { & $Py -c 'import bpy, numpy; assert bpy.app.version[:2] == (4, 2)' 2>$null | Out-Null } catch { return $false }
   return $LASTEXITCODE -eq 0
 }
 
@@ -239,20 +240,21 @@ function Invoke-Setup {
     if (Test-Path $ffDir) { Remove-Item -Recurse -Force $ffDir }
     Move-Item $inner.FullName $ffDir
     Remove-Item -Recurse -Force $tmp, $zip -ErrorAction SilentlyContinue
+    Remove-Item -Force (Join-Path $ffDir 'bin\ffplay.exe') -ErrorAction SilentlyContinue   # the player is not needed (~170 MB)
     if (-not (Test-Ffmpeg $ffLocal)) { Stop-Setup 'the downloaded ffmpeg does not work' }
     Write-Ok ('private copy: ' + $ffLocal)
   }
 
   # ---- 4. npm packages + Chromium -------------------------------------------------------------------
   Write-Step 'npm packages and the Chromium browser'
-  & node pc\build-caches.mjs --check --only node-modules | Out-Null
+  & node pc/build-caches.mjs --check --only node-modules | Out-Null
   if ($LASTEXITCODE -eq 0) { Write-Ok 'npm packages already installed' }
   else {
     & npm.cmd ci --no-audit --no-fund
     if ($LASTEXITCODE -ne 0) { Stop-Setup 'npm ci failed (see above)' }
     Write-Ok 'npm ci done'
   }
-  & node pc\build-caches.mjs --check --only chromium | Out-Null
+  & node pc/build-caches.mjs --check --only chromium | Out-Null
   if ($LASTEXITCODE -eq 0) { Write-Ok 'Chromium already installed' }
   else {
     & npx.cmd playwright install chromium
@@ -312,7 +314,7 @@ function Invoke-Setup {
   # ---- 6. caches ---------------------------------------------------------------------------------------
   if (-not $SkipCaches) {
     Write-Step 'caches: asset downloads, landscape bakes, human characters, cloth bakes (first time: 1-3 hours)'
-    $cacheArgs = @('pc\build-caches.mjs', '--python', $bpyPy)
+    $cacheArgs = @('pc/build-caches.mjs', '--python', $bpyPy)
     if ($WithVoice) { $cacheArgs += '--with-voice' }
     & node @cacheArgs
     if ($LASTEXITCODE -ne 0) { Stop-Setup 'some caches could not be made (see above). Run the setup again - finished parts are kept.' }
@@ -324,12 +326,12 @@ function Invoke-Setup {
   $gpuRc = 0
   if (-not $SkipGpuCheck -and -not $SkipCaches) {
     Write-Step 'GPU self-test (one native 4K frame) - may take a few minutes'
-    & node render\gpu-check.mjs
+    & node render/gpu-check.mjs
     $gpuRc = $LASTEXITCODE
     Write-Step 'end-to-end test: a tiny made-up episode (render, stop, resume, assemble)'
     $mode = '--cpu'
     if ($gpuRc -eq 0) { $mode = '--gpu' }
-    & node pc\selftest-episode.mjs $mode
+    & node pc/selftest-episode.mjs $mode
     if ($LASTEXITCODE -ne 0) { Write-Note 'the end-to-end test did not pass - send pc\logs to the Claude session' }
   }
 

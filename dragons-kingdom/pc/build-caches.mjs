@@ -388,7 +388,7 @@ async function main() {
   if (opt.only) for (const n of opt.only) if (!FAMILIES.some((f) => f.name === n)) throw new Error(`--only ${n}: choose from ${FAMILIES.map((f) => f.name).join(', ')}`);
   const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
   fs.mkdirSync(path.join(HERE, 'logs'), { recursive: true });
-  LOG = path.join(HERE, 'logs', `caches-${stamp}${opt.check ? '-check' : ''}.log`);
+  if (!opt.check) LOG = path.join(HERE, 'logs', `caches-${stamp}.log`);   // --check only prints
   const python = bpyPython(opt.python);
   const ctx = { ...opt, python };
   say(`Dragon's Kingdom caches - ${opt.check ? 'check' : 'build'} (${new Date().toString()})`);
@@ -415,8 +415,8 @@ async function main() {
       if (!c2.ok) bad++;
     } else { bad++; say(`  FAILED  ${f.name.padEnd(13)} ${r.problem}`); }
   }
-  say(bad ? `\n${bad} item(s) not ready - details in ${rel(LOG)}. Run this again to retry (finished parts are kept).` : '\nall caches ready.');
-  say(`log: ${rel(LOG)}`);
+  say(bad ? `\n${bad} item(s) not ready${LOG ? ` - details in ${rel(LOG)}` : ''}. ${opt.check ? 'Build them with: node pc/build-caches.mjs' : 'Run this again to retry (finished parts are kept).'}` : '\nall caches ready.');
+  if (LOG) say(`log: ${rel(LOG)}`);
   return bad ? 1 : 0;
 }
 
