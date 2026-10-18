@@ -70,7 +70,7 @@ SR, SR_TTS = mv.SR, mv.SR_TTS
 SEED_BASE = mv.SEED_BASE
 APPROVED_TAG = "[creator-approved wording 2026-10-18]"
 SPECIES_RE = re.compile(r"bashion|nightwing|slitherwing", re.I)
-STRONG_RE = re.compile(r"\b(fuck\w*|shit\w*|bastard\w*|damn\w*|bloody)\b", re.I)
+STRONG_RE = re.compile(r"\b(fuck\w*(?:['’]s)?|shit\w*|bastard\w*|damn\w*|bloody)(?![\w'’])", re.I)
 CUTOFF_S = 0.075   # voices.json special_lines cut_off: 60-90 ms before the natural end, 10-15 ms fade
 PLACEHOLDER_TAG = "PLACEHOLDER"
 
@@ -127,8 +127,10 @@ FINAL_PERF = {
     "L080": ("command", {}, "Canonical command 'Fire' (breath weapon). Short, firm, no exclamation (special_lines.L080)."),
     "L081": ("command", {"cutoff_s": CUTOFF_S}, "Canonical 'Hold', begun mid-struggle and cut off as the wing tears "
              "(special_lines.L081: cut 60-90 ms before the natural end)."),
-    "L082": ("command", {"pitch_st": 1.5, "drive": 1.8, "mix_gain_db": 2.5},
-             "'Hold!' firm, complete (performance note): the full stop command, raised over the struggle."),
+    "L082": ("raised", {"speed_mul": 1.0, "mix_gain_db": 2.5},
+             "'Hold!' firm, complete (performance note): the full stop command, raised over the struggle. The first "
+             "version (command preset, +1.5 st, drive 1.8) was not confirmed by the recognizer; neither was the plain "
+             "command preset, whose 20 ms tail clips the final 'd'. This raised read is."),
     "X9-01": ("pain", {"mix_gain_db": -3.0}, "Through pain, to herself (special_lines.X9-01)."),
     "X9-02": ("shout", {}, "Shouted down from the masthead (special_lines.X9-02)."),
     "X9-03": ("urgent", {}, "Work stops on the quay; quick question."),
@@ -144,7 +146,8 @@ FINAL_PERF = {
     "X22-08": ("breathless", {}, "The child runs back out of breath (delivery)."),
     "L173": ("plain", {}, "Normal volume; the festival music partly covers it in the mix (special_lines.L173 masked)."),
     "L174": ("shout", {}, "He raises his voice: the alarm (special_lines.L174)."),
-    "L175": ("urgent", {}, "Turning; sharp (delivery)."),
+    "L175": ("urgent", {"speed_mul": 1.0}, "Turning; sharp (delivery). Role speed kept: at x1.05 the recognizer "
+             "could not confirm the one-word line; at x1.0 it can."),
     "L178": ("firm", {}, "Practical under pressure; final (delivery)."),
     "L179": ("shout", {}, "Shouted orders to the crowd (delivery)."),
     "L180": ("command_quiet", {}, "Queen Fall: quiet authority, no shout; slightly closer and drier than the chaos "
@@ -584,20 +587,99 @@ def _job(task):
 
 
 _CHK = None
+_LINES = None
+ASR_PARTITION = 48   # takes per recognizer instance (fixed, so the result never depends on --jobs or scheduling)
 
 
 def _init_checker(lines):
+    global _LINES
+    _LINES = lines
+
+
+def _asr_part(items):
+    """One fresh recognizer per fixed partition, takes in episode order. pocketsphinx adapts its cepstral mean
+    from one utterance to the next, so a shared, re-used decoder would make a borderline result depend on which
+    takes it heard before (measured: 1 of 385 changed when the order was reversed)."""
     global _CHK
-    _CHK = mv.Checker(lines)
+    _CHK = mv.Checker(_LINES)
+    return [_asr_job(it) for it in items]
 
 
 def _asr_job(item):
-    lid, path, ref = item
+    """The recognizer hears the speech only: a synthetic breath before the line (pain, breathless) is a sound,
+    not a word, and it decodes as a spurious 'if'. Word times are given from the start of the FILE."""
+    lid, path, ref, breath_s = item
     x, _ = sf.read(str(path), dtype="float64")
-    asr, w, ok = _CHK.run(x, ref)
+    skip = int(round(breath_s * SR))
+    asr, w, ok = _CHK.run(x[skip:], ref)
+    for e in w:
+        e["start_s"] = round(e["start_s"] + breath_s, 3); e["end_s"] = round(e["end_s"] + breath_s, 3)
     asr["aligned"] = ok
+    asr["skipped_breath_s"] = breath_s
     asr["intelligible"] = asr["wer"] == 0 or asr["closed_set_match"]
     return lid, asr, {"aligned": ok, "words": w}
+
+
+def _init_diag(threads, tmp, lines):
+    _init_worker(threads, tmp)
+    _init_checker(lines)
+
+
+def _fresh_asr(x, ref):
+    """Decode with a recognizer built for this one utterance (no history at all)."""
+    r, _, _ = mv.Checker(_LINES).run(x, ref)
+    return {"free_hyp": r["free_hyp"], "closed_set_pick": r["closed_set_pick"],
+            "intelligible": r["wer"] == 0 or r["closed_set_match"]}
+
+
+REF_VOICES = (("af_heart", "en-us"), ("am_michael", "en-us"))  # plain reference reads for the recognizer baseline
+
+
+def _diag_job(item):
+    """For a take the recognizer could not confirm, every decode below uses a recognizer built for that one
+    utterance. (1) The take itself: if a fresh recognizer confirms it, the miss was the shared recognizer's
+    adaptation. (2) The same words read plainly (no performance DSP, no pitch shift; same sentence split, edges and
+    level as a take) by the role's OWN voice, and by two reference voices (af_heart, am_michael). (3) For a
+    pitch-shifted role, the take shifted back. Verdicts: the own voice fails too -> the recognizer does not
+    follow this voice on these words (not the processing); the shifted-back take passes -> the role pitch; the own
+    voice passes but the take does not -> the performance processing made it harder: LISTEN; nothing passes ->
+    a limit of the recognizer."""
+    lid, path, text, ref, breath_s, role_pitch, cut, cast = item
+    x, _ = sf.read(str(path), dtype="float64")
+    x = x[int(round(breath_s * SR)):]
+    out = {"take_fresh_recognizer": _fresh_asr(x, ref), "references": {}}
+    own = ("own voice (" + cast["voice"] + ")", _ENG.style(cast), cast["lang"], cast["speed"])
+    for name, v, lang, speed in [own] + [(v, v, lang, 1.0) for v, lang in REF_VOICES]:
+        parts = []
+        for i, snt in enumerate(mv.sentences(text)):
+            a = _ENG.say(snt, v, speed, lang)
+            a0, a1 = mv.speech_bounds(a, SR_TTS)
+            parts += ([np.zeros(int(0.3 * SR_TTS))] if i else []) + [a[max(0, a0 - int(0.01 * SR_TTS)): a1 + int(0.01 * SR_TTS)]]
+        a, _ = mv.sox(np.concatenate(parts), SR_TTS, "rate", "-v", str(SR))
+        a, _ = mv.trim(a, SR, mv.EDGE_KEEP_S, mv.EDGE_KEEP_S)
+        a, _ = mv.normalize(a)
+        out["references"][name] = _fresh_asr(a, ref)
+    if role_pitch:
+        y, _ = mv.sox(x, SR, "pitch", str(int(round(-role_pitch * 100))))
+        out["take_with_role_pitch_undone"] = _fresh_asr(y, ref)
+    refs = list(out["references"].values())
+    own_ok, other_ok = refs[0]["intelligible"], any(r["intelligible"] for r in refs[1:])
+    if out["take_fresh_recognizer"]["intelligible"]:
+        out["verdict"] = ("recognizer state: confirmed by a fresh recognizer; the shared one had adapted to the takes "
+                          "heard before it")
+    elif cut:
+        out["verdict"] = "cut off by design: the last word is cut before it ends (the line is interrupted)"
+    elif role_pitch and out["take_with_role_pitch_undone"]["intelligible"]:
+        out["verdict"] = ("role pitch: confirmed once the role's pitch shift is undone; the recognizer's adult model "
+                          "does not follow the shifted voice")
+    elif not own_ok and other_ok:
+        out["verdict"] = ("voice vs recognizer: the role's own voice read plainly is not confirmed either (another "
+                          "voice is), so the processing is not the cause")
+    elif not own_ok and not other_ok:
+        out["verdict"] = "recognizer limit: no plain read of these words is confirmed, in any voice"
+    else:
+        out["verdict"] = "LISTEN: the role's own voice read plainly is confirmed, this take is not"
+    return lid, out
 
 
 # --------------------------------------------------------------------------------------------- records
@@ -825,15 +907,29 @@ def verify(D, V, takes, nvs, words, run_asr=True, jobs=1):
     # --- intelligibility
     asr_summary = None
     if run_asr:
-        items = [(t["id"], FINAL / t["file"], words_of(by_id[t["id"]]["text"])) for t in takes]
+        items = [(t["id"], FINAL / t["file"], words_of(by_id[t["id"]]["text"]), t.get("breath_s") or 0.0) for t in takes]
+        parts = [items[i:i + ASR_PARTITION] for i in range(0, len(items), ASR_PARTITION)]
         with ProcessPoolExecutor(max_workers=jobs, mp_context=_ctx(), initializer=_init_checker, initargs=(lines,)) as ex:
-            for lid, asr, w in ex.map(_asr_job, items, chunksize=4):
-                t = next(x for x in takes if x["id"] == lid)
-                t["asr_check"] = asr
-                words[lid] = w
-                if not asr["intelligible"]:
-                    notes.append(f"{lid}: pocketsphinx heard '{asr['free_hyp']}' (WER {asr['wer']:.2f}) and picked "
-                                 f"'{asr['closed_set_pick']}' from the closed set; listen to this take")
+            results = [r for part in ex.map(_asr_part, parts) for r in part]
+        tk = {t["id"]: t for t in takes}
+        for lid, asr, w in results:
+            tk[lid]["asr_check"] = asr
+            words[lid] = w
+        failing = [t for t in takes if not t["asr_check"]["intelligible"]]
+        diag = {}
+        if failing:
+            ditems = [(t["id"], FINAL / t["file"], t["tts_input"], words_of(by_id[t["id"]]["text"]), t.get("breath_s") or 0.0,
+                       t["voice"]["role_pitch_semitones"], bool(by_id[t["id"]]["interrupted"]), role_cast(V, t["role"]))
+                      for t in failing]
+            with ProcessPoolExecutor(max_workers=jobs, mp_context=_ctx(), initializer=_init_diag,
+                                     initargs=(int(os.environ.get("DK_THREADS", "1")), os.environ.get("DK_TMP"), lines)) as ex:
+                for lid, out in ex.map(_diag_job, ditems):
+                    diag[lid] = out
+        for t in failing:
+            asr = t["asr_check"]
+            asr["diagnosis"] = diag[t["id"]]
+            notes.append(f"{t['id']} ({t['role']}, '{t['text']}'): pocketsphinx heard '{asr['free_hyp']}' (WER {asr['wer']:.2f}), "
+                         f"picked '{asr['closed_set_pick']}'. {diag[t['id']]['verdict']}")
         wers = [t["asr_check"]["wer"] for t in takes]
         asr_summary = {
             "engine": "pocketsphinx 5.1.1 (bundled US-English model and CMU dictionary)",
@@ -846,6 +942,11 @@ def verify(D, V, takes, nvs, words, run_asr=True, jobs=1):
             "forced_alignment_ok": sum(1 for t in takes if t["asr_check"]["aligned"]),
             "mean_free_wer": round(float(np.mean(wers)), 3),
             "not_intelligible": [t["id"] for t in takes if not t["asr_check"]["intelligible"]],
+            "not_intelligible_by_verdict": {
+                k: [t["id"] for t in failing if t["asr_check"]["diagnosis"]["verdict"].startswith(k)]
+                for k in ("recognizer state", "cut off by design", "role pitch", "voice vs recognizer", "recognizer limit",
+                          "LISTEN")},
+            "diagnosis_rule": _diag_job.__doc__.strip(),
             "why_free_wer_is_high_on_some_lines": [
                 "1-3 word lines ('Attack.', 'Down!', 'Mostly.') give the language model no context.",
                 "British voices (narrator, king, guard captain, musician, old woman...) against a US-English recognizer "
@@ -857,6 +958,7 @@ def verify(D, V, takes, nvs, words, run_asr=True, jobs=1):
     # in the phonemes, and the forced aligner finds it in the audio
     strong = []
     for t in takes:
+        t["strong_language"] = strong_words(t["text"])  # from the text itself, never from an older record
         if not t["strong_language"]:
             continue
         al = {w["w"]: w for w in (words.get(t["id"]) or {}).get("words", [])}
@@ -1043,7 +1145,11 @@ def write_md(doc, path):
     w("- Strong language spoken as written: " + ", ".join(
         f"{x['id']} ({', '.join(f['word'] for f in x['words'])}) {'ok' if x['spoken_as_written'] else 'CHECK'}" for x in c["strong_language"]))
     if a.get("not_intelligible"):
-        w(f"- Not confirmed by the recognizer (listen to these): {', '.join(a['not_intelligible'])}")
+        w(f"- Not confirmed by the recognizer: {len(a['not_intelligible'])} of {a['of']} takes. Why, per take "
+          "(a plain reference read of the same words by af_heart and am_michael tells a limit of the check from a weak take):")
+        for k, v in (a.get("not_intelligible_by_verdict") or {}).items():
+            if v:
+                w(f"  - {k}: {', '.join(v)}")
     vs = doc.get("voice_separation") or {}
     if vs.get("listen_first"):
         w("- Role pairs in the same scene whose measured voices are closest (audition these first): " +
