@@ -267,7 +267,15 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
        bend to put the pad of the last bone in the opening, every bone kept off the frame and the
        tip still ahead of the knuckle (grip.test). Kept when the pad lands nearer than the solve's. */
     if (isTrig && rec.trigAt) {
-      const T = rec.trigAt;
+      /* On the BLADE, not in the middle of the hole. rec.trigAt is the centre of the guard's
+         opening; the trigger hangs at the back of it, and a pad sent to the centre lay along the
+         guard's bottom bar under the blade's tip (the audit's commonest firing-hand fault). The
+         first metal behind the centre, at its height, is the blade: the pad goes against its face,
+         a little above the middle, on the gun's centre line. */
+      let T = rec.trigAt;
+      for (let x = T[0]; x > T[0] - 0.03; x -= 0.0007) {
+        if (sf(x, T[1], 0) < 0.0015) { T = [x + 0.0075, T[1] + 0.002, 0]; break; }
+      }
       const c0 = nrm(cross(k, nrm(sub(rigDir[0], mul(k, dot(rigDir[0], k))))));
       const pose = (yaw, pitch, a1, a2) => {
         const kk = rot(k, c0, pitch);
@@ -384,7 +392,7 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
      and on a pistol's frame alike. The grip solve aimed it forward and up off the side, and on the
      M4 it reached past the end of the handguard into the air. From its own base, along the left
      surface: the joints pushed out until they clear it. Only kept if it ends nearer the gun. */
-  if (!firing && rec.thumbPivot && rec.thumbMid && rec.thumbTip) {
+  if (!firing && !globalThis.__noSuppThumb && rec.thumbPivot && rec.thumbMid && rec.thumbTip) {
     const rT = radius * 1.05;
     const T0 = rec.thumbPivot;
     const L0 = len(sub(rec.thumbMid, T0)), L1 = len(sub(rec.thumbTip, rec.thumbMid));
@@ -608,7 +616,27 @@ function _bodyArm(src, S, rec, shoulder, base, sf, keepThumb) {
   let thumbCarry = null;
   if (rec.thumbPivot && rec.thumbMid && rec.thumbTip && rec.thumbAxis) {
     const fg = MF[4];
-    const t0 = V(rec.thumbPivot), t1 = V(rec.thumbMid);
+    /* ROOTED ON THE PALM. The rig's thumb pivot is its own point, and the palm is fitted to the
+       knuckle row separately; where the two disagreed, the skin between the thumb and the hand
+       was pulled across the gap -- the tent of skin at the web on nearly every support hand the
+       audit looked at, and on the SVT-40 a sheet of it up across the forend. The thumb starts
+       where the palm puts the figure's own thumb base. */
+    let t0 = palmCarry(fg.piv[0]);
+    let t1 = V(rec.thumbMid);
+    /* And it swings from there no further than a thumb does: the first bone kept within 70
+       degrees of where the palm carries the figure's own thumb, or the web twists into a spike. */
+    {
+      const rest = nrm(sub(palmCarry(fg.piv[1]), t0));
+      let a = sub(t1, t0);
+      const L = len(a) || 0.03;
+      a = mul(a, 1 / L);
+      const cosA = dot(a, rest), MAXA = 70 * Math.PI / 180;
+      if (cosA < Math.cos(MAXA)) {
+        const perp = nrm(sub(a, mul(rest, cosA)));
+        a = add(mul(rest, Math.cos(MAXA)), mul(perp, Math.sin(MAXA)));
+        t1 = add(t0, mul(a, L));
+      }
+    }
     let t2 = V(rec.thumbTip);
     t2 = add(t2, mul(nrm(sub(t2, t1)), 0.009));
     let ax = V(rec.thumbAxis);
@@ -877,6 +905,7 @@ function _bodyArmPalette(weapon, slots) {
  * Only for the `pistol` grip with a surface to measure; `opts.fitHand === false` keeps the
  * anchor as given. */
 function _fitFiringHand(hands, opts) {
+  const { sub, len } = _ba;
   const sf = opts.surface;
   if (!sf || opts.fitHand === false || !hands || !hands.right) return hands;
   if ((hands.rightGrip || 'pistol') !== 'pistol') return hands;
@@ -911,16 +940,27 @@ function _fitFiringHand(hands, opts) {
      the frame where there is no guard (the guard's own opening is air too, but metal follows it). */
   const ceilingAt = (x, yLow) => {
     const yHigh = opts.boreY != null ? opts.boreY : 0.02;
-    let best = null, wasSolid = false, airFrom = null;
+    // Runs of metal and air, top down.
+    const runs = [];
     for (let y = yHigh; y >= yLow; y -= 0.001) {
-      const sd = solid(x, y);
-      if (wasSolid && !sd) airFrom = y;
-      if (sd) airFrom = null;
-      if (airFrom != null && airFrom - y >= 0.025 && best == null) best = airFrom;
-      if (sd && best != null) best = null;            // metal again below: that was an opening
-      wasSolid = sd;
+      const m = solid(x, y);
+      if (!runs.length || runs[runs.length - 1].m !== m) runs.push({ m, top: y, bot: y });
+      else runs[runs.length - 1].bot = y;
     }
-    return best;
+    // The last metal-to-air edge with 25 mm of air (or the end of the scan) under it.
+    for (let i = runs.length - 1; i > 0; i--) {
+      const r = runs[i];
+      if (r.m || !runs[i - 1].m || r.top - r.bot < 0.025 - 0.0011) continue;
+      /* A GUARD, or the frame? A guard is a thin bar with its opening over it; then the middle
+         finger goes under the bar and the index rides in the opening. Under a plain frame (a
+         bullpup's body, a grip with no guard in front of it) there is no opening to put the index
+         in, and tucking the middle finger under it put the AUG's index knuckle inside the stock:
+         there the INDEX goes under it. */
+      const bar = runs[i - 1], above = runs[i - 2];
+      const guard = bar.top - bar.bot < 0.012 && !!above && !above.m && above.top - above.bot >= 0.006;
+      return { y: r.top, guard };
+    }
+    return null;
   };
   const R = 0.0095;                   // a finger's radius, skin included
   /* Up to four solves, each moving the anchor most of the way to where the last one says the
@@ -935,9 +975,17 @@ function _fitFiringHand(hands, opts) {
     const m = rec.byFinger[2].pivots3[0];
     const f0 = frontAt(m[1], m[0] + 0.012);
     if (f0 == null) break;
-    const top = ceilingAt(f0 + 0.010, m[1] - 0.06);
-    if (top == null) break;
-    const Y = top - R - 0.0015;
+    /* Read a little way ahead of the strap, at three stations: right in front of it the line can
+       run down the trigger blade itself and never see the opening above the guard's bar. */
+    let ceil = null;
+    for (const ox of [0.016, 0.022, 0.010]) {
+      const c = ceilingAt(f0 + ox, m[1] - 0.06);
+      if (c && c.guard) { ceil = c; break; }
+      if (c && !ceil) ceil = c;
+    }
+    if (ceil == null) break;
+    const spread = len(sub(rec.byFinger[3].pivots3[0], m)) || 0.0194;
+    const Y = ceil.y - R - 0.0015 - (ceil.guard ? 0 : spread);
     const fy = frontAt(Y, f0 + 0.010);
     if (fy == null) break;
     let X = fy - 0.008;
@@ -968,6 +1016,84 @@ function _fitFiringHand(hands, opts) {
   return out;
 }
 
+/* THE SUPPORT HAND UNDER THE FOREND, not on top of it.
+ *
+ * The audit's commonest glaring fault in first person: on a narrow forend -- a round shroud, a bare
+ * barrel -- the grip solve seated the support hand ON TOP, palm over the barrel and fingers hanging
+ * down the far side, right in the sight picture (the Groza's, Sten's, PPSh's and P90's knuckles
+ * 23 to 28 mm above the bore). A support hand holds from underneath: the knuckle row along the
+ * underside of the forend, the fingers curling up its far side. So the hand is solved once (geometry
+ * only) and moved down, a few times, until its knuckle row sits at the forend's underside.
+ *
+ * And where multiplayer's automatic station is on bare barrel (two-thirds of the way out on a gun
+ * with nothing under the barrel there -- the MP7, UMP, Vector, P90), `opts.supportStation === 'auto'`
+ * lets the hand slide back to the front of whatever there is to hold. Authored anchors (zombies)
+ * keep their station -- a pump gun's support hand has to stay on the pump. */
+function _fitSupportHand(hands, opts) {
+  const { sub, len } = _ba;
+  const sf = opts.surface;
+  if (!sf || opts.fitHand === false || !hands || !hands.left) return hands;
+  const grip = hands.leftGrip || 'fore';
+  if (grip !== 'fore' && grip !== 'woodFore' && grip !== 'tube') return hands;
+  const bore = opts.boreY != null ? opts.boreY : 0.03;
+  const solid = (x, y) => {
+    for (const z of [0, -0.006, 0.006, -0.012, 0.012]) if (sf(x, y, z) < 0) return true;
+    return false;
+  };
+  // The underside of what is under the bore at x: the lowest metal in the first unbroken run down.
+  const underside = (x) => {
+    let y = bore, seen = false, low = null;
+    for (; y > bore - 0.11; y -= 0.001) {
+      const m = solid(x, y);
+      if (m) { seen = true; low = y; } else if (seen && low - y > 0.006) break;
+    }
+    return low;
+  };
+  let at = hands.left.slice();
+  if (opts.supportStation === 'auto') {
+    // Bare barrel is less than 18 mm deep under the bore; a magazine or a foregrip is more than 75.
+    const depth = (x) => { const u = underside(x); return u == null ? 0 : bore - u; };
+    if (depth(at[0]) < 0.018) {
+      const stop = hands.right ? hands.right[0] + 0.10 : 0.08;
+      for (let x = at[0]; x > stop; x -= 0.004) {
+        const d = depth(x);
+        if (d > 0.075) break;                       // the magazine: stay ahead of it
+        if (d >= 0.022) { at[0] = Math.max(stop, x - 0.03); break; }
+      }
+    }
+  }
+  const trial = (a) => {
+    const rec = {};
+    const g3 = () => [new Geometry(), new Geometry(), new Geometry()];
+    try {
+      buildViewHand(new Geometry(), new Vec3(a[0], a[1], a[2]), -1, { grip, thumbGeo: new Geometry(), out: rec,
+        boreY: opts.boreY, sightY: opts.sightY,
+        digitGeos: [new Geometry(), new Geometry(), new Geometry(), new Geometry()], palmGeo: new Geometry(),
+        phalanxGeos: [g3(), g3(), g3(), g3()], surface: sf });
+    } catch (e) { return null; }
+    return rec.byFinger && rec.byFinger[3] ? rec : null;
+  };
+  let best = null;
+  for (let it = 0; it < 4; it++) {
+    const rec = trial(at);
+    if (!rec) break;
+    const kn = rec.byFinger.slice(0, 4).map((d) => d.pivots3[0]);
+    const ky = kn.reduce((s, q) => s + q[1], 0) / 4, kx = kn.reduce((s, q) => s + q[0], 0) / 4;
+    const u = underside(kx);
+    if (u == null) break;
+    const want = u + 0.004;                       // the knuckle row's centre just under the underside's level
+    if (globalThis.__fitDbg) globalThis.__fitDbg.push({ side: 'L', it, at: at.map((v) => +(v * 1000).toFixed(1)), kx: +(kx * 1000).toFixed(1), ky: +(ky * 1000).toFixed(1), u: +(u * 1000).toFixed(1) });
+    const err = Math.max(0, ky - want);             // only ever too high: a hand lower than this is the rig's call
+    if (!best || err < best.err) best = { at: at.slice(), err };
+    if (err < 0.002) break;
+    at = [at[0], at[1] - Math.min(0.06, err * 0.9), at[2]];
+  }
+  if (!best) return hands;
+  const dx = best.at[0] - hands.left[0], dy = best.at[1] - hands.left[1];
+  if (Math.abs(dx) < 1e-4 && Math.abs(dy) < 1e-4) return hands;
+  return Object.assign({}, hands, { left: best.at, fittedLeft: [+dx.toFixed(4), +dy.toFixed(4)] });
+}
+
 /* Swap the rig's tubes for the body's arms. The rig's actors keep every transform the game gives
    them and stop being drawn; the arms are drawn from them. `opts.stickArms` keeps the old look. */
 const _viewmodelArmsRig = Engine.prototype.viewmodelArms;
@@ -975,9 +1101,10 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
   /* Fitted once per arms key: the cache below returns the same arms for the same key, and the fit
      is a hand solve of its own. */
   const fkey = 'arms:' + (opts.key || JSON.stringify(hands));
-  if (!(this._armCache && this._armCache[fkey])) hands = _fitFiringHand(hands, opts);
+  if (!(this._armCache && this._armCache[fkey])) hands = _fitSupportHand(_fitFiringHand(hands, opts), opts);
   const arms = _viewmodelArmsRig.call(this, weapon, hands, opts);
   if (arms && hands && hands.fitted) arms.fitted = hands.fitted;
+  if (arms && hands && hands.fittedLeft) arms.fittedLeft = hands.fittedLeft;
   if (!arms || opts.stickArms || this.stickArms) return arms;
   const key = 'arms:' + (opts.key || JSON.stringify(hands));
   const parts = this._armCache && this._armCache[key];

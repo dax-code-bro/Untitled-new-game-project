@@ -1237,6 +1237,8 @@
           boreY: made.boreAt != null ? made.boreAt : null,
           sightY: made.sightAt != null ? made.sightAt : null,
           surface: game.weaponSurface ? game.weaponSurface(made) : null,
+          // The automatic support station may slide back off bare barrel (engine 98f).
+          supportStation: 'auto',
         });
       } catch (e) { made.__arms = null; }
     }

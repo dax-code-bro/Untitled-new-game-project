@@ -2383,21 +2383,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              than one enclosed gap forward of the web -- a magazine well,
              a sling loop, the space inside a bipod -- and the trigger is
              always the first one. */
-          let score = enc + d * 2 - (x - at.x) * 0.35;
-          /* AND NOTHING BUT THE RECEIVER ABOVE IT. A trigger guard hangs straight off the bottom of
-             the receiver, so going up from inside it the first metal is the receiver itself. The
-             space UNDER the guard -- boxed in by the guard's bar above, the grip behind and the
-             magazine ahead -- passes every test above just as well, and on the AK it won: the
-             trigger finger was sent 46 mm below its knuckle into the air under the guard. Up from
-             there the scan crosses the bar, then air again (the real opening), then the receiver:
-             two pieces of metal over it, not one. */
-          let walls = 0, wasMetal = false;
-          for (let yy = y + 0.0015; yy <= yTop + 0.012; yy += 0.0015) {
-            const mt = solidAt(x, yy, z);
-            if (mt && !wasMetal) walls++;
-            wasMetal = mt;
-          }
-          if (walls >= 2) score -= 6;
+          const score = enc + d * 2 - (x - at.x) * 0.35;
           /* Several, not one.
            *
            * Recognising a hole and choosing the right one are different
@@ -2413,11 +2399,40 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         }
       }
     }
+    /* OF TWO HOLES ONE ABOVE THE OTHER, THE UPPER. A trigger guard hangs straight off the
+       receiver, and the space UNDER it -- boxed in by its bar above, the grip behind and the
+       magazine ahead -- passes every test above just as well: on the AK it won by six thousandths
+       and the trigger finger was sent 46 mm below its knuckle into the air under the guard. When
+       the best hole has an equally good one straight above it with metal between (the bar), the
+       trigger is in the upper. Relational on purpose: a bias toward height in the score itself
+       picked spurious gaps up by the slide on the P226 and the MP5, and counting the pieces of
+       metal over each hole took the Thompson's trigger away (its receiver has a gap in it). */
+    if (trigAt) {
+      /* The bar is HORIZONTAL -- metal across 12 mm at one height -- which the trigger blade, hanging
+         down inside the opening, is not; and the two holes are more than an opening's height apart. */
+      const metal = (x, y) => sf(x, y, 0) < 0.002 || (inS && inS(x, y, 0));
+      let up = null;
+      for (const [sc, v] of trigAll) {
+        if (sc < best - 0.05 || Math.abs(v.x - trigAt.x) > 0.014 || v.y < trigAt.y + 0.03) continue;
+        let bar = false;
+        for (let yy = trigAt.y + 0.004; yy < v.y - 0.004 && !bar; yy += 0.001) {
+          bar = metal(trigAt.x - 0.006, yy) && metal(trigAt.x, yy) && metal(trigAt.x + 0.006, yy);
+        }
+        if (bar && (!up || sc > up[0])) up = [sc, v];
+      }
+      if (up) {
+        trigAt = up[1];
+        const at2 = trigAll.indexOf(up);
+        if (at2 >= 0) trigAll[at2] = [best + 0.001, up[1]];
+        best += 0.001;
+      }
+    }
     trigAll.sort((p1, p2) => p2[0] - p1[0]);
     trigAll.length = Math.min(trigAll.length, 5);
     if (opts.out) {
       opts.out.trigScan = scan;
       opts.out.trigTried = trigAll.length;
+      opts.out.trigCands = trigAll.map(([sc, v]) => [+sc.toFixed(3), +v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3)]);
       if (trigAt) opts.out.trigAt = [trigAt.x, trigAt.y, trigAt.z];
     }
   }
