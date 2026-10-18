@@ -50,7 +50,7 @@ import { PROJECT_ROOT, checkFfmpeg, ffmpegPath } from './lib/tools.mjs';
 import { parseSchedule, loadJobs, parseCommand, DEFAULT_SCHEDULE } from './lib/schedule.mjs';
 import { probeVideo, ffprobeJson, COLOR_TAGS, fpsRational, spawnFfmpeg } from './lib/ffmpeg.mjs';
 import { lockJob } from './lib/job.mjs';
-import { savedGpuProfile } from './lib/gpu.mjs';
+import { savedGpuProfile, gpuCheckCommand } from './lib/gpu.mjs';
 import { estimateCues, readSrt, writeSrt, sliceCues } from './lib/subtitles.mjs';
 import { fmtDuration } from './lib/progress.mjs';
 
@@ -518,9 +518,23 @@ async function main() {
   say(hr('='));
   say(`npm run episode ${process.argv.slice(2).join(' ')}`.trim());
   if (!a.cpu && !a.gpu && !gpuSaved && !a.dryRun) {
-    say('No graphics card has been checked on this computer yet.');
-    say('  Run   npm run gpu-check   first (it finds the GPU and estimates the render time),');
-    say('  or    npm run episode -- --cpu   to render with the processor only (very slow).');
+    // what the last GPU check on this computer found (output/gpu-check/gpu-check.json), if it ran
+    const last = readJson(path.join(PROJECT_ROOT, 'output', 'gpu-check', 'gpu-check.json'));
+    const ranHere = last && last.system?.host === os.hostname();
+    const cpuCmd = process.platform === 'win32' ? 'pc\\Render-Episode.cmd --cpu' : 'bash pc/render-episode.sh --cpu';
+    if (ranHere && last.exitCode === 2) {
+      say(`The GPU check ran on this computer (${last.date}) but found NO usable graphics card:`);
+      say('  every way Chromium tried ended in software rendering (see the "GPU NOT USED" banner in pc/logs/gpu-check-*.txt).');
+      say('  Fix the driver as that banner says, then run the GPU check again:');
+    } else if (ranHere && last.exitCode) {
+      say(`The GPU check on this computer stopped with an error (${last.date}): ${last.error || 'see pc/logs/gpu-check-*.txt'}`);
+      say('  Run it again:');
+    } else {
+      say('No graphics card has been checked on this computer yet. Run the GPU check first');
+      say('  (it finds the graphics card and estimates the render time):');
+    }
+    say(`    ${gpuCheckCommand()}`);
+    say(`  or render with the processor only (very slow):  ${cpuCmd}`);
     return 2;
   }
   if (o.gpu && !gpuSaved && !process.env.DK_GPU_PROFILE) say('note: --gpu without a gpu-check result for this computer: using the default launch profile');

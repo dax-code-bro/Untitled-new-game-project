@@ -107,10 +107,39 @@ export function activeGpuProfile() {
   return all[0];
 }
 
+/** How a person runs the GPU check on this OS. A fresh Windows PowerShell window has no node on
+ *  PATH when the setup installed its private copy, and may refuse npm.ps1 (script policy), so
+ *  Windows gets the .cmd launcher, which handles both. */
+export function gpuCheckCommand(platform = process.platform) {
+  return platform === 'win32' ? 'pc\\GPU-Check.cmd  (double-click it, or type it in PowerShell)'
+    : 'bash pc/render-episode.sh --gpu-check   (or: npm run gpu-check)';
+}
+
+/** The programs to set to "High performance" in Windows Settings > System > Display > Graphics:
+ *  this Node.js and Playwright's own Chromium (NOT Google Chrome), with their full paths. */
+export function graphicsSettingsApps() {
+  const out = [process.execPath];
+  const env = process.env.PLAYWRIGHT_BROWSERS_PATH;
+  const base = env && env !== '0' ? env
+    : process.platform === 'win32' ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'ms-playwright') : null;
+  if (!base) return out;
+  try {
+    for (const d of fs.readdirSync(base).sort()) {
+      if (!/^chromium(_headless_shell)?-\d+$/.test(d)) continue;
+      for (const exe of ['chrome.exe', 'headless_shell.exe']) {
+        const f = path.join(base, d, 'chrome-win', exe);
+        if (fs.existsSync(f)) out.push(f);
+      }
+    }
+  } catch {}
+  return out;
+}
+
 /** Big, impossible-to-miss explanation for a --gpu render that would run on the CPU. */
-export function softwareFallbackMessage(renderer, { profile, check = false } = {}) {
+export function softwareFallbackMessage(renderer, { profile, check = false, apps = null } = {}) {
   const line = '='.repeat(78);
   const os_ = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] || process.platform;
+  const appList = process.platform === 'win32' ? (apps || graphicsSettingsApps()) : [];
   return [
     '', line,
     '  GPU NOT USED - Chromium fell back to SOFTWARE rendering (no graphics card).',
@@ -122,15 +151,18 @@ export function softwareFallbackMessage(renderer, { profile, check = false } = {
     '',
     '  What to do:',
     ...[
-      ...(check ? [] : [`Run  node render/gpu-check.mjs  - it tries every way Chromium can reach\n      the graphics card on ${os_} and remembers the one that works.`]),
+      ...(check ? [] : [`Run the GPU check:  ${gpuCheckCommand()}\n      It tries every way Chromium can reach the graphics card on ${os_} and\n      remembers the one that works.`]),
       ...(process.platform === 'win32'
-        ? ['Update the graphics driver (NVIDIA app / AMD Adrenalin / Intel Driver &\n      Support Assistant), restart the PC, run gpu-check again.',
-          'Laptop: plug in the charger; in Windows Settings > System > Display >\n      Graphics, set "node.exe" and "chrome.exe" to "High performance".']
+        ? ['Update the graphics driver (NVIDIA app / AMD Adrenalin / Intel Driver &\n      Support Assistant), restart the PC, run the GPU check again.',
+          'Laptop: plug in the charger. In Windows Settings > System > Display >\n      Graphics, add each of these programs ("Browse") and set it to "High\n      performance". The Chromium here is Playwright\'s own copy, not Google Chrome:' +
+            (appList.length > 1 ? appList.map((f) => `\n        ${f}`).join('')
+              : `\n        ${appList[0] || 'node.exe'}\n        %LOCALAPPDATA%\\ms-playwright\\chromium-<number>\\chrome-win\\chrome.exe\n        %LOCALAPPDATA%\\ms-playwright\\chromium_headless_shell-<number>\\chrome-win\\headless_shell.exe`)]
         : process.platform === 'darwin'
-          ? ['Update macOS (the Metal drivers come with it) and run gpu-check again.']
-          : ['Install the GPU driver with Vulkan support (NVIDIA proprietary, or Mesa\n      radeonsi/anv), make sure "vulkaninfo" works, run gpu-check again.']),
+          ? ['Update macOS (the Metal drivers come with it) and run the GPU check again.']
+          : ['Install the GPU driver with Vulkan support (NVIDIA proprietary, or Mesa\n      radeonsi/anv), make sure "vulkaninfo" works, run the GPU check again.']),
       'Send the gpu-check output (pc/logs/gpu-check-*.txt) to the Claude session.',
     ].map((s, i) => `   ${i + 1}. ${s}`),
+    check ? `  Run the GPU check again with:  ${gpuCheckCommand()}` : null,
     '  To render on the CPU on purpose, leave out --gpu (or set DK_ALLOW_SOFTWARE_GPU=1).',
     line, '',
   ].filter((l) => l !== null).join('\n');

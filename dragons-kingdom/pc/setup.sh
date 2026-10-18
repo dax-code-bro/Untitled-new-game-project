@@ -8,12 +8,14 @@
 # where it stopped):
 #   1. git, then the project: clone, or "git pull" of the branch below
 #   2. Node.js 20 LTS (a private copy in pc/tools/node if the computer has none >= 20)
-#   3. ffmpeg with libx264 (Homebrew on a Mac, a static build in pc/tools/ffmpeg on Linux)
+#   3. ffmpeg with libx264: on Linux a pinned static build in pc/tools/ffmpeg (SHA-256 checked, the
+#      same ffmpeg 8.1.3 as the Windows setup); on a Mac Homebrew's (or evermeet.cx's) - not pinned
 #   4. npm ci + Playwright's Chromium
 #   5. Python 3.11 + Blender's Python module (bpy 4.2) in pc/.venv-bpy
 #   6. every cache a render needs: node pc/build-caches.mjs (asset downloads, landscape
 #      bakes, human characters, cloth bakes - the long step, 1-3 hours the first time)
 #   7. the GPU self-test: node render/gpu-check.mjs
+# The computer is kept awake during steps 6-7 (caffeinate on macOS, systemd-inhibit on Linux).
 # Everything is logged to pc/logs/setup-<date>.log.
 #
 # Options: --dir DIR       where the project lives / is cloned (default: this script's project,
@@ -33,6 +35,10 @@ REPO_URL="${DK_REPO_URL:-https://github.com/dax-code-bro/Untitled-new-game-proje
 BRANCH="claude/ultimate-ai-legend-KhpoT"
 NODE_MAJOR=20
 UV_VERSION="0.5.11"
+# pinned ffmpeg for Linux (pc/MANIFEST.md): BtbN month-end build of 2026-09-30, ffmpeg 8.1.3, GPL (libx264)
+FF_BASE="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-30-13-08"
+FF_X64="ffmpeg-n8.1.3-9-g29e619e767-linux64-gpl-8.1";    FF_X64_SHA="97ce978979194b5cf7e06a5e68020dbdaa7a4f3294c5452b6a1bc347100dbb79"
+FF_ARM64="ffmpeg-n8.1.3-9-g29e619e767-linuxarm64-gpl-8.1"; FF_ARM64_SHA="10523d1e0be6b3ce62a9708cc50815c4b5eb5f36ae147fbe2afeecda6f2d6845"
 DIR=""; PULL=1; CACHES=1; GPUCHECK=1; PYTHON=""; VOICE=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -59,6 +65,7 @@ note() { echo "   note: $*"; }
 die()  { echo; echo "SETUP STOPPED: $*"; echo "Fix that, then run the same command again - it continues where it stopped."; [ -n "${LOG:-}" ] && echo "log: $LOG"; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 dl()   { curl -fL --retry 3 --retry-delay 2 -o "$2" "$1"; }
+sha256() { (sha256sum "$1" 2>/dev/null || shasum -a 256 "$1") | awk '{print $1}'; }
 
 echo "Dragon's Kingdom setup ($OS $ARCH) - $(date)"
 
@@ -134,10 +141,39 @@ step "ffmpeg (with libx264)"
 # (output captured first: with pipefail, "ffmpeg | grep -q" fails when grep stops reading early)
 ff_ok() { local f="${1:-ffmpeg}" out; out="$("$f" -hide_banner -encoders 2>/dev/null)" || return 1; case "$out" in *libx264*) return 0;; esac; return 1; }
 FF=""
-if [ -x "$TOOLS/ffmpeg/bin/ffmpeg" ] && ff_ok "$TOOLS/ffmpeg/bin/ffmpeg"; then FF="$TOOLS/ffmpeg/bin/ffmpeg"
-elif have ffmpeg && have ffprobe && ff_ok ffmpeg; then FF="$(command -v ffmpeg)"
+if [ "$OS" = "Linux" ]; then
+  # always the pinned build (render/lib/tools.mjs uses pc/tools/ffmpeg before any other), so every
+  # run and every computer encodes with the same ffmpeg and x264
+  case "$ARCH" in x86_64) FN="$FF_X64"; FSHA="$FF_X64_SHA";; aarch64|arm64) FN="$FF_ARM64"; FSHA="$FF_ARM64_SHA";; *) FN=""; FSHA="";; esac
+  if [ -n "$FN" ]; then
+    if [ -x "$TOOLS/ffmpeg/bin/ffmpeg" ] && [ "$(head -1 "$TOOLS/ffmpeg/.dk-pin" 2>/dev/null)" = "$FN" ] && ff_ok "$TOOLS/ffmpeg/bin/ffmpeg"; then
+      FF="$TOOLS/ffmpeg/bin/ffmpeg"; ok "pinned build $FN"
+    else
+      [ -d "$TOOLS/ffmpeg" ] && note "pc/tools/ffmpeg is not the pinned build - replacing it"
+      echo "   downloading the pinned ffmpeg ($FN.tar.xz, about 150 MB)"
+      rm -rf "$TOOLS/ffmpeg.new" "$TOOLS/ffmpeg.tar.xz"
+      if dl "$FF_BASE/$FN.tar.xz" "$TOOLS/ffmpeg.tar.xz" && [ "$(sha256 "$TOOLS/ffmpeg.tar.xz")" = "$FSHA" ] \
+        && mkdir -p "$TOOLS/ffmpeg.new" && tar -xJf "$TOOLS/ffmpeg.tar.xz" -C "$TOOLS/ffmpeg.new" --strip-components 1 \
+        && rm -f "$TOOLS/ffmpeg.new/bin/ffplay" && echo "$FN" > "$TOOLS/ffmpeg.new/.dk-pin" && ff_ok "$TOOLS/ffmpeg.new/bin/ffmpeg"; then
+        rm -rf "$TOOLS/ffmpeg" && mv "$TOOLS/ffmpeg.new" "$TOOLS/ffmpeg" && FF="$TOOLS/ffmpeg/bin/ffmpeg"
+        ok "pinned build $FN (SHA-256 ok)"
+      else
+        note "the pinned ffmpeg could not be downloaded or did not match its SHA-256"
+        rm -rf "$TOOLS/ffmpeg.new"
+        if have ffmpeg && have ffprobe && ff_ok ffmpeg; then
+          FF="$(command -v ffmpeg)"; note "using the installed $FF for now - NOT the pinned build; run the setup again later"
+        fi
+      fi
+      rm -f "$TOOLS/ffmpeg.tar.xz"
+    fi
+  elif have ffmpeg && have ffprobe && ff_ok ffmpeg; then FF="$(command -v ffmpeg)"; note "no pinned ffmpeg for $ARCH: using $FF"
+  fi
 else
-  if [ "$OS" = "Darwin" ]; then
+  # macOS: no pinned build (BtbN has none; the Mac hosts could not be fingerprinted from the cloud):
+  # Homebrew's, or evermeet.cx's latest release. Its version is printed below and in the GPU check log.
+  if [ -x "$TOOLS/ffmpeg/bin/ffmpeg" ] && ff_ok "$TOOLS/ffmpeg/bin/ffmpeg"; then FF="$TOOLS/ffmpeg/bin/ffmpeg"
+  elif have ffmpeg && have ffprobe && ff_ok ffmpeg; then FF="$(command -v ffmpeg)"
+  else
     if have brew; then brew install ffmpeg && FF="$(command -v ffmpeg)"; fi
     if [ -z "$FF" ]; then
       echo "   no Homebrew: downloading static ffmpeg + ffprobe (evermeet.cx; Intel build, runs on Apple Silicon via Rosetta)"
@@ -146,15 +182,8 @@ else
       dl https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip "$TOOLS/ffprobe.zip" && unzip -o -q "$TOOLS/ffprobe.zip" -d "$TOOLS/ffmpeg/bin" && rm -f "$TOOLS/ffprobe.zip"
       chmod +x "$TOOLS/ffmpeg/bin/"* 2>/dev/null; FF="$TOOLS/ffmpeg/bin/ffmpeg"
     fi
-  else
-    case "$ARCH" in x86_64) FA=linux64;; aarch64|arm64) FA=linuxarm64;; *) FA="";; esac
-    [ -n "$FA" ] || die "install ffmpeg with your package manager (sudo apt-get install ffmpeg)"
-    URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-$FA-gpl.tar.xz"
-    echo "   downloading a static ffmpeg build ($URL)"
-    mkdir -p "$TOOLS/ffmpeg" && dl "$URL" "$TOOLS/ffmpeg.tar.xz" && tar -xJf "$TOOLS/ffmpeg.tar.xz" -C "$TOOLS/ffmpeg" --strip-components 1 && rm -f "$TOOLS/ffmpeg.tar.xz"
-    rm -f "$TOOLS/ffmpeg/bin/ffplay"     # the player is not needed (saves ~170 MB)
-    FF="$TOOLS/ffmpeg/bin/ffmpeg"
   fi
+  note "macOS: this ffmpeg is not a pinned build (the version is in the line below)"
 fi
 [ -n "$FF" ] && ff_ok "$FF" || die "no ffmpeg with libx264 (Linux: sudo apt-get install ffmpeg; Mac: brew install ffmpeg)"
 ok "$("$FF" -hide_banner -version | head -1 | cut -c1-60) ($FF)"
@@ -216,9 +245,16 @@ fi
 if [ "$BPY" != "$VPY" ]; then echo "$BPY" > "$PROJ/pc/.bpy-python"; else rm -f "$PROJ/pc/.bpy-python"; fi
 
 # ---- 6. caches -----------------------------------------------------------------------------------
+# keep the computer awake during the long steps (only systemd-inhibit if this session may use it)
+AWAKE=()
+if have caffeinate; then AWAKE=(caffeinate -i)
+elif have systemd-inhibit && systemd-inhibit --what=sleep:idle --why="test" true >/dev/null 2>&1; then
+  AWAKE=(systemd-inhibit --what=sleep:idle --why="Dragon's Kingdom setup")
+fi
 if [ "$CACHES" = 1 ]; then
   step "caches: asset downloads, landscape bakes, human characters, cloth bakes (first time: 1-3 hours)"
-  node pc/build-caches.mjs --python "$BPY" $VOICE || die "some caches could not be made (see above; run again to retry - finished parts are kept)"
+  [ ${#AWAKE[@]} -gt 0 ] && echo "   the computer will not go to sleep while this runs (${AWAKE[0]})"
+  ${AWAKE[@]+"${AWAKE[@]}"} node pc/build-caches.mjs --python "$BPY" $VOICE || die "some caches could not be made (see above; run again to retry - finished parts are kept)"
 else
   step "caches skipped (--skip-caches): run  node pc/build-caches.mjs --python \"$BPY\"  later"
 fi
@@ -227,7 +263,7 @@ fi
 GPU_RC=0
 if [ "$GPUCHECK" = 1 ]; then
   step "GPU self-test (one native 4K frame)"
-  node render/gpu-check.mjs; GPU_RC=$?
+  ${AWAKE[@]+"${AWAKE[@]}"} node render/gpu-check.mjs; GPU_RC=$?
 fi
 
 echo
@@ -241,6 +277,7 @@ else
 fi
 echo " Render: bash \"$PROJ/pc/render-episode.sh\"   (git pull + caches + npm run episode; Ctrl+C stops, run again to continue)"
 echo " Status: bash \"$PROJ/pc/render-episode.sh\" --status"
+echo " GPU check again: bash \"$PROJ/pc/render-episode.sh\" --gpu-check"
 echo " Log:    $LOG"
 echo "=================================================================="
 rm -f "$TMPLOG"

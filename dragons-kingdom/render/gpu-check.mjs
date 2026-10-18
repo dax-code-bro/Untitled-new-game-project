@@ -31,7 +31,7 @@ import { spawnSync } from 'node:child_process';
 import { parseArgs, num } from './lib/args.mjs';
 import { resolvePreset } from './lib/presets.mjs';
 import { PROJECT_ROOT, loadPlaywright, chromeExecutable, chromeFlags, ffmpegPath, checkFfmpeg } from './lib/tools.mjs';
-import { gpuProfiles, isSoftwareRenderer, INTEGRATED_RE, pageProbe, writeGpuFile, softwareFallbackMessage, GPU_FILE } from './lib/gpu.mjs';
+import { gpuProfiles, isSoftwareRenderer, INTEGRATED_RE, pageProbe, writeGpuFile, softwareFallbackMessage, graphicsSettingsApps, GPU_FILE } from './lib/gpu.mjs';
 import { openSession } from './lib/session.mjs';
 import { writePng } from './lib/ffmpeg.mjs';
 import { parseSchedule, loadJobs, DEFAULT_SCHEDULE } from './lib/schedule.mjs';
@@ -251,8 +251,10 @@ async function main() {
       }
       say(`\n   -> using "${chosen.profile.name}": ${chosen.probe.renderer}`);
       if (INTEGRATED_RE.test(chosen.probe.renderer) && sys.gpusOS.length > 1) {
-        say('   NOTE: this looks like the INTEGRATED graphics. If the PC also has a separate (faster) card, set node.exe and');
-        say('         chrome.exe to "High performance" in Windows Settings > System > Display > Graphics and run this again.');
+        say('   NOTE: this looks like the INTEGRATED graphics. If the PC also has a separate (faster) card, add these');
+        say('         programs in Windows Settings > System > Display > Graphics ("Browse"), set each to "High performance"');
+        say('         and run this again (the Chromium is Playwright\'s own copy, not Google Chrome):');
+        for (const f of graphicsSettingsApps()) say(`           ${f}`);
       }
       const saved = writeGpuFile({ profile: chosen.profile, renderer: chosen.probe.renderer, vendor: chosen.probe.vendor, browser: chosen.probe.browser });
       result.gpu = saved;
