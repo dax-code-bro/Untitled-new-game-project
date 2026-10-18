@@ -847,7 +847,8 @@ def main(argv):
                 title = ce.ADDITION_SHOTS[n["id"]]["title"] if n["kind"] == "add" and n["id"] in ce.ADDITION_SHOTS else \
                     RATING_SHOTS.get(n["id"], {}).get("title", "")
                 order.append({"row": n["id"], "kind": "addition" if n["kind"] == "add" else "rating", "title": title,
-                              "where": scene_of(i), "changes": kids, **vals})
+                              "where": scene_of(i), "changes": kids, "creator_approved": bool(n["approved"]),
+                              "approved_inside": [c["id"] for c in n["children"] if c["approved"]], **vals})
     t = 0.0
     for r in order:
         r["start_s"] = t
@@ -972,8 +973,11 @@ def main(argv):
         print("\n| Start | Part | What | Tight cut | Expected | Loose cut |\n|---:|---|---|---:|---:|---:|")
         for r in order:
             extra = (" (with %s)" % ", ".join(r["changes"])) if r["changes"] else ""
-            label = r["row"] + extra if r["kind"] == "original" else "**%s** (%s %s)%s" % (
-                r["row"], "addition in" if r["kind"] == "addition" else "rating pass in", r["where"], extra)
+            if r["kind"] == "rating" and r.get("creator_approved"):
+                kind_label = "rating pass, approved by Daxtyn, in"
+            else:
+                kind_label = "addition in" if r["kind"] == "addition" else "rating pass in"
+            label = r["row"] + extra if r["kind"] == "original" else "**%s** (%s %s)%s" % (r["row"], kind_label, r["where"], extra)
             print("| %s | %s | %s | %s | %s | %s |" % (ce.mmss(r["start_s"]), label, r["title"], ce.mmss(r["low_s"]), ce.mmss(r["expected_s"]), ce.mmss(r["high_s"])))
         print("| | **Total** | | **%s** | **%s** | **%s** |" % tuple(ce.mmss(tot[k]) for k in K))
     if review and "--review" in argv:

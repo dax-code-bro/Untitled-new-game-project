@@ -2,6 +2,30 @@
 
 Owner of this folder and of `../tools/` (the check tools and generators). Resume from here after a restart.
 
+## Daxtyn's decisions applied (2026-10-18)
+
+- Decision 1 (species lines): the PENDING P1-P3 blocks and the open-question note after Abby's [ORIGINAL] line are gone.
+  The five lines are CHANGED blocks with reason "creator-approved 2026-10-18" and the cue marker
+  `[creator-approved wording 2026-10-18]`: C8b (L048, his [ORIGINAL] line, approved change), C9 (L053+L054), C19 (L109),
+  C30 (X17-11, inside the proposed X17). Old wording kept as WAS. `check_final.APPROVED_CHANGES` records old+new text;
+  `PENDING_LINES` is empty.
+- Decision 2 (deaths in Cling): R15, R16b, R18, R20, R21 use `[RATING PASS R# — creator-approved 2026-10-18 — begin]`
+  and a `[RATING PASS — creator-approved 2026-10-18]` NOTE (`check_final.APPROVED_RATING`). R19, R16, R17 stay proposed.
+- Decision 3 (Remi adult): Remi and "prince" left `PROTECTED_RE`/`PROTECTED_SPEAKERS` (check_final) and `CHILDISH_RE`
+  (final_build). No Remi drinking beat exists or was added (CHANGES.md section 3 offers one).
+- Decision 4 (render on Daxtyn's PC): only a note at the top of render-schedule.md (figures = CPU-only upper bound). The
+  render tools are another workflow's.
+- New checker proofs: 1e (198 handoff spoken lines: 194 verbatim + 4 approved, nothing else spoken outside the
+  additions), 1f (approved changes exact, nothing else claims approval, cue marker only in approved NOW text); approved
+  marker form only for APPROVED_RATING. Negative tests (13 broken copies, `--final COPY`) all exit 1; Remi with a flask
+  in R10 passes.
+- Breakdown rebuilt: dialogue `creator_approved`/`was_original` fields, L068 context (FINAL_CONTEXT), voices.json
+  approved special lines (preview takes of L048/L053/L054 marked out of date), species pronunciations dropped,
+  creature "design" instead of "species"; shot 1D-09 override; APPROVED_WORDING flag (4 shots).
+- Estimate now 54:24 (44:18-68:56); shot list 54:16; 37 changed lines (19 DRAGONS.md, 14 rating, 4 approved).
+- Docs: CHANGES.md (questions 1, 3, 4 answered, section 9), DRAGONS.md (question closed), SERIES.md section 9
+  (decisions log), new ../../../CHARACTERS.md.
+
 ## State (2026-10-16, review round)
 
 - `screenplay-final.md` is the locked shooting script and the source of truth, edited by hand.
@@ -55,8 +79,9 @@ Generated into this folder from `screenplay-final.md` (`tools/build_final_breakd
 
 ## Open (needs Daxtyn or a later step)
 
-- CHANGES.md questions 1-10 (species wording, dog-sit, Remi's age, deaths, wine, the drug's name, the verse,
-  language, new roles, which additions to keep).
+- CHANGES.md questions 2 and 5-10 (dog-sit, wine, the drug's name, the verse, language, new roles, which additions to
+  keep). Questions 1, 3 and 4 were answered on 2026-10-18.
+- New takes for L048, L053, L054 (the preview takes have the old wording).
 - Audition the four blended voices and the eight new roles; record the sung verse (R13-01), Abby's cry (X12) and the
   rider's scream with people.
 - Pilot renders to replace the s/frame estimates (`final_build.py` SPF), then rebuild the schedule.

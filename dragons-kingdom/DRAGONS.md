@@ -6,7 +6,13 @@ This file holds Daxtyn's own decisions about every dragon. Anything written here
 
 **No dragon species (decided 2026-10-09).** Daxtyn scrapped the species *Bashion*, *Nightwing* and *Slitherwing*. Every dragon is its own custom design. Dragons no longer share a species body. Leaf and Starlight are not "the same species", and the gold hatchling and the scout are their own designs too.
 
-- Open question: the Episode 1 dialogue still names the species. That includes Abby's [ORIGINAL] line "Why couldn't I get a Bashion?" and the proposed lines L053–L055 ("Nightwings are faster…", "And Bashions?", "Better for war.") and L109 ("A Slitherwing."). Daxtyn decides the new wording. Until then the lines stay as written.
+- **Species names in the dialogue: decided 2026-10-18 (question closed).** The Episode 1 dialogue used to name the scrapped species. Daxtyn chose the suggested wording ("use the suggestions"):
+  - Abby's [ORIGINAL] line "Why couldn't I get a Bashion?" becomes "Why couldn't I get one like Charcoal?". This is Daxtyn's own line, and he approved the change.
+  - Remi's "Nightwings are faster. More versatile." and Abby's "And Bashions?" (L053, L054) become "Smaller ones are faster. More versatile." and "And big ones?". Remi's answer "Better for war." (L055) stays.
+  - Remi's "We were off the coast. Flying together. Something came past Leaf. A Slitherwing." (L109) becomes "...Something came past Leaf. A small dragon. Fast."
+  - Abby's "I still want a Bashion." (addition X17) becomes "I still want one like Charcoal."
+
+  No Episode 1 line names a species any more. The old wording is kept for the record in the shooting script's WAS text (`episodes/s01e01/final/screenplay-final.md`, changes C8b, C9, C19 and C30) and in `episodes/s01e01/final/CHANGES.md` section 9. The handoff `episodes/s01e01/screenplay.md` itself is never edited.
 
 **Every dragon has two legs and horns (decided 2026-10-14).** All dragons have **only two legs**, not four, and **every dragon has horns**. The wings are the front limbs, like a bat's or a pterosaur's. On the ground a dragon stands on its two hind legs and can lean on its folded wings (the wrist joint) when it walks, as bats and pterosaurs do. There are no separate front legs.
 

@@ -118,3 +118,20 @@ Production limits that always apply:
 - Suggestive material stays non-explicit, and only ever involves adults. It never involves children or characters who could be children (for example Abby, who the Episode 1 screenplay calls a child, or the child in Cling).
 - Children are never shown using drugs, tobacco or alcohol.
 - Violence and gore are shown as in a live-action drama. They serve the story and are not instructions for real-world harm.
+
+## 9. Canon decisions log
+
+Daxtyn's decisions, newest first, with the date and where each one is recorded in full. This log only records what he decided; it does not change the rules above. Which characters are adults is in `CHARACTERS.md`; the dragon designs are in `DRAGONS.md`.
+
+| Date | Daxtyn's decision | Recorded in |
+|---|---|---|
+| 2026-10-18 | **Species lines (Episode 1):** use the suggested wording. His own [ORIGINAL] line "Why couldn't I get a Bashion?" becomes "Why couldn't I get one like Charcoal?" (he approved changing his own line; the old wording is kept). "Nightwings are faster. More versatile." / "And Bashions?" become "Smaller ones are faster. More versatile." / "And big ones?". "...A Slitherwing." becomes "...A small dragon. Fast.". "I still want a Bashion." becomes "I still want one like Charcoal.". This closes the open question in `DRAGONS.md`. | `DRAGONS.md`; `episodes/s01e01/final/CHANGES.md` section 9; `screenplay-final.md` (C8b, C9, C19, C30) |
+| 2026-10-18 | **Deaths in Cling (Episode 1):** keep the six unnamed adult deaths, with their gore, in Starlight's attack (rating-pass pieces R15, R16b, R18, R20, R21). | `episodes/s01e01/final/CHANGES.md` question 4 and section 9 |
+| 2026-10-18 | **Remi is an adult.** He may drink, swear and so on. The limits of section 8 still apply to Abby, the child in Cling and anyone who could be a child. His exact age is not set. | `CHARACTERS.md` |
+| 2026-10-18 | **Production, not canon: final 4K rendering runs on Daxtyn's own gaming PC, on its graphics card**, instead of the CPU-only cloud machine. Its operating system and graphics card are not known yet: support Windows 10/11 first (most likely), then macOS and Linux. Section 2's native-4K rule is unchanged. | `episodes/s01e01/final/render-schedule.md`; the render tools' own documentation |
+| 2026-10-16 | The rating and content of the show (section 8). | Section 8 |
+| 2026-10-16 | "Give me the complete episode one" (Episode 1 shooting script; the additions stay proposals until he accepts them). | `episodes/s01e01/final/CHANGES.md` |
+| 2026-10-16 | Dragons stand low and normal, the two legs toward the center of the body. | `DRAGONS.md` |
+| 2026-10-14 | Every dragon has two legs, horns, and wings as its front limbs; Claude designs the bodies and Daxtyn reviews pictures. | `DRAGONS.md` |
+| 2026-10-09 | No dragon species: every dragon is its own design. Charcoal's and Leaf's looks. Leaf is about a quarter of Charcoal's size. | `DRAGONS.md` |
+| 2026-10-06 | Episodes run 50 minutes to an hour; full native 4K that looks like live action. | Sections 1-3 |

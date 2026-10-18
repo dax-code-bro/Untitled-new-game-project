@@ -1,6 +1,6 @@
 # Episode 1, complete shooting script: what changed
 
-For Daxtyn. Written 16 October 2026, revised the same day after a review (section 8).
+For Daxtyn. Written 16 October 2026, revised the same day after a review (section 8), and updated on 18 October 2026 with your decisions (section 9).
 
 ## The short version
 
@@ -9,12 +9,18 @@ For Daxtyn. Written 16 October 2026, revised the same day after a review (sectio
   - `screenplay-final-clean.md` is the one to read. It is the whole episode from the first wave to the last wingbeat, with no markers.
   - `screenplay-final.md` is the same script for the production team. Every change in it is marked, and the old wording is kept next to each changed line.
 - **This is a script, not a video.** Nothing new has been drawn, voiced or rendered for it.
-- **Estimated length: about 54 minutes** (54:22). This is only an estimate from the shot list's timing model. The real length is known only once a rough test cut (an animatic) is timed. The outer bounds are 44:16 (every scene cut as fast as it could be) and 68:54 (every scene cut as slowly as it could be).
-- **Three kinds of change. You can undo each one on its own, and none of them is canon until you say yes:**
+- **Estimated length: about 54 minutes** (54:24). This is only an estimate from the shot list's timing model. The real length is known only once a rough test cut (an animatic) is timed. The outer bounds are 44:18 (every scene cut as fast as it could be) and 68:56 (every scene cut as slowly as it could be).
+- **Your decisions of 18 October 2026 are in** (section 9):
+  - the five lines that named a dragon species now use the wording you approved, including your own line, which is now "Why couldn't I get one like Charcoal?";
+  - the six deaths in Cling stay, and are marked as approved by you;
+  - Remi is an adult;
+  - the finished 4K episode will render on your own gaming PC (that is render work, not a script change; see `render-schedule.md`).
+- **Four kinds of change. You can undo each one on its own, and everything that is ours stays a proposal until you say yes:**
   1. The **28 additions** we proposed in `../expansion-proposal.md`. They are in the shooting script by default so the episode reaches your length. That is not acceptance: they stay proposals until you say yes to each one, and you can cut any of them.
-  2. **Your dragon decisions** from `DRAGONS.md`. The decisions are yours. The wording that carries them out is ours. 19 stage directions changed. Five dialogue lines still use the old species names, because `DRAGONS.md` says those lines stay as written until you choose new wording (question 1).
-  3. **The rating pass** we propose for the content you listed: drugs, tobacco, alcohol, strong language, dark and ordinary humor, suggestive material, intense violence, strong blood and gore. It has 24 new short pieces and 14 changed lines.
-- **Your own words are untouched.** Your four [ORIGINAL] lines are exactly as you wrote them, including "Why couldn't I get a Bashion?" (see question 1). Every line of the handoff `screenplay.md` is still in the file, word for word and in order. A checking tool proves it every time it runs.
+  2. **Your dragon decisions** from `DRAGONS.md`. The decisions are yours. The wording that carries them out in the stage directions is ours: 19 stage directions changed.
+  3. **The rating pass** we propose for the content you listed: drugs, tobacco, alcohol, strong language, dark and ordinary humor, suggestive material, intense violence, strong blood and gore. It has 24 new short pieces and 14 changed lines. You approved five of the pieces on 18 October 2026: the ones with the deaths in Cling.
+  4. **Wording you approved** on 18 October 2026: the five species lines (four changed blocks in the script: C8b, C9, C19 and C30).
+- **Your own words are kept.** Three of your four [ORIGINAL] lines are exactly as you wrote them. The fourth, "Why couldn't I get a Bashion?", now reads "Why couldn't I get one like Charcoal?", because you approved that change on 18 October 2026; your old wording is still in `screenplay-final.md`. Every line of the handoff `screenplay.md` is still in the file, word for word and in order (a changed line keeps its old wording next to the new one). A checking tool proves it every time it runs.
 
 ## 1. The 28 proposed additions (in the script by default, not accepted)
 
@@ -81,20 +87,26 @@ Every dragon at rest now crouches or lies **low and level**: belly near the grou
 | C31 | X18 | the hatchling pushes up "front legs first, then ... the back legs" | "the wrists of its folded wings first, then, trembling, its two legs" |
 | C32 | X19 (production note) | "more Slitherwings" | "more scouts" |
 
+**The dialogue that named a species** now uses the wording you approved on 18 October 2026 (question 1, section 9). These four changes are yours, not proposals. The old wording stays in `screenplay-final.md`:
+
+| # | Where | Was | Now (approved by you, 18 October 2026) |
+|---|---|---|---|
+| C8b | 1D, Abby, line L048 (your [ORIGINAL] line) | "Why couldn't I get a Bashion?" | "Why couldn't I get one like Charcoal?" |
+| C9 | 1D, Remi and Abby, lines L053 and L054 | "Nightwings are faster. More versatile." / "And Bashions?" | "Smaller ones are faster. More versatile." / "And big ones?" (Remi's "Better for war." stays) |
+| C19 | 2B, Remi, line L109 | "We were off the coast. Flying together. Something came past Leaf. A Slitherwing." | "We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast." |
+| C30 | X17, Abby | "I still want a Bashion." | "I still want one like Charcoal." (X17 itself is still a proposal) |
+
+C9, C19 and C30 are the numbers these same lines had in the first version of this script; C8b sits between C8 and C9. Remi's "Still want one?" a little later in 1D now means a dragon like Charcoal; its words do not change.
+
 What we left alone on purpose:
 
-- **Dialogue that still names a species.** `DRAGONS.md` says: "Daxtyn decides the new wording. Until then the lines stay as written." So these lines are shot as written, and each of the three proposed ones is marked `[PENDING ...]` in `screenplay-final.md`, with our suggested wording kept beside it as an alternative that is not used unless you pick it (question 1):
-  - your [ORIGINAL] line "Why couldn't I get a Bashion?" (1D);
-  - Remi: "Nightwings are faster. More versatile." and Abby: "And Bashions?" (1D, lines L053 and L054; Remi's "Better for war." follows as before);
-  - Remi: "...Something came past Leaf. A Slitherwing." (2B, line L109);
-  - Abby: "I still want a Bashion." (X17).
 - **The handoff's front matter and closing checks** (the instructions, the CANON LOCK, the policies and the final continuity check) still name the old species. They are kept word for word, because they are the record of what the handoff said. A note placed right after them in the script says that your `DRAGONS.md` decisions win and how to read the old wording.
 
 ## 3. The proposed rating pass
 
 You set the rating on 16 October 2026 (`SERIES.md` section 8). We propose weaving it in where it fits the people and the world. Every piece serves a scene: it shows who someone is, or sets up something that pays off later, or shows what the violence costs. Nothing was added just to tick a box. Each new piece sits between `[PROPOSED RATING PASS R# — begin]` and its `— end]` line. R8b, R9b and R16b were added in the review (section 8); the letter keeps the other numbers the same.
 
-**New pieces (R1 to R21, R8b, R9b, R16b):**
+**New pieces (R1 to R21, R8b, R9b, R16b).** You approved R15, R16b, R18, R20 and R21, the pieces with the deaths in Cling, on 18 October 2026 (question 4). In `screenplay-final.md` they are marked `[RATING PASS R# — creator-approved 2026-10-18 — begin]` instead of PROPOSED. Every other piece is still our proposal.
 
 | # | Where | What we added | Contains |
 |---|---|---|---|
@@ -114,14 +126,14 @@ You set the rating on 16 October 2026 (`SERIES.md` section 8). We propose weavin
 | R12 | 3A | The king's toast after his speech: "To the person behind you." The shot is framed on the adults around the steps, with no child in it. | alcohol |
 | R13 | X22 | At the alley end of the table, the opposite end from the king, the vendor sings a bawdy verse we wrote for the series, low, for that end of the table only: "The miller's wife had flour to sell and sold it twice a day, and the miller never asked her why the baker came to stay." Every child is across the square on the steps with the old woman. The musician, eating beside him: "Not that one." | suggestive, alcohol, humor |
 | R14 | 3C | The guard captain: "Don't stand there gawping! Get them through, for fuck's sake!" | language |
-| R15 | 3C | The first pass kills. A man under the collapsing roofline, only his arm showing, blood running along the paving joints. A woman struck down by flying timber. | violence, blood, death |
+| R15 (approved) | 3C | The first pass kills. A man under the collapsing roofline, only his arm showing, blood running along the paving joints. A woman struck down by flying timber. | violence, blood, death |
 | R16 | 3C | The second pass. Most of what it throws finds empty ground, but not all of it: a flying board takes the injured villager's legs out from under him. | violence |
-| R16b | 3C | A guard of the escort who has no lines is thrown against a house front and dies, leaving a long dark smear. He is visibly not one of the guards who speak. | violence, blood, death |
+| R16b (approved) | 3C | A guard of the escort who has no lines is thrown against a house front and dies, leaving a long dark smear. He is visibly not one of the guards who speak. | violence, blood, death |
 | R17 | 3C | The villager's injuries, shown plainly: a split scalp, and his RIGHT leg broken so badly the bone shows. He lives. | gore |
-| R18 | 3D | The dead in the square: the arm, the woman, a man rocking a grown woman whose head is a ruin of blood, a man-sized shape under a soaked banner. | gore, death |
+| R18 (approved) | 3D | The dead in the square: the arm, the woman, a man rocking a grown woman whose head is a ruin of blood, a man-sized shape under a soaked banner. | gore, death |
 | R19 | 3D | The parent keeps the child's face turned away from the body in the square. The child sees none of it; the audience does. | (protects the child) |
-| R20 | X27 | The guard searching for the villager's family finds a dead man he knows first, and covers his face. | death |
-| R21 | X28 | The dead laid in a row below the steps, across the square from the arch where the child shelters, every one a grown man or woman, under festival cloth. The banners are not long enough; a pair of men's boots shows, a festival ribbon through one lace. | death |
+| R20 (approved) | X27 | The guard searching for the villager's family finds a dead man he knows first, and covers his face. | death |
+| R21 (approved) | X28 | The dead laid in a row below the steps, across the square from the arch where the child shelters, every one a grown man or woman, under festival cloth. The banners are not long enough; a pair of men's boots shows, a festival ribbon through one lace. | death |
 
 **Changed lines (old wording kept in `screenplay-final.md`):**
 
@@ -144,9 +156,9 @@ You set the rating on 16 October 2026 (`SERIES.md` section 8). We propose weavin
 
 **The limits we kept:**
 
-- **Children.** No child drinks, smokes or takes part in anything suggestive, and no drinking, smoking or suggestive moment is framed with a child in it. Where children are nearby, the script says in the picture itself where they are (R3, R11, R12, R13). This covers Abby, the Cling child, the young riders and every other child. Abby's broken arm is still shown without a graphic bone image.
+- **Children.** No child drinks, smokes or takes part in anything suggestive, and no drinking, smoking or suggestive moment is framed with a child in it. Where children are nearby, the script says in the picture itself where they are (R3, R11, R12, R13). This covers Abby, the Cling child, the young riders, the young attendant and every other child. Abby's broken arm is still shown without a graphic bone image.
 - **Every one of the dead is an adult.** The script says so in the pictures and notes of R15, R16b, R18, R20 and R21, and the checking tool fails if a child, or a small or little body, is named in any death or gore piece.
-- **Remi.** His age is not established, so we treated him the same way: no drinking, smoking, drugs or suggestive material near him. He does swear once and gets the scout's blood on him. See question 3.
+- **Remi is an adult** (your decision, 18 October 2026). The limits for children no longer apply to him, and the checking tool no longer treats him as a possible child. Nothing in the script has him drink, smoke or take anything yet: you said he may, so we have not added a beat on our own. He swears once ("you little bastard", C13) and gets the scout's blood on him. If you want him to have a drink, one place we suggested is with the keepers after the fight (X15, next to R10); say so and we will write it as a proposal.
 - **Suggestive material** is between adults only and never explicit.
 - **No instructions.** Nothing shows how to prepare or use a drug, and no violence is staged as a how-to.
 - **The CANON LOCK still holds.** The scout rider is burned, screaming but alive, conscious and strapped on. The scout dragon has lost its LEFT wing and is bleeding, but it is alive and fighting to stay afloat, and nothing shows it bleeding to death. Nobody says whether either one lives. There is no named villain. Starlight breathes no fire and takes no wound. Queen Fall says only "Attack.". The King of Cling has no name. Nothing comes from Episode 2. Abby's LEFT arm. Dragons never speak. Abby never answers the succession question.
@@ -155,23 +167,12 @@ You set the rating on 16 October 2026 (`SERIES.md` section 8). We propose weavin
 
 ## 4. Questions for you
 
-1. **The species names in the dialogue.** Your own line "Why couldn't I get a Bashion?" stays word for word. `DRAGONS.md` also keeps four of our proposed lines as written until you choose new wording, so all five are performed as written for now. Now that there are no species, the old names no longer mean a kind of dragon. What should they say? For each line, here are the options we see; you can pick one, or give us your own words:
-   - **Abby, 1D (your [ORIGINAL] line):** "Why couldn't I get a Bashion?"
-     - keep "Bashion" as a word people use for the big war dragons, a nickname and not a species (then every line below could keep its word too);
-     - "Why couldn't I get one like Charcoal?";
-     - your own wording.
-   - **Remi and Abby, 1D, just after it (L053, L054):** "Nightwings are faster. More versatile." / "And Bashions?"
-     - our proposal: "Smaller ones are faster. More versatile." / "And big ones?";
-     - your own wording. Remi's answer "Better for war." works with either.
-   - **Remi's report, 2B (L109):** "...Something came past Leaf. A Slitherwing."
-     - our proposal: "...Something came past Leaf. A small dragon. Fast.";
-     - your own wording.
-   - **Abby to Leaf, X17:** "I still want a Bashion."
-     - our proposal: "I still want one like Charcoal.";
-     - your own wording.
+Questions 1, 3 and 4 were answered on 18 October 2026 (section 9). The others are still open.
+
+1. **The species names in the dialogue. Answered 18 October 2026:** "use the suggestions". Abby's line in 1D, your own [ORIGINAL] line "Why couldn't I get a Bashion?", is now "Why couldn't I get one like Charcoal?" (you approved changing it). "Nightwings are faster. More versatile." / "And Bashions?" are now "Smaller ones are faster. More versatile." / "And big ones?". Remi's "...A Slitherwing." is now "...A small dragon. Fast.". Abby's "I still want a Bashion." in X17 is now "I still want one like Charcoal.". See section 2.
 2. **Leaf sitting like a dog.** `DRAGONS.md` still leaves this open. The script now follows your 16 October decision everywhere: Leaf and every other dragon at rest crouches or lies low and level, legs folded under the middle of the body, wings' wrists on the ground. Would you also like Leaf to sometimes sit back on his haunches like a dog, chest up, with his folded wings braced in front of him? That pose tips the body up, so it is less level and less low than the rest of the episode. We can use it for Leaf only, for example when he waits for Abby in X2 and 1B, if you say so.
-3. **Is Remi an adult?** We kept all drinking, smoking, drugs and suggestive material away from him because his age isn't set. If he is an adult, say so and we can let him have a drink with the keepers after the fight, for example.
-4. **Deaths in Cling.** If every rating-pass piece is kept, six unnamed adults die in Starlight's attack: a man under the roofline, a woman by the steps (R15), a guard of the escort (R16b), the woman across a man's lap and the body under the banner (R18), and the man the guard finds in the alley (R20). That raises the stakes for Episode 2: King Fallen hears about an attack that killed people. Is that right for your story? **If you want no deaths,** cut R15, R16b, R18, R19, R20 and R21 together. The checking tool flags any of them left behind. The injured villager (R16, R17) stays.
+3. **Is Remi an adult? Answered 18 October 2026: yes.** He may drink, swear and so on; the limits for children still apply to Abby and the child in Cling. His exact age is still not set. See "The limits we kept" in section 3: the script does not have him drink yet.
+4. **Deaths in Cling. Answered 18 October 2026: keep them.** Six unnamed adults die in Starlight's attack, with their blood and gore: a man under the roofline, a woman by the steps (R15), a guard of the escort (R16b), the woman across a man's lap and the body under the banner (R18), and the man the guard finds in the alley (R20); R21 shows them laid out. Those five pieces are now marked as approved by you. R20 sits inside the proposed addition X27 and R21 inside X28: if you ever cut X27, the man in the alley goes with it. R19 (the parent keeps the child's face turned away) and the injured villager (R16, R17) are not deaths and stay proposals.
 5. **Alexandria and the wine (R1).** It suggests she drank alone through the night while she waited for the egg. Does that fit her?
 6. **The musician's pipe (R3).** The drug is deliberately left unnamed. Do you want a name for it in your world? If so, what?
 7. **The bawdy verse (R13).** Keep it, change it, or cut it?
@@ -185,22 +186,25 @@ All of this is in `screenplay-final.md`:
 
 - **To cut an addition,** delete everything from its `[PROPOSED ADDITION X# ... — begin]` line to its `[PROPOSED ADDITION X# — end]` line. Any rating-pass piece inside it goes with it.
 - **To cut a rating-pass piece,** delete everything from `[PROPOSED RATING PASS R# — begin]` to `[PROPOSED RATING PASS R# — end]`.
-- **To undo a changed line,** replace the whole `[CHANGED C# ...]` block with the lines under its "WAS" marker.
-- **To use new wording for a species line** (question 1), turn that line and its `[PENDING P# ...]` block into a `[CHANGED C# — DRAGONS.md: your wording, <date> — WAS ...]` block and take the line out of `PENDING_LINES` in `../tools/check_final.py`.
-- **For no deaths in Cling,** cut R15, R16b, R18, R19, R20 and R21.
+- **To undo a changed line,** replace the whole `[CHANGED C# ...]` block with the lines under its "WAS" marker. For the four changes you approved (C8b, C9, C19, C30), only do that if you change your mind, and then also take them out of `APPROVED_CHANGES` in `../tools/check_final.py`; the tool fails if an approved change is missing or different from what you approved.
+- **To record a new decision of yours** about the wording of a line: put it in a `[CHANGED C# — creator-approved <date>: ... — WAS ...]` block, give the new cue the marker `[creator-approved wording <date>]`, and add the old and new text to `APPROVED_CHANGES` in `../tools/check_final.py`.
+- **The deaths in Cling** (R15, R16b, R18, R20, R21) are approved by you. If you ever want them gone after all, cut them together with R19 and take them out of `APPROVED_RATING` in `../tools/check_final.py`.
 - **Then run** `python3 tools/check_final.py --update-timing --clean` (from `episodes/s01e01/`), and after that `python3 tools/check_final.py` with no options. The tool tells you if something else leaned on what you cut. For example, R7, R8, R8b, R9b, C20, C23, C24 and C25 all lean on C15 (the scout's blood on Charcoal and Remi), and R16b, R18, R20 and R21 lean on R15.
 
-## 6. What the checks say (16 October 2026)
+## 6. What the checks say (18 October 2026)
 
 `python3 tools/check_final.py` exits with code 0:
 
-- all 1,116 lines of `screenplay.md` are found word for word and in order;
-- if you remove every addition, rating-pass piece, PENDING note and document note, and put the old wording back, you get `screenplay.md` byte for byte;
-- the four [ORIGINAL] lines are unchanged, and no new line is marked [ORIGINAL];
+- all 1,116 lines of `screenplay.md` are found word for word and in order (a changed line keeps its old wording in the file);
+- if you remove every addition, rating-pass piece and document note, and put the old wording back, you get `screenplay.md` byte for byte;
+- of the 198 spoken lines of `screenplay.md`, 194 are spoken word for word and in order, and the other 4 (L048, L053, L054, L109) are spoken exactly in the wording you approved on 18 October 2026; nothing else is spoken outside the additions and the rating pass;
+- three of the four [ORIGINAL] lines are unchanged; the fourth is exactly the approved "Why couldn't I get one like Charcoal?", its old wording is kept, and no new line is marked [ORIGINAL];
+- the four approved changes (C8b, C9, C19, C30) are in the script with exactly the old and new wording recorded in the tool, and no other change claims your approval;
+- the five rating-pass pieces you approved (R15, R16b, R18, R20, R21) are marked as approved, and no other piece is;
 - all 28 additions are exactly as proposed, apart from their marked changes;
-- the five dialogue lines `DRAGONS.md` keeps as written are as written, and each proposed one is followed by its PENDING note;
-- the canon check and the rating-limit check are clean on all new text. The tool now also fails on a dragon sitting on its haunches or "like a dog", on a word that would have the scout bleeding to death ("pumping", "bleeding out", "limp"...), on a child or a small body among the dead, and on a death piece kept after R15 was cut. During testing it caught every deliberate mistake we made in broken copies;
-- estimated length: 54:22 expected (44:16 to 68:54).
+- no species word is left in any stage direction or line of dialogue;
+- the canon check and the rating-limit check are clean on all new text. The rating check protects Abby, the Cling child, the young attendant and the young riders; Remi is no longer on that list, because he is an adult. The tool also fails on a dragon sitting on its haunches or "like a dog", on a word that would have the scout bleeding to death ("pumping", "bleeding out", "limp"...), on a child or a small body among the dead, and on a death piece kept after R15 was cut. On 18 October we tested it again on broken copies (the approved wording changed, your old line put back, another handoff line changed, R19 marked approved, R15 marked as a proposal, the approval marker on another line, R18 cut, a PENDING note put back, a child next to the ale, a species word put back): it caught every one;
+- estimated length: 54:24 expected (44:18 to 68:56).
 
 `tools/check_extended.py` and `tools/extract_dialogue.py --check` still pass on the original files.
 
@@ -220,62 +224,62 @@ These are estimates for an animatic, not measured footage. They use the same tim
 | 9:53 | **X4** (addition in 1C) (with C3, C4, C5, C6) | Over Verdor | 1:18 | 1:38 | 2:06 |
 | 11:31 | **X5** (addition in 1C) (with R3) | Cling, before the festival | 1:22 | 1:41 | 2:10 |
 | 13:12 | **X6** (addition in 1C) (with C7, C8) | The outer rocks (race) | 1:14 | 1:32 | 1:56 |
-| 14:44 | 1D | Siblings, succession, and the playful nip | 1:38 | 1:59 | 2:30 |
-| 16:42 | 1E (with C10) | The first fast pass | 0:47 | 0:56 | 1:11 |
-| 17:39 | 1F (with C11, C14, C15, C16, C17) | Pursuit and the scout's fall | 1:35 | 1:58 | 2:33 |
-| 19:36 | **X7** (addition in 1F) | Pursuit: height for speed | 0:21 | 0:26 | 0:34 |
-| 20:02 | **X8** (addition in 1F) (with C12, C13) | Pursuit: sun, rocks and mist | 0:48 | 1:00 | 1:18 |
-| 21:02 | **X9** (addition in 1F) (with R4, C18, R5) | The harbor sees her | 0:36 | 0:44 | 0:54 |
-| 21:46 | 2A | Return to Verdor | 1:16 | 1:32 | 1:56 |
-| 23:18 | **R6** (rating pass in 2A) | 2A: a keeper swears | 0:02 | 0:02 | 0:02 |
-| 23:20 | **X10** (addition in 2A) (with R7) | Remi's approach | 0:29 | 0:37 | 0:48 |
-| 23:56 | **R8** (rating pass in 2A) | 2A: Charcoal's bloody jaw; Remi streaked | 0:08 | 0:10 | 0:13 |
-| 24:06 | 2B | Treatment and Remi's report | 2:06 | 2:30 | 3:02 |
-| 26:37 | **R8b** (rating pass in 2B) | 2B: Alexandria sees the blood on Remi | 0:02 | 0:02 | 0:03 |
-| 26:40 | 2C | Santa Maria orders and sibling aftermath | 1:26 | 1:44 | 2:06 |
-| 28:23 | **X11** (addition in 2C) (with C20) | You've done enough today | 0:28 | 0:34 | 0:42 |
-| 28:56 | **R9** (rating pass in 2C) | 2C: the crew's dark joke | 0:12 | 0:15 | 0:18 |
-| 29:12 | **X12** (addition in 2C) (with C21) | The arm is set | 0:58 | 1:10 | 1:25 |
-| 30:21 | **X13** (addition in 2C) (with C22) | The queen and the hatchling | 1:16 | 1:35 | 2:02 |
-| 31:56 | **X14** (addition in 2C) | Cling, midday | 0:58 | 1:12 | 1:31 |
-| 33:08 | **R9b** (rating pass in 2C) | 2C: Remi's scrubbed hands | 0:02 | 0:03 | 0:04 |
-| 33:10 | **X15** (addition in 2C) (with C23, C24, C25, R10) | The rig comes off | 0:44 | 0:55 | 1:10 |
-| 34:06 | **X16** (addition in 2C) (with C26, C27, C28) | The Santa Maria sails | 0:30 | 0:38 | 0:48 |
-| 34:44 | **X17** (addition in 2C) (with C29) | Later, with help | 1:10 | 1:25 | 1:47 |
-| 36:08 | **X18** (addition in 2C) (with C31) | The queen and the rider | 0:58 | 1:10 | 1:27 |
-| 37:19 | **X19** (addition in 2C) (with C32) | The sail | 0:54 | 1:08 | 1:27 |
-| 38:27 | 3A | Cling's festival and its king | 1:52 | 2:16 | 2:46 |
-| 40:42 | **X20** (addition in 3A) (with R11) | Festival before the king | 0:52 | 1:02 | 1:18 |
-| 41:45 | **R12** (rating pass in 3A) | 3A: the king's toast | 0:06 | 0:08 | 0:10 |
-| 41:53 | **X21** (addition in 3A) | The king among his people | 0:54 | 1:03 | 1:16 |
-| 42:56 | **X22** (addition in 3A) (with R13) | The old song and the children's dance | 1:36 | 1:56 | 2:26 |
-| 44:52 | 3B | The white dragon approaches | 0:56 | 1:10 | 1:28 |
-| 46:02 | **X23** (addition in 3B) (with C34) | The watchman understands | 0:12 | 0:16 | 0:20 |
-| 46:18 | **X24** (addition in 3B) | The square freezes | 0:14 | 0:18 | 0:24 |
-| 46:36 | 3C | Starlight's attack | 1:56 | 2:20 | 2:59 |
-| 48:56 | **R14** (rating pass in 3C) | 3C: the captain swears | 0:05 | 0:06 | 0:07 |
-| 49:02 | **R15** (rating pass in 3C) | 3C: the first pass kills | 0:08 | 0:10 | 0:12 |
-| 49:12 | **X25** (addition in 3C) | The family is separated | 0:08 | 0:10 | 0:14 |
-| 49:22 | **X26** (addition in 3C) (with C35) | Between the passes | 0:20 | 0:24 | 0:30 |
-| 49:46 | **R16** (rating pass in 3C) | 3C: the second pass hurts the villager | 0:04 | 0:04 | 0:06 |
-| 49:50 | **R16b** (rating pass in 3C) | 3C: a guard of the escort dies | 0:03 | 0:04 | 0:05 |
-| 49:54 | **R17** (rating pass in 3C) | 3C: the villager's injuries | 0:04 | 0:05 | 0:06 |
-| 50:00 | 3D | Aftermath and cliffhanger | 1:04 | 1:20 | 1:44 |
-| 51:20 | **R18** (rating pass in 3D) | 3D: the dead in the square | 0:10 | 0:14 | 0:18 |
-| 51:34 | **R19** (rating pass in 3D) | 3D: the parent shields the child | 0:03 | 0:04 | 0:06 |
-| 51:38 | **X27** (addition in 3D) (with R20, C36) | Survivors | 0:44 | 0:56 | 1:12 |
-| 52:33 | **X28** (addition in 3D) (with R21, C37) | Orders carried out | 0:54 | 1:08 | 1:27 |
-| 53:42 | END | End credits | 0:30 | 0:40 | 1:00 |
-| | **Total** | | **44:16** | **54:22** | **68:54** |
+| 14:44 | 1D (with C8b, C9) | Siblings, succession, and the playful nip | 1:39 | 2:00 | 2:32 |
+| 16:44 | 1E (with C10) | The first fast pass | 0:47 | 0:56 | 1:11 |
+| 17:40 | 1F (with C11, C14, C15, C16, C17) | Pursuit and the scout's fall | 1:35 | 1:58 | 2:33 |
+| 19:38 | **X7** (addition in 1F) | Pursuit: height for speed | 0:21 | 0:26 | 0:34 |
+| 20:04 | **X8** (addition in 1F) (with C12, C13) | Pursuit: sun, rocks and mist | 0:48 | 1:00 | 1:18 |
+| 21:04 | **X9** (addition in 1F) (with R4, C18, R5) | The harbor sees her | 0:36 | 0:44 | 0:54 |
+| 21:47 | 2A | Return to Verdor | 1:16 | 1:32 | 1:56 |
+| 23:20 | **R6** (rating pass in 2A) | 2A: a keeper swears | 0:02 | 0:02 | 0:02 |
+| 23:21 | **X10** (addition in 2A) (with R7) | Remi's approach | 0:29 | 0:37 | 0:48 |
+| 23:58 | **R8** (rating pass in 2A) | 2A: Charcoal's bloody jaw; Remi streaked | 0:08 | 0:10 | 0:13 |
+| 24:08 | 2B (with C19) | Treatment and Remi's report | 2:07 | 2:32 | 3:04 |
+| 26:40 | **R8b** (rating pass in 2B) | 2B: Alexandria sees the blood on Remi | 0:02 | 0:02 | 0:03 |
+| 26:42 | 2C | Santa Maria orders and sibling aftermath | 1:26 | 1:44 | 2:06 |
+| 28:26 | **X11** (addition in 2C) (with C20) | You've done enough today | 0:28 | 0:34 | 0:42 |
+| 28:59 | **R9** (rating pass in 2C) | 2C: the crew's dark joke | 0:12 | 0:15 | 0:18 |
+| 29:14 | **X12** (addition in 2C) (with C21) | The arm is set | 0:58 | 1:10 | 1:25 |
+| 30:24 | **X13** (addition in 2C) (with C22) | The queen and the hatchling | 1:16 | 1:35 | 2:02 |
+| 31:58 | **X14** (addition in 2C) | Cling, midday | 0:58 | 1:12 | 1:31 |
+| 33:10 | **R9b** (rating pass in 2C) | 2C: Remi's scrubbed hands | 0:02 | 0:03 | 0:04 |
+| 33:13 | **X15** (addition in 2C) (with C23, C24, C25, R10) | The rig comes off | 0:44 | 0:55 | 1:10 |
+| 34:08 | **X16** (addition in 2C) (with C26, C27, C28) | The Santa Maria sails | 0:30 | 0:38 | 0:48 |
+| 34:46 | **X17** (addition in 2C) (with C29, C30) | Later, with help | 1:10 | 1:26 | 1:48 |
+| 36:12 | **X18** (addition in 2C) (with C31) | The queen and the rider | 0:58 | 1:10 | 1:27 |
+| 37:22 | **X19** (addition in 2C) (with C32) | The sail | 0:54 | 1:08 | 1:27 |
+| 38:30 | 3A | Cling's festival and its king | 1:52 | 2:16 | 2:46 |
+| 40:46 | **X20** (addition in 3A) (with R11) | Festival before the king | 0:52 | 1:02 | 1:18 |
+| 41:48 | **R12** (rating pass in 3A) | 3A: the king's toast | 0:06 | 0:08 | 0:10 |
+| 41:56 | **X21** (addition in 3A) | The king among his people | 0:54 | 1:03 | 1:16 |
+| 42:59 | **X22** (addition in 3A) (with R13) | The old song and the children's dance | 1:36 | 1:56 | 2:26 |
+| 44:56 | 3B | The white dragon approaches | 0:56 | 1:10 | 1:28 |
+| 46:06 | **X23** (addition in 3B) (with C34) | The watchman understands | 0:12 | 0:16 | 0:20 |
+| 46:21 | **X24** (addition in 3B) | The square freezes | 0:14 | 0:18 | 0:24 |
+| 46:40 | 3C | Starlight's attack | 1:56 | 2:20 | 2:59 |
+| 49:00 | **R14** (rating pass in 3C) | 3C: the captain swears | 0:05 | 0:06 | 0:07 |
+| 49:06 | **R15** (rating pass, approved by Daxtyn, in 3C) | 3C: the first pass kills | 0:08 | 0:10 | 0:12 |
+| 49:15 | **X25** (addition in 3C) | The family is separated | 0:08 | 0:10 | 0:14 |
+| 49:26 | **X26** (addition in 3C) (with C35) | Between the passes | 0:20 | 0:24 | 0:30 |
+| 49:49 | **R16** (rating pass in 3C) | 3C: the second pass hurts the villager | 0:04 | 0:04 | 0:06 |
+| 49:54 | **R16b** (rating pass, approved by Daxtyn, in 3C) | 3C: a guard of the escort dies | 0:03 | 0:04 | 0:05 |
+| 49:58 | **R17** (rating pass in 3C) | 3C: the villager's injuries | 0:04 | 0:05 | 0:06 |
+| 50:02 | 3D | Aftermath and cliffhanger | 1:04 | 1:20 | 1:44 |
+| 51:23 | **R18** (rating pass, approved by Daxtyn, in 3D) | 3D: the dead in the square | 0:10 | 0:14 | 0:18 |
+| 51:36 | **R19** (rating pass in 3D) | 3D: the parent shields the child | 0:03 | 0:04 | 0:06 |
+| 51:40 | **X27** (addition in 3D) (with R20, C36) | Survivors | 0:44 | 0:56 | 1:12 |
+| 52:36 | **X28** (addition in 3D) (with R21, C37) | Orders carried out | 0:54 | 1:08 | 1:27 |
+| 53:44 | END | End credits | 0:30 | 0:40 | 1:00 |
+| | **Total** | | **44:18** | **54:24** | **68:56** |
 
-- **Where the time comes from:** the handoff screenplay 25:16, the 28 additions 25:21 and the rating pass 3:45. The dragon wording changes add no time. The rating pass adds 16 spoken lines (125 words) and about 2¾ minutes of pictures. Rows can differ from the total by a second because of rounding.
-- **Render cost** if every frame is made at native 4K (`SERIES.md` section 2): about 78,000 frames. At the speed of the simple benchmark scene that would be 43 to 70 hours, but the real sets are far heavier: the five style frames took 131 to 822 seconds per 4K frame on this machine. `render-schedule.md` plans with those measurements: about 2,600 hours of rendering, roughly 99 days of continuous rendering on this one machine, delivered to you scene by scene. A second machine would shorten it; the faster render settings are not allowed for the finished episode.
+- **Where the time comes from:** the handoff screenplay 25:16, the 28 additions 25:21 and the rating pass 3:45. The dragon wording changes add no time; the wording you approved adds about 3 seconds (a few more words). The rating pass adds 16 spoken lines (125 words) and about 2¾ minutes of pictures. Rows can differ from the total by a second because of rounding.
+- **Render cost** if every frame is made at native 4K (`SERIES.md` section 2): about 78,000 frames. At the speed of the simple benchmark scene that would be 44 to 70 hours, but the real sets are far heavier: the five style frames took 131 to 822 seconds per 4K frame on this cloud machine, which has no graphics card. `render-schedule.md` plans with those measurements: about 2,600 hours of rendering, roughly 99 days of continuous rendering on this machine. You decided on 18 October 2026 that the finished episode renders on your own gaming PC with its graphics card instead; that should be much faster, but nobody has measured it yet, so the schedule's figures are an upper bound until your PC is measured. The faster render settings are not allowed for the finished episode.
 
 ## 8. Review fixes (16 October 2026)
 
 A review of the first version of this script found these problems. We checked each one against the script and the rule files, and all of them were right. What we changed:
 
-1. **Species in dialogue.** We had rewritten the lines `DRAGONS.md` keeps as written until you choose, and listed our wording as if it were your decision. They are back to the written wording, marked PENDING, and our wording is only offered in question 1.
+1. **Species in dialogue.** We had rewritten the lines `DRAGONS.md` keeps as written until you choose, and listed our wording as if it were your decision. They are back to the written wording, marked PENDING, and our wording is only offered in question 1. (On 18 October 2026 you chose that wording; see section 9.)
 2. **The scout's wound.** "The raw, pumping stump" and a dark stain "spreading" into the sea said the scout was bleeding to death, which would decide its later story. Now: "the torn, bleeding shoulder where the wing was" and "a red stain in the water around the scout's torn shoulder".
 3. **Dog-sit.** The script had made the open dog-sit question a yes, against your low, level stance. Every dragon at rest now crouches or lies low and level; the dog-sit is only offered in question 2.
 4. **Markers.** "Accepted by default" read like your acceptance. The markers now say PROPOSED, and question 10 says plainly that none of it is canon until you say yes.
@@ -285,3 +289,14 @@ A review of the first version of this script found these problems. We checked ea
 8. **The dead.** Every one of the dead is now plainly an adult (R18: "a grown woman", "a man-sized shape"; R21: "every one of them a grown man or woman", "men's boots"), and they are laid out below the steps, away from the arch where the child shelters.
 9. **The guard who dies** is now one of the escort with no lines, plainly not a guard who speaks, and he is among the dead in R21. He has his own block (R16b), which leans on R15 like the other deaths, so "no deaths" is one cut list (question 4).
 10. **Smaller fixes.** R1's note matches the nearly empty jug. "Get under the fucking stone!" is now "Get under stone! Fucking move!". The three "bloody"s became one (the healer), with "damned" for the keeper and "for pity's sake" for the master. The burned rider's scream no longer says "this time" (which only made sense next to the old wording) and stays unidentifiable. The extra drinking lines that only repeated R12 and R13 are gone (the old C33 and the ale and pipe smoke in R11). The second pass now says in the picture itself that not all of the debris lands on empty ground.
+
+## 9. Your decisions of 18 October 2026
+
+You answered questions 1, 3 and 4 and decided where the finished episode renders. What we did with each:
+
+1. **Species lines: "use the suggestions".** The five lines now use the wording in section 2 (C8b, C9, C19, C30). One of them was your own [ORIGINAL] line, and you approved changing it: "Why couldn't I get a Bashion?" is now "Why couldn't I get one like Charcoal?". Your old wording is kept in `screenplay-final.md` and in this file. The cue of each line is marked `[creator-approved wording 2026-10-18]`, so everyone recording it knows to say exactly these words. `DRAGONS.md` records the question as closed. The script's other PENDING notes are gone; there are none left.
+2. **Deaths in Cling: keep the six unnamed adult deaths, with the gore.** R15, R16b, R18, R20 and R21 are marked as approved by you (question 4).
+3. **Remi is an adult.** He may drink, swear and so on. The limits for children still apply to Abby and the child in Cling (and to the young attendant and the young riders, who could be children). The checking tool and the shot list no longer treat Remi as a possible child. No drinking beat for Remi was added (section 3). His exact age is still not set. `../../../CHARACTERS.md` now lists who is an adult and who is a child, and says which facts are still open.
+4. **The finished 4K episode renders on your own gaming PC** (on its graphics card), not on this cloud machine. Its system and graphics card are not known yet, so Windows 10/11 comes first, then macOS and Linux. That is work on the render tools, which is being done separately; for this script, `render-schedule.md` now says that its hours are measured on this CPU-only machine and are an upper bound until your PC is measured.
+
+Everything else in this file that is ours stays a proposal until you say yes: the 28 additions, the other rating-pass pieces and changes, and the stage-direction wording.
