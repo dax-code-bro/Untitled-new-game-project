@@ -182,6 +182,8 @@ function defaultJobName({ scene, presetName, a, start, seconds, fps, bitDepth })
 
 main().then((code) => process.exit(code), (e) => {
   console.error(`\nerror: ${e.message}`);
+  // machine-readable reason for a caller (render/episode.mjs): JOB_MISMATCH, GPU_SOFTWARE_FALLBACK, ...
+  if (process.env.DK_ERROR_JSON) { try { fs.writeFileSync(process.env.DK_ERROR_JSON, JSON.stringify({ code: e.code ?? null, message: e.message }) + '\n'); } catch {} }
   if (process.env.DK_DEBUG) console.error(e.stack);
   process.exit(1);
 });

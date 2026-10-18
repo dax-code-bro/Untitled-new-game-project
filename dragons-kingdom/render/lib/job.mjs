@@ -145,6 +145,17 @@ function describeChanges(prev, cur) {
   return { changes: out, onlyFiles: nonFile === 0 && edited.length > 0, edited };
 }
 
+/** The "this folder holds a DIFFERENT render" error (nothing is deleted). */
+function mismatchError(outDir, what, changes, diff = {}) {
+  const err = new Error(`${path.relative(process.cwd(), outDir) || outDir} already holds ${what} of a DIFFERENT render - nothing was deleted.\n` +
+    `  what differs: ${changes.join('; ')}\n` +
+    (diff.onlyFiles ? `  - to continue that render, undo the edits to ${listFiles(diff.edited)} and run the same command again\n` : '') +
+    `  - to keep that render, write this one somewhere else:   --out output/<new-name>\n` +
+    `  - to throw that render away and start over here:        add --fresh`);
+  err.code = 'JOB_MISMATCH';
+  return err;
+}
+
 function writeJson(file, obj) {
   const tmp = `${file}.tmp-${process.pid}`;
   fs.writeFileSync(tmp, JSON.stringify(obj, null, 2) + '\n');
@@ -204,8 +215,21 @@ export async function runJob(opts) {
   process.on('SIGTERM', onSignal);
 
   try {
+    // Chunks drawn by the CPU (SwiftShader) and by a graphics card (--gpu) never mix:
+    // known from job.json alone, so it is said before a browser starts (with --gpu
+    // on a machine whose GPU is not usable the browser would refuse to start at all).
+    if (!opts.fresh) {
+      let prev0 = null;
+      try { prev0 = JSON.parse(fs.readFileSync(path.join(outDir, 'job.json'), 'utf8')); } catch {}
+      const was = prev0?.format === JOB_FORMAT ? prev0.fingerprint?.renderer?.gpu : undefined;
+      if (was !== undefined && was !== !!opts.gpu) {
+        const n = fs.readdirSync(chunksDir).filter((f) => /^chunk_\d+\.mp4$/.test(f)).length;
+        const fin = fs.existsSync(path.join(outDir, `${jobName}.mp4`));
+        if (n || fin) throw mismatchError(outDir, n ? `${n} finished chunk(s)${fin ? ' and a finished video' : ''}` : 'a finished video', [`renderer gpu (${was} -> ${!!opts.gpu})`]);
+      }
+    }
     // First worker tells us the scene's meta (duration) - needed to plan.
-    const mkWorker = (id) => new RenderWorker({ id, server, sceneFile, init: initCfg, gpu: opts.gpu, log: (...a) => { progress?.clearLine(); console.error(...a); } });
+    const mkWorker = (id) => new RenderWorker({ id, server, sceneFile, init: initCfg, gpu: opts.gpu, gpuProfile: opts.gpuProfile, log: (...a) => { progress?.clearLine(); console.error(...a); } });
     const w0 = mkWorker(1);
     workers.push(w0);
     const t0 = Date.now();
@@ -270,13 +294,7 @@ export async function runJob(opts) {
       const n = finished().length;
       if (n || fs.existsSync(finalFile)) {
         const what = n ? `${n} finished chunk(s)${fs.existsSync(finalFile) ? ' and a finished video' : ''}` : 'a finished video';
-        const err = new Error(`${path.relative(process.cwd(), outDir) || outDir} already holds ${what} of a DIFFERENT render - nothing was deleted.\n` +
-          `  what differs: ${changes.join('; ')}\n` +
-          (diff.onlyFiles ? `  - to continue that render, undo the edits to ${listFiles(diff.edited)} and run the same command again\n` : '') +
-          `  - to keep that render, write this one somewhere else:   --out output/<new-name>\n` +
-          `  - to throw that render away and start over here:        add --fresh`);
-        err.code = 'JOB_MISMATCH';
-        throw err;
+        throw mismatchError(outDir, what, changes, diff);
       }
       for (const f of fs.readdirSync(chunksDir)) fs.rmSync(path.join(chunksDir, f), { force: true });   // nothing finished: nothing to lose
     } else {

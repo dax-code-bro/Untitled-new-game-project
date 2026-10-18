@@ -1,0 +1,5 @@
+# Made on each computer by the setup scripts / gpu-check - never committed.
+logs/
+tools/
+.venv-bpy/
+.dk-gpu.json

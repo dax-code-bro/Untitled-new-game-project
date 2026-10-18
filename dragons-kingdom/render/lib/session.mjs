@@ -34,7 +34,7 @@ export async function openSession(o) {
   const sceneFile = path.resolve(o.scene);
   const p = o.resolved ?? resolvePreset(o.preset ?? 'draft', { size: o.size });
   const server = o.server ?? await startServer({ allowRoots: [path.dirname(sceneFile)] });
-  const worker = new RenderWorker({ id: o.id ?? 0, server, sceneFile, init: runtimeConfig(p, o), gpu: o.gpu, log: o.log, verbose: o.verbose });
+  const worker = new RenderWorker({ id: o.id ?? 0, server, sceneFile, init: runtimeConfig(p, o), gpu: o.gpu, gpuProfile: o.gpuProfile, log: o.log, verbose: o.verbose });
   let info;
   try { info = await worker.start(); } catch (e) { await worker.close(); if (!o.server) await server.close(); throw e; }
   return {

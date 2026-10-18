@@ -16,7 +16,12 @@
     "render:final-fast": "node render/render.mjs scenes/test-kingdom.js --preset final-fast",
     "still": "node render/render.mjs --still scenes/test-kingdom.js --time 5 --preset final --png output/still-4k.png",
     "bench": "node render/bench.mjs --preset final",
-    "bench:final-fast": "node render/bench.mjs --preset final-fast"
+    "bench:final-fast": "node render/bench.mjs --preset final-fast",
+    "episode": "node render/episode.mjs",
+    "episode:status": "node render/episode.mjs --status",
+    "gpu-check": "node render/gpu-check.mjs",
+    "caches": "node pc/build-caches.mjs",
+    "caches:check": "node pc/build-caches.mjs --check"
   },
   "dependencies": {
     "three": "0.180.0"

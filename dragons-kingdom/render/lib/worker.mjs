@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { loadPlaywright, chromeExecutable, chromeFlags } from './tools.mjs';
+import { activeGpuProfile, isSoftwareRenderer, pageProbe, SoftwareGpuError } from './gpu.mjs';
 
 const INIT_TIMEOUT_MS = Number(process.env.DK_INIT_TIMEOUT_MS) || 10 * 60 * 1000;
 const CLOSE_TIMEOUT_MS = Number(process.env.DK_CLOSE_TIMEOUT_MS) || 20000;   // env: tests
@@ -67,14 +68,18 @@ export class RenderWorker {
 
   async start() {
     const pw = await loadPlaywright();
-    const executablePath = await chromeExecutable();
+    const gpu = !!this.opts.gpu;
+    // --gpu: the launch profile gpu-check found for this machine (render/lib/gpu.mjs)
+    const profile = gpu ? (this.opts.gpuProfile ?? activeGpuProfile()) : null;
+    // profile.shell: Playwright's chromium-headless-shell (picked by Playwright itself)
+    const executablePath = profile?.shell ? (process.env.DK_CHROME_SHELL || undefined) : await chromeExecutable();
     this.dead = false; this.deathReason = null; this.info = null;
     this.death = new Promise((_, reject) => { this._die = reject; });
     this.death.catch(() => {});
     const browser = await pw.chromium.launch({
       executablePath,
-      headless: true,
-      args: [...chromeFlags({ gpu: !!this.opts.gpu }), this.marker],
+      headless: profile ? profile.headless !== false : true,
+      args: [...chromeFlags({ gpu, profile }), this.marker],
       timeout: 120000,
     });
     this.browser = browser;
@@ -108,9 +113,19 @@ export class RenderWorker {
     });
     await this._guard(page.goto(this.opts.server.pageUrl, { waitUntil: 'load' }), { timeoutMs: 120000, what: 'loading the runtime page' });
     await this._guard(page.waitForFunction(() => window.dkReady === true, null, { timeout: 60000 }));
+    if (gpu) {
+      // Which GPU really draws? Checked before the (long) scene setup: a silent
+      // fallback to SwiftShader would turn days of rendering into months.
+      this.probe = await this._guard(page.evaluate(pageProbe), { timeoutMs: 60000, what: 'the GPU probe' });
+      if (isSoftwareRenderer(this.probe.renderer) && !/^(1|true|yes)$/i.test(process.env.DK_ALLOW_SOFTWARE_GPU || '')) {
+        await this.close();
+        throw new SoftwareGpuError(this.probe.renderer, profile);
+      }
+    }
     const cfg = { ...this.opts.init, sceneUrl: this.opts.server.fileUrl(this.opts.sceneFile) + `?v=${Date.now()}` };
     this.info = await this._guard(page.evaluate((c) => window.dk.init(c), cfg), { timeoutMs: INIT_TIMEOUT_MS, what: 'scene setup (setup() + asset loading)' });
     this.info.browserVersion = this.browserVersion;
+    if (profile) this.info.gpuProfile = profile.name;
     return this.info;
   }
 

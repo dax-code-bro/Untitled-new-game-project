@@ -46,13 +46,31 @@ export async function chromeExecutable() {
   return exe;
 }
 
-function which(bin) {
-  const r = spawnSync('sh', ['-c', `command -v ${bin}`], { encoding: 'utf8' });
-  return r.status === 0 ? r.stdout.trim() : null;
+const EXE = process.platform === 'win32' ? '.exe' : '';
+/** Tools the PC setup scripts (pc/setup-windows.ps1, pc/setup.sh) may unpack into the project. */
+export const LOCAL_TOOLS_DIR = path.join(PROJECT_ROOT, 'pc', 'tools');
+
+const _which = new Map();
+export function which(bin) {
+  if (_which.has(bin)) return _which.get(bin);
+  let found = null;
+  if (process.platform === 'win32') {
+    const r = spawnSync('where', [bin], { encoding: 'utf8', windowsHide: true });
+    if (r.status === 0) found = r.stdout.split(/\r?\n/).map((l) => l.trim()).find(Boolean) || null;
+  } else {
+    const r = spawnSync('sh', ['-c', `command -v ${bin}`], { encoding: 'utf8' });
+    if (r.status === 0) found = r.stdout.trim() || null;
+  }
+  _which.set(bin, found);
+  return found;
+}
+function localTool(bin) {
+  const f = path.join(LOCAL_TOOLS_DIR, 'ffmpeg', 'bin', bin + EXE);
+  return existsSync(f) ? f : null;
 }
 
-export function ffmpegPath() { return process.env.DK_FFMPEG || which('ffmpeg') || 'ffmpeg'; }
-export function ffprobePath() { return process.env.DK_FFPROBE || which('ffprobe') || 'ffprobe'; }
+export function ffmpegPath() { return process.env.DK_FFMPEG || localTool('ffmpeg') || which('ffmpeg') || 'ffmpeg'; }
+export function ffprobePath() { return process.env.DK_FFPROBE || localTool('ffprobe') || which('ffprobe') || 'ffprobe'; }
 
 export function checkFfmpeg() {
   const r = spawnSync(ffmpegPath(), ['-hide_banner', '-encoders'], { encoding: 'utf8' });
@@ -71,8 +89,9 @@ export const COMMON_FLAGS = [
   '--mute-audio',
   '--no-first-run',
 ];
-export function chromeFlags({ gpu = false } = {}) {
+// gpu: profile = a launch profile from gpu.mjs (its ANGLE back end and flags).
+export function chromeFlags({ gpu = false, profile = null } = {}) {
   const extra = (process.env.DK_CHROME_ARGS || '').split(/\s+/).filter(Boolean);
-  const gpuFlags = gpu ? ['--ignore-gpu-blocklist', '--enable-gpu'] : SWIFTSHADER_FLAGS;
+  const gpuFlags = gpu ? (profile?.args ?? ['--ignore-gpu-blocklist', '--enable-gpu']) : SWIFTSHADER_FLAGS;
   return [...COMMON_FLAGS, ...gpuFlags, ...extra];
 }

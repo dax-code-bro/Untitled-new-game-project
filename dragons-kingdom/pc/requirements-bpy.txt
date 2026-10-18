@@ -1,0 +1,13 @@
+# Blender's Python module for the offline cache builds (human characters, cloth bakes).
+# Exactly the versions the cloud builds were made with (2026-10). bpy 4.2.0 needs Python 3.11
+# (64-bit) and has wheels for Windows x64, macOS (Apple Silicon and Intel) and Linux x86_64.
+# The setup scripts install this into pc/.venv-bpy:   python -m pip install -r pc/requirements-bpy.txt
+bpy==4.2.0
+numpy==2.4.6
+Cython==3.3.0
+requests==2.34.2
+zstandard==0.25.0
+certifi==2026.7.22
+charset-normalizer==3.5.2
+idna==3.20
+urllib3==2.8.0

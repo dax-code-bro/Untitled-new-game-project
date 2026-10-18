@@ -52,6 +52,23 @@ function inside(root, p) {
   return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
 }
 
+/**
+ * URL path under /fs/ for an absolute file path, and back. POSIX:
+ * /home/x/scene.js <-> /fs/home/x/scene.js. Windows: C:\Users\x\scene.js <->
+ * /fs/C%3A/Users/x/scene.js (the drive letter is the first segment, so relative
+ * imports inside the page resolve to the same drive). `p` = node:path flavour.
+ */
+export function fsUrlPath(abs, p = path) {
+  const parts = p.resolve(abs).split(p.sep);
+  if (parts[0] === '') parts.shift();                 // POSIX: the leading "/"
+  return '/fs/' + parts.map(encodeURIComponent).join('/');
+}
+export function fsPathFromUrl(pathname, p = path) {
+  const rest = pathname.slice('/fs/'.length);
+  if (p.sep === '\\') return /^[A-Za-z]:(\/|$)/.test(rest) ? p.resolve(rest) : null;   // Windows: needs a drive
+  return p.resolve('/' + rest);
+}
+
 // ------------------------------------------------------------ WebSocket ----
 // Just enough of RFC 6455 for one job: a browser sends (possibly fragmented)
 // binary messages, we send short text messages. No extensions, no compression.
@@ -265,8 +282,8 @@ export async function startServer({ allowRoots = [] } = {}) {
       }
     }
     if (p.startsWith('/fs/')) {
-      const f = path.resolve('/' + p.slice(4));
-      if (fsRoots.some((r) => inside(r, f))) return sendFile(res, f);
+      const f = fsPathFromUrl(p);
+      if (f && fsRoots.some((r) => inside(r, f))) return sendFile(res, f);
       res.writeHead(403); res.end('outside allowed roots'); return;
     }
     res.writeHead(404); res.end('not found');
@@ -325,7 +342,7 @@ export async function startServer({ allowRoots = [] } = {}) {
   return {
     base,
     pageUrl: `${base}/`,
-    fileUrl: (abs) => `${base}/fs${path.resolve(abs).split(path.sep).map(encodeURIComponent).join('/')}`,
+    fileUrl: (abs) => `${base}${fsUrlPath(abs)}`,
     /** Register a frame sink; returns the WebSocket URL the page sends frames to. */
     addSink(id, sink) { sinks.set(id, sink); return `ws://127.0.0.1:${port}/ws/${id}`; },
     removeSink(id) {
