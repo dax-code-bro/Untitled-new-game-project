@@ -3435,6 +3435,10 @@ function makeViewmodelArms(hands, opts = {}) {
       if (rec.pivots) rec.pivots[3] = rec.indexPivot;
     }
     rec.grip = typeof grip === 'string' ? grip : 'custom';
+    // Which way the held part runs and which way the hand grasps it, for what closes the hand on it.
+    const gk = typeof grip === 'string' ? GRIP_KINDS[grip] : grip;
+    if (gk && gk.axis) rec.gripAxis = gk.axis.slice();
+    if (gk && gk.round) rec.gripRound = gk.round.slice();
     out[side > 0 ? 'right' : 'left'] = rec;
     out[side > 0 ? 'rPivots' : 'lPivots'] = rec.pivots || [];
   }
