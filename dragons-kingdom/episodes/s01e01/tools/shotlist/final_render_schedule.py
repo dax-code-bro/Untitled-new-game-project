@@ -4,6 +4,8 @@
 Native 4K masters only (SERIES.md section 2: --preset final on every frame; no final-fast, no --twos). Seconds per
 frame come from final/shotlist.json (native_4k_s_per_frame: MEASURED style-frame figures and estimates derived from
 them, see final_build.py SPF). Nothing here is measured on the final sets yet: the pilot replaces the estimates.
+All speeds are from the CPU-only cloud machine; Daxtyn decided on 2026-10-18 that the masters render on his own PC's
+graphics card (OS and GPU not known yet), so the page says these figures are an upper bound until his PC is measured.
 
 Usage: python3 tools/shotlist/final_render_schedule.py [--check]
 """
@@ -150,6 +152,8 @@ def build_md(d, scenes, by_set, T, jobs):
     w("# Dragon's Kingdom S01E01: native 4K render schedule for the locked shooting script")
     w('')
     w('> **Plan only.** Nothing of the final script has been rendered. The seconds per frame are measured on the five style frames and estimated from them for the other sets; nobody has rendered a frame of the new sets yet. Every figure here is an estimate until the pilot (step 1 below) measures the real scenes. Made by `tools/shotlist/final_render_schedule.py` from `shotlist.json`; the per-shot job list is `render-jobs.json`.')
+    w('')
+    w('> **Where the masters will render (Daxtyn\'s decision, 18 October 2026).** The final 4K masters will render on Daxtyn\'s own gaming PC, on its graphics card, not on this CPU-only cloud machine. Its operating system and graphics card are not known yet: Windows 10/11 is the most likely, and macOS and Linux are to be supported too. Every hour and day figure below was measured or estimated on this 4-vCPU machine without a GPU (SwiftShader), so it is a CPU-only upper bound, not a forecast for his PC, and the disk plan is written for the 15 GB free here. Before planning his render, run the pilot (step 1) on his PC with the renderer\'s `--gpu` option, put the measured seconds per frame into `final_build.py` (`SPF`) and rebuild this schedule.')
     w('')
     w('## The answer')
     w('')

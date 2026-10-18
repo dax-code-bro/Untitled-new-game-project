@@ -63,7 +63,7 @@ WHAT HAS CHANGED SINCE THE HANDOFF WAS WRITTEN (read with the CANON LOCK and PRO
 The handoff's front matter above and its closing checks at the end are kept word for word. Where they disagree with a later decision by Daxtyn, his decision wins, as follows.
 
 Dragons (DRAGONS.md, Daxtyn's decisions):
-- No species (2026-10-09). Bashion, Nightwing and Slitherwing are scrapped, and every dragon is its own design. Where the CANON LOCK, the policies or the closing checks name a species, read it as the handoff's old wording for that one dragon: Charcoal, Leaf, Starlight, the gold hatchling or the scout. Species words are gone from every stage direction (see the CHANGED blocks). In the dialogue, DRAGONS.md keeps them as written until Daxtyn chooses new wording: his [ORIGINAL] line "Why couldn't I get a Bashion?", the proposed lines just after it (L053, L054), Remi's report in 2B (L109) and Abby's proposed line in X17. Those lines are shot as written; the three proposed ones are marked PENDING, with a proposed alternative that is used only if he picks it (final/CHANGES.md question 1).
+- No species (2026-10-09). Bashion, Nightwing and Slitherwing are scrapped, and every dragon is its own design. Where the CANON LOCK, the policies or the closing checks name a species, read it as the handoff's old wording for that one dragon: Charcoal, Leaf, Starlight, the gold hatchling or the scout. Species words are gone from every stage direction (see the CHANGED blocks) and, since Daxtyn chose the new wording on 2026-10-18, from all the dialogue too: his ORIGINAL line "Why couldn't I get a Bashion?" is now "Why couldn't I get one like Charcoal?" (C8b); "Nightwings are faster. More versatile." / "And Bashions?" are now "Smaller ones are faster. More versatile." / "And big ones?" (C9); Remi's "A Slitherwing." is now "A small dragon. Fast." (C19); Abby's "I still want a Bashion." in X17 is now "I still want one like Charcoal." (C30). CANON LOCK item 8 above still quotes the old ORIGINAL line, as the record of what the handoff said; the approved wording replaces it.
 - Two legs, wings as forelimbs and horns on every dragon (2026-10-14). No dragon has front legs.
 - A low, normal stance (2026-10-16): low to the ground, the two legs under the middle of the body, the body roughly level, the folded wings' wrists touching down in front for support when walking or resting. No dragon stands tall and upright like a rearing horse. Every dragon at rest in this script uses that decided stance: it crouches or lies low and level, belly near the ground, its two legs folded under the middle of its body, the wrists of its folded wings on the ground in front. DRAGONS.md still leaves open whether Leaf may also sit back on his haunches like a dog; this script does not use that pose, and it is offered to Daxtyn only as an alternative (final/CHANGES.md question 2).
 - Leaf is about a quarter of Charcoal's size (2026-10-09), not one-twentieth.
@@ -71,7 +71,8 @@ Dragons (DRAGONS.md, Daxtyn's decisions):
 
 Rating (SERIES.md section 8, decided by Daxtyn on 2026-10-16): the show is for mature audiences. It contains drug references and drug use, tobacco, alcohol, strong language, dark humor and ordinary humor, suggestive material, intense violence, strong blood and gore. This replaces the "Violence" paragraph of PRODUCTION CONTINUITY above. In this episode:
 - Violence and gore are shown as in a live-action drama. The scout rider's burn and the tearing of the scout's LEFT wing are shown plainly, with blood. Starlight's attack kills unnamed people in Cling and shows their bodies. All of it serves the story, none of it is staged as instruction for real-world harm, and nothing is lingered on for its own sake. The dark humor is about danger and the living, never a joke at the expense of the dead.
-- Hard limits: suggestive material is non-explicit and only ever between adults. Nothing suggestive, and no drugs, tobacco or alcohol, involves Abby, the Cling child or any character who could be a child. This script also keeps all of it away from Remi, whose age is not established, from the young attendant and from the young riders. Abby's broken arm is still shown without a graphic bone image.
+- Daxtyn approved keeping the six unnamed adult deaths in Starlight's attack on Cling, with their blood and gore (2026-10-18; R15, R16b, R18, R20, R21).
+- Hard limits: suggestive material is non-explicit and only ever between adults. Nothing suggestive, and no drugs, tobacco or alcohol, involves Abby, the Cling child or any character who could be a child; this script also keeps all of it away from the young attendant and the young riders. Remi is an adult (Daxtyn, 2026-10-18), so these limits do not apply to him; CANON LOCK item 2 still leaves his exact age unset. Abby's broken arm is still shown without a graphic bone image.
 - The CANON LOCK still binds every event: the scout rider and the scout dragon are alive when last seen and nobody declares them dead; no named villain or conspiracy; Starlight breathes no fire and takes no wound; Queen Fall says only "Attack."; the King of Cling stays unnamed; nothing from Episode 2; Abby's LEFT arm; the scout's LEFT wing; dragons have no human dialogue; Abby never answers the succession question.
 
 EDITING PLAN — THREE MAIN SCENES WITH SUBSEQUENCES
@@ -92,7 +93,7 @@ EDITING PLAN — THREE MAIN SCENES WITH SUBSEQUENCES
 47:00–49:00  Scene 3D: aftermath and cliffhanger
 49:00–50:00  End credits, adjusted to actual credits available
 
-The editing plan above is the handoff's 50-minute plan, kept word for word. It does not include the additions or the rating pass. This script's estimated runtime, from tools/check_final.py with the shot list's timing model: expected 54:22, tight-cut bound 44:16, loose-cut bound 68:54. These are estimates for an animatic, not measured footage (SERIES.md section 1). The scene-by-scene table is in final/CHANGES.md.
+The editing plan above is the handoff's 50-minute plan, kept word for word. It does not include the additions or the rating pass. This script's estimated runtime, from tools/check_final.py with the shot list's timing model: expected 54:24, tight-cut bound 44:18, loose-cut bound 68:56. These are estimates for an animatic, not measured footage (SERIES.md section 1). The scene-by-scene table is in final/CHANGES.md.
 
 SCREENPLAY
 
@@ -644,8 +645,8 @@ The dragons continue across open water. A shallow smile flickers across Abby's f
 
 She looks across Charcoal's enormous body, taking in the effortless way he holds the air.
 
-ABBY [ORIGINAL]:
-"Why couldn't I get a Bashion?"
+ABBY [creator-approved wording 2026-10-18]:
+"Why couldn't I get one like Charcoal?"
 
 REMI:
 "You have Leaf."
@@ -661,11 +662,11 @@ Abby touches Leaf affectionately. Leaf turns one eye toward her voice.
 ABBY [to Leaf]:
 "I didn't mean it like that."
 
-REMI:
-"Nightwings are faster. More versatile."
+REMI [creator-approved wording 2026-10-18]:
+"Smaller ones are faster. More versatile."
 
-ABBY:
-"And Bashions?"
+ABBY [creator-approved wording 2026-10-18]:
+"And big ones?"
 
 REMI:
 "Better for war."
@@ -1053,8 +1054,8 @@ The healer continues without providing a real-world instructional demonstration.
 ALEXANDRIA [to Remi]:
 "Tell me."
 
-REMI:
-"We were off the coast. Flying together. Something came past Leaf. A Slitherwing."
+REMI [creator-approved wording 2026-10-18]:
+"We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast."
 
 ALEXANDRIA:
 "With a rider?"
@@ -1567,8 +1568,8 @@ ABBY:
 
 She stays there. Then, sounding more like herself:
 
-ABBY:
-"I still want a Bashion."
+ABBY [creator-approved wording 2026-10-18]:
+"I still want one like Charcoal."
 
 Leaf blinks, slowly.
 
@@ -2250,16 +2251,16 @@ CONTINUITY CHECK FOR THE FINAL SCRIPT (additions, dragon changes and rating pass
 
 Canon: no addition or rating-pass beat names an unnamed character. The King of Cling, the scout rider, the hatchling, the ship's master, the sailor, the keepers, the dead of Cling and every extra stay unnamed, and nobody is given an exact age. The King of Cling first appears in 3A, as written. The hatchling is gold, weak, unnamed, has no rider, does not glow and is alive at the end; news of it stays inside the palace. The scout rider is burned and screaming but conscious, moving and still strapped on when last seen; the scout dragon has lost its LEFT wing and is bleeding, struggling to keep itself above water. Neither is shown after 1F, and nobody says whether they live. The Santa Maria is seen leaving the harbor and later as a far-off sail, never arriving. No addition or rating-pass beat decides how the pair would be brought aboard or where they would be cared for; the crew's jokes in 2C decide nothing. Word to King Fallen is ordered, as written, and never shown leaving or arriving. No Water Gliders, no Episode 2 material, no war mobilization or flying ban, no new villain, no identity reveal, and no line that points at more scouts coming. Verdor is never described as part of Tara. Starlight's actions are unchanged: white, no fire, no wounds; the dead of Cling are killed by her dive, her wings and what they throw. Queen Fall says only "Attack." and gains one wordless close shot of her hand on Starlight's neck (X28). The scout's wound is shown as a torn, bleeding shoulder and a red stain in the water, not as a death sentence.
 
-Dragons: no species word is used in any stage direction. In dialogue, species words remain only where DRAGONS.md keeps the lines as written until Daxtyn chooses new wording: Abby's [ORIGINAL] line in 1D and the PENDING lines L053, L054, L109 and Abby's line in X17 (P1-P3). Every dragon has two legs, wings as forelimbs and horns, and is staged low, its legs under the middle of its body and its folded wings' wrists touching down in front when it walks or rests. Leaf and every other dragon at rest crouch or lie low and level; none sits back on its haunches. Whether Leaf may also sit like a dog is still open in DRAGONS.md and is offered to Daxtyn only as an alternative (final/CHANGES.md question 2). The hatchling pushes itself up on its wing wrists and its two legs (X18). The scout is a small, fast dragon of its own design.
+Dragons: no species word is used in any stage direction or line of dialogue. The five lines that named a species use the wording Daxtyn approved on 2026-10-18 (C8b, C9, C19, C30); their old wording stays in the WAS text. Every dragon has two legs, wings as forelimbs and horns, and is staged low, its legs under the middle of its body and its folded wings' wrists touching down in front when it walks or rests. Leaf and every other dragon at rest crouch or lie low and level; none sits back on its haunches. Whether Leaf may also sit like a dog is still open in DRAGONS.md and is offered to Daxtyn only as an alternative (final/CHANGES.md question 2). The hatchling pushes itself up on its wing wrists and its two legs (X18). The scout is a small, fast dragon of its own design.
 
 People: Abby's LEFT arm is the injured arm in every scene after 1E. She uses only her right hand, and the sling supports her left arm. Before the pass she uses both hands freely, as 1C asks (X3, X4, X6). Abby never answers the succession question, and nothing raises it again. Dragons have no human dialogue. No addition or rating-pass beat gives a dragon a spoken order: riders steer by weight and touch, Abby stops Leaf with a raised hand (X17), and the only words spoken to dragons as orders are the screenplay's own. No canonical command (Attack, Fire, Hold, Skit, Free fire) is added; X18 only talks about the commands Remi already gave, and Remi answers honestly that Charcoal stopped when the full "Hold!" was finished.
 
 Blood continuity: from 1F the scout's blood is on Charcoal's jaw and throat and on Remi's face, hands and sleeves (X10). In 2A Remi scrubs most of it off his face with a keeper's cloth as he crosses to Abby; streaks stay at his hairline and neck, and his hands and sleeves stay dark (R8). Abby and then Alexandria see it and say nothing (R8, R8b). Alexandria wipes his hairline, neck and hands in X11. In the "BACK IN THE TREATMENT ROOM" picture his hands are scrubbed clean at the healer's bowl (R9b), whether or not X11 is kept; his sleeves stay stained for the rest of the day. Charcoal's jaws stay bloody until Remi washes them in X15; if X15 is cut, they are clean when we next see him. In Cling, the injured adult villager has a split scalp and an open fracture of his RIGHT leg below the knee from the second pass to the end; his leg is splinted in X27.
 
-Rating limits: suggestive material is non-explicit and only between adults (R11, R13). No drug, tobacco or alcohol beat involves Abby, Remi, the Cling child, the young attendant, the young riders or any other child: no child drinks, smokes or takes part in a suggestive beat, and no such beat frames a child. Where children are nearby, the picture itself says where they are (R3, R11, R12, R13), and the watchman's cup (C34) is its own close shot on his platform. Every one of the dead in Cling is an adult (R15, R16b, R18, R20, R21). Abby's fracture is still shown without a graphic bone image. Nothing shows how to prepare or use a drug, and no violence is staged as instruction.
+Rating limits: suggestive material is non-explicit and only between adults (R11, R13). No drug, tobacco or alcohol beat involves Abby, the Cling child, the young attendant, the young riders or any other child (Remi is an adult, Daxtyn 2026-10-18; no beat in this script has him drink, smoke or take anything): no child drinks, smokes or takes part in a suggestive beat, and no such beat frames a child. Where children are nearby, the picture itself says where they are (R3, R11, R12, R13), and the watchman's cup (C34) is its own close shot on his platform. Every one of the dead in Cling is an adult (R15, R16b, R18, R20, R21; Daxtyn approved keeping these deaths on 2026-10-18). Abby's fracture is still shown without a graphic bone image. Nothing shows how to prepare or use a drug, and no violence is staged as instruction.
 
 Places: the outer rocks, the gap and the mist bank lying against the rocks' seaward side in X6 must match X8 and 1F, so the scout falls close to the coast, beyond the outer rocks. The Cling map in X5, X14 and X20–X28 must match 3A–3D: fountain with central pillar, steps, arch, gate onto the broad road, alley, music space, watchman's post. The launch scar is torn in 1C and being mended in X19. Cling has no fire from Starlight and no fire montage: the only flames in Cling are pipe embers before the attack, no fire starts in the attack, and the festival food is not cooked over open flames on screen. Cling's first visit (X5) is in the same morning hour as the flight, so no cut goes back in time.
 
 Links between additions (each is also stated in that addition's first note): X8's gap beat leans on X6. X13 reads best after X12. The three lines of X17 starting "You told me to go." lean on X12. X19 leans on X17. X22's gate beat and X26's gate picture lean on X21. X24 and X25 lean on the farm family, who are introduced in both X14 and X20, so they need at least one of those two. Every other addition stands on its own. Some echo an earlier addition when both are kept, and each still reads without it: the harbor, lookout, instructor and quay dragon of X4 in X9, X10 and X16; Abby's morning routine with Leaf from X2 in X17; the race's dive from X6 in X7; the hatchling's struggle from X13 in X18; the dance and the old woman of X14 in X22; the parcel of X5 in X14; the farm family of X14 and X20 in X27.
 
-Rating-pass links (each is also stated in that block's first note or in its CHANGED reason): R7, R8, R8b, R9b, C20, C23, C24 and C25 lean on C15. R5 leans on R4. R16b, R18, R20 and R21 lean on R15, the deaths in Cling: if Daxtyn wants no deaths, cut R15, R16b, R18, R19, R20 and R21 together. R19 leans on R18. C36 leans on R17. A rating-pass block or change inside an addition goes with that addition if it is cut.
+Rating-pass links (each is also stated in that block's first note or in its CHANGED reason): R7, R8, R8b, R9b, C20, C23, C24 and C25 lean on C15. R5 leans on R4. R16b, R18, R20 and R21 lean on R15, the deaths in Cling, which Daxtyn approved on 2026-10-18. R19 leans on R18. C36 leans on R17. A rating-pass block or change inside an addition goes with that addition if it is cut.

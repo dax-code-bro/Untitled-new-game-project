@@ -8,19 +8,35 @@ canon lists, so both tools always agree. check_extended.py is unchanged and stil
 screenplay-extended.md.
 
 Markers in the final script (see its first FINAL SCRIPT NOTE). Everything marked PROPOSED is a proposal
-(SERIES.md section 5): being in the shooting script is not acceptance. When Daxtyn accepts an addition, its
-markers are removed and the acceptance is recorded in the episode folder; that also needs this tool's proofs
-1b and 2 to treat the accepted text as base text, which is not built yet.
+(SERIES.md section 5): being in the shooting script is not acceptance. What Daxtyn has decided is marked
+creator-approved with the date and recorded in final/CHANGES.md; those blocks keep an approval marker (not a
+PROPOSED one) in this production copy so that proofs 1 and 2 can still tell the handoff and the proposals
+apart, and the reading copy (--clean) has no markers at all. An addition he accepts as a whole would need
+proofs 1b and 2 to treat its text as base text, which is not built yet.
   [PROPOSED ADDITION X# — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
       ... [PROPOSED ADDITION X# — end]
   [PROPOSED RATING PASS R# — begin] ... [PROPOSED RATING PASS R# — end]   (may sit inside an addition;
       ids may carry a letter, R8b, for blocks added between existing ones)
+  [RATING PASS R# — creator-approved 2026-10-18 — begin] ... [RATING PASS R# — end]   (a rating-pass block
+      Daxtyn approved; exactly the ids in APPROVED_RATING; its NOTE opens with RP_NOTE_APPROVED)
   [CHANGED C# — reason — WAS (kept for the record, not shot):] old lines
-  [CHANGED C# — NOW (shoot this):] new lines [CHANGED C# — end]   (may sit inside an addition)
+  [CHANGED C# — NOW (shoot this):] new lines [CHANGED C# — end]   (may sit inside an addition; ids may
+      carry a letter too, C8b)
   [PENDING P# — Daxtyn wording — DRAGONS.md L9 — begin] ... [PENDING P# — end]
-      (right after dialogue that DRAGONS.md keeps as written until Daxtyn chooses new wording; holds only a
-      NOTE with the proposed alternative; never shot; may sit inside an addition)
+      (right after dialogue kept as written while Daxtyn decides its wording; holds only a NOTE with the
+      proposed alternative; never shot; may sit inside an addition. None is open since 2026-10-18:
+      PENDING_LINES is empty, so any PENDING block fails until a new open question is listed there)
   [FINAL SCRIPT NOTE — begin] ... [FINAL SCRIPT NOTE — end]  (document notes, top level only)
+  "SPEAKER [creator-approved wording 2026-10-18]:"   (a cue source marker, like [ORIGINAL]: Daxtyn approved this
+      exact wording; only in the NOW text of an APPROVED_CHANGES block)
+
+Daxtyn's decisions of 2026-10-18 that this tool enforces (final/CHANGES.md section 9):
+  - APPROVED_CHANGES: the five dialogue lines that named a scrapped species, with their old and new text, his
+    own [ORIGINAL] line "Why couldn't I get a Bashion?" among them. These and only these may change a spoken
+    line of screenplay.md or an [ORIGINAL] line.
+  - APPROVED_RATING: the rating-pass blocks with the six unnamed adult deaths in Cling.
+  - Remi is an adult: he is no longer in the rating lint's protected list (Abby, the Cling child, the young
+    attendant and the young riders still are).
 
 Hard checks (exit code 1 if any fails):
   1. Proof that the original survives:
@@ -29,18 +45,27 @@ Hard checks (exit code 1 if any fails):
        b. dropping every note, addition, rating-pass and PENDING block (with the blank line each brought) and
           turning every top-level CHANGED block back into its WAS text gives screenplay.md byte for
           byte, so nothing unmarked was added or changed;
-       c. the four [ORIGINAL] cue + quote pairs are in the shooting text unchanged, no CHANGED block
-          touches them, and no new cue is marked [ORIGINAL];
+       c. the [ORIGINAL] cue + quote pairs are in the shooting text unchanged, except one that an
+          APPROVED_CHANGES entry replaces (then the approved pair is shot and the old one is not); no other
+          CHANGED block touches them, and no new cue is marked [ORIGINAL];
        d. top-level changes sit only inside the story (between "SCREENPLAY" and "END OF EPISODE 1."):
-          the front matter, CANON LOCK and closing checks stay word for word.
+          the front matter, CANON LOCK and closing checks stay word for word;
+       e. every spoken line of screenplay.md (cue + quote) is spoken word for word, in order, in the shooting
+          text outside the additions and rating-pass blocks, and nothing else is spoken there, except the
+          APPROVED_CHANGES lines, which are spoken exactly in their approved wording;
+       f. every APPROVED_CHANGES block is in the script with exactly its recorded WAS and NOW text, in the
+          addition it belongs to; no other CHANGED block claims creator approval, and the cue marker
+          "[creator-approved wording 2026-10-18]" appears only in their NOW text.
   2. Proof that the additions are the proposals: inside each addition, dropping its rating-pass and
      PENDING blocks and turning its CHANGED blocks back into WAS text gives the body of the same
      "[PROPOSED ADDITION X#]" in screenplay-extended.md exactly.
   3. Markers: well formed, ids unique and increasing (gaps are allowed: Daxtyn may cut), only
-     rating-pass, CHANGED and PENDING blocks nest (inside additions), every rating-pass block opens with
-     "NOTE (not spoken): [PROPOSED RATING PASS]", every CHANGED reason names DRAGONS.md or
-     [PROPOSED RATING PASS], every PENDING block opens with "NOTE (not spoken): [PENDING Daxtyn wording —
-     DRAGONS.md L9]" and follows one of the PENDING_LINES, and every PENDING_LINES line is followed by one.
+     rating-pass, CHANGED and PENDING blocks nest (inside additions), every proposed rating-pass block opens
+     with "NOTE (not spoken): [PROPOSED RATING PASS]" and every approved one with RP_NOTE_APPROVED, the
+     approved marker form is used for exactly the APPROVED_RATING ids, every CHANGED reason names DRAGONS.md,
+     [PROPOSED RATING PASS] or (APPROVED_CHANGES only) "creator-approved 2026-10-18", every PENDING block
+     opens with "NOTE (not spoken): [PENDING Daxtyn wording — DRAGONS.md L9]" and follows one of the
+     PENDING_LINES, and every PENDING_LINES line is followed by one.
   4. Dependencies: check_extended.DEPENDS for additions and RATING_DEPENDS below; a kept block whose
      dependency was cut fails, and each link is named in the dependent's first note (or CHANGED
      reason) and in the closing note's "Links between additions" / "Rating-pass links" paragraphs.
@@ -50,11 +75,11 @@ Hard checks (exit code 1 if any fails):
      shot and never speaking; no death or bleeding-out words with the scout or its rider;
      no fire, wounds or blood with Starlight; Abby never mentions being queen; no canonical command
      and no short spoken order to a dragon; only known speakers (dragons never speak). In the whole
-     story's shooting text, species words appear only in Abby's [ORIGINAL] line and the PENDING_LINES
-     (DRAGONS.md: dialogue naming a species stays as written until Daxtyn chooses new wording).
+     story's shooting text no species word is left (Daxtyn chose the new wording on 2026-10-18; the
+     PENDING_LINES exception is empty).
   6. Rating hard limits (SERIES.md section 8) on all new text: no sentence pairs a drug, tobacco,
-     alcohol or suggestive word with Abby, Remi (age not established), a child, the young attendant
-     or the young riders; those characters never speak such words; no graphic bone or gore with Abby;
+     alcohol or suggestive word with Abby, a child, the princess, the young attendant or the young riders
+     (Remi is an adult, Daxtyn 2026-10-18); those characters never speak such words; no graphic bone or gore with Abby;
      the story text of the death and gore blocks (DEAD_BLOCKS) never names a child or a small or little
      body: every one of the dead is an adult.
   7. The runtime quoted in the timing FINAL SCRIPT NOTE matches the computed estimate
@@ -90,22 +115,52 @@ SHOTLIST = ce.SHOTLIST
 
 ADD_BEGIN = re.compile(r"^\[PROPOSED ADDITION (X\d+) — (in the shooting script by default 2026-10-16, not accepted by Daxtyn) — begin\]$")
 ADD_END = re.compile(r"^\[PROPOSED ADDITION (X\d+) — end\]$")
-RP_BEGIN = re.compile(r"^\[PROPOSED RATING PASS (R\d+[a-z]?) — begin\]$")
-RP_END = re.compile(r"^\[PROPOSED RATING PASS (R\d+[a-z]?) — end\]$")
+APPROVED_DATE = "2026-10-18"
+RP_BEGIN = re.compile(r"^\[(?P<form>PROPOSED RATING PASS|RATING PASS) (?P<id>R\d+[a-z]?)(?P<appr> — creator-approved 2026-10-18)? — begin\]$")
+RP_END = re.compile(r"^\[(?P<form>PROPOSED RATING PASS|RATING PASS) (?P<id>R\d+[a-z]?) — end\]$")
 PEND_BEGIN = re.compile(r"^\[PENDING (P\d+) — Daxtyn wording — DRAGONS\.md L9 — begin\]$")
 PEND_END = re.compile(r"^\[PENDING (P\d+) — end\]$")
 RP_NOTE = "NOTE (not spoken): [PROPOSED RATING PASS]"
+RP_NOTE_APPROVED = "NOTE (not spoken): [RATING PASS — creator-approved 2026-10-18]"
 RP_REASON = "[PROPOSED RATING PASS]"
 PEND_NOTE = "NOTE (not spoken): [PENDING Daxtyn wording — DRAGONS.md L9]"
-# DRAGONS.md (Daxtyn's decision file): "the Episode 1 dialogue still names the species ... Daxtyn decides the new
-# wording. Until then the lines stay as written." These proposed lines keep their species word while that question
-# is open; each must be followed by a PENDING block. Abby's [ORIGINAL] line is allowed separately.
-PENDING_LINES = {'"Nightwings are faster. More versatile."': "P1", '"And Bashions?"': "P1",
-                 '"We were off the coast. Flying together. Something came past Leaf. A Slitherwing."': "P2",
-                 '"I still want a Bashion."': "P3"}
-CH_WAS = re.compile(r"^\[CHANGED (C\d+) — (.+) — WAS \(kept for the record, not shot\):\]$")
-CH_NOW = re.compile(r"^\[CHANGED (C\d+) — NOW \(shoot this\):\]$")
-CH_END = re.compile(r"^\[CHANGED (C\d+) — end\]$")
+# Dialogue kept as written while Daxtyn decides its wording: {quoted line: PENDING id}; each must be followed by a
+# PENDING block. Empty since 2026-10-18: Daxtyn chose the wording for every line that named a scrapped species
+# (APPROVED_CHANGES below), which closed the DRAGONS.md question the old P1-P3 blocks held open.
+PENDING_LINES = {}
+
+# Daxtyn's decisions of 2026-10-18 (final/CHANGES.md section 9). The old and new text of every approved change,
+# exactly as it must stand in the CHANGED block's WAS and NOW sections. "in": the addition the block sits in
+# (None = the handoff's own text).
+APPROVED_REASON = "creator-approved " + APPROVED_DATE        # every approved CHANGED reason starts with this
+APPROVED_TAG = "creator-approved wording " + APPROVED_DATE   # cue source marker in the NOW text, like [ORIGINAL]
+APPROVED_CHANGES = {
+    "C8b": {"in": None, "line_ids": ["L048"],
+            "decision": "Daxtyn approved changing his own [ORIGINAL] line (decision 1).",
+            "was": ['ABBY [ORIGINAL]:', '"Why couldn\'t I get a Bashion?"'],
+            "now": ['ABBY [%s]:' % APPROVED_TAG, '"Why couldn\'t I get one like Charcoal?"']},
+    "C9": {"in": None, "line_ids": ["L053", "L054"],
+           "decision": "Daxtyn chose the suggested wording (decision 1).",
+           "was": ['REMI:', '"Nightwings are faster. More versatile."', '', 'ABBY:', '"And Bashions?"'],
+           "now": ['REMI [%s]:' % APPROVED_TAG, '"Smaller ones are faster. More versatile."', '',
+                   'ABBY [%s]:' % APPROVED_TAG, '"And big ones?"']},
+    "C19": {"in": None, "line_ids": ["L109"],
+            "decision": "Daxtyn chose the suggested wording (decision 1).",
+            "was": ['REMI:', '"We were off the coast. Flying together. Something came past Leaf. A Slitherwing."'],
+            "now": ['REMI [%s]:' % APPROVED_TAG,
+                    '"We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast."']},
+    "C30": {"in": "X17", "line_ids": ["X17-11"],
+            "decision": "Daxtyn chose the suggested wording (decision 1); X17 itself is still a proposal.",
+            "was": ['ABBY:', '"I still want a Bashion."'],
+            "now": ['ABBY [%s]:' % APPROVED_TAG, '"I still want one like Charcoal."']},
+}
+# Rating-pass blocks Daxtyn approved (decision 2: keep the six unnamed adult deaths in Starlight's attack, with their
+# gore). {id: the addition it sits in, or None}. R19 (the parent shields the child) and R16/R17 (the villager's
+# injuries) are not deaths and stay proposals.
+APPROVED_RATING = {"R15": None, "R16b": None, "R18": None, "R20": "X27", "R21": "X28"}
+CH_WAS = re.compile(r"^\[CHANGED (C\d+[a-z]?) — (.+) — WAS \(kept for the record, not shot\):\]$")
+CH_NOW = re.compile(r"^\[CHANGED (C\d+[a-z]?) — NOW \(shoot this\):\]$")
+CH_END = re.compile(r"^\[CHANGED (C\d+[a-z]?) — end\]$")
 NOTE_BEGIN, NOTE_END = "[FINAL SCRIPT NOTE — begin]", "[FINAL SCRIPT NOTE — end]"
 MARKER_WORDS = ("ADDITION", "RATING PASS", "CHANGED", "PENDING", "FINAL SCRIPT NOTE", "EXTENDED EDITION NOTE")
 EXT_BEGIN = re.compile(r"^\[PROPOSED ADDITION (X\d+) — begin\]$")
@@ -201,6 +256,8 @@ CHANGE_SHOTS = {
     "C27": ("The working dragon crouched beside its fishing crew", 0), "C28": ("lead their dragons off the field", 0),
     "C29": ("Leaf is up at once, low on his two legs", 0),
     "C31": ("the wrists of its folded wings first", 0), "C32": ("more scouts or at a war", 0),
+    "C8b": ("Why couldn't I get one like Charcoal?", 0), "C9": ("Smaller ones are faster. More versatile.", 0),
+    "C19": ("A small dragon. Fast.", 0), "C30": ("I still want one like Charcoal.", 0),
     "C34": ("his cup of ale goes over beside the bread, still full", 0.5),
     "C35": ("Get under stone! Fucking move!", 0), "C36": ("his broken leg splinted", 0.5),
     "C37": ("a jug that came through the wreck unbroken", 4.0),
@@ -216,8 +273,10 @@ STARLIGHT_RE = re.compile(r"\b(Starlight|Queen Fall|white body|white shape)\b")
 WOUND_RE = re.compile(r"\b(fire|flames?|burn\w*|wound\w*|bleed\w*|blood\w*|injur\w*|scar\w*)\b", re.I)
 VICE_RE = re.compile(r"\b(ale|wine|cider|beer|mead|brandy|liquor|spirits|flask|jugs?|drunk\w*|tipsy|tobacco|pipes?|snuff|"
                      r"smok\w*|drugs?|poppy|hemp|opium|suggestive|bawdy|innuendo|flirt\w*|lovers?|seduc\w*|kiss\w*|naked|undress\w*)\b", re.I)
-PROTECTED_RE = re.compile(r"\b(Abby|Remi|prince|princess|child|children|kids?|boy|girl|young riders?|young attendant)\b", re.I)
-PROTECTED_SPEAKERS = {"ABBY", "REMI", "CHILD", "YOUNG ATTENDANT"}
+# Characters the rating limits protect (SERIES.md section 8). Remi left this list on 2026-10-18: Daxtyn decided he
+# is an adult ("prince" means Remi, so it left too). "princess" is Abby.
+PROTECTED_RE = re.compile(r"\b(Abby|princess|child|children|kids?|boy|girl|young riders?|young attendant)\b", re.I)
+PROTECTED_SPEAKERS = {"ABBY", "CHILD", "YOUNG ATTENDANT"}
 ABBY_GORE_RE = re.compile(r"\b(bone|gore|graphic|blood\w*)\b", re.I)
 
 
@@ -250,11 +309,18 @@ def parse(lines):
             if ln.startswith("[") and ln.endswith("]") and any(w in ln for w in MARKER_WORDS):
                 errors.append("line %d: malformed marker %r" % (i + 1, ln))
             continue
+        ident = (m.group("id") if "id" in m.re.groupindex else m.group(1)) if m else None
         if k in ("add_b", "rp_b", "ch_was", "pend_b", "note_b"):
             kind = {"add_b": "add", "rp_b": "rp", "ch_was": "ch", "pend_b": "pend", "note_b": "note"}[k]
-            node = {"kind": kind, "id": m.group(1) if m else None, "start": i, "end": None, "children": [],
+            node = {"kind": kind, "id": ident, "start": i, "end": None, "children": [],
                     "parent": stack[-1] if stack else None, "reason": m.group(2) if k == "ch_was" else None,
-                    "status": m.group(2) if k == "add_b" else None, "now": None}
+                    "status": m.group(2) if k == "add_b" else None, "now": None,
+                    "approved": (k == "rp_b" and m.group("form") == "RATING PASS") or
+                                (k == "ch_was" and m.group(2).startswith(APPROVED_REASON)),
+                    "form": m.group("form") if k == "rp_b" else None}
+            if k == "rp_b" and (m.group("form") == "RATING PASS") != bool(m.group("appr")):
+                errors.append("line %d: malformed rating-pass marker %r (a PROPOSED block has no approval date; an approved "
+                              "one reads '[RATING PASS R# — creator-approved %s — begin]')" % (i + 1, ln, APPROVED_DATE))
             if stack:
                 p = stack[-1]
                 if p["kind"] != "add" or kind not in ("rp", "ch", "pend"):
@@ -276,7 +342,7 @@ def parse(lines):
                 errors.append("line %d: end marker without begin" % (i + 1))
                 continue
             node = stack.pop()
-            if node["kind"] != kind or (m and node["id"] != m.group(1)):
+            if node["kind"] != kind or (m and node["id"] != ident) or (k == "rp_e" and m.group("form") != node["form"]):
                 errors.append("line %d: end marker does not match the block opened at line %d" % (i + 1, node["start"] + 1))
             if kind == "ch" and node["now"] is None:
                 errors.append("line %d: CHANGED %s has no NOW marker" % (i + 1, node["id"]))
@@ -387,6 +453,24 @@ def dlg_seconds(dl):
     return sum(d[4] + ce.CUE_GAP for d in dl)
 
 
+def spoken_pairs(lines):
+    """[(cue, quoted line)] for every speaker cue followed directly by its quoted line."""
+    return [(lines[k], lines[k + 1]) for k in range(len(lines) - 1)
+            if ce.CUE_RE.match(lines[k]) and lines[k + 1].startswith('"')]
+
+
+def approved_pair_map():
+    """{old (cue, quote): (new (cue, quote), change id)} from APPROVED_CHANGES."""
+    out = {}
+    for cid, a in APPROVED_CHANGES.items():
+        old, new = spoken_pairs(a["was"]), spoken_pairs(a["now"])
+        if len(old) != len(new) or len(old) != len(a["line_ids"]):
+            raise SystemExit("APPROVED_CHANGES %s: WAS, NOW and line_ids do not pair up" % cid)
+        for o, n in zip(old, new):
+            out[o] = (n, cid)
+    return out
+
+
 def sentences(text):
     for line in text.split("\n"):
         for s in re.split(r"(?<=[.!?])\s+", line):
@@ -425,28 +509,91 @@ def main(argv):
     shoot = squeeze(materialize(L, 0, len(L) - 1, top, {"note", "pend"}, "now", recurse=True))
     marked = [(l, orig_lines[i + 1]) for i, l in enumerate(orig_lines[:-1])
               if ce.CUE_RE.match(l) and "ORIGINAL" in (ce.CUE_RE.match(l).group(2) or "")]
+    apairs = approved_pair_map()
+    shoot_pairs = set(spoken_pairs(shoot))
+    replaced_orig = []
     for cue, quote in marked:
-        if not any(shoot[k] == cue and shoot[k + 1] == quote for k in range(len(shoot) - 1)):
+        if (cue, quote) in apairs:          # an [ORIGINAL] line Daxtyn approved new wording for
+            (ncue, nquote), cid = apairs[(cue, quote)]
+            replaced_orig.append(cid)
+            if (ncue, nquote) not in shoot_pairs:
+                hard.append("%s: the approved wording of the [ORIGINAL] line is not in the shooting text: %s %s" % (cid, ncue, nquote))
+            if (cue, quote) in shoot_pairs:
+                hard.append("%s: the old wording of the [ORIGINAL] line is still shot: %s %s" % (cid, cue, quote))
+        elif (cue, quote) not in shoot_pairs:
             hard.append("[ORIGINAL] line missing or changed in the shooting text: %s %s" % (cue, quote))
     n_orig_cues = sum(1 for l in shoot if ce.CUE_RE.match(l) and "ORIGINAL" in (ce.CUE_RE.match(l).group(2) or ""))
-    if n_orig_cues != len(marked):
-        hard.append("the shooting text has %d cues marked [ORIGINAL]; screenplay.md has %d" % (n_orig_cues, len(marked)))
+    if n_orig_cues != len(marked) - len(replaced_orig):
+        hard.append("the shooting text has %d cues marked [ORIGINAL]; screenplay.md has %d, %d of them reworded with Daxtyn's approval"
+                    % (n_orig_cues, len(marked), len(replaced_orig)))
     try:
         story_lo, story_hi = L.index("SCREENPLAY"), L.index("END OF EPISODE 1.")
     except ValueError:
         story_lo, story_hi = 0, len(L)
         hard.append("cannot find the 'SCREENPLAY' or 'END OF EPISODE 1.' line")
+    # 1e. every spoken line of the handoff is spoken word for word outside the additions and rating-pass blocks,
+    #     in order, and nothing else is spoken there, except the approved changes in their approved wording
+    try:
+        o_lo, o_hi = orig_lines.index("SCREENPLAY"), orig_lines.index("END OF EPISODE 1.")
+    except ValueError:
+        o_lo, o_hi = 0, len(orig_lines)
+    orig_spoken = spoken_pairs(orig_lines[o_lo:o_hi])
+    expect_spoken = [apairs[p][0] if p in apairs else p for p in orig_spoken]
+    handoff_shot = materialize(L, 0, len(L) - 1, top, {"note", "add", "rp", "pend"}, "now")
+    try:
+        h_lo, h_hi = handoff_shot.index("SCREENPLAY"), handoff_shot.index("END OF EPISODE 1.")
+    except ValueError:
+        h_lo, h_hi = 0, len(handoff_shot)
+    got_spoken = spoken_pairs(handoff_shot[h_lo:h_hi])
+    n_approved_spoken = sum(1 for p in orig_spoken if p in apairs)
+    spoken_ok = got_spoken == expect_spoken
+    if not spoken_ok:
+        k = next((k for k in range(max(len(got_spoken), len(expect_spoken)))
+                  if k >= len(got_spoken) or k >= len(expect_spoken) or got_spoken[k] != expect_spoken[k]), None)
+        hard.append("handoff dialogue: spoken line %s outside the additions differs: expected %r, got %r" % (
+            k + 1, expect_spoken[k] if k < len(expect_spoken) else "<none>", got_spoken[k] if k < len(got_spoken) else "<none>"))
     quotes = {q for _, q in marked} | {c for c, _ in marked}
+    # 1f. the approved changes are in the script exactly as recorded, and nothing else claims approval
+    present_ch = {n["id"]: n for n in nodes if n["kind"] == "ch"}
+    present_add = {n["id"] for n in nodes if n["kind"] == "add"}
+    for cid, a in APPROVED_CHANGES.items():
+        n = present_ch.get(cid)
+        if n is None:
+            if a["in"] and a["in"] not in present_add:
+                review.append("%s (creator-approved wording) went with %s, which was cut" % (cid, a["in"]))
+            else:
+                hard.append("%s: Daxtyn's approved change (%s) is missing from the script" % (cid, a["decision"]))
+            continue
+        if not n["approved"]:
+            hard.append("%s: its reason must start with %r (Daxtyn's decision): %r" % (cid, APPROVED_REASON, n["reason"]))
+        if was_lines(L, n) != a["was"]:
+            hard.append("%s: the WAS text is not the recorded old wording %r" % (cid, a["was"]))
+        if now_lines(L, n) != a["now"]:
+            hard.append("%s: the NOW text is not the approved wording %r" % (cid, a["now"]))
+        if (n["parent"]["id"] if n["parent"] else None) != a["in"]:
+            hard.append("%s: must sit %s" % (cid, ("inside " + a["in"]) if a["in"] else "in the handoff's own text"))
+    approved_now = set()
+    for n in nodes:
+        if n["kind"] == "ch" and n["id"] in APPROVED_CHANGES and n["now"] is not None:
+            approved_now |= set(range(n["now"] + 1, n["end"]))
+    for k, l in enumerate(L):
+        if APPROVED_TAG in l and ce.CUE_RE.match(l) and k not in approved_now:
+            hard.append("line %d: the cue marker [%s] is only for the NOW text of APPROVED_CHANGES: %r" % (k + 1, APPROVED_TAG, l))
     for n in nodes:
         if n["kind"] != "ch":
             continue
         w, nw = was_lines(L, n), now_lines(L, n)
         if not w or not nw or w == nw:
             hard.append("%s: WAS and NOW must both be present and differ" % n["id"])
-        if any("[ORIGINAL" in l or l in quotes for l in w):
-            hard.append("%s: changes an [ORIGINAL] line, which must stay word for word" % n["id"])
-        if not ("DRAGONS.md" in n["reason"] or RP_REASON in n["reason"]):
-            hard.append("%s: its reason names neither DRAGONS.md nor %s: %r" % (n["id"], RP_REASON, n["reason"]))
+        if n["id"] not in APPROVED_CHANGES:
+            if "creator-approved" in n["reason"]:
+                hard.append("%s: claims creator approval but is not in APPROVED_CHANGES (record Daxtyn's decision there first)" % n["id"])
+            if any("[ORIGINAL" in l or l in quotes for l in w):
+                hard.append("%s: changes an [ORIGINAL] line, which must stay word for word" % n["id"])
+            if n["parent"] is None and any(p in orig_spoken for p in spoken_pairs(w)):
+                hard.append("%s: changes a spoken line of screenplay.md; only Daxtyn's approved changes may (APPROVED_CHANGES)" % n["id"])
+        if not ("DRAGONS.md" in n["reason"] or RP_REASON in n["reason"] or n["reason"].startswith(APPROVED_REASON)):
+            hard.append("%s: its reason names neither DRAGONS.md, %s nor %r: %r" % (n["id"], RP_REASON, APPROVED_REASON, n["reason"]))
         if any(l in PENDING_LINES for l in w + nw):
             hard.append("%s: changes a line that DRAGONS.md keeps as written until Daxtyn chooses new wording (use a PENDING block)" % n["id"])
         if n["parent"] is None and not (story_lo < n["start"] < story_hi):
@@ -485,8 +632,16 @@ def main(argv):
     for n in nodes:
         if n["kind"] == "rp":
             first = next((l for l in L[n["start"] + 1:n["end"]] if l.strip()), "")
-            if not first.startswith(RP_NOTE):
-                hard.append("%s: does not open with %r" % (n["id"], RP_NOTE))
+            want = RP_NOTE_APPROVED if n["approved"] else RP_NOTE
+            if not first.startswith(want):
+                hard.append("%s: does not open with %r" % (n["id"], want))
+            if n["approved"] and n["id"] not in APPROVED_RATING:
+                hard.append("%s: marked creator-approved but Daxtyn has not approved it (APPROVED_RATING)" % n["id"])
+            if not n["approved"] and n["id"] in APPROVED_RATING:
+                hard.append("%s: Daxtyn approved it on %s; its marker must say so ('[RATING PASS %s — creator-approved %s — begin]')"
+                            % (n["id"], APPROVED_DATE, n["id"], APPROVED_DATE))
+            if n["approved"] and (n["parent"]["id"] if n["parent"] else None) != APPROVED_RATING.get(n["id"]):
+                hard.append("%s: must sit %s" % (n["id"], ("inside " + APPROVED_RATING[n["id"]]) if APPROVED_RATING.get(n["id"]) else "at the top level"))
         if n["kind"] == "pend":
             body = [l for l in L[n["start"] + 1:n["end"]] if l.strip()]
             if len(body) != 1 or not body[0].startswith(PEND_NOTE):
@@ -499,6 +654,13 @@ def main(argv):
             n["first_note"] = first
             if not first.startswith("NOTE (not spoken):"):
                 hard.append("%s: does not open with a 'NOTE (not spoken):' line" % n["id"])
+    present_rp = {n["id"] for n in nodes if n["kind"] == "rp"}
+    for rid, home in APPROVED_RATING.items():
+        if rid not in present_rp:
+            if home and home not in {n["id"] for n in nodes if n["kind"] == "add"}:
+                review.append("%s (creator-approved) went with %s, which was cut" % (rid, home))
+            else:
+                hard.append("%s: Daxtyn approved keeping it (the deaths in Cling, %s), but it is not in the script" % (rid, APPROVED_DATE))
     notes = [n for n in top if n["kind"] == "note"]
     note_text = ["\n".join(L[n["start"] + 1:n["end"]]) for n in notes]
     closing = note_text[-1] if note_text else ""
@@ -598,14 +760,14 @@ def main(argv):
             for mm in re.finditer(pat, text, re.I):
                 s0 = max(0, mm.start() - 40)
                 review.append("%s [%s] ...%s..." % (label, why, text[s0:mm.end() + 30].replace("\n", " ")))
-    # whole story, shooting text: species words only in Abby's [ORIGINAL] line; no upright stance
+    # whole story, shooting text: no species word anywhere (Daxtyn chose the wording on 2026-10-18); no upright stance
     try:
         s_lo, s_hi = shoot.index("SCREENPLAY"), shoot.index("END OF EPISODE 1.")
     except ValueError:
         s_lo, s_hi = 0, 0
     for k in range(s_lo, s_hi):
         l = shoot[k]
-        if SPECIES_RE.search(l) and l not in quotes and l not in PENDING_LINES:
+        if SPECIES_RE.search(l) and l not in PENDING_LINES:
             flag("story line still names a species: %r" % l[:120])
         if STANCE_RE.search(l):
             flag("story line contradicts the two-legged low stance: %r" % l[:120])
@@ -695,9 +857,11 @@ def main(argv):
     tot_orig = {k: sum(st[r["row"]][k] for r in order if r["kind"] == "original") for k in K}
     tot_add = {k: sum(units_t[n["id"]][k] for n in adds) for k in K}
     rating_nodes = [n for n in nodes if n["kind"] == "rp" or (n["kind"] == "ch" and RP_REASON in n["reason"])]
-    dragon_nodes = [n for n in nodes if n["kind"] == "ch" and RP_REASON not in n["reason"]]
+    dragon_nodes = [n for n in nodes if n["kind"] == "ch" and RP_REASON not in n["reason"] and not n["approved"]]
+    approved_ch_nodes = [n for n in nodes if n["kind"] == "ch" and n["approved"]]
     tot_rating = {k: sum(units_t[n["id"]][k] for n in rating_nodes) for k in K}
     tot_dragon = {k: sum(units_t[n["id"]][k] for n in dragon_nodes) for k in K}
+    tot_approved = {k: sum(units_t[n["id"]][k] for n in approved_ch_nodes) for k in K}
     trims = [("X4", 8.0), ("X5", 8.0), ("X15", 9.0), ("X16", 4.5), ("X20", 9.0), ("X22", 5.0), ("X27", 5.5), ("X13", 6.0)]
     over60, cut_e, cut_h = [], 0.0, 0.0
     t_e = sum(s for x, s in trims if x in present)
@@ -758,31 +922,45 @@ def main(argv):
     n_rp = sum(1 for n in nodes if n["kind"] == "rp")
     n_ch = sum(1 for n in nodes if n["kind"] == "ch")
     n_ch_r = sum(1 for n in nodes if n["kind"] == "ch" and RP_REASON in n["reason"])
+    n_ch_a = sum(1 for n in nodes if n["kind"] == "ch" and n["approved"])
+    n_rp_a = sum(1 for n in nodes if n["kind"] == "rp" and n["approved"])
     n_pend = sum(1 for n in nodes if n["kind"] == "pend")
     all_new = [d for n in nodes if n["kind"] == "rp" for d in dialogue(L[n["start"] + 1:n["end"]])[0]]
     result = {"source_sha256": sha,
               "proof": {"original_lines": len(orig_lines), "lines_found_in_order": matched,
-                        "byte_identical_after_restoring": verbatim, "original_markers": len(marked)},
+                        "byte_identical_after_restoring": verbatim, "original_markers": len(marked),
+                        "original_markers_reworded_with_approval": replaced_orig,
+                        "handoff_spoken_lines": len(orig_spoken), "handoff_spoken_lines_with_approved_wording": n_approved_spoken,
+                        "handoff_dialogue_as_expected": spoken_ok},
               "additions_kept": [a["id"] for a in adds], "additions_cut": cut,
-              "rating_pass_blocks": n_rp, "changed_blocks": n_ch, "changed_for_rating": n_ch_r, "pending_blocks": n_pend,
+              "rating_pass_blocks": n_rp, "changed_blocks": n_ch, "changed_for_rating": n_ch_r,
+              "changed_creator_approved": n_ch_a, "rating_pass_creator_approved": n_rp_a, "pending_blocks": n_pend,
+              "creator_approved": {"date": APPROVED_DATE, "changes": sorted(APPROVED_CHANGES), "rating_pass": sorted(APPROVED_RATING)},
               "units": units_t, "running_order": order, "totals": tot, "original_totals": tot_orig,
-              "addition_totals": tot_add, "rating_pass_totals": tot_rating, "dragon_change_totals": tot_dragon,
+              "addition_totals": tot_add, "rating_pass_totals": tot_rating, "dragon_change_totals": tot_dragon, "approved_change_totals": tot_approved,
               "over_60_cut_order": over60, "frames": frames, "render_hours": render_h,
               "hard_failures": hard, "review": review}
     print("PROOF  screenplay.md sha256 %s" % sha[:16])
     print("PROOF  %d of %d original lines found word for word, in order: %s" % (matched, len(orig_lines), "yes" if not missing else "NO"))
     print("PROOF  notes/additions/rating-pass blocks dropped and WAS text restored = screenplay.md byte for byte: %s" % ("yes" if verbatim else "NO"))
-    print("PROOF  [ORIGINAL] cue+quote pairs: %d, each unchanged in the shooting text: %s" % (len(marked), not any("[ORIGINAL] line" in h for h in hard)))
+    print("PROOF  [ORIGINAL] cue+quote pairs: %d; %d unchanged in the shooting text, %d reworded with Daxtyn's approval (%s): %s" % (
+        len(marked), len(marked) - len(replaced_orig), len(replaced_orig), ", ".join(replaced_orig) or "none",
+        "yes" if not any("[ORIGINAL]" in h or "ORIGINAL line" in h for h in hard) else "NO"))
+    print("PROOF  %d spoken lines of screenplay.md, in order outside the additions: %d word for word, %d in the wording Daxtyn approved %s (%s): %s" % (
+        len(orig_spoken), len(orig_spoken) - n_approved_spoken, n_approved_spoken, APPROVED_DATE,
+        ", ".join(c for c in APPROVED_CHANGES if APPROVED_CHANGES[c]["in"] is None), "yes" if spoken_ok else "NO"))
     print("PROOF  additions identical to their proposals outside marked changes: %d of %d kept%s" % (
         sum(1 for a in adds if not any(h.startswith(a["id"] + ": not the proposal") for h in hard)), len(adds),
         (" (cut: %s)" % ", ".join(cut)) if cut else ""))
-    print("blocks: %d additions, %d rating-pass blocks, %d changed lines (%d for the rating pass, %d for DRAGONS.md), "
-          "%d PENDING wording notes, %d document notes" % (len(adds), n_rp, n_ch, n_ch_r, n_ch - n_ch_r, n_pend, len(notes)))
+    print("blocks: %d additions, %d rating-pass blocks (%d creator-approved), %d changed lines (%d for the rating pass, %d for DRAGONS.md, "
+          "%d creator-approved wording), %d PENDING wording notes, %d document notes" % (
+              len(adds), n_rp, n_rp_a, n_ch, n_ch_r, n_ch - n_ch_r - n_ch_a, n_ch_a, n_pend, len(notes)))
     print("rating-pass dialogue: %d new lines, %d words" % (len(all_new), sum(d[3] for d in all_new)))
     print("original  : tight %s  expected %s  loose %s" % tuple(ce.mmss(tot_orig[k]) for k in K))
     print("additions : tight %s  expected %s  loose %s" % tuple(ce.mmss(tot_add[k]) for k in K))
     print("rating    : tight %s  expected %s  loose %s" % tuple(ce.mmss(tot_rating[k]) for k in K))
     print("dragons   : tight %+.1fs  expected %+.1fs  loose %+.1fs" % tuple(tot_dragon[k] for k in K))
+    print("approved  : tight %+.1fs  expected %+.1fs  loose %+.1fs   (the creator-approved wording changes)" % tuple(tot_approved[k] for k in K))
     print("FINAL     : tight %s  expected %s  loose %s   (raw seconds %.1f / %.1f / %.1f)  50-60 min: %s"
           % (tuple(ce.mmss(tot[k]) for k in K) + tuple(tot[k] for k in K) + ("yes" if in_range else "NO",)))
     for s_ in over60:

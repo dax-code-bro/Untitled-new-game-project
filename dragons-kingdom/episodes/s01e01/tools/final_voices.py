@@ -14,6 +14,10 @@ voice style arrays are averaged; ../voices.json engines.kokoro.controls) plus a 
 neither parent voice speaks in the same scenes. Every blend is untested: audition it against every role
 it shares a scene with before use.
 
+Daxtyn's decisions of 2026-10-18: the five lines that named a scrapped dragon species use the wording he approved
+(final/dialogue.json creator_approved), so no species word is spoken and the species pronunciations are not needed;
+the creature entries describe each dragon's own design instead of a species (DRAGONS.md, no species).
+
 Usage: python3 tools/final_voices.py [--check]
 """
 import json
@@ -92,6 +96,18 @@ PRESET_HOW = {
     "pain": "As L072 in ../voices.json: a breath before the line, breathy and shaky, slightly higher pitch, narrower tone.",
     "sung": "Kokoro cannot sing. Record this line with a person (recommended), or use a spoken-rhythm TTS take labelled TEMP in the animatic. The tune is newly written for the series; no existing song may be used.",
 }
+# DRAGONS.md: no species, every dragon is its own design. Replaces ../voices.json creature_vocals[*].species.
+DESIGN = {
+    "CHARCOAL": "Charcoal's own design (no species, DRAGONS.md): completely black, blue eyes, immense (about 36 m long)",
+    "LEAF": "Leaf's own design (no species, DRAGONS.md): dark green, not fully grown, about a quarter of Charcoal's size",
+    "STARLIGHT": "Starlight's own design (no species): albino, reflective white scales ('Queen of Dragons'), about twice Charcoal's size",
+    "SCOUT": "The scout's own design (no species): small, extremely fast",
+    "HATCHLING": "The gold hatchling's own design (no species): 24-karat gold, newborn",
+}
+SPECIES_WORDS = ("Bashion", "Bashions", "Nightwings", "Slitherwing")
+APPROVED_HOW = ("Speak byte-exact: Daxtyn approved this wording on %s (CHANGED %s). The old wording \"%s\"%s is not recorded. "
+                "The subtitle text never changes.")
+
 NON_VERBAL = OrderedDict([
     ("rider_scream_1F", "C14: the burned scout rider screams, a raw, wordless sound loud enough to carry over the wind. Keep the voice unidentifiable (no gender or age cue that could point at an identity; CANON LOCK 11): a processed human scream layered with wind, not a TTS line."),
     ("scout_cry_1F", "C15/C16: the scout dragon's scream as the wing tears (creature_vocals.SCOUT)."),
@@ -110,6 +126,15 @@ def voice_label(spec):
     if "blend" in spec:
         return "+".join("%s:%.2f" % (v, w) for v, w in spec["blend"])
     return spec["voice"]
+
+
+def creature_vocals(cv):
+    out = OrderedDict()
+    for k, v in cv.items():
+        if isinstance(v, dict) and "species" in v:
+            v = OrderedDict((("design", DESIGN[k]) if kk == "species" else (kk, vv)) for kk, vv in v.items())
+        out[k] = v
+    return out
 
 
 def build():
@@ -135,6 +160,10 @@ def build():
                 if (t["voice"], t["role_speed"]) != (r["primary"]["voice"], r["primary"]["speed"]):
                     raise SystemExit("%s: ../voices.json and preview takes.json disagree" % name)
                 r["preview_takes"] = "%d preview take(s) already use this voice (preview/vo/takes.json)" % t["lines"]
+            aud = next((x for x in xs if x["id"] == r.get("audition_line")), None)
+            if aud and aud["creator_approved"]:
+                r["audition_note"] = ("The audition of %s was measured with its old wording (\"%s\"); the final script uses the wording "
+                                      "Daxtyn approved on %s. The voice choice stands." % (aud["id"], aud["was_text"], aud["creator_approved"]))
         else:
             spec = NEW_ROLES.get(name) or RECAST.get(name)
             if spec is None:
@@ -168,8 +197,19 @@ def build():
     if len(plain) != len(set(plain)):
         raise SystemExit("two roles share a plain voice: %r" % plain)
 
+    by_id = {x["id"]: x for x in lines}
     special = OrderedDict()
     for k, v in src["special_lines"].items():
+        v = OrderedDict(v)
+        if "how" in v:
+            v["how"] = v["how"].replace("respelling of 'Bashion' is allowed", "respelling is allowed")
+        x = by_id.get(k)
+        if x and x["text"] != v["text"]:
+            if not x["creator_approved"]:
+                raise SystemExit("%s: ../voices.json special_lines text differs from the final script, and the final wording is not creator-approved" % k)
+            v.update([("text", x["text"]), ("original", False), ("type", "approved_exact"),
+                      ("how", APPROVED_HOW % (x["creator_approved"], x["changed_by"], x["was_text"],
+                                              " (his [ORIGINAL] line)" if x["was_original"] else ""))])
         special[k] = v
     for x in lines:
         if x["origin"] == "original":
@@ -181,6 +221,14 @@ def build():
         if preset:
             special[x["id"]] = OrderedDict([("speaker", x["speaker"]), ("text", x["text"]), ("original", False),
                                             ("type", preset), ("how", PRESET_HOW[preset])])
+    old_takes = {t["id"]: t for t in takes["takes"]}
+    for x in lines:
+        if x["creator_approved"] and x["id"] not in special:
+            special[x["id"]] = OrderedDict([("speaker", x["speaker"]), ("text", x["text"]), ("original", False), ("type", "approved_exact"),
+                                           ("how", APPROVED_HOW % (x["creator_approved"], x["changed_by"], x["was_text"], ""))])
+        if x["creator_approved"] and x["id"] in old_takes and old_takes[x["id"]]["text"] != x["text"]:
+            special[x["id"]]["preview_take"] = ("OUT OF DATE: preview/vo/takes.json has a take of the old wording. Make a new take of "
+                                                "this wording before the line is used in the final animatic.")
     for x in lines:
         if x["pending"]:
             special.setdefault(x["id"], OrderedDict([("speaker", x["speaker"]), ("text", x["text"]), ("original", x["original"])]))
@@ -188,18 +236,24 @@ def build():
                                            "If he picks the proposed alternative, record that too: \"%s\"." % x["pending_alternative"])
 
     pron = []
-    words = {"Bashion": [], "Bashions": [], "Nightwings": [], "Slitherwing": []}
+    words = {w: [] for w in SPECIES_WORDS}
     for x in lines:
         for wd in words:
             if any(t.strip(".,?!") == wd for t in x["text"].split()):
                 words[wd].append(x["id"])
+    if any(words.values()):
+        raise SystemExit("a final line still speaks a scrapped species word: %r" % {w: v for w, v in words.items() if v})
     for p in src["pronunciation"]:
         p = OrderedDict(p)
         if p["word"] in words:
-            p["in_lines"] = words[p["word"]]
+            continue        # no longer spoken (see the note below)
+        names = [w.strip() for w in p["word"].split(",")]
+        if len(names) > 1 and any(w in words for w in names):
+            p["word"] = ", ".join(w for w in names if w not in words)
         pron.append(p)
-    pron.insert(2, OrderedDict([("word", "Nightwings"), ("in_lines", words["Nightwings"]), ("sounds_like", "NITE-wingz"),
-                                ("tts_respelling", None), ("status", "Ordinary English reading; the line is PENDING (DRAGONS.md).")]))
+    pron.insert(0, OrderedDict([("word", ", ".join(SPECIES_WORDS)), ("in_lines", []),
+                                ("status", "Not spoken in the final script: Daxtyn approved new wording for every line that used these "
+                                           "scrapped species names (2026-10-18; final/CHANGES.md section 9). ../voices.json still lists them for the handoff.")]))
 
     allowed_unused = [v for v in KOKORO_EN if v not in AVOID and v not in plain and not any(
         v == b["voice"] for r in roles.values() for b in r["primary"].get("blend", []))]
@@ -212,8 +266,8 @@ def build():
                                 ("casting_base", "episodes/s01e01/voices.json"), ("preview_takes", "episodes/s01e01/preview/vo/takes.json")])),
         ("rules", src["rules"][:2] + [
             "The text sent to TTS is final/dialogue.json 'text' with the 'pronunciation' respellings applied (and a leading or trailing em dash removed). Subtitles always use the unmodified 'text'.",
-            "[ORIGINAL] lines L011, L046, L047, L048 are spoken word for word.",
-            "PENDING lines (L053, L054, L109, X17-11) are recorded as written; see special_lines.",
+            "[ORIGINAL] lines %s are spoken word for word." % ", ".join(x["id"] for x in lines if x["original"]),
+            "Lines in the wording Daxtyn approved on 2026-10-18 (%s) are spoken word for word in that wording; the old wording is never recorded (see special_lines). L048 replaces his [ORIGINAL] line." % ", ".join(x["id"] for x in lines if x["creator_approved"]),
         ] + src["rules"][4:] + [
             "Blended voices (primary.blend) are new: audition each against every role in its scenes before approving a take.",
             "Only Kokoro English voices with Apache-2.0 weights are used, and not the ones ../voices.json avoids (named after a commercial product's voice, or am_santa).",
@@ -224,7 +278,7 @@ def build():
         ("roles", roles),
         ("special_lines", special),
         ("non_verbal_human", NON_VERBAL),
-        ("creature_vocals", src["creature_vocals"]),
+        ("creature_vocals", creature_vocals(src["creature_vocals"])),
         ("human_recordings", src["human_recordings"]),
         ("voice_pool", OrderedDict([
             ("kokoro_english_voices", len(KOKORO_EN)), ("avoided", sorted(AVOID)),

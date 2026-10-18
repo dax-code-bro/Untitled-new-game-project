@@ -6,8 +6,8 @@ Source of truth: ../final/screenplay-final.md (read only; check_final.py must pa
 Writes, into ../final/:
   dialogue.json       every SPOKEN line of the shooting text, in order, with its origin
                       (original handoff / proposed addition X# / proposed rating pass R#), the CHANGED
-                      block that reworded it, the PENDING note that keeps it as written, timing and
-                      subtitle cues
+                      block that reworded it and the old wording, whether Daxtyn approved that wording
+                      (creator_approved, 2026-10-18), timing and subtitle cues
   dialogue.md         the recording script, scene by scene
   onscreen-text.json  title, captions, lettering, credits (the handoff's ten cards plus the ones the
                       additions bring)
@@ -45,13 +45,16 @@ EM = "—"
 X_SCENE_RE = re.compile(r"^SCENE (X\d+) " + EM + r" (.+)$")
 
 # The proposed alternative wording kept in each PENDING note (shot only if Daxtyn picks it). Each text must
-# appear in its PENDING note; the key is the line it would replace.
-PENDING_ALTERNATIVES = {
-    "Nightwings are faster. More versatile.": "Smaller ones are faster. More versatile.",
-    "And Bashions?": "And big ones?",
-    "We were off the coast. Flying together. Something came past Leaf. A Slitherwing.":
-        "We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast.",
-    "I still want a Bashion.": "I still want one like Charcoal.",
+# appear in its PENDING note; the key is the line it would replace. Empty since 2026-10-18: Daxtyn chose the
+# wording of the species lines (check_final.APPROVED_CHANGES), so no PENDING note is left.
+PENDING_ALTERNATIVES = {}
+APPROVED_TAG = cf.APPROVED_TAG
+
+# Delivery context written for the final script where the handoff annotation (extract_dialogue.ANNOTATIONS, kept for
+# ../dialogue.json) no longer fits it: {line id: (the annotation's context, the context for the final script)}.
+FINAL_CONTEXT = {
+    "L068": ("Small smile; he means a Bashion.",
+             "Small smile; he means a dragon like Charcoal (L048 in its approved wording)."),
 }
 
 # What each rating-pass block contains (final/CHANGES.md section 3); lines spoken inside it carry it.
@@ -107,7 +110,7 @@ def walk(L, lo, hi, nodes, ctx, out):
             if n["kind"] in ("note", "pend"):
                 pass
             elif n["kind"] == "ch":
-                c = dict(ctx, ch=n["id"], was=cf.was_lines(L, n))
+                c = dict(ctx, ch=n["id"], was=cf.was_lines(L, n), now=cf.now_lines(L, n), approved=n["approved"])
                 for k in range(n["now"] + 1, n["end"]):
                     out.append((k, L[k], c))
             else:
@@ -181,14 +184,32 @@ def build():
                 ed.fail("final line %d: cue not followed by one quoted line" % (i + 1))
             speaker, bracket, text = cm.group(1), cm.group(2), q[1:-1]
             original, br_addr, notes = ed.parse_bracket(bracket)
+            approved_tag = APPROVED_TAG in notes
+            notes = [p for p in notes if p != APPROVED_TAG]       # a source marker, not a performance note
+            if approved_tag != bool(qctx.get("ch") and qctx.get("approved")):
+                ed.fail("final line %d: the [%s] cue marker belongs exactly to the NOW text of an approved CHANGED block" % (i + 1, APPROVED_TAG))
+            # the old wording of a reworded line: the quote at the same position in the block's WAS text
+            was, was_cue = None, None
+            if qctx.get("ch"):
+                now_pairs, was_pairs = cf.spoken_pairs(qctx["now"]), cf.spoken_pairs(qctx["was"])
+                pos = [k2 for k2, (c2, q2) in enumerate(now_pairs) if q2 == q]
+                if len(now_pairs) == len(was_pairs) and len(pos) == 1:
+                    was_cue, was_q = was_pairs[pos[0]]
+                    was = was_q[1:-1]
             unit = ctx["rp"] or ctx["add"]
             if unit is None:
                 n_ann, a = next(ann)
                 a_scene, a_speaker, a_text, context, addressee, addr_src, cmd_kind = a
-                if (a_scene, a_speaker, a_text) != (scene, speaker, text):
+                # a handoff line Daxtyn approved new wording for is matched by its old wording
+                ann_text = was if (qctx.get("approved") and was is not None) else text
+                if (a_scene, a_speaker, a_text) != (scene, speaker, ann_text):
                     ed.fail("original line L%03d does not match the annotation table at final line %d: %r vs %r"
-                            % (n_ann, qi + 1, (scene, speaker, text), (a_scene, a_speaker, a_text)))
+                            % (n_ann, qi + 1, (scene, speaker, ann_text), (a_scene, a_speaker, a_text)))
                 lid, origin, ctx_src = "L%03d" % n_ann, "original", "hand-checked (extract_dialogue.ANNOTATIONS)"
+                if lid in FINAL_CONTEXT:
+                    if context != FINAL_CONTEXT[lid][0]:
+                        ed.fail("%s: the annotation changed; re-check FINAL_CONTEXT" % lid)
+                    context, ctx_src = FINAL_CONTEXT[lid][1], "hand-checked for the final script (FINAL_CONTEXT)"
             else:
                 counters[unit] = counters.get(unit, 0) + 1
                 lid = "%s-%02d" % (unit, counters[unit])
@@ -213,10 +234,7 @@ def build():
             est, rule = ed.estimate_seconds(speaker, text, notes, interrupted, cmd_kind)
             perf = ", ".join(notes) if notes else None
             delivery = (perf + " " + EM + " " + context) if perf else context
-            was = None
-            if qctx.get("ch"):
-                was_q = [l for l in qctx["was"] if l.startswith('"')]
-                was = was_q[0][1:-1] if len(was_q) == 1 else None
+            was_original = bool(was_cue and "ORIGINAL" in (ed.CUE_RE.match(was_cue).group(2) or ""))
             content = list(RATING_CONTENT.get(ctx["rp"], [])) if ctx["rp"] else []
             if qctx.get("ch") in CHANGE_CONTENT:
                 content += [c for c in CHANGE_CONTENT[qctx["ch"]] if c not in content]
@@ -235,6 +253,7 @@ def build():
                 ("part", part_title if ctx["add"] else None),
                 ("origin", origin), ("addition", ctx["add"]), ("rating_pass", ctx["rp"]),
                 ("changed_by", qctx.get("ch")), ("was_text", was),
+                ("creator_approved", cf.APPROVED_DATE if approved_tag else None), ("was_original", was_original),
                 ("pending", pend[0] if pend else None), ("pending_alternative", alt),
                 ("speaker", speaker), ("addressee", addressee), ("addressee_source", addr_src if addressee else None),
                 ("text", text), ("original", original),
@@ -267,9 +286,18 @@ def build():
         ed.fail("%d original lines were not found in the shooting text (first: L%03d)" % (len(rest), rest[0][0]))
 
     # ---- checks -------------------------------------------------------------------------------------
+    # Daxtyn's [ORIGINAL] lines: the handoff's four, minus the one he approved new wording for (C8b)
+    replaced = {(x["speaker"], x["was_text"]) for x in out if x["was_original"] and x["creator_approved"]}
     originals = [(x["speaker"], x["text"]) for x in out if x["original"]]
-    if originals != ed.ORIGINAL_LINES:
+    if originals != [o for o in ed.ORIGINAL_LINES if o not in replaced]:
         ed.fail("[ORIGINAL] lines differ from the canon list: %r" % originals)
+    approved = [(x["id"], x["speaker"], x["was_text"], x["text"]) for x in out if x["creator_approved"]]
+    want = []
+    for cid, a in cf.APPROVED_CHANGES.items():
+        for lid, (wc, wq), (nc, nq) in zip(a["line_ids"], cf.spoken_pairs(a["was"]), cf.spoken_pairs(a["now"])):
+            want.append((lid, ed.CUE_RE.match(nc).group(1), wq[1:-1], nq[1:-1]))
+    if sorted(approved) != sorted(want):
+        ed.fail("the creator-approved lines differ from check_final.APPROVED_CHANGES:\n  got  %r\n  want %r" % (approved, want))
     for x in out:
         for bad in ("[", "]", '"', "ORIGINAL", "PICTURE", "SOUND:", "NOTE"):
             if bad in x["text"]:
@@ -281,8 +309,8 @@ def build():
     shoot_quotes = sum(1 for (i, t, c) in seq[s0:s1] if t.startswith('"'))
     if shoot_quotes != len(out):
         ed.fail("quoted lines in the shooting text (%d) != spoken lines (%d)" % (shoot_quotes, len(out)))
-    if sorted(x["pending"] for x in out if x["pending"]) != ["P1", "P1", "P2", "P3"]:
-        ed.fail("PENDING lines are not the four DRAGONS.md keeps as written")
+    if any(x["pending"] for x in out) or any(re.search(r"\b(Bashions?|Nightwings?|Slitherwings?)\b", x["text"]) for x in out):
+        ed.fail("a spoken line still names a scrapped species or is PENDING (Daxtyn chose the wording on 2026-10-18)")
 
     # ---- totals -------------------------------------------------------------------------------------
     def tot(xs):
@@ -308,13 +336,14 @@ def build():
     sha = hashlib.sha256(raw.encode("utf-8")).hexdigest()
     dialogue = OrderedDict([
         ("episode", "S01E01"), ("series", "Dragon's Kingdom"),
-        ("status", "Planning data extracted from the locked shooting script. No final voices have been recorded and nothing has been rendered. Every line not marked original=true is proposed dialogue; the additions and the rating pass are in the script by default and are not canon until Daxtyn accepts them (SERIES.md section 5)."),
+        ("status", "Planning data extracted from the locked shooting script. No final voices have been recorded and nothing has been rendered. Every line not marked original=true or creator_approved is proposed dialogue; the additions and the rating pass are in the script by default and are not canon until Daxtyn accepts them (SERIES.md section 5). creator_approved lines use wording Daxtyn approved on 2026-10-18; X17-11 sits in the proposed addition X17, so only its wording is approved."),
         ("source", REL_SOURCE), ("source_sha256", sha), ("generated_by", REL_SCRIPT),
         ("rules", [
             "Only text following a named speaker or NARRATOR is spoken. NOTE lines, PICTURE/SOUND lines, markers, WAS text and PENDING notes are never spoken or subtitled.",
             "'text' holds only the spoken words of the shooting text (the NOW side of a CHANGED block): no quotes, no bracketed notes, no [ORIGINAL] marker.",
-            "original=true marks Daxtyn's four [ORIGINAL] lines: perform and subtitle them byte-exact.",
-            "pending=P# marks a proposed line that still names a scrapped species. DRAGONS.md keeps it as written until Daxtyn chooses new wording, so it is recorded as written; pending_alternative is the proposed replacement, recorded only if he picks it.",
+            "original=true marks Daxtyn's [ORIGINAL] lines: perform and subtitle them byte-exact. The handoff had four; the fourth, L048, now uses the wording he approved on 2026-10-18 (was_original=true, was_text keeps his old line).",
+            "creator_approved=2026-10-18 marks the five lines whose wording Daxtyn chose on that date (L048, L053, L054, L109, X17-11; they named a species he scrapped): perform and subtitle them byte-exact; was_text is the old wording, which is not recorded.",
+            "pending=P# would mark a line kept as written while Daxtyn decides its wording; none is open since 2026-10-18.",
             "Dragons have no human dialogue.",
             "An em dash at the end of 'text' means the line is cut off (interrupted=true); a leading em dash means it picks up a cut-off line ('continues').",
             "Subtitles come from the final recorded dialogue; re-run this script if the script changes.",
@@ -327,6 +356,7 @@ def build():
             ("origin", "original | addition | rating_pass"),
             ("addition / rating_pass", "the block the line is in (a rating-pass block can sit inside an addition)"),
             ("changed_by / was_text", "the CHANGED block that rewords this line and the wording it replaced (kept in screenplay-final.md)"),
+            ("creator_approved / was_original", "the date Daxtyn approved this wording, and whether the old wording was one of his [ORIGINAL] lines (see rules)"),
             ("pending / pending_alternative", "see rules"),
             ("rating_content", "what the line carries for the mature rating (SERIES.md section 8)"),
             ("delivery", "bracketed performance note (if any) and the context; context_source says whether it was hand-checked or taken automatically from the stage direction before the line"),
@@ -342,6 +372,7 @@ def build():
             ("spoken_lines", len(out)), ("est_spoken_seconds", total), ("est_spoken_minutes", round(total / 60.0, 2)),
             ("by_origin", OrderedDict((o, tot([x for x in out if x["origin"] == o])) for o in ("original", "addition", "rating_pass"))),
             ("original_marker_lines", sum(1 for x in out if x["original"])),
+            ("creator_approved_lines", sum(1 for x in out if x["creator_approved"])),
             ("pending_wording_lines", sum(1 for x in out if x["pending"])),
             ("changed_lines", sum(1 for x in out if x["changed_by"])),
             ("command_lines", sum(1 for x in out if x["is_command"])),
@@ -427,8 +458,8 @@ def build_md(d, o):
     w("")
     w("- Only the words in the **Line** column are spoken. The **How** column is advice for the performer; never say it out loud.")
     w("- **#** is the line id. `L001`-`L198` are the handoff's lines (the same ids as `../dialogue.json`). `X4-03` is the third line of proposed addition X4; `R3-02` the second line of proposed rating-pass block R3.")
-    w("- **ORIGINAL** marks Daxtyn's own four lines. Say them exactly as written.")
-    w("- **PENDING** marks a line that still uses a scrapped dragon name. `DRAGONS.md` keeps it as written until Daxtyn chooses new wording, so record it as written; the proposed alternative is shown and is recorded only if he picks it.")
+    w("- **ORIGINAL** marks Daxtyn's own lines. Say them exactly as written.")
+    w("- **APPROVED** marks a line whose wording Daxtyn chose on 18 October 2026 (the lines that named a dragon species he scrapped). Say it exactly as written; the old wording in *was* is not recorded. L048 replaces one of his own [ORIGINAL] lines.")
     w("- **CHANGED C#** marks a line reworded in the final script; the old wording is shown in *was*.")
     w("- **ADD** = proposed addition, **RATING** = proposed rating-pass line (with what it carries). None of it is canon until Daxtyn accepts it.")
     w("- A dash at the end of a line (—) means the speaker gets cut off. Dragons never speak.")
@@ -439,8 +470,8 @@ def build_md(d, o):
     bo = t["by_origin"]
     w("- Spoken lines: **%d**: %d from the handoff, %d in the proposed additions, %d in the proposed rating pass." % (
         t["spoken_lines"], bo["original"]["lines"], bo["addition"]["lines"], bo["rating_pass"]["lines"]))
-    w("- %d ORIGINAL lines, %d PENDING lines, %d CHANGED lines, %d dragon-command lines, %d cut-off lines, %d lines with strong language." % (
-        t["original_marker_lines"], t["pending_wording_lines"], t["changed_lines"], t["command_lines"], t["interrupted_lines"], t["strong_language_lines"]))
+    w("- %d ORIGINAL lines, %d APPROVED lines, %d CHANGED lines (the APPROVED ones included), %d dragon-command lines, %d cut-off lines, %d lines with strong language." % (
+        t["original_marker_lines"], t["creator_approved_lines"], t["changed_lines"], t["command_lines"], t["interrupted_lines"], t["strong_language_lines"]))
     w("- Total speaking time: about **%s seconds (%s)**. The rest of the estimated 54-minute episode is picture, action, music and silence (`shotlist.md`)." % (
         ed.fmt_s(t["est_spoken_seconds"]), ed.mmss(t["est_spoken_seconds"])))
     w("")
@@ -482,7 +513,10 @@ def build_md(d, o):
                 tags.append("**ORIGINAL, say exactly.**")
             if x["pending"]:
                 tags.append("**PENDING (%s): record as written.** Proposed alternative, only if Daxtyn picks it: \"%s\"" % (x["pending"], x["pending_alternative"]))
-            if x["changed_by"]:
+            if x["creator_approved"]:
+                tags.append("**APPROVED by Daxtyn %s, say exactly.** CHANGED %s; %s \"%s\" (not recorded)." % (
+                    x["creator_approved"], x["changed_by"], "replaces his [ORIGINAL] line" if x["was_original"] else "was", x["was_text"]))
+            elif x["changed_by"]:
                 tags.append("**CHANGED %s** (was: \"%s\")" % (x["changed_by"], x["was_text"]))
             if x["origin"] == "addition" and not x["rating_pass"]:
                 tags.append("ADD.")
@@ -527,9 +561,10 @@ def main(argv):
             with open(path, "w", encoding="utf-8") as f:
                 f.write(content)
     t = dialogue["totals"]
-    print("final spoken lines: %d (original %d, addition %d, rating pass %d) | est. spoken seconds: %s | speakers: %d | pending: %d | on-screen cards: %d"
+    print("final spoken lines: %d (original %d, addition %d, rating pass %d) | est. spoken seconds: %s | speakers: %d | creator-approved: %d | pending: %d | on-screen cards: %d"
           % (t["spoken_lines"], t["by_origin"]["original"]["lines"], t["by_origin"]["addition"]["lines"],
-             t["by_origin"]["rating_pass"]["lines"], t["est_spoken_seconds"], t["speakers"], t["pending_wording_lines"], len(onscreen["cards"])))
+             t["by_origin"]["rating_pass"]["lines"], t["est_spoken_seconds"], t["speakers"], t["creator_approved_lines"],
+             t["pending_wording_lines"], len(onscreen["cards"])))
     if check:
         if stale:
             print("STALE: " + ", ".join(stale))

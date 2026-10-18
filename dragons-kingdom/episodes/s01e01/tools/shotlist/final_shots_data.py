@@ -307,6 +307,10 @@ S('X6-19', 'WS', 'air-to-air, long lens', 'Leaf@L (behind, near side), Charcoal@
 S('X6-20', 'EWS', 'air-to-air travel', 'Leaf@L, Charcoal@R, island@bg (harbor, town, palace)', 'Ahead, the whole island in the morning light. For a while nobody speaks. The camera travels with them, not around them.',
   '', 'Wind; the light theme.', 7, 1, set='SKY_OFF_VERDOR', tags=['OCEAN'])
 
+# ===================================================================================================== 1D
+# Daxtyn's decision of 2026-10-18: Abby's [ORIGINAL] line L048 now uses the wording he approved (CHANGED C8b).
+OVERRIDES['1D-09'] = dict(action="Abby's line in the wording Daxtyn approved on 2026-10-18 (CHANGED C8b; it replaces her [ORIGINAL] line), verbatim.")
+
 # ===================================================================================================== 1F
 block('X7', after='1F-04', set='COASTAL_SKY_WATER', tod='LATE MORNING', light=L_PURSUIT)
 S('X7-01', 'WS', 'air-to-air, long lens, behind Charcoal', 'Scout@C (drawing away, low), Charcoal@fg', 'In a straight line the scout draws away; the gap opens with every one of its quick wingbeats.', '',

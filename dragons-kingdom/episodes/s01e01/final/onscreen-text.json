@@ -2,7 +2,7 @@
   "episode": "S01E01",
   "status": "Planning data. Nothing has been designed or rendered yet.",
   "source": "episodes/s01e01/final/screenplay-final.md",
-  "source_sha256": "756a7152764f9bb97c49f3df91630d6dcc5bd6fc384dedef3c908bb3b54c0bc3",
+  "source_sha256": "3387cc014412b2d00a6907f754540fc6b320a945f92452ba5b7a387ac31398d3",
   "generated_by": "episodes/s01e01/tools/extract_final_dialogue.py",
   "about": "Text that appears in the picture itself (title, captions, lettering, credits), separate from dialogue subtitles. T01-T10 are the handoff's cards (same ids as ../onscreen-text.json); T11-T12 come from proposed additions. Cards are listed in running order.",
   "suggested_hold_seconds_note": "Suggestions for the animatic only; adjust in the edit.",
@@ -32,7 +32,7 @@
       "suggested_hold_seconds": 1.5,
       "screenplay_says": "PICTURE: A broad series of landscapes: a coastal settlement, open sea, a forest reaching a cliff, distant fortified walls. Use dissolves rather than a fake precise map. If place names appear, show them as simple captions over unlocated sea or land, without implying boundaries: TARA; CITADEL SEA; SCRAPPER; PROXY SEA; VERDOR.",
       "note": "Proposed production choice: the captions follow the narrator's order in L003 (Tara, Scrapper, Verdor, Citadel Sea, Proxy Sea), each appearing as its name is spoken. The screenplay's own caption list is in a different order (TARA; CITADEL SEA; SCRAPPER; PROXY SEA; VERDOR). The captions are optional and can be dropped.",
-      "source_line": 142
+      "source_line": 145
     },
     {
       "id": "T02",
@@ -50,7 +50,7 @@
       "suggested_hold_seconds": 1.5,
       "screenplay_says": "PICTURE: A broad series of landscapes: a coastal settlement, open sea, a forest reaching a cliff, distant fortified walls. Use dissolves rather than a fake precise map. If place names appear, show them as simple captions over unlocated sea or land, without implying boundaries: TARA; CITADEL SEA; SCRAPPER; PROXY SEA; VERDOR.",
       "note": "Proposed production choice: the captions follow the narrator's order in L003 (Tara, Scrapper, Verdor, Citadel Sea, Proxy Sea), each appearing as its name is spoken. The screenplay's own caption list is in a different order (TARA; CITADEL SEA; SCRAPPER; PROXY SEA; VERDOR). The captions are optional and can be dropped.",
-      "source_line": 142
+      "source_line": 145
     },
     {
       "id": "T03",
@@ -68,7 +68,7 @@
       "suggested_hold_seconds": 1.5,
       "screenplay_says": "PICTURE: A broad series of landscapes: a coastal settlement, open sea, a forest reaching a cliff, distant fortified walls. Use dissolves rather than a fake precise map. If place names appear, show them as simple captions over unlocated sea or land, without implying boundaries: TARA; CITADEL SEA; SCRAPPER; PROXY SEA; VERDOR.",
       "note": "Proposed production choice: the captions follow the narrator's order in L003 (Tara, Scrapper, Verdor, Citadel Sea, Proxy Sea), each appearing as its name is spoken. The screenplay's own caption list is in a different order (TARA; CITADEL SEA; SCRAPPER; PROXY SEA; VERDOR). The captions are optional and can be dropped.",
-      "source_line": 142
+      "source_line": 145
     },
     {
       "id": "T04",
@@ -86,7 +86,7 @@
       "suggested_hold_seconds": 1.5,
       "screenplay_says": "PICTURE: A broad series of landscapes: a coastal settlement, open sea, a forest reaching a cliff, distant fortified walls. Use dissolves rather than a fake precise map. If place names appear, show them as simple captions over unlocated sea or land, without implying boundaries: TARA; CITADEL SEA; SCRAPPER; PROXY SEA; VERDOR.",
       "note": "Proposed production choice: the captions follow the narrator's order in L003 (Tara, Scrapper, Verdor, Citadel Sea, Proxy Sea), each appearing as its name is spoken. The screenplay's own caption list is in a different order (TARA; CITADEL SEA; SCRAPPER; PROXY SEA; VERDOR). The captions are optional and can be dropped.",
-      "source_line": 142
+      "source_line": 145
     },
     {
       "id": "T05",
@@ -104,7 +104,7 @@
       "suggested_hold_seconds": 1.5,
       "screenplay_says": "PICTURE: A broad series of landscapes: a coastal settlement, open sea, a forest reaching a cliff, distant fortified walls. Use dissolves rather than a fake precise map. If place names appear, show them as simple captions over unlocated sea or land, without implying boundaries: TARA; CITADEL SEA; SCRAPPER; PROXY SEA; VERDOR.",
       "note": "Proposed production choice: the captions follow the narrator's order in L003 (Tara, Scrapper, Verdor, Citadel Sea, Proxy Sea), each appearing as its name is spoken. The screenplay's own caption list is in a different order (TARA; CITADEL SEA; SCRAPPER; PROXY SEA; VERDOR). The captions are optional and can be dropped.",
-      "source_line": 142
+      "source_line": 145
     },
     {
       "id": "T06",
@@ -118,7 +118,7 @@
       "suggested_hold_seconds": 5.0,
       "screenplay_says": "TITLE: DRAGON'S KINGDOM.",
       "note": "Written in the screenplay as 'TITLE: DRAGON'S KINGDOM.' The final period is screenplay punctuation, not part of the title. The series name is Dragon's Kingdom.",
-      "source_line": 157
+      "source_line": 160
     },
     {
       "id": "T12",
@@ -133,7 +133,7 @@
       "suggested_hold_seconds": 2.0,
       "screenplay_says": "PICTURE: Moored at the quay is the largest ship in the harbor, a wooden sailing ship with furled sails and a crew at work on deck: the Santa Maria. If the production design supports legible lettering, her name can be glimpsed on the hull here. Do not hold on it or underline it with music. She is one ship among several.",
       "note": "Optional: only if the lettering is legible. The ship's name card in 2C (T07) is optional too; show the name at most once on a card.",
-      "source_line": 552
+      "source_line": 555
     },
     {
       "id": "T11",
@@ -148,7 +148,7 @@
       "suggested_hold_seconds": 3.5,
       "screenplay_says": "ON-SCREEN LOCATION: CLING — SCRAPPER.",
       "note": "The first time Cling is seen (X5). T08 repeats it at 3A, as the screenplay writes it; the X5 note keeps both. If X5 is cut, T08 is the only one.",
-      "source_line": 604
+      "source_line": 607
     },
     {
       "id": "T07",
@@ -162,7 +162,7 @@
       "suggested_hold_seconds": 3.0,
       "screenplay_says": "PICTURE: Brief harbor intercut. The messenger runs down weathered steps, reaches a waiting crew, and delivers the order without repeating the whole scene. Show the Santa Maria's name on a restrained identification card or its hull only if the production design supports legible lettering. This is the story's vessel, not an excuse to import historical Earth figures.",
       "note": "The story's own vessel, not a reference to historical Earth figures. It does not need to be shown at all.",
-      "source_line": 1451
+      "source_line": 1454
     },
     {
       "id": "T08",
@@ -176,7 +176,7 @@
       "suggested_hold_seconds": 3.5,
       "screenplay_says": "ON-SCREEN LOCATION: CLING — SCRAPPER.",
       "note": "Not marked optional. The final period in the screenplay is punctuation, not part of the caption. Cling is a kingdom within Scrapper.",
-      "source_line": 2054
+      "source_line": 2056
     },
     {
       "id": "T09",
@@ -190,7 +190,7 @@
       "suggested_hold_seconds": 3.0,
       "screenplay_says": "PICTURE: Cut high above the village to Queen Fall riding Starlight. Introduce her face in a controlled close shot, then re-establish her smallness against her dragon. Do not label her Alexandria. A brief non-spoken identification in the production notes is enough; an on-screen name is optional.",
       "note": "The screenplay says a production-note identification is enough and an on-screen name is optional. Exact wording is not fixed; 'QUEEN FALL' is the plainest form.",
-      "source_line": 2390
+      "source_line": 2392
     },
     {
       "id": "T10",
@@ -204,7 +204,7 @@
       "suggested_hold_seconds": null,
       "screenplay_says": "END TITLES",
       "note": "Text is not written yet. Credit only real contributors and real assets. Do not invent a cast, a production company or licensed music.",
-      "source_line": 2720
+      "source_line": 2722
     }
   ]
 }

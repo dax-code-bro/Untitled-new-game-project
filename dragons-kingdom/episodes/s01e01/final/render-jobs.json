@@ -2,7 +2,7 @@
  "meta": {
   "status": "PLAN ONLY. Nothing of the final script has been rendered. Seconds per frame are MEASURED style-frame figures and estimates derived from them; the pilot measures the real sets.",
   "source": "episodes/s01e01/final/shotlist.json",
-  "source_sha256": "756a7152764f9bb97c49f3df91630d6dcc5bd6fc384dedef3c908bb3b54c0bc3",
+  "source_sha256": "3387cc014412b2d00a6907f754540fc6b320a945f92452ba5b7a387ac31398d3",
   "generated_by": "episodes/s01e01/tools/shotlist/final_render_schedule.py",
   "rules": [
    "Native 3840x2160, --preset final on every frame (SERIES.md section 2). No final-fast, no --twos, no draft/preview for masters.",
@@ -10,14 +10,14 @@
    "Intermediates: 10-bit CRF 12. Conform per scene, verify, move the scene master off the machine, then delete that scene's shot files and chunk folders."
   ],
   "totals": {
-   "frames": 78096,
-   "frames_3d": 76944,
-   "hours_1_browser": 2580.4,
+   "frames": 78144,
+   "frames_3d": 76992,
+   "hours_1_browser": 2581.2,
    "hours_range": [
-    1956.1,
-    3545.3
+    1956.7,
+    3546.4
    ],
-   "wall_hours_2_browsers": 2366.0
+   "wall_hours_2_browsers": 2366.7
   }
  },
  "jobs": [
@@ -4559,8 +4559,8 @@
    "part": null,
    "set": "SKY_OFF_VERDOR",
    "render": "3d",
-   "frames": 72,
-   "seconds": 3.0,
+   "frames": 84,
+   "seconds": 3.5,
    "s_per_frame": 33.0,
    "s_per_frame_range": [
     26.0,
@@ -4569,11 +4569,11 @@
    "basis": "ESTIMATE from MEASURED F3 131.0 s x 0.20-0.33",
    "chunk_frames": 24,
    "chunk_seconds": 1.0,
-   "chunks": 3,
-   "hours_1_browser": 0.66,
+   "chunks": 4,
+   "hours_1_browser": 0.77,
    "setup_s": 104,
    "sub_frames": null,
-   "command": "node render/render.mjs episodes/s01e01/final/scenes/sky-off-verdor.js --preset final --cinematic velocity --start <shot start, s> --seconds 3.000000 --workers 2 --chunk-seconds 1.0000 --bit-depth 10 --crf 12 --out output/s01e01/1D/1D-09"
+   "command": "node render/render.mjs episodes/s01e01/final/scenes/sky-off-verdor.js --preset final --cinematic velocity --start <shot start, s> --seconds 3.500000 --workers 2 --chunk-seconds 1.0000 --bit-depth 10 --crf 12 --out output/s01e01/1D/1D-09"
   },
   {
    "job": "1D-10",
@@ -4628,8 +4628,8 @@
    "part": null,
    "set": "SKY_OFF_VERDOR",
    "render": "3d",
-   "frames": 192,
-   "seconds": 8.0,
+   "frames": 204,
+   "seconds": 8.5,
    "s_per_frame": 33.0,
    "s_per_frame_range": [
     26.0,
@@ -4638,11 +4638,11 @@
    "basis": "ESTIMATE from MEASURED F3 131.0 s x 0.20-0.33",
    "chunk_frames": 24,
    "chunk_seconds": 1.0,
-   "chunks": 8,
-   "hours_1_browser": 1.76,
+   "chunks": 9,
+   "hours_1_browser": 1.87,
    "setup_s": 104,
    "sub_frames": null,
-   "command": "node render/render.mjs episodes/s01e01/final/scenes/sky-off-verdor.js --preset final --cinematic velocity --start <shot start, s> --seconds 8.000000 --workers 2 --chunk-seconds 1.0000 --bit-depth 10 --crf 12 --out output/s01e01/1D/1D-12"
+   "command": "node render/render.mjs episodes/s01e01/final/scenes/sky-off-verdor.js --preset final --cinematic velocity --start <shot start, s> --seconds 8.500000 --workers 2 --chunk-seconds 1.0000 --bit-depth 10 --crf 12 --out output/s01e01/1D/1D-12"
   },
   {
    "job": "1D-13",
@@ -7986,8 +7986,8 @@
    "part": null,
    "set": "TREATMENT_ROOM",
    "render": "3d",
-   "frames": 192,
-   "seconds": 8.0,
+   "frames": 216,
+   "seconds": 9.0,
    "s_per_frame": 86.0,
    "s_per_frame_range": [
     65.0,
@@ -7996,11 +7996,11 @@
    "basis": "ESTIMATE: 0.8 x F4 (interior, 3-4 hero people, coast through the opening)",
    "chunk_frames": 12,
    "chunk_seconds": 0.5,
-   "chunks": 16,
-   "hours_1_browser": 4.587,
+   "chunks": 18,
+   "hours_1_browser": 5.16,
    "setup_s": 96,
    "sub_frames": null,
-   "command": "node render/render.mjs episodes/s01e01/final/scenes/treatment-room.js --preset final --cinematic velocity --start <shot start, s> --seconds 8.000000 --workers 2 --chunk-seconds 0.5000 --bit-depth 10 --crf 12 --out output/s01e01/2B/2B-09"
+   "command": "node render/render.mjs episodes/s01e01/final/scenes/treatment-room.js --preset final --cinematic velocity --start <shot start, s> --seconds 9.000000 --workers 2 --chunk-seconds 0.5000 --bit-depth 10 --crf 12 --out output/s01e01/2B/2B-09"
   },
   {
    "job": "2B-10",

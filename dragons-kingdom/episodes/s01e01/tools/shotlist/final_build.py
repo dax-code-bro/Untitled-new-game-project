@@ -12,7 +12,8 @@ Checks (exit 1 on any failure): every spoken line of the final script is covered
 additions and rating-pass blocks matches the script; every block in the script has shots and no shot belongs to a
 block the script does not have; each addition's and rating-pass block's picture time equals what
 check_extended.ADDITION_SHOTS / check_final.RATING_SHOTS / check_final.CHANGE_SHOTS give, so this list and
-check_final.py estimate the same runtime; no drink, smoke, drug or suggestive shot frames a child, Abby or Remi;
+check_final.py estimate the same runtime; no drink, smoke, drug or suggestive shot frames a child or Abby (Remi is an
+adult, Daxtyn 2026-10-18);
 Starlight never has fire; the expected runtime is 50-60 min.
 
 Usage: python3 tools/shotlist/final_build.py [--check]
@@ -77,9 +78,10 @@ FLAG_TEXT.update({
     'REMI_BLOOD_3': 'After X11 (his mother wipes hairline, neck and hands) and R9b (hands scrubbed at the healer\'s bowl): hands clean, red from scrubbing; sleeves stained for the rest of the day.',
     'CHARCOAL_JAW_BLOOD': "The scout's blood on Charcoal's lower jaw and throat from the bite until Remi washes it off in X15: wet at first, drying dark. Charcoal has no wound of his own.",
     'VILLAGER_INJURIES': 'Adult villager: split scalp (blood down one side of the face into the collar) and an open fracture of the RIGHT leg below the knee, from the second pass to the end; leg splinted with a banner pole in X27. He lives.',
-    'NO_CHILD_IN_FRAME': 'Drink, smoke, drug or suggestive beat: no child (and not Abby or Remi) anywhere in frame (SERIES.md section 8).',
+    'NO_CHILD_IN_FRAME': 'Drink, smoke, drug or suggestive beat: no child (and not Abby, the young attendant or the young riders) anywhere in frame (SERIES.md section 8). Remi is an adult (Daxtyn, 2026-10-18).',
     'DEAD_ARE_ADULTS': 'Every dead body is an adult; partly covered or turned away, no faces, no lingering close-up.',
-    'PENDING_WORDING': 'A line here keeps a scrapped dragon name until Daxtyn chooses new wording (DRAGONS.md): record it as written; plan a pickup for the alternative.',
+    'PENDING_WORDING': 'A line here is kept as written while Daxtyn decides its wording: record it as written; plan a pickup for the alternative.',
+    'APPROVED_WORDING': 'A line here uses wording Daxtyn approved on 2026-10-18 (it replaced a scrapped species name; CHANGES.md section 9): record exactly this wording, never the old one.',
 })
 TAG_TEXT = dict(B['TAG_TEXT'])
 TAG_TEXT.update({
@@ -96,7 +98,7 @@ TAG_WEIGHT.update({'BLOOD': 3, 'GORE': 4, 'BODY_DEAD': 3, 'PROP_DRINK_SMOKE': 2,
 GROUND_SETS = {'VERDOR_GROUNDS', 'VERDOR_HARBOR', 'RIDING_SCHOOL_FIELD', 'BIRTHING_CHAMBER'}
 DRAGON_RE = re.compile(r"\b(charcoal|leaf|starlight|scout(?! rider)|hatchling|working dragon|small dragon|young dragon|dragons)\b")
 HUMAN_RE = re.compile(r"\b(alexandria|abby|remi|attendant|keeper|healer|messenger|vendor|musician|king|captain|guard|watchman|child|parent|villager|partner|old woman|neighbor|master|sailor|lookout|crew|instructor|riders?|servants?|man|woman|people|crowd|townspeople|farmer|adults|queen fall|rider)\b")
-CHILDISH_RE = re.compile(r"\b(child|children|abby|remi|young riders?|young attendant|kids?)\b")
+CHILDISH_RE = re.compile(r"\b(child|children|abby|young riders?|young attendant|kids?)\b")   # Remi is an adult (2026-10-18)
 LENS = {'EWS': '24 mm', 'WS': '35 mm', 'MS': '50 mm', 'CU': '85 mm', 'INS': '100 mm macro', 'POV': '35 mm (eyeline)', 'CARD': 'n/a'}
 
 # Native-4K seconds per frame by set (velocity motion blur, --preset final, every frame drawn at 3840x2160).
@@ -333,6 +335,8 @@ def main(argv):
                 e['delivery'] = x['performance_note']
             if x['pending']:
                 e['pending'] = x['pending']
+            if x['creator_approved']:
+                e['creator_approved'] = x['creator_approved']
             dlg.append(e)
             dlg_s += (x['est_seconds'] + TURN_GAP) * portion
         a, b = float(s['a']), float(s['b'])
@@ -383,6 +387,8 @@ def main(argv):
             addf('ORIGINAL_LINE_EXACT')
         if any(LINES[d['id']]['pending'] for d in dlg):
             addf('PENDING_WORDING')
+        if any(LINES[d['id']]['creator_approved'] for d in dlg):
+            addf('APPROVED_WORDING')
         if 'PROP_DRINK_SMOKE' in tags:
             addf('NO_CHILD_IN_FRAME')
         if 'BODY_DEAD' in tags:

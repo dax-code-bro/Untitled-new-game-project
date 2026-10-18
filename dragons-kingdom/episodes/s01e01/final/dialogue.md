@@ -6,8 +6,8 @@ The recording script for the whole episode: who says what, scene by scene. It is
 
 - Only the words in the **Line** column are spoken. The **How** column is advice for the performer; never say it out loud.
 - **#** is the line id. `L001`-`L198` are the handoff's lines (the same ids as `../dialogue.json`). `X4-03` is the third line of proposed addition X4; `R3-02` the second line of proposed rating-pass block R3.
-- **ORIGINAL** marks Daxtyn's own four lines. Say them exactly as written.
-- **PENDING** marks a line that still uses a scrapped dragon name. `DRAGONS.md` keeps it as written until Daxtyn chooses new wording, so record it as written; the proposed alternative is shown and is recorded only if he picks it.
+- **ORIGINAL** marks Daxtyn's own lines. Say them exactly as written.
+- **APPROVED** marks a line whose wording Daxtyn chose on 18 October 2026 (the lines that named a dragon species he scrapped). Say it exactly as written; the old wording in *was* is not recorded. L048 replaces one of his own [ORIGINAL] lines.
 - **CHANGED C#** marks a line reworded in the final script; the old wording is shown in *was*.
 - **ADD** = proposed addition, **RATING** = proposed rating-pass line (with what it carries). None of it is canon until Daxtyn accepts it.
 - A dash at the end of a line (—) means the speaker gets cut off. Dragons never speak.
@@ -16,13 +16,13 @@ The recording script for the whole episode: who says what, scene by scene. It is
 ## Totals
 
 - Spoken lines: **385**: 198 from the handoff, 171 in the proposed additions, 16 in the proposed rating pass.
-- 4 ORIGINAL lines, 4 PENDING lines, 3 CHANGED lines, 9 dragon-command lines, 8 cut-off lines, 6 lines with strong language.
-- Total speaking time: about **772.2 seconds (12:52)**. The rest of the estimated 54-minute episode is picture, action, music and silence (`shotlist.md`).
+- 3 ORIGINAL lines, 5 APPROVED lines, 8 CHANGED lines (the APPROVED ones included), 9 dragon-command lines, 8 cut-off lines, 6 lines with strong language.
+- Total speaking time: about **774.8 seconds (12:55)**. The rest of the estimated 54-minute episode is picture, action, music and silence (`shotlist.md`).
 
 | Character | Lines | Words | Seconds | In |
 |---|---:|---:|---:|---|
-| REMI | 84 | 373 | 154 | 1A, 1B, 1C, 1D, 1E, 1F, 2A, 2B, 2C |
-| ABBY | 79 | 306 | 123.4 | 1A, 1B, 1C, 1D, 1E, 1F, 2A, 2B, 2C |
+| REMI | 84 | 376 | 155.4 | 1A, 1B, 1C, 1D, 1E, 1F, 2A, 2B, 2C |
+| ABBY | 79 | 309 | 124.6 | 1A, 1B, 1C, 1D, 1E, 1F, 2A, 2B, 2C |
 | ALEXANDRIA | 61 | 309 | 125.9 | 1A, 2B, 2C |
 | KING OF CLING | 27 | 220 | 88.6 | 3A, 3B, 3C, 3D |
 | GUARD CAPTAIN | 16 | 80 | 32.3 | 2C, 3A, 3B, 3C, 3D |
@@ -201,20 +201,20 @@ These appear in the picture, not in the voice track. Full details are in `onscre
 
 ### Scene 1D: Brother, Sister, and Two Dragons
 
-*EXT. SKY OFF VERDOR — DAY* · 24 lines · about 46 s
+*EXT. SKY OFF VERDOR — DAY* · 24 lines · about 47.2 s
 
 | # | Who | Line | How | Sec |
 |---|---|---|---|---:|
 | L046 | REMI | You're going to be queen when I'm gone. Least I think that's how that works. You good with that? | **ORIGINAL, say exactly.** Casual, as if continuing a thought he has carried a while. Say it exactly. | 7.8 |
 | | | *(silence)* | ABBY SAYS NOTHING. Keep the silence: no answer, no nod, no narration. | |
 | L047 | REMI | Yeah, you're good. | **ORIGINAL, say exactly.** After a silence that lasts just long enough to be uncomfortable, he answers for her. Say it exactly. | 1.2 |
-| L048 | ABBY | Why couldn't I get a Bashion? | **ORIGINAL, say exactly.** Looking across Charcoal's enormous body. Say it exactly. | 2.3 |
+| L048 | ABBY | Why couldn't I get one like Charcoal? | **APPROVED by Daxtyn 2026-10-18, say exactly.** CHANGED C8b; replaces his [ORIGINAL] line "Why couldn't I get a Bashion?" (not recorded). Looking across Charcoal's enormous body. Say it exactly. | 2.7 |
 | L049 | REMI | You have Leaf. | Plain. | 1.2 |
 | L050 | ABBY | I know I have Leaf. | Quick, a little defensive. | 1.9 |
 | L051 | REMI | Then don't ask like he isn't right here. | A gentle scold on Leaf's behalf. | 3.1 |
 | L052 | ABBY | I didn't mean it like that. | To Leaf. Affectionate apology, touching Leaf; he turns one eye toward her. | 2.3 |
-| L053 | REMI | Nightwings are faster. More versatile. | **PENDING (P1): record as written.** Proposed alternative, only if Daxtyn picks it: "Smaller ones are faster. More versatile." Matter-of-fact. | 2.2 |
-| L054 | ABBY | And Bashions? | **PENDING (P1): record as written.** Proposed alternative, only if Daxtyn picks it: "And big ones?" Curious. | 0.8 |
+| L053 | REMI | Smaller ones are faster. More versatile. | **APPROVED by Daxtyn 2026-10-18, say exactly.** CHANGED C9; was "Nightwings are faster. More versatile." (not recorded). Matter-of-fact. | 2.6 |
+| L054 | ABBY | And big ones? | **APPROVED by Daxtyn 2026-10-18, say exactly.** CHANGED C9; was "And Bashions?" (not recorded). Curious. | 1.2 |
 | L055 | REMI | Better for war. | Plain statement, not a boast. Leave a little quiet after it. | 1.2 |
 | L056 | ABBY | I was thinking about being able to move the ground every time I leave. | Lighter; she means Charcoal's ground-shaking takeoff. | 5.4 |
 | L057 | REMI | Someone has to mend it afterward. | Dry. | 2.3 |
@@ -228,7 +228,7 @@ These appear in the picture, not in the voice track. Full details are in `onscre
 | L065 | ABBY | His whole head. | Still astonished. | 1.2 |
 | L066 | REMI | Leaf saw too. | Dry joke. | 1.2 |
 | L067 | ABBY | You're all right. Leave him alone. | To Leaf. Rubbing Leaf; soothing, then a mild scold. | 2.6 |
-| L068 | REMI | Still want one? | Small smile; he means a Bashion. | 1.2 |
+| L068 | REMI | Still want one? | Small smile; he means a dragon like Charcoal (L048 in its approved wording). | 1.2 |
 | L069 | ABBY | Yes. | Immediate. The last light moment before the attack. | 0.6 |
 
 ### Scene 1E: Something Too Fast
@@ -298,7 +298,7 @@ These appear in the picture, not in the voice track. Full details are in `onscre
 
 ### Scene 2B: What Happened in the Sky
 
-*INT. VERDOR TREATMENT ROOM — DAY* · 38 lines · about 83 s
+*INT. VERDOR TREATMENT ROOM — DAY* · 38 lines · about 84 s
 
 | # | Who | Line | How | Sec |
 |---|---|---|---|---:|
@@ -312,7 +312,7 @@ These appear in the picture, not in the voice track. Full details are in `onscre
 | L106 | ALEXANDRIA | What do you know? | To the Healer. Controlled, economical. | 1.5 |
 | L107 | HEALER | Her arm is broken. It needs support and rest. | Plain report. No miracle cure. | 3.7 |
 | L108 | ALEXANDRIA | Tell me. | To Remi. Level voice. | 0.8 |
-| L109 | REMI | We were off the coast. Flying together. Something came past Leaf. A Slitherwing. | **PENDING (P2): record as written.** Proposed alternative, only if Daxtyn picks it: "We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast." Reporting in short pieces: only what he saw. | 5.8 |
+| L109 | REMI | We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast. | **APPROVED by Daxtyn 2026-10-18, say exactly.** CHANGED C19; was "We were off the coast. Flying together. Something came past Leaf. A Slitherwing." (not recorded). Reporting in short pieces: only what he saw. | 6.8 |
 | L110 | ALEXANDRIA | With a rider? | Sharp but level. | 1.2 |
 | L111 | REMI | Yes. | Plain. | 0.6 |
 | L112 | ALEXANDRIA | Did it strike her? | Level. | 1.5 |
@@ -343,7 +343,7 @@ These appear in the picture, not in the voice track. Full details are in `onscre
 
 ### Scene 2C: The Santa Maria
 
-*INT. TREATMENT ROOM DOORWAY / EXT. VERDOR HARBOR — DAY* · 103 lines · about 213.3 s · with X11, R9, X12, X13, X14, X15, X16, X17, X18, X19
+*INT. TREATMENT ROOM DOORWAY / EXT. VERDOR HARBOR — DAY* · 103 lines · about 213.7 s · with X11, R9, X12, X13, X14, X15, X16, X17, X18, X19
 
 | # | Who | Line | How | Sec |
 |---|---|---|---|---:|
@@ -436,7 +436,7 @@ These appear in the picture, not in the voice track. Full details are in `onscre
 | X17-08 | ABBY | Remi says I should tell you. | ADD. Abby puts her right hand flat against the side of Leaf's face. His breath stirs the loose hair at her temple. For a moment she doesn't say anything. | 2.3 |
 | X17-09 | ABBY | You brought me home. I couldn't hold on properly, so you flew for both of us. | ADD. Leaf's eye turns to her. | 6.4 |
 | X17-10 | ABBY | Thank you. | ADD. Leaf presses his head very gently against her hand. | 0.8 |
-| X17-11 | ABBY | I still want a Bashion. | **PENDING (P3): record as written.** Proposed alternative, only if Daxtyn picks it: "I still want one like Charcoal." ADD. She stays there. Then, sounding more like herself: | 1.9 |
+| X17-11 | ABBY | I still want one like Charcoal. | **APPROVED by Daxtyn 2026-10-18, say exactly.** CHANGED C30; was "I still want a Bashion." (not recorded). ADD. She stays there. Then, sounding more like herself: | 2.3 |
 | X17-12 | ABBY | Not instead of you. | ADD. Leaf blinks, slowly. | 1.5 |
 | | | ***X18: THE QUEEN AND THE RIDER (end of 2C)*** | proposed addition | |
 | X18-01 | ALEXANDRIA | Did he stop when you told him? | ADD. Alexandria stops beside Charcoal. Up close he is immense, and she is small beside his head. He regards her calmly. She does not step back. | 2.7 |
@@ -591,4 +591,4 @@ These appear in the picture, not in the voice track. Full details are in `onscre
 
 ---
 
-Generated from `screenplay-final.md` (sha256 `756a7152764f9bb9`). To rebuild after a script change: `python3 tools/extract_final_dialogue.py` (after `tools/check_final.py` passes).
+Generated from `screenplay-final.md` (sha256 `3387cc014412b2d0`). To rebuild after a script change: `python3 tools/extract_final_dialogue.py` (after `tools/check_final.py` passes).

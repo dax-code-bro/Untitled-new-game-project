@@ -1,15 +1,16 @@
 {
   "episode": "S01E01",
   "series": "Dragon's Kingdom",
-  "status": "Planning data extracted from the locked shooting script. No final voices have been recorded and nothing has been rendered. Every line not marked original=true is proposed dialogue; the additions and the rating pass are in the script by default and are not canon until Daxtyn accepts them (SERIES.md section 5).",
+  "status": "Planning data extracted from the locked shooting script. No final voices have been recorded and nothing has been rendered. Every line not marked original=true or creator_approved is proposed dialogue; the additions and the rating pass are in the script by default and are not canon until Daxtyn accepts them (SERIES.md section 5). creator_approved lines use wording Daxtyn approved on 2026-10-18; X17-11 sits in the proposed addition X17, so only its wording is approved.",
   "source": "episodes/s01e01/final/screenplay-final.md",
-  "source_sha256": "756a7152764f9bb97c49f3df91630d6dcc5bd6fc384dedef3c908bb3b54c0bc3",
+  "source_sha256": "3387cc014412b2d00a6907f754540fc6b320a945f92452ba5b7a387ac31398d3",
   "generated_by": "episodes/s01e01/tools/extract_final_dialogue.py",
   "rules": [
     "Only text following a named speaker or NARRATOR is spoken. NOTE lines, PICTURE/SOUND lines, markers, WAS text and PENDING notes are never spoken or subtitled.",
     "'text' holds only the spoken words of the shooting text (the NOW side of a CHANGED block): no quotes, no bracketed notes, no [ORIGINAL] marker.",
-    "original=true marks Daxtyn's four [ORIGINAL] lines: perform and subtitle them byte-exact.",
-    "pending=P# marks a proposed line that still names a scrapped species. DRAGONS.md keeps it as written until Daxtyn chooses new wording, so it is recorded as written; pending_alternative is the proposed replacement, recorded only if he picks it.",
+    "original=true marks Daxtyn's [ORIGINAL] lines: perform and subtitle them byte-exact. The handoff had four; the fourth, L048, now uses the wording he approved on 2026-10-18 (was_original=true, was_text keeps his old line).",
+    "creator_approved=2026-10-18 marks the five lines whose wording Daxtyn chose on that date (L048, L053, L054, L109, X17-11; they named a species he scrapped): perform and subtitle them byte-exact; was_text is the old wording, which is not recorded.",
+    "pending=P# would mark a line kept as written while Daxtyn decides its wording; none is open since 2026-10-18.",
     "Dragons have no human dialogue.",
     "An em dash at the end of 'text' means the line is cut off (interrupted=true); a leading em dash means it picks up a cut-off line ('continues').",
     "Subtitles come from the final recorded dialogue; re-run this script if the script changes."
@@ -22,6 +23,7 @@
     "origin": "original | addition | rating_pass",
     "addition / rating_pass": "the block the line is in (a rating-pass block can sit inside an addition)",
     "changed_by / was_text": "the CHANGED block that rewords this line and the wording it replaced (kept in screenplay-final.md)",
+    "creator_approved / was_original": "the date Daxtyn approved this wording, and whether the old wording was one of his [ORIGINAL] lines (see rules)",
     "pending / pending_alternative": "see rules",
     "rating_content": "what the line carries for the mature rating (SERIES.md section 8)",
     "delivery": "bracketed performance note (if any) and the context; context_source says whether it was hand-checked or taken automatically from the stage direction before the line",
@@ -35,18 +37,18 @@
   },
   "totals": {
     "spoken_lines": 385,
-    "est_spoken_seconds": 772.2,
-    "est_spoken_minutes": 12.87,
+    "est_spoken_seconds": 774.8,
+    "est_spoken_minutes": 12.91,
     "by_origin": {
       "original": {
         "lines": 198,
-        "words": 974,
-        "est_seconds": 407.4
+        "words": 979,
+        "est_seconds": 409.6
       },
       "addition": {
         "lines": 171,
-        "words": 769,
-        "est_seconds": 310.5
+        "words": 770,
+        "est_seconds": 310.9
       },
       "rating_pass": {
         "lines": 16,
@@ -54,14 +56,15 @@
         "est_seconds": 54.3
       }
     },
-    "original_marker_lines": 4,
-    "pending_wording_lines": 4,
-    "changed_lines": 3,
+    "original_marker_lines": 3,
+    "creator_approved_lines": 5,
+    "pending_wording_lines": 0,
+    "changed_lines": 8,
     "command_lines": 9,
     "canonical_command_lines": 5,
     "interrupted_lines": 8,
     "strong_language_lines": 6,
-    "subtitle_cues": 406,
+    "subtitle_cues": 407,
     "speakers": 26,
     "by_speaker": {
       "NARRATOR": {
@@ -115,8 +118,8 @@
       },
       "ABBY": {
         "lines": 79,
-        "words": 306,
-        "est_seconds": 123.4,
+        "words": 309,
+        "est_seconds": 124.6,
         "origins": [
           "addition",
           "original"
@@ -135,8 +138,8 @@
       },
       "REMI": {
         "lines": 84,
-        "words": 373,
-        "est_seconds": 154.0,
+        "words": 376,
+        "est_seconds": 155.4,
         "origins": [
           "addition",
           "original"
@@ -537,8 +540,8 @@
       },
       "X17": {
         "lines": 12,
-        "words": 65,
-        "est_seconds": 25.4
+        "words": 66,
+        "est_seconds": 25.8
       },
       "X18": {
         "lines": 12,
@@ -607,7 +610,7 @@
       "id": "PROLOGUE",
       "title": "BEFORE THE SKY HAD RIDERS",
       "slugline": "EXT. SEA AND COAST — DAWN",
-      "source_line": 125,
+      "source_line": 128,
       "lines": 5,
       "words": 78,
       "est_seconds": 39.9,
@@ -619,7 +622,7 @@
       "id": "1A",
       "title": "A BIRTH IN VERDOR",
       "slugline": "INT. BIRTHING CHAMBER — MORNING",
-      "source_line": 161,
+      "source_line": 164,
       "lines": 39,
       "words": 145,
       "est_seconds": 58.8,
@@ -634,7 +637,7 @@
       "id": "1B",
       "title": "TWO RIDERS",
       "slugline": "EXT. VERDOR RIDING GROUNDS — MORNING",
-      "source_line": 373,
+      "source_line": 376,
       "lines": 18,
       "words": 64,
       "est_seconds": 26.8,
@@ -648,7 +651,7 @@
       "id": "1C",
       "title": "THE WEIGHT OF WINGS",
       "slugline": "EXT. VERDOR RIDING GROUNDS / SKY — CONTINUOUS",
-      "source_line": 488,
+      "source_line": 491,
       "lines": 32,
       "words": 103,
       "est_seconds": 40.5,
@@ -664,10 +667,10 @@
       "id": "1D",
       "title": "BROTHER, SISTER, AND TWO DRAGONS",
       "slugline": "EXT. SKY OFF VERDOR — DAY",
-      "source_line": 740,
+      "source_line": 743,
       "lines": 24,
-      "words": 114,
-      "est_seconds": 46.0,
+      "words": 117,
+      "est_seconds": 47.2,
       "first_line": "L046",
       "last_line": "L069",
       "parts": []
@@ -676,7 +679,7 @@
       "id": "1E",
       "title": "SOMETHING TOO FAST",
       "slugline": "EXT. SKY OFF VERDOR — CONTINUOUS",
-      "source_line": 861,
+      "source_line": 865,
       "lines": 9,
       "words": 30,
       "est_seconds": 13.4,
@@ -688,7 +691,7 @@
       "id": "1F",
       "title": "CHARCOAL'S ANSWER",
       "slugline": "EXT. COASTAL SKY AND WATER — CONTINUOUS",
-      "source_line": 919,
+      "source_line": 923,
       "lines": 12,
       "words": 43,
       "est_seconds": 19.8,
@@ -704,7 +707,7 @@
       "id": "2A",
       "title": "THE LANDING",
       "slugline": "EXT. VERDOR RIDING GROUNDS — DAY",
-      "source_line": 1108,
+      "source_line": 1112,
       "lines": 17,
       "words": 63,
       "est_seconds": 26.5,
@@ -719,10 +722,10 @@
       "id": "2B",
       "title": "WHAT HAPPENED IN THE SKY",
       "slugline": "INT. VERDOR TREATMENT ROOM — DAY",
-      "source_line": 1226,
+      "source_line": 1230,
       "lines": 38,
-      "words": 205,
-      "est_seconds": 83.0,
+      "words": 207,
+      "est_seconds": 84.0,
       "first_line": "L099",
       "last_line": "L136",
       "parts": []
@@ -731,10 +734,10 @@
       "id": "2C",
       "title": "THE SANTA MARIA",
       "slugline": "INT. TREATMENT ROOM DOORWAY / EXT. VERDOR HARBOR — DAY",
-      "source_line": 1385,
+      "source_line": 1388,
       "lines": 103,
-      "words": 524,
-      "est_seconds": 213.3,
+      "words": 525,
+      "est_seconds": 213.7,
       "first_line": "L137",
       "last_line": "X19-09",
       "parts": [
@@ -754,7 +757,7 @@
       "id": "3A",
       "title": "CLING CELEBRATES",
       "slugline": "EXT. CLING VILLAGE, WITHIN SCRAPPER — DAY",
-      "source_line": 2051,
+      "source_line": 2053,
       "lines": 52,
       "words": 322,
       "est_seconds": 130.3,
@@ -771,7 +774,7 @@
       "id": "3B",
       "title": "WHITE IN THE DISTANCE",
       "slugline": "EXT. CLING SQUARE / SKY — CONTINUOUS",
-      "source_line": 2324,
+      "source_line": 2326,
       "lines": 8,
       "words": 20,
       "est_seconds": 9.6,
@@ -783,7 +786,7 @@
       "id": "3C",
       "title": "THE DIVE",
       "slugline": "EXT. CLING VILLAGE — CONTINUOUS",
-      "source_line": 2401,
+      "source_line": 2403,
       "lines": 15,
       "words": 69,
       "est_seconds": 28.7,
@@ -798,7 +801,7 @@
       "id": "3D",
       "title": "AFTER THE MUSIC",
       "slugline": "EXT. CLING VILLAGE — MOMENTS LATER",
-      "source_line": 2566,
+      "source_line": 2568,
       "lines": 13,
       "words": 88,
       "est_seconds": 35.6,
@@ -821,6 +824,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "NARRATOR",
@@ -845,7 +850,7 @@
       ],
       "subtitle_min_seconds": 4.5,
       "beat_after": null,
-      "source_line": 133
+      "source_line": 136
     },
     {
       "id": "L002",
@@ -857,6 +862,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "NARRATOR",
@@ -883,7 +890,7 @@
       ],
       "subtitle_min_seconds": 7.6,
       "beat_after": null,
-      "source_line": 140
+      "source_line": 143
     },
     {
       "id": "L003",
@@ -895,6 +902,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "NARRATOR",
@@ -920,7 +929,7 @@
       ],
       "subtitle_min_seconds": 7.5,
       "beat_after": null,
-      "source_line": 145
+      "source_line": 148
     },
     {
       "id": "L004",
@@ -932,6 +941,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "NARRATOR",
@@ -957,7 +968,7 @@
       ],
       "subtitle_min_seconds": 5.4,
       "beat_after": null,
-      "source_line": 150
+      "source_line": 153
     },
     {
       "id": "L005",
@@ -969,6 +980,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "NARRATOR",
@@ -993,7 +1006,7 @@
       ],
       "subtitle_min_seconds": 1.9,
       "beat_after": null,
-      "source_line": 155
+      "source_line": 158
     },
     {
       "id": "X1-01",
@@ -1005,6 +1018,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "YOUNG ATTENDANT",
@@ -1029,7 +1044,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 187
+      "source_line": 190
     },
     {
       "id": "X1-02",
@@ -1041,6 +1056,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -1065,7 +1082,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 190
+      "source_line": 193
     },
     {
       "id": "L006",
@@ -1077,6 +1094,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ATTENDANT",
@@ -1101,7 +1120,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 199
+      "source_line": 202
     },
     {
       "id": "L007",
@@ -1113,6 +1132,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -1137,7 +1158,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 202
+      "source_line": 205
     },
     {
       "id": "L008",
@@ -1149,6 +1170,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ATTENDANT",
@@ -1173,7 +1196,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 205
+      "source_line": 208
     },
     {
       "id": "L009",
@@ -1185,6 +1208,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -1209,7 +1234,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 208
+      "source_line": 211
     },
     {
       "id": "L010",
@@ -1221,6 +1246,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ATTENDANT",
@@ -1245,7 +1272,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 217
+      "source_line": 220
     },
     {
       "id": "L011",
@@ -1257,6 +1284,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -1281,7 +1310,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 222
+      "source_line": 225
     },
     {
       "id": "L012",
@@ -1293,6 +1322,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -1317,7 +1348,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 231
+      "source_line": 234
     },
     {
       "id": "L013",
@@ -1329,6 +1360,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -1353,7 +1386,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 234
+      "source_line": 237
     },
     {
       "id": "L014",
@@ -1365,6 +1398,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -1389,7 +1424,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 239
+      "source_line": 242
     },
     {
       "id": "L015",
@@ -1401,6 +1436,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -1425,7 +1462,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 242
+      "source_line": 245
     },
     {
       "id": "L016",
@@ -1437,6 +1474,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -1461,7 +1500,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 245
+      "source_line": 248
     },
     {
       "id": "L017",
@@ -1473,6 +1512,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -1497,7 +1538,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 250
+      "source_line": 253
     },
     {
       "id": "L018",
@@ -1509,6 +1550,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -1533,7 +1576,7 @@
       ],
       "subtitle_min_seconds": 1.7,
       "beat_after": null,
-      "source_line": 253
+      "source_line": 256
     },
     {
       "id": "L019",
@@ -1545,6 +1588,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ATTENDANT",
@@ -1569,7 +1614,7 @@
       ],
       "subtitle_min_seconds": 1.9,
       "beat_after": null,
-      "source_line": 256
+      "source_line": 259
     },
     {
       "id": "L020",
@@ -1581,6 +1626,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -1605,7 +1652,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 261
+      "source_line": 264
     },
     {
       "id": "L021",
@@ -1617,6 +1664,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -1641,7 +1690,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 264
+      "source_line": 267
     },
     {
       "id": "L022",
@@ -1653,6 +1702,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -1677,7 +1728,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 267
+      "source_line": 270
     },
     {
       "id": "L023",
@@ -1689,6 +1740,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -1713,7 +1766,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 270
+      "source_line": 273
     },
     {
       "id": "L024",
@@ -1725,6 +1778,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -1749,7 +1804,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 273
+      "source_line": 276
     },
     {
       "id": "L025",
@@ -1761,6 +1816,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -1785,7 +1842,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 278
+      "source_line": 281
     },
     {
       "id": "L026",
@@ -1797,6 +1854,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -1821,7 +1880,7 @@
       ],
       "subtitle_min_seconds": 2.2,
       "beat_after": null,
-      "source_line": 281
+      "source_line": 284
     },
     {
       "id": "L027",
@@ -1833,6 +1892,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -1857,7 +1918,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 286
+      "source_line": 289
     },
     {
       "id": "L028",
@@ -1869,6 +1930,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -1893,7 +1956,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 289
+      "source_line": 292
     },
     {
       "id": "L029",
@@ -1905,6 +1968,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -1929,7 +1994,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 292
+      "source_line": 295
     },
     {
       "id": "L030",
@@ -1941,6 +2006,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -1965,7 +2032,7 @@
       ],
       "subtitle_min_seconds": 1.9,
       "beat_after": null,
-      "source_line": 295
+      "source_line": 298
     },
     {
       "id": "L031",
@@ -1977,6 +2044,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -2001,7 +2070,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 298
+      "source_line": 301
     },
     {
       "id": "X2-01",
@@ -2013,6 +2082,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -2037,7 +2108,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 309
+      "source_line": 312
     },
     {
       "id": "X2-02",
@@ -2049,6 +2120,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -2073,7 +2146,7 @@
       ],
       "subtitle_min_seconds": 1.9,
       "beat_after": null,
-      "source_line": 314
+      "source_line": 317
     },
     {
       "id": "X2-03",
@@ -2085,6 +2158,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -2109,7 +2184,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 317
+      "source_line": 320
     },
     {
       "id": "X2-04",
@@ -2121,6 +2196,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -2145,7 +2222,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 326
+      "source_line": 329
     },
     {
       "id": "X2-05",
@@ -2157,6 +2234,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -2181,7 +2260,7 @@
       ],
       "subtitle_min_seconds": 2.8,
       "beat_after": null,
-      "source_line": 329
+      "source_line": 332
     },
     {
       "id": "X2-06",
@@ -2193,6 +2272,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -2217,7 +2298,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 332
+      "source_line": 335
     },
     {
       "id": "X2-07",
@@ -2229,6 +2310,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -2253,7 +2336,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 335
+      "source_line": 338
     },
     {
       "id": "X2-08",
@@ -2265,6 +2348,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -2289,7 +2374,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 350
+      "source_line": 353
     },
     {
       "id": "X2-09",
@@ -2301,6 +2386,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -2325,7 +2412,7 @@
       ],
       "subtitle_min_seconds": 2.5,
       "beat_after": null,
-      "source_line": 359
+      "source_line": 362
     },
     {
       "id": "X2-10",
@@ -2337,6 +2424,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ATTENDANT",
@@ -2361,7 +2450,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 362
+      "source_line": 365
     },
     {
       "id": "X2-11",
@@ -2373,6 +2462,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -2397,7 +2488,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 365
+      "source_line": 368
     },
     {
       "id": "L032",
@@ -2409,6 +2500,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -2437,7 +2530,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 387
+      "source_line": 390
     },
     {
       "id": "L033",
@@ -2449,6 +2542,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -2473,7 +2568,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 392
+      "source_line": 395
     },
     {
       "id": "L034",
@@ -2485,6 +2580,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -2509,7 +2606,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 395
+      "source_line": 398
     },
     {
       "id": "L035",
@@ -2521,6 +2618,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -2545,7 +2644,7 @@
       ],
       "subtitle_min_seconds": 2.2,
       "beat_after": null,
-      "source_line": 398
+      "source_line": 401
     },
     {
       "id": "L036",
@@ -2557,6 +2656,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -2581,7 +2682,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 401
+      "source_line": 404
     },
     {
       "id": "L037",
@@ -2593,6 +2694,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GROUND KEEPER",
@@ -2617,7 +2720,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 408
+      "source_line": 411
     },
     {
       "id": "X3-01",
@@ -2629,6 +2732,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GROUND KEEPER",
@@ -2653,7 +2758,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 423
+      "source_line": 426
     },
     {
       "id": "X3-02",
@@ -2665,6 +2770,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -2689,7 +2796,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 426
+      "source_line": 429
     },
     {
       "id": "X3-03",
@@ -2701,6 +2808,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GROUND KEEPER",
@@ -2725,7 +2834,7 @@
       ],
       "subtitle_min_seconds": 1.6,
       "beat_after": null,
-      "source_line": 429
+      "source_line": 432
     },
     {
       "id": "X3-04",
@@ -2737,6 +2846,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GROUND KEEPER",
@@ -2761,7 +2872,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 436
+      "source_line": 439
     },
     {
       "id": "X3-05",
@@ -2773,6 +2884,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -2797,7 +2910,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 439
+      "source_line": 442
     },
     {
       "id": "X3-06",
@@ -2809,6 +2922,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -2833,7 +2948,7 @@
       ],
       "subtitle_min_seconds": 2.6,
       "beat_after": null,
-      "source_line": 446
+      "source_line": 449
     },
     {
       "id": "X3-07",
@@ -2845,6 +2960,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -2869,7 +2986,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 453
+      "source_line": 456
     },
     {
       "id": "R2-01",
@@ -2881,6 +2998,8 @@
       "rating_pass": "R2",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GROUND KEEPER",
@@ -2909,7 +3028,7 @@
       ],
       "subtitle_min_seconds": 2.2,
       "beat_after": null,
-      "source_line": 464
+      "source_line": 467
     },
     {
       "id": "L038",
@@ -2921,6 +3040,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -2945,7 +3066,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 473
+      "source_line": 476
     },
     {
       "id": "L039",
@@ -2957,6 +3078,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -2981,7 +3104,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 476
+      "source_line": 479
     },
     {
       "id": "L040",
@@ -2993,6 +3116,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -3017,7 +3142,7 @@
       ],
       "subtitle_min_seconds": 1.8,
       "beat_after": null,
-      "source_line": 479
+      "source_line": 482
     },
     {
       "id": "L041",
@@ -3029,6 +3154,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -3053,7 +3180,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 484
+      "source_line": 487
     },
     {
       "id": "L042",
@@ -3065,6 +3192,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -3089,7 +3218,7 @@
       ],
       "subtitle_min_seconds": 1.9,
       "beat_after": "Remi cannot hear her at this distance (shown by the distance and his lack of reply, not by hiding the line). No shouted reply.",
-      "source_line": 500
+      "source_line": 503
     },
     {
       "id": "L043",
@@ -3101,6 +3230,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -3125,7 +3256,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 509
+      "source_line": 512
     },
     {
       "id": "L044",
@@ -3137,6 +3268,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -3161,7 +3294,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 512
+      "source_line": 515
     },
     {
       "id": "L045",
@@ -3173,6 +3306,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -3197,7 +3332,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 515
+      "source_line": 518
     },
     {
       "id": "X4-01",
@@ -3209,6 +3344,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -3233,7 +3370,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 557
+      "source_line": 560
     },
     {
       "id": "X4-02",
@@ -3245,6 +3382,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -3269,7 +3408,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 562
+      "source_line": 565
     },
     {
       "id": "X4-03",
@@ -3281,6 +3420,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -3305,7 +3446,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 577
+      "source_line": 580
     },
     {
       "id": "X4-04",
@@ -3317,6 +3458,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -3341,7 +3484,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 580
+      "source_line": 583
     },
     {
       "id": "X4-05",
@@ -3353,6 +3496,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -3377,7 +3522,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 583
+      "source_line": 586
     },
     {
       "id": "X4-06",
@@ -3389,6 +3534,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -3413,7 +3560,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 586
+      "source_line": 589
     },
     {
       "id": "X4-07",
@@ -3425,6 +3572,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -3449,7 +3598,7 @@
       ],
       "subtitle_min_seconds": 1.6,
       "beat_after": null,
-      "source_line": 589
+      "source_line": 592
     },
     {
       "id": "X5-01",
@@ -3461,6 +3610,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "MUSICIAN",
@@ -3485,7 +3636,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 621
+      "source_line": 624
     },
     {
       "id": "X5-02",
@@ -3497,6 +3648,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "VENDOR",
@@ -3521,7 +3674,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 624
+      "source_line": 627
     },
     {
       "id": "X5-03",
@@ -3533,6 +3686,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "MUSICIAN",
@@ -3557,7 +3712,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 627
+      "source_line": 630
     },
     {
       "id": "R3-01",
@@ -3569,6 +3724,8 @@
       "rating_pass": "R3",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "VENDOR",
@@ -3596,7 +3753,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 640
+      "source_line": 643
     },
     {
       "id": "R3-02",
@@ -3608,6 +3765,8 @@
       "rating_pass": "R3",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "MUSICIAN",
@@ -3635,7 +3794,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 643
+      "source_line": 646
     },
     {
       "id": "R3-03",
@@ -3647,6 +3806,8 @@
       "rating_pass": "R3",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "VENDOR",
@@ -3674,7 +3835,7 @@
       ],
       "subtitle_min_seconds": 1.6,
       "beat_after": null,
-      "source_line": 646
+      "source_line": 649
     },
     {
       "id": "R3-04",
@@ -3686,6 +3847,8 @@
       "rating_pass": "R3",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "MUSICIAN",
@@ -3713,7 +3876,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 649
+      "source_line": 652
     },
     {
       "id": "X5-04",
@@ -3725,6 +3888,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD",
@@ -3749,7 +3914,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 658
+      "source_line": 661
     },
     {
       "id": "X5-05",
@@ -3761,6 +3926,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "WATCHMAN",
@@ -3785,7 +3952,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 661
+      "source_line": 664
     },
     {
       "id": "X5-06",
@@ -3797,6 +3964,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD",
@@ -3821,7 +3990,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 664
+      "source_line": 667
     },
     {
       "id": "X5-07",
@@ -3833,6 +4002,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "WATCHMAN",
@@ -3857,7 +4028,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 667
+      "source_line": 670
     },
     {
       "id": "X6-01",
@@ -3869,6 +4040,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -3893,7 +4066,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 691
+      "source_line": 694
     },
     {
       "id": "X6-02",
@@ -3905,6 +4078,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -3929,7 +4104,7 @@
       ],
       "subtitle_min_seconds": 1.9,
       "beat_after": null,
-      "source_line": 694
+      "source_line": 697
     },
     {
       "id": "X6-03",
@@ -3941,6 +4116,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -3965,7 +4142,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 697
+      "source_line": 700
     },
     {
       "id": "X6-04",
@@ -3977,6 +4154,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -4001,7 +4180,7 @@
       ],
       "subtitle_min_seconds": 2.3,
       "beat_after": null,
-      "source_line": 700
+      "source_line": 703
     },
     {
       "id": "X6-05",
@@ -4013,6 +4192,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -4037,7 +4218,7 @@
       ],
       "subtitle_min_seconds": 2.1,
       "beat_after": null,
-      "source_line": 703
+      "source_line": 706
     },
     {
       "id": "X6-06",
@@ -4049,6 +4230,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -4073,7 +4256,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 708
+      "source_line": 711
     },
     {
       "id": "X6-07",
@@ -4085,6 +4268,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -4109,7 +4294,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 723
+      "source_line": 726
     },
     {
       "id": "X6-08",
@@ -4121,6 +4306,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -4145,7 +4332,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 726
+      "source_line": 729
     },
     {
       "id": "X6-09",
@@ -4157,6 +4344,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -4181,7 +4370,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 729
+      "source_line": 732
     },
     {
       "id": "X6-10",
@@ -4193,6 +4382,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -4217,7 +4408,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 732
+      "source_line": 735
     },
     {
       "id": "L046",
@@ -4229,6 +4420,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -4254,7 +4447,7 @@
       ],
       "subtitle_min_seconds": 5.7,
       "beat_after": "ABBY SAYS NOTHING. Keep the silence: no answer, no nod, no narration.",
-      "source_line": 746
+      "source_line": 749
     },
     {
       "id": "L047",
@@ -4266,6 +4459,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -4290,7 +4485,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 753
+      "source_line": 756
     },
     {
       "id": "L048",
@@ -4300,33 +4495,35 @@
       "origin": "original",
       "addition": null,
       "rating_pass": null,
-      "changed_by": null,
-      "was_text": null,
+      "changed_by": "C8b",
+      "was_text": "Why couldn't I get a Bashion?",
+      "creator_approved": "2026-10-18",
+      "was_original": true,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
       "addressee": null,
       "addressee_source": null,
-      "text": "Why couldn't I get a Bashion?",
-      "original": true,
+      "text": "Why couldn't I get one like Charcoal?",
+      "original": false,
       "delivery": "Looking across Charcoal's enormous body. Say it exactly.",
       "context_source": "hand-checked (extract_dialogue.ANNOTATIONS)",
       "performance_note": null,
-      "bracket_raw": "ORIGINAL",
+      "bracket_raw": "creator-approved wording 2026-10-18",
       "rating_content": [],
       "is_command": false,
       "command": null,
       "interrupted": false,
       "continues": null,
-      "words": 6,
-      "est_seconds": 2.3,
+      "words": 7,
+      "est_seconds": 2.7,
       "timing_rule": "conversational",
       "subtitle_cues": [
-        "Why couldn't I get a Bashion?"
+        "Why couldn't I get one like Charcoal?"
       ],
-      "subtitle_min_seconds": 1.8,
+      "subtitle_min_seconds": 2.2,
       "beat_after": null,
-      "source_line": 760
+      "source_line": 767
     },
     {
       "id": "L049",
@@ -4338,6 +4535,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -4362,7 +4561,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 769
+      "source_line": 771
     },
     {
       "id": "L050",
@@ -4374,6 +4573,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -4398,7 +4599,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 772
+      "source_line": 774
     },
     {
       "id": "L051",
@@ -4410,6 +4611,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -4434,7 +4637,7 @@
       ],
       "subtitle_min_seconds": 2.4,
       "beat_after": null,
-      "source_line": 775
+      "source_line": 777
     },
     {
       "id": "L052",
@@ -4446,6 +4649,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -4470,7 +4675,7 @@
       ],
       "subtitle_min_seconds": 1.6,
       "beat_after": null,
-      "source_line": 780
+      "source_line": 782
     },
     {
       "id": "L053",
@@ -4480,33 +4685,35 @@
       "origin": "original",
       "addition": null,
       "rating_pass": null,
-      "changed_by": null,
-      "was_text": null,
-      "pending": "P1",
-      "pending_alternative": "Smaller ones are faster. More versatile.",
+      "changed_by": "C9",
+      "was_text": "Nightwings are faster. More versatile.",
+      "creator_approved": "2026-10-18",
+      "was_original": false,
+      "pending": null,
+      "pending_alternative": null,
       "speaker": "REMI",
       "addressee": null,
       "addressee_source": null,
-      "text": "Nightwings are faster. More versatile.",
+      "text": "Smaller ones are faster. More versatile.",
       "original": false,
       "delivery": "Matter-of-fact.",
       "context_source": "hand-checked (extract_dialogue.ANNOTATIONS)",
       "performance_note": null,
-      "bracket_raw": null,
+      "bracket_raw": "creator-approved wording 2026-10-18",
       "rating_content": [],
       "is_command": false,
       "command": null,
       "interrupted": false,
       "continues": null,
-      "words": 5,
-      "est_seconds": 2.2,
+      "words": 6,
+      "est_seconds": 2.6,
       "timing_rule": "conversational",
       "subtitle_cues": [
-        "Nightwings are faster. More versatile."
+        "Smaller ones are faster. More versatile."
       ],
-      "subtitle_min_seconds": 2.3,
+      "subtitle_min_seconds": 2.4,
       "beat_after": null,
-      "source_line": 783
+      "source_line": 792
     },
     {
       "id": "L054",
@@ -4516,33 +4723,35 @@
       "origin": "original",
       "addition": null,
       "rating_pass": null,
-      "changed_by": null,
-      "was_text": null,
-      "pending": "P1",
-      "pending_alternative": "And big ones?",
+      "changed_by": "C9",
+      "was_text": "And Bashions?",
+      "creator_approved": "2026-10-18",
+      "was_original": false,
+      "pending": null,
+      "pending_alternative": null,
       "speaker": "ABBY",
       "addressee": null,
       "addressee_source": null,
-      "text": "And Bashions?",
+      "text": "And big ones?",
       "original": false,
       "delivery": "Curious.",
       "context_source": "hand-checked (extract_dialogue.ANNOTATIONS)",
       "performance_note": null,
-      "bracket_raw": null,
+      "bracket_raw": "creator-approved wording 2026-10-18",
       "rating_content": [],
       "is_command": false,
       "command": null,
       "interrupted": false,
       "continues": null,
-      "words": 2,
-      "est_seconds": 0.8,
+      "words": 3,
+      "est_seconds": 1.2,
       "timing_rule": "conversational",
       "subtitle_cues": [
-        "And Bashions?"
+        "And big ones?"
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 786
+      "source_line": 795
     },
     {
       "id": "L055",
@@ -4554,6 +4763,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -4578,7 +4789,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 795
+      "source_line": 799
     },
     {
       "id": "L056",
@@ -4590,6 +4801,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -4614,7 +4827,7 @@
       ],
       "subtitle_min_seconds": 4.2,
       "beat_after": null,
-      "source_line": 800
+      "source_line": 804
     },
     {
       "id": "L057",
@@ -4626,6 +4839,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -4650,7 +4865,7 @@
       ],
       "subtitle_min_seconds": 2.0,
       "beat_after": null,
-      "source_line": 803
+      "source_line": 807
     },
     {
       "id": "L058",
@@ -4662,6 +4877,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -4686,7 +4903,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 806
+      "source_line": 810
     },
     {
       "id": "L059",
@@ -4698,6 +4915,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -4722,7 +4941,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 809
+      "source_line": 813
     },
     {
       "id": "L060",
@@ -4734,6 +4953,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -4758,7 +4979,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 814
+      "source_line": 818
     },
     {
       "id": "L061",
@@ -4770,6 +4991,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -4794,7 +5017,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 821
+      "source_line": 825
     },
     {
       "id": "L062",
@@ -4806,6 +5029,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -4830,7 +5055,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 830
+      "source_line": 834
     },
     {
       "id": "L063",
@@ -4842,6 +5067,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -4866,7 +5093,7 @@
       ],
       "subtitle_min_seconds": 1.8,
       "beat_after": null,
-      "source_line": 835
+      "source_line": 839
     },
     {
       "id": "L064",
@@ -4878,6 +5105,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -4902,7 +5131,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 838
+      "source_line": 842
     },
     {
       "id": "L065",
@@ -4914,6 +5143,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -4938,7 +5169,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 841
+      "source_line": 845
     },
     {
       "id": "L066",
@@ -4950,6 +5181,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -4974,7 +5207,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 844
+      "source_line": 848
     },
     {
       "id": "L067",
@@ -4986,6 +5219,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -5010,7 +5245,7 @@
       ],
       "subtitle_min_seconds": 2.0,
       "beat_after": null,
-      "source_line": 849
+      "source_line": 853
     },
     {
       "id": "L068",
@@ -5022,6 +5257,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -5029,8 +5266,8 @@
       "addressee_source": null,
       "text": "Still want one?",
       "original": false,
-      "delivery": "Small smile; he means a Bashion.",
-      "context_source": "hand-checked (extract_dialogue.ANNOTATIONS)",
+      "delivery": "Small smile; he means a dragon like Charcoal (L048 in its approved wording).",
+      "context_source": "hand-checked for the final script (FINAL_CONTEXT)",
       "performance_note": null,
       "bracket_raw": null,
       "rating_content": [],
@@ -5046,7 +5283,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 854
+      "source_line": 858
     },
     {
       "id": "L069",
@@ -5058,6 +5295,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -5082,7 +5321,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 857
+      "source_line": 861
     },
     {
       "id": "L070",
@@ -5094,6 +5333,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -5118,7 +5359,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 881
+      "source_line": 885
     },
     {
       "id": "L071",
@@ -5130,6 +5371,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -5154,7 +5397,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 886
+      "source_line": 890
     },
     {
       "id": "L072",
@@ -5166,6 +5409,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -5190,7 +5435,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 889
+      "source_line": 893
     },
     {
       "id": "L073",
@@ -5202,6 +5447,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -5226,7 +5473,7 @@
       ],
       "subtitle_min_seconds": 1.7,
       "beat_after": null,
-      "source_line": 892
+      "source_line": 896
     },
     {
       "id": "L074",
@@ -5238,6 +5485,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -5262,7 +5511,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 899
+      "source_line": 903
     },
     {
       "id": "L075",
@@ -5274,6 +5523,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -5298,7 +5549,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 902
+      "source_line": 906
     },
     {
       "id": "L076",
@@ -5310,6 +5561,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -5334,7 +5587,7 @@
       ],
       "subtitle_min_seconds": 2.2,
       "beat_after": null,
-      "source_line": 905
+      "source_line": 909
     },
     {
       "id": "L077",
@@ -5346,6 +5599,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -5374,7 +5629,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 910
+      "source_line": 914
     },
     {
       "id": "L078",
@@ -5386,6 +5641,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -5414,7 +5671,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 915
+      "source_line": 919
     },
     {
       "id": "X7-01",
@@ -5426,6 +5683,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -5450,7 +5709,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 937
+      "source_line": 941
     },
     {
       "id": "L079",
@@ -5462,6 +5721,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -5490,7 +5751,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 952
+      "source_line": 956
     },
     {
       "id": "X8-01",
@@ -5502,6 +5763,8 @@
       "rating_pass": null,
       "changed_by": "C13",
       "was_text": "There you are.",
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -5528,7 +5791,7 @@
       ],
       "subtitle_min_seconds": 2.0,
       "beat_after": null,
-      "source_line": 971
+      "source_line": 975
     },
     {
       "id": "L080",
@@ -5540,6 +5803,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -5568,7 +5833,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1001
+      "source_line": 1005
     },
     {
       "id": "L081",
@@ -5580,6 +5845,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -5608,7 +5875,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1020
+      "source_line": 1024
     },
     {
       "id": "L082",
@@ -5620,6 +5887,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -5648,7 +5917,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1029
+      "source_line": 1033
     },
     {
       "id": "L083",
@@ -5660,6 +5929,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -5688,7 +5959,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1044
+      "source_line": 1048
     },
     {
       "id": "X9-01",
@@ -5700,6 +5971,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -5724,7 +5997,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 1060
+      "source_line": 1064
     },
     {
       "id": "X9-02",
@@ -5736,6 +6009,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "LOOKOUT",
@@ -5760,7 +6035,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 1079
+      "source_line": 1083
     },
     {
       "id": "X9-03",
@@ -5772,6 +6047,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "SHIP'S MASTER",
@@ -5796,7 +6073,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1084
+      "source_line": 1088
     },
     {
       "id": "X9-04",
@@ -5808,6 +6085,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "SHIP'S MASTER",
@@ -5832,7 +6111,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 1089
+      "source_line": 1093
     },
     {
       "id": "R5-01",
@@ -5844,6 +6123,8 @@
       "rating_pass": "R5",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "SHIP'S MASTER",
@@ -5870,7 +6151,7 @@
       ],
       "subtitle_min_seconds": 4.5,
       "beat_after": null,
-      "source_line": 1098
+      "source_line": 1102
     },
     {
       "id": "R6-01",
@@ -5882,6 +6163,8 @@
       "rating_pass": "R6",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KEEPER",
@@ -5908,7 +6191,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1118
+      "source_line": 1122
     },
     {
       "id": "L084",
@@ -5920,6 +6203,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GROUND KEEPER",
@@ -5944,7 +6229,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1123
+      "source_line": 1127
     },
     {
       "id": "L085",
@@ -5956,6 +6241,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GROUND KEEPER",
@@ -5980,7 +6267,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1128
+      "source_line": 1132
     },
     {
       "id": "L086",
@@ -5992,6 +6279,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -6016,7 +6305,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 1131
+      "source_line": 1135
     },
     {
       "id": "L087",
@@ -6028,6 +6317,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GROUND KEEPER",
@@ -6052,7 +6343,7 @@
       ],
       "subtitle_min_seconds": 1.8,
       "beat_after": null,
-      "source_line": 1134
+      "source_line": 1138
     },
     {
       "id": "L088",
@@ -6064,6 +6355,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -6088,7 +6381,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 1139
+      "source_line": 1143
     },
     {
       "id": "L089",
@@ -6100,6 +6393,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GROUND KEEPER",
@@ -6124,7 +6419,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1144
+      "source_line": 1148
     },
     {
       "id": "L090",
@@ -6136,6 +6431,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -6160,7 +6457,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1147
+      "source_line": 1151
     },
     {
       "id": "L091",
@@ -6172,6 +6469,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -6196,7 +6495,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1152
+      "source_line": 1156
     },
     {
       "id": "L092",
@@ -6208,6 +6507,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GROUND KEEPER",
@@ -6232,7 +6533,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1155
+      "source_line": 1159
     },
     {
       "id": "X10-01",
@@ -6244,6 +6545,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -6268,7 +6571,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1182
+      "source_line": 1186
     },
     {
       "id": "L093",
@@ -6280,6 +6583,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -6304,7 +6609,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1203
+      "source_line": 1207
     },
     {
       "id": "L094",
@@ -6316,6 +6621,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -6340,7 +6647,7 @@
       ],
       "subtitle_min_seconds": 1.7,
       "beat_after": null,
-      "source_line": 1206
+      "source_line": 1210
     },
     {
       "id": "L095",
@@ -6352,6 +6659,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -6376,7 +6685,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1209
+      "source_line": 1213
     },
     {
       "id": "L096",
@@ -6388,6 +6697,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -6412,7 +6723,7 @@
       ],
       "subtitle_min_seconds": 1.9,
       "beat_after": null,
-      "source_line": 1214
+      "source_line": 1218
     },
     {
       "id": "L097",
@@ -6424,6 +6735,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GROUND KEEPER",
@@ -6448,7 +6761,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 1217
+      "source_line": 1221
     },
     {
       "id": "L098",
@@ -6460,6 +6773,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -6484,7 +6799,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1222
+      "source_line": 1226
     },
     {
       "id": "L099",
@@ -6496,6 +6811,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "HEALER",
@@ -6520,7 +6837,7 @@
       ],
       "subtitle_min_seconds": 1.7,
       "beat_after": null,
-      "source_line": 1232
+      "source_line": 1236
     },
     {
       "id": "L100",
@@ -6532,6 +6849,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -6556,7 +6875,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 1235
+      "source_line": 1239
     },
     {
       "id": "L101",
@@ -6568,6 +6887,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "HEALER",
@@ -6592,7 +6913,7 @@
       ],
       "subtitle_min_seconds": 1.6,
       "beat_after": null,
-      "source_line": 1238
+      "source_line": 1242
     },
     {
       "id": "L102",
@@ -6604,6 +6925,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "HEALER",
@@ -6628,7 +6951,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1243
+      "source_line": 1247
     },
     {
       "id": "L103",
@@ -6640,6 +6963,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -6664,7 +6989,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1256
+      "source_line": 1260
     },
     {
       "id": "L104",
@@ -6676,6 +7001,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -6700,7 +7027,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1259
+      "source_line": 1263
     },
     {
       "id": "L105",
@@ -6712,6 +7039,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -6736,7 +7065,7 @@
       ],
       "subtitle_min_seconds": 1.6,
       "beat_after": null,
-      "source_line": 1262
+      "source_line": 1266
     },
     {
       "id": "L106",
@@ -6748,6 +7077,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -6772,7 +7103,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1267
+      "source_line": 1271
     },
     {
       "id": "L107",
@@ -6784,6 +7115,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "HEALER",
@@ -6808,7 +7141,7 @@
       ],
       "subtitle_min_seconds": 2.7,
       "beat_after": null,
-      "source_line": 1270
+      "source_line": 1274
     },
     {
       "id": "L108",
@@ -6820,6 +7153,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -6844,7 +7179,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1275
+      "source_line": 1279
     },
     {
       "id": "L109",
@@ -6854,33 +7189,36 @@
       "origin": "original",
       "addition": null,
       "rating_pass": null,
-      "changed_by": null,
-      "was_text": null,
-      "pending": "P2",
-      "pending_alternative": "We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast.",
+      "changed_by": "C19",
+      "was_text": "We were off the coast. Flying together. Something came past Leaf. A Slitherwing.",
+      "creator_approved": "2026-10-18",
+      "was_original": false,
+      "pending": null,
+      "pending_alternative": null,
       "speaker": "REMI",
       "addressee": null,
       "addressee_source": null,
-      "text": "We were off the coast. Flying together. Something came past Leaf. A Slitherwing.",
+      "text": "We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast.",
       "original": false,
       "delivery": "Reporting in short pieces: only what he saw.",
       "context_source": "hand-checked (extract_dialogue.ANNOTATIONS)",
       "performance_note": null,
-      "bracket_raw": null,
+      "bracket_raw": "creator-approved wording 2026-10-18",
       "rating_content": [],
       "is_command": false,
       "command": null,
       "interrupted": false,
       "continues": null,
-      "words": 13,
-      "est_seconds": 5.8,
+      "words": 15,
+      "est_seconds": 6.8,
       "timing_rule": "conversational",
       "subtitle_cues": [
-        "We were off the coast. Flying together.\nSomething came past Leaf. A Slitherwing."
+        "We were off the coast. Flying together.\nSomething came past Leaf. A small dragon.",
+        "Fast."
       ],
-      "subtitle_min_seconds": 4.8,
+      "subtitle_min_seconds": 5.2,
       "beat_after": null,
-      "source_line": 1278
+      "source_line": 1286
     },
     {
       "id": "L110",
@@ -6892,6 +7230,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -6916,7 +7256,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1287
+      "source_line": 1290
     },
     {
       "id": "L111",
@@ -6928,6 +7268,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -6952,7 +7294,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1290
+      "source_line": 1293
     },
     {
       "id": "L112",
@@ -6964,6 +7306,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -6988,7 +7332,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 1293
+      "source_line": 1296
     },
     {
       "id": "L113",
@@ -7000,6 +7344,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -7026,7 +7372,7 @@
       ],
       "subtitle_min_seconds": 5.0,
       "beat_after": null,
-      "source_line": 1296
+      "source_line": 1299
     },
     {
       "id": "L114",
@@ -7038,6 +7384,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -7062,7 +7410,7 @@
       ],
       "subtitle_min_seconds": 1.7,
       "beat_after": null,
-      "source_line": 1299
+      "source_line": 1302
     },
     {
       "id": "L115",
@@ -7074,6 +7422,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -7098,7 +7448,7 @@
       ],
       "subtitle_min_seconds": 1.7,
       "beat_after": null,
-      "source_line": 1304
+      "source_line": 1307
     },
     {
       "id": "L116",
@@ -7110,6 +7460,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -7134,7 +7486,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1307
+      "source_line": 1310
     },
     {
       "id": "L117",
@@ -7146,6 +7498,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -7170,7 +7524,7 @@
       ],
       "subtitle_min_seconds": 1.9,
       "beat_after": null,
-      "source_line": 1310
+      "source_line": 1313
     },
     {
       "id": "L118",
@@ -7182,6 +7536,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -7206,7 +7562,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 1313
+      "source_line": 1316
     },
     {
       "id": "L119",
@@ -7218,6 +7574,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -7242,7 +7600,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1318
+      "source_line": 1321
     },
     {
       "id": "L120",
@@ -7254,6 +7612,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -7278,7 +7638,7 @@
       ],
       "subtitle_min_seconds": 2.2,
       "beat_after": null,
-      "source_line": 1323
+      "source_line": 1326
     },
     {
       "id": "L121",
@@ -7290,6 +7650,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -7314,7 +7676,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1326
+      "source_line": 1329
     },
     {
       "id": "L122",
@@ -7326,6 +7688,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -7350,7 +7714,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1329
+      "source_line": 1332
     },
     {
       "id": "L123",
@@ -7362,6 +7726,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -7386,7 +7752,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 1334
+      "source_line": 1337
     },
     {
       "id": "L124",
@@ -7398,6 +7764,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -7422,7 +7790,7 @@
       ],
       "subtitle_min_seconds": 3.7,
       "beat_after": null,
-      "source_line": 1337
+      "source_line": 1340
     },
     {
       "id": "L125",
@@ -7434,6 +7802,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -7458,7 +7828,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 1342
+      "source_line": 1345
     },
     {
       "id": "L126",
@@ -7470,6 +7840,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -7494,7 +7866,7 @@
       ],
       "subtitle_min_seconds": 1.9,
       "beat_after": null,
-      "source_line": 1347
+      "source_line": 1350
     },
     {
       "id": "L127",
@@ -7506,6 +7878,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -7530,7 +7904,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1350
+      "source_line": 1353
     },
     {
       "id": "L128",
@@ -7542,6 +7916,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -7566,7 +7942,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1353
+      "source_line": 1356
     },
     {
       "id": "L129",
@@ -7578,6 +7954,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -7602,7 +7980,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1358
+      "source_line": 1361
     },
     {
       "id": "L130",
@@ -7614,6 +7992,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -7638,7 +8018,7 @@
       ],
       "subtitle_min_seconds": 3.4,
       "beat_after": null,
-      "source_line": 1361
+      "source_line": 1364
     },
     {
       "id": "L131",
@@ -7650,6 +8030,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -7674,7 +8056,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1364
+      "source_line": 1367
     },
     {
       "id": "L132",
@@ -7686,6 +8068,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -7710,7 +8094,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 1367
+      "source_line": 1370
     },
     {
       "id": "L133",
@@ -7722,6 +8106,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -7746,7 +8132,7 @@
       ],
       "subtitle_min_seconds": 2.8,
       "beat_after": null,
-      "source_line": 1370
+      "source_line": 1373
     },
     {
       "id": "L134",
@@ -7758,6 +8144,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -7782,7 +8170,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 1375
+      "source_line": 1378
     },
     {
       "id": "L135",
@@ -7794,6 +8182,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -7818,7 +8208,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 1378
+      "source_line": 1381
     },
     {
       "id": "L136",
@@ -7830,6 +8220,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -7854,7 +8246,7 @@
       ],
       "subtitle_min_seconds": 1.7,
       "beat_after": null,
-      "source_line": 1381
+      "source_line": 1384
     },
     {
       "id": "L137",
@@ -7866,6 +8258,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -7892,7 +8286,7 @@
       ],
       "subtitle_min_seconds": 6.4,
       "beat_after": null,
-      "source_line": 1389
+      "source_line": 1392
     },
     {
       "id": "L138",
@@ -7904,6 +8298,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ROYAL MESSENGER",
@@ -7928,7 +8324,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 1392
+      "source_line": 1395
     },
     {
       "id": "L139",
@@ -7940,6 +8336,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -7965,7 +8363,7 @@
       ],
       "subtitle_min_seconds": 5.9,
       "beat_after": null,
-      "source_line": 1395
+      "source_line": 1398
     },
     {
       "id": "L140",
@@ -7977,6 +8375,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -8001,7 +8401,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1400
+      "source_line": 1403
     },
     {
       "id": "L141",
@@ -8013,6 +8413,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -8037,7 +8439,7 @@
       ],
       "subtitle_min_seconds": 3.8,
       "beat_after": null,
-      "source_line": 1405
+      "source_line": 1408
     },
     {
       "id": "L142",
@@ -8049,6 +8451,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ROYAL MESSENGER",
@@ -8073,7 +8477,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1408
+      "source_line": 1411
     },
     {
       "id": "X11-01",
@@ -8085,6 +8489,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -8109,7 +8515,7 @@
       ],
       "subtitle_min_seconds": 2.9,
       "beat_after": null,
-      "source_line": 1419
+      "source_line": 1422
     },
     {
       "id": "X11-02",
@@ -8121,6 +8527,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -8145,7 +8553,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1422
+      "source_line": 1425
     },
     {
       "id": "X11-03",
@@ -8157,6 +8565,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -8181,7 +8591,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 1425
+      "source_line": 1428
     },
     {
       "id": "X11-04",
@@ -8193,6 +8603,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -8217,7 +8629,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 1428
+      "source_line": 1431
     },
     {
       "id": "X11-05",
@@ -8229,6 +8641,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -8253,7 +8667,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1435
+      "source_line": 1438
     },
     {
       "id": "X11-06",
@@ -8265,6 +8679,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -8289,7 +8705,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1438
+      "source_line": 1441
     },
     {
       "id": "X11-07",
@@ -8301,6 +8717,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -8325,7 +8743,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1441
+      "source_line": 1444
     },
     {
       "id": "R9-01",
@@ -8337,6 +8755,8 @@
       "rating_pass": "R9",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "SAILOR",
@@ -8365,7 +8785,7 @@
       ],
       "subtitle_min_seconds": 2.0,
       "beat_after": null,
-      "source_line": 1462
+      "source_line": 1465
     },
     {
       "id": "R9-02",
@@ -8377,6 +8797,8 @@
       "rating_pass": "R9",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "SHIP'S MASTER",
@@ -8406,7 +8828,7 @@
       ],
       "subtitle_min_seconds": 3.6,
       "beat_after": null,
-      "source_line": 1465
+      "source_line": 1468
     },
     {
       "id": "X12-01",
@@ -8418,6 +8840,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "HEALER",
@@ -8442,7 +8866,7 @@
       ],
       "subtitle_min_seconds": 2.2,
       "beat_after": null,
-      "source_line": 1478
+      "source_line": 1481
     },
     {
       "id": "X12-02",
@@ -8454,6 +8878,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -8478,7 +8904,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1481
+      "source_line": 1484
     },
     {
       "id": "X12-03",
@@ -8490,6 +8916,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "HEALER",
@@ -8514,7 +8942,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1484
+      "source_line": 1487
     },
     {
       "id": "X12-04",
@@ -8526,6 +8954,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -8550,7 +8980,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 1487
+      "source_line": 1490
     },
     {
       "id": "X12-05",
@@ -8562,6 +8992,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -8586,7 +9018,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1496
+      "source_line": 1499
     },
     {
       "id": "X12-06",
@@ -8598,6 +9030,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "HEALER",
@@ -8622,7 +9056,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 1499
+      "source_line": 1502
     },
     {
       "id": "X12-07",
@@ -8634,6 +9068,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -8658,7 +9094,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1502
+      "source_line": 1505
     },
     {
       "id": "X12-08",
@@ -8670,6 +9106,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "HEALER",
@@ -8694,7 +9132,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1505
+      "source_line": 1508
     },
     {
       "id": "X12-09",
@@ -8706,6 +9144,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -8730,7 +9170,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1512
+      "source_line": 1515
     },
     {
       "id": "X12-10",
@@ -8742,6 +9182,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "YOUNG ATTENDANT",
@@ -8766,7 +9208,7 @@
       ],
       "subtitle_min_seconds": 3.6,
       "beat_after": null,
-      "source_line": 1515
+      "source_line": 1518
     },
     {
       "id": "X12-11",
@@ -8778,6 +9220,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -8802,7 +9246,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1520
+      "source_line": 1523
     },
     {
       "id": "X12-12",
@@ -8814,6 +9258,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -8838,7 +9284,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1523
+      "source_line": 1526
     },
     {
       "id": "X12-13",
@@ -8850,6 +9296,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -8874,7 +9322,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 1526
+      "source_line": 1529
     },
     {
       "id": "X12-14",
@@ -8886,6 +9334,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "HEALER",
@@ -8910,7 +9360,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1531
+      "source_line": 1534
     },
     {
       "id": "X12-15",
@@ -8922,6 +9372,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -8946,7 +9398,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1534
+      "source_line": 1537
     },
     {
       "id": "X12-16",
@@ -8958,6 +9410,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -8982,7 +9436,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1537
+      "source_line": 1540
     },
     {
       "id": "X12-17",
@@ -8994,6 +9448,8 @@
       "rating_pass": null,
       "changed_by": "C21",
       "was_text": "Sit down, Your Highness. You're in my light.",
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "HEALER",
@@ -9020,7 +9476,7 @@
       ],
       "subtitle_min_seconds": 3.0,
       "beat_after": null,
-      "source_line": 1546
+      "source_line": 1549
     },
     {
       "id": "X13-01",
@@ -9032,6 +9488,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "YOUNG ATTENDANT",
@@ -9056,7 +9514,7 @@
       ],
       "subtitle_min_seconds": 2.3,
       "beat_after": null,
-      "source_line": 1571
+      "source_line": 1574
     },
     {
       "id": "X13-02",
@@ -9068,6 +9526,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -9092,7 +9552,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 1576
+      "source_line": 1579
     },
     {
       "id": "X13-03",
@@ -9104,6 +9564,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "YOUNG ATTENDANT",
@@ -9128,7 +9590,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1583
+      "source_line": 1586
     },
     {
       "id": "X13-04",
@@ -9140,6 +9602,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -9164,7 +9628,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1586
+      "source_line": 1589
     },
     {
       "id": "X13-05",
@@ -9176,6 +9640,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -9200,7 +9666,7 @@
       ],
       "subtitle_min_seconds": 2.2,
       "beat_after": null,
-      "source_line": 1591
+      "source_line": 1594
     },
     {
       "id": "X13-06",
@@ -9212,6 +9678,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "YOUNG ATTENDANT",
@@ -9236,7 +9704,7 @@
       ],
       "subtitle_min_seconds": 1.9,
       "beat_after": null,
-      "source_line": 1598
+      "source_line": 1601
     },
     {
       "id": "X13-07",
@@ -9248,6 +9716,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -9272,7 +9742,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1603
+      "source_line": 1606
     },
     {
       "id": "X13-08",
@@ -9284,6 +9754,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -9308,7 +9780,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1610
+      "source_line": 1613
     },
     {
       "id": "X13-09",
@@ -9320,6 +9792,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -9344,7 +9818,7 @@
       ],
       "subtitle_min_seconds": 3.2,
       "beat_after": null,
-      "source_line": 1617
+      "source_line": 1620
     },
     {
       "id": "X13-10",
@@ -9356,6 +9830,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "YOUNG ATTENDANT",
@@ -9380,7 +9856,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 1620
+      "source_line": 1623
     },
     {
       "id": "X13-11",
@@ -9392,6 +9868,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -9416,7 +9894,7 @@
       ],
       "subtitle_min_seconds": 1.9,
       "beat_after": null,
-      "source_line": 1623
+      "source_line": 1626
     },
     {
       "id": "X14-01",
@@ -9428,6 +9906,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ADULT VILLAGER",
@@ -9452,7 +9932,7 @@
       ],
       "subtitle_min_seconds": 1.9,
       "beat_after": null,
-      "source_line": 1643
+      "source_line": 1646
     },
     {
       "id": "X14-02",
@@ -9464,6 +9944,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD",
@@ -9488,7 +9970,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 1646
+      "source_line": 1649
     },
     {
       "id": "X14-03",
@@ -9500,6 +9982,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "CHILD",
@@ -9524,7 +10008,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1653
+      "source_line": 1656
     },
     {
       "id": "X14-04",
@@ -9536,6 +10020,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "PARENT",
@@ -9560,7 +10046,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1656
+      "source_line": 1659
     },
     {
       "id": "X14-05",
@@ -9572,6 +10058,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -9596,7 +10084,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 1663
+      "source_line": 1666
     },
     {
       "id": "X14-06",
@@ -9608,6 +10096,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "WATCHMAN",
@@ -9632,7 +10122,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1666
+      "source_line": 1669
     },
     {
       "id": "X14-07",
@@ -9644,6 +10134,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -9668,7 +10160,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1669
+      "source_line": 1672
     },
     {
       "id": "X14-08",
@@ -9680,6 +10172,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "OLD WOMAN",
@@ -9704,7 +10198,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 1676
+      "source_line": 1679
     },
     {
       "id": "L143",
@@ -9716,6 +10210,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -9740,7 +10236,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1693
+      "source_line": 1696
     },
     {
       "id": "L144",
@@ -9752,6 +10248,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -9776,7 +10274,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 1696
+      "source_line": 1699
     },
     {
       "id": "L145",
@@ -9788,6 +10286,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -9812,7 +10312,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1699
+      "source_line": 1702
     },
     {
       "id": "L146",
@@ -9824,6 +10324,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -9848,7 +10350,7 @@
       ],
       "subtitle_min_seconds": 1.7,
       "beat_after": null,
-      "source_line": 1702
+      "source_line": 1705
     },
     {
       "id": "L147",
@@ -9860,6 +10362,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -9884,7 +10388,7 @@
       ],
       "subtitle_min_seconds": 2.0,
       "beat_after": null,
-      "source_line": 1707
+      "source_line": 1710
     },
     {
       "id": "L148",
@@ -9896,6 +10400,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -9920,7 +10426,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1710
+      "source_line": 1713
     },
     {
       "id": "L149",
@@ -9932,6 +10438,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -9956,7 +10464,7 @@
       ],
       "subtitle_min_seconds": 1.6,
       "beat_after": null,
-      "source_line": 1715
+      "source_line": 1718
     },
     {
       "id": "L150",
@@ -9968,6 +10476,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -9992,7 +10502,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1718
+      "source_line": 1721
     },
     {
       "id": "L151",
@@ -10004,6 +10514,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -10028,7 +10540,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1721
+      "source_line": 1724
     },
     {
       "id": "L152",
@@ -10040,6 +10552,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -10064,7 +10578,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1724
+      "source_line": 1727
     },
     {
       "id": "L153",
@@ -10076,6 +10590,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -10100,7 +10616,7 @@
       ],
       "subtitle_min_seconds": 2.0,
       "beat_after": null,
-      "source_line": 1729
+      "source_line": 1732
     },
     {
       "id": "L154",
@@ -10112,6 +10628,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -10136,7 +10654,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 1732
+      "source_line": 1735
     },
     {
       "id": "L155",
@@ -10148,6 +10666,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -10172,7 +10692,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1737
+      "source_line": 1740
     },
     {
       "id": "X15-01",
@@ -10184,6 +10704,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GROUND KEEPER",
@@ -10208,7 +10730,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1769
+      "source_line": 1772
     },
     {
       "id": "X15-02",
@@ -10220,6 +10742,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -10244,7 +10768,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 1772
+      "source_line": 1775
     },
     {
       "id": "R10-01",
@@ -10256,6 +10780,8 @@
       "rating_pass": "R10",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GROUND KEEPER",
@@ -10283,7 +10809,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1783
+      "source_line": 1786
     },
     {
       "id": "R10-02",
@@ -10295,6 +10821,8 @@
       "rating_pass": "R10",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KEEPER",
@@ -10322,7 +10850,7 @@
       ],
       "subtitle_min_seconds": 2.8,
       "beat_after": null,
-      "source_line": 1786
+      "source_line": 1789
     },
     {
       "id": "X16-01",
@@ -10334,6 +10862,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "SHIP'S MASTER",
@@ -10358,7 +10888,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1810
+      "source_line": 1813
     },
     {
       "id": "X16-02",
@@ -10370,6 +10900,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "INSTRUCTOR",
@@ -10394,7 +10926,7 @@
       ],
       "subtitle_min_seconds": 2.4,
       "beat_after": null,
-      "source_line": 1821
+      "source_line": 1824
     },
     {
       "id": "X17-01",
@@ -10406,6 +10938,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GROUND KEEPER",
@@ -10430,7 +10964,7 @@
       ],
       "subtitle_min_seconds": 2.3,
       "beat_after": null,
-      "source_line": 1841
+      "source_line": 1844
     },
     {
       "id": "X17-02",
@@ -10442,6 +10976,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -10466,7 +11002,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 1848
+      "source_line": 1851
     },
     {
       "id": "X17-03",
@@ -10478,6 +11014,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -10502,7 +11040,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1851
+      "source_line": 1854
     },
     {
       "id": "X17-04",
@@ -10514,6 +11052,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -10538,7 +11078,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1854
+      "source_line": 1857
     },
     {
       "id": "X17-05",
@@ -10550,6 +11090,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -10574,7 +11116,7 @@
       ],
       "subtitle_min_seconds": 1.9,
       "beat_after": null,
-      "source_line": 1859
+      "source_line": 1862
     },
     {
       "id": "X17-06",
@@ -10586,6 +11128,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -10610,7 +11154,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1862
+      "source_line": 1865
     },
     {
       "id": "X17-07",
@@ -10622,6 +11166,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -10646,7 +11192,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 1865
+      "source_line": 1868
     },
     {
       "id": "X17-08",
@@ -10658,6 +11204,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -10682,7 +11230,7 @@
       ],
       "subtitle_min_seconds": 1.7,
       "beat_after": null,
-      "source_line": 1882
+      "source_line": 1885
     },
     {
       "id": "X17-09",
@@ -10694,6 +11242,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -10719,7 +11269,7 @@
       ],
       "subtitle_min_seconds": 4.6,
       "beat_after": null,
-      "source_line": 1887
+      "source_line": 1890
     },
     {
       "id": "X17-10",
@@ -10731,6 +11281,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -10755,7 +11307,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1892
+      "source_line": 1895
     },
     {
       "id": "X17-11",
@@ -10765,33 +11317,35 @@
       "origin": "addition",
       "addition": "X17",
       "rating_pass": null,
-      "changed_by": null,
-      "was_text": null,
-      "pending": "P3",
-      "pending_alternative": "I still want one like Charcoal.",
+      "changed_by": "C30",
+      "was_text": "I still want a Bashion.",
+      "creator_approved": "2026-10-18",
+      "was_original": false,
+      "pending": null,
+      "pending_alternative": null,
       "speaker": "ABBY",
       "addressee": null,
       "addressee_source": null,
-      "text": "I still want a Bashion.",
+      "text": "I still want one like Charcoal.",
       "original": false,
       "delivery": "She stays there. Then, sounding more like herself:",
       "context_source": "auto: the stage direction just before the line",
       "performance_note": null,
-      "bracket_raw": null,
+      "bracket_raw": "creator-approved wording 2026-10-18",
       "rating_content": [],
       "is_command": false,
       "command": null,
       "interrupted": false,
       "continues": null,
-      "words": 5,
-      "est_seconds": 1.9,
+      "words": 6,
+      "est_seconds": 2.3,
       "timing_rule": "conversational",
       "subtitle_cues": [
-        "I still want a Bashion."
+        "I still want one like Charcoal."
       ],
-      "subtitle_min_seconds": 1.4,
+      "subtitle_min_seconds": 1.9,
       "beat_after": null,
-      "source_line": 1897
+      "source_line": 1904
     },
     {
       "id": "X17-12",
@@ -10803,6 +11357,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -10827,7 +11383,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 1908
+      "source_line": 1910
     },
     {
       "id": "X18-01",
@@ -10839,6 +11395,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -10863,7 +11421,7 @@
       ],
       "subtitle_min_seconds": 1.8,
       "beat_after": null,
-      "source_line": 1930
+      "source_line": 1932
     },
     {
       "id": "X18-02",
@@ -10875,6 +11433,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -10899,7 +11459,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1933
+      "source_line": 1935
     },
     {
       "id": "X18-03",
@@ -10911,6 +11471,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -10935,7 +11497,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1936
+      "source_line": 1938
     },
     {
       "id": "X18-04",
@@ -10947,6 +11509,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -10971,7 +11535,7 @@
       ],
       "subtitle_min_seconds": 1.7,
       "beat_after": null,
-      "source_line": 1939
+      "source_line": 1941
     },
     {
       "id": "X18-05",
@@ -10983,6 +11547,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -11007,7 +11573,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1944
+      "source_line": 1946
     },
     {
       "id": "X18-06",
@@ -11019,6 +11585,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -11043,7 +11611,7 @@
       ],
       "subtitle_min_seconds": 2.6,
       "beat_after": null,
-      "source_line": 1949
+      "source_line": 1951
     },
     {
       "id": "X18-07",
@@ -11055,6 +11623,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -11079,7 +11649,7 @@
       ],
       "subtitle_min_seconds": 3.5,
       "beat_after": null,
-      "source_line": 1954
+      "source_line": 1956
     },
     {
       "id": "X18-08",
@@ -11091,6 +11661,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -11115,7 +11687,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1957
+      "source_line": 1959
     },
     {
       "id": "X18-09",
@@ -11127,6 +11699,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -11151,7 +11725,7 @@
       ],
       "subtitle_min_seconds": 2.8,
       "beat_after": null,
-      "source_line": 1960
+      "source_line": 1962
     },
     {
       "id": "X18-10",
@@ -11163,6 +11737,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -11187,7 +11763,7 @@
       ],
       "subtitle_min_seconds": 4.0,
       "beat_after": null,
-      "source_line": 1965
+      "source_line": 1967
     },
     {
       "id": "X18-11",
@@ -11199,6 +11775,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -11223,7 +11801,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 1968
+      "source_line": 1970
     },
     {
       "id": "X18-12",
@@ -11235,6 +11813,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ALEXANDRIA",
@@ -11259,7 +11839,7 @@
       ],
       "subtitle_min_seconds": 2.0,
       "beat_after": null,
-      "source_line": 1971
+      "source_line": 1973
     },
     {
       "id": "X19-01",
@@ -11271,6 +11851,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -11295,7 +11877,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 2003
+      "source_line": 2005
     },
     {
       "id": "X19-02",
@@ -11307,6 +11889,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "HEALER",
@@ -11331,7 +11915,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2006
+      "source_line": 2008
     },
     {
       "id": "X19-03",
@@ -11343,6 +11927,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -11367,7 +11953,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2009
+      "source_line": 2011
     },
     {
       "id": "X19-04",
@@ -11379,6 +11965,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "HEALER",
@@ -11403,7 +11991,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 2012
+      "source_line": 2014
     },
     {
       "id": "X19-05",
@@ -11415,6 +12003,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -11439,7 +12029,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 2017
+      "source_line": 2019
     },
     {
       "id": "X19-06",
@@ -11451,6 +12041,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -11475,7 +12067,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2020
+      "source_line": 2022
     },
     {
       "id": "X19-07",
@@ -11487,6 +12079,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -11511,7 +12105,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 2029
+      "source_line": 2031
     },
     {
       "id": "X19-08",
@@ -11523,6 +12117,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "REMI",
@@ -11547,7 +12143,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 2034
+      "source_line": 2036
     },
     {
       "id": "X19-09",
@@ -11559,6 +12155,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ABBY",
@@ -11583,7 +12181,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 2041
+      "source_line": 2043
     },
     {
       "id": "L156",
@@ -11595,6 +12193,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "VENDOR",
@@ -11619,7 +12219,7 @@
       ],
       "subtitle_min_seconds": 3.5,
       "beat_after": null,
-      "source_line": 2061
+      "source_line": 2063
     },
     {
       "id": "L157",
@@ -11631,6 +12231,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "MUSICIAN",
@@ -11655,7 +12257,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2064
+      "source_line": 2066
     },
     {
       "id": "L158",
@@ -11667,6 +12269,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "VENDOR",
@@ -11691,7 +12295,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 2067
+      "source_line": 2069
     },
     {
       "id": "X20-01",
@@ -11703,6 +12307,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "PARTNER",
@@ -11727,7 +12333,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 2078
+      "source_line": 2080
     },
     {
       "id": "X20-02",
@@ -11739,6 +12345,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ADULT VILLAGER",
@@ -11763,7 +12371,7 @@
       ],
       "subtitle_min_seconds": 1.6,
       "beat_after": null,
-      "source_line": 2081
+      "source_line": 2083
     },
     {
       "id": "R11-01",
@@ -11775,6 +12383,8 @@
       "rating_pass": "R11",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "PARTNER",
@@ -11801,7 +12411,7 @@
       ],
       "subtitle_min_seconds": 2.5,
       "beat_after": null,
-      "source_line": 2090
+      "source_line": 2092
     },
     {
       "id": "X20-03",
@@ -11813,6 +12423,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "PARENT",
@@ -11837,7 +12449,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 2099
+      "source_line": 2101
     },
     {
       "id": "X20-04",
@@ -11849,6 +12461,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "PARENT",
@@ -11873,7 +12487,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2104
+      "source_line": 2106
     },
     {
       "id": "X20-05",
@@ -11885,6 +12499,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "CHILD",
@@ -11909,7 +12525,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2107
+      "source_line": 2109
     },
     {
       "id": "X20-06",
@@ -11921,6 +12537,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "VENDOR",
@@ -11945,7 +12563,7 @@
       ],
       "subtitle_min_seconds": 2.1,
       "beat_after": null,
-      "source_line": 2110
+      "source_line": 2112
     },
     {
       "id": "X20-07",
@@ -11957,6 +12575,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "CHILD",
@@ -11981,7 +12601,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 2115
+      "source_line": 2117
     },
     {
       "id": "X20-08",
@@ -11993,6 +12613,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "WATCHMAN",
@@ -12017,7 +12639,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2118
+      "source_line": 2120
     },
     {
       "id": "X20-09",
@@ -12029,6 +12651,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "CHILD",
@@ -12053,7 +12677,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2121
+      "source_line": 2123
     },
     {
       "id": "X20-10",
@@ -12065,6 +12689,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "WATCHMAN",
@@ -12089,7 +12715,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 2124
+      "source_line": 2126
     },
     {
       "id": "L159",
@@ -12101,6 +12727,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -12125,7 +12753,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 2133
+      "source_line": 2135
     },
     {
       "id": "L160",
@@ -12137,6 +12765,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "VENDOR",
@@ -12161,7 +12791,7 @@
       ],
       "subtitle_min_seconds": 1.7,
       "beat_after": null,
-      "source_line": 2136
+      "source_line": 2138
     },
     {
       "id": "L161",
@@ -12173,6 +12803,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -12197,7 +12829,7 @@
       ],
       "subtitle_min_seconds": 1.7,
       "beat_after": null,
-      "source_line": 2139
+      "source_line": 2141
     },
     {
       "id": "L162",
@@ -12209,6 +12841,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -12233,7 +12867,7 @@
       ],
       "subtitle_min_seconds": 1.7,
       "beat_after": null,
-      "source_line": 2144
+      "source_line": 2146
     },
     {
       "id": "L163",
@@ -12245,6 +12879,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -12269,7 +12905,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2147
+      "source_line": 2149
     },
     {
       "id": "L164",
@@ -12281,6 +12917,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "CHILD",
@@ -12305,7 +12943,7 @@
       ],
       "subtitle_min_seconds": 1.8,
       "beat_after": null,
-      "source_line": 2152
+      "source_line": 2154
     },
     {
       "id": "L165",
@@ -12317,6 +12955,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "PARENT",
@@ -12341,7 +12981,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 2155
+      "source_line": 2157
     },
     {
       "id": "L166",
@@ -12353,6 +12993,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -12377,7 +13019,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2158
+      "source_line": 2160
     },
     {
       "id": "L167",
@@ -12389,6 +13031,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "CHILD",
@@ -12413,7 +13057,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2161
+      "source_line": 2163
     },
     {
       "id": "L168",
@@ -12425,6 +13069,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -12449,7 +13095,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 2164
+      "source_line": 2166
     },
     {
       "id": "L169",
@@ -12461,6 +13107,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -12486,7 +13134,7 @@
       ],
       "subtitle_min_seconds": 3.5,
       "beat_after": null,
-      "source_line": 2171
+      "source_line": 2173
     },
     {
       "id": "L170",
@@ -12498,6 +13146,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "VENDOR",
@@ -12522,7 +13172,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2174
+      "source_line": 2176
     },
     {
       "id": "L171",
@@ -12534,6 +13184,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -12561,7 +13213,7 @@
       ],
       "subtitle_min_seconds": 10.4,
       "beat_after": null,
-      "source_line": 2177
+      "source_line": 2179
     },
     {
       "id": "L172",
@@ -12573,6 +13225,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -12598,7 +13252,7 @@
       ],
       "subtitle_min_seconds": 6.8,
       "beat_after": null,
-      "source_line": 2182
+      "source_line": 2184
     },
     {
       "id": "R12-01",
@@ -12610,6 +13264,8 @@
       "rating_pass": "R12",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -12636,7 +13292,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 2193
+      "source_line": 2195
     },
     {
       "id": "X21-01",
@@ -12648,6 +13304,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "VENDOR",
@@ -12672,7 +13330,7 @@
       ],
       "subtitle_min_seconds": 1.6,
       "beat_after": null,
-      "source_line": 2208
+      "source_line": 2210
     },
     {
       "id": "X21-02",
@@ -12684,6 +13342,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -12708,7 +13368,7 @@
       ],
       "subtitle_min_seconds": 3.4,
       "beat_after": null,
-      "source_line": 2211
+      "source_line": 2213
     },
     {
       "id": "X21-03",
@@ -12720,6 +13380,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "VENDOR",
@@ -12744,7 +13406,7 @@
       ],
       "subtitle_min_seconds": 2.0,
       "beat_after": null,
-      "source_line": 2214
+      "source_line": 2216
     },
     {
       "id": "X21-04",
@@ -12756,6 +13418,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -12780,7 +13444,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 2217
+      "source_line": 2219
     },
     {
       "id": "X21-05",
@@ -12792,6 +13456,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -12816,7 +13482,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2224
+      "source_line": 2226
     },
     {
       "id": "X21-06",
@@ -12828,6 +13494,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -12852,7 +13520,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 2227
+      "source_line": 2229
     },
     {
       "id": "X21-07",
@@ -12864,6 +13532,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -12888,7 +13558,7 @@
       ],
       "subtitle_min_seconds": 3.0,
       "beat_after": null,
-      "source_line": 2230
+      "source_line": 2232
     },
     {
       "id": "X21-08",
@@ -12900,6 +13570,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -12924,7 +13596,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2233
+      "source_line": 2235
     },
     {
       "id": "X21-09",
@@ -12936,6 +13608,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -12961,7 +13635,7 @@
       ],
       "subtitle_min_seconds": 5.2,
       "beat_after": null,
-      "source_line": 2236
+      "source_line": 2238
     },
     {
       "id": "X21-10",
@@ -12973,6 +13647,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -12997,7 +13673,7 @@
       ],
       "subtitle_min_seconds": 2.5,
       "beat_after": null,
-      "source_line": 2241
+      "source_line": 2243
     },
     {
       "id": "X21-11",
@@ -13009,6 +13685,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -13033,7 +13711,7 @@
       ],
       "subtitle_min_seconds": 1.9,
       "beat_after": null,
-      "source_line": 2246
+      "source_line": 2248
     },
     {
       "id": "X21-12",
@@ -13045,6 +13723,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -13069,7 +13749,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 2249
+      "source_line": 2251
     },
     {
       "id": "R13-01",
@@ -13081,6 +13761,8 @@
       "rating_pass": "R13",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "VENDOR",
@@ -13110,7 +13792,7 @@
       ],
       "subtitle_min_seconds": 7.0,
       "beat_after": null,
-      "source_line": 2264
+      "source_line": 2266
     },
     {
       "id": "R13-02",
@@ -13122,6 +13804,8 @@
       "rating_pass": "R13",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "MUSICIAN",
@@ -13150,7 +13834,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2269
+      "source_line": 2271
     },
     {
       "id": "X22-01",
@@ -13162,6 +13846,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "VENDOR",
@@ -13186,7 +13872,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2278
+      "source_line": 2280
     },
     {
       "id": "X22-02",
@@ -13198,6 +13884,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "MUSICIAN",
@@ -13222,7 +13910,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 2281
+      "source_line": 2283
     },
     {
       "id": "X22-03",
@@ -13234,6 +13922,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "VENDOR",
@@ -13258,7 +13948,7 @@
       ],
       "subtitle_min_seconds": 1.6,
       "beat_after": null,
-      "source_line": 2284
+      "source_line": 2286
     },
     {
       "id": "X22-04",
@@ -13270,6 +13960,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ADULT VILLAGER",
@@ -13294,7 +13986,7 @@
       ],
       "subtitle_min_seconds": 1.6,
       "beat_after": null,
-      "source_line": 2289
+      "source_line": 2291
     },
     {
       "id": "X22-05",
@@ -13306,6 +13998,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD",
@@ -13330,7 +14024,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 2292
+      "source_line": 2294
     },
     {
       "id": "X22-06",
@@ -13342,6 +14036,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ADULT VILLAGER",
@@ -13366,7 +14062,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2295
+      "source_line": 2297
     },
     {
       "id": "X22-07",
@@ -13378,6 +14074,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "OLD WOMAN",
@@ -13402,7 +14100,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2304
+      "source_line": 2306
     },
     {
       "id": "X22-08",
@@ -13414,6 +14112,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "CHILD",
@@ -13438,7 +14138,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2313
+      "source_line": 2315
     },
     {
       "id": "X22-09",
@@ -13450,6 +14150,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "PARENT",
@@ -13474,7 +14176,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 2316
+      "source_line": 2318
     },
     {
       "id": "L173",
@@ -13486,6 +14188,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "WATCHMAN",
@@ -13510,7 +14214,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2344
+      "source_line": 2346
     },
     {
       "id": "L174",
@@ -13522,6 +14226,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "WATCHMAN",
@@ -13546,7 +14252,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 2349
+      "source_line": 2351
     },
     {
       "id": "L175",
@@ -13558,6 +14264,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -13582,7 +14290,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2354
+      "source_line": 2356
     },
     {
       "id": "L176",
@@ -13594,6 +14302,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -13618,7 +14328,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2361
+      "source_line": 2363
     },
     {
       "id": "L177",
@@ -13630,6 +14340,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -13654,7 +14366,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2364
+      "source_line": 2366
     },
     {
       "id": "L178",
@@ -13666,6 +14378,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -13690,7 +14404,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2367
+      "source_line": 2369
     },
     {
       "id": "L179",
@@ -13702,6 +14416,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -13726,7 +14442,7 @@
       ],
       "subtitle_min_seconds": 3.0,
       "beat_after": null,
-      "source_line": 2372
+      "source_line": 2374
     },
     {
       "id": "L180",
@@ -13738,6 +14454,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "QUEEN FALL",
@@ -13766,7 +14484,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2395
+      "source_line": 2397
     },
     {
       "id": "L181",
@@ -13778,6 +14496,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -13802,7 +14522,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2407
+      "source_line": 2409
     },
     {
       "id": "L182",
@@ -13814,6 +14534,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -13838,7 +14560,7 @@
       ],
       "subtitle_min_seconds": 2.8,
       "beat_after": null,
-      "source_line": 2412
+      "source_line": 2414
     },
     {
       "id": "R14-01",
@@ -13850,6 +14572,8 @@
       "rating_pass": "R14",
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -13876,7 +14600,7 @@
       ],
       "subtitle_min_seconds": 3.6,
       "beat_after": null,
-      "source_line": 2421
+      "source_line": 2423
     },
     {
       "id": "L183",
@@ -13888,6 +14612,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -13912,7 +14638,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2434
+      "source_line": 2436
     },
     {
       "id": "L184",
@@ -13924,6 +14650,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "PARENT",
@@ -13948,7 +14676,7 @@
       ],
       "subtitle_min_seconds": 1.5,
       "beat_after": null,
-      "source_line": 2459
+      "source_line": 2461
     },
     {
       "id": "L185",
@@ -13960,6 +14688,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "CHILD",
@@ -13984,7 +14714,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2462
+      "source_line": 2464
     },
     {
       "id": "L186",
@@ -13996,6 +14726,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "PARENT",
@@ -14020,7 +14752,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2465
+      "source_line": 2467
     },
     {
       "id": "L187",
@@ -14032,6 +14764,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD",
@@ -14056,7 +14790,7 @@
       ],
       "subtitle_min_seconds": 1.4,
       "beat_after": null,
-      "source_line": 2472
+      "source_line": 2474
     },
     {
       "id": "L188",
@@ -14068,6 +14802,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -14092,7 +14828,7 @@
       ],
       "subtitle_min_seconds": 1.8,
       "beat_after": null,
-      "source_line": 2475
+      "source_line": 2477
     },
     {
       "id": "L189",
@@ -14104,6 +14840,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD",
@@ -14128,7 +14866,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2478
+      "source_line": 2480
     },
     {
       "id": "L190",
@@ -14140,6 +14878,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "VENDOR",
@@ -14164,7 +14904,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 2489
+      "source_line": 2491
     },
     {
       "id": "X26-01",
@@ -14176,6 +14916,8 @@
       "rating_pass": null,
       "changed_by": "C35",
       "was_text": "She's coming round! Get under stone!",
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "WATCHMAN",
@@ -14202,7 +14944,7 @@
       ],
       "subtitle_min_seconds": 3.0,
       "beat_after": null,
-      "source_line": 2504
+      "source_line": 2506
     },
     {
       "id": "L191",
@@ -14214,6 +14956,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "ADULT VILLAGER",
@@ -14238,7 +14982,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2550
+      "source_line": 2552
     },
     {
       "id": "L192",
@@ -14250,6 +14994,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -14274,7 +15020,7 @@
       ],
       "subtitle_min_seconds": 2.6,
       "beat_after": null,
-      "source_line": 2553
+      "source_line": 2555
     },
     {
       "id": "L193",
@@ -14286,6 +15032,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD",
@@ -14310,7 +15058,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2558
+      "source_line": 2560
     },
     {
       "id": "X27-01",
@@ -14322,6 +15070,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "OLD WOMAN",
@@ -14346,7 +15096,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2606
+      "source_line": 2608
     },
     {
       "id": "X27-02",
@@ -14358,6 +15108,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD",
@@ -14382,7 +15134,7 @@
       ],
       "subtitle_min_seconds": 2.5,
       "beat_after": null,
-      "source_line": 2611
+      "source_line": 2613
     },
     {
       "id": "L194",
@@ -14394,6 +15146,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -14419,7 +15173,7 @@
       ],
       "subtitle_min_seconds": 4.6,
       "beat_after": null,
-      "source_line": 2638
+      "source_line": 2640
     },
     {
       "id": "L195",
@@ -14431,6 +15185,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -14455,7 +15211,7 @@
       ],
       "subtitle_min_seconds": 1.1,
       "beat_after": null,
-      "source_line": 2641
+      "source_line": 2643
     },
     {
       "id": "L196",
@@ -14467,6 +15223,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -14491,7 +15249,7 @@
       ],
       "subtitle_min_seconds": 1.8,
       "beat_after": null,
-      "source_line": 2644
+      "source_line": 2646
     },
     {
       "id": "L197",
@@ -14503,6 +15261,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -14527,7 +15287,7 @@
       ],
       "subtitle_min_seconds": 1.3,
       "beat_after": null,
-      "source_line": 2649
+      "source_line": 2651
     },
     {
       "id": "L198",
@@ -14539,6 +15299,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -14563,7 +15325,7 @@
       ],
       "subtitle_min_seconds": 3.3,
       "beat_after": null,
-      "source_line": 2652
+      "source_line": 2654
     },
     {
       "id": "X28-01",
@@ -14575,6 +15337,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -14599,7 +15363,7 @@
       ],
       "subtitle_min_seconds": 2.5,
       "beat_after": null,
-      "source_line": 2677
+      "source_line": 2679
     },
     {
       "id": "X28-02",
@@ -14611,6 +15375,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -14635,7 +15401,7 @@
       ],
       "subtitle_min_seconds": 1.0,
       "beat_after": null,
-      "source_line": 2680
+      "source_line": 2682
     },
     {
       "id": "X28-03",
@@ -14647,6 +15413,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "GUARD CAPTAIN",
@@ -14671,7 +15439,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 2683
+      "source_line": 2685
     },
     {
       "id": "X28-04",
@@ -14683,6 +15451,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -14707,7 +15477,7 @@
       ],
       "subtitle_min_seconds": 3.3,
       "beat_after": null,
-      "source_line": 2686
+      "source_line": 2688
     },
     {
       "id": "X28-05",
@@ -14719,6 +15489,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "CHILD",
@@ -14743,7 +15515,7 @@
       ],
       "subtitle_min_seconds": 1.2,
       "beat_after": null,
-      "source_line": 2699
+      "source_line": 2701
     },
     {
       "id": "X28-06",
@@ -14755,6 +15527,8 @@
       "rating_pass": null,
       "changed_by": null,
       "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
       "pending": null,
       "pending_alternative": null,
       "speaker": "KING OF CLING",
@@ -14780,7 +15554,7 @@
       ],
       "subtitle_min_seconds": 3.8,
       "beat_after": null,
-      "source_line": 2704
+      "source_line": 2706
     }
   ]
 }

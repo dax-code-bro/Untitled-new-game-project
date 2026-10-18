@@ -3,7 +3,7 @@
 Every shot of the whole episode in order, made from `screenplay-final.md` by `tools/shotlist/final_build.py`. **Plan only: nothing has been rendered for this script.** The times are estimates for an animatic; the real length is known only once an animatic is timed (`SERIES.md` section 1).
 
 - **726 shots**: 331 from the handoff shot list (`../shotlist.json`, with the final script's changes), 352 in the proposed additions, 43 in the proposed rating pass. Everything proposed is in the script by default and is not canon until Daxtyn accepts it.
-- **Estimated length: 54:14 expected** (tight cut 44:08, loose cut 68:50), 78096 frames at 24 fps. The shots use `tools/check_final.py`'s timing tables, which estimate 54:22; the few seconds between the two are the duplicate beats played once (1B-11, X7-drop) and rounding each shot to half a second.
+- **Estimated length: 54:16 expected** (tight cut 44:10, loose cut 68:52), 78144 frames at 24 fps. The shots use `tools/check_final.py`'s timing tables, which estimate 54:24; the few seconds between the two are the duplicate beats played once (1B-11, X7-drop) and rounding each shot to half a second.
 - **385 spoken lines**, each placed in exactly one shot (ids from `dialogue.json`).
 - **167 hard shots** (difficulty 4-5). **452 shots carry a realism strategy** (faces, crowds, blood, gore, the dead).
 - Dropped as duplicates: 1B-11 (played by X3); X7-drop (played by 1F-05).
@@ -17,18 +17,18 @@ Every shot of the whole episode in order, made from `screenplay-final.md` by `to
 | 1:43 | 1A | The gold hatchling | 58 | 39 | 3:25 | 4:14 | 5:22 | X1, R1, X2 |
 | 5:58 | 1B | Preparing to fly | 32 | 18 | 1:52 | 2:18 | 2:54 | X3, R2 |
 | 8:16 | 1C | Takeoff and open sky | 81 | 32 | 5:08 | 6:22 | 8:11 | X4, X5, R3, X6 |
-| 14:38 | 1D | Siblings, succession, and the playful nip | 26 | 24 | 1:38 | 1:59 | 2:30 |  |
-| 16:36 | 1E | The first fast pass | 18 | 9 | 0:47 | 0:56 | 1:11 |  |
-| 17:33 | 1F | Pursuit and the scout's fall | 70 | 12 | 3:16 | 4:04 | 5:16 | X7, X8, X9, R4, R5 |
-| 21:37 | 2A | Return to Verdor | 34 | 17 | 1:55 | 2:21 | 3:00 | R6, X10, R7, R8 |
-| 23:58 | 2B | Treatment and Remi's report | 29 | 38 | 2:08 | 2:33 | 3:06 | R8b |
-| 26:31 | 2C | Santa Maria orders and sibling aftermath | 153 | 103 | 9:40 | 11:49 | 14:51 | X11, R9, X12, X13, X14, R9b, X15, R10, X16, X17, X18, X19 |
-| 38:20 | 3A | Cling's festival and its king | 78 | 52 | 5:22 | 6:24 | 8:00 | X20, R11, R12, X21, R13, X22 |
-| 44:44 | 3B | The white dragon approaches | 33 | 8 | 1:23 | 1:44 | 2:14 | X23, X24 |
-| 46:28 | 3C | Starlight's attack | 50 | 15 | 2:46 | 3:23 | 4:20 | R14, R15, X25, X26, R16, R16b, R17 |
-| 49:52 | 3D | Aftermath and cliffhanger | 45 | 13 | 2:54 | 3:42 | 4:46 | R18, R19, X27, R20, X28, R21 |
-| 53:34 | END | End credits | 1 | 0 | 0:30 | 0:40 | 1:00 |  |
-| | **Total** | | **726** | **385** | **44:08** | **54:14** | **68:50** | |
+| 14:38 | 1D | Siblings, succession, and the playful nip | 26 | 24 | 1:38 | 2:00 | 2:31 |  |
+| 16:38 | 1E | The first fast pass | 18 | 9 | 0:47 | 0:56 | 1:11 |  |
+| 17:34 | 1F | Pursuit and the scout's fall | 70 | 12 | 3:16 | 4:04 | 5:16 | X7, X8, X9, R4, R5 |
+| 21:38 | 2A | Return to Verdor | 34 | 17 | 1:55 | 2:21 | 3:00 | R6, X10, R7, R8 |
+| 23:59 | 2B | Treatment and Remi's report | 29 | 38 | 2:09 | 2:34 | 3:07 | R8b |
+| 26:33 | 2C | Santa Maria orders and sibling aftermath | 153 | 103 | 9:40 | 11:49 | 14:52 | X11, R9, X12, X13, X14, R9b, X15, R10, X16, X17, X18, X19 |
+| 38:22 | 3A | Cling's festival and its king | 78 | 52 | 5:22 | 6:24 | 8:00 | X20, R11, R12, X21, R13, X22 |
+| 44:46 | 3B | The white dragon approaches | 33 | 8 | 1:23 | 1:44 | 2:14 | X23, X24 |
+| 46:30 | 3C | Starlight's attack | 50 | 15 | 2:46 | 3:23 | 4:20 | R14, R15, X25, X26, R16, R16b, R17 |
+| 49:54 | 3D | Aftermath and cliffhanger | 45 | 13 | 2:54 | 3:42 | 4:46 | R18, R19, X27, R20, X28, R21 |
+| 53:36 | END | End credits | 1 | 0 | 0:30 | 0:40 | 1:00 |  |
+| | **Total** | | **726** | **385** | **44:10** | **54:16** | **68:52** | |
 
 ## Sets
 
@@ -74,7 +74,7 @@ Every shot of the whole episode in order, made from `screenplay-final.md` by `to
 - **LEAF_UNHARMED** (3 shots): Leaf is unharmed by the head-in-mouth beat. Teeth never close through skin.
 - **SIZE_DISPARITY** (33 shots): Leaf's body is about a quarter of Charcoal's length (DRAGONS.md 2026-10-09; Charcoal ~36 m). Use long lenses so a foreground Leaf does not cheat the scale.
 - **HATCHLING_NO_GLOW** (23 shots): The gold hatchling reflects light but never emits it. It is weak and has no name.
-- **ORIGINAL_LINE_EXACT** (4 shots): An [ORIGINAL] line: use the exact wording.
+- **ORIGINAL_LINE_EXACT** (3 shots): An [ORIGINAL] line: use the exact wording.
 - **ABBY_SILENCE** (2 shots): Abby does not answer the succession question: no words, no nod, no narration.
 - **SCREEN_DIRECTION** (9 shots): Flight line: travel screen LEFT to RIGHT, camera on the inland side. Leaf LEFT/near and slightly behind, Charcoal RIGHT/far and ahead. Island on the inland side, open sea beyond them. Because they travel screen-right, this camera sees the dragons' and riders' RIGHT sides; their LEFT sides face seaward, away from camera.
 - **SPEAKING_DISTANCE** (12 shots): Airborne/field speakers are close enough to hear each other. Wind sits between the lines; no shouted conversations across impossible distances.
@@ -89,9 +89,9 @@ Every shot of the whole episode in order, made from `screenplay-final.md` by `to
 - **REMI_BLOOD_3** (34 shots): After X11 (his mother wipes hairline, neck and hands) and R9b (hands scrubbed at the healer's bowl): hands clean, red from scrubbing; sleeves stained for the rest of the day.
 - **CHARCOAL_JAW_BLOOD** (15 shots): The scout's blood on Charcoal's lower jaw and throat from the bite until Remi washes it off in X15: wet at first, drying dark. Charcoal has no wound of his own.
 - **VILLAGER_INJURIES** (6 shots): Adult villager: split scalp (blood down one side of the face into the collar) and an open fracture of the RIGHT leg below the knee, from the second pass to the end; leg splinted with a banner pole in X27. He lives.
-- **NO_CHILD_IN_FRAME** (23 shots): Drink, smoke, drug or suggestive beat: no child (and not Abby or Remi) anywhere in frame (SERIES.md section 8).
+- **NO_CHILD_IN_FRAME** (23 shots): Drink, smoke, drug or suggestive beat: no child (and not Abby, the young attendant or the young riders) anywhere in frame (SERIES.md section 8). Remi is an adult (Daxtyn, 2026-10-18).
 - **DEAD_ARE_ADULTS** (9 shots): Every dead body is an adult; partly covered or turned away, no faces, no lingering close-up.
-- **PENDING_WORDING** (3 shots): A line here keeps a scrapped dragon name until Daxtyn chooses new wording (DRAGONS.md): record it as written; plan a pickup for the alternative.
+- **APPROVED_WORDING** (4 shots): A line here uses wording Daxtyn approved on 2026-10-18 (it replaced a scrapped species name; CHANGES.md section 9): record exactly this wording, never the old one.
 
 ## Every shot
 
@@ -306,7 +306,7 @@ Size: EWS extreme wide, WS wide, MS medium, CU close, INS insert, POV point of v
 | 188 | X6-19 | X6 | SKY_OFF_VERDOR | WS / 135-200 mm long lens (keeps the dragons' size difference honest) / air-to-air, long lens | Leaf@L (behind, near side), Charcoal@R, mist@bg | They turn back along the coast side by side, Leaf a little behind on the near side, as for 1D. Behind them the mist still lies against the rocks. |  | 2 | 5 |
 | 189 | X6-20 | X6 | SKY_OFF_VERDOR | EWS / 135-200 mm long lens (keeps the dragons' size difference honest) / air-to-air travel | Leaf@L, Charcoal@R, island@bg (harbor, town, palace) | Ahead, the whole island in the morning light. For a while nobody speaks. The camera travels with them, not around them. |  | 2 | 8 |
 
-### 1D: Siblings, succession, and the playful nip (1:59, 26 shots)
+### 1D: Siblings, succession, and the playful nip (2:00, 26 shots)
 
 | # | Shot | Part | Set | Size / lens / move | In frame | Action | Lines | D | s |
 |---:|---|---|---|---|---|---|---|---:|---:|
@@ -318,10 +318,10 @@ Size: EWS extreme wide, WS wide, MS medium, CU close, INS insert, POV point of v
 | 195 | 1D-06 |  | SKY_OFF_VERDOR | WS / 135-200 mm long lens (keeps the dragons' size difference honest) / air-to-air | Leaf@L, Charcoal@R | The dragons continue across open water. |  | 2 | 4 |
 | 196 | 1D-07 |  | SKY_OFF_VERDOR | CU / 85 mm / air-to-air | Abby@L | A shallow smile flickers across Abby's face. She still does not answer. |  | 4 | 3 |
 | 197 | 1D-08 |  | SKY_OFF_VERDOR | POV / 35 mm (eyeline) / Abby's POV | Charcoal (body, wing)@R | She looks across Charcoal's enormous body, the effortless way he holds the air. |  | 2 | 4 |
-| 198 | 1D-09 |  | SKY_OFF_VERDOR | CU / 85 mm / air-to-air | Abby@L (eyeline screen-R) | ORIGINAL line, verbatim. | L048 | 3 | 3 |
+| 198 | 1D-09 |  | SKY_OFF_VERDOR | CU / 85 mm / air-to-air | Abby@L (eyeline screen-R) | Abby's line in the wording Daxtyn approved on 2026-10-18 (CHANGED C8b; it replaces her [ORIGINAL] line), verbatim. | L048 | 3 | 3.5 |
 | 199 | 1D-10 |  | SKY_OFF_VERDOR | MS / 135-200 mm long lens (keeps the dragons' size difference honest) / air-to-air two-shot (long lens) | Abby@L, Leaf@L, Remi@R-bg, Charcoal@R-bg | Sibling exchange across the gap. | L049 L050 L051 | 3 | 8 |
 | 200 | 1D-11 |  | SKY_OFF_VERDOR | CU / 85 mm / air-to-air | Abby@C, Leaf (head, one eye)@R | Abby touches Leaf affectionately. Leaf turns one eye toward her voice. | L052 | 3 | 5 |
-| 201 | 1D-12 |  | SKY_OFF_VERDOR | MS / 50 mm / air-to-air | Remi@R, Abby@L-bg | Plain answer; he is not advertising a war. A little quiet afterward. | L053 L054 L055 | 3 | 8 |
+| 201 | 1D-12 |  | SKY_OFF_VERDOR | MS / 50 mm / air-to-air | Remi@R, Abby@L-bg | Plain answer; he is not advertising a war. A little quiet afterward. | L053 L054 L055 | 3 | 8.5 |
 | 202 | 1D-13 |  | SKY_OFF_VERDOR | MS / 50 mm / air-to-air two-shot | Abby@L, Remi@R-bg | Light teasing. | L056 L057 L058 L059 | 3 | 12 |
 | 203 | 1D-14 |  | SKY_OFF_VERDOR | WS / 135-200 mm long lens (keeps the dragons' size difference honest) / air-to-air | Leaf@L (edging right), Charcoal@R | Leaf edges closer to Charcoal. Abby gives a small corrective gesture. Leaf follows for a moment, then looks back at the larger dragon. |  | 2 | 6 |
 | 204 | 1D-15 |  | SKY_OFF_VERDOR | MS / 50 mm / air-to-air | Abby@L | Warning Leaf. | L060 | 3 | 1.5 |
@@ -474,7 +474,7 @@ Size: EWS extreme wide, WS wide, MS medium, CU close, INS insert, POV point of v
 | 336 | 2A-19 |  | VERDOR_GROUNDS | MS / 50 mm / static | Leaf@R (one step forward), Keeper@C, Abby@L-bg (raised RIGHT hand) | Leaf takes a step after her, then stops at the keeper's quiet presence and Abby's raised right hand. | L098 | 3 | 4.5 |
 | 337 | 2A-20 |  | VERDOR_GROUNDS | CU / 85 mm / static (hold) | Leaf@R | Hold on Leaf watching her go. Cut before it becomes a sentimental montage. |  | 2 | 3.5 |
 
-### 2B: Treatment and Remi's report (2:33, 29 shots)
+### 2B: Treatment and Remi's report (2:34, 29 shots)
 
 | # | Shot | Part | Set | Size / lens / move | In frame | Action | Lines | D | s |
 |---:|---|---|---|---|---|---|---|---:|---:|
@@ -487,7 +487,7 @@ Size: EWS extreme wide, WS wide, MS medium, CU close, INS insert, POV point of v
 | 344 | 2B-06 |  | TREATMENT_ROOM | MS / 50 mm / static | Alexandria@L (kneeling, level), Abby@C | Alexandria kneels/sits level with her daughter and lets Abby take her hand with the uninjured RIGHT hand. |  | 2 | 4 |
 | 345 | 2B-07 |  | TREATMENT_ROOM | MS / 50 mm / static | Alexandria@L, Healer@R | Alexandria to the healer. | L106 L107 | 3 | 6.5 |
 | 346 | 2B-08 |  | TREATMENT_ROOM | MS / 50 mm / static | Healer@R, Abby@C | The healer continues in broad, credible action (no instructional demonstration). Time for Abby's breathing to settle. |  | 2 | 6 |
-| 347 | 2B-09 |  | TREATMENT_ROOM | MS / 50 mm / static | Remi@L | Alexandria asks; Remi reports. | L108 L109 | 3 | 8 |
+| 347 | 2B-09 |  | TREATMENT_ROOM | MS / 50 mm / static | Remi@L | Alexandria asks; Remi reports. | L108 L109 | 3 | 9 |
 | 348 | 2B-10 |  | TREATMENT_ROOM | MS / 50 mm / static, over Remi's shoulder | Alexandria@R, Remi@L-fg (back) | Alexandria's questions; his short answer. | L110 L111 L112 | 3 | 4.5 |
 | 349 | 2B-11 |  | TREATMENT_ROOM | MS / 50 mm / static | Remi@L | Remi. | L113 | 3 | 6.5 |
 | 350 | 2B-12 |  | TREATMENT_ROOM | CU / 85 mm / static | Abby@C | Abby. | L114 | 3 | 3.5 |
@@ -900,4 +900,4 @@ Size: EWS extreme wide, WS wide, MS medium, CU close, INS insert, POV point of v
 
 ---
 
-Generated from `screenplay-final.md` (sha256 `756a7152764f9bb9`). Rebuild: `python3 tools/extract_final_dialogue.py && python3 tools/shotlist/final_build.py` (from `episodes/s01e01/`).
+Generated from `screenplay-final.md` (sha256 `3387cc014412b2d0`). Rebuild: `python3 tools/extract_final_dialogue.py && python3 tools/shotlist/final_build.py` (from `episodes/s01e01/`).

@@ -6,7 +6,7 @@
   "generated_by": "episodes/s01e01/tools/final_voices.py",
   "source": {
     "dialogue": "episodes/s01e01/final/dialogue.json",
-    "dialogue_source_sha256": "756a7152764f9bb97c49f3df91630d6dcc5bd6fc384dedef3c908bb3b54c0bc3",
+    "dialogue_source_sha256": "3387cc014412b2d00a6907f754540fc6b320a945f92452ba5b7a387ac31398d3",
     "casting_base": "episodes/s01e01/voices.json",
     "preview_takes": "episodes/s01e01/preview/vo/takes.json"
   },
@@ -14,8 +14,8 @@
     "Role keys are the speaker names exactly as in dialogue.json.",
     "One voice per role for the whole episode. Never change a role's voice between scenes, and never let two roles share a voice.",
     "The text sent to TTS is final/dialogue.json 'text' with the 'pronunciation' respellings applied (and a leading or trailing em dash removed). Subtitles always use the unmodified 'text'.",
-    "[ORIGINAL] lines L011, L046, L047, L048 are spoken word for word.",
-    "PENDING lines (L053, L054, L109, X17-11) are recorded as written; see special_lines.",
+    "[ORIGINAL] lines L011, L046, L047 are spoken word for word.",
+    "Lines in the wording Daxtyn approved on 2026-10-18 (L048, L053, L054, L109, X17-11) are spoken word for word in that wording; the old wording is never recorded (see special_lines). L048 replaces his [ORIGINAL] line.",
     "Never speak bracketed notes, delivery notes, speaker names or the [ORIGINAL] marker.",
     "Dragons never speak. Their sounds are in creature_vocals.",
     "A human recording, when one exists for a line, always replaces the TTS take (see human_recordings).",
@@ -96,45 +96,9 @@
   },
   "pronunciation": [
     {
-      "word": "Bashion",
-      "in_lines": [
-        "L048",
-        "X17-11"
-      ],
-      "espeak_default_ipa": "bˈæʃən",
-      "sounds_like": "BASH-un",
-      "tts_respelling": null,
-      "status": "ASK DAXTYN how he says it (e.g. BASH-un or BASH-ee-on). L048 is an [ORIGINAL] line."
-    },
-    {
-      "word": "Bashions",
-      "in_lines": [
-        "L054"
-      ],
-      "espeak_default_ipa": "bˈæʃənz",
-      "sounds_like": "BASH-unz",
-      "tts_respelling": null,
-      "status": "Same answer as Bashion."
-    },
-    {
-      "word": "Nightwings",
-      "in_lines": [
-        "L053"
-      ],
-      "sounds_like": "NITE-wingz",
-      "tts_respelling": null,
-      "status": "Ordinary English reading; the line is PENDING (DRAGONS.md)."
-    },
-    {
-      "word": "Slitherwing",
-      "in_lines": [
-        "L109"
-      ],
-      "espeak_default_ipa": "slˈɪðɚwəɪŋ",
-      "sounds_like": "SLITHER-wuh-ing (wrong vowel)",
-      "tts_respelling": "Slither-wing",
-      "respelled_ipa": "slˈɪðɚwˈɪŋ",
-      "status": "Respell for TTS input only; confirm with Daxtyn."
+      "word": "Bashion, Bashions, Nightwings, Slitherwing",
+      "in_lines": [],
+      "status": "Not spoken in the final script: Daxtyn approved new wording for every line that used these scrapped species names (2026-10-18; final/CHANGES.md section 9). ../voices.json still lists them for the handoff."
     },
     {
       "word": "Verdor",
@@ -157,7 +121,7 @@
       "status": "ASK DAXTYN (TAR-uh or TAIR-uh?)."
     },
     {
-      "word": "Nightwings, Charcoal, Starlight, Cling, Scrapper, Santa Maria, Fallen, Citadel, Proxy, Leaf",
+      "word": "Charcoal, Starlight, Cling, Scrapper, Santa Maria, Fallen, Citadel, Proxy, Leaf",
       "status": "Read as ordinary English; no change needed."
     },
     {
@@ -357,8 +321,8 @@
       "display_name": "Abby",
       "provisional": true,
       "lines": 79,
-      "words": 306,
-      "est_seconds": 123.4,
+      "words": 309,
+      "est_seconds": 124.6,
       "scenes": [
         "1A",
         "1B",
@@ -416,14 +380,15 @@
         "X19"
       ],
       "casting_source": "kept from ../voices.json (unchanged, so the preview takes stay valid)",
-      "preview_takes": "28 preview take(s) already use this voice (preview/vo/takes.json)"
+      "preview_takes": "28 preview take(s) already use this voice (preview/vo/takes.json)",
+      "audition_note": "The audition of L048 was measured with its old wording (\"Why couldn't I get a Bashion?\"); the final script uses the wording Daxtyn approved on 2026-10-18. The voice choice stands."
     },
     "REMI": {
       "display_name": "Remi",
       "provisional": true,
       "lines": 84,
-      "words": 373,
-      "est_seconds": 154.0,
+      "words": 376,
+      "est_seconds": 155.4,
       "scenes": [
         "1A",
         "1B",
@@ -1425,21 +1390,22 @@
       "text": "You're going to be queen when I'm gone. Least I think that's how that works. You good with that?",
       "original": true,
       "type": "original_exact",
-      "how": "Speak byte-exact (screenplay [ORIGINAL]). Only pronunciation respelling of 'Bashion' is allowed in the TTS input; the subtitle text never changes."
+      "how": "Speak byte-exact (screenplay [ORIGINAL]). Only pronunciation respelling is allowed in the TTS input; the subtitle text never changes."
     },
     "L047": {
       "speaker": "REMI",
       "text": "Yeah, you're good.",
       "original": true,
       "type": "original_exact",
-      "how": "Speak byte-exact (screenplay [ORIGINAL]). Only pronunciation respelling of 'Bashion' is allowed in the TTS input; the subtitle text never changes."
+      "how": "Speak byte-exact (screenplay [ORIGINAL]). Only pronunciation respelling is allowed in the TTS input; the subtitle text never changes."
     },
     "L048": {
       "speaker": "ABBY",
-      "text": "Why couldn't I get a Bashion?",
-      "original": true,
-      "type": "original_exact",
-      "how": "Speak byte-exact (screenplay [ORIGINAL]). Only pronunciation respelling of 'Bashion' is allowed in the TTS input; the subtitle text never changes."
+      "text": "Why couldn't I get one like Charcoal?",
+      "original": false,
+      "type": "approved_exact",
+      "how": "Speak byte-exact: Daxtyn approved this wording on 2026-10-18 (CHANGED C8b). The old wording \"Why couldn't I get a Bashion?\" (his [ORIGINAL] line) is not recorded. The subtitle text never changes.",
+      "preview_take": "OUT OF DATE: preview/vo/takes.json has a take of the old wording. Make a new take of this wording before the line is used in the final animatic."
     },
     "L020": {
       "speaker": "ABBY",
@@ -1830,27 +1796,33 @@
     },
     "L053": {
       "speaker": "REMI",
-      "text": "Nightwings are faster. More versatile.",
+      "text": "Smaller ones are faster. More versatile.",
       "original": false,
-      "pending": "DRAGONS.md keeps this line as written until Daxtyn chooses new wording: record it as written. If he picks the proposed alternative, record that too: \"Smaller ones are faster. More versatile.\"."
+      "type": "approved_exact",
+      "how": "Speak byte-exact: Daxtyn approved this wording on 2026-10-18 (CHANGED C9). The old wording \"Nightwings are faster. More versatile.\" is not recorded. The subtitle text never changes.",
+      "preview_take": "OUT OF DATE: preview/vo/takes.json has a take of the old wording. Make a new take of this wording before the line is used in the final animatic."
     },
     "L054": {
       "speaker": "ABBY",
-      "text": "And Bashions?",
+      "text": "And big ones?",
       "original": false,
-      "pending": "DRAGONS.md keeps this line as written until Daxtyn chooses new wording: record it as written. If he picks the proposed alternative, record that too: \"And big ones?\"."
+      "type": "approved_exact",
+      "how": "Speak byte-exact: Daxtyn approved this wording on 2026-10-18 (CHANGED C9). The old wording \"And Bashions?\" is not recorded. The subtitle text never changes.",
+      "preview_take": "OUT OF DATE: preview/vo/takes.json has a take of the old wording. Make a new take of this wording before the line is used in the final animatic."
     },
     "L109": {
       "speaker": "REMI",
-      "text": "We were off the coast. Flying together. Something came past Leaf. A Slitherwing.",
+      "text": "We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast.",
       "original": false,
-      "pending": "DRAGONS.md keeps this line as written until Daxtyn chooses new wording: record it as written. If he picks the proposed alternative, record that too: \"We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast.\"."
+      "type": "approved_exact",
+      "how": "Speak byte-exact: Daxtyn approved this wording on 2026-10-18 (CHANGED C19). The old wording \"We were off the coast. Flying together. Something came past Leaf. A Slitherwing.\" is not recorded. The subtitle text never changes."
     },
     "X17-11": {
       "speaker": "ABBY",
-      "text": "I still want a Bashion.",
+      "text": "I still want one like Charcoal.",
       "original": false,
-      "pending": "DRAGONS.md keeps this line as written until Daxtyn chooses new wording: record it as written. If he picks the proposed alternative, record that too: \"I still want one like Charcoal.\"."
+      "type": "approved_exact",
+      "how": "Speak byte-exact: Daxtyn approved this wording on 2026-10-18 (CHANGED C30). The old wording \"I still want a Bashion.\" is not recorded. The subtitle text never changes."
     }
   },
   "non_verbal_human": {
@@ -1864,7 +1836,7 @@
     "rule": "No dragon speaks. Dragons communicate by posture, breath, growls, calls and eye movement (screenplay). These are sound-design settings, not TTS.",
     "method": "Procedural synthesis in Python (numpy/scipy) - prototypes exist - optionally layered with Daxtyn's own recorded growls/breaths pitched down. No downloaded animal recordings unless each file is checked CC0.",
     "CHARCOAL": {
-      "species": "Bashion (melanistic, black)",
+      "design": "Charcoal's own design (no species, DRAGONS.md): completely black, blue eyes, immense (about 36 m long)",
       "character": "immense, calm, slow to anger",
       "wingbeat": {
         "source": "assets.json scale.readings[<chosen reading>].wingbeat_hz_charcoal; period_s = 1 / that value. Same number the animation uses.",
@@ -1898,7 +1870,7 @@
       "prototype": "charcoal_wingbeats_immense.wav, charcoal_breath_low_growl.wav"
     },
     "LEAF": {
-      "species": "Nightwing, green, subadult",
+      "design": "Leaf's own design (no species, DRAGONS.md): dark green, not fully grown, about a quarter of Charcoal's size",
       "character": "quick, playful, then protective",
       "wingbeat": {
         "source": "assets.json scale.readings[<chosen reading>].wingbeat_hz_leaf; period_s = 1 / that value. Same number the animation uses.",
@@ -1920,7 +1892,7 @@
       "prototype": "leaf_wingbeats_quick_corrective.wav"
     },
     "STARLIGHT": {
-      "species": "Nightwing, albino ('Queen of Dragons'), about twice Charcoal's size",
+      "design": "Starlight's own design (no species): albino, reflective white scales ('Queen of Dragons'), about twice Charcoal's size",
       "wingbeat": {
         "source": "assets.json scale.readings[<chosen reading>].wingbeat_hz_starlight; period_s = 1 / that value. Same number the animation uses.",
         "period_s_by_reading": {
@@ -1949,13 +1921,13 @@
       "prototype": "scale the Charcoal wingbeat: longer period, lower push, broader whoosh"
     },
     "SCOUT": {
-      "species": "Slitherwing (small, extremely fast)",
+      "design": "The scout's own design (no species): small, extremely fast",
       "sound": "thin hiss, rapid wing flutter (~8-12 beats/s), the sharp pass crack (1E), distress when caught, weak effort in the water",
       "prototype": "scout_pass_sharp_crack.wav (enters RIGHT, exits LEFT, matching the shot list's pass direction)",
       "pass_geometry": "shotlist.json conventions.the_pass_1E: the scout comes head-on from ahead and passes through the gap between Leaf and Charcoal, on Leaf's LEFT (seaward) side = the FAR side from the inland camera, never between Leaf and the camera. Pan R -> L, slightly behind Leaf in the image (a little less direct than a camera-side pass); the wake then surrounds the listener. In the 1E-04 front shot the wake comes from screen RIGHT (Abby's left)."
     },
     "HATCHLING": {
-      "species": "Bashion, 24-karat gold",
+      "design": "The gold hatchling's own design (no species): 24-karat gold, newborn",
       "sound": "faint effortful sounds, tiny breaths, scrapes inside the shell; fragile, never cute squeaks",
       "prototype": "egg_scratch_then_crack.wav"
     }
@@ -1991,6 +1963,6 @@
   "totals": {
     "roles": 26,
     "lines": 385,
-    "est_seconds": 772.2
+    "est_seconds": 774.8
   }
 }

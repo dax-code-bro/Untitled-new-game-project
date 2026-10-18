@@ -3,7 +3,7 @@
   "title": "Dragon's Kingdom - S01E01 - shot list of the locked shooting script",
   "status": "PLAN ONLY. Nothing has been rendered for the final script. Durations are animatic estimates, not measured footage. Every addition and rating-pass shot is proposed (SERIES.md section 5): in the script by default, not canon until Daxtyn accepts it.",
   "source": "episodes/s01e01/final/screenplay-final.md",
-  "source_sha256": "756a7152764f9bb97c49f3df91630d6dcc5bd6fc384dedef3c908bb3b54c0bc3",
+  "source_sha256": "3387cc014412b2d00a6907f754540fc6b320a945f92452ba5b7a387ac31398d3",
   "dialogue": "episodes/s01e01/final/dialogue.json",
   "generated_by": "episodes/s01e01/tools/shotlist/final_build.py (handoff shots: tools/shotlist/shots_data.py; new shots: tools/shotlist/final_shots_data.py)",
   "fps": 24,
@@ -27,9 +27,9 @@
    }
   ],
   "check_final_estimate_s": {
-   "low": 2655.5,
-   "expected": 3261.5,
-   "high": 4133.5
+   "low": 2658.0,
+   "expected": 3264.5,
+   "high": 4136.5
   }
  },
  "sets": [
@@ -72,7 +72,7 @@
    "id": "SKY_OFF_VERDOR",
    "description": "Air: coast and island of Verdor on the inland side (screen LEFT in establishing shots), open sea on the other. Palace visible far off. Used for 1C (after take-off), 1D, 1E and Abby's intercuts in 1F.",
    "shots": 73,
-   "expected_s": 307.5,
+   "expected_s": 308.5,
    "new_in_final": false
   },
   {
@@ -86,7 +86,7 @@
    "id": "TREATMENT_ROOM",
    "description": "Interior, Verdor: working room with daylight opening (coastline and outer rocks visible through it), seat, clean cloth, water; doorway to a corridor. 2B and 2C.",
    "shots": 68,
-   "expected_s": 355.5,
+   "expected_s": 356.5,
    "new_in_final": false
   },
   {
@@ -219,9 +219,10 @@
   "REMI_BLOOD_3": "After X11 (his mother wipes hairline, neck and hands) and R9b (hands scrubbed at the healer's bowl): hands clean, red from scrubbing; sleeves stained for the rest of the day.",
   "CHARCOAL_JAW_BLOOD": "The scout's blood on Charcoal's lower jaw and throat from the bite until Remi washes it off in X15: wet at first, drying dark. Charcoal has no wound of his own.",
   "VILLAGER_INJURIES": "Adult villager: split scalp (blood down one side of the face into the collar) and an open fracture of the RIGHT leg below the knee, from the second pass to the end; leg splinted with a banner pole in X27. He lives.",
-  "NO_CHILD_IN_FRAME": "Drink, smoke, drug or suggestive beat: no child (and not Abby or Remi) anywhere in frame (SERIES.md section 8).",
+  "NO_CHILD_IN_FRAME": "Drink, smoke, drug or suggestive beat: no child (and not Abby, the young attendant or the young riders) anywhere in frame (SERIES.md section 8). Remi is an adult (Daxtyn, 2026-10-18).",
   "DEAD_ARE_ADULTS": "Every dead body is an adult; partly covered or turned away, no faces, no lingering close-up.",
-  "PENDING_WORDING": "A line here keeps a scrapped dragon name until Daxtyn chooses new wording (DRAGONS.md): record it as written; plan a pickup for the alternative."
+  "PENDING_WORDING": "A line here is kept as written while Daxtyn decides its wording: record it as written; plan a pickup for the alternative.",
+  "APPROVED_WORDING": "A line here uses wording Daxtyn approved on 2026-10-18 (it replaced a scrapped species name; CHANGES.md section 9): record exactly this wording, never the old one."
  },
  "difficulty_tag_definitions": {
   "CROWD": "Many independently moving people (festival / evacuation).",
@@ -11242,31 +11243,32 @@
      "kind": "person"
     }
    ],
-   "action": "ORIGINAL line, verbatim.",
+   "action": "Abby's line in the wording Daxtyn approved on 2026-10-18 (CHANGED C8b; it replaces her [ORIGINAL] line), verbatim.",
    "dialogue": [
     {
      "id": "L048",
      "speaker": "ABBY",
-     "first_words": "Why couldn't I get a Bashion?",
+     "first_words": "Why couldn't I get one like",
      "origin": "original",
-     "spoken_s": 2.3,
-     "line_seconds": 2.65,
-     "speaker_on_screen": true
+     "spoken_s": 2.7,
+     "line_seconds": 3.05,
+     "speaker_on_screen": true,
+     "creator_approved": "2026-10-18"
     }
    ],
    "sound": "",
    "continuity_flags": [
-    "ORIGINAL_LINE_EXACT"
+    "APPROVED_WORDING"
    ],
    "timing": {
-    "dialogue_s": 2.65,
+    "dialogue_s": 3.05,
     "action_s": 0.5,
     "breath_s": 0.0
    },
-   "est_seconds": 3.0,
+   "est_seconds": 3.5,
    "est_low_s": 3.0,
-   "est_high_s": 3.5,
-   "frames_at_24fps": 72,
+   "est_high_s": 4.0,
+   "frames_at_24fps": 84,
    "render": "3d",
    "difficulty": 3,
    "difficulty_tags": [
@@ -11466,22 +11468,22 @@
     {
      "id": "L053",
      "speaker": "REMI",
-     "first_words": "Nightwings are faster. More versatile.",
+     "first_words": "Smaller ones are faster. More versatile.",
      "origin": "original",
-     "spoken_s": 2.2,
-     "line_seconds": 2.55,
+     "spoken_s": 2.6,
+     "line_seconds": 2.95,
      "speaker_on_screen": true,
-     "pending": "P1"
+     "creator_approved": "2026-10-18"
     },
     {
      "id": "L054",
      "speaker": "ABBY",
-     "first_words": "And Bashions?",
+     "first_words": "And big ones?",
      "origin": "original",
-     "spoken_s": 0.8,
-     "line_seconds": 1.15,
+     "spoken_s": 1.2,
+     "line_seconds": 1.55,
      "speaker_on_screen": true,
-     "pending": "P1"
+     "creator_approved": "2026-10-18"
     },
     {
      "id": "L055",
@@ -11496,17 +11498,17 @@
    "sound": "Wind fills the quiet after \"Better for war.\"",
    "continuity_flags": [
     "SPEAKING_DISTANCE",
-    "PENDING_WORDING"
+    "APPROVED_WORDING"
    ],
    "timing": {
-    "dialogue_s": 5.25,
+    "dialogue_s": 6.05,
     "action_s": 0.0,
     "breath_s": 2.5
    },
-   "est_seconds": 8.0,
-   "est_low_s": 6.0,
-   "est_high_s": 10.0,
-   "frames_at_24fps": 192,
+   "est_seconds": 8.5,
+   "est_low_s": 6.5,
+   "est_high_s": 10.5,
+   "frames_at_24fps": 204,
    "render": "3d",
    "difficulty": 3,
    "difficulty_tags": [
@@ -19670,26 +19672,26 @@
      "speaker": "REMI",
      "first_words": "We were off the coast. Flying",
      "origin": "original",
-     "spoken_s": 5.8,
-     "line_seconds": 6.15,
+     "spoken_s": 6.8,
+     "line_seconds": 7.15,
      "speaker_on_screen": true,
-     "pending": "P2"
+     "creator_approved": "2026-10-18"
     }
    ],
    "sound": "",
    "continuity_flags": [
     "REMI_BLOOD_2",
-    "PENDING_WORDING"
+    "APPROVED_WORDING"
    ],
    "timing": {
-    "dialogue_s": 7.3,
+    "dialogue_s": 8.3,
     "action_s": 0.5,
     "breath_s": 0.0
    },
-   "est_seconds": 8.0,
-   "est_low_s": 7.0,
-   "est_high_s": 9.0,
-   "frames_at_24fps": 192,
+   "est_seconds": 9.0,
+   "est_low_s": 8.0,
+   "est_high_s": 10.0,
+   "frames_at_24fps": 216,
    "render": "3d",
    "difficulty": 3,
    "difficulty_tags": [
@@ -27867,28 +27869,28 @@
     {
      "id": "X17-11",
      "speaker": "ABBY",
-     "first_words": "I still want a Bashion.",
+     "first_words": "I still want one like Charcoal.",
      "origin": "addition",
-     "spoken_s": 1.9,
-     "line_seconds": 2.25,
+     "spoken_s": 2.3,
+     "line_seconds": 2.65,
      "speaker_on_screen": true,
-     "pending": "P3"
+     "creator_approved": "2026-10-18"
     }
    ],
    "sound": "",
    "continuity_flags": [
     "ABBY_LEFT_ARM_INJURED",
     "ABBY_SLING_LEFT",
-    "PENDING_WORDING"
+    "APPROVED_WORDING"
    ],
    "timing": {
-    "dialogue_s": 2.25,
+    "dialogue_s": 2.65,
     "action_s": 0.0,
     "breath_s": 1.0
    },
    "est_seconds": 3.5,
-   "est_low_s": 2.5,
-   "est_high_s": 4.0,
+   "est_low_s": 3.0,
+   "est_high_s": 4.5,
    "frames_at_24fps": 84,
    "render": "3d",
    "difficulty": 3,
@@ -41468,10 +41470,10 @@
    "shots": 26,
    "spoken_lines": 24,
    "parts": [],
-   "low_s": 98.0,
-   "expected_s": 119.0,
-   "high_s": 150.0,
-   "frames_expected": 2856,
+   "low_s": 98.5,
+   "expected_s": 120.0,
+   "high_s": 151.0,
+   "frames_expected": 2880,
    "hard_shots": 4,
    "sets": [
     "SKY_OFF_VERDOR"
@@ -41480,7 +41482,7 @@
   {
    "scene": "1E",
    "title": "The first fast pass",
-   "start_s": 996.5,
+   "start_s": 997.5,
    "shots": 18,
    "spoken_lines": 9,
    "parts": [],
@@ -41496,7 +41498,7 @@
   {
    "scene": "1F",
    "title": "Pursuit and the scout's fall",
-   "start_s": 1053.0,
+   "start_s": 1054.0,
    "shots": 70,
    "spoken_lines": 12,
    "parts": [
@@ -41523,7 +41525,7 @@
   {
    "scene": "2A",
    "title": "Return to Verdor",
-   "start_s": 1297.0,
+   "start_s": 1298.0,
    "shots": 34,
    "spoken_lines": 17,
    "parts": [
@@ -41546,16 +41548,16 @@
   {
    "scene": "2B",
    "title": "Treatment and Remi's report",
-   "start_s": 1438.0,
+   "start_s": 1439.0,
    "shots": 29,
    "spoken_lines": 38,
    "parts": [
     "R8b"
    ],
-   "low_s": 128.0,
-   "expected_s": 153.0,
-   "high_s": 186.0,
-   "frames_expected": 3672,
+   "low_s": 129.0,
+   "expected_s": 154.0,
+   "high_s": 187.0,
+   "frames_expected": 3696,
    "hard_shots": 2,
    "sets": [
     "TREATMENT_ROOM"
@@ -41564,7 +41566,7 @@
   {
    "scene": "2C",
    "title": "Santa Maria orders and sibling aftermath",
-   "start_s": 1591.0,
+   "start_s": 1593.0,
    "shots": 153,
    "spoken_lines": 103,
    "parts": [
@@ -41581,9 +41583,9 @@
     "X18",
     "X19"
    ],
-   "low_s": 579.5,
+   "low_s": 580.0,
    "expected_s": 709.0,
-   "high_s": 891.0,
+   "high_s": 891.5,
    "frames_expected": 17016,
    "hard_shots": 17,
    "sets": [
@@ -41601,7 +41603,7 @@
   {
    "scene": "3A",
    "title": "Cling's festival and its king",
-   "start_s": 2300.0,
+   "start_s": 2302.0,
    "shots": 78,
    "spoken_lines": 52,
    "parts": [
@@ -41624,7 +41626,7 @@
   {
    "scene": "3B",
    "title": "The white dragon approaches",
-   "start_s": 2684.5,
+   "start_s": 2686.5,
    "shots": 33,
    "spoken_lines": 8,
    "parts": [
@@ -41644,7 +41646,7 @@
   {
    "scene": "3C",
    "title": "Starlight's attack",
-   "start_s": 2788.5,
+   "start_s": 2790.5,
    "shots": 50,
    "spoken_lines": 15,
    "parts": [
@@ -41669,7 +41671,7 @@
   {
    "scene": "3D",
    "title": "Aftermath and cliffhanger",
-   "start_s": 2991.5,
+   "start_s": 2993.5,
    "shots": 45,
    "spoken_lines": 13,
    "parts": [
@@ -41694,7 +41696,7 @@
   {
    "scene": "END",
    "title": "End credits",
-   "start_s": 3214.0,
+   "start_s": 3216.0,
    "shots": 1,
    "spoken_lines": 0,
    "parts": [],
@@ -41921,13 +41923,13 @@
  "totals": {
   "shots": 726,
   "spoken_lines": 385,
-  "low_s": 2648.0,
-  "expected_s": 3254.0,
-  "high_s": 4130.0,
-  "low_min": 44.13,
-  "expected_min": 54.23,
-  "high_min": 68.83,
-  "frames_expected": 78096,
+  "low_s": 2650.0,
+  "expected_s": 3256.0,
+  "high_s": 4132.5,
+  "low_min": 44.17,
+  "expected_min": 54.27,
+  "high_min": 68.88,
+  "frames_expected": 78144,
   "hard_shots": 167,
   "shots_by_origin": {
    "handoff": 331,
@@ -41988,7 +41990,7 @@
    "LEAF_UNHARMED": 3,
    "SIZE_DISPARITY": 33,
    "HATCHLING_NO_GLOW": 23,
-   "ORIGINAL_LINE_EXACT": 4,
+   "ORIGINAL_LINE_EXACT": 3,
    "ABBY_SILENCE": 2,
    "SCREEN_DIRECTION": 9,
    "SPEAKING_DISTANCE": 12,
@@ -42005,7 +42007,8 @@
    "VILLAGER_INJURIES": 6,
    "NO_CHILD_IN_FRAME": 23,
    "DEAD_ARE_ADULTS": 9,
-   "PENDING_WORDING": 3
+   "PENDING_WORDING": 0,
+   "APPROVED_WORDING": 4
   }
  }
 }
