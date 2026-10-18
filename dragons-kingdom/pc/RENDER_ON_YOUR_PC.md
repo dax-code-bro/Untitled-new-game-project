@@ -21,6 +21,10 @@ carry on later without losing finished work.
 | **Internet** | For the setup: about 4 GB of downloads. After that only for `git pull`, which gets new scenes. |
 | **Time** | Setup: **1-3 hours** the first time. Most of that is building the 48 human characters, and it runs by itself. Rendering: the GPU check estimates it for your PC. |
 
+Your PC as you described it (`pc/TARGET.md`): Windows, an NVIDIA GeForce RTX 4090 and about 2 TB
+free. That is more than enough: the 4090 has 24 GB of video memory, and 2 TB holds the whole
+episode many times over. The GPU check confirms the real card.
+
 ---
 
 ## Step 1: install everything (one line)
