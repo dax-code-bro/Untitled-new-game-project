@@ -597,7 +597,10 @@ async function main() {
           if (res.code === 0) { err = finishShot(o, scene, job, r, res.wallS); break; }
           if (STOPPING || res.code === 130 || res.signal === 'SIGINT') { STOPPING = true; break; }
           const code = res.err?.code;
-          if (code === 'GPU_SOFTWARE_FALLBACK') { say(res.err.message); throw Object.assign(new Error('the graphics card is not being used - stopped (see above)'), { exit: 2 }); }
+          if (code === 'GPU_SOFTWARE_FALLBACK') {
+            if (LOG_FILE) try { fs.appendFileSync(LOG_FILE, res.err.message + '\n'); } catch {}   // (render.mjs already showed it)
+            throw Object.assign(new Error('the graphics card is not being used - stopped (see the GPU NOT USED banner above)'), { exit: 2 });
+          }
           if (code === 'JOB_MISMATCH' && !fresh) {
             say(`  ${job.job}: its unfinished chunks were made from older scene files or settings -> starting this shot over (--fresh)`);
             fresh = true; continue;

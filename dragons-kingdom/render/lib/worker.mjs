@@ -6,6 +6,7 @@
 // page is raced against a "death" promise that rejects on page crash, page
 // close, browser disconnect, or kill() (used by the job's stall watchdog).
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { loadPlaywright, chromeExecutable, chromeFlags } from './tools.mjs';
 import { activeGpuProfile, isSoftwareRenderer, pageProbe, SoftwareGpuError } from './gpu.mjs';
@@ -13,9 +14,14 @@ import { activeGpuProfile, isSoftwareRenderer, pageProbe, SoftwareGpuError } fro
 const INIT_TIMEOUT_MS = Number(process.env.DK_INIT_TIMEOUT_MS) || 10 * 60 * 1000;
 const CLOSE_TIMEOUT_MS = Number(process.env.DK_CLOSE_TIMEOUT_MS) || 20000;   // env: tests
 
-/** Linux: SIGKILL every process whose command line contains marker. */
+/** SIGKILL every process whose command line contains marker (Linux: /proc; Windows: CIM query). */
 function killByMarker(marker) {
   let n = 0;
+  if (process.platform === 'win32') {
+    const ps = `$n = 0; Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLine.Contains('${marker.replace(/'/g, "''")}') } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; $n++ }; $n`;
+    const r = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', windowsHide: true, timeout: 30000 });
+    return Number.parseInt((r.stdout || '').trim(), 10) || 0;
+  }
   try {
     for (const pid of fs.readdirSync('/proc')) {
       if (!/^\d+$/.test(pid) || +pid === process.pid) continue;

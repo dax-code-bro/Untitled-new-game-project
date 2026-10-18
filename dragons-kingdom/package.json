@@ -21,7 +21,8 @@
     "episode:status": "node render/episode.mjs --status",
     "gpu-check": "node render/gpu-check.mjs",
     "caches": "node pc/build-caches.mjs",
-    "caches:check": "node pc/build-caches.mjs --check"
+    "caches:check": "node pc/build-caches.mjs --check",
+    "selftest:episode": "node pc/selftest-episode.mjs"
   },
   "dependencies": {
     "three": "0.180.0"

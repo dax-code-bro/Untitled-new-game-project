@@ -181,7 +181,8 @@ function estimate(m, scheduleFile) {
   const ref = readReference()?.measurements?.[m.candidate];
   if (!ref) return { note: `no CPU reference for "${m.candidate}" in pc/reference-cpu.json - no estimate` };
   const ratio = m.steadyS / ref.steadyS;
-  const setupRatio = ref.setupS ? m.setupS / ref.setupS : 1;
+  // scene setup is JavaScript on the CPU (geometry, crowds); only a frame with a real setup (F2: ~150 s) measures it
+  const setupRatio = ref.setupS >= 10 && m.setupS > 0 ? m.setupS / ref.setupS : 1;
   let sched;
   try { sched = parseSchedule(scheduleFile); } catch (e) { return { ratio, note: `could not read the render schedule: ${e.message}` }; }
   let jobs = [];
@@ -310,6 +311,10 @@ async function main() {
       say(`   ${'TOTAL'.padEnd(15)} ${''.padStart(7)}   ${String(Math.round(T.cpuH)).padStart(10)}   ${T.hours.toFixed(1).padStart(8)}  (${T.low.toFixed(0)}-${T.high.toFixed(0)})`);
       say(`\n   => about ${fmtDuration(T.hours * 3600)} of rendering (${(T.hours / 24).toFixed(1)} days non-stop) for one browser,`);
       say('      plus ~3-6 h of encoding the scene files and the final episode.');
+      if (m.candidate !== CANDIDATES[0].id) {
+        say(`   NOTE: measured on the fallback frame "${m.candidate}" (the F2 style frame could not be built here yet).`);
+        say('         F2 (people, dragons, grass) is much closer to the real sets: run this again after the caches are built.');
+      }
       say('   ESTIMATE ONLY: one test frame scaled to every set (the cloud figures are themselves estimates');
       say('   for sets that are not built yet). Two browsers at once (the default) are usually a bit faster.');
     } else say(`   ${est.note}`);
