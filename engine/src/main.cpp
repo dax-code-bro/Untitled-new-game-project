@@ -252,9 +252,12 @@ static v3 biomeColour(world::Biome b, float h, float slope, float jitter){
     case world::B_GRASS:      c = v3{0.20f, 0.30f, 0.13f}; break;
     case world::B_FOREST:     c = v3{0.13f, 0.22f, 0.10f}; break;
     case world::B_MOUNTAIN:   c = v3{0.33f, 0.31f, 0.29f}; break;
-    case world::B_URBAN_LOW:  c = v3{0.25f, 0.28f, 0.19f}; break;
-    case world::B_URBAN_MID:  c = v3{0.29f, 0.29f, 0.28f}; break;
-    case world::B_URBAN_HIGH: c = v3{0.30f, 0.30f, 0.30f}; break;
+    // Paved ground reflects 8-20% of the light that hits it. These used to
+    // be 0.30, and under a midday sun ACES takes 0.30 most of the way to
+    // white, which is why a city seen from the air sat on a sheet of paper.
+    case world::B_URBAN_LOW:  c = v3{0.155f, 0.175f, 0.118f}; break;
+    case world::B_URBAN_MID:  c = v3{0.138f, 0.137f, 0.133f}; break;
+    case world::B_URBAN_HIGH: c = v3{0.130f, 0.130f, 0.132f}; break;
     default:                  c = v3{0.20f, 0.30f, 0.14f}; break;
   }
   // snow on the peaks, rock on steep faces
@@ -295,6 +298,35 @@ static void buildChunk(Chunk& ch, int gx, int gz){
               : (b == world::B_FOREST)     ? (float)texgen::MAT_DIRT
               : world::World::isUrbanB((uint8_t)b) ? (float)texgen::MAT_CONCRETE
               : (float)texgen::MAT_GRASS;
+      // Urban ground used to be one flat 0.30 grey, and under a midday sun
+      // ACES lifts that to near white — which is why the gaps between the
+      // buildings read as a void with a city standing in it. A real city has
+      // no blank ground: what is not road or building is car park, service
+      // yard, worn verge or hardstanding. Four of those, picked by a slow
+      // noise, costs nothing and puts a floor under the place.
+      if(world::World::isUrbanB((uint8_t)b) && slope <= 0.34f){
+        // Three octaves of value noise pile up around 0.5 — the central limit
+        // does not care what you wanted — so thresholds on the raw value pick
+        // one branch almost everywhere. Stretching it about the midpoint is
+        // what turns this from a uniform grey into city blocks.
+        float raw = m::fbm(wx * 0.0065f + 31.7f, wz * 0.0065f - 12.3f, 3);
+        float lot = m::clampf(0.5f + (raw - 0.5f) * 2.7f, 0.0f, 1.0f);
+        float green = (b == world::B_URBAN_LOW) ? 0.26f : 0.0f;   // suburbs: gardens
+        if(lot < 0.50f - green * 0.7f){
+          v.col = v3{0.062f, 0.065f, 0.072f}; v.mat = (float)texgen::MAT_ASPHALT;
+          v.rough = 0.62f;
+        } else if(lot < 0.64f - green * 0.5f){
+          v.col = v3{0.112f, 0.108f, 0.098f}; v.mat = (float)texgen::MAT_GRAVEL;
+          v.rough = 0.90f;
+        } else if(lot < 0.80f - green * 0.5f){
+          v.col = v3{0.138f, 0.137f, 0.133f}; v.mat = (float)texgen::MAT_CONCRETE;
+          v.rough = 0.86f;
+        } else {
+          v.col = v3{0.100f, 0.126f, 0.072f}; v.mat = (float)texgen::MAT_GRASS;
+          v.rough = 0.92f;
+        }
+        v.col = v.col * (0.86f + jit * 0.28f);
+      }
       // steep ground shows rock whatever the biome says, and bare earth
       // appears on moderate slopes where grass would not hold
       if(slope > 0.55f)      v.mat = (float)texgen::MAT_ROCK;
@@ -436,37 +468,75 @@ static void buildRoadTileGeometry(const std::vector<int>& edgeIds,
     float hw = e.width * 0.5f;
 
     v3 tarmac = e.highway ? v3{0.118f, 0.122f, 0.132f} : v3{0.135f, 0.138f, 0.148f};
-    v3 kerb   = v3{0.46f, 0.46f, 0.47f};
+    v3 walk   = v3{0.190f, 0.188f, 0.185f};
+    v3 kface  = v3{0.250f, 0.247f, 0.240f};
+
+    // The cross-section of a street. The old profile was two flat grey strips
+    // either side of the tarmac, which from eye level is not a kerb, it is a
+    // ramp: the road just gets lighter. Now the pavement rises to a kerb with
+    // a real face, and that face carries its own normals, so the gutter line
+    // picks up light and shade along its whole length. The crease points are
+    // duplicated for exactly that reason — share them with the pavement and
+    // the normals average back into mush.
+    const float KW = world::World::KERB_RUN;  // kerb face: horizontal run
+    const float KH = world::World::KERB_RISE; //            and rise
+    const float SW = hw + world::World::WALK_OUT;
+    struct Lane { float off, dy; int nm; };   // nm 0 up, 1 kerb left, 2 kerb right
+    const Lane lanes[] = {
+      { -SW,      0.00f, 0 }, { -hw - KW, KH,    0 },
+      { -hw - KW, KH,    1 }, { -hw,      0.00f, 1 },
+      { -hw,      0.00f, 0 }, {  hw,      0.00f, 0 },
+      {  hw,      0.00f, 2 }, {  hw + KW, KH,    2 },
+      {  hw + KW, KH,    0 }, {  SW,      0.00f, 0 }
+    };
+    const int LN = (int)(sizeof(lanes) / sizeof(lanes[0]));
+
+    const float klen = std::sqrt(KH * KH + KW * KW);
+    const float kn = KH / klen, ku = KW / klen;
 
     for(int s = 0; s <= segs; s++){
       float t = (float)s / segs;
       float x = e.x1 + dx * L * t, z = e.z1 + dz * L * t;
       float h = (e.bridge ? std::max(W.terr.sample(x, z), 4.0f) : W.terr.sample(x, z)) + 0.38f;
       float jit = m::hash2((int)(x * 0.3f), (int)(z * 0.3f)) * 0.06f;
-      // 4 verts per rib: outer-left kerb, road-left, road-right, outer-right kerb
-      const float lanes[4] = { -hw - 1.6f, -hw, hw, hw + 1.6f };
-      for(int k = 0; k < 4; k++){
+      for(int k = 0; k < LN; k++){
+        const Lane& Ln = lanes[k];
+        float wx = x + px * Ln.off, wz = z + pz * Ln.off;
+        float y  = h + Ln.dy;
+        // The carriageway and the kerb are held flat across, off the
+        // centreline height, the way tarmac is actually laid. The outer edge
+        // of the pavement is the one that meets the ground, so it follows the
+        // ground: let it stay level on a cross-slope and the whole footway
+        // sinks out of sight on the uphill side.
+        if(Ln.off <= -SW + 1e-3f || Ln.off >= SW - 1e-3f){
+          float g = W.terr.sample(wx, wz) + 0.05f;
+          if(g > y) y = g;
+        }
         gfx::Vertex v;
-        bool isKerb = (k == 0 || k == 3);
-        v.pos = { x + px * lanes[k], h + (isKerb ? 0.16f : 0.0f), z + pz * lanes[k] };
-        v.nrm = { 0, 1, 0 };
-        v.col = isKerb ? kerb : (tarmac + v3(jit));
-        v.ao  = 1.0f;
+        v.pos = { wx, y, wz };
+        if(Ln.nm == 1)      v.nrm = {  px * kn, ku,  pz * kn };
+        else if(Ln.nm == 2) v.nrm = { -px * kn, ku, -pz * kn };
+        else                v.nrm = { 0, 1, 0 };
+        bool road = (Ln.dy == 0.0f && Ln.off > -hw - 1e-4f && Ln.off < hw + 1e-4f);
+        v.col   = Ln.nm ? kface : (road ? (tarmac + v3(jit)) : walk);
+        v.ao    = road ? 1.0f : 0.94f;
         v.joint = 0.0f;
-        v.rough = isKerb ? 0.80f : 0.56f;
+        v.rough = road ? 0.56f : 0.82f;
         v.metal = 0.0f;
-        v.mat   = isKerb ? (float)texgen::MAT_CONCRETE : (float)texgen::MAT_ASPHALT;
+        v.mat   = road ? (float)texgen::MAT_ASPHALT : (float)texgen::MAT_CONCRETE;
         verts.push_back(v);
       }
     }
-    uint32_t base = (uint32_t)verts.size() - (uint32_t)(segs + 1) * 4;
+    uint32_t base = (uint32_t)verts.size() - (uint32_t)(segs + 1) * LN;
     for(int s = 0; s < segs; s++){
-      for(int k = 0; k < 3; k++){
-        uint32_t a = base + s * 4 + k;
-        uint32_t b = a + 1;        // next lane across
-        uint32_t c = a + 4;        // same lane, next rib
-        uint32_t d = c + 1;
-        idx.insert(idx.end(), { a, b, c, b, d, c });
+      for(int k = 0; k < LN - 1; k++){
+        // skip the zero-area quads between a duplicated crease pair
+        if(lanes[k].off == lanes[k+1].off && lanes[k].dy == lanes[k+1].dy) continue;
+        uint32_t a  = base + s * LN + k;
+        uint32_t q1 = a + 1;        // next lane across
+        uint32_t c  = a + LN;       // same lane, next rib
+        uint32_t d  = c + 1;
+        idx.insert(idx.end(), { a, q1, c, q1, d, c });
       }
     }
 
@@ -560,13 +630,13 @@ static void buildAllMeshes(){
   models::buildWheel(meshWheel, 1.0f, 1.0f);       // unit wheel, scaled per car
   makeUnitInstanced(meshWheel, 512);
 
-  models::buildTower(meshTower[0], 14, true);   makeUnitInstanced(meshTower[0], 1200);
-  models::buildTower(meshTower[1], 9,  false);  makeUnitInstanced(meshTower[1], 1200);
-  models::buildHouse(meshHouse[0], false);      makeUnitInstanced(meshHouse[0], 2400);
-  models::buildHouse(meshHouse[1], true);       makeUnitInstanced(meshHouse[1], 2400);
-  models::buildShop(meshShop);                  makeUnitInstanced(meshShop, 1600);
-  models::buildApartment(meshApt[0], 6);        makeUnitInstanced(meshApt[0], 1600);
-  models::buildApartment(meshApt[1], 10);       makeUnitInstanced(meshApt[1], 1600);
+  models::buildTower(meshTower[0], 14, true);   makeUnitInstanced(meshTower[0], 1800);
+  models::buildTower(meshTower[1], 9,  false);  makeUnitInstanced(meshTower[1], 1800);
+  models::buildHouse(meshHouse[0], false);      makeUnitInstanced(meshHouse[0], 3600);
+  models::buildHouse(meshHouse[1], true);       makeUnitInstanced(meshHouse[1], 3600);
+  models::buildShop(meshShop);                  makeUnitInstanced(meshShop, 2400);
+  models::buildApartment(meshApt[0], 6);        makeUnitInstanced(meshApt[0], 2400);
+  models::buildApartment(meshApt[1], 10);       makeUnitInstanced(meshApt[1], 2400);
 
   models::buildTree(meshTree[0], 0); makeUnitInstanced(meshTree[0], 4000);
   models::buildTree(meshTree[1], 1); makeUnitInstanced(meshTree[1], 4000);
@@ -1049,7 +1119,14 @@ static void drawSceneGeometry(const gfx::Program& pr, bool shadowPass){
 // ============================================================================
 //  Simulation
 // ============================================================================
-static float terrainH(float x, float z){ return W.terr.sample(x, z); }
+// The surface you actually stand on: the heightmap, or the street where there
+// is one. Every walker, driver and animal goes through here, so one call site
+// lifts the whole population out of the tarmac.
+static float terrainH(float x, float z){
+  float t = W.terr.sample(x, z);
+  float s = W.streetY(x, z);
+  return s > t ? s : t;
+}
 
 static void spawnCarOnEdge(Vehicle& c, int ei, bool forward, m::Rng& rng){
   const auto& e = W.edges[ei];
@@ -2083,6 +2160,10 @@ extern "C" {
   EMSCRIPTEN_KEEPALIVE float dbgPlayerY(){ return P.pos.y; }
   EMSCRIPTEN_KEEPALIVE float dbgPlayerZ(){ return P.pos.z; }
   EMSCRIPTEN_KEEPALIVE float dbgTerrainY(){ return W.terr.sample(P.pos.x, P.pos.z); }
+  EMSCRIPTEN_KEEPALIVE float dbgStreetY(){ return W.streetY(P.pos.x, P.pos.z); }
+  EMSCRIPTEN_KEEPALIVE int   dbgEdgeBucket(){
+    return (int)W.edgeBuckets[world::World::bucketIndex(P.pos.x, P.pos.z)].size();
+  }
   EMSCRIPTEN_KEEPALIVE int   dbgOverWater(){ return W.terr.isWater(P.pos.x, P.pos.z) ? 1 : 0; }
   EMSCRIPTEN_KEEPALIVE int   dbgBiome(){ return (int)W.terr.sampleBiome(P.pos.x, P.pos.z); }
   EMSCRIPTEN_KEEPALIVE float dbgCamY(){ return cam.pos.y; }
@@ -2278,7 +2359,7 @@ int main(){
         f.x = e.x1 + ax * t + px * off * side;
         f.z = e.z1 + az * t + pz * off * side;
         if(W.terr.isWater(f.x, f.z)) continue;
-        f.y = W.terr.sample(f.x, f.z);
+        f.y = terrainH(f.x, f.z);           // on the pavement, not under it
         f.rot = std::atan2(-px * side, -pz * side);
         float r = fr.f();
         f.kind = r < 0.34f ? 0 : r < 0.62f ? 1 : r < 0.90f ? 2 : 3;
@@ -2293,16 +2374,30 @@ int main(){
   {
     float bx = W.districts[0].wx, bz = W.districts[0].wz;
     float bestD = 1e18f;
-    for(const auto& e : W.edges){
+    int bestEdge = 0;
+    for(size_t i = 0; i < W.edges.size(); i++){
+      const auto& e = W.edges[i];
       if(e.zone > 2 || e.bridge) continue;
       float mx = (e.x1 + e.x2) * 0.5f, mz = (e.z1 + e.z2) * 0.5f;
       float dx = mx - W.districts[0].wx, dz = mz - W.districts[0].wz;
       float d = dx*dx + dz*dz;
-      if(d < bestD){ bestD = d; bx = mx; bz = mz; }
+      if(d < bestD){ bestD = d; bx = mx; bz = mz; bestEdge = (int)i; }
     }
-    // step to the kerb so we don't start in the middle of the road
-    P.pos = v3{ bx + 9.0f, W.terr.sample(bx + 9.0f, bz), bz };
-    if(W.terr.isWater(P.pos.x, P.pos.z)) P.pos = v3{ bx, W.terr.sample(bx, bz), bz };
+    // Step across the road, not along the X axis. Offsetting by a fixed +9 m
+    // in world X put the player in the middle of any road that happened to
+    // run east-west, which is where the first screenshot of this game was
+    // always taken from.
+    {
+      const auto& e = W.edges[bestEdge];
+      float ax = e.x2 - e.x1, az = e.z2 - e.z1;
+      float L = std::sqrt(ax*ax + az*az); if(L < 1e-3f) L = 1.0f;
+      float px = -az / L, pz = ax / L;
+      float off = e.width * 0.5f + 2.2f;        // on the pavement
+      float sx = bx + px * off, sz = bz + pz * off;
+      if(W.terr.isWater(sx, sz)){ sx = bx - px * off; sz = bz - pz * off; }
+      if(W.terr.isWater(sx, sz)){ sx = bx; sz = bz; }
+      P.pos = v3{ sx, terrainH(sx, sz), sz };
+    }
     P.look.shirt = v3{0.92f, 0.76f, 0.25f};
     P.look.pants = v3{0.16f, 0.20f, 0.28f};
     cam.yaw = 0.6f;

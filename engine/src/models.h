@@ -409,156 +409,449 @@ inline void buildWheel(gfx::Mesh& out, float r, float w){
 // ============================================================================
 // Unit building: 1x1 footprint, 1.0 tall. The instance matrix scales it, so a
 // single mesh becomes a bungalow or a skyscraper.
+//
+// Where the detail goes is a budget decision, not a taste one. Each of these
+// meshes is drawn hundreds of times a frame, so one vertex here costs a
+// thousand on screen. The spend therefore follows viewing distance:
+//
+//   towers      read from across the map  -> continuous full-height structure:
+//                                            fins, slab lips, parapet, plant.
+//                                            No per-window trim; it would be
+//                                            averaged away by the mip chain.
+//   apartments  read from down the street -> piers, string courses, balconies
+//                                            and glazing on all four sides.
+//   houses/shops read from the pavement   -> reveals, sills, canopies, doors.
+//
+// Two rules apply everywhere. An opening is made by projecting its trim, not
+// by recessing the pane: the surrounding sill and lintel stand proud of the
+// wall so the opening shadows itself, which is the part that survives
+// distance. And no two panes are the same colour — see windowPane.
+
+// The four sides of a unit footprint: outward normal, and the yaw that takes
+// local +Z onto it.
+struct Face { float nx, nz, yaw; };
+inline const Face* unitFaces(){
+  static const Face f[4] = {
+    { 0.0f,  1.0f,  0.0f            },   // +Z, the street front
+    { 1.0f,  0.0f,  m::PI * 0.5f    },   // +X
+    { 0.0f, -1.0f,  m::PI           },   // -Z, the back
+    {-1.0f,  0.0f, -m::PI * 0.5f    }    // -X
+  };
+  return f;
+}
+
+// One window: pane, lintel, sill. Three boxes, because this gets stamped
+// thousands of times.
+//
+// The pane colour is different every time. A wall of identical dark
+// rectangles reads as wallpaper; real glass reflects more sky the higher up
+// it is, some panes are curtained, a few rooms are lit. That variation is
+// free — it rides in the vertex colour — and it is most of what makes a
+// facade look inhabited rather than printed.
+//
+//   at    a point on the wall surface      t  trim width, in the facade plane
+//   hw/hh half extents of the opening      p  how far the trim stands proud
+//   sky   0 at street level, 1 at the top
+inline void windowPane(Builder& b, const v3& at, const quat& rot,
+                       float hw, float hh, float t, float p,
+                       const v3& trim, m::Rng& rng, float sky, bool sill = true){
+  const v3 n    = rot.rotate(v3{0, 0, 1});
+  const v3 up   {0, 1, 0};
+
+  float j = rng.f(), lit = rng.f();
+  // Daylight glass is not black. It is a mid blue-grey, because what you see
+  // in it is the sky. Stacking a shading term and an ambient-occlusion term
+  // on top of an already dark albedo was taking these panes down to about 4%
+  // reflectance, which is a hole in the wall, not a window. The recess shadow
+  // comes from the trim standing proud of it — it does not need faking here.
+  v3 glass{0.168f, 0.208f, 0.258f};
+  glass += v3{0.085f, 0.118f, 0.168f} * sky;      // sky reflection, by height
+  glass = glass * (0.70f + j * 0.80f);            // blinds, dirt, empty room
+  if(lit > 0.957f)      glass = v3{0.405f, 0.350f, 0.260f};             // lit room
+  else if(lit < 0.115f) glass = glass * 0.56f + v3{0.135f, 0.128f, 0.120f}; // curtained
+
+  b.mat(0.055f + j * 0.05f, 0.22f); b.surface(-1.0f);
+  b.box(at - n * 0.0015f, {hw, hh, 0.004f}, glass, rot, 1.0f, 0.92f);
+
+  // lintel above, sill below — both proud, both casting onto the pane
+  b.mat(0.70f, 0.02f);
+  b.box(at + up * (hh + t) + n * p, {hw + t * 1.3f, t, p * 1.9f}, trim, rot);
+  if(sill)
+    b.box(at - up * (hh + t) + n * (p * 1.5f),
+          {hw + t * 1.6f, t * 0.85f, p * 2.7f}, trim, rot);
+}
+
+// A parapet: four upstands and a coping, with the roof deck sitting below
+// them. A solid cap slab gives a building a flat lid; an upstand gives it an
+// edge, and an edge is what you see against the sky.
+inline void parapet(Builder& b, float px, float pz, float y,
+                    float h, float thick, const v3& wall, const v3& coping){
+  const Face* FA = unitFaces();
+  b.mat(0.55f, 0.06f); b.surface(4.0f);
+  b.box({0, y + h * 0.25f, 0}, {px * 0.99f, h * 0.25f, pz * 0.99f}, coping);  // deck
+  for(int s = 0; s < 4; s++){
+    quat r = quat::axisAngle({0,1,0}, FA[s].yaw);
+    float halfW = (FA[s].nx != 0.0f) ? pz : px;
+    v3 c{ FA[s].nx * px, y + h, FA[s].nz * pz };
+    b.mat(0.58f, 0.05f); b.surface(4.0f);
+    b.box(c, {halfW, h, thick}, wall, r);
+    b.mat(0.44f, 0.14f); b.surface(-1.0f);
+    b.box(c + v3{0, h * 1.12f, 0}, {halfW * 1.01f, h * 0.15f, thick * 1.5f}, coping, r);
+  }
+}
+
+// Stair bulkhead, water tank, chiller array, mast. Roof plant is the cheapest
+// detail in the game: nobody stands on these roofs, but every one of them is
+// on the skyline.
+inline void roofPlant(Builder& b, float px, float pz, float y, float s,
+                      const v3& dark){
+  b.mat(0.60f, 0.08f); b.surface(4.0f);
+  b.box({ px * 0.44f, y + s * 0.62f,  pz * 0.30f}, {px * 0.21f, s * 0.62f, pz * 0.18f}, dark);
+  b.mat(0.42f, 0.50f); b.surface(-1.0f);
+  b.cylinder({-px * 0.36f, y + s * 0.80f, -pz * 0.28f},
+             px * 0.17f, s * 0.60f, 10, {0.56f, 0.57f, 0.59f});
+  b.mat(0.55f, 0.35f);
+  for(int k = -1; k <= 1; k++)
+    b.box({px * 0.24f * k, y + s * 0.28f, pz * 0.04f},
+          {px * 0.090f, s * 0.28f, pz * 0.095f}, {0.50f, 0.52f, 0.55f});
+  b.mat(0.35f, 0.70f);
+  b.cylinder({px * 0.08f, y + s * 1.6f, pz * 0.42f}, 0.005f, s * 1.1f, 6, {0.62f,0.64f,0.66f});
+  b.box({px * 0.08f, y + s * 2.76f, pz * 0.42f}, {0.013f, s * 0.12f, 0.013f}, {0.86f,0.18f,0.14f});
+}
+
 inline void buildTower(gfx::Mesh& out, int floors, bool setback){
   Builder b;
-  b.mat(0.42f, 0.10f);
-  b.surface(4.0f);          // MAT_CONCRETE (enum was renumbered)
-  const v3 wall{1,1,1};
-  const v3 glass{0.14f, 0.19f, 0.26f};
-  const v3 dark {0.20f, 0.21f, 0.24f};
+  const Face* FA = unitFaces();
+  const v3 wall {1.00f, 1.00f, 1.00f};         // picks up the instance tint
+  const v3 dark {0.185f, 0.195f, 0.225f};
+  const v3 fin  {0.80f, 0.81f, 0.84f};
+  m::Rng rng(setback ? 9001u : 7703u);
 
-  float fh = 1.0f / floors;
-  float hx = 0.5f, hz = 0.5f;
-  float y = 0.0f;
-  for(int f = 0; f < floors; f++){
-    // step the silhouette in as it rises
-    if(setback && f > 0 && f % 5 == 0){ hx *= 0.88f; hz *= 0.88f; }
-    b.mat(0.44f, 0.08f);
-    b.box({0, y + fh * 0.5f, 0}, {hx, fh * 0.5f, hz}, wall);
-    // continuous glazing band, inset slightly
-    b.mat(0.10f, 0.35f); b.surface(-1.0f);
-    b.box({0, y + fh * 0.58f,  hz}, {hx * 0.92f, fh * 0.30f, 0.008f}, glass);
-    b.box({0, y + fh * 0.58f, -hz}, {hx * 0.92f, fh * 0.30f, 0.008f}, glass);
-    b.box({ hx, y + fh * 0.58f, 0}, {0.008f, fh * 0.30f, hz * 0.92f}, glass);
-    b.box({-hx, y + fh * 0.58f, 0}, {0.008f, fh * 0.30f, hz * 0.92f}, glass);
-    // floor slab lip
-    b.mat(0.55f, 0.05f); b.surface(4.0f);
-    b.box({0, y + fh * 0.03f, 0}, {hx * 1.012f, fh * 0.035f, hz * 1.012f}, dark);
-    y += fh;
+  if(floors < 5) floors = 5;
+  const float fh    = 1.0f / floors;
+  const float lobby = fh * 1.6f;               // double-height ground floor
+
+  // Two or three stacked blocks, stepping in. Stepping in whole blocks rather
+  // than floor by floor is what lets the fins run uninterrupted, and an
+  // uninterrupted vertical line is the whole of a tower's grain at a mile.
+  struct Block { float y0, y1, hx, hz; };
+  Block blk[3];
+  int nb;
+  if(setback){
+    nb = 3;
+    blk[0] = { 0.0f,  0.47f, 0.500f, 0.500f };
+    blk[1] = { 0.47f, 0.81f, 0.428f, 0.442f };
+    blk[2] = { 0.81f, 1.00f, 0.338f, 0.352f };
+  } else {
+    nb = 1;
+    blk[0] = { 0.0f, 1.0f, 0.500f, 0.500f };
   }
-  // roof furniture
-  b.mat(0.62f, 0.15f);
-  b.box({0, 1.0f + 0.012f, 0}, {hx * 1.02f, 0.012f, hz * 1.02f}, dark);
-  b.box({ hx * 0.35f, 1.0f + 0.045f, hz * 0.30f}, {hx * 0.22f, 0.035f, hz * 0.20f}, dark);
-  b.box({-hx * 0.30f, 1.0f + 0.060f, -hz * 0.25f}, {hx * 0.14f, 0.050f, hz * 0.14f}, dark);
-  b.cylinder({hx * 0.10f, 1.0f + 0.10f, -hz * 0.05f}, 0.012f, 0.085f, 6, {0.6f,0.15f,0.12f});
+
+  for(int i = 0; i < nb; i++){
+    const Block& B = blk[i];
+    float y0 = (B.y0 < lobby) ? lobby : B.y0;
+    float hy = (B.y1 - y0) * 0.5f;
+    if(hy <= 0.0f) continue;
+
+    // the opaque shaft
+    b.mat(0.44f, 0.08f); b.surface(4.0f);
+    b.box({0, (y0 + B.y1) * 0.5f, 0}, {B.hx, hy, B.hz}, wall);
+
+    // glazing band per floor per face, flush with the wall; the slab lips and
+    // fins below stand proud of it, so every pane sits in a recess
+    int f0 = (int)((y0 + 1e-4f) / fh);
+    for(int f = f0; f < floors; f++){
+      float yb = (f + 0.52f) * fh;
+      if(yb + fh * 0.30f > B.y1 - fh * 0.08f) break;
+      float sky = (float)f / (float)(floors - 1);
+      for(int s = 0; s < 4; s++){
+        quat r = quat::axisAngle({0,1,0}, FA[s].yaw);
+        float halfW = (FA[s].nx != 0.0f) ? B.hz : B.hx;
+        v3 c{ FA[s].nx * B.hx, yb, FA[s].nz * B.hz };
+        windowPane(b, c, r, halfW * 0.93f, fh * 0.29f, fh * 0.055f, 0.0030f,
+                   fin, rng, sky, false);
+      }
+      // floor slab lip, right round — the horizontal half of the grid
+      b.mat(0.52f, 0.06f); b.surface(4.0f);
+      b.box({0, (f + 0.04f) * fh, 0},
+            {B.hx + 0.016f, fh * 0.055f, B.hz + 0.016f}, dark);
+    }
+
+    // continuous vertical fins
+    b.mat(0.50f, 0.10f); b.surface(4.0f);
+    const int BAYS = 6;
+    for(int s = 0; s < 4; s++){
+      quat r = quat::axisAngle({0,1,0}, FA[s].yaw);
+      float halfW = (FA[s].nx != 0.0f) ? B.hz : B.hx;
+      v3 tan = r.rotate(v3{1,0,0});
+      for(int k = 0; k <= BAYS; k++){
+        float u = ((float)k / BAYS * 2.0f - 1.0f) * halfW * 0.985f;
+        v3 c{ FA[s].nx * B.hx, (y0 + B.y1) * 0.5f, FA[s].nz * B.hz };
+        c += tan * u;
+        b.box(c, {halfW * 0.0125f, hy, 0.0105f}, fin, r);
+      }
+    }
+    // a cornice where one block hands over to the next
+    if(i + 1 < nb){
+      b.mat(0.50f, 0.08f); b.surface(4.0f);
+      b.box({0, B.y1 - fh * 0.05f, 0},
+            {B.hx + 0.026f, fh * 0.090f, B.hz + 0.026f}, dark);
+    }
+  }
+
+  // ---- ground floor: a lobby you can walk up to
+  {
+    b.mat(0.09f, 0.30f); b.surface(-1.0f);
+    for(int s = 0; s < 4; s++){
+      quat r = quat::axisAngle({0,1,0}, FA[s].yaw);
+      v3 c{ FA[s].nx * 0.5f, lobby * 0.52f, FA[s].nz * 0.5f };
+      b.box(c, {0.455f, lobby * 0.42f, 0.005f},
+            v3{0.195f, 0.232f, 0.282f}, r, 1.0f, 0.94f);
+      // piers between the glass, and the corner returns
+      b.mat(0.46f, 0.08f); b.surface(4.0f);
+      v3 tan = r.rotate(v3{1,0,0});
+      for(int k = -2; k <= 2; k++)
+        b.box(c + tan * (k * 0.24f), {0.013f, lobby * 0.52f, 0.013f}, wall, r);
+      b.mat(0.09f, 0.30f); b.surface(-1.0f);
+    }
+    // entrance canopy and a revolving-door drum on the street face
+    b.mat(0.55f, 0.14f); b.surface(-1.0f);
+    b.frustumBox({0, lobby * 0.90f, 0.556f}, 0.235f, 0.062f, 0.235f, 0.020f,
+                 0.011f, dark);
+    b.mat(0.24f, 0.55f);
+    b.cylinder({0, lobby * 0.40f, 0.500f}, 0.080f, lobby * 0.40f, 10,
+               {0.56f, 0.58f, 0.61f});
+    // a band of lobby light spilling onto the pavement is the cheapest way to
+    // say "there is an inside"
+    b.mat(0.90f, 0.0f);
+    b.box({0, 0.004f, 0.560f}, {0.30f, 0.004f, 0.055f}, {0.42f, 0.36f, 0.26f});
+  }
+
+  // ---- crown
+  {
+    const Block& T = blk[nb - 1];
+    parapet(b, T.hx + 0.012f, T.hz + 0.012f, 1.0f, fh * 0.17f, 0.016f, wall, dark);
+    roofPlant(b, T.hx, T.hz, 1.0f + fh * 0.08f, fh * 0.50f, dark);
+  }
   b.finish(out);
 }
 
 inline void buildHouse(gfx::Mesh& out, bool twoStorey){
   Builder b;
-  b.surface(4.0f);
-  const v3 wall{1,1,1};
-  const v3 roofc{0.30f, 0.20f, 0.17f};
-  const v3 door {0.32f, 0.20f, 0.13f};
-  const v3 glass{0.16f, 0.22f, 0.28f};
-  const v3 frame{0.92f, 0.92f, 0.90f};
+  const Face* FA = unitFaces();
+  const v3 wall {1, 1, 1};
+  const v3 roofc{0.250f, 0.168f, 0.142f};
+  const v3 trim {0.945f, 0.935f, 0.905f};
+  const v3 doorc{0.295f, 0.180f, 0.118f};
+  m::Rng rng(twoStorey ? 4421u : 3307u);
 
-  float bodyTop = twoStorey ? 0.70f : 0.46f;
-  b.mat(0.66f, 0.0f);
+  const float bodyTop = twoStorey ? 0.70f : 0.46f;
+  const float t = 0.015f, p = 0.0032f;
+
+  b.mat(0.66f, 0.0f); b.surface(4.0f);
   b.box({0, bodyTop * 0.5f, 0}, {0.5f, bodyTop * 0.5f, 0.5f}, wall);
 
-  // pitched roof: two tapered slabs meeting at a ridge
-  b.mat(0.72f, 0.0f);
-  b.frustumBox({0, bodyTop + 0.16f, 0}, 0.56f, 0.56f, 0.05f, 0.56f, 0.16f, roofc);
-  b.box({0, bodyTop + 0.012f, 0}, {0.545f, 0.018f, 0.545f}, roofc);   // eaves
+  // a plinth, so the walls meet the ground in a line instead of just stopping
+  b.mat(0.80f, 0.0f);
+  b.box({0, 0.020f, 0}, {0.516f, 0.020f, 0.516f}, {0.50f, 0.485f, 0.46f});
 
-  // windows + door on the front face (+Z)
-  b.mat(0.10f, 0.30f); b.surface(-1.0f);
-  float wy = twoStorey ? 0.44f : 0.30f;
-  b.box({ 0.24f, wy, 0.502f}, {0.105f, 0.085f, 0.006f}, glass);
-  b.box({-0.24f, wy, 0.502f}, {0.105f, 0.085f, 0.006f}, glass);
-  b.mat(0.70f, 0.0f);
-  b.box({ 0.24f, wy, 0.506f}, {0.118f, 0.098f, 0.004f}, frame, quat(), 1.0f, 0.9f);
-  b.box({-0.24f, wy, 0.506f}, {0.118f, 0.098f, 0.004f}, frame, quat(), 1.0f, 0.9f);
-  if(twoStorey){
-    b.mat(0.10f, 0.30f);
-    b.box({ 0.24f, 0.16f, 0.502f}, {0.095f, 0.075f, 0.006f}, glass);
-    b.box({-0.24f, 0.16f, 0.502f}, {0.095f, 0.075f, 0.006f}, glass);
+  // pitched roof: overhanging eaves, fascia, soffit. The overhang is there
+  // for the band of shade it throws across the top of the wall.
+  b.mat(0.74f, 0.0f);
+  b.frustumBox({0, bodyTop + 0.150f, 0}, 0.578f, 0.578f, 0.042f, 0.578f,
+               0.150f, roofc);
+  b.box({0, bodyTop + 0.008f, 0}, {0.562f, 0.015f, 0.562f}, roofc);     // fascia
+  b.mat(0.82f, 0.0f); b.surface(-1.0f);
+  b.box({0, bodyTop - 0.014f, 0}, {0.548f, 0.009f, 0.548f}, trim);      // soffit
+
+  // Windows on every side. Three blank walls is the loudest thing a house can
+  // say about being a prop. Offsets are per-side so nothing lands on the door
+  // or the garage.
+  const float uTab[4][2] = {
+    { -0.255f,  0.255f },   // +Z front, either side of the door
+    { -0.285f, -0.285f },   // +X, clear of the garage
+    {  0.200f, -0.230f },   // -Z back
+    {  0.265f,  0.265f }    // -X
+  };
+  const int nTab[4] = { 2, 1, 2, 1 };
+  const float wy0 = twoStorey ? 0.200f : 0.268f;
+  const float wy1 = bodyTop - 0.138f;
+  for(int s = 0; s < 4; s++){
+    quat r = quat::axisAngle({0,1,0}, FA[s].yaw);
+    v3 n{ FA[s].nx * 0.5f, 0, FA[s].nz * 0.5f };
+    v3 tan = r.rotate(v3{1,0,0});
+    for(int k = 0; k < nTab[s]; k++){
+      v3 base = n + tan * uTab[s][k];
+      windowPane(b, base + v3{0, wy0, 0}, r, 0.086f, 0.070f, t, p, trim, rng, 0.25f);
+      if(twoStorey)
+        windowPane(b, base + v3{0, wy1, 0}, r, 0.086f, 0.060f, t, p, trim, rng, 0.75f);
+    }
   }
-  // door
-  b.mat(0.55f, 0.0f); b.surface(-1.0f);
-  b.box({0, 0.115f, 0.505f}, {0.075f, 0.115f, 0.008f}, door);
-  b.mat(0.25f, 0.8f);
-  b.box({0.052f, 0.118f, 0.515f}, {0.012f, 0.012f, 0.006f}, {0.8f,0.7f,0.3f});
-  // chimney
-  b.mat(0.75f, 0.0f); b.surface(4.0f);
-  b.box({0.30f, bodyTop + 0.22f, -0.22f}, {0.055f, 0.14f, 0.055f}, {0.42f,0.31f,0.27f});
+
+  // front door under a porch
+  {
+    quat r;                                   // identity: +Z
+    b.mat(0.55f, 0.0f); b.surface(-1.0f);
+    b.box({0, 0.116f, 0.506f}, {0.070f, 0.116f, 0.009f}, doorc);
+    b.mat(0.68f, 0.02f);
+    b.box({0, 0.240f, 0.512f}, {0.088f, 0.013f, 0.015f}, trim);
+    b.mat(0.25f, 0.80f);
+    b.box({0.048f, 0.120f, 0.518f}, {0.010f, 0.010f, 0.007f}, {0.78f, 0.68f, 0.32f});
+    b.mat(0.72f, 0.0f);
+    for(int k = -1; k <= 1; k += 2)
+      b.box({0.142f * k, 0.132f, 0.578f}, {0.013f, 0.132f, 0.013f}, trim);
+    b.frustumBox({0, 0.278f, 0.566f}, 0.170f, 0.088f, 0.170f, 0.074f, 0.013f, roofc);
+    b.mat(0.82f, 0.0f); b.surface(4.0f);
+    b.box({0, 0.016f, 0.556f}, {0.112f, 0.016f, 0.052f}, {0.56f, 0.55f, 0.53f});
+  }
+  // garage door on the +X flank
+  {
+    b.mat(0.46f, 0.12f); b.surface(-1.0f);
+    b.box({0.504f, 0.098f, 0.150f}, {0.011f, 0.098f, 0.140f}, {0.72f, 0.72f, 0.74f});
+    b.mat(0.68f, 0.02f);
+    b.box({0.508f, 0.208f, 0.150f}, {0.012f, 0.014f, 0.156f}, trim);
+  }
+  // chimney with a cap
+  b.mat(0.78f, 0.0f); b.surface(4.0f);
+  b.box({-0.300f, bodyTop + 0.205f, -0.230f}, {0.046f, 0.130f, 0.046f},
+        {0.58f, 0.42f, 0.355f});
+  b.mat(0.70f, 0.0f); b.surface(-1.0f);
+  b.box({-0.300f, bodyTop + 0.342f, -0.230f}, {0.056f, 0.011f, 0.056f},
+        {0.40f, 0.40f, 0.42f});
   b.finish(out);
 }
 
 inline void buildShop(gfx::Mesh& out){
   Builder b;
-  const v3 wall{1,1,1};
-  b.mat(0.60f, 0.05f);
-  b.box({0, 0.30f, 0}, {0.5f, 0.30f, 0.5f}, wall);
-  // parapet
-  b.mat(0.66f, 0.0f);
-  b.box({0, 0.625f, 0}, {0.52f, 0.035f, 0.52f}, {0.55f, 0.55f, 0.57f});
-  // full-height shopfront glazing
-  b.mat(0.08f, 0.35f); b.surface(-1.0f);
-  b.box({0, 0.26f, 0.503f}, {0.44f, 0.20f, 0.008f}, {0.13f, 0.19f, 0.25f});
-  // awning
-  b.mat(0.70f, 0.0f); b.surface(-1.0f);
-  b.frustumBox({0, 0.50f, 0.60f}, 0.46f, 0.12f, 0.46f, 0.02f, 0.035f, {0.72f, 0.20f, 0.18f});
-  // sign band
-  b.mat(0.40f, 0.1f);
-  b.box({0, 0.565f, 0.512f}, {0.36f, 0.045f, 0.012f}, {1.5f, 1.35f, 0.75f});
+  const Face* FA = unitFaces();
+  const v3 wall {1, 1, 1};
+  const v3 band {0.315f, 0.315f, 0.335f};
+  const v3 trim {0.90f, 0.89f, 0.87f};
+  m::Rng rng(5519u);
 
-  // Glazing and a shopfront on EVERY side. Large-scale features like these
-  // are what still read from across a street; fine brick does not survive
-  // the mip chain at that distance.
-  const v3 glass{0.13f, 0.18f, 0.24f};
-  const v3 band {0.30f, 0.30f, 0.32f};
-  struct Side { float sx, sz, rot; };
-  const Side sides[4] = { {0,-1, m::PI}, {1,0, m::PI*0.5f}, {-1,0, -m::PI*0.5f}, {0,1,0} };
-  for(int i = 0; i < 4; i++){
-    const Side& S = sides[i];
-    quat r = quat::axisAngle({0,1,0}, S.rot);
-    v3 n{ S.sx * 0.503f, 0.0f, S.sz * 0.503f };
-    if(i == 3) continue;                    // front already has its shopfront
-    b.mat(0.08f, 0.35f); b.surface(-1.0f);
-    b.box({n.x, 0.26f, n.z}, {0.40f, 0.17f, 0.008f}, glass, r);
-    b.mat(0.55f, 0.05f); b.surface(4.0f);
-    b.box({n.x, 0.455f, n.z}, {0.46f, 0.030f, 0.010f}, band, r);   // fascia
-    b.box({n.x, 0.075f, n.z}, {0.46f, 0.075f, 0.010f}, band, r);   // stall riser
-  }
-  // upper-floor window row, so a two-storey shop is not a blank slab
-  for(int i = 0; i < 4; i++){
-    const Side& S = sides[i];
-    quat r = quat::axisAngle({0,1,0}, S.rot);
-    v3 n{ S.sx * 0.504f, 0.0f, S.sz * 0.504f };
-    b.mat(0.10f, 0.30f); b.surface(-1.0f);
-    for(int w = -1; w <= 1; w++){
-      v3 off = r.rotate(v3{ w * 0.28f, 0.0f, 0.0f });
-      b.box({n.x + off.x, 0.475f, n.z + off.z}, {0.095f, 0.055f, 0.008f}, glass, r);
-    }
-  }
   b.mat(0.60f, 0.05f); b.surface(4.0f);
+  b.box({0, 0.30f, 0}, {0.5f, 0.30f, 0.5f}, wall);
+
+  // A shopfront on every side, because a corner shop has two fronts and a
+  // blank flank is what made these read as crates.
+  for(int s = 0; s < 4; s++){
+    quat r = quat::axisAngle({0,1,0}, FA[s].yaw);
+    v3 n{ FA[s].nx * 0.5f, 0, FA[s].nz * 0.5f };
+    v3 tan = r.rotate(v3{1,0,0});
+
+    // full-height glazing, divided by pilasters
+    b.mat(0.08f, 0.35f); b.surface(-1.0f);
+    b.box(n + v3{0, 0.255f, 0}, {0.435f, 0.165f, 0.005f},
+          v3{0.188f, 0.225f, 0.278f}, r, 1.0f, 0.94f);
+    b.mat(0.56f, 0.05f); b.surface(4.0f);
+    b.box(n + v3{0, 0.072f, 0}, {0.462f, 0.072f, 0.013f}, band, r);   // stall riser
+    b.box(n + v3{0, 0.438f, 0}, {0.468f, 0.030f, 0.016f}, band, r);   // fascia
+    for(int k = -2; k <= 2; k++)                                       // pilasters
+      b.box(n + tan * (k * 0.232f) + v3{0, 0.252f, 0},
+            {0.016f, 0.252f, 0.0095f}, wall, r);
+
+    // upper-floor windows over a continuous sill course
+    float sky = 0.6f;
+    for(int k = -1; k <= 1; k++)
+      windowPane(b, n + tan * (k * 0.280f) + v3{0, 0.545f, 0}, r,
+                 0.092f, 0.048f, 0.011f, 0.0030f, trim, rng, sky, false);
+    b.mat(0.66f, 0.02f); b.surface(4.0f);
+    b.box(n + v3{0, 0.487f, 0}, {0.470f, 0.011f, 0.019f}, trim, r);
+  }
+
+  // street face: awning, sign band, blade sign, recessed door
+  b.mat(0.70f, 0.0f); b.surface(-1.0f);
+  b.frustumBox({0, 0.400f, 0.585f}, 0.420f, 0.095f, 0.420f, 0.018f, 0.030f,
+               {0.70f, 0.195f, 0.175f});
+  b.mat(0.40f, 0.10f);
+  b.box({0, 0.438f, 0.520f}, {0.330f, 0.040f, 0.012f}, {1.55f, 1.38f, 0.78f});
+  b.box({0.455f, 0.360f, 0.540f}, {0.058f, 0.072f, 0.012f}, {1.30f, 0.95f, 0.55f});
+  b.mat(0.52f, 0.0f);
+  b.box({-0.150f, 0.118f, 0.506f}, {0.062f, 0.118f, 0.010f}, {0.28f, 0.22f, 0.19f});
+
+  // parapet rather than a cap slab
+  parapet(b, 0.512f, 0.512f, 0.600f, 0.030f, 0.015f, wall, band);
+  b.mat(0.55f, 0.35f); b.surface(-1.0f);
+  for(int k = -1; k <= 1; k += 2)
+    b.box({0.20f * k, 0.648f, -0.14f}, {0.075f, 0.038f, 0.085f},
+          {0.50f, 0.52f, 0.55f});
   b.finish(out);
 }
 
 inline void buildApartment(gfx::Mesh& out, int floors){
   Builder b;
-  const v3 wall{1,1,1};
-  float fh = 1.0f / floors;
-  b.mat(0.58f, 0.04f);
-  b.surface(4.0f);
+  const Face* FA = unitFaces();
+  const v3 wall {1, 1, 1};
+  const v3 trim {0.88f, 0.875f, 0.855f};
+  const v3 dark {0.325f, 0.335f, 0.365f};
+  m::Rng rng(floors * 131u + 77u);
+
+  if(floors < 3) floors = 3;
+  const float fh = 1.0f / floors;
+
+  b.mat(0.58f, 0.04f); b.surface(4.0f);
   b.box({0, 0.5f, 0}, {0.5f, 0.5f, 0.5f}, wall);
-  // balconies + window bands per floor
+
+  // plinth, and a string course at first-floor level where the shops stop
+  b.mat(0.76f, 0.02f);
+  b.box({0, fh * 0.065f, 0}, {0.516f, fh * 0.065f, 0.516f}, dark);
+  b.box({0, fh * 1.0f,   0}, {0.513f, fh * 0.038f, 0.513f}, dark);
+
+  // Glazing bands on all four sides, cut into bays by piers that run the full
+  // height. At street-to-window distance the bays read as separate windows;
+  // the piers cost 24 boxes once instead of three per window per floor.
   for(int f = 0; f < floors; f++){
-    float y = (f + 0.55f) * fh;
-    b.mat(0.10f, 0.30f); b.surface(-1.0f);
-    b.box({0, y, 0.502f}, {0.40f, fh * 0.26f, 0.008f}, {0.15f, 0.20f, 0.27f});
-    b.box({0, y, -0.502f}, {0.40f, fh * 0.26f, 0.008f}, {0.15f, 0.20f, 0.27f});
-    if(f > 0){
-      b.mat(0.55f, 0.1f); b.surface(4.0f);
-      b.box({0, y - fh * 0.28f, 0.565f}, {0.42f, 0.010f, 0.065f}, {0.60f,0.60f,0.62f});
-      b.box({0, y - fh * 0.20f, 0.628f}, {0.42f, 0.055f, 0.008f}, {0.52f,0.53f,0.56f});
+    float yb = (f + 0.55f) * fh;
+    float sky = (float)f / (float)(floors - 1);
+    for(int s = 0; s < 4; s++){
+      quat r = quat::axisAngle({0,1,0}, FA[s].yaw);
+      v3 c{ FA[s].nx * 0.5f, yb, FA[s].nz * 0.5f };
+      windowPane(b, c, r, 0.430f, fh * 0.255f, fh * 0.055f, 0.0026f,
+                 trim, rng, sky, true);
     }
   }
-  b.mat(0.62f, 0.05f);
-  b.box({0, 1.015f, 0}, {0.52f, 0.018f, 0.52f}, {0.34f, 0.35f, 0.38f});
+  b.mat(0.54f, 0.06f); b.surface(4.0f);
+  for(int s = 0; s < 4; s++){
+    quat r = quat::axisAngle({0,1,0}, FA[s].yaw);
+    v3 tan = r.rotate(v3{1,0,0});
+    v3 c{ FA[s].nx * 0.5f, 0.5f, FA[s].nz * 0.5f };
+    for(int k = -4; k <= 4; k++)
+      b.box(c + tan * (k * 0.1135f), {0.0135f, 0.5f, 0.0085f}, wall, r);
+  }
+
+  // balconies front and back, first floor up
+  for(int f = 1; f < floors; f++){
+    float y = (f + 0.55f) * fh;
+    for(int s = 0; s < 3; s += 2){                 // +Z and -Z
+      quat r = quat::axisAngle({0,1,0}, FA[s].yaw);
+      v3 n{ FA[s].nx, 0, FA[s].nz };
+      b.mat(0.56f, 0.10f); b.surface(4.0f);
+      b.box({n.x * 0.556f, y - fh * 0.295f, n.z * 0.556f},
+            {0.325f, fh * 0.042f, 0.056f}, dark, r);
+      b.mat(0.40f, 0.45f); b.surface(-1.0f);
+      b.box({n.x * 0.610f, y - fh * 0.155f, n.z * 0.610f},
+            {0.325f, fh * 0.135f, 0.007f}, {0.52f, 0.56f, 0.60f}, r);
+      v3 tan = r.rotate(v3{1,0,0});
+      for(int k = -1; k <= 1; k += 2)
+        b.box(v3{n.x * 0.582f, y - fh * 0.155f, n.z * 0.582f} + tan * (0.325f * k),
+              {0.007f, fh * 0.135f, 0.029f}, {0.52f, 0.56f, 0.60f}, r);
+    }
+  }
+
+  // ground floor: an entrance with a canopy, flanked by two shop units
+  b.mat(0.09f, 0.30f); b.surface(-1.0f);
+  b.box({0, fh * 0.46f, 0.502f}, {0.400f, fh * 0.34f, 0.006f},
+        {0.190f, 0.228f, 0.275f}, quat(), 1.0f, 0.94f);
+  b.mat(0.50f, 0.0f);
+  b.box({0, fh * 0.30f, 0.509f}, {0.070f, fh * 0.30f, 0.010f}, {0.26f, 0.20f, 0.17f});
+  b.mat(0.55f, 0.14f);
+  b.frustumBox({0, fh * 0.80f, 0.556f}, 0.165f, 0.058f, 0.165f, 0.018f,
+               0.010f, dark);
+  b.mat(0.90f, 0.0f);
+  b.box({0, 0.004f, 0.556f}, {0.22f, 0.004f, 0.050f}, {0.40f, 0.34f, 0.24f});
+
+  parapet(b, 0.514f, 0.514f, 1.0f, fh * 0.14f, 0.016f, wall, dark);
+  roofPlant(b, 0.50f, 0.50f, 1.0f + fh * 0.07f, fh * 0.40f, dark);
   b.finish(out);
 }
 

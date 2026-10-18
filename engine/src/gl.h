@@ -94,6 +94,7 @@ struct Mesh {
   GLuint vao = 0, vbo = 0, ebo = 0, ivbo = 0;
   GLsizei indexCount = 0;
   int     instanceCount = 0;
+  int     instanceCap   = 0;
   m::v3   boundsMin{0,0,0}, boundsMax{0,0,0};
 
   void upload(const std::vector<Vertex>& verts, const std::vector<uint32_t>& idx){
@@ -146,6 +147,7 @@ struct Mesh {
   };
 
   void setupInstancing(int maxInstances){
+    instanceCap = maxInstances;
     glBindVertexArray(vao);
     glGenBuffers(1, &ivbo);
     glBindBuffer(GL_ARRAY_BUFFER, ivbo);
@@ -166,11 +168,15 @@ struct Mesh {
   }
 
   void updateInstances(const std::vector<Instance>& inst){
+    // Clamp to what we actually allocated. An over-long upload is rejected
+    // whole by glBufferSubData, so the draw would quietly keep last frame's
+    // instances rather than show the extra ones.
     instanceCount = (int)inst.size();
-    if(!ivbo || inst.empty()) return;
+    if(instanceCap > 0 && instanceCount > instanceCap) instanceCount = instanceCap;
+    if(!ivbo || instanceCount <= 0) return;
     glBindBuffer(GL_ARRAY_BUFFER, ivbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0,
-                    (GLsizeiptr)(inst.size() * sizeof(Instance)), inst.data());
+                    (GLsizeiptr)((size_t)instanceCount * sizeof(Instance)), inst.data());
   }
 
   void draw() const {

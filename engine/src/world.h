@@ -146,7 +146,7 @@ struct World {
   // ~140k props and buildings every single frame.
   static constexpr float BUCKET = 500.0f;
   static constexpr int   BN = (int)(SIZE / BUCKET);
-  std::vector<std::vector<int>> propBuckets, bldBuckets;
+  std::vector<std::vector<int>> propBuckets, bldBuckets, edgeBuckets;
 
   static int bucketIndex(float x, float z){
     int bx = (int)(x / BUCKET), bz = (int)(z / BUCKET);
@@ -157,10 +157,67 @@ struct World {
   void buildBuckets(){
     propBuckets.assign(BN * BN, {});
     bldBuckets.assign(BN * BN, {});
+    edgeBuckets.assign(BN * BN, {});
     for(size_t i = 0; i < props.size(); i++)
       propBuckets[bucketIndex(props[i].x, props[i].z)].push_back((int)i);
     for(size_t i = 0; i < buildings.size(); i++)
       bldBuckets[bucketIndex(buildings[i].x, buildings[i].z)].push_back((int)i);
+    // A road is a long thing, so it goes into every bucket it crosses. The
+    // step is a fraction of a bucket, which is what makes a single-bucket
+    // lookup in streetY() safe: an edge that comes within a few metres of a
+    // point has to pass through that point's own bucket.
+    for(size_t i = 0; i < edges.size(); i++){
+      const RoadEdge& e = edges[i];
+      if(e.bridge) continue;
+      int steps = (int)(e.len / (BUCKET * 0.0625f)) + 1;
+      int last = -1;
+      for(int st = 0; st <= steps; st++){
+        float t = (float)st / steps;
+        int b = bucketIndex(m::lerpf(e.x1, e.x2, t), m::lerpf(e.z1, e.z2, t));
+        if(b != last){ edgeBuckets[b].push_back((int)i); last = b; }
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- streets
+  // The cross-section the road mesh is built to. Kept here rather than in the
+  // renderer because the simulation needs the same numbers: if these two ever
+  // disagree, people walk through the pavement.
+  static constexpr float ROAD_LIFT = 0.38f;   // tarmac above levelled terrain
+  static constexpr float KERB_RUN  = 0.055f;  // kerb face, horizontally
+  static constexpr float KERB_RISE = 0.17f;   // kerb face, vertically
+  static constexpr float WALK_OUT  = 4.2f;    // pavement width past the kerb
+
+  // Absolute height of the walkable street surface, or a large negative
+  // number away from the roads.
+  //
+  // This exists because everything that walks or drives took its height
+  // straight from the heightmap, which put the player's feet 38 cm inside the
+  // asphalt and buried the bottom of every wheel. Nothing reads as unfinished
+  // faster than characters wading through the ground they are standing on.
+  float streetY(float wx, float wz) const {
+    if(edgeBuckets.empty()) return -1e9f;
+    float best = -1e9f;
+    for(int ei : edgeBuckets[bucketIndex(wx, wz)]){
+      const RoadEdge& e = edges[ei];
+      float ax = e.x2 - e.x1, az = e.z2 - e.z1;
+      float L2 = ax * ax + az * az;
+      if(L2 < 1e-6f) continue;
+      float t = m::clampf(((wx - e.x1) * ax + (wz - e.z1) * az) / L2, 0.0f, 1.0f);
+      float cx = e.x1 + ax * t, cz = e.z1 + az * t;
+      float dx = wx - cx, dz = wz - cz;
+      float d  = std::sqrt(dx * dx + dz * dz);
+      float hw = e.width * 0.5f;
+      float kerb = hw + KERB_RUN, outer = hw + WALK_OUT;
+      if(d > outer) continue;
+      float lift;
+      if(d <= hw)        lift = ROAD_LIFT;
+      else if(d <= kerb) lift = ROAD_LIFT + KERB_RISE * (d - hw) / KERB_RUN;
+      else               lift = ROAD_LIFT + KERB_RISE * (outer - d) / (outer - kerb);
+      float y = terr.sample(cx, cz) + lift;
+      if(y > best) best = y;
+    }
+    return best;
   }
   // call fn(index) for every item whose bucket is within `radius` of (x,z)
   template <typename F>
@@ -508,12 +565,26 @@ struct World {
   }
 
   // Carve the terrain flat under every road so the tarmac doesn't float or sink.
+  //
+  // The corridor has to be a good deal wider than the road. A heightmap cell
+  // is 31 m across, so the ground between two samples is whatever bilinear
+  // interpolation says — flatten only the cells under the tarmac and the
+  // ground still climbs across the pavement. It was climbing 1.2 m over the
+  // 12 m from centreline to kerb, which buried that side of the street.
   void flattenRoads(){
     for(const auto& e : edges){
       if(e.bridge) continue;
       int steps = std::max(2, (int)(e.len / (HSTEP * 0.5f)));
-      float halfW = e.width * 0.5f + 8.0f;
-      int cells = std::max(1, (int)(halfW / HSTEP) + 1);
+      // A heightmap cell is 31 m across, so a corridor only as wide as the
+      // street cannot come out flat — bilinear interpolation keeps pulling it
+      // toward the untouched cells either side. In town that is fine to fix
+      // by brute force: downtown ground really is flat for fifty metres
+      // around a street. Out in the country the corridor stays narrow so the
+      // hills keep their shape.
+      bool town  = (e.zone <= 2);
+      float hard  = e.width * 0.5f + (town ? 44.0f : WALK_OUT + 4.0f);
+      float halfW = hard + (town ? 34.0f : 26.0f);
+      int cells = std::max(1, (int)(halfW / HSTEP) + 2);
       for(int s = 0; s <= steps; s++){
         float t = (float)s / steps;
         float x = m::lerpf(e.x1, e.x2, t), z = m::lerpf(e.z1, e.z2, t);
@@ -527,8 +598,10 @@ struct World {
             if(terr.biome[i] == B_WATER) continue;
             float dx = (gx + 0.5f) * HSTEP - x, dz = (gz + 0.5f) * HSTEP - z;
             float d = std::sqrt(dx*dx + dz*dz);
-            float w = m::clampf(1.0f - d / (halfW * 1.9f), 0.0f, 1.0f);
-            terr.height[i] = m::lerpf(terr.height[i], target, w * 0.85f);
+            float w, k;
+            if(d <= hard){ w = 1.0f; k = 0.97f; }
+            else { w = m::clampf(1.0f - (d - hard) / (halfW - hard), 0.0f, 1.0f); k = 0.85f; }
+            terr.height[i] = m::lerpf(terr.height[i], target, w * k);
           }
         }
       }
@@ -587,9 +660,12 @@ struct World {
           float along = high ? rng.range(26, 54) : mid ? rng.range(22, 42) : rng.range(15, 26);
           if(t + along > L - margin) break;
           float depth = high ? rng.range(24, 48) : mid ? rng.range(20, 36) : rng.range(14, 24);
-          float gap   = high ? rng.range(10, 24) : rng.range(6, 16);
+          // Tighter frontage. The old gaps and the one-in-four skip left so
+          // much bare ground between neighbours that a downtown street read
+          // as a plain with towers parked on it rather than as a street.
+          float gap   = high ? rng.range(5, 13) : rng.range(3.5f, 10);
 
-          if(rng.f() < (high ? 0.24f : sub ? 0.24f : 0.20f)){ t += along + gap; continue; }
+          if(rng.f() < (high ? 0.10f : sub ? 0.16f : 0.09f)){ t += along + gap; continue; }
 
           float cAlong = t + along * 0.5f;
           float off = e.width * 0.5f + depth * 0.5f + 3.0f;

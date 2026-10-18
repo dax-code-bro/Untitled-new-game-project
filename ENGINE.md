@@ -291,3 +291,100 @@ street is architecture, not texels.
 
 Both halves matter — scanned materials make a wall convincing when you walk up
 to it, and large-scale structure makes the street convincing from across it.
+
+---
+
+## Acting on that finding: structure, not texels
+
+The section above said the fix for a flat-looking street is architecture. This
+is what that turned out to mean in practice.
+
+### Where detail can go
+
+Every building mesh is a unit cube that the instance matrix scales, and each
+one is drawn hundreds of times a frame, so one vertex in a mesh costs a
+thousand on screen. The budget has to follow viewing distance:
+
+| archetype | seen from | gets |
+|---|---|---|
+| tower | across the map | full-height mullions, slab lips, setbacks, parapet, roof plant — and no per-window trim, which the mip chain would eat anyway |
+| apartment | down the street | piers, string courses, balconies, glazing on all four sides |
+| house, shop | the pavement | window reveals, sills, canopies, doors, porches |
+
+The mullions are the clearest case. Running them floor by floor would have
+cost 32 boxes per floor; running them continuously from base to parapet costs
+28 for the whole block, and continuity is the entire point — an unbroken
+vertical line is what gives a tower its grain from a kilometre away.
+
+### Openings are made by projecting the trim, not recessing the pane
+
+A dark rectangle flush with a wall reads as a sticker at every distance. The
+instinct is to push the glass back into the wall, but the wall is one opaque
+box, so a recessed pane is simply inside it and invisible.
+
+The trick is the other way round: leave the pane where the wall is and stand
+the sill and lintel *proud* of it. The opening is then genuinely in a recess
+relative to its own trim, and it shadows itself — which is the part that
+survives distance.
+
+One trap: these offsets are in unit space, so they are multiplied by the
+building's depth. A projection of 0.0075 looks harmless until it is applied to
+a 30 m deep block, where it becomes a 60 cm concrete ledge over every window.
+
+### Daylight glass is not black
+
+The panes started out at about 4% reflectance, which is a hole in a wall. Three
+things were stacked on an already dark albedo: a dark base colour, a per-face
+shading term, and an ambient-occlusion multiplier. Outdoors in daylight you are
+not looking *through* a window, you are looking at the sky reflected in it, and
+that is a mid blue-grey. The recess shadow comes from the trim; it does not
+need faking in the vertex colour as well.
+
+What does belong in the vertex colour is variation. No two panes share one: a
+sky-reflection gradient by height, a per-pane jitter for blinds and dirt, the
+occasional curtained or lit room. It rides along for free and it is most of
+what makes a facade look inhabited rather than printed.
+
+### Urban ground was a sheet of paper
+
+Paved ground reflects 8–20% of the light that hits it. Ours was at 0.30, and
+under a midday sun ACES takes 0.30 most of the way to white, so the city sat on
+a blank plain. Halving the albedo fixed the tone; the *variety* needed a second
+fix, because three octaves of value noise pile up around 0.5 — the central
+limit theorem does not care what the thresholds wanted — so a threshold test on
+the raw value picks one branch nearly everywhere. Stretching the distribution
+about its midpoint is what turns a uniform grey into car parks, service yards,
+hardstanding and worn verges at city-block scale.
+
+### Streets
+
+The old cross-section was two flat grey strips either side of the tarmac.
+From eye level that is not a kerb, it is a ramp: the road just gets lighter.
+It is now a pavement rising to a kerb with a real face, and that face carries
+its own normals — which means duplicating the vertices at the crease, because
+sharing them averages the normals straight back into mush.
+
+Two things fell out of that:
+
+- **Everything was standing inside the road.** The tarmac sits 38 cm above the
+  levelled terrain, but the player, every car and every pedestrian took their
+  height straight from the heightmap. Feet were below the asphalt and the
+  bottom of every wheel was buried. `World::streetY()` now returns the real
+  street surface and `terrainH()` takes the higher of the two, so one call site
+  lifts the whole population out of the ground.
+- **A heightmap cell is 31 m across.** Flattening only the cells under the
+  tarmac still leaves the ground climbing across the pavement — bilinear
+  interpolation keeps pulling it toward the untouched cells either side. It was
+  climbing 1.2 m over the 12 m from centreline to kerb, which buried that side
+  of the street. In town the corridor is now flattened hard for 44 m either
+  side, which is true to how flat downtown ground really is; in the country it
+  stays narrow so the hills keep their shape. As a backstop the outer edge of
+  the pavement follows the ground it meets, so it can never sink under it.
+
+### A latent bug this turned up
+
+`Mesh::updateInstances()` uploaded `inst.size()` instances without checking
+what was allocated. An over-long `glBufferSubData` is rejected whole, so the
+draw would have quietly kept the previous frame's instances rather than show
+the extra ones — invisible until a dense enough street made it happen. It now
+clamps to the allocated capacity.
