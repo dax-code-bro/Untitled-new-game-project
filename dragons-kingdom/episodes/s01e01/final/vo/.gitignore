@@ -1,0 +1,10 @@
+# Voice takes are rebuilt by ../tools/make_final_vo.py and are never committed.
+# Commit only the scripts, JSON and Markdown.
+*.wav
+*.flac
+*.aiff
+*.mp3
+*.m4a
+*.aac
+*.ogg
+*.opus
