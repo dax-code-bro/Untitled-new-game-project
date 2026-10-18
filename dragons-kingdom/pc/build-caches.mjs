@@ -8,6 +8,7 @@
 //                                                nature, humans, architecture, props, voice)
 //   options: --python PATH  Blender's Python (bpy 4.2) - default pc/.venv-bpy (made by the setup
 //                           scripts) or DK_BPY_PYTHON;  --jobs N  parallel human builds;
+//            --humans id,id only these characters (e.g. --only humans --humans abby,remi --force);
 //            --force        rebuild even if up to date;  --with-voice  also the Kokoro voice models
 //
 // Idempotent and resumable: every finished piece is recorded in a stamp
@@ -298,7 +299,11 @@ export const FAMILIES = [
       let ids;
       try { ids = await humanIds(py); } catch (e) { return { ok: false, problem: e.message }; }
       const st = readStamp(cache); st.ids = ids; writeJson(stampFile(cache), st);
-      const todo = ids.filter((id) => ctx.force || !exists(path.join(cache, `${id}.json`)) || !exists(path.join(cache, `${id}.bin`)) || (st.entries[id] ? st.entries[id].hash !== hash : !ctx.trustUnstamped));
+      if (ctx.humans) {
+        const unknown = ctx.humans.filter((id) => !ids.includes(id));
+        if (unknown.length) return { ok: false, problem: `--humans: unknown id(s) ${unknown.join(', ')} (build.py --list shows them)` };
+      }
+      const todo = ids.filter((id) => !ctx.humans || ctx.humans.includes(id)).filter((id) => ctx.force || !exists(path.join(cache, `${id}.json`)) || !exists(path.join(cache, `${id}.bin`)) || (st.entries[id] ? st.entries[id].hash !== hash : !ctx.trustUnstamped));
       if (!todo.length) { say(`    all ${ids.length} characters up to date`); return { ok: true }; }
       const cores = os.availableParallelism?.() ?? os.cpus().length;
       const jobs = ctx.jobs || Math.max(1, Math.min(6, Math.floor(cores / 4), Math.floor(os.totalmem() / 2 ** 30 / 4)));
@@ -374,6 +379,7 @@ async function main() {
     else if (a === '--with-voice') opt.voice = true;
     else if (a === '--only') opt.only = new Set(argv[++i].split(','));
     else if (a === '--python') opt.python = argv[++i];
+    else if (a === '--humans') opt.humans = argv[++i].split(',').map((x) => x.trim()).filter(Boolean);
     else if (a === '--jobs') opt.jobs = Math.max(1, parseInt(argv[++i], 10) || 1);
     else if (a === '--rebuild-unstamped') opt.trustUnstamped = false;
     else if (a === '-h' || a === '--help') { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 18).map((l) => l.replace(/^\/\/ ?/, '')).join('\n')); return 0; }
