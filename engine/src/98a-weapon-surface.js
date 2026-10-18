@@ -17,6 +17,12 @@ Engine.prototype.weaponSurface = function (root) {
      so a shell marked from vertices is a shell full of holes. */
   const tris = [];
   const walk = (a, local) => {
+    /* Not the hands. The viewmodel rig's bones are parented to the weapon and kept, undrawn
+       (`noDraw`), to pose the body arms; asked for after the arms were made, this walk took that
+       invisible rig for part of the gun -- a block of finger bones round the grip that the trigger
+       guard's opening, the gap behind the magazine and the air under the handguard all read as
+       solid metal in. */
+    if (a !== root && a.noDraw) return;
     const geo = a.mesh && game.geometryOf(a.mesh);
     if (geo && geo.positions) {
       const q = geo.positions;
@@ -314,6 +320,15 @@ Engine.prototype.weaponSurface = function (root) {
     }
   }
   const inside = (x, y, z) => {
+    /* Off every seam. These guns are built in mirrored halves and lofted rings, so their edges lie
+       on round numbers -- the centre plane z = 0 above all -- and a ray down a shared edge lands in
+       the shadow of both triangles on it (the test below is inclusive, as it must be for a ray
+       through a vertex), counts the crossing twice and flips the parity. On the M4 that made the
+       whole empty space between the grip and the magazine solid metal at z = 0 and striped it
+       solid/empty every 8 mm at z = -5 mm, and every scan that steps on a round grid -- the
+       trigger-guard search, the hand fit -- was reading those stripes. A few micrometres off the
+       axis is nothing to a finger and never on an edge. */
+    y += 2.71e-6; z += 1.37e-6;
     const cell = pgrid.get(pkey(Math.floor(y / PCELL), Math.floor(z / PCELL)));
     if (!cell) return false;
     let ahead = 0, behind = 0;

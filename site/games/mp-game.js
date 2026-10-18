@@ -1186,20 +1186,23 @@
     };
   }
 
-  function buildGun(game, id) {
+  /* `at` is for the hand audit and tests, which photograph a gun where they can see it; the game
+     builds it out of the way and the viewmodel moves it. */
+  function buildGun(game, id, at) {
     var made = null;
     var fn = VM_BESPOKE[id];
+    at = at || [0, -90, 0];
     if (fn && typeof game[fn] === 'function') {
-      try { made = game[fn]({ at: [0, -90, 0], physics: false }); } catch (e) { made = null; }
+      try { made = game[fn]({ at: at, physics: false }); } catch (e) { made = null; }
     }
     if (!made) {
-      try { made = game.serviceArm(id, { at: [0, -90, 0], physics: false }); } catch (e) { made = null; }
+      try { made = game.serviceArm(id, { at: at, physics: false }); } catch (e) { made = null; }
     }
     if (!made && VM_FALLBACK[id]) {
-      try { made = game.serviceArm(VM_FALLBACK[id], { at: [0, -90, 0], physics: false }); } catch (e) { made = null; }
+      try { made = game.serviceArm(VM_FALLBACK[id], { at: at, physics: false }); } catch (e) { made = null; }
     }
     if (!made) {
-      try { made = game.serviceArm('m4', { at: [0, -90, 0], physics: false }); } catch (e) { made = null; }
+      try { made = game.serviceArm('m4', { at: at, physics: false }); } catch (e) { made = null; }
     }
     /* AND THE HANDS. The engine has had a fully solved pair of them all
        along -- fingers that close onto the weapon's own surface until
@@ -4073,5 +4076,6 @@
      under a different name, and one -- the MG42 -- genuinely has no
      model of its own and borrows the MG34's. A test that cannot tell
      those apart reports four failures and means one. */
-  W.MP_GAME = { start: start, KEYS: KEYS, VM_BESPOKE: VM_BESPOKE, VM_FALLBACK: VM_FALLBACK };
+  W.MP_GAME = { start: start, KEYS: KEYS, VM_BESPOKE: VM_BESPOKE, VM_FALLBACK: VM_FALLBACK,
+    buildGun: buildGun, handsFor: handsFor };
 })();
