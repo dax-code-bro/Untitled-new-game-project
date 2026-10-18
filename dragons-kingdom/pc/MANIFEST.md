@@ -24,10 +24,10 @@ CPU-bound steps.
 | HDRIs, photo-scanned PBR materials, scanned models, MakeHuman base data (115 entries in `assets-lib/manifest.json`; 52 "available", every file SHA-256 checked) | `assets-lib/hdri`, `pbr`, `model`, `human`, `texture` | 872 MB (hdri 261, pbr 406, human 171, model 35 MB) | `node assets-lib/fetch.mjs` | 1-5 min | every set |
 | 63 more Poly Haven / ambientCG assets (status "blocked": that cloud machine's network refuses those hosts; a home connection does not) | same folders | about 1.5-2 GB (ambientCG zips: 142 MB) | `node assets-lib/fetch.mjs` (the same command - it resolves them through the Poly Haven API; failures there are reported, not fatal) | 5-15 min | nothing yet (no scene uses them); downloaded so later scenes can |
 | **Caches baked from the code** | | | | | |
-| Human characters: 48 ids (Remi, Abby, Alexandria, Fall, the king, riders, crowd, children...) - MakeHuman body + Blender cloth garments + hair + props + baked AO | `scenes/lib/humans/cache/<id>.json + .bin` | 1.1 GB | `node pc/build-caches.mjs --only humans` (runs `scenes/lib/humans/offline/build.py --only <id>` with bpy, several at once, resumable per character) | 1.5-2 h on 4 cores; close-up characters 4-14 min each | every shot with people |
-| Landscape: Verdor coast land + cliff tiles (LOD 0-3), prologue island, the land around Cling (Node, seeded erosion) | `scenes/lib/nature/cache/verdor` (404 MB: tiles 397 MB), `island` (7.4 MB), `cling` (7.5 MB) | 419 MB | `node pc/build-caches.mjs --only nature` (the four commands in `scenes/lib/nature/README.md`, in that order) | 6-9 min | coast, flight, Cling sets |
-| Architecture cloth bakes: the nest linen, the treatment-room table cloth (bpy) | `scenes/lib/architecture/cache/*.json` | 160 KB | `node pc/build-caches.mjs --only architecture` (`offline/nest_cloth.py`, `table_cloth.py`) | under 1 min | birthing chamber, treatment room |
-| Prop cloth bakes: prologue sail (full / eased), market awnings, counter cloth, banners (still / breeze / gust), 6 pennants (bpy) | `scenes/lib/props/cache/*.json` | 484 KB | `node pc/build-caches.mjs --only props` (`offline/sail.py`, `drapes.py`) | 1-2 min | prologue boat, Cling festival |
+| Human characters: 48 ids (Remi, Abby, Alexandria, Fall, the king, riders, crowd, children...) - MakeHuman body + Blender cloth garments + hair + props + baked AO | `scenes/lib/humans/cache/<id>.json + .bin` | 1.1 GB | `node pc/build-caches.mjs --only humans` (runs `scenes/lib/humans/offline/build.py --only <id>` with bpy, several at once, resumable per character) | 1.5-2 h on 4 cores; close-up characters 4-14 min each (guard1 measured: 80 s) | every shot with people |
+| Landscape: Verdor coast land + cliff tiles (LOD 0-3), prologue island, the land around Cling (Node, seeded erosion) | `scenes/lib/nature/cache/verdor` (404 MB: tiles 397 MB), `island` (7.4 MB), `cling` (7.5 MB) | 419 MB | `node pc/build-caches.mjs --only nature` (the four commands in `scenes/lib/nature/README.md`, in that order) | 14.6 min measured in a clean clone (land 1m22, cliffs 10m04, island 1m19, Cling 1m52) | coast, flight, Cling sets |
+| Architecture cloth bakes: the nest linen, the treatment-room table cloth (bpy) | `scenes/lib/architecture/cache/*.json` | 160 KB | `node pc/build-caches.mjs --only architecture` (`offline/nest_cloth.py`, `table_cloth.py`) | 1m25 measured | birthing chamber, treatment room |
+| Prop cloth bakes: prologue sail (full / eased), market awnings, counter cloth, banners (still / breeze / gust), 6 pennants (bpy) | `scenes/lib/props/cache/*.json` | 484 KB | `node pc/build-caches.mjs --only props` (`offline/sail.py`, `drapes.py`) | 2m28 measured | prologue boat, Cling festival |
 | Dragons / creatures (Charcoal, Leaf, Starlight, the hatchling, the scout) | - | 0 | nothing: built procedurally from `scenes/lib/creatures` in each scene's `setup()` (the "setup" seconds per shot) | - | - |
 | **Optional** | | | | | |
 | Kokoro-82M voice models `kokoro-v1.0.int8.onnx` + `voices-v1.0.bin` (Apache-2.0, SHA-256 checked) | `episodes/s01e01/preview/.cache/kokoro/` | about 115 MB | `node pc/build-caches.mjs --only voice` (or setup with `-WithVoice` / `--with-voice`) | 1 min | only for making computer voice takes (`preview/tools/make_vo.py`, its own Python venv: `preview/tools/requirements-vo.txt`, plus espeak-ng and SoX); **not** needed to render pictures |
@@ -62,14 +62,19 @@ example, `scenes/lib/humans/offline/garments.py`, the next run rebuilds the char
 that only changes scenes rebuilds nothing. Caches made by hand without a stamp (the cloud machine)
 are accepted when their files exist.
 
-Determinism (measured 2026-10-18 in a clean clone on the cloud machine): the architecture bakes
-(nest linen, table cloth), the prologue sails and the pennants came out **byte-identical** to the
-cloud's caches. The market-awning bake (`scenes/lib/props/offline/drapes.py`) is **not
-reproducible**: two runs of the same code on the same machine differ by up to 75 mm per cloth
-vertex (Blender's cloth solver with collisions is not deterministic). The human characters also
-use Blender cloth, so expect small fold differences there too. Inside one computer this does not
-matter, because every shot reads the same cache. But the awnings and clothes on the PC can differ in
-fold detail from the cloud's previews. If a cache is rebuilt in the middle of the episode, finished
-shots keep the old folds: `npm run episode -- --status` lists them as stale, and
-`--rerender-stale` renders them again. The nature bakes are seeded JavaScript and should give the
-same bytes everywhere (see the clean-clone check in the report).
+Reproducibility (measured 2026-10-18 in a clean clone on the cloud machine, against the cloud's
+own caches):
+
+| Cache | Result |
+|---|---|
+| nature: land, island, Cling | byte-identical to the cloud's |
+| nature: Verdor cliffs | all 2716 tiles byte-identical; `cliffs.json` differs only in its `bakedAt` time. The cloud's folder also holds 8 orphan tiles from an older bake that no scene lists |
+| architecture: nest linen, table cloth; props: both sails, the pennants | byte-identical |
+| props: market awnings (`drapes.py`) | **not reproducible**: two runs of the same code on the same machine differ by up to 75 mm per cloth vertex |
+| humans (tested: guard1) | two builds on the same machine are byte-identical. They differ from the cloud's guard1, which was built at 01:28 on 2026-10-12, before the last change to `scenes/lib/humans/offline` (02:18 the same day). So the cloud's character caches may be one code revision behind the PC's |
+
+Within one computer the awning difference does not matter, because every shot reads the same
+cache. But the awnings, and any characters the cloud has not rebuilt, can differ in detail from
+the cloud's previews. If a cache is rebuilt in the middle of the episode, finished shots keep
+the old version: `npm run episode -- --status` lists them as stale, and `--rerender-stale`
+renders them again.
