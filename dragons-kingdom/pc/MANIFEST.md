@@ -62,7 +62,14 @@ example, `scenes/lib/humans/offline/garments.py`, the next run rebuilds the char
 that only changes scenes rebuilds nothing. Caches made by hand without a stamp (the cloud machine)
 are accepted when their files exist.
 
-Determinism: the nature bakes are seeded JavaScript and give the same bytes on every computer.
-The Blender cloth simulations (humans, cloth bakes) are seeded too, but floating-point details
-can differ slightly between operating systems and CPUs, so a character built on Windows may differ
-from the cloud build by fractions of a millimetre - not visibly.
+Determinism (measured 2026-10-18 in a clean clone on the cloud machine): the architecture bakes
+(nest linen, table cloth), the prologue sails and the pennants came out **byte-identical** to the
+cloud's caches. The market-awning bake (`scenes/lib/props/offline/drapes.py`) is **not
+reproducible**: two runs of the same code on the same machine differ by up to 75 mm per cloth
+vertex (Blender's cloth solver with collisions is not deterministic). The human characters also
+use Blender cloth, so expect small fold differences there too. Inside one computer this does not
+matter, because every shot reads the same cache. But the awnings and clothes on the PC can differ in
+fold detail from the cloud's previews. If a cache is rebuilt in the middle of the episode, finished
+shots keep the old folds: `npm run episode -- --status` lists them as stale, and
+`--rerender-stale` renders them again. The nature bakes are seeded JavaScript and should give the
+same bytes everywhere (see the clean-clone check in the report).
