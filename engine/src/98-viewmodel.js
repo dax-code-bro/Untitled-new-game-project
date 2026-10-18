@@ -2383,7 +2383,21 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              than one enclosed gap forward of the web -- a magazine well,
              a sling loop, the space inside a bipod -- and the trigger is
              always the first one. */
-          const score = enc + d * 2 - (x - at.x) * 0.35;
+          let score = enc + d * 2 - (x - at.x) * 0.35;
+          /* AND NOTHING BUT THE RECEIVER ABOVE IT. A trigger guard hangs straight off the bottom of
+             the receiver, so going up from inside it the first metal is the receiver itself. The
+             space UNDER the guard -- boxed in by the guard's bar above, the grip behind and the
+             magazine ahead -- passes every test above just as well, and on the AK it won: the
+             trigger finger was sent 46 mm below its knuckle into the air under the guard. Up from
+             there the scan crosses the bar, then air again (the real opening), then the receiver:
+             two pieces of metal over it, not one. */
+          let walls = 0, wasMetal = false;
+          for (let yy = y + 0.0015; yy <= yTop + 0.012; yy += 0.0015) {
+            const mt = solidAt(x, yy, z);
+            if (mt && !wasMetal) walls++;
+            wasMetal = mt;
+          }
+          if (walls >= 2) score -= 6;
           /* Several, not one.
            *
            * Recognising a hole and choosing the right one are different

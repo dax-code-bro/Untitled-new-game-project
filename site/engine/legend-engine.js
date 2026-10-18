@@ -50626,7 +50626,21 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              than one enclosed gap forward of the web -- a magazine well,
              a sling loop, the space inside a bipod -- and the trigger is
              always the first one. */
-          const score = enc + d * 2 - (x - at.x) * 0.35;
+          let score = enc + d * 2 - (x - at.x) * 0.35;
+          /* AND NOTHING BUT THE RECEIVER ABOVE IT. A trigger guard hangs straight off the bottom of
+             the receiver, so going up from inside it the first metal is the receiver itself. The
+             space UNDER the guard -- boxed in by the guard's bar above, the grip behind and the
+             magazine ahead -- passes every test above just as well, and on the AK it won: the
+             trigger finger was sent 46 mm below its knuckle into the air under the guard. Up from
+             there the scan crosses the bar, then air again (the real opening), then the receiver:
+             two pieces of metal over it, not one. */
+          let walls = 0, wasMetal = false;
+          for (let yy = y + 0.0015; yy <= yTop + 0.012; yy += 0.0015) {
+            const mt = solidAt(x, yy, z);
+            if (mt && !wasMetal) walls++;
+            wasMetal = mt;
+          }
+          if (walls >= 2) score -= 6;
           /* Several, not one.
            *
            * Recognising a hole and choosing the right one are different
@@ -53259,8 +53273,16 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
     // Out from the middle of the frame to the left until clear of it, at a given station.
     const leftOf = (q) => { const p = [q[0], q[1], 0]; for (let n = 0; n < 40 && sf(p[0], p[1], p[2]) < rT; n++) p[2] -= 0.0015; return p; };
     // The base: behind the backstrap, a little to the right of centre (where the web of the hand is).
-    const b0 = [rec.thumbPivot[0], rec.thumbPivot[1], 0.004];
+    let b0 = [rec.thumbPivot[0], rec.thumbPivot[1], 0.004];
     for (let n = 0; n < 30 && sf(b0[0], b0[1], b0[2]) < rT; n++) b0[0] -= 0.0015;
+    /* Where a stock comes down behind the grip (the Scattergun's, the MG 42's) there is no clear
+       place behind the backstrap to step back to, and the base was left 15 mm inside the wood.
+       Then the web stays on its own side of the grip, stepped out to the right until clear -- or
+       the thumb stays where the grip solve put it. */
+    if (sf(b0[0], b0[1], b0[2]) < rT * 0.8) {
+      b0 = rec.thumbPivot.slice();
+      for (let n = 0; n < 15 && sf(b0[0], b0[1], b0[2]) < rT; n++) b0[2] += 0.0015;
+    }
     const tip = leftOf(rec.thumbTip);
     // The middle joint between them, held off the corner of the grip it goes round.
     const mid = leftOf([b0[0] + (tip[0] - b0[0]) * 0.42, (b0[1] + tip[1]) / 2, 0]);
@@ -53269,7 +53291,7 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
     const push = (q) => { const p = q.slice(); for (let n = 0; n < 30 && sf(p[0], p[1], p[2]) < rT; n++) p[2] -= 0.0012; return p; };
     const d0 = nrm(sub(mid, b0)), M = push(add(b0, mul(d0, L0)));
     const d1 = nrm(sub(tip, M)), T = push(add(M, mul(d1, L1)));
-    if (sf(M[0], M[1], M[2]) > rT * 0.8 && sf(T[0], T[1], T[2]) > rT * 0.8) {
+    if (sf(b0[0], b0[1], b0[2]) > rT * 0.8 && sf(M[0], M[1], M[2]) > rT * 0.8 && sf(T[0], T[1], T[2]) > rT * 0.8) {
       rec.thumbPivot = b0; rec.thumbMid = M; rec.thumbTip = T;
       // Its bend: across the thumb and the line into the gun.
       let k = nrm(cross(d0, [0, 0, 1]));
@@ -53837,12 +53859,19 @@ function _fitFiringHand(hands, opts) {
     const Y = top - R - 0.0015;
     const fy = frontAt(Y, f0 + 0.010);
     if (fy == null) break;
-    const X = fy - 0.008;
-    const err = Math.hypot(X - m[0], Y - m[1]);
+    let X = fy - 0.008;
+    /* And not into the stock. Raising the hand raises the web of it, and on a gun whose stock
+       or receiver comes down behind the grip (the Scattergun, the MG 42) the thumb's base went
+       14 mm into the wood. Buried, it counts against the solve and the next step goes back down. */
+    const T = rec.thumbPivot;
+    const buried = T ? Math.max(0, 0.007 - sf(T[0], T[1], T[2])) : 0;
+    let tY = Y;
+    if (buried > 0) tY = Math.min(Y, m[1] - buried * 1.2);
+    const err = Math.hypot(X - m[0], Y - m[1]) + 3 * buried;
     if (!best || err < best.err) best = { at: at.slice(), err };
     if (err < 0.002) break;
     const nx = Math.max(base[0] - 0.03, Math.min(base[0] + 0.02, at[0] + 0.85 * (X - m[0])));
-    const ny = Math.max(base[1] - 0.03, Math.min(base[1] + 0.07, at[1] + 0.85 * (Y - m[1])));
+    const ny = Math.max(base[1] - 0.03, Math.min(base[1] + 0.07, at[1] + 0.85 * (tY - m[1])));
     if (Math.abs(nx - at[0]) < 0.001 && Math.abs(ny - at[1]) < 0.001) break;
     at = [nx, ny, at[2]];
   }
