@@ -180,7 +180,9 @@ const doneFile = (o, scene, job) => path.join(shotDir(o, scene, job), 'DONE.json
 function shotDone(o, scene, job) {
   const d = readJson(doneFile(o, scene, job));
   if (!d || d.frames !== job.frames || d.width !== o.W || d.height !== o.H) return null;
-  if (statKey(shotFile(o, scene, job)) !== d.stat) return null;    // the file was replaced or deleted
+  // the file was deleted or replaced (same size = the same file copied elsewhere and back: its time may differ)
+  const now = statKey(shotFile(o, scene, job));
+  if (!now || now.split(':')[0] !== String(d.stat).split(':')[0]) return null;
   return d;
 }
 
@@ -330,7 +332,9 @@ async function assembleScene(o, plan, scene, cues) {
   const have = readJson(side);
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const srt = out.replace(/\.mp4$/, '.en.srt');
-  writeSrt(srt, sliceCues(cues.cues, scene.startFrame / FPS, (scene.startFrame + scene.frames) / FPS));
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  const sceneCues = sliceCues(cues.cues, scene.startFrame / FPS, (scene.startFrame + scene.frames) / FPS);
+  if (sceneCues.length) writeSrt(srt, sceneCues); else fs.rmSync(srt, { force: true });
   if (have && fs.existsSync(out) && statKey(out) === have.stat && same({ ...have.want }, want)) return 'up to date';
   const tmp = `${out}.part.mp4`;
   const listFile = path.join(o.out, 'scenes', `.concat-${scene.key.replace(/[^\w-]/g, '_')}.txt`);
@@ -349,7 +353,7 @@ async function assembleScene(o, plan, scene, cues) {
     try {
       await ffmpeg(['-f', 'concat', '-safe', '0', '-i', listFile, ...audioIn, '-map', '0:v:0', '-map', '1:a:0',
         ...passthrough(), ...x264Args({ crf: o.masterCrf, preset: o.masterPreset, bitDepth: 10 }), ...audioOut,
-        '-r', fpsRational(FPS), '-metadata', `title=Dragon's Kingdom S01E01 - ${scene.key}${scene.title ? `: ${scene.title}` : ''}`,
+        '-metadata', `title=Dragon's Kingdom S01E01 - ${scene.key}${scene.title ? `: ${scene.title}` : ''}`,
         '-movflags', '+faststart', '-f', 'mp4', tmp], `scene ${scene.key}`);
     } finally { fs.rmSync(listFile, { force: true }); }
   }

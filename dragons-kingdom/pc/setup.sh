@@ -26,6 +26,9 @@
 set -u
 set -o pipefail
 
+# (everything runs inside main: with "curl ... | bash" the whole script is read before anything
+#  runs, so no command can swallow the rest of it from stdin)
+main() {
 REPO_URL="${DK_REPO_URL:-https://github.com/dax-code-bro/Untitled-new-game-project.git}"
 BRANCH="claude/ultimate-ai-legend-KhpoT"
 NODE_MAJOR=20
@@ -181,7 +184,7 @@ else
   for c in "$PYTHON" python3.11 /opt/homebrew/bin/python3.11 /usr/local/bin/python3.11 /usr/bin/python3.11; do
     [ -n "$c" ] && is311 "$c" && { PY311="$c"; break; }
   done
-  if [ -n "$PY311" ] && "$PY311" -m venv --help >/dev/null 2>&1 && { [ -x "$VPY" ] || "$PY311" -m venv "$VENV"; } && [ -x "$VPY" ]; then
+  if [ -n "$PY311" ] && "$PY311" -c 'import venv, ensurepip' >/dev/null 2>&1 && { [ -x "$VPY" ] || "$PY311" -m venv "$VENV"; } && [ -x "$VPY" ]; then
     ok "Python 3.11: $PY311"
     "$VPY" -m pip install --upgrade pip >/dev/null 2>&1
     "$VPY" -m pip install -r pc/requirements-bpy.txt || die "pip install bpy failed (needs ~1.5 GB free disk)"
@@ -237,3 +240,5 @@ echo " Log:    $LOG"
 echo "=================================================================="
 rm -f "$TMPLOG"
 exit "$GPU_RC"
+}
+main "$@"

@@ -71,7 +71,10 @@ function run(cmd, args, { cwd = ROOT, env = {}, quiet = true, shell = false } = 
 const lastLines = (t, n = 6) => t.trim().split(/\r?\n/).slice(-n).map((l) => `      ${l}`).join('\n');
 
 export function bpyPython(explicit) {
-  const c = [explicit, process.env.DK_BPY_PYTHON,
+  // pc/.bpy-python: written by the setup scripts when the venv lives elsewhere (Windows: a short path)
+  let recorded = null;
+  try { recorded = fs.readFileSync(path.join(HERE, '.bpy-python'), 'utf8').trim() || null; } catch {}
+  const c = [explicit, process.env.DK_BPY_PYTHON, recorded,
     path.join(HERE, '.venv-bpy', WIN ? 'Scripts' : 'bin', WIN ? 'python.exe' : 'python')].filter(Boolean);
   return c.find((p) => exists(p)) || null;
 }
