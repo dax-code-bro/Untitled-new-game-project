@@ -1145,8 +1145,9 @@ def write_md(doc, path):
     w("- Strong language spoken as written: " + ", ".join(
         f"{x['id']} ({', '.join(f['word'] for f in x['words'])}) {'ok' if x['spoken_as_written'] else 'CHECK'}" for x in c["strong_language"]))
     if a.get("not_intelligible"):
-        w(f"- Not confirmed by the recognizer: {len(a['not_intelligible'])} of {a['of']} takes. Why, per take "
-          "(a plain reference read of the same words by af_heart and am_michael tells a limit of the check from a weak take):")
+        w(f"- Not confirmed by the recognizer: {len(a['not_intelligible'])} of {a['of']} takes. Why, per take (each re-checked "
+          "with a fresh recognizer against plain reads of the same words in the role's own voice and two reference voices; "
+          "see takes.json checks.asr.diagnosis_rule):")
         for k, v in (a.get("not_intelligible_by_verdict") or {}).items():
             if v:
                 w(f"  - {k}: {', '.join(v)}")
@@ -1225,7 +1226,8 @@ def main():
     VO.mkdir(parents=True, exist_ok=True)
     takes, nvs = dict(old_takes), dict(old_nv)
     eng_info = old["engine"] if old else None
-    timing = old.get("timing") if old else None
+    timing = old.get("timing") if old else None          # the last FULL render
+    timing_last = old.get("timing_last_run") if old else None
     if not args.verify:
         only = set(args.only.split(",")) if args.only else None
         todo = [l for l in lines if not only or l["id"] in only]
@@ -1263,9 +1265,12 @@ def main():
                                     "sha256": res["sha256"]}
                     print(f"{n['id']:9} placeholder {n['kind']:<34} {res['x_len'] / SR:5.2f}s", flush=True)
         wall = time.perf_counter() - t_all
-        timing = {"rendered": len(tasks), "wall_s": round(wall, 1), "sum_of_worker_seconds": round(gen_total, 1),
+        timing_last = {"rendered": len(tasks), "wall_s": round(wall, 1), "sum_of_worker_seconds": round(gen_total, 1),
                   "jobs": args.jobs, "onnx_threads_per_job": threads,
                   "machine": "cloud VM, 4 vCPU (Intel Xeon 2.1 GHz), no GPU" if (os.cpu_count() or 0) == 4 else f"{os.cpu_count()} CPUs"}
+        timing_last["at"] = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
+        if not only:
+            timing = timing_last
         print(f"rendered {len(tasks)} in {wall:.1f}s wall ({gen_total:.1f}s of worker time)", flush=True)
         # remove WAVs of ids that no longer exist
         known = {Path(t["file"]).name for t in takes.values()} | {Path(t["file"]).name for t in nvs.values()}
@@ -1275,7 +1280,9 @@ def main():
 
     take_list = [takes[l["id"]] for l in lines if l["id"] in takes]
     nv_list = [nvs[n["id"]] for n in NONVERBAL if n["id"] in nvs]
+    t_v = time.perf_counter()
     problems, notes, extra = verify(D, V, take_list, nv_list, words, run_asr=not args.no_asr, jobs=args.jobs)
+    verify_s = round(time.perf_counter() - t_v, 1)
     for p in problems:
         print("PROBLEM:", p)
     for n in notes:
@@ -1333,6 +1340,8 @@ def main():
                    "placeholder_label": "file name contains '.PLACEHOLDER.' and the WAV INFO comment starts with 'PLACEHOLDER'"},
         "engine": eng_info,
         "timing": timing,
+        "timing_last_run": timing_last,
+        "timing_verify_s": {"seconds": verify_s, "jobs": args.jobs, "asr": not args.no_asr},
         "determinism": {"seed_base": SEED_BASE, "seed_rule": "crc32('<id>:<purpose>') + seed_base",
                         "sox": "-R (repeatable) -D (no dither)", "onnx": "1 thread per worker process",
                         "check": "make_final_vo.py --repeat-check sample; and every take whose text is unchanged since "

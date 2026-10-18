@@ -3,7 +3,7 @@
  "episode": "S01E01",
  "status": "PROVISIONAL computer-voice takes for every spoken line of the locked shooting script (final/screenplay-final.md), for the animatic and the timed edit. Not approved by Daxtyn. Additions and rating-pass lines are proposals until he accepts them; a human recording replaces any take (voices.json human_recordings). PLACEHOLDER files are stand-ins, not performances.",
  "generated_by": "dragons-kingdom/episodes/s01e01/final/tools/make_final_vo.py",
- "script_sha256": "a0f0c37c00dd86fc302faeb6fc112b18b5f1ba62407891ed24286d1c46a2ba2a",
+ "script_sha256": "4cb617e4b24f2616a5c47d8f1415bdaaf57f47f009489332dd0fbcec01a4174c",
  "dsp_module": {
   "path": "dragons-kingdom/episodes/s01e01/preview/tools/make_vo.py",
   "sha256": "063b68c23718f9eda01832debcfd85afed08f0680d19cd04c78b46e6f23c15e6",
@@ -74,12 +74,27 @@
   }
  },
  "timing": {
-  "rendered": 2,
-  "wall_s": 7.1,
-  "sum_of_worker_seconds": 6.6,
+  "rendered": 389,
+  "wall_s": 616.4,
+  "sum_of_worker_seconds": 2443.9,
   "jobs": 4,
   "onnx_threads_per_job": 1,
-  "machine": "cloud VM, 4 vCPU (Intel Xeon 2.1 GHz), no GPU"
+  "machine": "cloud VM, 4 vCPU (Intel Xeon 2.1 GHz), no GPU",
+  "at": "2026-10-18 20:29 UTC"
+ },
+ "timing_last_run": {
+  "rendered": 389,
+  "wall_s": 616.4,
+  "sum_of_worker_seconds": 2443.9,
+  "jobs": 4,
+  "onnx_threads_per_job": 1,
+  "machine": "cloud VM, 4 vCPU (Intel Xeon 2.1 GHz), no GPU",
+  "at": "2026-10-18 20:29 UTC"
+ },
+ "timing_verify_s": {
+  "seconds": 287.1,
+  "jobs": 4,
+  "asr": true
  },
  "determinism": {
   "seed_base": 20261007,

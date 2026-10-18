@@ -28,8 +28,11 @@ python -I make_final_vo.py --repeat-check sample # make a sample again in fresh 
 ```
 
 The script runs 4 worker processes (`--jobs`, or `DK_JOBS`). Each one runs onnxruntime with 1 thread
-(`DK_THREADS`), which keeps the takes deterministic. A full run took about 13 minutes on the 4-vCPU
-cloud machine, plus about 4 minutes for the checks. `DK_TMP` sets the folder for SoX's temporary files.
+(`DK_THREADS`), which keeps the takes deterministic. On the 4-vCPU cloud machine, a full run measured
+10 min 16 s to make the 389 files, plus 4 min 47 s for the checks. `DK_TMP` sets the folder for SoX's
+temporary files.
+
+Two full runs made the same 389 files byte for byte, and so did `--repeat-check sample`.
 
 The exit code is 0 only when every check in `takes.json` → `checks.problems` passes.
 

@@ -130,7 +130,7 @@ Roles to record first (voices.json): ABBY, REMI, ALEXANDRIA, KING OF CLING.
 - [ORIGINAL] lines, byte-exact against the handoff and the shooting script: L011 ok, L046 ok, L047 ok
 - Wording Daxtyn approved on 2026-10-18 (old wording never recorded): L048 ok, L053 ok, L054 ok, L109 ok, X17-11 ok
 - Strong language spoken as written: R2-01 (damned) ok, X8-01 (bastard) ok, R6-01 (shit) ok, X12-17 (bloody) ok, R14-01 (fuck's) ok, X26-01 (Fucking) ok
-- Not confirmed by the recognizer: 15 of 385 takes. Why, per take (a plain reference read of the same words by af_heart and am_michael tells a limit of the check from a weak take):
+- Not confirmed by the recognizer: 15 of 385 takes. Why, per take (each re-checked with a fresh recognizer against plain reads of the same words in the role's own voice and two reference voices; see takes.json checks.asr.diagnosis_rule):
   - recognizer state: X5-02
   - cut off by design: L081
   - role pitch: X5-04, X14-03, X20-05, L167, X22-08, L193
