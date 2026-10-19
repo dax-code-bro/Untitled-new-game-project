@@ -1305,6 +1305,8 @@
           supportStation: 'auto',
           // Where the forearms come from, for a hold that needs them elsewhere (HOLDS: the shield).
           spread: HOLDS[id] && HOLDS[id].spread != null ? HOLDS[id].spread : undefined,
+          // A launcher's support fingers stop round the side of its tube, below the sights (98f).
+          supportCap: spec && spec.cls === 'launcher' ? 0.6 : undefined,
         });
       } catch (e) { made.__arms = null; }
     }

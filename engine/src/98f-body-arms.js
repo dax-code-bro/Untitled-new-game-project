@@ -1196,7 +1196,12 @@ function makeBodyArms(parts, shoulders, sf, keepThumb, ext) {
       /* ...nor quite to the top edge: fingers that reached it lay across the top of a slim forend's
          barrel. (Capped at the bore instead, they could not fit up a tall forend -- the
          Breakwater's -- and were pushed out sideways, 55 mm off it.) */
-      const top = rec.constructed ? rec.constructed.yt - 0.004 : Infinity;
+      let top = rec.constructed ? rec.constructed.yt - 0.004 : Infinity;
+      /* `supportCap` (a launcher's tube, 7 to 9 cm across, whose top edge is the sight line's own
+         height: fingers that reached it framed the front sight) stops them that fraction of the way
+         up the section's upper half, round its side. */
+      const cs = rec.constructed;
+      if (cs && ext.supportCap != null) top = Math.min(top, (cs.yt + cs.yb) / 2 + ext.supportCap * (cs.yt - cs.yb) / 2);
       if (ext.sightY == null && top === Infinity) return sfL;
       const lim = Math.min(ext.sightY != null ? ext.sightY - 0.004 : Infinity, top), under = sfL;
       const f = (x, y, z) => Math.min(under(x, y, z), lim - y);
@@ -1487,7 +1492,8 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
   const back = parts.shoulderX != null ? parts.shoulderX : -0.07;
   const drop = opts.drop != null ? opts.drop : -0.335, spread = opts.spread != null ? opts.spread : 0.315;
   const body = makeBodyArms(parts, { right: [back, drop, spread], left: [back, drop, -spread] }, opts.surface || null, !!opts.thumb,
-    { boreY: opts.boreY != null ? opts.boreY : null, sightY: opts.sightY != null ? opts.sightY : null });
+    { boreY: opts.boreY != null ? opts.boreY : null, sightY: opts.sightY != null ? opts.sightY : null,
+      supportCap: opts.supportCap != null ? opts.supportCap : null });
   if (!body) return arms;
   // The thumbs were closed onto the gun after the rig handed these out: the game turns them by these.
   const dr = parts.digits.right, dl = parts.digits.left;
