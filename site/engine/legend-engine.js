@@ -53959,7 +53959,7 @@ function _bodyArm(src, S, rec, shoulder, base, sf, keepThumb) {
  * and its two sides -- and the hand is put there; _wrapHand then closes every finger onto the
  * metal as before. The rig's actors still carry the hand (the reload moves them and the hand goes
  * with them); only where it rests on the gun is decided here. */
-function _constructForeGrip(rec, sf, bore) {
+function _constructForeGrip(rec, sf, bore, hold) {
   const { sub, add, mul, nrm, len } = _ba;
   if (!rec || !rec.byFinger || !rec.at || bore == null) return false;
   const x0 = rec.at[0];
@@ -53981,7 +53981,6 @@ function _constructForeGrip(rec, sf, bore) {
   zr = Math.max(zr, 0.006); zl = Math.min(zl, -0.006);
   const R = 0.0095, pitch = 0.0202;
   const k = [-1, 0, 0];                           // the left hand's fingers close about -x up the right side
-  const d0 = nrm([0, 0.55, 1]);
   const turn = (v, t) => {                          // rotate v about -x by t: closes +z toward +y
     const c = Math.cos(t), s2 = Math.sin(t);
     return [v[0], v[1] * c + v[2] * s2, -v[1] * s2 + v[2] * c];
@@ -53992,12 +53991,21 @@ function _constructForeGrip(rec, sf, bore) {
     /* Under the forend, a third of the way in from its right edge: the forend rests in the palm, the
        first bone of each finger goes round the corner and the rest curl up the side. At the corner
        itself, on a wide handguard, the fingers rose flat up the side like a board. */
-    const P0 = [x0 + (f - 1.5) * pitch, yb - R * 0.7, Math.max(zr - 0.30 * (zr - zl), 0.004)];
-    let dir = d0;
+    /* Two holds (makeBodyArms closes both onto the gun and keeps the one that rests on it): `wide`,
+       the knuckles a third of the way in from the right edge, the first bone rising up the lower
+       corner and the finger lying up the flat side -- a wide handguard, the M4's or the MG 42's
+       jacket; and `slim`, the first bone flat along the underside and the finger turning up hard at
+       the corner, the knuckles over toward the left edge -- a slim forend held in a fist. Set a third
+       of the way in on a slim forend, the first bones overshot its side by 25 mm and the fingers
+       stood out to the right of the Scattergun's barrels. */
+    const wide = hold === 'slim' ? 0 : 1;
+    const zSlim = Math.max(zr + R * 0.3 - L[0] * 0.85, zl + 0.004), zWide = Math.max(zr - 0.30 * (zr - zl), 0.004);
+    const P0 = [x0 + (f - 1.5) * pitch, yb - R * 0.7, wide ? zWide : Math.min(zWide, zSlim)];
+    let dir = nrm([0, 0.25 + 0.30 * wide, 1]);
     const P1 = add(P0, mul(dir, L[0]));
-    dir = turn(dir, 0.5);
+    dir = turn(dir, 1.15 - 0.65 * wide);
     const P2 = add(P1, mul(dir, L[1]));
-    dir = turn(dir, 0.4);
+    dir = turn(dir, 0.55 - 0.15 * wide);
     const T = add(P2, mul(dir, L[2]));
     d.pivots3 = [P0, P1, P2];
     d.joints = [P1, P2];
@@ -54016,6 +54024,41 @@ function _constructForeGrip(rec, sf, bore) {
   return true;
 }
 
+/* A hand record copied deep (its arrays and plain objects), to try a hold on without touching the
+   one the game keeps; and the winner's values written back into the kept record's own objects, so
+   everything already holding a reference to a finger keeps it. */
+function _cloneRec(o) {
+  if (Array.isArray(o)) return o.map(_cloneRec);
+  if (!o || typeof o !== 'object') return o;
+  if (Object.getPrototypeOf(o) !== Object.prototype) return o;
+  const c = {};
+  for (const k of Object.keys(o)) c[k] = _cloneRec(o[k]);
+  return c;
+}
+function _adoptRec(dst, src) {
+  const fingers = dst.byFinger;
+  for (const k of Object.keys(src)) if (k !== 'byFinger' && k !== 'digits') dst[k] = src[k];
+  src.byFinger.forEach((d, f) => { if (fingers[f]) Object.assign(fingers[f], d); else fingers[f] = d; });
+  dst.digits = dst.byFinger.slice(0, 4);
+}
+/* How well a hand's fingers rest on the gun: each joint's distance from lying on the surface, a joint
+   in the gun counting double -- the same measure _wrapHand closes a finger by. */
+/* Measured against the gun itself (`sf`); the ceiling over the sights (`sfCeil`) only counts where a
+   joint is through it -- resting against that line in the air is not resting on the gun. */
+function _restScore(rec, sf, sfCeil) {
+  const R = [0.0088, 0.0081, 0.0072];
+  let acc = 0;
+  for (const d of rec.byFinger.slice(0, 4)) {
+    [d.pivots3[1], d.pivots3[2], d.tip].forEach((q, j) => {
+      const e = sf(q[0], q[1], q[2]) - R[j];
+      acc += e < 0 ? -2 * e : e;
+      const c = sfCeil ? sfCeil(q[0], q[1], q[2]) - R[j] : e;
+      if (c < e && c < 0) acc -= 2 * c;
+    });
+  }
+  return acc;
+}
+
 function makeBodyArms(parts, shoulders, sf, keepThumb, ext) {
   if (parts.__bodyArms !== undefined) return parts.__bodyArms;
   parts.__bodyArms = null;
@@ -54030,20 +54073,39 @@ function makeBodyArms(parts, shoulders, sf, keepThumb, ext) {
     const sfL = sf && rc && rc.length ? _surfaceWithHand(sf, rc) : sf;
     const dl = parts.digits.left;
     let sfS = sfL;
+    /* And no finger above the sights: the support hand's surface gets a ceiling just under the
+       sight line, so a finger curling up the forend's side stops there instead of crossing it --
+       nor above the forend's own top by more than a fingertip: a support hand's fingers come up its
+       side to the top edge, they do not lie across the top (the M16's did, an overhand hold). */
+    const ceiling = (rec) => {
+      const top = rec.constructed ? rec.constructed.yt + 0.006 : Infinity;
+      if (ext.sightY == null && top === Infinity) return sfL;
+      const lim = Math.min(ext.sightY != null ? ext.sightY - 0.004 : Infinity, top), under = sfL;
+      const f = (x, y, z) => Math.min(under(x, y, z), lim - y);
+      f.raw = under.raw;
+      return f;
+    };
+    let l = null;
     if (parts.hasLeft && dl && sf && ext && (dl.grip === 'fore' || dl.grip === 'woodFore' || dl.grip === 'tube')) {
-      _constructForeGrip(dl, sf, ext.boreY);
-      /* And no finger above the sights: the support hand's surface gets a ceiling just under the
-         sight line, so a finger curling up the forend's side stops there instead of crossing it. */
-      /* ...nor above the forend's own top by more than a fingertip: a support hand's fingers come up
-         its side to the top edge, they do not lie across the top (the M16's did, an overhand hold). */
-      const top = dl.constructed ? dl.constructed.yt + 0.006 : Infinity;
-      if (ext.sightY != null || top < Infinity) {
-        const lim = Math.min(ext.sightY != null ? ext.sightY - 0.004 : Infinity, top), under = sfL;
-        sfS = (x, y, z) => Math.min(under(x, y, z), lim - y);
-        sfS.raw = under.raw;
+      /* BOTH HOLDS, and the one that rests on the gun is kept: across sixty forends neither the
+         wide-handguard hold nor the slim fist is right for every one, and the forend's width alone
+         did not say which (measured: each won on guns either side of every threshold tried). */
+      let best = null;
+      for (const hold of (globalThis.__hold ? [globalThis.__hold] : ['wide', 'slim'])) {
+        const r2 = _cloneRec(dl);
+        if (!_constructForeGrip(r2, sf, ext.boreY, hold)) break;
+        const sfH = ceiling(r2);
+        const body = _bodyArm(src, 'L', r2, shoulders.left, 16, sfH);
+        const sc = _restScore(r2, sfL, sfH);
+        if (!best || sc < best.sc) best = { sc, body, r2, hold };
+      }
+      if (best) {
+        _adoptRec(dl, best.r2);
+        dl.hold = best.hold;
+        l = best.body;
       }
     }
-    const l = parts.hasLeft ? _bodyArm(src, 'L', dl, shoulders.left, 16, sfS) : null;
+    if (!l && parts.hasLeft) l = _bodyArm(src, 'L', dl, shoulders.left, 16, sfS);
     if (!r) return null;
     parts.__bodyArms = { r, l };
   } catch (e) {
