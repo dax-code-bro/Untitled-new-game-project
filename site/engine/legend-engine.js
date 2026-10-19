@@ -53356,8 +53356,20 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
      clear panel; a support finger past the end of what it holds), the finger closes into the fist
      as a relaxed hand's does -- as far as it can without going into the gun. */
   const curlLoose = (d, R) => {
-    const tipSf = sf(d.tip[0], d.tip[1], d.tip[2]), midSf = sf(d.pivots3[2][0], d.pivots3[2][1], d.pivots3[2][2]);
+    /* Against the gun itself: a support hand's surface has a ceiling just under the forend's top edge
+       (makeBodyArms), and a finger already standing above it read as touching -- inside the ceiling
+       -- so it was never folded (the Sawn-off's, the Scattergun's, upright beside the front sight). */
+    const sr = sf.raw || sf;
+    const tipSf = sr(d.tip[0], d.tip[1], d.tip[2]), midSf = sr(d.pivots3[2][0], d.pivots3[2][1], d.pivots3[2][2]);
     if (tipSf < 0.025 && (tipSf < 0.015 || midSf < 0.012)) return;
+    const clearR = (p, dir, L, r) => {
+      let m = Infinity;
+      for (const t of [0.25, 0.45, 0.65, 0.85, 1.0]) {
+        const q = add(p, mul(dir, L * t));
+        m = Math.min(m, sr(q[0], q[1], q[2]) - r * (t === 1 ? 0.85 : 1));
+      }
+      return m;
+    };
     // A finger the closing wrapped bends the way it was wrapped (a support finger may close either
     // way, see below); folded against that, its bones came out mirrored, drawn inside out.
     let k = nrm(d.axis);
@@ -53372,17 +53384,25 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
        curls were tried before and the finger left straight if all three touched: the DP 28's middle
        finger stood up past its barrel, its tip 56 mm off anything. */
     let best = null;
-    for (let a1 = 90; a1 >= 0; a1 -= 10) for (let a2 = 80; a2 >= 0; a2 -= 10) {
-      let dir = rot(d0, k, a1 * DEG);
-      const P2 = add(P1, mul(dir, L[1]));
-      dir = rot(dir, k, a2 * DEG);
-      const T = add(P2, mul(dir, L[2]));
-      if (clear(P1, nrm(sub(P2, P1)), L[1], R[1] * 0.7) < 0 || clear(P2, nrm(sub(T, P2)), L[2], R[2] * 0.7) < 0) continue;
-      const ts = sf(T[0], T[1], T[2]);
-      const e = Math.max(0, ts - 0.004) - 0.00001 * (a1 + a2);
-      if (!best || e < best.e) best = { e, ts, a: a1 + a2, P2, T };
+    /* Either way round, the way it bends first: past the end of the Sawn-off's forend the middle and
+       index fingers could not fold the way they had wrapped without going into the barrels, and stood
+       out 5 cm beside the muzzle. (The drawn finger takes its pad side from the curl itself.) */
+    for (const kk of [k, mul(k, -1)]) {
+      for (let a1 = 90; a1 >= 0; a1 -= 10) for (let a2 = 80; a2 >= 0; a2 -= 10) {
+        let dir = rot(d0, kk, a1 * DEG);
+        const P2 = add(P1, mul(dir, L[1]));
+        dir = rot(dir, kk, a2 * DEG);
+        const T = add(P2, mul(dir, L[2]));
+        if (clearR(P1, nrm(sub(P2, P1)), L[1], R[1] * 0.7) < 0 || clearR(P2, nrm(sub(T, P2)), L[2], R[2] * 0.7) < 0) continue;
+        const ts = sr(T[0], T[1], T[2]);
+        // ...and where the ceiling is lower than the gun (the tip above it), that counts against it.
+        const over = Math.max(0, ts - sf(T[0], T[1], T[2])) + Math.max(0, sr(P2[0], P2[1], P2[2]) - sf(P2[0], P2[1], P2[2]));
+        const e = Math.max(0, ts - 0.004) + 2 * over - 0.00001 * (a1 + a2) + (kk === k ? 0 : 0.002);
+        if (!best || e < best.e) best = { e, ts, a: a1 + a2, P2, T, k: kk };
+      }
     }
     if (!best || best.a < 30) return;
+    k = best.k;
     // A finger with something in reach (its tip under 25 mm off) is only folded if that brings it
     // nearer: folded anyway, the Scattergun's and Breakwater's support middles came off their pumps.
     if (tipSf < 0.025 && best.ts > tipSf - 0.003) return;
