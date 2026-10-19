@@ -5644,6 +5644,12 @@ in vec4 vParams;
 in float vViewDepth;
 
 uniform vec3 uCameraPos;
+#ifdef CLIP_NEAR
+/* An aimed weapon's own parts behind its rear sight: the top of the stock under the cheek, cut by the
+   near plane into a flap across the sight picture. Clipped here, per mesh, so the arms holding the
+   weapon keep the ordinary near plane (engine 97l-aim.js). */
+uniform float uClipNear;
+#endif
 uniform float uTime;
 uniform vec3 uBaseColor;
 uniform float uRoughness;
@@ -5916,6 +5922,9 @@ layout(location=0) out vec4 outColor;
 layout(location=1) out vec4 outGBuffer;
 
 void main(){
+#ifdef CLIP_NEAR
+  if (vViewDepth < uClipNear) discard;
+#endif
   vec2 uv = vUv * uUvScale;
   /* The projection axis, kept because the tangent frame below needs
      the same one. 0 = mesh UVs, 1 = +-X, 2 = +-Y, 3 = +-Z. */
@@ -10265,7 +10274,10 @@ class Renderer {
     if (batch.skinned) defines.push('SKINNED');
     if (batch.grass) defines.push('GRASS');
     if (batch.alphaClip) defines.push('ALPHA_CLIP');
+    // A variant of its own, so the discard costs nothing to every mesh that is not clipped.
+    if (batch.clipNear > 0) defines.push('CLIP_NEAR');
     const sh = this.program('pbr', GLSL.pbrVert, GLSL.pbrFrag, defines).use();
+    if (batch.clipNear > 0) sh.f('uClipNear', batch.clipNear);
 
     sh.m4('uViewProj', camera.viewProj);
     // For the G-buffer normal only; see the uView comment in pbrFrag.
@@ -29316,8 +29328,9 @@ class Engine {
       }
 
       // Skinned and morphed meshes cannot be instanced: each needs its own
-      // bone texture or its own vertex buffer.
-      if (actor.skeleton || actor.face) {
+      // bone texture or its own vertex buffer. Nor a mesh clipped near the eye (`clipNear`, an
+      // aimed weapon's parts behind its rear sight): the clip is a per-draw uniform.
+      if (actor.skeleton || actor.face || actor.clipNear > 0) {
         individual.push(actor);
         continue;
       }
@@ -29387,6 +29400,7 @@ class Engine {
         skinned: !!actor.skeleton,
         grass: false,
         alphaClip: false,
+        clipNear: actor.clipNear > 0 ? actor.clipNear : 0,
         sortKey: camPos.distanceToSq(actor.position),
       };
       if (actor.skeleton) {
@@ -48275,10 +48289,15 @@ Engine.prototype.mortar = function (opts = {}) {
    with the rib). From 10 cm away the near plane cut it flat, and what showed was a wide, stretched,
    wood-grained flap fanned out under the rear sight: the Kar 98's, the Mosin's, the Garand's, the
    Thompson's; the Longwake's scope bell filled a third of the screen. Aimed, the eye sees nothing
-   behind the rear sight -- the stock is under the cheek -- so the near plane goes out, while aiming,
-   to just short of the rearmost thing on the sight line ahead of the stock: the rear sight, the back
-   of the receiver, a scope's ocular. Everything behind it leaves the picture and the sights are
-   untouched. 22 cm at most: further, and the back of an M4's upper receiver was cut open. */
+   behind the rear sight -- the stock is under the cheek -- so the weapon's own parts are clipped,
+   while aiming, at 15 mm short of the rearmost thing on the sight line ahead of the stock: the rear
+   sight, the back of the receiver, a scope's ocular. Everything behind it leaves the picture and the
+   sights are untouched. 22 cm at most: further, and the back of an M4's upper receiver was cut open.
+
+   THE WEAPON'S PARTS, NOT THE CAMERA'S NEAR PLANE. Done first by moving the near plane out, it cut
+   the firing hand's wrist too: on the M4, the AK and the Volkhammer the back of the hand ended in a
+   ragged sheet of skin with no forearm behind it. So the clip is a per-mesh one (`clipNearTree`,
+   the renderer's CLIP_NEAR variant) on the weapon's rigid parts; the skinned arms are never cut. */
 
 const AIM_NEAR_MAX = 0.22;
 
@@ -48319,18 +48338,31 @@ function aimShape(root, sightY, geometryOf) {
   return root.__aimShape;
 }
 
-/* The near plane for a weapon `dist` out along the camera axis (its origin's depth) at aim `aim`
-   (0 hip .. 1 aimed): `near0` at the hip, out to 15 mm short of the rear sight aimed. Only a weapon
-   that reaches back past the eye (rear < -0.15) gains anything; the rest keep `near0`. */
-function aimNear(shape, dist, aim, near0) {
-  if (!shape || shape.rear >= -0.15 || !(aim > 0)) return near0;
+/* The clip distance for a weapon `dist` out along the camera axis (its origin's depth) at aim `aim`
+   (0 hip .. 1 aimed): 0 at the hip, 15 mm short of the rear sight aimed. Only a weapon that reaches
+   back past the eye (rear < -0.15) is clipped. Eased in on the square of the aim, so a weapon on its
+   way up is not cut where its butt still is. */
+function aimClip(shape, dist, aim) {
+  if (!shape || shape.rear >= -0.15 || !(aim > 0)) return 0;
   const want = shape.sightRear == null ? AIM_NEAR_MAX
     : Math.min(AIM_NEAR_MAX, dist + shape.sightRear - 0.015);
-  return near0 + Math.max(0, want - near0) * Math.min(1, aim);
+  const a = Math.min(1, aim);
+  return want > 0 ? want * a * a : 0;
 }
 
 Engine.prototype.aimShape = function (root, sightY) {
   return aimShape(root, sightY, this.geometryOf ? (m) => this.geometryOf(m) : null);
+};
+
+/* Set `clipNear` (metres from the eye; 0 for none) on a weapon's rigid parts. Skinned meshes -- the
+   arms holding it -- are left alone. */
+Engine.prototype.clipNearTree = function (root, v) {
+  const walk = (a) => {
+    if (!a) return;
+    if (!a.skeleton) a.clipNear = v;
+    for (const c of (a.children || [])) walk(c);
+  };
+  walk(root);
 };
 
 
@@ -56230,7 +56262,7 @@ const LegendEngine = {
   /* The inspect, shared for the same reason -- see 97g-inspect.js. */
   INSPECT_TIME, INSPECT_CANCEL, inspectPose,
   /* What an aimed weapon puts in front of the eye -- its butt and its rear sight; see 97l-aim.js. */
-  AIM_NEAR_MAX, aimShape, aimNear,
+  AIM_NEAR_MAX, aimShape, aimClip,
   /* Brass and spent magazines -- see 97h-spent.js. */
   keepSpent,
   /* The noises a weapon makes when nobody is shooting it. */

@@ -45,6 +45,10 @@ struct DrawItem {
     /* NATIVE: a fake window pane -- trace a room behind it (pbr.frag);
        the value is the room's brightness. 0 = off. */
     float           interior = 0.0f;
+    /* An aimed weapon's own parts closer to the eye than this are not drawn (pbr.frag): the top of
+       the stock under the cheek, which the near plane cut into a flap across the sight picture.
+       Per item, so the arms holding the weapon are never cut. 0 = off. */
+    float           clipNear = 0.0f;
     /* NATIVE: the lawn around the camera (GRASS_FIELD). A density/height
        field over the map (r = density, g = ground height); the instances
        are a fixed grid of offsets the vertex shader re-centres on the

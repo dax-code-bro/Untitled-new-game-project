@@ -956,6 +956,10 @@
        up into the air. Two hands on the grip, as a pistol is held. */
     p90: { left: [0.006, -0.030, -0.034], leftGrip: PISTOL_WRAP },
     mp7: { left: [0.186, -0.026, -0.016], leftGrip: 'foregrip' },
+    /* The AUG's vertical foregrip, 16 to 18 cm out: it hangs deeper than a forend, so the forend rule
+       found the gas collar at 36 cm instead and the hand held bare barrel, its index up beside the
+       optic. */
+    aug: { left: [0.172, -0.030, -0.016], leftGrip: 'foregrip' },
     mp40: { left: [0.070, -0.026, -0.016], leftGrip: 'foregrip' },
     /* The C96 is zombies' own model, held as zombies holds it (bunker-nine WEAPONS.mauser): the
        firing hand down the broomhandle, which slopes back, and the support hand round the magazine
@@ -1579,8 +1583,6 @@
         if (cur) show(cur, false);
         shown = false;
         if (flash) flash.visible = false;
-        // The aimed near plane goes with the gun (place(), engine 97l-aim.js).
-        if (game.camera) game.camera.near = 0.1;
         /* And whatever the hand was carrying. A magazine left visible
            when the weapon goes away hangs in the air where the gun
            used to be -- the same fault zombies had and fixed. */
@@ -1908,9 +1910,10 @@
            the camera sat inside its receiver (the AUG's, the Groza's) looking at the magazine and
            the frame bars from within. */
         if (shape.rear < -0.15 && !BULLPUP[state.gun]) adsD = Math.min(adsD, Math.max(0.16, (0.05 - shape.rear) / OUT));
-        /* And the near plane out to just short of the rear sight, so the top of the stock under the
-           cheek is not cut into a flap across the sight picture (engine 97l-aim.js). */
-        if (game.camera && window.LE.aimNear) game.camera.near = window.LE.aimNear(shape, adsD * OUT, aim, 0.1);
+        /* And the weapon clipped just short of its rear sight, so the top of the stock under the
+           cheek is not cut by the near plane into a flap across the sight picture (engine 97l-aim.js).
+           The weapon's own parts only: the arms keep the ordinary near plane. */
+        if (g && game.clipNearTree && window.LE.aimClip) game.clipNearTree(g, window.LE.aimClip(shape, adsD * OUT, aim));
         var dist = (hipD * (1 - aim) + adsD * aim) * OUT - kick * 0.03 - low * 0.03
           - INS.in
           /* And drawn in toward the face while the hands work, which is

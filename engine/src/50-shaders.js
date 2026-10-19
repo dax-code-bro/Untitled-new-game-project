@@ -1019,6 +1019,12 @@ in vec4 vParams;
 in float vViewDepth;
 
 uniform vec3 uCameraPos;
+#ifdef CLIP_NEAR
+/* An aimed weapon's own parts behind its rear sight: the top of the stock under the cheek, cut by the
+   near plane into a flap across the sight picture. Clipped here, per mesh, so the arms holding the
+   weapon keep the ordinary near plane (engine 97l-aim.js). */
+uniform float uClipNear;
+#endif
 uniform float uTime;
 uniform vec3 uBaseColor;
 uniform float uRoughness;
@@ -1291,6 +1297,9 @@ layout(location=0) out vec4 outColor;
 layout(location=1) out vec4 outGBuffer;
 
 void main(){
+#ifdef CLIP_NEAR
+  if (vViewDepth < uClipNear) discard;
+#endif
   vec2 uv = vUv * uUvScale;
   /* The projection axis, kept because the tangent frame below needs
      the same one. 0 = mesh UVs, 1 = +-X, 2 = +-Y, 3 = +-Z. */

@@ -203,7 +203,7 @@ KitFile::KitFile(const std::filesystem::path& path, rendering::MaterialLibrary& 
             w.kick = get(jw, "kick", 1.0f);
             w.sightFov = get(jw, "sightFov", 0.8f);
             w.adsTime = get(jw, "adsTime", 0.2f);
-            w.aimNear = get(jw, "aimNear", 0.0f);
+            w.aimClip = get(jw, "aimClip", 0.0f);
             w.recoilUp = get(jw, "recoilUp", 1.0f);
             w.recoilSide = get(jw, "recoilSide", 0.3f);
             w.recover = get(jw, "recover", 9.0f);

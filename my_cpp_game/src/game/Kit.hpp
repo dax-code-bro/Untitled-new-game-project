@@ -27,7 +27,7 @@ struct WeaponDef {
     std::string id, name;
     float damage = 30, headMul = 2, refire = 0.2f, reload = 2, spread = 1, adsSpread = 0.35f, kick = 1;
     float sightFov = 0.8f, adsTime = 0.2f, recoilUp = 1, recoilSide = 0.3f, recover = 9;
-    float aimNear = 0.0f;                       // the web game's near plane when aimed (0: none recorded)
+    float aimClip = 0.0f;                       // aimed, the weapon's parts nearer the eye than this are clipped (0: none)
     int   mag = 8, reserve = 40, pellets = 1;
     bool  automatic = false;
 };

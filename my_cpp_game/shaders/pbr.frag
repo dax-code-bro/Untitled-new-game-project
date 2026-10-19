@@ -129,6 +129,10 @@ vec3 bevelNormal(out float edge){
 }
 
 uniform vec3 uCameraPos;
+/* An aimed weapon's parts behind its rear sight (engine 97l-aim.js): not drawn, per item, so the
+   arms keep the ordinary near plane. 0 = off. NATIVE: a uniform branch, not the web's CLIP_NEAR
+   program variant (this build has one program per pass). */
+uniform float uClipNear;
 uniform float uTime;
 uniform vec3 uBaseColor;
 uniform float uRoughness;
@@ -460,6 +464,7 @@ vec3 interiorRoom(){
 }
 
 void main(){
+  if (uClipNear > 0.0 && vViewDepth < uClipNear) discard;
   vec2 uv = vUv * uUvScale;
   /* The projection axis, kept because the tangent frame below needs
      the same one. 0 = mesh UVs, 1 = +-X, 2 = +-Y, 3 = +-Z. */

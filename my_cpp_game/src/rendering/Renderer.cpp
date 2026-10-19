@@ -370,6 +370,7 @@ void Renderer::drawPbr(const DrawItem& it, const Camera& cam) {
     p->set("uWetGround", it.wetGround * wetScale);
     p->set("uCast", it.cast);
     p->set("uInterior", it.interior * interiorScale);
+    p->set("uClipNear", it.clipNear);
     if (it.field) {
         p->texture("uLawnField", *it.field);
         p->set("uLawnRect", it.fieldRect);

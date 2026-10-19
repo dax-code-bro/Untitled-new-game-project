@@ -716,10 +716,6 @@ void ZombiesGame::frame(rendering::Camera& cam, std::vector<rendering::DrawItem>
     const float baseFov = m_kit.fov() > 0.2f ? m_kit.fov() : glm::radians(70.0f);
     cam.fov = baseFov * glm::mix(1.0f, g.def->sightFov, m_ads);
     cam.nearZ = 0.05f;
-    /* Aimed, out to the near plane the web game drew this pose with (recorded in the kit): just short
-       of the rear sight, so the top of the stock under the cheek is not cut into a flap across the
-       sight picture. */
-    if (g.def->aimNear > cam.nearZ) cam.nearZ = glm::mix(cam.nearZ, g.def->aimNear, m_ads);
 
     // ---- the boards that are still up ----
     for (const auto& b : m_boards) if (!b.down) out.push_back(b.item);
@@ -817,7 +813,15 @@ void ZombiesGame::frame(rendering::Camera& cam, std::vector<rendering::DrawItem>
         proc = glm::rotate(proc, m_sway.x * 0.05f * k, glm::vec3(0, 1, 0));
         const glm::mat4 view = glm::lookAt(cam.position, cam.target, cam.up);
         const glm::mat4 camWorld = glm::inverse(view);
+        const size_t firstItem = out.size();
         rig.emitPose(palSrc, frameIx, ma, vis, camWorld * proc, out);
+        /* Aimed, the weapon's own (rigid) parts are clipped just short of its rear sight, as the web
+           game clips them (recorded in the kit): the top of the stock under the cheek is not cut by
+           the near plane into a flap across the sight picture. The skinned arms are never cut. */
+        const float clip = g.def->aimClip * adsShown * adsShown;
+        if (clip > 0.0f)
+            for (size_t i = firstItem; i < out.size(); ++i)
+                if (!out[i].boneTexture) out[i].clipNear = clip;
 
         // The muzzle flash: a hot blob and a light, for a frame or two.
         static const bool forceFlash = std::getenv("GAME_FLASH") != nullptr;   // captures: show the flash

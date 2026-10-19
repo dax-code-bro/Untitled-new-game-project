@@ -256,9 +256,9 @@ async function main() {
       run(40);
       // Aimed.
       T.hold({ aim: true }); run(45);
-      /* And the near plane the web game drew it with: aimed, it moves out to just short of the
-         rear sight so the stock under the cheek leaves the picture (engine 97l-aim.js). */
-      const aimNear = G.camera.near;
+      /* And how near the eye the web game clips the weapon's own parts when aimed: just short of the
+         rear sight, so the stock under the cheek leaves the picture (engine 97l-aim.js). */
+      const aimClip = P.aimClip || 0;
       rec('ads', 30, 1, true);
       T.hold({ aim: true, fire: true }); run(1); T.hold({ aim: true, fire: false });
       rec('adsfire', 60, 18, false);
@@ -278,7 +278,7 @@ async function main() {
         name: w.name || id, damage: w.dmg || 0, headMul: w.headMul || 2, mag: w.mag || 0,
         reserve: w.reserve || 0, refire: w.refire || 0.2, reload: w.reload || 2, auto: !!w.auto,
         pellets: w.pellets || 1, spread: w.spread || 0, adsSpread: w.adsSpread || 0.35, kick: w.kick || 1,
-        sightFov: w.sightFov || 0.8, adsTime: w.adsTime || 0.2, aimNear,
+        sightFov: w.sightFov || 0.8, adsTime: w.adsTime || 0.2, aimClip,
         recoilUp: (w.recoil && w.recoil.up) || 1, recoilSide: (w.recoil && w.recoil.side) || 0.3,
         recover: (w.recoil && w.recoil.recover) || 9,
       };

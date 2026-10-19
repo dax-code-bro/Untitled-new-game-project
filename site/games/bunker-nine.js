@@ -7228,7 +7228,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      ejection port and the reload state all come out of this function, and a
      shot fired through a scope still has to throw its flash and its brass
      from the right place. */
-  if (!P.alive) { game.camera.near = 0.09; return; }
+  if (!P.alive) return;
 
   const cam = game.camera;
   const f = _vTmp1.copy(cam.target).sub(cam.position).normalize();
@@ -7530,10 +7530,12 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      butt is behind the eye. */
   const shape = v && game.aimShape ? game.aimShape(v.kind === 'single' ? v.actor : v.root, spec.sightH) : null;
   if (shape && shape.rear < -0.15) adsD = Math.min(adsD, Math.max(0.16, (0.05 - shape.rear) / OUT));
-  /* And the near plane out to just short of the rear sight while aiming, so the top of the stock
-     under the cheek is not cut into a flap across the sight picture (engine 97l-aim.js). Behind a
-     scope nothing is drawn and the near plane is the ordinary one. */
-  game.camera.near = shown && window.LE.aimNear ? window.LE.aimNear(shape, adsD * OUT, a, 0.09) : 0.09;
+  /* And the weapon clipped just short of its rear sight while aiming, so the top of the stock under
+     the cheek is not cut by the near plane into a flap across the sight picture (engine 97l-aim.js).
+     The weapon's own parts only: the arms keep the ordinary near plane. */
+  const clip = shown && shape && window.LE.aimClip ? window.LE.aimClip(shape, adsD * OUT, a) : 0;
+  if (v && game.clipNearTree) game.clipNearTree(v.kind === 'single' ? v.actor : v.root, clip);
+  P.aimClip = clip;
   /* THE INSPECT, which is a curve rather than a clip: a viewmodel is one
      actor held at an offset from the eye, so the thing that has to move
      is the offset. engine/src/97g-inspect.js owns the shape and

@@ -1581,7 +1581,10 @@ class Renderer {
     if (batch.skinned) defines.push('SKINNED');
     if (batch.grass) defines.push('GRASS');
     if (batch.alphaClip) defines.push('ALPHA_CLIP');
+    // A variant of its own, so the discard costs nothing to every mesh that is not clipped.
+    if (batch.clipNear > 0) defines.push('CLIP_NEAR');
     const sh = this.program('pbr', GLSL.pbrVert, GLSL.pbrFrag, defines).use();
+    if (batch.clipNear > 0) sh.f('uClipNear', batch.clipNear);
 
     sh.m4('uViewProj', camera.viewProj);
     // For the G-buffer normal only; see the uView comment in pbrFrag.

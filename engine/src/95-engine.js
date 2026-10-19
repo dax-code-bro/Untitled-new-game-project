@@ -1935,8 +1935,9 @@ class Engine {
       }
 
       // Skinned and morphed meshes cannot be instanced: each needs its own
-      // bone texture or its own vertex buffer.
-      if (actor.skeleton || actor.face) {
+      // bone texture or its own vertex buffer. Nor a mesh clipped near the eye (`clipNear`, an
+      // aimed weapon's parts behind its rear sight): the clip is a per-draw uniform.
+      if (actor.skeleton || actor.face || actor.clipNear > 0) {
         individual.push(actor);
         continue;
       }
@@ -2006,6 +2007,7 @@ class Engine {
         skinned: !!actor.skeleton,
         grass: false,
         alphaClip: false,
+        clipNear: actor.clipNear > 0 ? actor.clipNear : 0,
         sortKey: camPos.distanceToSq(actor.position),
       };
       if (actor.skeleton) {
