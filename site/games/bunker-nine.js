@@ -7204,6 +7204,35 @@ function setViewVisible(v, on) {
 
 /* Position the equipped weapon against the camera every frame — bob,
    sway, recoil, reload dip. This is the whole first-person feel. */
+/* How far behind its own origin a weapon reaches (the butt of its stock): the least x over its drawn
+   parts, cached on the weapon. */
+function viewRearOf(g) {
+  if (!g) return 0;
+  if (g.__rearX != null) return g.__rearX;
+  const game = g.engine;
+  let lo = 0;
+  const walk = (a, m) => {
+    // Hidden parts count: mid-swap the whole weapon is hidden when this may first be asked.
+    if (a !== g && a.noDraw) return;
+    const geo = a.mesh && game && game.geometryOf ? game.geometryOf(a.mesh) : null;
+    if (geo && geo.positions) {
+      const q = geo.positions, e = m ? m.e : null;
+      for (let i = 0; i < q.length; i += 24) {
+        const x = e ? e[0] * q[i] + e[4] * q[i + 1] + e[8] * q[i + 2] + e[12] : q[i];
+        if (x < lo) lo = x;
+      }
+    }
+    for (const c of (a.children || [])) {
+      const cm = new window.LE.Mat4();
+      cm.compose(c._position, c._rotation, c.scale);
+      if (m) { const t = new window.LE.Mat4(); t.mulMatrices(m, cm); walk(c, t); } else walk(c, cm);
+    }
+  };
+  try { walk(g, null); } catch (e) { lo = 0; }
+  g.__rearX = lo;
+  return lo;
+}
+
 function updateViewmodel(game, P, dt, moving, S, sfx) {
   const spec = P.spec();
   const v = P.view[P.equipped()];
@@ -7489,7 +7518,8 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   const hipX = (po ? po.x : 0.092 + bulk * 0.020) - drawIn + bobX * (bench ? 0 : 1),
         hipY = (po ? po.y : -0.150 - bulk * 0.026 - tipDrop) + (bench ? 0 : bobY - dip),
         hipD = po ? po.d : 0.355 + bulk * 0.055;
-  const adsX = 0, adsY = -spec.sightH, adsD = 0.30;
+  const adsX = 0, adsY = -spec.sightH;
+  let adsD = 0.30;
   const a = P.ads;
   /* Hold the whole viewmodel further out.
    *
@@ -7512,6 +7542,15 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
    * on the camera axis, and it is -sightH at any distance. Scaling it
    * would take every measured sight line in this file off axis at once. */
   const OUT = 1.30;
+  /* THE CHEEK ON THE STOCK, as multiplayer has it (mp-game place()): held 0.39 m out when aimed, a
+     weapon whose butt is less than that behind its grip has the butt hanging in front of the eye --
+     the Paralyzer's flat grey stock filled the bottom of its sight picture, the Scattergun's square
+     butt sat under its bead. A weapon with a stock (15 cm or more behind its grip) comes in until the
+     butt is behind the eye. */
+  if (v) {
+    const rear = viewRearOf(v.kind === 'single' ? v.actor : v.root);
+    if (rear < -0.15) adsD = Math.min(adsD, Math.max(0.16, (0.05 - rear) / OUT));
+  }
   /* THE INSPECT, which is a curve rather than a clip: a viewmodel is one
      actor held at an offset from the eye, so the thing that has to move
      is the offset. engine/src/97g-inspect.js owns the shape and

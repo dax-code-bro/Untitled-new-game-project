@@ -53237,7 +53237,7 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
      as a relaxed hand's does -- as far as it can without going into the gun. */
   const curlLoose = (d, R) => {
     const tipSf = sf(d.tip[0], d.tip[1], d.tip[2]), midSf = sf(d.pivots3[2][0], d.pivots3[2][1], d.pivots3[2][2]);
-    if (tipSf < 0.015 || midSf < 0.012) return;
+    if (tipSf < 0.025 && (tipSf < 0.015 || midSf < 0.012)) return;
     let k = nrm(d.axis);
     const want = nrm(cross(palmA, nR));
     if (dot(k, want) < 0) k = mul(k, -1);
@@ -54230,11 +54230,11 @@ function makeBodyArms(parts, shoulders, sf, keepThumb, ext) {
        sight line, so a finger curling up the forend's side stops there instead of crossing it --
        nor above the forend's own top by more than a fingertip: a support hand's fingers come up its
        side to the top edge, they do not lie across the top (the M16's did, an overhand hold). */
-    const CAP = globalThis.__suppCap != null ? globalThis.__suppCap : 0.012;
     const ceiling = (rec) => {
-      /* ...and no more than a fingertip above the bore: over a slim forend the gun's top is the
-         barrel's (or the barrels'), and fingers that reached it lay across the top of the barrel. */
-      const top = rec.constructed ? Math.min(rec.constructed.yt + 0.006, ext.boreY + CAP) : Infinity;
+      /* ...nor quite to the top edge: fingers that reached it lay across the top of a slim forend's
+         barrel. (Capped at the bore instead, they could not fit up a tall forend -- the
+         Breakwater's -- and were pushed out sideways, 55 mm off it.) */
+      const top = rec.constructed ? rec.constructed.yt - (globalThis.__suppTop != null ? globalThis.__suppTop : 0.004) : Infinity;
       if (ext.sightY == null && top === Infinity) return sfL;
       const lim = Math.min(ext.sightY != null ? ext.sightY - 0.004 : Infinity, top), under = sfL;
       const f = (x, y, z) => Math.min(under(x, y, z), lim - y);

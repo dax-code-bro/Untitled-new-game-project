@@ -950,7 +950,8 @@
     var game = g.engine;
     var lo = 0;
     var walk = function (a, m) {
-      if (a.noDraw || a.visible === false) return;
+      // Hidden parts count: mid-swap the whole weapon is hidden when this may first be asked.
+      if (a !== g && a.noDraw) return;
       var geo = a.mesh && game && game.geometryOf ? game.geometryOf(a.mesh) : null;
       if (geo && geo.positions) {
         var q = geo.positions, e = m ? m.e : null;
