@@ -554,10 +554,12 @@ const WEAPONS = {
     ammo: { loader: { count: 4, pcd: 0.0148, round: AMMO.mag500 } },
     // Punches armour: half an inch of lead goes through riot plate.
     punchesPlate: true,
-    /* Its own hold, not the engine's fitted one (98f _fitFiringHand): a revolver's guard is small
-       and its grip long, and tucking the middle finger under the guard put the whole hand up the
-       frame, along the cylinder, with the grip bare below it. */
-    fitHand: false,
+    /* Fitted like the rest (98f _fitFiringHand). It was opted out when the fit took the frame's
+       edge for the guard and put the whole hand up along the cylinder; reading the guard itself, it
+       puts the middle finger under this small guard, the web up on the backstrap's hump and the
+       trigger 6 mm above the index knuckle -- held at its authored anchor the hand sat 34 mm under
+       the trigger, its backstrap bare. */
+    fitHand: true,
     hands: { right: [-0.010, -0.013, 0.015], rightGrip: 'pistol', left: [0.030, -0.030, -0.028], leftGrip: { axis: [-0.28, -0.94, 0], round: [0, 0, 1], girth: 0.074, spread: 0.0192, close: 0.90, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   mauser: {

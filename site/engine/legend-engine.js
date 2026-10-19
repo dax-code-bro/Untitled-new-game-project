@@ -52210,6 +52210,7 @@ Engine.prototype.weaponSurface = function (root) {
   /* And which closed piece each triangle belongs to (see `inside`): every vertex welded by
      position across the whole weapon, one id per distinct point. */
   const tv = [];
+  const walkedNames = [];
   const weld = new Map();
   let nV = 0;
   const walk = (a, local) => {
@@ -52219,7 +52220,12 @@ Engine.prototype.weaponSurface = function (root) {
        guard's opening, the gap behind the magazine and the air under the handguard all read as
        solid metal in. */
     if (a !== root && a.noDraw) return;
+    /* Nor what is hidden: the reload's spare magazine is parked out of sight INSIDE the gun between
+       reloads, and counted, it made the middle of the Thompson's grip solid while the grip's own
+       wood was not -- the hand fit measured a different gun from the one on the screen. */
+    if (a !== root && a.visible === false) return;
     const geo = a.mesh && game.geometryOf(a.mesh);
+    walkedNames.push((a.name || '?').slice(0, 24) + ':' + (geo && geo.indices ? geo.indices.length / 3 : 0));
     if (geo && geo.positions) {
       const q = geo.positions;
       const m = local ? local.e : null;
@@ -52555,6 +52561,57 @@ Engine.prototype.weaponSurface = function (root) {
       }
     }
   }
+  /* RAYS UP AND ACROSS, for the escape test below: the triangles bucketed by (x, z) for a ray along
+     y and by (x, y) for a ray along z, the same way pgrid buckets them by (y, z) for x. */
+  const ygrid = new Map(), zgrid = new Map();
+  for (let t = 0; t < tris.length; t += 3) {
+    const A = tris[t], B2 = tris[t + 1], C = tris[t + 2];
+    const xa = Math.floor(Math.min(A[0], B2[0], C[0]) / PCELL), xb = Math.floor(Math.max(A[0], B2[0], C[0]) / PCELL);
+    const ya = Math.floor(Math.min(A[1], B2[1], C[1]) / PCELL), yb = Math.floor(Math.max(A[1], B2[1], C[1]) / PCELL);
+    const za = Math.floor(Math.min(A[2], B2[2], C[2]) / PCELL), zb = Math.floor(Math.max(A[2], B2[2], C[2]) / PCELL);
+    for (let i = xa; i <= xb; i++) {
+      for (let k = za; k <= zb; k++) { const kk = pkey(i, k); let c = ygrid.get(kk); if (!c) { c = []; ygrid.set(kk, c); } c.push(t); }
+      for (let j = ya; j <= yb; j++) { const kk = pkey(i, j); let c = zgrid.get(kk); if (!c) { c = []; zgrid.set(kk, c); } c.push(t); }
+    }
+  }
+  /* Does a ray from (x, y, z) along axis `ax` (0 x, 1 y, 2 z) meet the gun ahead, and behind? */
+  const blocked = (ax, x, y, z) => {
+    const P3 = [x, y, z];
+    const u = ax === 0 ? 1 : 0, v = ax === 2 ? 1 : 2;           // the two axes the ray does not run along
+    const grid = ax === 0 ? pgrid : (ax === 1 ? ygrid : zgrid);
+    const cell = grid.get(pkey(Math.floor(P3[u] / PCELL), Math.floor(P3[v] / PCELL)));
+    if (!cell) return [false, false];
+    let ahead = false, behind = false;
+    for (let c = 0; c < cell.length && !(ahead && behind); c++) {
+      const t = cell[c];
+      const A = tris[t], B2 = tris[t + 1], C = tris[t + 2];
+      const au = A[u] - P3[u], av = A[v] - P3[v], bu = B2[u] - P3[u], bv = B2[v] - P3[v], cu = C[u] - P3[u], cv = C[v] - P3[v];
+      const wc = au * bv - bu * av, wa = bu * cv - cu * bv, wb = cu * av - au * cv;
+      if (!((wa >= 0 && wb >= 0 && wc >= 0) || (wa <= 0 && wb <= 0 && wc <= 0))) continue;
+      const den = wa + wb + wc;
+      if (den === 0) continue;
+      const h = (A[ax] * wa + B2[ax] * wb + C[ax] * wc) / den;
+      if (h > P3[ax]) ahead = true; else behind = true;
+    }
+    return [ahead, behind];
+  };
+  /* BOXED IN, for the solids parity cannot see: an open shell -- the Thompson's
+     wooden grip is two panels and a frame, none of them closed -- has no inside by any count of
+     crossings, and the middle of the grip read as air. A point the gun surrounds in all six
+     directions is inside it. Only asked near the surface (the caller's distance), where it can
+     matter to a finger. */
+  const enclosed = (x, y, z) => {
+    /* Five of the six: a grip shell is often open at the bottom (the Thompson's is), and the ray
+       down it escapes. The air pockets a hand meets -- a trigger guard's opening, the gap between a
+       grip and its magazine -- are open on two sides or more. */
+    let open = 0;
+    for (let ax = 0; ax < 3; ax++) {
+      const [a, b2] = blocked(ax, x, y, z);
+      open += (a ? 0 : 1) + (b2 ? 0 : 1);
+      if (open > 1) return false;
+    }
+    return true;
+  };
   const inside = (x, y, z) => {
     /* Off every seam. These guns are built in mirrored halves and lofted rings, so their edges lie
        on round numbers -- the centre plane z = 0 above all -- and a ray down a shared edge lands in
@@ -52587,13 +52644,18 @@ Engine.prototype.weaponSurface = function (root) {
       if (cAhead[pc] === 0 && cBehind[pc] === 0) touched.push(pc);
       if (hx > x) cAhead[pc]++; else cBehind[pc]++;
     }
-    let hit = false;
+    let hit = false, openAhead = 0, openBehind = 0;
     for (const pc of touched) {
-      // Inside this piece when both counts are odd; open along this line when they disagree,
-      // and then this piece says nothing (outside is the safe way to be wrong).
-      if ((cAhead[pc] & 1) === 1 && (cBehind[pc] & 1) === 1) hit = true;
+      // Inside this piece when both counts are odd. Open along this line when they disagree: then
+      // it is counted with the other open pieces -- wooden grip panels closed off by the frame
+      // they sit on are two open pieces that make one solid between them (the Thompson's grip read
+      // as air with each counted alone) -- and that group is inside when ITS counts are both odd.
+      const a = cAhead[pc] & 1, b2 = cBehind[pc] & 1;
+      if (a === 1 && b2 === 1) hit = true;
+      else if (a !== b2) { openAhead += cAhead[pc]; openBehind += cBehind[pc]; }
       cAhead[pc] = 0; cBehind[pc] = 0;
     }
+    if (!hit && (openAhead & 1) === 1 && (openBehind & 1) === 1) hit = true;
     return hit;
   };
   /* SIGNED, and this is the whole fault behind "the fingers are jumbled up
@@ -52616,7 +52678,15 @@ Engine.prototype.weaponSurface = function (root) {
    * anything about occupancy grids. The sign only appears past the shell
    * band, so a finger genuinely touching the surface still reads zero and
    * stays legal. */
-  const signed = (x, y, z) => (inside(x, y, z) ? -surf(x, y, z) : surf(x, y, z));
+  const signed = (x, y, z) => {
+    const d = surf(x, y, z);
+    if (d >= 1) return d;
+    if (inside(x, y, z)) return -d;
+    // The escape test costs three rays: only where a finger could be (within 3 cm of the gun).
+    if (d < 0.03 && enclosed(x + 2.71e-6, y + 1.93e-6, z + 1.37e-6)) return -d;
+    return d;
+  };
+  signed.debug = { tris: tris.length / 3, pieces: nPiece, walked: walkedNames, blocked };
   signed.inside = inside;
   signed.unsigned = surf;
   return signed;
@@ -53849,6 +53919,13 @@ function _bodyArm(src, S, rec, shoulder, base, sf, keepThumb) {
     outP[i * 3] = p[0] / tot; outP[i * 3 + 1] = p[1] / tot; outP[i * 3 + 2] = p[2] / tot;
     const top = [...slotW.entries()].sort((x, y) => y[1] - x[1]).slice(0, 4);
     const tw = top.reduce((s2, x) => s2 + x[1], 0) || 1;
+    // DEBUG (removed before shipping): globalThis.__hideDigit = { side: 'R', f } hides one digit (f 0 little .. 3 index, 4 thumb).
+    const HD = globalThis.__hideDigit;
+    if (HD && HD.side === S) {
+      const slots = HD.f === 4 ? [3] : [4 + HD.f * 3, 5 + HD.f * 3, 6 + HD.f * 3];
+      let wd = 0; for (const sl of slots) wd += slotW.get(sl) || 0;
+      if (wd / tw > 0.4) keep[i] = 0;
+    }
     top.forEach(([slot, w], q) => { outJ[i * 4 + q] = base + slot; outW[i * 4 + q] = w / tw; });
   }
 
@@ -54006,7 +54083,8 @@ function _constructForeGrip(rec, sf, bore, hold) {
   if (zr == null || zl == null) return false;
   zr = Math.max(zr, 0.006); zl = Math.min(zl, -0.006);
   const R = 0.0095, pitch = 0.0202;
-  const k = [-1, 0, 0];                           // the left hand's fingers close about -x up the right side
+  const SWEEP = (globalThis.__suppSweep != null ? globalThis.__suppSweep : 25) * Math.PI / 180;
+  const cY = Math.cos(SWEEP), sY = Math.sin(SWEEP);
   const turn = (v, t) => {                          // rotate v about -x by t: closes +z toward +y
     const c = Math.cos(t), s2 = Math.sin(t);
     return [v[0], v[1] * c + v[2] * s2, -v[1] * s2 + v[2] * c];
@@ -54033,11 +54111,22 @@ function _constructForeGrip(rec, sf, bore, hold) {
     const P2 = add(P1, mul(dir, L[1]));
     dir = turn(dir, 0.55 - 0.15 * wide);
     const T = add(P2, mul(dir, L[2]));
-    d.pivots3 = [P0, P1, P2];
-    d.joints = [P1, P2];
-    d.knuckle = P0;
-    d.tip = T;
-    d.axis = k.slice();
+    /* ANGLED FORWARD as they wrap, the whole hand turned about the knuckle row's middle: a support
+       hand does not grip square across the forend -- its fingers lean toward the muzzle as they
+       come up the side, so the index knuckle sits further under and the wrist trails back toward
+       the shooter. Square across, the palm's long axis ran straight out to the left and aimed, the
+       support arm came in flat from the side edge of the screen. */
+    const zc = wide ? zWide : Math.min(zWide, zSlim);
+    const turnY = (q) => {
+      const dx = q[0] - x0, dz = q[2] - zc;
+      return [x0 + dx * cY + dz * sY, q[1], zc - dx * sY + dz * cY];
+    };
+    const Q = [P0, P1, P2, T].map(turnY);
+    d.pivots3 = [Q[0], Q[1], Q[2]];
+    d.joints = [Q[1], Q[2]];
+    d.knuckle = Q[0];
+    d.tip = Q[3];
+    d.axis = [-cY, 0, sY];
     d.open = -1;
   }
   // The thumb along the left side, pointing at the muzzle; its root is where the palm puts it.
@@ -54103,8 +54192,11 @@ function makeBodyArms(parts, shoulders, sf, keepThumb, ext) {
        sight line, so a finger curling up the forend's side stops there instead of crossing it --
        nor above the forend's own top by more than a fingertip: a support hand's fingers come up its
        side to the top edge, they do not lie across the top (the M16's did, an overhand hold). */
+    const CAP = globalThis.__suppCap != null ? globalThis.__suppCap : 0.012;
     const ceiling = (rec) => {
-      const top = rec.constructed ? rec.constructed.yt + 0.006 : Infinity;
+      /* ...and no more than a fingertip above the bore: over a slim forend the gun's top is the
+         barrel's (or the barrels'), and fingers that reached it lay across the top of the barrel. */
+      const top = rec.constructed ? Math.min(rec.constructed.yt + 0.006, ext.boreY + CAP) : Infinity;
       if (ext.sightY == null && top === Infinity) return sfL;
       const lim = Math.min(ext.sightY != null ? ext.sightY - 0.004 : Infinity, top), under = sfL;
       const f = (x, y, z) => Math.min(under(x, y, z), lim - y);
@@ -54122,7 +54214,9 @@ function makeBodyArms(parts, shoulders, sf, keepThumb, ext) {
         if (!_constructForeGrip(r2, sf, ext.boreY, hold)) break;
         const sfH = ceiling(r2);
         const body = _bodyArm(src, 'L', r2, shoulders.left, 16, sfH);
-        const sc = _restScore(r2, sfL, sfH);
+        /* The palm-under hold unless the fist is clearly better: the fist's palm is round the left
+           side, and from there the hand reads as gripping from above. */
+        const sc = _restScore(r2, sfL, sfH) * (hold === 'slim' ? (globalThis.__slimMargin != null ? 1 / globalThis.__slimMargin : 1 / 0.7) : 1);
         if (!best || sc < best.sc) best = { sc, body, r2, hold };
       }
       if (best) {
@@ -54189,7 +54283,12 @@ function _fitFiringHand(hands, opts) {
   const { sub, len } = _ba;
   const sf = opts.surface;
   if (!sf || opts.fitHand === false || !hands || !hands.right) return hands;
-  if ((hands.rightGrip || 'pistol') !== 'pistol') return hands;
+  /* Any grip whose index works a trigger: the `pistol` and `wrist` kinds and a weapon's own grip
+     that says so (the C96's, the MG 42's) -- left out, those hands sat 26 to 51 mm under their
+     triggers. */
+  const gripIn = hands.rightGrip || 'pistol';
+  const gk = typeof gripIn === 'string' ? GRIP_KINDS[gripIn] : gripIn;
+  if (!gk || gk.index !== 'trigger') return hands;
   // Metal anywhere across the middle of the gun at (x, y): a guard bar or a strap is not always
   // on the centre plane itself.
   const solid = (x, y) => {
@@ -54200,7 +54299,7 @@ function _fitFiringHand(hands, opts) {
     const rec = {};
     const g3 = () => [new Geometry(), new Geometry(), new Geometry()];
     try {
-      buildViewHand(new Geometry(), new Vec3(at[0], at[1], at[2]), 1, { grip: 'pistol', thumbGeo: new Geometry(),
+      buildViewHand(new Geometry(), new Vec3(at[0], at[1], at[2]), 1, { grip: gripIn, thumbGeo: new Geometry(),
         out: rec, boreY: opts.boreY, sightY: opts.sightY, indexGeo: new Geometry(),
         digitGeos: [new Geometry(), new Geometry(), new Geometry(), new Geometry()], palmGeo: new Geometry(),
         phalanxGeos: [g3(), g3(), g3(), g3()], surface: sf });
@@ -54249,6 +54348,7 @@ function _fitFiringHand(hands, opts) {
      The hand seats itself against the grip after the anchor moves, so the response is not
      linear, and an unchecked last step is how the MG 42's hand first went off up its receiver. */
   const base = hands.right;
+  if (globalThis.__fitDbg) { let fr = null; for (let x = 0.012; x > -0.06; x -= 0.001) if (solid(x, -0.04)) { fr = x; break; } globalThis.__fitDbg.push({ key: opts.key, probeFront: fr, sfIn: [0.0, 0.005, -0.005].map((xx) => +sf(xx, -0.04, 0).toFixed(4)), dbg: sf.debug }); }
   let at = base.slice(), best = null;
   at[2] += globalThis.__fitDZ != null ? globalThis.__fitDZ : 0.004;
   for (let it = 0; it < 4; it++) {
@@ -54257,13 +54357,18 @@ function _fitFiringHand(hands, opts) {
     const m = rec.byFinger[2].pivots3[0];
     const f0 = frontAt(m[1], m[0] + 0.012);
     if (f0 == null) break;
-    /* Read a little way ahead of the strap, at three stations: right in front of it the line can
-       run down the trigger blade itself and never see the opening above the guard's bar. */
+    /* Read a little way ahead of the strap, station by station out to 64 mm: right in front of it
+       the line can run down the trigger blade itself and never see the opening above the guard's
+       bar -- and on the M1911 and the Thompson the guard does not begin until 25 to 35 mm ahead of
+       the strap. Read only that close, the frame's edge was taken for the ceiling, the index sent
+       under it, and the hand sat a finger low (the Thompson's ring and little knuckles below the
+       bottom of its grip, its trigger 37 mm above the index knuckle). The first station that finds a
+       guard is the one; failing that, the nearest frame. */
     let ceil = null;
-    for (const ox of [0.016, 0.022, 0.010]) {
+    for (const ox of [0.016, 0.022, 0.010, 0.028, 0.034, 0.040, 0.046, 0.052, 0.058, 0.064]) {
       const c = ceilingAt(f0 + ox, m[1] - 0.06);
       if (c && c.guard) { ceil = c; break; }
-      if (c && !ceil) ceil = c;
+      if (c && !ceil && ox <= 0.022) ceil = c;
     }
     if (ceil == null) break;
     const spread = len(sub(rec.byFinger[3].pivots3[0], m)) || 0.0194;

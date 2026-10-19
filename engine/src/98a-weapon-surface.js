@@ -19,6 +19,7 @@ Engine.prototype.weaponSurface = function (root) {
   /* And which closed piece each triangle belongs to (see `inside`): every vertex welded by
      position across the whole weapon, one id per distinct point. */
   const tv = [];
+  const walkedNames = [];
   const weld = new Map();
   let nV = 0;
   const walk = (a, local) => {
@@ -28,7 +29,12 @@ Engine.prototype.weaponSurface = function (root) {
        guard's opening, the gap behind the magazine and the air under the handguard all read as
        solid metal in. */
     if (a !== root && a.noDraw) return;
+    /* Nor what is hidden: the reload's spare magazine is parked out of sight INSIDE the gun between
+       reloads, and counted, it made the middle of the Thompson's grip solid while the grip's own
+       wood was not -- the hand fit measured a different gun from the one on the screen. */
+    if (a !== root && a.visible === false) return;
     const geo = a.mesh && game.geometryOf(a.mesh);
+    walkedNames.push((a.name || '?').slice(0, 24) + ':' + (geo && geo.indices ? geo.indices.length / 3 : 0));
     if (geo && geo.positions) {
       const q = geo.positions;
       const m = local ? local.e : null;
@@ -364,6 +370,57 @@ Engine.prototype.weaponSurface = function (root) {
       }
     }
   }
+  /* RAYS UP AND ACROSS, for the escape test below: the triangles bucketed by (x, z) for a ray along
+     y and by (x, y) for a ray along z, the same way pgrid buckets them by (y, z) for x. */
+  const ygrid = new Map(), zgrid = new Map();
+  for (let t = 0; t < tris.length; t += 3) {
+    const A = tris[t], B2 = tris[t + 1], C = tris[t + 2];
+    const xa = Math.floor(Math.min(A[0], B2[0], C[0]) / PCELL), xb = Math.floor(Math.max(A[0], B2[0], C[0]) / PCELL);
+    const ya = Math.floor(Math.min(A[1], B2[1], C[1]) / PCELL), yb = Math.floor(Math.max(A[1], B2[1], C[1]) / PCELL);
+    const za = Math.floor(Math.min(A[2], B2[2], C[2]) / PCELL), zb = Math.floor(Math.max(A[2], B2[2], C[2]) / PCELL);
+    for (let i = xa; i <= xb; i++) {
+      for (let k = za; k <= zb; k++) { const kk = pkey(i, k); let c = ygrid.get(kk); if (!c) { c = []; ygrid.set(kk, c); } c.push(t); }
+      for (let j = ya; j <= yb; j++) { const kk = pkey(i, j); let c = zgrid.get(kk); if (!c) { c = []; zgrid.set(kk, c); } c.push(t); }
+    }
+  }
+  /* Does a ray from (x, y, z) along axis `ax` (0 x, 1 y, 2 z) meet the gun ahead, and behind? */
+  const blocked = (ax, x, y, z) => {
+    const P3 = [x, y, z];
+    const u = ax === 0 ? 1 : 0, v = ax === 2 ? 1 : 2;           // the two axes the ray does not run along
+    const grid = ax === 0 ? pgrid : (ax === 1 ? ygrid : zgrid);
+    const cell = grid.get(pkey(Math.floor(P3[u] / PCELL), Math.floor(P3[v] / PCELL)));
+    if (!cell) return [false, false];
+    let ahead = false, behind = false;
+    for (let c = 0; c < cell.length && !(ahead && behind); c++) {
+      const t = cell[c];
+      const A = tris[t], B2 = tris[t + 1], C = tris[t + 2];
+      const au = A[u] - P3[u], av = A[v] - P3[v], bu = B2[u] - P3[u], bv = B2[v] - P3[v], cu = C[u] - P3[u], cv = C[v] - P3[v];
+      const wc = au * bv - bu * av, wa = bu * cv - cu * bv, wb = cu * av - au * cv;
+      if (!((wa >= 0 && wb >= 0 && wc >= 0) || (wa <= 0 && wb <= 0 && wc <= 0))) continue;
+      const den = wa + wb + wc;
+      if (den === 0) continue;
+      const h = (A[ax] * wa + B2[ax] * wb + C[ax] * wc) / den;
+      if (h > P3[ax]) ahead = true; else behind = true;
+    }
+    return [ahead, behind];
+  };
+  /* BOXED IN, for the solids parity cannot see: an open shell -- the Thompson's
+     wooden grip is two panels and a frame, none of them closed -- has no inside by any count of
+     crossings, and the middle of the grip read as air. A point the gun surrounds in all six
+     directions is inside it. Only asked near the surface (the caller's distance), where it can
+     matter to a finger. */
+  const enclosed = (x, y, z) => {
+    /* Five of the six: a grip shell is often open at the bottom (the Thompson's is), and the ray
+       down it escapes. The air pockets a hand meets -- a trigger guard's opening, the gap between a
+       grip and its magazine -- are open on two sides or more. */
+    let open = 0;
+    for (let ax = 0; ax < 3; ax++) {
+      const [a, b2] = blocked(ax, x, y, z);
+      open += (a ? 0 : 1) + (b2 ? 0 : 1);
+      if (open > 1) return false;
+    }
+    return true;
+  };
   const inside = (x, y, z) => {
     /* Off every seam. These guns are built in mirrored halves and lofted rings, so their edges lie
        on round numbers -- the centre plane z = 0 above all -- and a ray down a shared edge lands in
@@ -396,13 +453,18 @@ Engine.prototype.weaponSurface = function (root) {
       if (cAhead[pc] === 0 && cBehind[pc] === 0) touched.push(pc);
       if (hx > x) cAhead[pc]++; else cBehind[pc]++;
     }
-    let hit = false;
+    let hit = false, openAhead = 0, openBehind = 0;
     for (const pc of touched) {
-      // Inside this piece when both counts are odd; open along this line when they disagree,
-      // and then this piece says nothing (outside is the safe way to be wrong).
-      if ((cAhead[pc] & 1) === 1 && (cBehind[pc] & 1) === 1) hit = true;
+      // Inside this piece when both counts are odd. Open along this line when they disagree: then
+      // it is counted with the other open pieces -- wooden grip panels closed off by the frame
+      // they sit on are two open pieces that make one solid between them (the Thompson's grip read
+      // as air with each counted alone) -- and that group is inside when ITS counts are both odd.
+      const a = cAhead[pc] & 1, b2 = cBehind[pc] & 1;
+      if (a === 1 && b2 === 1) hit = true;
+      else if (a !== b2) { openAhead += cAhead[pc]; openBehind += cBehind[pc]; }
       cAhead[pc] = 0; cBehind[pc] = 0;
     }
+    if (!hit && (openAhead & 1) === 1 && (openBehind & 1) === 1) hit = true;
     return hit;
   };
   /* SIGNED, and this is the whole fault behind "the fingers are jumbled up
@@ -425,7 +487,15 @@ Engine.prototype.weaponSurface = function (root) {
    * anything about occupancy grids. The sign only appears past the shell
    * band, so a finger genuinely touching the surface still reads zero and
    * stays legal. */
-  const signed = (x, y, z) => (inside(x, y, z) ? -surf(x, y, z) : surf(x, y, z));
+  const signed = (x, y, z) => {
+    const d = surf(x, y, z);
+    if (d >= 1) return d;
+    if (inside(x, y, z)) return -d;
+    // The escape test costs three rays: only where a finger could be (within 3 cm of the gun).
+    if (d < 0.03 && enclosed(x + 2.71e-6, y + 1.93e-6, z + 1.37e-6)) return -d;
+    return d;
+  };
+  signed.debug = { tris: tris.length / 3, pieces: nPiece, walked: walkedNames, blocked };
   signed.inside = inside;
   signed.unsigned = surf;
   return signed;
