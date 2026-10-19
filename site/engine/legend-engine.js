@@ -53386,9 +53386,28 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
       const c0 = leftOf([b0[0] + rT + 0.004, b0[1], 0]);
       if (c0[2] > -0.05 && sf(c0[0], c0[1], c0[2]) >= rT * 0.95) b0 = c0;
     }
-    const tip = leftOf(rec.thumbTip);
+    /* AGAINST THE RECEIVER, not beside the trigger guard. At the grip solve's thumb height there is
+       often nothing but the guard's thin bar ahead of the grip, and the thumb lay along that, 20 to
+       27 mm under the receiver -- in the open space below the gun, where from the right it showed
+       as a second finger pointing at the muzzle under the trigger finger. A thumb rides up against
+       the bottom edge of the receiver's (or frame's) left side: from the station's own height up to
+       the first height where the gun is a body and not a bar (16 mm across or more), a little into
+       it. Where the frame is already there (a pistol's), nothing moves. */
+    const bodyAt = (x, y0) => {
+      for (let y = y0; y <= y0 + 0.045; y += 0.0015) {
+        let n = 0;
+        for (let z = -0.03; z <= 0.03; z += 0.002) if (sf(x, y, z) < 0) n++;
+        if (n >= 8) return y;
+      }
+      return null;
+    };
+    const raise = (q) => {
+      const y = bodyAt(q[0], q[1]);
+      return y != null && y > q[1] + 0.004 ? [q[0], y + 0.005, q[2]] : q;
+    };
+    const tip = leftOf(raise(rec.thumbTip));
     // The middle joint between them, held off the corner of the grip it goes round.
-    const mid = leftOf([b0[0] + (tip[0] - b0[0]) * 0.42, (b0[1] + tip[1]) / 2, 0]);
+    const mid = leftOf(raise([b0[0] + (tip[0] - b0[0]) * 0.42, (b0[1] + tip[1]) / 2, 0]));
     // Lengths kept: the bones laid along base -> mid -> tip as far as they reach.
     // Each joint pushed out to the left until it clears the grip it lies on.
     const push = (q) => { const p = q.slice(); for (let n = 0; n < 30 && sf(p[0], p[1], p[2]) < rT; n++) p[2] -= 0.0012; return p; };
@@ -54251,14 +54270,14 @@ function _fitFiringHand(hands, opts) {
     const Y = ceil.y - R - 0.0015 - (ceil.guard ? 0 : spread);
     const fy = frontAt(Y, f0 + 0.010);
     if (fy == null) break;
-    /* The knuckle row OUTSIDE the grip's front corner, a little ahead of the front strap and (below)
-       out from the side -- where the knuckles of a hand round a grip are, the first bone of each
-       finger lying straight ACROSS the strap with its pad on it. Set 8 mm behind the strap, the first
-       bone met the corner end-on and stood off it, its middle joint 7 mm proud of the strap; 2 mm
-       ahead, the corner still turned it, and the middle finger's first bone pointed 70 degrees off
-       the muzzle rather than across -- from the right, a second finger reaching forward beside the
-       trigger finger. 6 mm ahead and 4 mm out: 84 degrees, across. */
-    let X = fy + (globalThis.__fitDX != null ? globalThis.__fitDX : 0.006);
+    /* The knuckle row just AHEAD of the front strap, at the grip's front corner (and, below, 4 mm
+       out from its side) -- so the first bone of each finger lies across the strap. Set 8 mm behind
+       it, the first bone met the corner end-on and stood off it, its middle joint 7 mm proud of the
+       strap. Further ahead (6 mm) laid the middle finger's first bone squarer across, but brought
+       the index knuckle to within 6 mm of the trigger on the Grease Gun and folded the trigger
+       finger back on itself; the "second finger reaching forward" it was chasing was the thumb
+       (see _wrapHand). */
+    let X = fy + (globalThis.__fitDX != null ? globalThis.__fitDX : 0.002);
     /* And not into the stock. Raising the hand raises the web of it, and on a gun whose stock
        or receiver comes down behind the grip (the Scattergun, the MG 42) the thumb's base went
        14 mm into the wood. Buried, it counts against the solve and the next step goes back down. */

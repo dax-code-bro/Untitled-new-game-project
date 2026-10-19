@@ -971,8 +971,22 @@
     return lo;
   }
 
-  function handsFor(g, cls, game) {
+  /* WHERE A FEW GUNS ARE HELD that the rule below cannot find, read off their own shapes: a
+     vertical post is held in a fist like a pistol grip, not cupped from underneath like a forend.
+     The P90's station two thirds out was on bare barrel past the front of its body, its support
+     fingers 38 mm off anything; the MP7's was cupped under the bottom of its vertical foregrip and
+     the MP 40's under its magazine. */
+  var HOLDS = {
+    p90: { left: [0.035, 0.010, 0], leftGrip: 'fore' },
+    mp7: { left: [0.186, -0.026, -0.016], leftGrip: 'foregrip' },
+    mp40: { left: [0.070, -0.026, -0.016], leftGrip: 'foregrip' },
+  };
+  function handsFor(g, cls, game, id) {
     var muzzle = (g && g.muzzleAt != null) ? g.muzzleAt : 0.42;
+    if (id && HOLDS[id]) {
+      return { right: [-0.006, -0.024, 0.016], rightGrip: 'pistol',
+        left: HOLDS[id].left.slice(), leftGrip: HOLDS[id].leftGrip };
+    }
     var bore = (g && g.boreAt != null) ? g.boreAt : 0.05;
     var oneHanded = cls === 'pistol' || muzzle < 0.24;
     if (oneHanded) {
@@ -1261,7 +1275,7 @@
     if (made && game.viewmodelArms) {
       try {
         var spec = W.MP_DATA && W.MP_DATA.gun ? W.MP_DATA.gun(id) : null;
-        made.__arms = game.viewmodelArms(made, handsFor(made, spec && (spec.cls || spec.class), game), {
+        made.__arms = game.viewmodelArms(made, handsFor(made, spec && (spec.cls || spec.class), game, id), {
           key: 'mp:' + id,
           boreY: made.boreAt != null ? made.boreAt : null,
           sightY: made.sightAt != null ? made.sightAt : null,
