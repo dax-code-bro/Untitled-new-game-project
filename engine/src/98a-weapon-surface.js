@@ -16,6 +16,11 @@ Engine.prototype.weaponSurface = function (root) {
      "which side of it" -- a flat panel has vertices only at its corners,
      so a shell marked from vertices is a shell full of holes. */
   const tris = [];
+  /* And which closed piece each triangle belongs to (see `inside`): every vertex welded by
+     position across the whole weapon, one id per distinct point. */
+  const tv = [];
+  const weld = new Map();
+  let nV = 0;
   const walk = (a, local) => {
     /* Not the hands. The viewmodel rig's bones are parented to the weapon and kept, undrawn
        (`noDraw`), to pose the body arms; asked for after the arms were made, this walk took that
@@ -36,7 +41,20 @@ Engine.prototype.weaponSurface = function (root) {
             m[1] * x + m[5] * y + m[9] * z + m[13],
             m[2] * x + m[6] * y + m[10] * z + m[14]];
         };
-        for (let i = 0; i < I.length; i += 3) tris.push(tf(I[i]), tf(I[i + 1]), tf(I[i + 2]));
+        const P3 = [], vid = new Int32Array(q.length / 3);
+        for (let i = 0; i < q.length / 3; i++) {
+          const p = tf(i);
+          P3.push(p);
+          // A tenth of a millimetre: the corners a box's faces share, not the points two parts share.
+          const key = (Math.round(p[0] * 1e4) + 65536) * 17179869184 + (Math.round(p[1] * 1e4) + 65536) * 131072 + (Math.round(p[2] * 1e4) + 65536);
+          let v = weld.get(key);
+          if (v === undefined) { v = nV++; weld.set(key, v); }
+          vid[i] = v;
+        }
+        for (let i = 0; i < I.length; i += 3) {
+          tris.push(P3[I[i]], P3[I[i + 1]], P3[I[i + 2]]);
+          tv.push(vid[I[i]], vid[I[i + 1]], vid[I[i + 2]]);
+        }
       }
       // Every third vertex: a fingertip is 10 mm across and these meshes are
       // far finer than that, so a third of them describes the same surface.
@@ -291,6 +309,33 @@ Engine.prototype.weaponSurface = function (root) {
    * the answer is not to be trusted -- so it says outside, which is the
    * safe way to be wrong. */
   if (!tris.length) { surf.inside = () => false; return surf; }
+  /* PARITY PER PIECE, and a point is inside if it is inside ANY of them.
+   *
+   * A gun is not one closed surface. It is dozens of closed pieces laid into and over each other
+   * -- grip panels over the frame, a magazine in its well, pins through the slide, a slide over the
+   * barrel -- plus the odd open plate. Counted over all of them at once, a point inside two
+   * overlapping pieces crosses an even number of faces and reads as air (the middle of a pistol's
+   * grip, where the panels lap the frame), and one open plate anywhere down the ray flips the
+   * answer for the whole line -- the stripes of "solid" and "empty" every scan of the C96 and the
+   * M4 kept tripping on. So the triangles are grouped into the pieces they make (connected through
+   * shared corners), each piece keeps its own count, and a piece that is open along the ray (its two
+   * counts disagree) has no say. */
+  const par = new Int32Array(nV);
+  for (let i = 0; i < nV; i++) par[i] = i;
+  const find = (i) => { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; };
+  const unite = (a, b) => { a = find(a); b = find(b); if (a !== b) par[b] = a; };
+  for (let t = 0; t < tv.length; t += 3) { unite(tv[t], tv[t + 1]); unite(tv[t], tv[t + 2]); }
+  const pieceOf = new Int32Array(tris.length / 3);
+  const label = new Map();
+  for (let t = 0; t < tv.length; t += 3) {
+    const r = find(tv[t]);
+    let l = label.get(r);
+    if (l === undefined) { l = label.size; label.set(r, l); }
+    pieceOf[t / 3] = l;
+  }
+  const nPiece = label.size;
+  const cAhead = new Int32Array(nPiece), cBehind = new Int32Array(nPiece);
+  const touched = [];
   /* Four millimetres, not ten.
    *
    * The parity test reads ONE column cell and runs an exact point-in-2D-
@@ -331,7 +376,7 @@ Engine.prototype.weaponSurface = function (root) {
     y += 2.71e-6; z += 1.37e-6;
     const cell = pgrid.get(pkey(Math.floor(y / PCELL), Math.floor(z / PCELL)));
     if (!cell) return false;
-    let ahead = 0, behind = 0;
+    touched.length = 0;
     for (let c = 0; c < cell.length; c++) {
       const t = cell[c];
       const A = tris[t], B2 = tris[t + 1], C = tris[t + 2];
@@ -347,12 +392,18 @@ Engine.prototype.weaponSurface = function (root) {
       if (den === 0) continue;
       // Where along x it crosses, by the same weights.
       const hx = (A[0] * wa + B2[0] * wb + C[0] * wc) / den;
-      if (hx > x) ahead++; else behind++;
+      const pc = pieceOf[t / 3];
+      if (cAhead[pc] === 0 && cBehind[pc] === 0) touched.push(pc);
+      if (hx > x) cAhead[pc]++; else cBehind[pc]++;
     }
-    // Open along this line: the two counts disagree, and outside is the
-    // safe answer.
-    if (((ahead & 1) === 1) !== ((behind & 1) === 1)) return false;
-    return (ahead & 1) === 1;
+    let hit = false;
+    for (const pc of touched) {
+      // Inside this piece when both counts are odd; open along this line when they disagree,
+      // and then this piece says nothing (outside is the safe way to be wrong).
+      if ((cAhead[pc] & 1) === 1 && (cBehind[pc] & 1) === 1) hit = true;
+      cAhead[pc] = 0; cBehind[pc] = 0;
+    }
+    return hit;
   };
   /* SIGNED, and this is the whole fault behind "the fingers are jumbled up
    * with the gun".

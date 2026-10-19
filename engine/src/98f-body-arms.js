@@ -234,7 +234,7 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
         const t = onTrigger
           ? joint(p, dir, k, L[j], R[j] * 0.8, j === 0 ? 0 : angle(dir, rigDir[j], k), -40 * DEG, 110 * DEG, true)
           : joint(p, dir, k, L[j], R[j], start, lim[j][0], lim[j][1], false,
-            Math.min(0, sf(p[0], p[1], p[2]) - R[j]) - 0.0005);
+            Math.min(0, sf(p[0], p[1], p[2]) - R[j]) - (globalThis.__squish != null ? globalThis.__squish : 0.0025));
         if (globalThis.__wrapDbg) (pts.dbg || (pts.dbg = [])).push([+(start / DEG).toFixed(0), +(t / DEG).toFixed(0), +(clear(p, rot(dir, k, t), L[j], R[j]) * 1000).toFixed(1), +(clear(p, rot(dir, k, t + 6 * DEG), L[j], R[j]) * 1000).toFixed(1)]);
         dir = rot(dir, k, t);
         p = add(p, mul(dir, L[j]));
@@ -299,7 +299,9 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
           }
         }
         const fwd = P[3][0] - P0[0];
-        return dist(padOf(P), T) + 3 * Math.max(0, pen) + 3 * Math.max(0, 0.013 - fwd);
+        const KP = globalThis.__trigPip != null ? globalThis.__trigPip : 2.0;
+        const pipGap = sf(P[1][0], P[1][1], P[1][2]) - R[0] - 0.006;
+        return dist(padOf(P), T) + 3 * Math.max(0, pen) + 3 * Math.max(0, 0.013 - fwd) + KP * Math.max(0, pipGap);
       };
       const rigCost = cost({ P: [P0, d.pivots3[1], d.pivots3[2], d.tip] });
       // Coarse: the nearest poses by distance alone, then those costed against the gun.
@@ -1187,7 +1189,7 @@ function _fitFiringHand(hands, opts) {
        bone of each finger lies across the strap. Set 8 mm behind it, the first bone met the corner
        end-on and stood off it, its middle joint 7 mm proud of the strap on average (the audit's
        "fingers bow out ahead of the grip"); 2 mm ahead, 5. */
-    let X = fy + 0.002;
+    let X = fy + (globalThis.__fitDX != null ? globalThis.__fitDX : 0.002);
     /* And not into the stock. Raising the hand raises the web of it, and on a gun whose stock
        or receiver comes down behind the grip (the Scattergun, the MG 42) the thumb's base went
        14 mm into the wood. Buried, it counts against the solve and the next step goes back down. */
@@ -1196,6 +1198,7 @@ function _fitFiringHand(hands, opts) {
     let tY = Y;
     if (buried > 0) tY = Math.min(Y, m[1] - buried * 1.2);
     const err = Math.hypot(X - m[0], Y - m[1]) + 3 * buried;
+    if (globalThis.__fitDbg) globalThis.__fitDbg.push({ key: opts.key, at: at.slice(), m: m.slice(), f0, ceil, Y, X, fy, err });
     if (!best || err < best.err) best = { at: at.slice(), err };
     if (err < 0.002) break;
     const nx = Math.max(base[0] - 0.03, Math.min(base[0] + 0.02, at[0] + 0.85 * (X - m[0])));
