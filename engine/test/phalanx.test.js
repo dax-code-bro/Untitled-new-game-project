@@ -107,7 +107,22 @@ const note = (s) => console.log(`  ..   ${s}`);
       if (!a2 || !a2.lBones) continue;
       const rec = a2.digits && a2.digits.left;
       const ds = rec && rec.digits;
-      const bs = a2.lBones[0], d = ds && ds[0];
+      /* THE MOST BENT support finger, not always the first. What this asks
+         -- does the finger change its own shape as it opens -- needs a
+         middle joint with a bend in it to change: the Mauser's first
+         finger lies straight across the back of its magazine housing
+         (0.9 degrees at that joint), on it, and a straight joint reads the
+         same open or shut however the chain works. */
+      let fi = 0, bendMax = -1;
+      for (let f = 0; ds && f < Math.min(4, ds.length); f++) {
+        const q = ds[f];
+        if (!q || !q.pivots3 || !a2.lBones[f]) continue;
+        const u = q.pivots3[1].map((c, i) => c - q.pivots3[0][i]), w = q.pivots3[2].map((c, i) => q.pivots3[2][i] - q.pivots3[1][i]);
+        const cs = (u[0] * w[0] + u[1] * w[1] + u[2] * w[2]) / ((Math.hypot(...u) * Math.hypot(...w)) || 1);
+        const bend = Math.acos(Math.max(-1, Math.min(1, cs)));
+        if (bend > bendMax) { bendMax = bend; fi = f; }
+      }
+      const bs = a2.lBones[fi], d = ds && ds[fi];
       if (!bs || !bs[1] || !bs[2] || !d || !d.pivots3 || !d.tip) continue;
       /* IN THE PALM'S FRAME. Opening a hand during a reload also slides
          the whole support arm to the magazine well, and measured in the

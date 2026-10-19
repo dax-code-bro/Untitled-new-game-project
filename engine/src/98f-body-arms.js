@@ -349,15 +349,8 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
        bend to put the pad of the last bone in the opening, every bone kept off the frame and the
        tip still ahead of the knuckle (grip.test). Kept when the pad lands nearer than the solve's. */
     if (isTrig && rec.trigAt) {
-      /* On the BLADE, not in the middle of the hole. rec.trigAt is the centre of the guard's
-         opening; the trigger hangs at the back of it, and a pad sent to the centre lay along the
-         guard's bottom bar under the blade's tip (the audit's commonest firing-hand fault). The
-         first metal behind the centre, at its height, is the blade: the pad goes against its face,
-         a little above the middle, on the gun's centre line. */
-      let T = rec.trigAt;
-      for (let x = T[0]; x > T[0] - 0.03; x -= 0.0007) {
-        if (sf(x, T[1], 0) < 0.0015) { T = [x + 0.0075, T[1] + 0.002, 0]; break; }
-      }
+      // On the BLADE, not in the middle of the hole (_triggerBlade).
+      const T = _triggerBlade(sf, rec.trigAt);
       const c0 = nrm(cross(k, nrm(sub(rigDir[0], mul(k, dot(rigDir[0], k))))));
       const pose = (yaw, pitch, a1, a2) => {
         const kk = rot(k, c0, pitch);
@@ -542,8 +535,14 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
     }
   }
   // Only a thumb left floating: one the grip solve laid on the gun is already where it belongs.
+  /* Or one it left IN the gun: a single action's thumb stays where the solve put it (the game
+     drives it up to the hammer from there), and on the Obliterator that was along the near side of
+     the frame with its tip a centimetre into it -- 44 per cent of the drawn thumb inside the gun.
+     `joint` backs a bone out of the metal before it closes it, so the same closing puts it on. */
   const tt = rec.thumbTip;
-  if (rec.thumbPivot && rec.thumbMid && tt && rec.thumbAxis && sf(tt[0], tt[1], tt[2]) > 0.014) {
+  const tmid = rec.thumbMid && tt ? [0, 1, 2].map((q) => (rec.thumbMid[q] + tt[q]) / 2) : null;
+  const sunk = !rec.thumbMoved && tmid && [rec.thumbMid, tmid, tt].some((q) => sf(q[0], q[1], q[2]) < radius * 0.5);
+  if (rec.thumbPivot && rec.thumbMid && tt && rec.thumbAxis && (sf(tt[0], tt[1], tt[2]) > 0.014 || sunk)) {
     const T0 = rec.thumbPivot;
     const L0 = len(sub(rec.thumbMid, T0)), L1 = len(sub(rec.thumbTip, rec.thumbMid));
     let d0 = nrm(sub(rec.thumbMid, T0)), d1 = nrm(sub(rec.thumbTip, rec.thumbMid));
@@ -1223,7 +1222,10 @@ function makeBodyArms(parts, shoulders, sf, keepThumb, ext) {
       const cs = rec.constructed;
       if (cs && ext.supportCap != null) top = Math.min(top, (cs.yt + cs.yb) / 2 + ext.supportCap * (cs.yt - cs.yb) / 2);
       if (ext.sightY == null && top === Infinity) return sfL;
-      const lim = Math.min(ext.sightY != null ? ext.sightY - 0.004 : Infinity, top), under = sfL;
+      /* The JOINTS' ceiling, and a fingertip's skin runs on 7 mm past its last joint: stopped 4 mm
+         under the sight line, a finger curling up the far side of the Sawn-off's and the
+         Scattergun's barrels put its tip 7 to 8 mm over it, beside the bead. */
+      const lim = Math.min(ext.sightY != null ? ext.sightY - 0.011 : Infinity, top), under = sfL;
       const f = (x, y, z) => Math.min(under(x, y, z), lim - y);
       f.raw = under.raw;
       return f;
@@ -1282,6 +1284,42 @@ function _bodyArmPalette(weapon, slots) {
     return Skeleton.prototype.uploadTexture.call(this, gl, frame);
   };
   return s;
+}
+
+/* The point on a trigger's blade the pad goes to: a finger's radius in front of the blade's face, a
+   little above the centre's height, on the centre line. `trigAt` is the centre of the guard's opening,
+   and the blade hangs down inside the opening and divides it, so the centre can fall either side of
+   it. The first metal behind the centre is the blade when the centre is ahead of it -- and when that
+   metal is thick it is the grip's front strap: on the M4, the AK and most of the service rifles the
+   centre is behind the blade, and the pad was sent into the gap between the grip and the trigger,
+   the finger lying 15 to 20 mm off the blade. Then the blade is the first thin metal AHEAD of the
+   centre (6 mm or less front to back, with air beyond it), at the centre's height or up to 16 mm
+   over it -- the blade hangs from the receiver and its tip can be above the centre. */
+function _triggerBlade(sf, trigAt) {
+  const tx = trigAt[0], ty = trigAt[1];
+  const solid = (x, y) => sf(x, y, 0) < 0;
+  const run = (x0, y, dir) => {
+    let n = 0;
+    for (let x = x0; n < 0.012 && solid(x, y); x += dir * 0.0005) n += 0.0005;
+    return n;
+  };
+  let back = null;
+  for (let x = tx; x > tx - 0.03; x -= 0.0005) if (solid(x, ty)) { back = x; break; }
+  if (back == null || run(back, ty, -1) > 0.007) {
+    for (let y = ty; y <= ty + 0.016; y += 0.001) {
+      for (let x = tx; x < tx + 0.03; x += 0.0005) {
+        if (!solid(x, y)) continue;
+        const w = run(x, y, 1);
+        if (w <= 0.006 && !solid(x + w + 0.003, y)) return [x + w + 0.009, y + 0.002, 0];
+        break;
+      }
+    }
+  }
+  let T = trigAt;
+  for (let x = T[0]; x > T[0] - 0.03; x -= 0.0007) {
+    if (sf(x, T[1], 0) < 0.0015) { T = [x + 0.0075, T[1] + 0.002, 0]; break; }
+  }
+  return T;
 }
 
 /* THE FIRING HAND IS FITTED TO ITS GRIP, not hung at a number.
@@ -1432,6 +1470,18 @@ function _fitFiringHand(hands, opts) {
        finger back on itself; the "second finger reaching forward" it was chasing was the thumb
        (see _wrapHand). */
     let X = fy + 0.002;
+    /* AND FAR ENOUGH BEHIND THE TRIGGER for the finger to fold onto it. Measured on all seventy-five
+       multiplayer guns: with the index knuckle 22 mm or more behind the blade the pad landed on it (1
+       to 10 mm); at 7 to 19 mm -- most of them, the knuckle row being set by the strap and the guard
+       alone -- the first bone (37 mm) overshot the trigger and the finger lay forward along the frame
+       past it, 12 to 27 mm off; and on the Paralyzer the knuckle was ahead of its trigger and the
+       finger pointed at the target. So the row goes back until the index knuckle is 26 mm behind the
+       blade -- no more than 14 mm behind the strap, which is where a hand's knuckles lie on the side
+       of a grip. */
+    if (TA) {
+      const B = _triggerBlade(sf, TA), lead = rec.byFinger[3].pivots3[0][0] - m[0];
+      if (B[0] - (X + lead) < 0.026) X = Math.max(fy - 0.014, Math.min(X, B[0] - 0.026 - lead));
+    }
     /* And not into the stock. Raising the hand raises the web of it, and on a gun whose stock
        or receiver comes down behind the grip (the Scattergun, the MG 42) the thumb's base went
        14 mm into the wood. Buried, it counts against the solve and the next step goes back down. */
@@ -1548,6 +1598,9 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
        contact checks): hung there, the arms would be measured as part of the gun they hold. It
        is never culled, being placed by its palette rather than its position. */
     const a = new Actor(this, { name, mesh: this._gpuMeshOf(geo), material: mat, skeleton: pal, boundRadius: 0.9 });
+    /* Its geometry kept where `geometryOf` finds it, so what measures the hands (grip.test,
+       sweep.test) measures these -- the hand that is drawn -- skinned through the same palette. */
+    a.mesh.__cpuGeometry = geo;
     a.noCull = true;
     a.armsOf = weapon;
     // Destroyed with the weapon all the same (95-engine `destroy` takes its `rigged` with it).

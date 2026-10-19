@@ -181,7 +181,19 @@ const SWEEP = () => {
       for (let i = 0; i < px.length; i += 4) if (px[i] + px[i + 1] + px[i + 2] > 40) n++;
       return n;
     };
+    /* ONLY WHAT IS DRAWN. The viewmodel rig is posed every frame and never drawn (`noDraw`): the
+       hand on screen is the body's own (98f). A rig finger bone that culls badly is a surface
+       nobody sees -- the Mauser's and the Obliterator's came up here -- so a mesh whose every
+       actor is hidden that way is left out. One no actor holds any more (a zombie since killed)
+       is still measured. */
+    const holders = new Map();
+    for (const a of (window.B && window.B.game ? window.B.game.actors : [])) {
+      const k = a.mesh && a.mesh.__key;
+      if (k == null) continue;
+      holders.set(k, (holders.get(k) || false) || !a.noDraw);
+    }
     for (const key in seen) {
+      if (holders.has(key) && holders.get(key) === false) continue;
       const geo = seen[key], bb = geo.bounds;
       if (!bb) continue;
       const c = [(bb.min.x + bb.max.x) / 2, (bb.min.y + bb.max.y) / 2, (bb.min.z + bb.max.z) / 2];
@@ -505,62 +517,41 @@ const SWEEP = () => {
         for (const which of ['right', 'left']) {
           const h = hands[which];
           if (!h) continue;
-          /* The FINGERS too, and this is why both hand checks were red.
-           *
-           * They read `arms.skin` alone, which was the whole hand when
-           * they were written and is the palm now that every digit has
-           * its own mesh and pivot. So "does the hand wrap what it holds"
-           * was being asked of a palm with no fingers on it, and "does
-           * anything stick out of it" of a palm that by definition has
-           * nothing sticking out: the answer came back 2.9 per cent for
-           * almost every weapon and 1 for the rest, two numbers across
-           * twenty-six hands, which is the shape of a measurement that
-           * has stopped looking at its subject rather than of twenty-six
-           * broken hands.
-           *
-           * Every part of the hand, each brought into the weapon's frame
-           * by its own transform, the way grip.test does it. */
-          /* AND ALL OF EVERY FINGER. `rFingers` is the PROXIMAL bone of
-             each finger only -- the middle and distal bones, the ones that
-             actually come round the far side of a grip, live in `rBones`
-             -- and the palm has been its own mesh since the wrist joint
-             went in. This list predates both, so it was measuring a palm-
-             less hand with every finger cut off at the first knuckle. */
-          const uniq = (arr) => [...new Set(arr.filter(Boolean))];
-          const bits = which === 'right'
-            ? uniq([arms.skin, arms.palm, arms.thumb, arms.index].concat(arms.rFingers || [], ...(arms.rBones || []).map((b) => b || [])))
-            : uniq([arms.lSkin, arms.lPalm, arms.lThumb].concat(arms.lFingers || [], ...(arms.lBones || []).map((b) => b || [])));
-          /* THROUGH THE WHOLE CHAIN, not one link of it. Every piece of
-             hand lofts in the weapon's space and each actor's transform
-             is only its OWN bend about its own joint -- but the bones are
-             chained: proximal under the palm, middle under proximal,
-             distal under middle. Taking only `act`'s own transform
-             measured each middle and distal bone as if the bone before it
-             had not bent, so a curled finger was read nearly straight and
-             never reached the far side of the grip: 18 to 30 hands "on
-             two or three sides" whose close-ups show them closed. Compose
-             up through every parent that is part of the arms. */
-          const armAll = new Set(arms.parts || []);
-          const chainM = (act) => {
-            const m = new LE.Mat4(); m.compose(act._position, act._rotation, act.scale);
-            for (let q = act.parent; q && armAll.has(q); q = q.parent) {
-              const pm = new LE.Mat4(); pm.compose(q._position, q._rotation, q.scale);
-              const t = new LE.Mat4(); t.mulMatrices(pm, m); m.copy(t);
-            }
-            return m;
-          };
+          /* THE HAND THAT IS DRAWN. Every version of this read the rig --
+             `arms.skin`, the palm, the finger bones -- and was right to,
+             while the rig was what the player saw. It is not any more: the
+             rig is posed and hidden (`noDraw`), and the hand on screen is
+             the body's own skinned hand (98f), closed joint by joint onto
+             the weapon. Read off the rig, a hand on a forend came out "on
+             two sides" whose close-ups show palm under, fingers up one
+             side and thumb up the other, because the rig's palm and the
+             drawn palm are no longer the same shape. Skinned here through
+             the palette the shader uses (each vertex the weighted sum of
+             its rig actors' world matrices), and brought into the
+             weapon's frame. */
+          const wroot = live.kind === 'single' ? live.actor : live.root;
+          const toW = new LE.Mat4().copy(wroot.matrix).invert().e;
           const pos = [];
-          for (const act of bits) {
-            if (!act || !act.mesh) continue;
-            const g4 = G.geometryOf(act.mesh);
-            if (!g4 || !g4.positions) continue;
-            const m4 = chainM(act);
-            const e4 = m4.e, q4 = g4.positions;
-            for (let i = 0; i < q4.length; i += 3) {
-              const x = q4[i], y = q4[i + 1], z = q4[i + 2];
-              pos.push(e4[0]*x + e4[4]*y + e4[8]*z + e4[12],
-                e4[1]*x + e4[5]*y + e4[9]*z + e4[13],
-                e4[2]*x + e4[6]*y + e4[10]*z + e4[14]);
+          for (const sa of (arms.bodySkin || [])) {
+            if (!sa || !sa.skeleton || !/Skin(R|L)$/.test(sa.name || '')) continue;
+            if ((sa.name.endsWith('R')) !== (which === 'right')) continue;
+            const g4 = G.geometryOf(sa.mesh);
+            if (!g4 || !g4.positions || !g4.joints) continue;
+            sa.skeleton.refresh();
+            const Mx = sa.skeleton.matrices, q4 = g4.positions, J4 = g4.joints, W4 = g4.weights;
+            for (let i = 0; i < q4.length / 3; i++) {
+              const x = q4[i*3], y = q4[i*3+1], z = q4[i*3+2];
+              let wx = 0, wy = 0, wz = 0;
+              for (let k = 0; k < 4; k++) {
+                const ww = W4[i*4+k]; if (!ww) continue;
+                const o = J4[i*4+k] * 16;
+                wx += ww * (Mx[o]*x + Mx[o+4]*y + Mx[o+8]*z + Mx[o+12]);
+                wy += ww * (Mx[o+1]*x + Mx[o+5]*y + Mx[o+9]*z + Mx[o+13]);
+                wz += ww * (Mx[o+2]*x + Mx[o+6]*y + Mx[o+10]*z + Mx[o+14]);
+              }
+              pos.push(toW[0]*wx + toW[4]*wy + toW[8]*wz + toW[12],
+                toW[1]*wx + toW[5]*wy + toW[9]*wz + toW[13],
+                toW[2]*wx + toW[6]*wy + toW[10]*wz + toW[14]);
             }
           }
           if (!pos.length) { out.sys.grips.push({ id, which, err: 'no mesh' }); continue; }
@@ -946,11 +937,13 @@ const SWEEP = () => {
            near was another finger. */
         const skin = new Set([arms.skin, arms.lSkin, arms.sleeve, arms.lSleeve,
           arms.thumb, arms.index]);
+        const tris = [];
         const walk = (a, local) => {
           if (a.mesh && !skin.has(a)) {
             const geo = G.geometryOf(a.mesh);
             if (geo && geo.positions) {
               const q = geo.positions, m = local ? local.e : null;
+              const base = pts.length / 3;
               /* Every vertex, not every third.
                
                  This stepped by 9 -- one vertex in three -- and the whole
@@ -971,6 +964,7 @@ const SWEEP = () => {
                 }
                 pts.push(x, y, z);
               }
+              if (geo.indices) for (let i = 0; i < geo.indices.length; i++) tris.push(base + geo.indices[i]);
             }
           }
           for (const c of (a.children || [])) {
@@ -989,6 +983,33 @@ const SWEEP = () => {
            nothing said so. A measurement with nothing to measure is a
            fault, not a row to leave out. */
         if (!pts.length) { out.sys.contact.push({ id, err: 'no weapon points' }); continue; }
+        /* TO THE SURFACE, NOT TO THE NEAREST VERTEX -- and that is the
+           Mauser's 1 mm against 15 below, finally. A long flat face has its
+           vertices at its ends: a fingertip lying on the middle of the
+           Remington's wooden forend, a millimetre off it by every other
+           measure, read 15 to 41 mm here because the nearest CORNER was
+           that far away. The distance to the nearest point on any of the
+           weapon's triangles is the distance to the weapon. */
+        const tri = (P2, ia, ib, ic) => {
+          const A = [pts[ia*3], pts[ia*3+1], pts[ia*3+2]], B2 = [pts[ib*3], pts[ib*3+1], pts[ib*3+2]], C = [pts[ic*3], pts[ic*3+1], pts[ic*3+2]];
+          const ab = [B2[0]-A[0], B2[1]-A[1], B2[2]-A[2]], ac = [C[0]-A[0], C[1]-A[1], C[2]-A[2]], ap = [P2[0]-A[0], P2[1]-A[1], P2[2]-A[2]];
+          const dot = (u, w) => u[0]*w[0] + u[1]*w[1] + u[2]*w[2];
+          const at = (o, d, t) => Math.hypot(P2[0] - o[0] - d[0]*t, P2[1] - o[1] - d[1]*t, P2[2] - o[2] - d[2]*t);
+          const d1 = dot(ab, ap), d2 = dot(ac, ap);
+          if (d1 <= 0 && d2 <= 0) return at(A, ab, 0);
+          const bp = [P2[0]-B2[0], P2[1]-B2[1], P2[2]-B2[2]], d3 = dot(ab, bp), d4 = dot(ac, bp);
+          if (d3 >= 0 && d4 <= d3) return at(B2, ab, 0);
+          const cp = [P2[0]-C[0], P2[1]-C[1], P2[2]-C[2]], d5 = dot(ab, cp), d6 = dot(ac, cp);
+          if (d6 >= 0 && d5 <= d6) return at(C, ab, 0);
+          const vc = d1*d4 - d3*d2;
+          if (vc <= 0 && d1 >= 0 && d3 <= 0) return at(A, ab, d1 / (d1 - d3));
+          const vb = d5*d2 - d1*d6;
+          if (vb <= 0 && d2 >= 0 && d6 <= 0) return at(A, ac, d2 / (d2 - d6));
+          const va = d3*d6 - d5*d4;
+          if (va <= 0 && (d4-d3) >= 0 && (d5-d6) >= 0) return at(B2, [C[0]-B2[0], C[1]-B2[1], C[2]-B2[2]], (d4-d3) / ((d4-d3) + (d5-d6)));
+          const den = 1 / (va + vb + vc), v2 = vb * den, w2 = vc * den;
+          return Math.hypot(P2[0] - A[0] - ab[0]*v2 - ac[0]*w2, P2[1] - A[1] - ab[1]*v2 - ac[1]*w2, P2[2] - A[2] - ab[2]*v2 - ac[2]*w2);
+        };
         const near = (P2) => {
           let best = 1e9;
           for (let i = 0; i < pts.length; i += 3) {
@@ -996,7 +1017,12 @@ const SWEEP = () => {
             const d = dx*dx + dy*dy + dz*dz;
             if (d < best) best = d;
           }
-          return Math.sqrt(best);
+          best = Math.sqrt(best);
+          for (let i = 0; i < tris.length; i += 3) {
+            const d = tri(P2, tris[i], tris[i+1], tris[i+2]);
+            if (d < best) best = d;
+          }
+          return best;
         };
         for (const sideName of ['right', 'left']) {
           const rec = arms.digits[sideName];
@@ -1363,9 +1389,18 @@ function check(name, cond, detail = '') {
          lies along the stock.
        ram right -- fingers closed over a 20 mm bar handle; the sample
          radius takes in more of the forearm than of the hand.
+     And four more once the drawn hand was measured instead of the rig
+     (2026-10-19, close-ups from the right, the left and below):
+       remington, killstreak, paralyzer right -- a rifle's stock wrist:
+         palm on the right of it, index curled into the guard, three
+         fingers round the left, thumb over the top. The side with no skin
+         is the back, and behind a stock's wrist is more stock.
+       mg42 right -- the same hand on its grip, the back of which runs
+         into the butt.
      Named here so the list can only get shorter: any other hand that
      comes up short still fails. */
-  const LOOKED_AT = new Set(['thompson right', 'breakwater left', 'ram right']);
+  const LOOKED_AT = new Set(['thompson right', 'breakwater left', 'ram right',
+    'remington right', 'killstreak right', 'paralyzer right', 'mg42 right']);
   const claw = gr.filter((g2) => !g2.err && g2.sides < (g2.need || 4) && !LOOKED_AT.has(g2.id + ' ' + g2.which));
   check('every hand has skin round what it holds: four sides if it closes, three if it cradles', claw.length === 0,
     list(claw, (g2) => `${g2.id} ${g2.which} (${g2.kind}): skin on only ${g2.sides} of ${g2.need || 4} sides`

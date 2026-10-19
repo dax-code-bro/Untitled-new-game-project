@@ -388,8 +388,12 @@ const WEAPONS = {
       /* The forend's own axis. It was at [0.242, -0.006, -0.020]: 12 mm
          past the end of the wood, which runs x 0.056 to 0.230, and offset
          into the left barrel. On the middle of the wood the little finger
-         goes 8 per cent buried to 0 and nothing else moves. */
-      left: [0.190, -0.009, 0], leftGrip: 'woodFore' },
+         goes 8 per cent buried to 0 and nothing else moves. Then 15 mm
+         forward, the index's knuckle at the wood's front end: at 0.190 the
+         fingers round the barrels' side under the sight line left the
+         index's tip 6 mm over it, beside the bead (sightblock.test, the
+         drawn hand); here it is 1.3 mm under. */
+      left: [0.205, -0.009, 0], leftGrip: 'woodFore' },
   },
   /* The stun gun. A double gun with no wood on it: a capacitor bank where
      the rib should be, copper wound round both barrels, emitter rings at

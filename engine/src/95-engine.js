@@ -452,8 +452,9 @@ class Engine {
    * key alongside the mesh; the geometry is built once and cached anyway,
    * so this holds no memory that was not already held. */
   geometryOf(mesh) {
-    if (!mesh || !this._geoByKey) return null;
-    return this._geoByKey.get(mesh.__key) || null;
+    if (!mesh) return null;
+    /* Or held on the mesh itself: the first-person arms are built per weapon, not by key (98f). */
+    return (this._geoByKey && this._geoByKey.get(mesh.__key)) || mesh.__cpuGeometry || null;
   }
 
   /* DISTANT VERSIONS FOR A STATIC MESH, built once per mesh key and shared: the close-up, a

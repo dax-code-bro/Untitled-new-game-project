@@ -91,8 +91,14 @@ const R = path.join(__dirname, '..', '..') + '/';
        * Which retires a bug: "the Thompson's trigger finger is a third
        * inside its receiver" was this, not a finger in a receiver. */
       const propSet = new Set((v.prop && v.prop.parts) || []);
+      /* EVERY PIECE OF THE RIG, which this list named piece by piece and
+         had stopped keeping up with: the palm and the middle and distal
+         bones were never on it, and they hang off the weapon -- so their
+         triangles counted as gun, and a drawn finger lying where the
+         hidden rig finger is read as "inside the weapon". */
       const armSet = new Set([a.sleeve, a.skin, a.lSleeve, a.lSkin, a.thumb,
         a.lThumb, a.index].concat(a.rFingers || []).concat(a.lFingers || [])
+        .concat(a.rig || a.parts || [])
         .concat([...propSet]).filter(Boolean));
       const M4 = LegendEngine.Mat4;
       const tri = [];
@@ -204,61 +210,56 @@ const R = path.join(__dirname, '..', '..') + '/';
         return Math.sqrt(best);
       };
       const buried = [], onGun = [];
-      /* A DIGIT IS A CHAIN OF THREE MESHES NOW, and this read one.
-       *
-       * When the finger was split into a bone per actor, rFingers[f]
-       * became the PROXIMAL phalanx rather than the whole finger, and
-       * this went on sampling that one mesh -- a fifth of the vertices
-       * it used to. Every figure in the table moved to a multiple of 20
-       * per cent overnight and the ratchet reported thirty-two digits
-       * driven deeper into their weapons. Not one vertex had moved. A
-       * percentage whose denominator changed is not a comparison, and
-       * the tell was that the new numbers were all 20, 40 and 60: the
-       * geometry had not become coarser, the sample had. */
-      const digitMeshes = [];
-      const chainOf = (bones, one) => {
-        const cs = [];
-        if (bones) for (const b of bones) { if (b) cs.push(b); }
-        if (!cs.length && one) cs.push(one);
-        return cs;
-      };
-      for (let f = 0; f < 4; f++) {
-        const rc = chainOf(a.rBones && a.rBones[f], a.rFingers && a.rFingers[f]);
-        if (rc.length) digitMeshes.push([(f === 3 ? 'index' : 'r' + f), rc]);
-        const lc = chainOf(a.lBones && a.lBones[f], a.lFingers && a.lFingers[f]);
-        if (lc.length) digitMeshes.push(['l' + f, lc]);
-      }
-      /* ONE STRIDE ACROSS THE WHOLE FINGER, not one per mesh.
-       *
-       * This took every ninth vertex of a single mesh. A finger is three
-       * meshes now, and running the same stride inside each of them
-       * samples a different number of points than running it across the
-       * finger -- which moved every figure in the table on geometry
-       * where not one vertex had. A percentage whose denominator moved
-       * is not a comparison.
-       *
-       * Every ninth vertex of the finger, however many buffers it is
-       * cut into. The three bones share their joint rings, so the count
-       * is two rings higher than the single mesh gave and the numbers
-       * are within a sample of the ones recorded before the split. */
-      for (const [dn, acts] of digitMeshes) {
-        let seen = 0, inN = 0, onN = 0, cursor = 0;
-        for (const act of acts) {
-        const g3 = B.game.geometryOf(act.mesh);
-        if (!g3 || !g3.positions) continue;
-        const m3 = new M4(); m3.compose(act._position, act._rotation, act.scale);
-        const e3 = m3.e, P3 = g3.positions, n3 = P3.length / 3;
-        const first = (9 - (cursor % 9)) % 9;
-        cursor += n3;
-        for (let i3 = first; i3 < n3; i3 += 9) {
+      /* THE HAND THAT IS DRAWN, digit by digit. This sampled the rig's
+         finger meshes, which were the hand on screen until the body's own
+         hand replaced them (98f); the rig is posed and hidden now, and its
+         fingers are not where the drawn ones are -- its palm is a
+         different shape, so "the Scattergun's ring finger is a fifth in
+         the gun" was a finger nobody can see. The drawn hand is skinned
+         here through the palette the shader uses (each vertex the
+         weighted sum of its rig actors' world matrices), brought into the
+         weapon's frame, and each vertex goes to the digit whose bone
+         carries most of it: the palette is [sleeve, forearm, palm, thumb,
+         then three bones a finger] for each hand, the right from 0 and the
+         left from 16, fingers in the rig's order (the last the index). */
+      const toW = new M4().copy(root.matrix).invert().e;
+      const digits = new Map();
+      for (const sa of (a.bodySkin || [])) {
+        const g3 = sa && sa.skeleton ? B.game.geometryOf(sa.mesh) : null;
+        if (!g3 || !g3.positions || !g3.joints) continue;
+        const R2 = /R$/.test(sa.name || ''), base = R2 ? 0 : 16;
+        sa.skeleton.refresh();
+        const Mx = sa.skeleton.matrices, P3 = g3.positions, J3 = g3.joints, W3 = g3.weights;
+        for (let i3 = 0; i3 < P3.length / 3; i3++) {
           const x = P3[i3*3], y = P3[i3*3+1], z = P3[i3*3+2];
-          const wx = e3[0]*x+e3[4]*y+e3[8]*z+e3[12];
-          const wy = e3[1]*x+e3[5]*y+e3[9]*z+e3[13];
-          const wz = e3[2]*x+e3[6]*y+e3[10]*z+e3[14];
-          seen++;
-          if (insideW(wx, wy, wz)) inN++;
-          else if (nearW(wx, wy, wz) < 0.004) onN++;
+          let wx = 0, wy = 0, wz = 0, top = -1, tw = 0;
+          for (let k = 0; k < 4; k++) {
+            const ww = W3[i3*4+k]; if (!ww) continue;
+            const j = J3[i3*4+k], o = j * 16;
+            wx += ww * (Mx[o]*x + Mx[o+4]*y + Mx[o+8]*z + Mx[o+12]);
+            wy += ww * (Mx[o+1]*x + Mx[o+5]*y + Mx[o+9]*z + Mx[o+13]);
+            wz += ww * (Mx[o+2]*x + Mx[o+6]*y + Mx[o+10]*z + Mx[o+14]);
+            if (ww > tw) { tw = ww; top = j; }
+          }
+          const sl = top - base;
+          if (sl < 4 || sl >= 16) continue;
+          const f = Math.floor((sl - 4) / 3);
+          const dn = R2 ? (f === 3 ? 'index' : 'r' + f) : 'l' + f;
+          if (!digits.has(dn)) digits.set(dn, []);
+          digits.get(dn).push([toW[0]*wx + toW[4]*wy + toW[8]*wz + toW[12],
+            toW[1]*wx + toW[5]*wy + toW[9]*wz + toW[13], toW[2]*wx + toW[6]*wy + toW[10]*wz + toW[14]]);
         }
+      }
+      // Every third vertex: a body finger is three hundred of them, and the ray test is per point.
+      for (const dn of ['r0', 'l0', 'r1', 'l1', 'r2', 'l2', 'index', 'l3']) {
+        const qs = digits.get(dn);
+        if (!qs) continue;
+        let seen = 0, inN = 0, onN = 0;
+        for (let i3 = 0; i3 < qs.length; i3 += 3) {
+          const q = qs[i3];
+          seen++;
+          if (insideW(q[0], q[1], q[2])) inN++;
+          else if (nearW(q[0], q[1], q[2]) < 0.004) onN++;
         }
         if (seen) {
           buried.push([dn, Math.round(inN * 100 / seen)]);
@@ -380,22 +381,40 @@ const R = path.join(__dirname, '..', '..') + '/';
      differences; what is comparable is everything measured from here
      on. The worst offenders are the same ones they have always been
      -- the Kill Streak's support hand, the Mauser's, the MP5's. */
+  /* RE-DERIVED ON THE DRAWN HAND, the third time and the one to keep.
+     Every table above was of the rig's fingers, which are posed and hidden now
+     (98f): the hand on screen is the body's own, skinned onto them. Measured
+     on that hand at the commit before the rework (7f58d7b): 6.3 per cent of
+     the average digit inside its weapon and 11.3 touching it. Measured here:
+     8.7 and 17.2 at first. Both rose because the fingers now close onto the gun and
+     press 2.5 mm into it so no daylight shows (_wrapHand) -- a finger lying
+     its length along a forend that way is a quarter "inside" by parity, which
+     is what the support hands at 23 to 29 per cent are (the Thompson's, the
+     Breakwater's, the Sawn-off's, the MG 42's: looked at, lying on the forend
+     or the jacket, not through it). Moved once more the same day, by the
+     support hand's ceiling coming down 7 mm (a fingertip's skin past its last
+     joint was in the Sawn-off's and the Paralyzer's sight picture): their
+     support fingers lie lower along the forend, the Sawn-off's little finger
+     7 to 28, and the fleet reads 8.9; and the Scattergun's hand 15 mm
+     forward on its wood (its index tip out of the sight picture), its ring
+     finger lying along the forend, 0 to 25. What this has to catch from here
+     is a digit getting worse. */
   const BASE = {
-    m1911: { r0: 0, l0: 0, r1: 13, l1: 0, r2: 13, l2: 7, index: 7, l3: 7 },
-    blaze: { r0: 0, l0: 0, r1: 13, l1: 0, r2: 13, l2: 7, index: 7, l3: 7 },
-    thompson: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 7, l2: 0, index: 13, l3: 0 },
-    scatter: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 7, l2: 0, index: 0, l3: 0 },
-    arc: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 20, l3: 7 },
-    arc2: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 20, l3: 7 },
-    obliterator: { r0: 13, l0: 0, r1: 7, l1: 0, r2: 7, l2: 0, index: 20, l3: 0 },
-    mauser: { r0: 0, l0: 33, r1: 13, l1: 13, r2: 0, l2: 7, index: 20, l3: 7 },
-    paralyzer: { r0: 0, l0: 40, r1: 0, l1: 13, r2: 7, l2: 13, index: 7, l3: 13 },
-    mp5: { r0: 0, l0: 27, r1: 0, l1: 27, r2: 0, l2: 33, index: 7, l3: 20 },
-    breakwater: { r0: 0, l0: 13, r1: 7, l1: 13, r2: 20, l2: 0, index: 13, l3: 0 },
-    sawnoff: { r0: 0, l0: 27, r1: 0, l1: 20, r2: 7, l2: 27, index: 27, l3: 13 },
-    remington: { r0: 0, l0: 20, r1: 0, l1: 7, r2: 7, l2: 7, index: 13, l3: 7 },
-    killstreak: { r0: 0, l0: 47, r1: 0, l1: 27, r2: 7, l2: 53, index: 27, l3: 67 },
-    mg42: { r0: 0, l0: 7, r1: 7, l1: 13, r2: 7, l2: 20, index: 27, l3: 20 },
+    m1911: { r0: 2, l0: 0, r1: 6, l1: 0, r2: 1, l2: 3, index: 12, l3: 1 },
+    blaze: { r0: 2, l0: 0, r1: 6, l1: 1, r2: 0, l2: 3, index: 8, l3: 0 },
+    thompson: { r0: 2, l0: 23, r1: 10, l1: 14, r2: 12, l2: 13, index: 5, l3: 10 },
+    scatter: { r0: 7, l0: 28, r1: 14, l1: 25, r2: 8, l2: 5, index: 6, l3: 10 },
+    arc: { r0: 5, l0: 1, r1: 15, l1: 2, r2: 12, l2: 13, index: 7, l3: 6 },
+    arc2: { r0: 5, l0: 1, r1: 15, l1: 2, r2: 12, l2: 13, index: 7, l3: 6 },
+    obliterator: { r0: 6, l0: 0, r1: 4, l1: 2, r2: 5, l2: 0, index: 6, l3: 11 },
+    mauser: { r0: 4, l0: 0, r1: 9, l1: 2, r2: 9, l2: 0, index: 3, l3: 3 },
+    paralyzer: { r0: 4, l0: 20, r1: 14, l1: 17, r2: 8, l2: 21, index: 4, l3: 13 },
+    mp5: { r0: 11, l0: 14, r1: 18, l1: 6, r2: 9, l2: 19, index: 7, l3: 7 },
+    breakwater: { r0: 15, l0: 25, r1: 21, l1: 19, r2: 13, l2: 21, index: 17, l3: 14 },
+    sawnoff: { r0: 3, l0: 28, r1: 15, l1: 25, r2: 12, l2: 4, index: 17, l3: 3 },
+    remington: { r0: 10, l0: 10, r1: 16, l1: 9, r2: 4, l2: 14, index: 3, l3: 9 },
+    killstreak: { r0: 11, l0: 16, r1: 10, l1: 5, r2: 8, l2: 17, index: 3, l3: 11 },
+    mg42: { r0: 7, l0: 9, r1: 12, l1: 23, r2: 13, l2: 7, index: 7, l3: 10 },
   };
   // Eight points is about one sample in twelve: past the noise of which
   // vertices happen to land inside, and well under the 19 that aiming

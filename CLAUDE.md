@@ -78,8 +78,12 @@ thumb, finger bones).
 Before the rig solves it, a firing hand on any grip whose kind puts the index
 on a trigger is fitted to it (`_fitFiringHand`): the trigger guard straight
 under the trigger first, the middle knuckle tucked under it (or under the
-frame), the knuckle row at the grip's front corner; `fitHand: false` keeps an
-authored anchor (the Obliterator). The rig places the knuckles; `_wrapHand`
+frame), the knuckle row at the grip's front corner -- or further back, up to
+14 mm behind the strap, until the index knuckle is 26 mm behind the trigger
+blade, or the finger overshoots it; `fitHand: false` keeps an authored anchor
+(the Obliterator). The blade is found by `_triggerBlade`: the guard opening's
+centre can fall either side of the blade, so it is the first metal behind the
+centre if that is thin, else the first thin metal ahead of it. The rig places the knuckles; `_wrapHand`
 then closes every finger joint by joint onto the weapon's own surface
 (`weaponSurface`) and writes the joints back into the hand records, so the
 game's finger turns use them. A finger on an upright grip (pistol grip,
@@ -96,8 +100,16 @@ behind the grip and the forearm runs back. A support hand on a `fore`,
 `woodFore` or `tube` grip is built from the forend's measured section
 (`_constructForeGrip`), both the wide-handguard hold and the slim fist, and
 the one that rests on the gun is kept; its fingers stop just under the
-forend's top edge, and every support hand's under the sight line. A melee
-`haft` is not wrapped.
+forend's top edge, and every support hand's joints 11 mm under the sight line
+(a fingertip's skin runs 7 mm past its joint). A thumb the solve left floating
+or sunk in the gun (a single action's) is closed onto it. A melee `haft` is
+not wrapped.
+
+The drawn arms' geometry is readable (`geometryOf`, from `mesh.__cpuGeometry`),
+and the hand tests measure the hand that is drawn, skinned on the CPU through
+the same palette: grip.test's burial ratchet, sweep.test's skin-round and
+finger-contact checks (the latter by point-to-triangle distance), and
+sightblock.test's height over the sight line.
 
 `weaponSurface` (98a) skips the `noDraw` rig and hidden parts (a parked
 reload magazine), counts ray parity per connected piece, and calls a point
