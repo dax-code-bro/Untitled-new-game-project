@@ -942,6 +942,35 @@
   var PISTOL_WRAP = { axis: [-0.28, -0.94, 0], round: [0, 0, 1], girth: 0.078,
     spread: 0.0184, close: 0.90, index: 'wrap', thumb: 'stack', drop: 0 };
 
+  /* How far behind its own origin a weapon reaches (the butt of its stock), from its meshes: the
+     least x over every part, cached on the weapon. */
+  function rearOf(g) {
+    if (!g) return 0;
+    if (g.__rearX != null) return g.__rearX;
+    var game = g.engine;
+    var lo = 0;
+    var walk = function (a, m) {
+      if (a.noDraw || a.visible === false) return;
+      var geo = a.mesh && game && game.geometryOf ? game.geometryOf(a.mesh) : null;
+      if (geo && geo.positions) {
+        var q = geo.positions, e = m ? m.e : null;
+        for (var i = 0; i < q.length; i += 24) {
+          var x = e ? e[0] * q[i] + e[4] * q[i + 1] + e[8] * q[i + 2] + e[12] : q[i];
+          if (x < lo) lo = x;
+        }
+      }
+      var kids = a.children || [];
+      for (var k = 0; k < kids.length; k++) {
+        var c = kids[k], cm = new window.LE.Mat4();
+        cm.compose(c._position, c._rotation, c.scale);
+        if (m) { var t = new window.LE.Mat4(); t.mulMatrices(m, cm); walk(c, t); } else walk(c, cm);
+      }
+    };
+    try { walk(g, null); } catch (e) { lo = 0; }
+    g.__rearX = lo;
+    return lo;
+  }
+
   function handsFor(g, cls, game) {
     var muzzle = (g && g.muzzleAt != null) ? g.muzzleAt : 0.42;
     var bore = (g && g.boreAt != null) ? g.boreAt : 0.05;
@@ -1841,7 +1870,18 @@
         var offR = hipX * OUT * (1 - aim) + INS.side + swayX;
         var offU = hipY * OUT * (1 - aim) + (-sightH) * aim
           - low * 0.085 + rl * 0.098 + bob * 0.6 - swapDrop + INS.up + swayY;
-        var dist = (hipD * (1 - aim) + 0.30 * aim) * OUT - kick * 0.03 - low * 0.03
+        /* THE CHEEK ON THE STOCK. Aimed, the whole gun is held 0.39 m out like everything else --
+           and on a rifle whose butt is less than that behind its grip, the butt then hangs in front
+           of the eye: the back of the M4's stock filled the middle of the sight picture, 19 mm under
+           the front sight, and the AK's, the Kar 98's and the MP5's the same. A rifle is aimed with
+           the cheek on the stock and the butt behind the eye, so a weapon with a stock (one reaching
+           15 cm or more behind its grip) comes in until the butt is 5 cm behind the near plane's
+           side of the eye -- never closer than 0.21 m to its grip. Pistols and stockless guns keep the
+           distance they had. */
+        var adsD = 0.30;
+        var rear = rearOf(g);
+        if (rear < -0.15) adsD = Math.min(adsD, Math.max(0.16, (0.05 - rear) / OUT));
+        var dist = (hipD * (1 - aim) + adsD * aim) * OUT - kick * 0.03 - low * 0.03
           - INS.in
           /* And drawn in toward the face while the hands work, which is
              the other half of "you can see what is being done to it". */

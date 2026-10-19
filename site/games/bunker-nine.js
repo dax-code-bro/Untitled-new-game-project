@@ -618,7 +618,11 @@ const WEAPONS = {
          Streak: its forend is x 0.050 to 0.090, forty millimetres of it,
          and everywhere a support hand can actually reach past that is
          coil, charge tube or barrel. There is no wood to hold. */
-      left: [0.112, -0.026, -0.020], leftGrip: { axis: [0.96, -0.28, 0], round: [0, 1, 0], girth: 0.042, spread: 0.0186, close: 0.92, index: 'wrap', thumb: 'along', drop: 0 } },
+      /* UNDER THE MAGAZINE HOUSING, as the forend hold (98f builds it from the housing's own
+         section): the wrap above, round a bar along the barrel, closed the hand over the top of the
+         gun with the wrist above it, and aimed, the support arm came down into the picture from the
+         top of the screen. The C96 is held two-handed by the housing in front of the guard. */
+      left: [0.095, -0.030, -0.020], leftGrip: 'fore' },
   },
   /* A rifle for the long shots across the field. Bolt action, so it is
      five rounds and then you are working the handle while they close —

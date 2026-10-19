@@ -53640,11 +53640,18 @@ function _bodyArm(src, S, rec, shoulder, base, sf, keepThumb) {
       return m;
     };
     const DEG = Math.PI / 180, TOUCH = +(globalThis.__palmTouch != null ? globalThis.__palmTouch : -0.0025), HI = 90 * DEG, LO = -20 * DEG;
+    /* A support hand under a forend CUPS it: its palm closes until it meets the gun or the wrist
+       comes up a third of the way up the forend's side, not on up the side of a narrow one (the
+       C96's magazine housing) until the wrist is over the gun and the arm comes down into the
+       picture from the top of the screen. */
+    const wristOk = rec.constructed
+      ? (t) => _baCarry(palmMHk, turnF(t), hk, hk, hk)(Jw)[1] <= rec.constructed.yb + 0.35 * (rec.constructed.yt - rec.constructed.yb)
+      : () => true;
     let t = 0;
     if (clearAt(0) < TOUCH) {
       for (let n = 1; LO <= -n * 2 * DEG; n++) if (clearAt(-n * 2 * DEG) >= TOUCH) { t = -n * 2 * DEG; break; }
     } else {
-      for (const st of [6 * DEG, 1.5 * DEG]) while (t + st <= HI && clearAt(t + st) >= TOUCH) t += st;
+      for (const st of [6 * DEG, 1.5 * DEG]) while (t + st <= HI && clearAt(t + st) >= TOUCH && wristOk(t + st)) t += st;
     }
     palmR = turnF(t);
     palmCarry = _baCarry(palmMHk, palmR, hk, hk, hk);
@@ -54224,6 +54231,7 @@ function _fitFiringHand(hands, opts) {
      linear, and an unchecked last step is how the MG 42's hand first went off up its receiver. */
   const base = hands.right;
   let at = base.slice(), best = null;
+  at[2] += globalThis.__fitDZ != null ? globalThis.__fitDZ : 0.004;
   for (let it = 0; it < 4; it++) {
     const rec = trial(at);
     if (!rec) break;
@@ -54243,11 +54251,14 @@ function _fitFiringHand(hands, opts) {
     const Y = ceil.y - R - 0.0015 - (ceil.guard ? 0 : spread);
     const fy = frontAt(Y, f0 + 0.010);
     if (fy == null) break;
-    /* The knuckle row just AHEAD of the front strap, at the grip's front corner -- so the first
-       bone of each finger lies across the strap. Set 8 mm behind it, the first bone met the corner
-       end-on and stood off it, its middle joint 7 mm proud of the strap on average (the audit's
-       "fingers bow out ahead of the grip"); 2 mm ahead, 5. */
-    let X = fy + (globalThis.__fitDX != null ? globalThis.__fitDX : 0.002);
+    /* The knuckle row OUTSIDE the grip's front corner, a little ahead of the front strap and (below)
+       out from the side -- where the knuckles of a hand round a grip are, the first bone of each
+       finger lying straight ACROSS the strap with its pad on it. Set 8 mm behind the strap, the first
+       bone met the corner end-on and stood off it, its middle joint 7 mm proud of the strap; 2 mm
+       ahead, the corner still turned it, and the middle finger's first bone pointed 70 degrees off
+       the muzzle rather than across -- from the right, a second finger reaching forward beside the
+       trigger finger. 6 mm ahead and 4 mm out: 84 degrees, across. */
+    let X = fy + (globalThis.__fitDX != null ? globalThis.__fitDX : 0.006);
     /* And not into the stock. Raising the hand raises the web of it, and on a gun whose stock
        or receiver comes down behind the grip (the Scattergun, the MG 42) the thumb's base went
        14 mm into the wood. Buried, it counts against the solve and the next step goes back down. */
