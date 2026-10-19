@@ -629,7 +629,7 @@ const WEAPONS = {
          underneath as a forend (98f), the housing was too narrow and short for the fingers, which
          stood straight up past the sights (sightblock, 62 mm). The C96 is held two-handed by the
          housing in front of the guard. */
-      left: [0.095, -0.002, -0.016], leftGrip: 'foregrip' },
+      left: [0.095, -0.008, -0.016], leftGrip: 'foregrip' },
   },
   /* A rifle for the long shots across the field. Bolt action, so it is
      five rounds and then you are working the handle while they close —

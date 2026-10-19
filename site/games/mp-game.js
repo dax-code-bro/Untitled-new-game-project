@@ -963,7 +963,7 @@
        frame behind the magazine with the wooden grip bare beneath it. */
     mauser: { right: [-0.010, -0.020, 0.014],
       rightGrip: { axis: [-0.10, -0.99, 0], round: [0, 0, -1], girth: 0.062, spread: 0.0196, close: 0.98, index: 'trigger', thumb: 'over', drop: 0 },
-      left: [0.095, -0.002, -0.016], leftGrip: 'foregrip' },
+      left: [0.095, -0.008, -0.016], leftGrip: 'foregrip' },
     // The M3 is held by its magazine housing; cupped under it as a forend, the hand tore apart.
     grease: { left: [0.055, -0.026, -0.016], leftGrip: 'foregrip' },
     /* The riot shield went through the one-handed rule and got a pistol grip and a pistol's
