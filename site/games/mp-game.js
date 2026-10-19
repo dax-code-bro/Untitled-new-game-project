@@ -980,12 +980,18 @@
     p90: { left: [0.035, 0.010, 0], leftGrip: 'fore' },
     mp7: { left: [0.186, -0.026, -0.016], leftGrip: 'foregrip' },
     mp40: { left: [0.070, -0.026, -0.016], leftGrip: 'foregrip' },
+    /* The riot shield went through the one-handed rule and got a pistol grip and a pistol's
+       wrapped support hand, both closing on nothing (the fingers 17 mm off). Held as zombies holds
+       the same model: the firing hand on the grip bar, the support arm in the forearm cuff. */
+    riotshield: { right: [0, 0, 0], rightGrip: 'haft', left: [0.040, 0.150, 0],
+      leftGrip: { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
   };
   function handsFor(g, cls, game, id) {
     var muzzle = (g && g.muzzleAt != null) ? g.muzzleAt : 0.42;
     if (id && HOLDS[id]) {
-      return { right: [-0.006, -0.024, 0.016], rightGrip: 'pistol',
-        left: HOLDS[id].left.slice(), leftGrip: HOLDS[id].leftGrip };
+      var h = HOLDS[id];
+      return { right: (h.right || [-0.006, -0.024, 0.016]).slice(), rightGrip: h.rightGrip || 'pistol',
+        left: h.left.slice(), leftGrip: h.leftGrip };
     }
     var bore = (g && g.boreAt != null) ? g.boreAt : 0.05;
     var oneHanded = cls === 'pistol' || muzzle < 0.24;
