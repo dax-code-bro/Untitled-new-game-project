@@ -464,7 +464,10 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
      and on a pistol's frame alike. The grip solve aimed it forward and up off the side, and on the
      M4 it reached past the end of the handguard into the air. From its own base, along the left
      surface: the joints pushed out until they clear it. Only kept if it ends nearer the gun. */
-  if (!firing && (upright || underFore) && rec.thumbPivot && rec.thumbMid && rec.thumbTip) {
+  /* On a forend, or round a pistol's frame (where it closes over the firing hand: `sf.raw`) -- not on
+     a vertical foregrip, where the thumb wraps over the fingers as the grip solve put it; laid along
+     the Arc Breaker's foregrip it came out bent up into a boomerang. */
+  if (!firing && (underFore || (upright && sf.raw)) && rec.thumbPivot && rec.thumbMid && rec.thumbTip) {
     const rT = radius * 1.05;
     const T0 = rec.thumbPivot;
     const L0 = len(sub(rec.thumbMid, T0)), L1 = len(sub(rec.thumbTip, rec.thumbMid));
