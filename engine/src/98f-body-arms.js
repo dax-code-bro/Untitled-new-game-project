@@ -165,8 +165,42 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
     const pa = nrm(sub(a, mul(k, dot(a, k)))), pb = nrm(sub(b, mul(k, dot(b, k))));
     return Math.atan2(dot(cross(pa, pb), k), dot(pa, pb));
   };
+  /* A FINGER WITH NOTHING TO HOLD CURLS, it does not stand out straight. Where the closing finds no
+     surface in reach (the shield's open hand beside its bar, one finger straight up behind the
+     clear panel; a support finger past the end of what it holds), the finger closes into the fist
+     as a relaxed hand's does -- as far as it can without going into the gun. */
+  const curlLoose = (d, R) => {
+    const tipSf = sf(d.tip[0], d.tip[1], d.tip[2]), midSf = sf(d.pivots3[2][0], d.pivots3[2][1], d.pivots3[2][2]);
+    if (tipSf < 0.015 || midSf < 0.012) return;
+    let k = nrm(d.axis);
+    const want = nrm(cross(palmA, nR));
+    if (dot(k, want) < 0) k = mul(k, -1);
+    const P0 = d.pivots3[0];
+    const L = [len(sub(d.pivots3[1], P0)), len(sub(d.pivots3[2], d.pivots3[1])), len(sub(d.tip, d.pivots3[2]))];
+    const d0 = nrm(sub(d.pivots3[1], P0));
+    for (const [a1, a2] of [[80, 60], [60, 45], [40, 30]]) {
+      const P1 = add(P0, mul(d0, L[0]));
+      let dir = rot(d0, k, a1 * DEG);
+      const P2 = add(P1, mul(dir, L[1]));
+      dir = rot(dir, k, a2 * DEG);
+      const T = add(P2, mul(dir, L[2]));
+      if (clear(P1, nrm(sub(P2, P1)), L[1], R[1] * 0.7) < 0 || clear(P2, nrm(sub(T, P2)), L[2], R[2] * 0.7) < 0) continue;
+      d.pivots3 = [P0, P1, P2];
+      d.joints = [P1, P2];
+      d.tip = T;
+      d.axis = k;
+      d.open = -1;
+      d.curled = true;
+      return;
+    }
+  };
   // A melee handle (the shield's, the hammer's) is a bar the grip solve already wraps.
-  if (rec.grip === 'haft') { rec.digits = rec.byFinger.slice(0, 4); return []; }
+  if (rec.grip === 'haft') {
+    const Rh = [radius, radius * 0.92, radius * 0.82];
+    for (const d of rec.byFinger.slice(0, 4)) curlLoose(d, Rh);
+    rec.digits = rec.byFinger.slice(0, 4);
+    return [];
+  }
   const trig = rec.indexPlane != null;                // the firing hand's index lies on a trigger
   /* A HAND THAT STARTS INSIDE THE OTHER ONE moves out first. On a two-handed pistol grip the
      solve put the support hand's knuckles where the firing hand's fingertips are, so every finger
@@ -344,13 +378,14 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
     }
     // Kept only if it rests on the gun better than the grip solve's finger did. Where the solve
     // already had it right (a shield's handle, some forends), its pose stands.
-    if (score(pts[1], pts[2], pts[3]) >= score(d.pivots3[1], d.pivots3[2], d.tip) - 0.001) continue;
+    if (score(pts[1], pts[2], pts[3]) >= score(d.pivots3[1], d.pivots3[2], d.tip) - 0.001) { curlLoose(d, R); continue; }
     d.pivots3 = [pts[0], pts[1], pts[2]];
     d.joints = [pts[1], pts[2]];
     d.tip = pts[3];
     d.axis = k;
     d.open = -1;
     d.wrapped = true;
+    curlLoose(d, R);
   }
   // The thumb, its two bones, closing onto the gun from where the grip solve laid it.
   /* THE FIRING THUMB GOES ROUND TO THE FAR SIDE. The grip solve laid it forward along the near
@@ -638,7 +673,10 @@ function _bodyArm(src, S, rec, shoulder, base, sf, keepThumb) {
      back of the slide in the sight picture. The palm turns about the knuckle row toward its own
      palm side, from the fingers' line, until its skin meets the gun (or the knuckles are bent as
      far as a hand's go), so it lies on the grip and the wrist falls behind it. */
-  if (sf) {
+  /* Not round a melee handle (`haft`: the hammer's, the knife's, the shield's bar): the grip solve's
+     own fist round the bar already sets that palm, and turned further, the hammer's forearm came
+     into the aimed view from the middle of the right edge. */
+  if (sf && rec.grip !== 'haft') {
     // The palm side again, from the fingers as they now are (the trigger finger is no guide to it).
     const use = S === 'R' && rec.indexPlane != null ? [0, 1, 2] : [0, 1, 2, 3];
     let n2 = [0, 0, 0], cs = [0, 0, 0];
