@@ -120,7 +120,9 @@ riot shield, whose handle gaps are walled in).
 Multiplayer support hands go on the forend `weaponForend` (98f) measures, no
 more than 40 cm out and pulled back onto it past a bipod or gas tube
 (`handsFor`); guns the rule cannot place have a hold in `HOLDS` (mp-game: the
-P90, MP7, MP 40, Grease Gun, C96, riot shield). The riot shield holds each
+P90, MP7, AUG, MP 40, Grease Gun, Grinder, Longwake, M60, C96, riot shield,
+and the Scattergun and Trench gun, whose rule stations put a fingertip in the
+sight picture). The riot shield holds each
 of its two handle bars across in a fist, both games, with the forearms
 brought in (`spread`, zombies `armSpread`). Aimed, a weapon with a stock
 comes in until its butt is behind the eye, and its own rigid parts are

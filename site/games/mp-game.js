@@ -992,6 +992,13 @@
        out to either side, the support forearm went out through the panel's curved wing and was drawn
        pale behind it. */
     riotshield: { right: [0, 0, -0.038], rightGrip: Object.assign({}, SHIELD_BAR, { round: [1, 0, 0] }), left: [0.040, 0.150, -0.034], leftGrip: SHIELD_BAR, spread: 0.20 },
+    /* Out of the sight picture. The rule put the Scattergun's support hand 26.5 cm out, past the end
+       of its wood (which ends at 23), and its index came up the barrels' side 9 mm over the sight
+       line beside the bead; on the wood's front end, as zombies holds the same model, it is under it.
+       The Trench gun's pump runs 24 to 40 cm out, and at the rule's 40 a fingertip was 5 mm over the
+       line; in the middle of the pump, clear. (Measured on the drawn hand.) */
+    scatter: { left: [0.205, 0.0176, 0], leftGrip: 'woodFore' },
+    trench: { left: [0.30, 0.0076, 0], leftGrip: 'fore' },
   };
   function handsFor(g, cls, game, id) {
     var muzzle = (g && g.muzzleAt != null) ? g.muzzleAt : 0.42;
