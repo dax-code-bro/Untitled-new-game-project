@@ -111,6 +111,9 @@ more than 40 cm out and pulled back onto it past a bipod or gas tube
 P90, MP7, MP 40, Grease Gun, C96, riot shield). The riot shield holds each
 of its two handle bars across in a fist, both games, with the forearms
 brought in (`spread`, zombies `armSpread`). Aimed, a weapon with a stock
-comes in until its butt is behind the eye, and the near plane moves out to
-just short of its rear sight (`aimShape`/`aimNear`, engine 97l-aim.js), in
-both games. After changing any of this, re-record the kit.
+comes in until its butt is behind the eye, and its own rigid parts are
+clipped just short of its rear sight (`aimShape`/`aimClip`/`clipNearTree`,
+engine 97l-aim.js; the renderer's CLIP_NEAR variant) so the stock under the
+cheek leaves the picture and the arms are never cut -- both games, and the
+native build from the kit's `aimClip`. After changing any of this, re-record
+the kit.
