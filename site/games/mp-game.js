@@ -943,6 +943,8 @@
     spread: 0.0184, close: 0.90, index: 'wrap', thumb: 'stack', drop: 0 };
 
   var BULLPUP = { aug: 1, groza: 1, p90: 1 };
+  /* A riot shield's handle: a bar across the shield, gripped from behind. */
+  var SHIELD_BAR = { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 };
   /* WHERE A FEW GUNS ARE HELD that the rule below cannot find, read off their own shapes: a
      vertical post is held in a fist like a pistol grip, not cupped from underneath like a forend.
      The P90's station two thirds out was on bare barrel past the front of its body, its support
@@ -952,13 +954,26 @@
     p90: { left: [0.035, 0.010, 0], leftGrip: 'fore' },
     mp7: { left: [0.186, -0.026, -0.016], leftGrip: 'foregrip' },
     mp40: { left: [0.070, -0.026, -0.016], leftGrip: 'foregrip' },
+    /* The C96 is zombies' own model, held as zombies holds it (bunker-nine WEAPONS.mauser): the
+       firing hand down the broomhandle, which slopes back, and the support hand round the magazine
+       housing in front of the guard. Through the pistol rule the firing hand lay over the top of the
+       frame behind the magazine with the wooden grip bare beneath it. */
+    mauser: { right: [-0.010, -0.020, 0.014],
+      rightGrip: { axis: [-0.10, -0.99, 0], round: [0, 0, -1], girth: 0.062, spread: 0.0196, close: 0.98, index: 'trigger', thumb: 'over', drop: 0 },
+      left: [0.095, -0.002, -0.016], leftGrip: 'foregrip' },
     // The M3 is held by its magazine housing; cupped under it as a forend, the hand tore apart.
     grease: { left: [0.055, -0.026, -0.016], leftGrip: 'foregrip' },
     /* The riot shield went through the one-handed rule and got a pistol grip and a pistol's
        wrapped support hand, both closing on nothing (the fingers 17 mm off). Held as zombies holds
        the same model: the firing hand on the grip bar, the support arm in the forearm cuff. */
-    riotshield: { right: [0, 0, 0], rightGrip: 'haft', left: [0.040, 0.150, 0],
-      leftGrip: { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
+    /* Both of its handles are bars across the shield, not posts: the firing hand was given the
+       'haft' kind (a shaft held upright, a knife's or a hammer's) and stood open beside its bar, the
+       bar running into its palm. Each hand closes across its own bar; the support hand is centred on
+       the upper one (it hung off the end of it, the little finger lying straight up the clear panel).
+       And both forearms run back inside the shield's curve: from the usual shoulder anchors, 31 cm
+       out to either side, the support forearm went out through the panel's curved wing and was drawn
+       pale behind it. */
+    riotshield: { right: [0, 0, -0.038], rightGrip: Object.assign({}, SHIELD_BAR, { round: [1, 0, 0] }), left: [0.040, 0.150, -0.034], leftGrip: SHIELD_BAR, spread: 0.12 },
   };
   function handsFor(g, cls, game, id) {
     var muzzle = (g && g.muzzleAt != null) ? g.muzzleAt : 0.42;
@@ -976,7 +991,10 @@
     /* Short of the muzzle by a hand's width, whatever the weapon is --
        a two-thirds rule alone puts the support hand off the end of a
        submachine gun and halfway down the barrel of a rifle. */
-    var fore = Math.max(0.12, Math.min(muzzle * 0.66, muzzle - 0.10));
+    /* And no more than 40 cm out. Two-thirds of a Kar 98, a Mosin or a Springfield is 53 cm, at the
+       front band: aimed, the hand sat on top of the gun beside the front sight, at the end of an arm
+       locked straight. A rifleman's hand is on the forend ahead of the magazine. */
+    var fore = Math.max(0.12, Math.min(muzzle * 0.66, muzzle - 0.10, 0.40));
     /* And ON the forend. Two-thirds of the way out is past the end of the
        handguard on an M4, on bare barrel, where the grip solve has nothing
        to close the fingers onto and they stand straight up beside the gun.
@@ -984,7 +1002,12 @@
        one on bare barrel is brought back onto the forend the weapon's own
        geometry shows (weaponForend, engine 98f). */
     var fe = (game && game.weaponForend) ? game.weaponForend(g) : null;
-    if (fe && !fe.under(fore)) fore = Math.min(Math.max(fore, fe.from + 0.035), fe.to - 0.07);
+    /* A station past the front of the forend comes back onto it even with something under it: on
+       every machine gun and on the FG 42 that something was the folded bipod and the gas tube, and
+       the hand held bare barrel 50 cm out with a bipod leg through its fingers. Never nearer the
+       grip than 20 cm (the Springfield's measured forend ends 20 cm out). */
+    if (fe && fore > fe.to - 0.07 && fe.under(fore)) fore = Math.max(fe.to - 0.07, Math.min(fore, 0.20));
+    else if (fe && !fe.under(fore)) fore = Math.min(Math.max(fore, fe.from + 0.035), fe.to - 0.07);
     return { right: [-0.006, -0.024, 0.016], rightGrip: 'pistol',
       left: [fore, bore * 0.42, 0], leftGrip: 'fore' };
   }
@@ -1262,6 +1285,8 @@
           surface: game.weaponSurface ? game.weaponSurface(made) : null,
           // The automatic support station may slide back off bare barrel (engine 98f).
           supportStation: 'auto',
+          // Where the forearms come from, for a hold that needs them elsewhere (HOLDS: the shield).
+          spread: HOLDS[id] && HOLDS[id].spread != null ? HOLDS[id].spread : undefined,
         });
       } catch (e) { made.__arms = null; }
     }

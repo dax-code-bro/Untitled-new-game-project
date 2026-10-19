@@ -37843,14 +37843,17 @@ function buildShieldFrame(g) {
   }
   /* Behind: a forearm cuff up high and a grip bar low, on standoffs. The
      hand goes through one and holds the other, which is why the shield sits
-     where it does relative to the body. */
+     where it does relative to the body. A hand's width apart: with the grip
+     bar's standoffs 60 mm apart there was 44 mm of bar between them for four
+     fingers, and the outer two lay over the standoffs; a riot shield's grip is
+     110 mm. */
   const back = -(S.R - Math.cos(0) * S.R) - S.T;
-  strut(g, [back, 0.1000, -0.0420], [back - 0.0350, 0.1000, -0.0420], ringOutline(0.0075, 12));
-  strut(g, [back, 0.1000, 0.0420], [back - 0.0350, 0.1000, 0.0420], ringOutline(0.0075, 12));
-  strut(g, [back - 0.0350, 0.1000, -0.0420], [back - 0.0350, 0.1000, 0.0420], ringOutline(0.0125, 14));
-  strut(g, [back, -0.0700, -0.0300], [back - 0.0750, -0.0700, -0.0300], ringOutline(0.0080, 12));
-  strut(g, [back, -0.0700, 0.0300], [back - 0.0750, -0.0700, 0.0300], ringOutline(0.0080, 12));
-  strut(g, [back - 0.0750, -0.0700, -0.0300], [back - 0.0750, -0.0700, 0.0300], ringOutline(0.0110, 14));
+  strut(g, [back, 0.1000, -0.0500], [back - 0.0350, 0.1000, -0.0500], ringOutline(0.0075, 12));
+  strut(g, [back, 0.1000, 0.0500], [back - 0.0350, 0.1000, 0.0500], ringOutline(0.0075, 12));
+  strut(g, [back - 0.0350, 0.1000, -0.0500], [back - 0.0350, 0.1000, 0.0500], ringOutline(0.0125, 14));
+  strut(g, [back, -0.0700, -0.0550], [back - 0.0750, -0.0700, -0.0550], ringOutline(0.0080, 12));
+  strut(g, [back, -0.0700, 0.0550], [back - 0.0750, -0.0700, 0.0550], ringOutline(0.0080, 12));
+  strut(g, [back - 0.0750, -0.0700, -0.0550], [back - 0.0750, -0.0700, 0.0550], ringOutline(0.0110, 14));
   // A viewport band across the top third, in the frame's own steel.
   for (const y of [0.2000, 0.2600]) {
     let prev = null;
@@ -52651,8 +52654,9 @@ Engine.prototype.weaponSurface = function (root) {
       for (let j = ya; j <= yb; j++) { const kk = pkey(i, j); let c = zgrid.get(kk); if (!c) { c = []; zgrid.set(kk, c); } c.push(t); }
     }
   }
-  /* Does a ray from (x, y, z) along axis `ax` (0 x, 1 y, 2 z) meet the gun ahead, and behind? */
-  const blocked = (ax, x, y, z) => {
+  /* Does a ray from (x, y, z) along axis `ax` (0 x, 1 y, 2 z) meet the gun ahead, and behind --
+     within `maxD` of the point? */
+  const blocked = (ax, x, y, z, maxD = Infinity) => {
     const P3 = [x, y, z];
     const u = ax === 0 ? 1 : 0, v = ax === 2 ? 1 : 2;           // the two axes the ray does not run along
     const grid = ax === 0 ? pgrid : (ax === 1 ? ygrid : zgrid);
@@ -52668,6 +52672,7 @@ Engine.prototype.weaponSurface = function (root) {
       const den = wa + wb + wc;
       if (den === 0) continue;
       const h = (A[ax] * wa + B2[ax] * wb + C[ax] * wc) / den;
+      if (Math.abs(h - P3[ax]) > maxD) continue;
       if (h > P3[ax]) ahead = true; else behind = true;
     }
     return [ahead, behind];
@@ -52680,10 +52685,13 @@ Engine.prototype.weaponSurface = function (root) {
   const enclosed = (x, y, z) => {
     /* Five of the six: a grip shell is often open at the bottom (the Thompson's is), and the ray
        down it escapes. The air pockets a hand meets -- a trigger guard's opening, the gap between a
-       grip and its magazine -- are open on two sides or more. */
+       grip and its magazine -- are open on two sides or more. And walls within 12 cm, a grip-sized
+       shell (the Thompson's is 10 cm tall): the riot shield's grip bar has its panel 7 cm in front of it, standoffs either side and
+       the forearm cuff 17 cm over it, so the space a hand closes into read as solid metal and the
+       fingers lay straight out over the bar. */
     let open = 0;
     for (let ax = 0; ax < 3; ax++) {
-      const [a, b2] = blocked(ax, x, y, z);
+      const [a, b2] = blocked(ax, x, y, z, 0.12);
       open += (a ? 0 : 1) + (b2 ? 0 : 1);
       if (open > 1) return false;
     }
@@ -53321,21 +53329,29 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
     const P0 = d.pivots3[0];
     const L = [len(sub(d.pivots3[1], P0)), len(sub(d.pivots3[2], d.pivots3[1])), len(sub(d.tip, d.pivots3[2]))];
     const d0 = nrm(sub(d.pivots3[1], P0));
-    for (const [a1, a2] of [[80, 60], [60, 45], [40, 30]]) {
-      const P1 = add(P0, mul(d0, L[0]));
+    const P1 = add(P0, mul(d0, L[0]));
+    /* Every curl of the two outer joints that keeps clear of the gun, and of those the one whose tip
+       comes to rest nearest it -- else the deepest fold. Three fixed curls were tried before and the
+       finger left straight if all three touched: the DP 28's middle finger stood up past its barrel,
+       its tip 56 mm off anything. */
+    let best = null;
+    for (let a1 = 90; a1 >= 0; a1 -= 10) for (let a2 = 80; a2 >= 0; a2 -= 10) {
       let dir = rot(d0, k, a1 * DEG);
       const P2 = add(P1, mul(dir, L[1]));
       dir = rot(dir, k, a2 * DEG);
       const T = add(P2, mul(dir, L[2]));
       if (clear(P1, nrm(sub(P2, P1)), L[1], R[1] * 0.7) < 0 || clear(P2, nrm(sub(T, P2)), L[2], R[2] * 0.7) < 0) continue;
-      d.pivots3 = [P0, P1, P2];
-      d.joints = [P1, P2];
-      d.tip = T;
-      d.axis = k;
-      d.open = -1;
-      d.curled = true;
-      return;
+      const ts = sf(T[0], T[1], T[2]);
+      const e = ts < 0.012 ? a1 + a2 >= 60 ? -1 : 0 : ts;
+      if (!best || e < best.e - 1e-6 || (Math.abs(e - best.e) < 1e-6 && a1 + a2 > best.a)) best = { e, a: a1 + a2, P2, T };
     }
+    if (!best || best.a < 30) return;
+    d.pivots3 = [P0, P1, best.P2];
+    d.joints = [P1, best.P2];
+    d.tip = best.T;
+    d.axis = k;
+    d.open = -1;
+    d.curled = true;
   };
   // A melee handle (the shield's, the hammer's) is a bar the grip solve already wraps.
   if (rec.grip === 'haft') {

@@ -1907,14 +1907,17 @@ function buildShieldFrame(g) {
   }
   /* Behind: a forearm cuff up high and a grip bar low, on standoffs. The
      hand goes through one and holds the other, which is why the shield sits
-     where it does relative to the body. */
+     where it does relative to the body. A hand's width apart: with the grip
+     bar's standoffs 60 mm apart there was 44 mm of bar between them for four
+     fingers, and the outer two lay over the standoffs; a riot shield's grip is
+     110 mm. */
   const back = -(S.R - Math.cos(0) * S.R) - S.T;
-  strut(g, [back, 0.1000, -0.0420], [back - 0.0350, 0.1000, -0.0420], ringOutline(0.0075, 12));
-  strut(g, [back, 0.1000, 0.0420], [back - 0.0350, 0.1000, 0.0420], ringOutline(0.0075, 12));
-  strut(g, [back - 0.0350, 0.1000, -0.0420], [back - 0.0350, 0.1000, 0.0420], ringOutline(0.0125, 14));
-  strut(g, [back, -0.0700, -0.0300], [back - 0.0750, -0.0700, -0.0300], ringOutline(0.0080, 12));
-  strut(g, [back, -0.0700, 0.0300], [back - 0.0750, -0.0700, 0.0300], ringOutline(0.0080, 12));
-  strut(g, [back - 0.0750, -0.0700, -0.0300], [back - 0.0750, -0.0700, 0.0300], ringOutline(0.0110, 14));
+  strut(g, [back, 0.1000, -0.0500], [back - 0.0350, 0.1000, -0.0500], ringOutline(0.0075, 12));
+  strut(g, [back, 0.1000, 0.0500], [back - 0.0350, 0.1000, 0.0500], ringOutline(0.0075, 12));
+  strut(g, [back - 0.0350, 0.1000, -0.0500], [back - 0.0350, 0.1000, 0.0500], ringOutline(0.0125, 14));
+  strut(g, [back, -0.0700, -0.0550], [back - 0.0750, -0.0700, -0.0550], ringOutline(0.0080, 12));
+  strut(g, [back, -0.0700, 0.0550], [back - 0.0750, -0.0700, 0.0550], ringOutline(0.0080, 12));
+  strut(g, [back - 0.0750, -0.0700, -0.0550], [back - 0.0750, -0.0700, 0.0550], ringOutline(0.0110, 14));
   // A viewport band across the top third, in the frame's own steel.
   for (const y of [0.2000, 0.2600]) {
     let prev = null;

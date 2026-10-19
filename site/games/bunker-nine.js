@@ -792,11 +792,10 @@ const WEAPONS = {
     knockback: 3.8, sweep: 0.9, blocks: true,
     sightH: 0.05, sightFov: 1.0, adsTime: 0.26,
     recoil: { up: 0.9, side: 0.5, climb: 0, recover: 11 },
-    /* On the shield's own hardware. SHIELD_ORIGIN is placed on the grip
-       bar, so the firing hand belongs at the origin and the support arm in
-       the forearm cuff, 170 mm up and 40 mm forward of it. Both hands were
-       out in front of the panel holding nothing. */
-    hands: { right: [0, 0, 0], rightGrip: 'haft', left: [0.040, 0.150, 0], leftGrip: { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
+    /* On the shield's own hardware, held as the whole shield is (see `shield` below). */
+    hands: { right: [0, 0, -0.038], rightGrip: { axis: [0, 0, 1], round: [1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 },
+      left: [0.040, 0.150, -0.034], leftGrip: { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
+    armSpread: 0.12,
   },
   shield: {
     name: 'Riot Shield', slotName: 'RIOT SHIELD',
@@ -810,7 +809,15 @@ const WEAPONS = {
        bar, so the firing hand belongs at the origin and the support arm in
        the forearm cuff, 170 mm up and 40 mm forward of it. Both hands were
        out in front of the panel holding nothing. */
-    hands: { right: [0, 0, 0], rightGrip: 'haft', left: [0.040, 0.150, 0], leftGrip: { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
+    /* Both handles are bars across the shield, each closed in its own fist (multiplayer HOLDS
+       holds the same model the same way): the firing hand had the 'haft' kind, a shaft held
+       upright, and stood open beside its bar with the bar in its palm; the support hand is centred
+       on the cuff's bar (it hung off the end, one finger straight up the clear panel). `armSpread`
+       brings both forearms in to run back inside the shield's curve -- from the usual shoulders,
+       31 cm out, the support forearm went out through the curved panel. */
+    hands: { right: [0, 0, -0.038], rightGrip: { axis: [0, 0, 1], round: [1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 },
+      left: [0.040, 0.150, -0.034], leftGrip: { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
+    armSpread: 0.12,
   },
   arc: {
     name: 'Arc Breaker', slotName: 'ARC BREAKER',
@@ -6495,7 +6502,7 @@ function makePlayer(game, S, hud, sfx, voice) {
        where a trigger cannot be -- above the bore is the top of the slide,
        and the solve was perfectly happy to lay the finger along it. */
     v.arms = game.viewmodelArms(root, WEAPONS[id].hands,
-      { key: id, thumb: !!WEAPONS[id].thumbCock, fitHand: WEAPONS[id].fitHand,
+      { key: id, thumb: !!WEAPONS[id].thumbCock, fitHand: WEAPONS[id].fitHand, spread: WEAPONS[id].armSpread,
         boreY: (root && root.boreAt != null) ? root.boreAt : null,
         /* The gun's own sight line. The support hand is solved onto the
            weapon's surface, and on a forend the top of that surface is

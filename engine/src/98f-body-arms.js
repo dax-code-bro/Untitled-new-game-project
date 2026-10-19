@@ -178,21 +178,29 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
     const P0 = d.pivots3[0];
     const L = [len(sub(d.pivots3[1], P0)), len(sub(d.pivots3[2], d.pivots3[1])), len(sub(d.tip, d.pivots3[2]))];
     const d0 = nrm(sub(d.pivots3[1], P0));
-    for (const [a1, a2] of [[80, 60], [60, 45], [40, 30]]) {
-      const P1 = add(P0, mul(d0, L[0]));
+    const P1 = add(P0, mul(d0, L[0]));
+    /* Every curl of the two outer joints that keeps clear of the gun, and of those the one whose tip
+       comes to rest nearest it -- else the deepest fold. Three fixed curls were tried before and the
+       finger left straight if all three touched: the DP 28's middle finger stood up past its barrel,
+       its tip 56 mm off anything. */
+    let best = null;
+    for (let a1 = 90; a1 >= 0; a1 -= 10) for (let a2 = 80; a2 >= 0; a2 -= 10) {
       let dir = rot(d0, k, a1 * DEG);
       const P2 = add(P1, mul(dir, L[1]));
       dir = rot(dir, k, a2 * DEG);
       const T = add(P2, mul(dir, L[2]));
       if (clear(P1, nrm(sub(P2, P1)), L[1], R[1] * 0.7) < 0 || clear(P2, nrm(sub(T, P2)), L[2], R[2] * 0.7) < 0) continue;
-      d.pivots3 = [P0, P1, P2];
-      d.joints = [P1, P2];
-      d.tip = T;
-      d.axis = k;
-      d.open = -1;
-      d.curled = true;
-      return;
+      const ts = sf(T[0], T[1], T[2]);
+      const e = ts < 0.012 ? a1 + a2 >= 60 ? -1 : 0 : ts;
+      if (!best || e < best.e - 1e-6 || (Math.abs(e - best.e) < 1e-6 && a1 + a2 > best.a)) best = { e, a: a1 + a2, P2, T };
     }
+    if (!best || best.a < 30) return;
+    d.pivots3 = [P0, P1, best.P2];
+    d.joints = [P1, best.P2];
+    d.tip = best.T;
+    d.axis = k;
+    d.open = -1;
+    d.curled = true;
   };
   // A melee handle (the shield's, the hammer's) is a bar the grip solve already wraps.
   if (rec.grip === 'haft') {
