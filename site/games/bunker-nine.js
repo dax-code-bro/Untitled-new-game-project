@@ -798,7 +798,7 @@ const WEAPONS = {
     /* On the shield's own hardware, held as the whole shield is (see `shield` below). */
     hands: { right: [0, 0, -0.038], rightGrip: { axis: [0, 0, 1], round: [1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 },
       left: [0.040, 0.150, -0.034], leftGrip: { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
-    armSpread: 0.12,
+    armSpread: 0.20,
   },
   shield: {
     name: 'Riot Shield', slotName: 'RIOT SHIELD',
@@ -820,7 +820,7 @@ const WEAPONS = {
        31 cm out, the support forearm went out through the curved panel. */
     hands: { right: [0, 0, -0.038], rightGrip: { axis: [0, 0, 1], round: [1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 },
       left: [0.040, 0.150, -0.034], leftGrip: { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
-    armSpread: 0.12,
+    armSpread: 0.20,
   },
   arc: {
     name: 'Arc Breaker', slotName: 'ARC BREAKER',

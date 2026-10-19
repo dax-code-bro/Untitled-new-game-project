@@ -942,7 +942,10 @@
   var PISTOL_WRAP = { axis: [-0.28, -0.94, 0], round: [0, 0, 1], girth: 0.078,
     spread: 0.0184, close: 0.90, index: 'wrap', thumb: 'stack', drop: 0 };
 
-  var BULLPUP = { aug: 1, groza: 1, p90: 1 };
+  /* Bullpups: what reaches back past the grip is the action, which the eye looks along, not a
+     stock under the cheek -- not pulled in, and not clipped (the Kestrel 12's receiver was cut open
+     into flaps across its sight picture). */
+  var BULLPUP = { aug: 1, groza: 1, p90: 1, kestrel12: 1 };
   /* A riot shield's handle: a bar across the shield, gripped from behind. */
   var SHIELD_BAR = { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 };
   /* WHERE A FEW GUNS ARE HELD that the rule below cannot find, read off their own shapes: a
@@ -988,7 +991,7 @@
        And both forearms run back inside the shield's curve: from the usual shoulder anchors, 31 cm
        out to either side, the support forearm went out through the panel's curved wing and was drawn
        pale behind it. */
-    riotshield: { right: [0, 0, -0.038], rightGrip: Object.assign({}, SHIELD_BAR, { round: [1, 0, 0] }), left: [0.040, 0.150, -0.034], leftGrip: SHIELD_BAR, spread: 0.12 },
+    riotshield: { right: [0, 0, -0.038], rightGrip: Object.assign({}, SHIELD_BAR, { round: [1, 0, 0] }), left: [0.040, 0.150, -0.034], leftGrip: SHIELD_BAR, spread: 0.20 },
   };
   function handsFor(g, cls, game, id) {
     var muzzle = (g && g.muzzleAt != null) ? g.muzzleAt : 0.42;
@@ -1921,7 +1924,7 @@
         /* And the weapon clipped just short of its rear sight, so the top of the stock under the
            cheek is not cut by the near plane into a flap across the sight picture (engine 97l-aim.js).
            The weapon's own parts only: the arms keep the ordinary near plane. */
-        if (g && game.clipNearTree && window.LE.aimClip) game.clipNearTree(g, window.LE.aimClip(shape, adsD * OUT, aim));
+        if (g && game.clipNearTree && window.LE.aimClip) game.clipNearTree(g, BULLPUP[state.gun] ? 0 : window.LE.aimClip(shape, adsD * OUT, aim));
         var dist = (hipD * (1 - aim) + adsD * aim) * OUT - kick * 0.03 - low * 0.03
           - INS.in
           /* And drawn in toward the face while the hands work, which is
@@ -3878,7 +3881,10 @@
            nothing in between -- which is what "I can't aim down sights,
            there's no animation" is. It eases now, and faster to the
            sight than back off it, the way a real one does. */
-        var wantAim = (input.buttons.aim || p.aiming) ? 1 : 0;
+        /* Not a shield: there are no sights on it, and raised to the eye its support forearm ran
+           up the middle of the screen to the cuff. */
+        var shieldHeld = !!(w && W.MP_DATA && W.MP_DATA.gun && (W.MP_DATA.gun(w.id) || {}).shield);
+        var wantAim = (input.buttons.aim || p.aiming) && !shieldHeld ? 1 : 0;
         /* A linear ramp, eased on the way out: starts, travels, seats on
            the eye -- 0.2 s up, 0.26 s down -- where the exponential lunged
            and then crept. */
