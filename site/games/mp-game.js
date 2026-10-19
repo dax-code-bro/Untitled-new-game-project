@@ -960,6 +960,12 @@
        found the gas collar at 36 cm instead and the hand held bare barrel, its index up beside the
        optic. */
     aug: { left: [0.172, -0.030, -0.016], leftGrip: 'foregrip' },
+    /* On handguards the forend rule could not pick out. The Longwake's runs 13 to 40 cm out with
+       its bipod mount hanging from the middle of it, and the rule took the receiver's underside
+       behind it: the hand ended at the mount, an open claw beside the bipod. The M60's ribbed
+       handguard is 22 to 33 cm out; the rule's station was behind it, under the feed. */
+    longwake: { left: [0.300, 0.009, 0], leftGrip: 'fore' },
+    m60: { left: [0.250, 0.009, 0], leftGrip: 'fore' },
     mp40: { left: [0.070, -0.026, -0.016], leftGrip: 'foregrip' },
     /* The C96 is zombies' own model, held as zombies holds it (bunker-nine WEAPONS.mauser): the
        firing hand down the broomhandle, which slopes back, and the support hand round the magazine
