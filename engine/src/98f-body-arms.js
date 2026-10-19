@@ -276,8 +276,7 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
         const t = onTrigger
           ? joint(p, dir, k, L[j], R[j] * 0.8, j === 0 ? 0 : angle(dir, rigDir[j], k), -40 * DEG, 110 * DEG, true)
           : joint(p, dir, k, L[j], R[j], start, lim[j][0], j === 0 ? Math.max(lim[0][1], s0 + 10 * DEG) : lim[j][1], false,
-            Math.min(0, sf(p[0], p[1], p[2]) - R[j]) - (globalThis.__squish != null ? globalThis.__squish : 0.0025));
-        if (globalThis.__wrapDbg) (pts.dbg || (pts.dbg = [])).push([+(start / DEG).toFixed(0), +(t / DEG).toFixed(0), +(clear(p, rot(dir, k, t), L[j], R[j]) * 1000).toFixed(1), +(clear(p, rot(dir, k, t + 6 * DEG), L[j], R[j]) * 1000).toFixed(1)]);
+            Math.min(0, sf(p[0], p[1], p[2]) - R[j]) - 0.0025);
         dir = rot(dir, k, t);
         p = add(p, mul(dir, L[j]));
         pts.push(p);
@@ -303,7 +302,6 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
        joint at its limit and the middles 10 to 20 mm off. A support finger is closed both ways
        and keeps the one that rests on the gun. */
     let pts = curl(k);
-    if (globalThis.__wrapDbg) globalThis.__wrapDbg.push({ rec, f, a: pts.dbg, L: L.map((v) => +(v * 1000).toFixed(0)) });
     /* A finger on an upright grip may also start already folded round it: from the
        grip solve's line, straight ahead, the Barrett's ring and middle fingers lay along its
        magazine and the first degree of closing ran them into it, though the 28 mm between grip and
@@ -358,7 +356,7 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
           }
         }
         const fwd = P[3][0] - P0[0];
-        const KP = globalThis.__trigPip != null ? globalThis.__trigPip : 2.0;
+        const KP = 2.0;
         const pipGap = sf(P[1][0], P[1][1], P[1][2]) - R[0] - 0.006;
         return dist(padOf(P), T) + 3 * Math.max(0, pen) + 3 * Math.max(0, 0.013 - fwd) + KP * Math.max(0, pipGap);
       };
@@ -728,7 +726,7 @@ function _bodyArm(src, S, rec, shoulder, base, sf, keepThumb) {
       for (const p of pts) { const q = cr(p); m = Math.min(m, sf(q[0], q[1], q[2])); }
       return m;
     };
-    const DEG = Math.PI / 180, TOUCH = +(globalThis.__palmTouch != null ? globalThis.__palmTouch : -0.0025), HI = 90 * DEG, LO = -20 * DEG;
+    const DEG = Math.PI / 180, TOUCH = -0.0025, HI = 90 * DEG, LO = -20 * DEG;
     /* A support hand under a forend CUPS it: its palm closes until it meets the gun or the wrist
        comes up a third of the way up the forend's side, not on up the side of a narrow one (the
        C96's magazine housing) until the wrist is over the gun and the arm comes down into the
@@ -838,7 +836,6 @@ function _bodyArm(src, S, rec, shoulder, base, sf, keepThumb) {
     }
     let t2 = V(rec.thumbTip);
     t2 = add(t2, mul(nrm(sub(t2, t1)), 0.009));
-    rec.__drawnThumb = [t0, t1, t2, palmCarry(fg.piv[1]), palmCarry(Jw)];
     let ax = V(rec.thumbAxis);
     // The thumb's pad faces across the palm: sign its axis so it does.
     if (dot(cross(ax, nrm(sub(t1, V(rec.thumbPivot)))), nR) < 0) ax = mul(ax, -1);
@@ -919,13 +916,6 @@ function _bodyArm(src, S, rec, shoulder, base, sf, keepThumb) {
     outP[i * 3] = p[0] / tot; outP[i * 3 + 1] = p[1] / tot; outP[i * 3 + 2] = p[2] / tot;
     const top = [...slotW.entries()].sort((x, y) => y[1] - x[1]).slice(0, 4);
     const tw = top.reduce((s2, x) => s2 + x[1], 0) || 1;
-    // DEBUG (removed before shipping): globalThis.__hideDigit = { side: 'R', f } hides one digit (f 0 little .. 3 index, 4 thumb).
-    const HD = globalThis.__hideDigit;
-    if (HD && HD.side === S) {
-      const slots = HD.f === 4 ? [3] : [4 + HD.f * 3, 5 + HD.f * 3, 6 + HD.f * 3];
-      let wd = 0; for (const sl of slots) wd += slotW.get(sl) || 0;
-      if (wd / tw > 0.4) keep[i] = 0;
-    }
     top.forEach(([slot, w], q) => { outJ[i * 4 + q] = base + slot; outW[i * 4 + q] = w / tw; });
   }
 
@@ -1083,7 +1073,7 @@ function _constructForeGrip(rec, sf, bore, hold) {
   if (zr == null || zl == null) return false;
   zr = Math.max(zr, 0.006); zl = Math.min(zl, -0.006);
   const R = 0.0095, pitch = 0.0202;
-  const SWEEP = (globalThis.__suppSweep != null ? globalThis.__suppSweep : 25) * Math.PI / 180;
+  const SWEEP = 25 * Math.PI / 180;
   const cY = Math.cos(SWEEP), sY = Math.sin(SWEEP);
   const turn = (v, t) => {                          // rotate v about -x by t: closes +z toward +y
     const c = Math.cos(t), s2 = Math.sin(t);
@@ -1196,7 +1186,7 @@ function makeBodyArms(parts, shoulders, sf, keepThumb, ext) {
       /* ...nor quite to the top edge: fingers that reached it lay across the top of a slim forend's
          barrel. (Capped at the bore instead, they could not fit up a tall forend -- the
          Breakwater's -- and were pushed out sideways, 55 mm off it.) */
-      const top = rec.constructed ? rec.constructed.yt - (globalThis.__suppTop != null ? globalThis.__suppTop : 0.004) : Infinity;
+      const top = rec.constructed ? rec.constructed.yt - 0.004 : Infinity;
       if (ext.sightY == null && top === Infinity) return sfL;
       const lim = Math.min(ext.sightY != null ? ext.sightY - 0.004 : Infinity, top), under = sfL;
       const f = (x, y, z) => Math.min(under(x, y, z), lim - y);
@@ -1209,14 +1199,14 @@ function makeBodyArms(parts, shoulders, sf, keepThumb, ext) {
          wide-handguard hold nor the slim fist is right for every one, and the forend's width alone
          did not say which (measured: each won on guns either side of every threshold tried). */
       let best = null;
-      for (const hold of (globalThis.__hold ? [globalThis.__hold] : ['wide', 'slim'])) {
+      for (const hold of ['wide', 'slim']) {
         const r2 = _cloneRec(dl);
         if (!_constructForeGrip(r2, sf, ext.boreY, hold)) break;
         const sfH = ceiling(r2);
         const body = _bodyArm(src, 'L', r2, shoulders.left, 16, sfH);
         /* The palm-under hold unless the fist is clearly better: the fist's palm is round the left
            side, and from there the hand reads as gripping from above. */
-        const sc = _restScore(r2, sfL, sfH) * (hold === 'slim' ? (globalThis.__slimMargin != null ? 1 / globalThis.__slimMargin : 1 / 0.7) : 1);
+        const sc = _restScore(r2, sfL, sfH) * (hold === 'slim' ? 1 / 0.7 : 1);
         if (!best || sc < best.sc) best = { sc, body, r2, hold };
       }
       if (best) {
@@ -1225,7 +1215,9 @@ function makeBodyArms(parts, shoulders, sf, keepThumb, ext) {
         l = best.body;
       }
     }
-    if (!l && parts.hasLeft) l = _bodyArm(src, 'L', dl, shoulders.left, 16, sfS);
+    /* Any other support hold keeps under the sight line too: wrapped round the C96's magazine
+       housing, its support fingers came up over it and 4.6 mm into the sight picture. */
+    if (!l && parts.hasLeft) l = _bodyArm(src, 'L', dl, shoulders.left, 16, dl ? ceiling(dl) : sfS);
     if (!r) return null;
     parts.__bodyArms = { r, l };
   } catch (e) {
@@ -1359,9 +1351,8 @@ function _fitFiringHand(hands, opts) {
      The hand seats itself against the grip after the anchor moves, so the response is not
      linear, and an unchecked last step is how the MG 42's hand first went off up its receiver. */
   const base = hands.right;
-  if (globalThis.__fitDbg) { let fr = null; for (let x = 0.012; x > -0.06; x -= 0.001) if (solid(x, -0.04)) { fr = x; break; } globalThis.__fitDbg.push({ key: opts.key, probeFront: fr, sfIn: [0.0, 0.005, -0.005].map((xx) => +sf(xx, -0.04, 0).toFixed(4)), dbg: sf.debug }); }
   let at = base.slice(), best = null;
-  at[2] += globalThis.__fitDZ != null ? globalThis.__fitDZ : 0.004;
+  at[2] += 0.004;
   for (let it = 0; it < 4; it++) {
     const rec = trial(at);
     if (!rec) break;
@@ -1405,7 +1396,7 @@ function _fitFiringHand(hands, opts) {
        the index knuckle to within 6 mm of the trigger on the Grease Gun and folded the trigger
        finger back on itself; the "second finger reaching forward" it was chasing was the thumb
        (see _wrapHand). */
-    let X = fy + (globalThis.__fitDX != null ? globalThis.__fitDX : 0.002);
+    let X = fy + 0.002;
     /* And not into the stock. Raising the hand raises the web of it, and on a gun whose stock
        or receiver comes down behind the grip (the Scattergun, the MG 42) the thumb's base went
        14 mm into the wood. Buried, it counts against the solve and the next step goes back down. */
@@ -1414,7 +1405,6 @@ function _fitFiringHand(hands, opts) {
     let tY = Y;
     if (buried > 0) tY = Math.min(Y, m[1] - buried * 1.2);
     const err = Math.hypot(X - m[0], Y - m[1]) + 3 * buried;
-    if (globalThis.__fitDbg) globalThis.__fitDbg.push({ key: opts.key, at: at.slice(), m: m.slice(), f0, ceil, Y, X, fy, err });
     if (!best || err < best.err) best = { at: at.slice(), err };
     if (err < 0.002) break;
     const nx = Math.max(base[0] - 0.03, Math.min(base[0] + 0.02, at[0] + 0.85 * (X - m[0])));

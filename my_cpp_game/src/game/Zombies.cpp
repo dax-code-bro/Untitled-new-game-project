@@ -716,6 +716,10 @@ void ZombiesGame::frame(rendering::Camera& cam, std::vector<rendering::DrawItem>
     const float baseFov = m_kit.fov() > 0.2f ? m_kit.fov() : glm::radians(70.0f);
     cam.fov = baseFov * glm::mix(1.0f, g.def->sightFov, m_ads);
     cam.nearZ = 0.05f;
+    /* Aimed, out to the near plane the web game drew this pose with (recorded in the kit): just short
+       of the rear sight, so the top of the stock under the cheek is not cut into a flap across the
+       sight picture. */
+    if (g.def->aimNear > cam.nearZ) cam.nearZ = glm::mix(cam.nearZ, g.def->aimNear, m_ads);
 
     // ---- the boards that are still up ----
     for (const auto& b : m_boards) if (!b.down) out.push_back(b.item);

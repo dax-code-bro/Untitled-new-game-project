@@ -19,7 +19,6 @@ Engine.prototype.weaponSurface = function (root) {
   /* And which closed piece each triangle belongs to (see `inside`): every vertex welded by
      position across the whole weapon, one id per distinct point. */
   const tv = [];
-  const walkedNames = [];
   const weld = new Map();
   let nV = 0;
   const walk = (a, local) => {
@@ -34,7 +33,6 @@ Engine.prototype.weaponSurface = function (root) {
        wood was not -- the hand fit measured a different gun from the one on the screen. */
     if (a !== root && a.visible === false) return;
     const geo = a.mesh && game.geometryOf(a.mesh);
-    walkedNames.push((a.name || '?').slice(0, 24) + ':' + (geo && geo.indices ? geo.indices.length / 3 : 0));
     if (geo && geo.positions) {
       const q = geo.positions;
       const m = local ? local.e : null;
@@ -383,9 +381,8 @@ Engine.prototype.weaponSurface = function (root) {
       for (let j = ya; j <= yb; j++) { const kk = pkey(i, j); let c = zgrid.get(kk); if (!c) { c = []; zgrid.set(kk, c); } c.push(t); }
     }
   }
-  /* Does a ray from (x, y, z) along axis `ax` (0 x, 1 y, 2 z) meet the gun ahead, and behind --
-     within `maxD` of the point? */
-  const blocked = (ax, x, y, z, maxD = Infinity) => {
+  /* Does a ray from (x, y, z) along axis `ax` (0 x, 1 y, 2 z) meet the gun ahead, and behind? */
+  const blocked = (ax, x, y, z) => {
     const P3 = [x, y, z];
     const u = ax === 0 ? 1 : 0, v = ax === 2 ? 1 : 2;           // the two axes the ray does not run along
     const grid = ax === 0 ? pgrid : (ax === 1 ? ygrid : zgrid);
@@ -401,7 +398,6 @@ Engine.prototype.weaponSurface = function (root) {
       const den = wa + wb + wc;
       if (den === 0) continue;
       const h = (A[ax] * wa + B2[ax] * wb + C[ax] * wc) / den;
-      if (Math.abs(h - P3[ax]) > maxD) continue;
       if (h > P3[ax]) ahead = true; else behind = true;
     }
     return [ahead, behind];
@@ -414,13 +410,10 @@ Engine.prototype.weaponSurface = function (root) {
   const enclosed = (x, y, z) => {
     /* Five of the six: a grip shell is often open at the bottom (the Thompson's is), and the ray
        down it escapes. The air pockets a hand meets -- a trigger guard's opening, the gap between a
-       grip and its magazine -- are open on two sides or more. And walls within 12 cm, a grip-sized
-       shell (the Thompson's is 10 cm tall): the riot shield's grip bar has its panel 7 cm in front of it, standoffs either side and
-       the forearm cuff 17 cm over it, so the space a hand closes into read as solid metal and the
-       fingers lay straight out over the bar. */
+       grip and its magazine -- are open on two sides or more. */
     let open = 0;
     for (let ax = 0; ax < 3; ax++) {
-      const [a, b2] = blocked(ax, x, y, z, 0.12);
+      const [a, b2] = blocked(ax, x, y, z);
       open += (a ? 0 : 1) + (b2 ? 0 : 1);
       if (open > 1) return false;
     }
@@ -492,15 +485,16 @@ Engine.prototype.weaponSurface = function (root) {
    * anything about occupancy grids. The sign only appears past the shell
    * band, so a finger genuinely touching the surface still reads zero and
    * stays legal. */
+  const shells = root.solidShells !== false;
   const signed = (x, y, z) => {
     const d = surf(x, y, z);
     if (d >= 1) return d;
     if (inside(x, y, z)) return -d;
-    // The escape test costs three rays: only where a finger could be (within 3 cm of the gun).
-    if (d < 0.03 && enclosed(x + 2.71e-6, y + 1.93e-6, z + 1.37e-6)) return -d;
+    // The escape test costs three rays: only where a finger could be (within 3 cm of the gun). Not
+    // on a weapon that says it has no shells (the riot shield: its handles' gaps are boxed in).
+    if (d < 0.03 && shells && enclosed(x + 2.71e-6, y + 1.93e-6, z + 1.37e-6)) return -d;
     return d;
   };
-  signed.debug = { tris: tris.length / 3, pieces: nPiece, walked: walkedNames, blocked };
   signed.inside = inside;
   signed.unsigned = surf;
   return signed;

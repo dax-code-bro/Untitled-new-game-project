@@ -73,12 +73,44 @@ closed onto the rig's solved finger joints and skinned to those actors
 through a palette read off them (`_bodyArmPalette`). `opts.stickArms` (or
 `engine.stickArms`) brings the old tubes back. A new rig part that moves a
 hand must be one of the actors the palette reads (sleeve, forearm, palm,
-thumb, finger bones). The rig places the knuckles; `_wrapHand` (98f) then
-closes every finger joint by joint onto the weapon's own surface (`weaponSurface`)
-and writes the joints back into the hand records, so the game's finger turns
-use them. It keeps the trigger finger's solved pose (grip.test needs it reaching
-forward), moves the firing thumb round to the far side of the grip (not on a
-`thumb` single action), lays the support thumb along the forend, and on a
-two-handed pistol closes the support hand over the firing hand's fingers.
-Multiplayer support hands are kept on the forend by `weaponForend` (98f) in
-`handsFor`. After changing them, re-record the kit.
+thumb, finger bones).
+
+Before the rig solves it, a firing hand on any grip whose kind puts the index
+on a trigger is fitted to it (`_fitFiringHand`): the trigger guard straight
+under the trigger first, the middle knuckle tucked under it (or under the
+frame), the knuckle row at the grip's front corner; `fitHand: false` keeps an
+authored anchor (the Obliterator). The rig places the knuckles; `_wrapHand`
+then closes every finger joint by joint onto the weapon's own surface
+(`weaponSurface`) and writes the joints back into the hand records, so the
+game's finger turns use them. A finger on an upright grip (pistol grip,
+vertical foregrip, magazine housing) wraps round it -- its tip may not end
+more than 30 mm ahead of its knuckle, and it may start the closing already
+folded round the strap; a finger that touches nothing curls (`curlLoose`).
+It keeps the trigger finger's solved pose with its pad on the blade (grip.test
+needs it reaching forward), moves the firing thumb round to the far side of
+the grip (not on a `thumb` single action), lays the support thumb along a
+forend or a two-handed pistol's frame, and on a two-handed pistol closes the
+support hand over the firing hand's fingers. `_bodyArm` turns the palm about
+the knuckle row until it meets the gun (`rec.palmFlex`), so the wrist lands
+behind the grip and the forearm runs back. A support hand on a `fore`,
+`woodFore` or `tube` grip is built from the forend's measured section
+(`_constructForeGrip`), both the wide-handguard hold and the slim fist, and
+the one that rests on the gun is kept; its fingers stop just under the
+forend's top edge, and every support hand's under the sight line. A melee
+`haft` is not wrapped.
+
+`weaponSurface` (98a) skips the `noDraw` rig and hidden parts (a parked
+reload magazine), counts ray parity per connected piece, and calls a point
+inside an open shell (a wooden grip's panels) when the gun walls it in on
+five of six sides -- not on a model that sets `solidShells = false` (the
+riot shield, whose handle gaps are walled in).
+
+Multiplayer support hands go on the forend `weaponForend` (98f) measures, no
+more than 40 cm out and pulled back onto it past a bipod or gas tube
+(`handsFor`); guns the rule cannot place have a hold in `HOLDS` (mp-game: the
+P90, MP7, MP 40, Grease Gun, C96, riot shield). The riot shield holds each
+of its two handle bars across in a fist, both games, with the forearms
+brought in (`spread`, zombies `armSpread`). Aimed, a weapon with a stock
+comes in until its butt is behind the eye, and the near plane moves out to
+just short of its rear sight (`aimShape`/`aimNear`, engine 97l-aim.js), in
+both games. After changing any of this, re-record the kit.

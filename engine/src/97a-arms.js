@@ -3444,6 +3444,10 @@ Engine.prototype.riotShield = function (opts = {}) {
   const body = mountArm(this, 'shield', parts,
     { frame: ARM_MAT.grey, panel: ARM_MAT.glass }, opts, 0.56, 5.5, 'frame');
   body.muzzleAt = 0.2000;
+  /* No hollow shells to fill in (weaponSurface): behind the grip bar the panel is in front, the
+     standoffs either side, the cuff over it and the curved panel's wings beyond, and the gap a hand
+     closes into read as solid -- no finger could go round the bar. */
+  body.solidShells = false;
   return body;
 };
 
