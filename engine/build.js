@@ -99,6 +99,8 @@ const LegendEngine = {
   reloadFetch, reloadOnscreen, reloadReach, stowReloadProp,
   /* The inspect, shared for the same reason -- see 97g-inspect.js. */
   INSPECT_TIME, INSPECT_CANCEL, inspectPose,
+  /* What an aimed weapon puts in front of the eye -- its butt and its rear sight; see 97l-aim.js. */
+  AIM_NEAR_MAX, aimShape, aimNear,
   /* Brass and spent magazines -- see 97h-spent.js. */
   keepSpent,
   /* The noises a weapon makes when nobody is shooting it. */

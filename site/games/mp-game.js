@@ -943,36 +943,6 @@
     spread: 0.0184, close: 0.90, index: 'wrap', thumb: 'stack', drop: 0 };
 
   var BULLPUP = { aug: 1, groza: 1, p90: 1 };
-  /* How far behind its own origin a weapon reaches (the butt of its stock), from its meshes: the
-     least x over every part, cached on the weapon. */
-  function rearOf(g) {
-    if (!g) return 0;
-    if (g.__rearX != null) return g.__rearX;
-    var game = g.engine;
-    var lo = 0;
-    var walk = function (a, m) {
-      // Hidden parts count: mid-swap the whole weapon is hidden when this may first be asked.
-      if (a !== g && a.noDraw) return;
-      var geo = a.mesh && game && game.geometryOf ? game.geometryOf(a.mesh) : null;
-      if (geo && geo.positions) {
-        var q = geo.positions, e = m ? m.e : null;
-        for (var i = 0; i < q.length; i += 24) {
-          var x = e ? e[0] * q[i] + e[4] * q[i + 1] + e[8] * q[i + 2] + e[12] : q[i];
-          if (x < lo) lo = x;
-        }
-      }
-      var kids = a.children || [];
-      for (var k = 0; k < kids.length; k++) {
-        var c = kids[k], cm = new window.LE.Mat4();
-        cm.compose(c._position, c._rotation, c.scale);
-        if (m) { var t = new window.LE.Mat4(); t.mulMatrices(m, cm); walk(c, t); } else walk(c, cm);
-      }
-    };
-    try { walk(g, null); } catch (e) { lo = 0; }
-    g.__rearX = lo;
-    return lo;
-  }
-
   /* WHERE A FEW GUNS ARE HELD that the rule below cannot find, read off their own shapes: a
      vertical post is held in a fist like a pistol grip, not cupped from underneath like a forend.
      The P90's station two thirds out was on bare barrel past the front of its body, its support
@@ -1581,6 +1551,8 @@
         if (cur) show(cur, false);
         shown = false;
         if (flash) flash.visible = false;
+        // The aimed near plane goes with the gun (place(), engine 97l-aim.js).
+        if (game.camera) game.camera.near = 0.1;
         /* And whatever the hand was carrying. A magazine left visible
            when the weapon goes away hangs in the air where the gun
            used to be -- the same fault zombies had and fixed. */
@@ -1903,11 +1875,14 @@
            side of the eye -- never closer than 0.21 m to its grip. Pistols and stockless guns keep the
            distance they had. */
         var adsD = 0.30;
-        var rear = rearOf(g);
+        var shape = game.aimShape ? game.aimShape(g, sightH) : { rear: 0, sightRear: null };
         /* Not a bullpup: what reaches back past its grip is the action, not a stock, and brought in,
            the camera sat inside its receiver (the AUG's, the Groza's) looking at the magazine and
            the frame bars from within. */
-        if (rear < -0.15 && !BULLPUP[state.gun]) adsD = Math.min(adsD, Math.max(0.16, (0.05 - rear) / OUT));
+        if (shape.rear < -0.15 && !BULLPUP[state.gun]) adsD = Math.min(adsD, Math.max(0.16, (0.05 - shape.rear) / OUT));
+        /* And the near plane out to just short of the rear sight, so the top of the stock under the
+           cheek is not cut into a flap across the sight picture (engine 97l-aim.js). */
+        if (game.camera && window.LE.aimNear) game.camera.near = window.LE.aimNear(shape, adsD * OUT, aim, 0.1);
         var dist = (hipD * (1 - aim) + adsD * aim) * OUT - kick * 0.03 - low * 0.03
           - INS.in
           /* And drawn in toward the face while the hands work, which is

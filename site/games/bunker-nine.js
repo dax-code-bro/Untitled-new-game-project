@@ -7204,35 +7204,6 @@ function setViewVisible(v, on) {
 
 /* Position the equipped weapon against the camera every frame — bob,
    sway, recoil, reload dip. This is the whole first-person feel. */
-/* How far behind its own origin a weapon reaches (the butt of its stock): the least x over its drawn
-   parts, cached on the weapon. */
-function viewRearOf(g) {
-  if (!g) return 0;
-  if (g.__rearX != null) return g.__rearX;
-  const game = g.engine;
-  let lo = 0;
-  const walk = (a, m) => {
-    // Hidden parts count: mid-swap the whole weapon is hidden when this may first be asked.
-    if (a !== g && a.noDraw) return;
-    const geo = a.mesh && game && game.geometryOf ? game.geometryOf(a.mesh) : null;
-    if (geo && geo.positions) {
-      const q = geo.positions, e = m ? m.e : null;
-      for (let i = 0; i < q.length; i += 24) {
-        const x = e ? e[0] * q[i] + e[4] * q[i + 1] + e[8] * q[i + 2] + e[12] : q[i];
-        if (x < lo) lo = x;
-      }
-    }
-    for (const c of (a.children || [])) {
-      const cm = new window.LE.Mat4();
-      cm.compose(c._position, c._rotation, c.scale);
-      if (m) { const t = new window.LE.Mat4(); t.mulMatrices(m, cm); walk(c, t); } else walk(c, cm);
-    }
-  };
-  try { walk(g, null); } catch (e) { lo = 0; }
-  g.__rearX = lo;
-  return lo;
-}
-
 function updateViewmodel(game, P, dt, moving, S, sfx) {
   const spec = P.spec();
   const v = P.view[P.equipped()];
@@ -7247,7 +7218,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      ejection port and the reload state all come out of this function, and a
      shot fired through a scope still has to throw its flash and its brass
      from the right place. */
-  if (!P.alive) return;
+  if (!P.alive) { game.camera.near = 0.09; return; }
 
   const cam = game.camera;
   const f = _vTmp1.copy(cam.target).sub(cam.position).normalize();
@@ -7547,10 +7518,12 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      the Paralyzer's flat grey stock filled the bottom of its sight picture, the Scattergun's square
      butt sat under its bead. A weapon with a stock (15 cm or more behind its grip) comes in until the
      butt is behind the eye. */
-  if (v) {
-    const rear = viewRearOf(v.kind === 'single' ? v.actor : v.root);
-    if (rear < -0.15) adsD = Math.min(adsD, Math.max(0.16, (0.05 - rear) / OUT));
-  }
+  const shape = v && game.aimShape ? game.aimShape(v.kind === 'single' ? v.actor : v.root, spec.sightH) : null;
+  if (shape && shape.rear < -0.15) adsD = Math.min(adsD, Math.max(0.16, (0.05 - shape.rear) / OUT));
+  /* And the near plane out to just short of the rear sight while aiming, so the top of the stock
+     under the cheek is not cut into a flap across the sight picture (engine 97l-aim.js). Behind a
+     scope nothing is drawn and the near plane is the ordinary one. */
+  game.camera.near = shown && window.LE.aimNear ? window.LE.aimNear(shape, adsD * OUT, a, 0.09) : 0.09;
   /* THE INSPECT, which is a curve rather than a clip: a viewmodel is one
      actor held at an offset from the eye, so the thing that has to move
      is the offset. engine/src/97g-inspect.js owns the shape and
