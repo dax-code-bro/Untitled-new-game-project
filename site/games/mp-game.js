@@ -965,6 +965,8 @@
        behind it: the hand ended at the mount, an open claw beside the bipod. The M60's ribbed
        handguard is 22 to 33 cm out; the rule's station was behind it, under the feed. */
     longwake: { left: [0.300, 0.009, 0], leftGrip: 'fore' },
+    // The Grinder's vertical foregrip, 26 to 28 cm out (the rule cupped its bare barrel at 38).
+    grinder: { left: [0.268, -0.030, -0.016], leftGrip: 'foregrip' },
     m60: { left: [0.250, 0.009, 0], leftGrip: 'fore' },
     mp40: { left: [0.070, -0.026, -0.016], leftGrip: 'foregrip' },
     /* The C96 is zombies' own model, held as zombies holds it (bunker-nine WEAPONS.mauser): the

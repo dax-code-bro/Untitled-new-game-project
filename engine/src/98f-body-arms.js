@@ -508,9 +508,14 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
       return leftAt(x, y);
     };
     const yT = T0[1] + 0.004;
-    const M = sideAt(T0[0] + L0 * 0.95, yT), T = sideAt(T0[0] + (L0 + L1) * 0.92, yT + 0.002);
+    const Mt = sideAt(T0[0] + L0 * 0.95, yT), Tt = sideAt(T0[0] + (L0 + L1) * 0.92, yT + 0.002);
+    /* Each bone AIMED at its point along the side, at its own length. Set on the points themselves,
+       the first bone stretched up to 1.6 times and the drawn thumb came out a thin pointed spike
+       (the MG 34's, the M60's, the Sten's, the AK's). */
+    const M = add(T0, mul(nrm(sub(Mt, T0)), L0)), T = add(M, mul(nrm(sub(Tt, M)), L1));
     const dNow = sf(rec.thumbTip[0], rec.thumbTip[1], rec.thumbTip[2]), dNew = sf(T[0], T[1], T[2]);
-    if (dNew < Math.max(dNow, rT * 1.6) && Math.abs(T[2]) < 0.07 && len(sub(M, T0)) < L0 * 1.6) {
+    if (dNew < Math.max(dNow, rT * 1.6) && Math.abs(T[2]) < 0.07 && len(sub(Mt, T0)) < L0 * 1.6
+      && sf(M[0], M[1], M[2]) > rT * 0.6) {
       rec.thumbMid = M; rec.thumbTip = T;
       rec.thumbAxis = nrm(cross(nrm(sub(M, T0)), [0, 0, -1]));
       rec.thumbMoved = true;

@@ -1126,7 +1126,9 @@ Object.assign(SERVICE_KINDS, {
     rec: { rear: -0.150, front: 0.095, up: 0.0245, down: 0.0230, w: 0.0195, e: 6 },
     hg: { kind: 'poly', x0: 0.110, x1: 0.270, r: 0.0240, w: 0.0240, drop: 0.0240 },
     mag: null,
-    ammoBox: { kind: 'drum', x: -0.020, r: 0.0720, w: 0.0340, drop: 0.002 },
+    /* Ahead of the grip with room for a hand: at x -0.020 the drum's rear came back to the grip's own
+       station, flush against its front strap, and the firing fingers lay straight out along the drum. */
+    ammoBox: { kind: 'drum', x: 0.020, r: 0.0720, w: 0.0340, drop: 0.002 },
     grip: { x: -0.092, y: -0.0190, len: 0.108, rake: 0.28, wide: 1.18, e: 1.4 },
     trigger: { x: -0.060 },
     foregrip: { x: 0.180, len: 0.096, rake: 0.08, under: 0.0240 },
