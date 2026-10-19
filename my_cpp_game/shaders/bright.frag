@@ -7,6 +7,8 @@ uniform float uSoftKnee;
 layout(location=0) out vec4 outColor;
 void main(){
   vec3 c = texture(uTex, vUv).rgb;
+  // Whatever else let a NaN through, it is not blurred into a block (pbrFrag zeroes its own).
+  if (!(dot(c, vec3(1.0)) < 3.0e38)) c = vec3(0.0);
   float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
   // Soft knee: a hard threshold makes bloom pop in and out as objects move.
   float knee = uThreshold * uSoftKnee + 1e-5;

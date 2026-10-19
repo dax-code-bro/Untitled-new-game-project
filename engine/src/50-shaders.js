@@ -1921,6 +1921,11 @@ void main(){
   if (alpha < 0.35) discard;
   alpha = 1.0;
 #endif
+  /* A NaN or an infinity out of the lighting at a grazing angle (a pow of a base a hair below zero,
+     a 0/0 in a lobe) is one pixel here, and the bloom chain spreads it into a black square tens of
+     pixels across -- the 1911's grip did it, square in the multiplayer sight picture. Zeroed at the
+     source, before any post pass (bloom, exposure, TAA) reads it. */
+  if (!(dot(color, vec3(1.0)) < 3.0e38)) color = vec3(0.0);
   outColor = vec4(color, alpha);
 
   /* The G-buffer. The renderer masks attachment 1 off for every pass but
@@ -2285,6 +2290,8 @@ uniform float uSoftKnee;
 layout(location=0) out vec4 outColor;
 void main(){
   vec3 c = texture(uTex, vUv).rgb;
+  // Whatever else let a NaN through, it is not blurred into a block (pbrFrag zeroes its own).
+  if (!(dot(c, vec3(1.0)) < 3.0e38)) c = vec3(0.0);
   float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
   // Soft knee: a hard threshold makes bloom pop in and out as objects move.
   float knee = uThreshold * uSoftKnee + 1e-5;

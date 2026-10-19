@@ -6543,6 +6543,11 @@ void main(){
   if (alpha < 0.35) discard;
   alpha = 1.0;
 #endif
+  /* A NaN or an infinity out of the lighting at a grazing angle (a pow of a base a hair below zero,
+     a 0/0 in a lobe) is one pixel here, and the bloom chain spreads it into a black square tens of
+     pixels across -- the 1911's grip did it, square in the multiplayer sight picture. Zeroed at the
+     source, before any post pass (bloom, exposure, TAA) reads it. */
+  if (!(dot(color, vec3(1.0)) < 3.0e38)) color = vec3(0.0);
   outColor = vec4(color, alpha);
 
   /* The G-buffer. The renderer masks attachment 1 off for every pass but
@@ -6907,6 +6912,8 @@ uniform float uSoftKnee;
 layout(location=0) out vec4 outColor;
 void main(){
   vec3 c = texture(uTex, vUv).rgb;
+  // Whatever else let a NaN through, it is not blurred into a block (pbrFrag zeroes its own).
+  if (!(dot(c, vec3(1.0)) < 3.0e38)) c = vec3(0.0);
   float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
   // Soft knee: a hard threshold makes bloom pop in and out as objects move.
   float knee = uThreshold * uSoftKnee + 1e-5;
@@ -53305,7 +53312,7 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
     // Out from the middle of the frame to the left until clear of it, at a given station.
     const leftOf = (q) => { const p = [q[0], q[1], 0]; for (let n = 0; n < 40 && sf(p[0], p[1], p[2]) < rT; n++) p[2] -= 0.0015; return p; };
     // The base: behind the backstrap, a little to the right of centre (where the web of the hand is).
-    let b0 = [rec.thumbPivot[0], rec.thumbPivot[1], 0.004];
+    let b0 = [rec.thumbPivot[0], rec.thumbPivot[1], 0.004], behind = true;
     for (let n = 0; n < 30 && sf(b0[0], b0[1], b0[2]) < rT; n++) b0[0] -= 0.0015;
     /* Where a stock comes down behind the grip (the Scattergun's, the MG 42's) there is no clear
        place behind the backstrap to step back to, and the base was left 15 mm inside the wood.
@@ -53313,7 +53320,18 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
        the thumb stays where the grip solve put it. */
     if (sf(b0[0], b0[1], b0[2]) < rT * 0.8) {
       b0 = rec.thumbPivot.slice();
+      behind = false;
       for (let n = 0; n < 15 && sf(b0[0], b0[1], b0[2]) < rT; n++) b0[2] += 0.0015;
+    }
+    /* ROOTED AT THE LEFT REAR CORNER of the grip, not behind its middle: the thumb's root joint is
+       on the far side of the backstrap and the web wraps round behind it (the palm's thenar is
+       drawn round to here, _bodyArm). From behind the middle, its first bone crossed the back of
+       the frame square to the gun -- from the eye, a thumb lying across the slide in the sight
+       picture. Clear behind, it comes forward along the left side from just ahead of the
+       backstrap. */
+    if (behind) {
+      const c0 = leftOf([b0[0] + rT + 0.004, b0[1], 0]);
+      if (c0[2] > -0.05 && sf(c0[0], c0[1], c0[2]) >= rT * 0.95) b0 = c0;
     }
     const tip = leftOf(rec.thumbTip);
     // The middle joint between them, held off the corner of the grip it goes round.
@@ -53411,6 +53429,39 @@ function _surfaceWithHand(sf, caps) {
   return f;
 }
 
+/* Points on the palm's skin (palm side, clear of the knuckle row where the fingers bend), in the
+   figure's space: what _bodyArm closes the palm onto the grip by. Cached per side. */
+function _palmSamples(src, S, palmMHk) {
+  const key = '_palmPts' + S;
+  if (src[key]) return src[key];
+  const { g, info } = src, H = info[S];
+  const { sub, dot } = _ba;
+  const P = g.positions, nv = P.length / 3;
+  const hvIdx = new Map();
+  for (let i = 0; i < H.hv.length; i++) hvIdx.set(H.hv[i], i);
+  const ss = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+  const cand = [];
+  for (let i = 0; i < nv; i++) {
+    const hi = hvIdx.get(g.srcVert[i]);
+    if (hi === undefined) continue;
+    let palm = 0;
+    for (let m = 0; m < 5; m++) {
+      const w = H.ws[hi * 5 + m];
+      if (w < 1e-3) continue;
+      const fg = H.fingers[m];
+      palm += w * (1 - ss(fg.js[0] * fg.L - 0.017, fg.js[0] * fg.L + 0.017, H.s[hi * 5 + m]));
+    }
+    if (palm < 0.85) continue;
+    const p = [P[i * 3], P[i * 3 + 1], P[i * 3 + 2]], d = sub(p, palmMHk.o);
+    // Behind the knuckle row by 2.5 cm or more, and on the palm side of the hand's middle.
+    if (dot(d, palmMHk.a) > -0.025 || dot(d, palmMHk.c) < 0.004) continue;
+    cand.push(p);
+  }
+  const step = Math.max(1, Math.floor(cand.length / 60));
+  src[key] = cand.filter((_, i) => i % step === 0);
+  return src[key];
+}
+
 /* Build one arm (skin and sleeve) in the weapon's space.
  *
  *   S      'R' or 'L' (the figure's side)
@@ -53499,10 +53550,54 @@ function _bodyArm(src, S, rec, shoulder, base, sf, keepThumb) {
   const klMH0 = sub(MF[0].piv[0], MF[3].piv[0]);
   const sgnK = dot(klMH0, palmMH.b) >= 0 ? 1 : -1;
   const palmMHk = kFrame(kMidMH, klMH0, palmMH.c, sgnK);
-  const palmR = kFrame(kMidR, sub(BF[3].pivots3[0], BF[0].pivots3[0]), nR, sgnK);
-  const palmCarry = _baCarry(palmMHk, palmR, hk, hk, hk);
+  let palmR = kFrame(kMidR, sub(BF[3].pivots3[0], BF[0].pivots3[0]), nR, sgnK);
+  let palmCarry = _baCarry(palmMHk, palmR, hk, hk, hk);
   // The fingers and thumb closed onto this weapon's own surface (the rig only placed the knuckles well).
   if (sf && !rec.__wrapped) { rec.__caps = _wrapHand(rec, sf, palmR.a, nR, 0.0088, S === 'R', keepThumb); rec.__wrapped = true; }
+  /* THE PALM CLOSES ONTO THE GRIP, as a finger does. Framed from the fingers alone, the palm came
+     out in line with their first bones -- a hand with its knuckles straight. On a pistol grip those
+     bones run across the front strap, so the palm stood straight out to the side of the gun with the
+     wrist 10 cm off it: from above, both arms of a two-handed pistol hold made a T, every firing
+     forearm stuck out at right angles to its gun, and the thumb, rooted on that palm, crossed the
+     back of the slide in the sight picture. The palm turns about the knuckle row toward its own
+     palm side, from the fingers' line, until its skin meets the gun (or the knuckles are bent as
+     far as a hand's go), so it lies on the grip and the wrist falls behind it. */
+  if (sf) {
+    // The palm side again, from the fingers as they now are (the trigger finger is no guide to it).
+    const use = S === 'R' && rec.indexPlane != null ? [0, 1, 2] : [0, 1, 2, 3];
+    let n2 = [0, 0, 0], cs = [0, 0, 0];
+    for (const f of use) {
+      const k0 = BF[f].pivots3[0], d0 = nrm(sub(BF[f].pivots3[1], k0));
+      n2 = add(n2, nrm(cross(BF[f].axis, d0)));
+      const t = sub(BF[f].tip, k0);
+      cs = add(cs, sub(t, mul(d0, dot(t, d0))));
+    }
+    n2 = nrm(n2);
+    if (dot(cs, n2) < 0) n2 = mul(n2, -1);
+    const fr0 = kFrame(kMidR, sub(BF[3].pivots3[0], BF[0].pivots3[0]), n2, sgnK);
+    const turnF = (t) => {
+      const c = Math.cos(t), s = Math.sin(t);
+      return { o: fr0.o, b: fr0.b, a: add(mul(fr0.a, c), mul(fr0.c, -s)), c: add(mul(fr0.c, c), mul(fr0.a, s)) };
+    };
+    const pts = _palmSamples(src, S, palmMHk);
+    const clearAt = (t) => {
+      const cr = _baCarry(palmMHk, turnF(t), hk, hk, hk);
+      let m = Infinity;
+      for (const p of pts) { const q = cr(p); m = Math.min(m, sf(q[0], q[1], q[2])); }
+      return m;
+    };
+    const DEG = Math.PI / 180, TOUCH = +(globalThis.__palmTouch != null ? globalThis.__palmTouch : -0.0025), HI = 90 * DEG, LO = -20 * DEG;
+    let t = 0;
+    if (clearAt(0) < TOUCH) {
+      for (let n = 1; LO <= -n * 2 * DEG; n++) if (clearAt(-n * 2 * DEG) >= TOUCH) { t = -n * 2 * DEG; break; }
+    } else {
+      for (const st of [6 * DEG, 1.5 * DEG]) while (t + st <= HI && clearAt(t + st) >= TOUCH) t += st;
+    }
+    palmR = turnF(t);
+    palmCarry = _baCarry(palmMHk, palmR, hk, hk, hk);
+    nR = palmR.c;
+    rec.palmFlex = +(t / DEG).toFixed(1);
+  }
   const wristR = palmCarry(Jw);
   /* THE FOREARM RUNS ON FROM THE HAND. A wrist holding a gun is all but straight; aimed at the
      rig's "shoulder" (a point it chose only so its sleeve tube would leave the frame low) the
@@ -53556,7 +53651,7 @@ function _bodyArm(src, S, rec, shoulder, base, sf, keepThumb) {
     }));
   }
   // The thumb: base joint to middle joint, middle joint to tip.
-  let thumbCarry = null;
+  let thumbCarry = null, thenarShift = null;
   if (rec.thumbPivot && rec.thumbMid && rec.thumbTip && rec.thumbAxis) {
     const fg = MF[4];
     /* ROOTED ON THE PALM. The rig's thumb pivot is its own point, and the palm is fitted to the
@@ -53566,9 +53661,21 @@ function _bodyArm(src, S, rec, shoulder, base, sf, keepThumb) {
        where the palm puts the figure's own thumb base. */
     let t0 = palmCarry(fg.piv[0]);
     let t1 = V(rec.thumbMid);
+    /* A FIRING THUMB GOES ROUND THE BACK OF THE GRIP: its root is on the far side of the backstrap
+       (_wrapHand), where the flat palm cannot reach. The thenar -- the palm's skin that belongs to
+       the thumb -- is drawn round to it, most at the thumb's root and none at the wrist, so the web
+       wraps the backstrap instead of the thumb leaving the palm on the near side and crossing the
+       gun. */
+    if (S === 'R' && rec.thumbMoved && rec.indexPlane != null) {
+      let D = sub(V(rec.thumbPivot), t0);
+      const dl = len(D);
+      if (dl > 0.05) D = mul(D, 0.05 / dl);
+      thenarShift = D;
+      t0 = add(t0, D);
+    }
     /* And it swings from there no further than a thumb does: the first bone kept within 70
        degrees of where the palm carries the figure's own thumb, or the web twists into a spike. */
-    {
+    if (!thenarShift) {
       const rest = nrm(sub(palmCarry(fg.piv[1]), t0));
       let a = sub(t1, t0);
       const L = len(a) || 0.03;
@@ -53582,6 +53689,7 @@ function _bodyArm(src, S, rec, shoulder, base, sf, keepThumb) {
     }
     let t2 = V(rec.thumbTip);
     t2 = add(t2, mul(nrm(sub(t2, t1)), 0.009));
+    rec.__drawnThumb = [t0, t1, t2, palmCarry(fg.piv[1]), palmCarry(Jw)];
     let ax = V(rec.thumbAxis);
     // The thumb's pad faces across the palm: sign its axis so it does.
     if (dot(cross(ax, nrm(sub(t1, V(rec.thumbPivot)))), nR) < 0) ax = mul(ax, -1);
@@ -53637,7 +53745,12 @@ function _bodyArm(src, S, rec, shoulder, base, sf, keepThumb) {
             parts.push([bc[1] || bc[0] || palmCarry, 4 + f * 3 + 1, wH * wsf * (t[1] - t[2])]);
             parts.push([bc[2] || bc[1] || bc[0] || palmCarry, 4 + f * 3 + 2, wH * wsf * t[2]]);
           } else if (thumbCarry) {
-            parts.push([palmCarry, 2, wH * wsf * (1 - t[0])]);
+            if (thenarShift) {
+              // The thenar drawn round with the thumb's root: all of it at the root, none 4.5 cm back.
+              const g2 = ss(-0.045, -0.004, s), D = thenarShift;
+              const thenar = (p) => { const q = palmCarry(p); return [q[0] + D[0] * g2, q[1] + D[1] * g2, q[2] + D[2] * g2]; };
+              parts.push([thenar, 2, wH * wsf * (1 - t[0])]);
+            } else parts.push([palmCarry, 2, wH * wsf * (1 - t[0])]);
             parts.push([thumbCarry[0], 3, wH * wsf * (t[0] - t[1])]);
             parts.push([thumbCarry[1], 3, wH * wsf * t[1]]);
           } else parts.push([palmCarry, 2, wH * wsf]);

@@ -1206,6 +1206,11 @@ void main(){
   if (alpha < 0.35) discard;
   alpha = 1.0;
 #endif
+  /* A NaN or an infinity out of the lighting at a grazing angle (a pow of a base a hair below zero,
+     a 0/0 in a lobe) is one pixel here, and the bloom chain spreads it into a black square tens of
+     pixels across -- the 1911's grip did it, square in the multiplayer sight picture. Zeroed at the
+     source, before any post pass (bloom, exposure, TAA) reads it. */
+  if (!(dot(color, vec3(1.0)) < 3.0e38)) color = vec3(0.0);
   outColor = vec4(color, alpha);
 
   /* The G-buffer. The renderer masks attachment 1 off for every pass but
