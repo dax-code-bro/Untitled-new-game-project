@@ -942,6 +942,7 @@
   var PISTOL_WRAP = { axis: [-0.28, -0.94, 0], round: [0, 0, 1], girth: 0.078,
     spread: 0.0184, close: 0.90, index: 'wrap', thumb: 'stack', drop: 0 };
 
+  var BULLPUP = { aug: 1, groza: 1, p90: 1 };
   /* How far behind its own origin a weapon reaches (the butt of its stock), from its meshes: the
      least x over every part, cached on the weapon. */
   function rearOf(g) {
@@ -976,11 +977,13 @@
      vertical post is held in a fist like a pistol grip, not cupped from underneath like a forend.
      The P90's station two thirds out was on bare barrel past the front of its body, its support
      fingers 38 mm off anything; the MP7's was cupped under the bottom of its vertical foregrip and
-     the MP 40's under its magazine. */
+     the MP 40's and the Grease Gun's under their magazines. */
   var HOLDS = {
     p90: { left: [0.035, 0.010, 0], leftGrip: 'fore' },
     mp7: { left: [0.186, -0.026, -0.016], leftGrip: 'foregrip' },
     mp40: { left: [0.070, -0.026, -0.016], leftGrip: 'foregrip' },
+    // The M3 is held by its magazine housing; cupped under it as a forend, the hand tore apart.
+    grease: { left: [0.055, -0.026, -0.016], leftGrip: 'foregrip' },
     /* The riot shield went through the one-handed rule and got a pistol grip and a pistol's
        wrapped support hand, both closing on nothing (the fingers 17 mm off). Held as zombies holds
        the same model: the firing hand on the grip bar, the support arm in the forearm cuff. */
@@ -1901,7 +1904,10 @@
            distance they had. */
         var adsD = 0.30;
         var rear = rearOf(g);
-        if (rear < -0.15) adsD = Math.min(adsD, Math.max(0.16, (0.05 - rear) / OUT));
+        /* Not a bullpup: what reaches back past its grip is the action, not a stock, and brought in,
+           the camera sat inside its receiver (the AUG's, the Groza's) looking at the magazine and
+           the frame bars from within. */
+        if (rear < -0.15 && !BULLPUP[state.gun]) adsD = Math.min(adsD, Math.max(0.16, (0.05 - rear) / OUT));
         var dist = (hipD * (1 - aim) + adsD * aim) * OUT - kick * 0.03 - low * 0.03
           - INS.in
           /* And drawn in toward the face while the hands work, which is

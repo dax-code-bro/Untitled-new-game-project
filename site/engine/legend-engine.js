@@ -54365,6 +54365,17 @@ function _fitFiringHand(hands, opts) {
       if (!runs.length || runs[runs.length - 1].m !== m) runs.push({ m, top: y, bot: y });
       else runs[runs.length - 1].bot = y;
     }
+    /* A GUARD FIRST, from the top down: the first thin bar under the receiver with its opening over
+       it and air under it. Searched from the bottom up, the Ranger's lower bar 40 mm under its guard
+       was taken for the guard and the hand dropped to the end of its travel, the trigger 52 mm above
+       the index knuckle. */
+    for (let i = 2; i < runs.length; i++) {
+      const air = runs[i], bar = runs[i - 1], above = runs[i - 2];
+      if (air.m || !bar.m || above.m) continue;
+      if (bar.top - bar.bot < 0.012 && above.top - above.bot >= 0.006 && (air.top - air.bot >= 0.010 || i === runs.length - 1)) {
+        return { y: air.top, guard: true };
+      }
+    }
     // The last metal-to-air edge with 25 mm of air (or the end of the scan) under it.
     for (let i = runs.length - 1; i > 0; i--) {
       const r = runs[i];
@@ -54403,10 +54414,22 @@ function _fitFiringHand(hands, opts) {
        bottom of its grip, its trigger 37 mm above the index knuckle). The first station that finds a
        guard is the one; failing that, the nearest frame. */
     let ceil = null;
-    for (const ox of [0.016, 0.022, 0.010, 0.028, 0.034, 0.040, 0.046, 0.052, 0.058, 0.064]) {
-      const c = ceilingAt(f0 + ox, m[1] - 0.06);
-      if (c && c.guard) { ceil = c; break; }
-      if (c && !ceil && ox <= 0.022) ceil = c;
+    /* Straight under the trigger first: the guard's bottom bar is what is directly below the trigger
+       blade. Read from the strap outward alone, a station through the guard's own rear upright sees
+       no opening and takes whatever bar is lower down (the Ranger's, 40 mm under its guard). */
+    const TA = rec.trigAt;
+    if (TA) {
+      for (const ox of [0.004, 0.010, -0.002, 0.016]) {
+        const c = ceilingAt(TA[0] + ox, m[1] - 0.06);
+        if (c && c.guard && c.y < TA[1]) { ceil = c; break; }
+      }
+    }
+    if (!ceil) {
+      for (const ox of [0.016, 0.022, 0.010, 0.028, 0.034, 0.040, 0.046, 0.052, 0.058, 0.064]) {
+        const c = ceilingAt(f0 + ox, m[1] - 0.06);
+        if (c && c.guard) { ceil = c; break; }
+        if (c && !ceil && ox <= 0.022) ceil = c;
+      }
     }
     if (ceil == null) break;
     const spread = len(sub(rec.byFinger[3].pivots3[0], m)) || 0.0194;
