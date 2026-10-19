@@ -520,6 +520,9 @@ const WEAPONS = {
      * sense: it was measured for a sight picture it does not have, and it
      * was built a set of magazines and optics nobody will ever see. */
     kick: 0, sfx: 'dryFire', tool: true,
+    /* And nothing to aim: held to the eye, the hammer came to the middle of the screen and the
+       forearm holding it filled the right third of the picture. */
+    noAds: true,
     sightH: 0.05, sightFov: 0.95, adsTime: 0.2,
     recoil: { up: 0, side: 0, climb: 0, recover: 12 },
     hands: { right: [0.006, -0.002, 0.012], left: null, rightGrip: 'haft' },

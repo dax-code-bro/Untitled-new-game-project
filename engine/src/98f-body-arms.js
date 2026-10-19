@@ -264,18 +264,18 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
     // The knuckle turns about the rig's first bone (it may need to open well clear of a magazine or
     // close well in); the middle and last joints bend only forward, as far as a finger's do.
     const lim = [[-50 * DEG, 70 * DEG], [0, 105 * DEG], [0, 80 * DEG]];
-    const curl = (k) => {
+    const curl = (k, s0 = 0) => {
       let dir = nrm(sub(rigDir[0], mul(k, dot(rigDir[0], k))));
       const pts = [P0];
       let p = P0;
       for (let j = 0; j < 3; j++) {
-        const start = j === 0 ? 0 : Math.max(0, angle(dir, rigDir[j], k));
+        const start = j === 0 ? s0 : Math.max(0, angle(dir, rigDir[j], k));
         /* The trigger finger keeps the trigger solve's pose -- it lies along a blade, it does not
            wrap -- and only opens a bone that the solve left inside the gun (its tip through the
            magwell). */
         const t = onTrigger
           ? joint(p, dir, k, L[j], R[j] * 0.8, j === 0 ? 0 : angle(dir, rigDir[j], k), -40 * DEG, 110 * DEG, true)
-          : joint(p, dir, k, L[j], R[j], start, lim[j][0], lim[j][1], false,
+          : joint(p, dir, k, L[j], R[j], start, lim[j][0], j === 0 ? Math.max(lim[0][1], s0 + 10 * DEG) : lim[j][1], false,
             Math.min(0, sf(p[0], p[1], p[2]) - R[j]) - (globalThis.__squish != null ? globalThis.__squish : 0.0025));
         if (globalThis.__wrapDbg) (pts.dbg || (pts.dbg = [])).push([+(start / DEG).toFixed(0), +(t / DEG).toFixed(0), +(clear(p, rot(dir, k, t), L[j], R[j]) * 1000).toFixed(1), +(clear(p, rot(dir, k, t + 6 * DEG), L[j], R[j]) * 1000).toFixed(1)]);
         dir = rot(dir, k, t);
@@ -286,10 +286,17 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
     };
     /* How well a finger rests on the gun: each joint's distance from lying on the surface, a joint
        in the gun counting double. */
+    /* ...and a finger on an upright grip (a pistol grip, a vertical foregrip, a magazine housing)
+       holds it by going ROUND it: one whose tip ends more than 30 mm ahead of its knuckle is lying
+       along something else. The Barrett's middle and ring fingers lay straight along the side of its
+       magazine, tips 9 cm out, and the C96's support fingers along its magazine housing, and scored
+       as well as a wrap because every joint touched the gun. */
+    const fwdCost = (T) => (!isTrig && (!rec.gripAxis || Math.abs(rec.gripAxis[1]) > 0.8))
+      ? 2 * Math.max(0, T[0] - P0[0] - 0.03) : 0;
     const score = (P1, P2, T) => [[P1, R[0]], [P2, R[1]], [T, R[2] * 0.85]].reduce((acc, [q, r]) => {
       const e = sf(q[0], q[1], q[2]) - r;
       return acc + (e < 0 ? -2 * e : e);
-    }, 0);
+    }, fwdCost(T));
     /* Closing is whichever way brings the finger onto the gun. The palm side the hand's frame
        implies came out the wrong way round on some support hands (the Mauser's forend, the
        Remington's, the MG 42's), and those fingers curled into a fist in the air beside it, every
@@ -297,6 +304,16 @@ function _wrapHand(rec, sf, palmA, nR, radius, firing, keepThumb) {
        and keeps the one that rests on the gun. */
     let pts = curl(k);
     if (globalThis.__wrapDbg) globalThis.__wrapDbg.push({ rec, f, a: pts.dbg, L: L.map((v) => +(v * 1000).toFixed(0)) });
+    /* A finger on an upright grip may also start already folded round it: from the
+       grip solve's line, straight ahead, the Barrett's ring and middle fingers lay along its
+       magazine and the first degree of closing ran them into it, though the 28 mm between grip and
+       magazine takes a finger across the strap. */
+    if (!isTrig && (!rec.gripAxis || Math.abs(rec.gripAxis[1]) > 0.8)) {
+      for (const s0 of [40 * DEG, 80 * DEG]) {
+        const alt = curl(k, s0);
+        if (score(alt[1], alt[2], alt[3]) < score(pts[1], pts[2], pts[3]) - 0.001) pts = alt;
+      }
+    }
     if (!firing && !isTrig) {
       const kk = mul(k, -1), alt = curl(kk);
       if (score(alt[1], alt[2], alt[3]) < score(pts[1], pts[2], pts[3]) - 0.002) { pts = alt; k = kk; }
