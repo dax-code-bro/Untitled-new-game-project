@@ -336,6 +336,7 @@ class Mat3 {
 
 /* ---------------- Mat4 (column-major, GL layout) ---------------- */
 
+const _m4Alias = new Float32Array(16);
 class Mat4 {
   constructor() {
     this.e = new Float32Array(16);
@@ -367,7 +368,9 @@ class Mat4 {
     return this;
   }
   mulMatrices(a, b) {
-    const ae = a.e, be = b.e, te = this.e;
+    /* The result is written a column at a time while `a` is still being read, so when the output is
+       also the left operand (`m.mul(t)`, `m.mulMatrices(m, t)`) `a` is read from a copy. */
+    const ae = a === this ? (_m4Alias.set(a.e), _m4Alias) : a.e, be = b.e, te = this.e;
     for (let c = 0; c < 4; c++) {
       const b0 = be[c * 4], b1 = be[c * 4 + 1], b2 = be[c * 4 + 2], b3 = be[c * 4 + 3];
       te[c * 4] = ae[0] * b0 + ae[4] * b1 + ae[8] * b2 + ae[12] * b3;

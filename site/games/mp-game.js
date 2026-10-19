@@ -951,7 +951,10 @@
      fingers 38 mm off anything; the MP7's was cupped under the bottom of its vertical foregrip and
      the MP 40's and the Grease Gun's under their magazines. */
   var HOLDS = {
-    p90: { left: [0.035, 0.010, 0], leftGrip: 'fore' },
+    /* ...and the P90 has nothing ahead of its guard to hold at all: its box ends 6 cm in front of the
+       grip and the rest is bare barrel, so cupped under the front of the box the support fingers stood
+       up into the air. Two hands on the grip, as a pistol is held. */
+    p90: { left: [0.006, -0.030, -0.034], leftGrip: PISTOL_WRAP },
     mp7: { left: [0.186, -0.026, -0.016], leftGrip: 'foregrip' },
     mp40: { left: [0.070, -0.026, -0.016], leftGrip: 'foregrip' },
     /* The C96 is zombies' own model, held as zombies holds it (bunker-nine WEAPONS.mauser): the

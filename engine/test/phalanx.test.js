@@ -84,9 +84,12 @@ const note = (s) => console.log(`  ..   ${s}`);
     const inWeapon = (act, stop, p3) => {
       const chain = [];
       for (let x = act; x && x !== stop; x = x.parent) chain.unshift(x);
-      const m = new M4(), t = new M4();
+      const m = new M4(), t = new M4(), r = new M4();
       m.identity();
-      for (const x of chain) { t.compose(x._position, x._rotation, x.scale); m.mulMatrices(m, t); }
+      /* Into a third matrix: mulMatrices writes its result a column at a time while still reading
+         its left operand, so m.mulMatrices(m, t) came out wrong in the second order -- 0.2 to
+         0.4 mm at the support knuckles, read as the knuckle drifting while the finger opened. */
+      for (const x of chain) { t.compose(x._position, x._rotation, x.scale); r.mulMatrices(m, t); m.copy(r); }
       return new V3(p3[0], p3[1], p3[2]).applyMat4(m);
     };
     const dist = (u, v) => Math.hypot(u.x - v.x, u.y - v.y, u.z - v.z);
