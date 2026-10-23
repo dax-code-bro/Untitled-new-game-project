@@ -56,8 +56,8 @@ export default {
     // ------------------------------------------------------------------- 1A
     '1A-01': {
       staging: 'NONE: macro on the shell; the crack runs on from the old fracture and stops.',
-      cam: { rig: 'static', frame: { subjects: [['eggCrack', [0.1, 0.05]]], from: 150, dist: 0.62, rise: 0.06 }, mm: 100, fstop: 8 },
-      set: { egg: 'closed', crack: [[0, 0.3], [1.5, 0.3], [2.4, 1.0, 'out']], eggFill: { intensity: 1.2, heading: 185 } },
+      cam: { rig: 'static', frame: { subjects: [['eggCrack', [0.1, 0.05]]], from: 150, dist: 1.3, rise: 0.12 }, mm: 85, fstop: 8, focus: 'eggCrack' },
+      set: { egg: 'closed', crack: [[0, 0.3], [1.5, 0.3], [2.4, 1.0, 'out']], eggFill: { intensity: 0.8, heading: 195, rise: 0.3 }, sun: 0.45 },
       exposure: -0.4,
     },
     '1A-02': {
@@ -94,20 +94,20 @@ export default {
     },
     '1A-06': {
       staging: 'NONE: macro; another piece of shell shifts.',
-      cam: { rig: 'static', frame: { subjects: [['eggFrag', [0.0, 0.0]]], from: 165, dist: 0.6, rise: 0.04 }, mm: 100, fstop: 8 },
-      set: { egg: 'cracked', crack: 1, frag: { shift: [[0.8, 0], [1.05, 0.07], [1.4, 0.05]] }, eggFill: { intensity: 1.4, heading: 180 } },
+      cam: { rig: 'static', frame: { subjects: [['eggFrag', [0.05, 0.0]]], from: 135, dist: 1.15, rise: 0.12 }, mm: 85, fstop: 8, focus: 'eggFrag' },
+      set: { egg: 'cracked', crack: 1, frag: { shift: [[0.8, 0], [1.05, 0.07], [1.4, 0.05]] }, eggFill: { intensity: 0.8, heading: 190, rise: 0.3 }, sun: 0.45 },
       exposure: -0.4,
     },
     '1A-07': {
       staging: 'NONE: macro; the shell flexes outward under pressure (birth stage 1).',
-      cam: { rig: 'static', frame: { subjects: [['eggFrag', [-0.1, 0.05]]], from: 155, dist: 0.55, rise: 0.0 }, mm: 100, fstop: 8 },
-      set: { egg: 'cracked', crack: 1, frag: { shift: 0.05, push: [[0.5, 0], [1.8, 0.005], [2.5, 0.002], [3.3, 0]] }, eggFill: { intensity: 1.4, heading: 180 } },
+      cam: { rig: 'static', frame: { subjects: [['eggFrag', [-0.12, 0.05]]], from: 112, dist: 1.2, rise: 0.04 }, mm: 100, fstop: 8, focus: 'eggFrag' },
+      set: { egg: 'cracked', crack: 1, frag: { shift: 0.05, push: [[0.5, 0], [1.8, 0.005], [2.5, 0.002], [3.3, 0]] }, eggFill: { intensity: 0.8, heading: 175, rise: 0.25 }, sun: 0.45 },
       exposure: -0.4,
     },
     '1A-08': {
       staging: 'NONE: macro, a different angle; a fragment lifts away (birth stage 2).',
-      cam: { rig: 'static', frame: { subjects: [['eggFrag', [0.15, 0.0]]], from: 205, dist: 0.85, rise: 0.12 }, mm: 100, fstop: 8 },
-      set: { egg: 'cracked', crack: 1, frag: { shift: 0.05, lift: [[0.6, 0], [1.9, 1]] }, eggFill: { intensity: 1.4, heading: 215 } },
+      cam: { rig: 'static', frame: { subjects: [['eggFrag', [0.15, -0.05]]], from: 92, dist: 1.25, rise: 0.32 }, mm: 85, fstop: 8, focus: 'eggFrag' },
+      set: { egg: 'cracked', crack: 1, frag: { shift: 0.05, lift: [[0.6, 0], [1.9, 1]] }, eggFill: { intensity: 0.8, heading: 160, rise: 0.3 }, sun: 0.45 },
       exposure: -0.3,
     },
     '1A-09': {
@@ -177,9 +177,9 @@ export default {
     },
     '1A-18': {
       staging: 'SIL + WIDE: from the nest toward the door; Abby and Remi two backlit shapes in the bright doorway (reverse angle, declared).',
-      cam: { rig: 'static', pos: [-0.95, 1.4, -0.35], look: [-3.6, 1.25, -1.95], mm: 35, fstop: 2.8, focus: 'door' },
-      exposure: -1.6,
-      set: { door: [[0.2, 0], [0.8, 0.85]], lamps: 0.35, passage: 2.2 },
+      cam: { rig: 'static', pos: [-0.9, 1.4, -1.45], look: [-3.6, 1.25, -1.95], mm: 35, fstop: 2.8, focus: 'door' },
+      exposure: -1.0,
+      set: { door: [[0.2, 0], [0.8, 0.85]], lamps: 0.35, passage: 3.5, passLight: 0.1, passageCard: -0.12 },
       cast: {
         abby: { at: [-4.55, -1.95], face: 90, look: 'egg', acts: [[0.4, 'walk', { to: [-3.85, -1.95], speed: 0.9 }], [1.0, 'bow', { to: 0.25, dur: 0.4 }]] },
         remi: { at: [-4.7, -1.55], face: 90, look: 'egg', acts: [[0.7, 'walk', { to: [-4.15, -1.6], speed: 0.8 }]] },
@@ -293,13 +293,13 @@ export default {
     },
     '1A-32': {
       staging: 'SIL: two silhouettes in the bright doorway; Abby looks back once (reverse angle toward the door, declared).',
-      cam: { rig: 'static', pos: [-0.95, 1.4, -0.35], look: [-3.6, 1.25, -1.95], mm: 35, fstop: 2.8, focus: 'door' },
-      exposure: -1.3,
+      cam: { rig: 'static', pos: [-0.9, 1.4, -1.45], look: [-3.6, 1.25, -1.95], mm: 35, fstop: 2.8, focus: 'door' },
+      exposure: -0.9,
       cast: {
         abby: { at: [-3.05, -1.95], face: 270, look: null, acts: [[0.5, 'look', { at: 'hatchling', amount: 1 }], [1.7, 'look', { at: 'doorOut', amount: 0.4 }], [2.0, 'walk', { to: [-4.7, -1.95], speed: 1.0 }]] },
         remi: { at: [-3.55, -1.65], face: 270, acts: [[1.6, 'walk', { to: [-4.8, -1.6], speed: 1.0 }]] },
       },
-      set: { door: [[0, 0.85], [3.0, 0.85], [3.8, 0.0]], lamps: 0.4, passage: 2.2 },
+      set: { door: [[0, 0.85], [3.0, 0.85], [3.8, 0.0]], lamps: 0.4, passage: 3.5, passLight: 0.1, passageCard: -0.12 },
     },
     '1A-33': {
       staging: 'BACK + HANDS: her hand (sharp) rests near the newborn without restraining it.',

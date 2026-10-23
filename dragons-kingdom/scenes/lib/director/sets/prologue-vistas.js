@@ -63,7 +63,7 @@ const LOOKS = {
   verdor: { sea: 'dawn', haze: 4.0, density: 0.00015, wb: 4800, exposure: 1.4, banks: () => [
     { center: [-200, 30, -1900], radius: [2200, 35, 300], density: 0.006, noise: 0.9 }] },
   calm: { sea: 'calm', haze: 1.2, density: 0.00004, wb: 6000, exposure: 2.1, banks: () => [] },
-  swell: { sea: 'swell', haze: 3.4, density: 0.00018, wb: 7600, exposure: 0.45, range: 16000, banks: () => [
+  swell: { sea: 'swell', haze: 3.4, density: 0.00018, wb: 5000, exposure: -0.2, range: 16000, banks: () => [
     { center: [0, 620, 0], radius: [30000, 140, 30000], density: 0.01, noise: 0.8 }] },
   islands: { sea: 'dawn', haze: 3.0, density: 0.0001, wb: 4400, exposure: 1.3, banks: (S) => [
     { center: [S.x * 6000, S.y * 6000 + 80, S.z * 6000], radius: [2600, 420, 800], density: 0.016, noise: 0.95 },
@@ -106,7 +106,7 @@ export async function build(ctx, { shotSpecs }) {
     // a dark sandstone cliff: an earthy grit texture side-projected reads as weathered rock; the
     // library's block-like rock26 read as a dressed stone wall on a 60 m heightfield face
     cliff: (o = {}) => terrainMaterial(ctx, [
-      { id: 'pbr/acg_ground24', scale: 3, tint: [0.4, 0.33, 0.27], normalScale: 1.6 },
+      { id: 'pbr/acg_ground24', scale: 11, tint: [0.4, 0.33, 0.27], normalScale: 1.6 },
       { id: 'pbr/acg_ground13', scale: 8, tint: [0.42, 0.46, 0.34] },
       { id: 'pbr/acg_ground27', scale: 6, tint: [0.36, 0.32, 0.27] },
     ], { macro: 0.6, macroScale: 0.01, detailNear: 300, detailFar: 2500, vertexColors: true, ...o }),
@@ -122,7 +122,7 @@ export async function build(ctx, { shotSpecs }) {
       xs: gradedAxis(o.x[0], o.x[1], o.n[0], o.focus?.[0], o.focus ? 1.6 : 0), zs: gradedAxis(o.z[0], o.z[1], o.n[1], o.focus?.[1], o.focus ? 1.6 : 0),
       height: o.h,
       splat: (x, z, y, n) => { const steep = smooth(0.55, 0.85, 1 - n[1]); const low = 1 - smooth(1.5, 8, y); const g = (1 - steep) * (1 - low); return [Math.max(steep, low * 0.7), g * 0.7, g * 0.3 + low * 0.3, 0]; },
-      color: (x, z, y, n) => { const p = N.fbm(x * 0.008 + 11, z * 0.008 - 4, 4); const v = Math.max(0.3, 0.95 + 0.9 * p); return [v * 0.98, v, v * 0.96]; },
+      color: o.color || ((x, z, y, n) => { const p = N.fbm(x * 0.008 + 11, z * 0.008 - 4, 4); const v = Math.max(0.3, 0.95 + 0.9 * p); return [v * 0.98, v, v * 0.96]; }),
       skip: (a, b, c, d) => Math.max(a, b, c, d) < -10,
     });
     const m = new THREE.Mesh(hf.geometry, await terrainMats[o.mat || 'dark'](o.matOpts || {}));
@@ -163,7 +163,8 @@ export async function build(ctx, { shotSpecs }) {
   // ---- forest: a dark sandstone sea cliff, oak and pine wood to its edge (P-10)
   if (used.has('forest')) {
     const g = group('forest');
-    const edge = (x) => -140 + 28 * Math.sin(x / 170 + 0.6) + 12 * Math.sin(x / 47);
+    // the edge line wanders, with gullies and buttresses (vertical shadow lines on the face)
+    const edge = (x) => -140 + 28 * Math.sin(x / 170 + 0.6) + 12 * Math.sin(x / 47) + 9 * N.fbm(x * 0.045, 3.3, 3) + 4 * N.fbm(x * 0.17, 8.1, 2);
     const H = (x, z) => {
       const d = edge(x) - z;                        // metres inland of the cliff edge
       const top = 62 + 10 * N.fbm(x * 0.003, z * 0.003 + 9, 3) + 0.02 * Math.max(0, d);
@@ -177,7 +178,21 @@ export async function build(ctx, { shotSpecs }) {
       const face = top * (1 - u - steps) + 3.5 * smooth(w * 0.7, w + 14, f) * (1 - smooth(w + 14, w + 40, f));
       return Math.max(-8, face - 0.25 * Math.max(0, f - w - 25));
     };
-    const L = await land({ x: [-1400, 1400], z: [-1400, 400], n: [640, 420], focus: [0, -140], h: H, mat: 'cliff', matOpts: { cliff: { strata: 1.0, streaks: 0.9, wet: 0.8, ochre: 0.6 } } });
+    // vertex colour on the face: horizontal beds (light / dark sandstone), dark run-off streaks, a
+    // wet dark band at the foot; the texture alone repeats visibly on a 60 m face
+    const faceColor = (x, z, y, n) => {
+      const p = N.fbm(x * 0.008 + 11, z * 0.008 - 4, 4);
+      let v = Math.max(0.3, 0.95 + 0.9 * p);
+      const steep = smooth(0.35, 0.7, 1 - n[1]);
+      if (steep > 0) {
+        const bed = 0.5 + 0.5 * Math.sin(y * 0.42 + 2.5 * N.fbm(x * 0.012, 1.7, 2));
+        const streak = N.fbm(x * 0.11, y * 0.015 + 2, 3);
+        const wet = 1 - smooth(0.5, 5, y);
+        v *= 1 - steep * (0.45 - 0.35 * bed - 0.4 * streak + 0.35 * wet);
+      }
+      return [v * 0.98, v * 0.97, v * 0.95];
+    };
+    const L = await land({ x: [-1400, 1400], z: [-1400, 400], n: [720, 480], focus: [0, -140], h: H, mat: 'cliff', color: faceColor, matOpts: { cliff: { strata: 1.0, streaks: 0.9, wet: 0.8, ochre: 0.6 } } });
     g.add(L.mesh);
     const oak = await treeKit(ctx, 'oak', { variants: 2, seed: 31, exposure: 0.2 });
     const oakW = await treeKit(ctx, 'oak', { variants: 2, seed: 32, exposure: 0.8, scale: 0.75 });

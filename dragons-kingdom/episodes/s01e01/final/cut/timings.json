@@ -1,0 +1,30 @@
+{
+ "about": "MEASURED seconds per frame of draft renders on the machine named below (scenes/lib/director/tools/render-shots.mjs; steady state: setup excluded). cost.js uses these instead of the model. Other jobs sharing the CPU make them slower: see load.",
+ "shots": {
+  "R1-01": {
+   "draft_s_per_frame": 2.622,
+   "frames_drawn": 96,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 13.52,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
+   "measured_at": "2026-10-23T05:20"
+  },
+  "X1-02": {
+   "draft_s_per_frame": 3.162,
+   "frames_drawn": 144,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 10.01,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
+   "measured_at": "2026-10-23T05:31"
+  }
+ },
+ "sets": {
+  "ALEXANDRIA_ROOM": {
+   "setup_s": 6.6,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
+   "measured_at": "2026-10-23T05:23"
+  }
+ }
+}

@@ -1637,12 +1637,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 2,
-    "k4_cpu_s_per_frame": 25,
-    "k4_gpu_s_per_frame": 25,
-    "draft_minutes": 3.2,
-    "k4_cpu_hours": 0.67,
-    "k4_gpu_hours": 0.67,
+    "draft_s_per_frame": 2.62,
+    "k4_cpu_s_per_frame": 32.78,
+    "k4_gpu_s_per_frame": 32.78,
+    "draft_minutes": 4.2,
+    "k4_cpu_hours": 0.87,
+    "k4_gpu_hours": 0.87,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1651,7 +1651,7 @@
      "move": 1,
      "total": 1
     },
-    "basis": "ESTIMATE: masonry interior, 1-2 people, sea through the window; x 1 for the shot's content"
+    "basis": "MEASURED draft 2.62 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-2 people, sea through the window)"
    },
    "staging": "NONE: nobody in the room; the jug and the cup on the sill against the grey sea light.",
    "deviation": null,
@@ -1683,12 +1683,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 2.42,
-    "k4_cpu_s_per_frame": 30.24,
-    "k4_gpu_s_per_frame": 30.24,
-    "draft_minutes": 5.81,
-    "k4_cpu_hours": 1.21,
-    "k4_gpu_hours": 1.21,
+    "draft_s_per_frame": 3.16,
+    "k4_cpu_s_per_frame": 39.53,
+    "k4_gpu_s_per_frame": 39.53,
+    "draft_minutes": 7.59,
+    "k4_cpu_hours": 1.58,
+    "k4_gpu_hours": 1.58,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -1697,7 +1697,7 @@
      "move": 1.08,
      "total": 1.21
     },
-    "basis": "ESTIMATE: masonry interior, 1-2 people, sea through the window; x 1.21 for the shot's content"
+    "basis": "MEASURED draft 3.16 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-2 people, sea through the window)"
    },
    "staging": "BACK + WIDE: she is a dark shape against the window, back to the room; the made bed at left.",
    "deviation": null,
@@ -5071,7 +5071,7 @@
     },
     "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
    },
-   "staging": "HANDS: her hands at his foot pad, his eye beyond (soft); the focus racks to it; he does not flinch.",
+   "staging": "HANDS: her hands at the pad of the wing-knuckle he walks on, his eye beyond (soft, his head turned to watch her); the focus racks to it; he does not flinch.",
    "deviation": null,
    "action": "Each foot; the soft skin under his jaw where the straps sit. She finds an old scrape on one foot pad, presses beside it and watches his eye. He does not flinch.",
    "need": {
@@ -5238,7 +5238,7 @@
     },
     "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
    },
-   "staging": "PROFILE + DOF: she kneels and leans her forehead to his, eyes closed; his eye sharp, her profile soft; he breathes out.",
+   "staging": "PROFILE + DOF: she kneels in front of his head and leans her forehead to his, eyes closed; seen from the side: his eye sharp, her profile soft; he breathes out.",
    "deviation": null,
    "action": "She leans her forehead against his for a moment, and he breathes out, warm, through his nose.",
    "need": {

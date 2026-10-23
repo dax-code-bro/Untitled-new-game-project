@@ -139,7 +139,19 @@ checkFfmpeg();
 
 // --------------------------------------------------------------- render ---
 const timings = readJson(TIMINGS, { about: 'MEASURED seconds per frame of draft renders on the machine named below (scenes/lib/director/tools/render-shots.mjs; steady state: setup excluded). cost.js uses these instead of the model. Other jobs sharing the CPU make them slower: see load.', shots: {}, sets: {} });
-const saveTimings = () => { if (STILLS || PRESET !== 'draft') return; fs.mkdirSync(path.dirname(TIMINGS), { recursive: true }); fs.writeFileSync(TIMINGS, JSON.stringify(timings, null, 1) + '\n'); };
+// several render-shots processes may share the file (one per set group): merge this process's own
+// entries into what is on disk at save time instead of overwriting the others'
+const written = { shots: new Set(), sets: new Set() };
+const saveTimings = () => {
+  if (STILLS || PRESET !== 'draft') return;
+  fs.mkdirSync(path.dirname(TIMINGS), { recursive: true });
+  const cur = readJson(TIMINGS, null) || { ...timings, shots: {}, sets: {} };
+  for (const k of written.shots) cur.shots[k] = timings.shots[k];
+  for (const k of written.sets) cur.sets[k] = timings.sets[k];
+  const tmp = `${TIMINGS}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(cur, null, 1) + '\n');
+  fs.renameSync(tmp, TIMINGS);
+};
 const machine = `${os.cpus().length} vCPU ${os.cpus()[0]?.model?.trim() || ''}, SwiftShader`.trim();
 const server = await startServer({ allowRoots: [SCENES] });
 let stopping = false;
@@ -191,6 +203,7 @@ async function renderShot(w, set, item) {
   // steady state: from the first frame to the last (the first frame of a page also compiles shaders)
   const spf = order.length > 1 && tFirst ? (Date.now() - tFirst) / 1000 / (order.length - 1) : ms / 1000 / order.length;
   fs.writeFileSync(path.join(work.shots, `${r.job}.json`), JSON.stringify({ job: r.job, set, frames: r.frames, pre, post, drawn: order.length, ...item.keys, s_per_frame: +spf.toFixed(3), wall_s: +(ms / 1000).toFixed(1), at: new Date().toISOString() }, null, 1) + '\n');
+  written.shots.add(r.job);
   timings.shots[r.job] = { draft_s_per_frame: +spf.toFixed(3), frames_drawn: order.length, cinematic: CINE, twos: TWOS, load: +os.loadavg()[0].toFixed(2), machine, measured_at: new Date().toISOString().slice(0, 16) };
   saveTimings();
   framesDone += order.length;
@@ -212,6 +225,7 @@ for (const s of plan) {
       let tries = 0;
       try {
         await w.start();
+        written.sets.add(s.set);
         timings.sets[s.set] = { setup_s: +((Date.now() - ts) / 1000).toFixed(1), machine, measured_at: new Date().toISOString().slice(0, 16) };
         console.log(`  [w${i}] set built in ${fmt((Date.now() - ts) / 1000)} (${w.info.glRenderer})`);
         while (queue.length && !stopping) {

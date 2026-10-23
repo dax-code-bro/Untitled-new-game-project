@@ -156,10 +156,21 @@ if (warnings.length) { md.push('', '## Warnings', ''); for (const w of warnings)
 out.set(path.join(CUT, 'edl.md'), md.join('\n') + '\n');
 
 // ---------------------------------------------------------------- write ---
+// --check ignores the render-cost figures: they follow cut/timings.json, which every draft render
+// updates (MEASURED s/frame), so they are not a sign of a stale table
+const COSTY = /cost|estimate|minutes|per_frame|hours/i;
+const stripCost = (v) => (Array.isArray(v) ? v.map(stripCost) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).filter(([k]) => !COSTY.test(k)).map(([k, x]) => [k, stripCost(x)])) : v);
+const norm = (f, s) => {
+  if (s == null) return s;
+  if (f.endsWith('.json')) { try { return JSON.stringify(stripCost(JSON.parse(s))); } catch { return s; } }
+  if (f.endsWith('edl.md')) return s.split('\n').filter((l) => !/^Render cost/.test(l)).map((l) => (/^\| \d+ \|/.test(l) ? l.replace(/(\|[^|]*){2}\|$/, '|') : l)).join('\n');
+  return s;
+};
 let changed = 0;
 for (const [f, s] of out) {
   const old = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : null;
   if (old === s) continue;
+  if (CHECK && norm(f, old) === norm(f, s)) continue;
   changed++;
   if (CHECK) { console.log(`out of date: ${rel(f)}`); continue; }
   fs.mkdirSync(path.dirname(f), { recursive: true });

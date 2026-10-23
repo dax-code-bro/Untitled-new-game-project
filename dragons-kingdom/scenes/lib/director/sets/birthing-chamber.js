@@ -430,8 +430,12 @@ float eh(vec3 p){p=fract(p*0.1031);p+=dot(p,p.zyx+31.32);return fract((p.x+p.y)*
       const dOpen = keyed(t, st.door ?? 0);
       hinge.rotation.y = -dOpen * 1.75;
       hinge.updateMatrixWorld(true);
-      passLight.intensity = 9 * clamp(dOpen * 2) * (st.passage ?? 1);
+      // set.passLight trims the light the passage throws in (a silhouette in the doorway wants the
+      // bright card behind it, not a lamp behind the heads: skin transmits it and faces glow)
+      passLight.intensity = 9 * clamp(dOpen * 2) * (st.passage ?? 1) * (st.passLight ?? 1);
       passage.material.color.setRGB(1.4, 1.35, 1.25).multiplyScalar(st.passage ?? 1);
+      // set.passageCard: the card's distance beyond the wall's outer face (default 0.9 m)
+      passage.position.x = -ROOM.w / 2 - ROOM.T - (st.passageCard ?? 0.9);
       passage.visible = dOpen > 0.01;
       fold.visible = false;
     },

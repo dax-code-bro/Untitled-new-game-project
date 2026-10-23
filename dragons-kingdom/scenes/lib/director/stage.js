@@ -362,6 +362,13 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
     const fc = S.frameCache.get(row.job);
     const camEnv = fc ? { ...S.env, approxPoint: (n, tt) => (fc[n] ? new THREE.Vector3(...fc[n]) : S.env.point(n, tt)) } : { ...S.env, approxPoint: (n, tt) => S.env.point(n, tt) };
     evalCamera(spec1.cam, local, sel.u, ctx, camEnv, dur);
+    // cam.debug: print the solved camera and the subjects' posed points once per shot (framing checks)
+    if (spec1.cam.debug) {
+      const r3 = (v) => v.toArray().map((x) => +x.toFixed(2));
+      const names = [...(fr?.subjects || []).map(([n]) => n), ...(Array.isArray(spec1.cam.debug) ? spec1.cam.debug : [])];
+      const subj = Object.fromEntries(names.map((n) => { try { return [n, r3(S.env.point(n, local))]; } catch { return [n, null]; } }));
+      S.env.warnOnce(`debug: camera ${JSON.stringify(r3(ctx.camera.position))} subjects ${JSON.stringify(subj)}`);
+    }
     // effects
     S.fx.update(spec1, local, S.env, { shot: row.job, u: sel.u, camera: ctx.camera });
     // exposure (continuity + the shot's own trim), shadows: the set is static within a shot

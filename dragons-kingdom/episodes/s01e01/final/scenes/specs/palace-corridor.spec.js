@@ -39,6 +39,7 @@ export default {
       cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.15, 0.25]], ['chamberDoor', [-0.25, 0.1]]], from: 160, height: 1.6, at: 1.0 }, mm: 50, fstop: 2, focus: 'alexandria.head', bounds: BOUNDS },
       cast: { alexandria: { at: [0.05, 3.2], face: 0, look: 'chamberDoor', acts: [[0, 'walk', { to: [-0.1, 1.15], speed: 1.4, stop: 0.6 }], [1.4, 'bow', { to: 0.12, dur: 0.6 }], [2.0, 'rise', { dur: 0.6 }], [2.7, 'walk', { to: [-0.2, -1.4], speed: 1.0 }]] } },
       set: { door: [[0, 0], [2.5, 0], [3.1, 0.75]] },
+      exposure: 0.6,
     },
     'X2-04': {
       staging: 'BACK + SIL: from behind, the two of them dark against the daylight at the end of the corridor.',

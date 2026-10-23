@@ -35,8 +35,9 @@ export default {
       cam: { rig: 'static', pos: [-5.5, G + 0.75, 6], look: [4.5, G + 1.1, -38], mm: 85, fstop: 4, focus: [[0, 'leaf.head'], [2.5, 'leaf.head']] },
       cast: {
         leaf: { at: LEAF, face: 180, acts: [[0, 'stand', { breathe: 0.5 }], [0.6, 'walk', { to: LEAF_C, speed: 3.6, stop: 0.35, blend: 0.4 }], [2.6, 'crouch', { k: 1, breathe: 0.9, blend: 0.8 }]] },
-        abby: { at: [-1.4, -14], face: 5, look: 'leaf.head', lookAmount: 0.6, acts: [[0, 'walk', { to: [2.2, -26.5], speed: 1.5, stop: 0.6 }]] },
-        remi: { at: [1.6, -9], face: 20, look: 'farField', lookAmount: 0.4, acts: [[0, 'walk', { path: [[7, -20], [16, -34]], speed: 1.7 }]] },
+        abby: { at: [-3.2, -14], face: 8, look: 'leaf.head', lookAmount: 0.6, acts: [[0, 'walk', { to: [0.6, -26.8], speed: 1.5, stop: 0.6 }]] },
+        // Remi crosses the right of frame, walking on (north-east) out of it toward Charcoal off screen
+        remi: { at: [1.0, -17], face: 35, look: 'farField', lookAmount: 0.4, acts: [[0, 'walk', { path: [[9, -27], [18, -38]], speed: 1.7 }]] },
       },
     },
     'X2-09': {
@@ -48,11 +49,11 @@ export default {
       },
     },
     'X2-10': {
-      staging: 'HANDS: her hands at his foot pad, his eye beyond (soft); the focus racks to it; he does not flinch.',
-      cam: { rig: 'static', frame: { subjects: [['leaf.hl_R_3', [-0.15, -0.25]], ['leaf.eye', [0.35, 0.3]]], from: 332, height: G + 0.5, dist: 1.7, at: 1.0 }, mm: 85, fstop: 2.8, focus: [[0, 'leaf.hl_R_3'], [2.6, 'leaf.hl_R_3'], [3.5, 'leaf.eye']] },
+      staging: 'HANDS: her hands at the pad of the wing-knuckle he walks on, his eye beyond (soft, his head turned to watch her); the focus racks to it; he does not flinch.',
+      cam: { rig: 'static', frame: { subjects: [['leaf.w_R_2', [-0.15, -0.3]], ['leaf.eye', [0.3, 0.25]]], from: 235, height: G + 0.55, dist: 1.5, at: 1.0 }, mm: 50, fstop: 2.8, focus: [[0, 'leaf.w_R_2'], [2.6, 'leaf.w_R_2'], [3.5, 'leaf.eye']] },
       cast: {
-        leaf: leafCrouched({ look: [0.5, -0.05] }),
-        abby: { at: [4.6, -38.4], nearTo: { to: 'leaf.hl_R_3', dist: 0.7, from: 255 }, look: 'leaf.hl_R_3', posture: { kneel: 1 }, acts: [[0.2, 'handsTo', { at: 'leaf.hl_R_3', in: 0.5, spread: 0.1 }], [2.4, 'look', { at: 'leaf.eye', amount: 0.8 }]] },
+        leaf: leafCrouched({ look: [-0.5, -0.1] }),
+        abby: { at: [4.6, -38.4], nearTo: { to: 'leaf.w_R_2', dist: 0.62, from: 215 }, look: 'leaf.w_R_2', posture: { kneel: 1 }, acts: [[0.2, 'handsTo', { at: 'leaf.w_R_2', in: 0.5, spread: 0.1 }], [2.4, 'look', { at: 'leaf.eye', amount: 0.8 }]] },
       },
     },
     'X2-11': {
@@ -74,11 +75,11 @@ export default {
       },
     },
     'X2-13': {
-      staging: 'PROFILE + DOF: she kneels and leans her forehead to his, eyes closed; his eye sharp, her profile soft; he breathes out.',
-      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.3, 0.1]], ['leaf.eye', [0.3, 0.1]]], from: 180, height: G + 0.95, dist: 2.4, at: 1.5 }, mm: 85, fstop: 2.0, focus: 'leaf.eye' },
+      staging: 'PROFILE + DOF: she kneels in front of his head and leans her forehead to his, eyes closed; seen from the side: his eye sharp, her profile soft; he breathes out.',
+      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.25, 0.05]], ['leaf.eye', [0.25, 0.08]]], from: 95, height: G + 1.0, dist: 4.4, at: 1.5 }, mm: 85, fstop: 2.0, focus: 'leaf.eye' },
       cast: {
-        leaf: leafCrouched({ look: [0.0, -0.1], breathe: 1.0 }),
-        abby: { at: [5.4, -33.6], nearTo: { to: 'leaf.head', dist: 0.62, from: 268 }, look: 'leaf.head', lookAmount: 1.0, posture: { kneel: 1 }, acts: [[0.4, 'bow', { to: 0.4, dur: 1.2 }]] },
+        leaf: leafCrouched({ look: [0.0, -0.15], breathe: 1.0 }),
+        abby: { at: [6.4, -32.4], nearTo: { to: 'leaf.head', dist: 0.95, from: 185 }, look: 'leaf.head', lookAmount: 1.0, posture: { kneel: 1 }, acts: [[0.4, 'bow', { to: 0.45, dur: 1.2 }]] },
       },
     },
   },
