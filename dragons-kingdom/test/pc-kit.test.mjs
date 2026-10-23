@@ -165,3 +165,13 @@ test('Send-Logs privacy: user folder in any letter case and its 8.3 short form, 
   const nix = makePrivacy({ home: '/home/user', tmp: '/tmp', user: 'user', host: 'box', win: false });
   assert.equal(nix('the user ran /home/user/x on box in /tmp/y'), 'the user ran ~/x on <computer> in <temp>/y');
 });
+
+test('pc kit: both setups install the pinned Node.js of render/lib/pins.mjs, always (never the PC\'s own)', async () => {
+  const { PINS } = await import('../render/lib/pins.mjs');
+  const ps = fs.readFileSync(path.join(PC, 'setup-windows.ps1'), 'utf8');
+  const sh = fs.readFileSync(path.join(PC, 'setup.sh'), 'utf8');
+  assert.match(ps, new RegExp(`\\$NodeVersion = '${PINS.node.replace(/\./g, '\\.')}'`), 'setup-windows.ps1 pins another Node.js');
+  assert.match(sh, new RegExp(`NODE_VERSION="${PINS.node.replace(/\./g, '\\.')}"`), 'setup.sh pins another Node.js');
+  assert.doesNotMatch(ps, /NodeMajor/, 'setup-windows.ps1 still accepts any Node.js >= a major version');
+  assert.doesNotMatch(sh, /NODE_MAJOR/, 'setup.sh still accepts any Node.js >= a major version');
+});

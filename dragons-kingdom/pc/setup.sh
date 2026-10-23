@@ -7,8 +7,8 @@
 # What it does (safe to run again any time - it skips what is done and continues
 # where it stopped):
 #   1. git, then the project: clone, or "git pull" of the branch below
-#   2. Node.js: the computer's own if it is version 20 or newer, else a private copy of Node.js 22.22.0 LTS
-#      in pc/tools/node (pinned version, SHA-256 checked)
+#   2. Node.js: always a private copy of Node.js 22.22.0 LTS in pc/tools/node (pinned version, SHA-256
+#      checked; the computer's own Node.js is not used, so bakes and renders match the cloud machine)
 #   3. ffmpeg with libx264: on Linux a pinned static build in pc/tools/ffmpeg (SHA-256 checked, the
 #      same ffmpeg 8.1.3 as the Windows setup); on a Mac Homebrew's (or evermeet.cx's) - not pinned
 #   4. npm ci + Playwright's Chromium
@@ -37,8 +37,7 @@ set -o pipefail
 main() {
 REPO_URL="${DK_REPO_URL:-https://github.com/dax-code-bro/Untitled-new-game-project.git}"
 BRANCH="claude/ultimate-ai-legend-KhpoT"
-NODE_MAJOR=20                 # a Node.js already on the computer is used if it is at least this version
-NODE_VERSION="22.22.0"        # else this one (nodejs.org/dist; SHA-256 per platform below)
+NODE_VERSION="22.22.0"        # always this one, in pc/tools/node (nodejs.org/dist; SHA-256 per platform below)
 UV_VERSION="0.5.11"           # only if there is no Python 3.11 (SHA-256 per platform below)
 pin_sha() {                   # pin_sha <file name> -> its SHA-256 (published by nodejs.org / astral-sh, checked 2026-10-23)
   case "$1" in
@@ -130,25 +129,26 @@ cd "$PROJ" || die "cannot cd to $PROJ"
 TOOLS="$PROJ/pc/tools"; mkdir -p "$TOOLS"
 
 # ---- 2. Node.js -----------------------------------------------------------------------------
-step "Node.js"
-node_ok() { have node && [ "$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)" -ge "$NODE_MAJOR" ]; }
-[ -x "$TOOLS/node/bin/node" ] && export PATH="$TOOLS/node/bin:$PATH"
+# Always the pinned Node.js in pc/tools/node (first on PATH here and in render-episode.sh), never the
+# computer's own: the landscape bakes and the renders run on exactly the Node.js the cloud machine uses.
+step "Node.js $NODE_VERSION (pinned)"
+node_ok() { [ -x "$TOOLS/node/bin/node" ] && [ "$("$TOOLS/node/bin/node" --version 2>/dev/null)" = "v$NODE_VERSION" ]; }
 if ! node_ok; then
   case "$OS-$ARCH" in
     Linux-x86_64) NP=linux-x64;; Linux-aarch64|Linux-arm64) NP=linux-arm64;;
     Darwin-arm64) NP=darwin-arm64;; Darwin-x86_64) NP=darwin-x64;;
-    *) die "no Node.js download for $OS $ARCH - install Node.js $NODE_MAJOR from https://nodejs.org";;
+    *) die "no Node.js download for $OS $ARCH - install Node.js $NODE_VERSION from https://nodejs.org into pc/tools/node";;
   esac
   FILE="node-v$NODE_VERSION-$NP.tar.xz"
   WANT="$(pin_sha "$FILE")"
-  echo "   no Node.js $NODE_MAJOR or newer here: downloading $FILE (pinned)"
+  echo "   installing Node.js $NODE_VERSION into pc/tools/node (pinned): $FILE"
   dl "https://nodejs.org/dist/v$NODE_VERSION/$FILE" "$TOOLS/$FILE" || die "download failed (internet connection?)"
   GOT="$(sha256 "$TOOLS/$FILE")"
   [ -n "$WANT" ] && [ "$WANT" = "$GOT" ] || { rm -f "$TOOLS/$FILE"; die "$FILE: SHA-256 $GOT does not match the pinned $WANT (damaged download? run again)"; }
   rm -rf "$TOOLS/node" && mkdir -p "$TOOLS/node" && tar -xJf "$TOOLS/$FILE" -C "$TOOLS/node" --strip-components 1 && rm -f "$TOOLS/$FILE"
-  export PATH="$TOOLS/node/bin:$PATH"
 fi
-node_ok || die "Node.js $NODE_MAJOR+ is still not available"
+export PATH="$TOOLS/node/bin:$PATH"
+node_ok && [ "$(node --version)" = "v$NODE_VERSION" ] || die "the pinned Node.js $NODE_VERSION is not the one on PATH (found $(node --version 2>/dev/null))"
 ok "node $(node --version) ($(command -v node))"
 
 # ---- 3. ffmpeg --------------------------------------------------------------------------------

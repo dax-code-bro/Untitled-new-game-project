@@ -71,6 +71,7 @@ import { resolveShot as resolveShotIn } from './lib/shots.mjs';
 import { readGate, gateVerdict, GATE_NAME } from './lib/gate.mjs';
 import { drawRoll, scrollArgs, tmpDir as creditsTmpDir } from './lib/credits.mjs';
 import { ensureFonts } from './lib/fonts.mjs';
+import { PINS } from './lib/pins.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RENDER_MJS = path.join(HERE, 'render.mjs');
@@ -600,6 +601,7 @@ async function main() {
     if (verdict === 'SMALL DIFFERENCES') say('note: the GPU check found SMALL DIFFERENCES between this graphics card\'s picture and the cloud\'s (see its banner); please send the picture to Claude');
   }
   say(`renderer: ${o.gpu ? `GPU - ${gpuSaved?.renderer || 'default profile'}` : 'CPU (SwiftShader)'};  output: ${relp(o.out)}${o.size ? `  (TEST size ${o.size}: not a master)` : ''}`);
+  if (process.versions.node !== PINS.node) say(`note: this is Node.js ${process.version}, not the pinned ${PINS.node} that the setup puts in pc/tools/node (the launchers use that one)`);
   if (plan.orphans.length) say(`note: render-jobs.json has scenes that are not in the schedule: ${plan.orphans.join(', ')} (ignored)`);
   checkFfmpeg();
 

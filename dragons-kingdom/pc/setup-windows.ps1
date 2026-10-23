@@ -12,8 +12,8 @@
   What it does (safe to run again any time - it skips what is done and continues where it stopped):
     1. Git (the PC's own, else a portable MinGit - pinned version, SHA-256 checked, no
        administrator needed), then the project: git clone, or git pull of the branch
-    2. Node.js: the PC's own if it is version 20 or newer, else a private copy of Node.js 22.22.0 LTS in
-       pc\tools\node (pinned version, SHA-256 checked)
+    2. Node.js: always a private copy of Node.js 22.22.0 LTS in pc\tools\node (pinned version, SHA-256
+       checked; the PC's own Node.js is not used, so bakes and renders match the cloud machine)
     3. ffmpeg with libx264: a pinned build (private copy in pc\tools\ffmpeg; SHA-256 checked), so
        every PC encodes with the same ffmpeg
     4. npm ci + Playwright's Chromium
@@ -58,8 +58,7 @@ try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::S
 
 $RepoUrl = 'https://github.com/dax-code-bro/Untitled-new-game-project.git'
 if ($env:DK_REPO_URL) { $RepoUrl = $env:DK_REPO_URL }
-$NodeMajor = 20                          # a Node.js already on the PC is used if it is at least this version
-#  - Node.js 22 LTS for PCs without one (the version the cloud machine runs the tests with), from nodejs.org/dist
+#  - Node.js 22 LTS, always (the version the cloud machine runs the tests and the bakes with), from nodejs.org/dist
 $NodeVersion = '22.22.0'
 $NodeZipSha256 = 'c97fa376d2becdc8863fcd3ca2dd9a83a9f3468ee7ccf7a6d076ec66a645c77a'
 #  - uv (only if the PC has no Python 3.11): installs a private Python 3.11
@@ -146,12 +145,6 @@ function Expand-Zip([string]$Zip, [string]$Dest) {
   Expand-Archive -Path $Zip -DestinationPath $Dest -Force -ErrorAction Stop
 }
 
-function Get-NodeMajor {
-  if (-not (Test-Cmd 'node')) { return 0 }
-  $v = & node -p "process.versions.node.split('.')[0]" 2>$null
-  if ($LASTEXITCODE -ne 0) { return 0 }
-  return [int]$v
-}
 
 function Test-Ffmpeg([string]$Exe) {
   if (-not $Exe) { return $false }
@@ -321,13 +314,17 @@ function Invoke-Setup {
   }
 
   # ---- 2. Node.js ----------------------------------------------------------------------------------
-  Write-Step 'Node.js'
+  # Always the pinned Node.js in pc\tools\node (first on PATH here and in the render launcher), never the PC's
+  # own: the landscape bakes and the renders then run on exactly the Node.js the cloud machine uses.
+  Write-Step ('Node.js ' + $NodeVersion + ' (pinned)')
   $nodeDir = Join-Path $tools 'node'
-  if (Test-Path (Join-Path $nodeDir 'node.exe')) { $env:Path = $nodeDir + ';' + $env:Path }
-  if ((Get-NodeMajor) -lt $NodeMajor) {
+  $nodeExe = Join-Path $nodeDir 'node.exe'
+  $have = ''
+  if (Test-Path $nodeExe) { $have = ("" + (& $nodeExe --version 2>$null)).Trim() }
+  if ($have -ne ('v' + $NodeVersion)) {
     $file = 'node-v' + $NodeVersion + '-win-x64.zip'
     $zip = Join-Path $tools $file
-    Write-Host ('   no Node.js ' + $NodeMajor + ' or newer on this PC: installing Node.js ' + $NodeVersion + ' into pc\tools\node')
+    Write-Host ('   installing Node.js ' + $NodeVersion + ' into pc\tools\node' + $(if ($have) { ' (replacing ' + $have + ')' } else { '' }))
     Save-Download ('https://nodejs.org/dist/v' + $NodeVersion + '/' + $file) $zip $NodeZipSha256
     $tmp = Join-Path $tools 'node-unpack'
     Expand-Zip $zip $tmp
@@ -335,10 +332,11 @@ function Invoke-Setup {
     if (Test-Path $nodeDir) { Remove-Item -Recurse -Force $nodeDir }
     Move-Item $inner.FullName $nodeDir
     Remove-Item -Recurse -Force $tmp, $zip -ErrorAction SilentlyContinue
-    $env:Path = $nodeDir + ';' + $env:Path
   }
-  if ((Get-NodeMajor) -lt $NodeMajor) { Stop-Setup ('Node.js ' + $NodeMajor + ' or newer is still not available') }
-  Write-Ok ('node ' + (& node --version) + ' (' + (Get-Command node).Source + ')')
+  $env:Path = $nodeDir + ';' + $env:Path
+  $now = ("" + (& node --version 2>$null)).Trim()
+  if ($now -ne ('v' + $NodeVersion)) { Stop-Setup ('the pinned Node.js ' + $NodeVersion + ' is not the one on PATH (found ' + $now + ')') }
+  Write-Ok ('node ' + $now + ' (' + (Get-Command node).Source + ')')
 
   # ---- 3. ffmpeg -------------------------------------------------------------------------------------
   # Always the pinned build in pc\tools\ffmpeg (render\lib\tools.mjs uses it before any other ffmpeg),

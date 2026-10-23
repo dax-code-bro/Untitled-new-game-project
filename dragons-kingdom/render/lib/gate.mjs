@@ -12,6 +12,8 @@
 //               and of the renderer page (runtime/), plus the data files the code names with
 //               new URL('./literal', import.meta.url) (git-ignored caches are excluded: they are covered
 //               by pc/build-caches.mjs stamps) and render/lib/presets.mjs (the quality settings)
+//   lock.caches the cloud cache packages the render PC installs (pc/cache-delivery.json: humans, landscape,
+//               cloth bakes): a shot approved with one set of characters / bakes waits when they change
 //   lock.text   (credits card) sha256 of the credits text
 //
 // Text files are hashed with CRLF turned into LF, so a Windows checkout gives the same lock.
@@ -120,6 +122,14 @@ export function importClosure(entries) {
   return { files, unresolved: [...unresolved].sort() };
 }
 
+/** The cloud cache packages the PC installs (pc/cache-delivery.json): { family: archive sha256 } -> one id. */
+function cachePackagesId() {
+  let d = null;
+  try { d = JSON.parse(fs.readFileSync(path.join(PROJECT_ROOT, 'pc', 'cache-delivery.json'), 'utf8')); } catch { return null; }
+  const ids = Object.fromEntries((d.packages || []).map((p) => [p.family, p.archive?.sha256 ?? null]).sort(([a], [b]) => (a < b ? -1 : 1)));
+  return sha256(canonical(ids)).slice(0, 16);
+}
+
 const RENDERER_ENTRIES = [path.join(RUNTIME_ROOT, 'page.html'), path.join(RUNTIME_ROOT, 'dk-runtime.js'), path.join(PROJECT_ROOT, 'render', 'lib', 'presets.mjs')];
 
 const _closure = new Map();
@@ -146,6 +156,7 @@ export function computeLock(job, r) {
     scene: fileHash(r.scene),
     shot: sha256(canonical({ frames: job.frames, startS: r.startS ?? 0, entry: r.entry ?? null, command: r.entry ? null : (r.command ?? null) })),
     lib: lib.hash,
+    caches: cachePackagesId(),
   };
   return { lock, lockId: sha256(canonical(lock)).slice(0, 16), libFiles: lib.files, unresolved: lib.unresolved };
 }
@@ -200,7 +211,7 @@ export function gateVerdict(gate, job, r) {
   if (!a) return { gated: true, approved: false, reason: `not approved for the masters yet (not in ${GATE_NAME})`, now: c };
   if (a.lockId === c.lockId) return { gated: true, approved: true, current: true, lockId: a.lockId, entry: a, now: c };
   const changed = [];
-  for (const k of ['text', 'scene', 'shot']) if ((a.lock?.[k] ?? null) !== (c.lock[k] ?? null)) changed.push(k === 'shot' ? 'its shot entry' : k === 'scene' ? `its scene file ${r.scene ? rel(r.scene) : ''}`.trim() : 'the credits text');
+  for (const k of ['text', 'scene', 'shot', 'caches']) if ((a.lock?.[k] ?? null) !== (c.lock[k] ?? null)) changed.push(k === 'shot' ? 'its shot entry' : k === 'scene' ? `its scene file ${r.scene ? rel(r.scene) : ''}`.trim() : k === 'caches' ? 'the cloud cache packages (pc/cache-delivery.json)' : 'the credits text');
   if ((a.lock?.lib ?? null) !== (c.lock.lib ?? null)) {
     const was = gate.libs?.[a.lock?.lib]?.files || {};
     const now = c.libFiles || {};

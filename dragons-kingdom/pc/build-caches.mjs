@@ -10,7 +10,12 @@
 //                           scripts) or DK_BPY_PYTHON;  --jobs N  parallel human builds;
 //            --humans id,id only these characters (e.g. --only humans --humans abby,remi --force);
 //            --force        rebuild even if up to date;  --with-voice  also the Kokoro voice models
-//            --from PATH    sound: install a package from a copied .tar or folder (pc/MANIFEST.md, "Sound")
+//            --from PATH    sound or one cache family (humans, nature, architecture, props): install its package
+//                           from a copied .tar or folder (pc/MANIFEST.md, "Sound" and "Cache packages")
+//            --rebuild      humans/nature/architecture/props: rebuild here even when the cloud's package exists
+// humans, nature, architecture and props: when pc/cache-delivery.json (pc/pack-caches.mjs) lists a published
+// package for the family, that package is installed (sha256 checked) instead of rebuilding: the PC then has
+// exactly the geometry the shots were reviewed with. Without one, the family is rebuilt as before.
 // "sound" (the final voice takes and the episode mix, never in git) downloads what the cloud has
 // published in episodes/s01e01/final/audio/delivery.json; nothing published yet is not an error.
 //
@@ -26,6 +31,7 @@ import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readDelivery, packageState, installPackage, download, sha256File } from './sound-delivery.mjs';
+import { PINS } from '../render/lib/pins.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, '..');
@@ -194,10 +200,83 @@ function bpyFamily(name, lib, what) {
 }
 
 function humanSources() { return listDir(path.join(HUMANS, 'offline'), /\.py$/); }
+
+/** Where each family's cache lives, and the identity of the code that makes it (for the cache packages). */
+export const CACHE_DIRS = { humans: path.join(HUMANS, 'cache'), nature: path.join(NATURE, 'cache'), architecture: path.join(ARCH, 'cache'), props: path.join(PROPS, 'cache') };
+export function familyCodeHash(name) {
+  if (name === 'humans') return hashFiles(humanSources());
+  if (name === 'nature') { const rs = natureRecipes(); return sha1(rs.map((r) => `${r.script}=${natureHash(r, rs)}`).join('\n')).slice(0, 16); }
+  const lib = { architecture: ARCH, props: PROPS }[name];
+  if (lib) return sha1(bpyRecipes(lib).map((r) => `${r.name}=${r.hash}`).join('\n')).slice(0, 16);
+  return null;
+}
 async function humanIds(py) {
   const r = spawnSync(py, ['-I', path.join(HUMANS, 'offline', 'build.py'), '--list'], { cwd: ROOT, encoding: 'utf8', windowsHide: true, maxBuffer: 16 << 20 });
   if (r.status !== 0) throw new Error(`build.py --list failed: ${(r.stderr || r.stdout || '').trim().split('\n').slice(-3).join(' | ')}`);
   return r.stdout.split(/\r?\n/).map((l) => l.split(' - ')[0].trim()).filter((x) => /^[\w-]+$/.test(x));
+}
+
+// ------------------------------------------------------------ cache packages ---
+// pc/cache-delivery.json (pc/pack-caches.mjs): the cloud's caches as sha256-pinned packages. A family with a
+// package that can be had (an archive url, or --from a copied tar) is INSTALLED, not rebuilt, so the PC uses exactly
+// the geometry the shots were reviewed with. After an install, <cache>/.dk-package.json remembers the archive and
+// every file's size + time, so later checks do not hash gigabytes again.
+const CACHE_DELIVERY = path.join(HERE, 'cache-delivery.json');
+const cachePackage = (fam) => (readJson(CACHE_DELIVERY)?.packages || []).find((p) => p.family === fam) || null;
+const statKey = (f) => { try { const st = fs.statSync(f); return `${st.size}:${Math.floor(st.mtimeMs)}`; } catch { return null; } };
+function packageInstalled(p) {
+  const dir = path.join(ROOT, p.dir);
+  const mark = readJson(path.join(dir, '.dk-package.json'));
+  if (mark?.archive === p.archive?.sha256 && p.files.every((f) => mark.files?.[f.path] && mark.files[f.path] === statKey(path.join(dir, f.path)))) return { ok: true, total: p.files.length, have: p.files.length };
+  const st = packageState(p);
+  if (st.ok) writeJson(path.join(dir, '.dk-package.json'), { archive: p.archive?.sha256 ?? null, files: Object.fromEntries(p.files.map((f) => [f.path, statKey(path.join(dir, f.path))])) });
+  return st;
+}
+async function installCachePackage(p, ctx) {
+  let src = ctx.from ? path.resolve(ctx.from) : null;
+  if (!src) {
+    if (!p.archive?.url) return { ok: false, problem: `${p.id}: the package is not published yet (no url in pc/cache-delivery.json)` };
+    src = path.join(HERE, 'downloads', p.archive.file);
+    const have = exists(src) && fs.statSync(src).size === p.archive.bytes && sha256File(src) === p.archive.sha256;
+    if (!have) {
+      say(`    ${p.id}: downloading the cloud's package ${p.archive.url} (${(p.archive.bytes / 2 ** 20).toFixed(0)} MB)`);
+      try { await download(p.archive.url, src, { sha256: p.archive.sha256, bytes: p.archive.bytes, say }); } catch (e) { return { ok: false, problem: `${p.id}: ${e.message}` }; }
+    }
+  } else if (!exists(src)) return { ok: false, problem: `--from ${src}: not found` };
+  else if (fs.statSync(src).isFile() && sha256File(src) !== p.archive?.sha256) return { ok: false, problem: `--from ${path.basename(src)}: not the recorded package of ${p.id} (sha256 differs)` };
+  const r = installPackage(p, src, say);
+  if (r.bad.length) return { ok: false, problem: `${p.id}: ${r.bad.length} file(s) did not match their sha256 and were NOT put in place (e.g. ${r.bad.slice(0, 3).join(', ')})` };
+  const st = packageInstalled(p);
+  if (!st.ok) return { ok: false, problem: `${p.id}: ${st.total - st.have} file(s) still differ after unpacking` };
+  say(`    ${p.id}: ${r.written} file(s) of the cloud's package checked and put in ${p.dir}${p.code_hash !== familyCodeHash(p.family) ? ' (note: the code that makes them changed since they were packed; these are the files the cloud renders with)' : ''}`);
+  if (!ctx.from && exists(src)) fs.rmSync(src, { force: true });
+  return { ok: true };
+}
+/** Package first, rebuild as the fallback (no package, not published, or --rebuild). */
+function withPackage(fam) {
+  const { check: buildCheck, build: rebuild } = fam;
+  return {
+    ...fam,
+    async check(ctx = {}) {
+      const p = !ctx.rebuild && cachePackage(fam.name);
+      if (p) {
+        const st = packageInstalled(p);
+        if (st.ok) return { ok: true, note: `the cloud's files (${p.archive.file}, ${st.total} files, sha256 checked)` };
+        if (p.archive?.url) return { ok: false, problem: `${st.total - st.have} of ${st.total} file(s) differ from the cloud's package (it gets installed)` };
+      }
+      const c = await buildCheck.call(this, ctx);
+      return p && c.ok ? { ...c, note: `${c.note ? `${c.note}; ` : ''}these files differ from the recorded cloud package ${p.archive.file} (cloud: pack again, node pc/pack-caches.mjs ${fam.name} --record; render PC: install it with --only ${fam.name} --from <tar> once it is published)` } : c;
+    },
+    async build(ctx) {
+      const p = !ctx.rebuild && cachePackage(fam.name);
+      if (p && (p.archive?.url || ctx.from)) {
+        const r = await installCachePackage(p, ctx);
+        if (r.ok || ctx.from) return r;
+        say(`    ${r.problem} - rebuilding instead`);
+      }
+      return rebuild.call(this, ctx);
+    },
+  };
 }
 
 export const FAMILIES = [
@@ -273,7 +352,7 @@ export const FAMILIES = [
       return r.code === 0 ? { ok: true } : { ok: false, problem: `assets-lib/fetch.mjs reported missing assets (run it again: it resumes)\n${lastLines(r.tail)}` };
     },
   },
-  {
+  withPackage({
     name: 'nature', what: 'landscape bakes: Verdor coast + cliffs, prologue island, land around Cling (Node)',
     check() {
       const rs = natureRecipes();
@@ -281,6 +360,8 @@ export const FAMILIES = [
       return probs.length ? { ok: false, problem: probs.map((x) => `${x.r.script}: ${x.s.problem}`).join('; ') } : { ok: true };
     },
     async build(ctx) {
+      // the landscape bakes are floating-point work in Node: only the pinned Node.js gives the cloud's results
+      if (process.versions.node !== PINS.node && !ctx.anyNode) return { ok: false, problem: `the landscape bakes run on the pinned Node.js ${PINS.node} only (this is ${process.version}); the setup puts it in pc/tools/node (or pass --any-node)` };
       const rs = natureRecipes();
       for (const r of rs) {
         const h = natureHash(r, rs);
@@ -293,8 +374,8 @@ export const FAMILIES = [
       }
       return { ok: true };
     },
-  },
-  {
+  }),
+  withPackage({
     name: 'humans', what: 'human characters (Blender cloth + MakeHuman, scenes/lib/humans/offline/build.py)',
     needsPython: true,
     async check(ctx) {
@@ -345,9 +426,9 @@ export const FAMILIES = [
       await Promise.all(Array.from({ length: jobs }, worker));
       return failed.length ? { ok: false, problem: `${failed.length} character(s) failed: ${failed.join(', ')} (run again to retry just these)` } : { ok: true };
     },
-  },
-  bpyFamily('architecture', ARCH, 'architecture cloth bakes (nest linen, table cloth; Blender)'),
-  bpyFamily('props', PROPS, 'prop cloth bakes (sails, awnings, banners, pennants; Blender)'),
+  }),
+  withPackage(bpyFamily('architecture', ARCH, 'architecture cloth bakes (nest linen, table cloth; Blender)')),
+  withPackage(bpyFamily('props', PROPS, 'prop cloth bakes (sails, awnings, banners, pennants; Blender)')),
   {
     // sound files that are never in git (SERIES.md section 2): pc/sound-delivery.mjs, pc/pack-sound.mjs
     name: 'sound', what: 'sound not in git: final voice takes + episode mix (episodes/s01e01/final/audio/delivery.json)',
@@ -466,6 +547,8 @@ async function main() {
     else if (a === '--jobs') opt.jobs = Math.max(1, parseInt(argv[++i], 10) || 1);
     else if (a === '--rebuild-unstamped') opt.trustUnstamped = false;
     else if (a === '--from') opt.from = argv[++i];
+    else if (a === '--rebuild') opt.rebuild = true;
+    else if (a === '--any-node') opt.anyNode = true;
     else if (a === '-h' || a === '--help') { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 21).map((l) => l.replace(/^\/\/ ?/, '')).join('\n')); return 0; }
     else throw new Error(`unknown option ${a}`);
   }
@@ -478,7 +561,7 @@ async function main() {
   say(`Dragon's Kingdom caches - ${opt.check ? 'check' : 'build'} (${new Date().toString()})`);
   say(`  project ${ROOT}`);
   say(`  Blender Python: ${python || 'not found (needed for humans, architecture, props)'}`);
-  if (opt.from && !(opt.only && opt.only.size === 1 && opt.only.has('sound'))) throw new Error('--from is for the sound: use  --only sound --from <file.tar or folder>');
+  if (opt.from && !(opt.only && opt.only.size === 1 && ['sound', 'humans', 'nature', 'architecture', 'props'].includes([...opt.only][0]))) throw new Error('--from installs ONE package: use  --only sound|humans|nature|architecture|props --from <file.tar or folder>');
   const fams = FAMILIES.filter((f) => (opt.only ? opt.only.has(f.name) : !f.optional || f.defaultRun || (f.name === 'voice' && opt.voice)));
   let bad = 0;
   let warn = 0;     // optional families (sound, voice): reported, but a render does not wait for them
@@ -491,7 +574,7 @@ async function main() {
       if (!c.ok) fail(f);
       continue;
     }
-    if (c.ok && !opt.force && !(opt.from && f.name === 'sound')) { say(`  ok      ${f.name.padEnd(13)} ${c.note || 'up to date'}`); continue; }
+    if (c.ok && !opt.force && !opt.from) { say(`  ok      ${f.name.padEnd(13)} ${c.note || 'up to date'}`); continue; }
     say(`  build   ${f.name.padEnd(13)} ${f.what}${c.problem ? ` - ${c.problem}` : ''}`);
     const t0 = Date.now();
     let r;

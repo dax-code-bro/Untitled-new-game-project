@@ -60,8 +60,10 @@ const CANDIDATES = [
   // only with --heavy (or --candidate f5-cling): the heaviest set, for graphics memory and the GPU time-out
   { id: 'f5-cling', heavy: true, label: 'style frame F5, Cling square (the heaviest set: houses, crowd, Starlight; 821 s per frame on the cloud CPU with 8 sub-frames)', scene: 'scenes/lookdev/style-f5-cling-square.js', time: 2, cinematic: 'velocity',
     crops: [{ name: 'cling-centre', x: 1872, y: 1032 }, { name: 'cling-left', x: 960, y: 1300 }] },
-  { id: 'lookdev-coast', label: 'cinematic lookdev coast (sky model, fog, FFT ocean, dragon; no caches needed)', scene: 'scenes/cinematic-lookdev.js', time: 4, cinematic: 'velocity' },
-  { id: 'test-kingdom', label: 'test kingdom (castle, 13,700 trees, standard pipeline; no assets needed)', scene: 'scenes/test-kingdom.js', time: 5, cinematic: undefined },
+  { id: 'lookdev-coast', label: 'cinematic lookdev coast (sky model, fog, FFT ocean, dragon; no caches needed)', scene: 'scenes/cinematic-lookdev.js', time: 4, cinematic: 'velocity',
+    crops: [{ name: 'dragon-head', x: 912, y: 522 }, { name: 'rock-in-mist', x: 762, y: 1482 }] },
+  { id: 'test-kingdom', label: 'test kingdom (castle, 13,700 trees, standard pipeline; no assets needed)', scene: 'scenes/test-kingdom.js', time: 5, cinematic: undefined,
+    crops: [{ name: 'castle-gate', x: 2052, y: 1092 }, { name: 'dragon-on-tower', x: 1932, y: 702 }] },
 ];
 
 const HELP = `
@@ -218,7 +220,7 @@ function pictureReport(m, outDir, { writeReference }) {
   const c = CANDIDATES.find((x) => x.id === m.candidate) || {};
   const jpg = chatPicture(pic.png, c.crops || [], path.join(outDir, m.candidate === CANDIDATES[0].id ? PICTURE_JPG : `gpu-check-picture-${m.candidate}-for-claude.jpg`));
   const nanBufs = Object.entries(pic.buffers || {}).filter(([k, v]) => k !== 'shaderErrors' && v && (v.nan || v.inf));
-  say(`   float buffers: ${pic.buffers ? (nanBufs.length ? nanBufs.map(([k, v]) => `${k} ${v.nan} NaN / ${v.inf} Inf`).join(', ') : `${Object.keys(pic.buffers).length - 1} checked, no NaN or Inf`) : 'not readable'}${pic.buffers?.shaderErrors ? `, ${pic.buffers.shaderErrors} shader errors` : ''}`);
+  say(`   float buffers: ${pic.buffers ? (nanBufs.length ? nanBufs.map(([k, v]) => `${k} ${v.nan} NaN / ${v.inf} Inf`).join(', ') : `${Object.keys(pic.buffers).length - 1} checked, no NaN or Inf`) : 'none to check (this frame does not use the cinematic pipeline)'}${pic.buffers?.shaderErrors ? `, ${pic.buffers.shaderErrors} shader errors` : ''}`);
   if (writeReference) {
     const ref = readImageReference() || { about: 'The GPU check test frames as the cloud machine (SwiftShader) renders them: thumbnail + 1:1 crops (deflate + base64 RGB), pure black/white shares. render/gpu-check.mjs compares a PC\'s frame with these (render/lib/picture.mjs).', candidates: {} };
     ref.candidates[m.candidate] = { scene: m.scene, time: m.time, cinematic: m.cinematic, preset: 'final', bitDepth: 10, renderer: m.renderer, measuredAt: new Date().toISOString(), ...toReference(pic.analysis) };
