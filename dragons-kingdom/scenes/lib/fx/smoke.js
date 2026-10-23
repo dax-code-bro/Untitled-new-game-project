@@ -21,7 +21,7 @@ export const SMOKE_KINDS = {
   chimney: { albedo: [0.5, 0.5, 0.5], ms: 0.6, sigma: 1.2, g: 0.6, grow: 0.7, rise: 1.2, life: 12, size: 0.18, billow: 0.45 },
   smoulder: { albedo: [0.36, 0.355, 0.35], ms: 0.5, sigma: 0.55, g: 0.55, grow: 0.8, rise: 1.4, life: 7, size: 0.1, billow: 0.3 },
   soot: { albedo: [0.05, 0.045, 0.04], ms: 0.15, sigma: 3.0, g: 0.4, grow: 1.1, rise: 2.4, life: 7, size: 0.4, billow: 0.75 },
-  cloth: { albedo: [0.12, 0.11, 0.1], ms: 0.25, sigma: 2.4, g: 0.45, grow: 1.0, rise: 1.4, life: 6, size: 0.18, billow: 0.6 },
+  cloth: { albedo: [0.14, 0.13, 0.12], ms: 0.3, sigma: 1.8, g: 0.45, grow: 0.75, rise: 1.4, life: 5, size: 0.09, billow: 0.6 },
   steam: { albedo: [0.85, 0.86, 0.88], ms: 0.85, sigma: 1.5, g: 0.7, grow: 1.1, rise: 1.0, life: 3, size: 0.2, billow: 0.5 },
   // pipe smoke: fine particles - bluish when side-lit, pale grey exhaled
   pipe: { albedo: [0.62, 0.66, 0.74], ms: 0.7, sigma: 0.9, g: 0.65, grow: 0.25, rise: 0.35, life: 6, size: 0.004, billow: 0.0 },

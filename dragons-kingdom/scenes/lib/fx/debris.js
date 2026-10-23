@@ -66,9 +66,8 @@ function colorize(geo, fn) {
   return geo;
 }
 /** Irregular convex lump (stone, clod): hull of jittered points on an ellipsoid. */
-function lumpGeometry(seed, size, flat = 0.6) {
+function lumpGeometry(seed, size, flat = 0.6, n = 18) {
   const pts = [];
-  const n = 18;
   for (let i = 0; i < n; i++) {
     const u = hash01(seed, i, 1) * 2 - 1, a = hash01(seed, i, 2) * Math.PI * 2, r = 0.7 + 0.3 * hash01(seed, i, 3);
     const s = Math.sqrt(1 - u * u);
@@ -78,7 +77,7 @@ function lumpGeometry(seed, size, flat = 0.6) {
   return g.toNonIndexed ? g : g;
 }
 /** A slab with a ragged outline (plaster, turf): top face, bottom face, ragged sides. */
-function slabGeometry(seed, w, d, th, rag = 0.25) {
+function slabGeometry(seed, w, d, th, rag = 0.25, botK = 0.95, dome = 0) {
   const N = 14;
   const ring = [];
   for (let i = 0; i < N; i++) {
@@ -87,11 +86,12 @@ function slabGeometry(seed, w, d, th, rag = 0.25) {
     ring.push([Math.cos(a) * w * 0.5 * r, Math.sin(a) * d * 0.5 * r]);
   }
   const P = [], I = [];
-  const topY = (x, z) => th * 0.5 + th * 0.12 * (hash01(seed, Math.round(x * 50), Math.round(z * 50)) - 0.5);
+  const topY = (x, z) => th * 0.5 + th * 0.12 * (hash01(seed, Math.round(x * 50), Math.round(z * 50)) - 0.5) - dome * th * 0.6;
   // top centre, ring top, ring bottom, bottom centre
   P.push(0, th * 0.5, 0);
   for (const [x, z] of ring) P.push(x, topY(x, z), z);
-  for (const [x, z] of ring) P.push(x * 0.95, -th * 0.5, z * 0.95);
+  // (torn sod: the soil under it breaks away narrower and ragged)
+  ring.forEach(([x, z], i) => { const b = botK * (1 - (1 - botK) * hash01(seed, i, 9)); P.push(x * b, -th * 0.5 * (1 + dome * (hash01(seed, i, 8) - 0.5)), z * b); });
   P.push(0, -th * 0.5, 0);
   const top = 0, rt = 1, rb = 1 + N, bot = 1 + 2 * N;
   for (let i = 0; i < N; i++) {
@@ -106,6 +106,38 @@ function slabGeometry(seed, w, d, th, rag = 0.25) {
   const ng = g.toNonIndexed();
   ng.computeVertexNormals();
   return ng;
+}
+/**
+ * Grass blades on a turf slab's top and root threads under it (two-sided thin triangles,
+ * vertex-coloured), appended to the slab: torn sod read as dark bricks with a green lid.
+ */
+function addTufts(slab, seed, w, d, th, n = 60) {
+  const P = [], N = [], C = [];
+  const tri = (a, b, c, col, nn) => { for (const v of [a, b, c, a, c, b]) { P.push(...v); N.push(...nn); C.push(...col); } };
+  for (let i = 0; i < n; i++) {
+    const h = (k) => hash01(seed, i, 300 + k);
+    const x = (h(0) - 0.5) * w * 0.8, z = (h(1) - 0.5) * d * 0.8;
+    if ((x / (w * 0.45)) ** 2 + (z / (d * 0.45)) ** 2 > 1) continue;
+    const y = th * 0.5;
+    const L = 0.025 + 0.06 * h(2), lean = (h(3) - 0.5) * 1.2, az = h(4) * Math.PI * 2, wd = 0.002 + 0.003 * h(5);
+    const tip = [x + Math.cos(az) * lean * L, y + L, z + Math.sin(az) * lean * L];
+    const sx = -Math.sin(az) * wd, sz = Math.cos(az) * wd;
+    const g = h(6);
+    const col = g < 0.7 ? [0.07 + 0.06 * h(7), 0.11 + 0.07 * h(7), 0.03] : [0.22, 0.2, 0.09];   // green, a few straw-dry
+    tri([x - sx, y, z - sz], [x + sx, y, z + sz], tip, col, [Math.cos(az) * 0.3, 0.9, Math.sin(az) * 0.3]);
+  }
+  for (let i = 0; i < Math.round(n * 0.3); i++) {
+    const h = (k) => hash01(seed, i, 400 + k);
+    const x = (h(0) - 0.5) * w * 0.7, z = (h(1) - 0.5) * d * 0.7, y = -th * 0.5;
+    const L = 0.02 + 0.05 * h(2), az = h(3) * Math.PI * 2, wd = 0.0015;
+    const tip = [x + Math.cos(az) * L * 0.6, y - L, z + Math.sin(az) * L * 0.6];
+    tri([x - wd, y, z], [x + wd, y, z], tip, [0.16, 0.12, 0.08], [0, -1, 0]);
+  }
+  const cat = (name, add) => { const a = slab.attributes[name].array; const out = new Float32Array(a.length + add.length); out.set(a); out.set(add, a.length); return out; };
+  slab.setAttribute('position', new THREE.BufferAttribute(cat('position', P), 3));
+  slab.setAttribute('normal', new THREE.BufferAttribute(cat('normal', N), 3));
+  slab.setAttribute('color', new THREE.BufferAttribute(cat('color', C), 3));
+  return slab;
 }
 /** Fallback timber piece (when the props kit is not used): a box with splintered ends. */
 function timberGeometry(seed, L, h, w) {
@@ -125,7 +157,7 @@ function timberGeometry(seed, L, h, w) {
 
 const SOIL = [0.11, 0.075, 0.045], SOIL_DRY = [0.2, 0.155, 0.11], GRASS = [0.12, 0.16, 0.05];
 const PLASTER = [0.62, 0.6, 0.55], DAUB = [0.28, 0.21, 0.14];
-const STONE = [0.42, 0.39, 0.34];
+const STONE = [0.32, 0.3, 0.27];
 
 /** Build the fragment library: { kind: [{ meshes: [{ geometry, material }], half: [hx,hy,hz] }] } */
 async function buildLibrary(fx, o) {
@@ -210,12 +242,15 @@ async function buildLibrary(fx, o) {
   lib.turf = []; lib.clod = [];
   for (let i = 0; i < V(4); i++) {
     const w = 0.18 + 0.4 * hash01(141, i), d = w * (0.5 + 0.5 * hash01(142, i)), th = 0.05 + 0.06 * hash01(143, i);
-    const g = centre(colorize(slabGeometry(141 + i, w, d, th, 0.35), (x, y, z, nx, ny) => (ny > 0.5 ? GRASS : ny < -0.5 ? SOIL : y > th * 0.3 ? [0.1, 0.1, 0.05] : SOIL)));
-    lib.turf.push({ meshes: [{ geometry: g, material: mats.turf }], half: half(g) });
+    // (resting height from the sod alone: blades and roots bend under it)
+    const sg = centre(colorize(slabGeometry(141 + i, w, d, th, 0.4, 0.62, 0.5), (x, y, z, nx, ny) => (ny > 0.5 ? [0.09, 0.1, 0.045] : ny < -0.5 ? SOIL : y > th * 0.3 ? [0.1, 0.09, 0.05] : SOIL)));
+    const hh = half(sg);
+    const g = addTufts(sg, 141 + i, w, d, th, Math.round(40 + 90 * w));
+    lib.turf.push({ meshes: [{ geometry: g, material: mats.turf }], half: hh });
   }
   for (let i = 0; i < V(4); i++) {
     const s = 0.03 + 0.08 * hash01(161, i);
-    const g = centre(colorize(lumpGeometry(161 + i, [s, s * 0.8, s], 0.8), (x, y, z, nx, ny) => (ny > 0.7 && hash01(162, i) > 0.5 ? GRASS : hash01(163, i) > 0.5 ? SOIL : SOIL_DRY)));
+    const g = centre(colorize(lumpGeometry(161 + i, [s, s * 0.7, s * (0.6 + 0.6 * hash01(164, i))], 0.65, 9), (x, y, z, nx, ny) => (ny > 0.7 && hash01(162, i) > 0.5 ? GRASS : hash01(163, i) > 0.5 ? SOIL : SOIL_DRY)));
     lib.clod.push({ meshes: [{ geometry: g, material: mats.turf }], half: half(g) });
   }
   return lib;

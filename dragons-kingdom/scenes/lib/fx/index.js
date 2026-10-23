@@ -23,6 +23,7 @@ import { waterApi } from './water.js';
 import { goreApi } from './gore.js';
 import { clothApi } from './cloth.js';
 import { sparksApi, ashApi } from './sparks.js';
+import { registerDirectorKinds } from './director.js';
 
 export { FxManager, Effect } from './core/manager.js';
 export { ParticleLayer } from './core/particles.js';
@@ -35,7 +36,8 @@ export { DebrisEffect, solvePiece, poseAt } from './debris.js';
 export { SmokePlume, SmokeWisp, SMOKE_KINDS } from './smoke.js';
 export { FireJet, FireBurn, Embers, Shimmer, FIRE_PALETTES } from './fire.js';
 export { ClothHole, attachToBone, surfaceHit } from './gore.js';
-export { ClothEffect, simulateCloth } from './cloth.js';
+export { ClothEffect, simulateCloth, fabricMaterial, bodyColliders } from './cloth.js';
+export { DIRECTOR_KINDS } from './director.js';
 export { Sparks, AshFall } from './sparks.js';
 
 /** Create the FX manager for this scene (one per scene; cached on ctx). */
@@ -56,3 +58,10 @@ export async function createFx(ctx, o = {}) {
   ctx.__dkFx = fx;
   return fx;
 }
+
+/**
+ * The shot director's hook (scenes/lib/director/fx.js loadFxLibrary): registers every FX cue kind
+ * (blood-spray, dust-downwash, debris-collapse, fire-jet, water-splash, gore-wing-root, ...; see
+ * director.js / README.md).
+ */
+export function registerDirectorFx(registerFx) { registerDirectorKinds(registerFx, createFx); }

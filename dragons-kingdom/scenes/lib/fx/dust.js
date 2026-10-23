@@ -67,7 +67,7 @@ export class Downwash extends Effect {
     // three kinds of puff: the rolling front (55%), the low carpet behind it (30%), and big thin
     // billows of the diffused cloud (15%)
     const kind = h(15) < 0.55 ? 0 : h(15) < 0.85 ? 1 : 2;
-    const lam = kind === 0 ? 0.82 + 0.2 * h(2) : kind === 1 ? 0.15 + 0.7 * Math.pow(h(2), 0.8) : 0.4 + 0.6 * h(2);
+    const lam = kind === 0 ? 0.72 + 0.3 * Math.sqrt(h(2)) : kind === 1 ? 0.15 + 0.7 * Math.pow(h(2), 0.8) : 0.4 + 0.6 * h(2);
     const tau = 0.75 * (0.8 + 0.4 * h(3)) * Math.sqrt(k30);
     // the ring is not a perfect circle: its reach and roll height vary smoothly around it (lobes
     // where the wings pushed harder), so neighbouring puffs move together as one wall
@@ -93,7 +93,7 @@ export class Downwash extends Effect {
     // slow lift of the stirred air, then settling
     y += 0.18 * a * k30 * h(10) - 0.015 * Math.max(0, a - 4) ** 2 * h(11);
     // turbulence: smooth wander along the ring and in height
-    const tw = 0.05 * R * Math.min(1, a / 0.8);
+    const tw = 0.07 * R * Math.min(1, a / 0.8);
     const wx = noise1(a * 0.6 + j * 0.37, s + 1) * tw, wz = noise1(a * 0.6 + j * 0.53, s + 2) * tw, wy = noise1(a * 0.5 + j * 0.71, s + 3) * tw * 0.35;
     const cx = Math.cos(th), cz = Math.sin(th);
     p[0] = C[0] + cx * rr + wx + this.wind[0] * a;
