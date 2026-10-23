@@ -5,7 +5,8 @@ Native 4K masters only (SERIES.md section 2: --preset final on every frame; no f
 frame come from final/shotlist.json (native_4k_s_per_frame: MEASURED style-frame figures and estimates derived from
 them, see final_build.py SPF). Nothing here is measured on the final sets yet: the pilot replaces the estimates.
 All speeds are from the CPU-only cloud machine; Daxtyn decided on 2026-10-18 that the masters render on his own PC's
-graphics card (OS and GPU not known yet), so the page says these figures are an upper bound until his PC is measured.
+graphics card (pc/TARGET.md: Windows, an NVIDIA GeForce RTX 4090, about 2 TB free), so the page says these figures are a
+CPU-only upper bound and plans his PC with stated scenarios until its GPU check measures it.
 
 Usage: python3 tools/shotlist/final_render_schedule.py [--check]
 """
@@ -29,6 +30,14 @@ SETUP_S = {                       # MEASURED style frames, round 4: total incl. 
     'CLING_ROAD': 102, 'CLING_SKY': 102, 'CARD_BLACK': 0}
 MB_PER_FRAME_SHOT = (0.28, 0.56)  # ESTIMATE (preview/render-plan.md): 10-bit CRF 12 intermediates with film grain
 MB_PER_FRAME_MASTER = (0.15, 0.30)  # ESTIMATE: 10-bit or 8-bit CRF 16 scene/episode masters (~29-58 Mbit/s at 4K24)
+# Daxtyn's render PC as he described it on 2026-10-18 (pc/TARGET.md). Nothing has been measured on it yet.
+PC = {'os': 'Windows', 'gpu': 'NVIDIA GeForce RTX 4090', 'free_tb': 2.0}
+# How many times faster than this machine his GPU might draw a frame: SCENARIOS, not measurements. The GPU check
+# (pc\GPU-Check.cmd) measures the real factor on the F2 style frame (this machine: 77 s per steady 4K frame).
+PC_SPEEDUPS = (25, 50, 100, 250)
+PC_SETUP_SPEEDUP = (1.0, 3.0)    # scene setup is JavaScript on the CPU: this machine's speed down to 3x faster (a desktop CPU)
+GB_TOOLS_CACHES = 8               # pc/MANIFEST.md: tools + asset library + caches, about
+GB_PER_MIN_1080P = (0.04, 0.07)  # ESTIMATE: the 8-bit 1080p copy of the episode, per minute
 CHUNK_FRAMES = (48, 24, 12, 6)    # 2, 1, 0.5, 0.25 s
 CHUNK_BUDGET_S = 1500             # aim: one chunk = at most ~25 min of one browser's work
 
@@ -124,7 +133,7 @@ def main(argv):
         'generated_by': 'episodes/s01e01/tools/shotlist/final_render_schedule.py',
         'rules': ['Native 3840x2160, --preset final on every frame (SERIES.md section 2). No final-fast, no --twos, no draft/preview for masters.',
                   'One render.mjs job per shot; chunks sized so one chunk is at most ~25 min of one browser (a restart loses at most one chunk per browser).',
-                  'Intermediates: 10-bit CRF 12. Conform per scene, verify, move the scene master off the machine, then delete that scene\'s shot files and chunk folders.'],
+                  'Intermediates: 10-bit CRF 12. Conform per scene and verify it; chunk folders go once the scene file is made. On a machine short of disk (the cloud machine) move each scene master off and delete that scene\'s shot files; on Daxtyn\'s PC (about 2 TB free, pc/TARGET.md) keep them until he has approved the episode.'],
         'totals': {'frames': T['frames'], 'frames_3d': T['frames_3d'], 'hours_1_browser': round(T['hours_1_browser'], 1),
                    'hours_range': [round(T['hours_lo'], 1), round(T['hours_hi'], 1)], 'wall_hours_2_browsers': round(T['wall_h_2_browsers'], 1)},
     }
@@ -153,7 +162,7 @@ def build_md(d, scenes, by_set, T, jobs):
     w('')
     w('> **Plan only.** Nothing of the final script has been rendered. The seconds per frame are measured on the five style frames and estimated from them for the other sets; nobody has rendered a frame of the new sets yet. Every figure here is an estimate until the pilot (step 1 below) measures the real scenes. Made by `tools/shotlist/final_render_schedule.py` from `shotlist.json`; the per-shot job list is `render-jobs.json`.')
     w('')
-    w('> **Where the masters will render (Daxtyn\'s decision, 18 October 2026).** The final 4K masters will render on Daxtyn\'s own gaming PC, on its graphics card, not on this CPU-only cloud machine. Its operating system and graphics card are not known yet: Windows 10/11 is the most likely, and macOS and Linux are to be supported too. Every hour and day figure below was measured or estimated on this 4-vCPU machine without a GPU (SwiftShader), so it is a CPU-only upper bound, not a forecast for his PC, and the disk plan is written for the 15 GB free here. Before planning his render, run the pilot (step 1) on his PC with the renderer\'s `--gpu` option, put the measured seconds per frame into `final_build.py` (`SPF`) and rebuild this schedule.')
+    w('> **Where the masters will render (Daxtyn\'s decision, 18 October 2026).** The final 4K masters will render on Daxtyn\'s own gaming PC, on its graphics card, not on this CPU-only cloud machine. He described it the same day (`pc/TARGET.md`): **%s, an %s** (his words: "I\'m pretty sure"; the GPU check confirms the real model) **and about %.0f TB free**. Every hour and day figure in the tables below was measured or estimated on this 4-vCPU machine without a GPU (SwiftShader), so it is a CPU-only upper bound, not a forecast for his PC. The section "On Daxtyn\'s PC" turns it into scenarios for the %s and plans his disk. The first real figure comes from `pc\\GPU-Check.cmd` on his PC; after that the pilot (step 1) runs there with `--gpu`, its seconds per frame go into `final_build.py` (`SPF`), and this schedule is rebuilt.' % (PC['os'], PC['gpu'], PC['free_tb'], PC['gpu'].replace('NVIDIA GeForce ', '')))
     w('')
     w('## The answer')
     w('')
@@ -164,9 +173,40 @@ def build_md(d, scenes, by_set, T, jobs):
     w('- **On this one machine (4 vCPU, no GPU), two browsers: about %s hours of wall-clock time, about %.0f days (%.1f months) of continuous rendering**, scene setup included. Two browsers do not halve the time here: SwiftShader already uses all four threads, and the README benchmark measured only a %.2fx gain for the second browser.' % (
         format(round(T['wall_h_2_browsers']), ','), days, days / 30.4, TWO_BROWSER_GAIN))
     w('- **Why so much more than the old "43-70 hours":** that figure used the speed of the simple benchmark scene (0.37-0.50 frames per second). The real sets are much heavier. The five style frames, rendered at 4K on this machine, took 131-822 s per frame with the 8-sub-frame film finish, which is about 26-270 s per frame with velocity motion blur. Cling, the heaviest set, is about a third of the episode.')
-    w('- **Disk:** the 10-bit intermediates of the whole episode would take about %.0f-%.0f GB, and a finished 4K master about %.0f-%.0f GB, against about 15 GB free here. So the episode is rendered, checked and delivered **one scene at a time** (largest scene: %.1f-%.1f GB of intermediates), and the full-episode join happens on a drive with room for both the scene files and the master.' % (
-        shot_gb[0], shot_gb[1], master_gb[0], master_gb[1], max(s['disk_shots_gb'][0] for s in scenes), max(s['disk_shots_gb'][1] for s in scenes)))
-    w('- **What would make it faster without changing the look:** a second (or third) machine taking whole scenes (the job list splits cleanly by scene); a machine with a real graphics card (`--gpu`, never measured here); the free tricks in `../preview/render-plan.md` ("Cheapest tricks that keep the look": grass LOD, skipping the ocean where it cannot be seen, the shadow cache), each checked with an A/B still. `final-fast` and `--twos` are not allowed for masters (`SERIES.md` section 2); they are fine for the animatic and for previews, which must be labelled as previews.')
+    w('- **Disk:** the 10-bit intermediates of the whole episode would take about %.0f-%.0f GB, and a finished 4K master about %.0f-%.0f GB. On Daxtyn\'s PC (about %.0f TB free) everything fits at once, several times over (see "On Daxtyn\'s PC"). Only on this machine (about 15 GB free) is the episode rendered, checked and delivered **one scene at a time** for lack of disk (largest scene: %.1f-%.1f GB of intermediates).' % (
+        shot_gb[0], shot_gb[1], master_gb[0], master_gb[1], PC['free_tb'], max(s['disk_shots_gb'][0] for s in scenes), max(s['disk_shots_gb'][1] for s in scenes)))
+    w('- **What would make it faster without changing the look:** a second (or third) machine taking whole scenes (the job list splits cleanly by scene); a real graphics card (`--gpu`: Daxtyn\'s PC, see the next section; never measured here); the free tricks in `../preview/render-plan.md` ("Cheapest tricks that keep the look": grass LOD, skipping the ocean where it cannot be seen, the shadow cache), each checked with an A/B still. `final-fast` and `--twos` are not allowed for masters (`SERIES.md` section 2); they are fine for the animatic and for previews, which must be labelled as previews.')
+    w('')
+    # ---- Daxtyn's PC: scenarios until his GPU check measures it
+    setup_h = T['setup_h']
+    conform_h = (T['frames'] / FPS / 60) * 2 * 2 / 60     # ESTIMATE: scene files + the 1080p copy, about 2 min of CPU encode per minute each
+    w('## On Daxtyn\'s PC (%s, %s, about %.0f TB free)' % (PC['os'], PC['gpu'].replace('NVIDIA GeForce ', ''), PC['free_tb']))
+    w('')
+    w('Nothing has been measured on his PC yet, so this section is **scenarios, not a forecast**. What will be measured, in this order: `pc\\GPU-Check.cmd` draws one native 4K frame of the F2 style frame on his GPU (this machine needs 77 s for it) and prints the speed-up and its own estimate per scene; then `STATUS.txt` uses the measured speed of the shots he has rendered.')
+    w('')
+    w('**Time.** Rendering is the GPU part; scene setup (building the dragons, the crowds and the sets in JavaScript) runs on his CPU, once per shot (%d jobs: %.0f h at this machine\'s measured setup speed, %.0f h if his CPU is %.0fx faster); the scene files and the 1080p copy are CPU encodes after the pictures exist, and the 4K episode is joined from the scene files without re-encoding (about %.0f h, ESTIMATE).' % (
+        sum(1 for j in jobs if j['render'] == '3d'), setup_h, setup_h / PC_SETUP_SPEEDUP[1], PC_SETUP_SPEEDUP[1], conform_h))
+    w('')
+    w('| If his GPU draws a frame ... | Rendering (h) | + setup (h) | + encodes (h) | Total | Non-stop days |')
+    w('|---|---:|---:|---:|---:|---:|')
+    for k in PC_SPEEDUPS:
+        r = T['hours_1_browser'] / k
+        lo, hi = r + setup_h / PC_SETUP_SPEEDUP[1] + conform_h, r + setup_h / PC_SETUP_SPEEDUP[0] + conform_h
+        w('| %dx faster than this machine (about %.1f s per 4K frame on average) | %.0f | %.0f-%.0f | %.0f | %.0f-%.0f h | %.1f-%.1f |' % (
+            k, T['hours_1_browser'] * 3600 / T['frames_3d'] / k, r, setup_h / PC_SETUP_SPEEDUP[1], setup_h / PC_SETUP_SPEEDUP[0], conform_h, lo, hi, lo / 24, hi / 24))
+    w('')
+    w('Which row is likely is not known. A GPU usually draws a WebGL frame tens to hundreds of times faster than SwiftShader on four CPU threads, but the heavy sets also do per-frame JavaScript work (posing crowds, cloth and dragons) that the GPU does not speed up. So the middle rows (50-100x) are a planning guess, the first row a cautious one, and the last an optimistic one. Two browsers on one GPU mostly overlap the CPU and GPU halves of a frame; whether that pays is measured on his PC, not assumed.')
+    w('')
+    w('**Disk.** Shots %.0f-%.0f GB + scene files %.0f-%.0f GB + the 4K episode %.0f-%.0f GB + the 1080p copy %.0f-%.0f GB + tools and caches about %d GB = **about %.0f-%.0f GB, %.0f-%.0f%% of %.0f TB**. So on his PC:' % (
+        shot_gb[0], shot_gb[1], master_gb[0], master_gb[1], master_gb[0], master_gb[1],
+        T['frames'] / FPS / 60 * GB_PER_MIN_1080P[0], T['frames'] / FPS / 60 * GB_PER_MIN_1080P[1], GB_TOOLS_CACHES,
+        shot_gb[0] + 2 * master_gb[0] + T['frames'] / FPS / 60 * GB_PER_MIN_1080P[0] + GB_TOOLS_CACHES,
+        shot_gb[1] + 2 * master_gb[1] + T['frames'] / FPS / 60 * GB_PER_MIN_1080P[1] + GB_TOOLS_CACHES,
+        100 * (shot_gb[0] + 2 * master_gb[0] + GB_TOOLS_CACHES) / (PC['free_tb'] * 1024), 100 * (shot_gb[1] + 2 * master_gb[1] + T['frames'] / FPS / 60 * GB_PER_MIN_1080P[1] + GB_TOOLS_CACHES) / (PC['free_tb'] * 1024), PC['free_tb']))
+    w('')
+    w('- every scene file and every shot file stays on the PC until Daxtyn has watched and approved the episode, so a sound update or a fixed shot never needs a re-render of anything else (`npm run episode` already deletes the chunk folders once a scene file exists);')
+    w('- the full-episode join happens on the same drive (no copying off first);')
+    w('- the scenes still render in story order, so the finished part is always a watchable beginning.')
     w('')
     w('## Seconds per 4K frame, by set')
     w('')
@@ -219,7 +259,7 @@ def build_md(d, scenes, by_set, T, jobs):
     w('- **After a restart or a crash, run the same command again.** Finished jobs are skipped, and an interrupted job re-renders only the chunks that were not finished and verified: at most one chunk per browser is lost.')
     w('- **Masters:** `--preset final --cinematic velocity --bit-depth 10 --crf 12 --workers 2` for every shot; 1E-03 keeps the 8-sub-frame film finish (`--cinematic film`). No `final-fast`, no `--twos` (`SERIES.md` section 2).')
     w('')
-    w('## Disk plan (about 15 GB free on this machine)')
+    w('## Disk plan on this machine (about 15 GB free; Daxtyn\'s PC: see "On Daxtyn\'s PC")')
     w('')
     w('- **While a scene renders:** its shot files (largest scene %.1f-%.1f GB) plus the chunk folders of the shots in progress. Delete each shot\'s chunk folder as soon as its `.mp4` is verified (`SERIES.md` section 2).' % (max(s['disk_shots_gb'][0] for s in scenes), max(s['disk_shots_gb'][1] for s in scenes)))
     w('- **Conform the scene:** trim, cut and dissolve the shots, draw the captions, mux the scene\'s stereo mix and subtitles, write one scene master (10-bit, CRF 16), and check it from start to end (sound present, no black or repeated footage, faces and dragons consistent, continuity flags). Then copy the scene master off the machine and delete the scene\'s shot files.')
@@ -230,7 +270,7 @@ def build_md(d, scenes, by_set, T, jobs):
     w('## Risks')
     w('')
     w('- **The estimates are not measured on the new sets.** Seven sets do not exist yet (see `assets-delta.md`), and the Cling estimate alone moves the total by hundreds of hours. The pilot settles it.')
-    w('- **Months, not days.** On this one machine the episode is a %.0f-day render even if nothing goes wrong. Retakes (a fix found while checking a scene) add to it: plan about 1.3-1.5x the final pass for fixes on the hard shots (%d hard shots).' % (days, d['totals']['hard_shots']))
+    w('- **Months, not days, on this machine.** Here the episode is a %.0f-day render even if nothing goes wrong (Daxtyn\'s GPU should cut that to days: see the scenarios above). Retakes (a fix found while checking a scene) add to it: plan about 1.3-1.5x the final pass for fixes on the hard shots (%d hard shots).' % (days, d['totals']['hard_shots']))
     w('- **Building comes first.** The bottleneck before any of this is building the %d new shots\' sets, people, dragons, effects and animation (`assets-delta.md`), not render hours.' % (tot['shots_by_origin']['addition'] + tot['shots_by_origin']['rating_pass']))
     w('- **The machine is shared.** Other workflows run heavy jobs here; these figures assume the CPU is free.')
     w('')

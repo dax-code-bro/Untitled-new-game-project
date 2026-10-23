@@ -2,6 +2,28 @@
 
 Owner of this folder and of `../tools/` (the check tools and generators). Resume from here after a restart.
 
+## Follow-ups of 2026-10-23 (the review of the PC kit and the script)
+
+- `check_final.py`: proof 1g locks the CONTENT of the five approved death blocks (R15, R16b, R18, R20, R21): their story
+  lines are stored word for word in `APPROVED_RATING_TEXT` (the text CHANGES.md question 4 put to Daxtyn, commit 89efae0;
+  the approval commit 3f43434 changed only markers and NOTE lines), and `APPROVED_RATING_SHA256` guards that table.
+- Rating lint: titles and kinship words (`his sister`, `her daughter`, `Leaf's rider`, ...) count as protected names;
+  drinking words count as alcohol; rule 6b flags a vice word with a pronoun right after a protected character is named
+  (same or previous paragraph); cue directions `[to Abby]` with a vice word fail; rule 6d fails any death word in new text
+  outside the approved blocks. The three hits read in context (R3, C34, C14) are in `REVIEWED_CONTEXT` with the reason.
+  `--selftest` runs 9 broken copies (all caught).
+- The reading copy drops the `[creator-approved wording 2026-10-18]` cue marker too (SERIES.md section 5 now describes
+  how accepted text stays marked in the production copy and has no markers in the reading copy).
+- `voices.json` (via `tools/final_voices.py`): status notes now say that computer-voice takes of every line exist in
+  `vo/` (384 takes + 5 placeholders, 2026-10-18), measured but not listened to, none approved; the L048/L053/L054 notes
+  point to the final takes. Only notes changed, no casting: `vo/takes.json` still records the previous voices.json
+  sha256 (4a372fa0...) as its source until `tools/make_final_vo.py` runs again; the takes themselves are unaffected.
+- `render-schedule.md` (via `tools/shotlist/final_render_schedule.py`): the render PC is no longer "not known":
+  `pc/TARGET.md` (Windows, RTX 4090, about 2 TB). New section "On Daxtyn's PC" with time scenarios (25-250x this
+  machine: about 1-5 days non-stop, setup and encodes included; NOT measured) and the disk plan (54-100 GB, 3-5% of his
+  disk: keep every shot and scene file until he approves the episode).
+- `credits.txt`: the end-credits text (the END card), from the real contributors and the licences only.
+
 ## Daxtyn's decisions applied (2026-10-18)
 
 - Decision 1 (species lines): the PENDING P1-P3 blocks and the open-question note after Abby's [ORIGINAL] line are gone.
@@ -13,14 +35,14 @@ Owner of this folder and of `../tools/` (the check tools and generators). Resume
   and a `[RATING PASS — creator-approved 2026-10-18]` NOTE (`check_final.APPROVED_RATING`). R19, R16, R17 stay proposed.
 - Decision 3 (Remi adult): Remi and "prince" left `PROTECTED_RE`/`PROTECTED_SPEAKERS` (check_final) and `CHILDISH_RE`
   (final_build). No Remi drinking beat exists or was added (CHANGES.md section 3 offers one).
-- Decision 4 (render on Daxtyn's PC): only a note at the top of render-schedule.md (figures = CPU-only upper bound). The
-  render tools are another workflow's.
+- Decision 4 (render on Daxtyn's PC): a note at the top of render-schedule.md (figures = CPU-only upper bound); since
+  2026-10-23 also the section "On Daxtyn's PC" (pc/TARGET.md). The render tools are the PC kit's (`pc/`, `render/`).
 - New checker proofs: 1e (198 handoff spoken lines: 194 verbatim + 4 approved, nothing else spoken outside the
   additions), 1f (approved changes exact, nothing else claims approval, cue marker only in approved NOW text); approved
   marker form only for APPROVED_RATING. Negative tests (13 broken copies, `--final COPY`) all exit 1; Remi with a flask
   in R10 passes.
 - Breakdown rebuilt: dialogue `creator_approved`/`was_original` fields, L068 context (FINAL_CONTEXT), voices.json
-  approved special lines (preview takes of L048/L053/L054 marked out of date), species pronunciations dropped,
+  approved special lines (the preview takes of L048/L053/L054 have the old wording; the final takes in `vo/` have the new one), species pronunciations dropped,
   creature "design" instead of "species"; shot 1D-09 override; APPROVED_WORDING flag (4 shots).
 - Estimate now 54:24 (44:18-68:56); shot list 54:16; 37 changed lines (19 DRAGONS.md, 14 rating, 4 approved).
 - Docs: CHANGES.md (questions 1, 3, 4 answered, section 9), DRAGONS.md (question closed), SERIES.md section 9
@@ -64,11 +86,11 @@ a CHANGED block on a PENDING line.
 
 Generated into this folder from `screenplay-final.md` (`tools/build_final_breakdown.py --check` exits 0):
 - `dialogue.json` / `dialogue.md`: 385 spoken lines (198 handoff, 171 additions, 16 rating pass), 26 speakers,
-  4 PENDING lines, est. 12:52 of speech. `onscreen-text.json`: 12 cards (T11 Cling caption in X5, T12 optional hull name in X4).
+  4 PENDING lines then (none since 2026-10-18), est. 12:52 of speech. `onscreen-text.json`: 12 cards (T11 Cling caption in X5, T12 optional hull name in X4).
 - `voices.json`: 26 roles; the 18 handoff roles keep `../voices.json` (ADULT VILLAGER recast male: the additions make
   him a man); 8 new roles (YOUNG ATTENDANT af_sky, LOOKOUT af_jessica, SAILOR bf_alice, OLD WOMAN bf_isabella, PARTNER
   af_sarah, and blends for SHIP'S MASTER, KEEPER, INSTRUCTOR, ADULT VILLAGER because all nine allowed male voices were
-  taken). Blends are NOT auditioned yet.
+  taken). Blends are not auditioned by ear (their final takes in `vo/` were measured only).
 - `shotlist.json` / `shotlist.md`: 726 shots (331 handoff incl. 3 CHANGED extras, 352 additions, 43 rating pass),
   54:14 expected (44:08-68:50); 1B-11 and X7's last shot are played once (duplicates). check_final says 54:22.
 - `render-schedule.md` / `render-jobs.json`: ~2,580 h one browser (1,956-3,545), ~2,366 h wall with 2 browsers
@@ -81,9 +103,9 @@ Generated into this folder from `screenplay-final.md` (`tools/build_final_breakd
 
 - CHANGES.md questions 2 and 5-10 (dog-sit, wine, the drug's name, the verse, language, new roles, which additions to
   keep). Questions 1, 3 and 4 were answered on 2026-10-18.
-- New takes for L048, L053, L054 (the preview takes have the old wording).
-- Audition the four blended voices and the eight new roles; record the sung verse (R13-01), Abby's cry (X12) and the
-  rider's scream with people.
+- Listen to the takes of the four blended voices and the eight new roles (`vo/takes.md`); record the sung verse
+  (R13-01), Abby's cry (X12) and the rider's scream with people (`vo/` has PLACEHOLDER stand-ins). The final takes of
+  L048, L053, L054 with the approved wording exist (`vo/`, 2026-10-18).
 - Pilot renders to replace the s/frame estimates (`final_build.py` SPF), then rebuild the schedule.
 - When Daxtyn accepts an addition, SERIES.md section 5 says remove its markers: check_final.py's proofs 1b/2 then need an
   "accepted text" mode (not built).

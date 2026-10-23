@@ -3,7 +3,7 @@
  "packages": [
   {
    "id": "final-vo",
-   "what": "Episode 1 final voice takes: 385 takes and 5 placeholders, computer voices (episodes/s01e01/final/vo/README.md). Daxtyn has not approved any of them.",
+   "what": "Episode 1 final voice takes: 384 takes and 5 placeholders (389 files), computer voices (episodes/s01e01/final/vo/README.md). Daxtyn has not approved any of them.",
    "dir": "episodes/s01e01/final",
    "files_from": "episodes/s01e01/final/vo/takes.json",
    "needed_for": "mixing the episode's sound (on whichever computer the mix is made). Not needed to render pictures.",

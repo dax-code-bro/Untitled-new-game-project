@@ -7,7 +7,7 @@
   "rules": [
    "Native 3840x2160, --preset final on every frame (SERIES.md section 2). No final-fast, no --twos, no draft/preview for masters.",
    "One render.mjs job per shot; chunks sized so one chunk is at most ~25 min of one browser (a restart loses at most one chunk per browser).",
-   "Intermediates: 10-bit CRF 12. Conform per scene, verify, move the scene master off the machine, then delete that scene's shot files and chunk folders."
+   "Intermediates: 10-bit CRF 12. Conform per scene and verify it; chunk folders go once the scene file is made. On a machine short of disk (the cloud machine) move each scene master off and delete that scene's shot files; on Daxtyn's PC (about 2 TB free, pc/TARGET.md) keep them until he has approved the episode."
   ],
   "totals": {
    "frames": 78144,

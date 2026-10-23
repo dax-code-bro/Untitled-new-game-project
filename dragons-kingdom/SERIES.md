@@ -83,17 +83,26 @@ These rules apply to every episode of Dragon's Kingdom and to everyone working o
 - **Accepting a proposal:**
   - It becomes canon only when Daxtyn says yes to it.
   - Record what he accepted and when, in that episode's folder.
-  - Then remove its markers and rebuild the planning files (dialogue, shot list, assets, voices) from the accepted text.
+  - Then take off its PROPOSED markers and rebuild the planning files (dialogue, shot list, assets, voices) from the accepted text.
+  - How the accepted text stays marked: the production copy of a screenplay (the one whose checks prove the original survives) still has to tell his text, the accepted text and the proposals apart. So there an approval marker that names the date takes the place of the PROPOSED one, for example `[RATING PASS R15 — creator-approved 2026-10-18 — begin]`, and a cue whose wording he approved carries `[creator-approved wording 2026-10-18]`, the way his own lines carry [ORIGINAL]. The reading copy (Episode 1: `episodes/s01e01/final/screenplay-final-clean.md`) has no markers at all.
+  - The check records the exact text he accepted and fails if a word of it changes (Episode 1: `APPROVED_CHANGES` and `APPROVED_RATING_TEXT` in `episodes/s01e01/tools/check_final.py`). Changing accepted text is a new proposal: it needs his OK again.
 - **Respect later episodes.** No episode borrows material that belongs to a later one, and none locks in later-episode facts, such as who carries a message, how a rescue goes or what happens to a character. If a later episode is affected, it goes to Daxtyn as a question.
 
 ## 6. Checks to run
 
-- **Render pipeline:** `npm test` in `dragons-kingdom/` (24 tests at the time of writing). It must pass before render code changes are committed.
-- **Screenplay integrity (Episode 1):** `python3 episodes/s01e01/tools/check_extended.py`. Exit code 0 means:
-  - the original screenplay is intact;
-  - the additions are marked correctly and their dependency notes are present;
-  - the canon lint is clean.
-- **Planning data (Episode 1):** `python3 episodes/s01e01/tools/extract_dialogue.py --check`.
+Run them from `dragons-kingdom/`. Each must pass (exit code 0) before the work it covers is committed.
+
+- **Render pipeline:** `npm test` (33 tests on 2026-10-23, about 3 minutes on the cloud machine). It must pass before render code changes are committed.
+- **Locked shooting script (Episode 1):** `python3 episodes/s01e01/tools/check_final.py`. Exit code 0 means:
+  - the handoff (`screenplay.md`) survives word for word, and only the changes Daxtyn approved touch its spoken lines;
+  - the blocks he approved hold exactly the text he approved (the six deaths in Cling, the new species wording);
+  - the additions are exactly the proposals, with their markers and dependency notes;
+  - the canon lint and the rating lint of section 8 are clean: by name, by title, through a pronoun right after a protected character is named, and no new death outside the approved ones;
+  - the runtime in the script's timing note and the reading copy `screenplay-final-clean.md` are current (after an edit: `--update-timing --clean`).
+  - `--selftest` feeds it broken copies that must fail, as a check of the checker itself.
+- **Planning data (Episode 1):** `python3 episodes/s01e01/tools/build_final_breakdown.py --check`: dialogue, voices, shot list and render schedule are rebuilt from the locked script and match it.
+- **Extended edition (Episode 1):** `python3 episodes/s01e01/tools/check_extended.py` (the original screenplay intact in `screenplay-extended.md`, additions marked, canon lint clean) and `python3 episodes/s01e01/tools/extract_dialogue.py --check`.
+- **Render PC kit:** `node pc/build-caches.mjs --check` (everything a render needs that is not in git), `npm run selftest:episode` (the episode runner: skip, stop, resume, assemble, sound swap), `npm run selftest:sound` (the sound delivery route) and, on the render PC, `pc\GPU-Check.cmd` (`pc/RENDER_ON_YOUR_PC.md`).
 
 ## 7. Where episodes come from
 
@@ -128,7 +137,7 @@ Daxtyn's decisions, newest first, with the date and where each one is recorded i
 | 2026-10-18 | **Species lines (Episode 1):** use the suggested wording. His own [ORIGINAL] line "Why couldn't I get a Bashion?" becomes "Why couldn't I get one like Charcoal?" (he approved changing his own line; the old wording is kept). "Nightwings are faster. More versatile." / "And Bashions?" become "Smaller ones are faster. More versatile." / "And big ones?". "...A Slitherwing." becomes "...A small dragon. Fast.". "I still want a Bashion." becomes "I still want one like Charcoal.". This closes the open question in `DRAGONS.md`. | `DRAGONS.md`; `episodes/s01e01/final/CHANGES.md` section 9; `screenplay-final.md` (C8b, C9, C19, C30) |
 | 2026-10-18 | **Deaths in Cling (Episode 1):** keep the six unnamed adult deaths, with their gore, in Starlight's attack (rating-pass pieces R15, R16b, R18, R20, R21). | `episodes/s01e01/final/CHANGES.md` question 4 and section 9 |
 | 2026-10-18 | **Remi is an adult.** He may drink, swear and so on. The limits of section 8 still apply to Abby, the child in Cling and anyone who could be a child. His exact age is not set. | `CHARACTERS.md` |
-| 2026-10-18 | **Production, not canon: final 4K rendering runs on Daxtyn's own gaming PC, on its graphics card**, instead of the CPU-only cloud machine. Its operating system and graphics card are not known yet: support Windows 10/11 first (most likely), then macOS and Linux. Section 2's native-4K rule is unchanged. | `episodes/s01e01/final/render-schedule.md`; the render tools' own documentation |
+| 2026-10-18 | **Production, not canon: final 4K rendering runs on Daxtyn's own gaming PC, on its graphics card**, instead of the CPU-only cloud machine. The same day he described the PC: Windows, an NVIDIA GeForce RTX 4090 (his words: "I'm pretty sure"; the GPU check confirms the real model) and about 2 TB of free disk. The render kit targets that PC first; macOS and Linux stay supported. Section 2's native-4K rule is unchanged. | `pc/TARGET.md`; `episodes/s01e01/final/render-schedule.md`; `pc/RENDER_ON_YOUR_PC.md` |
 | 2026-10-16 | The rating and content of the show (section 8). | Section 8 |
 | 2026-10-16 | "Give me the complete episode one" (Episode 1 shooting script; the additions stay proposals until he accepts them). | `episodes/s01e01/final/CHANGES.md` |
 | 2026-10-16 | Dragons stand low and normal, the two legs toward the center of the body. | `DRAGONS.md` |

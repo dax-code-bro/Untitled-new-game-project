@@ -4,7 +4,8 @@ This file holds Daxtyn's own decisions about the people of the series, next to t
 
 Each fact says where it comes from:
 - **Daxtyn** means his own decision, with its date.
-- **Screenplay** means the Episode 1 handoff says so.
+- **Screenplay** means the Episode 1 handoff says so, in the words quoted.
+- **Inference** means it follows from what the screenplay says, but the screenplay does not say it in so many words. An inference is not canon: Daxtyn can overrule it at any time.
 
 ## Adults and children (for the content limits)
 
@@ -14,9 +15,9 @@ The show is rated for mature audiences (`SERIES.md` section 8). Its limits for c
 |---|---|---|---|
 | Prince Remi IV (Remi) | **Adult** | Daxtyn, 2026-10-18: "Remi is an ADULT" (he may drink, swear and so on) | Do not apply |
 | Abby | **A child** | Screenplay: scene 2A calls her "the injured child" | Apply |
-| Queen Alexandria | Adult | Screenplay: the queen of Verdor and the mother of Remi and Abby | Do not apply |
-| Queen Fall of Tara | Adult | Screenplay: a reigning queen and Starlight's rider | Do not apply |
-| The King of Cling | Adult | Screenplay: the king of Cling, which lies within Scrapper | Do not apply |
+| Queen Alexandria | Adult | Screenplay: "Queen Alexandria is their mother" (Remi's and Abby's). Inference: a mother of an adult son is an adult | Do not apply |
+| Queen Fall of Tara | Adult | Screenplay: "Queen Fall of Tara is her rider" (Starlight's). Inference: she holds the title queen and leads Starlight's attack | Do not apply |
+| The King of Cling | Adult | Screenplay: "the King of Cling", the "local king" of Cling, which lies "within Scrapper". Inference: he holds the title king and acts as the village's ruler | Do not apply |
 | The child in Cling (CHILD) | **A child** | Screenplay | Apply |
 
 The handoff says not to invent anyone's exact age (CANON LOCK item 2), so no exact age is set for anyone. Being an adult or a child is all that is decided.
@@ -31,23 +32,23 @@ The current Episode 1 shooting script also has proposed characters whose ages ar
 
 ## Abby
 
-- **Screenplay:** Remi's younger sister, rider of Leaf. Queen Alexandria is her mother. The scout's pass breaks her LEFT arm in Episode 1. She never answers the succession question. Scene 2A calls her "the injured child", so the content limits for children apply to her (`SERIES.md` section 8). Her broken arm is never shown as a graphic bone image.
+- **Screenplay:** Remi's younger sister, rider of Leaf. Queen Alexandria is her mother. The scout's pass breaks her arm in Episode 1; the handoff makes it the LEFT arm as "a production choice, not previously fixed canon". She never answers the succession question. Scene 2A calls her "the injured child", so the content limits for children apply to her (`SERIES.md` section 8). Her broken arm is never shown as a graphic bone image.
 - Her exact age is not set.
 
 ## Queen Alexandria
 
-- **Screenplay:** the queen of Verdor, mother of Remi and Abby. Her exact line at the hatching is "My pretty little weapon" ([ORIGINAL]). She orders the Santa Maria to bring back the fallen rider and dragon. She is not Queen Fall.
-- An adult, because the screenplay makes her the reigning queen and the mother of Remi.
+- **Screenplay:** "Queen Alexandria is their mother" (Remi's and Abby's), and Verdor is "Remi and Abby's home island kingdom". Her exact line at the hatching is "My pretty little weapon" ([ORIGINAL]). She orders the Santa Maria to bring back the fallen rider and dragon. She is not Queen Fall.
+- **Inference:** that she rules Verdor (the screenplay calls her queen and gives her the orders, but never says "reigning"), and that she is an adult, because she is the mother of Remi, whom Daxtyn made an adult.
 
 ## Queen Fall of Tara
 
-- **Screenplay:** Starlight's rider. She is not Queen Alexandria, and King Fallen of Scrapper is another person again. In Episode 1 she says only "Attack."
-- An adult, because the screenplay makes her a reigning queen.
+- **Screenplay:** "Queen Fall of Tara is her rider" (Starlight's). She is not Queen Alexandria, and King Fallen of Scrapper is another person again. In Episode 1 she says only "Attack."
+- **Inference:** that she is an adult, because she holds the title queen and leads the attack on Cling. The screenplay does not say whether she reigns over Tara or is a queen by marriage, and nothing in production may decide it.
 
 ## The King of Cling
 
-- **Screenplay:** the king of Cling, introduced at the festival in scene 3A. His personal name is not given, and none may be invented.
-- An adult, because the screenplay makes him the reigning king.
+- **Screenplay:** "the King of Cling", introduced at the festival in scene 3A; Cling is "within Scrapper" and has a "local king" who is "unnamed". His personal name is not given, and none may be invented.
+- **Inference:** that he is an adult, because he holds the title king and acts as the village's ruler under pressure. The screenplay never says "reigning".
 
 ## Everyone else
 

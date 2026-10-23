@@ -2,7 +2,7 @@
 
 > **Plan only.** Nothing of the final script has been rendered. The seconds per frame are measured on the five style frames and estimated from them for the other sets; nobody has rendered a frame of the new sets yet. Every figure here is an estimate until the pilot (step 1 below) measures the real scenes. Made by `tools/shotlist/final_render_schedule.py` from `shotlist.json`; the per-shot job list is `render-jobs.json`.
 
-> **Where the masters will render (Daxtyn's decision, 18 October 2026).** The final 4K masters will render on Daxtyn's own gaming PC, on its graphics card, not on this CPU-only cloud machine. Its operating system and graphics card are not known yet: Windows 10/11 is the most likely, and macOS and Linux are to be supported too. Every hour and day figure below was measured or estimated on this 4-vCPU machine without a GPU (SwiftShader), so it is a CPU-only upper bound, not a forecast for his PC, and the disk plan is written for the 15 GB free here. Before planning his render, run the pilot (step 1) on his PC with the renderer's `--gpu` option, put the measured seconds per frame into `final_build.py` (`SPF`) and rebuild this schedule.
+> **Where the masters will render (Daxtyn's decision, 18 October 2026).** The final 4K masters will render on Daxtyn's own gaming PC, on its graphics card, not on this CPU-only cloud machine. He described it the same day (`pc/TARGET.md`): **Windows, an NVIDIA GeForce RTX 4090** (his words: "I'm pretty sure"; the GPU check confirms the real model) **and about 2 TB free**. Every hour and day figure in the tables below was measured or estimated on this 4-vCPU machine without a GPU (SwiftShader), so it is a CPU-only upper bound, not a forecast for his PC. The section "On Daxtyn's PC" turns it into scenarios for the RTX 4090 and plans his disk. The first real figure comes from `pc\GPU-Check.cmd` on his PC; after that the pilot (step 1) runs there with `--gpu`, its seconds per frame go into `final_build.py` (`SPF`), and this schedule is rebuilt.
 
 ## The answer
 
@@ -10,8 +10,29 @@
 - **About 2,581 hours of rendering for one browser** at native 4K (range 1,957-3,546 h from the per-set seconds per frame; up to 4,492 h if the loose cut and the slow end both happen).
 - **On this one machine (4 vCPU, no GPU), two browsers: about 2,367 hours of wall-clock time, about 99 days (3.2 months) of continuous rendering**, scene setup included. Two browsers do not halve the time here: SwiftShader already uses all four threads, and the README benchmark measured only a 1.10x gain for the second browser.
 - **Why so much more than the old "43-70 hours":** that figure used the speed of the simple benchmark scene (0.37-0.50 frames per second). The real sets are much heavier. The five style frames, rendered at 4K on this machine, took 131-822 s per frame with the 8-sub-frame film finish, which is about 26-270 s per frame with velocity motion blur. Cling, the heaviest set, is about a third of the episode.
-- **Disk:** the 10-bit intermediates of the whole episode would take about 21-42 GB, and a finished 4K master about 11-23 GB, against about 15 GB free here. So the episode is rendered, checked and delivered **one scene at a time** (largest scene: 4.7-9.3 GB of intermediates), and the full-episode join happens on a drive with room for both the scene files and the master.
-- **What would make it faster without changing the look:** a second (or third) machine taking whole scenes (the job list splits cleanly by scene); a machine with a real graphics card (`--gpu`, never measured here); the free tricks in `../preview/render-plan.md` ("Cheapest tricks that keep the look": grass LOD, skipping the ocean where it cannot be seen, the shadow cache), each checked with an A/B still. `final-fast` and `--twos` are not allowed for masters (`SERIES.md` section 2); they are fine for the animatic and for previews, which must be labelled as previews.
+- **Disk:** the 10-bit intermediates of the whole episode would take about 21-42 GB, and a finished 4K master about 11-23 GB. On Daxtyn's PC (about 2 TB free) everything fits at once, several times over (see "On Daxtyn's PC"). Only on this machine (about 15 GB free) is the episode rendered, checked and delivered **one scene at a time** for lack of disk (largest scene: 4.7-9.3 GB of intermediates).
+- **What would make it faster without changing the look:** a second (or third) machine taking whole scenes (the job list splits cleanly by scene); a real graphics card (`--gpu`: Daxtyn's PC, see the next section; never measured here); the free tricks in `../preview/render-plan.md` ("Cheapest tricks that keep the look": grass LOD, skipping the ocean where it cannot be seen, the shadow cache), each checked with an A/B still. `final-fast` and `--twos` are not allowed for masters (`SERIES.md` section 2); they are fine for the animatic and for previews, which must be labelled as previews.
+
+## On Daxtyn's PC (Windows, RTX 4090, about 2 TB free)
+
+Nothing has been measured on his PC yet, so this section is **scenarios, not a forecast**. What will be measured, in this order: `pc\GPU-Check.cmd` draws one native 4K frame of the F2 style frame on his GPU (this machine needs 77 s for it) and prints the speed-up and its own estimate per scene; then `STATUS.txt` uses the measured speed of the shots he has rendered.
+
+**Time.** Rendering is the GPU part; scene setup (building the dragons, the crowds and the sets in JavaScript) runs on his CPU, once per shot (723 jobs: 20 h at this machine's measured setup speed, 7 h if his CPU is 3x faster); the scene files and the 1080p copy are CPU encodes after the pictures exist, and the 4K episode is joined from the scene files without re-encoding (about 4 h, ESTIMATE).
+
+| If his GPU draws a frame ... | Rendering (h) | + setup (h) | + encodes (h) | Total | Non-stop days |
+|---|---:|---:|---:|---:|---:|
+| 25x faster than this machine (about 4.8 s per 4K frame on average) | 103 | 7-20 | 4 | 114-127 h | 4.7-5.3 |
+| 50x faster than this machine (about 2.4 s per 4K frame on average) | 52 | 7-20 | 4 | 62-75 h | 2.6-3.1 |
+| 100x faster than this machine (about 1.2 s per 4K frame on average) | 26 | 7-20 | 4 | 36-50 h | 1.5-2.1 |
+| 250x faster than this machine (about 0.5 s per 4K frame on average) | 10 | 7-20 | 4 | 21-34 h | 0.9-1.4 |
+
+Which row is likely is not known. A GPU usually draws a WebGL frame tens to hundreds of times faster than SwiftShader on four CPU threads, but the heavy sets also do per-frame JavaScript work (posing crowds, cloth and dragons) that the GPU does not speed up. So the middle rows (50-100x) are a planning guess, the first row a cautious one, and the last an optimistic one. Two browsers on one GPU mostly overlap the CPU and GPU halves of a frame; whether that pays is measured on his PC, not assumed.
+
+**Disk.** Shots 21-42 GB + scene files 11-23 GB + the 4K episode 11-23 GB + the 1080p copy 2-4 GB + tools and caches about 8 GB = **about 54-100 GB, 3-5% of 2 TB**. So on his PC:
+
+- every scene file and every shot file stays on the PC until Daxtyn has watched and approved the episode, so a sound update or a fixed shot never needs a re-render of anything else (`npm run episode` already deletes the chunk folders once a scene file exists);
+- the full-episode join happens on the same drive (no copying off first);
+- the scenes still render in story order, so the finished part is always a watchable beginning.
 
 ## Seconds per 4K frame, by set
 
@@ -98,7 +119,7 @@ Wall hours = render hours / 1.10 (two browsers) + one scene setup per job (MEASU
 - **After a restart or a crash, run the same command again.** Finished jobs are skipped, and an interrupted job re-renders only the chunks that were not finished and verified: at most one chunk per browser is lost.
 - **Masters:** `--preset final --cinematic velocity --bit-depth 10 --crf 12 --workers 2` for every shot; 1E-03 keeps the 8-sub-frame film finish (`--cinematic film`). No `final-fast`, no `--twos` (`SERIES.md` section 2).
 
-## Disk plan (about 15 GB free on this machine)
+## Disk plan on this machine (about 15 GB free; Daxtyn's PC: see "On Daxtyn's PC")
 
 - **While a scene renders:** its shot files (largest scene 4.7-9.3 GB) plus the chunk folders of the shots in progress. Delete each shot's chunk folder as soon as its `.mp4` is verified (`SERIES.md` section 2).
 - **Conform the scene:** trim, cut and dissolve the shots, draw the captions, mux the scene's stereo mix and subtitles, write one scene master (10-bit, CRF 16), and check it from start to end (sound present, no black or repeated footage, faces and dragons consistent, continuity flags). Then copy the scene master off the machine and delete the scene's shot files.
@@ -108,6 +129,6 @@ Wall hours = render hours / 1.10 (two browsers) + one scene setup per job (MEASU
 ## Risks
 
 - **The estimates are not measured on the new sets.** Seven sets do not exist yet (see `assets-delta.md`), and the Cling estimate alone moves the total by hundreds of hours. The pilot settles it.
-- **Months, not days.** On this one machine the episode is a 99-day render even if nothing goes wrong. Retakes (a fix found while checking a scene) add to it: plan about 1.3-1.5x the final pass for fixes on the hard shots (167 hard shots).
+- **Months, not days, on this machine.** Here the episode is a 99-day render even if nothing goes wrong (Daxtyn's GPU should cut that to days: see the scenarios above). Retakes (a fix found while checking a scene) add to it: plan about 1.3-1.5x the final pass for fixes on the hard shots (167 hard shots).
 - **Building comes first.** The bottleneck before any of this is building the 395 new shots' sets, people, dragons, effects and animation (`assets-delta.md`), not render hours.
 - **The machine is shared.** Other workflows run heavy jobs here; these figures assume the CPU is free.

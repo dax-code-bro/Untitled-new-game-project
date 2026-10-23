@@ -2,7 +2,7 @@
   "schema": "dragons-kingdom/voices v0.2 (final script)",
   "episode": "S01E01",
   "series": "Dragon's Kingdom",
-  "status": "PROVISIONAL casting for the locked shooting script. Nothing here is approved by Daxtyn. No final dialogue has been recorded. The 18 handoff roles keep their ../voices.json voices, except the ADULT VILLAGER (recast, see his entry); the 8 new roles are cast here and have not been auditioned.",
+  "status": "PROVISIONAL casting for the locked shooting script. Nothing here is approved by Daxtyn. No person has recorded any line. Computer-voice takes of every spoken line exist in final/vo/ (made 2026-10-18 by final/tools/make_final_vo.py: 384 takes and 5 placeholders, 389 files, not in git); they were measured, not listened to, and none is approved. The 18 handoff roles keep their ../voices.json voices, except the ADULT VILLAGER (recast, see his entry); the 8 new roles are cast here and have not been auditioned by ear.",
   "generated_by": "episodes/s01e01/tools/final_voices.py",
   "source": {
     "dialogue": "episodes/s01e01/final/dialogue.json",
@@ -207,7 +207,7 @@
       "audition_line": "X12-10",
       "human_recording_priority": 4,
       "why": "af_sky is the lightest unused allowed female voice; it sits apart from the ATTENDANT (af_river), who shares 1A with her.",
-      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "audition_status": "NOT AUDITIONED BY EAR. Its final takes exist (final/vo/, made 2026-10-18 by final/tools/make_final_vo.py) but were only measured, not listened to (final/vo/takes.json voice_separation): listen to them against every role it shares a scene with before any take is approved.",
       "casting_source": "new role in the final script"
     },
     "ALEXANDRIA": {
@@ -751,7 +751,7 @@
       "audition_line": "X9-02",
       "human_recording_priority": 5,
       "why": "af_jessica is free because the final script makes the ADULT VILLAGER a man (recast below); it has only one line and shares no scene with the PARTNER.",
-      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "audition_status": "NOT AUDITIONED BY EAR. Its final takes exist (final/vo/, made 2026-10-18 by final/tools/make_final_vo.py) but were only measured, not listened to (final/vo/takes.json voice_separation): listen to them against every role it shares a scene with before any take is approved.",
       "casting_source": "new role in the final script"
     },
     "SHIP'S MASTER": {
@@ -794,7 +794,7 @@
       "audition_line": "R5-01",
       "human_recording_priority": 4,
       "why": "Blend of two allowed male voices whose roles never share his scenes (GROUND KEEPER is on the riding grounds, KING OF CLING in Cling), shifted 2.5 semitones down so it sits below both.",
-      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "audition_status": "NOT AUDITIONED BY EAR. Its final takes exist (final/vo/, made 2026-10-18 by final/tools/make_final_vo.py) but were only measured, not listened to (final/vo/takes.json voice_separation): listen to them against every role it shares a scene with before any take is approved.",
       "casting_source": "new role in the final script"
     },
     "KEEPER": {
@@ -835,7 +835,7 @@
       "audition_line": "R10-02",
       "human_recording_priority": 5,
       "why": "Blend of two allowed male voices whose roles are in Cling (GUARD, MUSICIAN); he speaks only on the riding grounds, next to the GROUND KEEPER (am_fenrir), whom it must not resemble. Pitched up a semitone.",
-      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "audition_status": "NOT AUDITIONED BY EAR. Its final takes exist (final/vo/, made 2026-10-18 by final/tools/make_final_vo.py) but were only measured, not listened to (final/vo/takes.json voice_separation): listen to them against every role it shares a scene with before any take is approved.",
       "casting_source": "new role in the final script"
     },
     "HEALER": {
@@ -964,7 +964,7 @@
       "audition_line": "R9-01",
       "human_recording_priority": 5,
       "why": "bf_alice is an unused allowed voice; the master is a lowered male blend, so the exchange in R9 has two clearly different voices.",
-      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "audition_status": "NOT AUDITIONED BY EAR. Its final takes exist (final/vo/, made 2026-10-18 by final/tools/make_final_vo.py) but were only measured, not listened to (final/vo/takes.json voice_separation): listen to them against every role it shares a scene with before any take is approved.",
       "casting_source": "new role in the final script"
     },
     "ADULT VILLAGER": {
@@ -1007,7 +1007,7 @@
       "audition_line": "X14-01",
       "human_recording_priority": 4,
       "why": "Blend of two allowed male voices whose roles speak only in Verdor (ROYAL MESSENGER, GROUND KEEPER), a semitone down.",
-      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "audition_status": "NOT AUDITIONED BY EAR. Its final takes exist (final/vo/, made 2026-10-18 by final/tools/make_final_vo.py) but were only measured, not listened to (final/vo/takes.json voice_separation): listen to them against every role it shares a scene with before any take is approved.",
       "casting_source": "recast for the final script (was af_jessica in ../voices.json)"
     },
     "CHILD": {
@@ -1202,7 +1202,7 @@
       "audition_line": "X14-08",
       "human_recording_priority": 4,
       "why": "bf_isabella is an unused allowed voice; slowed and lowered for age.",
-      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "audition_status": "NOT AUDITIONED BY EAR. Its final takes exist (final/vo/, made 2026-10-18 by final/tools/make_final_vo.py) but were only measured, not listened to (final/vo/takes.json voice_separation): listen to them against every role it shares a scene with before any take is approved.",
       "casting_source": "new role in the final script"
     },
     "INSTRUCTOR": {
@@ -1241,7 +1241,7 @@
       "audition_line": "X16-02",
       "human_recording_priority": 5,
       "why": "Blend of two allowed male voices used only in Cling (WATCHMAN, GUARD CAPTAIN); he speaks once, at the Verdor harbor.",
-      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "audition_status": "NOT AUDITIONED BY EAR. Its final takes exist (final/vo/, made 2026-10-18 by final/tools/make_final_vo.py) but were only measured, not listened to (final/vo/takes.json voice_separation): listen to them against every role it shares a scene with before any take is approved.",
       "casting_source": "new role in the final script"
     },
     "PARTNER": {
@@ -1270,7 +1270,7 @@
       "audition_line": "R11-01",
       "human_recording_priority": 4,
       "why": "af_sarah is an unused allowed voice and differs from the PARENT (af_aoede), the other mother in the square.",
-      "audition_status": "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved.",
+      "audition_status": "NOT AUDITIONED BY EAR. Its final takes exist (final/vo/, made 2026-10-18 by final/tools/make_final_vo.py) but were only measured, not listened to (final/vo/takes.json voice_separation): listen to them against every role it shares a scene with before any take is approved.",
       "casting_source": "new role in the final script"
     },
     "KING OF CLING": {
@@ -1405,7 +1405,7 @@
       "original": false,
       "type": "approved_exact",
       "how": "Speak byte-exact: Daxtyn approved this wording on 2026-10-18 (CHANGED C8b). The old wording \"Why couldn't I get a Bashion?\" (his [ORIGINAL] line) is not recorded. The subtitle text never changes.",
-      "preview_take": "OUT OF DATE: preview/vo/takes.json has a take of the old wording. Make a new take of this wording before the line is used in the final animatic."
+      "preview_take": "preview/vo/takes.json still has a take of the OLD wording: do not use it. The final take final/vo/L048.wav (made 2026-10-18) speaks this wording."
     },
     "L020": {
       "speaker": "ABBY",
@@ -1764,7 +1764,7 @@
       "text": "The miller's wife had flour to sell and sold it twice a day, and the miller never asked her why the baker came to stay.",
       "original": false,
       "type": "sung",
-      "how": "Kokoro cannot sing. Record this line with a person (recommended), or use a spoken-rhythm TTS take labelled TEMP in the animatic. The tune is newly written for the series; no existing song may be used."
+      "how": "Kokoro cannot sing. Record this line with a person (recommended), or use a spoken-rhythm TTS take labelled TEMP in the animatic. The tune is newly written for the series; no existing song may be used. Until a person records it, the final takes have a spoken-rhythm stand-in, final/vo/<line id>.PLACEHOLDER.wav (made 2026-10-18; not a performance)."
     },
     "X22-07": {
       "speaker": "OLD WOMAN",
@@ -1800,7 +1800,7 @@
       "original": false,
       "type": "approved_exact",
       "how": "Speak byte-exact: Daxtyn approved this wording on 2026-10-18 (CHANGED C9). The old wording \"Nightwings are faster. More versatile.\" is not recorded. The subtitle text never changes.",
-      "preview_take": "OUT OF DATE: preview/vo/takes.json has a take of the old wording. Make a new take of this wording before the line is used in the final animatic."
+      "preview_take": "preview/vo/takes.json still has a take of the OLD wording: do not use it. The final take final/vo/L053.wav (made 2026-10-18) speaks this wording."
     },
     "L054": {
       "speaker": "ABBY",
@@ -1808,7 +1808,7 @@
       "original": false,
       "type": "approved_exact",
       "how": "Speak byte-exact: Daxtyn approved this wording on 2026-10-18 (CHANGED C9). The old wording \"And Bashions?\" is not recorded. The subtitle text never changes.",
-      "preview_take": "OUT OF DATE: preview/vo/takes.json has a take of the old wording. Make a new take of this wording before the line is used in the final animatic."
+      "preview_take": "preview/vo/takes.json still has a take of the OLD wording: do not use it. The final take final/vo/L054.wav (made 2026-10-18) speaks this wording."
     },
     "L109": {
       "speaker": "REMI",

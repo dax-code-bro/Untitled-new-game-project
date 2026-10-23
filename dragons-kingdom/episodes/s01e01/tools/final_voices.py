@@ -94,7 +94,7 @@ PRESET_HOW = {
     "quiet": "Speed x0.95, -4 to -6 dB in the mix, close and dry. Kokoro has no 'quiet' control; the level and closeness carry it.",
     "raised_voice": "As L070 in ../voices.json: speed x1.08, +3 dB presence at 2-4 kHz, gentle saturation, +3 to +4 dB in the mix; let the wind, the crowd or the music partly cover it.",
     "pain": "As L072 in ../voices.json: a breath before the line, breathy and shaky, slightly higher pitch, narrower tone.",
-    "sung": "Kokoro cannot sing. Record this line with a person (recommended), or use a spoken-rhythm TTS take labelled TEMP in the animatic. The tune is newly written for the series; no existing song may be used.",
+    "sung": "Kokoro cannot sing. Record this line with a person (recommended), or use a spoken-rhythm TTS take labelled TEMP in the animatic. The tune is newly written for the series; no existing song may be used. Until a person records it, the final takes have a spoken-rhythm stand-in, final/vo/<line id>.PLACEHOLDER.wav (made 2026-10-18; not a performance).",
 }
 # DRAGONS.md: no species, every dragon is its own design. Replaces ../voices.json creature_vocals[*].species.
 DESIGN = {
@@ -181,7 +181,7 @@ def build():
             r.update([("gender_basis", spec["gender_basis"]), ("direction", spec["direction"]), ("primary", primary),
                       ("license", LICENSE), ("audition_line", max(xs, key=lambda x: x["words"])["id"]),
                       ("human_recording_priority", spec["priority"]), ("why", spec["why"]),
-                      ("audition_status", "NOT AUDITIONED. Generate the audition line and compare it with every role it shares a scene with before any take is approved."),
+                      ("audition_status", "NOT AUDITIONED BY EAR. Its final takes exist (final/vo/, made 2026-10-18 by final/tools/make_final_vo.py) but were only measured, not listened to (final/vo/takes.json voice_separation): listen to them against every role it shares a scene with before any take is approved."),
                       ("casting_source", "recast for the final script (was af_jessica in ../voices.json)" if name in RECAST else "new role in the final script")])
         key = (r["primary"]["voice"], r["primary"].get("pitch_semitones", 0.0))
         if key in used:
@@ -227,8 +227,8 @@ def build():
             special[x["id"]] = OrderedDict([("speaker", x["speaker"]), ("text", x["text"]), ("original", False), ("type", "approved_exact"),
                                            ("how", APPROVED_HOW % (x["creator_approved"], x["changed_by"], x["was_text"], ""))])
         if x["creator_approved"] and x["id"] in old_takes and old_takes[x["id"]]["text"] != x["text"]:
-            special[x["id"]]["preview_take"] = ("OUT OF DATE: preview/vo/takes.json has a take of the old wording. Make a new take of "
-                                                "this wording before the line is used in the final animatic.")
+            special[x["id"]]["preview_take"] = ("preview/vo/takes.json still has a take of the OLD wording: do not use it. The final take "
+                                                "final/vo/%s.wav (made 2026-10-18) speaks this wording." % x["id"])
     for x in lines:
         if x["pending"]:
             special.setdefault(x["id"], OrderedDict([("speaker", x["speaker"]), ("text", x["text"]), ("original", x["original"])]))
@@ -260,7 +260,7 @@ def build():
     out = OrderedDict([
         ("schema", "dragons-kingdom/voices v0.2 (final script)"),
         ("episode", "S01E01"), ("series", "Dragon's Kingdom"),
-        ("status", "PROVISIONAL casting for the locked shooting script. Nothing here is approved by Daxtyn. No final dialogue has been recorded. The 18 handoff roles keep their ../voices.json voices, except the ADULT VILLAGER (recast, see his entry); the 8 new roles are cast here and have not been auditioned."),
+        ("status", "PROVISIONAL casting for the locked shooting script. Nothing here is approved by Daxtyn. No person has recorded any line. Computer-voice takes of every spoken line exist in final/vo/ (made 2026-10-18 by final/tools/make_final_vo.py: 384 takes and 5 placeholders, 389 files, not in git); they were measured, not listened to, and none is approved. The 18 handoff roles keep their ../voices.json voices, except the ADULT VILLAGER (recast, see his entry); the 8 new roles are cast here and have not been auditioned by ear."),
         ("generated_by", "episodes/s01e01/tools/final_voices.py"),
         ("source", OrderedDict([("dialogue", "episodes/s01e01/final/dialogue.json"), ("dialogue_source_sha256", dl["source_sha256"]),
                                 ("casting_base", "episodes/s01e01/voices.json"), ("preview_takes", "episodes/s01e01/preview/vo/takes.json")])),
