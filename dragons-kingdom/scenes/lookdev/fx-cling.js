@@ -105,7 +105,6 @@ export async function setup(ctx) {
   await fx.debris.boards({ at: [-5.5, 0.7, 1.8], dir: [1, 0.1, 0.35], t0: STRIKE + 1.1, count: 5, speed: 11, seed: 5, walls });
   // R15-01: blood running out from under the wreckage, along the joints of the paving
   const pool = fx.blood.pool({ at: [2.3, 0, -0.9], t0: STRIKE + 3, radius: 1.0, tau: 10, src: [0.1, -0.35], joints: { cell: 0.1, width: 0.012, pattern: 'cobbles' }, seed: 5, target: g });
-  console.warn('[fx-cling] pool ' + JSON.stringify({ ssr: pool.ssr, meshes: pool.meshes.map((m) => [m.name, !!m.userData.dkLate, !!m.material.userData.dkLateUniforms]) }));
   // R16b-01: the long dark smear down a house front (a body slid down the stone from 2.2 m)
   const front = [];
   set.traverse((m) => { if (m.isMesh && /stone/i.test(m.name)) front.push(m); });

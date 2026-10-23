@@ -52,14 +52,22 @@ export class FireJet extends Effect {
       max: maxF, mode: 'flame', name: 'fx-fire-flames', soft: 0.3, conserve: false,
       // optically thick: each tongue shows the flame's own radiance (gain x palette) and covers
       // what is behind it; `occlusion` < 1 lets some background through (thinner, cleaner fire)
-      shading: { coreC: this.P.core, bodyC: this.P.body, edgeC: this.P.edge, gain: (o.radiance ?? 0.9) * this.gain, sigma: o.sigma ?? 1.4, occlusion: o.occlusion ?? 0.85 * Math.min(1, this.P.smokeAmt + 0.3), soot: 1, noiseScale: 2.2, noiseAmt: 1.2, evolve: 2.5, edge: 0.5 },
+      // (a sooty, fuel-rich fire is optically thick and creased; a hot clean one - Leaf's - is
+      // more transparent, smoother and glows: occlusion / crease follow the palette's soot)
+      shading: {
+        coreC: this.P.core, bodyC: this.P.body, edgeC: this.P.edge, gain: (o.radiance ?? 0.7) * this.gain, sigma: o.sigma ?? (0.8 + 0.6 * clamp(this.P.smokeAmt, 0, 1)),
+        occlusion: o.occlusion ?? (0.3 + 0.5 * clamp(this.P.smokeAmt, 0, 1)), crease: o.crease ?? (0.12 + 0.33 * clamp(this.P.smokeAmt, 0, 1)), stretch: 0.4,
+        heatK: o.heatK ?? (this.P.smokeAmt < 0.7 ? 0.8 : 1),
+        soot: 1, noiseScale: 2.2, noiseAmt: 1.2, evolve: 2.5, edge: 0.5,
+      },
     }));
-    // soot: each burnt-out packet of fuel becomes smoke that rises and drifts
-    this.smokeRate = (o.smokeRate ?? 160) * Math.sqrt(fx.tier.particles);
-    this.smokeLife = o.smokeLife ?? 2.8;
+    // soot: burning-out fuel along the second half of the stream rolls off its top as black smoke
+    // that climbs fast (hot) and spreads - many small puffs, torn edges, never one smooth ball
+    this.smokeRate = (o.smokeRate ?? 260) * Math.sqrt(fx.tier.particles);
+    this.smokeLife = o.smokeLife ?? 3.2;
     this.smoke = o.smoke === false ? null : this.layer(new ParticleLayer(fx, {
-      max: Math.ceil(this.smokeRate * this.smokeLife) + 8, mode: 'puff', name: 'fx-fire-smoke', soft: 0.6,
-      shading: { albedo: this.P.smoke.map((c) => Math.max(c, 0.02) * 1.6), ms: 0.2, sigma: 2.2 * this.P.smokeAmt, g: 0.45, noiseScale: 1.3, noiseAmt: 1.1, evolve: 0.6, billow: 0.7, edge: 0.65 },
+      max: Math.ceil(this.smokeRate * (this.smokeLife + this.life)) + 8, mode: 'puff', name: 'fx-fire-smoke', soft: 0.6,
+      shading: { albedo: this.P.smoke.map((c) => Math.max(c, 0.02) * 1.6), ms: 0.2, sigma: 2.0 * this.P.smokeAmt, g: 0.45, noiseScale: 1.6, noiseAmt: 1.45, evolve: 0.8, billow: 0.75, edge: 0.75 },
     }));
     // embers thrown from the stream
     this.emberRate = (o.emberRate ?? 90) * fx.tier.particles;
@@ -122,7 +130,8 @@ export class FireJet extends Effect {
     const rise = 0.14 * L * f * f;
     for (let k = 0; k < 3; k++) out[k] = O[k] + D[k] * x + s[k] * (Math.cos(ang) * rad + tx) + u[k] * (Math.sin(ang) * rad + ty);
     out[1] += rise;
-    let r = (0.025 * L + 0.34 * W * Math.pow(f, 1.15)) * (0.5 + 0.9 * h(3) * h(3));
+    // (a narrow rod of burning fuel at the mouth, blooming within the first tenth of its life)
+    let r = (0.012 * L + 0.013 * L * smoothstep(0, 0.12, f) + 0.34 * W * Math.pow(f, 1.15)) * (0.5 + 0.9 * h(3) * h(3));
     // surges: tongues bunch into billows with thinner necks between them
     r *= 0.6 + 0.8 * (0.5 + 0.5 * Math.sin(xf * 8.5 - te * 13.0 + this.seed));
     // the stream splashes along the ground where it hits it
@@ -171,21 +180,23 @@ export class FireJet extends Effect {
       for (let k = k0; k <= k1; k++) {
         const te = this.t0 + (k + hash01(this.seed, k, 19)) / this.smokeRate;
         if (te > tb || te > this.t1) continue;
+        const h = (m) => hash01(this.seed * 313, k, m);
         const F = frameAt(te);
-        const ab = tb - te - this.life * 0.7;
+        const f0 = 0.45 + 0.5 * h(5);                          // where along the stream it rolls off
+        const ab = tb - te - this.life * f0;
         if (ab < 0 || ab > this.smokeLife) continue;
         const start = [0, 0, 0];
-        const [r0] = this.packet(k * 7 + 3, te, this.life * 0.7, F, start);
+        const [r0] = this.packet(k * 7 + 3, te, this.life * f0, F, start);
+        start[1] += r0 * 0.55;                                 // off the top of the flame
         const sp = (a, out) => {
-          const h = (m) => hash01(this.seed * 313, k, m);
-          ballistic(start, [0, 0, 0], [0, 0, 0], 1, fx.wind, a, out);
-          out[1] += 3.2 * (1 - Math.exp(-a / 1.2)) * (0.6 + 0.8 * h(0));
-          out[0] += noise1(a * 0.8 + h(1) * 40, this.seed + 11) * (0.3 + a) * this.W * 0.3;
-          out[2] += noise1(a * 0.8 + h(2) * 40, this.seed + 12) * (0.3 + a) * this.W * 0.3;
+          ballistic(start, [F.D[0] * 3, 0, F.D[2] * 3], [0, 0, 0], 1.6, fx.wind, a, out);
+          out[1] += 4.8 * (1 - Math.exp(-a / 1.1)) * (0.6 + 0.8 * h(0)) + 0.6 * a;
+          out[0] += noise1(a * 0.9 + h(1) * 40, this.seed + 11) * (0.3 + a) * this.W * 0.35;
+          out[2] += noise1(a * 0.9 + h(2) * 40, this.seed + 12) * (0.3 + a) * this.W * 0.35;
         };
-        sp(Math.max(0, ta - te - this.life * 0.7), pa); sp(ab, pb);
-        const size = r0 * (0.8 + 1.5 * Math.sqrt(ab));
-        const dens = smoothstep(0, 0.2, ab) * (1 - smoothstep(this.smokeLife * 0.4, this.smokeLife, ab)) * 0.6;
+        sp(Math.max(0, ta - te - this.life * f0), pa); sp(ab, pb);
+        const size = r0 * (0.45 + 0.35 * h(3)) * (0.7 + 1.5 * Math.sqrt(ab));
+        const dens = smoothstep(0, 0.15, ab) * (1 - smoothstep(this.smokeLife * 0.35, this.smokeLife, ab)) / (1 + 0.5 * ab) * 0.55;
         this.smoke.push(pa, pb, size, hash01(k, 8) * 6.28, dens, (k % 977) / 977, ab / this.smokeLife, [1, 1, 1]);
       }
     }

@@ -272,7 +272,7 @@ void main() {
 // (core / body / edge, the canon fire colours) or a blackbody ramp; additive. vD.a = heat (0..1.4)
 const FRAG_FLAME = FRAG_COMMON + /* glsl */`
 uniform vec3 uCoreC, uBodyC, uEdgeC;
-uniform float uGain, uNoiseScale, uNoiseAmt, uEvolve, uEdge, uSoot, uOcc, uSigma;
+uniform float uGain, uNoiseScale, uNoiseAmt, uEvolve, uEdge, uSoot, uOcc, uSigma, uStretchN, uCrease, uHeatK;
 void main() {
   vec2 q = fxCapsule();
   float d2 = dot(q, q);
@@ -283,7 +283,12 @@ void main() {
   // coordinate printed straight hatching along every fast tongue)
   float qx = uOcc > 0.0 ? mix(q.x, vQ.x, 0.5) : q.x;
   vec3 pw = vCenterW + (vAxW * qx + vAyW * q.y) * vR + vToCamW * zs * vR * 0.5;
-  vec3 np = (pw - vCenterW) / vR * uNoiseScale + vec3(seed * 13.17, seed * 7.31, seed * 3.77) + vec3(0.0, -age * uEvolve, age * uEvolve * 0.37);
+  // gas is drawn out by the flow: structure stretched ~2.5x along the tongue (an isotropic noise
+  // printed a cracked-mud network of cells over the whole jet), and it streams along it with age
+  vec3 dw = (pw - vCenterW) / vR;
+  float al = dot(dw, vAxW);
+  dw += vAxW * (al * (uStretchN - 1.0) - age * uEvolve * 0.8);
+  vec3 np = dw * uNoiseScale + vec3(seed * 13.17, seed * 7.31, seed * 3.77) + vec3(0.0, -age * uEvolve, age * uEvolve * 0.37);
   vec4 n = texture(uNoise, np * 0.25);
   vec4 n2 = texture(uNoise, np * 0.71 + 0.37);
   float dr = sqrt(d2);
@@ -307,9 +312,13 @@ void main() {
     // piled-up tongues converge to the flame's own radiance instead of adding up to a white
     // beam, and cool, sooty creases between billows read dark against the sky.
     float a = (1.0 - exp(-tau * uSigma)) * smoothstep(1.0, 0.55, dr);
-    // contrast of a real flame: billow middles burn hot, the folds between them cool to deep
-    // red and sooty brown; the hottest (youngest) gas near the mouth glares yellow-white
-    float hb = heat * mix(0.45, 1.25, smoothstep(0.3, 0.75, n.g * 0.7 + n2.r * 0.5));
+    // contrast of a real flame: billow middles burn hot, the folds between them a little cooler
+    // (deeper orange, not brown: inside the fire everything is still glowing); only where the gas
+    // has cooled - old packets, the outer rim - do the folds go to dark red and soot. The hottest
+    // (youngest) gas near the mouth glares yellow-white.
+    float bil = smoothstep(0.3, 0.75, n.r * 0.6 + n2.b * 0.3 + n.g * 0.35);
+    float cool = smoothstep(0.75, 0.2, vD.a) + smoothstep(0.6, 1.0, dr) * 0.6;
+    float hb = heat * uHeatK * mix(0.75 - uCrease * (0.4 + 0.5 * clamp(cool, 0.0, 1.0)), 1.2, bil);
     vec3 c2 = hb > 0.55 ? mix(uBodyC, uCoreC, clamp((hb - 0.55) / 0.45, 0.0, 1.0)) : mix(uEdgeC * 0.6, uBodyC, clamp(hb / 0.55, 0.0, 1.0));
     c2 *= smoothstep(0.08, 0.4, hb) * (1.0 + 1.6 * max(0.0, hb - 1.0));
     float soot = (1.0 - smoothstep(0.05, 0.5, hb)) * uSoot;
@@ -420,7 +429,7 @@ export class ParticleLayer {
       uEmissive: { value: s.emissive ?? 0 }, uMS: { value: s.ms ?? 0.5 }, uEmitCol: { value: v3(s.emitCol, [1, 0.4, 0.1]) }, uSunScale: { value: s.sunScale ?? 1 },
       uGloss: { value: s.gloss ?? 120 }, uGain: { value: s.gain ?? 1 }, uCore: { value: s.core ?? 0 },
       uCoreC: { value: v3(s.coreC, [1.0, 0.5, 0.09]) }, uBodyC: { value: v3(s.bodyC, [1.0, 0.27, 0.025]) }, uEdgeC: { value: v3(s.edgeC, [0.75, 0.07, 0.01]) },
-      uSoot: { value: s.soot ?? 0 }, uShimmer: { value: s.shimmer ?? 1 }, uTimeS: { value: 0 }, uOcc: { value: s.occlusion ?? 0 },
+      uSoot: { value: s.soot ?? 0 }, uStretchN: { value: s.stretch ?? 0.4 }, uCrease: { value: s.crease ?? 0.45 }, uHeatK: { value: s.heatK ?? 1 }, uShimmer: { value: s.shimmer ?? 1 }, uTimeS: { value: 0 }, uOcc: { value: s.occlusion ?? 0 },
     };
     this.uniforms = uniforms;
     const blend = o.blending || (this.mode === 'glow' || (this.mode === 'flame' && !(s.occlusion > 0)) ? 'additive' : 'premult');
