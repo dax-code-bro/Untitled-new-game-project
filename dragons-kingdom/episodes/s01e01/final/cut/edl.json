@@ -56,12 +56,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 1.84,
-    "k4_cpu_s_per_frame": 13.72,
-    "k4_gpu_s_per_frame": 13.72,
-    "draft_minutes": 4.41,
-    "k4_cpu_hours": 0.55,
-    "k4_gpu_hours": 0.55,
+    "draft_s_per_frame": 5.18,
+    "k4_cpu_s_per_frame": 38.69,
+    "k4_gpu_s_per_frame": 38.69,
+    "draft_minutes": 12.43,
+    "k4_cpu_hours": 1.55,
+    "k4_gpu_hours": 1.55,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -70,7 +70,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "MEASURED: F1 draft ~1.7 s/f (velocity, 2026-10-23), 4K 12.7 s/f (README); x 1.08 for the shot's content"
+    "basis": "MEASURED draft 5.18 s/f on this machine; 4K = draft x 7.47 (the set's 4K/draft ratio: MEASURED: F1 draft ~1.7 s/f (velocity, 2026-10-23), 4K 12.7 s/f (README))"
    },
    "staging": "NONE: low over the water, the pale sky in the moving swell; fade in from black.",
    "deviation": null,
@@ -181,12 +181,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 2.5,
-    "k4_cpu_s_per_frame": 18.65,
-    "k4_gpu_s_per_frame": 18.65,
-    "draft_minutes": 11.49,
-    "k4_cpu_hours": 1.43,
-    "k4_gpu_hours": 1.43,
+    "draft_s_per_frame": 7.1,
+    "k4_cpu_s_per_frame": 53.03,
+    "k4_gpu_s_per_frame": 53.03,
+    "draft_minutes": 32.65,
+    "k4_cpu_hours": 4.07,
+    "k4_gpu_hours": 4.07,
     "factors": {
      "people": 1.36,
      "creatures": 1,
@@ -195,7 +195,7 @@
      "move": 1.08,
      "total": 1.47
     },
-    "basis": "MEASURED: F1 draft ~1.7 s/f (velocity, 2026-10-23), 4K 12.7 s/f (README); x 1.47 for the shot's content"
+    "basis": "MEASURED draft 7.1 s/f on this machine; 4K = draft x 7.47 (the set's 4K/draft ratio: MEASURED: F1 draft ~1.7 s/f (velocity, 2026-10-23), 4K 12.7 s/f (README))"
    },
    "staging": "WIDE: toward the island in its cloud cap; the vessel crosses the left foreground, small.",
    "deviation": null,
@@ -1499,12 +1499,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.68,
-    "k4_cpu_s_per_frame": 42,
-    "k4_gpu_s_per_frame": 42,
-    "draft_minutes": 8.09,
-    "k4_cpu_hours": 1.54,
-    "k4_gpu_hours": 1.54,
+    "draft_s_per_frame": 4.93,
+    "k4_cpu_s_per_frame": 56.35,
+    "k4_gpu_s_per_frame": 56.35,
+    "draft_minutes": 10.85,
+    "k4_cpu_hours": 2.07,
+    "k4_gpu_hours": 2.07,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1513,7 +1513,7 @@
      "move": 1,
      "total": 1.05
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.05 for the shot's content"
+    "basis": "MEASURED draft 4.93 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "NONE: macro on the shell; the crack runs on from the old fracture and stops.",
    "deviation": null,
@@ -1545,12 +1545,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.66,
-    "k4_cpu_s_per_frame": 53.22,
-    "k4_gpu_s_per_frame": 53.22,
-    "draft_minutes": 11.18,
-    "k4_cpu_hours": 2.13,
-    "k4_gpu_hours": 2.13,
+    "draft_s_per_frame": 3.89,
+    "k4_cpu_s_per_frame": 44.42,
+    "k4_gpu_s_per_frame": 44.42,
+    "draft_minutes": 9.33,
+    "k4_cpu_hours": 1.78,
+    "k4_gpu_hours": 1.78,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -1559,7 +1559,7 @@
      "move": 1.08,
      "total": 1.33
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.33 for the shot's content"
+    "basis": "MEASURED draft 3.89 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "WIDE: the attendant small, turned to the nest.",
    "deviation": null,
@@ -1591,12 +1591,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 2.49,
-    "k4_cpu_s_per_frame": 31.15,
-    "k4_gpu_s_per_frame": 31.15,
-    "draft_minutes": 4.49,
-    "k4_cpu_hours": 0.93,
-    "k4_gpu_hours": 0.93,
+    "draft_s_per_frame": 6.54,
+    "k4_cpu_s_per_frame": 81.75,
+    "k4_gpu_s_per_frame": 81.75,
+    "draft_minutes": 11.77,
+    "k4_cpu_hours": 2.45,
+    "k4_gpu_hours": 2.45,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -1605,7 +1605,7 @@
      "move": 1.08,
      "total": 1.25
     },
-    "basis": "ESTIMATE: masonry interior, 1-3 people; x 1.25 for the shot's content"
+    "basis": "MEASURED draft 6.54 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-3 people)"
    },
    "staging": "BACK + WIDE: followed from behind, small in frame; she hurries out of the chamber door and along the corridor, then breaks into a run.",
    "deviation": null,
@@ -1842,12 +1842,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 2.63,
-    "k4_cpu_s_per_frame": 32.86,
-    "k4_gpu_s_per_frame": 32.86,
-    "draft_minutes": 4.21,
-    "k4_cpu_hours": 0.88,
-    "k4_gpu_hours": 0.88,
+    "draft_s_per_frame": 9.26,
+    "k4_cpu_s_per_frame": 115.74,
+    "k4_gpu_s_per_frame": 115.74,
+    "draft_minutes": 14.81,
+    "k4_cpu_hours": 3.09,
+    "k4_gpu_hours": 3.09,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -1856,7 +1856,7 @@
      "move": 1,
      "total": 1.31
     },
-    "basis": "ESTIMATE: masonry interior, 1-2 people, sea through the window; x 1.31 for the shot's content"
+    "basis": "MEASURED draft 9.26 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-2 people, sea through the window)"
    },
    "staging": "OTS + DOF: over Alexandria's right shoulder (her face out of frame); the young attendant small and soft in the doorway, backlit by the passage lamp; Alexandria goes to the door.",
    "deviation": null,
@@ -1888,12 +1888,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 2.84,
-    "k4_cpu_s_per_frame": 35.49,
-    "k4_gpu_s_per_frame": 35.49,
-    "draft_minutes": 4.54,
-    "k4_cpu_hours": 0.95,
-    "k4_gpu_hours": 0.95,
+    "draft_s_per_frame": 6.91,
+    "k4_cpu_s_per_frame": 86.43,
+    "k4_gpu_s_per_frame": 86.43,
+    "draft_minutes": 11.06,
+    "k4_cpu_hours": 2.3,
+    "k4_gpu_hours": 2.3,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -1902,7 +1902,7 @@
      "move": 1.08,
      "total": 1.42
     },
-    "basis": "ESTIMATE: masonry interior, 1-3 people; x 1.42 for the shot's content"
+    "basis": "MEASURED draft 6.91 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-3 people)"
    },
    "staging": "BACK: tracking alongside, three-quarter behind her right shoulder; the young attendant falls behind.",
    "deviation": null,
@@ -1934,12 +1934,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 2.31,
-    "k4_cpu_s_per_frame": 28.84,
-    "k4_gpu_s_per_frame": 28.84,
-    "draft_minutes": 3.23,
-    "k4_cpu_hours": 0.67,
-    "k4_gpu_hours": 0.67,
+    "draft_s_per_frame": 5.6,
+    "k4_cpu_s_per_frame": 70.04,
+    "k4_gpu_s_per_frame": 70.04,
+    "draft_minutes": 7.84,
+    "k4_cpu_hours": 1.63,
+    "k4_gpu_hours": 1.63,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -1948,7 +1948,7 @@
      "move": 1,
      "total": 1.15
     },
-    "basis": "ESTIMATE: masonry interior, 1-3 people; x 1.15 for the shot's content"
+    "basis": "MEASURED draft 5.6 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-3 people)"
    },
    "staging": "BACK: three-quarter behind her; the composure beat is in her shoulders and breath; she goes in.",
    "deviation": "The shot list asks for her face at the door (the composure beat); faces are not approved and lip-sync does not exist yet, so the beat is played on her back and shoulders (a slow exhale, the head settling) as the preview staged its face beats.",
@@ -1980,12 +1980,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.69,
-    "k4_cpu_s_per_frame": 53.64,
-    "k4_gpu_s_per_frame": 53.64,
-    "draft_minutes": 9.39,
-    "k4_cpu_hours": 1.79,
-    "k4_gpu_hours": 1.79,
+    "draft_s_per_frame": 6.92,
+    "k4_cpu_s_per_frame": 79.05,
+    "k4_gpu_s_per_frame": 79.05,
+    "draft_minutes": 13.83,
+    "k4_cpu_hours": 2.64,
+    "k4_gpu_hours": 2.64,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -1994,7 +1994,7 @@
      "move": 1,
      "total": 1.34
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.34 for the shot's content"
+    "basis": "MEASURED draft 6.92 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "BACK + SIL: the attendant from behind (soft), Alexandria a dark shape in the bright doorway; the raised hand reads as a shape.",
    "deviation": null,
@@ -2179,12 +2179,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 5.07,
-    "k4_cpu_s_per_frame": 57.93,
-    "k4_gpu_s_per_frame": 57.93,
-    "draft_minutes": 17.24,
-    "k4_cpu_hours": 3.28,
-    "k4_gpu_hours": 3.28,
+    "draft_s_per_frame": 6.94,
+    "k4_cpu_s_per_frame": 79.35,
+    "k4_gpu_s_per_frame": 79.35,
+    "draft_minutes": 23.61,
+    "k4_cpu_hours": 4.5,
+    "k4_gpu_hours": 4.5,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2193,7 +2193,7 @@
      "move": 1.08,
      "total": 1.45
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.45 for the shot's content"
+    "basis": "MEASURED draft 6.94 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "DOF: the egg sharp in the foreground; both women soft behind it at either side (mouths unreadable).",
    "deviation": null,
@@ -2774,7 +2774,7 @@
     },
     "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
    },
-   "staging": "BACK + SIL: her lost profile from behind-right, rim-lit by the shaft; the cheek line hides the lips. Hold after the line.",
+   "staging": "BACK: from behind her left shoulder (the solver opens to 35 mm in the corner): she bends to the hatchling, her face turned away down into frame; the whisper plays on her back. Hold after the line.",
    "deviation": null,
    "action": "She whispers the ORIGINAL line, for the hatchling not the room. HOLD on her face for a beat after the line.",
    "need": {
@@ -4601,12 +4601,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 2.84,
-    "k4_cpu_s_per_frame": 35.49,
-    "k4_gpu_s_per_frame": 35.49,
-    "draft_minutes": 4.54,
-    "k4_cpu_hours": 0.95,
-    "k4_gpu_hours": 0.95,
+    "draft_s_per_frame": 10.04,
+    "k4_cpu_s_per_frame": 125.5,
+    "k4_gpu_s_per_frame": 125.5,
+    "draft_minutes": 16.06,
+    "k4_cpu_hours": 3.35,
+    "k4_gpu_hours": 3.35,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -4615,7 +4615,7 @@
      "move": 1.08,
      "total": 1.42
     },
-    "basis": "ESTIMATE: masonry interior, 1-3 people; x 1.42 for the shot's content"
+    "basis": "MEASURED draft 10.04 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-3 people)"
    },
    "staging": "BACK + SIL: from behind, the two of them dark against the daylight at the end of the corridor.",
    "deviation": "The shot list asks for a backward track ahead of them (faces toward the camera); faces are not approved yet, so the camera follows from behind and they walk into the light. Swap back when faces are approved.",

@@ -62,7 +62,7 @@ export default {
     },
     '1A-02': {
       staging: 'WIDE: the attendant small, turned to the nest.',
-      cam: { rig: 'tilt', pos: [0.3, 1.75, 2.8], look: [[0, [2.4, 3.8, -0.45]], [1.0, [2.4, 3.8, -0.45]], [5.2, [-0.6, 0.75, -0.4]]], mm: 24, fstop: 2.8, focus: 'nest' },
+      cam: { rig: 'tilt', pos: [0.3, 1.75, 2.8], look: [[0, [2.4, 3.8, -0.45]], [0.7, [2.4, 3.8, -0.45]], [2.3, [1.0, 1.9, -0.4]], [3.8, [-0.15, 0.72, -0.62]]], mm: 24, fstop: 2.8, focus: 'nest' },
       cast: { attendant: { at: ATT, face: 'egg', look: 'egg', acts: [[3.6, 'gesture', { side: 'both', dur: 2.2 }]] } },
       set: { egg: 'closed', crack: 1 },
       fx: [FLICKER, DUST],
@@ -155,8 +155,8 @@ export default {
       cast: { alexandria: { ...seated, acts: [[0.3, 'lean', { to: 0.65, dur: 1.4 }]] }, hatchling: hatchRest() },
     },
     '1A-15': {
-      staging: 'BACK + SIL: her lost profile from behind-right, rim-lit by the shaft; the cheek line hides the lips. Hold after the line.',
-      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.12, 0.22]]], from: 66, dist: 1.25, rise: 0.02 }, mm: 65, fstop: 2, focus: 'alexandria.head', bounds: BOUNDS },
+      staging: 'BACK: from behind her left shoulder (the solver opens to 35 mm in the corner): she bends to the hatchling, her face turned away down into frame; the whisper plays on her back. Hold after the line.',
+      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.5, 0.22]], ['hatchling.head', [-0.42, -0.45]]], from: 25, height: 1.32, at: 1.6 }, mm: 65, fstop: 2, focus: 'alexandria.head', bounds: BOUNDS },
       cast: { alexandria: { ...seated, posture: { sit: 1, lean: 0.65 } }, hatchling: hatchRest() },
       lines: [['L011', 0.9]],
       minTail: 2.5,
@@ -179,7 +179,7 @@ export default {
       staging: 'SIL + WIDE: from the nest toward the door; Abby and Remi two backlit shapes in the bright doorway (reverse angle, declared).',
       cam: { rig: 'static', pos: [-0.9, 1.4, -1.45], look: [-3.6, 1.25, -1.95], mm: 35, fstop: 2.8, focus: 'door' },
       exposure: -1.0,
-      set: { door: [[0.2, 0], [0.8, 0.85]], lamps: 0.35, passage: 3.5, passLight: 0.1, passageCard: -0.12 },
+      set: { door: [[0.2, 0], [0.8, 0.85]], lamps: 0.35, passage: 3.5, passLight: 0.1, passageCard: 1.1, passageCardScale: [4, 1.5], portal: false },
       cast: {
         abby: { at: [-4.55, -1.95], face: 90, look: 'egg', acts: [[0.4, 'walk', { to: [-3.85, -1.95], speed: 0.9 }], [1.0, 'bow', { to: 0.25, dur: 0.4 }]] },
         remi: { at: [-4.7, -1.55], face: 90, look: 'egg', acts: [[0.7, 'walk', { to: [-4.15, -1.6], speed: 0.8 }]] },
@@ -203,7 +203,7 @@ export default {
     },
     '1A-21': {
       staging: 'BACK: two backs over the nest; Alexandria soft beyond.',
-      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.3, 0.3]], ['remi.head', [0.3, 0.42]]], from: 185, height: 1.55 }, mm: 40, fstop: 2, focus: 'hatchling', bounds: BOUNDS },
+      cam: { rig: 'static', pos: [-0.08, 1.85, 2.8], look: [-0.06, 0.62, 0.35], mm: 30, fstop: 2, focus: 'hatchling' },
       cast: {
         abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling' }, remi: { at: REMI_S, face: 'hatchling', look: 'hatchling' },
         alexandria: seated, hatchling: hatchRest(),
@@ -261,7 +261,7 @@ export default {
     },
     '1A-29': {
       staging: 'BACK: the sideways look reads as a head turn from behind.',
-      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.3, 0.12]], ['remi.head', [0.32, 0.42]]], from: 186, height: 1.5 }, mm: 40, fstop: 2, focus: 'remi.head', bounds: BOUNDS },
+      cam: { rig: 'static', pos: [1.25, 1.7, 2.8], look: [-0.3, 0.9, 0.95], mm: 26, fstop: 2, focus: 'remi.head' },
       cast: {
         abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 } },
         remi: { at: REMI_S, face: 'hatchling', look: 'hatchling', acts: [[0.2, 'look', { at: 'abby.head', amount: 0.9 }], [2.4, 'look', { at: 'hatchling' }]] },
@@ -299,7 +299,7 @@ export default {
         abby: { at: [-3.05, -1.95], face: 270, look: null, acts: [[0.5, 'look', { at: 'hatchling', amount: 1 }], [1.7, 'look', { at: 'doorOut', amount: 0.4 }], [2.0, 'walk', { to: [-4.7, -1.95], speed: 1.0 }]] },
         remi: { at: [-3.55, -1.65], face: 270, acts: [[1.6, 'walk', { to: [-4.8, -1.6], speed: 1.0 }]] },
       },
-      set: { door: [[0, 0.85], [3.0, 0.85], [3.8, 0.0]], lamps: 0.4, passage: 3.5, passLight: 0.1, passageCard: -0.12 },
+      set: { door: [[0, 0.85], [3.0, 0.85], [3.8, 0.0]], lamps: 0.4, passage: 3.5, passLight: 0.1, passageCard: 1.1, passageCardScale: [4, 1.5], portal: false },
     },
     '1A-33': {
       staging: 'BACK + HANDS: her hand (sharp) rests near the newborn without restraining it.',

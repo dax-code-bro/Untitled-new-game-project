@@ -76,6 +76,37 @@ function cutBox(group, names, box) {
   return removed;
 }
 
+/** Move the triangles of the given material meshes whose centroid lies in a world box into new meshes
+ *  (same material) that can be shown or hidden per shot; returns them in a group. */
+function splitBox(group, names, box) {
+  const out = new THREE.Group();
+  const found = [];
+  group.traverse((m) => { if (m.isMesh && names.some((n) => m.name.endsWith(':' + n))) found.push(m); });
+  for (const m of found) {
+    const g = m.geometry, P = g.attributes.position.array, I = g.index.array;
+    const o = m.position;
+    const keep = [], take = [];
+    for (let i = 0; i < I.length; i += 3) {
+      let cx = 0, cy = 0, cz = 0;
+      for (let k = 0; k < 3; k++) { const j = I[i + k] * 3; cx += P[j]; cy += P[j + 1]; cz += P[j + 2]; }
+      cx = cx / 3 + o.x; cy = cy / 3 + o.y; cz = cz / 3 + o.z;
+      const inBox = cx > box[0][0] && cx < box[1][0] && cy > box[0][1] && cy < box[1][1] && cz > box[0][2] && cz < box[1][2];
+      (inBox ? take : keep).push(I[i], I[i + 1], I[i + 2]);
+    }
+    if (!take.length) continue;
+    const big = g.attributes.position.count > 65535;
+    g.setIndex(new THREE.BufferAttribute(big ? new Uint32Array(keep) : new Uint16Array(keep), 1));
+    const g2 = g.clone();
+    g2.setIndex(new THREE.BufferAttribute(big ? new Uint32Array(take) : new Uint16Array(take), 1));
+    const m2 = new THREE.Mesh(g2, m.material);
+    m2.name = m.name + ':split';
+    m2.position.copy(m.position); m2.quaternion.copy(m.quaternion); m2.scale.copy(m.scale);
+    m2.castShadow = m.castShadow; m2.receiveShadow = m.receiveShadow;
+    out.add(m2);
+  }
+  return out;
+}
+
 /** linen surface height (nest-local bake rasterised into a 1 cm grid; F4's method) */
 function makeLinenY(cloth) {
   if (!cloth) return (x, z) => NEST.TOP + 0.13;
@@ -174,7 +205,10 @@ export async function build(ctx, { shotSpecs }) {
   // leaf on a hinge so it can open and close (1A-03, 1A-18, 1A-32, X2-02)
   const leafBox = [[-ROOM.w / 2 - 0.62, 0.0, DOOR_Z1 - 0.05], [-ROOM.w / 2 - 0.42, DOOR.h + 0.05, DOOR_Z0 + 0.05]];
   cutBox(room, ['oak', 'oakDark', 'iron'], leafBox);
-  scene.add(room);
+  // the dim interior portal the architecture puts behind the doorway (at the wall's outer face): its
+  // own mesh, so a shot can take it away and show the bright passage card beyond instead (set.portal)
+  const portal = splitBox(room, ['portal'], [[-ROOM.w / 2 - ROOM.T - 0.2, -0.2, DOOR_Z1 - 0.2], [-ROOM.w / 2 - ROOM.T + 0.2, DOOR.h + 0.3, DOOR_Z0 + 0.2]]);
+  scene.add(room, portal);
   const lamps = [];
   for (const l of ch.lights) { l.intensity *= 0.6; l.userData.dirScale = 1; scene.add(l); lamps.push(l); }
   const lampBase = lamps.map((l) => l.intensity);
@@ -434,8 +468,16 @@ float eh(vec3 p){p=fract(p*0.1031);p+=dot(p,p.zyx+31.32);return fract((p.x+p.y)*
       // bright card behind it, not a lamp behind the heads: skin transmits it and faces glow)
       passLight.intensity = 9 * clamp(dOpen * 2) * (st.passage ?? 1) * (st.passLight ?? 1);
       passage.material.color.setRGB(1.4, 1.35, 1.25).multiplyScalar(st.passage ?? 1);
-      // set.passageCard: the card's distance beyond the wall's outer face (default 0.9 m)
+      // set.passageCard: the card's distance beyond the wall's outer face (default 0.9 m); keep it
+      // BEHIND anyone who walks in or out through the door (a card in the tunnel cut people entering
+      // from the passage into floating pieces: 1A-18, 1A-32). set.passageCardScale: [w, h] factors
+      // (a far card must be larger to fill the opening from inside the room)
       passage.position.x = -ROOM.w / 2 - ROOM.T - (st.passageCard ?? 0.9);
+      const pcs = st.passageCardScale ?? [1, 1];
+      passage.scale.set(pcs[0], pcs[1], 1);
+      // set.portal: false takes the architecture's dim interior portal out of the doorway (it sits at
+      // the wall's outer face and hides a card further out)
+      portal.visible = st.portal !== false;
       passage.visible = dOpen > 0.01;
       fold.visible = false;
     },
