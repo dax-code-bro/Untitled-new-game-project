@@ -15,6 +15,9 @@ import { walkProfile, actorState, makePath, envelope } from '../blocking.js';
 import { indexTakes, placeLines, takeParts, mouthAt, speakerAt } from '../dialogue.js';
 import { SETS, continuityFor, sunDir } from '../registry.js';
 import { estimateShot } from '../cost.js';
+import { faceReadability } from '../audit.js';
+import { wingOutline, paintWingCloud } from '../sets/wing-cloud.js';
+import { makeNoise, smooth } from '../../sets/terrain.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');
@@ -103,5 +106,27 @@ t('shot tables and the edit list are up to date (build-shots --check)', () => {
     assert.ok(fs.existsSync(path.join(ROOT, e.src.scene_file)), `${e.job}: ${e.src.scene_file}`);
     assert.equal(e.src.start_s % 1, 0);
   }
+});
+t('audit: a frontal, large, sharp speaking face reads; turned, small or defocused ones do not', () => {
+  const lens = { focalLength: 50, fstop: 2, focus: 2, sensor: 'super35' };
+  const toCam = [0, 0, 1];
+  assert.equal(faceReadability([0, 0, 1], toCam, 2, lens).readable, true);                       // frontal, 2 m, focused
+  assert.equal(faceReadability([1, 0, 0], toCam, 2, lens).readable, false);                      // profile (90 deg)
+  assert.equal(faceReadability([0, 0, 1], toCam, 25, { ...lens, focus: 25 }).readable, false);  // small (25 m away at 50 mm)
+  assert.equal(faceReadability([0, 0, 1], toCam, 4, { ...lens, focus: 1 }).readable, false);    // far behind the focus
+  const m = faceReadability([0, 0, 1], toCam, 2, lens);
+  assert.ok(Math.abs(m.faceFrac - (240 * 50) / 2000 / 14) < 1e-9 && m.blurFrac < 1e-9);
+});
+t('wing cloud: a closed wing outline; the painter fills a soft, deterministic, non-empty card', () => {
+  const poly = wingOutline();
+  assert.ok(poly.length > 40 && poly.every((p) => p.every(Number.isFinite)));
+  const paint = () => { const N = makeNoise(77); const img = { data: new Uint8ClampedArray(96 * 48 * 4), width: 96, height: 48 }; return paintWingCloud(img, (x, y) => N.fbm(x, y, 6), smooth).data; };
+  const a = paint(), b = paint();
+  let cover = 0, edge = 0;
+  for (let i = 3; i < a.length; i += 4) { if (a[i] > 128) cover++; if (a[i] > 0 && a[i] < 200) edge++; assert.equal(a[i], b[i]); }
+  const px = a.length / 4;
+  assert.ok(cover > px * 0.15 && cover < px * 0.7, `cover ${cover}/${px}`);
+  assert.ok(edge > px * 0.05, 'soft edges');
+  assert.equal(a[3], 0, 'the corners are clear sky');
 });
 console.log(`\n${n} checks passed`);

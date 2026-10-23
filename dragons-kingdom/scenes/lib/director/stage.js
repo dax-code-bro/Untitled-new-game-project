@@ -28,6 +28,7 @@ import { actorState, actorVisible } from './blocking.js';
 import { poseHuman, poseCreature, humanRig } from './actions.js';
 import { FxRunner, loadFxLibrary } from './fx.js';
 import { mouthAt, speakerAt } from './dialogue.js';
+import { faceReadability } from './audit.js';
 
 const HUMAN_PARTS = { head: 'head', neck: 'neck02', chest: 'spine02', hips: 'root', pelvis: 'root', 'hand.L': 'wrist.L', 'hand.R': 'wrist.R', 'elbow.L': 'lowerarm01.L', 'elbow.R': 'lowerarm01.R', 'foot.L': 'foot.L', 'foot.R': 'foot.R', 'knee.L': 'lowerleg01.L', 'knee.R': 'lowerleg01.R', 'shoulder.L': 'upperarm01.L', 'shoulder.R': 'upperarm01.R' };
 const CREATURE_PARTS = { head: 'head', chest: 'thorax', hips: 'lumbar', neck: 'neck_4', tail: 'tail_6', jaw: 'jaw' };
@@ -404,14 +405,11 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
       const fwd = eyes.clone().sub(head).normalize();
       const toCam = cam.position.clone().sub(eyes);
       const dist = toCam.length();
-      const ang = (Math.acos(Math.max(-1, Math.min(1, fwd.dot(toCam.normalize())))) * 180) / Math.PI;
+      toCam.normalize();
       const ndc = eyes.clone().project(cam);
       if (ndc.z > 1 || Math.abs(ndc.x) > 1.02 || Math.abs(ndc.y) > 1.02) continue;
-      const f = L.focalLength || 35, N = L.fstop || 2.8, S0 = (L.focus || dist) * 1000, d = dist * 1000;
-      const sensorH = typeof L.sensor === 'number' ? L.sensor * 9 / 16 : ({ super35: 14.0, fullframe: 20.25, alexa65: 30.44 }[L.sensor || 'super35'] ?? 14.0);
-      const faceFrac = (240 * f) / d / sensorH;
-      const cocFrac = ((f * f) / (N * Math.max(1, S0 - f))) * (Math.abs(d - S0) / d) / sensorH;
-      const flag = ang < 70 && faceFrac > 0.06 && cocFrac < 0.006;
+      const m = faceReadability(fwd.toArray(), toCam.toArray(), dist, { focalLength: L.focalLength, fstop: L.fstop, focus: L.focus, sensor: L.sensor });
+      const ang = m.angle, faceFrac = m.faceFrac, cocFrac = m.blurFrac, flag = m.readable;
       const rec = { shot: row.job, role, t: +t.toFixed(2), angle: Math.round(ang), face: +(faceFrac * 100).toFixed(1), blur: +(cocFrac * 100).toFixed(2), flag };
       S.faceAudit = S.faceAudit || {};
       const k = `${row.job}:${role}`, prev = S.faceAudit[k];
