@@ -89,12 +89,34 @@ export class POB {
     add(new THREE.BoxGeometry(0.8, 0.05, 0.12), new THREE.MeshBasicMaterial({ color: 0x46ff8a }), cx, 1.02, sz + 0.2);
     physics.addBox([o.x + cx - 0.6, o.y, o.z + sz - 0.5], [o.x + cx + 0.6, o.y + 1.0, o.z + sz + 0.5]);
 
-    this.interact = [
+    this.baseInteract = [
       { type: 'terminal', pos: new THREE.Vector3(o.x + sx, o.y + 2.2, o.z + sz + 0.2), label: 'Use POB Terminal' },
       { type: 'deposit', pos: new THREE.Vector3(o.x + cx, o.y + 0.9, o.z + sz + 0.2), label: 'Deposit Filament' },
     ];
+    // finished prints wait on the front edge of the bed until you pick them up
+    this.trayPoint = new THREE.Vector3(o.x, o.y + 1.0, o.z + 3.9);
     this.spawn = new THREE.Vector3(o.x + 0.5, o.y, o.z + H + 8);
     this.drawScreen();
+  }
+
+  // things you can interact with (the bed only while something finished is sitting on it)
+  get interact() {
+    const tray = this.save.tray || [];
+    if (!tray.length) return this.baseInteract;
+    const name = ITEMS[tray[0].id].name;
+    return [...this.baseInteract, { type: 'pickup_print', pos: this.trayPoint, label: `Pick up ${name}${tray.length > 1 ? ` (+${tray.length - 1} more)` : ''}` }];
+  }
+
+  // take the next finished print off the bed and into the inventory; no room -> it goes to the locker
+  takePrint(inv) {
+    const tray = this.save.tray || [];
+    const it = tray.shift();
+    if (!it) return null;
+    const ok = inv.add(it);
+    if (!ok) this.save.locker.push(it);
+    if (this.trayShown === it) { this.group.remove(this.display); this.display = null; this.trayShown = null; }
+    this.hooks.persist();
+    return { item: it, ok };
   }
 
   // ---------------------------------------------------------------- queue
@@ -154,7 +176,7 @@ export class POB {
     while (q.length && now >= q[0].end) {
       const job = q.shift();
       const item = makeItem(job.id);
-      this.save.locker.push(item);
+      (this.save.tray = this.save.tray || []).push(item);
       this.hooks.onPrinted(item);
       this.hooks.persist();
     }
@@ -163,7 +185,7 @@ export class POB {
     let progress = 0;
     if (job) {
       progress = (now - job.start) / (job.end - job.start);
-      if (this.displayJob !== job) this.setDisplay(job.id);
+      if (this.displayJob !== job) { this.setDisplay(job.id); this.trayShown = null; }
       // raster the nozzle over the part at the current layer height
       const lay = this.displaySize;
       const layerY = BED + 0.05 + lay.y * progress;
@@ -174,6 +196,11 @@ export class POB {
       this.tip.visible = true;
     } else {
       if (this.display && this.displayJob) { this.group.remove(this.display); this.display = null; this.displayJob = null; }
+      // idle with a finished print waiting: show it whole on the bed, softly lit
+      const tray = this.save.tray || [];
+      if (tray.length && this.trayShown !== tray[0]) { this.setDisplay(tray[0].id); this.displayJob = null; this.trayShown = tray[0]; }
+      if (!tray.length && this.trayShown) { if (this.display) this.group.remove(this.display); this.display = null; this.trayShown = null; }
+      if (this.trayShown) { this.clip.constant = this.origin.y + 1000; }
       this.head.position.set(Math.sin(this.t * 0.3) * 0.5, HEIGHT - 3.2, 0);
       this.glow.intensity = 0;
       this.tip.visible = false;
@@ -228,10 +255,10 @@ export class POB {
       c.fillStyle = '#1e3a44'; c.fillRect(26, 170, W - 52, 26);
       c.fillStyle = '#46ffb0'; c.fillRect(26, 170, (W - 52) * Math.min(1, progress), 26);
       c.fillStyle = '#9fe8ff'; c.fillText(`${Math.floor(progress * 100)}%  ·  ${fmtDuration((job.end - Date.now()) / 1000)} left`, 26, 228);
-      c.fillText(`QUEUE: ${this.save.queue.length}  ·  LOCKER: ${this.save.locker.length}`, 26, 270);
+      c.fillText(`QUEUE: ${this.save.queue.length}  ·  ON BED: ${(this.save.tray || []).length}`, 26, 270);
     } else {
       c.fillStyle = '#6a8a94'; c.fillText('PRINTER IDLE', 26, 150);
-      c.fillText(`LOCKER: ${this.save.locker.length} items`, 26, 190);
+      c.fillText((this.save.tray || []).length ? `READY ON THE BED: ${(this.save.tray || []).length}` : `LOCKER: ${this.save.locker.length} items`, 26, 190);
       c.fillStyle = '#46ffb0'; c.fillText('[E] TOUCH TO OPEN', 26, 270);
     }
     this.screenTex.needsUpdate = true;

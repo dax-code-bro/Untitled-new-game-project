@@ -18,7 +18,8 @@ export function defaultSave() {
     version: 1,
     bank: 60,          // filament deposited at the POB
     cloth: 0,          // cloth deposited (for gun camo)
-    locker: [],        // printed / extracted items waiting at the POB
+    locker: [],        // stored items (extracted gear, prints you had no room for)
+    tray: [],          // finished prints sitting on the print bed, waiting to be picked up
     queue: [],         // print jobs {id, start, end} (Date.now timestamps)
     carry: starterKit(), // what you spawn with (only kept if you leave the game inside the safe zone)
     settings: { sens: 1, volume: 0.7 },

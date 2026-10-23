@@ -63,7 +63,7 @@ export class Game {
     const pobPoi = POIS.find((p) => p.id === 'pob');
     this.pob = new POB(scene, this.physics, pobPoi, this.save, {
       persist: () => ctx.persist(),
-      onPrinted: (it) => { this.hud.toast(`Printed: ${ITEMS[it.id].name} (in your POB locker)`, '#46ffb0', 4); this.audio.printDone(); },
+      onPrinted: (it) => { this.hud.toast(`Printed: ${ITEMS[it.id].name} — pick it up from the print bed`, '#46ffb0', 4); this.audio.printDone(); },
     });
     this.containers = [];
     for (const l of this.structures.loot) this.addLootCrate(l);
@@ -347,11 +347,25 @@ export class Game {
       if (!f) return;
       if (f.type === 'container') this.openContainer(f.c);
       else if (f.type === 'terminal') this.openUI('terminal');
+      else if (f.type === 'pickup_print') this.pickupPrint();
       else if (f.type === 'deposit') this.deposit();
       else if (f.type === 'harvest') this.harvest(f.a);
       else if (f.type === 'pickup') this.pickupProjectile(f.p);
       else if (f.type === 'extract') this.extraction.call();
     }
+  }
+
+  pickupPrint() {
+    const P = this.player;
+    const r = this.pob.takePrint(P.inv);
+    if (!r) return;
+    const name = ITEMS[r.item.id].name;
+    if (r.ok) {
+      this.hud.toast(`Picked up ${name}`, '#46ffb0', 3);
+      this.audio.pickup();
+      if (!P.held) P.refreshHeld();
+      this.saveCarry();
+    } else this.hud.toast(`No room for the ${name} — it went to your POB locker`, '#ffd23f', 4);
   }
 
   openUI(kind) {

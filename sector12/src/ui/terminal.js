@@ -65,7 +65,7 @@ export function renderTerminal(hud, game) {
         <span>${running ? `${Math.floor(p * 100)}% · ${fmtDuration((j.end - now) / 1000)} left` : `starts in ${fmtDuration((j.start - now) / 1000)}`}</span>
         <button data-tact="cancel" data-v="${i}">Cancel (refund)</button></div>`;
     }).join('') : '<p class="emptytxt">The printer is idle. Pick something in PRINT.</p>';
-    body = `<div class="tqueue">${body}</div><p class="note">Prints keep running in real time, even when you're out in the field or the game is closed. Finished items go to your locker.</p>`;
+    body = `<div class="tqueue">${body}</div><p class="note">Prints keep running in real time, even when you're out in the field or the game is closed. Finished items wait on the print bed: walk up to it and pick them up.</p>`;
   } else {
     const inv = game.player.inv;
     const locker = save.locker.map((it, i) => `<div class="lrow"><div class="nm">${esc(describeItem(it))}</div><button data-tact="take" data-v="${i}">Take</button></div>`).join('') || '<p class="emptytxt">Locker is empty.</p>';

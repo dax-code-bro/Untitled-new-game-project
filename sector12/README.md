@@ -51,7 +51,7 @@ Phones start on the Low graphics preset.
 
 1. You spawn at the POB, inside a safe zone. Take your kit out of the **LOCKER** tab on the terminal.
 2. Go out and earn filament. Operator kills pay **headshot 10, body 5, explosive or mid-air 30**. Cargo helicopters drop **caches** worth 30, 50–70 or 70–200 filament, and occasionally a **10,000-filament Abominable Cache** on the summit.
-3. Bring the filament back to the **yellow deposit crate**, then print on the touchscreen. You watch the nozzle print your item.
+3. Bring the filament back to the **yellow deposit crate**, then print on the touchscreen. You watch the nozzle print your item, then pick it up off the print bed (**E** / **USE**) and it goes straight into your inventory. If you have no room, it goes to your locker.
 4. To bank everything you carry, **extract at the very top of Frostfang Summit** in the north. Dress for -50 °C.
 5. If you die, everything you were carrying is gone.
 
