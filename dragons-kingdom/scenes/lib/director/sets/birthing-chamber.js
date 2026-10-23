@@ -193,8 +193,8 @@ export async function build(ctx, { shotSpecs }) {
   passage.position.set(-ROOM.w / 2 - ROOM.T - 0.9, 1.4, (DOOR_Z0 + DOOR_Z1) / 2);
   passage.rotation.y = Math.PI / 2;
   scene.add(passage);
-  const passLight = new THREE.PointLight(new THREE.Color(0.8, 0.85, 0.95), 0, 6, 2);
-  passLight.position.set(-ROOM.w / 2 - 0.2, 1.6, (DOOR_Z0 + DOOR_Z1) / 2);
+  const passLight = new THREE.PointLight(new THREE.Color(0.8, 0.85, 0.95), 0, 8, 2);
+  passLight.position.set(-ROOM.w / 2 - ROOM.T - 0.7, 1.9, (DOOR_Z0 + DOOR_Z1) / 2);
   scene.add(passLight);
 
   const linenY = makeLinenY(cloth);
@@ -218,16 +218,41 @@ export async function build(ctx, { shotSpecs }) {
   lamps.push(keyLamp.L);
   lampBase.push(keyLamp.base);
 
+  // the title's rim lamp (T-01): a warm lamp just out of frame behind-left of the egg
+  const titleLamp = new THREE.PointLight(new THREE.Color(1.0, 0.55, 0.22), 0, 3, 2);
+  scene.add(titleLamp);
   // ---- the egg (props library): closed (with its old fracture), cracked, opened. It stands on its
   // blunt end in the bedding (the props egg's own orientation, a slight lean); the hatchling breaks
   // out of the narrow top. 0.6 m tall: a 1 m newborn lies curled inside it.
   const vk = await verdorKit(ctx);
   const EH = 0.6;
   const eggY = linenY(EGG[0], EGG[2]) - 0.035;                     // pressed a little into the bedding
+  // the shell's look follows style frame F4 (a dark, slightly glossy, finely pitted leathery shell);
+  // the props egg's own shell material reads pale in a macro under this chamber's light
+  const shellMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.035, 0.03, 0.026), roughness: 0.62, metalness: 0, clearcoat: 0.18, clearcoatRoughness: 0.55 });
+  shellMat.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vEP;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvEP = position;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vEP;
+float eh(vec3 p){p=fract(p*0.1031);p+=dot(p,p.zyx+31.32);return fract((p.x+p.y)*p.z);}`)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{ vec3 q = vEP * 90.0; vec3 i = floor(q); vec3 f = smoothstep(0.0, 1.0, fract(q));
+  float h = mix(mix(mix(eh(i), eh(i + vec3(1,0,0)), f.x), mix(eh(i + vec3(0,1,0)), eh(i + vec3(1,1,0)), f.x), f.y),
+                mix(mix(eh(i + vec3(0,0,1)), eh(i + vec3(1,0,1)), f.x), mix(eh(i + vec3(0,1,1)), eh(i + vec3(1,1,1)), f.x), f.y), f.z);
+  vec3 dpx = dFdx(-vViewPosition), dpy = dFdy(-vViewPosition);
+  float hx = dFdx(h), hy = dFdy(h);
+  vec3 r1 = cross(dpy, normal), r2 = cross(normal, dpx);
+  float det = dot(dpx, r1);
+  normal = normalize(abs(det) * normal - sign(det) * (hx * r1 + hy * r2) * 0.0015); }`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+{ float sp = step(0.93, eh(floor(vEP * 260.0))) * 0.6 + 0.4 * eh(floor(vEP * 60.0)); diffuseColor.rgb *= 0.8 + 0.5 * sp; }`);
+  };
+  shellMat.customProgramCacheKey = () => 'dk-dir-eggshell';
   const eggs = {};
   for (const state of ['closed', 'cracked', 'opened']) {
     const g = new THREE.Group();
     const e = vk.egg({ o: new THREE.Vector3(0, 0, 0), x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) }, { state, h: EH, seed: 7 });
+    e.traverse((o) => { if (o.isMesh && o.material === vk.mats.shell) o.material = shellMat; });
     g.add(e);
     g.position.set(EGG[0], eggY, EGG[2]);
     g.rotation.set(0.05, 0.6, -0.04);
@@ -249,14 +274,28 @@ export async function build(ctx, { shotSpecs }) {
     const d = new THREE.Vector3(Math.sin(phi), 0, Math.cos(phi)).applyQuaternion(eggQ);
     return eggCentre.clone().addScaledVector(eggAxis, u * EH / 2).addScaledVector(d, r + lift);
   };
+  // the real shell surface (the props egg has noise and a lean the ellipsoid above does not know):
+  // ray-cast from outside toward the axis onto the closed egg's outer shell
+  const shellMeshes = [];
+  eggs.closed.traverse((o) => { if (o.isMesh && o.material === shellMat) shellMeshes.push(o); });
+  eggs.closed.updateMatrixWorld(true);
+  const ray = new THREE.Raycaster();
+  const eggSurf = (u, phi, lift = 0.0015) => {
+    const out = eggPoint(u, phi, 0.15);
+    const axisP = eggCentre.clone().addScaledVector(eggAxis, u * EH / 2);
+    const dir = axisP.clone().sub(out).normalize();
+    ray.set(out, dir); ray.far = 1;
+    const hit = ray.intersectObjects(shellMeshes, false)[0];
+    return hit ? hit.point.clone().addScaledVector(dir, -lift) : eggPoint(u, phi, lift);
+  };
   // the growing crack (1A-01): from the old fracture near the top, wandering toward the narrow end
   const crackMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.004, 0.003, 0.002), side: THREE.DoubleSide });
   const cpts = [];
   for (let i = 0; i <= 60; i++) {
     const s = i / 60;
     const u = 0.55 - 0.6 * s, phi = -0.25 + 0.55 * s + 0.12 * Math.sin(s * 23) + 0.05 * Math.sin(s * 71);
-    const p = eggPoint(u, phi, 0.0012);
-    const p2 = eggPoint(u + 0.01, phi, 0.0012);
+    const p = eggSurf(u, phi, 0.0012);
+    const p2 = eggSurf(u + 0.01, phi, 0.0012);
     const nrm = p.clone().sub(eggCentre).normalize();
     const sd = new THREE.Vector3().crossVectors(p2.clone().sub(p).normalize(), nrm).normalize();
     cpts.push({ p, side: sd, w: 0.0011 * (1 - 0.6 * s) });
@@ -271,7 +310,7 @@ export async function build(ctx, { shotSpecs }) {
     for (let i = 0; i <= n; i++) for (let j = 0; j <= n; j++) {
       const u = 0.42 + 0.2 * (i / n), phi = 0.1 + 0.55 * (j / n);
       const edge = Math.min(i, n - i, j, n - j);
-      const p = eggPoint(u, phi, 0.0025 + 0.0006 * (edge === 0 ? 0 : 1)).sub(eggCentre);
+      const p = eggSurf(u, phi, 0.0025 + 0.0006 * (edge === 0 ? 0 : 1)).sub(eggCentre);
       pos.push(p.x, p.y, p.z);
     }
     for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const a = i * (n + 1) + j, b = a + 1, c = a + n + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
@@ -279,7 +318,7 @@ export async function build(ctx, { shotSpecs }) {
     g.setIndex(idx); g.computeVertexNormals();
     return g;
   })();
-  const fragMat = vk.mats.shell.clone(); fragMat.side = THREE.DoubleSide;
+  const fragMat = shellMat.clone(); fragMat.side = THREE.DoubleSide; fragMat.onBeforeCompile = shellMat.onBeforeCompile; fragMat.customProgramCacheKey = () => 'dk-dir-eggshell-ds';
   const frag = new THREE.Mesh(fragGeo, fragMat);
   frag.castShadow = frag.receiveShadow = true;
   const fragPivot = new THREE.Group(); fragPivot.position.copy(eggCentre); fragPivot.add(frag); fragPivot.visible = false;
@@ -302,7 +341,7 @@ export async function build(ctx, { shotSpecs }) {
   // ---- marks (VERDOR frame)
   const bed = (x, z) => linenY(x, z);
   const marks = {
-    nest: [NEST_C[0], 0.45, NEST_C[2]], egg: eggCentre.toArray(), eggTop: eggCentre.clone().addScaledVector(eggAxis, EH * 0.47).toArray(), eggCrack: eggPoint(0.3, 0.1, 0).toArray(), eggFrag: eggPoint(0.52, 0.37, 0).toArray(),
+    nest: [NEST_C[0], 0.45, NEST_C[2]], egg: eggCentre.toArray(), eggTop: eggCentre.clone().addScaledVector(eggAxis, EH * 0.47).toArray(), eggCrack: eggSurf(0.3, 0.1, 0).toArray(), eggFrag: eggSurf(0.52, 0.37, 0).toArray(),
     door: [DOOR_C[0], 1.3, DOOR_C[2]], doorway: [DOOR_C[0] + 0.7, 0, DOOR_C[2]], doorOut: [DOOR_C[0] - 1.6, 0, DOOR_C[2]],
     window: [ROOM.w / 2, 3.95, -0.35], windowFloor: [-1.2, 0, -0.2],
     stool: [NEST_C[0] + 2.05, 0, NEST_C[2] + 0.6],
@@ -343,8 +382,9 @@ export async function build(ctx, { shotSpecs }) {
       if (ctx.cinematic?.volumetrics) ctx.cinematic.volumetrics.density = (st.dust ?? 1) * (c.sun ? 0.12 : 0.02);
       // lamps: continuity level x the shot's own trim (TITLE: only the key lamp burns)
       const lv = (c.lamps ?? 1) * (st.lamps ?? 1);
-      lamps.forEach((l, i) => { l.userData.dirScale = (st.onlyKeyLamp && l !== keyLamp.L ? 0 : lv); l.intensity = lampBase[i] * l.userData.dirScale; });
+      lamps.forEach((l, i) => { l.userData.dirScale = (st.onlyKeyLamp && l !== keyLamp.L ? 0 : lv) * (l === keyLamp.L ? (st.keyLamp ?? 1) : 1); l.intensity = lampBase[i] * l.userData.dirScale; });
       keyLamp.g.visible = st.keyLamp !== false;
+      if (st.titleLamp) { titleLamp.position.set(...st.titleLamp.at); titleLamp.intensity = st.titleLamp.intensity ?? 0.6; } else titleLamp.intensity = 0;
       // the egg
       const state = st.egg ?? 'closed';
       for (const [k, g] of Object.entries(eggs)) g.visible = k === state;
@@ -374,7 +414,8 @@ export async function build(ctx, { shotSpecs }) {
       const dOpen = keyed(t, st.door ?? 0);
       hinge.rotation.y = -dOpen * 1.75;
       hinge.updateMatrixWorld(true);
-      passLight.intensity = 3 * clamp(dOpen * 2);
+      passLight.intensity = 6 * clamp(dOpen * 2) * (st.passage ?? 1);
+      passage.material.color.setRGB(1.4, 1.35, 1.25).multiplyScalar(st.passage ?? 1);
       passage.visible = dOpen > 0.01;
       fold.visible = false;
     },

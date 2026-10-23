@@ -22,7 +22,7 @@
 // }
 import * as THREE from 'three';
 import { SETS, continuityFor } from './registry.js';
-import { shotAt, clamp } from './timeline.js';
+import { shotAt, clamp, keyed } from './timeline.js';
 import { evalCamera, resolvePoint } from './camera.js';
 import { actorState, actorVisible } from './blocking.js';
 import { poseHuman, poseCreature, humanRig } from './actions.js';
@@ -256,7 +256,7 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
       const part = bp(b.anchor.part || 'head');
       const to = resolvePoint(b.anchor.to, tt, S.env);
       if (part && to) {
-        if (b.anchor.offset) to.add(new THREE.Vector3(...b.anchor.offset));
+        if (b.anchor.offset) to.add(new THREE.Vector3(...keyed(tt, b.anchor.offset)));
         c.root.position.add(to.sub(part));
         c.root.updateMatrixWorld(true);
       }

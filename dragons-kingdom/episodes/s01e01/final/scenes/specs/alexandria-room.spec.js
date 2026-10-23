@@ -1,0 +1,46 @@
+// Shot specs - ALEXANDRIA_ROOM (scene 1A: R1-01, X1-02 .. X1-04, first light). Map:
+// scenes/lib/director/sets/alexandria-room.js (room x -2.7..2.7, z -2.5..2.5; the window in the EAST
+// wall at z 0.1..1.3 with the jug and the cup on its deep sill; the door in the NORTH wall's east end,
+// x 1.0..2.1; the bed against the north wall in the middle).
+// Faces: Alexandria is seen from behind (she waits at the window, back to the room) and over her
+// shoulder; the young attendant is small, soft (DOF) and backlit by the lamp in the passage.
+
+const BOUNDS = [[-2.45, 0.3, -2.25], [2.45, 3.6, 2.3]];
+const WIN = [2.08, 0.65];                  // Alexandria at the window (her root), facing east
+const DOORWAY = [1.55, -2.72];             // in the door's reveal
+
+export default {
+  set: 'ALEXANDRIA_ROOM',
+  cast: {
+    alexandria: { kind: 'human', id: 'alexandria', role: 'ALEXANDRIA', armSwing: 0.15 },
+    youngAttendant: { kind: 'human', id: 'crowd15', role: 'YOUNG ATTENDANT', armSwing: 0.5 },
+  },
+  homes: { alexandria: [WIN[0], 1.55, WIN[1]], youngAttendant: [DOORWAY[0], 1.45, DOORWAY[1]] },
+  shots: {
+    'R1-01': {
+      staging: 'NONE: nobody in the room; the jug and the cup on the sill against the grey sea light.',
+      cam: { rig: 'static', frame: { subjects: [['cup', [0.18, -0.12]], ['jug', [-0.22, 0.05]]], from: 250, dist: 0.62, rise: 0.17 }, mm: 100, fstop: 4, focus: 'cup' },
+      exposure: 0.2,
+    },
+    'X1-02': {
+      staging: 'BACK + WIDE: she is a dark shape against the window, back to the room; the made bed at left.',
+      cam: { rig: 'push', frame: { subjects: [['alexandria.head', [0.42, 0.22]], ['bed', [-0.45, -0.35]]], from: 238, height: 1.5 }, mm: 35, fstop: 2.8, focus: 'alexandria.head', push: 0.06, bounds: BOUNDS },
+      cast: { alexandria: { at: WIN, face: 90, look: 'windowOut', lookAmount: 0.6, acts: [[2.6, 'look', { at: 'windowOut', amount: 0.8 }]] } },
+    },
+    'X1-03': {
+      staging: 'BACK: from behind her right shoulder; she turns toward the door (left background), her face away from the camera throughout.',
+      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.3, 0.22]], ['door', [-0.48, 0.02]]], from: 200, height: 1.55, dist: 1.85, at: 0.4 }, mm: 50, fstop: 2.4, focus: 'alexandria.head', bounds: BOUNDS },
+      cast: { alexandria: { at: WIN, face: 90, look: 'windowOut', acts: [[0.35, 'turn', { to: 'door', dur: 0.75 }], [0.35, 'look', { at: 'door' }]] } },
+    },
+    'X1-04': {
+      staging: 'OTS + DOF: over Alexandria\'s right shoulder (her face out of frame); the young attendant small and soft in the doorway, backlit by the passage lamp; Alexandria goes to the door.',
+      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.62, 0.2]], ['youngAttendant.head', [-0.22, 0.14]]], from: 158, height: 1.62, dist: 0.95, at: 0.6 }, mm: 50, fstop: 1.8, focus: 'alexandria.head', bounds: BOUNDS },
+      set: { door: 0.85 },
+      cast: {
+        alexandria: { at: [1.82, -0.25], face: 'youngAttendant', look: 'youngAttendant.head', acts: [[3.9, 'walk', { to: [1.6, -1.95], speed: 1.2 }]] },
+        youngAttendant: { at: DOORWAY, face: 180, look: 'alexandria.head', lookAmount: 0.7, acts: [[0.3, 'bow', { to: 0.18, dur: 0.35 }], [1.2, 'rise', { dur: 0.5 }], [4.1, 'walk', { to: [1.4, -3.6], speed: 0.9, face: 180 }]] },
+      },
+      lines: [['X1-01', 0.45], ['X1-02', 0.45]],
+    },
+  },
+};

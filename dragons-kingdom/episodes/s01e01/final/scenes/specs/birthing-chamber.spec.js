@@ -23,7 +23,7 @@ const DOOR_IN = [-2.95, -1.9], DOOR_OUT = [-4.7, -1.9];
 const BOUNDS = [[-3.35, 0.25, -2.85], [3.35, 5.2, 2.85]];
 
 const seated = { at: ALEX_SEAT, face: 270, posture: { sit: 1 }, look: 'hatchling.head', lookAmount: 0.6 };
-const hatchRest = (o = {}) => ({ at: HR, face: 242, acts: [[0, 'lie', { sprawl: 1, breathe: 0.6, lidRelax: 0.45, ...o }]] });
+const hatchRest = (o = {}) => ({ at: HR, face: 242, settle: true, acts: [[0, 'lie', { sprawl: 1, breathe: 0.6, lidRelax: 0.45, ...o }]] });
 const DUST = { kind: 'dust-motes', id: 'shaft', params: { box: [[-1.6, 0.35, -1.0], [3.3, 4.6, 0.45]], count: 900, size: 0.007, opacity: 0.35 } };
 const FLICKER = { kind: 'lamp-flicker', params: { amount: 0.06 } };
 
@@ -49,15 +49,16 @@ export default {
     'T-01': {
       staging: 'NONE: no people. Near dark: only the key lamp; the title over the dark shell.',
       cam: { rig: 'push', frame: { subjects: [['egg', [0.05, 0.02]]], from: 125, dist: 0.95, rise: 0.05 }, mm: 75, fstop: 2, push: 0.1, bounds: BOUNDS },
-      set: { egg: 'closed', onlyKeyLamp: true, dust: 0.3 },
+      set: { egg: 'closed', onlyKeyLamp: true, dust: 0.3, titleLamp: { at: [0.12, 0.98, -0.62], intensity: 0.9 } },
       captions: [{ text: "DRAGON'S KINGDOM", from: 1.0, to: 6.2, style: 'title' }],
-      exposure: -0.2,
+      exposure: 0.6,
     },
     // ------------------------------------------------------------------- 1A
     '1A-01': {
       staging: 'NONE: macro on the shell; the crack runs on from the old fracture and stops.',
       cam: { rig: 'static', frame: { subjects: [['eggCrack', [0.12, 0.0]]], from: 170, dist: 0.5, rise: 0.04 }, mm: 100, fstop: 2.8 },
       set: { egg: 'closed', crack: [[0, 0.3], [1.5, 0.3], [2.4, 1.0, 'out']] },
+      exposure: -1.3,
     },
     '1A-02': {
       staging: 'WIDE: the attendant small, turned to the nest.',
@@ -87,7 +88,7 @@ export default {
     },
     '1A-05': {
       staging: 'BACK: from behind Alexandria; she sits on the stool beside the nest and does not reach in.',
-      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.2, 0.3]], ['egg', [-0.3, -0.25]]], from: 82, height: 1.45, at: 3.2 }, mm: 50, fstop: 2.8, focus: 'alexandria.head', bounds: BOUNDS },
+      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.2, 0.3]], ['egg', [-0.3, -0.25]]], from: 82, height: 1.45, at: 0.6 }, mm: 40, fstop: 2.8, focus: 'alexandria.head', bounds: BOUNDS },
       cast: { alexandria: { at: [1.3, -0.95], face: 'egg', look: 'egg', acts: [[0.3, 'walk', { to: ALEX_SEAT, speed: 0.75, face: 270 }], [1.9, 'sit', { dur: 1.1 }]] } },
       set: { egg: 'closed', crack: 1 },
     },
@@ -95,27 +96,30 @@ export default {
       staging: 'NONE: macro; another piece of shell shifts.',
       cam: { rig: 'static', frame: { subjects: [['eggFrag', [0.0, 0.0]]], from: 165, dist: 0.42, rise: 0.03 }, mm: 100, fstop: 2.8 },
       set: { egg: 'cracked', crack: 1, frag: { shift: [[0.8, 0], [1.05, 0.07], [1.4, 0.05]] } },
+      exposure: -1.3,
     },
     '1A-07': {
       staging: 'NONE: macro; the shell flexes outward under pressure (birth stage 1).',
       cam: { rig: 'static', frame: { subjects: [['eggFrag', [-0.1, 0.05]]], from: 150, dist: 0.38, rise: 0.0 }, mm: 100, fstop: 2.8 },
       set: { egg: 'cracked', crack: 1, frag: { shift: 0.05, push: [[0.5, 0], [1.8, 0.005], [2.5, 0.002], [3.3, 0]] } },
+      exposure: -1.3,
     },
     '1A-08': {
       staging: 'NONE: macro, a different angle; a fragment lifts away (birth stage 2).',
       cam: { rig: 'static', frame: { subjects: [['eggFrag', [0.15, 0.1]]], from: 210, dist: 0.55, rise: 0.08 }, mm: 100, fstop: 2.8 },
       set: { egg: 'cracked', crack: 1, frag: { shift: 0.05, lift: [[0.6, 0], [1.9, 1]] } },
+      exposure: -1.0,
     },
     '1A-09': {
       staging: 'NONE: close; a small gold snout presses into the opening (birth stage 3); gold catches the lamplight, no glow.',
       cam: { rig: 'push', frame: { subjects: [['eggTop', [0.0, -0.1]]], from: 190, dist: 0.62, rise: 0.06 }, mm: 100, fstop: 2.8, focus: 'hatchling.head', push: 0.1 },
-      cast: { hatchling: { root: [[0, [0.66, 0.5, -0.2]], [0.8, [0.66, 0.5, -0.2]], [2.6, [0.63, 0.6, -0.17]]], face: 242, pitch: -62, acts: [[0, 'lie', { sprawl: 1, raise: 0.4, headDown: -0.3, breathe: 0.7, lidRelax: 0.6 }]] } },
+      cast: { hatchling: { at: [0.7, -0.22], face: 242, pitch: -70, anchor: { part: 'head', to: 'eggTop', offset: [[0, [0, -0.2, 0]], [0.8, [0, -0.2, 0]], [2.6, [-0.015, -0.11, 0.008]]] }, acts: [[0, 'lie', { sprawl: 1, raise: 0.4, headDown: -0.3, breathe: 0.7, lidRelax: 0.6 }]] } },
       set: { egg: 'opened' },
     },
     '1A-10': {
       staging: 'NONE: close; the shape stills (birth stage 4); one tiny breath moves the shell edge.',
       cam: { rig: 'static', frame: { subjects: [['eggTop', [0.0, -0.05]]], from: 175, dist: 0.6, rise: 0.04 }, mm: 100, fstop: 2.8, focus: 'hatchling.head' },
-      cast: { hatchling: { root: [[0, [0.63, 0.6, -0.17]]], face: 242, pitch: -62, acts: [[0, 'lie', { sprawl: 1, raise: 0.4, headDown: -0.3, breathe: 0.25, lidRelax: 0.8 }]] } },
+      cast: { hatchling: { at: [0.7, -0.22], face: 242, pitch: -70, anchor: { part: 'head', to: 'eggTop', offset: [-0.015, -0.11, 0.008] }, acts: [[0, 'lie', { sprawl: 1, raise: 0.4, headDown: -0.3, breathe: 0.25, lidRelax: 0.8 }]] } },
       set: { egg: 'opened' },
     },
     '1A-11': {
@@ -132,7 +136,8 @@ export default {
       cam: { rig: 'push', frame: { subjects: [['hatchling.head', [-0.15, 0.05]], ['egg', [0.4, 0.25]]], from: 186, height: 0.78, at: 6.0 }, mm: 50, fstop: 2.8, focus: 'hatchling.eye', push: [[0, 0.12], [9, 0.0]], bounds: BOUNDS },
       cast: {
         hatchling: {
-          root: [[0, [0.63, 0.6, -0.17]], [2.5, [0.48, 0.66, -0.07]], [5.6, [0.12, 0.44, 0.14]]], face: 242, pitch: [[0, -62], [2.5, -28], [5.6, 0]],
+          at: [0.7, -0.22], face: 242, pitch: [[0, -70], [2.4, -35], [5.4, 0]], settle: { lift: true },
+          anchor: { part: 'head', to: [[0, 'eggTop'], [2.4, [0.42, 1.02, -0.02]], [5.4, [-0.24, 0.62, 0.36]]], offset: [[0, [-0.015, -0.11, 0.008]], [2.4, [0, 0, 0]]] },
           acts: [[0, 'pushUp', { k: 0.3, tremble: 0.8, breathe: 0.7 }], [2.6, 'struggle', { period: 3.2, blend: 1.2 }], [6.4, 'lie', { sprawl: 1, breathe: 0.75, lidRelax: 0.5, blend: 1.0 }]],
         },
       },
@@ -158,26 +163,27 @@ export default {
     },
     '1A-16': {
       staging: 'DOF: focus on the lamp in the foreground; she is a soft shape behind its bokeh.',
-      cam: { rig: 'static', frame: { subjects: [['lampKey', [-0.45, -0.5]], ['attendant.head', [0.25, 0.3]]], from: 192, height: 0.75 }, mm: 50, fstop: 2, focus: 'lampKey', bounds: BOUNDS },
+      cam: { rig: 'static', pos: [-0.62, 0.66, 2.05], look: [-0.12, 0.98, -1.25], mm: 50, fstop: 2, focus: 'lampKey' },
       cast: { attendant: { at: ATT, face: 'hatchling', look: 'hatchling', lookAmount: 0.5, acts: [[0.3, 'look', { at: 'hatchling', amount: 0.3 }]] } },
     },
     '1A-17': {
       staging: 'HANDS: style frame F4\'s framing - the hatchling slips against the broken shell; Alexandria\'s hands come in from screen right with a folded cloth; her face out of frame.',
       cam: { rig: 'static', frame: { subjects: [['hatchling.head', [-0.3, 0.05]], ['hatchling.hips', [0.3, -0.05]]], from: 176, height: 0.68, at: 3 }, mm: 50, fstop: 2.8, focus: 'hatchling.eye', bounds: BOUNDS },
       cast: {
-        hatchling: { at: HR, face: 242, acts: [[0, 'struggle', { period: 4.2, k: 0.9 }], [3.6, 'pushUp', { k: 0.25, tremble: 0.4, blend: 1.0 }]] },
-        alexandria: { ...seated, posture: { sit: 1, lean: 0.85 }, acts: [[2.2, 'handsTo', { at: 'hatchling.chest', offset: [0.12, -0.05, 0.05], palm: [0, 1, 0], in: 0.8, spread: 0.07 }]] },
+        hatchling: { at: HR, face: 242, settle: true, acts: [[0, 'struggle', { period: 4.2, k: 0.9 }], [3.6, 'pushUp', { k: 0.25, tremble: 0.4, blend: 1.0 }]] },
+        alexandria: { ...seated, at: [0.95, 0.12], posture: { sit: 1, lean: 0.85 }, acts: [[2.2, 'handsTo', { at: 'hatchling.chest', offset: [0.08, -0.02, 0.1], palm: [0, 1, 0], in: 0.8, spread: 0.07 }]] },
       },
       set: { egg: 'opened', foldInHands: true },
     },
     '1A-18': {
       staging: 'SIL + WIDE: from the nest toward the door; Abby and Remi two backlit shapes in the bright doorway (reverse angle, declared).',
       cam: { rig: 'static', pos: [-0.95, 1.4, -0.35], look: [-3.6, 1.25, -1.95], mm: 35, fstop: 2.8, focus: 'door' },
+      exposure: -1.6,
+      set: { door: [[0.2, 0], [0.8, 0.85]], lamps: 0.35, passage: 2.2 },
       cast: {
         abby: { at: [-4.55, -1.95], face: 90, look: 'egg', acts: [[0.4, 'walk', { to: [-3.85, -1.95], speed: 0.9 }], [1.0, 'bow', { to: 0.25, dur: 0.4 }]] },
         remi: { at: [-4.7, -1.55], face: 90, look: 'egg', acts: [[0.7, 'walk', { to: [-4.15, -1.6], speed: 0.8 }]] },
       },
-      set: { door: [[0.2, 0], [0.8, 0.85]] },
       lines: [['L012', 1.25]],
     },
     '1A-19': {
@@ -206,7 +212,7 @@ export default {
     },
     '1A-22': {
       staging: 'DOF + HANDS: her face far out of focus behind the sharp hatchling; the almost-touch is her hand.',
-      cam: { rig: 'static', frame: { subjects: [['hatchling.head', [0.42, -0.05]], ['abby.head', [-0.35, 0.25]]], from: 15, height: 0.6, at: 2.0 }, mm: 75, fstop: 2, focus: 'hatchling.eye', bounds: BOUNDS },
+      cam: { rig: 'static', frame: { subjects: [['hatchling.head', [0.42, -0.05]], ['abby.head', [-0.35, 0.25]]], from: 320, height: 0.62, at: 2.0 }, mm: 65, fstop: 2, focus: 'hatchling.eye', bounds: BOUNDS },
       cast: {
         abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', acts: [[0.3, 'crouch', { dur: 0.9 }], [2.4, 'reach', { side: 'R', at: 'hatchling.head', offset: [-0.05, 0.08, 0.25], in: 0.6, hold: 0.7, out: 0.5 }], [3.6, 'look', { at: 'alexandria.head' }]] },
         hatchling: { at: HR, face: 242, acts: [[0, 'lie', { sprawl: 1, breathe: 0.6, look: [0, 0] }], [1.3, 'lie', { sprawl: 1, breathe: 0.6, look: [0.45, 0.12], blend: 0.8 }]] },
@@ -214,13 +220,13 @@ export default {
     },
     '1A-23': {
       staging: 'OTS + DOF + SIL: over Abby\'s crouched shoulder (soft) to Alexandria, soft and backlit; focus on the hatchling between them.',
-      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.62, 0.05]], ['alexandria.head', [0.32, 0.32]], ['hatchling', [-0.05, -0.38]]], from: 215, height: 0.95 }, mm: 50, fstop: 2, focus: 'hatchling', bounds: BOUNDS },
+      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.6, 0.1]], ['alexandria.head', [0.5, 0.32]], ['hatchling.head', [-0.05, -0.35]]], from: 180, height: 0.95 }, mm: 40, fstop: 2, focus: 'hatchling.head', bounds: BOUNDS },
       cast: { abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 } }, alexandria: seated, hatchling: hatchRest() },
       lines: [['L017', 0.4]],
     },
     '1A-24': {
       staging: 'BACK + DOF: Remi from behind (soft); the attendant across the nest, soft.',
-      cam: { rig: 'static', frame: { subjects: [['remi.head', [-0.55, 0.35]], ['attendant.head', [0.3, 0.3]]], from: 198, height: 1.75 }, mm: 50, fstop: 2, focus: 'hatchling', bounds: BOUNDS },
+      cam: { rig: 'static', frame: { subjects: [['remi.head', [-0.55, 0.35]], ['attendant.head', [0.3, 0.3]]], from: 160, height: 1.75 }, mm: 40, fstop: 2, focus: 'hatchling', bounds: BOUNDS },
       cast: {
         remi: { at: REMI_S, face: 'hatchling', look: 'hatchling' }, attendant: { at: ATT, face: 'hatchling', look: 'remi.head', lookAmount: 0.5 },
         abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 } }, hatchling: hatchRest(),
@@ -239,7 +245,7 @@ export default {
     },
     '1A-27': {
       staging: 'BACK + DOF: from behind Abby (soft) to Alexandria (soft); the hatchling sharp between.',
-      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.62, 0.25]], ['alexandria.head', [0.55, 0.35]], ['hatchling.head', [0.0, -0.3]]], from: 205, height: 1.0 }, mm: 50, fstop: 2, focus: 'hatchling.head', bounds: BOUNDS },
+      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.6, 0.2]], ['alexandria.head', [0.55, 0.35]], ['hatchling.head', [0.0, -0.32]]], from: 182, height: 1.0 }, mm: 40, fstop: 2, focus: 'hatchling.head', bounds: BOUNDS },
       cast: { abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 } }, alexandria: seated, hatchling: hatchRest() },
       lines: [['L020', 0.45], ['L021', 0.45]],
       minTail: 0.8,
@@ -265,7 +271,7 @@ export default {
     },
     '1A-30': {
       staging: 'BACK + WIDE: from behind Alexandria (soft) across the nest to the children, small.',
-      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.62, 0.32]], ['abby.head', [-0.28, 0.0]]], from: 72, height: 1.4 }, mm: 50, fstop: 2, focus: 'abby.head', bounds: BOUNDS },
+      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.62, 0.32]], ['abby.head', [-0.28, 0.0]]], from: 72, height: 1.4 }, mm: 50, fstop: 1.8, focus: 'alexandria.head', bounds: BOUNDS },
       cast: {
         alexandria: seated,
         abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 }, acts: [[2.7, 'rise', { dur: 1.2 }]] },
@@ -288,15 +294,16 @@ export default {
     '1A-32': {
       staging: 'SIL: two silhouettes in the bright doorway; Abby looks back once (reverse angle toward the door, declared).',
       cam: { rig: 'static', pos: [-0.95, 1.4, -0.35], look: [-3.6, 1.25, -1.95], mm: 35, fstop: 2.8, focus: 'door' },
+      exposure: -1.3,
       cast: {
         abby: { at: [-3.05, -1.95], face: 270, look: null, acts: [[0.5, 'look', { at: 'hatchling', amount: 1 }], [1.7, 'look', { at: 'doorOut', amount: 0.4 }], [2.0, 'walk', { to: [-4.7, -1.95], speed: 1.0 }]] },
         remi: { at: [-3.55, -1.65], face: 270, acts: [[1.6, 'walk', { to: [-4.8, -1.6], speed: 1.0 }]] },
       },
-      set: { door: [[0, 0.85], [3.0, 0.85], [3.8, 0.0]] },
+      set: { door: [[0, 0.85], [3.0, 0.85], [3.8, 0.0]], lamps: 0.4, passage: 2.2 },
     },
     '1A-33': {
       staging: 'BACK + HANDS: her hand (sharp) rests near the newborn without restraining it.',
-      cam: { rig: 'static', frame: { subjects: [['alexandria.hand.R', [0.15, -0.1]], ['hatchling.head', [-0.4, -0.15]]], from: 66, height: 1.2, at: 3.0 }, mm: 65, fstop: 2, focus: 'hatchling.chest', bounds: BOUNDS },
+      cam: { rig: 'static', frame: { subjects: [['alexandria.hand.R', [0.25, -0.05]], ['hatchling.head', [-0.4, -0.2]]], from: 25, height: 1.15, at: 3.0 }, mm: 50, fstop: 2, focus: 'alexandria.hand.R', bounds: BOUNDS },
       cast: {
         alexandria: { ...seated, posture: { sit: 1, lean: 0.8 }, acts: [[1.6, 'reach', { side: 'R', at: 'hatchling.chest', offset: [0.08, 0.0, 0.12], in: 1.0 }]] },
         hatchling: hatchRest(),
