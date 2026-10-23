@@ -165,7 +165,11 @@ if (!NOAUDIO && cues.length) {
       srt.push({ a: at + (Math.max(sg.start_s, fi) - fi), b: at + (Math.min(sg.end_s, fo) - fi), text: (tk.role === 'NARRATOR' ? '' : '') + sg.text });
     }
   });
-  af.push(`${cues.map((_, j) => `[a${j}]`).join('')}amix=inputs=${cues.length}:normalize=0:dropout_transition=0,apad,atrim=end=${(total / FPS).toFixed(4)},aformat=sample_rates=48000:channel_layouts=stereo[aout]`);
+  // a silent bed the full length of the cut: amix runs as long as its longest input, so the sound track
+  // always covers the picture (apad after a many-input amix did not pad: the track ended with the last line)
+  inputs.push('-f', 'lavfi', '-i', `anullsrc=r=48000:cl=stereo:d=${(total / FPS + 1).toFixed(3)}`);
+  const nBed = nV + cues.length;
+  af.push(`${cues.map((_, j) => `[a${j}]`).join('')}[${nBed}:a]amix=inputs=${cues.length + 1}:normalize=0:dropout_transition=0:duration=longest,aresample=async=1:first_pts=0,atrim=end=${(total / FPS).toFixed(4)},aformat=sample_rates=48000:channel_layouts=stereo[aout]`);
   vf.push(...af);
   audioLabel = 'aout';
 }
@@ -190,5 +194,5 @@ fs.writeFileSync(OUT.replace(/\.mp4$/, '.en.srt'), srt.map((s, i) => `${i + 1}\n
 report.output = { file: rel(OUT), frames: pr.frames, duration_s: +(pr.frames / FPS).toFixed(3), size_mb: +(fs.statSync(OUT).size / 1048576).toFixed(1), assembled_s: Math.round((Date.now() - t0) / 1000) };
 report.summary = { rendered: report.shots.filter((s) => s.source.startsWith('rendered')).length, black: report.shots.filter((s) => s.source === 'black').length, slates: report.shots.filter((s) => s.source === 'slate').length, voice_cues: cues.length };
 fs.writeFileSync(path.join(HERE, 'cut-report.json'), JSON.stringify(report, null, 1) + '\n');
-fs.rmSync(WORK, { recursive: true, force: true });
+if (!flag("--keep-work")) fs.rmSync(WORK, { recursive: true, force: true }); else console.log(`work kept: ${WORK}`);
 console.log(`wrote ${rel(OUT)}: ${pr.frames} frames = ${(pr.frames / FPS).toFixed(2)} s, ${report.output.size_mb} MB (${report.summary.rendered} rendered, ${report.summary.black} black, ${report.summary.slates} slates, ${cues.length} voice cues) in ${report.output.assembled_s} s`);

@@ -49,7 +49,7 @@ export default {
       cam: { rig: 'boat', mount: 'boat', pos: [-4.2, 1.75, 0.55], look: [-1.0, 1.55, 0.1], mm: 50, fstop: 2.8, focus: 'sailor.head', shake: { kind: 'vehicle', amount: 0.15, seed: 13 } },
       set: { boat: { at: [4, -76], heading: 74, speed: 2.2 } },
       cast: {
-        sailor: { at: SAILOR, face: 60, look: 'boat.mast', lookAmount: 0.3, acts: [[1.1, 'turn', { to: 345, dur: 1.4 }], [1.0, 'look', { at: 'shape', amount: 1.0, blend: 1.0 }]] },
+        sailor: { at: SAILOR, face: 60, look: 'boat.mast', lookAmount: 0.3, acts: [[1.1, 'turn', { to: 32, dur: 1.4 }], [1.0, 'look', { at: 'shape', amount: 0.5, blend: 1.0 }]] },
         steersman: { at: [-3.85, 0.25], face: 90 },
       },
     },

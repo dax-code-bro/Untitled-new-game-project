@@ -31,6 +31,7 @@ import { treeKit, scatterTrees } from '../../nature/trees.js';
 import { mulberry } from '../../nature/noise.js';
 import { filmFinish } from '../../../lookdev/finish.js';
 import { keyed, clamp } from '../timeline.js';
+import { paintWingCloud } from './wing-cloud.js';
 
 export function cinematic() {
   return filmFinish({
@@ -285,31 +286,12 @@ export async function build(ctx, { shotSpecs }) {
   let wing = null;
   if (used.has('sky')) {
     const g = group('sky');
-    // a cloud is soft everywhere: the wing outline is only a density bias; fbm decides where the
-    // vapour is, and the edges dissolve into wisps (no hard silhouette, no regular scallops)
+    // a cloud is soft everywhere: the wing outline (wing-cloud.js) is only a density bias; fbm decides
+    // where the vapour is, the edges dissolve into wisps, the finger bones read as denser streaks
     const cv = document.createElement('canvas'); cv.width = 768; cv.height = 384;
     const c2 = cv.getContext('2d');
     const img = c2.createImageData(cv.width, cv.height);
-    const fbm = (x, y) => N.fbm(x, y, 6);
-    const fingers = [0.36, 0.53, 0.69, 0.84];
-    for (let j = 0; j < cv.height; j++) for (let i = 0; i < cv.width; i++) {
-      const u = i / cv.width, v = j / cv.height;               // u: 0 = wing root .. 1 = tip; v: 0 = top
-      const wu = u + 0.04 * fbm(u * 3 + 9, v * 3), wv = v + 0.05 * fbm(u * 3, v * 3 + 4);   // warped coordinates
-      const lead = 0.28 - 0.16 * Math.sin(wu * Math.PI * 0.95) + 0.07 * wu;               // leading edge (the arm)
-      let trail = 0.6 - 0.14 * wu;
-      fingers.forEach((f, q) => { trail += (0.2 - 0.03 * q) * Math.exp(-Math.pow((wu - f) / (0.05 + 0.01 * q), 2)); });
-      const body = smooth(-0.06, 0.08, wv - lead) * (1 - smooth(-0.1, 0.08, wv - trail)) * (1 - smooth(0.82, 1.0, wu)) * smooth(0.0, 0.12, wu);
-      // vapour streaks along the finger bones and a denser rim along the leading edge
-      let streak = 0;
-      for (const f of fingers) streak = Math.max(streak, Math.exp(-Math.pow((wu - f + 0.1 * (wv - lead)) / 0.02, 2)) * smooth(lead, lead + 0.08, wv) * (1 - smooth(trail - 0.05, trail + 0.12, wv)));
-      const rim = Math.exp(-Math.pow((wv - lead - 0.03) / 0.04, 2)) * smooth(0.05, 0.2, wu) * (1 - smooth(0.75, 0.95, wu));
-      const n1 = fbm(u * 6, v * 4) * 0.5 + 0.5, n2 = fbm(u * 22 + 7, v * 14) * 0.5 + 0.5, n3 = fbm(u * 60 + 3, v * 40 + 1) * 0.5 + 0.5;
-      const dens = (body * 0.8 + streak * 0.5 + rim * 0.45) * (0.55 + 0.6 * n1) * (0.7 + 0.45 * n2) * (0.85 + 0.3 * n3);
-      const a = clamp(smooth(0.18, 0.75, dens), 0, 1) * 0.9;
-      const shade = clamp(0.62 + 0.3 * smooth(0.25, 0.0, wv - lead) + 0.18 * (n2 - 0.5) - 0.15 * smooth(0.4, 0.9, dens), 0, 1);  // lit from above / the sun side, denser cores greyer
-      const k = (j * cv.width + i) * 4;
-      img.data[k] = 255 * shade; img.data[k + 1] = 248 * shade; img.data[k + 2] = 240 * shade; img.data[k + 3] = 255 * a;
-    }
+    paintWingCloud(img, (x, y) => N.fbm(x, y, 6), smooth);
     c2.putImageData(img, 0, 0);
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter;
     const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, color: new THREE.Color(1.5, 1.42, 1.32), fog: false });
