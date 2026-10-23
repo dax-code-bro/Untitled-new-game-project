@@ -7,11 +7,13 @@
 # What it does (safe to run again any time - it skips what is done and continues
 # where it stopped):
 #   1. git, then the project: clone, or "git pull" of the branch below
-#   2. Node.js 20 LTS (a private copy in pc/tools/node if the computer has none >= 20)
+#   2. Node.js: the computer's own if it is version 20 or newer, else a private copy of Node.js 22.22.0 LTS
+#      in pc/tools/node (pinned version, SHA-256 checked)
 #   3. ffmpeg with libx264: on Linux a pinned static build in pc/tools/ffmpeg (SHA-256 checked, the
 #      same ffmpeg 8.1.3 as the Windows setup); on a Mac Homebrew's (or evermeet.cx's) - not pinned
 #   4. npm ci + Playwright's Chromium
-#   5. Python 3.11 + Blender's Python module (bpy 4.2) in pc/.venv-bpy
+#   5. Python 3.11 (the computer's own, else a private one via uv 0.5.11 - pinned, SHA-256 checked)
+#      + Blender's Python module (bpy 4.2) in pc/.venv-bpy
 #   6. every cache a render needs: node pc/build-caches.mjs (asset downloads, landscape
 #      bakes, human characters, cloth bakes - the long step, 1-3 hours the first time)
 #   7. the GPU self-test: node render/gpu-check.mjs
@@ -33,8 +35,22 @@ set -o pipefail
 main() {
 REPO_URL="${DK_REPO_URL:-https://github.com/dax-code-bro/Untitled-new-game-project.git}"
 BRANCH="claude/ultimate-ai-legend-KhpoT"
-NODE_MAJOR=20
-UV_VERSION="0.5.11"
+NODE_MAJOR=20                 # a Node.js already on the computer is used if it is at least this version
+NODE_VERSION="22.22.0"        # else this one (nodejs.org/dist; SHA-256 per platform below)
+UV_VERSION="0.5.11"           # only if there is no Python 3.11 (SHA-256 per platform below)
+pin_sha() {                   # pin_sha <file name> -> its SHA-256 (published by nodejs.org / astral-sh, checked 2026-10-23)
+  case "$1" in
+    node-v22.22.0-linux-x64.tar.xz)    echo 9aa8e9d2298ab68c600bd6fb86a6c13bce11a4eca1ba9b39d79fa021755d7c37;;
+    node-v22.22.0-linux-arm64.tar.xz)  echo 1bf1eb9ee63ffc4e5d324c0b9b62cf4a289f44332dfef9607cea1a0d9596ba6f;;
+    node-v22.22.0-darwin-arm64.tar.xz) echo 2bd596bbfc4a275ceb8721a5954ee97daea5ebe673e96a185ebd732f6fb023ac;;
+    node-v22.22.0-darwin-x64.tar.xz)   echo 48bc437e00e0c1483da34c21dca196efcb8d22e5dcb0bc7c65386afb00fabb85;;
+    uv-x86_64-unknown-linux-gnu.tar.gz)  echo 14411de26cdea5f5139fafaf2b675b1c633e744dd49c6d6a9fc8817ec065158b;;
+    uv-aarch64-unknown-linux-gnu.tar.gz) echo 055c329c38a93c01d378349d51cb4d521d1998c8a79355ddc00f863ce451942f;;
+    uv-aarch64-apple-darwin.tar.gz)      echo 695f3640d5b1a4e28de7e36e3a2e14072852dcc6c70bf9e4deec6ada00d516b4;;
+    uv-x86_64-apple-darwin.tar.gz)       echo 7e23d1d892c23f9e74245c4fd3d3e246438ce9b34460f85eee61f784de137b0b;;
+    *) echo "";;
+  esac
+}
 # pinned ffmpeg for Linux (pc/MANIFEST.md): BtbN month-end build of 2026-09-30, ffmpeg 8.1.3, GPL (libx264)
 FF_BASE="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-30-13-08"
 FF_X64="ffmpeg-n8.1.3-9-g29e619e767-linux64-gpl-8.1";    FF_X64_SHA="97ce978979194b5cf7e06a5e68020dbdaa7a4f3294c5452b6a1bc347100dbb79"
@@ -112,7 +128,7 @@ cd "$PROJ" || die "cannot cd to $PROJ"
 TOOLS="$PROJ/pc/tools"; mkdir -p "$TOOLS"
 
 # ---- 2. Node.js -----------------------------------------------------------------------------
-step "Node.js $NODE_MAJOR LTS"
+step "Node.js"
 node_ok() { have node && [ "$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)" -ge "$NODE_MAJOR" ]; }
 [ -x "$TOOLS/node/bin/node" ] && export PATH="$TOOLS/node/bin:$PATH"
 if ! node_ok; then
@@ -121,15 +137,12 @@ if ! node_ok; then
     Darwin-arm64) NP=darwin-arm64;; Darwin-x86_64) NP=darwin-x64;;
     *) die "no Node.js download for $OS $ARCH - install Node.js $NODE_MAJOR from https://nodejs.org";;
   esac
-  BASE="https://nodejs.org/dist/latest-v$NODE_MAJOR.x"
-  SUMS="$(curl -fsSL "$BASE/SHASUMS256.txt")" || die "cannot reach nodejs.org"
-  FILE="$(echo "$SUMS" | awk '{print $2}' | grep -E "^node-v[0-9.]+-$NP\.tar\.xz$" | head -1)"
-  [ -n "$FILE" ] || die "no $NP build listed at $BASE"
-  echo "   downloading $FILE"
-  dl "$BASE/$FILE" "$TOOLS/$FILE" || die "download failed"
-  WANT="$(echo "$SUMS" | grep " $FILE\$" | awk '{print $1}')"
-  GOT="$( (shasum -a 256 "$TOOLS/$FILE" 2>/dev/null || sha256sum "$TOOLS/$FILE") | awk '{print $1}')"
-  [ "$WANT" = "$GOT" ] || die "checksum of $FILE does not match"
+  FILE="node-v$NODE_VERSION-$NP.tar.xz"
+  WANT="$(pin_sha "$FILE")"
+  echo "   no Node.js $NODE_MAJOR or newer here: downloading $FILE (pinned)"
+  dl "https://nodejs.org/dist/v$NODE_VERSION/$FILE" "$TOOLS/$FILE" || die "download failed (internet connection?)"
+  GOT="$(sha256 "$TOOLS/$FILE")"
+  [ -n "$WANT" ] && [ "$WANT" = "$GOT" ] || { rm -f "$TOOLS/$FILE"; die "$FILE: SHA-256 $GOT does not match the pinned $WANT (damaged download? run again)"; }
   rm -rf "$TOOLS/node" && mkdir -p "$TOOLS/node" && tar -xJf "$TOOLS/$FILE" -C "$TOOLS/node" --strip-components 1 && rm -f "$TOOLS/$FILE"
   export PATH="$TOOLS/node/bin:$PATH"
 fi
@@ -229,8 +242,9 @@ else
         *) die "install Python 3.11 (64-bit) and run again";;
       esac
       echo "   no Python 3.11 found: installing uv $UV_VERSION (Python manager) into pc/tools/uv"
-      mkdir -p "$TOOLS/uv" && dl "https://github.com/astral-sh/uv/releases/download/$UV_VERSION/uv-$UT.tar.gz" "$TOOLS/uv.tgz" \
-        && tar -xzf "$TOOLS/uv.tgz" -C "$TOOLS/uv" --strip-components 1 && rm -f "$TOOLS/uv.tgz" || die "could not download uv"
+      mkdir -p "$TOOLS/uv" && dl "https://github.com/astral-sh/uv/releases/download/$UV_VERSION/uv-$UT.tar.gz" "$TOOLS/uv.tgz" || die "could not download uv"
+      [ "$(sha256 "$TOOLS/uv.tgz")" = "$(pin_sha "uv-$UT.tar.gz")" ] || { rm -f "$TOOLS/uv.tgz"; die "uv-$UT.tar.gz does not match its pinned SHA-256 (damaged download? run again)"; }
+      tar -xzf "$TOOLS/uv.tgz" -C "$TOOLS/uv" --strip-components 1 && rm -f "$TOOLS/uv.tgz" || die "could not unpack uv"
     fi
     export UV_PYTHON_INSTALL_DIR="$TOOLS/python"
     "$UV" python install 3.11 || die "uv could not install Python 3.11"

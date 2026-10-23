@@ -14,11 +14,11 @@ CPU-bound steps.
 |---|---|---:|---|---|---|
 | **Tools** | | | | | |
 | Git | the PC's own Git, else portable MinGit 2.55.0(5) in `%LOCALAPPDATA%\DragonsKingdom\mingit` (pinned, SHA-256 checked; no installer and no administrator password) | about 50 MB | setup script, step 1 | 1 min | clone + `git pull` of new scene files |
-| Node.js 20 LTS (any 20+ works) | system, or `pc/tools/node` (official nodejs.org zip, SHA-256 checked) | about 90 MB | setup script, step 2 | 1 min | everything |
+| Node.js (any 20+ already on the PC; else the pinned 22.22.0 LTS) | system, or `pc/tools/node` (official nodejs.org archive, pinned SHA-256 below) | about 90 MB | setup script, step 2 | 1 min | everything |
 | ffmpeg + ffprobe with libx264 | `pc/tools/ffmpeg`: Windows and Linux always the **pinned** ffmpeg 8.1.3 build below (SHA-256 checked; `pc/tools/ffmpeg/.dk-pin` names it; `render/lib/tools.mjs` uses it before any other ffmpeg). macOS: Homebrew's or evermeet.cx's, **not pinned** | 193 MB download, about 450 MB unpacked (Windows); 150 MB (Linux) | setup script, step 3 | 1-3 min | encoding chunks, scene files, the episode |
 | npm packages (three 0.180.0, Playwright 1.56.1) | `node_modules/` | 46 MB | `npm ci` | 30 s | everything |
 | Playwright Chromium (build 1194) + headless shell | `%LOCALAPPDATA%\ms-playwright` (Windows), `~/Library/Caches/ms-playwright`, `~/.cache/ms-playwright` | 597 MB + 323 MB | `npx playwright install chromium` | 1-2 min | drawing the frames (WebGL2 on the GPU) |
-| Python 3.11 (64-bit) | system (`py -3.11`, `python3.11`), else private via uv 0.5.11 (`%LOCALAPPDATA%\DragonsKingdom\python`, `pc/tools/python`) | about 100 MB | setup script, step 5 | 1 min | Blender cloth / character builds |
+| Python 3.11 (64-bit) | system (`py -3.11`, `python3.11`), else private via uv 0.5.11 (pinned SHA-256 below; `%LOCALAPPDATA%\DragonsKingdom\python`, `pc/tools/python`) | about 100 MB | setup script, step 5 | 1 min | Blender cloth / character builds |
 | Blender's Python module bpy 4.2.0 + numpy 2.4.6 (`pc/requirements-bpy.txt`) | `pc/.venv-bpy` (Windows: `%LOCALAPPDATA%\DragonsKingdom\venv-bpy` when the project path is long; recorded in `pc/.bpy-python`) | 1.6 GB (wheel download: 315 MB Windows, 208-221 MB macOS, 519 MB Linux) | setup script, step 5 | 3-5 min | the four bpy cache families below |
 | **Asset library** | | | | | |
 | HDRIs, photo-scanned PBR materials, scanned models, MakeHuman base data (115 entries in `assets-lib/manifest.json`; 52 "available", every file SHA-256 checked) | `assets-lib/hdri`, `pbr`, `model`, `human`, `texture` | 872 MB (hdri 261, pbr 406, human 171, model 35 MB) | `node assets-lib/fetch.mjs` | 1-5 min | every set |
@@ -38,7 +38,8 @@ CPU-bound steps.
 | **Per machine** | | | | | |
 | GPU launch profile found by gpu-check | `pc/.dk-gpu.json` | 1 KB | `pc\GPU-Check.cmd` (Windows), `bash pc/render-episode.sh --gpu-check` (macOS / Linux), or `node render/gpu-check.mjs` | 1-5 min | `--gpu`, `npm run episode` |
 | Benchmark result (`--workers auto`) | `.dk-tuning.json` | 1 KB | `npm run bench` | 5-10 min | optional |
-| Logs | `pc/logs/` | small | every setup / gpu-check / cache / episode run | - | sending back to the Claude session |
+| Logs | `pc/logs/` | small | every setup / gpu-check / cache / episode run | - | sending back to the Claude session: `pc\Send-Logs.cmd` (or `node pc/collect-logs.mjs`) puts the newest of each, the PC's details and the render status into one file, `pc/logs/send-to-claude-<date>.txt`, with the user folder's name replaced by `~` |
+| Windows graphics preference "High performance" for Node.js, Playwright's `chrome.exe` and `headless_shell.exe` | registry, per user: `HKCU\Software\Microsoft\DirectX\UserGpuPreferences` (what Settings > System > Display > Graphics writes; no administrator) | - | setup script (before the GPU check) and every start of `pc\Render-Episode.cmd` / `GPU-Check.cmd` (a new Chromium build lands in a new folder) | - | laptops with two graphics chips; no effect with one card |
 | Sound downloads in progress | `pc/downloads/` | up to the archive size | `pc/build-caches.mjs` (removed after unpacking) | - | - |
 | **Render output** | | | | | |
 | Shots (10-bit CRF 12 intermediates) | `output/episode1/shots/<scene>/<shot>/` | about 0.3-0.6 MB per frame: 25-45 GB for the episode | `npm run episode` | the render | scene files |
@@ -53,7 +54,18 @@ CPU-bound steps.
 | ffmpeg 8.1.3, Windows x64 | `https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-30-13-08/ffmpeg-n8.1.3-9-g29e619e767-win64-gpl-8.1.zip` | `7b801cdd3a1a0bb54ae6f572187e68b4ed54f52086cfee133fab2180bfb429fa` |
 | ffmpeg 8.1.3, Linux x64 | same release, `ffmpeg-n8.1.3-9-g29e619e767-linux64-gpl-8.1.tar.xz` | `97ce978979194b5cf7e06a5e68020dbdaa7a4f3294c5452b6a1bc347100dbb79` |
 | ffmpeg 8.1.3, Linux arm64 | same release, `ffmpeg-n8.1.3-9-g29e619e767-linuxarm64-gpl-8.1.tar.xz` | `10523d1e0be6b3ce62a9708cc50815c4b5eb5f36ae147fbe2afeecda6f2d6845` |
-| Node.js 20 (only if the PC has no Node 20+) | the newest `node-v20.*-win-x64.zip` / `.tar.xz` on nodejs.org | checked against nodejs.org's own `SHASUMS256.txt` |
+| Node.js 22.22.0, Windows x64 (only if the PC has no Node 20+) | `https://nodejs.org/dist/v22.22.0/node-v22.22.0-win-x64.zip` (2026-01-12) | `c97fa376d2becdc8863fcd3ca2dd9a83a9f3468ee7ccf7a6d076ec66a645c77a` |
+| Node.js 22.22.0, Linux x64 / arm64 | same folder, `node-v22.22.0-linux-x64.tar.xz` / `-linux-arm64.tar.xz` | `9aa8e9d2298ab68c600bd6fb86a6c13bce11a4eca1ba9b39d79fa021755d7c37` / `1bf1eb9ee63ffc4e5d324c0b9b62cf4a289f44332dfef9607cea1a0d9596ba6f` |
+| Node.js 22.22.0, macOS arm64 / x64 | same folder, `node-v22.22.0-darwin-arm64.tar.xz` / `-darwin-x64.tar.xz` | `2bd596bbfc4a275ceb8721a5954ee97daea5ebe673e96a185ebd732f6fb023ac` / `48bc437e00e0c1483da34c21dca196efcb8d22e5dcb0bc7c65386afb00fabb85` |
+| uv 0.5.11, Windows x64 (only if there is no Python 3.11) | `https://github.com/astral-sh/uv/releases/download/0.5.11/uv-x86_64-pc-windows-msvc.zip` | `3e8203e6434b45427f20824419f8d8d53f970a76d94ccdcad07f8498fa01a9d0` |
+| uv 0.5.11, Linux x64 / arm64 | same release, `uv-x86_64-unknown-linux-gnu.tar.gz` / `uv-aarch64-unknown-linux-gnu.tar.gz` | `14411de26cdea5f5139fafaf2b675b1c633e744dd49c6d6a9fc8817ec065158b` / `055c329c38a93c01d378349d51cb4d521d1998c8a79355ddc00f863ce451942f` |
+| uv 0.5.11, macOS arm64 / x64 | same release, `uv-aarch64-apple-darwin.tar.gz` / `uv-x86_64-apple-darwin.tar.gz` | `695f3640d5b1a4e28de7e36e3a2e14072852dcc6c70bf9e4deec6ada00d516b4` / `7e23d1d892c23f9e74245c4fd3d3e246438ce9b34460f85eee61f784de137b0b` |
+
+The Node.js and uv values are the publishers' own (`SHASUMS256.txt` on nodejs.org, the `.sha256` file next to each uv
+asset); on 2026-10-23 the Windows Node zip, the Windows uv zip and the Linux x64 uv archive were downloaded on the cloud
+machine and matched, and `pc/setup.sh` installed the pinned Linux Node from scratch. Node 20 reached its end of life in
+April 2026, so a PC without Node gets 22 LTS (the version the cloud machine runs `npm test` with); a Node 20+ already on
+the PC is still used.
 
 The ffmpeg builds are BtbN's month-end build of 2026-09-30 from the 8.1 release branch. BtbN keeps
 month-end builds for two years, and its `checksums.sha256` for that release lists the values above.
@@ -90,7 +102,9 @@ goes on with silent scene files. State on 2026-10-18: `final-vo` is packed and c
 (`dk-s01e01-final-vo-60d54fe148a1.tar`, 94,586,368 bytes, SHA-256
 `6c770b177f30df29c4652c958708bc5ae5a35ee5bec470cde45c227935890346`) but **not uploaded**; the mix
 does not exist. The whole route (pack, download from a web server, unpack, a damaged archive, a
-damaged file, paths that try to leave the folder) was tested on the cloud machine.
+damaged file, paths that try to leave the folder) is checked by `npm run selftest:sound`
+(`pc/selftest-sound.mjs`, a made-up package; 11 checks, all passing on 2026-10-23). Packing `final-vo` again on
+2026-10-23 gave the same archive name, size and SHA-256 as on 2026-10-18.
 
 ## Disk space to plan for
 
