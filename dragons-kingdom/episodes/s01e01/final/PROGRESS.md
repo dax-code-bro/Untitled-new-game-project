@@ -2,6 +2,24 @@
 
 Owner of this folder and of `../tools/` (the check tools and generators). Resume from here after a restart.
 
+## Second review of 2026-10-23 (evening): what changed here
+
+- **REQUEST to the director track: approve shots with the render gate.** `render-ready.json` (this folder) decides which
+  shots the render PC may turn into 4K masters; it is empty, so the PC masters nothing yet (76 shots have scene files and
+  wait for approval, `node render/gate.mjs status`). After reviewing a shot's draft: `node render/gate.mjs approve <shot ids>
+  --by "<who>" [--note "..."]` (or `--scene 1A`), commit `render-ready.json`. Changing an approved shot's scene, entry or
+  any file its scene loads makes it wait until it is approved again (`node render/gate.mjs check` exits 1); `revoke` takes
+  a shot back. The credits card (E-01) is gated on `credits.txt` the same way.
+- Rating lint (`../tools/check_final.py`), extended after every probe of the reviewer passed the old one: drink, tobacco,
+  drug and intimacy words; sons, heirs, youths, pages, squires, apprentices; second-person pronouns; a scope of the
+  paragraph and the three before it, ended when an adult is named; rule 6c for spoken cues (a call plus a vice word, or a
+  call plus an offer with a vice word nearby); gentle death words. `--selftest`: 17 broken copies + 1 table edit, all
+  caught. "The attendant" stays unprotected: ATTENDANT is the adult at the nest in this script (YOUNG ATTENDANT is
+  protected). `CHANGES.md` now says the lint checks wording, not meaning.
+- `credits.txt` is in heading / name blocks (format in `credits-notes.md`), with the CC BY block (title, author, licence,
+  link, "modified") and the credits typeface (EB Garamond, OFL). `video-description.txt` holds the full attribution with
+  the source URL for the video page. The card was rendered and looked at (contact sheet, 960x540 and 4K frames, 1:1 crops).
+
 ## Follow-ups of 2026-10-23 (the review of the PC kit and the script)
 
 - `check_final.py`: proof 1g locks the CONTENT of the five approved death blocks (R15, R16b, R18, R20, R21): their story
@@ -9,9 +27,9 @@ Owner of this folder and of `../tools/` (the check tools and generators). Resume
   the approval commit 3f43434 changed only markers and NOTE lines), and `APPROVED_RATING_SHA256` guards that table.
 - Rating lint: titles and kinship words (`his sister`, `her daughter`, `Leaf's rider`, ...) count as protected names;
   drinking words count as alcohol; rule 6b flags a vice word with a pronoun right after a protected character is named
-  (same or previous paragraph); cue directions `[to Abby]` with a vice word fail; rule 6d fails any death word in new text
-  outside the approved blocks. The three hits read in context (R3, C34, C14) are in `REVIEWED_CONTEXT` with the reason.
-  `--selftest` runs 8 broken copies of the script and 1 edit of the locked table (all caught).
+  (same or previous paragraph; widened in the second review above); cue directions `[to Abby]` with a vice word fail;
+  rule 6d fails any death word in new text outside the approved blocks. The hits read in context are in
+  `REVIEWED_CONTEXT` with the reason. `--selftest` then ran 8 broken copies (17 since the second review).
 - The reading copy drops the `[creator-approved wording 2026-10-18]` cue marker too (SERIES.md section 5 now describes
   how accepted text stays marked in the production copy and has no markers in the reading copy).
 - `voices.json` (via `tools/final_voices.py`): status notes now say that computer-voice takes of every line exist in

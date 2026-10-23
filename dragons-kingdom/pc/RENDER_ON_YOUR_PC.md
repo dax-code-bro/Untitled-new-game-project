@@ -261,12 +261,14 @@ from Homebrew and is not the pinned version the Windows and Linux setups use.
   assets with their licences. It is a proposal: you decide the wording (`credits-notes.md` next to
   it says where each line comes from). When the file changes and the director approves the new
   credits, the next render redoes only the credits roll.
-- **The Windows scripts were written and checked on a Linux computer.** On 2026-10-23 the whole
-  Windows setup ran there under PowerShell 7 (with a user folder named `José` to test non-English
-  letters): every tool's output appeared on the screen and in the setup log, and the setup ended
-  with exit code 2 because that computer has no graphics card. The scripts were also checked for
-  Windows PowerShell 5.1 syntax. Windows itself, its console and a real graphics card were not part
-  of that test, so **your first run is the real test**. Please send the logs.
+- **The Windows scripts were tested on a real Windows computer without a graphics card**
+  (GitHub's Windows Server 2025 test machine, Windows PowerShell 5.1, 2026-10-23): the setup
+  installed the tools in about a minute (the long character-building step was left out there) and
+  said `SETUP RESULT: 0`; GPU-Check.cmd showed the GPU NOT USED banner and ended with code 2, as it
+  should there; a 4K test picture (the coast) drawn there was exactly the cloud computer's; the render self-test (render, stop, resume, approvals, credits change, joining
+  the episode) passed; Send-Logs.cmd left no user or computer name in its file. A real graphics card,
+  the console window you click in, and File Explorer were not part of that test, so **your first
+  run is still the real test**. Please send the logs and the picture.
 - The GPU check's estimate scales one test frame to every set. The cloud's per-set figures are
   themselves estimates for sets that are not built yet. The real speed shows once the first scenes
   render (`STATUS.txt` then uses the measured speed).

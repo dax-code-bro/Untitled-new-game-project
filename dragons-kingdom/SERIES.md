@@ -92,17 +92,19 @@ These rules apply to every episode of Dragon's Kingdom and to everyone working o
 
 Run them from `dragons-kingdom/`. Each must pass (exit code 0) before the work it covers is committed.
 
-- **Render pipeline:** `npm test` (33 tests on 2026-10-23, about 3 minutes on the cloud machine). It must pass before render code changes are committed.
+- **Render pipeline:** `npm test` (41 tests on 2026-10-23, about 4 minutes on the cloud machine; the PowerShell parse test is skipped where no pwsh is installed. They are the render tests and the render PC kit tests in `test/pc-kit.test.mjs`: the Windows launchers' shape, no "npm run" in what Windows shows, the render gate's lock and verdicts, Send-Logs privacy, the pinned Node.js, the GPU picture comparison). It must pass before render code changes are committed.
+- **Render gate (which shots may become 4K masters):** `node render/gate.mjs check` exits 1 when a shot approved in `episodes/s01e01/final/render-ready.json` has changed since its approval (approve it again with `node render/gate.mjs approve <shot> --by "<who>"`, or revoke it). `node render/gate.mjs status` lists every shot's state.
 - **Locked shooting script (Episode 1):** `python3 episodes/s01e01/tools/check_final.py`. Exit code 0 means:
   - the handoff (`screenplay.md`) survives word for word, and only the changes Daxtyn approved touch its spoken lines;
   - the blocks he approved hold exactly the text he approved (the six deaths in Cling, the new species wording);
   - the additions are exactly the proposals, with their markers and dependency notes;
-  - the canon lint and the rating lint of section 8 are clean: by name, by title, through a pronoun right after a protected character is named, and no new death outside the approved ones;
+  - the canon lint and the rating lint of section 8 are clean. The rating lint matches **wording, not meaning**: a protected character named, called by a title or kinship word (sons, heirs, pages, squires, apprentices...), or referred to by a pronoun (including you / thee / thy) while a protected character is in scope (named in that paragraph or the three before it, until an adult is named instead), together with drink, tobacco, drug or intimacy words; a spoken cue that calls a protected character and has a vice word anywhere in it; a cue that calls a protected character and offers something ("have", "take", "try", "a pull") with a vice word in the same or the previous paragraph; and no new death outside the approved ones, including gentle death words (drowns, perishes, "does not move again", "stops breathing"). Each reviewed exception is listed with its reason in `REVIEWED_CONTEXT`. A sentence that means something forbidden in words the lint does not know still needs a human reading;
   - the runtime in the script's timing note and the reading copy `screenplay-final-clean.md` are current (after an edit: `--update-timing --clean`).
-  - `--selftest` feeds it broken copies that must fail, as a check of the checker itself.
+  - `--selftest` feeds it broken copies that must fail (seventeen, plus an edit of the approved-text table), as a check of the checker itself.
 - **Planning data (Episode 1):** `python3 episodes/s01e01/tools/build_final_breakdown.py --check`: dialogue, voices, shot list and render schedule are rebuilt from the locked script and match it.
 - **Extended edition (Episode 1):** `python3 episodes/s01e01/tools/check_extended.py` (the original screenplay intact in `screenplay-extended.md`, additions marked, canon lint clean) and `python3 episodes/s01e01/tools/extract_dialogue.py --check`.
-- **Render PC kit:** `node pc/build-caches.mjs --check` (everything a render needs that is not in git), `npm run selftest:episode` (the episode runner: skip, stop, resume, assemble, sound swap), `npm run selftest:sound` (the sound delivery route) and, on the render PC, `pc\GPU-Check.cmd` (`pc/RENDER_ON_YOUR_PC.md`).
+- **Voice takes record (Episode 1):** `python3 episodes/s01e01/final/tools/refresh_vo_sources.py --check`: `vo/takes.json` names the current `voices.json` and every take still matches its recorded SHA-256.
+- **Render PC kit:** `node pc/build-caches.mjs --check` (everything a render needs that is not in git), `npm run selftest:episode` (the episode runner: skip, stop, resume, assemble, sound swap, and the render gate: unapproved, approved, changed after approval, approved again, revoked), `npm run selftest:sound` (the sound delivery route), the GitHub Actions workflow `pc-kit-windows` (the setup, the GPU check, the picture check, the kit tests and the self-test on a real Windows machine; run it from the Actions tab) and, on the render PC, `pc\GPU-Check.cmd` (`pc/RENDER_ON_YOUR_PC.md`).
 
 ## 7. Where episodes come from
 
