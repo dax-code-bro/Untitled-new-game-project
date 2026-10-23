@@ -1,6 +1,6 @@
 {
  "title": "Dragon's Kingdom S01E01 - draft cut: PROLOGUE + TITLE + 1A",
- "made_at": "2026-10-23T05:34",
+ "made_at": "2026-10-23T23:06",
  "shots_dir": "../../../../tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/work/shots",
  "size": "960x540",
  "fps": 24,
@@ -28,7 +28,7 @@
    "job": "P-02",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T19:48",
    "frames": 144,
    "rec_in": 96,
    "trans": [
@@ -48,7 +48,7 @@
    "job": "P-03",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T20:21",
    "frames": 276,
    "rec_in": 240,
    "trans": [
@@ -67,7 +67,7 @@
    "job": "P-04",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T20:28",
    "frames": 84,
    "rec_in": 516,
    "trans": [
@@ -86,7 +86,7 @@
    "job": "P-05",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T20:55",
    "frames": 84,
    "rec_in": 600,
    "trans": [
@@ -105,7 +105,7 @@
    "job": "P-06",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T20:43",
    "frames": 144,
    "rec_in": 684,
    "trans": [
@@ -124,7 +124,7 @@
    "job": "P-07",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T20:48",
    "frames": 84,
    "rec_in": 828,
    "trans": [
@@ -132,18 +132,18 @@
    ],
    "handles_used": [
     0,
-    0
+    12
    ],
    "held_frames": [
     0,
-    12
+    0
    ]
   },
   {
    "job": "P-08",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T21:24",
    "frames": 192,
    "rec_in": 912,
    "trans": [
@@ -151,19 +151,19 @@
     24
    ],
    "handles_used": [
-    0,
-    0
-   ],
-   "held_frames": [
     12,
     12
+   ],
+   "held_frames": [
+    0,
+    0
    ]
   },
   {
    "job": "P-09",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T21:35",
    "frames": 204,
    "rec_in": 1104,
    "trans": [
@@ -171,19 +171,19 @@
     24
    ],
    "handles_used": [
-    0,
-    0
-   ],
-   "held_frames": [
     12,
     9
+   ],
+   "held_frames": [
+    0,
+    0
    ]
   },
   {
    "job": "P-10",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T21:55",
    "frames": 48,
    "rec_in": 1308,
    "trans": [
@@ -191,19 +191,19 @@
     18
    ],
    "handles_used": [
-    0,
-    0
-   ],
-   "held_frames": [
     9,
     6
+   ],
+   "held_frames": [
+    0,
+    0
    ]
   },
   {
    "job": "P-11",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T21:57",
    "frames": 48,
    "rec_in": 1356,
    "trans": [
@@ -211,19 +211,19 @@
     12
    ],
    "handles_used": [
-    0,
-    0
-   ],
-   "held_frames": [
     6,
     6
+   ],
+   "held_frames": [
+    0,
+    0
    ]
   },
   {
    "job": "P-12",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T21:59",
    "frames": 48,
    "rec_in": 1404,
    "trans": [
@@ -231,19 +231,19 @@
     12
    ],
    "handles_used": [
-    0,
-    0
-   ],
-   "held_frames": [
     6,
     6
+   ],
+   "held_frames": [
+    0,
+    0
    ]
   },
   {
    "job": "P-13",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T22:02",
    "frames": 60,
    "rec_in": 1452,
    "trans": [
@@ -251,19 +251,19 @@
     12
    ],
    "handles_used": [
-    0,
-    0
-   ],
-   "held_frames": [
     6,
     6
+   ],
+   "held_frames": [
+    0,
+    0
    ]
   },
   {
    "job": "P-14",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T22:03",
    "frames": 48,
    "rec_in": 1512,
    "trans": [
@@ -271,19 +271,19 @@
     12
    ],
    "handles_used": [
-    0,
-    0
-   ],
-   "held_frames": [
     6,
     9
+   ],
+   "held_frames": [
+    0,
+    0
    ]
   },
   {
    "job": "P-15",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T22:14",
    "frames": 276,
    "rec_in": 1560,
    "trans": [
@@ -291,19 +291,19 @@
     18
    ],
    "handles_used": [
-    0,
-    0
-   ],
-   "held_frames": [
     9,
     12
+   ],
+   "held_frames": [
+    0,
+    0
    ]
   },
   {
    "job": "P-16",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T22:34",
    "frames": 264,
    "rec_in": 1836,
    "trans": [
@@ -311,11 +311,11 @@
     24
    ],
    "handles_used": [
-    0,
+    12,
     0
    ],
    "held_frames": [
-    12,
+    0,
     0
    ]
   },
@@ -323,7 +323,7 @@
    "job": "P-17",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T22:46",
    "frames": 180,
    "rec_in": 2100,
    "trans": [
@@ -342,7 +342,7 @@
    "job": "T-01",
    "scene": "TITLE",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T05:42",
    "frames": 192,
    "rec_in": 2280,
    "trans": [
@@ -361,7 +361,7 @@
    "job": "1A-01",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T05:53",
    "frames": 132,
    "rec_in": 2472,
    "trans": [
@@ -380,7 +380,7 @@
    "job": "1A-02",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T20:54",
    "frames": 144,
    "rec_in": 2604,
    "trans": [
@@ -399,7 +399,7 @@
    "job": "X1-01",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T06:04",
    "frames": 108,
    "rec_in": 2748,
    "trans": [
@@ -456,7 +456,7 @@
    "job": "X1-03",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T05:37",
    "frames": 48,
    "rec_in": 3096,
    "trans": [
@@ -475,7 +475,7 @@
    "job": "X1-04",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T05:51",
    "frames": 96,
    "rec_in": 3144,
    "trans": [
@@ -494,7 +494,7 @@
    "job": "X1-05",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T06:15",
    "frames": 96,
    "rec_in": 3240,
    "trans": [
@@ -513,7 +513,7 @@
    "job": "X1-06",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T06:23",
    "frames": 84,
    "rec_in": 3336,
    "trans": [
@@ -532,7 +532,7 @@
    "job": "1A-03",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T06:16",
    "frames": 120,
    "rec_in": 3420,
    "trans": [
@@ -551,7 +551,7 @@
    "job": "1A-04",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T06:40",
    "frames": 204,
    "rec_in": 3540,
    "trans": [
@@ -570,7 +570,7 @@
    "job": "1A-05",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T21:05",
    "frames": 84,
    "rec_in": 3744,
    "trans": [
@@ -589,7 +589,7 @@
    "job": "1A-06",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T21:13",
    "frames": 72,
    "rec_in": 3828,
    "trans": [
@@ -608,7 +608,7 @@
    "job": "1A-07",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T21:21",
    "frames": 96,
    "rec_in": 3900,
    "trans": [
@@ -627,7 +627,7 @@
    "job": "1A-08",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T21:33",
    "frames": 84,
    "rec_in": 3996,
    "trans": [
@@ -646,7 +646,7 @@
    "job": "1A-09",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T21:53",
    "frames": 108,
    "rec_in": 4080,
    "trans": [
@@ -665,7 +665,7 @@
    "job": "1A-10",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T22:12",
    "frames": 108,
    "rec_in": 4188,
    "trans": [
@@ -684,7 +684,7 @@
    "job": "1A-11",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T22:17",
    "frames": 60,
    "rec_in": 4296,
    "trans": [
@@ -703,7 +703,7 @@
    "job": "1A-12",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T22:53",
    "frames": 216,
    "rec_in": 4356,
    "trans": [
@@ -722,7 +722,7 @@
    "job": "1A-13",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T23:02",
    "frames": 60,
    "rec_in": 4572,
    "trans": [
@@ -1178,7 +1178,7 @@
    "job": "X2-04",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T06:39",
    "frames": 96,
    "rec_in": 7056,
    "trans": [
@@ -1963,16 +1963,16 @@
   }
  ],
  "output": {
-  "file": "../../../../tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/cut-test.mp4",
+  "file": "episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_PROLOGUE-TITLE-1A.mp4",
   "frames": 8580,
   "duration_s": 357.5,
-  "size_mb": 4.6,
-  "assembled_s": 107
+  "size_mb": 35.4,
+  "assembled_s": 127
  },
  "summary": {
-  "rendered": 2,
+  "rendered": 38,
   "black": 1,
-  "slates": 73,
+  "slates": 37,
   "voice_cues": 50
  }
 }
