@@ -7,12 +7,14 @@
 # The computer is kept awake while it runs (caffeinate on macOS, systemd-inhibit on Linux).
 # Extra words go to the episode runner:  bash pc/render-episode.sh --status | --max-hours 8 | ...
 # GPU check instead of rendering:        bash pc/render-episode.sh --gpu-check [gpu-check options]
+# Logs for the Claude session:           bash pc/render-episode.sh --send-logs   (one file: pc/logs/send-to-claude-<date>.txt)
 set -u
 PROJ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJ" || exit 1
 for d in "$PROJ/pc/tools/node/bin" "$PROJ/pc/tools/ffmpeg/bin"; do [ -d "$d" ] && PATH="$d:$PATH"; done
 export PATH
 command -v node >/dev/null || { echo "Node.js is missing: run bash pc/setup.sh first"; exit 1; }
+case " $* " in *" --send-logs "*) exec node pc/collect-logs.mjs;; esac
 PULL=1; STATUS=0; GPUCHECK=0; ARGS=()
 for a in "$@"; do
   case "$a" in --no-pull) PULL=0;; --gpu-check) GPUCHECK=1;; --status) STATUS=1; ARGS+=("$a");; *) ARGS+=("$a");; esac

@@ -4,7 +4,7 @@ rem renders one native 4K test frame and estimates how long Episode 1 takes on t
 rem Works in a new window: it finds the Node.js, ffmpeg and Git that the setup put in pc\tools,
 rem and needs no change to the PowerShell script policy. Options are passed on, for example
 rem   GPU-Check.cmd --all-profiles      (list every way Chromium can reach the graphics card)
-rem The result goes to pc\logs\gpu-check-<date>.txt (send that file back).
+rem The result goes to pc\logs\gpu-check-DATE.txt (send that file back).
 (
   powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0render-episode.ps1" --gpu-check %*
   echo.

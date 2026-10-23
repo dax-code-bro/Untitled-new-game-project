@@ -12,16 +12,20 @@
   What it does (safe to run again any time - it skips what is done and continues where it stopped):
     1. Git (the PC's own, else a portable MinGit - pinned version, SHA-256 checked, no
        administrator needed), then the project: git clone, or git pull of the branch
-    2. Node.js 20 LTS (private copy in pc\tools\node if the PC has no Node >= 20; SHA-256 checked)
+    2. Node.js: the PC's own if it is version 20 or newer, else a private copy of Node.js 22.22.0 LTS in
+       pc\tools\node (pinned version, SHA-256 checked)
     3. ffmpeg with libx264: a pinned build (private copy in pc\tools\ffmpeg; SHA-256 checked), so
        every PC encodes with the same ffmpeg
     4. npm ci + Playwright's Chromium
-    5. Python 3.11 + Blender's Python module bpy 4.2 in a private venv
+    5. Python 3.11 (the PC's own, else a private one via uv 0.5.11 - pinned, SHA-256 checked) + Blender's
+       Python module bpy 4.2 in a private venv
     6. every cache a render needs: node pc\build-caches.mjs (downloads, landscape bakes,
        48 human characters, cloth bakes - the long step: 1-3 hours the first time)
     7. GPU self-test (node render\gpu-check.mjs) and a 1-minute end-to-end render test
-    8. a desktop shortcut "Render Dragon's Kingdom" (= pc\Render-Episode.cmd)
-  The PC is kept awake during steps 6-7, and clicking inside the window does not pause it.
+    8. a desktop shortcut "Render Dragon's Kingdom" (= pc\Render-Episode.cmd), and Windows' graphics
+       setting "High performance" for Node.js and the Chromium it uses (per user, no administrator; on a
+       laptop with two graphics chips this makes Chromium use the strong one)
+  The PC is kept awake for the whole setup, and clicking inside the window does not pause it.
   Everything the tools print is shown and also written to dragons-kingdom\pc\logs\setup-<date>.log.
   Exit code: 0 ok, 2 setup finished but no usable graphics card, 1 setup stopped.
 
@@ -47,8 +51,13 @@ try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::S
 
 $RepoUrl = 'https://github.com/dax-code-bro/Untitled-new-game-project.git'
 if ($env:DK_REPO_URL) { $RepoUrl = $env:DK_REPO_URL }
-$NodeMajor = 20
+$NodeMajor = 20                          # a Node.js already on the PC is used if it is at least this version
+#  - Node.js 22 LTS for PCs without one (the version the cloud machine runs the tests with), from nodejs.org/dist
+$NodeVersion = '22.22.0'
+$NodeZipSha256 = 'c97fa376d2becdc8863fcd3ca2dd9a83a9f3468ee7ccf7a6d076ec66a645c77a'
+#  - uv (only if the PC has no Python 3.11): installs a private Python 3.11
 $UvVersion = '0.5.11'
+$UvZipSha256 = '3e8203e6434b45427f20824419f8d8d53f970a76d94ccdcad07f8498fa01a9d0'
 # Pinned downloads (pc/MANIFEST.md): the exact files, with the SHA-256 the setup checks.
 #  - MinGit (portable Git, no installer, no administrator): Git for Windows 2.55.0(5), 2026-08-20
 $MinGitUrl = 'https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.5/MinGit-2.55.0.5-64-bit.zip'
@@ -189,6 +198,43 @@ function Disable-QuickEdit {
     return $mode
   } catch { return $null }
 }
+# Windows' own per-program graphics choice (Settings > System > Display > Graphics > "High performance"), stored per
+# user in HKCU, so no administrator is needed. On a desktop with one graphics card it changes nothing; on a laptop
+# with a weak and a strong graphics chip it makes Node.js and the Chromium it starts use the strong one.
+# Returns the programs that have the setting now.
+function Set-GpuPreference([string[]]$Exes) {
+  $key = 'HKCU:\Software\Microsoft\DirectX\UserGpuPreferences'
+  $done = @()
+  if ([Environment]::OSVersion.Platform -ne 'Win32NT') { return $done }
+  try {
+    if (-not (Test-Path $key)) { New-Item -Path $key -Force | Out-Null }
+    foreach ($exe in $Exes) {
+      if (-not $exe -or -not (Test-Path -LiteralPath $exe)) { continue }
+      $full = (Resolve-Path -LiteralPath $exe).Path
+      $cur = (Get-ItemProperty -Path $key -Name $full -ErrorAction SilentlyContinue).$full
+      if ("$cur" -notmatch 'GpuPreference=2;') {
+        $val = ("$cur" -replace 'GpuPreference=\d;', '') + 'GpuPreference=2;'     # keep any other setting Windows stored there
+        New-ItemProperty -Path $key -Name $full -Value $val -PropertyType String -Force | Out-Null
+      }
+      $done += $full
+    }
+  } catch { Write-Note ('could not set the graphics preference: ' + $_.Exception.Message) }
+  return $done
+}
+# The programs that draw the frames: Node.js and Playwright's Chromium (full browser and headless shell).
+function Get-RenderProgram {
+  $list = @()
+  $n = Get-Command node -ErrorAction SilentlyContinue
+  if ($n) { $list += $n.Source }
+  $pw = $env:PLAYWRIGHT_BROWSERS_PATH
+  if (-not $pw -or $pw -eq '0') { $pw = Join-Path $env:LOCALAPPDATA 'ms-playwright' }
+  if (Test-Path $pw) {
+    $list += @(Get-ChildItem -Path $pw -Directory -Filter 'chromium-*' -ErrorAction SilentlyContinue | ForEach-Object { Join-Path $_.FullName 'chrome-win\chrome.exe' })
+    $list += @(Get-ChildItem -Path $pw -Directory -Filter 'chromium_headless_shell-*' -ErrorAction SilentlyContinue | ForEach-Object { Join-Path $_.FullName 'chrome-win\headless_shell.exe' })
+  }
+  return @($list | Where-Object { $_ -and (Test-Path -LiteralPath $_) })
+}
+
 function Restore-ConsoleMode($Mode) {
   if ($null -eq $Mode) { return }
   try { [void][DK.ConsoleMode]::SetConsoleMode([DK.ConsoleMode]::GetStdHandle(-10), [uint32]$Mode) } catch { Write-Verbose $_.Exception.Message }
@@ -239,7 +285,7 @@ function Invoke-Setup {
   New-Item -ItemType Directory -Force -Path $logDir | Out-Null
   $script:Log = Join-Path $logDir ('setup-' + $stamp + '.log')
   try { Stop-Transcript | Out-Null } catch { Write-Verbose $_.Exception.Message }
-  if (Test-Path $tmpLog) { Get-Content $tmpLog | Set-Content $script:Log; Remove-Item -Force $tmpLog -ErrorAction SilentlyContinue }
+  if (Test-Path $tmpLog) { Copy-Item -LiteralPath $tmpLog -Destination $script:Log -Force; Remove-Item -Force $tmpLog -ErrorAction SilentlyContinue }   # a byte copy (Set-Content would re-encode)
   Start-Log $script:Log -Append
   Write-Ok ('project: ' + $proj)
   if ($proj -match 'OneDrive') { Write-Note 'the project is inside OneDrive: syncing gigabytes of render files is slow - better use -Dir C:\DragonsKingdom' }
@@ -268,26 +314,20 @@ function Invoke-Setup {
   }
 
   # ---- 2. Node.js ----------------------------------------------------------------------------------
-  Write-Step ('Node.js ' + $NodeMajor + ' LTS')
+  Write-Step 'Node.js'
   $nodeDir = Join-Path $tools 'node'
   if (Test-Path (Join-Path $nodeDir 'node.exe')) { $env:Path = $nodeDir + ';' + $env:Path }
   if ((Get-NodeMajor) -lt $NodeMajor) {
-    $base = 'https://nodejs.org/dist/latest-v' + $NodeMajor + '.x'
-    $sumsFile = Join-Path $tools 'SHASUMS256.txt'
-    Save-Download ($base + '/SHASUMS256.txt') $sumsFile
-    $line = Get-Content $sumsFile | Where-Object { $_ -match 'node-v[\d.]+-win-x64\.zip$' } | Select-Object -First 1
-    if (-not $line) { Stop-Setup ('no Windows build listed at ' + $base) }
-    $parts = $line -split '\s+'
-    $want = $parts[0]; $file = $parts[1]
+    $file = 'node-v' + $NodeVersion + '-win-x64.zip'
     $zip = Join-Path $tools $file
-    Write-Host ('   downloading ' + $file)
-    Save-Download ($base + '/' + $file) $zip $want
+    Write-Host ('   no Node.js ' + $NodeMajor + ' or newer on this PC: installing Node.js ' + $NodeVersion + ' into pc\tools\node')
+    Save-Download ('https://nodejs.org/dist/v' + $NodeVersion + '/' + $file) $zip $NodeZipSha256
     $tmp = Join-Path $tools 'node-unpack'
     Expand-Zip $zip $tmp
     $inner = Get-ChildItem -Directory $tmp | Select-Object -First 1
     if (Test-Path $nodeDir) { Remove-Item -Recurse -Force $nodeDir }
     Move-Item $inner.FullName $nodeDir
-    Remove-Item -Recurse -Force $tmp, $zip, $sumsFile -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force $tmp, $zip -ErrorAction SilentlyContinue
     $env:Path = $nodeDir + ';' + $env:Path
   }
   if ((Get-NodeMajor) -lt $NodeMajor) { Stop-Setup ('Node.js ' + $NodeMajor + ' or newer is still not available') }
@@ -374,7 +414,7 @@ function Invoke-Setup {
       if (-not (Test-Path $uv)) {
         Write-Host ('   no Python 3.11 found: installing uv ' + $UvVersion + ' (a small, free Python manager) into pc\tools\uv')
         $zip = Join-Path $tools 'uv.zip'
-        Save-Download ('https://github.com/astral-sh/uv/releases/download/' + $UvVersion + '/uv-x86_64-pc-windows-msvc.zip') $zip
+        Save-Download ('https://github.com/astral-sh/uv/releases/download/' + $UvVersion + '/uv-x86_64-pc-windows-msvc.zip') $zip $UvZipSha256
         Expand-Zip $zip (Join-Path $tools 'uv')
         Remove-Item -Force $zip
       }
@@ -395,11 +435,8 @@ function Invoke-Setup {
   elseif (Test-Path $marker) { Remove-Item -Force $marker }
 
   # ---- 6. caches ---------------------------------------------------------------------------------------
-  $awake = $false
   if (-not $SkipCaches) {
-    $awake = Set-KeepAwake $true
     Write-Step 'caches: asset downloads, landscape bakes, human characters, cloth bakes (first time: 1-3 hours)'
-    if ($awake) { Write-Host '   the PC will not go to sleep until the setup is finished' }
     Write-Host '   one line per finished piece; a character can take 5-15 minutes, so a quiet minute is normal'
     $cacheArgs = @('pc/build-caches.mjs', '--python', $bpyPy)
     if ($WithVoice) { $cacheArgs += '--with-voice' }
@@ -408,6 +445,10 @@ function Invoke-Setup {
   } else {
     Write-Step 'caches skipped (-SkipCaches): run  node pc\build-caches.mjs  later'
   }
+
+  # ---- graphics preference (before the GPU check, so the check sees the setting) --------------------------
+  $pref = Set-GpuPreference (Get-RenderProgram)
+  if ($pref.Count) { Write-Ok ('Windows graphics setting "High performance" for: ' + (($pref | ForEach-Object { Split-Path -Leaf $_ }) -join ', ')) }
 
   # ---- 7. GPU self-test + end-to-end test ---------------------------------------------------------------
   $gpuRc = 0
@@ -420,7 +461,6 @@ function Invoke-Setup {
     $rc = Invoke-Tool node pc/selftest-episode.mjs $mode
     if ($rc -ne 0) { Write-Note 'the end-to-end test did not pass - send pc\logs to the Claude session' }
   }
-  if ($awake) { [void](Set-KeepAwake $false) }
 
   # ---- 8. desktop shortcut --------------------------------------------------------------------------------
   if (-not $NoShortcut) {
@@ -458,6 +498,8 @@ $oldPyUtf8 = $env:PYTHONUTF8
 $env:PYTHONUTF8 = '1'
 $oldConsoleMode = Disable-QuickEdit
 $script:Code = 1
+# the PC stays awake (no sleep) from here to the end of the setup: downloads and character builds take hours
+if (Set-KeepAwake $true) { Write-Host 'The PC will not go to sleep until the setup is finished (the screen may still turn off).' }
 try {
   Invoke-Setup          # (not "$x = Invoke-Setup": that would swallow everything the tools print)
 } catch {

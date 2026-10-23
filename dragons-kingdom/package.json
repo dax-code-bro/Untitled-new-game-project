@@ -22,7 +22,8 @@
     "gpu-check": "node render/gpu-check.mjs",
     "caches": "node pc/build-caches.mjs",
     "caches:check": "node pc/build-caches.mjs --check",
-    "selftest:episode": "node pc/selftest-episode.mjs"
+    "selftest:episode": "node pc/selftest-episode.mjs",
+    "selftest:sound": "node pc/selftest-sound.mjs"
   },
   "dependencies": {
     "three": "0.180.0"

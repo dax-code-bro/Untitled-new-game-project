@@ -132,7 +132,7 @@ async function main() {
 
   say('\nrun 1: scene B has no scene file yet');
   let r = await runEpisode();
-  if (r.code === 2 && /No graphics card has been checked/.test(r.out)) { say(r.out); say('-> run with --cpu, or run  npm run gpu-check  first'); return 2; }
+  if (r.code === 2 && /No graphics card has been checked/.test(r.out)) { say(r.out); say(`-> run with --cpu, or run the GPU check first: ${process.platform === 'win32' ? 'pc\\GPU-Check.cmd' : 'npm run gpu-check'}`); return 2; }
   check(r.code === 0, `exit code 0 (got ${r.code})`);
   check(/B-01\s+SKIPPED - waiting for .*set-b\.js/.test(r.out), 'B-01 skipped with a clear message');
   check(['A', 'C', 'END'].every((k) => fs.existsSync(sceneMp4(k))), 'scene files A, C and END were made');

@@ -67,7 +67,8 @@ Render Episode 1 scene by scene (resumable) and assemble the episode.
   --status             show progress only, render nothing
   --dry-run            list what would be rendered / assembled
   --only S1,S2         only these scenes (e.g. 1A,1B); the episode is assembled when ALL are done
-  --gpu | --cpu        renderer (default: the GPU that "npm run gpu-check" found; without one: stop)
+  --gpu | --cpu        renderer (default: the GPU that the GPU check found - Windows: pc\\GPU-Check.cmd,
+                       elsewhere: npm run gpu-check; without one: stop)
   --workers N          browsers per shot (default: the job's own, 2; a shot that fails is retried with 1)
   --max-hours H        do not start a new shot after H hours (stop cleanly, resume later)
   --rerender-stale     render finished shots again if their scene files changed since (git pull)

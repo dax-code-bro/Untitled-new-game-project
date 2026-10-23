@@ -64,7 +64,9 @@ function run(cmd, args, { cwd = ROOT, env = {}, quiet = true, shell = false } = 
     logOnly(`\n$ ${cmd} ${args.join(' ')}\n`);
     let p;
     try {
-      p = spawn(cmd, args, { cwd, env: { ...process.env, ...env }, shell, windowsHide: true, stdio: ['ignore', quiet ? 'pipe' : 'inherit', quiet ? 'pipe' : 'inherit'] });
+      // Python children read and write UTF-8 (a Windows user folder such as C:\Users\José must survive; Windows'
+      // Python would otherwise use the old code page for files and pipes)
+      p = spawn(cmd, args, { cwd, env: { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8', ...env }, shell, windowsHide: true, stdio: ['ignore', quiet ? 'pipe' : 'inherit', quiet ? 'pipe' : 'inherit'] });
     } catch (e) { resolve({ code: 1, error: e.message, s: 0, tail: '' }); return; }
     let tail = '';
     const keep = (d) => { const s = d.toString(); logOnly(s); tail = (tail + s).slice(-3000); };
@@ -465,12 +467,14 @@ async function main() {
   if (opt.from && !(opt.only && opt.only.size === 1 && opt.only.has('sound'))) throw new Error('--from is for the sound: use  --only sound --from <file.tar or folder>');
   const fams = FAMILIES.filter((f) => (opt.only ? opt.only.has(f.name) : !f.optional || f.defaultRun || (f.name === 'voice' && opt.voice)));
   let bad = 0;
+  let warn = 0;     // optional families (sound, voice): reported, but a render does not wait for them
+  const fail = (f) => { if (f.optional) warn++; else bad++; };
   for (const f of fams) {
     let c;
     try { c = await f.check(ctx); } catch (e) { c = { ok: false, problem: e.message }; }
     if (opt.check) {
-      say(`  ${c.ok ? 'ok     ' : 'MISSING'} ${f.name.padEnd(13)} ${c.ok ? (c.note || f.what) : c.problem}${!c.ok && c.note ? ` (${c.note})` : ''}`);
-      if (!c.ok) bad++;
+      say(`  ${c.ok ? 'ok     ' : 'MISSING'} ${f.name.padEnd(13)} ${c.ok ? (c.note || f.what) : c.problem}${!c.ok && c.note ? ` (${c.note})` : ''}${!c.ok && f.optional ? ' [optional]' : ''}`);
+      if (!c.ok) fail(f);
       continue;
     }
     if (c.ok && !opt.force && !(opt.from && f.name === 'sound')) { say(`  ok      ${f.name.padEnd(13)} ${c.note || 'up to date'}`); continue; }
@@ -481,9 +485,10 @@ async function main() {
     if (r.ok) {
       const c2 = await f.check(ctx);
       say(`  ${c2.ok ? 'ok     ' : 'CHECK  '} ${f.name.padEnd(13)} ${c2.ok ? `built in ${fmt((Date.now() - t0) / 1000)}` : `built, but the check still says: ${c2.problem}`}`);
-      if (!c2.ok) bad++;
-    } else { bad++; say(`  FAILED  ${f.name.padEnd(13)} ${r.problem}`); }
+      if (!c2.ok) fail(f);
+    } else { fail(f); say(`  ${f.optional ? 'WARNING' : 'FAILED '} ${f.name.padEnd(13)} ${r.problem}${f.optional ? ' (optional: rendering does not wait for it; the next run tries again)' : ''}`); }
   }
+  if (warn) say(`\n${warn} optional item(s) not ready (sound or voice models): the pictures render without them.`);
   say(bad ? `\n${bad} item(s) not ready${LOG ? ` - details in ${rel(LOG)}` : ''}. ${opt.check ? 'Build them with: node pc/build-caches.mjs' : 'Run this again to retry (finished parts are kept).'}` : '\nall caches ready.');
   if (LOG) say(`log: ${rel(LOG)}`);
   return bad ? 1 : 0;

@@ -9,6 +9,8 @@
   not pause the render (QuickEdit is switched off for this window).
   Extra words are passed on, e.g.  Render-Episode.cmd --status   or   --max-hours 8   or   --no-pull
   GPU check instead of rendering (what pc\GPU-Check.cmd runs):  Render-Episode.cmd --gpu-check [gpu-check options]
+  Logs for the Claude session (what pc\Send-Logs.cmd runs):     Render-Episode.cmd --send-logs
+    (one text file pc\logs\send-to-claude-<date>.txt; its text is also copied, ready to paste with Ctrl+V)
 #>
 param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Rest = @())
 $ErrorActionPreference = 'Continue'
@@ -18,6 +20,27 @@ $extra = @((Join-Path $tools 'node'), (Join-Path $tools 'ffmpeg\bin'), (Join-Pat
 if ($extra) { $env:Path = ($extra -join ';') + ';' + $env:Path }
 Set-Location $proj
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Write-Host 'Node.js is missing: run pc\Setup-Windows.cmd first.' -ForegroundColor Red; exit 1 }
+
+# ---- logs for the Claude session: one file, its text copied, its folder opened
+if ($Rest -contains '--send-logs') {
+  $pathFile = Join-Path ([IO.Path]::GetTempPath()) ('dk-send-logs-' + $PID + '.txt')
+  $env:DK_PRINT_PATH_FILE = $pathFile
+  & node pc/collect-logs.mjs
+  $code = $LASTEXITCODE
+  Remove-Item Env:\DK_PRINT_PATH_FILE -ErrorAction SilentlyContinue
+  if ($code -eq 0 -and (Test-Path -LiteralPath $pathFile)) {
+    $file = ([IO.File]::ReadAllText($pathFile)).Trim()
+    Remove-Item -Force -LiteralPath $pathFile -ErrorAction SilentlyContinue
+    try {
+      Set-Clipboard -Value ([IO.File]::ReadAllText($file)) -ErrorAction Stop
+      Write-Host 'The text is copied. Click into the chat with Claude and press Ctrl+V, then Enter.' -ForegroundColor Green
+    } catch { Write-Host 'Could not copy the text: open the file, press Ctrl+A and Ctrl+C, and paste it into the chat.' -ForegroundColor Yellow }
+    if ([Environment]::OSVersion.Platform -eq 'Win32NT') {
+      try { Start-Process -FilePath 'explorer.exe' -ArgumentList ('/select,"' + $file + '"') } catch { Write-Verbose $_.Exception.Message }
+    }
+  }
+  exit $code
+}
 
 $gpuCheck = $Rest -contains '--gpu-check'
 $args2 = @($Rest | Where-Object { $_ -ne '--no-pull' -and $_ -ne '--gpu-check' })
@@ -52,6 +75,28 @@ if (-not $gpuCheck -and -not $statusOnly) {
   Write-Host '== checking the caches' -ForegroundColor Cyan
   & node pc/build-caches.mjs
   if ($LASTEXITCODE -ne 0) { Write-Host '   some caches are not ready - the episode runner will say what is missing' -ForegroundColor Yellow }
+}
+
+# Windows' graphics setting "High performance" for Node.js and Playwright's Chromium (per user, no administrator;
+# the same as pc\setup-windows.ps1 does; repeated here because a newer Chromium build lands in a new folder)
+if (-not $statusOnly) {
+  try {
+    $key = 'HKCU:\Software\Microsoft\DirectX\UserGpuPreferences'
+    $pw = $env:PLAYWRIGHT_BROWSERS_PATH
+    if (-not $pw -or $pw -eq '0') { $pw = Join-Path $env:LOCALAPPDATA 'ms-playwright' }
+    $exes = @((Get-Command node -ErrorAction SilentlyContinue).Source)
+    if (Test-Path $pw) {
+      $exes += @(Get-ChildItem -Path $pw -Directory -Filter 'chromium-*' -ErrorAction SilentlyContinue | ForEach-Object { Join-Path $_.FullName 'chrome-win\chrome.exe' })
+      $exes += @(Get-ChildItem -Path $pw -Directory -Filter 'chromium_headless_shell-*' -ErrorAction SilentlyContinue | ForEach-Object { Join-Path $_.FullName 'chrome-win\headless_shell.exe' })
+    }
+    if ([Environment]::OSVersion.Platform -eq 'Win32NT') {
+      if (-not (Test-Path $key)) { New-Item -Path $key -Force | Out-Null }
+      foreach ($exe in ($exes | Where-Object { $_ -and (Test-Path -LiteralPath $_) })) {
+        $cur = (Get-ItemProperty -Path $key -Name $exe -ErrorAction SilentlyContinue).$exe
+        if ("$cur" -notmatch 'GpuPreference=2;') { New-ItemProperty -Path $key -Name $exe -Value (("$cur" -replace 'GpuPreference=\d;', '') + 'GpuPreference=2;') -PropertyType String -Force | Out-Null }
+      }
+    }
+  } catch { Write-Verbose $_.Exception.Message }
 }
 
 # keep the PC awake while rendering (released when this window closes)
