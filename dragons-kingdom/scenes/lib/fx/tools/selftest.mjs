@@ -1,12 +1,16 @@
 // FX library self-test (node, no browser): the pure pieces every frame depends on.
 //   node scenes/lib/fx/tools/selftest.mjs
 // - cloth pre-simulation is deterministic (same bytes twice) and a tear really splits the grid
-// - debris solver: deterministic, never below the ground, comes to rest on a stable face
+// - debris solver: deterministic, never below the ground, comes to rest on a stable face; held
+//   pieces, roof slides, toppling, wall bounces, piles; the roofline capture reads a real roof
 // - analytic helpers (ballistic with drag, liveRange) agree with brute-force integration
 // - the director registration covers every documented kind with a factory
 import * as THREE from 'three';
 import { simulateCloth, bodyColliders } from '../cloth.js';
-import { solvePiece, poseAt } from '../debris.js';
+import { solvePiece, poseAt, PileField, prepWalls } from '../debris.js';
+import { damageCapture, captureRuns } from '../destruction.js';
+import { Kit, frame } from '../../architecture/core.js';
+import { house } from '../../architecture/house.js';
 import { ballistic } from '../core/util.js';
 import { liveRange } from '../smoke.js';
 import { registerDirectorFx, DIRECTOR_KINDS } from '../index.js';
@@ -44,6 +48,54 @@ const up = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
 ok(Math.abs(Math.abs(up.y) - 1) < 1e-3 && Math.abs(pos[1] - 0.007) < 0.01, `debris: a tile comes to rest flat (y ${pos[1].toFixed(3)}, |up.y| ${Math.abs(up.y).toFixed(4)})`);
 poseAt(s1, 20, pos, q); const p20 = pos.slice(); poseAt(s1, 30, pos, q);
 ok(Math.hypot(pos[0] - p20[0], pos[2] - p20[2]) < 1e-9, 'debris: at rest it stays put');
+
+// held, then slides down a 45 deg roof and leaves its edge on time
+{
+  const d = [0, -Math.SQRT1_2, Math.SQRT1_2], a = 4, dist = 2, v0s = 0.5;
+  const sol = solvePiece([0, 6, 0], [0, 0, 0], new THREE.Quaternion(), [0, 0, 0], [0.13, 0.007, 0.08], 1, { ground: () => 0, hold: true, incline: { d, a, dist, v0: v0s } });
+  const p0 = [0, 0, 0], qq = new THREE.Quaternion();
+  ok(poseAt(sol, 0.2, p0, qq) && Math.abs(p0[1] - 6) < 1e-9, 'debris: a held piece sits at its start before its time');
+  const tEdge = 1 + (-v0s + Math.sqrt(v0s * v0s + 2 * a * dist)) / a;
+  poseAt(sol, tEdge - 1e-6, p0, qq);
+  ok(Math.abs(p0[1] - (6 - dist * Math.SQRT1_2)) < 1e-3 && Math.abs(sol.segs[0].t1 - tEdge) < 1e-9, `debris: slides down the roof and leaves the eaves at ${tEdge.toFixed(3)} s`);
+}
+// a standing box pushed over its edge topples and lies on its long side
+{
+  const half = [0.5, 1.0, 0.4];
+  const sol = solvePiece([0, 1.0, 0], [0, 0, 0], new THREE.Quaternion(), [0, 0, 0], half, 0.5, { ground: () => 0, hold: true, pivot: { E: [0, 0, 0.4], axis: [1, 0, 0], w0: 3 } });
+  const p0 = [0, 0, 0], qq = new THREE.Quaternion();
+  poseAt(sol, 20, p0, qq);
+  const yl = new THREE.Vector3(0, 1, 0).applyQuaternion(qq);
+  ok(sol.segs[0].type === 5 && Math.abs(yl.y) < 0.05 && p0[1] < 0.55 && p0[2] > 0.4, `debris: a pushed box topples over its edge (rest height ${p0[1].toFixed(2)} m, z ${p0[2].toFixed(2)} m)`);
+  const weak = solvePiece([0, 1.0, 0], [0, 0, 0], new THREE.Quaternion(), [0, 0, 0], half, 0.5, { ground: () => 0, hold: true, pivot: { E: [0, 0, 0.4], axis: [1, 0, 0], w0: 0.5 } });
+  poseAt(weak, 20, p0, qq);
+  ok(Math.abs(p0[1] - 1.0) < 1e-6 && Math.abs(qq.w - 1) < 1e-6, 'debris: a weak push rocks it back onto its base');
+}
+// a wall stops what is thrown at it
+{
+  const walls = prepWalls([{ p: [2, 0, 0], n: [-1, 0, 0], width: 6, height: 4 }]);
+  const sol = solvePiece([0, 1, 0], [9, 2, 0], new THREE.Quaternion(), [0, 0, 0], [0.1, 0.1, 0.1], 0, { ground: () => 0, walls });
+  const p0 = [0, 0, 0], qq = new THREE.Quaternion();
+  let maxX = -Infinity;
+  const ext = (q) => [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)].reduce((s2, a) => s2 + Math.abs(a.applyQuaternion(q).x) * 0.1, 0);
+  for (let t = 0; t < 6; t += 1 / 240) if (poseAt(sol, t, p0, qq)) maxX = Math.max(maxX, p0[0] + ext(qq));
+  ok(maxX < 2.02 && sol.events.some((e) => e.wall), `debris: bounces off a wall face (furthest reach x ${maxX.toFixed(2)} m)`);
+}
+// piles: what lands later lies on what is already there
+{
+  const pile = new PileField(() => 0, 0.04);
+  pile.stamp([0, 0.08, 0], new THREE.Quaternion(), [0.6, 0.08, 0.07]);
+  ok(Math.abs(pile.ground(0.3, 0) - 0.16) < 1e-6 && pile.ground(0, 0.3) === 0, 'debris: the pile is as high as the beam under it, and only under it');
+}
+// the roofline capture reads a real Cling roof: one slope, its pitch, clay vs stone slate
+for (const cover of ['clay', 'slate']) {
+  const cap = damageCapture((x, y, z) => Math.hypot(x - 1, y - 7.4, z + 2.4) < 1.3);
+  const kit = new Kit(0);
+  house(kit, frame([0, 0, -6]), { w: 7, d: 8.5, storeys: 1, roof: 'side', cover, seed: 25, lod: 'mid', party: { left: true, right: true }, damage: (p) => cap.damage([p[0], p[1], p[2] - 6]) });
+  const runs = captureRuns(cap.calls);
+  const R = runs[0];
+  ok(runs.length === 1 && R.hit.length > 20 && R.n[2] > 0.5 && R.coverGuess === cover, `roofline: capture finds the struck slope (${R?.hit.length} ${cover} tiles, pitch ${((R?.pitch ?? 0) * 180 / Math.PI).toFixed(0)} deg, guessed ${R?.coverGuess})`);
+}
 
 // ---- analytic helpers
 const p = [0, 0, 0], v = [0, 0, 0];

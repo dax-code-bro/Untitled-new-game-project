@@ -9,6 +9,7 @@
 //   0 wide from the square      1 low across the paving (stall, boards)     2 the after-state
 //   (the same cues evaluated 100 s later: where everything lies in 3D)       3 the roof itself
 //   (held tiles before the strike, the sheets sliding off)    4 both roofs after (the holes)
+//   5 the blood after: the pool run along the paving joints (R15), the smear down the front (R16b)
 //
 //   node render/render.mjs --still scenes/lookdev/fx-cling.js --time 1.4 --preset draft --png out.png
 import * as THREE from 'three';
@@ -23,7 +24,7 @@ import { filmFinish } from './finish.js';
 
 export const meta = {
   title: 'FX lookdev - Cling roofline destruction',
-  duration: 40,
+  duration: 48,
   seed: 5,
   cinematic: filmFinish({
     atmosphere: { enabled: true, sky: 'scene', haze: 1.1 },
@@ -102,6 +103,13 @@ export async function setup(ctx) {
   const thrown = sweep ? sweep.effects[0] : null;
   // the music stage's boards scything across the paving (R16-01)
   await fx.debris.boards({ at: [-5.5, 0.7, 1.8], dir: [1, 0.1, 0.35], t0: STRIKE + 1.1, count: 5, speed: 11, seed: 5, walls });
+  // R15-01: blood running out from under the wreckage, along the joints of the paving
+  const pool = fx.blood.pool({ at: [2.3, 0, -0.9], t0: STRIKE + 3, radius: 1.0, tau: 10, src: [0.1, -0.35], joints: { cell: 0.1, width: 0.012, pattern: 'cobbles' }, seed: 5, target: g });
+  console.warn('[fx-cling] pool ' + JSON.stringify({ ssr: pool.ssr, meshes: pool.meshes.map((m) => [m.name, !!m.userData.dkLate, !!m.material.userData.dkLateUniforms]) }));
+  // R16b-01: the long dark smear down a house front (a body slid down the stone from 2.2 m)
+  const front = [];
+  set.traverse((m) => { if (m.isMesh && /stone/i.test(m.name)) front.push(m); });
+  fx.blood.smear({ target: front, at: [-1.2, 1.25, -1.72], dir: [0, 0, -1], up: [1, 0, 0], size: [2.0, 0.45, 0.4], t0: STRIKE + 2.0, grow: [0, 0.4], seed: 2, params: [0, 5, 0.9, 2.5] });
   console.warn('[fx-cling] ' + JSON.stringify({ roofA: { tiles: roofA.tiles, runs: roofA.runs }, roofTiles: roof.tiles, pieces: roof.pieces.length, runs: roof.runs, roofMs: Math.round(tRoof), shattered: roof.pieces.filter((p) => p.shard).length, hb: { ridge: hb.ridge } }));
   if (sweep) console.warn('[fx-cling] sweep ' + JSON.stringify({ parts: sweep.parts.length, thrown: sweep.effects.length, sizes: sweep.parts.slice(0, 12).map((p) => +p.userData.size.toFixed(2)) }));
   S = { fx, roof, thrown };
@@ -113,6 +121,8 @@ const VIEWS = [
   { pos: [-0.2, 1.7, 5.0], look: [2.6, 0.2, -0.6], f: 28, after: 100 },
   { pos: [1.2, 5.2, 4.2], look: [2.4, 6.6, -2.4], f: 35 },
   { pos: [0.0, 4.2, 9.0], look: [0.0, 6.6, -3.0], f: 28, after: 100 },
+  // 5: the blood after (R15 / R16b): the pool along the joints, the smear on the house front
+  { pos: [0.6, 1.55, 3.2], look: [0.4, 0.5, -1.4], f: 28, after: 100 },
 ];
 export function update(t, ctx) {
   const cam = ctx.camera;

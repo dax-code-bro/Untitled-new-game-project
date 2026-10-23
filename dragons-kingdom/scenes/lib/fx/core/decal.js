@@ -35,6 +35,7 @@
 import * as THREE from 'three';
 import { Effect } from './manager.js';
 import { arr3, norm3, cross3, dot3, clamp, smoothstep, hash01 } from './util.js';
+import { LATE_GLSL, makeLateUniforms, makeLate } from './late.js';
 
 export const MAX_STAMPS = 48;
 
@@ -44,17 +45,17 @@ export const MAX_STAMPS = 48;
 export const DECAL_LIQUIDS = {
   // whole blood: reflectance ~0.25-0.35 in deep red, a few % in green/blue (fresh, oxygenated);
   // drying turns it brown-black (methaemoglobin) and matte, edges first
-  blood: { sigWet: [1.0, 7.0, 8.0], sigDry: [1.5, 4.0, 4.6], albWet: [0.1, 0.005, 0.005], albDry: [0.035, 0.012, 0.008], rough: [0.06, 0.55], coat: [0.6, 0.08], coatRough: [0.02, 0.4], h: 0.0006 },
+  blood: { spec: 0, sigWet: [1.0, 7.0, 8.0], sigDry: [1.5, 4.0, 4.6], albWet: [0.11, 0.005, 0.005], albDry: [0.035, 0.012, 0.008], rough: [0.06, 0.55], coat: [0.6, 0.08], coatRough: [0.02, 0.4], h: 0.0006 },
   // venous / older blood (darker, less saturated) - wounds, pooled under bodies
   // (coat 0.6 / 0.02: a mirror of the blue sky turned big wet areas violet; a slightly rougher,
   // weaker coat keeps the wet glint without repainting the film)
-  bloodDark: { sigWet: [1.3, 8.0, 8.5], sigDry: [1.6, 4.2, 4.8], albWet: [0.08, 0.004, 0.004], albDry: [0.03, 0.01, 0.007], rough: [0.05, 0.55], coat: [0.42, 0.08], coatRough: [0.07, 0.4], h: 0.0007 },
+  bloodDark: { spec: 0, sigWet: [1.3, 8.0, 8.5], sigDry: [1.6, 4.2, 4.8], albWet: [0.09, 0.0045, 0.004], albDry: [0.03, 0.01, 0.007], rough: [0.05, 0.55], coat: [0.42, 0.08], coatRough: [0.07, 0.4], h: 0.0007 },
   // diluted blood (washed, runoff, pink water on skin)
-  bloodThin: { sigWet: [0.12, 1.4, 1.6], sigDry: [0.25, 1.2, 1.4], albWet: [0.05, 0.012, 0.012], albDry: [0.03, 0.012, 0.01], rough: [0.08, 0.5], coat: [0.8, 0.05], coatRough: [0.03, 0.4], h: 0.0003 },
+  bloodThin: { spec: 0, sigWet: [0.12, 1.4, 1.6], sigDry: [0.25, 1.2, 1.4], albWet: [0.05, 0.012, 0.012], albDry: [0.03, 0.012, 0.01], rough: [0.08, 0.5], coat: [0.8, 0.05], coatRough: [0.03, 0.4], h: 0.0003 },
   soot: { sigWet: [2.2, 2.3, 2.4], sigDry: [2.2, 2.3, 2.4], albWet: [0.012, 0.011, 0.01], albDry: [0.012, 0.011, 0.01], rough: [0.9, 0.95], coat: [0, 0], coatRough: [0.5, 0.5], h: 0.0 },
   char: { sigWet: [6, 6, 6], sigDry: [6, 6, 6], albWet: [0.009, 0.008, 0.007], albDry: [0.009, 0.008, 0.007], rough: [0.55, 0.6], coat: [0.05, 0.05], coatRough: [0.35, 0.35], h: 0.0025 },
-  water: { sigWet: [0.35, 0.33, 0.3], sigDry: [0, 0, 0], albWet: [0, 0, 0], albDry: [0, 0, 0], rough: [0.1, 0.9], coat: [0.9, 0], coatRough: [0.03, 0.5], h: 0.0002 },
-  mud: { sigWet: [1.2, 1.5, 1.9], sigDry: [0.8, 1.0, 1.3], albWet: [0.06, 0.045, 0.03], albDry: [0.16, 0.13, 0.1], rough: [0.25, 0.95], coat: [0.5, 0], coatRough: [0.1, 0.5], h: 0.0015 },
+  water: { spec: 0, sigWet: [0.35, 0.33, 0.3], sigDry: [0, 0, 0], albWet: [0, 0, 0], albDry: [0, 0, 0], rough: [0.1, 0.9], coat: [0.9, 0], coatRough: [0.03, 0.5], h: 0.0002 },
+  mud: { spec: 0.15, sigWet: [1.2, 1.5, 1.9], sigDry: [0.8, 1.0, 1.3], albWet: [0.06, 0.045, 0.03], albDry: [0.16, 0.13, 0.1], rough: [0.25, 0.95], coat: [0.5, 0], coatRough: [0.1, 0.5], h: 0.0015 },
   // skin burn colours: albWet = raw dermis (glossy red-pink), albDry = blistered epidermis
   burn: { sigWet: [0.25, 1.4, 1.6], sigDry: [0.25, 1.4, 1.6], albWet: [0.32, 0.055, 0.045], albDry: [0.42, 0.3, 0.2], rough: [0.18, 0.45], coat: [0.7, 0.1], coatRough: [0.08, 0.3], h: 0.0015 },
 };
@@ -471,10 +472,52 @@ void main() {
   gl_FragColor = vec4(mix(vec3(1.0), T, zf), 1.0);
 }`;
 
+// Screen-space reflection of the wet film (late pass: the opaque scene's colour + depth): the
+// ray off the film is marched in view space against the scene's depth; where it meets a wall, a
+// person, a cart, the film mirrors THAT instead of the sky map (a pool in the square reflects the
+// house fronts, not a blue sky the houses would hide). Misses keep the sky map.
+const SSR_GLSL = /* glsl */`
+${LATE_GLSL}
+uniform mat4 dkProjM;
+uniform float fxdSSR;
+float fxdSceneZAt(vec2 uv) {
+  float d = texture(dkSceneDepth, uv).r;
+  if (d >= 1.0) return 1e9;
+  float z = d * 2.0 - 1.0;
+  return 2.0 * dkLateNearFar.x * dkLateNearFar.y / ((dkLateNearFar.y + dkLateNearFar.x) - z * (dkLateNearFar.y - dkLateNearFar.x));
+}
+vec2 fxdUV(vec3 q) { vec4 c = dkProjM * vec4(q, 1.0); return c.xy / max(c.w, 1e-5) * 0.5 + 0.5; }
+vec4 fxdSSRTrace(vec3 P, vec3 R) {
+  if (dkLateOn < 0.5 || fxdSSR <= 0.0) return vec4(0.0);
+  float s = 0.05, sPrev = 0.0;
+  vec3 prevQ = P;
+  for (int i = 0; i < FXD_SSR_STEPS; i++) {
+    vec3 Q = P + R * s;
+    if (-Q.z <= dkLateNearFar.x) break;
+    vec2 uv = fxdUV(Q);
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) break;   // left the frame: the sky map
+    float sz = fxdSceneZAt(uv), rz = -Q.z;
+    // crossed behind the depth surface within this step (a step's own length is the thickness
+    // allowed: a wall is hit, the ground far behind a post is not)
+    if (rz > sz + 0.01 && rz - sz < 0.04 + 1.5 * (s - sPrev)) {
+      vec3 a = prevQ, b = Q;
+      for (int k = 0; k < 5; k++) { vec3 m = 0.5 * (a + b); if (-m.z > fxdSceneZAt(fxdUV(m))) b = m; else a = m; }
+      vec2 ub = fxdUV(b);
+      vec2 e = min(ub, 1.0 - ub);
+      float fade = smoothstep(0.0, 0.06, min(e.x, e.y)) * (1.0 - smoothstep(0.6, 1.0, s / FXD_SSR_MAX));
+      return vec4(fxSceneColor(ub * dkLateSize), fade);
+    }
+    prevQ = Q; sPrev = s;
+    s *= FXD_SSR_GROW;
+  }
+  return vec4(0.0);
+}
+`;
+
 let kindKeyCounter = 0;
 
-/** Build the two materials for a decal kind. */
-function makeMaterials(kind, liquid, stamps, uniforms) {
+/** Build the two materials for a decal kind (ssr: march steps, 0 = sky map only). */
+function makeMaterials(kind, liquid, stamps, uniforms, ssr = 0) {
   const defines = { [`FX_KIND_${kind.toUpperCase()}`]: 1, FX_STAMPS: stamps };
   const absorb = new THREE.ShaderMaterial({
     vertexShader: VERT, fragmentShader: FRAG_ABSORB, uniforms, defines,
@@ -484,16 +527,23 @@ function makeMaterials(kind, liquid, stamps, uniforms) {
     blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
   });
+  // (a liquid film has ONE interface - the clearcoat is its surface; the base layer is the light
+  // scattered back from inside it, with no second mirror: L.spec 0 for liquids)
+  const Lq = typeof liquid === 'string' ? DECAL_LIQUIDS[liquid] : liquid;
   const shine = new THREE.MeshPhysicalMaterial({
-    color: 0xffffff, roughness: 0.5, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05, specularIntensity: 0.35,
+    color: 0xffffff, roughness: 0.5, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05, specularIntensity: Lq?.spec ?? 0.35,
     transparent: true, depthWrite: false, depthTest: true,
     blending: THREE.CustomBlending, blendEquation: THREE.AddEquation,
     blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
   });
-  shine.defines = { ...defines };
+  // (geometric steps from 5 cm out to 25 m whatever the count: more steps = finer, not further)
+  // (keep the material's own STANDARD / PHYSICAL defines: without PHYSICAL three drops IOR and
+  // USE_SPECULAR, and the base layer silently becomes a 4 % mirror with F90 = 1 - a second,
+  // sky-blue reflection on every film)
+  shine.defines = { ...shine.defines, ...defines, ...(ssr ? { FXD_SSR_STEPS: ssr, FXD_SSR_MAX: '25.0', FXD_SSR_GROW: Math.pow(25 / 0.05, 1 / ssr).toFixed(5) } : {}), ...(globalThis.__fxdDebug ? { FXD_DEBUG: globalThis.__fxdDebug } : {}) };
   shine.userData.dkNoSSAO = false;
-  const key = `fxdecal-${kind}-${stamps}`;
+  const key = `fxdecal-${kind}-${stamps}-${Lq?.spec ?? 0.35}-${ssr}-${globalThis.__fxdDebug || 0}`;
   shine.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader
@@ -502,6 +552,7 @@ function makeMaterials(kind, liquid, stamps, uniforms) {
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec3 vDecal;
+${ssr ? SSR_GLSL : ''}
 ${NOISE}
 ${KINDS}
 ${SHADE}
@@ -536,8 +587,31 @@ diffuseColor.rgb = fxdAlb;`)
 material.clearcoat = fxdCoat;
 material.clearcoatRoughness = clamp(fxdCoatR, 0.0525, 1.0);
 #endif`)
+      .replace('#include <lights_fragment_maps>', `#include <lights_fragment_maps>
+#if defined(USE_CLEARCOAT) && defined(FXD_SSR_STEPS) && defined(RE_IndirectSpecular)
+{
+  vec4 ssr = fxdSSRTrace(geometryPosition, reflect(-geometryViewDir, geometryClearcoatNormal));
+  // (a rougher film blurs what it mirrors: fade the sharp trace with the coat's roughness)
+  clearcoatRadiance = mix(clearcoatRadiance, ssr.rgb, ssr.a * fxdSSR * (1.0 - smoothstep(0.08, 0.35, material.clearcoatRoughness)));
+}
+#endif`)
       .replace('#include <dithering_fragment>', `#include <dithering_fragment>
-{ float zf = 1.0 - smoothstep(0.35, 0.5, abs(vDecal.z)); gl_FragColor.rgb *= zf * min(1.0, fxdCov * 4.0); gl_FragColor.a = 0.0; }`);
+{ float zf = 1.0 - smoothstep(0.35, 0.5, abs(vDecal.z)); gl_FragColor.rgb *= zf * min(1.0, fxdCov * 4.0); gl_FragColor.a = 0.0; }
+#if defined(FXD_DEBUG)
+#if FXD_DEBUG == 1
+gl_FragColor.rgb = reflectedLight.directDiffuse;
+#elif FXD_DEBUG == 2
+gl_FragColor.rgb = reflectedLight.directSpecular;
+#elif FXD_DEBUG == 3
+gl_FragColor.rgb = reflectedLight.indirectDiffuse;
+#elif FXD_DEBUG == 4
+gl_FragColor.rgb = reflectedLight.indirectSpecular;
+#elif FXD_DEBUG == 5
+gl_FragColor.rgb = clearcoatSpecularIndirect + clearcoatSpecularDirect;
+#elif FXD_DEBUG == 6
+gl_FragColor.rgb = vec3(material.clearcoat, fxdCoat, material.specularF90);
+#endif
+#endif`);
   };
   shine.customProgramCacheKey = () => key;
   return { absorb, shine };
@@ -793,7 +867,13 @@ export class DecalEffect extends Effect {
     this.uniforms = u;
     this.growSpec = o.grow ?? def.grow ?? null;
     this.drySpec = o.dry ?? 0;
-    const mats = makeMaterials(this.kind, liquid, nSt, u);
+    // reflections of the surroundings in big wet films on the ground / walls (pools, smears, the
+    // drops of a spray): screen-space, in the late pass (o.ssr: false / steps; tier sets the count)
+    const ssrSteps = o.ssr === false ? 0 : typeof o.ssr === 'number' ? o.ssr
+      : (['pool', 'smear', 'stamps', 'splat', 'wet'].includes(this.kind) ? { draft: 16, preview: 24, final: 32, ultra: 48 }[fx.tier.name] ?? 24 : 0);
+    if (ssrSteps) Object.assign(u, makeLateUniforms(), { dkProjM: { value: new THREE.Matrix4() }, fxdSSR: { value: o.ssrStrength ?? 1 } });
+    this.ssr = ssrSteps;
+    const mats = makeMaterials(this.kind, liquid, nSt, u, ssrSteps);
     this.mats = mats;
     // geometry on every target (or the ground)
     const targets = o.target == null ? [null] : Array.isArray(o.target) ? o.target : [o.target];
@@ -810,6 +890,7 @@ export class DecalEffect extends Effect {
         m.castShadow = false; m.receiveShadow = order === 2;
         m.frustumCulled = false;
         m.userData.dkNoVelocity = true;
+        if (order === 2 && this.ssr && !r.skinned) makeLate(m, u);
         if (r.skinned) {
           // same transform + skeleton as the skin: add next to it
           m.bind(tg.skeleton, tg.bindMatrix);

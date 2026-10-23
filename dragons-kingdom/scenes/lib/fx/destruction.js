@@ -37,8 +37,12 @@ const UP = [0, 1, 0];
  * Wrap a damage region for the architecture: region(x, y, z) -> bool in world coordinates.
  * Pass `cap.damage` as clingSquare's `damage` (called with x, y, z) or as house()'s `damage`
  * (called with [x, y, z] in the house's local frame: give o.toWorld([x, y, z]) -> [x, y, z]).
- * Every query is recorded in order ([x, y, z, removed]); roofline() reads them.
+ * Every query is recorded in order ([x, y, z, removed]); roofline() reads them. o.name registers
+ * the capture for the director's 'debris-roofline' cue (params.capture: that name).
  */
+const CAPTURES = new Map();
+/** A capture registered by name (damageCapture(region, { name })) - the director's cues use it. */
+export const captureByName = (name) => CAPTURES.get(name) || null;
 export function damageCapture(region, o = {}) {
   const calls = [];
   const damage = (a, b, c) => {
@@ -48,7 +52,9 @@ export function damageCapture(region, o = {}) {
     calls.push([p[0], p[1], p[2], r ? 1 : 0]);
     return r;
   };
-  return { damage, calls, region };
+  const cap = { damage, calls, region, name: o.name || null };
+  if (o.name) CAPTURES.set(o.name, cap);
+  return cap;
 }
 
 // ------------------------------------------------------------------ geometry helpers --
@@ -534,6 +540,8 @@ export class ThrownObject extends Effect {
     this.dustScale = o.dustScale ?? 2;
     this._p = [0, 0, 0];
   }
+  /** Put the object back where the set has it (the director, when the cue is not running). */
+  restore() { const obj = this.obj; obj.position.copy(this.home.p); obj.quaternion.copy(this.home.q); obj.scale.copy(this.home.s); obj.updateMatrixWorld(true); }
   /** Where it ends up (the after-state). */
   restPose() { const s = this.sol.segs[this.sol.segs.length - 1]; return s.type === 2 ? { p: s.p.slice(), q: s.q.clone() } : null; }
   update(t, cam) {

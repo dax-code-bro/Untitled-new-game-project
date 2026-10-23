@@ -16,7 +16,11 @@
 //   { kind, c (creature) | ch (character), root }); without it they draw nothing and warn;
 // - one FX manager serves all the director's cues (cached on ctx.__dkFxDirector), separate from
 //   a set's own createFx() manager.
-const STATIC_ONLY = new Set(['debris-burst', 'debris-collapse', 'debris-boards', 'debris-turf']);
+import { captureByName } from './destruction.js';
+
+const STATIC_ONLY = new Set(['debris-burst', 'debris-collapse', 'debris-boards', 'debris-turf', 'debris-roofline', 'debris-object', 'debris-sweep']);
+// a set object by name (api.set.objects) or the object itself
+const setObject = (api, n) => (n && typeof n === 'object' ? n : api.set?.objects?.[n] || null);
 
 function arr(v) { return v && (Array.isArray(v) ? v : v.isVector3 ? [v.x, v.y, v.z] : null); }
 
@@ -37,6 +41,22 @@ export const DIRECTOR_KINDS = {
   'debris-collapse': { about: 'a wall / roof section collapsing into fragments', cost: 0.4, make: (fx, p) => fx.debris.collapse(p) },
   'debris-boards': { about: 'boards / planks thrown (stalls, shutters)', cost: 0.2, make: (fx, p) => fx.debris.boards(p) },
   'debris-turf': { about: 'turf, clods and stones torn up by claws / a takeoff', cost: 0.3, make: (fx, p) => fx.debris.turf(p) },
+  'debris-roofline': {
+    about: 'the set\'s own roof section coming down (params.capture: the name given to fx.debris.damageCapture when the set was built with the hole; params.set: set object / group to match the tiles to; impact, dir, speed)', cost: 0.6,
+    make: (fx, p, who, api) => {
+      const capture = typeof p.capture === 'string' ? captureByName(p.capture) : p.capture;
+      if (!capture) { console.warn(`[fx] debris-roofline: no damage capture "${p.capture}" (build the set with fx.debris.damageCapture(region, { name }).damage)`); return null; }
+      return fx.debris.roofline({ ...p, capture, set: setObject(api, p.set) || api.set?.group || api.scene });
+    },
+  },
+  'debris-object': {
+    about: 'a whole set prop thrown by the blast (params.object: set object name; dir, speed, spin; topples over its edge if standing)', cost: 0.1,
+    make: (fx, p, who, api) => { const object = setObject(api, p.object); if (!object) { console.warn(`[fx] debris-object: no set object "${p.object}"`); return null; } return fx.debris.object({ ...p, object }); },
+  },
+  'debris-sweep': {
+    about: 'a set prop swept by the blast and coming apart into its loose parts (the vendor\'s stall, 3C-12; params.object, dir, speed)', cost: 0.2,
+    make: (fx, p, who, api) => { const object = setObject(api, p.object); if (!object) { console.warn(`[fx] debris-sweep: no set object "${p.object}"`); return null; } return fx.debris.sweep({ ...p, object }); },
+  },
   // smoke and fire
   'smoke-plume': { about: 'a smoke column (wood fire, chimney, smoulder, soot, steam)', cost: 0.6, make: (fx, p) => fx.smoke.plume(p) },
   'smoke-trail': { about: 'smoke streaming from a moving burning thing', cost: 0.5, make: (fx, p) => fx.smoke.trail(p) },
@@ -141,13 +161,13 @@ async function makeInstance(kind, def, ctx, api, createFx) {
   let effects = [];
   const build = async () => {
     const n0 = fx.effects.length;
-    await def.make(fx, params, who);
+    await def.make(fx, params, who, api);
     effects = fx.effects.slice(n0);
     for (const e of effects) e.object.visible = false;
   };
   const buildSync = () => {
     const n0 = fx.effects.length;
-    def.make(fx, params, who);
+    def.make(fx, params, who, api);
     effects = fx.effects.slice(n0);
   };
   if (!lazy) await build();
@@ -156,7 +176,7 @@ async function makeInstance(kind, def, ctx, api, createFx) {
   let built = !lazy;
   return {
     dynamic,
-    setActive(on) { for (const e of effects) { e.object.visible = on; e.enabled = on; } },
+    setActive(on) { for (const e of effects) { e.object.visible = on; e.enabled = on; if (!on) e.restore?.(); } },
     update(local, c, env, info) {
       L.env = env; L.from = c?.from ?? L.from;
       if (!built) { buildSync(); built = true; for (const e of effects) { e.object.visible = true; e.enabled = true; } }
