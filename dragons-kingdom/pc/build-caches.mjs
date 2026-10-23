@@ -240,6 +240,20 @@ export const FAMILIES = [
     async build() { return { ok: false, problem: 'install ffmpeg with the setup script (pc/setup-windows.ps1 / pc/setup.sh)' }; },
   },
   {
+    name: 'fonts', what: 'the end-credits font: EB Garamond, OFL (pinned npm package, sha256 checked; render/lib/fonts.mjs)',
+    async check() {
+      const { fontPaths, FONT_DIR } = await import(pathToFileURL(path.join(ROOT, 'render', 'lib', 'fonts.mjs')).href);
+      return fontPaths() ? { ok: true } : { ok: false, problem: `not in ${path.relative(ROOT, FONT_DIR)} yet (or not the pinned files)` };
+    },
+    async build() {
+      try {
+        const { ensureFonts } = await import(pathToFileURL(path.join(ROOT, 'render', 'lib', 'fonts.mjs')).href);
+        await ensureFonts({ say });
+        return { ok: true };
+      } catch (e) { return { ok: false, problem: e.message }; }
+    },
+  },
+  {
     name: 'assets', what: 'asset library: HDRIs, photo materials, scanned models, MakeHuman data (assets-lib/fetch.mjs)',
     check() {
       const m = readJson(path.join(ROOT, 'assets-lib', 'manifest.json'));

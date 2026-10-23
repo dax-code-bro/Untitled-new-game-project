@@ -27,7 +27,14 @@
        laptop with two graphics chips this makes Chromium use the strong one)
   The PC is kept awake for the whole setup, and clicking inside the window does not pause it.
   Everything the tools print is shown and also written to dragons-kingdom\pc\logs\setup-<date>.log.
-  Exit code: 0 ok, 2 setup finished but no usable graphics card, 1 setup stopped.
+  Exit code (also shown in the last banner and written to the log as "SETUP RESULT: <code> ..."):
+    0 everything ok
+    1 the setup stopped (the message says why; run it again)
+    2 setup finished, but no usable graphics card (GPU NOT USED)
+    3 setup finished, but the graphics card draws the test picture DIFFERENTLY from the cloud (or the
+      heavy test frame failed): send the picture output\gpu-check\gpu-check-picture-for-claude.jpg
+    4 setup finished, but the GPU check itself crashed (see its error above)
+    5 setup finished and the GPU is fine, but the 1-minute end-to-end test failed
 
 .PARAMETER Dir
   Where the project is cloned (default: %USERPROFILE%\DragonsKingdom). Ignored when the script
@@ -452,14 +459,15 @@ function Invoke-Setup {
 
   # ---- 7. GPU self-test + end-to-end test ---------------------------------------------------------------
   $gpuRc = 0
+  $e2eRc = 0
   if (-not $SkipGpuCheck -and -not $SkipCaches) {
     Write-Step 'GPU self-test (one native 4K frame) - may take a few minutes'
     $gpuRc = Invoke-Tool node render/gpu-check.mjs
     Write-Step 'end-to-end test: a tiny made-up episode (render, stop, resume, assemble)'
     $mode = '--cpu'
-    if ($gpuRc -eq 0) { $mode = '--gpu' }
-    $rc = Invoke-Tool node pc/selftest-episode.mjs $mode
-    if ($rc -ne 0) { Write-Note 'the end-to-end test did not pass - send pc\logs to the Claude session' }
+    if ($gpuRc -eq 0 -or $gpuRc -eq 3) { $mode = '--gpu' }
+    $e2eRc = Invoke-Tool node pc/selftest-episode.mjs $mode
+    if ($e2eRc -ne 0) { Write-Note 'the end-to-end test did not pass - double-click pc\Send-Logs.cmd and send the text' }
   }
 
   # ---- 8. desktop shortcut --------------------------------------------------------------------------------
@@ -477,17 +485,25 @@ function Invoke-Setup {
     } catch { Write-Note ('could not make the desktop shortcut: ' + $_.Exception.Message) }
   }
 
+  # one result code for the whole setup (the most important problem wins); see "Exit code" at the top
+  $result = 0
+  $what = 'everything ok'
+  if ($gpuRc -eq 2) { $result = 2; $what = 'no usable graphics card was found (see the GPU NOT USED banner above)' }
+  elseif ($gpuRc -eq 3) { $result = 3; $what = 'the graphics card draws the test picture DIFFERENTLY from the cloud (see the PICTURE CHECK banner above): send output\gpu-check\gpu-check-picture-for-claude.jpg' }
+  elseif ($gpuRc -ne 0) { $result = 4; $what = ('the GPU check itself failed with code ' + $gpuRc + ' (see its error above)') }
+  elseif ($e2eRc -ne 0) { $result = 5; $what = ('the 1-minute end-to-end test failed with code ' + $e2eRc + ' (see above)') }
   Write-Host ''
   Write-Host '=================================================================='
-  if ($gpuRc -eq 2) { Write-Host ' Setup finished, BUT no usable graphics card was found (see the GPU NOT USED banner above).' -ForegroundColor Yellow }
-  elseif ($gpuRc -ne 0) { Write-Host ' Setup finished, but the GPU check failed (see above).' -ForegroundColor Yellow }
-  else { Write-Host ' Setup finished.' -ForegroundColor Green }
+  if ($result -eq 0) { Write-Host ' Setup finished.' -ForegroundColor Green }
+  else { Write-Host (' Setup finished, BUT ' + $what) -ForegroundColor Red }
+  Write-Host (' SETUP RESULT: ' + $result + ' - ' + $what) -ForegroundColor $(if ($result -eq 0) { 'Green' } else { 'Red' })
+  if ($result -ne 0) { Write-Host ' Please double-click pc\Send-Logs.cmd and paste the text into the chat with Claude.' -ForegroundColor Yellow }
   Write-Host (' Render:     double-click "Render Dragon''s Kingdom" on the desktop (or pc\Render-Episode.cmd)')
   Write-Host (' GPU check:  double-click pc\GPU-Check.cmd')
   Write-Host (' Status:     pc\Render-Episode.cmd --status')
   Write-Host (' Log:        ' + $script:Log)
   Write-Host '=================================================================='
-  $script:Code = $gpuRc
+  $script:Code = $result
 }
 
 # UTF-8 for what the tools print (Node and Python write UTF-8; Windows PowerShell would read it as an
@@ -505,6 +521,7 @@ try {
 } catch {
   Write-Host ''
   Write-Host ('SETUP STOPPED: ' + $_.Exception.Message) -ForegroundColor Red
+  Write-Host ('SETUP RESULT: 1 - the setup stopped: ' + $_.Exception.Message) -ForegroundColor Red
   Write-Host 'Fix that, then run the same command again - it continues where it stopped.'
   if ($script:Log) { Write-Host ('log: ' + $script:Log) }
   $script:Code = 1

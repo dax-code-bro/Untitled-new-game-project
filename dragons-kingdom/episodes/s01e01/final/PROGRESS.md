@@ -16,8 +16,10 @@ Owner of this folder and of `../tools/` (the check tools and generators). Resume
   how accepted text stays marked in the production copy and has no markers in the reading copy).
 - `voices.json` (via `tools/final_voices.py`): status notes now say that computer-voice takes of every line exist in
   `vo/` (384 takes + 5 placeholders, 2026-10-18), measured but not listened to, none approved; the L048/L053/L054 notes
-  point to the final takes. Only notes changed, no casting: `vo/takes.json` still records the previous voices.json
-  sha256 (4a372fa0...) as its source until `tools/make_final_vo.py` runs again; the takes themselves are unaffected.
+  point to the final takes. Only notes changed, no casting. `vo/takes.json` now records the current voices.json
+  (fa8e15bb...) as its source: `tools/refresh_vo_sources.py` (2026-10-23) found the version the takes were made from
+  in git (commit 3f43434), proved that the parts that decide how a take sounds are identical (render digest), verified
+  all 389 take files against their sha256, and wrote only the sources block (with a dated `sources_refreshed` entry).
 - `render-schedule.md` (via `tools/shotlist/final_render_schedule.py`): the render PC is no longer "not known":
   `pc/TARGET.md` (Windows, RTX 4090, about 2 TB). New section "On Daxtyn's PC" with time scenarios (25-250x this
   machine: about 1-5 days non-stop, setup and encodes included; NOT measured) and the disk plan (54-100 GB, 3-5% of his

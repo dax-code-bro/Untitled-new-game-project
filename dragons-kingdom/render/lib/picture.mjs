@@ -111,7 +111,10 @@ export function toReference(a) {
 
 // Limits (see compare): thumbnail PSNR/SSIM catch colour, exposure, missing/moved objects and black
 // blocks; crops catch fine detail. Grain is drawn from a hash in the shader, so a different GPU may draw
-// a different grain pattern: the crops allow for that (grain alone measured about 30 dB at 1:1 here).
+// a different grain pattern. MEASURED on the cloud machine (2026-10-23, F2, native 4K): frame 48 against
+// frame 49 - a new grain pattern plus one frame of motion - gives thumbnail 41.5 dB / SSIM 0.993 and 1:1
+// crops 25.2 dB (Charcoal's head) and 30.5 dB (Remi). The limits sit below that, so a different grain
+// pattern passes; a wrong texture, a missing object or broken shading falls far below them.
 export const LIMITS = { thumbPsnr: 30, thumbSsim: 0.93, cropPsnr: 22, closeThumbPsnr: 25, closeThumbSsim: 0.85, extraBlack: 0.002, extraWhite: 0.002 };
 
 /**

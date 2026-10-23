@@ -1,7 +1,5 @@
 DRAGON'S KINGDOM
-
 Season 1, Episode 1
-
 
 
 Created by
@@ -14,11 +12,9 @@ Additional scenes and dialogue
 drafted with Claude (Anthropic)
 
 
-
-Made with Claude (Anthropic) in Claude Code:
+Made with Claude (Anthropic) in Claude Code
 the scene code, the 3D models and animation,
 the voice processing and the render pipeline
-
 
 
 Voices
@@ -26,22 +22,22 @@ computer-generated with Kokoro-82M by hexgrad
 (Apache License 2.0)
 
 
-
-Skies and light (HDRI photographs, CC0)
-from Poly Haven
+Skies and light, HDRI photographs (CC0)
 Greg Zaal, Alexander Scholten,
 Sergej Majboroda, Andreas Mischok
+from Poly Haven
 
-Photo-scanned ground, rock, wood, bark,
-cloth, leather and metal (CC0)
+Photo-scanned materials (CC0)
+ground, rock, wood, bark, cloth, leather and metal
 Lennart Demes, ambientCG
 
 Stone and pebble materials (CC0)
 Rob Tuytel and the Poly Haven team
 
 Coastal cliff composition
-Babylon.js team (CC BY 4.0),
-from Poly Haven scans (CC0)
+Babylon.js (CC BY 4.0), from Poly Haven assets (CC0)
+creativecommons.org/licenses/by/4.0
+modified: pieces rearranged and rescaled
 
 Leaf textures
 Daniel Greenheck, EZ-Tree (MIT License)
@@ -49,12 +45,16 @@ Daniel Greenheck, EZ-Tree (MIT License)
 Human bodies, faces, eyes, hair and skin
 MakeHuman team / Data Collection AB (CC0)
 
-Dutch ship model: Poly Haven (CC0)
+Dutch ship model
+Poly Haven (CC0)
 
-Street lantern: sbtron / Microsoft,
-fish: Microsoft, wicker: Eric Chadwick
+Street lantern, fish and wicker
+sbtron / Microsoft, Microsoft, Eric Chadwick
 Khronos glTF Sample Assets (CC0)
 
+Credits typeface
+EB Garamond, The EB Garamond Project Authors
+(SIL Open Font License 1.1)
 
 
 Made with free and open-source software

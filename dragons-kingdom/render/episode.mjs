@@ -69,6 +69,8 @@ import { estimateCues, readSrt, writeSrt, sliceCues } from './lib/subtitles.mjs'
 import { fmtDuration } from './lib/progress.mjs';
 import { resolveShot as resolveShotIn } from './lib/shots.mjs';
 import { readGate, gateVerdict, GATE_NAME } from './lib/gate.mjs';
+import { drawRoll, scrollArgs, tmpDir as creditsTmpDir } from './lib/credits.mjs';
+import { ensureFonts } from './lib/fonts.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RENDER_MJS = path.join(HERE, 'render.mjs');
@@ -78,19 +80,22 @@ const TITLE = 'DragonsKingdom_S01E01';
 const HELP = `
 Render Episode 1 scene by scene (resumable) and assemble the episode.
 
-  npm run episode [-- options]          (or: node render/episode.mjs [options])
+  ${process.platform === 'win32' ? 'pc\\Render-Episode.cmd [options]     (git pull + caches + this; or: node render\\episode.mjs [options])'
+    : 'bash pc/render-episode.sh [options]  (git pull + caches + this; or: npm run episode -- [options])'}
 
   --status             show progress only, render nothing
   --dry-run            list what would be rendered / assembled
   --only S1,S2         only these scenes (e.g. 1A,1B); the episode is assembled when ALL are done
-  --gpu | --cpu        renderer (default: the GPU that the GPU check found - Windows: pc\\GPU-Check.cmd,
-                       elsewhere: npm run gpu-check; without one: stop)
+  --gpu | --cpu        renderer (default: the GPU that the GPU check found - ${gpuCheckCommand().split('  (')[0].trim()};
+                       without one: stop)
   --workers N          browsers per shot (default: the job's own, 2; a shot that fails is retried with 1)
   --max-hours H        do not start a new shot after H hours (stop cleanly, resume later)
   --rerender-stale     render finished shots again if files they loaded changed since (git pull), as long
                        as the current files are the approved ones (a changed APPROVAL re-renders by itself)
   --ignore-gate        TEST renders only (needs --size): also render shots that are not approved in
                        ${GATE_NAME} (work in progress); never for masters
+  --accept-gpu-picture the GPU check said this graphics card draws the test frame DIFFERENTLY: render masters
+                       anyway (only after someone has looked at its picture; remembered for that GPU check)
   --no-assemble        render shots only, do not join scenes / the episode
   --keep-chunks        keep the shots' chunk folders after their scene file is made
   --verify-full        decode scene files and the episode completely as a check (slow at 4K)
@@ -281,41 +286,24 @@ async function makeCard(o, scene, job, r) {
   fs.mkdirSync(dir, { recursive: true });
   const out = shotFile(o, scene, job);
   const tmp = `${out}.part.mp4`;
-  const d = job.frames / FPS;
-  const vf = [];
+  let inputs = ['-f', 'lavfi', '-i', `color=c=black:s=${o.W}x${o.H}:r=${FPS}`, '-frames:v', String(job.frames)];
+  let work = null;
   if (r.kind === 'text') {
-    const font = findFont();
-    const size = Math.round(56 * o.H / 2160);
-    // every line centred, as end credits are (drawtext text_align, FFmpeg 6.1+); older FFmpeg: a centred block of left-aligned lines
-    const across = drawtextCanAlign() ? `x=0:boxw=${o.W}:text_align=C` : 'x=(w-text_w)/2';
-    vf.push(`drawtext=${font ? `fontfile=${ffPath(font)}:` : ''}textfile=${ffPath(r.textFile)}:expansion=none:fontcolor=white:fontsize=${size}:line_spacing=${Math.round(size * 0.6)}:${across}:y=h-(t/${d.toFixed(3)})*(h+text_h)`);
+    // the credits roll (render/lib/credits.mjs): the pinned OFL font, drawn once, moved a whole number of pixels per frame
+    const fonts = await ensureFonts({ say });
+    work = creditsTmpDir(job.job.replace(/[^\w-]/g, '_'));
+    const roll = drawRoll({ text: fs.readFileSync(r.textFile, 'utf8'), W: o.W, H: o.H, fonts, workDir: work });
+    const sc = scrollArgs({ png: roll.png, W: o.W, H: o.H, rollH: roll.rollH, frames: job.frames, fps: FPS });
+    say(`  ${job.job}: credits roll ${roll.items.length} lines, ${roll.rollH} px tall, ${sc.plan.S} px per frame (${(sc.plan.S * FPS * 2160 / o.H).toFixed(0)} px/s at 4K), font ${path.basename(fonts.regular)}`);
+    inputs = sc.args;
   }
-  await ffmpeg(['-f', 'lavfi', '-i', `color=c=black:s=${o.W}x${o.H}:r=${FPS}`, '-frames:v', String(job.frames),
-    ...(vf.length ? ['-vf', vf.join(',')] : []), ...x264Args({ crf: 12, preset: o.x264Preset, bitDepth: 10 }),
-    '-r', fpsRational(FPS), '-f', 'mp4', tmp], `card ${job.job}`);
+  try {
+    await ffmpeg([...inputs, ...x264Args({ crf: 12, preset: o.x264Preset, bitDepth: 10 }), '-r', fpsRational(FPS), '-f', 'mp4', tmp], `card ${job.job}`);
+  } finally { if (work) fs.rmSync(work, { recursive: true, force: true }); }
   fs.renameSync(tmp, out);
-  // a text card remembers the text it was made from: when credits.txt changes, the card is made again (see the main loop)
+  // a text card remembers the text it was made from (gate lock + files)
   const files = r.textFile ? { [relp(r.textFile)]: hashOnDisk(o, relp(r.textFile)) } : {};
   return finishShot(o, scene, job, r, null, files);
-}
-
-let _canAlign = null;
-/** Does this FFmpeg's drawtext know text_align (6.1 and newer)? */
-function drawtextCanAlign() {
-  if (_canAlign === null) {
-    const r = spawnSync(ffmpegPath(), ['-hide_banner', '-h', 'filter=drawtext'], { encoding: 'utf8', windowsHide: true });
-    _canAlign = /\btext_align\b/.test(r.stdout || '');
-  }
-  return _canAlign;
-}
-
-function findFont() {
-  const c = process.platform === 'win32'
-    ? ['C:/Windows/Fonts/georgia.ttf', 'C:/Windows/Fonts/times.ttf', 'C:/Windows/Fonts/arial.ttf']
-    : process.platform === 'darwin'
-      ? ['/System/Library/Fonts/Supplemental/Georgia.ttf', '/System/Library/Fonts/Supplemental/Times New Roman.ttf', '/Library/Fonts/Arial.ttf']
-      : ['/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf', '/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf', '/usr/share/fonts/TTF/DejaVuSerif.ttf'];
-  return c.find((f) => fs.existsSync(f)) || null;
 }
 
 // ---------------------------------------------------------------- sound ---
@@ -536,7 +524,7 @@ function printStatus(o, plan, rows) {
 let PLAN_DIR = path.dirname(DEFAULT_SCHEDULE);
 
 async function main() {
-  const a = parseArgs(process.argv.slice(2), { booleans: ['help', 'status', 'dry-run', 'gpu', 'cpu', 'rerender-stale', 'no-assemble', 'assemble', 'keep-chunks', 'verify-full', 'skip-cache-check', 'stale', 'ignore-gate'] });
+  const a = parseArgs(process.argv.slice(2), { booleans: ['help', 'status', 'dry-run', 'gpu', 'cpu', 'rerender-stale', 'no-assemble', 'assemble', 'keep-chunks', 'verify-full', 'skip-cache-check', 'stale', 'ignore-gate', 'accept-gpu-picture'] });
   if (a.help) { console.log(HELP); return 0; }
   const schedule = path.resolve(a.schedule || DEFAULT_SCHEDULE);
   PLAN_DIR = path.dirname(schedule);
@@ -593,6 +581,24 @@ async function main() {
     return 2;
   }
   if (o.gpu && !gpuSaved && !process.env.DK_GPU_PROFILE) say('note: --gpu without a gpu-check result for this computer: using the default launch profile');
+  // the GPU check's PICTURE check (render/lib/picture.mjs): a graphics card that draws the test frame DIFFERENTLY
+  // from the cloud machine (on which every shot was reviewed) does not start masters until someone has looked
+  if (o.gpu && !o.size && !a.dryRun) {
+    const last = readJson(path.join(PROJECT_ROOT, 'output', 'gpu-check', 'gpu-check.json'));
+    const verdict = last && last.system?.host === os.hostname() ? last.picture?.verdict : null;
+    const okFile = path.join(PROJECT_ROOT, 'pc', '.dk-gpu-picture-accepted.json');
+    if (a.acceptGpuPicture && last) { writeJson(okFile, { gpuCheckDate: last.date, verdict, acceptedAt: new Date().toISOString(), host: os.hostname() }); say(`the GPU check picture of ${last.date} is accepted (${relp(okFile)})`); }
+    const accepted = readJson(okFile);
+    if (verdict === 'DIFFERENT' && !(accepted && accepted.gpuCheckDate === last.date)) {
+      say('STOP: the last GPU check found that this graphics card draws the test frame DIFFERENTLY from the cloud');
+      say('  computer, on which every shot was reviewed (see the PICTURE CHECK banner in pc/logs/gpu-check-*.txt):');
+      for (const r of last.picture.reasons || []) say(`    - ${r}`);
+      say(`  Drag the picture ${last.picture.jpg || 'output/gpu-check/' + 'gpu-check-picture-for-claude.jpg'} into the chat with Claude.`);
+      say(`  Only after someone has looked at it and says it is fine:  ${renderCommand('--accept-gpu-picture')}`);
+      return 3;
+    }
+    if (verdict === 'SMALL DIFFERENCES') say('note: the GPU check found SMALL DIFFERENCES between this graphics card\'s picture and the cloud\'s (see its banner); please send the picture to Claude');
+  }
   say(`renderer: ${o.gpu ? `GPU - ${gpuSaved?.renderer || 'default profile'}` : 'CPU (SwiftShader)'};  output: ${relp(o.out)}${o.size ? `  (TEST size ${o.size}: not a master)` : ''}`);
   if (plan.orphans.length) say(`note: render-jobs.json has scenes that are not in the schedule: ${plan.orphans.join(', ')} (ignored)`);
   checkFfmpeg();

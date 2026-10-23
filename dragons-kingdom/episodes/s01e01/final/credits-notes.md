@@ -1,9 +1,14 @@
 # Episode 1 end credits: where each line comes from
 
-`credits.txt` (next to this file) is the text of the end credits. `render/episode.mjs` draws it, unchanged, as the
-40-second roll of shot E-01 (scene END): white text on black, every line centred, rolling up from the bottom edge
-until the last line has left the top. Every line of the file appears on screen, so the file holds no comments; the
-notes are here.
+`credits.txt` (next to this file) is the text of the end credits. `render/episode.mjs` draws it as the 40-second roll
+of shot E-01 (scene END), rolling up from below the bottom edge until the last line has left the top. Every line of
+the file appears on screen, so the file holds no comments; the notes are here. `video-description.txt` holds the same
+credits for the video's description, with the full CC BY attribution (source address, licence link, changes).
+
+How the file is read (`render/lib/credits.mjs`): blocks are separated by blank lines. The first block is the title
+(first line large, the rest smaller). In every other block the first line is the role heading (drawn small, in
+letter-spaced capitals, warm grey) and the lines after it are names (larger, warm white); a block of one line is a
+name line. Two or more blank lines make a larger gap (a new section).
 
 The credits are a **proposal** like everything else that is not Daxtyn's own (`SERIES.md` section 5). Daxtyn decides
 the wording. The rules the draft follows:
@@ -26,7 +31,8 @@ the wording. The rules the draft follows:
 | Skies and light: Greg Zaal, Alexander Scholten, Sergej Majboroda, Andreas Mischok (Poly Haven, CC0) | `assets-lib/manifest.json`, the 11 HDRIs with status "available" |
 | Photo-scanned ground ... metal: Lennart Demes, ambientCG (CC0) | manifest: every `pbr/acg_*` entry |
 | Stone and pebble materials: Rob Tuytel and the Poly Haven team (CC0) | manifest: `pbr/ph_white_sandstone_bricks_03`, `pbr/ph_sandstone_blocks_04`, `pbr/ph_floor_pebbles_01` |
-| Coastal cliff composition: Babylon.js team (CC BY 4.0), from Poly Haven scans (CC0) | `assets-lib/CREDITS.md`, CC-BY-4.0 section: **required** credit |
+| Coastal cliff composition: Babylon.js (CC BY 4.0), from Poly Haven assets (CC0); creativecommons.org/licenses/by/4.0; modified: pieces rearranged and rescaled | `assets-lib/CREDITS.md`, CC-BY-4.0 section: **required** credit, in its exact wording. CC BY 4.0 also asks for the licence link and a note that the work was changed: `scenes/lib/sets/kitbash.js` takes the composition apart and rearranges and rescales its pieces into new cliffs and shores. The source address is in `video-description.txt` |
+| Credits typeface: EB Garamond (SIL Open Font License 1.1) | `render/lib/fonts.mjs`: the font the card is drawn with (crediting it is courtesy; the OFL does not require it on screen) |
 | Leaf textures: Daniel Greenheck, EZ-Tree (MIT License) | `assets-lib/CREDITS.md`, MIT section |
 | Human bodies ... skin: MakeHuman team / Data Collection AB (CC0) | manifest: every `human/*` entry |
 | Dutch ship model: Poly Haven (CC0) | manifest: `model/ph_dutch_ship_medium` |
@@ -48,18 +54,25 @@ Assets in the manifest with status "blocked" (not downloaded yet) are not credit
    - `SERIES.md` section 7 says he writes the main story with ChatGPT. Whether the credits say so is his choice; the
      draft does not mention it.
    - Whether he wants a different credit for himself ("Written by", "Directed by"), or other names (people who helped).
-4. **Length.** 40 s for about 70 lines rolls at about 211 pixels a second at 4K, so each line is on screen for about
-   10 s. If the text grows past about 120 lines, lengthen E-01 in the shot list rather than rolling faster.
+4. **Length.** 40 s for the 50 lines rolls at 8 whole pixels per frame at 4K (192 pixels a second), so each line is on
+   screen for about 11 s. If the text grows past about 90 lines, lengthen E-01 in the shot list rather than rolling
+   faster.
 
 ## How the card is made
 
-- `render/episode.mjs` finds `credits.txt`, draws it with FFmpeg's `drawtext` (font size 56 px at 2160 lines, line
-  spacing 34 px, every line centred with `text_align`, which needs FFmpeg 6.1 or newer; the pinned FFmpeg 8.1.3 has it),
-  and records the file's hash. When `credits.txt` changes, the next run makes the card again and rejoins the END scene
-  and the episode on its own; nothing else is rendered again.
-- Font: the operating system's serif font (Windows and macOS: Georgia; Linux: DejaVu Serif). It is not shipped with the
-  project, so the card can look slightly different on another computer. An open-licence font in the asset library would
-  make it identical everywhere (not done yet).
-- Keep the text plain ASCII (straight quotes, `-` instead of dashes): every font has those characters.
-- Checked on 2026-10-23: the card rendered at 960x540 through `npm run episode -- --only END --size 960x540`, and one
-  frame of the same filter at 3840x2160 (whole frame and 1:1 crop) - legible, centred, no clipped lines.
+- `render/lib/credits.mjs` draws the whole roll ONCE as a still image, every line at a whole-pixel position, with
+  FFmpeg's `drawtext` in one font, EB Garamond (SIL Open Font License 1.1). The font is the same file on every
+  computer: `render/lib/fonts.mjs` downloads the pinned npm package `@expo-google-fonts/eb-garamond` 0.4.2 (tarball
+  and both TTF files checked by sha256) into `pc/tools/fonts/` (git-ignored; the setup fetches it, `node
+  pc/build-caches.mjs --only fonts`). Without it the card stops with a message; it never falls back to a system font.
+- Sizes at 2160 lines: title 128 px, its second line 56 px, headings 38 px (capitals, letter-spaced), names 62 px.
+- The roll moves up by the same whole number of pixels on every frame (FFmpeg `overlay`, y = y0 - n x S, worked out in
+  4:4:4 so no row is rounded away). S is the smallest whole number that gets the roll through the 40 s; the time left
+  over is black, split before the first and after the last line. With this text: 8 px per frame at 4K (192 px/s, each
+  line about 11 s on screen), about 2 s of black at each end. At the 960x540 test size the rounding is coarser (3 px per
+  frame, about 6 s of black at each end).
+- The card belongs to the render gate like every shot (`render-ready.json`): when `credits.txt` changes, the card is
+  made again only after the new text is approved (`node render/gate.mjs approve E-01 --by ...`).
+- Checked on 2026-10-23: the card at 960x540 through `render/episode.mjs --only END --size 960x540 --ignore-gate`
+  (contact sheet of six frames; every one of the 636 frames with text moved exactly 3 px), and two native 4K frames
+  of the same roll (whole frame and 1:1 crops): legible, centred, nothing clipped, no missing glyphs.

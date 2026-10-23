@@ -29,12 +29,16 @@ if ($Rest -contains '--send-logs') {
   $code = $LASTEXITCODE
   Remove-Item Env:\DK_PRINT_PATH_FILE -ErrorAction SilentlyContinue
   if ($code -eq 0 -and (Test-Path -LiteralPath $pathFile)) {
-    $file = ([IO.File]::ReadAllText($pathFile)).Trim()
+    $lines = @([IO.File]::ReadAllLines($pathFile) | Where-Object { $_.Trim() })
+    $file = $lines[0].Trim()
+    $picture = $null
+    if ($lines.Count -gt 1) { $picture = $lines[1].Trim() }
     Remove-Item -Force -LiteralPath $pathFile -ErrorAction SilentlyContinue
     try {
       Set-Clipboard -Value ([IO.File]::ReadAllText($file)) -ErrorAction Stop
       Write-Host 'The text is copied. Click into the chat with Claude and press Ctrl+V, then Enter.' -ForegroundColor Green
     } catch { Write-Host 'Could not copy the text: open the file, press Ctrl+A and Ctrl+C, and paste it into the chat.' -ForegroundColor Yellow }
+    if ($picture) { Write-Host ('Then drag the picture ' + (Split-Path -Leaf $picture) + ' (in the folder that opens) into the chat too.') -ForegroundColor Green }
     if ([Environment]::OSVersion.Platform -eq 'Win32NT') {
       try { Start-Process -FilePath 'explorer.exe' -ArgumentList ('/select,"' + $file + '"') } catch { Write-Verbose $_.Exception.Message }
     }

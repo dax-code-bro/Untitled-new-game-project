@@ -16,7 +16,9 @@
 #      + Blender's Python module (bpy 4.2) in pc/.venv-bpy
 #   6. every cache a render needs: node pc/build-caches.mjs (asset downloads, landscape
 #      bakes, human characters, cloth bakes - the long step, 1-3 hours the first time)
-#   7. the GPU self-test: node render/gpu-check.mjs
+#   7. the GPU self-test (node render/gpu-check.mjs) and a 1-minute end-to-end test (pc/selftest-episode.mjs)
+# Exit code: 0 ok, 1 stopped, 2 no usable GPU, 3 the GPU draws the test picture DIFFERENTLY from the cloud,
+# 4 the GPU check crashed, 5 the end-to-end test failed (the last banner says "SETUP RESULT: <code> - ...").
 # The computer is kept awake during steps 6-7 (caffeinate on macOS, systemd-inhibit on Linux).
 # Everything is logged to pc/logs/setup-<date>.log.
 #
@@ -78,7 +80,7 @@ STEP=0
 step() { STEP=$((STEP+1)); echo; echo "==[ $STEP ]== $*"; }
 ok()   { echo "   ok: $*"; }
 note() { echo "   note: $*"; }
-die()  { echo; echo "SETUP STOPPED: $*"; echo "Fix that, then run the same command again - it continues where it stopped."; [ -n "${LOG:-}" ] && echo "log: $LOG"; exit 1; }
+die()  { echo; echo "SETUP STOPPED: $*"; echo "SETUP RESULT: 1 - the setup stopped: $*"; echo "Fix that, then run the same command again - it continues where it stopped."; [ -n "${LOG:-}" ] && echo "log: $LOG"; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 dl()   { curl -fL --retry 3 --retry-delay 2 -o "$2" "$1"; }
 sha256() { (sha256sum "$1" 2>/dev/null || shasum -a 256 "$1") | awk '{print $1}'; }
@@ -273,28 +275,36 @@ else
   step "caches skipped (--skip-caches): run  node pc/build-caches.mjs --python \"$BPY\"  later"
 fi
 
-# ---- 7. GPU self-test ----------------------------------------------------------------------------
-GPU_RC=0
+# ---- 7. GPU self-test + end-to-end test -------------------------------------------------------------
+GPU_RC=0; E2E_RC=0
 if [ "$GPUCHECK" = 1 ]; then
   step "GPU self-test (one native 4K frame)"
   ${AWAKE[@]+"${AWAKE[@]}"} node render/gpu-check.mjs; GPU_RC=$?
+  step "end-to-end test: a tiny made-up episode (render, stop, resume, assemble)"
+  MODE=--cpu; { [ "$GPU_RC" = 0 ] || [ "$GPU_RC" = 3 ]; } && MODE=--gpu
+  ${AWAKE[@]+"${AWAKE[@]}"} node pc/selftest-episode.mjs "$MODE"; E2E_RC=$?
 fi
 
+# one result code (the most important problem wins), the same codes as pc/setup-windows.ps1:
+# 0 ok, 1 stopped, 2 no usable GPU, 3 the GPU draws the test picture DIFFERENTLY, 4 the GPU check crashed,
+# 5 the end-to-end test failed
+RESULT=0; WHAT="everything ok"
+if [ "$GPU_RC" = 2 ]; then RESULT=2; WHAT="no usable graphics card was found (see the GPU NOT USED banner above)"
+elif [ "$GPU_RC" = 3 ]; then RESULT=3; WHAT="the graphics card draws the test picture DIFFERENTLY from the cloud (see the PICTURE CHECK banner): send output/gpu-check/gpu-check-picture-for-claude.jpg"
+elif [ "$GPU_RC" != 0 ]; then RESULT=4; WHAT="the GPU check itself failed with code $GPU_RC (see its error above)"
+elif [ "$E2E_RC" != 0 ]; then RESULT=5; WHAT="the end-to-end test failed with code $E2E_RC (see above)"
+fi
 echo
 echo "=================================================================="
-if [ "$GPU_RC" = 2 ]; then
-  echo " Setup finished, BUT the GPU check found no usable graphics card (see the banner above)."
-elif [ "$GPU_RC" != 0 ]; then
-  echo " Setup finished, but the GPU check failed (see above)."
-else
-  echo " Setup finished."
-fi
-echo " Render: bash \"$PROJ/pc/render-episode.sh\"   (git pull + caches + npm run episode; Ctrl+C stops, run again to continue)"
+if [ "$RESULT" = 0 ]; then echo " Setup finished."; else echo " Setup finished, BUT $WHAT"; fi
+echo " SETUP RESULT: $RESULT - $WHAT"
+[ "$RESULT" != 0 ] && echo " Please run  bash \"$PROJ/pc/render-episode.sh\" --send-logs  and paste the text into the chat with Claude."
+echo " Render: bash \"$PROJ/pc/render-episode.sh\"   (git pull + caches + the episode renderer; Ctrl+C stops, run again to continue)"
 echo " Status: bash \"$PROJ/pc/render-episode.sh\" --status"
 echo " GPU check again: bash \"$PROJ/pc/render-episode.sh\" --gpu-check"
 echo " Log:    $LOG"
 echo "=================================================================="
 rm -f "$TMPLOG"
-exit "$GPU_RC"
+exit "$RESULT"
 }
 main "$@"

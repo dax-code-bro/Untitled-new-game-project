@@ -1,0 +1,21 @@
+Dragon's Kingdom - Season 1, Episode 1
+Created by Daxtyn Sanches. Story by Daxtyn Sanches.
+Additional scenes and dialogue drafted with Claude (Anthropic). Made with Claude (Anthropic) in Claude Code: the scene code, the 3D models and animation, the voice processing and the render pipeline.
+
+Voices: computer-generated with Kokoro-82M by hexgrad (Apache License 2.0).
+
+Third-party assets
+- Coastal cliff composition: Babylon.js (CC BY 4.0), from Poly Haven assets (CC0).
+  Source: https://github.com/BabylonJS/Assets/tree/master/meshes/MeshBlending (coastalCliff.glb)
+  Licence: https://creativecommons.org/licenses/by/4.0/
+  Changes: the pieces were taken apart, rearranged and rescaled into new cliffs and shores for this episode.
+- Leaf textures: Daniel Greenheck, EZ-Tree (MIT License), https://github.com/dgreenheck/ez-tree
+- Skies and light, HDRI photographs (CC0): Greg Zaal, Alexander Scholten, Sergej Majboroda, Andreas Mischok, from Poly Haven (https://polyhaven.com)
+- Photo-scanned materials (CC0): Lennart Demes, ambientCG (https://ambientcg.com)
+- Stone and pebble materials (CC0): Rob Tuytel and the Poly Haven team
+- Human bodies, faces, eyes, hair and skin (CC0): MakeHuman team / Data Collection AB (http://www.makehumancommunity.org)
+- Dutch ship model (CC0): Poly Haven
+- Street lantern, fish and wicker (CC0): sbtron / Microsoft, Microsoft, Eric Chadwick - Khronos glTF Sample Assets
+- Credits typeface: EB Garamond, The EB Garamond Project Authors (SIL Open Font License 1.1)
+
+Made with free and open-source software: three.js (MIT), Playwright (Apache 2.0), Chromium (BSD and other open licences), Node.js (MIT), FFmpeg and x264 (GNU GPL), Blender (GNU GPL), Python (PSF License), NumPy and SciPy (BSD), kokoro-onnx and ONNX Runtime (MIT), eSpeak NG and phonemizer (GNU GPL 3.0), SoX (GNU GPL / LGPL).

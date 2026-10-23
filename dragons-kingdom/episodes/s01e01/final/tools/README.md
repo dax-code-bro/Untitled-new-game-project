@@ -3,6 +3,7 @@
 | Script | What it does |
 |---|---|
 | `make_final_vo.py` | Makes a computer-voice take for every spoken line of `../dialogue.json` (the locked shooting script), plus labelled placeholders for the sung verse and the screams and cries, then checks all of them. Output goes to `../vo/` (see `../vo/README.md`). |
+| `refresh_vo_sources.py` | Updates the source record in `../vo/takes.json` (the sha256 of `voices.json`) without re-rendering, but only after proving that nothing audible changed: it finds the exact `voices.json` the takes were made from in git history, compares the parts that decide how a take sounds (pronunciation, render defaults, engines, each role's voice, blend, speed, pitch and sentence gap, each special line's type), and checks every take file against its sha256. Otherwise it refuses and says which lines to re-render. Standard library only. `--check` reports without writing. |
 
 ## Setup (once)
 

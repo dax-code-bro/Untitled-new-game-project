@@ -16,7 +16,8 @@
   },
   "voices.json": {
    "path": "dragons-kingdom/episodes/s01e01/final/voices.json",
-   "sha256": "4a372fa00bd6b99681482fbe7a18e25b726b063aab92dd1f15a995352fa72d5e"
+   "sha256": "fa8e15bbcd13522fbe51785e3b94a50f60754d3ca6c982bb386582590196526b",
+   "render_digest": "73d0fa104bd448b8e5a8e6dc01daeb425d1a99c7a6564f3fc3ee6b2dc2e920f0"
   },
   "shotlist.json": {
    "path": "dragons-kingdom/episodes/s01e01/final/shotlist.json",
@@ -31,6 +32,16 @@
    "sha256": "a21f0ad7daa42c0b4e3c4c0fc31ce29a2b2dd1f40995a4c97f509ffd89e5b80c"
   }
  },
+ "sources_refreshed": [
+  {
+   "date": "2026-10-23",
+   "source": "voices.json",
+   "from": "4a372fa00bd6b99681482fbe7a18e25b726b063aab92dd1f15a995352fa72d5e",
+   "to": "fa8e15bbcd13522fbe51785e3b94a50f60754d3ca6c982bb386582590196526b",
+   "made_from_commit": "3f4343449478",
+   "why": "only parts that do not change a take were edited (render digest equal); all 389 take files verified against their sha256 - by final/tools/refresh_vo_sources.py, no take re-rendered"
+  }
+ ],
  "decisions_applied": {
   "2026-10-18 decision 1": "the five species lines are spoken in Daxtyn's approved wording (L048, L053, L054, L109, X17-11); the old wording is never recorded",
   "2026-10-18 decision 2": "the Cling deaths are picture and sound design; no spoken line changes",
