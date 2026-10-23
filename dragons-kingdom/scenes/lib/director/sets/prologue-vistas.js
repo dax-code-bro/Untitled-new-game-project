@@ -61,10 +61,9 @@ const LOOKS = {
   walls: { sea: null, haze: 4.5, density: 0.00025, wb: 4700, exposure: 1.6, banks: () => [
     { center: [-300, 30, -450], radius: [900, 25, 200], density: 0.002, noise: 0.95 }] },
   verdor: { sea: 'dawn', haze: 4.0, density: 0.00015, wb: 4800, exposure: 1.4, banks: () => [
-    { center: [300, 175, -2550], radius: [1200, 60, 420], density: 0.005, noise: 0.95 },
     { center: [-200, 30, -1900], radius: [2200, 35, 300], density: 0.006, noise: 0.9 }] },
   calm: { sea: 'calm', haze: 1.2, density: 0.00004, wb: 6000, exposure: 2.1, banks: () => [] },
-  swell: { sea: 'swell', haze: 3.4, density: 0.00018, wb: 6800, exposure: 1.2, range: 16000, banks: () => [
+  swell: { sea: 'swell', haze: 3.4, density: 0.00018, wb: 7600, exposure: 0.45, range: 16000, banks: () => [
     { center: [0, 620, 0], radius: [30000, 140, 30000], density: 0.01, noise: 0.8 }] },
   islands: { sea: 'dawn', haze: 3.0, density: 0.0001, wb: 4400, exposure: 1.3, banks: (S) => [
     { center: [S.x * 6000, S.y * 6000 + 80, S.z * 6000], radius: [2600, 420, 800], density: 0.016, noise: 0.95 },
@@ -104,6 +103,13 @@ export async function build(ctx, { shotSpecs }) {
       { id: 'pbr/acg_ground13', scale: 8, tint: [0.42, 0.46, 0.34] },
       { id: 'pbr/acg_ground24', scale: 8, tint: [0.5, 0.48, 0.42] },
     ], { macro: 0.55, macroScale: 0.004, detailNear: 300, detailFar: 2500, vertexColors: true, ...o }),
+    // a dark sandstone cliff: an earthy grit texture side-projected reads as weathered rock; the
+    // library's block-like rock26 read as a dressed stone wall on a 60 m heightfield face
+    cliff: (o = {}) => terrainMaterial(ctx, [
+      { id: 'pbr/acg_ground24', scale: 3, tint: [0.4, 0.33, 0.27], normalScale: 1.6 },
+      { id: 'pbr/acg_ground13', scale: 8, tint: [0.42, 0.46, 0.34] },
+      { id: 'pbr/acg_ground27', scale: 6, tint: [0.36, 0.32, 0.27] },
+    ], { macro: 0.6, macroScale: 0.01, detailNear: 300, detailFar: 2500, vertexColors: true, ...o }),
     pale: (o = {}) => terrainMaterial(ctx, [
       { id: 'pbr/acg_rock26', scale: 6, tint: [0.82, 0.8, 0.74] },
       { id: 'pbr/acg_ground13', scale: 8, tint: [0.46, 0.5, 0.36] },
@@ -171,7 +177,7 @@ export async function build(ctx, { shotSpecs }) {
       const face = top * (1 - u - steps) + 3.5 * smooth(w * 0.7, w + 14, f) * (1 - smooth(w + 14, w + 40, f));
       return Math.max(-8, face - 0.25 * Math.max(0, f - w - 25));
     };
-    const L = await land({ x: [-1400, 1400], z: [-1400, 400], n: [640, 420], focus: [0, -140], h: H, matOpts: { cliff: { strata: 1.0, streaks: 0.9, wet: 0.8, ochre: 0.5 } } });
+    const L = await land({ x: [-1400, 1400], z: [-1400, 400], n: [640, 420], focus: [0, -140], h: H, mat: 'cliff', matOpts: { cliff: { strata: 1.0, streaks: 0.9, wet: 0.8, ochre: 0.6 } } });
     g.add(L.mesh);
     const oak = await treeKit(ctx, 'oak', { variants: 2, seed: 31, exposure: 0.2 });
     const oakW = await treeKit(ctx, 'oak', { variants: 2, seed: 32, exposure: 0.8, scale: 0.75 });
@@ -283,7 +289,7 @@ export async function build(ctx, { shotSpecs }) {
       for (const f of fingers) streak = Math.max(streak, Math.exp(-Math.pow((wu - f + 0.1 * (wv - lead)) / 0.02, 2)) * smooth(lead, lead + 0.08, wv) * (1 - smooth(trail - 0.05, trail + 0.12, wv)));
       const rim = Math.exp(-Math.pow((wv - lead - 0.03) / 0.04, 2)) * smooth(0.05, 0.2, wu) * (1 - smooth(0.75, 0.95, wu));
       const n1 = fbm(u * 6, v * 4) * 0.5 + 0.5, n2 = fbm(u * 22 + 7, v * 14) * 0.5 + 0.5, n3 = fbm(u * 60 + 3, v * 40 + 1) * 0.5 + 0.5;
-      const dens = (body * 0.75 + streak * 0.5 + rim * 0.45) * (0.25 + 1.1 * n1) * (0.6 + 0.6 * n2) * (0.8 + 0.4 * n3);
+      const dens = (body * 0.8 + streak * 0.5 + rim * 0.45) * (0.55 + 0.6 * n1) * (0.7 + 0.45 * n2) * (0.85 + 0.3 * n3);
       const a = clamp(smooth(0.18, 0.75, dens), 0, 1) * 0.9;
       const shade = clamp(0.62 + 0.3 * smooth(0.25, 0.0, wv - lead) + 0.18 * (n2 - 0.5) - 0.15 * smooth(0.4, 0.9, dens), 0, 1);  // lit from above / the sun side, denser cores greyer
       const k = (j * cv.width + i) * 4;
@@ -292,7 +298,7 @@ export async function build(ctx, { shotSpecs }) {
     c2.putImageData(img, 0, 0);
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter;
     const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, color: new THREE.Color(1.5, 1.42, 1.32), fog: false });
-    wing = new THREE.Mesh(new THREE.PlaneGeometry(2800, 1400), mat);
+    wing = new THREE.Mesh(new THREE.PlaneGeometry(2100, 1050), mat);
     wing.renderOrder = 5;
     g.add(wing);
   }

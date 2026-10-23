@@ -26,6 +26,7 @@ export default {
       set: { area: 'meadow' },
       // the body flies east 70 m up at 22 m/s; with the sun at 32 deg in the east its shadow lies ~108 m
       // west of it and crosses the frame centre at 3.5 s
+      reviewAt: 0.47,
       fx: [{ kind: 'shadow-pass', from: 0.8, to: 6.2, params: { object: 'shadowDragon', from: [-101, G + 70, 79], to: [18, G + 70, 79], yawDeg: 90 } }],
       lines: [['L005', 2.6]],
     },
@@ -43,7 +44,7 @@ export default {
       cam: { rig: 'handheld', frame: { subjects: [['abby.head', [-0.4, 0.3]], ['leaf.w_R_2', [0.12, -0.3]]], from: 238, height: G + 1.55, dist: 2.3, at: 1.5 }, mm: 50, fstop: 2.8, focus: 'abby.hand.R', shake: { kind: 'handheld', amount: 0.5 } },
       cast: {
         leaf: leafCrouched({ look: [0.35, 0.05] }),
-        abby: { at: [4.2, -35.6], face: 75, look: 'leaf.w_R_2', lookAmount: 0.9, acts: [[0.4, 'handsTo', { at: 'leaf.w_R_2', in: 0.6, spread: 0.12, palm: [1, 0, 0] }]] },
+        abby: { at: [4.2, -35.6], nearTo: { to: 'leaf.w_R_2', dist: 0.62, from: 255 }, look: 'leaf.w_R_2', lookAmount: 0.9, acts: [[0.4, 'handsTo', { at: 'leaf.w_R_2', in: 0.6, spread: 0.12, palm: [1, 0, 0] }]] },
       },
     },
     'X2-10': {
@@ -51,33 +52,33 @@ export default {
       cam: { rig: 'static', frame: { subjects: [['leaf.hl_R_3', [-0.15, -0.25]], ['leaf.eye', [0.35, 0.3]]], from: 332, height: G + 0.5, dist: 1.7, at: 1.0 }, mm: 85, fstop: 2.8, focus: [[0, 'leaf.hl_R_3'], [2.6, 'leaf.hl_R_3'], [3.5, 'leaf.eye']] },
       cast: {
         leaf: leafCrouched({ look: [0.5, -0.05] }),
-        abby: { at: [4.6, -38.4], face: 60, look: 'leaf.hl_R_3', posture: { kneel: 1 }, acts: [[0.2, 'handsTo', { at: 'leaf.hl_R_3', in: 0.5, spread: 0.1 }], [2.4, 'look', { at: 'leaf.eye', amount: 0.8 }]] },
+        abby: { at: [4.6, -38.4], nearTo: { to: 'leaf.hl_R_3', dist: 0.7, from: 255 }, look: 'leaf.hl_R_3', posture: { kneel: 1 }, acts: [[0.2, 'handsTo', { at: 'leaf.hl_R_3', in: 0.5, spread: 0.1 }], [2.4, 'look', { at: 'leaf.eye', amount: 0.8 }]] },
       },
     },
     'X2-11': {
       staging: 'OTS: over her shoulder to Leaf; she is satisfied (the line plays on her back).',
-      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.48, 0.24]], ['leaf.head', [0.3, 0.02]]], from: 250, height: G + 1.5, dist: 1.9 }, mm: 50, fstop: 2.8, focus: 'leaf.head' },
+      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.45, 0.24]], ['leaf.head', [0.32, 0.0]]], from: 292, height: G + 1.5, dist: 1.7 }, mm: 50, fstop: 2.8, focus: 'leaf.head' },
       cast: {
         leaf: leafCrouched({ look: [-0.3, 0.05] }),
-        abby: { at: [4.7, -33.2], face: 100, look: 'leaf.eye', lookAmount: 0.8, acts: [[0.5, 'nod', { amount: 0.08, rate: 1.4, in: 0.2, hold: 0.4, out: 0.3 }]] },
+        abby: { at: [4.7, -33.2], nearTo: { to: 'leaf.head', dist: 1.25, from: 262 }, look: 'leaf.eye', lookAmount: 0.8, acts: [[0.5, 'nod', { amount: 0.08, rate: 1.4, in: 0.2, hold: 0.4, out: 0.3 }]] },
       },
       lines: [['X2-08', 0.4]],
       minTail: 0.2,
     },
     'X2-12': {
       staging: 'BACK: from behind her at the riding gear; Leaf noses in over her right shoulder; she pushes his head away; it comes straight back.',
-      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.3, 0.22]], ['leaf.head', [0.22, 0.25]]], from: 98, height: G + 1.6, dist: 2.6, at: 0.8 }, mm: 50, fstop: 2.8, focus: 'abby.head' },
+      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.28, 0.2]], ['leaf.head', [0.25, 0.25]]], from: 98, height: G + 1.6, dist: 3.1, at: 0.8 }, mm: 50, fstop: 2.8, focus: 'abby.head' },
       cast: {
-        leaf: { root: [[0, [2.0, G, -48.4]], [1.2, [2.0, G, -48.2]], [1.5, [2.1, G, -48.9], 'out'], [2.6, [2.0, G, -48.2]]], yawKeys: [[0, 176], [1.5, 165], [2.6, 178]], acts: [[0, 'stand', { breathe: 0.6, look: [0.1, -0.15] }]] },
+        leaf: { root: [[0, [1.3, G, -48.2]], [1.2, [1.3, G, -48.0]], [1.5, [1.5, G, -48.8], 'out'], [2.6, [1.3, G, -48.0]]], yawKeys: [[0, 178], [1.5, 168], [2.6, 180]], acts: [[0, 'stand', { breathe: 0.6, look: [0.1, -0.15] }]] },
         abby: { at: [1.7, -43.6], face: 272, look: 'gear', lookAmount: 0.7, acts: [[1.1, 'shove', { side: 'R', at: 'leaf.head', dur: 0.5, in: 0.15, hold: 0.25, out: 0.35 }], [1.1, 'look', { at: 'leaf.head', amount: 0.4, blend: 0.3 }], [2.2, 'look', { at: 'gear', amount: 0.7 }]] },
       },
     },
     'X2-13': {
       staging: 'PROFILE + DOF: she kneels and leans her forehead to his, eyes closed; his eye sharp, her profile soft; he breathes out.',
-      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.28, 0.1]], ['leaf.eye', [0.28, 0.12]]], from: 178, height: G + 0.9, dist: 2.0, at: 1.5 }, mm: 85, fstop: 2.0, focus: 'leaf.eye' },
+      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.3, 0.1]], ['leaf.eye', [0.3, 0.1]]], from: 180, height: G + 0.95, dist: 2.4, at: 1.5 }, mm: 85, fstop: 2.0, focus: 'leaf.eye' },
       cast: {
         leaf: leafCrouched({ look: [0.0, -0.1], breathe: 1.0 }),
-        abby: { at: [5.4, -33.6], face: 92, look: 'leaf.head', lookAmount: 1.0, posture: { kneel: 1 }, acts: [[0.4, 'bow', { to: 0.4, dur: 1.2 }]] },
+        abby: { at: [5.4, -33.6], nearTo: { to: 'leaf.head', dist: 0.62, from: 268 }, look: 'leaf.head', lookAmount: 1.0, posture: { kneel: 1 }, acts: [[0.4, 'bow', { to: 0.4, dur: 1.2 }]] },
       },
     },
   },

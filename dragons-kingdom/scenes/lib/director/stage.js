@@ -255,6 +255,7 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
       if (!a) continue;
       a.root.visible = actorVisible(b, tt);
       if (!a.root.visible) { S.posed.add(name); continue; }
+      if (b.nearTo) placeNear(st, b.nearTo, tt);
       if (a.kind === 'human') {
         const mouth = row.dialogue?.length ? mouthAt(row.dialogue, a.def.role || name.toUpperCase(), tt) : 0;
         poseHuman(a.ch, st, tt, S.env, { idle: b.idle, armSwing: b.armSwing ?? a.def.armSwing, armsDown: b.armsDown ?? a.def.armsDown, mouth, role: a.def.role, placed: row.dialogue, shot: row.job });
@@ -270,6 +271,21 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
       if (a.kind !== 'object' || b.dynamic) dynamic.push(a.root);
     }
     return dynamic;
+  }
+
+  /**
+   * `nearTo: { to: 'leaf.head', dist: 0.5, from: 270, face: true }` puts an actor's root `dist` metres
+   * from a POSED point (actors are posed objects -> creatures -> humans, so a person can stand at a
+   * dragon's real head, foot or wing joint), on the side given by `from` (heading from the point to
+   * the actor), facing the point. Pure: the point is posed for this same t.
+   */
+  function placeNear(st, o, tt) {
+    const p = S.env.point(o.to, tt);
+    if (!p) return;
+    const a = ((o.from ?? 180) * Math.PI) / 180, d = o.dist ?? 0.6;
+    st.x = p.x + Math.sin(a) * d; st.z = p.z - Math.cos(a) * d;
+    st.y = S.env.ground(st.x, st.z);
+    if (o.face !== false) st.yaw = Math.atan2(p.x - st.x, p.z - st.z) + ((o.turn ?? 0) * Math.PI) / 180;
   }
 
   /**

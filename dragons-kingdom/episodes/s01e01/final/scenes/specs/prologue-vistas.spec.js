@@ -74,8 +74,8 @@ export default {
     'P-16': {
       staging: 'NONE: a wing-shaped cloud drifts across a brightening morning sky; the camera tilts up from the sea to it.',
       trans: ['dissolve', 24],
-      cam: { rig: 'tilt', pos: [0, 6, 0], look: [[0, [-200, 160, -3200]], [3.0, [-200, 160, -3200]], [10.5, [-100, 1350, -3200]]], mm: 35, fstop: 5.6, focus: 3500, ease: 'sine' },
-      set: { loc: 'sky', wing: { path: [[0, [-1100, 1450, -3200]], [11, [500, 1600, -3300]]] } },
+      cam: { rig: 'tilt', pos: [0, 6, 0], look: [[0, [-200, 160, -3200]], [3.0, [-200, 160, -3200]], [10.5, [80, 1330, -3200]]], mm: 35, fstop: 5.6, focus: 3500, ease: 'sine' },
+      set: { loc: 'sky', wing: { path: [[0, [-1000, 1380, -3250]], [11, [350, 1420, -3300]]] } },
       lines: [['L004', 2.0]],
     },
   },
