@@ -6,6 +6,7 @@ import { HUD, esc } from './ui/hud.js';
 import { Game } from './game.js';
 import { buildTextures, arrayTextures } from './textures.js';
 import { QUALITY } from './graphics.js';
+import { TouchControls, isTouchDevice } from './touch.js';
 import { ITEMS, fmtDuration } from './data/catalog.js';
 
 const $ = (id) => document.getElementById(id);
@@ -24,15 +25,19 @@ else delete save.speed;
 const audio = new AudioSys();
 audio.setVolume(save.settings.volume);
 const hud = new HUD(audio);
-const input = { keys: {}, pressed: new Set(), mdx: 0, mdy: 0, lmb: false, rmb: false, wheel: 0 };
+const input = { keys: {}, pressed: new Set(), mdx: 0, mdy: 0, lmb: false, rmb: false, wheel: 0, stick: null };
+const touchMode = isTouchDevice();
+// phones get the light preset by default (it can be raised in the pause menu)
+if (touchMode && !save.settings.quality) save.settings.quality = 'low';
 let game = null;
+const touch = touchMode ? new TouchControls({ input, getGame: () => game, pause: () => setPaused(true), audio }) : null;
 let textures = null; // generated once, reused across lives
 if (!save.settings.quality) save.settings.quality = params.get('quality') || 'high';
 if (params.get('quality')) save.settings.quality = params.get('quality');
 
-const locked = () => testMode || document.pointerLockElement === canvas;
+const locked = () => testMode || touchMode || document.pointerLockElement === canvas;
 function lock() {
-  if (testMode) return;
+  if (testMode || touchMode) return;
   try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* unsupported */ }
   setTimeout(() => { if (game && !game.ui && !game.over && !locked()) setPaused(true); }, 400);
 }
@@ -41,6 +46,7 @@ function setPaused(p) {
   if (!game) return;
   game.paused = p;
   $('pause').classList.toggle('hidden', !p);
+  if (touch) touch.show(!p && !!game && !game.over);
   if (p) { $('sens').value = save.settings.sens; $('vol').value = save.settings.volume; $('quality').value = save.settings.quality || 'high'; }
 }
 const persist = () => Save.store(save);
@@ -63,13 +69,17 @@ function showTitle(result = null) {
     <div class="tstats"><span>◆ <b>${s.bank}</b> filament banked</span><span>🧵 <b>${s.cloth || 0}</b> cloth</span><span>🗄 <b>${s.locker.length}</b> in locker</span><span>🖨 ${q}</span></div>
     <button class="deploy" id="deploy">${result ? 'RESPAWN AT THE POB' : 'DEPLOY'}</button>
     <div class="cols">
-      <div><h4>Controls</h4><ul>
+      ${touchMode ? `<div><h4>Touch controls</h4><ul>
+        <li>Left thumb: move (push to the edge to sprint) · Right thumb: drag to look</li>
+        <li><b>FIRE</b> (keep dragging to aim while firing) · <b>AIM</b> toggles sights · <b>JUMP</b> · <b>CROUCH</b> · <b>RELOAD</b></li>
+        <li><b>USE</b> appears near things you can open, loot or harvest</li>
+        <li>Top bar: <b>SWAP</b> weapon · <b>HEAL</b> · <b>AMMO</b> type · <b>BAG</b> inventory · <b>MAP</b> · <b>II</b> pause</li></ul></div>` : `<div><h4>Controls</h4><ul>
         <li><kbd>WASD</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> jump/climb · <kbd>C</kbd> crouch</li>
         <li><kbd>LMB</kbd> fire / swing / throw · <kbd>RMB</kbd> aim (CO2 knife: fire blade)</li>
         <li><kbd>R</kbd> reload · <kbd>T</kbd> switch ammo type · <kbd>V</kbd> pump Patriot 09</li>
         <li><kbd>1</kbd>–<kbd>5</kbd> guns / melee / throwing / flare · <kbd>Q</kbd> cycle</li>
         <li><kbd>F</kbd> quick-heal · <kbd>H</kbd> hand warmer · <kbd>Z</kbd> pin target</li>
-        <li><kbd>E</kbd> interact · <kbd>Tab</kbd> inventory · <kbd>M</kbd> map · <kbd>Esc</kbd> pause</li></ul></div>
+        <li><kbd>E</kbd> interact · <kbd>Tab</kbd> inventory · <kbd>M</kbd> map · <kbd>Esc</kbd> pause</li></ul></div>`}
       <div><h4>Survive Sector 12</h4><ul>
         <li>You spawn at the <b>POB</b>. Deposit filament in its crate, then print gear on the touchscreen.</li>
         <li>Filament: headshot kill <b>10</b> · body kill <b>5</b> · explosive or mid-air kill <b>30</b>. Cargo helis drop caches.</li>
@@ -85,6 +95,10 @@ function showTitle(result = null) {
 
 async function deploy() {
   audio.init();
+  if (touchMode) {
+    // full screen, landscape, where the browser allows it
+    try { const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen({ navigationUI: 'hide' }); if (r && r.then) r.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).catch(() => {}); } catch (e) { /* not allowed here */ }
+  }
   $('title').classList.add('hidden');
   $('loading').classList.remove('hidden');
   $('loading-detail').textContent = 'Building the island…';
@@ -101,6 +115,7 @@ async function deploy() {
   await game.load((ready, want) => { $('loading-detail').textContent = `Streaming terrain ${ready}/${want}`; });
   $('loading').classList.add('hidden');
   hud.show();
+  if (touch) touch.show(true);
   lock();
 }
 
@@ -111,6 +126,7 @@ function onExit(result) {
   hud.hide();
   setPaused(false);
   $('pause').classList.add('hidden');
+  if (touch) touch.show(false);
   unlock();
   showTitle(result);
 }
@@ -142,7 +158,7 @@ addEventListener('mouseup', (e) => { if (e.button === 0) input.lmb = false; if (
 addEventListener('wheel', (e) => { if (game && locked() && !game.ui) input.wheel = Math.sign(e.deltaY); }, { passive: true });
 addEventListener('contextmenu', (e) => e.preventDefault());
 
-$('resume').addEventListener('click', () => { audio.init(); if (testMode) setPaused(false); else lock(); });
+$('resume').addEventListener('click', () => { audio.init(); if (testMode || touchMode) setPaused(false); else lock(); });
 $('quit').addEventListener('click', () => {
   if (!game) return;
   const safe = game.inSafeZone(game.player.pos);
@@ -151,7 +167,7 @@ $('quit').addEventListener('click', () => {
   setPaused(false);
   const g = game;
   g.dispose(); game = null; window.__game = null;
-  hud.hide(); $('pause').classList.add('hidden'); unlock();
+  hud.hide(); $('pause').classList.add('hidden'); if (touch) touch.show(false); unlock();
   showTitle();
 });
 $('sens').addEventListener('input', (e) => { save.settings.sens = +e.target.value; persist(); });

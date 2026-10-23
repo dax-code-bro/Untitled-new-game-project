@@ -124,14 +124,17 @@ export class Game {
     fx.ring(here, 0.1, 0.2, 0.05, 0xffffff, 0.01);
     fx.update(0.016, this.camera.position);
     this.gfx.patchScene();
+    // the warm-up objects go away once compiling is done (not before: three still checks their programs)
+    const cleanup = () => { for (const r of rigs) r.dispose(); this.scene.remove(tmp); };
     try {
-      // never let a driver that doesn't report parallel-compile status hold up the loading screen
-      if (this.renderer.compileAsync) await Promise.race([this.renderer.compileAsync(this.scene, this.camera), new Promise((r) => setTimeout(r, 6000))]);
-      else this.renderer.compile(this.scene, this.camera);
+      if (this.renderer.compileAsync) {
+        const job = this.renderer.compileAsync(this.scene, this.camera);
+        job.then(cleanup, cleanup);
+        // never let a driver that doesn't report parallel-compile status hold up the loading screen
+        await Promise.race([job, new Promise((r) => setTimeout(r, 6000))]);
+      } else { this.renderer.compile(this.scene, this.camera); cleanup(); }
       this.gfx.render(); // shadow-pass variants too
-    } catch (e) { console.warn('shader warm-up', e); }
-    for (const r of rigs) r.dispose();
-    this.scene.remove(tmp);
+    } catch (e) { console.warn('shader warm-up', e); cleanup(); }
   }
 
   // ---------------------------------------------------------------- frame

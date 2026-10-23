@@ -33,6 +33,20 @@ During a session, the live game object is available as `window.__game`.
 | Tab / M / Esc | Inventory (attachments, camo, placing buildings) / map / pause |
 | Y | Inspect your weapon |
 
+### On a phone or tablet
+
+Touch devices get on-screen controls automatically (force them with `?touch`, or force mouse controls with `?mouse`). Hold the phone sideways.
+
+| Control | Action |
+| --- | --- |
+| Left thumb | Floating move stick; push it to the rim to sprint |
+| Right thumb | Drag anywhere to look (keep dragging while holding FIRE to track a target) |
+| FIRE / AIM / JUMP / CROUCH / RELOAD | As on the keyboard; AIM toggles |
+| USE | Appears when you can open, loot, harvest or extract |
+| Top bar | SWAP weapon, HEAL, AMMO type, BAG (inventory), MAP, II (pause) |
+
+Phones start on the Low graphics preset.
+
 ## How to play
 
 1. You spawn at the POB, inside a safe zone. Take your kit out of the **LOCKER** tab on the terminal.
@@ -68,6 +82,7 @@ During a session, the live game object is available as `window.__game`.
 | `viewmodel.js` | First-person arms and weapon: IK hands, sway / bob / recoil springs, working actions, per-weapon reloads, melee, throws, medical |
 | `rig.js` | Human rig: planted-foot gait, two-bone IK legs and arms, aim stance, reloads, flinches, verlet ragdoll deaths |
 | `animalRig.js` | Quadruped rig for every species: walk / trot / gallop / bound gaits, grazing, ears, tail, ragdoll |
+| `touch.js` | On-screen touch controls for phones and tablets |
 | `effects.js` | Soft particles, decals, physical casings and dropped mags, impacts per surface, explosions, splashes, blood |
 
 After changing the catalog, regenerate the tables in DESIGN.md with `node tools/catalog-tables.mjs`.

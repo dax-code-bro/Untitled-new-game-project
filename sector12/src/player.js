@@ -154,14 +154,17 @@ export class Player {
     this.h = this.crouch ? 1.2 : 1.8;
 
     // ----- movement
-    const f = (k.KeyW ? 1 : 0) - (k.KeyS ? 1 : 0), s = (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0);
+    // keys, plus the touch stick (analog: a light push walks slowly)
+    const stick = uiOpen ? null : inp.stick;
+    const f = clamp((k.KeyW ? 1 : 0) - (k.KeyS ? 1 : 0) + (stick ? stick.y : 0), -1, 1), s = clamp((k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0) + (stick ? stick.x : 0), -1, 1);
     const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
     let wx = -sy * f + cy * s, wz = -cy * f - sy * s;
     const wl = Math.hypot(wx, wz);
-    if (wl > 0) { wx /= wl; wz /= wl; }
+    if (wl > 1) { wx /= wl; wz /= wl; } else if (wl > 0 && !stick) { wx /= wl; wz /= wl; }
+    if (stick && wl > 0 && wl < 0.35) { wx *= 0.35 / wl; wz *= 0.35 / wl; }
     this.moving = wl > 0;
     const busy = this.busyT > 0;
-    this.sprinting = !!k.ShiftLeft && f > 0 && !inp.rmb && !this.crouch && !busy && !this.swimming;
+    this.sprinting = (!!k.ShiftLeft || !!(stick && stick.sprint)) && f > 0 && !inp.rmb && !this.crouch && !busy && !this.swimming;
     if (this.sprinting && this.crouchToggle) this.crouchToggle = false;
     let speed = this.swimming ? 2.3 : this.sprinting ? 6.6 : this.crouch ? 2.2 : 4.3;
     speed *= this.speedMul() * (1 - 0.42 * this.adsT) * (busy ? 0.55 : 1);
