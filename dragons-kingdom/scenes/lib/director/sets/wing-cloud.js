@@ -6,9 +6,11 @@
 // Pure: paintWingCloud(img, fbm, smooth) fills img.data (width x height RGBA, 2:1) deterministically.
 
 const P = {
-  root: [0.05, 0.5], rootLow: [0.16, 0.8], wrist: [0.8, 0.2], tip: [1.93, 0.33],
-  // the finger tips on the trailing edge, from the tip back toward the body
-  fingers: [[1.68, 0.67], [1.3, 0.86], [0.92, 0.9]],
+  root: [0.08, 0.52], rootLow: [0.2, 0.74], wrist: [0.72, 0.3], tip: [1.95, 0.2],
+  // the finger tips on the trailing edge, from the tip back toward the body: splayed back like a
+  // soaring wing (fingers hanging straight down read as legs)
+  fingers: [[1.82, 0.56], [1.5, 0.8], [1.12, 0.88]],
+  tilt: 8,                                    // degrees: the whole wing rises toward its tip
 };
 
 const lerp2 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
@@ -49,7 +51,10 @@ export function paintWingCloud(img, fbm, smooth) {
   const bones = [[P.root, P.wrist], [P.wrist, P.tip], ...P.fingers.map((f) => [P.wrist, f])];
   const clamp = (x) => Math.max(0, Math.min(1, x));
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
-    const u = (i + 0.5) / W, v = (j + 0.5) / H;
+    // rotate the sample point about the card centre (the wing rises toward the tip)
+    const ca = Math.cos((P.tilt * Math.PI) / 180), sa = Math.sin((P.tilt * Math.PI) / 180);
+    const cx = (i + 0.5) / W * 2 - 1, cy = (j + 0.5) / H - 0.5;
+    const u = (ca * cx - sa * cy + 1) / 2, v = sa * cx + ca * cy + 0.5;
     // warped sample point: the outline breaks into wisps
     const X = u * 2 + 0.07 * fbm(u * 4 + 9, v * 4) + 0.025 * fbm(u * 14 + 2, v * 12 + 5);
     const Y = v + 0.06 * fbm(u * 4, v * 4 + 4) + 0.02 * fbm(u * 15 + 8, v * 13);
@@ -70,9 +75,10 @@ export function paintWingCloud(img, fbm, smooth) {
     });
     // the membrane thins toward the trailing edge between the fingers
     const n1 = fbm(u * 6, v * 4) * 0.5 + 0.5, n2 = fbm(u * 22 + 7, v * 14) * 0.5 + 0.5, n3 = fbm(u * 60 + 3, v * 40 + 1) * 0.5 + 0.5;
-    const memb = body * (0.42 + 0.25 * smooth(0.0, -0.18, d));
-    const dens = (memb + bone * smooth(0.06, -0.03, d) * 0.55) * (0.6 + 0.55 * n1) * (0.72 + 0.4 * n2) * (0.85 + 0.3 * n3);
-    const a = clamp(smooth(0.16, 0.62, dens)) * 0.92;
+    // a thin membrane (the sky shows through) between dense bone streaks: the skeleton reads
+    const memb = body * (0.4 + 0.16 * smooth(0.0, -0.2, d));
+    const dens = (memb + bone * smooth(0.06, -0.03, d) * 0.6) * (0.6 + 0.55 * n1) * (0.72 + 0.4 * n2) * (0.85 + 0.3 * n3);
+    const a = clamp(smooth(0.12, 0.75, dens)) * 0.95;
     // lit from above and the sun side: the upper (leading) part brighter, dense cores greyer
     const top = smooth(0.35, 0.0, Y - 0.25 - 0.1 * Math.abs(X - 0.8));
     const shade = clamp(0.68 + 0.24 * top + 0.14 * (n2 - 0.5) - 0.06 * smooth(0.45, 0.95, dens) + 0.06 * bone);

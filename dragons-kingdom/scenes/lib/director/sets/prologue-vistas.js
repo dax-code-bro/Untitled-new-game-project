@@ -294,7 +294,7 @@ export async function build(ctx, { shotSpecs }) {
     paintWingCloud(img, (x, y) => N.fbm(x, y, 6), smooth);
     c2.putImageData(img, 0, 0);
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter;
-    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, color: new THREE.Color(1.5, 1.42, 1.32), fog: false });
+    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, color: new THREE.Color(1.18, 1.13, 1.06), fog: false });   // not clipped: the bone streaks must read
     wing = new THREE.Mesh(new THREE.PlaneGeometry(2100, 1050), mat);
     wing.renderOrder = 5;
     g.add(wing);
