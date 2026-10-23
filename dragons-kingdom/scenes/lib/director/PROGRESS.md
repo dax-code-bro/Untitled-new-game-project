@@ -3,7 +3,32 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
-## State (2026-10-23)
+## Session 3 (2026-10-23 evening, resumed after a usage-limit stop)
+
+- The dailies of the earlier sessions were in `output/` and were lost with the container; the 13 shots
+  in the scratch work folder survived. Renders now go to the scratch work folder:
+  `render-shots.mjs --work <scratch>/eng1/director/work --redo-on shot` (two queues: the prologue sets,
+  and BIRTHING_CHAMBER in parallel; `--redo-on shot` so a builder change that cannot alter a finished
+  shot does not re-render it - force those with `--only <ids> --force`).
+- Review stills of every unrendered shot first (`--stills 0.15,0.5,0.85`), then fixes:
+  - 1A-18 / 1A-32: people walking in/out through the chamber door were cut into floating pieces: the
+    passage card sat inside the wall's tunnel, in front of them. The architecture's dim interior
+    portal (at the wall's outer face) is now split out as its own mesh (`set.portal: false` hides it),
+    the card goes 1.1 m beyond the wall, scaled to fill the opening (`set.passageCardScale`).
+  - 1A-02: the tilt from the window spent 3 s on a dark wall; now it holds on the window, tilts down
+    along the shaft and holds on the room (attendant, bowls, egg).
+  - 1A-15: the back of Alexandria's head close up read as a flat hair disc (humans library bun); now
+    from behind her left shoulder, the hatchling in frame, her face turned away down.
+  - 1A-21 / 1A-29: the framing solver pinned the camera to the south wall far west: Remi's face read in
+    profile while he speaks. Explicit cameras behind them (backs; his look to Abby turns away).
+  - P-05: the sailor's turn showed a full profile; kept to a lost profile.
+  - P-16: the wing cloud read as a loaf with drips; repainted (`sets/wing-cloud.js`): arm, wrist,
+    finger streaks radiating to a scalloped trailing edge (Node prototype: same noise as the page).
+- Cut assembler: the sound track started at the first line (12.1 s; MP4 audio start_time) and ended
+  with the last one; now a silent bed + `aresample=async=1:first_pts=0` makes it start at 0 and run
+  the cut's whole length. `--keep-work` keeps the ffmpeg graph for debugging.
+
+## State (2026-10-23, before session 3)
 
 - **All 76 shots of PROLOGUE + TITLE + 1A are authored** (shot list order, 8 580 frames = 5:57.5):
   P-01 black card; P-02..P-07 `SEA_COAST_DAWN`; P-08..P-16 `PROLOGUE_VISTAS`; P-17 + X2-08..X2-13

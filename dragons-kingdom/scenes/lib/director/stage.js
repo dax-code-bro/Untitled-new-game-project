@@ -27,7 +27,7 @@ import { evalCamera, resolvePoint } from './camera.js';
 import { actorState, actorVisible } from './blocking.js';
 import { poseHuman, poseCreature, humanRig } from './actions.js';
 import { FxRunner, loadFxLibrary } from './fx.js';
-import { mouthAt } from './dialogue.js';
+import { mouthAt, speakerAt } from './dialogue.js';
 
 const HUMAN_PARTS = { head: 'head', neck: 'neck02', chest: 'spine02', hips: 'root', pelvis: 'root', 'hand.L': 'wrist.L', 'hand.R': 'wrist.R', 'elbow.L': 'lowerarm01.L', 'elbow.R': 'lowerarm01.R', 'foot.L': 'foot.L', 'foot.R': 'foot.R', 'knee.L': 'lowerleg01.L', 'knee.R': 'lowerleg01.R', 'shoulder.L': 'upperarm01.L', 'shoulder.R': 'upperarm01.R' };
 const CREATURE_PARTS = { head: 'head', chest: 'thorax', hips: 'lumbar', neck: 'neck_4', tail: 'tail_6', jaw: 'jaw' };
@@ -371,6 +371,9 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
       const subj = Object.fromEntries(names.map((n) => { try { return [n, r3(S.env.point(n, local))]; } catch { return [n, null]; } }));
       S.env.warnOnce(`debug: camera ${JSON.stringify(r3(ctx.camera.position))} subjects ${JSON.stringify(subj)}`);
     }
+    // the speaking-face audit (realism strategy): until lip-sync exists a speaking face must be soft,
+    // turned (profile or further), small or backlit; the first frame of a shot that breaks it is reported
+    try { faceAudit(row, local); } catch { /* an audit never stops a render */ }
     // effects
     S.fx.update(spec1, local, S.env, { shot: row.job, u: sel.u, camera: ctx.camera });
     // exposure (continuity + the shot's own trim), shadows: the set is static within a shot
@@ -378,6 +381,43 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
     ctx.shadows.key = `${row.job}|${JSON.stringify(spec1.set || {})}`;
     ctx.shadows.dynamic = [...dynamic, ...S.fx.dynamic, ...(S.built.dynamic?.(info) || [])];
     S.built.afterCamera?.(info);
+  }
+
+  /**
+   * Speaking-face audit: for the actor speaking at shot time t (placed dialogue), the angle between the
+   * face's forward direction (head bone -> mid-eyes) and the lens, the face height as a fraction of the
+   * frame height and the defocus blur (circle of confusion) as a fraction of the frame height. A face
+   * turned less than 70 deg from the lens, taller than 6 % of the frame and sharper than 0.6 % blur reads
+   * as a talking face with a still mouth: reported once per shot and actor (console + S.faceAudit).
+   */
+  function faceAudit(row, t) {
+    if (!row.dialogue?.length) return;
+    const role = speakerAt(row.dialogue, t);
+    if (!role) return;
+    const cam = S.ctx.camera, L = S.ctx.lens || {};
+    for (const [name, a] of Object.entries(S.actors)) {
+      if (a.kind !== 'human' || !a.root.visible || (a.def.role || name.toUpperCase()) !== role) continue;
+      const head = a.ch.bone('head')?.getWorldPosition(new THREE.Vector3());
+      const eL = a.ch.bone('eye.L'), eR = a.ch.bone('eye.R');
+      if (!head || !eL || !eR) continue;
+      const eyes = eL.getWorldPosition(new THREE.Vector3()).add(eR.getWorldPosition(new THREE.Vector3())).multiplyScalar(0.5);
+      const fwd = eyes.clone().sub(head).normalize();
+      const toCam = cam.position.clone().sub(eyes);
+      const dist = toCam.length();
+      const ang = (Math.acos(Math.max(-1, Math.min(1, fwd.dot(toCam.normalize())))) * 180) / Math.PI;
+      const ndc = eyes.clone().project(cam);
+      if (ndc.z > 1 || Math.abs(ndc.x) > 1.02 || Math.abs(ndc.y) > 1.02) continue;
+      const f = L.focalLength || 35, N = L.fstop || 2.8, S0 = (L.focus || dist) * 1000, d = dist * 1000;
+      const sensorH = typeof L.sensor === 'number' ? L.sensor * 9 / 16 : ({ super35: 14.0, fullframe: 20.25, alexa65: 30.44 }[L.sensor || 'super35'] ?? 14.0);
+      const faceFrac = (240 * f) / d / sensorH;
+      const cocFrac = ((f * f) / (N * Math.max(1, S0 - f))) * (Math.abs(d - S0) / d) / sensorH;
+      const flag = ang < 70 && faceFrac > 0.06 && cocFrac < 0.006;
+      const rec = { shot: row.job, role, t: +t.toFixed(2), angle: Math.round(ang), face: +(faceFrac * 100).toFixed(1), blur: +(cocFrac * 100).toFixed(2), flag };
+      S.faceAudit = S.faceAudit || {};
+      const k = `${row.job}:${role}`, prev = S.faceAudit[k];
+      if (!prev || (rec.flag && !prev.flag) || (rec.flag === prev.flag && rec.face - rec.angle / 10 > prev.face - prev.angle / 10)) S.faceAudit[k] = rec;
+      if (flag) S.env.warnOnce(`speaking face reads: ${role} ${rec.angle} deg from the lens, ${rec.face}% of frame height, blur ${rec.blur}% (soften, turn, shrink or backlight it until lip-sync exists)`);
+    }
   }
 
   return { meta, setup, update, get state() { return S; } };

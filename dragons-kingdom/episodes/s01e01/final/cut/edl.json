@@ -273,12 +273,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.48,
-    "k4_cpu_s_per_frame": 33.48,
-    "k4_gpu_s_per_frame": 33.48,
-    "draft_minutes": 6.27,
-    "k4_cpu_hours": 0.78,
-    "k4_gpu_hours": 0.78,
+    "draft_s_per_frame": 4.58,
+    "k4_cpu_s_per_frame": 34.21,
+    "k4_gpu_s_per_frame": 34.21,
+    "draft_minutes": 6.41,
+    "k4_cpu_hours": 0.8,
+    "k4_gpu_hours": 0.8,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -287,7 +287,7 @@
      "move": 1.08,
      "total": 1.34
     },
-    "basis": "MEASURED draft 4.48 s/f on this machine; 4K = draft x 7.47 (the set's 4K/draft ratio: MEASURED: F1 draft ~1.7 s/f (velocity, 2026-10-23), 4K 12.7 s/f (README))"
+    "basis": "MEASURED draft 4.58 s/f on this machine; 4K = draft x 7.47 (the set's 4K/draft ratio: MEASURED: F1 draft ~1.7 s/f (velocity, 2026-10-23), 4K 12.7 s/f (README))"
    },
    "staging": "BACK: from the stern, the sailor at mid-ship turns to port and up toward the sound above the fog - his face turns away from the lens (lost profile at most).",
    "deviation": null,
@@ -365,12 +365,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 2.06,
-    "k4_cpu_s_per_frame": 15.36,
-    "k4_gpu_s_per_frame": 15.36,
-    "draft_minutes": 2.88,
-    "k4_cpu_hours": 0.36,
-    "k4_gpu_hours": 0.36,
+    "draft_s_per_frame": 2.84,
+    "k4_cpu_s_per_frame": 21.25,
+    "k4_gpu_s_per_frame": 21.25,
+    "draft_minutes": 3.98,
+    "k4_cpu_hours": 0.5,
+    "k4_gpu_hours": 0.5,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -379,7 +379,7 @@
      "move": 1.08,
      "total": 1.21
     },
-    "basis": "MEASURED: F1 draft ~1.7 s/f (velocity, 2026-10-23), 4K 12.7 s/f (README); x 1.21 for the shot's content"
+    "basis": "MEASURED draft 2.84 s/f on this machine; 4K = draft x 7.47 (the set's 4K/draft ratio: MEASURED: F1 draft ~1.7 s/f (velocity, 2026-10-23), 4K 12.7 s/f (README))"
    },
    "staging": "SIL + BACK: the sailor still, from behind, a dark shape against the bright fog to port.",
    "deviation": null,
@@ -489,12 +489,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 1.62,
-    "k4_cpu_s_per_frame": 14.04,
-    "k4_gpu_s_per_frame": 14.04,
-    "draft_minutes": 5.18,
-    "k4_cpu_hours": 0.75,
-    "k4_gpu_hours": 0.75,
+    "draft_s_per_frame": 7.99,
+    "k4_cpu_s_per_frame": 69.2,
+    "k4_gpu_s_per_frame": 69.2,
+    "draft_minutes": 25.55,
+    "k4_cpu_hours": 3.69,
+    "k4_gpu_hours": 3.69,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -503,7 +503,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+    "basis": "MEASURED draft 7.99 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: a fishing settlement above its shore under a pale dawn sky, from the water; slow drift.",
    "deviation": null,
@@ -635,12 +635,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 1.62,
-    "k4_cpu_s_per_frame": 14.04,
-    "k4_gpu_s_per_frame": 14.04,
-    "draft_minutes": 5.51,
-    "k4_cpu_hours": 0.8,
-    "k4_gpu_hours": 0.8,
+    "draft_s_per_frame": 2.9,
+    "k4_cpu_s_per_frame": 25.17,
+    "k4_gpu_s_per_frame": 25.17,
+    "draft_minutes": 9.87,
+    "k4_cpu_hours": 1.43,
+    "k4_gpu_hours": 1.43,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -649,7 +649,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+    "basis": "MEASURED draft 2.9 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: open sea to the horizon, away from the land.",
    "deviation": null,
@@ -1545,10 +1545,10 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.89,
-    "k4_cpu_s_per_frame": 44.42,
-    "k4_gpu_s_per_frame": 44.42,
-    "draft_minutes": 9.33,
+    "draft_s_per_frame": 3.9,
+    "k4_cpu_s_per_frame": 44.58,
+    "k4_gpu_s_per_frame": 44.58,
+    "draft_minutes": 9.36,
     "k4_cpu_hours": 1.78,
     "k4_gpu_hours": 1.78,
     "factors": {
@@ -1559,7 +1559,7 @@
      "move": 1.08,
      "total": 1.33
     },
-    "basis": "MEASURED draft 3.89 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
+    "basis": "MEASURED draft 3.9 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "WIDE: the attendant small, turned to the nest.",
    "deviation": null,
@@ -2225,12 +2225,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.24,
-    "k4_cpu_s_per_frame": 48.45,
-    "k4_gpu_s_per_frame": 48.45,
-    "draft_minutes": 5.94,
-    "k4_cpu_hours": 1.13,
-    "k4_gpu_hours": 1.13,
+    "draft_s_per_frame": 7.42,
+    "k4_cpu_s_per_frame": 84.81,
+    "k4_gpu_s_per_frame": 84.81,
+    "draft_minutes": 10.39,
+    "k4_cpu_hours": 1.98,
+    "k4_gpu_hours": 1.98,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -2239,7 +2239,7 @@
      "move": 1,
      "total": 1.21
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.21 for the shot's content"
+    "basis": "MEASURED draft 7.42 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "BACK: from behind Alexandria; she sits on the stool beside the nest and does not reach in.",
    "deviation": null,
@@ -2271,12 +2271,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.68,
-    "k4_cpu_s_per_frame": 42,
-    "k4_gpu_s_per_frame": 42,
-    "draft_minutes": 4.41,
-    "k4_cpu_hours": 0.84,
-    "k4_gpu_hours": 0.84,
+    "draft_s_per_frame": 6.62,
+    "k4_cpu_s_per_frame": 75.62,
+    "k4_gpu_s_per_frame": 75.62,
+    "draft_minutes": 7.94,
+    "k4_cpu_hours": 1.51,
+    "k4_gpu_hours": 1.51,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -2285,7 +2285,7 @@
      "move": 1,
      "total": 1.05
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.05 for the shot's content"
+    "basis": "MEASURED draft 6.62 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "NONE: macro; another piece of shell shifts.",
    "deviation": null,
@@ -2317,12 +2317,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.68,
-    "k4_cpu_s_per_frame": 42,
-    "k4_gpu_s_per_frame": 42,
-    "draft_minutes": 5.88,
-    "k4_cpu_hours": 1.12,
-    "k4_gpu_hours": 1.12,
+    "draft_s_per_frame": 5.38,
+    "k4_cpu_s_per_frame": 61.5,
+    "k4_gpu_s_per_frame": 61.5,
+    "draft_minutes": 8.61,
+    "k4_cpu_hours": 1.64,
+    "k4_gpu_hours": 1.64,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -2331,7 +2331,7 @@
      "move": 1,
      "total": 1.05
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.05 for the shot's content"
+    "basis": "MEASURED draft 5.38 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "NONE: macro; the shell flexes outward under pressure (birth stage 1).",
    "deviation": null,
@@ -2363,12 +2363,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.68,
-    "k4_cpu_s_per_frame": 42,
-    "k4_gpu_s_per_frame": 42,
-    "draft_minutes": 5.15,
-    "k4_cpu_hours": 0.98,
-    "k4_gpu_hours": 0.98,
+    "draft_s_per_frame": 8.39,
+    "k4_cpu_s_per_frame": 95.91,
+    "k4_gpu_s_per_frame": 95.91,
+    "draft_minutes": 11.75,
+    "k4_cpu_hours": 2.24,
+    "k4_gpu_hours": 2.24,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -2377,7 +2377,7 @@
      "move": 1,
      "total": 1.05
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.05 for the shot's content"
+    "basis": "MEASURED draft 8.39 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "NONE: macro, a different angle; a fragment lifts away (birth stage 2).",
    "deviation": null,
@@ -3497,7 +3497,7 @@
     },
     "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.55 for the shot's content"
    },
-   "staging": "BACK + DOF: Remi from behind (soft); the attendant across the nest, soft.",
+   "staging": "BACK + DOF: Remi from behind (the focus is on his shoulder); the attendant across the nest out of focus, answering down to the hatchling.",
    "deviation": null,
    "action": "Remi asks; the attendant answers.",
    "need": {
@@ -5445,7 +5445,7 @@
     },
     "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.43 for the shot's content"
    },
-   "staging": "DOF: the hatchling sharp between them; the women soft, mouths unreadable.",
+   "staging": "DOF: low and close on the sleeping hatchling (sharp); the two women far behind it, out of focus, mouths unreadable.",
    "deviation": null,
    "action": "She sends the attendant to sleep.",
    "need": {

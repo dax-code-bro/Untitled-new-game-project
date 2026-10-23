@@ -225,10 +225,10 @@ export default {
       lines: [['L017', 0.4]],
     },
     '1A-24': {
-      staging: 'BACK + DOF: Remi from behind (soft); the attendant across the nest, soft.',
-      cam: { rig: 'static', frame: { subjects: [['remi.head', [-0.55, 0.35]], ['attendant.head', [0.3, 0.3]]], from: 160, height: 1.75 }, mm: 40, fstop: 2, focus: 'hatchling', bounds: BOUNDS },
+      staging: 'BACK + DOF: Remi from behind (the focus is on his shoulder); the attendant across the nest out of focus, answering down to the hatchling.',
+      cam: { rig: 'static', frame: { subjects: [['remi.head', [-0.55, 0.35]], ['attendant.head', [0.3, 0.3]]], from: 160, height: 1.75 }, mm: 40, fstop: 1.4, focus: 'remi.head', focusOffset: -0.15, bounds: BOUNDS },
       cast: {
-        remi: { at: REMI_S, face: 'hatchling', look: 'hatchling' }, attendant: { at: ATT, face: 'hatchling', look: 'remi.head', lookAmount: 0.5 },
+        remi: { at: REMI_S, face: 'hatchling', look: 'hatchling' }, attendant: { at: ATT, face: 'hatchling', look: 'hatchling', lookAmount: 0.8 },
         abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 } }, hatchling: hatchRest(),
       },
       lines: [['L018', 0.6], ['L019', 0.45]],
@@ -350,8 +350,8 @@ export default {
       cast: { alexandria: { ...seated, acts: [[0.9, 'look', { at: 'attendant.head', amount: 0.8 }]] }, attendant: { at: ATT, face: 'hatchling', look: 'hatchling' }, hatchling: hatchRest() },
     },
     'X2-15': {
-      staging: 'DOF: the hatchling sharp between them; the women soft, mouths unreadable.',
-      cam: { rig: 'static', frame: { subjects: [['attendant.head', [-0.45, 0.3]], ['alexandria.head', [0.45, 0.22]], ['hatchling', [0.0, -0.4]]], from: 184, height: 1.2 }, mm: 50, fstop: 2, focus: 'hatchling', bounds: BOUNDS },
+      staging: 'DOF: low and close on the sleeping hatchling (sharp); the two women far behind it, out of focus, mouths unreadable.',
+      cam: { rig: 'static', frame: { subjects: [['hatchling.head', [0.05, -0.42]], ['attendant.head', [-0.45, 0.34]], ['alexandria.head', [0.45, 0.28]]], from: 184, height: 0.75, dist: 0.95 }, mm: 40, fstop: 1.4, focus: 'hatchling.head', focusOffset: -0.2, bounds: BOUNDS },
       cast: { alexandria: { ...seated, look: 'attendant.head', lookAmount: 0.6, acts: [[5.6, 'look', { at: 'hatchling.head' }]] }, attendant: { at: ATT, face: 'alexandria', look: 'alexandria.head', lookAmount: 0.6, acts: [[4.6, 'bow', { to: 0.3, dur: 0.5 }]] }, hatchling: hatchRest() },
       lines: [['X2-09', 0.6], ['X2-10', 0.35], ['X2-11', 0.35]],
     },
