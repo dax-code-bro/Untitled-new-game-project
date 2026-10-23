@@ -50,7 +50,9 @@ export class FireJet extends Effect {
     const maxF = Math.ceil(this.rate * this.life) + 8;
     this.flames = this.layer(new ParticleLayer(fx, {
       max: maxF, mode: 'flame', name: 'fx-fire-flames', soft: 0.3, conserve: false,
-      shading: { coreC: this.P.core, bodyC: this.P.body, edgeC: this.P.edge, gain: 0.05 * this.gain, noiseScale: 2.2, noiseAmt: 1.2, evolve: 2.5, edge: 0.5 },
+      // optically thick: each tongue shows the flame's own radiance (gain x palette) and covers
+      // what is behind it; `occlusion` < 1 lets some background through (thinner, cleaner fire)
+      shading: { coreC: this.P.core, bodyC: this.P.body, edgeC: this.P.edge, gain: (o.radiance ?? 0.9) * this.gain, sigma: o.sigma ?? 1.4, occlusion: o.occlusion ?? 0.85 * Math.min(1, this.P.smokeAmt + 0.3), soot: 1, noiseScale: 2.2, noiseAmt: 1.2, evolve: 2.5, edge: 0.5 },
     }));
     // soot: each burnt-out packet of fuel becomes smoke that rises and drifts
     this.smokeRate = (o.smokeRate ?? 160) * Math.sqrt(fx.tier.particles);
@@ -157,13 +159,10 @@ export class FireJet extends Effect {
       const [r, heat, dens] = this.packet(i, te, ab, F, pb);
       if (dens < 0.01) continue;
       // a tongue is drawn out along the flow: the capsule spans it (plus the shutter streak)
-      const e = r * (0.5 + 0.6 * hash01(i, 6));
+      const e = r * (0.15 + 0.35 * hash01(i, 6));
       const fd = norm3([F.D[0], F.D[1] + 0.35 * ab / this.life, F.D[2]]);
       for (let k = 0; k < 3; k++) { pa[k] -= fd[k] * e; pb[k] += fd[k] * e; }
-      // young packets near the mouth overlap many times over: less gain each, so the sum stays
-      // yellow-orange instead of clipping to cream-white
-      const g = 0.3 + 0.7 * smoothstep(0, 0.45, ab / this.life);
-      this.flames.push(pa, pb, r, hash01(i, 5) * 6.28, dens * g, (i % 983) / 983, ab / this.life, [1, 1, 1], heat);
+      this.flames.push(pa, pb, r, hash01(i, 5) * 6.28, dens, (i % 983) / 983, ab / this.life, [1, 1, 1], heat);
       const w = dens * Math.max(0, heat); cx += pb[0] * w; cy += pb[1] * w; cz += pb[2] * w; cw += w;
     }
     // soot rising off the end of the flames
@@ -280,7 +279,7 @@ export class FireBurn extends Effect {
     this.drag = o.drag ?? 9;
     this.flames = this.layer(new ParticleLayer(fx, {
       max: Math.ceil(this.rate * this.life) + 8, mode: 'flame', name: 'fx-burn-flames', soft: 0.05, conserve: false,
-      shading: { coreC: this.P.core, bodyC: this.P.body, edgeC: this.P.edge, gain: 0.09 * (o.gain ?? 1), noiseScale: 2.0, noiseAmt: 1.3, evolve: 3.0, edge: 0.5 },
+      shading: { coreC: this.P.core, bodyC: this.P.body, edgeC: this.P.edge, gain: (o.radiance ?? 0.9) * (o.gain ?? 1), sigma: o.sigma ?? 1.6, occlusion: o.occlusion ?? 0.6, soot: 1, noiseScale: 2.0, noiseAmt: 1.3, evolve: 3.0, edge: 0.5 },
     }));
     this.light = new THREE.PointLight(new THREE.Color(...this.P.light), 0, 6, 2);
     this.object.add(this.light);

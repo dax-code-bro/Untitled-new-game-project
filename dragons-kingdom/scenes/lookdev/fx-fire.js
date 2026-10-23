@@ -62,7 +62,8 @@ export async function setup(ctx) {
   fx.fire.embers({ at: [40, 1.4, 0], t0: 0, t1: 40, rate: 12, radius: 0.25, seed: 6 });
   // the moving burner: 30 m/s along +x at 3 m, passing x = 70..130
   const runAt = (t) => [70 + (t - 24) * 30, 3, 20];
-  fx.fire.burn({ at: runAt, t0: 24.0, t1: 30, size: 0.35, seed: 7, smokeRate: 70, smokeLife: 3 });
+  const burnAt = (t) => { const p = runAt(t); return [p[0] - 0.35, p[1] + 0.25, p[2] + 0.2]; };   // on the back of the capsule's shoulder
+  fx.fire.burn({ at: burnAt, t0: 24.0, t1: 30, size: 0.35, seed: 7, smokeRate: 70, smokeLife: 3 });
   S = { fx, runner, runAt };
 }
 

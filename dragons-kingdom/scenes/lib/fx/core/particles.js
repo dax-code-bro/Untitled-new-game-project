@@ -268,14 +268,17 @@ void main() {
 // (core / body / edge, the canon fire colours) or a blackbody ramp; additive. vD.a = heat (0..1.4)
 const FRAG_FLAME = FRAG_COMMON + /* glsl */`
 uniform vec3 uCoreC, uBodyC, uEdgeC;
-uniform float uGain, uNoiseScale, uNoiseAmt, uEvolve, uEdge, uSoot;
+uniform float uGain, uNoiseScale, uNoiseAmt, uEvolve, uEdge, uSoot, uOcc, uSigma;
 void main() {
   vec2 q = fxCapsule();
   float d2 = dot(q, q);
   if (d2 >= 1.0) discard;
   float zs = sqrt(1.0 - d2);
   float age = vC.z, seed = vC.y;
-  vec3 pw = vCenterW + (vAxW * q.x + vAyW * q.y) * vR + vToCamW * zs * vR * 0.5;
+  // (thick mode: the noise runs along the whole streak, half smeared - a fully clamped
+  // coordinate printed straight hatching along every fast tongue)
+  float qx = uOcc > 0.0 ? mix(q.x, vQ.x, 0.5) : q.x;
+  vec3 pw = vCenterW + (vAxW * qx + vAyW * q.y) * vR + vToCamW * zs * vR * 0.5;
   vec3 np = (pw - vCenterW) / vR * uNoiseScale + vec3(seed * 13.17, seed * 7.31, seed * 3.77) + vec3(0.0, -age * uEvolve, age * uEvolve * 0.37);
   vec4 n = texture(uNoise, np * 0.25);
   vec4 n2 = texture(uNoise, np * 0.71 + 0.37);
@@ -292,10 +295,24 @@ void main() {
   vec3 col = heat > 0.55 ? mix(uBodyC, uCoreC, clamp((heat - 0.55) / 0.45, 0.0, 1.0)) : mix(uEdgeC, uBodyC, clamp(heat / 0.55, 0.0, 1.0));
   col *= smoothstep(0.0, 0.25, heat);
   float thick = 2.0 * zs;
-  float m = dens * thick * vC.x * vAlphaK * uGain;
-  m *= fxSoftFade(vViewZ - zs * vR);
-  FX_DEPTH_OUT(clamp(dens * thick * vC.x * vAlphaK * 1.5, 0.0, 1.0), vViewZ - zs * vR)
-  gl_FragColor = vec4(col * m, 0.0);
+  float tau = dens * thick * vC.x * vAlphaK * fxSoftFade(vViewZ - zs * vR);
+  FX_DEPTH_OUT(clamp(tau * 1.5, 0.0, 1.0), vViewZ - zs * vR)
+  if (uOcc > 0.0) {
+    // optically thick flame (a dragon's fuel-rich jet): emission + absorption. Each tongue covers
+    // what is behind it by a = 1 - e^-(sigma tau) and shines with the local source colour, so
+    // piled-up tongues converge to the flame's own radiance instead of adding up to a white
+    // beam, and cool, sooty creases between billows read dark against the sky.
+    float a = (1.0 - exp(-tau * uSigma)) * smoothstep(1.0, 0.55, dr);
+    // contrast of a real flame: billow middles burn hot, the folds between them cool to deep
+    // red and sooty brown; the hottest (youngest) gas near the mouth glares yellow-white
+    float hb = heat * mix(0.45, 1.25, smoothstep(0.3, 0.75, n.g * 0.7 + n2.r * 0.5));
+    vec3 c2 = hb > 0.55 ? mix(uBodyC, uCoreC, clamp((hb - 0.55) / 0.45, 0.0, 1.0)) : mix(uEdgeC * 0.6, uBodyC, clamp(hb / 0.55, 0.0, 1.0));
+    c2 *= smoothstep(0.08, 0.4, hb) * (1.0 + 1.6 * max(0.0, hb - 1.0));
+    float soot = (1.0 - smoothstep(0.05, 0.5, hb)) * uSoot;
+    gl_FragColor = vec4(c2 * a * uGain, a * uOcc * (0.7 + 0.3 * soot));
+    return;
+  }
+  gl_FragColor = vec4(col * tau * uGain, 0.0);
 }`;
 
 // 'shimmer': heat haze - the scene behind (late pass colour copy) refracted by rising, swirling
@@ -399,10 +416,10 @@ export class ParticleLayer {
       uEmissive: { value: s.emissive ?? 0 }, uMS: { value: s.ms ?? 0.5 }, uEmitCol: { value: v3(s.emitCol, [1, 0.4, 0.1]) }, uSunScale: { value: s.sunScale ?? 1 },
       uGloss: { value: s.gloss ?? 120 }, uGain: { value: s.gain ?? 1 }, uCore: { value: s.core ?? 0 },
       uCoreC: { value: v3(s.coreC, [1.0, 0.5, 0.09]) }, uBodyC: { value: v3(s.bodyC, [1.0, 0.27, 0.025]) }, uEdgeC: { value: v3(s.edgeC, [0.75, 0.07, 0.01]) },
-      uSoot: { value: s.soot ?? 0 }, uShimmer: { value: s.shimmer ?? 1 }, uTimeS: { value: 0 },
+      uSoot: { value: s.soot ?? 0 }, uShimmer: { value: s.shimmer ?? 1 }, uTimeS: { value: 0 }, uOcc: { value: s.occlusion ?? 0 },
     };
     this.uniforms = uniforms;
-    const blend = o.blending || (this.mode === 'glow' || this.mode === 'flame' ? 'additive' : 'premult');
+    const blend = o.blending || (this.mode === 'glow' || (this.mode === 'flame' && !(s.occlusion > 0)) ? 'additive' : 'premult');
     const mat = new THREE.ShaderMaterial({
       vertexShader: VERT, fragmentShader: FRAGS[this.mode], uniforms,
       transparent: true, depthWrite: false, depthTest: true, fog: false, toneMapped: false,
