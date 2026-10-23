@@ -4,6 +4,7 @@ import { describeItem, magSize, isGun } from '../inventory.js';
 import { gunParams } from '../player.js';
 import { POIS, REGIONS, WORLD } from '../terrain.js';
 import { renderTerminal, onTerminalClick, onTerminalInput } from './terminal.js';
+import { buildMap } from '../chunkBuild.js';
 
 const $ = (id) => document.getElementById(id);
 export const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -32,6 +33,8 @@ export class HUD {
     try {
       this.mapWorker = new Worker(new URL('../terrainWorker.js', import.meta.url), { type: 'module' });
       this.mapWorker.onmessage = (e) => this.onMap(e.data);
+      // no module workers on this host: draw the maps on the main thread instead (smaller)
+      this.mapWorker.onerror = () => { this.mapWorker = { postMessage: (m) => setTimeout(() => { const px = Math.min(m.px, 384); this.onMap({ type: 'map', id: m.id, px: buildMap(m.cx, m.cz, m.span, px), w: px }); }, 0) }; this.mapWorker.postMessage({ type: 'map', id: 'island', cx: 0, cz: 0, span: WORLD.size, px: 768 }); };
       this.mapWorker.postMessage({ type: 'map', id: 'island', cx: 0, cz: 0, span: WORLD.size, px: 768 });
     } catch (e) { this.mapWorker = null; }
   }

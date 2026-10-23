@@ -3,7 +3,7 @@
 // Each chunk's vertices are local to the chunk, so float precision stays fine across the map.
 import * as THREE from 'three';
 import { WORLD, islandD } from './terrain.js';
-import { buildChunk } from './chunkBuild.js';
+import { buildChunk, buildHeightmap } from './chunkBuild.js';
 import { terrainMaterial, waterMaterial, oceanGeometry, heightTexture } from './materials.js';
 
 const ROOT = 65536;
@@ -29,6 +29,7 @@ export class Terrain {
       for (let i = 0; i < n; i++) {
         const w = new Worker(new URL('./terrainWorker.js', import.meta.url), { type: 'module' });
         w.onmessage = (e) => this.onResult(e.data);
+        w.onerror = () => this.dropWorker(w); // a host that refuses module workers: build here instead
         w.busy = false;
         this.workers.push(w);
       }
@@ -46,10 +47,22 @@ export class Terrain {
     this.ocean.receiveShadow = true;
     this.scene.add(this.ocean);
     // the water shader needs to know how deep the water is: a heightmap of the whole map, built off-thread
-    if (this.workers[0]) this.workers[0].postMessage({ type: 'heightmap', px: 1024, span: WORLD.size });
+    if (this.workers[0]) { this.workers[0].wantsHeightmap = true; this.workers[0].postMessage({ type: 'heightmap', px: 1024, span: WORLD.size }); }
+  }
+
+  dropWorker(w) {
+    if (!this.workers.includes(w)) return;
+    this.workers = this.workers.filter((x) => x !== w);
+    try { w.terminate(); } catch (e) { /* already gone */ }
+    if (w.current) { const n = this.nodes.get(w.current); if (n && n.state === 'building') { n.state = 'queued'; this.queue.push(n); } }
+    if (w.wantsHeightmap || !this.workers.length) {
+      if (this.workers[0]) { this.workers[0].wantsHeightmap = true; this.workers[0].postMessage({ type: 'heightmap', px: 1024, span: WORLD.size }); }
+      else if (!this.heightDone) { const px = buildHeightmap(512, WORLD.size); this.onHeightmap({ type: 'heightmap', px, w: 512 }); }
+    }
   }
 
   onHeightmap(m) {
+    this.heightDone = true;
     const t = new THREE.DataTexture(m.px, m.w, m.w, THREE.RGBAFormat);
     t.magFilter = t.minFilter = THREE.NearestFilter;
     t.needsUpdate = true;
