@@ -67,6 +67,8 @@ const Table = (() => {
     picture = Models.pictureFrame(); picture.position.set(0, 2.05, BACK + 0.03); scene.add(picture);
     doorObj = Models.door(); doorObj.position.set(-W / 2 + 0.07, 0, -1.6); doorObj.rotation.y = Math.PI / 2; scene.add(doorObj);
     [deskL, deskR, picture, doorObj].forEach(o => o.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } }));
+    // remember where things stand so a new game can put back what a nuke blew away
+    [...shelves.map(sh => sh.pivot), deskL, deskR, picture].forEach(o => { o.userData.home = { p: o.position.clone(), r: o.rotation.clone() }; });
 
     const table = Models.table(3.4, 1.2, 0.78);
     table.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
@@ -163,7 +165,11 @@ const Table = (() => {
     { coat: 0x1e1e1e, shirt: 0x5a1a1a, hat: 0x111111, scarf: 0x222222, skin: 0x8a6a56, beard: 0x5a4a3a },
   ];
 
+  let junk = [];   // leftovers of a nuclear blast, cleared with the table
   function clearSeats() {
+    junk.forEach(j => scene.remove(j)); junk = [];
+    [...shelves.map(sh => sh.pivot), deskL, deskR, picture].forEach(o => { if (o && o.userData.home) { o.position.copy(o.userData.home.p); o.rotation.copy(o.userData.home.r); } });
+    if (boxObj) { scene.remove(boxObj); boxObj = null; }
     seats.forEach(s => { if (s.group) scene.remove(s.group); s.cards.forEach(c => c.parent && c.parent.remove(c)); });
     pile.forEach(c => scene.remove(c));
     pools.forEach(p => scene.remove(p));
@@ -192,13 +198,14 @@ const Table = (() => {
       const chair = Models.chair(); chair.position.z = -0.05;
       chair.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
       group.add(chair);
-      const rigObj = Models.outlaw(PALETTES[i % PALETTES.length]);
+      const rigObj = Models.outlaw(PALETTES[(p.pal != null ? p.pal : i) % PALETTES.length]);
       group.add(rigObj.root);
-      const label = Util.textSprite(p.name, { sub: Bots.label(p) });
+      const sub = p.sub || Bots.label(p);
+      const label = Util.textSprite(p.name, { sub });
       label.position.set(0, 1.6, 0);
       group.add(label);
       scene.add(group);
-      const seat = { group, chair, rig: rigObj, cards: [], items: [], marks: [], tags: [], label, dead: false, name: p.name, sub: Bots.label(p), look: null, idle: Math.random() * 10, drip: 0 };
+      const seat = { group, chair, rig: rigObj, cards: [], items: [], marks: [], tags: [], label, dead: false, name: p.name, sub, look: null, idle: Math.random() * 10, drip: 0 };
       seats.push(seat);
       applyPose(rigObj.rArm, restPose(seat, 'r'));
       applyPose(rigObj.lArm, restPose(seat, 'l'));
@@ -391,6 +398,15 @@ const Table = (() => {
       handHolder.scale.setScalar(sc);
       handHolder.position.set(0, -halfH + Models.CARD_H * sc * 0.56, -0.6);
     }
+
+    seats.forEach(st => {
+      const ring = st.reverseRing;
+      if (!ring) return;
+      ring.rotation.z += dt * 2.5;
+      ring.position.y += Math.sin(time * 3) * 0.0004;
+      ring.userData.flash = Math.max(0, (ring.userData.flash || 0) - dt * 2);
+      ring.material.emissiveIntensity = 1.2 + ring.userData.flash * 4;
+    });
 
     // your cards drift to their slots (hover/selection lift)
     seats.forEach(s => s.cards.forEach(c => {
@@ -674,6 +690,7 @@ const Table = (() => {
       return;
     }
     const big = gun.shotgun;
+    const vi = opts.victim != null ? opts.victim : ti;
     const target = opts.lethal || big ? headWorld(ti) : chestWorld(ti);
     const dir = target.clone().sub(pos).normalize();
     FX.muzzleFlash(scene, pos, big ? 0.8 : 0.4);
@@ -707,8 +724,56 @@ const Table = (() => {
         s.rig.rArm.shoulder.quaternion.copy(q0).multiply(Q().setFromAxisAngle(V(1, 0, 0), -k * 0.5));
       }, E.out);
     }
+    if (big) breakOpen(gun);
+    if (opts.reverse) {
+      // the shot hits the reverse ring and flies back at the shooter
+      await Engine.wait(0.12);
+      const ring = seats[ti].reverseRing;
+      if (ring) { ring.userData.flash = 1; }
+      Sound.reverse && Sound.reverse();
+      FX.burst(scene, target, { count: 24, color: 0xff3020, emissive: true, size: 0.008, speed: 2.5, life: 0.4 });
+      const back = headWorld(vi);
+      const d2 = back.clone().sub(target).normalize();
+      const tr2 = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, target.distanceTo(back), 6),
+        new THREE.MeshBasicMaterial({ color: 0xff4030, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending }));
+      tr2.position.copy(target).add(back).multiplyScalar(0.5);
+      tr2.quaternion.setFromUnitVectors(V(0, 1, 0), d2);
+      scene.add(tr2);
+      T(0.2, t => { tr2.material.opacity = 0.9 * (1 - t); }).then(() => scene.remove(tr2));
+      setReverse(ti, false);
+      if (opts.blocked) await shieldHit(vi, d2);
+      else if (opts.lethal) await kill(vi, d2);
+      else await wound(vi, d2);
+      return;
+    }
+    if (opts.blocked) { await shieldHit(vi, dir); return; }
     if (opts.lethal) await kill(ti, dir);
     else await wound(ti, dir);
+  }
+
+  // After a shotgun shot: the barrels drop open, a smoking shell flies out,
+  // and the gun snaps shut again.
+  async function breakOpen(gun) {
+    if (!gun.barrels) return;
+    await Engine.wait(0.35);
+    await T(0.25, t => { gun.barrels.rotation.x = 0.55 * t; }, E.out);
+    const spent = gun.shells.find(sh => sh.visible);
+    if (spent) {
+      const w = spent.getWorldPosition(V(0, 0, 0)), q = spent.getWorldQuaternion(Q());
+      spent.visible = false;
+      const flying = spent.clone(); flying.visible = true;
+      flying.position.copy(w); flying.quaternion.copy(q); flying.scale.setScalar(gun.group.getWorldScale(V(0, 0, 0)).x);
+      scene.add(flying);
+      const v = V((Math.random() - 0.5) * 0.6, 1.4, -0.4).applyQuaternion(gun.group.getWorldQuaternion(Q()));
+      const p0 = w.clone();
+      FX.smoke(scene, w, V(0, 1, 0), 3, 0.3);
+      T(0.9, t => {
+        flying.position.set(p0.x + v.x * t, p0.y + v.y * t - 4.9 * t * t, p0.z + v.z * t);
+        flying.rotation.x += 0.4; flying.rotation.z += 0.25;
+        if (flying.position.y < 0.02) flying.position.y = 0.02;
+      }, E.linear).then(() => setTimeout(() => scene.remove(flying), 4000));
+    }
+    await T(0.2, t => { gun.barrels.rotation.x = 0.55 * (1 - t); }, E.in);
   }
 
   // The target takes the bullet.
@@ -725,6 +790,7 @@ const Table = (() => {
     const sideKick = Math.sign(dir.x * Math.cos(s.group.rotation.y) - dir.z * Math.sin(s.group.rotation.y)) || 1;
     flyHat(s, dir);
     if (!s.unarmed) dropGun(s);
+    lowerShield(ti); setReverse(ti, false);
     s.bleeding = false; s.tags = [];
     await T(0.16, t => { r.spine.rotation.x = sx0 - 0.35 * t; r.head.rotation.x = -0.5 * t; r.spine.rotation.z = sz0 + sideKick * 0.15 * t; }, E.out);
     moveArm(r.rArm, makePose(s, r.rArm, V(-0.3, -0.1, 0.25), V(-1, -1, 0), null), 0.8, E.in);
@@ -1306,9 +1372,13 @@ const Table = (() => {
     const from = obj.getWorldPosition(V(0, 0, 0));
     const to = ti === 0 ? camera.getWorldPosition(V(0, 0, 0)).add(V(0, -0.35, -0.5)) : seats[ti].group.localToWorld(V(0, TABLE_Y + 0.02, 0.62));
     await T(0.8, t => { obj.position.lerpVectors(from, to, t); obj.position.y += Math.sin(t * Math.PI) * 0.4; obj.rotation.y = t * 8; }, E.inOut);
+    pendingPact = obj;
     return obj;
   }
-  async function decline(obj) {
+  let pendingPact = null;
+  async function decline(obj = pendingPact) {
+    pendingPact = null;
+    if (!obj) return;
     const at = obj.getWorldPosition(V(0, 0, 0));
     FX.burst(scene, at, { count: 26, color: 0xe8d8b0, size: 0.02, speed: 1.4, dir: V(0, 1, 0), gravity: 2, life: 1.4, floor: TABLE_Y });
     scene.remove(obj);
@@ -1316,8 +1386,16 @@ const Table = (() => {
 
   // Team up: the member hops over beside the leader, the chairs become a
   // couch and the member's cards join the leader's hand.
-  async function formTeam(li, mi, obj) {
+  async function formTeam(li, mi, obj = pendingPact) {
+    pendingPact = null;
     if (obj) { await T(0.3, t => obj.scale.setScalar(1 - t * 0.99)); scene.remove(obj); }
+    await seatTogether(li, mi, true);
+    await transferCards(mi, li);
+  }
+
+  // Put two teammates side by side on a couch. Whoever isn't the viewer moves.
+  async function seatTogether(li, mi, animate) {
+    if (mi === 0) [li, mi] = [mi, li];
     const L = seats[li], M = seats[mi];
     L.group.updateMatrixWorld(true);
     // Your teammate moves to a couch along the table right next to you, where
@@ -1326,10 +1404,11 @@ const Table = (() => {
     const q1 = li === 0 ? Q().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0)) : L.group.quaternion.clone();
     const p0 = M.group.position.clone(), q0 = M.group.quaternion.clone();
     const chairs = [L.chair, M.chair].filter(Boolean);
-    await T(0.4, t => chairs.forEach(c => c.scale.setScalar(Math.max(0.01, 1 - t))));
+    const dur = k => (animate ? k : 0);
+    await T(dur(0.4), t => chairs.forEach(c => c.scale.setScalar(Math.max(0.01, 1 - t))));
     chairs.forEach(c => { c.visible = false; });
-    Sound.thud();
-    await T(1.0, t => {
+    if (animate) Sound.thud();
+    await T(dur(1.0), t => {
       M.group.position.lerpVectors(p0, dest, t);
       M.group.position.y = Math.sin(t * Math.PI) * 0.35;
       M.group.quaternion.slerpQuaternions(q0, q1, t);
@@ -1338,8 +1417,7 @@ const Table = (() => {
     couch.scale.setScalar(0.01);
     if (li === 0) { couch.position.set(0.3, 0, -0.08); M.group.add(couch); M.couch = couch; }
     else { couch.position.set(-0.32, 0, -0.1); L.group.add(couch); L.couch = couch; }
-    await T(0.6, t => couch.scale.setScalar(Math.max(0.01, E.back(t))), E.linear);
-    await transferCards(mi, li);
+    await T(dur(0.6), t => couch.scale.setScalar(Math.max(0.01, E.back(t))), E.linear);
   }
 
   // Move every card from one seat's hand into another's.
@@ -1358,10 +1436,363 @@ const Table = (() => {
     relayout(ti);
   }
 
+
+  // ---------- Block, Reverse, Grenade, Nuclear ----------
+
+  // Block: a riveted steel shield springs up on the table in front of a seat.
+  async function raiseShield(pi) {
+    const s = seats[pi];
+    if (s.shield) return;
+    const sh = Models.shield();
+    const z = pi === 0 ? 0.95 : 0.45;
+    sh.position.set(0, TABLE_Y - 0.3, z);
+    sh.scale.setScalar(pi === 0 ? 0.9 : 1.5);
+    const glow = new THREE.PointLight(0x9ac8ff, 0.8, 0.9); glow.position.set(0, 0.2, 0.15); sh.add(glow);
+    s.group.add(sh);
+    s.shield = sh;
+    await T(0.5, t => { sh.position.y = Util.lerp(TABLE_Y - 0.3, TABLE_Y, E.back(t)); }, E.linear);
+    Sound.smash();
+    FX.burst(scene, sh.getWorldPosition(V(0, 0, 0)), { count: 10, color: 0xffd080, emissive: true, size: 0.006, speed: 1.5, life: 0.3 });
+  }
+  // A hit lands on the shield: sparks, a clang, and it topples over.
+  async function shieldHit(pi, dir) {
+    const s = seats[pi];
+    const sh = s.shield;
+    if (!sh) return;
+    s.shield = null;
+    const at = sh.getWorldPosition(V(0, 0, 0)).add(V(0, 0.15, 0));
+    Sound.smash();
+    FX.burst(scene, at, { count: 30, color: 0xffd080, emissive: true, size: 0.007, speed: 3, dir: dir ? dir.clone().negate() : null, life: 0.45 });
+    await T(0.6, t => { sh.rotation.x = -E.bounce(t) * 1.4; }, E.linear);
+    const sc0 = sh.scale.x;
+    await T(0.6, t => { sh.scale.setScalar(Math.max(0.01, sc0 * (1 - t))); });
+    s.group.remove(sh);
+  }
+  async function lowerShield(pi) {
+    const s = seats[pi];
+    const sh = s && s.shield;
+    if (!sh) return;
+    s.shield = null;
+    await T(0.4, t => { sh.position.y = Util.lerp(TABLE_Y, TABLE_Y - 0.3, t); });
+    s.group.remove(sh);
+  }
+
+  // Reverse: a red ring circles a seat until a shot bounces off it.
+  async function setReverse(pi, on) {
+    const s = seats[pi];
+    if (!s) return;
+    if (on && !s.reverseRing) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(pi === 0 ? 0.22 : 0.34, 0.012, 8, 48),
+        new THREE.MeshStandardMaterial({ color: 0xff2a1a, emissive: 0xff1a0a, emissiveIntensity: 1.2, transparent: true, opacity: 0.85 }));
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(0, pi === 0 ? TABLE_Y + 0.03 : 1.0, pi === 0 ? 0.95 : 0);
+      ring.scale.setScalar(0.01);
+      ring.userData.flash = 0;
+      s.group.add(ring);
+      s.reverseRing = ring;
+      Sound.reverse && Sound.reverse();
+      await T(0.5, t => ring.scale.setScalar(Math.max(0.01, E.back(t))), E.linear);
+    } else if (!on && s.reverseRing) {
+      const ring = s.reverseRing;
+      s.reverseRing = null;
+      await T(0.4, t => ring.scale.setScalar(Math.max(0.01, 1 + t * 0.6)), E.out);
+      s.group.remove(ring);
+    }
+  }
+
+  // Burn a seat's cards: they curl up off the table and turn to ash.
+  function burnCards(si) {
+    const s = seats[si];
+    const cards = s.cards.splice(0);
+    cards.forEach((c, i) => {
+      scene.attach(c);
+      c.userData.flying = true;
+      const p0 = c.position.clone();
+      c.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); } });
+      T(1.0 + i * 0.1, t => {
+        c.position.set(p0.x + Math.sin(t * 6 + i) * 0.05, p0.y + t * 0.5, p0.z);
+        c.rotation.z += 0.08; c.rotation.x += 0.05;
+        c.traverse(o => { if (o.isMesh && o.material.color) { o.material.color.setRGB(1 - t * 0.9, 0.5 - t * 0.45, 0.3 - t * 0.28); if (o.material.emissive) o.material.emissive.setRGB(1.2 * (1 - t), 0.3 * (1 - t), 0); } });
+        c.scale.setScalar(Math.max(0.01, 1 - t));
+      }, E.in).then(() => scene.remove(c));
+    });
+    if (si === 0) { selected = -1; hovered = -1; }
+  }
+  // Items blown off the table and gone.
+  function blowItems(si, from) {
+    const s = seats[si];
+    s.items.splice(0).forEach(({ obj }) => {
+      scene.attach(obj);
+      const p0 = obj.position.clone();
+      const out = p0.clone().sub(from).setY(0).normalize().multiplyScalar(1.5);
+      T(0.9, t => {
+        obj.position.set(p0.x + out.x * t, p0.y + Math.sin(t * Math.PI) * 0.5, p0.z + out.z * t);
+        obj.rotation.x += 0.3; obj.rotation.z += 0.2;
+        obj.scale.setScalar(Math.max(0.01, 1 - t * 0.9));
+      }, E.out).then(() => scene.remove(obj));
+    });
+  }
+
+  function camShake(seconds, power) {
+    const p0 = rig.position.clone();
+    return T(seconds, t => {
+      const k = power * (1 - t);
+      rig.position.set(p0.x + (Math.random() - 0.5) * k, p0.y + (Math.random() - 0.5) * k, p0.z + (Math.random() - 0.5) * k);
+    }, E.linear).then(() => { if (!seats[0] || !seats[0].dead) rig.position.copy(p0); });
+  }
+
+  // Fireball: stacked glowing sprites, a blast light and thick smoke.
+  function fireball(at, size) {
+    const light = new THREE.PointLight(0xffa040, 30, 12, 2);
+    light.position.copy(at).add(V(0, 0.3, 0));
+    scene.add(light);
+    T(1.2, t => { light.intensity = 30 * (1 - t); }).then(() => scene.remove(light));
+    for (let i = 0; i < 7; i++) {
+      const glow = Util.canvasTexture(64, 64, (g, w, h) => {
+        const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+        gr.addColorStop(0, 'rgba(255,250,210,1)'); gr.addColorStop(0.35, 'rgba(255,150,40,0.95)'); gr.addColorStop(0.7, 'rgba(180,40,0,0.5)'); gr.addColorStop(1, 'rgba(60,0,0,0)');
+        g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      });
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+      const off = V((Math.random() - 0.5) * 0.4, Math.random() * 0.3, (Math.random() - 0.5) * 0.4).multiplyScalar(size);
+      sp.position.copy(at).add(off);
+      scene.add(sp);
+      const peak = size * (0.8 + Math.random() * 0.8);
+      T(0.9 + Math.random() * 0.5, t => { sp.scale.setScalar(peak * E.out(t) + 0.01); sp.material.opacity = 1 - t; sp.position.y += 0.004; }, E.linear).then(() => scene.remove(sp));
+    }
+    FX.smoke(scene, at, V(0, 1, 0), 26, size * 2.2);
+    FX.burst(scene, at, { count: 60, color: 0x3a2a1a, size: 0.025, speed: 4 * size, dir: V(0, 1.2, 0), gravity: 7, life: 1.6, floor: 0.01 });
+    FX.burst(scene, at, { count: 40, color: 0xffc060, emissive: true, size: 0.008, speed: 6 * size, life: 0.6 });
+  }
+
+  // Grenade: the thrower pulls the pin and lobs it into the middle of the
+  // table. `hits` = [{ s, dead }] seats caught in the blast, `blocked` seats
+  // whose shield took it, `selfDead` if the thrower dies of it.
+  async function grenade(pi, hits, blocked, selfDead) {
+    const g = Models.grenade();
+    const center = V(0.05, TABLE_Y + 0.04, -0.15);
+    let from;
+    if (pi === 0) {
+      camera.add(g);
+      g.position.set(0.12, -0.18, -0.4);
+      await T(0.4, t => { g.position.y = -0.18 + t * 0.06; });
+      from = g.getWorldPosition(V(0, 0, 0));
+    } else {
+      const s = seats[pi];
+      s.rig.lArm.hand.add(g);
+      g.position.set(0, -0.06, 0.03);
+      await moveArm(s.rig.lArm, makePose(s, s.rig.lArm, V(0.25, 0.75, -0.05), V(1, -1, -0.3), null), 0.5);
+      from = g.getWorldPosition(V(0, 0, 0));
+    }
+    // pull the pin
+    const ring = g.userData.ring;
+    Sound.cock();
+    const rw = ring.getWorldPosition(V(0, 0, 0));
+    scene.attach(ring);
+    T(0.8, t => { ring.position.set(rw.x + t * 0.3, rw.y + Math.sin(t * Math.PI) * 0.2, rw.z); ring.rotation.x += 0.4; }).then(() => scene.remove(ring));
+    await Engine.wait(0.25);
+    scene.attach(g);
+    if (pi !== 0) moveArm(seats[pi].rig.lArm, restPose(seats[pi], 'l'), 0.6);
+    from = g.position.clone();
+    await T(0.75, t => {
+      g.position.lerpVectors(from, center, t);
+      g.position.y = Util.lerp(from.y, center.y, t) + Math.sin(t * Math.PI) * 0.6;
+      g.rotation.x += 0.35; g.rotation.z += 0.2;
+    }, E.linear);
+    Sound.thud();
+    const blink = new THREE.PointLight(0xff2010, 0, 1.2); blink.position.copy(center).add(V(0, 0.1, 0)); scene.add(blink);
+    for (let i = 0; i < 3; i++) {
+      Sound.tick && Sound.tick();
+      blink.intensity = 3;
+      await T(0.25, t => { blink.intensity = 3 * (1 - t); g.position.x = center.x + Math.sin(t * 20) * 0.006; });
+      await Engine.wait(0.08);
+    }
+    scene.remove(blink); scene.remove(g);
+    // BOOM
+    Sound.explosion && Sound.explosion();
+    fireball(center, 0.9);
+    camShake(0.9, 0.08);
+    const scorch = Models.decal(Models.tex().pool, 1.2);
+    scorch.material = scorch.material.clone(); scorch.material.color.setRGB(0.08, 0.06, 0.05); scorch.material.opacity = 0.9;
+    scorch.rotation.x = -Math.PI / 2; scorch.position.set(center.x, TABLE_Y + 0.003, center.z);
+    scene.add(scorch); pools.push(scorch);
+    // the pile of played cards is blown off the table
+    pile.splice(0).forEach(c => {
+      const v = V(Math.random() - 0.5, 1, Math.random() - 0.5).normalize();
+      const p0 = c.position.clone();
+      T(1.0, t => { c.position.set(p0.x + v.x * t * 2, p0.y + Math.sin(t * Math.PI) * 0.8, p0.z + v.z * t * 2); c.rotation.x += 0.3; c.scale.setScalar(Math.max(0.01, 1 - t)); }).then(() => scene.remove(c));
+    });
+    const jobs = [];
+    hits.forEach(({ s: si, dead }) => {
+      const dir = headWorld(si).sub(center).normalize();
+      burnCards(si);
+      blowItems(si, center);
+      jobs.push(dead ? kill(si, dir) : wound(si, dir));
+    });
+    blocked.forEach(si => jobs.push(shieldHit(si, headWorld(si).sub(center).normalize())));
+    const sdir = headWorld(pi).sub(center).normalize();
+    jobs.push(selfDead ? kill(pi, sdir) : wound(pi, sdir));
+    await Promise.all(jobs);
+  }
+
+  // Nuclear: sirens, the room shakes, a bomb punches through the ceiling and
+  // everything is blown away in a white-hot blast.
+  async function nuke(pi) {
+    Sound.siren && Sound.siren();
+    const c0 = lamp.light.color.clone();
+    const alarm = new THREE.PointLight(0xff1000, 0, 14); alarm.position.set(0, 3, 0); scene.add(alarm);
+    for (let i = 0; i < 5; i++) {
+      FX.burst(scene, V((Math.random() - 0.5) * 3, 3.35, (Math.random() - 0.5) * 3), { count: 14, color: 0x8a8070, size: 0.02, speed: 0.4, dir: V(0, -1, 0), gravity: 6, life: 1.2, floor: 0.01 });
+      await T(0.45, t => { alarm.intensity = 6 * Math.sin(t * Math.PI); lamp.group.rotation.z = Math.sin(t * Math.PI * 2) * 0.3; });
+      camShake(0.45, 0.01 + i * 0.012);
+    }
+    // the bomb comes through the ceiling
+    const bomb = Models.missile();
+    bomb.position.set(0.1, 6, -0.4);
+    scene.add(bomb);
+    FX.burst(scene, V(0.1, 3.38, -0.4), { count: 80, color: 0x6a6a64, size: 0.05, speed: 3, dir: V(0, -1, 0), gravity: 9, life: 1.5, floor: 0.01 });
+    await T(0.45, t => { bomb.position.y = Util.lerp(6, TABLE_Y + 0.8, E.in(t)); }, E.linear);
+    Sound.explosion && Sound.explosion();
+    // white flash, a fireball and the room blown outward
+    const flashLight = new THREE.PointLight(0xffffff, 80, 30, 1); flashLight.position.set(0, 1.5, -0.4); scene.add(flashLight); junk.push(flashLight);
+    scene.remove(bomb);
+    fireball(V(0.1, TABLE_Y + 0.4, -0.4), 2.4);
+    camShake(2.2, 0.25);
+    const blown = [];
+    seats.forEach((s, i) => { if (i !== 0 && s.group) blown.push(s.group); });
+    shelves.forEach(sh => blown.push(sh.pivot));
+    [deskL, deskR, picture].forEach(o => blown.push(o));
+    blown.forEach(o => {
+      const p0 = o.position.clone();
+      const out = p0.clone().setY(0); if (out.lengthSq() < 0.01) out.set(0, 0, -1);
+      out.normalize().multiplyScalar(3 + Math.random() * 2);
+      const spin = V(Math.random() * 6, Math.random() * 6, Math.random() * 6);
+      const r0 = o.rotation.clone();
+      T(1.6, t => {
+        o.position.set(p0.x + out.x * t, p0.y + Math.sin(t * Math.PI) * 1.5, p0.z + out.z * t);
+        o.rotation.set(r0.x + spin.x * t, r0.y + spin.y * t, r0.z + spin.z * t);
+      }, E.out);
+    });
+    // mushroom cloud: a column of fire puffs rising into a rolling cap,
+    // turning to dark smoke as it cools
+    const puff = (hot) => Util.canvasTexture(64, 64, (g, w, h) => {
+      const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+      if (hot) { gr.addColorStop(0, 'rgba(255,250,220,1)'); gr.addColorStop(0.4, 'rgba(255,160,50,0.9)'); gr.addColorStop(1, 'rgba(160,30,0,0)'); }
+      else { gr.addColorStop(0, 'rgba(70,60,52,0.9)'); gr.addColorStop(0.6, 'rgba(50,44,40,0.6)'); gr.addColorStop(1, 'rgba(30,28,26,0)'); }
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    });
+    const fireTex = puff(true), smokeTex = puff(false);
+    // look up at the cloud
+    if (!seats[0].dead) { fovLock = true; const rx0 = camera.rotation.x, f0 = camera.fov; T(2.0, t => { camera.rotation.x = Util.lerp(rx0, 0.32, t); camera.fov = Util.lerp(f0, Math.max(f0, 70), t); camera.updateProjectionMatrix(); }, E.inOut); }
+    const base = V(0.1, TABLE_Y, -0.4);
+    const puffs = [];
+    for (let i = 0; i < 46; i++) {
+      const inCap = i >= 16;
+      const a = Math.random() * Math.PI * 2;
+      const r = inCap ? 0.4 + Math.random() * 0.9 : Math.random() * 0.25;
+      const y = inCap ? 2.3 + Math.random() * 0.6 : (i / 16) * 2.3;
+      [true, false].forEach(hot => {
+        const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: hot ? fireTex : smokeTex, transparent: true, depthWrite: false,
+          blending: hot ? THREE.AdditiveBlending : THREE.NormalBlending, opacity: hot ? 1 : 0 }));
+        sp.position.copy(base);
+        scene.add(sp); junk.push(sp);
+        puffs.push({ sp, hot, a, r, y, size: (inCap ? 0.9 : 0.6) + Math.random() * 0.5, delay: (inCap ? 0.25 : 0) + (i % 16) * 0.02 });
+      });
+    }
+    await T(2.6, t => {
+      puffs.forEach(pf => {
+        const k = Math.max(0, Math.min(1, (t - pf.delay) / (1 - pf.delay)));
+        const e = E.out(k);
+        pf.sp.position.set(base.x + Math.cos(pf.a + k) * pf.r * e, base.y + pf.y * e, base.z + Math.sin(pf.a + k) * pf.r * e);
+        pf.sp.scale.setScalar(0.01 + pf.size * e * (pf.hot ? 1 : 1.25));
+        pf.sp.material.opacity = pf.hot ? Math.max(0, 1 - k * 0.9) : Math.min(0.85, k * 1.2);
+      });
+      flashLight.intensity = 80 * (1 - t);
+      lamp.light.color.lerpColors(c0, new THREE.Color(1, 0.4, 0.1), t);
+    }, E.linear);
+    scene.remove(alarm);
+  }
+
+  // ---------- rebuild ----------
+  // Set the whole table to a known state at once: used when the phone is
+  // passed to another player and when an online player joins or catches up.
+  // `snap.seats` is in seat order (seat 0 = the viewer).
+  function rebuild(players, snap) {
+    setup(players);
+    ravage = ravageTarget = snap.ravage || 0;
+    snap.seats.forEach((d, i) => {
+      const s = seats[i];
+      (d.hand || []).forEach(id => {
+        const c = Models.card(id);
+        c.traverse(o => { if (o.isMesh) o.castShadow = true; });
+        s.cards.push(c);
+        parentOf(i).add(c);
+      });
+      relayout(i);
+      s.cards.forEach(c => { c.position.copy(c.userData.slot.pos); c.quaternion.copy(c.userData.slot.quat); });
+      setLives(i, Math.max(0, d.lives || 0));
+      (d.items || []).forEach(id => {
+        const obj = Models.item(id);
+        s.items.push({ id, obj });
+        s.group.add(obj);
+        obj.position.copy(itemSlot(i, s.items.length - 1));
+      });
+      if (d.dead) { instantDead(i); return; }
+      if (d.bleeding) {
+        s.bleeding = true;
+        if (s.rig) { s.lean = 0.2; applyPose(s.rig.lArm, clutchPose(s)); }
+      }
+      if (d.unarmed) {
+        s.unarmed = true;
+        if (i === 0) myGun.group.visible = false; else s.rig.gun.group.visible = false;
+      }
+      if (d.shotgun) giveShotgun(i);
+      if (d.block) raiseShield(i);
+      if (d.reverse) setReverse(i, true);
+      if (d.tags && s.rig) setTags(i, d.tags);
+    });
+    (snap.teams || []).forEach(([li, mi]) => seatTogether(li, mi, false));
+    (snap.pile || []).forEach((id, k) => {
+      const c = Models.card(id);
+      c.position.set((Math.random() - 0.5) * 0.12, TABLE_Y + 0.0015 + k * 0.0012, (Math.random() - 0.5) * 0.12 - 0.1);
+      c.rotation.set(-Math.PI / 2, 0, (Math.random() - 0.5) * 1.2);
+      scene.add(c); pile.push(c);
+    });
+    if (snap.box != null) {
+      boxObj = Models.crate();
+      boxObj.scale.setScalar(0.75);
+      const o = seats[snap.box];
+      o.group.updateMatrixWorld(true);
+      boxObj.position.copy(o.group.localToWorld(snap.box === 0 ? V(-0.2, TABLE_Y, 1.05) : V(0.18, TABLE_Y, 0.78)));
+      boxObj.userData.mine = snap.box === 0;
+      scene.add(boxObj);
+    }
+  }
+
+  // Someone already dead when the table is rebuilt: slumped, no hat, no gun.
+  function instantDead(i) {
+    const s = seats[i];
+    s.dead = true;
+    if (i === 0) {
+      rig.position.set(0.15, TABLE_Y + 0.12, 1.75);
+      rig.rotation.set(-0.35, 0, 1.35);
+      return;
+    }
+    const r = s.rig;
+    r.spine.rotation.set(0.92, 0, 0.1);
+    r.head.rotation.set(0.45, 0.3, 0);
+    r.hat.visible = false;
+    r.gun.group.visible = false;
+    applyPose(r.rArm, makePose(s, r.rArm, V(-0.3, -0.1, 0.25), V(-1, -1, 0), null));
+    applyPose(r.lArm, makePose(s, r.lArm, V(0.25, 0.1, 0.5), V(1, -1, 0), null));
+    setLabel(s, s.name + ' — DEAD', '#e0402a');
+  }
+
   api = {
     setup, deal, play, select, setCovered, drawGuns, holsterGuns, aim, shoot, recover, peek, jackGlow, bloodyMary,
     wound, stopBleeding, loseLife, bleedOut, setLives, setTags, spawnBox, openBox, usePotion, useBandage,
     smashGun, newGun, giveShotgun, removeShotgun, binoStart, binoEnd, invite, decline, formTeam, transferCards,
+    raiseShield, lowerShield, setReverse, grenade, nuke, rebuild,
     onCardDrop: null, onBoxClick: null,
     get hasBox() { return !!boxObj; },
     show() { if (!scene) buildRoom(); Engine.setStage(stage); },

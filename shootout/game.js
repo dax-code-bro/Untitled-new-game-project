@@ -1,12 +1,16 @@
 // Shootout — screens, menus and the rules of the table.
-// All drawing and animation lives in the 3D modules (engine, table, stages);
-// this file runs the game: turns, cards, items, guns, wounds and shootouts.
+//
+// Every seat at the table is played by someone: you ('local'), a friend on
+// this same phone (also 'local', taking turns), a friend on another phone
+// ('remote', online) or a bot. One phone runs the game (the host); it asks
+// each seat for its decisions, plays the animations and, when friends are
+// online, broadcasts every animation and message so their phones replay them.
 
 const MODES = {
-  solo:   { label: 'Solo',        players: 1, opponents: 1 },
-  duos:   { label: 'Duos',        players: 2, opponents: 1 },
-  trios:  { label: 'Trios',       players: 3, opponents: 2 },
-  bloody: { label: 'Bloody Mary', players: 4, opponents: 3 },
+  solo:   { label: 'Solo',        seats: 2 },
+  duos:   { label: 'Duos',        seats: 2 },
+  trios:  { label: 'Trios',       seats: 3 },
+  bloody: { label: 'Bloody Mary', seats: 4 },
 };
 
 // Round at which the room is fully wrecked and the music is at full dread.
@@ -24,28 +28,39 @@ const SHOTGUN_SHELLS = 2;
 // life. Losing your last life kills you.
 const START_LIVES = 1;
 
-// players[0] is you; the rest are the bots around the table.
 const state = {
+  modeId: null,
   mode: null,
   round: 1,
   players: [],
+  over: true,
+  multi: false,     // more than one person playing (same phone or online)
+  online: null,     // 'host' | 'client' | null
+  view: 0,          // whose seat this phone's camera sits in
   selected: -1,
   covered: false,
-  over: false,
-  myTurn: false,
-  busy: false,     // an item or card is being resolved on your turn
-  box: null,       // { owner, items } while an unopened box sits on the table
+  busy: false,
+  box: null,        // { owner, items } while an unopened box sits on the table
+  pile: [],         // recently played card ids
+  config: null,     // how the current game was started (for Play again)
 };
 
 const $ = sel => document.querySelector(sel);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
-const me = () => state.players[0];
-const opponents = () => state.players.slice(1);
 const alive = () => state.players.filter(p => p.alive);
-const seatOf = p => state.players.indexOf(p);
-const nameOf = p => (p.you ? 'you' : p.name);
-const teammateOf = p => (p.team ? p.team.members.find(m => m !== p && m.alive) : null);
+const idx = p => state.players.indexOf(p);
+const viewer = () => state.players[state.view];
+const teammateOf = p => (p && p.team ? p.team.members.find(m => m !== p && m.alive) : null);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// Text: "You" in a one-player game, names whenever several people play.
+const isYou = p => !state.multi && p.ctrl === 'local';
+const N = p => (isYou(p) ? 'You' : esc(p.name));
+const n = p => (isYou(p) ? 'you' : esc(p.name));
+const V = (p, you, they) => (isYou(p) ? you : they);
+const POSS = p => (isYou(p) ? 'your' : esc(p.name) + "'s");
+const SELF = p => (isYou(p) ? 'yourself' : 'themself');
 
 // ---------- screen switching with a fade ----------
 
@@ -57,6 +72,7 @@ function showScreen(name, fade = true) {
     $('#screen-' + name).classList.add('active');
     if (MENU_SCREENS.includes(name)) MenuStage.show();
     if (name === 'game') Table.show();
+    if (name === 'mode') renderWho();
   };
   if (!fade) { go(); return; }
   const f = $('#fade');
@@ -69,6 +85,7 @@ function showScreen(name, fade = true) {
 window.addEventListener('DOMContentLoaded', () => {
   Engine.init($('#gl'));
   runLoadingStage(() => showScreen('menu'));
+  $('#pid-chip').textContent = 'ID ' + Net.pid;
 
   // Browsers only allow sound after the first click/tap.
   window.addEventListener('pointerdown', () => Sound.unlock(), { once: true });
@@ -79,41 +96,165 @@ window.addEventListener('DOMContentLoaded', () => {
       showScreen(btn.dataset.go);
     });
   });
-
-  document.querySelectorAll('[data-mode]').forEach(btn => {
-    btn.addEventListener('click', () => startGame(btn.dataset.mode));
-  });
+  document.querySelectorAll('[data-mode]').forEach(btn => btn.addEventListener('click', () => pickTable(btn.dataset.mode)));
+  document.querySelectorAll('[data-who]').forEach(btn => btn.addEventListener('click', () => { who.tab = btn.dataset.who; renderWho(); }));
 
   $('#btn-quit').addEventListener('click', quitGame);
   $('#btn-cover').addEventListener('click', toggleCover);
-  $('#btn-again').addEventListener('click', () => {
-    $('#game-over').classList.add('hidden');
-    startGame(state.modeId);
-  });
-  $('#btn-menu').addEventListener('click', () => {
-    $('#game-over').classList.add('hidden');
-    quitGame();
-  });
+  $('#btn-again').addEventListener('click', playAgain);
+  $('#btn-menu').addEventListener('click', () => { $('#game-over').classList.add('hidden'); quitGame(); });
 
   $('#set-music').addEventListener('input', e => Sound.setMusicVolume(e.target.value / 100));
   $('#set-sfx').addEventListener('input', e => Sound.setSfxVolume(e.target.value / 100));
   $('#set-blood').addEventListener('change', e => Table.setBlood(e.target.checked));
   $('#set-difficulty').addEventListener('change', e => Bots.setDifficulty(e.target.value));
 
+  // same-phone players
+  $('#hs-minus').addEventListener('click', () => { who.locals = Math.max(2, who.locals - 1); renderWho(); });
+  $('#hs-plus').addEventListener('click', () => { who.locals = Math.min(4, who.locals + 1); renderWho(); });
+
+  // friends
+  $('#my-name').value = Net.name;
+  $('#my-name').addEventListener('change', e => { Net.setName(e.target.value); e.target.value = Net.name; });
+  $('#invite-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const box = $('#invite-id');
+    await sendInvite(box.value);
+    box.value = '';
+  });
+  $('#btn-leave-party').addEventListener('click', () => Net.leaveParty());
+  Net.on('lobby', renderWho);
+  Net.on('party', () => { renderWho(); checkMissing(); });
+  Net.on('status', renderWho);
+  Net.on('invite', showInvite);
+  Net.on('act', onRemoteAct);
+  Net.on('memberLeft', onMemberLeft);
+  Net.on('game', onHostGame);
+  Net.on('hostLeft', onHostLeft);
+  Net.init();
+
   // Tap a card to pick it, tap it again (or drag it up onto the table) to play.
   Table.onCardClick = i => {
-    if (state.covered || state.over) return;
+    if (state.covered || !turn) return;
     Sound.cardFlick();
-    if (state.selected === i && state.myTurn && !state.busy) playSelected();
+    if (state.selected === i && turn.canPlay && !state.busy) playSelected();
     else selectCard(state.selected === i ? -1 : i);
   };
   Table.onCardDrop = i => {
-    if (state.covered || state.over || !state.myTurn || state.busy) return;
+    if (state.covered || !turn || !turn.canPlay || state.busy) return;
     state.selected = i;
     playSelected();
   };
   Table.onBoxClick = () => openMyBox();
+  $('#curtain-go').addEventListener('click', () => { const r = curtainResolve; curtainResolve = null; $('#curtain').classList.add('hidden'); if (r) r(); });
 });
+
+// ---------- who is playing: bots, same phone, friends ----------
+
+const who = { tab: 'bots', locals: 2, names: ['Player 1', 'Player 2', 'Player 3', 'Player 4'] };
+
+function humansFor(mode) {
+  if (who.tab === 'same') {
+    const k = Math.min(who.locals, mode.seats);
+    return Array.from({ length: k }, (_, i) => ({ name: (who.names[i] || '').trim() || 'Player ' + (i + 1), ctrl: 'local' }));
+  }
+  if (who.tab === 'friends' && Net.party && Net.party.isHost) {
+    return Net.members().map(m => ({ name: m.name, ctrl: m.me ? 'local' : 'remote', pid: m.pid }));
+  }
+  return [{ name: who.tab === 'friends' ? Net.name : 'You', ctrl: 'local', pid: Net.pid }];
+}
+
+function renderWho() {
+  const box = $('#who');
+  if (!box) return;
+  document.querySelectorAll('[data-who]').forEach(b => b.classList.toggle('on', b.dataset.who === who.tab));
+  ['bots', 'same', 'friends'].forEach(t => $('#who-' + t).classList.toggle('hidden', who.tab !== t));
+  // same phone: name boxes
+  $('#hs-count').textContent = who.locals;
+  const names = $('#hs-names');
+  if (names.children.length !== who.locals) {
+    names.innerHTML = '';
+    for (let i = 0; i < who.locals; i++) {
+      const inp = document.createElement('input');
+      inp.id = 'hs-name-' + i; inp.maxLength = 16; inp.value = who.names[i]; inp.placeholder = 'Player ' + (i + 1);
+      inp.setAttribute('aria-label', 'Name of player ' + (i + 1));
+      inp.addEventListener('input', () => { who.names[i] = inp.value; });
+      names.appendChild(inp);
+    }
+  }
+  // friends
+  $('#friends-offline').classList.toggle('hidden', Net.available);
+  $('#friends-online').classList.toggle('hidden', !Net.available);
+  $('#my-pid').textContent = Net.pid;
+  const party = Net.party;
+  const members = Net.members();
+  $('#party-list').innerHTML = party
+    ? members.map(m => `<li>${esc(m.name)} <small>${m.pid}${m.host ? ' · host' : ''}${m.me ? ' · you' : ''}</small></li>`).join('')
+    : '<li class="muted">Invite a friend to start a party.</li>';
+  $('#btn-leave-party').classList.toggle('hidden', !party);
+  const others = Net.online();
+  $('#online-list').innerHTML = others.length
+    ? others.map(o => `<li>${esc(o.name)} <small>${o.pid}</small> <button type="button" data-invite="${o.pid}">Invite</button></li>`).join('')
+    : '<li class="muted">Nobody else has the game open right now.</li>';
+  $('#online-list').querySelectorAll('[data-invite]').forEach(b => b.addEventListener('click', () => sendInvite(b.dataset.invite)));
+  const waiting = who.tab === 'friends' && party && !party.isHost;
+  $('#party-note').textContent = !party ? '' : waiting
+    ? `Waiting for ${members.find(m => m.host) ? members.find(m => m.host).name : 'the host'} to pick a table.`
+    : 'Pick a table above to start the game with your party. Empty seats get bots.';
+  // the green circles: how many bots each table would get
+  document.querySelectorAll('[data-mode]').forEach(btn => {
+    const mode = MODES[btn.dataset.mode];
+    const humans = humansFor(mode).length;
+    const bots = mode.seats - humans;
+    btn.disabled = waiting || bots < 0 || (who.tab === 'friends' && !party && false);
+    btn.querySelector('small').textContent = bots < 0 ? 'too many players' : humans > 1
+      ? `${humans} players · ${bots} bot${bots === 1 ? '' : 's'}`
+      : `vs ${bots} bot${bots === 1 ? '' : 's'}`;
+  });
+}
+
+async function sendInvite(id) {
+  const note = $('#invite-note');
+  try {
+    await Net.invite(id);
+    note.textContent = `Invite sent to ${String(id).trim().toUpperCase()}.`;
+  } catch (e) {
+    note.textContent = {
+      'bad-id': 'Player IDs are 6 letters and numbers, like K7Q2XD.',
+      self: "That's your own ID.",
+      'not-host': 'Only the party host can invite.',
+      offline: 'Online play is not available here.',
+    }[e.message] || 'Could not send the invite.';
+  }
+  renderWho();
+}
+
+let pendingInvite = null;
+function showInvite(inv) {
+  pendingInvite = inv;
+  $('#invite-text').textContent = `${inv.name} (${inv.from}) invited you to their party.`;
+  $('#invite-pop').classList.remove('hidden');
+  Sound.chime && Sound.chime();
+}
+async function answerInvite(yes) {
+  $('#invite-pop').classList.add('hidden');
+  const inv = pendingInvite;
+  pendingInvite = null;
+  if (!yes || !inv) return;
+  if (!state.over) quitGame();
+  await Net.accept(inv);
+  who.tab = 'friends';
+  showScreen('mode');
+}
+
+function pickTable(modeId) {
+  const mode = MODES[modeId];
+  const humans = humansFor(mode);
+  if (humans.length > mode.seats) return;
+  if (who.tab === 'friends' && Net.party && !Net.party.isHost) return;
+  const online = who.tab === 'friends' && Net.party && Net.party.isHost && humans.some(h => h.ctrl === 'remote');
+  startGame({ modeId, humans, online });
+}
 
 // ---------- guns ----------
 
@@ -131,8 +272,8 @@ function loadGun() {
 
 // Make sure at least `n` rounds are queued, reloading a fresh cylinder behind
 // the current one when it is about to run dry.
-function ensureRounds(player, n) {
-  while (player.gun.length < n) player.gun.push(...loadGun());
+function ensureRounds(player, k) {
+  while (player.gun.length < k) player.gun.push(...loadGun());
 }
 
 // Pull the trigger: returns true for a live round, false for a blank.
@@ -142,342 +283,579 @@ function pullTrigger(player) {
 }
 
 // Cards 1, 2 and 3: reveal whether that upcoming round is live or blank.
-function peekRound(player, n) {
-  ensureRounds(player, n);
-  const round = player.gun[n - 1];
+function peekRound(player, k) {
+  ensureRounds(player, k);
+  const round = player.gun[k - 1];
   round.known = true;
   return round.live;
 }
 
-// ---------- game flow ----------
+// ---------- animations, messages and the online broadcast ----------
 
-function startGame(modeId) {
+// How each Table call's arguments name players, so every phone can turn a
+// player number into a seat around its own camera.
+const ANIM = {
+  deal: 'P_', play: 'P_', drawGuns: '', holsterGuns: '', aim: 'PP', shoot: 'PP_O', recover: 'PP_',
+  peek: 'P__', jackGlow: '', bloodyMary: '', wound: 'P_', stopBleeding: 'P_', loseLife: 'P', bleedOut: 'P',
+  setLives: 'P_', setTags: 'P_', spawnBox: 'P', openBox: 'P_', usePotion: 'P', useBandage: 'PP', smashGun: 'P',
+  newGun: 'P', giveShotgun: 'P', removeShotgun: 'P', binoStart: 'PP', binoEnd: '', invite: 'PP', decline: '',
+  formTeam: 'PP', transferCards: 'PP', setRavage: '_', raiseShield: 'P', lowerShield: 'P', setReverse: 'P_',
+  grenade: 'PHL_', nuke: 'P',
+};
+const seatOf = i => (i - state.view + state.players.length) % state.players.length;
+
+function applyAnim(f, args) {
+  const spec = ANIM[f] || '';
+  const mapped = args.map((a, k) => {
+    switch (spec[k]) {
+      case 'P': return seatOf(a);
+      case 'L': return a.map(seatOf);
+      case 'H': return a.map(h => ({ s: seatOf(h.s), dead: h.dead }));
+      case 'O': return Object.assign({}, a, a && a.victim != null ? { victim: seatOf(a.victim) } : {});
+      default: return a;
+    }
+  });
+  if (f === 'binoStart' && mapped[0] === 0) document.body.classList.add('binoculars');
+  if (f === 'binoEnd') document.body.classList.remove('binoculars');
+  return Table[f](...mapped);
+}
+
+// Host: send an event to friends' phones along with a fresh snapshot.
+function bcast(ev) {
+  if (state.online === 'host') Net.hostSend(ev, snapshot());
+}
+
+// Play an animation here (and on friends' phones).
+function A(f, ...args) {
+  bcast({ m: 'a', f, a: args });
+  return applyAnim(f, args);
+}
+
+// Messages, banners, sounds (here and on friends' phones).
+function ui(f, ...args) {
+  bcast({ m: 'u', f, a: args });
+  applyUi(f, args);
+}
+
+function applyUi(f, a) {
+  switch (f) {
+    case 'log': log(a[0]); break;
+    case 'banner': showBanner(a[0]); break;
+    case 'status': setStatus(a[0]); break;
+    case 'flash': flash(); break;
+    case 'snd': if (Sound[a[0]]) Sound[a[0]](); break;
+    case 'round': state.round = a[0]; applyDread(); renderAll(); break;
+    case 'whiteout': whiteout(); break;
+    case 'end': showEnd(a[0], a[1]); break;
+  }
+}
+
+// ---------- snapshots (online sync and same-phone handoffs) ----------
+
+function knownStr(p) {
+  ensureRounds(p, 3);
+  return p.gun.slice(0, 3).map(r => (r.known ? (r.live ? 'L' : 'B') : '?')).join('');
+}
+
+function teamsList() {
+  const seen = new Set(), out = [];
+  state.players.forEach(p => {
+    if (!p.team || seen.has(p.team)) return;
+    seen.add(p.team);
+    if (p.team.members.every(m => m.alive)) out.push([idx(p.team.leader), idx(p.team.members.find(m => m !== p.team.leader))]);
+  });
+  return out;
+}
+
+function tagsOf(p) {
+  const tags = [];
+  if (p.bleeding) tags.push('BLEEDING');
+  if (p.unarmed) tags.push('UNARMED');
+  if (p.hasShotgun && p.shotgun > 0) tags.push('SHOTGUN');
+  if (teammateOf(p)) tags.push('TEAM');
+  return tags;
+}
+
+function snapshot() {
+  return {
+    r: state.round, m: state.modeId, mu: state.multi ? 1 : 0, ov: state.over ? 1 : 0,
+    bx: state.box ? idx(state.box.owner) : null, pl: state.pile.slice(-6), tm: teamsList(),
+    ps: state.players.map(p => ({
+      nm: p.name, pid: p.pid || null, c: p.ctrl, sb: p.sub, pa: p.pal, a: p.alive ? 1 : 0, l: p.lives, b: p.bleeding ? 1 : 0,
+      h: p.hand, i: p.items, u: p.unarmed ? 1 : 0, sg: p.shotgun, hs: p.hasShotgun ? 1 : 0, bk: p.block ? 1 : 0, rv: p.reverse ? 1 : 0, k: knownStr(p),
+    })),
+  };
+}
+
+// A friend's phone keeps a copy of the players built from the host's snapshot.
+function fromSnapshot(s) {
+  state.round = s.r;
+  state.modeId = s.m;
+  state.mode = MODES[s.m];
+  state.multi = !!s.mu;
+  state.players = s.ps.map(d => ({
+    name: d.nm, pid: d.pid, ctrl: d.c, sub: d.sb, pal: d.pa, alive: !!d.a, lives: d.l, bleeding: !!d.b, hand: d.h || [], items: d.i || [],
+    unarmed: !!d.u, shotgun: d.sg || 0, hasShotgun: !!d.hs, block: !!d.bk, reverse: !!d.rv,
+    gun: (d.k || '???').split('').map(c => ({ known: c !== '?', live: c === 'L' })), team: null,
+  }));
+  (s.tm || []).forEach(([li, mi]) => {
+    const team = { members: [state.players[li], state.players[mi]], leader: state.players[li] };
+    state.players[li].team = state.players[mi].team = team;
+  });
+  state.box = s.bx != null ? { owner: state.players[s.bx] } : null;
+  state.pile = s.pl || [];
+  const me = state.players.findIndex(p => p.pid === Net.pid);
+  if (me >= 0) state.view = me;
+}
+
+// Rebuild the whole table as seen from `state.view`.
+function rebuildTable() {
+  const k = state.players.length;
+  const order = Array.from({ length: k }, (_, i) => (state.view + i) % k);
+  const seat = i => (i - state.view + k) % k;
+  const tps = order.map(i => { const p = state.players[i]; return { name: p.name, sub: p.sub, pal: p.pal }; });
+  Table.rebuild(tps, {
+    ravage: dread(),
+    seats: order.map(i => {
+      const p = state.players[i];
+      return { hand: p.hand, lives: p.lives, items: p.items, dead: !p.alive, bleeding: p.bleeding, unarmed: p.unarmed,
+        shotgun: p.hasShotgun && p.shotgun > 0, block: p.block, reverse: p.reverse, tags: tagsOf(p) };
+    }),
+    teams: teamsList().map(([li, mi]) => [seat(li), seat(mi)]),
+    pile: state.pile.slice(-6),
+    box: state.box ? seat(idx(state.box.owner)) : null,
+  });
+  renderAll();
+}
+
+// ---------- starting a game ----------
+
+function startGame(config) {
   Sound.unlock();
   state.game = (state.game || 0) + 1;   // lets a previous game's async steps bail out
   const game = state.game;
-  state.modeId = modeId;
-  state.mode = MODES[modeId];
+  state.config = config;
+  state.modeId = config.modeId;
+  state.mode = MODES[config.modeId];
   state.round = 1;
   state.over = false;
   state.covered = false;
   state.selected = -1;
-  state.myTurn = false;
   state.busy = false;
   state.box = null;
-  $('#btn-cover').textContent = 'Cover cards';
-  $('#card-info').classList.add('hidden');
-  hidePanel();
-  $('#feed').innerHTML = '';
+  state.pile = [];
+  state.view = 0;
+  state.multi = config.humans.length > 1;
+  state.online = config.online ? 'host' : null;
+  turn = null;
+  pendingAsks.clear();
+  resetHud();
 
-  state.players = [{ name: 'You', you: true }];
-  state.players.push(...Bots.lineup(state.mode.opponents));
-  state.players.forEach(p => Object.assign(p, {
-    alive: true, hand: dealHand(), gun: loadGun(), lives: START_LIVES, bleeding: false, bleedUntil: 0,
+  const bots = Bots.lineup(state.mode.seats - config.humans.length);
+  state.players = [
+    ...config.humans.map(h => ({ name: h.name, ctrl: h.ctrl, pid: h.pid || null, sub: h.ctrl === 'remote' ? 'ONLINE' : (state.multi ? 'PLAYER' : 'YOU') })),
+    ...bots.map(b => Object.assign(b, { ctrl: 'bot', sub: Bots.label(b) })),
+  ];
+  state.players.forEach((p, i) => Object.assign(p, {
+    pal: i, alive: true, hand: [], gun: loadGun(), lives: START_LIVES, bleeding: false, bleedUntil: 0,
     items: [], shotgun: 0, hasShotgun: false, unarmed: false, team: null, priority: null, shotBy: null,
+    block: false, reverse: false, cause: '',
   }));
 
-  Table.setup(state.players);
-  state.players.forEach((p, i) => Table.setLives(i, p.lives));
-  applyDread();
-  renderAll();
-  setStatus('');
-
+  if (state.online === 'host') Net.hostStart(Net.pid + '-' + Date.now().toString(36));
+  rebuildTable();
   showScreen('game');
-  setTimeout(async () => {
+  setTimeout(() => {
     if (game !== state.game) return;
     Sound.startMusic();
-    showBanner('ROUND 1');
-    // deal round-robin, one card at a time
-    for (let k = 0; k < HAND_SIZE; k++) {
-      for (let i = 0; i < state.players.length; i++) {
-        if (game !== state.game) return;
-        await Table.deal(i, [state.players[i].hand[k]]);
-      }
-    }
-    if (game !== state.game) return;
-    beginTurn();
+    runGame(game).catch(e => console.error(e));
   }, 900);
 }
 
+function playAgain() {
+  $('#game-over').classList.add('hidden');
+  if (state.online === 'client') { showScreen('mode'); return; }
+  const cfg = state.config;
+  if (cfg && cfg.online) {
+    const humans = Net.members().map(m => ({ name: m.name, ctrl: m.me ? 'local' : 'remote', pid: m.pid }));
+    startGame(Object.assign({}, cfg, { humans: humans.slice(0, MODES[cfg.modeId].seats), online: humans.length > 1 }));
+  } else if (cfg) startGame(cfg);
+}
+
 function quitGame() {
+  const wasClient = state.online === 'client';
+  if (state.online === 'host') Net.hostStop();
   state.over = true;
-  state.game++;
+  state.game = (state.game || 0) + 1;
+  state.online = null;
+  turn = null;
   Sound.stopMusic();
   hidePanel();
+  $('#curtain').classList.add('hidden');
   document.body.classList.remove('bleeding', 'binoculars');
   $('#card-info').classList.add('hidden');
+  if (wasClient) { client.gid = null; Net.leaveParty(); }
   showScreen('menu');
 }
 
-// Your turn: refill empty hands, then wait for you to use items and play a card.
-async function beginTurn() {
-  if (state.over) return;
-  const game = state.game;
-  for (const p of alive()) {
-    if (p.hand.length || (p.team && p.team.leader !== p && teammateOf(p))) continue;
-    const mate = p.team && p.team.leader === p ? teammateOf(p) : null;
-    p.hand = dealHand(mate ? HAND_SIZE * 2 : HAND_SIZE);
-    await Table.deal(seatOf(p), p.hand);
-    if (game !== state.game) return;
+// ---------- the host's game loop ----------
+
+async function runGame(game) {
+  const live = () => game === state.game && !state.over;
+  ui('banner', 'ROUND 1');
+  // deal round-robin, one card at a time
+  const hands = state.players.map(() => dealHand());
+  for (let k = 0; k < HAND_SIZE; k++) {
+    for (let i = 0; i < state.players.length; i++) {
+      if (!live()) return;
+      state.players[i].hand.push(hands[i][k]);
+      await A('deal', i, [hands[i][k]]);
+    }
   }
-  state.myTurn = true;
-  state.busy = false;
-  renderAll();
-  if (state.selected >= 0) selectCard(state.selected);
-  setStatus(state.box && state.box.owner === me() ? 'A box slid over to you. Tap it to open it, then play a card.' : 'Your turn: tap a card, then tap it again to play');
+  while (live()) {
+    for (const p of state.players) {
+      if (!live()) return;
+      if (p.alive) await takeTurn(p);
+    }
+    if (!live()) return;
+    if (!(await shootout('End of round ' + state.round)) || !live()) return;
+    if (!(await endOfRound()) || !live()) return;
+    ui('round', state.round + 1);
+    ui('banner', 'ROUND ' + state.round);
+    await sleep(1400);
+    if (!live()) return;
+    await maybeBox();
+  }
 }
 
-// You play a card, then each living bot (or bot team) plays one. Once
-// everyone has played, the round ends in a shootout.
-async function playSelected() {
-  if (state.selected < 0 || state.over || !state.myTurn || state.busy) return;
-  const game = state.game;
-  state.busy = true;
-  let index = state.selected;
-  selectCard(-1);
-
-  // Teams vote on every card from the shared hand.
-  const mate = teammateOf(me());
-  if (mate) {
-    const choice = Bots.vote(mate, me().hand, index);
-    if (choice !== index) {
-      const mine = CARD_BY_ID[me().hand[index]].name, theirs = CARD_BY_ID[me().hand[choice]].name;
-      const v = await choose('TEAM VOTE', `${mate.name} votes for <b>${theirs}</b>. You voted for <b>${mine}</b>. It's a tie.`, [
-        { label: 'Flip a coin', value: 'coin' },
-        { label: `Go with ${theirs}`, value: 'theirs' },
-      ]);
-      if (game !== state.game) return;
-      if (v === 'theirs') index = choice;
-      else {
-        const heads = Math.random() < 0.5;
-        showBanner(heads ? 'HEADS' : 'TAILS');
-        log(`Coin flip: ${heads ? `heads, you play <b>${mine}</b>` : `tails, ${mate.name} wins the vote: <b>${theirs}</b>`}.`);
-        if (!heads) index = choice;
-        await sleep(900);
-      }
-    } else log(`${mate.name} votes yes.`);
+// One seat's turn: refill an empty hand, then items and a card.
+async function takeTurn(p) {
+  const i = idx(p);
+  const member = p.team && p.team.leader !== p && teammateOf(p);
+  if (!p.hand.length && !member) {
+    const ids = dealHand(teammateOf(p) ? HAND_SIZE * 2 : HAND_SIZE);
+    p.hand.push(...ids);
+    await A('deal', i, ids);
   }
-
-  state.myTurn = false;
-  renderItems();
-  const [id] = me().hand.splice(index, 1);
-  await Table.play(0, index);
-  if (!(await resolveCard(me(), id)) || game !== state.game) return;
-
-  for (const opp of opponents()) {
-    if (!opp.alive || state.over) continue;
-    await botTurn(opp);
-    if (state.over || game !== state.game) return;
+  if (p.ctrl === 'bot') return botTurn(p);
+  ui('status', `${N(p)}${isYou(p) ? 'r turn' : "'s turn"}${member ? ' (your teammate plays the cards)' : ''}`);
+  for (;;) {
+    if (state.over || !p.alive) return;
+    const act = await ask(p, 'turn', { canPlay: !member });
+    if (act == null) { if (p.ctrl === 'bot') return botTurn(p); return; }
+    if (act.k === 'box') { await openBox(p); continue; }
+    if (act.k === 'item') {
+      const target = act.t != null ? state.players[act.t] : p;
+      if (p.items.includes(act.id) && target) await useItem(p, act.id, target);
+      continue;
+    }
+    if (act.k === 'pass') return;
+    if (act.k === 'play' && !member && p.hand[act.i] != null) { await teamPlay(p, act.i); return; }
   }
-
-  // Everyone has played: the round ends with a shootout.
-  if (!(await shootout('End of round ' + state.round)) || game !== state.game) return;
-  if (!(await endOfRound()) || game !== state.game) return;
-
-  state.round++;
-  applyDread();
-  renderAll();
-  showBanner('ROUND ' + state.round);
-  await sleep(1400);
-  if (game !== state.game) return;
-  await maybeBox();
-  if (game !== state.game || state.over) return;
-  beginTurn();
 }
 
 // A bot's turn: use items, then (unless its team leader plays for it) a card.
 async function botTurn(bot) {
-  const game = state.game;
-  setStatus(bot.name + ' is thinking…');
+  ui('status', esc(bot.name) + ' is thinking…');
   await sleep(500);
   const danger = alive().some(p => p.shotgun > 0 && p !== bot);
   for (const act of Bots.chooseItems(bot, { alive: alive(), danger })) {
-    if (!bot.alive || state.over || game !== state.game) return;
-    if (!bot.items.includes(act.item)) continue;
+    if (!bot.alive || state.over) return;
+    if (!bot.items.includes(act.item) || !act.target || !act.target.alive) continue;
     await useItem(bot, act.item, act.target);
   }
-  if (!bot.alive || state.over || game !== state.game) return;
+  if (!bot.alive || state.over) return;
   if (bot.team && bot.team.leader !== bot && teammateOf(bot)) return;   // the leader plays for the team
   if (!bot.hand.length) return;
-  setStatus(bot.name + ' is choosing a card…');
+  ui('status', esc(bot.name) + ' is choosing a card…');
   await sleep(500);
+  bot.foes = alive().filter(p => p !== bot && p !== teammateOf(bot)).length;
   const oi = Bots.chooseCard(bot);
-  const [oid] = bot.hand.splice(oi, 1);
-  if (teammateOf(bot)) log(`${bot.name}'s team voted.`);
-  await Table.play(seatOf(bot), oi);
-  await resolveCard(bot, oid);
+  if (teammateOf(bot)) ui('log', `${esc(bot.name)}'s team voted.`);
+  await playCard(bot, oi);
 }
 
-// Apply a played card's effect. Returns false if the game ended because of it.
+// A person plays a card; a teammate votes on it first.
+async function teamPlay(p, i) {
+  const mate = teammateOf(p);
+  let choice = i;
+  if (mate) {
+    const mine = CARD_BY_ID[p.hand[i]].name;
+    let alt = i;
+    if (mate.ctrl === 'bot') alt = Bots.vote(mate, p.hand, i);
+    else {
+      const others = [...new Set(p.hand.filter((c, k) => k !== i && c !== p.hand[i]))];
+      const v = await ask(mate, 'choice', {
+        title: 'TEAM VOTE', html: `${N(p)} wants to play <b>${mine}</b>.`,
+        options: [{ label: 'Agree', v: -1 }, ...others.map(c => ({ label: `Vote for ${CARD_BY_ID[c].name}`, v: p.hand.indexOf(c) }))],
+      });
+      alt = v == null || v === -1 ? i : v;
+    }
+    if (alt === i) ui('log', `${esc(mate.name)} votes yes.`);
+    else {
+      const theirs = CARD_BY_ID[p.hand[alt]].name;
+      const v = await ask(p, 'choice', {
+        title: 'TEAM VOTE', html: `${esc(mate.name)} votes for <b>${theirs}</b>, ${n(p)} voted for <b>${mine}</b>. It's a tie.`,
+        options: [{ label: 'Flip a coin', v: 'coin' }, { label: `Go with ${theirs}`, v: 'theirs' }],
+      });
+      if (v === 'theirs') choice = alt;
+      else {
+        const heads = Math.random() < 0.5;
+        ui('banner', heads ? 'HEADS' : 'TAILS');
+        ui('log', `Coin flip: ${heads ? `heads, ${n(p)} play${V(p, '', 's')} <b>${mine}</b>` : `tails, ${esc(mate.name)} wins the vote: <b>${theirs}</b>`}.`);
+        if (!heads) choice = alt;
+        await sleep(900);
+      }
+    }
+  }
+  await playCard(p, choice);
+}
+
+async function playCard(p, i) {
+  const [id] = p.hand.splice(i, 1);
+  state.pile.push(id);
+  if (state.pile.length > 12) state.pile.shift();
+  await A('play', idx(p), i);
+  await resolveCard(p, id);
+}
+
+// Apply a played card's effect.
 async function resolveCard(player, id) {
   const card = CARD_BY_ID[id];
-  log(`${player.you ? 'You' : player.name} played <b>${card.name}</b>.`);
+  const pi = idx(player);
+  const mate = teammateOf(player);
+  ui('log', `${N(player)} played <b>${card.name}</b>.`);
   renderAll();
 
   if (card.instantWin) {
-    await Table.jackGlow();
-    const mate = teammateOf(player);
-    const winners = player.you || (mate && mate.you) ? 'YOU WIN' : (mate ? `${player.name} & ${mate.name} WIN` : player.name.toUpperCase() + ' WINS');
-    endGame(winners, `${player.you ? 'You' : player.name} played the Jack of Trades.`);
-    return false;
+    await A('jackGlow');
+    endGame([player, mate].filter(Boolean), `${N(player)} played the Jack of Trades.`);
+    return;
+  }
+  if (card.nuke) {
+    ui('banner', 'NUCLEAR');
+    ui('log', `${N(player)} launched a <b class="live">nuclear bomb</b>.`);
+    await A('nuke', pi);
+    ui('whiteout');
+    state.players.forEach(p => { if (p !== player && p !== mate) { p.alive = false; p.cause = 'Wiped out by a nuclear bomb.'; } });
+    await sleep(1200);
+    endGame([player, mate].filter(Boolean), `${N(player)} launched a nuclear bomb. Everyone else was wiped out.`);
+    return;
+  }
+  if (card.grenade) {
+    await throwGrenade(player);
+    return;
   }
   if (card.shotgun) {
     player.shotgun = SHOTGUN_SHELLS;
     player.hasShotgun = true;
-    await Table.giveShotgun(seatOf(player));
-    log(`${player.you ? 'You have' : player.name + ' has'} a <b>shotgun</b> this round: 2 shells, both live.${player.unarmed ? ' (Unarmed, so it stays on the table.)' : ''}`);
+    await A('giveShotgun', pi);
+    ui('log', `${N(player)} ${V(player, 'have', 'has')} a <b>shotgun</b> this round: 2 shells, both live.${player.unarmed ? ' (Unarmed, so it stays on the table.)' : ''}`);
     refreshTags(player);
+  }
+  if (card.block) {
+    player.block = true;
+    await A('raiseShield', pi);
+    ui('log', `A steel shield rises in front of ${n(player)}. It stops the next hit this round.`);
+  }
+  if (card.reverse) {
+    player.reverse = true;
+    await A('setReverse', pi, true);
+    ui('log', `${N(player)} ${V(player, 'are', 'is')} ringed in red: the next shot at ${isYou(player) ? 'you' : 'them'} this round goes back to the shooter.`);
   }
   if (card.peek) {
     const live = peekRound(player, card.peek);
-    if (!player.you) setStatus(`${player.name} checks their cylinder…`);
-    await Table.peek(seatOf(player), card.peek, live);
-    if (player.you) {
-      const which = ['next', '2nd', '3rd'][card.peek - 1];
-      showBanner(live ? 'LIVE' : 'BLANK');
-      log(`<span class="secret">Only you know: your ${which} round is <b class="${live ? 'live' : 'blank'}">${live ? 'LIVE' : 'BLANK'}</b>.</span>`);
-      renderGun();
-      await sleep(900);
-    }
+    if (player.ctrl === 'bot') ui('status', `${esc(player.name)} checks their cylinder…`);
+    await A('peek', pi, card.peek, live);
+    tell(player, 'peek', card.peek, live);
+    await sleep(600);
   }
   if (card.forcesShootout) {
-    await Table.bloodyMary();
-    return shootout('Bloody Mary');
+    await A('bloodyMary');
+    await shootout('Bloody Mary');
   }
-  return true;
+}
+
+// Grenade: everyone else is hit and loses their cards and items; the
+// thrower keeps theirs but is caught in the blast too.
+async function throwGrenade(p) {
+  const hits = [], blocked = [], lines = [];
+  for (const v of alive()) {
+    if (v === p) continue;
+    if (v.block) { v.block = false; blocked.push(v); lines.push(`${N(v)}'s shield took the blast`); continue; }
+    v.hand = [];
+    v.items = [];
+    const res = hit(v, 'wound');
+    if (res.dies) v.cause = 'Caught in a grenade blast.';
+    hits.push({ v, res });
+  }
+  const self = hit(p, 'wound');
+  if (self.dies) p.cause = 'Caught in your own grenade blast.';
+  ui('banner', 'GRENADE');
+  ui('snd', 'cock');
+  await A('grenade', idx(p), hits.map(h => ({ s: idx(h.v), dead: h.res.dies })), blocked.map(idx), self.dies);
+  ui('flash');
+  hits.forEach(({ v, res }) => lines.push(`${N(v)} ${res.dies ? (isYou(v) ? 'are killed' : 'is killed') : res.lostLife ? V(v, 'lose a life', 'loses a life') : V(v, 'are bleeding out', 'is bleeding out')} and lose${V(v, '', 's')} every card and item`));
+  ui('log', `<b class="live">BOOM.</b> ${lines.join('; ')}. ${N(p)} ${self.dies ? V(p, 'are killed too', 'is killed too') : V(p, 'are bleeding out', 'is bleeding out')} but keep${V(p, '', 's')} ${POSS(p)} cards.`);
+  [...hits.map(h => h.v), p].forEach(v => { A('setLives', idx(v), Math.max(0, v.lives)); if (!v.alive) onDeath(v); refreshTags(v); });
+  renderAll();
+  checkGameOver();
+}
+
+// A hit lands on `p`: a kill, or a wound (a lost life if already bleeding).
+function hit(p, kind) {
+  const res = { dies: false, lostLife: false, wounded: false };
+  if (kind === 'kill') res.dies = true;
+  else if (p.bleeding) { p.lives--; res.lostLife = true; res.dies = p.lives <= 0; }
+  else { p.bleeding = true; p.bleedUntil = state.round + 1; res.wounded = true; }
+  if (res.dies) { p.alive = false; p.bleeding = false; }
+  return res;
 }
 
 // ---------- shootouts ----------
 
-// Every living, armed player, starting with you, shoots themself or someone
-// else. Unarmed players (smashed guns) can't shoot and can't be shot.
-// Returns false if the game ended.
+// Every living, armed player shoots themself or someone else. Unarmed players
+// (smashed guns) can't shoot and can't be shot. Returns false if the game ended.
 async function shootout(reason) {
-  const game = state.game;
-  showBanner('SHOOTOUT');
-  log(`<span class="shootout">— Shootout: ${reason} —</span>`);
-  await Table.drawGuns();
+  ui('banner', 'SHOOTOUT');
+  ui('log', `<span class="shootout">— Shootout: ${reason} —</span>`);
+  await A('drawGuns');
   await sleep(500);
 
   for (const shooter of state.players) {
-    if (state.over || game !== state.game) return false;
+    if (state.over) return false;
     if (!shooter.alive) continue;
-    if (shooter.unarmed) { log(`${shooter.you ? 'You sit' : shooter.name + ' sits'} this one out, unarmed.`); continue; }
-
+    if (shooter.unarmed) { ui('log', `${N(shooter)} sit${V(shooter, '', 's')} this one out, unarmed.`); continue; }
     const targets = alive().filter(p => p === shooter || !p.unarmed);
     let target;
-    if (shooter.you) {
-      target = await askForTarget(reason, targets);
+    if (shooter.ctrl !== 'bot') {
+      const v = await ask(shooter, 'choice', targetChoice(shooter, targets, reason));
+      if (state.over) return false;
+      if (v === 'hold') target = null;
+      else if (v == null) target = Bots.chooseTarget(shooter, targets);
+      else target = state.players[v];
     } else {
-      setStatus(shooter.name + ' is deciding…');
+      ui('status', esc(shooter.name) + ' is deciding…');
       await sleep(700);
       target = Bots.chooseTarget(shooter, targets);
     }
-    if (game !== state.game) return false;
-    if (!target) { log(`${shooter.you ? 'You hold' : shooter.name + ' holds'} fire.`); continue; }
+    if (!target || !target.alive) { ui('log', `${N(shooter)} hold${V(shooter, '', 's')} fire.`); continue; }
     await fire(shooter, target);
     if (checkGameOver()) return false;
   }
-  setStatus('');
-  await Table.holsterGuns();
+  ui('status', '');
+  await A('holsterGuns');
   return true;
 }
 
+function targetChoice(p, targets, reason) {
+  const shotgun = p.shotgun > 0;
+  const next = p.gun[0];
+  const privateOk = p.ctrl === 'remote' || state.view === idx(p);
+  const hint = shotgun
+    ? `${isYou(p) ? 'You hold' : esc(p.name) + ' holds'} the <b class="live">shotgun</b> (${p.shotgun} live shell${p.shotgun === 1 ? '' : 's'}): one hit kills.`
+    : privateOk && next && next.known
+      ? `You know your next round is <b class="${next.live ? 'live' : 'blank'}">${next.live ? 'LIVE' : 'BLANK'}</b>.`
+      : "You don't know if your next round is live or blank.";
+  const options = [];
+  if (!shotgun) options.push({ label: 'Shoot yourself', v: idx(p), cls: 'self' });
+  targets.filter(t => t !== p).forEach(t => options.push({
+    label: `Shoot ${t.name}${t.bleeding ? ' (bleeding)' : ''}${t.block ? ' (shielded)' : ''}${t.reverse ? ' (reverse!)' : ''}${t === teammateOf(p) ? ' (teammate)' : ''}`,
+    v: idx(t),
+  }));
+  if (!options.length) options.push({ label: 'Hold fire (nobody to shoot)', v: 'hold' });
+  const title = state.multi ? `SHOOTOUT · ${esc(p.name)}` : 'SHOOTOUT';
+  return { title, html: `${reason}. ${hint}`, options };
+}
+
 async function fire(shooter, target) {
-  const who = target === shooter
-    ? (shooter.you ? 'yourself' : 'themself')
-    : (target.you ? 'YOU' : target.name);
-  const si = seatOf(shooter), ti = seatOf(target);
+  const si = idx(shooter), ti = idx(target);
+  const tn = target === shooter ? SELF(shooter) : (isYou(target) ? 'YOU' : esc(target.name));
   const shotgun = shooter.shotgun > 0;
-  setStatus(`${shooter.you ? 'You aim' : shooter.name + ' aims'} ${shotgun ? 'the shotgun ' : ''}at ${who}…`);
-  await Table.aim(si, ti);
+  ui('status', `${N(shooter)} aim${V(shooter, '', 's')} ${shotgun ? 'the shotgun ' : ''}at ${tn}…`);
+  await A('aim', si, ti);
   await sleep(700);   // let it hang
 
-  let live, dies = false, lostLife = false;
-  if (shotgun) { shooter.shotgun--; live = true; dies = true; }
-  else live = pullTrigger(shooter);
+  let live;
+  if (shotgun) { shooter.shotgun--; live = true; } else live = pullTrigger(shooter);
   if (target !== shooter) target.shotBy = shooter;   // vengeful bots remember this
 
-  const by = shooter.you ? 'You' : shooter.name;
   if (!live) {
-    Sound.blank();
-    log(`${by} shot ${who}: <i>click.</i> A blank.`);
-  } else {
-    if (shotgun) Sound.shotgun(); else Sound.gunshot();
-    flash();
-    if (!dies) {
-      if (target.bleeding) {           // shot again while bleeding: lose a life now
-        target.lives--;
-        lostLife = true;
-        dies = target.lives <= 0;
-      } else {
-        target.bleeding = true;
-        target.bleedUntil = state.round + 1;
-      }
-    }
-    if (dies) {
-      target.alive = false;
-      target.bleeding = false;
-      target.cause = shotgun ? 'A shotgun blast.' : 'Shot again while you were already bleeding.';
-      log(`${by} shot ${who} with the ${shotgun ? 'shotgun' : 'revolver'}: <b class="live">BANG!</b> ${target.you ? 'You are' : target.name + ' is'} dead.`);
-    } else if (lostLife) {
-      log(`${by} shot ${who}: <b class="live">BANG!</b> Already bleeding, ${target.you ? 'you lose' : 'they lose'} a life.`);
-    } else {
-      log(`${by} shot ${who}: <b class="live">BANG!</b> ${target.you ? "You're" : target.name + ' is'} <b class="live">bleeding out</b>. A bandage by the end of next round, or lose a life.`);
-    }
+    ui('snd', 'blank');
+    ui('log', `${N(shooter)} shot ${tn}: <i>click.</i> A blank.`);
+    renderGun();
+    await A('shoot', si, ti, false, {});
+    if (shooter.alive) await A('recover', si, ti, false);
+    await sleep(300);
+    return;
   }
+  ui('snd', shotgun ? 'shotgun' : 'gunshot');
+  ui('flash');
+  // a Reverse ring sends the shot back; a Block shield stops it
+  let victim = target, reverse = false, blocked = false;
+  if (target !== shooter && target.reverse) { target.reverse = false; reverse = true; victim = shooter; }
+  if (victim.block) { victim.block = false; blocked = true; }
+  const res = blocked ? { dies: false } : hit(victim, shotgun ? 'kill' : 'wound');
+  if (res.dies) victim.cause = shotgun ? 'A shotgun blast.' : reverse ? 'Your own shot, turned back by a Reverse.' : 'Shot again while already bleeding.';
+  const vn = N(victim);
+  let line = `${N(shooter)} shot ${tn}${shotgun ? ' with the shotgun' : ''}: <b class="live">BANG!</b> `;
+  if (reverse) line += `The Reverse turns it back on ${victim === shooter ? (isYou(shooter) ? 'you' : 'them') : vn}. `;
+  if (blocked) line += `${vn === 'You' ? 'Your' : vn + "'s"} shield stops it.`;
+  else if (res.dies) line += `${vn} ${V(victim, 'are', 'is')} dead.`;
+  else if (res.lostLife) line += `Already bleeding, ${vn === 'You' ? 'you lose' : vn + ' loses'} a life.`;
+  else line += `${vn} ${V(victim, 'are', 'is')} <b class="live">bleeding out</b>. A bandage by the end of next round, or lose a life.`;
+  ui('log', line);
   renderGun();
-  await Table.shoot(si, ti, live, { lethal: dies });
-  Table.setLives(ti, Math.max(0, target.lives));
-  if (dies) onDeath(target);
-  refreshTags(target);
+  await A('shoot', si, ti, true, { lethal: res.dies, reverse, blocked, victim: idx(victim) });
+  A('setLives', idx(victim), Math.max(0, victim.lives));
+  if (res.dies) onDeath(victim);
+  refreshTags(victim); refreshTags(target);
   renderAll();
-  if (shooter.alive) await Table.recover(si, ti, live);
+  if (shooter.alive) await A('recover', si, ti, true);
   await sleep(300);
 }
 
-// End of the round: bleeding wounds cost a life, smashed guns are replaced
-// and shotguns disappear. Returns false if the game ended.
+// End of the round: bleeding wounds cost a life, smashed guns are replaced,
+// shotguns, shields and reverses wear off. Returns false if the game ended.
 async function endOfRound() {
   for (const p of alive()) {
     if (!p.bleeding || state.round < p.bleedUntil) continue;
     p.lives--;
     p.bleeding = false;
-    const i = seatOf(p);
-    Table.setLives(i, Math.max(0, p.lives));
+    const i = idx(p);
+    A('setLives', i, Math.max(0, p.lives));
     if (p.lives <= 0) {
       p.alive = false;
-      p.cause = 'You bled out. Nobody bandaged you in time.';
-      log(`${p.you ? 'You' : p.name} bled out.`);
-      await Table.bleedOut(i);
+      p.cause = isYou(p) ? 'You bled out. Nobody bandaged you in time.' : 'Bled out.';
+      ui('log', `${N(p)} bled out.`);
+      await A('bleedOut', i);
       onDeath(p);
       if (checkGameOver()) return false;
     } else {
-      log(`${p.you ? 'You' : p.name} lost a life to the bleeding but ${p.you ? "you're" : "they're"} still breathing.`);
-      await Table.loseLife(i);
-      await Table.stopBleeding(i, false);
+      ui('log', `${N(p)} lost a life to the bleeding but ${isYou(p) ? "you're" : "they're"} still breathing.`);
+      await A('loseLife', i);
+      await A('stopBleeding', i, false);
     }
     refreshTags(p);
   }
   for (const p of alive()) {
+    const i = idx(p);
     if (p.unarmed) {
       p.unarmed = false;
       p.gun = loadGun();
-      log(`${p.you ? 'You get' : p.name + ' gets'} a new gun.`);
-      await Table.newGun(seatOf(p));
+      ui('log', `${N(p)} get${V(p, '', 's')} a new gun.`);
+      await A('newGun', i);
     }
-    if (p.hasShotgun) {
-      p.hasShotgun = false;
-      p.shotgun = 0;
-      await Table.removeShotgun(seatOf(p));
-    }
+    if (p.hasShotgun) { p.hasShotgun = false; p.shotgun = 0; await A('removeShotgun', i); }
+    if (p.block) { p.block = false; A('lowerShield', i); }
+    if (p.reverse) { p.reverse = false; A('setReverse', i, false); }
     refreshTags(p);
   }
   renderAll();
   return !checkGameOver();
 }
 
-// A death breaks up the dead player's team; any shared cards go to the survivor.
+// A death breaks up the dead player's team; shared cards go to the survivor.
 function onDeath(p) {
   const mate = teammateOf(p);
   if (p.team) {
@@ -485,35 +863,34 @@ function onDeath(p) {
     if (mate && p.hand.length) {
       mate.hand.push(...p.hand);
       p.hand = [];
-      Table.transferCards(seatOf(p), seatOf(mate));
+      A('transferCards', idx(p), idx(mate));
     }
-    if (mate) { log(`${mate.you ? 'You fight' : mate.name + ' fights'} on alone.`); refreshTags(mate); }
+    if (mate) { ui('log', `${N(mate)} fight${V(mate, '', 's')} on alone.`); refreshTags(mate); }
   }
-  if (p.you) document.body.classList.remove('bleeding');
 }
 
 function checkGameOver() {
   if (state.over) return true;
-  if (!me().alive) { endGame('YOU DIED', me().cause || 'You ran out of lives.'); return true; }
   const left = alive();
   const oneTeam = left.length === 2 && left[0].team && left[0].team === left[1].team;
-  if (left.length === 1 || oneTeam) {
-    endGame('YOU WIN', oneTeam ? `You and ${left.find(p => !p.you).name} are the last ones standing.` : 'You are the last one standing.');
+  const people = left.filter(p => p.ctrl !== 'bot');
+  if (left.length <= 1 || oneTeam) {
+    endGame(left, left.length ? (oneTeam ? `${N(left[0])} and ${n(left[1])} are the last ones standing.` : `${N(left[0])} ${V(left[0], 'are', 'is')} the last one standing.`) : 'Nobody survived.');
+    return true;
+  }
+  if (!people.length) {
+    const dead = state.players.find(p => p.ctrl === 'local');
+    endGame(left, !state.multi && dead ? dead.cause || 'You ran out of lives.' : 'Every player is dead. The bots take the table.');
     return true;
   }
   return false;
 }
 
-function endGame(title, reason) {
+function endGame(winners, reason) {
+  if (state.over) return;
   state.over = true;
-  state.myTurn = false;
-  hidePanel();
-  setStatus('');
-  $('#card-info').classList.add('hidden');
-  renderItems();
-  $('#game-over-title').textContent = title;
-  $('#game-over-reason').textContent = reason;
-  setTimeout(() => $('#game-over').classList.remove('hidden'), 1200);
+  turn = null;
+  ui('end', winners.map(idx), reason);
 }
 
 // ---------- boxes and items ----------
@@ -523,32 +900,23 @@ async function maybeBox() {
   if (state.round < 2 || state.box || Math.random() > BOX_CHANCE) return;
   const owner = pick(alive());
   state.box = { owner, items: rollItems() };
-  showBanner('A BOX!');
-  await Table.spawnBox(seatOf(owner));
-  log(`A box slid over to ${nameOf(owner)}.`);
-  if (!owner.you) await openBox(owner);
-  renderItems();
+  ui('banner', 'A BOX!');
+  await A('spawnBox', idx(owner));
+  ui('log', `A box slid over to ${n(owner)}.`);
+  if (owner.ctrl === 'bot') await openBox(owner);
+  renderAll();
 }
 
 async function openBox(p) {
   const box = state.box;
   if (!box || box.owner !== p) return;
   state.box = null;
-  await Table.openBox(seatOf(p), box.items);
   p.items.push(...box.items);
+  await A('openBox', idx(p), box.items);
   const names = box.items.map(id => ITEMS[id].name).join(' and ');
-  log(p.you ? `You found <b>${names}</b>.` : `${p.name} found two items.`);
-  renderItems();
-}
-
-async function openMyBox() {
-  if (!state.box || state.box.owner !== me() || !state.myTurn || state.busy || state.over) return;
-  state.busy = true;
-  renderItems();
-  await openBox(me());
-  state.busy = false;
-  renderItems();
-  setStatus('Your turn: tap a card, then tap it again to play');
+  if (p.ctrl === 'bot' || state.multi) ui('log', `${N(p)} found two items.`);
+  if (p.ctrl !== 'bot') tell(p, 'found', names);
+  renderAll();
 }
 
 // Use an item. `target` is the player it's used on (if it needs one).
@@ -556,28 +924,31 @@ async function useItem(p, id, target) {
   const k = p.items.indexOf(id);
   if (k < 0) return;
   p.items.splice(k, 1);
-  const pi = seatOf(p);
-  const by = p.you ? 'You' : p.name;
+  const pi = idx(p);
   if (id === 'potion') {
-    await Table.usePotion(pi);
     p.lives++;
-    Table.setLives(pi, p.lives);
-    log(`${by} drank a <b>health potion</b>: ${p.lives} ${p.lives === 1 ? 'life' : 'lives'}.`);
+    await A('usePotion', pi);
+    A('setLives', pi, p.lives);
+    ui('log', `${N(p)} drank a <b>health potion</b>: ${p.lives} ${p.lives === 1 ? 'life' : 'lives'}.`);
   } else if (id === 'bandage') {
-    await Table.useBandage(pi, seatOf(target));
     target.bleeding = false;
-    log(`${by} bandaged ${target === p ? (p.you ? 'yourself' : 'themself') : nameOf(target)}. The bleeding stops.`);
+    await A('useBandage', pi, idx(target));
+    ui('log', `${N(p)} bandaged ${target === p ? SELF(p) : n(target)}. The bleeding stops.`);
     refreshTags(target);
   } else if (id === 'hammer') {
-    await Table.smashGun(pi);
     p.unarmed = true;
-    log(`${by} smashed ${p.you ? 'your' : 'their'} own gun with a <b>hammer</b>. Nobody can shoot ${p.you ? 'you' : 'them'} this round.`);
+    await A('smashGun', pi);
+    ui('log', `${N(p)} smashed ${isYou(p) ? 'your' : 'their'} own gun with a <b>hammer</b>. Nobody can shoot ${isYou(p) ? 'you' : 'them'} this round.`);
   } else if (id === 'binoculars') {
-    if (p.you) await lookThrough(target);
-    else {
-      await Table.binoStart(pi, seatOf(target));
-      if (target.hand.includes('jack')) p.priority = target;
-      log(`${p.name} looks at ${target.you ? 'your' : target.name + "'s"} cards through <b>binoculars</b>.`);
+    await A('binoStart', pi, idx(target));
+    if (p.ctrl === 'bot') {
+      if (target.hand.includes('jack') || target.hand.includes('nuclear')) p.priority = target;
+      ui('log', `${N(p)} looks at ${POSS(target)} cards through <b>binoculars</b>.`);
+    } else {
+      const cards = target.hand.length ? target.hand.map(c => `<b>${CARD_BY_ID[c].name}</b>`).join(', ') : 'no cards';
+      ui('log', `${N(p)} look${V(p, '', 's')} at ${POSS(target)} cards through <b>binoculars</b>.`);
+      await ask(p, 'choice', { title: 'BINOCULARS', html: `${esc(target.name)} is holding ${cards}.`, options: [{ label: 'Lower the binoculars', v: 1 }] });
+      await A('binoEnd');
     }
   } else if (id === 'teammate') {
     await offerTeam(p, target);
@@ -586,85 +957,306 @@ async function useItem(p, id, target) {
   renderAll();
 }
 
-// Your binoculars: zoom in on their cards and list them.
-async function lookThrough(target) {
-  document.body.classList.add('binoculars');
-  await Table.binoStart(0, seatOf(target));
-  const cards = target.hand.length ? target.hand.map(id => `<b>${CARD_BY_ID[id].name}</b>`).join(', ') : 'no cards';
-  log(`Through the binoculars: ${target.name} holds ${cards}.`);
-  await choose('BINOCULARS', `${target.name} is holding ${cards}.`, [{ label: 'Lower the binoculars', value: 1 }]);
-  await Table.binoEnd();
-  document.body.classList.remove('binoculars');
-}
-
 // Teammate: ask someone to team up; they say yes or no. A team needs at
 // least one player left outside it to fight.
 async function offerTeam(from, to) {
   if (from.team || to.team || alive().length < 3) return;
-  const obj = await Table.invite(seatOf(from), seatOf(to));
+  await A('invite', idx(from), idx(to));
   let yes;
-  if (to.you) {
-    yes = await choose('TEAM UP?', `${from.name} wants to team up. You'd share a couch and your cards, and vote on every card you play.`, [
-      { label: 'Team up', value: true }, { label: 'Refuse', value: false },
-    ]) === true;
-  } else {
-    setStatus(`${to.name} is thinking it over…`);
+  if (to.ctrl === 'bot') {
+    ui('status', `${esc(to.name)} is thinking it over…`);
     await sleep(900);
     yes = Bots.acceptTeam(to, from);
+  } else {
+    yes = await ask(to, 'choice', {
+      title: 'TEAM UP?', html: `${esc(from.name)} wants to team up with ${n(to)}. You'd share a couch and your cards, and vote on every card you play.`,
+      options: [{ label: 'Team up', v: true }, { label: 'Refuse', v: false }],
+    }) === true;
   }
   if (!yes) {
-    await Table.decline(obj);
-    log(`${to.you ? 'You refuse' : to.name + ' refuses'} to team up with ${nameOf(from)}.`);
+    await A('decline');
+    ui('log', `${N(to)} refuse${V(to, '', 's')} to team up with ${n(from)}.`);
     return;
   }
-  // you always lead a team you're in, so you keep choosing the cards
-  const leader = to.you ? to : from, member = leader === from ? to : from;
+  // a person leads a team with a bot; between two people the inviter leads
+  const leader = from.ctrl === 'bot' && to.ctrl !== 'bot' ? to : from;
+  const member = leader === from ? to : from;
   const team = { members: [leader, member], leader };
   leader.team = member.team = team;
-  showBanner('TEAM UP');
-  log(`${leader.you ? 'You' : leader.name} and ${nameOf(member)} team up. Their hands are shared now.`);
   leader.hand.push(...member.hand);
   member.hand = [];
-  await Table.formTeam(seatOf(leader), seatOf(member), obj);
+  ui('banner', 'TEAM UP');
+  ui('log', `${N(leader)} and ${n(member)} team up. Their hands are shared now.`);
+  await A('formTeam', idx(leader), idx(member));
   refreshTags(leader); refreshTags(member);
 }
 
-// Your items: pick a target if needed, then use it.
-async function useMyItem(id) {
-  if (!state.myTurn || state.busy || state.over) return;
-  state.busy = true;
-  renderItems();
-  const others = alive().filter(p => !p.you);
-  let target = me();
-  if (id === 'bandage') {
-    const hurt = alive().filter(p => p.bleeding);
-    target = hurt.length === 1 ? hurt[0] : await choose('BANDAGE', 'Who do you bandage?',
-      hurt.map(p => ({ label: p.you ? 'Yourself' : p.name, value: p })).concat([{ label: 'Cancel', value: null }]));
-  } else if (id === 'binoculars') {
-    target = await choose('BINOCULARS', "Whose cards do you want to see?",
-      others.filter(p => p !== teammateOf(me())).map(p => ({ label: p.name, value: p })).concat([{ label: 'Cancel', value: null }]));
-  } else if (id === 'teammate') {
-    target = await choose('TEAMMATE', 'Who do you ask to team up?',
-      others.filter(p => !p.team).map(p => ({ label: p.name, value: p })).concat([{ label: 'Cancel', value: null }]));
+function refreshTags(p) {
+  if (!p) return;
+  A('setTags', idx(p), tagsOf(p));
+}
+
+// ---------- asking people for decisions ----------
+
+let askSeq = 0;
+const pendingAsks = new Map();
+
+// Ask a person for a decision: on this phone, or online on theirs.
+// Resolves null when an online player leaves (a bot then decides).
+function ask(p, kind, data) {
+  if (state.over && kind !== 'choice') return Promise.resolve(null);
+  if (p.ctrl === 'local') return localAsk(p, kind, data);
+  if (p.ctrl === 'remote') {
+    const id = ++askSeq;
+    return new Promise(res => {
+      pendingAsks.set(id, { res, pid: p.pid });
+      bcast({ m: 'ask', to: p.pid, id, k: kind, d: data });
+    });
   }
-  if (target) await useItem(me(), id, target);
+  return Promise.resolve(null);
+}
+
+function onRemoteAct(pid, act) {
+  const w = pendingAsks.get(act.id);
+  if (!w || w.pid !== pid) return;
+  pendingAsks.delete(act.id);
+  w.res(act.v);
+}
+
+// Host: any online player no longer in the party has left the table.
+function checkMissing() {
+  if (state.online !== 'host' || state.over) return;
+  const here = new Set(Net.members().map(m => m.pid));
+  state.players.filter(p => p.ctrl === 'remote' && !here.has(p.pid)).forEach(p => onMemberLeft(p.pid));
+}
+
+function onMemberLeft(pid) {
+  if (state.online !== 'host' || state.over) return;
+  const p = state.players.find(q => q.pid === pid && q.ctrl === 'remote');
+  if (!p) return;
+  Object.assign(p, Bots.lineup(1)[0], { name: p.name, ctrl: 'bot', pid: null });
+  p.sub = Bots.label(p);
+  ui('log', `${esc(p.name)} left the table. A bot plays for them now.`);
+  for (const [id, w] of pendingAsks) if (w.pid === pid) { pendingAsks.delete(id); w.res(null); }
+}
+
+// Private news for one person: what their 1/2/3 card showed, what they found.
+function tell(p, what, ...args) {
+  if (p.ctrl === 'local') showTell(what, args, p);
+  else if (p.ctrl === 'remote') bcast({ m: 'tell', to: p.pid, f: what, a: args });
+}
+
+function showTell(what, a, p) {
+  if (p && state.multi && state.online !== 'client' && state.view !== idx(p)) return;   // same phone: only the one looking
+  if (what === 'peek') {
+    const [k, live] = a;
+    const which = ['next', '2nd', '3rd'][k - 1];
+    showBanner(live ? 'LIVE' : 'BLANK');
+    log(`<span class="secret">Only you know: your ${which} round is <b class="${live ? 'live' : 'blank'}">${live ? 'LIVE' : 'BLANK'}</b>.</span>`);
+    renderGun();
+  } else if (what === 'found') {
+    log(`<span class="secret">You found <b>${a[0]}</b>.</span>`);
+  }
+}
+
+// Same phone: hide the table and pass the phone before someone's private turn.
+let curtainResolve = null;
+function curtain(name) {
+  return new Promise(res => {
+    curtainResolve = res;
+    $('#curtain-text').textContent = `Pass the phone to ${name}`;
+    $('#curtain-go').textContent = `I'm ${name}`;
+    $('#curtain').classList.remove('hidden');
+  });
+}
+
+async function focus(p) {
+  const i = idx(p);
+  if (state.view === i) return;
+  await curtain(p.name);
   if (state.over) return;
+  state.view = i;
+  rebuildTable();
+}
+
+// ---------- this phone's controls ----------
+
+let turn = null;   // { canPlay, respond } while this phone's player is choosing
+
+function localAsk(p, kind, data) {
+  return new Promise(async res => {
+    if (kind === 'turn') {
+      if (state.multi) await focus(p);
+      if (state.over) return res(null);
+      beginTurnUI(data, res);
+    } else {
+      res(await choose(data.title, data.html, data.options));
+    }
+  });
+}
+
+// A friend's phone answers the host's questions the same way.
+function handleAsk(ev) {
+  const respond = v => Net.sendAct({ id: ev.id, v });
+  if (ev.k === 'turn') beginTurnUI(ev.d, respond);
+  else choose(ev.d.title, ev.d.html, ev.d.options).then(respond);
+}
+
+function beginTurnUI(data, respond) {
+  turn = { canPlay: data.canPlay, respond };
   state.busy = false;
   renderAll();
   if (state.selected >= 0) selectCard(state.selected);
-  setStatus('Your turn: tap a card, then tap it again to play');
+  const me = viewer();
+  const prompt = !data.canPlay ? 'Your teammate plays the cards. Use items, then end your turn.'
+    : state.box && state.box.owner === me ? 'A box slid over to you. Tap it to open it, then play a card.'
+    : 'Your turn: tap a card, then tap it again to play';
+  setStatus(state.multi && state.online !== 'client' ? `${me.name}: ${prompt}` : prompt);
+}
+
+function endTurnUI(action) {
+  if (!turn) return;
+  const r = turn.respond;
+  turn = null;
+  state.busy = true;
+  selectCard(-1);
+  renderAll();
+  r(action);
+}
+
+function playSelected() {
+  if (state.selected < 0 || !turn || !turn.canPlay || state.busy) return;
+  endTurnUI({ k: 'play', i: state.selected });
+}
+
+function openMyBox() {
+  if (!turn || state.busy || !state.box || state.box.owner !== viewer()) return;
+  endTurnUI({ k: 'box' });
+}
+
+async function useMyItem(id) {
+  if (!turn || state.busy) return;
+  const me = viewer();
+  const others = alive().filter(p => p !== me);
+  let target = me;
+  state.busy = true;
+  renderItems();
+  const cancel = { label: 'Cancel', v: null };
+  if (id === 'bandage') {
+    const hurt = alive().filter(p => p.bleeding);
+    target = hurt.length === 1 ? hurt[0] : await choose('BANDAGE', 'Who do you bandage?', hurt.map(p => ({ label: p === me ? 'Yourself' : p.name, v: idx(p) })).concat([cancel])).then(v => (v == null ? null : state.players[v]));
+  } else if (id === 'binoculars') {
+    target = await choose('BINOCULARS', "Whose cards do you want to see?", others.filter(p => p !== teammateOf(me)).map(p => ({ label: p.name, v: idx(p) })).concat([cancel])).then(v => (v == null ? null : state.players[v]));
+  } else if (id === 'teammate') {
+    target = await choose('TEAMMATE', 'Who do you ask to team up?', others.filter(p => !p.team).map(p => ({ label: p.name, v: idx(p) })).concat([cancel])).then(v => (v == null ? null : state.players[v]));
+  }
+  state.busy = false;
+  if (!target) { renderAll(); return; }
+  endTurnUI({ k: 'item', id, t: idx(target) });
 }
 
 // Why an item can't be used right now ('' when it can).
 function itemBlocked(id) {
+  const me = viewer();
   if (id === 'bandage' && !alive().some(p => p.bleeding)) return 'Nobody is bleeding';
-  if (id === 'hammer' && me().unarmed) return 'Already unarmed';
+  if (id === 'hammer' && me.unarmed) return 'Already unarmed';
   if (id === 'teammate') {
-    if (me().team) return 'Already on a team';
+    if (me.team) return 'Already on a team';
     if (alive().length < 3) return 'Nobody would be left to fight';
-    if (!alive().some(p => !p.you && !p.team)) return 'Nobody free to team with';
+    if (!alive().some(p => p !== me && !p.team)) return 'Nobody free to team with';
   }
   return '';
+}
+
+// ---------- a friend's phone: mirror the host ----------
+
+const client = { gid: null, last: 0, queue: [], pumping: false };
+
+function onHostGame(g) {
+  if (!g) {
+    if (state.online === 'client' && !state.over) { endedByHost(); }
+    return;
+  }
+  if (g.id !== client.gid) { startClient(g); return; }
+  if (state.online !== 'client') return;
+  const fresh = (g.ev || []).filter(e => e.n > client.last).sort((a, b) => a.n - b.n);
+  if (!fresh.length) return;
+  if (fresh[0].n > client.last + 1) {
+    // missed some: jump straight to the host's snapshot
+    client.queue = [];
+    fromSnapshot(g.s);
+    client.last = g.s.n;
+    rebuildTable();
+    return;
+  }
+  client.queue.push(...fresh);
+  client.last = fresh[fresh.length - 1].n;
+  client.latest = g.s;
+  pump();
+}
+
+function startClient(g) {
+  state.game = (state.game || 0) + 1;
+  client.gid = g.id;
+  client.queue = [];
+  client.last = g.s.n;
+  client.latest = g.s;
+  state.online = 'client';
+  state.over = false;
+  state.selected = -1;
+  state.covered = false;
+  state.busy = false;
+  turn = null;
+  resetHud();
+  $('#game-over').classList.add('hidden');
+  fromSnapshot(g.s);
+  state.multi = true;
+  rebuildTable();
+  showScreen('game');
+  Sound.startMusic();
+  const fresh = (g.ev || []).filter(e => e.n > client.last).sort((a, b) => a.n - b.n);
+  client.queue.push(...fresh);
+  if (fresh.length) client.last = fresh[fresh.length - 1].n;
+  pump();
+}
+
+async function pump() {
+  if (client.pumping) return;
+  client.pumping = true;
+  const game = state.game;
+  while (client.queue.length && game === state.game) {
+    const ev = client.queue.shift();
+    try {
+      if (ev.m === 'a') await applyAnim(ev.f, ev.a);
+      else if (ev.m === 'u') { if (ev.f === 'end' && client.latest) syncHud(client.latest); applyUi(ev.f, ev.a); }
+      else if (ev.m === 'ask' && ev.to === Net.pid) { if (client.latest) syncHud(client.latest); handleAsk(ev); }
+      else if (ev.m === 'tell' && ev.to === Net.pid) showTell(ev.f, ev.a);
+    } catch (e) { console.error('event', ev, e); }
+  }
+  if (client.latest && game === state.game) syncHud(client.latest);
+  client.pumping = false;
+}
+
+// Refresh the HUD from the host's latest snapshot without touching the table.
+function syncHud(s) {
+  const view = state.view;
+  fromSnapshot(s);
+  state.view = view;
+  state.multi = true;
+  renderAll();
+}
+
+function onHostLeft() {
+  if (state.online === 'client' && !state.over) endedByHost();
+}
+function endedByHost() {
+  state.over = true;
+  turn = null;
+  hidePanel();
+  $('#game-over-title').textContent = 'GAME OVER';
+  $('#game-over-reason').textContent = 'The host left the table.';
+  $('#btn-again').textContent = 'Back to party';
+  $('#game-over').classList.remove('hidden');
 }
 
 // ---------- panels ----------
@@ -678,49 +1270,34 @@ function choose(title, html, options) {
       const b = document.createElement('button');
       if (o.cls) b.className = o.cls;
       b.textContent = o.label;
-      b.addEventListener('click', () => { hidePanel(); resolve(o.value); });
+      b.addEventListener('click', () => { hidePanel(); resolve(o.v); });
       panel.appendChild(b);
     });
     panel.classList.remove('hidden');
   });
 }
 
-function askForTarget(reason, targets) {
-  const shotgun = me().shotgun > 0;
-  const next = me().gun[0];
-  const hint = shotgun
-    ? `You hold the <b class="live">shotgun</b> (${me().shotgun} live shell${me().shotgun === 1 ? '' : 's'}): one hit kills.`
-    : next && next.known
-      ? `You know your next round is <b class="${next.live ? 'live' : 'blank'}">${next.live ? 'LIVE' : 'BLANK'}</b>.`
-      : "You don't know if your next round is live or blank.";
-  const others = targets.filter(p => !p.you);
-  const options = [];
-  if (!shotgun) options.push({ label: 'Shoot yourself', value: me(), cls: 'self' });
-  others.forEach(p => options.push({ label: `Shoot ${p.name}${p.bleeding ? ' (bleeding)' : ''}${p === teammateOf(me()) ? ' (teammate)' : ''}`, value: p }));
-  if (!options.length) options.push({ label: 'Hold fire (nobody to shoot)', value: null });
-  setStatus('Pick who to shoot');
-  return choose('SHOOTOUT', `${reason}. ${hint}`, options);
-}
-
 function hidePanel() { $('#shootout').classList.add('hidden'); }
 
 // ---------- feedback ----------
 
+const dread = () => Math.min(1, (state.round - 1) / (MAX_DREAD_ROUND - 1));
+
 // Music and the room both follow the same "dread" level.
 function applyDread() {
-  const dread = Math.min(1, (state.round - 1) / (MAX_DREAD_ROUND - 1));
-  Table.setRavage(dread);
-  Sound.setIntensity(dread);
+  Table.setRavage(dread());
+  Sound.setIntensity(dread());
 }
 
 function showBanner(text) {
   const b = $('#round-banner');
   b.textContent = text;
   b.classList.add('show');
-  setTimeout(() => b.classList.remove('show'), 1600);
+  clearTimeout(showBanner.t);
+  showBanner.t = setTimeout(() => b.classList.remove('show'), 1600);
 }
 
-function setStatus(text) { $('#status').textContent = text; }
+function setStatus(text) { $('#status').innerHTML = text; }
 
 function log(html) {
   const feed = $('#feed');
@@ -737,6 +1314,34 @@ function flash() {
   f.classList.add('on');
 }
 
+function whiteout() {
+  const w = $('#whiteout');
+  w.classList.remove('on');
+  void w.offsetWidth;
+  w.classList.add('on');
+}
+
+// The end screen, worded for whoever is looking at this phone.
+function showEnd(winIdx, reason) {
+  state.over = true;
+  turn = null;
+  hidePanel();
+  setStatus('');
+  $('#card-info').classList.add('hidden');
+  renderItems();
+  const winners = winIdx.map(i => state.players[i]).filter(Boolean);
+  const names = winners.map(p => p.name.toUpperCase()).join(' & ');
+  const mine = state.online === 'client' ? [state.players[state.view]] : state.players.filter(p => p.ctrl === 'local');
+  let title;
+  if (!winners.length) title = 'NOBODY WINS';
+  else if (mine.length === 1) title = winners.includes(mine[0]) ? 'YOU WIN' : !mine[0].alive ? 'YOU DIED' : `${names} ${winners.length > 1 ? 'WIN' : 'WINS'}`;
+  else title = `${names} ${winners.length > 1 ? 'WIN' : 'WINS'}`;
+  $('#game-over-title').textContent = title;
+  $('#game-over-reason').innerHTML = reason;
+  $('#btn-again').textContent = state.online === 'client' ? 'Back to party' : 'Play again';
+  setTimeout(() => $('#game-over').classList.remove('hidden'), 1200);
+}
+
 function toggleCover() {
   state.covered = !state.covered;
   Table.setCovered(state.covered);
@@ -744,15 +1349,16 @@ function toggleCover() {
   if (state.covered) selectCard(-1);
 }
 
-// Words under a bot's name in the room.
-function refreshTags(p) {
-  if (!p || p.you) return;
-  const tags = [];
-  if (p.bleeding) tags.push('BLEEDING');
-  if (p.unarmed) tags.push('UNARMED');
-  if (p.hasShotgun && p.shotgun > 0) tags.push('SHOTGUN');
-  if (teammateOf(p)) tags.push(teammateOf(p).you ? 'YOUR TEAMMATE' : 'TEAM');
-  Table.setTags(seatOf(p), tags);
+function resetHud() {
+  $('#btn-cover').textContent = 'Cover cards';
+  $('#card-info').classList.add('hidden');
+  $('#game-over').classList.add('hidden');
+  $('#curtain').classList.add('hidden');
+  $('#btn-again').textContent = 'Play again';
+  hidePanel();
+  $('#feed').innerHTML = '';
+  setStatus('');
+  document.body.classList.remove('bleeding', 'binoculars');
 }
 
 // ---------- HUD ----------
@@ -761,14 +1367,16 @@ function refreshTags(p) {
 // them) and one red mark per life.
 function renderGun() {
   const box = $('#my-gun');
-  const p = me();
+  const p = viewer();
   if (!p) return;
   ensureRounds(p, 3);
   const marks = Array.from({ length: Math.max(0, p.lives) }, () => '<i></i>').join('');
-  const status = !p.alive ? '' : p.unarmed ? '<div class="tag">UNARMED</div>'
+  const status = !p.alive ? '<div class="tag bleed">DEAD</div>' : p.unarmed ? '<div class="tag">UNARMED</div>'
     : p.shotgun > 0 ? `<div class="tag">SHOTGUN · ${p.shotgun} LIVE</div>` : '';
-  box.innerHTML = `<div class="gun-label">LIVES</div><div class="lives">${marks}</div>` +
-    (p.bleeding ? `<div class="tag bleed">BLEEDING OUT</div>` : '') + status +
+  const guards = (p.block ? '<div class="tag">SHIELD UP</div>' : '') + (p.reverse ? '<div class="tag">REVERSE</div>' : '');
+  box.innerHTML = (state.multi ? `<div class="gun-label who">${esc(p.name)}</div>` : '') +
+    `<div class="gun-label">LIVES</div><div class="lives">${marks}</div>` +
+    (p.bleeding ? `<div class="tag bleed">BLEEDING OUT</div>` : '') + status + guards +
     '<div class="gun-label">YOUR GUN</div>' + p.gun.slice(0, 3).map((r, i) => {
       const cls = r.known ? (r.live ? 'live' : 'blank') : 'unknown';
       const text = r.known ? (r.live ? 'LIVE' : 'BLANK') : '?';
@@ -779,27 +1387,31 @@ function renderGun() {
 
 function renderItems() {
   const bar = $('#items');
-  const p = me();
-  if (!p) return;
-  const can = state.myTurn && !state.busy && !state.over;
+  const p = viewer();
+  if (!p) { bar.innerHTML = ''; return; }
+  const can = !!turn && !state.busy && !state.over;
   let html = '';
   if (state.box && state.box.owner === p && !state.over) {
     html += `<button class="item box" data-box ${can ? '' : 'disabled'}><b>Open box</b><span>Two random items inside</span></button>`;
   }
-  html += p.items.map((id, i) => {
+  html += p.items.map(id => {
     const why = itemBlocked(id);
     return `<button class="item" data-item="${id}" ${can && !why ? '' : 'disabled'} title="${ITEMS[id].desc}"><b>${ITEMS[id].name}</b><span>${why || ITEMS[id].desc}</span></button>`;
   }).join('');
+  if (turn && !turn.canPlay) html += `<button class="item box" data-pass ${can ? '' : 'disabled'}><b>End turn</b><span>Your teammate plays the cards</span></button>`;
   bar.innerHTML = html ? `<div class="gun-label">ITEMS</div>${html}` : '';
   bar.querySelectorAll('[data-item]').forEach(b => b.addEventListener('click', () => useMyItem(b.dataset.item)));
   const boxBtn = bar.querySelector('[data-box]');
   if (boxBtn) boxBtn.addEventListener('click', openMyBox);
+  const pass = bar.querySelector('[data-pass]');
+  if (pass) pass.addEventListener('click', () => endTurnUI({ k: 'pass' }));
 }
 
 function renderAll() {
-  if (!state.mode) return;
+  if (!state.mode || !viewer()) return;
   $('#round-label').textContent = 'ROUND ' + state.round;
-  $('#mode-label').textContent = state.mode.label.toUpperCase() + ' · ' + state.mode.players + (state.mode.players === 1 ? ' PLAYER' : ' PLAYERS');
+  const people = state.players.filter(p => p.ctrl !== 'bot').length;
+  $('#mode-label').textContent = `${state.mode.label.toUpperCase()} · ${state.players.length} SEATS${people > 1 ? ` · ${people} PLAYERS` : ''}${state.online ? ' · ONLINE' : ''}`;
   renderGun();
   renderItems();
 }
@@ -808,10 +1420,11 @@ function selectCard(i) {
   state.selected = i;
   Table.select(i);
   const info = $('#card-info');
-  if (i < 0 || !me().hand[i]) { info.classList.add('hidden'); return; }
-  const c = CARD_BY_ID[me().hand[i]];
+  const me = viewer();
+  if (i < 0 || !me || !me.hand[i]) { info.classList.add('hidden'); return; }
+  const c = CARD_BY_ID[me.hand[i]];
   info.innerHTML = `<b>${c.name}</b>${c.effect}` +
-    (state.myTurn && !state.busy
+    (turn && turn.canPlay && !state.busy
       ? '<button class="play">Play card</button><small>or tap the card again, or drag it onto the table</small>'
       : '<small>Wait for your turn.</small>');
   const play = info.querySelector('.play');

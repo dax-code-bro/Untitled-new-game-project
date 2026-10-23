@@ -50,11 +50,19 @@ const Bots = (() => {
     const random = () => Math.floor(Math.random() * hand.length);
     if (difficulty === 'easy') return random();
 
-    // A Jack of Trades wins on the spot, so smart bots never sit on one.
+    // A Jack of Trades or a nuke wins on the spot, so smart bots never sit on one.
     if (find('jack') >= 0) return find('jack');
+    if (find('nuclear') >= 0) return find('nuclear');
 
     const next = bot.gun[0];
     const smart = difficulty === 'hard' || bot.personality === 'calculating' || bot.personality === 'cautious';
+
+    // Hurt or in danger: put up a shield or a reverse first.
+    if ((bot.bleeding || bot.lives <= 1) && !bot.block && find('block') >= 0 && (smart || chance(0.5))) return find('block');
+    if (bot.bleeding && !bot.reverse && find('reverse') >= 0 && (smart || chance(0.5))) return find('reverse');
+
+    // A grenade is worth the wound when there are several people to hit.
+    if (find('grenade') >= 0 && !bot.bleeding && (bot.foes || 1) >= 2 && (smart || chance(0.4))) return find('grenade');
 
     // A shotgun only lasts this round and never misses: take it.
     if (find('gun') >= 0 && (smart || chance(0.5))) return find('gun');
@@ -69,7 +77,7 @@ const Bots = (() => {
     if (next && !next.known && find('one') >= 0 && (smart || chance(0.5))) return find('one');
 
     // Otherwise keep the useful cards and play something else.
-    const keep = new Set(['jack', 'bloody', 'one', 'two', 'three']);
+    const keep = new Set(['jack', 'bloody', 'one', 'two', 'three', 'grenade', 'nuclear', 'block', 'reverse']);
     const filler = hand.map((id, i) => i).filter(i => !keep.has(hand[i]));
     if (filler.length && (smart || chance(0.6))) return pick(filler);
     return random();
@@ -83,6 +91,8 @@ const Bots = (() => {
     const enemies = others.filter(p => !mate(p));
     if (enemies.length) others = enemies;
     if (!others.length) return bot;
+    // a red Reverse ring sends the shot back: smart bots aim elsewhere
+    if (difficulty !== 'easy') { const safe = others.filter(p => !p.reverse); if (safe.length) others = safe; }
 
     // With a shotgun every shot kills: never point it at yourself.
     if (bot.shotgun > 0) {

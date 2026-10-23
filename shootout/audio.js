@@ -154,6 +154,47 @@ const Sound = (() => {
     noiseHit(t, { dur: 0.35, type: 'highpass', f: 2000, vol: 0.7 });
   }
 
+  // Grenade fuse tick.
+  function tick() {
+    if (!ensure()) return;
+    tone(ctx.currentTime, 1500, null, 0.06, 0.35, 'square');
+  }
+
+  // Big blast: a deep boom with a long rumble.
+  function explosion() {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    noiseHit(t, { dur: 2.2, f: 3000, f2: 60, vol: 1.8 });
+    tone(t, 70, 20, 1.6, 1.4);
+    noiseHit(t + 0.1, { dur: 1.8, type: 'bandpass', f: 300, f2: 80, vol: 0.8 });
+  }
+
+  // Air-raid siren rising and falling (Nuclear).
+  function siren() {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sawtooth';
+    for (let i = 0; i < 3; i++) {
+      o.frequency.setValueAtTime(300, t + i * 0.8);
+      o.frequency.linearRampToValueAtTime(900, t + i * 0.8 + 0.6);
+    }
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.25, t + 0.2);
+    g.gain.setValueAtTime(0.25, t + 2.2);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 2.5);
+    o.connect(g).connect(sfxGain);
+    o.start(t); o.stop(t + 2.6);
+  }
+
+  // Reverse: a whooshing pitch sweep.
+  function reverse() {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    tone(t, 1200, 200, 0.35, 0.25, 'triangle');
+    noiseHit(t, { dur: 0.3, type: 'bandpass', f: 2000, f2: 400, q: 3, vol: 0.4 });
+  }
+
   // Dry fire: the hammer falls on a blank.
   function blank() {
     if (!ensure()) return;
@@ -311,5 +352,5 @@ const Sound = (() => {
     if (sfxGain) sfxGain.gain.value = v;
   }
 
-  return { unlock, gunshot, shotgun, thud, creak, chime, gulp, smash, cock, blank, impact, cardFlick, startMusic, stopMusic, setIntensity, setMusicVolume, setSfxVolume };
+  return { unlock, gunshot, shotgun, tick, explosion, siren, reverse, thud, creak, chime, gulp, smash, cock, blank, impact, cardFlick, startMusic, stopMusic, setIntensity, setMusicVolume, setSfxVolume };
 })();

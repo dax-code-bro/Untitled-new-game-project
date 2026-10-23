@@ -36,6 +36,53 @@
       <button class="circle" data-mode="trios"><span>Trios</span><small>3 players · 2 bots</small></button>
       <button class="circle bloody" data-mode="bloody"><span>Bloody Mary</span><small>4 players · 3 bots</small></button>
     </div>
+
+    <div id="who">
+      <div class="who-tabs" role="tablist">
+        <button type="button" data-who="bots" class="on">Me vs bots</button>
+        <button type="button" data-who="same">Same phone</button>
+        <button type="button" data-who="friends">Friends</button>
+      </div>
+
+      <div id="who-bots" class="who-panel">
+        <p>Just you. Every other seat is a bot.</p>
+      </div>
+
+      <div id="who-same" class="who-panel hidden">
+        <p>Share this phone. Each player gets a "pass the phone" screen before their turn, so nobody sees the others' cards.</p>
+        <div class="stepper">
+          <span>Players on this phone</span>
+          <button type="button" id="hs-minus" aria-label="Fewer players">−</button>
+          <b id="hs-count">2</b>
+          <button type="button" id="hs-plus" aria-label="More players">+</button>
+        </div>
+        <div id="hs-names" class="name-boxes"></div>
+      </div>
+
+      <div id="who-friends" class="who-panel hidden">
+        <div class="id-row">
+          <div>Your player ID <b id="my-pid" class="pid"></b></div>
+          <label>Your name <input id="my-name" maxlength="20"></label>
+        </div>
+        <div id="friends-offline" class="hidden">
+          <p class="muted">Online play works when the game is opened from its claude.ai link. Your friends also need to be invited to it from the Share menu.</p>
+        </div>
+        <div id="friends-online">
+          <form id="invite-form">
+            <label for="invite-id">Friend's player ID</label>
+            <div class="invite-row"><input id="invite-id" maxlength="6" placeholder="K7Q2XD" autocomplete="off" autocapitalize="characters"><button type="submit">Invite</button></div>
+            <small id="invite-note"></small>
+          </form>
+          <h4>Your party</h4>
+          <ul id="party-list" class="people"></ul>
+          <p id="party-note" class="muted"></p>
+          <button type="button" id="btn-leave-party" class="hidden">Leave party</button>
+          <h4>Online now</h4>
+          <ul id="online-list" class="people"></ul>
+        </div>
+      </div>
+    </div>
+
     <button class="back" data-go="menu">Back</button>
   </div>
 </section>
@@ -106,6 +153,21 @@
   </div>
 </section>
 
+<div id="pid-chip" title="Your player ID. Friends type it to invite you."></div>
+
+<div id="invite-pop" class="hidden" role="dialog" aria-label="Party invite">
+  <h3>PARTY INVITE</h3>
+  <p id="invite-text"></p>
+  <div class="row"><button type="button" onclick="answerInvite(true)">Accept</button><button type="button" onclick="answerInvite(false)">Decline</button></div>
+</div>
+
+<div id="curtain" class="hidden">
+  <p id="curtain-text"></p>
+  <small>Everyone else, look away.</small>
+  <button type="button" id="curtain-go"></button>
+</div>
+
+<div id="whiteout"></div>
 <div id="fade"></div>
 
 <script src="vendor/three.min.js"></script>
@@ -113,6 +175,7 @@
 <script src="cards.js"></script>
 <script src="items.js"></script>
 <script src="bots.js"></script>
+<script src="net.js"></script>
 <script src="audio.js"></script>
 <script src="models.js"></script>
 <script src="fx.js"></script>

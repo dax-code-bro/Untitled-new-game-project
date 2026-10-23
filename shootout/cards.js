@@ -1,15 +1,15 @@
 // Shootout — card definitions.
-// Every card in the game lives here. Cards without rules yet say so in
-// their `effect` text.
+// Every card in the game lives here. Rare cards carry a `handChance`: the
+// chance that a dealt hand holds one (never more than one).
 
 const CARDS = [
   { id: 'jack',     name: 'Jack of Trades', icon: '🃏', corner: 'J',  style: '',         effect: 'Play it and you win the game on the spot.', instantWin: true, handChance: 0.10 },
   { id: 'bloody',   name: 'Bloody Mary',    icon: '🩸', corner: 'BM', style: 'dark red', effect: 'Forces a shootout right now: everyone must shoot themself or someone else.', forcesShootout: true, handChance: 0.20 },
   { id: 'gun',      name: 'Gun',            icon: '🔫', corner: 'G',  style: '',         effect: 'Gives you a shotgun for this round: 2 shells, both live, and one hit kills anyone.', shotgun: true },
-  { id: 'grenade',  name: 'Grenade',        icon: '💣', corner: 'GR', style: '',         effect: 'Effect not written yet.' },
-  { id: 'nuclear',  name: 'Nuclear',        icon: '☢️', corner: 'N',  style: 'dark',     effect: 'Effect not written yet.' },
-  { id: 'block',    name: 'Block',          icon: '🛡️', corner: 'B',  style: '',         effect: 'Effect not written yet.' },
-  { id: 'reverse',  name: 'Reverse',        icon: '🔄', corner: 'R',  style: '',         effect: 'Effect not written yet.' },
+  { id: 'grenade',  name: 'Grenade',        icon: '💣', corner: 'GR', style: '',         effect: 'Blows up the table: everyone else is hit and loses all their cards and items. You keep yours, but the blast leaves you bleeding out too.', grenade: true, handChance: 0.08 },
+  { id: 'nuclear',  name: 'Nuclear',        icon: '☢️', corner: 'N',  style: 'dark',     effect: 'Launches a nuclear bomb on the table. Everyone else is wiped out and you win on the spot.', nuke: true, handChance: 0.03 },
+  { id: 'block',    name: 'Block',          icon: '🛡️', corner: 'B',  style: '',         effect: 'A steel shield rises in front of you. It stops the next hit you would take this round: a bullet, a shotgun blast or a grenade.', block: true },
+  { id: 'reverse',  name: 'Reverse',        icon: '🔄', corner: 'R',  style: '',         effect: 'The next live shot someone fires at you this round turns around and hits them instead.', reverse: true },
   { id: 'one',      name: '1',              icon: '1',  corner: '1',  style: '',         effect: 'Secretly shows you if the next round in your gun is live or blank.', peek: 1 },
   { id: 'two',      name: '2',              icon: '2',  corner: '2',  style: '',         effect: 'Secretly shows you if the 2nd round in your gun is live or blank.', peek: 2 },
   { id: 'three',    name: '3',              icon: '3',  corner: '3',  style: '',         effect: 'Secretly shows you if the 3rd round in your gun is live or blank.', peek: 3 },
@@ -31,6 +31,7 @@ function dealHand(size = HAND_SIZE) {
   const freeSlots = [...hand.keys()];
   for (const rare of CARDS.filter(c => c.handChance)) {
     if (Math.random() < rare.handChance) {
+      if (!freeSlots.length) break;
       const [slot] = freeSlots.splice(Math.floor(Math.random() * freeSlots.length), 1);
       hand[slot] = rare.id;
     }

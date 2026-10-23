@@ -289,3 +289,65 @@ body.binoculars #bino-mask { opacity: 1; }
   #my-gun { top: 26%; }
   #card-info { bottom: 34%; }
 }
+
+/* ---------- player ID, who's playing, invites ---------- */
+#pid-chip {
+  position: fixed; top: calc(6px + env(safe-area-inset-top, 0px)); right: 8px; z-index: 120;
+  font: bold 12px/1 Georgia, serif; letter-spacing: 0.12em; color: #f0d8a0;
+  background: rgba(10, 6, 3, 0.85); border: 1px solid #8a6a3a; padding: 5px 8px; pointer-events: none;
+}
+.game-buttons { top: 36px !important; }
+#status { top: 74px !important; width: min(92vw, 640px); }
+
+.mode-box { max-height: calc(100vh - 32px); overflow-y: auto; }
+#who { width: min(560px, 100%); display: flex; flex-direction: column; gap: 12px; color: #c8c0b0; font-size: 14px; }
+.who-tabs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.who-tabs button { background: #141414; color: #b0b0b0; border: 1px solid #333; padding: 8px 14px; font-size: 14px; letter-spacing: 0.06em; }
+.who-tabs button.on { background: #0f3a18; color: #d8ffd8; border-color: #2bd14a; }
+.who-panel { display: flex; flex-direction: column; gap: 10px; }
+.who-panel p { margin: 0; line-height: 1.4; }
+.muted { color: #8a8478; }
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper button { width: 34px; height: 34px; background: #1a1a1a; color: #e8dcc4; border: 1px solid #444; font-size: 18px; }
+.name-boxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+.name-boxes input, #my-name, #invite-id {
+  background: #101010; color: #f0e8d8; border: 1px solid #444; padding: 8px; font: 15px Georgia, serif; min-width: 0;
+}
+.id-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; }
+.id-row label { display: flex; gap: 6px; align-items: center; }
+.pid { font-size: 20px; letter-spacing: 0.18em; color: #f0d8a0; margin-left: 6px; }
+#invite-form { display: flex; flex-direction: column; gap: 4px; }
+.invite-row { display: flex; gap: 6px; }
+.invite-row input { flex: 1; text-transform: uppercase; letter-spacing: 0.15em; }
+.invite-row button, #btn-leave-party, .people button {
+  background: #0f3a18; color: #d8ffd8; border: 1px solid #2bd14a; padding: 6px 12px; font-size: 14px;
+}
+#invite-note { color: #e0b040; min-height: 1em; }
+#who h4 { margin: 6px 0 0; color: #e0c890; letter-spacing: 0.12em; font-size: 12px; text-transform: uppercase; }
+.people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.people li { display: flex; align-items: center; gap: 8px; background: #0e0e0e; border: 1px solid #222; padding: 6px 8px; }
+.people li small { color: #8a8478; letter-spacing: 0.1em; flex: 1; }
+.people li.muted { border-style: dashed; }
+.circle[disabled] { opacity: 0.4; cursor: default; transform: none; }
+
+#invite-pop {
+  position: fixed; left: 50%; top: 18%; transform: translateX(-50%); z-index: 130;
+  width: min(360px, calc(100vw - 32px)); background: rgba(10, 30, 14, 0.97); border: 2px solid #2bd14a;
+  box-shadow: 0 0 40px rgba(40, 220, 80, 0.35); padding: 18px; text-align: center; color: #e8f8e8;
+}
+#invite-pop h3 { margin: 0 0 8px; letter-spacing: 0.2em; }
+#invite-pop .row { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+#invite-pop button { background: #0f3a18; color: #fff; border: 1px solid #2bd14a; padding: 10px 18px; font-size: 16px; }
+
+#curtain {
+  position: fixed; inset: 0; z-index: 110; background: #050302;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 16px;
+}
+#curtain p { font-size: clamp(26px, 7vw, 48px); color: #e0c890; letter-spacing: 0.08em; margin: 0; }
+#curtain small { color: #8a7a60; }
+#curtain button { background: #6a1a10; color: #fff0d8; border: 2px solid #e0a040; padding: 14px 28px; font-size: 20px; letter-spacing: 0.12em; }
+
+#whiteout { position: fixed; inset: 0; z-index: 105; background: #fffaf0; opacity: 0; pointer-events: none; }
+#whiteout.on { animation: whiteout 3.2s ease-out; }
+@keyframes whiteout { 0% { opacity: 0; } 8% { opacity: 1; } 60% { opacity: 0.9; } 100% { opacity: 0; } }
+#my-gun .gun-label.who { color: #f0d8a0; font-size: 13px; }
