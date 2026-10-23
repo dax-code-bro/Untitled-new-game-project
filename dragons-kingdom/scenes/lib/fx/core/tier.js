@@ -6,11 +6,15 @@
 // draft frame predicts the final frame.
 //
 // Tier resolution order (first that is set wins):
-//   createFx(ctx, { tier })            explicit ('draft' | 'preview' | 'final' | 'ultra')
+//   createFx(ctx, { tier })            explicit ('draft' | 'preview' | 'final' | 'ultra'; also
+//                                      low / medium / high / hero ...)
 //   ctx.quality.fxTier / ctx.quality.tier   (render presets / the gpu-tier track)
 //   ctx.meta.fxTier
 //   auto: from the preset and the GPU: SwiftShader (CPU) never above 'preview'; a real GPU gets
 //         'final' at the final presets and 'ultra' when ctx.quality.tier === 'ultra'.
+// What a tier scales: particle counts (smoke, dust, fire, sparks, water spray; density
+// renormalised), shadow-grid and noise-volume resolution, ray-march and shadow steps, cloth grid,
+// fracture (fragment counts and variants), decal SSR steps (16 / 24 / 32 / 48), decal resolution.
 
 export const TIERS = {
   // CPU iteration on the cloud box (960x540)
@@ -33,11 +37,19 @@ export function glRendererName(renderer) {
 }
 export const isSoftwareGL = (name) => /swiftshader|llvmpipe|softpipe|software/i.test(name);
 
-/** Pick the tier for this render. Returns a copy of the tier object (+ .gpu, .reason). */
+// other names a quality setting may use (the runtime's own tiers, a preset) -> the FX tier
+const ALIASES = { low: 'draft', fast: 'draft', cpu: 'draft', medium: 'preview', mid: 'preview', high: 'final', gpu: 'final', '4k': 'final', hero: 'ultra', epic: 'ultra', max: 'ultra' };
+export const tierName = (n) => (n == null ? null : TIERS[n] ? n : ALIASES[String(n).toLowerCase()] || null);
+
+/**
+ * Pick the tier for this render. Returns a copy of the tier object (+ .gpu, .reason).
+ * ctx.quality.fxParticles (a number) further scales the particle counts of the chosen tier
+ * (a render PC with headroom can ask for 1.5x without changing anything else).
+ */
 export function resolveTier(ctx, want) {
   const gl = glRendererName(ctx.renderer);
   const soft = isSoftwareGL(gl);
-  let name = want && want !== 'auto' ? want : (ctx.quality?.fxTier || ctx.quality?.tier || ctx.meta?.fxTier || null);
+  let name = tierName(want && want !== 'auto' ? want : (ctx.quality?.fxTier || ctx.quality?.tier || ctx.meta?.fxTier || null));
   let reason = name ? 'explicit' : 'auto';
   if (!name || !TIERS[name]) {
     const p = ctx.preset || 'final';
@@ -45,7 +57,10 @@ export function resolveTier(ctx, want) {
     else name = p === 'draft' ? 'preview' : p === 'preview' ? 'preview' : 'final';
     reason = `auto (${p}, ${soft ? 'software GL' : 'GPU'})`;
   }
-  return { ...TIERS[name], gpu: !soft, glRenderer: gl, reason };
+  const t = { ...TIERS[name], gpu: !soft, glRenderer: gl, reason };
+  const k = Number(ctx.quality?.fxParticles);
+  if (Number.isFinite(k) && k > 0) t.particles *= k;
+  return t;
 }
 
 /** Scale a particle count by the tier (at least `min`). */

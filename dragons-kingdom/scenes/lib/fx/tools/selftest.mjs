@@ -14,6 +14,7 @@ import { house } from '../../architecture/house.js';
 import { ballistic } from '../core/util.js';
 import { liveRange } from '../smoke.js';
 import { registerDirectorFx, DIRECTOR_KINDS } from '../index.js';
+import { resolveTier } from '../core/tier.js';
 
 let fails = 0, n = 0;
 const ok = (c, msg) => { n++; if (!c) { fails++; console.log(`FAIL ${msg}`); } else console.log(`ok   ${msg}`); };
@@ -105,6 +106,16 @@ for (let t = 0; t < 1.3 - 1e-12; t += dt) { for (let k = 0; k < 3; k++) { const 
 ok(Math.hypot(p[0] - x[0], p[1] - x[1], p[2] - x[2]) < 2e-3, `util: closed-form drag ballistic matches integration (err ${Math.hypot(p[0] - x[0], p[1] - x[1]).toExponential(1)} m)`);
 const [i0, i1] = liveRange(10, 0, 100, 20, 3);
 ok(i0 <= 7 * 20 && i1 >= 10 * 20 - 1 && i1 - i0 < 3 * 20 + 3, `smoke: live particle range [${i0}, ${i1}] covers exactly the last 3 s`);
+
+// ---- quality tiers: the CPU box never goes above preview; a GPU scales up with the preset
+{
+  const fake = (name, preset, quality = {}) => ({ preset, quality, renderer: { getContext: () => ({ getExtension: () => ({ UNMASKED_RENDERER_WEBGL: 1 }), getParameter: () => name }) } });
+  const sw = 'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)', rtx = 'ANGLE (NVIDIA, NVIDIA GeForce RTX 4090 Direct3D11 vs_5_0 ps_5_0, D3D11)';
+  const r = [resolveTier(fake(sw, 'draft')).name, resolveTier(fake(sw, 'final')).name, resolveTier(fake(rtx, 'preview')).name, resolveTier(fake(rtx, 'final')).name, resolveTier(fake(rtx, 'final', { tier: 'hero' })).name, resolveTier(fake(rtx, 'final', { fxTier: 'high' })).name];
+  ok(r.join() === 'draft,preview,preview,final,ultra,final', `tiers: CPU draft/final -> ${r[0]}/${r[1]}, RTX preview/final/hero/high -> ${r.slice(2).join('/')}`);
+  const t = resolveTier(fake(rtx, 'final', { fxParticles: 1.5 }));
+  ok(Math.abs(t.particles - 1.5) < 1e-9 && t.gpu, 'tiers: ctx.quality.fxParticles scales the particle counts on a GPU');
+}
 
 // ---- director kinds
 const reg = new Map();

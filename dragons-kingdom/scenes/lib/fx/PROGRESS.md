@@ -9,19 +9,36 @@ API and usage: `README.md` in this folder. Self-test: `node scenes/lib/fx/tools/
 | module | status | lookdev |
 |---|---|---|
 | `core/` manager, particles (puff / drop / glow / chip / flame / shimmer capsules with shutter streaks, energy-normalised), depth twins, light rig, noise volume, deep-shadow grid, tiers, late pass | done | all |
-| `core/decal.js` projected film decals (static, skinned, ground, plane) - coat / splat / spatter / stamps / run / smear / soak / pool / burn / scorch / char / wet / gash | done; smear still a little uniform | `fx-blood.js` |
+| `core/decal.js` projected film decals (static, skinned, ground, plane) - coat / splat / spatter / stamps / run / smear / soak / pool / burn / scorch / char / wet / gash; screen-space reflections of the surroundings in wet ground / wall films (late pass) | done; smear still a little uniform | `fx-blood.js`, `fx-cling.js` |
 | `blood.js` spray (drops stamped where they land), drip, pool, film decals, blood in water, tint | done | `fx-blood.js`, `fx-water.js` |
 | `dust.js` downwash (wall jet + ring vortex; wall thickened so its tangent edge is not a straight cut), cloud, haze; multiple scattering | done | `fx-dust.js`, `fx-director.js` |
-| `debris.js` collapse / burst / boards / turf: closed-form flight, bounces, slide, settle on a stable face; props breakables; torn sod with grass and roots | done | `fx-destruction.js`, `fx-director.js` |
+| `debris.js` collapse / burst / boards / turf: closed-form flight, bounces off ground AND wall faces, slide, settle on a stable face, tilt onto what is under it; piles (later pieces lie on earlier ones); tiles / plaster shatter on hard impacts; roof-slope slide pre-segment; toppling over an edge; held pieces; props breakables; torn sod; rafters, battens, wattle-and-daub | done | `fx-destruction.js`, `fx-cling.js`, `fx-director.js` |
+| `destruction.js` Cling: `damageCapture` + `roofline` (the set's own removed tiles held, then blown / sliding off in sheets; clay + stone slate in the set's batch and height), `object` (thrown / toppling prop), `split` + `sweep` (a prop coming apart into its loose parts), after-state = same cues with t0 = -100 | done | `fx-cling.js` |
 | `smoke.js` plume / trail / wisp (wood, chimney, smoulder, soot, cloth, steam, pipe, herb) | done | `fx-smoke.js` |
 | `fire.js` jet (flames, 3 lights, embers, soot, shimmer, scorch), burn, embers, shimmer | working; jet core still soft near the mouth, Leaf's blue jet reads as a violet blob | `fx-fire.js` |
 | `water.js` splash, spray, foam, trail, churn, downwash ring on the FFT ocean | done | `fx-water.js` |
 | `gore.js` wing root, open fracture, scalp, burned rider, garment holes | working; reads as gore but still a little CG (bone too clean, scalp blood thin, rider burn small in frame) | `fx-gore.js` |
 | `cloth.js` banner (release, gust, real split tear), drape over a body, fabric material | done | `fx-cloth.js`, `fx-director.js` |
 | `sparks.js` sparks, ash | done | `fx-cloth.js`, `fx-director.js` |
-| `director.js` 34 director cue kinds via `registerDirectorFx` | done (gore / body decals wait on `api.actor`) | `fx-director.js` |
+| `director.js` 37 director cue kinds via `registerDirectorFx` (+ debris-roofline / debris-object / debris-sweep; thrown props go home when their cue is off) | done (gore / body decals wait on `api.actor`) | `fx-director.js` |
+| `core/tier.js` tiers + aliases (low / medium / high / hero), `ctx.quality.fxParticles` scale, self-tested CPU vs RTX selection | done | selftest |
 
 ## Notes / decisions
+
+* **The violet pools were a bug, not physics**: the decal shine material replaced three's
+  `material.defines` (STANDARD / PHYSICAL) with its own, so the physical chunk lost IOR and
+  USE_SPECULAR and the base layer became a 4 % mirror with F90 = 1 under the clearcoat - a
+  second sky reflection on every film. Fixed (defines merged); liquids now have `spec: 0` (one
+  interface: the clearcoat). Pools are dark maroon and mirror what is around them (SSR).
+* Multiple-scattering octaves in the puff shader are energy-normalised (`1 / (1 + 0.75 (ms + ms^2))`):
+  dust / smoke / steam were up to 2.3x brighter than a matte surface of their albedo (cotton-wool
+  white dust next to lime-washed walls). All particle FX got a little darker and more textured.
+* Roofline tiles are plain meshes (not instanced): the architecture's tile shader computes its
+  world normal from modelMatrix only. A few hundred draw calls per roof hole.
+* Debris impact dust is normalised by the number of impacts (sqrt(30 / n)): a roof's worth of
+  slates makes one cloud, not 400 opaque puffs.
+* Thrown objects standing on the ground used to "land" at t0 (the spin pushed their box corner
+  into the ground at once): they now pivot over their far bottom edge first (`solvePiece` pivot).
 
 * Liquids are shaded as films: pass 1 multiplies the surface underneath by the film's
   transmittance (thin blood tints skin / plaster red, thick blood hides it), pass 2 is a
@@ -49,6 +66,16 @@ API and usage: `README.md` in this folder. Self-test: `node scenes/lib/fx/tools/
 
 ## Renders looked at (scratch, `.../scratchpad/eng1/fx/`)
 
+* cling v1-v13 (`cling/sheet-v*.png`): held slates indistinguishable from the roof before the
+  strike (v2-24.3), sheets sliding off the eaves (v8-10.6), piles at the wall foot, shards on
+  the paving, stall toppling then tumbling into the square with its goods flying (v7), roof
+  holes after (v8-33: bare deck boards - see REQUEST architecture), pool along the joints
+  dark red after the define fix (v12, v13), smear under the sill.
+* pool tests (`pool/sheet-a..f.png`, `pool/crop-j.png`): reflections of the wall / post / a beam
+  lying in the pool; `blood2/sheet-d.png`: the blood lookdev after the fix.
+* `ms/sheet-ms.png`: dust / smoke / fire after the energy normalisation (downwash dust brown and
+  textured instead of creamy).
+
 * blood v1-v4 (`sheet-blood-v4.png`): spray stamps on the wall read as spatter; face spatter
   reads; smear still too uniform; soak edge fixed; pool colour purple under blue sky (see above).
 * destruction v2 (`sheet-destr-v2.png`): collapse reads, pieces rest flat, bright dust.
@@ -61,11 +88,23 @@ API and usage: `README.md` in this folder. Self-test: `node scenes/lib/fx/tools/
   drape over a body (head / feet readable); sparks visible after `conserve: false`.
 * director v1-v6 (`sheet-dir-v*.png`, `crop-turf6.png`): cues match direct calls exactly; turf.
 
-## Next
+## Next (round 3)
+
+1. Fire jet core + Leaf palette (still open), gore polish (still open), blood on Charcoal's
+   scales (F1 bite) - see below.
+2. Cling: crumbling plaster panels out of the timber-framed storey under the strike (use
+   `burst` with `daub` + `plaster` from the struck panel today); a falling beam that hinges at
+   one end (3C-13 / R15-02) - the pivot segment can do it.
+3. SSR: rough films could blur the trace; rays leaving the frame fall back to the sky map.
+
+## Next (round 2, kept for reference)
 
 1. Fire jet: denser, hotter core near the mouth; Leaf palette less violet-blob.
 2. Gore: scalp blood sheets heavier; fracture bone with marrow / blood film; frame the burns.
 3. Blood carried along Charcoal's neck (F1 bite): a lookdev on the creature's scales.
 4. REQUESTS outstanding: director `api.actor(name)` + live `point` for FX factories; runtime
    aerial perspective for late transparent objects; humans costume-damage states (torn hose,
-   burned sleeve as garment variants instead of holes in the shader).
+   burned sleeve as garment variants instead of holes in the shader); architecture: a damage
+   region that also breaks the deck boards / battens (a dark hole into the roof space, broken
+   rafter ends) instead of bare boards; props: `stall(F, kind, { ground: false })` or the ground
+   goods as separate groups (the sweep splits them today by connectivity).

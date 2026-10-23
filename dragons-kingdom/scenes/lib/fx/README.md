@@ -55,6 +55,11 @@ resolutions, never the look: per-particle density is renormalised so a cloud kee
 * `fx.blood.coat | splat | spatter | stamps | runs | smear | soak ({ target, at, dir, size, t0, grow, dry })`
   film decals on skin, scales, cloth, stone - two passes (transmittance multiply + lit wet film
   with clearcoat and meniscus bump), wet -> dry (`dry: [t0, t1]`), skinned meshes follow the bones.
+* wet films on the ground and walls (`pool`, `smear`, `stamps`, `splat`, `wet`) mirror their
+  SURROUNDINGS: a screen-space reflection marched against the scene's depth in the late pass
+  (house fronts, a beam lying in the pool, people), the sky map only where the ray leaves the
+  frame (`ssr: false | steps`, `ssrStrength`; steps by tier 16 / 24 / 32 / 48). A liquid film has
+  one interface: liquids carry `spec: 0` (no second mirror under the clearcoat).
 * `fx.blood.water({ at, height(x,z,t), t0, radius })` blood clouding sea / bowl water; `fx.blood.tint(conc)`
   for tinted-water states (pink bowl, runoff).
 
@@ -71,17 +76,52 @@ resolutions, never the look: per-particle density is renormalised so a cloud kee
 **Dust (`dust.js`)** - F5
 * `fx.dust.downwash({ at, t0, bursts: [s...], radius, strength, color })` wall jet + rolling ring vortex
   per downstroke (take-off / landing; colours `loam`, `chalk`, `sand`, `road`, `ash`).
-* `fx.dust.cloud({ at, t0, radius, dir, speed, color, life })` impact / collapse cloud.
+* `fx.dust.cloud({ at, t0, radius, dir, speed, spread, color, life, grow, thin, fall })` impact /
+  collapse cloud (`grow`: how fast the puffs swell, `thin`: dilution 1/s, `fall`: share of heavy
+  dust falling with the debris).
 * `fx.dust.haze({ box, t0, t1, density, color })` settling haze.
 
-**Debris and destruction (`debris.js`)** - F6, 1C take-off (async: `await`)
-* `await fx.debris.collapse({ box, t0, dir, speed, pieces })` a roof / wall section: tiles, beams, plaster.
-* `await fx.debris.burst({ at | box, dir, spread, speed, t0, pieces: { tile: 20, plaster: 30 } })`.
+**Debris and destruction (`debris.js`, `destruction.js`)** - F6, 1C take-off (async: `await`)
+* **The set's own roofline coming down (3C-11)** - build the set with a capture of its damage
+  region, then bring exactly those tiles down:
+  ```js
+  const cap = fx.debris.damageCapture((x, y, z) => inHole(x, y, z), { name: 'cling-3c' });
+  const set = await clingSquare(ctx, { damage: cap.damage });   // house(): damage + { toWorld }
+  await fx.debris.roofline({ capture: cap, set: set.group, t0: 1.2, impact: [x, y, z], dir: [0.5, -0.3, 0.8], speed: 9, walls });
+  ```
+  The architecture asks the capture about every tile it lays; the removed ones come back as FX
+  tiles of the same size (clay plain tiles or stone slates, read from the course layout), in the
+  roof's own clay / slate batch and at the height of the set's neighbouring tiles (read from its
+  tile mesh) - HELD in place until the failure reaches them, so the shot can open on the intact
+  roof. Near the impact (`blast`, m) tiles, battens, rafters, deck boards and splinters are
+  blown along `dir`; beyond it the roof lets go in sheets (`sheet: [0.9, 0.7]` m) that slide down
+  the slope (g (sin a - mu cos a), `mu`), lowest first, and tip off the eaves. Dust: a grey-brown
+  strike cloud, curtains pouring off the eaves with the biggest sheets, lime dust where it lands,
+  settling haze (`dust: false | { color, strength, curtains, haze }`).
+* `fx.debris.object({ object, t0, dir, speed, spin })` throws a whole prop (the guard's spear, the
+  watchman's cup, a crate); standing on the ground it first TOPPLES over its far bottom edge
+  (`topple`, `carry`), then tumbles; it is held where the set put it until t0.
+* `fx.debris.sweep({ object, t0, dir, speed })` (3C-12, the vendor's stall): the prop is split
+  into its loose parts (`fx.debris.split`: connected pieces of its merged meshes, grouped by
+  overlapping bounds - a basket with its apples, a barrel with its hoops; a loaf merely resting on
+  the counter is its own part); the frame topples and tumbles, everything loose is thrown with the
+  gust, the lighter the further.
+* `await fx.debris.collapse({ box, t0, dir, speed, pieces })` a generic roof / wall section.
+* `await fx.debris.burst({ at | box, dir, spread, speed, t0, pieces: { tile: 20, plaster: 30, daub: 6 } })`.
 * `await fx.debris.boards({ at, dir, t0, count, speed })` stage boards scything across the paving.
 * `await fx.debris.turf({ at, radius, t0, bursts, speed })` torn sod (grass on top, roots under),
   clods, stones under a take-off.
-* every piece is a real mesh (the props festival breakables when present); flight with drag,
-  bounces with restitution and friction, slide, settle on a stable face; impact grit + dust.
+* pieces: tile, tileShard, beam, rafter, batten, board, splinter, plaster, daub (lime face, clay
+  daub and the hazel wattle in the broken back), stone, turf, clod; the props festival breakables
+  when present. Closed-form flight with drag, bounces (restitution + Coulomb friction) off the
+  ground and off wall faces (`walls: [{ p, n, width, height }]`), slide, settle on a stable face.
+  **Piles**: pieces are solved in the order they come to rest, each against the ground plus the
+  pieces already lying there (a sparse height grid), and tilt to lie on what is under them.
+  **Shattering**: clay tiles break into 2-4 shards, plaster into crumbs, at hard impacts
+  (`shatter: false`, `shatterAt`). Impact grit + dust (the dust of many impacts is shared, not
+  stacked). Everything is solved once in setup; any frame is drawn alone.
+* **After-state (3D, X27, X28)**: build the same calls with `t0` far in the past (e.g. -100): every
+  piece lies where it came to rest in 3C (`effect.restPoses()`, `thrown.restPose()`).
 
 **Smoke (`smoke.js`)** - F2, F4, F5
 * `fx.smoke.plume({ at, t0, t1, kind, rate, size, wind })` kinds `wood`, `chimney`, `smoulder`, `soot`,
@@ -111,10 +151,11 @@ resolutions, never the look: per-particle density is renormalised so a cloud kee
 
 ## Director cues (`director.js`)
 
-`scenes/lib/director/fx.js` imports `registerDirectorFx` from `index.js`; 34 kinds are registered:
+`scenes/lib/director/fx.js` imports `registerDirectorFx` from `index.js`; 37 kinds are registered:
 
 `blood-spray blood-drip blood-pool blood-decal blood-water dust-downwash dust-cloud dust-haze
-debris-burst debris-collapse debris-boards debris-turf smoke-plume smoke-trail smoke-wisp fire-jet
+debris-burst debris-collapse debris-boards debris-turf debris-roofline debris-object debris-sweep
+smoke-plume smoke-trail smoke-wisp fire-jet
 fire-burn embers heat-shimmer scorch water-splash water-spray water-foam water-trail water-churn
 water-downwash gore-wing-root gore-fracture gore-scalp gore-burned-rider cloth-banner cloth-drape
 sparks ash-fall`
@@ -126,6 +167,11 @@ fx: [
   { kind: 'gore-wing-root', id: 'scout', from: 0, params: { actor: 'scout', side: 'L' } },
 ]
 ```
+
+`debris-roofline` takes `params.capture` = the name given to `fx.debris.damageCapture(region, { name })`
+when the set was built (and `params.set` = a set object to match the tiles to; default the set's
+group); `debris-object` / `debris-sweep` take `params.object` = a set object name. A thrown prop
+goes back where the set has it whenever its cue is not running.
 
 `params` are the library call's options verbatim; t0 = 0 at the cue's `from`. `at` is an array, a
 set mark, a set object, or an actor point (followed through the director's pure blocking
@@ -143,14 +189,19 @@ renders cues through the director's `FxRunner` (and matches the direct calls fra
   perspective and DOF see smoke and dust at their own distance, not the background's.
 * The shared light rig reads the scene's sun / sky / ground and up to 4 point lights (fire light
   reaches smoke and dust); clouds self-shadow through a deep-shadow grid and take multiple-
-  scattering octaves so thick dust is bright, not sooty.
+  scattering octaves so thick dust is bright, not sooty - energy-normalised: the lit side of an
+  optically thick cloud of albedo a looks like a matte surface of about that albedo (never
+  brighter than the lime-washed wall beside it).
 * Decals and water patches render in the late pass where they need the scene's depth / colour.
 
 ## Lookdev scenes
 
-`scenes/lookdev/fx-blood.js`, `fx-gore.js`, `fx-dust.js`, `fx-destruction.js`, `fx-smoke.js`,
-`fx-fire.js`, `fx-water.js`, `fx-cloth.js`, `fx-director.js` - each a few views of a few seconds
-with scale references (grey ball albedo 0.4, 1.8 m post).
+`scenes/lookdev/fx-blood.js`, `fx-gore.js`, `fx-dust.js`, `fx-destruction.js`, `fx-cling.js`,
+`fx-smoke.js`, `fx-fire.js`, `fx-water.js`, `fx-cloth.js`, `fx-director.js` - each a few views of
+a few seconds with scale references (grey ball albedo 0.4, 1.8 m post). `fx-cling.js`: two Cling
+townhouses from the architecture library (clay and stone-slate roofs, both built with holes
+through `damageCapture`), the vendor's stall from the props library swept apart, stage boards,
+the after-state 100 s later, the pool along the paving joints and the smear down the front.
 
 ```
 node render/render.mjs --still scenes/lookdev/fx-cloth.js --time 1.7 --preset draft --png out.png
