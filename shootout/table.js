@@ -13,12 +13,16 @@ const Table = (() => {
   const DECK_POS = V(0.38, TABLE_Y, 0.15);
 
   let scene, camera, rig, handHolder, stage;
-  let lamp, hemi, myGun, myGunRest;
+  let lamp, hemi, myGun, myGunRest, myShotgun = null, myShotgunRest, boxObj = null;
   let shelves = [], deskL, deskR, picture, doorObj, decals = [], cracks = [], pools = [];
   let seats = [];          // seats[i] = { group, rig?, cards: [], label, dead, name }
   let pile = [];
   let ravageTarget = 0, ravage = 0, showBlood = true;
   let flicker = 1, hovered = -1, selected = -1, covered = false;
+  let drag = null;           // a card being dragged up out of your hand
+  let fovLock = false;       // true while an animation zooms the camera
+  // Wider view on tall phone screens so the table and your cards still fit.
+  const baseFov = () => (camera.aspect < 0.8 ? 74 : camera.aspect < 1.2 ? 64 : 55);
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2(-9, -9);
   let api;
@@ -118,11 +122,19 @@ const Table = (() => {
     scene.add(myGun.group);
 
     stage = { scene, camera, update };
+    myShotgunRest = { pos: V(-0.02, TABLE_Y + 0.03, 1.28), rot: new THREE.Euler(0, Math.PI - 0.2, Math.PI / 2), scale: 1 };
+    myGunRest.scale = 1.25;
+    window.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('click', onClick);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', () => { drag = null; if (seats[0]) relayout(0); });
   }
 
   function resetMyGun() {
+    if (myShotgun) { myShotgun.group.parent && myShotgun.group.parent.remove(myShotgun.group); myShotgun = null; }
+    if (boxObj) { scene.remove(boxObj); boxObj = null; }
+    myGun.group.visible = true;
+    myGun.group.scale.setScalar(1.25);
     if (myGun.group.parent !== scene) scene.attach(myGun.group);
     myGun.group.position.copy(myGunRest.pos);
     myGun.group.rotation.copy(myGunRest.rot);
@@ -161,12 +173,17 @@ const Table = (() => {
   function setup(players) {
     if (!scene) buildRoom();
     clearSeats();
-    hovered = selected = -1; covered = false;
+    hovered = selected = -1; covered = false; drag = null; bino = null;
+    handHolder.visible = true;
+    document.body.style.cursor = '';
     ravage = ravageTarget = 0;
     rig.position.set(0, 1.27, 2.25); rig.rotation.set(0, 0, 0);
-    camera.rotation.set(-0.3, 0, 0); camera.fov = 55; camera.updateProjectionMatrix();
+    camera.rotation.set(-0.3, 0, 0); fovLock = false; camera.fov = baseFov(); camera.updateProjectionMatrix();
     resetMyGun();
-    seats.push({ you: true, cards: [], dead: false });
+    const youGroup = new THREE.Group();
+    youGroup.position.set(0, 0, 2.05); youGroup.rotation.y = Math.PI;
+    scene.add(youGroup);
+    seats.push({ you: true, group: youGroup, cards: [], items: [], marks: [], tags: [], dead: false });
     const spots = seatSpots(players.length - 1);
     players.slice(1).forEach((p, i) => {
       const spot = spots[i];
@@ -181,7 +198,7 @@ const Table = (() => {
       label.position.set(0, 1.6, 0);
       group.add(label);
       scene.add(group);
-      const seat = { group, rig: rigObj, cards: [], label, dead: false, name: p.name, sub: Bots.label(p), look: null, idle: Math.random() * 10 };
+      const seat = { group, chair, rig: rigObj, cards: [], items: [], marks: [], tags: [], label, dead: false, name: p.name, sub: Bots.label(p), look: null, idle: Math.random() * 10, drip: 0 };
       seats.push(seat);
       applyPose(rigObj.rArm, restPose(seat, 'r'));
       applyPose(rigObj.lArm, restPose(seat, 'l'));
@@ -353,7 +370,27 @@ const Table = (() => {
       r.head.rotation.y += (yaw + Math.sin(time * 0.4 + s.idle) * 0.08 - r.head.rotation.y) * Math.min(1, dt * 4);
       r.head.rotation.x += (pitch - r.head.rotation.x) * Math.min(1, dt * 4);
       r.eyeMat.emissive.setRGB(R > 0.55 ? (R - 0.55) * 2.2 : 0, 0, 0);
+      if (s.bleeding) {
+        s.drip -= dt;
+        if (s.drip <= 0) {
+          s.drip = 0.35 + Math.random() * 0.5;
+          FX.burst(scene, chestWorld(i), { count: 2, color: 0x7a0000, size: 0.01, speed: 0.2, dir: V(0, -1, 0), spread: 0.2, gravity: 9, life: 1.2, floor: 0.002 });
+        }
+      }
     });
+
+    // camera and hand adapt to the screen shape: on a tall phone the view
+    // widens and the hand shrinks so every card fits on screen
+    if (!fovLock && Math.abs(camera.fov - baseFov()) > 0.01) { camera.fov = baseFov(); camera.updateProjectionMatrix(); }
+    if (seats[0]) {
+      const halfH = 0.6 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+      const halfW = halfH * camera.aspect;
+      const n = Math.max(1, seats[0].cards.length);
+      const fan = Math.min(0.105, 0.36 / n) * (n - 1) + Models.CARD_W + 0.04;
+      const sc = Math.min(0.82, (2 * halfW * 0.94) / fan);
+      handHolder.scale.setScalar(sc);
+      handHolder.position.set(0, -halfH + Models.CARD_H * sc * 0.56, -0.6);
+    }
 
     // your cards drift to their slots (hover/selection lift)
     seats.forEach(s => s.cards.forEach(c => {
@@ -369,8 +406,10 @@ const Table = (() => {
   function slotFor(pi, i, n) {
     const off = i - (n - 1) / 2;
     if (pi === 0) {
-      const lift = (i === hovered ? 0.025 : 0) + (i === selected ? 0.055 : 0);
-      const pos = V(off * 0.105, -Math.abs(off) * 0.014 + lift, i * 0.002 + (i === selected ? 0.01 : 0));
+      const spacing = Math.min(0.105, 0.36 / Math.max(1, n));
+      let lift = (i === hovered ? 0.025 : 0) + (i === selected ? 0.055 : 0);
+      if (drag && drag.i === i && drag.moved) lift = Math.min(0.3, Math.max(0, drag.dy) / innerHeight * 0.75);
+      const pos = V(off * spacing, -Math.abs(off) * 0.014 + lift, i * 0.002 + (i === selected ? 0.01 : 0));
       const quat = Q().setFromEuler(new THREE.Euler(0, covered ? Math.PI : 0, -off * 0.11));
       return { pos, quat };
     }
@@ -461,17 +500,46 @@ const Table = (() => {
 
   // ---------- pointer ----------
 
+  // Tap a card to pick it (tap again to play), or drag it up onto the table.
+  const setPointer = e => pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  function onPointerDown(e) {
+    if (Engine.stage !== stage) return;
+    setPointer(e);
+    const i = pickCard(e);
+    if (i >= 0) drag = { i, y0: e.clientY, dy: 0, moved: false };
+  }
   function onPointerMove(e) {
     if (Engine.stage !== stage) return;
-    pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
-    const i = pickCard(e);
-    if (i !== hovered) { hovered = i; relayout(0); document.body.style.cursor = i >= 0 ? 'pointer' : ''; }
+    setPointer(e);
+    if (drag) {
+      drag.dy = drag.y0 - e.clientY;
+      if (Math.abs(drag.dy) > 12) drag.moved = true;
+      relayout(0);
+      return;
+    }
+    const i = e.pointerType === 'mouse' ? pickCard(e) : -1;
+    const overBox = e.pointerType === 'mouse' && pickBox(e);
+    if (i !== hovered) { hovered = i; relayout(0); }
+    document.body.style.cursor = i >= 0 || overBox ? 'pointer' : '';
   }
-  function onClick(e) {
+  function onPointerUp(e) {
     if (Engine.stage !== stage) return;
-    pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
-    const i = pickCard(e);
-    if (i >= 0 && api.onCardClick) api.onCardClick(i);
+    setPointer(e);
+    if (drag) {
+      const d = drag;
+      drag = null;
+      relayout(0);
+      if (!d.moved) { if (api.onCardClick) api.onCardClick(d.i); }
+      else if (d.dy > innerHeight * 0.12 && api.onCardDrop) api.onCardDrop(d.i);
+      return;
+    }
+    if (pickBox(e) && api.onBoxClick) api.onBoxClick();
+  }
+  function pickBox(e) {
+    if (!boxObj || !boxObj.userData.mine || boxObj.userData.opening) return false;
+    if (e.target && e.target.id !== 'gl' && !e.target.classList.contains('screen')) return false;
+    raycaster.setFromCamera(pointer, camera);
+    return raycaster.intersectObject(boxObj, true).length > 0;
   }
   function pickCard(e) {
     if (e.target && e.target.id !== 'gl' && !e.target.classList.contains('screen')) return -1;
@@ -494,30 +562,38 @@ const Table = (() => {
     return Q().setFromRotationMatrix(_m4);
   }
 
-  async function raiseMyGun(pos, quat, seconds = 0.7) {
-    camera.attach(myGun.group);
-    const p0 = myGun.group.position.clone(), q0 = myGun.group.quaternion.clone();
-    const s0 = myGun.group.scale.x;
+  // The gun you shoot with: the shotgun while you hold one, else your revolver.
+  const myWeapon = () => myShotgun || myGun;
+  const restOf = w => (w === myGun ? myGunRest : myShotgunRest);
+  // A bot's weapon in hand.
+  const weaponOf = s => s.shotgun || s.rig.gun;
+
+  async function raiseMyGun(pos, quat, seconds = 0.7, w = myWeapon()) {
+    camera.attach(w.group);
+    const p0 = w.group.position.clone(), q0 = w.group.quaternion.clone();
+    const s0 = w.group.scale.x;
     await T(seconds, t => {
-      myGun.group.position.lerpVectors(p0, pos, t);
-      myGun.group.position.y += Math.sin(t * Math.PI) * 0.05;
-      myGun.group.quaternion.slerpQuaternions(q0, quat, t);
-      myGun.group.scale.setScalar(Util.lerp(s0, 1, t));
+      w.group.position.lerpVectors(p0, pos, t);
+      w.group.position.y += Math.sin(t * Math.PI) * 0.05;
+      w.group.quaternion.slerpQuaternions(q0, quat, t);
+      w.group.scale.setScalar(Util.lerp(s0, 1, t));
     }, E.inOut);
   }
 
-  async function lowerMyGun() {
-    scene.attach(myGun.group);
-    const p0 = myGun.group.position.clone(), q0 = myGun.group.quaternion.clone();
-    const q1 = Q().setFromEuler(myGunRest.rot);
-    const s0 = myGun.group.scale.x;
+  async function lowerMyGun(w = null) {
+    w = w || (myShotgun && myShotgun.group.parent === camera ? myShotgun : myGun);
+    const rest = restOf(w);
+    scene.attach(w.group);
+    const p0 = w.group.position.clone(), q0 = w.group.quaternion.clone();
+    const q1 = Q().setFromEuler(rest.rot);
+    const s0 = w.group.scale.x;
     await T(0.6, t => {
-      myGun.group.position.lerpVectors(p0, myGunRest.pos, t);
-      myGun.group.position.y += Math.sin(t * Math.PI) * 0.1;
-      myGun.group.quaternion.slerpQuaternions(q0, q1, t);
-      myGun.group.scale.setScalar(Util.lerp(s0, 1.25, t));
+      w.group.position.lerpVectors(p0, rest.pos, t);
+      w.group.position.y += Math.sin(t * Math.PI) * 0.1;
+      w.group.quaternion.slerpQuaternions(q0, q1, t);
+      w.group.scale.setScalar(Util.lerp(s0, rest.scale, t));
     }, E.inOut);
-    myGun.cylinder.position.set(0, 0, 0);
+    w.cylinder.position.set(0, 0, 0);
   }
 
   async function cock(gun) {
@@ -553,14 +629,16 @@ const Table = (() => {
       if (ti === 0) {
         const pos = V(0.13, -0.05, -0.19);
         const q = Q().setFromRotationMatrix(_m4.lookAt(V(0.02, 0.03, 0.02), pos, V(0, 1, 0)));
-        T(0.7, t => { rig.rotation.z = -0.1 * t; camera.fov = 55 - 7 * t; camera.updateProjectionMatrix(); });
+        fovLock = true;
+        const f0 = camera.fov;
+        T(0.7, t => { rig.rotation.z = -0.1 * t; camera.fov = f0 - 7 * t; camera.updateProjectionMatrix(); });
         await raiseMyGun(pos, q);
       } else {
         const tw = headWorld(ti);
         const pos = V(0.08, -0.13, -0.34);
         await raiseMyGun(pos, myAimQuat(pos, tw));
       }
-      await cock(myGun);
+      await cock(myWeapon());
       return;
     }
     const s = seats[si];
@@ -572,16 +650,17 @@ const Table = (() => {
       s.lean = 0.12;
       await moveArm(s.rig.rArm, aimPose(s, headWorld(ti)), 0.7, E.out);
     }
-    await cock(s.rig.gun);
+    await cock(weaponOf(s));
   }
 
   function muzzleOf(si) {
-    const g = si === 0 ? myGun : seats[si].rig.gun;
+    const g = si === 0 ? myWeapon() : weaponOf(seats[si]);
     return { pos: g.muzzle.getWorldPosition(V(0, 0, 0)), gun: g };
   }
 
-  // Pull the trigger. Live rounds flash, kick and kill the target.
-  async function shoot(si, ti, live) {
+  // Pull the trigger. Live rounds flash and kick; `opts.lethal` kills the
+  // target, otherwise a live round wounds them and they start bleeding.
+  async function shoot(si, ti, live, opts = {}) {
     const { pos, gun } = muzzleOf(si);
     gun.hammer.rotation.x = 0;
     if (!live) {
@@ -594,10 +673,12 @@ const Table = (() => {
       }
       return;
     }
-    const target = headWorld(ti);
+    const big = gun.shotgun;
+    const target = opts.lethal || big ? headWorld(ti) : chestWorld(ti);
     const dir = target.clone().sub(pos).normalize();
-    FX.muzzleFlash(scene, pos, 0.4);
-    FX.smoke(scene, pos, dir, 8, 0.7);
+    FX.muzzleFlash(scene, pos, big ? 0.8 : 0.4);
+    FX.smoke(scene, pos, dir, big ? 18 : 8, big ? 1.2 : 0.7);
+    if (big) FX.burst(scene, pos, { count: 18, color: 0xffc060, emissive: true, size: 0.006, speed: 6, dir: dir.clone().multiplyScalar(3), spread: 0.3, gravity: 0, life: 0.25 });
     lamp.light.intensity *= 1.6;
     // tracer
     const len = pos.distanceTo(target);
@@ -610,11 +691,12 @@ const Table = (() => {
 
     // recoil
     if (si === 0) {
-      const p0 = myGun.group.position.clone();
+      const w = myWeapon(), kick = big ? 2.2 : 1;
+      const p0w = w.group.position.clone();
       T(0.3, t => {
-        const k = Math.sin(t * Math.PI);
-        myGun.group.position.set(p0.x, p0.y + k * 0.03, p0.z + k * 0.05);
-        myGun.group.rotateX(-k * 0.08 * (1 - t));
+        const k = Math.sin(t * Math.PI) * kick;
+        w.group.position.set(p0w.x, p0w.y + k * 0.03, p0w.z + k * 0.05);
+        w.group.rotateX(-k * 0.08 * (1 - t));
         camera.rotation.x = -0.3 + k * 0.03;
       }, E.out);
     } else if (ti !== si) {
@@ -625,7 +707,8 @@ const Table = (() => {
         s.rig.rArm.shoulder.quaternion.copy(q0).multiply(Q().setFromAxisAngle(V(1, 0, 0), -k * 0.5));
       }, E.out);
     }
-    await kill(ti, dir);
+    if (opts.lethal) await kill(ti, dir);
+    else await wound(ti, dir);
   }
 
   // The target takes the bullet.
@@ -641,7 +724,8 @@ const Table = (() => {
     const sx0 = r.spine.rotation.x, sz0 = r.spine.rotation.z;
     const sideKick = Math.sign(dir.x * Math.cos(s.group.rotation.y) - dir.z * Math.sin(s.group.rotation.y)) || 1;
     flyHat(s, dir);
-    dropGun(s);
+    if (!s.unarmed) dropGun(s);
+    s.bleeding = false; s.tags = [];
     await T(0.16, t => { r.spine.rotation.x = sx0 - 0.35 * t; r.head.rotation.x = -0.5 * t; r.spine.rotation.z = sz0 + sideKick * 0.15 * t; }, E.out);
     moveArm(r.rArm, makePose(s, r.rArm, V(-0.3, -0.1, 0.25), V(-1, -1, 0), null), 0.8, E.in);
     moveArm(r.lArm, makePose(s, r.lArm, V(0.25, 0.1, 0.5), V(1, -1, 0), null), 0.8, E.in);
@@ -683,7 +767,7 @@ const Table = (() => {
   }
 
   function dropGun(s) {
-    const g = s.rig.gun.group;
+    const g = weaponOf(s).group;
     scene.attach(g);
     const p0 = g.position.clone();
     const p1 = s.group.localToWorld(V(-0.3, TABLE_Y + 0.02, 0.38));
@@ -701,7 +785,7 @@ const Table = (() => {
     seats[0].dead = true;
     const r0 = rig.rotation.clone(), p0 = rig.position.clone();
     const away = dir ? Math.sign(dir.x) || 1 : 1;
-    if (myGun.group.parent === camera) lowerMyGun();
+    if (myWeapon().group.parent === camera) lowerMyGun();
     await T(0.15, t => { rig.rotation.z = r0.z + away * -0.25 * t; rig.rotation.x = r0.x + 0.15 * t; }, E.out);
     await T(1.2, t => {
       rig.position.set(p0.x + away * 0.15 * t, Util.lerp(p0.y, TABLE_Y + 0.12, t), Util.lerp(p0.z, 1.75, t));
@@ -715,7 +799,7 @@ const Table = (() => {
   async function recover(si, ti, live) {
     if (si === 0) {
       if (seats[0].dead) return;
-      T(0.5, t => { rig.rotation.z = Util.lerp(rig.rotation.z, 0, t); camera.fov = Util.lerp(camera.fov, 55, t); camera.updateProjectionMatrix(); camera.rotation.x = -0.3; });
+      T(0.5, t => { rig.rotation.z = Util.lerp(rig.rotation.z, 0, t); camera.fov = Util.lerp(camera.fov, baseFov(), t); camera.updateProjectionMatrix(); camera.rotation.x = -0.3; }).then(() => { fovLock = false; });
       await lowerMyGun();
       return;
     }
@@ -796,8 +880,490 @@ const Table = (() => {
     await T(0.5, t => { lamp.light.color.lerpColors(new THREE.Color(1, 0, 0), c0, t); });
   }
 
+
+  // ---------- wounds, bleeding and lives ----------
+
+  function chestWorld(pi) {
+    if (pi === 0) return camera.getWorldPosition(V(0, 0, 0)).add(V(0, -0.35, 0));
+    const s = seats[pi];
+    s.rig.root.updateMatrixWorld(true);
+    return s.rig.spine.localToWorld(V(0, 0.36, 0.12));
+  }
+
+  function clutchPose(s) { return makePose(s, s.rig.lArm, V(0.03, 0.36, 0.2), V(1, -1, 0.2), null); }
+
+  // Shot but still alive: jolt, spray, then hunch over clutching the wound.
+  async function wound(ti, dir) {
+    if (ti === 0) { await woundMe(dir); return; }
+    const s = seats[ti];
+    FX.blood(scene, chestWorld(ti), dir, 0);
+    s.bleeding = true;
+    await T(0.14, t => { s.lean = Util.lerp(0.04, -0.32, t); }, E.out);
+    moveArm(s.rig.lArm, clutchPose(s), 0.5);
+    await T(0.7, t => { s.lean = Util.lerp(-0.32, 0.2, t); }, E.out);
+  }
+
+  async function woundMe(dir) {
+    seats[0].bleeding = true;
+    FX.blood(scene, camera.getWorldPosition(V(0, 0, 0)).add(V(0, -0.2, -0.8)), V(0, -0.3, -1), TABLE_Y);
+    const z0 = rig.rotation.z, away = dir ? Math.sign(dir.x) || 1 : 1;
+    await T(0.12, t => { rig.rotation.z = z0 - away * 0.18 * t; rig.position.z = 2.25 + 0.08 * t; }, E.out);
+    await T(0.6, t => { rig.rotation.z = Util.lerp(z0 - away * 0.18, -away * 0.04, t); rig.position.z = 2.25 + 0.08 * (1 - t); }, E.inOut);
+  }
+
+  // Bleeding stopped: by a bandage (`wrap` shows the dressing) or by losing a life.
+  async function stopBleeding(pi, wrap) {
+    const s = seats[pi];
+    s.bleeding = false;
+    if (pi === 0) { T(0.5, t => { rig.rotation.z = Util.lerp(rig.rotation.z, 0, t); }); return; }
+    if (s.dead) return;
+    if (wrap && !s.wrap) {
+      s.wrap = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.03, 8, 24), new THREE.MeshStandardMaterial({ color: 0xf0ebe0, roughness: 1 }));
+      s.wrap.rotation.x = Math.PI / 2; s.wrap.position.y = 0.36; s.wrap.scale.setScalar(0.01);
+      s.rig.spine.add(s.wrap);
+      T(0.5, t => { const k = Math.max(0.01, E.back(t)); s.wrap.scale.set(k, 0.66 * k, k); }, E.linear);
+    }
+    await Promise.all([
+      T(0.5, t => { s.lean = Util.lerp(s.lean || 0, 0.04, t); }),
+      moveArm(s.rig.lArm, restPose(s, 'l'), 0.6),
+    ]);
+  }
+
+  // Ran out of time while bleeding but had a spare life: a shudder, one mark gone.
+  async function loseLife(pi) {
+    if (pi === 0) {
+      await T(0.5, t => { rig.position.y = 1.27 - Math.sin(t * Math.PI) * 0.06; rig.rotation.x = Math.sin(t * Math.PI) * 0.08; });
+      return;
+    }
+    const s = seats[pi];
+    await T(0.6, t => { s.rig.head.rotation.z = Math.sin(t * Math.PI * 6) * 0.08 * (1 - t); });
+  }
+
+  // Bled out: a slow slump forward onto the table.
+  async function bleedOut(pi) {
+    if (pi === 0) { await killMe(null); return; }
+    const s = seats[pi];
+    s.dead = true; s.bleeding = false;
+    const r = s.rig;
+    r.eyeMat.emissive.setRGB(0, 0, 0);
+    if (!s.unarmed) dropGun(s);
+    moveArm(r.rArm, makePose(s, r.rArm, V(-0.25, -0.15, 0.2), V(-1, -1, 0), null), 1.6, E.in);
+    moveArm(r.lArm, makePose(s, r.lArm, V(0.25, 0.1, 0.5), V(1, -1, 0), null), 1.6, E.in);
+    const sx0 = r.spine.rotation.x;
+    await T(1.8, t => {
+      r.spine.rotation.x = Util.lerp(sx0, 0.95, t);
+      r.spine.rotation.z = Util.lerp(r.spine.rotation.z, 0.1, t * 0.2);
+      r.head.rotation.x = Util.lerp(r.head.rotation.x, 0.5, t);
+    }, E.in);
+    const pool = Models.decal(Models.tex().pool, 0.5);
+    pool.rotation.x = -Math.PI / 2;
+    pool.position.copy(s.group.localToWorld(V(0.05, TABLE_Y + 0.002, 0.5)));
+    pool.material.opacity = 1; pool.scale.setScalar(0.1);
+    scene.add(pool); pools.push(pool);
+    T(3, t => pool.scale.setScalar(0.1 + t * 0.9), E.out);
+    s.tags = [];
+    setLabel(s, s.name + ' — DEAD', '#e0402a');
+  }
+
+  // Red tally marks on the table in front of each seat, one per life.
+  function markSlot(pi, i) {
+    return pi === 0 ? V(0.44 - i * 0.03, TABLE_Y + 0.0012, 0.5) : V(0.38 - i * 0.03, TABLE_Y + 0.0012, 0.44);
+  }
+  function setLives(pi, n) {
+    const s = seats[pi];
+    if (!s) return;
+    while (s.marks.length < n) {
+      const m = Models.lifeMark();
+      m.position.copy(markSlot(pi, s.marks.length));
+      m.rotation.y = (Math.random() - 0.5) * 0.15;
+      m.scale.set(1, 1, 0.01);
+      s.group.add(m); s.marks.push(m);
+      T(0.4, t => m.scale.set(1, 1, Math.max(0.01, t)), E.back);
+    }
+    while (s.marks.length > n) {
+      const m = s.marks.pop();
+      T(0.5, t => m.scale.set(1 - t * 0.9, 1, 1 - t * 0.99)).then(() => s.group.remove(m));
+    }
+  }
+
+  function setLabel(s, text, color) {
+    if (!s.label) return;
+    s.group.remove(s.label);
+    const sub = [s.sub, ...(s.tags || [])].join(' · ');
+    s.label = Util.textSprite(text, { color, sub, subColor: (s.tags || []).length ? '#e06040' : '#9a8a6a' });
+    s.label.position.set(0, 1.6, 0);
+    s.group.add(s.label);
+  }
+  // Extra words under a name: BLEEDING, UNARMED, SHOTGUN, TEAM.
+  function setTags(pi, tags) {
+    const s = seats[pi];
+    if (!s || !s.rig || s.dead) return;
+    if (tags.join() === (s.tags || []).join()) return;
+    s.tags = tags;
+    setLabel(s, s.name);
+  }
+
+  // ---------- items ----------
+
+  function itemSlot(pi, i) {
+    return pi === 0 ? V(0.5 - i * 0.12, TABLE_Y, 0.74) : V(-0.32 + i * 0.11, TABLE_Y, 0.66);
+  }
+  function layoutItems(pi, seconds = 0.4) {
+    const s = seats[pi];
+    return Promise.all(s.items.map((it, i) => {
+      const to = itemSlot(pi, i), from = it.obj.position.clone();
+      return T(seconds, t => it.obj.position.lerpVectors(from, to, t));
+    }));
+  }
+  function takeItem(pi, id) {
+    const s = seats[pi];
+    const k = s.items.findIndex(it => it.id === id);
+    if (k < 0) return null;
+    const [it] = s.items.splice(k, 1);
+    layoutItems(pi);
+    scene.attach(it.obj);
+    return it.obj;
+  }
+
+  // A crate drops onto the middle of the table, then slides to a seat.
+  async function spawnBox(pi) {
+    if (boxObj) scene.remove(boxObj);
+    boxObj = Models.crate();
+    boxObj.scale.setScalar(0.75);
+    boxObj.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    const land = V(0.25, TABLE_Y, 0.3);
+    boxObj.position.set(land.x, 3.2, land.z);
+    boxObj.rotation.y = Math.random() * 6;
+    scene.add(boxObj);
+    await T(0.7, t => { boxObj.position.y = Util.lerp(3.2, TABLE_Y, E.bounce(t)); }, E.linear);
+    Sound.thud();
+    FX.burst(scene, land.clone().add(V(0, 0.02, 0)), { count: 24, color: 0x8a7050, size: 0.012, speed: 1.2, dir: V(0, 0.6, 0), gravity: 3, life: 0.8, floor: TABLE_Y });
+    const s = seats[pi];
+    s.group.updateMatrixWorld(true);
+    const dest = s.group.localToWorld(pi === 0 ? V(-0.2, TABLE_Y, 1.05) : V(0.18, TABLE_Y, 0.78));
+    const r0 = boxObj.rotation.y, r1 = s.group.rotation.y + (pi === 0 ? Math.PI : 0) + 0.2;
+    await T(0.6, t => { boxObj.position.lerpVectors(land, dest, t); boxObj.rotation.y = Util.lerp(r0, r1, t); }, E.out);
+    boxObj.userData.mine = pi === 0;
+    boxObj.userData.owner = pi;
+  }
+
+  // The lid flies open and the items rise out and settle in front of the seat.
+  async function openBox(pi, ids) {
+    if (!boxObj) return;
+    const box = boxObj;
+    box.userData.opening = true;
+    const s = seats[pi];
+    if (s.rig) {   // reach for the lid
+      const from = getPose(s.rig.lArm);
+      await moveArm(s.rig.lArm, makePose(s, s.rig.lArm, worldToSpine(s, box.position.clone().add(V(0, 0.25, 0))), V(0.4, -1, -0.3), null), 0.4);
+      moveArm(s.rig.lArm, from, 0.5);
+    }
+    Sound.creak();
+    await T(0.5, t => { box.userData.lid.rotation.x = -1.9 * t; box.userData.glow.intensity = 3 * t; }, E.back);
+    Sound.chime();
+    const top = box.position.clone().add(V(0, 0.3, 0));
+    for (const id of ids) {
+      const obj = Models.item(id);
+      obj.position.copy(box.position).add(V(0, 0.1, 0));
+      obj.scale.setScalar(0.01);
+      scene.add(obj);
+      await T(0.45, t => { obj.position.lerpVectors(box.position.clone().add(V(0, 0.1, 0)), top, t); obj.scale.setScalar(Math.max(0.01, t * 1.3)); obj.rotation.y = t * 6; }, E.out);
+      s.items.push({ id, obj });
+      s.group.attach(obj);
+      const to = itemSlot(pi, s.items.length - 1), from = obj.position.clone();
+      const q0 = obj.quaternion.clone(), q1 = Q().setFromEuler(new THREE.Euler(0, Math.random() * 0.6 - 0.3, 0));
+      await T(0.5, t => { obj.position.lerpVectors(from, to, t); obj.position.y += Math.sin(t * Math.PI) * 0.15; obj.quaternion.slerpQuaternions(q0, q1, t); obj.scale.setScalar(Util.lerp(1.3, 1, t)); }, E.inOut);
+    }
+    await T(0.4, t => { box.scale.setScalar(0.75 * (1 - t * 0.99)); box.userData.glow.intensity = 3 * (1 - t); });
+    scene.remove(box);
+    if (boxObj === box) boxObj = null;
+  }
+
+  // Health potion: drink it. A red glow and a new mark.
+  async function usePotion(pi) {
+    const obj = takeItem(pi, 'potion');
+    if (!obj) return;
+    if (pi === 0) {
+      camera.attach(obj);
+      const p0 = obj.position.clone(), q0 = obj.quaternion.clone();
+      await T(0.6, t => { obj.position.lerpVectors(p0, V(0.02, -0.16, -0.32), t); obj.quaternion.slerpQuaternions(q0, Q(), t); }, E.inOut);
+      Sound.gulp();
+      await T(0.8, t => { obj.position.y = -0.16 + t * 0.08; obj.rotation.x = t * 1.9; camera.rotation.x = -0.3 + Math.sin(t * Math.PI) * 0.18; }, E.inOut);
+    } else {
+      const s = seats[pi];
+      const from = getPose(s.rig.lArm);
+      s.rig.lArm.hand.attach(obj);
+      const p0 = obj.position.clone();
+      T(0.4, t => obj.position.lerpVectors(p0, V(0, -0.06, 0.02), t));
+      await moveArm(s.rig.lArm, makePose(s, s.rig.lArm, V(0.06, 0.66, 0.22), V(1, -1, 0), null), 0.6);
+      Sound.gulp();
+      s.headDown = -0.45;
+      await T(0.9, t => { obj.rotation.x = -t * 1.6; });
+      s.headDown = 0;
+      scene.attach(obj);
+      moveArm(s.rig.lArm, from, 0.5);
+    }
+    const glow = new THREE.PointLight(0xff3030, 0, 1.5);
+    glow.position.copy(chestWorld(pi)).add(V(0, 0.2, 0));
+    scene.add(glow);
+    Sound.chime();
+    await T(0.5, t => { glow.intensity = 4 * Math.sin(t * Math.PI); obj.scale.setScalar(1 - t * 0.99); });
+    scene.remove(glow); obj.parent && obj.parent.remove(obj);
+  }
+
+  // Bandage: the roll flies to whoever is bleeding and wraps the wound.
+  async function useBandage(pi, ti) {
+    const obj = takeItem(pi, 'bandage');
+    if (!obj) return;
+    const to = ti === 0 ? camera.getWorldPosition(V(0, 0, 0)).add(V(0, -0.3, -0.35)) : chestWorld(ti).add(V(0, 0, 0.1));
+    const from = obj.getWorldPosition(V(0, 0, 0));
+    await T(0.7, t => { obj.position.lerpVectors(from, to, t); obj.position.y += Math.sin(t * Math.PI) * 0.35; obj.rotation.z = t * 14; }, E.inOut);
+    Sound.chime();
+    await T(0.35, t => obj.scale.setScalar(1 - t * 0.99));
+    scene.remove(obj);
+    await stopBleeding(ti, true);
+  }
+
+  // Hammer: smash your own gun to bits.
+  async function smashGun(pi) {
+    const tool = takeItem(pi, 'hammer');
+    let gun, at;
+    if (pi === 0) {
+      if (myShotgun) { myShotgun.group.visible = false; }
+      gun = myGun.group;
+      if (gun.parent !== scene) scene.attach(gun);
+      at = gun.position.clone();
+    } else {
+      const s = seats[pi];
+      await moveArm(s.rig.rArm, restPose(s, 'r'), 0.5);
+      gun = weaponOf(s).group;
+      scene.attach(gun);
+      at = s.group.localToWorld(V(-0.18, TABLE_Y + 0.02, 0.5));
+      const p0 = gun.position.clone(), q0 = gun.quaternion.clone();
+      const q1 = Q().setFromEuler(new THREE.Euler(0, s.group.rotation.y, Math.PI / 2));
+      await T(0.4, t => { gun.position.lerpVectors(p0, at, t); gun.quaternion.slerpQuaternions(q0, q1, t); });
+      if (s.shotgun) s.rig.gun.group.visible = false;
+    }
+    const h = tool || Models.item('hammer');
+    scene.add(h);
+    h.position.copy(at).add(V(0.05, 0.45, 0.25));
+    h.rotation.set(-1.2, 0, 0);
+    await T(0.35, t => { h.rotation.x = Util.lerp(-1.2, -0.4, t); }, E.out);
+    await T(0.18, t => { h.position.y = Util.lerp(at.y + 0.45, at.y + 0.05, t); h.rotation.x = Util.lerp(-0.4, 0.35, t); }, E.in);
+    Sound.smash();
+    gun.visible = false;
+    FX.burst(scene, at.clone().add(V(0, 0.03, 0)), { count: 30, color: 0x3a3c40, size: 0.018, speed: 2.2, dir: V(0, 1, 0), gravity: 8, life: 1.4, floor: TABLE_Y });
+    FX.burst(scene, at.clone().add(V(0, 0.03, 0)), { count: 20, color: 0xffd080, emissive: true, size: 0.006, speed: 3, life: 0.35 });
+    await T(0.4, t => { h.position.y = at.y + 0.05 + t * 0.4; h.scale.setScalar(1 - t * 0.99); });
+    scene.remove(h);
+    seats[pi].unarmed = true;
+  }
+
+  // A fresh revolver after a smashed one (or a fallen shotgun round).
+  async function newGun(pi) {
+    const s = seats[pi];
+    s.unarmed = false;
+    if (pi === 0) {
+      resetMyGunPose();
+      myGun.group.visible = true;
+      await T(0.5, t => myGun.group.scale.setScalar(Math.max(0.01, 1.25 * E.back(t))), E.linear);
+      return;
+    }
+    if (s.dead) return;
+    const old = s.rig.gun.group;
+    old.parent && old.parent.remove(old);
+    s.rig.gun = Models.revolver();
+    const g = s.rig.gun.group;
+    g.rotation.x = Math.PI / 2; g.position.set(0, -0.04, 0); g.scale.setScalar(0.01);
+    g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    s.rig.rArm.hand.add(g);
+    await T(0.5, t => g.scale.setScalar(Math.max(0.01, 1.25 * E.back(t))), E.linear);
+  }
+  function resetMyGunPose() {
+    if (myGun.group.parent !== scene) scene.attach(myGun.group);
+    myGun.group.position.copy(myGunRest.pos);
+    myGun.group.rotation.copy(myGunRest.rot);
+  }
+
+  // Gun card: a shotgun drops onto the table (or into a bot's hand).
+  async function giveShotgun(pi) {
+    const sg = Models.shotgun();
+    sg.group.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    if (pi === 0) {
+      if (myShotgun) scene.remove(myShotgun.group);
+      myShotgun = sg;
+      scene.add(sg.group);
+      sg.group.rotation.copy(myShotgunRest.rot);
+      const p = myShotgunRest.pos;
+      await T(0.6, t => sg.group.position.set(p.x, Util.lerp(2.6, p.y, E.bounce(t)), p.z), E.linear);
+      Sound.thud();
+      return;
+    }
+    const s = seats[pi];
+    if (s.dead) return;
+    if (s.shotgun) s.shotgun.group.parent && s.shotgun.group.parent.remove(s.shotgun.group);
+    s.shotgun = sg;
+    s.rig.gun.group.visible = false;
+    const g = sg.group;
+    g.rotation.x = Math.PI / 2; g.position.set(0, -0.04, 0); g.scale.setScalar(0.01);
+    s.rig.rArm.hand.add(g);
+    const glow = new THREE.PointLight(0xffd080, 0, 1.2);
+    s.rig.rArm.hand.add(glow);
+    Sound.thud();
+    await T(0.6, t => { g.scale.setScalar(Math.max(0.01, E.back(t))); glow.intensity = 3 * Math.sin(t * Math.PI); }, E.linear);
+    s.rig.rArm.hand.remove(glow);
+  }
+
+  // End of the round: the shotgun is gone.
+  async function removeShotgun(pi) {
+    if (pi === 0) {
+      const sg = myShotgun;
+      if (!sg) return;
+      myShotgun = null;
+      if (sg.group.parent === camera) scene.attach(sg.group);
+      await T(0.5, t => sg.group.scale.setScalar(Math.max(0.01, 1 - t)));
+      scene.remove(sg.group);
+      return;
+    }
+    const s = seats[pi];
+    const sg = s.shotgun;
+    if (!sg) return;
+    s.shotgun = null;
+    await T(0.5, t => sg.group.scale.setScalar(Math.max(0.01, 1 - t)));
+    sg.group.parent && sg.group.parent.remove(sg.group);
+    if (!s.dead && !s.unarmed) s.rig.gun.group.visible = true;
+  }
+
+  // Binoculars: you zoom in on a player while their cards stand up for you.
+  let bino = null;
+  async function binoStart(pi, ti) {
+    const tool = takeItem(pi, 'binoculars');
+    const t = seats[ti];
+    if (pi !== 0) {
+      const s = seats[pi];
+      if (tool) {
+        s.rig.spine.attach(tool);
+        const p0 = tool.position.clone(), q0 = tool.quaternion.clone();
+        await T(0.5, k => { tool.position.lerpVectors(p0, V(0, 0.75, 0.2), k); tool.quaternion.slerpQuaternions(q0, Q(), k); });
+      }
+      s.look = ti;
+      await moveArm(s.rig.lArm, makePose(s, s.rig.lArm, V(0.06, 0.72, 0.22), V(1, -1, 0), null), 0.5);
+      await Engine.wait(1.4);
+      s.look = null;
+      moveArm(s.rig.lArm, restPose(s, 'l'), 0.5);
+      if (tool) { await T(0.3, k => tool.scale.setScalar(1 - k * 0.99)); tool.parent.remove(tool); }
+      return;
+    }
+    if (tool) { await T(0.3, k => tool.scale.setScalar(1 - k * 0.99)); scene.remove(tool); }
+    // zoom the camera at the target's cards, which lift and turn to face you
+    const target = t.cards.length ? t.cards[Math.floor(t.cards.length / 2)].getWorldPosition(V(0, 0, 0)) : headWorld(ti);
+    fovLock = true;
+    const camQ0 = camera.quaternion.clone(), fov0 = camera.fov;
+    rig.updateMatrixWorld(true);
+    const m = new THREE.Matrix4().lookAt(V(0, 0, 0), rig.worldToLocal(target.clone()), V(0, 1, 0));
+    const camQ1 = Q().setFromRotationMatrix(m);
+    handHolder.visible = false;
+    const lifts = t.cards.map(c => {
+      const p0 = c.position.clone(), q0 = c.quaternion.clone();
+      c.userData.flying = true;
+      return { c, p0, q0 };
+    });
+    bino = { ti, camQ0, fov0, lifts };
+    const camPos = camera.getWorldPosition(V(0, 0, 0));
+    await T(0.8, k => {
+      camera.quaternion.slerpQuaternions(camQ0, camQ1, k);
+      camera.fov = Util.lerp(fov0, 30, k); camera.updateProjectionMatrix();
+      lifts.forEach(({ c, p0, q0 }, i) => {
+        c.position.set(p0.x, p0.y + 0.08 * k, p0.z);
+        const face = new THREE.Object3D();
+        c.parent.updateMatrixWorld(true);
+        const lp = c.parent.worldToLocal(camPos.clone());
+        face.position.copy(c.position); face.lookAt(lp);
+        c.quaternion.slerpQuaternions(q0, face.quaternion, k);
+      });
+    }, E.inOut);
+  }
+  async function binoEnd() {
+    if (!bino) return;
+    const { camQ0, fov0, lifts } = bino;
+    bino = null;
+    const q1 = camera.quaternion.clone(), f1 = camera.fov;
+    const starts = lifts.map(({ c }) => ({ p: c.position.clone(), q: c.quaternion.clone() }));
+    await T(0.6, k => {
+      camera.quaternion.slerpQuaternions(q1, camQ0, k);
+      camera.fov = Util.lerp(f1, fov0, k); camera.updateProjectionMatrix();
+      lifts.forEach(({ c, p0, q0 }, i) => { c.position.lerpVectors(starts[i].p, p0, k); c.quaternion.slerpQuaternions(starts[i].q, q0, k); });
+    }, E.inOut);
+    lifts.forEach(({ c }) => { c.userData.flying = false; });
+    handHolder.visible = true;
+    fovLock = false;
+  }
+
+  // Teammate: the pact flies across the table.
+  async function invite(pi, ti) {
+    const obj = takeItem(pi, 'teammate') || Models.item('teammate');
+    scene.add(obj);
+    const from = obj.getWorldPosition(V(0, 0, 0));
+    const to = ti === 0 ? camera.getWorldPosition(V(0, 0, 0)).add(V(0, -0.35, -0.5)) : seats[ti].group.localToWorld(V(0, TABLE_Y + 0.02, 0.62));
+    await T(0.8, t => { obj.position.lerpVectors(from, to, t); obj.position.y += Math.sin(t * Math.PI) * 0.4; obj.rotation.y = t * 8; }, E.inOut);
+    return obj;
+  }
+  async function decline(obj) {
+    const at = obj.getWorldPosition(V(0, 0, 0));
+    FX.burst(scene, at, { count: 26, color: 0xe8d8b0, size: 0.02, speed: 1.4, dir: V(0, 1, 0), gravity: 2, life: 1.4, floor: TABLE_Y });
+    scene.remove(obj);
+  }
+
+  // Team up: the member hops over beside the leader, the chairs become a
+  // couch and the member's cards join the leader's hand.
+  async function formTeam(li, mi, obj) {
+    if (obj) { await T(0.3, t => obj.scale.setScalar(1 - t * 0.99)); scene.remove(obj); }
+    const L = seats[li], M = seats[mi];
+    L.group.updateMatrixWorld(true);
+    // Your teammate moves to a couch along the table right next to you, where
+    // you can see them; bot teammates share a couch side by side.
+    const dest = li === 0 ? V(0.98, 0, 1.15) : L.group.localToWorld(V(-0.64, 0, 0));
+    const q1 = li === 0 ? Q().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0)) : L.group.quaternion.clone();
+    const p0 = M.group.position.clone(), q0 = M.group.quaternion.clone();
+    const chairs = [L.chair, M.chair].filter(Boolean);
+    await T(0.4, t => chairs.forEach(c => c.scale.setScalar(Math.max(0.01, 1 - t))));
+    chairs.forEach(c => { c.visible = false; });
+    Sound.thud();
+    await T(1.0, t => {
+      M.group.position.lerpVectors(p0, dest, t);
+      M.group.position.y = Math.sin(t * Math.PI) * 0.35;
+      M.group.quaternion.slerpQuaternions(q0, q1, t);
+    }, E.inOut);
+    const couch = Models.couch(1.45);
+    couch.scale.setScalar(0.01);
+    if (li === 0) { couch.position.set(0.3, 0, -0.08); M.group.add(couch); M.couch = couch; }
+    else { couch.position.set(-0.32, 0, -0.1); L.group.add(couch); L.couch = couch; }
+    await T(0.6, t => couch.scale.setScalar(Math.max(0.01, E.back(t))), E.linear);
+    await transferCards(mi, li);
+  }
+
+  // Move every card from one seat's hand into another's.
+  async function transferCards(fi, ti) {
+    const F = seats[fi], D = seats[ti];
+    const moving = F.cards.splice(0);
+    for (const c of moving) {
+      D.cards.push(c);
+      relayout(ti);
+      const w = worldSlot(ti, c.userData.slot);
+      Sound.cardFlick();
+      await flyTo(c, w.pos, w.quat, 0.4, 0.2);
+      parentOf(ti).attach(c);
+      c.position.copy(c.userData.slot.pos); c.quaternion.copy(c.userData.slot.quat);
+    }
+    relayout(ti);
+  }
+
   api = {
     setup, deal, play, select, setCovered, drawGuns, holsterGuns, aim, shoot, recover, peek, jackGlow, bloodyMary,
+    wound, stopBleeding, loseLife, bleedOut, setLives, setTags, spawnBox, openBox, usePotion, useBandage,
+    smashGun, newGun, giveShotgun, removeShotgun, binoStart, binoEnd, invite, decline, formTeam, transferCards,
+    onCardDrop: null, onBoxClick: null,
+    get hasBox() { return !!boxObj; },
     show() { if (!scene) buildRoom(); Engine.setStage(stage); },
     setRavage(v) { ravageTarget = clamp(v, 0, 1); },
     setBlood(v) { showBlood = v; },

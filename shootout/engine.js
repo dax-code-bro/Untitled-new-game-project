@@ -27,7 +27,7 @@ const Engine = (() => {
   function init(c) {
     canvas = c;
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Math.min(window.innerWidth, window.innerHeight) < 700 ? 1.5 : 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputEncoding = THREE.sRGBEncoding;
@@ -50,7 +50,9 @@ const Engine = (() => {
   }
 
   function loop(now) {
-    const dt = Math.min(0.05, (now - last) / 1000 || 0) * speed;
+    // cap the step so a slow frame doesn't skip an animation, but keep slow
+    // devices close to real time
+    const dt = Math.min(0.1, (now - last) / 1000 || 0) * speed;
     last = now;
     clock += dt;
     for (let i = tweens.length - 1; i >= 0; i--) {
@@ -120,7 +122,7 @@ const Util = {
     return tex;
   },
   // A flat text label that always faces the camera.
-  textSprite(text, { color = '#f0e0c0', sub = '', subColor = '#9a8a6a', width = 512 } = {}) {
+  textSprite(text, { color = '#f0e0c0', sub = '', subColor = '#9a8a6a', width = 768 } = {}) {
     const tex = Util.canvasTexture(width, 128, (g, w, h) => {
       g.clearRect(0, 0, w, h);
       g.textAlign = 'center';
@@ -130,14 +132,18 @@ const Util = {
       g.fillStyle = color;
       g.fillText(text, w / 2, 56);
       if (sub) {
-        g.font = '28px Georgia, serif';
+        // shrink long tag lines (e.g. "CALCULATING · BLEEDING · UNARMED") to fit
+        let size = 32;
+        do { g.font = `bold ${size}px Georgia, serif`; size -= 2; } while (g.measureText(sub.toUpperCase()).width > w - 20 && size > 14);
+        g.fillStyle = 'rgba(0,0,0,0.7)';
+        g.fillText(sub.toUpperCase(), w / 2 + 2, 106);
         g.fillStyle = subColor;
-        g.fillText(sub.toUpperCase().split('').join(' '), w / 2, 104);
+        g.fillText(sub.toUpperCase(), w / 2, 104);
       }
     });
     const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
     const s = new THREE.Sprite(mat);
-    s.scale.set(0.56, 0.14, 1);
+    s.scale.set(0.96, 0.16, 1);
     return s;
   },
 };

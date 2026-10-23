@@ -566,7 +566,143 @@ const Models = (() => {
     return d;
   }
 
+
+  // ---------- shotgun ----------
+  // Double-barrel coach gun. Same layout as the revolver: barrels along +Z,
+  // grip hangs down -Y, so it fits the same hand and aiming code.
+  function shotgun() {
+    const m = mats();
+    const g = new THREE.Group();
+    [-0.013, 0.013].forEach(x => {
+      const b = cyl(0.012, 0.012, 0.46, m.blued, 16);
+      b.rotation.x = Math.PI / 2; b.position.set(x, 0.012, 0.27); g.add(b);
+      const bore = cyl(0.008, 0.008, 0.002, m.black, 12, { cast: false });
+      bore.rotation.x = Math.PI / 2; bore.position.set(x, 0.012, 0.501); g.add(bore);
+    });
+    const rib = box(0.006, 0.006, 0.44, m.steel); rib.position.set(0, 0.026, 0.27); g.add(rib);
+    const fore = box(0.04, 0.026, 0.16, m.grip); fore.position.set(0, -0.006, 0.17); g.add(fore);
+    const action = box(0.044, 0.05, 0.08, m.steel); action.position.set(0, 0.0, 0.0); g.add(action);
+    const hammers = new THREE.Group();
+    [-0.012, 0.012].forEach(x => { const h = box(0.006, 0.022, 0.01, m.blued); h.position.set(x, 0.03, -0.03); hammers.add(h); });
+    g.add(hammers);
+    const guard = mesh(new THREE.TorusGeometry(0.018, 0.003, 6, 18, Math.PI), m.steel);
+    guard.rotation.set(Math.PI, Math.PI / 2, 0); guard.position.set(0, -0.028, -0.02); g.add(guard);
+    const stock = box(0.038, 0.06, 0.26, m.grip); stock.position.set(0, -0.04, -0.15); stock.rotation.x = 0.22; g.add(stock);
+    const butt = box(0.042, 0.075, 0.012, m.black); butt.position.set(0, -0.07, -0.28); butt.rotation.x = 0.22; g.add(butt);
+    const muzzle = new THREE.Object3D(); muzzle.position.set(0, 0.012, 0.51); g.add(muzzle);
+    // the hand code expects a cylinder and hammer; give it harmless stand-ins
+    const cylinder = new THREE.Group(); g.add(cylinder);
+    return { group: g, cylinder, hammer: hammers, muzzle, chambers: [], rounds: [], shotgun: true };
+  }
+
+  // ---------- items ----------
+
+  // Wooden crate with iron bands; userData.lid swings open at the back hinge.
+  function crate() {
+    const m = mats();
+    const g = new THREE.Group();
+    const W = 0.34, H = 0.2, D = 0.24;
+    const body = box(W, H, D, m.darkWood); body.position.y = H / 2; g.add(body);
+    for (let i = 0; i < 3; i++) {
+      const plank = box(W + 0.004, 0.006, D + 0.004, m.black); plank.position.y = 0.04 + i * 0.065; g.add(plank);
+    }
+    [-1, 1].forEach(sx => { const band = box(0.02, H + 0.004, D + 0.006, m.steel); band.position.set(sx * (W / 2 - 0.04), H / 2, 0); g.add(band); });
+    const hinge = new THREE.Group(); hinge.position.set(0, H, -D / 2); g.add(hinge);
+    const lid = box(W + 0.01, 0.03, D + 0.01, m.wood); lid.position.set(0, 0.015, D / 2); hinge.add(lid);
+    const lock = box(0.04, 0.05, 0.012, m.brass); lock.position.set(0, -0.01, D + 0.008); hinge.add(lock);
+    const glow = new THREE.PointLight(0xffd080, 0, 0.8); glow.position.set(0, H - 0.02, 0); g.add(glow);
+    g.userData.lid = hinge; g.userData.glow = glow;
+    return g;
+  }
+
+  // Red health potion in a round flask.
+  function potion() {
+    const g = new THREE.Group();
+    const glass = new THREE.MeshStandardMaterial({ color: col(0xc01818), emissive: col(0x500000), roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.85 });
+    const flask = sphere(0.04, glass); flask.position.y = 0.04; g.add(flask);
+    const neck = cyl(0.012, 0.016, 0.04, glass, 12); neck.position.y = 0.09; g.add(neck);
+    const cork = cyl(0.013, 0.011, 0.018, new THREE.MeshStandardMaterial({ color: col(0x9a7040), roughness: 0.9 }), 10); cork.position.y = 0.118; g.add(cork);
+    const label = cyl(0.041, 0.041, 0.02, new THREE.MeshStandardMaterial({ color: col(0xe8dcc4), roughness: 0.9 }), 20); label.position.y = 0.04; label.scale.z = 1.01; g.add(label);
+    return g;
+  }
+
+  // Roll of bandage with a loose tail.
+  function bandage() {
+    const g = new THREE.Group();
+    const cloth = new THREE.MeshStandardMaterial({ color: col(0xf0ebe0), roughness: 1 });
+    const roll = cyl(0.03, 0.03, 0.05, cloth, 18); roll.rotation.z = Math.PI / 2; roll.position.y = 0.03; g.add(roll);
+    const core = cyl(0.01, 0.01, 0.052, new THREE.MeshStandardMaterial({ color: col(0xa89878) }), 10); core.rotation.z = Math.PI / 2; core.position.y = 0.03; g.add(core);
+    const tail = box(0.05, 0.002, 0.09, cloth); tail.position.set(0, 0.001, 0.07); g.add(tail);
+    return g;
+  }
+
+  // Claw hammer lying on its side; origin at the handle's end.
+  function hammerTool() {
+    const m = mats();
+    const g = new THREE.Group();
+    const handle = cyl(0.012, 0.014, 0.3, m.grip, 10); handle.rotation.x = Math.PI / 2; handle.position.z = 0.15; g.add(handle);
+    const head = box(0.03, 0.03, 0.13, m.steel); head.rotation.y = Math.PI / 2; head.position.set(0, 0, 0.3); g.add(head);
+    const face = cyl(0.02, 0.02, 0.02, m.steel, 12); face.rotation.z = Math.PI / 2; face.position.set(0.07, 0, 0.3); g.add(face);
+    const claw = box(0.012, 0.024, 0.05, m.steel); claw.position.set(-0.075, 0.01, 0.3); claw.rotation.z = 0.5; g.add(claw);
+    g.userData.head = head;
+    return g;
+  }
+
+  function binoculars() {
+    const m = mats();
+    const g = new THREE.Group();
+    const body = new THREE.MeshStandardMaterial({ color: col(0x2a2a24), roughness: 0.6, metalness: 0.4 });
+    [-0.035, 0.035].forEach(x => {
+      const tube = cyl(0.022, 0.026, 0.11, body, 16); tube.rotation.x = Math.PI / 2; tube.position.set(x, 0.026, 0); g.add(tube);
+      const lens = cyl(0.02, 0.02, 0.002, new THREE.MeshStandardMaterial({ color: col(0x4a6a8a), metalness: 0.9, roughness: 0.05 }), 16);
+      lens.rotation.x = Math.PI / 2; lens.position.set(x, 0.026, 0.056); g.add(lens);
+      const ring = cyl(0.024, 0.024, 0.01, m.brass, 16); ring.rotation.x = Math.PI / 2; ring.position.set(x, 0.026, -0.05); g.add(ring);
+    });
+    const bridge = box(0.05, 0.012, 0.04, body); bridge.position.set(0, 0.03, 0); g.add(bridge);
+    return g;
+  }
+
+  // Teammate offer: a rolled-up pact tied with a red ribbon.
+  function contract() {
+    const g = new THREE.Group();
+    const paper = new THREE.MeshStandardMaterial({ color: col(0xe8d8b0), roughness: 0.95 });
+    const roll = cyl(0.02, 0.02, 0.16, paper, 14); roll.rotation.z = Math.PI / 2; roll.position.y = 0.02; g.add(roll);
+    const ribbon = mesh(new THREE.TorusGeometry(0.021, 0.005, 8, 18), new THREE.MeshStandardMaterial({ color: col(0xa01818), roughness: 0.7 }));
+    ribbon.rotation.y = Math.PI / 2; ribbon.position.y = 0.02; g.add(ribbon);
+    const seal = cyl(0.012, 0.012, 0.004, new THREE.MeshStandardMaterial({ color: col(0x8a1010), roughness: 0.5 }), 12);
+    seal.position.set(0, 0.042, 0.004); g.add(seal);
+    return g;
+  }
+
+  function item(id) {
+    const g = { potion, bandage, hammer: hammerTool, binoculars, teammate: contract }[id]();
+    g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    return g;
+  }
+
+  // Leather couch that replaces two chairs when players team up.
+  function couch(width = 1.35) {
+    const g = new THREE.Group();
+    const leather = new THREE.MeshStandardMaterial({ color: col(0x5a2a18), roughness: 0.55 });
+    const wood = mats().darkWood;
+    const base = box(width, 0.18, 0.55, wood); base.position.y = 0.2; g.add(base);
+    const seat = box(width - 0.18, 0.12, 0.5, leather); seat.position.set(0, 0.36, 0.02); g.add(seat);
+    const back = box(width, 0.55, 0.14, leather); back.position.set(0, 0.6, -0.22); g.add(back);
+    [-1, 1].forEach(sx => { const arm = box(0.1, 0.32, 0.55, leather); arm.position.set(sx * (width / 2 - 0.05), 0.42, 0); g.add(arm); });
+    [-1, 1].forEach(sx => [-1, 1].forEach(sz => { const leg = cyl(0.025, 0.02, 0.12, wood, 8); leg.position.set(sx * (width / 2 - 0.08), 0.06, sz * 0.22); g.add(leg); }));
+    g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    return g;
+  }
+
+  // A painted red tally mark (one per life).
+  function lifeMark() {
+    const mark = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.002, 0.07),
+      new THREE.MeshStandardMaterial({ color: col(0xc01010), emissive: col(0x500000), roughness: 0.6 }));
+    return mark;
+  }
+
   return {
+    shotgun, crate, item, couch, lifeMark,
     V, tex, mats, revolver, card, setCardFace, cardFace, outlaw, table, chair, bookshelf, desk,
     door, pictureFrame, hangingLamp, target, bullet, decal, CARD_W, CARD_H,
   };

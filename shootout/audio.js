@@ -81,6 +81,79 @@ const Sound = (() => {
     }
   }
 
+  // A burst of filtered noise; the building block for most effects.
+  function noiseHit(t, { dur = 0.2, type = 'lowpass', f = 1000, f2 = null, q = 1, vol = 0.8 } = {}) {
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer(dur + 0.05);
+    const flt = ctx.createBiquadFilter();
+    flt.type = type; flt.Q.value = q;
+    flt.frequency.setValueAtTime(f, t);
+    if (f2) flt.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(flt).connect(g).connect(sfxGain);
+    src.start(t);
+  }
+
+  function tone(t, f, f2, dur, vol, type = 'sine') {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g).connect(sfxGain);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+
+  // Shotgun: a deeper, longer blast than the revolver.
+  function shotgun() {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    noiseHit(t, { dur: 0.9, f: 4000, f2: 120, vol: 1.4 });
+    tone(t, 110, 30, 0.4, 1.1);
+    noiseHit(t + 0.05, { dur: 0.6, type: 'bandpass', f: 600, f2: 200, vol: 0.5 });
+  }
+
+  // Wooden crate landing on the table.
+  function thud() {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    tone(t, 90, 45, 0.25, 0.9);
+    noiseHit(t, { dur: 0.15, type: 'bandpass', f: 400, vol: 0.6 });
+  }
+
+  function creak() {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    tone(t, 300, 520, 0.5, 0.15, 'sawtooth');
+    tone(t + 0.1, 420, 260, 0.4, 0.08, 'sawtooth');
+  }
+
+  // Bright chime for finding items, gaining a life or healing.
+  function chime() {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    [660, 880, 1320].forEach((f, i) => tone(t + i * 0.08, f, null, 0.5, 0.18, 'triangle'));
+  }
+
+  function gulp() {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    for (let i = 0; i < 3; i++) tone(t + i * 0.22, 180, 90, 0.12, 0.5);
+  }
+
+  // Hammer smashing metal: clang plus scattering parts.
+  function smash() {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    tone(t, 1800, 900, 0.4, 0.5, 'square');
+    tone(t, 2600, 1400, 0.3, 0.3, 'triangle');
+    noiseHit(t, { dur: 0.35, type: 'highpass', f: 2000, vol: 0.7 });
+  }
+
   // Dry fire: the hammer falls on a blank.
   function blank() {
     if (!ensure()) return;
@@ -238,5 +311,5 @@ const Sound = (() => {
     if (sfxGain) sfxGain.gain.value = v;
   }
 
-  return { unlock, gunshot, cock, blank, impact, cardFlick, startMusic, stopMusic, setIntensity, setMusicVolume, setSfxVolume };
+  return { unlock, gunshot, shotgun, thud, creak, chime, gulp, smash, cock, blank, impact, cardFlick, startMusic, stopMusic, setIntensity, setMusicVolume, setSfxVolume };
 })();
