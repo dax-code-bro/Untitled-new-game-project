@@ -89,14 +89,27 @@ Hard checks (exit code 1 if any fails):
      carry no such direction, and nobody says such a word to them ("[to Abby]"); no graphic bone or gore with Abby;
      the story text of the death and gore blocks (DEAD_BLOCKS) never names a child or a small or little
      body: every one of the dead is an adult.
-     b. Context: names are not enough, because a pronoun carries a character into the next sentence. A sentence
-        with such a word and a third-person pronoun (she, her, he, his, they, ...) fails when one of those
-        characters was named earlier in the same paragraph or in the paragraph before. A person reads each hit in
-        context; only an exact sentence listed in REVIEWED_CONTEXT, with the reason, passes (shown by --review;
-        rewording the sentence makes it fail again until it is read again).
+     (Protected words also include son, heir, youth, page, squire, apprentice, lad, lass. "The attendant" alone is
+     NOT protected: in this script ATTENDANT is the adult at the nest; the young one is always "young attendant".
+     Vice words include rum, grog, gin, whisky, tankard, wineskin, cigar(ette), weed, pipe-weed, laudanum, nude,
+     sex, caress, fondle.)
+     b. Context: names are not enough, because a pronoun carries a character into the next sentences. A sentence
+        with such a word and a pronoun (she, her, he, his, they, ... and you, your, ye, thee) fails while one of
+        those characters is IN SCOPE: named in the same paragraph or one of the SCOPE_PARAS (3) paragraphs before
+        it, also in the script text just before the block, and after that for as long as no adult is named
+        instead (ADULT_RE). A person reads each hit in context; only an exact sentence listed in REVIEWED_CONTEXT,
+        with the reason, passes (shown by --review; rewording the sentence makes it fail again until it is read
+        again).
+     c. One spoken cue is one address: a cue whose spoken text names or calls one of those characters ("Here,
+        girl.") fails when a drug/tobacco/alcohol/suggestive word is anywhere in that cue ("Here, girl. Have a
+        drink."), or when it offers something (have, take, try, want, ...) while such a word is in the same or the
+        paragraph before ("Lad. Take a pull of this." after the flask).
      d. Deaths: a death word in new story text outside the blocks Daxtyn approved (APPROVED_RATING: the six unnamed
-        adult deaths in Cling) fails, because a new death needs his OK; a sentence that is not a death (a direction
-        such as "Do not imply death.") is listed in REVIEWED_CONTEXT.
+        adult deaths in Cling) fails, because a new death needs his OK. Gentle wordings count too (drowned,
+        perished, slaughter, bodies, "does not move again", "stops breathing", "stays down", ...). A sentence that
+        is not a death (a direction such as "Do not imply death.") is listed in REVIEWED_CONTEXT.
+     A lint cannot read: it catches wording, not meaning. Anything it misses is still against SERIES.md section 8,
+     and every new block is read by a person as well.
   7. The runtime quoted in the timing FINAL SCRIPT NOTE matches the computed estimate
      (--update-timing rewrites it), and final/screenplay-final-clean.md is up to date (--clean).
 
@@ -315,24 +328,42 @@ DEATH_RE = re.compile(r"\b(dead|died|dies|killed|kills|corpse|lifeless|limp|pump
 SCOUT_RE = re.compile(r"\b(scout|the rider|rider's)\b", re.I)
 STARLIGHT_RE = re.compile(r"\b(Starlight|Queen Fall|white body|white shape)\b")
 WOUND_RE = re.compile(r"\b(fire|flames?|burn\w*|wound\w*|bleed\w*|blood\w*|injur\w*|scar\w*)\b", re.I)
-VICE_RE = re.compile(r"\b(ale|wine|cider|beer|mead|brandy|liquor|spirits|flask|jugs?|drunk\w*|tipsy|drinks?|drank|drinking|swig\w*|"
-                     r"intoxicat\w*|hung ?over|hangover|booze\w*|tobacco|pipes?|snuff|"
-                     r"smok\w*|drugs?|poppy|hemp|opium|suggestive|bawdy|innuendo|flirt\w*|lovers?|seduc\w*|kiss\w*|naked|undress\w*)\b", re.I)
+VICE_RE = re.compile(r"\b(ale|wine|wineskins?|cider|beer|mead|brandy|rum|grog|gin|whiske?y|liquor|spirits|moonshine|flasks?|jugs?|"
+                     r"tankards?|drunk\w*|tipsy|drinks?|drank|drinking|swig\w*|"
+                     r"intoxicat\w*|hung ?over|hangover|booze\w*|tobacco|pipes?|pipe-?weed|weed|snuff|cigars?|cigarettes?|"
+                     r"smok\w*|drugs?|poppy|hemp|opium|laudanum|suggestive|bawdy|innuendo|flirt\w*|lovers?|seduc\w*|kiss\w*|"
+                     r"naked|nude|undress\w*|sex\w*|caress\w*|fondl\w*)\b", re.I)
 # Characters the rating limits protect (SERIES.md section 8). Remi left this list on 2026-10-18: Daxtyn decided he
 # is an adult ("prince" means Remi, so it left too). "princess" is Abby. Titles and kinship words count too, so a
 # sentence cannot slip past by calling Abby "his sister", "the queen's daughter" or "Leaf's rider" instead of her name.
 PROTECTED_RE = re.compile(r"\b(Abby|princess|child|children|kids?|boys?|girls?|young riders?|young attendant|daughters?|sisters?|"
+                          r"sons?|heirs?|youths?|pages?|squires?|apprentices?|"
                           r"Leaf's rider|little ones?|young ones?|youngsters?|lads?|lass(?:es|ie)?|teen\w*|bab(?:y|ies)|infants?|"
                           r"toddlers?|minors?)\b", re.I)
 PROTECTED_SPEAKERS = {"ABBY", "CHILD", "YOUNG ATTENDANT"}
-# Rule 6b: a pronoun can carry a protected character into the next sentence ("Abby sits down. She takes the cup."). A
-# sentence with a drug/tobacco/alcohol/suggestive word and a third-person pronoun fails when a protected character was
-# named earlier in the same paragraph or in the paragraph before, unless the exact sentence is in REVIEWED_CONTEXT.
-PRONOUN_RE = re.compile(r"\b(she|her|hers|herself|he|him|his|himself|they|them|their|theirs|themselves)\b", re.I)
+# Rule 6b: a pronoun can carry a protected character into the next sentences ("Abby sits down. ... She takes the cup.").
+# A sentence with a drug/tobacco/alcohol/suggestive word and a pronoun fails while a protected character is IN SCOPE:
+# named in this paragraph or one of the 3 before it (also in the script text just before a block), and after that for
+# as long as no adult is named instead (ADULT_RE). Second-person words count as pronouns ("Abby! You want a swig?").
+# Unless the exact sentence is in REVIEWED_CONTEXT.
+PRONOUN_RE = re.compile(r"\b(she|her|hers|herself|he|him|his|himself|they|them|their|theirs|themselves|"
+                        r"you|your|yours|yourself|yourselves|ye|thee|thou|thy)\b", re.I)
+SCOPE_PARAS = 3
+ADULT_RE = re.compile(r"\b(Remi|Alexandria|queens?|kings?|keepers?|musicians?|watchm[ae]n|healers?|sailors?|vendors?|guards?|"
+                      r"master|captain|crew|m[ae]n|wom[ae]n|fathers?|mothers?|husband|wife|farmers?|soldiers?|steward|cook|"
+                      r"innkeeper|merchants?|fisherm[ae]n|old \w+|adults?|grooms?|stable hands?|ATTENDANT)\b")
+# Rule 6c: one spoken cue is one address. A cue that names or calls a protected character ("Here, girl.") and has a
+# drug/tobacco/alcohol/suggestive word anywhere in it fails, even across its sentences ("Here, girl. Have a drink.").
+# So does a cue that calls a protected character and OFFERS something ("Lad. Take a pull of this.") when a vice word
+# is in the same or the paragraph before (the flask on the table).
+OFFER_RE = re.compile(r"\b(have|take|try|taste|share|want|fancy|here's|go on|drink|sip|swig|smoke|pull|puff|light)\b", re.I)
 # Rule 6d: deaths. Daxtyn approved six unnamed adult deaths, all in APPROVED_RATING. A death word in any other new
 # story text fails (a new death needs his OK, SERIES.md section 5), unless the exact sentence is in REVIEWED_CONTEXT.
-NEW_DEATH_RE = re.compile(r"\b(dead|deaths?|died|dies|dying|killed|kills?|killing|corpses?|lifeless|slain|murder\w*|"
-                          r"bled out|bleeding out|bleeds? to death)\b", re.I)
+NEW_DEATH_RE = re.compile(r"\b(dead|deaths?|died|dies|dying|killed|kills?|killing|corpses?|carcass\w*|lifeless|slain|murder\w*|"
+                          r"bled out|bleeding out|bleeds? to death|drown\w*|perish\w*|slaughter\w*|massacre\w*|bodies|"
+                          r"execut(?:e|ed|es|ing|ion)|behead\w*|decapitat\w*|strangl\w*|suffocat\w*|burn(?:s|ed|t)? alive|"
+                          r"(?:does|did|do|will) not move again|never moves? again|moves? no more|"
+                          r"stops? breathing|stopped breathing|breathes? no more|last breath|stays? down|stayed down)\b", re.I)
 # Sentences a person read in context and found fine for rules 6b and 6d: {exact sentence: why}. An edit of the sentence
 # drops it from this list, so the check fails again until someone reads the new wording. Listed ones show in --review.
 REVIEWED_CONTEXT = {
@@ -344,6 +375,9 @@ REVIEWED_CONTEXT = {
         "from his post.",
     "Do not imply death.":
         "C14 (6d): a direction NOT to show a death (the scout's rider, CANON LOCK 12).",
+    "She remembers the gold shape in the shell, and the moment she thought it had stopped breathing.":
+        "X12 (6d): Abby remembers her fear at the hatching (the original's 'Abby looks afraid it has stopped breathing. Then "
+        "its side rises.'): the hatchling lives; nobody dies.",
 }
 ABBY_GORE_RE = re.compile(r"\b(bone|gore|graphic|blood\w*)\b", re.I)
 
@@ -802,14 +836,20 @@ def main(argv):
     for body in proposals.values():
         known |= {m.group(1) for l in body for m in [ce.CUE_RE.match(l)] if m}
     known |= NEW_ROLES
-    units = []   # (label, lines of new text in shooting form)
+    units = []   # (label, lines of new text in shooting form, home block, the script paragraphs just before it)
+
+    def before(n):
+        """The last SCOPE_PARAS paragraphs of story text before a block (rule 6b scope), markers and notes left out."""
+        lines = [l for l in L[max(0, n["start"] - 400):n["start"]] if kind_of(l) is None and l != NOTE_END
+                 and not l.startswith("NOTE (not spoken):")]
+        return paragraphs(lines)[-SCOPE_PARAS:]
     for n in nodes:
         if n["kind"] == "add":    # its own text; nested rating-pass blocks and changes are linted on their own
-            units.append((n["id"], materialize(L, n["start"] + 1, n["end"] - 1, n["children"], {"rp", "ch", "pend"}, "now"), n["id"]))
+            units.append((n["id"], materialize(L, n["start"] + 1, n["end"] - 1, n["children"], {"rp", "ch", "pend"}, "now"), n["id"], before(n)))
         elif n["kind"] in ("rp", "pend"):
-            units.append((n["id"], L[n["start"] + 1:n["end"]], n["parent"]["id"] if n["parent"] else n["id"]))
+            units.append((n["id"], L[n["start"] + 1:n["end"]], n["parent"]["id"] if n["parent"] else n["id"], before(n)))
         elif n["kind"] == "ch":
-            units.append((n["id"], now_lines(L, n), n["parent"]["id"] if n["parent"] else n["id"]))
+            units.append((n["id"], now_lines(L, n), n["parent"]["id"] if n["parent"] else n["id"], before(n)))
     seen = set()
     context_reviewed = []   # (unit, rule, sentence): rule 6b/6d hits that REVIEWED_CONTEXT explains (shown with --review)
 
@@ -817,7 +857,7 @@ def main(argv):
         if msg not in seen:
             seen.add(msg)
             hard.append(msg)
-    for label, body, home in units:
+    for label, body, home, ctx in units:
         text = "\n".join(body)
         story = "\n".join(l for l in body if not l.startswith("NOTE (not spoken):"))
         dl, problems = dialogue(body)
@@ -870,20 +910,44 @@ def main(argv):
                 flag("%s: a drug/tobacco/alcohol/suggestive word in the same sentence as a child or possible minor (SERIES.md section 8): %r" % (label, s[:140]))
             if re.search(r"\bAbby\b", s) and ABBY_GORE_RE.search(s):
                 flag("%s: graphic injury wording next to Abby: %r" % (label, s[:120]))
-        # 6b. context: a pronoun can stand for a protected character named just before (same or previous paragraph)
+        # 6b. context: a pronoun can stand for a protected character named shortly before (SCOPE_PARAS paragraphs, also
+        # in the script just before this block, and longer while no adult is named instead)
         paras = paragraphs(l for l in body if not l.startswith("NOTE (not spoken):"))
-        for pi, para in enumerate(paras):
-            prot_seen = pi > 0 and bool(PROTECTED_RE.search("\n".join(paras[pi - 1])))
+        last_prot, adult_after = None, False
+        for ci, para in enumerate(ctx):
             for s in sentences("\n".join(para)):
-                hit = prot_seen and not PROTECTED_RE.search(s) and VICE_RE.search(s) and PRONOUN_RE.search(s)
+                if PROTECTED_RE.search(s):
+                    last_prot, adult_after = ci - len(ctx), False
+                elif last_prot is not None and ADULT_RE.search(s):
+                    adult_after = True
+        for pi, para in enumerate(paras):
+            for s in sentences("\n".join(para)):
+                in_scope = last_prot is not None and (pi - last_prot <= SCOPE_PARAS or not adult_after)
+                hit = in_scope and not PROTECTED_RE.search(s) and VICE_RE.search(s) and PRONOUN_RE.search(s)
                 if hit and s in REVIEWED_CONTEXT:
                     context_reviewed.append((label, "6b", s))
                 elif hit:
-                    flag("%s: a drug/tobacco/alcohol/suggestive word with a pronoun right after a child or possible minor is "
-                         "named (who is '%s'?): %r. Name the adult, or read it in context and add the exact sentence to "
-                         "REVIEWED_CONTEXT with the reason (SERIES.md section 8)" % (label, PRONOUN_RE.search(s).group(0), s[:140]))
+                    flag("%s: a drug/tobacco/alcohol/suggestive word with a pronoun while a child or possible minor is "
+                         "in the scene's focus (who is '%s'?): %r. Name the adult, or read it in context and add the exact "
+                         "sentence to REVIEWED_CONTEXT with the reason (SERIES.md section 8)" % (label, PRONOUN_RE.search(s).group(0), s[:140]))
                 if PROTECTED_RE.search(s):
-                    prot_seen = True
+                    last_prot, adult_after = pi, False
+                elif last_prot is not None and ADULT_RE.search(s):
+                    adult_after = True
+            # 6c. one spoken cue is one address: a protected name or call ("girl", "lad") with a vice word anywhere in the
+            # cue, or with an offer while a vice word is in this or the paragraph before
+            if ce.CUE_RE.match(para[0]):
+                said = " ".join(para[1:])
+                prev = "\n".join(paras[pi - 1]) if pi > 0 else "\n".join(ctx[-1]) if ctx else ""
+                who = PROTECTED_RE.search(said)
+                if who and (VICE_RE.search(said) or (OFFER_RE.search(said) and VICE_RE.search(prev))):
+                    joined = " ".join(para)
+                    if joined in REVIEWED_CONTEXT:
+                        context_reviewed.append((label, "6c", joined))
+                    else:
+                        flag("%s: a spoken cue calls a child or possible minor (%r) and %s: %r (SERIES.md section 8)"
+                             % (label, who.group(0), "has a drug/tobacco/alcohol/suggestive word" if VICE_RE.search(said)
+                                else "offers something right after a drug/tobacco/alcohol word (%r)" % VICE_RE.search(prev).group(0), joined[:160]))
         # 6d. deaths: only the blocks Daxtyn approved may hold one
         if label not in APPROVED_RATING:
             for s in sentences(story):
@@ -1153,21 +1217,22 @@ def main(argv):
 
 
 def selftest():
-    """--selftest: broken copies of the final script must fail with the right message (rules 1g, 6, 6b, 6d)."""
+    """--selftest: broken copies of the final script must fail with the right message (rules 1g, 6, 6b, 6c, 6d)."""
     import contextlib
     import io
     import tempfile
     fin = load(FINAL)
     R10_AT = "That keeper takes a flask from inside his coat, drinks and passes it over."
+    R10_AT2 = "The ground keeper drinks, longer than he meant to, and hands the flask back."
     cases = [
         ("an approved death block reworded (R18)", [("rocking, saying nothing", "swaying, saying nothing")],
          "R18: its story text is not the text Daxtyn approved"),
         ("an approved picture cut from R21", [("\n\nPICTURE: Along the wall below the steps", "\n\nPICTUR: Along the wall below the steps")],
          "R21: its story text is not the text Daxtyn approved"),
         ("a pronoun after Abby in the same paragraph (R10)", [(R10_AT, R10_AT + " Abby watches from the stable door. He holds the flask out to her.")],
-         "with a pronoun right after a child or possible minor is named"),
+         "with a pronoun while a child or possible minor is"),
         ("a pronoun after Abby in the paragraph before (R10)", [(R10_AT, R10_AT + "\n\nPICTURE: Abby stands at the stable door.\n\nPICTURE: The keeper holds the flask out to her.")],
-         "with a pronoun right after a child or possible minor is named"),
+         "with a pronoun while a child or possible minor is"),
         ("a title instead of her name (R10)", [(R10_AT, R10_AT + " The queen's daughter takes the flask.")],
          "in the same sentence as a child or possible minor"),
         ("an offer of drink in a cue to Abby (R10)", [(R10_AT, R10_AT + "\n\nKEEPER [to Abby]:\n\"Have a drink, then.\"")],
@@ -1175,7 +1240,26 @@ def selftest():
         ("a new death outside the approved blocks (R10)", [(R10_AT, R10_AT + " A third keeper lies dead behind the feed cart.")],
          "death word 'dead' outside the deaths Daxtyn approved"),
         ("a reviewed sentence reworded (R3)", [("takes a small pipe from his coat and lights it.", "takes a small pipe from his coat and lights it slowly.")],
-         "with a pronoun right after a child or possible minor is named"),
+         "with a pronoun while a child or possible minor is"),
+        # 2026-10-23 review: second person, a call without a name, scope over several paragraphs, kinship, more vice and death words
+        ("'you' in a line right after Abby is called (R10)", [(R10_AT2, R10_AT2 + "\n\nKEEPER [low]:\n\"Abby! You want a swig?\"")],
+         "(who is 'You'?)"),
+        ("a drink offered to 'girl' in the next sentence (R10)", [(R10_AT2, R10_AT2 + "\n\nKEEPER:\n\"Here, girl. Have a drink.\"")],
+         "a spoken cue calls a child or possible minor ('girl') and has a drug"),
+        ("an offer to 'lad' right after the flask (R10)", [(R10_AT2, R10_AT2 + "\n\nKEEPER:\n\"Lad. Take a pull of this, it'll warm you.\"")],
+         "a spoken cue calls a child or possible minor ('Lad') and offers something"),
+        ("'she' two paragraphs after Abby (R10)", [(R10_AT2, R10_AT2 + "\n\nPICTURE: Abby comes out of the stable.\n\nPICTURE: Leaf lifts her head.\n\nPICTURE: She takes the flask and drinks.")],
+         "(who is 'She'?)"),
+        ("'his son' with the flask (R10)", [(R10_AT2, R10_AT2 + " His son takes the flask and drinks.")],
+         "in the same sentence as a child or possible minor"),
+        ("grog, whisky, weed and a cigar (R10)", [(R10_AT2, R10_AT2 + " The boy rolls some weed into a cigar.")],
+         "in the same sentence as a child or possible minor"),
+        ("a death said gently: 'does not move again' (R10)", [(R10_AT2, R10_AT2 + "\n\nPICTURE: A stable hand falls from the loft and does not move again.")],
+         "death word 'does not move again' outside the deaths Daxtyn approved"),
+        ("a drowning (R10)", [(R10_AT2, R10_AT2 + "\n\nPICTURE: A sailor is drowned in the harbour.")],
+         "death word 'drowned' outside the deaths Daxtyn approved"),
+        ("bodies after a slaughter (R10)", [(R10_AT2, R10_AT2 + "\n\nPICTURE: Bodies lie in the street after the slaughter.")],
+         "death word 'Bodies' outside the deaths Daxtyn approved"),
     ]
     failures = 0
 

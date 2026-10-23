@@ -115,6 +115,19 @@ export function gpuCheckCommand(platform = process.platform) {
     : 'bash pc/render-episode.sh --gpu-check   (or: npm run gpu-check)';
 }
 
+/** How to run the episode renderer again, said the way that works on this platform (the same reason as
+ *  gpuCheckCommand: on Windows npm may not be on PATH and npm.ps1 may be blocked, so Windows gets the
+ *  desktop shortcut / the .cmd launcher, which also does the git pull and the cache check).
+ *  `args` = extra options as one string ('' = a normal run). */
+export function renderCommand(args = '', platform = process.platform) {
+  const a = String(args || '').trim();
+  if (platform === 'win32') {
+    return a ? `pc\\Render-Episode.cmd ${a}  (type it in PowerShell in the project folder)`
+      : 'double-click "Render Dragon\'s Kingdom" on the desktop again (or pc\\Render-Episode.cmd)';
+  }
+  return `bash pc/render-episode.sh${a ? ` ${a}` : ''}`;
+}
+
 /** The programs to set to "High performance" in Windows Settings > System > Display > Graphics:
  *  this Node.js and Playwright's own Chromium (NOT Google Chrome), with their full paths. */
 export function graphicsSettingsApps() {

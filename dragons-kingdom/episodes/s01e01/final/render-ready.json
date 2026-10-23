@@ -1,0 +1,11 @@
+{
+ "about": [
+  "Render gate: only the shots listed here are rendered into the Episode 1 masters (render/episode.mjs).",
+  "A shot is listed by the director after reviewing its frames: node render/gate.mjs approve <shot ids> --by \"<who>\" [--note \"<what was reviewed>\"].",
+  "The lock pins the scene file, the shot entry and every code file the scene loads (sha256); if any of them changes, the shot waits until it is approved again.",
+  "Approving again with new files makes the render PC render that shot again and re-join its scene. See render/lib/gate.mjs."
+ ],
+ "format": 1,
+ "approved": {},
+ "libs": {}
+}

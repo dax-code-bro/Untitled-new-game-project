@@ -212,13 +212,24 @@ All of this is in `screenplay-final.md`:
 - the tool now keeps a word-for-word copy of the five death pieces you approved, as they stood when question 4
   was put to you, and fails if a single word of them changes. Your approval covers that text; a change would
   be a new proposal for you;
-- the rating check no longer looks only for names. It also catches a title or family word that stands for a
-  protected character ("his sister", "the queen's daughter", "Leaf's rider"), a "she" or "he" right after one of
-  them is named, a line said *to* Abby or the child, and drinking words. It also fails on any new death outside
-  the five pieces you approved. Three sentences it flags were read by a person and are fine (the musician's pipe
-  after the child has gone indoors, the watchman's untouched cup, and the direction "Do not imply death."); the
-  tool lists them with the reason;
-- `--selftest` tries the tool on eight broken copies of the script and on one edit of its own record of the
+- the rating check no longer looks only for names. It catches wording, not meaning, so a person still reads
+  every new piece; what it looks for:
+  - a title or family word that can stand for a protected character ("his sister", "the queen's daughter",
+    "Leaf's rider", "his son", "the lad", "the squire", "the apprentice");
+  - drinking, smoking and drug words (also rum, grog, whisky, tankard, cigar, weed) and suggestive words;
+  - a pronoun ("she", "he", and also "you") while a protected character is still in the scene: named in the same
+    paragraph or one of the three before it, and after that until an adult is named instead;
+  - a spoken line that calls a protected character by name or as "girl", "lad" and so on and has such a word
+    anywhere in it ("Here, girl. Have a drink."), or offers something right after a flask or a cup is mentioned
+    ("Lad. Take a pull of this."); and a line whose cue says it is spoken *to* Abby or the child with such a word;
+  - any new death outside the five pieces you approved, also when it is said gently ("drowned", "bodies",
+    "does not move again", "stops breathing").
+  Four sentences it flags were read by a person and are fine (the musician's pipe after the child has gone
+  indoors, the watchman's untouched cup, the direction "Do not imply death.", and Abby remembering she feared the
+  hatchling had stopped breathing); the tool lists them with the reason. (The first version of this note, earlier
+  on 23 October, said the check caught every line said to Abby; a review showed it missed lines like the ones
+  above, so the check was extended the same day.)
+- `--selftest` tries the tool on seventeen broken copies of the script and on one edit of its own record of the
   approved text; it caught every one;
 - the reading copy (`screenplay-final-clean.md`) no longer shows the `[creator-approved wording 2026-10-18]`
   tag on the five lines whose wording you approved; it has no production markers at all now.

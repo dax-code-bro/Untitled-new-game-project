@@ -6,14 +6,24 @@
 //   node pc/selftest-episode.mjs --cpu | --gpu | --keep
 //
 // What it checks:
-//  1. a scene whose shot scene file does not exist yet is SKIPPED with a message, the
-//     other scenes render and are joined into scene files (one with sound, END credits card);
-//  2. the missing scene file "arrives" (as with git pull); the run is hard-killed in the
-//     middle of that shot (like a power cut);
+//  0. the render gate: with nothing approved (render-ready.json), no shot and no credits card is
+//     rendered, only black cards; --ignore-gate is refused for a master (no --size);
+//  1. after approval (node render/gate.mjs approve ...): a scene whose shot scene file does not exist
+//     yet is SKIPPED with a message, the other scenes render and are joined into scene files (one with
+//     sound, END credits card);
+//  2. the missing scene file "arrives" (as with git pull) but is not approved: SKIPPED; once approved,
+//     the run is hard-killed in the middle of that shot (like a power cut);
 //  3. the next run resumes the shot from its finished chunks, joins the last scene and
 //     assembles the episode (+ small copy, subtitles); frame counts, streams and sound are checked;
-//  4. one more run has nothing left to do.
-//  5. the credits text changes: only the credits card is made again and END + the episode are rejoined.
+//  4. the sound of a scene arrives: only the sound track is replaced;
+//  5. one more run has nothing left to do;
+//  6. the credits text changes: nothing happens until it is approved again; then only the credits
+//     card is made again and END + the episode are rejoined;
+//  7. a scene file changes after approval (work in progress pushed): the finished shot stays, nothing
+//     is rendered; the shot is approved again with the new file: it is rendered again, only its scene
+//     is re-joined, and the episode is assembled again;
+//  8. an approval is withdrawn: that scene is not joined and the episode is not assembled; approved
+//     again with the same files: everything is up to date without rendering.
 // The fixture lives in output/selftest-episode/ (removed afterwards unless --keep).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -102,6 +112,12 @@ function writeFixture() {
   return { plan, setB };
 }
 
+/** node render/gate.mjs <cmd> <args> on the fixture's plan */
+function gate(cmd, ...args) {
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'render', 'gate.mjs'), cmd, ...args, '--schedule', path.join(FIX, 'plan', 'render-schedule.md')], { cwd: ROOT, encoding: 'utf8' });
+  return { code: r.status, out: `${r.stdout || ''}${r.stderr || ''}` };
+}
+
 function runEpisode(extra = [], { killWhen } = {}) {
   return new Promise((resolve) => {
     const a = [path.join(ROOT, 'render', 'episode.mjs'), '--schedule', path.join(FIX, 'plan', 'render-schedule.md'), '--size', SIZE,
@@ -130,20 +146,38 @@ async function main() {
   const sceneMp4 = (k) => path.join(OUT, 'scenes', `${k}_TEST_${SIZE}.mp4`);
   const episode = path.join(OUT, `DragonsKingdom_S01E01_TEST_${SIZE}.mp4`);
 
-  say('\nrun 1: scene B has no scene file yet');
+  say('\nrun 0: the render gate - nothing is approved yet');
   let r = await runEpisode();
   if (r.code === 2 && /No graphics card has been checked/.test(r.out)) { say(r.out); say(`-> run with --cpu, or run the GPU check first: ${process.platform === 'win32' ? 'pc\\GPU-Check.cmd' : 'npm run gpu-check'}`); return 2; }
+  check(r.code === 0, `exit code 0 (got ${r.code})`);
+  check(/A-02\s+SKIPPED - not approved for the masters yet/.test(r.out) && /E-01\s+SKIPPED - not approved/.test(r.out), 'A-02 and the credits card are SKIPPED: not approved');
+  check(!/frames, set /.test(r.out) && !fs.existsSync(sceneMp4('A')) && !fs.existsSync(sceneMp4('END')), 'no shot rendered, no scene file made');
+  check(fs.existsSync(path.join(OUT, 'shots', 'A', 'A-01', 'DONE.json')), 'the black card A-01 needs no approval and was made');
+  const ig = spawnSync(process.execPath, [path.join(ROOT, 'render', 'episode.mjs'), '--schedule', path.join(FIX, 'plan', 'render-schedule.md'), '--ignore-gate', '--dry-run', '--cpu'], { cwd: ROOT, encoding: 'utf8' });
+  check(ig.status === 1 && /--ignore-gate is only for TEST renders/.test(`${ig.stdout}${ig.stderr}`), '--ignore-gate without --size (a master) is refused');
+  let g = gate('approve', 'A-02', 'B-01', 'C-01,C-02', '--scene', 'END', '--by', 'selftest');
+  check(g.code === 1 && /approved 4 shot\(s\)/.test(g.out) && /B-01 \(waiting for/.test(g.out), 'approve: A-02, C-01, C-02, E-01 approved; B-01 refused (no scene file yet)');
+  if (failures) { say(r.out); say(g.out); return 1; }
+
+  say('\nrun 1: scene B has no scene file yet');
+  r = await runEpisode();
   check(r.code === 0, `exit code 0 (got ${r.code})`);
   check(/B-01\s+SKIPPED - waiting for .*set-b\.js/.test(r.out), 'B-01 skipped with a clear message');
   check(['A', 'C', 'END'].every((k) => fs.existsSync(sceneMp4(k))), 'scene files A, C and END were made');
   check(!fs.existsSync(sceneMp4('B')) && !fs.existsSync(episode), 'no scene B and no episode yet');
   const a = probe(sceneMp4('A'), ['-show_entries', 'stream=codec_type,codec_name,width,height,pix_fmt:format=duration']);
   check(a?.streams?.some((s) => s.codec_type === 'audio') && a.streams.some((s) => s.pix_fmt === 'yuv420p10le' && s.width === 320), 'scene A: 10-bit video at 320x180 + sound');
+  const doneA = JSON.parse(fs.readFileSync(path.join(OUT, 'shots', 'A', 'A-02', 'DONE.json'), 'utf8'));
+  check(/^[0-9a-f]{16}$/.test(doneA.lockId || '') && doneA.approvedBy === 'selftest', 'A-02 remembers the approval it was rendered under');
   if (failures) { say(r.out); return 1; }
 
-  say('\nrun 2: the set-B scene file arrives (like git pull); the run is hard-killed in the middle of B-01');
+  say('\nrun 2: the set-B scene file arrives (like git pull), not approved yet; then approved, and the run is hard-killed in the middle of B-01');
   fs.writeFileSync(setB, sceneSource('#4060e0', 'set B'));
   fs.writeFileSync(setB.replace(/\.js$/, '.shots.json'), JSON.stringify({ shots: [{ job: 'B-01', start_s: 10, frames: 72 }] }));
+  r = await runEpisode();
+  check(r.code === 0 && /B-01\s+SKIPPED - not approved/.test(r.out) && !/frames, set /.test(r.out), 'B-01 SKIPPED: its scene file is there but not approved');
+  g = gate('approve', 'B-01', '--by', 'selftest', '--note', 'set B reviewed');
+  check(g.code === 0 && /approved 1 shot/.test(g.out), 'B-01 approved');
   const chunks = path.join(OUT, 'shots', 'B', 'B-01', 'chunks');
   r = await runEpisode([], { killWhen: () => fs.existsSync(chunks) && fs.readdirSync(chunks).filter((f) => /^chunk_\d+\.mp4$/.test(f)).length >= 3 });
   const kept = fs.existsSync(chunks) ? fs.readdirSync(chunks).filter((f) => /^chunk_\d+\.mp4$/.test(f)).length : 0;
@@ -186,16 +220,51 @@ async function main() {
   r = await runEpisode();
   check(r.code === 0 && /episode: up to date/.test(r.out) && !/frames, set /.test(r.out), 'nothing rendered, everything up to date');
   r = await runEpisode(['--status']);
-  check(/total: 216\/216 frames \(100\.0%\)/.test(r.out), 'status shows 216/216 frames');
+  check(/total: 216\/216 frames \(100\.0%\)/.test(r.out) && /render gate: 5 shot\(s\) approved/.test(r.out), 'status shows 216/216 frames and 5 approved shots');
 
-  say('\nrun 6: the credits text changes: only the credits card is made again, then END and the episode are rejoined');
+  say('\nrun 6: the credits text changes: nothing happens until it is approved again; then only the card is made again');
   fs.appendFileSync(path.join(FIX, 'plan', 'credits.txt'), 'Leaf textures: a new line\n');
   r = await runEpisode();
-  check(r.code === 0 && /E-01: the card's text changed since it was made/.test(r.out), 'the credits card was made again');
+  check(r.code === 0 && /episode: up to date/.test(r.out) && !/E-01: approved again/.test(r.out), 'unapproved credits edit: the approved card is kept, the episode is up to date');
+  g = gate('check');
+  check(g.code === 1 && /E-01 .*the credits text/.test(g.out), 'gate check reports E-01 changed after its approval');
+  gate('approve', 'E-01', '--by', 'selftest');
+  r = await runEpisode();
+  check(r.code === 0 && /E-01: approved again \(with new files\) since it was rendered -> rendering it again/.test(r.out), 'approved again: the credits card was made again');
   check(!/frames, set /.test(r.out), 'no 3D shot rendered again');
   check(/END: joining/.test(r.out) && !/\bA: joining|\bC: joining/.test(r.out), 'only the END scene file was rejoined');
   const v6 = probe(episode, ['-count_packets', '-show_entries', 'stream=codec_type,nb_read_packets']);
-  check(+v6?.streams?.find((x) => x.codec_type === 'video')?.nb_read_packets === 216, 'the episode was assembled again with all 216 frames');
+  check(/episode: built/.test(r.out) && +v6?.streams?.find((x) => x.codec_type === 'video')?.nb_read_packets === 216, 'the episode was assembled again with all 216 frames');
+
+  say('\nrun 7: work in progress changes set C after its approval; then C-02 is approved again with the new file');
+  const setC = path.join(FIX, 'plan', 'scenes', 'set-c.js');
+  const mp4C2 = path.join(OUT, 'shots', 'C', 'C-02', 'C-02.mp4');
+  const statC2 = fs.statSync(mp4C2).mtimeMs;
+  fs.writeFileSync(setC, sceneSource('#e0e040', 'set C, work in progress'));
+  r = await runEpisode();
+  check(r.code === 0 && !/frames, set /.test(r.out) && /episode: up to date/.test(r.out) && fs.statSync(mp4C2).mtimeMs === statC2, 'WIP edit: nothing rendered, the approved C-02 render is kept, the episode is up to date');
+  r = await runEpisode(['--dry-run']);
+  check(!/C-02\s+would render/.test(r.out), 'the dry run would render nothing for C-02 either');
+  g = gate('approve', 'C-02', '--by', 'selftest', '--note', 'new yellow box reviewed');
+  check(g.code === 0 && /approved 1 shot/.test(g.out), 'C-02 approved again with the new file');
+  r = await runEpisode();
+  check(r.code === 0 && /C-02: approved again \(with new files\)/.test(r.out) && /C-02\s+24 frames, set SET_C/.test(r.out), 'C-02 was rendered again');
+  check(!/C-01\s+24 frames/.test(r.out) && !/A-02\s+24 frames/.test(r.out), 'no other shot was rendered again');
+  check(/\bC: joining/.test(r.out) && !/\bA: joining|\bB: joining|END: joining/.test(r.out), 'only scene C was re-joined');
+  const v7 = probe(episode, ['-count_packets', '-show_entries', 'stream=codec_type,nb_read_packets']);
+  check(/episode: built/.test(r.out) && +v7?.streams?.find((x) => x.codec_type === 'video')?.nb_read_packets === 216, 'the episode was assembled again with all 216 frames');
+
+  say('\nrun 8: the approval of C-01 is withdrawn, then given again for the same files');
+  gate('revoke', 'C-01');
+  const ep8 = fs.statSync(episode).mtimeMs;
+  r = await runEpisode();
+  check(/C-01\s+NOT USED - rendered under an approval that was withdrawn/.test(r.out), 'C-01: its render is not used any more');
+  check(!/\bC: joining/.test(r.out) && /episode: not assembled yet/.test(r.out) && fs.statSync(episode).mtimeMs === ep8, 'scene C is not joined and the episode is not assembled again');
+  r = await runEpisode(['--status']);
+  check(/OUT OF DATE \(not used\)/.test(r.out), 'status marks the scene C file as out of date');
+  gate('approve', 'C-01', '--by', 'selftest');
+  r = await runEpisode();
+  check(r.code === 0 && !/frames, set /.test(r.out) && /episode: up to date/.test(r.out), 'approved again (same files): nothing rendered, everything up to date');
 
   say(`\n${failures ? `${failures} check(s) FAILED` : 'all checks passed'} in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   if (failures) say(`(fixture and output kept in ${path.relative(ROOT, FIX)})`);

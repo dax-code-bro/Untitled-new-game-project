@@ -19,6 +19,7 @@
     "bench:final-fast": "node render/bench.mjs --preset final-fast",
     "episode": "node render/episode.mjs",
     "episode:status": "node render/episode.mjs --status",
+    "gate": "node render/gate.mjs",
     "gpu-check": "node render/gpu-check.mjs",
     "caches": "node pc/build-caches.mjs",
     "caches:check": "node pc/build-caches.mjs --check",

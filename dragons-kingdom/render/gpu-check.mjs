@@ -18,12 +18,21 @@
 //     the master settings: --preset final --cinematic velocity, 10-bit) - the
 //     first frame includes shader compilation - then a few more frames to
 //     measure the steady speed. Saves the first one as a PNG.
-//  4. Compares the speed with the same frame measured on the cloud machine's
+//  4. Compares the PICTURE with the same frame rendered on the cloud machine, on which every
+//     shot was reviewed (pc/reference-image.json: a thumbnail and two 1:1 crops, render/lib/picture.mjs):
+//     PSNR / SSIM, pure black and white pixels (NaN / infinity), and the NaN / Inf counts of every
+//     float buffer in the page. Prints SAME PICTURE, SMALL DIFFERENCES or DIFFERENT in a banner and
+//     writes output/gpu-check/gpu-check-picture-for-claude.jpg (the frame at 1280x720 + two 1:1 crops)
+//     to drag into the chat.
+//  5. Compares the speed with the same frame measured on the cloud machine's
 //     CPU (pc/reference-cpu.json) and scales the per-scene hours of
 //     episodes/s01e01/final/render-schedule.md by it: an ESTIMATE of how long
 //     Episode 1 takes on this PC.
+//  --heavy also renders the F5 Cling square style frame (the heaviest set, a third of the episode):
+//  graphics memory and the Windows GPU time-out (TDR) on the biggest scene.
 // Everything printed also goes to pc/logs/gpu-check-<date>.txt and
-// output/gpu-check/gpu-check.json. Exit code: 0 GPU ok, 2 no GPU (software), 1 error.
+// output/gpu-check/gpu-check.json. Exit code: 0 GPU ok, 2 no GPU (software), 3 the GPU draws a
+// DIFFERENT picture from the reference, 1 error.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -36,13 +45,21 @@ import { openSession } from './lib/session.mjs';
 import { writePng } from './lib/ffmpeg.mjs';
 import { parseSchedule, loadJobs, DEFAULT_SCHEDULE } from './lib/schedule.mjs';
 import { fmtDuration } from './lib/progress.mjs';
+import { analyse, compare, toReference, LIMITS } from './lib/picture.mjs';
 
 const REFERENCE_FILE = path.join(PROJECT_ROOT, 'pc', 'reference-cpu.json');
+const REFERENCE_IMAGE_FILE = path.join(PROJECT_ROOT, 'pc', 'reference-image.json');
+export const PICTURE_JPG = 'gpu-check-picture-for-claude.jpg';
 
 // Test frames, best first. A candidate whose scene cannot be built here (a
 // cache or asset not made yet) is skipped with a note; the next one is used.
 const CANDIDATES = [
-  { id: 'f2-velocity', label: 'style frame F2, Verdor riding grounds (Charcoal, Leaf, Remi, Abby, keeper, 77k grass tufts)', scene: 'scenes/lookdev/style-f2-riding-grounds.js', time: 2, cinematic: 'velocity' },
+  // crops: 1:1 places compared with the reference (top-left corner, 96x96, 4K pixels) and shown in the chat picture (640x360 around them)
+  { id: 'f2-velocity', label: 'style frame F2, Verdor riding grounds (Charcoal, Leaf, Remi, Abby, keeper, 77k grass tufts)', scene: 'scenes/lookdev/style-f2-riding-grounds.js', time: 2, cinematic: 'velocity',
+    crops: [{ name: 'charcoal-head', x: 1392, y: 1302 }, { name: 'remi-on-the-platform', x: 2082, y: 752 }] },
+  // only with --heavy (or --candidate f5-cling): the heaviest set, for graphics memory and the GPU time-out
+  { id: 'f5-cling', heavy: true, label: 'style frame F5, Cling square (the heaviest set: houses, crowd, Starlight; 821 s per frame on the cloud CPU with 8 sub-frames)', scene: 'scenes/lookdev/style-f5-cling-square.js', time: 2, cinematic: 'velocity',
+    crops: [{ name: 'cling-centre', x: 1872, y: 1032 }, { name: 'cling-left', x: 960, y: 1300 }] },
   { id: 'lookdev-coast', label: 'cinematic lookdev coast (sky model, fog, FFT ocean, dragon; no caches needed)', scene: 'scenes/cinematic-lookdev.js', time: 4, cinematic: 'velocity' },
   { id: 'test-kingdom', label: 'test kingdom (castle, 13,700 trees, standard pipeline; no assets needed)', scene: 'scenes/test-kingdom.js', time: 5, cinematic: undefined },
 ];
@@ -54,11 +71,13 @@ GPU self-test: finds the graphics card, renders a 4K style frame, estimates Epis
 
   --frames N          frames to render (default 3: the first includes shader compilation)
   --candidate ID      test frame: ${CANDIDATES.map((c) => c.id).join(' | ')} (default: the first that builds)
+  --heavy             also render the F5 Cling square frame (the heaviest set: graphics memory, GPU time-out)
   --scene FILE --time T [--cinematic MODE]   any other scene instead
   --profile NAME      only try this launch profile (see --all-profiles)
   --all-profiles      try every launch profile and list them all
   --swiftshader       skip the GPU search, measure SwiftShader (the CPU) on purpose
-  --write-reference   (with --swiftshader) store the result in pc/reference-cpu.json
+  --write-reference   (with --swiftshader) store the speed in pc/reference-cpu.json
+  --write-reference-image  (with --swiftshader) store the picture (thumbnail + 1:1 crops) in pc/reference-image.json
   --schedule FILE     render schedule (default ${path.relative(PROJECT_ROOT, DEFAULT_SCHEDULE)})
   --probe-only        stop after the GPU search (no rendering)
   --out DIR           where the PNG and gpu-check.json go (default output/gpu-check)
@@ -154,6 +173,7 @@ async function measure(c, { gpu, profile, frames, outDir }) {
   try {
     const f0 = Math.round(c.time * 24);
     const res = [];
+    let picture = null;
     for (let k = 0; k < frames; k++) {
       const frame = f0 + k;
       const a = Date.now();
@@ -163,15 +183,72 @@ async function measure(c, { gpu, profile, frames, outDir }) {
       say(`   frame ${frame} (${k === 0 ? 'first: includes shader compilation' : 'steady'}): ${(ms / 1000).toFixed(2)} s`);
       if (k === 0) {
         const png = path.join(outDir, `gpu-check-${c.id}.png`);
-        await writePng(got.get(frame), { width: p.width, height: p.height, out: png });
+        const rgba = got.get(frame);
+        await writePng(rgba, { width: p.width, height: p.height, out: png });
         say(`   wrote ${path.relative(PROJECT_ROOT, png)} (${p.width}x${p.height})`);
+        // the picture: compared with the frame the cloud rendered (and every shot was reviewed on)
+        const buffers = await s.worker.page.evaluate(() => window.dk.debugCinematic?.() ?? null).catch((e) => ({ error: e.message }));
+        picture = { analysis: analyse(rgba, p.width, p.height, c.crops || []), buffers: buffers?.error ? null : buffers, png };
+        if (buffers?.error) say(`   (could not read the float buffers: ${buffers.error.split('\n')[0]})`);
       }
     }
     const steady = res.length > 1 ? res.slice(1).map((r) => r.ms).sort((a, b) => a - b)[(res.length - 1) >> 1] : res[0].ms;
     return { candidate: c.id, scene: c.scene, time: c.time, cinematic: c.cinematic ?? null, renderer: s.info.glRenderer,
       setupS: +(s.info.setupMs / 1000).toFixed(1), openS: +(openMs / 1000).toFixed(1), firstS: +(res[0].ms / 1000).toFixed(2),
-      steadyS: +(steady / 1000).toFixed(2), frames: res };
+      steadyS: +(steady / 1000).toFixed(2), frames: res, picture };
   } finally { await s.close(); }
+}
+
+// --------------------------------------------------------------- picture ---
+function readImageReference() { try { return JSON.parse(fs.readFileSync(REFERENCE_IMAGE_FILE, 'utf8')); } catch { return null; } }
+
+/** One JPG to drag into the chat: the frame at 1280x720 on top, two 640x360 1:1 crops below (1280x1080). */
+function chatPicture(png, crops, out) {
+  const W = 3840, H = 2160;
+  const box = (c) => [Math.max(0, Math.min(W - 640, c.x + 48 - 320)), Math.max(0, Math.min(H - 360, c.y + 48 - 180))];
+  const [a, b] = [crops[0] || { x: 1600, y: 900 }, crops[1] || crops[0] || { x: 1600, y: 900 }].map(box);
+  const f = `[0:v]split=3[s0][s1][s2];[s0]scale=1280:720:flags=area[top];[s1]crop=640:360:${a[0]}:${a[1]}[c1];[s2]crop=640:360:${b[0]}:${b[1]}[c2];[c1][c2]hstack=inputs=2[bot];[top][bot]vstack=inputs=2,format=yuvj420p[o]`;
+  const r = spawnSync(ffmpegPath(), ['-hide_banner', '-loglevel', 'error', '-y', '-i', png, '-filter_complex', f, '-map', '[o]', '-frames:v', '1', '-q:v', '3', out], { encoding: 'utf8', windowsHide: true });
+  return r.status === 0 ? out : null;
+}
+
+function pictureReport(m, outDir, { writeReference }) {
+  const pic = m.picture;
+  if (!pic) return null;
+  const c = CANDIDATES.find((x) => x.id === m.candidate) || {};
+  const jpg = chatPicture(pic.png, c.crops || [], path.join(outDir, m.candidate === CANDIDATES[0].id ? PICTURE_JPG : `gpu-check-picture-${m.candidate}-for-claude.jpg`));
+  const nanBufs = Object.entries(pic.buffers || {}).filter(([k, v]) => k !== 'shaderErrors' && v && (v.nan || v.inf));
+  say(`   float buffers: ${pic.buffers ? (nanBufs.length ? nanBufs.map(([k, v]) => `${k} ${v.nan} NaN / ${v.inf} Inf`).join(', ') : `${Object.keys(pic.buffers).length - 1} checked, no NaN or Inf`) : 'not readable'}${pic.buffers?.shaderErrors ? `, ${pic.buffers.shaderErrors} shader errors` : ''}`);
+  if (writeReference) {
+    const ref = readImageReference() || { about: 'The GPU check test frames as the cloud machine (SwiftShader) renders them: thumbnail + 1:1 crops (deflate + base64 RGB), pure black/white shares. render/gpu-check.mjs compares a PC\'s frame with these (render/lib/picture.mjs).', candidates: {} };
+    ref.candidates[m.candidate] = { scene: m.scene, time: m.time, cinematic: m.cinematic, preset: 'final', bitDepth: 10, renderer: m.renderer, measuredAt: new Date().toISOString(), ...toReference(pic.analysis) };
+    fs.writeFileSync(REFERENCE_IMAGE_FILE, JSON.stringify(ref, null, 1) + '\n');
+    say(`   wrote the picture reference in ${path.relative(PROJECT_ROOT, REFERENCE_IMAGE_FILE)}`);
+  }
+  const ref = readImageReference()?.candidates?.[m.candidate];
+  const out = { jpg: jpg ? path.relative(PROJECT_ROOT, jpg) : null };
+  if (!ref) {
+    say(`   no reference picture for "${m.candidate}" in pc/reference-image.json - the picture is not compared`);
+    return { ...out, verdict: 'NOT COMPARED' };
+  }
+  const cmp = compare(pic.analysis, ref, pic.buffers);
+  Object.assign(out, cmp, { referenceDate: ref.measuredAt });
+  const line = '#'.repeat(78);
+  say('');
+  say(line);
+  say(`#  PICTURE CHECK (${m.candidate}): ${cmp.verdict}`);
+  say(`#  compared with the frame the cloud rendered on ${String(ref.measuredAt).slice(0, 10)} (every shot is reviewed there):`);
+  say(`#    whole picture (${ref.thumb.w}x${ref.thumb.h}): PSNR ${cmp.thumbPsnr} dB (limit ${LIMITS.thumbPsnr}), SSIM ${cmp.thumbSsim} (limit ${LIMITS.thumbSsim})`);
+  for (const k of cmp.crops) say(`#    1:1 crop ${k.name}: PSNR ${k.psnr} dB (limit ${LIMITS.cropPsnr})`);
+  say(`#    pure black ${(100 * cmp.black.now).toFixed(3)}% (reference ${(100 * cmp.black.ref).toFixed(3)}%), pure white ${(100 * cmp.white.now).toFixed(3)}% (reference ${(100 * cmp.white.ref).toFixed(3)}%)`);
+  for (const r of cmp.reasons) say(`#    - ${r}`);
+  if (cmp.verdict !== 'SAME PICTURE') {
+    say('#  The graphics card does not draw this frame exactly like the cloud computer. Before rendering');
+    say('#  the episode, drag this picture into the chat with Claude so someone can look at it:');
+  } else say('#  Please still drag this picture into the chat with Claude, so someone can look at it:');
+  say(`#    ${out.jpg || '(the picture could not be written)'}`);
+  say(line);
+  return out;
 }
 
 // ------------------------------------------------------------- estimate ---
@@ -198,7 +275,7 @@ function estimate(m, scheduleFile) {
 
 // ------------------------------------------------------------------ main ---
 async function main() {
-  const a = parseArgs(process.argv.slice(2), { booleans: ['help', 'all-profiles', 'swiftshader', 'write-reference', 'probe-only'] });
+  const a = parseArgs(process.argv.slice(2), { booleans: ['help', 'all-profiles', 'swiftshader', 'write-reference', 'write-reference-image', 'probe-only', 'heavy'] });
   if (a.help) { console.log(HELP); return 0; }
   const frames = num(a.frames, 'frames', { min: 1, int: true }) ?? 3;
   const outDir = path.resolve(a.out || path.join(PROJECT_ROOT, 'output', 'gpu-check'));
@@ -264,22 +341,32 @@ async function main() {
 
     // ---- 2. render a 4K frame
     say(`\n== Rendering native 3840x2160 (--preset final, 10-bit${a.swiftshader ? ', SwiftShader = CPU' : ', GPU'})`);
-    let cands = CANDIDATES;
+    let cands = CANDIDATES.filter((c) => !c.heavy);
     if (a.scene) cands = [{ id: path.basename(a.scene, '.js'), label: a.scene, scene: a.scene, time: num(a.time, 'time', { min: 0 }) ?? 0, cinematic: a.cinematic }];
     else if (a.candidate) cands = a.candidate === 'all' ? CANDIDATES : CANDIDATES.filter((c) => c.id === a.candidate);
     if (!cands.length) throw new Error(`--candidate ${a.candidate}: choose ${CANDIDATES.map((c) => c.id).join(', ')} or all`);
     const measurements = [];
-    for (const c of cands) {
+    const heavy = a.heavy && !a.candidate && !a.scene ? CANDIDATES.filter((c) => c.heavy) : [];
+    let found = false;
+    for (const c of [...cands, ...heavy]) {
+      if (found && !c.heavy && a.candidate !== 'all' && !a.writeReference && !a.writeReferenceImage) continue;
       say(` - ${c.label}`);
       say(`   scene ${c.scene} at t=${c.time} s${c.cinematic ? `, --cinematic ${c.cinematic}` : ''}`);
       try {
-        const m = await measure(c, { gpu: !a.swiftshader, profile: chosen?.profile, frames, outDir });
+        const m = await measure(c, { gpu: !a.swiftshader, profile: chosen?.profile, frames: c.heavy ? Math.min(frames, 2) : frames, outDir });
         say(`   renderer: ${m.renderer}`);
         say(`   scene setup ${m.setupS} s (browser + scene build ${m.openS} s), first frame ${m.firstS} s, steady ${m.steadyS} s per frame`);
+        m.picture = pictureReport(m, outDir, { writeReference: !!a.writeReferenceImage });
         measurements.push(m);
-        if (a.candidate !== 'all' && !a.writeReference) break;
+        if (!c.heavy) found = true;
       } catch (e) {
         if (e.code === 'GPU_SOFTWARE_FALLBACK') throw e;
+        if (c.heavy) {
+          say(`   the heavy frame FAILED: ${e.message.split('\n')[0]}`);
+          say('   (if it says the context or device was lost, the graphics card ran out of memory or hit the Windows GPU time-out)');
+          result.heavyError = e.message.split('\n')[0];
+          continue;
+        }
         say(`   could not build this test frame here: ${e.message.split('\n')[0]}`);
         say('   (a cache or asset is probably not made yet - trying the next test frame)');
       }
@@ -299,7 +386,8 @@ async function main() {
       fs.writeFileSync(REFERENCE_FILE, JSON.stringify(ref, null, 1) + '\n');
       say(`\n   wrote ${path.relative(PROJECT_ROOT, REFERENCE_FILE)}`);
     }
-    const m = measurements[0];
+    const m = measurements.find((x) => !CANDIDATES.find((c) => c.id === x.candidate)?.heavy) || measurements[0];
+    result.picture = m.picture;
     const est = estimate(m, scheduleFile);
     result.estimate = est;
     say('\n== Episode 1 estimate (from ' + path.relative(PROJECT_ROOT, scheduleFile) + ')');
@@ -321,6 +409,14 @@ async function main() {
       say('   for sets that are not built yet). Two browsers at once (the default) are usually a bit faster.');
     } else say(`   ${est.note}`);
     if (a.swiftshader && !a.writeReference) code = 0;
+    const different = measurements.filter((x) => x.picture?.verdict === 'DIFFERENT');
+    if (different.length && !a.swiftshader) {
+      say(`\nPICTURE DIFFERENT (${different.map((x) => x.candidate).join(', ')}): the episode renderer will not start masters until someone`);
+      say('has looked at the picture (drag it into the chat with Claude; see the PICTURE CHECK banner above).');
+      code = 3;
+    }
+    if (result.heavyError) { say(`\nTHE HEAVY FRAME (F5) FAILED: ${result.heavyError}`); if (!code) code = 3; }
+    if (measurements.some((x) => x.picture?.jpg)) say(`\nPicture for the chat: ${measurements.find((x) => x.picture?.jpg).picture.jpg}`);
     return code;
   } catch (e) {
     say(`\nerror: ${e.message}`);

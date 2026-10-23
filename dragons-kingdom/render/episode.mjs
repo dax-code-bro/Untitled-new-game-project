@@ -8,15 +8,29 @@
 // The plan is episodes/s01e01/final/render-schedule.md (scene order) and
 // render-jobs.json next to it (one job per shot, with the master settings:
 // native 3840x2160, 24 fps, --preset final, --cinematic velocity (1E-03: film),
-// 10-bit, CRF 12). For every scene, in order:
+// 10-bit, CRF 12).
 //
-//  1. Every shot is rendered with render/render.mjs into
+// THE RENDER GATE (render-ready.json next to render-jobs.json, render/lib/gate.mjs):
+// the branch carries every track's work in progress, so a scene file existing does
+// not make a shot ready for a master. A shot (and the end-credits card) is rendered
+// only when the director has approved it with `node render/gate.mjs approve ...`,
+// which locks the sha256 of its scene file, its shot entry and every code file the
+// scene loads. Files changed after the approval: the shot WAITS (it would not show
+// what was approved). Approval renewed with new files: a finished shot is rendered
+// AGAIN and its scene re-joined. A scene is joined, and the episode assembled, only
+// from shots rendered with their current approval. Black cards need no approval.
+// (--ignore-gate renders unapproved shots, only together with --size: TEST, never a master.)
+//
+// For every scene, in order:
+//
+//  1. Every approved shot is rendered with render/render.mjs into
 //     output/episode1/shots/<scene>/<shot>/<shot>.mp4 (chunked: stopping and
 //     running the command again continues where it stopped; a shot that is
-//     finished is never rendered again). Black and text cards are made with ffmpeg.
-//     A shot whose scene file does not exist yet is SKIPPED with a message:
-//     the scene files are being built in the cloud and arrive with `git pull`;
-//     run `git pull` and `npm run episode` again later and it continues.
+//     finished is not rendered again unless its approval changes). Black and text
+//     cards are made with ffmpeg. A shot whose scene file does not exist yet, or
+//     that is not approved yet, is SKIPPED with a message: the scene files and
+//     the approvals are made in the cloud and arrive with `git pull`; the render
+//     shortcut pulls and continues.
 //  2. When all shots of a scene are finished, they are joined into
 //     output/episode1/scenes/<scene>.mp4 (10-bit H.264 CRF 16, the scene's sound
 //     if there is any, silence otherwise) + <scene>.en.srt, and the shots'
@@ -26,7 +40,7 @@
 //     can switch on/off) and DragonsKingdom_S01E01_1080p.mp4 (8-bit, plays on
 //     phones and TVs), plus DragonsKingdom_S01E01.en.srt.
 //
-// Where a shot's scene file and start time come from (first match wins):
+// Where a shot's scene file and start time come from (render/lib/shots.mjs, first match wins):
 //   a. its render-jobs.json command, once that command has no "<...>" placeholder
 //      and its scene file exists;
 //   b. the set scene named in the command (episodes/s01e01/final/scenes/<set>.js)
@@ -50,9 +64,11 @@ import { PROJECT_ROOT, checkFfmpeg, ffmpegPath } from './lib/tools.mjs';
 import { parseSchedule, loadJobs, parseCommand, DEFAULT_SCHEDULE } from './lib/schedule.mjs';
 import { probeVideo, ffprobeJson, COLOR_TAGS, fpsRational, spawnFfmpeg } from './lib/ffmpeg.mjs';
 import { lockJob } from './lib/job.mjs';
-import { savedGpuProfile, gpuCheckCommand } from './lib/gpu.mjs';
+import { savedGpuProfile, gpuCheckCommand, renderCommand } from './lib/gpu.mjs';
 import { estimateCues, readSrt, writeSrt, sliceCues } from './lib/subtitles.mjs';
 import { fmtDuration } from './lib/progress.mjs';
+import { resolveShot as resolveShotIn } from './lib/shots.mjs';
+import { readGate, gateVerdict, GATE_NAME } from './lib/gate.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RENDER_MJS = path.join(HERE, 'render.mjs');
@@ -71,7 +87,10 @@ Render Episode 1 scene by scene (resumable) and assemble the episode.
                        elsewhere: npm run gpu-check; without one: stop)
   --workers N          browsers per shot (default: the job's own, 2; a shot that fails is retried with 1)
   --max-hours H        do not start a new shot after H hours (stop cleanly, resume later)
-  --rerender-stale     render finished shots again if their scene files changed since (git pull)
+  --rerender-stale     render finished shots again if files they loaded changed since (git pull), as long
+                       as the current files are the approved ones (a changed APPROVAL re-renders by itself)
+  --ignore-gate        TEST renders only (needs --size): also render shots that are not approved in
+                       ${GATE_NAME} (work in progress); never for masters
   --no-assemble        render shots only, do not join scenes / the episode
   --keep-chunks        keep the shots' chunk folders after their scene file is made
   --verify-full        decode scene files and the episode completely as a check (slow at 4K)
@@ -138,40 +157,8 @@ function loadPlan(o) {
   return { sched, jobsFile, scenes, orphans, totalFrames: f };
 }
 
-/** Where shot `job` comes from. Returns { ready, kind, scene, startS, args, reason, via } */
-function resolveShot(job) {
-  if (job.render === 'black') return { ready: true, kind: 'black' };
-  if (job.render === 'text') {
-    const credits = ['credits.txt', 'credits.md'].map((n) => path.join(PLAN_DIR, n)).find((f) => fs.existsSync(f));
-    return credits ? { ready: true, kind: 'text', textFile: credits }
-      : { ready: false, kind: 'text', reason: `the end-credits text is not written yet (${relp(path.join(PLAN_DIR, 'credits.txt'))})` };
-  }
-  const cmd = parseCommand(job.command);
-  if (!cmd?.scene) return { ready: false, kind: '3d', reason: 'render-jobs.json has no render command for this shot' };
-  const setScene = path.resolve(PROJECT_ROOT, cmd.scene);
-  const base = { kind: '3d', args: cmd.args };
-  // a. a finished command
-  if (!cmd.placeholders.length && fs.existsSync(setScene)) {
-    return { ...base, ready: true, scene: setScene, startS: Number(cmd.args.start ?? 0), via: 'render-jobs.json command' };
-  }
-  // b. the set scene + its shot table
-  const table = setScene.replace(/\.m?js$/, '.shots.json');
-  if (fs.existsSync(setScene) && fs.existsSync(table)) {
-    const t = readJson(table);
-    const list = Array.isArray(t) ? t : Array.isArray(t?.shots) ? t.shots : t ? Object.entries(t).filter(([, v]) => v && typeof v === 'object').map(([k, v]) => ({ job: k, ...v })) : [];
-    const e = list.find((x) => (x.job ?? x.id ?? x.shot) === job.job);
-    const start = e && Number(e.start_s ?? e.set_time_start_s ?? e.start);
-    if (e && Number.isFinite(start)) {
-      const warn = e.frames !== undefined && +e.frames !== job.frames ? `shot table says ${e.frames} frames, render-jobs.json ${job.frames} - rendering ${job.frames}` : null;
-      return { ...base, ready: true, scene: setScene, startS: start, via: `${relp(table)}`, warn };
-    }
-  }
-  // c. a scene file for this shot alone
-  const own = path.join(PLAN_DIR, 'scenes', 'shots', `${job.job}.js`);
-  if (fs.existsSync(own)) return { ...base, ready: true, scene: own, startS: 0, via: relp(own) };
-  const missing = !fs.existsSync(setScene) ? relp(setScene) : `an entry for ${job.job} in ${relp(table)}`;
-  return { ...base, ready: false, reason: `waiting for ${missing}` };
-}
+/** Where shot `job` comes from (render/lib/shots.mjs). Returns { ready, kind, scene, startS, args, reason, via, entry } */
+const resolveShot = (job) => resolveShotIn(job, PLAN_DIR);
 
 // ------------------------------------------------------------ shot state ---
 const shotDir = (o, scene, job) => path.join(o.out, 'shots', scene.key, job.job);
@@ -255,9 +242,37 @@ function finishShot(o, scene, job, r, wallS, files = null) {
     job: job.job, scene: scene.key, set: job.set, kind: r.kind, frames: job.frames, width: o.W, height: o.H, stat: statKey(file),
     source: r.scene ? relp(r.scene) : null, startS: r.startS ?? null, via: r.via ?? null, cinematic: r.args?.cinematic ?? null,
     renderer: jj?.fingerprint?.renderer ?? null, files: files ?? jj?.fingerprint?.files ?? {}, wallS: wallS ?? null,
+    // the render gate: the approval this shot was rendered under (null: a black card, or an ungated TEST render)
+    lockId: r.lockId ?? null, lock: r.lock ?? null, approvedBy: r.approvedBy ?? null,
     finishedAt: new Date().toISOString(),
   });
   return null;
+}
+
+// ------------------------------------------------------------ the gate ---
+let GATE = { exists: false, approved: {}, libs: {} };
+
+/** Why a finished scene must not be joined (gate): shots missing, not approved, or rendered under another approval. */
+function gateProblems(o, scene) {
+  if (!o.gated) return [];
+  const out = [];
+  for (const j of scene.jobs) {
+    if (j.render === 'black') continue;
+    const d = shotDone(o, scene, j);
+    const a = GATE.approved[j.job];
+    if (!d) out.push(`${j.job} is not rendered`);
+    else if (!a) out.push(`${j.job} is not approved (${GATE_NAME})`);
+    else if (d.lockId !== a.lockId) out.push(`${j.job} was rendered under another approval`);
+  }
+  return out;
+}
+
+/** The scene file exists and was joined from exactly the shot files there now. */
+function sceneCurrent(o, scene) {
+  const side = readJson(sceneFile(o, scene).replace(/\.mp4$/, '.json'));
+  if (!side || !fs.existsSync(sceneFile(o, scene)) || statKey(sceneFile(o, scene)) !== side.stat) return false;
+  const now = scene.jobs.map((j) => ({ job: j.job, stat: statKey(shotFile(o, scene, j)) }));
+  return JSON.stringify(side.want?.inputs) === JSON.stringify(now);
 }
 
 /** Black card or (end credits) text card with the shots' encoder settings. */
@@ -335,6 +350,8 @@ function episodeCues(o, plan) {
 const sceneFile = (o, scene) => path.join(o.out, 'scenes', `${scene.key}${o.tag}.mp4`);
 
 async function assembleScene(o, plan, scene, cues) {
+  const problems = gateProblems(o, scene);
+  if (problems.length) throw new Error(`not joined (render gate): ${problems.slice(0, 4).join('; ')}${problems.length > 4 ? `; +${problems.length - 4} more` : ''}`);
   const out = sceneFile(o, scene);
   const side = out.replace(/\.mp4$/, '.json');
   const inputs = scene.jobs.map((j) => ({ job: j.job, file: shotFile(o, scene, j), frames: j.frames, stat: statKey(shotFile(o, scene, j)) }));
@@ -460,16 +477,27 @@ function collectStatus(o, plan) {
   const spf = speedModel(o, plan);
   const rows = [];
   for (const s of plan.scenes) {
-    const r = { scene: s.key, title: s.title, shots: s.jobs.length, done: 0, waiting: 0, frames: s.frames, framesDone: 0, leftH: 0, stale: 0, file: null, reasons: [] };
+    const r = { scene: s.key, title: s.title, shots: s.jobs.length, done: 0, waiting: 0, unapproved: 0, changed: 0, outdated: 0, frames: s.frames, framesDone: 0, leftH: 0, stale: 0, file: null, sceneCurrent: false, reasons: [] };
+    const why = (t) => { if (r.reasons.length < 3 && !r.reasons.includes(t)) r.reasons.push(t); };
     for (const j of s.jobs) {
       const d = shotDone(o, s, j);
-      if (d) { r.done++; r.framesDone += j.frames; if (o.checkStale && d.kind === '3d' && staleFiles(o, d).length) r.stale++; continue; }
+      const appr = o.gated && j.render !== 'black' ? GATE.approved[j.job] : null;
+      if (d && (!o.gated || j.render === 'black' || (appr && d.lockId === appr.lockId))) {
+        r.done++; r.framesDone += j.frames; if (o.checkStale && d.kind === '3d' && staleFiles(o, d).length) r.stale++; continue;
+      }
+      if (d) { r.outdated++; why(`${j.job}: rendered under ${appr ? 'an older approval' : 'an approval that was withdrawn'} - not used`); }
       const res = resolveShot(j);
-      if (!res.ready) { r.waiting++; if (r.reasons.length < 3 && !r.reasons.includes(res.reason)) r.reasons.push(res.reason); }
+      if (!res.ready) { r.waiting++; why(res.reason); }
+      else if (o.gated && j.render !== 'black') {
+        const v = gateVerdict(GATE, j, res);
+        if (!v.approved) { r.unapproved++; why(`not approved yet (${GATE_NAME})`); }
+        else if (!v.current) { r.changed++; why(`${j.job}: files changed since it was approved: ${v.changed.join(', ')}`); }
+      }
       r.leftH += (j.frames * spf(j)) / 3600;
     }
     const f = sceneFile(o, s);
     r.file = fs.existsSync(f) ? relp(f) : null;
+    r.sceneCurrent = !!r.file && r.done === r.shots && sceneCurrent(o, s);
     rows.push(r);
   }
   return rows;
@@ -478,29 +506,37 @@ function collectStatus(o, plan) {
 function printStatus(o, plan, rows) {
   const ep4k = path.join(o.out, `${TITLE}${o.size ? '_TEST_' + o.size : '_4K'}.mp4`);
   const lines = [];
-  lines.push(hr('='), `Dragon's Kingdom S01E01 - render status ${new Date().toLocaleString()}`, `renderer: ${o.gpu ? `GPU (${savedGpuProfile()?.renderer || 'see gpu-check'})` : 'CPU (SwiftShader)'}   output: ${relp(o.out)}`, hr('='));
-  lines.push(' #  scene            shots done  waiting  frames done        left (est.)  scene file');
-  let td = 0, tf = 0, tl = 0, tw = 0, ts = 0;
+  lines.push(hr('='), `Dragon's Kingdom S01E01 - render status ${new Date().toLocaleString()}`, `renderer: ${o.gpu ? `GPU (${savedGpuProfile()?.renderer || 'see gpu-check'})` : 'CPU (SwiftShader)'}   output: ${relp(o.out)}`);
+  const nAppr = Object.keys(GATE.approved || {}).length;
+  lines.push(o.gated ? `render gate: ${GATE.exists ? `${nAppr} shot(s) approved in ${GATE_NAME}` : `${GATE_NAME} does not exist yet - nothing but black cards is rendered`}${GATE.error ? ` - ${GATE.error}` : ''}`
+    : 'render gate: IGNORED (--ignore-gate, TEST render)');
+  lines.push(hr('='));
+  lines.push(' #  scene            shots done  not approved  waiting  frames done        left (est.)  scene file');
+  let td = 0, tf = 0, tl = 0, tw = 0, ts = 0, tu = 0, tc = 0, to = 0;
   rows.forEach((r, i) => {
-    td += r.framesDone; tf += r.frames; tl += r.leftH; tw += r.waiting; ts += r.stale;
-    lines.push(`${String(i + 1).padStart(2)}  ${r.scene.padEnd(16)} ${`${r.done}/${r.shots}`.padStart(8)}  ${String(r.waiting).padStart(7)}  ${`${r.framesDone}/${r.frames}`.padStart(13)}  ${(r.leftH ? fmtH(r.leftH) : '-').padStart(11)}  ${r.file ? 'DONE' : r.done === r.shots && r.shots ? 'ready to join' : ''}${r.stale ? `  (${r.stale} stale)` : ''}`);
+    td += r.framesDone; tf += r.frames; tl += r.leftH; tw += r.waiting; ts += r.stale; tu += r.unapproved; tc += r.changed; to += r.outdated;
+    const fileState = r.sceneCurrent ? 'DONE' : r.file ? (r.done === r.shots ? 'to be joined again' : 'OUT OF DATE (not used)') : r.done === r.shots && r.shots ? 'ready to join' : '';
+    lines.push(`${String(i + 1).padStart(2)}  ${r.scene.padEnd(16)} ${`${r.done}/${r.shots}`.padStart(8)}  ${String(r.unapproved + r.changed).padStart(12)}  ${String(r.waiting).padStart(7)}  ${`${r.framesDone}/${r.frames}`.padStart(13)}  ${(r.leftH ? fmtH(r.leftH) : '-').padStart(11)}  ${fileState}${r.stale ? `  (${r.stale} stale)` : ''}`);
     for (const why of r.reasons) lines.push(`      waiting: ${why}`);
   });
-  lines.push(hr(), `total: ${td}/${tf} frames (${tf ? ((100 * td) / tf).toFixed(1) : 0}%), ${tw} shot(s) waiting for scene files; about ${fmtH(tl)} of rendering left (ESTIMATE${o.gpu ? '' : ', CPU'})`);
-  if (ts) lines.push(`${ts} finished shot(s) were rendered from scene files that have changed since (npm run episode -- --rerender-stale)`);
+  lines.push(hr(), `total: ${td}/${tf} frames (${tf ? ((100 * td) / tf).toFixed(1) : 0}%); about ${fmtH(tl)} of rendering left (ESTIMATE${o.gpu ? '' : ', CPU'})`);
+  if (tu || tc) lines.push(`${tu + tc} shot(s) wait for the director's approval (${tu} not approved yet${tc ? `, ${tc} changed since their approval` : ''}): they are rendered after a later git pull brings it`);
+  if (tw) lines.push(`${tw} shot(s) wait for their scene files (they arrive with git pull)`);
+  if (to) lines.push(`${to} finished shot(s) were rendered under an approval that has changed: they are not used, and are rendered again once the new approval matches the files`);
+  if (ts) lines.push(`${ts} finished shot(s) were rendered from files that have changed since (to render them again: ${renderCommand('--rerender-stale')})`);
   lines.push(fs.existsSync(ep4k) ? `EPISODE: ${relp(ep4k)}` : 'episode file: not yet (needs every scene)');
   const g = freeGB(o.out);
   if (g != null) lines.push(`free disk: ${g.toFixed(0)} GB`);
   const text = lines.join('\n');
   console.log(text);
-  try { fs.mkdirSync(o.out, { recursive: true }); fs.writeFileSync(path.join(o.out, 'STATUS.txt'), text + '\n'); writeJson(path.join(o.out, 'status.json'), { at: new Date().toISOString(), rows }); } catch {}
+  try { fs.mkdirSync(o.out, { recursive: true }); fs.writeFileSync(path.join(o.out, 'STATUS.txt'), text + '\n'); writeJson(path.join(o.out, 'status.json'), { at: new Date().toISOString(), gate: o.gated ? { file: GATE_NAME, exists: GATE.exists, approved: nAppr } : 'ignored', rows }); } catch {}
 }
 
 // ----------------------------------------------------------------- main ---
 let PLAN_DIR = path.dirname(DEFAULT_SCHEDULE);
 
 async function main() {
-  const a = parseArgs(process.argv.slice(2), { booleans: ['help', 'status', 'dry-run', 'gpu', 'cpu', 'rerender-stale', 'no-assemble', 'assemble', 'keep-chunks', 'verify-full', 'skip-cache-check', 'stale'] });
+  const a = parseArgs(process.argv.slice(2), { booleans: ['help', 'status', 'dry-run', 'gpu', 'cpu', 'rerender-stale', 'no-assemble', 'assemble', 'keep-chunks', 'verify-full', 'skip-cache-check', 'stale', 'ignore-gate'] });
   if (a.help) { console.log(HELP); return 0; }
   const schedule = path.resolve(a.schedule || DEFAULT_SCHEDULE);
   PLAN_DIR = path.dirname(schedule);
@@ -525,18 +561,22 @@ async function main() {
   o.gpu = a.cpu ? false : a.gpu ? true : !!gpuSaved;
   const plan = loadPlan(o);
   o.checkStale = !!(a.status || a.stale || a.rerenderStale);
+  // the render gate (render-ready.json): only approved shots go into masters
+  if (a.ignoreGate && !o.size) throw new Error(`--ignore-gate is only for TEST renders (with --size, e.g. --size 960x540): masters render the shots approved in ${GATE_NAME} only`);
+  o.gated = !a.ignoreGate;
+  GATE = readGate(PLAN_DIR);
 
   if (a.status) { printStatus(o, plan, collectStatus(o, plan)); saveHashes(o); return 0; }
 
   LOG_FILE = path.join(PROJECT_ROOT, 'pc', 'logs', `episode${o.size ? '-test' : ''}.log`);
   fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
   say(hr('='));
-  say(`npm run episode ${process.argv.slice(2).join(' ')}`.trim());
+  say(`render/episode.mjs ${process.argv.slice(2).join(' ')}`.trim());
   if (!a.cpu && !a.gpu && !gpuSaved && !a.dryRun) {
     // what the last GPU check on this computer found (output/gpu-check/gpu-check.json), if it ran
     const last = readJson(path.join(PROJECT_ROOT, 'output', 'gpu-check', 'gpu-check.json'));
     const ranHere = last && last.system?.host === os.hostname();
-    const cpuCmd = process.platform === 'win32' ? 'pc\\Render-Episode.cmd --cpu' : 'bash pc/render-episode.sh --cpu';
+    const cpuCmd = renderCommand('--cpu');
     if (ranHere && last.exitCode === 2) {
       say(`The GPU check ran on this computer (${last.date}) but found NO usable graphics card:`);
       say('  every way Chromium tried ended in software rendering (see the "GPU NOT USED" banner in pc/logs/gpu-check-*.txt).');
@@ -591,25 +631,48 @@ async function main() {
       if (only && !only.has(scene.key)) continue;
       say(hr());
       say(`scene ${scene.n} ${scene.key}${scene.title ? `: ${scene.title}` : ''} - ${scene.jobs.length} shot(s), ${scene.frames} frames (${fmtDuration(scene.frames / FPS)})`);
-      let complete = true, waiting = 0;
+      let complete = true, waiting = 0, unapproved = 0, held = 0;
       for (const job of scene.jobs) {
         if (STOPPING) { complete = false; break; }
         const done = shotDone(o, scene, job);
-        if (done && done.kind === 'text' && staleFiles(o, done).length) {
-          // cards cost seconds, so a changed credits text is made again without being asked (--rerender-stale is for 3D shots)
-          say(`  ${job.job}: the card's text changed since it was made (${staleFiles(o, done).join(', ')}) -> making it again`);
-          if (!a.dryRun) { fs.rmSync(doneFile(o, scene, job), { force: true }); fs.rmSync(shotFile(o, scene, job), { force: true }); }
-        } else if (done) {
-          if (a.rerenderStale && done.kind === '3d') {
+        const gatedJob = o.gated && job.render !== 'black';
+        const appr = gatedJob ? GATE.approved[job.job] : null;
+        const drop = () => { if (!a.dryRun) { fs.rmSync(doneFile(o, scene, job), { force: true }); fs.rmSync(shotFile(o, scene, job), { force: true }); } };
+        let r = null;
+        if (done) {
+          if (gatedJob && !(appr && done.lockId === appr.lockId)) {
+            // finished, but not under the approval that holds now
+            r = resolveShot(job);
+            const v = r.ready ? gateVerdict(GATE, job, r) : null;
+            if (v?.approved && v.current) {
+              say(`  ${job.job}: approved again (with new files) since it was rendered -> rendering it again; its scene is joined again afterwards`);
+              drop();
+            } else {
+              complete = false; held++;
+              say(`  ${job.job.padEnd(8)} NOT USED - rendered under ${appr ? 'an older approval' : 'an approval that was withdrawn'}; ${!appr ? `it is not in ${GATE_NAME} any more` : !r.ready ? r.reason : `the files do not match the new approval yet (${v.changed.join(', ')})`}`);
+              continue;
+            }
+          } else if (!o.gated && done.kind === 'text' && staleFiles(o, done).length) {
+            // (ungated TEST render) cards cost seconds, so a changed credits text is made again without being asked
+            say(`  ${job.job}: the card's text changed since it was made (${staleFiles(o, done).join(', ')}) -> making it again`);
+            drop();
+          } else if (a.rerenderStale && done.kind === '3d' && staleFiles(o, done).length) {
             const st = staleFiles(o, done);
-            if (st.length) {
-              say(`  ${job.job}: finished, but ${st.length} of its files changed since (${st.slice(0, 3).join(', ')}${st.length > 3 ? ', ...' : ''}) -> rendering again`);
-              if (!a.dryRun) { fs.rmSync(doneFile(o, scene, job), { force: true }); fs.rmSync(shotFile(o, scene, job), { force: true }); }
-            } else continue;
+            r = resolveShot(job);
+            const v = gatedJob && r.ready ? gateVerdict(GATE, job, r) : null;
+            if (gatedJob && !(v?.approved && v.current)) { say(`  ${job.job}: ${st.length} of its files changed since it was rendered, but the files now are not the approved ones - the approved render is kept`); continue; }
+            say(`  ${job.job}: finished, but ${st.length} of its files changed since (${st.slice(0, 3).join(', ')}${st.length > 3 ? ', ...' : ''}) -> rendering again`);
+            drop();
           } else continue;
         }
-        const r = resolveShot(job);
+        r ??= resolveShot(job);
         if (!r.ready) { complete = false; waiting++; say(`  ${job.job.padEnd(8)} SKIPPED - ${r.reason}`); continue; }
+        if (gatedJob) {
+          const v = gateVerdict(GATE, job, r);
+          if (!v.approved) { complete = false; unapproved++; say(`  ${job.job.padEnd(8)} SKIPPED - ${v.reason}`); continue; }
+          if (!v.current) { complete = false; unapproved++; say(`  ${job.job.padEnd(8)} SKIPPED - approved, but changed since: ${v.changed.join(', ')} (waits until it is approved again)`); continue; }
+          Object.assign(r, { lockId: v.lockId, lock: v.now.lock, approvedBy: v.entry.approvedBy ?? null });
+        }
         if (Date.now() - t0 > maxMs) { say(`  --max-hours reached: not starting ${job.job}`); complete = false; STOPPING = true; break; }
         if (r.warn) say(`  ${job.job}: note: ${r.warn}`);
         const gb = freeGB(o.out);
@@ -649,14 +712,18 @@ async function main() {
         if (!a.keepChunks) fs.rmSync(path.join(shotDir(o, scene, job), 'chunks'), { recursive: true, force: true });
         printProgressLine(o, plan);
       }
-      if (waiting) say(`  ${scene.key}: ${waiting} shot(s) are waiting for their scene files - they arrive with "git pull"; run "npm run episode" again then.`);
+      if (waiting) say(`  ${scene.key}: ${waiting} shot(s) are waiting for their scene files - they arrive with "git pull"; then ${renderCommand()}.`);
+      if (unapproved) say(`  ${scene.key}: ${unapproved} shot(s) are waiting for the director's approval (${GATE_NAME}) - it also arrives with "git pull".`);
+      if (held) say(`  ${scene.key}: ${held} finished shot(s) do not match their current approval: the scene is not joined until they do.`);
+      if (!complete && !a.dryRun && fs.existsSync(sceneFile(o, scene)) && !sceneCurrent(o, scene)) say(`  ${scene.key}: the scene file from before (${relp(sceneFile(o, scene))}) is out of date and is not used.`);
       if (complete && !a.dryRun && !a.noAssemble && !STOPPING) {
         try { const r = await assembleScene(o, plan, scene, cues); say(`  scene file ${relp(sceneFile(o, scene))}: ${r}`); } catch (e) { failed.push(`scene ${scene.key}: ${e.message}`); say(`  scene ${scene.key}: FAILED to join - ${e.message}`); }
       }
     }
     // ---- the episode
     if (!a.dryRun && !a.noAssemble && !STOPPING && !only) {
-      const ready = plan.scenes.every((s) => fs.existsSync(sceneFile(o, s)) && readJson(sceneFile(o, s).replace(/\.mp4$/, '.json')));
+      // every scene file joined from exactly the shots there now, each rendered under its current approval
+      const ready = plan.scenes.every((s) => sceneCurrent(o, s) && !gateProblems(o, s).length);
       say(hr());
       if (ready) {
         const r = await assembleEpisode(o, plan, cues);
