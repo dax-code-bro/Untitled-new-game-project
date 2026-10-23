@@ -1,0 +1,310 @@
+{
+ "set": "VERDOR_GROUNDS",
+ "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+ "spec": "episodes/s01e01/final/scenes/specs/verdor-grounds.spec.js",
+ "fps": 24,
+ "handles": 12,
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "note": "start_s / frames are the render-jobs.json contract (episode.mjs); pre/post are handle frames the editor may render around each shot.",
+ "shots": [
+  {
+   "job": "P-17",
+   "seq": 17,
+   "scene": "PROLOGUE",
+   "set": "VERDOR_GROUNDS",
+   "start_s": 1,
+   "start_frame": 24,
+   "frames": 180,
+   "pre": 12,
+   "post": 12,
+   "seconds": 7.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L005",
+     "part": 0,
+     "ref": "L005",
+     "role": "NARRATOR",
+     "file": "vo/L005.wav",
+     "file_in_s": 0,
+     "file_out_s": 2.105,
+     "at_s": 2.57,
+     "speech_in_s": 2.6,
+     "speech_out_s": 4.645,
+     "words": [
+      {
+       "w": "this",
+       "start_s": 2.57,
+       "end_s": 2.92
+      },
+      {
+       "w": "is",
+       "start_s": 2.92,
+       "end_s": 3.12
+      },
+      {
+       "w": "where",
+       "start_s": 3.12,
+       "end_s": 3.38
+      },
+      {
+       "w": "our",
+       "start_s": 3.38,
+       "end_s": 3.49
+      },
+      {
+       "w": "story",
+       "start_s": 3.49,
+       "end_s": 3.95
+      },
+      {
+       "w": "begins",
+       "start_s": 3.95,
+       "end_s": 4.66
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "shadow-pass",
+     "from": 0.8,
+     "to": 6.2
+    }
+   ],
+   "continuity": {
+    "tod": "clear morning",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     0.819151558012767,
+     0.5299192642332049,
+     0.21949099844821696
+    ],
+    "exposure": 1.4
+   },
+   "staging": "NONE: high over the meadow edge; an immense shadow crosses the grass left to right; the dragon is never seen (cut before it is identified).",
+   "deviation": null
+  },
+  {
+   "job": "X2-08",
+   "seq": 66,
+   "scene": "1A",
+   "set": "VERDOR_GROUNDS",
+   "start_s": 11,
+   "start_frame": 264,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning, mist thinning",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.8528685319524433,
+     0.49999999999999994,
+     0.15038373318043527
+    ],
+    "exposure": 1.4
+   },
+   "staging": "WIDE: low, long lens; Leaf comes low and quick, then crouches; Abby from behind at left; Remi walks on past at right toward something very large off screen.",
+   "deviation": null
+  },
+  {
+   "job": "X2-09",
+   "seq": 67,
+   "scene": "1A",
+   "set": "VERDOR_GROUNDS",
+   "start_s": 18,
+   "start_frame": 432,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning, mist thinning",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.8528685319524433,
+     0.49999999999999994,
+     0.15038373318043527
+    ],
+    "exposure": 1.4
+   },
+   "staging": "BACK: handheld close beside them; Abby from behind-left checks his wing joint, practised and unhurried.",
+   "deviation": null
+  },
+  {
+   "job": "X2-10",
+   "seq": 68,
+   "scene": "1A",
+   "set": "VERDOR_GROUNDS",
+   "start_s": 24,
+   "start_frame": 576,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning, mist thinning",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.8528685319524433,
+     0.49999999999999994,
+     0.15038373318043527
+    ],
+    "exposure": 1.4
+   },
+   "staging": "HANDS: her hands at his foot pad, his eye beyond (soft); the focus racks to it; he does not flinch.",
+   "deviation": null
+  },
+  {
+   "job": "X2-11",
+   "seq": 69,
+   "scene": "1A",
+   "set": "VERDOR_GROUNDS",
+   "start_s": 31,
+   "start_frame": 744,
+   "frames": 36,
+   "pre": 12,
+   "post": 12,
+   "seconds": 1.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "X2-08",
+     "part": 0,
+     "ref": "X2-08",
+     "role": "ABBY",
+     "file": "vo/X2-08.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.695,
+     "at_s": 0.37,
+     "speech_in_s": 0.4,
+     "speech_out_s": 1.035,
+     "words": [
+      {
+       "w": "you'll",
+       "start_s": 0.37,
+       "end_s": 0.63
+      },
+      {
+       "w": "do",
+       "start_s": 0.63,
+       "end_s": 0.96
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning, mist thinning",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.8528685319524433,
+     0.49999999999999994,
+     0.15038373318043527
+    ],
+    "exposure": 1.4
+   },
+   "staging": "OTS: over her shoulder to Leaf; she is satisfied (the line plays on her back).",
+   "deviation": null
+  },
+  {
+   "job": "X2-12",
+   "seq": 70,
+   "scene": "1A",
+   "set": "VERDOR_GROUNDS",
+   "start_s": 35,
+   "start_frame": 840,
+   "frames": 84,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning, mist thinning",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.8528685319524433,
+     0.49999999999999994,
+     0.15038373318043527
+    ],
+    "exposure": 1.4
+   },
+   "staging": "BACK: from behind her at the riding gear; Leaf noses in over her right shoulder; she pushes his head away; it comes straight back.",
+   "deviation": null
+  },
+  {
+   "job": "X2-13",
+   "seq": 71,
+   "scene": "1A",
+   "set": "VERDOR_GROUNDS",
+   "start_s": 41,
+   "start_frame": 984,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning, mist thinning",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.8528685319524433,
+     0.49999999999999994,
+     0.15038373318043527
+    ],
+    "exposure": 1.4
+   },
+   "staging": "PROFILE + DOF: she kneels and leans her forehead to his, eyes closed; his eye sharp, her profile soft; he breathes out.",
+   "deviation": null
+  }
+ ]
+}

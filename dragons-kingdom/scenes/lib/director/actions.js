@@ -157,8 +157,22 @@ export function poseHuman(ch, st, t, env, info = {}) {
       if (b) { rotateWorld(b, _q.setFromAxisAngle(UP, -twist)); ch.root.updateMatrixWorld(true); }
     }
   }
-  // 5. arms: walk swing, then overlays by IK
+  // 5. arms: hanging arms while walking (a drape pose with a hand on the hip or a raised arm would
+  //    walk that way), then overlays by IK, then the walk swing
   const armBusy = { L: 0, R: 0 };
+  const down = Math.max(info.armsDown ?? walkW * (info.armSwing === 0 ? 0 : 1), st.posture.armsDown ?? 0);
+  if (down > 0.01 && !custom('armsDown')) {
+    for (const sd of ['L', 'R']) {
+      if (st.overlays.some((o) => o.w > 0.5 && (o.o?.side === sd || o.o?.side === 'both' || ['carry', 'handsTo', 'clasp', 'cradle'].includes(o.name)))) continue;
+      const ub = ch.bone(`upperarm01.${sd}`); if (!ub) continue;
+      const sgn = sd === 'L' ? 1 : -1;
+      const sh = wpos(ub);
+      const target = sh.clone().add(new THREE.Vector3(0, -rig.armLen * 0.94, 0)).addScaledVector(fwd, 0.05).addScaledVector(left, sgn * 0.07);
+      const pole = sh.clone().add(new THREE.Vector3(0, -0.3, 0)).addScaledVector(fwd, -0.5).addScaledVector(left, sgn * 0.1);
+      limbIK(ch, 'arm', sd, target, pole, { reach: down });
+      if (down > 0.5) relaxHand(ch, sd, { palm: left.clone().multiplyScalar(-sgn), fingers: new THREE.Vector3(0, -1, 0), curl: 0.3 });
+    }
+  }
   for (const ov of st.overlays) {
     if (ov.w <= 0.001) continue;
     if (custom(ov.name)) { armBusy.L = armBusy.R = 1; continue; }

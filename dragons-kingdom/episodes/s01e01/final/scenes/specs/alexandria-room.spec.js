@@ -29,7 +29,7 @@ export default {
     },
     'X1-03': {
       staging: 'BACK: from behind her left shoulder (three-quarter back); she turns toward the door (left background), her face away from the camera throughout.',
-      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.32, 0.22]], ['door', [-0.45, 0.02]]], from: 232, height: 1.6, dist: 1.9, at: 0.4 }, mm: 50, fstop: 2.4, focus: 'alexandria.head', bounds: BOUNDS },
+      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.32, 0.22]], ['door', [-0.45, 0.02]]], from: 242, height: 1.6, dist: 1.9, at: 0.4 }, mm: 50, fstop: 2.4, focus: 'alexandria.head', bounds: BOUNDS },
       cast: { alexandria: { at: WIN, face: 90, look: 'windowOut', acts: [[0.35, 'turn', { to: 'door', dur: 0.75 }], [0.35, 'look', { at: 'door' }]] } },
     },
     'X1-04': {
@@ -40,7 +40,7 @@ export default {
         alexandria: { at: [1.82, -0.25], face: 'youngAttendant', look: 'youngAttendant.head', acts: [[3.9, 'walk', { to: [1.6, -1.95], speed: 1.2 }]] },
         youngAttendant: { at: DOORWAY, face: 180, look: 'alexandria.head', lookAmount: 0.7, acts: [[0.3, 'bow', { to: 0.18, dur: 0.35 }], [1.2, 'rise', { dur: 0.5 }], [4.1, 'walk', { to: [1.4, -3.6], speed: 0.9, face: 180 }]] },
       },
-      lines: [['X1-01', 0.35], ['X1-02', 0.35]],
+      lines: [['X1-01', 0.42], ['X1-02', 0.3]],
     },
   },
 };

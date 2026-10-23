@@ -21,6 +21,7 @@
 import { clamp, ease, lerp, keyed } from './timeline.js';
 
 export const POSTURES = ['crouch', 'kneel', 'sit', 'bow', 'lean'];
+const MOVES = new Set(['walk', 'run', 'hurry', 'turn', 'place']);
 export const OVERLAYS = new Set(['raiseHand', 'point', 'reach', 'gesture', 'handsTo', 'carry', 'cradle', 'shove', 'touch', 'nod', 'headShake', 'clasp', 'hold', 'wave']);
 
 const D2R = Math.PI / 180;
@@ -112,11 +113,16 @@ export function actorState(spec, t, env) {
   const s = { x: st0[0], z: st0[1], yaw: faceYaw(spec.face, st0[0], st0[1]) ?? 0, speed: 0, dist: 0, moving: 0, posture: { crouch: 0, kneel: 0, sit: 0, bow: 0, lean: 0 }, overlays: [], look: spec.look ? { at: spec.look, amount: spec.lookAmount ?? 0.85 } : null, walkHeading: null };
   if (spec.posture) Object.assign(s.posture, spec.posture);
   const acts = (spec.acts || []).slice().sort((a, b) => a[0] - b[0]);
+  // an act runs until the next act of its own CHANNEL starts (a walk is cut by the next walk / turn,
+  // a crouch ramp by the next posture act - a raised hand or a turn of the head cuts neither)
+  const channel = (n) => (OVERLAYS.has(n) ? `ov:${n}` : n === 'look' ? 'look' : MOVES.has(n) ? 'move' : POSTURES.includes(n) || n === 'rise' ? 'posture' : n === 'hide' || n === 'show' ? 'vis' : 'base');
   for (let i = 0; i < acts.length; i++) {
     const [t0, name, o = {}] = acts[i];
     if (t0 > t) break;
-    const tNext = i + 1 < acts.length ? acts[i + 1][0] : Infinity;
-    const tEnd = Math.min(t, OVERLAYS.has(name) || name === 'look' ? t : tNext);     // base acts are cut by the next base act
+    const ch = channel(name);
+    let tNext = Infinity;
+    for (let j = i + 1; j < acts.length; j++) if (channel(acts[j][1]) === ch) { tNext = acts[j][0]; break; }
+    const tEnd = Math.min(t, OVERLAYS.has(name) || name === 'look' ? t : tNext);
     const dt = tEnd - t0;
     if (OVERLAYS.has(name)) { s.overlays.push({ name, w: envelope(t - t0, o), o, t0, dt: t - t0 }); continue; }
     switch (name) {

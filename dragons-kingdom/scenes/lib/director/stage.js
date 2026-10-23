@@ -257,7 +257,7 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
       if (!a.root.visible) { S.posed.add(name); continue; }
       if (a.kind === 'human') {
         const mouth = row.dialogue?.length ? mouthAt(row.dialogue, a.def.role || name.toUpperCase(), tt) : 0;
-        poseHuman(a.ch, st, tt, S.env, { idle: b.idle, armSwing: b.armSwing ?? a.def.armSwing, mouth, role: a.def.role, placed: row.dialogue, shot: row.job });
+        poseHuman(a.ch, st, tt, S.env, { idle: b.idle, armSwing: b.armSwing ?? a.def.armSwing, armsDown: b.armsDown ?? a.def.armsDown, mouth, role: a.def.role, placed: row.dialogue, shot: row.job });
       } else if (a.kind === 'creature') {
         poseCreature(a.c, S_poses, st, tt, { look: b.lookPose ? b.lookPose : null, defaults: b.poseDefaults });
         placeCreature(a, b, tt);
@@ -349,7 +349,7 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
     // effects
     S.fx.update(spec1, local, S.env, { shot: row.job, u: sel.u, camera: ctx.camera });
     // exposure (continuity + the shot's own trim), shadows: the set is static within a shot
-    if (ctx.cinematic?.grade) ctx.cinematic.grade.exposure = (cont.exposure ?? 0) + (spec1.exposure ?? 0);
+    if (ctx.cinematic?.grade) ctx.cinematic.grade.exposure = (cont.exposure ?? 0) + (info.exposureTrim ?? 0) + (spec1.exposure ?? 0);
     ctx.shadows.key = `${row.job}|${JSON.stringify(spec1.set || {})}`;
     ctx.shadows.dynamic = [...dynamic, ...S.fx.dynamic, ...(S.built.dynamic?.(info) || [])];
     S.built.afterCamera?.(info);

@@ -126,29 +126,29 @@
      "file": "vo/X1-01.wav",
      "file_in_s": 0,
      "file_out_s": 2.375,
-     "at_s": -0.05,
-     "speech_in_s": 0.35,
-     "speech_out_s": 2.305,
+     "at_s": 0.02,
+     "speech_in_s": 0.42,
+     "speech_out_s": 2.375,
      "words": [
       {
        "w": "your",
-       "start_s": 0.32,
-       "end_s": 0.53
+       "start_s": 0.39,
+       "end_s": 0.6
       },
       {
        "w": "majesty",
-       "start_s": 0.53,
-       "end_s": 1.33
+       "start_s": 0.6,
+       "end_s": 1.4
       },
       {
        "w": "the",
-       "start_s": 1.61,
-       "end_s": 1.79
+       "start_s": 1.68,
+       "end_s": 1.86
       },
       {
        "w": "egg",
-       "start_s": 1.79,
-       "end_s": 2.31
+       "start_s": 1.86,
+       "end_s": 2.38
       }
      ],
      "gain_db": 0,
@@ -163,19 +163,19 @@
      "file": "vo/X1-02.wav",
      "file_in_s": 0,
      "file_out_s": 0.91,
-     "at_s": 2.625,
-     "speech_in_s": 2.655,
-     "speech_out_s": 3.505,
+     "at_s": 2.645,
+     "speech_in_s": 2.675,
+     "speech_out_s": 3.525,
      "words": [
       {
        "w": "i'm",
-       "start_s": 2.625,
-       "end_s": 2.845
+       "start_s": 2.645,
+       "end_s": 2.865
       },
       {
        "w": "coming",
-       "start_s": 2.845,
-       "end_s": 3.335
+       "start_s": 2.865,
+       "end_s": 3.355
       }
      ],
      "gain_db": 0,

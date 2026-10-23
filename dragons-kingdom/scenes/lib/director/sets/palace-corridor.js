@@ -132,7 +132,7 @@ export async function build(ctx) {
         beyondExit.material.color.setRGB(1.3, 1.36, 1.45);
         sky.userData.uniforms.uZ.value.setRGB(0.12, 0.15, 0.22); sky.userData.uniforms.uH.value.setRGB(0.45, 0.47, 0.52);
       } else {
-        sun.color.setRGB(1.0, 0.9, 0.76); sun.intensity = 2.2 * (st.sun ?? 1);
+        sun.color.setRGB(1.0, 0.9, 0.76); sun.intensity = 1.5 * (st.sun ?? 1);
         sun.position.copy(sun.target.position).addScaledVector(S, 40);
         winLights.forEach((l) => { l.intensity = 0.6; });
         exitLight.intensity = 5;

@@ -17,7 +17,8 @@
 //            up); lag / yawLag: the operator trails the subject's position / turns by that many seconds
 //   orbit    { center, radius, height, angle (deg, keys ok) }  pos on a circle round center
 //   mount    'boat' | actor name                 the camera rides that object: numeric pos / look are in its
-//            own frame (a boat-mounted camera, a camera on a dragon's back); names stay world points
+//            own frame (a boat-mounted camera, a camera on a dragon's back); names and { at: [x, y, z] }
+//            stay world points
 //   push     0.05 | keys                      move this fraction of the way toward `look` over the shot
 //   roll     degrees (keys ok)
 //   mm       focal length (keys = a zoom), sensor ('super35'), fstop, shutter (deg), iso

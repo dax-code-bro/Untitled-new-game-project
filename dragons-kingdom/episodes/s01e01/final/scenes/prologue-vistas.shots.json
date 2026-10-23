@@ -1,0 +1,795 @@
+{
+ "set": "PROLOGUE_VISTAS",
+ "scene_file": "episodes/s01e01/final/scenes/prologue-vistas.js",
+ "spec": "episodes/s01e01/final/scenes/specs/prologue-vistas.spec.js",
+ "fps": 24,
+ "handles": 12,
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "note": "start_s / frames are the render-jobs.json contract (episode.mjs); pre/post are handle frames the editor may render around each shot.",
+ "shots": [
+  {
+   "job": "P-08",
+   "seq": 8,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "start_s": 1,
+   "start_frame": 24,
+   "frames": 192,
+   "pre": 12,
+   "post": 12,
+   "seconds": 8,
+   "trans": [
+    "dissolve",
+    24
+   ],
+   "dialogue": [
+    {
+     "id": "L002",
+     "part": 1,
+     "ref": "L002#1",
+     "role": "NARRATOR",
+     "file": "vo/L002.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.935,
+     "at_s": 1.3,
+     "speech_in_s": 1.3,
+     "speech_out_s": 2.935,
+     "words": [
+      {
+       "w": "the",
+       "start_s": 1.3,
+       "end_s": 1.49
+      },
+      {
+       "w": "seas",
+       "start_s": 1.49,
+       "end_s": 1.99
+      },
+      {
+       "w": "had",
+       "start_s": 1.99,
+       "end_s": 2.18
+      },
+      {
+       "w": "names",
+       "start_s": 2.18,
+       "end_s": 2.76
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L002",
+     "part": 2,
+     "ref": "L002#2",
+     "role": "NARRATOR",
+     "file": "vo/L002.wav",
+     "file_in_s": 1.935,
+     "file_out_s": 4.32,
+     "at_s": 3.235,
+     "speech_in_s": 3.535,
+     "speech_out_s": 5.32,
+     "words": [
+      {
+       "w": "the",
+       "start_s": 3.55,
+       "end_s": 3.68
+      },
+      {
+       "w": "kingdoms",
+       "start_s": 3.68,
+       "end_s": 4.3
+      },
+      {
+       "w": "had",
+       "start_s": 4.3,
+       "end_s": 4.52
+      },
+      {
+       "w": "borders",
+       "start_s": 4.52,
+       "end_s": 5.19
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "dawn",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     0.9887692138764507,
+     0.12186934340514748,
+     0.08650609705762924
+    ],
+    "sunVeiled": true
+   },
+   "staging": "NONE: a fishing settlement above its shore under a pale dawn sky, from the water; slow drift.",
+   "deviation": null
+  },
+  {
+   "job": "P-09",
+   "seq": 9,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "start_s": 11,
+   "start_frame": 264,
+   "frames": 204,
+   "pre": 12,
+   "post": 12,
+   "seconds": 8.5,
+   "trans": [
+    "dissolve",
+    24
+   ],
+   "dialogue": [
+    {
+     "id": "L002",
+     "part": 3,
+     "ref": "L002#3",
+     "role": "NARRATOR",
+     "file": "vo/L002.wav",
+     "file_in_s": 4.32,
+     "file_out_s": 9.185,
+     "at_s": 1.1,
+     "speech_in_s": 1.4,
+     "speech_out_s": 5.935,
+     "words": [
+      {
+       "w": "beyond",
+       "start_s": 1.4,
+       "end_s": 1.74
+      },
+      {
+       "w": "them",
+       "start_s": 1.74,
+       "end_s": 1.91
+      },
+      {
+       "w": "lay",
+       "start_s": 1.91,
+       "end_s": 2.12
+      },
+      {
+       "w": "islands",
+       "start_s": 2.12,
+       "end_s": 2.63
+      },
+      {
+       "w": "no",
+       "start_s": 2.63,
+       "end_s": 2.86
+      },
+      {
+       "w": "one",
+       "start_s": 2.86,
+       "end_s": 3.04
+      },
+      {
+       "w": "had",
+       "start_s": 3.04,
+       "end_s": 3.18
+      },
+      {
+       "w": "reached",
+       "start_s": 3.18,
+       "end_s": 3.75
+      },
+      {
+       "w": "and",
+       "start_s": 4.09,
+       "end_s": 4.25
+      },
+      {
+       "w": "things",
+       "start_s": 4.25,
+       "end_s": 4.52
+      },
+      {
+       "w": "no",
+       "start_s": 4.52,
+       "end_s": 4.73
+      },
+      {
+       "w": "one",
+       "start_s": 4.73,
+       "end_s": 4.93
+      },
+      {
+       "w": "had",
+       "start_s": 4.93,
+       "end_s": 5.04
+      },
+      {
+       "w": "thought",
+       "start_s": 5.04,
+       "end_s": 5.32
+      },
+      {
+       "w": "to",
+       "start_s": 5.32,
+       "end_s": 5.42
+      },
+      {
+       "w": "fear",
+       "start_s": 5.42,
+       "end_s": 5.88
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "dawn",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     0.9887692138764507,
+     0.12186934340514748,
+     0.08650609705762924
+    ],
+    "sunVeiled": true
+   },
+   "staging": "NONE: open sea to the horizon, away from the land.",
+   "deviation": null
+  },
+  {
+   "job": "P-10",
+   "seq": 10,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "start_s": 22,
+   "start_frame": 528,
+   "frames": 48,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2,
+   "trans": [
+    "dissolve",
+    18
+   ],
+   "dialogue": [
+    {
+     "id": "L003",
+     "part": 1,
+     "ref": "L003#1",
+     "role": "NARRATOR",
+     "file": "vo/L003.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.375,
+     "at_s": 0.55,
+     "speech_in_s": 0.55,
+     "speech_out_s": 1.625,
+     "words": [
+      {
+       "w": "tara",
+       "start_s": 0.55,
+       "end_s": 1.18
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [
+    {
+     "text": "Tara",
+     "style": "location",
+     "from_s": 0.45,
+     "to_s": 1.7
+    }
+   ],
+   "fx": [],
+   "continuity": {
+    "tod": "dawn",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     0.9887692138764507,
+     0.12186934340514748,
+     0.08650609705762924
+    ],
+    "sunVeiled": true
+   },
+   "staging": "NONE: a forest reaching a dark sea cliff, from the water; caption TARA on the word.",
+   "deviation": null
+  },
+  {
+   "job": "P-11",
+   "seq": 11,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "start_s": 26,
+   "start_frame": 624,
+   "frames": 48,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2,
+   "trans": [
+    "dissolve",
+    12
+   ],
+   "dialogue": [
+    {
+     "id": "L003",
+     "part": 2,
+     "ref": "L003#2",
+     "role": "NARRATOR",
+     "file": "vo/L003.wav",
+     "file_in_s": 1.375,
+     "file_out_s": 2.75,
+     "at_s": 0.2,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.275,
+     "words": [
+      {
+       "w": "scrapper",
+       "start_s": 0.585,
+       "end_s": 1.215
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [
+    {
+     "text": "Scrapper",
+     "style": "location",
+     "from_s": 0.485,
+     "to_s": 1.735
+    }
+   ],
+   "fx": [],
+   "continuity": {
+    "tod": "dawn",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     0.9887692138764507,
+     0.12186934340514748,
+     0.08650609705762924
+    ],
+    "sunVeiled": true
+   },
+   "staging": "NONE: distant fortified walls along a ridge, inland; caption SCRAPPER on the word.",
+   "deviation": null
+  },
+  {
+   "job": "P-12",
+   "seq": 12,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "start_s": 30,
+   "start_frame": 720,
+   "frames": 48,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2,
+   "trans": [
+    "dissolve",
+    12
+   ],
+   "dialogue": [
+    {
+     "id": "L003",
+     "part": 3,
+     "ref": "L003#3",
+     "role": "NARRATOR",
+     "file": "vo/L003.wav",
+     "file_in_s": 2.75,
+     "file_out_s": 4.1,
+     "at_s": 0.2,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.25,
+     "words": [
+      {
+       "w": "verdor",
+       "start_s": 0.59,
+       "end_s": 1.16
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [
+    {
+     "text": "Verdor",
+     "style": "location",
+     "from_s": 0.49,
+     "to_s": 1.74
+    }
+   ],
+   "fx": [],
+   "continuity": {
+    "tod": "dawn",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     0.9887692138764507,
+     0.12186934340514748,
+     0.08650609705762924
+    ],
+    "sunVeiled": true
+   },
+   "staging": "NONE: a misted pale island alone on the sea, from open water; caption VERDOR on the word.",
+   "deviation": null
+  },
+  {
+   "job": "P-13",
+   "seq": 13,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "start_s": 34,
+   "start_frame": 816,
+   "frames": 60,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2.5,
+   "trans": [
+    "dissolve",
+    12
+   ],
+   "dialogue": [
+    {
+     "id": "L003",
+     "part": 4,
+     "ref": "L003#4",
+     "role": "NARRATOR",
+     "file": "vo/L003.wav",
+     "file_in_s": 4.1,
+     "file_out_s": 7.045,
+     "at_s": 0.92,
+     "speech_in_s": 1.22,
+     "speech_out_s": 3.565,
+     "words": [
+      {
+       "w": "the",
+       "start_s": 1.25,
+       "end_s": 1.36
+      },
+      {
+       "w": "citadel",
+       "start_s": 1.36,
+       "end_s": 1.85
+      },
+      {
+       "w": "sea",
+       "start_s": 1.85,
+       "end_s": 2.29
+      },
+      {
+       "w": "and",
+       "start_s": 2.29,
+       "end_s": 2.49
+      },
+      {
+       "w": "the",
+       "start_s": 2.49,
+       "end_s": 2.56
+      },
+      {
+       "w": "proxy",
+       "start_s": 2.56,
+       "end_s": 3.04
+      },
+      {
+       "w": "sea",
+       "start_s": 3.04,
+       "end_s": 3.52
+      }
+     ],
+     "gain_db": 0,
+     "continues": true,
+     "placeholder": false
+    }
+   ],
+   "captions": [
+    {
+     "text": "Citadel Sea",
+     "style": "location",
+     "from_s": 1.26,
+     "to_s": 2.31
+    }
+   ],
+   "fx": [],
+   "continuity": {
+    "tod": "high bright day (another sea)",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     0.5065235487181534,
+     0.6156614753256582,
+     0.6036512589184275
+    ],
+    "sunVeiled": true
+   },
+   "staging": "NONE: calm open water under a high bright sky, no coast; caption CITADEL SEA on the words.",
+   "deviation": null
+  },
+  {
+   "job": "P-14",
+   "seq": 14,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "start_s": 39,
+   "start_frame": 936,
+   "frames": 48,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2,
+   "trans": [
+    "dissolve",
+    12
+   ],
+   "dialogue": [],
+   "captions": [
+    {
+     "text": "Proxy Sea",
+     "style": "location",
+     "from_s": 0,
+     "to_s": 1.75
+    }
+   ],
+   "fx": [],
+   "continuity": {
+    "tod": "low cloud, long swell",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     -0.3318606833692001,
+     0.24192189559966773,
+     0.9117797339616576
+    ],
+    "sunVeiled": true
+   },
+   "staging": "NONE: a different sea: a long swell under low cloud, no coast; caption PROXY SEA on the words.",
+   "deviation": null
+  },
+  {
+   "job": "P-15",
+   "seq": 15,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "start_s": 43,
+   "start_frame": 1032,
+   "frames": 276,
+   "pre": 12,
+   "post": 12,
+   "seconds": 11.5,
+   "trans": [
+    "dissolve",
+    18
+   ],
+   "dialogue": [
+    {
+     "id": "L003",
+     "part": 5,
+     "ref": "L003#5",
+     "role": "NARRATOR",
+     "file": "vo/L003.wav",
+     "file_in_s": 7.045,
+     "file_out_s": 11.43,
+     "at_s": 0.9,
+     "speech_in_s": 1.2,
+     "speech_out_s": 5.255,
+     "words": [
+      {
+       "w": "seven",
+       "start_s": 1.235,
+       "end_s": 1.625
+      },
+      {
+       "w": "kingdoms",
+       "start_s": 1.625,
+       "end_s": 2.275
+      },
+      {
+       "w": "and",
+       "start_s": 2.455,
+       "end_s": 2.595
+      },
+      {
+       "w": "undiscovered",
+       "start_s": 2.595,
+       "end_s": 3.305
+      },
+      {
+       "w": "islands",
+       "start_s": 3.305,
+       "end_s": 3.805
+      },
+      {
+       "w": "beyond",
+       "start_s": 3.805,
+       "end_s": 4.095
+      },
+      {
+       "w": "the",
+       "start_s": 4.095,
+       "end_s": 4.155
+      },
+      {
+       "w": "familiar",
+       "start_s": 4.155,
+       "end_s": 4.605
+      },
+      {
+       "w": "shores",
+       "start_s": 4.605,
+       "end_s": 5.235
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "dawn",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     0.9887692138764507,
+     0.12186934340514748,
+     0.08650609705762924
+    ],
+    "sunVeiled": true
+   },
+   "staging": "NONE: unreached islands far on the horizon at dawn; a very slow push; no caption.",
+   "deviation": null
+  },
+  {
+   "job": "P-16",
+   "seq": 16,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "start_s": 57,
+   "start_frame": 1368,
+   "frames": 264,
+   "pre": 12,
+   "post": 12,
+   "seconds": 11,
+   "trans": [
+    "dissolve",
+    24
+   ],
+   "dialogue": [
+    {
+     "id": "L004",
+     "part": 0,
+     "ref": "L004",
+     "role": "NARRATOR",
+     "file": "vo/L004.wav",
+     "file_in_s": 0,
+     "file_out_s": 5.96,
+     "at_s": 1.97,
+     "speech_in_s": 2,
+     "speech_out_s": 7.9,
+     "words": [
+      {
+       "w": "by",
+       "start_s": 1.97,
+       "end_s": 2.17
+      },
+      {
+       "w": "the",
+       "start_s": 2.17,
+       "end_s": 2.24
+      },
+      {
+       "w": "fourteen",
+       "start_s": 2.24,
+       "end_s": 2.74
+      },
+      {
+       "w": "hundreds",
+       "start_s": 2.74,
+       "end_s": 3.45
+      },
+      {
+       "w": "dragons",
+       "start_s": 3.6,
+       "end_s": 4.11
+      },
+      {
+       "w": "were",
+       "start_s": 4.11,
+       "end_s": 4.18
+      },
+      {
+       "w": "part",
+       "start_s": 4.18,
+       "end_s": 4.51
+      },
+      {
+       "w": "of",
+       "start_s": 4.51,
+       "end_s": 4.58
+      },
+      {
+       "w": "our",
+       "start_s": 4.58,
+       "end_s": 4.7
+      },
+      {
+       "w": "lives",
+       "start_s": 4.7,
+       "end_s": 5.35
+      },
+      {
+       "w": "so",
+       "start_s": 5.98,
+       "end_s": 6.28
+      },
+      {
+       "w": "were",
+       "start_s": 6.28,
+       "end_s": 6.51
+      },
+      {
+       "w": "the",
+       "start_s": 6.51,
+       "end_s": 6.62
+      },
+      {
+       "w": "people",
+       "start_s": 6.62,
+       "end_s": 7.01
+      },
+      {
+       "w": "who",
+       "start_s": 7.01,
+       "end_s": 7.19
+      },
+      {
+       "w": "rode",
+       "start_s": 7.19,
+       "end_s": 7.48
+      },
+      {
+       "w": "them",
+       "start_s": 7.48,
+       "end_s": 7.74
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning: first clear sunlight",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     0.9632873407929415,
+     0.20791169081775931,
+     0.1698535483567055
+    ],
+    "sunVeiled": true
+   },
+   "staging": "NONE: a wing-shaped cloud drifts across a brightening morning sky; the camera tilts up from the sea to it.",
+   "deviation": null
+  }
+ ]
+}

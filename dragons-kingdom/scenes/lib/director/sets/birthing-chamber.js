@@ -221,6 +221,10 @@ export async function build(ctx, { shotSpecs }) {
   lamps.push(keyLamp.L);
   lampBase.push(keyLamp.base);
 
+  // an egg fill for the macros (a lamp carried close / a bounce card off the linen, as a crew would
+  // add): warm, from the key lamp's side (south-west of the egg), off unless a shot asks (set.eggFill)
+  const eggFill = new THREE.PointLight(new THREE.Color(1.0, 0.56, 0.26), 0, 3, 2);
+  scene.add(eggFill);
   // the title's rim lamp (T-01): a warm lamp just out of frame behind-left of the egg
   const titleLamp = new THREE.PointLight(new THREE.Color(1.0, 0.55, 0.22), 0, 3, 2);
   scene.add(titleLamp);
@@ -388,6 +392,15 @@ float eh(vec3 p){p=fract(p*0.1031);p+=dot(p,p.zyx+31.32);return fract((p.x+p.y)*
       lamps.forEach((l, i) => { l.userData.dirScale = (st.onlyKeyLamp && l !== keyLamp.L ? 0 : lv) * (l === keyLamp.L ? (st.keyLamp ?? 1) : 1); l.intensity = lampBase[i] * l.userData.dirScale; });
       keyLamp.g.visible = st.keyLamp !== false;
       if (st.titleLamp) { titleLamp.position.set(...st.titleLamp.at); titleLamp.intensity = st.titleLamp.intensity ?? 0.6; } else titleLamp.intensity = 0;
+      // the egg fill: set.eggFill = intensity (or { intensity, heading (deg, from the egg), dist, rise })
+      {
+        const f = typeof st.eggFill === 'number' ? { intensity: st.eggFill } : st.eggFill || null;
+        eggFill.intensity = f ? f.intensity ?? 0.4 : 0;
+        if (f) {
+          const hd = ((f.heading ?? 205) * Math.PI) / 180, dd = f.dist ?? 0.8;
+          eggFill.position.set(eggCentre.x + Math.sin(hd) * dd, eggCentre.y + (f.rise ?? 0.15), eggCentre.z - Math.cos(hd) * dd);
+        }
+      }
       // the egg
       const state = st.egg ?? 'closed';
       for (const [k, g] of Object.entries(eggs)) g.visible = k === state;

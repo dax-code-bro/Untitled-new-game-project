@@ -38,20 +38,41 @@
    "seq": 2,
    "scene": "PROLOGUE",
    "set": "SEA_COAST_DAWN",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 144,
    "rec_in": 96,
    "rec_out": 240,
    "tc_in": "00:00:04:00",
    "tc_out": "00:00:10:00",
    "trans": [
-    "cut"
+    "fadein",
+    36
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sea-coast-dawn.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 1.84,
+    "k4_cpu_s_per_frame": 13.72,
+    "k4_gpu_s_per_frame": 13.72,
+    "draft_minutes": 4.41,
+    "k4_cpu_hours": 0.55,
+    "k4_gpu_hours": 0.55,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "MEASURED: F1 draft ~1.7 s/f (velocity, 2026-10-23), 4K 12.7 s/f (README); x 1.08 for the shot's content"
+   },
+   "staging": "NONE: low over the water, the pale sky in the moving swell; fade in from black.",
    "deviation": null,
    "action": "Fade in: low view just above the water. Pale sky reflected between moving bands of deep blue.",
    "need": {
@@ -64,7 +85,7 @@
    "seq": 3,
    "scene": "PROLOGUE",
    "set": "SEA_COAST_DAWN",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 276,
    "rec_in": 240,
    "rec_out": 516,
@@ -73,11 +94,110 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sea-coast-dawn.js",
+    "start_s": 9,
+    "start_frame": 216
+   },
+   "dialogue": [
+    {
+     "id": "L001",
+     "part": 0,
+     "ref": "L001",
+     "role": "NARRATOR",
+     "file": "vo/L001.wav",
+     "file_in_s": 0,
+     "file_out_s": 4.865,
+     "at_s": 2.17,
+     "speech_in_s": 2.2,
+     "speech_out_s": 7.005,
+     "words": [
+      {
+       "w": "until",
+       "start_s": 2.17,
+       "end_s": 2.59
+      },
+      {
+       "w": "the",
+       "start_s": 2.59,
+       "end_s": 2.75
+      },
+      {
+       "w": "early",
+       "start_s": 2.75,
+       "end_s": 3.03
+      },
+      {
+       "w": "twelve",
+       "start_s": 3.03,
+       "end_s": 3.34
+      },
+      {
+       "w": "hundreds",
+       "start_s": 3.34,
+       "end_s": 3.99
+      },
+      {
+       "w": "humanity",
+       "start_s": 4.32,
+       "end_s": 4.95
+      },
+      {
+       "w": "did",
+       "start_s": 4.95,
+       "end_s": 5.1
+      },
+      {
+       "w": "not",
+       "start_s": 5.1,
+       "end_s": 5.28
+      },
+      {
+       "w": "know",
+       "start_s": 5.28,
+       "end_s": 5.61
+      },
+      {
+       "w": "that",
+       "start_s": 5.61,
+       "end_s": 5.79
+      },
+      {
+       "w": "dragons",
+       "start_s": 5.79,
+       "end_s": 6.29
+      },
+      {
+       "w": "existed",
+       "start_s": 6.29,
+       "end_s": 7.02
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 12.17
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 2.5,
+    "k4_cpu_s_per_frame": 18.65,
+    "k4_gpu_s_per_frame": 18.65,
+    "draft_minutes": 11.49,
+    "k4_cpu_hours": 1.43,
+    "k4_gpu_hours": 1.43,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.47
+    },
+    "basis": "MEASURED: F1 draft ~1.7 s/f (velocity, 2026-10-23), 4K 12.7 s/f (README); x 1.47 for the shot's content"
+   },
+   "staging": "WIDE: toward the island in its cloud cap; the vessel crosses the left foreground, small.",
    "deviation": null,
    "action": "Camera travels toward an island whose high ground disappears into morning cloud. A small, unremarkable wooden vessel crosses the foreground; its sails make the world feel human in scale. No dragon riders.",
    "need": {
@@ -90,7 +210,7 @@
    "seq": 4,
    "scene": "PROLOGUE",
    "set": "SEA_COAST_DAWN",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 84,
    "rec_in": 516,
    "rec_out": 600,
@@ -99,11 +219,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sea-coast-dawn.js",
+    "start_s": 23,
+    "start_frame": 552
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 2.06,
+    "k4_cpu_s_per_frame": 15.36,
+    "k4_gpu_s_per_frame": 15.36,
+    "draft_minutes": 2.88,
+    "k4_cpu_hours": 0.36,
+    "k4_gpu_hours": 0.36,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.21
+    },
+    "basis": "MEASURED: F1 draft ~1.7 s/f (velocity, 2026-10-23), 4K 12.7 s/f (README); x 1.21 for the shot's content"
+   },
+   "staging": "HANDS: a working hand on the rope at the shrouds; no face (100 mm, aboard).",
    "deviation": null,
    "action": "A working hand secures a rope aboard the vessel.",
    "need": {
@@ -116,7 +256,7 @@
    "seq": 5,
    "scene": "PROLOGUE",
    "set": "SEA_COAST_DAWN",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 84,
    "rec_in": 600,
    "rec_out": 684,
@@ -125,11 +265,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sea-coast-dawn.js",
+    "start_s": 29,
+    "start_frame": 696
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 2.28,
+    "k4_cpu_s_per_frame": 17.01,
+    "k4_gpu_s_per_frame": 17.01,
+    "draft_minutes": 3.19,
+    "k4_cpu_hours": 0.4,
+    "k4_gpu_hours": 0.4,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "MEASURED: F1 draft ~1.7 s/f (velocity, 2026-10-23), 4K 12.7 s/f (README); x 1.34 for the shot's content"
+   },
+   "staging": "BACK: from the stern, the sailor at mid-ship turns to port and up toward the sound above the fog - his face turns away from the lens (lost profile at most).",
    "deviation": null,
    "action": "An anonymous sailor turns toward an unfamiliar sound above the fog. Face kept small/three-quarter; not a historical discoverer, no date.",
    "need": {
@@ -142,7 +302,7 @@
    "seq": 6,
    "scene": "PROLOGUE",
    "set": "SEA_COAST_DAWN",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 144,
    "rec_in": 684,
    "rec_out": 828,
@@ -151,11 +311,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sea-coast-dawn.js",
+    "start_s": 35,
+    "start_frame": 840
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 1.84,
+    "k4_cpu_s_per_frame": 13.72,
+    "k4_gpu_s_per_frame": 13.72,
+    "draft_minutes": 4.41,
+    "k4_cpu_hours": 0.55,
+    "k4_gpu_hours": 0.55,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "MEASURED: F1 draft ~1.7 s/f (velocity, 2026-10-23), 4K 12.7 s/f (README); x 1.08 for the shot's content"
+   },
+   "staging": "NONE: low, up into the fog; something vast passes inside the mist - only its shadow in the light shafts and a darkening of the mist; never a dragon.",
    "deviation": null,
    "action": "The mist changes shape. Something passes beyond it, so large the eye first mistakes its shadow for cloud. Never resolve a dragon; no named dragon.",
    "need": {
@@ -168,7 +348,7 @@
    "seq": 7,
    "scene": "PROLOGUE",
    "set": "SEA_COAST_DAWN",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 84,
    "rec_in": 828,
    "rec_out": 912,
@@ -177,16 +357,36 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sea-coast-dawn.js",
+    "start_s": 43,
+    "start_frame": 1032
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 2.06,
+    "k4_cpu_s_per_frame": 15.36,
+    "k4_gpu_s_per_frame": 15.36,
+    "draft_minutes": 2.88,
+    "k4_cpu_hours": 0.36,
+    "k4_gpu_hours": 0.36,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.21
+    },
+    "basis": "MEASURED: F1 draft ~1.7 s/f (velocity, 2026-10-23), 4K 12.7 s/f (README); x 1.21 for the shot's content"
+   },
+   "staging": "SIL + BACK: the sailor still, from behind, a dark shape against the bright fog to port.",
    "deviation": null,
    "action": "The sailor becomes still, seen from behind as a dark shape against the bright fog. His face is not shown: he stays an anonymous figure, not an identifiable discoverer (background-tier head; no face close-up).",
    "need": {
     "pre": 0,
-    "post": 0
+    "post": 12
    }
   },
   {
@@ -194,25 +394,123 @@
    "seq": 8,
    "scene": "PROLOGUE",
    "set": "PROLOGUE_VISTAS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 192,
    "rec_in": 912,
    "rec_out": 1104,
    "tc_in": "00:00:38:00",
    "tc_out": "00:00:46:00",
    "trans": [
-    "cut"
+    "dissolve",
+    24
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/prologue-vistas.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
+   "dialogue": [
+    {
+     "id": "L002",
+     "part": 1,
+     "ref": "L002#1",
+     "role": "NARRATOR",
+     "file": "vo/L002.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.935,
+     "at_s": 1.3,
+     "speech_in_s": 1.3,
+     "speech_out_s": 2.935,
+     "words": [
+      {
+       "w": "the",
+       "start_s": 1.3,
+       "end_s": 1.49
+      },
+      {
+       "w": "seas",
+       "start_s": 1.49,
+       "end_s": 1.99
+      },
+      {
+       "w": "had",
+       "start_s": 1.99,
+       "end_s": 2.18
+      },
+      {
+       "w": "names",
+       "start_s": 2.18,
+       "end_s": 2.76
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 39.3
+    },
+    {
+     "id": "L002",
+     "part": 2,
+     "ref": "L002#2",
+     "role": "NARRATOR",
+     "file": "vo/L002.wav",
+     "file_in_s": 1.935,
+     "file_out_s": 4.32,
+     "at_s": 3.235,
+     "speech_in_s": 3.535,
+     "speech_out_s": 5.32,
+     "words": [
+      {
+       "w": "the",
+       "start_s": 3.55,
+       "end_s": 3.68
+      },
+      {
+       "w": "kingdoms",
+       "start_s": 3.68,
+       "end_s": 4.3
+      },
+      {
+       "w": "had",
+       "start_s": 4.3,
+       "end_s": 4.52
+      },
+      {
+       "w": "borders",
+       "start_s": 4.52,
+       "end_s": 5.19
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 41.235
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 1.62,
+    "k4_cpu_s_per_frame": 14.04,
+    "k4_gpu_s_per_frame": 14.04,
+    "draft_minutes": 5.18,
+    "k4_cpu_hours": 0.75,
+    "k4_gpu_hours": 0.75,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+   },
+   "staging": "NONE: a fishing settlement above its shore under a pale dawn sky, from the water; slow drift.",
    "deviation": null,
    "action": "Landscape 1 (dissolve): a coastal settlement under a pale sky.",
    "need": {
-    "pre": 0,
-    "post": 0
+    "pre": 12,
+    "post": 12
    }
   },
   {
@@ -220,25 +518,145 @@
    "seq": 9,
    "scene": "PROLOGUE",
    "set": "PROLOGUE_VISTAS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 204,
    "rec_in": 1104,
    "rec_out": 1308,
    "tc_in": "00:00:46:00",
    "tc_out": "00:00:54:12",
    "trans": [
-    "cut"
+    "dissolve",
+    24
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/prologue-vistas.js",
+    "start_s": 11,
+    "start_frame": 264
+   },
+   "dialogue": [
+    {
+     "id": "L002",
+     "part": 3,
+     "ref": "L002#3",
+     "role": "NARRATOR",
+     "file": "vo/L002.wav",
+     "file_in_s": 4.32,
+     "file_out_s": 9.185,
+     "at_s": 1.1,
+     "speech_in_s": 1.4,
+     "speech_out_s": 5.935,
+     "words": [
+      {
+       "w": "beyond",
+       "start_s": 1.4,
+       "end_s": 1.74
+      },
+      {
+       "w": "them",
+       "start_s": 1.74,
+       "end_s": 1.91
+      },
+      {
+       "w": "lay",
+       "start_s": 1.91,
+       "end_s": 2.12
+      },
+      {
+       "w": "islands",
+       "start_s": 2.12,
+       "end_s": 2.63
+      },
+      {
+       "w": "no",
+       "start_s": 2.63,
+       "end_s": 2.86
+      },
+      {
+       "w": "one",
+       "start_s": 2.86,
+       "end_s": 3.04
+      },
+      {
+       "w": "had",
+       "start_s": 3.04,
+       "end_s": 3.18
+      },
+      {
+       "w": "reached",
+       "start_s": 3.18,
+       "end_s": 3.75
+      },
+      {
+       "w": "and",
+       "start_s": 4.09,
+       "end_s": 4.25
+      },
+      {
+       "w": "things",
+       "start_s": 4.25,
+       "end_s": 4.52
+      },
+      {
+       "w": "no",
+       "start_s": 4.52,
+       "end_s": 4.73
+      },
+      {
+       "w": "one",
+       "start_s": 4.73,
+       "end_s": 4.93
+      },
+      {
+       "w": "had",
+       "start_s": 4.93,
+       "end_s": 5.04
+      },
+      {
+       "w": "thought",
+       "start_s": 5.04,
+       "end_s": 5.32
+      },
+      {
+       "w": "to",
+       "start_s": 5.32,
+       "end_s": 5.42
+      },
+      {
+       "w": "fear",
+       "start_s": 5.42,
+       "end_s": 5.88
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 47.1
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 1.62,
+    "k4_cpu_s_per_frame": 14.04,
+    "k4_gpu_s_per_frame": 14.04,
+    "draft_minutes": 5.51,
+    "k4_cpu_hours": 0.8,
+    "k4_gpu_hours": 0.8,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+   },
+   "staging": "NONE: open sea to the horizon, away from the land.",
    "deviation": null,
    "action": "Landscape 2 (dissolve): open sea to the horizon.",
    "need": {
-    "pre": 0,
-    "post": 0
+    "pre": 12,
+    "post": 9
    }
   },
   {
@@ -246,25 +664,79 @@
    "seq": 10,
    "scene": "PROLOGUE",
    "set": "PROLOGUE_VISTAS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 48,
    "rec_in": 1308,
    "rec_out": 1356,
    "tc_in": "00:00:54:12",
    "tc_out": "00:00:56:12",
    "trans": [
-    "cut"
+    "dissolve",
+    18
    ],
-   "src": null,
-   "dialogue": [],
-   "captions": [],
-   "cost": null,
-   "staging": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/prologue-vistas.js",
+    "start_s": 22,
+    "start_frame": 528
+   },
+   "dialogue": [
+    {
+     "id": "L003",
+     "part": 1,
+     "ref": "L003#1",
+     "role": "NARRATOR",
+     "file": "vo/L003.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.375,
+     "at_s": 0.55,
+     "speech_in_s": 0.55,
+     "speech_out_s": 1.625,
+     "words": [
+      {
+       "w": "tara",
+       "start_s": 0.55,
+       "end_s": 1.18
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 55.05
+    }
+   ],
+   "captions": [
+    {
+     "text": "Tara",
+     "style": "location",
+     "from_s": 0.45,
+     "to_s": 1.7,
+     "rec_from_s": 54.95,
+     "rec_to_s": 56.2
+    }
+   ],
+   "cost": {
+    "draft_s_per_frame": 1.62,
+    "k4_cpu_s_per_frame": 14.04,
+    "k4_gpu_s_per_frame": 14.04,
+    "draft_minutes": 1.3,
+    "k4_cpu_hours": 0.19,
+    "k4_gpu_hours": 0.19,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+   },
+   "staging": "NONE: a forest reaching a dark sea cliff, from the water; caption TARA on the word.",
    "deviation": null,
    "action": "Landscape 3: a forest reaching a cliff edge. Simple caption TARA over this unlocated land only, synced to the spoken word. No borders, no map, no other named place in view.",
    "need": {
-    "pre": 0,
-    "post": 0
+    "pre": 9,
+    "post": 6
    }
   },
   {
@@ -272,25 +744,79 @@
    "seq": 11,
    "scene": "PROLOGUE",
    "set": "PROLOGUE_VISTAS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 48,
    "rec_in": 1356,
    "rec_out": 1404,
    "tc_in": "00:00:56:12",
    "tc_out": "00:00:58:12",
    "trans": [
-    "cut"
+    "dissolve",
+    12
    ],
-   "src": null,
-   "dialogue": [],
-   "captions": [],
-   "cost": null,
-   "staging": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/prologue-vistas.js",
+    "start_s": 26,
+    "start_frame": 624
+   },
+   "dialogue": [
+    {
+     "id": "L003",
+     "part": 2,
+     "ref": "L003#2",
+     "role": "NARRATOR",
+     "file": "vo/L003.wav",
+     "file_in_s": 1.375,
+     "file_out_s": 2.75,
+     "at_s": 0.2,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.275,
+     "words": [
+      {
+       "w": "scrapper",
+       "start_s": 0.585,
+       "end_s": 1.215
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 56.7
+    }
+   ],
+   "captions": [
+    {
+     "text": "Scrapper",
+     "style": "location",
+     "from_s": 0.485,
+     "to_s": 1.735,
+     "rec_from_s": 56.985,
+     "rec_to_s": 58.235
+    }
+   ],
+   "cost": {
+    "draft_s_per_frame": 1.62,
+    "k4_cpu_s_per_frame": 14.04,
+    "k4_gpu_s_per_frame": 14.04,
+    "draft_minutes": 1.3,
+    "k4_cpu_hours": 0.19,
+    "k4_gpu_hours": 0.19,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+   },
+   "staging": "NONE: distant fortified walls along a ridge, inland; caption SCRAPPER on the word.",
    "deviation": null,
    "action": "Landscape 4: distant fortified walls. Caption SCRAPPER over this view only, synced to the spoken word. No other named place in view.",
    "need": {
-    "pre": 0,
-    "post": 0
+    "pre": 6,
+    "post": 6
    }
   },
   {
@@ -298,25 +824,79 @@
    "seq": 12,
    "scene": "PROLOGUE",
    "set": "PROLOGUE_VISTAS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 48,
    "rec_in": 1404,
    "rec_out": 1452,
    "tc_in": "00:00:58:12",
    "tc_out": "00:01:00:12",
    "trans": [
-    "cut"
+    "dissolve",
+    12
    ],
-   "src": null,
-   "dialogue": [],
-   "captions": [],
-   "cost": null,
-   "staging": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/prologue-vistas.js",
+    "start_s": 30,
+    "start_frame": 720
+   },
+   "dialogue": [
+    {
+     "id": "L003",
+     "part": 3,
+     "ref": "L003#3",
+     "role": "NARRATOR",
+     "file": "vo/L003.wav",
+     "file_in_s": 2.75,
+     "file_out_s": 4.1,
+     "at_s": 0.2,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.25,
+     "words": [
+      {
+       "w": "verdor",
+       "start_s": 0.59,
+       "end_s": 1.16
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 58.7
+    }
+   ],
+   "captions": [
+    {
+     "text": "Verdor",
+     "style": "location",
+     "from_s": 0.49,
+     "to_s": 1.74,
+     "rec_from_s": 58.99,
+     "rec_to_s": 60.24
+    }
+   ],
+   "cost": {
+    "draft_s_per_frame": 1.62,
+    "k4_cpu_s_per_frame": 14.04,
+    "k4_gpu_s_per_frame": 14.04,
+    "draft_minutes": 1.3,
+    "k4_cpu_hours": 0.19,
+    "k4_gpu_hours": 0.19,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+   },
+   "staging": "NONE: a misted pale island alone on the sea, from open water; caption VERDOR on the word.",
    "deviation": null,
    "action": "Landscape 5: a misted island seen from open water, alone in frame. Caption VERDOR over this view only, synced to the spoken word. A separate dissolve from the walls, so nothing implies Verdor is near or visible from Scrapper.",
    "need": {
-    "pre": 0,
-    "post": 0
+    "pre": 6,
+    "post": 6
    }
   },
   {
@@ -324,25 +904,109 @@
    "seq": 13,
    "scene": "PROLOGUE",
    "set": "PROLOGUE_VISTAS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 60,
    "rec_in": 1452,
    "rec_out": 1512,
    "tc_in": "00:01:00:12",
    "tc_out": "00:01:03:00",
    "trans": [
-    "cut"
+    "dissolve",
+    12
    ],
-   "src": null,
-   "dialogue": [],
-   "captions": [],
-   "cost": null,
-   "staging": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/prologue-vistas.js",
+    "start_s": 34,
+    "start_frame": 816
+   },
+   "dialogue": [
+    {
+     "id": "L003",
+     "part": 4,
+     "ref": "L003#4",
+     "role": "NARRATOR",
+     "file": "vo/L003.wav",
+     "file_in_s": 4.1,
+     "file_out_s": 7.045,
+     "at_s": 0.92,
+     "speech_in_s": 1.22,
+     "speech_out_s": 3.565,
+     "words": [
+      {
+       "w": "the",
+       "start_s": 1.25,
+       "end_s": 1.36
+      },
+      {
+       "w": "citadel",
+       "start_s": 1.36,
+       "end_s": 1.85
+      },
+      {
+       "w": "sea",
+       "start_s": 1.85,
+       "end_s": 2.29
+      },
+      {
+       "w": "and",
+       "start_s": 2.29,
+       "end_s": 2.49
+      },
+      {
+       "w": "the",
+       "start_s": 2.49,
+       "end_s": 2.56
+      },
+      {
+       "w": "proxy",
+       "start_s": 2.56,
+       "end_s": 3.04
+      },
+      {
+       "w": "sea",
+       "start_s": 3.04,
+       "end_s": 3.52
+      }
+     ],
+     "gain_db": 0,
+     "continues": true,
+     "placeholder": false,
+     "rec_s": 61.42
+    }
+   ],
+   "captions": [
+    {
+     "text": "Citadel Sea",
+     "style": "location",
+     "from_s": 1.26,
+     "to_s": 2.31,
+     "rec_from_s": 61.76,
+     "rec_to_s": 62.81
+    }
+   ],
+   "cost": {
+    "draft_s_per_frame": 1.62,
+    "k4_cpu_s_per_frame": 14.04,
+    "k4_gpu_s_per_frame": 14.04,
+    "draft_minutes": 1.62,
+    "k4_cpu_hours": 0.23,
+    "k4_gpu_hours": 0.23,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+   },
+   "staging": "NONE: calm open water under a high bright sky, no coast; caption CITADEL SEA on the words.",
    "deviation": null,
    "action": "Landscape 6: calm open water under a high bright sky, no coastline. Caption CITADEL SEA over this water only, synced to the spoken words.",
    "need": {
-    "pre": 0,
-    "post": 0
+    "pre": 6,
+    "post": 6
    }
   },
   {
@@ -350,25 +1014,55 @@
    "seq": 14,
    "scene": "PROLOGUE",
    "set": "PROLOGUE_VISTAS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 48,
    "rec_in": 1512,
    "rec_out": 1560,
    "tc_in": "00:01:03:00",
    "tc_out": "00:01:05:00",
    "trans": [
-    "cut"
+    "dissolve",
+    12
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/prologue-vistas.js",
+    "start_s": 39,
+    "start_frame": 936
+   },
    "dialogue": [],
-   "captions": [],
-   "cost": null,
-   "staging": null,
+   "captions": [
+    {
+     "text": "Proxy Sea",
+     "style": "location",
+     "from_s": 0,
+     "to_s": 1.75,
+     "rec_from_s": 63,
+     "rec_to_s": 64.75
+    }
+   ],
+   "cost": {
+    "draft_s_per_frame": 1.62,
+    "k4_cpu_s_per_frame": 14.04,
+    "k4_gpu_s_per_frame": 14.04,
+    "draft_minutes": 1.3,
+    "k4_cpu_hours": 0.19,
+    "k4_gpu_hours": 0.19,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+   },
+   "staging": "NONE: a different sea: a long swell under low cloud, no coast; caption PROXY SEA on the words.",
    "deviation": null,
    "action": "Landscape 7: a different stretch of water (long swell under low cloud, different light), no coastline. Caption PROXY SEA over this water only, synced to the spoken words. Separate dissolve from P-13, so the two seas never share one view and no boundary is implied.",
    "need": {
-    "pre": 0,
-    "post": 0
+    "pre": 6,
+    "post": 9
    }
   },
   {
@@ -376,25 +1070,110 @@
    "seq": 15,
    "scene": "PROLOGUE",
    "set": "PROLOGUE_VISTAS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 276,
    "rec_in": 1560,
    "rec_out": 1836,
    "tc_in": "00:01:05:00",
    "tc_out": "00:01:16:12",
    "trans": [
-    "cut"
+    "dissolve",
+    18
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/prologue-vistas.js",
+    "start_s": 43,
+    "start_frame": 1032
+   },
+   "dialogue": [
+    {
+     "id": "L003",
+     "part": 5,
+     "ref": "L003#5",
+     "role": "NARRATOR",
+     "file": "vo/L003.wav",
+     "file_in_s": 7.045,
+     "file_out_s": 11.43,
+     "at_s": 0.9,
+     "speech_in_s": 1.2,
+     "speech_out_s": 5.255,
+     "words": [
+      {
+       "w": "seven",
+       "start_s": 1.235,
+       "end_s": 1.625
+      },
+      {
+       "w": "kingdoms",
+       "start_s": 1.625,
+       "end_s": 2.275
+      },
+      {
+       "w": "and",
+       "start_s": 2.455,
+       "end_s": 2.595
+      },
+      {
+       "w": "undiscovered",
+       "start_s": 2.595,
+       "end_s": 3.305
+      },
+      {
+       "w": "islands",
+       "start_s": 3.305,
+       "end_s": 3.805
+      },
+      {
+       "w": "beyond",
+       "start_s": 3.805,
+       "end_s": 4.095
+      },
+      {
+       "w": "the",
+       "start_s": 4.095,
+       "end_s": 4.155
+      },
+      {
+       "w": "familiar",
+       "start_s": 4.155,
+       "end_s": 4.605
+      },
+      {
+       "w": "shores",
+       "start_s": 4.605,
+       "end_s": 5.235
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 65.9
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 1.62,
+    "k4_cpu_s_per_frame": 14.04,
+    "k4_gpu_s_per_frame": 14.04,
+    "draft_minutes": 7.45,
+    "k4_cpu_hours": 1.08,
+    "k4_gpu_hours": 1.08,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+   },
+   "staging": "NONE: unreached islands far on the horizon at dawn; a very slow push; no caption.",
    "deviation": null,
    "action": "The last landscape breathes: unreached islands on the horizon, no caption. The narration ends (\"Seven kingdoms, and undiscovered islands...\"), then the music enters with a low sustained string tone and a restrained rising theme (no battle montage).",
    "need": {
-    "pre": 0,
-    "post": 0
+    "pre": 9,
+    "post": 12
    }
   },
   {
@@ -402,24 +1181,149 @@
    "seq": 16,
    "scene": "PROLOGUE",
    "set": "PROLOGUE_VISTAS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 264,
    "rec_in": 1836,
    "rec_out": 2100,
    "tc_in": "00:01:16:12",
    "tc_out": "00:01:27:12",
    "trans": [
-    "cut"
+    "dissolve",
+    24
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/prologue-vistas.js",
+    "start_s": 57,
+    "start_frame": 1368
+   },
+   "dialogue": [
+    {
+     "id": "L004",
+     "part": 0,
+     "ref": "L004",
+     "role": "NARRATOR",
+     "file": "vo/L004.wav",
+     "file_in_s": 0,
+     "file_out_s": 5.96,
+     "at_s": 1.97,
+     "speech_in_s": 2,
+     "speech_out_s": 7.9,
+     "words": [
+      {
+       "w": "by",
+       "start_s": 1.97,
+       "end_s": 2.17
+      },
+      {
+       "w": "the",
+       "start_s": 2.17,
+       "end_s": 2.24
+      },
+      {
+       "w": "fourteen",
+       "start_s": 2.24,
+       "end_s": 2.74
+      },
+      {
+       "w": "hundreds",
+       "start_s": 2.74,
+       "end_s": 3.45
+      },
+      {
+       "w": "dragons",
+       "start_s": 3.6,
+       "end_s": 4.11
+      },
+      {
+       "w": "were",
+       "start_s": 4.11,
+       "end_s": 4.18
+      },
+      {
+       "w": "part",
+       "start_s": 4.18,
+       "end_s": 4.51
+      },
+      {
+       "w": "of",
+       "start_s": 4.51,
+       "end_s": 4.58
+      },
+      {
+       "w": "our",
+       "start_s": 4.58,
+       "end_s": 4.7
+      },
+      {
+       "w": "lives",
+       "start_s": 4.7,
+       "end_s": 5.35
+      },
+      {
+       "w": "so",
+       "start_s": 5.98,
+       "end_s": 6.28
+      },
+      {
+       "w": "were",
+       "start_s": 6.28,
+       "end_s": 6.51
+      },
+      {
+       "w": "the",
+       "start_s": 6.51,
+       "end_s": 6.62
+      },
+      {
+       "w": "people",
+       "start_s": 6.62,
+       "end_s": 7.01
+      },
+      {
+       "w": "who",
+       "start_s": 7.01,
+       "end_s": 7.19
+      },
+      {
+       "w": "rode",
+       "start_s": 7.19,
+       "end_s": 7.48
+      },
+      {
+       "w": "them",
+       "start_s": 7.48,
+       "end_s": 7.74
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 78.47
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 1.62,
+    "k4_cpu_s_per_frame": 14.04,
+    "k4_gpu_s_per_frame": 14.04,
+    "draft_minutes": 7.13,
+    "k4_cpu_hours": 1.03,
+    "k4_gpu_hours": 1.03,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+   },
+   "staging": "NONE: a wing-shaped cloud drifts across a brightening morning sky; the camera tilts up from the sea to it.",
    "deviation": null,
    "action": "A wing-shaped cloud drifts across a brightening sky.",
    "need": {
-    "pre": 0,
+    "pre": 12,
     "post": 0
    }
   },
@@ -428,7 +1332,7 @@
    "seq": 17,
    "scene": "PROLOGUE",
    "set": "VERDOR_GROUNDS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 180,
    "rec_in": 2100,
    "rec_out": 2280,
@@ -437,11 +1341,80 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
+   "dialogue": [
+    {
+     "id": "L005",
+     "part": 0,
+     "ref": "L005",
+     "role": "NARRATOR",
+     "file": "vo/L005.wav",
+     "file_in_s": 0,
+     "file_out_s": 2.105,
+     "at_s": 2.57,
+     "speech_in_s": 2.6,
+     "speech_out_s": 4.645,
+     "words": [
+      {
+       "w": "this",
+       "start_s": 2.57,
+       "end_s": 2.92
+      },
+      {
+       "w": "is",
+       "start_s": 2.92,
+       "end_s": 3.12
+      },
+      {
+       "w": "where",
+       "start_s": 3.12,
+       "end_s": 3.38
+      },
+      {
+       "w": "our",
+       "start_s": 3.38,
+       "end_s": 3.49
+      },
+      {
+       "w": "story",
+       "start_s": 3.49,
+       "end_s": 3.95
+      },
+      {
+       "w": "begins",
+       "start_s": 3.95,
+       "end_s": 4.66
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 90.07
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.4,
+    "k4_cpu_s_per_frame": 39.69,
+    "k4_gpu_s_per_frame": 39.69,
+    "draft_minutes": 10.21,
+    "k4_cpu_hours": 1.98,
+    "k4_gpu_hours": 1.98,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.13
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.13 for the shot's content"
+   },
+   "staging": "NONE: high over the meadow edge; an immense shadow crosses the grass left to right; the dragon is never seen (cut before it is identified).",
    "deviation": null,
    "action": "Match cut: the cloud shape becomes a dragon's immense shadow traveling across grass in the present day. Cut before the dragon is identified.",
    "need": {
@@ -808,35 +1781,35 @@
      "file": "vo/X1-01.wav",
      "file_in_s": 0,
      "file_out_s": 2.375,
-     "at_s": -0.05,
-     "speech_in_s": 0.35,
-     "speech_out_s": 2.305,
+     "at_s": 0.02,
+     "speech_in_s": 0.42,
+     "speech_out_s": 2.375,
      "words": [
       {
        "w": "your",
-       "start_s": 0.32,
-       "end_s": 0.53
+       "start_s": 0.39,
+       "end_s": 0.6
       },
       {
        "w": "majesty",
-       "start_s": 0.53,
-       "end_s": 1.33
+       "start_s": 0.6,
+       "end_s": 1.4
       },
       {
        "w": "the",
-       "start_s": 1.61,
-       "end_s": 1.79
+       "start_s": 1.68,
+       "end_s": 1.86
       },
       {
        "w": "egg",
-       "start_s": 1.79,
-       "end_s": 2.31
+       "start_s": 1.86,
+       "end_s": 2.38
       }
      ],
      "gain_db": 0,
      "continues": false,
      "placeholder": false,
-     "rec_s": 130.95
+     "rec_s": 131.02
     },
     {
      "id": "X1-02",
@@ -846,25 +1819,25 @@
      "file": "vo/X1-02.wav",
      "file_in_s": 0,
      "file_out_s": 0.91,
-     "at_s": 2.625,
-     "speech_in_s": 2.655,
-     "speech_out_s": 3.505,
+     "at_s": 2.645,
+     "speech_in_s": 2.675,
+     "speech_out_s": 3.525,
      "words": [
       {
        "w": "i'm",
-       "start_s": 2.625,
-       "end_s": 2.845
+       "start_s": 2.645,
+       "end_s": 2.865
       },
       {
        "w": "coming",
-       "start_s": 2.845,
-       "end_s": 3.335
+       "start_s": 2.865,
+       "end_s": 3.355
       }
      ],
      "gain_db": 0,
      "continues": false,
      "placeholder": false,
-     "rec_s": 133.625
+     "rec_s": 133.645
     }
    ],
    "captions": [],
@@ -3973,7 +4946,7 @@
    "seq": 66,
    "scene": "1A",
    "set": "VERDOR_GROUNDS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 7536,
    "rec_out": 7656,
@@ -3982,11 +4955,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 11,
+    "start_frame": 264
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.45,
+    "k4_cpu_s_per_frame": 51.88,
+    "k4_gpu_s_per_frame": 51.88,
+    "draft_minutes": 8.89,
+    "k4_cpu_hours": 1.73,
+    "k4_gpu_hours": 1.73,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.09,
+     "move": 1,
+     "total": 1.48
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.48 for the shot's content"
+   },
+   "staging": "WIDE: low, long lens; Leaf comes low and quick, then crouches; Abby from behind at left; Remi walks on past at right toward something very large off screen.",
    "deviation": null,
    "action": "Leaf is waiting where he always waits. He sees Abby coming and starts toward her too fast, low and quick on his two legs with his folded wings swinging forward to take his weight, then remembers himself and crouches low, belly near the grass, his two legs folded under the middle of his body, the wrists of his folded wings on the ground in front of him, quivering with the effort of keeping still. Remi walks on past them toward the far end of the field, where something very large breathes out of frame (Charcoal stays out of frame until 1B).",
    "need": {
@@ -3999,7 +4992,7 @@
    "seq": 67,
    "scene": "1A",
    "set": "VERDOR_GROUNDS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 7656,
    "rec_out": 7752,
@@ -4008,11 +5001,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 18,
+    "start_frame": 432
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 46.87,
+    "k4_gpu_s_per_frame": 46.87,
+    "draft_minutes": 6.43,
+    "k4_cpu_hours": 1.25,
+    "k4_gpu_hours": 1.25,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.34 for the shot's content"
+   },
+   "staging": "BACK: handheld close beside them; Abby from behind-left checks his wing joint, practised and unhurried.",
    "deviation": null,
    "action": "Abby goes over Leaf the way she does every morning: each wing joint in turn, practised and unhurried.",
    "need": {
@@ -4025,7 +5038,7 @@
    "seq": 68,
    "scene": "1A",
    "set": "VERDOR_GROUNDS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 7752,
    "rec_out": 7872,
@@ -4034,11 +5047,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 24,
+    "start_frame": 576
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
+    "k4_gpu_s_per_frame": 43.4,
+    "draft_minutes": 7.44,
+    "k4_cpu_hours": 1.45,
+    "k4_gpu_hours": 1.45,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+   },
+   "staging": "HANDS: her hands at his foot pad, his eye beyond (soft); the focus racks to it; he does not flinch.",
    "deviation": null,
    "action": "Each foot; the soft skin under his jaw where the straps sit. She finds an old scrape on one foot pad, presses beside it and watches his eye. He does not flinch.",
    "need": {
@@ -4051,7 +5084,7 @@
    "seq": 69,
    "scene": "1A",
    "set": "VERDOR_GROUNDS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 36,
    "rec_in": 7872,
    "rec_out": 7908,
@@ -4060,11 +5093,60 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 31,
+    "start_frame": 744
+   },
+   "dialogue": [
+    {
+     "id": "X2-08",
+     "part": 0,
+     "ref": "X2-08",
+     "role": "ABBY",
+     "file": "vo/X2-08.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.695,
+     "at_s": 0.37,
+     "speech_in_s": 0.4,
+     "speech_out_s": 1.035,
+     "words": [
+      {
+       "w": "you'll",
+       "start_s": 0.37,
+       "end_s": 0.63
+      },
+      {
+       "w": "do",
+       "start_s": 0.63,
+       "end_s": 0.96
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 328.37
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
+    "k4_gpu_s_per_frame": 43.4,
+    "draft_minutes": 2.23,
+    "k4_cpu_hours": 0.43,
+    "k4_gpu_hours": 0.43,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+   },
+   "staging": "OTS: over her shoulder to Leaf; she is satisfied (the line plays on her back).",
    "deviation": null,
    "action": "She is satisfied.",
    "need": {
@@ -4077,7 +5159,7 @@
    "seq": 70,
    "scene": "1A",
    "set": "VERDOR_GROUNDS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 84,
    "rec_in": 7908,
    "rec_out": 7992,
@@ -4086,11 +5168,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 35,
+    "start_frame": 840
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
+    "k4_gpu_s_per_frame": 43.4,
+    "draft_minutes": 5.21,
+    "k4_cpu_hours": 1.01,
+    "k4_gpu_hours": 1.01,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+   },
+   "staging": "BACK: from behind her at the riding gear; Leaf noses in over her right shoulder; she pushes his head away; it comes straight back.",
    "deviation": null,
    "action": "Leaf noses at the riding equipment over her shoulder, wanting to go. She pushes his head away. It comes straight back.",
    "need": {
@@ -4103,7 +5205,7 @@
    "seq": 71,
    "scene": "1A",
    "set": "VERDOR_GROUNDS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 7992,
    "rec_out": 8088,
@@ -4112,11 +5214,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 41,
+    "start_frame": 984
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
+    "k4_gpu_s_per_frame": 43.4,
+    "draft_minutes": 5.95,
+    "k4_cpu_hours": 1.16,
+    "k4_gpu_hours": 1.16,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+   },
+   "staging": "PROFILE + DOF: she kneels and leans her forehead to his, eyes closed; his eye sharp, her profile soft; he breathes out.",
    "deviation": null,
    "action": "She leans her forehead against his for a moment, and he breathes out, warm, through his nose.",
    "need": {

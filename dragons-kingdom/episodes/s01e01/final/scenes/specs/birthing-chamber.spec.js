@@ -57,7 +57,7 @@ export default {
     '1A-01': {
       staging: 'NONE: macro on the shell; the crack runs on from the old fracture and stops.',
       cam: { rig: 'static', frame: { subjects: [['eggCrack', [0.1, 0.05]]], from: 150, dist: 0.62, rise: 0.06 }, mm: 100, fstop: 8 },
-      set: { egg: 'closed', crack: [[0, 0.3], [1.5, 0.3], [2.4, 1.0, 'out']] },
+      set: { egg: 'closed', crack: [[0, 0.3], [1.5, 0.3], [2.4, 1.0, 'out']], eggFill: { intensity: 1.2, heading: 185 } },
       exposure: -0.4,
     },
     '1A-02': {
@@ -94,20 +94,20 @@ export default {
     },
     '1A-06': {
       staging: 'NONE: macro; another piece of shell shifts.',
-      cam: { rig: 'static', frame: { subjects: [['eggFrag', [0.0, 0.0]]], from: 128, dist: 0.6, rise: 0.04 }, mm: 100, fstop: 8 },
-      set: { egg: 'cracked', crack: 1, frag: { shift: [[0.8, 0], [1.05, 0.07], [1.4, 0.05]] } },
+      cam: { rig: 'static', frame: { subjects: [['eggFrag', [0.0, 0.0]]], from: 165, dist: 0.6, rise: 0.04 }, mm: 100, fstop: 8 },
+      set: { egg: 'cracked', crack: 1, frag: { shift: [[0.8, 0], [1.05, 0.07], [1.4, 0.05]] }, eggFill: { intensity: 1.4, heading: 180 } },
       exposure: -0.4,
     },
     '1A-07': {
       staging: 'NONE: macro; the shell flexes outward under pressure (birth stage 1).',
-      cam: { rig: 'static', frame: { subjects: [['eggFrag', [-0.1, 0.05]]], from: 140, dist: 0.55, rise: 0.0 }, mm: 100, fstop: 8 },
-      set: { egg: 'cracked', crack: 1, frag: { shift: 0.05, push: [[0.5, 0], [1.8, 0.005], [2.5, 0.002], [3.3, 0]] } },
+      cam: { rig: 'static', frame: { subjects: [['eggFrag', [-0.1, 0.05]]], from: 155, dist: 0.55, rise: 0.0 }, mm: 100, fstop: 8 },
+      set: { egg: 'cracked', crack: 1, frag: { shift: 0.05, push: [[0.5, 0], [1.8, 0.005], [2.5, 0.002], [3.3, 0]] }, eggFill: { intensity: 1.4, heading: 180 } },
       exposure: -0.4,
     },
     '1A-08': {
       staging: 'NONE: macro, a different angle; a fragment lifts away (birth stage 2).',
-      cam: { rig: 'static', frame: { subjects: [['eggFrag', [0.15, 0.0]]], from: 100, dist: 0.85, rise: 0.12 }, mm: 100, fstop: 8 },
-      set: { egg: 'cracked', crack: 1, frag: { shift: 0.05, lift: [[0.6, 0], [1.9, 1]] } },
+      cam: { rig: 'static', frame: { subjects: [['eggFrag', [0.15, 0.0]]], from: 205, dist: 0.85, rise: 0.12 }, mm: 100, fstop: 8 },
+      set: { egg: 'cracked', crack: 1, frag: { shift: 0.05, lift: [[0.6, 0], [1.9, 1]] }, eggFill: { intensity: 1.4, heading: 215 } },
       exposure: -0.3,
     },
     '1A-09': {

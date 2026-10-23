@@ -1,0 +1,288 @@
+{
+ "set": "SEA_COAST_DAWN",
+ "scene_file": "episodes/s01e01/final/scenes/sea-coast-dawn.js",
+ "spec": "episodes/s01e01/final/scenes/specs/sea-coast-dawn.spec.js",
+ "fps": 24,
+ "handles": 12,
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "note": "start_s / frames are the render-jobs.json contract (episode.mjs); pre/post are handle frames the editor may render around each shot.",
+ "shots": [
+  {
+   "job": "P-02",
+   "seq": 2,
+   "scene": "PROLOGUE",
+   "set": "SEA_COAST_DAWN",
+   "start_s": 1,
+   "start_frame": 24,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "fadein",
+    36
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "dawn",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     -0.008678730623841365,
+     0.10452846326765346,
+     -0.9944840270218831
+    ],
+    "sunVeiled": true,
+    "exposure": -1.35,
+    "whiteBalance": 3700
+   },
+   "staging": "NONE: low over the water, the pale sky in the moving swell; fade in from black.",
+   "deviation": null
+  },
+  {
+   "job": "P-03",
+   "seq": 3,
+   "scene": "PROLOGUE",
+   "set": "SEA_COAST_DAWN",
+   "start_s": 9,
+   "start_frame": 216,
+   "frames": 276,
+   "pre": 12,
+   "post": 12,
+   "seconds": 11.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L001",
+     "part": 0,
+     "ref": "L001",
+     "role": "NARRATOR",
+     "file": "vo/L001.wav",
+     "file_in_s": 0,
+     "file_out_s": 4.865,
+     "at_s": 2.17,
+     "speech_in_s": 2.2,
+     "speech_out_s": 7.005,
+     "words": [
+      {
+       "w": "until",
+       "start_s": 2.17,
+       "end_s": 2.59
+      },
+      {
+       "w": "the",
+       "start_s": 2.59,
+       "end_s": 2.75
+      },
+      {
+       "w": "early",
+       "start_s": 2.75,
+       "end_s": 3.03
+      },
+      {
+       "w": "twelve",
+       "start_s": 3.03,
+       "end_s": 3.34
+      },
+      {
+       "w": "hundreds",
+       "start_s": 3.34,
+       "end_s": 3.99
+      },
+      {
+       "w": "humanity",
+       "start_s": 4.32,
+       "end_s": 4.95
+      },
+      {
+       "w": "did",
+       "start_s": 4.95,
+       "end_s": 5.1
+      },
+      {
+       "w": "not",
+       "start_s": 5.1,
+       "end_s": 5.28
+      },
+      {
+       "w": "know",
+       "start_s": 5.28,
+       "end_s": 5.61
+      },
+      {
+       "w": "that",
+       "start_s": 5.61,
+       "end_s": 5.79
+      },
+      {
+       "w": "dragons",
+       "start_s": 5.79,
+       "end_s": 6.29
+      },
+      {
+       "w": "existed",
+       "start_s": 6.29,
+       "end_s": 7.02
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "dawn",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     -0.008678730623841365,
+     0.10452846326765346,
+     -0.9944840270218831
+    ],
+    "sunVeiled": true,
+    "exposure": -1.35,
+    "whiteBalance": 3700
+   },
+   "staging": "WIDE: toward the island in its cloud cap; the vessel crosses the left foreground, small.",
+   "deviation": null
+  },
+  {
+   "job": "P-04",
+   "seq": 4,
+   "scene": "PROLOGUE",
+   "set": "SEA_COAST_DAWN",
+   "start_s": 23,
+   "start_frame": 552,
+   "frames": 84,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "dawn",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     -0.008678730623841365,
+     0.10452846326765346,
+     -0.9944840270218831
+    ],
+    "sunVeiled": true,
+    "exposure": -1.35,
+    "whiteBalance": 3700
+   },
+   "staging": "HANDS: a working hand on the rope at the shrouds; no face (100 mm, aboard).",
+   "deviation": null
+  },
+  {
+   "job": "P-05",
+   "seq": 5,
+   "scene": "PROLOGUE",
+   "set": "SEA_COAST_DAWN",
+   "start_s": 29,
+   "start_frame": 696,
+   "frames": 84,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "dawn",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     -0.008678730623841365,
+     0.10452846326765346,
+     -0.9944840270218831
+    ],
+    "sunVeiled": true,
+    "exposure": -1.35,
+    "whiteBalance": 3700
+   },
+   "staging": "BACK: from the stern, the sailor at mid-ship turns to port and up toward the sound above the fog - his face turns away from the lens (lost profile at most).",
+   "deviation": null
+  },
+  {
+   "job": "P-06",
+   "seq": 6,
+   "scene": "PROLOGUE",
+   "set": "SEA_COAST_DAWN",
+   "start_s": 35,
+   "start_frame": 840,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "dawn",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     -0.008678730623841365,
+     0.10452846326765346,
+     -0.9944840270218831
+    ],
+    "sunVeiled": true,
+    "exposure": -1.35,
+    "whiteBalance": 3700
+   },
+   "staging": "NONE: low, up into the fog; something vast passes inside the mist - only its shadow in the light shafts and a darkening of the mist; never a dragon.",
+   "deviation": null
+  },
+  {
+   "job": "P-07",
+   "seq": 7,
+   "scene": "PROLOGUE",
+   "set": "SEA_COAST_DAWN",
+   "start_s": 43,
+   "start_frame": 1032,
+   "frames": 84,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "dawn",
+    "weather": "sea fog in banks, a low cloud bank on the eastern horizon; fresh breeze (Beaufort 5) from 110 deg",
+    "notes": "Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).",
+    "sun": [
+     -0.008678730623841365,
+     0.10452846326765346,
+     -0.9944840270218831
+    ],
+    "sunVeiled": true,
+    "exposure": -1.35,
+    "whiteBalance": 3700
+   },
+   "staging": "SIL + BACK: the sailor still, from behind, a dark shape against the bright fog to port.",
+   "deviation": null
+  }
+ ]
+}
