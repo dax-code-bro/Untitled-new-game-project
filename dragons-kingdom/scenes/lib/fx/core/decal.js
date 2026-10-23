@@ -189,8 +189,12 @@ void fxdEval(vec2 uv, out float d, out float cov, out float dryBias) {
   float e = 1.0 - length(q);
   float n = fxdF(p / (mn * 0.22) + so);
   float n2 = fxdF3(p / (mn * 0.06) + so * 1.7);
-  float c = (e * 1.1 + (n - 0.5) * 0.75 + (n2 - 0.5) * 0.18 - (1.0 - uAmount) * 0.6 - 0.08) * mn * 0.5;
-  float sheet = fxdFilm(c, mn * 0.012) * (0.5 + 1.4 * smoothstep(0.0, mn * 0.18, c)) * (0.75 + 0.5 * n2);
+  // gravity streaks: a coat is a film that flowed downhill - its thickness and its edge follow
+  // long, narrow streaks along uDown (an isotropic blob read as paint)
+  vec2 pd = vec2(dot(p, vec2(-uDown.y, uDown.x)), dot(p, uDown));
+  float st = fxdF(vec2(pd.x / (mn * 0.05), pd.y / (mn * 0.7)) + so * 0.9);
+  float c = (e * 1.1 + (n - 0.5) * 0.75 + (n2 - 0.5) * 0.18 + (st - 0.5) * 0.35 - (1.0 - uAmount) * 0.6 - 0.08) * mn * 0.5;
+  float sheet = fxdFilm(c, mn * 0.012) * (0.5 + 1.4 * smoothstep(0.0, mn * 0.18, c)) * (0.75 + 0.5 * n2) * (0.5 + 1.0 * st);
   d = sheet; cov = step(0.001, sheet);
   dryBias = 0.35 * (1.0 - smoothstep(0.0, mn * 0.12, c));
   if (uP.y > 0.0) fxdRuns(p, -uDown * mn * 0.05, mn * 0.38, uP.y, mn * uP.z, mn * 0.012, uGrow, uSeed, d, cov);

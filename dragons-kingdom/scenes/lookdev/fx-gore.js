@@ -67,14 +67,19 @@ export async function setup(ctx) {
   placeCharacter(rider, 9, 1.0, 0, -0.6); scene.add(rider.root); rider.update(0); rider.root.updateMatrixWorld(true);
   fx.gore.burnedRider({ character: rider, side: 'R', t0: 0, burnTime: 0.8 });
   const P = (ch, b) => ch.bone(b).getWorldPosition(new THREE.Vector3());
-  S = { fx, scout, vil, rider, woundP, woundN, vHead: P(vil, 'head'), vShin: P(vil, 'lowerleg02.R'), rArm: P(rider, 'lowerarm02.R') };
+  const vq = vil.root.getWorldQuaternion(new THREE.Quaternion());
+  const vFwd = new THREE.Vector3(0, 0, 1).applyQuaternion(vq), vRight = new THREE.Vector3(-1, 0, 0).applyQuaternion(vq);
+  const rq = rider.root.getWorldQuaternion(new THREE.Quaternion());
+  const rFwd = new THREE.Vector3(0, 0, 1).applyQuaternion(rq), rRight = new THREE.Vector3(-1, 0, 0).applyQuaternion(rq);
+  const rArm = P(rider, 'lowerarm02.R').lerp(P(rider, 'lowerarm01.R'), 0.5);
+  S = { fx, scout, vil, rider, woundP, woundN, vHead: P(vil, 'head'), vFwd, vRight, vShin: P(vil, 'lowerleg02.R'), rArm, rNeck: P(rider, 'neck02'), rFwd, rRight };
 }
 
 const VIEWS = [
   { look: () => S.woundP, pos: () => S.woundP.clone().addScaledVector(S.woundN, 1.2).add(new THREE.Vector3(0, 0.5, 0.5)), f: 50, fstop: 4 },
-  { look: () => S.vHead, pos: () => S.vHead.clone().add(new THREE.Vector3(-0.35, 0.05, 0.75)), f: 50, fstop: 4 },
+  { look: () => S.vHead.clone().addScaledVector(S.vFwd, 0.05), pos: () => S.vHead.clone().addScaledVector(S.vFwd, 0.7).addScaledVector(S.vRight, 0.4).add(new THREE.Vector3(0, 0.04, 0)), f: 65, fstop: 4 },
   { look: () => S.vShin, pos: () => S.vShin.clone().add(new THREE.Vector3(-0.2, 0.25, 0.9)), f: 50, fstop: 4 },
-  { look: () => S.rArm, pos: () => S.rArm.clone().add(new THREE.Vector3(0.9, 0.35, 1.3)), f: 50, fstop: 5.6 },
+  { look: () => S.rArm.clone().lerp(S.rNeck, 0.25), pos: () => S.rArm.clone().lerp(S.rNeck, 0.25).addScaledVector(S.rFwd, 0.75).addScaledVector(S.rRight, 0.6).add(new THREE.Vector3(0, 0.05, 0)), f: 40, fstop: 5.6 },
 ];
 export function update(t, ctx) {
   const cam = ctx.camera;
