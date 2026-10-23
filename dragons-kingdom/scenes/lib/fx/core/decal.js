@@ -143,6 +143,10 @@ void fxdSpatter(vec2 p, float cell, float dens, float rMax, float elong, inout f
       vec2 fromSrc = c - uSrc;
       float dist = length(fromSrc);
       float k = dens * exp(-dist / max(uP.x, 1e-4)) * (lvl == 0 ? 0.35 : (lvl == 1 ? 0.6 : 0.9));
+      // (thinned out over the projector's outer fifth: a source near the box edge printed a
+      // straight line where the spatter began)
+      vec2 eb = abs(c) / (0.5 * uSize);
+      k *= 1.0 - smoothstep(0.8, 1.0, max(eb.x, eb.y));
       float hp = fxdH(id + 17.3);
       if (hp > k) continue;
       float r = rMax * (lvl == 0 ? 1.0 : (lvl == 1 ? 0.5 : 0.25)) * (0.25 + 0.75 * pow(fxdH(id + 5.1), 2.0));

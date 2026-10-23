@@ -206,11 +206,14 @@ renders cues through the director's `FxRunner` (and matches the direct calls fra
 ## Lookdev scenes
 
 `scenes/lookdev/fx-blood.js`, `fx-gore.js`, `fx-dust.js`, `fx-destruction.js`, `fx-cling.js`,
-`fx-smoke.js`, `fx-fire.js`, `fx-water.js`, `fx-cloth.js`, `fx-director.js` - each a few views of
+`fx-smoke.js`, `fx-fire.js`, `fx-water.js`, `fx-cloth.js`, `fx-director.js`, `fx-scales.js` - each a few views of
 a few seconds with scale references (grey ball albedo 0.4, 1.8 m post). `fx-cling.js`: two Cling
 townhouses from the architecture library (clay and stone-slate roofs, both built with holes
 through `damageCapture`), the vendor's stall from the props library swept apart, stage boards,
 the after-state 100 s later, the pool along the paving joints and the smear down the front.
+`fx-scales.js`: Charcoal after the bite (F1) - the jaws and chin coated and running, the spray
+thrown back along his neck and the spatter it leaves on the scales, then the same 10 min later
+(dried dark and matte); decals ride on the creature's skinned hide.
 
 ```
 node render/render.mjs --still scenes/lookdev/fx-cloth.js --time 1.7 --preset draft --png out.png
