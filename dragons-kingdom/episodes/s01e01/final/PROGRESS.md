@@ -11,7 +11,7 @@ Owner of this folder and of `../tools/` (the check tools and generators). Resume
   drinking words count as alcohol; rule 6b flags a vice word with a pronoun right after a protected character is named
   (same or previous paragraph); cue directions `[to Abby]` with a vice word fail; rule 6d fails any death word in new text
   outside the approved blocks. The three hits read in context (R3, C34, C14) are in `REVIEWED_CONTEXT` with the reason.
-  `--selftest` runs 9 broken copies (all caught).
+  `--selftest` runs 8 broken copies of the script and 1 edit of the locked table (all caught).
 - The reading copy drops the `[creator-approved wording 2026-10-18]` cue marker too (SERIES.md section 5 now describes
   how accepted text stays marked in the production copy and has no markers in the reading copy).
 - `voices.json` (via `tools/final_voices.py`): status notes now say that computer-voice takes of every line exist in

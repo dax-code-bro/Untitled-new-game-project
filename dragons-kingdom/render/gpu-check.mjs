@@ -220,7 +220,7 @@ async function main() {
     say(`   CPU:       ${sys.cpu}, RAM ${sys.ramGB} GB`);
     for (const g of sys.gpusOS.length ? sys.gpusOS : ['(the OS did not list any graphics card)']) say(`   GPU (OS):  ${g}`);
     say(`   Node ${sys.node}, Playwright ${sys.playwright}, ${sys.ffmpeg}`);
-    if (sys.freeDiskGB != null) say(`   free disk: ${sys.freeDiskGB.toFixed(0)} GB (the episode needs ~60 GB while rendering, see pc/RENDER_ON_YOUR_PC.md)`);
+    if (sys.freeDiskGB != null) say(`   free disk: ${sys.freeDiskGB.toFixed(0)} GB (the episode needs about 100 GB while rendering: shots, scene files and the finished episode; pc/MANIFEST.md)`);
 
     // ---- 1. find the GPU
     let chosen = null;

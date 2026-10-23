@@ -208,6 +208,21 @@ All of this is in `screenplay-final.md`:
 
 `tools/check_extended.py` and `tools/extract_dialogue.py --check` still pass on the original files.
 
+**Added on 23 October 2026** (the script itself did not change):
+- the tool now keeps a word-for-word copy of the five death pieces you approved, as they stood when question 4
+  was put to you, and fails if a single word of them changes. Your approval covers that text; a change would
+  be a new proposal for you;
+- the rating check no longer looks only for names. It also catches a title or family word that stands for a
+  protected character ("his sister", "the queen's daughter", "Leaf's rider"), a "she" or "he" right after one of
+  them is named, a line said *to* Abby or the child, and drinking words. It also fails on any new death outside
+  the five pieces you approved. Three sentences it flags were read by a person and are fine (the musician's pipe
+  after the child has gone indoors, the watchman's untouched cup, and the direction "Do not imply death."); the
+  tool lists them with the reason;
+- `--selftest` tries the tool on eight broken copies of the script and on one edit of its own record of the
+  approved text; it caught every one;
+- the reading copy (`screenplay-final-clean.md`) no longer shows the `[creator-approved wording 2026-10-18]`
+  tag on the five lines whose wording you approved; it has no production markers at all now.
+
 ## 7. Estimated length, scene by scene
 
 These are estimates for an animatic, not measured footage. They use the same timing method as `shotlist.json` and `expansion-proposal.md`. "With C#" means changed lines inside that part; "with R#" means rating-pass pieces inside it. The full breakdown of the final script (every spoken line, every shot, voices, new assets and the render schedule) is in this folder: `dialogue.md`, `shotlist.md`, `voices.json`, `assets-delta.md` and `render-schedule.md`.
