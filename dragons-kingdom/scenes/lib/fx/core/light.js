@@ -134,7 +134,7 @@ export class LightRig {
       const a = [amb.color.r * amb.intensity, amb.color.g * amb.intensity, amb.color.b * amb.intensity];
       sky = sky ? sky.map((x, i) => x + a[i]) : a; ground = ground ? ground.map((x, i) => x + a[i]) : a.slice();
     }
-    if (!sky) { const s = u.uSunCol.value; sky = [s.x * 0.06, s.y * 0.07, s.z * 0.09]; ground = [s.x * 0.02, s.y * 0.018, s.z * 0.015]; }
+    if (!sky) { const s = u.uSunCol.value; sky = [s.x * 0.1, s.y * 0.12, s.z * 0.16]; ground = [s.x * 0.03, s.y * 0.028, s.z * 0.024]; }
     if (this.over.sky) sky = this.over.sky;
     if (this.over.ground) ground = this.over.ground;
     u.uSkyCol.value.set(...sky); u.uGroundCol.value.set(...ground);

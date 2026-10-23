@@ -19,6 +19,7 @@ import { DecalEffect } from './core/decal.js';
 import { debrisApi } from './debris.js';
 import { smokeApi } from './smoke.js';
 import { fireApi } from './fire.js';
+import { waterApi } from './water.js';
 
 export { FxManager, Effect } from './core/manager.js';
 export { ParticleLayer } from './core/particles.js';
@@ -41,6 +42,7 @@ export async function createFx(ctx, o = {}) {
   fx.debris = debrisApi(fx);
   fx.smoke = smokeApi(fx);
   fx.fire = fireApi(fx);
+  fx.water = waterApi(fx);
   ctx.__dkFx = fx;
   return fx;
 }

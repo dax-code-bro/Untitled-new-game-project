@@ -21,6 +21,7 @@ import * as THREE from 'three';
 import { Effect } from './core/manager.js';
 import { ParticleLayer } from './core/particles.js';
 import { DecalEffect, MAX_STAMPS } from './core/decal.js';
+import { LATE_GLSL, makeLateUniforms } from './core/late.js';
 import { hash01, arr3, clamp, smoothstep, ballistic, coneDir, norm3, dot3, len3, gauss } from './core/util.js';
 
 export const BLOOD_COLOR = [0.115, 0.0065, 0.0065];     // fresh, optically thick (linear)
@@ -292,10 +293,12 @@ export class BloodDrip extends Effect {
  * multiply (absorption) + a faint red scatter, clouded by billowing noise and spreading over time.
  */
 const WATER_VERT = /* glsl */`
-varying vec2 vL; varying vec3 vW;
-void main() { vL = position.xz; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+varying vec2 vL; varying vec3 vW; varying float vVZ;
+void main() { vL = position.xz; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vec4 v = viewMatrix * w; vVZ = -v.z; gl_Position = projectionMatrix * v; }`;
 const WATER_FRAG = /* glsl */`
 precision highp float;
+${LATE_GLSL}
+varying float vVZ;
 uniform float uR, uAge, uSeed, uDens, uLateTint;
 uniform vec3 uSig, uScat;
 varying vec2 vL; varying vec3 vW;
@@ -304,6 +307,7 @@ float n(vec2 p) { vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 *
   return mix(mix(h(i), h(i + vec2(1, 0)), u.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), u.x), u.y); }
 float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += a * n(p); p = p * 2.07 + 3.1; a *= 0.5; } return s; }
 void main() {
+  if (fxSceneZ() < vVZ - 0.05) discard;     // solid things in front (no test against the waves)
   float r = length(vL) / max(uR, 1e-3);
   if (r > 1.0) discard;
   vec2 q = vL / max(uR, 1e-3) * 3.0 + uSeed;
@@ -329,14 +333,16 @@ export class BloodInWater extends Effect {
     const geo = new THREE.PlaneGeometry(2, 2, res, res);
     geo.rotateX(-Math.PI / 2);
     this.base = geo.attributes.position.array.slice();
+    const onLate = !!fx.ctx.cinematic && o.late !== false;
     const mk = (tint) => new THREE.ShaderMaterial({
       vertexShader: WATER_VERT, fragmentShader: WATER_FRAG,
       uniforms: {
+        ...makeLateUniforms(),
         uR: { value: 1 }, uAge: { value: 0 }, uSeed: { value: (o.seed ?? 1) * 3.7 }, uDens: { value: o.density ?? 1.2 },
-        uSig: { value: new THREE.Vector3(...(o.sigma || [0.25, 2.2, 2.4])) }, uScat: { value: new THREE.Vector3(...(o.scatter || [0.035, 0.002, 0.002])) },
+        uSig: { value: new THREE.Vector3(...(o.sigma || [0.35, 1.1, 1.2])) }, uScat: { value: new THREE.Vector3(...(o.scatter || [0.012, 0.0008, 0.0008])) },
         uLateTint: { value: tint ? 1 : 0 },
       },
-      transparent: true, depthWrite: false, depthTest: true,
+      transparent: true, depthWrite: false, depthTest: !onLate,
       blending: THREE.CustomBlending, blendEquation: THREE.AddEquation,
       blendSrc: tint ? THREE.OneFactor : THREE.ZeroFactor, blendDst: tint ? THREE.OneFactor : THREE.SrcColorFactor,
       blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,
@@ -348,7 +354,7 @@ export class BloodInWater extends Effect {
       mesh.userData.dkNoVelocity = true;
       // over the ocean: drawn in the late pass after it
       if (o.late !== false) mesh.userData.dkLate = true;
-      m.userData.dkLateUniforms = null;
+      m.userData.dkLateUniforms = m.uniforms;
       this.object.add(mesh);
       return mesh;
     });
