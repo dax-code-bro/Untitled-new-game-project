@@ -58,8 +58,8 @@ const CANDIDATES = [
   { id: 'f2-velocity', label: 'style frame F2, Verdor riding grounds (Charcoal, Leaf, Remi, Abby, keeper, 77k grass tufts)', scene: 'scenes/lookdev/style-f2-riding-grounds.js', time: 2, cinematic: 'velocity',
     crops: [{ name: 'charcoal-head', x: 1392, y: 1302 }, { name: 'remi-on-the-platform', x: 2082, y: 752 }] },
   // only with --heavy (or --candidate f5-cling): the heaviest set, for graphics memory and the GPU time-out
-  { id: 'f5-cling', heavy: true, label: 'style frame F5, Cling square (the heaviest set: houses, crowd, Starlight; 821 s per frame on the cloud CPU with 8 sub-frames)', scene: 'scenes/lookdev/style-f5-cling-square.js', time: 2, cinematic: 'velocity',
-    crops: [{ name: 'cling-centre', x: 1872, y: 1032 }, { name: 'cling-left', x: 960, y: 1300 }] },
+  { id: 'f5-cling', heavy: true, label: 'style frame F5, Cling square (the heaviest set: houses, crowd, Starlight; 221 s for this frame on the cloud CPU)', scene: 'scenes/lookdev/style-f5-cling-square.js', time: 2, cinematic: 'velocity',
+    crops: [{ name: 'starlight-head', x: 1870, y: 345 }, { name: 'watchman', x: 1100, y: 1890 }] },
   { id: 'lookdev-coast', label: 'cinematic lookdev coast (sky model, fog, FFT ocean, dragon; no caches needed)', scene: 'scenes/cinematic-lookdev.js', time: 4, cinematic: 'velocity',
     crops: [{ name: 'dragon-head', x: 912, y: 522 }, { name: 'rock-in-mist', x: 762, y: 1482 }] },
   { id: 'test-kingdom', label: 'test kingdom (castle, 13,700 trees, standard pipeline; no assets needed)', scene: 'scenes/test-kingdom.js', time: 5, cinematic: undefined,
@@ -223,7 +223,7 @@ function pictureReport(m, outDir, { writeReference }) {
   say(`   float buffers: ${pic.buffers ? (nanBufs.length ? nanBufs.map(([k, v]) => `${k} ${v.nan} NaN / ${v.inf} Inf`).join(', ') : `${Object.keys(pic.buffers).length - 1} checked, no NaN or Inf`) : 'none to check (this frame does not use the cinematic pipeline)'}${pic.buffers?.shaderErrors ? `, ${pic.buffers.shaderErrors} shader errors` : ''}`);
   if (writeReference) {
     const ref = readImageReference() || { about: 'The GPU check test frames as the cloud machine (SwiftShader) renders them: thumbnail + 1:1 crops (deflate + base64 RGB), pure black/white shares. render/gpu-check.mjs compares a PC\'s frame with these (render/lib/picture.mjs).', candidates: {} };
-    ref.candidates[m.candidate] = { scene: m.scene, time: m.time, cinematic: m.cinematic, preset: 'final', bitDepth: 10, renderer: m.renderer, measuredAt: new Date().toISOString(), ...toReference(pic.analysis) };
+    ref.candidates[m.candidate] = { scene: m.scene, time: m.time, cinematic: m.cinematic, preset: 'final', bitDepth: 10, renderer: m.renderer, measuredAt: new Date().toISOString(), ...toReference(pic.analysis, pic.buffers) };
     fs.writeFileSync(REFERENCE_IMAGE_FILE, JSON.stringify(ref, null, 1) + '\n');
     say(`   wrote the picture reference in ${path.relative(PROJECT_ROOT, REFERENCE_IMAGE_FILE)}`);
   }
@@ -244,6 +244,7 @@ function pictureReport(m, outDir, { writeReference }) {
   for (const k of cmp.crops) say(`#    1:1 crop ${k.name}: PSNR ${k.psnr} dB (limit ${LIMITS.cropPsnr})`);
   say(`#    pure black ${(100 * cmp.black.now).toFixed(3)}% (reference ${(100 * cmp.black.ref).toFixed(3)}%), pure white ${(100 * cmp.white.now).toFixed(3)}% (reference ${(100 * cmp.white.ref).toFixed(3)}%)`);
   for (const r of cmp.reasons) say(`#    - ${r}`);
+  for (const n of cmp.notes || []) say(`#    (note: ${n})`);
   if (cmp.verdict !== 'SAME PICTURE') {
     say('#  The graphics card does not draw this frame exactly like the cloud computer. Before rendering');
     say('#  the episode, drag this picture into the chat with Claude so someone can look at it:');
@@ -299,7 +300,7 @@ async function main() {
     say(`   CPU:       ${sys.cpu}, RAM ${sys.ramGB} GB`);
     for (const g of sys.gpusOS.length ? sys.gpusOS : ['(the OS did not list any graphics card)']) say(`   GPU (OS):  ${g}`);
     say(`   Node ${sys.node}, Playwright ${sys.playwright}, ${sys.ffmpeg}`);
-    if (sys.freeDiskGB != null) say(`   free disk: ${sys.freeDiskGB.toFixed(0)} GB (the episode needs about 100 GB while rendering: shots, scene files and the finished episode; pc/MANIFEST.md)`);
+    if (sys.freeDiskGB != null) say(`   free disk: ${sys.freeDiskGB.toFixed(0)} GB (the episode needs up to about 100 GB while rendering: tools, assets and caches about 8 GB, shots, scene files and the finished episode 45-92 GB; pc/MANIFEST.md)`);
 
     // ---- 1. find the GPU
     let chosen = null;

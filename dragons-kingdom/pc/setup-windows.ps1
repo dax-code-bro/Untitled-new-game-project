@@ -310,7 +310,7 @@ function Invoke-Setup {
   if ($drive -and $drive.Free) {
     $freeGB = [math]::Round($drive.Free / 1GB)
     Write-Ok ('free disk on ' + $drive.Name + ': ' + $freeGB + ' GB')
-    if ($freeGB -lt 100) { Write-Note 'Episode 1 needs about 100 GB while it renders (tools + caches ~6 GB, shots + scene files ~60-90 GB)' }
+    if ($freeGB -lt 100) { Write-Note 'Episode 1 needs up to about 100 GB while it renders (tools, assets and caches about 8 GB; shots, scene files and the episode 45-92 GB)' }
   }
 
   # ---- 2. Node.js ----------------------------------------------------------------------------------

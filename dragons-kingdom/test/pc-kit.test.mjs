@@ -17,7 +17,7 @@ const cmdFiles = fs.readdirSync(PC).filter((f) => f.endsWith('.cmd')).map((f) =>
 const ps1Files = fs.readdirSync(PC).filter((f) => f.endsWith('.ps1')).map((f) => path.join(PC, f));
 
 // ---------------------------------------------------------------- launchers ---
-test('pc kit: every .cmd launcher is CRLF, "@echo off" + rem lines + ONE ( ... exit /b ) block, no < or > in comments', () => {
+test('pc kit: every .cmd launcher is CRLF, "@echo off" + rem lines + ONE ( ... exit /b !DK_RC! ) block that passes the exit code on, no < or > in comments', () => {
   assert.ok(cmdFiles.length >= 4, `expected the four launchers, found ${cmdFiles.length}`);
   for (const f of cmdFiles) {
     const name = path.basename(f);
@@ -34,7 +34,14 @@ test('pc kit: every .cmd launcher is CRLF, "@echo off" + rem lines + ONE ( ... e
     const close = lines.lastIndexOf(')');
     assert.equal(close, lines.length - 1, `${name}: the block's ")" must be the last line (nothing after the block)`);
     const body = lines.slice(i + 1, close);
-    assert.ok(body.length >= 1 && /^\s*exit \/b\s*$/i.test(body[body.length - 1]), `${name}: the block must end with "exit /b"`);
+    // the exit code of the PowerShell script must reach whoever started the .cmd (the Windows CI checks
+    // GPU-Check.cmd's exit 2 on a machine without a GPU): captured at run time right after powershell
+    // (%ERRORLEVEL% inside a block is expanded when the block is READ, hence "call set ... %%"), and given
+    // to "exit /b" explicitly: a bare "exit /b" after "pause" ended with exit code 0 on windows-latest.
+    assert.match(body[0] || '', /^\s*powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0[a-z-]+\.ps1"/i, `${name}: the block must start with the powershell line`);
+    assert.equal((body[1] || '').trim(), 'call set DK_RC=%%ERRORLEVEL%%', `${name}: the line after powershell must keep its exit code: call set DK_RC=%%ERRORLEVEL%%`);
+    assert.equal((body[2] || '').trim(), 'setlocal EnableDelayedExpansion', `${name}: delayed expansion (for !DK_RC!) is switched on only after the powershell line, so a "!" in a folder name cannot break it`);
+    assert.ok(body.length >= 1 && /^\s*exit \/b !DK_RC!\s*$/i.test(body[body.length - 1]), `${name}: the block must end with "exit /b !DK_RC!"`);
     assert.ok(!body.some((l) => /^\s*[()]\s*$/.test(l)), `${name}: no nested blocks`);
   }
 });
@@ -174,4 +181,39 @@ test('pc kit: both setups install the pinned Node.js of render/lib/pins.mjs, alw
   assert.match(sh, new RegExp(`NODE_VERSION="${PINS.node.replace(/\./g, '\\.')}"`), 'setup.sh pins another Node.js');
   assert.doesNotMatch(ps, /NodeMajor/, 'setup-windows.ps1 still accepts any Node.js >= a major version');
   assert.doesNotMatch(sh, /NODE_MAJOR/, 'setup.sh still accepts any Node.js >= a major version');
+});
+
+// ---------------------------------------------------------- picture check ---
+test('GPU picture check: same frame passes, a darker frame, a black block, new NaN and lost detail are caught; the reference\'s own NaN is a note', async () => {
+  const { analyse, toReference, compare } = await import('../render/lib/picture.mjs');
+  const W = 768, H = 432;
+  // a frame with structure at every scale (gradients + fine checker) so PSNR / SSIM mean something
+  const frame = new Uint8Array(W * H * 4);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = (y * W + x) * 4, fine = ((x >> 1) + (y >> 1)) & 1 ? 60 : 0;   // texture-like contrast (cobbles, scales)
+    frame[i] = 40 + ((x * 150) / W) + fine; frame[i + 1] = 60 + ((y * 120) / H) + fine; frame[i + 2] = 90 + (((x + y) * 60) / (W + H)); frame[i + 3] = 255;
+  }
+  const crops = [{ name: 'a', x: 100, y: 100 }, { name: 'b', x: 500, y: 300 }];
+  const ref = toReference(analyse(frame, W, H, crops), { scene: { nan: 0, inf: 0 }, resolve: { nan: 0, inf: 0 }, shaderErrors: 0 });
+  const verdict = (f, bufs = null, r = ref) => compare(analyse(f, W, H, crops), JSON.parse(JSON.stringify(r)), bufs);
+  assert.equal(verdict(frame).verdict, 'SAME PICTURE');
+  const grain = frame.map((v, i) => (i % 4 === 3 ? v : Math.max(0, Math.min(255, v + ((i * 7919) % 5) - 2))));
+  assert.equal(verdict(grain).verdict, 'SAME PICTURE', 'a different grain pattern (+-2 codes) must pass');
+  const dark = frame.map((v, i) => (i % 4 === 3 ? v : v * 0.55));
+  assert.equal(verdict(dark).verdict, 'DIFFERENT', 'a much darker frame');
+  const block = frame.slice();
+  for (let y = 150; y < 300; y++) for (let x = 200; x < 450; x++) { const i = (y * W + x) * 4; block[i] = block[i + 1] = block[i + 2] = 0; }
+  assert.equal(verdict(block).verdict, 'DIFFERENT', 'a black block (NaN shown as black)');
+  const flat = frame.slice();   // the texture missing (a smooth colour) in the place of crop "a"
+  for (let y = 100; y < 196; y++) for (let x = 100; x < 196; x++) { const i = (y * W + x) * 4, j = (y * W + (x & ~3)) * 4; for (let c = 0; c < 3; c++) flat[i + c] = (frame[j + c] + frame[j + c + 4] + frame[j + c + 8] + frame[j + c + 12]) >> 2; }
+  const lost = verdict(flat);
+  assert.notEqual(lost.verdict, 'SAME PICTURE', 'lost fine detail in a 1:1 crop');
+  assert.ok(lost.reasons.some((r) => r.includes('"a"')), lost.reasons.join('; '));
+  assert.equal(verdict(frame, { scene: { nan: 3, inf: 0 }, shaderErrors: 0 }).verdict, 'DIFFERENT', 'NaN where the cloud frame has none');
+  assert.equal(verdict(frame, { scene: { nan: 0, inf: 0 }, shaderErrors: 2 }).verdict, 'DIFFERENT', 'shader compile errors');
+  const refNaN = { ...ref, buffers: { scene: { nan: 96, inf: 0 } } };
+  const same = verdict(frame, { scene: { nan: 96, inf: 0 } }, refNaN);
+  assert.equal(same.verdict, 'SAME PICTURE', 'the same NaN count as the cloud frame (F5) is a scene fault, not the GPU');
+  assert.equal(same.notes.length, 1);
+  assert.equal(verdict(frame, { scene: { nan: 400, inf: 0 } }, refNaN).verdict, 'DIFFERENT', 'far more NaN than the cloud frame');
 });

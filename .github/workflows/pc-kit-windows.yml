@@ -2,10 +2,11 @@
 # GitHub's windows-latest runner: Windows PowerShell 5.1, a real console API, no GPU.
 #  1. the one-click setup (pc\Setup-Windows.cmd -SkipCaches -NoPull -NoShortcut) with Git hidden from PATH, so the
 #     pinned portable MinGit, Node.js, ffmpeg and uv are downloaded and checked by SHA-256 exactly as on a fresh PC;
-#  2. pc\GPU-Check.cmd: no GPU here, so it must end with exit code 2 and the GPU NOT USED banner;
-#  3. the picture check on Windows' SwiftShader against the frame the Linux cloud machine rendered;
+#  2. pc\GPU-Check.cmd: no GPU here, so it must end with exit code 2 (passed on by the .cmd) and the GPU NOT USED banner;
+#  3. the picture check on Windows' SwiftShader against the frame the Linux cloud machine rendered (must be SAME PICTURE);
 #  4. the end-to-end episode self-test (render, kill, resume, gate, assemble) and the pc-kit tests on real win32;
 #  5. pc\Send-Logs.cmd; every log is uploaded as the "pc-kit-windows-logs" artifact.
+# Every check step runs even when an earlier check failed (only a failed setup stops them).
 # Runs by hand (Actions > pc-kit-windows > Run workflow) and when the Windows launchers change on the render branch.
 name: pc-kit-windows
 on:
@@ -16,6 +17,9 @@ on:
       - '.github/workflows/pc-kit-windows.yml'
       - 'dragons-kingdom/pc/*.ps1'
       - 'dragons-kingdom/pc/*.cmd'
+      - 'dragons-kingdom/render/gpu-check.mjs'
+      - 'dragons-kingdom/render/lib/picture.mjs'
+      - 'dragons-kingdom/pc/reference-image.json'
 jobs:
   windows:
     runs-on: windows-latest
@@ -29,6 +33,7 @@ jobs:
         with:
           fetch-depth: 1
       - name: Setup-Windows.cmd (Git hidden, so the pinned MinGit is used)
+        id: setup
         run: |
           $PSVersionTable.PSVersion | Out-String | Write-Host
           $env:Path = ($env:Path -split ';' | Where-Object { $_ -and $_ -notmatch '\\Git\\' }) -join ';'
@@ -39,6 +44,7 @@ jobs:
           if (-not (Test-Path "$env:LOCALAPPDATA\DragonsKingdom\mingit\cmd\git.exe")) { Write-Host 'MinGit was NOT installed'; exit 1 }
           exit $rc
       - name: GPU-Check.cmd (no GPU here - expect exit 2 and the GPU NOT USED banner)
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: |
           cmd /c "echo.| pc\GPU-Check.cmd"
           $rc = $LASTEXITCODE
@@ -47,17 +53,23 @@ jobs:
           if (-not (Select-String -Path $log.FullName -Pattern 'GPU NOT USED' -Quiet)) { Write-Host 'no GPU NOT USED banner in' $log.Name; exit 1 }
           if ($rc -ne 2) { exit 1 } else { exit 0 }
       - name: Picture check on Windows SwiftShader (coast frame vs the Linux cloud reference)
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: |
           $env:Path = "$PWD\pc\tools\node;$PWD\pc\tools\ffmpeg\bin;" + $env:Path
           node render/gpu-check.mjs --swiftshader --candidate lookdev-coast --frames 1 --out output/gpu-check-win
           Write-Host "exit code: $LASTEXITCODE"
-          if ($LASTEXITCODE -ne 0) { exit 1 } else { exit 0 }
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $r = Get-Content output/gpu-check-win/gpu-check.json -Raw | ConvertFrom-Json
+          Write-Host "picture verdict on Windows SwiftShader: $($r.picture.verdict)"
+          if ($r.picture.verdict -ne 'SAME PICTURE') { exit 1 } else { exit 0 }
       - name: pc-kit tests on real Windows
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: |
           $env:Path = "$PWD\pc\tools\node;$PWD\pc\tools\ffmpeg\bin;" + $env:Path
           node --test test/pc-kit.test.mjs
           if ($LASTEXITCODE -ne 0) { exit 1 } else { exit 0 }
       - name: End-to-end episode self-test (CPU)
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: |
           $env:Path = "$PWD\pc\tools\node;$PWD\pc\tools\ffmpeg\bin;" + $env:Path
           node pc/selftest-episode.mjs --cpu

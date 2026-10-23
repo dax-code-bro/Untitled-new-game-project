@@ -99,13 +99,23 @@ export function analyse(rgba, w, h, crops = []) {
   };
 }
 
-/** The reference entry stored in pc/reference-image.json. */
-export function toReference(a) {
+/** NaN / Inf counts per float buffer (window.dk.debugCinematic()), without the other fields. */
+export function bufferCounts(stats) {
+  if (!stats || typeof stats !== 'object') return null;
+  const out = {};
+  for (const [k, v] of Object.entries(stats)) if (v && typeof v === 'object' && 'nan' in v) out[k] = { nan: v.nan | 0, inf: v.inf | 0 };
+  return out;
+}
+
+/** The reference entry stored in pc/reference-image.json (with the reference frame's own NaN / Inf counts). */
+export function toReference(a, bufferStats = null) {
+  const buffers = bufferCounts(bufferStats);
   return {
     width: a.width, height: a.height,
     thumb: { w: THUMB_W, h: THUMB_H, rgb: pack(a.thumb) },
     crops: a.crops.map((c) => ({ name: c.name, x: c.x, y: c.y, w: CROP, h: CROP, rgb: pack(c.rgb) })),
     black: +a.black.toFixed(6), white: +a.white.toFixed(6),
+    ...(buffers ? { buffers } : {}),
   };
 }
 
@@ -119,7 +129,7 @@ export const LIMITS = { thumbPsnr: 30, thumbSsim: 0.93, cropPsnr: 22, closeThumb
 
 /**
  * Compare a frame (analyse()) with a reference (toReference() form) and float-buffer stats.
- * Returns { verdict: 'SAME PICTURE' | 'SMALL DIFFERENCES' | 'DIFFERENT', reasons: [...], thumbPsnr, thumbSsim, crops: [{name, psnr}], black, white, buffers }
+ * Returns { verdict: 'SAME PICTURE' | 'SMALL DIFFERENCES' | 'DIFFERENT', reasons: [...], notes: [...], thumbPsnr, thumbSsim, crops: [{name, psnr}], black, white, buffers }
  */
 export function compare(a, ref, bufferStats = null) {
   const reasons = [];
@@ -139,13 +149,22 @@ export function compare(a, ref, bufferStats = null) {
   for (const c of out.crops) if (c.psnr != null && c.psnr < LIMITS.cropPsnr) { level = Math.max(level, 1); reasons.push(`fine detail differs in the 1:1 crop "${c.name}" (PSNR ${c.psnr} dB)`); }
   if (a.black > ref.black + LIMITS.extraBlack) { level = 2; reasons.push(`${(100 * a.black).toFixed(2)}% pure black pixels (reference ${(100 * ref.black).toFixed(2)}%): NaN in the float pipeline shows as black`); }
   if (a.white > ref.white + LIMITS.extraWhite) { level = 2; reasons.push(`${(100 * a.white).toFixed(2)}% pure white pixels (reference ${(100 * ref.white).toFixed(2)}%): infinity in the float pipeline shows as white`); }
+  // NaN / Inf in the float buffers: measured against the reference frame's own counts. A buffer that is clean
+  // on the cloud machine must be clean here (any NaN = DIFFERENT). A few scenes already hold some NaN on the
+  // cloud machine (F5: 96 NaN in "scene", 2026-10-23, hidden by the post chain): there, only MORE than twice
+  // the reference count is a difference of this GPU; the same count is a note (a scene fault, not the GPU).
+  const notes = [];
+  out.notes = notes;
   if (bufferStats) {
     out.buffers = {};
     for (const [k, v] of Object.entries(bufferStats)) {
       if (k === 'shaderErrors') { out.shaderErrors = v; if (v) { level = 2; reasons.push(`${v} shader program(s) failed to compile`); } continue; }
       if (!v || typeof v !== 'object') continue;
       out.buffers[k] = { nan: v.nan, inf: v.inf };
-      if (v.nan || v.inf) { level = 2; reasons.push(`float buffer "${k}" holds ${v.nan} NaN and ${v.inf} infinite values`); }
+      const r = ref.buffers?.[k] || { nan: 0, inf: 0 };
+      const over = (now, was) => (was ? now > 2 * was : now > 0);
+      if (over(v.nan, r.nan) || over(v.inf, r.inf)) { level = 2; reasons.push(`float buffer "${k}" holds ${v.nan} NaN and ${v.inf} infinite values (the cloud frame: ${r.nan} NaN, ${r.inf} infinite)`); }
+      else if (v.nan || v.inf) notes.push(`float buffer "${k}" holds ${v.nan} NaN / ${v.inf} infinite values; the cloud frame holds ${r.nan} / ${r.inf} too (a fault of the scene, not of this graphics card)`);
     }
   }
   out.verdict = ['SAME PICTURE', 'SMALL DIFFERENCES', 'DIFFERENT'][level];
