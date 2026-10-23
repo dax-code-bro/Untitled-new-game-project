@@ -178,6 +178,10 @@ void main() {
     sun += oa * Ti * mix(lam, ph * (0.6 + 0.8 * relief), 0.5);
     oa *= msA; ob *= 0.5; oc *= 0.5;
   }
+  // (energy: the octaves share what single scattering would give - an optically thick cloud of
+  // albedo a looks like a matte surface of about that albedo on its lit side, never brighter than
+  // the lime-washed wall beside it; thin forward-lit fringes still glow through the phase term)
+  sun *= 1.0 / (1.0 + 0.75 * (msA + msA * msA));
   sun *= uSunCol * uSunScale / 3.14159;
   float occ = vE.x;
   vec3 amb = mix(uGroundCol, uSkyCol, clamp(0.5 + 0.5 * nW.y, 0.0, 1.0)) * (0.35 + 0.65 * occ) * uAmbient * (0.8 + 0.4 * bill);

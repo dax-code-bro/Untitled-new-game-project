@@ -185,6 +185,10 @@ export class DustCloud extends Effect {
     this.R = o.radius ?? 5;
     this.n = Math.max(24, Math.round((o.puffs ?? 260) * ts.n));
     this.life = o.life ?? 12;
+    // grow: how fast the puffs swell (diffusion); thin: how fast the cloud dilutes (1/s)
+    this.grow = o.grow ?? 1.4;
+    this.thin = o.thin ?? 0.6;
+    this.fall = o.fall ?? 0;
     this.dir = norm3(arr3(o.dir ?? [0, 1, 0]));
     this.spread = o.spread ?? 1.2;
     this.speed = o.speed ?? 7;
@@ -218,8 +222,10 @@ export class DustCloud extends Effect {
         const a = Math.max(0, tt - tj);
         const tr = (1 - Math.exp(-k * a)) / k;
         for (let i = 0; i < 3; i++) out[i] = C[i] + d[i] * (v * tr + R * 0.25 * h(5)) + this.wind[i] * a;
-        // the cloud billows up a little, then sinks as it thins
+        // the cloud billows up a little, then sinks as it thins; a share of it (o.fall: the heavy
+        // dust pouring off a broken roof with the debris) falls at its settling speed
         out[1] += R * 0.12 * Math.sqrt(a) * h(6) - 0.01 * a * a * h(7);
+        if (h(13) < this.fall) { const vf = 0.8 + 1.6 * h(14), kf = 1.5; out[1] -= vf * (a - (1 - Math.exp(-kf * a)) / kf) + 0.35 * vf * a; }
         const tw = R * 0.1 * Math.min(1, a / 1.2);
         out[0] += noise1(a * 0.4 + j * 0.41, this.seed + 1) * tw;
         out[2] += noise1(a * 0.4 + j * 0.67, this.seed + 2) * tw;
@@ -227,10 +233,10 @@ export class DustCloud extends Effect {
       };
       pos(ta, pa);
       const a = pos(tb, pb);
-      const size = (R / 5) * (0.35 + 0.9 * h(8)) * (0.35 + 1.4 * Math.sqrt(a / 1.5)) * this.ts.size;
+      const size = (R / 5) * (0.35 + 0.9 * h(8)) * (0.35 + this.grow * Math.sqrt(a / 1.5)) * this.ts.size;
       pa[1] = Math.max(pa[1], gy + size * 0.3); pb[1] = Math.max(pb[1], gy + size * 0.3);
       const life = this.life * (0.5 + 0.7 * h(9));
-      const dens = this.strength * smoothstep(0, 0.12, a) * (1 - smoothstep(life * 0.4, life, a)) / (1 + 0.6 * a) * this.ts.dens;
+      const dens = this.strength * smoothstep(0, 0.12, a) * (1 - smoothstep(life * 0.4, life, a)) / (1 + this.thin * a) * this.ts.dens;
       if (dens <= 0.002) continue;
       const tint = 0.9 + 0.2 * h(10);
       L.push(pa, pb, size, h(11) * 6.283, dens, h(12), Math.min(1, a / this.life), [tint, tint, tint * 0.98]);

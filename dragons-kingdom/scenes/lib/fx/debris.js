@@ -214,6 +214,16 @@ async function buildLibrary(fx, o) {
     if (fk) lib.board.push(fromKit('board', 71 + i, { l: 0.7 + 0.8 * hash01(71, i), w: 0.18 + 0.1 * hash01(72, i), ends: i % 2 ? [-1, 1] : [1] }));
     else { const g = centre(colorize(timberGeometry(71 + i, 1.0, 0.03, 0.22), () => [0.2, 0.18, 0.15])); lib.board.push({ meshes: [{ geometry: g, material: mats.timber }], half: half(g) }); }
   }
+  // rafters (long, light section, snapped at one or both ends) and roof battens (thin laths)
+  lib.rafter = []; lib.batten = [];
+  for (let i = 0; i < V(3); i++) {
+    if (fk) lib.rafter.push(fromKit('beam', 81 + i, { l: 1.7 + 1.0 * hash01(81, i), h: 0.13, w: 0.09, ends: i % 2 ? [-1, 1] : [1] }));
+    else { const g = centre(colorize(timberGeometry(81 + i, 2.0, 0.13, 0.09), () => [0.2, 0.13, 0.075])); lib.rafter.push({ meshes: [{ geometry: g, material: mats.timber }], half: half(g) }); }
+  }
+  for (let i = 0; i < V(3); i++) {
+    const L = 0.7 + 1.1 * hash01(85, i), g = centre(colorize(timberGeometry(85 + i, L, 0.022, 0.045), (x, y, z) => [0.3, 0.22, 0.13].map((c) => c * (0.85 + 0.3 * hash01(86, i)))));
+    lib.batten.push({ meshes: [{ geometry: g, material: mats.timber }], half: half(g) });
+  }
   // splinters: thin sticks
   lib.splinter = [];
   for (let i = 0; i < V(3); i++) {
@@ -230,6 +240,40 @@ async function buildLibrary(fx, o) {
       return y > th * 0.25 ? PLASTER.map((c) => c * 0.9) : DAUB;
     }));
     lib.plaster.push({ meshes: [{ geometry: g, material: mats.plaster }], half: half(g) });
+  }
+  // wattle and daub panels from a timber-framed storey: lime-plaster face (+y), clay-and-straw
+  // daub behind, and the woven hazel rods of the wattle showing in the broken back
+  lib.daub = [];
+  for (let i = 0; i < V(4); i++) {
+    const w = 0.25 + 0.3 * hash01(111, i), d = w * (0.6 + 0.4 * hash01(112, i)), th = 0.06 + 0.04 * hash01(113, i);
+    const g = colorize(slabGeometry(111 + i, w, d, th, 0.32), (x, y, z, nx, ny) => {
+      if (ny > 0.6) return PLASTER;
+      if (ny < -0.6) return DAUB.map((c) => c * 0.9);
+      return y > th * 0.3 ? PLASTER.map((c) => c * 0.92) : DAUB;
+    });
+    // wattle: hazel rods across the back, half sunk into the daub, sticking out of the broken edges
+    const P = [], N = [], C = [];
+    const nr = 3 + Math.floor(3 * hash01(114, i));
+    for (let r = 0; r < nr; r++) {
+      const z = (r / (nr - 1) - 0.5) * d * 0.75, rr = 0.007 + 0.004 * hash01(115, i, r);
+      const x0 = -w * (0.45 + 0.2 * hash01(116, i, r)), x1 = w * (0.45 + 0.2 * hash01(117, i, r));
+      const y = -th * 0.5 + rr * 0.6;
+      const col = [0.26, 0.19, 0.11].map((c) => c * (0.8 + 0.4 * hash01(118, i, r)));
+      for (let k = 0; k < 6; k++) {
+        const a0 = (k / 6) * Math.PI * 2, a1 = ((k + 1) / 6) * Math.PI * 2;
+        const q = (a) => [Math.cos(a) * rr, Math.sin(a) * rr];
+        const [y0, z0] = q(a0), [y1, z1] = q(a1);
+        const v = [[x0, y + y0, z + z0], [x1, y + y0, z + z0], [x1, y + y1, z + z1], [x0, y + y1, z + z1]];
+        const nn = [0, Math.cos((a0 + a1) / 2), Math.sin((a0 + a1) / 2)];
+        for (const idx of [0, 1, 2, 0, 2, 3]) { P.push(...v[idx]); N.push(...nn); C.push(...col); }
+      }
+    }
+    const cat = (name, add) => { const a = g.attributes[name].array; const out = new Float32Array(a.length + add.length); out.set(a); out.set(add, a.length); return out; };
+    g.setAttribute('position', new THREE.BufferAttribute(cat('position', P), 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(cat('normal', N), 3));
+    g.setAttribute('color', new THREE.BufferAttribute(cat('color', C), 3));
+    centre(g);
+    lib.daub.push({ meshes: [{ geometry: g, material: mats.plaster }], half: half(g) });
   }
   // stone rubble
   lib.stone = [];
@@ -264,6 +308,7 @@ function library(fx, o) {
 // ------------------------------------------------------------------ trajectory solver --
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _v = new THREE.Vector3(), _m = new THREE.Matrix4(), _s = new THREE.Vector3();
 const AXES = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+const UP = [0, 1, 0];
 
 /** Orientation q advanced by angular velocity w (world, rad/s) for time dt. */
 function spinQ(q0, w, dt, out) {
@@ -273,12 +318,14 @@ function spinQ(q0, w, dt, out) {
   _q2.setFromAxisAngle(_v, wl * dt);
   return out.copy(_q2).multiply(q0);
 }
-/** Lowest point of the piece below its centre (oriented box half extents h). */
-function lowExtent(q, h) {
+/** Half extent of an oriented box (attitude q, half sizes h) along unit direction n. */
+function extentAlong(q, h, n) {
   let s = 0;
-  for (let k = 0; k < 3; k++) { _v.set(...AXES[k]).applyQuaternion(q); s += Math.abs(_v.y) * h[k]; }
+  for (let k = 0; k < 3; k++) { _v.set(...AXES[k]).applyQuaternion(q); s += Math.abs(_v.x * n[0] + _v.y * n[1] + _v.z * n[2]) * h[k]; }
   return s;
 }
+/** Lowest point of the piece below its centre (oriented box half extents h). */
+function lowExtent(q, h) { return extentAlong(q, h, UP); }
 /**
  * Rest attitude: a piece comes to rest on a STABLE face - a thin tile or board always lies flat,
  * a beam never stands on its end; among the stable faces the one nearest to its current attitude.
@@ -300,45 +347,185 @@ function restQ(q, h) {
   _v.set(...AXES[best]).applyQuaternion(q);
   const target = new THREE.Vector3(0, bs, 0);
   const fix = new THREE.Quaternion().setFromUnitVectors(_v.clone().normalize(), target);
-  return { q: fix.multiply(q.clone()), h: h[best] };
+  return { q: fix.multiply(q.clone()), h: h[best], k: best };
+}
+/**
+ * Where a piece lying in attitude q (vertical axis kv) at x/z of `pe` comes to rest on `ground`
+ * (the bare ground plus the pile of pieces that came down before it): the centre height and a
+ * tilt that lays it on what is under it (a tile across a beam, a board on the rubble).
+ */
+function restOn(pe, q, half, kv, ground) {
+  const ax = [0, 1, 2].map((k) => _v.set(...AXES[k]).applyQuaternion(q).toArray());
+  const [ku, kw] = [0, 1, 2].filter((k) => k !== kv);
+  const u = ax[ku], w = ax[kw];
+  const hu = Math.max(0.01, half[ku] * 0.8), hw = Math.max(0.01, half[kw] * 0.8);
+  const g = (a, b) => ground(pe[0] + u[0] * a + w[0] * b, pe[2] + u[2] * a + w[2] * b);
+  const g0 = ground(pe[0], pe[2]);
+  const gu1 = g(hu, 0), gu0 = g(-hu, 0), gw1 = g(0, hw), gw0 = g(0, -hw);
+  const y = Math.max(g0, 0.5 * (gu1 + gu0), 0.5 * (gw1 + gw0));
+  const su = Math.atan(clamp((gu1 - gu0) / (2 * hu), -0.45, 0.45)), sw = Math.atan(clamp((gw1 - gw0) / (2 * hw), -0.45, 0.45));
+  const tilt = new THREE.Quaternion();
+  const axU = norm3(cross3(u, UP)), axW = norm3(cross3(w, UP));
+  if (Math.abs(su) > 1e-4 && len3(cross3(u, UP)) > 1e-3) tilt.premultiply(_q2.setFromAxisAngle(_v.set(...axU), su));
+  if (Math.abs(sw) > 1e-4 && len3(cross3(w, UP)) > 1e-3) tilt.premultiply(_q2.setFromAxisAngle(_v.set(...axW), sw));
+  return { y, tilt };
+}
+
+/** Normalise wall colliders: { p (foot of the face, centre), n (out of the face), width, height, thick }. */
+export function prepWalls(walls) {
+  return (walls || []).map((W) => {
+    const n = norm3([W.n[0], 0, W.n[2]]);
+    return { p: arr3(W.p), n, t: norm3(cross3(UP, n)), w: W.width ?? W.w ?? 4, h: W.height ?? W.h ?? 4, thick: W.thick ?? 0.6 };
+  });
+}
+/** Signed clearance of a piece in front of a wall face (Infinity when beside / above / behind it). */
+function wallGap(W, pp, qq, half) {
+  const dx = pp[0] - W.p[0], dy = pp[1] - W.p[1], dz = pp[2] - W.p[2];
+  const ext = extentAlong(qq, half, W.n);
+  const s = dx * W.n[0] + dy * W.n[1] + dz * W.n[2] - ext;
+  const u = dx * W.t[0] + dz * W.t[2];
+  if (Math.abs(u) > W.w / 2 + ext * 0.5 || dy < -ext || dy > W.h + ext * 0.5) return Infinity;
+  if (s < -W.thick) return Infinity;
+  return s;
 }
 
 /**
- * Solve one piece: launch at te from p0 with v0, attitude q0, spin w0 (world). Returns segments.
- * o: { e (restitution), mu (friction), k (drag 1/s), ground(x,z), bounces, wind }
+ * Solve one piece: launch at te from p0 with v0, attitude q0, spin w0 (world). Returns
+ * { segs, events, hold }. o: { e (restitution), mu (friction), k (drag 1/s), ground(x,z),
+ * bounces, slideBelow, tmax, walls (prepWalls), hold (shown at p0 before te),
+ * incline: { d (unit, down the slope), a (m/s^2 along d), dist (m to the edge), v0 (m/s along d) }
+ * (a roof tile sliding off before it flies) }.
+ * pivot: { E (a point on the bottom edge it tips over), axis (unit, along that edge, so that a
+ * positive turn tips the top toward the push), w0 (rad/s), alpha / tPush (push), past (rad past
+ * balance at which it leaves the edge), carry ([x,y,z] m/s the blast adds when it leaves) }.
+ * Segment types: 0 flight, 1 slide + settle, 2 rest, 3 slide down an incline, 4 gone (shattered),
+ * 5 toppling over an edge.
  */
 export function solvePiece(p0, v0, q0, w0, half, te, o) {
   const segs = [];
   const ground = o.ground;
-  const k = o.k ?? 0.05, e = o.e ?? 0.3, mu = o.mu ?? 0.5, wind = o.wind || [0, 0, 0];
+  const k = o.k ?? 0.05, e = o.e ?? 0.3, mu = o.mu ?? 0.5;
   let p = p0.slice(), v = v0.slice(), q = q0.clone(), w = w0.slice(), t = te;
-  const pp = [0, 0, 0], vv = [0, 0, 0], qq = new THREE.Quaternion();
   const events = [];
   const tmax = o.tmax ?? 12;
-  for (let b = 0; b <= (o.bounces ?? 4); b++) {
-    // flight until the lowest point touches the ground
-    const gap = (tt) => {
-      ballistic(p, v, G, k, wind, tt, pp);
-      spinQ(q, w, tt, qq);
-      return pp[1] - lowExtent(qq, half) - ground(pp[0], pp[2]);
-    };
+  const hold = !!o.hold;
+  // ---- a slide down a slope (the roof) to its edge: constant acceleration along d, then off it
+  if (o.incline) {
+    const I = o.incline, d = norm3(I.d), a = I.a ?? 4, vs0 = I.v0 ?? 0, dist = Math.max(0, I.dist ?? 0);
+    let ts;
+    if (dist <= 1e-4) ts = 0;
+    else if (Math.abs(a) < 1e-4) ts = vs0 > 1e-4 ? dist / vs0 : Infinity;
+    else { const disc = vs0 * vs0 + 2 * a * dist; ts = disc < 0 ? Infinity : (-vs0 + Math.sqrt(disc)) / a; }
+    if (!Number.isFinite(ts)) {
+      segs.push({ type: 2, t0: t, t1: Infinity, p: p.slice(), q: q.clone() });
+      return { segs, events, hold };
+    }
+    if (ts > 0) {
+      segs.push({ type: 3, t0: t, t1: t + ts, p: p.slice(), d, v0: vs0, a, q: q.clone() });
+      const ve = vs0 + a * ts;
+      p = [p[0] + d[0] * dist, p[1] + d[1] * dist, p[2] + d[2] * dist];
+      v = [v[0] + d[0] * ve, v[1] + d[1] * ve, v[2] + d[2] * ve];
+      t += ts;
+    }
+  }
+  // ---- toppling: a standing piece (a stall, a barrel) pushed over its bottom edge - it rotates
+  // about that edge (gravity torque + the push) until it is past balance, then leaves it tumbling
+  if (o.pivot) {
+    const P = o.pivot, E = P.E, ax = norm3(P.axis);
+    const r0 = [p[0] - E[0], p[1] - E[1], p[2] - E[2]];
+    const r = len3(r0);
+    // angle of the centre from the vertical through the edge, measured toward the tipping side
+    const side = norm3(cross3(ax, UP));                       // the way the top moves at first
+    const phi0 = Math.atan2(-dot3(r0, side), r0[1]);          // > 0: centre behind the edge
+    const kg = 3 * 9.81 / (4 * Math.max(0.05, r));
+    const dt = 1 / 240;
+    let th = 0, om = P.w0 ?? 2, tt = 0;
+    const samples = [0];
+    const rel = phi0 + (P.past ?? 0.35);
+    while (tt < (P.tmax ?? 3)) {
+      const acc = -kg * Math.sin(phi0 - th) + (tt < (P.tPush ?? 0) ? (P.alpha ?? 0) : 0);
+      om += acc * dt; th += om * dt; tt += dt;
+      if (th < 0) { th = 0; om = 0; }
+      samples.push(th);
+      if (th >= rel) break;
+    }
+    const seg = { type: 5, t0: t, t1: t + tt, p: p.slice(), q: q.clone(), E: E.slice(), axis: ax, dt, th: samples };
+    segs.push(seg);
+    if (th < rel) {
+      // rocked back: it stays standing
+      segs[segs.length - 1].t1 = t + tt;
+      segs.push({ type: 2, t0: t + tt, t1: Infinity, p: p.slice(), q: q.clone() });
+      return { segs, events, hold };
+    }
+    // release: rigid rotation about the edge by th, centre velocity om * axis x (c - E)
+    const qr = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(...ax), th);
+    const rv = new THREE.Vector3(...r0).applyQuaternion(qr);
+    p = [E[0] + rv.x, E[1] + rv.y, E[2] + rv.z];
+    q = qr.clone().multiply(q);
+    const vc = cross3(ax, [rv.x, rv.y, rv.z]).map((x) => x * om);
+    const carry = P.carry ?? [0, 0, 0];
+    v = [vc[0] + carry[0], vc[1] + carry[1], vc[2] + carry[2]];
+    w = ax.map((x) => x * om);
+    t += tt;
+  }
+  const pp = [0, 0, 0], vv = [0, 0, 0], qq = new THREE.Quaternion();
+  // walls the piece starts in front of (a piece thrown out of a house front ignores that front)
+  const walls = (o.walls || []).filter((W) => wallGap(W, p, q, half) > -1e-3);
+  const dtMax = walls.length ? 0.02 : 0.05;
+  let hitW = -1;
+  const gap = (tt) => {
+    ballistic(p, v, G, k, null, tt, pp);
+    spinQ(q, w, tt, qq);
+    let m = pp[1] - lowExtent(qq, half) - ground(pp[0], pp[2]);
+    hitW = -1;
+    for (let i = 0; i < walls.length; i++) { const s = wallGap(walls[i], pp, qq, half); if (s < m) { m = s; hitW = i; } }
+    return m;
+  };
+  const nb = o.bounces ?? 4;
+  for (let b = 0; b <= nb; b++) {
+    // (a piece that starts on the ground - a prop standing on the paving - and is thrown off it
+    // lifts clear first instead of 'landing' at once)
+    if (b === 0 && v[1] > 0.05 && !o.pivot) {
+      const g0 = p[1] - lowExtent(q, half) - ground(p[0], p[2]);
+      if (g0 <= 0) p[1] += -g0 + 0.002;
+    }
+    // flight until the piece touches the ground or a wall
     let th = Infinity;
     if (gap(0) > 0.0) {
       let a = 0, dt = 0.01;
-      for (let tt = dt; tt <= tmax; tt += dt) { if (gap(tt) <= 0) { th = tt; break; } a = tt; dt = Math.min(0.05, dt * 1.25); }
-      if (Number.isFinite(th)) { let lo = a, hi = th; for (let i = 0; i < 22; i++) { const m = 0.5 * (lo + hi); if (gap(m) > 0) lo = m; else hi = m; } th = 0.5 * (lo + hi); }
+      for (let tt = dt; tt <= tmax; tt += dt) { if (gap(tt) <= 0) { th = tt; break; } a = tt; dt = Math.min(dtMax, dt * 1.25); }
+      if (Number.isFinite(th)) { let lo = a, hi = th; for (let i = 0; i < 22; i++) { const m = 0.5 * (lo + hi); if (gap(m) > 0) lo = m; else hi = m; } th = hi; gap(th); }
     } else th = 0;
+    const wallHit = hitW;
     segs.push({ type: 0, t0: t, t1: t + (Number.isFinite(th) ? th : tmax), p: p.slice(), v: v.slice(), q: q.clone(), w: w.slice(), k });
-    if (!Number.isFinite(th)) return { segs, events };
+    if (!Number.isFinite(th)) return { segs, events, hold };
     // contact
-    ballistic(p, v, G, k, wind, th, pp, vv);
+    ballistic(p, v, G, k, null, th, pp, vv);
     spinQ(q, w, th, qq);
     t += th;
     p = pp.slice(); q = qq.clone();
+    if (wallHit >= 0) {
+      // off a wall: restitution on the normal, Coulomb friction on the rest, a new spin
+      const W = walls[wallHit];
+      const vn = dot3(vv, W.n);
+      const vt = [vv[0] - vn * W.n[0], vv[1] - vn * W.n[1], vv[2] - vn * W.n[2]], vtl = len3(vt);
+      const jn = (1 + e) * Math.max(0, -vn);
+      const keep = vtl > 1e-4 ? Math.max(0, 1 - mu * jn / vtl) : 0;
+      v = [vt[0] * keep - vn * e * W.n[0], vt[1] * keep - vn * e * W.n[1], vt[2] * keep - vn * e * W.n[2]];
+      events.push({ t, p: p.slice(), speed: len3(vv), vn: Math.max(0, -vn), v: vv.slice(), n: W.n.slice(), seg: segs.length - 1, gy: ground(p[0], p[2]), wall: true });
+      const h1 = hash01(t * 1000, b, 11), h2 = hash01(t * 1000, b, 12);
+      const across = vtl > 1e-3 ? norm3(cross3(W.n, vt)) : [0, 1, 0];
+      const rad = Math.max(0.03, (half[0] + half[1] + half[2]) / 3);
+      const spin = (vtl * keep) / rad * (0.4 + 0.5 * h1);
+      w = [across[0] * spin + (h2 - 0.5) * spin * 0.6, across[1] * spin, across[2] * spin + (h1 - 0.5) * spin * 0.6];
+      for (let i = 0; i < 3; i++) p[i] += W.n[i] * 0.002;
+      continue;
+    }
     const vn = vv[1], vt = [vv[0], 0, vv[2]], vtl = len3(vt);
     const speed = len3(vv);
-    events.push({ t, p: p.slice(), speed, vn: -vn });
-    if (-vn < (o.slideBelow ?? 1.5) || b === (o.bounces ?? 4)) {
+    const gy = ground(p[0], p[2]);
+    events.push({ t, p: p.slice(), speed, vn: -vn, v: vv.slice(), n: [0, 1, 0], seg: segs.length - 1, gy });
+    if (-vn < (o.slideBelow ?? 1.5) || b === nb) {
       // slide: tangential speed after a last frictional impulse, then deceleration mu*g
       const keep = vtl > 1e-4 ? Math.max(0, 1 - mu * (1 + e) * Math.abs(vn) / vtl) : 0;
       const vs = [vt[0] * keep, 0, vt[2] * keep];
@@ -346,13 +533,17 @@ export function solvePiece(p0, v0, q0, w0, half, te, o) {
       const acc = Math.max(0.5, mu * 9.81);
       const ts = vsl / acc;
       const R = restQ(q, half);
-      const gy = ground(p[0], p[2]);
-      segs.push({ type: 1, t0: t, t1: t + Math.max(ts, 0.25), p: [p[0], gy + R.h, p[2]], v: vs, acc, ts, qa: q.clone(), qb: R.q, yaw: (hash01(t * 997, 3) - 0.5) * vsl * 2.0, h: R.h, y0: p[1] });
-      const pe = [p[0] + vs[0] * ts * 0.5, gy + R.h, p[2] + vs[2] * ts * 0.5];
-      const qe = R.q.clone();
-      if (Math.abs(segs[segs.length - 1].yaw) > 1e-4) qe.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), segs[segs.length - 1].yaw * ts * 0.5));
-      segs.push({ type: 2, t0: t + Math.max(ts, 0.25), t1: Infinity, p: pe, q: qe });
-      return { segs, events };
+      const yaw = (hash01(t * 997, 3) - 0.5) * vsl * 2.0;
+      const pe = [p[0] + vs[0] * ts * 0.5, 0, p[2] + vs[2] * ts * 0.5];
+      const qy = R.q.clone();
+      if (Math.abs(yaw) > 1e-4) qy.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw * ts * 0.5));
+      const rest = restOn(pe, qy, half, R.k, ground);
+      pe[1] = rest.y + R.h;
+      const tEnd = t + Math.max(ts, 0.25);
+      segs.push({ type: 1, t0: t, t1: tEnd, p: pe.slice(), p0: p.slice(), v: vs, acc, ts, qa: q.clone(), qb: R.q, tilt: rest.tilt, yaw, h: R.h, y0: p[1] });
+      const qe = rest.tilt.clone().multiply(qy);
+      segs.push({ type: 2, t0: tEnd, t1: Infinity, p: pe, q: qe });
+      return { segs, events, hold };
     }
     // bounce: Coulomb impulse on the tangential part, restitution on the normal
     const jn = (1 + e) * -vn;
@@ -366,13 +557,33 @@ export function solvePiece(p0, v0, q0, w0, half, te, o) {
     w = [across[0] * spin + (h2 - 0.5) * spin * 0.8, (h3 - 0.5) * spin * 0.6, across[2] * spin + (h1 - 0.5) * spin * 0.8];
     p[1] += 0.002;
   }
-  return { segs, events };
+  return { segs, events, hold };
 }
 
-/** Pose of a solved piece at time t -> writes position (array) and quaternion; false before launch. */
+/** Cut a solution at contact event ev (the piece shatters there): it is gone from ev.t on. */
+export function cutAt(sol, ev) {
+  sol.segs = sol.segs.slice(0, ev.seg + 1);
+  sol.segs[sol.segs.length - 1].t1 = ev.t;
+  sol.segs.push({ type: 4, t0: ev.t, t1: Infinity });
+  sol.events = sol.events.filter((x) => x.t <= ev.t);
+  return sol;
+}
+/** Time a solution comes to rest (or vanishes); Infinity if it never does. */
+export function restTime(sol) {
+  const s = sol.segs[sol.segs.length - 1];
+  return s.type === 2 || s.type === 4 ? s.t0 : Infinity;
+}
+
+/** Pose of a solved piece at time t -> writes position (array) and quaternion; false when not drawn. */
 export function poseAt(sol, t, pos, q) {
   const segs = sol.segs;
-  if (t < segs[0].t0) return false;
+  if (t < segs[0].t0) {
+    if (!sol.hold) return false;
+    const s = segs[0];
+    pos[0] = s.p[0]; pos[1] = s.p[1]; pos[2] = s.p[2];
+    q.copy(s.q || s.qa);
+    return true;
+  }
   let s = segs[segs.length - 1];
   for (const sg of segs) if (t < sg.t1) { s = sg; break; }
   const dt = Math.max(0, t - s.t0);
@@ -381,53 +592,177 @@ export function poseAt(sol, t, pos, q) {
     spinQ(s.q, s.w, dt, q);
   } else if (s.type === 1) {
     const tt = Math.min(dt, s.ts);
-    pos[0] = s.p[0] + s.v[0] * (tt - 0.5 * tt * tt / Math.max(s.ts, 1e-4));
-    pos[2] = s.p[2] + s.v[2] * (tt - 0.5 * tt * tt / Math.max(s.ts, 1e-4));
+    const f = tt - 0.5 * tt * tt / Math.max(s.ts, 1e-4);
+    pos[0] = s.p0[0] + s.v[0] * f;
+    pos[2] = s.p0[2] + s.v[2] * f;
     // settle: from the contact attitude onto the rest face within ~0.25 s, the centre sinking with it
     const u = smoothstep(0, 0.25, dt);
     q.copy(s.qa).slerp(s.qb, u);
-    if (Math.abs(s.yaw) > 1e-4) { _q.setFromAxisAngle(_v.set(0, 1, 0), s.yaw * (tt - 0.5 * tt * tt / Math.max(s.ts, 1e-4))); q.premultiply(_q); }
+    if (Math.abs(s.yaw) > 1e-4) { _q.setFromAxisAngle(_v.set(0, 1, 0), s.yaw * f); q.premultiply(_q); }
+    if (s.tilt) { _q.identity().slerp(s.tilt, u); q.premultiply(_q); }
     pos[1] = s.y0 + (s.p[1] - s.y0) * u;
+  } else if (s.type === 3) {
+    const f = s.v0 * dt + 0.5 * s.a * dt * dt;
+    pos[0] = s.p[0] + s.d[0] * f; pos[1] = s.p[1] + s.d[1] * f; pos[2] = s.p[2] + s.d[2] * f;
+    q.copy(s.q);
+  } else if (s.type === 4) {
+    return false;
+  } else if (s.type === 5) {
+    const f = Math.min(s.th.length - 1, dt / s.dt), i = Math.floor(f), u = f - i;
+    const th = s.th[i] + (s.th[Math.min(s.th.length - 1, i + 1)] - s.th[i]) * u;
+    _q.setFromAxisAngle(_v.set(...s.axis), th);
+    _v.set(s.p[0] - s.E[0], s.p[1] - s.E[1], s.p[2] - s.E[2]).applyQuaternion(_q);
+    pos[0] = s.E[0] + _v.x; pos[1] = s.E[1] + _v.y; pos[2] = s.E[2] + _v.z;
+    q.copy(_q).multiply(s.q);
   } else {
     pos[0] = s.p[0]; pos[1] = s.p[1]; pos[2] = s.p[2]; q.copy(s.q);
   }
   return true;
 }
 
+// ------------------------------------------------------------------ piles --
+/**
+ * The pile: a sparse height grid of the pieces already at rest. Pieces are solved in the order
+ * they come to rest, each against the bare ground plus the pile so far, so later pieces land and
+ * lie ON earlier ones (rubble heaps, a tile across a beam) instead of inside them.
+ */
+export class PileField {
+  constructor(base, cell = 0.04) { this.base = base; this.cell = cell; this.h = new Map(); }
+  key(i, j) { return (i + 1048576) * 2097152 + (j + 1048576); }
+  ground(x, z) {
+    const b = this.base(x, z);
+    const v = this.h.get(this.key(Math.floor(x / this.cell), Math.floor(z / this.cell)));
+    return v !== undefined && v > b ? v : b;
+  }
+  /** Add a piece lying at pos with attitude q (half extents half). */
+  stamp(pos, q, half) {
+    const ax = [0, 1, 2].map((k) => _v.set(...AXES[k]).applyQuaternion(q).toArray());
+    let top = pos[1];
+    for (let k = 0; k < 3; k++) top += Math.abs(ax[k][1]) * half[k];
+    // footprint: the box projected on the ground (sampled at cell centres)
+    let rx = 0, rz = 0;
+    for (let k = 0; k < 3; k++) { rx += Math.abs(ax[k][0]) * half[k]; rz += Math.abs(ax[k][2]) * half[k]; }
+    const c = this.cell;
+    const i0 = Math.floor((pos[0] - rx) / c), i1 = Math.floor((pos[0] + rx) / c);
+    const j0 = Math.floor((pos[2] - rz) / c), j1 = Math.floor((pos[2] + rz) / c);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+      const x = (i + 0.5) * c - pos[0], z = (j + 0.5) * c - pos[2];
+      // inside the box's horizontal cross-section (a point (x, y, z) with some y inside the box)
+      let inside = true;
+      for (let k = 0; k < 3 && inside; k++) {
+        const a = ax[k];
+        const hz = Math.hypot(a[0], a[2]);
+        if (hz < 0.2) continue;                       // the (near-)vertical axis: no limit in x/z
+        if (Math.abs(x * a[0] + z * a[2]) / hz > half[k] * hz + c * 0.5) inside = false;
+      }
+      if (!inside) continue;
+      const key = this.key(i, j);
+      const v = this.h.get(key);
+      if (v === undefined || top > v) this.h.set(key, top);
+    }
+  }
+}
+
 // ------------------------------------------------------------------ the effect --
 const KIND_PHYS = {
   tile: { e: 0.25, mu: 0.55, k: 0.25, spin: 14 }, tileShard: { e: 0.2, mu: 0.6, k: 0.3, spin: 18 },
   beam: { e: 0.18, mu: 0.6, k: 0.02, spin: 3 }, board: { e: 0.2, mu: 0.45, k: 0.06, spin: 6 }, splinter: { e: 0.3, mu: 0.5, k: 0.6, spin: 25 },
-  plaster: { e: 0.15, mu: 0.7, k: 0.2, spin: 12 }, stone: { e: 0.3, mu: 0.6, k: 0.05, spin: 10 },
+  rafter: { e: 0.15, mu: 0.6, k: 0.015, spin: 2 }, batten: { e: 0.22, mu: 0.5, k: 0.1, spin: 8 },
+  plaster: { e: 0.15, mu: 0.7, k: 0.2, spin: 12 }, daub: { e: 0.12, mu: 0.75, k: 0.12, spin: 8 }, stone: { e: 0.3, mu: 0.6, k: 0.05, spin: 10 },
   turf: { e: 0.08, mu: 0.9, k: 0.3, spin: 6 }, clod: { e: 0.1, mu: 0.8, k: 0.25, spin: 12 },
 };
 // what an impact throws up: chip colours (grit) and dust colour
 const KIND_GRIT = {
   tile: [[0.22, 0.1, 0.06], [0.3, 0.16, 0.1]], tileShard: [[0.22, 0.1, 0.06], [0.3, 0.16, 0.1]],
-  beam: [[0.42, 0.31, 0.18]], board: [[0.4, 0.3, 0.18]], splinter: [[0.42, 0.31, 0.18]],
-  plaster: [[0.62, 0.6, 0.55], [0.3, 0.22, 0.15]], stone: [[0.42, 0.39, 0.34]],
+  beam: [[0.42, 0.31, 0.18]], board: [[0.4, 0.3, 0.18]], splinter: [[0.42, 0.31, 0.18]], rafter: [[0.42, 0.31, 0.18]], batten: [[0.42, 0.31, 0.18]],
+  plaster: [[0.62, 0.6, 0.55], [0.3, 0.22, 0.15]], daub: [[0.62, 0.6, 0.55], [0.3, 0.22, 0.15]], stone: [[0.42, 0.39, 0.34]],
   turf: [[0.11, 0.075, 0.045], [0.12, 0.16, 0.05]], clod: [[0.11, 0.075, 0.045], [0.2, 0.155, 0.11]],
 };
-const KIND_DUST = { plaster: [0.66, 0.63, 0.57], tile: [0.45, 0.33, 0.26], tileShard: [0.45, 0.33, 0.26], stone: [0.55, 0.52, 0.47], turf: [0.4, 0.34, 0.26], clod: [0.4, 0.34, 0.26], beam: [0.5, 0.45, 0.38], board: [0.5, 0.45, 0.38], splinter: [0.5, 0.45, 0.38] };
+const KIND_DUST = { plaster: [0.66, 0.63, 0.57], daub: [0.6, 0.55, 0.47], tile: [0.45, 0.33, 0.26], tileShard: [0.45, 0.33, 0.26], stone: [0.55, 0.52, 0.47], turf: [0.4, 0.34, 0.26], clod: [0.4, 0.34, 0.26], beam: [0.5, 0.45, 0.38], board: [0.5, 0.45, 0.38], splinter: [0.5, 0.45, 0.38], rafter: [0.5, 0.45, 0.38], batten: [0.5, 0.45, 0.38] };
+// brittle pieces break where they hit hard: clay tiles into 2-4 shards (on stone paving most of
+// them), lime plaster into crumbs. vmin: normal impact speed (m/s) from which they may break,
+// vsure: from which they always do.
+const KIND_SHATTER = {
+  tile: { into: 'tileShard', n: [2, 4], vmin: 3.5, vsure: 7, scale: 1 },
+  plaster: { into: 'plaster', n: [2, 3], vmin: 4, vsure: 8, scale: 0.5 },
+  daub: { into: 'plaster', n: [2, 4], vmin: 4.5, vsure: 9, scale: 0.6 },
+};
+// physics / grit / dust of a kind that is a variant of another (the roofline's own tiles: 'tile')
+const baseKind = (lib, kind) => lib[kind]?.as || kind;
 
 /**
- * DebrisEffect: o.pieces = [{ kind, variant, p0, v0, q0 (THREE.Quaternion), w0, te, scale }]
- * (presets build these), o.impactDust / o.grit (default true), o.ground (function).
+ * DebrisEffect: o.pieces = [{ kind, variant, p0, v0, q0 (THREE.Quaternion), w0, te, scale,
+ * hold, incline, noShatter }] (presets build these), o.impactDust / o.grit (default true),
+ * o.ground (function), o.walls ([{ p, n, width, height }] faces pieces bounce off), o.pile
+ * (default true: later pieces land on earlier ones), o.shatter (default true: tiles and
+ * plaster break on hard impacts, scaled by o.shatterAt).
  */
 export class DebrisEffect extends Effect {
   constructor(fx, o, lib) {
     super(fx, { name: o.name || 'fx-debris', ...o });
     this.velocityPose = true;     // rigid meshes: motion blur from the shutter-open pose
     this.lib = lib;
-    const ground = o.groundFn || ((x, z) => fx.ground(x, z));
-    this.pieces = o.pieces.map((P, i) => {
+    const base = o.groundFn || ((x, z) => fx.ground(x, z));
+    const pile = o.pile === false ? null : new PileField(base, o.pileCell ?? 0.04);
+    const ground = pile ? (x, z) => pile.ground(x, z) : base;
+    const walls = prepWalls(o.walls);
+    const shatter = o.shatter !== false;
+    const solve = (P) => {
+      const bk = baseKind(lib, P.kind);
+      const ph = { ...KIND_PHYS[bk], ...(o.physics || {}), ...(P.physics || {}) };
+      return solvePiece(P.p0, P.v0, P.q0, P.w0, P.half, P.te, { ground, k: ph.k, e: ph.e, mu: ph.mu, bounces: o.bounces ?? 4, walls, hold: P.hold, incline: P.incline });
+    };
+    const mkPiece = (P, i) => {
       const L = lib[P.kind][P.variant % lib[P.kind].length];
       const half = L.half.map((h, k) => h * (Array.isArray(P.scale) ? P.scale[k] : P.scale ?? 1));
-      const ph = { ...KIND_PHYS[P.kind], ...(o.physics || {}) };
-      const sol = solvePiece(P.p0, P.v0, P.q0, P.w0, half, P.te, { ground, k: ph.k, e: ph.e, mu: ph.mu, bounces: o.bounces ?? 4, wind: null });
-      return { ...P, L, half, sol, i };
-    });
-    // instanced meshes per (kind, variant, sub-mesh)
+      return { ...P, L, half, i };
+    };
+    let all = o.pieces.map(mkPiece);
+    // pass 1: every piece against the bare ground (the order they come to rest in)
+    for (const P of all) P.sol = solve(P);
+    // pass 2: in that order, each piece against the ground + the pile so far; brittle ones may
+    // break at their first hard contact (the shards join the queue)
+    const queue = all.slice();
+    const done = [];
+    let nid = all.length;
+    while (queue.length) {
+      let bi = 0;
+      for (let j = 1; j < queue.length; j++) if (restTime(queue[j].sol) < restTime(queue[bi].sol) || (restTime(queue[j].sol) === restTime(queue[bi].sol) && queue[j].i < queue[bi].i)) bi = j;
+      const P = queue.splice(bi, 1)[0];
+      if (pile) P.sol = solve(P);
+      const S = shatter && !P.noShatter ? KIND_SHATTER[baseKind(lib, P.kind)] : null;
+      const ev = S ? P.sol.events[0] : null;
+      const into = S ? (lib[`${P.kind}:shard`] ? `${P.kind}:shard` : S.into) : null;
+      if (ev && lib[into] && ev.vn > S.vmin * (o.shatterAt ?? 1) && hash01(P.i * 7 + 1, 991) < smoothstep(S.vmin, S.vsure, ev.vn / (o.shatterAt ?? 1)) + 0.15) {
+        cutAt(P.sol, ev);
+        ev.shatter = true;
+        const n = S.n[0] + Math.floor(hash01(P.i, 992) * (S.n[1] - S.n[0] + 1));
+        const vt = [ev.v[0] - ev.n[0] * dot3(ev.v, ev.n), ev.v[1] - ev.n[1] * dot3(ev.v, ev.n), ev.v[2] - ev.n[2] * dot3(ev.v, ev.n)];
+        for (let k = 0; k < n; k++) {
+          const h = (m) => hash01(P.i * 31 + k, 993, m);
+          const r = coneDir(ev.n, 1.25, h(0), h(1));
+          const sp = 0.6 + 2.2 * h(2) + ev.vn * 0.12;
+          const off = [(h(3) - 0.5) * P.half[0], 0, (h(4) - 0.5) * P.half[2]];
+          const ps = [ev.p[0] + off[0] + ev.n[0] * 0.01, ev.p[1] + 0.01 + ev.n[1] * 0.01, ev.p[2] + off[2] + ev.n[2] * 0.01];
+          const Q = mkPiece({
+            kind: into, variant: (h(5) * 97) | 0, te: ev.t, p0: ps,
+            v0: [vt[0] * (0.35 + 0.3 * h(6)) + r[0] * sp, vt[1] * 0.3 + r[1] * sp * (0.4 + 0.5 * h(7)), vt[2] * (0.35 + 0.3 * h(6)) + r[2] * sp],
+            q0: rq(P.i * 13 + k, 5), w0: randW(P.i * 13 + k, 6, 20), scale: (P.scale && !Array.isArray(P.scale) ? P.scale : 1) * S.scale * (0.8 + 0.35 * h(8)), noShatter: true, shard: true,
+          }, nid++);
+          Q.sol = solve(Q);
+          queue.push(Q);
+        }
+      } else if (pile) {
+        const s = P.sol.segs[P.sol.segs.length - 1];
+        if (s.type === 2) pile.stamp(s.p, s.q, P.half);
+      }
+      done.push(P);
+    }
+    done.sort((a, b) => a.i - b.i);
+    this.pieces = done;
+    this.pile = pile;
+    // meshes: instanced per (kind, variant, sub-mesh); plain meshes for pieces whose material
+    // cannot be instanced (the architecture's own tiles: their shader reads modelMatrix)
     const groups = new Map();
     for (const P of this.pieces) {
       const key = `${P.kind}:${P.variant % this.lib[P.kind].length}`;
@@ -435,9 +770,22 @@ export class DebrisEffect extends Effect {
       groups.get(key).push(P);
     }
     this.inst = [];
+    this.plain = [];
     for (const [key, list] of groups) {
       const L = list[0].L;
       for (const sm of L.meshes) {
+        if (L.instanced === false) {
+          for (const P of list) {
+            const m = new THREE.Mesh(sm.geometry, sm.material);
+            m.name = `fx-debris:${key}`;
+            m.castShadow = o.castShadow ?? true; m.receiveShadow = true;
+            m.matrixAutoUpdate = false;
+            this.object.add(m);
+            this.casters.push(m);
+            this.plain.push({ m, P });
+          }
+          continue;
+        }
         const im = new THREE.InstancedMesh(sm.geometry, sm.material, list.length);
         im.name = `fx-debris:${key}`;
         im.castShadow = o.castShadow ?? true; im.receiveShadow = true;
@@ -452,7 +800,7 @@ export class DebrisEffect extends Effect {
     this.events = [];
     for (const P of this.pieces) for (const ev of P.sol.events) {
       const mass = P.half[0] * P.half[1] * P.half[2] * 8;
-      if (ev.speed > 1.2) this.events.push({ ...ev, kind: P.kind, mass, i: P.i });
+      if (ev.speed > 1.2) this.events.push({ ...ev, kind: baseKind(lib, P.kind), mass: ev.shatter ? mass * 3 : mass, i: P.i });
     }
     this.events.sort((a, b) => b.mass * b.speed - a.mass * a.speed);
     this.events = this.events.slice(0, Math.round((o.maxImpacts ?? 160) * fx.tier.particles + 20));
@@ -464,8 +812,21 @@ export class DebrisEffect extends Effect {
       shading: { albedo: [1, 1, 1], ms: 0.75, sigma: 2.2, g: 0.5, noiseScale: 1.6, noiseAmt: 1.0, evolve: 0.4, billow: 0.75, edge: 0.7 },
     })) : null;
     this.dustScale = o.dustScale ?? 1;
+    // many impacts close together make one cloud, not many opaque ones stacked: the puffs of a
+    // big fall (a roof's worth of slates) share the density of ~30 impacts
+    this.dustNorm = Math.min(1, Math.sqrt(30 / Math.max(1, this.events.length)));
     this._p = [0, 0, 0];
     this._q = new THREE.Quaternion();
+  }
+
+  /** Where every piece lies once it is all over (for the after-state: 3D, X27, X28). */
+  restPoses() {
+    const out = [];
+    for (const P of this.pieces) {
+      const s = P.sol.segs[P.sol.segs.length - 1];
+      if (s.type === 2) out.push({ kind: P.kind, p: s.p.slice(), q: s.q.clone(), half: P.half.slice(), t: s.t0 });
+    }
+    return out;
   }
 
   update(t, cam) {
@@ -483,6 +844,14 @@ export class DebrisEffect extends Effect {
       im.instanceMatrix.needsUpdate = true;
       im.computeBoundingSphere?.();
     }
+    for (const { m, P } of this.plain) {
+      if (!poseAt(P.sol, t, pos, q)) { m.visible = false; continue; }
+      m.visible = true;
+      const sc = P.scale ?? 1;
+      _s.set(...(Array.isArray(sc) ? sc : [sc, sc, sc]));
+      m.matrix.compose(_v.set(pos[0], pos[1], pos[2]), q, _s);
+      m.matrixWorldNeedsUpdate = true;
+    }
     if (!this.fx.shutterOpenPass) this.drawImpacts(t);
     for (const l of this.layers) l.end(cam);
   }
@@ -496,18 +865,20 @@ export class DebrisEffect extends Effect {
       if (a1 < 0) return;
       const a0 = Math.max(0, ta - ev.t);
       const en = Math.min(1, Math.sqrt(ev.mass * 40) * ev.speed / 6);
-      // grit: a few crumbs thrown up and out
+      const nrm = ev.n || [0, 1, 0];
+      const gy = ev.gy ?? fx.ground(ev.p[0], ev.p[2]);
+      // grit: a few crumbs thrown up and out (a shattering tile throws more)
+      const nk = ev.shatter ? 14 : 8;
       if (this.grit && a1 < 1.5) {
         const cols = KIND_GRIT[ev.kind] || [[0.4, 0.38, 0.34]];
-        for (let k = 0; k < 8; k++) {
+        for (let k = 0; k < nk && k < 8 * 2; k++) {
           const h = (m) => hash01(j * 13 + 7, k, m);
-          if (h(0) > en) continue;
-          coneDir([0, 1, 0], 1.2, h(1), h(2), d);
+          if (h(0) > (ev.shatter ? 1 : en)) continue;
+          coneDir(nrm, 1.2, h(1), h(2), d);
           const sp = ev.speed * (0.15 + 0.35 * h(3));
           const v0 = [d[0] * sp, d[1] * sp, d[2] * sp];
           ballistic(ev.p, v0, G, 1.0, null, a0, pa); ballistic(ev.p, v0, G, 1.0, null, a1, pb);
-          const gy = fx.ground(ev.p[0], ev.p[2]);
-          const r = 0.004 + 0.012 * h(4) * h(4);
+          const r = 0.004 + (ev.shatter ? 0.02 : 0.012) * h(4) * h(4);
           if (pb[1] < gy + r) { pb[1] = gy + r * 0.5; if (pa[1] < gy + r) pa[1] = gy + r * 0.5; }
           this.grit.push(pa, pb, r, h(5) * 6.28, 1, h(6), 0, cols[(h(7) * cols.length) | 0]);
         }
@@ -520,12 +891,12 @@ export class DebrisEffect extends Effect {
           const ang = h(0) * 6.283;
           const R = (0.15 + 0.5 * en) * this.dustScale;
           const grow = 1 - Math.exp(-a1 / 0.5);
-          pb[0] = ev.p[0] + Math.cos(ang) * R * grow * (0.4 + 0.6 * h(1));
-          pb[2] = ev.p[2] + Math.sin(ang) * R * grow * (0.4 + 0.6 * h(1));
-          pb[1] = fx.ground(ev.p[0], ev.p[2]) + R * (0.25 + 0.35 * grow) + 0.08 * a1 * h(2);
+          pb[0] = ev.p[0] + Math.cos(ang) * R * grow * (0.4 + 0.6 * h(1)) + nrm[0] * R * 0.5;
+          pb[2] = ev.p[2] + Math.sin(ang) * R * grow * (0.4 + 0.6 * h(1)) + nrm[2] * R * 0.5;
+          pb[1] = (ev.wall ? ev.p[1] : gy) + R * (0.25 + 0.35 * grow) + 0.08 * a1 * h(2);
           for (let m = 0; m < 3; m++) pb[m] += fx.wind[m] * a1;
           const size = R * (0.35 + 0.5 * h(3)) * (0.5 + 0.8 * Math.sqrt(grow));
-          const dens = en * smoothstep(0, 0.06, a1) * (1 - smoothstep(1.5, 6, a1)) / (1 + 0.8 * a1) * 0.9;
+          const dens = en * smoothstep(0, 0.06, a1) * (1 - smoothstep(1.5, 6, a1)) / (1 + 0.8 * a1) * 0.9 * (this.dustNorm ?? 1);
           if (dens < 0.004) continue;
           this.dust.push(pb, pb, size, h(4) * 6.28, dens, h(5), Math.min(1, a1 / 6), col);
         }
