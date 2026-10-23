@@ -11,8 +11,10 @@ Markers in the final script (see its first FINAL SCRIPT NOTE). Everything marked
 (SERIES.md section 5): being in the shooting script is not acceptance. What Daxtyn has decided is marked
 creator-approved with the date and recorded in final/CHANGES.md; those blocks keep an approval marker (not a
 PROPOSED one) in this production copy so that proofs 1 and 2 can still tell the handoff and the proposals
-apart, and the reading copy (--clean) has no markers at all. An addition he accepts as a whole would need
-proofs 1b and 2 to treat its text as base text, which is not built yet.
+apart, and the reading copy (--clean) has no markers at all: no block markers, no NOTE lines and no
+"[creator-approved wording 2026-10-18]" cue marker (the handoff's own [ORIGINAL] cue marks stay: they are Daxtyn's
+text). SERIES.md section 5 describes this. An addition he accepts as a whole would need proofs 1b and 2 to treat its
+text as base text, which is not built yet.
   [PROPOSED ADDITION X# — in the shooting script by default 2026-10-16, not accepted by Daxtyn — begin]
       ... [PROPOSED ADDITION X# — end]
   [PROPOSED RATING PASS R# — begin] ... [PROPOSED RATING PASS R# — end]   (may sit inside an addition;
@@ -55,7 +57,10 @@ Hard checks (exit code 1 if any fails):
           APPROVED_CHANGES lines, which are spoken exactly in their approved wording;
        f. every APPROVED_CHANGES block is in the script with exactly its recorded WAS and NOW text, in the
           addition it belongs to; no other CHANGED block claims creator approval, and the cue marker
-          "[creator-approved wording 2026-10-18]" appears only in their NOW text.
+          "[creator-approved wording 2026-10-18]" appears only in their NOW text;
+       g. every approved rating-pass block (APPROVED_RATING) holds exactly the story text Daxtyn approved, word for
+          word (APPROVED_RATING_TEXT, itself locked by APPROVED_RATING_SHA256): his approval covers that content,
+          not just the block ids.
   2. Proof that the additions are the proposals: inside each addition, dropping its rating-pass and
      PENDING blocks and turning its CHANGED blocks back into WAS text gives the body of the same
      "[PROPOSED ADDITION X#]" in screenplay-extended.md exactly.
@@ -77,11 +82,21 @@ Hard checks (exit code 1 if any fails):
      and no short spoken order to a dragon; only known speakers (dragons never speak). In the whole
      story's shooting text no species word is left (Daxtyn chose the new wording on 2026-10-18; the
      PENDING_LINES exception is empty).
-  6. Rating hard limits (SERIES.md section 8) on all new text: no sentence pairs a drug, tobacco,
-     alcohol or suggestive word with Abby, a child, the princess, the young attendant or the young riders
-     (Remi is an adult, Daxtyn 2026-10-18); those characters never speak such words; no graphic bone or gore with Abby;
+  6. Rating hard limits (SERIES.md section 8) on all new text: no sentence pairs a drug, tobacco, alcohol
+     (drinking words included) or suggestive word with Abby, a child, the princess, the young attendant or the young
+     riders, or with a title or kinship word that can stand for them ("his sister", "her daughter", "Leaf's rider",
+     "the little one", ...) (Remi is an adult, Daxtyn 2026-10-18); those characters never speak such words, their cues
+     carry no such direction, and nobody says such a word to them ("[to Abby]"); no graphic bone or gore with Abby;
      the story text of the death and gore blocks (DEAD_BLOCKS) never names a child or a small or little
      body: every one of the dead is an adult.
+     b. Context: names are not enough, because a pronoun carries a character into the next sentence. A sentence
+        with such a word and a third-person pronoun (she, her, he, his, they, ...) fails when one of those
+        characters was named earlier in the same paragraph or in the paragraph before. A person reads each hit in
+        context; only an exact sentence listed in REVIEWED_CONTEXT, with the reason, passes (shown by --review;
+        rewording the sentence makes it fail again until it is read again).
+     d. Deaths: a death word in new story text outside the blocks Daxtyn approved (APPROVED_RATING: the six unnamed
+        adult deaths in Cling) fails, because a new death needs his OK; a sentence that is not a death (a direction
+        such as "Do not imply death.") is listed in REVIEWED_CONTEXT.
   7. The runtime quoted in the timing FINAL SCRIPT NOTE matches the computed estimate
      (--update-timing rewrites it), and final/screenplay-final-clean.md is up to date (--clean).
 
@@ -94,6 +109,7 @@ loose-cut bound = 1.15/1.3/1.5 x; both are outer bounds, not likely values.
 
 Usage: python3 tools/check_final.py [--markdown] [--review] [--json out.json] [--clean]
                                     [--update-timing] [--final FILE] [--orig FILE] [--ext FILE]
+       python3 tools/check_final.py --selftest   (broken copies of the script must fail: rules 1g, 6, 6b, 6d)
 Standard library only. Paths are relative to this file (episodes/s01e01/tools/).
 """
 import copy
@@ -158,6 +174,34 @@ APPROVED_CHANGES = {
 # gore). {id: the addition it sits in, or None}. R19 (the parent shields the child) and R16/R17 (the villager's
 # injuries) are not deaths and stay proposals.
 APPROVED_RATING = {"R15": None, "R16b": None, "R18": None, "R20": "X27", "R21": "X28"}
+# What Daxtyn approved is the CONTENT of those blocks, not only their ids. Every story line of each approved block
+# (each non-blank line except the production NOTE), exactly as final/CHANGES.md question 4 put it to him: the text of
+# screenplay-final.md at commit 89efae0 (2026-10-16). The approval itself (commit 3f43434, 2026-10-18) changed only the
+# markers and NOTE lines. Proof 1g fails if a word of this text changes; the sha256 values also catch an edit of this
+# table. A change to approved text needs Daxtyn's OK first: record it in final/CHANGES.md, then update both tables.
+APPROVED_RATING_TEXT = {
+    "R15": [
+        "PICTURE: Out of the dust, low to the ground: a man who was standing under the adjoining roofline when it came down is under it now. Only his arm shows beneath the timbers and broken tiles, and it does not move. Blood runs out from under the wreckage and along the joints between the paving stones toward the fountain.",
+        "PICTURE: A woman near the steps turns to run, and a flying length of roof timber takes her across the back of the head. She drops face down and stays down. Someone stumbles over her in the dust and keeps going.",
+    ],
+    "R16b": [
+        "PICTURE: As the white body passes over, a guard of the escort who has had no lines, posted alone at the far side of the square, is lifted off his feet by the blast of air and thrown against the stone front of a house. He slides down it, leaves a long dark smear on the stone and does not move again. His spear skids away across the paving.",
+    ],
+    "R18": [
+        "PICTURE: And the people who did not get out of the open. The arm under the roof timbers. The woman by the steps, face down where she fell, the dust on her already darkening. Near the fountain a man sits on the paving with a grown woman across his lap whose head is a ruin of blood, rocking, saying nothing. A banner torn down in the first pass lies over a man-sized shape in the middle of the square, soaked dark through at its center.",
+    ],
+    "R20": [
+        "PICTURE: In the mouth of the alley he lifts a fallen awning and stops, the way a man stops for someone he knows. Under it a man lies dead, his chest crushed in under a fallen beam. The guard looks at him for one breath, lays the awning back over his face, and stands up.",
+    ],
+    "R21": [
+        "PICTURE: Along the wall below the steps, across the square from the arch and out of sight of the shelter beneath it, the dead are laid in a row, every one of them a grown man or woman, covered with whatever festival cloth is left. The banners are not long enough. From under one of them a pair of men's boots shows, a festival ribbon still tied through one lace.",
+    ],
+}
+APPROVED_RATING_SHA256 = {"R15": "cbd2531530b93652ccb5dd8203554333c7048e2e85cb9457e8db7bdf87696653",
+                          "R16b": "e24498efe303081303b2c86b8f5d95aab23d4900b542a928b3bba8d2bfddcf9b",
+                          "R18": "e9b3254a142142836ee57473e8b7ea28b0a1cc34dcaeb78f16e2fae8f846fbf7",
+                          "R20": "8d5cc441fa784500aeabede8f886ffed9042ceb839213d5fa24d4dd5beb165a1",
+                          "R21": "dc56e4819b871c5696446f04a6050d1756661bb58f33f1f88785cd76ed249fe1"}
 CH_WAS = re.compile(r"^\[CHANGED (C\d+[a-z]?) — (.+) — WAS \(kept for the record, not shot\):\]$")
 CH_NOW = re.compile(r"^\[CHANGED (C\d+[a-z]?) — NOW \(shoot this\):\]$")
 CH_END = re.compile(r"^\[CHANGED (C\d+[a-z]?) — end\]$")
@@ -271,12 +315,36 @@ DEATH_RE = re.compile(r"\b(dead|died|dies|killed|kills|corpse|lifeless|limp|pump
 SCOUT_RE = re.compile(r"\b(scout|the rider|rider's)\b", re.I)
 STARLIGHT_RE = re.compile(r"\b(Starlight|Queen Fall|white body|white shape)\b")
 WOUND_RE = re.compile(r"\b(fire|flames?|burn\w*|wound\w*|bleed\w*|blood\w*|injur\w*|scar\w*)\b", re.I)
-VICE_RE = re.compile(r"\b(ale|wine|cider|beer|mead|brandy|liquor|spirits|flask|jugs?|drunk\w*|tipsy|tobacco|pipes?|snuff|"
+VICE_RE = re.compile(r"\b(ale|wine|cider|beer|mead|brandy|liquor|spirits|flask|jugs?|drunk\w*|tipsy|drinks?|drank|drinking|swig\w*|"
+                     r"intoxicat\w*|hung ?over|hangover|booze\w*|tobacco|pipes?|snuff|"
                      r"smok\w*|drugs?|poppy|hemp|opium|suggestive|bawdy|innuendo|flirt\w*|lovers?|seduc\w*|kiss\w*|naked|undress\w*)\b", re.I)
 # Characters the rating limits protect (SERIES.md section 8). Remi left this list on 2026-10-18: Daxtyn decided he
-# is an adult ("prince" means Remi, so it left too). "princess" is Abby.
-PROTECTED_RE = re.compile(r"\b(Abby|princess|child|children|kids?|boy|girl|young riders?|young attendant)\b", re.I)
+# is an adult ("prince" means Remi, so it left too). "princess" is Abby. Titles and kinship words count too, so a
+# sentence cannot slip past by calling Abby "his sister", "the queen's daughter" or "Leaf's rider" instead of her name.
+PROTECTED_RE = re.compile(r"\b(Abby|princess|child|children|kids?|boys?|girls?|young riders?|young attendant|daughters?|sisters?|"
+                          r"Leaf's rider|little ones?|young ones?|youngsters?|lads?|lass(?:es|ie)?|teen\w*|bab(?:y|ies)|infants?|"
+                          r"toddlers?|minors?)\b", re.I)
 PROTECTED_SPEAKERS = {"ABBY", "CHILD", "YOUNG ATTENDANT"}
+# Rule 6b: a pronoun can carry a protected character into the next sentence ("Abby sits down. She takes the cup."). A
+# sentence with a drug/tobacco/alcohol/suggestive word and a third-person pronoun fails when a protected character was
+# named earlier in the same paragraph or in the paragraph before, unless the exact sentence is in REVIEWED_CONTEXT.
+PRONOUN_RE = re.compile(r"\b(she|her|hers|herself|he|him|his|himself|they|them|their|theirs|themselves)\b", re.I)
+# Rule 6d: deaths. Daxtyn approved six unnamed adult deaths, all in APPROVED_RATING. A death word in any other new
+# story text fails (a new death needs his OK, SERIES.md section 5), unless the exact sentence is in REVIEWED_CONTEXT.
+NEW_DEATH_RE = re.compile(r"\b(dead|deaths?|died|dies|dying|killed|kills?|killing|corpses?|lifeless|slain|murder\w*|"
+                          r"bled out|bleeding out|bleeds? to death)\b", re.I)
+# Sentences a person read in context and found fine for rules 6b and 6d: {exact sentence: why}. An edit of the sentence
+# drops it from this list, so the check fails again until someone reads the new wording. Listed ones show in --review.
+REVIEWED_CONTEXT = {
+    "PICTURE: The musician takes a small pipe from his coat and lights it.":
+        "R3 (6b): 'his' is the musician. The child named in the paragraph before is called indoors and the door shuts "
+        "before the pipe comes out (the block's own first picture).",
+    "Close on the platform boards: his cup of ale goes over beside the bread, still full.":
+        "C34 (6b): 'his' is the watchman (an adult); the child earlier in the paragraph is down in the square, seen "
+        "from his post.",
+    "Do not imply death.":
+        "C14 (6d): a direction NOT to show a death (the scout's rider, CANON LOCK 12).",
+}
 ABBY_GORE_RE = re.compile(r"\b(bone|gore|graphic|blood\w*)\b", re.I)
 
 
@@ -390,6 +458,23 @@ def materialize(lines, lo, hi, nodes, drop, ch_side, recurse=False):
         if i not in skip:
             out.append(lines[i])
         i += 1
+    return out
+
+
+def story_lines(body):
+    """The story text of a block: every non-blank line except the production NOTE lines."""
+    return [l for l in body if l.strip() and not l.startswith("NOTE (not spoken):")]
+
+
+def paragraphs(lines):
+    """Blank-line separated groups of lines (a cue and its quote stay together)."""
+    out, cur = [], []
+    for l in list(lines) + [""]:
+        if l.strip():
+            cur.append(l)
+        elif cur:
+            out.append(cur)
+            cur = []
     return out
 
 
@@ -608,6 +693,29 @@ def main(argv):
             if not (PEND_BEGIN.match(nxt) and PEND_BEGIN.match(nxt).group(1) == pid):
                 hard.append("line %d %s keeps a scrapped dragon name but is not followed by its PENDING %s block" % (k + 1, line, pid))
 
+    # 1g. the approved rating-pass blocks hold exactly the story text Daxtyn approved (their content, not only their ids)
+    lock_ok, locked_sha = True, {}
+    if set(APPROVED_RATING_TEXT) != set(APPROVED_RATING) or set(APPROVED_RATING_SHA256) != set(APPROVED_RATING):
+        hard.append("APPROVED_RATING_TEXT / APPROVED_RATING_SHA256 must list exactly the APPROVED_RATING ids %s" % sorted(APPROVED_RATING))
+        lock_ok = False
+    for rid, text in sorted(APPROVED_RATING_TEXT.items()):
+        locked_sha[rid] = hashlib.sha256("\n".join(text).encode("utf-8")).hexdigest()
+        if locked_sha[rid] != APPROVED_RATING_SHA256.get(rid):
+            hard.append("%s: the record of the text Daxtyn approved (APPROVED_RATING_TEXT) was edited: it no longer matches its "
+                        "sha256 in APPROVED_RATING_SHA256" % rid)
+            lock_ok = False
+    for n in nodes:
+        if n["kind"] != "rp" or n["id"] not in APPROVED_RATING_TEXT:
+            continue
+        got, want = story_lines(L[n["start"] + 1:n["end"]]), APPROVED_RATING_TEXT[n["id"]]
+        if got != want:
+            lock_ok = False
+            k = next(k for k in range(max(len(got), len(want))) if k >= len(got) or k >= len(want) or got[k] != want[k])
+            hard.append("%s: its story text is not the text Daxtyn approved on %s (story line %d: expected %r, got %r). Approved "
+                        "content changes only with his OK: record it in final/CHANGES.md, then update APPROVED_RATING_TEXT and "
+                        "APPROVED_RATING_SHA256" % (n["id"], APPROVED_DATE, k + 1, (want[k] if k < len(want) else "<none>")[:90],
+                                                    (got[k] if k < len(got) else "<none>")[:90]))
+
     # ---- 2. additions are the proposals -----------------------------------------------------------
     proposals = ext_bodies(ext_lines)
     adds = [n for n in nodes if n["kind"] == "add"]
@@ -703,6 +811,7 @@ def main(argv):
         elif n["kind"] == "ch":
             units.append((n["id"], now_lines(L, n), n["parent"]["id"] if n["parent"] else n["id"]))
     seen = set()
+    context_reviewed = []   # (unit, rule, sentence): rule 6b/6d hits that REVIEWED_CONTEXT explains (shown with --review)
 
     def flag(msg):
         if msg not in seen:
@@ -735,6 +844,11 @@ def main(argv):
                 flag("%s: short spoken order to a dragon (reads as a new command): %s %r" % (label, spk, said))
             if spk in PROTECTED_SPEAKERS and VICE_RE.search(said):
                 flag("%s: %s speaks a drug/tobacco/alcohol/suggestive word: %r (SERIES.md section 8)" % (label, spk, said))
+            if spk in PROTECTED_SPEAKERS and VICE_RE.search(rawnote):
+                flag("%s: the cue gives %s a drug/tobacco/alcohol/suggestive direction: %r (SERIES.md section 8)" % (label, spk, rawnote))
+            if PROTECTED_RE.search(rawnote) and VICE_RE.search(said):
+                flag("%s: %s says a drug/tobacco/alcohol/suggestive word to a child or possible minor [%s]: %r (SERIES.md section 8)"
+                     % (label, spk, rawnote, said))
         for pat, why in ce.HARD_FORBIDDEN + ce.REGRESSIONS:
             for mm in re.finditer(pat, text):
                 flag("%s: forbidden %r (%s)" % (label, mm.group(0), why))
@@ -756,6 +870,30 @@ def main(argv):
                 flag("%s: a drug/tobacco/alcohol/suggestive word in the same sentence as a child or possible minor (SERIES.md section 8): %r" % (label, s[:140]))
             if re.search(r"\bAbby\b", s) and ABBY_GORE_RE.search(s):
                 flag("%s: graphic injury wording next to Abby: %r" % (label, s[:120]))
+        # 6b. context: a pronoun can stand for a protected character named just before (same or previous paragraph)
+        paras = paragraphs(l for l in body if not l.startswith("NOTE (not spoken):"))
+        for pi, para in enumerate(paras):
+            prot_seen = pi > 0 and bool(PROTECTED_RE.search("\n".join(paras[pi - 1])))
+            for s in sentences("\n".join(para)):
+                hit = prot_seen and not PROTECTED_RE.search(s) and VICE_RE.search(s) and PRONOUN_RE.search(s)
+                if hit and s in REVIEWED_CONTEXT:
+                    context_reviewed.append((label, "6b", s))
+                elif hit:
+                    flag("%s: a drug/tobacco/alcohol/suggestive word with a pronoun right after a child or possible minor is "
+                         "named (who is '%s'?): %r. Name the adult, or read it in context and add the exact sentence to "
+                         "REVIEWED_CONTEXT with the reason (SERIES.md section 8)" % (label, PRONOUN_RE.search(s).group(0), s[:140]))
+                if PROTECTED_RE.search(s):
+                    prot_seen = True
+        # 6d. deaths: only the blocks Daxtyn approved may hold one
+        if label not in APPROVED_RATING:
+            for s in sentences(story):
+                mm = NEW_DEATH_RE.search(s)
+                if mm and s in REVIEWED_CONTEXT:
+                    context_reviewed.append((label, "6d", s))
+                elif mm:
+                    flag("%s: death word %r outside the deaths Daxtyn approved (%s): a new death needs his OK first "
+                         "(SERIES.md section 5); if it is not a death, add the exact sentence to REVIEWED_CONTEXT with the reason: %r"
+                         % (label, mm.group(0), ", ".join(sorted(APPROVED_RATING)), s[:120]))
         for pat, why in ce.REVIEW:
             for mm in re.finditer(pat, text, re.I):
                 s0 = max(0, mm.start() - 40)
@@ -771,6 +909,12 @@ def main(argv):
             flag("story line still names a species: %r" % l[:120])
         if STANCE_RE.search(l):
             flag("story line contradicts the two-legged low stance: %r" % l[:120])
+
+    used = {sent for _, _, sent in context_reviewed}
+    for sent in REVIEWED_CONTEXT:
+        if sent not in used:
+            review.append("REVIEWED_CONTEXT entry no longer needed or no longer in the script (reworded or cut?): %r" % sent[:100])
+    review.extend("%s [%s, reviewed: %s] %s" % (lab, rule, REVIEWED_CONTEXT[sent], sent[:100]) for lab, rule, sent in context_reviewed)
 
     # ---- runtime ------------------------------------------------------------------------------------
     st = {s["scene"]: s for s in json.load(open(SHOTLIST, encoding="utf-8"))["scene_totals"]}
@@ -903,6 +1047,15 @@ def main(argv):
         out = []
         body = materialize(L, 0, len(L) - 1, tops, {"note", "pend"}, "now", recurse=True)
         body = [l for l in body if not l.startswith("NOTE (not spoken):") and l not in (NOTE_BEGIN, NOTE_END)]
+        # the cue source marker of the approved wording is a production marker too: "ABBY [creator-approved wording
+        # 2026-10-18]:" reads "ABBY:" here (other cue notes, such as [ORIGINAL] from the handoff itself, stay)
+        def unmark(l):
+            m = ce.CUE_RE.match(l)
+            if not m or not m.group(2) or APPROVED_TAG not in m.group(2):
+                return l
+            rest = [p.strip() for p in m.group(2).split(";") if p.strip() and p.strip() != APPROVED_TAG]
+            return "%s%s:" % (m.group(1), (" [%s]" % "; ".join(rest)) if rest else "")
+        body = [unmark(l) for l in body]
         out += ["DRAGON'S KINGDOM — SEASON 1, EPISODE 1 — READING COPY OF THE LOCKED SHOOTING SCRIPT", "",
                 "Generated from final/screenplay-final.md by tools/check_final.py --clean. Do not edit this copy: edit "
                 "screenplay-final.md and run the tool again. This copy leaves out the markers, the production NOTE lines, "
@@ -936,7 +1089,9 @@ def main(argv):
               "additions_kept": [a["id"] for a in adds], "additions_cut": cut,
               "rating_pass_blocks": n_rp, "changed_blocks": n_ch, "changed_for_rating": n_ch_r,
               "changed_creator_approved": n_ch_a, "rating_pass_creator_approved": n_rp_a, "pending_blocks": n_pend,
-              "creator_approved": {"date": APPROVED_DATE, "changes": sorted(APPROVED_CHANGES), "rating_pass": sorted(APPROVED_RATING)},
+              "creator_approved": {"date": APPROVED_DATE, "changes": sorted(APPROVED_CHANGES), "rating_pass": sorted(APPROVED_RATING),
+                                   "rating_pass_text_sha256": locked_sha, "rating_pass_text_identical": lock_ok},
+              "reviewed_context": [{"unit": lab, "rule": rule, "sentence": sent, "why": REVIEWED_CONTEXT[sent]} for lab, rule, sent in context_reviewed],
               "units": units_t, "running_order": order, "totals": tot, "original_totals": tot_orig,
               "addition_totals": tot_add, "rating_pass_totals": tot_rating, "dragon_change_totals": tot_dragon, "approved_change_totals": tot_approved,
               "over_60_cut_order": over60, "frames": frames, "render_hours": render_h,
@@ -950,6 +1105,8 @@ def main(argv):
     print("PROOF  %d spoken lines of screenplay.md, in order outside the additions: %d word for word, %d in the wording Daxtyn approved %s (%s): %s" % (
         len(orig_spoken), len(orig_spoken) - n_approved_spoken, n_approved_spoken, APPROVED_DATE,
         ", ".join(c for c in APPROVED_CHANGES if APPROVED_CHANGES[c]["in"] is None), "yes" if spoken_ok else "NO"))
+    print("PROOF  approved rating-pass blocks (%s): story text identical to what Daxtyn approved %s (locked by text and sha256): %s" % (
+        ", ".join(sorted(APPROVED_RATING)), APPROVED_DATE, "yes" if lock_ok else "NO"))
     print("PROOF  additions identical to their proposals outside marked changes: %d of %d kept%s" % (
         sum(1 for a in adds if not any(h.startswith(a["id"] + ": not the proposal") for h in hard)), len(adds),
         (" (cut: %s)" % ", ".join(cut)) if cut else ""))
@@ -995,5 +1152,68 @@ def main(argv):
     return 1 if hard else 0
 
 
+def selftest():
+    """--selftest: broken copies of the final script must fail with the right message (rules 1g, 6, 6b, 6d)."""
+    import contextlib
+    import io
+    import tempfile
+    fin = load(FINAL)
+    R10_AT = "That keeper takes a flask from inside his coat, drinks and passes it over."
+    cases = [
+        ("an approved death block reworded (R18)", [("rocking, saying nothing", "swaying, saying nothing")],
+         "R18: its story text is not the text Daxtyn approved"),
+        ("an approved picture cut from R21", [("\n\nPICTURE: Along the wall below the steps", "\n\nPICTUR: Along the wall below the steps")],
+         "R21: its story text is not the text Daxtyn approved"),
+        ("a pronoun after Abby in the same paragraph (R10)", [(R10_AT, R10_AT + " Abby watches from the stable door. He holds the flask out to her.")],
+         "with a pronoun right after a child or possible minor is named"),
+        ("a pronoun after Abby in the paragraph before (R10)", [(R10_AT, R10_AT + "\n\nPICTURE: Abby stands at the stable door.\n\nPICTURE: The keeper holds the flask out to her.")],
+         "with a pronoun right after a child or possible minor is named"),
+        ("a title instead of her name (R10)", [(R10_AT, R10_AT + " The queen's daughter takes the flask.")],
+         "in the same sentence as a child or possible minor"),
+        ("an offer of drink in a cue to Abby (R10)", [(R10_AT, R10_AT + "\n\nKEEPER [to Abby]:\n\"Have a drink, then.\"")],
+         "to a child or possible minor [to Abby]"),
+        ("a new death outside the approved blocks (R10)", [(R10_AT, R10_AT + " A third keeper lies dead behind the feed cart.")],
+         "death word 'dead' outside the deaths Daxtyn approved"),
+        ("a reviewed sentence reworded (R3)", [("takes a small pipe from his coat and lights it.", "takes a small pipe from his coat and lights it slowly.")],
+         "with a pronoun right after a child or possible minor is named"),
+    ]
+    failures = 0
+
+    def run(argv):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = main(argv)
+        return rc, buf.getvalue()
+    rc, out = run([])
+    print("selftest  %-58s %s" % ("the real script passes", "ok" if rc == 0 else "FAILED (exit %d)" % rc))
+    failures += rc != 0
+    with tempfile.TemporaryDirectory() as tmp:
+        for name, edits, want in cases:
+            text = fin
+            for old, new in edits:
+                if text.count(old) != 1:
+                    raise SystemExit("selftest %r: %r is not in the script exactly once" % (name, old[:60]))
+                text = text.replace(old, new)
+            path = os.path.join(tmp, "broken.md")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
+            rc, out = run(["--final", path])
+            ok = rc == 1 and want in out
+            failures += not ok
+            print("selftest  %-58s %s" % (name, "caught" if ok else "NOT CAUGHT (exit %d; expected %r)" % (rc, want)))
+    saved = copy.deepcopy(APPROVED_RATING_TEXT)
+    try:
+        APPROVED_RATING_TEXT["R15"][0] = APPROVED_RATING_TEXT["R15"][0].replace("does not move", "barely moves")
+        rc, out = run([])
+        ok = rc == 1 and "the record of the text Daxtyn approved (APPROVED_RATING_TEXT) was edited" in out
+    finally:
+        APPROVED_RATING_TEXT.clear()
+        APPROVED_RATING_TEXT.update(saved)
+    failures += not ok
+    print("selftest  %-58s %s" % ("the locked text edited inside this tool", "caught" if ok else "NOT CAUGHT"))
+    print("selftest: %s" % ("all cases behave" if not failures else "%d case(s) wrong" % failures))
+    return 1 if failures else 0
+
+
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(selftest() if "--selftest" in sys.argv[1:] else main(sys.argv[1:]))

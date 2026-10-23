@@ -645,7 +645,7 @@ The dragons continue across open water. A shallow smile flickers across Abby's f
 
 She looks across Charcoal's enormous body, taking in the effortless way he holds the air.
 
-ABBY [creator-approved wording 2026-10-18]:
+ABBY:
 "Why couldn't I get one like Charcoal?"
 
 REMI:
@@ -662,10 +662,10 @@ Abby touches Leaf affectionately. Leaf turns one eye toward her voice.
 ABBY [to Leaf]:
 "I didn't mean it like that."
 
-REMI [creator-approved wording 2026-10-18]:
+REMI:
 "Smaller ones are faster. More versatile."
 
-ABBY [creator-approved wording 2026-10-18]:
+ABBY:
 "And big ones?"
 
 REMI:
@@ -1054,7 +1054,7 @@ The healer continues without providing a real-world instructional demonstration.
 ALEXANDRIA [to Remi]:
 "Tell me."
 
-REMI [creator-approved wording 2026-10-18]:
+REMI:
 "We were off the coast. Flying together. Something came past Leaf. A small dragon. Fast."
 
 ALEXANDRIA:
@@ -1568,7 +1568,7 @@ ABBY:
 
 She stays there. Then, sounding more like herself:
 
-ABBY [creator-approved wording 2026-10-18]:
+ABBY:
 "I still want one like Charcoal."
 
 Leaf blinks, slowly.
