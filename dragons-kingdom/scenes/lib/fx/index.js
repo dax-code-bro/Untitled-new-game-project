@@ -20,6 +20,7 @@ import { debrisApi } from './debris.js';
 import { smokeApi } from './smoke.js';
 import { fireApi } from './fire.js';
 import { waterApi } from './water.js';
+import { goreApi } from './gore.js';
 
 export { FxManager, Effect } from './core/manager.js';
 export { ParticleLayer } from './core/particles.js';
@@ -31,6 +32,7 @@ export { BLOOD_COLOR, bloodTint } from './blood.js';
 export { DebrisEffect, solvePiece, poseAt } from './debris.js';
 export { SmokePlume, SmokeWisp, SMOKE_KINDS } from './smoke.js';
 export { FireJet, FireBurn, Embers, Shimmer, FIRE_PALETTES } from './fire.js';
+export { ClothHole, attachToBone, surfaceHit } from './gore.js';
 
 /** Create the FX manager for this scene (one per scene; cached on ctx). */
 export async function createFx(ctx, o = {}) {
@@ -43,6 +45,7 @@ export async function createFx(ctx, o = {}) {
   fx.smoke = smokeApi(fx);
   fx.fire = fireApi(fx);
   fx.water = waterApi(fx);
+  fx.gore = goreApi(fx);
   ctx.__dkFx = fx;
   return fx;
 }

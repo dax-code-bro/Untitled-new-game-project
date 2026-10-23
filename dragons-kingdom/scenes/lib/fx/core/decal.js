@@ -44,9 +44,9 @@ export const MAX_STAMPS = 48;
 export const DECAL_LIQUIDS = {
   // whole blood: reflectance ~0.25-0.35 in deep red, a few % in green/blue (fresh, oxygenated);
   // drying turns it brown-black (methaemoglobin) and matte, edges first
-  blood: { sigWet: [1.0, 7.0, 8.0], sigDry: [1.5, 4.0, 4.6], albWet: [0.1, 0.005, 0.005], albDry: [0.035, 0.012, 0.008], rough: [0.06, 0.55], coat: [1.0, 0.12], coatRough: [0.02, 0.4], h: 0.0006 },
+  blood: { sigWet: [1.0, 7.0, 8.0], sigDry: [1.5, 4.0, 4.6], albWet: [0.1, 0.005, 0.005], albDry: [0.035, 0.012, 0.008], rough: [0.06, 0.55], coat: [0.6, 0.08], coatRough: [0.02, 0.4], h: 0.0006 },
   // venous / older blood (darker, less saturated) - wounds, pooled under bodies
-  bloodDark: { sigWet: [1.3, 8.0, 8.5], sigDry: [1.6, 4.2, 4.8], albWet: [0.08, 0.004, 0.004], albDry: [0.03, 0.01, 0.007], rough: [0.05, 0.55], coat: [1.0, 0.12], coatRough: [0.02, 0.4], h: 0.0007 },
+  bloodDark: { sigWet: [1.3, 8.0, 8.5], sigDry: [1.6, 4.2, 4.8], albWet: [0.08, 0.004, 0.004], albDry: [0.03, 0.01, 0.007], rough: [0.05, 0.55], coat: [0.6, 0.08], coatRough: [0.02, 0.4], h: 0.0007 },
   // diluted blood (washed, runoff, pink water on skin)
   bloodThin: { sigWet: [0.12, 1.4, 1.6], sigDry: [0.25, 1.2, 1.4], albWet: [0.05, 0.012, 0.012], albDry: [0.03, 0.012, 0.01], rough: [0.08, 0.5], coat: [0.8, 0.05], coatRough: [0.03, 0.4], h: 0.0003 },
   soot: { sigWet: [2.2, 2.3, 2.4], sigDry: [2.2, 2.3, 2.4], albWet: [0.012, 0.011, 0.01], albDry: [0.012, 0.011, 0.01], rough: [0.9, 0.95], coat: [0, 0], coatRough: [0.5, 0.5], h: 0.0 },
@@ -317,6 +317,20 @@ void fxdEval(vec2 uv, out float d, out float cov, out float dryBias) {
   d = fxdFilm(c, mn * 0.006) * (2.5 + 2.5 * smoothstep(0.0, mn * 0.08, c) + 1.5 * j);
   cov = step(0.001, d);
   dryBias = 0.5 * (1.0 - smoothstep(0.0, mn * 0.05, c));
+#elif defined(FX_KIND_GASH)
+  // a laceration along +x: an open split (dark, deep red inside), swollen bruised lips, blood
+  // welling out of it and running down along gravity
+  float L = uSize.x * 0.42;
+  float s = clamp(p.x / L, -1.0, 1.0);
+  float open = uSize.y * 0.06 * (1.0 - s * s) * (0.7 + 0.6 * fxdN(vec2(p.x / (uSize.x * 0.08), uSeed)));
+  float yy = p.y - (fxdN(vec2(p.x / (uSize.x * 0.3), uSeed + 3.0)) - 0.5) * uSize.y * 0.12;
+  float inside = step(abs(p.x), L) * smoothstep(open, open * 0.4, abs(yy));
+  float lip = step(abs(p.x), L * 1.05) * smoothstep(open * 3.5, open, abs(yy)) * (1.0 - inside);
+  d = max(inside * 3.5, lip * 0.5);
+  cov = max(step(0.001, inside), lip * 0.0);
+  dryBias = 0.0;
+  if (uP.y > 0.0) fxdRuns(p, vec2(0.0, 0.0) + uDown * open, L * 0.8, uP.y, max(uSize.x, uSize.y) * uP.z, uSize.y * 0.02, uGrow, uSeed + 9.0, d, cov);
+  cov = max(cov, step(0.001, d));
 #elif defined(FX_KIND_BURN)
   // zones from the centre out: raw (wet, glossy), blistered, blackened rim, reddened halo
   vec2 q = p / (0.5 * uSize);
@@ -707,6 +721,7 @@ const KIND_DEFAULTS = {
   soak: { p: [0, 0.45, 0, 0], grow: [0, 20] },       // p.y film strength
   pool: { p: [0, 0, 0, 0], grow: [0, 30] },
   burn: { p: [0, 0, 0, 0] },
+  gash: { p: [0, 4, 0.8, 0], grow: [0.2, 4] },          // p.y runs, p.z run length (x max size)
   scorch: { p: [0, 1.0, 0, 0] },
   char: { p: [0, 0.02, 0, 0] },
   wet: { p: [0, 0, 0, 0] },
