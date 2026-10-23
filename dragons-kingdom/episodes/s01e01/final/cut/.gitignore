@@ -1,0 +1,10 @@
+# Draft cut videos, audio mixes and renders are rebuilt by make-cut.mjs and are never committed.
+*.mp4
+*.mov
+*.mkv
+*.wav
+*.flac
+*.m4a
+*.png
+*.jpg
+work/

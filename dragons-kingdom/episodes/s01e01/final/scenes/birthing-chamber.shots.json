@@ -1,0 +1,2765 @@
+{
+ "set": "BIRTHING_CHAMBER",
+ "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+ "spec": "episodes/s01e01/final/scenes/specs/birthing-chamber.spec.js",
+ "fps": 24,
+ "handles": 12,
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "note": "start_s / frames are the render-jobs.json contract (episode.mjs); pre/post are handle frames the editor may render around each shot.",
+ "shots": [
+  {
+   "job": "T-01",
+   "seq": 18,
+   "scene": "TITLE",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 1,
+   "start_frame": 24,
+   "frames": 192,
+   "pre": 12,
+   "post": 12,
+   "seconds": 8,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [
+    {
+     "text": "DRAGON'S KINGDOM",
+     "style": "title",
+     "from_s": 1,
+     "to_s": 6.2
+    }
+   ],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "before the hatching: near dark, one lamp",
+    "weather": "-",
+    "notes": "The closed egg in near-dark: one warm lamp rim. The chamber of 1A before the hatching.",
+    "sun": null,
+    "lamps": 0.55,
+    "exposure": 0.6
+   },
+   "staging": "NONE: no people. Near dark: only the key lamp; the title over the dark shell.",
+   "deviation": null
+  },
+  {
+   "job": "1A-01",
+   "seq": 19,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 11,
+   "start_frame": 264,
+   "frames": 132,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "NONE: macro on the shell; the crack runs on from the old fracture and stops.",
+   "deviation": null
+  },
+  {
+   "job": "1A-02",
+   "seq": 20,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 19,
+   "start_frame": 456,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    },
+    {
+     "kind": "dust-motes",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "WIDE: the attendant small, turned to the nest.",
+   "deviation": null
+  },
+  {
+   "job": "1A-03",
+   "seq": 28,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 27,
+   "start_frame": 648,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "BACK + SIL: the attendant from behind (soft), Alexandria a dark shape in the bright doorway; the raised hand reads as a shape.",
+   "deviation": null
+  },
+  {
+   "job": "1A-04",
+   "seq": 29,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 34,
+   "start_frame": 816,
+   "frames": 204,
+   "pre": 12,
+   "post": 12,
+   "seconds": 8.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L006",
+     "part": 0,
+     "ref": "L006",
+     "role": "ATTENDANT",
+     "file": "vo/L006.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.57,
+     "at_s": 0.57,
+     "speech_in_s": 0.6,
+     "speech_out_s": 2.11,
+     "words": [
+      {
+       "w": "it",
+       "start_s": 0.57,
+       "end_s": 0.75
+      },
+      {
+       "w": "started",
+       "start_s": 0.75,
+       "end_s": 1.19
+      },
+      {
+       "w": "a",
+       "start_s": 1.19,
+       "end_s": 1.23
+      },
+      {
+       "w": "moment",
+       "start_s": 1.23,
+       "end_s": 1.56
+      },
+      {
+       "w": "ago",
+       "start_s": 1.56,
+       "end_s": 2.06
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L007",
+     "part": 0,
+     "ref": "L007",
+     "role": "ALEXANDRIA",
+     "file": "vo/L007.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.295,
+     "at_s": 2.48,
+     "speech_in_s": 2.51,
+     "speech_out_s": 3.745,
+     "words": [
+      {
+       "w": "has",
+       "start_s": 2.48,
+       "end_s": 2.7
+      },
+      {
+       "w": "anyone",
+       "start_s": 2.7,
+       "end_s": 3.08
+      },
+      {
+       "w": "touched",
+       "start_s": 3.08,
+       "end_s": 3.44
+      },
+      {
+       "w": "it",
+       "start_s": 3.44,
+       "end_s": 3.76
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L008",
+     "part": 0,
+     "ref": "L008",
+     "role": "ATTENDANT",
+     "file": "vo/L008.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.5,
+     "at_s": 4.065,
+     "speech_in_s": 4.095,
+     "speech_out_s": 5.535,
+     "words": [
+      {
+       "w": "no",
+       "start_s": 4.065,
+       "end_s": 4.565
+      },
+      {
+       "w": "your",
+       "start_s": 4.565,
+       "end_s": 4.695
+      },
+      {
+       "w": "majesty",
+       "start_s": 4.695,
+       "end_s": 5.485
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L009",
+     "part": 0,
+     "ref": "L009",
+     "role": "ALEXANDRIA",
+     "file": "vo/L009.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.16,
+     "at_s": 5.905,
+     "speech_in_s": 5.935,
+     "speech_out_s": 7.035,
+     "words": [
+      {
+       "w": "then",
+       "start_s": 5.905,
+       "end_s": 6.155
+      },
+      {
+       "w": "let",
+       "start_s": 6.155,
+       "end_s": 6.305
+      },
+      {
+       "w": "it",
+       "start_s": 6.305,
+       "end_s": 6.385
+      },
+      {
+       "w": "finish",
+       "start_s": 6.385,
+       "end_s": 6.965
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "DOF: the egg sharp in the foreground; both women soft behind it at either side (mouths unreadable).",
+   "deviation": null
+  },
+  {
+   "job": "1A-05",
+   "seq": 30,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 45,
+   "start_frame": 1080,
+   "frames": 84,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "BACK: from behind Alexandria; she sits on the stool beside the nest and does not reach in.",
+   "deviation": null
+  },
+  {
+   "job": "1A-06",
+   "seq": 31,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 51,
+   "start_frame": 1224,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "NONE: macro; another piece of shell shifts.",
+   "deviation": null
+  },
+  {
+   "job": "1A-07",
+   "seq": 32,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 56,
+   "start_frame": 1344,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "NONE: macro; the shell flexes outward under pressure (birth stage 1).",
+   "deviation": null
+  },
+  {
+   "job": "1A-08",
+   "seq": 33,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 62,
+   "start_frame": 1488,
+   "frames": 84,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "NONE: macro, a different angle; a fragment lifts away (birth stage 2).",
+   "deviation": null
+  },
+  {
+   "job": "1A-09",
+   "seq": 34,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 68,
+   "start_frame": 1632,
+   "frames": 108,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "NONE: close; a small gold snout presses into the opening (birth stage 3); gold catches the lamplight, no glow.",
+   "deviation": null
+  },
+  {
+   "job": "1A-10",
+   "seq": 35,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 75,
+   "start_frame": 1800,
+   "frames": 108,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "NONE: close; the shape stills (birth stage 4); one tiny breath moves the shell edge.",
+   "deviation": null
+  },
+  {
+   "job": "1A-11",
+   "seq": 36,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 82,
+   "start_frame": 1968,
+   "frames": 60,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    },
+    {
+     "kind": "dust-motes",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "SIL + HANDS: the two attendants as dark shapes against the cool shaft; the clasped hands carry it.",
+   "deviation": null
+  },
+  {
+   "job": "1A-12",
+   "seq": 37,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 87,
+   "start_frame": 2088,
+   "frames": 216,
+   "pre": 12,
+   "post": 12,
+   "seconds": 9,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "NONE: the hatchling emerges awkwardly - wet, unsteady, exhausted; no glow. (Kinematic: pose blends along a path over the rim; no soft-body shell.)",
+   "deviation": null
+  },
+  {
+   "job": "1A-13",
+   "seq": 38,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 98,
+   "start_frame": 2352,
+   "frames": 60,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L010",
+     "part": 0,
+     "ref": "L010",
+     "role": "ATTENDANT",
+     "file": "vo/L010.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.03,
+     "at_s": 0.57,
+     "speech_in_s": 0.6,
+     "speech_out_s": 1.57,
+     "words": [
+      {
+       "w": "look",
+       "start_s": 0.57,
+       "end_s": 0.88
+      },
+      {
+       "w": "at",
+       "start_s": 0.88,
+       "end_s": 1.15
+      },
+      {
+       "w": "it",
+       "start_s": 1.15,
+       "end_s": 1.51
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "OTS + BACK: over the attendant's left shoulder; she speaks turned away from camera.",
+   "deviation": null
+  },
+  {
+   "job": "1A-14",
+   "seq": 39,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 103,
+   "start_frame": 2472,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "OTS + DOF: over Alexandria's right shoulder, veil and cheek soft; the softening carried by posture and breath (face close-up waits for approved faces).",
+   "deviation": null
+  },
+  {
+   "job": "1A-15",
+   "seq": 40,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 108,
+   "start_frame": 2592,
+   "frames": 132,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L011",
+     "part": 0,
+     "ref": "L011",
+     "role": "ALEXANDRIA",
+     "file": "vo/L011.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.465,
+     "at_s": 0.865,
+     "speech_in_s": 0.9,
+     "speech_out_s": 2.305,
+     "words": [
+      {
+       "w": "my",
+       "start_s": 0.865,
+       "end_s": 1.095
+      },
+      {
+       "w": "pretty",
+       "start_s": 1.095,
+       "end_s": 1.475
+      },
+      {
+       "w": "little",
+       "start_s": 1.475,
+       "end_s": 1.715
+      },
+      {
+       "w": "weapon",
+       "start_s": 1.715,
+       "end_s": 2.235
+      }
+     ],
+     "gain_db": -11,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "BACK + SIL: her lost profile from behind-right, rim-lit by the shaft; the cheek line hides the lips. Hold after the line.",
+   "deviation": null
+  },
+  {
+   "job": "1A-16",
+   "seq": 41,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 116,
+   "start_frame": 2784,
+   "frames": 48,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "DOF: focus on the lamp in the foreground; she is a soft shape behind its bokeh.",
+   "deviation": null
+  },
+  {
+   "job": "1A-17",
+   "seq": 42,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 120,
+   "start_frame": 2880,
+   "frames": 156,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "HANDS: style frame F4's framing - the hatchling slips against the broken shell; Alexandria's hands come in from screen right with a folded cloth; her face out of frame.",
+   "deviation": null
+  },
+  {
+   "job": "1A-18",
+   "seq": 43,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 129,
+   "start_frame": 3096,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L012",
+     "part": 0,
+     "ref": "L012",
+     "role": "ABBY",
+     "file": "vo/L012.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.765,
+     "at_s": 1.22,
+     "speech_in_s": 1.25,
+     "speech_out_s": 1.955,
+     "words": [
+      {
+       "w": "is",
+       "start_s": 1.22,
+       "end_s": 1.43
+      },
+      {
+       "w": "it",
+       "start_s": 1.43,
+       "end_s": 1.53
+      },
+      {
+       "w": "out",
+       "start_s": 1.53,
+       "end_s": 1.93
+      }
+     ],
+     "gain_db": 1,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "SIL + WIDE: from the nest toward the door; Abby and Remi two backlit shapes in the bright doorway (reverse angle, declared).",
+   "deviation": null
+  },
+  {
+   "job": "1A-19",
+   "seq": 44,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 134,
+   "start_frame": 3216,
+   "frames": 36,
+   "pre": 12,
+   "post": 12,
+   "seconds": 1.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L013",
+     "part": 0,
+     "ref": "L013",
+     "role": "ALEXANDRIA",
+     "file": "vo/L013.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.93,
+     "at_s": 0.27,
+     "speech_in_s": 0.3,
+     "speech_out_s": 1.17,
+     "words": [
+      {
+       "w": "come",
+       "start_s": 0.27,
+       "end_s": 0.49
+      },
+      {
+       "w": "slowly",
+       "start_s": 0.49,
+       "end_s": 1.12
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "BACK: from behind Alexandria; her back shows she does not look away.",
+   "deviation": null
+  },
+  {
+   "job": "1A-20",
+   "seq": 45,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 138,
+   "start_frame": 3312,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "WIDE: high in the corner; everyone small.",
+   "deviation": null
+  },
+  {
+   "job": "1A-21",
+   "seq": 46,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 144,
+   "start_frame": 3456,
+   "frames": 156,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L014",
+     "part": 0,
+     "ref": "L014",
+     "role": "ABBY",
+     "file": "vo/L014.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.785,
+     "at_s": 0.77,
+     "speech_in_s": 0.8,
+     "speech_out_s": 1.525,
+     "words": [
+      {
+       "w": "it's",
+       "start_s": 0.77,
+       "end_s": 0.99
+      },
+      {
+       "w": "gold",
+       "start_s": 0.99,
+       "end_s": 1.47
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L015",
+     "part": 0,
+     "ref": "L015",
+     "role": "REMI",
+     "file": "vo/L015.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.095,
+     "at_s": 1.795,
+     "speech_in_s": 1.825,
+     "speech_out_s": 2.86,
+     "words": [
+      {
+       "w": "i",
+       "start_s": 1.795,
+       "end_s": 1.955
+      },
+      {
+       "w": "can",
+       "start_s": 1.955,
+       "end_s": 2.165
+      },
+      {
+       "w": "see",
+       "start_s": 2.165,
+       "end_s": 2.465
+      },
+      {
+       "w": "that",
+       "start_s": 2.465,
+       "end_s": 2.815
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L016",
+     "part": 0,
+     "ref": "L016",
+     "role": "ABBY",
+     "file": "vo/L016.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.01,
+     "at_s": 3.13,
+     "speech_in_s": 3.16,
+     "speech_out_s": 4.11,
+     "words": [
+      {
+       "w": "i",
+       "start_s": 3.13,
+       "end_s": 3.28
+      },
+      {
+       "w": "mean",
+       "start_s": 3.28,
+       "end_s": 3.49
+      },
+      {
+       "w": "all",
+       "start_s": 3.49,
+       "end_s": 3.73
+      },
+      {
+       "w": "of",
+       "start_s": 3.73,
+       "end_s": 3.82
+      },
+      {
+       "w": "it",
+       "start_s": 3.82,
+       "end_s": 4.08
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "BACK: two backs over the nest; Alexandria soft beyond.",
+   "deviation": null
+  },
+  {
+   "job": "1A-22",
+   "seq": 47,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 153,
+   "start_frame": 3672,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "DOF + HANDS: her face far out of focus behind the sharp hatchling; the almost-touch is her hand.",
+   "deviation": null
+  },
+  {
+   "job": "1A-23",
+   "seq": 48,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 160,
+   "start_frame": 3840,
+   "frames": 60,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L017",
+     "part": 0,
+     "ref": "L017",
+     "role": "ALEXANDRIA",
+     "file": "vo/L017.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.825,
+     "at_s": 0.375,
+     "speech_in_s": 0.4,
+     "speech_out_s": 2.17,
+     "words": [
+      {
+       "w": "wait",
+       "start_s": 0.375,
+       "end_s": 0.945
+      },
+      {
+       "w": "let",
+       "start_s": 1.305,
+       "end_s": 1.445
+      },
+      {
+       "w": "it",
+       "start_s": 1.445,
+       "end_s": 1.535
+      },
+      {
+       "w": "settle",
+       "start_s": 1.535,
+       "end_s": 1.995
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "OTS + DOF + SIL: over Abby's crouched shoulder (soft) to Alexandria, soft and backlit; focus on the hatchling between them.",
+   "deviation": null
+  },
+  {
+   "job": "1A-24",
+   "seq": 49,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 165,
+   "start_frame": 3960,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L018",
+     "part": 0,
+     "ref": "L018",
+     "role": "REMI",
+     "file": "vo/L018.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.715,
+     "at_s": 0.57,
+     "speech_in_s": 0.6,
+     "speech_out_s": 2.255,
+     "words": [
+      {
+       "w": "how",
+       "start_s": 0.57,
+       "end_s": 0.76
+      },
+      {
+       "w": "long",
+       "start_s": 0.76,
+       "end_s": 1.23
+      },
+      {
+       "w": "has",
+       "start_s": 1.23,
+       "end_s": 1.41
+      },
+      {
+       "w": "it",
+       "start_s": 1.41,
+       "end_s": 1.47
+      },
+      {
+       "w": "been",
+       "start_s": 1.47,
+       "end_s": 1.63
+      },
+      {
+       "w": "trying",
+       "start_s": 1.63,
+       "end_s": 2.27
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L019",
+     "part": 0,
+     "ref": "L019",
+     "role": "ATTENDANT",
+     "file": "vo/L019.wav",
+     "file_in_s": 0,
+     "file_out_s": 2.69,
+     "at_s": 2.68,
+     "speech_in_s": 2.705,
+     "speech_out_s": 5.34,
+     "words": [
+      {
+       "w": "long",
+       "start_s": 2.68,
+       "end_s": 3.07
+      },
+      {
+       "w": "enough",
+       "start_s": 3.07,
+       "end_s": 3.47
+      },
+      {
+       "w": "it",
+       "start_s": 3.97,
+       "end_s": 4.1
+      },
+      {
+       "w": "needs",
+       "start_s": 4.1,
+       "end_s": 4.45
+      },
+      {
+       "w": "rest",
+       "start_s": 4.45,
+       "end_s": 4.78
+      },
+      {
+       "w": "now",
+       "start_s": 4.78,
+       "end_s": 5.31
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "BACK + DOF: Remi from behind (soft); the attendant across the nest, soft.",
+   "deviation": null
+  },
+  {
+   "job": "1A-25",
+   "seq": 50,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 173,
+   "start_frame": 4152,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "OTS: her fear is her stillness and the held breath; the face stays out of frame.",
+   "deviation": null
+  },
+  {
+   "job": "1A-26",
+   "seq": 51,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 179,
+   "start_frame": 4296,
+   "frames": 60,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "NONE: insert, the hatchling's side rises.",
+   "deviation": null
+  },
+  {
+   "job": "1A-27",
+   "seq": 52,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 184,
+   "start_frame": 4416,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L020",
+     "part": 0,
+     "ref": "L020",
+     "role": "ABBY",
+     "file": "vo/L020.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.53,
+     "at_s": 0.42,
+     "speech_in_s": 0.45,
+     "speech_out_s": 0.92,
+     "words": [
+      {
+       "w": "there",
+       "start_s": 0.42,
+       "end_s": 0.84
+      }
+     ],
+     "gain_db": -5.5,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L021",
+     "part": 0,
+     "ref": "L021",
+     "role": "ALEXANDRIA",
+     "file": "vo/L021.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.645,
+     "at_s": 1.34,
+     "speech_in_s": 1.37,
+     "speech_out_s": 1.955,
+     "words": [
+      {
+       "w": "yes",
+       "start_s": 1.34,
+       "end_s": 1.86
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "BACK + DOF: from behind Abby (soft) to Alexandria (soft); the hatchling sharp between.",
+   "deviation": null
+  },
+  {
+   "job": "1A-28",
+   "seq": 53,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 189,
+   "start_frame": 4536,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L022",
+     "part": 0,
+     "ref": "L022",
+     "role": "REMI",
+     "file": "vo/L022.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.185,
+     "at_s": 0.47,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.625,
+     "words": [
+      {
+       "w": "does",
+       "start_s": 0.47,
+       "end_s": 0.72
+      },
+      {
+       "w": "it",
+       "start_s": 0.72,
+       "end_s": 0.78
+      },
+      {
+       "w": "have",
+       "start_s": 0.78,
+       "end_s": 1.03
+      },
+      {
+       "w": "a",
+       "start_s": 1.03,
+       "end_s": 1.08
+      },
+      {
+       "w": "name",
+       "start_s": 1.08,
+       "end_s": 1.54
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L023",
+     "part": 0,
+     "ref": "L023",
+     "role": "ALEXANDRIA",
+     "file": "vo/L023.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.795,
+     "at_s": 1.945,
+     "speech_in_s": 1.975,
+     "speech_out_s": 2.71,
+     "words": [
+      {
+       "w": "not",
+       "start_s": 1.945,
+       "end_s": 2.245
+      },
+      {
+       "w": "yet",
+       "start_s": 2.245,
+       "end_s": 2.725
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L024",
+     "part": 0,
+     "ref": "L024",
+     "role": "ABBY",
+     "file": "vo/L024.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.155,
+     "at_s": 2.98,
+     "speech_in_s": 3.01,
+     "speech_out_s": 4.105,
+     "words": [
+      {
+       "w": "don't",
+       "start_s": 2.98,
+       "end_s": 3.18
+      },
+      {
+       "w": "let",
+       "start_s": 3.18,
+       "end_s": 3.35
+      },
+      {
+       "w": "him",
+       "start_s": 3.35,
+       "end_s": 3.48
+      },
+      {
+       "w": "choose",
+       "start_s": 3.48,
+       "end_s": 3.83
+      },
+      {
+       "w": "it",
+       "start_s": 3.83,
+       "end_s": 4.07
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "WIDE: high three-shot; faces a few pixels across.",
+   "deviation": null
+  },
+  {
+   "job": "1A-29",
+   "seq": 54,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 197,
+   "start_frame": 4728,
+   "frames": 84,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L025",
+     "part": 0,
+     "ref": "L025",
+     "role": "REMI",
+     "file": "vo/L025.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.235,
+     "at_s": 1.37,
+     "speech_in_s": 1.4,
+     "speech_out_s": 2.575,
+     "words": [
+      {
+       "w": "i",
+       "start_s": 1.47,
+       "end_s": 1.61
+      },
+      {
+       "w": "hadn't",
+       "start_s": 1.61,
+       "end_s": 1.94
+      },
+      {
+       "w": "offered",
+       "start_s": 1.94,
+       "end_s": 2.59
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "BACK: the sideways look reads as a head turn from behind.",
+   "deviation": null
+  },
+  {
+   "job": "1A-30",
+   "seq": 55,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 203,
+   "start_frame": 4872,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L026",
+     "part": 0,
+     "ref": "L026",
+     "role": "ALEXANDRIA",
+     "file": "vo/L026.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.76,
+     "at_s": 0.57,
+     "speech_in_s": 0.6,
+     "speech_out_s": 2.3,
+     "words": [
+      {
+       "w": "then",
+       "start_s": 0.57,
+       "end_s": 0.73
+      },
+      {
+       "w": "you",
+       "start_s": 0.73,
+       "end_s": 0.82
+      },
+      {
+       "w": "may",
+       "start_s": 0.82,
+       "end_s": 0.99
+      },
+      {
+       "w": "both",
+       "start_s": 0.99,
+       "end_s": 1.33
+      },
+      {
+       "w": "leave",
+       "start_s": 1.33,
+       "end_s": 1.56
+      },
+      {
+       "w": "it",
+       "start_s": 1.56,
+       "end_s": 1.62
+      },
+      {
+       "w": "in",
+       "start_s": 1.62,
+       "end_s": 1.76
+      },
+      {
+       "w": "peace",
+       "start_s": 1.76,
+       "end_s": 2.32
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "BACK + WIDE: from behind Alexandria (soft) across the nest to the children, small.",
+   "deviation": null
+  },
+  {
+   "job": "1A-31",
+   "seq": 56,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 211,
+   "start_frame": 5064,
+   "frames": 204,
+   "pre": 12,
+   "post": 12,
+   "seconds": 8.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L027",
+     "part": 0,
+     "ref": "L027",
+     "role": "REMI",
+     "file": "vo/L027.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.215,
+     "at_s": 0.47,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.655,
+     "words": [
+      {
+       "w": "we're",
+       "start_s": 0.47,
+       "end_s": 0.61
+      },
+      {
+       "w": "going",
+       "start_s": 0.61,
+       "end_s": 0.95
+      },
+      {
+       "w": "flying",
+       "start_s": 0.95,
+       "end_s": 1.67
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L028",
+     "part": 0,
+     "ref": "L028",
+     "role": "ALEXANDRIA",
+     "file": "vo/L028.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.7,
+     "at_s": 1.975,
+     "speech_in_s": 2.005,
+     "speech_out_s": 2.645,
+     "words": [
+      {
+       "w": "together",
+       "start_s": 1.975,
+       "end_s": 2.545
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L029",
+     "part": 0,
+     "ref": "L029",
+     "role": "ABBY",
+     "file": "vo/L029.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.56,
+     "at_s": 2.915,
+     "speech_in_s": 2.945,
+     "speech_out_s": 3.445,
+     "words": [
+      {
+       "w": "yes",
+       "start_s": 2.915,
+       "end_s": 3.425
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L030",
+     "part": 0,
+     "ref": "L030",
+     "role": "ALEXANDRIA",
+     "file": "vo/L030.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.725,
+     "at_s": 3.765,
+     "speech_in_s": 3.795,
+     "speech_out_s": 5.46,
+     "words": [
+      {
+       "w": "stay",
+       "start_s": 3.765,
+       "end_s": 4.065
+      },
+      {
+       "w": "within",
+       "start_s": 4.065,
+       "end_s": 4.335
+      },
+      {
+       "w": "reach",
+       "start_s": 4.335,
+       "end_s": 4.685
+      },
+      {
+       "w": "of",
+       "start_s": 4.685,
+       "end_s": 4.765
+      },
+      {
+       "w": "the",
+       "start_s": 4.765,
+       "end_s": 4.905
+      },
+      {
+       "w": "island",
+       "start_s": 4.905,
+       "end_s": 5.475
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L031",
+     "part": 0,
+     "ref": "L031",
+     "role": "REMI",
+     "file": "vo/L031.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.765,
+     "at_s": 5.78,
+     "speech_in_s": 5.81,
+     "speech_out_s": 6.515,
+     "words": [
+      {
+       "w": "we",
+       "start_s": 5.78,
+       "end_s": 6.01
+      },
+      {
+       "w": "will",
+       "start_s": 6.01,
+       "end_s": 6.53
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "BACK + WIDE: walking away; the lines carry across the room.",
+   "deviation": null
+  },
+  {
+   "job": "1A-32",
+   "seq": 57,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 222,
+   "start_frame": 5328,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "SIL: two silhouettes in the bright doorway; Abby looks back once (reverse angle toward the door, declared).",
+   "deviation": null
+  },
+  {
+   "job": "1A-33",
+   "seq": 58,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 228,
+   "start_frame": 5472,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "BACK + HANDS: her hand (sharp) rests near the newborn without restraining it.",
+   "deviation": null
+  },
+  {
+   "job": "X2-01",
+   "seq": 59,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 236,
+   "start_frame": 5664,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "BACK + WIDE: Remi small in the doorway; Alexandria from behind, not looking up.",
+   "deviation": null
+  },
+  {
+   "job": "X2-02",
+   "seq": 60,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 241,
+   "start_frame": 5784,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "X2-01",
+     "part": 0,
+     "ref": "X2-01",
+     "role": "ALEXANDRIA",
+     "file": "vo/X2-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.735,
+     "at_s": 0.47,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.175,
+     "words": [
+      {
+       "w": "remi",
+       "start_s": 0.47,
+       "end_s": 1.02
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X2-02",
+     "part": 0,
+     "ref": "X2-02",
+     "role": "ALEXANDRIA",
+     "file": "vo/X2-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.575,
+     "at_s": 1.595,
+     "speech_in_s": 1.625,
+     "speech_out_s": 3.14,
+     "words": [
+      {
+       "w": "keep",
+       "start_s": 1.595,
+       "end_s": 1.865
+      },
+      {
+       "w": "her",
+       "start_s": 1.865,
+       "end_s": 1.985
+      },
+      {
+       "w": "where",
+       "start_s": 1.985,
+       "end_s": 2.135
+      },
+      {
+       "w": "you",
+       "start_s": 2.135,
+       "end_s": 2.275
+      },
+      {
+       "w": "can",
+       "start_s": 2.275,
+       "end_s": 2.455
+      },
+      {
+       "w": "see",
+       "start_s": 2.455,
+       "end_s": 2.745
+      },
+      {
+       "w": "her",
+       "start_s": 2.745,
+       "end_s": 3.025
+      }
+     ],
+     "gain_db": -3,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "DOF: Remi soft in the doorway (backlit), Alexandria in focus but turned to the nest.",
+   "deviation": null
+  },
+  {
+   "job": "X2-03",
+   "seq": 61,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 248,
+   "start_frame": 5952,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "X2-03",
+     "part": 0,
+     "ref": "X2-03",
+     "role": "REMI",
+     "file": "vo/X2-03.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.185,
+     "at_s": 0.47,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.625,
+     "words": [
+      {
+       "w": "i",
+       "start_s": 0.47,
+       "end_s": 0.75
+      },
+      {
+       "w": "always",
+       "start_s": 0.75,
+       "end_s": 1.23
+      },
+      {
+       "w": "do",
+       "start_s": 1.23,
+       "end_s": 1.58
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "OTS + DOF: over Alexandria's shoulder (sharp); Remi soft and backlit in the doorway answers and goes.",
+   "deviation": null
+  },
+  {
+   "job": "X2-14",
+   "seq": 72,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 254,
+   "start_frame": 6096,
+   "frames": 84,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "DOF: focus on the hatchling between them; both women soft.",
+   "deviation": null
+  },
+  {
+   "job": "X2-15",
+   "seq": 73,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 260,
+   "start_frame": 6240,
+   "frames": 156,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "X2-09",
+     "part": 0,
+     "ref": "X2-09",
+     "role": "ALEXANDRIA",
+     "file": "vo/X2-09.wav",
+     "file_in_s": 0,
+     "file_out_s": 2.505,
+     "at_s": 0.57,
+     "speech_in_s": 0.6,
+     "speech_out_s": 3.105,
+     "words": [
+      {
+       "w": "you've",
+       "start_s": 0.57,
+       "end_s": 0.76
+      },
+      {
+       "w": "been",
+       "start_s": 0.76,
+       "end_s": 0.92
+      },
+      {
+       "w": "here",
+       "start_s": 0.92,
+       "end_s": 1.18
+      },
+      {
+       "w": "all",
+       "start_s": 1.18,
+       "end_s": 1.37
+      },
+      {
+       "w": "night",
+       "start_s": 1.37,
+       "end_s": 1.84
+      },
+      {
+       "w": "go",
+       "start_s": 2.16,
+       "end_s": 2.37
+      },
+      {
+       "w": "and",
+       "start_s": 2.37,
+       "end_s": 2.5
+      },
+      {
+       "w": "sleep",
+       "start_s": 2.5,
+       "end_s": 3.06
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X2-10",
+     "part": 0,
+     "ref": "X2-10",
+     "role": "ATTENDANT",
+     "file": "vo/X2-10.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.165,
+     "at_s": 3.425,
+     "speech_in_s": 3.455,
+     "speech_out_s": 4.55,
+     "words": [
+      {
+       "w": "your",
+       "start_s": 3.425,
+       "end_s": 3.665
+      },
+      {
+       "w": "majesty",
+       "start_s": 3.665,
+       "end_s": 4.515
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X2-11",
+     "part": 0,
+     "ref": "X2-11",
+     "role": "ALEXANDRIA",
+     "file": "vo/X2-11.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.745,
+     "at_s": 4.87,
+     "speech_in_s": 4.9,
+     "speech_out_s": 5.585,
+     "words": [
+      {
+       "w": "i'll",
+       "start_s": 4.87,
+       "end_s": 5.06
+      },
+      {
+       "w": "stay",
+       "start_s": 5.06,
+       "end_s": 5.6
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "DOF: the hatchling sharp between them; the women soft, mouths unreadable.",
+   "deviation": null
+  },
+  {
+   "job": "X2-16",
+   "seq": 74,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 269,
+   "start_frame": 6456,
+   "frames": 84,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "WIDE: the attendant leaves; the young attendant comes in with fresh water and settles by the door.",
+   "deviation": null
+  },
+  {
+   "job": "X2-17",
+   "seq": 75,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 275,
+   "start_frame": 6600,
+   "frames": 108,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    },
+    {
+     "kind": "dust-motes",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "BACK + DOF: from behind-left of Alexandria; she watches it breathe.",
+   "deviation": null
+  },
+  {
+   "job": "1A-34",
+   "seq": 76,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "start_s": 282,
+   "start_frame": 6768,
+   "frames": 60,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "lamp-flicker",
+     "from": null,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning: sun through the high east window (F4)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.7265173879056065,
+     0.6845471059286886,
+     0.05973060216899838
+    ],
+    "lamps": 1,
+    "exposure": 1.3
+   },
+   "staging": "NONE: insert, the tiny rise of its side (the match-cut source).",
+   "deviation": null
+  }
+ ]
+}

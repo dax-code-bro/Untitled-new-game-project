@@ -1,0 +1,4008 @@
+{
+ "title": "Dragon's Kingdom S01E01 - draft cut: PROLOGUE + TITLE + 1A",
+ "status": "DRAFT EDIT for the animatic / timing check (960x540 draft renders, computer voices, provisional designs). Not a master (SERIES.md section 2).",
+ "fps": 24,
+ "frames": 8580,
+ "duration_s": 357.5,
+ "duration_tc": "00:05:57:12",
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "shots": [
+  {
+   "job": "P-01",
+   "seq": 1,
+   "scene": "PROLOGUE",
+   "set": "CARD_BLACK",
+   "kind": "black",
+   "frames": 96,
+   "rec_in": 0,
+   "rec_out": 96,
+   "tc_in": "00:00:00:00",
+   "tc_out": "00:00:04:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Black screen. Before any image: waves folding against a rocky shore; a single seabird calls.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-02",
+   "seq": 2,
+   "scene": "PROLOGUE",
+   "set": "SEA_COAST_DAWN",
+   "kind": "missing",
+   "frames": 144,
+   "rec_in": 96,
+   "rec_out": 240,
+   "tc_in": "00:00:04:00",
+   "tc_out": "00:00:10:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Fade in: low view just above the water. Pale sky reflected between moving bands of deep blue.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-03",
+   "seq": 3,
+   "scene": "PROLOGUE",
+   "set": "SEA_COAST_DAWN",
+   "kind": "missing",
+   "frames": 276,
+   "rec_in": 240,
+   "rec_out": 516,
+   "tc_in": "00:00:10:00",
+   "tc_out": "00:00:21:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Camera travels toward an island whose high ground disappears into morning cloud. A small, unremarkable wooden vessel crosses the foreground; its sails make the world feel human in scale. No dragon riders.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-04",
+   "seq": 4,
+   "scene": "PROLOGUE",
+   "set": "SEA_COAST_DAWN",
+   "kind": "missing",
+   "frames": 84,
+   "rec_in": 516,
+   "rec_out": 600,
+   "tc_in": "00:00:21:12",
+   "tc_out": "00:00:25:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "A working hand secures a rope aboard the vessel.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-05",
+   "seq": 5,
+   "scene": "PROLOGUE",
+   "set": "SEA_COAST_DAWN",
+   "kind": "missing",
+   "frames": 84,
+   "rec_in": 600,
+   "rec_out": 684,
+   "tc_in": "00:00:25:00",
+   "tc_out": "00:00:28:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "An anonymous sailor turns toward an unfamiliar sound above the fog. Face kept small/three-quarter; not a historical discoverer, no date.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-06",
+   "seq": 6,
+   "scene": "PROLOGUE",
+   "set": "SEA_COAST_DAWN",
+   "kind": "missing",
+   "frames": 144,
+   "rec_in": 684,
+   "rec_out": 828,
+   "tc_in": "00:00:28:12",
+   "tc_out": "00:00:34:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The mist changes shape. Something passes beyond it, so large the eye first mistakes its shadow for cloud. Never resolve a dragon; no named dragon.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-07",
+   "seq": 7,
+   "scene": "PROLOGUE",
+   "set": "SEA_COAST_DAWN",
+   "kind": "missing",
+   "frames": 84,
+   "rec_in": 828,
+   "rec_out": 912,
+   "tc_in": "00:00:34:12",
+   "tc_out": "00:00:38:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The sailor becomes still, seen from behind as a dark shape against the bright fog. His face is not shown: he stays an anonymous figure, not an identifiable discoverer (background-tier head; no face close-up).",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-08",
+   "seq": 8,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "kind": "missing",
+   "frames": 192,
+   "rec_in": 912,
+   "rec_out": 1104,
+   "tc_in": "00:00:38:00",
+   "tc_out": "00:00:46:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Landscape 1 (dissolve): a coastal settlement under a pale sky.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-09",
+   "seq": 9,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "kind": "missing",
+   "frames": 204,
+   "rec_in": 1104,
+   "rec_out": 1308,
+   "tc_in": "00:00:46:00",
+   "tc_out": "00:00:54:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Landscape 2 (dissolve): open sea to the horizon.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-10",
+   "seq": 10,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "kind": "missing",
+   "frames": 48,
+   "rec_in": 1308,
+   "rec_out": 1356,
+   "tc_in": "00:00:54:12",
+   "tc_out": "00:00:56:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Landscape 3: a forest reaching a cliff edge. Simple caption TARA over this unlocated land only, synced to the spoken word. No borders, no map, no other named place in view.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-11",
+   "seq": 11,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "kind": "missing",
+   "frames": 48,
+   "rec_in": 1356,
+   "rec_out": 1404,
+   "tc_in": "00:00:56:12",
+   "tc_out": "00:00:58:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Landscape 4: distant fortified walls. Caption SCRAPPER over this view only, synced to the spoken word. No other named place in view.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-12",
+   "seq": 12,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "kind": "missing",
+   "frames": 48,
+   "rec_in": 1404,
+   "rec_out": 1452,
+   "tc_in": "00:00:58:12",
+   "tc_out": "00:01:00:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Landscape 5: a misted island seen from open water, alone in frame. Caption VERDOR over this view only, synced to the spoken word. A separate dissolve from the walls, so nothing implies Verdor is near or visible from Scrapper.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-13",
+   "seq": 13,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "kind": "missing",
+   "frames": 60,
+   "rec_in": 1452,
+   "rec_out": 1512,
+   "tc_in": "00:01:00:12",
+   "tc_out": "00:01:03:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Landscape 6: calm open water under a high bright sky, no coastline. Caption CITADEL SEA over this water only, synced to the spoken words.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-14",
+   "seq": 14,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "kind": "missing",
+   "frames": 48,
+   "rec_in": 1512,
+   "rec_out": 1560,
+   "tc_in": "00:01:03:00",
+   "tc_out": "00:01:05:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Landscape 7: a different stretch of water (long swell under low cloud, different light), no coastline. Caption PROXY SEA over this water only, synced to the spoken words. Separate dissolve from P-13, so the two seas never share one view and no boundary is implied.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-15",
+   "seq": 15,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "kind": "missing",
+   "frames": 276,
+   "rec_in": 1560,
+   "rec_out": 1836,
+   "tc_in": "00:01:05:00",
+   "tc_out": "00:01:16:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The last landscape breathes: unreached islands on the horizon, no caption. The narration ends (\"Seven kingdoms, and undiscovered islands...\"), then the music enters with a low sustained string tone and a restrained rising theme (no battle montage).",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-16",
+   "seq": 16,
+   "scene": "PROLOGUE",
+   "set": "PROLOGUE_VISTAS",
+   "kind": "missing",
+   "frames": 264,
+   "rec_in": 1836,
+   "rec_out": 2100,
+   "tc_in": "00:01:16:12",
+   "tc_out": "00:01:27:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "A wing-shaped cloud drifts across a brightening sky.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "P-17",
+   "seq": 17,
+   "scene": "PROLOGUE",
+   "set": "VERDOR_GROUNDS",
+   "kind": "missing",
+   "frames": 180,
+   "rec_in": 2100,
+   "rec_out": 2280,
+   "tc_in": "00:01:27:12",
+   "tc_out": "00:01:35:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Match cut: the cloud shape becomes a dragon's immense shadow traveling across grass in the present day. Cut before the dragon is identified.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "T-01",
+   "seq": 18,
+   "scene": "TITLE",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 192,
+   "rec_in": 2280,
+   "rec_out": 2472,
+   "tc_in": "00:01:35:00",
+   "tc_out": "00:01:43:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
+   "dialogue": [],
+   "captions": [
+    {
+     "text": "DRAGON'S KINGDOM",
+     "style": "title",
+     "from_s": 1,
+     "to_s": 6.2,
+     "rec_from_s": 96,
+     "rec_to_s": 101.2
+    }
+   ],
+   "cost": {
+    "draft_s_per_frame": 3.97,
+    "k4_cpu_s_per_frame": 45.36,
+    "k4_gpu_s_per_frame": 45.36,
+    "draft_minutes": 12.7,
+    "k4_cpu_hours": 2.42,
+    "k4_gpu_hours": 2.42,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.13
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.13 for the shot's content"
+   },
+   "staging": "NONE: no people. Near dark: only the key lamp; the title over the dark shell.",
+   "deviation": null,
+   "action": "Main title DRAGON'S KINGDOM appears against the dark surface of a closed egg. A quiet scratch from within. Music gives way to the scratch.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-01",
+   "seq": 19,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 132,
+   "rec_in": 2472,
+   "rec_out": 2604,
+   "tc_in": "00:01:43:00",
+   "tc_out": "00:01:48:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 11,
+    "start_frame": 264
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.68,
+    "k4_cpu_s_per_frame": 42,
+    "k4_gpu_s_per_frame": 42,
+    "draft_minutes": 8.09,
+    "k4_cpu_hours": 1.54,
+    "k4_gpu_hours": 1.54,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.05
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.05 for the shot's content"
+   },
+   "staging": "NONE: macro on the shell; the crack runs on from the old fracture and stops.",
+   "deviation": null,
+   "action": "Close on the egg. A fine crack extends from an existing fracture, then stops. Something inside scrapes again, smaller than the prologue sound.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-02",
+   "seq": 20,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 144,
+   "rec_in": 2604,
+   "rec_out": 2748,
+   "tc_in": "00:01:48:12",
+   "tc_out": "00:01:54:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 19,
+    "start_frame": 456
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.66,
+    "k4_cpu_s_per_frame": 53.22,
+    "k4_gpu_s_per_frame": 53.22,
+    "draft_minutes": 11.18,
+    "k4_cpu_hours": 2.13,
+    "k4_gpu_hours": 2.13,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1.1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.33
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.33 for the shot's content"
+   },
+   "staging": "WIDE: the attendant small, turned to the nest.",
+   "deviation": null,
+   "action": "The chamber: warm, practical, maintained. Prepared bedding, bowls of water, folded cloth. No magical apparatus. Incubation method kept generic.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X1-01",
+   "seq": 21,
+   "scene": "1A",
+   "set": "PALACE_CORRIDOR",
+   "kind": "missing",
+   "frames": 108,
+   "rec_in": 2748,
+   "rec_out": 2856,
+   "tc_in": "00:01:54:12",
+   "tc_out": "00:01:59:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "A YOUNG ATTENDANT, sent by the attendant at the nest, hurries out of the birthing chamber and along a palace corridor in the early light, trying not to run and failing.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "R1-01",
+   "seq": 22,
+   "scene": "1A",
+   "set": "ALEXANDRIA_ROOM",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 2856,
+   "rec_out": 2952,
+   "tc_in": "00:01:59:00",
+   "tc_out": "00:02:03:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Close on Alexandria's window sill in the grey first light: a jug of wine, nearly empty, and one cup with a dark ring dried inside it. Nobody else is in the room.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X1-02",
+   "seq": 23,
+   "scene": "1A",
+   "set": "ALEXANDRIA_ROOM",
+   "kind": "missing",
+   "frames": 144,
+   "rec_in": 2952,
+   "rec_out": 3096,
+   "tc_in": "00:02:03:00",
+   "tc_out": "00:02:09:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Alexandria stands at a window, already dressed in her restrained formal gown. Behind her, the bed has not been slept in. Through the window, the first light lies on the sea.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X1-03",
+   "seq": 24,
+   "scene": "1A",
+   "set": "ALEXANDRIA_ROOM",
+   "kind": "missing",
+   "frames": 48,
+   "rec_in": 3096,
+   "rec_out": 3144,
+   "tc_in": "00:02:09:00",
+   "tc_out": "00:02:11:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "She turns before the young attendant has finished knocking.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X1-04",
+   "seq": 25,
+   "scene": "1A",
+   "set": "ALEXANDRIA_ROOM",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 3144,
+   "rec_out": 3240,
+   "tc_in": "00:02:11:00",
+   "tc_out": "00:02:15:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The message at the door.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X1-05",
+   "seq": 26,
+   "scene": "1A",
+   "set": "PALACE_CORRIDOR",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 3240,
+   "rec_out": 3336,
+   "tc_in": "00:02:15:00",
+   "tc_out": "00:02:19:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "She walks the corridor quickly, the young attendant falling behind.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X1-06",
+   "seq": 27,
+   "scene": "1A",
+   "set": "PALACE_CORRIDOR",
+   "kind": "missing",
+   "frames": 84,
+   "rec_in": 3336,
+   "rec_out": 3420,
+   "tc_in": "00:02:19:00",
+   "tc_out": "00:02:22:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "At the chamber door she stops for a moment, lets her face settle into composure, and goes in.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-03",
+   "seq": 28,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 120,
+   "rec_in": 3420,
+   "rec_out": 3540,
+   "tc_in": "00:02:22:12",
+   "tc_out": "00:02:27:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 27,
+    "start_frame": 648
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.69,
+    "k4_cpu_s_per_frame": 53.64,
+    "k4_gpu_s_per_frame": 53.64,
+    "draft_minutes": 9.39,
+    "k4_cpu_hours": 1.79,
+    "k4_gpu_hours": 1.79,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.34 for the shot's content"
+   },
+   "staging": "BACK + SIL: the attendant from behind (soft), Alexandria a dark shape in the bright doorway; the raised hand reads as a shape.",
+   "deviation": null,
+   "action": "The attendant looks to the opening door. Queen Alexandria enters without announcement. The attendant starts to bow; Alexandria stops it with a small raised hand because the egg has moved.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-04",
+   "seq": 29,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 204,
+   "rec_in": 3540,
+   "rec_out": 3744,
+   "tc_in": "00:02:27:12",
+   "tc_out": "00:02:36:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 34,
+    "start_frame": 816
+   },
+   "dialogue": [
+    {
+     "id": "L006",
+     "part": 0,
+     "ref": "L006",
+     "role": "ATTENDANT",
+     "file": "vo/L006.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.57,
+     "at_s": 0.57,
+     "speech_in_s": 0.6,
+     "speech_out_s": 2.11,
+     "words": [
+      {
+       "w": "it",
+       "start_s": 0.57,
+       "end_s": 0.75
+      },
+      {
+       "w": "started",
+       "start_s": 0.75,
+       "end_s": 1.19
+      },
+      {
+       "w": "a",
+       "start_s": 1.19,
+       "end_s": 1.23
+      },
+      {
+       "w": "moment",
+       "start_s": 1.23,
+       "end_s": 1.56
+      },
+      {
+       "w": "ago",
+       "start_s": 1.56,
+       "end_s": 2.06
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 148.07
+    },
+    {
+     "id": "L007",
+     "part": 0,
+     "ref": "L007",
+     "role": "ALEXANDRIA",
+     "file": "vo/L007.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.295,
+     "at_s": 2.48,
+     "speech_in_s": 2.51,
+     "speech_out_s": 3.745,
+     "words": [
+      {
+       "w": "has",
+       "start_s": 2.48,
+       "end_s": 2.7
+      },
+      {
+       "w": "anyone",
+       "start_s": 2.7,
+       "end_s": 3.08
+      },
+      {
+       "w": "touched",
+       "start_s": 3.08,
+       "end_s": 3.44
+      },
+      {
+       "w": "it",
+       "start_s": 3.44,
+       "end_s": 3.76
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 149.98
+    },
+    {
+     "id": "L008",
+     "part": 0,
+     "ref": "L008",
+     "role": "ATTENDANT",
+     "file": "vo/L008.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.5,
+     "at_s": 4.065,
+     "speech_in_s": 4.095,
+     "speech_out_s": 5.535,
+     "words": [
+      {
+       "w": "no",
+       "start_s": 4.065,
+       "end_s": 4.565
+      },
+      {
+       "w": "your",
+       "start_s": 4.565,
+       "end_s": 4.695
+      },
+      {
+       "w": "majesty",
+       "start_s": 4.695,
+       "end_s": 5.485
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 151.565
+    },
+    {
+     "id": "L009",
+     "part": 0,
+     "ref": "L009",
+     "role": "ALEXANDRIA",
+     "file": "vo/L009.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.16,
+     "at_s": 5.905,
+     "speech_in_s": 5.935,
+     "speech_out_s": 7.035,
+     "words": [
+      {
+       "w": "then",
+       "start_s": 5.905,
+       "end_s": 6.155
+      },
+      {
+       "w": "let",
+       "start_s": 6.155,
+       "end_s": 6.305
+      },
+      {
+       "w": "it",
+       "start_s": 6.305,
+       "end_s": 6.385
+      },
+      {
+       "w": "finish",
+       "start_s": 6.385,
+       "end_s": 6.965
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 153.405
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5.07,
+    "k4_cpu_s_per_frame": 57.93,
+    "k4_gpu_s_per_frame": 57.93,
+    "draft_minutes": 17.24,
+    "k4_cpu_hours": 3.28,
+    "k4_gpu_hours": 3.28,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1.03,
+     "move": 1.08,
+     "total": 1.45
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.45 for the shot's content"
+   },
+   "staging": "DOF: the egg sharp in the foreground; both women soft behind it at either side (mouths unreadable).",
+   "deviation": null,
+   "action": "Quiet exchange across the nest.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-05",
+   "seq": 30,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 84,
+   "rec_in": 3744,
+   "rec_out": 3828,
+   "tc_in": "00:02:36:00",
+   "tc_out": "00:02:39:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 45,
+    "start_frame": 1080
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.24,
+    "k4_cpu_s_per_frame": 48.45,
+    "k4_gpu_s_per_frame": 48.45,
+    "draft_minutes": 5.94,
+    "k4_cpu_hours": 1.13,
+    "k4_gpu_hours": 1.13,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.21
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.21 for the shot's content"
+   },
+   "staging": "BACK: from behind Alexandria; she sits on the stool beside the nest and does not reach in.",
+   "deviation": null,
+   "action": "Alexandria takes a place beside the prepared nest. She does not reach in.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-06",
+   "seq": 31,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 3828,
+   "rec_out": 3900,
+   "tc_in": "00:02:39:12",
+   "tc_out": "00:02:42:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 51,
+    "start_frame": 1224
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.68,
+    "k4_cpu_s_per_frame": 42,
+    "k4_gpu_s_per_frame": 42,
+    "draft_minutes": 4.41,
+    "k4_cpu_hours": 0.84,
+    "k4_gpu_hours": 0.84,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.05
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.05 for the shot's content"
+   },
+   "staging": "NONE: macro; another piece of shell shifts.",
+   "deviation": null,
+   "action": "Another piece of shell shifts. The hatchling makes a faint effortful sound.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-07",
+   "seq": 32,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 3900,
+   "rec_out": 3996,
+   "tc_in": "00:02:42:12",
+   "tc_out": "00:02:46:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 56,
+    "start_frame": 1344
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.68,
+    "k4_cpu_s_per_frame": 42,
+    "k4_gpu_s_per_frame": 42,
+    "draft_minutes": 5.88,
+    "k4_cpu_hours": 1.12,
+    "k4_gpu_hours": 1.12,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.05
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.05 for the shot's content"
+   },
+   "staging": "NONE: macro; the shell flexes outward under pressure (birth stage 1).",
+   "deviation": null,
+   "action": "Birth stage 1: pressure beneath the shell; the surface flexes outward.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-08",
+   "seq": 33,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 84,
+   "rec_in": 3996,
+   "rec_out": 4080,
+   "tc_in": "00:02:46:12",
+   "tc_out": "00:02:50:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 62,
+    "start_frame": 1488
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.68,
+    "k4_cpu_s_per_frame": 42,
+    "k4_gpu_s_per_frame": 42,
+    "draft_minutes": 5.15,
+    "k4_cpu_hours": 0.98,
+    "k4_gpu_hours": 0.98,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.05
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.05 for the shot's content"
+   },
+   "staging": "NONE: macro, a different angle; a fragment lifts away (birth stage 2).",
+   "deviation": null,
+   "action": "Birth stage 2: a fragment lifts away.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-09",
+   "seq": 34,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 108,
+   "rec_in": 4080,
+   "rec_out": 4188,
+   "tc_in": "00:02:50:00",
+   "tc_out": "00:02:54:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 68,
+    "start_frame": 1632
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.45,
+    "k4_cpu_s_per_frame": 50.8,
+    "k4_gpu_s_per_frame": 50.8,
+    "draft_minutes": 8,
+    "k4_cpu_hours": 1.52,
+    "k4_gpu_hours": 1.52,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.27
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.27 for the shot's content"
+   },
+   "staging": "NONE: close; a small gold snout presses into the opening (birth stage 3); gold catches the lamplight, no glow.",
+   "deviation": null,
+   "action": "Birth stage 3: a small gold shape presses into the opening. Gold catches lamplight; it does not emit light.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-10",
+   "seq": 35,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 108,
+   "rec_in": 4188,
+   "rec_out": 4296,
+   "tc_in": "00:02:54:12",
+   "tc_out": "00:02:59:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 75,
+    "start_frame": 1800
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.12,
+    "k4_cpu_s_per_frame": 47.04,
+    "k4_gpu_s_per_frame": 47.04,
+    "draft_minutes": 7.41,
+    "k4_cpu_hours": 1.41,
+    "k4_gpu_hours": 1.41,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.18
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.18 for the shot's content"
+   },
+   "staging": "NONE: close; the shape stills (birth stage 4); one tiny breath moves the shell edge.",
+   "deviation": null,
+   "action": "Birth stage 4: a pause to breathe. The shape stills; a faint breath moves the shell edge.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-11",
+   "seq": 36,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 60,
+   "rec_in": 4296,
+   "rec_out": 4356,
+   "tc_in": "00:02:59:00",
+   "tc_out": "00:03:01:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 82,
+    "start_frame": 1968
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.77,
+    "k4_cpu_s_per_frame": 54.56,
+    "k4_gpu_s_per_frame": 54.56,
+    "draft_minutes": 4.77,
+    "k4_cpu_hours": 0.91,
+    "k4_gpu_hours": 0.91,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.36
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.36 for the shot's content"
+   },
+   "staging": "SIL + HANDS: the two attendants as dark shapes against the cool shaft; the clasped hands carry it.",
+   "deviation": null,
+   "action": "The attendants watch carefully, not celebrating.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-12",
+   "seq": 37,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 216,
+   "rec_in": 4356,
+   "rec_out": 4572,
+   "tc_in": "00:03:01:12",
+   "tc_out": "00:03:10:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 87,
+    "start_frame": 2088
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.45,
+    "k4_cpu_s_per_frame": 50.8,
+    "k4_gpu_s_per_frame": 50.8,
+    "draft_minutes": 16,
+    "k4_cpu_hours": 3.05,
+    "k4_gpu_hours": 3.05,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.27
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.27 for the shot's content"
+   },
+   "staging": "NONE: the hatchling emerges awkwardly - wet, unsteady, exhausted; no glow. (Kinematic: pose blends along a path over the rim; no soft-body shell.)",
+   "deviation": null,
+   "action": "The hatchling emerges awkwardly: wet, unsteady, exhausted. Gold along its scales; fragile movement. No glow.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-13",
+   "seq": 38,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 60,
+   "rec_in": 4572,
+   "rec_out": 4632,
+   "tc_in": "00:03:10:12",
+   "tc_out": "00:03:13:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 98,
+    "start_frame": 2352
+   },
+   "dialogue": [
+    {
+     "id": "L010",
+     "part": 0,
+     "ref": "L010",
+     "role": "ATTENDANT",
+     "file": "vo/L010.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.03,
+     "at_s": 0.57,
+     "speech_in_s": 0.6,
+     "speech_out_s": 1.57,
+     "words": [
+      {
+       "w": "look",
+       "start_s": 0.57,
+       "end_s": 0.88
+      },
+      {
+       "w": "at",
+       "start_s": 0.88,
+       "end_s": 1.15
+      },
+      {
+       "w": "it",
+       "start_s": 1.15,
+       "end_s": 1.51
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 191.07
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.56,
+    "k4_cpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": 52.08,
+    "draft_minutes": 4.56,
+    "k4_cpu_hours": 0.87,
+    "k4_gpu_hours": 0.87,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.3
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
+   },
+   "staging": "OTS + BACK: over the attendant's left shoulder; she speaks turned away from camera.",
+   "deviation": null,
+   "action": "The attendant, quietly.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-14",
+   "seq": 39,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 4632,
+   "rec_out": 4704,
+   "tc_in": "00:03:13:00",
+   "tc_out": "00:03:16:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 103,
+    "start_frame": 2472
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.56,
+    "k4_cpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": 52.08,
+    "draft_minutes": 5.47,
+    "k4_cpu_hours": 1.04,
+    "k4_gpu_hours": 1.04,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.3
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
+   },
+   "staging": "OTS + DOF: over Alexandria's right shoulder, veil and cheek soft; the softening carried by posture and breath (face close-up waits for approved faces).",
+   "deviation": null,
+   "action": "Alexandria lowers herself closer. Her expression softens.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-15",
+   "seq": 40,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 132,
+   "rec_in": 4704,
+   "rec_out": 4836,
+   "tc_in": "00:03:16:00",
+   "tc_out": "00:03:21:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 108,
+    "start_frame": 2592
+   },
+   "dialogue": [
+    {
+     "id": "L011",
+     "part": 0,
+     "ref": "L011",
+     "role": "ALEXANDRIA",
+     "file": "vo/L011.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.465,
+     "at_s": 0.865,
+     "speech_in_s": 0.9,
+     "speech_out_s": 2.305,
+     "words": [
+      {
+       "w": "my",
+       "start_s": 0.865,
+       "end_s": 1.095
+      },
+      {
+       "w": "pretty",
+       "start_s": 1.095,
+       "end_s": 1.475
+      },
+      {
+       "w": "little",
+       "start_s": 1.475,
+       "end_s": 1.715
+      },
+      {
+       "w": "weapon",
+       "start_s": 1.715,
+       "end_s": 2.235
+      }
+     ],
+     "gain_db": -11,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 196.865
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.56,
+    "k4_cpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": 52.08,
+    "draft_minutes": 10.03,
+    "k4_cpu_hours": 1.91,
+    "k4_gpu_hours": 1.91,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.3
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
+   },
+   "staging": "BACK + SIL: her lost profile from behind-right, rim-lit by the shaft; the cheek line hides the lips. Hold after the line.",
+   "deviation": null,
+   "action": "She whispers the ORIGINAL line, for the hatchling not the room. HOLD on her face for a beat after the line.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-16",
+   "seq": 41,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 48,
+   "rec_in": 4836,
+   "rec_out": 4884,
+   "tc_in": "00:03:21:12",
+   "tc_out": "00:03:23:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 116,
+    "start_frame": 2784
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.12,
+    "k4_cpu_s_per_frame": 47.04,
+    "k4_gpu_s_per_frame": 47.04,
+    "draft_minutes": 3.29,
+    "k4_cpu_hours": 0.63,
+    "k4_gpu_hours": 0.63,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.18
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.18 for the shot's content"
+   },
+   "staging": "DOF: focus on the lamp in the foreground; she is a soft shape behind its bokeh.",
+   "deviation": null,
+   "action": "The attendant hears but does not respond.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-17",
+   "seq": 42,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 156,
+   "rec_in": 4884,
+   "rec_out": 5040,
+   "tc_in": "00:03:23:12",
+   "tc_out": "00:03:30:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 120,
+    "start_frame": 2880
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.56,
+    "k4_cpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": 52.08,
+    "draft_minutes": 11.85,
+    "k4_cpu_hours": 2.26,
+    "k4_gpu_hours": 2.26,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.3
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
+   },
+   "staging": "HANDS: style frame F4's framing - the hatchling slips against the broken shell; Alexandria's hands come in from screen right with a folded cloth; her face out of frame.",
+   "deviation": null,
+   "action": "The hatchling tries to lift itself and slips against the broken shell. Alexandria supports it with a folded cloth. Practical tenderness.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-18",
+   "seq": 43,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 5040,
+   "rec_out": 5112,
+   "tc_in": "00:03:30:00",
+   "tc_out": "00:03:33:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 129,
+    "start_frame": 3096
+   },
+   "dialogue": [
+    {
+     "id": "L012",
+     "part": 0,
+     "ref": "L012",
+     "role": "ABBY",
+     "file": "vo/L012.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.765,
+     "at_s": 1.22,
+     "speech_in_s": 1.25,
+     "speech_out_s": 1.955,
+     "words": [
+      {
+       "w": "is",
+       "start_s": 1.22,
+       "end_s": 1.43
+      },
+      {
+       "w": "it",
+       "start_s": 1.43,
+       "end_s": 1.53
+      },
+      {
+       "w": "out",
+       "start_s": 1.53,
+       "end_s": 1.93
+      }
+     ],
+     "gain_db": 1,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 211.22
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.83,
+    "k4_cpu_s_per_frame": 55.2,
+    "k4_gpu_s_per_frame": 55.2,
+    "draft_minutes": 5.8,
+    "k4_cpu_hours": 1.1,
+    "k4_gpu_hours": 1.1,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1.06,
+     "move": 1,
+     "total": 1.38
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.38 for the shot's content"
+   },
+   "staging": "SIL + WIDE: from the nest toward the door; Abby and Remi two backlit shapes in the bright doorway (reverse angle, declared).",
+   "deviation": null,
+   "action": "At the doorway Abby leans in; Remi stands just behind her. The stillness is interrupted, not made comic.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-19",
+   "seq": 44,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 36,
+   "rec_in": 5112,
+   "rec_out": 5148,
+   "tc_in": "00:03:33:00",
+   "tc_out": "00:03:34:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 134,
+    "start_frame": 3216
+   },
+   "dialogue": [
+    {
+     "id": "L013",
+     "part": 0,
+     "ref": "L013",
+     "role": "ALEXANDRIA",
+     "file": "vo/L013.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.93,
+     "at_s": 0.27,
+     "speech_in_s": 0.3,
+     "speech_out_s": 1.17,
+     "words": [
+      {
+       "w": "come",
+       "start_s": 0.27,
+       "end_s": 0.49
+      },
+      {
+       "w": "slowly",
+       "start_s": 0.49,
+       "end_s": 1.12
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 213.27
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.56,
+    "k4_cpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": 52.08,
+    "draft_minutes": 2.73,
+    "k4_cpu_hours": 0.52,
+    "k4_gpu_hours": 0.52,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.3
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
+   },
+   "staging": "BACK: from behind Alexandria; her back shows she does not look away.",
+   "deviation": null,
+   "action": "Alexandria, without looking away from the hatchling.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-20",
+   "seq": 45,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 5148,
+   "rec_out": 5244,
+   "tc_in": "00:03:34:12",
+   "tc_out": "00:03:38:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 138,
+    "start_frame": 3312
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5.77,
+    "k4_cpu_s_per_frame": 65.89,
+    "k4_gpu_s_per_frame": 65.89,
+    "draft_minutes": 9.22,
+    "k4_cpu_hours": 1.76,
+    "k4_gpu_hours": 1.76,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1.06,
+     "move": 1,
+     "total": 1.65
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.65 for the shot's content"
+   },
+   "staging": "WIDE: high in the corner; everyone small.",
+   "deviation": null,
+   "action": "Abby takes two quick steps, remembers the instruction, and slows. Remi follows, looking first at the shell, then at the gold hatchling.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-21",
+   "seq": 46,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 156,
+   "rec_in": 5244,
+   "rec_out": 5400,
+   "tc_in": "00:03:38:12",
+   "tc_out": "00:03:45:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 144,
+    "start_frame": 3456
+   },
+   "dialogue": [
+    {
+     "id": "L014",
+     "part": 0,
+     "ref": "L014",
+     "role": "ABBY",
+     "file": "vo/L014.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.785,
+     "at_s": 0.77,
+     "speech_in_s": 0.8,
+     "speech_out_s": 1.525,
+     "words": [
+      {
+       "w": "it's",
+       "start_s": 0.77,
+       "end_s": 0.99
+      },
+      {
+       "w": "gold",
+       "start_s": 0.99,
+       "end_s": 1.47
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 219.27
+    },
+    {
+     "id": "L015",
+     "part": 0,
+     "ref": "L015",
+     "role": "REMI",
+     "file": "vo/L015.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.095,
+     "at_s": 1.795,
+     "speech_in_s": 1.825,
+     "speech_out_s": 2.86,
+     "words": [
+      {
+       "w": "i",
+       "start_s": 1.795,
+       "end_s": 1.955
+      },
+      {
+       "w": "can",
+       "start_s": 1.955,
+       "end_s": 2.165
+      },
+      {
+       "w": "see",
+       "start_s": 2.165,
+       "end_s": 2.465
+      },
+      {
+       "w": "that",
+       "start_s": 2.465,
+       "end_s": 2.815
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 220.295
+    },
+    {
+     "id": "L016",
+     "part": 0,
+     "ref": "L016",
+     "role": "ABBY",
+     "file": "vo/L016.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.01,
+     "at_s": 3.13,
+     "speech_in_s": 3.16,
+     "speech_out_s": 4.11,
+     "words": [
+      {
+       "w": "i",
+       "start_s": 3.13,
+       "end_s": 3.28
+      },
+      {
+       "w": "mean",
+       "start_s": 3.28,
+       "end_s": 3.49
+      },
+      {
+       "w": "all",
+       "start_s": 3.49,
+       "end_s": 3.73
+      },
+      {
+       "w": "of",
+       "start_s": 3.73,
+       "end_s": 3.82
+      },
+      {
+       "w": "it",
+       "start_s": 3.82,
+       "end_s": 4.08
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 221.63
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5.44,
+    "k4_cpu_s_per_frame": 62.16,
+    "k4_gpu_s_per_frame": 62.16,
+    "draft_minutes": 14.14,
+    "k4_cpu_hours": 2.69,
+    "k4_gpu_hours": 2.69,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.55
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.55 for the shot's content"
+   },
+   "staging": "BACK: two backs over the nest; Alexandria soft beyond.",
+   "deviation": null,
+   "action": "Siblings over the nest.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-22",
+   "seq": 47,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 120,
+   "rec_in": 5400,
+   "rec_out": 5520,
+   "tc_in": "00:03:45:00",
+   "tc_out": "00:03:50:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 153,
+    "start_frame": 3672
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.56,
+    "k4_cpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": 52.08,
+    "draft_minutes": 9.11,
+    "k4_cpu_hours": 1.74,
+    "k4_gpu_hours": 1.74,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.3
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
+   },
+   "staging": "DOF + HANDS: her face far out of focus behind the sharp hatchling; the almost-touch is her hand.",
+   "deviation": null,
+   "action": "Abby crouches to its level. Its head shifts toward her voice. She almost reaches out, then looks to Alexandria.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-23",
+   "seq": 48,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 60,
+   "rec_in": 5520,
+   "rec_out": 5580,
+   "tc_in": "00:03:50:00",
+   "tc_out": "00:03:52:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 160,
+    "start_frame": 3840
+   },
+   "dialogue": [
+    {
+     "id": "L017",
+     "part": 0,
+     "ref": "L017",
+     "role": "ALEXANDRIA",
+     "file": "vo/L017.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.825,
+     "at_s": 0.375,
+     "speech_in_s": 0.4,
+     "speech_out_s": 2.17,
+     "words": [
+      {
+       "w": "wait",
+       "start_s": 0.375,
+       "end_s": 0.945
+      },
+      {
+       "w": "let",
+       "start_s": 1.305,
+       "end_s": 1.445
+      },
+      {
+       "w": "it",
+       "start_s": 1.445,
+       "end_s": 1.535
+      },
+      {
+       "w": "settle",
+       "start_s": 1.535,
+       "end_s": 1.995
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 230.375
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5,
+    "k4_cpu_s_per_frame": 57.12,
+    "k4_gpu_s_per_frame": 57.12,
+    "draft_minutes": 5,
+    "k4_cpu_hours": 0.95,
+    "k4_gpu_hours": 0.95,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.43
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.43 for the shot's content"
+   },
+   "staging": "OTS + DOF + SIL: over Abby's crouched shoulder (soft) to Alexandria, soft and backlit; focus on the hatchling between them.",
+   "deviation": null,
+   "action": "Alexandria, gently.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-24",
+   "seq": 49,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 144,
+   "rec_in": 5580,
+   "rec_out": 5724,
+   "tc_in": "00:03:52:12",
+   "tc_out": "00:03:58:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 165,
+    "start_frame": 3960
+   },
+   "dialogue": [
+    {
+     "id": "L018",
+     "part": 0,
+     "ref": "L018",
+     "role": "REMI",
+     "file": "vo/L018.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.715,
+     "at_s": 0.57,
+     "speech_in_s": 0.6,
+     "speech_out_s": 2.255,
+     "words": [
+      {
+       "w": "how",
+       "start_s": 0.57,
+       "end_s": 0.76
+      },
+      {
+       "w": "long",
+       "start_s": 0.76,
+       "end_s": 1.23
+      },
+      {
+       "w": "has",
+       "start_s": 1.23,
+       "end_s": 1.41
+      },
+      {
+       "w": "it",
+       "start_s": 1.41,
+       "end_s": 1.47
+      },
+      {
+       "w": "been",
+       "start_s": 1.47,
+       "end_s": 1.63
+      },
+      {
+       "w": "trying",
+       "start_s": 1.63,
+       "end_s": 2.27
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 233.07
+    },
+    {
+     "id": "L019",
+     "part": 0,
+     "ref": "L019",
+     "role": "ATTENDANT",
+     "file": "vo/L019.wav",
+     "file_in_s": 0,
+     "file_out_s": 2.69,
+     "at_s": 2.68,
+     "speech_in_s": 2.705,
+     "speech_out_s": 5.34,
+     "words": [
+      {
+       "w": "long",
+       "start_s": 2.68,
+       "end_s": 3.07
+      },
+      {
+       "w": "enough",
+       "start_s": 3.07,
+       "end_s": 3.47
+      },
+      {
+       "w": "it",
+       "start_s": 3.97,
+       "end_s": 4.1
+      },
+      {
+       "w": "needs",
+       "start_s": 4.1,
+       "end_s": 4.45
+      },
+      {
+       "w": "rest",
+       "start_s": 4.45,
+       "end_s": 4.78
+      },
+      {
+       "w": "now",
+       "start_s": 4.78,
+       "end_s": 5.31
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 235.18
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5.44,
+    "k4_cpu_s_per_frame": 62.16,
+    "k4_gpu_s_per_frame": 62.16,
+    "draft_minutes": 13.05,
+    "k4_cpu_hours": 2.49,
+    "k4_gpu_hours": 2.49,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.55
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.55 for the shot's content"
+   },
+   "staging": "BACK + DOF: Remi from behind (soft); the attendant across the nest, soft.",
+   "deviation": null,
+   "action": "Remi asks; the attendant answers.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-25",
+   "seq": 50,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 5724,
+   "rec_out": 5820,
+   "tc_in": "00:03:58:12",
+   "tc_out": "00:04:02:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 173,
+    "start_frame": 4152
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.56,
+    "k4_cpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": 52.08,
+    "draft_minutes": 7.29,
+    "k4_cpu_hours": 1.39,
+    "k4_gpu_hours": 1.39,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.3
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
+   },
+   "staging": "OTS: her fear is her stillness and the held breath; the face stays out of frame.",
+   "deviation": null,
+   "action": "The hatchling goes still. For one unsettling instant Abby is afraid it has stopped breathing.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-26",
+   "seq": 51,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 60,
+   "rec_in": 5820,
+   "rec_out": 5880,
+   "tc_in": "00:04:02:12",
+   "tc_out": "00:04:05:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 179,
+    "start_frame": 4296
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.12,
+    "k4_cpu_s_per_frame": 47.04,
+    "k4_gpu_s_per_frame": 47.04,
+    "draft_minutes": 4.12,
+    "k4_cpu_hours": 0.78,
+    "k4_gpu_hours": 0.78,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.18
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.18 for the shot's content"
+   },
+   "staging": "NONE: insert, the hatchling's side rises.",
+   "deviation": null,
+   "action": "Then its side rises.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-27",
+   "seq": 52,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 5880,
+   "rec_out": 5952,
+   "tc_in": "00:04:05:00",
+   "tc_out": "00:04:08:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 184,
+    "start_frame": 4416
+   },
+   "dialogue": [
+    {
+     "id": "L020",
+     "part": 0,
+     "ref": "L020",
+     "role": "ABBY",
+     "file": "vo/L020.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.53,
+     "at_s": 0.42,
+     "speech_in_s": 0.45,
+     "speech_out_s": 0.92,
+     "words": [
+      {
+       "w": "there",
+       "start_s": 0.42,
+       "end_s": 0.84
+      }
+     ],
+     "gain_db": -5.5,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 245.42
+    },
+    {
+     "id": "L021",
+     "part": 0,
+     "ref": "L021",
+     "role": "ALEXANDRIA",
+     "file": "vo/L021.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.645,
+     "at_s": 1.34,
+     "speech_in_s": 1.37,
+     "speech_out_s": 1.955,
+     "words": [
+      {
+       "w": "yes",
+       "start_s": 1.34,
+       "end_s": 1.86
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 246.34
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5,
+    "k4_cpu_s_per_frame": 57.12,
+    "k4_gpu_s_per_frame": 57.12,
+    "draft_minutes": 6,
+    "k4_cpu_hours": 1.14,
+    "k4_gpu_hours": 1.14,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.43
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.43 for the shot's content"
+   },
+   "staging": "BACK + DOF: from behind Abby (soft) to Alexandria (soft); the hatchling sharp between.",
+   "deviation": null,
+   "action": "Relief, quietly shared.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-28",
+   "seq": 53,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 144,
+   "rec_in": 5952,
+   "rec_out": 6096,
+   "tc_in": "00:04:08:00",
+   "tc_out": "00:04:14:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 189,
+    "start_frame": 4536
+   },
+   "dialogue": [
+    {
+     "id": "L022",
+     "part": 0,
+     "ref": "L022",
+     "role": "REMI",
+     "file": "vo/L022.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.185,
+     "at_s": 0.47,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.625,
+     "words": [
+      {
+       "w": "does",
+       "start_s": 0.47,
+       "end_s": 0.72
+      },
+      {
+       "w": "it",
+       "start_s": 0.72,
+       "end_s": 0.78
+      },
+      {
+       "w": "have",
+       "start_s": 0.78,
+       "end_s": 1.03
+      },
+      {
+       "w": "a",
+       "start_s": 1.03,
+       "end_s": 1.08
+      },
+      {
+       "w": "name",
+       "start_s": 1.08,
+       "end_s": 1.54
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 248.47
+    },
+    {
+     "id": "L023",
+     "part": 0,
+     "ref": "L023",
+     "role": "ALEXANDRIA",
+     "file": "vo/L023.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.795,
+     "at_s": 1.945,
+     "speech_in_s": 1.975,
+     "speech_out_s": 2.71,
+     "words": [
+      {
+       "w": "not",
+       "start_s": 1.945,
+       "end_s": 2.245
+      },
+      {
+       "w": "yet",
+       "start_s": 2.245,
+       "end_s": 2.725
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 249.945
+    },
+    {
+     "id": "L024",
+     "part": 0,
+     "ref": "L024",
+     "role": "ABBY",
+     "file": "vo/L024.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.155,
+     "at_s": 2.98,
+     "speech_in_s": 3.01,
+     "speech_out_s": 4.105,
+     "words": [
+      {
+       "w": "don't",
+       "start_s": 2.98,
+       "end_s": 3.18
+      },
+      {
+       "w": "let",
+       "start_s": 3.18,
+       "end_s": 3.35
+      },
+      {
+       "w": "him",
+       "start_s": 3.35,
+       "end_s": 3.48
+      },
+      {
+       "w": "choose",
+       "start_s": 3.48,
+       "end_s": 3.83
+      },
+      {
+       "w": "it",
+       "start_s": 3.83,
+       "end_s": 4.07
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 250.98
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5.44,
+    "k4_cpu_s_per_frame": 62.16,
+    "k4_gpu_s_per_frame": 62.16,
+    "draft_minutes": 13.05,
+    "k4_cpu_hours": 2.49,
+    "k4_gpu_hours": 2.49,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.55
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.55 for the shot's content"
+   },
+   "staging": "WIDE: high three-shot; faces a few pixels across.",
+   "deviation": null,
+   "action": "Remi asks about a name. Abby does not move her eyes from the hatchling.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-29",
+   "seq": 54,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 84,
+   "rec_in": 6096,
+   "rec_out": 6180,
+   "tc_in": "00:04:14:00",
+   "tc_out": "00:04:17:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 197,
+    "start_frame": 4728
+   },
+   "dialogue": [
+    {
+     "id": "L025",
+     "part": 0,
+     "ref": "L025",
+     "role": "REMI",
+     "file": "vo/L025.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.235,
+     "at_s": 1.37,
+     "speech_in_s": 1.4,
+     "speech_out_s": 2.575,
+     "words": [
+      {
+       "w": "i",
+       "start_s": 1.47,
+       "end_s": 1.61
+      },
+      {
+       "w": "hadn't",
+       "start_s": 1.61,
+       "end_s": 1.94
+      },
+      {
+       "w": "offered",
+       "start_s": 1.94,
+       "end_s": 2.59
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 255.37
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5,
+    "k4_cpu_s_per_frame": 57.12,
+    "k4_gpu_s_per_frame": 57.12,
+    "draft_minutes": 7,
+    "k4_cpu_hours": 1.33,
+    "k4_gpu_hours": 1.33,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.43
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.43 for the shot's content"
+   },
+   "staging": "BACK: the sideways look reads as a head turn from behind.",
+   "deviation": null,
+   "action": "Remi gives her a sideways look; she keeps watching the hatchling, satisfied she has annoyed him.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-30",
+   "seq": 55,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 144,
+   "rec_in": 6180,
+   "rec_out": 6324,
+   "tc_in": "00:04:17:12",
+   "tc_out": "00:04:23:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 203,
+    "start_frame": 4872
+   },
+   "dialogue": [
+    {
+     "id": "L026",
+     "part": 0,
+     "ref": "L026",
+     "role": "ALEXANDRIA",
+     "file": "vo/L026.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.76,
+     "at_s": 0.57,
+     "speech_in_s": 0.6,
+     "speech_out_s": 2.3,
+     "words": [
+      {
+       "w": "then",
+       "start_s": 0.57,
+       "end_s": 0.73
+      },
+      {
+       "w": "you",
+       "start_s": 0.73,
+       "end_s": 0.82
+      },
+      {
+       "w": "may",
+       "start_s": 0.82,
+       "end_s": 0.99
+      },
+      {
+       "w": "both",
+       "start_s": 0.99,
+       "end_s": 1.33
+      },
+      {
+       "w": "leave",
+       "start_s": 1.33,
+       "end_s": 1.56
+      },
+      {
+       "w": "it",
+       "start_s": 1.56,
+       "end_s": 1.62
+      },
+      {
+       "w": "in",
+       "start_s": 1.62,
+       "end_s": 1.76
+      },
+      {
+       "w": "peace",
+       "start_s": 1.76,
+       "end_s": 2.32
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 258.07
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5.44,
+    "k4_cpu_s_per_frame": 62.16,
+    "k4_gpu_s_per_frame": 62.16,
+    "draft_minutes": 13.05,
+    "k4_cpu_hours": 2.49,
+    "k4_gpu_hours": 2.49,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.55
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.55 for the shot's content"
+   },
+   "staging": "BACK + WIDE: from behind Alexandria (soft) across the nest to the children, small.",
+   "deviation": null,
+   "action": "Warm but final. Abby stands reluctantly; Remi turns toward the door.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-31",
+   "seq": 56,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 204,
+   "rec_in": 6324,
+   "rec_out": 6528,
+   "tc_in": "00:04:23:12",
+   "tc_out": "00:04:32:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 211,
+    "start_frame": 5064
+   },
+   "dialogue": [
+    {
+     "id": "L027",
+     "part": 0,
+     "ref": "L027",
+     "role": "REMI",
+     "file": "vo/L027.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.215,
+     "at_s": 0.47,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.655,
+     "words": [
+      {
+       "w": "we're",
+       "start_s": 0.47,
+       "end_s": 0.61
+      },
+      {
+       "w": "going",
+       "start_s": 0.61,
+       "end_s": 0.95
+      },
+      {
+       "w": "flying",
+       "start_s": 0.95,
+       "end_s": 1.67
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 263.97
+    },
+    {
+     "id": "L028",
+     "part": 0,
+     "ref": "L028",
+     "role": "ALEXANDRIA",
+     "file": "vo/L028.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.7,
+     "at_s": 1.975,
+     "speech_in_s": 2.005,
+     "speech_out_s": 2.645,
+     "words": [
+      {
+       "w": "together",
+       "start_s": 1.975,
+       "end_s": 2.545
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 265.475
+    },
+    {
+     "id": "L029",
+     "part": 0,
+     "ref": "L029",
+     "role": "ABBY",
+     "file": "vo/L029.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.56,
+     "at_s": 2.915,
+     "speech_in_s": 2.945,
+     "speech_out_s": 3.445,
+     "words": [
+      {
+       "w": "yes",
+       "start_s": 2.915,
+       "end_s": 3.425
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 266.415
+    },
+    {
+     "id": "L030",
+     "part": 0,
+     "ref": "L030",
+     "role": "ALEXANDRIA",
+     "file": "vo/L030.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.725,
+     "at_s": 3.765,
+     "speech_in_s": 3.795,
+     "speech_out_s": 5.46,
+     "words": [
+      {
+       "w": "stay",
+       "start_s": 3.765,
+       "end_s": 4.065
+      },
+      {
+       "w": "within",
+       "start_s": 4.065,
+       "end_s": 4.335
+      },
+      {
+       "w": "reach",
+       "start_s": 4.335,
+       "end_s": 4.685
+      },
+      {
+       "w": "of",
+       "start_s": 4.685,
+       "end_s": 4.765
+      },
+      {
+       "w": "the",
+       "start_s": 4.765,
+       "end_s": 4.905
+      },
+      {
+       "w": "island",
+       "start_s": 4.905,
+       "end_s": 5.475
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 267.265
+    },
+    {
+     "id": "L031",
+     "part": 0,
+     "ref": "L031",
+     "role": "REMI",
+     "file": "vo/L031.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.765,
+     "at_s": 5.78,
+     "speech_in_s": 5.81,
+     "speech_out_s": 6.515,
+     "words": [
+      {
+       "w": "we",
+       "start_s": 5.78,
+       "end_s": 6.01
+      },
+      {
+       "w": "will",
+       "start_s": 6.01,
+       "end_s": 6.53
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 269.28
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5.77,
+    "k4_cpu_s_per_frame": 65.89,
+    "k4_gpu_s_per_frame": 65.89,
+    "draft_minutes": 19.6,
+    "k4_cpu_hours": 3.73,
+    "k4_gpu_hours": 3.73,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1.06,
+     "move": 1,
+     "total": 1.65
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.65 for the shot's content"
+   },
+   "staging": "BACK + WIDE: walking away; the lines carry across the room.",
+   "deviation": null,
+   "action": "Exchange on the way out.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-32",
+   "seq": 57,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 6528,
+   "rec_out": 6624,
+   "tc_in": "00:04:32:00",
+   "tc_out": "00:04:36:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 222,
+    "start_frame": 5328
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.83,
+    "k4_cpu_s_per_frame": 55.2,
+    "k4_gpu_s_per_frame": 55.2,
+    "draft_minutes": 7.73,
+    "k4_cpu_hours": 1.47,
+    "k4_gpu_hours": 1.47,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1.06,
+     "move": 1,
+     "total": 1.38
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.38 for the shot's content"
+   },
+   "staging": "SIL: two silhouettes in the bright doorway; Abby looks back once (reverse angle toward the door, declared).",
+   "deviation": null,
+   "action": "Abby looks back once at the gold hatchling. Then the children leave.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-33",
+   "seq": 58,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 144,
+   "rec_in": 6624,
+   "rec_out": 6768,
+   "tc_in": "00:04:36:00",
+   "tc_out": "00:04:42:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 228,
+    "start_frame": 5472
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.56,
+    "k4_cpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": 52.08,
+    "draft_minutes": 10.94,
+    "k4_cpu_hours": 2.08,
+    "k4_gpu_hours": 2.08,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.3
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
+   },
+   "staging": "BACK + HANDS: her hand (sharp) rests near the newborn without restraining it.",
+   "deviation": null,
+   "action": "Alexandria stays. Her hand rests near the newborn without restraining it.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-01",
+   "seq": 59,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 6768,
+   "rec_out": 6840,
+   "tc_in": "00:04:42:00",
+   "tc_out": "00:04:45:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 236,
+    "start_frame": 5664
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5.15,
+    "k4_cpu_s_per_frame": 58.83,
+    "k4_gpu_s_per_frame": 58.83,
+    "draft_minutes": 6.18,
+    "k4_cpu_hours": 1.18,
+    "k4_gpu_hours": 1.18,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.47
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.47 for the shot's content"
+   },
+   "staging": "BACK + WIDE: Remi small in the doorway; Alexandria from behind, not looking up.",
+   "deviation": null,
+   "action": "Remi is the last one through the chamber door. Alexandria speaks without looking up from the hatchling.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-02",
+   "seq": 60,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 120,
+   "rec_in": 6840,
+   "rec_out": 6960,
+   "tc_in": "00:04:45:00",
+   "tc_out": "00:04:50:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 241,
+    "start_frame": 5784
+   },
+   "dialogue": [
+    {
+     "id": "X2-01",
+     "part": 0,
+     "ref": "X2-01",
+     "role": "ALEXANDRIA",
+     "file": "vo/X2-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.735,
+     "at_s": 0.47,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.175,
+     "words": [
+      {
+       "w": "remi",
+       "start_s": 0.47,
+       "end_s": 1.02
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 285.47
+    },
+    {
+     "id": "X2-02",
+     "part": 0,
+     "ref": "X2-02",
+     "role": "ALEXANDRIA",
+     "file": "vo/X2-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.575,
+     "at_s": 1.595,
+     "speech_in_s": 1.625,
+     "speech_out_s": 3.14,
+     "words": [
+      {
+       "w": "keep",
+       "start_s": 1.595,
+       "end_s": 1.865
+      },
+      {
+       "w": "her",
+       "start_s": 1.865,
+       "end_s": 1.985
+      },
+      {
+       "w": "where",
+       "start_s": 1.985,
+       "end_s": 2.135
+      },
+      {
+       "w": "you",
+       "start_s": 2.135,
+       "end_s": 2.275
+      },
+      {
+       "w": "can",
+       "start_s": 2.275,
+       "end_s": 2.455
+      },
+      {
+       "w": "see",
+       "start_s": 2.455,
+       "end_s": 2.745
+      },
+      {
+       "w": "her",
+       "start_s": 2.745,
+       "end_s": 3.025
+      }
+     ],
+     "gain_db": -3,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 286.595
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5,
+    "k4_cpu_s_per_frame": 57.12,
+    "k4_gpu_s_per_frame": 57.12,
+    "draft_minutes": 10,
+    "k4_cpu_hours": 1.9,
+    "k4_gpu_hours": 1.9,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.43
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.43 for the shot's content"
+   },
+   "staging": "DOF: Remi soft in the doorway (backlit), Alexandria in focus but turned to the nest.",
+   "deviation": null,
+   "action": "He stops in the doorway.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-03",
+   "seq": 61,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 6960,
+   "rec_out": 7056,
+   "tc_in": "00:04:50:00",
+   "tc_out": "00:04:54:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 248,
+    "start_frame": 5952
+   },
+   "dialogue": [
+    {
+     "id": "X2-03",
+     "part": 0,
+     "ref": "X2-03",
+     "role": "REMI",
+     "file": "vo/X2-03.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.185,
+     "at_s": 0.47,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.625,
+     "words": [
+      {
+       "w": "i",
+       "start_s": 0.47,
+       "end_s": 0.75
+      },
+      {
+       "w": "always",
+       "start_s": 0.75,
+       "end_s": 1.23
+      },
+      {
+       "w": "do",
+       "start_s": 1.23,
+       "end_s": 1.58
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 290.47
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5.15,
+    "k4_cpu_s_per_frame": 58.83,
+    "k4_gpu_s_per_frame": 58.83,
+    "draft_minutes": 8.24,
+    "k4_cpu_hours": 1.57,
+    "k4_gpu_hours": 1.57,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.47
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.47 for the shot's content"
+   },
+   "staging": "OTS + DOF: over Alexandria's shoulder (sharp); Remi soft and backlit in the doorway answers and goes.",
+   "deviation": null,
+   "action": "He answers and goes.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-04",
+   "seq": 62,
+   "scene": "1A",
+   "set": "PALACE_CORRIDOR",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 7056,
+   "rec_out": 7152,
+   "tc_in": "00:04:54:00",
+   "tc_out": "00:04:58:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Abby and Remi walk fast down a corridor toward the daylight at its end.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-05",
+   "seq": 63,
+   "scene": "1A",
+   "set": "PALACE_CORRIDOR",
+   "kind": "missing",
+   "frames": 60,
+   "rec_in": 7152,
+   "rec_out": 7212,
+   "tc_in": "00:04:58:00",
+   "tc_out": "00:05:00:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Two SERVANTS carrying linen flatten themselves against the wall to let them pass.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-06",
+   "seq": 64,
+   "scene": "1A",
+   "set": "PALACE_CORRIDOR",
+   "kind": "missing",
+   "frames": 252,
+   "rec_in": 7212,
+   "rec_out": 7464,
+   "tc_in": "00:05:00:12",
+   "tc_out": "00:05:11:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Teasing on the move.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-07",
+   "seq": 65,
+   "scene": "1A",
+   "set": "PALACE_CORRIDOR",
+   "kind": "missing",
+   "frames": 72,
+   "rec_in": 7464,
+   "rec_out": 7536,
+   "tc_in": "00:05:11:00",
+   "tc_out": "00:05:14:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "She shoves his arm without breaking stride. He lets her. They go out into the morning light.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-08",
+   "seq": 66,
+   "scene": "1A",
+   "set": "VERDOR_GROUNDS",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 7536,
+   "rec_out": 7656,
+   "tc_in": "00:05:14:00",
+   "tc_out": "00:05:19:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Leaf is waiting where he always waits. He sees Abby coming and starts toward her too fast, low and quick on his two legs with his folded wings swinging forward to take his weight, then remembers himself and crouches low, belly near the grass, his two legs folded under the middle of his body, the wrists of his folded wings on the ground in front of him, quivering with the effort of keeping still. Remi walks on past them toward the far end of the field, where something very large breathes out of frame (Charcoal stays out of frame until 1B).",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-09",
+   "seq": 67,
+   "scene": "1A",
+   "set": "VERDOR_GROUNDS",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 7656,
+   "rec_out": 7752,
+   "tc_in": "00:05:19:00",
+   "tc_out": "00:05:23:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Abby goes over Leaf the way she does every morning: each wing joint in turn, practised and unhurried.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-10",
+   "seq": 68,
+   "scene": "1A",
+   "set": "VERDOR_GROUNDS",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 7752,
+   "rec_out": 7872,
+   "tc_in": "00:05:23:00",
+   "tc_out": "00:05:28:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Each foot; the soft skin under his jaw where the straps sit. She finds an old scrape on one foot pad, presses beside it and watches his eye. He does not flinch.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-11",
+   "seq": 69,
+   "scene": "1A",
+   "set": "VERDOR_GROUNDS",
+   "kind": "missing",
+   "frames": 36,
+   "rec_in": 7872,
+   "rec_out": 7908,
+   "tc_in": "00:05:28:00",
+   "tc_out": "00:05:29:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "She is satisfied.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-12",
+   "seq": 70,
+   "scene": "1A",
+   "set": "VERDOR_GROUNDS",
+   "kind": "missing",
+   "frames": 84,
+   "rec_in": 7908,
+   "rec_out": 7992,
+   "tc_in": "00:05:29:12",
+   "tc_out": "00:05:33:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Leaf noses at the riding equipment over her shoulder, wanting to go. She pushes his head away. It comes straight back.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-13",
+   "seq": 71,
+   "scene": "1A",
+   "set": "VERDOR_GROUNDS",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 7992,
+   "rec_out": 8088,
+   "tc_in": "00:05:33:00",
+   "tc_out": "00:05:37:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "She leans her forehead against his for a moment, and he breathes out, warm, through his nose.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-14",
+   "seq": 72,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 84,
+   "rec_in": 8088,
+   "rec_out": 8172,
+   "tc_in": "00:05:37:00",
+   "tc_out": "00:05:40:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 254,
+    "start_frame": 6096
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5,
+    "k4_cpu_s_per_frame": 57.12,
+    "k4_gpu_s_per_frame": 57.12,
+    "draft_minutes": 7,
+    "k4_cpu_hours": 1.33,
+    "k4_gpu_hours": 1.33,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.43
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.43 for the shot's content"
+   },
+   "staging": "DOF: focus on the hatchling between them; both women soft.",
+   "deviation": null,
+   "action": "The chamber is quiet again. Alexandria looks up at the attendant, who has been awake as long as she has.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-15",
+   "seq": 73,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 156,
+   "rec_in": 8172,
+   "rec_out": 8328,
+   "tc_in": "00:05:40:12",
+   "tc_out": "00:05:47:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 260,
+    "start_frame": 6240
+   },
+   "dialogue": [
+    {
+     "id": "X2-09",
+     "part": 0,
+     "ref": "X2-09",
+     "role": "ALEXANDRIA",
+     "file": "vo/X2-09.wav",
+     "file_in_s": 0,
+     "file_out_s": 2.505,
+     "at_s": 0.57,
+     "speech_in_s": 0.6,
+     "speech_out_s": 3.105,
+     "words": [
+      {
+       "w": "you've",
+       "start_s": 0.57,
+       "end_s": 0.76
+      },
+      {
+       "w": "been",
+       "start_s": 0.76,
+       "end_s": 0.92
+      },
+      {
+       "w": "here",
+       "start_s": 0.92,
+       "end_s": 1.18
+      },
+      {
+       "w": "all",
+       "start_s": 1.18,
+       "end_s": 1.37
+      },
+      {
+       "w": "night",
+       "start_s": 1.37,
+       "end_s": 1.84
+      },
+      {
+       "w": "go",
+       "start_s": 2.16,
+       "end_s": 2.37
+      },
+      {
+       "w": "and",
+       "start_s": 2.37,
+       "end_s": 2.5
+      },
+      {
+       "w": "sleep",
+       "start_s": 2.5,
+       "end_s": 3.06
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 341.07
+    },
+    {
+     "id": "X2-10",
+     "part": 0,
+     "ref": "X2-10",
+     "role": "ATTENDANT",
+     "file": "vo/X2-10.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.165,
+     "at_s": 3.425,
+     "speech_in_s": 3.455,
+     "speech_out_s": 4.55,
+     "words": [
+      {
+       "w": "your",
+       "start_s": 3.425,
+       "end_s": 3.665
+      },
+      {
+       "w": "majesty",
+       "start_s": 3.665,
+       "end_s": 4.515
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 343.925
+    },
+    {
+     "id": "X2-11",
+     "part": 0,
+     "ref": "X2-11",
+     "role": "ALEXANDRIA",
+     "file": "vo/X2-11.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.745,
+     "at_s": 4.87,
+     "speech_in_s": 4.9,
+     "speech_out_s": 5.585,
+     "words": [
+      {
+       "w": "i'll",
+       "start_s": 4.87,
+       "end_s": 5.06
+      },
+      {
+       "w": "stay",
+       "start_s": 5.06,
+       "end_s": 5.6
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 345.37
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5,
+    "k4_cpu_s_per_frame": 57.12,
+    "k4_gpu_s_per_frame": 57.12,
+    "draft_minutes": 12.99,
+    "k4_cpu_hours": 2.48,
+    "k4_gpu_hours": 2.48,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.43
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.43 for the shot's content"
+   },
+   "staging": "DOF: the hatchling sharp between them; the women soft, mouths unreadable.",
+   "deviation": null,
+   "action": "She sends the attendant to sleep.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-16",
+   "seq": 74,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 84,
+   "rec_in": 8328,
+   "rec_out": 8412,
+   "tc_in": "00:05:47:00",
+   "tc_out": "00:05:50:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 269,
+    "start_frame": 6456
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5.77,
+    "k4_cpu_s_per_frame": 65.89,
+    "k4_gpu_s_per_frame": 65.89,
+    "draft_minutes": 8.07,
+    "k4_cpu_hours": 1.54,
+    "k4_gpu_hours": 1.54,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1.06,
+     "move": 1,
+     "total": 1.65
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.65 for the shot's content"
+   },
+   "staging": "WIDE: the attendant leaves; the young attendant comes in with fresh water and settles by the door.",
+   "deviation": null,
+   "action": "The attendant goes. In the doorway she passes the YOUNG ATTENDANT, coming in with fresh water to take the next watch, who settles quietly by the door.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X2-17",
+   "seq": 75,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 108,
+   "rec_in": 8412,
+   "rec_out": 8520,
+   "tc_in": "00:05:50:12",
+   "tc_out": "00:05:55:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 275,
+    "start_frame": 6600
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.77,
+    "k4_cpu_s_per_frame": 54.56,
+    "k4_gpu_s_per_frame": 54.56,
+    "draft_minutes": 8.59,
+    "k4_cpu_hours": 1.64,
+    "k4_gpu_hours": 1.64,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.36
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.36 for the shot's content"
+   },
+   "staging": "BACK + DOF: from behind-left of Alexandria; she watches it breathe.",
+   "deviation": null,
+   "action": "Alexandria does not speak to the hatchling. She watches it breathe.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1A-34",
+   "seq": 76,
+   "scene": "1A",
+   "set": "BIRTHING_CHAMBER",
+   "kind": "3d",
+   "frames": 60,
+   "rec_in": 8520,
+   "rec_out": 8580,
+   "tc_in": "00:05:55:00",
+   "tc_out": "00:05:57:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/birthing-chamber.js",
+    "start_s": 282,
+    "start_frame": 6768
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.12,
+    "k4_cpu_s_per_frame": 47.04,
+    "k4_gpu_s_per_frame": 47.04,
+    "draft_minutes": 4.12,
+    "k4_cpu_hours": 0.78,
+    "k4_gpu_hours": 0.78,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.18
+    },
+    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.18 for the shot's content"
+   },
+   "staging": "NONE: insert, the tiny rise of its side (the match-cut source).",
+   "deviation": null,
+   "action": "The tiny rise of its breathing (match-cut source).",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  }
+ ]
+}
