@@ -51,21 +51,37 @@ export class FxManager {
     effect.dispose?.();
   }
 
-  /** Re-read the lights once per drawn (sub-)frame. */
-  prepare(t) {
+  /** Re-read the lights once per drawn (sub-)frame (effects updated one by one share it). */
+  prepare() {
     const ctx = this.ctx;
-    const s = `${ctx.frame}|${ctx.subframe ? ctx.subframe.index + ':' + ctx.subframe.kind : ''}|${t}`;
+    const s = `${ctx.frame}|${ctx.subframe ? ctx.subframe.index + ':' + ctx.subframe.kind : ''}`;
     if (s === this.stamp) return;
     this.stamp = s;
     this.light.update(this.focus);
   }
 
+  /**
+   * True while the runtime poses the scene at shutter-open only to measure motion vectors (the
+   * cinematic stack's velocity blur). Particles draw their own shutter streaks and are skipped
+   * then; rigid FX (debris, cloth) still pose themselves so they get motion blur.
+   */
+  get shutterOpenPass() { return this.ctx.subframe?.kind === 'shutter-open'; }
+
   /** Update every effect for time t (call after posing the scene and placing the camera). */
   update(t) {
     this.t = t;
-    this.prepare(t);
+    const open = this.shutterOpenPass;
+    if (!open) this.prepare();
     const cam = this.ctx.camera;
-    for (const e of this.effects) e.update(t, cam);
+    for (const e of this.effects) if (!open || e.velocityPose) e.update(t, cam);
+  }
+
+  /** Update one effect alone at its own time (the director's cue runner). */
+  updateOne(e, t) {
+    const open = this.shutterOpenPass;
+    if (open && !e.velocityPose) return;
+    if (!open) this.prepare();
+    e.update(t, this.ctx.camera);
   }
 
   /** Objects that move and cast shadows (for ctx.shadows.dynamic). */
@@ -91,6 +107,7 @@ export class Effect {
     this.layers = [];
     this.casters = [];           // moving shadow casters (ctx.shadows.dynamic)
     this.enabled = true;
+    this.velocityPose = false;   // true: also update at the shutter-open pose (rigid, moving meshes)
   }
   get dynamic() { return this.casters; }
   layer(l) {

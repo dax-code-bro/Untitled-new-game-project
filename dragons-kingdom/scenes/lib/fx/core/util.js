@@ -167,11 +167,12 @@ export function coneDir(dir, spread, h1, h2, out = [0, 0, 0]) {
 /**
  * Resolve an "at" spec to a position at time t: [x,y,z] | Vector3 | (t) => Vector3|[x,y,z] |
  * { object, offset: [x,y,z] } (offset in the object's local frame; reads the object's current
- * world matrix - pose it for t first) | { point: name } (director point via api.point).
+ * world matrix - pose it for t first) | { point: name } or 'name' (director point via api.point).
  */
 export function resolveAt(at, t, THREE, api) {
   if (at == null) return [0, 0, 0];
   if (typeof at === 'function') return arr3(at(t));
+  if (typeof at === 'string') return api?.point ? arr3(api.point(at, t)) : [0, 0, 0];
   if (Array.isArray(at) || at.isVector3) return arr3(at);
   if (at.object) {
     const o = at.object;
