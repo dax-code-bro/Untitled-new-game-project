@@ -106,7 +106,9 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
       }
     }));
     if (creaturesLib) S_poses = creaturesLib.poses;
-    const fx = new FxRunner(ctx, { scene: ctx.scene, set: built, point: null });
+    // FX factories get the cast too (the FX library's gore / decals / fire from a mouth take
+    // params.actor: api.actor(name) -> { kind, c (creature) | ch (character), root })
+    const fx = new FxRunner(ctx, { scene: ctx.scene, set: built, point: null, actors, actor: (n) => actors[n] || null });
     await fx.prepare(Object.values(shotSpecs));
     S = { ctx, table, shotSpecs, built, actors, fx, fxLib, posed: new Set(), states: {}, last: null, warned: new Set(), frameCache: new Map() };
     fx.api.point = (n, t) => S.env.point(n, t);

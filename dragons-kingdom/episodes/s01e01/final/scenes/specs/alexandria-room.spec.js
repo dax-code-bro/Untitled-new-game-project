@@ -30,7 +30,8 @@ export default {
     'X1-03': {
       staging: 'BACK: from behind her left shoulder (three-quarter back); she turns toward the door (left background), her face away from the camera throughout.',
       cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.32, 0.22]], ['door', [-0.45, 0.02]]], from: 242, height: 1.6, dist: 1.9, at: 0.4 }, mm: 50, fstop: 2.4, focus: 'alexandria.head', bounds: BOUNDS },
-      cast: { alexandria: { at: WIN, face: 90, look: 'windowOut', acts: [[0.35, 'turn', { to: 'door', dur: 0.75 }], [0.35, 'look', { at: 'door' }]] } },
+      // the head leads toward the door from the first frame (her face never turns to the camera); the body follows
+      cast: { alexandria: { at: WIN, face: 90, look: 'door', lookAmount: 0.9, acts: [[0.2, 'turn', { to: 'door', dur: 0.75 }]] } },
     },
     'X1-04': {
       staging: 'OTS + DOF: over Alexandria\'s right shoulder (her face out of frame); the young attendant small and soft in the doorway, backlit by the passage lamp; Alexandria goes to the door.',

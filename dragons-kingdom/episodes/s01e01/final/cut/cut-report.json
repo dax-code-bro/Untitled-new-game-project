@@ -1,0 +1,1978 @@
+{
+ "title": "Dragon's Kingdom S01E01 - draft cut: PROLOGUE + TITLE + 1A",
+ "made_at": "2026-10-23T05:34",
+ "shots_dir": "../../../../tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/work/shots",
+ "size": "960x540",
+ "fps": 24,
+ "shots": [
+  {
+   "job": "P-01",
+   "scene": "PROLOGUE",
+   "kind": "black",
+   "source": "black",
+   "frames": 96,
+   "rec_in": 0,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "P-02",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 96,
+   "trans": [
+    "fadein",
+    36
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "P-03",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 276,
+   "rec_in": 240,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "P-04",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 516,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "P-05",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 600,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "P-06",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 684,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "P-07",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 828,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    12
+   ]
+  },
+  {
+   "job": "P-08",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 192,
+   "rec_in": 912,
+   "trans": [
+    "dissolve",
+    24
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    12,
+    12
+   ]
+  },
+  {
+   "job": "P-09",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 204,
+   "rec_in": 1104,
+   "trans": [
+    "dissolve",
+    24
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    12,
+    9
+   ]
+  },
+  {
+   "job": "P-10",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 48,
+   "rec_in": 1308,
+   "trans": [
+    "dissolve",
+    18
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    9,
+    6
+   ]
+  },
+  {
+   "job": "P-11",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 48,
+   "rec_in": 1356,
+   "trans": [
+    "dissolve",
+    12
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    6,
+    6
+   ]
+  },
+  {
+   "job": "P-12",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 48,
+   "rec_in": 1404,
+   "trans": [
+    "dissolve",
+    12
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    6,
+    6
+   ]
+  },
+  {
+   "job": "P-13",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 60,
+   "rec_in": 1452,
+   "trans": [
+    "dissolve",
+    12
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    6,
+    6
+   ]
+  },
+  {
+   "job": "P-14",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 48,
+   "rec_in": 1512,
+   "trans": [
+    "dissolve",
+    12
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    6,
+    9
+   ]
+  },
+  {
+   "job": "P-15",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 276,
+   "rec_in": 1560,
+   "trans": [
+    "dissolve",
+    18
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    9,
+    12
+   ]
+  },
+  {
+   "job": "P-16",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 264,
+   "rec_in": 1836,
+   "trans": [
+    "dissolve",
+    24
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    12,
+    0
+   ]
+  },
+  {
+   "job": "P-17",
+   "scene": "PROLOGUE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 180,
+   "rec_in": 2100,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "T-01",
+   "scene": "TITLE",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 192,
+   "rec_in": 2280,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-01",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 132,
+   "rec_in": 2472,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-02",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 2604,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X1-01",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 108,
+   "rec_in": 2748,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "R1-01",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "rendered 2026-10-23T05:20",
+   "frames": 96,
+   "rec_in": 2856,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X1-02",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "rendered 2026-10-23T05:31",
+   "frames": 144,
+   "rec_in": 2952,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X1-03",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 48,
+   "rec_in": 3096,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X1-04",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 3144,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X1-05",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 3240,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X1-06",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 3336,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-03",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 3420,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-04",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 204,
+   "rec_in": 3540,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-05",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 3744,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-06",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 3828,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-07",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 3900,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-08",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 3996,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-09",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 108,
+   "rec_in": 4080,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-10",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 108,
+   "rec_in": 4188,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-11",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 60,
+   "rec_in": 4296,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-12",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 216,
+   "rec_in": 4356,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-13",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 60,
+   "rec_in": 4572,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-14",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 4632,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-15",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 132,
+   "rec_in": 4704,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-16",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 48,
+   "rec_in": 4836,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-17",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 156,
+   "rec_in": 4884,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-18",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 5040,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-19",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 36,
+   "rec_in": 5112,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-20",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 5148,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-21",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 156,
+   "rec_in": 5244,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-22",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 5400,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-23",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 60,
+   "rec_in": 5520,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-24",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 5580,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-25",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 5724,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-26",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 60,
+   "rec_in": 5820,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-27",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 5880,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-28",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 5952,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-29",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 6096,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-30",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 6180,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-31",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 204,
+   "rec_in": 6324,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-32",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 6528,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-33",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 6624,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-01",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 6768,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-02",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 6840,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-03",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 6960,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-04",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 7056,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-05",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 60,
+   "rec_in": 7152,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-06",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 252,
+   "rec_in": 7212,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-07",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 7464,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-08",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 7536,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-09",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 7656,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-10",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 7752,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-11",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 36,
+   "rec_in": 7872,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-12",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 7908,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-13",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 7992,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-14",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 8088,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-15",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 156,
+   "rec_in": 8172,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-16",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 8328,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X2-17",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 108,
+   "rec_in": 8412,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1A-34",
+   "scene": "1A",
+   "kind": "3d",
+   "source": "slate",
+   "frames": 60,
+   "rec_in": 8520,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  }
+ ],
+ "audio": [
+  {
+   "ref": "L001",
+   "role": "NARRATOR",
+   "shot": "P-03",
+   "file": "vo/L001.wav",
+   "file_in_s": 0,
+   "file_out_s": 4.865,
+   "rec_s": 12.17,
+   "gain_db": 0
+  },
+  {
+   "ref": "L002#1",
+   "role": "NARRATOR",
+   "shot": "P-08",
+   "file": "vo/L002.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.935,
+   "rec_s": 39.3,
+   "gain_db": 0
+  },
+  {
+   "ref": "L002#2",
+   "role": "NARRATOR",
+   "shot": "P-08",
+   "file": "vo/L002.wav",
+   "file_in_s": 1.935,
+   "file_out_s": 4.32,
+   "rec_s": 41.235,
+   "gain_db": 0
+  },
+  {
+   "ref": "L002#3",
+   "role": "NARRATOR",
+   "shot": "P-09",
+   "file": "vo/L002.wav",
+   "file_in_s": 4.32,
+   "file_out_s": 9.185,
+   "rec_s": 47.1,
+   "gain_db": 0
+  },
+  {
+   "ref": "L003#1",
+   "role": "NARRATOR",
+   "shot": "P-10",
+   "file": "vo/L003.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.375,
+   "rec_s": 55.05,
+   "gain_db": 0
+  },
+  {
+   "ref": "L003#2",
+   "role": "NARRATOR",
+   "shot": "P-11",
+   "file": "vo/L003.wav",
+   "file_in_s": 1.375,
+   "file_out_s": 2.75,
+   "rec_s": 56.7,
+   "gain_db": 0
+  },
+  {
+   "ref": "L003#3",
+   "role": "NARRATOR",
+   "shot": "P-12",
+   "file": "vo/L003.wav",
+   "file_in_s": 2.75,
+   "file_out_s": 4.1,
+   "rec_s": 58.7,
+   "gain_db": 0
+  },
+  {
+   "ref": "L003#4",
+   "role": "NARRATOR",
+   "shot": "P-13",
+   "file": "vo/L003.wav",
+   "file_in_s": 4.1,
+   "file_out_s": 7.045,
+   "rec_s": 61.42,
+   "gain_db": 0
+  },
+  {
+   "ref": "L003#5",
+   "role": "NARRATOR",
+   "shot": "P-15",
+   "file": "vo/L003.wav",
+   "file_in_s": 7.045,
+   "file_out_s": 11.43,
+   "rec_s": 65.9,
+   "gain_db": 0
+  },
+  {
+   "ref": "L004",
+   "role": "NARRATOR",
+   "shot": "P-16",
+   "file": "vo/L004.wav",
+   "file_in_s": 0,
+   "file_out_s": 5.96,
+   "rec_s": 78.47,
+   "gain_db": 0
+  },
+  {
+   "ref": "L005",
+   "role": "NARRATOR",
+   "shot": "P-17",
+   "file": "vo/L005.wav",
+   "file_in_s": 0,
+   "file_out_s": 2.105,
+   "rec_s": 90.07,
+   "gain_db": 0
+  },
+  {
+   "ref": "X1-01",
+   "role": "YOUNG ATTENDANT",
+   "shot": "X1-04",
+   "file": "vo/X1-01.wav",
+   "file_in_s": 0,
+   "file_out_s": 2.375,
+   "rec_s": 131.02,
+   "gain_db": 0
+  },
+  {
+   "ref": "X1-02",
+   "role": "ALEXANDRIA",
+   "shot": "X1-04",
+   "file": "vo/X1-02.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.91,
+   "rec_s": 133.645,
+   "gain_db": 0
+  },
+  {
+   "ref": "L006",
+   "role": "ATTENDANT",
+   "shot": "1A-04",
+   "file": "vo/L006.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.57,
+   "rec_s": 148.07,
+   "gain_db": 0
+  },
+  {
+   "ref": "L007",
+   "role": "ALEXANDRIA",
+   "shot": "1A-04",
+   "file": "vo/L007.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.295,
+   "rec_s": 149.98,
+   "gain_db": 0
+  },
+  {
+   "ref": "L008",
+   "role": "ATTENDANT",
+   "shot": "1A-04",
+   "file": "vo/L008.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.5,
+   "rec_s": 151.565,
+   "gain_db": 0
+  },
+  {
+   "ref": "L009",
+   "role": "ALEXANDRIA",
+   "shot": "1A-04",
+   "file": "vo/L009.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.16,
+   "rec_s": 153.405,
+   "gain_db": 0
+  },
+  {
+   "ref": "L010",
+   "role": "ATTENDANT",
+   "shot": "1A-13",
+   "file": "vo/L010.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.03,
+   "rec_s": 191.07,
+   "gain_db": 0
+  },
+  {
+   "ref": "L011",
+   "role": "ALEXANDRIA",
+   "shot": "1A-15",
+   "file": "vo/L011.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.465,
+   "rec_s": 196.865,
+   "gain_db": -11
+  },
+  {
+   "ref": "L012",
+   "role": "ABBY",
+   "shot": "1A-18",
+   "file": "vo/L012.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.765,
+   "rec_s": 211.22,
+   "gain_db": 1
+  },
+  {
+   "ref": "L013",
+   "role": "ALEXANDRIA",
+   "shot": "1A-19",
+   "file": "vo/L013.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.93,
+   "rec_s": 213.27,
+   "gain_db": 0
+  },
+  {
+   "ref": "L014",
+   "role": "ABBY",
+   "shot": "1A-21",
+   "file": "vo/L014.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.785,
+   "rec_s": 219.27,
+   "gain_db": 0
+  },
+  {
+   "ref": "L015",
+   "role": "REMI",
+   "shot": "1A-21",
+   "file": "vo/L015.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.095,
+   "rec_s": 220.295,
+   "gain_db": 0
+  },
+  {
+   "ref": "L016",
+   "role": "ABBY",
+   "shot": "1A-21",
+   "file": "vo/L016.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.01,
+   "rec_s": 221.63,
+   "gain_db": 0
+  },
+  {
+   "ref": "L017",
+   "role": "ALEXANDRIA",
+   "shot": "1A-23",
+   "file": "vo/L017.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.825,
+   "rec_s": 230.375,
+   "gain_db": 0
+  },
+  {
+   "ref": "L018",
+   "role": "REMI",
+   "shot": "1A-24",
+   "file": "vo/L018.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.715,
+   "rec_s": 233.07,
+   "gain_db": 0
+  },
+  {
+   "ref": "L019",
+   "role": "ATTENDANT",
+   "shot": "1A-24",
+   "file": "vo/L019.wav",
+   "file_in_s": 0,
+   "file_out_s": 2.69,
+   "rec_s": 235.18,
+   "gain_db": 0
+  },
+  {
+   "ref": "L020",
+   "role": "ABBY",
+   "shot": "1A-27",
+   "file": "vo/L020.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.53,
+   "rec_s": 245.42,
+   "gain_db": -5.5
+  },
+  {
+   "ref": "L021",
+   "role": "ALEXANDRIA",
+   "shot": "1A-27",
+   "file": "vo/L021.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.645,
+   "rec_s": 246.34,
+   "gain_db": 0
+  },
+  {
+   "ref": "L022",
+   "role": "REMI",
+   "shot": "1A-28",
+   "file": "vo/L022.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.185,
+   "rec_s": 248.47,
+   "gain_db": 0
+  },
+  {
+   "ref": "L023",
+   "role": "ALEXANDRIA",
+   "shot": "1A-28",
+   "file": "vo/L023.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.795,
+   "rec_s": 249.945,
+   "gain_db": 0
+  },
+  {
+   "ref": "L024",
+   "role": "ABBY",
+   "shot": "1A-28",
+   "file": "vo/L024.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.155,
+   "rec_s": 250.98,
+   "gain_db": 0
+  },
+  {
+   "ref": "L025",
+   "role": "REMI",
+   "shot": "1A-29",
+   "file": "vo/L025.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.235,
+   "rec_s": 255.37,
+   "gain_db": 0
+  },
+  {
+   "ref": "L026",
+   "role": "ALEXANDRIA",
+   "shot": "1A-30",
+   "file": "vo/L026.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.76,
+   "rec_s": 258.07,
+   "gain_db": 0
+  },
+  {
+   "ref": "L027",
+   "role": "REMI",
+   "shot": "1A-31",
+   "file": "vo/L027.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.215,
+   "rec_s": 263.97,
+   "gain_db": 0
+  },
+  {
+   "ref": "L028",
+   "role": "ALEXANDRIA",
+   "shot": "1A-31",
+   "file": "vo/L028.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.7,
+   "rec_s": 265.475,
+   "gain_db": 0
+  },
+  {
+   "ref": "L029",
+   "role": "ABBY",
+   "shot": "1A-31",
+   "file": "vo/L029.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.56,
+   "rec_s": 266.415,
+   "gain_db": 0
+  },
+  {
+   "ref": "L030",
+   "role": "ALEXANDRIA",
+   "shot": "1A-31",
+   "file": "vo/L030.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.725,
+   "rec_s": 267.265,
+   "gain_db": 0
+  },
+  {
+   "ref": "L031",
+   "role": "REMI",
+   "shot": "1A-31",
+   "file": "vo/L031.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.765,
+   "rec_s": 269.28,
+   "gain_db": 0
+  },
+  {
+   "ref": "X2-01",
+   "role": "ALEXANDRIA",
+   "shot": "X2-02",
+   "file": "vo/X2-01.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.735,
+   "rec_s": 285.47,
+   "gain_db": 0
+  },
+  {
+   "ref": "X2-02",
+   "role": "ALEXANDRIA",
+   "shot": "X2-02",
+   "file": "vo/X2-02.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.575,
+   "rec_s": 286.595,
+   "gain_db": -3
+  },
+  {
+   "ref": "X2-03",
+   "role": "REMI",
+   "shot": "X2-03",
+   "file": "vo/X2-03.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.185,
+   "rec_s": 290.47,
+   "gain_db": 0
+  },
+  {
+   "ref": "X2-04",
+   "role": "ABBY",
+   "shot": "X2-06",
+   "file": "vo/X2-04.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.11,
+   "rec_s": 301.07,
+   "gain_db": 0
+  },
+  {
+   "ref": "X2-05",
+   "role": "REMI",
+   "shot": "X2-06",
+   "file": "vo/X2-05.wav",
+   "file_in_s": 0,
+   "file_out_s": 2.975,
+   "rec_s": 302.52,
+   "gain_db": 0
+  },
+  {
+   "ref": "X2-06",
+   "role": "ABBY",
+   "shot": "X2-06",
+   "file": "vo/X2-06.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.88,
+   "rec_s": 305.835,
+   "gain_db": 0
+  },
+  {
+   "ref": "X2-07",
+   "role": "REMI",
+   "shot": "X2-06",
+   "file": "vo/X2-07.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.285,
+   "rec_s": 307.055,
+   "gain_db": 0
+  },
+  {
+   "ref": "X2-08",
+   "role": "ABBY",
+   "shot": "X2-11",
+   "file": "vo/X2-08.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.695,
+   "rec_s": 328.37,
+   "gain_db": 0
+  },
+  {
+   "ref": "X2-09",
+   "role": "ALEXANDRIA",
+   "shot": "X2-15",
+   "file": "vo/X2-09.wav",
+   "file_in_s": 0,
+   "file_out_s": 2.505,
+   "rec_s": 341.07,
+   "gain_db": 0
+  },
+  {
+   "ref": "X2-10",
+   "role": "ATTENDANT",
+   "shot": "X2-15",
+   "file": "vo/X2-10.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.165,
+   "rec_s": 343.925,
+   "gain_db": 0
+  },
+  {
+   "ref": "X2-11",
+   "role": "ALEXANDRIA",
+   "shot": "X2-15",
+   "file": "vo/X2-11.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.745,
+   "rec_s": 345.37,
+   "gain_db": 0
+  }
+ ],
+ "output": {
+  "file": "../../../../tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/cut-test.mp4",
+  "frames": 8580,
+  "duration_s": 357.5,
+  "size_mb": 4.6,
+  "assembled_s": 107
+ },
+ "summary": {
+  "rendered": 2,
+  "black": 1,
+  "slates": 73,
+  "voice_cues": 50
+ }
+}

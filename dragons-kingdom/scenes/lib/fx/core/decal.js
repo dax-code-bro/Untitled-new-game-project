@@ -412,6 +412,20 @@ void fxdShade(vec2 uv, out vec3 T, out vec3 alb, out float cov, out float rough,
   coat = mix(uCoat.x, uCoat.y, dry) * smoothstep(0.0, 0.25, d);
   coatR = mix(uCoatRough.x, uCoatRough.y, dry);
   h = dd * uHScale;
+#if defined(FX_KIND_POOL)
+  // a pool on stone is no mirror: a skin forms in patches (matte, slightly darker), dust and grit
+  // float on it, and its surface swells and dips over the stone below (breaking up the sky in it)
+  vec2 pp = (uv - 0.5) * uSize;
+  float mnp = min(uSize.x, uSize.y);
+  // (only as it dries: a matte skin on a fresh pool scattered the blue sky over it - violet paint)
+  float skinP = smoothstep(0.42, 0.72, fxdF(pp / (mnp * 0.1) + 17.0)) * dry;
+  float grit = smoothstep(0.8, 0.95, fxdF3(pp / (mnp * 0.007) + 3.0));
+  rough = mix(rough, 0.42, skinP * 0.8);
+  coat *= 1.0 - 0.65 * skinP;
+  coatR = mix(coatR, 0.22, skinP);
+  alb = mix(alb, vec3(0.045, 0.032, 0.022) * cov, grit * 0.6);
+  h += (fxdF(pp / (mnp * 0.04) + 5.0) - 0.5) * 0.0005 * smoothstep(0.0, 0.3, d);
+#endif
 #if defined(FX_KIND_SOAK)
   // absorbed into the fibres: the weave shows through, no film on top (only a damp sheen)
   alb *= 0.2; coat *= 0.15; h = 0.0;

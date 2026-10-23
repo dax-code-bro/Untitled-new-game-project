@@ -1453,12 +1453,12 @@
     }
    ],
    "cost": {
-    "draft_s_per_frame": 3.97,
-    "k4_cpu_s_per_frame": 45.36,
-    "k4_gpu_s_per_frame": 45.36,
-    "draft_minutes": 12.7,
-    "k4_cpu_hours": 2.42,
-    "k4_gpu_hours": 2.42,
+    "draft_s_per_frame": 3.2,
+    "k4_cpu_s_per_frame": 36.61,
+    "k4_gpu_s_per_frame": 36.61,
+    "draft_minutes": 10.25,
+    "k4_cpu_hours": 1.95,
+    "k4_gpu_hours": 1.95,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1467,7 +1467,7 @@
      "move": 1.08,
      "total": 1.13
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.13 for the shot's content"
+    "basis": "MEASURED draft 3.2 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "NONE: no people. Near dark: only the key lamp; the title over the dark shell.",
    "deviation": null,
@@ -1729,12 +1729,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 2.24,
-    "k4_cpu_s_per_frame": 28,
-    "k4_gpu_s_per_frame": 28,
-    "draft_minutes": 1.79,
-    "k4_cpu_hours": 0.37,
-    "k4_gpu_hours": 0.37,
+    "draft_s_per_frame": 7.41,
+    "k4_cpu_s_per_frame": 92.63,
+    "k4_gpu_s_per_frame": 92.63,
+    "draft_minutes": 5.93,
+    "k4_cpu_hours": 1.24,
+    "k4_gpu_hours": 1.24,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -1743,7 +1743,7 @@
      "move": 1,
      "total": 1.12
     },
-    "basis": "ESTIMATE: masonry interior, 1-2 people, sea through the window; x 1.12 for the shot's content"
+    "basis": "MEASURED draft 7.41 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-2 people, sea through the window)"
    },
    "staging": "BACK: from behind her left shoulder (three-quarter back); she turns toward the door (left background), her face away from the camera throughout.",
    "deviation": null,

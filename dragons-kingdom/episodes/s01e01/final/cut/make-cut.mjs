@@ -114,21 +114,24 @@ for (const s of segs) {
   if (padPre > 0 || padPost > 0) { vf.push(chain); chain = `[${last}]tpad=start=${padPre}:start_mode=clone:stop=${padPost}:stop_mode=clone[${label}p]`; last = `${label}p`; }
   if (s.tIn[0] === 'fadein') { vf.push(chain); chain = `[${last}]fade=t=in:st=0:d=${(s.tIn[1] / FPS).toFixed(3)}[${label}f]`; last = `${label}f`; }
   if (s.tOut?.[0] === 'fadeout') { vf.push(chain); const L = (e.frames + s.needPre + s.needPost) / FPS; chain = `[${last}]fade=t=out:st=${(L - s.tOut[1] / FPS - s.needPost / FPS).toFixed(3)}:d=${(s.tOut[1] / FPS).toFixed(3)}[${label}g]`; last = `${label}g`; }
+  // one time base and pixel aspect for every segment: xfade refuses inputs whose time bases differ
+  // (a rendered mp4 after trim, a lavfi slate, a concat of both)
+  vf.push(chain); chain = `[${last}]settb=1/${FPS},setsar=1[${label}z]`; last = `${label}z`;
   vf.push(chain);
   s.out = last; s.len = e.frames + s.needPre + s.needPost;
   report.shots.push({ job: e.job, scene: e.scene, kind: e.kind, source: src, frames: e.frames, rec_in: e.rec_in, trans: s.tIn, handles_used: [pre, post], held_frames: [Math.max(0, padPre), Math.max(0, padPost)] });
 }
 // join: runs of cuts are concatenated, dissolves cross-fade (offset = the accumulated length - the overlap)
 let acc = segs[0].out, accLen = segs[0].len - segs[0].needPre;
-if (segs[0].needPre) { vf.push(`[${acc}]trim=start_frame=${segs[0].needPre},setpts=PTS-STARTPTS[j0]`); acc = 'j0'; }
+if (segs[0].needPre) { vf.push(`[${acc}]trim=start_frame=${segs[0].needPre},setpts=PTS-STARTPTS,settb=1/${FPS}[j0]`); acc = 'j0'; }
 for (let k = 1; k < segs.length; k++) {
   const s = segs[k];
   const [tt, n] = s.tIn;
   if (tt === 'dissolve') {
-    vf.push(`[${acc}][${s.out}]xfade=transition=fade:duration=${(n / FPS).toFixed(4)}:offset=${((accLen - n) / FPS).toFixed(4)}[j${k}]`);
+    vf.push(`[${acc}][${s.out}]xfade=transition=fade:duration=${(n / FPS).toFixed(4)}:offset=${((accLen - n) / FPS).toFixed(4)},settb=1/${FPS}[j${k}]`);
     accLen = accLen - n + s.len;
   } else {
-    vf.push(`[${acc}][${s.out}]concat=n=2:v=1:a=0[j${k}]`);
+    vf.push(`[${acc}][${s.out}]concat=n=2:v=1:a=0,settb=1/${FPS}[j${k}]`);
     accLen += s.len;
   }
   acc = `j${k}`;

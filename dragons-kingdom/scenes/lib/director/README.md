@@ -38,6 +38,7 @@ shot videos  ->  cut/make-cut.mjs  ->  cut/DragonsKingdom_S01E01_draft-cut_<scen
 | `sets/*.js` | set builders: `birthing-chamber`, `alexandria-room`, `palace-corridor`, `sea-coast-dawn`, `prologue-vistas`, `verdor-grounds`, `common` (sky dome, light cards, room environments, wall lamps) |
 | `tools/build-shots.mjs` | shot tables, the edit list, the audio cue sheet (`--check` for CI) |
 | `tools/render-shots.mjs` | **dailies**: many shots per browser setup into one video file each (with the handle frames dissolves need), or review stills + a contact sheet per set (`--stills 0.2,0.8`); resumable; measured s/frame into `cut/timings.json` |
+| `tools/cut-sheet.mjs` | review sheets of an ASSEMBLED cut: frames taken from the cut file at fractions of every shot (transitions, captions, burn-ins included), tiled and labelled with shot id + record timecode |
 | `tools/still.mjs`, `tools/contact.mjs` | one still of a shot by `render.mjs --still`; a contact sheet from a review video |
 | `tools/probe-cast.js` | a scene showing humans-library characters as the director poses them, from four sides (cast checks: costume colours under a set's light, built-in drape poses) |
 | `tools/selftest.mjs` | unit checks of the pure parts (layout, keys, walk profile, dialogue placement, registry) |
@@ -60,7 +61,8 @@ shot videos  ->  cut/make-cut.mjs  ->  cut/DragonsKingdom_S01E01_draft-cut_<scen
 
 Positions are metres in the set's world frame or NAMES: marks (`'door'`), actors (`'alexandria'`),
 actor parts (`'abby.head'`, `'abby.hand.R'`, `'leaf.eye'`, `'leaf.w_R_2'` - any creature bone),
-set objects; anything can be a key list `[[t, value, ease?], ...]`. Headings: 0 = north (-z),
+set objects; anything can be a key list `[[t, value, ease?], ...]`. `cam.debug: true` (or a list of extra point
+names) prints the solved camera position and the subjects' posed points once per shot (framing checks). Headings: 0 = north (-z),
 90 = east (+x). Under a camera `mount`, numeric positions are in the mount's frame and
 `{ at: [x, y, z] }` is a world point.
 
@@ -72,6 +74,7 @@ node scenes/lib/director/tools/render-shots.mjs --stills 0.5             # one s
 node scenes/lib/director/tools/render-shots.mjs --sets SEA_COAST_DAWN    # draft videos of one set
 node scenes/lib/director/tools/render-shots.mjs                          # every shot of the cut (resumes)
 node episodes/s01e01/final/cut/make-cut.mjs                              # assemble the draft cut with the voices
+node scenes/lib/director/tools/cut-sheet.mjs --cut <cut.mp4> --out <dir> # review sheets across the cut
 node scenes/lib/director/tools/selftest.mjs                              # unit checks
 ```
 

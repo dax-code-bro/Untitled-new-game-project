@@ -40,7 +40,7 @@ const SHOTS = {
     { kind: 'debris-turf', id: 'launch', from: 0.5, to: null, at: 'launch', params: { bursts: [0, 0.85], radius: 12, speed: 10 } },
   ] },
   after: { fx: [
-    { kind: 'smoke-trail', id: 'sleeve', from: 0, to: null, at: 'runner.hand', params: { kind: 'cloth', t1: 12 } },
+    { kind: 'smoke-trail', id: 'sleeve', from: 0, to: null, at: 'runner.hand', params: { kind: 'cloth', t1: 12, size: 0.07, density: 0.6, life: 4 } },
     { kind: 'cloth-drape', id: 'body', from: 0, to: null, params: { body: { at: [3, G, 38], yaw: 0.4 }, size: [1.0, 2.6], fabric: 'wool', color: [0.26, 0.05, 0.035], border: { at: 0.05, width: 0.06, color: [0.45, 0.33, 0.08] } } },
     { kind: 'blood-pool', id: 'body', from: 0, to: null, at: [3.6, G, 38.6], params: { radius: 0.7, delay: 0, tau: 6 } },
     { kind: 'sparks', id: 'spear', from: 2.0, to: 4, at: [-1, 0.02, 40], params: { dir: [1, 0.25, -0.3], count: 90, speed: 6 } },
