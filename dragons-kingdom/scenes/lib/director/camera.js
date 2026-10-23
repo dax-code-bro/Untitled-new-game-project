@@ -11,13 +11,19 @@
 //   pos      [x, y, z] | name | keys          camera position
 //   look     [x, y, z] | name | keys          aim point
 //   offset   [dx, dy, dz]                     added to pos (world), e.g. pos: 'nest', offset: [...]
-//   follow   { target, offset: [dx, dy, dz], local: true }   drone / aerial follow: pos = target +
-//            offset (in the target's own frame if local), look defaults to the target
+//   follow   { target, offset: [dx, dy, dz], lookOffset, local: true, lag, yawLag, yaw }   tracking /
+//            drone follow: pos = the target's ground point + offset (in the target's own frame, x = its
+//            LEFT, z = forward, if local), look = ground point + lookOffset (same frame; default 1.2 m
+//            up); lag / yawLag: the operator trails the subject's position / turns by that many seconds
 //   orbit    { center, radius, height, angle (deg, keys ok) }  pos on a circle round center
+//   mount    'boat' | actor name                 the camera rides that object: numeric pos / look are in its
+//            own frame (a boat-mounted camera, a camera on a dragon's back); names stay world points
 //   push     0.05 | keys                      move this fraction of the way toward `look` over the shot
 //   roll     degrees (keys ok)
 //   mm       focal length (keys = a zoom), sensor ('super35'), fstop, shutter (deg), iso
 //   focus    name | metres | keys of either   (a focus pull: keys [[0, 'egg'], [2.5, 'alexandria.head']])
+//   focusOffset  metres added to the focus distance (- = nearer: a mark at an object's centre, focus on
+//            its near surface)
 //   shake    { kind: 'handheld'|'vehicle'|'wind'|'aerial'|'dragonback', amount, seed } (dk/camera.js)
 //   ease     default ease for the keys ('sine')
 //
@@ -69,6 +75,9 @@ export function resolvePoint(spec, t, env, opts = {}) {
   throw new Error(`camera: cannot resolve position ${JSON.stringify(spec)}`);
 }
 
+/** numeric position(s) (not names): what a mount transforms */
+const isLocalSpec = (v) => Array.isArray(v) && (typeof v[0] === 'number' || (isKeyList(v) && v.every((k) => Array.isArray(k[1]))));
+
 /** A number, or keys of numbers. */
 const num = (v, t, e) => (v == null ? null : typeof v === 'number' ? v : keyed(t, v, { ease: e }));
 
@@ -104,12 +113,20 @@ export function evalCamera(spec, t, u, ctx, env, shotSeconds = 1) {
   const cam = ctx.camera;
   let pos, look;
   if (s.follow) {
+    // the actor's ground frame (root on the ground, facing yaw); the operator lags `lag` s behind
+    // the subject's position and `yawLag` s behind its turns (pure: the blocking is evaluated at
+    // those earlier times, nothing is remembered between frames)
     const f = s.follow;
-    const fr = env.actorFrame ? env.actorFrame(f.target, t) : { pos: env.point(f.target, t), yaw: 0 };
-    const off = new THREE.Vector3(...(num(f.offset, t, e) || [0, 2, -6]));
-    if (f.local !== false) off.applyAxisAngle(new THREE.Vector3(0, 1, 0), fr.yaw || 0);
-    pos = fr.pos.clone().add(off);
-    look = s.look != null ? resolvePoint(s.look, t, env, { ease: e }) : fr.pos.clone().add(new THREE.Vector3(...(f.lookOffset || [0, 0, 0])));
+    const frameAt = (tt) => (env.actorFrame ? env.actorFrame(f.target, tt) : { pos: env.point(f.target, tt), yaw: 0 });
+    const fr = frameAt(t);
+    const frP = f.lag ? frameAt(t - f.lag) : fr;
+    let yaw = fr.yaw || 0;
+    if (f.yawLag) { const a = frameAt(t - f.yawLag).yaw || 0; yaw = a + Math.atan2(Math.sin(yaw - a), Math.cos(yaw - a)) * 0.5; }
+    if (f.yaw != null) yaw = (num(f.yaw, t, e) * Math.PI) / 180;          // a fixed world direction instead
+    const rot = (v) => (f.local !== false ? v.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw) : v);
+    const off = rot(new THREE.Vector3(...(num(f.offset, t, e) || [0, 2, -6])));
+    pos = frP.pos.clone().add(off);
+    look = s.look != null ? resolvePoint(s.look, t, env, { ease: e }) : fr.pos.clone().add(rot(new THREE.Vector3(...(num(f.lookOffset, t, e) || [0, 1.2, 0]))));
   } else if (s.orbit) {
     const o = s.orbit;
     const c = resolvePoint(o.center, t, env, { ease: e });
@@ -120,7 +137,19 @@ export function evalCamera(spec, t, u, ctx, env, shotSeconds = 1) {
   } else if (s.frame) {
     // solved framing; pos / look keys may still move it (offsets added below), push works as usual
     const mm0 = num(s.mm ?? 35, s.frame.track ? t : (s.frame.at ?? 0), e);
-    const fr = solveFraming(s.frame, mm0, env, t, 16 / 9, 24.89, s.bounds || null);
+    let fr = solveFraming(s.frame, mm0, env, t, 16 / 9, 24.89, s.bounds || null);
+    // a lens too long for the room: like a camera crew, go wider (static framings only, so the lens
+    // never jumps between frames); s.frame.autoLens: false keeps the lens and accepts the error
+    const tol = s.frame.tolerance ?? 0.12;
+    if (fr.worst > tol && !s.frame.track && s.frame.autoLens !== false && typeof (s.mm ?? 35) === 'number') {
+      for (const mm of [40, 35, 32, 28, 24, 21, 18].filter((m) => m < mm0 && m >= Math.max(18, mm0 * (s.frame.minLensRatio ?? 0.5)))) {
+        const f2 = solveFraming(s.frame, mm, env, t, 16 / 9, 24.89, s.bounds || null);
+        if (f2.worst < fr.worst) { fr = f2; fr.mm = mm; }
+        if (f2.worst <= tol) break;
+      }
+      if (fr.mm && env.warnOnce) env.warnOnce(`framing: ${mm0} mm cannot hold the framing here; a ${fr.mm} mm lens does (worst subject ${fr.worst.toFixed(2)} screen units off)`);
+    }
+    s.mm = fr.mm ?? s.mm;
     pos = fr.pos; look = fr.look;
     if (fr.worst > 0.15 && env.warnOnce) env.warnOnce(`framing: a subject lands ${fr.worst.toFixed(2)} screen units from its place (lens too long for the room, or the subjects too far apart)`);
     if (s.frame.move) {
@@ -142,6 +171,14 @@ export function evalCamera(spec, t, u, ctx, env, shotSeconds = 1) {
   } else {
     pos = resolvePoint(s.pos, t, env, { ease: e });
     look = resolvePoint(s.look, t, env, { ease: e });
+    // mount: the camera rides an object (a boat, a cart, a dragon's back): numeric positions are in
+    // that object's own frame (names stay world points)
+    if (s.mount) {
+      const M = env.objectMatrix?.(s.mount);
+      if (!M) throw new Error(`camera: mount "${s.mount}" is not an object or actor of this set`);
+      if (isLocalSpec(s.pos)) pos.applyMatrix4(M);
+      if (isLocalSpec(s.look)) look.applyMatrix4(M);
+    }
   }
   if (!pos || !look) throw new Error('camera: pos and look are required');
   if (s.offset) pos.add(_v.set(...s.offset));
@@ -176,7 +213,7 @@ export function evalCamera(spec, t, u, ctx, env, shotSeconds = 1) {
   if (s.iso != null) L.iso = s.iso;
   const fd = resolveFocus(s.focus ?? (s.frame ? s.frame.subjects[0][0] : s.look), t, cam.position, env, e);
   L.focusTarget = null;
-  L.focus = fd ?? look.distanceTo(cam.position);
+  L.focus = Math.max(0.05, (fd ?? look.distanceTo(cam.position)) + (num(s.focusOffset, t, e) ?? 0));
   return { pos: cam.position.clone(), look, focusDist: L.focus };
 }
 
@@ -187,7 +224,9 @@ export function evalCamera(spec, t, u, ctx, env, shotSeconds = 1) {
  *     subjects: [['alexandria.head', [0.35, 0.25]], ['egg', [-0.2, -0.3]]],   // screen x, y in -1..1
  *     from: 200,          // degrees: the side the camera looks FROM (0 = from the north, 90 = from the east)
  *     height: 1.4,        // camera height (m); or rise: metres above the first subject
- *     dist: 2.5,          // one subject: distance to it (two subjects: the solver finds it)
+ *     dist: 2.5,          // distance to the FIRST subject (one subject: exact; two or more: a soft target)
+ *     minDist: 0.55,      // the camera keeps at least this far from every subject (default 0.55 m)
+ *     tolerance: 0.12,    // worst screen error accepted before a wider lens is tried (autoLens: false = never)
  *     at: 0,              // shot time the subjects are measured at (static camera); track: true re-solves every frame
  *   }
  * Lens: the shot's mm on super 35 (16:9). Two subjects: camera x/z, yaw and pitch are solved
@@ -235,7 +274,11 @@ export function solveFraming(fr, mm, env, t, aspect = 16 / 9, sensorW = 24.89, b
     const w = fr.sideWeight ?? 0.02;
     const cx = qq[0] - c0.x, cz = qq[1] - c0.z, L = Math.hypot(cx, cz) || 1;
     out.push(w * (1 - (cx * fromDir.x + cz * fromDir.z) / L));
-    if (fr.dist) out.push(0.3 * (L - fr.dist));
+    // dist: the distance to the FIRST subject (the one the shot is about: an OTS shoulder, a face)
+    if (fr.dist) out.push(0.3 * (Math.hypot(qq[0] - P[0].p.x, qq[1] - P[0].p.z) - fr.dist));
+    // never inside or against a subject (heads are ~0.25 m across; a lens needs some air)
+    const minD = fr.minDist ?? 0.55;
+    for (const sj of P) { const dd = Math.hypot(qq[0] - sj.p.x, y - sj.p.y, qq[1] - sj.p.z); if (dd < minD) out.push(3 * (minD - dd)); else out.push(0); }
     // stay inside the set (a room's walls): a stiff penalty outside the box
     if (bounds) {
       const pv = [qq[0], y, qq[1]];

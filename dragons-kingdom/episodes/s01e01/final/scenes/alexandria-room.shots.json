@@ -1,0 +1,204 @@
+{
+ "set": "ALEXANDRIA_ROOM",
+ "scene_file": "episodes/s01e01/final/scenes/alexandria-room.js",
+ "spec": "episodes/s01e01/final/scenes/specs/alexandria-room.spec.js",
+ "fps": 24,
+ "handles": 12,
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "note": "start_s / frames are the render-jobs.json contract (episode.mjs); pre/post are handle frames the editor may render around each shot.",
+ "shots": [
+  {
+   "job": "R1-01",
+   "seq": 22,
+   "scene": "1A",
+   "set": "ALEXANDRIA_ROOM",
+   "start_s": 1,
+   "start_frame": 24,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "first light: the sun not up, grey sky over the sea, no lamp lit",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.9987820251299122,
+     -0.03489949670250097,
+     0.034878236872062415
+    ],
+    "sunVeiled": true,
+    "exposure": 1
+   },
+   "staging": "NONE: nobody in the room; the jug and the cup on the sill against the grey sea light.",
+   "deviation": null
+  },
+  {
+   "job": "X1-02",
+   "seq": 23,
+   "scene": "1A",
+   "set": "ALEXANDRIA_ROOM",
+   "start_s": 7,
+   "start_frame": 168,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "first light: the sun not up, grey sky over the sea, no lamp lit",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.9987820251299122,
+     -0.03489949670250097,
+     0.034878236872062415
+    ],
+    "sunVeiled": true,
+    "exposure": 1
+   },
+   "staging": "BACK + WIDE: she is a dark shape against the window, back to the room; the made bed at left.",
+   "deviation": null
+  },
+  {
+   "job": "X1-03",
+   "seq": 24,
+   "scene": "1A",
+   "set": "ALEXANDRIA_ROOM",
+   "start_s": 15,
+   "start_frame": 360,
+   "frames": 48,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "first light: the sun not up, grey sky over the sea, no lamp lit",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.9987820251299122,
+     -0.03489949670250097,
+     0.034878236872062415
+    ],
+    "sunVeiled": true,
+    "exposure": 1
+   },
+   "staging": "BACK: from behind her left shoulder (three-quarter back); she turns toward the door (left background), her face away from the camera throughout.",
+   "deviation": null
+  },
+  {
+   "job": "X1-04",
+   "seq": 25,
+   "scene": "1A",
+   "set": "ALEXANDRIA_ROOM",
+   "start_s": 19,
+   "start_frame": 456,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "X1-01",
+     "part": 0,
+     "ref": "X1-01",
+     "role": "YOUNG ATTENDANT",
+     "file": "vo/X1-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 2.375,
+     "at_s": -0.05,
+     "speech_in_s": 0.35,
+     "speech_out_s": 2.305,
+     "words": [
+      {
+       "w": "your",
+       "start_s": 0.32,
+       "end_s": 0.53
+      },
+      {
+       "w": "majesty",
+       "start_s": 0.53,
+       "end_s": 1.33
+      },
+      {
+       "w": "the",
+       "start_s": 1.61,
+       "end_s": 1.79
+      },
+      {
+       "w": "egg",
+       "start_s": 1.79,
+       "end_s": 2.31
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X1-02",
+     "part": 0,
+     "ref": "X1-02",
+     "role": "ALEXANDRIA",
+     "file": "vo/X1-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.91,
+     "at_s": 2.625,
+     "speech_in_s": 2.655,
+     "speech_out_s": 3.505,
+     "words": [
+      {
+       "w": "i'm",
+       "start_s": 2.625,
+       "end_s": 2.845
+      },
+      {
+       "w": "coming",
+       "start_s": 2.845,
+       "end_s": 3.335
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "first light: the sun not up, grey sky over the sea, no lamp lit",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.9987820251299122,
+     -0.03489949670250097,
+     0.034878236872062415
+    ],
+    "sunVeiled": true,
+    "exposure": 1
+   },
+   "staging": "OTS + DOF: over Alexandria's right shoulder (her face out of frame); the young attendant small and soft in the doorway, backlit by the passage lamp; Alexandria goes to the door.",
+   "deviation": null
+  }
+ ]
+}

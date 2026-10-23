@@ -193,8 +193,11 @@ export async function build(ctx, { shotSpecs }) {
   passage.position.set(-ROOM.w / 2 - ROOM.T - 0.9, 1.4, (DOOR_Z0 + DOOR_Z1) / 2);
   passage.rotation.y = Math.PI / 2;
   scene.add(passage);
-  const passLight = new THREE.PointLight(new THREE.Color(0.8, 0.85, 0.95), 0, 8, 2);
-  passLight.position.set(-ROOM.w / 2 - ROOM.T - 0.7, 1.9, (DOOR_Z0 + DOOR_Z1) / 2);
+  // the corridor's daylight spilling through the door: a soft source well beyond the doorway and above
+  // head height (a light just behind a head shines THROUGH the skin shader's wrap/transmission: faces
+  // in the doorway glowed red)
+  const passLight = new THREE.PointLight(new THREE.Color(0.8, 0.85, 0.95), 0, 10, 2);
+  passLight.position.set(-ROOM.w / 2 - ROOM.T - 2.6, 3.0, (DOOR_Z0 + DOOR_Z1) / 2 + 0.6);
   scene.add(passLight);
 
   const linenY = makeLinenY(cloth);
@@ -414,7 +417,7 @@ float eh(vec3 p){p=fract(p*0.1031);p+=dot(p,p.zyx+31.32);return fract((p.x+p.y)*
       const dOpen = keyed(t, st.door ?? 0);
       hinge.rotation.y = -dOpen * 1.75;
       hinge.updateMatrixWorld(true);
-      passLight.intensity = 6 * clamp(dOpen * 2) * (st.passage ?? 1);
+      passLight.intensity = 9 * clamp(dOpen * 2) * (st.passage ?? 1);
       passage.material.color.setRGB(1.4, 1.35, 1.25).multiplyScalar(st.passage ?? 1);
       passage.visible = dOpen > 0.01;
       fold.visible = false;

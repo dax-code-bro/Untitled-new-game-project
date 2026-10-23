@@ -71,6 +71,8 @@ export async function build(ctx) {
   const winFill = new THREE.PointLight(new THREE.Color(0.68, 0.74, 0.88), 0.9, 7, 2);
   winFill.position.set(w / 2 - 0.5, 1.9, WIN.z0 + WIN.w / 2);
   scene.add(winFill);
+  // bounce from the pale walls and floor (no GI here): a dim cool fill
+  scene.add(new THREE.HemisphereLight(new THREE.Color(0.5, 0.55, 0.65), new THREE.Color(0.35, 0.32, 0.3), 0.18));
 
   // ---- the room
   const M = await archMaterials(ctx);
@@ -110,8 +112,8 @@ export async function build(ctx) {
   leaf.position.set(-DOOR.x0, 0, d / 2 + T * 0.6);
   hinge.add(leaf); scene.add(hinge);
   // the passage beyond the door: lamplit (someone carried a lamp) - a warm dim card + a light
-  const passage = lightCard(1.4, 2.8, [0.5, 0.32, 0.18]); passage.position.set(DOOR.x0 + DOOR.w / 2, 1.4, -d / 2 - T - 0.9); scene.add(passage);
-  const passLight = new THREE.PointLight(new THREE.Color(1.0, 0.6, 0.3), 0, 6, 2); passLight.position.set(DOOR.x0 + DOOR.w / 2, 1.8, -d / 2 - T - 0.5); scene.add(passLight);
+  const passage = lightCard(1.4, 2.8, [0.16, 0.1, 0.055]); passage.position.set(DOOR.x0 + DOOR.w / 2, 1.4, -d / 2 - T - 0.9); scene.add(passage);
+  const passLight = new THREE.PointLight(new THREE.Color(1.0, 0.6, 0.3), 0, 8, 2); passLight.position.set(DOOR.x0 + DOOR.w / 2 - 0.6, 2.6, -d / 2 - T - 2.2); scene.add(passLight);
 
   // ---- the sill: a wine jug nearly empty and one cup with a dark ring dried inside it
   const vk = await verdorKit(ctx);
@@ -145,7 +147,7 @@ export async function build(ctx) {
       hinge.rotation.y = keyed(t, st.door ?? 0) * 1.5;
       hinge.updateMatrixWorld(true);
       const o = keyed(t, st.door ?? 0);
-      passLight.intensity = 2.2 * Math.min(1, o * 3);
+      passLight.intensity = 3.5 * Math.min(1, o * 3);
       passage.visible = o > 0.01;
     },
     dynamic(info) { const st = info.spec.set || {}; return st.door != null && typeof st.door !== 'number' ? [hinge] : []; },

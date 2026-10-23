@@ -1,0 +1,402 @@
+{
+ "set": "PALACE_CORRIDOR",
+ "scene_file": "episodes/s01e01/final/scenes/palace-corridor.js",
+ "spec": "episodes/s01e01/final/scenes/specs/palace-corridor.spec.js",
+ "fps": 24,
+ "handles": 12,
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "note": "start_s / frames are the render-jobs.json contract (episode.mjs); pre/post are handle frames the editor may render around each shot.",
+ "shots": [
+  {
+   "job": "X1-01",
+   "seq": 21,
+   "scene": "1A",
+   "set": "PALACE_CORRIDOR",
+   "start_s": 1,
+   "start_frame": 24,
+   "frames": 108,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "first light (X1) / morning (X2)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.9937680178757644,
+     0.0697564737441253,
+     0.08694343573875725
+    ],
+    "sunVeiled": true
+   },
+   "staging": "BACK + WIDE: followed from behind, small in frame; she hurries out of the chamber door and along the corridor, then breaks into a run.",
+   "deviation": null
+  },
+  {
+   "job": "X1-05",
+   "seq": 26,
+   "scene": "1A",
+   "set": "PALACE_CORRIDOR",
+   "start_s": 8,
+   "start_frame": 192,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "first light (X1) / morning (X2)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.9937680178757644,
+     0.0697564737441253,
+     0.08694343573875725
+    ],
+    "sunVeiled": true
+   },
+   "staging": "BACK: tracking alongside, three-quarter behind her right shoulder; the young attendant falls behind.",
+   "deviation": null
+  },
+  {
+   "job": "X1-06",
+   "seq": 27,
+   "scene": "1A",
+   "set": "PALACE_CORRIDOR",
+   "start_s": 14,
+   "start_frame": 336,
+   "frames": 84,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "first light (X1) / morning (X2)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.9937680178757644,
+     0.0697564737441253,
+     0.08694343573875725
+    ],
+    "sunVeiled": true
+   },
+   "staging": "BACK: three-quarter behind her; the composure beat is in her shoulders and breath; she goes in.",
+   "deviation": "The shot list asks for her face at the door (the composure beat); faces are not approved and lip-sync does not exist yet, so the beat is played on her back and shoulders (a slow exhale, the head settling) as the preview staged its face beats."
+  },
+  {
+   "job": "X2-04",
+   "seq": 62,
+   "scene": "1A",
+   "set": "PALACE_CORRIDOR",
+   "start_s": 20,
+   "start_frame": 480,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "first light (X1) / morning (X2)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.899666649415519,
+     0.40673664307580015,
+     0.15863550393553952
+    ],
+    "sunVeiled": false
+   },
+   "staging": "BACK + SIL: from behind, the two of them dark against the daylight at the end of the corridor.",
+   "deviation": "The shot list asks for a backward track ahead of them (faces toward the camera); faces are not approved yet, so the camera follows from behind and they walk into the light. Swap back when faces are approved."
+  },
+  {
+   "job": "X2-05",
+   "seq": 63,
+   "scene": "1A",
+   "set": "PALACE_CORRIDOR",
+   "start_s": 26,
+   "start_frame": 624,
+   "frames": 60,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "first light (X1) / morning (X2)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.899666649415519,
+     0.40673664307580015,
+     0.15863550393553952
+    ],
+    "sunVeiled": false
+   },
+   "staging": "BACK + WIDE: the servants flatten against the wall; the siblings pass, backs to camera.",
+   "deviation": null
+  },
+  {
+   "job": "X2-06",
+   "seq": 64,
+   "scene": "1A",
+   "set": "PALACE_CORRIDOR",
+   "start_s": 31,
+   "start_frame": 744,
+   "frames": 252,
+   "pre": 12,
+   "post": 12,
+   "seconds": 10.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "X2-04",
+     "part": 0,
+     "ref": "X2-04",
+     "role": "ABBY",
+     "file": "vo/X2-04.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.11,
+     "at_s": 0.57,
+     "speech_in_s": 0.6,
+     "speech_out_s": 1.65,
+     "words": [
+      {
+       "w": "it",
+       "start_s": 0.57,
+       "end_s": 0.72
+      },
+      {
+       "w": "turned",
+       "start_s": 0.72,
+       "end_s": 1.04
+      },
+      {
+       "w": "toward",
+       "start_s": 1.04,
+       "end_s": 1.36
+      },
+      {
+       "w": "me",
+       "start_s": 1.36,
+       "end_s": 1.62
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X2-05",
+     "part": 0,
+     "ref": "X2-05",
+     "role": "REMI",
+     "file": "vo/X2-05.wav",
+     "file_in_s": 0,
+     "file_out_s": 2.975,
+     "at_s": 2.02,
+     "speech_in_s": 2.05,
+     "speech_out_s": 4.965,
+     "words": [
+      {
+       "w": "it",
+       "start_s": 2.02,
+       "end_s": 2.19
+      },
+      {
+       "w": "turned",
+       "start_s": 2.19,
+       "end_s": 2.56
+      },
+      {
+       "w": "toward",
+       "start_s": 2.56,
+       "end_s": 2.84
+      },
+      {
+       "w": "the",
+       "start_s": 2.84,
+       "end_s": 2.91
+      },
+      {
+       "w": "noise",
+       "start_s": 2.91,
+       "end_s": 3.55
+      },
+      {
+       "w": "you",
+       "start_s": 3.9,
+       "end_s": 4.04
+      },
+      {
+       "w": "were",
+       "start_s": 4.04,
+       "end_s": 4.16
+      },
+      {
+       "w": "the",
+       "start_s": 4.16,
+       "end_s": 4.27
+      },
+      {
+       "w": "noise",
+       "start_s": 4.27,
+       "end_s": 4.94
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X2-06",
+     "part": 0,
+     "ref": "X2-06",
+     "role": "ABBY",
+     "file": "vo/X2-06.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.88,
+     "at_s": 5.335,
+     "speech_in_s": 5.365,
+     "speech_out_s": 6.185,
+     "words": [
+      {
+       "w": "i",
+       "start_s": 5.335,
+       "end_s": 5.465
+      },
+      {
+       "w": "was",
+       "start_s": 5.465,
+       "end_s": 5.625
+      },
+      {
+       "w": "quiet",
+       "start_s": 5.625,
+       "end_s": 6.155
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X2-07",
+     "part": 0,
+     "ref": "X2-07",
+     "role": "REMI",
+     "file": "vo/X2-07.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.285,
+     "at_s": 6.555,
+     "speech_in_s": 6.585,
+     "speech_out_s": 7.81,
+     "words": [
+      {
+       "w": "you",
+       "start_s": 6.555,
+       "end_s": 6.725
+      },
+      {
+       "w": "were",
+       "start_s": 6.725,
+       "end_s": 6.815
+      },
+      {
+       "w": "quiet",
+       "start_s": 6.815,
+       "end_s": 7.255
+      },
+      {
+       "w": "for",
+       "start_s": 7.255,
+       "end_s": 7.435
+      },
+      {
+       "w": "you",
+       "start_s": 7.435,
+       "end_s": 7.755
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "first light (X1) / morning (X2)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.899666649415519,
+     0.40673664307580015,
+     0.15863550393553952
+    ],
+    "sunVeiled": false
+   },
+   "staging": "BACK: a walking two-shot from behind; the teasing carries on the move; mouths unreadable.",
+   "deviation": null
+  },
+  {
+   "job": "X2-07",
+   "seq": 65,
+   "scene": "1A",
+   "set": "PALACE_CORRIDOR",
+   "start_s": 44,
+   "start_frame": 1056,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "first light (X1) / morning (X2)",
+    "weather": "clear after a misty dawn; mist thinning over the sea by X2-08",
+    "notes": "X1 (the queen's room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber's high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.",
+    "sun": [
+     0.899666649415519,
+     0.40673664307580015,
+     0.15863550393553952
+    ],
+    "sunVeiled": false
+   },
+   "staging": "SIL: at the corridor end, into the light; she shoves his arm without breaking stride; they go out.",
+   "deviation": null
+  }
+ ]
+}

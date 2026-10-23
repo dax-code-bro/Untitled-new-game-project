@@ -32,7 +32,7 @@ export default {
   cast: {
     alexandria: { kind: 'human', id: 'alexandria', role: 'ALEXANDRIA', armSwing: 0 },
     attendant: { kind: 'human', id: 'attendant', role: 'ATTENDANT', armSwing: 0.3 },
-    attendant2: { kind: 'human', id: 'crowd09', role: null, armSwing: 0 },
+    attendant2: { kind: 'human', id: 'crowd06', role: null, armSwing: 0 },
     youngAttendant: { kind: 'human', id: 'crowd15', role: 'YOUNG ATTENDANT', armSwing: 0.6 },
     abby: { kind: 'human', id: 'abby', role: 'ABBY' },
     remi: { kind: 'human', id: 'remi', role: 'REMI' },
@@ -48,7 +48,7 @@ export default {
     // ------------------------------------------------------------------ TITLE
     'T-01': {
       staging: 'NONE: no people. Near dark: only the key lamp; the title over the dark shell.',
-      cam: { rig: 'push', frame: { subjects: [['egg', [0.05, 0.02]]], from: 125, dist: 0.95, rise: 0.05 }, mm: 75, fstop: 2, push: 0.1, bounds: BOUNDS },
+      cam: { rig: 'push', frame: { subjects: [['eggTop', [0.3, 0.12]]], from: 128, dist: 2.3, rise: 0.12 }, mm: 85, fstop: 2.8, focus: 'egg', focusOffset: -0.2, push: 0.08, bounds: BOUNDS },
       set: { egg: 'closed', onlyKeyLamp: true, dust: 0.3, titleLamp: { at: [0.12, 0.98, -0.62], intensity: 0.9 } },
       captions: [{ text: "DRAGON'S KINGDOM", from: 1.0, to: 6.2, style: 'title' }],
       exposure: 0.6,
@@ -56,9 +56,9 @@ export default {
     // ------------------------------------------------------------------- 1A
     '1A-01': {
       staging: 'NONE: macro on the shell; the crack runs on from the old fracture and stops.',
-      cam: { rig: 'static', frame: { subjects: [['eggCrack', [0.12, 0.0]]], from: 170, dist: 0.5, rise: 0.04 }, mm: 100, fstop: 2.8 },
+      cam: { rig: 'static', frame: { subjects: [['eggCrack', [0.1, 0.05]]], from: 150, dist: 0.62, rise: 0.06 }, mm: 100, fstop: 8 },
       set: { egg: 'closed', crack: [[0, 0.3], [1.5, 0.3], [2.4, 1.0, 'out']] },
-      exposure: -1.3,
+      exposure: -0.4,
     },
     '1A-02': {
       staging: 'WIDE: the attendant small, turned to the nest.',
@@ -94,31 +94,31 @@ export default {
     },
     '1A-06': {
       staging: 'NONE: macro; another piece of shell shifts.',
-      cam: { rig: 'static', frame: { subjects: [['eggFrag', [0.0, 0.0]]], from: 165, dist: 0.42, rise: 0.03 }, mm: 100, fstop: 2.8 },
+      cam: { rig: 'static', frame: { subjects: [['eggFrag', [0.0, 0.0]]], from: 128, dist: 0.6, rise: 0.04 }, mm: 100, fstop: 8 },
       set: { egg: 'cracked', crack: 1, frag: { shift: [[0.8, 0], [1.05, 0.07], [1.4, 0.05]] } },
-      exposure: -1.3,
+      exposure: -0.4,
     },
     '1A-07': {
       staging: 'NONE: macro; the shell flexes outward under pressure (birth stage 1).',
-      cam: { rig: 'static', frame: { subjects: [['eggFrag', [-0.1, 0.05]]], from: 150, dist: 0.38, rise: 0.0 }, mm: 100, fstop: 2.8 },
+      cam: { rig: 'static', frame: { subjects: [['eggFrag', [-0.1, 0.05]]], from: 140, dist: 0.55, rise: 0.0 }, mm: 100, fstop: 8 },
       set: { egg: 'cracked', crack: 1, frag: { shift: 0.05, push: [[0.5, 0], [1.8, 0.005], [2.5, 0.002], [3.3, 0]] } },
-      exposure: -1.3,
+      exposure: -0.4,
     },
     '1A-08': {
       staging: 'NONE: macro, a different angle; a fragment lifts away (birth stage 2).',
-      cam: { rig: 'static', frame: { subjects: [['eggFrag', [0.15, 0.1]]], from: 210, dist: 0.55, rise: 0.08 }, mm: 100, fstop: 2.8 },
+      cam: { rig: 'static', frame: { subjects: [['eggFrag', [0.15, 0.0]]], from: 100, dist: 0.85, rise: 0.12 }, mm: 100, fstop: 8 },
       set: { egg: 'cracked', crack: 1, frag: { shift: 0.05, lift: [[0.6, 0], [1.9, 1]] } },
-      exposure: -1.0,
+      exposure: -0.3,
     },
     '1A-09': {
       staging: 'NONE: close; a small gold snout presses into the opening (birth stage 3); gold catches the lamplight, no glow.',
-      cam: { rig: 'push', frame: { subjects: [['eggTop', [0.0, -0.1]]], from: 190, dist: 0.62, rise: 0.06 }, mm: 100, fstop: 2.8, focus: 'hatchling.head', push: 0.1 },
+      cam: { rig: 'push', frame: { subjects: [['eggTop', [0.0, -0.05]]], from: 160, dist: 1.05, rise: 0.08 }, mm: 85, fstop: 5.6, focus: 'eggTop', push: 0.08 },
       cast: { hatchling: { at: [0.7, -0.22], face: 242, pitch: -70, anchor: { part: 'head', to: 'eggTop', offset: [[0, [0, -0.2, 0]], [0.8, [0, -0.2, 0]], [2.6, [-0.015, -0.11, 0.008]]] }, acts: [[0, 'lie', { sprawl: 1, raise: 0.4, headDown: -0.3, breathe: 0.7, lidRelax: 0.6 }]] } },
       set: { egg: 'opened' },
     },
     '1A-10': {
       staging: 'NONE: close; the shape stills (birth stage 4); one tiny breath moves the shell edge.',
-      cam: { rig: 'static', frame: { subjects: [['eggTop', [0.0, -0.05]]], from: 175, dist: 0.6, rise: 0.04 }, mm: 100, fstop: 2.8, focus: 'hatchling.head' },
+      cam: { rig: 'static', frame: { subjects: [['eggTop', [0.05, 0.0]]], from: 140, dist: 0.95, rise: 0.06 }, mm: 85, fstop: 5.6, focus: 'eggTop' },
       cast: { hatchling: { at: [0.7, -0.22], face: 242, pitch: -70, anchor: { part: 'head', to: 'eggTop', offset: [-0.015, -0.11, 0.008] }, acts: [[0, 'lie', { sprawl: 1, raise: 0.4, headDown: -0.3, breathe: 0.25, lidRelax: 0.8 }]] } },
       set: { egg: 'opened' },
     },
@@ -156,14 +156,14 @@ export default {
     },
     '1A-15': {
       staging: 'BACK + SIL: her lost profile from behind-right, rim-lit by the shaft; the cheek line hides the lips. Hold after the line.',
-      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.1, 0.2]]], from: 28, dist: 0.95, rise: -0.03 }, mm: 65, fstop: 2, focus: 'alexandria.head', bounds: BOUNDS },
+      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.12, 0.22]]], from: 66, dist: 1.25, rise: 0.02 }, mm: 65, fstop: 2, focus: 'alexandria.head', bounds: BOUNDS },
       cast: { alexandria: { ...seated, posture: { sit: 1, lean: 0.65 } }, hatchling: hatchRest() },
       lines: [['L011', 0.9]],
       minTail: 2.5,
     },
     '1A-16': {
       staging: 'DOF: focus on the lamp in the foreground; she is a soft shape behind its bokeh.',
-      cam: { rig: 'static', pos: [-0.62, 0.66, 2.05], look: [-0.12, 0.98, -1.25], mm: 50, fstop: 2, focus: 'lampKey' },
+      cam: { rig: 'static', frame: { subjects: [['lampKey', [-0.3, -0.45]], ['attendant.head', [0.12, 0.3]]], from: 172, height: 0.62, dist: 0.75 }, mm: 50, fstop: 2, focus: 'lampKey', bounds: BOUNDS },
       cast: { attendant: { at: ATT, face: 'hatchling', look: 'hatchling', lookAmount: 0.5, acts: [[0.3, 'look', { at: 'hatchling', amount: 0.3 }]] } },
     },
     '1A-17': {
@@ -240,7 +240,7 @@ export default {
     },
     '1A-26': {
       staging: 'NONE: insert, the hatchling\'s side rises.',
-      cam: { rig: 'static', frame: { subjects: [['hatchling.chest', [0.0, 0.0]]], from: 168, dist: 0.5, rise: 0.06 }, mm: 100, fstop: 2.8, focus: 'hatchling.chest' },
+      cam: { rig: 'static', frame: { subjects: [['hatchling.chest', [0.0, 0.0]]], from: 168, dist: 0.85, rise: 0.12 }, mm: 100, fstop: 8, focus: 'hatchling.chest', focusOffset: -0.06 },
       cast: { hatchling: hatchRest({ breathe: 0.45 }) },
     },
     '1A-27': {
@@ -303,7 +303,7 @@ export default {
     },
     '1A-33': {
       staging: 'BACK + HANDS: her hand (sharp) rests near the newborn without restraining it.',
-      cam: { rig: 'static', frame: { subjects: [['alexandria.hand.R', [0.25, -0.05]], ['hatchling.head', [-0.4, -0.2]]], from: 25, height: 1.15, at: 3.0 }, mm: 50, fstop: 2, focus: 'alexandria.hand.R', bounds: BOUNDS },
+      cam: { rig: 'static', frame: { subjects: [['alexandria.hand.R', [0.22, 0.05]], ['hatchling.head', [-0.35, -0.2]]], from: 205, height: 0.75, at: 3.0 }, mm: 65, fstop: 4, focus: 'alexandria.hand.R', bounds: BOUNDS },
       cast: {
         alexandria: { ...seated, posture: { sit: 1, lean: 0.8 }, acts: [[1.6, 'reach', { side: 'R', at: 'hatchling.chest', offset: [0.08, 0.0, 0.12], in: 1.0 }]] },
         hatchling: hatchRest(),
@@ -311,7 +311,7 @@ export default {
     },
     '1A-34': {
       staging: 'NONE: insert, the tiny rise of its side (the match-cut source).',
-      cam: { rig: 'static', frame: { subjects: [['hatchling.chest', [0.05, 0.0]]], from: 195, dist: 0.48, rise: 0.08 }, mm: 100, fstop: 2.8, focus: 'hatchling.chest' },
+      cam: { rig: 'static', frame: { subjects: [['hatchling.chest', [0.05, 0.0]]], from: 195, dist: 0.85, rise: 0.12 }, mm: 100, fstop: 8, focus: 'hatchling.chest', focusOffset: -0.06 },
       cast: { hatchling: hatchRest({ breathe: 0.5 }) },
     },
     // ------------------------------------------------------------- X2 (in 1A)

@@ -14,20 +14,20 @@ export default {
     alexandria: { kind: 'human', id: 'alexandria', role: 'ALEXANDRIA', armSwing: 0.15 },
     abby: { kind: 'human', id: 'abby', role: 'ABBY', armSwing: 1 },
     remi: { kind: 'human', id: 'remi', role: 'REMI', armSwing: 1 },
-    servant1: { kind: 'human', id: 'crowd08', role: null, armSwing: 0 },
+    servant1: { kind: 'human', id: 'crowd10', role: null, armSwing: 0 },
     servant2: { kind: 'human', id: 'crowd05', role: null, armSwing: 0 },
   },
   homes: { remi: [-0.45, 1.7, 14], abby: [0.45, 1.5, 14] },
   shots: {
     'X1-01': {
       staging: 'BACK + WIDE: followed from behind, small in frame; she hurries out of the chamber door and along the corridor, then breaks into a run.',
-      cam: { rig: 'follow', follow: { target: 'youngAttendant', offset: [[0, [0.3, 1.55, -2.6]], [4.5, [0.25, 1.5, -3.6]]], lookOffset: [0, 1.15, 2.0] }, mm: 35, fstop: 2.8, focus: 'youngAttendant', bounds: BOUNDS, shake: { kind: 'handheld', amount: 0.35 } },
-      cast: { youngAttendant: { at: [-0.2, 0.7], face: 180, look: 'exit', acts: [[0.15, 'hurry', { to: [0.15, 9.0], speed: 1.75 }], [2.9, 'run', { to: [0.25, 16.5], speed: 2.7 }]] } },
+      cam: { rig: 'follow', follow: { target: 'youngAttendant', local: false, lag: 0.35, offset: [[0, [0.45, 1.5, -2.3]], [4.5, [0.3, 1.5, -3.4]]], lookOffset: [0, 1.15, 2.5] }, mm: 35, fstop: 2.8, focus: 'youngAttendant', bounds: BOUNDS, shake: { kind: 'handheld', amount: 0.3 } },
+      cast: { youngAttendant: { at: [-0.2, 1.7], face: 180, look: 'exit', acts: [[0.1, 'hurry', { to: [0.15, 9.0], speed: 1.75 }], [2.9, 'run', { to: [0.25, 16.5], speed: 2.7 }]] } },
       set: { door: [[0, 0.35], [0.8, 0.35]] },
     },
     'X1-05': {
       staging: 'BACK: tracking alongside, three-quarter behind her right shoulder; the young attendant falls behind.',
-      cam: { rig: 'follow', follow: { target: 'alexandria', offset: [-1.25, 1.55, -1.5], lookOffset: [0.15, 1.35, 1.5] }, mm: 35, fstop: 2.8, focus: 'alexandria.head', bounds: BOUNDS, shake: { kind: 'handheld', amount: 0.3 } },
+      cam: { rig: 'follow', follow: { target: 'alexandria', lag: 0.25, offset: [-1.25, 1.55, -1.6], lookOffset: [0.25, 1.3, 1.8] }, mm: 35, fstop: 2.8, focus: 'alexandria.head', bounds: BOUNDS, shake: { kind: 'handheld', amount: 0.3 } },
       cast: {
         alexandria: { at: [0.2, 17.5], face: 0, look: 'chamberDoor', acts: [[0.0, 'walk', { to: [0.0, 9.0], speed: 1.75, acc: 0.1 }]] },
         youngAttendant: { at: [0.5, 19.6], face: 0, look: 'chamberDoor', acts: [[0.0, 'walk', { to: [0.4, 14.5], speed: 1.25, acc: 0.1 }]] },
@@ -43,7 +43,7 @@ export default {
     'X2-04': {
       staging: 'BACK + SIL: from behind, the two of them dark against the daylight at the end of the corridor.',
       deviation: 'The shot list asks for a backward track ahead of them (faces toward the camera); faces are not approved yet, so the camera follows from behind and they walk into the light. Swap back when faces are approved.',
-      cam: { rig: 'follow', follow: { target: 'abby', offset: [[0, [-0.35, 1.45, -3.0]], [4, [-0.35, 1.45, -3.3]]], lookOffset: [-0.4, 1.25, 4.0] }, mm: 35, fstop: 2.8, focus: 'abby.head', bounds: BOUNDS, shake: { kind: 'handheld', amount: 0.3 } },
+      cam: { rig: 'follow', follow: { target: 'abby', lag: 0.3, offset: [[0, [-0.35, 1.45, -3.0]], [4, [-0.35, 1.45, -3.3]]], lookOffset: [-0.4, 1.25, 4.0] }, mm: 35, fstop: 2.8, focus: 'abby.head', bounds: BOUNDS, shake: { kind: 'handheld', amount: 0.3 } },
       cast: {
         abby: { at: [0.45, 3.5], face: 180, look: 'exit', acts: [[0, 'walk', { to: [0.45, 11.5], speed: 1.75, acc: 0.15 }]] },
         remi: { at: [-0.45, 3.3], face: 180, look: 'exit', acts: [[0, 'walk', { to: [-0.45, 11.3], speed: 1.75, acc: 0.15 }]] },
@@ -51,7 +51,7 @@ export default {
     },
     'X2-05': {
       staging: 'BACK + WIDE: the servants flatten against the wall; the siblings pass, backs to camera.',
-      cam: { rig: 'follow', follow: { target: 'remi', offset: [-0.55, 1.5, -2.6], lookOffset: [0.2, 1.2, 3.0] }, mm: 50, fstop: 2.8, focus: 'remi.head', bounds: BOUNDS, shake: { kind: 'handheld', amount: 0.3 } },
+      cam: { rig: 'follow', follow: { target: 'remi', lag: 0.3, offset: [-0.55, 1.5, -2.6], lookOffset: [0.2, 1.2, 3.0] }, mm: 50, fstop: 2.8, focus: 'remi.head', bounds: BOUNDS, shake: { kind: 'handheld', amount: 0.3 } },
       cast: {
         abby: { at: [0.45, 11.0], face: 180, look: 'exit', acts: [[0, 'walk', { to: [0.4, 16.0], speed: 1.75, acc: 0.1 }]] },
         remi: { at: [-0.35, 10.8], face: 180, look: 'exit', acts: [[0, 'walk', { to: [-0.3, 15.8], speed: 1.75, acc: 0.1 }], [0.8, 'look', { at: 'servant1.head', amount: 0.4 }]] },
@@ -61,7 +61,7 @@ export default {
     },
     'X2-06': {
       staging: 'BACK: a walking two-shot from behind; the teasing carries on the move; mouths unreadable.',
-      cam: { rig: 'follow', follow: { target: 'abby', offset: [-0.45, 1.5, -2.4], lookOffset: [-0.45, 1.3, 3.0] }, mm: 40, fstop: 2.8, focus: 'abby.head', bounds: BOUNDS, shake: { kind: 'handheld', amount: 0.3 } },
+      cam: { rig: 'follow', follow: { target: 'abby', lag: 0.3, offset: [-0.45, 1.5, -2.4], lookOffset: [-0.45, 1.3, 3.0] }, mm: 40, fstop: 2.8, focus: 'abby.head', bounds: BOUNDS, shake: { kind: 'handheld', amount: 0.3 } },
       cast: {
         abby: { at: [0.42, 5.0], face: 180, look: 'exit', acts: [[0, 'walk', { to: [0.42, 21.0], speed: 1.5, acc: 0.1 }], [0.5, 'look', { at: 'remi.head', amount: 0.55 }], [2.2, 'look', { at: 'exit' }], [6.3, 'look', { at: 'remi.head', amount: 0.5 }], [7.5, 'look', { at: 'exit' }]] },
         remi: { at: [-0.42, 4.9], face: 180, look: 'exit', acts: [[0, 'walk', { to: [-0.42, 20.9], speed: 1.5, acc: 0.1 }], [2.6, 'look', { at: 'abby.head', amount: 0.5 }], [5.6, 'look', { at: 'exit' }], [7.9, 'look', { at: 'abby.head', amount: 0.5 }]] },

@@ -98,6 +98,12 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
         actors[name] = { name, kind: 'object', def: d, root: o };
       } else throw new Error(`${setId}: actor "${name}" has unknown kind "${d.kind}"`);
       actors[name].root.visible = false;
+      // an actor aboard something that moves (a sailor on the boat): its blocking is in the parent's frame
+      if (d.parent) {
+        const par = built.objects?.[d.parent];
+        if (!par) throw new Error(`${setId}: actor "${name}" has parent "${d.parent}", which the set builder does not provide`);
+        par.add(actors[name].root);
+      }
     }));
     if (creaturesLib) S_poses = creaturesLib.poses;
     const fx = new FxRunner(ctx, { scene: ctx.scene, set: built, point: null });
@@ -131,6 +137,27 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
         return null;
       },
       ground: (x, z) => (S.built.ground ? S.built.ground(x, z) : 0),
+      /** the world matrix of a set object or an actor root (camera mounts) */
+      objectMatrix(name) {
+        const o = S.built.objects?.[name] || S.actors[name]?.root;
+        if (!o) return null;
+        o.updateMatrixWorld(true);
+        return o.matrixWorld;
+      },
+      /** blocking env for one actor: an actor aboard a parent walks on the parent's deck (builder.groundIn) */
+      forActor(name) {
+        const d = S.actors[name]?.def;
+        if (!d?.parent) return env;
+        return { ...env, ground: (x, z) => (S.built.groundIn ? S.built.groundIn(d.parent, x, z) : 0) };
+      },
+      /** a point in an actor's parent frame -> world */
+      toWorld(name, v) {
+        const d = S.actors[name]?.def;
+        if (!d?.parent) return v;
+        const par = S.built.objects[d.parent];
+        par.updateMatrixWorld(true);
+        return v.applyMatrix4(par.matrixWorld);
+      },
       point(name, t) {
         if (name == null) return null;
         if (Array.isArray(name)) return new THREE.Vector3(...name);
@@ -149,9 +176,9 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
               const rig = humanRig(a.ch);
               const off = (part === 'head' || part === 'eye' || part === 'eyes') ? rig.head : part === 'chest' ? rig.pelvis.clone().lerp(rig.head, 0.55) : rig.pelvis;
               const o2 = off.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), st.yaw);
-              return new THREE.Vector3(st.x + o2.x, st.y + o2.y, st.z + o2.z);
+              return env.toWorld(an, new THREE.Vector3(st.x + o2.x, st.y + o2.y, st.z + o2.z));
             }
-            if (st) return new THREE.Vector3(st.x, st.y + 0.5, st.z);
+            if (st) return env.toWorld(an, new THREE.Vector3(st.x, st.y + 0.5, st.z));
           }
           if (a.kind === 'human') {
             if (!part) return a.ch.bone('spine02').getWorldPosition(new THREE.Vector3());
@@ -181,7 +208,7 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
         const part = rest.join('.');
         const a = S.actors[an], b = S.cur?.cast?.[an];
         if (a && b && a.kind !== 'object') {
-          const st = actorState(b, tt, env);
+          const st = actorState(b, tt, env.forActor(an));
           if (a.kind === 'human') {
             const rig = humanRig(a.ch);
             const P = st.posture;
@@ -190,7 +217,7 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
             off.y -= drop * (part === 'feet' ? 0 : 1);
             if (part === 'head' || part === 'eye' || part === 'eyes') off.z += (P.bow + P.crouch * 0.45 + P.lean * 0.5) * 0.25;
             off.applyAxisAngle(new THREE.Vector3(0, 1, 0), st.yaw);
-            return new THREE.Vector3(st.x + off.x, st.y + off.y, st.z + off.z);
+            return env.toWorld(an, new THREE.Vector3(st.x + off.x, st.y + off.y, st.z + off.z));
           }
           // creatures: from the size and the facing (head forward, chest middle)
           const L = a.c.L || a.def.length || 1;
@@ -203,9 +230,11 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
         return env.point(name, tt);
       },
       warnOnce(msg) { const k = `${S.cur?.job || ''}:${msg}`; if (!S.warned.has(k)) { S.warned.add(k); console.warn(`[director] ${S.cur?.job || ''}: ${msg}`); } },
-      actorFrame(name, t) {
-        const a = S.actors[name];
-        const p = env.point(name, t);
+      /** an actor's ground frame at shot time tt (pure: from the blocking, not from the posed root) */
+      actorFrame(name, tt) {
+        const a = S.actors[name], b = S.cur?.cast?.[name];
+        if (a && b && a.kind !== 'object') { const st = actorState(b, tt, env.forActor(name)); return { pos: env.toWorld(name, new THREE.Vector3(st.x, st.y, st.z)), yaw: st.yaw }; }
+        const p = env.point(name, tt);
         return { pos: p, yaw: a ? a.root.rotation.y : 0 };
       },
     };
@@ -219,7 +248,7 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
     const names = Object.keys(cast);
     const order = (k) => (S.actors[k]?.kind === 'object' ? 0 : S.actors[k]?.kind === 'creature' ? 1 : 2);
     names.sort((a, b) => order(a) - order(b));
-    for (const name of names) S.states[name] = actorState(cast[name], tt, S.env);
+    for (const name of names) S.states[name] = actorState(cast[name], tt, S.env.forActor(name));
     const dynamic = [];
     for (const name of names) {
       const a = S.actors[name], b = cast[name], st = S.states[name];

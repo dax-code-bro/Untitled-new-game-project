@@ -89,8 +89,9 @@ export function poseHuman(ch, st, t, env, info = {}) {
   ch.root.position.set(st.x, st.y, st.z);
   ch.root.rotation.set(0, st.yaw, 0);
   ch.root.updateMatrixWorld(true);
-  const fwd = new THREE.Vector3(Math.sin(st.yaw), 0, Math.cos(st.yaw));
-  const left = new THREE.Vector3(Math.cos(st.yaw), 0, -Math.sin(st.yaw));
+  // the body's forward / left in WORLD space (an actor parented to a boat turns with it)
+  const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(ch.root.getWorldQuaternion(_q2)).setY(0).normalize();
+  const left = new THREE.Vector3(fwd.z, 0, -fwd.x);
   const rootB = ch.bone('root');
   const custom = (n) => { const f = HUMAN_ACTIONS.get(n); if (f) { f(ch, st, t, env, info); return true; } return false; };
 

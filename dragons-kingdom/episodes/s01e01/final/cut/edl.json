@@ -601,7 +601,7 @@
    "seq": 21,
    "scene": "1A",
    "set": "PALACE_CORRIDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 108,
    "rec_in": 2748,
    "rec_out": 2856,
@@ -610,11 +610,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/palace-corridor.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 2.49,
+    "k4_cpu_s_per_frame": 31.15,
+    "k4_gpu_s_per_frame": 31.15,
+    "draft_minutes": 4.49,
+    "k4_cpu_hours": 0.93,
+    "k4_gpu_hours": 0.93,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1.08,
+     "total": 1.25
+    },
+    "basis": "ESTIMATE: masonry interior, 1-3 people; x 1.25 for the shot's content"
+   },
+   "staging": "BACK + WIDE: followed from behind, small in frame; she hurries out of the chamber door and along the corridor, then breaks into a run.",
    "deviation": null,
    "action": "A YOUNG ATTENDANT, sent by the attendant at the nest, hurries out of the birthing chamber and along a palace corridor in the early light, trying not to run and failing.",
    "need": {
@@ -627,7 +647,7 @@
    "seq": 22,
    "scene": "1A",
    "set": "ALEXANDRIA_ROOM",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 2856,
    "rec_out": 2952,
@@ -636,11 +656,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/alexandria-room.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 2,
+    "k4_cpu_s_per_frame": 25,
+    "k4_gpu_s_per_frame": 25,
+    "draft_minutes": 3.2,
+    "k4_cpu_hours": 0.67,
+    "k4_gpu_hours": 0.67,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1
+    },
+    "basis": "ESTIMATE: masonry interior, 1-2 people, sea through the window; x 1 for the shot's content"
+   },
+   "staging": "NONE: nobody in the room; the jug and the cup on the sill against the grey sea light.",
    "deviation": null,
    "action": "Close on Alexandria's window sill in the grey first light: a jug of wine, nearly empty, and one cup with a dark ring dried inside it. Nobody else is in the room.",
    "need": {
@@ -653,7 +693,7 @@
    "seq": 23,
    "scene": "1A",
    "set": "ALEXANDRIA_ROOM",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 144,
    "rec_in": 2952,
    "rec_out": 3096,
@@ -662,11 +702,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/alexandria-room.js",
+    "start_s": 7,
+    "start_frame": 168
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 2.42,
+    "k4_cpu_s_per_frame": 30.24,
+    "k4_gpu_s_per_frame": 30.24,
+    "draft_minutes": 5.81,
+    "k4_cpu_hours": 1.21,
+    "k4_gpu_hours": 1.21,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.21
+    },
+    "basis": "ESTIMATE: masonry interior, 1-2 people, sea through the window; x 1.21 for the shot's content"
+   },
+   "staging": "BACK + WIDE: she is a dark shape against the window, back to the room; the made bed at left.",
    "deviation": null,
    "action": "Alexandria stands at a window, already dressed in her restrained formal gown. Behind her, the bed has not been slept in. Through the window, the first light lies on the sea.",
    "need": {
@@ -679,7 +739,7 @@
    "seq": 24,
    "scene": "1A",
    "set": "ALEXANDRIA_ROOM",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 48,
    "rec_in": 3096,
    "rec_out": 3144,
@@ -688,11 +748,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/alexandria-room.js",
+    "start_s": 15,
+    "start_frame": 360
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 2.24,
+    "k4_cpu_s_per_frame": 28,
+    "k4_gpu_s_per_frame": 28,
+    "draft_minutes": 1.79,
+    "k4_cpu_hours": 0.37,
+    "k4_gpu_hours": 0.37,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.12
+    },
+    "basis": "ESTIMATE: masonry interior, 1-2 people, sea through the window; x 1.12 for the shot's content"
+   },
+   "staging": "BACK: from behind her left shoulder (three-quarter back); she turns toward the door (left background), her face away from the camera throughout.",
    "deviation": null,
    "action": "She turns before the young attendant has finished knocking.",
    "need": {
@@ -705,7 +785,7 @@
    "seq": 25,
    "scene": "1A",
    "set": "ALEXANDRIA_ROOM",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 3144,
    "rec_out": 3240,
@@ -714,11 +794,98 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/alexandria-room.js",
+    "start_s": 19,
+    "start_frame": 456
+   },
+   "dialogue": [
+    {
+     "id": "X1-01",
+     "part": 0,
+     "ref": "X1-01",
+     "role": "YOUNG ATTENDANT",
+     "file": "vo/X1-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 2.375,
+     "at_s": -0.05,
+     "speech_in_s": 0.35,
+     "speech_out_s": 2.305,
+     "words": [
+      {
+       "w": "your",
+       "start_s": 0.32,
+       "end_s": 0.53
+      },
+      {
+       "w": "majesty",
+       "start_s": 0.53,
+       "end_s": 1.33
+      },
+      {
+       "w": "the",
+       "start_s": 1.61,
+       "end_s": 1.79
+      },
+      {
+       "w": "egg",
+       "start_s": 1.79,
+       "end_s": 2.31
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 130.95
+    },
+    {
+     "id": "X1-02",
+     "part": 0,
+     "ref": "X1-02",
+     "role": "ALEXANDRIA",
+     "file": "vo/X1-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.91,
+     "at_s": 2.625,
+     "speech_in_s": 2.655,
+     "speech_out_s": 3.505,
+     "words": [
+      {
+       "w": "i'm",
+       "start_s": 2.625,
+       "end_s": 2.845
+      },
+      {
+       "w": "coming",
+       "start_s": 2.845,
+       "end_s": 3.335
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 133.625
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 2.63,
+    "k4_cpu_s_per_frame": 32.86,
+    "k4_gpu_s_per_frame": 32.86,
+    "draft_minutes": 4.21,
+    "k4_cpu_hours": 0.88,
+    "k4_gpu_hours": 0.88,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.06,
+     "move": 1,
+     "total": 1.31
+    },
+    "basis": "ESTIMATE: masonry interior, 1-2 people, sea through the window; x 1.31 for the shot's content"
+   },
+   "staging": "OTS + DOF: over Alexandria's right shoulder (her face out of frame); the young attendant small and soft in the doorway, backlit by the passage lamp; Alexandria goes to the door.",
    "deviation": null,
    "action": "The message at the door.",
    "need": {
@@ -731,7 +898,7 @@
    "seq": 26,
    "scene": "1A",
    "set": "PALACE_CORRIDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 3240,
    "rec_out": 3336,
@@ -740,11 +907,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/palace-corridor.js",
+    "start_s": 8,
+    "start_frame": 192
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 2.84,
+    "k4_cpu_s_per_frame": 35.49,
+    "k4_gpu_s_per_frame": 35.49,
+    "draft_minutes": 4.54,
+    "k4_cpu_hours": 0.95,
+    "k4_gpu_hours": 0.95,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.06,
+     "move": 1.08,
+     "total": 1.42
+    },
+    "basis": "ESTIMATE: masonry interior, 1-3 people; x 1.42 for the shot's content"
+   },
+   "staging": "BACK: tracking alongside, three-quarter behind her right shoulder; the young attendant falls behind.",
    "deviation": null,
    "action": "She walks the corridor quickly, the young attendant falling behind.",
    "need": {
@@ -757,7 +944,7 @@
    "seq": 27,
    "scene": "1A",
    "set": "PALACE_CORRIDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 84,
    "rec_in": 3336,
    "rec_out": 3420,
@@ -766,12 +953,32 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/palace-corridor.js",
+    "start_s": 14,
+    "start_frame": 336
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 2.31,
+    "k4_cpu_s_per_frame": 28.84,
+    "k4_gpu_s_per_frame": 28.84,
+    "draft_minutes": 3.23,
+    "k4_cpu_hours": 0.67,
+    "k4_gpu_hours": 0.67,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.15
+    },
+    "basis": "ESTIMATE: masonry interior, 1-3 people; x 1.15 for the shot's content"
+   },
+   "staging": "BACK: three-quarter behind her; the composure beat is in her shoulders and breath; she goes in.",
+   "deviation": "The shot list asks for her face at the door (the composure beat); faces are not approved and lip-sync does not exist yet, so the beat is played on her back and shoulders (a slow exhale, the head settling) as the preview staged its face beats.",
    "action": "At the chamber door she stops for a moment, lets her face settle into composure, and goes in.",
    "need": {
     "pre": 0,
@@ -3404,7 +3611,7 @@
    "seq": 62,
    "scene": "1A",
    "set": "PALACE_CORRIDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 7056,
    "rec_out": 7152,
@@ -3413,12 +3620,32 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/palace-corridor.js",
+    "start_s": 20,
+    "start_frame": 480
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 2.84,
+    "k4_cpu_s_per_frame": 35.49,
+    "k4_gpu_s_per_frame": 35.49,
+    "draft_minutes": 4.54,
+    "k4_cpu_hours": 0.95,
+    "k4_gpu_hours": 0.95,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.06,
+     "move": 1.08,
+     "total": 1.42
+    },
+    "basis": "ESTIMATE: masonry interior, 1-3 people; x 1.42 for the shot's content"
+   },
+   "staging": "BACK + SIL: from behind, the two of them dark against the daylight at the end of the corridor.",
+   "deviation": "The shot list asks for a backward track ahead of them (faces toward the camera); faces are not approved yet, so the camera follows from behind and they walk into the light. Swap back when faces are approved.",
    "action": "Abby and Remi walk fast down a corridor toward the daylight at its end.",
    "need": {
     "pre": 0,
@@ -3430,7 +3657,7 @@
    "seq": 63,
    "scene": "1A",
    "set": "PALACE_CORRIDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 60,
    "rec_in": 7152,
    "rec_out": 7212,
@@ -3439,11 +3666,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/palace-corridor.js",
+    "start_s": 26,
+    "start_frame": 624
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.58,
+    "k4_cpu_s_per_frame": 44.76,
+    "k4_gpu_s_per_frame": 44.76,
+    "draft_minutes": 3.58,
+    "k4_cpu_hours": 0.75,
+    "k4_gpu_hours": 0.75,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.12,
+     "move": 1.08,
+     "total": 1.79
+    },
+    "basis": "ESTIMATE: masonry interior, 1-3 people; x 1.79 for the shot's content"
+   },
+   "staging": "BACK + WIDE: the servants flatten against the wall; the siblings pass, backs to camera.",
    "deviation": null,
    "action": "Two SERVANTS carrying linen flatten themselves against the wall to let them pass.",
    "need": {
@@ -3456,7 +3703,7 @@
    "seq": 64,
    "scene": "1A",
    "set": "PALACE_CORRIDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 252,
    "rec_in": 7212,
    "rec_out": 7464,
@@ -3465,11 +3712,209 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/palace-corridor.js",
+    "start_s": 31,
+    "start_frame": 744
+   },
+   "dialogue": [
+    {
+     "id": "X2-04",
+     "part": 0,
+     "ref": "X2-04",
+     "role": "ABBY",
+     "file": "vo/X2-04.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.11,
+     "at_s": 0.57,
+     "speech_in_s": 0.6,
+     "speech_out_s": 1.65,
+     "words": [
+      {
+       "w": "it",
+       "start_s": 0.57,
+       "end_s": 0.72
+      },
+      {
+       "w": "turned",
+       "start_s": 0.72,
+       "end_s": 1.04
+      },
+      {
+       "w": "toward",
+       "start_s": 1.04,
+       "end_s": 1.36
+      },
+      {
+       "w": "me",
+       "start_s": 1.36,
+       "end_s": 1.62
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 301.07
+    },
+    {
+     "id": "X2-05",
+     "part": 0,
+     "ref": "X2-05",
+     "role": "REMI",
+     "file": "vo/X2-05.wav",
+     "file_in_s": 0,
+     "file_out_s": 2.975,
+     "at_s": 2.02,
+     "speech_in_s": 2.05,
+     "speech_out_s": 4.965,
+     "words": [
+      {
+       "w": "it",
+       "start_s": 2.02,
+       "end_s": 2.19
+      },
+      {
+       "w": "turned",
+       "start_s": 2.19,
+       "end_s": 2.56
+      },
+      {
+       "w": "toward",
+       "start_s": 2.56,
+       "end_s": 2.84
+      },
+      {
+       "w": "the",
+       "start_s": 2.84,
+       "end_s": 2.91
+      },
+      {
+       "w": "noise",
+       "start_s": 2.91,
+       "end_s": 3.55
+      },
+      {
+       "w": "you",
+       "start_s": 3.9,
+       "end_s": 4.04
+      },
+      {
+       "w": "were",
+       "start_s": 4.04,
+       "end_s": 4.16
+      },
+      {
+       "w": "the",
+       "start_s": 4.16,
+       "end_s": 4.27
+      },
+      {
+       "w": "noise",
+       "start_s": 4.27,
+       "end_s": 4.94
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 302.52
+    },
+    {
+     "id": "X2-06",
+     "part": 0,
+     "ref": "X2-06",
+     "role": "ABBY",
+     "file": "vo/X2-06.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.88,
+     "at_s": 5.335,
+     "speech_in_s": 5.365,
+     "speech_out_s": 6.185,
+     "words": [
+      {
+       "w": "i",
+       "start_s": 5.335,
+       "end_s": 5.465
+      },
+      {
+       "w": "was",
+       "start_s": 5.465,
+       "end_s": 5.625
+      },
+      {
+       "w": "quiet",
+       "start_s": 5.625,
+       "end_s": 6.155
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 305.835
+    },
+    {
+     "id": "X2-07",
+     "part": 0,
+     "ref": "X2-07",
+     "role": "REMI",
+     "file": "vo/X2-07.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.285,
+     "at_s": 6.555,
+     "speech_in_s": 6.585,
+     "speech_out_s": 7.81,
+     "words": [
+      {
+       "w": "you",
+       "start_s": 6.555,
+       "end_s": 6.725
+      },
+      {
+       "w": "were",
+       "start_s": 6.725,
+       "end_s": 6.815
+      },
+      {
+       "w": "quiet",
+       "start_s": 6.815,
+       "end_s": 7.255
+      },
+      {
+       "w": "for",
+       "start_s": 7.255,
+       "end_s": 7.435
+      },
+      {
+       "w": "you",
+       "start_s": 7.435,
+       "end_s": 7.755
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 307.055
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 2.84,
+    "k4_cpu_s_per_frame": 35.49,
+    "k4_gpu_s_per_frame": 35.49,
+    "draft_minutes": 11.92,
+    "k4_cpu_hours": 2.48,
+    "k4_gpu_hours": 2.48,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.06,
+     "move": 1.08,
+     "total": 1.42
+    },
+    "basis": "ESTIMATE: masonry interior, 1-3 people; x 1.42 for the shot's content"
+   },
+   "staging": "BACK: a walking two-shot from behind; the teasing carries on the move; mouths unreadable.",
    "deviation": null,
    "action": "Teasing on the move.",
    "need": {
@@ -3482,7 +3927,7 @@
    "seq": 65,
    "scene": "1A",
    "set": "PALACE_CORRIDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 7464,
    "rec_out": 7536,
@@ -3491,11 +3936,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/palace-corridor.js",
+    "start_s": 44,
+    "start_frame": 1056
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 2.63,
+    "k4_cpu_s_per_frame": 32.86,
+    "k4_gpu_s_per_frame": 32.86,
+    "draft_minutes": 3.15,
+    "k4_cpu_hours": 0.66,
+    "k4_gpu_hours": 0.66,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.06,
+     "move": 1,
+     "total": 1.31
+    },
+    "basis": "ESTIMATE: masonry interior, 1-3 people; x 1.31 for the shot's content"
+   },
+   "staging": "SIL: at the corridor end, into the light; she shoves his arm without breaking stride; they go out.",
    "deviation": null,
    "action": "She shoves his arm without breaking stride. He lets her. They go out into the morning light.",
    "need": {

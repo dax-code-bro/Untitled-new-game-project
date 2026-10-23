@@ -103,6 +103,10 @@ export async function build(ctx) {
   // window light: a cool fill near each window (unshadowed)
   const winLights = WIN.map((z) => { const l = new THREE.PointLight(new THREE.Color(0.75, 0.82, 0.95), 0.0, 6, 2); l.position.set(w / 2 - 0.3, 2.3, z); scene.add(l); return l; });
   const exitLight = new THREE.PointLight(new THREE.Color(1, 0.97, 0.9), 0, 12, 2); exitLight.position.set(0, 2.2, L - 0.6); scene.add(exitLight);
+  // bounce: the sunlit floor patches and pale walls light the ceiling and the shadow sides a little
+  // (no GI on this renderer - a dim warm-from-below / cool-from-above fill stands in for it)
+  const bounce = new THREE.HemisphereLight(new THREE.Color(0.55, 0.6, 0.7), new THREE.Color(0.75, 0.6, 0.45), 0.25);
+  scene.add(bounce);
 
   camera_near(ctx);
   const marks = {
@@ -128,7 +132,7 @@ export async function build(ctx) {
         beyondExit.material.color.setRGB(1.3, 1.36, 1.45);
         sky.userData.uniforms.uZ.value.setRGB(0.12, 0.15, 0.22); sky.userData.uniforms.uH.value.setRGB(0.45, 0.47, 0.52);
       } else {
-        sun.color.setRGB(1.0, 0.9, 0.76); sun.intensity = 3.2;
+        sun.color.setRGB(1.0, 0.9, 0.76); sun.intensity = 2.2 * (st.sun ?? 1);
         sun.position.copy(sun.target.position).addScaledVector(S, 40);
         winLights.forEach((l) => { l.intensity = 0.6; });
         exitLight.intensity = 5;
@@ -136,6 +140,7 @@ export async function build(ctx) {
         sky.userData.uniforms.uZ.value.setRGB(0.3, 0.42, 0.62); sky.userData.uniforms.uH.value.setRGB(0.95, 0.95, 0.95);
       }
       lamps.forEach((l) => { l.intensity = 1.4 * (st.lamps ?? (veiled ? 1 : 0.6)); });
+      bounce.intensity = (veiled ? 0.16 : 0.3) * (st.bounce ?? 1);
       hinge.rotation.y = keyed(t, st.door ?? 0) * 1.6;
       hinge.updateMatrixWorld(true);
       if (ctx.cinematic?.volumetrics) ctx.cinematic.volumetrics.density = veiled ? 0.015 : 0.035;
