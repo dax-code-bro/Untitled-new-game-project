@@ -9,8 +9,8 @@
 //        the knee, blood soaking the cloth (R17)
 //   fx.gore.scalp({ character, side: 'R', t0 })                  a split scalp, blood sheeting down
 //        one side of the face (R17)
-//   fx.gore.burnedRider({ character, t0 })                       1F-14b: a sleeve burned away, the
-//        forearm and the side of the neck blistered raw with blackened edges, scorched leather
+//   fx.gore.burnedRider({ character, t0, neck })                 1F-14b: a sleeve burned away, the
+//        forearm blistered raw with blackened edges (neck: true - the hood burned through too)
 //   fx.gore.hole({ mesh, at, radius, edge: 'char' | 'torn', t0, t1 })   costume burn-through / tear
 //   fx.gore.burn / gash / char (decals: see core/decal.js)
 //   fx.gore.appliance(bone, worldPos, worldDir)                  attach any mesh to a bone, posed now
@@ -20,6 +20,9 @@ import { DecalEffect } from './core/decal.js';
 import { hash01, arr3, clamp, smoothstep, norm3, cross3, noise1 } from './core/util.js';
 
 // ------------------------------------------------------------------ materials --
+// linear albedo of the people's skin under the wounds (matched by pixel to the humans library's
+// skin in the same light: the earlier 0.36/0.24/0.18 read pale pink-white next to it in sun)
+const SKIN = [0.27, 0.13, 0.075];
 const TISSUE_GLSL = /* glsl */`
 float gH(vec3 p) { p = fract(p * 0.1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
 float gN(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
@@ -35,7 +38,7 @@ float gF(vec3 p) { return gN(p) * 0.5 + gN(p * 2.1 + 3.1) * 0.3 + gN(p * 4.3 + 7
 function tissueMaterial(kind, o = {}) {
   const m = new THREE.MeshPhysicalMaterial({
     color: 0xffffff, roughness: kind === 'bone' ? 0.45 : 0.55, metalness: 0,
-    clearcoat: kind === 'bone' ? 0.2 : 0.18, clearcoatRoughness: kind === 'bone' ? 0.35 : 0.3,
+    clearcoat: kind === 'bone' ? 0.2 : kind === 'burnskin' ? 0.1 : 0.18, clearcoatRoughness: kind === 'bone' ? 0.35 : 0.3,
     side: kind === 'hide' || kind === 'membrane' ? THREE.DoubleSide : THREE.FrontSide,
     sheen: kind === 'muscle' ? 0.3 : 0, sheenColor: new THREE.Color(0.35, 0.05, 0.04), sheenRoughness: 0.5,
   });
@@ -64,11 +67,15 @@ ${kind === 'muscle' ? `
   float base = smoothstep(0.4 + 0.3 * uBlood, 0.0, zz);
   // blood smeared up the shaft in streaks along it (it came out through the wound)
   float streak = smoothstep(0.3, 0.6, gN(vec3(gp.x * 90.0, gp.y * 90.0, gp.z * 5.0) + 2.0)) * smoothstep(1.1 * uBlood, 0.0, zz);
-  vec3 c = mix(vec3(0.42, 0.36, 0.27), vec3(0.3, 0.24, 0.17), por);
+  vec3 c = mix(vec3(0.34, 0.28, 0.2), vec3(0.22, 0.17, 0.12), por);
+  // (fresh out of the wound it is never clean: a thin pink-red film of blood and torn
+  // periosteum over all of it, patchy)
+  float film = smoothstep(0.35, 0.65, gF(gp * 14.0 + 6.0));
+  c *= mix(vec3(1.0), vec3(0.62, 0.2, 0.16), uBlood * (0.45 + 0.4 * film));
   // the broken end: spongy, red marrow-filled bone where it split
   c = mix(c, mix(vec3(0.3, 0.06, 0.04), vec3(0.45, 0.32, 0.24), por), smoothstep(0.75, 0.95, zz / max(uLen, 1e-3)) * uMarrow);
   c = mix(c, vec3(0.1, 0.01, 0.008), clamp(base * (0.7 + 0.6 * por) + 0.25 * smoothstep(0.6, 0.8, por) + streak * 0.85, 0.0, 1.0));
-  diffuseColor.rgb = c; gr = 0.5 - 0.3 * max(base, streak);` : kind === 'hide' ? `
+  diffuseColor.rgb = c; gr = 0.42 - 0.25 * max(base, streak) - 0.08 * film * uBlood;` : kind === 'hide' ? `
   // a torn flap: the creature's / person's skin outside, raw pink-red dermis and blood inside
   float bl = gF(gp * 12.0);
   vec3 inner = mix(vec3(0.26, 0.07, 0.055), vec3(0.08, 0.006, 0.005), smoothstep(0.3, 0.6, bl));
@@ -82,7 +89,9 @@ ${kind === 'muscle' ? `
   flesh = mix(flesh, vec3(0.025, 0.002, 0.002), smoothstep(0.5, 0.72, n2));
   float film = 1.0 - smoothstep(0.95, 1.2, rr + (n1 - 0.5) * 0.5) * smoothstep(0.35, 0.65, n2);
   vec3 skin = uOut * (0.9 + 0.2 * n2);
-  vec3 c = mix(skin, mix(vec3(0.04, 0.003, 0.002), vec3(0.1, 0.009, 0.007), n2), film);
+  // (a thin film over skin filters it - multiply, red; a linear mix with dark blood read mauve)
+  vec3 c = mix(skin, skin * vec3(0.5, 0.07, 0.05), smoothstep(0.0, 0.5, film));
+  c = mix(c, mix(vec3(0.04, 0.003, 0.002), vec3(0.1, 0.009, 0.007), n2), smoothstep(0.4, 1.0, film));
   c = mix(c, flesh, 1.0 - smoothstep(0.3, 0.55, rr + (n1 - 0.5) * 0.3));
   diffuseColor.rgb = c; gr = mix(0.62, 0.2, film);` : kind === 'burnskin' ? `
   // a burned forearm minutes after: zones out from where it burned longest (uC, radius uRad, in
@@ -93,19 +102,22 @@ ${kind === 'muscle' ? `
   float zr = length(vGP - uC) / max(uRad, 1e-4) + (n1 - 0.5) * 0.55 + (n2 - 0.5) * 0.15;
   vec3 skin = uOut * vec3(0.95, 0.62, 0.55) * (0.85 + 0.3 * n3);
   vec3 rawC = mix(vec3(0.085, 0.011, 0.008), vec3(0.19, 0.03, 0.022), n3);
-  vec3 blisC = mix(vec3(0.34, 0.26, 0.19), vec3(0.42, 0.33, 0.24), n3);
-  vec3 sloC = vec3(0.3, 0.27, 0.23) * (0.8 + 0.3 * n3);
-  vec3 fullC = mix(vec3(0.03, 0.022, 0.016), vec3(0.3, 0.27, 0.23), smoothstep(0.45, 0.75, n2));
+  vec3 blisC = mix(vec3(0.29, 0.21, 0.14), vec3(0.36, 0.27, 0.18), n3);
+  vec3 sloC = vec3(0.25, 0.21, 0.17) * (0.8 + 0.3 * n3);
+  float nb = gF(vGP * 45.0 + 3.0);
+  // full thickness: dry leathery eschar, black-brown to tan, with a few waxy white islands
+  vec3 fullC = mix(vec3(0.022, 0.016, 0.011), vec3(0.17, 0.12, 0.08), smoothstep(0.35, 0.75, n2));
+  fullC = mix(fullC, vec3(0.3, 0.26, 0.21), smoothstep(0.72, 0.9, n2) * smoothstep(0.4, 0.7, n1) * 0.8);
   float full = 1.0 - smoothstep(0.25, 0.42, zr);
   float raw = smoothstep(0.25, 0.4, zr) * (1.0 - smoothstep(0.62, 0.78, zr));
-  float slo = smoothstep(0.55, 0.65, zr) * (1.0 - smoothstep(0.7, 0.8, zr)) * smoothstep(0.4, 0.6, n2);
-  float blis = smoothstep(0.68, 0.78, zr) * (1.0 - smoothstep(0.9, 1.05, zr)) * smoothstep(0.35, 0.55, n2);
+  float slo = smoothstep(0.55, 0.65, zr) * (1.0 - smoothstep(0.7, 0.8, zr)) * smoothstep(0.45, 0.65, nb);
+  float blis = smoothstep(0.68, 0.78, zr) * (1.0 - smoothstep(0.9, 1.05, zr)) * smoothstep(0.4, 0.6, nb);
   vec3 c = skin;
   c = mix(c, blisC, blis);
   c = mix(c, rawC, raw);
   c = mix(c, sloC, slo);
   c = mix(c, fullC, full);
-  diffuseColor.rgb = c; gr = mix(mix(mix(0.55, 0.32, blis), 0.16, raw), 0.7, full);` : `
+  diffuseColor.rgb = c; gr = mix(mix(mix(0.55, 0.32, blis), 0.26, raw), 0.78, full);` : `
   // torn membrane: thin, grey-brown, darker veins, blood soaking in from the torn edge (low z)
   float vein = smoothstep(0.78, 0.9, gN(vec3(gp.x * 8.0, gp.y * 30.0, gp.z * 8.0)));
   float edge = smoothstep(0.25, 0.0, vGP.z / max(uScale, 1e-4));
@@ -149,7 +161,7 @@ function boneShardGeometry(seed, length, radius) {
  */
 /** The torn outline shared by a crater and the hide flaps round it: reach x this, by angle. */
 const rimK = (a, seed) => 0.88 + 0.55 * noise1(a * 1.1 + seed * 0.7, seed + 9) + 0.25 * noise1(a * 3.7 + seed, seed + 10);
-function tissueDomeGeometry(seed, R, h) {
+function tissueDomeGeometry(seed, R, h, rimAmt = 1) {
   const nr = 24, na = 48;
   const P = [], I = [];
   for (let i = 0; i <= nr; i++) for (let j = 0; j < na; j++) {
@@ -159,7 +171,7 @@ function tissueDomeGeometry(seed, R, h) {
     // bowl: deepest in the middle, a torn lip near the rim, shredded lumps everywhere
     const z = -h * (1 - u * u) * 0.9 + h * 0.25 * Math.exp(-((u - 0.85) ** 2) / 0.01) + n * h * 0.55 * (0.4 + u);
     // a torn outline, not a disc: the reach varies round the rim (lobes and bites)
-    const rim = rimK(a, seed);
+    const rim = 1 + (rimK(a, seed) - 1) * rimAmt;
     P.push(x * (1 + 0.08 * n) * rim, y * (1 + 0.08 * n) * rim, z);
   }
   for (let i = 0; i < nr; i++) for (let j = 0; j < na; j++) {
@@ -169,6 +181,16 @@ function tissueDomeGeometry(seed, R, h) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
   g.setIndex(I); g.computeVertexNormals();
+  return g;
+}
+/** Bend a patch built flat in its xy plane (z out) round a cylinder of radius R along y. */
+function wrapRound(g, R) {
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i), th = clamp(x / R, -1.4, 1.4);
+    p.setX(i, (R + z) * Math.sin(th)); p.setZ(i, (R + z) * Math.cos(th) - R);
+  }
+  g.computeVertexNormals();
   return g;
 }
 /** Shreds: thin torn strands of muscle / tendon hanging out of a wound (local +z out). */
@@ -358,21 +380,34 @@ export class ClothHole {
     mesh.updateWorldMatrix(true, false);
     if (mesh.isSkinnedMesh) mesh.skeleton.update();
     let best = Infinity, bi = 0;
+    const W = new Float32Array(pos.count * 3);
     for (let i = 0; i < pos.count; i++) {
       if (mesh.isSkinnedMesh) mesh.getVertexPosition(i, v); else v.fromBufferAttribute(pos, i);
       v.applyMatrix4(mesh.matrixWorld);
+      W[i * 3] = v.x; W[i * 3 + 1] = v.y; W[i * 3 + 2] = v.z;
       const d = v.distanceToSquared(c);
       if (d < best) { best = d; bi = i; }
     }
     v.fromBufferAttribute(pos, bi);
+    // the hole is cut in bind space, which need not be metres at the current pose (a stretched
+    // garment, a scaled bind): bind-space length per world metre round the centre
+    const b0 = v.clone(), w0 = new THREE.Vector3(W[bi * 3], W[bi * 3 + 1], W[bi * 3 + 2]), vb = new THREE.Vector3(), vw = new THREE.Vector3();
+    let ks = 0, kn = 0;
+    for (let i = 0; i < pos.count; i++) {
+      vw.set(W[i * 3], W[i * 3 + 1], W[i * 3 + 2]);
+      const dw = vw.distanceTo(w0);
+      if (dw < 0.01 || dw > 0.1) continue;
+      ks += vb.fromBufferAttribute(pos, i).distanceTo(b0) / dw; kn++;
+    }
+    this.k = kn ? ks / kn : 1;
     H.u.uHoleC.value[this.slot].set(v.x, v.y, v.z, 0);
-    H.u.uHoleP.value[this.slot].set({ char: 0, torn: 1, wound: 2 }[o.edge || 'char'] ?? 0, o.band ?? (o.radius ?? 0.06) * 0.6, (o.seed ?? 1) * 1.7, 0);
+    H.u.uHoleP.value[this.slot].set({ char: 0, torn: 1, wound: 2 }[o.edge || 'char'] ?? 0, (o.band ?? (o.radius ?? 0.06) * 0.6) * this.k, (o.seed ?? 1) * 1.7, 0);
     this.update(o.t0 ?? 0);
   }
   update(t) {
     const o = this.o, H = this.mesh.material.userData.fxHoles;
     const t0 = o.t0 ?? 0, t1 = o.t1 ?? t0 + 0.6;
-    const r = (o.radius ?? 0.06) * smoothstep(t0, t1, t) * (t >= t0 ? 1 : 0);
+    const r = (o.radius ?? 0.06) * this.k * smoothstep(t0, t1, t) * (t >= t0 ? 1 : 0);
     H.u.uHoleC.value[this.slot].w = r;
     // the char band spreads ahead of the hole; it is there (scorch) even before it opens
     H.u.uHoleP.value[this.slot].w = smoothstep(t0 - 0.3, t0 + 0.2, t);
@@ -434,6 +469,7 @@ class Appliance extends Effect {
   update(t) {
     const vis = t >= this.t0 && this.enabled;
     this.root.visible = vis;
+    for (const x of this.extra || []) x.visible = vis;
     for (const h of this.holes) h.update(t);
     if (!vis) return;
     for (const S of this.strips) {
@@ -574,8 +610,21 @@ function openFracture(fx, o) {
   shard.rotation.set(-0.9, 0.2, 0); shard.position.set(0, 0.006, -0.012);
   const holeR = o.tear ?? 0.05;
   // the bed under the torn hose: torn flesh around the bone, bloodied skin out to the rim
-  const bed = new THREE.Mesh(tissueDomeGeometry(seed, holeR * 1.1, holeR * 0.2), tissueMaterial('wound', { scale: holeR * 1.1, outside: o.skin || [0.36, 0.24, 0.18] }));
-  bed.scale.set(0.9, 1.2, 1); bed.position.z = -0.004;
+  // (the hole's ragged edge reaches 1.25 x its radius: the bed must cover all of it, or the
+  // hose's grey back face shows through round the wound)
+  // and it is wrapped round the limb (a flat disc that wide stood off the sides of the shin)
+  // (the shin's own half-width, from rays across it 4 cm in, started 10 cm out - inside the gap
+  // to the other leg: the bone line runs near the front
+  // of the leg, so the distance to it is no measure of how round the leg is there)
+  const across = new THREE.Vector3().crossVectors(axis, out).normalize(), c0 = sp.clone().addScaledVector(out, -0.04);
+  const rayX = (sg) => [body, ...cloth].map((m) => surfaceHit(m, c0.clone().addScaledVector(across, 0.1 * sg).toArray(), across.clone().multiplyScalar(-sg).toArray())).filter(Boolean).sort((p, q) => p.distance - q.distance)[0];
+  const sA = rayX(1), sB = rayX(-1);
+  const limbR = clamp(sA && sB ? new THREE.Vector3(...sA.point).distanceTo(new THREE.Vector3(...sB.point)) / 2 - 0.012 : 0.05, 0.03, 0.09);
+  const bedGeo = tissueDomeGeometry(seed, holeR * 1.45, holeR * 0.24, 0.25);
+  bedGeo.scale(1.1, 1.25, 1);
+  wrapRound(bedGeo, limbR);
+  const bed = new THREE.Mesh(bedGeo, tissueMaterial('wound', { scale: holeR * 1.1, outside: o.skin || SKIN }));
+  bed.position.z = -0.004;
   const shreds = new THREE.Mesh(shredGeometry(seed + 2, 0.022, 5), tissueMaterial('muscle', { scale: 0.1 }));
   holder.add(bed, shreds, shard);
   for (const m of holder.children) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; }
@@ -583,7 +632,8 @@ function openFracture(fx, o) {
   for (const m of cloth) A.holes.push(new ClothHole(m, { at: sp.toArray(), radius: o.tear ?? 0.05, edge: 'wound', band: (o.tear ?? 0.05) * 0.9, t0: A.t0 - 0.01, t1: A.t0, seed }));
   if (o.decals !== false) {
     for (const m of cloth) fx.add(new DecalEffect(fx, { kind: 'soak', liquid: 'bloodDark', target: m, at: sp.toArray(), dir: out.clone().negate().toArray(), up: axis.toArray(), size: [0.24, 0.34, 0.25], t0: A.t0, grow: [0, o.soakTau ?? 6], src: [0, -0.05], amount: 0.95, seed: seed + 1 }));
-    fx.add(new DecalEffect(fx, { kind: 'coat', liquid: 'bloodDark', target: body, at: sp.toArray(), dir: out.clone().negate().toArray(), up: axis.toArray(), size: [0.12, 0.16, 0.15], t0: A.t0, seed: seed + 2, params: [0, 4, 0.8, 0], grow: [0, 6] }));
+    // (the skin under hose / trousers is cut away by the build: then the bed carries the blood)
+    if (!cloth.length) fx.add(new DecalEffect(fx, { kind: 'coat', liquid: 'bloodDark', target: body, at: sp.toArray(), dir: out.clone().negate().toArray(), up: axis.toArray(), size: [0.12, 0.16, 0.15], t0: A.t0, seed: seed + 2, params: [0, 4, 0.8, 0], grow: [0, 6] }));
   }
   fx.add(A);
   return A;
@@ -610,7 +660,7 @@ function scalp(fx, o) {
   // corner of the eye, over the cheekbone to the jaw (projected from the front-side of the face)
   const dirF = fwd.clone().multiplyScalar(-0.8).addScaledVector(right, -0.6).normalize();
   const sheetC = hp.clone().addScaledVector(fwd, 0.07).addScaledVector(right, 0.065).addScaledVector(up, 0.02);
-  out.push(fx.add(new DecalEffect(fx, { kind: 'coat', liquid: 'bloodDark', target: [body, ...hair], at: onSkin(sheetC, dirF), dir: dirF.toArray(), up: [0, 1, 0], size: [0.13, 0.27, 0.3], t0: t0 + 0.2, grow: [0, 5], seed: seed + 1, params: [0, 6, 0.55, 0], amount: o.amount ?? 0.6, maxAngle: 88 })));
+  out.push(fx.add(new DecalEffect(fx, { kind: 'coat', liquid: 'bloodDark', target: [body, ...hair], at: onSkin(sheetC, dirF), dir: dirF.toArray(), up: [0, 1, 0], size: [0.12, 0.27, 0.3], t0: t0 + 0.2, grow: [0, 5], seed: seed + 1, params: [0, 6, 0.55, o.streams ?? 1], amount: o.amount ?? 0.55, maxAngle: 88 })));
   // a stream straight down from the split over the temple
   out.push(fx.add(new DecalEffect(fx, { kind: 'run', liquid: 'bloodDark', target: [body, ...hair], at: onSkin(aim.clone().addScaledVector(up, -0.06), dirF), dir: dirF.toArray(), up: [0, 1, 0], size: [0.07, 0.22, 0.3], t0: t0 + 0.1, grow: [0, 4], seed: seed + 5, params: [0, 4, 0, 0], amount: 0.8, maxAngle: 88 })));
   // rivulets off the jaw down the neck into the collar
@@ -621,43 +671,53 @@ function scalp(fx, o) {
   return out;
 }
 
-/** 1F-14b: the rider after the flames - burns on the forearm and the neck, sleeve burned away. */
-function burnedRider(fx, o) {
-  const ch = o.character, side = o.side || 'R';
+/**
+ * Burn through every garment layer over a point and show the burned skin under it: char-edged
+ * holes in each layer the ray from outside meets, and the innermost layer's own shape pulled in a
+ * few mm (the build deletes the skin that garments cover) shaded as a burn graded out from the
+ * middle. Bare skin (no layer over it) gets the burn decal instead. Returns { holes, patch }.
+ */
+const ANAT = /body|eyes|brows|lashes|teeth|tongue|caruncle|hair|reins|buckle|belt/;
+function burnThrough(fx, ch, at, outv, o = {}) {
   const body = ch.meshes.find((m) => /body/.test(m.name)) || ch.meshes[0];
-  const out = [];
+  const R = o.radius ?? 0.09, t0 = o.t0 ?? 0;
+  const o3 = at.clone().addScaledVector(outv, 0.3).toArray(), d3 = outv.clone().negate().toArray();
+  const hits = ch.meshes.filter((mm) => !ANAT.test(mm.name.split(':').pop())).map((m) => [m, surfaceHit(m, o3, d3)]).filter((x) => x[1]);
+  const holes = hits.map(([m, h], i) => new ClothHole(m, { at: h.point, radius: R, edge: 'char', band: o.charBand ?? 0.05, t0, t1: t0 + (o.burnTime ?? 1.2), seed: (o.seed ?? 3) + i }));
+  // the innermost layer is the one the ray from outside meets last (the patch goes under it even
+  // where the build kept some skin: what it kept there is cut in jagged triangles)
+  const inner = hits.sort((a, b) => b[1].distance - a[1].distance)[0];
+  const skinHit = inner ? null : surfaceHit(body, o3, d3);
+  const onSkin = !inner;
+  const patch = !onSkin ? shellPatch(inner[0], inner[1].point, R * 1.5, o.inset ?? 0.006, tissueMaterial('burnskin', { outside: o.skin || SKIN, radius: R * 1.1 })) : null;
+  if (onSkin) fx.add(new DecalEffect(fx, { kind: 'burn', target: body, at: (skinHit ? new THREE.Vector3(...skinHit.point) : at.clone().addScaledVector(outv, 0.05)).toArray(), dir: d3, up: o.up, size: [R * 1.3, R * 2.2, 0.2], t0: t0 + 0.3, amount: o.amount ?? 0.95, seed: (o.seed ?? 3) + 6, maxAngle: 89 }));
+  return { holes, patch };
+}
+
+/** 1F-14b: the rider after the flames - the sleeve burned away over a burned forearm; with
+ * neck: true also the hood / collar burned through over the side of the neck. */
+function burnedRider(fx, o) {
+  const ch = o.character, side = o.side || 'R', t0 = o.t0 ?? 0;
   const w = new THREE.Vector3(), e = new THREE.Vector3();
   ch.bone(`lowerarm02.${side}`).getWorldPosition(w); ch.bone(`lowerarm01.${side}`).getWorldPosition(e);
   const mid = w.clone().lerp(e, 0.5);
   const up = new THREE.Vector3(0, 1, 0);
   const axis = w.clone().sub(e).normalize();
   const outv = up.clone().addScaledVector(axis, -up.dot(axis)).normalize();
-  // the sleeve burns away over the forearm (coat + shirt), charred edges
-  // every garment layer over the forearm burns through (coat, shirt, wraps, gloves...)
-  const ANAT = /body|eyes|brows|lashes|teeth|tongue|caruncle|hair|reins|buckle|belt/;
-  const pr = 0.3, o3 = mid.clone().addScaledVector(outv, pr).toArray(), d3 = outv.clone().negate().toArray();
-  const layers = ch.meshes.filter((mm) => !ANAT.test(mm.name.split(':').pop()) && surfaceHit(mm, o3, d3));
-  for (const m of layers) {
-    out.push(new ClothHole(m, { at: mid.toArray(), radius: o.sleeve ?? 0.09, edge: 'char', band: o.charBand ?? 0.05, t0: o.t0 ?? 0, t1: (o.t0 ?? 0) + (o.burnTime ?? 1.2), seed: 3 }));
-  }
-  // the forearm under the burned-away sleeve: the innermost sleeve's own shape pulled in a few mm
-  // (the build deletes the skin that garments cover), burned
-  // the innermost layer is the one the ray from outside meets last
-  const inner = layers.map((m) => [m, surfaceHit(m, o3, d3).distance]).sort((a, b) => b[1] - a[1])[0]?.[0];
-  const arm = inner ? shellPatch(inner, mid.toArray(), (o.sleeve ?? 0.09) * 1.5, o.inset ?? 0.006, tissueMaterial('burnskin', { outside: o.skin || [0.36, 0.25, 0.19], radius: (o.sleeve ?? 0.09) * 1.1 })) : null;
-  const holder = new THREE.Group();
-  if (arm) holder.userData.patch = arm;
-  out.push(fx.add(new DecalEffect(fx, { kind: 'burn', target: body, at: mid.clone().addScaledVector(outv, 0.05).toArray(), dir: outv.clone().negate().toArray(), up: axis.toArray(), size: [0.12, 0.2, 0.2], t0: (o.t0 ?? 0) + 0.3, amount: 0.95, seed: 9, maxAngle: 89 })));
-  // the side of the neck
+  const arm = burnThrough(fx, ch, mid, outv, { radius: o.sleeve ?? 0.09, t0, burnTime: o.burnTime, charBand: o.charBand, inset: o.inset, skin: o.skin, up: axis.toArray(), seed: 3 });
+  // the side of the neck (from the side, a little forward: under the jaw)
   const nk = new THREE.Vector3(); ch.bone('neck02').getWorldPosition(nk);
   const q = ch.root.getWorldQuaternion(new THREE.Quaternion());
   const sideV = new THREE.Vector3(side === 'R' ? -1 : 1, 0, 0).applyQuaternion(q);
-  out.push(fx.add(new DecalEffect(fx, { kind: 'burn', target: body, at: nk.clone().addScaledVector(sideV, 0.06).toArray(), dir: sideV.clone().negate().toArray(), size: [0.1, 0.12, 0.15], t0: (o.t0 ?? 0) + 0.3, amount: 0.85, seed: 11, maxAngle: 89 })));
-  // holes need update(t): wrap them into an effect
-  const holes = out.filter((x) => x instanceof ClothHole);
-  const E = new Appliance(fx, { name: 'fx-gore-burnedrider', t0: o.t0 ?? 0 });
-  E.holes = holes;
-  if (arm) { E.root = arm; E.casters.push(arm); }
+  const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
+  // (off unless asked: under the scout rider's hood the build keeps the neck skin only in jagged
+  // triangles and the shirt collar sits between - the burn does not read yet; see PROGRESS)
+  const neck = o.neck !== true ? { holes: [], patch: null } : burnThrough(fx, ch, nk, sideV.clone().addScaledVector(fwd, 0.35).normalize(), { radius: o.neckRadius ?? 0.055, t0: t0 + 0.2, burnTime: o.burnTime, charBand: 0.035, inset: 0.005, skin: o.skin, amount: 0.85, seed: 11 });
+  const E = new Appliance(fx, { name: 'fx-gore-burnedrider', t0 });
+  E.holes = [...arm.holes, ...neck.holes];
+  for (const p of [arm.patch, neck.patch]) if (p) E.casters.push(p);
+  E.root = arm.patch || E.root;
+  if (neck.patch) E.extra = [neck.patch];
   fx.add(E);
   return E;
 }

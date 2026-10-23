@@ -67,10 +67,19 @@ resolutions, never the look: per-particle density is renormalised so a cloud kee
 * `fx.gore.wingRoot({ creature, side: 'L', t0, back, bleed, bleedAt, membrane })` the scout's torn wing
   root: crater of exposed muscle, hide flaps, broken bone ends, membrane strips that flap, blood
   coat running back over the flank, pulsing spray.
-* `fx.gore.openFracture({ character, side: 'R', t0 })` bone through the torn, soaked hose below the knee.
-* `fx.gore.scalp({ character, side, t0 })` split scalp, sheets of blood down one side of the face.
-* `fx.gore.burnedRider({ character, side, t0, burnTime })` sleeve burned away (charred hole edges in
-  the garment), blistered raw forearm and neck burns with blackened edges.
+* `fx.gore.openFracture({ character, side: 'R', t0 })` bone through the torn, soaked hose below the knee
+  (the wound bed is wrapped round the shin, its radius measured by rays across the leg, so it fills
+  the ragged hole; bone under a patchy blood film, never clean).
+* `fx.gore.scalp({ character, side, t0, streams })` split scalp, blood down one side of the face in
+  separate streams that merge and part (coat decal `params.w` = streams 0..1, the sheet's sides
+  wander as it runs down).
+* Cloth holes measure bind-space units per world metre round their centre, so `radius` is metres on
+  any garment.
+* `fx.gore.burnedRider({ character, side, t0, burnTime, neck })` the sleeve burned through every
+  garment layer the ray from outside meets (charred hole edges), the forearm under it shaded as a
+  burn graded out from the middle (eschar, raw weeping dermis, slough, blisters, reddened skin).
+  `neck: true` also burns through the hood / collar at the side of the neck (opt-in: under the scout
+  rider's hood it does not read yet - see PROGRESS).
 * building blocks: `hole` (garment holes: char / torn / wound edges), `burn`, `gash`, `char`, `appliance`.
 
 **Dust (`dust.js`)** - F5

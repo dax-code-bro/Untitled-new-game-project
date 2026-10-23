@@ -77,7 +77,7 @@ export const DIRECTOR_KINDS = {
   'gore-wing-root': { about: 'the scout\'s torn wing root (params.actor, side, bleed...)', cost: 0.3, needs: 'creature', make: (fx, p, who) => fx.gore.wingRoot({ ...p, creature: who.creature(p) }) },
   'gore-fracture': { about: 'an open fracture below the knee through torn clothing (params.actor, side)', cost: 0.2, needs: 'character', make: (fx, p, who) => fx.gore.openFracture({ ...p, character: who.character(p) }) },
   'gore-scalp': { about: 'a split scalp with blood down the face (params.actor, side)', cost: 0.1, needs: 'character', make: (fx, p, who) => fx.gore.scalp({ ...p, character: who.character(p) }) },
-  'gore-burned-rider': { about: 'burned clothing and skin after dragon fire (params.actor, side, burnTime)', cost: 0.2, needs: 'character', make: (fx, p, who) => fx.gore.burnedRider({ ...p, character: who.character(p) }) },
+  'gore-burned-rider': { about: 'burned clothing and skin after dragon fire (params.actor, side, burnTime, neck)', cost: 0.2, needs: 'character', make: (fx, p, who) => fx.gore.burnedRider({ ...p, character: who.character(p) }) },
   // cloth, sparks, ash
   'cloth-banner': { about: 'a banner torn loose / ripped / flogging in a dragon\'s wake', cost: 0.2, make: (fx, p) => fx.cloth.banner(p) },
   'cloth-drape': { about: 'a cloth lying over a body or shapes', cost: 0.1, make: (fx, p) => fx.cloth.drape(p) },

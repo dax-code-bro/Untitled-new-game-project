@@ -189,6 +189,9 @@ void fxdEval(vec2 uv, out float d, out float cov, out float dryBias) {
 #if defined(FX_KIND_COAT)
   // broad coverage: an irregular sheet, thinning and breaking up toward its edge, drips below
   vec2 q = p / (0.5 * uSize);
+  // (streams: the sheet's sides wander as it runs down, so its edges are not one long curve)
+  vec2 dq = vec2(-uDown.y, uDown.x);
+  q += dq * uP.w * 0.45 * (fxdF(vec2(dot(p, uDown) / (mn * 0.45), 7.3) + so) - 0.5) * 2.0;
   float e = 1.0 - length(q);
   float n = fxdF(p / (mn * 0.22) + so);
   float n2 = fxdF3(p / (mn * 0.06) + so * 1.7);
@@ -197,7 +200,16 @@ void fxdEval(vec2 uv, out float d, out float cov, out float dryBias) {
   vec2 pd = vec2(dot(p, vec2(-uDown.y, uDown.x)), dot(p, uDown));
   float st = fxdF(vec2(pd.x / (mn * 0.05), pd.y / (mn * 0.7)) + so * 0.9);
   float c = (e * 1.1 + (n - 0.5) * 0.75 + (n2 - 0.5) * 0.18 + (st - 0.5) * 0.35 - (1.0 - uAmount) * 0.6 - 0.08) * mn * 0.5;
-  float sheet = fxdFilm(c, mn * 0.012) * (0.5 + 1.4 * smoothstep(0.0, mn * 0.18, c)) * (0.75 + 0.5 * n2) * (0.5 + 1.0 * st);
+  // (the noise could carry the sheet out to the projector box, where it ended on a straight cut:
+  // pull it back over the outer quarter of the ellipse so the edge is always the film's own)
+  c -= mn * 0.75 * smoothstep(0.72, 1.0, length(q));
+  // p.w: streams - the sheet breaks into separate runs that merge and part (blood coming down a
+  // face from a scalp wound), skin between them; thick dark streams, thin bright film between
+  float sk = uP.w;
+  float st2 = fxdF(vec2(pd.x / (mn * 0.11), pd.y / (mn * 1.2)) + so * 1.3);
+  c += ((st - 0.5) * 0.7 + (st2 - 0.5) * 0.6) * sk * mn * 0.5;
+  float sheet = fxdFilm(c, mn * 0.012) * (0.5 + 1.4 * smoothstep(0.0, mn * 0.18, c)) * (0.75 + 0.5 * n2) * (0.5 + 1.0 * st)
+    * mix(1.0, 0.35 + 1.5 * smoothstep(0.35, 0.8, st * 0.6 + st2 * 0.4), sk);
   d = sheet; cov = step(0.001, sheet);
   dryBias = 0.35 * (1.0 - smoothstep(0.0, mn * 0.12, c));
   if (uP.y > 0.0) fxdRuns(p, -uDown * mn * 0.05, mn * 0.38, uP.y, mn * uP.z, mn * 0.012, uGrow, uSeed, d, cov);
@@ -806,7 +818,7 @@ export function projectOnPlane(F, lift = 0.003) {
 
 // ------------------------------------------------------------------ the effect --
 const KIND_DEFAULTS = {
-  coat: { p: [0, 3, 0.6, 0], grow: [0.4, 6] },       // p.y = drip count, p.z = drip length (x min size)
+  coat: { p: [0, 3, 0.6, 0], grow: [0.4, 6] },       // p.y = drip count, p.z = drip length (x min size), p.w = streams 0..1
   splat: { p: [1, 0, 0, 0] },                         // p.x > 0: add satellite spatter
   spatter: { p: [0.15, 0.04, 0.012, 1.0] },           // p.x falloff (m), p.y cell (x min size), p.z max drop (x min size), p.w elongation
   stamps: { p: [0, 0, 0, 0] },

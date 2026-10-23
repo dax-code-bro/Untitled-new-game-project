@@ -4,7 +4,7 @@
 //     membrane strips flapping, blood running back over the flank and spraying off it
 //   1 the injured villager (R17): split scalp with blood down one side of the face
 //   2 his RIGHT leg below the knee: the open fracture through the torn, soaked hose
-//   3 the scout's rider after the flames (1F-14b): sleeve burned away, forearm and neck burns
+//   3 the scout's rider after the flames (1F-14b): the sleeve burned away, the forearm burned
 // The creature and people are the libraries' current provisional builds; poses are plain (the
 // staging belongs to the shots). Grey card behind for value reference.
 //
@@ -79,7 +79,7 @@ const VIEWS = [
   { look: () => S.woundP, pos: () => S.woundP.clone().addScaledVector(S.woundN, 2.2).add(new THREE.Vector3(0, 0.7, 1.0)), f: 50, fstop: 4 },
   { look: () => S.vHead.clone().addScaledVector(S.vFwd, 0.05), pos: () => S.vHead.clone().addScaledVector(S.vFwd, 0.7).addScaledVector(S.vRight, 0.4).add(new THREE.Vector3(0, 0.04, 0)), f: 65, fstop: 4 },
   { look: () => S.vShin, pos: () => S.vShin.clone().add(new THREE.Vector3(-0.2, 0.25, 0.9)), f: 50, fstop: 4 },
-  { look: () => S.rArm.clone().lerp(S.rNeck, 0.25), pos: () => S.rArm.clone().lerp(S.rNeck, 0.25).addScaledVector(S.rFwd, 0.75).addScaledVector(S.rRight, 0.6).add(new THREE.Vector3(0, 0.05, 0)), f: 40, fstop: 5.6 },
+  { look: () => S.rArm, pos: () => S.rArm.clone().addScaledVector(S.rFwd, 0.55).addScaledVector(S.rRight, 0.45).add(new THREE.Vector3(0, 0.22, 0)), f: 45, fstop: 5.6 },
 ];
 export function update(t, ctx) {
   const cam = ctx.camera;
