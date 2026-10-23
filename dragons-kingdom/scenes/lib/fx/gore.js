@@ -147,6 +147,8 @@ function boneShardGeometry(seed, length, radius) {
  * Exposed tissue: a torn CRATER over a disc of radius R (local +z out of the body): recessed in
  * the middle (where the limb was), lumpy and shredded, the rim raised where the hide tore.
  */
+/** The torn outline shared by a crater and the hide flaps round it: reach x this, by angle. */
+const rimK = (a, seed) => 0.88 + 0.55 * noise1(a * 1.1 + seed * 0.7, seed + 9) + 0.25 * noise1(a * 3.7 + seed, seed + 10);
 function tissueDomeGeometry(seed, R, h) {
   const nr = 24, na = 48;
   const P = [], I = [];
@@ -155,8 +157,10 @@ function tissueDomeGeometry(seed, R, h) {
     const x = Math.cos(a) * r, y = Math.sin(a) * r, u = r / R;
     const n = noise1(x * 9 / R + seed, seed) * 0.5 + noise1(y * 11 / R + 3 + seed, seed + 1) * 0.4 + noise1((x + y) * 27 / R, seed + 2) * 0.35 + noise1((x - y) * 61 / R + 5, seed + 3) * 0.2;
     // bowl: deepest in the middle, a torn lip near the rim, shredded lumps everywhere
-    const z = -h * (1 - u * u) * 0.9 + h * 0.5 * Math.exp(-((u - 0.85) ** 2) / 0.01) + n * h * 0.55 * (0.4 + u);
-    P.push(x * (1 + 0.08 * n), y * (1 + 0.08 * n), z);
+    const z = -h * (1 - u * u) * 0.9 + h * 0.25 * Math.exp(-((u - 0.85) ** 2) / 0.01) + n * h * 0.55 * (0.4 + u);
+    // a torn outline, not a disc: the reach varies round the rim (lobes and bites)
+    const rim = rimK(a, seed);
+    P.push(x * (1 + 0.08 * n) * rim, y * (1 + 0.08 * n) * rim, z);
   }
   for (let i = 0; i < nr; i++) for (let j = 0; j < na; j++) {
     const a = i * na + j, b = i * na + (j + 1) % na, c = (i + 1) * na + j, d = (i + 1) * na + (j + 1) % na;
@@ -225,7 +229,7 @@ function flapRingGeometry(seed, R, n = 16) {
       const L = (len + rag) * s;
       // the flap peels back: from the rim outward and curling away from the wound (toward -z)
       const ang = curl * s;
-      const r = R * (1.0 + 0.05 * hash01(seed, f, 5)) + Math.sin(ang) * L / Math.max(ang, 1e-3) * (ang > 1e-3 ? 1 : 0) + (ang <= 1e-3 ? L : 0);
+      const r = R * rimK(a, seed) * (1.0 + 0.05 * hash01(seed, f, 5)) + Math.sin(ang) * L / Math.max(ang, 1e-3) * (ang > 1e-3 ? 1 : 0) + (ang <= 1e-3 ? L : 0);
       const z = R * 0.08 - (1 - Math.cos(ang)) * L / Math.max(ang, 1e-3) * 0.9;
       P.push(Math.cos(a) * r, Math.sin(a) * r, z);
     }
@@ -499,15 +503,15 @@ function wingRoot(fx, o) {
     holder.add(b);
   });
   // tattered membrane strips hanging from the rim
-  const nS = o.strips ?? 4;
+  const nS = o.strips ?? 3;
   for (let k = 0; k < nS; k++) {
-    const len = R * (1.2 + 1.8 * hash01(seed, k, 11)), wd = R * (0.15 + 0.2 * hash01(seed, k, 12));
+    const len = R * (0.9 + 1.4 * hash01(seed, k, 11)), wd = R * (0.1 + 0.14 * hash01(seed, k, 12));
     const g = new THREE.PlaneGeometry(wd, len, 2, 10);
     g.translate(0, 0, 0); g.rotateX(Math.PI / 2); g.translate(0, 0, len / 2);
     // ragged sides
     const p = g.attributes.position;
     for (let i = 0; i < p.count; i++) p.setX(i, p.getX(i) * (0.6 + 0.6 * hash01(seed, k, i)) * (1 - 0.6 * (p.getZ(i) / len)));
-    const strip = new THREE.Mesh(g, tissueMaterial('membrane', { outside: o.membrane || [0.11, 0.095, 0.085], scale: R / 0.25 }));
+    const strip = new THREE.Mesh(g, tissueMaterial('membrane', { outside: o.membrane || [0.06, 0.05, 0.047], scale: R / 0.25 }));
     const a = (k / nS) * Math.PI * 1.2 - 0.6 + (hash01(seed, k, 13) - 0.5) * 0.4;
     strip.position.set(Math.cos(a) * R * 0.95, Math.sin(a) * R * 0.95, 0);
     // they stream back along the body (local -y ~ toward the tail when flying): lean them out

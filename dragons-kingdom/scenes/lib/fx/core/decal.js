@@ -46,7 +46,9 @@ export const DECAL_LIQUIDS = {
   // drying turns it brown-black (methaemoglobin) and matte, edges first
   blood: { sigWet: [1.0, 7.0, 8.0], sigDry: [1.5, 4.0, 4.6], albWet: [0.1, 0.005, 0.005], albDry: [0.035, 0.012, 0.008], rough: [0.06, 0.55], coat: [0.6, 0.08], coatRough: [0.02, 0.4], h: 0.0006 },
   // venous / older blood (darker, less saturated) - wounds, pooled under bodies
-  bloodDark: { sigWet: [1.3, 8.0, 8.5], sigDry: [1.6, 4.2, 4.8], albWet: [0.08, 0.004, 0.004], albDry: [0.03, 0.01, 0.007], rough: [0.05, 0.55], coat: [0.6, 0.08], coatRough: [0.02, 0.4], h: 0.0007 },
+  // (coat 0.6 / 0.02: a mirror of the blue sky turned big wet areas violet; a slightly rougher,
+  // weaker coat keeps the wet glint without repainting the film)
+  bloodDark: { sigWet: [1.3, 8.0, 8.5], sigDry: [1.6, 4.2, 4.8], albWet: [0.08, 0.004, 0.004], albDry: [0.03, 0.01, 0.007], rough: [0.05, 0.55], coat: [0.42, 0.08], coatRough: [0.07, 0.4], h: 0.0007 },
   // diluted blood (washed, runoff, pink water on skin)
   bloodThin: { sigWet: [0.12, 1.4, 1.6], sigDry: [0.25, 1.2, 1.4], albWet: [0.05, 0.012, 0.012], albDry: [0.03, 0.012, 0.01], rough: [0.08, 0.5], coat: [0.8, 0.05], coatRough: [0.03, 0.4], h: 0.0003 },
   soot: { sigWet: [2.2, 2.3, 2.4], sigDry: [2.2, 2.3, 2.4], albWet: [0.012, 0.011, 0.01], albDry: [0.012, 0.011, 0.01], rough: [0.9, 0.95], coat: [0, 0], coatRough: [0.5, 0.5], h: 0.0 },

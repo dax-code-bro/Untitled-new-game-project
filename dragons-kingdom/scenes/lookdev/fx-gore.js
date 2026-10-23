@@ -76,7 +76,7 @@ export async function setup(ctx) {
 }
 
 const VIEWS = [
-  { look: () => S.woundP, pos: () => S.woundP.clone().addScaledVector(S.woundN, 1.2).add(new THREE.Vector3(0, 0.5, 0.5)), f: 50, fstop: 4 },
+  { look: () => S.woundP, pos: () => S.woundP.clone().addScaledVector(S.woundN, 2.2).add(new THREE.Vector3(0, 0.7, 1.0)), f: 50, fstop: 4 },
   { look: () => S.vHead.clone().addScaledVector(S.vFwd, 0.05), pos: () => S.vHead.clone().addScaledVector(S.vFwd, 0.7).addScaledVector(S.vRight, 0.4).add(new THREE.Vector3(0, 0.04, 0)), f: 65, fstop: 4 },
   { look: () => S.vShin, pos: () => S.vShin.clone().add(new THREE.Vector3(-0.2, 0.25, 0.9)), f: 50, fstop: 4 },
   { look: () => S.rArm.clone().lerp(S.rNeck, 0.25), pos: () => S.rArm.clone().lerp(S.rNeck, 0.25).addScaledVector(S.rFwd, 0.75).addScaledVector(S.rRight, 0.6).add(new THREE.Vector3(0, 0.05, 0)), f: 40, fstop: 5.6 },
