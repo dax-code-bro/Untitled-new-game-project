@@ -112,6 +112,7 @@ export class Effect {
   get dynamic() { return this.casters; }
   layer(l) {
     this.layers.push(l); this.object.add(l.mesh);
+    if (l.depthTwin) this.object.add(l.depthTwin);
     if (l.shadowTwin) { this.object.add(l.shadowTwin); this.casters.push(l.shadowTwin); }
     else if (l.mesh.castShadow) this.casters.push(l.mesh);
     return l;

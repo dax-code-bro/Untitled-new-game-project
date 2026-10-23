@@ -37,7 +37,7 @@ attribute vec4 aC;     // alpha, seed, age, sunT (deep shadow)
 attribute vec4 aD;     // r, g, b, extra
 attribute vec2 aE;     // ambient occlusion (sky visibility), unused
 uniform vec2 uViewport;
-uniform float uMinPx, uStretchMax;
+uniform float uMinPx, uStretchMax, uConserve;
 varying vec3 vQ;       // capsule coords: x along the streak (in r), y across (in r), halfLen (in r)
 varying vec4 vC; varying vec4 vD; varying vec2 vE;
 varying vec3 vCenterW; varying float vR; varying float vViewZ; varying float vAlphaK;
@@ -60,7 +60,7 @@ void main() {
   if (L <= 1e-5 || halfL < 0.02 * r) { ax = vec2(cos(aB.w), sin(aB.w)); halfL = 0.0; }
   vec2 ay = vec2(-ax.y, ax.x);
   // energy: the particle's opacity is spread over the swept area
-  k *= 1.0 / (1.0 + halfL * 1.2732);   // pi r^2 / (pi r^2 + 4 r halfL)
+  k *= 1.0 / (1.0 + uConserve * halfL / r * 1.2732);   // pi r^2 / (pi r^2 + 4 r halfL)
   float ex = (halfL / r + 1.0);
   vec2 off = ax * position.x * ex * r + ay * position.y * r;
   vec4 c = vm; c.xy += off;
@@ -84,7 +84,28 @@ ${NOISE_GLSL}
 varying vec3 vQ; varying vec4 vC; varying vec4 vD; varying vec2 vE;
 varying vec3 vCenterW; varying float vR; varying float vViewZ; varying float vAlphaK;
 varying vec3 vAxW; varying vec3 vAyW; varying vec3 vToCamW;
-uniform float uSoft, uOpacity;
+uniform float uSoft, uOpacity, uDepthThr;
+// depth-only twin: the cinematic resolve hazes / fogs every pixel at the depth it finds there. A
+// transparent particle in front of a far background would get the far background's haze. The
+// twin writes, under each particle, a depth between the background's and the particle's own
+// (weighted by the particle's opacity), so dense smoke / flame is hazed at its own distance and
+// thin edges blend smoothly into the background's haze. Over the sky (no haze applied there) it
+// writes the particle depth where the particle is not negligible.
+void fxWriteDepth(float a, float fz) {
+  float sz = fxSceneZ();
+  float z;
+  if (sz > 1e8) { if (a < uDepthThr) discard; z = fz; }
+  else { if (fz >= sz) discard; z = mix(sz, fz, smoothstep(0.0, 0.85, a)); }
+  float n = dkLateNearFar.x, f = dkLateNearFar.y;
+  float ndc = (f + n) / (f - n) - 2.0 * f * n / ((f - n) * max(z, n));
+  gl_FragDepth = clamp(0.5 * ndc + 0.5, 0.0, 1.0);
+  gl_FragColor = vec4(0.0);
+}
+#ifdef FX_DEPTH_ONLY
+#define FX_DEPTH_OUT(a, fz) { fxWriteDepth(a, fz); return; }
+#else
+#define FX_DEPTH_OUT(a, fz)
+#endif
 // nearest point on the capsule axis -> (dx, dy) in units of r
 vec2 fxCapsule() { return vec2(max(abs(vQ.x) - vQ.z, 0.0) * sign(vQ.x), vQ.y); }
 float fxSoftFade(float frontZ) {
@@ -129,6 +150,7 @@ void main() {
   alpha *= fxSoftFade(vViewZ - zs * vR);
   alpha *= smoothstep(0.15, 0.6 + vR * 0.5, vViewZ - zs * vR);
   if (alpha <= 0.002) discard;
+  FX_DEPTH_OUT(alpha, vViewZ - zs * vR)
   // ---- light
   vec3 nW = normalize(vAxW * q.x + vAyW * q.y + vToCamW * zs);   // sphere normal
   vec3 L = uSunDir;
@@ -178,6 +200,7 @@ void main() {
   float alpha = smoothstep(1.0, 0.55, sqrt(d2)) * vC.x * vAlphaK * uOpacity;
   alpha *= fxSoftFade(vViewZ - zs * vR);
   if (alpha <= 0.002) discard;
+  FX_DEPTH_OUT(alpha, vViewZ - zs * vR)
   vec3 nW = normalize(vAxW * q.x + vAyW * q.y + vToCamW * zs);
   vec3 V = normalize(vToCamW);
   vec3 alb = uAlbedo * vD.rgb;
@@ -231,6 +254,7 @@ void main() {
   float alpha = vC.x * vAlphaK * uOpacity;
   alpha *= fxSoftFade(vViewZ);
   if (alpha <= 0.002) discard;
+  FX_DEPTH_OUT(alpha, vViewZ)
   vec3 nW = normalize(vToCamW + (vAxW * q.x + vAyW * q.y) * 0.6);
   float diff = clamp(dot(nW, uSunDir), 0.0, 1.0) * 0.75 + 0.25;
   vec3 alb = uAlbedo * vD.rgb;
@@ -238,7 +262,67 @@ void main() {
   gl_FragColor = vec4(col * alpha, alpha);
 }`;
 
-const FRAGS = { puff: FRAG_PUFF, drop: FRAG_DROP, glow: FRAG_GLOW, chip: FRAG_CHIP };
+
+// 'flame': a volumetric, self-lit tongue of burning gas - the same world-space noise erosion as
+// 'puff' (billows fixed in the flow), emission from a local heat value mapped through a palette
+// (core / body / edge, the canon fire colours) or a blackbody ramp; additive. vD.a = heat (0..1.4)
+const FRAG_FLAME = FRAG_COMMON + /* glsl */`
+uniform vec3 uCoreC, uBodyC, uEdgeC;
+uniform float uGain, uNoiseScale, uNoiseAmt, uEvolve, uEdge, uSoot;
+void main() {
+  vec2 q = fxCapsule();
+  float d2 = dot(q, q);
+  if (d2 >= 1.0) discard;
+  float zs = sqrt(1.0 - d2);
+  float age = vC.z, seed = vC.y;
+  vec3 pw = vCenterW + (vAxW * q.x + vAyW * q.y) * vR + vToCamW * zs * vR * 0.5;
+  vec3 np = (pw - vCenterW) / vR * uNoiseScale + vec3(seed * 13.17, seed * 7.31, seed * 3.77) + vec3(0.0, -age * uEvolve, age * uEvolve * 0.37);
+  vec4 n = texture(uNoise, np * 0.25);
+  vec4 n2 = texture(uNoise, np * 0.71 + 0.37);
+  float dr = sqrt(d2);
+  // torn tongue: the ball eroded hard by the billow and wisp channels, finer rips toward the rim
+  float shape = dr * 0.9 + (n.g - 0.5) * uNoiseAmt * 1.3 + (n2.r - 0.5) * 0.8 * uNoiseAmt * dr;
+  float dens = smoothstep(1.0, 1.0 - uEdge, shape);
+  // tears: dark gaps between licking tongues (the sum of many tongues must not fill in smooth)
+  dens *= smoothstep(0.3, 0.7, n.r * 0.55 + n2.g * 0.65 + (1.0 - dr) * 0.25);
+  if (dens <= 0.003) discard;
+  // local heat: hotter in the middle of the tongue and where the noise is dense
+  // billows (Worley cells) are hot in their middles, the creases between them cool to dark red
+  float heat = vD.a * (0.55 + 0.6 * (1.0 - dr)) * (0.45 + 0.9 * n.g) * (0.85 + 0.3 * n.r) - (n2.b - 0.5) * 0.25;
+  vec3 col = heat > 0.55 ? mix(uBodyC, uCoreC, clamp((heat - 0.55) / 0.45, 0.0, 1.0)) : mix(uEdgeC, uBodyC, clamp(heat / 0.55, 0.0, 1.0));
+  col *= smoothstep(0.0, 0.25, heat);
+  float thick = 2.0 * zs;
+  float m = dens * thick * vC.x * vAlphaK * uGain;
+  m *= fxSoftFade(vViewZ - zs * vR);
+  FX_DEPTH_OUT(clamp(dens * thick * vC.x * vAlphaK * 1.5, 0.0, 1.0), vViewZ - zs * vR)
+  gl_FragColor = vec4(col * m, 0.0);
+}`;
+
+// 'shimmer': heat haze - the scene behind (late pass colour copy) refracted by rising, swirling
+// noise; strongest low and in the middle of each patch. Needs the cinematic stack's late pass
+// (without it the patch draws nothing).
+const FRAG_SHIMMER = FRAG_COMMON + /* glsl */`
+uniform float uShimmer, uTimeS;
+void main() {
+  if (dkLateOn < 0.5) discard;
+  vec2 q = fxCapsule();
+  float d2 = dot(q, q);
+  if (d2 >= 1.0) discard;
+  float zs = sqrt(1.0 - d2);
+  vec3 pw = vCenterW + (vAxW * q.x + vAyW * q.y) * vR;
+  float sz = fxSceneZ();
+  if (sz < vViewZ - zs * vR) discard;                  // something solid in front of the haze
+  vec3 np = pw * 1.7 + vec3(0.0, -uTimeS * 2.2, 0.0) + vC.y * 5.0;
+  vec3 n = texture(uNoise, np * 0.25).rgb - 0.5;
+  vec3 n2 = texture(uNoise, np * 0.9 + 0.31).rgb - 0.5;
+  float w = (1.0 - d2) * (1.0 - d2) * vC.x;
+  // refraction offset in pixels: grows with the depth of hot air behind it, falls with distance
+  vec2 off = (n.xy * 0.7 + n2.xy * 0.5) * uShimmer * w * dkLateSize.y / max(vViewZ, 1.0);
+  vec3 col = fxSceneColor(gl_FragCoord.xy + off);
+  gl_FragColor = vec4(col * w, w);
+}`;
+
+const FRAGS = { puff: FRAG_PUFF, drop: FRAG_DROP, glow: FRAG_GLOW, chip: FRAG_CHIP, flame: FRAG_FLAME, shimmer: FRAG_SHIMMER };
 
 // shadow-map pass for puffs: the same density, turned into a stochastic (hashed) cut-out so a
 // thick cloud casts a solid shadow and a thin one a partial one (the shadow filter smooths it)
@@ -281,7 +365,7 @@ export class ParticleLayer {
     this.fx = fx;
     this.mode = o.mode || 'puff';
     this.max = Math.max(1, o.max | 0);
-    this.sort = o.sort ?? (this.mode !== 'glow');
+    this.sort = o.sort ?? (this.mode !== 'glow' && this.mode !== 'flame');
     const quad = new THREE.InstancedBufferGeometry();
     quad.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0]), 3));
     quad.setIndex([0, 1, 2, 0, 2, 3]);
@@ -306,17 +390,19 @@ export class ParticleLayer {
       ...fx.light.uniforms, ...late,
       uNoise: { value: fx.noise }, uTime: { value: 0 },
       uViewport: { value: new THREE.Vector2(fx.ctx.renderWidth || fx.ctx.width || 1920, fx.ctx.renderHeight || fx.ctx.height || 1080) },
-      uMinPx: { value: o.minPx ?? 0.7 }, uStretchMax: { value: o.stretchMax ?? 400 },
-      uSoft: { value: o.soft ?? 0.6 }, uOpacity: { value: s.opacity ?? 1 },
+      uMinPx: { value: o.minPx ?? 0.7 }, uStretchMax: { value: o.stretchMax ?? 400 }, uConserve: { value: o.conserve === false ? 0 : 1 },
+      uSoft: { value: o.soft ?? 0.6 }, uOpacity: { value: s.opacity ?? 1 }, uDepthThr: { value: 0.5 },
       uAlbedo: { value: v3(s.albedo, [0.5, 0.47, 0.42]) },
       uSigma: { value: s.sigma ?? 2.0 }, uG: { value: s.g ?? 0.45 },
       uNoiseScale: { value: s.noiseScale ?? 1.0 }, uNoiseAmt: { value: s.noiseAmt ?? 0.9 }, uEvolve: { value: s.evolve ?? 0.6 },
       uAmbient: { value: s.ambient ?? 1.0 }, uBillow: { value: s.billow ?? 0.6 }, uEdge: { value: s.edge ?? 0.6 },
       uEmissive: { value: s.emissive ?? 0 }, uMS: { value: s.ms ?? 0.5 }, uEmitCol: { value: v3(s.emitCol, [1, 0.4, 0.1]) }, uSunScale: { value: s.sunScale ?? 1 },
       uGloss: { value: s.gloss ?? 120 }, uGain: { value: s.gain ?? 1 }, uCore: { value: s.core ?? 0 },
+      uCoreC: { value: v3(s.coreC, [1.0, 0.5, 0.09]) }, uBodyC: { value: v3(s.bodyC, [1.0, 0.27, 0.025]) }, uEdgeC: { value: v3(s.edgeC, [0.75, 0.07, 0.01]) },
+      uSoot: { value: s.soot ?? 0 }, uShimmer: { value: s.shimmer ?? 1 }, uTimeS: { value: 0 },
     };
     this.uniforms = uniforms;
-    const blend = o.blending || (this.mode === 'glow' ? 'additive' : 'premult');
+    const blend = o.blending || (this.mode === 'glow' || this.mode === 'flame' ? 'additive' : 'premult');
     const mat = new THREE.ShaderMaterial({
       vertexShader: VERT, fragmentShader: FRAGS[this.mode], uniforms,
       transparent: true, depthWrite: false, depthTest: true, fog: false, toneMapped: false,
@@ -333,11 +419,29 @@ export class ParticleLayer {
     this.mesh.name = o.name || `fx-${this.mode}`;
     this.mesh.frustumCulled = false;
     this.mesh.castShadow = false; this.mesh.receiveShadow = false;
-    this.mesh.renderOrder = o.renderOrder ?? (this.mode === 'glow' ? 12 : 10);
+    this.mesh.renderOrder = o.renderOrder ?? ({ glow: 12, flame: 11, shimmer: 8 }[this.mode] ?? 10);
     if (o.late !== false) makeLate(this.mesh, uniforms);
     else this.mesh.userData.dkNoVelocity = true;
     this.geometry = quad;
     this.shadowGrid = null;
+    // depth twin (drawn right after the colour pass): dense pixels write the particle's depth, so the
+    // cinematic resolve hazes / fogs them at their own distance (not at the far background's) and
+    // depth of field / later FX see them. o.depthWrite: alpha threshold, false = none.
+    const thrDef = { puff: 0.1, drop: 0.3, chip: 0.3, flame: 0.1 }[this.mode];   // (sky threshold)
+    const thr = o.depthWrite === false ? null : (o.depthWrite ?? thrDef ?? null);
+    if (thr != null) {
+      const du = { ...uniforms, uDepthThr: { value: thr } };
+      const dmat = new THREE.ShaderMaterial({
+        vertexShader: VERT, fragmentShader: FRAGS[this.mode], uniforms: du, defines: { FX_DEPTH_ONLY: 1 },
+        transparent: true, depthWrite: true, depthTest: true, colorWrite: false, side: THREE.DoubleSide,
+      });
+      const twin = new THREE.Mesh(quad, dmat);
+      twin.name = `${this.mesh.name}-depth`;
+      twin.frustumCulled = false; twin.castShadow = false; twin.receiveShadow = false;
+      twin.renderOrder = 1000 + this.mesh.renderOrder;      // after every colour layer (never hides another FX)
+      if (o.late !== false) makeLate(twin, du); else twin.userData.dkNoVelocity = true;
+      this.depthTwin = twin;
+    }
     // clouds cast (stochastic) shadows on the ground, people and the volumetric fog
     const cast = o.castShadow ?? (this.mode === 'puff' && fx.tier.castShadow);
     if (cast && this.mode === 'puff') {
@@ -392,6 +496,7 @@ export class ParticleLayer {
     geo.instanceCount = n;
     this.mesh.visible = n > 0;
     if (this.shadowTwin) this.shadowTwin.visible = n > 0;
+    if (this.depthTwin) this.depthTwin.visible = n > 0;
     if (!n) return;
     {
       const A = this.sA, B = this.sB;
@@ -430,6 +535,6 @@ export class ParticleLayer {
     cp(this.sA, this.aA, 4); cp(this.sB, this.aB, 4); cp(this.sC, this.aC, 4); cp(this.sD, this.aD, 4); cp(this.sE, this.aE, 2);
   }
 
-  setTime(t) { this.uniforms.uTime.value = t; }
-  dispose() { this.geometry.dispose(); this.material.dispose(); }
+  setTime(t) { this.uniforms.uTime.value = t; this.uniforms.uTimeS.value = t; }
+  dispose() { this.geometry.dispose(); this.material.dispose(); this.depthTwin?.material.dispose(); }
 }
