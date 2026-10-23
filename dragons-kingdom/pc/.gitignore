@@ -4,3 +4,4 @@ tools/
 .venv-bpy/
 .dk-gpu.json
 .bpy-python
+downloads/

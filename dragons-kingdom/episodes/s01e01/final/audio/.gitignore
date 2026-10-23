@@ -1,0 +1,14 @@
+# Sound masters are never committed (SERIES.md section 2). They reach the render PC as a packed,
+# SHA-256-checked download: pc/pack-sound.mjs + delivery.json + pc/build-caches.mjs (pc/MANIFEST.md, "Sound").
+# Only delivery.json, README.md and the subtitle file S01E01.en.srt belong in git here.
+*.wav
+*.flac
+*.aiff
+*.m4a
+*.mp3
+*.aac
+*.ogg
+*.opus
+*.tar
+*.part
+*.part-dk

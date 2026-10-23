@@ -1,0 +1,21 @@
+{
+ "about": "Sound files that are not in git (SERIES.md section 2) and how they reach the render PC. pc/pack-sound.mjs packs a package on the computer that has its files and records the archive here (file, bytes, sha256, download url). pc/build-caches.mjs, family 'sound' (run by the desktop shortcut before every render), downloads it, checks the archive's and every file's sha256 and puts the files in 'dir'. Without a url: node pc/build-caches.mjs --only sound --from <archive.tar or folder>. archive null = not packed or not published yet.",
+ "packages": [
+  {
+   "id": "final-vo",
+   "what": "Episode 1 final voice takes: 385 takes and 5 placeholders, computer voices (episodes/s01e01/final/vo/README.md). Daxtyn has not approved any of them.",
+   "dir": "episodes/s01e01/final",
+   "files_from": "episodes/s01e01/final/vo/takes.json",
+   "needed_for": "mixing the episode's sound (on whichever computer the mix is made). Not needed to render pictures.",
+   "archive": null
+  },
+  {
+   "id": "mix",
+   "what": "Episode 1 sound mix: S01E01_mix.wav (the whole episode) or scenes/<scene>.wav (one per scene), plus S01E01.en.srt timed to it. Not made yet.",
+   "dir": "episodes/s01e01/final/audio",
+   "files": [],
+   "needed_for": "the sound of the scene files and of the episode; render/episode.mjs adds it to finished scenes without rendering the pictures again",
+   "archive": null
+  }
+ ]
+}

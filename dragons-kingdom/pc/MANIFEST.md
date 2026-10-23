@@ -13,9 +13,9 @@ CPU-bound steps.
 | What | Where | Size on disk | Rebuilt by | Time (first run) | Needed for |
 |---|---|---:|---|---|---|
 | **Tools** | | | | | |
-| Git | system (winget `Git.Git`), or portable MinGit in `%LOCALAPPDATA%\DragonsKingdom\mingit` | about 300 MB / 50 MB | setup script, step 1 | 1-2 min | clone + `git pull` of new scene files |
+| Git | the PC's own Git, else portable MinGit 2.55.0(5) in `%LOCALAPPDATA%\DragonsKingdom\mingit` (pinned, SHA-256 checked; no installer and no administrator password) | about 50 MB | setup script, step 1 | 1 min | clone + `git pull` of new scene files |
 | Node.js 20 LTS (any 20+ works) | system, or `pc/tools/node` (official nodejs.org zip, SHA-256 checked) | about 90 MB | setup script, step 2 | 1 min | everything |
-| ffmpeg + ffprobe with libx264 | system, or `pc/tools/ffmpeg` (BtbN GPL build: Windows / Linux; Homebrew or evermeet.cx on macOS) | 200 MB download, about 450 MB unpacked (Windows) | setup script, step 3 | 1-3 min | encoding chunks, scene files, the episode |
+| ffmpeg + ffprobe with libx264 | `pc/tools/ffmpeg`: Windows and Linux always the **pinned** ffmpeg 8.1.3 build below (SHA-256 checked; `pc/tools/ffmpeg/.dk-pin` names it; `render/lib/tools.mjs` uses it before any other ffmpeg). macOS: Homebrew's or evermeet.cx's, **not pinned** | 193 MB download, about 450 MB unpacked (Windows); 150 MB (Linux) | setup script, step 3 | 1-3 min | encoding chunks, scene files, the episode |
 | npm packages (three 0.180.0, Playwright 1.56.1) | `node_modules/` | 46 MB | `npm ci` | 30 s | everything |
 | Playwright Chromium (build 1194) + headless shell | `%LOCALAPPDATA%\ms-playwright` (Windows), `~/Library/Caches/ms-playwright`, `~/.cache/ms-playwright` | 597 MB + 323 MB | `npx playwright install chromium` | 1-2 min | drawing the frames (WebGL2 on the GPU) |
 | Python 3.11 (64-bit) | system (`py -3.11`, `python3.11`), else private via uv 0.5.11 (`%LOCALAPPDATA%\DragonsKingdom\python`, `pc/tools/python`) | about 100 MB | setup script, step 5 | 1 min | Blender cloth / character builds |
@@ -32,14 +32,65 @@ CPU-bound steps.
 | **Optional** | | | | | |
 | Kokoro-82M voice models `kokoro-v1.0.int8.onnx` + `voices-v1.0.bin` (Apache-2.0, SHA-256 checked) | `episodes/s01e01/preview/.cache/kokoro/` | about 115 MB | `node pc/build-caches.mjs --only voice` (or setup with `-WithVoice` / `--with-voice`) | 1 min | only for making computer voice takes (`preview/tools/make_vo.py`, its own Python venv: `preview/tools/requirements-vo.txt`, plus espeak-ng and SoX); **not** needed to render pictures |
 | Preview voice takes, preview mix and stems (`preview/vo/*.wav`, `preview/mix/`) | `episodes/s01e01/preview/` | about 190 MB | `preview/tools/make_vo.py`, `build_soundtrack.py` | - | the work-in-progress preview only, not the final episode |
+| **Sound (never in git; see "Sound" below)** | | | | | |
+| Final voice takes of the shooting script: 385 takes + 5 placeholders, 48 kHz 24-bit mono WAV (`final/vo/takes.json` lists each with its SHA-256) | `episodes/s01e01/final/vo/` | 90 MB (389 files) | made on the cloud by `final/tools/make_final_vo.py`; reaches the PC as package `final-vo` (`node pc/build-caches.mjs --only sound`) | 1 min download | mixing the sound (wherever the mix is made); **not** needed to render pictures |
+| The episode's sound mix `S01E01_mix.wav` (or `scenes/<scene>.wav`) + `S01E01.en.srt` | `episodes/s01e01/final/audio/` (git-ignored for sound files) | about 1 GB (55 min, 48 kHz 24-bit stereo) | **not made yet**; reaches the PC as package `mix` | a few minutes | the sound of the scene files and the episode |
 | **Per machine** | | | | | |
-| GPU launch profile found by gpu-check | `pc/.dk-gpu.json` | 1 KB | `npm run gpu-check` | 1-5 min | `--gpu`, `npm run episode` |
+| GPU launch profile found by gpu-check | `pc/.dk-gpu.json` | 1 KB | `pc\GPU-Check.cmd` (Windows), `bash pc/render-episode.sh --gpu-check` (macOS / Linux), or `node render/gpu-check.mjs` | 1-5 min | `--gpu`, `npm run episode` |
 | Benchmark result (`--workers auto`) | `.dk-tuning.json` | 1 KB | `npm run bench` | 5-10 min | optional |
 | Logs | `pc/logs/` | small | every setup / gpu-check / cache / episode run | - | sending back to the Claude session |
+| Sound downloads in progress | `pc/downloads/` | up to the archive size | `pc/build-caches.mjs` (removed after unpacking) | - | - |
 | **Render output** | | | | | |
 | Shots (10-bit CRF 12 intermediates) | `output/episode1/shots/<scene>/<shot>/` | about 0.3-0.6 MB per frame: 25-45 GB for the episode | `npm run episode` | the render | scene files |
 | Scene files (10-bit CRF 16 + sound) + `.en.srt` | `output/episode1/scenes/<scene>.mp4` | about 0.15-0.3 MB per frame: 12-23 GB | `npm run episode` | 5-60 min encoding each | the episode |
 | The episode: `DragonsKingdom_S01E01_4K.mp4` (10-bit, subtitles), `..._1080p.mp4` (8-bit, phones and TVs), `.en.srt` | `output/episode1/` | about 12-23 GB + 2-4 GB | `npm run episode` (when every scene is done) | 1-3 h | watching |
+
+## Pinned downloads (the setup checks each SHA-256 before using the file)
+
+| What | Exact file | SHA-256 |
+|---|---|---|
+| MinGit (Windows, only if the PC has no Git) | `https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.5/MinGit-2.55.0.5-64-bit.zip` (2026-08-20) | `56d7b226b7693196cfc71fef26568f536c4a021ab6c37ff2db4287bed908e96e` |
+| ffmpeg 8.1.3, Windows x64 | `https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-30-13-08/ffmpeg-n8.1.3-9-g29e619e767-win64-gpl-8.1.zip` | `7b801cdd3a1a0bb54ae6f572187e68b4ed54f52086cfee133fab2180bfb429fa` |
+| ffmpeg 8.1.3, Linux x64 | same release, `ffmpeg-n8.1.3-9-g29e619e767-linux64-gpl-8.1.tar.xz` | `97ce978979194b5cf7e06a5e68020dbdaa7a4f3294c5452b6a1bc347100dbb79` |
+| ffmpeg 8.1.3, Linux arm64 | same release, `ffmpeg-n8.1.3-9-g29e619e767-linuxarm64-gpl-8.1.tar.xz` | `10523d1e0be6b3ce62a9708cc50815c4b5eb5f36ae147fbe2afeecda6f2d6845` |
+| Node.js 20 (only if the PC has no Node 20+) | the newest `node-v20.*-win-x64.zip` / `.tar.xz` on nodejs.org | checked against nodejs.org's own `SHASUMS256.txt` |
+
+The ffmpeg builds are BtbN's month-end build of 2026-09-30 from the 8.1 release branch. BtbN keeps
+month-end builds for two years, and its `checksums.sha256` for that release lists the values above.
+The Windows zip and the Linux x64 archive were downloaded on the cloud machine on 2026-10-18 and
+matched; the Linux build was also tested there (libx264 present, 10-bit encode works). To move to a
+newer ffmpeg, change the name and SHA-256 in both setup scripts and here in one commit; the next
+setup run replaces `pc/tools/ffmpeg`. A Mac has no pinned build (BtbN makes none, and the Mac
+download hosts cannot be reached from the cloud machine to fingerprint them), so a Mac's ffmpeg
+version can differ: the setup log and every GPU-check log print it.
+
+## Sound (how audio that is not in git reaches the PC)
+
+`SERIES.md` section 2: audio masters are never committed. The route:
+
+1. **Pack** on the computer that has the files: `node pc/pack-sound.mjs final-vo` (the takes in
+   `episodes/s01e01/final/vo/`, checked against `takes.json` first) or `node pc/pack-sound.mjs mix`
+   (every sound file in `episodes/s01e01/final/audio/` and `scenes/`, plus `S01E01.en.srt`). It
+   writes one plain `.tar` to `output/delivery/`. The archive is deterministic: the same files give
+   the same bytes and the same SHA-256.
+2. **Publish**: upload the `.tar` to any free place with a direct download link (for example a
+   GitHub release of this repository), then run `node pc/pack-sound.mjs <id> --record --url <link>`.
+   That writes the archive's size and SHA-256, the link and, for the mix, every file's SHA-256 into
+   `episodes/s01e01/final/audio/delivery.json`. Commit and push only that small JSON file.
+3. **On the PC**, nothing extra to do: the desktop shortcut runs `git pull` and then
+   `pc/build-caches.mjs`, whose `sound` step downloads the `.tar` into `pc/downloads/`, checks its
+   SHA-256, checks every file in it against the list, puts only listed files in place (never outside
+   their folder), and deletes the download. `render/episode.mjs` then adds the mix to finished
+   scene files without rendering the pictures again.
+
+Without an upload, copy the `.tar` or the folder (a USB stick, a cloud drive) and run
+`node pc/build-caches.mjs --only sound --from <file.tar or folder>` on the PC. The same checks apply.
+Nothing published yet is not an error: `build-caches` shows "not published yet" and the render
+goes on with silent scene files. State on 2026-10-18: `final-vo` is packed and checked on the cloud
+(`dk-s01e01-final-vo-60d54fe148a1.tar`, 94,586,368 bytes, SHA-256
+`6c770b177f30df29c4652c958708bc5ae5a35ee5bec470cde45c227935890346`) but **not uploaded**; the mix
+does not exist. The whole route (pack, download from a web server, unpack, a damaged archive, a
+damaged file, paths that try to leave the folder) was tested on the cloud machine.
 
 ## Disk space to plan for
 

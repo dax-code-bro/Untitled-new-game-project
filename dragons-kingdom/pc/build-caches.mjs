@@ -5,11 +5,14 @@
 //   node pc/build-caches.mjs --check             what is missing / out of date (changes nothing)
 //   node pc/build-caches.mjs                     build what is missing or out of date
 //   node pc/build-caches.mjs --only nature,props one family (node-modules, chromium, ffmpeg, assets,
-//                                                nature, humans, architecture, props, voice)
+//                                                nature, humans, architecture, props, sound, voice)
 //   options: --python PATH  Blender's Python (bpy 4.2) - default pc/.venv-bpy (made by the setup
 //                           scripts) or DK_BPY_PYTHON;  --jobs N  parallel human builds;
 //            --humans id,id only these characters (e.g. --only humans --humans abby,remi --force);
 //            --force        rebuild even if up to date;  --with-voice  also the Kokoro voice models
+//            --from PATH    sound: install a package from a copied .tar or folder (pc/MANIFEST.md, "Sound")
+// "sound" (the final voice takes and the episode mix, never in git) downloads what the cloud has
+// published in episodes/s01e01/final/audio/delivery.json; nothing published yet is not an error.
 //
 // Idempotent and resumable: every finished piece is recorded in a stamp
 // (<cache>/.dk-build.json) together with a hash of the code that made it, so
@@ -22,6 +25,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readDelivery, packageState, installPackage, download, sha256File } from './sound-delivery.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, '..');
@@ -329,6 +333,69 @@ export const FAMILIES = [
   bpyFamily('architecture', ARCH, 'architecture cloth bakes (nest linen, table cloth; Blender)'),
   bpyFamily('props', PROPS, 'prop cloth bakes (sails, awnings, banners, pennants; Blender)'),
   {
+    // sound files that are never in git (SERIES.md section 2): pc/sound-delivery.mjs, pc/pack-sound.mjs
+    name: 'sound', what: 'sound not in git: final voice takes + episode mix (episodes/s01e01/final/audio/delivery.json)',
+    optional: true, defaultRun: true,    // a render does not wait for it: scene files get their sound later
+    check() {
+      const d = readDelivery();
+      if (!d) return { ok: true, note: 'no delivery list (episodes/s01e01/final/audio/delivery.json)' };
+      const notes = [];
+      const probs = [];
+      for (const p of d.packages) {
+        let st;
+        try { st = packageState(p); } catch (e) { probs.push(`${p.id}: ${e.message}`); continue; }
+        if (st.ok) notes.push(`${p.id} ok (${st.total} files)`);
+        else if (!st.total) notes.push(`${p.id}: not made yet`);
+        else if (p.archive?.url) probs.push(`${p.id}: ${st.total - st.have} of ${st.total} file(s) to download (${(p.archive.bytes / 2 ** 20).toFixed(0)} MB)`);
+        else notes.push(`${p.id}: not on this computer (${p.archive ? 'packed, not published: install it with --from' : 'not published yet'})`);
+      }
+      return probs.length ? { ok: false, problem: probs.join('; '), note: notes.join('; ') || null } : { ok: true, note: notes.join('; ') };
+    },
+    async build(ctx) {
+      const d = readDelivery();
+      if (!d) return { ok: false, problem: 'episodes/s01e01/final/audio/delivery.json is missing' };
+      if (ctx.from) {
+        const src = path.resolve(ctx.from);
+        if (!exists(src)) return { ok: false, problem: `--from ${src}: not found` };
+        let pkgs = d.packages;
+        if (fs.statSync(src).isFile()) {
+          const sum = sha256File(src);
+          const m = d.packages.find((p) => p.archive?.sha256 === sum);
+          if (m) { pkgs = [m]; say(`    ${path.basename(src)}: the published archive of "${m.id}" (sha256 ok)`); }
+        }
+        let n = 0;
+        const bad = [];
+        for (const p of pkgs) {
+          if (!packageState(p, { hash: false }).total) continue;
+          const r = installPackage(p, src, say);
+          if (r.written) say(`    ${p.id}: ${r.written} file(s) checked and put in ${p.dir}`);
+          n += r.written;
+          bad.push(...r.bad.map((b) => `${p.id}: ${b}`));
+        }
+        if (bad.length) return { ok: false, problem: `${bad.length} file(s) did not match their sha256 and were NOT put in place (e.g. ${bad.slice(0, 3).join(', ')})` };
+        if (!n) return { ok: false, problem: `--from ${src}: none of the listed sound files are in it` };
+        return { ok: true };
+      }
+      for (const p of d.packages) {
+        const st = packageState(p);
+        if (st.ok || !st.total || !p.archive?.url) continue;
+        const tar = path.join(HERE, 'downloads', p.archive.file);
+        const have = exists(tar) && fs.statSync(tar).size === p.archive.bytes && sha256File(tar) === p.archive.sha256;
+        if (!have) {
+          say(`    ${p.id}: downloading ${p.archive.url} (${(p.archive.bytes / 2 ** 20).toFixed(0)} MB)`);
+          try { await download(p.archive.url, tar, { sha256: p.archive.sha256, bytes: p.archive.bytes, say }); } catch (e) { return { ok: false, problem: `${p.id}: ${e.message}` }; }
+        }
+        const r = installPackage(p, tar, say);
+        if (r.bad.length) return { ok: false, problem: `${p.id}: ${r.bad.length} file(s) in the archive do not match delivery.json (not put in place)` };
+        const st2 = packageState(p);
+        if (!st2.ok) return { ok: false, problem: `${p.id}: ${st2.total - st2.have} file(s) still missing after unpacking - the published archive does not match delivery.json` };
+        say(`    ${p.id}: ${r.written} file(s) checked and put in ${p.dir}`);
+        fs.rmSync(tar, { force: true });
+      }
+      return { ok: true };
+    },
+  },
+  {
     name: 'voice', what: 'Kokoro-82M voice model files (only for making voice takes; optional)', optional: true,
     files: {
       'kokoro-v1.0.int8.onnx': '6e742170d309016e5891a994e1ce1559c702a2ccd0075e67ef7157974f6406cb',
@@ -382,7 +449,8 @@ async function main() {
     else if (a === '--humans') opt.humans = argv[++i].split(',').map((x) => x.trim()).filter(Boolean);
     else if (a === '--jobs') opt.jobs = Math.max(1, parseInt(argv[++i], 10) || 1);
     else if (a === '--rebuild-unstamped') opt.trustUnstamped = false;
-    else if (a === '-h' || a === '--help') { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 18).map((l) => l.replace(/^\/\/ ?/, '')).join('\n')); return 0; }
+    else if (a === '--from') opt.from = argv[++i];
+    else if (a === '-h' || a === '--help') { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 21).map((l) => l.replace(/^\/\/ ?/, '')).join('\n')); return 0; }
     else throw new Error(`unknown option ${a}`);
   }
   if (opt.only) for (const n of opt.only) if (!FAMILIES.some((f) => f.name === n)) throw new Error(`--only ${n}: choose from ${FAMILIES.map((f) => f.name).join(', ')}`);
@@ -394,7 +462,8 @@ async function main() {
   say(`Dragon's Kingdom caches - ${opt.check ? 'check' : 'build'} (${new Date().toString()})`);
   say(`  project ${ROOT}`);
   say(`  Blender Python: ${python || 'not found (needed for humans, architecture, props)'}`);
-  const fams = FAMILIES.filter((f) => (opt.only ? opt.only.has(f.name) : !f.optional || (f.name === 'voice' && opt.voice)));
+  if (opt.from && !(opt.only && opt.only.size === 1 && opt.only.has('sound'))) throw new Error('--from is for the sound: use  --only sound --from <file.tar or folder>');
+  const fams = FAMILIES.filter((f) => (opt.only ? opt.only.has(f.name) : !f.optional || f.defaultRun || (f.name === 'voice' && opt.voice)));
   let bad = 0;
   for (const f of fams) {
     let c;
@@ -404,7 +473,7 @@ async function main() {
       if (!c.ok) bad++;
       continue;
     }
-    if (c.ok && !opt.force) { say(`  ok      ${f.name.padEnd(13)} ${c.note || 'up to date'}`); continue; }
+    if (c.ok && !opt.force && !(opt.from && f.name === 'sound')) { say(`  ok      ${f.name.padEnd(13)} ${c.note || 'up to date'}`); continue; }
     say(`  build   ${f.name.padEnd(13)} ${f.what}${c.problem ? ` - ${c.problem}` : ''}`);
     const t0 = Date.now();
     let r;
