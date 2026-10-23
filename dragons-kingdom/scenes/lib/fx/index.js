@@ -21,6 +21,8 @@ import { smokeApi } from './smoke.js';
 import { fireApi } from './fire.js';
 import { waterApi } from './water.js';
 import { goreApi } from './gore.js';
+import { clothApi } from './cloth.js';
+import { sparksApi, ashApi } from './sparks.js';
 
 export { FxManager, Effect } from './core/manager.js';
 export { ParticleLayer } from './core/particles.js';
@@ -33,6 +35,8 @@ export { DebrisEffect, solvePiece, poseAt } from './debris.js';
 export { SmokePlume, SmokeWisp, SMOKE_KINDS } from './smoke.js';
 export { FireJet, FireBurn, Embers, Shimmer, FIRE_PALETTES } from './fire.js';
 export { ClothHole, attachToBone, surfaceHit } from './gore.js';
+export { ClothEffect, simulateCloth } from './cloth.js';
+export { Sparks, AshFall } from './sparks.js';
 
 /** Create the FX manager for this scene (one per scene; cached on ctx). */
 export async function createFx(ctx, o = {}) {
@@ -46,6 +50,9 @@ export async function createFx(ctx, o = {}) {
   fx.fire = fireApi(fx);
   fx.water = waterApi(fx);
   fx.gore = goreApi(fx);
+  fx.cloth = clothApi(fx);
+  fx.sparks = sparksApi(fx);
+  fx.ash = ashApi(fx);
   ctx.__dkFx = fx;
   return fx;
 }
