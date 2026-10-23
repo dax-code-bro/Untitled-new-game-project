@@ -47,7 +47,7 @@ export class Downwash extends Effect {
     this.wind = arr3(o.wind ?? fx.wind);
     this.puffs = this.layer(new ParticleLayer(fx, {
       max: this.perBurst * this.bursts.length, mode: 'puff', name: 'fx-downwash-puffs', soft: 0.8 * this.R / 30,
-      shading: { albedo: this.color, sigma: o.sigma ?? 0.55, g: 0.55, noiseScale: 2.4, noiseAmt: 1.25, evolve: 0.25, billow: 0.8, edge: 0.45, ambient: 1.0 },
+      shading: { albedo: this.color, ms: 0.75, sigma: o.sigma ?? 0.5, g: 0.55, noiseScale: 1.7, noiseAmt: 1.0, evolve: 0.25, billow: 0.45, edge: 0.8, ambient: 1.0 },
     }));
     this.grid = new ShadowGrid(fx.tier.grid);
     // grit + grass bits thrown outward
@@ -100,7 +100,7 @@ export class Downwash extends Effect {
     p[1] = C[1] + Math.max(0, y + wy) + this.wind[1] * a;
     p[2] = C[2] + cz * rr + wz + this.wind[2] * a;
     // size grows with turbulent diffusion
-    const base = kind === 0 ? 0.7 + 1.5 * h(12) * h(12) : kind === 1 ? 0.45 + 1.0 * h(12) : 2.0 + 1.8 * h(12);
+    const base = kind === 0 ? 1.0 + 1.6 * h(12) * h(12) : kind === 1 ? 0.6 + 1.1 * h(12) : 2.4 + 2.0 * h(12);
     const size = k30 * base * (0.35 + 0.65 * Math.sqrt(Math.min(4, a / 1.2))) * this.ts.size;
     // density: entrained in ~0.2 s, diluted as the puff grows, gone by the end of life
     const life = this.life * (0.6 + 0.6 * h(13)) * (kind === 2 ? 1.3 : 1);
@@ -193,7 +193,7 @@ export class DustCloud extends Effect {
     this.color = o.color ? (typeof o.color === 'string' ? DUST_COLORS[o.color] : o.color) : DUST_COLORS.chalk;
     this.puffs = this.layer(new ParticleLayer(fx, {
       max: this.n, mode: 'puff', name: 'fx-dust-cloud', soft: 0.4 * this.R / 5,
-      shading: { albedo: this.color, sigma: o.sigma ?? 1.8, g: 0.5, noiseScale: 1.5, noiseAmt: 1.0, evolve: 0.3, billow: 0.8, edge: 0.75 },
+      shading: { albedo: this.color, ms: 0.75, sigma: o.sigma ?? 1.8, g: 0.5, noiseScale: 1.5, noiseAmt: 1.0, evolve: 0.3, billow: 0.8, edge: 0.75 },
     }));
     this.grid = new ShadowGrid(fx.tier.grid);
     this.groundY = o.groundY;
@@ -258,7 +258,7 @@ export class DustHaze extends Effect {
     this.color = o.color ? (typeof o.color === 'string' ? DUST_COLORS[o.color] : o.color) : DUST_COLORS.chalk;
     this.puffs = this.layer(new ParticleLayer(fx, {
       max: this.n, mode: 'puff', name: 'fx-dust-haze', soft: 1.5,
-      shading: { albedo: this.color, sigma: 1.0, g: 0.6, noiseScale: 1.2, noiseAmt: 1.1, evolve: 0.1, billow: 0.3, edge: 0.9 },
+      shading: { albedo: this.color, ms: 0.75, sigma: 1.0, g: 0.6, noiseScale: 1.2, noiseAmt: 1.1, evolve: 0.1, billow: 0.3, edge: 0.9 },
     }));
     this.grid = new ShadowGrid(Math.max(8, fx.tier.grid >> 1));
   }

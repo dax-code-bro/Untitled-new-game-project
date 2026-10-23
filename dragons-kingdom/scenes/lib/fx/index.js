@@ -16,6 +16,7 @@ import { FxManager } from './core/manager.js';
 import { dustApi } from './dust.js';
 import { bloodApi } from './blood.js';
 import { DecalEffect } from './core/decal.js';
+import { debrisApi } from './debris.js';
 
 export { FxManager, Effect } from './core/manager.js';
 export { ParticleLayer } from './core/particles.js';
@@ -24,6 +25,7 @@ export { TIERS, resolveTier } from './core/tier.js';
 export { DecalEffect, DECAL_LIQUIDS, projectorFrame, projectOnMesh } from './core/decal.js';
 export { DUST_COLORS } from './dust.js';
 export { BLOOD_COLOR, bloodTint } from './blood.js';
+export { DebrisEffect, solvePiece, poseAt } from './debris.js';
 
 /** Create the FX manager for this scene (one per scene; cached on ctx). */
 export async function createFx(ctx, o = {}) {
@@ -32,6 +34,7 @@ export async function createFx(ctx, o = {}) {
   fx.dust = dustApi(fx);
   fx.blood = bloodApi(fx);
   fx.decal = (opts) => fx.add(new DecalEffect(fx, opts));
+  fx.debris = debrisApi(fx);
   ctx.__dkFx = fx;
   return fx;
 }

@@ -96,7 +96,7 @@ float fxSoftFade(float frontZ) {
 
 const FRAG_PUFF = FRAG_COMMON + /* glsl */`
 uniform vec3 uAlbedo;
-uniform float uSigma, uG, uNoiseScale, uNoiseAmt, uEvolve, uAmbient, uEmissive, uBillow, uEdge, uSunScale;
+uniform float uSigma, uG, uNoiseScale, uNoiseAmt, uEvolve, uAmbient, uEmissive, uBillow, uEdge, uSunScale, uMS;
 uniform vec3 uEmitCol;
 void main() {
   vec2 q = fxCapsule();
@@ -141,10 +141,22 @@ void main() {
   float msT = exp(-rho * dens * chord * vR * 0.15);
   float cloudT = vC.w;
   float cosV = dot(-normalize(vToCamW), L);    // angle between the view ray and the light
-  float ph = mix(fxHG(cosV, uG), fxHG(cosV, -0.25), 0.25) * 12.566;   // normalised: isotropic = 1
   float lamS = clamp(dot(nW, L) * 0.5 + 0.5, 0.0, 1.0);
   float lam = 0.3 + 0.7 * mix(lamS, relief, 0.6);
-  vec3 sun = uSunCol * cloudT * uSunScale * (selfT * mix(lam, ph * (0.6 + 0.8 * relief), 0.5) + 0.35 * msT * (1.0 - selfT)) / 3.14159;
+  // multiple scattering (Wrenninge's octaves): each order of scattering sees the light through a
+  // thinner effective medium (T^(0.5^i)) with a weaker, more isotropic phase - thick, bright
+  // scatterers (dust, steam) stay luminous deep inside instead of going black like soot
+  float Tl = cloudT * selfT;
+  float msA = uMS;
+  vec3 sun = vec3(0.0);
+  float oa = 1.0, ob = 1.0, oc = 1.0;
+  for (int o = 0; o < 3; o++) {
+    float ph = mix(fxHG(cosV, uG * oc), fxHG(cosV, -0.25 * oc), 0.25) * 12.566;
+    float Ti = pow(max(Tl, 1e-4), ob);
+    sun += oa * Ti * mix(lam, ph * (0.6 + 0.8 * relief), 0.5);
+    oa *= msA; ob *= 0.5; oc *= 0.5;
+  }
+  sun *= uSunCol * uSunScale / 3.14159;
   float occ = vE.x;
   vec3 amb = mix(uGroundCol, uSkyCol, clamp(0.5 + 0.5 * nW.y, 0.0, 1.0)) * (0.35 + 0.65 * occ) * uAmbient * (0.8 + 0.4 * bill);
   vec3 pdir; vec3 pe = fxPointIrr(pw, pdir);
@@ -260,7 +272,8 @@ void main() {
 /**
  * new ParticleLayer(fx, { max, mode, name, sort, late, shading: {...} })
  * shading (puff): albedo [r,g,b], sigma (1/m extinction per unit density), g (phase), noiseScale,
- *   noiseAmt, evolve, ambient, billow (0 wispy - 1 cauliflower), edge, emissive, emitCol, sunScale
+ *   noiseAmt, evolve, ambient, billow (0 wispy - 1 cauliflower), edge, emissive, emitCol, sunScale,
+ *   ms (multiple-scattering strength ~ single-scattering albedo: 0.6-0.8 dust/steam, 0.2 soot)
  * shading (drop): albedo, gloss; (glow): gain, core; (chip): albedo
  */
 export class ParticleLayer {
@@ -299,7 +312,7 @@ export class ParticleLayer {
       uSigma: { value: s.sigma ?? 2.0 }, uG: { value: s.g ?? 0.45 },
       uNoiseScale: { value: s.noiseScale ?? 1.0 }, uNoiseAmt: { value: s.noiseAmt ?? 0.9 }, uEvolve: { value: s.evolve ?? 0.6 },
       uAmbient: { value: s.ambient ?? 1.0 }, uBillow: { value: s.billow ?? 0.6 }, uEdge: { value: s.edge ?? 0.6 },
-      uEmissive: { value: s.emissive ?? 0 }, uEmitCol: { value: v3(s.emitCol, [1, 0.4, 0.1]) }, uSunScale: { value: s.sunScale ?? 1 },
+      uEmissive: { value: s.emissive ?? 0 }, uMS: { value: s.ms ?? 0.5 }, uEmitCol: { value: v3(s.emitCol, [1, 0.4, 0.1]) }, uSunScale: { value: s.sunScale ?? 1 },
       uGloss: { value: s.gloss ?? 120 }, uGain: { value: s.gain ?? 1 }, uCore: { value: s.core ?? 0 },
     };
     this.uniforms = uniforms;
