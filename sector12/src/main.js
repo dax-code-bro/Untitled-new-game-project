@@ -66,8 +66,9 @@ function showTitle(result = null) {
   $('title').innerHTML = `<div class="tbox">
     <h1>SECTOR 12</h1><p class="tag">An island in the middle of nowhere. Print to survive.</p>
     ${res}
+    ${saveFilesHtml()}
     <div class="tstats"><span>◆ <b>${s.bank}</b> filament banked</span><span>🧵 <b>${s.cloth || 0}</b> cloth</span><span>🗄 <b>${s.locker.length}</b> in locker</span><span>🖨 ${q}</span></div>
-    <button class="deploy" id="deploy">${result ? 'RESPAWN AT THE POB' : 'DEPLOY'}</button>
+    <button class="deploy" id="deploy">${result ? 'RESPAWN AT THE POB' : 'DEPLOY'} · ${esc(Save.activeName())}</button>
     <div class="cols">
       ${touchMode ? `<div><h4>Touch controls</h4><ul>
         <li>Left thumb: move (push to the edge to sprint) · Right thumb: drag to look</li>
@@ -86,11 +87,58 @@ function showTitle(result = null) {
         <li><b>South</b> forest: water, cover, hunting. <b>West</b> desert: scorching — wear sand gear. <b>East</b> jungle: rivers and ruins. <b>North</b> mountain: freezing, best loot.</li>
         <li><b>Extract</b> at the very top of Frostfang Summit to bank everything you carry. Die and you lose it.</li></ul></div>
     </div>
-    <button class="danger" id="reset">Reset progress</button>
+    <button class="danger" id="reset">Reset “${esc(Save.activeName())}”</button>
   </div>`;
   $('title').classList.remove('hidden');
   $('deploy').onclick = deploy;
-  $('reset').onclick = () => { if (confirm('Erase all progress (bank, locker, prints)?')) { save = Save.reset(); showTitle(); } };
+  // two-step buttons instead of browser pop-ups (the web page blocks those)
+  armTwoStep($('reset'), 'Tap again to erase this save', () => { save = Save.reset(); applySettings(); showTitle(); });
+  bindSaveFiles();
+}
+
+// ---------------------------------------------------------------- save files
+const ago = (t) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
+function saveFilesHtml() {
+  const list = Save.listSlots();
+  const rows = list.map((m) => `<div class="slot ${m.active ? 'on' : ''}" data-id="${m.id}">
+      <div class="sname"><b>${esc(m.name)}</b>${m.active ? '<em>playing</em>' : ''}<small>${ago(m.played)}</small></div>
+      <div class="sstats">◆ ${m.bank} · 🗄 ${m.locker}${m.queue ? ` · 🖨 ${m.queue}` : ''} · ${m.kills} kills · ${m.extracts} extracts</div>
+      <div class="sbtns">${m.active ? '' : `<button data-sact="play">Play</button>`}<button data-sact="rename">Rename</button><button data-sact="del" class="danger">Delete</button></div>
+    </div>`).join('');
+  return `<div class="saves"><h4>Save files</h4>${rows}
+    ${list.length < Save.MAX_SLOTS ? `<form id="newsave" class="newsave"><input id="newname" maxlength="24" placeholder="Name your new game" autocomplete="off"><button type="submit">+ New game</button></form>` : `<p class="small">You have ${Save.MAX_SLOTS} save files; delete one to start another.</p>`}</div>`;
+}
+function applySettings() { audio.setVolume(save.settings.volume); }
+function armTwoStep(btn, armedText, fn) {
+  if (!btn) return;
+  const label = btn.textContent;
+  let armed = false, t = null;
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!armed) { armed = true; btn.textContent = armedText; btn.classList.add('armed'); t = setTimeout(() => { armed = false; btn.textContent = label; btn.classList.remove('armed'); }, 3500); return; }
+    clearTimeout(t);
+    fn();
+  });
+}
+function bindSaveFiles() {
+  const form = $('newsave');
+  if (form) form.addEventListener('submit', (e) => { e.preventDefault(); const s2 = Save.createSlot($('newname').value); if (s2) { save = s2; applySettings(); showTitle(); } });
+  document.querySelectorAll('#title .slot').forEach((row) => {
+    const id = row.dataset.id;
+    const b = (k) => row.querySelector(`[data-sact="${k}"]`);
+    if (b('play')) b('play').onclick = () => { save = Save.load(id); applySettings(); showTitle(); };
+    b('rename').onclick = () => {
+      const nm = row.querySelector('.sname b');
+      const input = document.createElement('input');
+      input.maxLength = 24; input.value = nm.textContent; input.className = 'rename';
+      nm.replaceWith(input); input.focus(); input.select();
+      let finished = false;
+      const done = (keep = true) => { if (finished) return; finished = true; if (keep) Save.renameSlot(id, input.value); setTimeout(() => showTitle(), 0); };
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') done(); if (e.key === 'Escape') done(false); });
+      input.addEventListener('blur', done);
+    };
+    armTwoStep(b('del'), 'Tap again', () => { const s2 = Save.deleteSlot(id); if (s2) save = s2; applySettings(); showTitle(); });
+  });
 }
 
 async function deploy() {
@@ -159,10 +207,12 @@ addEventListener('wheel', (e) => { if (game && locked() && !game.ui) input.wheel
 addEventListener('contextmenu', (e) => e.preventDefault());
 
 $('resume').addEventListener('click', () => { audio.init(); if (testMode || touchMode) setPaused(false); else lock(); });
+let quitArmed = 0;
 $('quit').addEventListener('click', () => {
   if (!game) return;
   const safe = game.inSafeZone(game.player.pos);
-  if (!safe && !confirm('You are outside the POB safe zone. Quitting now loses everything you carry. Quit anyway?')) return;
+  if (!safe && Date.now() - quitArmed > 4000) { quitArmed = Date.now(); $('quit').textContent = 'Outside the safe zone: you lose what you carry. Tap again to quit'; setTimeout(() => { $('quit').textContent = 'Quit to title'; }, 4000); return; }
+  quitArmed = 0; $('quit').textContent = 'Quit to title';
   if (safe) game.saveCarry(); else { save.carry = []; persist(); }
   setPaused(false);
   const g = game;

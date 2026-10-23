@@ -55,6 +55,8 @@ Phones start on the Low graphics preset.
 4. To bank everything you carry, **extract at the very top of Frostfang Summit** in the north. Dress for -50 °C.
 5. If you die, everything you were carrying is gone.
 
+**Save files.** The title screen lists your save files. Start a **New game** in a fresh one, **Play** to switch, **Rename** or **Delete** (tap twice). Each save has its own filament, locker, prints and kit; settings are shared. Saves live in your browser.
+
 ## Code map (`src/`)
 
 | File | What it does |
