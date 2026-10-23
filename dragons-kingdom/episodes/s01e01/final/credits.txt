@@ -1,0 +1,70 @@
+DRAGON'S KINGDOM
+
+Season 1, Episode 1
+
+
+
+Created by
+Daxtyn Sanches
+
+Story by
+Daxtyn Sanches
+
+Additional scenes and dialogue
+drafted with Claude (Anthropic)
+
+
+
+Made with Claude (Anthropic) in Claude Code:
+the scene code, the 3D models and animation,
+the voice processing and the render pipeline
+
+
+
+Voices
+computer-generated with Kokoro-82M by hexgrad
+(Apache License 2.0)
+
+
+
+Skies and light (HDRI photographs, CC0)
+from Poly Haven
+Greg Zaal, Alexander Scholten,
+Sergej Majboroda, Andreas Mischok
+
+Photo-scanned ground, rock, wood, bark,
+cloth, leather and metal (CC0)
+Lennart Demes, ambientCG
+
+Stone and pebble materials (CC0)
+Rob Tuytel and the Poly Haven team
+
+Coastal cliff composition
+Babylon.js team (CC BY 4.0),
+from Poly Haven scans (CC0)
+
+Leaf textures
+Daniel Greenheck, EZ-Tree (MIT License)
+
+Human bodies, faces, eyes, hair and skin
+MakeHuman team / Data Collection AB (CC0)
+
+Dutch ship model: Poly Haven (CC0)
+
+Street lantern: sbtron / Microsoft,
+fish: Microsoft, wicker: Eric Chadwick
+Khronos glTF Sample Assets (CC0)
+
+
+
+Made with free and open-source software
+three.js (MIT)
+Playwright (Apache 2.0)
+Chromium (BSD and other open licences)
+Node.js (MIT)
+FFmpeg and x264 (GNU GPL)
+Blender (GNU GPL)
+Python (PSF License), NumPy and SciPy (BSD)
+kokoro-onnx and ONNX Runtime (MIT)
+eSpeak NG and phonemizer (GNU GPL 3.0)
+SoX (GNU GPL / LGPL)

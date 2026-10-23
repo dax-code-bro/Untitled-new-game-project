@@ -243,7 +243,7 @@ async function renderShot(o, scene, job, r, { workers, fresh }) {
   return { ...res, err, wallS: (Date.now() - t0) / 1000 };
 }
 
-function finishShot(o, scene, job, r, wallS) {
+function finishShot(o, scene, job, r, wallS, files = null) {
   const file = shotFile(o, scene, job);
   const v = probeVideo(file);
   if (!v || v.frames !== job.frames || v.width !== o.W || v.height !== o.H) {
@@ -253,7 +253,7 @@ function finishShot(o, scene, job, r, wallS) {
   writeJson(doneFile(o, scene, job), {
     job: job.job, scene: scene.key, set: job.set, kind: r.kind, frames: job.frames, width: o.W, height: o.H, stat: statKey(file),
     source: r.scene ? relp(r.scene) : null, startS: r.startS ?? null, via: r.via ?? null, cinematic: r.args?.cinematic ?? null,
-    renderer: jj?.fingerprint?.renderer ?? null, files: jj?.fingerprint?.files ?? {}, wallS: wallS ?? null,
+    renderer: jj?.fingerprint?.renderer ?? null, files: files ?? jj?.fingerprint?.files ?? {}, wallS: wallS ?? null,
     finishedAt: new Date().toISOString(),
   });
   return null;
@@ -270,13 +270,27 @@ async function makeCard(o, scene, job, r) {
   if (r.kind === 'text') {
     const font = findFont();
     const size = Math.round(56 * o.H / 2160);
-    vf.push(`drawtext=${font ? `fontfile=${ffPath(font)}:` : ''}textfile=${ffPath(r.textFile)}:expansion=none:fontcolor=white:fontsize=${size}:line_spacing=${Math.round(size * 0.6)}:x=(w-text_w)/2:y=h-(t/${d.toFixed(3)})*(h+text_h)`);
+    // every line centred, as end credits are (drawtext text_align, FFmpeg 6.1+); older FFmpeg: a centred block of left-aligned lines
+    const across = drawtextCanAlign() ? `x=0:boxw=${o.W}:text_align=C` : 'x=(w-text_w)/2';
+    vf.push(`drawtext=${font ? `fontfile=${ffPath(font)}:` : ''}textfile=${ffPath(r.textFile)}:expansion=none:fontcolor=white:fontsize=${size}:line_spacing=${Math.round(size * 0.6)}:${across}:y=h-(t/${d.toFixed(3)})*(h+text_h)`);
   }
   await ffmpeg(['-f', 'lavfi', '-i', `color=c=black:s=${o.W}x${o.H}:r=${FPS}`, '-frames:v', String(job.frames),
     ...(vf.length ? ['-vf', vf.join(',')] : []), ...x264Args({ crf: 12, preset: o.x264Preset, bitDepth: 10 }),
     '-r', fpsRational(FPS), '-f', 'mp4', tmp], `card ${job.job}`);
   fs.renameSync(tmp, out);
-  return finishShot(o, scene, job, r, null);
+  // a text card remembers the text it was made from: when credits.txt changes, the card is made again (see the main loop)
+  const files = r.textFile ? { [relp(r.textFile)]: hashOnDisk(o, relp(r.textFile)) } : {};
+  return finishShot(o, scene, job, r, null, files);
+}
+
+let _canAlign = null;
+/** Does this FFmpeg's drawtext know text_align (6.1 and newer)? */
+function drawtextCanAlign() {
+  if (_canAlign === null) {
+    const r = spawnSync(ffmpegPath(), ['-hide_banner', '-h', 'filter=drawtext'], { encoding: 'utf8', windowsHide: true });
+    _canAlign = /\btext_align\b/.test(r.stdout || '');
+  }
+  return _canAlign;
 }
 
 function findFont() {
@@ -580,7 +594,11 @@ async function main() {
       for (const job of scene.jobs) {
         if (STOPPING) { complete = false; break; }
         const done = shotDone(o, scene, job);
-        if (done) {
+        if (done && done.kind === 'text' && staleFiles(o, done).length) {
+          // cards cost seconds, so a changed credits text is made again without being asked (--rerender-stale is for 3D shots)
+          say(`  ${job.job}: the card's text changed since it was made (${staleFiles(o, done).join(', ')}) -> making it again`);
+          if (!a.dryRun) { fs.rmSync(doneFile(o, scene, job), { force: true }); fs.rmSync(shotFile(o, scene, job), { force: true }); }
+        } else if (done) {
           if (a.rerenderStale && done.kind === '3d') {
             const st = staleFiles(o, done);
             if (st.length) {

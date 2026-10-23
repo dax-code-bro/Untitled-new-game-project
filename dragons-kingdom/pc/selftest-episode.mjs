@@ -13,6 +13,7 @@
 //  3. the next run resumes the shot from its finished chunks, joins the last scene and
 //     assembles the episode (+ small copy, subtitles); frame counts, streams and sound are checked;
 //  4. one more run has nothing left to do.
+//  5. the credits text changes: only the credits card is made again and END + the episode are rejoined.
 // The fixture lives in output/selftest-episode/ (removed afterwards unless --keep).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -186,6 +187,15 @@ async function main() {
   check(r.code === 0 && /episode: up to date/.test(r.out) && !/frames, set /.test(r.out), 'nothing rendered, everything up to date');
   r = await runEpisode(['--status']);
   check(/total: 216\/216 frames \(100\.0%\)/.test(r.out), 'status shows 216/216 frames');
+
+  say('\nrun 6: the credits text changes: only the credits card is made again, then END and the episode are rejoined');
+  fs.appendFileSync(path.join(FIX, 'plan', 'credits.txt'), 'Leaf textures: a new line\n');
+  r = await runEpisode();
+  check(r.code === 0 && /E-01: the card's text changed since it was made/.test(r.out), 'the credits card was made again');
+  check(!/frames, set /.test(r.out), 'no 3D shot rendered again');
+  check(/END: joining/.test(r.out) && !/\bA: joining|\bC: joining/.test(r.out), 'only the END scene file was rejoined');
+  const v6 = probe(episode, ['-count_packets', '-show_entries', 'stream=codec_type,nb_read_packets']);
+  check(+v6?.streams?.find((x) => x.codec_type === 'video')?.nb_read_packets === 216, 'the episode was assembled again with all 216 frames');
 
   say(`\n${failures ? `${failures} check(s) FAILED` : 'all checks passed'} in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   if (failures) say(`(fixture and output kept in ${path.relative(ROOT, FIX)})`);
