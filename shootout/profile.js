@@ -54,7 +54,7 @@ const Profile = (() => {
   // The card you've been dealt most often.
   function topCard() {
     let best = null, k = 0;
-    Object.entries(data.cards).forEach(([id, c]) => { if (c > k) { best = id; k = c; } });
+    Object.entries(data.cards).forEach(([id, c]) => { if (c > k && CARD_BY_ID[id]) { best = id; k = c; } });
     return best;
   }
 

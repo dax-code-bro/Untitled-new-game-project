@@ -57,7 +57,6 @@ the rarest are rolled once per hand instead.
 | Swap | Rare | 7% per card (about 17% of hands) | Play it on someone and you swap everything: seats, cards, guns, lives, items, wounds, teammates, even dynamite. |
 | Gun | Rare | 5% per card (about 13% of hands) | Your big gun for this round: 2 shots, both live, one hit kills anyone. |
 | Dynamite | Rare | 4% per card (about 10% of hands) | Slide a lit bundle to another player. It blows at the end of next round and kills whoever sits there, unless a Block shield stops it. |
-| Jack of Trades | Epic | 10% of hands | Play it and you (and your teammate) win instantly. |
 | Grenade | Epic | 8% of hands | Everyone else is hit (starts bleeding, or loses a life if already bleeding) and loses all their cards and items. The thrower keeps theirs but is caught in the blast too. |
 | Nuclear | Legendary | 3% of hands (more with Lucky) | A nuclear bomb comes through the ceiling: everyone else is wiped out and you (and your teammate) win. |
 

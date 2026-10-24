@@ -339,6 +339,166 @@ const Table = (() => {
     return s.rig.head.localToWorld(V(0, 0.1, 0.02));
   }
 
+  // ---------- idle life ----------
+  // Between moves the outlaws don't just stare at you: their eyes wander
+  // round the room and the table, and now and then they smoke, sip whiskey,
+  // check a pocket watch, fix their hat, scratch their head, drum on the
+  // table or stretch. Only while the table is calm: any game animation
+  // interrupts them, and the arm settles back afterwards.
+
+  let busy = 0;   // game animations running right now
+
+  // Where an idle outlaw is looking; a new spot every few seconds.
+  function idleGaze(s, i, dt) {
+    s.gazeT = (s.gazeT || 0) - dt;
+    if (!s.gaze || s.gazeT <= 0) {
+      s.gazeT = 1.8 + Math.random() * 4.5;
+      const r = Math.random();
+      const others = seats.map((o, k) => k).filter(k => k !== i && k !== 0 && !seats[k].dead);
+      if (r < 0.2) s.gaze = { seat: 0 };                                       // you
+      else if (r < 0.5 && others.length) s.gaze = { seat: others[Math.floor(Math.random() * others.length)] };
+      else if (r < 0.62) s.gaze = { at: V((Math.random() - 0.5) * 0.6, TABLE_Y, (Math.random() - 0.5) * 1.6) };   // the table
+      else if (r < 0.7) s.gaze = { at: V(0, 3.2, -0.4) };                      // the lamp
+      else if (r < 0.8) s.gaze = { at: V(-3.9, 1.5, -1.6) };                   // the door
+      else s.gaze = { at: V((Math.random() - 0.5) * 7, 0.6 + Math.random() * 2, -4.5 + Math.random() * 3) };   // the room
+    }
+    if (s.act && s.act.look) return s.act.look();
+    if (s.gaze.seat != null && seats[s.gaze.seat] && !seats[s.gaze.seat].dead) return headWorld(s.gaze.seat);
+    return s.gaze.at || camera.getWorldPosition(V(0, 0, 0));
+  }
+
+  function idleTick(s, i, dt) {
+    s.nextAct = s.nextAct == null ? 2 + Math.random() * 8 : s.nextAct - dt;
+    if (s.nextAct > 0 || s.act || busy || s.dead || s.bleeding) return;
+    s.nextAct = 5 + Math.random() * 10;
+    const kinds = ['smoke', 'smoke', 'drink', 'drink', 'watch', 'hat', 'scratch', 'drum', 'stretch', 'cards'];
+    runIdle(s, kinds[Math.floor(Math.random() * kinds.length)]);
+  }
+
+  // A game animation is starting: everyone drops what they're doing.
+  function stopIdle() {
+    seats.forEach(s => {
+      if (!s.act) return;
+      s.act.stop();
+      s.act = null;
+      s.idleDirty = true;
+    });
+  }
+  // The table is calm again: put the left arms back where they belong.
+  function settleIdle() {
+    seats.forEach(s => {
+      if (!s.idleDirty || !s.rig || s.dead) return;
+      s.idleDirty = false;
+      s.idleLean = 0; s.idleHead = 0;
+      moveArm(s.rig.lArm, s.bleeding ? clutchPose(s) : restPose(s, 'l'), 0.5);
+    });
+  }
+
+  // Props the idle actions use: a cigarette and a shot glass.
+  function cigarette() {
+    const g = new THREE.Group();
+    const paper = Models.parts.cyl(0.0035, 0.0035, 0.07, new THREE.MeshStandardMaterial({ color: 0xeeeae0, roughness: 0.8 }), 8);
+    paper.rotation.x = Math.PI / 2; g.add(paper);
+    const ember = Models.parts.sphere(0.004, new THREE.MeshStandardMaterial({ color: 0xff7020, emissive: 0xff4010, emissiveIntensity: 1.2 }), { cast: false });
+    ember.position.z = 0.036; g.add(ember);
+    g.userData.ember = ember;
+    return g;
+  }
+  function shotGlass() {
+    const g = new THREE.Group();
+    const glass = Models.parts.cyl(0.022, 0.018, 0.055, new THREE.MeshStandardMaterial({ color: 0xd8e8f0, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.35 }), 14);
+    glass.position.y = 0.0275; g.add(glass);
+    const whiskey = Models.parts.cyl(0.019, 0.017, 0.03, new THREE.MeshStandardMaterial({ color: 0xa8641c, roughness: 0.2, transparent: true, opacity: 0.85 }), 14);
+    whiskey.position.y = 0.017; g.add(whiskey);
+    return g;
+  }
+
+  // Run one idle action on a seat. Each step is a tween that checks the
+  // action is still current, so stopIdle() can cut it off at any moment.
+  function runIdle(s, kind) {
+    const r = s.rig, arm = r.lArm;
+    const act = { kind, alive: true, props: [], stop() { this.alive = false; this.props.forEach(p => p.cleanup()); } };
+    s.act = act;
+    const ok = () => act.alive && s.act === act;
+    const pose = (hand, pole = V(1, -1, 0)) => makePose(s, arm, hand, pole, null);
+    const go = async (to, sec) => { if (!ok()) return false; const from = getPose(arm); await T(sec, t => { if (ok()) blendPose(arm, from, to, t); }); return ok(); };
+    const wait = async sec => { await Engine.wait(sec); return ok(); };
+    const tween = async (sec, fn) => { await T(sec, t => { if (ok()) fn(t); }); return ok(); };
+    const mouth = () => r.head.localToWorld(V(0, 0.06, 0.13));
+    const rest = restPose(s, 'l');
+    const finish = async () => {
+      if (ok()) { await go(rest, 0.6); }
+      if (s.act === act) { act.props.forEach(p => p.cleanup()); s.act = null; s.idleLean = 0; s.idleHead = 0; }
+    };
+    (async () => {
+      if (kind === 'smoke') {
+        const cig = cigarette();
+        arm.hand.add(cig); cig.position.set(0.01, -0.06, 0.03); cig.rotation.set(0.2, 0.5, 0); cig.scale.setScalar(0.01);
+        act.props.push({ cleanup: () => { cig.parent && cig.parent.remove(cig); } });
+        act.look = () => mouth().add(V(0, 0.4, 0.6));
+        if (!(await tween(0.3, t => cig.scale.setScalar(Math.max(0.01, t))))) return;
+        for (let k = 0; k < 2; k++) {
+          if (!(await go(pose(V(0.05, 0.64, 0.17)), 0.7))) return;
+          cig.userData.ember.material.emissiveIntensity = 3;
+          if (!(await wait(0.7))) return;
+          cig.userData.ember.material.emissiveIntensity = 1.2;
+          if (!(await go(pose(V(0.16, 0.36, 0.34)), 0.6))) return;
+          if (!(await wait(0.3))) return;
+          FX.smoke(scene, mouth(), V(0.2, 0.6, 0.6), 5, 0.22);   // exhale
+          if (!(await wait(1.2 + Math.random()))) return;
+        }
+        await tween(0.3, t => cig.scale.setScalar(Math.max(0.01, 1 - t)));
+      } else if (kind === 'drink') {
+        const glass = shotGlass();
+        const spot = spineToWorld(s, V(0.22, 0.2, 0.5)); spot.y = TABLE_Y;
+        scene.add(glass); glass.position.copy(spot);
+        act.props.push({ cleanup: () => { scene.attach(glass); scene.remove(glass); } });
+        act.look = () => glass.getWorldPosition(V(0, 0, 0));
+        if (!(await go(pose(worldToSpine(s, spot.clone().add(V(0, 0.07, 0)))), 0.7))) return;
+        arm.hand.attach(glass);
+        act.look = null;
+        if (!(await go(pose(V(0.04, 0.63, 0.17)), 0.6))) return;
+        s.idleHead = -0.3;
+        if (!(await wait(0.6))) return;
+        s.idleHead = 0;
+        if (!(await go(pose(worldToSpine(s, spot.clone().add(V(0, 0.07, 0)))), 0.6))) return;
+        scene.attach(glass); glass.position.copy(spot); glass.rotation.set(0, 0, 0);
+        Sound.thud && Sound.thud();
+      } else if (kind === 'watch') {
+        const watch = Models.parts.cyl(0.018, 0.018, 0.006, Models.mats().brass, 18);
+        watch.rotation.x = Math.PI / 2; arm.hand.add(watch); watch.position.set(0, -0.05, 0.03);
+        act.props.push({ cleanup: () => { watch.parent && watch.parent.remove(watch); } });
+        act.look = () => watch.getWorldPosition(V(0, 0, 0));
+        if (!(await go(pose(V(0.06, 0.36, 0.3)), 0.7))) return;
+        if (!(await wait(1.6 + Math.random()))) return;
+      } else if (kind === 'hat') {
+        if (!(await go(pose(V(0.1, 0.85, 0.14)), 0.7))) return;
+        const h0 = r.hat.rotation.x;
+        if (!(await tween(0.5, t => { r.hat.rotation.x = h0 + Math.sin(t * Math.PI) * 0.15; }))) { r.hat.rotation.x = h0; return; }
+        r.hat.rotation.x = h0;
+      } else if (kind === 'scratch') {
+        if (!(await go(pose(V(0.09, 0.82, -0.02), V(1, -0.5, -1)), 0.7))) return;
+        const p0 = getPose(arm), p1 = pose(V(0.11, 0.84, 0.0), V(1, -0.5, -1));
+        if (!(await tween(1.2, t => blendPose(arm, p0, p1, (Math.sin(t * Math.PI * 8) + 1) / 2)))) return;
+      } else if (kind === 'drum') {
+        const base = V(0.15, 0.24, 0.42);
+        if (!(await go(pose(base), 0.6))) return;
+        const p0 = pose(base), p1 = pose(base.clone().add(V(0, 0.025, 0)));
+        if (!(await tween(1.8, t => blendPose(arm, p0, p1, Math.abs(Math.sin(t * Math.PI * 9)))))) return;
+      } else if (kind === 'stretch') {
+        act.look = () => r.head.localToWorld(V(0, 1.5, 0.6));
+        if (!(await tween(1.0, t => { s.idleLean = -0.18 * Math.sin(t * Math.PI / 2); }))) return;
+        if (!(await wait(1.0))) return;
+        await tween(0.8, t => { s.idleLean = -0.18 * (1 - t); });
+      } else if (kind === 'cards') {
+        s.idleHead = 0.35;
+        if (!(await wait(1.8 + Math.random()))) return;
+        s.idleHead = 0;
+      }
+      await finish();
+    })().catch(e => console.error(e)).finally(() => { if (s.act === act && !act.alive) s.act = null; });
+  }
+
   // ---------- per-frame ----------
 
   function update(dt, time) {
@@ -397,13 +557,14 @@ const Table = (() => {
       if (!s.rig || s.dead) return;
       const r = s.rig;
       const nerves = 0.01 + R * 0.03;
-      r.spine.rotation.x = 0.06 + Math.sin(time * 1.6 + s.idle) * 0.012 + (s.lean || 0);
+      r.spine.rotation.x = 0.06 + Math.sin(time * 1.6 + s.idle) * 0.012 + (s.lean || 0) + (s.idleLean || 0);
       r.spine.rotation.z = Math.sin(time * 0.7 + s.idle) * nerves;
       r.spine.scale.y = 1 + Math.sin(time * 1.6 + s.idle) * 0.008;
-      const look = s.look !== null && s.look !== undefined ? headWorld(s.look) : camera.getWorldPosition(V(0, 0, 0));
+      const look = s.look !== null && s.look !== undefined ? headWorld(s.look) : idleGaze(s, i, dt);
       const lp = r.spine.worldToLocal(look.clone()).sub(r.head.position);
       const yaw = clamp(Math.atan2(lp.x, lp.z), -1.1, 1.1);
-      const pitch = clamp(-Math.atan2(lp.y - 0.1, Math.hypot(lp.x, lp.z)), -0.5, 0.6) + (s.headDown || 0);
+      const pitch = clamp(-Math.atan2(lp.y - 0.1, Math.hypot(lp.x, lp.z)), -0.5, 0.6) + (s.headDown || 0) + (s.idleHead || 0);
+      idleTick(s, i, dt);
       r.head.rotation.y += (yaw + Math.sin(time * 0.4 + s.idle) * 0.08 - r.head.rotation.y) * Math.min(1, dt * 4);
       r.head.rotation.x += (pitch - r.head.rotation.x) * Math.min(1, dt * 4);
       r.eyeMat.emissive.setRGB(R > 0.55 ? (R - 0.55) * 2.2 : 0, 0, 0);
@@ -989,18 +1150,7 @@ const Table = (() => {
     await lowerMyGun();
   }
 
-  // Jack of Trades: a golden glow bursts off the card on the pile.
-  async function jackGlow() {
-    const top = pile[pile.length - 1];
-    const light = new THREE.PointLight(0xffc040, 0, 3);
-    if (top) top.getWorldPosition(light.position);
-    light.position.y += 0.2;
-    scene.add(light);
-    if (top) FX.burst(scene, light.position, { count: 40, color: 0xffd040, emissive: true, size: 0.01, speed: 1.5, dir: V(0, 1, 0), gravity: 1, life: 1.5 });
-    await T(0.6, t => { light.intensity = 6 * t; });
-    await T(0.8, t => { light.intensity = 6 * (1 - t); });
-    scene.remove(light);
-  }
+
 
   // Bloody Mary: the lamp gutters and the room bleeds red for a moment.
   async function bloodyMary() {
@@ -1912,7 +2062,7 @@ const Table = (() => {
   }
 
   api = {
-    setup, deal, play, select, setCovered, drawGuns, holsterGuns, aim, shoot, recover, peek, jackGlow, bloodyMary,
+    setup, deal, play, select, setCovered, drawGuns, holsterGuns, aim, shoot, recover, peek, bloodyMary,
     wound, stopBleeding, loseLife, bleedOut, setLives, setTags, spawnBox, openBox, usePotion, useBandage,
     smashGun, newGun, giveShotgun, removeShotgun, binoStart, binoEnd, invite, decline, formTeam, transferCards,
     raiseShield, lowerShield, setReverse, grenade, nuke, rebuild, stealCard, placeDynamite, explodeDynamite, removeDynamite,
@@ -1924,5 +2074,20 @@ const Table = (() => {
     onCardClick: null,
     get cardCount() { return seats[0] ? seats[0].cards.length : 0; },
   };
+  // game animations interrupt the outlaws' idle life while they play
+  ['deal', 'play', 'drawGuns', 'holsterGuns', 'aim', 'shoot', 'recover', 'peek', 'bloodyMary', 'wound', 'stopBleeding',
+    'loseLife', 'bleedOut', 'spawnBox', 'openBox', 'usePotion', 'useBandage', 'smashGun', 'newGun', 'giveShotgun', 'removeShotgun',
+    'binoStart', 'invite', 'decline', 'formTeam', 'transferCards', 'raiseShield', 'grenade', 'nuke', 'stealCard', 'placeDynamite',
+    'explodeDynamite', 'rebuild', 'setup'].forEach(k => {
+    const fn = api[k];
+    if (!fn) return;
+    api[k] = (...args) => {
+      busy++;
+      stopIdle();
+      let out;
+      try { out = fn(...args); } catch (e) { busy--; throw e; }
+      return Promise.resolve(out).finally(() => { busy--; if (!busy) settleIdle(); });
+    };
+  });
   return api;
 })();

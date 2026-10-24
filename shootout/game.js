@@ -438,7 +438,7 @@ function peekRound(player, k) {
 // player number into a seat around its own camera.
 const ANIM = {
   deal: 'P_', play: 'P_', drawGuns: '', holsterGuns: '', aim: 'PP', shoot: 'PP_O', recover: 'PP_',
-  peek: 'P__', jackGlow: '', bloodyMary: '', wound: 'P_', stopBleeding: 'P_', loseLife: 'P', bleedOut: 'P',
+  peek: 'P__', bloodyMary: '', wound: 'P_', stopBleeding: 'P_', loseLife: 'P', bleedOut: 'P',
   setLives: 'P_', setTags: 'P_', spawnBox: 'P', openBox: 'P_', usePotion: 'P', useBandage: 'PP', smashGun: 'P',
   newGun: 'P', giveShotgun: 'P', removeShotgun: 'P', binoStart: 'PP', binoEnd: '', invite: 'PP', decline: '',
   formTeam: 'PP', transferCards: 'PP', setRavage: '_', raiseShield: 'P', lowerShield: 'P', setReverse: 'P_',
@@ -928,11 +928,6 @@ async function resolveCard(player, id) {
   ui('log', `${N(player)} played <b>${card.name}</b>.`);
   renderAll();
 
-  if (card.instantWin) {
-    await A('jackGlow');
-    endGame([player, mate].filter(Boolean), `${N(player)} played the Jack of Trades.`);
-    return;
-  }
   if (card.nuke) {
     ui('banner', 'NUCLEAR');
     ui('log', `${N(player)} launched a <b class="live">nuclear bomb</b>.`);
@@ -1339,7 +1334,7 @@ async function useItem(p, id, target) {
   } else if (id === 'binoculars') {
     await A('binoStart', pi, idx(target));
     if (p.ctrl === 'bot') {
-      if (target.hand.includes('jack') || target.hand.includes('nuclear')) p.priority = target;
+      if (target.hand.includes('nuclear')) p.priority = target;
       ui('log', `${N(p)} looks at ${POSS(target)} cards through <b>binoculars</b>.`);
     } else {
       const cards = target.hand.length ? target.hand.map(c => `<b>${CARD_BY_ID[c].name}</b>`).join(', ') : 'no cards';

@@ -13,7 +13,6 @@ const RARITY = {
 };
 
 const CARDS = [
-  { id: 'jack',     name: 'Jack of Trades', icon: '🃏', corner: 'J',  style: '',         rarity: 'epic',      effect: 'Play it and you win the game on the spot.', instantWin: true, handChance: 0.10 },
   { id: 'bloody',   name: 'Bloody Mary',    icon: '🩸', corner: 'BM', style: 'dark red', rarity: 'uncommon',  effect: 'Forces a shootout right now: everyone must shoot themself or someone else.', forcesShootout: true, handChance: 0.20 },
   { id: 'gun',      name: 'Gun',            icon: '🔫', corner: 'G',  style: '',         rarity: 'rare',      effect: 'Gives you your big gun for this round (a shotgun unless you picked another in Loadout): 2 shots, both live, and one hit kills anyone.', shotgun: true, weight: 5 },
   { id: 'swap',     name: 'Swap',           icon: '⇄',  corner: 'SW', style: '',         rarity: 'rare',      effect: 'Play it on another player and you two swap everything: seats, cards, guns, lives, items, wounds, even teammates. You become them and they become you.', swap: true, weight: 7 },

@@ -145,7 +145,7 @@ const MenuStage = (() => {
 
     placeGun();
 
-    ['jack', 'bloody', 'one'].forEach((id, i) => {
+    ['nuclear', 'bloody', 'one'].forEach((id, i) => {
       const c = Models.card(id);
       c.rotation.x = -Math.PI / 2;
       c.rotation.z = -0.35 + i * 0.32;

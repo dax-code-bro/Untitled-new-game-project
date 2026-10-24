@@ -129,12 +129,6 @@ const Models = (() => {
     g.fillStyle = ink; g.strokeStyle = ink; g.lineJoin = 'round'; g.lineCap = 'round';
     const red = '#8a0a0a';
     switch (id) {
-      case 'jack': {   // crown over a gold J
-        g.fillStyle = '#c8a040';
-        g.beginPath(); g.moveTo(-50, -20); g.lineTo(-50, -70); g.lineTo(-25, -45); g.lineTo(0, -80); g.lineTo(25, -45); g.lineTo(50, -70); g.lineTo(50, -20); g.closePath(); g.fill();
-        g.fillStyle = ink; g.font = 'bold 110px Georgia, serif'; g.textAlign = 'center'; g.fillText('J', 0, 70);
-        break;
-      }
       case 'bloody': {   // blood drop with a dripping trail
         g.fillStyle = '#c01810';
         g.beginPath(); g.moveTo(0, -75); g.bezierCurveTo(30, -25, 50, 5, 50, 30); g.arc(0, 30, 50, 0, Math.PI); g.bezierCurveTo(-50, 5, -30, -25, 0, -75); g.fill();
@@ -244,7 +238,7 @@ const Models = (() => {
       else { gr.addColorStop(0, '#f5ead2'); gr.addColorStop(1, '#d8c49c'); }
       g.fillStyle = gr; g.fillRect(0, 0, w, h);
       g.strokeStyle = dark ? '#000' : '#3a2410'; g.lineWidth = 8; g.strokeRect(4, 4, w - 8, h - 8);
-      g.strokeStyle = id === 'jack' ? '#c8a040' : (dark ? '#555' : '#8a6a40'); g.lineWidth = 2; g.strokeRect(16, 16, w - 32, h - 32);
+      g.strokeStyle = dark ? '#555' : '#8a6a40'; g.lineWidth = 2; g.strokeRect(16, 16, w - 32, h - 32);
       const ink = red ? (dark ? '#ff4a3a' : '#8a0a0a') : (dark ? '#e8d8b8' : '#2a1a0a');
       g.fillStyle = ink; g.textAlign = 'left';
       g.font = 'bold 30px Georgia, serif'; g.fillText(c.corner, 24, 50);

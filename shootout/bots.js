@@ -2,7 +2,7 @@
 // Each bot has a name and a personality that shapes who they shoot and how
 // often they turn the gun on themself. The difficulty setting decides how
 // well they use their cards: Easy bots play almost at random, Hard bots
-// peek at their gun before shootouts, cash in a Jack of Trades straight away
+// peek at their gun before shootouts, cash in a Nuclear straight away
 // and gang up on you.
 
 const Bots = (() => {
@@ -51,8 +51,7 @@ const Bots = (() => {
     const random = () => Math.floor(Math.random() * hand.length);
     if (difficulty === 'easy') return random();
 
-    // A Jack of Trades or a nuke wins on the spot, so smart bots never sit on one.
-    if (find('jack') >= 0) return find('jack');
+    // A nuke wins on the spot, so no bot sits on one.
     if (find('nuclear') >= 0) return find('nuclear');
 
     const next = bot.gun[0];
@@ -86,14 +85,14 @@ const Bots = (() => {
     // Dynamite is best lit early: it needs a round to burn down.
     if (find('dynamite') >= 0 && (bot.foes || 1) >= 1 && (smart || chance(0.6))) return find('dynamite');
 
-    // Pick a pocket, especially one known to hold a Jack or a nuke.
+    // Pick a pocket, especially one known to hold a nuke.
     if (find('pickpocket') >= 0 && (bot.priority || smart || chance(0.5))) return find('pickpocket');
 
     // Luck for a nuke later: worth playing when nothing better is on hand.
     if (find('lucky') >= 0 && (smart ? chance(0.7) : chance(0.4))) return find('lucky');
 
     // Otherwise keep the useful cards and play something else.
-    const keep = new Set(['jack', 'bloody', 'one', 'grenade', 'nuclear', 'block', 'reverse', 'swap', 'dynamite']);
+    const keep = new Set(['bloody', 'one', 'grenade', 'nuclear', 'block', 'reverse', 'swap', 'dynamite']);
     const filler = hand.map((id, i) => i).filter(i => !keep.has(hand[i]));
     if (filler.length && (smart || chance(0.6))) return pick(filler);
     return random();
@@ -123,7 +122,7 @@ const Bots = (() => {
     else selfShot = chance(PERSONALITIES[bot.personality].selfChance);
     if (selfShot) return bot;
 
-    // Someone they spotted holding a Jack of Trades through binoculars.
+    // Someone they spotted holding a Nuclear through binoculars.
     if (bot.priority && others.includes(bot.priority) && chance(0.8)) return bot.priority;
 
     // Vengeful bots shoot back at whoever last shot at them.
@@ -144,11 +143,11 @@ const Bots = (() => {
     if (!others.length) return null;
     if (difficulty === 'easy') return pick(others);
     const score = p => p.lives * 3 - (p.bleeding ? 3 : 0) + p.items.length + p.hand.length * 0.5 + (p.shotgun > 0 ? 4 : 0) + (p.block ? 2 : 0) - (p.unarmed ? 2 : 0) +
-      (p.hand.includes('jack') || p.hand.includes('nuclear') ? (bot.priority === p ? 6 : 0) : 0);
+      (p.hand.includes('nuclear') ? (bot.priority === p ? 6 : 0) : 0);
     return others.reduce((a, b) => (score(b) > score(a) ? b : a));
   }
 
-  // Whose pocket to pick: the one seen holding a Jack or a nuke, else the fullest hand.
+  // Whose pocket to pick: the one seen holding a nuke, else the fullest hand.
   function choosePickTarget(bot, players) {
     if (bot.priority && players.includes(bot.priority)) return bot.priority;
     if (difficulty === 'easy') return pick(players);
@@ -203,7 +202,7 @@ const Bots = (() => {
   // A teammate's vote on the card you want to play from the shared hand.
   // Returns the index the bot prefers; the same index means it agrees.
   function vote(bot, hand, proposed) {
-    if (hand[proposed] === 'jack') return proposed;
+    if (hand[proposed] === 'nuclear') return proposed;
     const pref = chooseCard({ ...bot, hand });
     if (pref === proposed || hand[pref] === hand[proposed]) return proposed;
     return chance(0.65) ? proposed : pref;
