@@ -199,6 +199,8 @@ const Net = (() => {
       g = { id: hostLog.gid, ev: hostLog.events.slice(-k), s: snap };
       k--;
     } while (JSON.stringify(g).length > 3700 && k > 0);
+    // still too big (a crowded table): send the snapshot alone, friends catch up from it
+    if (JSON.stringify(g).length > 3900) g = { id: hostLog.gid, ev: [], s: snap };
     party.room.presence({ g }).catch(e => console.warn('presence', e && e.message));
   }
   function hostStop() { hostLog = null; if (party) party.room.presence({ g: null }).catch(() => {}); }

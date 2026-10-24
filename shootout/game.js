@@ -11,7 +11,9 @@ const MODES = {
   duos:   { label: 'Duos',        seats: 2 },
   trios:  { label: 'Trios',       seats: 3 },
   bloody: { label: 'Bloody Mary', seats: 4 },
+  ffa:    { label: 'Free-for-all', seats: 6, ffa: true },   // 3 to 10 seats, picked on the mode screen
 };
+const FFA_MIN = 3, FFA_MAX = 10;
 
 // Round at which the room is fully wrecked and the music is at full dread.
 const MAX_DREAD_ROUND = 8;
@@ -114,7 +116,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // same-phone players
   $('#hs-minus').addEventListener('click', () => { who.locals = Math.max(2, who.locals - 1); renderWho(); });
-  $('#hs-plus').addEventListener('click', () => { who.locals = Math.min(4, who.locals + 1); renderWho(); });
+  $('#hs-plus').addEventListener('click', () => { who.locals = Math.min(FFA_MAX, who.locals + 1); renderWho(); });
+  $('#ffa-minus').addEventListener('click', () => { MODES.ffa.seats = Math.max(FFA_MIN, MODES.ffa.seats - 1); renderWho(); });
+  $('#ffa-plus').addEventListener('click', () => { MODES.ffa.seats = Math.min(FFA_MAX, MODES.ffa.seats + 1); renderWho(); });
 
   // friends
   $('#my-name').value = Net.name;
@@ -240,6 +244,7 @@ function renderWho() {
   $('#party-note').textContent = !party ? '' : waiting
     ? `Waiting for ${members.find(m => m.host) ? members.find(m => m.host).name : 'the host'} to pick a table.`
     : 'Pick a table above to start the game with your party. Empty seats get bots.';
+  $('#ffa-count').textContent = MODES.ffa.seats;
   // the green circles: how many bots each table would get
   document.querySelectorAll('[data-mode]').forEach(btn => {
     const mode = MODES[btn.dataset.mode];
@@ -522,7 +527,7 @@ function snapshot() {
     r: state.round, m: state.modeId, mu: state.multi ? 1 : 0, ov: state.over ? 1 : 0,
     bx: state.box ? idx(state.box.owner) : null, pl: state.pile.slice(-6), tm: teamsList(),
     ps: state.players.map(p => ({
-      nm: p.name, pid: p.pid || null, c: p.ctrl, sb: p.sub, pa: p.pal, ch: p.char, rg: p.rgun, sg: p.sgun, rs: p.rskin, ss: p.sskin, a: p.alive ? 1 : 0, l: p.lives, b: p.bleeding ? 1 : 0,
+      nm: p.name, pid: p.pid || null, c: p.ctrl, sb: p.sub, pa: p.pal, ch: p.char, rg: p.rgun, sg: p.sgun, rs: p.rskin !== 'standard' ? p.rskin : undefined, ss: p.sskin !== 'standard' ? p.sskin : undefined, a: p.alive ? 1 : 0, l: p.lives, b: p.bleeding ? 1 : 0,
       h: p.hand, i: p.items, u: p.unarmed ? 1 : 0, sg: p.shotgun, hs: p.hasShotgun ? 1 : 0, bk: p.block ? 1 : 0, rv: p.reverse ? 1 : 0, dy: p.dynamite ? 1 : 0, k: knownStr(p),
     })),
   };
@@ -535,7 +540,7 @@ function fromSnapshot(s) {
   state.mode = MODES[s.m];
   state.multi = !!s.mu;
   state.players = s.ps.map(d => ({
-    name: d.nm, pid: d.pid, ctrl: d.c, sub: d.sb, pal: d.pa, char: d.ch, rgun: d.rg, sgun: d.sg, rskin: d.rs, sskin: d.ss, alive: !!d.a, lives: d.l, bleeding: !!d.b, hand: d.h || [], items: d.i || [],
+    name: d.nm, pid: d.pid, ctrl: d.c, sub: d.sb, pal: d.pa, char: d.ch, rgun: d.rg, sgun: d.sg, rskin: d.rs || 'standard', sskin: d.ss || 'standard', alive: !!d.a, lives: d.l, bleeding: !!d.b, hand: d.h || [], items: d.i || [],
     unarmed: !!d.u, shotgun: d.sg || 0, hasShotgun: !!d.hs, block: !!d.bk, reverse: !!d.rv, dynamite: d.dy ? { round: 0 } : null,
     gun: (d.k || '???').split('').map(c => ({ known: c !== '?', live: c === 'L' })), team: null,
   }));
@@ -1035,7 +1040,8 @@ async function swapPlayers(a, b) {
   ui('log', `${N(a)} ${V(a, 'swap', 'swaps')} with ${n(b)}: seats, cards, guns, lives and all.`);
   IDENTITY.forEach(k => { const t = a[k]; a[k] = b[k]; b[k] = t; });
   [a, b].forEach(p => { p.priority = null; p.shotBy = null; if (p.ctrl === 'bot' && !p.personality) p.personality = 'calculating'; if (p.ctrl !== 'bot') delete p.personality; });
-  ui('swap', ia, ib, snapshot());
+  const snap = snapshot();
+  ui('swap', ia, ib, JSON.stringify(snap).length < 1400 ? snap : null);   // big tables: friends use the host's latest snapshot
   await sleep(1500);
 }
 
@@ -1443,7 +1449,7 @@ function swapView(ia, ib, snap) {
   const f = $('#fade');
   f.classList.add('on');
   setTimeout(() => {
-    if (state.online === 'client') { if (snap) { fromSnapshot(snap); state.multi = true; } }
+    if (state.online === 'client') { const s = snap || client.latest; if (s) { fromSnapshot(s); state.multi = true; } }
     else if (state.view === ia) state.view = ib;
     else if (state.view === ib) state.view = ia;
     if (state.covered) toggleCover();
@@ -1594,8 +1600,8 @@ function onHostGame(g) {
   if (g.id !== client.gid) { startClient(g); return; }
   if (state.online !== 'client') return;
   const fresh = (g.ev || []).filter(e => e.n > client.last).sort((a, b) => a.n - b.n);
-  if (!fresh.length) return;
-  if (fresh[0].n > client.last + 1) {
+  if (!fresh.length && !(g.s && g.s.n > client.last)) return;
+  if (!fresh.length || fresh[0].n > client.last + 1) {
     // missed some: jump straight to the host's snapshot
     client.queue = [];
     fromSnapshot(g.s);

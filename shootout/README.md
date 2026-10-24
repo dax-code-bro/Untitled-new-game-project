@@ -71,10 +71,14 @@ the rarest are rolled once per hand instead.
 | Binoculars | See any player's cards. |
 
 ## Who plays
-On **Play**, pick a table size (the green circles), then who's playing:
+On **Play**, pick a table size (the green circles), then who's playing.
+**Free-for-all** (the gold circle) seats anywhere from 3 to 10 at one table:
+set the number with the + and − under the circles. Empty seats get bots,
+everyone sits down both long sides of the table, and with 10 seats all ten
+characters are in play.
 
 - **Me vs bots**: every other seat is a bot.
-- **Same phone**: 2–4 people share one phone. A "pass the phone" screen hides
+- **Same phone**: 2–4 people share one phone (up to 10 in a free-for-all). A "pass the phone" screen hides
   the table before each person's turn so nobody sees the others' cards.
 - **Friends**: online play. Everyone's player ID is in the top-right corner.
   Type a friend's ID and press **Invite**; when they accept they join your

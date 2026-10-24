@@ -30,11 +30,12 @@ const Bots = (() => {
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   const chance = p => Math.random() < p;
 
-  // n bots with different names, in random order.
+  // n bots with different names, in random order (names repeat past the roster).
   function lineup(n) {
-    const pool = [...ROSTER];
+    let pool = [...ROSTER];
     const out = [];
-    for (let i = 0; i < n && pool.length; i++) {
+    for (let i = 0; i < n; i++) {
+      if (!pool.length) pool = [...ROSTER];
       const [b] = pool.splice(Math.floor(Math.random() * pool.length), 1);
       out.push({ name: b.name, personality: b.personality, bot: true });
     }

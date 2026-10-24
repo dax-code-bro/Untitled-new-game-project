@@ -22,7 +22,8 @@ const Table = (() => {
   let drag = null;           // a card being dragged up out of your hand
   let fovLock = false;       // true while an animation zooms the camera
   // Wider view on tall phone screens so the table and your cards still fit.
-  const baseFov = () => (camera.aspect < 0.8 ? 74 : camera.aspect < 1.2 ? 64 : 55);
+  // a crowded free-for-all table needs a wider view to see both long sides
+  const baseFov = () => (camera.aspect < 0.8 ? 74 : camera.aspect < 1.2 ? 64 : 55) + (seats.length > 5 ? (camera.aspect < 0.8 ? 14 : 10) : 0);
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2(-9, -9);
   let api;
@@ -158,14 +159,27 @@ const Table = (() => {
 
   // ---------- seats ----------
 
-  // Where each opponent sits, by how many there are (matches the 2D layout).
+  // Where each opponent sits, by how many there are. Up to three sit at the
+  // far end and the middle of each side; a free-for-all fills both long
+  // sides, going round the table: your left side, the far end, your right.
+  const SIDE_Z = { 1: [-0.45], 2: [-0.9, 0.1], 3: [-1.2, -0.35, 0.5], 4: [-1.35, -0.7, -0.05, 0.6] };
   function seatSpots(n) {
     const far = { pos: V(0, 0, -2.05), ry: 0 };
-    const left = { pos: V(-0.98, 0, -0.45), ry: Math.PI / 2 };
-    const right = { pos: V(0.98, 0, -0.45), ry: -Math.PI / 2 };
+    const side = (sx, z) => ({ pos: V(sx * 0.98, 0, z), ry: -sx * Math.PI / 2 });
     if (n <= 1) return [far];
-    if (n === 2) return [left, right];
-    return [far, left, right];
+    if (n === 2) return [side(-1, -0.45), side(1, -0.45)];
+    if (n === 3) return [far, side(-1, -0.45), side(1, -0.45)];
+    const sides = n - 1, nl = Math.ceil(sides / 2), nr = sides - nl;
+    const left = SIDE_Z[nl].slice().reverse().map(z => side(-1, z));
+    const right = (SIDE_Z[nr] || []).map(z => side(1, z));
+    return [...left, far, ...right];
+  }
+
+  // Name labels shrink when the table is crowded so they don't overlap.
+  function placeLabel(s) {
+    s.label.position.set(0, s.crowd ? 1.5 : 1.6, 0);
+    if (s.crowd) s.label.scale.multiplyScalar(0.72);
+    s.group.add(s.label);
   }
 
   let junk = [];   // leftovers of a nuclear blast, cleared with the table
@@ -207,11 +221,12 @@ const Table = (() => {
       group.add(rigObj.root);
       const sub = p.sub || Bots.label(p);
       const label = Util.textSprite(p.name, { sub });
-      label.position.set(0, 1.6, 0);
-      group.add(label);
       scene.add(group);
       const seat = { group, chair, rig: rigObj, cards: [], items: [], marks: [], tags: [], label, dead: false, name: p.name, sub, look: null, rskin: p.rskin, sskin: p.sskin, rgun: p.rgun, sgun: p.sgun, idle: Math.random() * 10, drip: 0 };
       seats.push(seat);
+      seat.crowd = players.length > 5;
+      if (seat.crowd) { label.position.set(0, 1.5, 0); label.scale.multiplyScalar(0.72); } else label.position.set(0, 1.6, 0);
+      group.add(label);
       applyPose(rigObj.rArm, restPose(seat, 'r'));
       applyPose(rigObj.lArm, restPose(seat, 'l'));
     });
@@ -827,8 +842,7 @@ const Table = (() => {
     // label turns red
     s.group.remove(s.label);
     s.label = Util.textSprite(s.name + ' — DEAD', { color: '#e0402a', sub: s.sub });
-    s.label.position.set(0, 1.6, 0);
-    s.group.add(s.label);
+    placeLabel(s);
   }
 
   function flyHat(s, dir) {
@@ -1101,8 +1115,7 @@ const Table = (() => {
     s.group.remove(s.label);
     const sub = [s.sub, ...(s.tags || [])].join(' · ');
     s.label = Util.textSprite(text, { color, sub, subColor: (s.tags || []).length ? '#e06040' : '#9a8a6a' });
-    s.label.position.set(0, 1.6, 0);
-    s.group.add(s.label);
+    placeLabel(s);
   }
   // Extra words under a name: BLEEDING, UNARMED, SHOTGUN, TEAM.
   function setTags(pi, tags) {
