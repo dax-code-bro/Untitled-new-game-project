@@ -16,8 +16,9 @@ library is three.js, vendored in `vendor/`. Nothing here is shared with the othe
 | `audio.js` | Generated music and sound effects; the music gets more intense each round |
 | `net.js` | Online play: player IDs, the lobby, invites, parties and the host/guest game messages |
 | `characters.js` | The 10 playable characters: their looks and bot personalities |
+| `guns.js` | Every Loadout gun model (revolvers, automatics and the Gun-card guns) |
 | `skins.js` | Gunsmith skins for the revolver and shotgun, and what unlocks each |
-| `profile.js` | Your stats, unlocked skins and loadout, kept on this phone |
+| `profile.js` | Your stats, unlocked skins and Loadout guns, kept on this phone |
 | `scores.js` | The shared scoreboard (claude.ai database) |
 | `bots.js` | Computer opponents: names, personalities and Easy/Normal/Hard difficulty |
 | `cards.js` | Every card and what it does; hands are 3 cards |
@@ -42,16 +43,19 @@ random player. Opening it gives two random items. You can use items on your
 turn before you play a card.
 
 ## Cards
-| Card | Effect |
-|---|---|
-| Jack of Trades | 10% of hands get one. Play it and you (and your teammate) win instantly. |
-| Bloody Mary | 20% of hands get one. Forces a shootout right away. |
-| Gun | A shotgun for this round: 2 shells, both live, one hit kills anyone. |
-| 1, 2, 3 | Secretly shows you if your next / 2nd / 3rd round is live or blank. |
-| Grenade | 8% of hands. Everyone else is hit (starts bleeding, or loses a life if already bleeding) and loses all their cards and items. The thrower keeps theirs but is caught in the blast too. |
-| Nuclear | 3% of hands. A nuclear bomb comes through the ceiling: everyone else is wiped out and you (and your teammate) win. |
-| Block | A steel shield stops the next hit you'd take this round (bullet, shotgun or grenade). |
-| Reverse | The next live shot someone fires at you this round turns around and hits them. |
+Every card has a rarity. Most cards fill each of your 3 hand slots by chance;
+the rarest are rolled once per hand instead.
+
+| Card | Rarity | Odds | Effect |
+|---|---|---|---|
+| 1, 2, 3 | Common | 22% each per card dealt (about 47% of hands) | Secretly shows you if your next / 2nd / 3rd round is live or blank. |
+| Block | Uncommon | 15% per card (about 34% of hands) | A steel shield stops the next hit you'd take this round (bullet, big gun or grenade). |
+| Reverse | Uncommon | 13% per card (about 30% of hands) | The next live shot someone fires at you this round turns around and hits them. |
+| Bloody Mary | Uncommon | 20% of hands | Forces a shootout right away. |
+| Gun | Rare | 6% per card (about 15% of hands) | Your big gun for this round: 2 shots, both live, one hit kills anyone. |
+| Jack of Trades | Epic | 10% of hands | Play it and you (and your teammate) win instantly. |
+| Grenade | Epic | 8% of hands | Everyone else is hit (starts bleeding, or loses a life if already bleeding) and loses all their cards and items. The thrower keeps theirs but is caught in the blast too. |
+| Nuclear | Legendary | 3% of hands | A nuclear bomb comes through the ceiling: everyone else is wiped out and you (and your teammate) win. |
 
 ## Items
 | Item | Effect |
@@ -77,24 +81,36 @@ Online play uses the claude.ai room, so it works when the game is opened from
 its claude.ai link, and each friend has to be invited to that link from its
 Share menu (they need to be signed in to claude.ai).
 
-## Characters (Loadout)
+## Characters
 Ten characters, each with their own 3D model: The Drifter, Sheriff Wade Holt,
 Preacher Ezekiel Cain, El Coyote, "Lucky" Jack Marlowe, Silas "Grim" Vane,
 Doc Ambrose Fell, Lillian Black the Widow, Rattlesnake Rose and Mortimer Grave.
-Nobody at a table can be the same character: in a party, characters other
-people picked show a red ✕. Same-phone players each pick one too, and bots play
-the characters left over.
+You pick one as each match loads. Nobody at a table can be the same character:
+online everyone picks at once and a character someone grabs gets a red ✕ on the
+other screens. Same-phone players pick one after another; bots play the
+characters left over. If you don't pick within 30 seconds, one is picked for you.
+
+## Loadout
+Pick the guns you carry. Looks only: every gun in a slot works the same.
+
+- **Revolver** (your gun every shootout): Colt Single Action Army, 1851 Navy
+  Revolver, Schofield Revolver, M1911, Mauser C96, Semi-Automatic Pistol (Luger style).
+  With an automatic, a 1/2/3 card drops the magazine to show the round.
+- **Gun card** (2 live shots, one hit kills): Double-Barrel Coach Gun, Colt
+  Python, S&W Model 500, .50 BMG Rifle, Blunderbuss.
+
+Gunsmith skins work on every gun in their slot.
 
 ## Gunsmith
 Skins change how your guns look, never how they shoot. Each unlocks with a goal:
 
-| Revolver | To unlock | Shotgun | To unlock |
+| Revolver slot | To unlock | Gun-card slot | To unlock |
 |---|---|---|---|
-| Makeshift Six-Shooter | Play 3 games | Gold | 5 shotgun kills |
+| Makeshift Six-Shooter | Play 3 games | Gold | 5 big-gun kills |
 | Silver | Win 3 games | Blue Light | Stop 10 hits with a Block shield |
 | Billy the Kid | 10 revolver kills | Hellfire | Throw 10 grenades |
 | Gold | Win 15 games | Dark Knight | Win 3 games in a row |
-| The Murderer's Device | 40 kills | Diamond | 25 shotgun kills |
+| The Murderer's Device | 40 kills | Diamond | 25 big-gun kills |
 | Angel | Heal 15 times | | |
 | Hellfire | Win 5 Bloody Mary games | | |
 | Dark Knight | Win 5 games in a row | | |

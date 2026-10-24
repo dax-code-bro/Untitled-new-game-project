@@ -1,4 +1,5 @@
-// Shootout — your record on this phone: stats, unlocked skins and loadout.
+// Shootout — your record on this phone: stats, unlocked skins, your guns
+// (Loadout) and the character you last played.
 // Everything is kept in this browser. The scoreboard (scores.js) copies the
 // headline numbers to the shared board.
 
@@ -8,7 +9,7 @@ const Profile = (() => {
     games: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0,
     kills: 0, rKills: 0, sKills: 0, grenades: 0, nukes: 0, heals: 0, blocks: 0, bloodyWins: 0,
     cards: {},                                   // card id -> times dealt to you
-    loadout: { char: null, rskin: 'standard', sskin: 'standard' },
+    loadout: { char: null, rgun: 'colt', sgun: 'coach', rskin: 'standard', sskin: 'standard' },
   });
 
   let data = blank();
@@ -62,6 +63,8 @@ const Profile = (() => {
     if (!unlocked('revolver', data.loadout.rskin)) data.loadout.rskin = 'standard';
     if (!unlocked('shotgun', data.loadout.sskin)) data.loadout.sskin = 'standard';
     if (data.loadout.char && !CHARACTER_BY_ID[data.loadout.char]) data.loadout.char = null;
+    if (!GUN_BY_ID.revolver[data.loadout.rgun]) data.loadout.rgun = 'colt';
+    if (!GUN_BY_ID.shotgun[data.loadout.sgun]) data.loadout.sgun = 'coach';
     save();
   }
 
@@ -70,6 +73,8 @@ const Profile = (() => {
     const l = data.loadout;
     return {
       char: CHARACTER_BY_ID[l.char] ? l.char : null,
+      rgun: GUN_BY_ID.revolver[l.rgun] ? l.rgun : 'colt',
+      sgun: GUN_BY_ID.shotgun[l.sgun] ? l.sgun : 'coach',
       rskin: unlocked('revolver', l.rskin) ? l.rskin : 'standard',
       sskin: unlocked('shotgun', l.sskin) ? l.sskin : 'standard',
     };

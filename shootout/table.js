@@ -129,13 +129,13 @@ const Table = (() => {
     window.addEventListener('pointercancel', () => { drag = null; if (seats[0]) relayout(0); });
   }
 
-  // Your own revolver wears your Gunsmith skin.
-  function setMyGunSkin(skin) {
-    skin = skin || 'standard';
-    if (myGun && myGun.skin === skin) return;
+  // Your own sidearm: the gun you picked in Loadout, in your Gunsmith skin.
+  function setMyGunSkin(skin, model) {
+    const key = (skin || 'standard') + ':' + (model || 'colt');
+    if (myGun && myGun.key === key) return;
     if (myGun && myGun.group.parent) myGun.group.parent.remove(myGun.group);
-    myGun = Models.revolver(skin);
-    myGun.skin = skin;
+    myGun = Guns.build('revolver', model || 'colt', skin || 'standard');
+    myGun.key = key;
     myGun.group.traverse(c => { if (c.isMesh) c.castShadow = true; });
     myGun.group.scale.setScalar(1.25);
     scene.add(myGun.group);
@@ -153,6 +153,7 @@ const Table = (() => {
     myGun.cylinder.rotation.set(0, 0, 0);
     myGun.hammer.rotation.set(0, 0, 0);
     myGun.rounds.forEach(r => { r.visible = true; r.material = Models.mats().brass; });
+    if (myGun.mag) myGun.mag.position.copy(myGun.mag.userData.home);
   }
 
   // ---------- seats ----------
@@ -187,12 +188,12 @@ const Table = (() => {
     ravage = ravageTarget = 0;
     rig.position.set(0, 1.27, 2.25); rig.rotation.set(0, 0, 0);
     camera.rotation.set(-0.3, 0, 0); fovLock = false; camera.fov = baseFov(); camera.updateProjectionMatrix();
-    setMyGunSkin(players[0] && players[0].rskin);
+    setMyGunSkin(players[0] && players[0].rskin, players[0] && players[0].rgun);
     resetMyGun();
     const youGroup = new THREE.Group();
     youGroup.position.set(0, 0, 2.05); youGroup.rotation.y = Math.PI;
     scene.add(youGroup);
-    seats.push({ you: true, group: youGroup, cards: [], items: [], marks: [], tags: [], dead: false, rskin: players[0] && players[0].rskin, sskin: players[0] && players[0].sskin });
+    seats.push({ you: true, group: youGroup, cards: [], items: [], marks: [], tags: [], dead: false, rskin: players[0] && players[0].rskin, sskin: players[0] && players[0].sskin, sgun: players[0] && players[0].sgun });
     const spots = seatSpots(players.length - 1);
     players.slice(1).forEach((p, i) => {
       const spot = spots[i];
@@ -202,14 +203,14 @@ const Table = (() => {
       chair.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
       group.add(chair);
       const ch = CHARACTER_BY_ID[p.char] || CHARACTERS[(i + 1) % CHARACTERS.length];
-      const rigObj = Models.outlaw(ch.look, p.rskin);
+      const rigObj = Models.outlaw(ch.look, p.rskin, p.rgun);
       group.add(rigObj.root);
       const sub = p.sub || Bots.label(p);
       const label = Util.textSprite(p.name, { sub });
       label.position.set(0, 1.6, 0);
       group.add(label);
       scene.add(group);
-      const seat = { group, chair, rig: rigObj, cards: [], items: [], marks: [], tags: [], label, dead: false, name: p.name, sub, look: null, rskin: p.rskin, sskin: p.sskin, idle: Math.random() * 10, drip: 0 };
+      const seat = { group, chair, rig: rigObj, cards: [], items: [], marks: [], tags: [], label, dead: false, name: p.name, sub, look: null, rskin: p.rskin, sskin: p.sskin, rgun: p.rgun, sgun: p.sgun, idle: Math.random() * 10, drip: 0 };
       seats.push(seat);
       applyPose(rigObj.rArm, restPose(seat, 'r'));
       applyPose(rigObj.lArm, restPose(seat, 'l'));
@@ -759,8 +760,9 @@ const Table = (() => {
   // and the gun snaps shut again.
   async function breakOpen(gun) {
     if (!gun.barrels) return;
+    const open = gun.open || (t => { gun.barrels.rotation.x = 0.55 * t; });
     await Engine.wait(0.35);
-    await T(0.25, t => { gun.barrels.rotation.x = 0.55 * t; }, E.out);
+    await T(0.25, t => open(t), E.out);
     const spent = gun.shells.find(sh => sh.visible);
     if (spent) {
       const w = spent.getWorldPosition(V(0, 0, 0)), q = spent.getWorldQuaternion(Q());
@@ -777,7 +779,7 @@ const Table = (() => {
         if (flying.position.y < 0.02) flying.position.y = 0.02;
       }, E.linear).then(() => setTimeout(() => scene.remove(flying), 4000));
     }
-    await T(0.2, t => { gun.barrels.rotation.x = 0.55 * (1 - t); }, E.in);
+    await T(0.2, t => open(1 - t), E.in);
   }
 
   // The target takes the bullet.
@@ -893,10 +895,18 @@ const Table = (() => {
       const from = getPose(s.rig.rArm);
       s.headDown = 0.45;
       await moveArm(s.rig.rArm, peekPose(s), 0.6);
-      const cyl = s.rig.gun.cylinder;
-      await T(0.3, t => { cyl.position.x = -0.035 * t; });
-      await T(0.9, t => { cyl.rotation.z = t * Math.PI * 3; }, E.out);
-      await T(0.3, t => { cyl.position.x = -0.035 * (1 - t); });
+      const gun = s.rig.gun;
+      if (gun.mag) {   // drop the magazine, look, slap it back in
+        const mg = gun.mag, home = mg.userData.home.clone(), out = mg.userData.out;
+        await T(0.3, t => { mg.position.copy(home).addScaledVector(out, t); });
+        await Engine.wait(0.8);
+        await T(0.3, t => { mg.position.copy(home).addScaledVector(out, 1 - t); });
+      } else {
+        const cyl = gun.cylinder;
+        await T(0.3, t => { cyl.position.x = -0.035 * t; });
+        await T(0.9, t => { cyl.rotation.z = t * Math.PI * 3; }, E.out);
+        await T(0.3, t => { cyl.position.x = -0.035 * (1 - t); });
+      }
       s.headDown = 0;
       await moveArm(s.rig.rArm, from, 0.6);
       return;
@@ -904,6 +914,7 @@ const Table = (() => {
     const pos = V(0.02, -0.06, -0.3);
     const q = Q().setFromEuler(new THREE.Euler(0.35, Math.PI + 0.35, 0));
     await raiseMyGun(pos, q, 0.7);
+    if (myGun.mag) { await peekMag(n, live); return; }
     const cyl = myGun.cylinder;
     myGun.rounds.forEach((r, i) => { r.visible = false; });
     await T(0.35, t => { cyl.position.x = -0.045 * t; }, E.out);
@@ -926,6 +937,27 @@ const Table = (() => {
     scene.remove(glow);
     await T(0.3, t => { cyl.position.x = -0.045 * (1 - t); });
     myGun.rounds.forEach(r => { r.visible = true; r.material = Models.mats().brass; });
+    await lowerMyGun();
+  }
+
+  // 1/2/3 with a semi-automatic: the magazine drops out and the chosen
+  // round (top, 2nd or 3rd) glows red if live; a blank shows dull and grey.
+  async function peekMag(n, live) {
+    const mg = myGun.mag, home = mg.userData.home.clone(), out = mg.userData.out;
+    await T(0.4, t => { mg.position.copy(home).addScaledVector(out, t); }, E.out);
+    const round = myGun.rounds[Math.min(n - 1, myGun.rounds.length - 1)];
+    round.material = new THREE.MeshStandardMaterial(live
+      ? { color: 0xc8963c, emissive: 0xff2000, emissiveIntensity: 0, metalness: 0.8, roughness: 0.3 }
+      : { color: 0x8a8a90, emissive: 0x5070a0, emissiveIntensity: 0, metalness: 0.4, roughness: 0.6 });
+    const glow = new THREE.PointLight(live ? 0xff2010 : 0xc8e0ff, 0, 0.4);
+    round.getWorldPosition(glow.position);
+    scene.add(glow);
+    await T(0.4, t => { glow.intensity = 2.5 * t; round.material.emissiveIntensity = (live ? 1.2 : 0.5) * t; });
+    await Engine.wait(1.1);
+    await T(0.3, t => { glow.intensity = 2.5 * (1 - t); round.material.emissiveIntensity = (live ? 1.2 : 0.5) * (1 - t); });
+    scene.remove(glow);
+    round.material = Models.mats().brass;
+    await T(0.3, t => { mg.position.copy(home).addScaledVector(out, 1 - t); }, E.in);
     await lowerMyGun();
   }
 
@@ -1242,7 +1274,7 @@ const Table = (() => {
     if (s.dead) return;
     const old = s.rig.gun.group;
     old.parent && old.parent.remove(old);
-    s.rig.gun = Models.revolver(s.rskin);
+    s.rig.gun = Guns.build('revolver', s.rgun, s.rskin);
     const g = s.rig.gun.group;
     g.rotation.x = Math.PI / 2; g.position.set(0, -0.04, 0); g.scale.setScalar(0.01);
     g.traverse(o => { if (o.isMesh) o.castShadow = true; });
@@ -1257,7 +1289,7 @@ const Table = (() => {
 
   // Gun card: a shotgun drops onto the table (or into a bot's hand).
   async function giveShotgun(pi) {
-    const sg = Models.shotgun(seats[pi] && seats[pi].sskin);
+    const sg = Guns.build('shotgun', seats[pi] && seats[pi].sgun, seats[pi] && seats[pi].sskin);
     sg.group.traverse(o => { if (o.isMesh) o.castShadow = true; });
     if (pi === 0) {
       if (myShotgun) scene.remove(myShotgun.group);

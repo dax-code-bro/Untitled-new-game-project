@@ -1,5 +1,5 @@
 // Shootout — Gunsmith skins.
-// Skins only change how a gun looks: every revolver and every shotgun fires
+// Skins only change how a gun looks: every revolver-slot and Gun-card gun fires
 // exactly the same whatever it wears. Each skin unlocks by reaching a goal
 // (see profile.js for the stats behind `stat`). The look of each skin is
 // built in models.js (gunLook).
@@ -30,16 +30,16 @@ const SKINS = {
   shotgun: [
     { id: 'standard',   name: 'Standard Issue',          stat: null,         n: 0,  goal: 'Yours from the start.',
       blurb: 'Blued barrels, engraved receiver and a walnut stock.' },
-    { id: 'gold',       name: 'Gold',                    stat: 'sKills',     n: 5,  goal: 'Kill 5 players with the shotgun.',
-      blurb: 'Gold barrels and receiver with an ebony stock.' },
+    { id: 'gold',       name: 'Gold',                    stat: 'sKills',     n: 5,  goal: 'Kill 5 players with a Gun card.',
+      blurb: 'Gold barrel and frame with an ebony stock or grips.' },
     { id: 'bluelight',  name: 'Blue Light',              stat: 'blocks',     n: 10, goal: 'Stop 10 hits with a Block shield.',
       blurb: 'Black steel traced with humming electric-blue light.' },
     { id: 'hellfire',   name: 'Hellfire',                stat: 'grenades',   n: 10, goal: 'Throw 10 grenades.',
-      blurb: 'Barrels that glow like a forge, with burning shells.' },
+      blurb: 'Metal that glows like a forge, with burning shells.' },
     { id: 'darkknight', name: 'Dark Knight',             stat: 'bestStreak', n: 3,  goal: 'Win 3 games in a row.',
-      blurb: 'Gothic black steel with crimson trim and spiked barrels.' },
-    { id: 'diamond',    name: 'Diamond',                 stat: 'sKills',     n: 25, goal: 'Kill 25 players with the shotgun.',
-      blurb: 'A shotgun cut from diamond, glittering in the lamplight.' },
+      blurb: 'Gothic black steel with crimson trim and a spiked muzzle.' },
+    { id: 'diamond',    name: 'Diamond',                 stat: 'sKills',     n: 25, goal: 'Kill 25 players with a Gun card.',
+      blurb: 'A gun cut from diamond, glittering in the lamplight.' },
   ],
 };
 

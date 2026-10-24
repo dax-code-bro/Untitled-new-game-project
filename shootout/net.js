@@ -81,9 +81,9 @@ const Net = (() => {
     fire('party');
   }
 
-  // Your character and skins, so the party can see who is taken.
+  // Your guns and skins, so the host can put them in your hands.
   function setGear(l) {
-    gear = { ch: l.char || null, rs: l.rskin || 'standard', ss: l.sskin || 'standard' };
+    gear = { rg: l.rgun || 'colt', sg: l.sgun || 'coach', rs: l.rskin || 'standard', ss: l.sskin || 'standard' };
     if (party) party.room.presence(gear).catch(() => {});
   }
 
@@ -145,7 +145,7 @@ const Net = (() => {
       if (!pr.pid) continue;
       const id = k => (typeof pr[k] === 'string' ? pr[k].slice(0, 16) : null);
       out.set(pr.pid, { pid: String(pr.pid), name: String(pr.nm || 'Someone').slice(0, 24), host: pr.pid === party.host, peer: p.peer, me: pr.pid === pid,
-        char: id('ch'), rskin: id('rs'), sskin: id('ss') });
+        rgun: id('rg'), sgun: id('sg'), rskin: id('rs'), sskin: id('ss') });
     }
     return [...out.values()].sort((a, b) => (b.host - a.host) || a.name.localeCompare(b.name));
   }

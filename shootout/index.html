@@ -142,7 +142,7 @@
     <h2>Gunsmith</h2>
     <div class="who-tabs gun-tabs" role="tablist">
       <button type="button" data-gun="revolver" class="on">Revolver</button>
-      <button type="button" data-gun="shotgun">Shotgun</button>
+      <button type="button" data-gun="shotgun">Gun card</button>
     </div>
     <div id="skin-list" class="tile-list"></div>
     <div id="skin-info" class="shop-info"></div>
@@ -151,14 +151,18 @@
   </div>
 </section>
 
-<!-- LOADOUT: who you play as -->
+<!-- LOADOUT: which guns you carry (looks only) -->
 <section id="screen-loadout" class="screen showcase">
   <div class="shop">
     <h2>Loadout</h2>
-    <p class="muted fine">Pick who you play as. Nobody at a table can be the same character: a <b class="x">✕</b> means someone in your party already took them.</p>
-    <div id="char-grid" class="tile-list chars"></div>
-    <div id="char-info" class="shop-info"></div>
-    <div class="shop-buttons"><button type="button" id="btn-pick-char">Play as</button><button class="back" data-go="menu">Back</button></div>
+    <div class="who-tabs gun-tabs" role="tablist">
+      <button type="button" data-slot="revolver" class="on">Revolver</button>
+      <button type="button" data-slot="shotgun">Gun card</button>
+    </div>
+    <div id="gun-list" class="tile-list guns"></div>
+    <div id="gun-info" class="shop-info"></div>
+    <p class="muted fine">Every gun is for looks only. Your character is picked when a match loads.</p>
+    <div class="shop-buttons"><button type="button" id="btn-equip-gun">Equip</button><button class="back" data-go="menu">Back</button></div>
   </div>
 </section>
 
@@ -192,6 +196,18 @@
   <button type="button" id="curtain-go"></button>
 </div>
 
+<!-- picking your character as a match loads -->
+<div id="char-pick" class="showcase hidden">
+  <div class="shop">
+    <h2 id="pick-title">Choose your outlaw</h2>
+    <p class="muted fine">Nobody at the table can be the same character: a <b class="x">✕</b> means someone already took them.</p>
+    <div id="pick-grid" class="tile-list chars"></div>
+    <div id="pick-info" class="shop-info"></div>
+    <div class="shop-buttons"><button type="button" id="pick-go">Play</button></div>
+    <small id="pick-timer" class="muted fine"></small>
+  </div>
+</div>
+
 <div id="whiteout"></div>
 <div id="fade"></div>
 
@@ -201,6 +217,7 @@
 <script src="items.js"></script>
 <script src="characters.js"></script>
 <script src="skins.js"></script>
+<script src="guns.js"></script>
 <script src="profile.js"></script>
 <script src="bots.js"></script>
 <script src="net.js"></script>

@@ -221,6 +221,14 @@ const Models = (() => {
       const words = c.name.toUpperCase().split(' ');
       const lines = words.length > 2 ? [words.slice(0, 2).join(' '), words.slice(2).join(' ')] : [words.join(' ')];
       lines.forEach((ln, i) => g.fillText(ln, w / 2, h - 52 + i * 28 - (lines.length - 1) * 14));
+      // rarity: a coloured gem in the corner and the word along the bottom
+      const rc = RARITY[c.rarity].color;
+      g.fillStyle = rc; g.strokeStyle = dark ? '#000' : '#2a1a0a'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(w - 36, 26); g.lineTo(w - 24, 40); g.lineTo(w - 36, 54); g.lineTo(w - 48, 40); g.closePath(); g.fill(); g.stroke();
+      g.font = 'bold 15px Georgia, serif';
+      g.fillStyle = dark ? rc : '#3a2a1a';
+      g.fillText(RARITY[c.rarity].label.toUpperCase(), w / 2, h - 22);
+      g.fillStyle = rc; g.fillRect(w / 2 - 40, h - 17, 80, 2);
     });
     return faceCache[id];
   }
@@ -580,21 +588,26 @@ const Models = (() => {
 
   // Extra pieces some skins add to a revolver or shotgun.
   // A shotgun is decorated twice: once on its barrels, once on its body.
-  const BARREL_DECO = ['clamp', 'barbed', 'spikes'];
-  function decorate(g, m, kind, part) {
-    const isR = kind === 'revolver';
-    const len = isR ? 0.17 : 0.46, y = isR ? 0.012 : 0.016, z0 = isR ? 0.03 : 0.035;
+  const BARREL_DECO = ['clamp', 'barbed', 'spikes', 'blade'];
+  // Where a gun's barrel and frame are, so decorations fit any model.
+  const DIMS = {
+    revolver: { r: 0.0125, sy: 1, y: 0.012, z0: 0.03, len: 0.17, top: 0.07, w: 0.0125, gz: -0.035, gy: -0.045 },
+    shotgun: { r: 0.03, sy: 0.6, y: 0.016, z0: 0.035, len: 0.46, top: 0.08, w: 0.024, gz: -0.07, gy: -0.04 },
+  };
+  function decorate(g, m, kind, part, dims) {
+    const D = Object.assign({}, DIMS[kind], dims);
+    const { r, sy, y, z0, len } = D;
     (m.deco || []).forEach(d => {
-      if (!isR && BARREL_DECO.includes(d) !== (part === 'barrels')) return;
-      if (d === 'clamp') {   // a hose clamp holding the barrel on
-        [0.08, 0.15].forEach(z => { const c = mesh(new THREE.TorusGeometry(isR ? 0.0125 : 0.03, 0.0022, 6, 18), m.nickel); c.position.set(0, y, isR ? z : z * 2.6); if (!isR) c.scale.set(1, 0.6, 1); g.add(c); });
+      if (part && BARREL_DECO.includes(d) !== (part === 'barrels')) return;
+      if (d === 'clamp') {   // hose clamps holding the barrel on
+        [0.35, 0.8].forEach(f => { const c = mesh(new THREE.TorusGeometry(r, 0.0022, 6, 18), m.nickel); c.position.set(0, y, z0 + len * f); c.scale.set(1, sy, 1); g.add(c); });
       } else if (d === 'wraps') {   // wire wound round the grip
-        for (let i = 0; i < 6; i++) { const w = mesh(new THREE.TorusGeometry(0.019, 0.0016, 6, 16), m.brass); w.rotation.x = Math.PI / 2 - 0.5; w.position.set(0, -0.045 - i * 0.009, -0.035 - i * 0.004); w.scale.set(1, 1.4, 1); g.add(w); }
-      } else if (d === 'barbed') {
-        const wire = mesh(new THREE.TorusGeometry(isR ? 0.013 : 0.03, 0.0012, 4, 60, Math.PI * 2), m.nickel);
+        for (let i = 0; i < 6; i++) { const w = mesh(new THREE.TorusGeometry(0.019, 0.0016, 6, 16), m.brass); w.rotation.x = Math.PI / 2 - 0.5; w.position.set(0, D.gy - i * 0.009, D.gz - i * 0.004); w.scale.set(1, 1.4, 1); g.add(w); }
+      } else if (d === 'barbed') {   // barbed wire wound down the barrel
+        const wire = mesh(new THREE.TorusGeometry(r + 0.001, 0.0012, 4, 60), m.nickel);
         for (let i = 0; i < 5; i++) {
-          const ring = wire.clone(); ring.position.set(0, y, z0 + 0.03 + i * (len * 0.12)); if (!isR) ring.scale.set(1, 0.6, 1); g.add(ring);
-          for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + i; const b = box(0.0012, 0.006, 0.0012, m.nickel); b.position.set(Math.cos(a) * (isR ? 0.013 : 0.03), y + Math.sin(a) * (isR ? 0.013 : 0.018), ring.position.z); b.rotation.z = a; g.add(b); }
+          const ring = wire.clone(); ring.position.set(0, y, z0 + len * (0.12 + i * 0.17)); ring.scale.set(1, sy, 1); g.add(ring);
+          for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + i; const b = box(0.0012, 0.006, 0.0012, m.nickel); b.position.set(Math.cos(a) * (r + 0.001), y + Math.sin(a) * (r + 0.001) * sy, ring.position.z); b.rotation.z = a; g.add(b); }
         }
       } else if (d === 'wings') {   // feathered wings fanning up from the frame
         [-1, 1].forEach(sx => {
@@ -606,23 +619,23 @@ const Models = (() => {
             f.rotation.x = 0.35 - i * 0.28;
             wing.add(f);
           }
-          wing.position.set(sx * 0.02, 0.012, -0.03); wing.rotation.y = sx * 0.3; g.add(wing);
+          wing.position.set(sx * (D.w + 0.008), 0.012, -0.03); wing.rotation.y = sx * 0.3; g.add(wing);
         });
       } else if (d === 'halo') {
         const halo = mesh(new THREE.TorusGeometry(0.03, 0.0025, 8, 32), m.halo, { cast: false });
-        halo.rotation.x = Math.PI / 2; halo.position.set(0, isR ? 0.07 : 0.08, isR ? -0.01 : -0.02); g.add(halo);
+        halo.rotation.x = Math.PI / 2; halo.position.set(0, D.top, -0.01); g.add(halo);
       } else if (d === 'embers') {   // glowing coals set in the frame
-        for (let i = 0; i < 5; i++) { const e = sphere(0.0026, m.brass, { cast: false }); e.position.set((i % 2 ? 1 : -1) * (isR ? 0.0125 : 0.024), -0.01 + (i * 0.007), (isR ? -0.02 : -0.04) + i * 0.01); g.add(e); }
+        for (let i = 0; i < 5; i++) { const e = sphere(0.0026, m.brass, { cast: false }); e.position.set((i % 2 ? 1 : -1) * D.w, -0.01 + (i * 0.007), -0.03 + i * 0.01); g.add(e); }
       } else if (d === 'blade') {   // a bayonet under the barrel
-        const blade = profile([[0.1, -0.012], [0.27, -0.008], [0.3, -0.004], [0.27, -0.002], [0.1, -0.004]], 0.003, m.nickel, 0.0005);
-        g.add(blade);
-        const lug = box(0.008, 0.012, 0.016, m.brass); lug.position.set(0, -0.006, 0.105); g.add(lug);
+        const by = y - r * sy - 0.004, bz = z0 + len;
+        g.add(profile([[bz - 0.1, by - 0.008], [bz + 0.07, by - 0.004], [bz + 0.1, by], [bz + 0.07, by + 0.002], [bz - 0.1, by]], 0.003, m.nickel, 0.0005));
+        const lug = box(0.008, 0.012, 0.016, m.brass); lug.position.set(0, by, bz - 0.09); g.add(lug);
       } else if (d === 'spikes') {   // spikes ringing the muzzle
         for (let i = 0; i < 6; i++) {
           const a = (i / 6) * Math.PI * 2;
-          const s = mesh(new THREE.ConeGeometry(0.004, 0.02, 6), m.brass);
-          s.rotation.x = Math.PI / 2; s.position.set(Math.cos(a) * 0.03, 0.016 + Math.sin(a) * 0.02, 0.43);
-          g.add(s);
+          const sp = mesh(new THREE.ConeGeometry(0.004, 0.02, 6), m.brass);
+          sp.rotation.x = Math.PI / 2; sp.position.set(Math.cos(a) * r, y + Math.sin(a) * r * sy, z0 + len - 0.03);
+          g.add(sp);
         }
       }
     });
@@ -728,7 +741,7 @@ const Models = (() => {
     g.add(panels);
     const medallion = cyl(0.004, 0.004, 0.036, m.brass, 12); medallion.rotation.z = Math.PI / 2; medallion.position.set(0, -0.07, -0.05); g.add(medallion);
 
-    decorate(g, m, 'revolver');
+    decorate(g, m, 'revolver', null);
     const muzzle = new THREE.Object3D(); muzzle.position.set(0, 0.012, 0.205); g.add(muzzle);
     return { group: g, cylinder, hammer, muzzle, chambers, rounds, trigger };
   }
@@ -760,7 +773,7 @@ const Models = (() => {
   // Seated figure facing +Z, built from a character's `look` (see
   // characters.js): hat style, face, hair, clothes and extras. Returns the
   // rig: root, spine, head, hat, arms, gun.
-  function outlaw(look = {}, gunSkin = 'standard') {
+  function outlaw(look = {}, gunSkin = 'standard', gunModel = 'colt') {
     const m = mats();
     const L = look;
     const has = x => (L.extras || []).includes(x);
@@ -946,7 +959,7 @@ const Models = (() => {
     }
     const rArm = arm(-1), lArm = arm(1);
 
-    const gun = revolver(gunSkin);
+    const gun = Guns.build('revolver', gunModel, gunSkin);
     gun.group.rotation.x = Math.PI / 2;          // barrel follows the forearm
     gun.group.position.set(0, -0.04, 0.0);
     gun.group.scale.setScalar(1.25);
@@ -1340,7 +1353,7 @@ const Models = (() => {
 
   return {
     shotgun, crate, item, couch, lifeMark, grenade, missile, shield, profile,
-    V, tex, mats, gunLook, revolver, card, setCardFace, cardFace, outlaw, table, chair, bookshelf, desk,
+    V, tex, mats, gunLook, revolver, parts: { col, mesh, box, cyl, sphere, profile, decorate }, card, setCardFace, cardFace, outlaw, table, chair, bookshelf, desk,
     door, pictureFrame, hangingLamp, target, bullet, decal, CARD_W, CARD_H,
   };
 })();

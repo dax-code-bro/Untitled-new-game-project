@@ -116,11 +116,12 @@ const MenuStage = (() => {
   let stage, scene, gun, gunSkin;
   // the revolver on the table wears your Gunsmith skin
   function placeGun() {
-    const skin = typeof Profile !== 'undefined' ? Profile.loadout().rskin : 'standard';
+    const l = Profile.loadout();
+    const skin = l.rskin + ':' + l.rgun;
     if (gun && skin === gunSkin) return;
     if (gun) scene.remove(gun.group);
     gunSkin = skin;
-    gun = Models.revolver(skin);
+    gun = Guns.build('revolver', l.rgun, l.rskin);
     gun.group.scale.setScalar(2.2);
     gun.group.rotation.set(0, 0.9, Math.PI / 2);     // lying on its side
     gun.group.position.set(-0.55, 0.035, 0.05);
@@ -238,7 +239,7 @@ const ShowcaseStage = (() => {
     current = null;
   }
 
-  // what: { kind: 'char', id, rskin } | { kind: 'revolver'|'shotgun', id }
+  // what: { kind: 'char', id, rskin, rgun } | { kind: 'revolver'|'shotgun', model, skin }
   function show(what) {
     if (!stage) build();
     Engine.setStage(stage);
@@ -251,7 +252,7 @@ const ShowcaseStage = (() => {
       const ch = CHARACTER_BY_ID[what.id] || CHARACTERS[0];
       const chair = Models.chair();
       chair.position.z = -0.05;
-      const o = Models.outlaw(ch.look, what.rskin);
+      const o = Models.outlaw(ch.look, what.rskin, what.rgun);
       // hands resting on the lap, gun pointing at the floor in front
       [o.rArm, o.lArm].forEach(a => { a.shoulder.rotation.x = -0.45; a.elbow.rotation.x = -0.75; });
       holder.add(chair, o.root);
@@ -259,11 +260,14 @@ const ShowcaseStage = (() => {
       current = { char: true };
       view = { pos: new THREE.Vector3(0, 1.25, 2.5), at: new THREE.Vector3(0, 0.8, 0) };
     } else {
-      const g = what.kind === 'shotgun' ? Models.shotgun(what.id) : Models.revolver(what.id);
-      const s = what.kind === 'shotgun' ? 1.25 : 3.4;
+      const g = Guns.build(what.kind, what.model, what.skin);
+      // fit the gun's length to the turntable and centre it
+      const bb = new THREE.Box3().setFromObject(g.group);
+      const size = bb.getSize(new THREE.Vector3()), mid = bb.getCenter(new THREE.Vector3());
+      const s = Math.min(3.4, 1.0 / Math.max(size.z, 0.001));
       g.group.scale.setScalar(s);
       g.group.rotation.set(0, Math.PI / 2, 0);          // side on to the camera as it turns
-      g.group.position.set(-0.065 * s, 0.03 * s, 0);    // centre the gun on the turntable
+      g.group.position.set(-mid.z * s, -mid.y * s + 0.02, 0);
       const pivot = new THREE.Group();
       pivot.add(g.group);
       pivot.rotation.z = 0.12;

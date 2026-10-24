@@ -71,9 +71,9 @@ function showScreen(name, fade = true) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     $('#screen-' + name).classList.add('active');
     if (MENU_SCREENS.includes(name)) MenuStage.show();
-    if (name === 'game') Table.show();
+    if (name === 'game' && !picker.open) Table.show();
     if (name === 'mode') renderWho();
-    if (name === 'loadout') { shop.char = Profile.loadout().char || shop.char || CHARACTERS[0].id; renderLoadout(); }
+    if (name === 'loadout') { shop.model = Profile.loadout()[shop.slot === 'revolver' ? 'rgun' : 'sgun']; renderLoadout(); }
     if (name === 'gunsmith') { shop.skin = Profile.loadout()[shop.gun === 'revolver' ? 'rskin' : 'sskin']; renderGunsmith(); }
     if (name === 'scores') renderScores();
   };
@@ -134,7 +134,6 @@ window.addEventListener('DOMContentLoaded', () => {
   Net.on('memberLeft', onMemberLeft);
   Net.on('game', onHostGame);
   Net.on('hostLeft', onHostLeft);
-  Net.on('party', () => { if ($('#screen-loadout').classList.contains('active')) renderLoadout(); });
   Net.setGear(Profile.loadout());
   Net.init().then(() => Scores.init());
   Scores.onChange(() => { if ($('#screen-scores').classList.contains('active')) renderScores(); });
@@ -152,13 +151,18 @@ window.addEventListener('DOMContentLoaded', () => {
     Sound.cock && Sound.cock();
     renderGunsmith();
   });
-  $('#btn-pick-char').addEventListener('click', () => {
-    if (takenByParty().includes(shop.char)) return;
-    Profile.setLoadout({ char: shop.char });
+  document.querySelectorAll('[data-slot]').forEach(b => b.addEventListener('click', () => {
+    shop.slot = b.dataset.slot;
+    shop.model = Profile.loadout()[shop.slot === 'revolver' ? 'rgun' : 'sgun'];
+    renderLoadout();
+  }));
+  $('#btn-equip-gun').addEventListener('click', () => {
+    Profile.setLoadout(shop.slot === 'revolver' ? { rgun: shop.model } : { sgun: shop.model });
     Net.setGear(Profile.loadout());
-    Sound.chime && Sound.chime();
+    Sound.cock && Sound.cock();
     renderLoadout();
   });
+  $('#pick-go').addEventListener('click', confirmPick);
 
   // Tap a card to pick it, tap it again (or drag it up onto the table) to play.
   Table.onCardClick = i => {
@@ -178,20 +182,20 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // ---------- who is playing: bots, same phone, friends ----------
 
-const who = { tab: 'bots', locals: 2, names: ['Player 1', 'Player 2', 'Player 3', 'Player 4'], chars: [null, null, null, null] };
+const who = { tab: 'bots', locals: 2, names: ['Player 1', 'Player 2', 'Player 3', 'Player 4'] };
 
 function humansFor(mode) {
   const mine = Profile.loadout();
   if (who.tab === 'same') {
     const k = Math.min(who.locals, mode.seats);
-    // the phone's owner (player 1) brings their Gunsmith skins
-    return Array.from({ length: k }, (_, i) => Object.assign({ name: (who.names[i] || '').trim() || 'Player ' + (i + 1), ctrl: 'local', char: who.chars[i] || null },
-      i === 0 ? { rskin: mine.rskin, sskin: mine.sskin } : {}));
+    // the phone's owner (player 1) brings their Loadout guns and skins
+    return Array.from({ length: k }, (_, i) => Object.assign({ name: (who.names[i] || '').trim() || 'Player ' + (i + 1), ctrl: 'local' },
+      i === 0 ? mine : {}));
   }
   if (who.tab === 'friends' && Net.party && Net.party.isHost) {
     return Net.members().map(m => (m.me
       ? Object.assign({ name: m.name, ctrl: 'local', pid: m.pid }, mine)
-      : { name: m.name, ctrl: 'remote', pid: m.pid, char: m.char, rskin: m.rskin, sskin: m.sskin }));
+      : { name: m.name, ctrl: 'remote', pid: m.pid, rgun: m.rgun, sgun: m.sgun, rskin: m.rskin, sskin: m.sskin }));
   }
   return [Object.assign({ name: who.tab === 'friends' ? Net.name : 'You', ctrl: 'local', pid: Net.pid }, mine)];
 }
@@ -213,22 +217,9 @@ function renderWho() {
       inp.id = 'hs-name-' + i; inp.maxLength = 16; inp.value = who.names[i]; inp.placeholder = 'Player ' + (i + 1);
       inp.setAttribute('aria-label', 'Name of player ' + (i + 1));
       inp.addEventListener('input', () => { who.names[i] = inp.value; });
-      const sel = document.createElement('select');
-      sel.id = 'hs-char-' + i;
-      sel.setAttribute('aria-label', 'Character for player ' + (i + 1));
-      sel.addEventListener('change', () => { who.chars[i] = sel.value || null; renderWho(); });
-      row.append(inp, sel);
+      row.append(inp);
       names.appendChild(row);
     }
-  }
-  // each same-phone player picks a character nobody else on the phone has
-  if (who.chars[0] == null) who.chars[0] = Profile.loadout().char;
-  for (let i = 0; i < who.locals; i++) {
-    const sel = $('#hs-char-' + i);
-    const others = who.chars.filter((c, k) => k !== i && k < who.locals && c);
-    if (others.includes(who.chars[i])) who.chars[i] = null;
-    sel.innerHTML = '<option value="">Random character</option>' + CHARACTERS.map(c =>
-      `<option value="${c.id}" ${others.includes(c.id) ? 'disabled' : ''} ${who.chars[i] === c.id ? 'selected' : ''}>${others.includes(c.id) ? '✕ ' : ''}${esc(c.short)}</option>`).join('');
   }
   // friends
   $('#friends-offline').classList.toggle('hidden', Net.available);
@@ -306,33 +297,25 @@ function pickTable(modeId) {
 
 // ---------- Loadout, Gunsmith and Scoreboard ----------
 
-const shop = { char: null, gun: 'revolver', skin: 'standard' };
+const shop = { gun: 'revolver', skin: 'standard', slot: 'revolver', model: 'colt' };
 
-// Characters other people in your party are playing as.
-function takenByParty() {
-  if (!Net.party) return [];
-  return Net.members().filter(m => !m.me && m.char).map(m => m.char);
-}
-
+// Loadout: which revolver you carry and which big gun a Gun card gives you.
+// Purely for looks: every gun in a slot shoots the same.
 function renderLoadout() {
-  const taken = takenByParty();
-  const mine = Profile.loadout().char;
-  const ch = CHARACTER_BY_ID[shop.char] || CHARACTERS[0];
-  $('#char-grid').innerHTML = CHARACTERS.map(c => {
-    const x = taken.includes(c.id);
-    const by = x ? Net.members().find(m => !m.me && m.char === c.id) : null;
-    return `<button type="button" class="tile${c.id === shop.char ? ' on' : ''}${x ? ' taken' : ''}${c.id === mine ? ' equipped' : ''}" data-char="${c.id}"
-      aria-label="${esc(c.name)}${x ? ', taken' : ''}">${portrait(c)}<b>${esc(c.short)}</b>${x ? `<i class="x" title="Taken by ${esc(by.name)}">✕</i>` : ''}</button>`;
-  }).join('');
-  $('#char-grid').querySelectorAll('[data-char]').forEach(b => b.addEventListener('click', () => { shop.char = b.dataset.char; renderLoadout(); }));
-  const takenBy = taken.includes(ch.id) ? Net.members().find(m => !m.me && m.char === ch.id) : null;
-  $('#char-info').innerHTML = `<h3>${esc(ch.name)}</h3><p>${esc(ch.blurb)}</p>` +
-    `<small>As a bot: ${ch.personality[0].toUpperCase() + ch.personality.slice(1)}</small>` +
-    (takenBy ? `<p class="warn">${esc(takenBy.name)} is already playing as ${esc(ch.short)}.</p>` : '');
-  const btn = $('#btn-pick-char');
-  btn.disabled = !!takenBy || ch.id === mine;
-  btn.textContent = ch.id === mine ? 'Playing as ' + ch.short : 'Play as ' + ch.short;
-  ShowcaseStage.show({ kind: 'char', id: ch.id, rskin: Profile.loadout().rskin });
+  document.querySelectorAll('[data-slot]').forEach(b => b.classList.toggle('on', b.dataset.slot === shop.slot));
+  const list = GUNS[shop.slot];
+  const l = Profile.loadout();
+  const equipped = shop.slot === 'revolver' ? l.rgun : l.sgun;
+  if (!GUN_BY_ID[shop.slot][shop.model]) shop.model = list[0].id;
+  $('#gun-list').innerHTML = list.map(gn => `<button type="button" class="tile gun${gn.id === shop.model ? ' on' : ''}${gn.id === equipped ? ' equipped' : ''}" data-model="${gn.id}"><b>${esc(gn.name)}</b></button>`).join('');
+  $('#gun-list').querySelectorAll('[data-model]').forEach(b => b.addEventListener('click', () => { shop.model = b.dataset.model; renderLoadout(); }));
+  const gn = GUN_BY_ID[shop.slot][shop.model];
+  $('#gun-info').innerHTML = `<h3>${esc(gn.name)}</h3><p>${esc(gn.blurb)}</p>` +
+    `<small>${shop.slot === 'revolver' ? 'Your gun for every shootout.' : 'What a Gun card puts in your hands: 2 live shots, one hit kills.'} Looks only: it shoots exactly like the others.</small>`;
+  const btn = $('#btn-equip-gun');
+  btn.disabled = gn.id === equipped;
+  btn.textContent = gn.id === equipped ? 'Equipped' : 'Equip';
+  ShowcaseStage.show({ kind: shop.slot, model: gn.id, skin: shop.slot === 'revolver' ? l.rskin : l.sskin });
 }
 
 // A small painted badge for each character: hat silhouette over their colours.
@@ -380,13 +363,13 @@ function renderGunsmith() {
   const sk = SKIN_BY_ID[shop.gun][shop.skin];
   const open = Profile.unlocked(shop.gun, sk.id);
   const have = Math.min(sk.n, Profile.value(sk.stat));
-  $('#skin-info').innerHTML = `<h3>${esc(sk.name)} ${shop.gun}</h3><p>${esc(sk.blurb)}</p>` +
+  $('#skin-info').innerHTML = `<h3>${esc(sk.name)} · ${shop.gun === 'revolver' ? 'Revolver' : 'Gun card'}</h3><p>${esc(sk.blurb)}</p>` +
     (open ? `<small class="ok">${sk.stat ? 'Unlocked: ' + esc(sk.goal) : esc(sk.goal)}</small>`
       : `<small>To unlock: <b>${esc(sk.goal)}</b></small><div class="bar"><i style="width:${(100 * have / sk.n).toFixed(0)}%"></i></div><small>${have} / ${sk.n}</small>`);
   const btn = $('#btn-equip');
   btn.disabled = !open || sk.id === equipped;
   btn.textContent = sk.id === equipped ? 'Equipped' : open ? 'Equip' : 'Locked';
-  ShowcaseStage.show({ kind: shop.gun, id: sk.id });
+  ShowcaseStage.show({ kind: shop.gun, model: Profile.loadout()[shop.gun === 'revolver' ? 'rgun' : 'sgun'], skin: sk.id });
 }
 
 function renderScores() {
@@ -501,6 +484,8 @@ function applyUi(f, a) {
     case 'round': state.round = a[0]; applyDread(); renderAll(); break;
     case 'whiteout': whiteout(); break;
     case 'end': showEnd(a[0], a[1], a[2]); break;
+    case 'taken': pickerTaken(a[0]); break;
+    case 'chars': charactersPicked(); break;
   }
 }
 
@@ -535,7 +520,7 @@ function snapshot() {
     r: state.round, m: state.modeId, mu: state.multi ? 1 : 0, ov: state.over ? 1 : 0,
     bx: state.box ? idx(state.box.owner) : null, pl: state.pile.slice(-6), tm: teamsList(),
     ps: state.players.map(p => ({
-      nm: p.name, pid: p.pid || null, c: p.ctrl, sb: p.sub, pa: p.pal, ch: p.char, rs: p.rskin, ss: p.sskin, a: p.alive ? 1 : 0, l: p.lives, b: p.bleeding ? 1 : 0,
+      nm: p.name, pid: p.pid || null, c: p.ctrl, sb: p.sub, pa: p.pal, ch: p.char, rg: p.rgun, sg: p.sgun, rs: p.rskin, ss: p.sskin, a: p.alive ? 1 : 0, l: p.lives, b: p.bleeding ? 1 : 0,
       h: p.hand, i: p.items, u: p.unarmed ? 1 : 0, sg: p.shotgun, hs: p.hasShotgun ? 1 : 0, bk: p.block ? 1 : 0, rv: p.reverse ? 1 : 0, k: knownStr(p),
     })),
   };
@@ -548,7 +533,7 @@ function fromSnapshot(s) {
   state.mode = MODES[s.m];
   state.multi = !!s.mu;
   state.players = s.ps.map(d => ({
-    name: d.nm, pid: d.pid, ctrl: d.c, sub: d.sb, pal: d.pa, char: d.ch, rskin: d.rs, sskin: d.ss, alive: !!d.a, lives: d.l, bleeding: !!d.b, hand: d.h || [], items: d.i || [],
+    name: d.nm, pid: d.pid, ctrl: d.c, sub: d.sb, pal: d.pa, char: d.ch, rgun: d.rg, sgun: d.sg, rskin: d.rs, sskin: d.ss, alive: !!d.a, lives: d.l, bleeding: !!d.b, hand: d.h || [], items: d.i || [],
     unarmed: !!d.u, shotgun: d.sg || 0, hasShotgun: !!d.hs, block: !!d.bk, reverse: !!d.rv,
     gun: (d.k || '???').split('').map(c => ({ known: c !== '?', live: c === 'L' })), team: null,
   }));
@@ -567,7 +552,7 @@ function rebuildTable() {
   const k = state.players.length;
   const order = Array.from({ length: k }, (_, i) => (state.view + i) % k);
   const seat = i => (i - state.view + k) % k;
-  const tps = order.map(i => { const p = state.players[i]; return { name: p.name, sub: p.sub, pal: p.pal, char: p.char, rskin: p.rskin, sskin: p.sskin }; });
+  const tps = order.map(i => { const p = state.players[i]; return { name: p.name, sub: p.sub, pal: p.pal, char: p.char, rgun: p.rgun, sgun: p.sgun, rskin: p.rskin, sskin: p.sskin }; });
   Table.rebuild(tps, {
     ravage: dread(),
     seats: order.map(i => {
@@ -602,6 +587,127 @@ function results(winners) {
   return out;
 }
 
+// The big gun a Gun card hands this player (cosmetic; they all work the same).
+const bigGun = p => (GUN_BY_ID.shotgun[p.sgun] || GUN_BY_ID.shotgun.coach).name;
+
+// ---------- picking characters as the match loads ----------
+// Everyone picks who they play as. Online, everyone picks at once and a
+// character someone grabs gets a ✕ on the others' screens straight away;
+// people sharing a phone pick one after another. Bots take what's left.
+
+const PICK_SECONDS = 30;
+async function pickCharacters(game) {
+  const taken = [];
+  const humans = state.players.filter(p => p.ctrl !== 'bot');
+  const claim = (p, id) => { p.char = id; taken.push(id); ui('taken', taken.slice()); };
+  const pickOne = async p => {
+    for (let tries = 0; tries < 6; tries++) {
+      if (game !== state.game) return;
+      const title = state.multi ? `${p.name}: choose your outlaw` : 'Choose your outlaw';
+      // a friend who never answers gets a random character
+      const v = await Promise.race([ask(p, 'char', { title, taken: taken.slice() }), sleep((PICK_SECONDS + 15) * 1000).then(() => null)]);
+      if (game !== state.game) return;
+      if (CHARACTER_BY_ID[v] && !taken.includes(v)) { claim(p, v); return; }
+      if (!CHARACTER_BY_ID[v]) break;
+      // someone took it a moment earlier: ask again with the new ✕
+    }
+    claim(p, freeCharacters(taken)[0].id);
+  };
+  const locals = humans.filter(p => p.ctrl === 'local');
+  await Promise.all([
+    ...humans.filter(p => p.ctrl === 'remote').map(pickOne),
+    (async () => { for (const p of locals) await pickOne(p); })(),
+  ]);
+  if (game !== state.game) return;
+  // bots play the characters left over, with those characters' names
+  const free = freeCharacters(taken);
+  state.players.filter(p => p.ctrl === 'bot').forEach((b, k) => {
+    const ch = free[k];
+    Object.assign(b, { name: ch.short, personality: ch.personality, char: ch.id });
+    b.sub = Bots.label(b);
+  });
+  humans.forEach(p => { p.char = p.char || freeCharacters(state.players.map(q => q.char))[0].id; p.sub = CHARACTER_BY_ID[p.char].short.toUpperCase() + ' · ' + p.sub.split(' · ').pop(); });
+  if (locals.length === 1 && !state.multi) Profile.setLoadout({ char: locals[0].char });
+  ui('chars');
+}
+
+// The picker on this phone.
+const picker = { open: false, taken: [], sel: null, done: null, timer: null, left: 0 };
+function openPicker(data, pref) {
+  return new Promise(res => {
+    if (picker.done) picker.done(null);
+    picker.open = true;
+    picker.done = res;
+    picker.taken = data.taken || [];
+    const free = CHARACTERS.filter(c => !picker.taken.includes(c.id));
+    if (!free.length) { closePicker(); res(null); return; }
+    picker.sel = [pref, picker.sel].find(id => CHARACTER_BY_ID[id] && !picker.taken.includes(id)) || free[0].id;
+    $('#pick-title').textContent = data.title || 'Choose your outlaw';
+    $('#char-pick').classList.remove('hidden');
+    picker.left = PICK_SECONDS;
+    clearInterval(picker.timer);
+    picker.timer = setInterval(() => { picker.left--; if (picker.left <= 0) confirmPick(); else $('#pick-timer').textContent = `Picking for you in ${picker.left}s`; }, 1000);
+    renderPicker();
+  });
+}
+
+function renderPicker() {
+  const ch = CHARACTER_BY_ID[picker.sel];
+  $('#pick-grid').innerHTML = CHARACTERS.map(c => {
+    const x = picker.taken.includes(c.id);
+    return `<button type="button" class="tile${c.id === picker.sel ? ' on' : ''}${x ? ' taken' : ''}" data-pick="${c.id}" ${x ? 'disabled' : ''}
+      aria-label="${esc(c.name)}${x ? ', taken' : ''}">${portrait(c)}<b>${esc(c.short)}</b>${x ? '<i class="x">✕</i>' : ''}</button>`;
+  }).join('');
+  $('#pick-grid').querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => { picker.sel = b.dataset.pick; renderPicker(); }));
+  $('#pick-info').innerHTML = `<h3>${esc(ch.name)}</h3><p>${esc(ch.blurb)}</p>`;
+  $('#pick-go').textContent = 'Play as ' + ch.short;
+  $('#pick-timer').textContent = `Picking for you in ${picker.left}s`;
+  const l = Profile.loadout();
+  ShowcaseStage.show({ kind: 'char', id: ch.id, rskin: l.rskin, rgun: l.rgun });
+}
+
+function confirmPick() {
+  if (!picker.open) return;
+  if (picker.taken.includes(picker.sel)) picker.sel = (CHARACTERS.find(c => !picker.taken.includes(c.id)) || {}).id;
+  const done = picker.done, id = picker.sel;
+  closePicker();
+  Sound.cock && Sound.cock();
+  if (done) done(id);
+}
+
+function closePicker() {
+  const was = picker.open;
+  picker.open = false;
+  picker.done = null;
+  clearInterval(picker.timer);
+  $('#char-pick').classList.add('hidden');
+  if (was && $('#screen-game').classList.contains('active')) Table.show();
+}
+
+// Someone just took a character: put a ✕ on it here.
+function pickerTaken(list) {
+  picker.taken = Array.isArray(list) ? list : [];
+  if (!picker.open) return;
+  if (picker.taken.includes(picker.sel)) picker.sel = (CHARACTERS.find(c => !picker.taken.includes(c.id)) || {}).id;
+  if (!picker.sel) return;
+  renderPicker();
+}
+
+// Everyone has picked: sit them all down at the table.
+function charactersPicked() {
+  if (picker.done) { const d = picker.done; picker.done = null; d(null); }
+  closePicker();
+  if (state.online === 'client' && client.latest) {
+    const view = state.view;
+    fromSnapshot(client.latest);
+    state.view = view; state.multi = true;
+    state.players.forEach(p => { p.hand = []; });   // nothing is dealt yet: the deal animations add the cards
+    state.pile = [];
+  }
+  rebuildTable();
+  Table.show();
+}
+
 // ---------- starting a game ----------
 
 function startGame(config) {
@@ -625,22 +731,16 @@ function startGame(config) {
   pendingAsks.clear();
   resetHud();
 
-  // Nobody plays the same character: a clash (or no pick) gets a free one,
-  // and the bots play the characters that are left.
-  const taken = [];
-  const humans = config.humans.map(h => {
-    let ch = CHARACTER_BY_ID[h.char] && !taken.includes(h.char) ? h.char : null;
-    if (!ch) ch = freeCharacters(taken.concat(config.humans.map(o => o.char).filter(c => c && c !== h.char)))[0].id;
-    taken.push(ch);
-    return { name: h.name, ctrl: h.ctrl, pid: h.pid || null, char: ch, rskin: h.rskin || 'standard', sskin: h.sskin || 'standard',
-      sub: CHARACTER_BY_ID[ch].short.toUpperCase() + ' · ' + (h.ctrl === 'remote' ? 'ONLINE' : (state.multi ? 'PLAYER' : 'YOU')) };
-  });
-  const free = freeCharacters(taken);
-  const bots = Bots.lineup(state.mode.seats - config.humans.length).map((b, k) => {
-    const ch = free[k];
-    return Object.assign(b, { name: ch.short, personality: ch.personality, char: ch.id, rskin: 'standard', sskin: 'standard', ctrl: 'bot' });
-  });
-  bots.forEach(b => { b.sub = Bots.label(b); });
+  // Characters are picked as the match loads (pickCharacters); bots carry a
+  // random pair of guns.
+  const humans = config.humans.map(h => ({
+    name: h.name, ctrl: h.ctrl, pid: h.pid || null, char: null,
+    rgun: GUN_BY_ID.revolver[h.rgun] ? h.rgun : 'colt', sgun: GUN_BY_ID.shotgun[h.sgun] ? h.sgun : 'coach',
+    rskin: h.rskin || 'standard', sskin: h.sskin || 'standard', sub: h.ctrl === 'remote' ? 'ONLINE' : (state.multi ? 'PLAYER' : 'YOU'),
+  }));
+  const bots = Bots.lineup(state.mode.seats - config.humans.length).map(b => Object.assign(b, {
+    char: null, rgun: pick(GUNS.revolver).id, sgun: pick(GUNS.shotgun).id, rskin: 'standard', sskin: 'standard', ctrl: 'bot', sub: 'CHOOSING…',
+  }));
   state.players = [...humans, ...bots];
   state.players.forEach((p, i) => Object.assign(p, {
     pal: i, alive: true, st: newTally(), hand: [], gun: loadGun(), lives: START_LIVES, bleeding: false, bleedUntil: 0,
@@ -688,6 +788,9 @@ function quitGame() {
 
 async function runGame(game) {
   const live = () => game === state.game && !state.over;
+  await pickCharacters(game);
+  if (!live()) return;
+  await sleep(600);
   ui('banner', 'ROUND 1');
   // deal round-robin, one card at a time
   const hands = state.players.map(() => dealHand());
@@ -839,7 +942,7 @@ async function resolveCard(player, id) {
     player.shotgun = SHOTGUN_SHELLS;
     player.hasShotgun = true;
     await A('giveShotgun', pi);
-    ui('log', `${N(player)} ${V(player, 'have', 'has')} a <b>shotgun</b> this round: 2 shells, both live.${player.unarmed ? ' (Unarmed, so it stays on the table.)' : ''}`);
+    ui('log', `${N(player)} ${V(player, 'get', 'gets')} the <b>${bigGun(player)}</b> this round: 2 shots, both live.${player.unarmed ? ' (Unarmed, so it stays on the table.)' : ''}`);
     refreshTags(player);
   }
   if (card.block) {
@@ -943,7 +1046,7 @@ function targetChoice(p, targets, reason) {
   const next = p.gun[0];
   const privateOk = p.ctrl === 'remote' || state.view === idx(p);
   const hint = shotgun
-    ? `${isYou(p) ? 'You hold' : esc(p.name) + ' holds'} the <b class="live">shotgun</b> (${p.shotgun} live shell${p.shotgun === 1 ? '' : 's'}): one hit kills.`
+    ? `${isYou(p) ? 'You hold' : esc(p.name) + ' holds'} the <b class="live">${bigGun(p)}</b> (${p.shotgun} live shot${p.shotgun === 1 ? '' : 's'}): one hit kills.`
     : privateOk && next && next.known
       ? `You know your next round is <b class="${next.live ? 'live' : 'blank'}">${next.live ? 'LIVE' : 'BLANK'}</b>.`
       : "You don't know if your next round is live or blank.";
@@ -962,7 +1065,7 @@ async function fire(shooter, target) {
   const si = idx(shooter), ti = idx(target);
   const tn = target === shooter ? SELF(shooter) : (isYou(target) ? 'YOU' : esc(target.name));
   const shotgun = shooter.shotgun > 0;
-  ui('status', `${N(shooter)} aim${V(shooter, '', 's')} ${shotgun ? 'the shotgun ' : ''}at ${tn}…`);
+  ui('status', `${N(shooter)} aim${V(shooter, '', 's')} ${shotgun ? 'the ' + bigGun(shooter) + ' ' : ''}at ${tn}…`);
   await A('aim', si, ti);
   await sleep(700);   // let it hang
 
@@ -989,7 +1092,7 @@ async function fire(shooter, target) {
   if (res.dies) killedBy(shooter, victim, shotgun ? 'shotgun' : 'revolver');
   if (res.dies) victim.cause = shotgun ? 'A shotgun blast.' : reverse ? 'Your own shot, turned back by a Reverse.' : 'Shot again while already bleeding.';
   const vn = N(victim);
-  let line = `${N(shooter)} shot ${tn}${shotgun ? ' with the shotgun' : ''}: <b class="live">BANG!</b> `;
+  let line = `${N(shooter)} shot ${tn}${shotgun ? ' with the ' + bigGun(shooter) : ''}: <b class="live">BANG!</b> `;
   if (reverse) line += `The Reverse turns it back on ${victim === shooter ? (isYou(shooter) ? 'you' : 'them') : vn}. `;
   if (blocked) line += `${vn === 'You' ? 'Your' : vn + "'s"} shield stops it.`;
   else if (res.dies) line += `${vn} ${V(victim, 'are', 'is')} dead.`;
@@ -1282,6 +1385,8 @@ function localAsk(p, kind, data) {
       if (state.multi) await focus(p);
       if (state.over) return res(null);
       beginTurnUI(data, res);
+    } else if (kind === 'char') {
+      res(await openPicker(data, idx(p) === 0 || !state.multi ? Profile.loadout().char : null));
     } else {
       res(await choose(data.title, data.html, data.options));
     }
@@ -1292,6 +1397,7 @@ function localAsk(p, kind, data) {
 function handleAsk(ev) {
   const respond = v => Net.sendAct({ id: ev.id, v });
   if (ev.k === 'turn') beginTurnUI(ev.d, respond);
+  else if (ev.k === 'char') openPicker(ev.d, Profile.loadout().char).then(respond);
   else choose(ev.d.title, ev.d.html, ev.d.options).then(respond);
 }
 
@@ -1550,7 +1656,7 @@ function recordResult(res) {
   const unlocks = Profile.record({ win: !!r.win, mode: state.modeId, st: r });
   Scores.push();
   if (!unlocks.length) return '';
-  return `<span class="unlock">Gunsmith unlocked: ${unlocks.map(u => `<b>${esc(u.skin.name)} ${u.kind}</b>`).join(', ')}</span>`;
+  return `<span class="unlock">Gunsmith unlocked: ${unlocks.map(u => `<b>${esc(u.skin.name)} (${u.kind === 'revolver' ? 'revolver' : 'Gun card'})</b>`).join(', ')}</span>`;
 }
 
 function toggleCover() {
@@ -1583,7 +1689,7 @@ function renderGun() {
   ensureRounds(p, 3);
   const marks = Array.from({ length: Math.max(0, p.lives) }, () => '<i></i>').join('');
   const status = !p.alive ? '<div class="tag bleed">DEAD</div>' : p.unarmed ? '<div class="tag">UNARMED</div>'
-    : p.shotgun > 0 ? `<div class="tag">SHOTGUN · ${p.shotgun} LIVE</div>` : '';
+    : p.shotgun > 0 ? `<div class="tag">${bigGun(p).toUpperCase()} · ${p.shotgun} LIVE</div>` : '';
   const guards = (p.block ? '<div class="tag">SHIELD UP</div>' : '') + (p.reverse ? '<div class="tag">REVERSE</div>' : '');
   box.innerHTML = (state.multi ? `<div class="gun-label who">${esc(p.name)}</div>` : '') +
     `<div class="gun-label">LIVES</div><div class="lives">${marks}</div>` +
@@ -1634,7 +1740,7 @@ function selectCard(i) {
   const me = viewer();
   if (i < 0 || !me || !me.hand[i]) { info.classList.add('hidden'); return; }
   const c = CARD_BY_ID[me.hand[i]];
-  info.innerHTML = `<b>${c.name}</b>${c.effect}` +
+  info.innerHTML = `<b>${c.name}</b><span class="rarity" style="color:${RARITY[c.rarity].color}">${RARITY[c.rarity].label} · ${cardOdds(c)}</span>${c.effect}` +
     (turn && turn.canPlay && !state.busy
       ? '<button class="play">Play card</button><small>or tap the card again, or drag it onto the table</small>'
       : '<small>Wait for your turn.</small>');
