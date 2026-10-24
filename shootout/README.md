@@ -7,14 +7,18 @@ library is three.js, vendored in `vendor/`. Nothing here is shared with the othe
 
 | File | What's in it |
 |---|---|
-| `index.html` | All screens: loading, main menu, mode select, table, settings, gunsmith, loadout |
+| `index.html` | All screens: loading, main menu, mode select, table, settings, gunsmith, loadout, scoreboard |
 | `engine.js` | 3D renderer, animation clock and tweens (three.js) |
 | `models.js` | Every 3D model: revolver, outlaws, cards, table, chairs, shelves, desks, door, lamp, target |
 | `fx.js` | Muzzle flash, gun smoke, sparks, splinters, blood |
-| `stages.js` | 3D loading screen (bullet-time shot) and the menu background |
+| `stages.js` | 3D loading screen (bullet-time shot), the menu background and the Loadout/Gunsmith turntable |
 | `table.js` | The 3D card table: dealing, playing, peeking, aiming, firing, deaths, the room falling apart |
 | `audio.js` | Generated music and sound effects; the music gets more intense each round |
 | `net.js` | Online play: player IDs, the lobby, invites, parties and the host/guest game messages |
+| `characters.js` | The 10 playable characters: their looks and bot personalities |
+| `skins.js` | Gunsmith skins for the revolver and shotgun, and what unlocks each |
+| `profile.js` | Your stats, unlocked skins and loadout, kept on this phone |
+| `scores.js` | The shared scoreboard (claude.ai database) |
 | `bots.js` | Computer opponents: names, personalities and Easy/Normal/Hard difficulty |
 | `cards.js` | Every card and what it does; hands are 3 cards |
 | `items.js` | Items from the boxes: health potion, bandage, teammate, hammer, binoculars |
@@ -72,6 +76,36 @@ On **Play**, pick a table size (the green circles), then who's playing:
 Online play uses the claude.ai room, so it works when the game is opened from
 its claude.ai link, and each friend has to be invited to that link from its
 Share menu (they need to be signed in to claude.ai).
+
+## Characters (Loadout)
+Ten characters, each with their own 3D model: The Drifter, Sheriff Wade Holt,
+Preacher Ezekiel Cain, El Coyote, "Lucky" Jack Marlowe, Silas "Grim" Vane,
+Doc Ambrose Fell, Lillian Black the Widow, Rattlesnake Rose and Mortimer Grave.
+Nobody at a table can be the same character: in a party, characters other
+people picked show a red ✕. Same-phone players each pick one too, and bots play
+the characters left over.
+
+## Gunsmith
+Skins change how your guns look, never how they shoot. Each unlocks with a goal:
+
+| Revolver | To unlock | Shotgun | To unlock |
+|---|---|---|---|
+| Makeshift Six-Shooter | Play 3 games | Gold | 5 shotgun kills |
+| Silver | Win 3 games | Blue Light | Stop 10 hits with a Block shield |
+| Billy the Kid | 10 revolver kills | Hellfire | Throw 10 grenades |
+| Gold | Win 15 games | Dark Knight | Win 3 games in a row |
+| The Murderer's Device | 40 kills | Diamond | 25 shotgun kills |
+| Angel | Heal 15 times | | |
+| Hellfire | Win 5 Bloody Mary games | | |
+| Dark Knight | Win 5 games in a row | | |
+| Diamond | Win 50 games | | |
+
+## Scoreboard
+Everyone who has played: wins, losses, W/L, win % and the card they've been
+dealt most. Your record lives on your phone and is posted to the board after
+each game. Posting needs write access to the artifact (Contributor or Editor in
+the Share menu); people who can only view still show up whenever someone who
+can write is online with them. Same-phone games don't count.
 
 ## Controls
 Tap a card to pick it, then tap it again, press **Play card**, or drag it up

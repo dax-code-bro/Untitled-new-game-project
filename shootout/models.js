@@ -297,6 +297,337 @@ const Models = (() => {
   const cyl = (rt, rb, h, mat, seg = 16, o) => mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat, o);
   const sphere = (r, mat, o) => mesh(new THREE.SphereGeometry(r, 20, 14), mat, o);
 
+  // ---------- gun skins (Gunsmith) ----------
+  // A skin swaps the materials a gun is built from (frame, barrel, cylinder,
+  // grips, trim, small parts) and can add a few decorations. Glowing skins
+  // pulse through `glowing`, animated every frame. Looks only: a skin never
+  // changes how a gun shoots.
+
+  const pattern = {};   // painted skin textures, made once on first use
+  function skinTex(name) {
+    if (pattern[name]) return pattern[name];
+    const P = (w, h, draw, rep = [6, 6], srgb = true) => Util.canvasTexture(w, h, draw, { repeat: rep, srgb });
+    const r = Util.rng(name.length * 131 + 7);
+    const grain = (g, w, h, base, line, n = 50) => {
+      g.fillStyle = base; g.fillRect(0, 0, w, h);
+      for (let k = 0; k < n; k++) {
+        g.strokeStyle = line; g.globalAlpha = 0.15 + r() * 0.3; g.lineWidth = 1 + r() * 2;
+        const x = r() * w; g.beginPath(); g.moveTo(x, 0); g.bezierCurveTo(x + 10, h * 0.3, x - 10, h * 0.6, x + 5, h); g.stroke();
+      }
+      g.globalAlpha = 1;
+    };
+    const cracks = (g, w, h, color, width, n) => {
+      g.strokeStyle = color; g.lineWidth = width; g.lineCap = 'round';
+      const branch = (x, y, a, len, d) => {
+        if (d > 5 || len < 4) return;
+        const x2 = x + Math.cos(a) * len, y2 = y + Math.sin(a) * len;
+        g.beginPath(); g.moveTo(x, y); g.lineTo(x2, y2); g.stroke();
+        branch(x2, y2, a + (r() - 0.5) * 1.1, len * 0.8, d + 1);
+        if (r() < 0.45) branch(x2, y2, a + (r() - 0.5) * 2.2, len * 0.55, d + 1);
+      };
+      for (let i = 0; i < n; i++) branch(r() * w, r() * h, r() * 6.3, 18 + r() * 20, 0);
+    };
+    const make = {
+      rust: () => P(256, 256, (g, w, h) => {
+        g.fillStyle = '#4a3a30'; g.fillRect(0, 0, w, h);
+        for (let i = 0; i < 260; i++) {
+          const c = ['#7a3a14', '#9a5420', '#5a2a10', '#3a3a3a', '#b06a2a'][Math.floor(r() * 5)];
+          g.fillStyle = c; g.globalAlpha = 0.25 + r() * 0.5;
+          g.beginPath(); g.arc(r() * w, r() * h, 2 + r() * 14, 0, 7); g.fill();
+        }
+        g.globalAlpha = 1;
+        g.strokeStyle = 'rgba(20,10,5,0.6)'; for (let i = 0; i < 30; i++) { g.beginPath(); const x = r() * w, y = r() * h; g.moveTo(x, y); g.lineTo(x + r() * 30 - 15, y + r() * 30 - 15); g.stroke(); }
+      }),
+      twine: () => P(128, 128, (g, w, h) => {
+        g.fillStyle = '#8a7048'; g.fillRect(0, 0, w, h);
+        for (let y = 0; y < h; y += 8) {
+          g.fillStyle = y % 16 ? '#a88a58' : '#6a5434'; g.fillRect(0, y, w, 6);
+          g.strokeStyle = 'rgba(40,28,14,0.6)'; for (let x = 0; x < w; x += 6) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + 4, y + 6); g.stroke(); }
+        }
+      }, [10, 10]),
+      ivory: () => P(256, 256, (g, w, h) => { grain(g, w, h, '#ece2c8', '#b8a880', 30); }, [4, 4]),
+      ebony: () => P(256, 256, (g, w, h) => { grain(g, w, h, '#16100c', '#3a2a20', 60); }, [4, 4]),
+      rosewood: () => P(256, 256, (g, w, h) => {
+        grain(g, w, h, '#5a2414', '#2a0c06', 70);
+        g.strokeStyle = 'rgba(20,6,2,0.9)'; g.lineWidth = 3;   // the notches
+        for (let i = 0; i < 21; i++) { const x = 10 + i * 11; g.beginPath(); g.moveTo(x, h * 0.1); g.lineTo(x + 3, h * 0.3); g.stroke(); }
+        g.fillStyle = 'rgba(230,200,140,0.55)'; g.font = 'bold 60px Georgia, serif'; g.textAlign = 'center'; g.fillText('W.B.', w / 2, h * 0.75);
+      }, [8, 8]),
+      bone: () => P(256, 256, (g, w, h) => {
+        grain(g, w, h, '#d8ccb0', '#8a7a5a', 25);
+        g.strokeStyle = 'rgba(60,20,10,0.8)'; g.lineWidth = 2.5;
+        for (let gp = 0; gp < 4; gp++) {   // tally marks, five to a gate
+          const x0 = 20 + gp * 58, y0 = 40 + (gp % 2) * 110;
+          for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(x0 + i * 9, y0); g.lineTo(x0 + i * 9, y0 + 50); g.stroke(); }
+          g.beginPath(); g.moveTo(x0 - 6, y0 + 40); g.lineTo(x0 + 34, y0 + 8); g.stroke();
+        }
+        g.fillStyle = 'rgba(110,0,0,0.55)'; for (let i = 0; i < 40; i++) { g.beginPath(); g.arc(r() * w, r() * h, 1 + r() * 4, 0, 7); g.fill(); }
+      }, [8, 8]),
+      bloodiron: () => P(256, 256, (g, w, h) => {
+        g.fillStyle = '#26221f'; g.fillRect(0, 0, w, h);
+        for (let i = 0; i < 300; i++) { const v = 20 + r() * 40; g.fillStyle = `rgba(${v},${v},${v},0.25)`; g.fillRect(r() * w, r() * h, 3, 3); }
+        for (let i = 0; i < 14; i++) {
+          const x = r() * w, y = r() * h;
+          g.fillStyle = `rgba(${90 + r() * 50},0,0,0.85)`;
+          g.beginPath(); g.arc(x, y, 3 + r() * 10, 0, 7); g.fill();
+          for (let k = 0; k < 8; k++) { g.beginPath(); g.arc(x + (r() - 0.5) * 50, y + (r() - 0.5) * 50, 1 + r() * 3, 0, 7); g.fill(); }
+          g.fillRect(x - 1.5, y, 3, 10 + r() * 30);
+        }
+      }),
+      pearl: () => P(256, 256, (g, w, h) => {
+        g.fillStyle = '#f4f0ec'; g.fillRect(0, 0, w, h);
+        for (let i = 0; i < 40; i++) {
+          g.strokeStyle = ['rgba(255,190,220,0.35)', 'rgba(180,220,255,0.35)', 'rgba(255,240,200,0.4)'][i % 3]; g.lineWidth = 3 + r() * 6;
+          g.beginPath(); g.arc(r() * w, r() * h, 10 + r() * 40, r() * 6, r() * 6 + 2); g.stroke();
+        }
+      }, [4, 4]),
+      feathers: () => P(256, 256, (g, w, h) => {
+        g.fillStyle = '#e8e4dc'; g.fillRect(0, 0, w, h);
+        g.strokeStyle = 'rgba(170,130,50,0.7)'; g.lineWidth = 1.5;
+        for (let i = 0; i < 9; i++) {
+          const x = 20 + (i % 3) * 85, y = 30 + Math.floor(i / 3) * 85;
+          g.beginPath(); g.moveTo(x, y + 60); g.quadraticCurveTo(x + 20, y + 20, x + 50, y); g.stroke();
+          for (let k = 0; k < 8; k++) { const t = k / 8; const px = x + 50 * t * t + 20 * t, py = y + 60 - 60 * t; g.beginPath(); g.moveTo(px, py); g.lineTo(px - 14, py - 8); g.moveTo(px, py); g.lineTo(px + 8, py + 12); g.stroke(); }
+        }
+      }),
+      veins: () => P(256, 256, (g, w, h) => { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); cracks(g, w, h, '#ffffff', 2.4, 10); }, [5, 5], false),
+      volcanic: () => P(256, 256, (g, w, h) => {
+        g.fillStyle = '#120a08'; g.fillRect(0, 0, w, h);
+        for (let i = 0; i < 400; i++) { const v = 10 + r() * 30; g.fillStyle = `rgba(${v + 10},${v},${v},0.5)`; g.fillRect(r() * w, r() * h, 2 + r() * 4, 2 + r() * 4); }
+        cracks(g, w, h, '#ff6a10', 2.4, 10);
+      }, [5, 5]),
+      circuit: () => P(256, 256, (g, w, h) => {
+        g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
+        g.strokeStyle = '#fff'; g.lineWidth = 2.5;
+        for (let i = 0; i < 26; i++) {
+          let x = Math.floor(r() * 16) * 16, y = Math.floor(r() * 16) * 16;
+          g.beginPath(); g.moveTo(x, y);
+          for (let k = 0; k < 4; k++) { if (r() < 0.5) x += (r() < 0.5 ? -1 : 1) * 32; else y += (r() < 0.5 ? -1 : 1) * 32; g.lineTo(x, y); }
+          g.stroke();
+          g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, 4, 0, 7); g.fill();
+        }
+      }, [4, 4], false),
+      facets: () => P(256, 256, (g, w, h) => {
+        const s = 32;
+        for (let y = 0; y < h; y += s) for (let x = 0; x < w; x += s) {
+          [[x, y, x + s, y, x, y + s], [x + s, y, x + s, y + s, x, y + s]].forEach(t => {
+            const v = 170 + r() * 85;
+            g.fillStyle = `rgb(${v - 20},${v},${Math.min(255, v + 30)})`;
+            g.beginPath(); g.moveTo(t[0], t[1]); g.lineTo(t[2], t[3]); g.lineTo(t[4], t[5]); g.closePath(); g.fill();
+          });
+        }
+        g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 1;
+        for (let y = 0; y <= h; y += s) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+        for (let x = 0; x <= w; x += s) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); g.beginPath(); g.moveTo(x + s, 0); g.lineTo(x - h + s, h); g.stroke(); }
+      }, [8, 8]),
+      sparkle: () => P(256, 256, (g, w, h) => {
+        g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
+        for (let i = 0; i < 70; i++) {
+          const x = r() * w, y = r() * h, s = 2 + r() * 5;
+          g.fillStyle = '#fff'; g.beginPath(); g.moveTo(x - s, y); g.lineTo(x, y - 0.6); g.lineTo(x + s, y); g.lineTo(x, y + 0.6); g.fill();
+          g.beginPath(); g.moveTo(x, y - s); g.lineTo(x + 0.6, y); g.lineTo(x, y + s); g.lineTo(x - 0.6, y); g.fill();
+        }
+      }, [8, 8], false),
+      gothic: () => P(256, 256, (g, w, h) => {
+        g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
+        g.strokeStyle = '#fff'; g.lineWidth = 2;
+        for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+          const x = 32 + i * 64, y = 32 + j * 64;
+          g.beginPath(); g.moveTo(x, y - 22); g.lineTo(x, y + 22); g.moveTo(x - 14, y - 8); g.lineTo(x + 14, y - 8); g.stroke();   // cross
+          g.beginPath(); g.arc(x, y, 26, 0, 7); g.stroke();
+          g.beginPath(); g.moveTo(x - 32, y - 32); g.quadraticCurveTo(x, y - 10, x + 32, y - 32); g.stroke();
+        }
+      }, [5, 5], false),
+    };
+    pattern[name] = make[name]();
+    return pattern[name];
+  }
+
+  // Materials that glow and pulse: [{ mat, base, speed, flicker }]
+  const glowing = [];
+  let glowHooked = false;
+  function addGlow(mat, base, speed = 2, flicker = 0) {
+    glowing.push({ mat, base, speed, flicker, seed: Math.random() * 10 });
+    if (!glowHooked && typeof Engine !== 'undefined') {
+      glowHooked = true;
+      Engine.onUpdate((dt, time) => {
+        for (let i = glowing.length - 1; i >= 0; i--) {
+          const gl = glowing[i];
+          const t = time + gl.seed;
+          gl.mat.emissiveIntensity = gl.base * (0.75 + 0.25 * Math.sin(t * gl.speed) + gl.flicker * (Math.sin(t * 17.3) * Math.sin(t * 7.1)));
+        }
+      });
+    }
+    return mat;
+  }
+
+  // Build the material set for a skin. Keys match mats() so the gun
+  // builders don't care which skin they wear.
+  const skinCache = {};
+  function gunLook(skin, kind) {
+    const key = kind + ':' + (skin || 'standard');
+    if (skinCache[key]) return skinCache[key];
+    const base = mats();
+    const env = envMap();
+    const metal = (color, metalness, roughness, extra = {}) => {
+      const mt = new THREE.MeshStandardMaterial(Object.assign({ color: col(color), metalness, roughness }, extra));
+      if (env) { mt.envMap = env; mt.envMapIntensity = extra.envI || 1; }
+      return mt;
+    };
+    const plain = (color, roughness, extra = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: col(color), roughness }, extra));
+    const glow = (mt, color, map, intensity, speed, flicker) => {
+      mt.emissive = col(color); mt.emissiveMap = map || null; mt.emissiveIntensity = intensity;
+      return addGlow(mt, intensity, speed, flicker);
+    };
+    const engr = base.engraved.map;
+    let L;
+    switch (skin) {
+      case 'makeshift': L = {
+        engraved: metal(0xc8b8a8, 0.6, 0.75, { map: skinTex('rust') }),
+        blued: metal(0x8a8a8a, 0.55, 0.8, { map: skinTex('rust') }),
+        steel: metal(0x5a5650, 0.7, 0.6),
+        grip: plain(0xffffff, 1, { map: skinTex('twine') }),
+        brass: metal(0xa86a3a, 0.8, 0.5),   // copper wire
+        nickel: metal(0x6a6660, 0.7, 0.6),
+        deco: ['clamp', 'wraps'],
+      }; break;
+      case 'silver': L = {
+        engraved: metal(0xf4f4f8, 1, 0.12, { map: engr, envI: 1.3 }),
+        blued: metal(0xd8dade, 1, 0.1, { envI: 1.3 }),
+        steel: metal(0xe0e2e6, 1, 0.14, { envI: 1.3 }),
+        grip: plain(0xffffff, 0.35, { map: skinTex('ivory') }),
+        brass: metal(0xe8e8ec, 1, 0.1),
+        nickel: metal(0xffffff, 1, 0.08),
+      }; break;
+      case 'gold': L = {
+        engraved: metal(0xffc850, 1, 0.18, { map: engr, envI: 1.3 }),
+        blued: metal(0xe0a830, 1, 0.16, { envI: 1.3 }),
+        steel: metal(0xf0b840, 1, 0.2, { map: engr, envI: 1.3 }),
+        grip: plain(0xffffff, 0.3, { map: skinTex('ebony') }),
+        brass: metal(0xffd870, 1, 0.12),
+        nickel: metal(0xffe090, 1, 0.12),
+      }; break;
+      case 'billy': L = {
+        engraved: metal(0xb8bcc0, 0.95, 0.42, { map: engr }),
+        blued: metal(0x9a9ea4, 0.95, 0.4),
+        steel: metal(0xa8acb0, 0.95, 0.45),
+        grip: plain(0xffffff, 0.5, { map: skinTex('rosewood') }),
+        brass: metal(0xb88a4a, 0.9, 0.45),
+        nickel: metal(0xc8c8c8, 1, 0.35),
+      }; break;
+      case 'murderer': L = {
+        engraved: metal(0xb0a8a0, 0.7, 0.6, { map: skinTex('bloodiron') }),
+        blued: metal(0x9a9090, 0.7, 0.55, { map: skinTex('bloodiron') }),
+        steel: metal(0x3a3432, 0.8, 0.5),
+        grip: plain(0xffffff, 0.7, { map: skinTex('bone') }),
+        brass: metal(0x4a1010, 0.6, 0.4),
+        nickel: metal(0x5a5a5a, 0.9, 0.5),
+        deco: ['barbed'],
+      }; break;
+      case 'angel': L = {
+        engraved: metal(0xfffaf0, 0.4, 0.25, { map: skinTex('feathers') }),
+        blued: metal(0xf0ece4, 0.5, 0.2),
+        steel: metal(0xffe8b0, 1, 0.15, { envI: 1.2 }),
+        grip: plain(0xffffff, 0.2, { map: skinTex('pearl') }),
+        brass: metal(0xffd870, 1, 0.12),
+        nickel: metal(0xfff0c0, 1, 0.12),
+        halo: glow(plain(0xfff4c8, 0.3), 0xffe8a0, null, 1.6, 1.5, 0),
+        deco: ['wings', 'halo'],
+      }; break;
+      case 'hellfire': L = {
+        engraved: glow(metal(0xffffff, 0.6, 0.55, { map: skinTex('volcanic') }), 0xff4a08, skinTex('veins'), 1.8, 3, 0.35),
+        blued: glow(metal(0x1a1210, 0.8, 0.4), 0xff3000, skinTex('veins'), 1.4, 2.6, 0.35),
+        steel: glow(metal(0x1a1210, 0.8, 0.4), 0xff5a10, skinTex('veins'), 1.6, 3.4, 0.35),
+        grip: glow(plain(0x1a0a06, 0.8), 0xc02000, skinTex('veins'), 1.2, 2, 0.3),
+        brass: glow(metal(0xff6a20, 0.8, 0.3), 0xff4000, null, 0.6, 4, 0.2),
+        nickel: metal(0x2a2220, 0.8, 0.4),
+        shell: glow(plain(0x3a0a04, 0.5), 0xff5000, null, 1.4, 5, 0.4),
+        deco: ['embers'],
+      }; break;
+      case 'darkknight': L = {
+        engraved: glow(metal(0x16161a, 0.9, 0.3), 0x8a0a14, skinTex('gothic'), 0.9, 1.2, 0),
+        blued: metal(0x0c0c10, 0.9, 0.28),
+        steel: glow(metal(0x121216, 0.9, 0.3), 0x6a0812, skinTex('gothic'), 0.7, 1.2, 0),
+        grip: plain(0x180808, 0.45, { map: skinTex('ebony') }),
+        brass: metal(0x8a0a14, 0.8, 0.3),
+        nickel: metal(0x3a3a42, 1, 0.25),
+        deco: kind === 'revolver' ? ['blade'] : ['spikes'],
+      }; break;
+      case 'diamond': L = {
+        engraved: glow(metal(0xffffff, 0.35, 0.05, { map: skinTex('facets'), envI: 1.8 }), 0xd8f0ff, skinTex('sparkle'), 0.9, 5, 0.6),
+        blued: glow(metal(0xe8f4ff, 0.4, 0.05, { map: skinTex('facets'), envI: 1.8 }), 0xd8f0ff, skinTex('sparkle'), 0.7, 4.3, 0.6),
+        steel: glow(metal(0xffffff, 0.35, 0.05, { map: skinTex('facets'), envI: 1.8 }), 0xd8f0ff, skinTex('sparkle'), 0.9, 4.7, 0.6),
+        grip: metal(0xc8e8ff, 0.3, 0.05, { map: skinTex('facets'), envI: 1.6 }),
+        brass: metal(0xf0f4ff, 1, 0.08),
+        nickel: metal(0xffffff, 1, 0.05),
+      }; break;
+      case 'bluelight': L = {
+        engraved: glow(metal(0x101418, 0.9, 0.3), 0x2aa0ff, skinTex('circuit'), 2, 2.4, 0.25),
+        blued: glow(metal(0x0a0c10, 0.9, 0.3), 0x2a90ff, skinTex('circuit'), 1.8, 2.8, 0.25),
+        steel: glow(metal(0x101418, 0.9, 0.3), 0x60c0ff, null, 0.8, 3, 0.2),
+        grip: glow(plain(0x0c1018, 0.5), 0x1a70ff, skinTex('circuit'), 1.2, 2, 0.2),
+        brass: glow(metal(0x80d0ff, 0.8, 0.2), 0x40b0ff, null, 1, 3, 0.2),
+        nickel: metal(0x3a4a5a, 1, 0.25),
+        shell: glow(plain(0x0a2a5a, 0.4), 0x2a90ff, null, 1.2, 4, 0.3),
+      }; break;
+      default: L = {};
+    }
+    const out = Object.assign({}, base, { ammo: base.brass, shell: null, deco: [] }, L);
+    out.ammo = base.brass;
+    skinCache[key] = out;
+    return out;
+  }
+
+  // Extra pieces some skins add to a revolver or shotgun.
+  // A shotgun is decorated twice: once on its barrels, once on its body.
+  const BARREL_DECO = ['clamp', 'barbed', 'spikes'];
+  function decorate(g, m, kind, part) {
+    const isR = kind === 'revolver';
+    const len = isR ? 0.17 : 0.46, y = isR ? 0.012 : 0.016, z0 = isR ? 0.03 : 0.035;
+    (m.deco || []).forEach(d => {
+      if (!isR && BARREL_DECO.includes(d) !== (part === 'barrels')) return;
+      if (d === 'clamp') {   // a hose clamp holding the barrel on
+        [0.08, 0.15].forEach(z => { const c = mesh(new THREE.TorusGeometry(isR ? 0.0125 : 0.03, 0.0022, 6, 18), m.nickel); c.position.set(0, y, isR ? z : z * 2.6); if (!isR) c.scale.set(1, 0.6, 1); g.add(c); });
+      } else if (d === 'wraps') {   // wire wound round the grip
+        for (let i = 0; i < 6; i++) { const w = mesh(new THREE.TorusGeometry(0.019, 0.0016, 6, 16), m.brass); w.rotation.x = Math.PI / 2 - 0.5; w.position.set(0, -0.045 - i * 0.009, -0.035 - i * 0.004); w.scale.set(1, 1.4, 1); g.add(w); }
+      } else if (d === 'barbed') {
+        const wire = mesh(new THREE.TorusGeometry(isR ? 0.013 : 0.03, 0.0012, 4, 60, Math.PI * 2), m.nickel);
+        for (let i = 0; i < 5; i++) {
+          const ring = wire.clone(); ring.position.set(0, y, z0 + 0.03 + i * (len * 0.12)); if (!isR) ring.scale.set(1, 0.6, 1); g.add(ring);
+          for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + i; const b = box(0.0012, 0.006, 0.0012, m.nickel); b.position.set(Math.cos(a) * (isR ? 0.013 : 0.03), y + Math.sin(a) * (isR ? 0.013 : 0.018), ring.position.z); b.rotation.z = a; g.add(b); }
+        }
+      } else if (d === 'wings') {   // feathered wings fanning up from the frame
+        [-1, 1].forEach(sx => {
+          const wing = new THREE.Group();
+          for (let i = 0; i < 5; i++) {
+            const f = mesh(new THREE.SphereGeometry(0.03, 12, 8), m.engraved);
+            f.scale.set(0.1, 0.32 - i * 0.03, 1.1 - i * 0.12);
+            f.position.set(0, 0.008 + i * 0.007, -0.02 - i * 0.006);
+            f.rotation.x = 0.35 - i * 0.28;
+            wing.add(f);
+          }
+          wing.position.set(sx * 0.02, 0.012, -0.03); wing.rotation.y = sx * 0.3; g.add(wing);
+        });
+      } else if (d === 'halo') {
+        const halo = mesh(new THREE.TorusGeometry(0.03, 0.0025, 8, 32), m.halo, { cast: false });
+        halo.rotation.x = Math.PI / 2; halo.position.set(0, isR ? 0.07 : 0.08, isR ? -0.01 : -0.02); g.add(halo);
+      } else if (d === 'embers') {   // glowing coals set in the frame
+        for (let i = 0; i < 5; i++) { const e = sphere(0.0026, m.brass, { cast: false }); e.position.set((i % 2 ? 1 : -1) * (isR ? 0.0125 : 0.024), -0.01 + (i * 0.007), (isR ? -0.02 : -0.04) + i * 0.01); g.add(e); }
+      } else if (d === 'blade') {   // a bayonet under the barrel
+        const blade = profile([[0.1, -0.012], [0.27, -0.008], [0.3, -0.004], [0.27, -0.002], [0.1, -0.004]], 0.003, m.nickel, 0.0005);
+        g.add(blade);
+        const lug = box(0.008, 0.012, 0.016, m.brass); lug.position.set(0, -0.006, 0.105); g.add(lug);
+      } else if (d === 'spikes') {   // spikes ringing the muzzle
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          const s = mesh(new THREE.ConeGeometry(0.004, 0.02, 6), m.brass);
+          s.rotation.x = Math.PI / 2; s.position.set(Math.cos(a) * 0.03, 0.016 + Math.sin(a) * 0.02, 0.43);
+          g.add(s);
+        }
+      }
+    });
+  }
+
   // ---------- revolver ----------
   // Single-action six-shooter. Barrel points along +Z, grip hangs down -Y,
   // origin at the cylinder. Returns { group, cylinder, hammer, muzzle,
@@ -319,8 +650,8 @@ const Models = (() => {
     return m;
   }
 
-  function revolver() {
-    const m = mats();
+  function revolver(skin) {
+    const m = gunLook(skin, 'revolver');
     const g = new THREE.Group();
 
     // barrel with a crowned muzzle, front blade sight and ejector housing
@@ -370,7 +701,7 @@ const Models = (() => {
       flute.position.set(Math.cos(fa) * 0.0222, Math.sin(fa) * 0.0222, 0.004);
       flute.rotation.z = fa + Math.PI / 2;
       cylinder.add(flute);
-      const round = cyl(0.0042, 0.0042, 0.006, m.brass, 12, { cast: false });
+      const round = cyl(0.0042, 0.0042, 0.006, m.ammo, 12, { cast: false });
       round.rotation.x = Math.PI / 2;
       round.position.set(Math.cos(a) * 0.0135, Math.sin(a) * 0.0135, -0.021);
       cylinder.add(round);
@@ -397,6 +728,7 @@ const Models = (() => {
     g.add(panels);
     const medallion = cyl(0.004, 0.004, 0.036, m.brass, 12); medallion.rotation.z = Math.PI / 2; medallion.position.set(0, -0.07, -0.05); g.add(medallion);
 
+    decorate(g, m, 'revolver');
     const muzzle = new THREE.Object3D(); muzzle.position.set(0, 0.012, 0.205); g.add(muzzle);
     return { group: g, cylinder, hammer, muzzle, chambers, rounds, trigger };
   }
@@ -425,14 +757,21 @@ const Models = (() => {
   }
 
   // ---------- outlaw ----------
-  // Seated figure facing +Z. Returns the rig: root, spine, head, hat, arms.
-  function outlaw(palette = {}) {
+  // Seated figure facing +Z, built from a character's `look` (see
+  // characters.js): hat style, face, hair, clothes and extras. Returns the
+  // rig: root, spine, head, hat, arms, gun.
+  function outlaw(look = {}, gunSkin = 'standard') {
     const m = mats();
-    const coat = new THREE.MeshStandardMaterial({ color: col(palette.coat || 0x3a2c22), roughness: 0.9 });
-    const shirt = new THREE.MeshStandardMaterial({ color: col(palette.shirt || 0x8a7a60), roughness: 0.9 });
-    const hatMat = new THREE.MeshStandardMaterial({ color: col(palette.hat || 0x2a1c12), roughness: 0.85 });
-    const pants = new THREE.MeshStandardMaterial({ color: col(0x2a2620), roughness: 0.95 });
-    const skin = new THREE.MeshStandardMaterial({ color: col(palette.skin || 0x8a6a52), roughness: 0.8 });
+    const L = look;
+    const has = x => (L.extras || []).includes(x);
+    const mat = (hex, rough = 0.9, extra = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: col(hex), roughness: rough }, extra));
+    const coat = mat(L.coat || 0x3a2c22);
+    const shirt = mat(L.shirt || 0x8a7a60);
+    const hatMat = mat(L.hatColor || 0x2a1c12, 0.85);
+    const pants = mat(0x2a2620, 0.95);
+    const skin = mat(L.skin || 0x8a6a52, 0.8);
+    const hairMat = mat(L.hair || 0x2a1a10, 1);
+    const female = !!L.female;
 
     const root = new THREE.Group();
 
@@ -442,38 +781,156 @@ const Models = (() => {
       const shin = box(0.11, 0.48, 0.12, pants); shin.position.set(x, 0.26, 0.36); root.add(shin);
       const boot = box(0.12, 0.08, 0.24, m.black); boot.position.set(x, 0.04, 0.41); root.add(boot);
     });
+    if (has('dress')) {   // long skirt draped over the lap and down to the floor
+      const skirt = mat(L.coat || 0x141014, 0.85);
+      const lap = box(0.38, 0.14, 0.46, skirt); lap.position.set(0, 0.54, 0.16); root.add(lap);
+      const drape = cyl(0.2, 0.26, 0.56, skirt, 18); drape.scale.z = 0.55; drape.position.set(0, 0.27, 0.36); root.add(drape);
+    }
 
     // spine pivots at the hips so the body can lean and slump
     const spine = new THREE.Group(); spine.position.set(0, 0.56, 0); root.add(spine);
-    const torso = cyl(0.2, 0.17, 0.56, coat, 16); torso.position.y = 0.28; torso.scale.z = 0.65; spine.add(torso);
-    const vest = box(0.18, 0.4, 0.05, shirt); vest.position.set(0, 0.32, 0.115); spine.add(vest);
-    const belt = cyl(0.178, 0.178, 0.045, new THREE.MeshStandardMaterial({ color: col(0x2a1a0e), roughness: 0.7 }), 18);
+    const torsoTop = female ? 0.18 : 0.2;
+    const torso = cyl(torsoTop, 0.17, 0.56, coat, 16); torso.position.y = 0.28; torso.scale.z = 0.65; spine.add(torso);
+    const front = box(0.18, 0.4, 0.05, shirt); front.position.set(0, 0.32, 0.115); spine.add(front);
+    if (has('vest')) {
+      const vm = mat(L.vest || 0x5a3a22, 0.8);
+      [-1, 1].forEach(sx => { const panel = box(0.075, 0.36, 0.055, vm); panel.position.set(sx * 0.06, 0.3, 0.122); spine.add(panel); });
+      for (let i = 0; i < 3; i++) { const b = sphere(0.006, m.brass); b.position.set(0.026, 0.2 + i * 0.07, 0.152); spine.add(b); }
+    }
+    const belt = cyl(0.178, 0.178, 0.045, mat(0x2a1a0e, 0.7), 18);
     belt.position.y = 0.03; belt.scale.z = 0.68; spine.add(belt);
     const buckle = box(0.05, 0.036, 0.01, m.brass); buckle.position.set(0, 0.03, 0.122); spine.add(buckle);
-    const shoulders = cyl(0.07, 0.07, 0.46, coat, 12); shoulders.rotation.z = Math.PI / 2; shoulders.position.y = 0.52; spine.add(shoulders);
+    const shoulderW = female ? 0.4 : 0.46;
+    const shoulders = cyl(0.07, 0.07, shoulderW, coat, 12); shoulders.rotation.z = Math.PI / 2; shoulders.position.y = 0.52; spine.add(shoulders);
     const neck = cyl(0.05, 0.055, 0.08, skin, 12); neck.position.y = 0.6; spine.add(neck);
-    const scarf = mesh(new THREE.TorusGeometry(0.06, 0.022, 8, 16), new THREE.MeshStandardMaterial({ color: col(palette.scarf || 0x6a1a14), roughness: 0.9 }));
-    scarf.rotation.x = Math.PI / 2; scarf.position.y = 0.58; spine.add(scarf);
+    if (L.scarf) {
+      const scarf = mesh(new THREE.TorusGeometry(0.06, 0.022, 8, 16), mat(L.scarf));
+      scarf.rotation.x = Math.PI / 2; scarf.position.y = 0.58; spine.add(scarf);
+      const knot = box(0.05, 0.07, 0.02, mat(L.scarf)); knot.position.set(0.02, 0.53, 0.07); knot.rotation.z = 0.3; spine.add(knot);
+    }
+    if (has('collar')) { const c = box(0.05, 0.03, 0.02, mat(0xf4f0e8, 0.6)); c.position.set(0, 0.6, 0.058); spine.add(c); }
+    if (has('bowtie')) {
+      const bm = mat(0x0a0a0a, 0.5);
+      [-1, 1].forEach(sx => { const w = mesh(new THREE.ConeGeometry(0.022, 0.04, 4), bm); w.rotation.z = sx * Math.PI / 2; w.position.set(sx * 0.02, 0.57, 0.075); spine.add(w); });
+    }
+    if (has('tie')) { const t = box(0.03, 0.2, 0.012, mat(0x2a0a0a, 0.6)); t.position.set(0, 0.46, 0.145); spine.add(t); }
+    if (has('badge')) {
+      const star = new THREE.Shape();
+      for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2 + Math.PI / 2, r = i % 2 ? 0.014 : 0.03; const x = Math.cos(a) * r, y = Math.sin(a) * r; i ? star.lineTo(x, y) : star.moveTo(x, y); }
+      const b = mesh(new THREE.ExtrudeGeometry(star, { depth: 0.006, bevelEnabled: false }), m.brass);
+      b.position.set(0.085, 0.4, 0.14); spine.add(b);
+    }
+    if (has('bandolier')) {
+      const band = box(0.05, 0.6, 0.02, mat(0x3a2410, 0.7)); band.position.set(0, 0.3, 0.13); band.rotation.z = 0.7; spine.add(band);
+      for (let i = 0; i < 7; i++) { const r = cyl(0.007, 0.007, 0.03, m.brass, 8); r.position.set(-0.15 + i * 0.05, 0.12 + i * 0.043, 0.145); spine.add(r); }
+    }
+    if (has('furcollar')) {
+      const fur = mesh(new THREE.TorusGeometry(0.15, 0.06, 10, 22), mat(0x5a4430, 1)); fur.rotation.x = Math.PI / 2; fur.scale.set(1.15, 0.8, 1); fur.position.y = 0.55; spine.add(fur);
+    }
+    if (has('poncho')) {
+      const pm = new THREE.MeshStandardMaterial({ roughness: 1, side: THREE.DoubleSide, map: Util.canvasTexture(128, 64, (g, w, h) => {
+        ['#8a2a14', '#d8a040', '#2a4a5a', '#e8dcc4', '#8a2a14'].forEach((c, i) => { g.fillStyle = c; g.fillRect(0, (i * h) / 5, w, h / 5); });
+      }) });
+      const po = mesh(new THREE.ConeGeometry(0.34, 0.36, 20, 1, true), pm); po.scale.z = 0.7; po.position.y = 0.42; spine.add(po);
+    }
+    if (has('coattails')) { const tails = box(0.3, 0.42, 0.03, coat); tails.position.set(0, 0.0, -0.13); tails.rotation.x = -0.25; spine.add(tails); }
 
     // head pivots at the neck
     const head = new THREE.Group(); head.position.set(0, 0.64, 0); spine.add(head);
-    const skull = sphere(0.105, skin); skull.position.y = 0.1; skull.scale.set(0.9, 1.08, 0.95); head.add(skull);
-    const jaw = box(0.12, 0.06, 0.1, skin); jaw.position.set(0, 0.03, 0.02); head.add(jaw);
+    const skull = sphere(0.105, skin); skull.position.y = 0.1; skull.scale.set(female ? 0.85 : 0.9, 1.08, 0.95); head.add(skull);
+    const jaw = box(female ? 0.1 : 0.12, 0.06, 0.1, skin); jaw.position.set(0, 0.03, 0.02); head.add(jaw);
     const nose = box(0.024, 0.04, 0.03, skin); nose.position.set(0, 0.09, 0.1); head.add(nose);
-    const beard = box(0.15, 0.06, 0.08, new THREE.MeshStandardMaterial({ color: col(palette.beard || 0x2a1a10), roughness: 1 }));
-    beard.position.set(0, 0.025, 0.05); beard.visible = palette.beard !== null; head.add(beard);
-    const eyeMat = new THREE.MeshStandardMaterial({ color: col(0x111111), emissive: col(0x000000), roughness: 0.4 });
+    [-1, 1].forEach(sx => { const ear = sphere(0.022, skin); ear.scale.set(0.5, 1, 0.8); ear.position.set(sx * 0.095, 0.1, 0.0); head.add(ear); });
+    const eyeMat = mat(0x111111, 0.4, { emissive: col(0x000000) });
     const eyes = [-0.035, 0.035].map(x => { const e = sphere(0.012, eyeMat, { cast: false }); e.position.set(x, 0.11, 0.088); head.add(e); return e; });
+    const brows = [-1, 1].map(sx => { const b = box(0.035, 0.008, 0.01, hairMat); b.position.set(sx * 0.035, 0.135, 0.093); b.rotation.z = sx * -0.12; head.add(b); return b; });
+    const fc = mat(L.facialColor || L.hair || 0x2a1a10, 1);
+    if (L.facial === 'beard') { const b = box(0.15, 0.09, 0.09, fc); b.position.set(0, 0.015, 0.05); head.add(b); }
+    if (L.facial === 'beard' || L.facial === 'mustache') { const mu = box(0.075, 0.016, 0.02, fc); mu.position.set(0, 0.066, 0.106); head.add(mu); }
+    if (L.facial === 'pencil') { const mu = box(0.06, 0.006, 0.012, fc); mu.position.set(0, 0.068, 0.108); head.add(mu); }
+    if (L.facial === 'stubble') { const st = box(0.125, 0.07, 0.1, mat(L.facialColor || 0x2a1a10, 1, { transparent: true, opacity: 0.45 })); st.position.set(0, 0.03, 0.025); head.add(st); }
+    if (has('lips')) { const lp = box(0.035, 0.01, 0.01, mat(0x8a1418, 0.5)); lp.position.set(0, 0.058, 0.11); head.add(lp); }
+    // hair
+    if (L.hairStyle === 'sideburns' || L.hairStyle === 'short') {
+      [-1, 1].forEach(sx => { const sb = box(0.018, 0.06, 0.04, hairMat); sb.position.set(sx * 0.093, 0.09, 0.03); head.add(sb); });
+      const back = sphere(0.1, hairMat); back.scale.set(0.95, 0.7, 0.6); back.position.set(0, 0.12, -0.04); head.add(back);
+    }
+    if (L.hairStyle === 'long') {
+      const back = box(0.21, 0.36, 0.06, hairMat); back.position.set(0, -0.02, -0.07); head.add(back);
+      [-1, 1].forEach(sx => { const strand = box(0.04, 0.26, 0.05, hairMat); strand.position.set(sx * 0.09, 0.02, 0.0); head.add(strand); });
+    }
+    if (L.hairStyle === 'braid') {
+      const back = sphere(0.1, hairMat); back.scale.set(0.95, 0.75, 0.65); back.position.set(0, 0.12, -0.04); head.add(back);
+      for (let i = 0; i < 7; i++) { const k = sphere(0.026 - i * 0.002, hairMat); k.position.set(0.07 + i * 0.006, 0.04 - i * 0.045, 0.02 + i * 0.012); head.add(k); }
+    }
+    // face extras
+    if (has('mask')) {
+      const bandana = new THREE.MeshStandardMaterial({ roughness: 0.9, map: Util.canvasTexture(64, 64, (g, w, h) => {
+        g.fillStyle = '#9a1814'; g.fillRect(0, 0, w, h); g.fillStyle = '#e8dcc4';
+        for (let i = 0; i < 30; i++) { g.beginPath(); g.arc(Math.random() * w, Math.random() * h, 2, 0, 7); g.fill(); }
+      }) });
+      const mk = mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.09, 18, 1, true, -Math.PI / 2, Math.PI), bandana);
+      mk.position.set(0, 0.055, 0.0); mk.scale.z = 1.05; head.add(mk);
+      const point = mesh(new THREE.ConeGeometry(0.05, 0.08, 4), bandana); point.rotation.x = Math.PI; point.position.set(0, -0.005, 0.1); head.add(point);
+    }
+    if (has('eyepatch')) {
+      const pm = mat(0x080808, 0.6);
+      const patch = cyl(0.022, 0.022, 0.008, pm, 14); patch.rotation.x = Math.PI / 2; patch.position.set(0.035, 0.112, 0.096); head.add(patch);
+      const strap = mesh(new THREE.TorusGeometry(0.104, 0.004, 6, 30), pm); strap.position.set(0, 0.12, 0); strap.rotation.set(Math.PI / 2, 0.35, 0); head.add(strap);
+    }
+    if (has('scar')) { const sc = box(0.006, 0.07, 0.006, mat(0xc07068, 0.6)); sc.position.set(-0.05, 0.1, 0.095); sc.rotation.z = 0.4; head.add(sc); }
+    if (has('monocle')) {
+      const mo = mesh(new THREE.TorusGeometry(0.02, 0.003, 8, 20), m.brass); mo.position.set(0.035, 0.11, 0.1); head.add(mo);
+      const chain = box(0.002, 0.08, 0.002, m.brass); chain.position.set(0.05, 0.07, 0.1); chain.rotation.z = 0.3; head.add(chain);
+    }
+    if (has('spectacles')) {
+      [-1, 1].forEach(sx => { const r = mesh(new THREE.TorusGeometry(0.019, 0.0025, 8, 20), m.nickel); r.position.set(sx * 0.035, 0.11, 0.1); head.add(r); });
+      const bridge = box(0.03, 0.003, 0.003, m.nickel); bridge.position.set(0, 0.112, 0.102); head.add(bridge);
+    }
+    if (has('cigar')) {
+      const cg = cyl(0.006, 0.006, 0.06, mat(0x5a3a20, 0.8), 8); cg.rotation.set(Math.PI / 2 - 0.2, 0, 0.3); cg.position.set(0.03, 0.055, 0.13); head.add(cg);
+      const tip = sphere(0.0065, mat(0xff5010, 0.5, { emissive: col(0xff3000), emissiveIntensity: 1.5 })); tip.position.set(0.04, 0.049, 0.158); head.add(tip);
+    }
 
+    // hats
     const hat = new THREE.Group(); hat.position.set(0, 0.19, 0); head.add(hat);
-    const brim = cyl(0.21, 0.21, 0.012, hatMat, 28); hat.add(brim);
-    const crown = cyl(0.1, 0.115, 0.13, hatMat, 20); crown.position.y = 0.07; hat.add(crown);
-    const dent = box(0.03, 0.02, 0.16, hatMat); dent.position.y = 0.138; hat.add(dent);
-    const band = cyl(0.117, 0.117, 0.025, new THREE.MeshStandardMaterial({ color: col(0x0a0a0a) }), 20); band.position.y = 0.022; hat.add(band);
+    const band = mat(0x0a0a0a, 0.6);
+    const style = L.hat || 'cowboy';
+    if (style === 'cowboy' || style === 'cowgirl') {
+      const brim = cyl(0.21, 0.21, 0.012, hatMat, 28); hat.add(brim);
+      const crown = cyl(0.1, 0.115, 0.13, hatMat, 20); crown.position.y = 0.07; hat.add(crown);
+      const dent = box(0.03, 0.02, 0.16, hatMat); dent.position.y = 0.138; hat.add(dent);
+      const b = cyl(0.117, 0.117, 0.025, style === 'cowgirl' ? m.nickel : band, 20); b.position.y = 0.022; hat.add(b);
+      if (style === 'cowgirl') [-1, 1].forEach(sx => { const flap = box(0.08, 0.012, 0.3, hatMat); flap.position.set(sx * 0.17, 0.03, 0); flap.rotation.z = sx * 0.7; hat.add(flap); });
+    } else if (style === 'flat') {
+      const brim = cyl(0.23, 0.23, 0.01, hatMat, 32); hat.add(brim);
+      const crown = cyl(0.105, 0.11, 0.08, hatMat, 22); crown.position.y = 0.045; hat.add(crown);
+      const b = cyl(0.112, 0.112, 0.02, band, 22); b.position.y = 0.015; hat.add(b);
+    } else if (style === 'top' || style === 'stovepipe') {
+      const tall = style === 'stovepipe' ? 0.32 : 0.21;
+      const brim = cyl(0.14, 0.14, 0.01, hatMat, 26); hat.add(brim);
+      const crown = cyl(0.088, 0.092, tall, hatMat, 22); crown.position.y = tall / 2; hat.add(crown);
+      const b = cyl(0.094, 0.094, 0.03, style === 'top' ? mat(0x6a1010, 0.6) : band, 22); b.position.y = 0.02; hat.add(b);
+    } else if (style === 'bowler') {
+      const brim = mesh(new THREE.TorusGeometry(0.115, 0.016, 8, 28), hatMat); brim.rotation.x = Math.PI / 2; brim.scale.z = 0.6; hat.add(brim);
+      const crown = mesh(new THREE.SphereGeometry(0.105, 22, 14, 0, Math.PI * 2, 0, Math.PI / 2), hatMat); crown.scale.y = 0.95; hat.add(crown);
+      const b = cyl(0.106, 0.106, 0.02, band, 22); b.position.y = 0.01; hat.add(b);
+    } else if (style === 'sombrero') {
+      const brim = mesh(new THREE.ConeGeometry(0.36, 0.06, 32, 1, true), hatMat); brim.position.y = 0.0; brim.material = hatMat.clone(); brim.material.side = THREE.DoubleSide; hat.add(brim);
+      const rim = mesh(new THREE.TorusGeometry(0.355, 0.012, 6, 36), hatMat); rim.rotation.x = Math.PI / 2; rim.position.y = -0.028; hat.add(rim);
+      const crown = mesh(new THREE.ConeGeometry(0.11, 0.24, 20), hatMat); crown.position.y = 0.12; hat.add(crown);
+      const b = cyl(0.1, 0.105, 0.03, mat(0xc8a040, 0.6), 20); b.position.y = 0.03; hat.add(b);
+    } else if (style === 'veil') {
+      const brim = cyl(0.25, 0.25, 0.008, hatMat, 32); hat.add(brim);
+      const crown = cyl(0.09, 0.1, 0.07, hatMat, 20); crown.position.y = 0.04; hat.add(crown);
+      const flower = sphere(0.03, mat(0x5a0a0e, 0.6)); flower.position.set(0.09, 0.05, 0.06); hat.add(flower);
+      const veil = mesh(new THREE.CylinderGeometry(0.2, 0.17, 0.2, 28, 1, true), mat(0x080808, 1, { transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false }), { cast: false });
+      veil.position.y = -0.1; hat.add(veil);
+    }
 
     // arms: shoulder -> elbow -> hand; the right hand holds the revolver
     function arm(side) {
-      const shoulder = new THREE.Group(); shoulder.position.set(side * 0.22, 0.5, 0); spine.add(shoulder);
+      const shoulder = new THREE.Group(); shoulder.position.set(side * (shoulderW / 2 - 0.01), 0.5, 0); spine.add(shoulder);
       const upper = cyl(0.055, 0.05, 0.3, coat, 10); upper.position.y = -0.15; shoulder.add(upper);
       const elbow = new THREE.Group(); elbow.position.y = -0.3; shoulder.add(elbow);
       const fore = cyl(0.048, 0.042, 0.27, coat, 10); fore.position.y = -0.135; elbow.add(fore);
@@ -489,14 +946,15 @@ const Models = (() => {
     }
     const rArm = arm(-1), lArm = arm(1);
 
-    const gun = revolver();
+    const gun = revolver(gunSkin);
     gun.group.rotation.x = Math.PI / 2;          // barrel follows the forearm
     gun.group.position.set(0, -0.04, 0.0);
     gun.group.scale.setScalar(1.25);
     rArm.hand.add(gun.group);
 
+    if (L.build) root.scale.set(L.build.w, L.build.h, L.build.w);
     root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    return { root, spine, head, hat, rArm, lArm, gun, eyes, eyeMat, torso };
+    return { root, spine, head, hat, rArm, lArm, gun, eyes, eyeMat, torso, brows };
   }
 
   // ---------- furniture ----------
@@ -667,8 +1125,8 @@ const Models = (() => {
   // Double-barrel coach gun with a break action. Same layout as the revolver
   // (barrels along +Z, grip down -Y) so it fits the same hand and aiming code.
   // `barrels` pivots at the hinge to break open; `shells` sit in the chambers.
-  function shotgun() {
-    const m = mats();
+  function shotgun(skin) {
+    const m = gunLook(skin, 'shotgun');
     const g = new THREE.Group();
     const barrels = new THREE.Group();
     barrels.position.set(0, -0.004, 0.035);             // hinge pin
@@ -685,9 +1143,9 @@ const Models = (() => {
     barrels.add(fore);
     const shells = [-0.0125, 0.0125].map(x => {
       const sh = new THREE.Group();
-      const hull = cyl(0.0105, 0.0105, 0.055, new THREE.MeshStandardMaterial({ color: col(0x8a1a14), roughness: 0.6 }), 14);
+      const hull = cyl(0.0105, 0.0105, 0.055, m.shell || new THREE.MeshStandardMaterial({ color: col(0x8a1a14), roughness: 0.6 }), 14);
       hull.rotation.x = Math.PI / 2; sh.add(hull);
-      const head = cyl(0.0115, 0.0115, 0.008, m.brass, 14); head.rotation.x = Math.PI / 2; head.position.z = -0.03; sh.add(head);
+      const head = cyl(0.0115, 0.0115, 0.008, m.ammo, 14); head.rotation.x = Math.PI / 2; head.position.z = -0.03; sh.add(head);
       sh.position.set(x, 0.016, 0.03);
       barrels.add(sh);
       return sh;
@@ -714,6 +1172,9 @@ const Models = (() => {
     const butt = profile([[-0.33, 0.004], [-0.336, 0.004], [-0.336, -0.104], [-0.33, -0.104]], 0.044, m.black, 0.001);
     g.add(butt);
 
+    // skin decorations on the barrels break open with them
+    decorate(barrels, m, 'shotgun', 'barrels');
+    decorate(g, m, 'shotgun', 'body');
     const muzzle = new THREE.Object3D(); muzzle.position.set(0, 0.016, 0.465); barrels.add(muzzle);
     // the hand code expects a cylinder; give it a harmless stand-in
     const cylinder = new THREE.Group(); g.add(cylinder);
@@ -879,7 +1340,7 @@ const Models = (() => {
 
   return {
     shotgun, crate, item, couch, lifeMark, grenade, missile, shield, profile,
-    V, tex, mats, revolver, card, setCardFace, cardFace, outlaw, table, chair, bookshelf, desk,
+    V, tex, mats, gunLook, revolver, card, setCardFace, cardFace, outlaw, table, chair, bookshelf, desk,
     door, pictureFrame, hangingLamp, target, bullet, decal, CARD_W, CARD_H,
   };
 })();

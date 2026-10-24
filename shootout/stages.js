@@ -113,9 +113,22 @@ function runLoadingStage(onDone) {
 // MENU: a revolver and three cards on a table under a swaying lamp, slowly
 // orbited by the camera. The HTML menu sits on top of it.
 const MenuStage = (() => {
-  let stage;
+  let stage, scene, gun, gunSkin;
+  // the revolver on the table wears your Gunsmith skin
+  function placeGun() {
+    const skin = typeof Profile !== 'undefined' ? Profile.loadout().rskin : 'standard';
+    if (gun && skin === gunSkin) return;
+    if (gun) scene.remove(gun.group);
+    gunSkin = skin;
+    gun = Models.revolver(skin);
+    gun.group.scale.setScalar(2.2);
+    gun.group.rotation.set(0, 0.9, Math.PI / 2);     // lying on its side
+    gun.group.position.set(-0.55, 0.035, 0.05);
+    gun.group.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    scene.add(gun.group);
+  }
   function build() {
-    const scene = new THREE.Scene();
+    scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0a0604);
     scene.fog = new THREE.Fog(0x0a0604, 2, 7);
     const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.01, 30);
@@ -129,12 +142,7 @@ const MenuStage = (() => {
     const top = new THREE.Mesh(new THREE.BoxGeometry(8, 0.06, 6), Models.mats().wood);
     top.position.y = -0.03; top.receiveShadow = true; scene.add(top);
 
-    const gun = Models.revolver();
-    gun.group.scale.setScalar(2.2);
-    gun.group.rotation.set(0, 0.9, Math.PI / 2);     // lying on its side
-    gun.group.position.set(-0.55, 0.035, 0.05);
-    gun.group.traverse(o => { if (o.isMesh) o.castShadow = true; });
-    scene.add(gun.group);
+    placeGun();
 
     ['jack', 'bloody', 'one'].forEach((id, i) => {
       const c = Models.card(id);
@@ -176,5 +184,99 @@ const MenuStage = (() => {
       },
     };
   }
-  return { show() { if (!stage) build(); Engine.setStage(stage); } };
+  return { show() { if (!stage) build(); placeGun(); Engine.setStage(stage); } };
+})();
+
+// SHOWCASE: one character or gun on a turntable under a spotlight, for the
+// Loadout and Gunsmith screens. The panel covers part of the screen, so the
+// view is shifted to keep the model in the open part.
+const ShowcaseStage = (() => {
+  let stage, scene, camera, holder, current = null, key = '', spin = 0;
+  let view = { pos: new THREE.Vector3(0, 1.25, 2.5), at: new THREE.Vector3(0, 0.8, 0) };
+  function build() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070504);
+    scene.fog = new THREE.Fog(0x070504, 3, 9);
+    camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.01, 30);
+    scene.add(new THREE.HemisphereLight(0x806048, 0x100804, 0.5));
+    const spot = new THREE.SpotLight(0xffe0b0, 3.2, 8, 0.5, 0.6, 1.2);
+    spot.position.set(0.6, 3.2, 1.6); spot.castShadow = true; spot.shadow.mapSize.set(1024, 1024); spot.shadow.bias = -0.002;
+    scene.add(spot); scene.add(spot.target);
+    const rim = new THREE.PointLight(0x6080c0, 0.8, 6); rim.position.set(-1.5, 1.5, -1.5); scene.add(rim);
+    const fill = new THREE.PointLight(0xffd8b0, 0.9, 6); fill.position.set(-0.8, 1.4, 2.4); scene.add(fill);
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(4, 48), Models.mats().floor);
+    floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+    const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.75, 0.08, 48), Models.mats().darkWood);
+    plinth.position.y = 0.04; plinth.receiveShadow = true; plinth.castShadow = true; scene.add(plinth);
+    holder = new THREE.Group(); holder.position.y = 0.08; scene.add(holder);
+    stage = {
+      scene, camera,
+      update(dt, time) {
+        spin += dt;
+        holder.rotation.y = Math.sin(spin * 0.45) * (current && current.gun ? 0.75 : 0.6);   // sway, mostly facing you
+        if (current && current.gun) holder.position.y = 0.55 + Math.sin(time * 1.3) * 0.015;
+        frame();
+      },
+    };
+  }
+
+  // Keep the model in the part of the screen the panel leaves open.
+  function frame() {
+    const w = innerWidth, h = innerHeight;
+    camera.aspect = w / h;
+    if (w > h * 1.1) camera.setViewOffset(w, h, w * 0.2, 0, w, h);
+    else camera.setViewOffset(w, h, 0, h * 0.24, w, h);
+    camera.updateProjectionMatrix();
+    // tall screens see less across: step back so the model still fits
+    const back = Math.min(2.8, Math.max(1, 1.25 / camera.aspect));
+    camera.position.copy(view.at).add(view.pos.clone().sub(view.at).multiplyScalar(back));
+    camera.lookAt(view.at);
+  }
+
+  function clear() {
+    while (holder.children.length) holder.remove(holder.children[0]);
+    current = null;
+  }
+
+  // what: { kind: 'char', id, rskin } | { kind: 'revolver'|'shotgun', id }
+  function show(what) {
+    if (!stage) build();
+    Engine.setStage(stage);
+    const k = JSON.stringify(what);
+    if (k === key) return;
+    key = k;
+    clear();
+    spin = 0;
+    if (what.kind === 'char') {
+      const ch = CHARACTER_BY_ID[what.id] || CHARACTERS[0];
+      const chair = Models.chair();
+      chair.position.z = -0.05;
+      const o = Models.outlaw(ch.look, what.rskin);
+      // hands resting on the lap, gun pointing at the floor in front
+      [o.rArm, o.lArm].forEach(a => { a.shoulder.rotation.x = -0.45; a.elbow.rotation.x = -0.75; });
+      holder.add(chair, o.root);
+      holder.position.y = 0.08;
+      current = { char: true };
+      view = { pos: new THREE.Vector3(0, 1.25, 2.5), at: new THREE.Vector3(0, 0.8, 0) };
+    } else {
+      const g = what.kind === 'shotgun' ? Models.shotgun(what.id) : Models.revolver(what.id);
+      const s = what.kind === 'shotgun' ? 1.25 : 3.4;
+      g.group.scale.setScalar(s);
+      g.group.rotation.set(0, Math.PI / 2, 0);          // side on to the camera as it turns
+      g.group.position.set(-0.065 * s, 0.03 * s, 0);    // centre the gun on the turntable
+      const pivot = new THREE.Group();
+      pivot.add(g.group);
+      pivot.rotation.z = 0.12;
+      holder.add(pivot);
+      current = { gun: true };
+      view = { pos: new THREE.Vector3(0, 0.95, 2.2), at: new THREE.Vector3(0, 0.55, 0) };
+    }
+    holder.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    frame();
+  }
+
+  // Back to a normal camera when leaving.
+  function hide() { if (camera) { camera.clearViewOffset(); camera.updateProjectionMatrix(); } key = ''; }
+
+  return { show, hide };
 })();

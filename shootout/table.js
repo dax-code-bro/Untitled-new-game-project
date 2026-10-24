@@ -116,12 +116,9 @@ const Table = (() => {
     handHolder = new THREE.Group(); handHolder.position.set(-0.05, -0.22, -0.6); handHolder.scale.setScalar(0.82); camera.add(handHolder);
     const handLight = new THREE.PointLight(0xffe0b0, 0.35, 1.2); handLight.position.set(0, 0.1, 0.2); handHolder.add(handLight);
 
-    myGun = Models.revolver();
-    myGun.group.traverse(c => { if (c.isMesh) c.castShadow = true; });
-    myGun.group.scale.setScalar(1.25);
+    setMyGunSkin('standard');
     myGunRest = { pos: V(0.36, TABLE_Y + 0.02, 1.35), rot: new THREE.Euler(0, Math.PI + 0.25, Math.PI / 2) };
     resetMyGun();
-    scene.add(myGun.group);
 
     stage = { scene, camera, update };
     myShotgunRest = { pos: V(-0.02, TABLE_Y + 0.03, 1.28), rot: new THREE.Euler(0, Math.PI - 0.2, Math.PI / 2), scale: 1 };
@@ -130,6 +127,18 @@ const Table = (() => {
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
     window.addEventListener('pointercancel', () => { drag = null; if (seats[0]) relayout(0); });
+  }
+
+  // Your own revolver wears your Gunsmith skin.
+  function setMyGunSkin(skin) {
+    skin = skin || 'standard';
+    if (myGun && myGun.skin === skin) return;
+    if (myGun && myGun.group.parent) myGun.group.parent.remove(myGun.group);
+    myGun = Models.revolver(skin);
+    myGun.skin = skin;
+    myGun.group.traverse(c => { if (c.isMesh) c.castShadow = true; });
+    myGun.group.scale.setScalar(1.25);
+    scene.add(myGun.group);
   }
 
   function resetMyGun() {
@@ -158,13 +167,6 @@ const Table = (() => {
     return [far, left, right];
   }
 
-  const PALETTES = [
-    { coat: 0x3a2c22, shirt: 0x8a7a60, hat: 0x2a1c12, scarf: 0x6a1a14, skin: 0x8a6a52 },
-    { coat: 0x2a3036, shirt: 0x6a6a5a, hat: 0x3a3028, scarf: 0x1a2a4a, skin: 0x9a7a62, beard: null },
-    { coat: 0x4a3a2a, shirt: 0xa89878, hat: 0x5a4632, scarf: 0x3a4a2a, skin: 0x7a5a42 },
-    { coat: 0x1e1e1e, shirt: 0x5a1a1a, hat: 0x111111, scarf: 0x222222, skin: 0x8a6a56, beard: 0x5a4a3a },
-  ];
-
   let junk = [];   // leftovers of a nuclear blast, cleared with the table
   function clearSeats() {
     junk.forEach(j => scene.remove(j)); junk = [];
@@ -185,11 +187,12 @@ const Table = (() => {
     ravage = ravageTarget = 0;
     rig.position.set(0, 1.27, 2.25); rig.rotation.set(0, 0, 0);
     camera.rotation.set(-0.3, 0, 0); fovLock = false; camera.fov = baseFov(); camera.updateProjectionMatrix();
+    setMyGunSkin(players[0] && players[0].rskin);
     resetMyGun();
     const youGroup = new THREE.Group();
     youGroup.position.set(0, 0, 2.05); youGroup.rotation.y = Math.PI;
     scene.add(youGroup);
-    seats.push({ you: true, group: youGroup, cards: [], items: [], marks: [], tags: [], dead: false });
+    seats.push({ you: true, group: youGroup, cards: [], items: [], marks: [], tags: [], dead: false, rskin: players[0] && players[0].rskin, sskin: players[0] && players[0].sskin });
     const spots = seatSpots(players.length - 1);
     players.slice(1).forEach((p, i) => {
       const spot = spots[i];
@@ -198,14 +201,15 @@ const Table = (() => {
       const chair = Models.chair(); chair.position.z = -0.05;
       chair.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
       group.add(chair);
-      const rigObj = Models.outlaw(PALETTES[(p.pal != null ? p.pal : i) % PALETTES.length]);
+      const ch = CHARACTER_BY_ID[p.char] || CHARACTERS[(i + 1) % CHARACTERS.length];
+      const rigObj = Models.outlaw(ch.look, p.rskin);
       group.add(rigObj.root);
       const sub = p.sub || Bots.label(p);
       const label = Util.textSprite(p.name, { sub });
       label.position.set(0, 1.6, 0);
       group.add(label);
       scene.add(group);
-      const seat = { group, chair, rig: rigObj, cards: [], items: [], marks: [], tags: [], label, dead: false, name: p.name, sub, look: null, idle: Math.random() * 10, drip: 0 };
+      const seat = { group, chair, rig: rigObj, cards: [], items: [], marks: [], tags: [], label, dead: false, name: p.name, sub, look: null, rskin: p.rskin, sskin: p.sskin, idle: Math.random() * 10, drip: 0 };
       seats.push(seat);
       applyPose(rigObj.rArm, restPose(seat, 'r'));
       applyPose(rigObj.lArm, restPose(seat, 'l'));
@@ -1238,7 +1242,7 @@ const Table = (() => {
     if (s.dead) return;
     const old = s.rig.gun.group;
     old.parent && old.parent.remove(old);
-    s.rig.gun = Models.revolver();
+    s.rig.gun = Models.revolver(s.rskin);
     const g = s.rig.gun.group;
     g.rotation.x = Math.PI / 2; g.position.set(0, -0.04, 0); g.scale.setScalar(0.01);
     g.traverse(o => { if (o.isMesh) o.castShadow = true; });
@@ -1253,7 +1257,7 @@ const Table = (() => {
 
   // Gun card: a shotgun drops onto the table (or into a bot's hand).
   async function giveShotgun(pi) {
-    const sg = Models.shotgun();
+    const sg = Models.shotgun(seats[pi] && seats[pi].sskin);
     sg.group.traverse(o => { if (o.isMesh) o.castShadow = true; });
     if (pi === 0) {
       if (myShotgun) scene.remove(myShotgun.group);

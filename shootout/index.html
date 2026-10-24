@@ -23,6 +23,7 @@
     <button data-go="settings">Settings</button>
     <button data-go="gunsmith">Gunsmith</button>
     <button data-go="loadout">Loadout</button>
+    <button data-go="scores">Scoreboard</button>
   </nav>
 </section>
 
@@ -135,20 +136,44 @@
   </div>
 </section>
 
-<!-- GUNSMITH (placeholder) -->
-<section id="screen-gunsmith" class="screen">
-  <div class="panel">
+<!-- GUNSMITH: skins for your revolver and shotgun -->
+<section id="screen-gunsmith" class="screen showcase">
+  <div class="shop">
     <h2>Gunsmith</h2>
-    <p class="soon">Customize your revolver here. Coming soon.</p>
-    <button class="back" data-go="menu">Back</button>
+    <div class="who-tabs gun-tabs" role="tablist">
+      <button type="button" data-gun="revolver" class="on">Revolver</button>
+      <button type="button" data-gun="shotgun">Shotgun</button>
+    </div>
+    <div id="skin-list" class="tile-list"></div>
+    <div id="skin-info" class="shop-info"></div>
+    <p class="muted fine">Skins are for looks only. Every gun shoots exactly the same.</p>
+    <div class="shop-buttons"><button type="button" id="btn-equip">Equip</button><button class="back" data-go="menu">Back</button></div>
   </div>
 </section>
 
-<!-- LOADOUT (placeholder) -->
-<section id="screen-loadout" class="screen">
-  <div class="panel">
+<!-- LOADOUT: who you play as -->
+<section id="screen-loadout" class="screen showcase">
+  <div class="shop">
     <h2>Loadout</h2>
-    <p class="soon">Pick what you bring to the table. Coming soon.</p>
+    <p class="muted fine">Pick who you play as. Nobody at a table can be the same character: a <b class="x">✕</b> means someone in your party already took them.</p>
+    <div id="char-grid" class="tile-list chars"></div>
+    <div id="char-info" class="shop-info"></div>
+    <div class="shop-buttons"><button type="button" id="btn-pick-char">Play as</button><button class="back" data-go="menu">Back</button></div>
+  </div>
+</section>
+
+<!-- SCOREBOARD: everyone who has played -->
+<section id="screen-scores" class="screen">
+  <div class="panel wide">
+    <h2>Scoreboard</h2>
+    <div id="my-record" class="my-record"></div>
+    <div class="score-wrap">
+      <table id="score-table">
+        <thead><tr><th>#</th><th>Player</th><th>Wins</th><th>Losses</th><th>W/L</th><th>Win %</th><th>Most dealt</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p id="score-note" class="muted fine"></p>
     <button class="back" data-go="menu">Back</button>
   </div>
 </section>
@@ -174,8 +199,12 @@
 <script src="engine.js"></script>
 <script src="cards.js"></script>
 <script src="items.js"></script>
+<script src="characters.js"></script>
+<script src="skins.js"></script>
+<script src="profile.js"></script>
 <script src="bots.js"></script>
 <script src="net.js"></script>
+<script src="scores.js"></script>
 <script src="audio.js"></script>
 <script src="models.js"></script>
 <script src="fx.js"></script>

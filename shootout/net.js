@@ -22,6 +22,8 @@ const Net = (() => {
   const pid = store.get('shootout.pid') || randomId(6);
   store.set('shootout.pid', pid);
   let name = store.get('shootout.name') || 'Outlaw ' + pid.slice(0, 3);
+  let gear = {};            // { ch, rs, ss }: character and skins, shown to the party
+  let stats = null;         // headline record for the scoreboard
 
   let room = null;          // the lobby everyone shares
   let party = null;         // { code, host, room, isHost }
@@ -37,7 +39,7 @@ const Net = (() => {
     if (!window.claude || typeof window.claude.use !== 'function') return null;
     try { room = await window.claude.use('room'); } catch (e) { room = null; }
     if (!room) { fire('status'); return null; }
-    room.presence({ pid, nm: name, party: null, invs: [] }).catch(() => {});
+    room.presence({ pid, nm: name, party: null, invs: [], st: stats }).catch(() => {});
     room.onPeers(onLobby, () => { room = null; fire('status'); });
     fire('status');
     return room;
@@ -79,6 +81,25 @@ const Net = (() => {
     fire('party');
   }
 
+  // Your character and skins, so the party can see who is taken.
+  function setGear(l) {
+    gear = { ch: l.char || null, rs: l.rskin || 'standard', ss: l.sskin || 'standard' };
+    if (party) party.room.presence(gear).catch(() => {});
+  }
+
+  // Your record, so anyone who can write the scoreboard can post it.
+  function setStats(st) {
+    stats = st;
+    if (room) room.presence({ st }).catch(() => {});
+  }
+
+  // Everyone online's record: [{ pid, name, st }]
+  function lobbyStats() {
+    if (!room) return [];
+    return room.peers().map(p => p.presence || {}).filter(pr => pr.pid && pr.st && typeof pr.st === 'object')
+      .map(pr => ({ pid: String(pr.pid), name: String(pr.nm || 'Someone').slice(0, 24), st: pr.st }));
+  }
+
   // ---------- party ----------
 
   async function joinParty(code, host) {
@@ -86,7 +107,7 @@ const Net = (() => {
     await leaveParty(true);
     const r = await room.join('sh-' + code.toLowerCase());
     party = { code, host, room: r, isHost: host === pid, lastAct: {}, lastG: null, hostSeen: false, peerPid: {} };
-    r.presence({ pid, nm: name, host: party.isHost ? 1 : 0 }).catch(() => {});
+    r.presence(Object.assign({ pid, nm: name, host: party.isHost ? 1 : 0 }, gear)).catch(() => {});
     r.onPeers(onParty, () => { party = null; fire('party'); });
     room.presence({ party: code }).catch(() => {});
     fire('party');
@@ -122,7 +143,9 @@ const Net = (() => {
     for (const p of party.room.peers()) {
       const pr = p.presence || {};
       if (!pr.pid) continue;
-      out.set(pr.pid, { pid: String(pr.pid), name: String(pr.nm || 'Someone').slice(0, 24), host: pr.pid === party.host, peer: p.peer, me: pr.pid === pid });
+      const id = k => (typeof pr[k] === 'string' ? pr[k].slice(0, 16) : null);
+      out.set(pr.pid, { pid: String(pr.pid), name: String(pr.nm || 'Someone').slice(0, 24), host: pr.pid === party.host, peer: p.peer, me: pr.pid === pid,
+        char: id('ch'), rskin: id('rs'), sskin: id('ss') });
     }
     return [...out.values()].sort((a, b) => (b.host - a.host) || a.name.localeCompare(b.name));
   }
@@ -189,7 +212,7 @@ const Net = (() => {
   }
 
   return {
-    init, on, online, setName, invite, accept, leaveParty, members, hostStart, hostSend, hostStop, sendAct,
+    init, on, online, setName, setGear, setStats, lobbyStats, invite, accept, leaveParty, members, hostStart, hostSend, hostStop, sendAct,
     get pid() { return pid; },
     get name() { return name; },
     get available() { return !!room; },

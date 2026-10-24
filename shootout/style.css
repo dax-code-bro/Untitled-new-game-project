@@ -351,3 +351,91 @@ body.binoculars #bino-mask { opacity: 1; }
 #whiteout.on { animation: whiteout 3.2s ease-out; }
 @keyframes whiteout { 0% { opacity: 0; } 8% { opacity: 1; } 60% { opacity: 0.9; } 100% { opacity: 0; } }
 #my-gun .gun-label.who { color: #f0d8a0; font-size: 13px; }
+
+/* ---------- loadout and gunsmith (3D preview behind a side/bottom panel) ---------- */
+.showcase { align-items: flex-end; justify-content: center; pointer-events: none; }
+.shop {
+  pointer-events: auto;
+  width: min(560px, 100vw); max-height: 56vh; overflow-y: auto;
+  background: linear-gradient(rgba(14, 9, 5, 0.88), rgba(14, 9, 5, 0.97));
+  border-top: 2px solid #6b4a2a;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 12px;
+}
+@media (min-aspect-ratio: 11/10) {
+  .showcase { justify-content: flex-end; align-items: stretch; }
+  .shop { width: min(460px, 46vw); max-height: none; height: 100%; border-top: 0; border-left: 2px solid #6b4a2a; padding: 24px; }
+}
+.shop h2 { letter-spacing: 0.2em; text-transform: uppercase; color: #d9c08a; font-size: 20px; }
+.shop .who-tabs { align-self: flex-start; }
+.muted.fine, .fine { font-size: 13px; }
+.x { color: #e0402a; }
+.tile-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.tile {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: rgba(30, 18, 10, 0.85); color: #e8dcc4; border: 2px solid #3a2a1a;
+  padding: 6px 4px 8px; font-size: 12px; text-transform: none; letter-spacing: 0;
+}
+.tile b { font-weight: normal; line-height: 1.15; text-align: center; }
+.tile img { width: 56px; height: 56px; border-radius: 4px; }
+.tile.on { border-color: #d9a050; background: #3a1a0c; }
+.tile.equipped::after { content: "✓"; position: absolute; top: 2px; left: 6px; color: #8ad070; font-size: 14px; }
+.tile.taken { opacity: 0.55; }
+.tile .x {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-style: normal; font-size: 64px; color: rgba(224, 40, 30, 0.9); text-shadow: 0 2px 6px #000; pointer-events: none;
+}
+.tile.locked .swatch { filter: grayscale(0.8) brightness(0.5); }
+.tile .lock { position: absolute; top: 4px; right: 4px; font-style: normal; font-size: 9px; letter-spacing: 0.1em; color: #c8a060; background: #000a; padding: 1px 4px; }
+.swatch { width: 56px; height: 28px; border-radius: 3px; border: 1px solid #0008; }
+.sw-standard   { background: linear-gradient(90deg, #6a4226 0 30%, #9a9aa0 30% 60%, #1a1d24 60%); }
+.sw-makeshift  { background: radial-gradient(circle at 30% 40%, #9a5420 0 20%, transparent 22%), radial-gradient(circle at 70% 60%, #7a3a14 0 18%, transparent 20%), linear-gradient(90deg, #a88a58 0 30%, #4a3a30 30%); }
+.sw-silver     { background: linear-gradient(120deg, #e8e2c8 0 30%, #f4f4f8 30% 55%, #b8bcc4 70%, #ffffff); }
+.sw-billy      { background: linear-gradient(90deg, #5a2414 0 30%, #b8bcc0 30% 65%, #8a8e94); }
+.sw-gold       { background: linear-gradient(120deg, #16100c 0 28%, #ffd870 28% 50%, #c8902a 75%, #ffe8a0); }
+.sw-murderer   { background: radial-gradient(circle at 60% 40%, #7a0000 0 14%, transparent 16%), radial-gradient(circle at 80% 70%, #5a0000 0 10%, transparent 12%), linear-gradient(90deg, #d8ccb0 0 30%, #26221f 30%); }
+.sw-angel      { background: radial-gradient(ellipse at 70% 20%, #fff4c8 0 22%, transparent 26%), linear-gradient(120deg, #f4f0ec 0 40%, #ffe8b0 60%, #fffaf0); box-shadow: 0 0 10px #ffe8a088; }
+.sw-hellfire   { background: linear-gradient(115deg, transparent 40%, #ff6a10 42% 45%, transparent 47%), linear-gradient(60deg, transparent 55%, #ff4a08 57% 59%, transparent 61%), #120a08; box-shadow: 0 0 10px #ff400088; }
+.sw-darkknight { background: linear-gradient(90deg, #180808 0 30%, #121216 30% 85%, #8a0a14 85%); }
+.sw-diamond    { background: conic-gradient(from 45deg, #e8f4ff, #a8d0f0, #ffffff, #c8e8ff, #e8f4ff); box-shadow: 0 0 10px #d8f0ff88; }
+.sw-bluelight  { background: linear-gradient(90deg, transparent 20%, #2aa0ff 21% 24%, transparent 25% 60%, #60c0ff 61% 63%, transparent 64%), #0a0c10; box-shadow: 0 0 10px #2a90ff88; }
+.shop-info { background: rgba(0, 0, 0, 0.35); border: 1px solid #3a2a1a; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.shop-info h3 { color: #d9c08a; font-size: 17px; text-transform: capitalize; }
+.shop-info p { font-size: 14px; line-height: 1.35; }
+.shop-info small { color: #b8a888; }
+.shop-info .ok { color: #8ad070; }
+.shop-info .warn { color: #e06040; }
+.bar { height: 8px; background: #2a1a10; border: 1px solid #5a3a20; }
+.bar i { display: block; height: 100%; background: linear-gradient(90deg, #8a2a10, #d9a050); }
+.shop-buttons { display: flex; gap: 10px; }
+.shop-buttons button { flex: 1; }
+.shop button, .shop .back {
+  background: rgba(30, 18, 10, 0.85); color: #e8dcc4; border: 2px solid #6b4a2a;
+  padding: 12px 14px; font-size: 16px; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.shop .tile { text-transform: none; letter-spacing: 0; font-size: 12px; padding: 6px 4px 8px; }
+.shop .who-tabs button { font-size: 14px; padding: 8px 14px; }
+.shop button:disabled { opacity: 0.5; cursor: default; }
+
+/* ---------- scoreboard ---------- */
+.panel.wide { width: min(720px, 96vw); max-height: 92vh; padding: 20px 16px; }
+.my-record { background: rgba(0, 0, 0, 0.35); border: 1px solid #3a2a1a; padding: 10px 12px; font-size: 14px; line-height: 1.5; }
+.my-record small { color: #9a8a6a; }
+.score-wrap { overflow: auto; max-height: 50vh; }
+#score-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+#score-table th { position: sticky; top: 0; background: #1a100a; color: #d9c08a; font-weight: normal; text-align: left; padding: 6px 8px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+#score-table td { padding: 6px 8px; border-top: 1px solid #2a1a10; white-space: nowrap; }
+#score-table td small { color: #8a7a60; font-size: 11px; }
+#score-table tr.me td { background: rgba(120, 50, 20, 0.35); color: #ffe0b0; }
+
+/* ---------- same-phone character pick, unlock note ---------- */
+.hs-row { display: flex; gap: 6px; }
+.hs-row input { flex: 1; min-width: 0; }
+.hs-row select { background: #1a100a; color: #e8dcc4; border: 1px solid #6b4a2a; padding: 4px; font-family: inherit; font-size: 14px; max-width: 48%; }
+.unlock { display: block; margin-top: 10px; color: #ffd870; }
+.name-boxes { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+@media (max-width: 520px) {
+  #score-table { font-size: 12px; }
+  #score-table th, #score-table td { padding: 5px 4px; }
+  #score-table th { font-size: 10px; letter-spacing: 0.02em; }
+}

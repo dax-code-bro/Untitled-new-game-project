@@ -64,7 +64,7 @@ const SELF = p => (isYou(p) ? 'yourself' : 'themself');
 
 // ---------- screen switching with a fade ----------
 
-const MENU_SCREENS = ['menu', 'mode', 'settings', 'gunsmith', 'loadout'];
+const MENU_SCREENS = ['menu', 'mode', 'settings', 'scores'];
 
 function showScreen(name, fade = true) {
   const go = () => {
@@ -73,6 +73,9 @@ function showScreen(name, fade = true) {
     if (MENU_SCREENS.includes(name)) MenuStage.show();
     if (name === 'game') Table.show();
     if (name === 'mode') renderWho();
+    if (name === 'loadout') { shop.char = Profile.loadout().char || shop.char || CHARACTERS[0].id; renderLoadout(); }
+    if (name === 'gunsmith') { shop.skin = Profile.loadout()[shop.gun === 'revolver' ? 'rskin' : 'sskin']; renderGunsmith(); }
+    if (name === 'scores') renderScores();
   };
   if (!fade) { go(); return; }
   const f = $('#fade');
@@ -115,7 +118,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // friends
   $('#my-name').value = Net.name;
-  $('#my-name').addEventListener('change', e => { Net.setName(e.target.value); e.target.value = Net.name; });
+  $('#my-name').addEventListener('change', e => { Net.setName(e.target.value); e.target.value = Net.name; Scores.push(); });
   $('#invite-form').addEventListener('submit', async e => {
     e.preventDefault();
     const box = $('#invite-id');
@@ -131,7 +134,31 @@ window.addEventListener('DOMContentLoaded', () => {
   Net.on('memberLeft', onMemberLeft);
   Net.on('game', onHostGame);
   Net.on('hostLeft', onHostLeft);
-  Net.init();
+  Net.on('party', () => { if ($('#screen-loadout').classList.contains('active')) renderLoadout(); });
+  Net.setGear(Profile.loadout());
+  Net.init().then(() => Scores.init());
+  Scores.onChange(() => { if ($('#screen-scores').classList.contains('active')) renderScores(); });
+
+  // Loadout and Gunsmith
+  document.querySelectorAll('[data-gun]').forEach(b => b.addEventListener('click', () => {
+    shop.gun = b.dataset.gun;
+    shop.skin = Profile.loadout()[shop.gun === 'revolver' ? 'rskin' : 'sskin'];
+    renderGunsmith();
+  }));
+  $('#btn-equip').addEventListener('click', () => {
+    if (!Profile.unlocked(shop.gun, shop.skin)) return;
+    Profile.setLoadout(shop.gun === 'revolver' ? { rskin: shop.skin } : { sskin: shop.skin });
+    Net.setGear(Profile.loadout());
+    Sound.cock && Sound.cock();
+    renderGunsmith();
+  });
+  $('#btn-pick-char').addEventListener('click', () => {
+    if (takenByParty().includes(shop.char)) return;
+    Profile.setLoadout({ char: shop.char });
+    Net.setGear(Profile.loadout());
+    Sound.chime && Sound.chime();
+    renderLoadout();
+  });
 
   // Tap a card to pick it, tap it again (or drag it up onto the table) to play.
   Table.onCardClick = i => {
@@ -151,17 +178,22 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // ---------- who is playing: bots, same phone, friends ----------
 
-const who = { tab: 'bots', locals: 2, names: ['Player 1', 'Player 2', 'Player 3', 'Player 4'] };
+const who = { tab: 'bots', locals: 2, names: ['Player 1', 'Player 2', 'Player 3', 'Player 4'], chars: [null, null, null, null] };
 
 function humansFor(mode) {
+  const mine = Profile.loadout();
   if (who.tab === 'same') {
     const k = Math.min(who.locals, mode.seats);
-    return Array.from({ length: k }, (_, i) => ({ name: (who.names[i] || '').trim() || 'Player ' + (i + 1), ctrl: 'local' }));
+    // the phone's owner (player 1) brings their Gunsmith skins
+    return Array.from({ length: k }, (_, i) => Object.assign({ name: (who.names[i] || '').trim() || 'Player ' + (i + 1), ctrl: 'local', char: who.chars[i] || null },
+      i === 0 ? { rskin: mine.rskin, sskin: mine.sskin } : {}));
   }
   if (who.tab === 'friends' && Net.party && Net.party.isHost) {
-    return Net.members().map(m => ({ name: m.name, ctrl: m.me ? 'local' : 'remote', pid: m.pid }));
+    return Net.members().map(m => (m.me
+      ? Object.assign({ name: m.name, ctrl: 'local', pid: m.pid }, mine)
+      : { name: m.name, ctrl: 'remote', pid: m.pid, char: m.char, rskin: m.rskin, sskin: m.sskin }));
   }
-  return [{ name: who.tab === 'friends' ? Net.name : 'You', ctrl: 'local', pid: Net.pid }];
+  return [Object.assign({ name: who.tab === 'friends' ? Net.name : 'You', ctrl: 'local', pid: Net.pid }, mine)];
 }
 
 function renderWho() {
@@ -175,12 +207,28 @@ function renderWho() {
   if (names.children.length !== who.locals) {
     names.innerHTML = '';
     for (let i = 0; i < who.locals; i++) {
+      const row = document.createElement('div');
+      row.className = 'hs-row';
       const inp = document.createElement('input');
       inp.id = 'hs-name-' + i; inp.maxLength = 16; inp.value = who.names[i]; inp.placeholder = 'Player ' + (i + 1);
       inp.setAttribute('aria-label', 'Name of player ' + (i + 1));
       inp.addEventListener('input', () => { who.names[i] = inp.value; });
-      names.appendChild(inp);
+      const sel = document.createElement('select');
+      sel.id = 'hs-char-' + i;
+      sel.setAttribute('aria-label', 'Character for player ' + (i + 1));
+      sel.addEventListener('change', () => { who.chars[i] = sel.value || null; renderWho(); });
+      row.append(inp, sel);
+      names.appendChild(row);
     }
+  }
+  // each same-phone player picks a character nobody else on the phone has
+  if (who.chars[0] == null) who.chars[0] = Profile.loadout().char;
+  for (let i = 0; i < who.locals; i++) {
+    const sel = $('#hs-char-' + i);
+    const others = who.chars.filter((c, k) => k !== i && k < who.locals && c);
+    if (others.includes(who.chars[i])) who.chars[i] = null;
+    sel.innerHTML = '<option value="">Random character</option>' + CHARACTERS.map(c =>
+      `<option value="${c.id}" ${others.includes(c.id) ? 'disabled' : ''} ${who.chars[i] === c.id ? 'selected' : ''}>${others.includes(c.id) ? '✕ ' : ''}${esc(c.short)}</option>`).join('');
   }
   // friends
   $('#friends-offline').classList.toggle('hidden', Net.available);
@@ -254,6 +302,112 @@ function pickTable(modeId) {
   if (who.tab === 'friends' && Net.party && !Net.party.isHost) return;
   const online = who.tab === 'friends' && Net.party && Net.party.isHost && humans.some(h => h.ctrl === 'remote');
   startGame({ modeId, humans, online });
+}
+
+// ---------- Loadout, Gunsmith and Scoreboard ----------
+
+const shop = { char: null, gun: 'revolver', skin: 'standard' };
+
+// Characters other people in your party are playing as.
+function takenByParty() {
+  if (!Net.party) return [];
+  return Net.members().filter(m => !m.me && m.char).map(m => m.char);
+}
+
+function renderLoadout() {
+  const taken = takenByParty();
+  const mine = Profile.loadout().char;
+  const ch = CHARACTER_BY_ID[shop.char] || CHARACTERS[0];
+  $('#char-grid').innerHTML = CHARACTERS.map(c => {
+    const x = taken.includes(c.id);
+    const by = x ? Net.members().find(m => !m.me && m.char === c.id) : null;
+    return `<button type="button" class="tile${c.id === shop.char ? ' on' : ''}${x ? ' taken' : ''}${c.id === mine ? ' equipped' : ''}" data-char="${c.id}"
+      aria-label="${esc(c.name)}${x ? ', taken' : ''}">${portrait(c)}<b>${esc(c.short)}</b>${x ? `<i class="x" title="Taken by ${esc(by.name)}">✕</i>` : ''}</button>`;
+  }).join('');
+  $('#char-grid').querySelectorAll('[data-char]').forEach(b => b.addEventListener('click', () => { shop.char = b.dataset.char; renderLoadout(); }));
+  const takenBy = taken.includes(ch.id) ? Net.members().find(m => !m.me && m.char === ch.id) : null;
+  $('#char-info').innerHTML = `<h3>${esc(ch.name)}</h3><p>${esc(ch.blurb)}</p>` +
+    `<small>As a bot: ${ch.personality[0].toUpperCase() + ch.personality.slice(1)}</small>` +
+    (takenBy ? `<p class="warn">${esc(takenBy.name)} is already playing as ${esc(ch.short)}.</p>` : '');
+  const btn = $('#btn-pick-char');
+  btn.disabled = !!takenBy || ch.id === mine;
+  btn.textContent = ch.id === mine ? 'Playing as ' + ch.short : 'Play as ' + ch.short;
+  ShowcaseStage.show({ kind: 'char', id: ch.id, rskin: Profile.loadout().rskin });
+}
+
+// A small painted badge for each character: hat silhouette over their colours.
+const portraitCache = {};
+function portrait(c) {
+  if (!portraitCache[c.id]) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 96;
+    const g = cv.getContext('2d');
+    const hex = v => '#' + (v || 0).toString(16).padStart(6, '0');
+    const L = c.look;
+    g.fillStyle = '#1a120c'; g.fillRect(0, 0, 96, 96);
+    g.fillStyle = hex(L.coat); g.beginPath(); g.ellipse(48, 100, 40, 30, 0, 0, Math.PI * 2); g.fill();
+    if (L.scarf) { g.fillStyle = hex(L.scarf); g.fillRect(36, 66, 24, 8); }
+    g.fillStyle = hex(L.skin); g.beginPath(); g.ellipse(48, 52, 17, 21, 0, 0, Math.PI * 2); g.fill();
+    if (L.facial === 'beard') { g.fillStyle = hex(L.facialColor); g.beginPath(); g.ellipse(48, 64, 15, 11, 0, 0, Math.PI); g.fill(); }
+    if (L.facial === 'mustache' || L.facial === 'beard') { g.fillStyle = hex(L.facialColor); g.fillRect(40, 58, 16, 3); }
+    if ((L.extras || []).includes('mask')) { g.fillStyle = '#9a1814'; g.beginPath(); g.moveTo(30, 54); g.lineTo(66, 54); g.lineTo(48, 74); g.fill(); }
+    if ((L.extras || []).includes('eyepatch')) { g.fillStyle = '#000'; g.beginPath(); g.arc(54, 48, 4, 0, 7); g.fill(); }
+    g.fillStyle = '#111'; g.fillRect(40, 47, 3, 3); if (!(L.extras || []).includes('eyepatch')) g.fillRect(53, 47, 3, 3);
+    g.fillStyle = hex(L.hatColor);
+    const hat = L.hat;
+    if (hat === 'top' || hat === 'stovepipe') { g.fillRect(20, 33, 56, 4); g.fillRect(33, hat === 'stovepipe' ? 2 : 12, 30, hat === 'stovepipe' ? 32 : 22); }
+    else if (hat === 'bowler') { g.fillRect(24, 33, 48, 4); g.beginPath(); g.arc(48, 34, 16, Math.PI, 0); g.fill(); }
+    else if (hat === 'sombrero') { g.beginPath(); g.ellipse(48, 34, 46, 7, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.moveTo(34, 34); g.lineTo(48, 6); g.lineTo(62, 34); g.fill(); }
+    else if (hat === 'veil') { g.fillRect(14, 31, 68, 3); g.fillRect(36, 22, 24, 10); g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(28, 34, 40, 26); }
+    else if (hat === 'flat') { g.fillRect(16, 32, 64, 4); g.fillRect(34, 20, 28, 13); }
+    else { g.beginPath(); g.moveTo(14, 34); g.quadraticCurveTo(48, 42, 82, 34); g.lineTo(82, 30); g.quadraticCurveTo(48, 36, 14, 30); g.fill(); g.beginPath(); g.moveTo(32, 32); g.lineTo(35, 12); g.quadraticCurveTo(48, 18, 61, 12); g.lineTo(64, 32); g.fill(); }
+    portraitCache[c.id] = cv.toDataURL();
+  }
+  return `<img src="${portraitCache[c.id]}" alt="">`;
+}
+
+function renderGunsmith() {
+  document.querySelectorAll('[data-gun]').forEach(b => b.classList.toggle('on', b.dataset.gun === shop.gun));
+  const list = SKINS[shop.gun];
+  const equipped = Profile.loadout()[shop.gun === 'revolver' ? 'rskin' : 'sskin'];
+  if (!SKIN_BY_ID[shop.gun][shop.skin]) shop.skin = 'standard';
+  $('#skin-list').innerHTML = list.map(sk => {
+    const open = Profile.unlocked(shop.gun, sk.id);
+    return `<button type="button" class="tile skin${sk.id === shop.skin ? ' on' : ''}${open ? '' : ' locked'}${sk.id === equipped ? ' equipped' : ''}" data-skin="${sk.id}">` +
+      `<span class="swatch sw-${sk.id}"></span><b>${esc(sk.name)}</b>${open ? '' : '<i class="lock">LOCKED</i>'}</button>`;
+  }).join('');
+  $('#skin-list').querySelectorAll('[data-skin]').forEach(b => b.addEventListener('click', () => { shop.skin = b.dataset.skin; renderGunsmith(); }));
+  const sk = SKIN_BY_ID[shop.gun][shop.skin];
+  const open = Profile.unlocked(shop.gun, sk.id);
+  const have = Math.min(sk.n, Profile.value(sk.stat));
+  $('#skin-info').innerHTML = `<h3>${esc(sk.name)} ${shop.gun}</h3><p>${esc(sk.blurb)}</p>` +
+    (open ? `<small class="ok">${sk.stat ? 'Unlocked: ' + esc(sk.goal) : esc(sk.goal)}</small>`
+      : `<small>To unlock: <b>${esc(sk.goal)}</b></small><div class="bar"><i style="width:${(100 * have / sk.n).toFixed(0)}%"></i></div><small>${have} / ${sk.n}</small>`);
+  const btn = $('#btn-equip');
+  btn.disabled = !open || sk.id === equipped;
+  btn.textContent = sk.id === equipped ? 'Equipped' : open ? 'Equip' : 'Locked';
+  ShowcaseStage.show({ kind: shop.gun, id: sk.id });
+}
+
+function renderScores() {
+  const s = Profile.stats;
+  const ratio = (w, l) => (l ? (w / l).toFixed(2) : w ? w.toFixed(2) : '0.00');
+  const pct = (w, g) => (g ? Math.round((100 * w) / g) + '%' : '–');
+  const cardName = id => (CARD_BY_ID[id] ? CARD_BY_ID[id].name : '–');
+  $('#my-record').innerHTML = `<b>${esc(Net.name)}</b> <small>${Net.pid}</small><br>` +
+    `${s.wins} wins · ${s.losses} losses · W/L ${ratio(s.wins, s.losses)} · ${pct(s.wins, s.games)} · best streak ${s.bestStreak} · ${s.kills} kills` +
+    `<br><small>Most dealt card: ${cardName(Profile.topCard())}</small>`;
+  let rows = Scores.rows.slice();
+  if (!rows.some(r => r.pid === Net.pid) && s.games) rows.push({ pid: Net.pid, nm: Net.name, w: s.wins, l: s.losses, g: s.games, top: Profile.topCard(), local: true });
+  rows.sort((a, b) => (b.w - a.w) || ((b.w / Math.max(1, b.l)) - (a.w / Math.max(1, a.l))) || (b.g - a.g));
+  $('#score-table tbody').innerHTML = rows.length ? rows.map((r, i) =>
+    `<tr class="${r.pid === Net.pid ? 'me' : ''}"><td>${i + 1}</td><td>${esc(r.nm || 'Someone')} <small>${esc(r.pid)}</small></td><td>${r.w | 0}</td><td>${r.l | 0}</td>` +
+    `<td>${ratio(r.w | 0, r.l | 0)}</td><td>${pct(r.w | 0, r.g | 0)}</td><td>${esc(cardName(r.top))}</td></tr>`).join('')
+    : '<tr><td colspan="7" class="muted">Nobody has finished a game yet.</td></tr>';
+  $('#score-note').textContent = !Scores.ready ? 'Loading the scoreboard…'
+    : !Scores.available ? 'The shared scoreboard works when the game is opened from its claude.ai link. Your own record is kept on this phone.'
+    : Scores.canWrite === false ? "You can see the board but can't post to it from this account. Your record is posted whenever someone who can is online with you."
+    : 'Everyone who has played. Same-phone games are not counted.';
 }
 
 // ---------- guns ----------
@@ -346,7 +500,7 @@ function applyUi(f, a) {
     case 'snd': if (Sound[a[0]]) Sound[a[0]](); break;
     case 'round': state.round = a[0]; applyDread(); renderAll(); break;
     case 'whiteout': whiteout(); break;
-    case 'end': showEnd(a[0], a[1]); break;
+    case 'end': showEnd(a[0], a[1], a[2]); break;
   }
 }
 
@@ -381,7 +535,7 @@ function snapshot() {
     r: state.round, m: state.modeId, mu: state.multi ? 1 : 0, ov: state.over ? 1 : 0,
     bx: state.box ? idx(state.box.owner) : null, pl: state.pile.slice(-6), tm: teamsList(),
     ps: state.players.map(p => ({
-      nm: p.name, pid: p.pid || null, c: p.ctrl, sb: p.sub, pa: p.pal, a: p.alive ? 1 : 0, l: p.lives, b: p.bleeding ? 1 : 0,
+      nm: p.name, pid: p.pid || null, c: p.ctrl, sb: p.sub, pa: p.pal, ch: p.char, rs: p.rskin, ss: p.sskin, a: p.alive ? 1 : 0, l: p.lives, b: p.bleeding ? 1 : 0,
       h: p.hand, i: p.items, u: p.unarmed ? 1 : 0, sg: p.shotgun, hs: p.hasShotgun ? 1 : 0, bk: p.block ? 1 : 0, rv: p.reverse ? 1 : 0, k: knownStr(p),
     })),
   };
@@ -394,7 +548,7 @@ function fromSnapshot(s) {
   state.mode = MODES[s.m];
   state.multi = !!s.mu;
   state.players = s.ps.map(d => ({
-    name: d.nm, pid: d.pid, ctrl: d.c, sub: d.sb, pal: d.pa, alive: !!d.a, lives: d.l, bleeding: !!d.b, hand: d.h || [], items: d.i || [],
+    name: d.nm, pid: d.pid, ctrl: d.c, sub: d.sb, pal: d.pa, char: d.ch, rskin: d.rs, sskin: d.ss, alive: !!d.a, lives: d.l, bleeding: !!d.b, hand: d.h || [], items: d.i || [],
     unarmed: !!d.u, shotgun: d.sg || 0, hasShotgun: !!d.hs, block: !!d.bk, reverse: !!d.rv,
     gun: (d.k || '???').split('').map(c => ({ known: c !== '?', live: c === 'L' })), team: null,
   }));
@@ -413,7 +567,7 @@ function rebuildTable() {
   const k = state.players.length;
   const order = Array.from({ length: k }, (_, i) => (state.view + i) % k);
   const seat = i => (i - state.view + k) % k;
-  const tps = order.map(i => { const p = state.players[i]; return { name: p.name, sub: p.sub, pal: p.pal }; });
+  const tps = order.map(i => { const p = state.players[i]; return { name: p.name, sub: p.sub, pal: p.pal, char: p.char, rskin: p.rskin, sskin: p.sskin }; });
   Table.rebuild(tps, {
     ravage: dread(),
     seats: order.map(i => {
@@ -426,6 +580,26 @@ function rebuildTable() {
     box: state.box ? seat(idx(state.box.owner)) : null,
   });
   renderAll();
+}
+
+// ---------- stats for the scoreboard and Gunsmith ----------
+
+// What each player did this game; added to their record when it ends.
+const newTally = () => ({ kills: 0, rKills: 0, sKills: 0, grenades: 0, nukes: 0, heals: 0, blocks: 0, cards: {} });
+function tally(p, key, k = 1) { if (p && p.st) p.st[key] += k; }
+function dealt(p, ids) { if (p && p.st) ids.forEach(id => { p.st.cards[id] = (p.st.cards[id] || 0) + 1; }); }
+function killedBy(killer, victim, how) {
+  if (!killer || killer === victim) return;
+  tally(killer, 'kills');
+  if (how === 'revolver') tally(killer, 'rKills');
+  if (how === 'shotgun') tally(killer, 'sKills');
+}
+
+// One result per person at the table (by player number), sent with the end.
+function results(winners) {
+  const out = {};
+  state.players.forEach((p, i) => { if (p.ctrl !== 'bot' && p.st) out[i] = Object.assign({ win: winners.includes(p) ? 1 : 0 }, p.st); });
+  return out;
 }
 
 // ---------- starting a game ----------
@@ -451,13 +625,25 @@ function startGame(config) {
   pendingAsks.clear();
   resetHud();
 
-  const bots = Bots.lineup(state.mode.seats - config.humans.length);
-  state.players = [
-    ...config.humans.map(h => ({ name: h.name, ctrl: h.ctrl, pid: h.pid || null, sub: h.ctrl === 'remote' ? 'ONLINE' : (state.multi ? 'PLAYER' : 'YOU') })),
-    ...bots.map(b => Object.assign(b, { ctrl: 'bot', sub: Bots.label(b) })),
-  ];
+  // Nobody plays the same character: a clash (or no pick) gets a free one,
+  // and the bots play the characters that are left.
+  const taken = [];
+  const humans = config.humans.map(h => {
+    let ch = CHARACTER_BY_ID[h.char] && !taken.includes(h.char) ? h.char : null;
+    if (!ch) ch = freeCharacters(taken.concat(config.humans.map(o => o.char).filter(c => c && c !== h.char)))[0].id;
+    taken.push(ch);
+    return { name: h.name, ctrl: h.ctrl, pid: h.pid || null, char: ch, rskin: h.rskin || 'standard', sskin: h.sskin || 'standard',
+      sub: CHARACTER_BY_ID[ch].short.toUpperCase() + ' · ' + (h.ctrl === 'remote' ? 'ONLINE' : (state.multi ? 'PLAYER' : 'YOU')) };
+  });
+  const free = freeCharacters(taken);
+  const bots = Bots.lineup(state.mode.seats - config.humans.length).map((b, k) => {
+    const ch = free[k];
+    return Object.assign(b, { name: ch.short, personality: ch.personality, char: ch.id, rskin: 'standard', sskin: 'standard', ctrl: 'bot' });
+  });
+  bots.forEach(b => { b.sub = Bots.label(b); });
+  state.players = [...humans, ...bots];
   state.players.forEach((p, i) => Object.assign(p, {
-    pal: i, alive: true, hand: [], gun: loadGun(), lives: START_LIVES, bleeding: false, bleedUntil: 0,
+    pal: i, alive: true, st: newTally(), hand: [], gun: loadGun(), lives: START_LIVES, bleeding: false, bleedUntil: 0,
     items: [], shotgun: 0, hasShotgun: false, unarmed: false, team: null, priority: null, shotBy: null,
     block: false, reverse: false, cause: '',
   }));
@@ -477,7 +663,7 @@ function playAgain() {
   if (state.online === 'client') { showScreen('mode'); return; }
   const cfg = state.config;
   if (cfg && cfg.online) {
-    const humans = Net.members().map(m => ({ name: m.name, ctrl: m.me ? 'local' : 'remote', pid: m.pid }));
+    const humans = humansFor(MODES[cfg.modeId]);
     startGame(Object.assign({}, cfg, { humans: humans.slice(0, MODES[cfg.modeId].seats), online: humans.length > 1 }));
   } else if (cfg) startGame(cfg);
 }
@@ -509,6 +695,7 @@ async function runGame(game) {
     for (let i = 0; i < state.players.length; i++) {
       if (!live()) return;
       state.players[i].hand.push(hands[i][k]);
+      dealt(state.players[i], [hands[i][k]]);
       await A('deal', i, [hands[i][k]]);
     }
   }
@@ -535,6 +722,7 @@ async function takeTurn(p) {
   if (!p.hand.length && !member) {
     const ids = dealHand(teammateOf(p) ? HAND_SIZE * 2 : HAND_SIZE);
     p.hand.push(...ids);
+    dealt(p, ids);
     await A('deal', i, ids);
   }
   if (p.ctrl === 'bot') return botTurn(p);
@@ -637,7 +825,8 @@ async function resolveCard(player, id) {
     ui('log', `${N(player)} launched a <b class="live">nuclear bomb</b>.`);
     await A('nuke', pi);
     ui('whiteout');
-    state.players.forEach(p => { if (p !== player && p !== mate) { p.alive = false; p.cause = 'Wiped out by a nuclear bomb.'; } });
+    tally(player, 'nukes');
+    state.players.forEach(p => { if (p !== player && p !== mate) { if (p.alive) killedBy(player, p, 'nuke'); p.alive = false; p.cause = 'Wiped out by a nuclear bomb.'; } });
     await sleep(1200);
     endGame([player, mate].filter(Boolean), `${N(player)} launched a nuclear bomb. Everyone else was wiped out.`);
     return;
@@ -680,13 +869,14 @@ async function resolveCard(player, id) {
 // thrower keeps theirs but is caught in the blast too.
 async function throwGrenade(p) {
   const hits = [], blocked = [], lines = [];
+  tally(p, 'grenades');
   for (const v of alive()) {
     if (v === p) continue;
-    if (v.block) { v.block = false; blocked.push(v); lines.push(`${N(v)}'s shield took the blast`); continue; }
+    if (v.block) { v.block = false; blocked.push(v); tally(v, 'blocks'); lines.push(`${N(v)}'s shield took the blast`); continue; }
     v.hand = [];
     v.items = [];
     const res = hit(v, 'wound');
-    if (res.dies) v.cause = 'Caught in a grenade blast.';
+    if (res.dies) { v.cause = 'Caught in a grenade blast.'; killedBy(p, v, 'grenade'); }
     hits.push({ v, res });
   }
   const self = hit(p, 'wound');
@@ -794,8 +984,9 @@ async function fire(shooter, target) {
   // a Reverse ring sends the shot back; a Block shield stops it
   let victim = target, reverse = false, blocked = false;
   if (target !== shooter && target.reverse) { target.reverse = false; reverse = true; victim = shooter; }
-  if (victim.block) { victim.block = false; blocked = true; }
+  if (victim.block) { victim.block = false; blocked = true; tally(victim, 'blocks'); }
   const res = blocked ? { dies: false } : hit(victim, shotgun ? 'kill' : 'wound');
+  if (res.dies) killedBy(shooter, victim, shotgun ? 'shotgun' : 'revolver');
   if (res.dies) victim.cause = shotgun ? 'A shotgun blast.' : reverse ? 'Your own shot, turned back by a Reverse.' : 'Shot again while already bleeding.';
   const vn = N(victim);
   let line = `${N(shooter)} shot ${tn}${shotgun ? ' with the shotgun' : ''}: <b class="live">BANG!</b> `;
@@ -827,6 +1018,7 @@ async function endOfRound() {
     if (p.lives <= 0) {
       p.alive = false;
       p.cause = isYou(p) ? 'You bled out. Nobody bandaged you in time.' : 'Bled out.';
+      if (p.shotBy && p.shotBy.alive) killedBy(p.shotBy, p, 'revolver');
       ui('log', `${N(p)} bled out.`);
       await A('bleedOut', i);
       onDeath(p);
@@ -890,7 +1082,7 @@ function endGame(winners, reason) {
   if (state.over) return;
   state.over = true;
   turn = null;
-  ui('end', winners.map(idx), reason);
+  ui('end', winners.map(idx), reason, results(winners));
 }
 
 // ---------- boxes and items ----------
@@ -925,6 +1117,7 @@ async function useItem(p, id, target) {
   if (k < 0) return;
   p.items.splice(k, 1);
   const pi = idx(p);
+  if (id === 'potion' || id === 'bandage') tally(p, 'heals');
   if (id === 'potion') {
     p.lives++;
     await A('usePotion', pi);
@@ -1322,7 +1515,7 @@ function whiteout() {
 }
 
 // The end screen, worded for whoever is looking at this phone.
-function showEnd(winIdx, reason) {
+function showEnd(winIdx, reason, res) {
   state.over = true;
   turn = null;
   hidePanel();
@@ -1337,9 +1530,27 @@ function showEnd(winIdx, reason) {
   else if (mine.length === 1) title = winners.includes(mine[0]) ? 'YOU WIN' : !mine[0].alive ? 'YOU DIED' : `${names} ${winners.length > 1 ? 'WIN' : 'WINS'}`;
   else title = `${names} ${winners.length > 1 ? 'WIN' : 'WINS'}`;
   $('#game-over-title').textContent = title;
-  $('#game-over-reason').innerHTML = reason;
+  $('#game-over-reason').innerHTML = reason + recordResult(res);
   $('#btn-again').textContent = state.online === 'client' ? 'Back to party' : 'Play again';
   setTimeout(() => $('#game-over').classList.remove('hidden'), 1200);
+}
+
+// Add the finished game to this phone's record (and the scoreboard). Only
+// counts when one person plays on this phone: same-phone games are shared.
+let recordedGame = null;
+function recordResult(res) {
+  if (!res) return '';
+  const key = state.online === 'client' ? 'c' + client.gid : 'h' + state.game;
+  if (recordedGame === key) return '';
+  const locals = state.players.filter(p => p.ctrl === 'local');
+  const mine = state.online === 'client' ? state.view : locals.length === 1 ? idx(locals[0]) : -1;
+  const r = res[mine];
+  if (!r) return '';
+  recordedGame = key;
+  const unlocks = Profile.record({ win: !!r.win, mode: state.modeId, st: r });
+  Scores.push();
+  if (!unlocks.length) return '';
+  return `<span class="unlock">Gunsmith unlocked: ${unlocks.map(u => `<b>${esc(u.skin.name)} ${u.kind}</b>`).join(', ')}</span>`;
 }
 
 function toggleCover() {
