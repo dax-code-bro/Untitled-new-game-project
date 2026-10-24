@@ -268,3 +268,29 @@ still pad-like at 4K; faces are still MakeHuman faces (expression units help, no
 - 03:15 UTC: DONE for this round. Final 4K in output/humans/r1/ (hero-*-r1, contact-1..7-r1,
   riders-1..3-r1 + _1920 + _crop-*); npm test 33/33 (234 s). Old caches (*.prev) deleted; the
   review renders (output/humans/r1c) deleted. Timings in README.
+
+## PERFORMANCE track (2026-10-24, from ~15:00 UTC) - lip-sync, face, body motion, crowd
+
+Built on the previous builder's snapshot (face.js units rig, rig.js IK toolkit, offline/lipsync_align.py,
+data/face-units.json). New modules (all pure functions of t over a schedule set up in setup()):
+- `visemes.js`: phones -> 9 articulators (jaw, close, round, spread, fv, th, tip, upper, press) with
+  Cohen-Massaro dominance coarticulation, rest segments in pauses, a contact floor for p/b/m and f/v,
+  loudness-scaled jaw, 40 ms visual lead; `visemeUnits()` maps onto MakeHuman units (tuned on renders:
+  LipsKiss + UpperLipForward for rounding - lowerLipForward parts the lips; JawOpen 0.72 + JawDrop 0.2).
+- `expressions.js`: 11 emotion unit sets (calm worry pain fear anger grief amusement surprise tender
+  contempt determined) + `emotionFromDelivery()` (whole-word rules; the old python rules read
+  "reaching" as pain, "saddle" as grief, "scold" as anger). lipsync JSON now stores `dl` (delivery
+  note) + `scene`; refresh with `lipsync_align.py --meta-only` (seconds, no re-alignment).
+- `faceperf.js`: face performer (say/mood/look/react/apply): lip-sync, emotion envelopes per line,
+  brow raises + head nods on stressed syllables (envelope accents), blinks (spontaneous / phrase /
+  gaze-shift, fear blinks more), gaze with fixation pattern on faces, aversion at line starts,
+  lids follow the eyes (derived units <Side>LidsDown/Up/TurnLeft/Right in face.js).
+- `motion.js`: body (place/walk/follow/trajectory/gesture/posture/stagger/fall/look/apply):
+  gait phase table with planted feet (plant = trajectory at 41% of stance, 32% running), heel/toe
+  roll, Hermite swing, pelvis lowered by the planted legs' reach (makes the walk's bob), spine
+  counter-rotation, arm swing, gestures (point wave reach support cradle handsToFace protectHead
+  flail carry explain), postures (crouch kneel cower hunch), falls, carryChild().
+- `perform.js`: public API createPerformer() (performLine, walkPath, runPath, gesture, posture,
+  lookAt, glance, mood, react, stagger, fall, carry, update) + directorFace() hook.
+Node test harness (no browser): scratchpad eng1/perf/nodechar.mjs + walkstat.mjs / walkerr.mjs
+(characters build in Node with a DOM stub; gait numbers: stance slip 0, IK error < 5 mm walking).

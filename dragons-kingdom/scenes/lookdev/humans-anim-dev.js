@@ -1,7 +1,8 @@
 // Humans performance - face development: one character's face close-up, frame k = face pose k.
 // scenes/lookdev/humans-anim-dev.json: { "id": "remi", "poses": [{ "JawDrop": 1 }, ...], "az": 20 }
-// (a pose may also be { "line": "L011", "t": 0.4 } - the lip-sync pose of that line at take time t,
-//  or { "emotion": { "fear": 1 } }). Render all poses in one run as a 1-fps sequence:
+// (a pose may also be { "visemes": { "jaw": 0.7, "round": 0.3 } } - articulators through
+//  visemes.js visemeUnits - or { "emotion": { "fear": 1 } } through expressions.js).
+// Render all poses in one run as a 1-fps sequence:
 //   node render/render.mjs scenes/lookdev/humans-anim-dev.js --preset draft --fps 1 --seconds N --workers 1
 import * as THREE from 'three';
 import { loadHDRI, loadPBR } from '../lib/assets.js';
@@ -11,8 +12,6 @@ import { reviewTime } from '../lib/humans/stage.js';
 import { filmFinish } from './finish.js';
 
 const CFG = await fetch(new URL('./humans-anim-dev.json', import.meta.url)).then((r) => r.json()).catch(() => ({ id: 'remi', poses: [{}] }));
-let perf = null;
-try { perf = await import('../lib/humans/perform.js'); } catch { perf = null; }
 
 export const meta = {
   title: 'Humans performance - face dev',
@@ -47,9 +46,9 @@ export async function setup(ctx) {
   scene.add(ch.root);
   const units = await loadFaceUnits();
   const face = createFaceRig(ch, units);
-  let lip = null;
-  if (perf) lip = await perf.loadPerformanceData();
-  S = { ch, face, lip };
+  const vis = await import('../lib/humans/visemes.js');
+  const expr = await import('../lib/humans/expressions.js');
+  S = { ch, face, vis, expr };
 }
 
 export function update(t, ctx) {
@@ -60,7 +59,10 @@ export function update(t, ctx) {
   const p = poses[Math.min(poses.length - 1, Math.max(0, rt.k))] || {};
   ch.update(0, { blink: false, eyes: CFG.eyes ?? false, amount: 0 });
   let w = p;
-  if (perf && (p.line || p.emotion)) w = perf.facePoseFor(ch, S.lip, p);
+  if (p.visemes) {
+    const v = { jaw: 0, close: 0, round: 0, spread: 0, fv: 0, th: 0, tip: 0, upper: 0, press: 0, ...p.visemes };
+    w = S.vis.visemeUnits(v, {});
+  } else if (p.emotion) w = S.expr.emotionUnits(p.emotion, {});
   face.apply(w);
   ch.root.updateMatrixWorld(true);
   const P = (n) => ch.bone(n).getWorldPosition(new THREE.Vector3());

@@ -14,9 +14,13 @@ Per take (vo/takes.json, WAVs in vo/, word times in vo/words.json):
      words.json window (vowels weighted x2.2, stops x0.7).
   3. a LOUDNESS envelope: RMS over 20 ms windows every 10 ms, in dB, mapped -45..-10 dBFS -> 0..63
      (one base64url character per 10 ms; the takes are level-matched to -20 dBFS voiced RMS).
-  4. an EMOTION estimate from the line's delivery note (dialogue.json `delivery`, takes.json performance
-     preset): weights 0..1 of calm, worry, pain, fear, anger, grief, amusement, surprise, by keyword
-     rules (KEYWORDS below). A starting point for the director; every line can be overridden in a shot.
+  4. the line's DELIVERY note (dialogue.json `delivery` -> `dl`), its scene and addressee. The emotion mix
+     is computed at runtime from `dl` + the performance preset (scenes/lib/humans/expressions.js
+     emotionFromDelivery: whole-word rules, negations dropped), so there is one rule set, testable in
+     Node; perform.js adds hand-set overrides for key lines and a per-scene mood.
+
+    --meta-only   refresh only the delivery / scene / addressee fields of an existing file (no
+                  re-alignment, seconds; run it after dialogue.json changes).
 
 Deterministic (no random numbers; fresh decoders). Non-verbal placeholders (vo/nonverbal/NV-*.wav) get an
 envelope only (no phones: an open, shaped mouth from the loudness).
@@ -46,40 +50,6 @@ EXTRA_WORDS = {
 }
 VOWELS = {'AA', 'AE', 'AH', 'AO', 'AW', 'AY', 'EH', 'ER', 'EY', 'IH', 'IY', 'OW', 'OY', 'UH', 'UW'}
 STOPS = {'P', 'B', 'T', 'D', 'K', 'G'}
-
-# delivery-note keywords -> emotion weights (first match per keyword; weights add, then clamp to 1)
-KEYWORDS = [
-    (r'\bcalm|controlled|steady|economical|simple|practical|plain|restrained|level|even\b', {'calm': 0.6}),
-    (r'\bgentle|soft|warm|tender|kind|quiet(ly)?|hushed|careful\b', {'calm': 0.45}),
-    (r'\bcasual|easy|light\b', {'calm': 0.35, 'amusement': 0.15}),
-    (r'\bworr(y|ied)|anxious|nervous|uneasy|concern|tense|unsure|hesitant|doubt|checking|urgent|breathless|frighten', {'worry': 0.6}),
-    (r'\bpain|hurt|wince|injur|gasp|through (the )?pain|aching', {'pain': 0.75}),
-    (r'\bfear|afraid|terrif|scared|panic|terror|horror|scream|shaking|trembl', {'fear': 0.8}),
-    (r'\bang(ry|er)|furious|fury|rage|snap|bitter|fierce|curse|swear|hard\b|cold\b|sharp', {'anger': 0.6}),
-    (r'\bshout|command|order|bark', {'anger': 0.3}),
-    (r'\bgrie(f|v)|sorrow|sad|mourn|tears|crying|weep|despair|numb|loss|broken|heavy', {'grief': 0.7}),
-    (r'\bresign|tired|weary|defeated', {'grief': 0.35, 'calm': 0.2}),
-    (r'\bteas|dry\b|amus|jok|laugh|grin|wry|smil|playful|delight|cheek|fond|banter', {'amusement': 0.6}),
-    (r'\brelie(f|ved)', {'calm': 0.3, 'amusement': 0.2}),
-    (r'\bamaz|wonder|awe|astonish|surpris|stunned|disbelief|eager', {'surprise': 0.6}),
-]
-PRESET_EMO = {'pain': {'pain': 0.8}, 'hurt': {'pain': 0.45}, 'shout': {'anger': 0.2, 'fear': 0.15},
-              'urgent': {'worry': 0.4}, 'breathless': {'worry': 0.3}, 'whisper': {'calm': 0.3},
-              'quiet': {'calm': 0.3}, 'firm': {'anger': 0.15, 'calm': 0.2}, 'command': {'anger': 0.25},
-              'resigned': {'grief': 0.3}, 'low': {'calm': 0.2, 'worry': 0.15}}
-
-
-def emotion_of(delivery, preset):
-    e = {}
-    txt = (delivery or '').lower()
-    for rx, w in KEYWORDS:
-        if re.search(rx, txt):
-            for k, v in w.items():
-                e[k] = e.get(k, 0) + v
-    for k, v in PRESET_EMO.get(preset or '', {}).items():
-        e[k] = e.get(k, 0) + v
-    return {k: round(min(1.0, v), 2) for k, v in sorted(e.items()) if v > 0.01}
-
 
 def envelope(x):
     hop, win = SR // 100, SR // 50
@@ -160,13 +130,40 @@ def spread_phones(words):
     return out
 
 
+def meta(rec, dl, tk):
+    """Delivery note, scene and addressee of a take (from dialogue.json / takes.json)."""
+    rec.pop('emo', None)
+    rec['dl'] = dl.get('delivery') or tk.get('performance', {}).get('delivery') or ''
+    rec['scene'] = tk.get('scene') or dl.get('scene')
+    if dl.get('addressee'):
+        rec['to'] = dl['addressee']
+    else:
+        rec.pop('to', None)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--vo', default=os.path.join(ROOT, 'episodes', 's01e01', 'final', 'vo'))
     ap.add_argument('--dialogue', default=os.path.join(ROOT, 'episodes', 's01e01', 'final', 'dialogue.json'))
     ap.add_argument('--only', default='')
     ap.add_argument('--out', default=OUT)
+    ap.add_argument('--meta-only', action='store_true')
     a = ap.parse_args()
+    if a.meta_only:
+        doc = json.load(open(a.out))
+        takes = {t['id']: t for t in json.load(open(os.path.join(a.vo, 'takes.json')))['takes']}
+        dlg = {l['id']: l for l in json.load(open(a.dialogue))['lines']}
+        for lid, rec in doc['lines'].items():
+            if lid in takes:
+                meta(rec, dlg.get(lid, {}), takes[lid])
+            else:
+                rec.pop('emo', None)
+                rec.setdefault('dl', rec.get('kind', ''))
+        doc['emotions'] = 'computed at runtime from dl + preset (scenes/lib/humans/expressions.js)'
+        with open(a.out, 'w') as fo:
+            json.dump(doc, fo, separators=(',', ':'))
+        print('meta refreshed', len(doc['lines']), os.path.getsize(a.out), 'bytes')
+        return
     takes = json.load(open(os.path.join(a.vo, 'takes.json')))
     words = json.load(open(os.path.join(a.vo, 'words.json')))['lines']
     dlg = {l['id']: l for l in json.load(open(a.dialogue))['lines']}
@@ -205,10 +202,7 @@ def main():
         if tk.get('cut_at_s'):
             rec['cut'] = tk['cut_at_s']
         rec['env'] = envelope(x)
-        dl = dlg.get(lid, {})
-        rec['emo'] = emotion_of(dl.get('delivery'), tk['performance']['preset'])
-        if dl.get('addressee'):
-            rec['to'] = dl['addressee']
+        meta(rec, dlg.get(lid, {}), tk)
         lines[lid] = rec
         print(lid, rec['phones_from'] if ph else 'envelope only', len(rec['ph']), rec['emo'], flush=True)
     for nv in takes.get('nonverbal_placeholders', []):
@@ -222,8 +216,8 @@ def main():
             x = x.mean(axis=1)
         kind = nv.get('kind', '')
         lines[nv['id']] = {'role': nv.get('who', ''), 'dur': round(nv['duration_s'], 3), 'preset': 'nonverbal',
-                           'kind': kind, 'ph': [], 'words': [], 'env': envelope(x),
-                           'emo': emotion_of(kind, 'pain' if 'pain' in kind or 'cry' in kind else None)}
+                           'kind': kind, 'ph': [], 'words': [], 'env': envelope(x), 'dl': kind,
+                           'scene': nv.get('scene')}
         stats['envelope_only'] += 1
     doc = {
         'schema': 'dragons-kingdom/lipsync v1',
@@ -232,7 +226,7 @@ def main():
         'source': 'episodes/s01e01/final/vo (takes.json, words.json, WAVs) + final/dialogue.json delivery notes',
         'units': 'times in centiseconds from the start of the WAV; env = 1 base64url char per 10 ms, 0..63 = -45..-10 dBFS RMS (20 ms window)',
         'phoneset': 'ARPAbet (CMU, no stress) from pocketsphinx 5.1.1 en-us',
-        'emotions': ['calm', 'worry', 'pain', 'fear', 'anger', 'grief', 'amusement', 'surprise'],
+        'emotions': 'computed at runtime from dl + preset (scenes/lib/humans/expressions.js)',
         'lines': dict(sorted(lines.items())),
     }
     os.makedirs(os.path.dirname(a.out), exist_ok=True)

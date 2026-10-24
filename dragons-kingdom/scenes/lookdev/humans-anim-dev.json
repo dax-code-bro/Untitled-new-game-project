@@ -1,1 +1,5 @@
-{ "id": "remi", "az": 18, "poses": [ { "JawDrop": 0.5 }, { "JawOpen": 0.5 }, { "JawDrop": 0.5, "lowerLipUp": 0.3 }, { "JawOpen": 0.5, "MouthLeftPullSide": 0.25, "MouthRightPullSide": 0.25 }, { "JawOpen": 0.3, "LipsKiss": 0.6 }, { "JawOpen": 0.1, "lowerLipBackward": 0.6, "UpperLipUp": 0.2 } ] }
+{ "id": "alexandria", "az": 30, "dist": 0.5, "poses": [
+  { "LipsKiss": 0.6 }, { "LipsKiss": 1.0 }, { "LipsKiss": 1.5 }, { "LipsKiss": 1.0, "UpperLipForward": 0.3 },
+  { "LipsKiss": 1.0, "lowerLipForward": 0.3 }, { "LipsKiss": 1.0, "lowerLipUp": 0.3 }, { "LipsKiss": 1.0, "JawOpen": 0.1 }, { "UpperLipForward": 0.5, "lowerLipForward": 0.5 },
+  { "visemes": { "jaw": 0.78, "spread": 0.08, "upper": 0.15 } }, { "visemes": { "jaw": 0.2, "spread": 0.62, "upper": 0.15 } }, { "lowerLipBackward": 0.6, "lowerLipUp": 0.4, "UpperLipUp": 0.2 }, { "lowerLipBackward": 0.4, "lowerLipUp": 0.6 }
+] }

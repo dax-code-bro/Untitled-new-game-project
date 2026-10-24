@@ -457,7 +457,11 @@ export function simpleTexturedMaterial(o = {}) {
   { vec3 ind = reflectedLight.indirectDiffuse; float li = dot(ind, vec3(0.2126, 0.7152, 0.0722));
     reflectedLight.indirectDiffuse = mix(ind, li * vec3(1.22, 0.95, 0.8), 0.75); }
   reflectedLight.indirectDiffuse *= mOcc; reflectedLight.directDiffuse *= mOcc;
-  reflectedLight.indirectSpecular *= mOcc * mOcc * 0.25; reflectedLight.directSpecular *= mOcc * mOcc; }` : ''));
+  reflectedLight.indirectSpecular *= mOcc * mOcc * 0.25; reflectedLight.directSpecular *= mOcc * mOcc;
+  // the environment seen by the teeth is the inside of the lips, not the sky / the field: an
+  // unshadowed sky + grass reflection turned the lower incisors grey-green
+  { vec3 sp = reflectedLight.indirectSpecular; float ls = dot(sp, vec3(0.2126, 0.7152, 0.0722));
+    reflectedLight.indirectSpecular = mix(sp, ls * vec3(1.15, 0.95, 0.85), 0.85) * ${teeth ? '0.4' : '1.0'}; } }` : ''));
     if (teeth) {
       // MakeHuman's teeth texture is a cool grey-white with baked shading: enamel is ivory, never
       // blue-white; the gums (red in the texture) stay

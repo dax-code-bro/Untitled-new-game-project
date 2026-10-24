@@ -41,6 +41,15 @@ export function loadFaceUnits(url = FACE_UNITS_URL) {
       }
       // derived units: the jaw alone (JawDrop also pulls the lower-lip centre down into a V)
       if (unit.JawDrop) unit.JawOpen = unit.JawDrop.filter(([b]) => b === 'jaw');
+      // the lids' share of the eye units (the lids follow the gaze; the eye bones themselves are
+      // turned by the performance layer): <Side>LidsDown / LidsUp / LidsIn / LidsOut
+      for (const s of ['Left', 'Right']) {
+        const lids = (u) => (unit[u] || []).filter(([b]) => !/^eye\./.test(b));
+        unit[`${s}LidsDown`] = lids(`${s}EyeDown`);
+        unit[`${s}LidsUp`] = lids(`${s}EyeUp`);
+        unit[`${s}LidsTurnLeft`] = lids(`${s}EyeturnLeft`);
+        unit[`${s}LidsTurnRight`] = lids(`${s}EyeturnRight`);
+      }
       return { names: Object.keys(unit), unit, license: doc.license, source: doc.source };
     })();
   }
@@ -79,7 +88,7 @@ export function createFaceRig(ch, units, opts = {}) {
       if (!ent) continue;
       for (const [s, rx, ry, rz] of ent) { s.x += w * rx; s.y += w * ry; s.z += w * rz; }
     }
-    if (ch.mouthU) ch.mouthU.value = Math.min(1, Math.max(0, (weights.JawDrop || 0) + 0.6 * (weights.JawDropStretched || 0)));
+    if (ch.mouthU) ch.mouthU.value = Math.min(1, Math.max(0, (weights.JawDrop || 0) + (weights.JawOpen || 0) + 0.6 * (weights.JawDropStretched || 0)));
     for (const s of S) {
       const b = ch.bones[s.i];
       const a = Math.sqrt(s.x * s.x + s.y * s.y + s.z * s.z);
