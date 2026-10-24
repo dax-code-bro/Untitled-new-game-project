@@ -341,8 +341,12 @@ function compile(S) {
     if (i > 0) {
       if (veff > 0.06) {
         const g = gaitParams(Math.max(veff, 0.45), h);
-        fLast = g.f;
-        p += g.f * DT;
+        // recovery steps after a shove are quick and short
+        const t = traj.t0 + i * DT;
+        let boost = 1;
+        for (const sg of S.staggers) { const u = (t - sg.t0) / (sg.dur + 0.4); if (u >= 0 && u <= 1) boost = Math.max(boost, 1 + 1.3 * Math.sin(Math.PI * Math.min(1, u * 1.4))); }
+        fLast = g.f * boost;
+        p += g.f * boost * DT;
       } else {
         // finish the step in progress at the last cadence, then hold at double support
         const fr = p - Math.floor(p);
@@ -534,16 +538,17 @@ export const GESTURES = {
   cradle(F, o) {
     const hurt = o.side || 'L', good = hurt === 'L' ? 'R' : 'L';
     const sh = hurt === 'L' ? 1 : -1;            // +left for the hurt side
-    const belly = F.pelvis.clone().addScaledVector(F.up, 0.2 + 0.03 * (F.rig.height - 1.5)).addScaledVector(F.fwd, 0.17);
-    const hurtHand = belly.clone().addScaledVector(F.left, -sh * 0.1).add(new THREE.Vector3(0, 0.04, 0));
+    const belly = F.pelvis.clone().addScaledVector(F.up, 0.11 + 0.04 * (F.rig.height - 1.5)).addScaledVector(F.fwd, 0.16);
+    // the hurt hand rests by the far hip: the forearm lies level across the stomach
+    const hurtHand = belly.clone().addScaledVector(F.left, -sh * (0.1 + 0.02 * (F.rig.height - 1.5))).add(new THREE.Vector3(0, 0.03, 0)).addScaledVector(F.fwd, -0.03);
     const tremble = noise1(F.seed + 7, F.t * 7) * 0.004 * (o.tremble ?? 1);
     hurtHand.y += tremble;
     const hurtElbow = F.sh[hurt].clone().addScaledVector(F.up, -F.rig.upper * 0.92).addScaledVector(F.fwd, 0.08).addScaledVector(F.left, sh * 0.02);
     // the good hand cups the hurt forearm from below, a little toward the wrist
-    const fore = hurtHand.clone().lerp(hurtElbow, 0.38).add(new THREE.Vector3(0, -0.045, 0)).addScaledVector(F.fwd, 0.02);
+    const fore = hurtHand.clone().lerp(hurtElbow, 0.3).add(new THREE.Vector3(0, -0.05, 0)).addScaledVector(F.fwd, 0.025);
     return {
-      [hurt]: { hand: hurtHand, pole: hurtElbow.clone().addScaledVector(F.left, sh * 0.25).addScaledVector(F.fwd, -0.1), fingers: F.left.clone().multiplyScalar(-sh).addScaledVector(F.fwd, 0.25).normalize(), palm: F.up.clone().multiplyScalar(-0.2).addScaledVector(F.fwd, -1).normalize(), shape: 'limp', shoulder: { up: 0.025, fwd: 0.02 } },
-      [good]: { hand: fore, pole: F.sh[good].clone().addScaledVector(F.left, -sh * 0.3).add(new THREE.Vector3(0, -0.4, 0)), fingers: F.left.clone().multiplyScalar(sh).addScaledVector(F.fwd, 0.2).normalize(), palm: F.up.clone(), shape: 'cup' },
+      [hurt]: { hand: hurtHand, pole: hurtElbow.clone().addScaledVector(F.left, sh * 0.25).addScaledVector(F.fwd, -0.1), fingers: F.left.clone().multiplyScalar(-sh).addScaledVector(F.fwd, 0.25).normalize(), palm: F.up.clone().multiplyScalar(-0.2).addScaledVector(F.fwd, -1).normalize(), shape: { curl: [0.35, 0.55, 0.65, 0.72, 0.8], spread: 0.0, thumbIn: 0.3 }, shoulder: { up: 0.025, fwd: 0.02 } },
+      [good]: { hand: fore, pole: F.sh[good].clone().addScaledVector(F.left, -sh * 0.3).add(new THREE.Vector3(0, -0.4, 0)), fingers: F.left.clone().multiplyScalar(sh).addScaledVector(F.fwd, 0.2).normalize(), palm: F.up.clone(), shape: 'grip' },
     };
   },
   /** both hands up to the face (grief / shock) */
@@ -689,7 +694,7 @@ function applyBody(S, t, o) {
     }
     const eps = 0.016;
     const drop = 0.5 * (over + Math.sqrt(over * over + eps * eps));      // smooth max(0, over), >= over
-    if (drop > 0) { rootB.position.y -= drop; ch.root.updateMatrixWorld(true); }
+    if (drop > 0) { rootB.position.y -= Math.min(drop, rig.legLen * 0.28); ch.root.updateMatrixWorld(true); }
   }
   // 4. legs by IK to the foot targets
   for (const sd of ['L', 'R']) {
@@ -771,6 +776,20 @@ function applyBody(S, t, o) {
   if (post.cower > 0.01) {
     F.dt = t; const res = GESTURES.protectHead(F, {});
     for (const sd of ['L', 'R']) if (!gest[sd] || gest[sd].w < post.cower) gest[sd] = { ...res[sd], w: post.cower };
+  }
+  // a reach beyond the arm bends the trunk toward it (picking something up, a hand to the ground)
+  for (const sd of ['L', 'R']) {
+    const ge = gest[sd];
+    if (!ge || !ge.hand || !(ge.name === 'reach' || ge.name === 'support')) continue;
+    const sh = wpos(ch.bone(`upperarm01.${sd}`), new THREE.Vector3());
+    const deficit = sh.distanceTo(ge.hand) - rig.armLen * 0.93;
+    if (deficit <= 0) continue;
+    const below = clamp01((sh.y - ge.hand.y) / 0.4);
+    const ang = Math.min(0.9, deficit / 0.45) * ge.w * (0.4 + 0.6 * below);
+    const toT = ge.hand.clone().sub(F.pelvis).setY(0).normalize();
+    const ax = new THREE.Vector3().crossVectors(UP, toT).normalize();
+    for (const [n, k] of [['spine04', 0.2], ['spine03', 0.3], ['spine02', 0.3], ['spine01', 0.2]]) { const b = ch.bone(n); if (b) rotateWorld(b, _q.setFromAxisAngle(ax, ang * k)); }
+    ch.root.updateMatrixWorld(true);
   }
   for (const sd of ['L', 'R']) {
     const base = targets[sd], ge = gest[sd];
@@ -918,6 +937,23 @@ function applyFall(S, fs, t, fwd, left) {
   const ch2 = wpos(ch.bone('spine02'), new THREE.Vector3());
   const minY = S.ground(ch2.x, ch2.z) + 0.13;
   if (ch2.y < minY) { ch.root.position.y += (minY - ch2.y) * smooth(topple * 1.5); ch.root.updateMatrixWorld(true); }
+  // once down, the legs lie along the ground behind the pelvis (not folded up in the air)
+  const down = smooth((topple - 0.7) / 0.3);
+  if (down > 0) {
+    for (const sd of ['L', 'R']) {
+      const sg = sd === 'L' ? 1 : -1;
+      const hip = wpos(ch.bone(`upperleg01.${sd}`), new THREE.Vector3());
+      // the feet are on the pivot side (opposite the direction of the fall) either way
+      const tgt = hip.clone().addScaledVector(dirW, -rig.legLen * 0.93).addScaledVector(axis, sg * 0.06);
+      tgt.y = S.ground(tgt.x, tgt.z) + 0.09;
+      // prone: knees toward the ground; on the back: knees up a little
+      const pole = hip.clone().addScaledVector(dirW, -0.4).add(new THREE.Vector3(0, forward ? -0.6 : 0.6, 0));
+      twoBoneIK(ch, 'leg', sd, tgt, pole, { reach: down });
+    }
+    const pel = wpos(ch.bone('root'), new THREE.Vector3());
+    const pmin = S.ground(pel.x, pel.z) + 0.11;
+    if (pel.y < pmin) { ch.root.position.y += pmin - pel.y; ch.root.updateMatrixWorld(true); }
+  }
   // hands reach for the ground ahead (forward) / out to the sides (back)
   const reach = smooth((u - 0.25) / 0.45);
   if (reach > 0) {
