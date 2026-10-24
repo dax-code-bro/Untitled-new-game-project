@@ -443,3 +443,4 @@ body.binoculars #bino-mask { opacity: 1; }
 #char-pick { position: fixed; inset: 0; z-index: 60; display: flex; }
 #char-pick.hidden { display: none; }
 .tile.gun { min-height: 54px; justify-content: center; font-size: 13px; }
+body.picking #screen-game > * { visibility: hidden; }

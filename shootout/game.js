@@ -644,6 +644,7 @@ function openPicker(data, pref) {
     picker.sel = [pref, picker.sel].find(id => CHARACTER_BY_ID[id] && !picker.taken.includes(id)) || free[0].id;
     $('#pick-title').textContent = data.title || 'Choose your outlaw';
     $('#char-pick').classList.remove('hidden');
+    document.body.classList.add('picking');
     picker.left = PICK_SECONDS;
     clearInterval(picker.timer);
     picker.timer = setInterval(() => { picker.left--; if (picker.left <= 0) confirmPick(); else $('#pick-timer').textContent = `Picking for you in ${picker.left}s`; }, 1000);
@@ -681,6 +682,7 @@ function closePicker() {
   picker.done = null;
   clearInterval(picker.timer);
   $('#char-pick').classList.add('hidden');
+  document.body.classList.remove('picking');
   if (was && $('#screen-game').classList.contains('active')) Table.show();
 }
 
