@@ -24,6 +24,7 @@ import { createOcean } from 'dk/ocean.js';
 import { heightfield, makeNoise, smooth, gradedAxis } from '../../sets/terrain.js';
 import { terrainMaterial } from '../../sets/materials.js';
 import { buildingKit } from '../../sets/buildings.js';
+import { scatter, bushGeometry, rockGeometry, foliageMaterial } from '../../sets/scatter.js';
 import { Kit, yawFrame, frame } from '../../architecture/core.js';
 import { archMaterials } from '../../architecture/materials.js';
 import { house } from '../../architecture/house.js';
@@ -60,7 +61,7 @@ const LOOKS = {
     { center: [S.x * 3000, S.y * 3000 + 60, S.z * 3000], radius: [1800, 360, 600], density: 0.02, noise: 0.95 },
     { center: [-400, 5, 300], radius: [800, 9, 160], density: 0.002, noise: 0.95 }] },
   walls: { sea: null, haze: 4.5, density: 0.00025, wb: 4700, exposure: 1.6, banks: () => [
-    { center: [-300, 30, -450], radius: [900, 25, 200], density: 0.002, noise: 0.95 }] },
+    { center: [-300, 30, -450], radius: [900, 25, 200], density: 0.0012, noise: 0.95 }] },
   verdor: { sea: 'dawn', haze: 4.0, density: 0.00015, wb: 4800, exposure: 1.4, banks: () => [
     { center: [-200, 30, -1900], radius: [2200, 35, 300], density: 0.006, noise: 0.9 }] },
   calm: { sea: 'calm', haze: 1.2, density: 0.00004, wb: 6000, exposure: 2.1, banks: () => [] },
@@ -107,22 +108,33 @@ export async function build(ctx, { shotSpecs }) {
     // a dark sandstone cliff: an earthy grit texture side-projected reads as weathered rock; the
     // library's block-like rock26 read as a dressed stone wall on a 60 m heightfield face
     cliff: (o = {}) => terrainMaterial(ctx, [
-      { id: 'pbr/acg_ground24', scale: 11, tint: [0.4, 0.33, 0.27], normalScale: 1.6 },
+      { id: 'pbr/acg_ground24', scale: 11, tint: [0.4, 0.33, 0.27], normalScale: 0.9 },
       { id: 'pbr/acg_ground13', scale: 8, tint: [0.42, 0.46, 0.34] },
       { id: 'pbr/acg_ground27', scale: 6, tint: [0.36, 0.32, 0.27] },
     ], { macro: 0.6, macroScale: 0.01, detailNear: 300, detailFar: 2500, vertexColors: true, ...o }),
+    // farmed / grazed land seen from 150 m - 2 km: the photographic grass layers at a large tile with
+    // weak normal maps (their tiled tread patterns read as chevrons on a slope at grazing angles),
+    // a soil layer for ploughed strips, shingle at the shore; the field patchwork is vertex colour
+    grass: (o = {}) => terrainMaterial(ctx, [
+      { id: 'pbr/acg_rock26', scale: 9, tint: [0.4, 0.38, 0.35], normalScale: 0.5 },
+      { id: 'pbr/acg_ground037', scale: 22, tint: [0.19, 0.26, 0.095], normalScale: 0.25 },
+      { id: 'pbr/acg_ground24', scale: 18, tint: [0.3, 0.23, 0.15], normalScale: 0.3 },
+      { id: 'pbr/acg_ground28', scale: 2.5, tint: [0.62, 0.58, 0.52], normalScale: 0.6 },
+    ], { macro: 0.45, macroScale: 0.01, detailNear: 120, detailFar: 700, vertexColors: true, minRoughness: 0.88, ...o }),
+    // seen from 2-3 km in mist: big tiles and weak normals (rock26's blocks at 6 m drew a fine
+    // crosshatch over the whole face), bedding from the cliff shader instead
     pale: (o = {}) => terrainMaterial(ctx, [
-      { id: 'pbr/acg_rock26', scale: 6, tint: [0.82, 0.8, 0.74] },
-      { id: 'pbr/acg_ground13', scale: 8, tint: [0.46, 0.5, 0.36] },
-      { id: 'pbr/acg_ground24', scale: 8, tint: [0.62, 0.6, 0.54] },
-    ], { macro: 0.5, macroScale: 0.004, detailNear: 300, detailFar: 3000, vertexColors: true, ...o }),
+      { id: 'pbr/acg_rock26', scale: 36, tint: [0.82, 0.8, 0.74], normalScale: 0.3 },
+      { id: 'pbr/acg_ground13', scale: 20, tint: [0.46, 0.5, 0.36], normalScale: 0.25 },
+      { id: 'pbr/acg_ground24', scale: 20, tint: [0.62, 0.6, 0.54], normalScale: 0.25 },
+    ], { macro: 0.5, macroScale: 0.004, detailNear: 200, detailFar: 1400, vertexColors: true, ...o }),
   };
   const N = makeNoise(77);
   const land = async (o) => {
     const hf = heightfield({
       xs: gradedAxis(o.x[0], o.x[1], o.n[0], o.focus?.[0], o.focus ? 1.6 : 0), zs: gradedAxis(o.z[0], o.z[1], o.n[1], o.focus?.[1], o.focus ? 1.6 : 0),
       height: o.h,
-      splat: (x, z, y, n) => { const steep = smooth(0.55, 0.85, 1 - n[1]); const low = 1 - smooth(1.5, 8, y); const g = (1 - steep) * (1 - low); return [Math.max(steep, low * 0.7), g * 0.7, g * 0.3 + low * 0.3, 0]; },
+      splat: o.splat || ((x, z, y, n) => { const steep = smooth(0.55, 0.85, 1 - n[1]); const low = 1 - smooth(1.5, 8, y); const g = (1 - steep) * (1 - low); return [Math.max(steep, low * 0.7), g * 0.7, g * 0.3 + low * 0.3, 0]; }),
       color: o.color || ((x, z, y, n) => { const p = N.fbm(x * 0.008 + 11, z * 0.008 - 4, 4); const v = Math.max(0.3, 0.95 + 0.9 * p); return [v * 0.98, v, v * 0.96]; }),
       skip: (a, b, c, d) => Math.max(a, b, c, d) < -10,
     });
@@ -133,7 +145,58 @@ export async function build(ctx, { shotSpecs }) {
   const locs = {};
   const group = (name) => { const g = new THREE.Group(); g.name = `loc:${name}`; g.visible = false; scene.add(g); locs[name] = g; return g; };
 
-  // ---- settlement: a fishing settlement on a slope above a shingle shore (P-08 / P-09)
+  // ---- farmed land: irregular fields (an anisotropic jittered-grid Voronoi, turned per landscape),
+  // each with its own use, hedges along the boundaries, trees in the hedges and in small woods. Seen
+  // from 150 m to 2 km a worked landscape reads by this patchwork; an even slope of one texture read
+  // as CG (the provisional P-08 / P-11)
+  const hash = (i, j, k) => { let h = Math.imul(i, 374761393) + Math.imul(j, 668265263) + Math.imul(k, 1442695041); h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+  const fields = ({ cell = 90, rot = 0.3, stretch = 1.6, seed = 1 }) => {
+    const c = Math.cos(rot), sn = Math.sin(rot), ks = Math.sqrt(stretch);
+    return (x, z) => {
+      const u = (x * c - z * sn) / cell, v = (x * sn + z * c) / cell;
+      const iu = Math.floor(u), iv = Math.floor(v);
+      let d1 = 1e9, d2 = 1e9, id = 0;
+      for (let a = -2; a <= 2; a++) for (let b = -1; b <= 1; b++) {
+        const pu = iu + a + 0.1 + 0.8 * hash(iu + a, iv + b, seed), pv = iv + b + 0.1 + 0.8 * hash(iu + a, iv + b, seed + 7);
+        const d = Math.hypot((u - pu) / ks, (v - pv) * ks);
+        if (d < d1) { d2 = d1; d1 = d; id = hash(iu + a, iv + b, seed + 13); } else if (d < d2) d2 = d;
+      }
+      return { id, edge: 0.5 * (d2 - d1) * cell / ks };
+    };
+  };
+  // field colours (x the grass layer): grazed pasture, hay meadow (paler, yellower), rough grazing
+  // (darker, tussocky), and ploughed strips (the soil layer)
+  const USE = { pasture: [0.92, 1.02, 0.86], hay: [1.3, 1.16, 0.8], rough: [0.74, 0.8, 0.6], plough: [1, 1, 1], moor: [1.02, 0.84, 0.62] };
+  const landUse = (F, mix) => (x, z) => {
+    const f = F(x, z);
+    const k = f.id < mix[0] ? 'pasture' : f.id < mix[1] ? 'hay' : f.id < mix[2] ? 'rough' : 'plough';
+    return { k, f };
+  };
+  const hedgeMat = foliageMaterial({ color: [0.035, 0.055, 0.022], leafScale: 3, flower: [0.6, 0.6, 0.5, 0.12] });
+  const hedgeGeo = [bushGeometry(1, 11, 0.8), bushGeometry(1, 23, 0.9)];
+  /** hedges on the field boundaries: bushes every ~2.4 m (with gaps), a hedgerow tree now and then */
+  const hedges = (o) => {
+    const pts = [[], []], trees = [];
+    const rr = mulberry(o.seed || 5);
+    const st = o.step || 1.25;
+    for (let z = o.z[0]; z < o.z[1]; z += st) for (let x = o.x[0]; x < o.x[1]; x += st) {
+      const jx = x + (rr() - 0.5) * st, jz = z + (rr() - 0.5) * st;
+      if (!o.where(jx, jz)) continue;
+      const f = o.F(jx, jz);
+      if (f.edge > 0.75) continue;
+      if (N.fbm(jx * 0.05 + 3, jz * 0.05, 2) < -0.45) continue;           // gaps, gateways
+      const y = o.H(jx, jz);
+      const s = 1.9 + 2.4 * rr() * rr() + 0.6 * rr();
+      pts[rr() < 0.5 ? 0 : 1].push({ p: [jx, y - 0.4, jz], s: [s, s * (0.55 + 0.45 * rr()), s * (0.8 + 0.4 * rr())], c: [0.7 + 0.4 * rr(), 0.8 + 0.25 * rr(), 0.7 + 0.35 * rr()] });
+      if (rr() < (o.treeP ?? 0.03)) trees.push([jx, y, jz]);
+    }
+    const grp = new THREE.Group();
+    pts.forEach((list, i) => { if (list.length) grp.add(scatter(hedgeGeo[i], hedgeMat, list.length, (r, k) => list[k] || null, 3 + i)); });
+    return { group: grp, trees, count: pts[0].length + pts[1].length };
+  };
+
+  // ---- settlement: a fishing settlement on a slope above a shingle shore (P-08 / P-09): small hedged
+  // fields round the houses, rough grazing above, moor on the tops; hawthorn and sycamore in the hedges
   if (used.has('settlement')) {
     const g = group('settlement');
     const shore = (x) => -140 + 35 * Math.sin(x / 210) + 18 * Math.sin(x / 63 + 1);
@@ -143,7 +206,37 @@ export async function build(ctx, { shotSpecs }) {
       const slope = 0.06 * d + 0.00012 * d * d;
       return 0.5 + slope + 14 * N.fbm(x * 0.004 + 3, z * 0.004, 4) * smooth(20, 200, d) + 40 * smooth(300, 800, d) * (0.6 + 0.4 * N.fbm(x * 0.002, z * 0.002 + 5, 3));
     };
-    const L = await land({ x: [-1600, 1600], z: [-1500, 200], n: [520, 300], focus: [0, -180], h: H });
+    const F = fields({ cell: 64, rot: 0.22, stretch: 1.7, seed: 3 });
+    const LU = landUse(F, [0.5, 0.7, 0.9]);
+    const moorAt = (x, z) => smooth(330, 520, shore(x) - z + 110 * N.fbm(x * 0.003 + 7, z * 0.003, 3));
+    const color = (x, z, y, n) => {
+      const d = shore(x) - z;
+      const p = N.fbm(x * 0.02 + 11, z * 0.02 - 4, 3);
+      let c = [1, 1, 1];
+      if (d > 4) {
+        const { k, f } = LU(x, z);
+        const u = USE[k];
+        const m = moorAt(x, z);
+        const v = 0.9 + 0.2 * f.id;
+        // the moor in patches: heather and dead bracken (darker, browner), paler grass between
+        const hb = smooth(-0.15, 0.35, N.fbm(x * 0.007 + 2, z * 0.007 - 6, 3));
+        const mo = [USE.moor[0] * (1.1 - 0.35 * hb), USE.moor[1] * (1.12 - 0.42 * hb), USE.moor[2] * (1.05 - 0.4 * hb)];
+        c = [0, 1, 2].map((i) => (u[i] * v) * (1 - m) + mo[i] * (0.85 + 0.3 * p) * m);
+        if (f.edge < 2.2 && m < 0.5) c = c.map((q) => q * 0.72);       // the hedge bottoms
+      }
+      return c.map((q) => q * (0.94 + 0.12 * p));
+    };
+    const splat = (x, z, y, n) => {
+      const d = shore(x) - z;
+      const steep = smooth(0.55, 0.85, 1 - n[1]);
+      const shingle = 1 - smooth(1.5, 9, d) * smooth(0.4, 2.2, y);
+      const { k } = LU(x, z);
+      const m = moorAt(x, z);
+      const soil = Math.max(k === 'plough' && m < 0.5 ? 1 : 0, 0.35 * m);
+      const r = (1 - steep) * (1 - shingle);
+      return [steep, r * (1 - soil), r * soil, shingle * (1 - steep)];
+    };
+    const L = await land({ x: [-1600, 1600], z: [-1500, 200], n: [520, 300], focus: [0, -180], h: H, mat: 'grass', color, splat });
     g.add(L.mesh);
     const M = await archMaterials(ctx);
     const kit = new Kit(0);
@@ -160,23 +253,49 @@ export async function build(ctx, { shotSpecs }) {
     const town = kit.build(M, { name: 'settlement' });
     town.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     g.add(town);
+    // hedges: not on the shore, not across a house plot, not on the moor
+    const hg = hedges({ x: [-560, 560], z: [-800, -110], F, H, seed: 41, treeP: 0.02,
+      where: (x, z) => shore(x) - z > 12 && moorAt(x, z) < 0.45 && !spots.some((s) => Math.hypot(s[0] - x, s[1] - z) < 9) });
+    g.add(hg.group);
+    // trees: wind-shorn hawthorn and sycamore in the hedges, a few round the houses, small woods in the
+    // folds of the slope
+    const thorn = await treeKit(ctx, 'hawthorn', { variants: 2, seed: 51, exposure: 0.8 });
+    const syc = await treeKit(ctx, 'sycamore', { variants: 2, seed: 52, exposure: 0.5 });
+    const places = hg.trees.map(([x, y, z], i) => ({ kit: i % 3 ? thorn : syc, x, y: y - 0.2, z, variant: i % 2, yaw: rr() * 6.28, scale: 0.8 + 0.5 * rr() }));
+    for (const [x, z] of spots) if (rr() < 0.45) { const a = rr() * 6.28; const tx = x + 9 * Math.cos(a), tz = z + 9 * Math.sin(a); places.push({ kit: syc, x: tx, y: H(tx, tz) - 0.2, z: tz, variant: Math.floor(rr() * 2), yaw: rr() * 6.28, scale: 0.8 + 0.4 * rr() }); }
+    for (let z = -700; z < -150; z += 6) for (let x = -800; x < 800; x += 6) {
+      const jx = x + (rr() - 0.5) * 5, jz = z + (rr() - 0.5) * 5;
+      const d = shore(jx) - jz;
+      if (d < 60 || moorAt(jx, jz) > 0.6 || N.fbm(jx * 0.006 + 21, jz * 0.006 - 3, 3) < 0.32) continue;
+      if (spots.some((s) => Math.hypot(s[0] - jx, s[1] - jz) < 12)) continue;
+      places.push({ kit: rr() < 0.7 ? syc : thorn, x: jx, y: H(jx, jz) - 0.2, z: jz, variant: Math.floor(rr() * 2), yaw: rr() * 6.28, scale: 0.75 + 0.5 * rr() });
+    }
+    g.add(scatterTrees(places, { views: [[-35, 13, 66], [25, 7, 310]], lod0: 40, lod1: 200, lod2: 700 }).group);
+    console.warn(`[director] settlement: ${hg.count} hedge bushes, ${places.length} trees`);
   }
   // ---- forest: a dark sandstone sea cliff, oak and pine wood to its edge (P-10)
   if (used.has('forest')) {
     const g = group('forest');
-    // the edge line wanders, with gullies and buttresses (vertical shadow lines on the face)
-    const edge = (x) => -140 + 28 * Math.sin(x / 170 + 0.6) + 12 * Math.sin(x / 47) + 9 * N.fbm(x * 0.045, 3.3, 3) + 4 * N.fbm(x * 0.17, 8.1, 2);
+    // the edge line wanders in headlands and bays (fine gullies every 20-40 m made an even comb of
+    // vertical light / shadow stripes under the raking dawn sun: a timber palisade)
+    const edge = (x) => -140 + 28 * Math.sin(x / 170 + 0.6) + 9 * Math.sin(x / 83 + 2) + 6 * N.fbm(x * 0.015, 3.3, 2);
+    const topAt = (x) => 48 + 26 * smooth(-0.5, 0.6, N.fbm(x * 0.0016 + 4, 1.3, 3));      // 48-74 m along the coast
+    const benchAt = (x) => 0.36 + 0.12 * N.fbm(x * 0.006 + 2, 5.5, 2);                  // the vegetated ledge
+    const faceW = (x) => 22 + 8 * N.fbm(x * 0.02, 7, 2);
+    // the profile down the face (u = 0 at the lip, 1 at the foot): an upper wall, a narrow bench where
+    // a softer bed weathered back (scrub grows on it), a lower wall, a talus slope at the foot
+    const prof = (u, b) => {
+      if (u < b) return 1 - 0.47 * (u / b) - 0.015 * smooth(0, 0.05, u);
+      if (u < b + 0.12) return 0.53 - 0.05 * (u - b) / 0.12;
+      if (u < 0.86) return 0.48 - 0.42 * (u - b - 0.12) / (0.74 - b);
+      return 0.06 * (1 - smooth(0.86, 1.25, u));
+    };
     const H = (x, z) => {
       const d = edge(x) - z;                        // metres inland of the cliff edge
-      const top = 62 + 10 * N.fbm(x * 0.003, z * 0.003 + 9, 3) + 0.02 * Math.max(0, d);
+      const top = topAt(x) + 6 * N.fbm(x * 0.003, z * 0.003 + 9, 3) + 0.02 * Math.max(0, d);
       if (d > 0) return top + 1.5 * N.fbm(x * 0.03, z * 0.03, 3);
-      // the face: near-vertical, with ledges; a boulder apron at its foot
-      const f = -d;
-      // a stepped face: two hard beds make ledges, softer beds between weather back; talus at the foot
-      const w = 16 + 8 * N.fbm(x * 0.02, 7, 2);
-      const u = smooth(0, w, f);
-      const steps = 0.08 * Math.sin(u * Math.PI * 3) * (1 - u);
-      const face = top * (1 - u - steps) + 3.5 * smooth(w * 0.7, w + 14, f) * (1 - smooth(w + 14, w + 40, f));
+      const f = -d, w = faceW(x);
+      const face = top * prof(f / w, benchAt(x)) + 3.5 * smooth(w * 0.85, w + 10, f) * (1 - smooth(w + 10, w + 34, f));
       return Math.max(-8, face - 0.25 * Math.max(0, f - w - 25));
     };
     // vertex colour on the face: horizontal beds (light / dark sandstone), dark run-off streaks, a
@@ -189,18 +308,21 @@ export async function build(ctx, { shotSpecs }) {
         const bed = 0.5 + 0.5 * Math.sin(y * 0.42 + 2.5 * N.fbm(x * 0.012, 1.7, 2));
         const streak = N.fbm(x * 0.11, y * 0.015 + 2, 3);
         const wet = 1 - smooth(0.5, 5, y);
-        v *= 1 - steep * (0.45 - 0.35 * bed - 0.4 * streak + 0.35 * wet);
+        // beds dominate; run-off streaks only here and there (an even comb of vertical streaks under a
+        // raking sun read as a timber palisade)
+        const patch = smooth(0.15, 0.55, N.fbm(x * 0.012 + 5, y * 0.01, 2));
+        v *= 1 - steep * (0.42 - 0.45 * bed - 0.22 * streak * patch + 0.35 * wet);
       }
       return [v * 0.98, v * 0.97, v * 0.95];
     };
-    const L = await land({ x: [-1400, 1400], z: [-1400, 400], n: [720, 480], focus: [0, -140], h: H, mat: 'cliff', color: faceColor, matOpts: { cliff: { strata: 1.0, streaks: 0.9, wet: 0.8, ochre: 0.6 } } });
+    const L = await land({ x: [-1400, 1400], z: [-1400, 400], n: [720, 480], focus: [0, -140], h: H, mat: 'cliff', color: faceColor, matOpts: { cliff: { strata: 1.0, streaks: 0.08, wet: 0.8, ochre: 0.6 } } });
     g.add(L.mesh);
     const oak = await treeKit(ctx, 'oak', { variants: 2, seed: 31, exposure: 0.2 });
     const oakW = await treeKit(ctx, 'oak', { variants: 2, seed: 32, exposure: 0.8, scale: 0.75 });
     const pine = await treeKit(ctx, 'pine', { variants: 2, seed: 33 });
     const rr = mulberry(4242), places = [];
     const G = 7.5;
-    for (let z = -620; z < -100; z += G) for (let x = -420; x < 420; x += G) {
+    for (let z = -620; z < -100; z += G) for (let x = -1000; x < 560; x += G) {
       const jx = x + (rr() - 0.5) * G * 0.9, jz = z + (rr() - 0.5) * G * 0.9;
       const d = edge(jx) - jz;
       if (d < 1.5) continue;
@@ -209,7 +331,26 @@ export async function build(ctx, { shotSpecs }) {
       const kit = d < 18 ? (u < 0.7 ? oakW : pine) : u < 0.6 ? oak : pine;
       places.push({ kit, x: jx, y: H(jx, jz) - 0.2, z: jz, variant: Math.floor(rr() * 2), yaw: rr() * 6.28, scale: (0.8 + 0.4 * rr()) * (d < 18 ? 0.85 : 1) });
     }
-    g.add(scatterTrees(places, { views: [[0, 12, 420]], lod0: 60, lod1: 250, lod2: 900 }).group);
+    g.add(scatterTrees(places, { views: [[255, 20, 150]], lod0: 60, lod1: 250, lod2: 900 }).group);
+    // scrub on the bench and the lip, fallen blocks along the foot (the face no longer meets the sea in
+    // one smooth roll)
+    const scrub = [], blocks = [];
+    for (let x = -1000; x < 560; x += 2.2) {
+      const w = faceW(x), b = benchAt(x), e = edge(x);
+      if (N.fbm(x * 0.02 + 9, 2.2, 2) > -0.25) {
+        const z = e + (b + 0.06) * w + (rr() - 0.5) * 2, y = H(x, z);
+        const sc = 1.6 + 1.8 * rr();
+        scrub.push({ p: [x + rr(), y - 0.3, z], s: [sc, sc * 0.7, sc], c: [0.8 + 0.4 * rr(), 0.9 + 0.2 * rr(), 0.8] });
+      }
+      if (rr() < 0.55) {
+        const z = e + w * (0.9 + 0.35 * rr()), y = H(x, z);
+        const sc = 1.2 + 4.5 * rr() * rr();
+        blocks.push({ p: [x + rr() * 2, y - sc * 0.25, z], s: [sc, sc * (0.6 + 0.4 * rr()), sc * (0.8 + 0.4 * rr())], c: [0.85 + 0.3 * rr(), 0.85 + 0.25 * rr(), 0.8 + 0.25 * rr()] });
+      }
+    }
+    g.add(scatter(hedgeGeo[0], hedgeMat, scrub.length, (r, k) => scrub[k] || null, 7));
+    const rockMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(0.2, 0.16, 0.12), roughness: 0.92, metalness: 0 });
+    g.add(scatter(rockGeometry(2, 5), rockMat, blocks.length, (r, k) => blocks[k] || null, 8));
   }
   // ---- walls: a curtain wall with round towers along a far ridge, inland (P-11)
   if (used.has('walls')) {
@@ -219,8 +360,43 @@ export async function build(ctx, { shotSpecs }) {
       const r = Math.exp(-Math.pow((z - ridgeZ(x)) / 260, 2)) * (70 + 20 * N.fbm(x * 0.003, 4, 3));
       return 4 + r + 10 * N.fbm(x * 0.004 + 1, z * 0.004, 4) + 0.02 * Math.max(0, -z - 1000) + (z > -150 ? 6 * smooth(-150, 100, z) : 0);
     };
-    const L = await land({ x: [-2600, 2600], z: [-2600, 300], n: [520, 360], focus: [0, -800], h: H });
+    // the land below the walls is farmed: long hedged strips on the lower slope, rough grazing on the
+    // ridge (the wall keeps a clear glacis), small woods in the folds
+    const F = fields({ cell: 95, rot: 0.12, stretch: 2.3, seed: 9 });
+    const LU = landUse(F, [0.42, 0.66, 0.8]);
+    const glacis = (x, z) => 1 - smooth(70, 150, z - ridgeZ(x) - 15);   // 1 within ~70 m below the wall (and beyond it)
+    const color = (x, z, y, n) => {
+      const p = N.fbm(x * 0.02 + 11, z * 0.02 - 4, 3);
+      const { k, f } = LU(x, z);
+      const gl = glacis(x, z);
+      const u = USE[k], r = USE.rough, v = 0.9 + 0.2 * f.id;
+      let c = [0, 1, 2].map((i) => u[i] * v * (1 - gl) + r[i] * 1.1 * gl);
+      if (f.edge < 2.4 && gl < 0.5) c = c.map((q) => q * 0.72);
+      return c.map((q) => q * (0.94 + 0.12 * p));
+    };
+    const splat = (x, z, y, n) => {
+      const steep = smooth(0.55, 0.85, 1 - n[1]);
+      const { k } = LU(x, z);
+      const soil = k === 'plough' && glacis(x, z) < 0.5 ? 1 : 0;
+      const r = 1 - steep;
+      return [steep, r * (1 - soil), r * soil, 0];
+    };
+    const L = await land({ x: [-2600, 2600], z: [-2600, 300], n: [520, 360], focus: [0, -800], h: H, mat: 'grass', color, splat });
     g.add(L.mesh);
+    const hg = hedges({ x: [-620, 620], z: [-780, -300], F, H, seed: 43, treeP: 0.018,
+      where: (x, z) => glacis(x, z) < 0.4 });
+    g.add(hg.group);
+    const oak = await treeKit(ctx, 'oak', { variants: 2, seed: 61, exposure: 0.3 });
+    const ash = await treeKit(ctx, 'ash', { variants: 2, seed: 62 });
+    const rw = mulberry(4343);
+    const places = hg.trees.map(([x, y, z], i) => ({ kit: i % 3 ? oak : ash, x, y: y - 0.2, z, variant: i % 2, yaw: rw() * 6.28, scale: 0.85 + 0.4 * rw() }));
+    for (let z = -760; z < -60; z += 7) for (let x = -1000; x < 1000; x += 7) {
+      const jx = x + (rw() - 0.5) * 6, jz = z + (rw() - 0.5) * 6;
+      if (glacis(jx, jz) > 0.2 || N.fbm(jx * 0.005 + 31, jz * 0.005 - 9, 3) < 0.3) continue;
+      places.push({ kit: rw() < 0.75 ? oak : ash, x: jx, y: H(jx, jz) - 0.2, z: jz, variant: Math.floor(rw() * 2), yaw: rw() * 6.28, scale: 0.8 + 0.45 * rw() });
+    }
+    g.add(scatterTrees(places, { views: [[66, 42, -281]], lod0: 40, lod1: 200, lod2: 700 }).group);
+    console.warn(`[director] walls: ${hg.count} hedge bushes, ${places.length} trees`);
     const B = await buildingKit(ctx, { stoneTint: [0.62, 0.6, 0.56] });
     const crest = [];
     for (let x = -520; x <= 520; x += 8) crest.push([x, ridgeZ(x) + 15]);
@@ -258,11 +434,13 @@ export async function build(ctx, { shotSpecs }) {
       const a = Math.atan2(dz, dx);
       const r = Math.hypot(dx, dz) * (1 + 0.14 * N.fbm(Math.cos(a) * 1.5 + 2, Math.sin(a) * 1.5, 4));
       if (r > 1.0) return -12 * smooth(1.0, 1.15, r) - 1;
-      const cliff = smooth(0, 0.035, 1 - r);           // sheer pale cliffs all round
+      const cliff = smooth(0, 0.05, 1 - r);            // sheer pale cliffs all round
       const plateau = 95 + 55 * smooth(0.2, 0.9, 1 - r) + 18 * N.fbm(x * 0.002, z * 0.002, 3);
       return cliff * plateau + 3 * N.fbm(x * 0.02, z * 0.02, 3) * cliff;
     };
-    const L = await land({ x: [C[0] - R[0] * 1.2, C[0] + R[0] * 1.2], z: [C[1] - R[1] * 1.3, C[1] + R[1] * 1.3], n: [420, 220], h: H, mat: 'pale' });
+    const L = await land({ x: [C[0] - R[0] * 1.2, C[0] + R[0] * 1.2], z: [C[1] - R[1] * 1.3, C[1] + R[1] * 1.3], n: [900, 420], focus: [C[0], C[1] + R[1] * 0.95], h: H, mat: 'pale', matOpts: { cliff: { strata: 0.9, streaks: 0.25, wet: 0.5, ochre: 0.15 } } });
+    // at 2.5 km under a 7 deg sun the shadow map (3 m texels) only adds acne: a crosshatch over the faces
+    L.mesh.receiveShadow = false; L.mesh.castShadow = false;
     g.add(L.mesh);
   }
   // ---- islands: far, unreached islands on the horizon (P-15)

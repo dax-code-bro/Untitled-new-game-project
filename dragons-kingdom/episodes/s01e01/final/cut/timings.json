@@ -423,6 +423,24 @@
    "load": 8.77,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
    "measured_at": "2026-10-24T00:14"
+  },
+  "1A-19": {
+   "draft_s_per_frame": 12.024,
+   "frames_drawn": 36,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 14.48,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.30GHz, SwiftShader",
+   "measured_at": "2026-10-24T15:05"
+  },
+  "X2-05": {
+   "draft_s_per_frame": 10.936,
+   "frames_drawn": 60,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 10.65,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.30GHz, SwiftShader",
+   "measured_at": "2026-10-24T15:08"
   }
  },
  "sets": {
@@ -432,14 +450,14 @@
    "measured_at": "2026-10-23T05:23"
   },
   "BIRTHING_CHAMBER": {
-   "setup_s": 41,
-   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-23T20:45"
+   "setup_s": 107.2,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.30GHz, SwiftShader",
+   "measured_at": "2026-10-24T14:58"
   },
   "PALACE_CORRIDOR": {
-   "setup_s": 8.7,
-   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-23T05:52"
+   "setup_s": 63.3,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.30GHz, SwiftShader",
+   "measured_at": "2026-10-24T14:57"
   },
   "SEA_COAST_DAWN": {
    "setup_s": 24.2,

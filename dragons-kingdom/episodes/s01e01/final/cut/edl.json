@@ -715,12 +715,12 @@
     }
    ],
    "cost": {
-    "draft_s_per_frame": 1.62,
-    "k4_cpu_s_per_frame": 14.04,
-    "k4_gpu_s_per_frame": 14.04,
-    "draft_minutes": 1.3,
-    "k4_cpu_hours": 0.19,
-    "k4_gpu_hours": 0.19,
+    "draft_s_per_frame": 19.02,
+    "k4_cpu_s_per_frame": 164.86,
+    "k4_gpu_s_per_frame": 164.86,
+    "draft_minutes": 15.22,
+    "k4_cpu_hours": 2.2,
+    "k4_gpu_hours": 2.2,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -729,9 +729,9 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+    "basis": "MEASURED draft 19.02 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
-   "staging": "NONE: a forest reaching a dark sea cliff, from the water; caption TARA on the word.",
+   "staging": "NONE: a forest reaching a dark sea cliff, from the water, the cliff line receding west along the frame; caption TARA on the word.",
    "deviation": null,
    "action": "Landscape 3: a forest reaching a cliff edge. Simple caption TARA over this unlocated land only, synced to the spoken word. No borders, no map, no other named place in view.",
    "need": {
@@ -795,12 +795,12 @@
     }
    ],
    "cost": {
-    "draft_s_per_frame": 1.62,
-    "k4_cpu_s_per_frame": 14.04,
-    "k4_gpu_s_per_frame": 14.04,
-    "draft_minutes": 1.3,
-    "k4_cpu_hours": 0.19,
-    "k4_gpu_hours": 0.19,
+    "draft_s_per_frame": 2.26,
+    "k4_cpu_s_per_frame": 19.58,
+    "k4_gpu_s_per_frame": 19.58,
+    "draft_minutes": 1.81,
+    "k4_cpu_hours": 0.26,
+    "k4_gpu_hours": 0.26,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -809,7 +809,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+    "basis": "MEASURED draft 2.26 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: distant fortified walls along a ridge, inland; caption SCRAPPER on the word.",
    "deviation": null,
@@ -875,12 +875,12 @@
     }
    ],
    "cost": {
-    "draft_s_per_frame": 1.62,
-    "k4_cpu_s_per_frame": 14.04,
-    "k4_gpu_s_per_frame": 14.04,
-    "draft_minutes": 1.3,
-    "k4_cpu_hours": 0.19,
-    "k4_gpu_hours": 0.19,
+    "draft_s_per_frame": 2.04,
+    "k4_cpu_s_per_frame": 17.64,
+    "k4_gpu_s_per_frame": 17.64,
+    "draft_minutes": 1.63,
+    "k4_cpu_hours": 0.24,
+    "k4_gpu_hours": 0.24,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -889,7 +889,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+    "basis": "MEASURED draft 2.04 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: a misted pale island alone on the sea, from open water; caption VERDOR on the word.",
    "deviation": null,
@@ -985,12 +985,12 @@
     }
    ],
    "cost": {
-    "draft_s_per_frame": 1.62,
-    "k4_cpu_s_per_frame": 14.04,
-    "k4_gpu_s_per_frame": 14.04,
-    "draft_minutes": 1.62,
-    "k4_cpu_hours": 0.23,
-    "k4_gpu_hours": 0.23,
+    "draft_s_per_frame": 1.86,
+    "k4_cpu_s_per_frame": 16.09,
+    "k4_gpu_s_per_frame": 16.09,
+    "draft_minutes": 1.86,
+    "k4_cpu_hours": 0.27,
+    "k4_gpu_hours": 0.27,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -999,7 +999,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+    "basis": "MEASURED draft 1.86 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: calm open water under a high bright sky, no coast; caption CITADEL SEA on the words.",
    "deviation": null,
@@ -1041,12 +1041,12 @@
     }
    ],
    "cost": {
-    "draft_s_per_frame": 1.62,
-    "k4_cpu_s_per_frame": 14.04,
-    "k4_gpu_s_per_frame": 14.04,
-    "draft_minutes": 1.3,
-    "k4_cpu_hours": 0.19,
-    "k4_gpu_hours": 0.19,
+    "draft_s_per_frame": 1.54,
+    "k4_cpu_s_per_frame": 13.35,
+    "k4_gpu_s_per_frame": 13.35,
+    "draft_minutes": 1.23,
+    "k4_cpu_hours": 0.18,
+    "k4_gpu_hours": 0.18,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1055,7 +1055,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+    "basis": "MEASURED draft 1.54 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: a different sea: a long swell under low cloud, no coast; caption PROXY SEA on the words.",
    "deviation": null,
@@ -1152,12 +1152,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 1.62,
-    "k4_cpu_s_per_frame": 14.04,
-    "k4_gpu_s_per_frame": 14.04,
-    "draft_minutes": 7.45,
-    "k4_cpu_hours": 1.08,
-    "k4_gpu_hours": 1.08,
+    "draft_s_per_frame": 2.15,
+    "k4_cpu_s_per_frame": 18.6,
+    "k4_gpu_s_per_frame": 18.6,
+    "draft_minutes": 9.87,
+    "k4_cpu_hours": 1.43,
+    "k4_gpu_hours": 1.43,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1166,7 +1166,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+    "basis": "MEASURED draft 2.15 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: unreached islands far on the horizon at dawn; a very slow push; no caption.",
    "deviation": null,
@@ -1303,12 +1303,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 1.62,
-    "k4_cpu_s_per_frame": 14.04,
-    "k4_gpu_s_per_frame": 14.04,
-    "draft_minutes": 7.13,
-    "k4_cpu_hours": 1.03,
-    "k4_gpu_hours": 1.03,
+    "draft_s_per_frame": 2.37,
+    "k4_cpu_s_per_frame": 20.51,
+    "k4_gpu_s_per_frame": 20.51,
+    "draft_minutes": 10.41,
+    "k4_cpu_hours": 1.5,
+    "k4_gpu_hours": 1.5,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1317,7 +1317,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "ESTIMATE: F1-class (sea, haze, distant land); x 1.08 for the shot's content"
+    "basis": "MEASURED draft 2.37 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: a wing-shaped cloud drifts across a brightening morning sky; the camera tilts up from the sea to it.",
    "deviation": null,
@@ -1398,12 +1398,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.4,
-    "k4_cpu_s_per_frame": 39.69,
-    "k4_gpu_s_per_frame": 39.69,
-    "draft_minutes": 10.21,
-    "k4_cpu_hours": 1.98,
-    "k4_gpu_hours": 1.98,
+    "draft_s_per_frame": 7.9,
+    "k4_cpu_s_per_frame": 92.17,
+    "k4_gpu_s_per_frame": 92.17,
+    "draft_minutes": 23.7,
+    "k4_cpu_hours": 4.61,
+    "k4_gpu_hours": 4.61,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1412,7 +1412,7 @@
      "move": 1.08,
      "total": 1.13
     },
-    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.13 for the shot's content"
+    "basis": "MEASURED draft 7.9 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
    },
    "staging": "NONE: high over the meadow edge; an immense shadow crosses the grass left to right; the dragon is never seen (cut before it is identified).",
    "deviation": null,
@@ -2409,12 +2409,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.45,
-    "k4_cpu_s_per_frame": 50.8,
-    "k4_gpu_s_per_frame": 50.8,
-    "draft_minutes": 8,
-    "k4_cpu_hours": 1.52,
-    "k4_gpu_hours": 1.52,
+    "draft_s_per_frame": 11.13,
+    "k4_cpu_s_per_frame": 127.25,
+    "k4_gpu_s_per_frame": 127.25,
+    "draft_minutes": 20.04,
+    "k4_cpu_hours": 3.82,
+    "k4_gpu_hours": 3.82,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -2423,7 +2423,7 @@
      "move": 1.08,
      "total": 1.27
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.27 for the shot's content"
+    "basis": "MEASURED draft 11.13 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "NONE: close; a small gold snout presses into the opening (birth stage 3); gold catches the lamplight, no glow.",
    "deviation": null,
@@ -2455,12 +2455,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.12,
-    "k4_cpu_s_per_frame": 47.04,
-    "k4_gpu_s_per_frame": 47.04,
-    "draft_minutes": 7.41,
-    "k4_cpu_hours": 1.41,
-    "k4_gpu_hours": 1.41,
+    "draft_s_per_frame": 10.12,
+    "k4_cpu_s_per_frame": 115.69,
+    "k4_gpu_s_per_frame": 115.69,
+    "draft_minutes": 18.22,
+    "k4_cpu_hours": 3.47,
+    "k4_gpu_hours": 3.47,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -2469,7 +2469,7 @@
      "move": 1,
      "total": 1.18
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.18 for the shot's content"
+    "basis": "MEASURED draft 10.12 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "NONE: close; the shape stills (birth stage 4); one tiny breath moves the shell edge.",
    "deviation": null,
@@ -2501,12 +2501,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.77,
-    "k4_cpu_s_per_frame": 54.56,
-    "k4_gpu_s_per_frame": 54.56,
-    "draft_minutes": 4.77,
-    "k4_cpu_hours": 0.91,
-    "k4_gpu_hours": 0.91,
+    "draft_s_per_frame": 4.99,
+    "k4_cpu_s_per_frame": 56.97,
+    "k4_gpu_s_per_frame": 56.97,
+    "draft_minutes": 4.99,
+    "k4_cpu_hours": 0.95,
+    "k4_gpu_hours": 0.95,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2515,7 +2515,7 @@
      "move": 1,
      "total": 1.36
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.36 for the shot's content"
+    "basis": "MEASURED draft 4.99 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "SIL + HANDS: the two attendants as dark shapes against the cool shaft; the clasped hands carry it.",
    "deviation": null,
@@ -2547,12 +2547,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.45,
-    "k4_cpu_s_per_frame": 50.8,
-    "k4_gpu_s_per_frame": 50.8,
-    "draft_minutes": 16,
-    "k4_cpu_hours": 3.05,
-    "k4_gpu_hours": 3.05,
+    "draft_s_per_frame": 10.16,
+    "k4_cpu_s_per_frame": 116.16,
+    "k4_gpu_s_per_frame": 116.16,
+    "draft_minutes": 36.59,
+    "k4_cpu_hours": 6.97,
+    "k4_gpu_hours": 6.97,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -2561,7 +2561,7 @@
      "move": 1.08,
      "total": 1.27
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.27 for the shot's content"
+    "basis": "MEASURED draft 10.16 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "NONE: the hatchling emerges awkwardly - wet, unsteady, exhausted; no glow. (Kinematic: pose blends along a path over the rim; no soft-body shell.)",
    "deviation": null,
@@ -2627,12 +2627,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.56,
-    "k4_cpu_s_per_frame": 52.08,
-    "k4_gpu_s_per_frame": 52.08,
-    "draft_minutes": 4.56,
-    "k4_cpu_hours": 0.87,
-    "k4_gpu_hours": 0.87,
+    "draft_s_per_frame": 8.46,
+    "k4_cpu_s_per_frame": 96.63,
+    "k4_gpu_s_per_frame": 96.63,
+    "draft_minutes": 8.46,
+    "k4_cpu_hours": 1.61,
+    "k4_gpu_hours": 1.61,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2641,7 +2641,7 @@
      "move": 1,
      "total": 1.3
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
+    "basis": "MEASURED draft 8.46 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "OTS + BACK: over the attendant's left shoulder; she speaks turned away from camera.",
    "deviation": null,
@@ -2673,12 +2673,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.56,
-    "k4_cpu_s_per_frame": 52.08,
-    "k4_gpu_s_per_frame": 52.08,
-    "draft_minutes": 5.47,
-    "k4_cpu_hours": 1.04,
-    "k4_gpu_hours": 1.04,
+    "draft_s_per_frame": 12.72,
+    "k4_cpu_s_per_frame": 145.36,
+    "k4_gpu_s_per_frame": 145.36,
+    "draft_minutes": 15.26,
+    "k4_cpu_hours": 2.91,
+    "k4_gpu_hours": 2.91,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2687,7 +2687,7 @@
      "move": 1,
      "total": 1.3
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
+    "basis": "MEASURED draft 12.72 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "OTS + DOF: over Alexandria's right shoulder, veil and cheek soft; the softening carried by posture and breath (face close-up waits for approved faces).",
    "deviation": null,
@@ -2758,12 +2758,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.56,
-    "k4_cpu_s_per_frame": 52.08,
-    "k4_gpu_s_per_frame": 52.08,
-    "draft_minutes": 10.03,
-    "k4_cpu_hours": 1.91,
-    "k4_gpu_hours": 1.91,
+    "draft_s_per_frame": 8.63,
+    "k4_cpu_s_per_frame": 98.58,
+    "k4_gpu_s_per_frame": 98.58,
+    "draft_minutes": 18.98,
+    "k4_cpu_hours": 3.61,
+    "k4_gpu_hours": 3.61,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2772,7 +2772,7 @@
      "move": 1,
      "total": 1.3
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
+    "basis": "MEASURED draft 8.63 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "BACK: from behind her left shoulder (the solver opens to 35 mm in the corner): she bends to the hatchling, her face turned away down into frame; the whisper plays on her back. Hold after the line.",
    "deviation": null,
@@ -2804,12 +2804,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.12,
-    "k4_cpu_s_per_frame": 47.04,
-    "k4_gpu_s_per_frame": 47.04,
-    "draft_minutes": 3.29,
-    "k4_cpu_hours": 0.63,
-    "k4_gpu_hours": 0.63,
+    "draft_s_per_frame": 5.89,
+    "k4_cpu_s_per_frame": 67.36,
+    "k4_gpu_s_per_frame": 67.36,
+    "draft_minutes": 4.72,
+    "k4_cpu_hours": 0.9,
+    "k4_gpu_hours": 0.9,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -2818,7 +2818,7 @@
      "move": 1,
      "total": 1.18
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.18 for the shot's content"
+    "basis": "MEASURED draft 5.89 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "DOF: focus on the lamp in the foreground; she is a soft shape behind its bokeh.",
    "deviation": null,
@@ -2850,12 +2850,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.56,
-    "k4_cpu_s_per_frame": 52.08,
-    "k4_gpu_s_per_frame": 52.08,
-    "draft_minutes": 11.85,
-    "k4_cpu_hours": 2.26,
-    "k4_gpu_hours": 2.26,
+    "draft_s_per_frame": 10.48,
+    "k4_cpu_s_per_frame": 119.78,
+    "k4_gpu_s_per_frame": 119.78,
+    "draft_minutes": 27.25,
+    "k4_cpu_hours": 5.19,
+    "k4_gpu_hours": 5.19,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2864,7 +2864,7 @@
      "move": 1,
      "total": 1.3
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
+    "basis": "MEASURED draft 10.48 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "HANDS: style frame F4's framing - the hatchling slips against the broken shell; Alexandria's hands come in from screen right with a folded cloth; her face out of frame.",
    "deviation": null,
@@ -2930,12 +2930,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.83,
-    "k4_cpu_s_per_frame": 55.2,
-    "k4_gpu_s_per_frame": 55.2,
-    "draft_minutes": 5.8,
-    "k4_cpu_hours": 1.1,
-    "k4_gpu_hours": 1.1,
+    "draft_s_per_frame": 5.39,
+    "k4_cpu_s_per_frame": 61.57,
+    "k4_gpu_s_per_frame": 61.57,
+    "draft_minutes": 6.46,
+    "k4_cpu_hours": 1.23,
+    "k4_gpu_hours": 1.23,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2944,7 +2944,7 @@
      "move": 1,
      "total": 1.38
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.38 for the shot's content"
+    "basis": "MEASURED draft 5.39 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "SIL + WIDE: from the nest toward the door; Abby and Remi two backlit shapes in the bright doorway (reverse angle, declared).",
    "deviation": null,
@@ -3005,12 +3005,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.56,
-    "k4_cpu_s_per_frame": 52.08,
-    "k4_gpu_s_per_frame": 52.08,
-    "draft_minutes": 2.73,
-    "k4_cpu_hours": 0.52,
-    "k4_gpu_hours": 0.52,
+    "draft_s_per_frame": 12.02,
+    "k4_cpu_s_per_frame": 137.42,
+    "k4_gpu_s_per_frame": 137.42,
+    "draft_minutes": 7.21,
+    "k4_cpu_hours": 1.37,
+    "k4_gpu_hours": 1.37,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -3019,7 +3019,7 @@
      "move": 1,
      "total": 1.3
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
+    "basis": "MEASURED draft 12.02 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "BACK: from behind Alexandria; her back shows she does not look away.",
    "deviation": null,
@@ -4963,12 +4963,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.45,
-    "k4_cpu_s_per_frame": 51.88,
-    "k4_gpu_s_per_frame": 51.88,
-    "draft_minutes": 8.89,
-    "k4_cpu_hours": 1.73,
-    "k4_gpu_hours": 1.73,
+    "draft_s_per_frame": 11.46,
+    "k4_cpu_s_per_frame": 133.69,
+    "k4_gpu_s_per_frame": 133.69,
+    "draft_minutes": 22.92,
+    "k4_cpu_hours": 4.46,
+    "k4_gpu_hours": 4.46,
     "factors": {
      "people": 1.36,
      "creatures": 1,
@@ -4977,7 +4977,7 @@
      "move": 1,
      "total": 1.48
     },
-    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.48 for the shot's content"
+    "basis": "MEASURED draft 11.46 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
    },
    "staging": "WIDE: low, long lens; Leaf comes low and quick, then crouches; Abby from behind at left; Remi walks on past at right toward something very large off screen.",
    "deviation": null,
@@ -5009,12 +5009,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.02,
-    "k4_cpu_s_per_frame": 46.87,
-    "k4_gpu_s_per_frame": 46.87,
-    "draft_minutes": 6.43,
-    "k4_cpu_hours": 1.25,
-    "k4_gpu_hours": 1.25,
+    "draft_s_per_frame": 13.07,
+    "k4_cpu_s_per_frame": 152.46,
+    "k4_gpu_s_per_frame": 152.46,
+    "draft_minutes": 20.91,
+    "k4_cpu_hours": 4.07,
+    "k4_gpu_hours": 4.07,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -5023,7 +5023,7 @@
      "move": 1.08,
      "total": 1.34
     },
-    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.34 for the shot's content"
+    "basis": "MEASURED draft 13.07 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
    },
    "staging": "BACK: handheld close beside them; Abby from behind-left checks his wing joint, practised and unhurried.",
    "deviation": null,
@@ -5055,12 +5055,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.72,
-    "k4_cpu_s_per_frame": 43.4,
-    "k4_gpu_s_per_frame": 43.4,
-    "draft_minutes": 7.44,
-    "k4_cpu_hours": 1.45,
-    "k4_gpu_hours": 1.45,
+    "draft_s_per_frame": 12.64,
+    "k4_cpu_s_per_frame": 147.48,
+    "k4_gpu_s_per_frame": 147.48,
+    "draft_minutes": 25.28,
+    "k4_cpu_hours": 4.92,
+    "k4_gpu_hours": 4.92,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -5069,7 +5069,7 @@
      "move": 1,
      "total": 1.24
     },
-    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+    "basis": "MEASURED draft 12.64 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
    },
    "staging": "HANDS: her hands at the pad of the wing-knuckle he walks on, his eye beyond (soft, his head turned to watch her); the focus racks to it; he does not flinch.",
    "deviation": null,
@@ -5130,12 +5130,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.72,
-    "k4_cpu_s_per_frame": 43.4,
-    "k4_gpu_s_per_frame": 43.4,
-    "draft_minutes": 2.23,
-    "k4_cpu_hours": 0.43,
-    "k4_gpu_hours": 0.43,
+    "draft_s_per_frame": 13.36,
+    "k4_cpu_s_per_frame": 155.82,
+    "k4_gpu_s_per_frame": 155.82,
+    "draft_minutes": 8.01,
+    "k4_cpu_hours": 1.56,
+    "k4_gpu_hours": 1.56,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -5144,7 +5144,7 @@
      "move": 1,
      "total": 1.24
     },
-    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+    "basis": "MEASURED draft 13.36 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
    },
    "staging": "OTS: over her shoulder to Leaf; she is satisfied (the line plays on her back).",
    "deviation": null,

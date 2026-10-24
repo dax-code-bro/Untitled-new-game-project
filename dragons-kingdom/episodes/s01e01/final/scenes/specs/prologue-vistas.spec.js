@@ -26,9 +26,11 @@ export default {
       lines: [['L002#3', 1.4]],
     },
     'P-10': {
-      staging: 'NONE: a forest reaching a dark sea cliff, from the water; caption TARA on the word.',
+      staging: 'NONE: a forest reaching a dark sea cliff, from the water, the cliff line receding west along the frame; caption TARA on the word.',
       trans: ['dissolve', 18],
-      cam: { rig: 'drone', pos: [[0, [-70, 18, 240]], [2, [-62, 18.3, 236]]], look: [0, 44, -170], mm: 24, fstop: 5.6, focus: 600, ease: 'linear' },
+      // looking along the coast (not square onto the face): the wandering cliff line, its buttresses and
+      // the wood's edge read in depth; a frontal face under the raking dawn sun read as a palisade
+      cam: { rig: 'drone', pos: [[0, [255, 20, 150]], [2, [247, 20.3, 147]]], look: [-60, 40, -170], mm: 24, fstop: 5.6, focus: 450, ease: 'linear' },
       set: { loc: 'forest' },
       lines: [['L003#1', 0.55]],
       captions: [{ text: 'Tara', line: 'L003#1', word: 'tara', lead: 0.1, hold: 1.25 }],
