@@ -209,6 +209,23 @@ const Models = (() => {
         g.beginPath(); g.moveTo(-58, 28); g.lineTo(-30, 4); g.lineTo(-30, 52); g.closePath(); g.fill();
         break;
       }
+      case 'dynamite': {   // three red sticks taped together with a burning fuse
+        for (let i = -1; i <= 1; i++) { g.fillStyle = '#b01810'; g.fillRect(i * 26 - 11, -40, 22, 90); g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(i * 26 - 7, -40, 4, 90); }
+        g.fillStyle = '#1a1a1a'; g.fillRect(-42, -22, 84, 9); g.fillRect(-42, 26, 84, 9);
+        g.strokeStyle = ink; g.lineWidth = 4; g.beginPath(); g.moveTo(0, -40); g.quadraticCurveTo(14, -62, 34, -66); g.stroke();
+        g.fillStyle = '#ffb020'; g.beginPath(); g.arc(36, -67, 8, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#fff4b0'; g.beginPath(); g.arc(36, -67, 3.5, 0, Math.PI * 2); g.fill();
+        break;
+      }
+      case 'pickpocket': {   // a coin purse with a hand reaching in
+        g.fillStyle = '#7a4a22'; g.beginPath(); g.ellipse(0, 22, 48, 42, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#c8a040'; g.fillRect(-30, -24, 60, 10);
+        g.strokeStyle = '#3a2410'; g.lineWidth = 3; g.beginPath(); g.moveTo(-22, 0); g.quadraticCurveTo(0, 14, 22, 0); g.stroke();
+        g.fillStyle = '#e8c070'; [[-16, 30], [10, 40], [20, 18]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.fill(); });
+        g.fillStyle = ink; g.beginPath(); g.moveTo(30, -70); g.lineTo(10, -32); g.lineTo(22, -26); g.lineTo(46, -60); g.closePath(); g.fill();
+        [0, 1, 2].forEach(k => { g.fillRect(4 + k * 7, -34, 5, 16); });
+        break;
+      }
       default: g.restore(); return false;
     }
     g.restore();
@@ -1328,6 +1345,23 @@ const Models = (() => {
     return g;
   }
 
+  // Dynamite: three red sticks taped together, a fuse with a glowing spark.
+  function dynamite() {
+    const g = new THREE.Group();
+    const m = mats();
+    const paper = new THREE.MeshStandardMaterial({ color: col(0xb01810), roughness: 0.75 });
+    for (let i = -1; i <= 1; i++) { const st = cyl(0.016, 0.016, 0.16, paper, 14); st.rotation.z = Math.PI / 2; st.position.set(0, 0.016 + (i === 0 ? 0.026 : 0), i * 0.017); g.add(st); }
+    [-0.05, 0.05].forEach(x => { const tape = mesh(new THREE.TorusGeometry(0.03, 0.005, 6, 18), m.black); tape.rotation.y = Math.PI / 2; tape.position.set(x, 0.025, 0); tape.scale.set(1, 0.85, 1.15); g.add(tape); });
+    const fuse = mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(V(0.08, 0.045, 0), V(0.12, 0.09, 0), V(0.15, 0.08, 0.02)), 10, 0.003, 6), m.black);
+    g.add(fuse);
+    const spark = sphere(0.007, new THREE.MeshStandardMaterial({ color: col(0xffd060), emissive: col(0xff8020), emissiveIntensity: 3 }), { cast: false });
+    spark.position.set(0.15, 0.08, 0.02); g.add(spark);
+    const light = new THREE.PointLight(0xff9030, 1.2, 0.8); light.position.copy(spark.position); g.add(light);
+    g.userData.spark = spark; g.userData.light = light;
+    g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    return g;
+  }
+
   // The bomb from the Nuclear card: fins, a nose cone and a radiation band.
   function missile() {
     const g = new THREE.Group();
@@ -1371,7 +1405,7 @@ const Models = (() => {
   }
 
   return {
-    shotgun, crate, item, couch, lifeMark, grenade, missile, shield, profile,
+    shotgun, crate, item, couch, lifeMark, grenade, dynamite, missile, shield, profile,
     V, tex, mats, gunLook, revolver, parts: { col, mesh, box, cyl, sphere, profile, decorate }, card, setCardFace, cardFace, outlaw, table, chair, bookshelf, desk,
     door, pictureFrame, hangingLamp, target, bullet, decal, CARD_W, CARD_H,
   };

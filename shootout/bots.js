@@ -82,11 +82,17 @@ const Bots = (() => {
     // Peek at the next round before the shootout if it's still a mystery.
     if (next && !next.known && find('one') >= 0 && (smart || chance(0.5))) return find('one');
 
+    // Dynamite is best lit early: it needs a round to burn down.
+    if (find('dynamite') >= 0 && (bot.foes || 1) >= 1 && (smart || chance(0.6))) return find('dynamite');
+
+    // Pick a pocket, especially one known to hold a Jack or a nuke.
+    if (find('pickpocket') >= 0 && (bot.priority || smart || chance(0.5))) return find('pickpocket');
+
     // Luck for a nuke later: worth playing when nothing better is on hand.
     if (find('lucky') >= 0 && (smart ? chance(0.7) : chance(0.4))) return find('lucky');
 
     // Otherwise keep the useful cards and play something else.
-    const keep = new Set(['jack', 'bloody', 'one', 'grenade', 'nuclear', 'block', 'reverse', 'swap']);
+    const keep = new Set(['jack', 'bloody', 'one', 'grenade', 'nuclear', 'block', 'reverse', 'swap', 'dynamite']);
     const filler = hand.map((id, i) => i).filter(i => !keep.has(hand[i]));
     if (filler.length && (smart || chance(0.6))) return pick(filler);
     return random();
@@ -141,6 +147,24 @@ const Bots = (() => {
     return others.reduce((a, b) => (score(b) > score(a) ? b : a));
   }
 
+  // Whose pocket to pick: the one seen holding a Jack or a nuke, else the fullest hand.
+  function choosePickTarget(bot, players) {
+    if (bot.priority && players.includes(bot.priority)) return bot.priority;
+    if (difficulty === 'easy') return pick(players);
+    return players.reduce((a, b) => (b.hand.length > a.hand.length ? b : a));
+  }
+
+  // Who gets the dynamite: an enemy without a shield (a grudge comes first).
+  function chooseDynamiteTarget(bot, players) {
+    const mate = p => bot.team && bot.team.members.includes(p);
+    let others = players.filter(p => !mate(p));
+    if (!others.length) others = players;
+    if (difficulty !== 'easy') { const open = others.filter(p => !p.block && !p.dynamite); if (open.length) others = open; }
+    if (bot.personality === 'vengeful' && bot.shotBy && others.includes(bot.shotBy)) return bot.shotBy;
+    if (bot.priority && others.includes(bot.priority)) return bot.priority;
+    return pick(others);
+  }
+
   // Items a bot uses at the start of its turn: [{ item, target }].
   // `ctx.alive` is every living player; `ctx.danger` is true when someone
   // holds a shotgun this round.
@@ -186,5 +210,5 @@ const Bots = (() => {
 
   function setDifficulty(d) { difficulty = d; }
 
-  return { lineup, label, chooseCard, chooseTarget, chooseSwapTarget, chooseItems, acceptTeam, vote, setDifficulty };
+  return { lineup, label, chooseCard, chooseTarget, chooseSwapTarget, choosePickTarget, chooseDynamiteTarget, chooseItems, acceptTeam, vote, setDifficulty };
 })();

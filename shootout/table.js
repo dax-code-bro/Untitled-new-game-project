@@ -325,6 +325,14 @@ const Table = (() => {
   // ---------- per-frame ----------
 
   function update(dt, time) {
+    // lit fuses flicker and spit sparks
+    seats.forEach(s => {
+      if (!s.dynamite) return;
+      const d = s.dynamite.userData;
+      d.light.intensity = 1 + Math.sin(time * 37) * 0.4 + Math.random() * 0.5;
+      d.spark.scale.setScalar(0.8 + Math.random() * 0.6);
+      if (Math.random() < dt * 8) FX.burst(scene, d.spark.getWorldPosition(V(0, 0, 0)), { count: 3, color: 0xffc060, emissive: true, size: 0.004, speed: 0.6, life: 0.3 });
+    });
     // ease the room toward the target ravage level
     ravage += (ravageTarget - ravage) * Math.min(1, dt * 0.9);
     const R = ravage;
@@ -1473,6 +1481,65 @@ const Table = (() => {
   }
 
 
+  // ---------- Pickpocket, Dynamite ----------
+
+  // Pickpocket: one card flies from a hand to the thief's. `id` is shown
+  // only if the card lands in this phone's own hand.
+  async function stealCard(fi, ti, k, id) {
+    const F = seats[fi], D = seats[ti];
+    const c = F.cards.splice(Math.max(0, Math.min(k, F.cards.length - 1)), 1)[0];
+    if (!c) return;
+    relayout(fi);
+    if (ti === 0 && id) Models.setCardFace(c, id); else if (fi === 0) Models.setCardFace(c, null);
+    scene.attach(c);
+    D.cards.push(c);
+    relayout(ti);
+    const w = worldSlot(ti, c.userData.slot);
+    Sound.cardFlick();
+    await flyTo(c, w.pos, w.quat, 0.55, 0.35, 1);
+    parentOf(ti).attach(c);
+    c.position.copy(c.userData.slot.pos); c.quaternion.copy(c.userData.slot.quat);
+    relayout(ti);
+  }
+
+  // Dynamite: a lit bundle slides across the table and stops in front of a seat.
+  async function placeDynamite(pi, instant) {
+    const s = seats[pi];
+    if (!s || s.dead) return;
+    if (s.dynamite) s.group.remove(s.dynamite);
+    const d = Models.dynamite();
+    s.dynamite = d;
+    const z = pi === 0 ? 0.78 : 0.38;
+    d.rotation.y = 0.4;
+    s.group.add(d);
+    if (instant) { d.position.set(0.18, TABLE_Y, z); return; }
+    Sound.cock && Sound.cock();
+    await T(0.7, t => { d.position.set(Util.lerp(0.9, 0.18, t), TABLE_Y, Util.lerp(z + 0.9, z, t)); d.rotation.y = 0.4 + (1 - t) * 6; }, E.out);
+  }
+
+  // The holder died some other way: the fuse goes out.
+  function removeDynamite(pi) {
+    const s = seats[pi];
+    if (s && s.dynamite) { s.group.remove(s.dynamite); s.dynamite = null; }
+  }
+
+  // The fuse burns down: boom. `dead` if it kills them, `blocked` if their shield took it.
+  async function explodeDynamite(pi, dead, blocked) {
+    const s = seats[pi];
+    const d = s && s.dynamite;
+    if (!d) return;
+    const at = d.getWorldPosition(V(0, 0, 0)).add(V(0, 0.05, 0));
+    for (let i = 0; i < 3; i++) { Sound.tick && Sound.tick(); await T(0.22, t => { d.userData.light.intensity = 4 * (1 - t); }); }
+    s.group.remove(d);
+    s.dynamite = null;
+    Sound.explosion && Sound.explosion();
+    fireball(at, 0.7);
+    camShake(0.8, pi === 0 ? 0.12 : 0.06);
+    const dir = headWorld(pi).sub(at).normalize();
+    if (blocked) await shieldHit(pi, dir);
+    else if (dead) await kill(pi, dir);
+  }
+
   // ---------- Block, Reverse, Grenade, Nuclear ----------
 
   // Block: a riveted steel shield springs up on the table in front of a seat.
@@ -1785,6 +1852,7 @@ const Table = (() => {
       if (d.shotgun) giveShotgun(i);
       if (d.block) raiseShield(i);
       if (d.reverse) setReverse(i, true);
+      if (d.dynamite) placeDynamite(i, true);
       if (d.tags && s.rig) setTags(i, d.tags);
     });
     (snap.teams || []).forEach(([li, mi]) => seatTogether(li, mi, false));
@@ -1828,7 +1896,7 @@ const Table = (() => {
     setup, deal, play, select, setCovered, drawGuns, holsterGuns, aim, shoot, recover, peek, jackGlow, bloodyMary,
     wound, stopBleeding, loseLife, bleedOut, setLives, setTags, spawnBox, openBox, usePotion, useBandage,
     smashGun, newGun, giveShotgun, removeShotgun, binoStart, binoEnd, invite, decline, formTeam, transferCards,
-    raiseShield, lowerShield, setReverse, grenade, nuke, rebuild,
+    raiseShield, lowerShield, setReverse, grenade, nuke, rebuild, stealCard, placeDynamite, explodeDynamite, removeDynamite,
     onCardDrop: null, onBoxClick: null,
     get hasBox() { return !!boxObj; },
     show() { if (!scene) buildRoom(); Engine.setStage(stage); },

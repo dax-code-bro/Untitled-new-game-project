@@ -48,13 +48,15 @@ the rarest are rolled once per hand instead.
 
 | Card | Rarity | Odds | Effect |
 |---|---|---|---|
-| 1 | Common | 32% per card dealt (about 62% of hands) | Secretly shows you if your next round is live or blank. |
-| Block | Uncommon | 18% per card (about 40% of hands) | A steel shield stops the next hit you'd take this round (bullet, big gun or grenade). |
-| Reverse | Uncommon | 15% per card (about 34% of hands) | The next live shot someone fires at you this round turns around and hits them. |
-| Lucky | Uncommon | 20% per card (about 43% of hands) | Your chance of being dealt a Nuclear jumps to 20%; each Lucky you play stacks another 20% (40%, then the 60% cap). Resets when a Nuclear comes. |
+| 1 | Common | 28% per card dealt (about 57% of hands) | Secretly shows you if your next round is live or blank. |
+| Lucky | Uncommon | 17% per card (about 38% of hands) | Your chance of being dealt a Nuclear jumps to 20%; each Lucky you play stacks another 20% (40%, then the 60% cap). Resets when a Nuclear comes. |
+| Block | Uncommon | 16% per card (about 36% of hands) | A steel shield stops the next hit you'd take this round (bullet, big gun, grenade or dynamite). |
+| Reverse | Uncommon | 13% per card (about 30% of hands) | The next live shot someone fires at you this round turns around and hits them. |
+| Pickpocket | Uncommon | 10% per card (about 24% of hands) | Steal a random card from another player's hand; only you see what you got. |
 | Bloody Mary | Uncommon | 20% of hands | Forces a shootout right away. |
-| Gun | Rare | 6% per card (about 15% of hands) | Your big gun for this round: 2 shots, both live, one hit kills anyone. |
-| Swap | Rare | 9% per card (about 21% of hands) | Play it on someone and you swap everything: seats, cards, guns, lives, items, wounds and teammates. |
+| Swap | Rare | 7% per card (about 17% of hands) | Play it on someone and you swap everything: seats, cards, guns, lives, items, wounds, teammates, even dynamite. |
+| Gun | Rare | 5% per card (about 13% of hands) | Your big gun for this round: 2 shots, both live, one hit kills anyone. |
+| Dynamite | Rare | 4% per card (about 10% of hands) | Slide a lit bundle to another player. It blows at the end of next round and kills whoever sits there, unless a Block shield stops it. |
 | Jack of Trades | Epic | 10% of hands | Play it and you (and your teammate) win instantly. |
 | Grenade | Epic | 8% of hands | Everyone else is hit (starts bleeding, or loses a life if already bleeding) and loses all their cards and items. The thrower keeps theirs but is caught in the blast too. |
 | Nuclear | Legendary | 3% of hands (more with Lucky) | A nuclear bomb comes through the ceiling: everyone else is wiped out and you (and your teammate) win. |

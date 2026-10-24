@@ -437,7 +437,7 @@ const ANIM = {
   setLives: 'P_', setTags: 'P_', spawnBox: 'P', openBox: 'P_', usePotion: 'P', useBandage: 'PP', smashGun: 'P',
   newGun: 'P', giveShotgun: 'P', removeShotgun: 'P', binoStart: 'PP', binoEnd: '', invite: 'PP', decline: '',
   formTeam: 'PP', transferCards: 'PP', setRavage: '_', raiseShield: 'P', lowerShield: 'P', setReverse: 'P_',
-  grenade: 'PHL_', nuke: 'P',
+  grenade: 'PHL_', nuke: 'P', stealCard: 'PP__', placeDynamite: 'P_', explodeDynamite: 'P__', removeDynamite: 'P',
 };
 const seatOf = i => (i - state.view + state.players.length) % state.players.length;
 
@@ -513,6 +513,7 @@ function tagsOf(p) {
   if (p.unarmed) tags.push('UNARMED');
   if (p.hasShotgun && p.shotgun > 0) tags.push('SHOTGUN');
   if (teammateOf(p)) tags.push('TEAM');
+  if (p.dynamite) tags.push('DYNAMITE');
   return tags;
 }
 
@@ -522,7 +523,7 @@ function snapshot() {
     bx: state.box ? idx(state.box.owner) : null, pl: state.pile.slice(-6), tm: teamsList(),
     ps: state.players.map(p => ({
       nm: p.name, pid: p.pid || null, c: p.ctrl, sb: p.sub, pa: p.pal, ch: p.char, rg: p.rgun, sg: p.sgun, rs: p.rskin, ss: p.sskin, a: p.alive ? 1 : 0, l: p.lives, b: p.bleeding ? 1 : 0,
-      h: p.hand, i: p.items, u: p.unarmed ? 1 : 0, sg: p.shotgun, hs: p.hasShotgun ? 1 : 0, bk: p.block ? 1 : 0, rv: p.reverse ? 1 : 0, k: knownStr(p),
+      h: p.hand, i: p.items, u: p.unarmed ? 1 : 0, sg: p.shotgun, hs: p.hasShotgun ? 1 : 0, bk: p.block ? 1 : 0, rv: p.reverse ? 1 : 0, dy: p.dynamite ? 1 : 0, k: knownStr(p),
     })),
   };
 }
@@ -535,7 +536,7 @@ function fromSnapshot(s) {
   state.multi = !!s.mu;
   state.players = s.ps.map(d => ({
     name: d.nm, pid: d.pid, ctrl: d.c, sub: d.sb, pal: d.pa, char: d.ch, rgun: d.rg, sgun: d.sg, rskin: d.rs, sskin: d.ss, alive: !!d.a, lives: d.l, bleeding: !!d.b, hand: d.h || [], items: d.i || [],
-    unarmed: !!d.u, shotgun: d.sg || 0, hasShotgun: !!d.hs, block: !!d.bk, reverse: !!d.rv,
+    unarmed: !!d.u, shotgun: d.sg || 0, hasShotgun: !!d.hs, block: !!d.bk, reverse: !!d.rv, dynamite: d.dy ? { round: 0 } : null,
     gun: (d.k || '???').split('').map(c => ({ known: c !== '?', live: c === 'L' })), team: null,
   }));
   (s.tm || []).forEach(([li, mi]) => {
@@ -559,7 +560,7 @@ function rebuildTable() {
     seats: order.map(i => {
       const p = state.players[i];
       return { hand: p.hand, lives: p.lives, items: p.items, dead: !p.alive, bleeding: p.bleeding, unarmed: p.unarmed,
-        shotgun: p.hasShotgun && p.shotgun > 0, block: p.block, reverse: p.reverse, tags: tagsOf(p) };
+        shotgun: p.hasShotgun && p.shotgun > 0, block: p.block, reverse: p.reverse, dynamite: !!p.dynamite, tags: tagsOf(p) };
     }),
     teams: teamsList().map(([li, mi]) => [seat(li), seat(mi)]),
     pile: state.pile.slice(-6),
@@ -982,6 +983,43 @@ async function resolveCard(player, id) {
     }
     if (target) await swapPlayers(player, target);
   }
+  if (card.pickpocket) {
+    const marks = alive().filter(o => o !== player && o.hand.length && o !== teammateOf(player));
+    let target = null;
+    if (marks.length && player.ctrl === 'bot') target = Bots.choosePickTarget(player, marks);
+    else if (marks.length) {
+      const v = await ask(player, 'choice', { title: 'PICKPOCKET', html: 'Whose pocket do you pick? You steal one of their cards at random.',
+        options: marks.map(o => ({ label: `${o.name} (${o.hand.length} card${o.hand.length === 1 ? '' : 's'})`, v: idx(o) })) });
+      target = marks.includes(state.players[v]) ? state.players[v] : pick(marks);
+    }
+    if (!target) ui('log', `${N(player)} reach${V(player, '', 'es')} for a pocket, but nobody has a card to steal.`);
+    else {
+      const k = Math.floor(Math.random() * target.hand.length);
+      const [id] = target.hand.splice(k, 1);
+      player.hand.push(id);
+      ui('log', `${N(player)} picked ${POSS(target)} pocket and stole a card.`);
+      await A('stealCard', idx(target), idx(player), k, player.ctrl === 'bot' ? null : id);
+      tell(player, 'stole', CARD_BY_ID[id].name);
+      renderAll();
+    }
+  }
+  if (card.dynamite) {
+    const others = alive().filter(o => o !== player);
+    let target = null;
+    if (others.length && player.ctrl === 'bot') target = Bots.chooseDynamiteTarget(player, others);
+    else if (others.length) {
+      const v = await ask(player, 'choice', { title: 'DYNAMITE', html: 'Who gets the dynamite? It blows up at the end of next round unless a Block shield stops it.',
+        options: others.map(o => ({ label: `${o.name}${o.block ? ' (shielded)' : ''}${o.dynamite ? ' (already has some)' : ''}`, v: idx(o) })) });
+      target = others.includes(state.players[v]) ? state.players[v] : pick(others);
+    }
+    if (target) {
+      target.dynamite = { by: player, round: state.round + 1 };
+      ui('banner', 'DYNAMITE');
+      ui('log', `${N(player)} lit a bundle of <b class="live">dynamite</b> and slid it to ${n(target)}. It blows at the end of next round.`);
+      await A('placeDynamite', idx(target));
+      refreshTags(target);
+    }
+  }
   if (card.forcesShootout) {
     await A('bloodyMary');
     await shootout('Bloody Mary');
@@ -1146,6 +1184,29 @@ async function fire(shooter, target) {
 // shotguns, shields and reverses wear off. Returns false if the game ended.
 async function endOfRound() {
   for (const p of alive()) {
+    if (!p.dynamite || state.round < p.dynamite.round) continue;
+    const by = p.dynamite.by, i = idx(p);
+    p.dynamite = null;
+    ui('banner', 'BOOM');
+    if (p.block) {
+      p.block = false;
+      tally(p, 'blocks');
+      ui('log', `The dynamite in front of ${n(p)} goes off, but ${isYou(p) ? 'your' : 'their'} shield takes the blast.`);
+      await A('explodeDynamite', i, false, true);
+      A('lowerShield', i);
+    } else {
+      p.alive = false; p.bleeding = false;
+      p.cause = isYou(p) ? 'Blown up by dynamite.' : 'Dynamite.';
+      killedBy(by, p, 'dynamite');
+      ui('log', `The dynamite in front of ${n(p)} goes off. <b class="live">${N(p)} ${V(p, 'are', 'is')} dead.</b>`);
+      await A('explodeDynamite', i, true, false);
+      A('setLives', i, 0);
+      onDeath(p);
+      if (checkGameOver()) return false;
+    }
+    refreshTags(p);
+  }
+  for (const p of alive()) {
     if (!p.bleeding || state.round < p.bleedUntil) continue;
     p.lives--;
     p.bleeding = false;
@@ -1185,6 +1246,7 @@ async function endOfRound() {
 
 // A death breaks up the dead player's team; shared cards go to the survivor.
 function onDeath(p) {
+  if (p.dynamite) { p.dynamite = null; A('removeDynamite', idx(p)); }
   const mate = teammateOf(p);
   if (p.team) {
     p.team.members.forEach(m => { m.team = null; });
@@ -1399,6 +1461,8 @@ function showTell(what, a, p) {
     showBanner(live ? 'LIVE' : 'BLANK');
     log(`<span class="secret">Only you know: your ${which} round is <b class="${live ? 'live' : 'blank'}">${live ? 'LIVE' : 'BLANK'}</b>.</span>`);
     renderGun();
+  } else if (what === 'stole') {
+    log(`<span class="secret">You stole <b>${esc(a[0])}</b>.</span>`);
   } else if (what === 'lucky') {
     log(`<span class="secret">Your chance of a <b>Nuclear</b> in your next hands is now <b>${a[0]}%</b>.</span>`);
   } else if (what === 'found') {
