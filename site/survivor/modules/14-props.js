@@ -20,19 +20,25 @@ SurvivorGame.module({
 
     /* Materials shared by everything, so the instancer can batch. */
     const MAT = {
-      road: { preset: 'concrete', color: 0x3a3a3c, roughness: 0.96 },
-      gravel: { preset: 'concrete', color: 0x6a655c, roughness: 1.0 },
+      // Asphalt and hardpan are both loose aggregate up close. The tints are
+      // what separate black road from pale yard.
+      road: { preset: 'gravel', color: 0x3a3a3c, roughness: 0.96 },
+      gravel: { preset: 'gravel', color: 0x6a655c, roughness: 1.0 },
       chainlink: { preset: 'metal', color: 0x9aa0a4, roughness: 0.55, metalness: 0.8 },
       post: { preset: 'metal', color: 0x6e7276, roughness: 0.7, metalness: 0.7 },
       steel: { preset: 'steel', color: 0x8b9095 },
       rust: { preset: 'rust', color: 0x7a4a2a },
       wood: { preset: 'wood', color: 0x7b5a34 },
+      // Firewood is split, not sawn, so the planed face of the plank preset
+      // is the wrong surface for it.
+      log: { preset: 'roughWood', color: 0x7b5a34 },
       hay: { preset: 'fabric', color: 0xc4a548, roughness: 1.0 },
       concrete: { preset: 'concrete', color: 0x9a9890 },
       water: { preset: 'glass', color: 0x2c4a5a, roughness: 0.12, opacity: 0.75 },
       glass: { preset: 'glass', color: 0x8fb6c8, roughness: 0.08, opacity: 0.35 },
       solar: { preset: 'glass', color: 0x1a2740, roughness: 0.2, metalness: 0.5 },
-      canvas: { preset: 'fabric', color: 0xd8452f },
+      // A windsock is sailcloth weight, not the shirt weave fabric carries.
+      canvas: { preset: 'canvas', color: 0xd8452f },
     };
 
     const y0 = (x, z) => ctx.groundY(x, z);
@@ -170,7 +176,7 @@ SurvivorGame.module({
         for (let r = 0; r < 4; r++) {
           for (let c = 0; c < 6; c++) {
             out.push(game.cylinder({ at: [p.x - 0.9 + c * 0.36, y + 0.18 + r * 0.34, p.z], radius: 0.16, height: 1.6,
-              material: MAT.wood, static: true, key: 'prop:log', name: r === 0 && c === 0 ? 'woodpile' : undefined }));
+              material: MAT.log, static: true, key: 'prop:log', name: r === 0 && c === 0 ? 'woodpile' : undefined }));
           }
         }
         if (out[0]) out[0].userData = { kind: 'woodpile', prop: p };

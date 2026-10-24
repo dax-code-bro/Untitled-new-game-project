@@ -35,6 +35,9 @@
   let lastWallMs = 0, wallDebt = 0, timeScaleMul = 1;
   let FAR_SEGMENTS = 512;
   let groundColourFn = null;
+  /* UV units per metre on the ground. The soil capture is two metres
+     across, so this lays it down about every two and a half. */
+  const GROUND_UV = 0.42;
   let detailPatch = null, detailCentre = null;
   const updateHooks = [];
   const keyBindings = [];
@@ -146,7 +149,14 @@
       // down its gullies.
       const bare = clamp01((slopeDeg - 30) / 22);
       const rock = BIOME_ALBEDO.cliff;
-      const t = 0.94 + 0.12 * (Math.sin(x * 0.017) * Math.cos(z * 0.021) * 0.5 + 0.5);
+      /* Macro variation, at two scales well beyond the size of the
+         texture tile. Ground is never one colour for a hundred metres,
+         and without this the photograph's two-metre tile is the only
+         thing the eye has to measure distance by — which is exactly
+         when it starts to notice the repeat. */
+      const t = 0.80
+        + 0.22 * (Math.sin(x * 0.0131 + 1.7) * Math.cos(z * 0.0113) * 0.5 + 0.5)
+        + 0.11 * (Math.sin(x * 0.047 - 0.6) * Math.cos(z * 0.0526 + 2.1) * 0.5 + 0.5);
       return [
         (base[0] * (1 - bare) + rock[0] * bare) * t,
         (base[1] * (1 - bare) + rock[1] * bare) * t,
@@ -167,9 +177,12 @@
       size: map.worldSizeM, segments: FAR_SEGMENTS, colliderSegments: 1024,
       heightFn: (x, z) => map.heightAtWorld(x, z),
       friction: 0.85, at: [0, 0, 0],
-      // One texture tile every twelve metres. Higher and the detail map
-      // aliases into a uniform speckle that washes the ground cover white.
-      uvScale: 0.08,
+      /* The ground texture is a photograph of soil two metres across, so
+         it wants to be laid down about every two metres. Stretched over
+         twelve, as it was when the texture was a noise function, a real
+         capture turns to mush; anisotropic filtering and mips take care
+         of the distance that the old scale was protecting against. */
+      uvScale: GROUND_UV,
     });
     groundColourFn = groundColour;
 
@@ -178,8 +191,22 @@
       // rather than drawn as a dark line across the horizon.
       at: [0, -0.6, 0], size: [map.worldSizeM * 7, 1.2, map.worldSizeM * 7],
       material: {
-        preset: 'ice', color: 0x0d2f45, roughness: 0.12, metalness: 0.02, opacity: 1,
-        uvScale: 0.010, normalStrength: 0.18,
+        /* The water capture is normals only, so the slab keeps the blue it
+           is given; the ice capture that used to be here is a frozen lake
+           and brought its own white albedo with it. Laying the swell down
+           at its real six metres would mean four and a half thousand
+           repeats across the slab, which is more than the mips can hold
+           together and shimmers at every distance, so it is stretched to
+           one tile every sixty metres instead. That costs the fine chop,
+           and the normals are driven harder to get the swell back. */
+        preset: 'water', color: 0x0b2434, roughness: 0.09, metalness: 0.02, opacity: 1,
+        /* Four thousand repeats across the slab is what life size would
+           ask for and more than the mips can hold together, so the swell
+           is laid down at one tile every twenty metres — close enough to
+           read as chop at a distance, coarse enough not to shimmer. The
+           normal is deliberately weak: open water is a mirror with a
+           texture on it, and a strong normal map turns it into tinfoil. */
+        uvScale: 1400, normalStrength: 0.16,
       },
       static: true, physics: false, name: 'sea',
     });
@@ -643,7 +670,10 @@
         const ddz = height(wx, wz + h) - height(wx, wz - h);
         const nx = -ddx, ny = 2 * h, nz = -ddz;
         const l = Math.hypot(nx, ny, nz) || 1;
-        g.vert(wx, y, wz, nx / l, ny / l, nz / l, wx * 0.08, wz * 0.08);
+        // The same UV scale as the far ground, or the near patch would
+        // tile the photograph at a different size and the join would be
+        // the most obvious line on the island.
+        g.vert(wx, y, wz, nx / l, ny / l, nz / l, wx * GROUND_UV, wz * GROUND_UV);
         if (groundColourFn) {
           const slope = Math.acos(Math.min(1, Math.max(-1, ny / l))) * 180 / Math.PI;
           const col = groundColourFn(wx, wz, y, slope);
@@ -706,6 +736,34 @@
     cliff:      { count: 620,   low: 0x555a34, high: 0x8a8a4e },
     ocean:      { count: 0,     low: 0x2f5d24, high: 0x86a83c },
   };
+
+  /* Grass was authored by eye and came out about twice as bright as grass
+     is. Measured diffuse albedo for a leaf is 0.16 to 0.26 across the
+     visible band — green growth at the bottom of that, dry marram and
+     standing hay at the top — and a blade painted at 0.44 is a blade that
+     goes to white the moment the sun is behind it, which is why a dune
+     read as a scatter of bone splinters. The hue each biome was given is
+     right; only the level was wrong, so it is scaled rather than
+     repicked. */
+  (function calibrateGrass() {
+    const toLin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    const toSrgb = (v) => (v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(Math.max(0, v), 1 / 2.4) - 0.055);
+    const fix = (hex, target) => {
+      const r = toLin(((hex >> 16) & 255) / 255);
+      const g = toLin(((hex >> 8) & 255) / 255);
+      const b = toLin((hex & 255) / 255);
+      const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      if (lum < 1e-4) return hex;
+      const k = Math.min(1.4, target / lum);
+      const enc = (v) => Math.max(0, Math.min(255, Math.round(toSrgb(v * k) * 255)));
+      return (enc(r) << 16) | (enc(g) << 8) | enc(b);
+    };
+    for (const spec of Object.values(GRASS_BY_BIOME)) {
+      // The pale end of a tuft is the dried tip, the dark end the base.
+      spec.low = fix(spec.low, 0.16);
+      spec.high = fix(spec.high, 0.24);
+    }
+  }());
 
   // Grass is a fixed-size field; rather than covering sixteen square
   // kilometres, it is picked up and put down around the player.

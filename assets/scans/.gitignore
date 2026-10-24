@@ -1,0 +1,5 @@
+# The source photographs are fetched, not authored here: tools/scan/fetch.js
+# pulls them from the repositories named in CREDITS.md, and raw/manifest.json
+# records exactly which file came from where. They are large, they are not
+# ours, and nothing in the game reads them — only the capture stage does.
+raw/

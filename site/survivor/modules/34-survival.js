@@ -70,7 +70,7 @@ SurvivorGame.module({
       for (let i = 0; i < 5; i++) {
         const a = (i / 5) * Math.PI * 2;
         const log = game.cylinder({ at: [x + Math.cos(a) * 0.2, y + 0.16, z + Math.sin(a) * 0.2], radius: 0.06, height: 0.75,
-          material: { preset: 'wood', color: 0x4a3520 }, static: true, key: 'fire:log' });
+          material: { preset: 'roughWood', color: 0x4a3520 }, static: true, key: 'fire:log' });
         log.setRotation([62, (a * 180) / Math.PI, 0]);
         actors.push(log);
       }
@@ -227,16 +227,18 @@ SurvivorGame.module({
       const x = ctx.player.x, z = ctx.player.z, y = ctx.groundY(x, z);
       const yaw = (game._camYaw * 180) / Math.PI;
       const actors = [];
-      const ridge = game.cylinder({ at: [x, y + 1.3, z], radius: 0.1, height: 3, material: { preset: 'wood', color: 0x6b4f30 }, static: true });
+      // Nothing in a lean-to is sawn: the frame is poles cut on the spot
+      // and the roof is a sheet thrown over them.
+      const ridge = game.cylinder({ at: [x, y + 1.3, z], radius: 0.1, height: 3, material: { preset: 'roughWood', color: 0x6b4f30 }, static: true });
       ridge.setRotation([90, yaw, 0]);
       actors.push(ridge);
       for (const s of [-1, 1]) {
         const leg = game.cylinder({ at: [x + Math.cos(yaw * Math.PI / 180) * s * 1.5, y + 0.65, z - Math.sin(yaw * Math.PI / 180) * s * 1.5],
-          radius: 0.08, height: 1.4, material: { preset: 'wood', color: 0x6b4f30 }, static: true });
+          radius: 0.08, height: 1.4, material: { preset: 'roughWood', color: 0x6b4f30 }, static: true });
         actors.push(leg);
       }
       const roof = game.box({ at: [x, y + 0.95, z - 0.7], size: [3.2, 0.12, 2.0],
-        material: { preset: 'fabric', color: 0x4c5a35, roughness: 1 }, static: true, name: 'lean-to' });
+        material: { preset: 'canvas', color: 0x4c5a35, roughness: 1 }, static: true, name: 'lean-to' });
       roof.setRotation([-28, yaw, 0]);
       roof.userData = { kind: 'shelter' };
       actors.push(roof);
@@ -264,9 +266,9 @@ SurvivorGame.module({
       const actors = [];
       for (const s of [-1, 1]) {
         actors.push(game.cylinder({ at: [x + s * 1.1, y + 0.8, z], radius: 0.06, height: 1.6,
-          material: { preset: 'wood', color: 0x6b4f30 }, static: true, key: 'rack:leg' }));
+          material: { preset: 'roughWood', color: 0x6b4f30 }, static: true, key: 'rack:leg' }));
       }
-      const bar = game.cylinder({ at: [x, y + 1.55, z], radius: 0.04, height: 2.3, material: { preset: 'wood', color: 0x6b4f30 }, static: true, name: 'drying rack' });
+      const bar = game.cylinder({ at: [x, y + 1.55, z], radius: 0.04, height: 2.3, material: { preset: 'roughWood', color: 0x6b4f30 }, static: true, name: 'drying rack' });
       bar.setRotation([0, 0, 90]);
       bar.userData = { kind: 'rack' };
       actors.push(bar);

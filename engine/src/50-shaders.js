@@ -435,6 +435,16 @@ uniform int uDebugMode;
 uniform sampler2D uAlbedoMap;
 uniform sampler2D uNormalMap;
 uniform sampler2D uOrmMap;
+/* A second photographed material, blended in by how steep the surface
+   is. Soil does not stay on a slope: past about thirty degrees a
+   hillside is the rock it is made of, and past fifty it is bare. Giving
+   the ground two materials and letting gravity decide between them is
+   the cheapest realism in the whole renderer. */
+uniform sampler2D uAlbedoMap2;
+uniform sampler2D uNormalMap2;
+uniform sampler2D uOrmMap2;
+uniform float uUvScale2;
+uniform vec2 uSlopeBlend;     // x = where the second material starts, y = where it takes over
 
 /* Extra point lights — small fixed budget, plenty for torches, muzzle
    flashes and glowing debris. */
@@ -486,8 +496,19 @@ void main(){
   metal = mix(metal, 0.0, foam);
 #endif
 
-  if (uHasMaps == 1) {
+  /* How much of the second material this fragment gets. Measured off the
+     geometric normal, not the mapped one, so the texture's own bumps do
+     not scatter rock across a flat field. */
+  float slopeMix = 0.0;
+  if (uHasMaps == 2) {
+    float steep = 1.0 - clamp(normalize(vNormal).y, 0.0, 1.0);
+    slopeMix = smoothstep(uSlopeBlend.x, uSlopeBlend.y, steep);
+  }
+  vec2 uv2 = vUv * uUvScale2;
+
+  if (uHasMaps >= 1) {
     vec4 tex = texture(uAlbedoMap, uv);
+    if (slopeMix > 0.0) tex = mix(tex, texture(uAlbedoMap2, uv2), slopeMix);
     albedo *= tex.rgb;
 #ifdef FUR_SHELL
     // Clip this layer against the strand-density mask: the further out the
@@ -497,6 +518,7 @@ void main(){
     albedo *= mix(0.74, 1.1, uShellT);
 #endif
     vec3 orm = texture(uOrmMap, uv).rgb;
+    if (slopeMix > 0.0) orm = mix(orm, texture(uOrmMap2, uv2).rgb, slopeMix);
     ao = orm.r;
     if (detailFade > 0.0) ao *= mix(1.0, texture(uOrmMap, uvDetail).r, detailFade * 0.65);
     rough *= orm.g * 1.25;
@@ -508,10 +530,11 @@ void main(){
   rough = clamp(rough, 0.035, 1.0);
 
   vec3 N = normalize(vNormal);
-  if (uHasMaps == 1 && uNormalStrength > 0.001) {
+  if (uHasMaps >= 1 && uNormalStrength > 0.001) {
     vec3 T = normalize(vTangent.xyz - N * dot(N, vTangent.xyz));
     vec3 B = cross(N, T) * vTangent.w;
     vec3 tn = texture(uNormalMap, uv).xyz * 2.0 - 1.0;
+    if (slopeMix > 0.0) tn = mix(tn, texture(uNormalMap2, uv2).xyz * 2.0 - 1.0, slopeMix);
     tn.xy *= uNormalStrength;
     if (detailFade > 0.0) {
       // Tangent-space whiteout: the fine tilt rides on top of the coarse one
@@ -613,7 +636,7 @@ void main(){
 #endif
 #ifdef ALPHA_CLIP
   // Grass blades taper to nothing; clipping keeps the silhouette crisp.
-  if (uHasMaps == 1) alpha *= texture(uAlbedoMap, uv).a;
+  if (uHasMaps >= 1) alpha *= texture(uAlbedoMap, uv).a;
   if (alpha < 0.35) discard;
   alpha = 1.0;
 #endif

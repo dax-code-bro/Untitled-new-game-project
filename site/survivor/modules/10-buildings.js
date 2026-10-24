@@ -85,20 +85,31 @@
      Every distinct material spec costs three generated textures, and the
      renderer batches by mesh and material, so the entire street shares this
      handful and draws in a handful of calls. Box UVs run 0..1 across a face
-     whatever the box measures, so uvScale here is a compromise across panel
-     sizes rather than a real texture density. */
+     whatever the box measures, so a scale here is read against the one
+     dimension every piece of a building shares — the 2.7 m storey for a
+     wall, the span of a room for a floor — rather than against whichever
+     panel happens to be longest. The scans are photographs of real
+     surfaces, so a course of brick that is 2 m of tile has to be laid down
+     as 2 m of wall or it stops being brick. */
   const MAT = {
-    brick: { preset: 'brick', uvScale: 8.5 },
-    concrete: { preset: 'concrete', uvScale: 3.2 },
-    cinder: { preset: 'concrete', color: 0x9c9992, uvScale: 5.0, roughness: 0.95 },
+    brick: { preset: 'brick', uvScale: 1.35 },
+    concrete: { preset: 'concrete', uvScale: 1.35 },
+    cinder: { preset: 'concrete', color: 0x9c9992, uvScale: 1.35, roughness: 0.95 },
+    // Painted plasterboard has nothing on it worth photographing, so the
+    // partition keeps the procedural grain.
     interior: { color: 0xdcd6c6, texture: 'smooth', roughness: 0.93, uvScale: 1 },
-    floorWood: { preset: 'wood', color: 0xa87c50, uvScale: 5.5 },
-    floorTile: { preset: 'tile', color: 0xd4d4cc, uvScale: 6.0 },
-    floorConcrete: { preset: 'concrete', color: 0x9d9a93, uvScale: 2.4 },
-    // Roof UVs are in metres, not 0..1, because that mesh is built at full
-    // size instead of being a scaled unit box.
-    roof: { preset: 'rubber', color: 0x4a4842, uvScale: 0.45 },
-    roofFlat: { preset: 'rubber', color: 0x53514a, uvScale: 2.4 },
+    floorWood: { preset: 'wood', color: 0xa87c50, uvScale: 4.0 },
+    floorTile: { preset: 'tile', color: 0xd4d4cc, uvScale: 2.0 },
+    floorConcrete: { preset: 'concrete', color: 0x9d9a93, uvScale: 2.0 },
+    // Mineral-surfaced roll roofing: grit bedded in bitumen, which is what
+    // a pitched roof on this street is covered in and what the gravel scan
+    // already is. Roof UVs are in metres, not 0..1, because that mesh is
+    // built at full size instead of being a scaled unit box.
+    roof: { preset: 'gravel', color: 0x4a4842, uvScale: 0.83 },
+    // A flat roof is ballasted with loose stone, and it is a box that runs
+    // from a garage to the width of a city block. One number cannot cover
+    // that range, so the engine sizes this one from the roof it lands on.
+    roofFlat: { preset: 'gravel', color: 0x53514a },
     door: { preset: 'wood', color: 0x8a6440, uvScale: 1.4 },
     bars: { preset: 'steel', color: 0x71767c },
     hole: { color: 0x090807, texture: 'smooth', roughness: 1 },

@@ -76,6 +76,30 @@ const TextureLib = {
     return out;
   },
 
+  /* A flat stand-in at the material's own reflectance, for the moment
+     between a scan being asked for and arriving. Two texels: it is only
+     ever seen for a frame or two, and it keeps the shader's map path
+     valid so there is no branch to get wrong. */
+  neutral(meanAlbedo = 0.3) {
+    const key = `neutral:${meanAlbedo}`;
+    if (this._cache.has(key)) return this._cache.get(key);
+    const size = 2, n = size * size;
+    const albedo = new Uint8Array(n * 4);
+    const orm = new Uint8Array(n * 4);
+    const normal = new Uint8Array(n * 4);
+    // Back out of linear reflectance into the sRGB byte the GPU expects.
+    const lin = Math.max(0, Math.min(1, meanAlbedo));
+    const srgb = Math.round((lin <= 0.0031308 ? lin * 12.92 : 1.055 * Math.pow(lin, 1 / 2.4) - 0.055) * 255);
+    for (let i = 0; i < n; i++) {
+      albedo[i * 4] = srgb; albedo[i * 4 + 1] = srgb; albedo[i * 4 + 2] = srgb; albedo[i * 4 + 3] = 255;
+      orm[i * 4] = 255; orm[i * 4 + 1] = 204; orm[i * 4 + 2] = 0; orm[i * 4 + 3] = 255;
+      normal[i * 4] = 128; normal[i * 4 + 1] = 128; normal[i * 4 + 2] = 255; normal[i * 4 + 3] = 255;
+    }
+    const maps = { albedo, orm, normal, size };
+    this._cache.set(key, maps);
+    return maps;
+  },
+
   /* Build the three maps for a named surface. Cached per (kind, size). */
   generate(kind, size = 256, seed = 1) {
     const key = `${kind}:${size}:${seed}`;
@@ -257,6 +281,15 @@ const TextureLib = {
       c.rough = 0.80 + leaf * 0.16;
       c.ao = 0.42 + clump * 0.38 + leaf * 0.20;
       c.h = clump * 0.6 + leaf * 0.4;
+      /* Where the foliage is actually there. A crown is mostly gaps —
+         a third of the sky gets through a summer canopy — and the alpha
+         is what lets a solid lobe of geometry read as leaves with light
+         between them. */
+      /* A summer canopy passes roughly a third of the sky. Biasing the
+         mask so about that much falls below the clip threshold is what
+         turns a solid lobe of geometry into leaves with daylight through
+         them. */
+      c.a = Math.max(0, Math.min(1, (clump * 0.45 + leaf * 0.75) * 1.25 - 0.22));
     },
 
     terrainDetail(u, v, n, c) {
@@ -591,6 +624,18 @@ class Material {
     this.detailScale = opts.detailScale != null ? opts.detailScale : 0;
     this.normalStrength = opts.normalStrength != null ? opts.normalStrength : 1;
     this.texture = opts.texture || null;   // name of a TextureLib kind
+    /* Name of a scanned material in 41-scans.js. A scan is a photograph
+       of the real surface and beats anything a noise function can do, so
+       when one is named it replaces the procedural maps as soon as the
+       browser has decoded it. The procedural texture stays as the thing
+       on screen in the meantime. */
+    this.scan = opts.scan || null;
+    /* A second scanned material and the slope band over which it takes
+       over, in sines of the surface angle: 0.30 is about 17 degrees,
+       0.62 about 38. */
+    this.scan2 = opts.scan2 || null;
+    this.uvScale2 = opts.uvScale2 != null ? opts.uvScale2 : (opts.uvScale != null ? opts.uvScale : 1);
+    this.slopeBlend = opts.slopeBlend || [0.30, 0.62];
     this.castShadow = opts.castShadow !== false;
     this.receiveShadow = opts.receiveShadow !== false;
     // Subsurface approximation — foliage and skin look dead without it.
@@ -598,35 +643,121 @@ class Material {
     // Per-vertex baked color (carved-from-photos meshes) instead of a
     // UV-mapped texture.
     this.vertexColor = !!opts.vertexColor;
+    /* Cut the surface away where the texture says there is nothing there.
+       A canopy modelled as a solid cone is a painted cone whatever is on
+       it; cut it against a leaf mask and the silhouette becomes leaves,
+       which is most of what tells you a tree is a tree at fifty metres. */
+    this.alphaClip = !!opts.alphaClip;
 
     this.maps = null;
-    if (this.texture) this._buildMaps(opts.textureSize || 256, opts.textureSeed || 1);
+    this.scanReady = false;
+    if (this.texture || this.scan) this._buildMaps(opts.textureSize || 256, opts.textureSeed || 1);
+    if (this.scan) this._requestScan();
+    if (this.scan2) this._requestScan2();
   }
 
-  _buildMaps(size, seed) {
+  _newMap(srgb) {
     const gl = this.gl;
-    const data = TextureLib.generate(this.texture, size, seed);
-    const mk = (bytes, srgb) => new Texture(gl, {
+    return new Texture(gl, {
       internalFormat: srgb ? gl.SRGB8_ALPHA8 : gl.RGBA8,
       format: gl.RGBA,
       type: gl.UNSIGNED_BYTE,
       wrap: gl.REPEAT,
       aniso: 8,
-    }).upload(bytes, size, size);
+    });
+  }
+
+  _buildMaps(size, seed) {
+    const data = this.texture
+      ? TextureLib.generate(this.texture, size, seed)
+      : TextureLib.neutral(typeof SCAN !== 'undefined' && SCAN[this.scan] ? SCAN[this.scan].meanAlbedo : 0.3);
+    const n = data.size;
     this.maps = {
       // Albedo is authored in sRGB; the GPU converts on sample. ORM and
       // normal are data, not colour, and must stay linear.
-      albedo: mk(data.albedo, true),
-      normal: mk(data.normal, false),
-      orm: mk(data.orm, false),
+      albedo: this._newMap(true).upload(data.albedo, n, n),
+      normal: this._newMap(false).upload(data.normal, n, n),
+      orm: this._newMap(false).upload(data.orm, n, n),
     };
   }
 
+  /* The steep-ground material. It gets its own three textures rather
+     than sharing, because its tile size is its own. */
+  _requestScan2() {
+    if (typeof loadScan !== 'function') return;
+    this.maps2 = {
+      albedo: this._newMap(true).upload(TextureLib.neutral(0.25).albedo, 2, 2),
+      normal: this._newMap(false).upload(TextureLib.neutral(0.25).normal, 2, 2),
+      orm: this._newMap(false).upload(TextureLib.neutral(0.25).orm, 2, 2),
+    };
+    loadScan(this.scan2).then((s) => {
+      if (!s || !this.maps2 || !this.gl) return;
+      this.maps2.albedo.upload(s.albedo.data, s.albedo.size, s.albedo.size);
+      this.maps2.normal.upload(s.normal.data, s.normal.size, s.normal.size);
+      this.maps2.orm.upload(s.orm.data, s.orm.size, s.orm.size);
+    }).catch(() => {});
+  }
+
+  /* Swap the procedural maps for the photographed ones the moment they
+     have decoded. Nothing waits on this: the surface is already on
+     screen, it simply gets better. */
+  _requestScan() {
+    if (typeof loadScan !== 'function') return;
+    loadScan(this.scan).then((s) => {
+      if (!s || !this.maps || !this.gl) return;
+      this.maps.albedo.upload(s.albedo.data, s.albedo.size, s.albedo.size);
+      this.maps.normal.upload(s.normal.data, s.normal.size, s.normal.size);
+      this.maps.orm.upload(s.orm.data, s.orm.size, s.orm.size);
+      this.scanReady = true;
+      if (s.spec && s.spec.subsurface && !this._ssOverride) this.subsurface = Math.max(this.subsurface, s.spec.subsurface);
+    }).catch(() => { /* a missing scan is not a reason to lose the surface */ });
+  }
+
+  /* The same surface at a different texture density.
+
+     Texture density has to follow object size — a 0.5 m capture of steel
+     stretched over a forty-metre ferry is not steel, it is a smear — but
+     draws are batched by material, so the scale cannot be a per-actor
+     uniform. The answer is a second Material that shares the first one's
+     GPU textures and differs only in how often they repeat. Quantising
+     to powers of two keeps the number of them small: a few variants
+     cover every object in the game from a fire-ring stone to a quarry
+     boulder. */
+  variant(uvScale) {
+    const k = Material.bucket(uvScale);
+    if (Math.abs(k - this.uvScale) < 1e-6) return this;
+    if (!this._variants) this._variants = new Map();
+    const hit = this._variants.get(k);
+    if (hit) return hit;
+    const v = Object.create(Material.prototype);
+    Object.assign(v, this);
+    v.uvScale = k;
+    v.uvScale2 = this.uvScale2 === this.uvScale ? k : this.uvScale2;
+    v._variants = null;
+    v._shared = true;                 // its maps belong to the parent
+    this._variants.set(k, v);
+    return v;
+  }
+
+  /* Powers of two from an eighth of a tile to thirty-two of them. */
+  static bucket(v) {
+    if (!(v > 0) || !Number.isFinite(v)) return 1;
+    const e = Math.round(Math.log2(Math.max(0.125, Math.min(64, v))));
+    return Math.pow(2, Math.max(-3, Math.min(6, e)));
+  }
+
+  /* How many metres of real surface one tile of this material covers.
+     Only a scanned material knows; a procedural one has no real size. */
+  get metresPerTile() {
+    if (this.scan && typeof SCAN !== 'undefined' && SCAN[this.scan]) return SCAN[this.scan].metresPerTile;
+    return 0;
+  }
+
   dispose() {
-    if (this.maps) {
-      this.maps.albedo.dispose();
-      this.maps.normal.dispose();
-      this.maps.orm.dispose();
+    if (this._shared) return;         // a variant does not own its textures
+    for (const m of [this.maps, this.maps2]) {
+      if (!m) continue;
+      m.albedo.dispose(); m.normal.dispose(); m.orm.dispose();
     }
   }
 }
@@ -634,17 +765,17 @@ class Material {
 /* Sensible presets so a game can say `material: 'gold'` and get something
    that reads correctly under the engine's lighting. */
 const MaterialPresets = {
-  concrete: { color: 0xb0aca4, texture: 'concrete', roughness: 0.9, metalness: 0 },
-  brick: { color: 0xffffff, texture: 'brick', roughness: 0.9, metalness: 0 },
-  wood: { color: 0xffffff, texture: 'wood', roughness: 0.7, metalness: 0 },
-  metal: { color: 0xc8ccd0, texture: 'metal', roughness: 0.35, metalness: 1 },
-  steel: { color: 0x9aa2aa, texture: 'metal', roughness: 0.4, metalness: 1 },
+  concrete: { color: 0xffffff, texture: 'concrete', scan: 'stoneFloor', roughness: 0.9, metalness: 0 },
+  brick: { color: 0xffffff, texture: 'brick', scan: 'brick', roughness: 0.9, metalness: 0 },
+  wood: { color: 0xffffff, texture: 'wood', scan: 'plank', roughness: 0.7, metalness: 0 },
+  metal: { color: 0xc8ccd0, texture: 'metal', scan: 'wornMetal', roughness: 0.35, metalness: 1 },
+  steel: { color: 0x9aa2aa, texture: 'metal', scan: 'wornMetal', roughness: 0.4, metalness: 1 },
   gold: { color: 0xffd276, texture: 'metal', roughness: 0.25, metalness: 1 },
   copper: { color: 0xd08a52, texture: 'metal', roughness: 0.32, metalness: 1 },
-  rust: { color: 0xffffff, texture: 'rust', roughness: 0.85, metalness: 0.3 },
-  rock: { color: 0xa8a49c, texture: 'rock', roughness: 0.92, metalness: 0 },
-  stone: { color: 0xa8a49c, texture: 'rock', roughness: 0.92, metalness: 0 },
-  grass: { color: 0xffffff, texture: 'grass', roughness: 0.95, metalness: 0, subsurface: 0.35 },
+  rust: { color: 0xb07a4e, texture: 'rust', scan: 'wornMetal', roughness: 0.92, metalness: 0.2 },
+  rock: { color: 0xffffff, texture: 'rock', scan: 'rock', roughness: 0.92, metalness: 0 },
+  stone: { color: 0xffffff, texture: 'rock', scan: 'rock', roughness: 0.92, metalness: 0 },
+  grass: { color: 0xffffff, texture: 'grass', scan: 'meadow', roughness: 0.95, metalness: 0, subsurface: 0.35 },
   /* Neutral grain for anything shaded by vertex colours — a hand-built
      mesh, a painted panel, a gun. Every other preset bakes a colour into
      its texture, which multiplies with the vertex colour and darkens it;
@@ -655,24 +786,47 @@ const MaterialPresets = {
   /* For anything whose colour comes from vertex colours: canopies, shrubs,
      hedges. The `grass` preset bakes a green albedo of its own and is the
      wrong thing to point a leaf at. */
-  foliage: { color: 0xffffff, texture: 'foliageDetail', roughness: 0.88, metalness: 0,
+  foliage: { color: 0xffffff, texture: 'foliageDetail', alphaClip: true, roughness: 0.88, metalness: 0,
     subsurface: 0.5, doubleSided: true, uvScale: 9, normalStrength: 0.55 },
-  dirt: { color: 0xffffff, texture: 'dirt', roughness: 0.96, metalness: 0 },
+  dirt: { color: 0xffffff, texture: 'dirt', scan: 'dirt', roughness: 0.96, metalness: 0 },
   // Neutral ground for vertex-coloured terrain: detail from the texture,
   // colour from the mesh.
   // Low normal strength on purpose: ground detail is centimetres of grain
   // over metres of tile, and at full bump it reads as corrugated iron.
-  terrain: { color: 0xffffff, texture: 'terrainDetail', roughness: 0.95, metalness: 0, subsurface: 0.12, normalStrength: 0.42, detailScale: 22 },
-  savanna: { color: 0xffffff, texture: 'savanna', roughness: 0.96, metalness: 0 },
-  mud: { color: 0xffffff, texture: 'mud', roughness: 0.8, metalness: 0 },
-  sand: { color: 0xffffff, texture: 'sand', roughness: 0.9, metalness: 0 },
+  /* The ground. Two photographed surfaces: soil grain everywhere, rock
+     grain where the slope is too steep for soil to stay on it, blended
+     over the same 25-46 degree band the island's own colouring uses. Both
+     are structure only — the biome decides the colour, the photograph
+     decides what the surface is made of. */
+  terrain: { color: 0xffffff, texture: 'terrainDetail', scan: 'groundDetail', scan2: 'rockDetail',
+    slopeBlend: [0.42, 0.72], roughness: 0.95, metalness: 0, subsurface: 0.12,
+    normalStrength: 0.95, detailScale: 9 },
+  savanna: { color: 0xffffff, texture: 'savanna', scan: 'grassTurf', roughness: 0.96, metalness: 0 },
+  /* Surfaces that had no preset at all, so every hide, split log, gravel
+     bed and sheet of water in the game was routed through cloth, sawn
+     plank or concrete instead. */
+  leather: { color: 0xffffff, texture: 'fabric', scan: 'leather', roughness: 0.72, metalness: 0 },
+  hide: { color: 0xffffff, texture: 'fabric', scan: 'leather', roughness: 0.80, metalness: 0 },
+  pelt: { color: 0xffffff, texture: 'fabric', scan: 'fur', roughness: 0.95, metalness: 0, subsurface: 0.25 },
+  roughWood: { color: 0xffffff, texture: 'wood', scan: 'roughWood', roughness: 0.88, metalness: 0 },
+  timber: { color: 0xffffff, texture: 'wood', scan: 'weatheredTimber', roughness: 0.92, metalness: 0 },
+  gravel: { color: 0xffffff, texture: 'rock', scan: 'gravel', roughness: 0.94, metalness: 0 },
+  canvas: { color: 0xffffff, texture: 'fabric', scan: 'sailcloth', roughness: 0.95, metalness: 0, subsurface: 0.22 },
+  rope: { color: 0xa98f63, texture: 'fabric', scan: 'rope', roughness: 0.94, metalness: 0 },
+  /* Water takes its colour from the sky, so the scan is normals only and
+     the surface keeps whatever colour it was given. */
+  water: { color: 0x14384f, texture: 'smooth', scan: 'waterSurface', roughness: 0.08, metalness: 0.02 },
+  mud: { color: 0xffffff, texture: 'mud', scan: 'dirt', roughness: 0.84, metalness: 0 },
+  sand: { color: 0xffffff, texture: 'sand', scan: 'sand', roughness: 0.9, metalness: 0 },
   marble: { color: 0xf2efe9, texture: 'marble', roughness: 0.2, metalness: 0 },
-  ice: { color: 0xdff2fa, texture: 'ice', roughness: 0.1, metalness: 0, opacity: 0.72 },
+  ice: { color: 0xffffff, texture: 'ice', scan: 'ice', roughness: 0.1, metalness: 0, opacity: 0.72 },
   glass: { color: 0xdfeef5, texture: 'smooth', roughness: 0.05, metalness: 0, opacity: 0.28 },
-  fabric: { color: 0xffffff, texture: 'fabric', roughness: 0.97, metalness: 0, subsurface: 0.2 },
+  /* The cloth scan is a weave without a colour, so the preset has to
+     carry one or an untinted use comes out white. Undyed linen. */
+  fabric: { color: 0xb9b1a3, texture: 'fabric', scan: 'cloth', roughness: 0.97, metalness: 0, subsurface: 0.2 },
   skin: { color: 0xffffff, texture: 'skin', roughness: 0.6, metalness: 0, subsurface: 0.5 },
   plastic: { color: 0xdddddd, texture: 'plastic', roughness: 0.35, metalness: 0 },
-  tile: { color: 0xffffff, texture: 'tile', roughness: 0.2, metalness: 0 },
+  tile: { color: 0xffffff, texture: 'tile', scan: 'stoneFloor', roughness: 0.4, metalness: 0 },
   rubber: { color: 0x2a2a2e, texture: 'smooth', roughness: 0.95, metalness: 0 },
   neon: { color: 0x111111, emissive: 0x36e0ff, emissiveStrength: 4, roughness: 0.4 },
   lava: { color: 0x2a0a04, emissive: 0xff5a1e, emissiveStrength: 3.5, texture: 'rock', roughness: 0.8 },

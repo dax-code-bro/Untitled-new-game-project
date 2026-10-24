@@ -88,10 +88,23 @@ SurvivorGame.module({
 
     /* ---- geometry, built once per archetype ---- */
 
+    /* A trunk's UVs have to be square in metres or no single texture scale
+       can be right for it: round the trunk is about a metre and a half,
+       up it is twenty, and a bark photograph laid down with one scalar
+       would be stretched eleven to one. Giving v the trunk's own aspect
+       ratio makes a UV unit the same distance whichever way it is
+       measured, and then one number tiles the bark correctly. */
+    function trunkAspect(rTrunk) { return 1 / (2 * Math.PI * rTrunk); }
+
     function conifer(rng, spec) {
       const g = new LE.Geometry();
       const h = 1;                       // unit height; instances scale it
       const rTrunk = spec.trunk * 0.5 / 12;
+      /* The trunk is its own mesh. Welded into the crown it had to share
+         the crown's material, which meant every trunk in the forest wore
+         the leaf texture. */
+      const bark = new LE.Geometry();
+      const vTop = h * 0.92 * trunkAspect(rTrunk);
       // Trunk as a tapered prism. Eight sides is enough: past that the extra
       // vertices are invisible and the tree is drawn a thousand times.
       const sides = 8;
@@ -99,14 +112,14 @@ SurvivorGame.module({
       for (let i = 0; i < sides; i++) {
         const a = (i / sides) * Math.PI * 2;
         const cx = Math.cos(a), cz = Math.sin(a);
-        ringA.push(g.vert(cx * rTrunk, 0, cz * rTrunk, cx, 0.15, cz, i / sides, 0));
-        g.vertColor(0.26, 0.21, 0.15);
-        ringB.push(g.vert(cx * rTrunk * 0.42, h * 0.92, cz * rTrunk * 0.42, cx, 0.15, cz, i / sides, 1));
-        g.vertColor(0.30, 0.25, 0.18);
+        ringA.push(bark.vert(cx * rTrunk, 0, cz * rTrunk, cx, 0.15, cz, i / sides, 0));
+        bark.vertColor(0.26, 0.21, 0.15);
+        ringB.push(bark.vert(cx * rTrunk * 0.42, h * 0.92, cz * rTrunk * 0.42, cx, 0.15, cz, i / sides, vTop));
+        bark.vertColor(0.30, 0.25, 0.18);
       }
       for (let i = 0; i < sides; i++) {
         const j = (i + 1) % sides;
-        g.quad(ringA[i], ringA[j], ringB[j], ringB[i]);
+        bark.quad(ringA[i], ringA[j], ringB[j], ringB[i]);
       }
       // Canopy as stacked skirts, widest low down, which is what gives a
       // conifer its outline against the sky.
@@ -117,35 +130,37 @@ SurvivorGame.module({
         const y1 = y0 + 0.20;
         const rad = (0.20 - f * 0.13) * (0.9 + rng.next() * 0.2);
         const tip = g.vert(0, y1, 0, 0, 1, 0, 0.5, 1);
-        g.vertColor(0.10, 0.19, 0.12);
+        g.vertColor(0.095, 0.150, 0.082);
         const ring = [];
         for (let i = 0; i < sides; i++) {
           const a = (i / sides) * Math.PI * 2 + t * 0.4;
           const cx = Math.cos(a), cz = Math.sin(a);
           ring.push(g.vert(cx * rad, y0, cz * rad, cx * 0.6, 0.5, cz * 0.6, i / sides, 0));
-          g.vertColor(0.07, 0.15, 0.09);
+          g.vertColor(0.055, 0.105, 0.058);
         }
         for (let i = 0; i < sides; i++) g.tri(tip, ring[i], ring[(i + 1) % sides]);
       }
-      return g.finalize();
+      return { crown: g.finalize(), bark: bark.finalize(), rTrunk };
     }
 
     function broadleaf(rng, spec) {
       const g = new LE.Geometry();
+      const bark = new LE.Geometry();
       const rTrunk = spec.trunk * 0.5 / 14;
+      const vTop = 0.52 * trunkAspect(rTrunk);
       const sides = 8;
       const ringA = [], ringB = [];
       for (let i = 0; i < sides; i++) {
         const a = (i / sides) * Math.PI * 2;
         const cx = Math.cos(a), cz = Math.sin(a);
-        ringA.push(g.vert(cx * rTrunk, 0, cz * rTrunk, cx, 0.1, cz, i / sides, 0));
-        g.vertColor(0.29, 0.24, 0.17);
-        ringB.push(g.vert(cx * rTrunk * 0.55, 0.52, cz * rTrunk * 0.55, cx, 0.1, cz, i / sides, 1));
-        g.vertColor(0.32, 0.27, 0.19);
+        ringA.push(bark.vert(cx * rTrunk, 0, cz * rTrunk, cx, 0.1, cz, i / sides, 0));
+        bark.vertColor(0.29, 0.24, 0.17);
+        ringB.push(bark.vert(cx * rTrunk * 0.55, 0.52, cz * rTrunk * 0.55, cx, 0.1, cz, i / sides, vTop));
+        bark.vertColor(0.32, 0.27, 0.19);
       }
       for (let i = 0; i < sides; i++) {
         const j = (i + 1) % sides;
-        g.quad(ringA[i], ringA[j], ringB[j], ringB[i]);
+        bark.quad(ringA[i], ringA[j], ringB[j], ringB[i]);
       }
       /* Canopy as several overlapping lobes rather than one ball. A single
          sphere reads as a lollipop; three or four offset blobs read as a
@@ -168,8 +183,13 @@ SurvivorGame.module({
             line.push(g.vert(ox + nx * rad, oy + y * rad * 0.8, oz + nz * rad,
               nx, y, nz, sIdx / seg, r / rings));
             // Slight per-vertex variation so the crown is not a flat colour.
-            const v = 0.9 + rng.next() * 0.25;
-            g.vertColor(0.13 * v, 0.24 * v, 0.08 * v);
+            /* Real foliage is far less saturated than the green anyone
+               reaches for, and it is never one colour: the top of a crown
+               is bleached by the sun and the underside is in its own
+               shade. Both of those are in here, and together they are
+               what stops a crown reading as painted card. */
+            const v = (0.78 + rng.next() * 0.34) * (0.74 + 0.30 * (y * 0.5 + 0.5));
+            g.vertColor(0.105 * v, 0.168 * v, 0.072 * v);
           }
           idx.push(line);
         }
@@ -179,7 +199,7 @@ SurvivorGame.module({
           }
         }
       }
-      return g.finalize();
+      return { crown: g.finalize(), bark: bark.finalize(), rTrunk };
     }
 
     function shrubGeo(rng) {
@@ -199,7 +219,7 @@ SurvivorGame.module({
             const nx = sr * Math.cos(th), nz = sr * Math.sin(th);
             line.push(g.vert(ox + nx * rad, y * rad * 0.9, oz + nz * rad, nx, y, nz, s / seg, r / rings));
             const v = 0.85 + rng.next() * 0.3;
-            g.vertColor(0.13 * v, 0.21 * v, 0.08 * v);
+            g.vertColor(0.100 * v, 0.152 * v, 0.068 * v);
           }
           idx.push(line);
         }
@@ -241,7 +261,7 @@ SurvivorGame.module({
         const rng = new LE.Rng(variantSeed + key.length * 977 + v * 131);
         GEO[key].push(spec.canopy === 'conifer' ? conifer(rng, spec)
           : spec.canopy === 'broad' ? broadleaf(rng, spec)
-          : logGeo(rng));
+          : { crown: logGeo(rng), bark: null, rTrunk: 0 });
       }
     }
     const SHRUB_GEO = [0, 1, 2].map((v) => shrubGeo(new LE.Rng(0xb00b + v * 37)));
@@ -257,7 +277,35 @@ SurvivorGame.module({
        trunk. `painted` supplies grain with a mean of one, so the colour
        written into the geometry is the colour that comes out. */
     const WOOD_MAT = { preset: 'painted', vertexColor: true, color: 0xffffff,
-      roughness: 0.92, uvScale: 8, normalStrength: 0.7 };
+      /* Bark grain from a photographed surface. Structure only, for the
+         same reason the colour is in the vertices: a birch and a spruce
+         are the same fissured wood in different colours, and multiplying
+         one brown photograph by another brown vertex gives a black
+         trunk. The tile is 0.9 m, and a trunk is about a metre around. */
+      scan: 'barkDetail',
+      roughness: 0.92, uvScale: 3.2, normalStrength: 1.0 };
+    /* One bark material per species. The capture is 0.9 m across and a
+       trunk is a metre or so around, so the number below is simply how
+       many of those tiles fit round the tree — worked out from the
+       species' own girth rather than tuned by eye. */
+    const BARK_MAT = {};
+    for (const key of Object.keys(SPECIES)) {
+      const spec = SPECIES[key];
+      if (spec.canopy === 'none') continue;
+      const rTrunk = spec.trunk * 0.5 / (spec.canopy === 'conifer' ? 12 : 14);
+      const meanH = (spec.height[0] + spec.height[1]) * 0.5;
+      BARK_MAT[key] = {
+        preset: 'painted', vertexColor: true, color: 0xffffff,
+        scan: 'barkDetail', roughness: 0.93, normalStrength: 1.0,
+        uvScale: Math.max(0.4, (2 * Math.PI * rTrunk * meanH) / 0.9),
+      };
+    }
+
+    /* Driftwood has been in the sea for years, which is a different
+       surface from a standing trunk — salt-bleached, split along the
+       grain, the soft wood gone. */
+    const DRIFT_MAT = { preset: 'painted', vertexColor: true, color: 0xffffff,
+      scan: 'weatheredTimber', roughness: 0.94, uvScale: 1.6, normalStrength: 0.9 };
 
     /* ---- placement ---- */
 
@@ -341,7 +389,7 @@ SurvivorGame.module({
           const v = rng.int(0, GEO.driftwood.length - 1);
           const len = 1.2 + rng.next() * 2.6;
           const a = game.mesh({
-            geometry: GEO.driftwood[v], key: `veg:drift:${v}`, material: WOOD_MAT,
+            geometry: GEO.driftwood[v], key: `veg:drift:${v}`, material: DRIFT_MAT,
             at: [x, ctx.groundY(x, z), z], scale: len, physics: false, name: 'driftwood',
           });
           a.setRotation([0, rng.next() * 360, rng.next() * 14 - 7]);
@@ -364,14 +412,27 @@ SurvivorGame.module({
       const v = rng.int(0, GEO[speciesId].length - 1);
       const heightM = spec.height[0] + rng.next() * (spec.height[1] - spec.height[0]);
       const y = ctx.groundY(x, z);
+      const geo = GEO[speciesId][v];
+      const turn = rng.next() * 360;
       const actor = game.mesh({
-        geometry: GEO[speciesId][v],
+        geometry: geo.crown,
         key: `veg:tree:${speciesId}:${v}`,
         material: FOLIAGE_MAT,
         at: [x, y, z], scale: heightM,
         physics: false, name: 'tree',
       });
-      actor.setRotation([0, rng.next() * 360, 0]);
+      actor.setRotation([0, turn, 0]);
+      let barkActor = null;
+      if (geo.bark) {
+        barkActor = game.mesh({
+          geometry: geo.bark,
+          key: `veg:bark:${speciesId}:${v}`,
+          material: BARK_MAT[speciesId] || WOOD_MAT,
+          at: [x, y, z], scale: heightM,
+          physics: false, name: 'treeBark',
+        });
+        barkActor.setRotation([0, turn, 0]);
+      }
 
       /* The collider is the trunk, not the crown. A canopy collider would
          stop the player two metres short of every tree and make a wood
@@ -386,12 +447,13 @@ SurvivorGame.module({
       // Standing timber, from the stem volume and the species density.
       const volumeM3 = Math.PI * trunkR * trunkR * heightM * 0.55;
       const rec = {
-        speciesId, spec, x, z, heightM, trunkR, actor, trunk,
+        speciesId, spec, x, z, heightM, trunkR, actor, trunk, barkActor,
         timberKg: volumeM3 * spec.timberPerM3,
         felled: false, chopProgress: 0,
       };
       actor.userData = { kind: 'tree', tree: rec };
       trunk.userData = { kind: 'tree', tree: rec };
+      if (barkActor) barkActor.userData = { kind: 'tree', tree: rec };
       return rec;
     }
 
@@ -401,6 +463,7 @@ SurvivorGame.module({
       for (const a of rec.actors) { try { a.destroy(); } catch (e) { /* already gone */ } }
       for (const t of rec.trees) {
         if (t.trunk) { try { t.trunk.destroy(); } catch (e) { /* already gone */ } }
+        if (t.barkActor) { try { t.barkActor.destroy(); } catch (e) { /* already gone */ } }
         const i = trees.indexOf(t);
         if (i >= 0) trees.splice(i, 1);
         treeCount--;
@@ -424,6 +487,7 @@ SurvivorGame.module({
       tree.felled = true;
       try {
         tree.actor.destroy();
+        if (tree.barkActor) tree.barkActor.destroy();
         if (tree.trunk) tree.trunk.destroy();
       } catch (e) { /* already gone */ }
       const i = trees.indexOf(tree);
@@ -432,7 +496,7 @@ SurvivorGame.module({
       // A felled tree is a log on the ground, not a puff of resources.
       const v = 0;
       const log = game.mesh({
-        geometry: GEO.driftwood[v], key: `veg:drift:${v}`, material: WOOD_MAT,
+        geometry: GEO.driftwood[v], key: `veg:drift:${v}`, material: DRIFT_MAT,
         at: [tree.x, ctx.groundY(tree.x, tree.z), tree.z],
         scale: Math.min(6, tree.heightM * 0.35), physics: false, name: 'felled',
       });

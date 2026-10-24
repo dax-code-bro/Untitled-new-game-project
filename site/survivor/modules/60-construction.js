@@ -39,7 +39,9 @@ SurvivorGame.module({
 
     /* What the player can put up from nothing. Costs are in the same items
        the inventory already knows about, and the mass of each piece is the
-       real mass of that much timber. */
+       real mass of that much timber. The ladder and the palisade are built
+       from split and round stock rather than sawn plank, which is why they
+       are the only two on a different surface. */
     const PIECES = {
       wallSection: { name: 'wall section', cost: { plank: 4, nails: 2 }, tool: 'hammer', seconds: 900,
         size: [2.4, 2.4, 0.14], material: { preset: 'wood', color: 0xa9885c }, assembly: 'exteriorFrameWall' },
@@ -50,11 +52,11 @@ SurvivorGame.module({
       doorway: { name: 'doorway', cost: { plank: 2, nails: 2 }, tool: 'hammer', seconds: 600,
         size: [1.0, 2.1, 0.14], material: { preset: 'wood', color: 0x8a6d47 } },
       ladder: { name: 'ladder', cost: { plank: 2, cordage: 2 }, tool: null, seconds: 900,
-        size: [0.5, 3.0, 0.1], material: { preset: 'wood', color: 0x8a6d47 } },
+        size: [0.5, 3.0, 0.1], material: { preset: 'roughWood', color: 0x8a6d47 } },
       workbench: { name: 'workbench', cost: { plank: 4, nails: 2 }, tool: 'hammer', seconds: 1800,
         size: [2.0, 0.9, 0.8], material: { preset: 'wood', color: 0x7a613f }, workbench: true },
       palisade: { name: 'palisade', cost: { timber: 2, cordage: 1 }, tool: 'axe', seconds: 1200,
-        size: [2.2, 2.6, 0.25], material: { preset: 'wood', color: 0x5f4a2e } },
+        size: [2.2, 2.6, 0.25], material: { preset: 'roughWood', color: 0x5f4a2e } },
     };
 
     let pieceId = 0;

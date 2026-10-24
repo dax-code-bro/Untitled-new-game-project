@@ -1,0 +1,493 @@
+{
+  "note": "Real photographic surface captures from open-source asset repositories. Every entry records where it came from and under what licence. 'maps' lists the files to fetch; anything absent is derived by tools/scan/capture.js, which is a standard photogrammetry material pipeline: delight, make seamless, height, normal, roughness, ambient occlusion.",
+  "repos": {
+    "babylon": {
+      "base": "https://raw.githubusercontent.com/BabylonJS/Assets/master/",
+      "name": "BabylonJS/Assets",
+      "licence": "CC BY 4.0",
+      "url": "https://github.com/BabylonJS/Assets"
+    },
+    "three": {
+      "base": "https://raw.githubusercontent.com/mrdoob/three.js/dev/",
+      "name": "mrdoob/three.js (examples)",
+      "licence": "MIT",
+      "url": "https://github.com/mrdoob/three.js"
+    },
+    "godot": {
+      "base": "https://raw.githubusercontent.com/godotengine/godot-demo-projects/master/",
+      "name": "Poly Haven (vendored in godotengine/godot-demo-projects)",
+      "licence": "CC0 1.0",
+      "url": "https://polyhaven.com"
+    }
+  },
+  "materials": [
+    {
+      "id": "sand",
+      "what": "Beach and dune sand.",
+      "repo": "babylon",
+      "size": 512,
+      "metresPerTile": 1.6,
+      "maps": {
+        "color": "textures/sand.jpg"
+      },
+      "roughRange": [
+        0.72,
+        0.94
+      ],
+      "metal": 0,
+      "heightAmpM": 0.004,
+      "slopeDeg": 9
+    },
+    {
+      "id": "meadow",
+      "what": "Meadow grass from above.",
+      "repo": "babylon",
+      "size": 512,
+      "metresPerTile": 2.2,
+      "maps": {
+        "color": "textures/grass.png",
+        "normal": "textures/grassn.png"
+      },
+      "roughRange": [
+        0.8,
+        0.98
+      ],
+      "metal": 0,
+      "heightAmpM": 0.02,
+      "subsurface": 0.32,
+      "slopeDeg": 19
+    },
+    {
+      "id": "grassTurf",
+      "what": "Thicker turf for pasture and clearings.",
+      "repo": "three",
+      "size": 512,
+      "metresPerTile": 3.0,
+      "maps": {
+        "color": "examples/textures/terrain/grasslight-big.jpg"
+      },
+      "roughRange": [
+        0.82,
+        0.99
+      ],
+      "metal": 0,
+      "heightAmpM": 0.025,
+      "subsurface": 0.3,
+      "slopeDeg": 21
+    },
+    {
+      "id": "rock",
+      "what": "Weathered rock face.",
+      "repo": "babylon",
+      "size": 512,
+      "metresPerTile": 2.4,
+      "maps": {
+        "color": "textures/rock.png",
+        "normal": "textures/rockn.png"
+      },
+      "roughRange": [
+        0.68,
+        0.95
+      ],
+      "metal": 0,
+      "heightAmpM": 0.05,
+      "slopeDeg": 27
+    },
+    {
+      "id": "forestFloor",
+      "what": "Leaf litter and soil under trees.",
+      "repo": "babylon",
+      "size": 512,
+      "metresPerTile": 2.0,
+      "maps": {
+        "color": "textures/ground.jpg"
+      },
+      "roughRange": [
+        0.78,
+        0.97
+      ],
+      "metal": 0,
+      "heightAmpM": 0.02,
+      "slopeDeg": 17
+    },
+    {
+      "id": "dirt",
+      "what": "Bare earth and mud.",
+      "repo": "babylon",
+      "size": 256,
+      "metresPerTile": 1.8,
+      "maps": {
+        "color": "textures/dirt.jpg"
+      },
+      "roughRange": [
+        0.8,
+        0.98
+      ],
+      "metal": 0,
+      "heightAmpM": 0.012,
+      "slopeDeg": 13
+    },
+    {
+      "id": "gravel",
+      "what": "Scree and shingle.",
+      "repo": "babylon",
+      "size": 256,
+      "metresPerTile": 1.2,
+      "maps": {
+        "color": "textures/rockyGround_basecolor.png",
+        "normal": "textures/rockyGround_normal.png",
+        "orm": "textures/rockyGround_metalRough.png"
+      },
+      "roughRange": [
+        0.62,
+        0.94
+      ],
+      "metal": 0,
+      "heightAmpM": 0.03,
+      "slopeDeg": 24
+    },
+    {
+      "id": "plank",
+      "what": "Sawn timber.",
+      "repo": "three",
+      "size": 256,
+      "metresPerTile": 1.2,
+      "maps": {
+        "color": "examples/textures/hardwood2_diffuse.jpg",
+        "height": "examples/textures/hardwood2_bump.jpg",
+        "roughness": "examples/textures/hardwood2_roughness.jpg"
+      },
+      "roughRange": [
+        0.35,
+        0.78
+      ],
+      "metal": 0,
+      "heightAmpM": 0.002,
+      "slopeDeg": 7
+    },
+    {
+      "id": "roughWood",
+      "what": "Unfinished wood: hafts, stakes, driftwood.",
+      "repo": "babylon",
+      "size": 256,
+      "metresPerTile": 0.9,
+      "maps": {
+        "color": "textures/wood.jpg"
+      },
+      "roughRange": [
+        0.55,
+        0.92
+      ],
+      "metal": 0,
+      "heightAmpM": 0.003,
+      "slopeDeg": 11
+    },
+    {
+      "id": "brick",
+      "what": "Masonry.",
+      "repo": "three",
+      "size": 256,
+      "metresPerTile": 2.0,
+      "maps": {
+        "color": "examples/textures/brick_diffuse.jpg",
+        "height": "examples/textures/brick_bump.jpg",
+        "roughness": "examples/textures/brick_roughness.jpg"
+      },
+      "roughRange": [
+        0.7,
+        0.96
+      ],
+      "metal": 0,
+      "heightAmpM": 0.008,
+      "slopeDeg": 15
+    },
+    {
+      "id": "leather",
+      "what": "Tanned hide. A real scan with its own occlusion and roughness.",
+      "repo": "babylon",
+      "size": 256,
+      "metresPerTile": 0.3,
+      "maps": {
+        "color": "meshes/FlightHelmet/glTF/FlightHelmet_Materials_LeatherPartsMat_BaseColor.png",
+        "normal": "meshes/FlightHelmet/glTF/FlightHelmet_Materials_LeatherPartsMat_Normal.png",
+        "orm": "meshes/FlightHelmet/glTF/FlightHelmet_Materials_LeatherPartsMat_OcclusionRoughMetal.png"
+      },
+      "roughRange": [
+        0.4,
+        0.9
+      ],
+      "metal": 0,
+      "heightAmpM": 0.0015,
+      "slopeDeg": 12,
+      "crop": "auto",
+      "structureOnly": false
+    },
+    {
+      "id": "fabric",
+      "what": "Woven cloth. A real weave, taken for its structure; the garment supplies the colour.",
+      "repo": "three",
+      "size": 256,
+      "metresPerTile": 0.18,
+      "maps": {
+        "color": "examples/textures/carbon/Carbon.png",
+        "normal": "examples/textures/carbon/Carbon_Normal.png"
+      },
+      "roughRange": [
+        0.74,
+        0.99
+      ],
+      "metal": 0,
+      "heightAmpM": 0.0008,
+      "slopeDeg": 14,
+      "neutralAlbedo": 0.45,
+      "structureOnly": true
+    },
+    {
+      "id": "wornMetal",
+      "what": "Steel that has been handled and rained on. Scratch structure from a scanned metal normal.",
+      "repo": "three",
+      "size": 256,
+      "metresPerTile": 0.5,
+      "maps": {
+        "normal": "examples/textures/pbr/Scratched_gold/Scratched_gold_01_1K_Normal.png"
+      },
+      "roughRange": [
+        0.16,
+        0.62
+      ],
+      "metal": 1,
+      "heightAmpM": 0.0008,
+      "slopeDeg": 14,
+      "structureOnly": true,
+      "neutralAlbedo": 0.56
+    },
+    {
+      "id": "ice",
+      "what": "Ice. A genuine CC0 photogrammetry scan from ambientCG, vendored by three.js.",
+      "repo": "three",
+      "size": 256,
+      "metresPerTile": 1.0,
+      "credit": "ambientCG Ice002 (CC0)",
+      "maps": {
+        "color": "examples/textures/ambientcg/Ice002_1K-JPG_Color.jpg",
+        "normal": "examples/textures/ambientcg/Ice002_1K-JPG_NormalGL.jpg",
+        "roughness": "examples/textures/ambientcg/Ice002_1K-JPG_Roughness.jpg",
+        "height": "examples/textures/ambientcg/Ice002_1K-JPG_Displacement.jpg"
+      },
+      "roughRange": [
+        0.04,
+        0.55
+      ],
+      "metal": 0,
+      "heightAmpM": 0.01,
+      "slopeDeg": 14
+    },
+    {
+      "id": "fur",
+      "what": "Animal coat.",
+      "repo": "babylon",
+      "size": 256,
+      "metresPerTile": 0.3,
+      "maps": {
+        "color": "textures/fur.jpg"
+      },
+      "roughRange": [
+        0.78,
+        0.99
+      ],
+      "metal": 0,
+      "heightAmpM": 0.004,
+      "subsurface": 0.25,
+      "slopeDeg": 22,
+      "crop": "auto",
+      "neutralAlbedo": 0.18
+    },
+    {
+      "id": "stoneFloor",
+      "what": "Flagstones and worn interior floor.",
+      "repo": "babylon",
+      "size": 256,
+      "metresPerTile": 2.0,
+      "maps": {
+        "color": "textures/floor.png",
+        "normal": "textures/floorn.png"
+      },
+      "roughRange": [
+        0.55,
+        0.92
+      ],
+      "metal": 0,
+      "heightAmpM": 0.006,
+      "slopeDeg": 15
+    },
+    {
+      "id": "waterSurface",
+      "what": "Open water. Normals only: the colour of water is the sky.",
+      "repo": "three",
+      "size": 256,
+      "metresPerTile": 6.0,
+      "maps": {
+        "normal": "examples/textures/waternormals.jpg"
+      },
+      "roughRange": [
+        0.02,
+        0.18
+      ],
+      "metal": 0,
+      "heightAmpM": 0.02,
+      "slopeDeg": 10
+    },
+    {
+      "id": "groundDetail",
+      "what": "Soil grain for the terrain. Structure only: the island's own biome colouring supplies the hue, this supplies the surface.",
+      "repo": "babylon",
+      "size": 512,
+      "metresPerTile": 2.0,
+      "slopeDeg": 10,
+      "structureOnly": true,
+      "neutralAlbedo": 1.0,
+      "maps": {
+        "color": "textures/ground.jpg"
+      },
+      "roughRange": [
+        0.78,
+        0.98
+      ],
+      "metal": 0,
+      "heightAmpM": 0.02,
+      "structureGain": 0.35
+    },
+    {
+      "id": "rockDetail",
+      "what": "Rock grain for steep ground, blended in where soil cannot stay.",
+      "repo": "babylon",
+      "size": 512,
+      "metresPerTile": 2.6,
+      "slopeDeg": 27,
+      "structureOnly": true,
+      "neutralAlbedo": 1.0,
+      "maps": {
+        "color": "textures/rock.png",
+        "normal": "textures/rockn.png"
+      },
+      "roughRange": [
+        0.66,
+        0.95
+      ],
+      "metal": 0,
+      "heightAmpM": 0.05,
+      "structureGain": 0.8
+    },
+    {
+      "id": "cloth",
+      "what": "Woven cloth. A Poly Haven scan, taken for its weave; the garment supplies the colour.",
+      "repo": "godot",
+      "size": 256,
+      "metresPerTile": 0.5,
+      "slopeDeg": 14,
+      "credit": "Poly Haven fabric_pattern_07 (CC0)",
+      "maps": {
+        "color": "3d/soft_body_physics/textures/polyhaven/fabric_pattern_07_col_1_1k.jpg",
+        "normal": "3d/soft_body_physics/textures/polyhaven/fabric_pattern_07_nor_gl_1k.jpg",
+        "orm": "3d/soft_body_physics/textures/polyhaven/fabric_pattern_07_arm_1k.jpg"
+      },
+      "roughRange": [
+        0.7,
+        0.99
+      ],
+      "metal": 0,
+      "heightAmpM": 0.001,
+      "subsurface": 0.2,
+      "structureOnly": true,
+      "neutralAlbedo": 1.0,
+      "structureGain": 1.3
+    },
+    {
+      "id": "sailcloth",
+      "what": "Heavy canvas. Shelters, packs, anything sewn out of a sail.",
+      "repo": "godot",
+      "size": 256,
+      "metresPerTile": 0.8,
+      "slopeDeg": 12,
+      "credit": "Poly Haven dutch_ship_medium (CC0)",
+      "maps": {
+        "color": "3d/graphics_settings/polyhaven/textures/dutch_ship_medium_sails_diff_1k.jpg",
+        "normal": "3d/graphics_settings/polyhaven/textures/dutch_ship_medium_sails_nor_gl_1k.jpg",
+        "orm": "3d/graphics_settings/polyhaven/textures/dutch_ship_medium_sails_arm_1k.jpg"
+      },
+      "roughRange": [
+        0.72,
+        0.99
+      ],
+      "metal": 0,
+      "heightAmpM": 0.002,
+      "subsurface": 0.22
+    },
+    {
+      "id": "rope",
+      "what": "Laid rope. Strand structure from a scan of ship's rigging.",
+      "repo": "godot",
+      "size": 256,
+      "metresPerTile": 0.35,
+      "slopeDeg": 24,
+      "credit": "Poly Haven dutch_ship_medium (CC0)",
+      "maps": {
+        "color": "3d/graphics_settings/polyhaven/textures/dutch_ship_medium_rigging_diff_1k.jpg",
+        "normal": "3d/graphics_settings/polyhaven/textures/dutch_ship_medium_rigging_nor_gl_1k.jpg",
+        "orm": "3d/graphics_settings/polyhaven/textures/dutch_ship_medium_rigging_arm_1k.jpg"
+      },
+      "roughRange": [
+        0.7,
+        0.98
+      ],
+      "metal": 0,
+      "heightAmpM": 0.004,
+      "structureOnly": true,
+      "neutralAlbedo": 1.0,
+      "structureGain": 1.5
+    },
+    {
+      "id": "weatheredTimber",
+      "what": "Tarred, salt-bleached ship planking. Wrecks, driftwood, anything that has been outside for years.",
+      "repo": "godot",
+      "size": 512,
+      "metresPerTile": 1.6,
+      "slopeDeg": 16,
+      "credit": "Poly Haven dutch_ship_medium (CC0)",
+      "maps": {
+        "color": "3d/graphics_settings/polyhaven/textures/dutch_ship_medium_hull_diff_1k.jpg",
+        "normal": "3d/graphics_settings/polyhaven/textures/dutch_ship_medium_hull_nor_gl_1k.jpg",
+        "orm": "3d/graphics_settings/polyhaven/textures/dutch_ship_medium_hull_arm_1k.jpg"
+      },
+      "roughRange": [
+        0.52,
+        0.95
+      ],
+      "metal": 0,
+      "heightAmpM": 0.006
+    },
+    {
+      "id": "barkDetail",
+      "what": "Bark grain for tree trunks. Structure only: the species decides the colour.",
+      "repo": "godot",
+      "size": 512,
+      "metresPerTile": 0.9,
+      "slopeDeg": 30,
+      "structureOnly": true,
+      "neutralAlbedo": 1.0,
+      "structureGain": 1.7,
+      "credit": "Poly Haven dutch_ship_medium (CC0)",
+      "maps": {
+        "color": "3d/graphics_settings/polyhaven/textures/dutch_ship_medium_hull_diff_1k.jpg",
+        "normal": "3d/graphics_settings/polyhaven/textures/dutch_ship_medium_hull_nor_gl_1k.jpg",
+        "orm": "3d/graphics_settings/polyhaven/textures/dutch_ship_medium_hull_arm_1k.jpg"
+      },
+      "roughRange": [
+        0.72,
+        0.98
+      ],
+      "metal": 0,
+      "heightAmpM": 0.01
+    }
+  ]
+}

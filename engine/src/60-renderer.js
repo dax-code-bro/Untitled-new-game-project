@@ -378,7 +378,10 @@ class Renderer {
     sh.f('uNormalStrength', mat.normalStrength);
     sh.f('uSubsurface', mat.subsurface);
     sh.i('uReceiveShadow', mat.receiveShadow ? 1 : 0);
-    sh.i('uHasMaps', mat.maps ? 1 : 0);
+    sh.i('uHasMaps', mat.maps ? (mat.maps2 ? 2 : 1) : 0);
+    sh.f('uUvScale2', mat.uvScale2 != null ? mat.uvScale2 : mat.uvScale);
+    const sb = mat.slopeBlend || [0.30, 0.62];
+    sh.v2('uSlopeBlend', sb[0], sb[1]);
     // Untextured materials must still bind SOMETHING to the map samplers:
     // an unset sampler defaults to unit 0, where a shadow sampler of a
     // different type lives, and that mismatch makes the draw call fail with
@@ -388,6 +391,10 @@ class Renderer {
     sh.tex('uAlbedoMap', maps.albedo);
     sh.tex('uNormalMap', maps.normal);
     sh.tex('uOrmMap', maps.orm);
+    const maps2 = mat.maps2 || maps;
+    sh.tex('uAlbedoMap2', maps2.albedo);
+    sh.tex('uNormalMap2', maps2.normal);
+    sh.tex('uOrmMap2', maps2.orm);
   }
 
   /* ---------------- cascaded shadow fitting ---------------- */

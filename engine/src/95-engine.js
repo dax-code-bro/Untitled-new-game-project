@@ -364,15 +364,35 @@ class Engine {
     return actor;
   }
 
+  /* Lay a scanned material down at its real size on this object.
+     `span` is how many metres one UV unit covers on the thing being
+     built. Nothing happens unless the material is a scan and the caller
+     did not already say how it wanted it tiled. */
+  _fit(actor, opts, span) {
+    if (!actor || !actor.material || opts.uvScale != null) return actor;
+    /* A material that already states its own density has been measured
+       against something the size of the object cannot see — a brick
+       course against a storey height rather than against the length of
+       the wall, which is the longer side and would fit the courses to
+       the wrong dimension. Where someone has said what they want, that
+       wins. */
+    if (actor.material.uvScale !== 1) return actor;
+    const mpt = actor.material.metresPerTile;
+    if (!mpt || !(span > 0)) return actor;
+    actor.material = actor.material.variant(span / mpt);
+    return actor;
+  }
+
   box(opts = {}) {
     const size = Vec3.from(opts.size != null ? opts.size : 1);
     const mesh = this._mesh('box', () => Shapes.box(1, 1, 1, 1));
     const shape = opts.physics === false ? null : Shape.box(size.x / 2, size.y / 2, size.z / 2);
     const a = this._spawn(opts, mesh, shape, size.length() * 0.5);
     a.scale.copy(size);
-    // Texture density should follow object size, or a big wall looks blurry
-    // next to a small crate.
-    if (a.material.uvScale === 1 && !opts.uvScale) a.material.uvScale = 1;
+    // Texture density follows object size, or a big wall looks blurry next
+    // to a small crate. A box's UVs run 0..1 across each face whatever the
+    // face measures, so the scale is the face length over the tile size.
+    this._fit(a, opts, Math.max(size.x, size.y, size.z));
     return a;
   }
 
@@ -382,6 +402,9 @@ class Engine {
     const shape = opts.physics === false ? null : Shape.sphere(r);
     const a = this._spawn(opts, mesh, shape, r);
     a.scale.setScalar(r * 2);
+    // A sphere's u runs twice round and v once over, so one UV unit is
+    // about pi*r of surface either way.
+    this._fit(a, opts, Math.PI * r);
     return a;
   }
 
@@ -392,6 +415,9 @@ class Engine {
     const shape = opts.physics === false ? null : Shape.cylinder(r, h, 12);
     const a = this._spawn(opts, mesh, shape, Math.sqrt(r * r + h * h / 4));
     a.scale.set(r * 2, h, r * 2);
+    // Round the side is pi*r per u unit and the full height per v unit;
+    // the taller of the two is what the eye measures the tiling against.
+    this._fit(a, opts, Math.max(h, Math.PI * r));
     return a;
   }
 
@@ -408,6 +434,7 @@ class Engine {
     const shape = opts.physics === false ? null : Shape.convex(pts);
     const a = this._spawn(opts, mesh, shape, Math.sqrt(r * r + h * h));
     a.scale.set(r * 2, h, r * 2);
+    this._fit(a, opts, Math.max(h, Math.PI * r));
     return a;
   }
 
@@ -433,6 +460,7 @@ class Engine {
     const shape = opts.physics === false ? null : Shape.convex(pts);
     const a = this._spawn(Object.assign({ material: 'rock' }, opts), mesh, shape, r * 1.2);
     a.scale.setScalar(r * 2);
+    this._fit(a, opts, Math.PI * r);
     return a;
   }
 
@@ -1385,7 +1413,7 @@ class Engine {
           count: 0,
           instanced: true,
           grass: false,
-          alphaClip: false,
+          alphaClip: !!actor.material.alphaClip,
           vertexColor: !!actor.material.vertexColor,
           sortKey: 0,
           cx: 0, cy: 0, cz: 0,
@@ -1435,7 +1463,7 @@ class Engine {
         instanced: false,
         skinned: !!actor.skeleton,
         grass: false,
-        alphaClip: false,
+        alphaClip: !!actor.material.alphaClip,
         vertexColor: !!actor.material.vertexColor,
         sortKey: camPos.distanceToSq(actor.position),
       };

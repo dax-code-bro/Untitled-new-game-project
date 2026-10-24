@@ -1,0 +1,42 @@
+[
+  {
+    "id": "cloth",
+    "from": [
+      "structure only, published reflectance",
+      "normal map, retargeted",
+      "ORM roughness",
+      "ORM occlusion"
+    ],
+    "slopeDeg": 14,
+    "size": 256,
+    "normalSize": 128,
+    "ormSize": 64,
+    "meanAlbedo": 0.907,
+    "bytes": {
+      "albedo": 6376,
+      "normal": 3370,
+      "orm": 172
+    },
+    "totalKb": 9.7
+  },
+  {
+    "id": "rope",
+    "from": [
+      "structure only, published reflectance",
+      "normal map, retargeted",
+      "ORM roughness",
+      "ORM occlusion"
+    ],
+    "slopeDeg": 24,
+    "size": 256,
+    "normalSize": 128,
+    "ormSize": 64,
+    "meanAlbedo": 0.985,
+    "bytes": {
+      "albedo": 528,
+      "normal": 3442,
+      "orm": 546
+    },
+    "totalKb": 4.4
+  }
+]

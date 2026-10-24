@@ -113,11 +113,18 @@ SurvivorGame.module({
         const cx = Math.cos(a) * d, cz = Math.sin(a) * d;
         const rr = r * rng.range(0.25, 0.55);
         const N = 8;
-        const centre = g.vert(cx, 0, cz, 0, 1, 0, 0.5, 0.5);
+        /* UVs are planar over the whole patch rather than a fresh 0..1
+           disc per lump, so a bed or a wallow gets one continuous piece
+           of surface instead of the same scrap repeated eight times in a
+           ring. Every rim vertex used to sit at (0, 0), which an
+           untextured mark did not care about and a photographed one
+           draws as a single texel smeared out along each radius. */
+        const centre = g.vert(cx, 0, cz, 0, 1, 0, cx * 0.5 + 0.5, cz * 0.5 + 0.5);
         const ring = [];
         for (let i = 0; i <= N; i++) {
           const t = (i / N) * Math.PI * 2;
-          ring.push(g.vert(cx + Math.cos(t) * rr, 0, cz + Math.sin(t) * rr, 0, 1, 0, 0, 0));
+          const px = cx + Math.cos(t) * rr, pz = cz + Math.sin(t) * rr;
+          ring.push(g.vert(px, 0, pz, 0, 1, 0, px * 0.5 + 0.5, pz * 0.5 + 0.5));
         }
         // Face up, for the same reason as the prints above.
         for (let i = 0; i < N; i++) g.tri(centre, ring[i + 1], ring[i]);
@@ -167,10 +174,16 @@ SurvivorGame.module({
     const MAT = {
       track: { color: 0xa8977a, roughness: 0.95, metalness: 0 },
       dropping: { color: 0x6b5a44, roughness: 0.86, metalness: 0 },
-      bed: { color: 0xa8a678, roughness: 0.98, metalness: 0 },
+      /* A bed is flattened grass, so it gets the grass capture. One UV
+         unit spans the disc, which is a bit over a metre for a deer-sized
+         bed, and the meadow tile is 2.2 m across. */
+      bed: { preset: 'grass', color: 0xa8a678, roughness: 0.98, metalness: 0, uvScale: 0.55 },
       rub: { color: 0xd8c496, roughness: 0.82, metalness: 0 },
       scrape: { color: 0x9d8464, roughness: 0.96, metalness: 0 },
-      wallow: { color: 0x8d7a5e, roughness: 0.9, metalness: 0 },
+      /* A wallow is churned wet earth and the mud capture is exactly
+         that. The disc is 1.8 m across at the scale it is drawn and the
+         tile is 1.8 m, so one tile covers it. */
+      wallow: { preset: 'mud', color: 0x8d7a5e, roughness: 0.9, metalness: 0, uvScale: 1.0 },
       feedSign: { color: 0x9dae72, roughness: 0.9, metalness: 0 },
       hair: { color: 0xc7b48e, roughness: 0.85, metalness: 0 },
     };

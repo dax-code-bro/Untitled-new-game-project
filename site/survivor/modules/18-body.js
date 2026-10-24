@@ -66,9 +66,33 @@ SurvivorGame.module({
        then tinted the same colour comes out nearly black. Colour lives
        in exactly one place — the tint — and the material carries only
        roughness and metalness. */
+    /* Which photographed surface each body material is made of. Skin
+       keeps its procedural shading — there is no scan of a hand in the
+       set and a cloth weave stretched over a knuckle looks worse than
+       no texture at all — but everything woven, tanned or furred gets
+       the real thing. */
+    const SCAN_FOR = {
+      linen: 'cloth', wool: 'cloth', canvas: 'sailcloth', denim: 'cloth',
+      hide: 'leather', fur: 'fur', boot: 'leather', bandage: 'cloth',
+    };
+    /* The cloth capture is structure without colour, so it multiplies the
+       garment's own tint rather than fighting it — which is the only way
+       one scan can be a linen shirt, a wool sweater and a bandage. */
+    /* Tile repeats across one UV unit of the part. The limb lofts run
+       one UV unit around and one along, so this is roughly how many
+       times the weave should cross an arm — a shirt sleeve is about
+       0.3 m around and the cloth capture is 0.5 m across. */
+    /* The cloth capture is a woven check half a metre across. Laid down
+       once per limb it reads as a tablecloth; laid down seven times the
+       check falls to about a centimetre, which is weave, which is what a
+       shirt looks like from inside your own sleeve. */
+    const UV_FOR = { linen: 7, wool: 7, canvas: 4, denim: 7, hide: 3, fur: 3, boot: 2.5, bandage: 9 };
+
     function matFor(name) {
       const m = LE.FP_MATERIAL[name] || LE.FP_MATERIAL.skin;
-      return { color: 0xffffff, roughness: m.roughness, metalness: m.metalness };
+      const out = { color: 0xffffff, roughness: m.roughness, metalness: m.metalness };
+      if (SCAN_FOR[name]) { out.scan = SCAN_FOR[name]; out.uvScale = UV_FOR[name] || 4; }
+      return out;
     }
 
     function makeActor(key, geo, mat, name) {
@@ -229,9 +253,17 @@ SurvivorGame.module({
 
     function applyTints() {
       const o = outfit();
+      /* A capture that brought its own colour — tanned leather, animal
+         coat — must not then be multiplied by the colour the material
+         was painted before there were any photographs in the game, or
+         the two browns make something close to black. Those two get a
+         near-white tint and let the photograph speak. */
+      const CARRIES_COLOUR = { leather: 1, fur: 1 };
       const set = (actor, bone, defMat) => {
         if (!actor) return;
-        const base = (LE.FP_MATERIAL[defMat] || LE.FP_MATERIAL.skin).color;
+        const base = CARRIES_COLOUR[SCAN_FOR[defMat]]
+          ? 0xe2dcd2
+          : (LE.FP_MATERIAL[defMat] || LE.FP_MATERIAL.skin).color;
         const d = damage.bones.get(bone);
         if (!d) { actor.setTint(base); return; }
         const stainMat = d.kind === 'bandage' ? 'bandage' : d.kind === 'bruise' ? 'bruise' : 'blood';

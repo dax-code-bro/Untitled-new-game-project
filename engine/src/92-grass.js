@@ -138,7 +138,12 @@ class Grass {
       color: 0xffffff,
       roughness: 0.92,
       metalness: 0,
-      subsurface: opts.subsurface != null ? opts.subsurface : 0.5,
+      /* A blade of grass does pass light, but half is far too much: at
+         0.5 every blade with the sun behind it goes to white and a field
+         reads as a scatter of plastic straws. A quarter is about what a
+         real blade transmits, and it leaves the blade's own colour
+         visible instead of washing it out. */
+      subsurface: opts.subsurface != null ? opts.subsurface : 0.26,
       doubleSided: true,
       castShadow: opts.castShadow !== false,
     });
