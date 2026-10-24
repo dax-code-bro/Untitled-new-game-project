@@ -65,6 +65,10 @@ export function buildCharacter(data, opts = {}) {
 
   // ---- meshes
   const meshes = [];
+  // one uniform per character: how far the mouth is open (0..1), set by the face rig (face.js);
+  // the mouth cavity, teeth and tongue darken with depth behind the lips (see mouthDepth)
+  const mouthU = { value: 0 };
+  const mouth = mouthFrame(header, bones, index);
   for (const m of header.meshes) {
     const g = new THREE.BufferGeometry();
     for (const [name, d] of Object.entries(m.attrs)) {
@@ -108,8 +112,11 @@ export function buildCharacter(data, opts = {}) {
       }
       g.setAttribute('lw', new THREE.BufferAttribute(lw, 1));
     }
+    if (mouth && (m.kind === 'skin' || m.name === 'teeth' || m.kind === 'tongue')) {
+      g.setAttribute('mdepth', new THREE.BufferAttribute(mouthDepth(g, mouth, m.kind === 'skin'), 1));
+    }
     g.computeBoundingSphere();
-    const mat = materialFor(m, header, opts);
+    const mat = materialFor(m, header, { ...opts, mouthU });
     let mesh;
     if (g.attributes.skinIndex) {
       mesh = new THREE.SkinnedMesh(g, mat);
@@ -142,7 +149,7 @@ export function buildCharacter(data, opts = {}) {
     meshes.push(mesh);
   }
   const ch = {
-    id: header.id, header, root, bones, index, skeleton, meshes, drape,
+    id: header.id, header, root, bones, index, skeleton, meshes, drape, mouthU,
     bone: (name) => bones[index[name]],
     mesh: (name) => meshes.find((x) => x.name.endsWith(':' + name)),
     meta: header.meta || {},
@@ -153,14 +160,86 @@ export function buildCharacter(data, opts = {}) {
 function materialFor(m, header, opts) {
   const mt = m.material || {};
   switch (m.kind) {
-    case 'skin': return skinMaterial({ ...mt, seed: hashStr(header.id) % 997 });
+    case 'skin': return skinMaterial({ ...mt, seed: hashStr(header.id) % 997, mouthU: opts.mouthU });
     case 'eye': return eyeMaterial(mt);
     case 'brow': case 'lash': case 'haircard': return cardMaterial({ ...mt, colorMap: m.kind === 'haircard', cut: m.kind === 'brow' ? [0.0, 0.03] : [0.06, 0.3] });
     case 'hair': return hairStrandMaterial(mt);
-    case 'teeth': case 'tongue': return simpleTexturedMaterial(mt);
+    case 'teeth': case 'tongue': return simpleTexturedMaterial({ ...mt, mouthU: opts.mouthU, mouth: m.name === 'teeth' || m.kind === 'tongue', teeth: m.name === 'teeth' });
     case 'cloth': return clothMaterial({ ...mt, wrinkle: mt.wrinkle ?? (m.name === 'shirt' ? 1 : 0) });
     default: return propMaterial(mt);
   }
+}
+
+/**
+ * The mouth in the drape (bind) pose: lip front point F and the head's forward axis f. The lips meet
+ * between the upper-lip bone (oris05) and the lower-lip bone (oris01); F is the frontmost skin point
+ * on that axis. null when the skeleton has no face bones.
+ */
+function mouthFrame(header, bones, index) {
+  const need = ['head', 'oris05', 'oris01'];
+  if (need.some((n) => index[n] === undefined)) return null;
+  const P = (n) => bones[index[n]].getWorldPosition(new THREE.Vector3());
+  const M = P('oris05').add(P('oris01')).multiplyScalar(0.5);
+  const f = new THREE.Vector3(0, 0, 1).applyQuaternion(bones[index.head].getWorldQuaternion(new THREE.Quaternion())).normalize();
+  const body = header.meshes.find((m) => m.kind === 'skin');
+  return { M, f, F: null, body };
+}
+
+/**
+ * Per-vertex depth behind the lip front (m) for the mouth cavity, teeth and tongue: 0 outside the
+ * mouth. Skin counts as cavity when, seen along the head's forward axis, it is hidden more than 3 mm
+ * behind other skin (the closed lips cover the whole cavity in the drape pose), lies within 3.5 cm of
+ * the mouth axis, and does not face away from it (the underside of the lower lip, the chin and the
+ * skin under the nose stay skin). The renderer's shadow maps cannot resolve a mouth: the cavity is
+ * darkened by this depth instead (materials.js).
+ */
+function mouthDepth(g, mo, isSkin) {
+  const pos = g.attributes.position, nrm = g.attributes.normal, n = pos.count;
+  const out = new Float32Array(n);
+  const { M, f } = mo;
+  const p = new THREE.Vector3(), a = new THREE.Vector3(), l = new THREE.Vector3(), nn = new THREE.Vector3();
+  // an orthonormal frame (u, v) across the mouth axis
+  const u = new THREE.Vector3(1, 0, 0).addScaledVector(f, -f.x).normalize();
+  const v = new THREE.Vector3().crossVectors(f, u);
+  if (!mo.F && !isSkin) mo.F = M.clone().addScaledVector(f, 0.006);
+  if (!mo.F) {
+    // lip front: the frontmost body vertex within 1 cm of the mouth axis (computed on the skin first)
+    let best = 0;
+    for (let i = 0; i < n; i++) {
+      p.fromBufferAttribute(pos, i); a.copy(p).sub(M);
+      const d = a.dot(f); l.copy(a).addScaledVector(f, -d);
+      if (l.length() < 0.01 && d > best && d < 0.05) best = d;
+    }
+    mo.F = M.clone().addScaledVector(f, best);
+  }
+  const cand = [];
+  const front = new Map();
+  const CELL = 0.002;
+  for (let i = 0; i < n; i++) {
+    p.fromBufferAttribute(pos, i); a.copy(p).sub(mo.F);
+    const d = -a.dot(f);
+    if (d > 0.11 || d < -0.03) continue;
+    l.copy(a).addScaledVector(f, d);
+    const r = l.length();
+    if (r > 0.037) continue;
+    const key = Math.round(l.dot(u) / CELL) * 4096 + Math.round(l.dot(v) / CELL);
+    if (isSkin) { const fr = front.get(key); if (fr === undefined || d < fr) front.set(key, d); }
+    if (d > 0.0005 && r < 0.035) cand.push(i, d, r, key);
+  }
+  for (let k = 0; k < cand.length; k += 4) {
+    const i = cand[k], d = cand[k + 1], r = cand[k + 2], key = cand[k + 3];
+    if (isSkin) {
+      const fr = front.get(key);
+      if (fr === undefined || d - fr < 0.003) continue;                  // nothing in front: outer skin
+      p.fromBufferAttribute(pos, i); a.copy(p).sub(mo.F); l.copy(a).addScaledVector(f, d);
+      nn.fromBufferAttribute(nrm, i);
+      const toAxis = r > 1e-5 ? -nn.dot(l) / r : 1;
+      if (toAxis < -0.2 && d < 0.02) continue;                           // faces away from the mouth
+      if (r > 0.012 && d < 0.015 + (r - 0.012) * 0.5) continue;          // under the nose / beside the corners
+    }
+    out[i] = d;
+  }
+  return out;
 }
 
 export function hashStr(s) {

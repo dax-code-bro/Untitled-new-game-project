@@ -1,0 +1,1 @@
+{ "id": "remi", "az": 18, "poses": [ { "JawDrop": 0.5 }, { "JawOpen": 0.5 }, { "JawDrop": 0.5, "lowerLipUp": 0.3 }, { "JawOpen": 0.5, "MouthLeftPullSide": 0.25, "MouthRightPullSide": 0.25 }, { "JawOpen": 0.3, "LipsKiss": 0.6 }, { "JawOpen": 0.1, "lowerLipBackward": 0.6, "UpperLipUp": 0.2 } ] }

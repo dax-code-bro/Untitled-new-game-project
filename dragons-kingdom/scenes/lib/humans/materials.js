@@ -107,6 +107,8 @@ export function skinMaterial(o = {}) {
     uScalp: { value: new THREE.Vector3(...(o.scalpColor || [0.05, 0.03, 0.02])) },
     uBeard: { value: new THREE.Vector3(...(o.beardColor || [0.04, 0.025, 0.015])) },
     uBeardFull: { value: o.beardFull ?? 0.0 },
+    // mouth opening 0..1 (face rig), shared with the teeth / tongue of the same character
+    uMouthOpen: o.mouthU || { value: 0 },
   };
   mat.userData.skin = U;
   mat.customProgramCacheKey = () => 'dk-human-skin';
@@ -114,15 +116,15 @@ export function skinMaterial(o = {}) {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', `#include <common>
-attribute float ao; attribute float thick; attribute vec4 aux; attribute vec4 aux2; attribute vec4 aux3; attribute vec3 albg;
-varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG;`)
+attribute float ao; attribute float thick; attribute vec4 aux; attribute vec4 aux2; attribute vec4 aux3; attribute vec3 albg; attribute float mdepth;
+varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG; varying float vMouth;`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-vObjP = position; vAO = ao; vThick = thick; vAux = aux; vAux2 = aux2; vAux3 = aux3; vAlbG = albg;`);
+vObjP = position; vAO = ao; vThick = thick; vAux = aux; vAux2 = aux2; vAux3 = aux3; vAlbG = albg; vMouth = mdepth;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 ${NOISE_GLSL}
-uniform vec3 uTone, uScalp, uBeard; uniform float uBeardFull; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid;
-varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG;
+uniform vec3 uTone, uScalp, uBeard; uniform float uBeardFull; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid, uMouthOpen;
+varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG; varying float vMouth;
 vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
@@ -202,6 +204,8 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   // under the hair - the strands read as one mass (orange skin between short strands read as a
   // speckled stubble pad); the beard mask's soft edge keeps the cheek line fading out
   c = mix(c, uBeard * (0.7 + 0.6 * hN3(vObjP * 900.0 + 5.0)), smoothstep(0.15, 0.85, vAux.b) * uBeardFull * 0.9);
+  // mouth cavity (vMouth = depth behind the lips, loader.js): wet mucosa, deeper red than the lips
+  c = mix(c, c * vec3(0.78, 0.4, 0.4), smoothstep(0.0008, 0.006, vMouth));
   diffuseColor.rgb = c;
 }`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
@@ -209,6 +213,7 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   float tz = hFbm(vObjP * 40.0 + 9.0);
   roughnessFactor = clamp(roughnessFactor * (0.8 + 0.35 * tz) - vAux.r * 0.2 - vAux.g * 0.05 + vAux.b * 0.15 + vAux.a * 0.35 - vAux2.g * 0.3 - vAux2.r * 0.04
                           - vAux3.r * 0.04 + (1.0 - vAux3.r) * 0.09 + vAux3.g * 0.05, 0.12, 0.95);
+  roughnessFactor = mix(roughnessFactor, 0.22, smoothstep(0.0008, 0.005, vMouth));   // wet inside the lips
   // pores hold no oil film: the sheen breaks up into a fine stipple where they are resolved
   { float fwr = length(fwidth(vObjP));
     float fpr = 1.0 - smoothstep(0.35, 1.0, fwr * 1600.0);
@@ -271,6 +276,12 @@ skinSmoothN = normal;
   reflectedLight.indirectDiffuse *= mix(vec3(aoV), vec3(aoV) * vec3(1.0, 0.86, 0.82), 1.0 - aoV);
   reflectedLight.indirectSpecular *= aoV * aoV * (1.0 - 0.85 * vAux.a);
   reflectedLight.directSpecular *= 1.0 - 0.8 * vAux.a;
+  // the mouth cavity: shadow maps cannot resolve it - darker with depth behind the lips, a little
+  // less when the mouth is wide open (light reaches the tongue and the front of the palate)
+  float mOcc = 1.0 - smoothstep(0.003, 0.03, vMouth) * (0.95 - 0.3 * uMouthOpen);
+  float mOccS = mOcc * mOcc;
+  reflectedLight.indirectDiffuse *= mOcc; reflectedLight.directDiffuse *= mOcc;
+  reflectedLight.indirectSpecular *= mOccS; reflectedLight.directSpecular *= mOccS;
 }`)
       .replace('#include <lights_physical_pars_fragment>', `#include <lights_physical_pars_fragment>
 void RE_Direct_Skin( const in IncidentLight directLight, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in PhysicalMaterial material, inout ReflectedLight reflectedLight ) {
@@ -420,11 +431,43 @@ reflectedLight.directDiffuse *= mix(1.0, vAO, 0.5);`);
 export function simpleTexturedMaterial(o = {}) {
   const mat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(...(o.color || [1, 1, 1])), roughness: o.rough ?? 0.5, metalness: 0, clearcoat: o.clearcoat ?? 0, clearcoatRoughness: 0.2 });
   if (o.map) mat.map = libTexture(o.map);
-  mat.customProgramCacheKey = () => 'dk-human-simple';
+  const mouth = !!o.mouth, teeth = !!o.teeth;
+  const U = { uMouthOpen: o.mouthU || { value: 0 } };
+  mat.userData.mouth = U;
+  mat.customProgramCacheKey = () => `dk-human-simple${mouth ? (teeth ? '-teeth' : '-mouth') : ''}`;
   mat.onBeforeCompile = (sh) => {
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float ao; varying float vAO;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvAO = ao;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vAO;')
-      .replace('#include <aomap_fragment>', '#include <aomap_fragment>\nreflectedLight.indirectDiffuse *= vAO; reflectedLight.indirectSpecular *= vAO; reflectedLight.directDiffuse *= mix(1.0, vAO, 0.75); reflectedLight.directSpecular *= vAO;');
+    Object.assign(sh.uniforms, U);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float ao; varying float vAO;' + (mouth ? ' attribute float mdepth; varying float vMouth;' : ''))
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvAO = ao;' + (mouth ? ' vMouth = mdepth;' : ''));
+    let fs = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vAO;' + (mouth ? ' varying float vMouth; uniform float uMouthOpen;' : ''))
+      .replace('#include <aomap_fragment>', '#include <aomap_fragment>\n'
+        // (teeth / tongue: the AO was baked with the mouth closed - only a part of it holds when it opens)
+        + (mouth ? 'float aoT = mix(vAO, 1.0, 0.6);\n' : 'float aoT = vAO;\n')
+        + 'reflectedLight.indirectDiffuse *= aoT; reflectedLight.indirectSpecular *= aoT; reflectedLight.directDiffuse *= mix(1.0, aoT, 0.75); reflectedLight.directSpecular *= aoT;'
+        // teeth / tongue inside the mouth: darker with depth behind the lips (the incisors ~5 mm
+        // behind them stay lit, the molars are in the dark), fewer sky reflections - the clearcoat's
+        // sky reflection too (unoccluded, it turned the teeth cyan)
+        + (mouth ? `
+#ifdef USE_CLEARCOAT
+  clearcoatSpecularIndirect *= aoT * 0.12 * (1.0 - smoothstep(0.004, 0.02, vMouth));
+  clearcoatSpecularDirect *= aoT * (1.0 - smoothstep(0.004, 0.02, vMouth));
+#endif
+{ float mOcc = 1.0 - smoothstep(0.006, 0.034, vMouth) * (0.93 - 0.3 * uMouthOpen);
+  // the light that does reach inside is bounced off lips and tongue: warm, not sky blue
+  { vec3 ind = reflectedLight.indirectDiffuse; float li = dot(ind, vec3(0.2126, 0.7152, 0.0722));
+    reflectedLight.indirectDiffuse = mix(ind, li * vec3(1.22, 0.95, 0.8), 0.75); }
+  reflectedLight.indirectDiffuse *= mOcc; reflectedLight.directDiffuse *= mOcc;
+  reflectedLight.indirectSpecular *= mOcc * mOcc * 0.25; reflectedLight.directSpecular *= mOcc * mOcc; }` : ''));
+    if (teeth) {
+      // MakeHuman's teeth texture is a cool grey-white with baked shading: enamel is ivory, never
+      // blue-white; the gums (red in the texture) stay
+      fs = fs.replace('#include <map_fragment>', `#include <map_fragment>
+{ vec3 c = diffuseColor.rgb; float gum = smoothstep(0.08, 0.25, c.r - max(c.g, c.b));
+  float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  vec3 enamel = mix(vec3(0.64, 0.53, 0.36), vec3(l) * vec3(1.06, 0.94, 0.76), 0.3);
+  diffuseColor.rgb = mix(enamel, c * vec3(0.9, 0.62, 0.62), gum); }`);
+    }
+    sh.fragmentShader = fs;
   };
   return mat;
 }
