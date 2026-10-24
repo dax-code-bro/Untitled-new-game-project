@@ -16,14 +16,17 @@ const CARDS = [
   { id: 'jack',     name: 'Jack of Trades', icon: '🃏', corner: 'J',  style: '',         rarity: 'epic',      effect: 'Play it and you win the game on the spot.', instantWin: true, handChance: 0.10 },
   { id: 'bloody',   name: 'Bloody Mary',    icon: '🩸', corner: 'BM', style: 'dark red', rarity: 'uncommon',  effect: 'Forces a shootout right now: everyone must shoot themself or someone else.', forcesShootout: true, handChance: 0.20 },
   { id: 'gun',      name: 'Gun',            icon: '🔫', corner: 'G',  style: '',         rarity: 'rare',      effect: 'Gives you your big gun for this round (a shotgun unless you picked another in Loadout): 2 shots, both live, and one hit kills anyone.', shotgun: true, weight: 6 },
+  { id: 'swap',     name: 'Swap',           icon: '⇄',  corner: 'SW', style: '',         rarity: 'rare',      effect: 'Play it on another player and you two swap everything: seats, cards, guns, lives, items, wounds, even teammates. You become them and they become you.', swap: true, weight: 9 },
   { id: 'grenade',  name: 'Grenade',        icon: '💣', corner: 'GR', style: '',         rarity: 'epic',      effect: 'Blows up the table: everyone else is hit and loses all their cards and items. You keep yours, but the blast leaves you bleeding out too.', grenade: true, handChance: 0.08 },
   { id: 'nuclear',  name: 'Nuclear',        icon: '☢️', corner: 'N',  style: 'dark',     rarity: 'legendary', effect: 'Launches a nuclear bomb on the table. Everyone else is wiped out and you win on the spot.', nuke: true, handChance: 0.03 },
-  { id: 'block',    name: 'Block',          icon: '🛡️', corner: 'B',  style: '',         rarity: 'uncommon',  effect: 'A steel shield rises in front of you. It stops the next hit you would take this round: a bullet, a shotgun blast or a grenade.', block: true, weight: 15 },
-  { id: 'reverse',  name: 'Reverse',        icon: '🔄', corner: 'R',  style: '',         rarity: 'uncommon',  effect: 'The next live shot someone fires at you this round turns around and hits them instead.', reverse: true, weight: 13 },
-  { id: 'one',      name: '1',              icon: '1',  corner: '1',  style: '',         rarity: 'common',    effect: 'Secretly shows you if the next round in your gun is live or blank.', peek: 1, weight: 22 },
-  { id: 'two',      name: '2',              icon: '2',  corner: '2',  style: '',         rarity: 'common',    effect: 'Secretly shows you if the 2nd round in your gun is live or blank.', peek: 2, weight: 22 },
-  { id: 'three',    name: '3',              icon: '3',  corner: '3',  style: '',         rarity: 'common',    effect: 'Secretly shows you if the 3rd round in your gun is live or blank.', peek: 3, weight: 22 },
+  { id: 'block',    name: 'Block',          icon: '🛡️', corner: 'B',  style: '',         rarity: 'uncommon',  effect: 'A steel shield rises in front of you. It stops the next hit you would take this round: a bullet, a shotgun blast or a grenade.', block: true, weight: 18 },
+  { id: 'reverse',  name: 'Reverse',        icon: '🔄', corner: 'R',  style: '',         rarity: 'uncommon',  effect: 'The next live shot someone fires at you this round turns around and hits them instead.', reverse: true, weight: 15 },
+  { id: 'lucky',    name: 'Lucky',          icon: '🍀', corner: 'L',  style: '',         rarity: 'uncommon',  effect: 'Your chance of being dealt a Nuclear in your next hands jumps to 20%. Every Lucky you play stacks: 40%, then 60%. Your luck resets once a Nuclear comes.', lucky: true, weight: 20 },
+  { id: 'one',      name: '1',              icon: '1',  corner: '1',  style: '',         rarity: 'common',    effect: 'Secretly shows you if the next round in your gun is live or blank.', peek: 1, weight: 32 },
 ];
+
+// Each Lucky played adds this much to your chance of a Nuclear, up to the cap.
+const LUCKY_STEP = 0.2, LUCKY_MAX = 3;
 
 // How likely a card is, in words: "22% per card" or "10% per hand".
 function cardOdds(c) {
@@ -43,12 +46,14 @@ function drawWeighted() {
   for (const c of pool) { r -= c.weight; if (r < 0) return c.id; }
   return pool[pool.length - 1].id;
 }
-function dealHand(size = HAND_SIZE) {
+// `luck` is how many Lucky cards the player has played (raises the Nuclear odds).
+function dealHand(size = HAND_SIZE, luck = 0) {
   const hand = [];
   for (let i = 0; i < size; i++) hand.push(drawWeighted());
   const freeSlots = [...hand.keys()];
   for (const rare of CARDS.filter(c => c.handChance)) {
-    if (Math.random() < rare.handChance) {
+    const odds = rare.nuke && luck > 0 ? Math.min(LUCKY_MAX, luck) * LUCKY_STEP : rare.handChance;
+    if (Math.random() < odds) {
       if (!freeSlots.length) break;
       const [slot] = freeSlots.splice(Math.floor(Math.random() * freeSlots.length), 1);
       hand[slot] = rare.id;

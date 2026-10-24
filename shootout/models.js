@@ -190,6 +190,25 @@ const Models = (() => {
         head(Math.PI * 1.9, false); head(Math.PI * 0.9, false);
         break;
       }
+      case 'lucky': {   // a gold horseshoe with nail holes and a four-leaf clover
+        g.strokeStyle = '#c8a040'; g.lineWidth = 22; g.lineCap = 'butt';
+        g.beginPath(); g.arc(0, -6, 48, Math.PI * 0.8, Math.PI * 2.2); g.stroke();
+        g.fillStyle = dark ? '#000' : '#3a2410';
+        for (let i = 0; i < 7; i++) { const a = Math.PI * 0.85 + i * (Math.PI * 1.3 / 6); g.beginPath(); g.arc(Math.cos(a) * 48, -6 + Math.sin(a) * 48, 3.5, 0, Math.PI * 2); g.fill(); }
+        g.fillStyle = '#2a8a3a';
+        for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; g.beginPath(); g.ellipse(Math.cos(a) * 11, 34 + Math.sin(a) * 11, 11, 8, a, 0, Math.PI * 2); g.fill(); }
+        g.strokeStyle = '#2a8a3a'; g.lineWidth = 4; g.beginPath(); g.moveTo(0, 36); g.quadraticCurveTo(6, 58, 16, 70); g.stroke();
+        break;
+      }
+      case 'swap': {   // two arrows passing each other
+        g.lineWidth = 12;
+        g.beginPath(); g.moveTo(-50, -22); g.lineTo(38, -22); g.stroke();
+        g.beginPath(); g.moveTo(58, -22); g.lineTo(30, -46); g.lineTo(30, 2); g.closePath(); g.fill();
+        g.fillStyle = red; g.strokeStyle = red;
+        g.beginPath(); g.moveTo(50, 28); g.lineTo(-38, 28); g.stroke();
+        g.beginPath(); g.moveTo(-58, 28); g.lineTo(-30, 4); g.lineTo(-30, 52); g.closePath(); g.fill();
+        break;
+      }
       default: g.restore(); return false;
     }
     g.restore();

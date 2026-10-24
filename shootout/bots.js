@@ -73,11 +73,20 @@ const Bots = (() => {
     // Chaotic bots can't resist starting a shootout.
     if (bot.personality === 'chaotic' && find('bloody') >= 0 && chance(0.6)) return find('bloody');
 
+    // Swap places with someone better off when things look bad.
+    if (find('swap') >= 0) {
+      const badly = bot.bleeding || bot.unarmed || (next && next.known && next.live) || bot.lives < 1;
+      if ((badly && (smart || chance(0.6))) || (bot.personality === 'chaotic' && chance(0.3))) return find('swap');
+    }
+
     // Peek at the next round before the shootout if it's still a mystery.
     if (next && !next.known && find('one') >= 0 && (smart || chance(0.5))) return find('one');
 
+    // Luck for a nuke later: worth playing when nothing better is on hand.
+    if (find('lucky') >= 0 && (smart ? chance(0.7) : chance(0.4))) return find('lucky');
+
     // Otherwise keep the useful cards and play something else.
-    const keep = new Set(['jack', 'bloody', 'one', 'two', 'three', 'grenade', 'nuclear', 'block', 'reverse']);
+    const keep = new Set(['jack', 'bloody', 'one', 'grenade', 'nuclear', 'block', 'reverse', 'swap']);
     const filler = hand.map((id, i) => i).filter(i => !keep.has(hand[i]));
     if (filler.length && (smart || chance(0.6))) return pick(filler);
     return random();
@@ -114,10 +123,22 @@ const Bots = (() => {
     if (bot.personality === 'vengeful' && bot.shotBy && others.includes(bot.shotBy)) return bot.shotBy;
 
     // Hard bots gang up on you.
-    const you = others.find(p => p.you);
+    const you = others.find(p => p.ctrl !== 'bot');
     if (difficulty === 'hard' && you && chance(0.6)) return you;
 
     return pick(others);
+  }
+
+  // Who a bot swaps with: whoever is best off (lives, health, cards, items,
+  // a big gun or a shield), never its own teammate.
+  function chooseSwapTarget(bot, players) {
+    const mate = p => bot.team && bot.team.members.includes(p);
+    const others = players.filter(p => p !== bot && !mate(p));
+    if (!others.length) return null;
+    if (difficulty === 'easy') return pick(others);
+    const score = p => p.lives * 3 - (p.bleeding ? 3 : 0) + p.items.length + p.hand.length * 0.5 + (p.shotgun > 0 ? 4 : 0) + (p.block ? 2 : 0) - (p.unarmed ? 2 : 0) +
+      (p.hand.includes('jack') || p.hand.includes('nuclear') ? (bot.priority === p ? 6 : 0) : 0);
+    return others.reduce((a, b) => (score(b) > score(a) ? b : a));
   }
 
   // Items a bot uses at the start of its turn: [{ item, target }].
@@ -165,5 +186,5 @@ const Bots = (() => {
 
   function setDifficulty(d) { difficulty = d; }
 
-  return { lineup, label, chooseCard, chooseTarget, chooseItems, acceptTeam, vote, setDifficulty };
+  return { lineup, label, chooseCard, chooseTarget, chooseSwapTarget, chooseItems, acceptTeam, vote, setDifficulty };
 })();

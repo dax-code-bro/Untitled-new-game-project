@@ -485,6 +485,7 @@ function applyUi(f, a) {
     case 'whiteout': whiteout(); break;
     case 'end': showEnd(a[0], a[1], a[2]); break;
     case 'taken': pickerTaken(a[0]); break;
+    case 'swap': swapView(a[0], a[1], a[2]); break;
     case 'chars': charactersPicked(); break;
   }
 }
@@ -825,7 +826,8 @@ async function takeTurn(p) {
   const i = idx(p);
   const member = p.team && p.team.leader !== p && teammateOf(p);
   if (!p.hand.length && !member) {
-    const ids = dealHand(teammateOf(p) ? HAND_SIZE * 2 : HAND_SIZE);
+    const ids = dealHand(teammateOf(p) ? HAND_SIZE * 2 : HAND_SIZE, p.luck || 0);
+    if (ids.includes('nuclear')) p.luck = 0;   // the luck paid off
     p.hand.push(...ids);
     dealt(p, ids);
     await A('deal', i, ids);
@@ -964,10 +966,39 @@ async function resolveCard(player, id) {
     tell(player, 'peek', card.peek, live);
     await sleep(600);
   }
+  if (card.lucky) {
+    player.luck = Math.min(LUCKY_MAX, (player.luck || 0) + 1);
+    ui('log', `${N(player)} ${V(player, 'feel', 'feels')} <b>lucky</b>.`);
+    tell(player, 'lucky', Math.round(player.luck * LUCKY_STEP * 100));
+  }
+  if (card.swap) {
+    const others = alive().filter(o => o !== player);
+    let target = null;
+    if (others.length && player.ctrl === 'bot') target = Bots.chooseSwapTarget(player, others);
+    else if (others.length) {
+      const v = await ask(player, 'choice', { title: 'SWAP', html: 'Who do you swap with? You trade everything: seats, cards, guns, lives, items and wounds.',
+        options: others.map(o => ({ label: `${o.name} (${o.lives} ${o.lives === 1 ? 'life' : 'lives'}${o.bleeding ? ', bleeding' : ''})`, v: idx(o) })) });
+      target = state.players[v] && state.players[v].alive && state.players[v] !== player ? state.players[v] : Bots.chooseSwapTarget(player, others);
+    }
+    if (target) await swapPlayers(player, target);
+  }
   if (card.forcesShootout) {
     await A('bloodyMary');
     await shootout('Bloody Mary');
   }
+}
+
+// Swap: two people trade places. Everything at a seat (cards, gun and its
+// rounds, lives, items, wounds, shields, a box, a teammate) stays there and
+// the people move: each now plays as what the other had.
+const IDENTITY = ['name', 'ctrl', 'pid', 'char', 'sub', 'st', 'luck', 'personality', 'bot'];
+async function swapPlayers(a, b) {
+  const ia = idx(a), ib = idx(b);
+  ui('log', `${N(a)} ${V(a, 'swap', 'swaps')} with ${n(b)}: seats, cards, guns, lives and all.`);
+  IDENTITY.forEach(k => { const t = a[k]; a[k] = b[k]; b[k] = t; });
+  [a, b].forEach(p => { p.priority = null; p.shotBy = null; if (p.ctrl === 'bot' && !p.personality) p.personality = 'calculating'; if (p.ctrl !== 'bot') delete p.personality; });
+  ui('swap', ia, ib, snapshot());
+  await sleep(1500);
 }
 
 // Grenade: everyone else is hit and loses their cards and items; the
@@ -1344,6 +1375,22 @@ function tell(p, what, ...args) {
   else if (p.ctrl === 'remote') bcast({ m: 'tell', to: p.pid, f: what, a: args });
 }
 
+// After a Swap: everyone's table is rebuilt (this phone may have changed seat).
+function swapView(ia, ib, snap) {
+  showBanner('SWAP');
+  const f = $('#fade');
+  f.classList.add('on');
+  setTimeout(() => {
+    if (state.online === 'client') { if (snap) { fromSnapshot(snap); state.multi = true; } }
+    else if (state.view === ia) state.view = ib;
+    else if (state.view === ib) state.view = ia;
+    if (state.covered) toggleCover();
+    selectCard(-1);
+    rebuildTable();
+    f.classList.remove('on');
+  }, 800);
+}
+
 function showTell(what, a, p) {
   if (p && state.multi && state.online !== 'client' && state.view !== idx(p)) return;   // same phone: only the one looking
   if (what === 'peek') {
@@ -1352,6 +1399,8 @@ function showTell(what, a, p) {
     showBanner(live ? 'LIVE' : 'BLANK');
     log(`<span class="secret">Only you know: your ${which} round is <b class="${live ? 'live' : 'blank'}">${live ? 'LIVE' : 'BLANK'}</b>.</span>`);
     renderGun();
+  } else if (what === 'lucky') {
+    log(`<span class="secret">Your chance of a <b>Nuclear</b> in your next hands is now <b>${a[0]}%</b>.</span>`);
   } else if (what === 'found') {
     log(`<span class="secret">You found <b>${a[0]}</b>.</span>`);
   }
