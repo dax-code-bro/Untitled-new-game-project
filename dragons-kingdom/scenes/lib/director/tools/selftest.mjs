@@ -17,6 +17,7 @@ import { SETS, continuityFor, sunDir } from '../registry.js';
 import { estimateShot } from '../cost.js';
 import { faceReadability } from '../audit.js';
 import { wingOutline, paintWingCloud } from '../sets/wing-cloud.js';
+import { fieldsVoronoi, landUse, hedgePlacements, FIELD_USE } from '../sets/farmland.js';
 import { makeNoise, smooth } from '../../sets/terrain.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -128,5 +129,27 @@ t('wing cloud: a closed wing outline; the painter fills a soft, deterministic, n
   assert.ok(cover > px * 0.15 && cover < px * 0.7, `cover ${cover}/${px}`);
   assert.ok(edge > px * 0.05, 'soft edges');
   assert.equal(a[3], 0, 'the corners are clear sky');
+});
+t('farmland: deterministic irregular fields of plausible size; hedges only on the boundaries', () => {
+  const F = fieldsVoronoi({ cell: 64, rot: 0.22, stretch: 1.7, seed: 3 });
+  const ids = new Set(); let near = 0, n = 0;
+  for (let z = -400; z < 400; z += 4) for (let x = -400; x < 400; x += 4) {
+    const f = F(x, z); n++;
+    assert.ok(f.id >= 0 && f.id < 1 && f.edge >= 0 && Number.isFinite(f.edge));
+    ids.add(f.id.toFixed(9)); if (f.edge < 1.5) near++;
+  }
+  // 800 x 800 m in 64 m cells: ~150 fields; ~10 % of the land within 1.5 m of a boundary (edge is a
+  // lower bound of the true distance: (d2 - d1) / 2, so a little more reads as near)
+  assert.ok(ids.size > 80 && ids.size < 260, `fields ${ids.size}`);
+  assert.ok(near / n > 0.04 && near / n < 0.2, `boundary fraction ${near / n}`);
+  assert.deepEqual(F(12.3, -45.6), fieldsVoronoi({ cell: 64, rot: 0.22, stretch: 1.7, seed: 3 })(12.3, -45.6));
+  const LU = landUse(F, [0.5, 0.7, 0.9]);
+  const kinds = new Set(); for (let x = -400; x < 400; x += 16) kinds.add(LU(x, 37).k);
+  assert.ok([...kinds].every((k) => FIELD_USE[k]) && kinds.size >= 3);
+  const h = hedgePlacements({ x: [-100, 100], z: [-100, 100], F, H: () => 2, seed: 41, treeP: 0.03 });
+  const h2 = hedgePlacements({ x: [-100, 100], z: [-100, 100], F, H: () => 2, seed: 41, treeP: 0.03 });
+  assert.equal(h.count, h2.count);
+  assert.ok(h.count > 200, `bushes ${h.count}`);
+  for (const b of h.bushes.flat()) assert.ok(F(b.p[0], b.p[2]).edge <= 0.75 + 1e-9);
 });
 console.log(`\n${n} checks passed`);

@@ -33,6 +33,7 @@ import { mulberry } from '../../nature/noise.js';
 import { filmFinish } from '../../../lookdev/finish.js';
 import { keyed, clamp } from '../timeline.js';
 import { paintWingCloud } from './wing-cloud.js';
+import { fieldsVoronoi, FIELD_USE, landUse, hedgePlacements } from './farmland.js';
 
 export function cinematic() {
   return filmFinish({
@@ -149,50 +150,15 @@ export async function build(ctx, { shotSpecs }) {
   // each with its own use, hedges along the boundaries, trees in the hedges and in small woods. Seen
   // from 150 m to 2 km a worked landscape reads by this patchwork; an even slope of one texture read
   // as CG (the provisional P-08 / P-11)
-  const hash = (i, j, k) => { let h = Math.imul(i, 374761393) + Math.imul(j, 668265263) + Math.imul(k, 1442695041); h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
-  const fields = ({ cell = 90, rot = 0.3, stretch = 1.6, seed = 1 }) => {
-    const c = Math.cos(rot), sn = Math.sin(rot), ks = Math.sqrt(stretch);
-    return (x, z) => {
-      const u = (x * c - z * sn) / cell, v = (x * sn + z * c) / cell;
-      const iu = Math.floor(u), iv = Math.floor(v);
-      let d1 = 1e9, d2 = 1e9, id = 0;
-      for (let a = -2; a <= 2; a++) for (let b = -1; b <= 1; b++) {
-        const pu = iu + a + 0.1 + 0.8 * hash(iu + a, iv + b, seed), pv = iv + b + 0.1 + 0.8 * hash(iu + a, iv + b, seed + 7);
-        const d = Math.hypot((u - pu) / ks, (v - pv) * ks);
-        if (d < d1) { d2 = d1; d1 = d; id = hash(iu + a, iv + b, seed + 13); } else if (d < d2) d2 = d;
-      }
-      return { id, edge: 0.5 * (d2 - d1) * cell / ks };
-    };
-  };
-  // field colours (x the grass layer): grazed pasture, hay meadow (paler, yellower), rough grazing
-  // (darker, tussocky), and ploughed strips (the soil layer)
-  const USE = { pasture: [0.92, 1.02, 0.86], hay: [1.3, 1.16, 0.8], rough: [0.74, 0.8, 0.6], plough: [1, 1, 1], moor: [1.02, 0.84, 0.62] };
-  const landUse = (F, mix) => (x, z) => {
-    const f = F(x, z);
-    const k = f.id < mix[0] ? 'pasture' : f.id < mix[1] ? 'hay' : f.id < mix[2] ? 'rough' : 'plough';
-    return { k, f };
-  };
+  const fields = fieldsVoronoi, USE = FIELD_USE;
   const hedgeMat = foliageMaterial({ color: [0.035, 0.055, 0.022], leafScale: 3, flower: [0.6, 0.6, 0.5, 0.12] });
   const hedgeGeo = [bushGeometry(1, 11, 0.8), bushGeometry(1, 23, 0.9)];
-  /** hedges on the field boundaries: bushes every ~2.4 m (with gaps), a hedgerow tree now and then */
+  /** hedges on the field boundaries (farmland.js hedgePlacements) as two instanced bush meshes */
   const hedges = (o) => {
-    const pts = [[], []], trees = [];
-    const rr = mulberry(o.seed || 5);
-    const st = o.step || 1.25;
-    for (let z = o.z[0]; z < o.z[1]; z += st) for (let x = o.x[0]; x < o.x[1]; x += st) {
-      const jx = x + (rr() - 0.5) * st, jz = z + (rr() - 0.5) * st;
-      if (!o.where(jx, jz)) continue;
-      const f = o.F(jx, jz);
-      if (f.edge > 0.75) continue;
-      if (N.fbm(jx * 0.05 + 3, jz * 0.05, 2) < -0.45) continue;           // gaps, gateways
-      const y = o.H(jx, jz);
-      const s = 1.9 + 2.4 * rr() * rr() + 0.6 * rr();
-      pts[rr() < 0.5 ? 0 : 1].push({ p: [jx, y - 0.4, jz], s: [s, s * (0.55 + 0.45 * rr()), s * (0.8 + 0.4 * rr())], c: [0.7 + 0.4 * rr(), 0.8 + 0.25 * rr(), 0.7 + 0.35 * rr()] });
-      if (rr() < (o.treeP ?? 0.03)) trees.push([jx, y, jz]);
-    }
+    const h = hedgePlacements({ ...o, noise: (x, z) => N.fbm(x * 0.05 + 3, z * 0.05, 2) });
     const grp = new THREE.Group();
-    pts.forEach((list, i) => { if (list.length) grp.add(scatter(hedgeGeo[i], hedgeMat, list.length, (r, k) => list[k] || null, 3 + i)); });
-    return { group: grp, trees, count: pts[0].length + pts[1].length };
+    h.bushes.forEach((list, i) => { if (list.length) grp.add(scatter(hedgeGeo[i], hedgeMat, list.length, (r, k) => list[k] || null, 3 + i)); });
+    return { group: grp, trees: h.trees, count: h.count };
   };
 
   // ---- settlement: a fishing settlement on a slope above a shingle shore (P-08 / P-09): small hedged
