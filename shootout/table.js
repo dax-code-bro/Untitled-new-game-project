@@ -225,6 +225,8 @@ const Table = (() => {
       const seat = { group, chair, rig: rigObj, cards: [], items: [], marks: [], tags: [], label, dead: false, name: p.name, sub, look: null, rskin: p.rskin, sskin: p.sskin, rgun: p.rgun, sgun: p.sgun, idle: Math.random() * 10, drip: 0 };
       seats.push(seat);
       seat.crowd = players.length > 5;
+      // at a crowded table only the nearest few cast shadows: keeps phones smooth
+      if (players.length > 6 && i > 2 && i < players.length - 4) rigObj.root.traverse(o => { if (o.isMesh) o.castShadow = false; });
       if (seat.crowd) { label.position.set(0, 1.5, 0); label.scale.multiplyScalar(0.72); } else label.position.set(0, 1.6, 0);
       group.add(label);
       applyPose(rigObj.rArm, restPose(seat, 'r'));
@@ -493,7 +495,10 @@ const Table = (() => {
   // Deal cards from the deck to a seat, one after another.
   async function deal(pi, ids) {
     const s = seats[pi];
+    if (!s) return;
+    const quick = seats.length > 5;   // a crowded table deals faster
     for (const id of ids) {
+      if (seats[pi] !== s) return;    // the table was rebuilt (a new game) mid-deal
       const c = Models.card(id);
       c.traverse(o => { if (o.isMesh) o.castShadow = true; });
       c.position.copy(DECK_POS).add(V(0, 0.015, 0));
@@ -503,7 +508,8 @@ const Table = (() => {
       relayout(pi);
       const w = worldSlot(pi, c.userData.slot);
       Sound.cardFlick();
-      await flyTo(c, w.pos, w.quat, 0.38, pi === 0 ? 0.15 : 0.22);
+      await flyTo(c, w.pos, w.quat, quick ? 0.24 : 0.38, pi === 0 ? 0.15 : 0.22);
+      if (seats[pi] !== s) { c.parent && c.parent.remove(c); return; }
       parentOf(pi).attach(c);
       c.position.copy(c.userData.slot.pos); c.quaternion.copy(c.userData.slot.quat);
       s.cards.forEach((cc, i) => { if (cc !== c) cc.userData.slot = slotFor(pi, i, s.cards.length); });
