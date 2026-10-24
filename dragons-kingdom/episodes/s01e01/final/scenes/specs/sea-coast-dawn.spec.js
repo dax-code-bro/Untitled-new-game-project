@@ -56,7 +56,9 @@ export default {
     'P-06': {
       staging: 'NONE: low, up into the fog; something vast passes inside the mist - only its shadow in the light shafts and a darkening of the mist; never a dragon.',
       cam: { rig: 'boat', mount: 'camboat', pos: [0, 0.2, 0], look: { at: [-40, 225, -1350] }, mm: 35, fstop: 5.6, focus: 400, shake: { kind: 'vehicle', amount: 0.15, seed: 3 } },
-      set: { boat: BOAT_FAR, camBoat: { at: [0, 0], heading: 0, speed: 0.4, height: 1.2, damp: 0.5 }, shape: { at: [-20, 185, -1350], drift: -9 } },
+      set: { boat: BOAT_FAR, camBoat: { at: [0, 0], heading: 0, speed: 0.4, height: 1.2, damp: 0.5 }, shape: { at: [40, 185, -1350], drift: -24, opacity: 0.34 } },
+      // the darkening has to MOVE to be seen at all: ~150 m across the frame in 6 s (at -9 m/s the
+      // draft showed a near-static smudge)
       exposure: -0.6,
     },
     'P-07': {

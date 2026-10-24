@@ -3051,12 +3051,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 5.77,
-    "k4_cpu_s_per_frame": 65.89,
-    "k4_gpu_s_per_frame": 65.89,
-    "draft_minutes": 9.22,
-    "k4_cpu_hours": 1.76,
-    "k4_gpu_hours": 1.76,
+    "draft_s_per_frame": 10.49,
+    "k4_cpu_s_per_frame": 119.84,
+    "k4_gpu_s_per_frame": 119.84,
+    "draft_minutes": 16.78,
+    "k4_cpu_hours": 3.2,
+    "k4_gpu_hours": 3.2,
     "factors": {
      "people": 1.48,
      "creatures": 1,
@@ -3065,7 +3065,7 @@
      "move": 1,
      "total": 1.65
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.65 for the shot's content"
+    "basis": "MEASURED draft 10.49 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "WIDE: high in the corner; everyone small.",
    "deviation": null,
@@ -4647,12 +4647,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.58,
-    "k4_cpu_s_per_frame": 44.76,
-    "k4_gpu_s_per_frame": 44.76,
-    "draft_minutes": 3.58,
-    "k4_cpu_hours": 0.75,
-    "k4_gpu_hours": 0.75,
+    "draft_s_per_frame": 10.94,
+    "k4_cpu_s_per_frame": 136.7,
+    "k4_gpu_s_per_frame": 136.7,
+    "draft_minutes": 10.94,
+    "k4_cpu_hours": 2.28,
+    "k4_gpu_hours": 2.28,
     "factors": {
      "people": 1.48,
      "creatures": 1,
@@ -4661,7 +4661,7 @@
      "move": 1.08,
      "total": 1.79
     },
-    "basis": "ESTIMATE: masonry interior, 1-3 people; x 1.79 for the shot's content"
+    "basis": "MEASURED draft 10.94 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-3 people)"
    },
    "staging": "BACK + WIDE: the servants flatten against the wall; the siblings pass, backs to camera.",
    "deviation": null,

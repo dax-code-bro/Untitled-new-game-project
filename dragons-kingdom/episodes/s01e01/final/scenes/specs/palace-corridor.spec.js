@@ -56,8 +56,10 @@ export default {
       cast: {
         abby: { at: [0.45, 11.0], face: 180, look: 'exit', acts: [[0, 'walk', { to: [0.4, 16.0], speed: 1.75, acc: 0.1 }]] },
         remi: { at: [-0.35, 10.8], face: 180, look: 'exit', acts: [[0, 'walk', { to: [-0.3, 15.8], speed: 1.75, acc: 0.1 }], [0.8, 'look', { at: 'servant1.head', amount: 0.4 }]] },
-        servant1: { at: [-1.1, 14.2], face: 90, look: 'remi.head', lookAmount: 0.5, acts: [[0.2, 'carry', {}], [0.2, 'walk', { to: [-1.22, 14.0], speed: 0.4 }]] },
-        servant2: { at: [-1.1, 15.1], face: 90, look: 'abby.head', lookAmount: 0.5, acts: [[0.3, 'walk', { to: [-1.22, 15.2], speed: 0.4 }]] },
+        // eyes lowered as the king's children pass (a servant turning to watch Remi came round full face
+        // to the lens in the draft: a sharp, frontal, lit face - against the realism plan)
+        servant1: { at: [-1.1, 14.2], face: 100, look: [-0.3, 0.2, 13.6], lookAmount: 0.8, acts: [[0.2, 'carry', {}], [0.2, 'walk', { to: [-1.22, 14.0], speed: 0.4 }]] },
+        servant2: { at: [-1.1, 15.1], face: 100, look: [-0.3, 0.2, 14.6], lookAmount: 0.8, acts: [[0.3, 'walk', { to: [-1.22, 15.2], speed: 0.4 }]] },
       },
     },
     'X2-06': {

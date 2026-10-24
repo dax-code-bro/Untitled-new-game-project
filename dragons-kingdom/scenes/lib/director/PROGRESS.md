@@ -3,6 +3,30 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 4 (2026-10-24, resumed after a usage-limit stop)
+
+- Renders: the 29 unrendered shots queued in two parallel queues (BIRTHING_CHAMBER alone; then
+  PALACE_CORRIDOR, VERDOR_GROUNDS, ALEXANDRIA_ROOM), finished shots kept (`--redo-on shot`). Queue
+  scripts in the scratch folder (`eng1/director/queue3.sh`, `queue-after.sh PID SET`, `queue-vistas.sh`).
+  Measured: the chamber 5-12 s per draft frame with two browsers sharing the 4 cores.
+- Review of the rendered shots (cut sheets of the interim cut + 1:1 frames), fixes:
+  - PROLOGUE_VISTAS landscapes rebuilt (they read as CG: one grey texture over a smooth slope with its
+    tiled normal map drawing chevrons, a palisade-like cliff, a crosshatched island):
+    - farmed land = an anisotropic jittered-grid Voronoi of FIELDS (pasture / hay / rough / ploughed:
+      vertex colour + a soil layer), HEDGES of overlapping instanced bushes along the field boundaries
+      (gaps, gateways), hedgerow trees and small woods (nature `treeKit`: hawthorn, sycamore, oak, ash);
+      a `grass` terrain material with large tiles, weak normals and min roughness 0.88 (smooth grass
+      mirrored the sky at grazing angles: pale blue fields);
+    - P-08: hedged small fields round the houses, rough grazing, a patchy moor (heather / bracken) on
+      the hill, shingle at the shore; P-11: long hedged strips below the walls, a clear glacis, woods;
+    - P-10: seen ALONG the coast (the face square-on under the raking dawn sun read as a palisade); the
+      cliff has a bench (a weathered soft bed) with scrub on it, 48-74 m height along the coast, a talus
+      foot with fallen blocks; no fine gullies / run-off streak comb;
+    - P-12: no shadow-map self-shadowing at 2.5 km (acne), finer mesh at the faces, big texture tiles.
+  - P-06: the shape in the mist drifts at 24 m/s (was 9: a near-static smudge), silhouette 0.34.
+  - 1A-11: the second attendant turned from the lens (his face lit orange by the table lamp, the beard
+    sparkling); X2-05: the servants lower their eyes (one turned full face to the lens).
+
 ## Session 3 (2026-10-23 evening, resumed after a usage-limit stop)
 
 - The dailies of the earlier sessions were in `output/` and were lost with the container; the 13 shots

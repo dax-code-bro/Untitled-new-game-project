@@ -14,7 +14,7 @@
 //          LEFT -> RIGHT for a camera looking north (heading ~74, F1); bobs on the swell
 //   camboat set.camBoat = { at, heading, speed, height }: a floating camera platform (rig 'boat',
 //          mount: 'camboat'); it heaves and rolls with the sea under it
-//   shape  set.shape = { at: [x, y, z], drift (m/s, +x), bank }: the thing in the mist (P-06)
+//   shape  set.shape = { at: [x, y, z], drift (m/s, +x), opacity (its diffused silhouette), bank }: the thing in the mist (P-06)
 // Boat-local frame (the props boat): +x = bow, +z = port side? (z across the beam), y up from the
 // waterline; actors aboard use `parent: 'boat'` and walk on the deck (groundIn).
 import * as THREE from 'three';
@@ -173,6 +173,7 @@ export async function build(ctx, { shotSpecs }) {
           const a = sh.at || SHAPE_AT, drift = (sh.drift ?? -9) * t;
           shape.root.position.set(a[0] + drift, a[1], a[2]);
           card.mesh.position.set(card.center.x + (a[0] - SHAPE_AT[0]) + drift, card.center.y + (a[1] - SHAPE_AT[1]), card.center.z + (a[2] - SHAPE_AT[2]));
+          if (sh.opacity != null && card.mesh.material) card.mesh.material.opacity = sh.opacity;
           shape.root.updateMatrixWorld(true);
         }
       }

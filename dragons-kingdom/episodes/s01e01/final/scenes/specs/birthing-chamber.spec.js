@@ -127,7 +127,9 @@ export default {
       cam: { rig: 'static', frame: { subjects: [['attendant.head', [0.05, 0.3]], ['attendant2.head', [-0.5, 0.32]]], from: 250, height: 1.4 }, mm: 50, fstop: 2, focus: 'attendant.chest', bounds: BOUNDS },
       cast: {
         attendant: { at: ATT, face: 'egg', look: 'egg', acts: [[0.2, 'clasp', {}]] },
-        attendant2: { at: ATT2, face: 'egg', look: 'egg' },
+        // turned from the lens toward the shaft, only his head toward the egg: from the front the table
+        // lamp lit his face orange and his beard sparkled (draft review) - a silhouette, as staged
+        attendant2: { at: ATT2, face: 62, look: 'egg', lookAmount: 0.3 },
       },
       fx: [FLICKER, DUST],
     },
