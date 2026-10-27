@@ -148,7 +148,7 @@ export const DIRECTOR_KINDS = {
   'water-splash': { about: 'a body hitting water: crown, sheet, jet, mist, foam', cost: 0.8, make: (fx, p) => fx.water.splash(p) },
   'water-spray': { about: 'wind-blown spray / a wingtip slap', cost: 0.4, make: (fx, p) => fx.water.spray(p) },
   'water-foam': { about: 'a foam patch on the water', cost: 0.1, make: (fx, p) => fx.water.foam(p) },
-  'water-trail': { about: 'a foam trail behind something moving in water', cost: 0.1, make: (fx, p) => fx.water.trail(p) },
+  'water-trail': { about: 'a foam trail behind something moving in water (at: a moving set point / actor point)', cost: 0.1, make: (fx, p) => fx.water.trail({ ...p, path: p.path ?? (typeof p.at === 'function' ? p.at : Array.isArray(p.at) ? () => p.at : undefined) }) },
   'water-churn': { about: 'thrashing in water: churned spray and foam', cost: 0.6, make: (fx, p) => fx.water.churn(p) },
   'water-downwash': { about: 'wingbeat downwash on water: rings, spray sheet, mist', cost: 0.8, make: (fx, p) => fx.water.downwash(p) },
   // gore (need api.actor)

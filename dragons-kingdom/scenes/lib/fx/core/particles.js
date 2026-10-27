@@ -434,7 +434,7 @@ export class ParticleLayer {
   constructor(fx, o = {}) {
     this.fx = fx;
     this.mode = o.mode || 'puff';
-    this.max = Math.max(1, o.max | 0);
+    this.max = Math.min(4194304, Math.max(1, o.max | 0));
     this.sort = o.sort ?? (this.mode !== 'glow' && this.mode !== 'flame');
     const quad = new THREE.InstancedBufferGeometry();
     quad.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0]), 3));
@@ -588,18 +588,25 @@ export class ParticleLayer {
       camera.updateMatrixWorld();
       const e = camera.matrixWorldInverse.elements;
       const dz0 = e[2], dz1 = e[6], dz2 = e[10], dz3 = e[14];
-      const A = this.sA, B = this.sB;
+      const A = this.sA, B = this.sB, dep = this.depth;
+      let dmin = Infinity, dmax = -Infinity;
       for (let i = 0; i < n; i++) {
         const x = 0.5 * (A[i * 4] + B[i * 4]), y = 0.5 * (A[i * 4 + 1] + B[i * 4 + 1]), z = 0.5 * (A[i * 4 + 2] + B[i * 4 + 2]);
-        this.depth[i] = dz0 * x + dz1 * y + dz2 * z + dz3;     // view z (negative in front)
-        this.order[i] = i;
+        const d = dz0 * x + dz1 * y + dz2 * z + dz3;           // view z (negative in front)
+        dep[i] = d; if (d < dmin) dmin = d; if (d > dmax) dmax = d;
       }
+      // most negative (farthest) first: a native numeric sort of packed (depth, index) keys - no
+      // comparator callback (3-4x faster: GPU tiers push 10x the particles through here)
+      if (!this.keys || this.keys.length < this.max) this.keys = new Float64Array(this.max);
+      const K = this.keys.subarray(0, n), sc = (2 ** 30 - 1) / Math.max(dmax - dmin, 1e-9);
+      for (let i = 0; i < n; i++) K[i] = Math.floor((dep[i] - dmin) * sc) * 4194304 + i;
+      K.sort();
       ord = this.order.subarray(0, n);
-      const dep = this.depth;
-      ord.sort((a, b) => dep[a] - dep[b]);                     // most negative (farthest) first
+      for (let j = 0; j < n; j++) ord[j] = K[j] % 4194304;
     }
     const cp = (src, dst, w) => {
       if (!ord) { dst.array.set(src.subarray(0, n * w)); }
+      else if (w === 4) { const a = dst.array; for (let j = 0; j < n; j++) { const i = ord[j] * 4, o4 = j * 4; a[o4] = src[i]; a[o4 + 1] = src[i + 1]; a[o4 + 2] = src[i + 2]; a[o4 + 3] = src[i + 3]; } }
       else { const a = dst.array; for (let j = 0; j < n; j++) { const i = ord[j]; for (let k = 0; k < w; k++) a[j * w + k] = src[i * w + k]; } }
       dst.clearUpdateRanges(); dst.addUpdateRange(0, n * w); dst.needsUpdate = true;
     };

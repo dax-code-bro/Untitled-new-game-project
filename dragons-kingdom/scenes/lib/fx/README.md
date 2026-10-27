@@ -51,7 +51,13 @@ resolutions, never the look: per-particle density is renormalised so a cloud kee
   drops with log-normal sizes, drag, gravity; each drop's landing (ground, wall plane, meshes) is
   found at setup and stamped into decals at its landing time; fine mist.
 * `fx.blood.drip({ at, t0, rate, ... })` forming drops, fall, splash, ground stamps.
-* `fx.blood.pool({ at, radius, delay, tau, joints })` spreading pool (lobed, follows paving joints).
+* `fx.blood.pool({ at, radius, delay, tau, joints, target })` spreading pool (lobed). No joints unless
+  given: `joints: { mesh: pavingMesh }` takes the set's OWN paving joints (its cobble / flag meshes
+  rasterised from above; a joint is the low part of the local relief or the bed between stones -
+  `res`, `reach`, `relief`, `bed`), or `{ fn(x, z) -> 0..1 }`, or `{ map: Texture }`; the old
+  procedural `{ pattern: 'cobbles' | 'flags' }` only for a ground with no geometry of its own. On
+  paving the blood lies thin on the stone tops and deep in the joints; give `target: [ground,
+  pavingMesh]` so the film follows the stones.
 * `fx.blood.coat | splat | spatter | stamps | runs | smear | soak ({ target, at, dir, size, t0, grow, dry })`
   film decals on skin, scales, cloth, stone - two passes (transmittance multiply + lit wet film
   with clearcoat and meniscus bump), wet -> dry (`dry: [t0, t1]`), skinned meshes follow the bones.
@@ -89,6 +95,12 @@ resolutions, never the look: per-particle density is renormalised so a cloud kee
   collapse cloud (`grow`: how fast the puffs swell, `thin`: dilution 1/s, `fall`: share of heavy
   dust falling with the debris).
 * `fx.dust.haze({ box, t0, t1, density, color })` settling haze.
+* `fx.dust.settle({ target, box | at + size, t0, tau, thickness, color })` what the air leaves:
+  a dry matte layer of dust / lime / ash (`color: 'lime' | 'chalk' | 'ash' | DUST_COLORS name |
+  [r,g,b]`) on whatever is under it - the ground (no target), set objects, characters and
+  creatures (skinned: it rides with them) - heaviest on what faces up, a trace on walls, none
+  underneath, thickening over `tau` s (decal kind `settle`, liquids `dust` / `lime` / `ash`). The
+  roofline lays one over the square under its haze (`settleOn`: the meshes to dust).
 
 **Debris and destruction (`debris.js`, `destruction.js`)** - F6, 1C take-off (async: `await`)
 * **The set's own roofline coming down (3C-11)** - build the set with a capture of its damage
@@ -106,7 +118,19 @@ resolutions, never the look: per-particle density is renormalised so a cloud kee
   blown along `dir`; beyond it the roof lets go in sheets (`sheet: [0.9, 0.7]` m) that slide down
   the slope (g (sin a - mu cos a), `mu`), lowest first, and tip off the eaves. Dust: a grey-brown
   strike cloud, curtains pouring off the eaves with the biggest sheets, lime dust where it lands,
-  settling haze (`dust: false | { color, strength, curtains, haze }`).
+  settling haze and the film it leaves (`dust: false | { color, strength, curtains, haze, settle }`,
+  `settleOn`).
+  The roof sheds as an avalanche, not a card wall: sheets hang on for a moment (`hang`, s, mean
+  0.45), each lets go course by course from the eaves up (row delay + jitter), every slate drags
+  with its own friction, tips about its own axis (+-30 deg off the course, some backwards) and
+  falls broadside with a flutter glide of its own (high drag toward a sideways drift, `flutter`),
+  landing flat with little bounce near the wall foot.
+  `panels: { box, n, count, crumbs, speed }`: the timber-framed storey's lime-plaster panels under
+  the eaves burst out (whole daub slabs with the wattle in their backs, plaster crumbs) and the
+  wall keeps the brown daub where the skin came off (`spall` decals on the set's `...:plaster`
+  meshes only, so timbers and windows stay). `beam: true | { at, side, length, release, w0, carry }`:
+  the eaves beam broken at the impact and pinned at its far end swings down on the hinge, tears
+  free and is thrown into the square (R15-02); the solver's pivot segment with `release`.
 * `fx.debris.object({ object, t0, dir, speed, spin })` throws a whole prop (the guard's spear, the
   watchman's cup, a crate); standing on the ground it first TOPPLES over its far bottom edge
   (`topple`, `carry`), then tumbles; it is held where the set put it until t0.
@@ -130,7 +154,8 @@ resolutions, never the look: per-particle density is renormalised so a cloud kee
   (`shatter: false`, `shatterAt`). Impact grit + dust (the dust of many impacts is shared, not
   stacked). Everything is solved once in setup; any frame is drawn alone.
 * **After-state (3D, X27, X28)**: build the same calls with `t0` far in the past (e.g. -100): every
-  piece lies where it came to rest in 3C (`effect.restPoses()`, `thrown.restPose()`).
+  piece lies where it came to rest in 3C (`effect.restPoses()`, `thrown.restPose()`). Through the
+  director the set says which shots are after it (`set.fxAfter`, below).
 
 **Smoke (`smoke.js`)** - F2, F4, F5
 * `fx.smoke.plume({ at, t0, t1, kind, rate, size, wind })` kinds `wood`, `chimney`, `smoulder`, `soot`,
@@ -138,10 +163,20 @@ resolutions, never the look: per-particle density is renormalised so a cloud kee
 * `fx.smoke.trail({ at: movingFn, t0, t1 })` streaming off something moving (burning sleeve).
 * `fx.smoke.wisp({ at, t0, t1, kind: 'pipe' | 'herb' })` laminar ribbon breaking into curls (R2-R9).
 
-**Fire (`fire.js`, palettes from `creatures/fire.js`)** - F2
-* `fx.fire.jet({ creature | origin, dir, t0, t1, palette: 'standard' | 'leaf', length })` dragon fire:
-  flame packets, three point lights along the jet, embers, soot, heat shimmer, ground splash, scorch.
-* `fx.fire.burn({ at, size, t0, t1 })` a burning object; `embers`, `shimmer`, `scorch`, `char`.
+**Fire (`fire.js`, `core/blackbody.js`, `core/flamevol.js`, `core/jetvol.js`)** - F2
+* Emission in ABSOLUTE scene radiance from temperature: blackbody chroma (Planck x CIE fit -> linear
+  sRGB) and luminance Y = Y0 (Y_P(T) / Y_P(1500 K))^0.5 (Y0 0.42-0.45): bodies grade saturated
+  orange (Y 0.15-0.5), cores clip to yellow-white and bloom (Y > 5), tips dark red (< 0.05) -
+  self-tested through the film finish. Leaf's fire maps the same field through a violet-blue ramp.
+* `fx.fire.jet({ creature | origin, dir, t0, t1, palette: 'standard' | 'leaf', length, render })`
+  dragon fire as a ray-marched VOLUME along the jet's centreline (bisector-slab parametrisation,
+  flow noise advected with the gas, big billows, soot creases, per-step shutter time = motion
+  blur; `render: 'particles'` for the old packets); embers, soot, heat shimmer, ground splash,
+  scorch. Its lights sit at the emission centroids of three bins along the jet with intensity =
+  radiance x area of the flame they stand for (the light and the visible flame cannot disagree).
+* `fx.fire.burn({ at, size, height, t0, t1 })` a burning object as a buoyant flame volume (sheet
+  factor from the wind; licks from noise advected on the buoyant time of flight; puffing at
+  1.5 / sqrt(D)); light from its own field (`vol.emission`); `embers`, `shimmer`, `scorch`, `char`.
 
 **Water (`water.js`)** - F1 sea stain, F8, C17
 * `fx.water.splash({ at, t0, size, height })` crown, sheet, Worthington jet, mist, foam patch.
@@ -160,14 +195,14 @@ resolutions, never the look: per-particle density is renormalised so a cloud kee
 
 ## Director cues (`director.js`)
 
-`scenes/lib/director/fx.js` imports `registerDirectorFx` from `index.js`; 37 kinds are registered:
+`scenes/lib/director/fx.js` imports `registerDirectorFx` from `index.js`; 38 kinds are registered:
 
 `blood-spray blood-drip blood-pool blood-decal blood-water dust-downwash dust-cloud dust-haze
 debris-burst debris-collapse debris-boards debris-turf debris-roofline debris-object debris-sweep
 smoke-plume smoke-trail smoke-wisp fire-jet
 fire-burn embers heat-shimmer scorch water-splash water-spray water-foam water-trail water-churn
 water-downwash gore-wing-root gore-fracture gore-scalp gore-burned-rider cloth-banner cloth-drape
-sparks ash-fall`
+sparks ash-fall dust-settle`
 
 ```js
 fx: [
@@ -179,15 +214,49 @@ fx: [
 
 `debris-roofline` takes `params.capture` = the name given to `fx.debris.damageCapture(region, { name })`
 when the set was built (and `params.set` = a set object to match the tiles to; default the set's
-group); `debris-object` / `debris-sweep` take `params.object` = a set object name. A thrown prop
-goes back where the set has it whenever its cue is not running.
+group); `debris-object` / `debris-sweep` take `params.object` = a set object name.
 
 `params` are the library call's options verbatim; t0 = 0 at the cue's `from`. `at` is an array, a
-set mark, a set object, or an actor point (followed through the director's pure blocking
-estimate). Debris needs fixed positions. Gore and decals on bodies need `params.actor` and the
-director to pass actors to FX factories (`api.actor(name)`, requested). The director's own
-`lamp-flicker`, `dust-motes` and `shadow-pass` stay as they are. `scenes/lookdev/fx-director.js`
-renders cues through the director's `FxRunner` (and matches the direct calls frame for frame).
+set mark, a point of the set builder's own (`set.point(name, t)`: a moving set piece such as the
+boat under way, followed in time), a set object, or an actor point (followed through the
+director's pure blocking estimate). Debris needs fixed positions.
+
+* **Bodies** (gore, `blood-decal` / `dust-settle` / `scorch` with `params.actor`): the director
+  hands the cast to FX (`api.actor(name) -> { kind, c | ch, root }`). These effects are built once,
+  at the first frame that needs them, on the actor's REST pose (bind pose, root at the origin,
+  upright) - never on whatever pose that frame has, so every render chunk builds the same thing -
+  and ride the skin / bones from then on. Their `at` / `dir` / `up` are in the actor's own frame
+  (metres from its root, +z its facing) or an actor part (`'remi.head'`, `'scout.wing.L'`).
+* `gore-wing-root`: the spray follows the creature's flight - the wound's offset in the creature's
+  frame carried along its blocking frame (`env.actorFrame`, pure); `at` on the cue or
+  `params.bleedAt` override it.
+* **After-state continuity**: a destruction cue (`debris-*`, `blood-pool`, `scorch`, `dust-settle`)
+  whose cue is not running shows the set as the set built it (the stall standing) - unless the
+  set says the shot is after it: `set.fxAfter = true | ['stall', 'roof'] (cue ids or kinds) |
+  fn(id, kind)`, set per shot by the set builder (`applyShot`, e.g. from the shot spec's `fxAfter`
+  or the continuity table). Then the effect shows its settled end state. (REQUEST director: set it
+  for 3D / X25-X28.)
+
+The director's own `lamp-flicker`, `dust-motes` and `shadow-pass` stay as they are.
+`scenes/lookdev/fx-director.js` renders cues through the director's `FxRunner` (and matches the
+direct calls frame for frame).
+
+Ready-to-paste cues for the shots that have FX (the director track owns the shot specs; the
+current prologue / sea-coast specs P-02..P-16 put no dragon on screen):
+
+```js
+// P-03 the vessel under way: its wake (at: the set's moving boat point)
+{ kind: 'water-trail', id: 'wake', from: 0, at: 'boat.stern', params: { width: 2.2 } },
+// F1 the bite: spray thrown back along Charcoal's neck, the jaws coated (on his rest pose)
+{ kind: 'blood-spray', id: 'bite', from: 1.2, at: 'charcoal.head', params: { dir: [0, 0.4, -1], amount: 1.4, duration: 0.8 } },
+{ kind: 'blood-decal', id: 'jaws', from: 1.2, at: 'jaw', params: { actor: 'charcoal', kind: 'coat', dir: [0, -0.3, -1], size: [0.9, 0.7, 0.8], params: [0, 6, 0.9, 0.6] } },
+// the scout's wing torn away in flight, the spray riding the flight path; blood in the sea below
+{ kind: 'gore-wing-root', id: 'scout', from: 0.4, params: { actor: 'scout', side: 'L' } },
+{ kind: 'water-splash', id: 'fall', from: 3.1, at: [x, 0, z], params: { size: 1.6 } },
+{ kind: 'blood-water', id: 'stain', from: 3.4, at: [x, 0, z], params: { radius: 3 } },
+// 3D / X27 the square after: dust on the dead and the debris
+{ kind: 'dust-settle', id: 'dust', from: -100, params: { box: [[-6, 0, -2], [6, 2.5, 8]], color: 'lime', thickness: 0.2 } },
+```
 
 ## How it fits the cinematic stack
 
@@ -226,6 +295,15 @@ Cost on the CPU cloud box (SwiftShader, 4 vCPU): draft stills 4-17 s per frame o
 ~0.5-3 s per banner in setup. On the RTX 4090 the GPU work is a small fraction of these.
 
 ## Limits / not built here
+
+* Particles are evaluated and sorted on the CPU each frame (closed-form motion, packed-key native
+  sort): 140k particles fill + sort in ~83 ms per frame on the 4-vCPU cloud box (14k: ~20 ms), a
+  small part of a 4K frame on the RTX PC; `ctx.quality.fxParticles` scales the counts on a GPU (the
+  `ultra` tier is 2.5x). A vertex-shader evaluation of the ballistic layers (launch data uploaded
+  once, `t` as a uniform) is the next step if counts need to go past ~50x.
+* Debris tiles / shards are plain meshes (the architecture tile material takes its normal from
+  modelMatrix: REQUEST architecture - normal from `instanceMatrix` under USE_INSTANCING; then the
+  debris draws one InstancedMesh per kind / variant).
 
 * Transparent FX drawn in the late pass get the runtime's haze for the depth found per pixel;
   the depth twins fix most of it, but the cleanest fix is an aerial-perspective lookup for late
