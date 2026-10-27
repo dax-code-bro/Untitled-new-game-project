@@ -55,7 +55,13 @@ const sunVec = (az, el) => new THREE.Vector3(Math.sin(az * D2R) * Math.cos(el * 
 
 /** Per-location look: fog banks, haze, fog density, the sea, white balance, exposure trim. */
 const LOOKS = {
-  settlement: { sea: 'dawn', haze: 4.5, density: 0.00022, wb: 4500, exposure: 1.5, banks: (S) => [
+  // P-09 (the settlement location looking out to sea, south) under a dawn altocumulus deck (`set.clouds`):
+  // south of the home only (P-08 looks north under a clear sky), lit warm on the sun side
+  settlement: { sea: 'dawn', haze: 4.5, density: 0.00022, wb: 4500, exposure: 1.5,
+    deck: { when: 'clouds', y: 3500, size: 160000, tile: 14000, detail: 1250, center: [0, 80000], home: [0, 300], yaw: -25, color: [0.95, 0.86, 0.82], edgeFade: 0.3,
+      glow: { az: 95, power: 1.5, sun: [1.7, 1.25, 0.85], away: [0.8, 0.85, 0.95] },
+      paint: { open: [-0.12, 0.22], radius: 0.6, soft: 0.2, core: 0.62, thin: 1.0, cells: [29, 41], sub: [73, 103] } },
+    banks: (S) => [
     { center: [S.x * 3000, S.y * 3000 + 60, S.z * 3000], radius: [1800, 360, 600], density: 0.02, noise: 0.95 },
     { center: [200, 70, -900], radius: [1200, 45, 300], density: 0.004, noise: 0.95 },
     { center: [-500, 6, 400], radius: [900, 10, 200], density: 0.002, noise: 0.95 }] },
@@ -460,6 +466,7 @@ export async function build(ctx, { shotSpecs }) {
     t.wrapS = t.wrapT = THREE.RepeatWrapping; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.anisotropy = 8;
     return t;
   };
+  const optional = [];
   for (const loc of used) {
     if (!LOOKS[loc]?.deck) continue;
     const g = locs[loc] || group(loc);
@@ -467,11 +474,35 @@ export async function build(ctx, { shotSpecs }) {
       const map = paintTex(draft ? 512 : 1024, (img) => paintCloudDeck(img, D.paint)); map.colorSpace = THREE.SRGBColorSpace;
       map.repeat.set(D.size / D.tile, D.size / D.tile);
       const detail = paintTex(256, (img) => paintCloudDetail(img, D.paint)); detail.repeat.set(D.size / D.detail, D.size / D.detail);
-      const deck = new THREE.Mesh(new THREE.PlaneGeometry(D.size, D.size),
-        new THREE.MeshBasicMaterial({ map, alphaMap: detail, transparent: true, opacity: D.opacity ?? 1, depthWrite: true, side: THREE.DoubleSide, color: new THREE.Color(...D.color), fog: false }));
+      // `glow` (a low sun lights the deck's sun side warm, the far side cool: vertex colour by the
+      // heading from the location's home) and `edgeFade` (alpha to 0 over the outer fraction of the
+      // card: a high deck's edge would show above the horizon) need a subdivided card
+      const shaded = !!(D.glow || D.edgeFade);
+      const deck = new THREE.Mesh(new THREE.PlaneGeometry(D.size, D.size, shaded ? 48 : 1, shaded ? 48 : 1),
+        new THREE.MeshBasicMaterial({ map, alphaMap: detail, transparent: true, opacity: D.opacity ?? 1, depthWrite: true, side: THREE.DoubleSide, color: new THREE.Color(...D.color), fog: false, vertexColors: shaded }));
       deck.rotation.order = 'YXZ'; deck.rotation.set(Math.PI / 2, D.yaw * D2R, 0);
       deck.position.set(D.center[0], D.y, D.center[1]);
       deck.name = `cloudDeck:${loc}`;
+      if (shaded) {
+        deck.updateMatrixWorld(true);
+        const P = deck.geometry.attributes.position, col = new Float32Array(P.count * 4), v = new THREE.Vector3();
+        const G = D.glow, home = D.home || [0, 0], half = D.size / 2;
+        for (let i = 0; i < P.count; i++) {
+          const r = Math.max(Math.abs(P.getX(i)), Math.abs(P.getY(i))) / half;
+          v.fromBufferAttribute(P, i).applyMatrix4(deck.matrixWorld);
+          let c = [1, 1, 1];
+          if (G) {
+            const da = Math.cos(Math.atan2(v.x - home[0], -(v.z - home[1])) - G.az * D2R);
+            const gs = Math.pow(Math.max(0, da), G.power ?? 2), ga = Math.max(0, -da);
+            c = c.map((q, k) => 1 + (G.sun[k] - 1) * gs + (G.away[k] - 1) * ga);
+          }
+          col.set([c[0], c[1], c[2], D.edgeFade ? smooth(1, 1 - D.edgeFade, r) : 1], i * 4);
+        }
+        deck.geometry.setAttribute('color', new THREE.BufferAttribute(col, 4));
+      }
+      // `when`: shown only in the shots whose set names it (a deck added to a location after some of
+      // its shots were final must not change those)
+      if (D.when) { deck.userData.when = D.when; optional.push(deck); }
       g.add(deck);
       if (D.veil) {
         const veil = new THREE.Mesh(new THREE.PlaneGeometry(D.size * 1.5, D.size * 1.5), new THREE.MeshBasicMaterial({ color: new THREE.Color(...D.veil), side: THREE.DoubleSide, fog: false }));
@@ -489,6 +520,7 @@ export async function build(ctx, { shotSpecs }) {
       const st = info.spec.set || {}, t = info.local, c = info.cont;
       const loc = st.loc || 'calm';
       for (const [k, g] of Object.entries(locs)) g.visible = k === loc;
+      for (const o of optional) o.visible = !!st[o.userData.when];
       const look = LOOKS[loc] || LOOKS.calm;
       // the sun of this shot (registry continuity), veiled or clear
       const sd = c.sun ? new THREE.Vector3(...c.sun).normalize() : sunVec(95, 7);

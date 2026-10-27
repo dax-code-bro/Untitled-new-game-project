@@ -65,6 +65,23 @@ How it works: `README.md` in this folder. Latest state first.
   browser died for memory (P-09 restarted) - assemble only when the renders are done. And again: never
   `pkill -f <pattern>` with the pattern in the same command line (it kills the calling shell; the orphaned
   ffmpeg kept running) - pgrep, then kill the PID.
+- MEMORY: 11:30-11:56 three renderer deaths for memory (P-09 twice, 1A-31 at 168/204 frames - 1.6 h lost):
+  my P-17 still runs (a VERDOR_GROUNDS browser, ~3 GB) next to two chamber renders, the vistas queue and
+  the other tracks' renders (perf: three render.mjs runs, ~6 GB). The vistas queue was stopped; the
+  optional re-renders (P-17 meadow, P-09 clouds, P-10..P-12) wait in queue M until at most one chamber
+  render runs. Rule from here: no extra browser while two chamber renders run.
+- Engine: `render-shots.mjs` renders and encodes a shot in 48-frame SEGMENTS (`--segment N`; manifest
+  `<job>.segs.json` with the shot's keys): a crash or a stop loses only the segment in flight, the retry
+  or the next run resumes and joins the segments with ffmpeg concat (no re-encode); a part file whose lock
+  names a dead process is removed instead of blocking the shot for 30 min. Tested on R1-01 (killed after
+  2 of 4 segments, resumed: "removed the part file of a dead run", "resuming - 2/4 segments", 96 frames
+  joined; PSNR 48-70 dB against the earlier one-piece render). Pure-mode velocity blur poses every frame
+  at its own shutter-open time, so a segment's first frame is the same as in one piece. The runs already
+  going (C, E) keep the old code; G, H, F2, M pick it up.
+- P-09 (`set.clouds`): a dawn altocumulus deck south of the settlement home (`LOOKS.settlement.deck`,
+  `when: 'clouds'` so P-08 is untouched), warm on the sun side (`glow`: vertex colour by heading from the
+  home), alpha fading to the card's edge (`edgeFade`: a deck at 3.5 km would show its edge above the
+  horizon). Node preview only so far; the previous P-09 is kept in `eng1/director/backup/`.
 - X2-13 (session-5 restage) rendered: from behind her, her head beside his snout, his eye sharp - reads as
   closeness, not quite forehead to forehead (a side view hid her behind the snout). Kept.
 

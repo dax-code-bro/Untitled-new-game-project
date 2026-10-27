@@ -22,7 +22,7 @@ export default {
       staging: 'NONE: open sea to the horizon, away from the land.',
       trans: ['dissolve', 24],
       cam: { rig: 'drone', pos: [[0, [40, 7, 300]], [8.5, [10, 7.2, 320]]], look: [[0, [-600, 2, 3400]], [8.5, [-450, 2, 3400]]], mm: 24, fstop: 5.6, focus: 500, ease: 'linear', shake: { kind: 'aerial', amount: 0.12 } },
-      set: { loc: 'settlement' },
+      set: { loc: 'settlement', clouds: true },          // a dawn altocumulus deck over the open sea (prologue-vistas.js LOOKS.settlement.deck)
       lines: [['L002#3', 1.4]],
     },
     'P-10': {

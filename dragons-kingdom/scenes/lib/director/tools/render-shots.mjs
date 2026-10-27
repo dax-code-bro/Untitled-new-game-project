@@ -21,6 +21,8 @@
 //   --force           re-render even if finished      --dry-run   list what would be rendered
 //   --reverse         take each set's shots from the last (a second queue meeting the first in the middle)
 //   --stills U,U      render stills at these fractions of each shot instead of videos (PNG + a contact sheet)
+//   --segment N       render + encode a shot in N-frame segments (default 48; 0 = one piece): a crash or a
+//                     stop loses only the segment in flight, the next run resumes the shot
 //   --timings FILE    measured seconds per frame go here (default episodes/s01e01/final/cut/timings.json; only
 //                     written for video renders of the draft preset)
 // Interrupt (Ctrl+C) and run again: finished shots are kept. Several processes may share one --work
@@ -48,6 +50,7 @@ const FINAL = path.join(ROOT, 'episodes/s01e01/final');
 const SCENES = path.join(FINAL, 'scenes');
 const rel = (f) => path.relative(ROOT, f).split(path.sep).join('/');
 const readJson = (f, d = null) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
+const readText = (f) => { try { return fs.readFileSync(f, 'utf8').trim(); } catch { return ''; } };
 const sha1 = (s) => crypto.createHash('sha1').update(s).digest('hex').slice(0, 16);
 const FPS = 24;
 
@@ -67,6 +70,10 @@ const ONLY = opt('--only') ? new Set(opt('--only').split(',')) : null;
 const SETS_F = opt('--sets') ? new Set(opt('--sets').split(',')) : null;
 const WORK = path.resolve(opt('--work', path.join(ROOT, 'output/director', PRESET)));
 const TIMINGS = path.resolve(opt('--timings', path.join(FINAL, 'cut/timings.json')));
+// a shot is rendered and encoded in SEGMENTS of this many frames (0 = one piece): a renderer killed for
+// memory (other renders on the machine) loses only the segment in flight, the retry / the next run
+// resumes from <job>.segs.json (same keys) and the finished segments are joined without re-encoding
+const SEGMENT = Math.max(0, +opt('--segment', 48));
 if (!['shot', 'set', 'core'].includes(REDO)) throw new Error('--redo-on must be shot, set or core');
 
 // ----------------------------------------------------------------- plan ---
@@ -217,23 +224,69 @@ async function renderShot(w, set, item) {
   const order = [];
   for (let i = 0; i < N; i += TWOS ? 2 : 1) order.push({ frame: f0 + i, repeat: TWOS ? Math.min(2, N - i) : 1 });
   const mp4 = path.join(work.shots, `${r.job}.mp4`), part = `${mp4}.part.mp4`;
-  const args = encoderArgs({ width: p.width, height: p.height, fps: FPS, input: 'yuv', bitDepth: 8, crf: p.crf, preset: p.x264Preset, out: part });
-  const sink = ffmpegSink(order, args, { label: `x264 ${r.job}` });
-  const sid = newId('c');
-  const url = server.addSink(sid, sink);
   const t0 = Date.now();
-  let tFirst = null;
-  sink.onProgress = (s) => { if (s.rendered === 1) tFirst = Date.now(); if (s.rendered % 24 === 0) process.stdout.write(`\r  [w${w.id}] ${r.job} ${s.rendered}/${order.length}   `); };
-  try {
-    await w.render({ sinkUrl: url, frames: order.map((o) => o.frame), capture: 'yuv', chunkStart: order[0].frame });
-    await sink.finish();
-  } catch (e) { await sink.abort().catch(() => {}); fs.rmSync(part, { force: true }); throw e; } finally { server.removeSink(sid); }
-  const v = verifyVideo(part, { frames: N, width: p.width, height: p.height });
-  if (!v.ok) { fs.rmSync(part, { force: true }); throw new Error(`${r.job}: encoded file failed the check: ${v.reason}`); }
-  fs.renameSync(part, mp4);
+  let tFirst = null, nRendered = 0, nResumed = 0;
+  const outFrames = (list) => list.reduce((n, o) => n + o.repeat, 0);
+  // one encoded piece: the frames of `list` -> file (verified, then renamed into place). Always encoded
+  // as <job>.mp4.part.mp4 (the in-flight name every tool knows: lock checks, cleanups, other queues)
+  const encodePiece = async (list, file) => {
+    const pp = part;
+    const args = encoderArgs({ width: p.width, height: p.height, fps: FPS, input: 'yuv', bitDepth: 8, crf: p.crf, preset: p.x264Preset, out: pp });
+    const sink = ffmpegSink(list, args, { label: `x264 ${r.job}` });
+    const sid = newId('c');
+    const url = server.addSink(sid, sink);
+    sink.onProgress = (st) => { if (st.rendered === 1 && tFirst === null) tFirst = Date.now(); if ((nRendered + st.rendered) % 24 === 0) process.stdout.write(`\r  [w${w.id}] ${r.job} ${nResumed + nRendered + st.rendered}/${order.length}   `); };
+    try {
+      await w.render({ sinkUrl: url, frames: list.map((o) => o.frame), capture: 'yuv', chunkStart: list[0].frame });
+      await sink.finish();
+    } catch (e) { await sink.abort().catch(() => {}); fs.rmSync(pp, { force: true }); throw e; } finally { server.removeSink(sid); }
+    const v = verifyVideo(pp, { frames: outFrames(list), width: p.width, height: p.height });
+    if (!v.ok) { fs.rmSync(pp, { force: true }); throw new Error(`${r.job}: encoded file failed the check: ${v.reason}`); }
+    fs.renameSync(pp, file);
+    nRendered += list.length;
+  };
+  if (!SEGMENT || order.length <= SEGMENT * 1.5) {
+    await encodePiece(order, mp4);
+  } else {
+    // segments: <job>.s000.mp4 ... + <job>.segs.json (what they were rendered for); resume the ones done
+    const segs = [];
+    for (let i = 0; i < order.length; i += SEGMENT) segs.push(order.slice(i, Math.min(order.length, i + SEGMENT)));
+    if (order.length - (segs.length - 1) * SEGMENT < SEGMENT / 2 && segs.length > 1) { const last = segs.pop(); segs[segs.length - 1] = segs[segs.length - 1].concat(last); }
+    const segFile = (k) => path.join(work.shots, `${r.job}.s${String(k).padStart(3, '0')}.mp4`);
+    const manFile = path.join(work.shots, `${r.job}.segs.json`);
+    const want = { keys: item.keys, frames: segs.map((x) => [x[0].frame, x.length]) };
+    const man = readJson(manFile);
+    const same = man && JSON.stringify({ keys: man.keys, frames: man.frames }) === JSON.stringify(want);
+    const stale = fs.readdirSync(work.shots).filter((f) => f.startsWith(`${r.job}.s`) && /\.s\d{3}\.mp4/.test(f));
+    if (!same) for (const f of stale) fs.rmSync(path.join(work.shots, f), { force: true });
+    const done = new Set(same ? (man.done || []) : []);
+    for (const k of [...done]) {
+      const v = fs.existsSync(segFile(k)) ? verifyVideo(segFile(k), { frames: outFrames(segs[k]), width: p.width, height: p.height }) : { ok: false };
+      if (!v.ok) done.delete(k);
+    }
+    nResumed = [...done].reduce((n, k) => n + segs[k].length, 0);
+    if (done.size) console.log(`\n  [w${w.id}] ${r.job}: resuming - ${done.size}/${segs.length} segments (${nResumed} frames) already rendered`);
+    const save = () => fs.writeFileSync(manFile, JSON.stringify({ ...want, segment: SEGMENT, done: [...done].sort((x, y) => x - y) }) + '\n');
+    save();
+    for (let k = 0; k < segs.length; k++) {
+      if (done.has(k)) continue;
+      await encodePiece(segs[k], segFile(k));
+      done.add(k); save();
+    }
+    // join without re-encoding (every segment starts on a key frame)
+    const list = path.join(work.shots, `${r.job}.segs.txt`);
+    fs.writeFileSync(list, segs.map((x, k) => `file '${segFile(k).replace(/'/g, "'\\''")}'`).join('\n') + '\n');
+    const j = spawnSync(ffmpegPath(), ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', part], { encoding: 'utf8' });
+    fs.rmSync(list, { force: true });
+    if (j.status !== 0) { fs.rmSync(part, { force: true }); throw new Error(`${r.job}: joining the segments failed: ${(j.stderr || '').trim().split('\n')[0]}`); }
+    const v = verifyVideo(part, { frames: N, width: p.width, height: p.height });
+    if (!v.ok) { fs.rmSync(part, { force: true }); throw new Error(`${r.job}: the joined segments failed the check: ${v.reason}`); }
+    fs.renameSync(part, mp4);
+  }
+  for (const f of fs.readdirSync(work.shots)) if (f.startsWith(`${r.job}.`) && (/\.s\d{3}\.mp4$/.test(f) || f === `${r.job}.segs.json`)) fs.rmSync(path.join(work.shots, f), { force: true });
   const ms = Date.now() - t0;
   // steady state: from the first frame to the last (the first frame of a page also compiles shaders)
-  const spf = order.length > 1 && tFirst ? (Date.now() - tFirst) / 1000 / (order.length - 1) : ms / 1000 / order.length;
+  const spf = nRendered > 1 && tFirst ? (Date.now() - tFirst) / 1000 / (nRendered - 1) : ms / 1000 / Math.max(1, nRendered);
   fs.writeFileSync(path.join(work.shots, `${r.job}.json`), JSON.stringify({ job: r.job, set, frames: r.frames, pre, post, drawn: order.length, ...item.keys, s_per_frame: +spf.toFixed(3), wall_s: +(ms / 1000).toFixed(1), at: new Date().toISOString(), notes: [...(notes.get(r.job) || [])] }, null, 1) + '\n');
   written.shots.add(r.job);
   timings.shots[r.job] = { draft_s_per_frame: +spf.toFixed(3), frames_drawn: order.length, cinematic: CINE, twos: TWOS, load: +os.loadavg()[0].toFixed(2), machine, measured_at: new Date().toISOString().slice(0, 16) };
@@ -265,8 +318,14 @@ for (const s of plan) {
           // several render-shots processes may share one work folder (two queues on one set): skip a
           // shot another process finished meanwhile, or is rendering now (its lock names a live pid)
           if (!STILLS && !FORCE && !stale(readJson(path.join(work.shots, `${item.row.job}.json`)), item.keys) && fs.existsSync(path.join(work.shots, `${item.row.job}.mp4`))) { console.log(`  [w${i}] ${item.row.job}: finished by another process, skipped`); continue; }
-          // an older process (no locks) shows its work by the growing .part.mp4
+          // an older process (no locks) shows its work by the growing .part.mp4; a part file whose lock
+          // names a dead process (a killed or crashed run) is stale: removed (its segments are kept)
           const part = path.join(work.shots, `${item.row.job}.mp4.part.mp4`);
+          if (!STILLS && fs.existsSync(part)) {
+            const lp = +(readText(path.join(work.shots, `${item.row.job}.lock`)) || 0);
+            let live = false; if (lp) { try { process.kill(lp, 0); live = true; } catch { /* dead */ } }
+            if (lp && !live) { fs.rmSync(part, { force: true }); console.log(`  [w${i}] ${item.row.job}: removed the part file of a dead run (pid ${lp})`); }
+          }
           if (!STILLS && fs.existsSync(part) && Date.now() - fs.statSync(part).mtimeMs < 30 * 60e3) { console.log(`  [w${i}] ${item.row.job}: being encoded by another process, skipped`); continue; }
           const lock = STILLS ? null : claim(item.row.job);
           if (lock === false) { console.log(`  [w${i}] ${item.row.job}: being rendered by another process, skipped`); continue; }
