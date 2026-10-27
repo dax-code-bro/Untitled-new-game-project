@@ -374,12 +374,13 @@ export default {
     },
     'X2-03': {
       staging: 'OTS + DOF (reverse angle, declared): from the doorway over Remi\'s shoulder (from behind, soft) onto Alexandria small at the nest, not looking up; he answers and goes out past the lens.',
-      // session 7: the OTS over HER shoulder was the X2-02 picture again, closer on the same axis (a jump cut in
-      // the assembled cut, her humans-library bun sharp at 1.5 m); a medium of Remi facing the lens showed the
-      // library face sharp and frontal (it reads CG: dlg-4k). Now the reverse: the camera in the door's
-      // tunnel, south of the line Alexandria - door (Remi left, she right, as in X2-02), his back soft in the
-      // foreground, her face small and down; he exits frame left past the lens
-      cam: { rig: 'static', pos: [-4.4, 1.6, -1.3], look: [1.1, 1.15, -1.3], mm: 28, fstop: 2, focus: 'alexandria.head' },
+      // session 7: the OTS over HER shoulder was the X2-02 picture again, 1.6x closer on the same axis (a jump
+      // cut in the assembled cut; her library bun sharp at 1.5 m). A medium of Remi facing the lens (the shot
+      // list's framing) showed the library face sharp and frontal (reads CG, cf. dlg-4k); a camera deeper in
+      // the door's tunnel had the door frame's post across the lens. Now the reverse from just inside the
+      // door frame (x -3.95; the frame posts are at x -4.14), south of the line Alexandria - door (Remi left,
+      // she right, as in X2-02): his back soft in the foreground, her face small and down, he exits frame left
+      cam: { rig: 'static', pos: [-3.95, 1.62, -1.42], look: [1.1, 1.2, -1.25], mm: 26, fstop: 2, focus: 'alexandria.head' },
       cast: {
         alexandria: { ...seated, posture: { sit: 1, lean: 0.4 } }, hatchling: hatchRest(),
         remi: { at: [-2.95, -1.8], face: 'alexandria', look: 'alexandria.head', lookAmount: 0.5, legs: 'planted', acts: [[2.1, 'turn', { to: 270, dur: 0.6 }], [2.6, 'walk', { to: [-4.8, -1.9], speed: 1.1 }]] },
