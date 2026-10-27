@@ -106,6 +106,13 @@ function keysFor(setId, spec, row) {
     handles: handlesFor(row),
   };
 }
+/** The keys of a shot from the files as they are NOW (the spec and the shot table re-read from disk). */
+async function freshKeys(setId, job) {
+  const tab = readJson(path.join(SCENES, SETS[setId].file.replace(/\.js$/, '.shots.json')));
+  const row = tab?.shots?.find((r) => r.job === job);
+  if (!row) return null;
+  return keysFor(setId, await loadSpec(setId), row);
+}
 function handlesFor(row) {
   const n = need.get(row.job) || { pre: 0, post: 0 };
   return { pre: Math.min(n.pre || 0, row.pre || 0), post: Math.min(n.post || 0, row.post || 0) };
@@ -327,6 +334,13 @@ for (const s of plan) {
             if (lp && !live) { fs.rmSync(part, { force: true }); console.log(`  [w${i}] ${item.row.job}: removed the part file of a dead run (pid ${lp})`); }
           }
           if (!STILLS && fs.existsSync(part) && Date.now() - fs.statSync(part).mtimeMs < 30 * 60e3) { console.log(`  [w${i}] ${item.row.job}: being encoded by another process, skipped`); continue; }
+          // the browser holds the spec and the set builder as they were when it built the set: a shot whose
+          // spec (or set) changed on disk since then would render the OLD staging under the new keys - skip
+          // it, a fresh run renders it (session 7: 1A-30 restaged while two queues held the old spec)
+          if (!STILLS) {
+            const fresh = await freshKeys(s.set, item.row.job).catch(() => null);
+            if (fresh && (fresh.shot !== item.keys.shot || fresh.set !== item.keys.set)) { console.log(`  [w${i}] ${item.row.job}: its ${fresh.shot !== item.keys.shot ? 'shot spec' : 'set'} changed on disk since this browser loaded the set - skipped (a fresh run renders it)`); continue; }
+          }
           const lock = STILLS ? null : claim(item.row.job);
           if (lock === false) { console.log(`  [w${i}] ${item.row.job}: being rendered by another process, skipped`); continue; }
           try { await renderShot(w, s.set, item); tries = 0; } catch (e) {
