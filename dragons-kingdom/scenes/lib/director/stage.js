@@ -86,7 +86,17 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
     await Promise.all([...used].map(async (name) => {
       const d = castDef[name];
       if (!d) throw new Error(`${setId}: actor "${name}" is used by a shot but not in spec.cast`);
-      if (d.kind === 'human') {
+      if (d.kind === 'human' && d.ride) {
+        // a RIDER: a seated build (remi_ride, abby_ride, fall_ride, scout_ride, abby_ride_injured)
+        // mounted on a creature of the cast after everyone is loaded (saddle fitted to its back,
+        // straddle fitted to its body, grab bar, stirrups: creatures library rider.js)
+        const ride = typeof d.ride === 'string' ? { on: d.ride } : { ...d.ride };
+        const human = await humansLib.loadHuman({ ids: [d.id] });
+        const rider = humansLib.createRider(human, { id: d.id, outfit: d.outfit || name, lean: ride.lean, reach: ride.reach });
+        rider.root.name = `actor:${name}`;
+        humanRig(rider.character);
+        actors[name] = { name, kind: 'human', def: d, ch: rider.character, root: rider.root, rider, ride };
+      } else if (d.kind === 'human') {
         const ch = await humansLib.loadCharacter(d.id, d.load || {});
         ch.root.name = `actor:${name}`;
         ctx.scene.add(ch.root);
@@ -111,6 +121,16 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
       }
     }));
     if (creaturesLib) S_poses = creaturesLib.poses;
+    // riders onto their mounts (one saddle per creature, fitted once; shown in the shots that seat
+    // someone on it or ask for it with `tack: true` on the creature's cast entry)
+    for (const a of Object.values(actors)) {
+      if (!a.ride) continue;
+      const m = actors[a.ride.on];
+      if (!m || m.kind !== 'creature') throw new Error(`${setId}: rider "${a.name}" rides "${a.ride.on}", which is not a creature in this set's shots`);
+      if (!m.tack) m.tack = creaturesLib.createSaddle(m.c, m.def.tack || {});
+      a.mount = creaturesLib.mountRider(m.c, m.tack, a.rider, { raise: a.ride.raise });
+      a.rider.root.visible = false;
+    }
     // FX factories get the cast too (the FX library's gore / decals / fire from a mouth take
     // params.actor: api.actor(name) -> { kind, c (creature) | ch (character), root })
     const fx = new FxRunner(ctx, { scene: ctx.scene, set: built, point: null, actors, actor: (n) => actors[n] || null });
@@ -176,7 +196,7 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
         const a = S.actors[an];
         if (a) {
           if (a.kind === 'object') return a.root.getWorldPosition(new THREE.Vector3());
-          if (!S.posed.has(an)) {
+          if (!S.posed.has(an) && !a.ride) {
             // not posed yet in this update: the blocking state's root + the rest-pose offset (pure)
             const st = S.states[an];
             if (st && a.kind === 'human') {
@@ -214,6 +234,7 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
         const [an, ...rest] = String(name).split('.');
         const part = rest.join('.');
         const a = S.actors[an], b = S.cur?.cast?.[an];
+        if (a?.ride) return env.point(name, tt);          // a rider sits where its mount's pose puts it
         if (a && b && a.kind !== 'object') {
           const st = actorState(b, tt, env.forActor(an));
           if (a.kind === 'human') {
@@ -239,6 +260,7 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
       warnOnce(msg) { const k = `${S.cur?.job || ''}:${msg}`; if (!S.warned.has(k)) { S.warned.add(k); console.warn(`[director] ${S.cur?.job || ''}: ${msg}`); } },
       /** an actor's ground frame at shot time tt (pure: from the blocking, not from the posed root) */
       actorFrame(name, tt) {
+        if (S.actors[name]?.ride) return env.actorFrame(S.actors[name].ride.on, tt);
         const a = S.actors[name], b = S.cur?.cast?.[name];
         if (a && b && a.kind !== 'object') { const st = actorState(b, tt, env.forActor(name)); return { pos: env.toWorld(name, new THREE.Vector3(st.x, st.y, st.z)), yaw: st.yaw }; }
         const p = env.point(name, tt);
@@ -262,6 +284,13 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
       if (!a) continue;
       a.root.visible = actorVisible(b, tt);
       if (!a.root.visible) { S.posed.add(name); continue; }
+      if (a.ride) {
+        // seated on its mount (posed before the humans): idle + the straddle fit; no blocking root
+        if (!cast[a.ride.on]) throw new Error(`[director] ${row.job}: rider "${name}" is cast without its mount "${a.ride.on}"`);
+        a.rider.update(tt, b.idle || {});
+        S.posed.add(name);
+        continue;
+      }
       if (b.nearTo) placeNear(st, b.nearTo, tt);
       if (a.kind === 'human') {
         const mouth = row.dialogue?.length ? mouthAt(row.dialogue, a.def.role || name.toUpperCase(), tt) : 0;
@@ -269,6 +298,7 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
         const stateAt = planted ? (t2) => { const s2 = actorState(b, t2, S.env.forActor(name)); if (b.nearTo) placeNear(s2, b.nearTo, t2); return s2; } : undefined;
         poseHuman(a.ch, st, tt, S.env, { idle: b.idle, armSwing: b.armSwing ?? a.def.armSwing, armsDown: b.armsDown ?? a.def.armsDown, mouth, role: a.def.role, placed: row.dialogue, shot: row.job, plantedFeet: planted, stateAt, seconds: (row.frames + (row.post || 0)) / 24 });
       } else if (a.kind === 'creature') {
+        if (a.tack) { const on = b.tack === true || names.some((n) => S.actors[n]?.ride?.on === name && actorVisible(cast[n], tt)); for (const m of a.tack.meshes || []) m.visible = on; }
         poseCreature(a.c, S_poses, st, tt, { look: b.lookPose ? b.lookPose : null, defaults: b.poseDefaults });
         placeCreature(a, b, tt);
       } else if (a.kind === 'object') {

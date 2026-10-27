@@ -69,6 +69,19 @@ the blocking as a function of time (`info.stateAt`, `info.seconds`); every other
 gait. Side-view stills of X2-04 both ways: the built-in gait lifted the toes like a dance step, the
 planted gait keeps the soles on the flags.
 
+**Riders**: a human cast entry with `ride: 'leaf'` (or `{ on: 'leaf', raise, lean, reach }`) and a
+seated build as its id (`remi_ride`, `abby_ride`, `fall_ride`, `scout_ride`, `abby_ride_injured`) is
+mounted on that creature at setup: the creatures library fits a saddle to its back (`createSaddle`,
+options from the creature's cast `tack: {...}`), straddles the rider's legs round its body, adds the
+grab bar and stirrups (`mountRider`). Each frame the rider follows its mount's pose (it is parented to
+the seat bone) with the build's idle motion; it has no blocking root of its own (`at` is ignored), its
+parts (`abby.head`, `abby.hand.R`) are real bone positions for cameras and eye-lines, a follow camera
+on a rider follows its mount. The saddle shows in the shots that seat someone on it (or `tack: true` on
+the creature's cast entry). A shot casting a rider must cast its mount. MOUNTING / DISMOUNTING: two cast
+entries (the standing build walks to the flank, reaches up; `[t, 'hide']` on it and `[t, 'show']` on the
+seated rider at the cut point) - a cut on the action, as a film would. `tools/probe-ride.js` is the test
+scene (Abby on Leaf on the real field set).
+
 Positions are metres in the set's world frame or NAMES: marks (`'door'`), actors (`'alexandria'`),
 actor parts (`'abby.head'`, `'abby.hand.R'`, `'leaf.eye'`, `'leaf.w_R_2'` - any creature bone),
 set objects; anything can be a key list `[[t, value, ease?], ...]`. `cam.debug: true` (or a list of extra point

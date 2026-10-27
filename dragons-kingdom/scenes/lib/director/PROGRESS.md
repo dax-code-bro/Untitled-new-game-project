@@ -34,6 +34,10 @@ How it works: `README.md` in this folder. Latest state first.
   painted disc at that size).
 - Planted feet wired in (`legs: 'planted'`): on for the walkers of the not-yet-rendered chamber shots
   (1A-31, 1A-32, X2-01, X2-03, X2-16); the rendered walkers keep the built-in gait.
+- Riders (`ride: '<creature>'` on a human cast entry with a seated build): the stage mounts them with
+  the creatures library's saddle / straddle / grab bar / stirrups and poses them from the mount each
+  frame (README "Riders"); `tools/probe-ride.js` is the test scene. NOT YET SEEN RENDERED at the time of
+  writing (the machine was full) - render the probe before using it in a shot.
 - Engine: the framing solver is now a pure module (`framing.js`, self-tested); a failed framing warning
   names the camera side that would hold it (`suggestFrom`); the stage's per-shot warnings are kept as
   review flags in each shot's sidecar (`notes`) and in `cut/cut-report.json` (they had only scrolled
