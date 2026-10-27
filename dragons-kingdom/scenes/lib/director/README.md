@@ -99,6 +99,8 @@ node scenes/lib/director/tools/render-shots.mjs --stills 0.5             # one s
 node scenes/lib/director/tools/render-shots.mjs --sets SEA_COAST_DAWN    # draft videos of one set
 node scenes/lib/director/tools/render-shots.mjs                          # every shot of the cut (resumes)
 node episodes/s01e01/final/cut/make-cut.mjs                              # assemble the draft cut with the voices
+bash episodes/s01e01/final/cut/assemble.sh <work>                        # what is left + cut + review sheets + voice sync check
+python3 episodes/s01e01/final/cut/check-sync.py <cut.mp4>                 # speech starts at every subtitle cue
 node scenes/lib/director/tools/shot-rows.mjs --shots <work>/shots --out <dir>  # each shot's frames vs its staging
 node scenes/lib/director/tools/cut-sheet.mjs --cut <cut.mp4> --out <dir> # review sheets across the cut
 node scenes/lib/director/tools/previs.mjs --set BIRTHING_CHAMBER --only 1A-27 --out <dir>   # previs (Node, seconds)
