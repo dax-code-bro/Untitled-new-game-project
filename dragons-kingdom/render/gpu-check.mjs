@@ -28,6 +28,10 @@
 //     CPU (pc/reference-cpu.json) and scales the per-scene hours of
 //     episodes/s01e01/final/render-schedule.md by it: an ESTIMATE of how long
 //     Episode 1 takes on this PC.
+//  6. Quality tiers (on a GPU, or with --tiers): renders the same frame at final, final-high and
+//     final-ultra (runtime/lib/quality.js), checks every tier draws the same picture structure (no NaN,
+//     no black frames), turns the measured speeds into hours of Episode 1 per tier and prints the
+//     RECOMMENDED preset: the highest tier that keeps the episode within ~3 days (--budget-hours).
 //  --heavy also renders the F5 Cling square style frame (the heaviest set, a third of the episode):
 //  graphics memory and the Windows GPU time-out (TDR) on the biggest scene.
 // Everything printed also goes to pc/logs/gpu-check-<date>.txt and
@@ -82,6 +86,10 @@ GPU self-test: finds the graphics card, renders a 4K style frame, estimates Epis
   --write-reference-image  (with --swiftshader) store the picture (thumbnail + 1:1 crops) in pc/reference-image.json
   --schedule FILE     render schedule (default ${path.relative(PROJECT_ROOT, DEFAULT_SCHEDULE)})
   --probe-only        stop after the GPU search (no rendering)
+  --tiers LIST|none   quality tiers to compare with final on this card (default on a GPU: high,ultra; with
+                      --swiftshader: none) - prints the hours of Episode 1 at every tier and the recommended preset
+  --tier-size WxH     render the tier comparison at this size instead of native 4K (a quick TEST)
+  --budget-hours H    the time Episode 1 may take for the recommendation (default 72 = 3 days)
   --out DIR           where the PNG and gpu-check.json go (default output/gpu-check)
 `;
 
@@ -411,6 +419,34 @@ async function main() {
       say('   ESTIMATE ONLY: one test frame scaled to every set (the cloud figures are themselves estimates');
       say('   for sets that are not built yet). Two browsers at once (the default) are usually a bit faster.');
     } else say(`   ${est.note}`);
+
+    // ---- 4. quality tiers: final vs final-high / final-ultra on this card, and the tier to render Episode 1 at
+    // (runtime/lib/quality.js, runtime/tools/tier-bench.mjs; the quality-tier track's part of this file)
+    if (est.rows && (a.tiers ? a.tiers !== 'none' : !a.swiftshader)) {
+      const { benchTiers, planFromBench, planLines } = await import('../runtime/tools/tier-bench.mjs');
+      const tc = CANDIDATES.find((x) => x.id === m.candidate) || { scene: m.scene, time: m.time, cinematic: m.cinematic };
+      const tierList = (a.tiers && a.tiers !== 'all' ? String(a.tiers) : 'high,ultra').split(',').map((x) => x.trim()).filter(Boolean);
+      const budgetH = num(a.budgetHours, 'budget-hours', { min: 1 }) ?? 72;
+      say(`\n== Quality tiers on this ${a.swiftshader ? 'CPU' : 'GPU'}: final vs ${tierList.join(', ')} (${a.tierSize ? `${a.tierSize}, a TEST size` : 'native 3840x2160'}; each tier builds the scene again)`);
+      try {
+        const bench = await benchTiers({ scene: tc.scene, time: tc.time, cinematic: tc.cinematic, gpu: !a.swiftshader, gpuProfile: chosen?.profile, tiers: tierList, size: a.tierSize, frames: 2, log: say });
+        const setupH = Math.max(0, est.total.hours - est.rows.reduce((acc, r) => acc + (r.cpuH || 0) * est.ratio, 0));
+        const plan = planFromBench(bench, { finalSteadyS: m.steadyS, refSteadyS: est.reference.steadyS, cpuHours: est.total.cpuH, setupH, encodeH: 4, budgetH });
+        result.tiers = { bench: { size: bench.size, results: Object.fromEntries(Object.entries(bench.results).map(([k, v]) => [k, { ...v, stats: undefined }])) }, plan };
+        say('');
+        for (const l of planLines(plan)) say(l);
+        const line = '#'.repeat(78);
+        say(`\n${line}`);
+        say(`#  RECOMMENDED QUALITY: --preset ${plan.preset}   (${plan.reason})`);
+        say(`#  (native 4K, every frame, at every tier; the tier only decides how much work goes into each pixel)`);
+        if (a.tierSize) say('#  measured at a TEST size: run the GPU check without --tier-size for the real figures');
+        say(line);
+        result.recommendedPreset = plan.preset;
+      } catch (e) {
+        say(`   the quality-tier benchmark failed: ${e.message.split('\n')[0]}`);
+        result.tiers = { error: e.message.split('\n')[0] };
+      }
+    }
     if (a.swiftshader && !a.writeReference) code = 0;
     const different = measurements.filter((x) => x.picture?.verdict === 'DIFFERENT');
     if (different.length && !a.swiftshader) {

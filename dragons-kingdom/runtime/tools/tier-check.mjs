@@ -8,7 +8,7 @@
 // Per tier it reports: render time of the frame (this machine), the work counters of the frame
 // (scene passes incl. shadow maps, full-screen passes, draw calls, triangles, update() calls) and
 // the cost model's estimate for an RTX 4090 at native 4K; against final: the structure of the
-// picture (192x108 thumbnail SSIM / PSNR - colour, exposure, objects, black blocks), extra pure
+// picture (96x54 thumbnail SSIM / PSNR - colour, exposure, objects, black blocks), extra pure
 // black / white pixels (NaN / infinity in the float pipeline) and the NaN / Inf counts of every
 // float buffer. Writes <tier>.png and a side-by-side tiers.png into --out.
 // Exit code 1 when a tier's picture is not the same structure (SSIM < 0.85 or PSNR < 25 dB),
@@ -24,7 +24,9 @@ import { TIER_NAMES, TIER_PRESETS, frameWork, estimateFrameMs, RTX4090_ASSUMPTIO
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const imp = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 
-export const STRUCTURE_LIMITS = { thumbSsim: 0.85, thumbPsnr: 25, extraBlack: 0.002, extraWhite: 0.002 };
+// "Same structure" is judged on a 96x54 area-averaged thumbnail: objects, exposure, colour, black
+// blocks show there; the finer detail a tier adds (ripples, sharper shadows, supersampling) does not.
+export const STRUCTURE_LIMITS = { thumbW: 96, thumbH: 54, thumbSsim: 0.85, thumbPsnr: 25, extraBlack: 0.002, extraWhite: 0.002 };
 
 /** Preset name of a tier at the final size ('final' | 'final-high' | ...). */
 export const presetOfTier = (t) => (t === 'final' ? 'final' : Object.keys(TIER_PRESETS).find((k) => TIER_PRESETS[k] === t));
@@ -70,12 +72,13 @@ export async function measureTier(o) {
 /** Structure of a tier's frame against the final tier's (same size). */
 export async function compareTiers(base, other) {
   const P = await imp('render/lib/picture.mjs');
-  const ta = P.thumbnail(base.rgba, base.width, base.height), tb = P.thumbnail(other.rgba, other.width, other.height);
+  const L0 = STRUCTURE_LIMITS;
+  const ta = P.thumbnail(base.rgba, base.width, base.height, L0.thumbW, L0.thumbH), tb = P.thumbnail(other.rgba, other.width, other.height, L0.thumbW, L0.thumbH);
   const ea = P.extremes(base.rgba), eb = P.extremes(other.rgba);
   const lum = (rgba) => { let s = 0; for (let i = 0; i < rgba.length; i += 4) s += 0.2126 * rgba[i] + 0.7152 * rgba[i + 1] + 0.0722 * rgba[i + 2]; return s / (rgba.length / 4); };
   const nanBufs = Object.entries(other.buffers || {}).filter(([k, v]) => k !== 'shaderErrors' && v && (v.nan || v.inf)).map(([k, v]) => `${k}: ${v.nan} NaN / ${v.inf} Inf`);
   const r = {
-    thumbSsim: +P.ssim(ta, tb, P.THUMB_W, P.THUMB_H).toFixed(4), thumbPsnr: +P.psnr(ta, tb).toFixed(2),
+    thumbSsim: +P.ssim(ta, tb, L0.thumbW, L0.thumbH).toFixed(4), thumbPsnr: +P.psnr(ta, tb).toFixed(2),
     meanLuma: [+lum(base.rgba).toFixed(2), +lum(other.rgba).toFixed(2)],
     black: [ea.black, eb.black], white: [ea.white, eb.white], nan: nanBufs, shaderErrors: other.buffers?.shaderErrors ?? 0,
   };
