@@ -22,19 +22,21 @@ export const meta = {
   cinematic: filmFinish({ ao: { enabled: true, radius: 0.4 }, dof: { samples: 32 }, grade: { exposure: 0.1, whiteBalance: 6000 } }),
 };
 
-const IDS = ['crowd01', 'crowd02', 'crowd03', 'crowd04', 'crowd05', 'crowd06', 'crowd07', 'crowd08', 'crowd09', 'crowd11', 'crowd12', 'crowd14', 'crowd15', 'crowd16', 'crowd17', 'crowd10'];
+const IDS = ['crowd01', 'crowd02', 'crowd03', 'crowd04', 'crowd05', 'crowd06', 'crowd07', 'crowd08', 'crowd09', 'crowd11', 'crowd12', 'crowd14', 'crowd15', 'crowd16', 'crowd17', 'crowd10',
+  'crowd13', 'crowd18', 'crowd02', 'crowd05', 'crowd08', 'crowd11'];
 // where each villager starts [x, z, yaw]: talking groups (by the stall, west of the steps, the music
-// space, under the steps) and a few on their own (one cheering the music, one waving to a friend,
-// two wandering across)
+// space, under the steps, by the fountain, east side) and a few on their own (two cheering the music,
+// one waving to a friend, two wandering across). Repeated builds stand far apart, facing away.
 const START = [
   [-10.5, 11.0, 0.6], [-7.9, 5.4, 0.9], [-7.0, 6.6, -2.4], [8.6, 2.6, 0.4], [-7.4, 5.0, -0.6], [-3.9, 10.0, 0.8], [-2.9, 10.9, -2.2],
   [2.0, 12.6, 1.2], [3.2, 13.6, -2.4], [6.0, 5.2, 1.6], [7.0, 5.8, -1.6], [2.9, 12.4, -0.6], [-3.6, 11.2, 2.6], [11.5, 9.5, -1.4], [2.4, 13.6, 2.8], [-1.0, 6.5, -2.9],
+  [-8.4, 6.2, 1.8], [9.6, 1.4, -0.3], [12.6, 14.2, 2.2], [13.6, 14.8, -1.0], [-13.0, 3.0, 1.0], [-12.2, 3.8, -2.0],
 ];
 // conversation groups (indices into IDS)
-const GROUPS = [[1, 2, 4], [5, 6, 12], [9, 10], [7, 11, 14, 8]];
+const GROUPS = [[1, 2, 4, 16], [5, 6, 12], [9, 10], [7, 11, 14, 8], [18, 19], [20, 21]];
 // the cheering / waving drapes keep their raised arms; the wanderers' raised arms hang
 const ARMS = { 13: 'hang', 15: 'hang' };
-const WANDER = { 13: { radius: 4.5, talk: 0.15 }, 15: { radius: 4.0, talk: 0.25 }, 0: { radius: 1.2, talk: 0.8 }, 3: { radius: 0.8, talk: 0.85 } };
+const WANDER = { 13: { radius: 4.5, talk: 0.15 }, 15: { radius: 4.0, talk: 0.25 }, 0: { radius: 1.2, talk: 0.8 }, 3: { radius: 0.8, talk: 0.85 }, 17: { radius: 0.8, talk: 0.85 } };
 const ALARM = { t: 3.0, at: [-2, -16], lookY: 14 };
 
 let S;

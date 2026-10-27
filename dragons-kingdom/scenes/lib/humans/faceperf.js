@@ -27,7 +27,7 @@ const _e = new THREE.Euler();
  */
 export const LINE_OVERRIDES = {
   // the ORIGINAL line, whispered to the hatchling: possessive tenderness with a cold edge
-  L011: { emo: { tender: 0.55, contempt: 0.18, calm: 0.3 }, amp: 0.85, gazeLock: true },
+  L011: { emo: { tender: 0.55, contempt: 0.18, calm: 0.3 }, amp: 0.95, gazeLock: true },
   L013: { emo: { tender: 0.35, determined: 0.3 } },
   L014: { emo: { surprise: 0.6, amusement: 0.25 } },
   L015: { emo: { amusement: 0.45, calm: 0.3 } },

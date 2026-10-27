@@ -68,7 +68,11 @@ const PHONES = {
 };
 const REST = { T: [0, 0, 0, 0, 0, 0, 0, 0, 0], A: [0.7, 0.5, 0.5, 0.5, 0.6, 0.6, 0.6, 0.5, 0.5], k: 11 };
 const VOWEL_K = 15;           // vowels reach ~70 ms past their plateau
-const ANTICIPATE = 0.6;       // decay before a segment = k * 0.6 (anticipation reaches further)
+// decay BEFORE a segment = k * ANTICIPATE[articulator]: anticipation reaches further than carry-over,
+// but not equally for every articulator - the lips start to round ~200 ms ahead of a w / oo (through the
+// consonants before it), while a bilabial closure or the lip-to-teeth of f / v forms only in the last
+// ~50 ms (with one factor for all, "weapon"'s EH was 43 % closed by the coming p)
+const ANTICIPATE = Float32Array.from([0.6, 1.5, 0.42, 0.6, 1.3, 0.8, 0.75, 0.6, 1.5]);
 const LEAD = 0.04;            // the mouth leads the sound (s)
 const LIP_GAIN = 1.15;       // overall articulation (read at 3/4 in a close-up; 1 looked mumbled)
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
@@ -77,7 +81,7 @@ function seg(c, half, def, out, name = '') {
   const T = Float32Array.from(def.T);
   const A = Float32Array.from(def.A || VA);
   const k = def.k || VOWEL_K;
-  out.push({ c, half, T, A, k, kb: k * ANTICIPATE, lab: name === 'P' || name === 'B' || name === 'M', fv: name === 'F' || name === 'V' });
+  out.push({ c, half, T, A, k, kb: ANTICIPATE.map((a) => k * a), lab: name === 'P' || name === 'B' || name === 'M', fv: name === 'F' || name === 'V' });
 }
 
 /**
@@ -165,10 +169,15 @@ export function lipAt(L, t, opts = {}) {
     if (s.c > tt + reach) break;
     const d = tt - s.c;
     const ex = Math.abs(d) - s.half * 0.6;
-    const k = d < 0 ? s.kb : s.k;
-    const f = ex > 0 ? Math.exp(-k * ex) : 1;
-    if (f < 1e-4) continue;
-    for (let j = 0; j < NP; j++) { const D = s.A[j] * f; out[j] += D * s.T[j]; den[j] += D; }
+    if (ex <= 0 || d >= 0) {
+      const f = ex > 0 ? Math.exp(-s.k * ex) : 1;
+      if (f < 1e-4) continue;
+      for (let j = 0; j < NP; j++) { const D = s.A[j] * f; out[j] += D * s.T[j]; den[j] += D; }
+    } else {
+      // before the segment: per-articulator anticipation
+      if (Math.exp(-s.kb[2] * ex) < 1e-4) continue;
+      for (let j = 0; j < NP; j++) { const D = s.A[j] * Math.exp(-s.kb[j] * ex); out[j] += D * s.T[j]; den[j] += D; }
+    }
   }
   const p = {};
   for (let j = 0; j < NP; j++) p[PARAMS[j]] = den[j] > 1e-6 ? out[j] / den[j] : 0;

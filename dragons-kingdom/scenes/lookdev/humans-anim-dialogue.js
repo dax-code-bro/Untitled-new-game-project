@@ -2,8 +2,9 @@
 //   L014 ABBY  "It's gold."          (amazed)            WAV at t = 0.80
 //   L015 REMI  "I can see that."     (dry big brother)   WAV at t = 1.90
 //   L016 ABBY  "I mean all of it."   (correcting him)    WAV at t = 3.27
-// Both watch the nest below the lens; Remi turns his eyes to his sister for his dry reply, Abby
-// turns up to him to correct him and back to the hatchling. Lip-sync from the takes' phone
+// Both watch the nest below the lens; Remi turns his eyes to his sister for his dry reply (one brow,
+// one lip corner), Abby turns up to him to correct him - an open hand toward the hatchling on "all" -
+// and back to it. Lip-sync from the takes' phone
 // alignment, emotions from the delivery notes (faceperf.js LINE_OVERRIDES for these three),
 // blinks, gaze with fixation saccades on the other's face, breathing, weight shift.
 // Draft clip with the takes: see the audio mix line in scenes/lib/humans/PROGRESS.md.
@@ -64,6 +65,10 @@ export async function setup(ctx) {
   abby.lookAt({ ch: remiCh }, 3.05, { amount: 0.75 });
   abby.lookAt(nest, 4.55, { amount: 0.7 });
   remi.glance({ ch: abbyCh }, 3.4);
+  // "I mean ALL of it": an open hand toward the hatchling on the stressed word, then it settles
+  abby.gesture('explain', 3.45, { side: 'L', in: 0.35, dur: 0.55, out: 0.7, beat: 0.9 });
+  // Remi's dry reply comes with a small shift of weight and a look down his nose (head up a touch)
+  remi.react({ LeftBrowDown: 0.12, RightOuterBrowUp: 0.18, MouthRightPullUp: 0.12 }, 1.95, 1.3);
   S = { abby, remi, abbyCh, remiCh };
   // camera: a medium two-shot from beside the nest, a touch below their eyes, fixed
   abby.update(0); remi.update(0);

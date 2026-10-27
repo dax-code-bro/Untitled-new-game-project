@@ -1,8 +1,8 @@
 // Performance proof 3 - Abby cradles her injured LEFT arm (2A, after the landing): she walks in
 // slowly across the riding ground, the left forearm held across her stomach by her right hand
 // (motion.js 'cradle': the hurt shoulder drawn up and in, a tremble), wincing on some steps; Remi
-// walks at her left side, his right hand under her hurt elbow ('support', on Abby's own bones), eyes
-// on her. She stops and says L091 "I'm standing." (WAV at t = 6.3), a little proud, a little shaky.
+// walks at her left side, his right hand holding her left upper arm from outside ('support', on Abby's
+// own bones), eyes on her. She stops and says L091 "I'm standing." (WAV at t = 6.3), a little proud, a little shaky.
 // The standing 'abby' build is used (any build can cradle; abby_injured has it in its drape pose).
 import * as THREE from 'three';
 import { loadHDRI } from '../lib/assets.js';
@@ -49,7 +49,10 @@ export async function setup(ctx) {
   abby.performLine('L091', LINES[0][2]);
   abby.lookAt({ ch: remiCh }, LINES[0][2] + 0.95, { amount: 0.7 });
   // Remi: his right hand under her hurt (left) elbow, eyes on her
-  remi.gesture('support', 0.2, { side: 'R', at: { ch: abbyCh, bone: 'lowerarm01.L', offset: [0.0, -0.075, 0.0] }, in: 0.8, dur: 99, palm: [0, 1, 0] });
+  // (offset in Abby's body frame: x her left, y up, z forward) his hand holds her left upper arm from
+  // the outside, above the hurt forearm - steadying her without touching the break (a hand 'under the
+  // elbow' ended up at her belly once the cradled elbow sat against her side)
+  remi.gesture('support', 0.2, { side: 'R', at: { ch: abbyCh, bone: 'upperarm02.L', offset: [0.06, -0.01, -0.045] }, in: 0.8, dur: 99, palm: [-1, 0.1, 0.25], fingers: [-0.25, -0.75, 0.6], shape: 'clutch' });
   remi.mood({ worry: 0.45 });
   remi.lookAt({ ch: abbyCh }, -5, { amount: 0.7 });
   S = { abby, remi, sun };

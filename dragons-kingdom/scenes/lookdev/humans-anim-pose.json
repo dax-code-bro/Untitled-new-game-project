@@ -1,3 +1,4 @@
-{ "id": "abby", "t": 2.0, "arms": "auto",
-  "acts": [["gesture", "cradle", -5, { "side": "L", "in": 0.1, "dur": 99 }], ["posture", "hunch", -5, { "in": 0.1, "hold": 99 }], ["mood", { "pain": 0.4, "worry": 0.25 }]],
-  "views": [{ "az": 0, "dist": 2.0, "h": 1.15, "fov": 30, "aim": 1.0 }, { "az": 40 }, { "az": 85 }, { "az": -40 }] }
+{ "id": "abby", "t": 4.0, "arms": "auto",
+  "acts": [["walkPath", [[0, -4.2], [0.05, -2], [0, 0.4]], 0.4, { "speed": 0.72, "accel": 1.4, "decel": 1.6 }],
+           ["gesture", "cradle", -5, { "side": "L", "in": 0.1, "dur": 99 }], ["posture", "hunch", -5, { "in": 0.1, "hold": 99 }], ["mood", { "pain": 0.4, "worry": 0.25 }]],
+  "views": [{ "az": 0, "dist": 2.2, "h": 1.15, "fov": 30, "aim": 1.0 }, { "az": 50 }, { "az": 90 }, { "az": -45 }] }

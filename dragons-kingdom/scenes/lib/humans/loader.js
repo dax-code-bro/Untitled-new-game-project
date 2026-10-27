@@ -161,12 +161,15 @@ export function buildCharacter(data, opts = {}) {
 // Worn things never follow a hand that happened to rest on them in the drape pose: the offline
 // skinning gave a belt under a "hand on the belt" pose (and its buckle, purse, scabbard) weights on
 // the hand and forearm bones, so when the performance layer moved that arm the belt tongue stretched
-// to the hand as a long black strap. A braid lying over the shoulder had upper-arm weights (it swung
-// with the arm). At load time (the drape pose is the bind pose, so nothing changes at rest):
-//   worn props: arm / hand weights go to the vertex's other bones (or the nearest torso bone)
+// to the hand as a long black strap; a purse at the hip had thigh weights and swung out level with
+// the striding leg). A braid lying over the shoulder had upper-arm weights (it swung with the arm).
+// At load time (the drape pose is the bind pose, so nothing changes at rest):
+//   worn props: arm / hand / leg weights go to the vertex's other bones (or the nearest torso bone)
 //   hair:       arm weights go to the clavicle of the same side (the shoulder top it lies on)
 const WORN = /^(belt|buckle|pouch|buttons|chain|circlet|sword_|kettle_hat|beltsash)/;
 const ARM = /^(shoulder01|upperarm|lowerarm|wrist|metacarpal|finger|thumb)/;
+// a purse or scabbard hangs from the belt: thigh weights swung it out level with the striding leg
+const LEG = /^(upperleg|lowerleg|foot|toe)/;
 const TORSO = /^(root|spine0\d|pelvis\.|neck0\d|head|clavicle\.)/;
 const rebound = new WeakMap();
 function rebindWorn(g, m, header, bones, index) {
@@ -179,7 +182,7 @@ function rebindWorn(g, m, header, bones, index) {
   if (done.has(m.name)) return;
   done.add(m.name);
   const names = header.bones.map((b) => b.name);
-  const isArm = names.map((n) => ARM.test(n));
+  const isArm = names.map((n) => ARM.test(n) || (worn && LEG.test(n)));
   if (!isArm.some(Boolean)) return;
   const si = g.attributes.skinIndex.array, sw = g.attributes.skinWeight.array, pos = g.attributes.position.array;
   const torso = names.map((n, i) => (TORSO.test(n) ? i : -1)).filter((i) => i >= 0);

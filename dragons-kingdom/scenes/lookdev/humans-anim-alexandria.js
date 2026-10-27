@@ -22,7 +22,7 @@ export const meta = {
     shadows: { cascades: 0 },
     ao: { enabled: true, radius: 0.08 },
     dof: { samples: 48 },
-    grade: { exposure: 0.3, whiteBalance: 4300 },
+    grade: { exposure: 0.15, whiteBalance: 4300 },
     lensFx: { vignette: 0.9 },
   }),
 };
@@ -41,8 +41,10 @@ export async function setup(ctx) {
   wall2.position.set(-2.6, 2.5, 1.5); wall2.rotation.y = Math.PI / 2; wall2.receiveShadow = true; scene.add(wall2);
   scene.background = new THREE.Color(0.01, 0.008, 0.006);
   // warm practical: low, camera left, in front of her (the lamps by the nest)
+  // (from the side of the nest rather than in front of her: the face models - nose shadow, a darker
+  // far cheek - instead of reading flat and pale)
   const key = new THREE.SpotLight(new THREE.Color(1.0, 0.68, 0.4), 7, 7, 0.75, 0.6, 2);
-  key.position.set(0.75, 0.95, 1.15); key.target.position.set(0, 1.45, 0);
+  key.position.set(1.05, 1.0, 0.7); key.target.position.set(0, 1.45, 0);
   key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0002; key.shadow.normalBias = 0.004; key.shadow.camera.near = 0.2;
   scene.add(key, key.target);
   // cool daylight shaft from a high opening behind her right shoulder (rim on the veil and cheek)
