@@ -61,9 +61,9 @@ export function update(t, ctx) {
   S.remi.update(t);
   // a slow track back in front of them, eye level with Abby
   const r = S.abby.rootAt(Math.min(t, 7.5));
-  camera.position.set(r.x - 0.75, 1.3, r.z + 3.7);
-  camera.lookAt(r.x + 0.25, 1.05, r.z);
-  camera.fov = 24; camera.near = 0.1; camera.far = 400;
+  camera.position.set(r.x - 0.6, 1.28, r.z + 3.1);
+  camera.lookAt(r.x + 0.22, 1.12, r.z);
+  camera.fov = 21; camera.near = 0.1; camera.far = 400;
   camera.updateProjectionMatrix();
-  if (ctx.lens) { ctx.lens.focalLength = null; ctx.lens.fstop = 2.8; ctx.lens.focus = 3.7; ctx.lens.shutterAngle = 180; }
+  if (ctx.lens) { ctx.lens.focalLength = null; ctx.lens.fstop = 2.8; ctx.lens.focus = 3.15; ctx.lens.shutterAngle = 180; }
 }

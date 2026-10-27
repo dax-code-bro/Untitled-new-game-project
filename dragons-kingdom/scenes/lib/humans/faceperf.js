@@ -272,7 +272,7 @@ function applyFace(api, ch, t, o) {
     const yawD = 0.02 * noise1(seed + 21, t * 0.6) * active * expressive;
     const rollD = 0.012 * noise1(seed + 22, t * 0.45) * active * expressive;
     if (nod || yawD || rollD) {
-      _q.setFromAxisAngle(right, -nod);                       // + = chin down: about the character's left axis
+      _q.setFromAxisAngle(right, nod);                        // about the head's +x (the character's left): + = chin down
       _q2.setFromAxisAngle(_v.set(0, 1, 0).applyQuaternion(hq), yawD);
       _q.multiply(_q2);
       _q2.setFromAxisAngle(_v.set(0, 0, 1).applyQuaternion(hq), rollD);

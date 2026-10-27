@@ -218,3 +218,52 @@ finish's sub-frames never straddle a cut:
 node render/render.mjs scenes/lookdev/humans-hero.js --preset final --fps 1 --seconds 8 --workers 1 --out output/humans/hero
 ffmpeg -i output/humans/hero/hero.mp4 hero_%d.png   # (or --still --time k.5 for one shot)
 ```
+
+## Performance: lip-sync, face, body motion, crowds (2026-10-24)
+
+Everything is scheduled up front (setup) and evaluated as a pure function of t, so any frame renders
+the same in any worker / chunk / order (`selftest-perf.mjs` checks it).
+
+```js
+import { loadPerformanceData, createPerformer } from '../lib/humans/perform.js';
+const data = await loadPerformanceData();                        // lip-sync + delivery data, face units
+const abby = createPerformer(await loadCharacter('abby'), data); // body + face of one character
+abby.place(0, 0, Math.PI);                                       // stand here (x, z, yaw) before walks
+abby.walkPath([[0, 0], [1, 2], [1, 5]], 0.5, { speed: 1.3, endYaw: 0 });   // planted feet; > ~2.2 m/s runs
+abby.performLine('L014', 6.2);                                   // the take's WAV time 0 plays at t = 6.2
+abby.mood({ pain: 0.4 });  abby.lookAt({ ch: remi.ch }, 7.0);    // emotion layer; head + eyes on Remi's face
+abby.gesture('cradle', 0, { side: 'L', dur: 99 });               // the injured LEFT arm held in
+abby.posture('kneel', 9.0, { hold: 2 });  abby.react('wince', 3.4);
+// update(t):  remi.update(t); abby.update(t)   (a character touched by another is updated first)
+```
+
+| module | what |
+|---|---|
+| `perform.js` | `createPerformer(ch, data, opts)`: `place`, `performLine(id, t0, { emo, amp, beats })`, `walkPath`, `runPath`, `follow(fn, t0, t1)`, `trajectory(tr)`, `gesture`, `posture`, `stagger`, `fall`, `lookAt`, `glance`, `mood`, `react`, `carry(child, t0, t1)`, `rootAt`, `update(t)`; `directorFace(data)` (a `registerHumanAction('face', ...)` hook: lip-sync from the shot's placed lines); `trajectoryFromBlocking(fn, t0, t1)`; `ROLE_OF` (cast id -> dialogue role) |
+| `visemes.js` | phones -> 9 articulators (jaw, lip closure, rounding, spread, f/v tuck, th, tongue tip, upper lip, press), Cohen-Massaro dominance coarticulation (a phone that needs an articulator dominates it briefly and strongly; one that does not lets its neighbours decide; anticipation reaches ~1.7x further than carry-over), a contact floor so p/b/m always close and f/v always tuck, rest in pauses > 80 ms, jaw scaled by the take's loudness, 40 ms visual lead -> MakeHuman face units |
+| `expressions.js` | 11 emotion layers as FACS-style unit mixes (calm worry pain fear anger grief amusement surprise tender contempt determined), blendable, softly limited; `emotionFromDelivery(note, preset)` (whole-word rules, negations dropped) |
+| `faceperf.js` | face performer: line emotion envelopes, brow raise / knit and head nods on stressed syllables (loudness accents), blinks (spontaneous; at phrase starts and pauses; on gaze shifts; more under fear), eye-target look-at with vergence, fixation saccades (eye-eye-mouth on a face), gaze aversion at line starts, lids that follow the eyes; `LINE_OVERRIDES` (hand-set key lines: L011 ...), `SCENE_MOOD` |
+| `motion.js` | body: trajectories (path + speed profile, fn(t), baked), gait phase table with PLANTED feet (plant = the root at 41 % of stance, 32 % running), heel strike / heel off rolling on heel and ball, Hermite swing with clearance and the running heel kick, pelvis lowered by the planted legs' reach (the walk's bob comes out of it), pelvis rotation / list / sway, spine counter-rotation and lean, arm swing (90 degrees bent when running), standing weight shift, gestures (`point wave reach support cradle handsToFace protectHead flail carry explain`), postures (`crouch kneel cower hunch`), `stagger` (quick recovery steps), `fall` (buckle, topple, hands to the ground, lie), head look with the chest helping on big turns, `carryChild(adult, child)` |
+| `crowd.js` | `createCrowd({ agents, exits, obstacles, walls, alarm, cower })`: social-force bake at 30 Hz in setup (seeded): MILL (wander near home, stop and face neighbours), FLEE along exit polylines (reaction wave from the threat, startle + gasp, glances back, some shield their heads), COWER (by a wall away from the threat, or frozen where they stand); no overlaps (position correction) |
+| `face.js` | the MakeHuman face pose units rig (+ derived `JawOpen`, `<Side>LidsDown/Up/TurnLeft/TurnRight`) |
+| `rig.js` | IK / hand-shape toolkit (two-bone IK with pole + soft reach, hand shapes, orientHand) |
+
+Data: `data/lipsync-s01e01.json` = `offline/lipsync_align.py` (pocketsphinx 5.1.1 forced alignment of
+every Episode 1 take: 384 aligned, 1 dictionary fallback, 4 non-verbal placeholders with loudness
+only; `--meta-only` refreshes the delivery notes in seconds). Python with pocketsphinx: the scratchpad
+`preview-venv` (`pip install pocketsphinx==5.1.1 soundfile scipy numpy`).
+
+Proof scenes (`scenes/lookdev/humans-anim-*.js`): `alexandria` (L011 close-up), `dialogue` (Remi and
+Abby, L014-L016), `cradle` (Abby's injured left arm, Remi supporting her elbow, L091), `crowd` (the
+Cling square crowd flees), `walk` (walk / run / kneel / stagger + fall), `dev` (face units, visemes and
+emotions one per second).
+
+Self-test: `node scenes/lib/humans/selftest-perf.mjs` (lip closures on all 340 p/b/m, rounding,
+delivery-rule traps, planted feet walking and running, order independence, falls, crowd determinism and
+spacing, the director face hook). Body tests need the character caches.
+
+Limits (honest): faces are MakeHuman bone units (no sculpted visemes / wrinkle maps), so expressions are
+subtle at a distance and corrective shapes are missing (a wide AA stretches the lip corners); garments are
+skinned (a long gown walks with its legs; runs and kneels in skirts stretch); falls are procedural, not
+physical; the crowd avoids people, walls and round obstacles but has no navigation mesh (exits are hand-
+given polylines).

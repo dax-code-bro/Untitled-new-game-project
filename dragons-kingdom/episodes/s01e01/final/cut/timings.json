@@ -441,6 +441,60 @@
    "load": 10.65,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.30GHz, SwiftShader",
    "measured_at": "2026-10-24T15:08"
+  },
+  "1A-20": {
+   "draft_s_per_frame": 10.486,
+   "frames_drawn": 96,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 9.12,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.30GHz, SwiftShader",
+   "measured_at": "2026-10-24T15:22"
+  },
+  "X2-06": {
+   "draft_s_per_frame": 9.698,
+   "frames_drawn": 252,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 17.36,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.30GHz, SwiftShader",
+   "measured_at": "2026-10-24T15:49"
+  },
+  "X2-07": {
+   "draft_s_per_frame": 10.3,
+   "frames_drawn": 72,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 12.34,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.30GHz, SwiftShader",
+   "measured_at": "2026-10-24T16:01"
+  },
+  "1A-21": {
+   "draft_s_per_frame": 18.589,
+   "frames_drawn": 156,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 13.83,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.30GHz, SwiftShader",
+   "measured_at": "2026-10-24T16:11"
+  },
+  "X2-12": {
+   "draft_s_per_frame": 20.273,
+   "frames_drawn": 84,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 26.26,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.30GHz, SwiftShader",
+   "measured_at": "2026-10-24T16:30"
+  },
+  "1A-22": {
+   "draft_s_per_frame": 15.432,
+   "frames_drawn": 120,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 14.28,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.30GHz, SwiftShader",
+   "measured_at": "2026-10-24T16:41"
   }
  },
  "sets": {
@@ -470,9 +524,9 @@
    "measured_at": "2026-10-23T22:23"
   },
   "VERDOR_GROUNDS": {
-   "setup_s": 46.7,
-   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-23T22:22"
+   "setup_s": 33.3,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.30GHz, SwiftShader",
+   "measured_at": "2026-10-24T16:02"
   }
  }
 }
