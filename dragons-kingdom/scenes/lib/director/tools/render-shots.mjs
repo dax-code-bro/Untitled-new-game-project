@@ -5,7 +5,7 @@
 // shot by shot by render/episode.mjs (render.mjs --start <start_s> --seconds <frames/24>), which
 // gives the same pictures for the same settings (update(t) is a pure function of the frame).
 //
-//   node scenes/lib/director/tools/render-shots.mjs                      every rendered shot of the cut (edl.json)
+//   node scenes/lib/director/tools/render-shots.mjs                      every rendered shot of the cuts (cut/edl*.json)
 //   node scenes/lib/director/tools/render-shots.mjs --only 1A-04,1A-05   just these
 //   node scenes/lib/director/tools/render-shots.mjs --sets SEA_COAST_DAWN --twos
 //   node scenes/lib/director/tools/render-shots.mjs --stills 0.1,0.5,0.9 --sets BIRTHING_CHAMBER   review stills + contact sheet
@@ -79,7 +79,9 @@ const SEGMENT = Math.max(0, +opt('--segment', 48));
 if (!['shot', 'set', 'core'].includes(REDO)) throw new Error('--redo-on must be shot, set or core');
 
 // ----------------------------------------------------------------- plan ---
-const edl = readJson(path.join(FINAL, 'cut/edl.json'));
+// every draft cut (cut/edl.json = PROLOGUE + TITLE + 1A, cut/edl-<part>.json for the further parts)
+const edls = fs.readdirSync(path.join(FINAL, 'cut')).filter((f) => /^edl(-[^.]+)?\.json$/.test(f)).map((f) => readJson(path.join(FINAL, 'cut', f))).filter(Boolean);
+const edl = edls.length ? { shots: edls.flatMap((e) => e.shots) } : null;
 const tables = fs.readdirSync(SCENES).filter((f) => f.endsWith('.shots.json')).map((f) => readJson(path.join(SCENES, f)));
 const inCut = edl ? new Set(edl.shots.filter((s) => s.kind === '3d').map((s) => s.job)) : null;
 // handle frames the edit needs around a shot (dissolves); the shot table reserves `pre`/`post` frames

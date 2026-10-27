@@ -10,8 +10,11 @@
 //        per-shot custom() functions, no three.js imports)
 // Writes episodes/s01e01/final/scenes/<set-file>.shots.json   (what render/episode.mjs and the set
 //        scene read: { job, start_s, frames, pre, post, dialogue: [placed lines], captions, ... })
-//        episodes/s01e01/final/cut/edl.json + edl.md               (the edit of the scenes asked for)
+//        episodes/s01e01/final/cut/edl.json + edl.md               (the edit of PROLOGUE + TITLE + 1A)
 //        episodes/s01e01/final/cut/audio-cues.json                 (every placed line, per scene)
+//        ... and one more edit per further part of the episode with authored shots (CUTS below:
+//        edl-1B.json / .md, audio-cues-1B.json) - each a cut of its own, from 0:00
+//        --scenes A,B: only the cut of those scenes (named edl-A-B unless it is the first cut's list)
 // --check: rebuild in memory and exit 1 if a written file would change (CI / npm test).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -32,7 +35,9 @@ const readJson = (f) => JSON.parse(fs.readFileSync(f, 'utf8'));
 const args = process.argv.slice(2);
 const opt = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : null; };
 const CHECK = args.includes('--check');
-const SCENE_LIST = (opt('--scenes') || 'PROLOGUE,TITLE,1A').split(',');
+// the draft cuts: the first is THE cut (edl.json); the others are written once a shot of theirs is authored
+const CUTS = opt('--scenes') ? [{ name: opt('--scenes') === 'PROLOGUE,TITLE,1A' ? 'edl' : `edl-${opt('--scenes').split(',').join('-')}`, scenes: opt('--scenes').split(','), always: true }]
+  : [{ name: 'edl', scenes: ['PROLOGUE', 'TITLE', '1A'], always: true }, { name: 'edl-1B', scenes: ['1B'] }];
 const HANDLE = 12;                                                 // handle frames reserved on each side of every shot
 
 const shotlist = readJson(path.join(FINAL, 'shotlist.json'));
@@ -100,62 +105,68 @@ for (const [setId, { spec }] of Object.entries(specs)) {
   out.set(file, JSON.stringify(table, null, 1) + '\n');
 }
 
-// ------------------------------------------------------ the edit (cut) ---
-const cutShots = shotlist.shots.filter((s) => SCENE_LIST.includes(s.scene));
-let rec = 0;
-const edl = [];
-for (const s of cutShots) {
-  const frames = jobFrames.get(s.id) ?? s.frames_at_24fps;
-  const row = tables[s.set]?.shots.find((r) => r.job === s.id) || null;
-  const kind = s.render === 'black' ? 'black' : row ? '3d' : 'missing';
-  if (kind === 'missing') warnings.push(`${s.id}: no spec yet (${s.set}) - the cut shows a slate`);
-  const trans = row?.trans || (s.render === 'black' ? ['cut'] : ['cut']);
-  edl.push({
-    job: s.id, seq: s.seq, scene: s.scene, set: s.set, kind, frames, rec_in: rec, rec_out: rec + frames,
-    tc_in: timecode(rec / FPS), tc_out: timecode((rec + frames) / FPS),
-    trans, src: row ? { scene_file: tables[s.set].scene_file, start_s: row.start_s, start_frame: row.start_frame } : null,
-    dialogue: (row?.dialogue || []).map((p) => ({ ...p, rec_s: +(rec / FPS + p.at_s).toFixed(3) })),
-    captions: (row?.captions || []).map((c) => ({ ...c, rec_from_s: +(rec / FPS + c.from_s).toFixed(3), rec_to_s: +(rec / FPS + c.to_s).toFixed(3) })),
-    cost: row ? estimateShot(s.set, frames, merge(specs[s.set].spec.defaults, specs[s.set].spec.shots[s.id]), { measured: measured[s.id], gpuRatio }) : null, staging: row?.staging || null, deviation: row?.deviation || null, action: s.action,
-  });
-  rec += frames;
-}
-// handle frames each rendered shot needs for its transitions (a dissolve of N frames is centred on the cut)
-for (let i = 0; i < edl.length; i++) {
-  const e = edl[i];
-  e.need = { pre: 0, post: 0 };
-  const [tt, n] = e.trans;
-  if (tt === 'dissolve' && i > 0) { e.need.pre = Math.ceil(n / 2); edl[i - 1].need = edl[i - 1].need || { pre: 0, post: 0 }; edl[i - 1].need.post = Math.floor(n / 2); }
-}
-for (const e of edl) if (e.need.pre > HANDLE || e.need.post > HANDLE) warnings.push(`${e.job}: transition needs ${Math.max(e.need.pre, e.need.post)} handle frames, only ${HANDLE} reserved`);
-const total = rec;
-const cues = edl.flatMap((e) => e.dialogue.map((d) => ({ scene: e.scene, shot: e.job, ref: d.ref, id: d.id, part: d.part, role: d.role, file: d.file, file_in_s: d.file_in_s, file_out_s: d.file_out_s, rec_s: d.rec_s, shot_at_s: d.at_s, speech_rec_in_s: +(e.rec_in / FPS + d.speech_in_s).toFixed(3), speech_rec_out_s: +(e.rec_in / FPS + d.speech_out_s).toFixed(3), gain_db: d.gain_db, continues: d.continues })));
-const edlJson = {
-  title: `Dragon's Kingdom S01E01 - draft cut: ${SCENE_LIST.join(' + ')}`,
-  status: 'DRAFT EDIT for the animatic / timing check (960x540 draft renders, computer voices, provisional designs). Not a master (SERIES.md section 2).',
-  fps: FPS, frames: total, duration_s: +(total / FPS).toFixed(3), duration_tc: timecode(total / FPS),
-  generated_by: 'scenes/lib/director/tools/build-shots.mjs', shots: edl,
-};
-out.set(path.join(CUT, 'edl.json'), JSON.stringify(edlJson, null, 1) + '\n');
-out.set(path.join(CUT, 'audio-cues.json'), JSON.stringify({ about: 'Every voice take placed in the cut: rec_s = where the WAV\'s file_in_s plays on the cut timeline (seconds from the cut\'s first frame); speech_rec_in/out = the words. Per scene below.', fps: FPS, scenes: Object.fromEntries(SCENE_LIST.map((sc) => [sc, cues.filter((c) => c.scene === sc)])) }, null, 1) + '\n');
+// ------------------------------------------------------ the edits (cuts) ---
+function buildCut(cut) {
+  const SCENE_LIST = cut.scenes;
+  const cutShots = shotlist.shots.filter((s) => SCENE_LIST.includes(s.scene));
+  if (!cut.always && !cutShots.some((s) => tables[s.set]?.shots.some((r) => r.job === s.id))) return null;
+  let rec = 0;
+  const edl = [];
+  for (const s of cutShots) {
+    const frames = jobFrames.get(s.id) ?? s.frames_at_24fps;
+    const row = tables[s.set]?.shots.find((r) => r.job === s.id) || null;
+    const kind = s.render === 'black' ? 'black' : row ? '3d' : 'missing';
+    if (kind === 'missing') warnings.push(`${s.id}: no spec yet (${s.set}) - the cut shows a slate`);
+    const trans = row?.trans || (s.render === 'black' ? ['cut'] : ['cut']);
+    edl.push({
+      job: s.id, seq: s.seq, scene: s.scene, set: s.set, kind, frames, rec_in: rec, rec_out: rec + frames,
+      tc_in: timecode(rec / FPS), tc_out: timecode((rec + frames) / FPS),
+      trans, src: row ? { scene_file: tables[s.set].scene_file, start_s: row.start_s, start_frame: row.start_frame } : null,
+      dialogue: (row?.dialogue || []).map((p) => ({ ...p, rec_s: +(rec / FPS + p.at_s).toFixed(3) })),
+      captions: (row?.captions || []).map((c) => ({ ...c, rec_from_s: +(rec / FPS + c.from_s).toFixed(3), rec_to_s: +(rec / FPS + c.to_s).toFixed(3) })),
+      cost: row ? estimateShot(s.set, frames, merge(specs[s.set].spec.defaults, specs[s.set].spec.shots[s.id]), { measured: measured[s.id], gpuRatio }) : null, staging: row?.staging || null, deviation: row?.deviation || null, action: s.action,
+    });
+    rec += frames;
+  }
+  // handle frames each rendered shot needs for its transitions (a dissolve of N frames is centred on the cut)
+  for (let i = 0; i < edl.length; i++) {
+    const e = edl[i];
+    e.need = { pre: 0, post: 0 };
+    const [tt, n] = e.trans;
+    if (tt === 'dissolve' && i > 0) { e.need.pre = Math.ceil(n / 2); edl[i - 1].need = edl[i - 1].need || { pre: 0, post: 0 }; edl[i - 1].need.post = Math.floor(n / 2); }
+  }
+  for (const e of edl) if (e.need.pre > HANDLE || e.need.post > HANDLE) warnings.push(`${e.job}: transition needs ${Math.max(e.need.pre, e.need.post)} handle frames, only ${HANDLE} reserved`);
+  const total = rec;
+  const cues = edl.flatMap((e) => e.dialogue.map((d) => ({ scene: e.scene, shot: e.job, ref: d.ref, id: d.id, part: d.part, role: d.role, file: d.file, file_in_s: d.file_in_s, file_out_s: d.file_out_s, rec_s: d.rec_s, shot_at_s: d.at_s, speech_rec_in_s: +(e.rec_in / FPS + d.speech_in_s).toFixed(3), speech_rec_out_s: +(e.rec_in / FPS + d.speech_out_s).toFixed(3), gain_db: d.gain_db, continues: d.continues })));
+  const edlJson = {
+    title: `Dragon's Kingdom S01E01 - draft cut: ${SCENE_LIST.join(' + ')}`,
+    status: 'DRAFT EDIT for the animatic / timing check (960x540 draft renders, computer voices, provisional designs). Not a master (SERIES.md section 2).',
+    fps: FPS, frames: total, duration_s: +(total / FPS).toFixed(3), duration_tc: timecode(total / FPS),
+    generated_by: 'scenes/lib/director/tools/build-shots.mjs', shots: edl,
+  };
+  out.set(path.join(CUT, `${cut.name}.json`), JSON.stringify(edlJson, null, 1) + '\n');
+  out.set(path.join(CUT, cut.name === 'edl' ? 'audio-cues.json' : `audio-cues-${cut.name.slice(4)}.json`), JSON.stringify({ about: 'Every voice take placed in the cut: rec_s = where the WAV\'s file_in_s plays on the cut timeline (seconds from the cut\'s first frame); speech_rec_in/out = the words. Per scene below.', fps: FPS, scenes: Object.fromEntries(SCENE_LIST.map((sc) => [sc, cues.filter((c) => c.scene === sc)])) }, null, 1) + '\n');
 
-// the human-readable edit list
-const md = [];
-md.push(`# Dragon's Kingdom S01E01 - draft cut: ${SCENE_LIST.join(' + ')}`, '');
-md.push(`> ${edlJson.status}`, '');
-md.push(`Generated by \`scenes/lib/director/tools/build-shots.mjs\` from \`shotlist.json\`, \`vo/takes.json\` + \`words.json\` and the shot specs in \`episodes/s01e01/final/scenes/specs/\`. Machine-readable: \`edl.json\`, \`audio-cues.json\`.`, '');
-md.push(`**Length: ${edlJson.duration_tc} (${edlJson.duration_s.toFixed(2)} s, ${total} frames at 24 fps)**, ${edl.length} shots (${edl.filter((e) => e.kind === '3d').length} rendered, ${edl.filter((e) => e.kind === 'black').length} black, ${edl.filter((e) => e.kind === 'missing').length} not authored).`, '');
-const est = edl.reduce((a, e) => { if (e.cost) { a.d += e.cost.draft_minutes; a.k += e.cost.k4_cpu_hours; if (e.cost.k4_gpu_hours != null) a.g += e.cost.k4_gpu_hours; } return a; }, { d: 0, k: 0, g: 0 });
-md.push(`Render cost (ESTIMATES unless a shot says MEASURED; see the cost column): draft ~${est.d.toFixed(0)} min of one browser on this 4-vCPU machine; native 4K ~${est.k.toFixed(1)} h CPU${gpuRatio ? `, ~${est.g.toFixed(1)} h on the GPU gpu-check measured` : ' (no GPU measurement yet: run the gpu-check on the render PC)'}.`, '');
-md.push('| # | shot | scene | set | in | out | frames | trans | lines (rec time of the words) | staging | draft s/f | 4K CPU s/f |', '|---:|---|---|---|---|---|---:|---|---|---|---:|---:|');
-edl.forEach((e, i) => {
-  const lines = e.dialogue.map((d) => `${d.ref} ${d.role} @${(e.rec_in / FPS + d.speech_in_s).toFixed(2)}`).join('; ');
-  md.push(`| ${i + 1} | ${e.job} | ${e.scene} | ${e.set} | ${e.tc_in} | ${e.tc_out} | ${e.frames} | ${e.trans.join(' ')} | ${lines} | ${(e.staging || (e.kind === 'black' ? 'black card' : e.kind === 'missing' ? 'NOT AUTHORED' : '')).replace(/\|/g, '/')} | ${e.cost ? e.cost.draft_s_per_frame : ''} | ${e.cost ? e.cost.k4_cpu_s_per_frame : ''} |`);
-});
-const dev = edl.filter((e) => e.deviation);
-if (dev.length) { md.push('', '## Where the staging departs from the shot list (and why)', ''); for (const e of dev) md.push(`- **${e.job}**: ${e.deviation}`); }
-if (warnings.length) { md.push('', '## Warnings', ''); for (const w of warnings) md.push(`- ${w}`); }
-out.set(path.join(CUT, 'edl.md'), md.join('\n') + '\n');
+  // the human-readable edit list
+  const md = [];
+  md.push(`# Dragon's Kingdom S01E01 - draft cut: ${SCENE_LIST.join(' + ')}`, '');
+  md.push(`> ${edlJson.status}`, '');
+  md.push(`Generated by \`scenes/lib/director/tools/build-shots.mjs\` from \`shotlist.json\`, \`vo/takes.json\` + \`words.json\` and the shot specs in \`episodes/s01e01/final/scenes/specs/\`. Machine-readable: \`${cut.name}.json\`, \`${cut.name === 'edl' ? 'audio-cues.json' : `audio-cues-${cut.name.slice(4)}.json`}\`.`, '');
+  md.push(`**Length: ${edlJson.duration_tc} (${edlJson.duration_s.toFixed(2)} s, ${total} frames at 24 fps)**, ${edl.length} shots (${edl.filter((e) => e.kind === '3d').length} rendered, ${edl.filter((e) => e.kind === 'black').length} black, ${edl.filter((e) => e.kind === 'missing').length} not authored).`, '');
+  const est = edl.reduce((a, e) => { if (e.cost) { a.d += e.cost.draft_minutes; a.k += e.cost.k4_cpu_hours; if (e.cost.k4_gpu_hours != null) a.g += e.cost.k4_gpu_hours; } return a; }, { d: 0, k: 0, g: 0 });
+  md.push(`Render cost (ESTIMATES unless a shot says MEASURED; see the cost column): draft ~${est.d.toFixed(0)} min of one browser on this 4-vCPU machine; native 4K ~${est.k.toFixed(1)} h CPU${gpuRatio ? `, ~${est.g.toFixed(1)} h on the GPU gpu-check measured` : ' (no GPU measurement yet: run the gpu-check on the render PC)'}.`, '');
+  md.push('| # | shot | scene | set | in | out | frames | trans | lines (rec time of the words) | staging | draft s/f | 4K CPU s/f |', '|---:|---|---|---|---|---|---:|---|---|---|---:|---:|');
+  edl.forEach((e, i) => {
+    const lines = e.dialogue.map((d) => `${d.ref} ${d.role} @${(e.rec_in / FPS + d.speech_in_s).toFixed(2)}`).join('; ');
+    md.push(`| ${i + 1} | ${e.job} | ${e.scene} | ${e.set} | ${e.tc_in} | ${e.tc_out} | ${e.frames} | ${e.trans.join(' ')} | ${lines} | ${(e.staging || (e.kind === 'black' ? 'black card' : e.kind === 'missing' ? 'NOT AUTHORED' : '')).replace(/\|/g, '/')} | ${e.cost ? e.cost.draft_s_per_frame : ''} | ${e.cost ? e.cost.k4_cpu_s_per_frame : ''} |`);
+  });
+  const dev = edl.filter((e) => e.deviation);
+  if (dev.length) { md.push('', '## Where the staging departs from the shot list (and why)', ''); for (const e of dev) md.push(`- **${e.job}**: ${e.deviation}`); }
+  if (warnings.length) { md.push('', '## Warnings', ''); for (const w of warnings) md.push(`- ${w}`); }
+  out.set(path.join(CUT, `${cut.name}.md`), md.join('\n') + '\n');
+  return { name: cut.name, scenes: SCENE_LIST, shots: edl.length, total };
+}
+const built = CUTS.map(buildCut).filter(Boolean);
 
 // ---------------------------------------------------------------- write ---
 // --check ignores the render-cost figures: they follow cut/timings.json, which every draft render
@@ -165,7 +176,7 @@ const stripCost = (v) => (Array.isArray(v) ? v.map(stripCost) : v && typeof v ==
 const norm = (f, s) => {
   if (s == null) return s;
   if (f.endsWith('.json')) { try { return JSON.stringify(stripCost(JSON.parse(s))); } catch { return s; } }
-  if (f.endsWith('edl.md')) return s.split('\n').filter((l) => !/^Render cost/.test(l)).map((l) => (/^\| \d+ \|/.test(l) ? l.replace(/(\|[^|]*){2}\|$/, '|') : l)).join('\n');
+  if (/edl(-[^/]*)?\.md$/.test(f)) return s.split('\n').filter((l) => !/^Render cost/.test(l)).map((l) => (/^\| \d+ \|/.test(l) ? l.replace(/(\|[^|]*){2}\|$/, '|') : l)).join('\n');
   return s;
 };
 let changed = 0;
@@ -180,5 +191,6 @@ for (const [f, s] of out) {
   console.log(`wrote ${rel(f)}`);
 }
 for (const w of warnings) console.log(`warning: ${w}`);
-console.log(`cut ${SCENE_LIST.join('+')}: ${edl.length} shots, ${total} frames = ${timecode(total / FPS)} (${(total / FPS).toFixed(2)} s); sets with specs: ${Object.keys(specs).join(', ') || 'none'}`);
+for (const c of built) console.log(`cut ${c.scenes.join('+')} (${c.name}): ${c.shots} shots, ${c.total} frames = ${timecode(c.total / FPS)} (${(c.total / FPS).toFixed(2)} s)`);
+console.log(`sets with specs: ${Object.keys(specs).join(', ') || 'none'}`);
 if (CHECK && changed) process.exit(1);

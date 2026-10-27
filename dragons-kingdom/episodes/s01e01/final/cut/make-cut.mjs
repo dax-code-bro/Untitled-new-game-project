@@ -6,8 +6,9 @@
 //
 //   node episodes/s01e01/final/cut/make-cut.mjs                    # uses output/director/draft/shots
 //   node episodes/s01e01/final/cut/make-cut.mjs --shots DIR --out FILE.mp4 [--clean] [--no-audio]
+//   node episodes/s01e01/final/cut/make-cut.mjs --edl edl-1B --shots DIR        another part's cut
 //
-// Reads  cut/edl.json (scenes/lib/director/tools/build-shots.mjs), vo/takes.json, vo/<line>.wav
+// Reads  cut/edl.json or cut/<--edl>.json (scenes/lib/director/tools/build-shots.mjs), vo/takes.json, vo/<line>.wav
 // Writes cut/DragonsKingdom_S01E01_draft-cut_<scenes>.mp4 (+ .en.srt)   - git-ignored
 //        cut/cut-report.json   what went into the file (rendered / slate per shot, handles used,
 //                              the mix cues, durations) - small, committed
@@ -34,8 +35,10 @@ const opt = (n, d = null) => { const i = argv.indexOf(n); return i >= 0 ? argv[i
 const flag = (n) => argv.includes(n);
 const readJson = (f, d = null) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
 
-const edl = readJson(path.join(HERE, 'edl.json'));
-if (!edl) throw new Error('cut/edl.json missing: run node scenes/lib/director/tools/build-shots.mjs');
+// --edl edl-1B: another part's cut (build-shots.mjs writes one edit list per part with authored shots)
+const EDL = opt('--edl', 'edl').replace(/\.json$/, '');
+const edl = readJson(path.join(HERE, `${EDL}.json`));
+if (!edl) throw new Error(`cut/${EDL}.json missing: run node scenes/lib/director/tools/build-shots.mjs`);
 const FPS = edl.fps, W = +(opt('--width', 960)), H = Math.round(W * 9 / 16 / 2) * 2;
 const SHOTS = path.resolve(opt('--shots', path.join(ROOT, 'output/director/draft/shots')));
 const tag = [...new Set(edl.shots.map((s) => s.scene))].join('-');
@@ -197,7 +200,7 @@ srt.sort((a, b) => a.a - b.a);
 fs.writeFileSync(OUT.replace(/\.mp4$/, '.en.srt'), srt.map((s, i) => `${i + 1}\n${ts(s.a)} --> ${ts(Math.max(s.b, s.a + 0.8))}\n${s.text}\n`).join('\n'));
 report.output = { file: rel(OUT), frames: pr.frames, duration_s: +(pr.frames / FPS).toFixed(3), size_mb: +(fs.statSync(OUT).size / 1048576).toFixed(1), assembled_s: Math.round((Date.now() - t0) / 1000) };
 report.summary = { rendered: report.shots.filter((s) => s.source.startsWith('rendered')).length, black: report.shots.filter((s) => s.source === 'black').length, slates: report.shots.filter((s) => s.source === 'slate').length, voice_cues: cues.length, review_flags: report.shots.filter((s) => s.notes).length };
-fs.writeFileSync(path.join(HERE, 'cut-report.json'), JSON.stringify(report, null, 1) + '\n');
+fs.writeFileSync(path.join(HERE, EDL === 'edl' ? 'cut-report.json' : `cut-report-${EDL.slice(4)}.json`), JSON.stringify(report, null, 1) + '\n');
 if (!flag("--keep-work")) fs.rmSync(WORK, { recursive: true, force: true }); else console.log(`work kept: ${WORK}`);
 // the render's review flags (framing the solver could not hold, a speaking face that reads): look at these shots first
 for (const r of report.shots.filter((x) => x.notes)) for (const n of r.notes) console.log(`  review ${r.job}: ${n}`);
