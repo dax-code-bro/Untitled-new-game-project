@@ -76,10 +76,13 @@ export default {
     },
     'X2-13': {
       staging: 'PROFILE + DOF: she kneels in front of his head and leans her forehead to his, eyes closed; seen from the side: his eye sharp, her profile soft; he breathes out.',
-      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.25, 0.05]], ['leaf.eye', [0.25, 0.08]]], from: 95, height: G + 1.0, dist: 4.4, at: 1.5 }, mm: 85, fstop: 2.0, focus: 'leaf.eye' },
+      // from the south-east, past her: her head in front of his snout's tip (soft, a lost profile), his eye
+      // beyond it sharp. She kneels 1.55 m from his skull: at 0.95 (the first render) her head was INSIDE
+      // the long snout (it reaches ~0.75 m past the eye) and the side view hid her behind it
+      cam: { rig: 'static', frame: { subjects: [['abby.head', [-0.3, 0.0]], ['leaf.eye', [0.3, 0.08]]], from: 110, height: G + 1.0, dist: 5.0, at: 1.5 }, mm: 85, fstop: 2.0, focus: 'leaf.eye' },
       cast: {
         leaf: leafCrouched({ look: [0.0, -0.15], breathe: 1.0 }),
-        abby: { at: [6.4, -32.4], nearTo: { to: 'leaf.head', dist: 0.95, from: 185 }, look: 'leaf.head', lookAmount: 1.0, posture: { kneel: 1 }, acts: [[0.4, 'bow', { to: 0.45, dur: 1.2 }]] },
+        abby: { at: [6.4, -32.4], nearTo: { to: 'leaf.head', dist: 1.35, from: 185 }, look: 'leaf.head', lookAmount: 1.0, posture: { kneel: 1 }, acts: [[0.4, 'bow', { to: 0.55, dur: 1.2 }]] },
       },
     },
   },

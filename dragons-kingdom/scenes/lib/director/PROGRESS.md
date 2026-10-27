@@ -3,6 +3,31 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 5 (2026-10-27, resumed after a container restart)
+
+- State found: 48 of 75 3D shots rendered in the scratch work folder (`eng1/director/work/shots`, it
+  survived); the session-4 queues had stopped mid-1A-23 / mid-X2-13; the reworked prologue landscapes
+  (P-08/P-10/P-11/P-12) had never been re-rendered (the P-08..P-12 videos were the provisional builds).
+- Renders: two queues (`eng1/director/queue3.sh "" BIRTHING_CHAMBER`; `queue5b.sh`: VERDOR_GROUNDS,
+  ALEXANDRIA_ROOM, PALACE_CORRIDOR, SEA_COAST_DAWN changed shots, then PROLOGUE_VISTAS P-08..P-12 forced).
+  Other tracks render at the same time: load 15-25 on 4 cores, the chamber ~10-20 s per draft frame.
+- Review of every rendered shot (3 frames per shot, `eng1/director/vid-rows.sh`), against its staging:
+  - 1A-22 was wrong: the solver (from 320, 65 mm) could not hold the two heads (0.68 screen units off),
+    put the hatchling LEFT and Abby's face sharp and frontal on the right. Restaged low along the
+    hatchling (from 22, 0.6 m high, 50 mm f/1.4): the hatchling sharp in front, Abby soft beyond, her
+    reaching hand between, the broken shell soft at the left edge (still checked).
+  - X2-10 (HANDS) does not read as hands: Abby's kneeling hands cannot reach the wing knuckle (0.15 m
+    off the grass, her hands 0.35 m above it; no hand IK to the ground). A restage from the west was
+    worse (her body filled the frame); the first render (a medium of her kneeling at his head, face
+    small, not speaking) is kept. Needs reach-down IK in the humans/performance track.
+  - 1A-06/07/08 macros: the shell movement (shift, flex, the fragment lifting away) is too subtle to
+    read at draft; the props egg's zigzag crack lines read as drawn. Kept for the draft.
+  - P-14 low-cloud sky is a flat gradient card; P-17 grass flat from above. Kept for the draft.
+- Engine: the framing solver is now a pure module (`framing.js`, self-tested); a failed framing warning
+  names the camera side that would hold it (`suggestFrom`); the stage's per-shot warnings are kept as
+  review flags in each shot's sidecar (`notes`) and in `cut/cut-report.json` (they had only scrolled
+  past in a log - that is how 1A-22 went unseen).
+
 ## Session 4 (2026-10-24, resumed after a usage-limit stop)
 
 - Renders: the 29 unrendered shots queued in two parallel queues (BIRTHING_CHAMBER alone; then

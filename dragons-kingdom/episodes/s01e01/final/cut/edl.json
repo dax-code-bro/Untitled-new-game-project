@@ -1729,12 +1729,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 7.41,
-    "k4_cpu_s_per_frame": 92.63,
-    "k4_gpu_s_per_frame": 92.63,
-    "draft_minutes": 5.93,
-    "k4_cpu_hours": 1.24,
-    "k4_gpu_hours": 1.24,
+    "draft_s_per_frame": 24.19,
+    "k4_cpu_s_per_frame": 302.35,
+    "k4_gpu_s_per_frame": 302.35,
+    "draft_minutes": 19.35,
+    "k4_cpu_hours": 4.03,
+    "k4_gpu_hours": 4.03,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -1743,7 +1743,7 @@
      "move": 1,
      "total": 1.12
     },
-    "basis": "MEASURED draft 7.41 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-2 people, sea through the window)"
+    "basis": "MEASURED draft 24.19 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-2 people, sea through the window)"
    },
    "staging": "BACK: from behind her left shoulder (three-quarter back); she turns toward the door (left background), her face away from the camera throughout.",
    "deviation": null,
@@ -3338,12 +3338,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 5,
-    "k4_cpu_s_per_frame": 57.12,
-    "k4_gpu_s_per_frame": 57.12,
-    "draft_minutes": 5,
-    "k4_cpu_hours": 0.95,
-    "k4_gpu_hours": 0.95,
+    "draft_s_per_frame": 24.24,
+    "k4_cpu_s_per_frame": 277.04,
+    "k4_gpu_s_per_frame": 277.04,
+    "draft_minutes": 24.24,
+    "k4_cpu_hours": 4.62,
+    "k4_gpu_hours": 4.62,
     "factors": {
      "people": 1.36,
      "creatures": 1,
@@ -3352,7 +3352,7 @@
      "move": 1,
      "total": 1.43
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.43 for the shot's content"
+    "basis": "MEASURED draft 24.24 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "OTS + DOF + SIL: over Abby's crouched shoulder (soft) to Alexandria, soft and backlit; focus on the hatchling between them.",
    "deviation": null,
@@ -5222,12 +5222,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.72,
-    "k4_cpu_s_per_frame": 43.4,
-    "k4_gpu_s_per_frame": 43.4,
-    "draft_minutes": 5.95,
-    "k4_cpu_hours": 1.16,
-    "k4_gpu_hours": 1.16,
+    "draft_s_per_frame": 26.14,
+    "k4_cpu_s_per_frame": 304.93,
+    "k4_gpu_s_per_frame": 304.93,
+    "draft_minutes": 41.82,
+    "k4_cpu_hours": 8.13,
+    "k4_gpu_hours": 8.13,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -5236,7 +5236,7 @@
      "move": 1,
      "total": 1.24
     },
-    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+    "basis": "MEASURED draft 26.14 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
    },
    "staging": "PROFILE + DOF: she kneels in front of his head and leans her forehead to his, eyes closed; seen from the side: his eye sharp, her profile soft; he breathes out.",
    "deviation": null,

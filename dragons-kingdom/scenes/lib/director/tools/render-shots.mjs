@@ -19,10 +19,13 @@
 //   --redo-on shot|set|core   re-render a finished shot when its own spec changed (shot), also when the set
 //                     builder / cast / defaults changed (set, default), also when the director core changed (core)
 //   --force           re-render even if finished      --dry-run   list what would be rendered
+//   --reverse         take each set's shots from the last (a second queue meeting the first in the middle)
 //   --stills U,U      render stills at these fractions of each shot instead of videos (PNG + a contact sheet)
 //   --timings FILE    measured seconds per frame go here (default episodes/s01e01/final/cut/timings.json; only
 //                     written for video renders of the draft preset)
-// Interrupt (Ctrl+C) and run again: finished shots are kept.
+// Interrupt (Ctrl+C) and run again: finished shots are kept. Several processes may share one --work
+// folder (e.g. two queues on the chamber): each shot is claimed with a <job>.lock (the pid) and a shot
+// another process finished or is rendering is skipped.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -58,6 +61,7 @@ const TWOS = flag('--twos');
 const WORKERS = Math.max(1, +opt('--workers', 1));
 const FORCE = flag('--force'), DRY = flag('--dry-run');
 const REDO = opt('--redo-on', 'set');
+const REVERSE = flag('--reverse');
 const STILLS = opt('--stills') ? opt('--stills').split(',').map(Number) : null;
 const ONLY = opt('--only') ? new Set(opt('--only').split(',')) : null;
 const SETS_F = opt('--sets') ? new Set(opt('--sets').split(',')) : null;
@@ -127,6 +131,7 @@ for (const tab of tables) {
     const why = FORCE ? 'forced' : stale(prev, k);
     if (why) todo.push({ row: r, keys: k, why });
   }
+  if (REVERSE) todo.reverse();
   if (todo.length) plan.push({ set: tab.set, scene: path.join(ROOT, tab.scene_file), todo });
 }
 
@@ -173,6 +178,22 @@ function noteFrom(args) {
   if (!notes.has(m[1])) notes.set(m[1], new Set());
   notes.get(m[1]).add(m[2].trim());
 }
+
+/** A lock file per shot being rendered (<job>.lock = pid): false when a live process holds it. */
+function claim(job) {
+  const f = path.join(work.shots, `${job}.lock`);
+  for (let k = 0; k < 2; k++) {
+    try { fs.writeFileSync(f, String(process.pid), { flag: 'wx' }); held.add(job); return true; } catch { /* exists */ }
+    let pid = 0; try { pid = +fs.readFileSync(f, 'utf8'); } catch { /* vanished */ }
+    if (pid === process.pid) { held.add(job); return true; }
+    if (pid) { try { process.kill(pid, 0); return false; } catch { /* a dead process's lock */ } }
+    fs.rmSync(f, { force: true });
+  }
+  return false;
+}
+function release(job) { if (held.delete(job)) fs.rmSync(path.join(work.shots, `${job}.lock`), { force: true }); }
+const held = new Set();
+process.on('exit', () => { for (const j of held) try { fs.rmSync(path.join(work.shots, `${j}.lock`), { force: true }); } catch { /* gone */ } });
 
 async function renderShot(w, set, item) {
   const r = item.row;
@@ -241,10 +262,18 @@ for (const s of plan) {
         console.log(`  [w${i}] set built in ${fmt((Date.now() - ts) / 1000)} (${w.info.glRenderer})`);
         while (queue.length && !stopping) {
           const item = queue.shift();
+          // several render-shots processes may share one work folder (two queues on one set): skip a
+          // shot another process finished meanwhile, or is rendering now (its lock names a live pid)
+          if (!STILLS && !FORCE && !stale(readJson(path.join(work.shots, `${item.row.job}.json`)), item.keys) && fs.existsSync(path.join(work.shots, `${item.row.job}.mp4`))) { console.log(`  [w${i}] ${item.row.job}: finished by another process, skipped`); continue; }
+          // an older process (no locks) shows its work by the growing .part.mp4
+          const part = path.join(work.shots, `${item.row.job}.mp4.part.mp4`);
+          if (!STILLS && fs.existsSync(part) && Date.now() - fs.statSync(part).mtimeMs < 30 * 60e3) { console.log(`  [w${i}] ${item.row.job}: being encoded by another process, skipped`); continue; }
+          const lock = STILLS ? null : claim(item.row.job);
+          if (lock === false) { console.log(`  [w${i}] ${item.row.job}: being rendered by another process, skipped`); continue; }
           try { await renderShot(w, s.set, item); tries = 0; } catch (e) {
             console.error(`\n  [w${i}] ${item.row.job} FAILED: ${e.message.split('\n')[0]}`);
-            if (w.dead && tries++ < 2) { queue.unshift(item); console.error(`  [w${i}] restarting the browser`); await w.restart(); } else failed++;
-          }
+            if (w.dead && tries++ < 2) { release(item.row.job); queue.unshift(item); console.error(`  [w${i}] restarting the browser`); await w.restart(); } else failed++;
+          } finally { release(item.row.job); }
         }
       } catch (e) { console.error(`\n  [w${i}] ${s.set}: ${e.message}`); failed += queue.length; queue.length = 0; } finally { await w.close(); workers.delete(w); }
     })());
