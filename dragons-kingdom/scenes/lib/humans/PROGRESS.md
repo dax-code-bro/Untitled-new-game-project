@@ -342,7 +342,7 @@ render in scratchpad eng1/perf/):
   so the hand landed on her belly) to holding her left upper arm from outside.
 - Dialogue proof: Abby's open left hand toward the hatchling on "ALL of it", Remi's one-brow /
   lip-corner reaction on his dry reply.
-- SCULPTED MOUTH SHAPES (mouthshapes.js + offline/mouthmorphs.py): the 9 CC0 MakeHuman / MPFB2 mouth
+- SCULPTED MOUTH SHAPES (mouthshapes.js + tools/mouthmorphs.py): the 9 CC0 MakeHuman / MPFB2 mouth
   expression unit TARGETS (assets-lib/human/mpfb_targets_expression) as morphs on the skin, from a
   sidecar next to the cache (cache/<id>.mouth.json + .bin, ~0.5 MB; the cache stays byte for byte as
   built). mouthmorphs.py repeats the build's body construction (shape, joints, the character's pose,
@@ -377,3 +377,14 @@ a low key light (Alexandria L011, Abby) - the hero renders show it too; hair bui
 Scratch: eng1/perf/dbg/*.mjs (Node harness perfload.mjs: load(id), perf, data; cradle.mjs,
 legs.mjs, crowdgrp.mjs, hairline.mjs), eng1/perf/bin/mixvo.sh (VO beds for the clips:
 mixvo.sh out.wav dur L011@1.0 ...).
+Since then the director wired the planted feet in itself (a4edee2: `legs: 'planted'` per shot / actor,
+info.plantedFeet + stateAt + seconds; the selftest passes plantedFeet too).
+Outputs (output/humans/perf/, git-ignored): alex-4k / dlg-4k / cradle-4k / crowd-4k (.png 3840x2160,
+_1920 downscales, _crop-* 1:1 crops), alex- / dialogue- / cradle- / crowd- / walk-draft.mp4 (960x540
+draft clips, cinematic preview finish, voice takes muxed in). Mouth-shape sidecars are generated
+caches (cache/<id>.mouth.*, git-ignored): re-run tools/mouthmorphs.py after any character rebuild
+(the runtime refuses a stale one with a warning and falls back to bone-only mouths).
+Next (for a successor): per-character mouth correctives (a wide AA still stretches the lip corners);
+asymmetric shape variants (one-sided smiles); trace the inner-lip blue line; the director's speaking
+shots still mostly frame faces from behind / in DOF (lip-sync exists now - their call); crowd faces
+have no sidecars (no speech) - emotion shapes for crowd fear would need them (~50 s each).

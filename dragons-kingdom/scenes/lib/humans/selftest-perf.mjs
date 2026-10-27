@@ -208,8 +208,8 @@ else {
     actions.registerHumanAction('legs', null);
     ok(planted.fin && planted.mm < builtin.mm / 4, `director 'legs' hook plants the feet (ankle travel on the ground ${planted.mm.toFixed(2)} mm/frame vs ${builtin.mm.toFixed(2)} built-in)`);
   }
-  // sculpted mouth shapes from the sidecar (offline/mouthmorphs.py): attached as morphs, driven by the lip-sync
-  if (!fs.existsSync(path.join(HERE, 'cache', 'alexandria.mouth.json'))) console.log('skip mouth-shape tests: no cache/alexandria.mouth.json (offline/mouthmorphs.py)');
+  // sculpted mouth shapes from the sidecar (tools/mouthmorphs.py): attached as morphs, driven by the lip-sync
+  if (!fs.existsSync(path.join(HERE, 'cache', 'alexandria.mouth.json'))) console.log('skip mouth-shape tests: no cache/alexandria.mouth.json (tools/mouthmorphs.py)');
   else {
     const { loadMouthShapes, attachMouthShapes } = await import('./mouthshapes.js');
     const realFetch = globalThis.fetch;

@@ -65,7 +65,7 @@ export async function loadCharacter(id, opts = {}) {
     try { await registerDirectorHooks(); } catch (e) { console.warn(`[humans] performance hooks not registered: ${e.message}`); }
   }
   const ch = buildCharacter(await loadCharacterData(id), opts);
-  // sculpted mouth shapes when the character has the sidecar (offline/mouthmorphs.py; none: no-op)
+  // sculpted mouth shapes when the character has the sidecar (tools/mouthmorphs.py; none: no-op)
   if (opts.mouthShapes !== false) attachMouthShapes(ch, await loadMouthShapes(id));
   ch.update = (t, o = {}) => applyIdle(ch, t, { ...(opts.idle || {}), ...o });
   return ch;

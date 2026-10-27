@@ -250,11 +250,12 @@ abby.posture('kneel', 9.0, { hold: 2 });  abby.react('wince', 3.4);
 | `mouthshapes.js` | `loadMouthShapes(id)` / `attachMouthShapes(ch, ms)` (automatic in `loadCharacter`; `{ mouthShapes: false }` skips): the 9 CC0 MakeHuman / MPFB2 mouth expression targets (compression, pursing, protusion, eversion, retraction, corner-puller, depression, elevation, parling) as morph targets on the skin, from the optional sidecar `cache/<id>.mouth.json + .bin`; refused (with a warning) for another character or a rebuilt cache. With them the lip-sync presses the lips for p b m, purses for oo / w, flares for sh ch r, stretches thin for ee / s, lifts the upper lip for f v, parts the lips over the teeth on small jaw openings; emotions add the smile, corners-down, upper-lip and pressed-lip shapes (`EMOTION_SHAPES`) |
 | `rig.js` | IK / hand-shape toolkit (two-bone IK with pole + soft reach, hand shapes, orientHand) |
 
-Mouth shapes: `<bpy python> -I scenes/lib/humans/offline/mouthmorphs.py <ids...> | --all [--force]` repeats
+Mouth shapes: `<bpy python> -I scenes/lib/humans/tools/mouthmorphs.py <ids...> | --all [--force]` repeats
 the build's body construction with the expression targets as morphs (race-blended like the build), posed
 with the character's own pose and skinning, checks it against the cache (max 0.1 mm, else refused) and
 writes the sparse sidecar (~4.7k vertices x 9 units, ~0.5 MB; ~50 s a character). The cache itself is
-untouched; a character without a sidecar simply keeps the bone-only mouth. Built so far: every speaking
+untouched; a character without a sidecar simply keeps the bone-only mouth. (The script lives in tools/,
+not offline/: the PC kit hashes offline/*.py as the code that makes the character caches.) Built so far: every speaking
 role (alexandria, remi*, abby*, fall*, king, attendant, healer, messenger, keepers, vendor, parent, child,
 musicians, guards, watchman, sailors). Re-run after rebuilding a character.
 

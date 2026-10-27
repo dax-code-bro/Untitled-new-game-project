@@ -14,8 +14,8 @@ skinning as the cache), the posed body is checked against the cache's body posit
 stay under 0.1 mm, else the sidecar is refused), and the posed morph deltas are stored sparsely
 (vertices any unit moves by more than 1 micron).
 
-    <bpy python> -I scenes/lib/humans/offline/mouthmorphs.py alexandria abby remi   [--units a,b] [--force]
-    <bpy python> -I scenes/lib/humans/offline/mouthmorphs.py --all
+    <bpy python> -I scenes/lib/humans/tools/mouthmorphs.py alexandria abby remi   [--units a,b] [--force]
+    <bpy python> -I scenes/lib/humans/tools/mouthmorphs.py --all
 """
 import argparse
 import json
@@ -24,7 +24,10 @@ import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+# (kept out of offline/: the PC kit hashes offline/*.py as the code that makes the character caches,
+# and this script leaves those caches untouched - it must not mark every built character as stale)
+OFFLINE = os.path.join(HERE, '..', 'offline')
+sys.path.insert(0, OFFLINE)
 
 import numpy as np  # noqa: E402
 

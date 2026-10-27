@@ -1,6 +1,6 @@
 // Sculpted mouth shapes for the lip-sync: the CC0 MakeHuman expression unit targets for the mouth
 // (mouth-compression, mouth-pursing, mouth-protusion, ...) as morph targets on a character's skin,
-// from the optional sidecar cache/<id>.mouth.json + .bin written by offline/mouthmorphs.py (the
+// from the optional sidecar cache/<id>.mouth.json + .bin written by tools/mouthmorphs.py (the
 // cache itself stays as built). A character without a sidecar simply has none: everything here is a
 // no-op then. face.js drives them by name, like the bone units: rig.apply({ 'mouth-pursing': 0.6 }).
 //
@@ -37,8 +37,8 @@ export function attachMouthShapes(ch, ms) {
   if (!mesh) return [];
   const g = mesh.geometry;
   const n = g.attributes.position.count;
-  // the sidecar must belong to this build of the cache (offline/mouthmorphs.py after a rebuild)
-  const stale = (why) => { console.warn(`[humans] ${ch.id}: mouth shapes not attached - ${why} (re-run offline/mouthmorphs.py ${ch.id})`); return []; };
+  // the sidecar must belong to this build of the cache (tools/mouthmorphs.py after a rebuild)
+  const stale = (why) => { console.warn(`[humans] ${ch.id}: mouth shapes not attached - ${why} (re-run tools/mouthmorphs.py ${ch.id})`); return []; };
   if (n !== ms.meta.vertexCount) return stale(`made for ${ms.meta.vertexCount} vertices, the skin has ${n}`);
   const want = ms.meta.check?.positionSum;
   if (want === undefined) return stale('sidecar without a position check');
