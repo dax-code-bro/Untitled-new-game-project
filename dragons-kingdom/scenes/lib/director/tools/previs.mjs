@@ -17,6 +17,8 @@
 //        was one, found only in the assembled cut) and the SCREEN ORDER of two subjects flipping (the
 //        line crossed; fine when the incoming shot's staging says 'reverse' / 'declared'). --only names
 //        incoming shots; --cam / --cast apply to the incoming shot, or to the one --cam-shot names.
+//        `cutsOk: { '<incoming shot>': 'why' }` at the spec's top level marks its flags as looked at and kept
+//        (not inside the shot's own spec: that would change its key and re-render it).
 //
 // Approximations (the reason a picture still has the last word): heads from the blocking state with a
 // standard body (standing head 1.62 m, seated 1.22, crouched 0.95, kneeling 1.12; per-actor `height`
@@ -284,7 +286,10 @@ if (argv.includes('--cuts')) {
     catch (e) { console.log(`${A.job} -> ${B.job}: not checked (${e.message})`); continue; }
     const plain = (r) => r.skip ? r : { cam: { pos: r.cam.pos.toArray() }, actors: r.actors.map((x) => ({ ...x, head: x.head.toArray() })) };
     const c = cutCheck(plain(ra), plain(rb), sb.staging || '');
-    n++; if (c.flags.some((f) => !f.endsWith('staging'))) bad++;
+    // spec.cutsOk[incoming]: a flag looked at in the pictures and kept (not counted)
+    const ok = spec.cutsOk?.[B.job] ?? sb.cutOk;
+    if (ok) c.flags = c.flags.map((f) => `${f} - accepted: ${ok}`);
+    n++; if (c.flags.some((f) => !f.endsWith('staging') && !f.includes(' - accepted: '))) bad++;
     const held = c.rows.map((r) => `${r.name} ${r.angle} deg ${r.ratio}x`).join(', ');
     console.log(`${A.job} -> ${B.job}  ${c.skip ? `not checked (${c.skip})` : held || 'no subject in both frames'}${c.flags.length ? `\n    ${c.flags.join('\n    ')}` : ''}`);
   }

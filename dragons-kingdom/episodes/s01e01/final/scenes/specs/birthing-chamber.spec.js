@@ -50,6 +50,11 @@ export default {
       stool: [1.45, 0, 0.9], hatchRest: [0.12, 0.47, 0.12], lampKey: [-0.5, 0.43, 1.31], lampNorth: [-0.95, 0.7, -2.55], bench: [-0.4, 0.62, -2.6],
     },
   },
+  // edit-check flags (previs --cuts) looked at in the renders and kept, per incoming shot (kept out of the
+  // shot specs: a spec change re-renders the shot)
+  cutsOk: {
+    '1A-29': 'the high wide 1A-28 hides the crossing: Abby stays left of Remi, the hatchling in front of them (session 7 renders)',
+  },
   // where each actor usually is (eye-lines and facings toward someone who is not in the shot)
   homes: { hatchling: [HR[0], 0.46, HR[1]], alexandria: [ALEX_SEAT[0], 1.2, ALEX_SEAT[1]], attendant: [ATT[0], 1.4, ATT[1]], abby: [ABBY_C[0], 1.0, ABBY_C[1]], remi: [REMI_S[0], 1.7, REMI_S[1]] },
   defaults: {
