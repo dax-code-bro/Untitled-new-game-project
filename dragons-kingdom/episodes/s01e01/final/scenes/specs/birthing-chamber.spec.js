@@ -373,14 +373,16 @@ export default {
       lines: [['X2-01', 0.5], ['X2-02', 0.45]],
     },
     'X2-03': {
-      staging: 'MEDIUM: Remi alone in the doorway (centre), three-quarter to the lens, lit low by the room lamps against the passage; he answers (lip-sync) and goes; his eyeline frame right to Alexandria off screen.',
-      // session 7: the OTS over her shoulder was the X2-02 picture again, closer on the same axis (a jump cut in
-      // the assembled cut, her humans-library bun sharp at 1.5 m); now the shot list's own framing - Remi
-      // centred in the doorway, 40 mm from over the nest, south of the line Alexandria - door
-      cam: { rig: 'static', pos: [-1.0, 1.5, 0.5], look: [-3.2, 1.42, -1.9], mm: 40, fstop: 2.8, focus: 'remi.head' },
+      staging: 'OTS + DOF (reverse angle, declared): from the doorway over Remi\'s shoulder (from behind, soft) onto Alexandria small at the nest, not looking up; he answers and goes out past the lens.',
+      // session 7: the OTS over HER shoulder was the X2-02 picture again, closer on the same axis (a jump cut in
+      // the assembled cut, her humans-library bun sharp at 1.5 m); a medium of Remi facing the lens showed the
+      // library face sharp and frontal (it reads CG: dlg-4k). Now the reverse: the camera in the door's
+      // tunnel, south of the line Alexandria - door (Remi left, she right, as in X2-02), his back soft in the
+      // foreground, her face small and down; he exits frame left past the lens
+      cam: { rig: 'static', pos: [-4.4, 1.6, -1.3], look: [1.1, 1.15, -1.3], mm: 28, fstop: 2, focus: 'alexandria.head' },
       cast: {
         alexandria: { ...seated, posture: { sit: 1, lean: 0.4 } }, hatchling: hatchRest(),
-        remi: { at: [-3.2, -1.9], face: 'alexandria', look: 'alexandria.head', lookAmount: 0.5, legs: 'planted', acts: [[2.1, 'turn', { to: 270, dur: 0.6 }], [2.6, 'walk', { to: [-4.8, -1.9], speed: 1.1 }]] },
+        remi: { at: [-2.95, -1.8], face: 'alexandria', look: 'alexandria.head', lookAmount: 0.5, legs: 'planted', acts: [[2.1, 'turn', { to: 270, dur: 0.6 }], [2.6, 'walk', { to: [-4.8, -1.9], speed: 1.1 }]] },
       },
       set: { door: 0.85 },
       lines: [['X2-03', 0.5]],

@@ -4260,11 +4260,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.83,
-    "k4_cpu_s_per_frame": 55.2,
+    "draft_s_per_frame": 16.09,
+    "k4_cpu_s_per_frame": 183.84,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 7.73,
-    "k4_cpu_hours": 1.47,
+    "draft_minutes": 25.74,
+    "k4_cpu_hours": 4.9,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -4274,7 +4274,7 @@
      "move": 1,
      "total": 1.38
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.38 for the shot's content"
+    "basis": "MEASURED draft 16.09 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "SIL: two silhouettes in the bright doorway; Abby looks back once (reverse angle toward the door, declared).",
    "deviation": null,
@@ -4571,7 +4571,7 @@
     },
     "basis": "MEASURED draft 27.08 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
-   "staging": "MEDIUM: Remi alone in the doorway (centre), three-quarter to the lens, lit low by the room lamps against the passage; he answers (lip-sync) and goes; his eyeline frame right to Alexandria off screen.",
+   "staging": "OTS + DOF (reverse angle, declared): from the doorway over Remi's shoulder (from behind, soft) onto Alexandria small at the nest, not looking up; he answers and goes out past the lens.",
    "deviation": null,
    "action": "He answers and goes.",
    "need": {
