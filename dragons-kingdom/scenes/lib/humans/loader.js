@@ -69,6 +69,12 @@ export function buildCharacter(data, opts = {}) {
   // the mouth cavity, teeth and tongue darken with depth behind the lips (see mouthDepth)
   const mouthU = { value: 0 };
   const mouth = mouthFrame(header, bones, index);
+  // one uniform per character: the head's forward axis in VIEW space, set before each draw of the
+  // skin / teeth / tongue (headFwdUpdater): the lips and the inside of the mouth take no direct light
+  // from behind the face. The shadow maps cannot resolve the head occluding them - a back light drew
+  // a cold blue line along the inside of the lower lip and lit the teeth from inside the head.
+  const headU = { value: new THREE.Vector3(0, 0, 1) };
+  const headFwd = mouth ? headFwdUpdater(headU, bones[index.head], mouth.f) : null;
   for (const m of header.meshes) {
     const g = new THREE.BufferGeometry();
     for (const [name, d] of Object.entries(m.attrs)) {
@@ -117,7 +123,7 @@ export function buildCharacter(data, opts = {}) {
     }
     if (g.attributes.skinIndex && opts.rebind !== false) rebindWorn(g, m, header, bones, index);
     g.computeBoundingSphere();
-    const mat = materialFor(m, header, { ...opts, mouthU });
+    const mat = materialFor(m, header, { ...opts, mouthU, headU });
     let mesh;
     if (g.attributes.skinIndex) {
       mesh = new THREE.SkinnedMesh(g, mat);
@@ -139,6 +145,7 @@ export function buildCharacter(data, opts = {}) {
       mesh.morphTargetInfluences = mnames.map(() => 0);
     }
     mesh.name = `${root.name}:${m.name}`;
+    if (headFwd && (m.kind === 'skin' || m.kind === 'teeth' || m.kind === 'tongue')) mesh.onBeforeRender = headFwd;
     // lashes and brows are too fine for a shadow map: at a grazing sun they print long dark
     // streaks across the cheek; their contact shading comes from the baked AO
     mesh.castShadow = opts.shadows !== false && m.material?.castShadow !== false && m.kind !== 'lash' && m.kind !== 'brow';
@@ -219,14 +226,29 @@ function rebindWorn(g, m, header, bones, index) {
 function materialFor(m, header, opts) {
   const mt = m.material || {};
   switch (m.kind) {
-    case 'skin': return skinMaterial({ ...mt, seed: hashStr(header.id) % 997, mouthU: opts.mouthU });
+    case 'skin': return skinMaterial({ ...mt, seed: hashStr(header.id) % 997, mouthU: opts.mouthU, headU: opts.headU });
     case 'eye': return eyeMaterial(mt);
     case 'brow': case 'lash': case 'haircard': return cardMaterial({ ...mt, colorMap: m.kind === 'haircard', cut: m.kind === 'brow' ? [0.0, 0.03] : [0.06, 0.3] });
     case 'hair': return hairStrandMaterial(mt);
-    case 'teeth': case 'tongue': return simpleTexturedMaterial({ ...mt, mouthU: opts.mouthU, mouth: m.name === 'teeth' || m.kind === 'tongue', teeth: m.name === 'teeth' });
+    case 'teeth': case 'tongue': return simpleTexturedMaterial({ ...mt, mouthU: opts.mouthU, headU: opts.headU, mouth: m.name === 'teeth' || m.kind === 'tongue', teeth: m.name === 'teeth' });
     case 'cloth': return clothMaterial({ ...mt, wrinkle: mt.wrinkle ?? (m.name === 'shirt' ? 1 : 0) });
     default: return propMaterial(mt);
   }
+}
+
+/**
+ * An onBeforeRender callback that puts the head's forward axis (fBind: in the drape pose, world) into
+ * headU in the view space of the camera about to draw (the shader's light directions are in view
+ * space). Cheap: one matrix column transform per draw.
+ */
+function headFwdUpdater(headU, headBone, fBind) {
+  headBone.updateWorldMatrix(true, false);
+  const local = fBind.clone().transformDirection(_m.copy(headBone.matrixWorld).invert());   // in the head bone's frame
+  const w = new THREE.Vector3();
+  return (renderer, scene, camera) => {
+    w.copy(local).transformDirection(headBone.matrixWorld).transformDirection(camera.matrixWorldInverse);
+    headU.value.copy(w);
+  };
 }
 
 /**
@@ -250,8 +272,10 @@ function mouthFrame(header, bones, index) {
  * behind other skin (the closed lips cover the whole cavity in the drape pose), lies within 3.5 cm of
  * the mouth axis, and does not face away from it (the underside of the lower lip, the chin and the
  * skin under the nose stay skin). The renderer's shadow maps cannot resolve a mouth: the cavity is
- * darkened by this depth instead (materials.js).
+ * darkened by this depth instead (materials.js). The lips' own outer skin gets LIP_ZONE (0.2 mm: below
+ * every cavity threshold) so the shader can keep back light off the whole mouth.
  */
+const LIP_ZONE = 0.0002;
 function mouthDepth(g, mo, isSkin) {
   const pos = g.attributes.position, nrm = g.attributes.normal, n = pos.count;
   const out = new Float32Array(n);
@@ -283,6 +307,10 @@ function mouthDepth(g, mo, isSkin) {
     if (r > 0.037) continue;
     const key = Math.round(l.dot(u) / CELL) * 4096 + Math.round(l.dot(v) / CELL);
     if (isSkin) { const fr = front.get(key); if (fr === undefined || d < fr) front.set(key, d); }
+    // the lips' outer surface (within 3 cm of the mouth axis, up to 2.5 cm behind the lip front):
+    // a tiny marker depth that changes no cavity shading but tells the skin shader it is mouth skin
+    // (no back light: materials.js RE_Direct_Skin)
+    if (isSkin && r < 0.03 && d > -0.003 && d < 0.025) out[i] = LIP_ZONE;
     if (d > 0.0005 && r < 0.035) cand.push(i, d, r, key);
   }
   for (let k = 0; k < cand.length; k += 4) {

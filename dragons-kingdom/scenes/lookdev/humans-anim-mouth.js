@@ -72,7 +72,9 @@ export function update(t, ctx) {
   const { camera } = ctx;
   const rt = reviewTime(t, ctx);
   const k = Math.min(TIMES.length - 1, Math.max(0, rt.k));
-  const tt = TIMES[k] + (rt.lt - k - 0.5);
+  // (the first frame of a run cannot know the frame rate: reviewTime gives lt = 0 there - clamp the
+  // sub-frame offset so every frame poses at its own moment)
+  const tt = TIMES[k] + Math.max(-0.02, Math.min(0.02, rt.lt - k - 0.5));
   S.P.update(tt, { blink: false });
   const ch = S.ch;
   ch.root.updateMatrixWorld(true);

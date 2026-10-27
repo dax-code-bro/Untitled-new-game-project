@@ -1,1 +1,2 @@
-{"id": "alexandria", "line": "L011", "times": [0.75, 0.97], "az": 0.42, "el": -0.2, "dist": 0.42, "fov": 21, "lights": {"key": 0, "shaft": 1, "bounce": 1, "env": 0.32}}
+{ "id": "alexandria", "line": "L011", "times": [0.17, 0.44, 0.75, 0.97, 1.16, 1.32], "az": 0.42, "el": -0.2, "dist": 0.42, "fov": 21,
+  "lights": { "key": 1, "shaft": 1, "bounce": 1, "env": 0.32 } }

@@ -109,6 +109,8 @@ export function skinMaterial(o = {}) {
     uBeardFull: { value: o.beardFull ?? 0.0 },
     // mouth opening 0..1 (face rig), shared with the teeth / tongue of the same character
     uMouthOpen: o.mouthU || { value: 0 },
+    // the head's forward axis in view space (loader.js headFwdUpdater): no back light on the lips
+    uHeadFwd: o.headU || { value: new THREE.Vector3(0, 0, 1) },
   };
   mat.userData.skin = U;
   mat.customProgramCacheKey = () => 'dk-human-skin';
@@ -123,7 +125,7 @@ vObjP = position; vAO = ao; vThick = thick; vAux = aux; vAux2 = aux2; vAux3 = au
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 ${NOISE_GLSL}
-uniform vec3 uTone, uScalp, uBeard; uniform float uBeardFull; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid, uMouthOpen;
+uniform vec3 uTone, uScalp, uBeard; uniform float uBeardFull; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid, uMouthOpen; uniform vec3 uHeadFwd;
 varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG; varying float vMouth;
 vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
@@ -284,7 +286,13 @@ skinSmoothN = normal;
   reflectedLight.indirectSpecular *= mOccS; reflectedLight.directSpecular *= mOccS;
 }`)
       .replace('#include <lights_physical_pars_fragment>', `#include <lights_physical_pars_fragment>
-void RE_Direct_Skin( const in IncidentLight directLight, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in PhysicalMaterial material, inout ReflectedLight reflectedLight ) {
+void RE_Direct_Skin( const in IncidentLight directLight0, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in PhysicalMaterial material, inout ReflectedLight reflectedLight ) {
+  // the lips and the inside of the mouth sit at the front of the face: a light from behind the head
+  // cannot reach them (the shadow maps do not resolve the head over the mouth - a cool back light
+  // drew a blue line along the wet inner lower lip)
+  IncidentLight directLight = directLight0;
+  { float lipM = max(smoothstep(0.0, 0.15, vAux.r), step(0.0001, vMouth));
+    directLight.color *= 1.0 - lipM * smoothstep(0.0, -0.35, dot(directLight0.direction, uHeadFwd)); }
   // subsurface-style diffuse: colour-dependent wrap on a softened normal (red light travels
   // further under the skin), energy-normalised; specular on the detailed normal
   vec3 nS = normalize(mix(geometryNormal, skinSmoothN, 0.7));
@@ -432,14 +440,24 @@ export function simpleTexturedMaterial(o = {}) {
   const mat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(...(o.color || [1, 1, 1])), roughness: o.rough ?? 0.5, metalness: 0, clearcoat: o.clearcoat ?? 0, clearcoatRoughness: 0.2 });
   if (o.map) mat.map = libTexture(o.map);
   const mouth = !!o.mouth, teeth = !!o.teeth;
-  const U = { uMouthOpen: o.mouthU || { value: 0 } };
+  const U = { uMouthOpen: o.mouthU || { value: 0 }, uHeadFwd: o.headU || { value: new THREE.Vector3(0, 0, 1) } };
   mat.userData.mouth = U;
   mat.customProgramCacheKey = () => `dk-human-simple${mouth ? (teeth ? '-teeth' : '-mouth') : ''}`;
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float ao; varying float vAO;' + (mouth ? ' attribute float mdepth; varying float vMouth;' : ''))
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvAO = ao;' + (mouth ? ' vMouth = mdepth;' : ''));
-    let fs = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vAO;' + (mouth ? ' varying float vMouth; uniform float uMouthOpen;' : ''))
+    let fs = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vAO;' + (mouth ? ' varying float vMouth; uniform float uMouthOpen; uniform vec3 uHeadFwd;' : ''))
+      // teeth / tongue: no direct light from behind the head (it would have to pass through the skull)
+      .replace('#include <lights_physical_pars_fragment>', '#include <lights_physical_pars_fragment>' + (mouth ? `
+void RE_Direct_Mouth( const in IncidentLight directLight, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in PhysicalMaterial material, inout ReflectedLight reflectedLight ) {
+  float k = 1.0 - smoothstep(0.0, -0.35, dot(directLight.direction, uHeadFwd));
+  if (k <= 0.0) return;
+  IncidentLight L = directLight; L.color *= k;
+  RE_Direct_Physical(L, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight);
+}
+#undef RE_Direct
+#define RE_Direct RE_Direct_Mouth` : ''))
       .replace('#include <aomap_fragment>', '#include <aomap_fragment>\n'
         // (teeth / tongue: the AO was baked with the mouth closed - only a part of it holds when it opens)
         + (mouth ? 'float aoT = mix(vAO, 1.0, 0.6);\n' : 'float aoT = vAO;\n')
@@ -463,12 +481,13 @@ export function simpleTexturedMaterial(o = {}) {
   { vec3 sp = reflectedLight.indirectSpecular; float ls = dot(sp, vec3(0.2126, 0.7152, 0.0722));
     reflectedLight.indirectSpecular = mix(sp, ls * vec3(1.15, 0.95, 0.85), 0.85) * ${teeth ? '0.4' : '1.0'}; } }` : ''));
     if (teeth) {
-      // MakeHuman's teeth texture is a cool grey-white with baked shading: enamel is ivory, never
-      // blue-white; the gums (red in the texture) stay
+      // MakeHuman's teeth texture is a cool grey-white with baked shading: enamel is a warm off-white,
+      // never blue-white (a saturated ivory went olive-green in the shade of the mouth); the gums
+      // (red in the texture) stay
       fs = fs.replace('#include <map_fragment>', `#include <map_fragment>
 { vec3 c = diffuseColor.rgb; float gum = smoothstep(0.08, 0.25, c.r - max(c.g, c.b));
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  vec3 enamel = mix(vec3(0.64, 0.53, 0.36), vec3(l) * vec3(1.06, 0.94, 0.76), 0.3);
+  vec3 enamel = mix(vec3(0.66, 0.6, 0.5), vec3(l) * vec3(1.04, 0.97, 0.88), 0.3);
   diffuseColor.rgb = mix(enamel, c * vec3(0.9, 0.62, 0.62), gum); }`);
     }
     sh.fragmentShader = fs;
