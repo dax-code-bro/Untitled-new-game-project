@@ -496,14 +496,17 @@ export function simpleTexturedMaterial(o = {}) {
 #endif
 { float mOcc = 1.0 - smoothstep(0.006, 0.034, vMouth) * (0.93 - 0.3 * uMouthOpen);
   // the light that does reach inside is bounced off lips and tongue: warm, not sky blue
+  // (pink-warm, not ivory: next to the saturated lips a neutral grey tooth read teal, a yellow one
+  // olive - the light inside is the lips' and the tongue's colour)
   { vec3 ind = reflectedLight.indirectDiffuse; float li = dot(ind, vec3(0.2126, 0.7152, 0.0722));
-    reflectedLight.indirectDiffuse = mix(ind, li * vec3(1.22, 0.95, 0.8), 0.75); }
+    reflectedLight.indirectDiffuse = mix(ind, li * vec3(1.32, 0.9, 0.8), 0.9); }
+  reflectedLight.directDiffuse *= mix(vec3(1.0), vec3(1.12, 0.94, 0.9), smoothstep(0.003, 0.012, vMouth));
   reflectedLight.indirectDiffuse *= mOcc; reflectedLight.directDiffuse *= mOcc;
   reflectedLight.indirectSpecular *= mOcc * mOcc * 0.25; reflectedLight.directSpecular *= mOcc * mOcc;
   // the environment seen by the teeth is the inside of the lips, not the sky / the field: an
   // unshadowed sky + grass reflection turned the lower incisors grey-green
   { vec3 sp = reflectedLight.indirectSpecular; float ls = dot(sp, vec3(0.2126, 0.7152, 0.0722));
-    reflectedLight.indirectSpecular = mix(sp, ls * vec3(1.15, 0.95, 0.85), 0.85) * ${teeth ? '0.4' : '1.0'}; } }` : ''));
+    reflectedLight.indirectSpecular = mix(sp, ls * vec3(1.22, 0.92, 0.84), 0.9) * ${teeth ? '0.4' : '1.0'}; } }` : ''));
     if (teeth) {
       // MakeHuman's teeth texture is a cool grey-white with baked shading: enamel is a warm off-white,
       // never blue-white (a saturated ivory went olive-green in the shade of the mouth); the gums
