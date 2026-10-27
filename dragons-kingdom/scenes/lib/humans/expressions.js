@@ -65,6 +65,22 @@ export const EMOTIONS = {
 };
 export const EMOTION_NAMES = Object.keys(EMOTIONS);
 
+// The mouth of an emotion on a character with the sculpted mouth shapes (mouthshapes.js: CC0
+// MakeHuman expression targets): the real muscle shapes - zygomaticus smile (AU12), depressor corners
+// down (AU15), levator upper lip (AU10), lips pressed thin (AU24), stretched (AU20) - on top of the
+// bone units, whose corner pulls then give up a part (SHAPE_TRADE) so the sum does not overshoot.
+export const EMOTION_SHAPES = {
+  worry: { 'mouth-depression': 0.18, 'mouth-compression': 0.12 },
+  pain: { 'mouth-elevation': 0.3, 'mouth-retraction': 0.25 },
+  fear: { 'mouth-retraction': 0.35 },
+  anger: { 'mouth-compression': 0.35, 'mouth-elevation': 0.12 },
+  grief: { 'mouth-depression': 0.55, 'mouth-compression': 0.1 },
+  amusement: { 'mouth-corner-puller': 0.45 },
+  tender: { 'mouth-corner-puller': 0.22 },
+  determined: { 'mouth-compression': 0.25 },
+};
+const SHAPE_TRADE = { MouthLeftPullUp: 0.7, MouthRightPullUp: 0.7, MouthLeftPullDown: 0.7, MouthRightPullDown: 0.7 };
+
 /** Soft limit of a unit weight (sums of several emotions saturate instead of breaking the face). */
 function soft(w) {
   const a = Math.abs(w);
@@ -74,7 +90,8 @@ function soft(w) {
 
 /**
  * Face-unit weights for an emotion mix { name: 0..1 }. opts: { asym (-0.3..0.3: + = the character's
- * LEFT side stronger), out (object to add into), gain (1) }.
+ * LEFT side stronger), out (object to add into), gain (1), shapes (the character has the sculpted
+ * mouth shapes: EMOTION_SHAPES join in) }.
  */
 export function emotionUnits(mix, opts = {}) {
   const o = {};
@@ -82,7 +99,8 @@ export function emotionUnits(mix, opts = {}) {
   for (const [name, w] of Object.entries(mix || {})) {
     const e = EMOTIONS[name];
     if (!e || !w) continue;
-    for (const u in e) o[u] = (o[u] || 0) + e[u] * w * g;
+    for (const u in e) o[u] = (o[u] || 0) + e[u] * w * g * (opts.shapes ? SHAPE_TRADE[u] ?? 1 : 1);
+    if (opts.shapes) for (const u in EMOTION_SHAPES[name] || {}) o[u] = (o[u] || 0) + EMOTION_SHAPES[name][u] * w * g;
   }
   const as = opts.asym || 0;
   const out = opts.out || {};

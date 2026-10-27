@@ -83,7 +83,8 @@ function targetPoint(tg, t, out) {
 
 /**
  * opts: { role, seed, asym (-0.3..0.3; default from the id), expressive (1: brow / head motion on
- * stressed syllables), blinkRate (1), lid (0.1: resting upper-lid closure), saccade (1) }
+ * stressed syllables), blinkRate (1), lid (0.1: resting upper-lid closure), saccade (1), shapes (use the
+ * sculpted mouth shapes; default: when the character has them, mouthshapes.js) }
  */
 export function createFacePerformer(ch, data, opts = {}) {
   const rig = createFaceRig(ch, data.units);
@@ -135,7 +136,9 @@ export function createFacePerformer(ch, data, opts = {}) {
     },
     apply(t, o = {}) { return applyFace(api, ch, t, o); },
   };
-  Object.assign(api, { _eyes: eyes, _head: head, _asym: asym, _opts: opts, _gestures: gestures });
+  // sculpted mouth shapes (mouthshapes.js) when the character has them: visemes / emotions use them
+  const shapes = opts.shapes ?? rig.shapes?.length > 0;
+  Object.assign(api, { _eyes: eyes, _head: head, _asym: asym, _opts: opts, _gestures: gestures, _shapes: shapes });
   return api;
 }
 
@@ -253,7 +256,7 @@ function applyFace(api, ch, t, o) {
   if (lineEmo) for (const k in lineEmo.emo) emo[k] = (emo[k] || 0) * (1 - 0.5 * lineW) + lineEmo.emo[k] * lineW * lineEmo.gain;
   const expressive = opts.expressive ?? 1;
   const emoGain = 0.9 + 0.25 * acc * expressive;
-  emotionUnits(emo, { asym: api._asym, out: W, gain: emoGain });
+  emotionUnits(emo, { asym: api._asym, out: W, gain: emoGain, shapes: api._shapes });
   // micro-motion of the face at rest: tiny slow drifts so a held face is never frozen
   const drift = (i, f) => noise1(seed + i, t * f);
   W.LeftInnerBrowUp = (W.LeftInnerBrowUp || 0) + 0.03 * drift(11, 0.31);
@@ -280,7 +283,7 @@ function applyFace(api, ch, t, o) {
   if (lip && active > 0) {
     const lw = {};
     // a smile or a pained stretch widens the mouth already: less extra spread from the visemes
-    visemeUnits(lip, { out: lw, lips: 1 - 0.3 * clamp01((emo.amusement || 0) + (emo.pain || 0)) });
+    visemeUnits(lip, { out: lw, lips: 1 - 0.3 * clamp01((emo.amusement || 0) + (emo.pain || 0)), shapes: api._shapes });
     for (const u in lw) W[u] = (W[u] || 0) + lw[u] * active;
     // closing the lips for p / b / m wins over an expression that parts them
     const cl = Math.min(1, lip.close) * active;

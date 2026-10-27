@@ -21,10 +21,12 @@ import * as THREE from 'three';
 import { loadCharacterData, buildCharacter, hashStr } from './loader.js';
 import { applyIdle } from './idle.js';
 import { registerDirectorHooks } from './director.js';
+import { loadMouthShapes, attachMouthShapes } from './mouthshapes.js';
 
 export { loadCharacterData, buildCharacter, CACHE_URL } from './loader.js';
 export { applyIdle, blinkAt } from './idle.js';
 export { registerDirectorHooks, setDirectorHooks } from './director.js';
+export { loadMouthShapes, attachMouthShapes } from './mouthshapes.js';
 
 /** Every built character id, with what it is for (PROVISIONAL looks; see offline/characters.py). */
 export const CAST = {
@@ -63,6 +65,8 @@ export async function loadCharacter(id, opts = {}) {
     try { await registerDirectorHooks(); } catch (e) { console.warn(`[humans] performance hooks not registered: ${e.message}`); }
   }
   const ch = buildCharacter(await loadCharacterData(id), opts);
+  // sculpted mouth shapes when the character has the sidecar (offline/mouthmorphs.py; none: no-op)
+  if (opts.mouthShapes !== false) attachMouthShapes(ch, await loadMouthShapes(id));
   ch.update = (t, o = {}) => applyIdle(ch, t, { ...(opts.idle || {}), ...o });
   return ch;
 }

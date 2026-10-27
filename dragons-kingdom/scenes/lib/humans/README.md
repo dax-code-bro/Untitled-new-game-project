@@ -240,14 +240,23 @@ abby.posture('kneel', 9.0, { hold: 2 });  abby.react('wince', 3.4);
 | module | what |
 |---|---|
 | `perform.js` | `createPerformer(ch, data, opts)`: `place`, `performLine(id, t0, { emo, amp, beats })`, `walkPath`, `runPath`, `follow(fn, t0, t1)`, `trajectory(tr)`, `gesture`, `posture`, `stagger`, `fall`, `lookAt`, `glance`, `mood`, `react`, `carry(child, t0, t1)`, `rootAt`, `update(t)`; `directorFace(data)` (a `registerHumanAction('face', ...)` hook: lip-sync from the shot's placed lines); `trajectoryFromBlocking(fn, t0, t1)`; `ROLE_OF` (cast id -> dialogue role) |
-| `visemes.js` | phones -> 9 articulators (jaw, lip closure, rounding, spread, f/v tuck, th, tongue tip, upper lip, press), Cohen-Massaro dominance coarticulation (a phone that needs an articulator dominates it briefly and strongly; one that does not lets its neighbours decide; anticipation reaches ~1.7x further than carry-over), a contact floor so p/b/m always close and f/v always tuck, rest in pauses > 80 ms, jaw scaled by the take's loudness, 40 ms visual lead -> MakeHuman face units |
+| `visemes.js` | phones -> 9 articulators (jaw, lip closure, rounding, spread, f/v tuck, th, tongue tip, upper lip, press), Cohen-Massaro dominance coarticulation (a phone that needs an articulator dominates it briefly and strongly; one that does not lets its neighbours decide; anticipation per articulator: rounding reaches ~2.4x further ahead than carry-over, lip closure and f/v tuck form late), a contact floor so p/b/m always close and f/v always tuck, rest in pauses > 80 ms, jaw scaled by the take's loudness, 40 ms visual lead -> MakeHuman face units |
 | `expressions.js` | 11 emotion layers as FACS-style unit mixes (calm worry pain fear anger grief amusement surprise tender contempt determined), blendable, softly limited; `emotionFromDelivery(note, preset)` (whole-word rules, negations dropped) |
 | `faceperf.js` | face performer: line emotion envelopes, brow raise / knit and head nods on stressed syllables (loudness accents), blinks (spontaneous; at phrase starts and pauses; on gaze shifts; more under fear), eye-target look-at with vergence, fixation saccades (eye-eye-mouth on a face), gaze aversion at line starts, lids that follow the eyes; `LINE_OVERRIDES` (hand-set key lines: L011 ...), `SCENE_MOOD` |
 | `motion.js` | `gestureNow(ch, name, o, w, t, dt)` / `legsNow(body, t, post)` pose a gesture or planted-foot legs on a character someone else placed (the director); body: trajectories (path + speed profile, fn(t), baked), gait phase table with PLANTED feet (plant = the root at 41 % of stance, 32 % running), heel strike / heel off rolling on heel and ball, Hermite swing with clearance and the running heel kick, pelvis lowered by the planted legs' reach (the walk's bob comes out of it), pelvis rotation / list / sway, spine counter-rotation and lean, arm swing (90 degrees bent when running), standing weight shift, gestures (`point wave reach support cradle handsToFace protectHead flail carry explain`), postures (`crouch kneel cower hunch`), `stagger` (quick recovery steps), `fall` (buckle, topple, hands to the ground, lie), head look with the chest helping on big turns, `carryChild(adult, child)` |
 | `crowd.js` | `createCrowd({ agents, exits, obstacles, walls, alarm, cower, groups })`: social-force bake at 30 Hz in setup (seeded): MILL (wander near home, stop and face neighbours; `groups` [[i, j, ...]]: conversation circles ~1.1 m apart, heads turn to the talker as the talk passes round, the talker gestures and smiles), FLEE along exit polylines (reaction wave from the threat, startle + gasp, glances back, some shield their heads), COWER (by a wall away from the threat, or frozen where they stand); no overlaps (position correction) |
 | `director.js` | shot-director registration (automatic from `loadCharacter`): `'face'` (lip-sync of the shot's placed takes incl. split-take parts, delivery emotion, scene mood, blinks, eye-line) and the `'cradle'` overlay; opt-in `registerDirectorHooks({ legs: true })` = planted-foot legs from `info.stateAt` (see Director below); `setDirectorHooks(false)` before loading keeps the director's own |
-| `face.js` | the MakeHuman face pose units rig (+ derived `JawOpen`, `<Side>LidsDown/Up/TurnLeft/TurnRight`) |
+| `face.js` | the MakeHuman face pose units rig (+ derived `JawOpen`, `<Side>LidsDown/Up/TurnLeft/TurnRight`) and, when the character has them, the sculpted mouth shapes by name (`'mouth-pursing': 0.6`) |
+| `mouthshapes.js` | `loadMouthShapes(id)` / `attachMouthShapes(ch, ms)` (automatic in `loadCharacter`; `{ mouthShapes: false }` skips): the 9 CC0 MakeHuman / MPFB2 mouth expression targets (compression, pursing, protusion, eversion, retraction, corner-puller, depression, elevation, parling) as morph targets on the skin, from the optional sidecar `cache/<id>.mouth.json + .bin`; refused (with a warning) for another character or a rebuilt cache. With them the lip-sync presses the lips for p b m, purses for oo / w, flares for sh ch r, stretches thin for ee / s, lifts the upper lip for f v, parts the lips over the teeth on small jaw openings; emotions add the smile, corners-down, upper-lip and pressed-lip shapes (`EMOTION_SHAPES`) |
 | `rig.js` | IK / hand-shape toolkit (two-bone IK with pole + soft reach, hand shapes, orientHand) |
+
+Mouth shapes: `<bpy python> -I scenes/lib/humans/offline/mouthmorphs.py <ids...> | --all [--force]` repeats
+the build's body construction with the expression targets as morphs (race-blended like the build), posed
+with the character's own pose and skinning, checks it against the cache (max 0.1 mm, else refused) and
+writes the sparse sidecar (~4.7k vertices x 9 units, ~0.5 MB; ~50 s a character). The cache itself is
+untouched; a character without a sidecar simply keeps the bone-only mouth. Built so far: every speaking
+role (alexandria, remi*, abby*, fall*, king, attendant, healer, messenger, keepers, vendor, parent, child,
+musicians, guards, watchman, sailors). Re-run after rebuilding a character.
 
 Data: `data/lipsync-s01e01.json` = `offline/lipsync_align.py` (pocketsphinx 5.1.1 forced alignment of
 every Episode 1 take: 384 aligned, 1 dictionary fallback, 4 non-verbal placeholders with loudness
@@ -269,8 +278,9 @@ the shot places for its role (`info.placed`, parts of split takes speak only the
 the line's delivery emotion, the scene's mood (`SCENE_MOOD`, 60 %) under it, blinks, saccades and eyes
 on the blocking's eye-line; `'cradle'` - the blocking act `[t, 'cradle', { side: 'L' }]` holds the hurt
 arm the performance way. Planted feet are opt-in because they need the blocking as a function of time:
-the stage passes `info.stateAt = (tt) => actorState(spec, tt, env)` and `info.seconds`, and calls
-`registerDirectorHooks({ legs: true })`; then `'legs'` keeps every stance foot fixed in the world (heel
+the stage passes `info.stateAt = (tt) => actorState(spec, tt, env)`, `info.seconds` and
+`info.plantedFeet`, and calls `registerDirectorHooks({ legs: true })` (wired by the director: `legs:
+'planted'` per shot or actor, on for the walkers of the chamber shots); then `'legs'` keeps every stance foot fixed in the world (heel
 strike, roll, toe-off, swing clearance, walk/run blend; the pelvis dips where a leg would over-reach;
 kneel / sit ramps place the feet like the director's own stances).
 
@@ -278,14 +288,16 @@ Self-test: `node scenes/lib/humans/selftest-perf.mjs` (lip closures on all 340 p
 delivery-rule traps, planted feet walking and running, order independence, falls, crowd determinism and
 spacing, the director face hook, split-take windows, registration + lip-sync through the director's own
 `poseHuman`, the director 'cradle' act, the opt-in planted legs (ankle travel on the ground vs the
-built-in gait), worn props free of hand weights). Body tests need the character caches.
+built-in gait), worn props free of hand weights, the mouth shapes attach, refuse another character's
+sidecar and are driven by L011's "my" / "weapon"). Body tests need the character caches.
 
 Loader (since 2026-10-27): worn props (belt, buckle, purse, buttons, chain, circlet, scabbard, hat)
 lose any hand / forearm skin weights at load time, and hair loses upper-arm weights (to the clavicle) -
 a hand resting on the belt in the drape pose dragged the belt tongue after it once the arm moved.
 
-Limits (honest): faces are MakeHuman bone units (no sculpted visemes / wrinkle maps), so expressions are
-subtle at a distance and corrective shapes are missing (a wide AA stretches the lip corners); garments are
+Limits (honest): faces are MakeHuman bone units plus the 9 sculpted mouth targets (no wrinkle maps, no
+per-character correctives), so expressions are subtle at a distance and a wide AA still stretches the
+lip corners; the mouth targets are symmetric (one-sided smiles stay bone units); garments are
 skinned (a long gown walks with its legs; runs and kneels in skirts stretch); falls are procedural, not
 physical; the crowd avoids people, walls and round obstacles but has no navigation mesh (exits are hand-
 given polylines).

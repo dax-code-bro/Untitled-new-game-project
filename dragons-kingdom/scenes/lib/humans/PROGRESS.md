@@ -328,7 +328,39 @@ render in scratchpad eng1/perf/):
   group centre, face it, heads turn to the talker (the talk passes round every 2-4.5 s), the talker
   makes a point with a hand and looks round, smiles; broken up by the alarm. Crowd proof restaged
   with four groups, a cheerer, a waver, two wanderers (raised-arm drapes hang for wanderers).
-- Alexandria L011 camera lowered (el -0.24: from beside the nest looking up into her bowed face).
+- Alexandria L011 camera lowered (el -0.24: from beside the nest looking up into her bowed face), key
+  light moved to the nest's side (the face models), exposure 0.15, L011 articulation amp 0.95 (0.85
+  read mumbled in the draft strip).
+- COARTICULATION (visemes.js): anticipation is now per articulator (ANTICIPATE: rounding 0.42 - it
+  starts ~200 ms early, through the consonants; bilabial closure / press 1.5 and f-v 1.3 - they form
+  in the last ~50 ms). With one factor, "weapon"'s EH was 43 % closed by the coming p (seen in the
+  draft face strip, eng1/perf/clips2/alexA_sheet.png); now 18 %. Selftest: 340/340 closures, 333/333
+  roundings still pass.
+- Worn props also lose LEG weights (a purse at the hip followed the thigh); the purse sticking out
+  sideways on Remi is its build shape (the hero render has it too), not motion.
+- Cradle proof: Remi's support moved from "under her elbow" (the cradled elbow sits against her side,
+  so the hand landed on her belly) to holding her left upper arm from outside.
+- Dialogue proof: Abby's open left hand toward the hatchling on "ALL of it", Remi's one-brow /
+  lip-corner reaction on his dry reply.
+- SCULPTED MOUTH SHAPES (mouthshapes.js + offline/mouthmorphs.py): the 9 CC0 MakeHuman / MPFB2 mouth
+  expression unit TARGETS (assets-lib/human/mpfb_targets_expression) as morphs on the skin, from a
+  sidecar next to the cache (cache/<id>.mouth.json + .bin, ~0.5 MB; the cache stays byte for byte as
+  built). mouthmorphs.py repeats the build's body construction (shape, joints, the character's pose,
+  body_part with the targets as morph_rest, pose_parts) and refuses unless the rebuilt body matches the
+  cache within 0.1 mm (all speaking characters: 0.000 mm); the runtime refuses another character's
+  sidecar or one older than a rebuild (vertex count + position checksum). Seen one by one at unit
+  weight (eng1/perf/pose/mshapes_sheet.png): compression = lips pressed thin, pursing = gathered
+  pucker, protusion = flared trumpet lips (strong), eversion = lips rolled out, retraction = thin
+  stretched closed lips, corner-puller = smile, depression = corners down, elevation = upper lip off
+  the teeth, parling = lips parted over the teeth. Mapping (visemes.js `shapes`): compression
+  0.3 close + 0.55 press, pursing 0.7 round (+ LipsKiss halved), protusion 0.35 min(round, 2 upper)
+  (sh ch r), retraction 0.45 spread, elevation 0.3 upper, parling 0.3 on small jaw openings;
+  emotions (expressions.js EMOTION_SHAPES): amusement corner-puller 0.45, grief depression 0.55,
+  worry depression 0.18, pain elevation + retraction, anger / determined compression, fear
+  retraction (bone corner pulls give 30 % back). L011 trace: "my" compression 0.52, "pretty" 0.67,
+  "weapon" w pursing 0.50 then p 0.66.
+- Alexandria close-up: f/2.2 -> f/3.2 and focus 8 mm nearer (the 4K still had the eyes sharp and the
+  mouth soft: ~28 mm depth of field at 0.95 m with the 65 mm-equivalent lens).
 Findings not fixed (look, not performance): the pulled-back hairlines show a band of scalp between
 the hairline roots (6 cm above the eyes, normal) and where the strands get dense, most visible under
 a low key light (Alexandria L011, Abby) - the hero renders show it too; hair build, not the rig

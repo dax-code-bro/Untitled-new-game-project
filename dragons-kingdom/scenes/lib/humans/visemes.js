@@ -206,7 +206,7 @@ export function lipAt(L, t, opts = {}) {
 
 /**
  * Face-unit weights for articulators p (face.js unit names). opts: { jaw (scale 1), lips (scale 1),
- * out (an object to add into) }. Tuned on the MakeHuman builds: JawOpen = the jaw bone alone
+ * out (an object to add into), shapes (the character has the sculpted mouth shapes: mouthshapes.js) }. Tuned on the MakeHuman builds: JawOpen = the jaw bone alone
  * (20 deg per unit), JawDrop also opens the lips (and pulls the lower-lip centre down).
  */
 export function visemeUnits(p, opts = {}) {
@@ -214,6 +214,8 @@ export function visemeUnits(p, opts = {}) {
   const add = (n, w) => { if (w) o[n] = (o[n] || 0) + w; };
   const js = (opts.jaw ?? 1) * LIP_GAIN, ls = (opts.lips ?? 1) * LIP_GAIN;
   const closeK = Math.min(1, p.close);
+  // with the sculpted mouth shapes (opts.shapes) the bone units carry less of the lip shape
+  const sh = opts.shapes ? 1 : 0;
   // closure forces the jaw nearly shut; the lips meet and press
   const jaw = Math.max(0, p.jaw) * (1 - 0.92 * closeK);
   add('JawOpen', 0.72 * jaw * js);
@@ -221,11 +223,23 @@ export function visemeUnits(p, opts = {}) {
   add('lowerLipUp', (0.22 * closeK + 0.12 * p.press + 0.2 * p.fv) * ls);
   add('lowerLipBackward', 0.42 * p.fv * ls);
   // rounding: LipsKiss is a compact forward pucker; lowerLipForward would part the lips (teeth)
-  add('LipsKiss', 1.1 * p.round * ls);
-  add('UpperLipForward', 0.2 * p.round * ls);
-  add('MouthLeftPullSide', 0.5 * p.spread * ls);
-  add('MouthRightPullSide', 0.5 * p.spread * ls);
-  add('UpperLipUp', 0.6 * p.upper * ls);
+  add('LipsKiss', (1.1 - 0.55 * sh) * p.round * ls);
+  add('UpperLipForward', (0.2 - 0.08 * sh) * p.round * ls);
+  add('MouthLeftPullSide', (0.5 - 0.2 * sh) * p.spread * ls);
+  add('MouthRightPullSide', (0.5 - 0.2 * sh) * p.spread * ls);
+  add('UpperLipUp', (0.6 - 0.2 * sh) * p.upper * ls);
+  if (sh) {
+    // the CC0 MakeHuman mouth targets (mouthshapes.js): lips that really press for p b m, a gathered
+    // pucker for oo / w, flared lips for sh ch r, thin stretched lips for ee / s, the upper lip lifted
+    // off the teeth for f v sh, and the lips parted over the teeth when the jaw is only a little open
+    add('mouth-compression', (0.3 * closeK + 0.55 * p.press) * ls);
+    add('mouth-pursing', 0.7 * p.round * ls);
+    add('mouth-protusion', 0.35 * Math.min(p.round, 2 * p.upper) * ls);
+    add('mouth-retraction', 0.45 * p.spread * ls);
+    add('mouth-elevation', 0.3 * p.upper * ls);
+    const part = Math.min(1, Math.max(0, p.jaw) / 0.2);
+    add('mouth-parling', 0.3 * part * (1 - closeK) * (1 - Math.min(1, p.round)) * ls);
+  }
   add('TongueOut', 0.22 * p.th);
   add('TonguePointUp', 0.5 * p.tip * Math.min(1, 0.3 + jaw * 2));
   add('TongueUp', 0.35 * p.tip);

@@ -79,6 +79,14 @@ export function createFaceRig(ch, units, opts = {}) {
     table[name] = ent;
   }
   const S = [...slots.values()];
+  // sculpted mouth shapes (mouthshapes.js: CC0 MakeHuman expression targets as morphs on the skin,
+  // when the character has the sidecar): driven by name like the units ('mouth-pursing': 0.6)
+  const morphs = [];
+  for (const m of ch.meshes) {
+    const d = m.morphTargetDictionary;
+    if (!d) continue;
+    for (const name in d) if (name.startsWith('mouth-')) morphs.push([m, d[name], name]);
+  }
   function apply(weights) {
     for (const s of S) { s.x = 0; s.y = 0; s.z = 0; }
     for (const name in weights) {
@@ -88,6 +96,7 @@ export function createFaceRig(ch, units, opts = {}) {
       if (!ent) continue;
       for (const [s, rx, ry, rz] of ent) { s.x += w * rx; s.y += w * ry; s.z += w * rz; }
     }
+    for (const [m, i, name] of morphs) m.morphTargetInfluences[i] = Math.max(-0.5, Math.min(1.5, weights[name] || 0));
     if (ch.mouthU) ch.mouthU.value = Math.min(1, Math.max(0, (weights.JawDrop || 0) + (weights.JawOpen || 0) + 0.6 * (weights.JawDropStretched || 0)));
     for (const s of S) {
       const b = ch.bones[s.i];
@@ -98,7 +107,7 @@ export function createFaceRig(ch, units, opts = {}) {
       b.quaternion.copy(ch.drape.q[s.i]).multiply(_q);
     }
   }
-  return { apply, units: Object.keys(table), bones: S.map((s) => ch.bones[s.i].name) };
+  return { apply, units: Object.keys(table).concat(morphs.map((x) => x[2])), bones: S.map((s) => ch.bones[s.i].name), shapes: morphs.map((x) => x[2]) };
 }
 
 /** Mirror a weight set left <-> right (unit names with Left/Right). */

@@ -7,6 +7,7 @@
 //              kneel / fall / cradle stay finite
 //   crowd      the bake is deterministic, finite, people keep >= 0.5 m apart
 //   director   directorFace() poses a face from placed lines
+//   shapes     the sculpted mouth shapes (sidecar) attach as morphs and the lip-sync drives them
 // Exit code 0 = all passed.
 import fs from 'fs';
 import path from 'path';
@@ -50,6 +51,16 @@ ok((E('Amazed.').surprise || 0) > 0.4, '"Amazed" is surprise');
 ok((E('Through the pain, quietly.').pain || 0) > 0.4, '"pain" is pain');
 const eu = emotionUnits({ fear: 1, pain: 1, anger: 1 });
 ok(Object.values(eu).every((w) => Math.abs(w) < 1.25), 'emotion sums stay softly limited');
+// sculpted mouth shapes: only asked for when the character has them
+{
+  const pb = { jaw: 0.02, close: 1, round: 0, spread: 0, fv: 0, th: 0, tip: 0, upper: 0, press: 0.6 };
+  const oo = { jaw: 0.1, close: 0, round: 0.9, spread: 0, fv: 0, th: 0, tip: 0, upper: 0, press: 0 };
+  const plain = visemeUnits(pb), withS = visemeUnits(pb, { shapes: true }), ooS = visemeUnits(oo, { shapes: true });
+  ok(!Object.keys(plain).some((k) => k.startsWith('mouth-')) && withS['mouth-compression'] > 0.5 && ooS['mouth-pursing'] > 0.6 && ooS.LipsKiss < visemeUnits(oo).LipsKiss,
+    `mouth shapes: p presses (compression ${withS['mouth-compression'].toFixed(2)}), oo purses (${ooS['mouth-pursing'].toFixed(2)}) with less bone pucker; none without shapes`);
+  const am = emotionUnits({ amusement: 1 }, { shapes: true }), am0 = emotionUnits({ amusement: 1 });
+  ok(am['mouth-corner-puller'] > 0.3 && am.MouthLeftPullUp < am0.MouthLeftPullUp && !('mouth-corner-puller' in am0), 'amusement smiles with the corner-puller shape when there are shapes');
+}
 
 // ---------------------------------------------------------------- body
 const cache = (id) => path.join(HERE, 'cache', id + '.json');
@@ -183,7 +194,7 @@ else {
       let slip = 0, n = 0, prev = null, fin = true;
       for (let f = 0; f < 24 * 9.5; f++) {
         const t = f / 24;
-        actions.poseHuman(c2, actorState(spec, t, env), t, env, { role: 'REMI', placed: [], shot: 'legs', stateAt: (tt) => actorState(spec, tt, env), seconds: 10 });
+        actions.poseHuman(c2, actorState(spec, t, env), t, env, { role: 'REMI', placed: [], shot: 'legs', plantedFeet: !!hook, stateAt: (tt) => actorState(spec, tt, env), seconds: 10 });
         const cur = { L: P(c2, 'foot.L'), R: P(c2, 'foot.R') };
         for (const sd of ['L', 'R']) {
           if (!Number.isFinite(cur[sd].x + cur[sd].y + cur[sd].z)) fin = false;
@@ -196,6 +207,33 @@ else {
     const builtin = walk(null), planted = walk(directorLegs());
     actions.registerHumanAction('legs', null);
     ok(planted.fin && planted.mm < builtin.mm / 4, `director 'legs' hook plants the feet (ankle travel on the ground ${planted.mm.toFixed(2)} mm/frame vs ${builtin.mm.toFixed(2)} built-in)`);
+  }
+  // sculpted mouth shapes from the sidecar (offline/mouthmorphs.py): attached as morphs, driven by the lip-sync
+  if (!fs.existsSync(path.join(HERE, 'cache', 'alexandria.mouth.json'))) console.log('skip mouth-shape tests: no cache/alexandria.mouth.json (offline/mouthmorphs.py)');
+  else {
+    const { loadMouthShapes, attachMouthShapes } = await import('./mouthshapes.js');
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async (u) => {
+      const f = fileURLToPath(u);
+      if (!fs.existsSync(f)) return { ok: false, status: 404 };
+      const b = fs.readFileSync(f);
+      return { ok: true, json: async () => JSON.parse(b), arrayBuffer: async () => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) };
+    };
+    let ms;
+    try { ms = await loadMouthShapes('alexandria'); } finally { globalThis.fetch = realFetch; }
+    const ch = load('alexandria');
+    const added = attachMouthShapes(ch, ms);
+    const skin = ch.meshes.find((m) => m.morphTargetDictionary && m.morphTargetDictionary['mouth-compression'] !== undefined);
+    ok(added.length === 9 && skin && skin.geometry.morphAttributes.position.length === skin.morphTargetInfluences.length, `alexandria: ${added.length} mouth shapes attached as morphs`);
+    const p = createPerformer(ch, units.data);
+    p.performLine('L011', 0);
+    const rec = units.data.lines.L011;
+    const mPh = rec.ph.find((x) => x[0] === 'M'), wPh = rec.ph.find((x) => x[0] === 'W');
+    const infl = (t, n) => { p.update(t); return skin.morphTargetInfluences[skin.morphTargetDictionary[n]]; };
+    const cM = infl((mPh[1] + mPh[2]) / 200 - 0.04, 'mouth-compression'), pW = infl((wPh[1] + wPh[2]) / 200 - 0.04, 'mouth-pursing');
+    ok(cM > 0.3 && pW > 0.3, `L011 drives the shapes: "my" presses (compression ${cM.toFixed(2)}), "weapon" purses (${pW.toFixed(2)})`);
+    const bad = attachMouthShapes(load('abby'), ms);
+    ok(bad.length === 0, 'a sidecar for another mesh is refused');
   }
   // worn props never follow a hand: no belt / buckle / purse vertex keeps an arm or hand weight
   {
