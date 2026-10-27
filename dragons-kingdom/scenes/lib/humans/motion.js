@@ -29,6 +29,7 @@
 import * as THREE from 'three';
 import { twoBoneIK, rotateWorld, setWorldQuat, wpos, wquat, handShape, orientHand, hash01, noise1, clamp01, smooth, smoother, lerp } from './rig.js';
 import { hashStr } from './loader.js';
+import { isCharTarget, charTargetPoint } from './targets.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion();
@@ -536,18 +537,9 @@ function pointOf(target, t) {
   if (!target) return null;
   if (target.isVector3 || Array.isArray(target)) return v3(target);
   if (typeof target === 'function') { const p = target(t); return p ? v3(p) : null; }
-  if (target.ch) {
-    const b = target.ch.bone(target.bone || 'head');
-    if (!b) return null;
-    b.updateWorldMatrix(true, false);
-    const p = new THREE.Vector3().setFromMatrixPosition(b.matrixWorld);
-    if (target.offset) {
-      // offset in the target character's body frame (x left, y up, z forward)
-      const q = target.ch.root.getWorldQuaternion(new THREE.Quaternion());
-      p.add(new THREE.Vector3(...target.offset).applyQuaternion(q));
-    }
-    return p;
-  }
+  // another character: its bones at THIS t (its performer's pass-1 snapshot - targets.js), offset in
+  // its body frame (x left, y up, z forward)
+  if (isCharTarget(target)) return charTargetPoint(target, t, new THREE.Vector3());
   if (target.object) { target.object.updateWorldMatrix(true, false); return new THREE.Vector3().setFromMatrixPosition(target.object.matrixWorld); }
   return null;
 }
@@ -863,6 +855,8 @@ function applyBody(S, t, o) {
     const dt = t - ge.t0;
     const w = envelopeW(dt, ge.o);
     if (w <= 0) continue;
+    // pass 1 (a snapshot other performers aim at): nothing that aims at another character
+    if (o.pass1 && isCharTarget(ge.o.at)) continue;
     F.dt = dt; F.w = w;
     const res = GESTURES[ge.name](F, ge.o, ge.o.side || 'R');
     for (const sd of ['L', 'R']) if (res[sd] && (!gest[sd] || w >= gest[sd].w)) gest[sd] = { ...res[sd], w, name: ge.name };
@@ -898,7 +892,7 @@ function applyBody(S, t, o) {
   // 7. falls (whole-body topple about the feet)
   if (fall.w > 0) applyFall(S, fall, t, fwd, left);
   // 8. head look / stabilisation
-  if (S.opts.headLook !== false) applyLook(S, t, fwd, left, gw, fall);
+  if (S.opts.headLook !== false) applyLook(S, t, fwd, left, gw, fall, o.pass1);
   ch.root.updateMatrixWorld(true);
   return { phi: phiT, v: vNow, gait: gw, feet, post, fall: fall.w, root: r };
 }
@@ -1010,10 +1004,12 @@ function shrug(ch, sd, o, w, fwd) {
 }
 
 // --------------------------------------------------------------- look / head --
-function applyLook(S, t, fwd, left, gw, fall) {
+function applyLook(S, t, fwd, left, gw, fall, pass1 = false) {
   const { ch } = S;
   let cur = null, prev = null;
   for (const L of S.looks) if (L.t0 <= t) { prev = cur; cur = L; }
+  // pass 1: a look at another character is left out (the snapshot others aim at; no recursion)
+  if (pass1 && (isCharTarget(cur?.target) || (isCharTarget(prev?.target) && t - cur.t0 < cur.blend))) return;
   const head = ch.bone('head');
   if (!head) return;
   head.updateWorldMatrix(true, false);

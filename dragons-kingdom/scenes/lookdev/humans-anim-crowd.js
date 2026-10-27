@@ -10,7 +10,7 @@
 import * as THREE from 'three';
 import { loadHDRI, loadPBR } from '../lib/assets.js';
 import { loadCharacter } from '../lib/humans/index.js';
-import { createPerformer, loadPerformanceData } from '../lib/humans/perform.js';
+import { createPerformer, loadPerformanceData, updateAll } from '../lib/humans/perform.js';
 import { createCrowd } from '../lib/humans/crowd.js';
 import { clingSquare, CLING } from '../lib/architecture/cling.js';
 import { filmFinish } from './finish.js';
@@ -83,7 +83,7 @@ export async function setup(ctx) {
 
 export function update(t, ctx) {
   const { camera } = ctx;
-  for (const p of S.performers) p.update(t);
+  updateAll(S.performers, t);
   // a wide from the king's steps (south, raised), looking north over the square; a slow drift
   const k = t / meta.duration;
   camera.position.set(4.5 - 1.5 * k, 4.6, 25.5);

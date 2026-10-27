@@ -140,6 +140,36 @@ else {
     ok(d < 1e-6, `pose at t is independent of earlier frames (max matrix diff ${d.toExponential(1)})`);
   }
   {
+    // two people: Abby looks at Remi while he walks, Remi's hand supports her cradled arm and he looks
+    // at her. A worker whose chunk starts at T (only the setup pose before) must pose exactly what a
+    // worker that rendered every frame before T poses, in either update order (targets.js snapshots)
+    const mk = (prepose = true) => {
+      const ab = load('abby'), re = load('remi');
+      const A = createPerformer(ab, units.data), R = createPerformer(re, units.data);
+      A.place(0, 0, 0); R.place(0.5, 0.9, Math.PI);
+      A.gesture('cradle', 0, { side: 'L', dur: 99 });
+      A.lookAt({ ch: re }, 0); R.lookAt({ ch: ab }, 0);
+      A.performLine('L014', 1.0); R.performLine('L015', 2.0);
+      R.walkPath([[0.5, 0.9], [0.45, 0.45]], 2.6, { speed: 0.8 });
+      R.gesture('support', 0.2, { side: 'R', at: { ch: ab, bone: 'upperarm02.L', offset: [0.06, -0.01, -0.045] }, in: 0.8, dur: 99, shape: 'clutch' });
+      if (prepose) { A.update(0); R.update(0); }        // the setup pose (never posed: bind pose)
+      return { A, R, ab, re };
+    };
+    const diff = (X, Y) => {
+      let d = 0;
+      for (const k of ['ab', 're']) X[k].bones.forEach((b, i) => { const e1 = b.matrixWorld.elements, e2 = Y[k].bones[i].matrixWorld.elements; for (let j = 0; j < 16; j++) d = Math.max(d, Math.abs(e1[j] - e2[j])); });
+      return d;
+    };
+    let worst = 0;
+    for (const T of [2.9, 3.5, 4.0]) {
+      const S1 = mk(); S1.A.update(T); S1.R.update(T);
+      const S2 = mk(); for (let t = 0; t < T - 1e-6; t += 1 / 24) { S2.A.update(t); S2.R.update(t); } S2.A.update(T); S2.R.update(T);
+      const S3 = mk(false); S3.R.update(T); S3.A.update(T);
+      worst = Math.max(worst, diff(S1, S2), diff(S1, S3));
+    }
+    ok(worst === 0, `two-person look + support: a chunk's first frame == the sequential frame, either update order (max matrix diff ${worst})`);
+  }
+  {
     const ch = load('crowd03');
     const p = createPerformer(ch, units.data); p.place(0, 0, 0);
     p.posture('kneel', 0.5, { hold: 1 }); p.stagger(3, { dir: [1, 0] }); p.fall(4, { dir: [0, 1] });

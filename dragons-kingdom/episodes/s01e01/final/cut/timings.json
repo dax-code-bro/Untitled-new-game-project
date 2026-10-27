@@ -38,13 +38,13 @@
    "measured_at": "2026-10-23T05:42"
   },
   "X1-04": {
-   "draft_s_per_frame": 9.259,
+   "draft_s_per_frame": 18.199,
    "frames_drawn": 96,
    "cinematic": "velocity",
    "twos": false,
-   "load": 11.72,
-   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-23T05:51"
+   "load": 13.81,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
+   "measured_at": "2026-10-27T21:58"
   },
   "1A-01": {
    "draft_s_per_frame": 4.931,
@@ -200,13 +200,13 @@
    "measured_at": "2026-10-23T21:21"
   },
   "P-08": {
-   "draft_s_per_frame": 27.799,
+   "draft_s_per_frame": 14.821,
    "frames_drawn": 216,
    "cinematic": "velocity",
    "twos": false,
-   "load": 20.13,
+   "load": 4.86,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
-   "measured_at": "2026-10-27T06:40"
+   "measured_at": "2026-10-27T22:18"
   },
   "1A-08": {
    "draft_s_per_frame": 8.392,
@@ -679,9 +679,9 @@
  },
  "sets": {
   "ALEXANDRIA_ROOM": {
-   "setup_s": 11.7,
+   "setup_s": 18.6,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
-   "measured_at": "2026-10-27T20:08"
+   "measured_at": "2026-10-27T21:28"
   },
   "BIRTHING_CHAMBER": {
    "setup_s": 119.4,
@@ -699,9 +699,9 @@
    "measured_at": "2026-10-27T04:24"
   },
   "PROLOGUE_VISTAS": {
-   "setup_s": 37.1,
+   "setup_s": 42.7,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
-   "measured_at": "2026-10-27T20:31"
+   "measured_at": "2026-10-27T21:24"
   },
   "VERDOR_GROUNDS": {
    "setup_s": 99,

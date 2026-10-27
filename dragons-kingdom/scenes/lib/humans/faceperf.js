@@ -15,6 +15,7 @@ import { createFaceRig } from './face.js';
 import { prepareLine, lipAt, visemeUnits, envSmooth } from './visemes.js';
 import { emotionUnits, emotionFromDelivery } from './expressions.js';
 import { hashStr } from './loader.js';
+import { isCharTarget, charTargetPoint } from './targets.js';
 import { setWorldQuat, wpos, wquat, hash01, noise1, clamp01, smooth } from './rig.js';
 
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion();
@@ -64,19 +65,9 @@ function targetPoint(tg, t, out) {
   if (tg.isVector3) return out.copy(tg);
   if (Array.isArray(tg)) return out.set(tg[0], tg[1], tg[2]);
   if (typeof tg === 'function') { const p = tg(t); return p ? out.copy(p.isVector3 ? p : _v2.set(p[0], p[1], p[2])) : null; }
-  if (tg.ch) {
-    const b = tg.ch.bone(tg.bone || 'head');
-    if (!b) return null;
-    b.updateWorldMatrix(true, false);
-    out.setFromMatrixPosition(b.matrixWorld);
-    if (!tg.bone || tg.bone === 'head') {
-      // a face: between the eyes (the head bone sits at the skull base)
-      const eL = tg.ch.bone('eye.L'), eR = tg.ch.bone('eye.R');
-      if (eL && eR) { eL.updateWorldMatrix(true, false); eR.updateWorldMatrix(true, false); out.setFromMatrixPosition(eL.matrixWorld).add(_v2.setFromMatrixPosition(eR.matrixWorld)).multiplyScalar(0.5); }
-    }
-    if (tg.offset) out.add(_v2.set(...tg.offset));
-    return out;
-  }
+  // another character: its bones at THIS t (its performer's pass-1 snapshot - targets.js); a face
+  // target is the point between the eyes
+  if (isCharTarget(tg)) return charTargetPoint(tg, t, out, { face: true });
   if (tg.object) { tg.object.updateWorldMatrix(true, false); return out.setFromMatrixPosition(tg.object.matrixWorld); }
   return null;
 }

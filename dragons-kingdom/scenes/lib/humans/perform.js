@@ -16,13 +16,16 @@
 //   // update(t, ctx)
 //   alex.update(t);
 //
-// Characters that touch each other (support, carry) must be updated in order: the one touched
-// first. Lines: data/lipsync-s01e01.json (offline/lipsync_align.py). Line ids are dialogue.json ids
+// Characters that look at / touch each other (lookAt / support / reach { ch }, carry) can be updated
+// in any order: a target on another character reads that character's pose at the SAME t (its pass-1
+// snapshot, targets.js), never whatever pose it was last given - frames are pure in t.
+// Lines: data/lipsync-s01e01.json (offline/lipsync_align.py). Line ids are dialogue.json ids
 // (L011, X12-07, NV-1E-04, ...).
 import * as THREE from 'three';
 import { loadFaceUnits } from './face.js';
 import { createFacePerformer, lineEmotion, LINE_OVERRIDES, SCENE_MOOD } from './faceperf.js';
 import { createBody, carryChild, Trajectory, GESTURES } from './motion.js';
+import { savePose, restorePose, capturePose } from './targets.js';
 
 export { lineEmotion, LINE_OVERRIDES, SCENE_MOOD } from './faceperf.js';
 export { EMOTIONS, emotionUnits, emotionFromDelivery } from './expressions.js';
@@ -120,12 +123,35 @@ export function createPerformer(ch, data, opts = {}) {
       carries.push({ child, t0, t1 });
       // while carried the child is posed by this performer (its own update() then does nothing):
       // the result is the same whichever of the two a scene updates first
-      (child._carriedBy ||= []).push({ t0, t1 });
+      (child._carriedBy ||= []).push({ t0, t1, carrier: P });
       body.gesture('carry', t0, { in: 0.6, dur: t1 - t0 - 0.6, out: 0.6 });
       return P;
     },
     /** Where the root is at t. */
     rootAt(t) { return body.rootAt(t); },
+    /**
+     * The pose others aim at (targets.js): bone world matrices at t from PASS 1 - the body posed for t
+     * without its looks / gestures toward other characters (no recursion, the same whatever was posed
+     * before or which performer is updated first). Cached per t; this character's visible pose is
+     * restored afterwards. -> { t, mw: Float64Array (16 per bone), rq: root world quaternion }
+     */
+    snapshot(t) {
+      const memo = (P._snaps ||= []);
+      for (const s of memo) if (s.t === t) return s;
+      const carrier = carrierAt(P, t);
+      const chs = carrier ? [ch, carrier.P.ch] : [ch];
+      const saved = chs.map((c) => savePose(c));
+      if (carrier) {
+        carrier.P.body.apply(t, { pass1: true });
+        body.apply(t, { carried: true, pass1: true });
+        carryChild(carrier.P.body, body, carrier.w);
+      } else body.apply(t, { pass1: true });
+      const snap = { t, ...capturePose(ch) };
+      chs.forEach((c, i) => restorePose(c, saved[i]));
+      memo.push(snap);
+      if (memo.length > 4) memo.shift();
+      return snap;
+    },
     /** Pose everything for t (pure). o: { face: false, blink: false } */
     update(t, o = {}) {
       const isCarried = P._carriedBy?.some((c) => t > c.t0 && t < c.t1);
@@ -144,7 +170,28 @@ export function createPerformer(ch, data, opts = {}) {
       return { body: b, face: f };
     },
   };
+  ch._performer = P;
   return P;
+}
+
+/** The carrier posing performer P at t (and its blend weight), or null. */
+function carrierAt(P, t) {
+  for (const c of P._carriedBy || []) {
+    if (!(t > c.t0 && t < c.t1)) continue;
+    const w = Math.min(1, Math.max(0, (t - c.t0) / 0.6)) * Math.min(1, Math.max(0, (c.t1 - t) / 0.6));
+    return { P: c.carrier, w };
+  }
+  return null;
+}
+
+/**
+ * Pose every performer for t. Any order gives the same frame (targets on other characters read their
+ * pass-1 snapshot at t - targets.js), this is a convenience for scenes and the crowd.
+ */
+export function updateAll(performers, t, o = {}) {
+  const out = [];
+  for (const p of performers) out.push(p.update(t, o));
+  return out;
 }
 
 const PAIN_FLINCH = { LeftBrowDown: 0.6, RightBrowDown: 0.6, LeftUpperLidClosed: 0.6, RightUpperLidClosed: 0.6, LeftLowerLidUp: 0.6, RightLowerLidUp: 0.6, NoseWrinkler: 0.4, MouthLeftPlatysma: 0.4, MouthRightPlatysma: 0.4, UpperLipUp: 0.3, JawOpen: 0.12 };

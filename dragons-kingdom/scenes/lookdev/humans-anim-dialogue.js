@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import { loadHDRI, loadPBR } from '../lib/assets.js';
 import { loadCharacter } from '../lib/humans/index.js';
-import { loadPerformanceData, createPerformer } from '../lib/humans/perform.js';
+import { loadPerformanceData, createPerformer, updateAll } from '../lib/humans/perform.js';
 import { filmFinish } from './finish.js';
 
 export const LINES = [['L014', 'abby', 0.8], ['L015', 'remi', 1.9], ['L016', 'abby', 3.27]];
@@ -80,8 +80,7 @@ export async function setup(ctx) {
 
 export function update(t, ctx) {
   const { camera } = ctx;
-  S.abby.update(t);
-  S.remi.update(t);
+  updateAll([S.abby, S.remi], t);      // any order poses the same frame (targets at the same t)
   camera.position.copy(S.cam.pos);
   camera.lookAt(S.cam.tgt);
   camera.fov = 19; camera.near = 0.05; camera.far = 60;

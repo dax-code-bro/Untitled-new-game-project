@@ -19,7 +19,8 @@
 //     groups: [[0, 1, 2], [3, 4]],                    // agents that stand together talking (optional)
 //   });
 //   crowd.bake();                                    // setup (also applies the schedule to the performers)
-//   update(t): for (const p of performers) p.update(t)
+//   update(t): updateAll(performers, t)              // perform.js; any order poses the same frame: heads
+//                                                    // turned to a talker read the talker's pose at t
 import * as THREE from 'three';
 import { Trajectory } from './motion.js';
 import { hash01 } from './rig.js';

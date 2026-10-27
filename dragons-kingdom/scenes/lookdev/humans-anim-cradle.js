@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { loadHDRI } from '../lib/assets.js';
 import { loadCharacter } from '../lib/humans/index.js';
 import { groundMaterial } from '../lib/humans/stage.js';
-import { createPerformer, loadPerformanceData } from '../lib/humans/perform.js';
+import { createPerformer, loadPerformanceData, updateAll } from '../lib/humans/perform.js';
 import { filmFinish } from './finish.js';
 
 export const LINES = [['L091', 'abby', 6.3]];
@@ -60,8 +60,7 @@ export async function setup(ctx) {
 
 export function update(t, ctx) {
   const { camera } = ctx;
-  S.abby.update(t);          // Abby first: Remi's hand holds her elbow
-  S.remi.update(t);
+  updateAll([S.abby, S.remi], t);      // any order poses the same frame (Remi's hand reads her arm at t)
   // a slow track back in front of them, eye level with Abby
   const r = S.abby.rootAt(Math.min(t, 7.5));
   camera.position.set(r.x - 0.6, 1.28, r.z + 3.1);
