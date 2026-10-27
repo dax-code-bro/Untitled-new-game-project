@@ -122,8 +122,8 @@ is a guess until your GPU check measures it.
 
 **The quality tier.** A graphics card like the 4090 can afford more work per pixel than the cloud
 computer, so the GPU check also draws its test frame at higher **quality tiers** (`high`, `ultra`,
-and others when they might fit): finer shadows, real motion blur from many sub-frames, reflections on
-water and wet stone. Every tier is still native 4K on every frame. It checks that each tier draws the
+and others when they might fit): finer shadows, real motion blur from many sub-frames, reflections in
+puddles and wet stone. Every tier is still native 4K on every frame. It checks that each tier draws the
 same picture as `final`, works out how long the whole episode would take at each one, and ends with a
 banner `RECOMMENDED QUALITY TIER: ...`: the best tier that keeps Episode 1 under about 3 days.
 **You do not have to do anything with it:** the render (Step 3) uses that tier by itself, but only

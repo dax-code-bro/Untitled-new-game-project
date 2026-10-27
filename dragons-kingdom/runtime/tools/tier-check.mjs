@@ -82,7 +82,11 @@ export async function compareTiers(base, other, { crops = [] } = {}) {
   const ta = P.thumbnail(base.rgba, base.width, base.height, L0.thumbW, L0.thumbH), tb = P.thumbnail(other.rgba, other.width, other.height, L0.thumbW, L0.thumbH);
   const ea = P.extremes(base.rgba), eb = P.extremes(other.rgba);
   const lum = (rgba) => { let s = 0; for (let i = 0; i < rgba.length; i += 4) s += 0.2126 * rgba[i] + 0.7152 * rgba[i + 1] + 0.0722 * rgba[i + 2]; return s / (rgba.length / 4); };
-  const nanBufs = Object.entries(other.buffers || {}).filter(([k, v]) => k !== 'shaderErrors' && v && (v.nan || v.inf)).map(([k, v]) => `${k}: ${v.nan} NaN / ${v.inf} Inf`);
+  // NaN / Inf the tier ADDS (a scene can already have some at final: the Cling set's scene buffer has 138 NaN values at
+  // final - reported to its owner; the tier is judged on what it changes)
+  const was = (k) => base.buffers?.[k] || {};
+  const nanBufs = Object.entries(other.buffers || {}).filter(([k, v]) => k !== 'shaderErrors' && v && ((v.nan || 0) > (was(k).nan || 0) || (v.inf || 0) > (was(k).inf || 0)))
+    .map(([k, v]) => `${k}: ${v.nan} NaN / ${v.inf} Inf${was(k).nan || was(k).inf ? ` (final ${was(k).nan || 0} / ${was(k).inf || 0})` : ''}`);
   const r = {
     thumbSsim: +P.ssim(ta, tb, L0.thumbW, L0.thumbH).toFixed(4), thumbPsnr: +P.psnr(ta, tb).toFixed(2),
     meanLuma: [+lum(base.rgba).toFixed(2), +lum(other.rgba).toFixed(2)],

@@ -57,6 +57,8 @@ Fixed (each verified on the cloud CPU, pictures looked at at 1:1):
   grid samples the density on the scene's own grid and only the light on the finer one, x2 across the
   screen and the same depth slices (finer slices moved how much of a mist bank lies in front of the
   cliffs: mist crop 39.7 dB at x1 x1 x1.5 vs 43.6 dB at x2 x2 x1).
+- ibl stays 'fast' at every tier: the exact PMREM lookups alone dimmed the warm sun path on F1's sea
+  (ibl knob alone: structure 0.992 / 37.6 dB, glitter crop 30 dB - all of the high tier's difference there).
 - density wired, append-only (u0c): grassField `density` (extra tufts after the reviewed ones, same random
   stream), scatterPlants grass + thrift tufts + shrubs (own stream, shifted grid). crowd: contract only.
 - dkSSR marks: architecture puddle, pool, quay stone + joints (tide band), harbour stone, setts.
@@ -66,6 +68,13 @@ Fixed (each verified on the cloud CPU, pictures looked at at 1:1):
   check at the recommended tier only; `--tiers all`; tier-check uses the pinned ffmpeg; RUNTIME_VERSION 1.2.0.
 
 Observed, not changed (final is the reviewed look):
+- The Cling set (scenes/lookdev/architecture-cling.js) has NaN values in the scene buffer AT FINAL (138 at the
+  gate shot t=3.5, across the upper half of the frame; 45 at the fountain, 39 at the Verdor harbour) - not the
+  tiers' doing (same count with SSR on and with no SSR object at all). Architecture track to look at;
+  `dk.debugCinematic()` now reports a `nanBox` per buffer. tier-check now judges only the NaN a tier ADDS.
+- SSR on the Cling fountain basin (pool marked dkSSR): the water reflects the pillar base, the rim and the
+  houses instead of the sky map - structure 0.938 / 25 dB: the largest look change of any tier knob, in the
+  A/B images for the director (keep or drop `pool` from the marks in architecture/materials.js).
 - final's velocity blur barely blurs a thin fast bar / a 30 m/s crate in the fast-motion fixture
   although the velocity buffer has the vectors (debug view): thin objects can slip between the tile
   samples at final (`motionBlur.tileStride` 2; the tiers use 1).

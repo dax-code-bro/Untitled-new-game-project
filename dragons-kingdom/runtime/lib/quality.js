@@ -77,7 +77,8 @@ const HIGH = {
   // x2 across the screen, the scene's own depth slices: finer depth slices move how much of a mist bank
   // lies in front of a surface (lookdev coast mist crop 39.7 dB at x1 x1 x1.5 vs 43.6 dB at x2 x2 x1)
   volumetrics: { scale: [2, 2, 1], softTaps: 32 },
-  ibl: 'exact',
+  // ibl stays 'fast' (as final): three's exact PMREM lookups dimmed the sun glitter on F1's sea (style frame
+  // F1, ibl knob alone: glitter crop 30 dB, the warm path on the water half gone) - a scene's own choice
   anisotropy: 16,
   // no screen-space reflections IN the sea at any tier (as at final): the fixed-step march hatches beside a
   // reflected object (a steel ball over the FFT sea, review 2026-10-27) and the Hi-Z variant
@@ -117,7 +118,6 @@ export const KNOB_DOCS = [
   ['ao', 'GTAO + contact shadows at full resolution instead of half, with more slices / steps / contact-ray steps: no blocky occlusion in creases (scales, cloth folds, masonry joints) at 4K and contact shadows that reach thin objects.', 'GTAO pass ~x4 pixels x ~2.2 taps'],
   ['dofSamples', 'Depth-of-field gather taps at the largest blur: smoother bokeh discs and out-of-focus foregrounds without grain.', 'DOF gather ~x2.7 (only where something is out of focus)'],
   ['volumetrics', 'Froxel fog grid x2 across the screen (12-pixel froxels at 4K instead of 24; the same depth slices; stored as a tiled atlas when it is taller than the GPU texture limit), 32-tap soft shadow lookups where the scene asked for soft shafts: sharper light shafts through trees, colonnades and wings. The mist keeps its shape: its density (noise, banks, height fog) is still sampled at the scene\'s own froxel centres and interpolated, only the light is evaluated per finer froxel (sampling the noise on the finer grid reshaped every mist bank; finer depth slices moved how much of a bank lies in front of the cliffs). (The mip-filtered noise switch stays the scene\'s choice: it turns distant mist wisps into flat haze.)', 'fog inject x4 froxels x 8 density taps'],
-  ['ibl', "Image-based lighting from three's exact PMREM lookups instead of the baked spherical harmonics + equirect (the CPU shortcut): glossy reflections exactly as three.js intends.", 'two env lookups per lit pixel'],
   ['anisotropy', 'Anisotropic texture filtering x16 on every mip-mapped texture: ground, roads, roofs and water stay sharp at grazing angles instead of blurring.', 'texture taps on grazing surfaces'],
   ['ocean', 'FFT ocean computed on the GPU, every sub-frame (the same 256x256 sea as final, so the sub-frame tiers do not run N + 2 CPU FFTs per frame); heightAt() (buoyancy) reads back only the 4 texels around each asked point. Not 512: its finer ripples change the sheen of the whole sea (a scene can ask for createOcean({ resolution: 512 }) itself). No screen-space reflections in the water (as at final: not clean yet).', 'FFT passes (3 x 16 small passes per sub-frame)'],
   ['ssr', 'Screen-space reflections on wet and glossy surfaces (puddles, wet cobbles and stone, polished metal, glazed windows, wet scales): the real scene is reflected instead of only the sky map, traced exactly through a min-depth pyramid (Hi-Z, 96 iterations: no stepping noise), blurred by roughness from a mip-mapped colour copy; fades at the screen edges and where the ray passes behind an object.', 'reflective objects drawn twice + Hi-Z build + trace'],

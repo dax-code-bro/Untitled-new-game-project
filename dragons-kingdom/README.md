@@ -955,7 +955,7 @@ only refines the reviewed picture or visibly changes it:
 | GTAO + contact shadows | half resolution, 3 slices x 6 steps, 10 contact steps | full resolution, 4 x 10 (max 6 x 12), 24 contact steps | no blocky occlusion in creases; contact shadows reach thin objects | refines |
 | DOF gather taps | 48 | 128 (max 192) | smoother bokeh and out-of-focus foregrounds at 4K | refines |
 | volumetric fog froxels | 160 x 90 x 64 (24-px froxels at 4K) | 320 x 180 x 64 (12-px froxels), 32-tap soft shadow lookups where the scene asked for soft shafts | sharper light shafts through trees, colonnades, wings. The mist keeps its shape: its density (noise, banks, height fog) is still sampled at the scene's own froxel centres and interpolated; only the light is evaluated per finer froxel. Sampling the noise on the finer grid reshaped every mist bank, finer depth slices moved how much of a bank lies in front of a cliff (both measured on the lookdev coast), so neither is done | sharper shafts |
-| image-based light | baked SH + equirect (the CPU shortcut) | three's exact PMREM lookups | glossy reflections exactly as three.js intends | refines |
+| image-based light | baked SH + equirect (the CPU shortcut) | the same | three's exact PMREM lookups (`cinematic.ibl: 'exact'`) stay a scene's choice: on F1 they dimmed the warm sun path on the sea (glitter crop 30 dB) | same |
 | anisotropic filtering | what the scene set | x16 on every mip-mapped texture | ground, roads, roofs stay sharp at grazing angles | refines |
 | FFT ocean | 256 x 256 per cascade on the CPU | the same 256 sea, its FFTs on the GPU every sub-frame | the same waves (heights within 0.2 mm of the CPU FFT); no N + 2 CPU FFTs per frame at the sub-frame tiers. Not 512: its finer ripples changed the sheen of the whole sea (structure SSIM 0.825 on the coast); a scene can still ask for `createOcean({ resolution: 512 })` | same |
 | reflections IN the sea | off | off | the fixed-step march hatches beside a reflected object, the experimental Hi-Z variant (`cinematic.ssr.sea: true`) returned sea-bed colours: not used (`runtime/PROGRESS.md`) | - |
@@ -995,6 +995,12 @@ pixel by why its ray ended. Screen-space limits apply: only what is on screen ca
   the look in the first round (the 512 ocean: SSIM 0.825, sea crop 18 dB; the froxels: mist crop 35 dB)
   were fixed as described in the table.
 - sea style frames: F1_F3_NUMBERS
+- wet surfaces (`--knobs ssr`, architecture lookdev at 480x272): the Cling fountain's basin now reflects
+  the pillar base, the rim and the houses instead of the sky map (structure 0.938, 25 dB: the largest
+  change any knob makes, shown to the director); the Cling gate and the Verdor quay barely change
+  (0.999 / 48 dB and 1.0 / 75 dB: dry setts and a shaded tide band are too rough to reflect).
+- NaN: tier-check judges the NaN/Inf a tier adds. The Cling set already has a few NaN values in its
+  scene buffer at final (138 at the gate shot; the architecture library's to look at).
 - fast motion (`(u4)`, `test/fixtures/fast-motion.js`: a 4 cm bar swinging at 24 rad/s, a crate sliding
   at 30 m/s): banding along the sweep 1.72 -> 0.88 with the per-sub-frame blur (plain averaging leaves a
   ladder of copies), same coverage; the crate's contact shadow moves with it (per-sub-frame GTAO).
