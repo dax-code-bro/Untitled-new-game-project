@@ -15,7 +15,7 @@ import { walkProfile, actorState, makePath, envelope } from '../blocking.js';
 import { indexTakes, placeLines, takeParts, mouthAt, speakerAt } from '../dialogue.js';
 import { SETS, continuityFor, sunDir } from '../registry.js';
 import { estimateShot } from '../cost.js';
-import { faceReadability } from '../audit.js';
+import { faceReadability, cutCheck } from '../audit.js';
 import { wingOutline, paintWingCloud } from '../sets/wing-cloud.js';
 import { periodicNoise, periodicCells, paintCloudDeck, paintCloudDetail } from '../sets/cloud-deck.js';
 import { meadowPattern } from '../sets/meadow.js';
@@ -292,5 +292,21 @@ t('hand props: an object between the posed palms, levelled, offset in the hands\
   assert.deepEqual(heldList({ holds: 'a' }), [{ object: 'a' }]);
   assert.equal(heldList({ holds: [{ object: 'a' }, 'b'] }).length, 2);
   assert.deepEqual(heldList({}), []);
+});
+t('edit check (cutCheck): a jump cut, a size change that saves it, a crossed eye-line, a reverse along the line', () => {
+  // two people 2 m apart on the x axis, B looking at A; frames hold both
+  const act = (name, x, sizePx, sx, lookAt = null) => ({ name, inFrame: true, head: [x, 1.6, 0], sizePx, x: sx, x3: x, z3: 0, lookAt });
+  const shot = (pos, sa, sb, xa = -0.3, xb = 0.3) => ({ cam: { pos }, actors: [act('a', 0, sa, xa), act('b', 2, sb, xb, 'a')] });
+  // the same side, 10 deg apart, 1.2x: a jump cut on the larger subject
+  const j = cutCheck(shot([1, 1.6, 4], 60, 50), shot([1.7, 1.6, 4], 72, 60));
+  assert.ok(j.flags.some((f) => f.startsWith('JUMP CUT')), j.flags.join('; '));
+  // the same cameras but the incoming frame 2x larger: no jump
+  assert.ok(!cutCheck(shot([1, 1.6, 4], 60, 50), shot([1.7, 1.6, 4], 120, 100)).flags.length);
+  // cameras on both sides of the line a-b (z +4 and z -4), 90 deg apart: the eye-line is crossed
+  const c = cutCheck(shot([1, 1.6, 4], 60, 50), shot([1, 1.6, -4], 30, 25, 0.3, -0.3));
+  assert.ok(c.flags.some((f) => f.includes('eye-line b - a') || f.includes('eye-line a - b')), c.flags.join('; '));
+  assert.ok(cutCheck(shot([1, 1.6, 4], 60, 50), shot([1, 1.6, -4], 30, 25, 0.3, -0.3), 'reverse angle, declared').flags.every((f) => f.endsWith('staging')));
+  // a camera on the line itself (behind b, looking at a) flips nothing
+  assert.ok(!cutCheck(shot([1, 1.6, 4], 60, 50), shot([5, 1.6, 0.2], 30, 90, 0.0, 0.1)).flags.some((f) => f.includes('eye-line')));
 });
 console.log(`\n${n} checks passed`);

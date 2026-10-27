@@ -29,9 +29,10 @@ export default {
     },
     'X1-03': {
       staging: 'BACK: from behind her left shoulder (three-quarter back); she turns toward the door (left background), her face away from the camera throughout.',
-      // focus pulled to the door she turns toward: her head soft in the foreground (sharp, the back of the
-      // humans library's bun read as a flat painted disc with a dashed band at this size - draft review)
-      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.32, 0.22]], ['door', [-0.45, 0.02]]], from: 242, height: 1.6, dist: 1.9, at: 0.4 }, mm: 50, fstop: 2.0, focus: [[0, 'alexandria.head'], [0.5, 'alexandria.head'], [1.4, 'door']], bounds: BOUNDS },
+      // focus on the door she turns toward from the first frame: her head soft in the foreground (sharp, the
+      // back of the humans library's bun read as a flat painted disc with a dashed band at this size; session 7:
+      // the pull from her head still showed it sharp for the first second)
+      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.32, 0.22]], ['door', [-0.45, 0.02]]], from: 242, height: 1.6, dist: 1.9, at: 0.4 }, mm: 50, fstop: 2.0, focus: 'door', bounds: BOUNDS },
       // the head leads toward the door from the first frame (her face never turns to the camera); the body follows
       cast: { alexandria: { at: WIN, face: 90, look: 'door', lookAmount: 0.9, acts: [[0.2, 'turn', { to: 'door', dur: 0.75 }]] } },
     },

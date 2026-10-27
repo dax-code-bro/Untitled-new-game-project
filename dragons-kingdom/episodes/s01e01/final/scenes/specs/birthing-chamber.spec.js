@@ -298,7 +298,9 @@ export default {
       staging: 'BACK + WIDE: from behind Alexandria (soft) across the nest to the children, small.',
       // session 6: an explicit camera behind her right shoulder, focus on the children (her bun, sharp in the
       // foreground, read as a painted disc; the 50 mm solve cut Remi's head off)
-      cam: { rig: 'static', pos: [3.2, 1.5, -0.95], look: [-0.2, 1.1, 1.55], mm: 28, fstop: 2, focus: 'abby.head' },
+      // session 7: 24 mm (was 28): previs --cuts found a jump cut into 1A-31 (its first frame holds the children
+      // from 18 deg away at 1.47x the size); wider, they are 1.7x smaller here, as the staging says (small)
+      cam: { rig: 'static', pos: [3.2, 1.5, -0.95], look: [-0.2, 1.1, 1.55], mm: 24, fstop: 2, focus: 'abby.head' },
       cast: {
         alexandria: seated,
         abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 }, acts: [[2.7, 'rise', { dur: 1.2 }]] },
@@ -371,8 +373,11 @@ export default {
       lines: [['X2-01', 0.5], ['X2-02', 0.45]],
     },
     'X2-03': {
-      staging: 'OTS + DOF: over Alexandria\'s shoulder (sharp); Remi soft and backlit in the doorway answers and goes.',
-      cam: { rig: 'static', pos: [2.4, 1.2, 0.75], look: [1.0, 1.24, 0.0], mm: 50, fstop: 2, focus: 'alexandria.head' },
+      staging: 'MEDIUM: Remi alone in the doorway (centre), three-quarter to the lens, lit low by the room lamps against the passage; he answers (lip-sync) and goes; his eyeline frame right to Alexandria off screen.',
+      // session 7: the OTS over her shoulder was the X2-02 picture again, closer on the same axis (a jump cut in
+      // the assembled cut, her humans-library bun sharp at 1.5 m); now the shot list's own framing - Remi
+      // centred in the doorway, 40 mm from over the nest, south of the line Alexandria - door
+      cam: { rig: 'static', pos: [-1.0, 1.5, 0.5], look: [-3.2, 1.42, -1.9], mm: 40, fstop: 2.8, focus: 'remi.head' },
       cast: {
         alexandria: { ...seated, posture: { sit: 1, lean: 0.4 } }, hatchling: hatchRest(),
         remi: { at: [-3.2, -1.9], face: 'alexandria', look: 'alexandria.head', lookAmount: 0.5, legs: 'planted', acts: [[2.1, 'turn', { to: 270, dur: 0.6 }], [2.6, 'walk', { to: [-4.8, -1.9], speed: 1.1 }]] },

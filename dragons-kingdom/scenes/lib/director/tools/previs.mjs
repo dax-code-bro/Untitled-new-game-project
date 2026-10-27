@@ -10,6 +10,13 @@
 //   node scenes/lib/director/tools/previs.mjs --set BIRTHING_CHAMBER --only 1A-27,1A-28 [--at 0.15,0.6,0.95] [--out DIR]
 //        [--cam '{"pos":[x,y,z],"look":[x,y,z],"mm":28,"fstop":1.4}']   try a camera over the shot's own (authoring loop)
 //        [--cast '{"alexandria":{"lookAmount":1}}']                       ... and cast changes (merged per actor)
+//   node scenes/lib/director/tools/previs.mjs --set BIRTHING_CHAMBER --cuts [--only X2-03]
+//        EDIT CHECK of the cuts between consecutive shots of this set in the edit list (the last frame of
+//        the outgoing shot against the first of the incoming one): a JUMP CUT (a subject both shots hold,
+//        seen from less than 25 deg apart at less than 1.6x the size - the 30-degree rule; X2-02 -> X2-03
+//        was one, found only in the assembled cut) and the SCREEN ORDER of two subjects flipping (the
+//        line crossed; fine when the incoming shot's staging says 'reverse' / 'declared'). --only names
+//        incoming shots; --cam / --cast apply to the incoming shot, or to the one --cam-shot names.
 //
 // Approximations (the reason a picture still has the last word): heads from the blocking state with a
 // standard body (standing head 1.62 m, seated 1.22, crouched 0.95, kneeling 1.12; per-actor `height`
@@ -26,7 +33,7 @@ import { actorState, actorVisible } from '../blocking.js';
 import { keyed, isKeyList } from '../timeline.js';
 import { solveFraming } from '../framing.js';
 import { speakerAt } from '../dialogue.js';
-import { faceReadability } from '../audit.js';
+import { faceReadability, cutCheck } from '../audit.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');
@@ -189,6 +196,7 @@ function analyse(s1, row, t, env) {
       sizePx: (0.24 / (dist * 2 * tanV)) * 540, speaking: speaker && role === speaker,
       angle: m ? Math.round(m.angle) : null, facePct: m ? +(m.faceFrac * 100).toFixed(1) : null, blurPct: m ? +(m.blurFrac * 100).toFixed(2) : null,
       reads: m && speaker && role === speaker && ndc.z <= 1 && Math.abs(ndc.x) <= 1 && Math.abs(ndc.y) <= 1 ? !!m.readable : false, yaw: st.yaw, x3: st.x, z3: st.z,
+      lookAt: typeof st.look?.at === 'string' ? st.look.at.split('.')[0] : null,
     });
   }
   // a head covered by a nearer actor's head or body (a disc 0.22 m wide at its own distance)
@@ -256,6 +264,31 @@ function sheet(row, s1, res, file, bounds) {
 
 // --------------------------------------------------------------------- run ---
 if (OUT) fs.mkdirSync(OUT, { recursive: true });
+if (argv.includes('--cuts')) {
+  const edl = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/s01e01/final/cut/edl.json'), 'utf8'));
+  const rows = new Map(table.shots.map((r) => [r.job, r]));
+  let n = 0, bad = 0;
+  for (let k = 1; k < edl.shots.length; k++) {
+    const A = edl.shots[k - 1], B = edl.shots[k];
+    if (A.set !== SET || B.set !== SET || !rows.has(A.job) || !rows.has(B.job)) continue;
+    if (ONLY && !ONLY.has(B.job)) continue;
+    const sa = merge(spec.defaults, spec.shots?.[A.job] || {}), sb = merge(spec.defaults, spec.shots?.[B.job] || {});
+    // --cam / --cast try a change on the incoming shot, or on the shot --cam-shot names (either side of a cut)
+    const tgt = opt('--cam-shot') === A.job ? sa : opt('--cam-shot') && opt('--cam-shot') !== B.job ? null : sb;
+    if (CAM && tgt) tgt.cam = CAM.frame || CAM.follow ? { ...CAM } : { ...tgt.cam, frame: undefined, follow: undefined, ...CAM };
+    if (CAST && tgt) for (const [c, v] of Object.entries(CAST)) tgt.cast[c] = { ...(tgt.cast?.[c] || {}), ...v };
+    let ra, rb;
+    try { ra = analyse(sa, rows.get(A.job), rows.get(A.job).frames / 24 - 1 / 24, shotEnv(sa)); rb = analyse(sb, rows.get(B.job), 0, shotEnv(sb)); }
+    catch (e) { console.log(`${A.job} -> ${B.job}: not checked (${e.message})`); continue; }
+    const plain = (r) => r.skip ? r : { cam: { pos: r.cam.pos.toArray() }, actors: r.actors.map((x) => ({ ...x, head: x.head.toArray() })) };
+    const c = cutCheck(plain(ra), plain(rb), sb.staging || '');
+    n++; if (c.flags.some((f) => !f.endsWith('staging'))) bad++;
+    const held = c.rows.map((r) => `${r.name} ${r.angle} deg ${r.ratio}x`).join(', ');
+    console.log(`${A.job} -> ${B.job}  ${c.skip ? `not checked (${c.skip})` : held || 'no subject in both frames'}${c.flags.length ? `\n    ${c.flags.join('\n    ')}` : ''}`);
+  }
+  console.log(`\n${n} cut(s) checked, ${bad} flagged`);
+  process.exit(0);
+}
 let flags = 0;
 const flagged = [];
 for (const row of table.shots) {
