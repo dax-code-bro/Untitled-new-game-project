@@ -1,6 +1,6 @@
 {
  "title": "Dragon's Kingdom S01E01 - draft cut: PROLOGUE + TITLE + 1A",
- "made_at": "2026-10-27T21:16",
+ "made_at": "2026-10-27T23:19",
  "shots_dir": "../../../../tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/work/shots",
  "size": "960x540",
  "fps": 24,
@@ -143,7 +143,7 @@
    "job": "P-08",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "rendered 2026-10-27T06:40",
+   "source": "rendered 2026-10-27T22:18",
    "frames": 192,
    "rec_in": 912,
    "trans": [
@@ -475,7 +475,7 @@
    "job": "X1-04",
    "scene": "1A",
    "kind": "3d",
-   "source": "rendered 2026-10-23T05:51",
+   "source": "rendered 2026-10-27T21:58",
    "frames": 96,
    "rec_in": 3144,
    "trans": [
@@ -488,7 +488,11 @@
    "held_frames": [
     0,
     0
-   ]
+   ],
+   "notes": [
+    "speaking face reads: YOUNG ATTENDANT 27 deg from the lens, 27.3% of frame height, blur 0.39% (lip-sync carries it now: check the mouth, or soften / turn / shrink / backlight it)"
+   ],
+   "accepted": "the young attendant is small, dark in the doorway and slightly soft past Alexandria's blurred shoulder; lip-sync is live (session 8 1:1 crop)"
   },
   {
    "job": "X1-05",
@@ -833,7 +837,8 @@
    ],
    "notes": [
     "speaking face reads: ABBY 9 deg from the lens, 20.7% of frame height, blur 0.06% (soften, turn, shrink or backlight it until lip-sync exists)"
-   ]
+   ],
+   "accepted": "the audit does not know light: both children are black silhouettes against the bright doorway (session 8 rows)"
   },
   {
    "job": "1A-19",
@@ -912,7 +917,8 @@
    ],
    "notes": [
     "framing: 50 mm cannot hold the framing here; a 40 mm lens does (worst subject 0.11 screen units off)"
-   ]
+   ],
+   "accepted": "framed as wanted at 50 mm (hatchling sharp in front, her face far out of focus); 0.11 off is inside the look"
   },
   {
    "job": "1A-23",
@@ -973,7 +979,8 @@
    "notes": [
     "framing: 65 mm cannot hold the framing here; a 35 mm lens does (worst subject 0.21 screen units off)",
     "framing: a subject lands 0.21 screen units from its place (lens too long for the room, or the subjects too far apart)"
-   ]
+   ],
+   "accepted": "the picture holds: her shoulder and bowed head left, the nest and hatchling right, face out of frame"
   },
   {
    "job": "1A-26",
@@ -1033,7 +1040,8 @@
    ],
    "notes": [
     "speaking face reads: ALEXANDRIA 16 deg from the lens, 8.7% of frame height, blur 0.05% (soften, turn, shrink or backlight it until lip-sync exists)"
-   ]
+   ],
+   "accepted": "Alexandria is small (9 % of the height), dark and far beyond the nest in the high wide; lip-sync is live"
   },
   {
    "job": "1A-29",
@@ -1417,7 +1425,8 @@
    "notes": [
     "framing: 40 mm cannot hold the framing here; a 21 mm lens does (worst subject 0.17 screen units off; background blur ~28 % of the 40 mm look)",
     "framing: a subject lands 0.17 screen units from its place (lens too long for the room, or the subjects too far apart)"
-   ]
+   ],
+   "accepted": "the sleeping hatchling sharp in front, the two women soft beyond: the picture the shot wants"
   },
   {
    "job": "X2-16",
@@ -1458,7 +1467,8 @@
    ],
    "notes": [
     "framing: 50 mm cannot hold the framing here; a 32 mm lens does (worst subject 0.07 screen units off; background blur ~41 % of the 50 mm look)"
-   ]
+   ],
+   "accepted": "from behind-left of Alexandria, the hatchling in frame: holds at 50 mm"
   },
   {
    "job": "1A-34",
@@ -1987,13 +1997,14 @@
   "frames": 8580,
   "duration_s": 357.5,
   "size_mb": 49.4,
-  "assembled_s": 139
+  "assembled_s": 90
  },
  "summary": {
   "rendered": 75,
   "black": 1,
   "slates": 0,
   "voice_cues": 50,
-  "review_flags": 6
+  "review_flags": 0,
+  "review_flags_accepted": 7
  }
 }

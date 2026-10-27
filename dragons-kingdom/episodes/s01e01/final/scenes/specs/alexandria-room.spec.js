@@ -15,6 +15,10 @@ export default {
     alexandria: { kind: 'human', id: 'alexandria', role: 'ALEXANDRIA', armSwing: 0.15 },
     youngAttendant: { kind: 'human', id: 'crowd15', role: 'YOUNG ATTENDANT', armSwing: 0.5 },
   },
+  // review flags of the renders looked at in the pictures and kept (make-cut lists them as accepted)
+  reviewOk: {
+    'X1-04': 'the young attendant is small, dark in the doorway and slightly soft past Alexandria\'s blurred shoulder; lip-sync is live (session 8 1:1 crop)',
+  },
   homes: { alexandria: [WIN[0], 1.55, WIN[1]], youngAttendant: [DOORWAY[0], 1.45, DOORWAY[1]] },
   shots: {
     'R1-01': {

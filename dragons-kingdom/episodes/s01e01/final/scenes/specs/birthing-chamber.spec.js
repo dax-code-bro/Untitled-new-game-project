@@ -55,6 +55,16 @@ export default {
   cutsOk: {
     '1A-29': 'the high wide 1A-28 hides the crossing: Abby stays left of Remi, the hatchling in front of them (session 7 renders)',
   },
+  // review flags of the renders (framing / speaking-face audits) looked at in the pictures and kept, per
+  // shot (kept out of the shot specs: make-cut lists them as accepted, not as open flags)
+  reviewOk: {
+    '1A-18': 'the audit does not know light: both children are black silhouettes against the bright doorway (session 8 rows)',
+    '1A-22': 'framed as wanted at 50 mm (hatchling sharp in front, her face far out of focus); 0.11 off is inside the look',
+    '1A-25': 'the picture holds: her shoulder and bowed head left, the nest and hatchling right, face out of frame',
+    '1A-28': 'Alexandria is small (9 % of the height), dark and far beyond the nest in the high wide; lip-sync is live',
+    'X2-15': 'the sleeping hatchling sharp in front, the two women soft beyond: the picture the shot wants',
+    'X2-17': 'from behind-left of Alexandria, the hatchling in frame: holds at 50 mm',
+  },
   // where each actor usually is (eye-lines and facings toward someone who is not in the shot)
   homes: { hatchling: [HR[0], 0.46, HR[1]], alexandria: [ALEX_SEAT[0], 1.2, ALEX_SEAT[1]], attendant: [ATT[0], 1.4, ATT[1]], abby: [ABBY_C[0], 1.0, ABBY_C[1]], remi: [REMI_S[0], 1.7, REMI_S[1]] },
   defaults: {

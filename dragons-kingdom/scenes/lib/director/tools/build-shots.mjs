@@ -125,6 +125,8 @@ function buildCut(cut) {
       dialogue: (row?.dialogue || []).map((p) => ({ ...p, rec_s: +(rec / FPS + p.at_s).toFixed(3) })),
       captions: (row?.captions || []).map((c) => ({ ...c, rec_from_s: +(rec / FPS + c.from_s).toFixed(3), rec_to_s: +(rec / FPS + c.to_s).toFixed(3) })),
       cost: row ? estimateShot(s.set, frames, merge(specs[s.set].spec.defaults, specs[s.set].spec.shots[s.id]), { measured: measured[s.id], gpuRatio }) : null, staging: row?.staging || null, deviation: row?.deviation || null, action: s.action,
+      // spec.reviewOk['<shot>']: the render's review flags were looked at in the pictures and the shot kept (why)
+      ...(row && specs[s.set].spec.reviewOk?.[s.id] ? { review_ok: specs[s.set].spec.reviewOk[s.id] } : {}),
     });
     rec += frames;
   }

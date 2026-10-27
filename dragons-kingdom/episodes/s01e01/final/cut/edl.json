@@ -489,11 +489,11 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 27.8,
-    "k4_cpu_s_per_frame": 240.92,
+    "draft_s_per_frame": 14.82,
+    "k4_cpu_s_per_frame": 128.45,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 88.96,
-    "k4_cpu_hours": 12.85,
+    "draft_minutes": 47.43,
+    "k4_cpu_hours": 6.85,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -503,7 +503,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "MEASURED draft 27.8 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
+    "basis": "MEASURED draft 14.82 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: a fishing settlement above its shore under a pale dawn sky, from the water; slow drift.",
    "deviation": null,
@@ -1842,11 +1842,11 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 9.26,
-    "k4_cpu_s_per_frame": 115.74,
+    "draft_s_per_frame": 18.2,
+    "k4_cpu_s_per_frame": 227.49,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 14.81,
-    "k4_cpu_hours": 3.09,
+    "draft_minutes": 29.12,
+    "k4_cpu_hours": 6.07,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -1856,11 +1856,12 @@
      "move": 1,
      "total": 1.31
     },
-    "basis": "MEASURED draft 9.26 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-2 people, sea through the window)"
+    "basis": "MEASURED draft 18.2 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-2 people, sea through the window)"
    },
    "staging": "OTS + DOF: over Alexandria's right shoulder (her head very soft in the foreground, face out of frame); the young attendant small and backlit in the doorway, nearly sharp; Alexandria goes to the door.",
    "deviation": null,
    "action": "The message at the door.",
+   "review_ok": "the young attendant is small, dark in the doorway and slightly soft past Alexandria's blurred shoulder; lip-sync is live (session 8 1:1 crop)",
    "need": {
     "pre": 0,
     "post": 0
@@ -2949,6 +2950,7 @@
    "staging": "SIL + WIDE: from the nest toward the door; Abby and Remi two backlit shapes in the bright doorway (reverse angle, declared).",
    "deviation": null,
    "action": "At the doorway Abby leans in; Remi stands just behind her. The stillness is interrupted, not made comic.",
+   "review_ok": "the audit does not know light: both children are black silhouettes against the bright doorway (session 8 rows)",
    "need": {
     "pre": 0,
     "post": 0
@@ -3272,6 +3274,7 @@
    "staging": "DOF + HANDS: her face far out of focus behind the sharp hatchling; the almost-touch is her hand.",
    "deviation": null,
    "action": "Abby crouches to its level. Its head shifts toward her voice. She almost reaches out, then looks to Alexandria.",
+   "review_ok": "framed as wanted at 50 mm (hatchling sharp in front, her face far out of focus); 0.11 off is inside the look",
    "need": {
     "pre": 0,
     "post": 0
@@ -3546,6 +3549,7 @@
    "staging": "OTS: her fear is her stillness and the held breath; the face stays out of frame.",
    "deviation": null,
    "action": "The hatchling goes still. For one unsettling instant Abby is afraid it has stopped breathing.",
+   "review_ok": "the picture holds: her shoulder and bowed head left, the nest and hatchling right, face out of frame",
    "need": {
     "pre": 0,
     "post": 0
@@ -3846,6 +3850,7 @@
    "staging": "WIDE: high three-shot from the south-west corner; the children's backs, Alexandria small and far beyond the nest.",
    "deviation": null,
    "action": "Remi asks about a name. Abby does not move her eyes from the hatchling.",
+   "review_ok": "Alexandria is small (9 % of the height), dark and far beyond the nest in the high wide; lip-sync is live",
    "need": {
     "pre": 0,
     "post": 0
@@ -5448,6 +5453,7 @@
    "staging": "DOF: low and close on the sleeping hatchling (sharp); the two women far behind it, out of focus, mouths unreadable.",
    "deviation": null,
    "action": "She sends the attendant to sleep.",
+   "review_ok": "the sleeping hatchling sharp in front, the two women soft beyond: the picture the shot wants",
    "need": {
     "pre": 0,
     "post": 0
@@ -5540,6 +5546,7 @@
    "staging": "BACK + DOF: from behind-left of Alexandria; she watches it breathe.",
    "deviation": null,
    "action": "Alexandria does not speak to the hatchling. She watches it breathe.",
+   "review_ok": "from behind-left of Alexandria, the hatchling in frame: holds at 50 mm",
    "need": {
     "pre": 0,
     "post": 0
