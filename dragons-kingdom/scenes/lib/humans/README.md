@@ -305,6 +305,16 @@ the stage passes `info.stateAt = (tt) => actorState(spec, tt, env)`, `info.secon
 strike, roll, toe-off, swing clearance, walk/run blend; the pelvis dips where a leg would over-reach;
 kneel / sit ramps place the feet like the director's own stances).
 
+Crowds in director shots (3C): the director's blocking poses one actor at a time; a crowd is better
+driven whole by `crowd.js`. In the shot's setup: load the extras (`loadCharacter`), make a performer
+for each (`createPerformer(ch, await loadPerformanceData())`), `createCrowd({ agents, exits, obstacles,
+walls, alarm, groups, stumble, falls })` with `carry: j` on a parent agent, `.bake()`; then in update(t)
+call `p.update(t)` for every extra instead of posing them through the blocking (carried children are
+posed by their carrier whatever the order). `scenes/lookdev/humans-anim-crowd.js` is the worked example
+(exits / walls / obstacles from `architecture/cling.js` CLING). Memory: the Cling square alone holds
+~2.3 GB of JS heap in the page (measured with 22 extras: 0.32 GB for the people), so on this shared
+cloud machine the crowd scene only runs when ~5 GB are free.
+
 Self-test: `node scenes/lib/humans/selftest-perf.mjs` (lip closures on all 340 p/b/m, rounding,
 delivery-rule traps, planted feet walking and running, order independence, falls, crowd determinism and
 spacing, the director face hook, split-take windows, registration + lip-sync through the director's own
