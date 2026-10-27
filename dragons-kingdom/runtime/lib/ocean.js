@@ -510,7 +510,10 @@ vec4 dkSeaSSR( vec3 viewPos, vec3 rv, float rough ) {
   // hit the sea bed and paint it into the reflection - those keep the mirrored sky (dkSeaIBLEnv)
   float up = inverseTransformDirection( rv, viewMatrix ).y;
   if ( up < 0.005 ) return vec4( 0.0 );
-  vec4 h = dkSsrTrace( viewPos, rv, rough );
+  // sharp lookups (roughness 0): the colour copy holds the sea bed where the water will be, and a blurred
+  // (mip) lookup around a reflected object would mix the sand in; the waves' own normals (and the sub-frames'
+  // jitter) make the reflection glossy instead
+  vec4 h = dkSsrTrace( viewPos, rv, 0.0 );
   if ( dkSsrDebug > 0.5 ) {
     // cinematic.debug = 'ssr': why each sea ray ended (colours as ssr.js)
     vec3 dkC[8] = vec3[8]( vec3( 0.15 ), vec3( 0.3 ), vec3( 1.0, 0.0, 0.0 ), vec3( 1.0, 1.0, 0.0 ), vec3( 1.0, 0.0, 1.0 ), vec3( 0.0, 0.2, 1.0 ), vec3( 0.0, 1.0, 1.0 ), vec3( 0.0, 1.0, 0.0 ) );

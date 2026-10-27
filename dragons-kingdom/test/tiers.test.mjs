@@ -189,4 +189,45 @@ test('(u4) fast motion at a sub-frame tier: one continuous streak (hybrid blur),
   assert.ok(Math.abs(b.mean - a.mean) < 2.5, `hybrid changes the coverage of the sweep: mean ${b.mean.toFixed(1)} vs ${a.mean.toFixed(1)}`);
   for (const [k, v] of Object.entries(hybrid.buffers || {})) if (k !== 'shaderErrors' && v) assert.ok(!v.nan && !v.inf, `${k}: ${v.nan} NaN / ${v.inf} Inf`);
   assert.equal(hybrid.buffers.shaderErrors, 0);
+  // the crate sliding at 30 m/s just over the ground: with GTAO + contact shadows from the frame-time pose only,
+  // a sharp dark slab stays under the middle of the smeared crate; per sub-frame, the darkening smears with it
+  const noAO = await shot({ subframeAO: false });
+  const hfH = (rgba) => {   // rms of luma - its 7-px horizontal mean, in the ground strip under the crate
+    const L = (x, y) => { const i = 4 * (y * 320 + x); return 0.2126 * rgba[i] + 0.7152 * rgba[i + 1] + 0.0722 * rgba[i + 2]; };
+    let e = 0, n = 0;
+    for (let y = 129; y < 136; y++) for (let x = 113; x < 167; x++) { let s = 0; for (let k = -3; k <= 3; k++) s += L(x + k, y); const d = L(x, y) - s / 7; e += d * d; n++; }
+    return Math.sqrt(e / n);
+  };
+  const c0 = hfH(noAO.rgba), c1 = hfH(hybrid.rgba);
+  t.diagnostic(`crate contact strip: AO once per frame hf ${c0.toFixed(3)}, per sub-frame ${c1.toFixed(3)}`);
+  assert.ok(c1 < 0.6 * c0, `the crate's contact darkening does not move with it: hf ${c1.toFixed(3)} vs ${c0.toFixed(3)} with frame-time AO`);
+});
+
+test('(u5) glossy over water: the ball\'s underside reflects the water (SSR after the late pass), the sea stays clean', { timeout: 600000 }, async (t) => {
+  const SCENE5 = path.join(FIX, 'glossy-sea.js');
+  const shot = async (preset) => {
+    const s = await openSession({ scene: SCENE5, resolved: resolvePreset(preset, { size: '320x180' }), bitDepth: 10, dither: false });
+    try { return (await s.render([24], 'rgba')).frames.get(24); } finally { await s.close(); }
+  };
+  const fin = await shot('final'), high = await shot('final-high');
+  const mean = (rgba, x0, y0, w, h) => {
+    const m = [0, 0, 0];
+    for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) for (let k = 0; k < 3; k++) m[k] += rgba[4 * (y * 320 + x) + k];
+    return m.map((v) => v / (w * h));
+  };
+  // the band just above the ball's lower silhouette: reflects the water at high (teal), the sky map at final
+  // (navy) - the bug drew the sand under the water there (red above blue)
+  const rim = mean(high, 130, 96, 60, 18), rimF = mean(fin, 130, 96, 60, 18);
+  t.diagnostic(`rim band mean RGB: final ${rimF.map((v) => v.toFixed(0)).join(',')}, high ${rim.map((v) => v.toFixed(0)).join(',')}`);
+  assert.ok(rim[1] > 1.5 * rim[0] && rim[2] > 1.5 * rim[0], `the ball's underside does not look like water at high: RGB ${rim.map((v) => v.toFixed(0))}`);
+  // the water beside / under the ball's reflection: no added hatching (rms of luma - its 7-px horizontal mean)
+  const hf = (rgba) => {
+    const L = (x, y) => { const i = 4 * (y * 320 + x); return 0.2126 * rgba[i] + 0.7152 * rgba[i + 1] + 0.0722 * rgba[i + 2]; };
+    let e = 0, n = 0;
+    for (let y = 125; y < 175; y++) for (let x = 103; x < 217; x++) { let s = 0; for (let k = -3; k <= 3; k++) s += L(x + k, y); const d = L(x, y) - s / 7; e += d * d; n++; }
+    return Math.sqrt(e / n);
+  };
+  const hF = hf(fin), hH = hf(high);
+  t.diagnostic(`water hatching (hf rms): final ${hF.toFixed(3)}, high ${hH.toFixed(3)}`);
+  assert.ok(hH < 1.15 * hF, `the sea next to the reflection is busier at high (${hH.toFixed(3)}) than at final (${hF.toFixed(3)})`);
 });

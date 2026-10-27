@@ -66,24 +66,23 @@ const HIGH = {
   volumetrics: { scale: [2, 2, 1.5], softTaps: 32 },
   ibl: 'exact',
   anisotropy: 16,
-  // the sea's screen-space reflections only come with sub-frames: at one sample per pixel the waves break
-  // a reflected dragon or ship up into per-pixel hits and misses (hatching beside it, measured on a steel
-  // ball over the FFT sea); 8-32 jittered sub-frames average that into a rippled reflection
+  // no screen-space reflections IN the sea at any tier (as at final): the fixed-step march hatches beside a
+  // reflected object (a steel ball over the FFT sea, review 2026-10-27) and the Hi-Z variant
+  // (cinematic.ssr.sea, experimental) returned sea-bed colours there - runtime/PROGRESS.md
   ocean: { resolution: 512, ssr: false, ssrSteps: 48, gpuFFT: true },
   ssr: { enabled: true, steps: 96, maxRoughness: 0.4, thickness: 0.35 },
   density: { grass: 1.5, vegetation: 1.3, crowd: 1.25, particles: 2.5 },
   textureScale: 2,
   fxTier: 'ultra',
 };
-const SEA_SSR = { ...HIGH.ocean, ssr: true };
 
 export const TIERS = {
   final: FINAL,
   high: HIGH,
-  ultra8: { ...HIGH, name: 'ultra8', label: 'ultra8 - high + 8 real sub-frames per frame (the style frames\' film finish)', subframes: 8, ocean: SEA_SSR },
-  ultra: { ...HIGH, name: 'ultra', label: 'ultra - high + 16 real sub-frames per frame', subframes: 16, ocean: SEA_SSR },
+  ultra8: { ...HIGH, name: 'ultra8', label: 'ultra8 - high + 8 real sub-frames per frame (the style frames\' film finish)', subframes: 8 },
+  ultra: { ...HIGH, name: 'ultra', label: 'ultra - high + 16 real sub-frames per frame', subframes: 16 },
   max: {
-    ...HIGH, name: 'max', label: 'max - high + 32 sub-frames, densest settings', subframes: 32, motionBlurSamples: 64, ocean: SEA_SSR,
+    ...HIGH, name: 'max', label: 'max - high + 32 sub-frames, densest settings', subframes: 32, motionBlurSamples: 64,
     ao: { resolution: 1, slices: 6, steps: 12, contactSteps: 24 }, dofSamples: 192,
     volumetrics: { scale: [2, 2, 2], softTaps: 32 },
     ssr: { enabled: true, steps: 128, maxRoughness: 0.45, thickness: 0.35 },
@@ -104,7 +103,7 @@ export const KNOB_DOCS = [
   ['volumetrics', 'Froxel fog grid x2 across the screen (12-pixel froxels at 4K instead of 24) and x1.5 in depth (stored as a tiled atlas when it is taller than the GPU texture limit), 32-tap soft shadow lookups where the scene asked for soft shafts: sharper light shafts through trees, colonnades and wings, finer fog edges. (The mip-filtered noise switch stays the scene\'s choice: it turns distant mist wisps into flat haze.)', 'fog inject ~x6 froxels'],
   ['ibl', "Image-based lighting from three's exact PMREM lookups instead of the baked spherical harmonics + equirect (the CPU shortcut): glossy reflections exactly as three.js intends.", 'two env lookups per lit pixel'],
   ['anisotropy', 'Anisotropic texture filtering x16 on every mip-mapped texture: ground, roads, roofs and water stay sharp at grazing angles instead of blurring.', 'texture taps on grazing surfaces'],
-  ['ocean', 'FFT ocean: 512x512 per cascade (finest ripples 11 cm instead of 21 cm) computed on the GPU each sub-frame, screen-space reflections of dragons, ships and cliffs in the water with 48 ray steps.', 'ocean late pass ~x2 (SSR), FFT passes'],
+  ['ocean', 'FFT ocean: 512x512 per cascade (finest ripples 11 cm instead of 21 cm, the 256 sea\'s waves unchanged) computed on the GPU every sub-frame; heightAt() (buoyancy) reads back only the 4 texels around each asked point. No screen-space reflections in the water (as at final: not clean yet).', 'FFT passes (3 x 20 small passes per sub-frame)'],
   ['ssr', 'Screen-space reflections on wet and glossy surfaces (puddles, wet cobbles and stone, polished metal, glazed windows, wet scales): the real scene is reflected instead of only the sky map, traced exactly through a min-depth pyramid (Hi-Z, 96 iterations: no stepping noise), blurred by roughness from a mip-mapped colour copy; fades at the screen edges and where the ray passes behind an object.', 'reflective objects drawn twice + Hi-Z build + trace'],
   ['density', 'Instance-count multipliers libraries read through density(ctx, kind): grass tufts, shrubs/vegetation, crowd extras, particles (smoke, dust, sparks, spray; the FX library renormalises opacity so a cloud keeps its density).', 'proportional to the instances'],
   ['textureScale', 'Size multiplier for procedurally generated textures (libraries read it): finer detail in close-ups.', 'texture memory x4'],

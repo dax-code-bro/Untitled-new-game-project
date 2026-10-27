@@ -104,9 +104,13 @@ export const CINEMATIC_DEFAULTS = {
   ssr: {
     enabled: false,                 // screen-space reflections on wet / glossy surfaces (quality tiers above final turn it on):
                                     // opaque Standard/Physical materials with roughness <= maxRoughness, and every material marked
-                                    // material.userData.dkSSR = true (false: never), are drawn once more in the late pass and get
-                                    // the reflected scene instead of the sky map where a ray hits (runtime/cinematic/ssr.js)
-    steps: 32,                      // ray-march steps (with a growing step length) + 4 refinement steps
+                                    // material.userData.dkSSR = true (false: never), are drawn once more AFTER the late pass (so a
+                                    // surface over water reflects the water) and get the reflected scene instead of the sky map
+                                    // where a ray hits (runtime/cinematic/ssr.js)
+    steps: 32,                      // Hi-Z traversal iterations (exact crossings through a min-depth pyramid)
+    sea: false,                     // EXPERIMENTAL: the FFT ocean's own reflections through the same Hi-Z tracer instead of its
+                                    // fixed-step march (only for an ocean created with ssr: true). Off everywhere: on a steel ball
+                                    // over the sea it returned sea-bed colours (runtime/PROGRESS.md)
     maxRoughness: 0.35,             // GGX roughness above which a surface gets no SSR (fades out from 60% of it)
     thickness: 0.35,                // metres a ray may pass behind a surface and still count as a hit (+2% of the distance)
     maxDistance: 250,               // metres a reflected ray travels at most

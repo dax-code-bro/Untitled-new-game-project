@@ -3,7 +3,8 @@
 // the bar moves ~5 px per sub-frame at 320x180: plain sub-frame averaging leaves a ladder of separate
 // copies (banding across the sweep), the hybrid accumulation (velocity blur inside each sub-frame) a
 // continuous streak. Its pivot end is 4 cm over the ground, so its contact shadow / ambient occlusion
-// moves with it (per-sub-frame AO). No haze, fog or depth of field: only the motion is measured.
+// moves with it, and a crate slides at 30 m/s 3 cm over the ground (per-sub-frame AO / contact shadows).
+// No haze, fog or depth of field: only the motion is measured.
 export const meta = {
   title: 'fast motion fixture', duration: 2, seed: 5,
   cinematic: {
@@ -29,13 +30,18 @@ export async function setup(ctx) {
   const bar = new THREE.Mesh(new THREE.BoxGeometry(4, 0.04, 0.04), new THREE.MeshStandardMaterial({ color: 0x18181a, roughness: 0.6 }));
   bar.position.x = 2; bar.castShadow = true; pivot.add(bar);
   scene.add(pivot);
-  ctx.shadows.dynamic = [pivot];
-  S = { pivot, sun };
+  // a crate sliding fast (30 m/s) 3 cm over the ground in front: its ambient occlusion and contact shadow
+  // must travel with it in every sub-frame (per-sub-frame GTAO), not stay at the frame-time position
+  const crate = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), new THREE.MeshStandardMaterial({ color: 0x6b4a2c, roughness: 0.8 }));
+  crate.castShadow = crate.receiveShadow = true; scene.add(crate);
+  ctx.shadows.dynamic = [pivot, crate];
+  S = { pivot, sun, crate };
 }
 export function update(t, ctx) {
   S.sun.position.set(3, 12, -8); S.sun.target.position.set(0, 0, 0);
   // swings up and down over the ground: at t = 0 it is 0.3 rad up, moving up at 24 rad/s
   S.pivot.rotation.z = 0.3 + 0.6 * Math.sin(40 * t);
+  S.crate.position.set(-0.5 + 30 * t, -1.05 + 0.15 + 0.03, 1);
   ctx.camera.position.set(0, -0.2, 10); ctx.camera.lookAt(0, -0.2, 0);
   ctx.lens.focalLength = 35; ctx.lens.fstop = 8; ctx.lens.shutterAngle = 180;
 }

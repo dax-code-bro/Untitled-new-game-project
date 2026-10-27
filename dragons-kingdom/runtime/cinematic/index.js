@@ -806,8 +806,11 @@ export class Cinematic {
       mark?.('ssr', target);
       return;
     }
-    // the sea's own reflections through the same Hi-Z tracer (its pyramid: the scene without the water)
-    if (this.ssr) {
+    // EXPERIMENTAL, off unless cinematic.ssr.sea === true (no tier turns it on): the sea's own reflections
+    // through the same Hi-Z tracer (its pyramid: the scene without the water). On the steel-ball-over-the-sea
+    // fixture its hits (placed on the ball by the depth pyramid) returned sea-bed colours - see runtime/PROGRESS.md.
+    // Without it a scene's own ocean { ssr: true } keeps ocean.js' fixed-step march, as at final.
+    if (this.ssr && this.c.ssr?.sea === true) {
       let sea = false;
       for (const o of late) {
         const oc = o.userData.dkOcean;
