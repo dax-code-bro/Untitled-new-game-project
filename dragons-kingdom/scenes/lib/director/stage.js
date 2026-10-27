@@ -406,11 +406,15 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
     // cast at that time once per shot (pure: depends only on the shot and frame.at), remember the
     // subject points, then pose for this frame
     const fr = spec1.cam?.frame;
+    // occluders for `frame.clear: true`: every other visible cast member's head and chest (the solver keeps
+    // them from standing in front of a subject); measured with the subjects, so a static camera stays put
+    const occluders = (tt) => Object.keys(cast).filter((n) => S.actors[n] && S.actors[n].kind !== 'object' && actorVisible(cast[n], tt)).flatMap((n) => [`${n}.head`, `${n}.chest`]);
+    const clearNames = fr?.clear === true ? occluders(fr.at ?? 0) : (fr?.clear || []);
     if (fr && !fr.track && !S.frameCache.has(row.job)) {
       const at = fr.at ?? 0;
       poseCast(spec1, row, at);
       const pts = {};
-      for (const [n] of fr.subjects) { const p = S.env.point(n, at); pts[n] = p ? p.toArray() : null; }
+      for (const n of [...fr.subjects.map(([n2]) => n2), ...clearNames]) { const p = S.env.point(n, at); pts[n] = p ? p.toArray() : null; }
       S.frameCache.set(row.job, pts);
     }
     const dynamic = poseCast(spec1, row, local);
@@ -421,6 +425,7 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
     if (!spec1.cam) throw new Error(`[director] shot ${row.job} has no cam in its spec`);
     const fc = S.frameCache.get(row.job);
     const camEnv = fc ? { ...S.env, approxPoint: (n, tt) => (fc[n] ? new THREE.Vector3(...fc[n]) : S.env.point(n, tt)) } : { ...S.env, approxPoint: (n, tt) => S.env.point(n, tt) };
+    camEnv.occluders = () => clearNames;
     evalCamera(spec1.cam, local, sel.u, ctx, camEnv, dur);
     // cam.debug: print the solved camera and the subjects' posed points once per shot (framing checks)
     if (spec1.cam.debug) {

@@ -172,6 +172,29 @@ t('framing: two subjects land on their screen places; a side that cannot hold th
   const alt = suggestFrom(bad, 65, env, 0, B);
   assert.ok(w0 > 0.5 && alt.worst < w0 * 0.3, `suggestion ${JSON.stringify(alt)} vs ${w0}`);
 });
+t('framing search + clear: a fan of starts beats the trapped single start; no subject hidden behind another actor', () => {
+  // the chamber's 1A-28 / 1A-27 cases (approximate heads): Abby crouched at the nest's south board, Remi
+  // standing beside her, Alexandria seated east, the hatchling between
+  const P = { a: [-0.5, 0.98, 1.72], x: [1.2, 1.2, -0.14], h: [0.12, 0.47, 0.14], hh: [-0.08, 0.5, 0.24], 'remi.head': [0.2, 1.68, 1.9], 'remi.chest': [0.2, 1.25, 1.9] };
+  const env = { point: (k) => new THREE.Vector3(...P[k]), occluders: () => ['remi.head', 'remi.chest'] };
+  const B = [[-3.35, 0.25, -2.85], [3.35, 5.2, 2.85]];
+  const tanH = 24.89 / 2 / 28;
+  const hidden = (r) => {
+    const cam = new THREE.PerspectiveCamera(2 * Math.atan(tanH / (16 / 9)) * 180 / Math.PI, 16 / 9, 0.05, 100);
+    cam.position.copy(r.pos); cam.lookAt(r.look); cam.updateMatrixWorld(true);
+    const s = new THREE.Vector3(...P.a).project(cam), o = new THREE.Vector3(...P['remi.chest']).project(cam);
+    const ds = r.pos.distanceTo(new THREE.Vector3(...P.a)), dO = r.pos.distanceTo(new THREE.Vector3(...P['remi.chest']));
+    return dO < ds && Math.hypot(s.x - o.x, (s.y - o.y) / 1.78) < 0.22 / (dO * tanH) + 0.12 / (ds * tanH) - 1e-3;
+  };
+  const fr28 = { subjects: [['a', [-0.45, -0.05]], ['x', [0.5, 0.05]], ['h', [0.0, -0.4]]], from: 195, height: 2.7 };
+  assert.ok(hidden(solveFraming(fr28, 28, env, 0, 16 / 9, 24.89, B)), 'the plain solve reproduces 1A-28 (Abby behind Remi)');
+  const c = solveFraming({ ...fr28, search: true, clear: true }, 28, env, 0, 16 / 9, 24.89, B);
+  assert.ok(!hidden(c), 'search + clear keeps Abby clear of Remi');
+  assert.deepEqual(solveFraming({ ...fr28, search: true, clear: true }, 28, env, 0, 16 / 9, 24.89, B).pos.toArray(), c.pos.toArray(), 'deterministic');
+  const fr27 = { subjects: [['a', [-0.6, 0.2]], ['x', [0.55, 0.35]], ['hh', [0.0, -0.32]]], from: 182, height: 1.0 };
+  const w0 = solveFraming(fr27, 40, env, 0, 16 / 9, 24.89, B).worst, w1 = solveFraming({ ...fr27, search: true }, 40, env, 0, 16 / 9, 24.89, B).worst;
+  assert.ok(w1 < w0 - 0.05, `search ${w1} vs single start ${w0}`);
+});
 t('hand props: an object between the posed palms, levelled, offset in the hands\' frame; one-hand and list forms', () => {
   // a mock character facing +x (yaw 90): left hand at z -0.15 (north), right hand at z +0.15 - wrists
   // and knuckles 0.08 m further forward, palms level at 1.0 m

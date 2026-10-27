@@ -15,6 +15,12 @@ import * as THREE from 'three';
  *     minDist: 0.55,      // the camera keeps at least this far from every subject (default 0.55 m)
  *     tolerance: 0.12,    // worst screen error accepted before a wider lens is tried (autoLens: false = never)
  *     at: 0,              // shot time the subjects are measured at (static camera); track: true re-solves every frame
+ *     search: true,       // opt-in: a GLOBAL search - Levenberg-Marquardt from a fan of starts (every 30 deg round the
+ *                         //   subjects x three distances, pulled inside the room) as well as the one on the `from` side;
+ *                         //   small rooms with three subjects trapped the single start against a wall (session 6)
+ *     clear: ['remi.head', 'remi.chest'] | true,   // opt-in: points that must not stand IN FRONT of a subject on
+ *                         //   screen (an occluder within ~0.22 m, nearer the lens); true = env.occluders() (the
+ *                         //   stage: every other cast member's head and chest) - 1A-28 hid Abby behind Remi
  *   }
  * Lens: the shot's mm on super 35 (16:9). Two subjects: camera x/z, yaw and pitch are solved
  * (Levenberg-Marquardt from a start on the `from` side) for the height; one subject: placed at
@@ -22,7 +28,11 @@ import * as THREE from 'three';
  */
 export function solveFraming(fr, mm, env, t, aspect = 16 / 9, sensorW = 24.89, bounds = null) {
   const tt = fr.track ? t : (fr.at ?? 0);
-  const P = fr.subjects.map(([n, s]) => ({ p: (env.approxPoint || env.point)(n, tt), s }));
+  const pt = (n) => (env.approxPoint || env.point)(n, tt);
+  const P = fr.subjects.map(([n, s]) => ({ p: pt(n), s, actor: String(n).split('.')[0] }));
+  // occluders (clear): points that must not cover a subject; never a subject's own actor
+  const occNames = fr.clear === true ? (env.occluders ? env.occluders() : []) : (fr.clear || []);
+  const O = occNames.map((n) => ({ p: pt(n), actor: String(n).split('.')[0], r: fr.clearRadius ?? 0.22 })).filter((o) => o.p);
   const tanH = (sensorW / 2) / mm, tanV = tanH / aspect;
   const fromA = ((fr.from ?? 180) * Math.PI) / 180;
   const fromDir = new THREE.Vector3(Math.sin(fromA), 0, -Math.cos(fromA));   // from the subject toward the camera
@@ -52,7 +62,8 @@ export function solveFraming(fr, mm, env, t, aspect = 16 / 9, sensorW = 24.89, b
   // two (or more) subjects: unknowns q = [x, z, yaw, pitch] (y = height), LM on the screen error
   const spread = P.reduce((m, a) => Math.max(m, a.p.distanceTo(c0)), 0.3);
   const d0 = (spread / Math.max(0.15, tanH * 0.5)) * 1.1 + 0.3;
-  let q = [c0.x + fromDir.x * d0, c0.z + fromDir.z * d0, Math.atan2(-fromDir.x, -fromDir.z), 0];
+  const startAt = (dir, d) => [c0.x + dir.x * d, c0.z + dir.z * d, Math.atan2(-dir.x, -dir.z), 0];
+  let q = startAt(fromDir, d0);
   const res = (qq) => {
     const y = camY(qq);
     const out = [];
@@ -66,6 +77,18 @@ export function solveFraming(fr, mm, env, t, aspect = 16 / 9, sensorW = 24.89, b
     // never inside or against a subject (heads are ~0.25 m across; a lens needs some air)
     const minD = fr.minDist ?? 0.55;
     for (const sj of P) { const dd = Math.hypot(qq[0] - sj.p.x, y - sj.p.y, qq[1] - sj.p.z); if (dd < minD) out.push(3 * (minD - dd)); else out.push(0); }
+    // occlusion: an occluder nearer the lens than a subject and within its own screen radius of it
+    for (const o of O) {
+      const [ox, oy, oz] = proj(qq[0], y, qq[1], qq[2], qq[3], o.p);
+      for (const sj of P) {
+        if (sj.actor === o.actor) continue;
+        const [sx, sy, sz] = proj(qq[0], y, qq[1], qq[2], qq[3], sj.p);
+        // clear by the occluder's half-width plus the subject's own (a head ~0.12 m), in screen units (x)
+        const rad = o.r / (Math.max(0.05, oz) * tanH) + 0.12 / (Math.max(0.05, sz) * tanH);
+        const sep = Math.hypot(sx - ox, (sy - oy) / 1.78);
+        out.push(sz > oz + 0.1 && sep < rad ? (fr.clearWeight ?? 6) * (rad - sep) : 0);
+      }
+    }
     // stay inside the set (a room's walls): a stiff penalty outside the box
     if (bounds) {
       const pv = [qq[0], y, qq[1]];
@@ -73,9 +96,11 @@ export function solveFraming(fr, mm, env, t, aspect = 16 / 9, sensorW = 24.89, b
     }
     return out;
   };
+  const lm = (qStart, iters) => {
+  let q = qStart.slice();
   let lambda = 1e-2;
   let r0 = res(q), e0 = r0.reduce((a, b) => a + b * b, 0);
-  for (let it = 0; it < 60 && e0 > 1e-10; it++) {
+  for (let it = 0; it < iters && e0 > 1e-10; it++) {
     const J = [];
     const h = [1e-4, 1e-4, 1e-5, 1e-5];
     for (let k = 0; k < 4; k++) { const q2 = q.slice(); q2[k] += h[k]; const r2 = res(q2); J.push(r2.map((v, i) => (v - r0[i]) / h[k])); }
@@ -89,6 +114,34 @@ export function solveFraming(fr, mm, env, t, aspect = 16 / 9, sensorW = 24.89, b
     const r2 = res(q2), e2 = r2.reduce((a, b) => a + b * b, 0);
     if (e2 < e0) { q = q2; r0 = r2; e0 = e2; lambda = Math.max(1e-7, lambda * 0.3); } else lambda = Math.min(1e6, lambda * 8);
   }
+  return { q, e0 };
+  };
+  let best = lm(q, 60);
+  if (fr.search) {
+    // a fan of starts round the subjects (the authored side first, then wider), each refined; the
+    // start inside the room keeps the walls' penalty from trapping the solve; deterministic order
+    // starts are pulled inside the room (0.25 m off the walls): in a small room most of the fan lies
+    // beyond the walls, and a start outside stays pinned to the wall it hits
+    const clampIn = (st) => {
+      if (!bounds) return st;
+      const cl = (v, k) => Math.min(bounds[1][k] - 0.25, Math.max(bounds[0][k] + 0.25, v));
+      return [cl(st[0], 0), cl(st[1], 2), Math.atan2(c0.x - cl(st[0], 0), c0.z - cl(st[1], 2)), st[3]];
+    };
+    const seen = new Set();
+    for (const da of [0, 30, -30, 60, -60, 90, -90, 120, -120, 150, -150, 180]) {
+      const a = fromA + (da * Math.PI) / 180;
+      const dir = new THREE.Vector3(Math.sin(a), 0, -Math.cos(a));
+      for (const k of [0.35, 0.6, 1.0]) {
+        const st = clampIn(startAt(dir, d0 * k));
+        const key = `${st[0].toFixed(2)},${st[1].toFixed(2)}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const r = lm(st, 40);
+        if (r.e0 < best.e0 - 1e-9) best = r;
+      }
+    }
+  }
+  q = best.q; const e0 = best.e0;
   const pos = new THREE.Vector3(q[0], camY(q), q[1]);
   const look = pos.clone().add(new THREE.Vector3(Math.cos(q[3]) * Math.sin(q[2]), Math.sin(q[3]), Math.cos(q[3]) * Math.cos(q[2])));
   // how well the subjects landed (screen units): reported once per shot by the stage
