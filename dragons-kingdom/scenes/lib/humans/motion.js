@@ -1106,39 +1106,63 @@ function applyFall(S, fs, t, fwd, left) {
   const ch2 = wpos(ch.bone('spine02'), new THREE.Vector3());
   const minY = S.ground(ch2.x, ch2.z) + 0.13;
   if (ch2.y < minY) { ch.root.position.y += (minY - ch2.y) * smooth(topple * 1.5); ch.root.updateMatrixWorld(true); }
-  // once down, the legs lie along the ground behind the pelvis (not folded up in the air)
+  // once down, the legs lie along the ground behind the pelvis (not folded up in the air): prone, nearly
+  // straight with the knee caps on the ground (a bent knee pushed the joint 7 cm into it) and one leg a
+  // little drawn up and out; on the back the knees come up a little
   const down = smooth((topple - 0.7) / 0.3);
+  const drawn = hash01(S.seed, 79) < 0.5 ? 'L' : 'R';
   if (down > 0) {
     for (const sd of ['L', 'R']) {
       const sg = sd === 'L' ? 1 : -1;
       const hip = wpos(ch.bone(`upperleg01.${sd}`), new THREE.Vector3());
+      const bent = forward && sd === drawn;
       // the feet are on the pivot side (opposite the direction of the fall) either way
-      const tgt = hip.clone().addScaledVector(dirW, -rig.legLen * 0.93).addScaledVector(axis, sg * 0.06);
-      tgt.y = S.ground(tgt.x, tgt.z) + 0.09;
-      // prone: knees toward the ground; on the back: knees up a little
-      const pole = hip.clone().addScaledVector(dirW, -0.4).add(new THREE.Vector3(0, forward ? -0.6 : 0.6, 0));
-      twoBoneIK(ch, 'leg', sd, tgt, pole, { reach: down });
+      const tgt = hip.clone().addScaledVector(dirW, -rig.legLen * (forward ? (bent ? 0.8 : 0.997) : 0.93)).addScaledVector(axis, sg * (bent ? 0.2 : 0.06));
+      tgt.y = S.ground(tgt.x, tgt.z) + (forward ? (bent ? 0.08 : 0.07) : 0.09);
+      // prone: the knee faces the ground (out to the side for the drawn-up leg); on the back: knees up
+      const pole = hip.clone().addScaledVector(dirW, -0.4).addScaledVector(axis, bent ? sg * 0.6 : 0).add(new THREE.Vector3(0, forward ? (bent ? -0.08 : -0.6) : 0.6, 0));
+      twoBoneIK(ch, 'leg', sd, tgt, pole, { reach: down, soft: 0.004 });
     }
     const pel = wpos(ch.bone('root'), new THREE.Vector3());
     const pmin = S.ground(pel.x, pel.z) + 0.11;
     if (pel.y < pmin) { ch.root.position.y += pmin - pel.y; ch.root.updateMatrixWorld(true); }
   }
-  // hands reach for the ground ahead (forward) / out to the sides (back)
+  // hands reach for the ground ahead to catch the fall (forward) / out to the sides (back); once down
+  // and still, the arms bend and the hands lie beside the head, elbows out (prone)
   const reach = smooth((u - 0.25) / 0.45);
   if (reach > 0) {
+    const settle = forward ? smooth((dt - T * 1.05) / 0.6) : 0;
     for (const sd of ['L', 'R']) {
       const sg = sd === 'L' ? 1 : -1;
       const sh = wpos(ch.bone(`upperarm01.${sd}`), new THREE.Vector3());
-      const tgt = sh.clone().addScaledVector(dirW, forward ? 0.25 : -0.05).addScaledVector(axis, sg * (forward ? 0.12 : 0.35));
-      tgt.y = S.ground(tgt.x, tgt.z) + 0.05;
-      const pole = sh.clone().add(new THREE.Vector3(0, 0.4, 0)).addScaledVector(axis, sg * 0.4);
-      twoBoneIK(ch, 'arm', sd, tgt, pole, { reach: reach * (u < 1.3 ? 1 : 0.8), soft: 0.03 });
-      handShape(ch, sd, 'open', reach);
+      const tgt = sh.clone().addScaledVector(dirW, forward ? lerp(0.25, 0.1, settle) : -0.05).addScaledVector(axis, sg * (forward ? lerp(0.12, 0.3, settle) : 0.35));
+      tgt.y = S.ground(tgt.x, tgt.z) + 0.045;
+      const pole = sh.clone().add(new THREE.Vector3(0, lerp(0.4, 0.15, settle), 0)).addScaledVector(axis, sg * lerp(0.4, 0.7, settle)).addScaledVector(dirW, -0.2 * settle);
+      twoBoneIK(ch, 'arm', sd, tgt, pole, { reach: reach * (u < 1.3 ? 1 : lerp(0.8, 1, settle)), soft: 0.03 });
+      handShape(ch, sd, settle > 0.5 ? 'relaxed' : 'open', reach);
     }
   }
-  // the head turns to one side lying down
+  // the head turns to one side lying down, the cheek on the ground: the skull is lifted clear of it
+  // (rotating the whole body about the feet left the head joint 3 cm under the ground)
   const hb = ch.bone('head');
-  if (hb && topple > 0.8) rotateWorld(hb, _q.setFromAxisAngle(dirW, 0.5 * smooth((topple - 0.8) / 0.2) * (hash01(S.seed, 77) < 0.5 ? 1 : -1)));
+  if (hb && topple > 0.8) {
+    const k = smooth((topple - 0.8) / 0.2);
+    rotateWorld(hb, _q.setFromAxisAngle(dirW, 0.5 * k * (hash01(S.seed, 77) < 0.5 ? 1 : -1)));
+    ch.root.updateMatrixWorld(true);
+    const clear = 0.09 * rig.height / 1.75;
+    for (let it = 0; it < 3; it++) {
+      const hp = wpos(hb, new THREE.Vector3());
+      const lack = S.ground(hp.x, hp.z) + clear - hp.y;
+      if (lack <= 0.002) break;
+      // lift by extending the neck (forward fall) / flexing it (on the back) about the body's lateral axis
+      const nb = ch.bone('neck01') || hb;
+      const np = wpos(nb, new THREE.Vector3());
+      const arm = Math.max(0.08, hp.distanceTo(np));
+      const ang = Math.min(0.6, Math.asin(Math.min(1, lack / arm))) * k;
+      rotateWorld(nb, _q.setFromAxisAngle(axis, (forward ? -1 : 1) * ang));
+      ch.root.updateMatrixWorld(true);
+    }
+  }
   ch.root.updateMatrixWorld(true);
 }
 
