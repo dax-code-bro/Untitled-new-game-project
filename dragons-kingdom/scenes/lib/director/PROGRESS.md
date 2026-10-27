@@ -21,16 +21,24 @@ How it works: `README.md` in this folder. Latest state first.
   one it looks at; a camera within 20 deg of the line does not flip it; a reverse across a group flips
   its members' order legitimately, so only looked-at pairs). Found on the authored cut:
   - X2-02 -> X2-03 (seen in the assembled cut first: the same frame twice, 1.6x closer on one axis):
-    X2-03 restaged as the REVERSE over Remi's shoulder from the door's tunnel (his back soft, Alexandria
-    small at the nest, not looking up; he exits frame left past the lens). A medium of Remi facing the
-    lens (the shot list's framing) was tried in previs and dropped: the humans-library face sharp and
-    frontal reads CG (performance track's dlg-4k).
+    X2-03 restaged as the REVERSE over Remi's shoulder from just inside the door frame (his back soft,
+    Alexandria small at the nest, not looking up; he turns and exits frame left past the lens). Tried
+    first: a medium of Remi facing the lens (the shot list's framing) - dropped in previs, the library
+    face sharp and frontal reads CG (performance track's dlg-4k); the camera deeper in the door's tunnel
+    - the stills showed the door FRAME's post (x -4.14) across the lens. Stills before the video: always.
+  - 1A-28 -> 1A-29: the children's eye-lines to the hatchling cross by the rule (high SW corner, then
+    behind them from the SE); in the pictures the high angle hides it (Abby stays left of Remi, the
+    hatchling stays in front of them) - kept.
   - 1A-30 -> 1A-31 (18 deg, 1.47x): 1A-30 at 24 mm (was 28) - the children 1.7x smaller ("small").
     1A-30 was held out of the running queues with a lock owned by a `sleep` process (a running render's
     browser holds the OLD spec in memory: it would have rendered the old camera).
   - X2-05 -> X2-06 (corridor, Remi 22 deg, 0.91x): two follow shots from behind; left as is for now.
   - 1A-28 -> 1A-29: the children's eye-lines to the hatchling crossed (high SW corner -> behind them
     from the SE); check the 1A-29 render.
+- Rendered this session: 1A-32 (silhouettes in the bright doorway, Abby looks back, the door closes),
+  1A-29 (Remi from behind, the hatchling sharp below), P-17 (meadow card: a pasture with lush / dry
+  patches; the dragon's shadow crosses at 3.7 s - wings, neck and horned head, hard-edged), the stills
+  of 1A-30 (24 mm) and X2-03 (both twice).
 - X1-03: focus on the door from the first frame (the pull from her head showed the library bun sharp -
   a flat disc with a dashed band - for the first second).
 

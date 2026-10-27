@@ -1,6 +1,6 @@
 {
  "title": "Dragon's Kingdom S01E01 - draft cut: PROLOGUE + TITLE + 1A",
- "made_at": "2026-10-27T18:12",
+ "made_at": "2026-10-27T18:52",
  "shots_dir": "../../../../tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/work/shots",
  "size": "960x540",
  "fps": 24,
@@ -323,7 +323,7 @@
    "job": "P-17",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "rendered 2026-10-23T22:46",
+   "source": "rendered 2026-10-27T18:51",
    "frames": 180,
    "rec_in": 2100,
    "trans": [
@@ -832,21 +832,7 @@
     0
    ],
    "notes": [
-    "speaking face reads: ABBY 9 deg from the lens, 20.7% of frame height, blur 0.06% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ABBY 6 deg from the lens, 21% of frame height, blur 0.05% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ABBY 6 deg from the lens, 21.2% of frame height, blur 0.04% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ABBY 7 deg from the lens, 21.3% of frame height, blur 0.03% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ABBY 7 deg from the lens, 21.4% of frame height, blur 0.02% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ABBY 7 deg from the lens, 21.5% of frame height, blur 0.02% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ABBY 6 deg from the lens, 21.6% of frame height, blur 0.02% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ABBY 6 deg from the lens, 21.6% of frame height, blur 0.01% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ABBY 6 deg from the lens, 21.7% of frame height, blur 0.01% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ABBY 6 deg from the lens, 21.8% of frame height, blur 0.01% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ABBY 7 deg from the lens, 21.8% of frame height, blur 0% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ABBY 6 deg from the lens, 21.8% of frame height, blur 0% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ABBY 7 deg from the lens, 21.9% of frame height, blur 0% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ABBY 6 deg from the lens, 21.9% of frame height, blur 0% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ABBY 8 deg from the lens, 21.9% of frame height, blur 0% (soften, turn, shrink or backlight it until lip-sync exists)"
+    "speaking face reads: ABBY 9 deg from the lens, 20.7% of frame height, blur 0.06% (soften, turn, shrink or backlight it until lip-sync exists)"
    ]
   },
   {
@@ -1046,17 +1032,14 @@
     0
    ],
    "notes": [
-    "speaking face reads: ALEXANDRIA 16 deg from the lens, 8.7% of frame height, blur 0.05% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ALEXANDRIA 15 deg from the lens, 8.7% of frame height, blur 0.05% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ALEXANDRIA 14 deg from the lens, 8.7% of frame height, blur 0.05% (soften, turn, shrink or backlight it until lip-sync exists)",
-    "speaking face reads: ALEXANDRIA 13 deg from the lens, 8.7% of frame height, blur 0.05% (soften, turn, shrink or backlight it until lip-sync exists)"
+    "speaking face reads: ALEXANDRIA 16 deg from the lens, 8.7% of frame height, blur 0.05% (soften, turn, shrink or backlight it until lip-sync exists)"
    ]
   },
   {
    "job": "1A-29",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T18:52",
    "frames": 84,
    "rec_in": 6096,
    "trans": [
@@ -1113,7 +1096,7 @@
    "job": "1A-32",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T18:32",
    "frames": 96,
    "rec_in": 6528,
    "trans": [
@@ -2003,13 +1986,13 @@
   "file": "episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_PROLOGUE-TITLE-1A.mp4",
   "frames": 8580,
   "duration_s": 357.5,
-  "size_mb": 48.5,
-  "assembled_s": 152
+  "size_mb": 48.8,
+  "assembled_s": 429
  },
  "summary": {
-  "rendered": 72,
+  "rendered": 74,
   "black": 1,
-  "slates": 3,
+  "slates": 1,
   "voice_cues": 50,
   "review_flags": 6
  }
