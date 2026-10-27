@@ -3573,11 +3573,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.12,
-    "k4_cpu_s_per_frame": 47.04,
+    "draft_s_per_frame": 17.74,
+    "k4_cpu_s_per_frame": 202.78,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 4.12,
-    "k4_cpu_hours": 0.78,
+    "draft_minutes": 17.74,
+    "k4_cpu_hours": 3.38,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
@@ -3587,7 +3587,7 @@
      "move": 1,
      "total": 1.18
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.18 for the shot's content"
+    "basis": "MEASURED draft 17.74 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "NONE: insert, the hatchling's side rises.",
    "deviation": null,
@@ -3682,7 +3682,7 @@
     },
     "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.43 for the shot's content"
    },
-   "staging": "BACK + DOF: from behind Abby (soft) to Alexandria (soft); the hatchling sharp between.",
+   "staging": "DOF: low and close on the hatchling (sharp) from the attendant's side; Abby and Alexandria soft beyond it at either side, mouths unreadable.",
    "deviation": null,
    "action": "Relief, quietly shared.",
    "need": {

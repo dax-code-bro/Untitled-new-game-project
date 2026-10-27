@@ -3,6 +3,30 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 6 (2026-10-27, resumed after another container restart)
+
+- State found: 1A-26..1A-33, X2-01..X2-03, X2-14, X2-15 unrendered; X1-03 / X2-13 rendered BEFORE their
+  session-5 restaging (stale); P-09..P-12 never re-rendered with the reworked landscapes; queues dead
+  mid-shot (stale locks + part files removed).
+- Review stills of every unrendered chamber shot (`--stills 0.2,0.75`) found most of them wrong - the
+  framing solver fails in this small room with three subjects (it hugs a wall and gives up):
+  1A-27 Abby in sharp profile, no 'behind'; 1A-28 Abby hidden BEHIND Remi in the three-shot; 1A-29 Remi's
+  head above the frame (26 mm aimed at 0.9 m); 1A-30 the 50 mm solve cut Remi's head and kept
+  Alexandria's bun (a painted-looking disc) sharp in the foreground; 1A-31 an empty room for 3 s (the
+  walkers entered a locked-off frame from off screen); 1A-33 her hand never reached the hatchling (1.1 m
+  from the stool) and her face was full on; X2-01/X2-02/X2-03 three near-identical frames (jump cuts);
+  X2-14 Alexandria's face full on and sharp; X2-15 the hatchling hidden by the straw rim.
+  Restaged (explicit cameras chosen with a quick Node projector of the actors' approximate heads -
+  scratch `eng1/director/proj.mjs`, `search.mjs`), checked again with preview stills: 1A-28 high from the
+  south-west corner, 1A-31 PANS with the walk to the door, X2-01..03 wide / closer / OTS all on the
+  south side of the line Alexandria-door, 1A-33 her LEFT hand to the linen south of the broken egg.
+- Engine: HAND PROPS (`handprops.js`, `holds:` on a cast entry): a set object placed from the posed
+  palms each frame (both hands: between the palms, levelled; one hand: in the palm), the stage owns it
+  (hidden when nobody holds it). X2-16's young attendant carried nothing in her upturned hands ("comes in
+  with fresh water"): now the chamber's `waterBowl` (props library bowl with water). Self-tested.
+- LESSON: a stop-after script's blanket `rm *.part.mp4` deleted another queue's X1-03 part (12 min of
+  work lost): only remove parts with no live lock (`stop-after.sh` fixed).
+
 ## Session 5 (2026-10-27, resumed after a container restart)
 
 - State found: 48 of 75 3D shots rendered in the scratch work folder (`eng1/director/work/shots`, it

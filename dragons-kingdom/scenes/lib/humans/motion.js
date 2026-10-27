@@ -37,7 +37,20 @@ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const sstep = (a, b, x) => smooth((x - a) / (b - a));
 const DT = 1 / 60;
 const PHI_REST = [0.07, 0.57];
-const MID = 0.41;                   // the hip passes over the ankle at ~41 % of a walking stance (32 % running)      // double-support centres (both feet down) for a duty >= 0.64
+// Gait shape constants (walking end of the walk -> run blend; tuned against normative walking
+// kinematics: knee ~5 deg at heel strike, ~15-20 in loading, near straight mid-stance, ~35-40 at
+// toe-off, a 60-65 deg peak early in the swing, straight again before the strike).
+export const GAIT = {
+  mid: 0.41,          // the hip passes over the ankle at this fraction of a walking stance (0.32 running)
+  heelOff: 0.7,       // the heel leaves the ground at this fraction of a walking stance
+  toeOff: 1.2,        // foot pitch scale (rad; x0.9 = heel up about the ball at toe-off), walking
+  liftPeak: 0.2,      // the walking swing lift peaks at this q (< 0: the old sin lift, peak ~0.42)
+  liftB: 5,           // decay exponent of the walking swing lift (q^a (1-q)^b)
+  lowerQ: 0.8,        // the toe-off height falls to the strike height by this q
+  pitchFlat: 0.45,    // the swing foot is level by this q, then turns toe-up for the strike
+  drop: 0.5,          // scale of the walking pelvis drop (the legs' reach lowers it where needed)
+  reach: 0.992,         // a stance leg may reach this fraction of its length before the pelvis drops
+};
 
 // ------------------------------------------------------------- gait model --
 /** Gait parameters for speed v (m/s) and body height h (m). run 0..1 = walk -> run blend. */
@@ -54,14 +67,14 @@ export function gaitParams(v, h = 1.75) {
     duty: lerp(lerp(0.66, 0.6, lowV), 0.37 - 0.025 * clamp01(v / s - 3), run),
     width: lerp(0.1, 0.05, run) * s,
     bob: lerp(0.02 * Math.min(1.4, Math.max(0.35, v / 1.3)), 0.045, run) * s,
-    drop: lerp(0.012 + 0.012 * lowV, 0.07, run) * s,
+    drop: lerp((0.012 + 0.012 * lowV) * GAIT.drop, 0.07, run) * s,
     lift: lerp(0.06 + 0.04 * lowV, 0.2, run) * s,
     kick: run * 0.22 * s,
     lean: lerp(0.03 + 0.04 * lowV, 0.2 + 0.03 * Math.max(0, v / s - 3), run),
     armA: lerp(0.22 * Math.min(1.5, v / 1.3), 0.62, run),
     elbow: lerp(0.18 + 0.1 * lowV, 1.45, run),
     yawA: lerp(0.06, 0.11, run), rollA: lerp(0.045, 0.025, run), sway: lerp(0.024, 0.008, run) * s,
-    strike: lerp(0.3, 0.1, run), toeOff: lerp(0.7, 0.85, run),
+    strike: lerp(0.3, 0.1, run), toeOff: lerp(GAIT.toeOff, 0.85, run), mid: lerp(GAIT.mid, 0.32, run), heelOff: lerp(GAIT.heelOff, 0.62, run), reach: lerp(GAIT.reach, 0.992, run),
   };
 }
 
@@ -405,7 +418,7 @@ function plant(S, s, k) {
   const strike = k + off;
   const iS = phiIndex(C, strike);
   const g = gaitParams(Math.max(0.45, C.vg[iS]), rig.height);
-  const iM = phiIndex(C, strike + g.duty * lerp(MID, 0.32, g.run));
+  const iM = phiIndex(C, strike + g.duty * g.mid);
   let iRef = iM, rest = false;
   if (C.phi[0] >= strike) { iRef = 0; rest = true; }
   else {
@@ -465,7 +478,7 @@ function footAt(S, sd, t, phiT, gNow, amp) {
     const f = p / D;
     let pitch = 0;
     if (f < 0.14) pitch = g.strike * (1 - smooth(f / 0.14));
-    else if (f > 0.62) pitch = -g.toeOff * Math.pow(smooth((f - 0.62) / 0.38), 1.3) * 0.9;
+    else if (f > g.heelOff) pitch = -g.toeOff * Math.pow(smooth((f - g.heelOff) / (1 - g.heelOff)), 1.3) * 0.9;
     pitch *= amp;
     footOnGround(S, sd, P0, pitch, res.pos);
     res.pitch = pitch;
@@ -491,8 +504,22 @@ function footAt(S, sd, t, phiT, gNow, amp) {
   res.pos.set(a.x + ux * along, lerp(a.y, b.y, h01), a.z + uz * along);
   // clearance: the foot lifts (early peak); a running heel comes up toward the buttock
   const liftK = Math.min(1, dist / 0.25);
-  res.pos.y += (g.lift * Math.sin(Math.PI * Math.pow(q, 0.8)) + g.kick * Math.sin(Math.PI * Math.min(1, q / 0.62)) * (1 - q)) * liftK * amp;
-  res.pitch = lerp(-g.toeOff * 0.9, g.strike, smooth(q)) * amp - 0.25 * g.run * Math.sin(Math.PI * q) * amp;
+  const yRun = (g.lift * Math.sin(Math.PI * Math.pow(q, 0.8)) + g.kick * Math.sin(Math.PI * Math.min(1, q / 0.62)) * (1 - q)) * liftK * amp;
+  const pRun = lerp(-g.toeOff * 0.9, g.strike, smooth(q)) * amp - 0.25 * g.run * Math.sin(Math.PI * q) * amp;
+  if (GAIT.liftPeak > 0 && g.run < 1) {
+    // walking swing: the heel comes up behind (highest early in the swing, the knee folding), the
+    // foot falls to a low clearance as it passes the stance foot, levels, then reaches out toe-up
+    // and the knee straightens before the strike
+    const pa = GAIT.liftPeak, pb = GAIT.liftB, ea = pb * pa / (1 - pa);
+    const bump = Math.pow(q, ea) * Math.pow(1 - q, pb) / (Math.pow(pa, ea) * Math.pow(1 - pa, pb));
+    const yW = (b.y - res.pos.y) + (a.y - b.y) * (1 - smooth(q / GAIT.lowerQ)) + g.lift * bump * liftK * amp;
+    const pW = (-g.toeOff * 0.9 * (1 - smooth(q / GAIT.pitchFlat)) + g.strike * smooth((q - GAIT.pitchFlat * 0.8) / (1 - GAIT.pitchFlat * 0.8))) * amp;
+    res.pos.y += lerp(yW, yRun, g.run);
+    res.pitch = lerp(pW, pRun, g.run);
+  } else {
+    res.pos.y += yRun;
+    res.pitch = pRun;
+  }
   res.yaw = P0.yaw + wrap(P1.yaw - P0.yaw) * smooth(q);
   res.toeFlat = 0;
   res.stance = false;
@@ -658,7 +685,7 @@ function reachDrop(S, feet, g) {
     if (wS <= 0) continue;
     const hip = wpos(ch.bone(`upperleg01.${sd}`), _v);
     const horiz = Math.hypot(hip.x - Ft.pos.x, hip.z - Ft.pos.z);
-    const Lmax = rig.legLen * (Ft.kneeDown ? 0.999 : 0.992);
+    const Lmax = rig.legLen * (Ft.kneeDown ? 0.999 : g.reach);
     const maxY = Ft.pos.y + Math.sqrt(Math.max(0, Lmax * Lmax - horiz * horiz));
     over = Math.max(over, (hip.y - maxY) * wS);
   }

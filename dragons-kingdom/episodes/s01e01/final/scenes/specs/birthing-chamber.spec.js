@@ -252,10 +252,11 @@ export default {
       cast: { hatchling: hatchRest({ breathe: 0.45 }) },
     },
     '1A-27': {
-      staging: 'BACK + DOF: from behind Abby (soft) to Alexandria (soft); the hatchling sharp between.',
-      // session 6: an explicit camera low behind Abby's right shoulder (the solver, from 182 at 40 mm, could
-      // not hold three subjects against the south wall: it put Abby in sharp profile and lost the 'behind')
-      cam: { rig: 'static', pos: [-0.57, 1.0, 2.8], look: [-0.26, 0.93, 1.85], mm: 28, fstop: 2, focus: 'hatchling.head' },
+      staging: 'DOF: low and close on the hatchling (sharp) from the attendant\'s side; Abby and Alexandria soft beyond it at either side, mouths unreadable.',
+      // session 6: from behind Abby the room was too small (from 182 the solver put her in sharp profile;
+      // an explicit camera at her back filled half the frame with it, hid the hatchling and left
+      // Alexandria's face sharp): now low at the hatchling, wide open, both women far out of focus
+      cam: { rig: 'static', frame: { subjects: [['hatchling.head', [0.0, -0.3]], ['abby.head', [-0.5, 0.25]], ['alexandria.head', [0.5, 0.3]]], from: 318, height: 0.85, dist: 0.95 }, mm: 40, fstop: 1.4, focus: 'hatchling.head', focusOffset: -0.15, bounds: BOUNDS },
       cast: { abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 } }, alexandria: seated, hatchling: hatchRest() },
       lines: [['L020', 0.45], ['L021', 0.45]],
       minTail: 0.8,
@@ -264,7 +265,7 @@ export default {
       staging: 'WIDE: high three-shot from the south-west corner; the children\'s backs, Alexandria small and far beyond the nest.',
       // session 6: from the south-west corner, high (the solved camera from 195 saw Remi straight in front of
       // Abby: she was hidden behind him in the three-shot)
-      cam: { rig: 'static', pos: [-3.1, 3.4, 2.65], look: [0.35, 0.5, 0.6], mm: 28, fstop: 2.8, focus: 'hatchling' },
+      cam: { rig: 'static', pos: [-3.1, 3.4, 2.65], look: [0.45, 0.62, 0.45], mm: 28, fstop: 2.8, focus: 'hatchling' },
       cast: {
         abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 } }, remi: { at: REMI_S, face: 'hatchling', look: 'hatchling', acts: [[0.4, 'look', { at: 'alexandria.head' }]] },
         alexandria: { ...seated, acts: [[1.6, 'look', { at: 'remi.head', amount: 0.4 }], [3.0, 'look', { at: 'hatchling.head' }]] }, hatchling: hatchRest(),
@@ -274,7 +275,7 @@ export default {
     '1A-29': {
       staging: 'BACK: the sideways look reads as a head turn from behind.',
       // session 6: aimed higher (the 26 mm look at 0.9 m put Remi's head above the frame: no head, no head turn)
-      cam: { rig: 'static', pos: [1.25, 1.75, 2.8], look: [-0.3, 1.2, 0.95], mm: 26, fstop: 2, focus: 'remi.head' },
+      cam: { rig: 'static', pos: [1.25, 1.75, 2.8], look: [-0.3, 1.32, 0.95], mm: 22, fstop: 2, focus: 'remi.head' },
       cast: {
         abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 } },
         remi: { at: REMI_S, face: 'hatchling', look: 'hatchling', acts: [[0.2, 'look', { at: 'abby.head', amount: 0.9 }], [2.4, 'look', { at: 'hatchling' }]] },
@@ -286,7 +287,7 @@ export default {
       staging: 'BACK + WIDE: from behind Alexandria (soft) across the nest to the children, small.',
       // session 6: an explicit camera behind her right shoulder, focus on the children (her bun, sharp in the
       // foreground, read as a painted disc; the 50 mm solve cut Remi's head off)
-      cam: { rig: 'static', pos: [2.6, 1.4, -0.75], look: [-0.2, 1.15, 1.55], mm: 32, fstop: 2, focus: 'abby.head' },
+      cam: { rig: 'static', pos: [3.2, 1.5, -0.95], look: [-0.2, 1.1, 1.55], mm: 28, fstop: 2, focus: 'abby.head' },
       cast: {
         alexandria: seated,
         abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 }, acts: [[2.7, 'rise', { dur: 1.2 }]] },
@@ -321,12 +322,12 @@ export default {
     },
     '1A-33': {
       staging: 'BACK + HANDS: her hand (sharp) rests near the newborn without restraining it.',
-      // session 6: over her right shoulder (the solved camera from the south-west saw her face full on, and
-      // her hand never got there: the hatchling lies 1.1 m from the stool, beyond her reach); her hand
-      // comes to rest on the linen at the nest's edge, the hatchling sharp beyond it
-      cam: { rig: 'static', pos: [1.9, 1.35, -0.95], look: [0.4, 0.5, 0.05], mm: 50, fstop: 4, focus: 'alexandria.hand.R' },
+      // session 6: over her left shoulder (the solved camera from the south-west saw her face full on, and
+      // her hand never got there: the hatchling lies 1.1 m from the stool, beyond her reach); her left
+      // hand comes to rest on the linen at the nest's edge south of the broken egg, the hatchling beyond it
+      cam: { rig: 'static', pos: [1.95, 1.3, 0.75], look: [0.35, 0.5, 0.15], mm: 50, fstop: 4, focus: 'alexandria.hand.L' },
       cast: {
-        alexandria: { ...seated, posture: { sit: 1, lean: 1.0 }, acts: [[1.6, 'reach', { side: 'R', at: [0.62, 0.52, -0.2], in: 1.0 }]] },
+        alexandria: { ...seated, posture: { sit: 1, lean: 1.0 }, acts: [[1.6, 'reach', { side: 'L', at: [0.58, 0.52, 0.22], in: 1.0 }]] },
         hatchling: hatchRest(),
       },
     },
@@ -360,7 +361,7 @@ export default {
     },
     'X2-03': {
       staging: 'OTS + DOF: over Alexandria\'s shoulder (sharp); Remi soft and backlit in the doorway answers and goes.',
-      cam: { rig: 'static', pos: [2.2, 1.4, 0.55], look: [1.2, 1.45, 0.15], mm: 40, fstop: 2, focus: 'alexandria.head' },
+      cam: { rig: 'static', pos: [2.4, 1.2, 0.75], look: [1.0, 1.24, 0.0], mm: 50, fstop: 2, focus: 'alexandria.head' },
       cast: {
         alexandria: { ...seated, posture: { sit: 1, lean: 0.4 } }, hatchling: hatchRest(),
         remi: { at: [-3.2, -1.9], face: 'alexandria', look: 'alexandria.head', lookAmount: 0.5, legs: 'planted', acts: [[2.1, 'turn', { to: 270, dur: 0.6 }], [2.6, 'walk', { to: [-4.8, -1.9], speed: 1.1 }]] },
@@ -372,13 +373,13 @@ export default {
       staging: 'DOF: focus on the hatchling between them; both women soft.',
       // session 6: from behind Alexandria's left shoulder (the solve from the south-west saw her face full
       // on, sharp enough to read), wide open so both women go soft
-      cam: { rig: 'static', pos: [2.45, 1.55, 1.45], look: [0.3, 0.75, -0.4], mm: 32, fstop: 1.4, focus: 'hatchling' },
+      cam: { rig: 'static', pos: [2.45, 1.55, 1.45], look: [0.3, 0.92, -0.4], mm: 32, fstop: 1.4, focus: 'hatchling' },
       cast: { alexandria: { ...seated, acts: [[0.9, 'look', { at: 'attendant.head', amount: 0.8 }]] }, attendant: { at: ATT, face: 'hatchling', look: 'hatchling' }, hatchling: hatchRest() },
     },
     'X2-15': {
       staging: 'DOF: low and close on the sleeping hatchling (sharp); the two women far behind it, out of focus, mouths unreadable.',
       // session 6: a little higher and further back (at 0.75 m the straw rim in front hid the hatchling)
-      cam: { rig: 'static', frame: { subjects: [['hatchling.head', [0.0, -0.3]], ['attendant.head', [-0.45, 0.34]], ['alexandria.head', [0.45, 0.28]]], from: 184, height: 0.88, dist: 1.1 }, mm: 40, fstop: 1.4, focus: 'hatchling.head', focusOffset: -0.2, bounds: BOUNDS },
+      cam: { rig: 'static', frame: { subjects: [['hatchling.head', [0.0, -0.35]], ['alexandria.head', [0.45, 0.3]]], from: 184, height: 0.82, dist: 0.9 }, mm: 40, fstop: 1.4, focus: 'hatchling.head', focusOffset: -0.15, bounds: BOUNDS },
       cast: { alexandria: { ...seated, look: 'attendant.head', lookAmount: 0.6, acts: [[5.6, 'look', { at: 'hatchling.head' }]] }, attendant: { at: ATT, face: 'alexandria', look: 'alexandria.head', lookAmount: 0.6, acts: [[4.6, 'bow', { to: 0.3, dur: 0.5 }]] }, hatchling: hatchRest() },
       lines: [['X2-09', 0.6], ['X2-10', 0.35], ['X2-11', 0.35]],
     },

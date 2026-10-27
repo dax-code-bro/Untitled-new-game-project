@@ -558,18 +558,27 @@
    "load": 20.13,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
    "measured_at": "2026-10-27T07:07"
+  },
+  "1A-26": {
+   "draft_s_per_frame": 17.743,
+   "frames_drawn": 60,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 15.08,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
+   "measured_at": "2026-10-27T09:48"
   }
  },
  "sets": {
   "ALEXANDRIA_ROOM": {
-   "setup_s": 18.9,
+   "setup_s": 20.1,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
-   "measured_at": "2026-10-27T03:15"
+   "measured_at": "2026-10-27T09:45"
   },
   "BIRTHING_CHAMBER": {
-   "setup_s": 95.7,
+   "setup_s": 65.7,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
-   "measured_at": "2026-10-27T04:14"
+   "measured_at": "2026-10-27T09:30"
   },
   "PALACE_CORRIDOR": {
    "setup_s": 46.9,
