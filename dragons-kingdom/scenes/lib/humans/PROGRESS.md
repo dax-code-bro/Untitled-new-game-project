@@ -466,7 +466,8 @@ crowd-draft.mp4 (all with their takes), walk-draft.mp4 (no audio); alex-4k / dlg
 crowd-4k .png + _1920 + 1:1 crops (alex: face, mouth; dlg: remi, abby; cradle: arms, abby; crowd:
 flee, carry).
 - npm test at the end (machine quieter): 44 pass, 1 skipped (no pwsh), 0 fail; selftest-perf all passed.
-Next (for a successor): the dialogue draft started 14 min before the mouth-interior tint (its teeth
-read cool at 960 px; re-render when convenient); a crowd member in the south of the square still
+- dialogue-draft.mp4 re-rendered after the mouth-interior tint (17 min on the quieter machine), same
+  performance, the open "gold" reads dark-warm inside.
+Next (for a successor): a crowd member in the south of the square still
 stands at t 5.2 (late reactor - give the reaction wave a cap); the cradle framing cuts the top of
 Remi's head; the Cling crowd page needs ~5 GB free (the set, not the people) - render it alone.
