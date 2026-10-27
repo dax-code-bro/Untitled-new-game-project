@@ -361,6 +361,15 @@ render in scratchpad eng1/perf/):
   "weapon" w pursing 0.50 then p 0.66.
 - Alexandria close-up: f/2.2 -> f/3.2 and focus 8 mm nearer (the 4K still had the eyes sharp and the
   mouth soft: ~28 mm depth of field at 0.95 m with the 65 mm-equivalent lens).
+- Cradle: the hurt hand's fingers fall together and flex like a hand at rest (curl 0.55-0.9, spread
+  -0.05); with MakeHuman's splayed rest fingers the lighter curl read as a claw in cradle-4k.png.
+- 4K stills reviewed (output/humans/perf/*-4k*.png, 1:1 crops): dlg (Remi mid-word turned to Abby,
+  Abby's lips parted, eyes on the nest), cradle (forearm across the ribs, tray hand, Remi's hand on
+  her upper arm), crowd (fleeing with hands to heads, motion blur), alex (re-rendered with the shapes).
+- Inner-lip line: parted lips show a thin pale blue line along the inside of the lower lip under the
+  chamber's cool top light (also faintly in the pre-shape 4K). Not the skin's specular, clearcoat or
+  direct light (three shader trials at the lip line changed nothing visible; reverted). Not traced
+  yet - next suspect the teeth / gum mesh's wet coat. Left for the look side.
 Findings not fixed (look, not performance): the pulled-back hairlines show a band of scalp between
 the hairline roots (6 cm above the eyes, normal) and where the strands get dense, most visible under
 a low key light (Alexandria L011, Abby) - the hero renders show it too; hair build, not the rig
