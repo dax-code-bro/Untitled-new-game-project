@@ -458,7 +458,15 @@ Render queue (memory-gated, sequential): scratchpad eng1/perf/bin/q3.sh, logs en
   frames in 14 min, 2 workers): walk with heel strike / push-off, stop, turn, wave 6-7 s; run, slow,
   stop, point 8-13 s; kneel + reach 14-18 s; stagger 20 s, fall 22 s (prone, head lifted); the
   parent lifts the child onto her hip at 25-26 s and walks off.
+- cradle-4k.png re-rendered with the session-3 shading (t 6.62, "I'm standing", 7.7 min): right hand
+  under the hurt left forearm, left hand palm up with a soft curl, Remi's hand on her upper arm; mouth
+  interior mean (37,15,11), no pixel bluer than red.
 Outputs (output/humans/perf/, not in git): alex-draft.mp4, dialogue-draft.mp4, cradle-draft.mp4,
 crowd-draft.mp4 (all with their takes), walk-draft.mp4 (no audio); alex-4k / dlg-4k / cradle-4k /
 crowd-4k .png + _1920 + 1:1 crops (alex: face, mouth; dlg: remi, abby; cradle: arms, abby; crowd:
 flee, carry).
+- npm test at the end (machine quieter): 44 pass, 1 skipped (no pwsh), 0 fail; selftest-perf all passed.
+Next (for a successor): the dialogue draft started 14 min before the mouth-interior tint (its teeth
+read cool at 960 px; re-render when convenient); a crowd member in the south of the square still
+stands at t 5.2 (late reactor - give the reaction wave a cap); the cradle framing cuts the top of
+Remi's head; the Cling crowd page needs ~5 GB free (the set, not the people) - render it alone.
