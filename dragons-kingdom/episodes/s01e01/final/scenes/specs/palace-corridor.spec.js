@@ -18,6 +18,8 @@ export default {
     servant2: { kind: 'human', id: 'crowd05', role: null, armSwing: 0 },
   },
   homes: { remi: [-0.45, 1.7, 14], abby: [0.45, 1.5, 14] },
+  // tools/previs.mjs: the builder's marks (sets/palace-corridor.js, corridor 26 m long)
+  previs: { marks: { chamberDoor: [-0.2, 1.4, 0], doorFront: [-0.2, 0, 1.2], exit: [0, 1.6, 26], exitIn: [0, 0, 24.8] } },
   shots: {
     'X1-01': {
       staging: 'BACK + WIDE: followed from behind, small in frame; she hurries out of the chamber door and along the corridor, then breaks into a run.',

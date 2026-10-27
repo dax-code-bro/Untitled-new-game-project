@@ -195,6 +195,14 @@ t('framing search + clear: a fan of starts beats the trapped single start; no su
   const w0 = solveFraming(fr27, 40, env, 0, 16 / 9, 24.89, B).worst, w1 = solveFraming({ ...fr27, search: true }, 40, env, 0, 16 / 9, 24.89, B).worst;
   assert.ok(w1 < w0 - 0.05, `search ${w1} vs single start ${w0}`);
 });
+t('previs (Node): a chamber shot previsualised - camera, heads on the screen, a hidden head found', () => {
+  // 1A-29's camera behind Remi: Abby crouched beside him is (partly) behind him - the render agreed
+  const r = spawnSync(process.execPath, [path.join(HERE, 'previs.mjs'), '--set', 'BIRTHING_CHAMBER', '--only', '1A-29', '--at', '0.5'], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /1A-29/);
+  assert.match(r.stdout, /cam 1\.25, 1\.75, 2\.80/);
+  assert.match(r.stdout, /abby .*HIDDEN behind remi/);
+});
 t('hand props: an object between the posed palms, levelled, offset in the hands\' frame; one-hand and list forms', () => {
   // a mock character facing +x (yaw 90): left hand at z -0.15 (north), right hand at z +0.15 - wrists
   // and knuckles 0.08 m further forward, palms level at 1.0 m

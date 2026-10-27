@@ -41,6 +41,15 @@ export default {
     remi: { kind: 'human', id: 'remi', role: 'REMI' },
     hatchling: { kind: 'creature', id: 'hatchling', quality: 'standard' },
   },
+  // tools/previs.mjs (Node previs): the set builder's marks it cannot compute without the set (approximate)
+  previs: {
+    bounds: BOUNDS,
+    marks: {
+      nest: [-0.6, 0.45, 0.3], egg: [0.62, 0.75, -0.18], eggTop: [0.62, 1.03, -0.18], eggCrack: [0.62, 0.95, -0.1], eggFrag: [0.6, 0.8, -0.05],
+      door: [-3.6, 1.3, -1.9], doorway: [-2.9, 0, -1.9], doorOut: [-5.2, 0, -1.9], window: [3.6, 3.95, -0.35], windowFloor: [-1.2, 0, -0.2],
+      stool: [1.45, 0, 0.9], hatchRest: [0.12, 0.47, 0.12], lampKey: [-0.5, 0.43, 1.31], lampNorth: [-0.95, 0.7, -2.55], bench: [-0.4, 0.62, -2.6],
+    },
+  },
   // where each actor usually is (eye-lines and facings toward someone who is not in the shot)
   homes: { hatchling: [HR[0], 0.46, HR[1]], alexandria: [ALEX_SEAT[0], 1.2, ALEX_SEAT[1]], attendant: [ATT[0], 1.4, ATT[1]], abby: [ABBY_C[0], 1.0, ABBY_C[1]], remi: [REMI_S[0], 1.7, REMI_S[1]] },
   defaults: {
@@ -252,11 +261,11 @@ export default {
       cast: { hatchling: hatchRest({ breathe: 0.45 }) },
     },
     '1A-27': {
-      staging: 'BACK + DOF: Abby\'s back soft at the left edge (a dirty frame), the hatchling sharp, Alexandria soft beyond, her face turned down to it.',
-      // session 6: the solver could not hold three subjects against the south wall (from 182: Abby in sharp
-      // profile; from 318: behind Alexandria, Abby's speaking face full on); an explicit camera behind
-      // Abby's right shoulder, wide open, Alexandria's eyes on the hatchling (her face turned 75 deg)
-      cam: { rig: 'static', pos: [-0.4, 1.07, 2.8], look: [-0.16, 1.01, 1.83], mm: 28, fstop: 1.4, focus: 'hatchling.head' },
+      staging: 'DOF: over Abby\'s shoulder onto the hatchling (sharp) - what "There." points at; both voices off screen (Abby behind the lens, Alexandria just above the frame).',
+      // session 6, after four stagings (stills + tools/previs.mjs): from behind Abby the hatchling lies
+      // straight in front of her (hidden by her back), and every angle that holds all three shows one
+      // speaking face full on at 3 m; the line is about the hatchling, so the picture is too
+      cam: { rig: 'static', pos: [-0.15, 1.25, 2.8], look: [0.12, 0.97, 1.83], mm: 28, fstop: 1.4, focus: 'hatchling.head' },
       cast: { abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 } }, alexandria: { ...seated, lookAmount: 1 }, hatchling: hatchRest() },
       lines: [['L020', 0.45], ['L021', 0.45]],
       minTail: 0.8,

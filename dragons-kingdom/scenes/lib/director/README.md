@@ -40,6 +40,7 @@ shot videos  ->  cut/make-cut.mjs  ->  cut/DragonsKingdom_S01E01_draft-cut_<scen
 | `sets/*.js` | set builders: `birthing-chamber`, `alexandria-room`, `palace-corridor`, `sea-coast-dawn`, `prologue-vistas`, `verdor-grounds`, `common` (sky dome, light cards, room environments, wall lamps), `wing-cloud` (the P-16 cloud card painter, pure: testable in Node) |
 | `tools/build-shots.mjs` | shot tables, the edit list, the audio cue sheet (`--check` for CI) |
 | `tools/render-shots.mjs` | **dailies**: many shots per browser setup into one video file each (with the handle frames dissolves need), or review stills + a contact sheet per set (`--stills 0.2,0.8`); resumable; measured s/frame into `cut/timings.json`; the stage's per-shot warnings (framing the solver could not hold, a speaking face that reads) are kept as **review flags** in each shot's `.json` sidecar (`notes`), listed at the end of the run, and carried into `cut/cut-report.json` by `make-cut.mjs` |
+| `tools/previs.mjs` | **previs in Node** (seconds, no browser): per shot and moment, the camera (static / keys / `frame` solved by the same solver / `follow`), every head on the screen (in / out, distance, size), the speaking-face check and heads hidden behind a nearer actor; `--out DIR` draws a sheet per shot (plan with the camera's field of view + a schematic of the frame); `--cam '{...}'` / `--cast '{...}'` try a camera or blocking over the shot's own (the authoring loop that found session 6's chamber stagings). Approximate bodies (standing head 1.62 m, seated 1.22, crouched 0.95), marks from `spec.previs.marks` / `homes`; it does not know light (a silhouette still 'reads') |
 | `tools/shot-rows.mjs` | **review rows of the dailies**: frames of every rendered shot video side by side, labelled with the shot's staging line from the edit list and its review flags, pages in edit order (`--shots <work>/shots --out DIR --at 0.1,0.5,0.9 --only ...`): hold each picture against what the shot is meant to be |
 | `tools/cut-sheet.mjs` | review sheets of an ASSEMBLED cut: frames taken from the cut file at fractions of every shot (transitions, captions, burn-ins included), tiled and labelled with shot id + record timecode |
 | `tools/still.mjs`, `tools/contact.mjs` | one still of a shot by `render.mjs --still`; a contact sheet from a review video |
@@ -100,6 +101,7 @@ node scenes/lib/director/tools/render-shots.mjs                          # every
 node episodes/s01e01/final/cut/make-cut.mjs                              # assemble the draft cut with the voices
 node scenes/lib/director/tools/shot-rows.mjs --shots <work>/shots --out <dir>  # each shot's frames vs its staging
 node scenes/lib/director/tools/cut-sheet.mjs --cut <cut.mp4> --out <dir> # review sheets across the cut
+node scenes/lib/director/tools/previs.mjs --set BIRTHING_CHAMBER --only 1A-27 --out <dir>   # previs (Node, seconds)
 node scenes/lib/director/tools/selftest.mjs                              # unit checks
 ```
 
