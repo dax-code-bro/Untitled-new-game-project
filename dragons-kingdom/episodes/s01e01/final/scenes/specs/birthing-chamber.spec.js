@@ -243,9 +243,11 @@ export default {
     },
     '1A-24': {
       staging: 'BACK + DOF: Remi from behind (the focus is on his shoulder); the attendant across the nest out of focus, answering down to the hatchling.',
-      cam: { rig: 'static', frame: { subjects: [['remi.head', [-0.55, 0.35]], ['attendant.head', [0.3, 0.3]]], from: 160, height: 1.75 }, mm: 40, fstop: 1.4, focus: 'remi.head', focusOffset: -0.15, bounds: BOUNDS },
+      // session 6: close behind Remi (the solve went to 21 mm in the south-east corner: the attendant's speaking
+      // face read, 43 deg, sharp; Abby hid behind Remi) - previs: the attendant 10 % blurred, eyes down
+      cam: { rig: 'static', pos: [0.6, 1.8, 2.8], look: [-0.3, 1.2, -0.8], mm: 45, fstop: 1.4, focus: 'remi.head', focusOffset: -0.15 },
       cast: {
-        remi: { at: REMI_S, face: 'hatchling', look: 'hatchling' }, attendant: { at: ATT, face: 'hatchling', look: 'hatchling', lookAmount: 0.8 },
+        remi: { at: REMI_S, face: 'hatchling', look: 'hatchling' }, attendant: { at: ATT, face: 'hatchling', look: 'hatchling', lookAmount: 1 },
         abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 } }, hatchling: hatchRest(),
       },
       lines: [['L018', 0.6], ['L019', 0.45]],

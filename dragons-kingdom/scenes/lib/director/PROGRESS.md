@@ -26,6 +26,21 @@ How it works: `README.md` in this folder. Latest state first.
   with fresh water"): now the chamber's `waterBowl` (props library bowl with water). Self-tested.
 - LESSON: a stop-after script's blanket `rm *.part.mp4` deleted another queue's X1-03 part (12 min of
   work lost): only remove parts with no live lock (`stop-after.sh` fixed).
+- Engine: `tools/previs.mjs` - Node previs in seconds (camera incl. `frame` solves, heads on the screen,
+  speaking-face check, heads hidden behind a nearer actor, plan + frame sheets via ImageMagick,
+  `--cam` / `--cast` overrides for an authoring loop). It predicted the render problems found by stills
+  (1A-28 Abby behind Remi, 1A-29 head out of frame, 1A-24 attendant's readable face, 1A-31 Abby in Remi's
+  shadow). USE IT BEFORE RENDERING STILLS. `spec.previs.marks` holds the set marks it cannot compute.
+- Engine: framing solver opt-ins `frame.search` (fan of starts inside the room) and `frame.clear`
+  (no actor in front of a subject); self-tested on the 1A-28 case. Not used by existing shots (their
+  cameras must not change under them).
+- 1A-27 took four stagings: from behind Abby the hatchling sits straight in front of her (hidden by her
+  back) and every angle holding all three shows a speaking face full on at 3 m; final: over Abby's
+  shoulder onto the hatchling, both voices off screen. 1A-24 restaged close behind Remi (the attendant's
+  face read at 21 mm; Abby was hidden) - queued after the main renders.
+- Lip-sync IS live in director renders now (humans/director.js registers the 'face' hook on load): the
+  speaking-face audit is a quality flag, no longer a hard rule.
+- Render speed this session: 25-35 s per chamber draft frame (load 15-25: other tracks render too).
 
 ## Session 5 (2026-10-27, resumed after a container restart)
 
