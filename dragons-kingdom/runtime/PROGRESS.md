@@ -40,6 +40,10 @@ Checked (all on the cloud CPU, SwiftShader):
 - every tier: same structure (96x54 thumbnail SSIM 0.89-0.92 on quay lookdev, coast, tier fixture), no
   NaN/Inf, no shader errors; deterministic (ultra frame identical after other frames / other browser).
 - GPU FFT vs CPU FFT: heightAt within 0.17 mm, picture PSNR 58 dB, exact at t = 59 min; 512 keeps the sea.
+- style frame F4 (birthing chamber, film finish x8) at 480x272: high SSIM 0.990 / 39.3 dB, ultra (x16)
+  0.990 / 39.0 dB vs final, same picture (2x crops of the hatchling and Alexandria's hands: smoother cloth
+  edges, nothing else). Its `update()` is ~270 ms per call on the cloud CPU, so on the PC the CPU side,
+  not the GPU, sets the price of sub-frames (estimate ~1.1 s final -> ~2.1 s ultra per 4K frame).
 - npm test: 45 tests, 44 pass, 1 skipped (PowerShell, as before).
 - gpu-check `--swiftshader --candidate lookdev-coast --tiers high,ultra --tier-size 480x272` runs end to end
   (bench, picture check per tier, plan table, RECOMMENDED banner, gpu-check.json `tiers` + `recommendedPreset`).
