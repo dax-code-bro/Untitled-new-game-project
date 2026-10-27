@@ -80,6 +80,25 @@ How it works: `README.md` in this folder. Latest state first.
   - P-09: the P-09 still with distFade still showed the hard line - it is the CAMERA'S FAR PLANE (60 km
     slant = 3.3 deg above the horizon for a deck 3.5 km up), not the card's edge. `set.far` per shot
     (P-09: 200 km) and the faded deck discards fragments below alpha 0.02 (no depth where it is gone).
+  - Rendered after the stills (20:31-21:30, two vistas browsers): P-09 (the clouds thin into the haze, no
+    line, 3 frames looked at), P-11 (hedge loaves: at 4x a continuous lumpy band instead of grey
+    pebbles; at 1x a small change), P-12 (whole island, both ends, mist at its foot), P-10 (the rock wall
+    of st14, frames 3 / 40 / 60 looked at). X2-03 (the doorway reverse) and X1-03 (door in focus from the
+    first frame, her head soft) rendered and looked at.
+- CUT, 21:16 (`assemble.sh <work> eng1/director/cutrev9`, 4 min with nothing else running):
+  `episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_PROLOGUE-TITLE-1A.mp4` - 357.50 s
+  (8580 frames, 960x540, h264 + aac), 75 rendered shots, 1 black card (P-01, by the script: black before
+  any image), 0 SLATES, 50 voice cues; check-sync 56 subtitle cues, 0 suspicious; render-shots dry-run
+  (--redo-on shot): nothing stale; edit check: 0 flags not accepted. All 8 cut-sheet pages looked at.
+  Review-flag notes kept in cut-report.json: 1A-18 / 1A-28 speaking faces (lip-sync is live; small or
+  soft), 1A-22 / 1A-25 / X2-15 / X2-17 "lens too long for the room" (looked at earlier: the pictures hold).
+- npm test (21:05-21:16, one vistas render beside it): 49 tests, 48 pass, 1 skipped, 0 fail. Director
+  selftest: 20 checks pass.
+- assemble.sh's edit-check step now prints only flags not yet accepted (a pair header used to print for
+  an accepted pair).
+- NOT DONE / next: P-08's hedges are still round bushes (`align: true` exists; P-08 costs ~100 min);
+  1B (VERDOR_GROUNDS, 32 shots) is not authored - the multi-cut plumbing (edl-1B, make-cut --edl) waits
+  for it; the 4K finals run on the render PC.
 
 ## Session 6 (2026-10-27, resumed after another container restart)
 

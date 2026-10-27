@@ -117,9 +117,9 @@ export async function build(ctx, { shotSpecs }) {
     ], { macro: 0.55, macroScale: 0.004, detailNear: 300, detailFar: 2500, vertexColors: true, ...o }),
     // a dark sandstone cliff: an earthy grit texture side-projected reads as weathered rock; the
     // library's block-like rock26 read as a dressed stone wall on a 60 m heightfield face
-    // (session 7: the grit at 11 m with a strong normal map, seen ALONG the face at a grazing angle, was
-    // squeezed sideways into fine vertical hairlines over the whole face - larger and flatter now; the
-    // face's form comes from the geometry: coastLand rows + relief)
+    // (session 7: larger and flatter than before - the face's form comes from the geometry: coastLand rows,
+    // relief and walls steeper than 75 deg; the fine vertical streaks on P-10 were the shader's top-down
+    // projection on 65-70 deg walls, not this texture)
     cliff: (o = {}) => terrainMaterial(ctx, [
       { id: 'pbr/acg_ground24', scale: 26, tint: [0.4, 0.33, 0.27], normalScale: 0.4 },
       { id: 'pbr/acg_ground13', scale: 8, tint: [0.42, 0.46, 0.34] },

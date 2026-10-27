@@ -1,6 +1,6 @@
 {
  "title": "Dragon's Kingdom S01E01 - draft cut: PROLOGUE + TITLE + 1A",
- "made_at": "2026-10-27T18:52",
+ "made_at": "2026-10-27T21:16",
  "shots_dir": "../../../../tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/work/shots",
  "size": "960x540",
  "fps": 24,
@@ -163,7 +163,7 @@
    "job": "P-09",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "rendered 2026-10-23T21:35",
+   "source": "rendered 2026-10-27T20:50",
    "frames": 204,
    "rec_in": 1104,
    "trans": [
@@ -183,7 +183,7 @@
    "job": "P-10",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "rendered 2026-10-23T21:55",
+   "source": "rendered 2026-10-27T21:15",
    "frames": 48,
    "rec_in": 1308,
    "trans": [
@@ -203,7 +203,7 @@
    "job": "P-11",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "rendered 2026-10-23T21:57",
+   "source": "rendered 2026-10-27T21:00",
    "frames": 48,
    "rec_in": 1356,
    "trans": [
@@ -223,7 +223,7 @@
    "job": "P-12",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "rendered 2026-10-23T21:59",
+   "source": "rendered 2026-10-27T21:04",
    "frames": 48,
    "rec_in": 1404,
    "trans": [
@@ -456,7 +456,7 @@
    "job": "X1-03",
    "scene": "1A",
    "kind": "3d",
-   "source": "rendered 2026-10-27T12:20",
+   "source": "rendered 2026-10-27T20:17",
    "frames": 48,
    "rec_in": 3096,
    "trans": [
@@ -1058,7 +1058,7 @@
    "job": "1A-30",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T19:55",
    "frames": 144,
    "rec_in": 6180,
    "trans": [
@@ -1172,7 +1172,7 @@
    "job": "X2-03",
    "scene": "1A",
    "kind": "3d",
-   "source": "rendered 2026-10-27T14:24",
+   "source": "rendered 2026-10-27T20:19",
    "frames": 96,
    "rec_in": 6960,
    "trans": [
@@ -1210,7 +1210,7 @@
    "job": "X2-05",
    "scene": "1A",
    "kind": "3d",
-   "source": "rendered 2026-10-27T04:22",
+   "source": "rendered 2026-10-27T19:38",
    "frames": 60,
    "rec_in": 7152,
    "trans": [
@@ -1986,13 +1986,13 @@
   "file": "episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_PROLOGUE-TITLE-1A.mp4",
   "frames": 8580,
   "duration_s": 357.5,
-  "size_mb": 48.8,
-  "assembled_s": 429
+  "size_mb": 49.4,
+  "assembled_s": 139
  },
  "summary": {
-  "rendered": 74,
+  "rendered": 75,
   "black": 1,
-  "slates": 1,
+  "slates": 0,
   "voice_cues": 50,
   "review_flags": 6
  }

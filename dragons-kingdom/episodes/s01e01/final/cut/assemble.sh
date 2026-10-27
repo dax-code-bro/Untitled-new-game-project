@@ -22,5 +22,6 @@ ffprobe -v error -show_entries format=duration:stream=codec_name,width,height,nb
 rm -rf "$REVIEW"; node scenes/lib/director/tools/cut-sheet.mjs --cut "$OUT" --out "$REVIEW" --at 0.2,0.75 --per-page 20 | tail -9
 python3 episodes/s01e01/final/cut/check-sync.py "$OUT" | tail -1
 for SET in SEA_COAST_DAWN PROLOGUE_VISTAS VERDOR_GROUNDS BIRTHING_CHAMBER PALACE_CORRIDOR ALEXANDRIA_ROOM; do
-  node scenes/lib/director/tools/previs.mjs --set $SET --cuts 2>/dev/null | grep -B1 -E "^    (JUMP|the eye-line)" | grep -v "accepted:" | grep -v -- "--" | sed "s/^/  $SET  /"
+  # flags not yet accepted (spec.cutsOk), each under its shot pair
+  node scenes/lib/director/tools/previs.mjs --set $SET --cuts 2>/dev/null | awk -v set="$SET" '/^[^ ]/ { hdr = $0; next } /^    (JUMP|the eye-line)/ && !/accepted:/ { if (hdr != "") { print "  " set "  " hdr; hdr = "" } print "  " set "  " $0 }'
 done
