@@ -144,10 +144,12 @@ function cameraAt(s1, t, u, env) {
     pos = r.pos; look = r.look; worst = r.worst;
   } else if (c.follow) {
     const f = c.follow, st = env.state(f.target, t);
-    const rot = (a) => V(a).applyAxisAngle(new THREE.Vector3(0, 1, 0), st.yaw);
+    const rot = (a) => (f.local !== false ? V(a).applyAxisAngle(new THREE.Vector3(0, 1, 0), f.yaw != null ? (keyed(t, f.yaw) * Math.PI) / 180 : st.yaw) : V(a));
     const g = new THREE.Vector3(st.x, st.y, st.z);
-    pos = g.clone().add(rot(f.offset || [0, 2, -6]));
-    look = c.look != null ? res(c.look) : g.clone().add(rot(f.lookOffset || [0, 1.2, 0]));
+    // offsets may be key lists (X2-04's follow pulls back over the shot)
+    const kv = (v, d) => (v == null ? d : isKeyList(v) ? keyed(t, v) : v);
+    pos = g.clone().add(rot(kv(f.offset, [0, 2, -6])));
+    look = c.look != null ? res(c.look) : g.clone().add(rot(kv(f.lookOffset, [0, 1.2, 0])));
   } else {
     pos = res(c.pos); look = res(c.look);
   }

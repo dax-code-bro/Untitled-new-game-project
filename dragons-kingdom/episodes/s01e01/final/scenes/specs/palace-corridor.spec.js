@@ -54,7 +54,10 @@ export default {
     },
     'X2-05': {
       staging: 'BACK + WIDE: the servants flatten against the wall; the siblings pass, backs to camera.',
-      cam: { rig: 'follow', follow: { target: 'remi', lag: 0.3, offset: [-0.55, 1.5, -2.6], lookOffset: [0.2, 1.2, 3.0] }, mm: 50, fstop: 2.8, focus: 'remi.head', bounds: BOUNDS, shake: { kind: 'handheld', amount: 0.3 } },
+      // session 7: static from the east wall (was a follow from behind, like X2-04 and X2-06 on each side of
+      // it: previs --cuts found a jump cut into X2-06, Remi 22 deg apart at 0.91x); the siblings walk past
+      // the lens into the depth, the servants on the right (west wall) as the shot list places them
+      cam: { rig: 'static', pos: [1.15, 1.4, 9.3], look: [-0.7, 1.2, 16.0], mm: 32, fstop: 2.8, focus: 'remi.head', bounds: BOUNDS },
       cast: {
         abby: { at: [0.45, 11.0], face: 180, look: 'exit', acts: [[0, 'walk', { to: [0.4, 16.0], speed: 1.75, acc: 0.1 }]] },
         remi: { at: [-0.35, 10.8], face: 180, look: 'exit', acts: [[0, 'walk', { to: [-0.3, 15.8], speed: 1.75, acc: 0.1 }], [0.8, 'look', { at: 'servant1.head', amount: 0.4 }]] },

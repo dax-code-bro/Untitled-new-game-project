@@ -3,6 +3,37 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 7 (2026-10-27 evening, resumed after a usage-limit stop + container restart)
+
+- State found: 72 of 75 3D shots rendered in `eng1/director/work/shots` (it survived); 1A-29, 1A-30, 1A-32
+  missing (1A-32 had one segment); P-17 had one segment of its meadow-card re-render; P-09 / P-10 stale
+  (spec changed), P-11 / P-12 never re-rendered with the reworked landscapes. Stale locks and part files
+  of the dead runs removed by hand (a fresh container reuses low pids: a lock's pid can look alive).
+- FIRST CUT (18:15): `make-cut.mjs --shots <work>/shots` -> 357.50 s, 72 rendered, 1 black, 3 slates
+  (1A-29 1A-30 1A-32), 50 voice cues, 3 min to assemble with nothing else running. Cut sheets
+  (`cut-sheet.mjs --at 0.2,0.75`, `eng1/director/cutrev7/`) looked at page by page.
+- Review flags were one note per FRAME for 1A-18 (the speaking-face audit's message carried its numbers,
+  so warnOnce never matched): `warnOnce(msg, key)` keys it per role now, make-cut collapses old
+  sidecars' notes per kind.
+- EDIT CHECK (new, `previs.mjs --cuts`, pure `audit.js cutCheck`, self-tested): every cut between two
+  consecutive shots of a set - a JUMP CUT (the largest subject both frames hold seen from < 25 deg apart
+  at < 1.6x the size) and a crossed EYE-LINE (cameras on both sides of the line between a subject and the
+  one it looks at; a camera within 20 deg of the line does not flip it; a reverse across a group flips
+  its members' order legitimately, so only looked-at pairs). Found on the authored cut:
+  - X2-02 -> X2-03 (seen in the assembled cut first: the same frame twice, 1.6x closer on one axis):
+    X2-03 restaged as the REVERSE over Remi's shoulder from the door's tunnel (his back soft, Alexandria
+    small at the nest, not looking up; he exits frame left past the lens). A medium of Remi facing the
+    lens (the shot list's framing) was tried in previs and dropped: the humans-library face sharp and
+    frontal reads CG (performance track's dlg-4k).
+  - 1A-30 -> 1A-31 (18 deg, 1.47x): 1A-30 at 24 mm (was 28) - the children 1.7x smaller ("small").
+    1A-30 was held out of the running queues with a lock owned by a `sleep` process (a running render's
+    browser holds the OLD spec in memory: it would have rendered the old camera).
+  - X2-05 -> X2-06 (corridor, Remi 22 deg, 0.91x): two follow shots from behind; left as is for now.
+  - 1A-28 -> 1A-29: the children's eye-lines to the hatchling crossed (high SW corner -> behind them
+    from the SE); check the 1A-29 render.
+- X1-03: focus on the door from the first frame (the pull from her head showed the library bun sharp -
+  a flat disc with a dashed band - for the first second).
+
 ## Session 6 (2026-10-27, resumed after another container restart)
 
 - State found: 1A-26..1A-33, X2-01..X2-03, X2-14, X2-15 unrendered; X1-03 / X2-13 rendered BEFORE their

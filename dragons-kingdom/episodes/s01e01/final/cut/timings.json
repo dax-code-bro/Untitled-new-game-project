@@ -648,6 +648,15 @@
    "load": 17.11,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
    "measured_at": "2026-10-27T16:45"
+  },
+  "1A-32": {
+   "draft_s_per_frame": 16.086,
+   "frames_drawn": 96,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 17.82,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
+   "measured_at": "2026-10-27T18:32"
   }
  },
  "sets": {
@@ -657,9 +666,9 @@
    "measured_at": "2026-10-27T11:57"
   },
   "BIRTHING_CHAMBER": {
-   "setup_s": 95.5,
+   "setup_s": 124.1,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
-   "measured_at": "2026-10-27T13:51"
+   "measured_at": "2026-10-27T18:18"
   },
   "PALACE_CORRIDOR": {
    "setup_s": 46.9,
