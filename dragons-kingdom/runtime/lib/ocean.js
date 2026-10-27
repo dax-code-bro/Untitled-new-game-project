@@ -24,6 +24,7 @@
 // Beer-Lambert absorption, and foam lines form where rocks / shores / hulls
 // cut the surface.
 import * as THREE from 'three';
+import { createGpuFFT } from './ocean-gpu.js';
 
 const G = 9.81;
 const TWO_PI = Math.PI * 2;
@@ -123,6 +124,8 @@ export const OCEAN_DEFAULTS = {
   refraction: 0.06,
   ssr: false,                            // screen-space reflections of the scene (dragons, cliffs) - needs the cinematic late pass; about doubles the ocean pass (measured 0.8 -> 1.8 s at 1080p); slightly aliased at the reflection edges
   ssrSteps: 24,
+  gpuFFT: false,                         // true: the FFTs run on the GPU (ocean-gpu.js) - the quality tiers above final turn it on
+                                         // with resolution 512 (finest ripples 11 cm instead of 21 cm), cheap at every sub-frame
   segments: 256, innerRadius: 0.35, sectorAngle: 2.6, gridFocus: 30, outerRadius: 20000, maxRingGrowth: 0.06,
   castShadow: false,
 };
@@ -131,14 +134,30 @@ export const OCEAN_DEFAULTS = {
  * Build the ocean. Returns { mesh, material, update(t), heightAt(x, z), stats }.
  */
 export function createOcean(ctx, opts = {}) {
-  const o = { ...OCEAN_DEFAULTS, ...opts };
+  // quality tiers (dk/quality.js) give defaults for resolution / ssr / ssrSteps / gpuFFT; a scene's own options win
+  const tq = ctx?.quality?.ocean || {};
+  const tierDefaults = {};
+  for (const k of ['resolution', 'ssr', 'ssrSteps', 'gpuFFT']) if (tq[k] !== undefined) tierDefaults[k] = tq[k];
+  const o = { ...OCEAN_DEFAULTS, ...tierDefaults, ...opts };
   const N = o.resolution;
-  const ifft2 = makeFFT(N);
+  const gpuMode = !!o.gpuFFT && !!ctx?.renderer;
+  const ifft2 = gpuMode ? null : makeFFT(N);
   const dirRad = (o.windDirection * Math.PI) / 180;
   const spec = jonswap(o);
   const cascades = o.cascades.map((L, ci) => {
     const rng = mulberry((o.seed * 7919 + ci * 104729) >>> 0);
-    const gauss = () => { const u1 = Math.max(rng(), 1e-12), u2 = rng(); const r = Math.sqrt(-2 * Math.log(u1)); return [r * Math.cos(TWO_PI * u2), r * Math.sin(TWO_PI * u2)]; };
+    const gaussOf = (r) => () => { const u1 = Math.max(r(), 1e-12), u2 = r(); const rr = Math.sqrt(-2 * Math.log(u1)); return [rr * Math.cos(TWO_PI * u2), rr * Math.sin(TWO_PI * u2)]; };
+    const gauss = gaussOf(rng);
+    // Above 256 x 256 (the quality tiers' 512): the wavenumbers a 256 grid has keep EXACTLY the 256
+    // grid's random numbers (same sea, same crests, same buoyancy), and only the finer ripples the
+    // larger grid adds get their own seeded stream - more detail, not a different sea.
+    const BASE = 256;
+    let baseG = null, gaussHi = null;
+    if (N > BASE) {
+      baseG = new Float64Array(2 * BASE * BASE);
+      for (let q = 0; q < BASE * BASE; q++) { const [a, b] = gauss(); baseG[2 * q] = a; baseG[2 * q + 1] = b; }
+      gaussHi = gaussOf(mulberry((o.seed * 7919 + ci * 104729 + 0x5bd1e995) >>> 0));
+    }
     const dk = TWO_PI / L;
     // wavenumber band of this cascade (no double counting between cascades)
     const kLo = ci === 0 ? 0 : (TWO_PI / o.cascades[ci]) * 6;
@@ -151,7 +170,10 @@ export function createOcean(ctx, opts = {}) {
       const n = i < N / 2 ? i : i - N, m = j < N / 2 ? j : j - N;
       const kx = n * dk, kz = m * dk, k = Math.hypot(kx, kz);
       kxA[idx] = kx; kzA[idx] = kz;
-      const [gr, gi] = gauss();
+      let gr, gi;
+      if (!baseG) [gr, gi] = gauss();
+      else if (n >= -BASE / 2 && n < BASE / 2 && m >= -BASE / 2 && m < BASE / 2) { const q = (m < 0 ? m + BASE : m) * BASE + (n < 0 ? n + BASE : n); gr = baseG[2 * q]; gi = baseG[2 * q + 1]; }
+      else [gr, gi] = gaussHi();
       if (k < 1e-6 || k < kLo || k >= kHi || i === N / 2 || j === N / 2) continue;
       const th = o.depth < 1e8 ? Math.tanh(Math.min(k * o.depth, 20)) : 1;
       const w = Math.sqrt(G * k * th);
@@ -167,6 +189,7 @@ export function createOcean(ctx, opts = {}) {
       const lvl = Math.max(0, Math.min(varByLevel.length - 1, Math.floor(Math.log2((Math.PI * N) / (k * L)))));
       for (let q = 0; q <= lvl; q++) varByLevel[q] += k * k * e;
     }
+    if (gpuMode) return { L, h0, omega, kxA, kzA, heightVar, slopeVar, varByLevel };
     const disp = new Float32Array(N * N * 4), deriv = new Float32Array(N * N * 4);
     const mkTex = (data) => {
       const t = new THREE.DataTexture(data, N, N, THREE.RGBAFormat, THREE.FloatType);
@@ -183,6 +206,8 @@ export function createOcean(ctx, opts = {}) {
   });
 
   const lambda = o.choppiness;
+  const gpu = gpuMode ? createGpuFFT(ctx.renderer, N, cascades, { lambda, mipFilter: o.mipFilter === 'trilinear' ? 'trilinear' : 'nearest' }) : null;
+  if (gpu) cascades.forEach((c, ci) => { c.dispTex = gpu.textures[ci].disp; c.derivTex = gpu.textures[ci].deriv; });
   function evolve(c, t) {
     const [A, B, C, D] = c.buf;
     const { h0, omega, kxA, kzA } = c;
@@ -561,12 +586,19 @@ vec3 outgoingLight = dkBody * mix(1.0 - dkF, 1.0, dkFoam) + totalSpecular + tota
   mesh.userData.dkOcean = { uniforms };
 
   const camPos = new THREE.Vector3();
+  let gpuPending = null;
   function update(t) {
+    uniforms.dkOceanTime.value = t;
+    mesh.userData.dkOceanTime = t;
+    if (gpu) {
+      // GPU: evolve now - except for the velocity motion blur's shutter-open pose, whose waves are
+      // never drawn (the water's motion vectors are the camera's): there only heightAt() needs them
+      if (ctx.subframe?.kind === 'shutter-open') gpuPending = t; else { gpuPending = null; gpu.compute(t); }
+      return;
+    }
     // (always evolve, also for the motion-blur "shutter-open" pose: heightAt() must
     // answer for exactly this t, whatever was rendered before)
     for (const c of cascades) evolve(c, t);
-    uniforms.dkOceanTime.value = t;
-    mesh.userData.dkOceanTime = t;
   }
   // keep the grid centred under the camera (the waves stay put in the world)
   const fwd = new THREE.Vector3();
@@ -616,6 +648,10 @@ vec3 outgoingLight = dkBody * mix(1.0 - dkF, 1.0, dkFoam) + totalSpecular + tota
   /** Water surface height (m) at world x, z for the current time (no horizontal displacement correction). */
   function heightAt(x, z) {
     let h = 0;
+    if (gpu) {
+      if (gpuPending !== null) { gpu.compute(gpuPending); gpuPending = null; }
+      cascades.forEach((c, ci) => { c.disp = gpu.displacement(ci); });
+    }
     for (const c of cascades) {
       const fx = (((x / c.L) % 1) + 1) % 1 * N, fz = (((z / c.L) % 1) + 1) % 1 * N;
       const i0 = Math.floor(fx) % N, j0 = Math.floor(fz) % N, i1 = (i0 + 1) % N, j1 = (j0 + 1) % N, u = fx - Math.floor(fx), v = fz - Math.floor(fz);
@@ -633,5 +669,5 @@ vec3 outgoingLight = dkBody * mix(1.0 - dkF, 1.0, dkFoam) + totalSpecular + tota
     uniforms.dkWake.value[i].set(w.x, w.z, h.x, h.y);
     uniforms.dkWakeP.value[i].set(w.hullLength ?? 15, (w.beam ?? 4) / 2, w.strength ?? 1, w.length ?? 120);
   }
-  return { mesh, material, uniforms, update, heightAt, setWake, stats, options: o };
+  return { mesh, material, uniforms, update, heightAt, setWake, stats, options: o, gpu: !!gpu };
 }

@@ -641,7 +641,7 @@ function countRenders(renderer) {
     const i = renderer.info.render, t = renderer.getRenderTarget();
     const px = t ? t.width * t.height : 0;
     FS.renders++; FS.calls += i.calls; FS.triangles += i.triangles;
-    if (scene && scene.isMesh && scene.geometry === S.fsGeom) { FS.fullscreen++; FS.fsPixels += px; }
+    if (scene && scene.isMesh && (scene.geometry === S.fsGeom || scene.userData.dkFullscreen)) { FS.fullscreen++; FS.fsPixels += px; }
     else { FS.sceneRenders++; FS.sceneCalls += i.calls; FS.scenePixels += px; }
     return r;
   };
