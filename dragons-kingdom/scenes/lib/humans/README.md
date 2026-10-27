@@ -272,6 +272,11 @@ acts from `humans-anim-pose.json`, several views: frame k = view k - for gesture
 `mouth` (a mouth macro of one take - lips, teeth, tongue, the inside of the lips - at the moments
 listed in `humans-anim-mouth.json`, frame k = moment k; each light of the L011 rig can be switched off
 there: that is how the blue inner-lip line was traced to the back light).
+Draft costs on the 4-vCPU cloud machine (SwiftShader, `--preset draft --cinematic preview`, 960x540):
+alexandria 4.5 s in 23 min (2 workers), dialogue 5.6 s in 25 min, cradle 8.5 s in 27 min, walk 30 s on
+twos in 14 min, crowd 10 s on twos in 1 h 48 min (1 worker - the Cling set); 4K finals 10-29 min each.
+Mux a take with `ffmpeg -i clip.mp4 -i take.wav -c:v copy -c:a aac -shortest out.mp4` (the scenes
+place each take at its line time: L011 at 1.0 s; L014 0.8, L015 1.9, L016 3.27; L091 6.3).
 
 Mouth and back light (materials.js / loader.js, 2026-10-27): the shadow maps cannot resolve the head
 occluding the mouth, so a light from BEHIND the head (dot(light, head forward) < 0, ramp to -0.35) gives

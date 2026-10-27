@@ -452,3 +452,13 @@ Render queue (memory-gated, sequential): scratchpad eng1/perf/bin/q3.sh, logs en
 - 4K stills re-rendered with the session-3 shading: dlg-4k.png (t 2.35, Remi mid-line, Abby looking
   down with a half smile, 10.5 min), alex-4k.png (t 1.95, "little weapon", 9.6 min): no lid sparkle,
   no ear glitter; the mouth interior has no pixel with blue >= red (it only read cool next to the lips).
+- Walk proof: Remi's wave started at 7.44 s, after the cut to Abby at 7.0 (his walk ended at 6.54 s,
+  measured in Node: scratch dbg/walkt.mjs). Shorter path from 0.3 s (ends 5.26 s), wave at +0.45 s,
+  act cuts at 7.2 / 13.5 s (Abby's point was cut at 13 too). walk-draft.mp4 (30 s on twos, 360
+  frames in 14 min, 2 workers): walk with heel strike / push-off, stop, turn, wave 6-7 s; run, slow,
+  stop, point 8-13 s; kneel + reach 14-18 s; stagger 20 s, fall 22 s (prone, head lifted); the
+  parent lifts the child onto her hip at 25-26 s and walks off.
+Outputs (output/humans/perf/, not in git): alex-draft.mp4, dialogue-draft.mp4, cradle-draft.mp4,
+crowd-draft.mp4 (all with their takes), walk-draft.mp4 (no audio); alex-4k / dlg-4k / cradle-4k /
+crowd-4k .png + _1920 + 1:1 crops (alex: face, mouth; dlg: remi, abby; cradle: arms, abby; crowd:
+flee, carry).
