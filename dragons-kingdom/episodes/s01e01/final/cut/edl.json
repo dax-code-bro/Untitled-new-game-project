@@ -58,10 +58,10 @@
    "cost": {
     "draft_s_per_frame": 5.18,
     "k4_cpu_s_per_frame": 38.69,
-    "k4_gpu_s_per_frame": 38.69,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 12.43,
     "k4_cpu_hours": 1.55,
-    "k4_gpu_hours": 1.55,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -183,10 +183,10 @@
    "cost": {
     "draft_s_per_frame": 7.1,
     "k4_cpu_s_per_frame": 53.03,
-    "k4_gpu_s_per_frame": 53.03,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 32.65,
     "k4_cpu_hours": 4.07,
-    "k4_gpu_hours": 4.07,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
      "creatures": 1,
@@ -229,10 +229,10 @@
    "cost": {
     "draft_s_per_frame": 5.04,
     "k4_cpu_s_per_frame": 37.67,
-    "k4_gpu_s_per_frame": 37.67,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 7.06,
     "k4_cpu_hours": 0.88,
-    "k4_gpu_hours": 0.88,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -275,10 +275,10 @@
    "cost": {
     "draft_s_per_frame": 4.58,
     "k4_cpu_s_per_frame": 34.21,
-    "k4_gpu_s_per_frame": 34.21,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 6.41,
     "k4_cpu_hours": 0.8,
-    "k4_gpu_hours": 0.8,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -321,10 +321,10 @@
    "cost": {
     "draft_s_per_frame": 3.72,
     "k4_cpu_s_per_frame": 27.79,
-    "k4_gpu_s_per_frame": 27.79,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 8.93,
     "k4_cpu_hours": 1.11,
-    "k4_gpu_hours": 1.11,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -367,10 +367,10 @@
    "cost": {
     "draft_s_per_frame": 2.84,
     "k4_cpu_s_per_frame": 21.25,
-    "k4_gpu_s_per_frame": 21.25,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 3.98,
     "k4_cpu_hours": 0.5,
-    "k4_gpu_hours": 0.5,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -491,10 +491,10 @@
    "cost": {
     "draft_s_per_frame": 7.99,
     "k4_cpu_s_per_frame": 69.2,
-    "k4_gpu_s_per_frame": 69.2,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 25.55,
     "k4_cpu_hours": 3.69,
-    "k4_gpu_hours": 3.69,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -637,10 +637,10 @@
    "cost": {
     "draft_s_per_frame": 2.9,
     "k4_cpu_s_per_frame": 25.17,
-    "k4_gpu_s_per_frame": 25.17,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 9.87,
     "k4_cpu_hours": 1.43,
-    "k4_gpu_hours": 1.43,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -717,10 +717,10 @@
    "cost": {
     "draft_s_per_frame": 19.02,
     "k4_cpu_s_per_frame": 164.86,
-    "k4_gpu_s_per_frame": 164.86,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 15.22,
     "k4_cpu_hours": 2.2,
-    "k4_gpu_hours": 2.2,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -797,10 +797,10 @@
    "cost": {
     "draft_s_per_frame": 2.26,
     "k4_cpu_s_per_frame": 19.58,
-    "k4_gpu_s_per_frame": 19.58,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 1.81,
     "k4_cpu_hours": 0.26,
-    "k4_gpu_hours": 0.26,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -877,10 +877,10 @@
    "cost": {
     "draft_s_per_frame": 2.04,
     "k4_cpu_s_per_frame": 17.64,
-    "k4_gpu_s_per_frame": 17.64,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 1.63,
     "k4_cpu_hours": 0.24,
-    "k4_gpu_hours": 0.24,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -987,10 +987,10 @@
    "cost": {
     "draft_s_per_frame": 1.86,
     "k4_cpu_s_per_frame": 16.09,
-    "k4_gpu_s_per_frame": 16.09,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 1.86,
     "k4_cpu_hours": 0.27,
-    "k4_gpu_hours": 0.27,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1043,10 +1043,10 @@
    "cost": {
     "draft_s_per_frame": 1.54,
     "k4_cpu_s_per_frame": 13.35,
-    "k4_gpu_s_per_frame": 13.35,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 1.23,
     "k4_cpu_hours": 0.18,
-    "k4_gpu_hours": 0.18,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1154,10 +1154,10 @@
    "cost": {
     "draft_s_per_frame": 2.15,
     "k4_cpu_s_per_frame": 18.6,
-    "k4_gpu_s_per_frame": 18.6,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 9.87,
     "k4_cpu_hours": 1.43,
-    "k4_gpu_hours": 1.43,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1305,10 +1305,10 @@
    "cost": {
     "draft_s_per_frame": 2.37,
     "k4_cpu_s_per_frame": 20.51,
-    "k4_gpu_s_per_frame": 20.51,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 10.41,
     "k4_cpu_hours": 1.5,
-    "k4_gpu_hours": 1.5,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1400,10 +1400,10 @@
    "cost": {
     "draft_s_per_frame": 7.9,
     "k4_cpu_s_per_frame": 92.17,
-    "k4_gpu_s_per_frame": 92.17,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 23.7,
     "k4_cpu_hours": 4.61,
-    "k4_gpu_hours": 4.61,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1455,10 +1455,10 @@
    "cost": {
     "draft_s_per_frame": 3.2,
     "k4_cpu_s_per_frame": 36.61,
-    "k4_gpu_s_per_frame": 36.61,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 10.25,
     "k4_cpu_hours": 1.95,
-    "k4_gpu_hours": 1.95,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1501,10 +1501,10 @@
    "cost": {
     "draft_s_per_frame": 4.93,
     "k4_cpu_s_per_frame": 56.35,
-    "k4_gpu_s_per_frame": 56.35,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 10.85,
     "k4_cpu_hours": 2.07,
-    "k4_gpu_hours": 2.07,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1547,10 +1547,10 @@
    "cost": {
     "draft_s_per_frame": 3.9,
     "k4_cpu_s_per_frame": 44.58,
-    "k4_gpu_s_per_frame": 44.58,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 9.36,
     "k4_cpu_hours": 1.78,
-    "k4_gpu_hours": 1.78,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -1593,10 +1593,10 @@
    "cost": {
     "draft_s_per_frame": 6.54,
     "k4_cpu_s_per_frame": 81.75,
-    "k4_gpu_s_per_frame": 81.75,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 11.77,
     "k4_cpu_hours": 2.45,
-    "k4_gpu_hours": 2.45,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -1639,10 +1639,10 @@
    "cost": {
     "draft_s_per_frame": 2.62,
     "k4_cpu_s_per_frame": 32.78,
-    "k4_gpu_s_per_frame": 32.78,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 4.2,
     "k4_cpu_hours": 0.87,
-    "k4_gpu_hours": 0.87,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -1685,10 +1685,10 @@
    "cost": {
     "draft_s_per_frame": 3.16,
     "k4_cpu_s_per_frame": 39.53,
-    "k4_gpu_s_per_frame": 39.53,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 7.59,
     "k4_cpu_hours": 1.58,
-    "k4_gpu_hours": 1.58,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -1731,10 +1731,10 @@
    "cost": {
     "draft_s_per_frame": 24.19,
     "k4_cpu_s_per_frame": 302.35,
-    "k4_gpu_s_per_frame": 302.35,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 19.35,
     "k4_cpu_hours": 4.03,
-    "k4_gpu_hours": 4.03,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -1844,10 +1844,10 @@
    "cost": {
     "draft_s_per_frame": 9.26,
     "k4_cpu_s_per_frame": 115.74,
-    "k4_gpu_s_per_frame": 115.74,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 14.81,
     "k4_cpu_hours": 3.09,
-    "k4_gpu_hours": 3.09,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -1890,10 +1890,10 @@
    "cost": {
     "draft_s_per_frame": 6.91,
     "k4_cpu_s_per_frame": 86.43,
-    "k4_gpu_s_per_frame": 86.43,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 11.06,
     "k4_cpu_hours": 2.3,
-    "k4_gpu_hours": 2.3,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -1936,10 +1936,10 @@
    "cost": {
     "draft_s_per_frame": 5.6,
     "k4_cpu_s_per_frame": 70.04,
-    "k4_gpu_s_per_frame": 70.04,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 7.84,
     "k4_cpu_hours": 1.63,
-    "k4_gpu_hours": 1.63,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -1982,10 +1982,10 @@
    "cost": {
     "draft_s_per_frame": 6.92,
     "k4_cpu_s_per_frame": 79.05,
-    "k4_gpu_s_per_frame": 79.05,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 13.83,
     "k4_cpu_hours": 2.64,
-    "k4_gpu_hours": 2.64,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2181,10 +2181,10 @@
    "cost": {
     "draft_s_per_frame": 6.94,
     "k4_cpu_s_per_frame": 79.35,
-    "k4_gpu_s_per_frame": 79.35,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 23.61,
     "k4_cpu_hours": 4.5,
-    "k4_gpu_hours": 4.5,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2227,10 +2227,10 @@
    "cost": {
     "draft_s_per_frame": 7.42,
     "k4_cpu_s_per_frame": 84.81,
-    "k4_gpu_s_per_frame": 84.81,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 10.39,
     "k4_cpu_hours": 1.98,
-    "k4_gpu_hours": 1.98,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -2273,10 +2273,10 @@
    "cost": {
     "draft_s_per_frame": 6.62,
     "k4_cpu_s_per_frame": 75.62,
-    "k4_gpu_s_per_frame": 75.62,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 7.94,
     "k4_cpu_hours": 1.51,
-    "k4_gpu_hours": 1.51,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -2319,10 +2319,10 @@
    "cost": {
     "draft_s_per_frame": 5.38,
     "k4_cpu_s_per_frame": 61.5,
-    "k4_gpu_s_per_frame": 61.5,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 8.61,
     "k4_cpu_hours": 1.64,
-    "k4_gpu_hours": 1.64,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -2365,10 +2365,10 @@
    "cost": {
     "draft_s_per_frame": 8.39,
     "k4_cpu_s_per_frame": 95.91,
-    "k4_gpu_s_per_frame": 95.91,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 11.75,
     "k4_cpu_hours": 2.24,
-    "k4_gpu_hours": 2.24,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1,
      "creatures": 1,
@@ -2411,10 +2411,10 @@
    "cost": {
     "draft_s_per_frame": 11.13,
     "k4_cpu_s_per_frame": 127.25,
-    "k4_gpu_s_per_frame": 127.25,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 20.04,
     "k4_cpu_hours": 3.82,
-    "k4_gpu_hours": 3.82,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -2457,10 +2457,10 @@
    "cost": {
     "draft_s_per_frame": 10.12,
     "k4_cpu_s_per_frame": 115.69,
-    "k4_gpu_s_per_frame": 115.69,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 18.22,
     "k4_cpu_hours": 3.47,
-    "k4_gpu_hours": 3.47,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -2503,10 +2503,10 @@
    "cost": {
     "draft_s_per_frame": 6.45,
     "k4_cpu_s_per_frame": 73.67,
-    "k4_gpu_s_per_frame": 73.67,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 6.45,
     "k4_cpu_hours": 1.23,
-    "k4_gpu_hours": 1.23,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2549,10 +2549,10 @@
    "cost": {
     "draft_s_per_frame": 10.16,
     "k4_cpu_s_per_frame": 116.16,
-    "k4_gpu_s_per_frame": 116.16,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 36.59,
     "k4_cpu_hours": 6.97,
-    "k4_gpu_hours": 6.97,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -2629,10 +2629,10 @@
    "cost": {
     "draft_s_per_frame": 8.46,
     "k4_cpu_s_per_frame": 96.63,
-    "k4_gpu_s_per_frame": 96.63,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 8.46,
     "k4_cpu_hours": 1.61,
-    "k4_gpu_hours": 1.61,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2675,10 +2675,10 @@
    "cost": {
     "draft_s_per_frame": 12.72,
     "k4_cpu_s_per_frame": 145.36,
-    "k4_gpu_s_per_frame": 145.36,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 15.26,
     "k4_cpu_hours": 2.91,
-    "k4_gpu_hours": 2.91,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2760,10 +2760,10 @@
    "cost": {
     "draft_s_per_frame": 8.63,
     "k4_cpu_s_per_frame": 98.58,
-    "k4_gpu_s_per_frame": 98.58,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 18.98,
     "k4_cpu_hours": 3.61,
-    "k4_gpu_hours": 3.61,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2806,10 +2806,10 @@
    "cost": {
     "draft_s_per_frame": 5.89,
     "k4_cpu_s_per_frame": 67.36,
-    "k4_gpu_s_per_frame": 67.36,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 4.72,
     "k4_cpu_hours": 0.9,
-    "k4_gpu_hours": 0.9,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -2852,10 +2852,10 @@
    "cost": {
     "draft_s_per_frame": 10.48,
     "k4_cpu_s_per_frame": 119.78,
-    "k4_gpu_s_per_frame": 119.78,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 27.25,
     "k4_cpu_hours": 5.19,
-    "k4_gpu_hours": 5.19,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2932,10 +2932,10 @@
    "cost": {
     "draft_s_per_frame": 5.39,
     "k4_cpu_s_per_frame": 61.57,
-    "k4_gpu_s_per_frame": 61.57,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 6.46,
     "k4_cpu_hours": 1.23,
-    "k4_gpu_hours": 1.23,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -3007,10 +3007,10 @@
    "cost": {
     "draft_s_per_frame": 12.02,
     "k4_cpu_s_per_frame": 137.42,
-    "k4_gpu_s_per_frame": 137.42,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 7.21,
     "k4_cpu_hours": 1.37,
-    "k4_gpu_hours": 1.37,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -3053,10 +3053,10 @@
    "cost": {
     "draft_s_per_frame": 10.49,
     "k4_cpu_s_per_frame": 119.84,
-    "k4_gpu_s_per_frame": 119.84,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 16.78,
     "k4_cpu_hours": 3.2,
-    "k4_gpu_hours": 3.2,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
      "creatures": 1,
@@ -3209,10 +3209,10 @@
    "cost": {
     "draft_s_per_frame": 18.59,
     "k4_cpu_s_per_frame": 212.45,
-    "k4_gpu_s_per_frame": 212.45,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 48.33,
     "k4_cpu_hours": 9.21,
-    "k4_gpu_hours": 9.21,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
      "creatures": 1,
@@ -3255,10 +3255,10 @@
    "cost": {
     "draft_s_per_frame": 15.43,
     "k4_cpu_s_per_frame": 176.37,
-    "k4_gpu_s_per_frame": 176.37,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 30.86,
     "k4_cpu_hours": 5.88,
-    "k4_gpu_hours": 5.88,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -3340,10 +3340,10 @@
    "cost": {
     "draft_s_per_frame": 24.24,
     "k4_cpu_s_per_frame": 277.04,
-    "k4_gpu_s_per_frame": 277.04,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 24.24,
     "k4_cpu_hours": 4.62,
-    "k4_gpu_hours": 4.62,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
      "creatures": 1,
@@ -3483,10 +3483,10 @@
    "cost": {
     "draft_s_per_frame": 5.44,
     "k4_cpu_s_per_frame": 62.16,
-    "k4_gpu_s_per_frame": 62.16,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 13.05,
     "k4_cpu_hours": 2.49,
-    "k4_gpu_hours": 2.49,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
      "creatures": 1,
@@ -3529,10 +3529,10 @@
    "cost": {
     "draft_s_per_frame": 4.56,
     "k4_cpu_s_per_frame": 52.08,
-    "k4_gpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 7.29,
     "k4_cpu_hours": 1.39,
-    "k4_gpu_hours": 1.39,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -3575,10 +3575,10 @@
    "cost": {
     "draft_s_per_frame": 4.12,
     "k4_cpu_s_per_frame": 47.04,
-    "k4_gpu_s_per_frame": 47.04,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 4.12,
     "k4_cpu_hours": 0.78,
-    "k4_gpu_hours": 0.78,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
      "creatures": 1,
@@ -3668,10 +3668,10 @@
    "cost": {
     "draft_s_per_frame": 5,
     "k4_cpu_s_per_frame": 57.12,
-    "k4_gpu_s_per_frame": 57.12,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 6,
     "k4_cpu_hours": 1.14,
-    "k4_gpu_hours": 1.14,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
      "creatures": 1,
@@ -3829,10 +3829,10 @@
    "cost": {
     "draft_s_per_frame": 5.44,
     "k4_cpu_s_per_frame": 62.16,
-    "k4_gpu_s_per_frame": 62.16,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 13.05,
     "k4_cpu_hours": 2.49,
-    "k4_gpu_hours": 2.49,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
      "creatures": 1,
@@ -3909,10 +3909,10 @@
    "cost": {
     "draft_s_per_frame": 5,
     "k4_cpu_s_per_frame": 57.12,
-    "k4_gpu_s_per_frame": 57.12,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 7,
     "k4_cpu_hours": 1.33,
-    "k4_gpu_hours": 1.33,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
      "creatures": 1,
@@ -4014,10 +4014,10 @@
    "cost": {
     "draft_s_per_frame": 5.44,
     "k4_cpu_s_per_frame": 62.16,
-    "k4_gpu_s_per_frame": 62.16,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 13.05,
     "k4_cpu_hours": 2.49,
-    "k4_gpu_hours": 2.49,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
      "creatures": 1,
@@ -4216,10 +4216,10 @@
    "cost": {
     "draft_s_per_frame": 5.77,
     "k4_cpu_s_per_frame": 65.89,
-    "k4_gpu_s_per_frame": 65.89,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 19.6,
     "k4_cpu_hours": 3.73,
-    "k4_gpu_hours": 3.73,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
      "creatures": 1,
@@ -4262,10 +4262,10 @@
    "cost": {
     "draft_s_per_frame": 4.83,
     "k4_cpu_s_per_frame": 55.2,
-    "k4_gpu_s_per_frame": 55.2,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 7.73,
     "k4_cpu_hours": 1.47,
-    "k4_gpu_hours": 1.47,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -4308,10 +4308,10 @@
    "cost": {
     "draft_s_per_frame": 4.56,
     "k4_cpu_s_per_frame": 52.08,
-    "k4_gpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 10.94,
     "k4_cpu_hours": 2.08,
-    "k4_gpu_hours": 2.08,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -4354,10 +4354,10 @@
    "cost": {
     "draft_s_per_frame": 5.15,
     "k4_cpu_s_per_frame": 58.83,
-    "k4_gpu_s_per_frame": 58.83,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 6.18,
     "k4_cpu_hours": 1.18,
-    "k4_gpu_hours": 1.18,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
      "creatures": 1,
@@ -4477,10 +4477,10 @@
    "cost": {
     "draft_s_per_frame": 5,
     "k4_cpu_s_per_frame": 57.12,
-    "k4_gpu_s_per_frame": 57.12,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 10,
     "k4_cpu_hours": 1.9,
-    "k4_gpu_hours": 1.9,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
      "creatures": 1,
@@ -4557,10 +4557,10 @@
    "cost": {
     "draft_s_per_frame": 5.15,
     "k4_cpu_s_per_frame": 58.83,
-    "k4_gpu_s_per_frame": 58.83,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 8.24,
     "k4_cpu_hours": 1.57,
-    "k4_gpu_hours": 1.57,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
      "creatures": 1,
@@ -4603,10 +4603,10 @@
    "cost": {
     "draft_s_per_frame": 10.04,
     "k4_cpu_s_per_frame": 125.5,
-    "k4_gpu_s_per_frame": 125.5,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 16.06,
     "k4_cpu_hours": 3.35,
-    "k4_gpu_hours": 3.35,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -4649,10 +4649,10 @@
    "cost": {
     "draft_s_per_frame": 10.94,
     "k4_cpu_s_per_frame": 136.7,
-    "k4_gpu_s_per_frame": 136.7,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 10.94,
     "k4_cpu_hours": 2.28,
-    "k4_gpu_hours": 2.28,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
      "creatures": 1,
@@ -4873,10 +4873,10 @@
    "cost": {
     "draft_s_per_frame": 9.7,
     "k4_cpu_s_per_frame": 121.23,
-    "k4_gpu_s_per_frame": 121.23,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 40.73,
     "k4_cpu_hours": 8.49,
-    "k4_gpu_hours": 8.49,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -4919,10 +4919,10 @@
    "cost": {
     "draft_s_per_frame": 10.3,
     "k4_cpu_s_per_frame": 128.75,
-    "k4_gpu_s_per_frame": 128.75,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 12.36,
     "k4_cpu_hours": 2.58,
-    "k4_gpu_hours": 2.58,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -4965,10 +4965,10 @@
    "cost": {
     "draft_s_per_frame": 11.46,
     "k4_cpu_s_per_frame": 133.69,
-    "k4_gpu_s_per_frame": 133.69,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 22.92,
     "k4_cpu_hours": 4.46,
-    "k4_gpu_hours": 4.46,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
      "creatures": 1,
@@ -5011,10 +5011,10 @@
    "cost": {
     "draft_s_per_frame": 13.07,
     "k4_cpu_s_per_frame": 152.46,
-    "k4_gpu_s_per_frame": 152.46,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 20.91,
     "k4_cpu_hours": 4.07,
-    "k4_gpu_hours": 4.07,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -5057,10 +5057,10 @@
    "cost": {
     "draft_s_per_frame": 12.64,
     "k4_cpu_s_per_frame": 147.48,
-    "k4_gpu_s_per_frame": 147.48,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 25.28,
     "k4_cpu_hours": 4.92,
-    "k4_gpu_hours": 4.92,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -5132,10 +5132,10 @@
    "cost": {
     "draft_s_per_frame": 13.36,
     "k4_cpu_s_per_frame": 155.82,
-    "k4_gpu_s_per_frame": 155.82,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 8.01,
     "k4_cpu_hours": 1.56,
-    "k4_gpu_hours": 1.56,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -5178,10 +5178,10 @@
    "cost": {
     "draft_s_per_frame": 20.27,
     "k4_cpu_s_per_frame": 236.52,
-    "k4_gpu_s_per_frame": 236.52,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 28.38,
     "k4_cpu_hours": 5.52,
-    "k4_gpu_hours": 5.52,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -5224,10 +5224,10 @@
    "cost": {
     "draft_s_per_frame": 26.14,
     "k4_cpu_s_per_frame": 304.93,
-    "k4_gpu_s_per_frame": 304.93,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 41.82,
     "k4_cpu_hours": 8.13,
-    "k4_gpu_hours": 8.13,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -5270,10 +5270,10 @@
    "cost": {
     "draft_s_per_frame": 5,
     "k4_cpu_s_per_frame": 57.12,
-    "k4_gpu_s_per_frame": 57.12,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 7,
     "k4_cpu_hours": 1.33,
-    "k4_gpu_hours": 1.33,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
      "creatures": 1,
@@ -5431,10 +5431,10 @@
    "cost": {
     "draft_s_per_frame": 5,
     "k4_cpu_s_per_frame": 57.12,
-    "k4_gpu_s_per_frame": 57.12,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 12.99,
     "k4_cpu_hours": 2.48,
-    "k4_gpu_hours": 2.48,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
      "creatures": 1,
@@ -5477,10 +5477,10 @@
    "cost": {
     "draft_s_per_frame": 5.77,
     "k4_cpu_s_per_frame": 65.89,
-    "k4_gpu_s_per_frame": 65.89,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 8.07,
     "k4_cpu_hours": 1.54,
-    "k4_gpu_hours": 1.54,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
      "creatures": 1,
@@ -5523,10 +5523,10 @@
    "cost": {
     "draft_s_per_frame": 4.77,
     "k4_cpu_s_per_frame": 54.56,
-    "k4_gpu_s_per_frame": 54.56,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 8.59,
     "k4_cpu_hours": 1.64,
-    "k4_gpu_hours": 1.64,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -5569,10 +5569,10 @@
    "cost": {
     "draft_s_per_frame": 4.12,
     "k4_cpu_s_per_frame": 47.04,
-    "k4_gpu_s_per_frame": 47.04,
+    "k4_gpu_s_per_frame": null,
     "draft_minutes": 4.12,
     "k4_cpu_hours": 0.78,
-    "k4_gpu_hours": 0.78,
+    "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
      "creatures": 1,

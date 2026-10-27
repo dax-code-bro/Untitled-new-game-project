@@ -40,7 +40,9 @@ const jobs = readJson(path.join(FINAL, 'render-jobs.json')).jobs;
 const jobFrames = new Map(jobs.map((j) => [j.job, j.frames]));
 const takes = indexTakes(readJson(path.join(FINAL, 'vo/takes.json')), readJson(path.join(FINAL, 'vo/words.json')));
 const measured = fs.existsSync(path.join(CUT, 'timings.json')) ? readJson(path.join(CUT, 'timings.json')).shots || {} : {};
-const gpuRatio = (() => { try { return readJson(path.join(ROOT, 'output/gpu-check/gpu-check.json'))?.estimate?.ratio || null; } catch { return null; } })();
+// a gpu-check run on a machine without a GPU (SwiftShader: ratio 1) is no GPU measurement - the edit
+// list said "~157 h on the GPU" from this cloud machine's own CPU check
+const gpuRatio = (() => { try { const e = readJson(path.join(ROOT, 'output/gpu-check/gpu-check.json'))?.estimate; return e?.ratio && !/swiftshader/i.test(e.reference?.renderer || '') ? e.ratio : null; } catch { return null; } })();
 
 // ---------------------------------------------------------------- specs ---
 const specs = {};

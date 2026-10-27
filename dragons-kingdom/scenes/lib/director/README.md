@@ -61,6 +61,14 @@ shot videos  ->  cut/make-cut.mjs  ->  cut/DragonsKingdom_S01E01_draft-cut_<scen
 }
 ```
 
+**Planted feet**: `legs: 'planted'` on a shot (or one actor of a shot, or the spec's `defaults`) poses
+that actor's legs with the humans library's planted-foot gait (performance track: stance feet fixed on
+the ground, heel strike / roll / toe-off, swing clearance, the pelvis dips where a leg would over-reach).
+The stage registers the hook (`registerDirectorHooks({ legs: true })`) when a set asks for it and passes
+the blocking as a function of time (`info.stateAt`, `info.seconds`); every other actor keeps the built-in
+gait. Side-view stills of X2-04 both ways: the built-in gait lifted the toes like a dance step, the
+planted gait keeps the soles on the flags.
+
 Positions are metres in the set's world frame or NAMES: marks (`'door'`), actors (`'alexandria'`),
 actor parts (`'abby.head'`, `'abby.hand.R'`, `'leaf.eye'`, `'leaf.w_R_2'` - any creature bone),
 set objects; anything can be a key list `[[t, value, ease?], ...]`. `cam.debug: true` (or a list of extra point

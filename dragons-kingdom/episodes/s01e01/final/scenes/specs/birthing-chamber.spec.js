@@ -11,6 +11,9 @@
 // backlit (SIL) or over the shoulder (OTS). `staging` records the choice per shot.
 //
 // Screen positions in `frame.subjects` are x, y in -1..1 (left..right, bottom..top).
+//
+// `legs: 'planted'` on the actors who walk in the shots rendered from session 5 on (the humans library's
+// planted-foot legs: stance feet fixed on the flags; the built-in gait lifted the toes like a dance step).
 
 const ALEX_SEAT = [1.25, -0.14];         // her root when seated on the stool (stool centre 0.13 m behind her, east)
 const ALEX_N = [1.2, -1.0];              // standing at the nest's north-east corner
@@ -290,8 +293,8 @@ export default {
       cam: { rig: 'static', pos: [2.7, 1.65, 0.75], look: [-3.0, 1.1, -1.55], mm: 28, fstop: 2.8, focus: 'abby.head' },
       cast: {
         alexandria: { ...seated, acts: [[3.0, 'look', { at: 'abby.head', amount: 0.5 }], [6.5, 'look', { at: 'hatchling.head' }]] },
-        abby: { at: [-0.55, 1.85], face: 'door', look: 'door', acts: [[0.3, 'walk', { path: [[-1.95, 1.95], [-2.6, 0.35], [-2.95, -1.45]], speed: 0.85 }]] },
-        remi: { at: [0.15, 1.95], face: 'door', look: 'door', acts: [[0.0, 'walk', { path: [[-1.55, 2.1], [-2.35, 0.55], [-2.75, -1.15]], speed: 0.9 }], [3.4, 'look', { at: 'alexandria.head', amount: 0.6 }]] },
+        abby: { at: [-0.55, 1.85], face: 'door', look: 'door', legs: 'planted', acts: [[0.3, 'walk', { path: [[-1.95, 1.95], [-2.6, 0.35], [-2.95, -1.45]], speed: 0.85 }]] },
+        remi: { at: [0.15, 1.95], face: 'door', look: 'door', legs: 'planted', acts: [[0.0, 'walk', { path: [[-1.55, 2.1], [-2.35, 0.55], [-2.75, -1.15]], speed: 0.9 }], [3.4, 'look', { at: 'alexandria.head', amount: 0.6 }]] },
         hatchling: hatchRest(),
       },
       lines: [['L027', 0.5], ['L028', 0.35], ['L029', 0.3], ['L030', 0.35], ['L031', 0.35]],
@@ -301,8 +304,8 @@ export default {
       cam: { rig: 'static', pos: [-0.9, 1.4, -1.45], look: [-3.6, 1.25, -1.95], mm: 35, fstop: 2.8, focus: 'door' },
       exposure: -0.9,
       cast: {
-        abby: { at: [-3.05, -1.95], face: 270, look: null, acts: [[0.5, 'look', { at: 'hatchling', amount: 1 }], [1.7, 'look', { at: 'doorOut', amount: 0.4 }], [2.0, 'walk', { to: [-4.7, -1.95], speed: 1.0 }]] },
-        remi: { at: [-3.55, -1.65], face: 270, acts: [[1.6, 'walk', { to: [-4.8, -1.6], speed: 1.0 }]] },
+        abby: { at: [-3.05, -1.95], face: 270, look: null, legs: 'planted', acts: [[0.5, 'look', { at: 'hatchling', amount: 1 }], [1.7, 'look', { at: 'doorOut', amount: 0.4 }], [2.0, 'walk', { to: [-4.7, -1.95], speed: 1.0 }]] },
+        remi: { at: [-3.55, -1.65], face: 270, legs: 'planted', acts: [[1.6, 'walk', { to: [-4.8, -1.6], speed: 1.0 }]] },
       },
       set: { door: [[0, 0.85], [3.0, 0.85], [3.8, 0.0]], lamps: 0.4, passage: 3.5, passLight: 0.1, passageCard: 1.1, passageCardScale: [4, 1.5], portal: false },
     },
@@ -325,7 +328,7 @@ export default {
       cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.55, 0.22]], ['remi.head', [-0.45, 0.25]]], from: 102, height: 1.35 }, mm: 50, fstop: 2.8, focus: 'alexandria.head', bounds: BOUNDS },
       cast: {
         alexandria: { ...seated, posture: { sit: 1, lean: 0.4 } }, hatchling: hatchRest(),
-        remi: { at: [-2.55, -1.3], face: 'door', look: 'door', acts: [[0.2, 'walk', { to: [-3.15, -1.9], speed: 0.9 }]] },
+        remi: { at: [-2.55, -1.3], face: 'door', look: 'door', legs: 'planted', acts: [[0.2, 'walk', { to: [-3.15, -1.9], speed: 0.9 }]] },
       },
       set: { door: 0.85 },
     },
@@ -344,7 +347,7 @@ export default {
       cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.6, 0.28]], ['remi.head', [-0.18, 0.3]]], from: 96, height: 1.45 }, mm: 50, fstop: 2, focus: 'alexandria.head', bounds: BOUNDS },
       cast: {
         alexandria: { ...seated, posture: { sit: 1, lean: 0.4 } }, hatchling: hatchRest(),
-        remi: { at: [-3.2, -1.9], face: 'alexandria', look: 'alexandria.head', lookAmount: 0.5, acts: [[2.1, 'turn', { to: 270, dur: 0.6 }], [2.6, 'walk', { to: [-4.8, -1.9], speed: 1.1 }]] },
+        remi: { at: [-3.2, -1.9], face: 'alexandria', look: 'alexandria.head', lookAmount: 0.5, legs: 'planted', acts: [[2.1, 'turn', { to: 270, dur: 0.6 }], [2.6, 'walk', { to: [-4.8, -1.9], speed: 1.1 }]] },
       },
       set: { door: 0.85 },
       lines: [['X2-03', 0.5]],
@@ -365,8 +368,8 @@ export default {
       cam: { rig: 'static', frame: { subjects: [['doorway', [-0.42, -0.35]], ['alexandria.head', [0.55, 0.05]]], from: 150, height: 1.55 }, mm: 35, fstop: 2.8, focus: 'doorway', bounds: BOUNDS },
       cast: {
         alexandria: seated, hatchling: hatchRest(),
-        attendant: { at: ATT, face: 'door', look: 'door', acts: [[0.2, 'walk', { path: [[-1.7, -1.75], [-3.0, -1.9], [-4.8, -1.9]], speed: 0.9 }]] },
-        youngAttendant: { at: [-4.8, -1.95], face: 90, look: 'egg', acts: [[1.8, 'walk', { to: [-2.75, -1.4], speed: 0.8, face: 'egg' }], [1.8, 'carry', {}]] },
+        attendant: { at: ATT, face: 'door', look: 'door', legs: 'planted', acts: [[0.2, 'walk', { path: [[-1.7, -1.75], [-3.0, -1.9], [-4.8, -1.9]], speed: 0.9 }]] },
+        youngAttendant: { at: [-4.8, -1.95], face: 90, look: 'egg', legs: 'planted', acts: [[1.8, 'walk', { to: [-2.75, -1.4], speed: 0.8, face: 'egg' }], [1.8, 'carry', {}]] },
       },
       set: { door: 0.85 },
     },

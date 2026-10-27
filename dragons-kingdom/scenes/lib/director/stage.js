@@ -78,6 +78,10 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
     const H = [...used].filter((a) => castDef[a]?.kind === 'human');
     let humansLib = null, creaturesLib = null;
     if (H.length) humansLib = await import('../humans/index.js');
+    // planted feet (humans library: performance track) for the shots / actors that ask for them:
+    // `legs: 'planted'` on a shot, an actor of a shot, or the spec's defaults
+    const wantsPlanted = Object.values(spec.shots || {}).some((s) => (s.legs ?? spec.defaults?.legs) === 'planted' || Object.values(s.cast || {}).some((c) => c?.legs === 'planted'));
+    if (wantsPlanted && humansLib?.registerDirectorHooks) await humansLib.registerDirectorHooks({ legs: true });
     if ([...used].some((a) => castDef[a]?.kind === 'creature')) creaturesLib = await import('../creatures/index.js');
     await Promise.all([...used].map(async (name) => {
       const d = castDef[name];
@@ -261,7 +265,9 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
       if (b.nearTo) placeNear(st, b.nearTo, tt);
       if (a.kind === 'human') {
         const mouth = row.dialogue?.length ? mouthAt(row.dialogue, a.def.role || name.toUpperCase(), tt) : 0;
-        poseHuman(a.ch, st, tt, S.env, { idle: b.idle, armSwing: b.armSwing ?? a.def.armSwing, armsDown: b.armsDown ?? a.def.armsDown, mouth, role: a.def.role, placed: row.dialogue, shot: row.job });
+        const planted = (b.legs ?? spec1.legs) === 'planted';
+        const stateAt = planted ? (t2) => { const s2 = actorState(b, t2, S.env.forActor(name)); if (b.nearTo) placeNear(s2, b.nearTo, t2); return s2; } : undefined;
+        poseHuman(a.ch, st, tt, S.env, { idle: b.idle, armSwing: b.armSwing ?? a.def.armSwing, armsDown: b.armsDown ?? a.def.armsDown, mouth, role: a.def.role, placed: row.dialogue, shot: row.job, plantedFeet: planted, stateAt, seconds: (row.frames + (row.post || 0)) / 24 });
       } else if (a.kind === 'creature') {
         poseCreature(a.c, S_poses, st, tt, { look: b.lookPose ? b.lookPose : null, defaults: b.poseDefaults });
         placeCreature(a, b, tt);

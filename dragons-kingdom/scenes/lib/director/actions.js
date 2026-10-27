@@ -117,7 +117,9 @@ export function poseHuman(ch, st, t, env, info = {}) {
   }
   if (rootB && twist) { rotateWorld(rootB, _q.setFromAxisAngle(UP, twist * 0.5)); ch.root.updateMatrixWorld(true); }
   const footQ = { L: ch.bone('foot.L')?.getWorldQuaternion(new THREE.Quaternion()), R: ch.bone('foot.R')?.getWorldQuaternion(new THREE.Quaternion()) };
-  if (!custom('legs')) {
+  // planted feet (the performance track's 'legs' hook) only where the shot asks for them (`legs:
+  // 'planted'`: the stage then passes info.stateAt / info.seconds); the built-in gait otherwise
+  if (!(info.plantedFeet && custom('legs'))) {
     for (const sd of ['L', 'R']) {
       if (!ch.bone(`foot.${sd}`)) continue;
       const restF = toWorld(ch, rig.foot[sd]);          // where the foot is in the drape pose (root placed)
