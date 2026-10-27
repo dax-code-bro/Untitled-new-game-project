@@ -41,6 +41,21 @@ How it works: `README.md` in this folder. Latest state first.
 - Lip-sync IS live in director renders now (humans/director.js registers the 'face' hook on load): the
   speaking-face audit is a quality flag, no longer a hard rule.
 - Render speed this session: 25-35 s per chamber draft frame (load 15-25: other tracks render too).
+- Queues: a stop-after-1A-28 trigger would also fire if ANOTHER queue finished 1A-28 first (stopping E
+  mid-shot): replaced by `stop-on-claim.sh PID JOB` - stop E when ITS lock claims 1A-27 (the one shot its
+  browser holds stale), which lets a forward queue (H: 1A-18, 1A-28, 1A-29, 1A-30) meet E's reverse queue
+  in the middle (render-shots skips a shot another process finished or holds). 1A-18 was stale too (its
+  look raised 0.1 m in session 6's first pass).
+- P-14 low cloud: the froxel bank at 620 m averaged to a flat grey ceiling (and drew a pale wall where it
+  ended at 30 km). Now a PAINTED DECK (`sets/cloud-deck.js`, pure + tileable: periodic gradient noise and
+  periodic Worley cells): warped domes per cloud element (dark thick cores, pale thin edges, gaps between,
+  whole elements dropping out where a large field is low), a 20 km tile repeated on a 64 km card at 520 m,
+  a near-detail alpha map (1.25 km tile) for the top of the frame, an opaque paler veil above (gaps show
+  overcast, not clear sky); the card writes depth so the haze takes its own distance (the far deck melts
+  into a bright band at the horizon). Node preview loop (`eng1/director/p14/proto.mjs`, a perspective
+  ray-cast of the same tile) before one browser still. Self-tested (tiling, cover, determinism).
+- X2-13 (session-5 restage) rendered: from behind her, her head beside his snout, his eye sharp - reads as
+  closeness, not quite forehead to forehead (a side view hid her behind the snout). Kept.
 
 ## Session 5 (2026-10-27, resumed after a container restart)
 

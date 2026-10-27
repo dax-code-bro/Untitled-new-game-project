@@ -17,6 +17,7 @@ import { SETS, continuityFor, sunDir } from '../registry.js';
 import { estimateShot } from '../cost.js';
 import { faceReadability } from '../audit.js';
 import { wingOutline, paintWingCloud } from '../sets/wing-cloud.js';
+import { periodicNoise, periodicCells, paintCloudDeck, paintCloudDetail } from '../sets/cloud-deck.js';
 import { fieldsVoronoi, landUse, hedgePlacements, FIELD_USE } from '../sets/farmland.js';
 import { solveFraming, suggestFrom } from '../framing.js';
 import { heldList, placeInHands } from '../handprops.js';
@@ -132,6 +133,26 @@ t('wing cloud: a closed wing outline; the painter fills a soft, deterministic, n
   assert.ok(cover > px * 0.15 && cover < px * 0.7, `cover ${cover}/${px}`);
   assert.ok(edge > px * 0.05, 'soft edges');
   assert.equal(a[3], 0, 'the corners are clear sky');
+});
+t('cloud deck: periodic noise + cells tile seamlessly; the painted deck is broken cloud, deterministic', () => {
+  const N = periodicNoise(5), C = periodicCells(5);
+  for (const [u, v] of [[0.13, 0.71], [0.999, 0.02], [0.5, 0.5]]) {
+    assert.ok(Math.abs(N.fbm(u, v, 7, 11, 6) - N.fbm(u + 1, v - 1, 7, 11, 6)) < 1e-9, 'fbm tiles');
+    const a = C(u, v, 13, 18), b = C(u + 1, v + 2, 13, 18);
+    assert.ok(Math.abs(a.f1 - b.f1) < 1e-9 && Math.abs(a.f2 - b.f2) < 1e-9 && a.id === b.id && a.f2 >= a.f1, 'cells tile');
+  }
+  const paint = () => paintCloudDeck({ data: new Uint8ClampedArray(64 * 64 * 4), width: 64, height: 64 }).data;
+  const a = paint(), b = paint();
+  let cover = 0, dark = 0;
+  for (let i = 0; i < a.length; i += 4) { assert.equal(a[i + 3], b[i + 3]); assert.equal(a[i], b[i]); if (a[i + 3] > 128) cover++; if (a[i + 3] > 128 && a[i] < 200) dark++; }
+  const px = a.length / 4;
+  assert.ok(cover > px * 0.35 && cover < px * 0.92, `cover ${cover}/${px}`);           // broken, not overcast-flat
+  assert.ok(dark > px * 0.05, `dark cores ${dark}/${px}`);
+  // the tile's edges continue across the seam (left column next to the right one)
+  let seam = 0; for (let y = 0; y < 64; y++) seam += Math.abs(a[(y * 64) * 4 + 3] - a[(y * 64 + 63) * 4 + 3]);
+  assert.ok(seam / 64 < 60, `seam alpha step ${seam / 64}`);
+  const d = paintCloudDetail({ data: new Uint8ClampedArray(32 * 32 * 4), width: 32, height: 32 }).data;
+  for (let i = 0; i < d.length; i += 4) assert.ok(d[i] >= 178 && d[i] <= 255);
 });
 t('farmland: deterministic irregular fields of plausible size; hedges only on the boundaries', () => {
   const F = fieldsVoronoi({ cell: 64, rot: 0.22, stretch: 1.7, seed: 3 });
