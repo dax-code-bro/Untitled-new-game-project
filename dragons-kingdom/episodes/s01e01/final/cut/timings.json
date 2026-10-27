@@ -200,13 +200,13 @@
    "measured_at": "2026-10-23T21:21"
   },
   "P-08": {
-   "draft_s_per_frame": 7.985,
+   "draft_s_per_frame": 27.799,
    "frames_drawn": 216,
    "cinematic": "velocity",
    "twos": false,
-   "load": 19.42,
-   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-23T21:24"
+   "load": 20.13,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
+   "measured_at": "2026-10-27T06:40"
   },
   "1A-08": {
    "draft_s_per_frame": 8.392,
@@ -540,6 +540,24 @@
    "load": 20.36,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
    "measured_at": "2026-10-27T06:25"
+  },
+  "X2-16": {
+   "draft_s_per_frame": 32.817,
+   "frames_drawn": 84,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 23.59,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
+   "measured_at": "2026-10-27T06:59"
+  },
+  "1A-25": {
+   "draft_s_per_frame": 26.006,
+   "frames_drawn": 96,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 20.13,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
+   "measured_at": "2026-10-27T07:07"
   }
  },
  "sets": {
@@ -564,9 +582,9 @@
    "measured_at": "2026-10-27T04:24"
   },
   "PROLOGUE_VISTAS": {
-   "setup_s": 21.3,
-   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-23T22:23"
+   "setup_s": 74.2,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
+   "measured_at": "2026-10-27T04:59"
   },
   "VERDOR_GROUNDS": {
    "setup_s": 110.1,
