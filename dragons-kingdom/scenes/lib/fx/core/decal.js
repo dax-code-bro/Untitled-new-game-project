@@ -34,7 +34,7 @@
 //   wet      plain wetness (water): darker, glossy
 import * as THREE from 'three';
 import { Effect } from './manager.js';
-import { arr3, norm3, cross3, dot3, clamp, smoothstep, hash01 } from './util.js';
+import { arr3, norm3, cross3, dot3, clamp, smoothstep, hash01, noise1 } from './util.js';
 import { LATE_GLSL, makeLateUniforms, makeLate } from './late.js';
 
 export const MAX_STAMPS = 48;
@@ -45,13 +45,13 @@ export const MAX_STAMPS = 48;
 export const DECAL_LIQUIDS = {
   // whole blood: reflectance ~0.25-0.35 in deep red, a few % in green/blue (fresh, oxygenated);
   // drying turns it brown-black (methaemoglobin) and matte, edges first
-  blood: { spec: 0, sigWet: [1.0, 7.0, 8.0], sigDry: [1.5, 4.0, 4.6], albWet: [0.11, 0.005, 0.005], albDry: [0.035, 0.012, 0.008], rough: [0.06, 0.55], coat: [0.6, 0.08], coatRough: [0.02, 0.4], h: 0.0006 },
+  blood: { spec: 0, sigWet: [1.0, 7.0, 8.0], sigDry: [1.5, 4.0, 4.6], albWet: [0.1, 0.005, 0.005], albDry: [0.035, 0.012, 0.008], rough: [0.06, 0.55], coat: [0.5, 0.08], coatRough: [0.03, 0.4], h: 0.0006, thickDark: 0.72 },
   // venous / older blood (darker, less saturated) - wounds, pooled under bodies
   // (coat 0.6 / 0.02: a mirror of the blue sky turned big wet areas violet; a slightly rougher,
   // weaker coat keeps the wet glint without repainting the film)
-  bloodDark: { spec: 0, sigWet: [1.3, 8.0, 8.5], sigDry: [1.6, 4.2, 4.8], albWet: [0.09, 0.0045, 0.004], albDry: [0.03, 0.01, 0.007], rough: [0.05, 0.55], coat: [0.42, 0.08], coatRough: [0.07, 0.4], h: 0.0007 },
+  bloodDark: { spec: 0, sigWet: [1.3, 8.0, 8.5], sigDry: [1.6, 4.2, 4.8], albWet: [0.085, 0.0045, 0.004], albDry: [0.03, 0.01, 0.007], rough: [0.05, 0.55], coat: [0.42, 0.08], coatRough: [0.07, 0.4], h: 0.0007, thickDark: 0.7 },
   // diluted blood (washed, runoff, pink water on skin)
-  bloodThin: { spec: 0, sigWet: [0.12, 1.4, 1.6], sigDry: [0.25, 1.2, 1.4], albWet: [0.05, 0.012, 0.012], albDry: [0.03, 0.012, 0.01], rough: [0.08, 0.5], coat: [0.8, 0.05], coatRough: [0.03, 0.4], h: 0.0003 },
+  bloodThin: { spec: 0, sigWet: [0.12, 1.4, 1.6], sigDry: [0.25, 1.2, 1.4], albWet: [0.05, 0.012, 0.012], albDry: [0.03, 0.012, 0.01], rough: [0.08, 0.5], coat: [0.8, 0.05], coatRough: [0.03, 0.4], h: 0.0003, thickDark: 0.3 },
   soot: { sigWet: [2.2, 2.3, 2.4], sigDry: [2.2, 2.3, 2.4], albWet: [0.012, 0.011, 0.01], albDry: [0.012, 0.011, 0.01], rough: [0.9, 0.95], coat: [0, 0], coatRough: [0.5, 0.5], h: 0.0 },
   char: { sigWet: [6, 6, 6], sigDry: [6, 6, 6], albWet: [0.009, 0.008, 0.007], albDry: [0.009, 0.008, 0.007], rough: [0.55, 0.6], coat: [0.05, 0.05], coatRough: [0.35, 0.35], h: 0.0025 },
   water: { spec: 0, sigWet: [0.35, 0.33, 0.3], sigDry: [0, 0, 0], albWet: [0, 0, 0], albDry: [0, 0, 0], rough: [0.1, 0.9], coat: [0.9, 0], coatRough: [0.03, 0.5], h: 0.0002 },
@@ -91,6 +91,12 @@ uniform vec2 uDown;        // gravity in decal coords (unit)
 uniform vec2 uSrc;         // source point in decal coords (metres, centre = 0)
 uniform vec4 uP;           // kind params
 uniform vec4 uJoint;       // pool: joint cell size (m), joint width (m), pattern (0 none, 1 cobbles, 2 flags), joint depth
+// surface flow (coat streams on a mesh): vFlow = (across, along) streamline coordinates in metres
+// - gravity projected on the posed surface, traced upstream to where the film started - and the
+// surface's steepness (0 level .. 1 vertical); uFlowOn = 0 where the decal has none (ground, planes)
+varying vec3 vFlow;
+uniform float uFlowOn;
+
 #if FX_STAMPS > 0
 uniform vec4 uStamp[FX_STAMPS];   // x, y (m), radius (m), hit time (s, relative to t0)
 uniform vec4 uStampB[FX_STAMPS];  // dir x, dir y (unit, travel on the surface), elongation, seed
@@ -100,6 +106,33 @@ vec2 fxdSeedOff() { return vec2(fract(uSeed * 0.1731) * 97.0, fract(uSeed * 0.33
 
 // a crisp-edged liquid profile from a signed field c (>0 inside, metres): rounded meniscus
 float fxdFilm(float c, float w) { return smoothstep(0.0, w, c); }
+#if FX_STREAMS > 0
+uniform vec4 uStr[FX_STREAMS * 16];   // traced rivulets: x, y (m), half-width (m), arc length (m; < 0 unused)
+// film thickness of the rivulets that have run as far as grow allows (each ends in a bead)
+float fxdStreamsD(vec2 p, float grow) {
+  float best = 0.0;
+  for (int i = 0; i < FX_STREAMS; i++) {
+    float total = 0.0;
+    for (int k = 15; k >= 0; k--) { if (uStr[i * 16 + k].w >= 0.0) { total = uStr[i * 16 + k].w; break; } }
+    float Lr = total * grow;
+    for (int k = 0; k < 15; k++) {
+      vec4 a = uStr[i * 16 + k], b = uStr[i * 16 + k + 1];
+      if (b.w < 0.0 || a.w > Lr) break;
+      vec2 ab = b.xy - a.xy;
+      float t = clamp(dot(p - a.xy, ab) / max(dot(ab, ab), 1e-10), 0.0, 1.0);
+      float tmax = (Lr - a.w) / max(b.w - a.w, 1e-6);
+      t = min(t, tmax);
+      vec2 c = a.xy + ab * t;
+      float w = mix(a.z, b.z, t);
+      float dd = fxdFilm(w - length(p - c), w * 0.55) * (1.1 + 0.5 * fxdN(vec2(mix(a.w, b.w, t) / (w * 6.0), float(i) * 3.1)));
+      // the bead at the front of a running stream: rounder and thicker
+      if (tmax < 1.0) { vec2 cf = a.xy + ab * clamp(tmax, 0.0, 1.0); dd = max(dd, fxdFilm(w * 1.35 - length(p - cf), w * 0.5) * 2.0); }
+      best = max(best, dd);
+    }
+  }
+  return best;
+}
+#endif
 
 // one drop hit on a surface: an ellipse stretched along its travel dir, with a tail and a few
 // satellites ahead of it (velocity carries fluid past the contact point)
@@ -143,15 +176,28 @@ void fxdSpatter(vec2 p, float cell, float dens, float rMax, float elong, inout f
       vec2 fromSrc = c - uSrc;
       float dist = length(fromSrc);
       float k = dens * exp(-dist / max(uP.x, 1e-4)) * (lvl == 0 ? 0.35 : (lvl == 1 ? 0.6 : 0.9));
+      // clustered: drops fly in clumps (a spray is a few jets breaking up), not an even field
+      k *= 0.25 + 1.5 * smoothstep(0.3, 0.75, fxdF3(c / (cell * 3.0) + so * 0.37));
       // (thinned out over the projector's outer fifth: a source near the box edge printed a
       // straight line where the spatter began)
       vec2 eb = abs(c) / (0.5 * uSize);
       k *= 1.0 - smoothstep(0.8, 1.0, max(eb.x, eb.y));
       float hp = fxdH(id + 17.3);
       if (hp > k) continue;
-      float r = rMax * (lvl == 0 ? 1.0 : (lvl == 1 ? 0.5 : 0.25)) * (0.25 + 0.75 * pow(fxdH(id + 5.1), 2.0));
+      // sizes from a power law: many fine drops, a few big ones
+      float r = rMax * (lvl == 0 ? 1.0 : (lvl == 1 ? 0.5 : 0.25)) * (0.1 + 0.9 * pow(fxdH(id + 5.1), 3.2));
       vec2 dir = dist > 1e-5 ? fromSrc / dist : vec2(1.0, 0.0);
-      fxdDrop(p, c, r, dir, elong * (0.4 + 0.6 * fxdH(id + 9.9)) * smoothstep(0.0, uP.x * 0.5, dist), fxdH(id + 2.2) * 100.0, d, cov);
+      // farther from the source the drops arrive at a grazing angle: longer ellipses and tails
+      float el = elong * (0.4 + 0.6 * fxdH(id + 9.9)) * (0.3 + 1.2 * smoothstep(0.0, uP.x * 1.5, dist));
+      fxdDrop(p, c, r, dir, el, fxdH(id + 2.2) * 100.0, d, cov);
+      // satellites thrown ahead of a big drop (the "exclamation" spray around a heavy hit)
+      if (lvl == 0 && r > rMax * 0.45) {
+        for (int m = 0; m < 3; m++) {
+          float hm = fxdH(id + float(m) * 3.3 + 41.0);
+          vec2 sc = c + dir * r * (2.2 + 3.5 * hm) + vec2(-dir.y, dir.x) * r * (fxdH(id + float(m) * 5.7) - 0.5) * 3.0;
+          fxdDrop(p, sc, r * (0.1 + 0.15 * hm), dir, el * 1.4, hm * 100.0 + 7.0, d, cov);
+        }
+      }
     }
   }
 }
@@ -193,15 +239,20 @@ void fxdEval(vec2 uv, out float d, out float cov, out float dryBias) {
 #if defined(FX_KIND_COAT)
   // broad coverage: an irregular sheet, thinning and breaking up toward its edge, drips below
   vec2 q = p / (0.5 * uSize);
+  // gravity streaks: a coat is a film that flowed downhill - its thickness and its edge follow
+  // long, narrow streaks along the flow (an isotropic blob read as paint). On a mesh the flow is
+  // the surface's own (streamline coordinates traced over the posed face / scales: streams bend
+  // round the brow, run into the eye socket and pool where the surface levels out)
+  vec2 pd = vec2(dot(p, vec2(-uDown.y, uDown.x)), dot(p, uDown));
+  float slope = 1.0;
+  if (uFlowOn > 0.5) { pd = vFlow.xy; slope = vFlow.z; }
+  float pool = (1.0 - smoothstep(0.2, 0.65, slope)) * uFlowOn;
   // (streams: the sheet's sides wander as it runs down, so its edges are not one long curve)
   vec2 dq = vec2(-uDown.y, uDown.x);
-  q += dq * uP.w * 0.45 * (fxdF(vec2(dot(p, uDown) / (mn * 0.45), 7.3) + so) - 0.5) * 2.0;
+  q += dq * uP.w * 0.45 * (fxdF(vec2(pd.y / (mn * 0.45), 7.3) + so) - 0.5) * 2.0;
   float e = 1.0 - length(q);
   float n = fxdF(p / (mn * 0.22) + so);
   float n2 = fxdF3(p / (mn * 0.06) + so * 1.7);
-  // gravity streaks: a coat is a film that flowed downhill - its thickness and its edge follow
-  // long, narrow streaks along uDown (an isotropic blob read as paint)
-  vec2 pd = vec2(dot(p, vec2(-uDown.y, uDown.x)), dot(p, uDown));
   float st = fxdF(vec2(pd.x / (mn * 0.05), pd.y / (mn * 0.7)) + so * 0.9);
   float c = (e * 1.1 + (n - 0.5) * 0.75 + (n2 - 0.5) * 0.18 + (st - 0.5) * 0.35 - (1.0 - uAmount) * 0.6 - 0.08) * mn * 0.5;
   // (the noise could carry the sheet out to the projector box, where it ended on a straight cut:
@@ -212,9 +263,19 @@ void fxdEval(vec2 uv, out float d, out float cov, out float dryBias) {
   float sk = uP.w;
   float st2 = fxdF(vec2(pd.x / (mn * 0.11), pd.y / (mn * 1.2)) + so * 1.3);
   c += ((st - 0.5) * 0.7 + (st2 - 0.5) * 0.6) * sk * mn * 0.5;
+  // (where the surface levels out - the brow, the socket, a fold - the blood stops and pools:
+  // the film widens and thickens there)
+  c += pool * sk * mn * 0.06;
   float sheet = fxdFilm(c, mn * 0.012) * (0.5 + 1.4 * smoothstep(0.0, mn * 0.18, c)) * (0.75 + 0.5 * n2) * (0.5 + 1.0 * st)
-    * mix(1.0, 0.35 + 1.5 * smoothstep(0.35, 0.8, st * 0.6 + st2 * 0.4), sk);
+    * mix(1.0, 0.35 + 1.5 * smoothstep(0.35, 0.8, st * 0.6 + st2 * 0.4), sk) * (1.0 + 1.4 * pool);
   d = sheet; cov = step(0.001, sheet);
+#if FX_STREAMS > 0
+  // on a mesh with traced rivulets: the sheet stays round the source, the blood comes down the
+  // surface in its own streams (they bend round the brow, run into the socket and pool there)
+  float upper = 1.0 - smoothstep(-0.5, -0.12, dot(p, uDown) / (0.5 * uSize.y) + (n - 0.5) * 0.35);
+  d = max(sheet * upper * 0.6, fxdStreamsD(p, uGrow));
+  cov = step(0.001, d);
+#endif
   dryBias = 0.35 * (1.0 - smoothstep(0.0, mn * 0.12, c));
   if (uP.y > 0.0) fxdRuns(p, -uDown * mn * 0.05, mn * 0.38, uP.y, mn * uP.z, mn * 0.012, uGrow, uSeed, d, cov);
 #elif defined(FX_KIND_SPLAT)
@@ -388,7 +449,7 @@ void fxdEval(vec2 uv, out float d, out float cov, out float dryBias) {
 const SHADE = /* glsl */`
 uniform vec3 uSigWet, uSigDry, uAlbWet, uAlbDry;
 uniform vec2 uRough, uCoat, uCoatRough;
-uniform float uHScale, uOpacity;
+uniform float uHScale, uOpacity, uThickDark;
 void fxdShade(vec2 uv, out vec3 T, out vec3 alb, out float cov, out float rough, out float coat, out float coatR, out float h) {
   float d, dryBias;
   fxdEval(uv, d, cov, dryBias);
@@ -425,9 +486,16 @@ void fxdShade(vec2 uv, out vec3 T, out vec3 alb, out float cov, out float rough,
   T = exp(-2.0 * dd * sig);
   vec3 opq = 1.0 - exp(-dd * sig * 1.2);
   alb = mix(uAlbWet, uAlbDry, dry) * opq;
+  // thick liquid is dark: fresh blood more than ~1 mm deep reads near-black red under its sheen;
+  // only thin films and edges show the saturated red (the surface below tinted through them)
+  alb *= mix(1.0, 1.0 - uThickDark, smoothstep(0.6, 2.2, dd));
   rough = mix(uRough.x, uRough.y, dry);
   coat = mix(uCoat.x, uCoat.y, dry) * smoothstep(0.0, 0.25, d);
-  coatR = mix(uCoatRough.x, uCoatRough.y, dry);
+  // (a perfectly even gloss over a film reads as plastic: the meniscus and drying skin vary it)
+  vec2 pr = (uv - 0.5) * uSize;
+  float gv = fxdF3(pr / (min(uSize.x, uSize.y) * 0.05) + 3.7);
+  coatR = mix(uCoatRough.x, uCoatRough.y, dry) * (0.6 + 0.9 * gv);
+  coat *= 0.8 + 0.3 * gv;
   h = dd * uHScale;
 #if defined(FX_KIND_POOL)
   // a pool on stone is no mirror: a skin forms in patches (matte, slightly darker), dust and grit
@@ -461,9 +529,11 @@ const VERT = /* glsl */`
 #include <skinning_pars_vertex>
 #include <logdepthbuf_pars_vertex>
 attribute vec3 aDecal;
+attribute vec3 aFlow;
 varying vec3 vDecal;
+varying vec3 vFlow;
 void main() {
-  vDecal = aDecal;
+  vDecal = aDecal; vFlow = aFlow;
   #include <skinbase_vertex>
   #include <begin_vertex>
   #include <beginnormal_vertex>
@@ -533,8 +603,8 @@ vec4 fxdSSRTrace(vec3 P, vec3 R) {
 let kindKeyCounter = 0;
 
 /** Build the two materials for a decal kind (ssr: march steps, 0 = sky map only). */
-function makeMaterials(kind, liquid, stamps, uniforms, ssr = 0) {
-  const defines = { [`FX_KIND_${kind.toUpperCase()}`]: 1, FX_STAMPS: stamps };
+function makeMaterials(kind, liquid, stamps, uniforms, ssr = 0, streams = 0) {
+  const defines = { [`FX_KIND_${kind.toUpperCase()}`]: 1, FX_STAMPS: stamps, FX_STREAMS: streams };
   const absorb = new THREE.ShaderMaterial({
     vertexShader: VERT, fragmentShader: FRAG_ABSORB, uniforms, defines,
     transparent: true, depthWrite: false, depthTest: true, fog: false, toneMapped: false,
@@ -559,12 +629,12 @@ function makeMaterials(kind, liquid, stamps, uniforms, ssr = 0) {
   // sky-blue reflection on every film)
   shine.defines = { ...shine.defines, ...defines, ...(ssr ? { FXD_SSR_STEPS: ssr, FXD_SSR_MAX: '25.0', FXD_SSR_GROW: Math.pow(25 / 0.05, 1 / ssr).toFixed(5) } : {}), ...(globalThis.__fxdDebug ? { FXD_DEBUG: globalThis.__fxdDebug } : {}) };
   shine.userData.dkNoSSAO = false;
-  const key = `fxdecal-${kind}-${stamps}-${Lq?.spec ?? 0.35}-${ssr}-${globalThis.__fxdDebug || 0}`;
+  const key = `fxdecal-${kind}-${stamps}-${streams}-${Lq?.spec ?? 0.35}-${ssr}-${globalThis.__fxdDebug || 0}`;
   shine.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute vec3 aDecal;\nvarying vec3 vDecal;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDecal = aDecal;');
+      .replace('#include <common>', '#include <common>\nattribute vec3 aDecal;\nattribute vec3 aFlow;\nvarying vec3 vDecal;\nvarying vec3 vFlow;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDecal = aDecal; vFlow = aFlow;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec3 vDecal;
@@ -642,6 +712,7 @@ function liquidUniforms(liq, o = {}) {
     uRough: { value: new THREE.Vector2(...L.rough) }, uCoat: { value: new THREE.Vector2(...L.coat) },
     uCoatRough: { value: new THREE.Vector2(...L.coatRough) }, uHScale: { value: o.height ?? L.h },
     uOpacity: { value: o.opacity ?? 1 },
+    uThickDark: { value: o.thickDark ?? L.thickDark ?? 0 },
   };
 }
 
@@ -720,8 +791,9 @@ export function projectOnMesh(target, F, opts = {}) {
     keep.push(a, b, c, (u1 - u0) > 1.2 || (v1 - v0) > 1.2);
   }
   if (!keep.length) return null;
+  const FL = opts.flow ? surfaceFlow(F, W, D, keep, N, opts.down) : null;
   // build: shared vertices remapped; big static triangles clipped
-  const P = [], Nn = [], Dd = [], SI = [], SW = [], I = [];
+  const P = [], Nn = [], Dd = [], SI = [], SW = [], I = [], Fl = [];
   const remap = new Map();
   const si = skinned ? g.attributes.skinIndex : null, sw = skinned ? g.attributes.skinWeight : null;
   const pushV = (k) => {
@@ -730,6 +802,7 @@ export function projectOnMesh(target, F, opts = {}) {
     P.push(pos.getX(k), pos.getY(k), pos.getZ(k));
     if (nrm) Nn.push(nrm.getX(k), nrm.getY(k), nrm.getZ(k)); else Nn.push(0, 1, 0);
     Dd.push(D[k * 3], D[k * 3 + 1], D[k * 3 + 2]);
+    if (FL) Fl.push(FL[k * 3], FL[k * 3 + 1], FL[k * 3 + 2]);
     if (skinned) { SI.push(si.getX(k), si.getY(k), si.getZ(k), si.getW(k)); SW.push(sw.getX(k), sw.getY(k), sw.getZ(k), sw.getW(k)); }
     remap.set(k, id);
     return id;
@@ -739,7 +812,7 @@ export function projectOnMesh(target, F, opts = {}) {
     const a = keep[i], b = keep[i + 1], c = keep[i + 2], big = keep[i + 3];
     if (!(clipOn && big)) { I.push(pushV(a), pushV(b), pushV(c)); continue; }
     // Sutherland-Hodgman against u in [-m, 1+m], v in [-m, 1+m] (local pos, normal, decal coords)
-    const vert = (k) => ({ p: [pos.getX(k), pos.getY(k), pos.getZ(k)], n: nrm ? [nrm.getX(k), nrm.getY(k), nrm.getZ(k)] : [0, 1, 0], d: [D[k * 3], D[k * 3 + 1], D[k * 3 + 2]] });
+    const vert = (k) => ({ p: [pos.getX(k), pos.getY(k), pos.getZ(k)], n: nrm ? [nrm.getX(k), nrm.getY(k), nrm.getZ(k)] : [0, 1, 0], d: [D[k * 3], D[k * 3 + 1], D[k * 3 + 2]], f: FL ? [FL[k * 3], FL[k * 3 + 1], FL[k * 3 + 2]] : [0, 0, 0] });
     let poly = [vert(a), vert(b), vert(c)];
     const m = margin;
     const planes = [[0, -m, 1], [0, 1 + m, -1], [1, -m, 1], [1, 1 + m, -1]];
@@ -752,7 +825,7 @@ export function projectOnMesh(target, F, opts = {}) {
         if ((da >= 0) !== (db >= 0)) {
           const t = da / (da - db);
           const L = (x, y) => x.map((q, r) => q + (y[r] - q) * t);
-          out.push({ p: L(A.p, B.p), n: L(A.n, B.n), d: L(A.d, B.d) });
+          out.push({ p: L(A.p, B.p), n: L(A.n, B.n), d: L(A.d, B.d), f: L(A.f, B.f) });
         }
       }
       poly = out;
@@ -760,20 +833,157 @@ export function projectOnMesh(target, F, opts = {}) {
     }
     if (poly.length < 3) continue;
     const base = P.length / 3;
-    for (const V of poly) { P.push(...V.p); Nn.push(...V.n); Dd.push(...V.d); }
+    for (const V of poly) { P.push(...V.p); Nn.push(...V.n); Dd.push(...V.d); if (FL) Fl.push(...V.f); }
     for (let j = 1; j + 1 < poly.length; j++) I.push(base, base + j, base + j + 1);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(Nn, 3));
   geo.setAttribute('aDecal', new THREE.Float32BufferAttribute(Dd, 3));
+  if (FL) geo.setAttribute('aFlow', new THREE.Float32BufferAttribute(Fl, 3));
   if (skinned) {
     geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(SI, 4));
     geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(SW, 4));
   }
   geo.setIndex(I);
   geo.computeBoundingSphere();
-  return { geometry: geo, skinned, count: I.length / 3 };
+  return { geometry: geo, skinned, count: I.length / 3, flow: !!FL, flowField: FL || null };
+}
+
+/**
+ * The surface's own downhill flow over a decal on a mesh, as streamline coordinates per vertex:
+ * gravity projected on each posed triangle (the steepest-descent direction on the surface), in
+ * decal metres, splatted to a grid over the projector, then every vertex traced UPSTREAM along
+ * that field to where its film started: across = where the streamline started (across the mean
+ * down direction), along = how far the film ran to get here. On a flat wall these are just the
+ * projected coordinates; on a face streams bend round the brow and run into the socket.
+ * Returns Float32Array(N * 3): across (m), along (m), steepness (0 level .. 1 vertical).
+ */
+function surfaceFlow(F, W, D, keep, N, down = [0, -1, 0]) {
+  const g = norm3(arr3(down));
+  const acc = new Float32Array(N * 3), cnt = new Float32Array(N);
+  for (let i = 0; i < keep.length; i += 4) {
+    const a = keep[i], b = keep[i + 1], c = keep[i + 2];
+    const ax = W[b * 3] - W[a * 3], ay = W[b * 3 + 1] - W[a * 3 + 1], az = W[b * 3 + 2] - W[a * 3 + 2];
+    const bx = W[c * 3] - W[a * 3], by = W[c * 3 + 1] - W[a * 3 + 1], bz = W[c * 3 + 2] - W[a * 3 + 2];
+    const n = norm3([ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx]);
+    const gn = dot3(g, n);
+    const gt = [g[0] - n[0] * gn, g[1] - n[1] * gn, g[2] - n[2] * gn];
+    const st = Math.hypot(gt[0], gt[1], gt[2]);
+    const fu = dot3(gt, F.x), fv = dot3(gt, F.y);
+    for (const k of [a, b, c]) { acc[k * 3] += fu; acc[k * 3 + 1] += fv; acc[k * 3 + 2] += st; cnt[k]++; }
+  }
+  // grid over the projector (metres), filled from the vertices, holes diffused
+  const n = 40, gx = new Float32Array(n * n), gy = new Float32Array(n * n), gw = new Float32Array(n * n);
+  for (let k = 0; k < N; k++) {
+    if (!cnt[k]) continue;
+    const i = Math.min(n - 1, Math.max(0, Math.floor(D[k * 3] * n))), j = Math.min(n - 1, Math.max(0, Math.floor(D[k * 3 + 1] * n)));
+    gx[j * n + i] += acc[k * 3] / cnt[k]; gy[j * n + i] += acc[k * 3 + 1] / cnt[k]; gw[j * n + i] += 1;
+  }
+  const dd = [dot3(g, F.x), dot3(g, F.y)], dl = Math.hypot(dd[0], dd[1]) || 1;
+  const d2 = dl > 0.05 ? [dd[0] / dl, dd[1] / dl] : [0, -1];
+  for (let c = 0; c < n * n; c++) if (gw[c]) { gx[c] /= gw[c]; gy[c] /= gw[c]; gw[c] = 1; }
+  for (let it = 0; it < 24; it++) {
+    let empty = 0;
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+      const c = j * n + i;
+      if (gw[c]) continue;
+      let sx = 0, sy = 0, sw = 0;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const ii = i + di, jj = j + dj;
+        if (ii < 0 || jj < 0 || ii >= n || jj >= n) continue;
+        const q = jj * n + ii; if (gw[q] !== 1) continue;
+        sx += gx[q]; sy += gy[q]; sw++;
+      }
+      if (sw) { gx[c] = sx / sw; gy[c] = sy / sw; gw[c] = 2; } else empty++;
+    }
+    for (let c = 0; c < n * n; c++) if (gw[c] === 2) gw[c] = 1;
+    if (!empty) break;
+  }
+  for (let c = 0; c < n * n; c++) if (!gw[c]) { gx[c] = d2[0]; gy[c] = d2[1]; }
+  const field = (u, v, out) => {
+    const fu = Math.min(n - 1.001, Math.max(0, u * n - 0.5)), fv = Math.min(n - 1.001, Math.max(0, v * n - 0.5));
+    const i = Math.floor(fu), j = Math.floor(fv), a = fu - i, b = fv - j;
+    const at = (ii, jj, A) => A[jj * n + ii];
+    for (const [A, o] of [[gx, 0], [gy, 1]]) out[o] = (at(i, j, A) * (1 - a) + at(i + 1, j, A) * a) * (1 - b) + (at(i, j + 1, A) * (1 - a) + at(i + 1, j + 1, A) * a) * b;
+    return out;
+  };
+  // slope per cell (for pooling where the surface levels out)
+  const gs = new Float32Array(n * n).fill(-1);
+  for (let k = 0; k < N; k++) {
+    if (!cnt[k]) continue;
+    const i = Math.min(n - 1, Math.max(0, Math.floor(D[k * 3] * n))), j = Math.min(n - 1, Math.max(0, Math.floor(D[k * 3 + 1] * n)));
+    gs[j * n + i] = Math.max(gs[j * n + i], acc[k * 3 + 2] / cnt[k]);
+  }
+  const out = new Float32Array(N * 3), f = [0, 0];
+  const hstep = Math.min(F.w, F.h) / n * 0.6;
+  const perp = [-d2[1], d2[0]];
+  for (let k = 0; k < N; k++) {
+    if (!cnt[k]) continue;
+    let x = (D[k * 3] - 0.5) * F.w, y = (D[k * 3 + 1] - 0.5) * F.h, path = 0;
+    for (let s = 0; s < 4 * n; s++) {
+      field(x / F.w + 0.5, y / F.h + 0.5, f);
+      const fl = Math.hypot(f[0], f[1]);
+      if (fl < 0.05) break;
+      const nx = x - f[0] / fl * hstep, ny = y - f[1] / fl * hstep;
+      if (Math.abs(nx) > F.w * 0.5 || Math.abs(ny) > F.h * 0.5) break;
+      x = nx; y = ny; path += hstep;
+    }
+    out[k * 3] = x * perp[0] + y * perp[1];
+    out[k * 3 + 1] = x * d2[0] + y * d2[1] + path;
+    out[k * 3 + 2] = acc[k * 3 + 2] / cnt[k];
+  }
+  // the field in decal metres (x, y from the centre): unit downhill direction + steepness
+  out.field = (x, y) => {
+    const u = x / F.w + 0.5, v = y / F.h + 0.5;
+    field(u, v, f);
+    const l = Math.hypot(f[0], f[1]);
+    const i = Math.min(n - 1, Math.max(0, Math.floor(u * n))), j = Math.min(n - 1, Math.max(0, Math.floor(v * n)));
+    const sl = gs[j * n + i] >= 0 ? gs[j * n + i] : 1;
+    return { dx: l > 1e-6 ? f[0] / l : d2[0], dy: l > 1e-6 ? f[1] / l : d2[1], mag: l, slope: sl };
+  };
+  out.down2 = d2;
+  return out;
+}
+
+/**
+ * Rivulets over a mesh decal: streams traced DOWNSTREAM along the surface flow from the source
+ * band at the top of the film, each with its own width (varying along it; widening and beading
+ * where the surface levels out and the blood slows - the brow, the socket, a fold). Returns
+ * Float32Array(S * STREAM_PTS * 4): x, y (decal metres), half-width (m), arc length (m; -1 unused).
+ */
+export const STREAM_PTS = 16;
+export function traceStreams(field, F, o = {}) {
+  const S = o.count ?? 5, mn = Math.min(F.w, F.h), seed = o.seed ?? 1;
+  const out = new Float32Array(S * STREAM_PTS * 4).fill(-1);
+  const d2 = field.down2, perp = [-d2[1], d2[0]];
+  const h = mn / 60;
+  for (let i = 0; i < S; i++) {
+    const hs = (k) => hash01(seed * 131 + 7, i, k);
+    const across = (S > 1 ? i / (S - 1) - 0.5 : 0) * 0.62 * F.w * (o.spread ?? 1) + (hs(0) - 0.5) * 0.08 * F.w;
+    let x = perp[0] * across - d2[0] * F.h * (0.22 + 0.12 * hs(1)), y = perp[1] * across - d2[1] * F.h * (0.22 + 0.12 * hs(1));
+    const w0 = mn * (o.width ?? 0.02) * (0.55 + 0.9 * hs(2));
+    const pts = [[x, y, w0, 0]];
+    let sArc = 0;
+    const maxLen = F.h * (0.5 + 0.5 * hs(3)) * (o.length ?? 1);
+    for (let st = 0; st < 400 && sArc < maxLen; st++) {
+      const fl = field.field(x, y);
+      // (a little wander: blood picks its way over pores and stubble)
+      const wob = (noise1(sArc / (mn * 0.22) + hs(4) * 20, seed + i) * 2) * 0.55 + (noise1(sArc / (mn * 0.06) + hs(6) * 20, seed + 7 + i) * 2) * 0.2;
+      const dx = fl.dx + perp[0] * wob * (1 - Math.abs(perp[0] * fl.dx + perp[1] * fl.dy)), dy = fl.dy + perp[1] * wob;
+      const l = Math.hypot(dx, dy) || 1;
+      x += dx / l * h; y += dy / l * h; sArc += h;
+      if (Math.abs(x) > F.w * 0.47 || Math.abs(y) > F.h * 0.47) break;
+      const pool = 1 - smoothstep(0.2, 0.65, fl.slope);
+      // (width: varies along the stream, the stream thins as it runs and loses blood to the skin)
+      const w = w0 * (0.55 + 0.9 * (noise1(sArc / (mn * 0.12) + hs(5) * 9, seed + 3 + i) + 0.5)) * (1 - 0.35 * Math.min(1, sArc / maxLen)) * (1 + 1.8 * pool);
+      if (sArc - pts[pts.length - 1][3] >= maxLen / (STREAM_PTS - 1) * 0.98 || pool > 0.6) pts.push([x, y, w, sArc]);
+      if (pts.length >= STREAM_PTS) break;
+      if (pool > 0.9) break;                     // the blood stops and pools here
+    }
+    pts.forEach((q, k) => out.set(q, (i * STREAM_PTS + k) * 4));
+  }
+  return out;
 }
 
 /** A grid patch draped on the ground function (world space) covering the projector footprint. */
@@ -872,6 +1082,7 @@ export class DecalEffect extends Effect {
       uSrc: { value: new THREE.Vector2(...(o.src || o.throw || [0, 0])) },
       uP: { value: new THREE.Vector4(...p) },
       uJoint: { value: new THREE.Vector4(o.joints?.cell ?? 0.12, o.joints?.width ?? 0.012, o.joints ? (o.joints.pattern === 'flags' ? 2 : 1) : 0, o.joints?.depth ?? 1) },
+      uFlowOn: { value: 0 },
       ...liquidUniforms(liquid, o),
     };
     if (nSt) {
@@ -889,15 +1100,32 @@ export class DecalEffect extends Effect {
       : (['pool', 'smear', 'stamps', 'splat', 'wet'].includes(this.kind) ? { draft: 16, preview: 24, final: 32, ultra: 48 }[fx.tier.name] ?? 24 : 0);
     if (ssrSteps) Object.assign(u, makeLateUniforms(), { dkProjM: { value: new THREE.Matrix4() }, fxdSSR: { value: o.ssrStrength ?? 1 } });
     this.ssr = ssrSteps;
-    const mats = makeMaterials(this.kind, liquid, nSt, u, ssrSteps);
-    this.mats = mats;
     // geometry on every target (or the ground)
     const targets = o.target == null ? [null] : Array.isArray(o.target) ? o.target : [o.target];
     this.meshes = [];
     let tri = 0;
+    // coat streams on a mesh follow the surface's own flow (surfaceFlow): explicit rivulets traced
+    // down the posed surface (traceStreams), on the first target that has a field
+    const flow = o.flow ?? (this.kind === 'coat' && (p[3] ?? 0) > 0);
+    let flowAll = !!flow;
+    const results = [];
     for (const tg of targets) {
-      const r = tg ? projectOnMesh(tg, this.F, o) : o.plane ? projectOnPlane(this.F, o.lift ?? 0.003) : projectOnGround(fx, this.F, o.res ?? 24, o.lift ?? 0.004);
+      const r = tg ? projectOnMesh(tg, this.F, { ...o, flow, down }) : o.plane ? projectOnPlane(this.F, o.lift ?? 0.003) : projectOnGround(fx, this.F, o.res ?? 24, o.lift ?? 0.004);
       if (!r) continue;
+      if (!r.flow) flowAll = false;
+      results.push([tg, r]);
+    }
+    let nStr = 0;
+    const ff = flowAll ? results.find(([, r]) => r.flowField)?.[1].flowField : null;
+    if (ff && this.kind === 'coat') {
+      nStr = Math.max(2, Math.min(8, Math.round(o.streamCount ?? (2 + 7 * (p[3] ?? 0) * (o.amount ?? 1)))));
+      const str = traceStreams(ff, this.F, { count: nStr, seed: o.seed ?? 1, width: o.streamWidth, length: o.streamLength, spread: o.amount ?? 1 });
+      u.uStr = { value: Array.from({ length: nStr * STREAM_PTS }, (_, i) => new THREE.Vector4(str[i * 4], str[i * 4 + 1], str[i * 4 + 2], str[i * 4 + 3])) };
+      this.streams = str;
+    }
+    const mats = makeMaterials(this.kind, liquid, nSt, u, ssrSteps, nStr);
+    this.mats = mats;
+    for (const [tg, r] of results) {
       tri += r.count;
       for (const [mat, order] of [[mats.absorb, 1], [mats.shine, 2]]) {
         const m = r.skinned ? new THREE.SkinnedMesh(r.geometry, mat) : new THREE.Mesh(r.geometry, mat);
@@ -922,6 +1150,7 @@ export class DecalEffect extends Effect {
       }
     }
     this.triangles = tri;
+    u.uFlowOn.value = flowAll && this.meshes.length ? 1 : 0;
     if (!this.meshes.length) console.warn(`[fx] decal ${this.kind}: nothing inside the projector at`, this.F.c);
   }
 

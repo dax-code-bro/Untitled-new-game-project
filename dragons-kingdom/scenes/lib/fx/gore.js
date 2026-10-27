@@ -660,7 +660,7 @@ function scalp(fx, o) {
   // corner of the eye, over the cheekbone to the jaw (projected from the front-side of the face)
   const dirF = fwd.clone().multiplyScalar(-0.8).addScaledVector(right, -0.6).normalize();
   const sheetC = hp.clone().addScaledVector(fwd, 0.07).addScaledVector(right, 0.065).addScaledVector(up, 0.02);
-  out.push(fx.add(new DecalEffect(fx, { kind: 'coat', liquid: 'bloodDark', target: [body, ...hair], at: onSkin(sheetC, dirF), dir: dirF.toArray(), up: [0, 1, 0], size: [0.12, 0.27, 0.3], t0: t0 + 0.2, grow: [0, 5], seed: seed + 1, params: [0, 6, 0.55, o.streams ?? 1], amount: o.amount ?? 0.55, maxAngle: 88 })));
+  out.push(fx.add(new DecalEffect(fx, { kind: 'coat', liquid: 'bloodDark', target: [body, ...hair], at: onSkin(sheetC, dirF), dir: dirF.toArray(), up: [0, 1, 0], size: [0.12, 0.27, 0.3], t0: t0 + 0.2, grow: [0, 5], seed: seed + 1, params: [0, 6, 0.55, o.streams ?? 1], amount: o.amount ?? 0.55, maxAngle: 88, flow: o.flow })));
   // a stream straight down from the split over the temple
   out.push(fx.add(new DecalEffect(fx, { kind: 'run', liquid: 'bloodDark', target: [body, ...hair], at: onSkin(aim.clone().addScaledVector(up, -0.06), dirF), dir: dirF.toArray(), up: [0, 1, 0], size: [0.07, 0.22, 0.3], t0: t0 + 0.1, grow: [0, 4], seed: seed + 5, params: [0, 4, 0, 0], amount: 0.8, maxAngle: 88 })));
   // rivulets off the jaw down the neck into the collar
