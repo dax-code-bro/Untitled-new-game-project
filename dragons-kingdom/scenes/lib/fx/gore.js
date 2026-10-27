@@ -38,10 +38,11 @@ float gF(vec3 p) { return gN(p) * 0.5 + gN(p * 2.1 + 3.1) * 0.3 + gN(p * 4.3 + 7
 function tissueMaterial(kind, o = {}) {
   const m = new THREE.MeshPhysicalMaterial({
     color: 0xffffff, roughness: kind === 'bone' ? 0.45 : 0.55, metalness: 0,
-    clearcoat: kind === 'bone' ? 0.2 : kind === 'burnskin' ? 0.1 : 0.18, clearcoatRoughness: kind === 'bone' ? 0.35 : 0.3,
+    clearcoat: kind === 'bone' ? 0.12 : kind === 'burnskin' ? 0.1 : 0.18, clearcoatRoughness: kind === 'bone' ? 0.35 : 0.3,
+    specularIntensity: kind === 'bone' ? 0.6 : 1,
     side: kind === 'hide' || kind === 'membrane' ? THREE.DoubleSide : THREE.FrontSide,
     // (bone is translucent: a warm sheen stands in for the light it scatters back near its edges)
-    sheen: kind === 'muscle' ? 0.3 : kind === 'bone' ? 0.35 : 0, sheenColor: kind === 'bone' ? new THREE.Color(0.5, 0.32, 0.25) : new THREE.Color(0.35, 0.05, 0.04), sheenRoughness: 0.5,
+    sheen: kind === 'muscle' ? 0.3 : kind === 'bone' ? 0.15 : 0, sheenColor: kind === 'bone' ? new THREE.Color(0.5, 0.32, 0.25) : new THREE.Color(0.35, 0.05, 0.04), sheenRoughness: 0.5,
   });
   const U = { uOut: { value: new THREE.Vector3(...(o.outside || [0.05, 0.045, 0.04])) }, uScale: { value: o.scale ?? 1 }, uBlood: { value: o.blood ?? 0.45 }, uMarrow: { value: o.marrow ?? 0 }, uLen: { value: o.length ?? 1 }, uC: { value: new THREE.Vector3(...(o.center || [0, 0, 0])) }, uRad: { value: o.radius ?? 0.1 } };
   m.userData.tissue = U;
@@ -71,11 +72,13 @@ ${kind === 'muscle' ? `
   float base = smoothstep(0.4 + 0.3 * uBlood, 0.0, zz);
   // blood smeared up the shaft in streaks along it (it came out through the wound)
   float streak = smoothstep(0.3, 0.6, gN(vec3(gp.x * 90.0, gp.y * 90.0, gp.z * 5.0) + 2.0)) * smoothstep(1.1 * uBlood, 0.0, zz);
-  vec3 c = mix(vec3(0.34, 0.28, 0.2), vec3(0.22, 0.17, 0.12), por);
+  // (fresh cortical bone is ivory, albedo ~0.5: darker, it read as a glass tube - the sky's
+  // reflection outshone a dark base)
+  vec3 c = mix(vec3(0.55, 0.47, 0.36), vec3(0.4, 0.32, 0.23), por);
   // (fresh out of the wound it is never clean: a thin pink-red film of blood and torn
   // periosteum over all of it, patchy)
   float film = smoothstep(0.35, 0.65, gF(gp * 14.0 + 6.0));
-  c *= mix(vec3(1.0), vec3(0.62, 0.2, 0.16), uBlood * (0.45 + 0.4 * film));
+  c *= mix(vec3(1.0), vec3(0.62, 0.2, 0.16), uBlood * (0.15 + 0.6 * film * film));
   // the broken end: spongy, red marrow-filled bone where it split
   c = mix(c, mix(vec3(0.3, 0.06, 0.04), vec3(0.45, 0.32, 0.24), por), smoothstep(0.75, 0.95, zz / max(uLen, 1e-3)) * uMarrow);
   c = mix(c, vec3(0.1, 0.01, 0.008), clamp(base * (0.7 + 0.6 * por) + 0.25 * smoothstep(0.6, 0.8, por) + streak * 0.85, 0.0, 1.0));
@@ -85,7 +88,7 @@ ${kind === 'muscle' ? `
   if (part > 0.5 && part < 1.5) c = mix(vec3(0.08, 0.01, 0.008), vec3(0.2, 0.06, 0.03), por);
   if (part > 1.5 && part < 2.5) c = mix(vec3(0.42, 0.36, 0.27), vec3(0.26, 0.2, 0.14), smoothstep(0.3, 0.7, por)) * mix(vec3(1.0), vec3(0.7, 0.35, 0.3), 0.4 * uBlood * smoothstep(0.5, 0.8, gF(gp * 30.0 + 2.0)));
   if (part > 2.5) { float trab = smoothstep(0.35, 0.6, gF(gp * 120.0 + 5.0)); c = mix(vec3(0.16, 0.025, 0.015), vec3(0.42, 0.28, 0.1), trab * 0.7); }
-  diffuseColor.rgb = c; gr = part > 2.5 ? 0.3 : part > 1.5 ? 0.75 : 0.42 - 0.25 * max(base, streak) - 0.08 * film * uBlood;` : kind === 'hide' ? `
+  diffuseColor.rgb = c; gr = part > 2.5 ? 0.3 : part > 1.5 ? 0.75 : 0.58 - 0.3 * max(base, streak) - 0.12 * film * uBlood;` : kind === 'hide' ? `
   // a torn flap: the creature's / person's skin outside, raw pink-red dermis and blood inside
   float bl = gF(gp * 12.0);
   vec3 inner = mix(vec3(0.26, 0.07, 0.055), vec3(0.08, 0.006, 0.005), smoothstep(0.3, 0.6, bl));
