@@ -63,8 +63,11 @@ export default {
         remi: { at: [-0.35, 10.8], face: 180, look: 'exit', acts: [[0, 'walk', { to: [-0.3, 15.8], speed: 1.75, acc: 0.1 }], [0.8, 'look', { at: 'servant1.head', amount: 0.4 }]] },
         // eyes lowered as the king's children pass (a servant turning to watch Remi came round full face
         // to the lens in the draft: a sharp, frontal, lit face - against the realism plan)
-        servant1: { at: [-1.1, 14.2], face: 100, look: [-0.3, 0.2, 13.6], lookAmount: 0.8, acts: [[0.2, 'carry', {}], [0.2, 'walk', { to: [-1.22, 14.0], speed: 0.4 }]] },
-        servant2: { at: [-1.1, 15.1], face: 100, look: [-0.3, 0.2, 14.6], lookAmount: 0.8, acts: [[0.3, 'walk', { to: [-1.22, 15.2], speed: 0.4 }]] },
+        // session 7: the linen is real (the builder's `linen` / `linen2` stacks in their hands); the carry is
+        // settled before the shot starts (from 0.2 s the arms passed up over the head on the way into it,
+        // and the upturned hands held nothing - the static camera now shows them for the whole shot)
+        servant1: { at: [-1.1, 14.2], face: 100, look: [-0.3, 0.2, 13.6], lookAmount: 0.8, holds: 'linen', acts: [[-1, 'carry', {}], [0.2, 'walk', { to: [-1.22, 14.0], speed: 0.4 }]] },
+        servant2: { at: [-1.1, 15.1], face: 100, look: [-0.3, 0.2, 14.6], lookAmount: 0.8, holds: 'linen2', acts: [[-1, 'carry', {}], [0.3, 'walk', { to: [-1.22, 15.2], speed: 0.4 }]] },
       },
     },
     'X2-06': {

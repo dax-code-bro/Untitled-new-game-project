@@ -1398,11 +1398,11 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 7.9,
-    "k4_cpu_s_per_frame": 92.17,
+    "draft_s_per_frame": 16.3,
+    "k4_cpu_s_per_frame": 190.2,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 23.7,
-    "k4_cpu_hours": 4.61,
+    "draft_minutes": 48.91,
+    "k4_cpu_hours": 9.51,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -1412,7 +1412,7 @@
      "move": 1.08,
      "total": 1.13
     },
-    "basis": "MEASURED draft 7.9 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
+    "basis": "MEASURED draft 16.3 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
    },
    "staging": "NONE: high over the meadow edge; an immense shadow crosses the grass left to right; the dragon is never seen (cut before it is identified).",
    "deviation": null,
@@ -3907,11 +3907,11 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 5,
-    "k4_cpu_s_per_frame": 57.12,
+    "draft_s_per_frame": 25.22,
+    "k4_cpu_s_per_frame": 288.21,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 7,
-    "k4_cpu_hours": 1.33,
+    "draft_minutes": 35.31,
+    "k4_cpu_hours": 6.72,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
@@ -3921,7 +3921,7 @@
      "move": 1,
      "total": 1.43
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.43 for the shot's content"
+    "basis": "MEASURED draft 25.22 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "BACK: the sideways look reads as a head turn from behind.",
    "deviation": null,
@@ -4647,11 +4647,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 26.87,
-    "k4_cpu_s_per_frame": 335.88,
+    "draft_s_per_frame": 24.8,
+    "k4_cpu_s_per_frame": 310.02,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 26.87,
-    "k4_cpu_hours": 5.6,
+    "draft_minutes": 24.8,
+    "k4_cpu_hours": 5.17,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -4661,7 +4661,7 @@
      "move": 1,
      "total": 1.66
     },
-    "basis": "MEASURED draft 26.87 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-3 people)"
+    "basis": "MEASURED draft 24.8 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-3 people)"
    },
    "staging": "BACK + WIDE: the servants flatten against the wall; the siblings pass, backs to camera.",
    "deviation": null,

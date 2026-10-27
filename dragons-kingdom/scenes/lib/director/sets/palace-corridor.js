@@ -19,6 +19,8 @@ import { door as doorBuilder } from '../../architecture/openings.js';
 import { filmFinish } from '../../../lookdev/finish.js';
 import { keyed, clamp } from '../timeline.js';
 import { wallFrame, skyDome, lightCard, roomEnvironment, wallLamp, cutBox } from './common.js';
+import { verdorKit, foldedCloth } from '../../props/verdor.js';
+import { Kit as PropKit, frame as pframe, rng as prng } from '../../props/core.js';
 
 export const CORR = { w: 3.0, L: 26, h: 4.4, T: 0.8 };
 const WIN = [3, 7, 11, 15, 19, 23];                      // window centres along z
@@ -114,8 +116,25 @@ export async function build(ctx) {
     mid: [0, 1.5, L / 2], turn: [0, 0, 9],
     ...Object.fromEntries(WIN.map((z, i) => [`win${i + 1}`, [w / 2 - 0.1, 2.2, z]])),
   };
+  // linen the servants carry (X2-05, the shot list's "two servants carrying linen"): hand props the stage
+  // places between the carriers' palms (`holds: 'linen'`), hidden when nobody holds them; origin at the
+  // stack's base. Two or three folded sheets stacked, each a little askew (props library foldedCloth)
+  const vk = await verdorKit(ctx);
+  const linenStack = (seed, n) => {
+    const pk = new PropKit(), r = prng(seed);
+    // each sheet folded 6 times (~4 cm), stacked: a bundle 12-16 cm tall reads as linen at a distance (a
+    // single 4-layer sheet read as a thin board in the hands)
+    for (let k = 0; k < n; k++) foldedCloth(pk, pframe([(r() - 0.5) * 0.02, k * 0.042, (r() - 0.5) * 0.02], [Math.cos((r() - 0.5) * 0.12), 0, Math.sin((r() - 0.5) * 0.12)]), r, { w: 0.38, d: 0.28, layers: 6, t: 0.005 });
+    const g = vk.build(pk, `linen-${seed}`);
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    g.visible = false;
+    scene.add(g);
+    return g;
+  };
+  const linen = linenStack(41, 4), linen2 = linenStack(42, 3);
+
   const api = {
-    marks, objects: { door: hinge }, lamps, ground: () => 0,
+    marks, objects: { door: hinge, linen, linen2 }, lamps, ground: () => 0,
     applyShot(info) {
       const st = info.spec.set || {};
       const c = info.cont;
