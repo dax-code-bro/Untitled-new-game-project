@@ -46,6 +46,15 @@ export async function setup(ctx) {
   ball.position.set(-5, 0.8, 14); ball.castShadow = ball.receiveShadow = true; scene.add(ball);
   const stake = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 1.8, 12), new THREE.MeshStandardMaterial({ color: 0x3a2a1c, roughness: 0.9 }));
   stake.position.set(40, 0.9, 0); stake.castShadow = true; scene.add(stake);
+  // light check beside the burning bundle: a grey card (albedo 0.4) and a dark wooden post
+  // (albedo ~0.05), both 0.5 m from the flame's edge, in the camera's view of the stake
+  const card = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 0.5), grey);
+  card.position.set(39.35, 1.5, -0.45); card.lookAt(40, 1.75, 0); card.material = grey.clone(); card.material.side = THREE.DoubleSide; card.castShadow = card.receiveShadow = true; scene.add(card);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 2.0, 12), new THREE.MeshStandardMaterial({ color: new THREE.Color(0.05, 0.04, 0.03), roughness: 0.85 }));
+  post.position.set(39.15, 1.0, 0.5); post.castShadow = post.receiveShadow = true; scene.add(post);
+  // the fuel: a bundle of rags / straw lashed to the stake top, charred
+  const bundle = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), new THREE.MeshStandardMaterial({ color: new THREE.Color(0.035, 0.028, 0.022), roughness: 0.95 }));
+  bundle.scale.set(1, 1.3, 1); bundle.position.set(40, 1.62, 0); bundle.castShadow = bundle.receiveShadow = true; scene.add(bundle);
   const runner = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 1.0, 6, 12), grey);
   runner.castShadow = true; scene.add(runner);
 
@@ -58,7 +67,7 @@ export async function setup(ctx) {
   const leafFx = { t0: 0.3 };
   fx.fire.jet({ origin: [-12, 3, 30], dir: [1, -0.12, 0.12], t0: 12.3, t1: 13.9, length: 13, palette: 'leaf', seed: 4 });
   // burning stake (cloth / straw bundle)
-  fx.fire.burn({ at: [40, 1.5, 0], t0: 0, t1: 40, size: 0.3, seed: 5, smokeRate: 30 });
+  fx.fire.burn({ at: [40, 1.62, 0], t0: 0, t1: 40, size: 0.24, height: 1.2, seed: 5, smokeRate: 30 });
   fx.fire.embers({ at: [40, 1.4, 0], t0: 0, t1: 40, rate: 12, radius: 0.25, seed: 6 });
   // the moving burner: 30 m/s along +x at 3 m, passing x = 70..130
   const runAt = (t) => [70 + (t - 24) * 30, 3, 20];

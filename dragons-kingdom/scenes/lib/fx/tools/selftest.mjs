@@ -15,6 +15,11 @@ import { ballistic } from '../core/util.js';
 import { liveRange } from '../smoke.js';
 import { registerDirectorFx, DIRECTOR_KINDS } from '../index.js';
 import { resolveTier } from '../core/tier.js';
+import { flamePalette, flameRadiance } from '../core/blackbody.js';
+import { FlameVolume } from '../core/flamevol.js';
+import { noiseVolume } from '../core/noise.js';
+import { gradeColor } from '../../../../runtime/cinematic/colorlut.js';
+import { LOOKS } from '../../../../runtime/cinematic/passes.js';
 
 let fails = 0, n = 0;
 const ok = (c, msg) => { n++; if (!c) { fails++; console.log(`FAIL ${msg}`); } else console.log(`ok   ${msg}`); };
@@ -115,6 +120,27 @@ ok(i0 <= 7 * 20 && i1 >= 10 * 20 - 1 && i1 - i0 < 3 * 20 + 3, `smoke: live parti
   ok(r.join() === 'draft,preview,preview,final,ultra,final', `tiers: CPU draft/final -> ${r[0]}/${r[1]}, RTX preview/final/hero/high -> ${r.slice(2).join('/')}`);
   const t = resolveTier(fake(rtx, 'final', { fxParticles: 1.5 }));
   ok(Math.abs(t.particles - 1.5) < 1e-9 && t.gpu, 'tiers: ctx.quality.fxParticles scales the particle counts on a GPU');
+}
+
+// ---- fire: blackbody emission in absolute radiance, graded through the film finish
+{
+  const P = flamePalette('standard');
+  const Y = (T) => { const c = flameRadiance(T, P); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  let mono = true; for (let T = 900; T < 2600; T += 50) if (!(Y(T + 50) > Y(T))) mono = false;
+  const body = flameRadiance(1450, P);
+  ok(mono && body[0] > body[1] && body[1] > body[2] && Y(1050) < 0.05 && Y(2250) > 5, `fire: radiance rises with T (1050 K ${Y(1050).toFixed(3)}, 1450 K ${Y(1450).toFixed(2)}, 2250 K ${Y(2250).toFixed(1)}), body orange`);
+  const g = { toneMapping: 'agx', contrast: 1, saturation: 1, gain: [1, 1, 1], lift: [0, 0, 0], gamma: [1, 1, 1] };
+  const e = (T) => gradeColor(flameRadiance(T, P), g, LOOKS.cinema, null).map((x) => Math.round(x * 255));
+  const eb = e(1450), ec = e(2250), et = e(1150);
+  ok(eb[0] - eb[2] > 150 && Math.min(...ec) > 190 && et[0] < 160, `fire: graded body saturated orange (${eb}), core clips (${ec}), tips dark red (${et})`);
+  // flame volume: the JS twin of the shader field gives a light that is deterministic and flickers
+  const fxs = { tier: { steps: 24, gpu: false }, noise: noiseVolume(32, 7) };
+  const fv = new FlameVolume(fxs, { R: [0.25, 0.25], H: 1.1, seed: 3 });
+  const m = new THREE.Matrix4();
+  const Ys = []; for (let i = 0; i < 24; i++) { const r = fv.emission(2 + i / 24, m); Ys.push(0.2126 * r.I[0] + 0.7152 * r.I[1] + 0.0722 * r.I[2]); }
+  const again = fv.emission(2 + 5 / 24, m);
+  const mean = Ys.reduce((a, b) => a + b, 0) / Ys.length, sd = Math.sqrt(Ys.reduce((a, b) => a + (b - mean) ** 2, 0) / Ys.length);
+  ok(Math.abs(0.2126 * again.I[0] + 0.7152 * again.I[1] + 0.0722 * again.I[2] - Ys[5]) < 1e-12 && mean > 0.05 && sd / mean > 0.03, `fire: flame light from its own field (mean I ${mean.toFixed(3)}, flicker ${(100 * sd / mean).toFixed(0)} %), deterministic`);
 }
 
 // ---- director kinds

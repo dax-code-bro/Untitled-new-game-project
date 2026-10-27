@@ -28,6 +28,7 @@ import * as THREE from 'three';
 import { LIGHT_GLSL } from './light.js';
 import { LATE_GLSL, makeLateUniforms, makeLate } from './late.js';
 import { NOISE_GLSL } from './noise.js';
+import { BLACKBODY_GLSL, flameUniforms } from './blackbody.js';
 
 const VERT = /* glsl */`
 precision highp float;
@@ -268,10 +269,14 @@ void main() {
 
 
 // 'flame': a volumetric, self-lit tongue of burning gas - the same world-space noise erosion as
-// 'puff' (billows fixed in the flow), emission from a local heat value mapped through a palette
-// (core / body / edge, the canon fire colours) or a blackbody ramp; additive. vD.a = heat (0..1.4)
-const FRAG_FLAME = FRAG_COMMON + /* glsl */`
-uniform vec3 uCoreC, uBodyC, uEdgeC;
+// 'puff' (billows fixed in the flow), stretched along the flow. Emission in ABSOLUTE scene
+// radiance from a soot temperature (core/blackbody.js): vD.a = heat (0..1.4) -> T between the
+// palette's tip and core temperatures; billow middles hotter, creases cooler. Optically thick
+// mode (occlusion > 0, the dragon jet): each tongue covers what is behind it and shows its own
+// radiance, so piled tongues converge to the flame's radiance (orange body, a yellow-white core
+// that clips and blooms in the film finish, cool creases dark red to soot-black) instead of
+// adding up to a peach beam. Edges are a high-contrast threshold of the noise (sharp licks).
+const FRAG_FLAME = FRAG_COMMON + BLACKBODY_GLSL + /* glsl */`
 uniform float uGain, uNoiseScale, uNoiseAmt, uEvolve, uEdge, uSoot, uOcc, uSigma, uStretchN, uCrease, uHeatK;
 void main() {
   vec2 q = fxCapsule();
@@ -283,49 +288,37 @@ void main() {
   // coordinate printed straight hatching along every fast tongue)
   float qx = uOcc > 0.0 ? mix(q.x, vQ.x, 0.5) : q.x;
   vec3 pw = vCenterW + (vAxW * qx + vAyW * q.y) * vR + vToCamW * zs * vR * 0.5;
-  // gas is drawn out by the flow: structure stretched ~2.5x along the tongue (an isotropic noise
-  // printed a cracked-mud network of cells over the whole jet), and it streams along it with age
+  // gas is drawn out by the flow: structure stretched along the tongue, streaming with age
   vec3 dw = (pw - vCenterW) / vR;
   float al = dot(dw, vAxW);
   dw += vAxW * (al * (uStretchN - 1.0) - age * uEvolve * 0.8);
   vec3 np = dw * uNoiseScale + vec3(seed * 13.17, seed * 7.31, seed * 3.77) + vec3(0.0, -age * uEvolve, age * uEvolve * 0.37);
   vec4 n = texture(uNoise, np * 0.25);
   vec4 n2 = texture(uNoise, np * 0.71 + 0.37);
+  vec4 z1 = (n - 0.48) / 0.155, z2 = (n2 - 0.48) / 0.155;          // standardised noise (sd 1)
   float dr = sqrt(d2);
-  // torn tongue: the ball eroded hard by the billow and wisp channels, finer rips toward the rim
-  float shape = dr * 0.9 + (n.g - 0.5) * uNoiseAmt * 1.3 + (n2.r - 0.5) * 0.8 * uNoiseAmt * dr;
-  float dens = smoothstep(1.0, 1.0 - uEdge, shape);
-  // tears: dark gaps between licking tongues (the sum of many tongues must not fill in smooth)
-  dens *= smoothstep(0.3, 0.7, n.r * 0.55 + n2.g * 0.65 + (1.0 - dr) * 0.25);
+  // torn tongue: the ball eroded hard by billows (rounded Worley lobes) and rips; a sharp
+  // threshold (uEdge: width of the edge in field units) - crisp licks, not airbrushed blobs
+  float field = (1.0 - dr) + (0.6 * z1.g + 0.3 * z2.r + 0.15 * z2.a) * 0.16 * uNoiseAmt * (0.6 + 0.6 * dr);
+  float dens = smoothstep(0.0, uEdge, field - 0.12);
   if (dens <= 0.003) discard;
-  // local heat: hotter in the middle of the tongue and where the noise is dense
-  // billows (Worley cells) are hot in their middles, the creases between them cool to dark red
-  float heat = vD.a * (0.55 + 0.6 * (1.0 - dr)) * (0.45 + 0.9 * n.g) * (0.85 + 0.3 * n.r) - (n2.b - 0.5) * 0.25;
-  vec3 col = heat > 0.55 ? mix(uBodyC, uCoreC, clamp((heat - 0.55) / 0.45, 0.0, 1.0)) : mix(uEdgeC, uBodyC, clamp(heat / 0.55, 0.0, 1.0));
-  col *= smoothstep(0.0, 0.25, heat);
+  // soot temperature: the packet's heat, hotter in billow middles, cooler in the folds between
+  float bil = smoothstep(-0.9, 1.1, 0.7 * z1.r + 0.5 * z2.b + 0.4 * z1.g);
+  float hb = vD.a * uHeatK * mix(1.0 - uCrease, 1.12, bil) * (0.78 + 0.34 * smoothstep(0.0, 0.55, field - 0.12));
+  float T = mix(uTTip, uTCore, clamp(hb / 1.25, 0.0, 1.0));
+  vec3 rad = fxFlameRad(T);
   float thick = 2.0 * zs;
   float tau = dens * thick * vC.x * vAlphaK * fxSoftFade(vViewZ - zs * vR);
   FX_DEPTH_OUT(clamp(tau * 1.5, 0.0, 1.0), vViewZ - zs * vR)
   if (uOcc > 0.0) {
-    // optically thick flame (a dragon's fuel-rich jet): emission + absorption. Each tongue covers
-    // what is behind it by a = 1 - e^-(sigma tau) and shines with the local source colour, so
-    // piled-up tongues converge to the flame's own radiance instead of adding up to a white
-    // beam, and cool, sooty creases between billows read dark against the sky.
-    float a = (1.0 - exp(-tau * uSigma)) * smoothstep(1.0, 0.55, dr);
-    // contrast of a real flame: billow middles burn hot, the folds between them a little cooler
-    // (deeper orange, not brown: inside the fire everything is still glowing); only where the gas
-    // has cooled - old packets, the outer rim - do the folds go to dark red and soot. The hottest
-    // (youngest) gas near the mouth glares yellow-white.
-    float bil = smoothstep(0.3, 0.75, n.r * 0.6 + n2.b * 0.3 + n.g * 0.35);
-    float cool = smoothstep(0.75, 0.2, vD.a) + smoothstep(0.6, 1.0, dr) * 0.6;
-    float hb = heat * uHeatK * mix(0.75 - uCrease * (0.4 + 0.5 * clamp(cool, 0.0, 1.0)), 1.2, bil);
-    vec3 c2 = hb > 0.55 ? mix(uBodyC, uCoreC, clamp((hb - 0.55) / 0.45, 0.0, 1.0)) : mix(uEdgeC * 0.6, uBodyC, clamp(hb / 0.55, 0.0, 1.0));
-    c2 *= smoothstep(0.08, 0.4, hb) * (1.0 + 1.6 * max(0.0, hb - 1.0));
-    float soot = (1.0 - smoothstep(0.05, 0.5, hb)) * uSoot;
-    gl_FragColor = vec4(c2 * a * uGain, a * uOcc * (0.7 + 0.3 * soot));
+    // optically thick (fuel-rich dragon fire): emission + absorption, a = 1 - e^-(sigma tau);
+    // cool soot (T < ~1150 K) still covers what is behind it -> dark creases and rims
+    float a = 1.0 - exp(-tau * uSigma);
+    float soot = (1.0 - smoothstep(1050.0, 1350.0, T)) * uSoot;
+    gl_FragColor = vec4(rad * a * uGain, a * uOcc * (0.75 + 0.25 * soot));
     return;
   }
-  gl_FragColor = vec4(col * tau * uGain, 0.0);
+  gl_FragColor = vec4(rad * tau * uGain, 0.0);
 }`;
 
 // 'shimmer': heat haze - the scene behind (late pass colour copy) refracted by rising, swirling
@@ -431,6 +424,7 @@ export class ParticleLayer {
       uCoreC: { value: v3(s.coreC, [1.0, 0.5, 0.09]) }, uBodyC: { value: v3(s.bodyC, [1.0, 0.27, 0.025]) }, uEdgeC: { value: v3(s.edgeC, [0.75, 0.07, 0.01]) },
       uSoot: { value: s.soot ?? 0 }, uStretchN: { value: s.stretch ?? 0.4 }, uCrease: { value: s.crease ?? 0.45 }, uHeatK: { value: s.heatK ?? 1 }, uShimmer: { value: s.shimmer ?? 1 }, uTimeS: { value: 0 }, uOcc: { value: s.occlusion ?? 0 },
     };
+    if (this.mode === 'flame') Object.assign(uniforms, flameUniforms(s.flamePalette ?? 'standard', THREE));
     this.uniforms = uniforms;
     const blend = o.blending || (this.mode === 'glow' || (this.mode === 'flame' && !(s.occlusion > 0)) ? 'additive' : 'premult');
     const mat = new THREE.ShaderMaterial({

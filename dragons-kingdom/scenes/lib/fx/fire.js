@@ -18,6 +18,9 @@ import * as THREE from 'three';
 import { Effect } from './core/manager.js';
 import { ParticleLayer } from './core/particles.js';
 import { DecalEffect } from './core/decal.js';
+import { FlameVolume } from './core/flamevol.js';
+import { JetVolume, JET_MAX } from './core/jetvol.js';
+import { flamePalette, flameRadiance } from './core/blackbody.js';
 import { SmokePlume, liveRange } from './smoke.js';
 import { hash01, arr3, clamp, smoothstep, ballistic, noise1, norm3, cross3, coneDir, len3 } from './core/util.js';
 import { FIRE_PALETTES } from '../creatures/fire.js';
@@ -48,17 +51,26 @@ export class FireJet extends Effect {
     this.rate = (o.rate ?? 700) * fx.tier.particles;
     this.gain = o.gain ?? 1;
     const maxF = Math.ceil(this.rate * this.life) + 8;
-    this.flames = this.layer(new ParticleLayer(fx, {
+    // flame emission: absolute radiance from a soot temperature (core/blackbody.js) - Charcoal's
+    // ordinary fire is a blackbody glow (orange body, yellow-white core that clips, dark red
+    // tips and soot-black creases); Leaf's purplish-blue fire maps the same temperatures through
+    // its own hue ramp. The packets' heat (1.3 at the mouth -> 0.15 at the end) -> T.
+    this.FP = flamePalette(o.flamePalette ?? (o.palette === 'leaf' ? 'leaf' : 'standard'));
+    // 'volume' (default): one ray-marched body of burning gas around the stream's centreline
+    // (core/jetvol.js); 'particles': the older sprite jet (cheaper, layered look)
+    this.mode = o.render ?? 'volume';
+    if (this.mode === 'volume') {
+      this.vol = new JetVolume(fx, { palette: this.FP, seed: this.seed, kappa: o.kappa, turb: o.turb, sharp: o.sharp, length: this.L, life: this.life, rref: 0.22 * this.W, noTwin: o.zzNoTwin, debugSeg: o.zzDebugSeg });
+      this.object.add(this.vol.mesh, this.vol.twin);
+    }
+    this.flames = this.mode === 'volume' ? null : this.layer(new ParticleLayer(fx, {
       max: maxF, mode: 'flame', name: 'fx-fire-flames', soft: 0.3, conserve: false,
-      // optically thick: each tongue shows the flame's own radiance (gain x palette) and covers
-      // what is behind it; `occlusion` < 1 lets some background through (thinner, cleaner fire)
-      // (a sooty, fuel-rich fire is optically thick and creased; a hot clean one - Leaf's - is
-      // more transparent, smoother and glows: occlusion / crease follow the palette's soot)
+      // optically thick: each tongue shows the flame's own radiance and covers what is behind
+      // it; `occlusion` < 1 lets some background through (thinner, cleaner fire: Leaf's)
       shading: {
-        coreC: this.P.core, bodyC: this.P.body, edgeC: this.P.edge, gain: (o.radiance ?? 0.7) * this.gain, sigma: o.sigma ?? (0.8 + 0.6 * clamp(this.P.smokeAmt, 0, 1)),
-        occlusion: o.occlusion ?? (0.3 + 0.5 * clamp(this.P.smokeAmt, 0, 1)), crease: o.crease ?? (0.12 + 0.33 * clamp(this.P.smokeAmt, 0, 1)), stretch: 0.4,
-        heatK: o.heatK ?? (this.P.smokeAmt < 0.7 ? 0.8 : 1),
-        soot: 1, noiseScale: 2.2, noiseAmt: 1.2, evolve: 2.5, edge: 0.5,
+        flamePalette: this.FP, gain: (o.radiance ?? 1) * this.gain, sigma: o.sigma ?? (1.0 + 0.8 * clamp(this.P.smokeAmt, 0, 1)),
+        occlusion: o.occlusion ?? (0.45 + 0.45 * clamp(this.P.smokeAmt, 0, 1)), crease: o.crease ?? (0.16 + 0.3 * clamp(this.P.smokeAmt, 0, 1)), stretch: 0.45,
+        heatK: o.heatK ?? 1, soot: 1, noiseScale: 2.2, noiseAmt: 1.2, evolve: 2.5, edge: o.edge ?? 0.16,
       },
     }));
     // soot: burning-out fuel along the second half of the stream rolls off its top as black smoke
@@ -144,7 +156,9 @@ export class FireJet extends Effect {
       out[2] += D[2] / hd * pen * 0.8 + s[2] * pen * (h(4) - 0.5) * 1.6;
       r *= 1 + pen / Math.max(r, 0.1) * 0.3;
     }
-    const heat = (1.3 - 1.15 * Math.pow(f, 0.8)) * (0.8 + 0.4 * h(5));
+    // heat: a white-hot rod of burning fuel at the mouth, falling fast to an orange body and a
+    // dark red, sooty end
+    const heat = (1.38 - 1.22 * Math.pow(f, 0.55)) * (0.82 + 0.36 * h(5));
     const dens = smoothstep(0, 0.012, a) * (1 - smoothstep(0.55, 1.0, f));
     return [r, heat, dens];
   }
@@ -157,8 +171,10 @@ export class FireJet extends Effect {
     const [i0, i1] = liveRange(tb, this.t0, this.t1, this.rate, this.life);
     let cx = 0, cy = 0, cz = 0, cw = 0;
     const frames = new Map();
+    const bins = [0, 1, 2].map(() => ({ I: [0, 0, 0], A: 0, p: [0, 0, 0], w: 0, r: 0 }));
     const frameAt = (te) => { const key = Math.round(te * 240); if (!frames.has(key)) frames.set(key, this.frame(key / 240)); return frames.get(key); };
-    for (let i = i0; i <= i1; i++) {
+    if (this.vol) this.drawVolume(t, frameAt, bins);
+    for (let i = i0; i <= (this.flames ? i1 : -1); i++) {
       const te = this.t0 + (i + hash01(this.seed, i, 9)) / this.rate;
       if (te > tb || te > this.t1) continue;
       const ab = tb - te;
@@ -173,6 +189,14 @@ export class FireJet extends Effect {
       for (let k = 0; k < 3; k++) { pa[k] -= fd[k] * e; pb[k] += fd[k] * e; }
       this.flames.push(pa, pb, r, hash01(i, 5) * 6.28, dens, (i % 983) / 983, ab / this.life, [1, 1, 1], heat);
       const w = dens * Math.max(0, heat); cx += pb[0] * w; cy += pb[1] * w; cz += pb[2] * w; cw += w;
+      // light: this tongue's radiance times its area, binned along the stream (mouth / mid / far)
+      const T = this.FP.tTip + (this.FP.tCore - this.FP.tTip) * clamp(heat * 0.92 / 1.25, 0, 1);
+      const rad = flameRadiance(T, this.FP), A = Math.PI * r * r * (1 + 1.27 * e / r) * clamp(dens, 0, 1);
+      const bin = ab / this.life < 0.18 ? 0 : ab / this.life < 0.45 ? 1 : 2, B = bins[bin];
+      const Y = 0.2126 * rad[0] + 0.7152 * rad[1] + 0.0722 * rad[2];
+      B.I[0] += rad[0] * A; B.I[1] += rad[1] * A; B.I[2] += rad[2] * A; B.A += A;
+      B.p[0] += pb[0] * Y * A; B.p[1] += pb[1] * Y * A; B.p[2] += pb[2] * Y * A; B.w += Y * A;
+      B.r = Math.max(B.r, r);
     }
     // soot rising off the end of the flames
     if (this.smoke) {
@@ -224,17 +248,28 @@ export class FireJet extends Effect {
     }
     // lights follow the stream; heat haze rides above it
     const on = this.on(t);
-    const F = this.frame(t);
-    const fl = flicker(t, this.seed);
+    // the jet's light: each bin's emission (radiance x area of its tongues), corrected for
+    // overlap (piled tongues hide each other: the summed area cannot exceed the stream's own
+    // silhouette there), at its emission centroid - so the light on the ground / the creature
+    // follows the flame's real brightness and flicker
+    const segL = [0.18, 0.27, 0.55];
     this.lights.forEach((l, k) => {
-      const x = l.userData.x;
-      const p = [F.O[0] + F.D[0] * this.L * x, F.O[1] + F.D[1] * this.L * x + 0.05 * this.L * x * x, F.O[2] + F.D[2] * this.L * x];
+      const B = bins[k];
+      if (!(B.w > 0) || on < 0.001) { l.intensity = 0; l.visible = false; return; }
+      const sil = this.L * segL[k] * this.W * (k === 0 ? 0.35 : k === 1 ? 0.7 : 0.9) + Math.PI * B.r * B.r;
+      const ov = this.vol ? 1 : Math.min(1, sil / Math.max(B.A, 1e-6));
+      const I = B.I.map((x) => x * ov * (this.o.lightScale ?? 1));
+      const Y = 0.2126 * I[0] + 0.7152 * I[1] + 0.0722 * I[2];
+      const p = [B.p[0] / B.w, B.p[1] / B.w, B.p[2] / B.w];
       const gy = fx.ground(p[0], p[2]);
-      l.position.set(p[0], Math.max(p[1], gy + 0.5), p[2]);
-      const share = k === 0 ? 0.006 : k === 1 ? 0.035 : 0.03;
-      l.intensity = this.P.lightI * on * fl * this.L * this.L * share * (this.o.lightScale ?? 1);
-      l.visible = on > 0.001;
+      l.position.set(p[0], Math.max(p[1], gy + 0.3 + B.r * 0.5), p[2]);
+      l.color.setRGB(I[0] / Math.max(Y, 1e-6), I[1] / Math.max(Y, 1e-6), I[2] / Math.max(Y, 1e-6));
+      l.intensity = Y;
+      l.distance = this.L * 3;
+      l.visible = Y > 1e-4;
+      if (this.o.debug) console.warn(`[fx] jet light ${k} Y=${Y.toFixed(2)} A=${B.A.toFixed(2)} sil=${sil.toFixed(2)} at=${p.map((x) => x.toFixed(1)).join(',')}`);
     });
+    const F = this.frame(t);
     if (this.haze && on > 0.01) {
       for (let k = 0; k < 24; k++) {
         const x = (k + 0.5) / 24;
@@ -244,6 +279,75 @@ export class FireJet extends Effect {
       this.haze.setTime(t);
     }
     if (cw > 0) fx.focus = [cx / cw, cy / cw, cz / cw];
+    else if (this.focusV) fx.focus = this.focusV;
+  }
+
+  /** The stream's centreline: gas of age a (emitted at te = t - a from the mouth then). */
+  centre(t, a, frameAt) {
+    const te = t - a, F = frameAt(te), { O, D } = F;
+    const L = this.L, W = this.W, f = a / this.life;
+    const s = norm3(Math.abs(D[1]) > 0.95 ? cross3([1, 0, 0], D) : cross3([0, 1, 0], D)), u = cross3(D, s);
+    const x = L * (1 - Math.exp(-3.0 * f)) / (1 - Math.exp(-3.0));
+    const xf = x / L, tw = W * 0.42 * Math.min(1, f * 1.6);
+    const tx = (noise1(xf * 3.1 - te * 2.4, this.seed + 1) + 0.6 * noise1(xf * 7.3 - te * 4.1, this.seed + 2)) * tw;
+    const ty = (noise1(xf * 2.7 - te * 2.1, this.seed + 3) + 0.6 * noise1(xf * 6.9 - te * 3.7, this.seed + 4)) * tw;
+    const p = [0, 0, 0];
+    for (let k = 0; k < 3; k++) p[k] = O[k] + D[k] * x + s[k] * tx + u[k] * ty;
+    p[1] += 0.14 * L * f * f;
+    // tube radius: the spread of the stream plus the size of its billows (a narrow rod of
+    // burning fuel at the mouth)
+    let R = 0.7 * W * 0.5 * (0.08 + 0.92 * Math.pow(f, 1.3)) + 0.8 * (0.012 * L + 0.013 * L * smoothstep(0, 0.12, f) + 0.34 * W * Math.pow(f, 1.15));
+    const gy = this.fx.ground(p[0], p[2]);
+    if (p[1] - R * 0.4 < gy) {
+      // the stream splashes along the ground: pushed up onto it, spread wider
+      const pen = gy - (p[1] - R * 0.4);
+      p[1] = gy + R * 0.4 + pen * 0.1;
+      const hd = Math.hypot(D[0], D[2]) || 1;
+      p[0] += D[0] / hd * pen * 0.6; p[2] += D[2] / hd * pen * 0.6;
+      R *= 1 + 0.35 * pen / Math.max(R, 0.1);
+    }
+    // soot temperature along the stream (as a fraction of core - tip, x 1.25): white-hot fuel at
+    // the mouth (~2250 K), orange within a fifth of the length (~1500 K), dark red and sooty by
+    // the end (~1100 K); billow middles run a few hundred K above this, rims below
+    const heat = 1.25 * (0.45 * Math.exp(-f / 0.07) + 0.55 * Math.pow(1 - f, 1.6));
+    return { p, R, a, f, heat };
+  }
+
+  /** Volume mode: the centreline polyline for this frame + its light bins. */
+  drawVolume(t, frameAt, bins) {
+    const aLo = Math.max(0, t - this.t1), aHi = Math.min(this.life, t - this.t0);
+    if (aHi - aLo < 0.004) { this.vol.set([], t, 0, 0); this.focusV = null; return; }
+    // samples evenly spaced ALONG the stream (it is fast at the mouth, slow at the end)
+    const n = JET_MAX, e3 = 1 - Math.exp(-3);
+    const xa = (a) => (1 - Math.exp(-3 * a / this.life)) / e3;
+    const x0 = xa(aLo), x1 = xa(aHi);
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const xn = x0 + (x1 - x0) * i / (n - 1);
+      const a = Math.min(aHi, Math.max(aLo, -Math.log(1 - xn * e3) * this.life / 3));
+      pts.push(this.centre(t, a, frameAt));
+    }
+    const [ta, tb] = this.fx.shutter(t);
+    this.vol.set(pts, t, this.o.zzNoBlur ? 0 : tb - ta, 1);
+    // light: each stretch of the stream shows its radiance over its silhouette (2 R x length);
+    // what is seen of it is its outer gas (cooler than its core, sooty rims late in the stream)
+    let cx = 0, cy = 0, cz = 0, cw = 0;
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const A = pts[i], B = pts[i + 1];
+      const len = Math.hypot(B.p[0] - A.p[0], B.p[1] - A.p[1], B.p[2] - A.p[2]);
+      const R = 0.5 * (A.R + B.R), f = 0.5 * (A.f + B.f), heat = 0.5 * (A.heat + B.heat);
+      const Tb = this.FP.tTip + (this.FP.tCore - this.FP.tTip) * clamp(heat / 1.25, 0, 1);
+      const T = Tb - 110 - 160 * smoothstep(0.25, 0.65, f);
+      const rad = flameRadiance(T, this.FP);
+      const area = 2 * R * len * 0.8 * (1 - smoothstep(0.78, 1.0, f));
+      const bin = f < 0.18 ? 0 : f < 0.45 ? 1 : 2, Bn = bins[bin];
+      const Y = 0.2126 * rad[0] + 0.7152 * rad[1] + 0.0722 * rad[2];
+      const m = [(A.p[0] + B.p[0]) / 2, (A.p[1] + B.p[1]) / 2, (A.p[2] + B.p[2]) / 2];
+      for (let k = 0; k < 3; k++) { Bn.I[k] += rad[k] * area; Bn.p[k] += m[k] * Y * area; }
+      Bn.A += area; Bn.w += Y * area; Bn.r = Math.max(Bn.r, R);
+      cx += m[0] * Y * area; cy += m[1] * Y * area; cz += m[2] * Y * area; cw += Y * area;
+    }
+    this.focusV = cw > 0 ? [cx / cw, cy / cw, cz / cw] : null;
   }
 
   /** A scorch where the stream meets the ground (computed at the middle of the burn). */
@@ -270,14 +374,19 @@ export class FireJet extends Effect {
     const dec = this.scorchDecal, up = dec.update.bind(dec);
     dec.update = (t) => { up(t); dec.uniforms.uOpacity.value = smoothstep(t0, t1, t); };
   }
+  dispose() { super.dispose(); this.vol?.dispose(); }
 }
 
 // ------------------------------------------------------------------ burning cloth / object --
 /**
- * Small flames licking up from a patch on a (possibly fast-moving) object, with a smoke trail and
- * a light. Packets inherit the source's velocity and are dragged toward the air: on a rider in a
- * 40 m/s slipstream the flames are torn back into short streaks and the smoke streams behind.
- * o: { at (function / {object, offset}), t0, t1, size (m, patch radius), intensity (0..1 or fn), palette }
+ * A burning object: a ray-marched flame volume (core/flamevol.js) standing on a patch of fuel,
+ * with its light, a smoke plume / trail and embers. The flame's axis is buoyancy plus the RELATIVE
+ * wind: on a still stake it stands up and leans with the breeze; on a rider in a 30 m/s slipstream
+ * it is laid back into a long sheet streaming off the body (wider across the burning patch,
+ * thin through it, faster gas, faster puffing), and the smoke streams behind.
+ * o: { at (point / function / {object, offset}), t0, t1, size (m, patch radius), height (m),
+ *      intensity (0..1 or fn), palette, normal (patch normal, for a sheet's orientation),
+ *      lightScale, kappa, turb, sharp, steps, smoke: false, smokeRate, smokeLife }
  */
 export class FireBurn extends Effect {
   constructor(fx, o = {}) {
@@ -285,69 +394,83 @@ export class FireBurn extends Effect {
     this.P = paletteOf(o.palette);
     this.t1 = o.t1 ?? this.t0 + 3;
     this.size = o.size ?? 0.25;
-    this.life = o.life ?? 0.32;
-    this.rate = (o.rate ?? 260) * fx.tier.particles * Math.max(0.3, this.size / 0.25);
-    this.drag = o.drag ?? 9;
-    this.flames = this.layer(new ParticleLayer(fx, {
-      max: Math.ceil(this.rate * this.life) + 8, mode: 'flame', name: 'fx-burn-flames', soft: 0.05, conserve: false,
-      shading: { coreC: this.P.core, bodyC: this.P.body, edgeC: this.P.edge, gain: (o.radiance ?? 0.9) * (o.gain ?? 1), sigma: o.sigma ?? 1.6, occlusion: o.occlusion ?? 0.6, soot: 1, noiseScale: 2.0, noiseAmt: 1.3, evolve: 3.0, edge: 0.5 },
-    }));
+    this.H = o.height ?? this.size * 4.2;
+    this.vel = (te) => { const a = fx.at(o.at, te - 0.01), b = fx.at(o.at, te + 0.01); return [(b[0] - a[0]) / 0.02, (b[1] - a[1]) / 0.02, (b[2] - a[2]) / 0.02]; };
+    // peak relative wind over the burn decides the sheet's proportions (fixed for the effect)
+    let wmax = 0;
+    for (let k = 0; k <= 16; k++) {
+      const t = this.t0 + (Math.min(this.t1, this.t0 + 30) - this.t0) * k / 16, v = this.vel(t);
+      wmax = Math.max(wmax, Math.hypot(fx.wind[0] - v[0], fx.wind[1] - v[1], fx.wind[2] - v[2]));
+    }
+    this.ub = o.buoyancy ?? 2.2 * Math.sqrt(9.81 * this.H);   // buoyant rise velocity scale (m/s)
+    const sheet = clamp(wmax / 12, 0, 1);                     // 0 still air .. 1 slipstream
+    this.sheet = sheet;
+    const fpal = o.flamePalette ?? (o.palette === 'leaf' ? 'leaf' : 'burn');
+    this.vol = new FlameVolume(fx, {
+      name: 'fx-burn-flame', palette: fpal, seed: this.seed,
+      R: [this.size * (1 + 0.2 * sheet), this.size * (1 - 0.55 * sheet)], H: this.H * (1 + 0.35 * sheet),
+      v0: (o.v0 ?? 1.5) + 0.45 * wmax * sheet, acc: 3 + 30 * sheet,
+      puffF: o.puffF ?? (1.5 / Math.sqrt(2 * this.size) + 0.12 * wmax * sheet / (2 * this.size)),
+      kappa: o.kappa, turb: o.turb ?? 1.0, sharp: o.sharp, lift: o.lift ?? (0.08 - 0.05 * sheet), bend: o.bend ?? 0,
+      steps: o.steps,
+    });
+    this.object.add(this.vol.mesh, this.vol.twin);
     this.light = new THREE.PointLight(new THREE.Color(...this.P.light), 0, 6, 2);
     this.object.add(this.light);
     fx.light.addPoint(this.light);
     this.smoke = o.smoke === false ? null : fx.add(new SmokePlume(fx, {
-      kind: o.smokeKind || 'cloth', at: o.at, t0: this.t0, t1: o.smokeT1 ?? this.t1 + (o.smolder ?? 1.5), inherit: 1, drag: o.smokeDrag ?? 3, rate: o.smokeRate ?? 45,
-      size: this.size * 0.5, life: o.smokeLife ?? 4, selfShadow: false, seed: this.seed + 1, spread: this.size * 0.6,
+      kind: o.smokeKind || 'cloth', at: (t) => this.tipAt(t), t0: this.t0, t1: o.smokeT1 ?? this.t1 + (o.smolder ?? 1.5), inherit: 1, drag: o.smokeDrag ?? 3, rate: o.smokeRate ?? 45,
+      size: this.size * 0.55, life: o.smokeLife ?? 4, selfShadow: false, seed: this.seed + 1, spread: this.size * 0.5,
       fade: (t) => 1 - 0.6 * smoothstep(this.t1, this.t1 + (o.smolder ?? 1.5), t),
     }));
-    this.vel = (te) => { const a = fx.at(o.at, te - 0.01), b = fx.at(o.at, te + 0.01); return [(b[0] - a[0]) / 0.02, (b[1] - a[1]) / 0.02, (b[2] - a[2]) / 0.02]; };
+    this.m0 = new THREE.Matrix4(); this.m1 = new THREE.Matrix4();
   }
   intensity(t) {
     const i = typeof this.o.intensity === 'function' ? this.o.intensity(t) : (this.o.intensity ?? 1);
     return i * smoothstep(this.t0, this.t0 + 0.15, t) * (1 - smoothstep(this.t1 - 0.3, this.t1, t));
   }
-  draw(t) {
-    const fx = this.fx;
-    const [ta, tb] = fx.shutter(t);
-    const pa = [0, 0, 0], pb = [0, 0, 0];
-    const [i0, i1] = liveRange(tb, this.t0, this.t1, this.rate, this.life);
-    for (let i = i0; i <= i1; i++) {
-      const te = this.t0 + (i + hash01(this.seed, i, 3)) / this.rate;
-      if (te > tb || te > this.t1) continue;
-      const ab = tb - te;
-      const h = (k) => hash01(this.seed * 811, i, k);
-      const life = this.life * (0.5 + 0.7 * h(0));
-      if (ab > life) continue;
-      const I = this.intensity(te);
-      if (I < 0.02) continue;
-      const src = fx.at(this.o.at, te), sv = this.vel(te);
-      const ang = h(1) * 6.283, rr = Math.sqrt(h(2)) * this.size;
-      const p0 = [src[0] + Math.cos(ang) * rr, src[1] + (h(3) - 0.5) * this.size * 0.6, src[2] + Math.sin(ang) * rr];
-      const pos = (a, out) => {
-        ballistic(p0, sv, [0, 0, 0], this.drag, fx.wind, a, out);
-        out[1] += 0.9 * a + 2.4 * a * a;                     // buoyant tongue
-        out[0] += noise1(a * 6 + h(4) * 40, 1) * 0.25 * a; out[2] += noise1(a * 6 + h(5) * 40, 2) * 0.25 * a;
-      };
-      pos(Math.max(0, ta - te), pa); pos(ab, pb);
-      const f = ab / life;
-      const r = this.size * (0.3 + 0.45 * f) * (0.6 + 0.8 * h(6));
-      const heat = (1.25 - 1.1 * f) * (0.8 + 0.4 * h(7));
-      const dens = smoothstep(0, 0.03, ab) * (1 - smoothstep(0.5, 1, f)) * I;
-      // tongues are tall: stretch the capsule along the packet's motion (+ up)
-      const dv = [pb[0] - pa[0], pb[1] - pa[1] + 1e-4, pb[2] - pa[2]], dl = len3(dv);
-      const e = r * (0.8 + 0.8 * h(9));
-      const mid = [(pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2, (pa[2] + pb[2]) / 2];
-      const up = norm3([dv[0] / dl * 0.5, dv[1] / dl * 0.5 + 0.5, dv[2] / dl * 0.5]);
-      const half = Math.max(e, dl / 2);
-      for (let k = 0; k < 3; k++) { pa[k] = mid[k] - up[k] * half * 0.6; pb[k] = mid[k] + up[k] * half * 1.4; }
-      this.flames.push(pa, pb, r, h(8) * 6.28, dens, (i % 911) / 911, f, [1, 1, 1], heat);
-    }
-    const src = fx.at(this.o.at, t);
-    this.light.position.set(src[0], src[1] + this.size * 0.8, src[2]);
-    this.light.intensity = this.P.lightI * this.intensity(t) * flicker(t, this.seed) * 30 * this.size * this.size * (this.o.lightScale ?? 1);
-    this.light.distance = 8 * Math.max(0.5, this.size / 0.25);
-    this.light.visible = this.light.intensity > 0.001;
+  /** The flame frame at time t: origin on the fuel, y = buoyancy + relative wind, x across the sheet. */
+  frameAt(t, m) {
+    const fx = this.fx, o = this.o;
+    const p = fx.at(o.at, t), v = this.vel(t);
+    const w = [fx.wind[0] - v[0], fx.wind[1] - v[1], fx.wind[2] - v[2]];
+    const ax = norm3([w[0] * 0.55, this.ub + w[1] * 0.55, w[2] * 0.55]);
+    // across: perpendicular to the axis and to the patch normal (or to the flow's side)
+    let n = o.normal ? norm3(arr3(typeof o.normal === 'function' ? o.normal(t) : o.normal)) : null;
+    let xa = n ? cross3(ax, n) : cross3(ax, Math.abs(ax[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]);
+    if (len3(xa) < 1e-3) xa = cross3(ax, [0, 0, 1]);
+    xa = norm3(xa);
+    const za = cross3(xa, ax);
+    m.makeBasis(new THREE.Vector3(...xa), new THREE.Vector3(...ax), new THREE.Vector3(...za));
+    m.setPosition(p[0], p[1] - this.size * 0.35 * (1 - this.sheet), p[2]);
+    return m;
   }
+  /** Where the flame tips are (the smoke starts there). */
+  tipAt(t) {
+    const m = this.frameAt(t, new THREE.Matrix4());
+    const v = new THREE.Vector3(0, this.vol.H * 0.85, 0).applyMatrix4(m);
+    return [v.x, v.y, v.z];
+  }
+  draw(t) {
+    const [ta, tb] = this.fx.shutter(t);
+    const on = this.intensity(t);
+    this.frameAt(ta, this.m0); this.frameAt(tb, this.m1);
+    this.vol.pose(this.m0, this.m1, ta, tb, on);
+    // the flame's light on its surroundings: its emission integrated over its volume
+    if (on > 0.002) {
+      const e = this.vol.emission(t, this.m1);
+      const I = e.I.map((x) => x * on * (this.o.lightScale ?? 1));
+      const Y = 0.2126 * I[0] + 0.7152 * I[1] + 0.0722 * I[2];
+      this.light.position.set(...e.at);
+      this.light.color.setRGB(I[0] / Math.max(Y, 1e-6), I[1] / Math.max(Y, 1e-6), I[2] / Math.max(Y, 1e-6));
+      this.light.intensity = Y;
+      this.light.distance = Math.max(6, this.H * 8);
+      this.lumens = Y;
+      if (this.o.debug) console.warn(`[fx] burn t=${t.toFixed(2)} I=${I.map((x) => x.toFixed(3)).join(',')} Y=${Y.toFixed(3)} at=${e.at.map((x) => x.toFixed(2)).join(',')}`);
+    } else this.light.intensity = 0;
+    this.light.visible = this.light.intensity > 1e-4;
+  }
+  dispose() { super.dispose(); this.vol.dispose(); }
 }
 
 /** Embers / sparks rising from a point (a burning stall, a fire's base). */
