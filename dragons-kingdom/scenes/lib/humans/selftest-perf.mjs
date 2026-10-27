@@ -138,6 +138,33 @@ else {
   }
   ok(same && fin2, 'crowd bake deterministic and finite');
   ok(minD >= 0.5, `crowd keeps people apart (min ${minD.toFixed(2)} m)`);
+  // crowd: a parent holds the child's hand, scoops it up at the alarm and runs (pose independent of
+  // the update order); one villager falls and stays down
+  if (['parent', 'child'].every((id) => fs.existsSync(cache(id)))) {
+    const mk = () => {
+      const ids = ['parent', 'child', 'crowd03', 'remi'];
+      const P = ids.map((id) => createPerformer(load(id), units.data));
+      const C = createCrowd({ seed: 5, t0: 0, t1: 9, agents: [
+        { performer: P[0], pos: [0, 0], yaw: 0, carry: 1 }, { performer: P[1], pos: [0.42, 0], yaw: 0 },
+        { performer: P[2], pos: [3, 1], yaw: 2 }, { performer: P[3], pos: [-3, 1], yaw: -2 }],
+        exits: [[[-6, 0], [-14, 0]], [[6, 0], [14, 0]]], alarm: { t: 2, at: [0, -9] }, falls: [2], cower: 0 }).bake();
+      return { P, C };
+    };
+    const A = mk(), B = mk();
+    const W = (ch, n) => new THREE.Vector3().setFromMatrixPosition(ch.bone(n).matrixWorld);
+    A.P.forEach((p) => p.update(1.5));
+    const hands = W(A.P[0].ch, 'wrist.L').distanceTo(W(A.P[1].ch, 'wrist.R'));
+    const tc = A.C.agents[0].pickT + 1.2;
+    A.P.forEach((p) => p.update(tc));
+    [...B.P].reverse().forEach((p) => p.update(tc));
+    const rise = W(A.P[1].ch, 'root').y - W(A.P[0].ch, 'root').y;
+    const orderSame = W(A.P[1].ch, 'head').distanceTo(W(B.P[1].ch, 'head')) < 1e-6;
+    const tf = A.C.agents[2].fallT;
+    A.P.forEach((p) => p.update(tf + 2));
+    const fallen = W(A.P[2].ch, 'head').y;
+    ok(hands < 0.2 && rise > 0.06 && rise < 0.2 && orderSame && fallen < 0.45,
+      `crowd: hand in hand (wrists ${(hands * 100).toFixed(0)} cm), child carried ${(rise * 100).toFixed(0)} cm above the parent's pelvis, same pose either update order (${orderSame}), the faller's head ${fallen.toFixed(2)} m up`);
+  }
   // director face hook
   {
     const ch = load('remi');

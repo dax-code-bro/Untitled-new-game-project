@@ -43,7 +43,11 @@ function segPoint(px, pz, ax, az, bx, bz) {
  * wave (s per 10 m of distance: 0.6) }, cower (0.15), lookBack (0.5: share that glance back),
  * groups: [[agent indices], ...] - conversation groups: the members stand on a loose ring round the
  * group's centre (shuffling a little), face it, turn their heads to whoever is talking (the turn passes
- * round the group every few seconds), and the talker gestures - until the alarm breaks them up }
+ * round the group every few seconds), and the talker gestures - until the alarm breaks them up,
+ * stumble (0: share of the fleeing who lurch when shoved hard - flailing arms, quick recovery steps),
+ * falls ([agent indices]: they go down during the flight and stay down; the others run round them) }
+ * Agent option carry: j - this agent (a parent) holds child j by the hand while milling, scoops the
+ * child up at the alarm (perform.js carry) and runs with it; the child is not simulated while carried.
  */
 export function createCrowd(opts) {
   const seed = opts.seed ?? 1;
@@ -134,8 +138,28 @@ function bake(C) {
     a.wp = 1;          // next waypoint on the exit path
     a.cowerAt = null;
   }
+  // parents and the children they carry: the child reacts with its parent, never cowers alone; the
+  // parent stoops for it (pickup) and runs a little slower with it
+  for (const a of agents) {
+    if (a.carry == null || !agents[a.carry]) continue;
+    const c = agents[a.carry];
+    c.carrier = a; a.child = c;
+    a.cowers = false; c.cowers = false;
+    c.fleeT = a.fleeT;
+    a.pickT = a.fleeT + 0.2;
+    a.vFlee *= 0.8;
+  }
+  const falls = new Set(opts.falls || []);
+  for (const a of agents) if (falls.has(a.i) && !a.cowers && !a.carrier && al) a.fallT = a.fleeT + 1.3 + 1.2 * hash01(seed, a.i * 11 + 12);
+  const carried = (b, t) => b.carrier && t >= b.carrier.pickT;
   // mill targets: piecewise, a new spot every 3-7 s, sometimes staying to talk
   const millGoal = (a, t) => {
+    if (a.carrier) {
+      // a child stays at its parent's side (its right hand in the parent's left)
+      const P = a.carrier, cy = Math.cos(P.h), sy = Math.sin(P.h);
+      const gx = P.x + cy * 0.42 + sy * 0.05, gz = P.z - sy * 0.42 + cy * 0.05;
+      return Math.hypot(gx - a.x, gz - a.z) > 0.08 ? [gx, gz] : null;
+    }
     if (a.group != null) {
       const G = C.groups[a.group];
       const ang = a.slot + 0.12 * Math.sin(t * 0.21 + a.i * 1.7), r = a.ringR * (1 + 0.08 * Math.sin(t * 0.33 + a.i));
@@ -153,7 +177,17 @@ function bake(C) {
     // forces
     for (const a of agents) {
       let gx = 0, gz = 0, v0 = 0, tau = 0.8;
-      if (t < a.fleeT) {
+      if (carried(a, t)) { a.fx = 0; a.fz = 0; continue; }
+      if (a.fallT != null && t >= a.fallT) {
+        // down: brakes over ~0.4 s and stays where it fell
+        a.fx = -a.vx / 0.18; a.fz = -a.vz / 0.18;
+        continue;
+      }
+      if (a.child && t >= a.fleeT && t < a.pickT + 0.75) {
+        // the parent stoops for the child: steps to it and stops
+        gx = a.child.x - a.x; gz = a.child.z - a.z;
+        v0 = Math.min(1.2, Math.max(0, Math.hypot(gx, gz) - 0.35) * 3); tau = 0.3;
+      } else if (t < a.fleeT) {
         const g = millGoal(a, t);
         if (g) { gx = g[0] - a.x; gz = g[1] - a.z; v0 = Math.min(a.vMill, Math.hypot(gx, gz) * 0.8); }
       } else if (a.cowers) {
@@ -179,13 +213,21 @@ function bake(C) {
       const gl = Math.hypot(gx, gz) || 1;
       let fx = (gx / gl * v0 - a.vx) / tau, fz = (gz / gl * v0 - a.vz) / tau;
       // other people: exponential repulsion + a little sideways slip (passing on the right)
+      let push = 0, pdx = 0, pdz = 0;
       for (const b of agents) {
-        if (b === a) continue;
+        if (b === a || carried(b, t) || b.carrier === a || a.carrier === b) continue;
         const dx = a.x - b.x, dz = a.z - b.z, d = Math.hypot(dx, dz) || 1e-3;
         if (d > 3) continue;
         const k = (t >= a.fleeT ? 7 : 2.2) * Math.exp((0.62 - d) / 0.3);
         fx += dx / d * k - dz / d * k * 0.15; fz += dz / d * k + dx / d * k * 0.15;
+        if (k > push) { push = k; pdx = dx / d; pdz = dz / d; }
       }
+      // a hard shove in the flight makes some lurch (once): thrown sideways, slowed, flailing
+      if (a.stumbleT == null && t > a.fleeT + 0.6 && push > 6 && !a.cowers && !a.child && a.fallT == null && hash01(seed, a.i * 11 + 13) < (opts.stumble ?? 0)) {
+        a.stumbleT = t; a.stumbleDir = [pdx, pdz];
+        a.vx += pdx * 1.4; a.vz += pdz * 1.4;
+      }
+      if (a.stumbleT != null && t > a.stumbleT && t < a.stumbleT + 0.7) v0 *= 0.45;
       for (const o of obs) {
         const dx = a.x - o.x, dz = a.z - o.z, d = Math.hypot(dx, dz) || 1e-3;
         const k = 6 * Math.exp((o.r + 0.32 - d) / 0.22);
@@ -201,6 +243,7 @@ function bake(C) {
     }
     // integrate (semi-implicit Euler), cap speed, heading follows the velocity (turn-rate limited)
     for (const a of agents) {
+      if (carried(a, t)) continue;
       if (a.cowerAt != null && t > a.cowerAt) { a.vx *= 0.8; a.vz *= 0.8; }
       a.vx += a.fx * DT; a.vz += a.fz * DT;
       const sp = Math.hypot(a.vx, a.vz), cap = (t >= a.fleeT && !a.cowers ? a.vFlee : a.vMill) * 1.25 + 0.2;
@@ -224,10 +267,13 @@ function bake(C) {
       const maxTurn = (t >= a.fleeT ? 5 : 1.6) * DT;
       a.h += Math.max(-maxTurn, Math.min(maxTurn, wrap(want - a.h)));
     }
+    // a carried child rides on its parent's hip (its root is posed by carryChild; the bake keeps it there)
+    for (const a of agents) if (carried(a, t)) { const P = a.carrier; a.x = P.x; a.z = P.z; a.vx = P.vx; a.vz = P.vz; a.h = P.h; }
     // bodies do not overlap: push apart any pair closer than 0.56 m (position correction)
     for (let it = 0; it < 2; it++) {
       for (let i = 0; i < agents.length; i++) for (let j = i + 1; j < agents.length; j++) {
         const a = agents[i], b = agents[j];
+        if (carried(a, t) || carried(b, t) || a.carrier === b || b.carrier === a) continue;
         const dx = a.x - b.x, dz = a.z - b.z, d = Math.hypot(dx, dz);
         if (d >= 0.56 || d < 1e-6) continue;
         const k = (0.56 - d) / 2 / d;
@@ -274,13 +320,56 @@ function bake(C) {
         tt += dur; k++;
       }
     }
+    // a parent and child hold hands while milling (meeting between them, at a height the child reaches
+    // up to - a pure function of the two baked roots, so any frame poses the same), until the pickup
+    if (a.child && a.child.performer) {
+      const ct = a.child, CP = ct.performer, cr = CP.body.S.rig, pr = P.body.S.rig;
+      // the adult's hand hangs a little below its own wrist height, the child reaches up to it
+      const hy = Math.min(pr.shoulderL.y - 0.93 * pr.armLen, cr.shoulderR.y - 0.12);
+      const meet = (tt) => {
+        const r = a.traj.at(tt, {}), c = ct.traj.at(tt, {});
+        const dx = c.x - r.x, dz = c.z - r.z, d = Math.hypot(dx, dz) || 1;
+        const k = 0.55;                                   // a little nearer the child
+        return new THREE.Vector3(r.x + dx * k + Math.sin(r.yaw) * 0.06, hy, r.z + dz * k + Math.cos(r.yaw) * 0.06);
+      };
+      // the wrists sit either side of the clasp (palm to palm), not both on it
+      const side = (tt, s) => { const m = meet(tt), r = a.traj.at(tt, {}), c = ct.traj.at(tt, {}); const dx = r.x - c.x, dz = r.z - c.z, d = Math.hypot(dx, dz) || 1; return m.add(new THREE.Vector3(dx / d * 0.045 * s, 0, dz / d * 0.045 * s)); };
+      const tEnd = (a.pickT ?? Infinity) - 0.35;
+      const tStart = t0 - 1;
+      if (tEnd > tStart + 1) {
+        P.gesture('reach', tStart, { side: 'L', at: (tt) => side(tt, 1), in: 0.3, dur: tEnd - tStart - 0.3, out: 0.3, shape: 'clutch' });
+        CP.gesture('reach', tStart, { side: 'R', at: (tt) => side(tt, -1), in: 0.3, dur: tEnd - tStart - 0.3, out: 0.3, shape: 'clutch' });
+      }
+      if (al && a.pickT != null) {
+        P.carry(CP, a.pickT, 1e9);
+        P.lookAt({ ch: CP.ch }, a.fleeT + 0.05, { amount: 0.7, blend: 0.2 });
+      }
+    }
     if (!al) continue;
     const threat = al.look || new THREE.Vector3(al.at[0], al.lookY ?? 6, al.at[1]);
     P.mood({ fear: 0.7 + 0.3 * hash01(seed, a.i * 11 + 5), worry: 0.3 }, a.fleeT - 0.5, 1e9, 0.3);
     // the startle: head (and eyes) snap to the threat, a gasp
     P.lookAt(threat, a.fleeT - 0.45, { amount: 0.9, blend: 0.18 });
     P.react('startle', a.fleeT - 0.4, 0.9);
-    if (a.cowers) {
+    if (a.carrier) {
+      // carried: clings to the parent and looks back at the thing over the roofs
+      P.lookAt(threat, a.fleeT + 1.2, { amount: 0.6, blend: 0.4 });
+      continue;
+    }
+    if (a.fallT != null) {
+      const r0 = a.traj.at(a.fallT - 0.15, {}), r1 = a.traj.at(a.fallT, {});
+      const dx = r1.x - r0.x, dz = r1.z - r0.z, d = Math.hypot(dx, dz);
+      P.fall(a.fallT, { dir: d > 1e-4 ? [dx / d, dz / d] : [Math.sin(r1.yaw), Math.cos(r1.yaw)], dur: 0.85 });
+    }
+    if (a.stumbleT != null) {
+      P.stagger(a.stumbleT, { dir: a.stumbleDir, dist: 0.04, dur: 0.6 });
+      P.gesture('flail', a.stumbleT, { in: 0.12, dur: 0.35, out: 0.5 });
+      P.react('gasp', a.stumbleT + 0.05, 0.7);
+    }
+    if (a.child) {
+      // carrying: eyes on the way out
+      P.lookAt(null, a.pickT + 0.8, { blend: 0.4 });
+    } else if (a.cowers) {
       P.posture('cower', a.cowerAt != null ? a.cowerAt - 0.1 : a.fleeT + 1.2, { in: 0.5, hold: 1e9 });
     } else {
       // running: eyes on the way out, some glance back over the shoulder, some shield their heads

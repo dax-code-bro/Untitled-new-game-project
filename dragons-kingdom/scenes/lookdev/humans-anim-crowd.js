@@ -22,36 +22,43 @@ export const meta = {
   cinematic: filmFinish({ ao: { enabled: true, radius: 0.4 }, dof: { samples: 32 }, grade: { exposure: 0.1, whiteBalance: 6000 } }),
 };
 
-const IDS = ['crowd01', 'crowd02', 'crowd03', 'crowd04', 'crowd05', 'crowd06', 'crowd07', 'crowd08', 'crowd09', 'crowd11', 'crowd12', 'crowd14', 'crowd15', 'crowd16', 'crowd17', 'crowd10',
-  'crowd13', 'crowd18', 'crowd02', 'crowd05', 'crowd08', 'crowd11'];
+export const IDS = ['crowd01', 'crowd02', 'crowd03', 'crowd04', 'crowd05', 'crowd06', 'crowd07', 'crowd08', 'crowd09', 'crowd11', 'crowd12', 'crowd14', 'crowd15', 'crowd16', 'crowd17', 'crowd10',
+  'crowd13', 'crowd18', 'parent', 'child', 'crowd08', 'crowd11'];
 // where each villager starts [x, z, yaw]: talking groups (by the stall, west of the steps, the music
 // space, under the steps, by the fountain, east side) and a few on their own (two cheering the music,
 // one waving to a friend, two wandering across). Repeated builds stand far apart, facing away.
-const START = [
+export const START = [
   [-10.5, 11.0, 0.6], [-7.9, 5.4, 0.9], [-7.0, 6.6, -2.4], [8.6, 2.6, 0.4], [-7.4, 5.0, -0.6], [-3.9, 10.0, 0.8], [-2.9, 10.9, -2.2],
   [2.0, 12.6, 1.2], [3.2, 13.6, -2.4], [6.0, 5.2, 1.6], [7.0, 5.8, -1.6], [2.9, 12.4, -0.6], [-3.6, 11.2, 2.6], [11.5, 9.5, -1.4], [2.4, 13.6, 2.8], [-1.0, 6.5, -2.9],
-  [-8.4, 6.2, 1.8], [9.6, 1.4, -0.3], [12.6, 14.2, 2.2], [13.6, 14.8, -1.0], [-13.0, 3.0, 1.0], [-12.2, 3.8, -2.0],
+  [-8.4, 6.2, 1.8], [9.6, 1.4, -0.3], [3.2, 15.2, -0.9], [2.78, 15.15, -0.9], [-13.0, 3.0, 1.0], [-12.2, 3.8, -2.0],
 ];
-// conversation groups (indices into IDS)
-const GROUPS = [[1, 2, 4, 16], [5, 6, 12], [9, 10], [7, 11, 14, 8], [18, 19], [20, 21]];
+// conversation groups (indices into IDS); the PARENT (18) holds the CHILD's (19) hand by the steps,
+// scoops the child up at the alarm and runs for the arch with it (3C: "Stay with me. Don't stop.")
+export const GROUPS = [[1, 2, 4, 16], [5, 6, 12], [9, 10], [7, 11, 14, 8], [20, 21]];
+export const CARRY = { 18: 19 };
+// in the flight: some lurch when shoved, one goes down and stays down (the others run round)
+export const FALLS = [15];
 // the cheering / waving drapes keep their raised arms; the wanderers' raised arms hang
-const ARMS = { 13: 'hang', 15: 'hang' };
-const WANDER = { 13: { radius: 4.5, talk: 0.15 }, 15: { radius: 4.0, talk: 0.25 }, 0: { radius: 1.2, talk: 0.8 }, 3: { radius: 0.8, talk: 0.85 }, 17: { radius: 0.8, talk: 0.85 } };
-const ALARM = { t: 3.0, at: [-2, -16], lookY: 14 };
+export const ARMS = { 13: 'hang', 15: 'hang' };
+export const WANDER = { 13: { radius: 4.5, talk: 0.15 }, 15: { radius: 4.0, talk: 0.25 }, 0: { radius: 1.2, talk: 0.8 }, 3: { radius: 0.8, talk: 0.85 }, 17: { radius: 0.8, talk: 0.85 } };
+export const ALARM = { t: 3.0, at: [-2, -16], lookY: 14 };
 
 let S;
 export async function setup(ctx) {
   const { scene } = ctx;
+  // draft / preview sizes build a lighter set (no hero-LOD focus areas, a 2K shadow map): 22 people +
+  // the square at hero LOD needs ~3 GB in the page, more than this shared machine always has free
+  const big = (ctx.width || 3840) >= 2560;
   const sky = await loadHDRI('hdri/kloofendal_48d_partly_cloudy', ctx, { extractSun: true, rotationY: -1.79 });
   const sun = sky.apply(scene);
-  sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0002; sun.shadow.normalBias = 0.02;
+  sun.castShadow = true; sun.shadow.mapSize.set(big ? 4096 : 2048, big ? 4096 : 2048); sun.shadow.bias = -0.0002; sun.shadow.normalBias = 0.02;
   scene.add(sun, sun.target);
   sun.target.position.set(0, 0, 6); sun.position.copy(sky.sun.direction).multiplyScalar(80).add(sun.target.position);
   Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 200 });
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), await loadPBR('pbr/ph_floor_pebbles_01', ctx, { worldSize: 60 }));
   ground.material.color.setRGB(0.7, 0.66, 0.6);
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
-  const set = await clingSquare(ctx, { lod: 'mid', focus: [[-6, 8], [6, 8], [CLING.arch.x, CLING.arch.z], [CLING.gate.x, CLING.gate.z]], heroR: 8, far: 40 });
+  const set = await clingSquare(ctx, big ? { lod: 'mid', focus: [[-6, 8], [6, 8], [CLING.arch.x, CLING.arch.z], [CLING.gate.x, CLING.gate.z]], heroR: 8, far: 40 } : { lod: 'mid' });
   scene.add(set.group);
 
   const data = await loadPerformanceData();
@@ -60,8 +67,8 @@ export async function setup(ctx) {
   const sq = CLING.square, gate = CLING.gate, arch = CLING.arch;
   const crowd = createCrowd({
     seed: 3, t0: 0, t1: meta.duration + 1,
-    agents: performers.map((p, i) => ({ performer: p, pos: [START[i][0], START[i][1]], yaw: START[i][2], radius: 1.6, talk: 0.55, ...(WANDER[i] || {}) })),
-    groups: GROUPS,
+    agents: performers.map((p, i) => ({ performer: p, pos: [START[i][0], START[i][1]], yaw: START[i][2], radius: 1.6, talk: 0.55, ...(WANDER[i] || {}), ...(CARRY[i] != null ? { carry: CARRY[i] } : {}) })),
+    groups: GROUPS, falls: FALLS, stumble: 0.35,
     exits: [
       [[arch.x + 5, arch.z], [arch.x, arch.z], [arch.x - 8, arch.z + 0.2], [arch.x - 16, arch.z - 4]],
       [[gate.x - 5, gate.z], [gate.x, gate.z], [gate.x + 10, gate.z + 0.3], [gate.x + 24, gate.z + 1]],

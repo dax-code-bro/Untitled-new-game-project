@@ -756,10 +756,11 @@ function applyBody(S, t, o) {
   const i0 = Math.max(0, Math.min(C.traj.n - 2, Math.floor(u)));
   const fi = clamp01(u - i0);
   const phiT = C.phi[i0] + (C.phi[i0 + 1] - C.phi[i0]) * fi;
-  const vNow = C.vg[i0] + (C.vg[i0 + 1] - C.vg[i0]) * fi;
+  // (o.carried: someone carries this body - no gait of its own, whatever its trajectory does)
+  const vNow = o.carried ? 0 : C.vg[i0] + (C.vg[i0 + 1] - C.vg[i0]) * fi;
   const gw = sstep(0.02, 0.5, vNow);                   // gait weight (0 standing)
   const g = gaitParams(Math.max(0.45, vNow), rig.height);
-  const stepping = C.phi[Math.min(C.traj.n - 1, i0 + 1)] !== C.phi[Math.max(0, i0 - 1)];
+  const stepping = !o.carried && C.phi[Math.min(C.traj.n - 1, i0 + 1)] !== C.phi[Math.max(0, i0 - 1)];
   const amp = Math.max(gw, stepping ? 0.35 : 0);
   // posture weights
   const post = { crouch: 0, kneel: 0, cower: 0, hunch: 0 };
@@ -768,6 +769,14 @@ function applyBody(S, t, o) {
   // 2. feet: planted feet (gait), standing feet, or posture feet
   const feet = {};
   for (const sd of ['L', 'R']) feet[sd] = footAt(S, sd, t, phiT, vNow, amp);
+  if (o.carried) {
+    // carried: the feet hang where the drape pose has them (the carrier's carryChild wraps the legs
+    // round it); the trajectory's own stepping would stretch them toward plants metres apart
+    for (const sd of ['L', 'R']) {
+      const a = rig[`ankle${sd}`];
+      feet[sd] = { pos: new THREE.Vector3(a.x, a.y, a.z).applyMatrix4(ch.root.matrixWorld), pitch: 0, yaw: r.yaw + rig[`footYaw${sd}`], toeFlat: 1, stance: true, P: null, q: 0 };
+    }
+  }
   // postures move the feet: kneel puts the right knee down, the left foot forward
   for (const sd of ['L', 'R']) {
     const F = feet[sd];
@@ -808,7 +817,7 @@ function applyBody(S, t, o) {
     _q3.setFromAxisAngle(_v.set(1, 0, 0), 0.06 * gw + post.crouch * 0.25 + post.cower * 0.35 + post.kneel * 0.05);
     rootB.quaternion.copy(ch.drape.q[ch.index.root]).premultiply(_q3).premultiply(_q2).premultiply(_q);
     ch.root.updateMatrixWorld(true);
-    reachDrop(S, feet, g);
+    if (!o.carried) reachDrop(S, feet, g);
   }
   // 4. legs by IK to the foot targets
   solveLegs(S, feet);

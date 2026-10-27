@@ -118,6 +118,9 @@ export function createPerformer(ch, data, opts = {}) {
     /** Carry another performer (a child) from t0 to t1: this one's arms make a seat, the child is posed on it. */
     carry(child, t0, t1 = 1e9) {
       carries.push({ child, t0, t1 });
+      // while carried the child is posed by this performer (its own update() then does nothing):
+      // the result is the same whichever of the two a scene updates first
+      (child._carriedBy ||= []).push({ t0, t1 });
       body.gesture('carry', t0, { in: 0.6, dur: t1 - t0 - 0.6, out: 0.6 });
       return P;
     },
@@ -125,11 +128,14 @@ export function createPerformer(ch, data, opts = {}) {
     rootAt(t) { return body.rootAt(t); },
     /** Pose everything for t (pure). o: { face: false, blink: false } */
     update(t, o = {}) {
-      const b = body.apply(t, o);
+      const isCarried = P._carriedBy?.some((c) => t > c.t0 && t < c.t1);
+      if (!o._fromCarrier && isCarried) return { body: null, face: null, carried: true };
+      // carried: no gait of its own (its legs and arms are posed round the carrier by carryChild)
+      const b = body.apply(t, isCarried ? { ...o, carried: true } : o);
       for (const c of carries) {
         const w = Math.min(1, Math.max(0, (t - c.t0) / 0.6)) * Math.min(1, Math.max(0, (c.t1 - t) / 0.6));
         if (w > 0) {
-          c.child.update(t, o);
+          c.child.update(t, { ...o, _fromCarrier: true });
           carryChild(body, c.child.body, w);
           if (c.child.face && o.face !== false) c.child.face.apply(t, o);
         }
