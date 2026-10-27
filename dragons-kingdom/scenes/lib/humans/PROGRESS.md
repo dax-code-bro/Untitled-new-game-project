@@ -443,3 +443,12 @@ Render queue (memory-gated, sequential): scratchpad eng1/perf/bin/q3.sh, logs en
   fixture, saw a 3 s gap in the warm-up heartbeat while three renders ran; alone it passes (runtime's).
 - Crowd draft: OOM-killed three times in a row (the kernel's memory-cgroup killer, dmesg) while my
   dialogue draft and two director renders ran; the crowd now runs only after my other renders.
+- Crowd draft (crowd-draft.mp4, 10 s on twos, 120 frames in 1 h 48 min with 1 worker, takes muxed):
+  groups talk and wave 0-3 s, heads snap up at the alarm, the wave of flight runs west to the arch
+  and east to the gate; the parent stoops for the child at 4.2 s, lifts it at 4.6 s and runs with it
+  on the hip; a villager falls mid-flight and stays down (arms beside the head), one cowers; the
+  square is nearly empty at 9 s. crowd-4k.png (final, t 5.2, 29 min): runners with arms over their
+  heads, motion blur, the parent with the child on the hip (crop-carry), crop-flee.
+- 4K stills re-rendered with the session-3 shading: dlg-4k.png (t 2.35, Remi mid-line, Abby looking
+  down with a half smile, 10.5 min), alex-4k.png (t 1.95, "little weapon", 9.6 min): no lid sparkle,
+  no ear glitter; the mouth interior has no pixel with blue >= red (it only read cool next to the lips).

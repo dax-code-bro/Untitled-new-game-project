@@ -1,8 +1,8 @@
 // Performance proof - body motion: walk with planted feet on a curve, stop + turn, wave; a run that
 // slows and points; a kneel and reach; a stagger and a fall. Daylight field, long lens tracking.
-//   t 0-7    Remi walks a curve (1.35 m/s), stops, turns to the lens, waves
-//   t 7-13   Abby runs (3.6 m/s), slows, stops, points back up the field
-//   t 13-19  Remi kneels, reaches to the ground, stands again
+//   t 0-7.2  Remi walks a curve (1.35 m/s), stops, turns to the lens, waves
+//   t 7.2-13.5 Abby runs (3.6 m/s), slows, stops, points back up the field
+//   t 13.5-19 Remi kneels, reaches to the ground, stands again
 //   t 19-24  a villager (crowd03) staggers from a blow, then falls
 //   t 24-30  a parent picks up the child and carries it away on the hip (carryChild)
 // Draft clip: node render/render.mjs scenes/lookdev/humans-anim-walk.js --preset draft --cinematic preview
@@ -37,9 +37,11 @@ export async function setup(ctx) {
   for (const c of [remi, abby, remi2, vill, par, kid]) scene.add(c.root);
   // 1. walk a curve, stop, turn to the lens, wave
   const A = createPerformer(remi, data).place(X.remi - 4, 0, Math.PI / 2);
-  const w = A.walkPath([[X.remi - 4, 0], [X.remi - 1.5, 0.8], [X.remi + 1.2, 0.2], [X.remi + 2.6, -0.2]], 0.5, { speed: 1.35, endYaw: 0 });
-  A.gesture('wave', w.t1 + 0.9, { side: 'R', dur: 1.6 });
-  A.lookAt(() => S.camPos, w.t1 + 0.5, { amount: 0.8 });
+  // (the walk ends at w.t1 = 5.26 s: the wave has to finish before the cut to Abby at 7.2 s - with the
+  // longer path it started at 7.4 s, after the cut)
+  const w = A.walkPath([[X.remi - 4, 0], [X.remi - 1.5, 0.8], [X.remi + 1.2, 0.2]], 0.3, { speed: 1.35, endYaw: 0 });
+  A.gesture('wave', w.t1 + 0.45, { side: 'R', dur: 1.5 });
+  A.lookAt(() => S.camPos, w.t1 + 0.3, { amount: 0.8 });
   // 2. run, slow, stop, point back
   const B = createPerformer(abby, data).place(X.abby - 9, 0.5, Math.PI / 2);
   const r = B.runPath([[X.abby - 9, 0.5], [X.abby + 2, 0.2]], 7.2, { speed: 3.6, decel: 1.6 });
@@ -69,8 +71,8 @@ export function update(t, ctx) {
   const { camera } = ctx;
   const { A, B, C, D, E, K } = S;
   let act, look, dist, h, side;
-  if (t < 7) { act = A; dist = 6.5; h = 1.15; side = 1; }
-  else if (t < 13) { act = B; dist = 9; h = 1.0; side = 1; }
+  if (t < 7.2) { act = A; dist = 6.5; h = 1.15; side = 1; }
+  else if (t < 13.5) { act = B; dist = 9; h = 1.0; side = 1; }
   else if (t < 19) { act = C; dist = 4.2; h = 0.85; side = 1; }
   else if (t < 24) { act = D; dist = 7; h = 0.9; side = 1; }
   else { act = E; dist = 5; h = 1.0; side = 1; }
