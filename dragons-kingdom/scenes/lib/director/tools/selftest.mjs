@@ -178,6 +178,14 @@ t('cloud deck card: horizontal facing down at its height, warm toward the sun, f
   assert.equal(centre, 1); assert.equal(corner, 0);
   assert.ok(east > 1.5 && west < 1.0, `east r/b ${east}, west ${west}`);
   assert.equal(deck.userData.when, 'clouds'); assert.equal(veil, null);
+  // distFade: alpha falls with the distance from home (near 1, far 0, monotone along a line south)
+  const df = cloudDeckMeshes({ ...D, edgeFade: 0, distFade: [25000, 90000] }, { canvas, texSize: 16 });
+  df.deck.updateMatrixWorld(true);
+  const PD = df.deck.geometry.attributes.position, CD = df.deck.geometry.attributes.color, prof = [];
+  for (let i = 0; i < PD.count; i++) { v.fromBufferAttribute(PD, i).applyMatrix4(df.deck.matrixWorld); const d = Math.hypot(v.x, v.z - 300); prof.push([d, CD.getW(i)]); }
+  prof.sort((p, q) => p[0] - q[0]);
+  assert.ok(prof.filter(([d]) => d < 20000).every(([, a]) => a > 0.999) && prof.filter(([d]) => d > 95000).every(([, a]) => a < 1e-6), 'near opaque, far gone');
+  assert.ok(prof.filter(([d]) => d > 40000 && d < 70000).every(([, a]) => a > 0.01 && a < 0.99), 'a gradual fade between');
   const plain = cloudDeckMeshes({ y: 520, size: 64000, tile: 20000, detail: 1250, center: [-24000, 8000], yaw: 20, color: [1, 1, 1], veil: [0.8, 0.82, 0.86] }, { canvas, texSize: 16 });
   assert.ok(!plain.deck.geometry.attributes.color && plain.veil && Math.abs(plain.veil.position.y - 970) < 1e-9);
 });

@@ -58,7 +58,7 @@ const LOOKS = {
   // P-09 (the settlement location looking out to sea, south) under a dawn altocumulus deck (`set.clouds`):
   // south of the home only (P-08 looks north under a clear sky), lit warm on the sun side
   settlement: { sea: 'dawn', haze: 4.5, density: 0.00022, wb: 4500, exposure: 1.5,
-    deck: { when: 'clouds', y: 3500, size: 160000, tile: 14000, detail: 1250, center: [0, 80000], home: [0, 300], yaw: -25, color: [0.95, 0.86, 0.82], edgeFade: 0.3,
+    deck: { when: 'clouds', y: 3500, size: 160000, tile: 14000, detail: 1250, center: [0, 80000], home: [0, 300], yaw: -25, color: [0.95, 0.86, 0.82], edgeFade: 0.3, distFade: [22000, 85000],
       glow: { az: 95, power: 1.5, sun: [1.7, 1.25, 0.85], away: [0.8, 0.85, 0.95] },
       paint: { open: [-0.12, 0.22], radius: 0.6, soft: 0.2, core: 0.62, thin: 1.0, cells: [29, 41], sub: [73, 103] } },
     banks: (S) => [

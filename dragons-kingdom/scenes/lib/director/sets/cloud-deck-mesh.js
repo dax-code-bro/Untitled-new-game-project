@@ -2,7 +2,9 @@
 // LOOKS[loc].deck): the painted tile (cloud-deck.js) as the map, the near detail as the alpha map, a
 // horizontal card at D.y turned by D.yaw, optional `glow` (vertex colour by the heading from D.home
 // against the sun azimuth: warm sun side, cool far side), `edgeFade` (alpha to 0 over the card's outer
-// fraction) and `veil` (an opaque paler layer 450 m above). Separate from the set so Node can test it
+// fraction), `distFade: [d0, d1]` (alpha to 0 between d0 and d1 metres from D.home: the deck thins into the
+// horizon haze gradually - by the card's edge alone the clouds stopped in a hard line 2 deg above a flat
+// haze band, P-09 session 7) and `veil` (an opaque paler layer 450 m above). Separate from the set so Node can test it
 // (pass `canvas` - a factory with the 2D-context calls used here - and a small `texSize`).
 import * as THREE from 'three';
 import { paintCloudDeck, paintCloudDetail } from './cloud-deck.js';
@@ -22,7 +24,7 @@ export function cloudDeckMeshes(D, { draft = true, texSize, canvas = () => docum
   const map = paintTex(texSize ?? (draft ? 512 : 1024), (img) => paintCloudDeck(img, D.paint)); map.colorSpace = THREE.SRGBColorSpace;
   map.repeat.set(D.size / D.tile, D.size / D.tile);
   const detail = paintTex(Math.min(256, texSize ?? 256), (img) => paintCloudDetail(img, D.paint)); detail.repeat.set(D.size / D.detail, D.size / D.detail);
-  const shaded = !!(D.glow || D.edgeFade);
+  const shaded = !!(D.glow || D.edgeFade || D.distFade);
   const deck = new THREE.Mesh(new THREE.PlaneGeometry(D.size, D.size, shaded ? 48 : 1, shaded ? 48 : 1),
     new THREE.MeshBasicMaterial({ map, alphaMap: detail, transparent: true, opacity: D.opacity ?? 1, depthWrite: true, side: THREE.DoubleSide, color: new THREE.Color(...D.color), fog: false, vertexColors: shaded }));
   deck.rotation.order = 'YXZ'; deck.rotation.set(Math.PI / 2, (D.yaw ?? 0) * D2R, 0);
@@ -41,7 +43,9 @@ export function cloudDeckMeshes(D, { draft = true, texSize, canvas = () => docum
         const gs = Math.pow(Math.max(0, da), G.power ?? 2), ga = Math.max(0, -da);
         c = c.map((q, k) => 1 + (G.sun[k] - 1) * gs + (G.away[k] - 1) * ga);
       }
-      col.set([c[0], c[1], c[2], D.edgeFade ? smooth(1, 1 - D.edgeFade, r) : 1], i * 4);
+      let alpha = D.edgeFade ? smooth(1, 1 - D.edgeFade, r) : 1;
+      if (D.distFade) alpha *= 1 - smooth(D.distFade[0], D.distFade[1], Math.hypot(v.x - home[0], v.z - home[1]));
+      col.set([c[0], c[1], c[2], alpha], i * 4);
     }
     deck.geometry.setAttribute('color', new THREE.BufferAttribute(col, 4));
   }
