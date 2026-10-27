@@ -401,7 +401,7 @@ export function bloodApi(fx) {
     spray: (o) => fx.add(new BloodSpray(fx, o)),
     drip: (o) => fx.add(new BloodDrip(fx, o)),
     pool: (o = {}) => fx.add(new DecalEffect(fx, {
-      liquid: 'bloodDark', dir: [0, -1, 0], up: [0, 0, -1], size: [(o.radius ?? 0.8) * 2, (o.radius ?? 0.8) * 2, 0.6], grow: [o.delay ?? 0, o.tau ?? 25], ...o,
+      liquid: 'bloodDark', dir: [0, -1, 0], up: [0, 0, -1], size: [(o.radius ?? 0.8) * 4, (o.radius ?? 0.8) * 4, 0.6], grow: [o.delay ?? 0, o.tau ?? 25], ...o,
       at: o.at, kind: 'pool',
     })),
     coat: decal('coat'),

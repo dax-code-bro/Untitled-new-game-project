@@ -40,17 +40,19 @@ function tissueMaterial(kind, o = {}) {
     color: 0xffffff, roughness: kind === 'bone' ? 0.45 : 0.55, metalness: 0,
     clearcoat: kind === 'bone' ? 0.2 : kind === 'burnskin' ? 0.1 : 0.18, clearcoatRoughness: kind === 'bone' ? 0.35 : 0.3,
     side: kind === 'hide' || kind === 'membrane' ? THREE.DoubleSide : THREE.FrontSide,
-    sheen: kind === 'muscle' ? 0.3 : 0, sheenColor: new THREE.Color(0.35, 0.05, 0.04), sheenRoughness: 0.5,
+    // (bone is translucent: a warm sheen stands in for the light it scatters back near its edges)
+    sheen: kind === 'muscle' ? 0.3 : kind === 'bone' ? 0.35 : 0, sheenColor: kind === 'bone' ? new THREE.Color(0.5, 0.32, 0.25) : new THREE.Color(0.35, 0.05, 0.04), sheenRoughness: 0.5,
   });
   const U = { uOut: { value: new THREE.Vector3(...(o.outside || [0.05, 0.045, 0.04])) }, uScale: { value: o.scale ?? 1 }, uBlood: { value: o.blood ?? 0.45 }, uMarrow: { value: o.marrow ?? 0 }, uLen: { value: o.length ?? 1 }, uC: { value: new THREE.Vector3(...(o.center || [0, 0, 0])) }, uRad: { value: o.radius ?? 0.1 } };
   m.userData.tissue = U;
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vGP;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvGP = position;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>\nvarying vec3 vGP; uniform vec3 uOut, uC; uniform float uScale, uBlood, uMarrow, uLen, uRad;\n${TISSUE_GLSL}`)
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vGP;\nattribute float aPart;\nvarying float vPart;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvGP = position; vPart = aPart;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>\nvarying vec3 vGP; varying float vPart; uniform vec3 uOut, uC; uniform float uScale, uBlood, uMarrow, uLen, uRad;\nfloat gBump, gBumpK;\n${TISSUE_GLSL}`)
       .replace('#include <color_fragment>', `#include <color_fragment>
 vec3 gp = vGP / max(uScale, 1e-4);
 float gr = 0.5;
+gBump = 0.0; gBumpK = 0.0;
 ${kind === 'muscle' ? `
   // muscle: fibres along local z, glistening; clotted dark patches, pale fascia streaks
   float fib = gN(vec3(gp.x * 60.0, gp.y * 60.0, gp.z * 6.0));
@@ -61,8 +63,10 @@ ${kind === 'muscle' ? `
   c = mix(c, vec3(0.03, 0.002, 0.002), clot * 0.9);
   c = mix(c, vec3(0.42, 0.3, 0.25), fas * 0.45);
   diffuseColor.rgb = c; gr = 0.25 + 0.3 * clot;` : kind === 'bone' ? `
-  // bone: ivory, porous where it broke, blood in the pores and cracks near the base
+  // bone: ivory cortex, porous where it broke, blood in the pores and cracks near the base;
+  // the canal wall dark red, the fracture face rough and lighter, marrow fatty yellow-red
   float por = gF(gp * 40.0);
+  float part = vPart;
   float zz = vGP.z / max(uScale, 1e-4);
   float base = smoothstep(0.4 + 0.3 * uBlood, 0.0, zz);
   // blood smeared up the shaft in streaks along it (it came out through the wound)
@@ -75,7 +79,13 @@ ${kind === 'muscle' ? `
   // the broken end: spongy, red marrow-filled bone where it split
   c = mix(c, mix(vec3(0.3, 0.06, 0.04), vec3(0.45, 0.32, 0.24), por), smoothstep(0.75, 0.95, zz / max(uLen, 1e-3)) * uMarrow);
   c = mix(c, vec3(0.1, 0.01, 0.008), clamp(base * (0.7 + 0.6 * por) + 0.25 * smoothstep(0.6, 0.8, por) + streak * 0.85, 0.0, 1.0));
-  diffuseColor.rgb = c; gr = 0.42 - 0.25 * max(base, streak) - 0.08 * film * uBlood;` : kind === 'hide' ? `
+  // (torn periosteum: a thin pink membrane still clinging in shreds to the outer cortex)
+  float peri = smoothstep(0.55, 0.7, gN(vec3(gp.x * 25.0, gp.y * 25.0, gp.z * 4.0) + 11.0)) * step(part, 0.5);
+  c = mix(c, vec3(0.32, 0.12, 0.1), peri * 0.6);
+  if (part > 0.5 && part < 1.5) c = mix(vec3(0.08, 0.01, 0.008), vec3(0.2, 0.06, 0.03), por);
+  if (part > 1.5 && part < 2.5) c = mix(vec3(0.42, 0.36, 0.27), vec3(0.26, 0.2, 0.14), smoothstep(0.3, 0.7, por)) * mix(vec3(1.0), vec3(0.7, 0.35, 0.3), 0.4 * uBlood * smoothstep(0.5, 0.8, gF(gp * 30.0 + 2.0)));
+  if (part > 2.5) { float trab = smoothstep(0.35, 0.6, gF(gp * 120.0 + 5.0)); c = mix(vec3(0.16, 0.025, 0.015), vec3(0.42, 0.28, 0.1), trab * 0.7); }
+  diffuseColor.rgb = c; gr = part > 2.5 ? 0.3 : part > 1.5 ? 0.75 : 0.42 - 0.25 * max(base, streak) - 0.08 * film * uBlood;` : kind === 'hide' ? `
   // a torn flap: the creature's / person's skin outside, raw pink-red dermis and blood inside
   float bl = gF(gp * 12.0);
   vec3 inner = mix(vec3(0.26, 0.07, 0.055), vec3(0.08, 0.006, 0.005), smoothstep(0.3, 0.6, bl));
@@ -94,30 +104,50 @@ ${kind === 'muscle' ? `
   c = mix(c, mix(vec3(0.04, 0.003, 0.002), vec3(0.1, 0.009, 0.007), n2), smoothstep(0.4, 1.0, film));
   c = mix(c, flesh, 1.0 - smoothstep(0.3, 0.55, rr + (n1 - 0.5) * 0.3));
   diffuseColor.rgb = c; gr = mix(0.62, 0.2, film);` : kind === 'burnskin' ? `
-  // a burned forearm minutes after: zones out from where it burned longest (uC, radius uRad, in
-  // the patch's own bind-space metres): full thickness - leathery, blackened and waxy grey-white;
-  // deep partial - raw, weeping red with sloughed skin hanging at its edges; superficial - tight
-  // pale blisters; then reddened skin
-  float n1 = gF(vGP * 30.0 + 1.0), n2 = gF(vGP * 90.0 + 5.0), n3 = gF(vGP * 220.0 + 9.0);
-  float zr = length(vGP - uC) / max(uRad, 1e-4) + (n1 - 0.5) * 0.55 + (n2 - 0.5) * 0.15;
-  vec3 skin = uOut * vec3(0.95, 0.62, 0.55) * (0.85 + 0.3 * n3);
-  vec3 rawC = mix(vec3(0.085, 0.011, 0.008), vec3(0.19, 0.03, 0.022), n3);
-  vec3 blisC = mix(vec3(0.29, 0.21, 0.14), vec3(0.36, 0.27, 0.18), n3);
-  vec3 sloC = vec3(0.25, 0.21, 0.17) * (0.8 + 0.3 * n3);
-  float nb = gF(vGP * 45.0 + 3.0);
-  // full thickness: dry leathery eschar, black-brown to tan, with a few waxy white islands
-  vec3 fullC = mix(vec3(0.022, 0.016, 0.011), vec3(0.17, 0.12, 0.08), smoothstep(0.35, 0.75, n2));
-  fullC = mix(fullC, vec3(0.3, 0.26, 0.21), smoothstep(0.72, 0.9, n2) * smoothstep(0.4, 0.7, n1) * 0.8);
-  float full = 1.0 - smoothstep(0.25, 0.42, zr);
-  float raw = smoothstep(0.25, 0.4, zr) * (1.0 - smoothstep(0.62, 0.78, zr));
-  float slo = smoothstep(0.55, 0.65, zr) * (1.0 - smoothstep(0.7, 0.8, zr)) * smoothstep(0.45, 0.65, nb);
-  float blis = smoothstep(0.68, 0.78, zr) * (1.0 - smoothstep(0.9, 1.05, zr)) * smoothstep(0.4, 0.6, nb);
-  vec3 c = skin;
-  c = mix(c, blisC, blis);
+  // a burned forearm minutes after, graded by how long each point burned (a smooth depth field
+  // from uC, radius uRad, in the patch's bind-space metres - low-frequency, no blotches):
+  // full thickness - leathery eschar, black-brown to tan with waxy grey-white islands; deep
+  // partial - raw, weeping red; superficial - tight, glossy, fluid-filled blisters (domes: the
+  // normal is bent by their height field below); then reddened skin fading out
+  float n1 = gF(vGP * 14.0 + 1.0), n2 = gF(vGP * 60.0 + 5.0), n3 = gF(vGP * 220.0 + 9.0);
+  float dep = 1.0 - (length(vGP - uC) / max(uRad, 1e-4) + (n1 - 0.5) * 0.45 + (n2 - 0.5) * 0.08);
+  vec3 skin = uOut * (0.88 + 0.22 * n3);
+  vec3 red = uOut * vec3(1.12, 0.62, 0.85);
+  vec3 rawC = mix(vec3(0.08, 0.01, 0.008), vec3(0.17, 0.028, 0.022), n3) * (0.8 + 0.4 * n2);
+  vec3 sloC = vec3(0.3, 0.25, 0.2) * (0.8 + 0.3 * n3);
+  vec3 fullC = mix(vec3(0.028, 0.016, 0.01), vec3(0.14, 0.085, 0.05), smoothstep(0.35, 0.75, n2));
+  fullC = mix(fullC, vec3(0.3, 0.25, 0.19), smoothstep(0.74, 0.9, n2) * smoothstep(0.5, 0.75, n1) * 0.6);
+  float crack = smoothstep(0.02, 0.0, abs(gN(vGP * 90.0 + 2.0) - 0.5)) * smoothstep(0.4, 0.6, gN(vGP * 30.0 + 8.0));   // the eschar splits as it tightens
+  float erythema = smoothstep(-0.15, 0.06, dep);
+  float blisZ = smoothstep(0.0, 0.12, dep) * (1.0 - smoothstep(0.24, 0.36, dep));
+  float raw = smoothstep(0.2, 0.36, dep) * (1.0 - smoothstep(0.6, 0.76, dep));
+  float full = smoothstep(0.58, 0.76, dep);
+  // blisters: domes on Voronoi cells, larger toward the raw edge, burst ones peeled (slough)
+  float bd = 1.0, bc = 0.0;
+  { vec3 g = vGP * 70.0; vec3 i0 = floor(g), f0 = fract(g);
+    for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+      vec3 o = vec3(float(x), float(y), float(z));
+      vec3 h = vec3(gH(i0 + o), gH(i0 + o + 17.0), gH(i0 + o + 31.0));
+      float d = length(o + h - f0);
+      if (d < bd) { bd = d; bc = gH(i0 + o + 5.0); }
+    } }
+  float brad = 0.22 + 0.2 * bc;           // (< half the cell spacing: domes never cut by their cell)
+  float dome = sqrt(max(0.0, 1.0 - (bd / brad) * (bd / brad))) * blisZ * step(0.5, bc);
+  float burst = step(0.88, bc) * blisZ;
+  float bArea = smoothstep(brad, brad * 0.8, bd) * burst;            // a burst blister: its roof peeled off, the wet base
+  // (a blister is a tense, translucent roof over straw-coloured fluid: the red skin shows through,
+  // it reads by its shape and its glossy highlight, not as a pale spot)
+  vec3 blisC = mix(red * 0.95, vec3(0.46, 0.34, 0.2), 0.18 + 0.1 * n3);
+  vec3 c = mix(skin, red, erythema);
+  c = mix(c, blisC, smoothstep(0.0, 0.35, dome) * (1.0 - burst));
+  c = mix(c, mix(rawC * 1.4, sloC, 0.35), bArea);
   c = mix(c, rawC, raw);
-  c = mix(c, sloC, slo);
   c = mix(c, fullC, full);
-  diffuseColor.rgb = c; gr = mix(mix(mix(0.55, 0.32, blis), 0.26, raw), 0.78, full);` : `
+  c = mix(c, vec3(0.05, 0.012, 0.008), crack * full * 0.8);
+  gBump = dome * 0.8 * (1.0 - burst) - raw * 0.15 + full * ((n2 - 0.5) * 0.3 - crack * 0.35);
+  gBumpK = 1.0;
+  gr = mix(mix(mix(mix(0.55, 0.45, erythema), 0.12, smoothstep(0.0, 0.2, dome) * (1.0 - burst)), 0.2, raw), 0.8, full);
+  diffuseColor.rgb = c;` : `
   // torn membrane: thin, grey-brown, darker veins, blood soaking in from the torn edge (low z)
   float vein = smoothstep(0.78, 0.9, gN(vec3(gp.x * 8.0, gp.y * 30.0, gp.z * 8.0)));
   float edge = smoothstep(0.25, 0.0, vGP.z / max(uScale, 1e-4));
@@ -125,6 +155,20 @@ ${kind === 'muscle' ? `
   c = mix(c, vec3(0.16, 0.012, 0.01), clamp(edge + 0.25 * gF(gp * 20.0) * edge, 0.0, 1.0));
   diffuseColor.rgb = c; gr = 0.4;`}`)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = gr;')
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+${kind === 'burnskin' ? `
+  // relief from the burn's height field (blister domes, sunken raw areas, cracked eschar):
+  // the normal bent by the screen-space slope of gBump (three's perturbNormalArb, no bump map)
+  {
+    float hh = gBump * 0.003;
+    vec2 dH = vec2(dFdx(hh), dFdy(hh));
+    vec3 vSigmaX = normalize(dFdx(-vViewPosition)), vSigmaY = normalize(dFdy(-vViewPosition));
+    vec3 vN = normal;
+    vec3 R1 = cross(vSigmaY, vN), R2 = cross(vN, vSigmaX);
+    float fDet = dot(vSigmaX, R1) * faceDirection;
+    vec3 vGrad = sign(fDet) * (dH.x * R1 + dH.y * R2);
+    normal = normalize(abs(fDet) * vN - vGrad / max(length(dFdx(-vViewPosition)) + length(dFdy(-vViewPosition)), 1e-6) * 0.5);
+  }` : ''}`)
       .replace('#include <lights_physical_fragment>', '#include <lights_physical_fragment>\n#ifdef USE_CLEARCOAT\nmaterial.clearcoat *= clamp((0.62 - gr) * 3.0, 0.0, 1.0);\n#endif');
   };
   m.customProgramCacheKey = () => `fx-gore-${kind}`;
@@ -132,27 +176,70 @@ ${kind === 'muscle' ? `
 }
 
 // ------------------------------------------------------------------ geometry --
-/** A splintered bone end: a tapering tube along +z with a jagged broken tip. */
+/**
+ * A broken long-bone end along +z: a SOLID bone, not a paper tube - the cortex (outer shell,
+ * ivory, a few mm thick) with the medullary canal inside it, a rough, slanted fracture face across
+ * the cortex wall where it split (spikes where it splintered), and marrow filling the canal a
+ * little below the break (fatty yellow-red in an adult long bone, blood through it).
+ * aPart: 0 outer cortex, 1 canal wall, 2 fracture face, 3 marrow.
+ */
 function boneShardGeometry(seed, length, radius) {
-  const g = new THREE.CylinderGeometry(radius * 0.85, radius, length, 14, 8, false);
-  g.rotateX(Math.PI / 2); g.translate(0, 0, length / 2);
-  const p = g.attributes.position;
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-    const a = Math.atan2(y, x);
-    // the top ring: splintered - long spikes and a slanted break
-    if (z > length * 0.85) {
-      // an oblique (spiral) break: the end is a slanted, splintered face, a few long spikes
-      const spike = Math.pow(hash01(seed, Math.round(a * 7), 1), 4) * length * 0.45;
-      const slant = Math.cos(a + seed) * radius * 1.4;
-      // (kept above the ring below it: a tip folded back under itself printed a dark crease)
-      p.setZ(i, Math.max(length * (0.58 + 0.16 * hash01(seed, Math.round(a * 7), 4)), z - length * 0.2 + slant + spike));
-      p.setX(i, x * (0.6 + 0.4 * hash01(seed, Math.round(a * 7), 2))); p.setY(i, y * (0.6 + 0.4 * hash01(seed, Math.round(a * 7), 3)));
+  const na = 18, nz = 9, inner = 0.58;
+  const P = [], A = [], I = [];
+  const topZ = (a) => {
+    const k = Math.round(((a / (Math.PI * 2)) % 1 + 1) % 1 * na);
+    // an oblique (spiral) break with a few splinters
+    const spike = Math.pow(hash01(seed, k, 1), 4) * length * 0.35;
+    return length * 0.82 + Math.cos(a + seed) * radius * 1.3 + spike;
+  };
+  const ring = (z0f, r, part, sgn) => {
+    const base = P.length / 3;
+    for (let iz = 0; iz <= nz; iz++) for (let ia = 0; ia <= na; ia++) {
+      const a = (ia / na) * Math.PI * 2;
+      const zt = topZ(a) - (part === 1 ? radius * 0.25 : 0);
+      const z = z0f + (zt - z0f) * (iz / nz);
+      const taper = 1 - 0.12 * (z / length);
+      const n = noise1(a * 3 + z * 20 / Math.max(length, 1e-3), seed + part) * radius * 0.1;
+      P.push(Math.cos(a) * (r * taper + n), Math.sin(a) * (r * taper + n), z); A.push(part);
     }
-    const n = noise1(a * 3 + z * 20, seed) * radius * 0.12;
-    p.setX(i, p.getX(i) + Math.cos(a) * n); p.setY(i, p.getY(i) + Math.sin(a) * n);
+    for (let iz = 0; iz < nz; iz++) for (let ia = 0; ia < na; ia++) {
+      const q0 = base + iz * (na + 1) + ia, q1 = q0 + 1, q2 = q0 + na + 1, q3 = q2 + 1;
+      if (sgn > 0) I.push(q0, q1, q3, q0, q3, q2); else I.push(q0, q3, q1, q0, q2, q3);
+    }
+    return base;
+  };
+  const outer = ring(0, radius, 0, 1);
+  const canal = ring(length * 0.35, radius * inner, 1, -1);
+  // fracture face: across the cortex wall at the break, rough and stepped
+  const fb = P.length / 3;
+  for (let ia = 0; ia <= na; ia++) {
+    const a = (ia / na) * Math.PI * 2;
+    for (let s2 = 0; s2 <= 2; s2++) {
+      const f = s2 / 2;
+      const r = radius * (1 - 0.12 * (topZ(a) / length)) * (1 - f * (1 - inner));
+      const z = topZ(a) - f * radius * 0.25 + (hash01(seed + 7, ia, s2) - 0.5) * radius * 0.35 * Math.sin(f * Math.PI);
+      P.push(Math.cos(a) * r, Math.sin(a) * r, z); A.push(2);
+    }
   }
+  for (let ia = 0; ia < na; ia++) for (let s2 = 0; s2 < 2; s2++) {
+    const q0 = fb + ia * 3 + s2, q1 = q0 + 1, q2 = q0 + 3, q3 = q2 + 1;
+    I.push(q0, q2, q3, q0, q3, q1);
+  }
+  // marrow: a spongy plug filling the canal, its surface a little below the break
+  const mb = P.length / 3, mz = length * 0.72;
+  P.push(0, 0, mz + radius * 0.1); A.push(3);
+  for (let ia = 0; ia <= na; ia++) {
+    const a = (ia / na) * Math.PI * 2;
+    const r = radius * inner * 0.98 * (1 - 0.12 * mz / length);
+    P.push(Math.cos(a) * r, Math.sin(a) * r, Math.min(mz + (hash01(seed + 3, ia, 0) - 0.5) * radius * 0.4, topZ(a) - radius * 0.3)); A.push(3);
+  }
+  for (let ia = 0; ia < na; ia++) I.push(mb, mb + 1 + ia, mb + 2 + ia);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  g.setAttribute('aPart', new THREE.Float32BufferAttribute(A, 1));
+  g.setIndex(I);
   g.computeVertexNormals();
+  void outer; void canal;
   return g;
 }
 /**
@@ -570,10 +657,28 @@ function wingRoot(fx, o) {
   }
   if (o.bleed !== false) {
     // the spray needs the wound's position as a pure function of t (the creature's flight path):
-    // o.bleedAt(t) -> [x, y, z]; without it the wound is taken where it is now (a still creature)
-    const still = holder.localToWorld(new THREE.Vector3(0, 0, R * 0.3)).toArray();
+    // o.bleedAt(t) -> [x, y, z]; or o.frame(t) -> { pos, yaw } (the creature's ground frame, e.g.
+    // the director's blocking): the wound rides it at its offset in the creature's own frame (as
+    // built: build on the rest pose); without either it stays where it is now (a still creature)
+    const wW = holder.localToWorld(new THREE.Vector3(0, 0, R * 0.3));
+    const still = wW.toArray();
+    let bleedAt = o.bleedAt || null;
+    if (!bleedAt && typeof o.frame === 'function') {
+      c.root.updateWorldMatrix(true, false);
+      const lw = c.root.worldToLocal(wW.clone()).multiply(c.root.scale);
+      const ry = c.root.rotation.y;
+      bleedAt = (t) => {
+        const f = o.frame(t);
+        if (!f) return still;
+        // (the offset turned by the frame's yaw relative to the yaw it was built at)
+        const a = f.yaw - ry, ca = Math.cos(a), sa = Math.sin(a);
+        const q = new THREE.Vector3(lw.x, lw.y, lw.z).applyAxisAngle(new THREE.Vector3(0, 1, 0), ry);
+        return [f.pos[0] + q.x * ca + q.z * sa, f.pos[1] + q.y, f.pos[2] - q.x * sa + q.z * ca];
+      };
+    }
+    A.bleedAt = bleedAt || still;
     fx.blood.spray({
-      at: o.bleedAt || still, dir: o.bleedDir || zW.toArray(), t0: A.t0, duration: o.bleedTime ?? 3, count: o.bleedCount ?? 900,
+      at: bleedAt || still, dir: o.bleedDir || zW.toArray(), t0: A.t0, duration: o.bleedTime ?? 3, count: o.bleedCount ?? 900,
       speed: 3, spread: 0.7, size: 0.002, mistCount: 40, stains: false, ground: o.ground ?? true,
     });
   }

@@ -28,6 +28,7 @@ import * as THREE from 'three';
 import { Effect } from './core/manager.js';
 import { ParticleLayer } from './core/particles.js';
 import { DebrisEffect, solvePiece, poseAt, prepWalls } from './debris.js';
+import { DecalEffect } from './core/decal.js';
 import { hash01, arr3, clamp, norm3, dot3, cross3, len3, coneDir } from './core/util.js';
 
 const UP = [0, 1, 0];
@@ -350,9 +351,13 @@ export async function roofline(fx, o, { library }) {
     for (const C of cells.values()) {
       const cc = [0, 0, 0];
       for (const T of C.list) for (let k = 0; k < 3; k++) cc[k] += T.p[k] / C.list.length;
+      C.maxD = Math.max(...C.list.map((T) => dot3(T.p, R.d)));
       C.c = cc;
       C.r = Math.hypot(cc[0] - I[0], cc[1] - I[1], cc[2] - I[2]);
-      C.te = t0 + Math.max(0, C.r - Rb * 0.5) / runSpeed + 0.06 * hash01(seed, C.ca, C.cd, 1);
+      // (a roof does not shed all at once: nails and battens hold some sheets for a moment - an
+      // avalanche over a couple of seconds, not one curtain of slates in the air together)
+      const hang = Math.min(2.4, -(o.hang ?? 0.45) * Math.log(1 - 0.95 * hash01(seed, C.ca, C.cd, 4)));
+      C.te = t0 + Math.max(0, C.r - Rb * 0.5) / runSpeed + 0.06 * hash01(seed, C.ca, C.cd, 1) + (C.r > Rb ? hang : hang * 0.3);
       C.mu = (o.mu ?? 0.25) * (0.8 + 0.4 * hash01(seed, C.ca, C.cd, 2));
       C.acc = 9.81 * (sinA - C.mu * cosA);
       C.v0 = 0.15 + 0.5 * hash01(seed, C.ca, C.cd, 3);
@@ -381,13 +386,27 @@ export async function roofline(fx, o, { library }) {
         P.v0 = [dd[0] * sp + R.n[0] * 1.2 * h(5), dd[1] * sp + R.n[1] * 1.2 * h(5), dd[2] * sp + R.n[2] * 1.2 * h(5)];
         P.w0 = randW(seed * 7 + ri, T.j, 10 + 14 * h(6));
       } else if (o.tiles !== false) {
-        // slides with its sheet to the eaves and tips off
-        P.te = C.te + 0.015 * h(4);
+        // slides with its sheet to the eaves and tips off - but a sheet is not a rigid card: it
+        // lets go course by course from the bottom (row delay + jitter), each slate drags on the
+        // battens with its own friction, leaves the eave lip at its own speed and tips about its
+        // own axis (+-30 deg off the course, some flipping backwards), and falls broadside -
+        // fluttering: high drag toward a sideways glide of its own (no grid formation)
+        const row = Math.max(0, ((C.maxD ?? dot3(T.p, R.d)) - dot3(T.p, R.d)) / Math.max(T.tl * 0.45, 0.05));      // 0 = the course at the bottom of the sheet
+        P.te = C.te + 0.07 * row * (0.5 + h(10)) + 0.16 * h(4) * h(4);
         const dist = Math.max(0, R.sEave + 0.04 - dot3(T.p, R.d) + T.tl * 0.5);
-        P.incline = { d: R.d, a: Math.max(0.6, C.acc), dist, v0: C.v0 };
-        P.v0 = [R.n[0] * 0.25 * h(5), R.n[1] * 0.25 * h(5), R.n[2] * 0.25 * h(5)];
-        const tip = 2.5 + 4 * h(6);
-        P.w0 = [R.a[0] * tip + (h(7) - 0.5) * 2, R.a[1] * tip + (h(8) - 0.5) * 2, R.a[2] * tip + (h(9) - 0.5) * 2];
+        const muI = C.mu * (0.5 + 1.0 * h(11));
+        P.incline = { d: R.d, a: Math.max(0.5, 9.81 * (sinA - muI * cosA)), dist, v0: C.v0 * (0.5 + 1.0 * h(12)) };
+        P.v0 = [R.n[0] * 0.4 * h(5), R.n[1] * 0.4 * h(5), R.n[2] * 0.4 * h(5)];
+        const ang = (h(6) - 0.5) * 1.05, ca = Math.cos(ang), sa = Math.sin(ang);
+        const nxA = cross3(R.n, R.a);
+        const ax = [R.a[0] * ca + nxA[0] * sa, R.a[1] * ca + nxA[1] * sa, R.a[2] * ca + nxA[2] * sa];
+        const tip = (1.5 + 6.5 * h(7)) * (h(8) < 0.22 ? -1 : 1);
+        P.w0 = [ax[0] * tip + (h(9) - 0.5) * 3, ax[1] * tip + (h(13) - 0.5) * 3, ax[2] * tip + (h(14) - 0.5) * 3];
+        const ga = h(15) * Math.PI * 2, gs = (o.flutter ?? 1) * (0.6 + 2.2 * h(16));
+        P.air = [Math.cos(ga) * gs, 0, Math.sin(ga) * gs];
+        // (a slate lands flat and stays near the wall foot: little bounce, high friction)
+        P.physics = { k: 0.55 + 0.6 * h(17), e: 0.1, mu: 0.85 };
+        P.bounces = 2;
       } else continue;
       pieces.push(P); nTiles++;
     }
@@ -420,8 +439,110 @@ export async function roofline(fx, o, { library }) {
       }
     }
   }
+  // the timber-framed storey under the struck eaves (3C-11 / 3C-13): its lime-plaster panels burst
+  // out between the studs - the brittle lime skin in crumbs, slabs of daub with the wattle in
+  // their backs out whole - and the wall keeps the brown daub where the skin came off ('spall'
+  // decals on the set's own plaster, so the timbers and windows stay as they are).
+  // o.panels: { box: [[x,y,z],[x,y,z]] (the region of the wall face), n (out of the wall),
+  //   count (daub slabs, default 6), crumbs (plaster pieces, default 4 per slab), speed (m/s,
+  //   default 0.3 V), delay (s after the strike, 0.06), target (meshes; default the meshes of
+  //   o.set named '...:plaster'), spalls (decal patches, default 3) }
+  const spalls = [];
+  if (o.panels) {
+    const Pn = o.panels === true ? {} : o.panels;
+    const n = norm3(arr3(Pn.n ?? [D[0], 0, D[2]]));
+    const b = Pn.box ?? [[I[0] - 1.2, I[1] - 2.2, I[2]], [I[0] + 1.2, I[1] - 0.5, I[2]]];
+    const nD = Pn.count ?? 6, nC = Math.round((Pn.crumbs ?? 4) * nD * fx.tier.fracture);
+    const sp0 = Pn.speed ?? V * 0.3;
+    // the out-of-wall frame: +y of a slab (its limewashed face) turned to n, rolled at random
+    const qN = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...n));
+    // patches of the face that come away together (the spalls), each one a few panels' worth
+    const nS = Pn.spalls ?? 3;
+    const cen = [];
+    for (let s = 0; s < nS; s++) {
+      const h = (k) => hash01(seed * 53 + 7, s, k);
+      cen.push([0, 1, 2].map((k) => b[0][k] + (b[1][k] - b[0][k]) * (0.15 + 0.7 * h(k))));
+    }
+    for (let i = 0; i < nD + nC; i++) {
+      const slab = i < nD;
+      const h = (k) => hash01(seed * 61 + 3, i, k);
+      const c = cen[i % nS];
+      const sx = (b[1][0] - b[0][0]) / (nS + 1), sy = (b[1][1] - b[0][1]) * 0.35, sz = (b[1][2] - b[0][2]) / (nS + 1);
+      const p0 = [c[0] + (h(1) - 0.5) * sx + n[0] * 0.05, c[1] + (h(2) - 0.5) * sy, c[2] + (h(3) - 0.5) * sz + n[2] * 0.05];
+      const r = Math.hypot(p0[0] - I[0], p0[1] - I[1], p0[2] - I[2]);
+      const roll = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(...n), h(4) * Math.PI * 2);
+      const q0 = roll.multiply(qN.clone());
+      const sp = sp0 * (slab ? 0.45 + 0.5 * h(5) : 0.6 + 0.9 * h(5));
+      const dd = coneDir(norm3([n[0] + D[0] * 0.5, n[1] + D[1] * 0.5 + 0.15, n[2] + D[2] * 0.5]), slab ? 0.35 : 0.7, h(6), h(7));
+      pieces.push({
+        kind: slab ? 'daub' : 'plaster', variant: (h(8) * 97) | 0, te: t0 + (Pn.delay ?? 0.06) + r / (runSpeed * 2) + 0.08 * h(9), p0,
+        v0: dd.map((x) => x * sp), q0, w0: randW(seed * 61 + 5, i, slab ? 3 + 4 * h(10) : 8 + 14 * h(10)),
+        scale: slab ? 0.9 + 0.35 * h(11) : 0.8 + 0.5 * h(11),
+      });
+    }
+    let targets = Pn.target ? (Array.isArray(Pn.target) ? Pn.target : [Pn.target]) : [];
+    if (!targets.length && o.set) o.set.traverse((m) => { if (m.isMesh && /:plaster$/i.test(m.name)) targets.push(m); });
+    if (targets.length) {
+      const up = Math.abs(n[1]) > 0.9 ? [0, 0, 1] : [0, 1, 0];
+      cen.forEach((c, s) => {
+        const h = (k) => hash01(seed * 53 + 11, s, k);
+        const w = Math.max(0.5, (b[1][0] - b[0][0] + Math.abs(b[1][2] - b[0][2])) / nS) * (1.1 + 0.4 * h(0));
+        const hh = Math.max(0.5, (b[1][1] - b[0][1]) * (0.55 + 0.35 * h(1)));
+        spalls.push({ at: [c[0], c[1], c[2]], dir: [-n[0], -n[1], -n[2]], up, size: [w, hh, 0.3], t0: t0 + (Pn.delay ?? 0.06) + 0.02, seed: seed * 7 + s, roll: (h(2) - 0.5) * 0.4, target: targets });
+      });
+    }
+  }
+  // the eaves beam (the jetty's wall plate / bressumer under the struck eaves) broken at the
+  // impact and still pinned at its far end (3C-13, R15-02's flying length of roof timber): the
+  // struck end drops, the beam swings down in front of the house on its hinge, tears free before
+  // it hangs plumb and is thrown out over the square with what the blast gives it.
+  // o.beam: { at (the pinned end; default on the eave line, length * 0.85 from the impact),
+  //   side (+1 / -1: which way along the eaves the free end points from the pin, default -1),
+  //   length (m, 2.4), drop (m below the eave tiles, 0.22), delay (s after the strike, 0.15),
+  //   w0 (rad/s at the start, 1.2), release (rad turned before it tears free, 1.2), carry
+  //   ([x,y,z] m/s added when it does; default 0.3 V along the blast, + 0.8 up), kind ('beam') }
+  if (o.beam && runs.length) {
+    const Bm = o.beam === true ? {} : o.beam;
+    const kindB = Bm.kind || 'beam';
+    const R = runs.reduce((a, x) => (x.hit.length > a.hit.length ? x : a), runs[0]);
+    const len = Bm.length ?? 2.4, sgn = Bm.side ?? -1;
+    const ax = R.a;
+    let E = Bm.at ? arr3(Bm.at) : null;
+    if (!E) {
+      // the eave line near the impact: the lowest removed tiles (down the slope) within the blast
+      let best = null, bs = -Infinity;
+      for (const p of R.hit) {
+        if (Math.hypot(p[0] - I[0], p[1] - I[1], p[2] - I[2]) > Rb * 1.6) continue;
+        const sd = dot3(p, R.d) - 0.3 * Math.abs(dot3([p[0] - I[0], p[1] - I[1], p[2] - I[2]], ax));
+        if (sd > bs) { bs = sd; best = p; }
+      }
+      best = best || R.m;
+      const along = dot3([I[0] - best[0], I[1] - best[1], I[2] - best[2]], ax) - sgn * len * 0.85;
+      const drop = Bm.drop ?? 0.22;
+      E = [best[0] + ax[0] * along, best[1] + ax[1] * along - drop, best[2] + ax[2] * along];
+    }
+    if (lib[kindB]?.length) {
+      const L = lib[kindB][0];
+      const ax0 = L.half.indexOf(Math.max(...L.half));
+      const sc = [1, 1, 1]; sc[ax0] = len / (2 * L.half[ax0]);
+      const dirB = [ax[0] * sgn, ax[1] * sgn, ax[2] * sgn];
+      const loc = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+      const qa = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(...loc[ax0]), new THREE.Vector3(...dirB));
+      const p0 = [E[0] + dirB[0] * len * 0.5, E[1] + dirB[1] * len * 0.5, E[2] + dirB[2] * len * 0.5];
+      const dh = norm3([dirB[0], 0, dirB[2]]);
+      const axis = cross3(UP, dh);             // (axis x up = dh: a positive turn drops the free end)
+      const carry = Bm.carry ? arr3(Bm.carry) : [D[0] * V * 0.3, Math.max(0, D[1]) * V * 0.3 + 0.8, D[2] * V * 0.3];
+      pieces.push({
+        kind: kindB, variant: 0, te: t0 + (Bm.delay ?? 0.15), p0, v0: [0, 0, 0], q0: qa, w0: [0, 0, 0], scale: sc, hold: true, noShatter: true, beam: true,
+        pivot: { E, axis, w0: Bm.w0 ?? 1.2, release: Bm.release ?? 1.2, carry, tmax: 3 },
+        physics: { e: 0.12, mu: 0.6, k: 0.02 }, bounces: 3,
+      });
+    }
+  }
   const eff = fx.add(new DebrisEffect(fx, { name: 'fx-roofline', maxImpacts: 220, ...o, pieces }, lib));
   eff.tiles = nTiles;
+  eff.spalls = spalls.map((s) => fx.add(new DecalEffect(fx, { kind: 'spall', liquid: 'daub', ...s })));
+  eff.beam = eff.pieces.find((P) => P.beam) || null;
   eff.runs = runs.map((R) => ({ cover: R.cover, n: R.n.map((v) => +v.toFixed(3)), tiles: R.hit.length, bucket: R.bucket, ts: R.ts, cv: +R.cv.toFixed(3), sTop: R.sTop }));
   if (o.dust !== false && runs.length) {
     // the dust of a century in the roof space (soot, lime, old mortar): grey-brown, thrown with
@@ -460,6 +581,13 @@ export async function roofline(fx, o, { library }) {
       if (dz.haze !== false) {
         const r = 4 + Rb;
         eff.dust.push(fx.dust.haze({ box: [[c[0] - r, c[1] - 0.1, c[2] - r], [c[0] + r, c[1] + 3.5, c[2] + r]], t0: tl + 1.5, t1: tl + 60, density: 0.035 * s, color: LIME, puffs: 90, seed: seed * 5 + 3 }));
+      }
+      // what the haze leaves: a film of lime and roof dust settled over the paving (and whatever
+      // o.settleOn lists: the set's ground meshes, the house fronts, bodies), thickening for a minute
+      if (dz.settle !== false) {
+        const r = 3.5 + Rb;
+        eff.settle = fx.dust.settle({ box: [[c[0] - r, c[1] - 0.6, c[2] - r], [c[0] + r, c[1] + 2.4, c[2] + r]], t0: tl + 0.8, tau: dz.settleTau ?? 25, color: dz.settleColor ?? 'lime', thickness: (dz.settleThickness ?? 0.16) * s, target: o.settleOn, seed: seed * 5 + 4 });
+        eff.dust.push(eff.settle);
       }
     }
   }

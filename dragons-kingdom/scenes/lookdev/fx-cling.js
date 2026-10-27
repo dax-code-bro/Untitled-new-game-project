@@ -10,6 +10,8 @@
 //   (the same cues evaluated 100 s later: where everything lies in 3D)       3 the roof itself
 //   (held tiles before the strike, the sheets sliding off)    4 both roofs after (the holes)
 //   5 the blood after: the pool run along the paving joints (R15), the smear down the front (R16b)
+//   6 the struck front after: spalled plaster panels, the beam down, settled dust
+//   7 settled lime dust on the ball and the post (on top, a trace on the sides, none underneath)
 //
 //   node render/render.mjs --still scenes/lookdev/fx-cling.js --time 1.4 --preset draft --png out.png
 import * as THREE from 'three';
@@ -18,13 +20,14 @@ import { groundMaterial } from '../lib/humans/stage.js';
 import { Kit, frame } from '../lib/architecture/core.js';
 import { archMaterials } from '../lib/architecture/materials.js';
 import { house } from '../lib/architecture/house.js';
+import { paving } from '../lib/architecture/cling.js';
 import { createFx } from '../lib/fx/index.js';
 import { hash01 } from '../lib/fx/core/util.js';
 import { filmFinish } from './finish.js';
 
 export const meta = {
   title: 'FX lookdev - Cling roofline destruction',
-  duration: 48,
+  duration: 64,
   seed: 5,
   cinematic: filmFinish({
     atmosphere: { enabled: true, sky: 'scene', haze: 1.1 },
@@ -63,7 +66,11 @@ export async function setup(ctx) {
   const g = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), await groundMaterial('pbr/ph_floor_pebbles_01', ctx, [80, 80], { tint: [0.95, 0.93, 0.9] }));
   g.rotation.x = -Math.PI / 2; g.receiveShadow = true; scene.add(g);
 
-  const fx = await createFx(ctx, { ground: 0, wind: [0.5, 0, 0.15], tier: ctx.meta.fxTier });
+  // the square's own paving in front of the struck house (the architecture library's cobbles: the
+  // blood pool runs along ITS joints), the gravel ground beyond it
+  const PAVE = [-1.5, 6.5, -1.72, 3.0];
+  const onPave = (x, z) => x > PAVE[0] && x < PAVE[1] && z > PAVE[2] && z < PAVE[3];
+  const fx = await createFx(ctx, { ground: (x, z) => (onPave(x, z) ? 0.022 : 0), wind: [0.5, 0, 0.15], tier: ctx.meta.fxTier });
   // the row: a gabled house (left) and the struck house with its eaves to the square (right)
   const M = await archMaterials(ctx);
   const cap = fx.debris.damageCapture(hole, { toWorld: (p) => [p[0] + HB[0], p[1] + HB[1], p[2] + HB[2]] });
@@ -71,8 +78,11 @@ export async function setup(ctx) {
   const kit = new Kit(0);
   house(kit, frame(HA), { w: 7.2, d: 8.5, storeys: 1, roof: 'side', cover: 'clay', seed: 11, lod: 'hero', chimney: 'right', party: { left: false, right: true }, damage: capA.damage });
   const hb = house(kit, frame(HB), { w: 7.0, d: 8.5, storeys: 1, roof: 'side', seed: 25, lod: 'hero', chimney: 'left', party: { left: true, right: false }, shop: { x: 4.6, w: 1.6 }, door: { x: 2.0 }, damage: cap.damage });
+  paving(kit, PAVE[0], PAVE[1], PAVE[2], PAVE[3], { seed: 55, wear: 0.3, puddles: 0 });
   const set = kit.build(M, { name: 'cling-row' });
   scene.add(set);
+  let paveMesh = null;
+  set.traverse((m) => { if (m.isMesh && /:stoneSett$/.test(m.name)) paveMesh = m; });
 
   // the vendor's stall in the square
   let stall = null;
@@ -96,7 +106,16 @@ export async function setup(ctx) {
   const walls = [{ p: [0, 0, -1.75], n: [0, 0, 1], width: 14.4, height: 5.2 }];
   const t0 = performance.now();
   const roofA = await fx.debris.roofline({ capture: capA, set, t0: STRIKE - 0.3, impact: [-2.2, 6.2, -1.9], dir: [0.6, -0.4, 0.7], speed: 7, blast: 0.9, runSpeed: 6, walls, seed: 9, dust: { curtains: 3, haze: false } });
-  const roof = await fx.debris.roofline({ capture: cap, set, t0: STRIKE, impact: [2.0, 6.3, -1.7], dir: [0.55, -0.3, 0.75], speed: 9, blast: 1.6, runSpeed: 8, walls, seed: 3 });
+  // the struck house's jettied timber storey (its face at HB.z + front): the plaster panels under
+  // the eaves burst out (3C-13), and a rafter pinned at the top of the hole swings down and is
+  // thrown into the square (R15-02)
+  const fz = HB[2] + hb.front + 0.02;
+  const roof = await fx.debris.roofline({
+    capture: cap, set, t0: STRIKE, impact: [2.0, 6.3, -1.7], dir: [0.55, -0.3, 0.75], speed: 9, blast: 1.6, runSpeed: 8, walls, seed: 3,
+    panels: { box: [[0.8, hb.hs + 0.5, fz], [3.4, hb.height - 0.3, fz]], n: [0, 0, 1], count: 6 },
+    settleOn: paveMesh ? [g, paveMesh] : [g],
+    beam: { delay: 0.25 },
+  });
   const tRoof = performance.now() - t0;
   // the blast that follows the body sweeps the stall into the square (3C-12)
   const sweep = stall ? fx.debris.sweep({ object: stall, t0: STRIKE + 0.9, dir: [0.15, 0.3, 1], speed: 7.5, e: 0.15, mu: 0.6, seed: 4 }) : null;
@@ -104,12 +123,21 @@ export async function setup(ctx) {
   // the music stage's boards scything across the paving (R16-01)
   await fx.debris.boards({ at: [-5.5, 0.7, 1.8], dir: [1, 0.1, 0.35], t0: STRIKE + 1.1, count: 5, speed: 11, seed: 5, walls });
   // R15-01: blood running out from under the wreckage, along the joints of the paving
-  const pool = fx.blood.pool({ at: [2.3, 0, -0.9], t0: STRIKE + 3, radius: 1.0, tau: 10, src: [0.1, -0.35], joints: { cell: 0.1, width: 0.012, pattern: 'cobbles' }, seed: 5, target: g });
+  // (on the cobbles and the bed between them; the joints are the paving's own, from its geometry)
+  const pool = fx.blood.pool({ at: [2.3, 0, -0.9], t0: STRIKE + 3, radius: 1.0, tau: 10, src: [0.1, -0.35], joints: paveMesh ? { mesh: paveMesh } : null, seed: 5, target: paveMesh ? [g, paveMesh] : g });
+  // F5 / 3D: the lime and roof dust settling on what is in the square - a dark woollen shape
+  // lying on the paving stands in for the dead (dusted on top, a trace on the sides, clean
+  // underneath; grey dust hardly shows on the grey ball, as it should not)
+  const wool = new THREE.MeshStandardMaterial({ color: new THREE.Color(0.045, 0.036, 0.03), roughness: 0.92 });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 1.3, 8, 24), wool);
+  body.rotation.z = Math.PI / 2; body.rotation.y = 0.35; body.position.set(-1.7, 0.19, 5.2);
+  body.castShadow = body.receiveShadow = true; scene.add(body); body.updateMatrixWorld(true);
+  fx.dust.settle({ target: [ball, post, body], t0: STRIKE + 2.5, tau: 20, color: 'lime', thickness: 0.25, seed: 3 });
   // R16b-01: the long dark smear down a house front (a body slid down the stone from 2.2 m)
   const front = [];
   set.traverse((m) => { if (m.isMesh && /stone/i.test(m.name)) front.push(m); });
   fx.blood.smear({ target: front, at: [-1.2, 1.25, -1.72], dir: [0, 0, -1], up: [1, 0, 0], size: [2.0, 0.45, 0.4], t0: STRIKE + 2.0, grow: [0, 0.4], seed: 2, params: [0, 5, 0.9, 2.5] });
-  console.warn('[fx-cling] ' + JSON.stringify({ roofA: { tiles: roofA.tiles, runs: roofA.runs }, roofTiles: roof.tiles, pieces: roof.pieces.length, runs: roof.runs, roofMs: Math.round(tRoof), shattered: roof.pieces.filter((p) => p.shard).length, hb: { ridge: hb.ridge } }));
+  console.warn('[fx-cling] ' + JSON.stringify({ roofA: { tiles: roofA.tiles, runs: roofA.runs }, roofTiles: roof.tiles, pieces: roof.pieces.length, runs: roof.runs, roofMs: Math.round(tRoof), shattered: roof.pieces.filter((p) => p.shard).length, hb: { ridge: hb.ridge, front: hb.front, hs: hb.hs, height: hb.height }, spalls: roof.spalls.map((d) => d.triangles), paveTris: paveMesh ? paveMesh.geometry.index?.count / 3 : 0, beam: roof.beam ? { segs: roof.beam.sol.segs.map((s) => [s.type, +s.t0.toFixed(2), +(Number.isFinite(s.t1) ? s.t1 : -1).toFixed(2)]), rest: roof.beam.sol.segs.at(-1).p?.map((v) => +v.toFixed(2)) } : null }));
   if (sweep) console.warn('[fx-cling] sweep ' + JSON.stringify({ parts: sweep.parts.length, thrown: sweep.effects.length, sizes: sweep.parts.slice(0, 12).map((p) => +p.userData.size.toFixed(2)) }));
   S = { fx, roof, thrown };
 }
@@ -122,6 +150,11 @@ const VIEWS = [
   { pos: [0.0, 4.2, 9.0], look: [0.0, 6.6, -3.0], f: 28, after: 100 },
   // 5: the blood after (R15 / R16b): the pool along the joints, the smear on the house front
   { pos: [0.6, 1.55, 3.2], look: [0.4, 0.5, -1.4], f: 28, after: 100 },
+  // 6: the struck front after: the plaster spalled off the timber storey's panels (3C-13), the
+  // eaves beam down, settled dust over the paving and the debris
+  { pos: [2.6, 1.9, 6.5], look: [2.2, 3.9, -1.3], f: 32, after: 100 },
+  // 7: settled dust on the ball and the post (F5's dust on people and the dead)
+  { pos: [-0.6, 1.3, 7.4], look: [-2.0, 0.3, 4.8], f: 35, after: 100 },
 ];
 export function update(t, ctx) {
   const cam = ctx.camera;

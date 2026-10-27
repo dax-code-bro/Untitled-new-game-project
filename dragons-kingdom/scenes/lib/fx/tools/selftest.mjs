@@ -14,6 +14,8 @@ import { house } from '../../architecture/house.js';
 import { ballistic } from '../core/util.js';
 import { liveRange } from '../smoke.js';
 import { registerDirectorFx, DIRECTOR_KINDS } from '../index.js';
+import { fxAfterOf, atRest, AFTER_T } from '../director.js';
+import { jointMapFromMeshes, jointMapFromFn, projectorFrame, projectOnMesh } from '../core/decal.js';
 import { resolveTier } from '../core/tier.js';
 import { flamePalette, flameRadiance } from '../core/blackbody.js';
 import { FlameVolume } from '../core/flamevol.js';
@@ -93,6 +95,20 @@ ok(Math.hypot(pos[0] - p20[0], pos[2] - p20[2]) < 1e-9, 'debris: at rest it stay
   pile.stamp([0, 0.08, 0], new THREE.Quaternion(), [0.6, 0.08, 0.07]);
   ok(Math.abs(pile.ground(0.3, 0) - 0.16) < 1e-6 && pile.ground(0, 0.3) === 0, 'debris: the pile is as high as the beam under it, and only under it');
 }
+// a beam pinned at one end (the eaves beam, R15-02): its free end drops, it swings down on the
+// hinge, tears free before it hangs plumb and is thrown on, landing on the ground in front
+{
+  const L = 2.4, E = [0, 5, 0];
+  const dh = [-1, 0, 0];
+  const axis = [0, 0, 1];                              // cross(UP, dh) for dh = -x: (0,1,0)x(-1,0,0) = (0,0,1)
+  const qB = new THREE.Quaternion();                   // long axis x (the beam lies along -x from the pin)
+  const sol = solvePiece([E[0] - L / 2, E[1], E[2]], [0, 0, 0], qB, [0, 0, 0], [L / 2, 0.08, 0.07], 1, { ground: () => 0, hold: true, pivot: { E, axis, w0: 1.2, release: 1.2, carry: [0, 0.8, 2] } });
+  const p0 = [0, 0, 0], qq = new THREE.Quaternion();
+  poseAt(sol, 1 + (sol.segs[0].t1 - 1) * 0.5, p0, qq);
+  const midDrop = p0[1] < E[1] - 0.2 && Math.abs(Math.hypot(p0[0] - E[0], p0[1] - E[1], p0[2] - E[2]) - L / 2) < 1e-3;
+  poseAt(sol, 30, p0, qq);
+  ok(sol.segs[0].type === 5 && sol.segs.length > 2 && midDrop && p0[1] < 0.2 && p0[2] > 0.5, `debris: a beam pinned at one end swings down on its hinge, tears free (${(sol.segs[0].t1 - 1).toFixed(2)} s) and lands in front (rest ${p0.map((x) => x.toFixed(2))})`);
+}
 // the roofline capture reads a real Cling roof: one slope, its pitch, clay vs stone slate
 for (const cover of ['clay', 'slate']) {
   const cap = damageCapture((x, y, z) => Math.hypot(x - 1, y - 7.4, z + 2.4) < 1.3);
@@ -141,6 +157,52 @@ ok(i0 <= 7 * 20 && i1 >= 10 * 20 - 1 && i1 - i0 < 3 * 20 + 3, `smoke: live parti
   const again = fv.emission(2 + 5 / 24, m);
   const mean = Ys.reduce((a, b) => a + b, 0) / Ys.length, sd = Math.sqrt(Ys.reduce((a, b) => a + (b - mean) ** 2, 0) / Ys.length);
   ok(Math.abs(0.2126 * again.I[0] + 0.7152 * again.I[1] + 0.0722 * again.I[2] - Ys[5]) < 1e-12 && mean > 0.05 && sd / mean > 0.03, `fire: flame light from its own field (mean I ${mean.toFixed(3)}, flicker ${(100 * sd / mean).toFixed(0)} %), deterministic`);
+}
+
+// ---- decals: the pool's joints come from the set's own paving; dust settles on what faces up
+{
+  // two 'cobbles' (boxes, tops at 3 cm) with a 2 cm joint between them along x = 0
+  const mat = new THREE.MeshBasicMaterial();
+  const g = new THREE.Group();
+  for (const sx of [-1, 1]) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.03, 0.4), mat); m.position.set(sx * 0.11, 0.015, 0); g.add(m); }
+  g.updateMatrixWorld(true);
+  const F = projectorFrame([0, 0.03, 0], [0, -1, 0], [0.5, 0.5, 0.4], [0, 0, -1]);
+  const T = jointMapFromMeshes(F, g, { res: 0.005 });
+  const at = (x, z) => { const u = (x * F.x[0] + z * F.x[2]) / F.w + 0.5, w = (x * F.y[0] + z * F.y[2]) / F.h + 0.5; const i = Math.min(T.image.width - 1, Math.floor(u * T.image.width)), j = Math.min(T.image.height - 1, Math.floor(w * T.image.height)); return T.image.data[(j * T.image.width + i) * 4] / 255; };
+  ok(at(0, 0) > 0.9 && at(0.1, 0) < 0.1 && at(-0.1, 0.05) < 0.1 && at(0.24, 0.24) > 0.9, `decal: pool joints from the paving's geometry (joint ${at(0, 0).toFixed(2)}, cobble tops ${at(0.1, 0).toFixed(2)} / ${at(-0.1, 0.05).toFixed(2)}, bed ${at(0.24, 0.24).toFixed(2)})`);
+  const T2 = jointMapFromFn(F, (x) => (Math.abs(x) < 0.01 ? 1 : 0), { res: 0.005 });
+  ok(T2.image.width === 100 && T2.image.data.some((v) => v === 255) && T2.image.data.some((v, i) => i % 4 === 0 && v === 0), 'decal: pool joints from a function of the ground');
+  // settle: per-vertex up-facing of the posed surface (a box: its top 1, its sides 0, no bottom)
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4).toNonIndexed(), mat);
+  box.position.set(0, 0.2, 0); box.updateMatrixWorld(true);
+  const Fd = projectorFrame([0, 0.2, 0], [0, -1, 0], [1, 1, 1], [0, 0, -1]);
+  const r = projectOnMesh(box, Fd, { upField: true, maxAngle: 100 });
+  const ups = r ? Array.from({ length: r.geometry.attributes.aFlow.count }, (_, i) => r.geometry.attributes.aFlow.getX(i)) : [];
+  ok(r && Math.max(...ups) > 0.99 && Math.min(...ups) > -0.01 && Math.min(...ups) < 0.01 && r.count === 10, `decal: settle keeps the top and the sides of a box, not its underside (${r?.count} triangles, up ${Math.min(...ups).toFixed(2)}..${Math.max(...ups).toFixed(2)})`);
+}
+
+// ---- director path: after-state, rest pose
+{
+  ok(fxAfterOf({ fxAfter: true }, 'stall', 'debris-sweep') && fxAfterOf({ fxAfter: ['stall'] }, 'stall', 'debris-sweep') && !fxAfterOf({ fxAfter: ['roof'] }, 'stall', 'debris-sweep')
+    && fxAfterOf({ fxAfter: (id) => id === 'stall' }, 'stall', 'x') && !fxAfterOf({}, 'stall', 'debris-sweep') && AFTER_T > 100, 'director: the set says which cues a shot is after (fxAfter: true | ids | fn)');
+  // a skinned actor posed and moved: under atRest the build sees its bind pose at the origin, and
+  // every transform comes back afterwards
+  const bones = [new THREE.Bone(), new THREE.Bone()];
+  bones[0].add(bones[1]); bones[1].position.set(0, 1, 0);
+  const geo = new THREE.BoxGeometry(0.2, 1, 0.2);
+  const n = geo.attributes.position.count;
+  geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(new Uint16Array(n * 4), 4));
+  geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(new Float32Array(n * 4).map((_, i) => (i % 4 === 0 ? 1 : 0)), 4));
+  const sm = new THREE.SkinnedMesh(geo, new THREE.MeshBasicMaterial());
+  sm.add(bones[0]); sm.bind(new THREE.Skeleton(bones));
+  const root = new THREE.Group(); root.add(sm);
+  const parent = new THREE.Group(); parent.position.set(5, 0, 0); parent.add(root);
+  root.position.set(1, 2, 3); root.rotation.y = 1.2;
+  bones[1].rotation.x = 0.8; bones[0].position.set(0.3, 0, 0);
+  parent.updateMatrixWorld(true);
+  const seen = atRest([{ root }], () => { const v = new THREE.Vector3(); bones[1].getWorldPosition(v); return { v: v.toArray(), par: root.parent, rx: bones[1].rotation.x }; });
+  const back = bones[1].rotation.x === 0.8 && bones[0].position.x === 0.3 && root.parent === parent && root.position.x === 1 && Math.abs(root.rotation.y - 1.2) < 1e-9;
+  ok(Math.abs(seen.v[1] - 1) < 1e-6 && Math.abs(seen.v[0]) < 1e-6 && seen.par === null && Math.abs(seen.rx) < 1e-6 && back, `director: body-bound effects build on the actor's rest pose at the origin (bone at ${seen.v.map((x) => x.toFixed(2))}), then the pose is put back`);
 }
 
 // ---- director kinds

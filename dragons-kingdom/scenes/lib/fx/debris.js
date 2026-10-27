@@ -405,6 +405,10 @@ export function solvePiece(p0, v0, q0, w0, half, te, o) {
   const segs = [];
   const ground = o.ground;
   const k = o.k ?? 0.05, e = o.e ?? 0.3, mu = o.mu ?? 0.5;
+  // air: the velocity of the air the piece's drag pulls it toward. A flat plate (a slate, a tile,
+  // a board) falling broadside flutters and glides off sideways; the closed-form model gets that
+  // as a high drag toward a per-piece sideways drift (the glide) instead of straight down
+  const air = o.air || null;
   let p = p0.slice(), v = v0.slice(), q = q0.clone(), w = w0.slice(), t = te;
   const events = [];
   const tmax = o.tmax ?? 12;
@@ -441,7 +445,9 @@ export function solvePiece(p0, v0, q0, w0, half, te, o) {
     const dt = 1 / 240;
     let th = 0, om = P.w0 ?? 2, tt = 0;
     const samples = [0];
-    const rel = phi0 + (P.past ?? 0.35);
+    // (release: past balance for a piece toppling over a bottom edge; P.release (rad turned) for
+    // one hanging from a hinge - a beam still pinned at one end swings down before it tears free)
+    const rel = P.release ?? (phi0 + (P.past ?? 0.35));
     while (tt < (P.tmax ?? 3)) {
       const acc = -kg * Math.sin(phi0 - th) + (tt < (P.tPush ?? 0) ? (P.alpha ?? 0) : 0);
       om += acc * dt; th += om * dt; tt += dt;
@@ -474,7 +480,7 @@ export function solvePiece(p0, v0, q0, w0, half, te, o) {
   const dtMax = walls.length ? 0.02 : 0.05;
   let hitW = -1;
   const gap = (tt) => {
-    ballistic(p, v, G, k, null, tt, pp);
+    ballistic(p, v, G, k, air, tt, pp);
     spinQ(q, w, tt, qq);
     let m = pp[1] - lowExtent(qq, half) - ground(pp[0], pp[2]);
     hitW = -1;
@@ -497,10 +503,10 @@ export function solvePiece(p0, v0, q0, w0, half, te, o) {
       if (Number.isFinite(th)) { let lo = a, hi = th; for (let i = 0; i < 22; i++) { const m = 0.5 * (lo + hi); if (gap(m) > 0) lo = m; else hi = m; } th = hi; gap(th); }
     } else th = 0;
     const wallHit = hitW;
-    segs.push({ type: 0, t0: t, t1: t + (Number.isFinite(th) ? th : tmax), p: p.slice(), v: v.slice(), q: q.clone(), w: w.slice(), k });
+    segs.push({ type: 0, t0: t, t1: t + (Number.isFinite(th) ? th : tmax), p: p.slice(), v: v.slice(), q: q.clone(), w: w.slice(), k, air });
     if (!Number.isFinite(th)) return { segs, events, hold };
     // contact
-    ballistic(p, v, G, k, null, th, pp, vv);
+    ballistic(p, v, G, k, air, th, pp, vv);
     spinQ(q, w, th, qq);
     t += th;
     p = pp.slice(); q = qq.clone();
@@ -588,7 +594,7 @@ export function poseAt(sol, t, pos, q) {
   for (const sg of segs) if (t < sg.t1) { s = sg; break; }
   const dt = Math.max(0, t - s.t0);
   if (s.type === 0) {
-    ballistic(s.p, s.v, G, s.k, null, dt, pos);
+    ballistic(s.p, s.v, G, s.k, s.air || null, dt, pos);
     spinQ(s.q, s.w, dt, q);
   } else if (s.type === 1) {
     const tt = Math.min(dt, s.ts);
@@ -710,7 +716,7 @@ export class DebrisEffect extends Effect {
     const solve = (P) => {
       const bk = baseKind(lib, P.kind);
       const ph = { ...KIND_PHYS[bk], ...(o.physics || {}), ...(P.physics || {}) };
-      return solvePiece(P.p0, P.v0, P.q0, P.w0, P.half, P.te, { ground, k: ph.k, e: ph.e, mu: ph.mu, bounces: o.bounces ?? 4, walls, hold: P.hold, incline: P.incline });
+      return solvePiece(P.p0, P.v0, P.q0, P.w0, P.half, P.te, { ground, k: ph.k, e: ph.e, mu: ph.mu, bounces: P.bounces ?? o.bounces ?? 4, walls, hold: P.hold, incline: P.incline, air: P.air, pivot: P.pivot });
     };
     const mkPiece = (P, i) => {
       const L = lib[P.kind][P.variant % lib[P.kind].length];

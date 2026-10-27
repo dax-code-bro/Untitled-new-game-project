@@ -16,9 +16,87 @@
 //   { kind, c (creature) | ch (character), root }); without it they draw nothing and warn;
 // - one FX manager serves all the director's cues (cached on ctx.__dkFxDirector), separate from
 //   a set's own createFx() manager.
+//
+// Determinism (every frame the same in any render order / chunk):
+// - effects bound to an actor's body (gore, decals with params.actor) are built ONCE, at the first
+//   frame that needs them, against the actor's REST pose (bind pose, root at the origin, upright),
+//   never against whatever pose that frame happens to have; projector params for them (at / dir /
+//   up) are in the actor's own frame (metres from its root, +z its facing) or an actor part name
+//   ('remi.head'), resolved on the rest pose. Their decals ride the skin from then on.
+// - a moving wound's spray (gore-wing-root) rides the creature's blocking frame (env.actorFrame:
+//   pure) at the wound's offset in the creature's own frame; cue.at / params.bleedAt override it.
+// - after-state: a destruction cue (debris-*, blood-pool, scorch, dust-settle) whose cue is not
+//   running in a shot shows the SET AS IT WAS (props back where the set put them) unless the set
+//   says the shot is after it: api.set.fxAfter (true, an array of cue ids, or fn(cueId, kind) ->
+//   bool; the set builder sets it per shot in applyShot, e.g. from the shot spec's `fxAfter`) -
+//   then it shows its settled end state (evaluated AFTER_T seconds after its cue).
 import { captureByName } from './destruction.js';
 
 const STATIC_ONLY = new Set(['debris-burst', 'debris-collapse', 'debris-boards', 'debris-turf', 'debris-roofline', 'debris-object', 'debris-sweep']);
+// cues whose end state is part of the set's continuity (shown settled in shots after them)
+const PERSIST = new Set([...STATIC_ONLY, 'blood-pool', 'scorch', 'dust-settle']);
+export const AFTER_T = 600;
+// the director's part names (scenes/lib/director/stage.js) -> bones, for points on a rest pose
+const HUMAN_PARTS = { head: 'head', neck: 'neck02', chest: 'spine02', hips: 'root', pelvis: 'root', 'hand.L': 'wrist.L', 'hand.R': 'wrist.R', 'elbow.L': 'lowerarm01.L', 'elbow.R': 'lowerarm01.R', 'foot.L': 'foot.L', 'foot.R': 'foot.R', 'knee.L': 'lowerleg01.L', 'knee.R': 'lowerleg01.R', 'shoulder.L': 'upperarm01.L', 'shoulder.R': 'upperarm01.R' };
+const CREATURE_PARTS = { head: 'head', chest: 'thorax', hips: 'lumbar', neck: 'neck_4', tail: 'tail_6', jaw: 'jaw', 'wing.L': 'w_L_0', 'wing.R': 'w_R_0' };
+
+/** Is the set in the after-state of this cue in the current shot (api.set.fxAfter)? */
+export function fxAfterOf(set, id, kind) {
+  const f = set?.fxAfter;
+  if (!f) return false;
+  if (f === true) return true;
+  if (Array.isArray(f)) return f.includes(id) || f.includes(kind);
+  if (f instanceof Set) return f.has(id) || f.has(kind);
+  if (typeof f === 'function') return !!f(id, kind);
+  return false;
+}
+
+/**
+ * Run fn with the actors' bodies in their REST pose: every skeleton at its bind pose, every root
+ * detached from its parent and at the origin, upright (so a build reads the same body whatever
+ * frame triggered it); everything is put back afterwards.
+ */
+export function atRest(actors, fn) {
+  const saved = [];
+  for (const a of actors) {
+    const root = a?.root;
+    if (!root) continue;
+    const par = root.parent;
+    const rs = { root, par, idx: par ? par.children.indexOf(root) : -1, p: root.position.clone(), q: root.quaternion.clone(), s: root.scale.clone(), bones: [] };
+    const skels = new Set();
+    root.traverse((m) => { if (m.isSkinnedMesh && m.skeleton) skels.add(m.skeleton); });
+    for (const sk of skels) for (const b of sk.bones) rs.bones.push([b, b.position.clone(), b.quaternion.clone(), b.scale.clone()]);
+    saved.push(rs);
+    if (par) par.remove(root);
+    root.position.set(0, 0, 0); root.quaternion.identity(); root.scale.copy(rs.s);
+    root.updateMatrixWorld(true);
+    for (const sk of skels) sk.pose();
+    root.updateMatrixWorld(true);
+  }
+  try { return fn(); } finally {
+    for (const rs of saved.reverse()) {
+      for (const [b, p, q, sc] of rs.bones) { b.position.copy(p); b.quaternion.copy(q); b.scale.copy(sc); }
+      rs.root.position.copy(rs.p); rs.root.quaternion.copy(rs.q); rs.root.scale.copy(rs.s);
+      if (rs.par) { rs.par.add(rs.root); const ch = rs.par.children; ch.splice(ch.indexOf(rs.root), 1); ch.splice(Math.max(0, rs.idx), 0, rs.root); }
+      rs.root.updateMatrixWorld(true);
+    }
+  }
+}
+
+/** A point on an actor's rest pose (under atRest): 'part' -> bone world position. */
+function restPartPoint(a, part, THREE) {
+  if (!a) return null;
+  let bone = null;
+  if (a.kind === 'human' && a.ch?.bone) bone = a.ch.bone(HUMAN_PARTS[part] || part) || a.ch.bone('spine02');
+  else if (a.kind === 'creature' && a.c?.bones) {
+    const bi = a.c.boneIndex || {};
+    const n = CREATURE_PARTS[part] || part;
+    bone = a.c.bones[bi[n] ?? bi.thorax];
+  }
+  const v = new THREE.Vector3();
+  if (bone) bone.getWorldPosition(v); else a.root.getWorldPosition(v);
+  return [v.x, v.y, v.z];
+}
 // a set object by name (api.set.objects) or the object itself
 const setObject = (api, n) => (n && typeof n === 'object' ? n : api.set?.objects?.[n] || null);
 
@@ -74,7 +152,10 @@ export const DIRECTOR_KINDS = {
   'water-churn': { about: 'thrashing in water: churned spray and foam', cost: 0.6, make: (fx, p) => fx.water.churn(p) },
   'water-downwash': { about: 'wingbeat downwash on water: rings, spray sheet, mist', cost: 0.8, make: (fx, p) => fx.water.downwash(p) },
   // gore (need api.actor)
-  'gore-wing-root': { about: 'the scout\'s torn wing root (params.actor, side, bleed...)', cost: 0.3, needs: 'creature', make: (fx, p, who) => fx.gore.wingRoot({ ...p, creature: who.creature(p) }) },
+  'gore-wing-root': {
+    about: 'the scout\'s torn wing root (params.actor, side, bleed...; the spray rides the creature\'s flight, or cue.at / params.bleedAt)', cost: 0.3, needs: 'creature',
+    make: (fx, p, who) => fx.gore.wingRoot({ ...p, bleedAt: p.bleedAt ?? who.cueAt ?? undefined, frame: p.frame ?? who.frame(p), creature: who.creature(p) }),
+  },
   'gore-fracture': { about: 'an open fracture below the knee through torn clothing (params.actor, side)', cost: 0.2, needs: 'character', make: (fx, p, who) => fx.gore.openFracture({ ...p, character: who.character(p) }) },
   'gore-scalp': { about: 'a split scalp with blood down the face (params.actor, side)', cost: 0.1, needs: 'character', make: (fx, p, who) => fx.gore.scalp({ ...p, character: who.character(p) }) },
   'gore-burned-rider': { about: 'burned clothing and skin after dragon fire (params.actor, side, burnTime, neck)', cost: 0.2, needs: 'character', make: (fx, p, who) => fx.gore.burnedRider({ ...p, character: who.character(p) }) },
@@ -83,6 +164,10 @@ export const DIRECTOR_KINDS = {
   'cloth-drape': { about: 'a cloth lying over a body or shapes', cost: 0.1, make: (fx, p) => fx.cloth.drape(p) },
   'sparks': { about: 'sparks off steel / stone, or knocked from a burning beam', cost: 0.05, make: (fx, p) => fx.sparks.burst(p) },
   'ash-fall': { about: 'ash and soot flakes drifting down after the fire', cost: 0.2, make: (fx, p) => fx.ash.fall(p) },
+  'dust-settle': {
+    about: 'dust / lime / ash settled on whatever is under it (the ground, set objects, params.actor bodies: on what faces up), thickening over params.tau s', cost: 0.1,
+    make: (fx, p, who) => fx.dust.settle({ ...p, target: who.mesh(p) }),
+  },
 };
 
 /**
@@ -107,6 +192,10 @@ async function makeInstance(kind, def, ctx, api, createFx) {
   }
   const params = { ...(cue.params || {}) };
   const L = { env: null, from: cue.from ?? 0 };
+  const actorOf = (p) => (p.actor != null ? (api.actor?.(p.actor) || api.actors?.[p.actor] || null) : null);
+  // bound to an actor's body: built on its rest pose (see the header), lazily (the at functions
+  // need the director's env)
+  const bodyBound = !!def.needs || (params.actor != null && /decal|settle|scorch/.test(kind));
   // fixed points (marks, set objects, arrays) are resolved now; actor points follow the cast
   const fixed = (n) => {
     if (n == null) return null;
@@ -118,9 +207,19 @@ async function makeInstance(kind, def, ctx, api, createFx) {
     return null;
   };
   const atName = cue.at ?? params.at;
-  let atSpec = fixed(atName);
-  let lazy = false;
-  if (!atSpec && atName != null) {
+  // a set builder's own pure point for a moving set piece (the boat under way: set.point(name, t)),
+  // ahead of the set object's position at setup
+  const setPoint = (n) => {
+    if (typeof n !== 'string' || typeof api.set?.point !== 'function' || api.set?.marks?.[n]) return null;
+    try { if (!arr(api.set.point(n, L.from))) return null; } catch { return null; }
+    return (te) => arr(api.set.point(n, te + L.from)) || [0, 0, 0];
+  };
+  let atSpec = setPoint(atName) || fixed(atName);
+  let lazy = bodyBound;
+  // (a body-bound decal's at is on the actor: 'part' or 'actor.part' on its rest pose, or
+  // [x,y,z] in its own frame - resolved inside the build, under atRest)
+  const ownPart = bodyBound && typeof atName === 'string' && !fixed(atName) ? (atName.startsWith(`${params.actor}.`) ? atName.slice(String(params.actor).length + 1) : atName) : null;
+  if (!atSpec && atName != null && !ownPart) {
     if (typeof atName === 'function' || (typeof atName === 'object' && !Array.isArray(atName))) atSpec = atName;
     else {
       lazy = true;
@@ -142,7 +241,6 @@ async function makeInstance(kind, def, ctx, api, createFx) {
     return null;
   }
   // actors (gore, decals on bodies, fire from a creature's mouth)
-  const actorOf = (p) => (p.actor != null ? (api.actor?.(p.actor) || api.actors?.[p.actor] || null) : null);
   const who = {
     creature: (p) => { const a = actorOf(p); return a ? (a.c || a.creature || null) : null; },
     character: (p) => { const a = actorOf(p); return a ? (a.ch || a.character || null) : null; },
@@ -153,6 +251,13 @@ async function makeInstance(kind, def, ctx, api, createFx) {
       if (!a) return p.plane ? null : undefined;
       return a.root || null;
     },
+    // the cue's own at (an actor point followed through the blocking), when the cue gave one
+    cueAt: atName != null && !ownPart ? atSpec : null,
+    // the actor's ground frame at effect time te (pure: from the blocking)
+    frame: (p) => (p.actor == null ? null : (te) => {
+      const f = L.env?.actorFrame?.(p.actor, te + L.from);
+      return f ? { pos: arr(f.pos) || [0, 0, 0], yaw: f.yaw || 0 } : null;
+    }),
   };
   if (def.needs && !(def.needs === 'creature' ? who.creature(params) : who.character(params))) {
     console.warn(`[fx] ${kind}: needs params.actor and the director's api.actor(name) (REQUEST director) - drawn as nothing`);
@@ -167,16 +272,29 @@ async function makeInstance(kind, def, ctx, api, createFx) {
   };
   const buildSync = () => {
     const n0 = fx.effects.length;
-    def.make(fx, params, who, api);
+    const run = () => {
+      if (ownPart) params.at = restPartPoint(actorOf(params), ownPart, THREE);
+      return def.make(fx, params, who, api);
+    };
+    if (bodyBound) atRest([actorOf(params)].filter(Boolean), run); else run();
     effects = fx.effects.slice(n0);
   };
   if (!lazy) await build();
   const dynamic = [];
   for (const e of effects) if (e.dynamic) dynamic.push(...e.dynamic);
   let built = !lazy;
+  const id = cue.id || kind;
+  const persist = PERSIST.has(kind) && params.persist !== false;
   return {
     dynamic,
-    setActive(on) { for (const e of effects) { e.object.visible = on; e.enabled = on; if (!on) e.restore?.(); } },
+    setActive(on) {
+      if (!on && persist && built && fxAfterOf(api.set, id, kind)) {
+        // the after-state: the set as the cue left it (settled), not as the set built it
+        for (const e of effects) { e.object.visible = true; e.enabled = true; fx.updateOne(e, AFTER_T); }
+        return;
+      }
+      for (const e of effects) { e.object.visible = on; e.enabled = on; if (!on) e.restore?.(); }
+    },
     update(local, c, env, info) {
       L.env = env; L.from = c?.from ?? L.from;
       if (!built) { buildSync(); built = true; for (const e of effects) { e.object.visible = true; e.enabled = true; } }

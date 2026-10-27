@@ -18,6 +18,7 @@ import { Effect } from './core/manager.js';
 import { ParticleLayer } from './core/particles.js';
 import { ShadowGrid } from './core/shadowgrid.js';
 import { hash01, arr3, clamp, smoothstep, noise1, ballistic, coneDir, norm3 } from './core/util.js';
+import { DecalEffect, DECAL_LIQUIDS } from './core/decal.js';
 
 export const DUST_COLORS = {
   loam: [0.44, 0.38, 0.3],        // dry field soil (the riding grounds)
@@ -301,11 +302,57 @@ export class DustHaze extends Effect {
   }
 }
 
+/**
+ * Dust / lime / ash settled out of the air onto whatever is under it (F5: the square, the debris,
+ * the people and the dead after the roof comes down; ash after the fire): a dry matte layer that
+ * greys and lightens what it lies on - heaviest on what faces up, a trace on walls, none
+ * underneath - thickening as it settles. A decal ('settle' kind): on the ground (no target), on
+ * set objects or on characters / creatures (skinned: it rides with them).
+ * o: target (mesh / group / array; none = the ground), at + size [w, d, depth] (projector from
+ *    above; default from the target's bounds, or box: [[x0,y0,z0],[x1,y1,z1]]), t0, delay, tau
+ *    (s to settle, 20), thickness (layer units ~0.5 mm, 0.35), color ('chalk' | 'lime' | 'ash' |
+ *    a DUST_COLORS name | [r,g,b] linear), amount 0..1, seed.
+ */
+function settle(fx, o = {}) {
+  const c = o.color;
+  const base = DECAL_LIQUIDS[o.liquid || (c === 'ash' ? 'ash' : c === 'chalk' || c === 'lime' ? 'lime' : 'dust')];
+  const col = Array.isArray(c) ? c : typeof c === 'string' && DUST_COLORS[c] && !['ash', 'chalk', 'lime'].includes(c) ? DUST_COLORS[c] : null;
+  const liquid = col ? { ...base, albWet: col.map((x) => x * 0.85), albDry: col.map((x) => x * 0.85) } : base;
+  let at = o.at, size = o.size;
+  if (o.box) {
+    const b = o.box;
+    at = [(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2, (b[0][2] + b[1][2]) / 2];
+    size = [b[1][0] - b[0][0], b[1][2] - b[0][2], Math.max(0.3, (b[1][1] - b[0][1]) * 1.6)];
+  } else if (!at && o.target) {
+    // (from the bounds of what it settles on)
+    const B = { min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] };
+    for (const t of Array.isArray(o.target) ? o.target : [o.target]) {
+      t.updateWorldMatrix(true, true);
+      t.traverse((m) => {
+        if (!m.isMesh || !m.geometry) return;
+        m.geometry.computeBoundingBox?.();
+        const bb = m.geometry.boundingBox?.clone().applyMatrix4(m.matrixWorld);
+        if (!bb) return;
+        for (let k = 0; k < 3; k++) { B.min[k] = Math.min(B.min[k], bb.min.getComponent(k)); B.max[k] = Math.max(B.max[k], bb.max.getComponent(k)); }
+      });
+    }
+    if (Number.isFinite(B.min[0])) {
+      at = B.min.map((v, k) => (v + B.max[k]) / 2);
+      size = [(B.max[0] - B.min[0]) * 1.15 + 0.1, (B.max[2] - B.min[2]) * 1.15 + 0.1, (B.max[1] - B.min[1]) * 1.6 + 0.1];
+    }
+  }
+  return fx.add(new DecalEffect(fx, {
+    dir: [0, -1, 0], up: [0, 0, -1], grow: [o.delay ?? 0, o.tau ?? 20], params: [0, o.thickness ?? 0.35, 0, 0], renderOrder: 2,
+    ...o, at: at || [0, 0, 0], size: size || [4, 4, 1], liquid, kind: 'settle',
+  }));
+}
+
 export function dustApi(fx) {
   return {
     downwash: (o) => fx.add(new Downwash(fx, o)),
     cloud: (o) => fx.add(new DustCloud(fx, o)),
     haze: (o) => fx.add(new DustHaze(fx, o)),
+    settle: (o) => settle(fx, o),
     COLORS: DUST_COLORS,
   };
 }

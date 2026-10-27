@@ -56,6 +56,14 @@ export const DECAL_LIQUIDS = {
   char: { sigWet: [6, 6, 6], sigDry: [6, 6, 6], albWet: [0.009, 0.008, 0.007], albDry: [0.009, 0.008, 0.007], rough: [0.55, 0.6], coat: [0.05, 0.05], coatRough: [0.35, 0.35], h: 0.0025 },
   water: { spec: 0, sigWet: [0.35, 0.33, 0.3], sigDry: [0, 0, 0], albWet: [0, 0, 0], albDry: [0, 0, 0], rough: [0.1, 0.9], coat: [0.9, 0], coatRough: [0.03, 0.5], h: 0.0002 },
   mud: { spec: 0.15, sigWet: [1.2, 1.5, 1.9], sigDry: [0.8, 1.0, 1.3], albWet: [0.06, 0.045, 0.03], albDry: [0.16, 0.13, 0.1], rough: [0.25, 0.95], coat: [0.5, 0], coatRough: [0.1, 0.5], h: 0.0015 },
+  // exposed wattle-and-daub where the lime skin spalled off (kind 'spall'): albWet = the daub,
+  // albDry = the broken lime's edge; matte, no film
+  daub: { spec: 0.2, sigWet: [9, 9, 9], sigDry: [9, 9, 9], albWet: [0.2, 0.135, 0.075], albDry: [0.5, 0.48, 0.43], rough: [0.92, 0.92], coat: [0, 0], coatRough: [0.5, 0.5], h: 0.02 },
+  // settled dust / lime / ash (kind 'settle'): a dry matte layer that greys whatever it lies on -
+  // sigma per unit thickness ~ how fast 1 unit (~0.5 mm) of loose powder hides the surface
+  dust: { spec: 0.15, sigWet: [2.2, 2.2, 2.2], sigDry: [2.2, 2.2, 2.2], albWet: [0.42, 0.39, 0.34], albDry: [0.42, 0.39, 0.34], rough: [0.95, 0.95], coat: [0, 0], coatRough: [0.5, 0.5], h: 0.0 },
+  lime: { spec: 0.15, sigWet: [2.4, 2.4, 2.4], sigDry: [2.4, 2.4, 2.4], albWet: [0.55, 0.53, 0.48], albDry: [0.55, 0.53, 0.48], rough: [0.95, 0.95], coat: [0, 0], coatRough: [0.5, 0.5], h: 0.0 },
+  ash: { spec: 0.1, sigWet: [2.6, 2.6, 2.6], sigDry: [2.6, 2.6, 2.6], albWet: [0.16, 0.155, 0.15], albDry: [0.16, 0.155, 0.15], rough: [0.97, 0.97], coat: [0, 0], coatRough: [0.5, 0.5], h: 0.0 },
   // skin burn colours: albWet = raw dermis (glossy red-pink), albDry = blistered epidermis
   burn: { sigWet: [0.25, 1.4, 1.6], sigDry: [0.25, 1.4, 1.6], albWet: [0.32, 0.055, 0.045], albDry: [0.42, 0.3, 0.2], rough: [0.18, 0.45], coat: [0.7, 0.1], coatRough: [0.08, 0.3], h: 0.0015 },
 };
@@ -90,7 +98,10 @@ uniform float uSeed, uAge, uGrow, uAmount, uDry;
 uniform vec2 uDown;        // gravity in decal coords (unit)
 uniform vec2 uSrc;         // source point in decal coords (metres, centre = 0)
 uniform vec4 uP;           // kind params
-uniform vec4 uJoint;       // pool: joint cell size (m), joint width (m), pattern (0 none, 1 cobbles, 2 flags), joint depth
+uniform vec4 uJoint;       // pool: joint cell size (m), joint width (m), pattern (0 none, 1 cobbles, 2 flags, 3 map), joint depth
+#if defined(FX_KIND_POOL)
+uniform sampler2D uJointMap;   // pattern 3: the set's own paving joints (1 on a joint), in decal uv
+#endif
 // surface flow (coat streams on a mesh): vFlow = (across, along) streamline coordinates in metres
 // - gravity projected on the posed surface, traced upstream to where the film started - and the
 // surface's steepness (0 level .. 1 vertical); uFlowOn = 0 where the decal has none (ground, planes)
@@ -239,6 +250,10 @@ void fxdEval(vec2 uv, out float d, out float cov, out float dryBias) {
 #if defined(FX_KIND_COAT)
   // broad coverage: an irregular sheet, thinning and breaking up toward its edge, drips below
   vec2 q = p / (0.5 * uSize);
+  // a torn, lobed outline (not an ellipse): the sheet's reach varies round its centre - and
+  // stays inside the projector box, where the pull-back below would print a round edge
+  float qa = atan(q.y, q.x);
+  float reach = 0.66 + 0.24 * (fxdF3(vec2(qa * 1.3 + so.x, so.y * 0.21)) - 0.5) * 2.0 + 0.09 * (fxdN(vec2(qa * 4.7 + so.y, 1.7)) - 0.5) * 2.0;
   // gravity streaks: a coat is a film that flowed downhill - its thickness and its edge follow
   // long, narrow streaks along the flow (an isotropic blob read as paint). On a mesh the flow is
   // the surface's own (streamline coordinates traced over the posed face / scales: streams bend
@@ -250,14 +265,14 @@ void fxdEval(vec2 uv, out float d, out float cov, out float dryBias) {
   // (streams: the sheet's sides wander as it runs down, so its edges are not one long curve)
   vec2 dq = vec2(-uDown.y, uDown.x);
   q += dq * uP.w * 0.45 * (fxdF(vec2(pd.y / (mn * 0.45), 7.3) + so) - 0.5) * 2.0;
-  float e = 1.0 - length(q);
+  float e = 1.0 - length(q) / max(reach, 0.3) * 0.75;
   float n = fxdF(p / (mn * 0.22) + so);
   float n2 = fxdF3(p / (mn * 0.06) + so * 1.7);
   float st = fxdF(vec2(pd.x / (mn * 0.05), pd.y / (mn * 0.7)) + so * 0.9);
   float c = (e * 1.1 + (n - 0.5) * 0.75 + (n2 - 0.5) * 0.18 + (st - 0.5) * 0.35 - (1.0 - uAmount) * 0.6 - 0.08) * mn * 0.5;
   // (the noise could carry the sheet out to the projector box, where it ended on a straight cut:
   // pull it back over the outer quarter of the ellipse so the edge is always the film's own)
-  c -= mn * 0.75 * smoothstep(0.72, 1.0, length(q));
+  c -= mn * 0.75 * smoothstep(0.84, 1.0, length(q));
   // p.w: streams - the sheet breaks into separate runs that merge and part (blood coming down a
   // face from a scalp wound), skin between them; thick dark streams, thin bright film between
   float sk = uP.w;
@@ -387,9 +402,11 @@ void fxdEval(vec2 uv, out float d, out float cov, out float dryBias) {
 #elif defined(FX_KIND_POOL)
   // a spreading pool (viscous gravity current: fast, then slowing): lobed outline from a domain
   // warp that grows with the pool, the front running ahead along paving joints
-  float R = mn * 0.5 * uGrow * uAmount;
+  float R = mn * 0.25 * uGrow * uAmount;                   // (the projector is 2 R each side: the lobes and the joint fingers never reach its box)
   float j = 0.0;
-  if (uJoint.z > 0.5) {
+  if (uJoint.z > 2.5) {
+    j = texture2D(uJointMap, uv).r * uJoint.w;
+  } else if (uJoint.z > 0.5) {
     float e = uJoint.z < 1.5 ? fxdVorEdge(p / uJoint.x + so) * uJoint.x
       : min(abs(fract(p.x / uJoint.x + 0.5 * floor(p.y / (uJoint.x * 0.7))) - 0.5), abs(fract(p.y / (uJoint.x * 0.7)) - 0.5)) * uJoint.x;
     j = smoothstep(uJoint.y, 0.0, e) * uJoint.w;              // 1 on a joint
@@ -398,7 +415,9 @@ void fxdEval(vec2 uv, out float d, out float cov, out float dryBias) {
   float dist = length(p - uSrc + wv * R * 0.9);
   float c = R * (1.0 + 0.25 * j) - dist + (fxdF3(p / (mn * 0.05) + so) - 0.5) * R * 0.1;
   c = min(c, min(0.5 * uSize.x - abs(p.x), 0.5 * uSize.y - abs(p.y)) - mn * 0.02);
-  d = fxdFilm(c, mn * 0.006) * (2.5 + 2.5 * smoothstep(0.0, mn * 0.08, c) + 1.5 * j);
+  // (on real paving the blood drains off the stone tops into the joints: a thin film on the
+  // tops, deep in the joints)
+  d = fxdFilm(c, mn * 0.006) * (uJoint.z > 2.5 ? 1.1 + 1.4 * smoothstep(0.0, mn * 0.08, c) + 3.5 * j : 2.5 + 2.5 * smoothstep(0.0, mn * 0.08, c) + 1.5 * j);
   cov = step(0.001, d);
   dryBias = 0.5 * (1.0 - smoothstep(0.0, mn * 0.05, c));
 #elif defined(FX_KIND_GASH)
@@ -436,6 +455,29 @@ void fxdEval(vec2 uv, out float d, out float cov, out float dryBias) {
   float cr = fxdVorEdge(p / max(uP.y, 1e-4) + so);
   cov = smoothstep(0.0, 0.08, c);
   d = cov * (1.0 + 2.5 * smoothstep(0.1, 0.0, cr));           // cracks: deeper (the relief)
+#elif defined(FX_KIND_SPALL)
+  // lime plaster broken off a wattle-and-daub panel: a ragged, sharp-edged patch (the decal's
+  // targets are the plaster only, so the timbers frame it); d > 0 inside (the daub), cov the patch
+  vec2 q = p / (0.5 * uSize);
+  float n = fxdF(p / (mn * 0.28) + so), n2 = fxdF3(p / (mn * 0.06) + so * 1.7);
+  float c = (1.0 - length(q)) + (n - 0.5) * 1.0 + (n2 - 0.5) * 0.22 - (1.0 - uAmount) * 0.7;
+  c -= 0.8 * smoothstep(0.84, 1.0, length(q));
+  cov = step(0.0, c) * step(0.001, uGrow);
+  d = c;
+  dryBias = 0.0;
+#elif defined(FX_KIND_SETTLE)
+  // dust / lime / ash settled out of the air over everything under a cloud: heaviest on what faces
+  // up (vFlow.x carries the posed surface's world normal y; none on undersides, a trace on
+  // walls), patchy (the air moved while it fell), thinning toward the projector's edge, grains
+  float up = uFlowOn > 0.5 ? vFlow.x : 1.0;
+  vec2 q = p / (0.5 * uSize);
+  float n = fxdF(p / (mn * 0.3) + so), n2 = fxdF3(p / (mn * 0.035) + so * 1.3);
+  float grain = fxdH(floor(p / 0.0025) + so);
+  float e = smoothstep(1.0, 0.5, length(q) + (n - 0.5) * 0.45);
+  float facing = 0.12 * smoothstep(-0.2, 0.2, up) + 0.88 * smoothstep(0.25, 0.9, up);
+  d = uGrow * uAmount * e * facing * (0.5 + 0.7 * n2) * (0.8 + 0.4 * grain) * uP.y;
+  cov = step(0.001, d);
+  dryBias = 0.0;
 #elif defined(FX_KIND_WET)
   vec2 q = p / (0.5 * uSize);
   float n = fxdF(p / (mn * 0.2) + so);
@@ -479,6 +521,30 @@ void fxdShade(vec2 uv, out vec3 T, out vec3 alb, out float cov, out float rough,
   coatR = mix(uCoatRough.y, uCoatRough.x, raw);
   h = (bump * 0.8 + raw * -0.4 + rim * 0.3 * fxdF3(p / (mn * 0.01))) * uHScale;
   cov = max(cov, halo);
+#elif defined(FX_KIND_SPALL)
+  // the daub: brown clay and chopped straw, recessed behind the lime by a skin's thickness; the
+  // wattle's woven rods in low relief across it; a pale broken lime lip round the edge (the fresh
+  // white section of the skin, a few mm to 2 cm) with the lip's shadow inside its upper edge
+  float c = d;
+  vec2 p = (uv - 0.5) * uSize;
+  float mn = min(uSize.x, uSize.y);
+  float cm = c * 0.5 * mn;                                   // ~ metres in from the edge
+  float d2, cov2, db2;
+  fxdEval(uv + vec2(0.0, 0.03 / uSize.y), d2, cov2, db2);     // 3 cm above: still inside?
+  float under = 1.0 - smoothstep(-0.004, 0.012, d2 * 0.5 * mn);
+  float straw = smoothstep(0.62, 0.8, fxdN(vec2(p.x * 260.0 + p.y * 90.0, p.y * 25.0 - p.x * 12.0)));
+  float clay = fxdF3(p / 0.05 + 3.1);
+  // wattle: horizontal hazel rods (~6 cm apart) woven round upright staves (~30 cm apart)
+  float rodY = p.y / 0.06 + 0.35 * sin(p.x / 0.3 * 3.14159);
+  float rod = smoothstep(0.55, 0.9, abs(sin(rodY * 3.14159))) * (0.55 + 0.45 * fxdN(vec2(p.x / 0.2, floor(rodY) * 1.7)));
+  float stave = smoothstep(0.035, 0.0, abs(fract(p.x / 0.3 + 0.37) - 0.5) * 0.3);
+  vec3 daubC = uAlbWet * (0.7 + 0.5 * clay) * mix(1.0, 1.6, straw * 0.6);
+  daubC = mix(daubC, uAlbWet * 0.55, (1.0 - rod) * 0.35 + stave * 0.3);
+  float lip = 1.0 - smoothstep(0.004, 0.02 + 0.012 * fxdN(p / 0.03), cm);
+  alb = mix(daubC * (1.0 - 0.7 * under * (1.0 - lip)), uAlbDry * (0.85 + 0.2 * fxdN(p / 0.004)), lip);
+  T = vec3(0.0);
+  rough = uRough.x; coat = 0.0; coatR = 0.5;
+  h = (-0.7 * (1.0 - lip) + 0.3 * rod * (1.0 - lip) + 0.08 * clay) * uHScale;
 #else
   vec3 sig = mix(uSigWet, uSigDry, dry);
   // dried films shrink and crack (thick areas)
@@ -791,7 +857,7 @@ export function projectOnMesh(target, F, opts = {}) {
     keep.push(a, b, c, (u1 - u0) > 1.2 || (v1 - v0) > 1.2);
   }
   if (!keep.length) return null;
-  const FL = opts.flow ? surfaceFlow(F, W, D, keep, N, opts.down) : null;
+  const FL = opts.upField ? upFacing(W, keep, N) : opts.flow ? surfaceFlow(F, W, D, keep, N, opts.down) : null;
   // build: shared vertices remapped; big static triangles clipped
   const P = [], Nn = [], Dd = [], SI = [], SW = [], I = [], Fl = [];
   const remap = new Map();
@@ -848,6 +914,21 @@ export function projectOnMesh(target, F, opts = {}) {
   geo.setIndex(I);
   geo.computeBoundingSphere();
   return { geometry: geo, skinned, count: I.length / 3, flow: !!FL, flowField: FL || null };
+}
+
+/** Per-vertex world normal y of the posed surface (kind 'settle': dust lies on what faces up). */
+function upFacing(W, keep, N) {
+  const A = new Float32Array(N * 3);
+  for (let i = 0; i < keep.length; i += 4) {
+    const a = keep[i], b = keep[i + 1], c = keep[i + 2];
+    const ax = W[b * 3] - W[a * 3], ay = W[b * 3 + 1] - W[a * 3 + 1], az = W[b * 3 + 2] - W[a * 3 + 2];
+    const bx = W[c * 3] - W[a * 3], by = W[c * 3 + 1] - W[a * 3 + 1], bz = W[c * 3 + 2] - W[a * 3 + 2];
+    const nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
+    for (const k of [a, b, c]) { A[k * 3] += nx; A[k * 3 + 1] += ny; A[k * 3 + 2] += nz; }
+  }
+  const out = new Float32Array(N * 3);
+  for (let k = 0; k < N; k++) { const l = Math.hypot(A[k * 3], A[k * 3 + 1], A[k * 3 + 2]); out[k * 3] = l > 0 ? A[k * 3 + 1] / l : 1; }
+  return out;
 }
 
 /**
@@ -1045,8 +1126,127 @@ const KIND_DEFAULTS = {
   scorch: { p: [0, 1.0, 0, 0] },
   char: { p: [0, 0.02, 0, 0] },
   wet: { p: [0, 0, 0, 0] },
+  spall: { p: [0, 0, 0, 0] },
+  settle: { p: [0, 0.35, 0, 0], grow: [0, 20] },     // p.y layer thickness (units ~0.5 mm) when settled
 };
-const KIND_LIQUID = { burn: 'burn', scorch: 'soot', char: 'char', wet: 'water' };
+const KIND_LIQUID = { burn: 'burn', scorch: 'soot', char: 'char', wet: 'water', spall: 'daub', settle: 'dust' };
+
+// pool joints: 0 none (the default), 1 / 2 procedural cobbles / flags (only when asked for by
+// pattern), 3 a map (from the set's paving meshes, a function or a texture)
+function jointMode(J) {
+  if (!J) return 0;
+  if (J.mesh || J.meshes || J.target || J.fn || J.map) return 3;
+  if (J.pattern === 'flags') return 2;
+  if (J.pattern === 'cobbles') return 1;
+  return 0;
+}
+let _black = null;
+const BLACK_TEX = () => {
+  if (!_black) { _black = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1); _black.needsUpdate = true; }
+  return _black;
+};
+const mapTexture = (data, n, m) => {
+  const rgba = new Uint8Array(n * m * 4);
+  for (let i = 0; i < n * m; i++) { const v = Math.round(clamp(data[i]) * 255); rgba[i * 4] = v; rgba[i * 4 + 1] = v; rgba[i * 4 + 2] = v; rgba[i * 4 + 3] = 255; }
+  const t = new THREE.DataTexture(rgba, n, m);
+  t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearFilter; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  t.needsUpdate = true;
+  return t;
+};
+
+/** Joint map (decal uv) from fn(x, z) -> 0..1 (1 on a joint) over a ground decal's footprint. */
+export function jointMapFromFn(F, fn, o = {}) {
+  const res = o.res ?? 0.006;
+  const n = Math.min(1024, Math.max(16, Math.ceil(F.w / res))), m = Math.min(1024, Math.max(16, Math.ceil(F.h / res)));
+  const D = new Float32Array(n * m);
+  for (let j = 0; j < m; j++) for (let i = 0; i < n; i++) {
+    const u = (i + 0.5) / n - 0.5, v = (j + 0.5) / m - 0.5;
+    const x = F.c[0] + F.x[0] * u * F.w + F.y[0] * v * F.h, z = F.c[2] + F.x[2] * u * F.w + F.y[2] * v * F.h;
+    D[j * n + i] = fn(x, z);
+  }
+  return mapTexture(D, n, m);
+}
+
+/**
+ * Joint map (decal uv) from the set's own paving: its meshes (cobbles, flags, setts - one mesh or
+ * many, any group) rasterised from above over the decal's footprint into a height field. A joint
+ * is where the surface lies below the stone tops around it - or where there is no stone at all
+ * (the sand / earth bed between) - so the pool runs along the joints that are really there.
+ * o: res (m per texel, 0.006), reach (m: the window the tops and the bed are taken over, 0.04),
+ *    relief (m: the least relief that makes a joint, 0.006), bed (the sand / earth bed's height:
+ *    number or fn(x, z); the pool uses fx.ground - bedDrop (0.022: fx.ground is the stone tops'
+ *    rest height for debris)).
+ */
+export function jointMapFromMeshes(F, meshes, o = {}) {
+  const res = o.res ?? 0.006;
+  const n = Math.min(1024, Math.max(16, Math.ceil(F.w / res))), m = Math.min(1024, Math.max(16, Math.ceil(F.h / res)));
+  const H = new Float32Array(n * m).fill(-Infinity);
+  const list = [];
+  for (const t of Array.isArray(meshes) ? meshes : [meshes]) t?.traverse?.((q) => { if (q.isMesh && q.geometry?.attributes?.position && !q.userData.fxDecal) list.push(q); });
+  const v = new THREE.Vector3();
+  let any = 0;
+  for (const mesh of list) {
+    mesh.updateWorldMatrix(true, false);
+    const g = mesh.geometry, pos = g.attributes.position, idx = g.index?.array;
+    const N = pos.count, U = new Float32Array(N), V = new Float32Array(N), Y = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
+      const dx = v.x - F.c[0], dy = v.y - F.c[1], dz = v.z - F.c[2];
+      U[i] = ((dx * F.x[0] + dy * F.x[1] + dz * F.x[2]) / F.w + 0.5) * n - 0.5;
+      V[i] = ((dx * F.y[0] + dy * F.y[1] + dz * F.y[2]) / F.h + 0.5) * m - 0.5;
+      Y[i] = dx * F.z[0] + dy * F.z[1] + dz * F.z[2];            // height along the projector's out axis
+    }
+    const T = idx ? idx.length / 3 : N / 3;
+    for (let t = 0; t < T; t++) {
+      const a = idx ? idx[t * 3] : t * 3, b = idx ? idx[t * 3 + 1] : t * 3 + 1, c = idx ? idx[t * 3 + 2] : t * 3 + 2;
+      const x0 = Math.max(0, Math.ceil(Math.min(U[a], U[b], U[c]))), x1 = Math.min(n - 1, Math.floor(Math.max(U[a], U[b], U[c])));
+      const y0 = Math.max(0, Math.ceil(Math.min(V[a], V[b], V[c]))), y1 = Math.min(m - 1, Math.floor(Math.max(V[a], V[b], V[c])));
+      if (x0 > x1 || y0 > y1) continue;
+      const d = (V[b] - V[c]) * (U[a] - U[c]) + (U[c] - U[b]) * (V[a] - V[c]);
+      if (Math.abs(d) < 1e-12) continue;
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const l0 = ((V[b] - V[c]) * (x - U[c]) + (U[c] - U[b]) * (y - V[c])) / d;
+        const l1 = ((V[c] - V[a]) * (x - U[c]) + (U[a] - U[c]) * (y - V[c])) / d;
+        const l2 = 1 - l0 - l1;
+        if (l0 < -1e-4 || l1 < -1e-4 || l2 < -1e-4) continue;
+        const h = l0 * Y[a] + l1 * Y[b] + l2 * Y[c];
+        const k = y * n + x;
+        if (h > H[k]) { H[k] = h; any++; }
+      }
+    }
+  }
+  if (!any) return null;
+  // (what is below the bed - the buried part of a cobble - is not seen: o.bed, the bed's height
+  // (a number or fn(x, z), e.g. fx.ground), lifts every texel to it)
+  if (o.bed != null) {
+    for (let j = 0; j < m; j++) for (let i = 0; i < n; i++) {
+      const u = (i + 0.5) / n - 0.5, v = (j + 0.5) / m - 0.5;
+      const x = F.c[0] + F.x[0] * u * F.w + F.y[0] * v * F.h, z = F.c[2] + F.x[2] * u * F.w + F.y[2] * v * F.h;
+      const b = (typeof o.bed === 'function' ? o.bed(x, z) : o.bed) - F.c[1];
+      const k = j * n + i;
+      if (!(H[k] > b)) H[k] = b;
+    }
+  }
+  // the stone tops and the bed around each texel (max / min filters over `reach`, separable):
+  // a joint is the lowest part of the local relief (a domed cobble's flank is not a joint)
+  const r = Math.max(1, Math.round((o.reach ?? 0.04) / res));
+  const filt = (src, pick, init) => {
+    const tmp = new Float32Array(n * m), out = new Float32Array(n * m);
+    for (let y = 0; y < m; y++) for (let x = 0; x < n; x++) { let b = init; for (let k = Math.max(0, x - r); k <= Math.min(n - 1, x + r); k++) { const v = src[y * n + k]; if (Number.isFinite(v)) b = pick(b, v); } tmp[y * n + x] = b; }
+    for (let y = 0; y < m; y++) for (let x = 0; x < n; x++) { let b = init; for (let k = Math.max(0, y - r); k <= Math.min(m - 1, y + r); k++) { const v = tmp[k * n + x]; if (Number.isFinite(v)) b = pick(b, v); } out[y * n + x] = b; }
+    return out;
+  };
+  const top = filt(H, Math.max, -Infinity), bed = filt(H, Math.min, Infinity);
+  const depth = o.relief ?? 0.006;
+  const D = new Float32Array(n * m);
+  for (let i = 0; i < n * m; i++) {
+    if (!Number.isFinite(H[i])) { D[i] = 1; continue; }
+    if (!Number.isFinite(top[i])) { D[i] = 0; continue; }
+    const rel = Math.max(depth, top[i] - bed[i]);
+    D[i] = smoothstep(0.6, 0.9, (top[i] - H[i]) / rel) * smoothstep(depth * 0.5, depth, top[i] - H[i]);
+  }
+  return mapTexture(D, n, m);
+}
 
 /**
  * A decal effect. o: {
@@ -1057,7 +1257,10 @@ const KIND_LIQUID = { burn: 'burn', scorch: 'soot', char: 'char', wet: 'water' }
  *   grow: [delay, tau] (s) -> uGrow = 1 - e^{-(t - t0 - delay)/tau}  | (t) => 0..1,
  *   dry: number 0..1 | [tStart, tEnd] seconds after t0 | (t) => 0..1,
  *   src: [x, y] metres in decal coords (spatter source / soak start / pool source), throw: [dx, dy] (splat),
- *   down: world gravity (default [0,-1,0]), joints: { cell, width, pattern: 'cobbles'|'flags', depth },
+ *   down: world gravity (default [0,-1,0]), joints (pool; none by default): { mesh: the set's paving
+   (mesh / group / array: its real joints, rasterised from above), res, reach, depth } | { fn(x, z)
+   -> 0..1 } | { map: Texture (decal uv) } | { pattern: 'cobbles'|'flags', cell, width } (procedural,
+   unrelated to the ground: only for a ground that has no geometry of its own),
  *   stamps: [{ x, y, r, t, dir: [dx, dy], el, seed }], params: [x,y,z,w] (kind params), opacity, height
  * }
  */
@@ -1081,7 +1284,7 @@ export class DecalEffect extends Effect {
       uDown: { value: new THREE.Vector2(dl > 0.05 ? dd[0] / dl : 0, dl > 0.05 ? dd[1] / dl : -1) },
       uSrc: { value: new THREE.Vector2(...(o.src || o.throw || [0, 0])) },
       uP: { value: new THREE.Vector4(...p) },
-      uJoint: { value: new THREE.Vector4(o.joints?.cell ?? 0.12, o.joints?.width ?? 0.012, o.joints ? (o.joints.pattern === 'flags' ? 2 : 1) : 0, o.joints?.depth ?? 1) },
+      uJoint: { value: new THREE.Vector4(o.joints?.cell ?? 0.12, o.joints?.width ?? 0.012, jointMode(o.joints), o.joints?.depth ?? 1) },
       uFlowOn: { value: 0 },
       ...liquidUniforms(liquid, o),
     };
@@ -1090,6 +1293,18 @@ export class DecalEffect extends Effect {
       u.uStampB = { value: Array.from({ length: nSt }, () => new THREE.Vector4(1, 0, 0, 0)) };
       u.uNStamps = { value: 0 };
       this.setStamps(o.stamps || [], u);
+    }
+    if (this.kind === 'pool') {
+      // joints: none unless asked for - from the set's own paving (meshes rasterised from above,
+      // or fn(x, z) -> 0..1 on a joint, or a ready map), or the old procedural patterns on request
+      const J = o.joints;
+      let map = null;
+      if (J && (J.mesh || J.meshes || J.target)) map = jointMapFromMeshes(this.F, J.mesh || J.meshes || J.target, { bed: J.bed ?? ((x, z) => fx.ground(x, z) - (J.bedDrop ?? 0.022)), ...J });
+      else if (J && typeof J.fn === 'function') map = jointMapFromFn(this.F, J.fn, J);
+      else if (J?.map) map = J.map;
+      if (J && (J.mesh || J.meshes || J.target || J.fn) && !map) { u.uJoint.value.z = 0; console.warn('[fx] pool: no paving under the pool to take joints from'); }
+      u.uJointMap = { value: map || BLACK_TEX() };
+      this.jointMap = map;
     }
     this.uniforms = u;
     this.growSpec = o.grow ?? def.grow ?? null;
@@ -1101,18 +1316,29 @@ export class DecalEffect extends Effect {
     if (ssrSteps) Object.assign(u, makeLateUniforms(), { dkProjM: { value: new THREE.Matrix4() }, fxdSSR: { value: o.ssrStrength ?? 1 } });
     this.ssr = ssrSteps;
     // geometry on every target (or the ground)
-    const targets = o.target == null ? [null] : Array.isArray(o.target) ? o.target : [o.target];
+    // (a group / an actor's root: every mesh in it, except FX's own decals)
+    const expand = (tg) => {
+      if (!tg || tg.geometry) return [tg];
+      const out = [];
+      tg.traverse((m) => { if (m.isMesh && m.geometry?.attributes?.position && !m.userData.fxDecal && !/^fx-/.test(m.name)) out.push(m); });
+      return out;
+    };
+    const targets = o.target == null ? [null] : (Array.isArray(o.target) ? o.target : [o.target]).flatMap(expand);
     this.meshes = [];
     let tri = 0;
     // coat streams on a mesh follow the surface's own flow (surfaceFlow): explicit rivulets traced
     // down the posed surface (traceStreams), on the first target that has a field
-    const flow = o.flow ?? (this.kind === 'coat' && (p[3] ?? 0) > 0);
+    const settle = this.kind === 'settle';
+    const flow = !settle && (o.flow ?? (this.kind === 'coat' && (p[3] ?? 0) > 0));
     let flowAll = !!flow;
     const results = [];
     for (const tg of targets) {
-      const r = tg ? projectOnMesh(tg, this.F, { ...o, flow, down }) : o.plane ? projectOnPlane(this.F, o.lift ?? 0.003) : projectOnGround(fx, this.F, o.res ?? 24, o.lift ?? 0.004);
+      const r = tg ? projectOnMesh(tg, this.F, { ...o, flow, down, upField: settle, maxAngle: o.maxAngle ?? (settle ? 100 : undefined) })
+        : o.plane ? projectOnPlane(this.F, o.lift ?? 0.003) : projectOnGround(fx, this.F, o.res ?? 24, o.lift ?? 0.004);
       if (!r) continue;
       if (!r.flow) flowAll = false;
+      // (settle on the ground / a plane: it faces up)
+      if (settle && !r.flow) { const n = r.geometry.attributes.position.count; const a = new Float32Array(n * 3); for (let i = 0; i < n; i++) a[i * 3] = 1; r.geometry.setAttribute('aFlow', new THREE.Float32BufferAttribute(a, 3)); }
       results.push([tg, r]);
     }
     let nStr = 0;
@@ -1133,7 +1359,7 @@ export class DecalEffect extends Effect {
         m.renderOrder = (o.renderOrder ?? 3) + order * 0.01;
         m.castShadow = false; m.receiveShadow = order === 2;
         m.frustumCulled = false;
-        m.userData.dkNoVelocity = true;
+        m.userData.dkNoVelocity = true; m.userData.fxDecal = true;
         if (order === 2 && this.ssr && !r.skinned) makeLate(m, u);
         if (r.skinned) {
           // same transform + skeleton as the skin: add next to it
@@ -1150,7 +1376,7 @@ export class DecalEffect extends Effect {
       }
     }
     this.triangles = tri;
-    u.uFlowOn.value = flowAll && this.meshes.length ? 1 : 0;
+    u.uFlowOn.value = (flowAll || settle) && this.meshes.length ? 1 : 0;
     if (!this.meshes.length) console.warn(`[fx] decal ${this.kind}: nothing inside the projector at`, this.F.c);
   }
 
