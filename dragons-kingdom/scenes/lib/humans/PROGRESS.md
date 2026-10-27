@@ -467,7 +467,9 @@ crowd-4k .png + _1920 + 1:1 crops (alex: face, mouth; dlg: remi, abby; cradle: a
 flee, carry).
 - npm test at the end (machine quieter): 44 pass, 1 skipped (no pwsh), 0 fail; selftest-perf all passed.
 - dialogue-draft.mp4 re-rendered after the mouth-interior tint (17 min on the quieter machine), same
-  performance, the open "gold" reads dark-warm inside.
+  performance, the open "gold" reads dark-warm inside. alex-draft.mp4 likewise (14.9 min): at 1.67 s
+  the lower teeth are (121,103,94) (were 120,114,104) and the band under them (72,62,51) (was an olive
+  59,58,45); lip-sync timing unchanged (opens 1.17 s, closes 2.5 s).
 Next (for a successor): a crowd member in the south of the square still
 stands at t 5.2 (late reactor - give the reaction wave a cap); the cradle framing cuts the top of
 Remi's head; the Cling crowd page needs ~5 GB free (the set, not the people) - render it alone.
