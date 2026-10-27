@@ -209,6 +209,23 @@ export function bodyRig(ch) {
   }
   r.ankleH = (r.ankleHL + r.ankleHR) / 2;
   r.legReach = r.hipL.y - r.ankleH;        // standing hip-to-ankle height in the drape
+  // the torso's front surface (clothes included) ahead of spine02 at its height, and its half
+  // width: where an arm held against the body has to go (a child, a slim queen and a stout
+  // villager differ by 10 cm)
+  const sp2 = P('spine02') || r.pelvis.clone().add(new THREE.Vector3(0, 0.2, 0.05));
+  let front = 0.1;
+  for (const m of ch.header.meshes) {
+    if (m.kind !== 'skin' && m.kind !== 'cloth') continue;
+    const mesh = ch.meshes.find((x) => x.name.endsWith(':' + m.name));
+    const pos = mesh?.geometry?.attributes?.position;
+    if (!pos) continue;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+      if (Math.abs(x - sp2.x) < 0.035 && Math.abs(y - sp2.y) < 0.025 && z - sp2.z > front && z - sp2.z < 0.35) front = z - sp2.z;
+    }
+  }
+  r.chestFront = front;
+  r.chestHalfW = 0.39 * r.shoulderL.distanceTo(r.shoulderR);
   ch._bodyRig = r;
   return r;
 }
@@ -536,19 +553,33 @@ export const GESTURES = {
   /** cradle the injured arm (o.side = the HURT arm, default 'L'): the hurt forearm across the belly,
    *  the other hand under it near the wrist, shoulders drawn in */
   cradle(F, o) {
+    // the classic guard of a broken forearm: the hurt upper arm hangs close at the side, the elbow
+    // bent a little past 90 degrees so the forearm lies level across the lower ribs, just clear of
+    // the clothes; the hurt hand hangs limp from the wrist at the far edge of the torso; the good
+    // hand cups the forearm from below between wrist and mid-forearm (palm up, fingers round it);
+    // the hurt shoulder is drawn up and forward. Sizes from the build (bodyRig: chestFront, chestHalfW).
     const hurt = o.side || 'L', good = hurt === 'L' ? 'R' : 'L';
     const sh = hurt === 'L' ? 1 : -1;            // +left for the hurt side
-    const belly = F.pelvis.clone().addScaledVector(F.up, 0.11 + 0.04 * (F.rig.height - 1.5)).addScaledVector(F.fwd, 0.16);
-    // the hurt hand rests by the far hip: the forearm lies level across the stomach
-    const hurtHand = belly.clone().addScaledVector(F.left, -sh * (0.1 + 0.02 * (F.rig.height - 1.5))).add(new THREE.Vector3(0, 0.03, 0)).addScaledVector(F.fwd, -0.03);
-    const tremble = noise1(F.seed + 7, F.t * 7) * 0.004 * (o.tremble ?? 1);
-    hurtHand.y += tremble;
-    const hurtElbow = F.sh[hurt].clone().addScaledVector(F.up, -F.rig.upper * 0.92).addScaledVector(F.fwd, 0.08).addScaledVector(F.left, sh * 0.02);
-    // the good hand cups the hurt forearm from below, a little toward the wrist
-    const fore = hurtHand.clone().lerp(hurtElbow, 0.3).add(new THREE.Vector3(0, -0.05, 0)).addScaledVector(F.fwd, 0.025);
+    const R = F.rig;
+    const hw = R.chestHalfW, fr = R.chestFront + (o.clear ?? 0.045);
+    const lvl = F.chest.clone().addScaledVector(F.up, (o.height ?? 0) - 0.015 * (1 - (o.low ?? 0)) - 0.06 * (o.low ?? 0));
+    const tremble = noise1(F.seed + 7, F.t * 7) * 0.003 * (o.tremble ?? 1);
+    // the hurt wrist: at the far edge of the torso front, a little higher than the elbow
+    const hurtWrist = lvl.clone().addScaledVector(F.fwd, fr + 0.01).addScaledVector(F.left, -sh * hw * 0.55).addScaledVector(F.up, 0.02 + tremble);
+    // where the elbow should go: by the hurt side, under the shoulder, a little forward
+    const elbowAim = lvl.clone().addScaledVector(F.left, sh * (hw + 0.02)).addScaledVector(F.fwd, fr * 0.45);
+    elbowAim.y = F.sh[hurt].y - R.upper * 0.93;
+    const foreDir = hurtWrist.clone().sub(elbowAim).normalize();
+    // the good hand holds the forearm from below 35 % of the way from the wrist like a tray: palm up
+    // under its axis, fingers pointing away from the body (a little toward the elbow) so that their
+    // curl wraps them round the front of the forearm; the wrist sits a palm's length behind
+    const fingersGood = F.fwd.clone().addScaledVector(F.left, sh * 0.55).addScaledVector(F.up, 0.1).normalize();
+    const under = hurtWrist.clone().lerp(elbowAim, 0.35).addScaledVector(F.up, -0.05).addScaledVector(fingersGood, -0.05 * R.height / 1.7);
+    // limp hurt hand: fingers carry on from the forearm and droop ~35 degrees; palm toward the body
+    const droop = foreDir.clone().addScaledVector(F.up, -0.7).normalize();
     return {
-      [hurt]: { hand: hurtHand, pole: hurtElbow.clone().addScaledVector(F.left, sh * 0.25).addScaledVector(F.fwd, -0.1), fingers: F.left.clone().multiplyScalar(-sh).addScaledVector(F.fwd, 0.25).normalize(), palm: F.up.clone().multiplyScalar(-0.2).addScaledVector(F.fwd, -1).normalize(), shape: { curl: [0.35, 0.55, 0.65, 0.72, 0.8], spread: 0.0, thumbIn: 0.3 }, shoulder: { up: 0.025, fwd: 0.02 } },
-      [good]: { hand: fore, pole: F.sh[good].clone().addScaledVector(F.left, -sh * 0.3).add(new THREE.Vector3(0, -0.4, 0)), fingers: F.left.clone().multiplyScalar(sh).addScaledVector(F.fwd, 0.2).normalize(), palm: F.up.clone(), shape: 'grip' },
+      [hurt]: { hand: hurtWrist, pole: elbowAim.clone().addScaledVector(F.left, sh * 0.35).addScaledVector(F.up, -0.2).addScaledVector(F.fwd, -0.15), fingers: droop, palm: F.fwd.clone().multiplyScalar(-1).addScaledVector(F.up, -0.3).normalize(), shape: { curl: [0.25, 0.4, 0.5, 0.55, 0.6], spread: 0.05, thumbIn: 0.2 }, shoulder: { up: 0.016, fwd: 0.02 } },
+      [good]: { hand: under, pole: F.sh[good].clone().addScaledVector(F.left, -sh * 0.35).addScaledVector(F.up, -0.45).addScaledVector(F.fwd, -0.1), fingers: fingersGood, palm: F.up.clone().addScaledVector(F.fwd, -0.1).normalize(), shape: { curl: [0.35, 0.75, 0.82, 0.85, 0.85], spread: 0.0, thumbIn: 0.05 }, shoulder: { fwd: 0.012 } },
     };
   },
   /** both hands up to the face (grief / shock) */

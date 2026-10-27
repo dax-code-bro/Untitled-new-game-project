@@ -75,7 +75,9 @@ export async function setup(ctx) {
   ch.root.updateMatrixWorld(true);
   const eL = ch.bone('eye.L').getWorldPosition(new THREE.Vector3()), eR = ch.bone('eye.R').getWorldPosition(new THREE.Vector3());
   const tgt = eL.add(eR).multiplyScalar(0.5).add(new THREE.Vector3(0, -0.035, 0));
-  const az = 0.42 + 0.5, el = -0.05, dist = 0.95;
+  // from low beside the nest (the hatchling's side), looking up into her lowered face: the eyes and
+  // mouth read while she looks down at it (a level camera saw the top of her bowed head)
+  const az = 0.42 + 0.42, el = -0.24, dist = 0.95;
   S.cam = { pos: new THREE.Vector3(tgt.x + dist * Math.cos(el) * Math.sin(az), tgt.y + dist * Math.sin(el), tgt.z + dist * Math.cos(el) * Math.cos(az)), tgt, focus: dist - 0.02 };
 }
 

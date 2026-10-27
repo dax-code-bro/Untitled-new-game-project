@@ -100,11 +100,15 @@ export function createFacePerformer(ch, data, opts = {}) {
 
   const api = {
     rig, lines, moods, looks, seed,
-    /** Schedule a take: its time 0 plays at t0. opts: { emo, gain (emotion 1), amp (lip amplitude), lookAway (true) } */
+    /**
+     * Schedule a take: its time 0 plays at t0. opts: { emo, gain (emotion 1), amp (lip amplitude),
+     * lookAway (true), window: [a, b] (take seconds: only the words inside play - a part of a split take) }
+     */
     say(id, t0, o = {}) {
-      const rec = data.lines[id];
-      if (!rec) throw new Error(`performance: no lip-sync record for line "${id}" (data/lipsync-s01e01.json)`);
-      const key = `${id}@${t0}`;
+      const full = data.lines[id];
+      if (!full) throw new Error(`performance: no lip-sync record for line "${id}" (data/lipsync-s01e01.json)`);
+      const rec = o.window ? sliceRecord(full, o.window[0], o.window[1]) : full;
+      const key = `${id}@${t0}${o.window ? `[${o.window}]` : ''}`;
       if (lines.some((l) => l.key === key)) return api;
       const ov = LINE_OVERRIDES[id] || {};
       lines.push({ key, id, t0, rec, L: prepareLine(rec), emo: o.emo || lineEmotion(rec, id), gain: o.gain ?? 0.85, amp: o.amp ?? ov.amp ?? 1, whisper: rec.preset === 'whisper', lookAway: o.lookAway ?? !ov.gazeLock, idx: lines.length });
@@ -133,6 +137,26 @@ export function createFacePerformer(ch, data, opts = {}) {
   };
   Object.assign(api, { _eyes: eyes, _head: head, _asym: asym, _opts: opts, _gestures: gestures });
   return api;
+}
+
+/**
+ * The part of a take record between take seconds a and b (a split take: the director places each part
+ * on its own): phones and words that start inside [a, b) - a word cut by the edge belongs to the part
+ * its start is in. Cached on the record.
+ */
+export function sliceRecord(rec, a, b) {
+  if (!(a > 0) && !(b < (rec.dur ?? Infinity))) return rec;
+  if (!rec._slices) Object.defineProperty(rec, '_slices', { value: new Map(), enumerable: false });
+  const key = `${a}:${b}`;
+  let s = rec._slices.get(key);
+  if (!s) {
+    const A = a * 100, B = b * 100;
+    const words = (rec.words || []).filter((w) => w[1] >= A - 1 && w[1] < B);
+    const w0 = words.length ? words[0][1] : A, w1 = words.length ? words[words.length - 1][2] : B;
+    s = { ...rec, ph: (rec.ph || []).filter((p) => p[1] >= w0 - 1 && p[1] < w1), words };
+    rec._slices.set(key, s);
+  }
+  return s;
 }
 
 function moodAt(api, t) {

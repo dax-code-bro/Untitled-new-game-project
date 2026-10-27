@@ -21,7 +21,7 @@
 // (L011, X12-07, NV-1E-04, ...).
 import * as THREE from 'three';
 import { loadFaceUnits } from './face.js';
-import { createFacePerformer, lineEmotion, LINE_OVERRIDES } from './faceperf.js';
+import { createFacePerformer, lineEmotion, LINE_OVERRIDES, SCENE_MOOD } from './faceperf.js';
 import { createBody, carryChild, Trajectory, GESTURES } from './motion.js';
 
 export { lineEmotion, LINE_OVERRIDES, SCENE_MOOD } from './faceperf.js';
@@ -172,18 +172,27 @@ export function directorFace(data, opts = {}) {
     ch._perfByShot = ch._perfByShot || new Map();
     let f = ch._perfByShot.get(shot);
     if (!f) {
-      f = createFacePerformer(ch, data, { role: info.role || ROLE_OF[ch.id], ...(opts.face || {}) });
+      f = createFacePerformer(ch, data, { role: info.role || ROLE_OF[ch.id], seed: shot, ...(opts.face || {}) });
       const role = info.role || ROLE_OF[ch.id] || String(ch.id).toUpperCase();
       for (const p of info.placed || []) {
         if (p.role !== role || !data.lines[p.id]) continue;
-        // shot time of take time 0: at_s is where file_in_s plays
-        f.say(p.id, p.at_s - p.file_in_s, {});
+        // shot time of take time 0: at_s is where file_in_s plays; a part of a split take speaks only
+        // its own words
+        const rec = data.lines[p.id];
+        const whole = !(p.file_in_s > 0.01) && !(p.file_out_s < (rec.dur ?? 0) - 0.01);
+        f.say(p.id, p.at_s - (p.file_in_s || 0), whole ? {} : { window: [p.file_in_s || 0, p.file_out_s ?? rec.dur] });
       }
-      if (info.mood) f.mood(info.mood);
-      if (st?.look?.at != null && env?.point) f.look((tt) => env.point(st.look.at, tt), st.look.t0 ?? -1e9);
+      // everyone in a shot carries the scene's mood (fear in the attack, grief after it) under their lines
+      const scene = String(shot).split('-')[0];
+      const base = info.mood || (SCENE_MOOD[scene] ? Object.fromEntries(Object.entries(SCENE_MOOD[scene]).map(([k, v]) => [k, v * 0.6])) : null);
+      if (base && opts.sceneMood !== false) f.mood(base);
+      // eyes follow the blocking's eye-line (look acts switch it at their own times)
+      // (the state of the frame being posed: poseHuman passes the blocking state for this t)
+      if (env?.point) f.look((tt) => { const s = info.stateAt ? info.stateAt(tt) : f._st; return s?.look?.at != null ? env.point(s.look.at, tt) : null; }, -1e9, { person: false });
       ch._perfByShot.set(shot, f);
       if (ch._perfByShot.size > 8) ch._perfByShot.delete(ch._perfByShot.keys().next().value);
     }
+    f._st = st;
     f.apply(t, {});
   };
 }

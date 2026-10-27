@@ -115,6 +115,7 @@ export function buildCharacter(data, opts = {}) {
     if (mouth && (m.kind === 'skin' || m.name === 'teeth' || m.kind === 'tongue')) {
       g.setAttribute('mdepth', new THREE.BufferAttribute(mouthDepth(g, mouth, m.kind === 'skin'), 1));
     }
+    if (g.attributes.skinIndex && opts.rebind !== false) rebindWorn(g, m, header, bones, index);
     g.computeBoundingSphere();
     const mat = materialFor(m, header, { ...opts, mouthU });
     let mesh;
@@ -155,6 +156,61 @@ export function buildCharacter(data, opts = {}) {
     meta: header.meta || {},
   };
   return ch;
+}
+
+// Worn things never follow a hand that happened to rest on them in the drape pose: the offline
+// skinning gave a belt under a "hand on the belt" pose (and its buckle, purse, scabbard) weights on
+// the hand and forearm bones, so when the performance layer moved that arm the belt tongue stretched
+// to the hand as a long black strap. A braid lying over the shoulder had upper-arm weights (it swung
+// with the arm). At load time (the drape pose is the bind pose, so nothing changes at rest):
+//   worn props: arm / hand weights go to the vertex's other bones (or the nearest torso bone)
+//   hair:       arm weights go to the clavicle of the same side (the shoulder top it lies on)
+const WORN = /^(belt|buckle|pouch|buttons|chain|circlet|sword_|kettle_hat|beltsash)/;
+const ARM = /^(shoulder01|upperarm|lowerarm|wrist|metacarpal|finger|thumb)/;
+const TORSO = /^(root|spine0\d|pelvis\.|neck0\d|head|clavicle\.)/;
+const rebound = new WeakMap();
+function rebindWorn(g, m, header, bones, index) {
+  const worn = m.kind === 'prop' && WORN.test(m.name);
+  const hair = m.kind === 'hair';
+  if (!worn && !hair) return;
+  // the arrays are views into the shared (cached) data: fix them once per data set
+  let done = rebound.get(header);
+  if (!done) { done = new Set(); rebound.set(header, done); }
+  if (done.has(m.name)) return;
+  done.add(m.name);
+  const names = header.bones.map((b) => b.name);
+  const isArm = names.map((n) => ARM.test(n));
+  if (!isArm.some(Boolean)) return;
+  const si = g.attributes.skinIndex.array, sw = g.attributes.skinWeight.array, pos = g.attributes.position.array;
+  const torso = names.map((n, i) => (TORSO.test(n) ? i : -1)).filter((i) => i >= 0);
+  const tp = torso.map((i) => bones[i].getWorldPosition(new THREE.Vector3()));
+  const clav = { L: index['clavicle.L'], R: index['clavicle.R'] };
+  for (let v = 0; v < si.length / 4; v++) {
+    let armW = 0;
+    for (let k = 0; k < 4; k++) if (sw[v * 4 + k] > 0 && isArm[si[v * 4 + k]]) armW += sw[v * 4 + k];
+    if (armW <= 0) continue;
+    if (hair) {
+      for (let k = 0; k < 4; k++) {
+        const b = si[v * 4 + k];
+        if (sw[v * 4 + k] > 0 && isArm[b]) { const c = clav[names[b].endsWith('.L') ? 'L' : 'R']; if (c !== undefined) si[v * 4 + k] = c; }
+      }
+      continue;
+    }
+    const rest = 1 - armW;
+    if (rest > 0.2) {
+      for (let k = 0; k < 4; k++) {
+        if (isArm[si[v * 4 + k]]) sw[v * 4 + k] = 0;
+        else sw[v * 4 + k] /= rest;
+      }
+    } else {
+      // nothing else holds it: the nearest torso bone takes it all
+      const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2];
+      let best = torso[0], bd = 1e9;
+      for (let j = 0; j < torso.length; j++) { const d = (tp[j].x - x) ** 2 + (tp[j].y - y) ** 2 + (tp[j].z - z) ** 2; if (d < bd) { bd = d; best = torso[j]; } }
+      si[v * 4] = best; sw[v * 4] = 1;
+      for (let k = 1; k < 4; k++) { si[v * 4 + k] = 0; sw[v * 4 + k] = 0; }
+    }
+  }
 }
 
 function materialFor(m, header, opts) {

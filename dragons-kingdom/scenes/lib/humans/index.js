@@ -20,9 +20,11 @@
 import * as THREE from 'three';
 import { loadCharacterData, buildCharacter, hashStr } from './loader.js';
 import { applyIdle } from './idle.js';
+import { registerDirectorHooks } from './director.js';
 
 export { loadCharacterData, buildCharacter, CACHE_URL } from './loader.js';
 export { applyIdle, blinkAt } from './idle.js';
+export { registerDirectorHooks, setDirectorHooks } from './director.js';
 
 /** Every built character id, with what it is for (PROVISIONAL looks; see offline/characters.py). */
 export const CAST = {
@@ -51,8 +53,15 @@ export const CAST = {
 export const CROWD = Array.from({ length: 18 }, (_, i) => `crowd${String(i + 1).padStart(2, '0')}`);
 for (const id of CROWD) CAST[id] = 'Festival villager';
 
-/** Load and build one character (cached data; every call returns a new independent instance). */
+/**
+ * Load and build one character (cached data; every call returns a new independent instance).
+ * The first call also registers the performance track's face (lip-sync, emotion, gaze) with the shot
+ * director (director.js; opts.performance === false skips it).
+ */
 export async function loadCharacter(id, opts = {}) {
+  if (opts.performance !== false) {
+    try { await registerDirectorHooks(); } catch (e) { console.warn(`[humans] performance hooks not registered: ${e.message}`); }
+  }
   const ch = buildCharacter(await loadCharacterData(id), opts);
   ch.update = (t, o = {}) => applyIdle(ch, t, { ...(opts.idle || {}), ...o });
   return ch;

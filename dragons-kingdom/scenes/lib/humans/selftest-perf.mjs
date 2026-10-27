@@ -136,6 +136,48 @@ else {
     fn(ch, { look: null }, 1.4, null, { placed, shot: 'test' });
     const jaw = ch.bone('jaw').quaternion.angleTo(ch.drape.q[ch.index.jaw]);
     ok(jaw > 0.005, `directorFace moves the jaw while speaking (${(jaw * 57.3).toFixed(1)} deg)`);
+    // a part of a split take speaks only its own words: L015 cut after "I can" -> silent at "see that"
+    const rec = units.data.lines.L015, ws = rec.words;
+    const cut = ws[1][2] / 100, tSee = (ws[2][1] + ws[2][2]) / 200;
+    const jawAt = (out) => {
+      const c = load('remi'), f = directorFace(units.data);
+      c.update(tSee + 1);
+      f(c, { look: null }, tSee + 1, null, { placed: [{ id: 'L015', role: 'REMI', at_s: 1.0, file_in_s: 0, ...(out ? { file_out_s: out } : {}) }], shot: 'part' });
+      return c.bone('jaw').quaternion.angleTo(c.drape.q[c.index.jaw]);
+    };
+    const jFull = jawAt(null), jPart = jawAt(cut);
+    ok(jPart < jFull * 0.4, `a split take's first part does not speak the second part's words ("see": jaw ${(jPart * 57.3).toFixed(2)} deg, whole take ${(jFull * 57.3).toFixed(2)} deg)`);
+  }
+  // registration with the shot director: loadCharacter() registers 'face'; poseHuman() then lip-syncs
+  {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async (u) => ({ ok: true, json: async () => JSON.parse(fs.readFileSync(fileURLToPath(u))) });
+    let names;
+    try { names = await (await import('./director.js')).registerDirectorHooks(); } finally { globalThis.fetch = realFetch; }
+    const actions = await import('../director/actions.js');
+    const { actorState } = await import('../director/blocking.js');
+    ok(typeof actions.humanAction('face') === 'function', `registerDirectorHooks() registers the director's 'face' action (${names.join(', ') || 'already registered'})`);
+    const ch = load('remi');
+    ch.root.updateMatrixWorld(true);
+    const env = { mark: () => null, point: () => null, ground: () => 0 };
+    const st = actorState({ at: [0, 0], face: 0, acts: [] }, 1.4, env);
+    actions.poseHuman(ch, st, 1.4, env, { role: 'REMI', placed: [{ id: 'L015', role: 'REMI', at_s: 1.0, file_in_s: 0 }], shot: '1A-test' });
+    const jaw = ch.bone('jaw').quaternion.angleTo(ch.drape.q[ch.index.jaw]);
+    ok(jaw > 0.005, `a director shot (poseHuman) lip-syncs a placed take (jaw ${(jaw * 57.3).toFixed(1)} deg)`);
+  }
+  // worn props never follow a hand: no belt / buckle / purse vertex keeps an arm or hand weight
+  {
+    let bad = 0;
+    for (const id of ['abby', 'remi']) {
+      const ch = load(id);
+      const names = ch.bones.map((b) => b.name);
+      for (const m of ch.meshes) {
+        if (!/:(belt|buckle|pouch)$/.test(m.name) || !m.geometry.attributes.skinIndex) continue;
+        const si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight;
+        for (let i = 0; i < si.count; i++) for (let k = 0; k < 4; k++) if (sw.getComponent(i, k) > 0 && /arm|wrist|finger|metacarpal/.test(names[si.getComponent(i, k)])) bad++;
+      }
+    }
+    ok(bad === 0, `worn props (belt, buckle, purse) carry no arm / hand weights (${bad})`);
   }
 }
 console.log(fails ? `${fails} FAILED` : 'all passed');
