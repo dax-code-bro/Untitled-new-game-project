@@ -607,8 +607,8 @@ export const GESTURES = {
     // lighter curl with MakeHuman's splayed rest fingers read as a claw in the 4K still)
     const droop = foreDir.clone().addScaledVector(F.up, -0.7).normalize();
     return {
-      [hurt]: { hand: hurtWrist, pole: elbowAim.clone().addScaledVector(F.left, sh * 0.35).addScaledVector(F.up, -0.2).addScaledVector(F.fwd, -0.15), fingers: droop, palm: F.fwd.clone().multiplyScalar(-1).addScaledVector(F.up, -0.3).normalize(), shape: { curl: [0.3, 0.55, 0.7, 0.8, 0.9], spread: -0.05, thumbIn: 0.25 }, shoulder: { up: 0.016, fwd: 0.02 } },
-      [good]: { hand: under, pole: F.sh[good].clone().addScaledVector(F.left, -sh * 0.35).addScaledVector(F.up, -0.45).addScaledVector(F.fwd, -0.1), fingers: fingersGood, palm: F.up.clone().addScaledVector(F.fwd, -0.1).normalize(), shape: { curl: [0.35, 0.75, 0.82, 0.85, 0.85], spread: 0.0, thumbIn: 0.05 }, shoulder: { fwd: 0.012 } },
+      [hurt]: { hand: hurtWrist, pole: elbowAim.clone().addScaledVector(F.left, sh * 0.35).addScaledVector(F.up, -0.2).addScaledVector(F.fwd, -0.15), fingers: droop, palm: F.fwd.clone().multiplyScalar(-1).addScaledVector(F.up, -0.3).normalize(), shape: { curl: [0.25, 0.42, 0.47, 0.52, 0.58], spread: -0.12, thumbIn: 0.3 }, shoulder: { up: 0.016, fwd: 0.02 } },
+      [good]: { hand: under, pole: F.sh[good].clone().addScaledVector(F.left, -sh * 0.35).addScaledVector(F.up, -0.45).addScaledVector(F.fwd, -0.1), fingers: fingersGood, palm: F.up.clone().addScaledVector(F.fwd, -0.1).normalize(), shape: { curl: [0.35, 0.75, 0.82, 0.85, 0.85], spread: -0.1, thumbIn: 0.05 }, shoulder: { fwd: 0.012 } },
     };
   },
   /** both hands up to the face (grief / shock) */

@@ -203,21 +203,25 @@ function handAxes(ch, side) {
 
 /**
  * Finger shape. shape: { curl: [thumb, index, middle, ring, little] radians per joint (or one
- * number), spread (rad), thumbIn (0..1 across the palm) } or a preset name: 'relaxed', 'open',
- * 'point', 'fist', 'cup', 'grip', 'wave'. amount blends from the current (drape) fingers.
- * The fingers are set from MakeHuman's rest (straight) fingers, then curled - independent of
- * whatever grip the build's drape pose gave the hand.
+ * number), spread (rad: > 0 fans the fingers out, < 0 closes them; 0 = a natural relaxed hand,
+ * index to little finger ~22 deg apart; -0.12 = fingers together), thumbIn (0..1 across the palm) }
+ * or a preset name: 'relaxed', 'open', 'point', 'fist', 'cup', 'grip', 'clutch', 'limp', 'claw',
+ * 'wave'. amount blends from the current (drape) fingers. The fingers are set from MakeHuman's rest
+ * (straight) fingers, then curled - independent of whatever grip the build's drape pose gave the hand.
+ * (MakeHuman's rest hand is splayed ~31 deg index to little finger; until 2026-10-27 the sign was
+ * inverted - a positive spread closed the fingers and 0 left that splay, so a limp hand read as a claw.)
  */
+const SPREAD_REST = 0.12;            // closing applied at spread 0 (the rest splay -> a relaxed hand)
 export const HAND_SHAPES = {
   relaxed: { curl: [0.15, 0.22, 0.32, 0.4, 0.48], spread: 0.03, thumbIn: 0.15 },
   open: { curl: [0.05, 0.04, 0.05, 0.07, 0.09], spread: 0.1, thumbIn: 0.0 },
   wave: { curl: [0.04, 0.03, 0.04, 0.05, 0.07], spread: 0.13, thumbIn: 0.0 },
   point: { curl: [0.45, 0.0, 1.25, 1.35, 1.4], spread: 0.0, thumbIn: 0.55 },
-  fist: { curl: [0.6, 1.35, 1.45, 1.5, 1.5], spread: 0.0, thumbIn: 0.7 },
+  fist: { curl: [0.6, 1.35, 1.45, 1.5, 1.5], spread: -0.1, thumbIn: 0.7 },
   cup: { curl: [0.25, 0.35, 0.42, 0.5, 0.55], spread: 0.02, thumbIn: 0.3 },
-  grip: { curl: [0.5, 0.9, 1.0, 1.05, 1.1], spread: 0.0, thumbIn: 0.5 },
-  clutch: { curl: [0.45, 0.7, 0.8, 0.85, 0.9], spread: 0.0, thumbIn: 0.45 },
-  limp: { curl: [0.2, 0.35, 0.45, 0.55, 0.62], spread: 0.02, thumbIn: 0.2 },
+  grip: { curl: [0.5, 0.9, 1.0, 1.05, 1.1], spread: -0.06, thumbIn: 0.5 },
+  clutch: { curl: [0.45, 0.7, 0.8, 0.85, 0.9], spread: -0.06, thumbIn: 0.45 },
+  limp: { curl: [0.2, 0.35, 0.45, 0.55, 0.62], spread: -0.08, thumbIn: 0.2 },
   claw: { curl: [0.3, 0.75, 0.8, 0.85, 0.9], spread: 0.12, thumbIn: 0.1 },
 };
 export function handShape(ch, side, shape, amount = 1) {
@@ -237,7 +241,7 @@ export function handShape(ch, side, shape, amount = 1) {
   for (let fi = 0; fi < 4; fi++) {
     const f = FINGERS[fi];
     const c = curls[fi + 1];
-    const spread = (s.spread ?? 0) * (fi - 1.2) * (side === 'L' ? 1 : -1);
+    const spread = (SPREAD_REST - (s.spread ?? 0)) * (fi - 1.2) * (side === 'L' ? 1 : -1);
     qs.setFromAxisAngle(ax.palm, spread);
     // base joint curls a little less, the middle joint most
     set(`finger${f}-1`, q.setFromAxisAngle(ax.curl, c * 0.85).premultiply(qs));

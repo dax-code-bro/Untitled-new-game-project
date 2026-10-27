@@ -11,10 +11,16 @@ import * as THREE from 'three';
 import { CACHE_URL } from './loader.js';
 
 const cache = new Map();
+// cache/mouth-index.json (tools/mouthmorphs.py): the ids that have a sidecar - no request (and no 404
+// in the browser console) for the others. Without the index every id is tried.
+let indexP = null;
+const mouthIndex = () => (indexP ||= fetch(CACHE_URL + 'mouth-index.json').then((r) => (r.ok ? r.json() : null)).then((j) => (Array.isArray(j?.ids) ? new Set(j.ids) : null)).catch(() => null));
 /** Fetch a character's mouth-shape sidecar (cached; null when it has none). */
 export function loadMouthShapes(id) {
   if (!cache.has(id)) {
     cache.set(id, (async () => {
+      const ix = await mouthIndex();
+      if (ix && !ix.has(id)) return null;
       const r = await fetch(CACHE_URL + id + '.mouth.json');
       if (!r.ok) return null;
       const meta = await r.json();

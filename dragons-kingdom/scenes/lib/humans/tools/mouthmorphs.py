@@ -139,9 +139,19 @@ def main():
             continue
         if not build_one(kit, cast[cid], units, a.force):
             fails.append(cid)
+    write_index()
     if fails:
         log('FAILED: ' + ', '.join(fails))
         sys.exit(1)
+
+
+def write_index():
+    """cache/mouth-index.json: the ids that have a sidecar (the runtime asks for no other id's sidecar,
+    so characters without one do not log a 404 per load in the browser)."""
+    ids = sorted(f[:-len('.mouth.json')] for f in os.listdir(CACHE) if f.endswith('.mouth.json'))
+    with open(os.path.join(CACHE, 'mouth-index.json'), 'w') as f:
+        json.dump({'ids': ids, 'note': 'written by scenes/lib/humans/tools/mouthmorphs.py'}, f, indent=1)
+    log(f'mouth-index.json: {len(ids)} characters with mouth shapes')
 
 
 if __name__ == '__main__':
