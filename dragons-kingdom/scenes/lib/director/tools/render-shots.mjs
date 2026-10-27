@@ -19,6 +19,8 @@
 //   --redo-on shot|set|core   re-render a finished shot when its own spec changed (shot), also when the set
 //                     builder / cast / defaults changed (set, default), also when the director core changed (core)
 //   --force           re-render even if finished      --dry-run   list what would be rendered
+//   --adopt-v2        give up-to-date finished shots their documentation-free key (staging / deviation text
+//                     edits then never re-render them); shots finished from session 7 on have it already
 //   --reverse         take each set's shots from the last (a second queue meeting the first in the middle)
 //   --stills U,U      render stills at these fractions of each shot instead of videos (PNG + a contact sheet)
 //   --segment N       render + encode a shot in N-frame segments (default 48; 0 = one piece): a crash or a
@@ -93,13 +95,20 @@ async function loadSpec(setId) {
   return m.default;
 }
 
-/** Everything that decides the pictures of one shot, as three keys (see --redo-on). */
+// fields that document a shot without changing its pictures: an edit to them must not re-render it
+const DOC_FIELDS = ['staging', 'deviation', 'cutOk', 'notes', 'about'];
+const docFree = (o) => Object.fromEntries(Object.entries(o || {}).filter(([k]) => !DOC_FIELDS.includes(k)));
+
+/** Everything that decides the pictures of one shot, as three keys (see --redo-on). `shot` keeps its first
+ *  formula (it hashes the documentation text too; older sidecars and running queues compare it), `shotV2`
+ *  leaves the documentation out - a sidecar that has it is compared by it (session 7). */
 function keysFor(setId, spec, row) {
   const s = spec.shots?.[row.job] || {};
   const builderFile = path.join(DIRECTOR, 'sets', `${SETS[setId].builder}.js`);
   const sceneFile = path.join(SCENES, SETS[setId].file);
   return {
     shot: sha1(fnText({ row: { ...row, continuity: row.continuity }, s })),
+    shotV2: sha1(fnText({ v: 2, row: docFree(row), s: docFree(s) })),
     set: sha1(fnText({ cast: spec.cast, homes: spec.homes, defaults: spec.defaults, b: fileHash(builderFile), sc: fileHash(sceneFile), common: fileHash(path.join(DIRECTOR, 'sets/common.js')) })),
     core: coreHash,
     look: { preset: PRESET, cinematic: CINE, twos: TWOS },
@@ -121,7 +130,7 @@ function stale(prev, k) {
   if (!prev) return 'new';
   if (JSON.stringify(prev.handles || { pre: 0, post: 0 }) !== JSON.stringify(k.handles)) return 'handles changed';
   if (JSON.stringify(prev.look) !== JSON.stringify(k.look)) return 'other settings';
-  if (prev.shot !== k.shot) return 'shot spec changed';
+  if (prev.shotV2 ? prev.shotV2 !== k.shotV2 : prev.shot !== k.shot) return 'shot spec changed';
   if (REDO !== 'shot' && prev.set !== k.set) return 'set changed';
   if (REDO === 'core' && prev.core !== k.core) return 'director core changed';
   return null;
@@ -129,6 +138,26 @@ function stale(prev, k) {
 
 const work = { shots: path.join(WORK, 'shots'), stills: path.join(WORK, 'stills') };
 fs.mkdirSync(work.shots, { recursive: true });
+
+// --adopt-v2: give every finished, UP-TO-DATE shot's sidecar its documentation-free key (shotV2), so a later
+// edit of its staging / deviation text does not re-render it. Shots that are stale are left alone.
+if (flag('--adopt-v2')) {
+  let n = 0;
+  for (const tab of tables) {
+    if (SETS_F && !SETS_F.has(tab.set)) continue;
+    const spec = await loadSpec(tab.set);
+    for (const r of tab.shots) {
+      if (ONLY && !ONLY.has(r.job)) continue;
+      const side = path.join(work.shots, `${r.job}.json`), prev = fs.existsSync(path.join(work.shots, `${r.job}.mp4`)) ? readJson(side) : null;
+      if (!prev || prev.shotV2) continue;
+      const k = keysFor(tab.set, spec, r);
+      if (prev.shot !== k.shot || prev.set !== k.set && REDO !== 'shot') { console.log(`  ${r.job}: stale - not adopted`); continue; }
+      fs.writeFileSync(side, JSON.stringify({ ...prev, shotV2: k.shotV2 }, null, 1) + '\n'); n++;
+    }
+  }
+  console.log(`adopt-v2: ${n} sidecar(s) given their documentation-free key`);
+  process.exit(0);
+}
 
 const plan = [];
 for (const tab of tables) {
@@ -261,7 +290,8 @@ async function renderShot(w, set, item) {
     if (order.length - (segs.length - 1) * SEGMENT < SEGMENT / 2 && segs.length > 1) { const last = segs.pop(); segs[segs.length - 1] = segs[segs.length - 1].concat(last); }
     const segFile = (k) => path.join(work.shots, `${r.job}.s${String(k).padStart(3, '0')}.mp4`);
     const manFile = path.join(work.shots, `${r.job}.segs.json`);
-    const want = { keys: item.keys, frames: segs.map((x) => [x[0].frame, x.length]) };
+    const { shotV2: _v2, ...legacyKeys } = item.keys;   // manifests of older runs have no shotV2
+    const want = { keys: legacyKeys, frames: segs.map((x) => [x[0].frame, x.length]) };
     const man = readJson(manFile);
     const same = man && JSON.stringify({ keys: man.keys, frames: man.frames }) === JSON.stringify(want);
     const stale = fs.readdirSync(work.shots).filter((f) => f.startsWith(`${r.job}.s`) && /\.s\d{3}\.mp4/.test(f));
@@ -339,7 +369,7 @@ for (const s of plan) {
           // it, a fresh run renders it (session 7: 1A-30 restaged while two queues held the old spec)
           if (!STILLS) {
             const fresh = await freshKeys(s.set, item.row.job).catch(() => null);
-            if (fresh && (fresh.shot !== item.keys.shot || fresh.set !== item.keys.set)) { console.log(`  [w${i}] ${item.row.job}: its ${fresh.shot !== item.keys.shot ? 'shot spec' : 'set'} changed on disk since this browser loaded the set - skipped (a fresh run renders it)`); continue; }
+            if (fresh && (fresh.shotV2 !== item.keys.shotV2 || fresh.set !== item.keys.set)) { console.log(`  [w${i}] ${item.row.job}: its ${fresh.shotV2 !== item.keys.shotV2 ? 'shot spec' : 'set'} changed on disk since this browser loaded the set - skipped (a fresh run renders it)`); continue; }
           }
           const lock = STILLS ? null : claim(item.row.job);
           if (lock === false) { console.log(`  [w${i}] ${item.row.job}: being rendered by another process, skipped`); continue; }

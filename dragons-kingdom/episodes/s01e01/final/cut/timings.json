@@ -218,13 +218,13 @@
    "measured_at": "2026-10-23T21:33"
   },
   "P-09": {
-   "draft_s_per_frame": 2.904,
+   "draft_s_per_frame": 4.45,
    "frames_drawn": 225,
    "cinematic": "velocity",
    "twos": false,
-   "load": 16.27,
-   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-23T21:35"
+   "load": 15.13,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
+   "measured_at": "2026-10-27T19:09"
   },
   "1A-09": {
    "draft_s_per_frame": 11.134,
@@ -434,13 +434,13 @@
    "measured_at": "2026-10-24T15:05"
   },
   "X2-05": {
-   "draft_s_per_frame": 26.87,
+   "draft_s_per_frame": 24.802,
    "frames_drawn": 60,
    "cinematic": "velocity",
    "twos": false,
-   "load": 20.74,
+   "load": 17.2,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
-   "measured_at": "2026-10-27T04:22"
+   "measured_at": "2026-10-27T19:05"
   },
   "1A-20": {
    "draft_s_per_frame": 10.486,
@@ -680,9 +680,9 @@
    "measured_at": "2026-10-27T18:15"
   },
   "PALACE_CORRIDOR": {
-   "setup_s": 46.9,
+   "setup_s": 20.4,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
-   "measured_at": "2026-10-27T03:36"
+   "measured_at": "2026-10-27T18:40"
   },
   "SEA_COAST_DAWN": {
    "setup_s": 79.7,
@@ -690,9 +690,9 @@
    "measured_at": "2026-10-27T04:24"
   },
   "PROLOGUE_VISTAS": {
-   "setup_s": 106.7,
+   "setup_s": 65.3,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
-   "measured_at": "2026-10-27T11:09"
+   "measured_at": "2026-10-27T18:52"
   },
   "VERDOR_GROUNDS": {
    "setup_s": 99,

@@ -635,11 +635,11 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 2.9,
-    "k4_cpu_s_per_frame": 25.17,
+    "draft_s_per_frame": 4.45,
+    "k4_cpu_s_per_frame": 38.57,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 9.87,
-    "k4_cpu_hours": 1.43,
+    "draft_minutes": 15.13,
+    "k4_cpu_hours": 2.19,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -649,7 +649,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "MEASURED draft 2.9 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
+    "basis": "MEASURED draft 4.45 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: open sea to the horizon, away from the land.",
    "deviation": null,
