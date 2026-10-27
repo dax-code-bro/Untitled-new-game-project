@@ -67,6 +67,26 @@ Fixed (each verified on the cloud CPU, pictures looked at at 1:1):
 - heightAt() on the GPU reads 4 texels per cascade; planner recommends only measured tiers, heavy F5
   check at the recommended tier only; `--tiers all`; tier-check uses the pinned ffmpeg; RUNTIME_VERSION 1.2.0.
 
+Final stays byte-identical (session-2 runtime + library edits vs the session-1 worktree ce50161, same
+frame, same size): cinematic-lookdev f96 velocity 480x272 and hero 320x180, test-kingdom f30,
+cinematic-scene / cinematic-sea-scene fixtures, architecture-cling f84 (with the dkSSR marks). nature-tree
+f24 differs by 64 bytes (max 3 code values) - but it differs between two runs of the SAME code too (84
+bytes, max 2): that scene is not byte-reproducible across browser sessions (pre-existing; the nature /
+runtime owner should look; chunked renders of it may not match at chunk joins by a code value or two).
+
+npm test (end of session 2): 49 tests, 48 pass, 0 fail, 1 skipped (PowerShell). Tier fixture (u1, 320x180,
+every knob incl. the mirror puddle): high SSIM 0.927 / 28.8 dB, ultra 0.875 / 26.0 dB (gate 0.85 / 25 -
+the puddle's reflection and the 16-sub-frame supersampling are most of it); u4 banding 1.721 -> 0.877, crate
+strip 2.836 -> 1.032; u5 rim (12,34,57) -> (21,75,77), water hatching 3.035 -> 3.051.
+
+A/B for the director (480x272, final vs high; images listed in the session report):
+- lookdev coast: high 0.9991 / 49.6 dB (mist 43.8, rocks 42.5, sea 43.5 dB); ultra 0.991 / 38.7 dB (sea and
+  rock edges motion-blurred and supersampled by the 16 sub-frames).
+- F1 prologue (dawn sea): high 0.9997 / 57.5 dB, sun-path crop 55.7 dB (after keeping the fast IBL).
+- F3 flight (dragons over the shallows): high 0.9996 / 54.9 dB, sea crop 48 dB.
+- per knob on the coast at the ultra knob tier: subframes 0.991, volumetrics 0.9993, ocean 0.9999, the rest
+  >= 0.9999; per knob on F1: only ibl mattered (now off).
+
 Observed, not changed (final is the reviewed look):
 - The Cling set (scenes/lookdev/architecture-cling.js) has NaN values in the scene buffer AT FINAL (138 at the
   gate shot t=3.5, across the upper half of the frame; 45 at the fountain, 39 at the Verdor harbour) - not the

@@ -980,8 +980,10 @@ cannot be patched draws nothing in that pass. `userData.dkSSR = false` (material
 pixel by why its ray ended. Screen-space limits apply: only what is on screen can be reflected.
 
 **Checked here** (CPU, SwiftShader; `npm test` `(u0)`-`(u5)`, `runtime/tools/tier-check.mjs`):
-- `final` is untouched: A/B against the runtime before the tiers (git worktree) gives byte-identical
-  frames (lookdev coast velocity and `hero`, test-kingdom, the cinematic test fixtures).
+- `final` is untouched: A/B against the runtime before these changes (git worktree) gives byte-identical
+  frames (lookdev coast velocity and `hero`, test-kingdom, the cinematic test fixtures, the Cling set
+  with its reflection marks). (The nature-tree lookdev differs by a code value or two, but it also
+  differs between two runs of the same code: that scene is not byte-reproducible by itself.)
 - every tier draws the same picture structure as final: 192 x 108 thumbnail SSIM >= 0.85 and
   PSNR >= 25 dB, plus 1:1 crop PSNRs; no NaN/Inf in any float buffer, no extra black/white pixels, no
   shader errors. Lookdev coast at 480x272 (crops: the mist bank, the
@@ -991,10 +993,15 @@ pixel by why its ray ended. Screen-space limits apply: only what is on screen ca
   (`pc/logs/gpu-check-2026-10-27-08-57-03.txt`) had failed exactly here (high 0.813, ultra 0.811 at
   192x108); later runs passed only because the gate had been loosened to 96x54. The one-knob A/B
   traced it to the 512 ocean.
-- one knob at a time (`--knobs all`) on the coast: every knob alone >= 0.99 SSIM; the two that changed
-  the look in the first round (the 512 ocean: SSIM 0.825, sea crop 18 dB; the froxels: mist crop 35 dB)
-  were fixed as described in the table.
-- sea style frames: F1_F3_NUMBERS
+- one knob at a time (`--knobs all --knob-tier ultra`) on the coast: sub-frames SSIM 0.991 (the motion
+  blur and supersampling, as intended), froxels 0.9993 (mist crop 43.6 dB: sharper shafts, same
+  banks), ocean 0.9999 (sea crop 47.9 dB), every other knob >= 0.9999. The two that changed the look
+  in the first round (the 512 ocean: SSIM 0.825, sea crop 18 dB; the froxels: mist crop 35 dB) were
+  fixed as described in the table.
+- sea style frames at 480x272, final vs high: F1 (dawn, the boat, the sun's path on the sea) SSIM
+  0.9997, 57.5 dB, sun-path crop 55.7 dB, same mean luma; F3 (the dragons over the shallows) 0.9996,
+  54.9 dB, sea crop 48 dB. The first round had found F1's sun path dimmed (crop 30 dB): the exact IBL
+  knob alone, which is why the tiers keep the fast IBL.
 - wet surfaces (`--knobs ssr`, architecture lookdev at 480x272): the Cling fountain's basin now reflects
   the pillar base, the rim and the houses instead of the sky map (structure 0.938, 25 dB: the largest
   change any knob makes, shown to the director); the Cling gate and the Verdor quay barely change
