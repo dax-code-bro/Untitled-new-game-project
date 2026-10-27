@@ -28,6 +28,7 @@
 import * as THREE from 'three';
 import * as POST from './post.js';
 import { createCinematic, cinematicFor, LENS_DEFAULTS } from './cinematic/index.js';
+import { tierNameFor, scenePresetOf, qualityFor, applyTierToCinematic } from './lib/quality.js';
 
 export const RUNTIME_VERSION = '1.1.0';   // part of every job fingerprint: bump when pictures change
 
@@ -383,6 +384,32 @@ function makePass(material) {
   return mesh;
 }
 
+// Quality tiers: anisotropic filtering for every mip-mapped texture the scene's materials use
+// (material maps and ShaderMaterial uniforms). Runs after setup(), before the textures are
+// uploaded (a texture already uploaded during setup is uploaded again). Returns a log line.
+const MIP_FILTERS = new Set([THREE.LinearMipmapLinearFilter, THREE.LinearMipmapNearestFilter, THREE.NearestMipmapLinearFilter, THREE.NearestMipmapNearestFilter]);
+function applyAnisotropy(scene, k) {
+  if (!(k > 1)) return [];
+  const seen = new Set();
+  let n = 0;
+  const visit = (v) => {
+    if (!v || !v.isTexture || seen.has(v) || v.isRenderTargetTexture) return;
+    seen.add(v);
+    if (!MIP_FILTERS.has(v.minFilter) || (v.anisotropy || 1) >= k) return;
+    if (!v.generateMipmaps && !(v.mipmaps && v.mipmaps.length) && !v.isCompressedTexture) return;
+    v.anisotropy = k; n++;
+    if (S.renderer.properties.get(v).__webglInit) v.needsUpdate = true;
+  };
+  visit(scene.background); visit(scene.environment);
+  scene.traverse((o) => {
+    for (const m of Array.isArray(o.material) ? o.material : o.material ? [o.material] : []) {
+      for (const v of Object.values(m)) visit(v);
+      if (m.uniforms) for (const u of Object.values(m.uniforms)) { const v = u && u.value; if (Array.isArray(v)) v.forEach(visit); else visit(v); }
+    }
+  });
+  return n ? [`anisotropy x${k} on ${n} texture(s)`] : [];
+}
+
 /**
  * init(cfg) - create renderer, load + set up the scene, build the post chain.
  * cfg = {
@@ -419,6 +446,7 @@ export async function init(cfg) {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.debug.checkShaderErrors = true;
   installShadowCache(renderer);
+  countRenders(renderer);
   const gl = renderer.getContext();
   S.renderer = renderer; S.gl = gl;
 
@@ -445,10 +473,13 @@ export async function init(cfg) {
   // ctx.rng is one stable function whose generator restarts at every reset()
   // of a chunk-warmup scene (so simulations may use it and stay reproducible)
   let rngImpl = guardedRng(seed);
+  // quality tier (runtime/lib/quality.js): 'final' unless the preset (final-high / final-ultra /
+  // final-max) or cfg.quality.tier asks for more. Scenes see a tier preset as 'final'.
+  const tier = tierNameFor(cfg);
   const ctx = {
     THREE, renderer, scene, camera,
     width: W, height: H, renderWidth: RW, renderHeight: RH,
-    fps: cfg.fps, preset: cfg.preset, quality: { shadowMapSize: 2048, shadows: true, detail: 1, ...(cfg.quality || {}) },
+    fps: cfg.fps, preset: scenePresetOf(cfg.preset), quality: qualityFor({ shadowMapSize: 2048, shadows: true, detail: 1, ...(cfg.quality || {}) }, tier),
     meta,
     rng: () => rngImpl(),
     makeRng: (s) => guardedRng((s ^ seed) >>> 0),
@@ -482,6 +513,16 @@ export async function init(cfg) {
   patchShadowFilter(shadowFilter);
   S.shadowFilter = shadowFilter;
   if (!POST.TONE_MAPPINGS.includes(post.toneMapping)) fail(`toneMapping "${post.toneMapping}" not one of ${POST.TONE_MAPPINGS}`);
+
+  // quality tier: sample counts, resolutions and sub-frames of the cinematic stack (after setup(),
+  // which may have changed ctx.cinematic), anisotropic filtering of the scene's textures
+  const tierChanges = ctx.cinematic ? applyTierToCinematic(ctx.cinematic, tier, { warmup: meta.mode === 'chunk-warmup', maxTextureSize: maxTex }) : [];
+  if (ctx.quality.anisotropy > 1) {
+    const maxAniso = renderer.capabilities.getMaxAnisotropy();
+    if (maxAniso > 1) tierChanges.push(...applyAnisotropy(scene, Math.min(ctx.quality.anisotropy, maxAniso)));
+    else tierChanges.push('anisotropy: this GL has no anisotropic filtering (skipped)');
+  }
+  if (tier !== 'final') console.log(`[dk] quality tier ${tier}: ${tierChanges.join('; ') || 'nothing to change in this scene'}`);
 
   // cinematic realism stack (opt-in): it owns its own scene/HDR targets
   const useCin = !!ctx.cinematic;
@@ -559,6 +600,7 @@ export async function init(cfg) {
     meta: { title: meta.title, duration: meta.duration, mode: meta.mode, warmupFrames: meta.warmupFrames },
     toneMapping: post.toneMapping, shadowFilter, setupMs: Math.round(setupMs), assetWaitMs, textures: seenTex.size,
     cinematic: S.cin ? S.cin.features : null,
+    quality: { tier, preset: cfg.preset, scenePreset: ctx.preset, changes: tierChanges },
     initMs: Math.round(performance.now() - t0),
   };
   return S.info;
@@ -580,8 +622,29 @@ function runUpdateAt(time, frame, sub = null) {
   const { ctx, mod } = S;
   ctx.frame = frame; ctx.t = time; ctx.subframe = sub;
   updateSerial++;
+  const t0 = performance.now();
   inUpdate = true;
-  try { mod.update(time, ctx); } finally { inUpdate = false; ctx.subframe = null; }
+  try { mod.update(time, ctx); } finally { inUpdate = false; ctx.subframe = null; FS.updates++; FS.updateMs += performance.now() - t0; }
+}
+
+// ------------------------------------------------------- work counters --
+// Per frame: every renderer.render() call (scene passes incl. their shadow maps, full-screen
+// passes), draw calls, triangles, full-screen pixels, update() calls and their CPU time. The
+// quality tiers' cost model (runtime/lib/quality.js) and runtime/tools/tier-check.mjs read them
+// through dk.frameStats(). Counting does not change any picture.
+const newFrameStats = () => ({ renders: 0, sceneRenders: 0, fullscreen: 0, fsPixels: 0, scenePixels: 0, calls: 0, sceneCalls: 0, triangles: 0, updates: 0, updateMs: 0 });
+let FS = newFrameStats();
+function countRenders(renderer) {
+  const render = renderer.render;
+  renderer.render = function dkCountedRender(scene, camera) {
+    const r = render.call(this, scene, camera);
+    const i = renderer.info.render, t = renderer.getRenderTarget();
+    const px = t ? t.width * t.height : 0;
+    FS.renders++; FS.calls += i.calls; FS.triangles += i.triangles;
+    if (scene && scene.isMesh && scene.geometry === S.fsGeom) { FS.fullscreen++; FS.fsPixels += px; }
+    else { FS.sceneRenders++; FS.sceneCalls += i.calls; FS.scenePixels += px; }
+    return r;
+  };
 }
 // ctx.lens.focalLength (dk/camera.js) also works without the cinematic stack
 function applyLensBasic() {
@@ -597,8 +660,9 @@ async function stepScene(frame, heartbeat) {
   const run = (f) => {
     ctx.frame = f; ctx.t = f / fps;
     updateSerial++;
+    const t0 = performance.now();
     inUpdate = true;
-    try { mod.update(ctx.t, ctx); } finally { inUpdate = false; }
+    try { mod.update(ctx.t, ctx); } finally { inUpdate = false; FS.updates++; FS.updateMs += performance.now() - t0; }
   };
   if (meta.mode === 'chunk-warmup') {
     if (frame <= S.simFrame) fail(`chunk-warmup scene asked to go back in time (${frame} <= ${S.simFrame}); frames must be rendered in order after reset`);
@@ -1085,9 +1149,11 @@ export async function renderFrames(opts) {
       if (firstError) throw firstError;
       const f = frames[i];
       const tu = performance.now();
+      FS = newFrameStats();
       await stepScene(f, sock.heartbeat);
       const tu1 = performance.now();
       const { timing } = renderPipeline(capture);
+      S.frameStats = { frame: f, ...FS, updateMs: Math.round(FS.updateMs * 10) / 10, cpuMs: Math.round((performance.now() - tu) * 10) / 10 };
       const read = startReadback(capture, getBuffer(i % poolSize, bytes), i % 2);
       const tr0 = performance.now();
       let tr1 = tr0, ts1 = tr0;
@@ -1123,5 +1189,20 @@ export async function renderFrames(opts) {
 }
 
 export function info() { return S.info; }
+/** Work counters of the last rendered frame (see countRenders) + the active quality tier and cinematic settings. */
+export function frameStats() {
+  const c = S.cin?.c;
+  return {
+    ...(S.frameStats || {}), tier: S.info?.quality?.tier ?? 'final', width: S.cfg.width, height: S.cfg.height,
+    renderWidth: S.cfg.renderWidth ?? S.cfg.width, renderHeight: S.cfg.renderHeight ?? S.cfg.height,
+    cinematic: c ? {
+      mode: S.cin.mode, subframes: S.cin.mode === 'accumulate' ? c.motionBlur.accumulateSamples : 1, mbSamples: c.motionBlur.samples,
+      cascades: S.cin.csm ? S.cin.csm.N : 0, cascadeMapSize: S.cin.csm ? S.cin.csm.size : 0,
+      ao: S.cin.ao ? { resolution: c.ao.resolution ?? 0.5, slices: c.ao.slices, steps: c.ao.steps, contactSteps: c.ao.contactSteps } : null,
+      dof: c.dof.enabled ? c.dof.samples : 0, fog: S.cin.volumetrics ? S.cin.volumetrics.grid : null, fogSoft: (c.volumetrics.shadowSoftness || 0) > 0,
+      ibl: c.ibl, ssr: c.ssr?.enabled ? { steps: c.ssr.steps, objects: S.cin.ssr?.count ?? 0 } : null, late: S.cin.late?.length ?? 0,
+    } : null,
+  };
+}
 /** Cinematic stack: NaN/Inf/range of its float buffers after the last frame (null without the stack). */
 export function debugCinematic() { return S.cin ? S.cin.debugStats() : null; }

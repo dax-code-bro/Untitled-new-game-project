@@ -1,5 +1,6 @@
 // Depth pre-pass + GTAO (ground-truth ambient occlusion) + screen-space
-// contact shadows, at half resolution, then an edge-aware 4x4 denoise.
+// contact shadows, at half resolution (full with ao.resolution = 1, the quality
+// tiers above final), then an edge-aware 4x4 denoise.
 // The result is read by every lit material during the main pass
 // (materials.js): AO darkens only the indirect light, contact shadows only
 // the sun.
@@ -16,14 +17,15 @@ import { raw, COMMON } from './passes.js';
 
 // half-res linear view z (one full-res depth texel per half-res pixel): better
 // cache locality and no per-tap linearisation in GTAO / contact shadows
-function makeDepthDownMaterial() {
+// (scale 2: half resolution, the default; 1: full resolution - ao.resolution = 1, quality tiers)
+function makeDepthDownMaterial(scale = 2) {
   return raw(/* glsl */ `
 ${COMMON}
 uniform highp sampler2D tDepth;
 uniform float uNear, uFar;
 out vec4 o;
 void main() {
-  float d = texelFetch(tDepth, ivec2(gl_FragCoord.xy) * 2, 0).r;
+  float d = texelFetch(tDepth, ivec2(gl_FragCoord.xy)${scale === 2 ? ' * 2' : ''}, 0).r;
   o = vec4(d >= 0.999999 ? 1e9 : viewZ(d, uNear, uFar), 0.0, 0.0, 1.0);
 }`, { tDepth: { value: null }, uNear: { value: 0.1 }, uFar: { value: 1000 } });
 }
@@ -177,13 +179,14 @@ export class AmbientOcclusion {
     this.RW = RW; this.RH = RH;
     this.preRT = new THREE.WebGLRenderTarget(RW, RH, { type: THREE.UnsignedByteType, depthBuffer: true, stencilBuffer: false, generateMipmaps: false });
     this.preRT.depthTexture = new THREE.DepthTexture(RW, RH, THREE.FloatType);
-    const HW = Math.ceil(RW / 2), HH = Math.ceil(RH / 2);
+    this.full = c.resolution === 1;
+    const HW = this.full ? RW : Math.ceil(RW / 2), HH = this.full ? RH : Math.ceil(RH / 2);
     const mk = (type, linear) => new THREE.WebGLRenderTarget(HW, HH, { type, depthBuffer: false, stencilBuffer: false, generateMipmaps: false, minFilter: linear ? THREE.LinearFilter : THREE.NearestFilter, magFilter: linear ? THREE.LinearFilter : THREE.NearestFilter });
     this.zRT = new THREE.WebGLRenderTarget(HW, HH, { type: THREE.FloatType, format: THREE.RedFormat, depthBuffer: false, stencilBuffer: false, generateMipmaps: false, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
     this.aoRT = mk(THREE.FloatType, false);
     this.outRT = mk(THREE.UnsignedByteType, true);
     this.pass = {
-      zdown: this.h.makePass(makeDepthDownMaterial()),
+      zdown: this.h.makePass(makeDepthDownMaterial(this.full ? 1 : 2)),
       gtao: this.h.makePass(makeGtaoMaterial(Math.max(1, c.slices | 0), Math.max(1, c.steps | 0))),
       denoise: this.h.makePass(makeDenoiseMaterial()),
     };
@@ -238,7 +241,7 @@ export class AmbientOcclusion {
     const e = camera.projectionMatrix.elements;
     u.uTan.value.set(1 / e[0], 1 / e[5]);
     u.uProj.value.copy(camera.projectionMatrix);
-    u.uRadius.value = c.radius; u.uMaxRadiusPx.value = c.maxRadiusPx * this.RW * 0.5; u.uPower.value = c.intensity;
+    u.uRadius.value = c.radius; u.uMaxRadiusPx.value = c.maxRadiusPx * this.RW * (this.full ? 1 : 0.5); u.uPower.value = c.intensity;
     const contact = c.contactShadows && sunWorld;
     u.uContactOn.value = contact ? 1 : 0;
     if (contact) {

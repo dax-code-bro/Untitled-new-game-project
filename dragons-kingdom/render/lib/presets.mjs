@@ -3,6 +3,7 @@
 // final-fast, which upscales in-shader). Defaults chosen from measurements on
 // a 4-core CPU-only box, see README "Measured speeds".
 import os from 'node:os';
+import { TIER_PRESETS, TIERS } from '../../runtime/lib/quality.js';
 
 export const PRESETS = {
   draft: {
@@ -25,7 +26,22 @@ export const PRESETS = {
     quality: { shadowMapSize: 4096, detail: 1 },
     crf: 16, x264Preset: 'fast',
   },
+  // The final preset (native 3840x2160, every frame) at a higher quality TIER for a big GPU
+  // (Daxtyn's RTX 4090): more work per pixel, the same picture content. runtime/lib/quality.js
+  // lists every knob; render/gpu-check.mjs measures them and recommends one. Scenes see
+  // ctx.preset === 'final' (and ctx.quality.tier). Opt-in only: nothing else changes.
+  //   final-high   every GPU knob up (4096 cascades, full-res GTAO, 2x froxels, SSR, x16 aniso, ...), velocity motion blur
+  //   final-ultra  final-high + 16 real sub-frames per frame (true motion blur / supersampling / penumbrae)
+  //   final-max    final-high + 32 sub-frames, densest settings
+  ...Object.fromEntries(Object.entries(TIER_PRESETS).map(([name, tier]) => [name, {
+    width: 3840, height: 2160, aa: 'fxaa',
+    quality: { shadowMapSize: 4096, detail: 1, tier },
+    crf: 16, x264Preset: 'fast', tier, about: TIERS[tier].label,
+  }])),
 };
+
+/** The quality tier a resolved preset renders at ('final' for the plain presets). */
+export const presetTier = (p) => p?.quality?.tier ?? p?.tier ?? 'final';
 
 export const AA_MODES = ['none', 'fxaa', 'fxaa-hq', 'msaa2', 'msaa4', 'msaa8'];
 

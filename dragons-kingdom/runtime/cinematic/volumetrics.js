@@ -12,6 +12,7 @@
 // a pure function of t (the noise drifts with t * wind).
 import * as THREE from 'three';
 import { raw, COMMON } from './passes.js';
+import { froxelAtlas } from '../lib/quality.js';
 
 const MAX_BANKS = 8;
 
@@ -81,7 +82,10 @@ export function makeCloudTexture(seed = 3) {
   return t;
 }
 
-function makeInjectMaterial(soft = false, noiseLod = false) {
+// Atlas layout: slices stacked in columns of ROWS slices (one column = the original layout, kept
+// bit-identical; quality tiers above final use several columns for grids taller than the GPU's
+// texture limit: runtime/lib/quality.js froxelAtlas()). Slice s sits in column s / ROWS, row s % ROWS.
+function makeInjectMaterial(soft = false, noiseLod = false, tiles = null, softTaps = 16) {
   return raw(/* glsl */ `
 ${COMMON}
 ${THREE.ShaderChunk.packing}
@@ -123,13 +127,13 @@ float shadowAt(sampler2D m, mat4 M, vec3 p) {
   // soft shadow lookup (volumetrics.shadowSoftness metres): a 16-tap disk in the light's
   // frame, so a thin caster's shadow column fades smoothly across froxels and slices
   float acc = 0.0;
-  for (int i = 0; i < 16; i++) {
-    float a = float(i) * 2.39996323, r = sqrt((float(i) + 0.5) / 16.0);
+  for (int i = 0; i < DK_VOL_SOFT_TAPS; i++) {
+    float a = float(i) * 2.39996323, r = sqrt((float(i) + 0.5) / float(DK_VOL_SOFT_TAPS));
     vec2 o = vec2(cos(a), sin(a)) * r * uShadowSoftUV;
     float d = unpackRGBAToDepth(texture(m, s.xy + o));
     acc += s.z - uShadowBias <= d ? 1.0 : 0.0;
   }
-  return acc / 16.0;
+  return acc / float(DK_VOL_SOFT_TAPS);
 #else
   float d = unpackRGBAToDepth(texture(m, s.xy));
   return s.z - uShadowBias <= d ? 1.0 : 0.0;
@@ -138,8 +142,16 @@ float shadowAt(sampler2D m, mat4 M, vec3 p) {
 void main() {
   ivec2 ip = ivec2(gl_FragCoord.xy);
   int Y = int(uGrid.y);
+#ifdef DK_VOL_TILED
+  int X = int(uGrid.x);
+  int col = ip.x / X, row = ip.y / Y;
+  int slice = col * DK_VOL_ROWS + row;
+  if (slice >= int(uGrid.z)) { o = vec4(0.0, 0.0, 0.0, 1.0); return; }
+  vec2 uv = (vec2(ip.x - col * X, ip.y - row * Y) + 0.5) / uGrid.xy;
+#else
   int slice = ip.y / Y;
   vec2 uv = (vec2(ip.x, ip.y - slice * Y) + 0.5) / uGrid.xy;
+#endif
   vec4 w = uInvViewProj * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
   vec3 dir = normalize(w.xyz / w.w - uCamPos);
   float lr = log(uRange.y / uRange.x);
@@ -203,25 +215,36 @@ void main() {
     tCloud: { value: null }, uCloud: { value: new THREE.Vector4(0.5, 0.2, 0.8, 1500) }, uCloudXf: { value: new THREE.Vector4(0.001, 0, 0, 0) },
     tAmbient: { value: null }, uAmbient: { value: new THREE.Vector3(0.3, 0.35, 0.42) }, uAmbientFromSky: { value: 0 },
     uIntensity: { value: 1 },
-  }, { ...(soft ? { DK_VOL_SOFT: 1 } : {}), ...(noiseLod ? { DK_VOL_NOISE_LOD: 1 } : {}) });
+  }, { ...(soft ? { DK_VOL_SOFT: 1, DK_VOL_SOFT_TAPS: softTaps } : {}), ...(noiseLod ? { DK_VOL_NOISE_LOD: 1 } : {}), ...(tiles ? { DK_VOL_TILED: 1, DK_VOL_ROWS: tiles.rows } : {}) });
 }
 
-function makeScanMaterial() {
+function makeScanMaterial(tiles = null) {
   return raw(/* glsl */ `
 uniform sampler2D tSrc;
 uniform int uOffset;     // slices
 uniform int uY;
+uniform int uX, uZ;      // (tiled atlas only)
 out vec4 o;
 void main() {
   ivec2 ip = ivec2(gl_FragCoord.xy);
   vec4 b = texelFetch(tSrc, ip, 0);
+#ifdef DK_VOL_TILED
+  int col = ip.x / uX, row = ip.y / uY;
+  int slice = col * DK_VOL_ROWS + row;
+  if (slice >= uOffset && slice < uZ) {
+    int prev = slice - uOffset, pc = prev / DK_VOL_ROWS, pr = prev - pc * DK_VOL_ROWS;
+    vec4 a = texelFetch(tSrc, ivec2(ip.x - col * uX + pc * uX, ip.y - row * uY + pr * uY), 0);   // the medium in front
+    b = vec4(a.rgb + a.a * b.rgb, a.a * b.a);
+  }
+#else
   int slice = ip.y / uY;
   if (slice >= uOffset) {
     vec4 a = texelFetch(tSrc, ip - ivec2(0, uOffset * uY), 0);   // the medium in front
     b = vec4(a.rgb + a.a * b.rgb, a.a * b.a);
   }
+#endif
   o = b;
-}`, { tSrc: { value: null }, uOffset: { value: 1 }, uY: { value: 1 } });
+}`, { tSrc: { value: null }, uOffset: { value: 1 }, uY: { value: 1 }, uX: { value: 1 }, uZ: { value: 1 } }, tiles ? { DK_VOL_TILED: 1, DK_VOL_ROWS: tiles.rows } : {});
 }
 
 export class Volumetrics {
@@ -230,12 +253,16 @@ export class Volumetrics {
   init(cloudTex) {
     const [X, Y, Z] = this.c.resolution;
     this.grid = [X, Y, Z];
-    const mk = () => new THREE.WebGLRenderTarget(X, Y * Z, { type: THREE.FloatType, depthBuffer: false, stencilBuffer: false, generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, wrapS: THREE.ClampToEdgeWrapping, wrapT: THREE.ClampToEdgeWrapping });
+    const maxTex = this.h.gl.getParameter(this.h.gl.MAX_TEXTURE_SIZE);
+    const at = froxelAtlas(this.grid, maxTex);
+    if (!at) throw new Error(`cinematic.volumetrics.resolution ${X}x${Y}x${Z} does not fit a ${maxTex} texture`);
+    this.tiles = at.cols > 1 ? at : null;     // one column: the original layout
+    const mk = () => new THREE.WebGLRenderTarget(at.width, at.height, { type: THREE.FloatType, depthBuffer: false, stencilBuffer: false, generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, wrapS: THREE.ClampToEdgeWrapping, wrapT: THREE.ClampToEdgeWrapping });
     this.rtA = mk(); this.rtB = mk();
     this.noise = makeNoise3D();
     if (this.c.noiseFilter) { this.noise.generateMipmaps = true; this.noise.minFilter = THREE.LinearMipmapLinearFilter; this.noise.needsUpdate = true; }
     this.cloudTex = cloudTex;
-    this.pass = { inject: this.h.makePass(makeInjectMaterial((this.c.shadowSoftness || 0) > 0, !!this.c.noiseFilter)), scan: this.h.makePass(makeScanMaterial()) };
+    this.pass = { inject: this.h.makePass(makeInjectMaterial((this.c.shadowSoftness || 0) > 0, !!this.c.noiseFilter, this.tiles, Math.max(1, this.c.softTaps | 0 || 16))), scan: this.h.makePass(makeScanMaterial(this.tiles)) };
     return this;
   }
 
@@ -290,7 +317,7 @@ export class Volumetrics {
     let src = this.rtA, dst = this.rtB;
     const su = this.pass.scan.material.uniforms;
     for (let off = 1; off < Z; off *= 2) {
-      su.tSrc.value = src.texture; su.uOffset.value = off; su.uY.value = Y;
+      su.tSrc.value = src.texture; su.uOffset.value = off; su.uY.value = Y; su.uX.value = X; su.uZ.value = Z;
       this.h.drawPass(this.pass.scan, dst);
       [src, dst] = [dst, src];
     }
@@ -311,5 +338,6 @@ export class Volumetrics {
     u.tVol.value = this.result.texture;
     u.uVolGrid.value.set(...this.grid);
     u.uVolRange.value.set(this.c.near, this.c.range);
+    if (u.uVolTiles) u.uVolTiles.value.set(this.tiles ? this.tiles.cols : 1, this.tiles ? this.tiles.rows : this.grid[2]);
   }
 }

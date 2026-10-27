@@ -8,6 +8,10 @@
 export const CINEMATIC_DEFAULTS = {
   aa: 'fxaa',                       // 'fxaa' (fused into the motion-blur pass) | 'none'
   debug: null,                      // show an internal buffer: 'ao' | 'contact' | 'velocity' | 'coc' | 'depth' | 'dof' | 'bloom' | 'scene' | 'fog'
+  lateLights: false,                // true: the scene's lights also light the late-pass objects (the FFT ocean: sun glitter,
+                                    // sun-lit foam, sun shadows on the water). Off by default: three only lights an object with
+                                    // lights on the camera's layers, so the late pass has been unlit by the sun so far and the
+                                    // existing sea shots were reviewed that way (runtime/PROGRESS.md)
   ibl: 'fast',                      // 'fast': environment light from baked spherical harmonics + a mip-mapped equirect
                                     // (one tap instead of two PMREM lookups per pixel) | 'exact': three.js' PMREM lookups
   motionBlur: {
@@ -28,6 +32,7 @@ export const CINEMATIC_DEFAULTS = {
     enabled: true,                  // GTAO on the indirect (sky/ambient) light only - needs a depth pre-pass
     radius: 1.0,                    // metres
     intensity: 1.0,
+    resolution: 0.5,                // 0.5: GTAO + contact shadows at half resolution; 1: full resolution (quality tiers above final)
     slices: 3, steps: 6,            // per half-res pixel: 3 directions x 2 sides x 6 steps
     maxRadiusPx: 0.035,             // fraction of width: limits the screen radius of close objects
     contactShadows: true,           // short screen-space shadow rays toward the sun (detail the shadow map misses)
@@ -80,9 +85,20 @@ export const CINEMATIC_DEFAULTS = {
     sunShadows: true,               // use the sun's shadow map (god rays through trees, castles, wings)
     noiseFilter: false,             // true: mip-mapped density noise, filtered to each froxel's size (no blocky aliasing in distant banks)
     shadowSoftness: 0,              // metres: > 0 = soft 16-tap shadow lookup in the fog (smooth shafts from thin casters; 0 = one tap)
+    softTaps: 16,                   // taps of that soft lookup (quality tiers above final: 32)
     cloudShadows: null,             // { coverage: 0.5, scale: 0.0012, altitude: 1500, speed: [8, 0], softness: 0.25, surfaces: true }
     ambient: null,                  // ambient (sky) radiance for in-scattering; default: from the sky or [0.3,0.35,0.42]*sun
     intensity: 1.0,
+  },
+  ssr: {
+    enabled: false,                 // screen-space reflections on wet / glossy surfaces (quality tiers above final turn it on):
+                                    // opaque Standard/Physical materials with roughness <= maxRoughness, and every material marked
+                                    // material.userData.dkSSR = true (false: never), are drawn once more in the late pass and get
+                                    // the reflected scene instead of the sky map where a ray hits (runtime/cinematic/ssr.js)
+    steps: 32,                      // ray-march steps (with a growing step length) + 4 refinement steps
+    maxRoughness: 0.35,             // GGX roughness above which a surface gets no SSR (fades out from 60% of it)
+    thickness: 0.35,                // metres a ray may pass behind a surface and still count as a hit (+2% of the distance)
+    maxDistance: 250,               // metres a reflected ray travels at most
   },
   bloom: {
     intensity: 0.012,               // lens veiling glare: share of light spread into a wide halo (1-3% for real cine lenses)
@@ -173,7 +189,8 @@ export function validateCinematic(c) {
   if (!(c.shadows.cascades >= 0 && c.shadows.cascades <= 4)) throw new Error('cinematic.shadows.cascades must be 0..4');
   const r = c.volumetrics.resolution;
   if (!(Array.isArray(r) && r.length === 3 && r.every((x) => Number.isInteger(x) && x >= 4))) throw new Error('cinematic.volumetrics.resolution must be [x, y, slices]');
-  if (r[1] * r[2] > 8192) throw new Error('cinematic.volumetrics.resolution: y * slices must be <= 8192 (texture limit)');
+  if (r[0] * r[1] * r[2] > 6.5e6) throw new Error('cinematic.volumetrics.resolution: at most 6.5 million froxels');
+  if (!(c.ao.resolution === 0.5 || c.ao.resolution === 1)) throw new Error('cinematic.ao.resolution must be 0.5 (half) or 1 (full)');
   return c;
 }
 

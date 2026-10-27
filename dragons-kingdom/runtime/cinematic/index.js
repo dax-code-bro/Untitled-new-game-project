@@ -27,6 +27,7 @@ import { CascadedShadows } from './shadows.js';
 import { Atmosphere } from './atmosphere.js';
 import { Volumetrics, makeCloudTexture } from './volumetrics.js';
 import { EnvBake } from './envbake.js';
+import { SurfaceSSR } from './ssr.js';
 import { sensorSize, focalLengthFromFov, cocScale, exposureMultiplier, exposureTime, LENS_DEFAULTS } from '../lib/camera.js';
 import { parseCube } from '../lib/lut.js';
 import { bakeGradeLut, LUT_SIZE, SHAPER_MIN_EV, SHAPER_MAX_EV } from './colorlut.js';
@@ -159,6 +160,8 @@ export class Cinematic {
     this.patchOn = !!(this.ao || this.csm || clouds || fastIBL);
     this.collectLate();
     if (this.patchOn) this.patcher.patchScene(this.h.scene);
+    // screen-space reflections on wet / glossy surfaces (late pass; the quality tiers turn it on)
+    if (c.ssr?.enabled) { this.ssr = new SurfaceSSR(this.h, this); this.ssr.collect(this.h.scene); }
 
     // ---- passes
     const mk = (m) => this.h.makePass(m);
@@ -196,10 +199,11 @@ export class Cinematic {
   rebuildVariants(force = false) {
     const c = this.c;
     const mbVel = this.mode === 'velocity';
-    const resolveKey = JSON.stringify({ mb: mbVel, atmo: !!this.atmoActive, vol: !!this.volActive });
+    const volTiled = !!this.volumetrics?.tiles;
+    const resolveKey = JSON.stringify({ mb: mbVel, atmo: !!this.atmoActive, vol: !!this.volActive, ...(volTiled ? { volTiled } : {}) });
     if (force || resolveKey !== this.resolveKey) {
       this.pass.resolve?.material.dispose();
-      this.pass.resolve = this.h.makePass(P.makeResolveMaterial({ mb: mbVel, atmo: !!this.atmoActive, vol: !!this.volActive }));
+      this.pass.resolve = this.h.makePass(P.makeResolveMaterial({ mb: mbVel, atmo: !!this.atmoActive, vol: !!this.volActive, volTiled }));
       this.resolveKey = resolveKey;
     }
     const mbKey = JSON.stringify({ mb: mbVel, fxaa: c.aa === 'fxaa' });
@@ -233,6 +237,7 @@ export class Cinematic {
       preset: c.preset, motionBlur: this.mode, aa: this.mode === 'accumulate' ? `jitter x${c.motionBlur.accumulateSamples}` : c.aa,
       dof: c.dof.enabled, bloom: c.bloom.intensity, grade: `${c.grade.toneMapping}/${c.grade.look}${this.lut ? ' + LUT' : ''}`,
       grain: c.grain.amount, ao: !!this.ao, atmosphere: !!this.atmoActive, volumetrics: !!this.volActive,
+      ...(this.ssr ? { ssr: `${this.ssr.steps} steps, ${this.ssr.count} object(s)` } : {}),
     };
   }
 
@@ -432,7 +437,7 @@ export class Cinematic {
     }
 
     // ---- final: camera + grade + lens
-    if (c.debug) return this.drawDebug(c.debug, { velDepth, dofOn });
+    if (c.debug && c.debug !== 'ssr') return this.drawDebug(c.debug, { velDepth, dofOn });   // ('ssr': the SSR pass draws its own debug colours, ssr.js)
     this.setFinalUniforms({ sharp, depthSrc, cocK, focus, maxCoc, dofOn, frame });
     h.drawPass(this.pass.final, this.finalRT);
     mark('final', this.finalRT);
@@ -555,7 +560,9 @@ export class Cinematic {
         noCache = true;
       }
       this.prepareLighting();
+      this.subIndex = i;
       this.renderSceneAndLate(this.sceneRT, { noShadowCache: noCache });
+      this.subIndex = 0;
       if (sunSave) { sun.position.copy(sunSave.pos); sun.target.position.copy(sunSave.tgt); sun.updateMatrixWorld(); }
       camera.updateProjectionMatrix();
       au.tSrc.value = this.sceneRT.texture; au.uWeight.value = 1 / N;
@@ -576,6 +583,7 @@ export class Cinematic {
     const { camera, scene } = this.h;
     camera.updateMatrixWorld();
     if (this.csm) this.csm.update();
+    if (this.ssr) this.ssr.collect(scene);          // before the main pass: both program variants from the first frame
     if (!this.patchOn) return;
     this.patcher.patchScene(scene);                 // materials created after setup
     const u = this.patcher.uniforms;
@@ -612,7 +620,8 @@ export class Cinematic {
     const h = this.h, { renderer, scene, camera, gl } = h;
     h.renderScene(target, opts);
     const late = this.collectLate();
-    if (!late.length) return;
+    const ssr = !!(this.ssr && this.ssr.list.length);
+    if (!late.length && !ssr) return;
     mark?.('scene', target);
     if (!this.lateDepthRT) {
       this.lateDepthRT = rt(this.RW, this.RH, { depth: true, depthTexture: true, type: THREE.UnsignedByteType });
@@ -631,6 +640,11 @@ export class Cinematic {
     blit(this.lateColorRT, gl.COLOR_BUFFER_BIT);
     renderer.state.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
     mark?.('late-copy', this.lateColorRT);
+    if (ssr) {
+      this.ssr.render(target, this.lateColorRT, this.lateDepthRT);
+      mark?.('ssr', target);
+      if (!late.length) return;
+    }
     for (const o of late) {
       const u = o.userData.dkOcean?.uniforms || o.material?.userData?.dkLateUniforms;
       if (!u) continue;
@@ -641,9 +655,18 @@ export class Cinematic {
       if (u.dkAmbTex && this.atmosphere && this.c.atmosphere.sky === 'physical') { u.dkAmbTex.value = this.atmosphere.ambRT.texture; u.dkAmbFromTex.value = 1; }
     }
     const mask = camera.layers.mask, bg = scene.background, auto = renderer.shadowMap.autoUpdate, ac = renderer.autoClear;
+    // three only lights an object with the lights that pass the camera's layer test: with
+    // lateLights the scene's lights also light the late objects (the ocean's sun glitter and
+    // sun-lit foam, with the main pass' shadow maps). Off by default: existing shots were
+    // reviewed without it (see runtime/PROGRESS.md).
+    const lit = [];
+    if (this.c.lateLights) scene.traverse((o) => { if (o.isLight && !o.layers.isEnabled(LATE_LAYER)) { lit.push(o); o.layers.enable(LATE_LAYER); } });
     camera.layers.set(LATE_LAYER); scene.background = null; renderer.shadowMap.autoUpdate = false; renderer.autoClear = false;
     try { renderer.setRenderTarget(target); renderer.render(scene, camera); }
-    finally { camera.layers.mask = mask; scene.background = bg; renderer.shadowMap.autoUpdate = auto; renderer.autoClear = ac; }
+    finally {
+      camera.layers.mask = mask; scene.background = bg; renderer.shadowMap.autoUpdate = auto; renderer.autoClear = ac;
+      for (const o of lit) o.layers.disable(LATE_LAYER);
+    }
     this.lateDrawn = true;
   }
 

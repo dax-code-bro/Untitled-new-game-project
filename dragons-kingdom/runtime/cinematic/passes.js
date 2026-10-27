@@ -52,7 +52,7 @@ float viewZ(float d, float n, float f) { float z = d * 2.0 - 1.0; return 2.0 * n
 // for motion blur, a per-pixel velocity + linear depth buffer (MRT).
 // Velocity: objects that moved write their own (velocity pass, alpha = 1);
 // every other pixel gets the camera motion from re-projecting its depth.
-export function makeResolveMaterial({ mb, atmo, vol }) {
+export function makeResolveMaterial({ mb, atmo, vol, volTiled = false }) {
   return raw(/* glsl */ `
 ${COMMON}
 uniform sampler2D tColor;
@@ -74,6 +74,9 @@ uniform sampler2D tVol;        // integrated froxels: rgb in-scatter, a = transm
 uniform vec3 uVolGrid;         // x, y, slices
 uniform vec2 uVolRange;        // near, far (m)
 uniform float uFogOnly;        // debug view 'fog': in-scattered light only
+#ifdef VOL_TILED
+uniform vec2 uVolTiles;        // atlas columns, slices per column (runtime/cinematic/volumetrics.js)
+#endif
 #endif
 layout(location = 0) out vec4 oColor;
 #ifdef MB
@@ -90,6 +93,20 @@ vec4 atlas3D(sampler2D t, vec3 grid, vec2 uv, float slice) {
   vec4 b = texture(t, vec2(p.x, p.y + s1 * grid.y) * inv);
   return mix(a, b, f);
 }
+
+#ifdef VOL_TILED
+// the same lookup in a tiled atlas: slice s in column floor(s / rows), row s - column * rows
+vec4 atlasTiled(sampler2D t, vec3 grid, vec2 tiles, vec2 uv, float slice) {
+  slice = clamp(slice, 0.0, grid.z - 1.0);
+  float s0 = floor(slice), f = slice - s0, s1 = min(s0 + 1.0, grid.z - 1.0);
+  vec2 p = clamp(uv * grid.xy, vec2(0.5), grid.xy - 0.5);
+  vec2 inv = 1.0 / (grid.xy * tiles);
+  float c0 = floor(s0 / tiles.y), c1 = floor(s1 / tiles.y);
+  vec4 a = texture(t, vec2(p.x + c0 * grid.x, p.y + (s0 - c0 * tiles.y) * grid.y) * inv);
+  vec4 b = texture(t, vec2(p.x + c1 * grid.x, p.y + (s1 - c1 * tiles.y) * grid.y) * inv);
+  return mix(a, b, f);
+}
+#endif
 
 void main() {
   ivec2 ip = ivec2(gl_FragCoord.xy);
@@ -119,7 +136,11 @@ void main() {
     // integrated froxels: value k = the medium from the camera to the far edge of slice k
     float vd = sky ? uVolRange.y : clamp(dist, uVolRange.x * 0.5, uVolRange.y);
     float f = log(vd / uVolRange.x) / log(uVolRange.y / uVolRange.x) * uVolGrid.z;
+#ifdef VOL_TILED
+    vec4 v = atlasTiled(tVol, uVolGrid, uVolTiles, uv, f - 1.0);
+#else
     vec4 v = atlas3D(tVol, uVolGrid, uv, f - 1.0);
+#endif
     float w = clamp(f, 0.0, 1.0);
     c = c * mix(1.0, v.a, w) + v.rgb * w;
   }
@@ -146,7 +167,8 @@ void main() {
     uVelScale: { value: 1 }, uMaxVel: { value: 100 },
     tApLut: { value: null }, uApGrid: { value: new THREE.Vector3(1, 1, 1) }, uApMaxDist: { value: 32000 }, uApScale: { value: 1 },
     tVol: { value: null }, uVolGrid: { value: new THREE.Vector3(1, 1, 1) }, uVolRange: { value: new THREE.Vector2(0.5, 500) }, uFogOnly: { value: 0 },
-  }, { ...(mb ? { MB: 1 } : {}), ...(atmo ? { ATMO: 1 } : {}), ...(vol ? { VOL: 1 } : {}) });
+    ...(volTiled ? { uVolTiles: { value: new THREE.Vector2(1, 1) } } : {}),
+  }, { ...(mb ? { MB: 1 } : {}), ...(atmo ? { ATMO: 1 } : {}), ...(vol ? { VOL: 1 } : {}), ...(vol && volTiled ? { VOL_TILED: 1 } : {}) });
 }
 
 // ------------------------------------------------------------- tile passes --
@@ -704,7 +726,7 @@ export const LOOKS = {
 // ------------------------------------------------------------------- debug --
 // cinematic.debug = 'ao' | 'contact' | 'velocity' | 'coc' | 'depth' | 'dof' | 'bloom' | 'scene'
 // shows one internal buffer instead of the picture (for checking a feature)
-export const DEBUG_VIEWS = ['ao', 'contact', 'velocity', 'coc', 'depth', 'dof', 'bloom', 'scene', 'fog'];
+export const DEBUG_VIEWS = ['ao', 'contact', 'velocity', 'coc', 'depth', 'dof', 'bloom', 'scene', 'fog', 'ssr'];
 export function makeDebugMaterial() {
   return raw(/* glsl */ `
 ${COMMON}
