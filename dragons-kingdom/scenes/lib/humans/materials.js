@@ -127,6 +127,9 @@ export function skinMaterial(o = {}) {
     uMouthOpen: o.mouthU || { value: 0 },
     // the head's forward axis in view space (loader.js headFwdUpdater): no back light on the lips
     uHeadFwd: o.headU || { value: new THREE.Vector3(0, 0, 1) },
+    // the lips' midpoint and up axis in the bind pose (loader.js mouthFrame): upper / lower lip
+    uLipM: { value: o.lipM ? o.lipM.clone() : new THREE.Vector3(0, -10, 0) },
+    uLipUp: { value: o.lipUp ? o.lipUp.clone() : new THREE.Vector3(0, 1, 0) },
   };
   mat.userData.skin = U;
   mat.customProgramCacheKey = () => 'dk-human-skin';
@@ -141,7 +144,7 @@ vObjP = position; vAO = ao; vThick = thick; vAux = aux; vAux2 = aux2; vAux3 = au
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 ${NOISE_GLSL}
-uniform vec3 uTone, uScalp, uBeard; uniform float uBeardFull; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid, uMouthOpen; uniform vec3 uHeadFwd;
+uniform vec3 uTone, uScalp, uBeard; uniform float uBeardFull; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid, uMouthOpen; uniform vec3 uHeadFwd, uLipM, uLipUp;
 varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG; varying float vMouth;
 vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
@@ -184,9 +187,12 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
     c = mix(c, plain, clamp(vAux2.b * 0.85, 0.0, 0.85)); }
   // lid margin: lash line and wet rim of the eye opening (dark, barely red)
   c = mix(c, c * vec3(0.62, 0.56, 0.55), vAux2.g * uLid);
-  // lips (aux.r) a little deeper, nails (aux.g) paler; the lips are not one even peach: a
-  // fine vertical mottling, a slightly darker vermilion border and a deeper centre line
-  c = mix(c, c * vec3(0.98, 0.7, 0.72), vAux.r * 0.75);
+  // lips (aux.r: loader.js applyLipMask, the photo's vermilion zone with its own colour - the face
+  // de-lighting is lifted there): ~0.8x the skin's luminance, redder (hue ~10-15 deg toward red) and
+  // a little more saturated than the skin round them; not one even peach: a fine vertical mottling,
+  // a slightly darker vermilion border (the lip line) and a deeper centre line
+  { float lr = smoothstep(0.03, 0.55, vAux.r);
+    c = mix(c, c * vec3(1.03, 0.66, 0.67), lr * 0.85); }
   { float lm1 = hN3(vObjP * vec3(700.0, 2500.0, 700.0) + 4.0) - 0.5;
     c *= 1.0 + vAux.r * (0.12 * lm1);
     c *= 1.0 - 0.1 * smoothstep(0.15, 0.4, vAux.r) * (1.0 - smoothstep(0.4, 0.7, vAux.r)); }
@@ -232,6 +238,9 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   roughnessFactor = clamp(roughnessFactor * (0.8 + 0.35 * tz) - vAux.r * 0.2 - vAux.g * 0.05 + vAux.b * 0.15 + vAux.a * 0.35 - vAux2.g * 0.3 - vAux2.r * 0.04
                           - vAux3.r * 0.04 + (1.0 - vAux3.r) * 0.09 + vAux3.g * 0.05, 0.12, 0.95);
   roughnessFactor = mix(roughnessFactor, 0.22, smoothstep(0.0008, 0.005, vMouth));   // wet inside the lips
+  // the lower lip is wetter (and catches a narrow highlight): the moist band along its middle
+  { float lo = smoothstep(0.001, -0.0025, dot(vObjP - uLipM, uLipUp)) * smoothstep(0.35, 0.8, vAux.r);
+    roughnessFactor = mix(roughnessFactor, 0.26, lo * 0.85); }
   // pores hold no oil film: the sheen breaks up into a fine stipple where they are resolved
   { float fwr = length(fwidth(vObjP));
     float fpr = 1.0 - smoothstep(0.35, 1.0, fwr * 1600.0);
@@ -289,6 +298,10 @@ material.roughness = min(1.0, material.roughness + 5.0 * (1.0 - dot(normal, skin
   material.clearcoat *= 0.12 + 0.88 * vAux3.r;
   material.clearcoat = max(material.clearcoat, 0.9 * vAux2.g);
   material.clearcoatRoughness = mix(material.clearcoatRoughness, 0.08, vAux2.g);
+  // a thin wet film on the lower lip: a narrow, defined highlight (not the broad sheen of skin)
+  { float lo = smoothstep(0.001, -0.0025, dot(vObjP - uLipM, uLipUp)) * smoothstep(0.35, 0.8, vAux.r);
+    material.clearcoat = max(material.clearcoat, 0.25 * lo);
+    material.clearcoatRoughness = mix(material.clearcoatRoughness, 0.16, lo); }
 #endif
 `)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
@@ -514,8 +527,22 @@ export function simpleTexturedMaterial(o = {}) {
       fs = fs.replace('#include <map_fragment>', `#include <map_fragment>
 { vec3 c = diffuseColor.rgb; float gum = smoothstep(0.08, 0.25, c.r - max(c.g, c.b));
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  vec3 enamel = mix(vec3(0.66, 0.6, 0.5), vec3(l) * vec3(1.04, 0.97, 0.88), 0.3);
-  diffuseColor.rgb = mix(enamel, c * vec3(0.9, 0.62, 0.62), gum); }`);
+  // keep the texture's own light / dark between the teeth (its baked gaps), relative to its mean
+  // (a constant enamel made one undifferentiated blob of the row)
+  float lm = 0.62;
+#ifdef USE_MAP
+  { vec3 cm = texture2D(map, vMapUv, 6.0).rgb; lm = max(0.2, dot(cm, vec3(0.2126, 0.7152, 0.0722))); }
+#endif
+  vec3 enamel = vec3(0.68, 0.62, 0.52) * clamp(mix(1.0, l / lm, 0.75), 0.35, 1.15);
+  // the gums: darker, deeper red (not the pale pink of the texture under the mouth's light)
+  diffuseColor.rgb = mix(enamel, c * vec3(0.72, 0.42, 0.42), gum);
+  vTeethGum = gum; }`)
+        // each tooth reads as its own rounded crown: the sides facing into the gap between two teeth
+        // (their normals turn away from the head's forward axis) darken - interproximal shadow
+        .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{ float fr = dot(normal, uHeadFwd);
+  diffuseColor.rgb *= mix(1.0, mix(0.45, 1.0, smoothstep(0.1, 0.65, fr)), 1.0 - vTeethGum); }`)
+        .replace('#include <common>', '#include <common>\nfloat vTeethGum = 0.0;');
     }
     sh.fragmentShader = fs;
   };

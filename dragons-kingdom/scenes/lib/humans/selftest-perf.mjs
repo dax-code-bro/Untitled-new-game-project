@@ -49,6 +49,26 @@ ok(!E('Worried, seeing Abby hunched over the saddle.').grief, '"saddle" is not g
 ok(!E('Plain statement, not a boast.').amusement, 'negation drops "not a boast"');
 ok((E('Amazed.').surprise || 0) > 0.4, '"Amazed" is surprise');
 ok((E('Through the pain, quietly.').pain || 0) > 0.4, '"pain" is pain');
+// a delivery 'note' that is really the stage direction before the line (dlsrc 'auto') is not read for
+// emotion words: the four misreads the review found
+{
+  const { lineEmotion } = await import('./faceperf.js');
+  const le = (id) => lineEmotion(doc.lines[id], id);
+  const bad = [];
+  for (const id of ['X5-04', 'X14-06', 'R9-01']) { const e = le(id); if ((e.anger || 0) > 0.05 || (e.determined || 0) > 0.05) bad.push(`${id} ${JSON.stringify(e)}`); }
+  const x127 = le('X12-07');
+  ok(!bad.length && (x127.pain || 0) <= 0.5, `stage directions are not delivery notes: no anger / determination for "Anything?", "Mostly.", "One wing gone"; Abby's "You didn't count" pain ${x127.pain} (was 1.0 from Remi's flinch)${bad.length ? ` - ${bad.join('; ')}` : ''}`);
+  const auto = Object.entries(doc.lines).filter(([, r]) => r.dlsrc === 'auto').length;
+  ok(auto >= 160, `the lip-sync data marks where each note came from (${auto} auto)`);
+  // a non-verbal take (a cry: no phones) opens the mouth from its envelope
+  const Lnv = prepareLine(doc.lines['NV-1E-04']);
+  let jmax = 0;
+  for (let t = 0; t < doc.lines['NV-1E-04'].dur; t += 0.01) { const pp = lipAt(Lnv, t); jmax = Math.max(jmax, (visemeUnits(pp).JawOpen || 0) * pp.active); }
+  ok(jmax > 0.3, `Abby's on-screen cry NV-1E-04 opens the jaw (JawOpen ${jmax.toFixed(2)}, was 0)`);
+  const { sceneOfShot } = await import('./perform.js');
+  ok(sceneOfShot(doc, 'X25-01') === '3C' && sceneOfShot(doc, 'R15-02') === '3C' && sceneOfShot(doc, '1A-04') === '1A',
+    `director shots find their scene from the shot list (X25-01 -> ${sceneOfShot(doc, 'X25-01')}, R15-02 -> ${sceneOfShot(doc, 'R15-02')})`);
+}
 const eu = emotionUnits({ fear: 1, pain: 1, anger: 1 });
 ok(Object.values(eu).every((w) => Math.abs(w) < 1.25), 'emotion sums stay softly limited');
 // sculpted mouth shapes: only asked for when the character has them
@@ -217,6 +237,34 @@ else {
     ok(hands < 0.2 && rise > 0.06 && rise < 0.2 && orderSame && fallen < 0.45,
       `crowd: hand in hand (wrists ${(hands * 100).toFixed(0)} cm), child carried ${(rise * 100).toFixed(0)} cm above the parent's pelvis, same pose either update order (${orderSame}), the faller's head ${fallen.toFixed(2)} m up`);
   }
+  // two takes of one character 0.25 s apart: the first syllable of the second is not swallowed by the
+  // first's closing rest
+  {
+    const rA = units.data.lines.L014, rB = units.data.lines.L016;
+    const endA = rA.ph[rA.ph.length - 1][2] / 100, inB = rB.ph[0][1] / 100;
+    const t0B = 1.0 + endA + 0.25 - inB;
+    const jaw = (withA) => {
+      const p = createPerformer(load('abby'), units.data); p.place(0, 0, 0);
+      if (withA) p.performLine('L014', 1.0);
+      p.performLine('L016', t0B);
+      let m = 0;
+      for (let t = t0B + inB; t < t0B + inB + 0.1; t += 0.02) m = Math.max(m, p.update(t).face.units.JawOpen || 0);
+      return m;
+    };
+    const alone = jaw(false), after = jaw(true);
+    ok(after > alone * 0.85, `a take 0.25 s after another keeps its first syllable (JawOpen ${after.toFixed(2)} vs ${alone.toFixed(2)} alone)`);
+  }
+  // eyes reading a face 0.66 m away refixate eye to eye (~5 deg), not the 0.3 deg they did
+  {
+    const a = createPerformer(load('abby'), units.data), r = createPerformer(load('remi'), units.data);
+    a.place(0, 0, 0); r.place(0, 0.66, Math.PI);
+    a.lookAt({ ch: r.ch }, 0);
+    const ys = [];
+    let d = 0;
+    for (let t = 2; t < 8; t += 1 / 24) { r.update(t); ys.push(a.update(t).face.gaze.yaw); d = P(a.ch, 'eye.L').distanceTo(P(r.ch, 'eye.L')); }
+    const range = (Math.max(...ys) - Math.min(...ys)) * 57.3, eyeToEye = 2 * Math.atan2(0.032, d) * 57.3;
+    ok(range > 0.7 * eyeToEye && range < 1.6 * eyeToEye, `face reading: eye refixations span ${range.toFixed(1)} deg (eye to eye on a face ${d.toFixed(2)} m away: ${eyeToEye.toFixed(1)} deg)`);
+  }
   // director face hook
   {
     const ch = load('remi');
@@ -313,6 +361,29 @@ else {
     ok(cM > 0.3 && pW > 0.3, `L011 drives the shapes: "my" presses (compression ${cM.toFixed(2)}), "weapon" purses (${pW.toFixed(2)})`);
     const bad = attachMouthShapes(load('abby'), ms);
     ok(bad.length === 0, 'a sidecar for another mesh is refused');
+  }
+  // the lips' colour zone (loader.js applyLipMask, data/lipmask-uv.json): the vermilion of the upper and
+  // lower lip gets the lip weight, nothing beyond 3.3 cm of the mouth (the nostrils are as red in the photo)
+  {
+    const L = await import('./loader.js');
+    const LM = L.decodeLipMask(JSON.parse(fs.readFileSync(path.join(HERE, 'data/lipmask-uv.json'))));
+    const res = [];
+    for (const id of ['alexandria', 'abby', 'remi']) {
+      const header = JSON.parse(fs.readFileSync(cache(id))), b = fs.readFileSync(path.join(HERE, 'cache', id + '.bin'));
+      const ch = L.buildCharacter({ header, bin: b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) }, { lipMask: LM });
+      const g = ch.meshes.find((m) => m.userData.kind === 'skin').geometry;
+      const M = P(ch, 'oris05').add(P(ch, 'oris01')).multiplyScalar(0.5);
+      let up = 0, lo = 0, far = 0;
+      for (let i = 0; i < g.attributes.position.count; i++) {
+        const w = g.attributes.aux.getX(i);
+        if (w < 0.5) continue;
+        const q = new THREE.Vector3().fromBufferAttribute(g.attributes.position, i);
+        const dy = q.y - M.y;
+        if (q.distanceTo(M) > 0.033) far++; else if (dy > 0) up++; else lo++;
+      }
+      res.push({ id, up, lo, far });
+    }
+    ok(res.every((r) => r.up > 60 && r.lo > 60 && r.far === 0), `lip colour zone: ${res.map((r) => `${r.id} ${r.up} upper / ${r.lo} lower-lip vertices, ${r.far} beyond the lips`).join('; ')}`);
   }
   // worn props never follow a hand: no belt / buckle / purse vertex keeps an arm or hand weight
   {

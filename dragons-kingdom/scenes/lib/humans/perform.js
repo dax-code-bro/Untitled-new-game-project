@@ -42,7 +42,8 @@ export function loadPerformanceData(url = LIPSYNC_URL) {
         fetch(url).then((r) => { if (!r.ok) throw new Error(`performance data: ${url} (${r.status})`); return r.json(); }),
         loadFaceUnits(),
       ]);
-      return { lines: doc.lines, units, source: doc.source };
+      // shots: { shot id: scene } for the shots whose id prefix is not their scene (X7-01 is in 1E)
+      return { lines: doc.lines, units, source: doc.source, shots: doc.shots || {} };
     })();
   }
   return dataP;
@@ -211,6 +212,20 @@ export function walkPath(performer, points, t0, o) { return performer.walkPath(p
 export function trajectoryFromBlocking(fn, t0, t1) { return Trajectory.fromFn(fn, t0, t1); }
 
 // ----------------------------------------------------------- director hooks --
+/** The scene of a director shot: info.scene > the shot list map (data.shots) > a placed take's scene > the id prefix. */
+export function sceneOfShot(data, shot, info = {}) {
+  if (info.scene) return info.scene;
+  const id = String(shot ?? '');
+  if (data?.shots?.[id]) return data.shots[id];
+  for (const p of info.placed || []) { const sc = data?.lines?.[p.id]?.scene; if (sc) return sc; }
+  return id.split('-')[0];
+}
+
+/** A blocking look target that is a face ('abby.head', 'remi.eyes', 'leaf.eye'): read eye, eye, mouth. */
+export function isFaceTarget(at) {
+  return typeof at === 'string' && /\.(head|eye|eyes|face)$/.test(at);
+}
+
 /**
  * A face action for the shot director (scenes/lib/director/actions.js registerHumanAction('face', fn)):
  * lip-sync from the shot's PLACED lines (dialogue.js placeLines), emotion from the take's delivery
@@ -235,13 +250,17 @@ export function directorFace(data, opts = {}) {
         const whole = !(p.file_in_s > 0.01) && !(p.file_out_s < (rec.dur ?? 0) - 0.01);
         f.say(p.id, p.at_s - (p.file_in_s || 0), whole ? {} : { window: [p.file_in_s || 0, p.file_out_s ?? rec.dur] });
       }
-      // everyone in a shot carries the scene's mood (fear in the attack, grief after it) under their lines
-      const scene = String(shot).split('-')[0];
+      // everyone in a shot carries the scene's mood (fear in the attack, grief after it) under their lines;
+      // the scene from the director (info.scene), the shot list (X25-01 / R15-02 are 3C shots: the id
+      // prefix does not say), the placed takes' own scene, and only then the id prefix
+      const scene = sceneOfShot(data, shot, info);
       const base = info.mood || (SCENE_MOOD[scene] ? Object.fromEntries(Object.entries(SCENE_MOOD[scene]).map(([k, v]) => [k, v * 0.6])) : null);
       if (base && opts.sceneMood !== false) f.mood(base);
       // eyes follow the blocking's eye-line (look acts switch it at their own times)
       // (the state of the frame being posed: poseHuman passes the blocking state for this t)
-      if (env?.point) f.look((tt) => { const s = info.stateAt ? info.stateAt(tt) : f._st; return s?.look?.at != null ? env.point(s.look.at, tt) : null; }, -1e9, { person: false });
+      // (a face - 'abby.head', 'leaf.eye' - is read eye, eye, mouth: person)
+      const stAt = (tt) => (info.stateAt ? info.stateAt(tt) : f._st);
+      if (env?.point) f.look((tt) => { const s = stAt(tt); return s?.look?.at != null ? env.point(s.look.at, tt) : null; }, -1e9, { person: (tt) => isFaceTarget(stAt(tt)?.look?.at) });
       ch._perfByShot.set(shot, f);
       if (ch._perfByShot.size > 8) ch._perfByShot.delete(ch._perfByShot.keys().next().value);
     }

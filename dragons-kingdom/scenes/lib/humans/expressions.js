@@ -133,6 +133,21 @@ const RULES = [
   [/\b(amaz\w*|wonder\w*|awe|astonish\w*|surpris\w*|stunned|disbelief|eager\w*)\b/, { surprise: 0.55 }],
   [/\b(firm|firmly|determined|resolute|set|stern)\b/, { determined: 0.45 }],
   [/\b(contempt\w*|scorn\w*|sneer\w*|mock\w*|dismissive)\b/, { contempt: 0.55 }],
+  // notes that name a manner rather than an emotion (hand-checked notes that read neutral before)
+  [/\b(impatient\w*|exasperat\w*|irritat\w*)\b/, { anger: 0.15, determined: 0.2 }],
+  [/\b(content|contented|satisfied)\b/, { calm: 0.4, amusement: 0.15 }],
+  [/\b(defensive\w*)\b/, { determined: 0.25, worry: 0.15 }],
+  [/\b(affection\w*|loving\w*)\b/, { tender: 0.45 }],
+  [/\b(apolog\w*|sorry|ashamed|guilt\w*|admitting|admits?)\b/, { worry: 0.25, grief: 0.2 }],
+  [/\b(curious\w*|intrigued|puzzled)\b/, { surprise: 0.3 }],
+  [/\b(excited\w*|thrilled|eager)\b/, { surprise: 0.35, amusement: 0.3 }],
+  [/\b(hope\w*)\b/, { surprise: 0.2, amusement: 0.15, worry: 0.1 }],
+  [/\b(deadpan|flat|flatly|unhurried)\b/, { calm: 0.45 }],
+  [/\b(confident\w*|sure|certain)\b/, { determined: 0.3, calm: 0.2 }],
+  [/\b(warn\w*)\b/, { determined: 0.35 }],
+  [/\b(uncomfortabl\w*|awkward\w*)\b/, { worry: 0.3 }],
+  [/\b(polite\w*|ritual|formal\w*|respectful\w*)\b/, { calm: 0.3 }],
+  [/\b(prompt|promptly|brisk\w*)\b/, { determined: 0.15 }],
 ];
 const PRESET = {
   pain: { pain: 0.75 }, hurt: { pain: 0.45 }, shout: { determined: 0.3, anger: 0.15 }, urgent: { worry: 0.4 },

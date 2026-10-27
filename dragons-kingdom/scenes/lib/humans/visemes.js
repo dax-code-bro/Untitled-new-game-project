@@ -116,14 +116,24 @@ export function prepareLine(rec) {
   const es = rec?.env || '';
   const env = new Float32Array(es.length);
   for (let i = 0; i < es.length; i++) env[i] = -45 + (B64.indexOf(es[i]) / 63) * 35;
-  const speechIn = ph.length ? ph[0][1] / 100 : 0;
-  const speechOut = ph.length ? ph[ph.length - 1][2] / 100 : dur;
+  let speechIn = ph.length ? ph[0][1] / 100 : 0;
+  let speechOut = ph.length ? ph[ph.length - 1][2] / 100 : dur;
+  // a NON-VERBAL take (a cry, a gasp, a scream: no phones, only its loudness envelope): the mouth is
+  // driven by the envelope (lipAt), its sounding span is where the envelope is above -38 dB
+  let nv = null;
+  if (!ph.length && (rec?.kind || rec?.preset === 'nonverbal') && env.length) {
+    const k = String(rec.kind || '').toLowerCase();
+    nv = { scream: /scream|shriek|yell/.test(k), cry: /\bcr(y|ies)\b|sob|wail|moan/.test(k), gasp: /gasp|breath|startl/.test(k) };
+    let a = -1, b = -1;
+    for (let i = 0; i < env.length; i++) if (env[i] > NV_FLOOR) { if (a < 0) a = i; b = i; }
+    if (a >= 0) { speechIn = a / 100; speechOut = (b + 1) / 100; }
+  }
   // the line's typical voiced level (median of the envelope inside speech)
   const vs = [];
   for (let i = Math.floor(speechIn * 100); i < Math.min(env.length, Math.ceil(speechOut * 100)); i++) if (env[i] > -38) vs.push(env[i]);
   vs.sort((x, y) => x - y);
   const level = vs.length ? vs[vs.length >> 1] : -22;
-  const prep = { segs, env, dur, speechIn, speechOut, level, words: rec?.words || [], rec, maxHalf: segs.reduce((m, s) => Math.max(m, s.half), 0) };
+  const prep = { segs, env, dur, speechIn, speechOut, level, nv, words: rec?.words || [], rec, maxHalf: segs.reduce((m, s) => Math.max(m, s.half), 0) };
   if (rec) Object.defineProperty(rec, '_prep', { value: prep, enumerable: false });
   return prep;
 }
@@ -158,6 +168,7 @@ function lowerBound(segs, c) {
  * opts: { lead (s, 0.04), amp (1), whisper (bool) }.
  */
 export function lipAt(L, t, opts = {}) {
+  if (L.nv) return nonverbalLipAt(L, t, opts);
   const tt = t + (opts.lead ?? LEAD);
   const out = new Float32Array(NP);
   const den = new Float32Array(NP);
@@ -200,6 +211,35 @@ export function lipAt(L, t, opts = {}) {
   for (const n of ['round', 'spread', 'fv', 'th', 'upper']) p[n] *= Math.min(1.2, amp);
   p.active = active;
   p.loud = loud;
+  p.db = db;
+  return p;
+}
+
+const NV_FLOOR = -38;          // dB: a non-verbal take is sounding above this
+const clamp1 = (x) => Math.max(0, Math.min(1, x));
+
+/**
+ * Articulators of a NON-VERBAL take (L.nv: a cry, a scream, a gasp - no phones): the jaw follows the
+ * loudness above -38 dB (a cry opens to ~0.75 of a full AA, a scream to ~0.95), a cry / scream
+ * stretches the lips wide and lifts the upper lip off the teeth (the pain / fear mouth), and a sharp
+ * RISE of the envelope (the intake of a gasp, the onset of a cry) drops the jaw a little ahead of it.
+ * Same output fields as lipAt.
+ */
+function nonverbalLipAt(L, t, opts = {}) {
+  const tt = t + (opts.lead ?? LEAD);
+  const nv = L.nv;
+  const db = envSmooth(L, tt, 0.03);
+  const lev = Math.pow(clamp1((db - NV_FLOOR) / 22), 0.7);
+  const rise = clamp1((envSmooth(L, tt + 0.03, 0.03) - envSmooth(L, tt - 0.06, 0.03)) / 12);
+  const big = nv.scream ? 0.95 : nv.cry ? 0.75 : 0.5;
+  const amp = opts.amp ?? 1;
+  const p = { jaw: 0, close: 0, round: 0, spread: 0, fv: 0, th: 0, tip: 0, upper: 0, press: 0 };
+  p.jaw = amp * Math.min(big, big * lev + 0.15 * rise);
+  p.spread = (nv.scream || nv.cry ? 0.6 : 0.2) * lev;
+  p.upper = (nv.scream || nv.cry ? 0.5 : 0.2) * lev + 0.15 * rise;
+  p.round = nv.gasp && !nv.cry ? 0.12 * lev : 0;
+  p.active = clamp1((t - (L.speechIn - 0.15)) / 0.12) * clamp1(((L.speechOut + 0.25) - t) / 0.25);
+  p.loud = Math.max(-1, Math.min(1, (db - L.level) / 8));
   p.db = db;
   return p;
 }

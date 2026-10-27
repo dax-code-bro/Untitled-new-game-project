@@ -80,7 +80,12 @@ export async function setup(ctx) {
   // from low beside the nest (the hatchling's side), looking up into her lowered face: the eyes and
   // mouth read while she looks down at it (a level camera saw the top of her bowed head)
   const az = 0.42 + 0.42, el = -0.24, dist = 0.95;
-  S.cam = { pos: new THREE.Vector3(tgt.x + dist * Math.cos(el) * Math.sin(az), tgt.y + dist * Math.sin(el), tgt.z + dist * Math.cos(el) * Math.cos(az)), tgt, focus: dist - 0.028 };
+  const pos = new THREE.Vector3(tgt.x + dist * Math.cos(el) * Math.sin(az), tgt.y + dist * Math.sin(el), tgt.z + dist * Math.cos(el) * Math.cos(az));
+  // focus between the eyes and the mouth (a dialogue close-up reads both; on the eyes alone the lips
+  // went soft at f/3.2), stopped down to f/4.5: ~4.5 cm of depth of field at 0.95 m
+  const eyes = ch.bone('eye.L').getWorldPosition(new THREE.Vector3()).add(ch.bone('eye.R').getWorldPosition(new THREE.Vector3())).multiplyScalar(0.5);
+  const mouth = ch.bone('oris01').getWorldPosition(new THREE.Vector3()).add(ch.bone('oris05').getWorldPosition(new THREE.Vector3())).multiplyScalar(0.5);
+  S.cam = { pos, tgt, focus: (pos.distanceTo(eyes) + pos.distanceTo(mouth)) / 2 };
 }
 
 export function update(t, ctx) {
@@ -90,5 +95,5 @@ export function update(t, ctx) {
   camera.lookAt(S.cam.tgt);
   camera.fov = 21; camera.near = 0.03; camera.far = 60;
   camera.updateProjectionMatrix();
-  if (ctx.lens) { ctx.lens.focalLength = null; ctx.lens.fstop = 3.2; ctx.lens.focus = S.cam.focus; ctx.lens.shutterAngle = 180; }
+  if (ctx.lens) { ctx.lens.focalLength = null; ctx.lens.fstop = 4.5; ctx.lens.focus = S.cam.focus; ctx.lens.shutterAngle = 180; }
 }

@@ -16,6 +16,7 @@ import { prepareLine, lipAt, visemeUnits, envSmooth } from './visemes.js';
 import { emotionUnits, emotionFromDelivery } from './expressions.js';
 import { hashStr } from './loader.js';
 import { isCharTarget, charTargetPoint } from './targets.js';
+import { AUTO_LINE_EMO, nonverbalEmotion } from './lines-s01e01.js';
 import { setWorldQuat, wpos, wquat, hash01, noise1, clamp01, smooth } from './rig.js';
 
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion();
@@ -34,6 +35,12 @@ export const LINE_OVERRIDES = {
   L015: { emo: { amusement: 0.45, calm: 0.3 } },
   L016: { emo: { surprise: 0.45, amusement: 0.3 } },
   L067: { emo: { tender: 0.45, anger: 0.18 } },
+  // hand-checked notes that say where, not how (read neutral by the rules): from the scene
+  L028: { emo: { worry: 0.25, tender: 0.25 } },
+  L048: { emo: { amusement: 0.2, surprise: 0.2 } },
+  L143: { emo: { grief: 0.45, worry: 0.3 } },
+  L147: { emo: { grief: 0.35, worry: 0.2 } },
+  L153: { emo: { tender: 0.45, worry: 0.2 } },
 };
 /** Base mood per scene when a line's note says nothing (proposed defaults). */
 export const SCENE_MOOD = {
@@ -41,11 +48,21 @@ export const SCENE_MOOD = {
   '2B': { worry: 0.3 }, '3B': { worry: 0.35 }, '3C': { fear: 0.6, worry: 0.3 }, '3D': { grief: 0.45, worry: 0.2 },
 };
 
-/** The emotion mix of a take: override > delivery note (+ preset) > scene mood. */
+/**
+ * The emotion mix of a take: LINE_OVERRIDES > the delivery note (+ the take's preset) > the scene mood.
+ * A note that is really the stage direction before the line (rec.dlsrc 'auto', lipsync_align.py) is not
+ * read for emotion words - it describes the scene ("a raised platform", "Remi flinches as if he were
+ * the one hurt"); those lines use their hand-set mix (lines-s01e01.js AUTO_LINE_EMO), else only the
+ * performance note in front of the direction ("quietly — ...": rec.pn) and the preset. A non-verbal
+ * take (a cry, a gasp, a scream: dlsrc 'kind') gets the face of its sound.
+ */
 export function lineEmotion(rec, id) {
   const o = LINE_OVERRIDES[id];
   if (o?.emo) return { ...o.emo };
-  const e = emotionFromDelivery(rec?.dl, rec?.preset);
+  if (rec?.dlsrc === 'auto' && AUTO_LINE_EMO[id]) return { ...AUTO_LINE_EMO[id] };
+  if (rec?.dlsrc === 'kind' || (rec?.preset === 'nonverbal' && !rec?.ph?.length)) return nonverbalEmotion(rec.kind || rec.dl);
+  const note = rec?.dlsrc === 'auto' ? (rec.pn || '') : rec?.dl;
+  const e = emotionFromDelivery(note, rec?.preset);
   if (!Object.keys(e).length && SCENE_MOOD[rec?.scene]) return { ...SCENE_MOOD[rec.scene] };
   return e;
 }
@@ -103,13 +120,19 @@ export function createFacePerformer(ch, data, opts = {}) {
       const key = `${id}@${t0}${o.window ? `[${o.window}]` : ''}`;
       if (lines.some((l) => l.key === key)) return api;
       const ov = LINE_OVERRIDES[id] || {};
-      lines.push({ key, id, t0, rec, L: prepareLine(rec), emo: o.emo || lineEmotion(rec, id), gain: o.gain ?? 0.85, amp: o.amp ?? ov.amp ?? 1, whisper: rec.preset === 'whisper', lookAway: o.lookAway ?? !ov.gazeLock, idx: lines.length });
+      const L = prepareLine(rec);
+      // a question lifts the brows on its last word (take seconds of that word)
+      const q = /\?["'”’)]*\s*$/.test(rec.tx || '') && rec.words?.length ? rec.words[rec.words.length - 1] : null;
+      lines.push({ key, id, t0, rec, L, emo: o.emo || lineEmotion(rec, id), gain: o.gain ?? (L.nv ? 1 : 0.85), amp: o.amp ?? ov.amp ?? 1, whisper: rec.preset === 'whisper', lookAway: o.lookAway ?? (!ov.gazeLock && !L.nv), question: q ? [q[1] / 100, q[2] / 100] : null, idx: lines.length });
       lines.sort((a, b) => a.t0 - b.t0);
       return api;
     },
     /** A base mood { emotion: w } between t0 and t1 (fade s in and out). */
     mood(mix, t0 = -1e9, t1 = 1e9, fade = 0.6) { moods.push({ mix, t0, t1, fade }); return api; },
-    /** Eye target from t0 on: Vector3 | [x,y,z] | fn(t) | { ch, bone, offset } | { object }. opts: { person (fixation pattern on a face) } */
+    /**
+     * Eye target from t0 on: Vector3 | [x,y,z] | fn(t) | { ch, bone, offset } | { object }. opts: { person
+     * (true | fn(t) -> bool: the target is a face - read eye, eye, mouth), amount }
+     */
     look(target, t0 = -1e9, o = {}) {
       looks.push({ target, t0, person: o.person ?? !!target?.ch, amount: o.amount ?? 1 });
       looks.sort((a, b) => a.t0 - b.t0);
@@ -117,13 +140,29 @@ export function createFacePerformer(ch, data, opts = {}) {
     },
     /** A one-off facial gesture: { units } envelope (e.g. a wince) at t0 for dur seconds. */
     react(units, t0, dur = 0.8, o = {}) { gestures.push({ units, t0, dur, attack: o.attack ?? 0.08 }); return api; },
-    /** Who is speaking now (line record or null) and the take time. */
+    /**
+     * The line speaking at t (and its take time), or null. When two takes of this character touch (the
+     * next one starts < 0.6 s after the last ends, or the parts of a split take back to back), the one
+     * whose words contain t wins over the other's closing rest or lead-in, then the nearer one.
+     */
     speaking(t) {
+      let best = null, bestK = -Infinity;
+      for (const s of api.speakingAll(t)) {
+        const L = s.line.L, tau = s.tau;
+        const dist = tau < L.speechIn - 0.06 ? L.speechIn - 0.06 - tau : tau > L.speechOut ? tau - L.speechOut : 0;
+        const k = (dist === 0 ? 10 : 0) - dist;
+        if (k > bestK) { bestK = k; best = s; }
+      }
+      return best;
+    },
+    /** Every line whose window (its words +- 0.3 s) contains t: [{ line, tau }]. */
+    speakingAll(t) {
+      const out = [];
       for (const l of lines) {
         const tau = t - l.t0;
-        if (tau >= l.L.speechIn - 0.3 && tau <= l.L.speechOut + 0.3) return { line: l, tau };
+        if (tau >= l.L.speechIn - 0.3 && tau <= l.L.speechOut + 0.3) out.push({ line: l, tau });
       }
-      return null;
+      return out;
     },
     apply(t, o = {}) { return applyFace(api, ch, t, o); },
   };
@@ -236,6 +275,21 @@ function applyFace(api, ch, t, o) {
   if (sp) {
     const l = sp.line;
     lip = lipAt(l.L, sp.tau, { amp: l.amp, whisper: l.whisper });
+    // overlapping takes of this character: per articulator the larger of the two, each weighted by how
+    // much its take is speaking (the earlier take's closing rest never swallows the next take's first
+    // syllable)
+    const all = api.speakingAll(t);
+    if (all.length > 1) {
+      const P = Object.keys(lip).filter((k) => k !== 'active' && k !== 'loud' && k !== 'db');
+      const acc0 = {};
+      let amax = 0;
+      for (const s of all) {
+        const p = s === sp || s.line === l ? lip : lipAt(s.line.L, s.tau, { amp: s.line.amp, whisper: s.line.whisper });
+        amax = Math.max(amax, p.active);
+        for (const k of P) acc0[k] = Math.max(acc0[k] ?? 0, p[k] * p.active);
+      }
+      if (amax > 1e-6) { for (const k of P) lip[k] = acc0[k] / amax; lip.active = amax; }
+    }
     active = lip.active;
     // accent: the envelope above its slow average (stressed syllables)
     const fast = envSmooth(l.L, sp.tau + 0.03, 0.04), slow = envSmooth(l.L, sp.tau, 0.3);
@@ -261,6 +315,15 @@ function applyFace(api, ch, t, o) {
       W[`${s}InnerBrowUp`] = (W[`${s}InnerBrowUp`] || 0) + up * 0.8;
       W[`${s}OuterBrowUp`] = (W[`${s}OuterBrowUp`] || 0) + up;
       W[`${s}BrowDown`] = (W[`${s}BrowDown`] || 0) + down * acc * 0.25 * expressive;
+    }
+  }
+  // ---- a question: the brows lift on its last word (and settle after it)
+  if (sp?.line.question && expressive) {
+    const [qa, qb] = sp.line.question;
+    const k = smooth((sp.tau - qa + 0.05) / 0.12) * (1 - smooth((sp.tau - qb - 0.15) / 0.3)) * 0.22 * expressive;
+    if (k > 0) for (const s of ['Left', 'Right']) {
+      W[`${s}InnerBrowUp`] = (W[`${s}InnerBrowUp`] || 0) + k;
+      W[`${s}OuterBrowUp`] = (W[`${s}OuterBrowUp`] || 0) + k * 0.8;
     }
   }
   // ---- one-off reactions (winces, flinches)
@@ -346,12 +409,18 @@ function gazeEyes(api, ch, t, o, sp) {
   const pick = (j) => hash01(seed, 1000 + j);
   const fix = (j) => {
     const r = pick(j);
-    if (cur?.person) return r < 0.42 ? [0.032, 0] : r < 0.84 ? [-0.032, 0] : [0, -0.07];
+    if (person) return r < 0.42 ? [0.032, 0] : r < 0.84 ? [-0.032, 0] : [0, -0.07];
     return [(hash01(seed, 2000 + j) - 0.5) * 0.05, (hash01(seed, 3000 + j) - 0.5) * 0.03];
   };
+  const person = typeof cur?.person === 'function' ? !!cur.person(t) : !!cur?.person;
   const f0 = fix(k - 1), f1 = fix(k);
   const s = smooth(tk / 0.05);
   const off = [f0[0] + (f1[0] - f0[0]) * s, f0[1] + (f1[1] - f0[1]) * s].map((x) => x * sacc);
+  // microsaccades while fixating: 0.1-0.3 deg jumps every ~0.4-0.65 s (a held eye is never still)
+  const mc = 0.4 + 0.25 * hash01(seed, 8), mk = Math.floor(t / mc);
+  const mj = (j) => [(hash01(seed, 4000 + j) - 0.5) * 0.009, (hash01(seed, 5000 + j) - 0.5) * 0.007];
+  const m0 = mj(mk - 1), m1 = mj(mk), ms = smooth((t - mk * mc) / 0.025) * sacc;
+  const micro = [m0[0] + (m1[0] - m0[0]) * ms, m0[1] + (m1[1] - m0[1]) * ms];
   // aversion: a speaker often looks away at the start of a thought and back as it lands
   let avY = 0, avP = 0;
   if (sp && sp.line.lookAway && hash01(seed, 500 + sp.line.idx) < 0.55) {
@@ -374,9 +443,12 @@ function gazeEyes(api, ch, t, o, sp) {
       const ry = Math.atan2(restF.x, restF.z), rp = Math.atan2(restF.y, Math.hypot(restF.x, restF.z));
       yaw = Math.atan2(d.x, d.z) - ry;
       pitch = Math.atan2(d.y, Math.hypot(d.x, d.z)) - rp;
-      const dist = d.length();
-      yaw += Math.atan2(off[0] * 0.15, Math.max(0.3, dist)) * (cur.person ? 1 : 6);
-      pitch += Math.atan2(off[1] * 0.15, Math.max(0.3, dist)) * (cur.person ? 1 : 6);
+      const dist = Math.max(0.3, d.length());
+      // the fixation offset is metres across the target: on a face the other eye / the mouth (a real
+      // eye-to-eye refixation at 0.66 m is ~5.5 deg); on anything else small re-fixations
+      const kk = person ? 1 : 0.9;
+      yaw += Math.atan2(off[0] * kk, dist) + micro[0];
+      pitch += Math.atan2(off[1] * kk, dist) + micro[1];
       yaw *= cur.amount; pitch *= cur.amount;
     } else {
       yaw = off[0] * 1.2; pitch = off[1] * 1.2;

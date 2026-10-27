@@ -18,7 +18,7 @@
 //   mountRider(charcoal, createSaddle(charcoal, {}), createRider(human, { outfit: 'remi' }));
 //   rider.update(t)                                           // idle breathing / blinks (optional)
 import * as THREE from 'three';
-import { loadCharacterData, buildCharacter, hashStr } from './loader.js';
+import { loadCharacterData, buildCharacter, hashStr, loadLipMask } from './loader.js';
 import { applyIdle } from './idle.js';
 import { registerDirectorHooks } from './director.js';
 import { loadMouthShapes, attachMouthShapes } from './mouthshapes.js';
@@ -64,6 +64,8 @@ export async function loadCharacter(id, opts = {}) {
   if (opts.performance !== false) {
     try { await registerDirectorHooks(); } catch (e) { console.warn(`[humans] performance hooks not registered: ${e.message}`); }
   }
+  // the lips' colour zone (data/lipmask-uv.json; loader.js applyLipMask) - loaded once
+  if (opts.lipMask === undefined) await loadLipMask();
   const ch = buildCharacter(await loadCharacterData(id), opts);
   // sculpted mouth shapes when the character has the sidecar (tools/mouthmorphs.py; none: no-op)
   if (opts.mouthShapes !== false) attachMouthShapes(ch, await loadMouthShapes(id));

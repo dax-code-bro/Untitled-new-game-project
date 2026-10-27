@@ -19,8 +19,9 @@ Per take (vo/takes.json, WAVs in vo/, word times in vo/words.json):
      emotionFromDelivery: whole-word rules, negations dropped), so there is one rule set, testable in
      Node; perform.js adds hand-set overrides for key lines and a per-scene mood.
 
-    --meta-only   refresh only the delivery / scene / addressee fields of an existing file (no
-                  re-alignment, seconds; run it after dialogue.json changes).
+    --meta-only   refresh only the delivery / note source / text / scene / addressee fields and the
+                  shot -> scene map of an existing file (no re-alignment, seconds; run it after
+                  dialogue.json or shotlist.json changes).
 
 Deterministic (no random numbers; fresh decoders). Non-verbal placeholders (vo/nonverbal/NV-*.wav) get an
 envelope only (no phones: an open, shaped mouth from the loudness).
@@ -131,14 +132,41 @@ def spread_phones(words):
 
 
 def meta(rec, dl, tk):
-    """Delivery note, scene and addressee of a take (from dialogue.json / takes.json)."""
+    """Delivery note, scene, addressee, text and where the note came from (dialogue.json / takes.json).
+
+    dlsrc: 'hand' - a delivery note a person wrote or checked; 'auto' - dialogue.json filled `delivery`
+    with the stage direction just before the line (context_source 'auto: ...'): it describes the scene,
+    not how the line is said, so the runtime reads no emotion from its words (expressions.js) - only
+    from a performance note in front of it ('quietly — ...' -> pn) and the take's preset.
+    """
     rec.pop('emo', None)
     rec['dl'] = dl.get('delivery') or tk.get('performance', {}).get('delivery') or ''
+    rec['dlsrc'] = 'auto' if str(dl.get('context_source') or '').startswith('auto') else 'hand'
+    pn = dl.get('performance_note') or tk.get('performance', {}).get('performance_note')
+    if pn:
+        rec['pn'] = pn
+    else:
+        rec.pop('pn', None)
+    if dl.get('text'):
+        rec['tx'] = dl['text']
     rec['scene'] = tk.get('scene') or dl.get('scene')
     if dl.get('addressee'):
         rec['to'] = dl['addressee']
     else:
         rec.pop('to', None)
+
+
+def shot_scenes(shotlist):
+    """{shot id: scene} for the shots whose id prefix is not their scene (X7-01 is in 1E, R15-02 in 3C):
+    the director's face hook reads the scene mood from it (a shot id alone does not say)."""
+    if not os.path.exists(shotlist):
+        return {}
+    out = {}
+    for sh in json.load(open(shotlist)).get('shots', []):
+        sid, sc = sh.get('id'), sh.get('scene')
+        if sid and sc and sid.split('-')[0] != sc:
+            out[sid] = sc
+    return dict(sorted(out.items()))
 
 
 def main():
@@ -148,6 +176,7 @@ def main():
     ap.add_argument('--only', default='')
     ap.add_argument('--out', default=OUT)
     ap.add_argument('--meta-only', action='store_true')
+    ap.add_argument('--shotlist', default=os.path.join(ROOT, 'episodes', 's01e01', 'final', 'shotlist.json'))
     a = ap.parse_args()
     if a.meta_only:
         doc = json.load(open(a.out))
@@ -159,6 +188,8 @@ def main():
             else:
                 rec.pop('emo', None)
                 rec.setdefault('dl', rec.get('kind', ''))
+                rec['dlsrc'] = 'kind'
+        doc['shots'] = shot_scenes(a.shotlist)
         doc['emotions'] = 'computed at runtime from dl + preset (scenes/lib/humans/expressions.js)'
         with open(a.out, 'w') as fo:
             json.dump(doc, fo, separators=(',', ':'))
@@ -204,7 +235,7 @@ def main():
         rec['env'] = envelope(x)
         meta(rec, dlg.get(lid, {}), tk)
         lines[lid] = rec
-        print(lid, rec['phones_from'] if ph else 'envelope only', len(rec['ph']), rec['emo'], flush=True)
+        print(lid, rec['phones_from'] if ph else 'envelope only', len(rec['ph']), rec['dlsrc'], flush=True)
     for nv in takes.get('nonverbal_placeholders', []):
         if only and nv['id'] not in only:
             continue
@@ -216,7 +247,7 @@ def main():
             x = x.mean(axis=1)
         kind = nv.get('kind', '')
         lines[nv['id']] = {'role': nv.get('who', ''), 'dur': round(nv['duration_s'], 3), 'preset': 'nonverbal',
-                           'kind': kind, 'ph': [], 'words': [], 'env': envelope(x), 'dl': kind,
+                           'kind': kind, 'ph': [], 'words': [], 'env': envelope(x), 'dl': kind, 'dlsrc': 'kind',
                            'scene': nv.get('scene')}
         stats['envelope_only'] += 1
     doc = {
@@ -227,6 +258,7 @@ def main():
         'units': 'times in centiseconds from the start of the WAV; env = 1 base64url char per 10 ms, 0..63 = -45..-10 dBFS RMS (20 ms window)',
         'phoneset': 'ARPAbet (CMU, no stress) from pocketsphinx 5.1.1 en-us',
         'emotions': 'computed at runtime from dl + preset (scenes/lib/humans/expressions.js)',
+        'shots': shot_scenes(a.shotlist),
         'lines': dict(sorted(lines.items())),
     }
     os.makedirs(os.path.dirname(a.out), exist_ok=True)

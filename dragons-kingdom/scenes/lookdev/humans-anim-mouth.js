@@ -5,7 +5,8 @@
 // cool high shaft from behind, interior HDRI); each light can be switched off from the JSON.
 // scenes/lookdev/humans-anim-mouth.json:
 //   { "id": "alexandria", "line": "L011", "times": [0.33, 0.55, ...]  (take seconds),
-//     "az": 0.84, "el": -0.2, "dist": 0.42, "fov": 21, "lights": { "key": 1, "shaft": 1, "bounce": 1, "env": 0.32 } }
+//     "az": 0.84, "el": -0.2, "dist": 0.42, "fov": 21, "lights": { "key": 1, "shaft": 1, "bounce": 1, "env": 0.32 },
+//     "charOpts": { "lipMask": false } (loadCharacter options: an A/B without the lip colour zone) }
 // Render all moments as a 1-fps sequence (frame k = moment k, posed at its own time):
 //   node render/render.mjs scenes/lookdev/humans-anim-mouth.js --preset draft --fps 1 --seconds N --workers 1
 import * as THREE from 'three';
@@ -59,7 +60,7 @@ export async function setup(ctx) {
     bounce.position.set(0.1, 0.7, 0.6); scene.add(bounce);
   }
   const data = await loadPerformanceData();
-  const ch = await loadCharacter(CFG.id || 'alexandria');
+  const ch = await loadCharacter(CFG.id || 'alexandria', CFG.charOpts || {});
   scene.add(ch.root);
   const P = createPerformer(ch, data, { arms: 'drape' });
   P.place(0, 0, CFG.yaw ?? 0.42);

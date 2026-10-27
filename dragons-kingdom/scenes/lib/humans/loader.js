@@ -123,9 +123,11 @@ export function buildCharacter(data, opts = {}) {
       if (m.kind === 'skin') eyeZone(g, md, bones, index);
       g.setAttribute('mdepth', new THREE.BufferAttribute(md, 1));
     }
+    // the lips' own colour zone (vermilion) from the skin photo's UV layout (data/lipmask-uv.json)
+    if (mouth && m.kind === 'skin' && opts.lipMask !== false) applyLipMask(g, m, mouth, opts.lipMask || LIPMASK_DATA);
     if (g.attributes.skinIndex && opts.rebind !== false) rebindWorn(g, m, header, bones, index);
     g.computeBoundingSphere();
-    const mat = materialFor(m, header, { ...opts, mouthU, headU });
+    const mat = materialFor(m, header, { ...opts, mouthU, headU, lipM: mouth?.M, lipUp: mouth?.up });
     let mesh;
     if (g.attributes.skinIndex) {
       mesh = new THREE.SkinnedMesh(g, mat);
@@ -228,7 +230,7 @@ function rebindWorn(g, m, header, bones, index) {
 function materialFor(m, header, opts) {
   const mt = m.material || {};
   switch (m.kind) {
-    case 'skin': return skinMaterial({ ...mt, seed: hashStr(header.id) % 997, mouthU: opts.mouthU, headU: opts.headU });
+    case 'skin': return skinMaterial({ ...mt, seed: hashStr(header.id) % 997, mouthU: opts.mouthU, headU: opts.headU, lipM: opts.lipM, lipUp: opts.lipUp });
     case 'eye': return eyeMaterial({ ...mt, headU: opts.headU });
     case 'brow': case 'lash': case 'haircard': return cardMaterial({ ...mt, colorMap: m.kind === 'haircard', cut: m.kind === 'brow' ? [0.0, 0.03] : [0.06, 0.3], front: m.kind === 'lash', headU: opts.headU });
     case 'hair': return hairStrandMaterial(mt);
@@ -265,7 +267,11 @@ function mouthFrame(header, bones, index) {
   const M = P('oris05').add(P('oris01')).multiplyScalar(0.5);
   const f = new THREE.Vector3(0, 0, 1).applyQuaternion(bones[index.head].getWorldQuaternion(new THREE.Quaternion())).normalize();
   const body = header.meshes.find((m) => m.kind === 'skin');
-  return { M, f, F: null, body };
+  // up across the lips (lower -> upper lip bone, square to f)
+  const up = P('oris05').sub(P('oris01'));
+  up.addScaledVector(f, -up.dot(f));
+  if (up.lengthSq() < 1e-10) up.set(0, 1, 0); else up.normalize();
+  return { M, f, up, F: null, body };
 }
 
 /**
@@ -341,6 +347,112 @@ function mouthDepth(g, mo, isSkin) {
     out[i] = d;
   }
   return out;
+}
+
+// ------------------------------------------------------------------ lips --
+// The build's lip mask (aux.r) is centred on MakeHuman's 'joint-mouth' helper, ~7 cm behind the lips
+// at the jaw joint, so almost no skin vertex got it (alexandria 3 of 55784) - and the face de-lighting
+// (albg) then evened the lips out like skin: in the 4K close-ups the lips read as a crack in a smooth
+// face. Every MakeHuman skin photo shares one UV layout, so the vermilion is a fixed region in UV
+// space (tools/lipmask_uv.py measured it per texture from the photo's redness: data/lipmask-uv.json).
+// Here every skin vertex within 4 cm of the lips samples that mask at its UV: aux.r (the lip weight
+// the skin shader reads) and the de-lighting gain lifted back to 1 (the photo's own lip colour).
+// The redness masks of the dark-skinned photos are noisy (lips barely redder than the skin): those
+// use the mean of the light-skinned photos' masks (the same UV layout, clean outlines).
+export const LIPMASK_URL = new URL('./data/lipmask-uv.json', import.meta.url).href;
+let LIPMASK_DATA = null;
+/** Load the lip mask data once (loadCharacter does; buildCharacter uses it when loaded). */
+export async function loadLipMask(url = LIPMASK_URL) {
+  if (LIPMASK_DATA) return LIPMASK_DATA;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    LIPMASK_DATA = decodeLipMask(await r.json());
+  } catch { LIPMASK_DATA = null; }
+  return LIPMASK_DATA;
+}
+/** Decode the base64 grids of data/lipmask-uv.json (Node: pass the parsed JSON). */
+export function decodeLipMask(doc) {
+  const atobX = (b) => (typeof atob === 'function' ? Uint8Array.from(atob(b), (c) => c.charCodeAt(0)) : new Uint8Array(Buffer.from(b, 'base64')));
+  const tex = {};
+  for (const [name, t] of Object.entries(doc.textures || {})) tex[name] = { ...t, grid: atobX(t.mask) };
+  return { doc, tex, light: Object.keys(tex).filter((n) => /lightskinned/.test(n)) };
+}
+export function setLipMask(d) { LIPMASK_DATA = d; }
+const UP = new THREE.Vector3(0, 1, 0);
+function sampleLipGrid(t, u, v) {
+  const [u0, v0, u1, v1] = t.box;
+  const x = ((u - u0) / (u1 - u0)) * t.w - 0.5, y = ((v - v0) / (v1 - v0)) * t.h - 0.5;
+  if (x < -0.5 || y < -0.5 || x > t.w - 0.5 || y > t.h - 0.5) return 0;
+  const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
+  const at = (i, j) => (i < 0 || j < 0 || i >= t.w || j >= t.h ? 0 : t.grid[j * t.w + i] / 255);
+  return (at(xi, yi) * (1 - fx) + at(xi + 1, yi) * fx) * (1 - fy) + (at(xi, yi + 1) * (1 - fx) + at(xi + 1, yi + 1) * fx) * fy;
+}
+function applyLipMask(g, m, mo, LM) {
+  if (!LM || !g.attributes.uv || !g.attributes.aux) return 0;
+  const name = String(m.material?.map || '').split('/').pop().replace(/\.[a-z]+$/i, '');
+  const own = LM.tex[name] && !/darkskinned/.test(name) ? LM.tex[name] : null;
+  const light = LM.light.map((n) => LM.tex[n]);
+  if (!light.length && !own) return 0;
+  const pos = g.attributes.position, uv = g.attributes.uv, aux = g.attributes.aux, albg = g.attributes.albg;
+  const p = new THREE.Vector3(), d = new THREE.Vector3();
+  // 1. the mask at every skin vertex of the lips' region: within 3.2 cm of the mouth, 1.2 cm below to
+  //    0.9 cm above the lip line (the nostrils are as red in the photo)
+  const W = new Map();
+  for (let i = 0; i < pos.count; i++) {
+    p.fromBufferAttribute(pos, i);
+    d.copy(p).sub(mo.M);
+    const h = d.dot(mo.up || UP);
+    if (d.lengthSq() > 0.032 * 0.032 || h > 0.009 || h < -0.012) {
+      // the build's own lip mask round MakeHuman's jaw-joint helper marked a few vertices deep in the
+      // head (alexandria: 3): not lips
+      if (aux.getX(i) > 0) aux.setX(i, 0);
+      continue;
+    }
+    const u = uv.getX(i), v = uv.getY(i);
+    // the character's own photo (light skin) half, the mean of the light-skinned photos half: one
+    // photo's mask can be patchy (a pale lower lip in the shoot's light)
+    let wl = 0;
+    for (const t of light) wl += sampleLipGrid(t, u, v);
+    wl /= Math.max(1, light.length);
+    W.set(i, own ? 0.5 * sampleLipGrid(own, u, v) + 0.5 * wl : wl);
+  }
+  if (!W.size) return 0;
+  // 2. a CLOSING over the mesh (3 rings dilated, then 3 eroded): fills the pale gaps of the lower lip
+  //    (the shoot's highlight) without growing the outline; then one ring of smoothing
+  const nb = new Map();
+  const idx = g.index ? g.index.array : null;
+  if (idx) {
+    const link = (a, b) => { if (!W.has(a) || !W.has(b)) return; let s = nb.get(a); if (!s) nb.set(a, (s = new Set())); s.add(b); };
+    for (let k = 0; k < idx.length; k += 3) {
+      const a = idx[k], b = idx[k + 1], c = idx[k + 2];
+      link(a, b); link(b, a); link(b, c); link(c, b); link(a, c); link(c, a);
+    }
+  }
+  // vertices at the same place (UV seams, split normals) share one value
+  const step = (src, f) => {
+    const out = new Map();
+    for (const [i, w] of src) { let v = w; for (const j of nb.get(i) || []) v = f(v, src.get(j)); out.set(i, v); }
+    return out;
+  };
+  let C = W;
+  for (let k = 0; k < 3; k++) C = step(C, Math.max);
+  for (let k = 0; k < 3; k++) C = step(C, Math.min);
+  const S = new Map();
+  for (const [i, w] of C) { let s = w * 2, n = 2; for (const j of nb.get(i) || []) { s += C.get(j); n++; } S.set(i, s / n); }
+  // 3. aux.r (the lip weight of the skin shader), the de-lighting gain back to 1 (the photo's own lip
+  //    colour); a soft edge from the grid's own 1-2 texel blur, no stray specks below 0.12
+  let n = 0;
+  for (const [i, w0] of S) {
+    const w = Math.max(0, Math.min(1, (w0 - 0.12) / 0.55));
+    if (w <= 0) continue;
+    aux.setX(i, Math.max(aux.getX(i), w));
+    if (albg) for (let k = 0; k < 3; k++) albg.setComponent(i, k, albg.getComponent(i, k) + (1 - albg.getComponent(i, k)) * w);
+    n++;
+  }
+  aux.needsUpdate = true;
+  if (albg) albg.needsUpdate = true;
+  return n;
 }
 
 export function hashStr(s) {
