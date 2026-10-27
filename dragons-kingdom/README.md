@@ -910,14 +910,29 @@ stopped and continued at any time.
 
 The `final` preset was tuned on the CPU cloud machine, where every tap costs. The masters
 render on Daxtyn's PC (`pc/TARGET.md`: Windows 11, an NVIDIA RTX 4090), which can afford far
-more work per pixel. A **quality tier** turns every knob up where a GPU can afford it. It is
-opt-in, deterministic, and changes only how finely the same picture is sampled: never the
-camera, lens, light, grade, grain or look. Everything is in `runtime/lib/quality.js`.
+more work per pixel. A **quality tier** turns knobs up where a GPU can afford it. It is opt-in and
+deterministic, and it keeps the camera, lens, light, grade and grain. Most knobs only sample the
+reviewed picture more finely. A few change what you see, on purpose and visibly: reflections on wet
+and glossy surfaces, extra grass tufts and shrubs (density), real sub-frames instead of the velocity
+motion blur, and sharper light shafts from the finer fog grid. Each knob is checked against `final`
+on its own (below). Everything is in `runtime/lib/quality.js`.
+
+**How a tier reaches the masters.** `render/episode.mjs` (`npm run episode`, `pc/Render-Episode.cmd`)
+renders every shot at `--preset final` and the tier it prints in its banner:
+
+- `--tier final|high|ultra8|ultra|max` (or `--preset final-high` ...) picks one by hand;
+- without it, it follows `pc/gpu-check.json`, but only when the GPU check measured that tier (not
+  extrapolated) at 3840x2160 on this computer's graphics card, every picture check passed and the tier
+  definitions have not changed since; otherwise it renders `final`. The banner says which and why.
+
+A job's fingerprint includes the tier, so a resumed shot never mixes tiers; `DONE.json` records it.
 
 ```bash
-node render/render.mjs <scene> --preset final-ultra            # native 4K at the ultra tier
+node render/episode.mjs --tier high                            # Episode 1 at the high tier
+node render/render.mjs <scene> --preset final --tier ultra     # one scene, native 4K, ultra tier
 node render/render.mjs --still <scene> --time 2 --preset final-ultra --size 640x360 --png u.png   # a quick look
-node runtime/tools/tier-check.mjs <scene> --time 2 --size 640x360 --tiers final,high,ultra   # compare the tiers
+node runtime/tools/tier-check.mjs <scene> --time 2 --size 480x272 --tiers final,high,ultra --crops "sea=0,200,200,70"
+node runtime/tools/tier-check.mjs <scene> --time 2 --size 480x272 --knobs all --crops "..."   # one knob at a time vs final
 node render/gpu-check.mjs                                      # on the PC: measure, plan, recommend
 ```
 
@@ -929,70 +944,83 @@ node render/gpu-check.mjs                                      # on the PC: meas
 | `ultra` | `final-ultra` | `high` + 16 real sub-frames per frame |
 | `max` | `final-max` | `high` + 32 sub-frames, the densest settings |
 
-What each knob does (final -> high / ultra; `max` goes further where noted):
+What each knob does (final -> high / ultra; `max` goes further where noted). "Look" says whether it
+only refines the reviewed picture or visibly changes it:
 
-| knob | final | high and up | what you see |
-|---|---|---|---|
-| sub-frames (`motionBlur.mode: 'accumulate'`) | velocity blur, 1 scene pass | ultra8 8, ultra 16, max 32 | `update()` and the whole scene + shadow pass run N times across the 180-degree shutter, each with a Halton sub-pixel jitter and the sun jittered inside its 0.53-degree disk: true motion blur (wing tips and wheel spokes blur along their arc, shadows blur too), N-x supersampling (no stair-stepped rigging, no sparkling scales), real penumbrae. A scene that already renders more sub-frames keeps them; simulation (chunk-warmup) scenes cannot and keep velocity blur |
-| velocity motion-blur taps | 20 | 48 (max 64) | smoother long streaks (`high`, and simulation scenes) |
-| sun shadow cascades | 2048 per cascade | 4096 | half the texel size: thin casters (rigging, spears, fence poles, fingers) keep their shadows, edges stop stepping |
-| GTAO + contact shadows | half resolution, 3 slices x 6 steps, 10 contact steps | full resolution, 4 x 10 (max 6 x 12), 24 contact steps | no blocky occlusion in creases (scales, cloth folds, masonry joints); contact shadows reach thin objects |
-| DOF gather taps | 48 | 128 (max 192) | smoother bokeh and out-of-focus foregrounds at 4K (no effect at small sizes, where the blur is small anyway) |
-| volumetric fog froxels | 160 x 90 x 64 (24-px froxels at 4K) | 320 x 180 x 96 (12-px froxels), 32-tap soft shadow lookups where the scene asked for soft shafts | sharper light shafts through trees, colonnades, wings; the grid is stored as a tiled atlas when it is taller than the GPU's texture limit |
-| image-based light | baked SH + equirect (the CPU shortcut) | three's exact PMREM lookups | glossy reflections exactly as three.js intends (measured 0.4 code values from the shortcut) |
-| anisotropic filtering | what the scene set | x16 on every mip-mapped texture | ground, roads, roofs stay sharp at grazing angles |
-| FFT ocean | 256 x 256 per cascade, CPU | 512 x 512 on the GPU, every sub-frame | finest ripples 11 cm instead of 21 cm; the same sea (a 256 grid's wave numbers keep their random numbers), heights within 0.2 mm of the CPU FFT |
-| ocean reflections (`ssr`) | off | on, 48 steps | dragons, ships and cliffs reflected in the water |
-| reflections on wet / glossy surfaces (`ssr`) | off | on (Hi-Z, 96 iterations; max 128) | puddles, wet cobbles and stone, polished metal, glass, wet scales reflect the scene instead of only the sky map (see below) |
-| `ctx.quality.density` | 1 | grass 1.5, vegetation 1.3, crowd 1.25 (max 2 / 1.6 / 1.5) | instance-count multipliers libraries read with `density(ctx, 'grass')` (`dk/quality.js`) |
-| FX tier | the FX library's own choice | `ultra` | 2.5x particles, finer smoke/fire grids, more ray-march steps, 2048 decals (`scenes/lib/fx/core/tier.js`) |
-| `ctx.quality.textureScale` | 1 | 2 | multiplier libraries may apply to procedurally generated texture sizes |
+| knob | final | high and up | what you see | look |
+|---|---|---|---|---|
+| sub-frames | velocity blur, 1 scene pass | ultra8 8, ultra 16, max 32 | `update()` and the whole scene + shadow pass run N times across the 180-degree shutter (Halton sub-pixel jitter, the sun jittered inside its 0.53-degree disk), averaged in 32-bit float. Each sub-frame also gets velocity blur over its own 1/N of the shutter (vectors from the previous sub-frame's pose), so a fast wing tip is one continuous streak along its arc, not N copies; haze, fog, GTAO and contact shadows are computed per sub-frame from its own pose. True curved motion blur, N-x supersampling, real sun penumbrae. Depth of field uses the centre sub-frame's depth. Simulation (chunk-warmup) scenes keep velocity blur | changes motion blur |
+| velocity motion-blur taps | 20, tiles read every 2nd pixel | 48 (max 64), every pixel | smoother long streaks; a moving object thinner than 2 px still gets its blur (`high`, and simulation scenes) | refines |
+| sun shadow cascades | 2048 per cascade | 4096 | half the texel size: thin casters keep their shadows, edges stop stepping | refines |
+| GTAO + contact shadows | half resolution, 3 slices x 6 steps, 10 contact steps | full resolution, 4 x 10 (max 6 x 12), 24 contact steps | no blocky occlusion in creases; contact shadows reach thin objects | refines |
+| DOF gather taps | 48 | 128 (max 192) | smoother bokeh and out-of-focus foregrounds at 4K | refines |
+| volumetric fog froxels | 160 x 90 x 64 (24-px froxels at 4K) | 320 x 180 x 64 (12-px froxels), 32-tap soft shadow lookups where the scene asked for soft shafts | sharper light shafts through trees, colonnades, wings. The mist keeps its shape: its density (noise, banks, height fog) is still sampled at the scene's own froxel centres and interpolated; only the light is evaluated per finer froxel. Sampling the noise on the finer grid reshaped every mist bank, finer depth slices moved how much of a bank lies in front of a cliff (both measured on the lookdev coast), so neither is done | sharper shafts |
+| image-based light | baked SH + equirect (the CPU shortcut) | three's exact PMREM lookups | glossy reflections exactly as three.js intends | refines |
+| anisotropic filtering | what the scene set | x16 on every mip-mapped texture | ground, roads, roofs stay sharp at grazing angles | refines |
+| FFT ocean | 256 x 256 per cascade on the CPU | the same 256 sea, its FFTs on the GPU every sub-frame | the same waves (heights within 0.2 mm of the CPU FFT); no N + 2 CPU FFTs per frame at the sub-frame tiers. Not 512: its finer ripples changed the sheen of the whole sea (structure SSIM 0.825 on the coast); a scene can still ask for `createOcean({ resolution: 512 })` | same |
+| reflections IN the sea | off | off | the fixed-step march hatches beside a reflected object, the experimental Hi-Z variant (`cinematic.ssr.sea: true`) returned sea-bed colours: not used (`runtime/PROGRESS.md`) | - |
+| reflections on wet / glossy surfaces (`ssr`) | off | on (Hi-Z, 96 iterations; max 128) | puddles, wet cobbles and stone, polished metal, glass, wet scales reflect the scene instead of only the sky map (see below) | changes reflections |
+| density | - | grass x1.5, shrubs x1.3 (max x2 / x1.6) | more grass tufts and shrubs, APPENDED after the ones final places: every reviewed tuft and shrub stays where it was, the tier only fills in between. Read by `scenes/lib/sets/grass.js` `grassField({ density })` and the nature library's `scatterPlants` (its grass, thrift tufts and shrubs); sets that call `grassField` without `density` (the director's riding grounds) are unchanged. `crowd` is a contract only: no crowd library reads it yet (one that does must append its extras behind the authored ones) | adds plants |
+| FX tier | the FX library's own choice | `ultra` | 2.5x particles, finer smoke/fire grids, more ray-march steps, 2048 decals (`scenes/lib/fx/core/tier.js`) | refines |
 
 **Reflections on wet and glossy surfaces** (`runtime/cinematic/ssr.js`, `cinematic.ssr`). Opaque
 `MeshStandardMaterial`/`MeshPhysicalMaterial` surfaces with roughness <= `ssr.maxRoughness` (0.4),
-and every material a library marks with `material.userData.dkSSR = true` (wet stone and cobbles,
-puddles: their roughness comes from maps or shader code the runtime cannot see), are drawn once more
-after the main pass, as a second program variant of the same material (every patch the library made
-still applies). That variant traces the reflected ray through a min-depth pyramid of the depth buffer
-(Hi-Z, after AMD FidelityFX SSSR's scheme: exact crossings, no stepping noise) and adds only the
-difference between what the scene shows there and what the environment map predicted, weighted by
-three's own Fresnel/roughness terms and specular occlusion (and the same for a clearcoat layer).
-Where no ray hits, the picture is exactly the main pass. Glossy surfaces read a mip-mapped colour copy
-at the reflection cone's footprint. `userData.dkSSR = false` (material) or `userData.dkNoSSR`
-(object) excludes something; `cinematic.debug = 'ssr'` colours every reflective pixel by why its ray
-ended (green hit, red left the screen, blue passed behind an object, ...). Screen-space limits apply:
-only what is on screen can be reflected.
+and every material a library marks with `material.userData.dkSSR = true`, are drawn once more after
+the main pass AND the late pass (so the sea is in the depth and colour they reflect), as a second
+program variant of the same material (every patch the library made still applies). The architecture
+library marks its puddles, basin water, the quay's wet tide band and joints, harbour stone and the
+setts of a square (their roughness comes from shader code; the tracer fades out above
+`maxRoughness`, so dry stone gets nothing). The variant traces the reflected ray through a min-depth
+pyramid of the depth buffer (Hi-Z, after AMD FidelityFX SSSR's scheme: exact crossings, no stepping
+noise) and adds only the difference between what the scene shows there and what the environment map
+predicted, weighted by three's own Fresnel/roughness terms and specular occlusion (and the same for a
+clearcoat layer). Where no ray hits, the picture is exactly the main pass. A material whose shader
+cannot be patched draws nothing in that pass. `userData.dkSSR = false` (material) or
+`userData.dkNoSSR` (object) excludes something; `cinematic.debug = 'ssr'` colours every reflective
+pixel by why its ray ended. Screen-space limits apply: only what is on screen can be reflected.
 
-**Checked here** (CPU, SwiftShader; `npm test` `(u0)`-`(u3)`, `runtime/tools/tier-check.mjs`):
-- `final` is untouched: A/B against the runtime before the tiers (git worktree) gave byte-identical
-  frames for the lookdev coast (velocity and `hero`), test-kingdom and both cinematic test fixtures.
-- every tier draws the same picture structure as final (96 x 54 thumbnail SSIM >= 0.85, PSNR >= 25 dB:
-  measured 0.89-0.92), no NaN/Inf in any float buffer, no extra black/white pixels, no shader errors;
-  each knob alone changes the quay lookdev by <= 0.4 code values of mean luma except the wet-surface
-  reflections (the puddle now shows the dark arch instead of the bright sky);
-- deterministic: an `ultra` frame is byte-identical after rendering other frames and in another
-  browser (this found and fixed an old bug of the sub-frame mode: the aerial-perspective LUT was built
-  from the previous frame's camera, so a browser's first frame differed from the same frame later);
-- the GPU FFT ocean matches the CPU FFT (heights 0.17 mm apart, picture 58 dB, still exact at 59 min).
+**Checked here** (CPU, SwiftShader; `npm test` `(u0)`-`(u5)`, `runtime/tools/tier-check.mjs`):
+- `final` is untouched: A/B against the runtime before the tiers (git worktree) gives byte-identical
+  frames (lookdev coast velocity and `hero`, test-kingdom, the cinematic test fixtures).
+- every tier draws the same picture structure as final: 192 x 108 thumbnail SSIM >= 0.85 and
+  PSNR >= 25 dB, plus 1:1 crop PSNRs; no NaN/Inf in any float buffer, no extra black/white pixels, no
+  shader errors. Lookdev coast at 480x272 (crops: the mist bank, the
+  rocks in the surf, the sea): high SSIM 0.999, 49.6 dB (crops 43.8 / 42.5 / 43.5 dB); ultra SSIM 0.991,
+  38.7 dB (36.6 / 31.3 / 29.9 dB: the same waves and rocks, the moving sea and the rock edges blurred
+  and supersampled by the 16 sub-frames). The first gpu-check of these tiers on this machine
+  (`pc/logs/gpu-check-2026-10-27-08-57-03.txt`) had failed exactly here (high 0.813, ultra 0.811 at
+  192x108); later runs passed only because the gate had been loosened to 96x54. The one-knob A/B
+  traced it to the 512 ocean.
+- one knob at a time (`--knobs all`) on the coast: every knob alone >= 0.99 SSIM; the two that changed
+  the look in the first round (the 512 ocean: SSIM 0.825, sea crop 18 dB; the froxels: mist crop 35 dB)
+  were fixed as described in the table.
+- sea style frames: F1_F3_NUMBERS
+- fast motion (`(u4)`, `test/fixtures/fast-motion.js`: a 4 cm bar swinging at 24 rad/s, a crate sliding
+  at 30 m/s): banding along the sweep 1.72 -> 0.88 with the per-sub-frame blur (plain averaging leaves a
+  ladder of copies), same coverage; the crate's contact shadow moves with it (per-sub-frame GTAO).
+- glossy over water (`(u5)`, `test/fixtures/glossy-sea.js`): a steel ball's underside reflects the
+  water, not the sand under it; the water itself stays clean (no hatching).
+- density (`(u0c)`): the tufts and shrubs final places are byte-identical at every tier, the extras come after.
+- deterministic: an `ultra` frame is byte-identical after rendering other frames and in another browser.
+- the GPU FFT ocean matches the CPU FFT (heights 0.17 mm apart).
 
 **What it costs.** Nothing here can measure the RTX 4090 itself; `render/gpu-check.mjs` does on the
-PC. It renders its test frame (F2) at final, `final-high` and `final-ultra` and checks that every tier
-draws the same picture (as above). It then turns the speeds into hours of Episode 1 per tier, from the
-render schedule, setup and encodes, and prints **RECOMMENDED QUALITY: --preset ...**: the highest tier
-that keeps the episode within 72 hours (`--budget-hours`). `final-ultra8` and `final-max` are
-extrapolated from the sub-frame count. Before that measurement, `runtime/tools/tier-check.mjs`
-estimates the GPU work from what each pass does (pixels x taps, triangles, shadow texels, sub-frames:
-`frameWork()` in `quality.js`) and from the frame's counted passes and draw calls
-(`dk.frameStats()`): on the quay lookdev at 4K, high is ~3.9x and ultra ~15x the GPU work of final,
-and ultra issues 5x the draw calls and 8x the `update()` calls. On a GPU, WebGL frames are often
-limited by draw-call submission and `update()` on the CPU, which the sub-frames multiply too. The
-gpu-check measures exactly that. Episode 1 is 78,144 frames, so 3 days allow ~3.3 s per frame on
-average: the sub-frame tiers fit only if the card renders final well under a second.
+PC. It renders its test frame at final and at the tiers, checks that every tier draws the same
+picture (as above) and turns the speeds into hours of Episode 1 per tier. It measures before it
+recommends: an extrapolated tier is rendered before it can be chosen, a tier that failed its
+picture check never is, and the heavy-scene check (F5) runs at the recommended tier. It prints
+**RECOMMENDED QUALITY TIER** (the highest that keeps the episode within 72 hours, `--budget-hours`)
+and stores it for `render/episode.mjs`. Before that measurement, `runtime/tools/tier-check.mjs`
+estimates the GPU work from what each pass does (`frameWork()` in `quality.js`). Sub-frames multiply
+`update()` (JavaScript on the CPU) as well as the GPU work. Episode 1 is 78,144 frames, so 3 days allow
+~3.3 s per frame on average.
 
-**Limits.** Sub-frames multiply `update()` (JavaScript on the CPU) as well as the GPU work. Wet-
-surface reflections need libraries to mark wet materials (`userData.dkSSR`). The density multipliers
-only act where a library reads them. The ocean's sun glitter is still missing in the cinematic late
-pass at every tier (`cinematic.lateLights`, off by default, see `runtime/PROGRESS.md`).
+**Limits.** No sea reflections at any tier (above). Depth of field at the sub-frame tiers uses the
+centre sub-frame's depth. The density multipliers act only where a library reads them (grass and
+plants so far). The ocean's sun glitter is still missing in the cinematic late pass at every tier
+(`cinematic.lateLights`, off by default, see `runtime/PROGRESS.md`). At final, the velocity blur can
+miss a moving object thinner than 2 px (its tiles read every second pixel); the tiers read every
+pixel.
 
 ## How it works inside
 

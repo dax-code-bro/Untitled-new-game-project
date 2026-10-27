@@ -7,7 +7,7 @@ and the README section "Quality tiers for the render PC (RTX 4090)".
 
 Final 4K masters render on Daxtyn's PC (Windows 11, RTX 4090). The `final` preset was tuned for the
 CPU cloud machine. The tiers turn every quality knob up where a GPU can afford it - opt-in, deterministic,
-same picture content - and `render/gpu-check.mjs` measures final vs the tiers on his GPU and recommends
+finer sampling of the reviewed picture (the knobs that change the look are listed in the README) - and `render/gpu-check.mjs` measures final vs the tiers on his GPU and recommends
 the tier that keeps Episode 1 under ~3 days.
 
 ## Map of the work
@@ -19,17 +19,63 @@ the tier that keeps Episode 1 under ~3 days.
 | `runtime/dk-runtime.js` | tier wiring (ctx.quality before setup, cinematic knobs after setup), `ctx.preset` = 'final' for tier presets, anisotropy pass, `dk.frameStats()` work counters, `info.quality` |
 | `runtime/cinematic/ssr.js` | wet/glossy-surface reflections: second program variant of the same material in the late pass, Hi-Z traversal, delta vs env, clearcoat, debug view 'ssr' |
 | `runtime/lib/ocean-gpu.js` | GPU FFT (spectrum, 2 log2 N butterfly passes, assemble; float32, phase split for hour-long t), readback for heightAt |
-| `runtime/lib/ocean.js` | `gpuFFT` option + tier defaults (resolution, ssr, ssrSteps, gpuFFT); N > 256 keeps the 256 sea |
+| `runtime/lib/ocean.js` | `gpuFFT` option + tier defaults (resolution, ssr, ssrSteps, gpuFFT); heightAt() reads 4 texels per cascade on the GPU; experimental Hi-Z sea reflections (`useHiZ`, `cinematic.ssr.sea`) |
 | `runtime/cinematic/ao.js` | `ao.resolution` 1 = full-res GTAO |
-| `runtime/cinematic/volumetrics.js`, `passes.js` | tiled froxel atlas (one column = old layout, byte-identical), `softTaps` |
-| `runtime/cinematic/index.js` | SSR wiring, `lateLights` (opt-in), accumulate-mode camera fix |
+| `runtime/cinematic/volumetrics.js`, `passes.js` | tiled froxel atlas (one column = old layout, byte-identical), `softTaps`, `densityGrid` (DK_VOL_DENS_GRID: density on the scene's grid, light on the finer one), tile-max stride |
+| `runtime/cinematic/index.js` | SSR wiring (after the late pass), `lateLights` (opt-in), accumulate-mode camera fix, hybrid sub-frames (`renderHybrid`: per-sub-frame velocity blur over its 1/N slice, haze/fog resolve, GTAO) |
 | `runtime/tools/tier-lookdev.js` | procedural scene exercising every knob |
 | `runtime/tools/tier-check.mjs` | CLI: render a scene at tiers, compare structure, counters, 4090 estimate; exported helpers |
 | `runtime/tools/tier-bench.mjs` | gpu-check's tier benchmark + plan + report lines |
 | `render/gpu-check.mjs` | section "4. quality tiers" (pc-kit's file; this track's hook only), `--tiers`, `--tier-size`, `--budget-hours` |
-| `test/tiers.test.mjs`, `test/fixtures/tier-scene.js` | (u0) maths, (u1) structure/NaN/shader errors, (u2) determinism of ultra, (u3) GPU vs CPU FFT |
+| `test/tiers.test.mjs`, `test/fixtures/tier-scene.js`, `fast-motion.js`, `glossy-sea.js` | (u0) maths, (u0b) episode follows only a measured recommendation, (u0c) density append-only, (u1) structure/NaN/shader errors, (u2) determinism of ultra, (u3) GPU vs CPU FFT, (u4) fast motion: hybrid streak + per-sub-frame AO, (u5) glossy over water |
+| outside runtime/ (reviewer's requests) | `render/episode.mjs` + `render.mjs` `--tier`, `render/gpu-check.mjs` measure-before-recommend, `pc/Render-Episode.cmd` + `pc/RENDER_ON_YOUR_PC.md` tier lines, `scenes/lib/sets/grass.js` + `scenes/lib/nature/plants.js` append-only density, `scenes/lib/architecture/materials.js` dkSSR marks |
 
 ## State (newest first)
+
+### Session 2 (2026-10-27, review fixes)
+
+Fixed (each verified on the cloud CPU, pictures looked at at 1:1):
+- Tiers reach the masters: `render/episode.mjs --tier` / `--preset final-*`; by default it follows
+  gpu-check.json only when that tier was measured (not extrapolated) at 3840x2160 on this card, every
+  picture check passed and the tier definitions are unchanged (`tierDefsHash`), else `final`; banner,
+  status, DONE.json `tier`; `render.mjs --tier`; resumes never mix tiers (the job fingerprint has the tier).
+- Sub-frame banding: hybrid accumulation (velocity blur inside each sub-frame over its 1/N slice x2 tent
+  overlap, vectors from the previous sub-frame's pose). Fast-motion fixture (u4): banding metric
+  1.72 -> 0.88, coverage unchanged; per-sub-frame GTAO: the crate's contact strip 2.84 -> 1.03.
+- SSR after the late pass (the sea is in depth/colour: u5, a steel ball over the sea reflects water, not
+  the sand under it). Sea SSR OFF at every tier: the fixed-step march hatches; the Hi-Z sea variant
+  (`cinematic.ssr.sea: true`, experimental) returned sea-bed colours where it should hit the ball and I
+  could not find why (float64 CPU replicas of the trace found no hit for flat water either) - next step
+  if anyone picks it up: trace one pixel on the glossy-sea fixture with `cinematic.debug = 'ssr'`
+  and compare the Hi-Z level walk with seasim.mjs-style replicas.
+- SSR fallback (no lights_fragment_end) discards instead of drawing the surface a second time.
+- Structure gate back to 192x108 (SSIM >= 0.85, PSNR >= 25 dB) + 1:1 crop PSNRs; one-knob A/B
+  (`tier-check --knobs all --crops ...`, `quality.only`). On the lookdev coast it found two knobs that
+  changed the look: the 512 ocean (SSIM 0.825 alone; the earlier gpu-check failure
+  gpu-check-2026-10-27-08-57-03: high/ultra 0.81 at 192x108) and the froxel grid (mist crop 35 dB).
+  Fixes: the ocean tier is the same 256 sea on the GPU (57 dB; 512 stays a scene's choice); the froxel
+  grid samples the density on the scene's own grid and only the light on the finer one, x2 across the
+  screen and the same depth slices (finer slices moved how much of a mist bank lies in front of the
+  cliffs: mist crop 39.7 dB at x1 x1 x1.5 vs 43.6 dB at x2 x2 x1).
+- density wired, append-only (u0c): grassField `density` (extra tufts after the reviewed ones, same random
+  stream), scatterPlants grass + thrift tufts + shrubs (own stream, shifted grid). crowd: contract only.
+- dkSSR marks: architecture puddle, pool, quay stone + joints (tide band), harbour stone, setts.
+- textureScale removed (no library read it, no 2K textures shipped); density.particles removed (the FX
+  library's own tier does particles).
+- heightAt() on the GPU reads 4 texels per cascade; planner recommends only measured tiers, heavy F5
+  check at the recommended tier only; `--tiers all`; tier-check uses the pinned ffmpeg; RUNTIME_VERSION 1.2.0.
+
+Observed, not changed (final is the reviewed look):
+- final's velocity blur barely blurs a thin fast bar / a 30 m/s crate in the fast-motion fixture
+  although the velocity buffer has the vectors (debug view): thin objects can slip between the tile
+  samples at final (`motionBlur.tileStride` 2; the tiers use 1).
+- Depth of field at the sub-frame tiers uses the centre sub-frame's depth.
+
+Next (open):
+- 4K numbers from the real GPU (gpu-check on Daxtyn's PC).
+- Director: pass `density: density(ctx, 'grass')` (or ctx.quality.density.grass) to the grassField calls in
+  `scenes/lib/director/sets/verdor-grounds.js` if the riding-ground grass should thicken at the tiers.
+- Sea SSR (see above). Ocean sun glitter in the late pass (`lateLights`, session 1).
 
 ### Session 1 (2026-10-27)
 
@@ -65,13 +111,10 @@ Decisions:
 - `volumetrics.noiseFilter` stays the scene's choice (it turns distant mist wisps into flat haze).
 - Tier presets are the final preset at a higher tier (native 4K, every frame); SERIES.md section 2 still
   says "--preset final" for masters - that wording is pc-kit's / Daxtyn's (REQUEST in the report).
-- Structure is judged at 96x54: the detail a tier adds (ripples, sharper shadows) must not count.
+- (session 1) Structure was judged at 96x54 - too loose: back to 192x108 + crops in session 2.
 
 Next (open):
 - 4K numbers from the real GPU (gpu-check on Daxtyn's PC). Then tune the ladder (e.g. a cheaper rung
   between final and high if high does not fit 72 h).
-- Libraries should read `density(ctx, kind)` (director's verdor-grounds grass `k`, sets/grass, nature
-  plants, crowds) and mark wet materials `userData.dkSSR` (architecture puddles/wet cobbles, sets wet bands,
-  creatures' wet hatchling, Starlight is auto by roughness if <= 0.4).
-- 2K/4K PBR texture variants (assets-lib only has 1K ambientCG files) for `textureScale`.
-- episode.mjs `--preset` passthrough (it hard-codes `--preset final`) + read `recommendedPreset`.
+- (done in session 2: density in sets/grass + nature plants, dkSSR in architecture, episode.mjs --tier;
+  textureScale dropped.)

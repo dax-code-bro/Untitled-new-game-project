@@ -1,5 +1,5 @@
 // FFT ocean on the GPU (dk/ocean.js uses it with { gpuFFT: true }; the quality tiers above final
-// turn it on with 512 x 512 cascades). The same maths as the CPU path in ocean.js - the same
+// turn it on for the same 256 x 256 sea). The same maths as the CPU path in ocean.js - the same
 // spectrum h0(k), the same packing of eight real fields into four complex inverse FFTs, the same
 // radix-2 decimation-in-time butterflies with a bit-reversed first stage - done in float32
 // fragment passes instead of float64 JavaScript:

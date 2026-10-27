@@ -86,7 +86,18 @@ scene (Abby on Leaf on the real field set).
 
 Positions are metres in the set's world frame or NAMES: marks (`'door'`), actors (`'alexandria'`),
 actor parts (`'abby.head'`, `'abby.hand.R'`, `'leaf.eye'`, `'leaf.w_R_2'` - any creature bone),
-set objects; anything can be a key list `[[t, value, ease?], ...]`. `cam.debug: true` (or a list of extra point
+set objects; anything can be a key list `[[t, value, ease?], ...]`.
+
+**Landscapes** (`sets/prologue-vistas.js`): per-shot `set` options a builder reads - `loc`, `sunTarget`,
+`shadowExtent`, `haze`, `fog`, `fogRange`, `wb`, `clouds` (show a deck tagged `when: 'clouds'`) and `far`
+(the camera's far plane, default 60 km: a deck 3.5 km up meets a 60 km far plane 3 deg above the horizon -
+a hard line across the clouds). A cliff is built with `coastLand()` - a heightfield in coast-aligned
+coordinates, rows close together ACROSS the face plus `relief(x, y)` on the steep part (a plain x / z grid
+cut by the face shades as fine vertical stripes); keep faces steeper than ~75 deg or the terrain shader
+mixes in its top-down projection (texture streaks down the face). Hedges: `farmland.js hedgePlacements`,
+`align: true` lays loaves along the boundary (round bushes read as pebbles from 400 m). Cloud decks
+(`cloud-deck-mesh.js`): `edgeFade`, `distFade: [d0, d1]` (fades with distance from `home`; faded
+fragments are discarded, no depth), `glow`, `veil`. `cam.debug: true` (or a list of extra point
 names) prints the solved camera position and the subjects' posed points once per shot (framing checks). Headings: 0 = north (-z),
 90 = east (+x). Under a camera `mount`, numeric positions are in the mount's frame and
 `{ at: [x, y, z] }` is a world point.

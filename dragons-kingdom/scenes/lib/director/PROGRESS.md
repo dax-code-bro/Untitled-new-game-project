@@ -63,7 +63,13 @@ How it works: `README.md` in this folder. Latest state first.
     proud). Chosen with a Node z-buffer raster of the face from the shot camera
     (`eng1/director/p10/raster.mjs`: old grid, aligned grid, two reliefs) before any browser. The bench
     scrub (one bush every 2.2 m on one line = a dotted rule across the face) is now clumps across the
-    bench's width.
+    bench's width. The first still showed the stripes STILL there, at 4x a texture of short vertical
+    fibres: the terrain shader (sets/materials.js) projects from the side only past ~75 deg and the 65-70
+    deg walls took ~40 % of its top-down projection - the texture stretched down the face. Tried and
+    ruled out with one still each: a larger, flatter cliff texture (no change), a tight shadow map (no
+    change). Fixed: faceW 14-19 m (was 22-30) - 75-80 deg walls; rows 0.31 m apart across them. Now a
+    dark mottled rock wall with beds and a green ledge (`eng1/director/st14`). LESSON: look at a 4x crop
+    before guessing the cause of a texture artefact.
   - P-11: the hedges read as rows of grey pebbles from 400 m in the mist (each round bush a lit dome).
     `hedgePlacements({ align: true })` (farmland.js): loaves 3-6 m long laid ALONG the boundary (yaw from
     the edge field's gradient), same random sequence so nothing else moves; checked in Node (edge

@@ -125,7 +125,8 @@ export const OCEAN_DEFAULTS = {
   ssr: false,                            // screen-space reflections of the scene (dragons, cliffs) - needs the cinematic late pass; about doubles the ocean pass (measured 0.8 -> 1.8 s at 1080p); slightly aliased at the reflection edges
   ssrSteps: 24,
   gpuFFT: false,                         // true: the FFTs run on the GPU (ocean-gpu.js) - the quality tiers above final turn it on
-                                         // with resolution 512 (finest ripples 11 cm instead of 21 cm), cheap at every sub-frame
+                                         // (the same 256 sea, cheap at every sub-frame). resolution 512 adds 11-21 cm ripples but
+                                         // changes the sheen of the whole sea: a scene's own choice, not a tier's
   segments: 256, innerRadius: 0.35, sectorAngle: 2.6, gridFocus: 30, outerRadius: 20000, maxRingGrowth: 0.06,
   castShadow: false,
 };
@@ -148,9 +149,10 @@ export function createOcean(ctx, opts = {}) {
     const rng = mulberry((o.seed * 7919 + ci * 104729) >>> 0);
     const gaussOf = (r) => () => { const u1 = Math.max(r(), 1e-12), u2 = r(); const rr = Math.sqrt(-2 * Math.log(u1)); return [rr * Math.cos(TWO_PI * u2), rr * Math.sin(TWO_PI * u2)]; };
     const gauss = gaussOf(rng);
-    // Above 256 x 256 (the quality tiers' 512): the wavenumbers a 256 grid has keep EXACTLY the 256
-    // grid's random numbers (same sea, same crests, same buoyancy), and only the finer ripples the
-    // larger grid adds get their own seeded stream - more detail, not a different sea.
+    // Above 256 x 256: the wavenumbers a 256 grid has keep EXACTLY the 256 grid's random numbers (same
+    // crests, same buoyancy), and only the finer ripples the larger grid adds get their own seeded
+    // stream. (Their slope still changes the sea's sheen everywhere - lookdev coast SSIM 0.825 - so the
+    // quality tiers stay at 256.)
     const BASE = 256;
     let baseG = null, gaussHi = null;
     if (N > BASE) {

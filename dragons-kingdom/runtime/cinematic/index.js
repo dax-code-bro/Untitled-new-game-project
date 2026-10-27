@@ -864,16 +864,20 @@ export class Cinematic {
       if (!t || t.texture.type !== THREE.FloatType) continue;
       const n = t.width * t.height * 4, buf = new Float32Array(n);
       renderer.readRenderTargetPixels(t, 0, 0, t.width, t.height, buf);
-      let nan = 0, inf = 0, neg = 0, min = Infinity, max = -Infinity, sum = 0;
+      let nan = 0, inf = 0, neg = 0, min = Infinity, max = -Infinity, sum = 0, nanBox = null;
       for (let i = 0; i < n; i++) {
         const v = buf[i];
-        if (Number.isNaN(v)) { nan++; continue; }
+        if (Number.isNaN(v)) {
+          const x = (i >> 2) % t.width, y = Math.floor((i >> 2) / t.width);
+          if (!nanBox) nanBox = [x, y, x, y]; else nanBox = [Math.min(nanBox[0], x), Math.min(nanBox[1], y), Math.max(nanBox[2], x), Math.max(nanBox[3], y)];
+          nan++; continue;
+        }
         if (!Number.isFinite(v)) { inf++; continue; }
         if (v < min) min = v; if (v > max) max = v;
         if (v < -1e-3 && (i & 3) < 3 && name !== 'resolve') neg++;
         sum += v;
       }
-      out[name] = { nan, inf, negative: neg, min, max, mean: sum / n };
+      out[name] = { nan, inf, negative: neg, min, max, mean: sum / n, ...(nanBox ? { nanBox } : {}) };   // nanBox: x0, y0, x1, y1 (y from the bottom)
     }
     return out;
   }
