@@ -423,3 +423,23 @@ job was left locked) and there was no walk clip. Done (each checked by a render 
 - The crowd scene builds a lighter set below 2560 px wide (no hero-LOD focus, 2K shadow map): the
   draft page OOM-crashed twice while three director renders ran (the memory cgroup is shared: 15 GB).
 Render queue (memory-gated, sequential): scratchpad eng1/perf/bin/q3.sh, logs eng1/perf/s3/q/*.log.
+
+### Session 3, continued (11:30-) - proof renders, mouth interior colour
+- Eye sockets: no back light on eyeballs / lashes / lid skin within 2.2 cm of the eyes (sparkling blue
+  lower-lid lines in the 4K L011), direct specular occluded by baked AO in cavities, pore-slope
+  (Toksvig-style) roughness - the glitter in and in front of the ear under the back light is gone.
+- Mouth interior: the L011 draft read a teal mouth. Pixel values said the lower teeth were a
+  warm-neutral grey (125,117,107) - teal only beside the saturated lips. The light inside the mouth is
+  now tinted like the lips and tongue it bounces off (pink-warm, not ivory - a yellow tooth went olive
+  before): teeth (130,111,100), the dark behind them reddish-black (ax_a/ax_b, scratch s3/rev).
+- Draft clips with the takes muxed (aac): alex-draft.mp4 (108 frames, 23.5 min, 2 workers),
+  dialogue-draft.mp4 (134 frames, 24.9 min), cradle-draft.mp4 (204 frames, 27.1 min). Checked frame
+  by frame at the line times: L011 opens on "My" at 1.17 s and closes at 2.5 s (take 1.0-2.47 s);
+  Abby's "It's gold." rounds on "gold" at 1.125 s and closes by 1.5 s; Remi's L015 2.0-2.75 s with his
+  head turning to her; Abby turns up to him for L016 at 3.5 s; cradle: right hand under the hurt left
+  forearm, left hand palm up with a soft curl, Remi's hand at her upper arm, "I'm standing" 6.3-7.3 s,
+  then she turns to him.
+- npm test: 43 pass, 1 skipped, 1 fail on the loaded machine; the failing one, (c3) stall watchdog with the long warm-up
+  fixture, saw a 3 s gap in the warm-up heartbeat while three renders ran; alone it passes (runtime's).
+- Crowd draft: OOM-killed three times in a row (the kernel's memory-cgroup killer, dmesg) while my
+  dialogue draft and two director renders ran; the crowd now runs only after my other renders.
