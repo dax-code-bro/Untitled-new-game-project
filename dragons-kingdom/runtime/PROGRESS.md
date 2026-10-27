@@ -1,54 +1,73 @@
 # runtime/ - quality tiers for the RTX 4090 (track: gpu-tier / "ultra")
 
-Owner of this file: the quality-tier track. Successor: read this first, then `runtime/lib/quality.js`.
+Owner of this file: the quality-tier track. Successor: read this first, then `runtime/lib/quality.js`
+and the README section "Quality tiers for the render PC (RTX 4090)".
 
 ## Goal
 
 Final 4K masters render on Daxtyn's PC (Windows 11, RTX 4090). The `final` preset was tuned for the
 CPU cloud machine. The tiers turn every quality knob up where a GPU can afford it - opt-in, deterministic,
-same picture content - and `render/gpu-check.mjs` measures final vs final-ultra on his GPU and recommends
+same picture content - and `render/gpu-check.mjs` measures final vs the tiers on his GPU and recommends
 the tier that keeps Episode 1 under ~3 days.
+
+## Map of the work
+
+| file | what |
+|---|---|
+| `runtime/lib/quality.js` | tiers final / high / ultra8 / ultra / max, `TIER_PRESETS`, `qualityFor()` (ctx.quality), `applyTierToCinematic()` (only raises; `ctx.quality` may override parts), `froxelAtlas()`, `KNOB_DOCS`, cost model (`frameWork`, `tierCost`, `estimateFrameMs`, `RTX4090_ASSUMPTIONS`), `fillTierTimes`, `planEpisode`, scene helpers `density()`, `scaleCount()`, `tierOf()` |
+| `render/lib/presets.mjs` | presets `final-high`, `final-ultra8`, `final-ultra`, `final-max` (3840x2160, `quality.tier`), `presetTier()` |
+| `runtime/dk-runtime.js` | tier wiring (ctx.quality before setup, cinematic knobs after setup), `ctx.preset` = 'final' for tier presets, anisotropy pass, `dk.frameStats()` work counters, `info.quality` |
+| `runtime/cinematic/ssr.js` | wet/glossy-surface reflections: second program variant of the same material in the late pass, Hi-Z traversal, delta vs env, clearcoat, debug view 'ssr' |
+| `runtime/lib/ocean-gpu.js` | GPU FFT (spectrum, 2 log2 N butterfly passes, assemble; float32, phase split for hour-long t), readback for heightAt |
+| `runtime/lib/ocean.js` | `gpuFFT` option + tier defaults (resolution, ssr, ssrSteps, gpuFFT); N > 256 keeps the 256 sea |
+| `runtime/cinematic/ao.js` | `ao.resolution` 1 = full-res GTAO |
+| `runtime/cinematic/volumetrics.js`, `passes.js` | tiled froxel atlas (one column = old layout, byte-identical), `softTaps` |
+| `runtime/cinematic/index.js` | SSR wiring, `lateLights` (opt-in), accumulate-mode camera fix |
+| `runtime/tools/tier-lookdev.js` | procedural scene exercising every knob |
+| `runtime/tools/tier-check.mjs` | CLI: render a scene at tiers, compare structure, counters, 4090 estimate; exported helpers |
+| `runtime/tools/tier-bench.mjs` | gpu-check's tier benchmark + plan + report lines |
+| `render/gpu-check.mjs` | section "4. quality tiers" (pc-kit's file; this track's hook only), `--tiers`, `--tier-size`, `--budget-hours` |
+| `test/tiers.test.mjs`, `test/fixtures/tier-scene.js` | (u0) maths, (u1) structure/NaN/shader errors, (u2) determinism of ultra, (u3) GPU vs CPU FFT |
 
 ## State (newest first)
 
 ### Session 1 (2026-10-27)
 
-Done and checked:
-- `runtime/lib/quality.js`: tiers final / high / ultra / max, `TIER_PRESETS` (final-high, final-ultra,
-  final-max), `qualityFor()` (ctx.quality: tier, fxTier, density, textureScale, anisotropy, ocean, ssr),
-  `applyTierToCinematic()` (sample counts only go up), `froxelAtlas()`, `KNOB_DOCS`, a cost model
-  (`frameWork()`, `tierCost()`), helpers `density(ctx, kind)`, `scaleCount()`, `tierOf()`.
-- `render/lib/presets.mjs`: presets `final-high`, `final-ultra`, `final-max` (3840x2160, quality.tier).
-  Scenes see `ctx.preset === 'final'` (hero creature builds etc. unchanged).
-- `runtime/dk-runtime.js`: tier wiring (quality before setup, cinematic knobs after setup), anisotropic
-  filtering after setup (`applyAnisotropy`), per-frame work counters (`dk.frameStats()`: passes, draw
-  calls, triangles, full-screen pixels, update() calls + ms), `info.quality` (tier + every change made).
-- `runtime/cinematic/ao.js`: `ao.resolution` 1 = full-resolution GTAO + contact shadows.
-- `runtime/cinematic/volumetrics.js` + `passes.js`: froxel atlas tiled in columns when the grid is taller
-  than the GPU texture limit (one column = the old layout, byte-identical); soft-shadow tap count.
-- `runtime/cinematic/ssr.js` (new): screen-space reflections on wet/glossy surfaces - same material,
-  second program variant (DK_SSR_PASS), drawn in the late pass, adds (scene hit - env radiance) x
-  singleScattering x spec. occlusion (+ clearcoat). Hi-Z min-depth pyramid traversal (after FidelityFX
-  SSSR's scheme): exact, no noise. Debug view `cinematic.debug = 'ssr'` colour-codes why rays end.
-  Libraries mark wet materials with `material.userData.dkSSR = true`.
-- `runtime/cinematic/index.js`: SSR wiring, `lateLights` (opt-in, see finding below).
-- `runtime/tools/tier-lookdev.js`: a procedural scene that exercises every knob.
-- A/B against the pre-tier runtime (git worktree): cinematic-lookdev (velocity and hero), test-kingdom,
-  both cinematic test fixtures - final pictures BYTE-IDENTICAL.
+Checked (all on the cloud CPU, SwiftShader):
+- `final` byte-identical to the pre-tier runtime (git worktree A/B): cinematic-lookdev (velocity + hero),
+  test-kingdom, cinematic-scene and cinematic-sea-scene fixtures. Re-run after every runtime change:
+  `ab.mjs`-style check = render the same frame with `git worktree add <dir> <old commit>` and compare bytes.
+- every tier: same structure (96x54 thumbnail SSIM 0.89-0.92 on quay lookdev, coast, tier fixture), no
+  NaN/Inf, no shader errors; deterministic (ultra frame identical after other frames / other browser).
+- GPU FFT vs CPU FFT: heightAt within 0.17 mm, picture PSNR 58 dB, exact at t = 59 min; 512 keeps the sea.
+- npm test: 45 tests, 44 pass, 1 skipped (PowerShell, as before).
+- gpu-check `--swiftshader --candidate lookdev-coast --tiers high,ultra --tier-size 480x272` runs end to end
+  (bench, picture check per tier, plan table, RECOMMENDED banner, gpu-check.json `tiers` + `recommendedPreset`).
 
-Findings / decisions:
-- `volumetrics.noiseFilter` is NOT turned on by the tiers: it averages distant mist-bank wisps into flat
-  haze (a different look; seen on the lookdev coast).
-- FOUND A BUG (not fixed in final, opt-in fix `cinematic.lateLights = true`): the ocean is drawn in the
-  late pass with the camera on layer 30 only; three.js only gathers lights that pass the camera's layer
-  test, so the cinematic ocean is compiled with 0 directional lights and no shadows - no GGX sun glitter,
-  no sun on the foam (probe: the DKOcean program's cache key lists 0 dir lights in the late pass). All
-  sea shots so far were reviewed this way, so the default is unchanged; the director decides.
+Bugs found and fixed:
+- Accumulate (sub-frame) mode was not order-independent: the aerial-perspective LUT used the camera's
+  world matrix before this frame's update, i.e. the previous frame's last sub-frame (or the setup pose in
+  a browser's first frame) - max 2-8 code values in the haze. Affected `hero`, the style frames' film
+  finish, shot 1E-03 (film). Fixed for accumulate mode only (velocity mode byte-identical).
 - three uploads `ivec4[]` uniforms with uniform4iv as given: use a flat Int32Array, not Vector4s.
 
-Next (planned):
-- tests (test/tiers.test.mjs): structure vs final (thumb SSIM), NaN/black, determinism per tier.
-- runtime/tools/tier-check.mjs: render a scene at every tier, compare, counters -> cost model.
-- gpu-check: benchmark final vs final-ultra, recommend a tier for <= ~72 h.
-- GPU FFT ocean (512, per sub-frame) - the CPU FFT at 512 x 16 sub-frames would cost ~2 s/frame.
-- README section "Quality tiers for the RTX 4090".
+Found, NOT fixed in final (opt-in fix `cinematic.lateLights = true`, director to decide):
+- The ocean is drawn in the late pass with the camera on layer 30 only; three gathers only lights that
+  pass the camera's layer test, so the cinematic ocean is compiled with 0 directional lights and no
+  shadows: no GGX sun glitter, no sun on foam (probe: DKOcean program cache key, late pass). Sea shots so
+  far were reviewed that way.
+
+Decisions:
+- `volumetrics.noiseFilter` stays the scene's choice (it turns distant mist wisps into flat haze).
+- Tier presets are the final preset at a higher tier (native 4K, every frame); SERIES.md section 2 still
+  says "--preset final" for masters - that wording is pc-kit's / Daxtyn's (REQUEST in the report).
+- Structure is judged at 96x54: the detail a tier adds (ripples, sharper shadows) must not count.
+
+Next (open):
+- 4K numbers from the real GPU (gpu-check on Daxtyn's PC). Then tune the ladder (e.g. a cheaper rung
+  between final and high if high does not fit 72 h).
+- Libraries should read `density(ctx, kind)` (director's verdor-grounds grass `k`, sets/grass, nature
+  plants, crowds) and mark wet materials `userData.dkSSR` (architecture puddles/wet cobbles, sets wet bands,
+  creatures' wet hatchling, Starlight is auto by roughness if <= 0.4).
+- 2K/4K PBR texture variants (assets-lib only has 1K ambientCG files) for `textureScale`.
+- episode.mjs `--preset` passthrough (it hard-codes `--preset final`) + read `recommendedPreset`.

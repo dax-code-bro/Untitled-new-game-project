@@ -80,8 +80,12 @@ node render/render.mjs scenes/test-kingdom.js --preset final --cinematic on
 | `preview`    | 1920 x 1080 | 1920 x 1080 | FXAA          | full-HD preview                     |
 | `final`      | 3840 x 2160 | 3840 x 2160 | FXAA          | the real 4K episode                 |
 | `final-fast` | 3840 x 2160 | 2560 x 1440 | FXAA + in-shader upscale/sharpen | 4K when time is short |
+| `final-high` | 3840 x 2160 | 3840 x 2160 | as `final` | `final` with every GPU quality knob up (see "Quality tiers") |
+| `final-ultra8` / `final-ultra` / `final-max` | 3840 x 2160 | 3840 x 2160 | 8 / 16 / 32 real sub-frames | `final-high` + true motion blur, supersampling and sun penumbrae - for a big GPU |
 
-Frame rate is 24 fps (film standard) unless you pass `--fps`.
+Frame rate is 24 fps (film standard) unless you pass `--fps`. The `final-*` quality presets
+are the `final` preset (native 4K, every frame) with more work per pixel; scenes see them as
+`final`. `node render/gpu-check.mjs` measures them on the render PC and recommends one.
 
 ### 8-bit or 10-bit?
 
@@ -330,7 +334,7 @@ The renderer is built to run overnight without anyone watching:
 
 ```
 node render/render.mjs <scene.js> [options]
-  --preset draft|preview|final|final-fast   (default final)
+  --preset draft|preview|final|final-fast|final-high|final-ultra8|final-ultra|final-max   (default final)
   --seconds S        length (default: the scene's meta.duration minus --start)
   --start S          start time in seconds
   --fps N            frames per second (default 24)
@@ -901,6 +905,94 @@ stopped and continued at any time.
   Physical, Lambert, Phong, Toon); custom ShaderMaterials are left as they are.
   If any material fails to compile with the stack on, the frame fails with
   the compiler's message instead of silently rendering without that object.
+
+## Quality tiers for the render PC (RTX 4090)
+
+The `final` preset was tuned on the CPU cloud machine, where every tap costs. The masters
+render on Daxtyn's PC (`pc/TARGET.md`: Windows 11, an NVIDIA RTX 4090), which can afford far
+more work per pixel. A **quality tier** turns every knob up where a GPU can afford it. It is
+opt-in, deterministic, and changes only how finely the same picture is sampled: never the
+camera, lens, light, grade, grain or look. Everything is in `runtime/lib/quality.js`.
+
+```bash
+node render/render.mjs <scene> --preset final-ultra            # native 4K at the ultra tier
+node render/render.mjs --still <scene> --time 2 --preset final-ultra --size 640x360 --png u.png   # a quick look
+node runtime/tools/tier-check.mjs <scene> --time 2 --size 640x360 --tiers final,high,ultra   # compare the tiers
+node render/gpu-check.mjs                                      # on the PC: measure, plan, recommend
+```
+
+| tier | preset | what it is |
+|---|---|---|
+| `final` | `final` | the master settings as reviewed on the cloud CPU (nothing changes: checked byte-identical) |
+| `high` | `final-high` | every GPU knob below up, velocity motion blur (one scene pass per frame) |
+| `ultra8` | `final-ultra8` | `high` + 8 real sub-frames per frame (as the style frames' film finish) |
+| `ultra` | `final-ultra` | `high` + 16 real sub-frames per frame |
+| `max` | `final-max` | `high` + 32 sub-frames, the densest settings |
+
+What each knob does (final -> high / ultra; `max` goes further where noted):
+
+| knob | final | high and up | what you see |
+|---|---|---|---|
+| sub-frames (`motionBlur.mode: 'accumulate'`) | velocity blur, 1 scene pass | ultra8 8, ultra 16, max 32 | `update()` and the whole scene + shadow pass run N times across the 180-degree shutter, each with a Halton sub-pixel jitter and the sun jittered inside its 0.53-degree disk: true motion blur (wing tips and wheel spokes blur along their arc, shadows blur too), N-x supersampling (no stair-stepped rigging, no sparkling scales), real penumbrae. A scene that already renders more sub-frames keeps them; simulation (chunk-warmup) scenes cannot and keep velocity blur |
+| velocity motion-blur taps | 20 | 48 (max 64) | smoother long streaks (`high`, and simulation scenes) |
+| sun shadow cascades | 2048 per cascade | 4096 | half the texel size: thin casters (rigging, spears, fence poles, fingers) keep their shadows, edges stop stepping |
+| GTAO + contact shadows | half resolution, 3 slices x 6 steps, 10 contact steps | full resolution, 4 x 10 (max 6 x 12), 24 contact steps | no blocky occlusion in creases (scales, cloth folds, masonry joints); contact shadows reach thin objects |
+| DOF gather taps | 48 | 128 (max 192) | smoother bokeh and out-of-focus foregrounds at 4K (no effect at small sizes, where the blur is small anyway) |
+| volumetric fog froxels | 160 x 90 x 64 (24-px froxels at 4K) | 320 x 180 x 96 (12-px froxels), 32-tap soft shadow lookups where the scene asked for soft shafts | sharper light shafts through trees, colonnades, wings; the grid is stored as a tiled atlas when it is taller than the GPU's texture limit |
+| image-based light | baked SH + equirect (the CPU shortcut) | three's exact PMREM lookups | glossy reflections exactly as three.js intends (measured 0.4 code values from the shortcut) |
+| anisotropic filtering | what the scene set | x16 on every mip-mapped texture | ground, roads, roofs stay sharp at grazing angles |
+| FFT ocean | 256 x 256 per cascade, CPU | 512 x 512 on the GPU, every sub-frame | finest ripples 11 cm instead of 21 cm; the same sea (a 256 grid's wave numbers keep their random numbers), heights within 0.2 mm of the CPU FFT |
+| ocean reflections (`ssr`) | off | on, 48 steps | dragons, ships and cliffs reflected in the water |
+| reflections on wet / glossy surfaces (`ssr`) | off | on (Hi-Z, 96 iterations; max 128) | puddles, wet cobbles and stone, polished metal, glass, wet scales reflect the scene instead of only the sky map (see below) |
+| `ctx.quality.density` | 1 | grass 1.5, vegetation 1.3, crowd 1.25 (max 2 / 1.6 / 1.5) | instance-count multipliers libraries read with `density(ctx, 'grass')` (`dk/quality.js`) |
+| FX tier | the FX library's own choice | `ultra` | 2.5x particles, finer smoke/fire grids, more ray-march steps, 2048 decals (`scenes/lib/fx/core/tier.js`) |
+| `ctx.quality.textureScale` | 1 | 2 | multiplier libraries may apply to procedurally generated texture sizes |
+
+**Reflections on wet and glossy surfaces** (`runtime/cinematic/ssr.js`, `cinematic.ssr`). Opaque
+`MeshStandardMaterial`/`MeshPhysicalMaterial` surfaces with roughness <= `ssr.maxRoughness` (0.4),
+and every material a library marks with `material.userData.dkSSR = true` (wet stone and cobbles,
+puddles: their roughness comes from maps or shader code the runtime cannot see), are drawn once more
+after the main pass, as a second program variant of the same material (every patch the library made
+still applies). That variant traces the reflected ray through a min-depth pyramid of the depth buffer
+(Hi-Z, after AMD FidelityFX SSSR's scheme: exact crossings, no stepping noise) and adds only the
+difference between what the scene shows there and what the environment map predicted, weighted by
+three's own Fresnel/roughness terms and specular occlusion (and the same for a clearcoat layer).
+Where no ray hits, the picture is exactly the main pass. Glossy surfaces read a mip-mapped colour copy
+at the reflection cone's footprint. `userData.dkSSR = false` (material) or `userData.dkNoSSR`
+(object) excludes something; `cinematic.debug = 'ssr'` colours every reflective pixel by why its ray
+ended (green hit, red left the screen, blue passed behind an object, ...). Screen-space limits apply:
+only what is on screen can be reflected.
+
+**Checked here** (CPU, SwiftShader; `npm test` `(u0)`-`(u3)`, `runtime/tools/tier-check.mjs`):
+- `final` is untouched: A/B against the runtime before the tiers (git worktree) gave byte-identical
+  frames for the lookdev coast (velocity and `hero`), test-kingdom and both cinematic test fixtures.
+- every tier draws the same picture structure as final (96 x 54 thumbnail SSIM >= 0.85, PSNR >= 25 dB:
+  measured 0.89-0.92), no NaN/Inf in any float buffer, no extra black/white pixels, no shader errors;
+  each knob alone changes the quay lookdev by <= 0.4 code values of mean luma except the wet-surface
+  reflections (the puddle now shows the dark arch instead of the bright sky);
+- deterministic: an `ultra` frame is byte-identical after rendering other frames and in another
+  browser (this found and fixed an old bug of the sub-frame mode: the aerial-perspective LUT was built
+  from the previous frame's camera, so a browser's first frame differed from the same frame later);
+- the GPU FFT ocean matches the CPU FFT (heights 0.17 mm apart, picture 58 dB, still exact at 59 min).
+
+**What it costs.** Nothing here can measure the RTX 4090 itself; `render/gpu-check.mjs` does on the
+PC. It renders its test frame (F2) at final, `final-high` and `final-ultra` and checks that every tier
+draws the same picture (as above). It then turns the speeds into hours of Episode 1 per tier, from the
+render schedule, setup and encodes, and prints **RECOMMENDED QUALITY: --preset ...**: the highest tier
+that keeps the episode within 72 hours (`--budget-hours`). `final-ultra8` and `final-max` are
+extrapolated from the sub-frame count. Before that measurement, `runtime/tools/tier-check.mjs`
+estimates the GPU work from what each pass does (pixels x taps, triangles, shadow texels, sub-frames:
+`frameWork()` in `quality.js`) and from the frame's counted passes and draw calls
+(`dk.frameStats()`): on the quay lookdev at 4K, high is ~3.9x and ultra ~15x the GPU work of final,
+and ultra issues 5x the draw calls and 8x the `update()` calls. On a GPU, WebGL frames are often
+limited by draw-call submission and `update()` on the CPU, which the sub-frames multiply too. The
+gpu-check measures exactly that. Episode 1 is 78,144 frames, so 3 days allow ~3.3 s per frame on
+average: the sub-frame tiers fit only if the card renders final well under a second.
+
+**Limits.** Sub-frames multiply `update()` (JavaScript on the CPU) as well as the GPU work. Wet-
+surface reflections need libraries to mark wet materials (`userData.dkSSR`). The density multipliers
+only act where a library reads them. The ocean's sun glitter is still missing in the cinematic late
+pass at every tier (`cinematic.lateLights`, off by default, see `runtime/PROGRESS.md`).
 
 ## How it works inside
 
