@@ -117,10 +117,13 @@ export async function build(ctx, { shotSpecs }) {
     ], { macro: 0.55, macroScale: 0.004, detailNear: 300, detailFar: 2500, vertexColors: true, ...o }),
     // a dark sandstone cliff: an earthy grit texture side-projected reads as weathered rock; the
     // library's block-like rock26 read as a dressed stone wall on a 60 m heightfield face
+    // (session 7: the grit at 11 m with a strong normal map, seen ALONG the face at a grazing angle, was
+    // squeezed sideways into fine vertical hairlines over the whole face - larger and flatter now; the
+    // face's form comes from the geometry: coastLand rows + relief)
     cliff: (o = {}) => terrainMaterial(ctx, [
-      { id: 'pbr/acg_ground24', scale: 11, tint: [0.4, 0.33, 0.27], normalScale: 0.9 },
+      { id: 'pbr/acg_ground24', scale: 26, tint: [0.4, 0.33, 0.27], normalScale: 0.4 },
       { id: 'pbr/acg_ground13', scale: 8, tint: [0.42, 0.46, 0.34] },
-      { id: 'pbr/acg_ground27', scale: 6, tint: [0.36, 0.32, 0.27] },
+      { id: 'pbr/acg_ground27', scale: 16, tint: [0.36, 0.32, 0.27] },
     ], { macro: 0.6, macroScale: 0.01, detailNear: 300, detailFar: 2500, vertexColors: true, ...o }),
     // farmed / grazed land seen from 150 m - 2 km: the photographic grass layers at a large tile with
     // weak normal maps (their tiled tread patterns read as chevrons on a slope at grazing angles),
@@ -152,6 +155,33 @@ export async function build(ctx, { shotSpecs }) {
     m.receiveShadow = true; m.castShadow = true;
     return { mesh: m, heightAt: o.h };
   };
+  /** A heightfield whose grid rows follow a coast line: built over (x, r) with r = z - edge(x) (metres
+   * seaward of the edge), then each vertex moved to z = edge(x) + r. A cliff face then lies ALONG the
+   * rows and `rs` can put rows close together across it (P-10: a plain x / z grid cut the face
+   * diagonally, every column met the face at a different place in its cell, and the face shaded as a
+   * comb of fine vertical stripes - a curtain, a palisade). o: xs, rs, edge(x), h(x, z), relief, color, mat. */
+  const coastLand = async (o) => {
+    const toZ = (x, r) => o.edge(x) + r;
+    const wrap = (f) => f && ((x, r, y, n) => f(x, toZ(x, r), y, n));
+    const hf = heightfield({
+      xs: o.xs, zs: o.rs, height: (x, r) => o.h(x, toZ(x, r)),
+      splat: wrap(o.splat) || ((x, r, y, n) => { const steep = smooth(0.55, 0.85, 1 - n[1]); const low = 1 - smooth(1.5, 8, y); const g = (1 - steep) * (1 - low); return [Math.max(steep, low * 0.7), g * 0.7, g * 0.3 + low * 0.3, 0]; }),
+      color: wrap(o.color),
+    });
+    // o.relief(x, y): metres seaward on the steep part only (joints, blocks, beds standing proud) - the
+    // rows are dense enough across a face to carry it
+    const g = hf.geometry, p = g.attributes.position, nn = g.attributes.normal;
+    for (let k = 0; k < p.count; k++) {
+      const x = p.getX(k), y = p.getY(k), st = o.relief ? smooth(0.35, 0.7, 1 - nn.getY(k)) : 0;
+      p.setZ(k, toZ(x, p.getZ(k)) + (st > 0 ? st * o.relief(x, y) : 0));
+    }
+    g.computeVertexNormals(); g.computeBoundingSphere(); g.computeBoundingBox();
+    const m = new THREE.Mesh(g, await terrainMats[o.mat || 'dark'](o.matOpts || {}));
+    m.receiveShadow = true; m.castShadow = true;
+    return { mesh: m, heightAt: o.h };
+  };
+  /** an axis from pieces [[a, b, n], ...] (n steps each, joined without repeating the joins) */
+  const pieces = (list) => { const out = []; for (const [a, b, n] of list) for (let i = out.length ? 1 : 0; i <= n; i++) out.push(a + (b - a) * i / n); return Float64Array.from(out); };
   const locs = {};
   const group = (name) => { const g = new THREE.Group(); g.name = `loc:${name}`; g.visible = false; scene.add(g); locs[name] = g; return g; };
 
@@ -256,7 +286,10 @@ export async function build(ctx, { shotSpecs }) {
     const edge = (x) => -140 + 28 * Math.sin(x / 170 + 0.6) + 9 * Math.sin(x / 83 + 2) + 6 * N.fbm(x * 0.015, 3.3, 2);
     const topAt = (x) => 48 + 26 * smooth(-0.5, 0.6, N.fbm(x * 0.0016 + 4, 1.3, 3));      // 48-74 m along the coast
     const benchAt = (x) => 0.36 + 0.12 * N.fbm(x * 0.006 + 2, 5.5, 2);                  // the vegetated ledge
-    const faceW = (x) => 22 + 8 * N.fbm(x * 0.02, 7, 2);
+    // 14-19 m from lip to foot for a 48-74 m face: walls of 75-80 deg (at 65-70 deg the terrain shader
+    // mixed ~40 % of its TOP-DOWN projection into the face - the texture stretched down it in fine
+    // vertical streaks; it projects from the side only past ~75 deg)
+    const faceW = (x) => 14 + 5 * N.fbm(x * 0.02, 7, 2);
     // the profile down the face (u = 0 at the lip, 1 at the foot): an upper wall, a narrow bench where
     // a softer bed weathered back (scrub grows on it), a lower wall, a talus slope at the foot
     const prof = (u, b) => {
@@ -286,11 +319,21 @@ export async function build(ctx, { shotSpecs }) {
         // beds dominate; run-off streaks only here and there (an even comb of vertical streaks under a
         // raking sun read as a timber palisade)
         const patch = smooth(0.15, 0.55, N.fbm(x * 0.012 + 5, y * 0.01, 2));
-        v *= 1 - steep * (0.42 - 0.45 * bed - 0.22 * streak * patch + 0.35 * wet);
+        v *= 1 - steep * (0.42 - 0.45 * bed - 0.06 * streak * patch + 0.35 * wet);
       }
       return [v * 0.98, v * 0.97, v * 0.95];
     };
-    const L = await land({ x: [-1400, 1400], z: [-1400, 400], n: [720, 480], focus: [0, -140], h: H, mat: 'cliff', color: faceColor, matOpts: { cliff: { strata: 1.0, streaks: 0.08, wet: 0.8, ochre: 0.6 } } });
+    // the grid follows the edge line (coastLand): rows 0.31 m apart across the face and its foot, so a
+    // 60 m face has ~50 rows down it (the x / z grid gave it 3-8, cut diagonally: fine vertical stripes)
+    const L = await coastLand({
+      xs: gradedAxis(-1400, 1400, 760, -150, 1.6), edge,
+      rs: pieces([[-1260, -160, 60], [-160, -8, 76], [-8, 36, 140], [36, 160, 50], [160, 560, 30]]),
+      h: H, mat: 'cliff', color: faceColor, matOpts: { cliff: { strata: 1.0, streaks: 0, wet: 0.8, ochre: 0.6 } },
+      // joints and blocks of a few metres, the beds standing out and weathering back (a Node raster of the
+      // face from the shot camera, eng1/director/p10/raster.mjs, chose these: joints alone read as stripes)
+      relief: (x, y) => 0.85 * N.fbm(x * 0.08, y * 0.03 + 3, 3) + 0.5 * N.fbm(x * 0.05 + 7, y * 0.08, 2)
+        + 0.3 * Math.sin(y * 0.42 + 2.5 * N.fbm(x * 0.012, 1.7, 2)) * (0.6 + 0.4 * N.fbm(x * 0.02 + 1, y * 0.05, 2)),
+    });
     g.add(L.mesh);
     const oak = await treeKit(ctx, 'oak', { variants: 2, seed: 31, exposure: 0.2 });
     const oakW = await treeKit(ctx, 'oak', { variants: 2, seed: 32, exposure: 0.8, scale: 0.75 });
@@ -312,10 +355,13 @@ export async function build(ctx, { shotSpecs }) {
     const scrub = [], blocks = [];
     for (let x = -1000; x < 560; x += 2.2) {
       const w = faceW(x), b = benchAt(x), e = edge(x);
-      if (N.fbm(x * 0.02 + 9, 2.2, 2) > -0.25) {
-        const z = e + (b + 0.06) * w + (rr() - 0.5) * 2, y = H(x, z);
-        const sc = 1.6 + 1.8 * rr();
-        scrub.push({ p: [x + rr(), y - 0.3, z], s: [sc, sc * 0.7, sc], c: [0.8 + 0.4 * rr(), 0.9 + 0.2 * rr(), 0.8] });
+      // scrub in clumps of varied size across the bench's width (one bush every 2.2 m along one line
+      // read from the water as a dotted rule drawn across the face)
+      const clump = N.fbm(x * 0.035 + 9, 2.2, 2);
+      if (clump > -0.05) for (let k = 0, n = clump > 0.3 ? 3 : clump > 0.12 ? 2 : 1; k < n; k++) {
+        const z = e + (b + 0.12 * rr()) * w, y = H(x, z);
+        const sc = (1.0 + 2.6 * rr() * rr()) * (0.7 + clump);
+        scrub.push({ p: [x + 2.2 * rr(), y - 0.25 * sc, z], s: [sc, sc * (0.5 + 0.4 * rr()), sc], c: [0.8 + 0.4 * rr(), 0.9 + 0.2 * rr(), 0.8] });
       }
       if (rr() < 0.55) {
         const z = e + w * (0.9 + 0.35 * rr()), y = H(x, z);
@@ -358,7 +404,8 @@ export async function build(ctx, { shotSpecs }) {
     };
     const L = await land({ x: [-2600, 2600], z: [-2600, 300], n: [520, 360], focus: [0, -800], h: H, mat: 'grass', color, splat });
     g.add(L.mesh);
-    const hg = hedges({ x: [-620, 620], z: [-780, -300], F, H, seed: 43, treeP: 0.018,
+    // align: loaves along the boundaries (round bushes read as rows of pebbles from 400 m in the mist)
+    const hg = hedges({ x: [-620, 620], z: [-780, -300], F, H, seed: 43, treeP: 0.018, align: true,
       where: (x, z) => glacis(x, z) < 0.4 });
     g.add(hg.group);
     const oak = await treeKit(ctx, 'oak', { variants: 2, seed: 61, exposure: 0.3 });
@@ -477,6 +524,10 @@ export async function build(ctx, { shotSpecs }) {
     applyShot(info) {
       const st = info.spec.set || {}, t = info.local, c = info.cont;
       const loc = st.loc || 'calm';
+      // `set.far`: a shot that sees a high deck to the horizon (P-09: 3.5 km up, 60 km of slant range ends
+      // 3 deg above the horizon - the far plane drew a hard line across the clouds)
+      const far = st.far || 60000;
+      if (camera.far !== far) { camera.far = far; camera.updateProjectionMatrix(); }
       for (const [k, g] of Object.entries(locs)) g.visible = k === loc;
       for (const o of optional) o.visible = !!st[o.userData.when];
       const look = LOOKS[loc] || LOOKS.calm;

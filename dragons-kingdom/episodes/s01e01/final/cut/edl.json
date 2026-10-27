@@ -715,11 +715,11 @@
     }
    ],
    "cost": {
-    "draft_s_per_frame": 19.02,
-    "k4_cpu_s_per_frame": 164.86,
+    "draft_s_per_frame": 42.19,
+    "k4_cpu_s_per_frame": 365.66,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 15.22,
-    "k4_cpu_hours": 2.2,
+    "draft_minutes": 33.75,
+    "k4_cpu_hours": 4.88,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -729,7 +729,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "MEASURED draft 19.02 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
+    "basis": "MEASURED draft 42.19 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: a forest reaching a dark sea cliff, from the water, the cliff line receding west along the frame; caption TARA on the word.",
    "deviation": null,
@@ -795,11 +795,11 @@
     }
    ],
    "cost": {
-    "draft_s_per_frame": 2.26,
-    "k4_cpu_s_per_frame": 19.58,
+    "draft_s_per_frame": 8.49,
+    "k4_cpu_s_per_frame": 73.56,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 1.81,
-    "k4_cpu_hours": 0.26,
+    "draft_minutes": 6.79,
+    "k4_cpu_hours": 0.98,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -809,7 +809,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "MEASURED draft 2.26 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
+    "basis": "MEASURED draft 8.49 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: distant fortified walls along a ridge, inland; caption SCRAPPER on the word.",
    "deviation": null,
@@ -875,11 +875,11 @@
     }
    ],
    "cost": {
-    "draft_s_per_frame": 2.04,
-    "k4_cpu_s_per_frame": 17.64,
+    "draft_s_per_frame": 3.68,
+    "k4_cpu_s_per_frame": 31.88,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 1.63,
-    "k4_cpu_hours": 0.24,
+    "draft_minutes": 2.94,
+    "k4_cpu_hours": 0.43,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -889,10 +889,10 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "MEASURED draft 2.04 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
+    "basis": "MEASURED draft 3.68 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: a misted pale island alone on the sea, from open water; caption VERDOR on the word.",
-   "deviation": null,
+   "deviation": "lens 35 mm (shot list: 24 mm) so the whole island sits in the frame with open sea at both ends",
    "action": "Landscape 5: a misted island seen from open water, alone in frame. Caption VERDOR over this view only, synced to the spoken word. A separate dissolve from the walls, so nothing implies Verdor is near or visible from Scrapper.",
    "need": {
     "pre": 6,
@@ -1729,11 +1729,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 26.21,
-    "k4_cpu_s_per_frame": 327.65,
+    "draft_s_per_frame": 10.43,
+    "k4_cpu_s_per_frame": 130.42,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 20.97,
-    "k4_cpu_hours": 4.37,
+    "draft_minutes": 8.35,
+    "k4_cpu_hours": 1.74,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.12,
@@ -1743,7 +1743,7 @@
      "move": 1,
      "total": 1.12
     },
-    "basis": "MEASURED draft 26.21 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-2 people, sea through the window)"
+    "basis": "MEASURED draft 10.43 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-2 people, sea through the window)"
    },
    "staging": "BACK: from behind her left shoulder (three-quarter back); she turns toward the door (left background), her face away from the camera throughout.",
    "deviation": null,
@@ -4012,11 +4012,11 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 5.44,
-    "k4_cpu_s_per_frame": 62.16,
+    "draft_s_per_frame": 24.87,
+    "k4_cpu_s_per_frame": 284.21,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 13.05,
-    "k4_cpu_hours": 2.49,
+    "draft_minutes": 59.68,
+    "k4_cpu_hours": 11.37,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -4026,7 +4026,7 @@
      "move": 1,
      "total": 1.55
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.55 for the shot's content"
+    "basis": "MEASURED draft 24.87 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "BACK + WIDE: from behind Alexandria (soft) across the nest to the children, small.",
    "deviation": null,
@@ -4555,11 +4555,11 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 27.08,
-    "k4_cpu_s_per_frame": 309.49,
+    "draft_s_per_frame": 15.15,
+    "k4_cpu_s_per_frame": 173.15,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 43.33,
-    "k4_cpu_hours": 8.25,
+    "draft_minutes": 24.24,
+    "k4_cpu_hours": 4.62,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
@@ -4569,7 +4569,7 @@
      "move": 1,
      "total": 1.47
     },
-    "basis": "MEASURED draft 27.08 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
+    "basis": "MEASURED draft 15.15 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "OTS + DOF (reverse angle, declared): from the doorway over Remi's shoulder (from behind, soft) onto Alexandria small at the nest, not looking up; he answers and goes out past the lens.",
    "deviation": null,

@@ -3,8 +3,9 @@
 // horizontal card at D.y turned by D.yaw, optional `glow` (vertex colour by the heading from D.home
 // against the sun azimuth: warm sun side, cool far side), `edgeFade` (alpha to 0 over the card's outer
 // fraction), `distFade: [d0, d1]` (alpha to 0 between d0 and d1 metres from D.home: the deck thins into the
-// horizon haze gradually - by the card's edge alone the clouds stopped in a hard line 2 deg above a flat
-// haze band, P-09 session 7) and `veil` (an opaque paler layer 450 m above). Separate from the set so Node can test it
+// horizon haze gradually; fragments below alpha 0.02 are discarded so they write no depth) and `veil` (an
+// opaque paler layer 450 m above). P-09's hard line 2-3 deg above a flat haze band was the CAMERA'S FAR
+// PLANE cutting the deck (60 km slant at 3.5 km up): the shot sets `set.far`. Separate from the set so Node can test it
 // (pass `canvas` - a factory with the 2D-context calls used here - and a small `texSize`).
 import * as THREE from 'three';
 import { paintCloudDeck, paintCloudDetail } from './cloud-deck.js';
@@ -26,7 +27,10 @@ export function cloudDeckMeshes(D, { draft = true, texSize, canvas = () => docum
   const detail = paintTex(Math.min(256, texSize ?? 256), (img) => paintCloudDetail(img, D.paint)); detail.repeat.set(D.size / D.detail, D.size / D.detail);
   const shaded = !!(D.glow || D.edgeFade || D.distFade);
   const deck = new THREE.Mesh(new THREE.PlaneGeometry(D.size, D.size, shaded ? 48 : 1, shaded ? 48 : 1),
-    new THREE.MeshBasicMaterial({ map, alphaMap: detail, transparent: true, opacity: D.opacity ?? 1, depthWrite: true, side: THREE.DoubleSide, color: new THREE.Color(...D.color), fog: false, vertexColors: shaded }));
+    new THREE.MeshBasicMaterial({ map, alphaMap: detail, transparent: true, opacity: D.opacity ?? 1, depthWrite: true, side: THREE.DoubleSide, color: new THREE.Color(...D.color), fog: false, vertexColors: shaded,
+      // a deck faded out by distance must not write depth where it is gone (the haze pass would haze the
+      // sky behind it a second time); decks without distFade keep their look
+      alphaTest: D.distFade ? 0.02 : 0 }));
   deck.rotation.order = 'YXZ'; deck.rotation.set(Math.PI / 2, (D.yaw ?? 0) * D2R, 0);
   deck.position.set(D.center[0], D.y, D.center[1]);
   deck.name = name;

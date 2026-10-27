@@ -57,8 +57,12 @@ function mulberry32(seed) {
  * Hedges on the field boundaries: overlapping bushes of mixed size every ~`step` m (a continuous lumpy
  * band; same-size bushes at a wider step read as a string of beads), gaps and gateways where
  * noise(x, z) < -0.45, a hedgerow tree with probability treeP.
- * o: { x: [x0, x1], z: [z0, z1], F, H(x, z), noise(x, z) -> -1..1, where(x, z) -> bool, seed, step, width, treeP }
- * Returns { bushes: [[{ p, s, c }...], [...]] (two geometry variants), trees: [[x, y, z]...], count }.
+ * `align: true` lays each bush as a loaf along its boundary (yaw `r` from the edge field's gradient, long
+ * axis 3-6 m, 1.7-2.6 m thick, 1.5-2.6 m tall): from 400 m on, round bushes of mixed size each shade as a lit dome and the
+ * hedges read as rows of pebbles (P-11); loaves overlap into one band with a lumpy top. Same random
+ * sequence, so the places and the trees do not move.
+ * o: { x: [x0, x1], z: [z0, z1], F, H(x, z), noise(x, z) -> -1..1, where(x, z) -> bool, seed, step, width, treeP, align }
+ * Returns { bushes: [[{ p, s, c, r? }...], [...]] (two geometry variants), trees: [[x, y, z]...], count }.
  */
 export function hedgePlacements(o) {
   const pts = [[], []], trees = [];
@@ -72,7 +76,13 @@ export function hedgePlacements(o) {
     if (o.noise && o.noise(jx, jz) < -0.45) continue;
     const y = o.H(jx, jz);
     const s = 1.9 + 2.4 * rr() * rr() + 0.6 * rr();
-    pts[rr() < 0.5 ? 0 : 1].push({ p: [jx, y - 0.4, jz], s: [s, s * (0.55 + 0.45 * rr()), s * (0.8 + 0.4 * rr())], c: [0.7 + 0.4 * rr(), 0.8 + 0.25 * rr(), 0.7 + 0.35 * rr()] });
+    const k = rr() < 0.5 ? 0 : 1, a = rr(), b = rr(), c = [0.7 + 0.4 * rr(), 0.8 + 0.25 * rr(), 0.7 + 0.35 * rr()];
+    if (o.align) {
+      // the boundary runs across the gradient of the distance to it
+      const d = 0.5, gx = o.F(jx + d, jz).edge - o.F(jx - d, jz).edge, gz = o.F(jx, jz + d).edge - o.F(jx, jz - d).edge;
+      const r = Math.hypot(gx, gz) > 1e-3 ? Math.atan2(gx, gz) : a * 6.283;   // local x along (-gz, gx)
+      pts[k].push({ p: [jx, y - 0.35, jz], s: [1.2 * s + 0.5, 2.0 + 1.4 * a, 1.7 + 0.9 * b], c, r });
+    } else pts[k].push({ p: [jx, y - 0.4, jz], s: [s, s * (0.55 + 0.45 * a), s * (0.8 + 0.4 * b)], c });
     if (rr() < (o.treeP ?? 0.03)) trees.push([jx, y, jz]);
   }
   return { bushes: pts, trees, count: pts[0].length + pts[1].length };

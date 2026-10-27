@@ -22,7 +22,9 @@ export default {
       staging: 'NONE: open sea to the horizon, away from the land.',
       trans: ['dissolve', 24],
       cam: { rig: 'drone', pos: [[0, [40, 7, 300]], [8.5, [10, 7.2, 320]]], look: [[0, [-600, 2, 3400]], [8.5, [-450, 2, 3400]]], mm: 24, fstop: 5.6, focus: 500, ease: 'linear', shake: { kind: 'aerial', amount: 0.12 } },
-      set: { loc: 'settlement', clouds: true },          // a dawn altocumulus deck over the open sea (prologue-vistas.js LOOKS.settlement.deck)
+      // a dawn altocumulus deck over the open sea (prologue-vistas.js LOOKS.settlement.deck); far: the deck
+      // thins out by 85 km (distFade) - the default 60 km far plane cut it in a hard line 3 deg up
+      set: { loc: 'settlement', clouds: true, far: 200000 },
       lines: [['L002#3', 1.4]],
     },
     'P-10': {
@@ -46,7 +48,10 @@ export default {
     'P-12': {
       staging: 'NONE: a misted pale island alone on the sea, from open water; caption VERDOR on the word.',
       trans: ['dissolve', 12],
-      cam: { rig: 'drone', pos: [[0, [-260, 8, 60]], [2, [-252, 8.1, 56]]], look: [200, 75, -2500], mm: 24, fstop: 5.6, focus: 2500, ease: 'linear' },
+      // session 7: from 5.4 km on a 35 mm (was 1.8 km on a 24 mm): both ends of the island in frame with sea
+      // beyond them - filling the width, it read as a coastline, not an island
+      deviation: 'lens 35 mm (shot list: 24 mm) so the whole island sits in the frame with open sea at both ends',
+      cam: { rig: 'drone', pos: [[0, [120, 9, 2900]], [2, [128, 9.1, 2896]]], look: [200, 60, -2500], mm: 35, fstop: 5.6, focus: 5400, ease: 'linear' },
       set: { loc: 'verdor', sunTarget: [200, 50, -2500], shadowExtent: 3000 },
       lines: [['L003#3', 0.5]],
       captions: [{ text: 'Verdor', line: 'L003#3', word: 'verdor', lead: 0.1, hold: 1.25 }],

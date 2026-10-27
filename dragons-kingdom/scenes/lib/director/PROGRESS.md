@@ -38,8 +38,6 @@ How it works: `README.md` in this folder. Latest state first.
     started at 0.2 s) and upturned empty hands. Now the carry is settled before the shot ([-1, 'carry'])
     and both servants hold real linen (corridor builder `linen` / `linen2`: stacks of the props library's
     foldedCloth, 6 layers each - 4 layers read as a thin board in the hands); stills checked twice.
-  - 1A-28 -> 1A-29: the children's eye-lines to the hatchling crossed (high SW corner -> behind them
-    from the SE); check the 1A-29 render.
 - Rendered this session: 1A-32 (silhouettes in the bright doorway, Abby looks back, the door closes),
   1A-29 (Remi from behind, the hatchling sharp below), P-17 (meadow card: a pasture with lush / dry
   patches; the dragon's shadow crosses at 3.7 s - wings, neck and horned head, hard-edged), the stills
@@ -54,6 +52,28 @@ How it works: `README.md` in this folder. Latest state first.
   the shot spec: a shot key change re-renders the shot).
 - X1-03: focus on the door from the first frame (the pull from her head showed the library bun sharp -
   a flat disc with a dashed band - for the first second).
+- 1A-30 (24 mm) rendered and looked at: Abby rises from the crouch, Remi turns to the door, Alexandria
+  soft in the foreground from behind. (Abby's near shin reads pale in the candle 0.3 m from it - lighting.)
+- Landscapes re-rendered (P-10 reframed along the coast, P-11, P-12) and looked at 1:1:
+  - P-10: the cliff face still shaded as a comb of fine vertical stripes (a curtain): a HEIGHTFIELD CUT
+    DIAGONALLY BY THE FACE - each grid column met the face at a different place in its cell (2-4 m grid,
+    6-12 rows down a 60 m face). `coastLand()` (prologue-vistas.js) builds the heightfield in coast-aligned
+    coordinates (x, r = z - edge(x)) and moves each vertex to z = edge(x) + r: rows 0.5 m apart across the
+    face (~100 down it), plus `relief(x, y)` pushed out on the steep part only (joints, blocks, beds standing
+    proud). Chosen with a Node z-buffer raster of the face from the shot camera
+    (`eng1/director/p10/raster.mjs`: old grid, aligned grid, two reliefs) before any browser. The bench
+    scrub (one bush every 2.2 m on one line = a dotted rule across the face) is now clumps across the
+    bench's width.
+  - P-11: the hedges read as rows of grey pebbles from 400 m in the mist (each round bush a lit dome).
+    `hedgePlacements({ align: true })` (farmland.js): loaves 3-6 m long laid ALONG the boundary (yaw from
+    the edge field's gradient), same random sequence so nothing else moves; checked in Node (edge
+    distance 2 m along a loaf 0.42 m, across 1.13 m). P-08 keeps round bushes (closer, they read as
+    shrubs; a 100-min re-render not spent on it).
+  - P-12: the island filled the frame edge to edge (a coastline, not an island): now 35 mm from 5.4 km,
+    both ends in frame with open sea beyond (Node projection of the outline: x 181..784 of 960).
+  - P-09: the P-09 still with distFade still showed the hard line - it is the CAMERA'S FAR PLANE (60 km
+    slant = 3.3 deg above the horizon for a deck 3.5 km up), not the card's edge. `set.far` per shot
+    (P-09: 200 km) and the faded deck discards fragments below alpha 0.02 (no depth where it is gone).
 
 ## Session 6 (2026-10-27, resumed after another container restart)
 
