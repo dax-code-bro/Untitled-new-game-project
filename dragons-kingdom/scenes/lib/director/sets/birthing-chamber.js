@@ -25,7 +25,7 @@ import { Kit, frame, sub, makeRand } from '../../architecture/core.js';
 import { archMaterials } from '../../architecture/materials.js';
 import { birthingChamber, loadArchCache, NEST } from '../../architecture/interiors.js';
 import { door as doorBuilder } from '../../architecture/openings.js';
-import { verdorKit } from '../../props/verdor.js';
+import { verdorKit, bowl as propBowl } from '../../props/verdor.js';
 import { stool as propStool } from '../../props/containers.js';
 import { Kit as PropKit, frame as pframe, rng as prng } from '../../props/core.js';
 import { filmFinish } from '../../../lookdev/finish.js';
@@ -370,6 +370,18 @@ float eh(vec3 p){p=fract(p*0.1031);p+=dot(p,p.zyx+31.32);return fract((p.x+p.y)*
   fold.castShadow = fold.receiveShadow = true; fold.visible = false;
   scene.add(fold);
 
+  // a bowl of fresh water carried in (X2-16, the young attendant): a hand prop the stage places
+  // between the carrier's palms (`holds: 'waterBowl'`); origin at its base
+  const waterBowl = (() => {
+    const pk = new PropKit();
+    propBowl(pk, pframe([0, 0, 0]), prng(11), { r: 0.13, kind: 'clay', water: 0.75 });
+    const g = vk.build(pk, 'water-bowl');
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    g.visible = false;
+    scene.add(g);
+    return g;
+  })();
+
   // Alexandria's stool, east of the nest (she sits facing west, toward the egg)
   {
     const pk = new PropKit();
@@ -394,7 +406,7 @@ float eh(vec3 p){p=fract(p*0.1031);p+=dot(p,p.zyx+31.32);return fract((p.x+p.y)*
     bench: [-0.4, 0.62, -2.6],
   };
   for (const k of ['alex', 'alexKneel', 'attendant', 'attendant2', 'abby', 'abbyStand', 'remi', 'remiBack', 'stool', 'doorway', 'alexDoor', 'attendantDoor', 'doorOut']) marks[k][1] = 0;
-  const objects = { egg: eggs.closed, eggCracked: eggs.cracked, eggOpened: eggs.opened, frag: fragPivot, fold, door: hinge, crack, keyLamp: keyLamp.g };
+  const objects = { egg: eggs.closed, eggCracked: eggs.cracked, eggOpened: eggs.opened, frag: fragPivot, fold, door: hinge, crack, keyLamp: keyLamp.g, waterBowl };
 
   // ground: the flag floor, the nest's linen / straw inside the frame
   const ground = (x, z) => {

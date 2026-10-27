@@ -29,6 +29,7 @@ import { poseHuman, poseCreature, humanRig } from './actions.js';
 import { FxRunner, loadFxLibrary } from './fx.js';
 import { mouthAt, speakerAt } from './dialogue.js';
 import { faceReadability } from './audit.js';
+import { heldList, placeInHands } from './handprops.js';
 
 const HUMAN_PARTS = { head: 'head', neck: 'neck02', chest: 'spine02', hips: 'root', pelvis: 'root', 'hand.L': 'wrist.L', 'hand.R': 'wrist.R', 'elbow.L': 'lowerarm01.L', 'elbow.R': 'lowerarm01.R', 'foot.L': 'foot.L', 'foot.R': 'foot.R', 'knee.L': 'lowerleg01.L', 'knee.R': 'lowerleg01.R', 'shoulder.L': 'upperarm01.L', 'shoulder.R': 'upperarm01.R' };
 const CREATURE_PARTS = { head: 'head', chest: 'thorax', hips: 'lumbar', neck: 'neck_4', tail: 'tail_6', jaw: 'jaw' };
@@ -136,6 +137,14 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
     const fx = new FxRunner(ctx, { scene: ctx.scene, set: built, point: null, actors, actor: (n) => actors[n] || null });
     await fx.prepare(Object.values(shotSpecs));
     S = { ctx, table, shotSpecs, built, actors, fx, fxLib, posed: new Set(), states: {}, last: null, warned: new Set(), frameCache: new Map() };
+    // hand props: every set object some shot puts in someone's hands (`holds`); the stage owns them
+    // (hidden unless held in the current frame)
+    S.handProps = new Set();
+    for (const s of Object.values(shotSpecs)) for (const b of Object.values(s.cast || {})) for (const h of heldList(b)) {
+      const o = built.objects?.[h.object];
+      if (!o) throw new Error(`${setId}: an actor holds "${h.object}", which the set builder does not provide (objects)`);
+      S.handProps.add(o);
+    }
     fx.api.point = (n, t) => S.env.point(n, t);
     S.env = makeEnv(S);
     if (fx.missing.size) console.warn(`[director] ${setId}: FX not built yet (drawn as nothing): ${[...fx.missing].join(', ')}`);
@@ -308,6 +317,18 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
       }
       S.posed.add(name);
       if (a.kind !== 'object' || b.dynamic) dynamic.push(a.root);
+    }
+    // hand props (`holds`), placed from the posed palms
+    for (const o of S.handProps) o.visible = false;
+    for (const name of names) {
+      const a = S.actors[name], b = cast[name];
+      if (!a || a.kind !== 'human' || !a.root.visible || !b.holds) continue;
+      for (const h of heldList(b)) {
+        if (tt < (h.from ?? -Infinity) || tt > (h.to ?? Infinity)) continue;
+        const o = S.built.objects[h.object];
+        placeInHands(a.ch, o, h);
+        dynamic.push(o);
+      }
     }
     return dynamic;
   }

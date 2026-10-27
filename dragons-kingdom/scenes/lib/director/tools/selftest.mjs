@@ -19,6 +19,7 @@ import { faceReadability } from '../audit.js';
 import { wingOutline, paintWingCloud } from '../sets/wing-cloud.js';
 import { fieldsVoronoi, landUse, hedgePlacements, FIELD_USE } from '../sets/farmland.js';
 import { solveFraming, suggestFrom } from '../framing.js';
+import { heldList, placeInHands } from '../handprops.js';
 import * as THREE from 'three';
 import { makeNoise, smooth } from '../../sets/terrain.js';
 
@@ -170,5 +171,34 @@ t('framing: two subjects land on their screen places; a side that cannot hold th
   const w0 = solveFraming(bad, 65, env, 0, 16 / 9, 24.89, B).worst;
   const alt = suggestFrom(bad, 65, env, 0, B);
   assert.ok(w0 > 0.5 && alt.worst < w0 * 0.3, `suggestion ${JSON.stringify(alt)} vs ${w0}`);
+});
+t('hand props: an object between the posed palms, levelled, offset in the hands\' frame; one-hand and list forms', () => {
+  // a mock character facing +x (yaw 90): left hand at z -0.15 (north), right hand at z +0.15 - wrists
+  // and knuckles 0.08 m further forward, palms level at 1.0 m
+  const root = new THREE.Group(); root.rotation.y = Math.PI / 2; root.updateMatrixWorld(true);
+  const bones = {};
+  const put = (n, p) => { const o = new THREE.Object3D(); o.position.set(...p); bones[n] = o; o.updateMatrixWorld(true); };
+  for (const [sd, z] of [['L', -0.15], ['R', 0.15]]) {
+    put(`wrist.${sd}`, [0.3, 1.0, z]);
+    for (const f of [2, 3, 4, 5]) put(`finger${f}-1.${sd}`, [0.38, 1.0, z + (f - 3.5) * 0.01]);
+  }
+  const ch = { root, bone: (n) => bones[n] || null };
+  const o = new THREE.Group(); o.visible = false;
+  placeInHands(ch, o, { object: 'bowl', offset: [0, -0.03, 0] });
+  assert.ok(o.visible);
+  assert.ok(o.position.distanceTo(new THREE.Vector3(0.34, 0.97, 0)) < 1e-6, `bowl at ${o.position.toArray()}`);
+  const x = new THREE.Vector3(1, 0, 0).applyQuaternion(o.quaternion), y = new THREE.Vector3(0, 1, 0).applyQuaternion(o.quaternion);
+  assert.ok(x.distanceTo(new THREE.Vector3(0, 0, 1)) < 1e-6, 'x axis from the left hand to the right');
+  assert.ok(y.distanceTo(new THREE.Vector3(0, 1, 0)) < 1e-6, 'levelled');
+  const cup = new THREE.Group();
+  placeInHands(ch, cup, { object: 'cup', hands: 'R' });
+  assert.ok(cup.position.distanceTo(new THREE.Vector3(0.34, 1.0, 0.15)) < 1e-6, `cup at ${cup.position.toArray()}`);
+  // a parented object gets local coordinates
+  const par = new THREE.Group(); par.position.set(1, 0, 0); par.updateMatrixWorld(true); const o2 = new THREE.Group(); par.add(o2);
+  placeInHands(ch, o2, {});
+  assert.ok(o2.getWorldPosition(new THREE.Vector3()).distanceTo(new THREE.Vector3(0.34, 1.0, 0)) < 1e-6);
+  assert.deepEqual(heldList({ holds: 'a' }), [{ object: 'a' }]);
+  assert.equal(heldList({ holds: [{ object: 'a' }, 'b'] }).length, 2);
+  assert.deepEqual(heldList({}), []);
 });
 console.log(`\n${n} checks passed`);
