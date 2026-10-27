@@ -279,7 +279,12 @@ no direct light to the lips, the skin inside them, the teeth and the tongue: a p
 carries the head's forward axis in view space (set before each draw, `headFwdUpdater`), the lips' outer
 skin is marked by a tiny depth (`LIP_ZONE`). L011's cool window shaft drew a blue line along the wet
 inner lower lip and lit the lower teeth from inside the skull. Enamel is a neutral warm off-white (the
-saturated ivory went olive in the shade of the mouth).
+saturated ivory went olive in the shade of the mouth), and the light inside the mouth takes the colour
+of the lips and tongue it bounced off (pink-warm): a neutral grey tooth beside the saturated lips read
+teal in a draft. The same rule covers the eyes: eyeballs, lashes and lid skin within 2.2 cm of an eye
+bone (`eyeZone`) take no direct light from behind the head (sparkling blue lower-lid lines in the 4K
+L011). Skin direct specular is occluded by the baked AO in cavities and the roughness rises with the
+pore normal's slope (Toksvig-style) - the ear glittered under the back light.
 
 Hands (rig.js `handShape`): `spread` > 0 fans the fingers out, < 0 closes them, 0 is a relaxed hand
 (~22 deg index to little finger); MakeHuman's rest hand is splayed ~31 deg and the sign was inverted
