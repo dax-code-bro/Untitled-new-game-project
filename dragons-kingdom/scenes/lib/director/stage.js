@@ -266,7 +266,7 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
         }
         return env.point(name, tt);
       },
-      warnOnce(msg) { const k = `${S.cur?.job || ''}:${msg}`; if (!S.warned.has(k)) { S.warned.add(k); console.warn(`[director] ${S.cur?.job || ''}: ${msg}`); } },
+      warnOnce(msg, key = msg) { const k = `${S.cur?.job || ''}:${key}`; if (!S.warned.has(k)) { S.warned.add(k); console.warn(`[director] ${S.cur?.job || ''}: ${msg}`); } },
       /** an actor's ground frame at shot time tt (pure: from the blocking, not from the posed root) */
       actorFrame(name, tt) {
         if (S.actors[name]?.ride) return env.actorFrame(S.actors[name].ride.on, tt);
@@ -476,7 +476,7 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
       S.faceAudit = S.faceAudit || {};
       const k = `${row.job}:${role}`, prev = S.faceAudit[k];
       if (!prev || (rec.flag && !prev.flag) || (rec.flag === prev.flag && rec.face - rec.angle / 10 > prev.face - prev.angle / 10)) S.faceAudit[k] = rec;
-      if (flag) S.env.warnOnce(`speaking face reads: ${role} ${rec.angle} deg from the lens, ${rec.face}% of frame height, blur ${rec.blur}% (soften, turn, shrink or backlight it until lip-sync exists)`);
+      if (flag) S.env.warnOnce(`speaking face reads: ${role} ${rec.angle} deg from the lens, ${rec.face}% of frame height, blur ${rec.blur}% (lip-sync carries it now: check the mouth, or soften / turn / shrink / backlight it)`, `face:${role}`);
     }
   }
 

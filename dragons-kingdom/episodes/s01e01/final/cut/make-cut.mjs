@@ -58,6 +58,10 @@ const probeFrames = (f) => {
 };
 const wrap = (s, n) => { const out = []; let line = ''; for (const w of String(s).split(/\s+/)) { if ((line + ' ' + w).trim().length > n) { out.push(line.trim()); line = w; } else line += ' ' + w; } if (line.trim()) out.push(line.trim()); return out; };
 
+// review flags of a shot: one per kind (a per-frame measure, e.g. the speaking-face audit of a render made
+// before it was keyed per role, wrote one note per frame that differed only in its numbers)
+const collapseNotes = (notes) => { const seen = new Set(); return notes.filter((n) => { const k = String(n).replace(/[\d.]+/g, '#'); if (seen.has(k)) return false; seen.add(k); return true; }); };
+
 // ------------------------------------------------------------- segments ---
 const inputs = [];          // ffmpeg input args
 const vf = [];              // filter graph lines
@@ -119,7 +123,7 @@ for (const s of segs) {
   vf.push(chain); chain = `[${last}]settb=1/${FPS},setsar=1[${label}z]`; last = `${label}z`;
   vf.push(chain);
   s.out = last; s.len = e.frames + s.needPre + s.needPost;
-  report.shots.push({ job: e.job, scene: e.scene, kind: e.kind, source: src, frames: e.frames, rec_in: e.rec_in, trans: s.tIn, handles_used: [pre, post], held_frames: [Math.max(0, padPre), Math.max(0, padPost)], ...(src.startsWith('rendered') && side?.notes?.length ? { notes: side.notes } : {}) });
+  report.shots.push({ job: e.job, scene: e.scene, kind: e.kind, source: src, frames: e.frames, rec_in: e.rec_in, trans: s.tIn, handles_used: [pre, post], held_frames: [Math.max(0, padPre), Math.max(0, padPost)], ...(src.startsWith('rendered') && side?.notes?.length ? { notes: collapseNotes(side.notes) } : {}) });
 }
 // join: runs of cuts are concatenated, dissolves cross-fade (offset = the accumulated length - the overlap)
 let acc = segs[0].out, accLen = segs[0].len - segs[0].needPre;

@@ -1,6 +1,6 @@
 {
  "title": "Dragon's Kingdom S01E01 - draft cut: PROLOGUE + TITLE + 1A",
- "made_at": "2026-10-23T23:06",
+ "made_at": "2026-10-27T18:12",
  "shots_dir": "../../../../tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/work/shots",
  "size": "960x540",
  "fps": 24,
@@ -105,7 +105,7 @@
    "job": "P-06",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "rendered 2026-10-23T20:43",
+   "source": "rendered 2026-10-27T04:58",
    "frames": 144,
    "rec_in": 684,
    "trans": [
@@ -143,7 +143,7 @@
    "job": "P-08",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "rendered 2026-10-23T21:24",
+   "source": "rendered 2026-10-27T06:40",
    "frames": 192,
    "rec_in": 912,
    "trans": [
@@ -263,7 +263,7 @@
    "job": "P-14",
    "scene": "PROLOGUE",
    "kind": "3d",
-   "source": "rendered 2026-10-23T22:03",
+   "source": "rendered 2026-10-27T11:23",
    "frames": 48,
    "rec_in": 1512,
    "trans": [
@@ -456,7 +456,7 @@
    "job": "X1-03",
    "scene": "1A",
    "kind": "3d",
-   "source": "rendered 2026-10-23T05:37",
+   "source": "rendered 2026-10-27T12:20",
    "frames": 48,
    "rec_in": 3096,
    "trans": [
@@ -684,7 +684,7 @@
    "job": "1A-11",
    "scene": "1A",
    "kind": "3d",
-   "source": "rendered 2026-10-23T22:17",
+   "source": "rendered 2026-10-27T02:40",
    "frames": 60,
    "rec_in": 4296,
    "trans": [
@@ -741,7 +741,7 @@
    "job": "1A-14",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T23:17",
    "frames": 72,
    "rec_in": 4632,
    "trans": [
@@ -760,7 +760,7 @@
    "job": "1A-15",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T23:36",
    "frames": 132,
    "rec_in": 4704,
    "trans": [
@@ -779,7 +779,7 @@
    "job": "1A-16",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T23:41",
    "frames": 48,
    "rec_in": 4836,
    "trans": [
@@ -798,7 +798,7 @@
    "job": "1A-17",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-24T00:08",
    "frames": 156,
    "rec_in": 4884,
    "trans": [
@@ -817,7 +817,7 @@
    "job": "1A-18",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T14:10",
    "frames": 72,
    "rec_in": 5040,
    "trans": [
@@ -830,13 +830,30 @@
    "held_frames": [
     0,
     0
+   ],
+   "notes": [
+    "speaking face reads: ABBY 9 deg from the lens, 20.7% of frame height, blur 0.06% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ABBY 6 deg from the lens, 21% of frame height, blur 0.05% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ABBY 6 deg from the lens, 21.2% of frame height, blur 0.04% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ABBY 7 deg from the lens, 21.3% of frame height, blur 0.03% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ABBY 7 deg from the lens, 21.4% of frame height, blur 0.02% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ABBY 7 deg from the lens, 21.5% of frame height, blur 0.02% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ABBY 6 deg from the lens, 21.6% of frame height, blur 0.02% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ABBY 6 deg from the lens, 21.6% of frame height, blur 0.01% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ABBY 6 deg from the lens, 21.7% of frame height, blur 0.01% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ABBY 6 deg from the lens, 21.8% of frame height, blur 0.01% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ABBY 7 deg from the lens, 21.8% of frame height, blur 0% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ABBY 6 deg from the lens, 21.8% of frame height, blur 0% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ABBY 7 deg from the lens, 21.9% of frame height, blur 0% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ABBY 6 deg from the lens, 21.9% of frame height, blur 0% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ABBY 8 deg from the lens, 21.9% of frame height, blur 0% (soften, turn, shrink or backlight it until lip-sync exists)"
    ]
   },
   {
    "job": "1A-19",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-24T15:05",
    "frames": 36,
    "rec_in": 5112,
    "trans": [
@@ -855,7 +872,7 @@
    "job": "1A-20",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-24T15:22",
    "frames": 96,
    "rec_in": 5148,
    "trans": [
@@ -874,7 +891,7 @@
    "job": "1A-21",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-24T16:11",
    "frames": 156,
    "rec_in": 5244,
    "trans": [
@@ -893,7 +910,7 @@
    "job": "1A-22",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T05:15",
    "frames": 120,
    "rec_in": 5400,
    "trans": [
@@ -906,13 +923,16 @@
    "held_frames": [
     0,
     0
+   ],
+   "notes": [
+    "framing: 50 mm cannot hold the framing here; a 40 mm lens does (worst subject 0.11 screen units off)"
    ]
   },
   {
    "job": "1A-23",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T03:05",
    "frames": 60,
    "rec_in": 5520,
    "trans": [
@@ -931,7 +951,7 @@
    "job": "1A-24",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T15:01",
    "frames": 144,
    "rec_in": 5580,
    "trans": [
@@ -950,7 +970,7 @@
    "job": "1A-25",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T07:07",
    "frames": 96,
    "rec_in": 5724,
    "trans": [
@@ -963,13 +983,17 @@
    "held_frames": [
     0,
     0
+   ],
+   "notes": [
+    "framing: 65 mm cannot hold the framing here; a 35 mm lens does (worst subject 0.21 screen units off)",
+    "framing: a subject lands 0.21 screen units from its place (lens too long for the room, or the subjects too far apart)"
    ]
   },
   {
    "job": "1A-26",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T09:48",
    "frames": 60,
    "rec_in": 5820,
    "trans": [
@@ -988,7 +1012,7 @@
    "job": "1A-27",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T15:32",
    "frames": 72,
    "rec_in": 5880,
    "trans": [
@@ -1007,7 +1031,7 @@
    "job": "1A-28",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T16:45",
    "frames": 144,
    "rec_in": 5952,
    "trans": [
@@ -1020,6 +1044,12 @@
    "held_frames": [
     0,
     0
+   ],
+   "notes": [
+    "speaking face reads: ALEXANDRIA 16 deg from the lens, 8.7% of frame height, blur 0.05% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ALEXANDRIA 15 deg from the lens, 8.7% of frame height, blur 0.05% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ALEXANDRIA 14 deg from the lens, 8.7% of frame height, blur 0.05% (soften, turn, shrink or backlight it until lip-sync exists)",
+    "speaking face reads: ALEXANDRIA 13 deg from the lens, 8.7% of frame height, blur 0.05% (soften, turn, shrink or backlight it until lip-sync exists)"
    ]
   },
   {
@@ -1064,7 +1094,7 @@
    "job": "1A-31",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T13:49",
    "frames": 204,
    "rec_in": 6324,
    "trans": [
@@ -1102,7 +1132,7 @@
    "job": "1A-33",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T16:36",
    "frames": 144,
    "rec_in": 6624,
    "trans": [
@@ -1121,7 +1151,7 @@
    "job": "X2-01",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T15:38",
    "frames": 72,
    "rec_in": 6768,
    "trans": [
@@ -1140,7 +1170,7 @@
    "job": "X2-02",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T15:09",
    "frames": 120,
    "rec_in": 6840,
    "trans": [
@@ -1159,7 +1189,7 @@
    "job": "X2-03",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T14:24",
    "frames": 96,
    "rec_in": 6960,
    "trans": [
@@ -1197,7 +1227,7 @@
    "job": "X2-05",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T04:22",
    "frames": 60,
    "rec_in": 7152,
    "trans": [
@@ -1216,7 +1246,7 @@
    "job": "X2-06",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-24T15:49",
    "frames": 252,
    "rec_in": 7212,
    "trans": [
@@ -1235,7 +1265,7 @@
    "job": "X2-07",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-24T16:01",
    "frames": 72,
    "rec_in": 7464,
    "trans": [
@@ -1254,7 +1284,7 @@
    "job": "X2-08",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T23:09",
    "frames": 120,
    "rec_in": 7536,
    "trans": [
@@ -1273,7 +1303,7 @@
    "job": "X2-09",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T23:30",
    "frames": 96,
    "rec_in": 7656,
    "trans": [
@@ -1292,7 +1322,7 @@
    "job": "X2-10",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-23T23:55",
    "frames": 120,
    "rec_in": 7752,
    "trans": [
@@ -1311,7 +1341,7 @@
    "job": "X2-11",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-24T00:03",
    "frames": 36,
    "rec_in": 7872,
    "trans": [
@@ -1330,7 +1360,7 @@
    "job": "X2-12",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-24T16:30",
    "frames": 84,
    "rec_in": 7908,
    "trans": [
@@ -1349,7 +1379,7 @@
    "job": "X2-13",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T11:07",
    "frames": 96,
    "rec_in": 7992,
    "trans": [
@@ -1368,7 +1398,7 @@
    "job": "X2-14",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T13:01",
    "frames": 84,
    "rec_in": 8088,
    "trans": [
@@ -1387,7 +1417,7 @@
    "job": "X2-15",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T12:15",
    "frames": 156,
    "rec_in": 8172,
    "trans": [
@@ -1400,13 +1430,17 @@
    "held_frames": [
     0,
     0
+   ],
+   "notes": [
+    "framing: 40 mm cannot hold the framing here; a 21 mm lens does (worst subject 0.17 screen units off; background blur ~28 % of the 40 mm look)",
+    "framing: a subject lands 0.17 screen units from its place (lens too long for the room, or the subjects too far apart)"
    ]
   },
   {
    "job": "X2-16",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T13:40",
    "frames": 84,
    "rec_in": 8328,
    "trans": [
@@ -1425,7 +1459,7 @@
    "job": "X2-17",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T06:13",
    "frames": 108,
    "rec_in": 8412,
    "trans": [
@@ -1438,13 +1472,16 @@
    "held_frames": [
     0,
     0
+   ],
+   "notes": [
+    "framing: 50 mm cannot hold the framing here; a 32 mm lens does (worst subject 0.07 screen units off; background blur ~41 % of the 50 mm look)"
    ]
   },
   {
    "job": "1A-34",
    "scene": "1A",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-27T05:26",
    "frames": 60,
    "rec_in": 8520,
    "trans": [
@@ -1966,13 +2003,14 @@
   "file": "episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_PROLOGUE-TITLE-1A.mp4",
   "frames": 8580,
   "duration_s": 357.5,
-  "size_mb": 35.4,
-  "assembled_s": 127
+  "size_mb": 48.5,
+  "assembled_s": 152
  },
  "summary": {
-  "rendered": 38,
+  "rendered": 72,
   "black": 1,
-  "slates": 37,
-  "voice_cues": 50
+  "slates": 3,
+  "voice_cues": 50,
+  "review_flags": 6
  }
 }
