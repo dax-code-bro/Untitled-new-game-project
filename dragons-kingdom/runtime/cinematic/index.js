@@ -304,6 +304,12 @@ export class Cinematic {
     this.rebuildVariants();
     const frame = ctx.frame | 0;
     let color, depthTex;
+    // Accumulate mode: the camera's world matrix must be this frame's before the sky / aerial-
+    // perspective LUTs are built - otherwise they used the previous frame's last sub-frame (or the
+    // setup pose in a browser's first frame): a frame rendered first differed from the same frame
+    // rendered after others (max 2-8 code values in the haze). Velocity mode keeps its order (the
+    // shutter-open pose, the same every time) so its pictures stay byte-identical.
+    if (this.mode === 'accumulate') camera.updateMatrixWorld();
 
     // ---- sky + sun light from the atmosphere, cascades, material uniforms, then the depth pre-pass + GTAO
     if (this.atmosphere) { this.atmosphere.update(); mark('sky-luts', this.atmosphere.apRT); }

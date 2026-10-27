@@ -19,7 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { TIER_NAMES, TIER_PRESETS, frameWork } from '../lib/quality.js';
+import { TIER_NAMES, TIER_PRESETS, frameWork, estimateFrameMs, RTX4090_ASSUMPTIONS } from '../lib/quality.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const imp = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
@@ -146,6 +146,9 @@ async function main() {
     const fr = frameFromStats(st);
     const w = frameWork(fr, tier);
     m.work = w; m.png = path.relative(ROOT, png);
+    m.estimate4090 = estimateFrameMs(fr, tier);
+    const e = m.estimate4090;
+    console.log(`   RTX 4090 ESTIMATE at native 4K (planning assumptions, runtime/lib/quality.js): ~${(e.ms / 1000).toFixed(2)} s/frame (GPU ${(e.gpuMs / 1000).toFixed(2)} s, draw calls ${(e.submitMs / 1000).toFixed(2)} s, update() ${(e.updateMs / 1000).toFixed(2)} s)`);
     if (tier !== 'final') {
       const cmp = await compareTiers(res[0], m);
       m.compare = cmp;

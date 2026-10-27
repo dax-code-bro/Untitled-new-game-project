@@ -14,6 +14,7 @@
 //
 //   final   the master settings as reviewed on the cloud CPU (the default; nothing changes)
 //   high    every GPU knob up, motion blur stays velocity-based (one scene pass per frame)
+//   ultra8  high + 8 real sub-frames per frame (as the style frames' film finish)
 //   ultra   high + 16 real sub-frames per frame (true motion blur, 16x supersampling, sun
 //           penumbrae) instead of the velocity motion blur
 //   max     high + 32 sub-frames, the densest settings
@@ -30,11 +31,11 @@
 //   ctx.quality.ocean            defaults dk/ocean.js uses (resolution, ssr, ssrSteps; a scene's own options win)
 //   ctx.quality.anisotropy       anisotropic filtering applied to every mip-mapped texture after setup (0 = leave)
 
-export const TIER_NAMES = ['final', 'high', 'ultra', 'max'];
+export const TIER_NAMES = ['final', 'high', 'ultra8', 'ultra', 'max'];
 
 // Render presets that are the native-4K final preset at a higher tier. The scene sees
 // ctx.preset === 'final' (so hero creature builds etc. are chosen exactly as for final).
-export const TIER_PRESETS = { 'final-high': 'high', 'final-ultra': 'ultra', 'final-max': 'max' };
+export const TIER_PRESETS = { 'final-high': 'high', 'final-ultra8': 'ultra8', 'final-ultra': 'ultra', 'final-max': 'max' };
 
 const FINAL = {
   name: 'final',
@@ -75,6 +76,7 @@ const HIGH = {
 export const TIERS = {
   final: FINAL,
   high: HIGH,
+  ultra8: { ...HIGH, name: 'ultra8', label: 'ultra8 - high + 8 real sub-frames per frame (the style frames\' film finish)', subframes: 8 },
   ultra: { ...HIGH, name: 'ultra', label: 'ultra - high + 16 real sub-frames per frame', subframes: 16 },
   max: {
     ...HIGH, name: 'max', label: 'max - high + 32 sub-frames, densest settings', subframes: 32, motionBlurSamples: 64,
@@ -163,7 +165,10 @@ const maxOf = (a, b) => (a == null ? b : Math.max(a, b));
  * The volumetric froxel grid is clamped so its atlas fits opts.maxTextureSize.
  */
 export function applyTierToCinematic(c, name, opts = {}) {
-  const t = TIERS[name];
+  // opts.quality (ctx.quality) may override parts of the tier: { ssr: { enabled: false }, subframes: 8, ... }
+  const q = opts.quality || {};
+  const T0 = TIERS[name];
+  const t = T0 ? { ...T0, ...(q.subframes !== undefined ? { subframes: q.subframes } : {}), ssr: { ...T0.ssr, ...(q.ssr || {}) } } : T0;
   const changed = [];
   if (!c || name === 'final') return changed;
   const note = (k, from, to) => { if (JSON.stringify(from) !== JSON.stringify(to)) changed.push(`${k}: ${JSON.stringify(from)} -> ${JSON.stringify(to)}`); };
@@ -212,7 +217,7 @@ export function applyTierToCinematic(c, name, opts = {}) {
   }
   if (t.ibl === 'exact' && c.ibl !== 'exact') { note('ibl', c.ibl, 'exact'); c.ibl = 'exact'; }
   // generic screen-space reflections on wet / glossy surfaces
-  if (t.ssr.enabled) {
+  if (t.ssr.enabled && name !== 'final') {
     const s = c.ssr || {}, from = { ...s };
     c.ssr = { ...s, enabled: true, steps: Math.max(s.steps || 0, t.ssr.steps), maxRoughness: Math.max(s.maxRoughness || 0, t.ssr.maxRoughness), thickness: s.thickness || t.ssr.thickness };
     note('ssr', from, c.ssr);
@@ -302,4 +307,65 @@ export function tierCost(frame, { finalMs = null, cpuParallel = false } = {}) {
     out[n] = { ratio, subframes: w.subframes, stages: w.stages, cpuMs: w.cpuMs, ms };
   }
   return out;
+}
+
+// Assumptions for an RTX 4090 behind Chrome's WebGL2 (ANGLE / Direct3D 11) - PLANNING FIGURES, not
+// measurements: render/gpu-check.mjs measures the real card. 82.6 TFLOPS fp32 and ~1,290 GTexel/s
+// at ~25% efficiency through WebGL give ~3e8 tap-equivalents per ms; three.js + Chrome + ANGLE spend
+// ~15 us of CPU per draw call; a desktop CPU next to a 4090 runs JavaScript ~2x faster than one
+// vCPU of the cloud machine (update() times measured here are scaled by 0.5).
+export const RTX4090_ASSUMPTIONS = { tapsPerMs: 3e8, callUs: 15, cpuScale: 0.5, readbackMs: 6 };
+
+/**
+ * Estimated milliseconds of one frame at a tier: frame = frameFromStats() of THAT tier's measured
+ * counters (draw calls, update() time) scaled to the target size. The GPU and the CPU (draw-call
+ * submission + update()) overlap, so a frame takes about the longer of the two plus the readback.
+ */
+export function estimateFrameMs(frame, name, a = RTX4090_ASSUMPTIONS) {
+  const w = frameWork(frame, name);
+  const gpuMs = w.gpu / a.tapsPerMs;
+  const submitMs = (frame.drawCalls || 0) * a.callUs / 1000;
+  const updateMs = w.cpuMs * a.cpuScale;
+  return { gpuMs, submitMs, updateMs, ms: Math.max(gpuMs, submitMs + updateMs) + a.readbackMs, subframes: w.subframes };
+}
+
+/**
+ * Seconds per frame of the tiers that were not measured, from the ones that were: the sub-frame
+ * tiers differ only in the number of scene passes, so s(N) = s(high) + (N - 1) * perSub with perSub
+ * from a measured sub-frame tier. Returns a copy with { tier: s } filled in and { extrapolated: [...] }.
+ */
+export function fillTierTimes(tierS) {
+  const out = { ...tierS }, extrapolated = [];
+  const subTiers = TIER_NAMES.filter((n) => TIERS[n].subframes > 0);
+  const known = subTiers.find((n) => out[n] > 0);
+  if (out.high > 0 && known) {
+    const perSub = Math.max(0, (out[known] - out.high) / (TIERS[known].subframes - 1));
+    for (const n of subTiers) if (!(out[n] > 0)) { out[n] = +(out.high + (TIERS[n].subframes - 1) * perSub).toFixed(3); extrapolated.push(n); }
+  }
+  return { times: out, extrapolated };
+}
+
+/**
+ * Plan the episode at every tier and recommend one. segments: parts of the episode that scale with
+ * one measured test frame each - [{ name, cpuH (render hours of that part on the cloud CPU, from
+ * render-schedule.md), refS (the cloud CPU's s/frame for the test frame), tierS: { final: s, high: s,
+ * ultra: s, max: s } measured on THIS GPU for the same test frame (missing tiers are skipped) }].
+ * setupH: scene setup on the CPU (once per shot, the same at every tier), encodeH: scene files +
+ * the final episode, budgetH: the limit (~3 days), parallel: speed-up of the browsers running at once.
+ * Returns { tiers: { name: { renderH, totalH, days, fits } }, recommended, reason }.
+ */
+export function planEpisode(segments, { setupH = 0, encodeH = 4, budgetH = 72, parallel = 1 } = {}) {
+  const tiers = {};
+  for (const name of TIER_NAMES) {
+    if (!segments.every((s) => s.tierS?.[name] > 0 && s.refS > 0)) continue;
+    const renderH = segments.reduce((acc, s) => acc + s.cpuH * (s.tierS[name] / s.refS), 0) / Math.max(1, parallel);
+    const totalH = renderH + setupH + encodeH;
+    tiers[name] = { renderH: +renderH.toFixed(1), totalH: +totalH.toFixed(1), days: +(totalH / 24).toFixed(2), fits: totalH <= budgetH };
+  }
+  const fitting = TIER_NAMES.filter((n) => tiers[n]?.fits);
+  const recommended = fitting.length ? fitting[fitting.length - 1] : (tiers.final ? 'final' : null);
+  const reason = !recommended ? 'no tier was measured'
+    : fitting.length ? `the highest tier that keeps Episode 1 within ${budgetH} h (${(budgetH / 24).toFixed(1)} days): ${tiers[recommended].totalH} h`
+      : `no tier fits ${budgetH} h - even final needs ${tiers.final.totalH} h; render at final (more machines or more time)`;
+  return { tiers, recommended, preset: recommended ? (recommended === 'final' ? 'final' : Object.keys(TIER_PRESETS).find((k) => TIER_PRESETS[k] === recommended)) : null, reason, budgetH };
 }

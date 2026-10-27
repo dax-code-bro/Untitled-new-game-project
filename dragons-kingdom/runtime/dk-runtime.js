@@ -516,7 +516,7 @@ export async function init(cfg) {
 
   // quality tier: sample counts, resolutions and sub-frames of the cinematic stack (after setup(),
   // which may have changed ctx.cinematic), anisotropic filtering of the scene's textures
-  const tierChanges = ctx.cinematic ? applyTierToCinematic(ctx.cinematic, tier, { warmup: meta.mode === 'chunk-warmup', maxTextureSize: maxTex }) : [];
+  const tierChanges = ctx.cinematic ? applyTierToCinematic(ctx.cinematic, tier, { warmup: meta.mode === 'chunk-warmup', maxTextureSize: maxTex, quality: ctx.quality }) : [];
   if (ctx.quality.anisotropy > 1) {
     const maxAniso = renderer.capabilities.getMaxAnisotropy();
     if (maxAniso > 1) tierChanges.push(...applyAnisotropy(scene, Math.min(ctx.quality.anisotropy, maxAniso)));
