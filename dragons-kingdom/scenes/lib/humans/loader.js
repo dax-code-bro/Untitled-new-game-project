@@ -119,7 +119,9 @@ export function buildCharacter(data, opts = {}) {
       g.setAttribute('lw', new THREE.BufferAttribute(lw, 1));
     }
     if (mouth && (m.kind === 'skin' || m.name === 'teeth' || m.kind === 'tongue')) {
-      g.setAttribute('mdepth', new THREE.BufferAttribute(mouthDepth(g, mouth, m.kind === 'skin'), 1));
+      const md = mouthDepth(g, mouth, m.kind === 'skin');
+      if (m.kind === 'skin') eyeZone(g, md, bones, index);
+      g.setAttribute('mdepth', new THREE.BufferAttribute(md, 1));
     }
     if (g.attributes.skinIndex && opts.rebind !== false) rebindWorn(g, m, header, bones, index);
     g.computeBoundingSphere();
@@ -145,7 +147,7 @@ export function buildCharacter(data, opts = {}) {
       mesh.morphTargetInfluences = mnames.map(() => 0);
     }
     mesh.name = `${root.name}:${m.name}`;
-    if (headFwd && (m.kind === 'skin' || m.kind === 'teeth' || m.kind === 'tongue')) mesh.onBeforeRender = headFwd;
+    if (headFwd && ['skin', 'teeth', 'tongue', 'eye', 'lash'].includes(m.kind)) mesh.onBeforeRender = headFwd;
     // lashes and brows are too fine for a shadow map: at a grazing sun they print long dark
     // streaks across the cheek; their contact shading comes from the baked AO
     mesh.castShadow = opts.shadows !== false && m.material?.castShadow !== false && m.kind !== 'lash' && m.kind !== 'brow';
@@ -227,8 +229,8 @@ function materialFor(m, header, opts) {
   const mt = m.material || {};
   switch (m.kind) {
     case 'skin': return skinMaterial({ ...mt, seed: hashStr(header.id) % 997, mouthU: opts.mouthU, headU: opts.headU });
-    case 'eye': return eyeMaterial(mt);
-    case 'brow': case 'lash': case 'haircard': return cardMaterial({ ...mt, colorMap: m.kind === 'haircard', cut: m.kind === 'brow' ? [0.0, 0.03] : [0.06, 0.3] });
+    case 'eye': return eyeMaterial({ ...mt, headU: opts.headU });
+    case 'brow': case 'lash': case 'haircard': return cardMaterial({ ...mt, colorMap: m.kind === 'haircard', cut: m.kind === 'brow' ? [0.0, 0.03] : [0.06, 0.3], front: m.kind === 'lash', headU: opts.headU });
     case 'hair': return hairStrandMaterial(mt);
     case 'teeth': case 'tongue': return simpleTexturedMaterial({ ...mt, mouthU: opts.mouthU, headU: opts.headU, mouth: m.name === 'teeth' || m.kind === 'tongue', teeth: m.name === 'teeth' });
     case 'cloth': return clothMaterial({ ...mt, wrinkle: mt.wrinkle ?? (m.name === 'shirt' ? 1 : 0) });
@@ -276,6 +278,18 @@ function mouthFrame(header, bones, index) {
  * every cavity threshold) so the shader can keep back light off the whole mouth.
  */
 const LIP_ZONE = 0.0002;
+/** The skin of the eye sockets (within 2.2 cm of an eyeball's centre: lids, lid margins) gets the same
+ *  front-of-face marker as the lips: no back light there either (sparkles along the lower lids). */
+function eyeZone(g, out, bones, index) {
+  const eyes = ['eye.L', 'eye.R'].filter((b) => index[b] !== undefined).map((b) => bones[index[b]].getWorldPosition(new THREE.Vector3()));
+  if (!eyes.length) return;
+  const pos = g.attributes.position, p = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    if (out[i] > 0) continue;
+    p.fromBufferAttribute(pos, i);
+    for (const e of eyes) if (p.distanceToSquared(e) < 0.022 * 0.022) { out[i] = LIP_ZONE; break; }
+  }
+}
 function mouthDepth(g, mo, isSkin) {
   const pos = g.attributes.position, nrm = g.attributes.normal, n = pos.count;
   const out = new Float32Array(n);

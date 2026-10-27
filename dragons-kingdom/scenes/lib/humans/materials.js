@@ -73,6 +73,22 @@ vec3 hBump(vec3 n, vec3 viewPos, float h, float facing) {
 }
 `;
 
+// Parts at the front of the face (teeth, tongue, eyeballs, lashes): no DIRECT light from behind the
+// head - it would have to pass through the skull, and the shadow maps cannot resolve that (a cool back
+// light lit the teeth from inside the head and drew sparkling lines along the lower lids). uHeadFwd:
+// the head's forward axis in view space (loader.js headFwdUpdater, set before each draw).
+const FRONT_GLSL = `
+uniform vec3 uHeadFwd;
+void RE_Direct_Front( const in IncidentLight directLight, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in PhysicalMaterial material, inout ReflectedLight reflectedLight ) {
+  float k = 1.0 - smoothstep(0.0, -0.35, dot(directLight.direction, uHeadFwd));
+  if (k <= 0.0) return;
+  IncidentLight L = directLight; L.color *= k;
+  RE_Direct_Physical(L, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight);
+}
+#undef RE_Direct
+#define RE_Direct RE_Direct_Front`;
+const headUniform = (o) => o.headU || { value: new THREE.Vector3(0, 0, 1) };
+
 // =================================================================== SKIN ==
 /**
  * opts: map (assets-lib path), tone [r,g,b] multiplier, saturation, redness, rough (0.45),
@@ -259,6 +275,10 @@ skinSmoothN = normal;
   skinTransCol = diffuseColor.rgb * vec3(1.0, 0.35, 0.22);
 }`)
       .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>
+// pore-scale normal variation the pixel cannot show as shape shows as roughness (Toksvig-style): the
+// pore edges' tilted normals caught a grazing back light as isolated blue-white sparkles (glitter in
+// front of and inside the ear)
+material.roughness = min(1.0, material.roughness + 5.0 * (1.0 - dot(normal, skinSmoothN)));
 #ifdef USE_SHEEN
   material.sheenColor *= 1.0 - vAux.a;
 #endif
@@ -278,6 +298,15 @@ skinSmoothN = normal;
   reflectedLight.indirectDiffuse *= mix(vec3(aoV), vec3(aoV) * vec3(1.0, 0.86, 0.82), 1.0 - aoV);
   reflectedLight.indirectSpecular *= aoV * aoV * (1.0 - 0.85 * vAux.a);
   reflectedLight.directSpecular *= 1.0 - 0.8 * vAux.a;
+  // cavities (ear concha, nostrils, between fingers): the shadow maps miss them, the baked AO knows -
+  // direct specular there sparkled on the pores under a back light (glitter in the ear)
+  reflectedLight.directSpecular *= mix(1.0, aoV * aoV, 0.75);
+#ifdef USE_CLEARCOAT
+  clearcoatSpecularDirect *= mix(1.0, aoV * aoV, 0.75);
+#endif
+#ifdef USE_SHEEN
+  sheenSpecularDirect *= mix(1.0, aoV, 0.75);
+#endif
   // the mouth cavity: shadow maps cannot resolve it - darker with depth behind the lips, a little
   // less when the mouth is wide open (light reaches the tongue and the front of the palate)
   float mOcc = 1.0 - smoothstep(0.003, 0.03, vMouth) * (0.95 - 0.3 * uMouthOpen);
@@ -333,7 +362,7 @@ export function eyeMaterial(o = {}) {
     clearcoat: 1.0, clearcoatRoughness: 0.02,
   });
   if (o.map) mat.map = libTexture(o.map);
-  const U = { uIrisTint: { value: new THREE.Vector3(...(o.irisTint || [1, 1, 1])) }, uScleraTint: { value: new THREE.Vector3(...(o.scleraTint || [0.93, 0.87, 0.8])) } };
+  const U = { uIrisTint: { value: new THREE.Vector3(...(o.irisTint || [1, 1, 1])) }, uScleraTint: { value: new THREE.Vector3(...(o.scleraTint || [0.93, 0.87, 0.8])) }, uHeadFwd: headUniform(o) };
   mat.customProgramCacheKey = () => 'dk-human-eye';
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
@@ -352,6 +381,7 @@ vAO = ao; vIris = iris; vGaze = normalize(normalMatrix * gz);`);
       .replace('#include <common>', `#include <common>
 uniform vec3 uIrisTint, uScleraTint;
 varying float vAO; varying vec3 vGaze; varying float vIris;`)
+      .replace('#include <lights_physical_pars_fragment>', '#include <lights_physical_pars_fragment>' + FRONT_GLSL)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
   // far from the iris the eye texture's atlas runs into its black background: a rolled eye
@@ -409,9 +439,10 @@ export function cardMaterial(o = {}) {
   // uCut: alpha below the first value is dropped, full at the second (faint card texels printed
   // translucent streaks past the eye corner; brows keep a fainter cut so their soft card stays)
   const U = { uAlphaChannel: { value: o.alphaChannel ?? 3 }, uAlphaGain: { value: o.alphaGain ?? 1.0 }, uShift: { value: o.shift ?? 0.08 }, uLower: { value: o.lower ?? 0.4 },
-    uCut: { value: new THREE.Vector2(...(o.cut || [0.08, 0.45])) } };
+    uCut: { value: new THREE.Vector2(...(o.cut || [0.08, 0.45])) }, uHeadFwd: headUniform(o) };
   mat.userData.card = U;
-  mat.customProgramCacheKey = () => 'dk-human-card';
+  const front = !!o.front;      // lashes: no back light (FRONT_GLSL)
+  mat.customProgramCacheKey = () => 'dk-human-card' + (front ? '-front' : '');
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader
@@ -422,6 +453,7 @@ vAO = ao; vLw = lw;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 uniform float uAlphaChannel, uAlphaGain, uShift, uLower; uniform vec2 uCut; varying float vAO; varying float vLw;`)
+      .replace('#include <lights_physical_pars_fragment>', '#include <lights_physical_pars_fragment>' + (front ? FRONT_GLSL : ''))
       .replace('#include <alphamap_fragment>', `
 #ifdef USE_ALPHAMAP
   vec4 am = texture2D( alphaMap, vAlphaMapUv );
@@ -440,24 +472,16 @@ export function simpleTexturedMaterial(o = {}) {
   const mat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(...(o.color || [1, 1, 1])), roughness: o.rough ?? 0.5, metalness: 0, clearcoat: o.clearcoat ?? 0, clearcoatRoughness: 0.2 });
   if (o.map) mat.map = libTexture(o.map);
   const mouth = !!o.mouth, teeth = !!o.teeth;
-  const U = { uMouthOpen: o.mouthU || { value: 0 }, uHeadFwd: o.headU || { value: new THREE.Vector3(0, 0, 1) } };
+  const U = { uMouthOpen: o.mouthU || { value: 0 }, uHeadFwd: headUniform(o) };
   mat.userData.mouth = U;
   mat.customProgramCacheKey = () => `dk-human-simple${mouth ? (teeth ? '-teeth' : '-mouth') : ''}`;
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float ao; varying float vAO;' + (mouth ? ' attribute float mdepth; varying float vMouth;' : ''))
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvAO = ao;' + (mouth ? ' vMouth = mdepth;' : ''));
-    let fs = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vAO;' + (mouth ? ' varying float vMouth; uniform float uMouthOpen; uniform vec3 uHeadFwd;' : ''))
+    let fs = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vAO;' + (mouth ? ' varying float vMouth; uniform float uMouthOpen;' : ''))
       // teeth / tongue: no direct light from behind the head (it would have to pass through the skull)
-      .replace('#include <lights_physical_pars_fragment>', '#include <lights_physical_pars_fragment>' + (mouth ? `
-void RE_Direct_Mouth( const in IncidentLight directLight, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in PhysicalMaterial material, inout ReflectedLight reflectedLight ) {
-  float k = 1.0 - smoothstep(0.0, -0.35, dot(directLight.direction, uHeadFwd));
-  if (k <= 0.0) return;
-  IncidentLight L = directLight; L.color *= k;
-  RE_Direct_Physical(L, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight);
-}
-#undef RE_Direct
-#define RE_Direct RE_Direct_Mouth` : ''))
+      .replace('#include <lights_physical_pars_fragment>', '#include <lights_physical_pars_fragment>' + (mouth ? FRONT_GLSL : ''))
       .replace('#include <aomap_fragment>', '#include <aomap_fragment>\n'
         // (teeth / tongue: the AO was baked with the mouth closed - only a part of it holds when it opens)
         + (mouth ? 'float aoT = mix(vAO, 1.0, 0.6);\n' : 'float aoT = vAO;\n')
