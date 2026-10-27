@@ -54,6 +54,17 @@ How it works: `README.md` in this folder. Latest state first.
   overcast, not clear sky); the card writes depth so the haze takes its own distance (the far deck melts
   into a bright band at the horizon). Node preview loop (`eng1/director/p14/proto.mjs`, a perspective
   ray-cast of the same tile) before one browser still. Self-tested (tiling, cover, determinism).
+- P-17 meadow from 46 m read as a sports pitch (one pixel ~5 cm: the grass tufts a fine noise, the 2 m
+  terrain vertices one flat green). A fine terrain CARD (0.3 m vertices, the same terrain material, so
+  the same light, shadow and AO) over the shot's footprint carries a pasture's patchwork (`sets/meadow.js`,
+  pure: lush / dry patches, irregular tussocks thicker where the grass is rough, clover, rosettes, a sheep
+  track, molehills - soil in the splat), faded to the plain field at its edges, lifted 10 cm so the coarse
+  terrain stays under it, visible in the meadow shots only; the meadow grass sits on it. Top-down Node
+  preview (`eng1/director/p17/top.mjs`) before the browser still.
+- LESSONS: an interim cut while 4 renders run: make-cut's ffmpeg (76 inputs) took 2 GB and a vistas
+  browser died for memory (P-09 restarted) - assemble only when the renders are done. And again: never
+  `pkill -f <pattern>` with the pattern in the same command line (it kills the calling shell; the orphaned
+  ffmpeg kept running) - pgrep, then kill the PID.
 - X2-13 (session-5 restage) rendered: from behind her, her head beside his snout, his eye sharp - reads as
   closeness, not quite forehead to forehead (a side view hid her behind the snout). Kept.
 

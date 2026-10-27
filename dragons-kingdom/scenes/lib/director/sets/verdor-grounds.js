@@ -25,6 +25,7 @@ import { Kit, yawFrame } from '../../architecture/core.js';
 import { archMaterials } from '../../architecture/materials.js';
 import { stable, keeperHouse, leafPlatform } from '../../architecture/verdor.js';
 import { verdorKit, groundGear } from '../../props/verdor.js';
+import { meadowPattern } from './meadow.js';
 import { Kit as PropKit, frame as pframe, rng as prng } from '../../props/core.js';
 import { createCreature, poses } from '../../creatures/index.js';
 import { filmFinish } from '../../../lookdev/finish.js';
@@ -80,18 +81,18 @@ export async function build(ctx, { shotSpecs }) {
   const ocean = createOcean(ctx, { windSpeed: 6, windDirection: 200, swell: 0.45, choppiness: 1.1, seed: 9, depth: 30, mipFilter: 'trilinear', roughness: 0.05, foamThreshold: 0.7, shoreFoam: 1.0, shoreFoamWidth: 1.6, surf: 0.85 });
   scene.add(ocean.mesh);
 
+  const landSplat = (x, z, y, n) => {
+    const steep = smooth(0.35, 0.7, 1 - n[1]);
+    const shore = 1 - smooth(1.0, 4.0, y);
+    // worn ground where the riders and Leaf come and go
+    const worn = (1 - smooth(4, 13, Math.hypot(x - LEAF_HOME[0], z - LEAF_HOME[1]) + 5 * N.fbm(x * 0.2, z * 0.2, 2))) * 0.6;
+    const turf = (1 - steep) * (1 - shore);
+    return [Math.max(steep, shore * 0.7), turf * (1 - worn) * 0.6, turf * (1 - worn) * 0.4, turf * worn + shore * 0.3];
+  };
+  const landColor = (x, z) => { const p = N.fbm(x * 0.03 + 4, z * 0.03, 3); const v = 0.85 + 0.35 * p; return [v, v, v * 0.97]; };
   const land = heightfield({
     xs: gradedAxis(-900, 1200, 640, 0, 2.2), zs: gradedAxis(-1800, 700, 640, -10, 2.2),
-    height: H,
-    splat: (x, z, y, n) => {
-      const steep = smooth(0.35, 0.7, 1 - n[1]);
-      const shore = 1 - smooth(1.0, 4.0, y);
-      // worn ground where the riders and Leaf come and go
-      const worn = (1 - smooth(4, 13, Math.hypot(x - LEAF_HOME[0], z - LEAF_HOME[1]) + 5 * N.fbm(x * 0.2, z * 0.2, 2))) * 0.6;
-      const turf = (1 - steep) * (1 - shore);
-      return [Math.max(steep, shore * 0.7), turf * (1 - worn) * 0.6, turf * (1 - worn) * 0.4, turf * worn + shore * 0.3];
-    },
-    color: (x, z) => { const p = N.fbm(x * 0.03 + 4, z * 0.03, 3); const v = 0.85 + 0.35 * p; return [v, v, v * 0.97]; },
+    height: H, splat: landSplat, color: landColor,
   });
   const landMat = await terrainMaterial(ctx, [
     { id: 'pbr/acg_rock26', scale: 3, tint: [0.62, 0.6, 0.56] },
@@ -105,7 +106,7 @@ export async function build(ctx, { shotSpecs }) {
   scene.add(ground);
 
   // grass: dense geometry tufts around the action and the meadow edge, thinning out with distance
-  const disc = (c, r0, r1, keep = () => true) => {
+  const disc = (c, r0, r1, keep = () => true, h = H) => {
     let cx = 0, cz = 0, left = 0;
     return (rng) => {
       if (left <= 0) {
@@ -117,7 +118,7 @@ export async function build(ctx, { shotSpecs }) {
       const rr = Math.sqrt(rng()) * 0.5, th = rng() * 6.283;
       const x = cx + Math.cos(th) * rr, z = cz + Math.sin(th) * rr;
       if (!keep(x, z, rng)) return null;
-      return [x, H(x, z) - 0.02, z];
+      return [x, h(x, z) - 0.02, z];
     };
   };
   const worn = (x, z, rng) => Math.hypot(x - LEAF_HOME[0], z - LEAF_HOME[1]) > 6 || rng() > 0.75;
@@ -125,9 +126,52 @@ export async function build(ctx, { shotSpecs }) {
   scene.add(grassField({ count: Math.round(60000 * k), height: [0.06, 0.22], seed: 5, color: [0.05, 0.072, 0.022], dry: [0.2, 0.17, 0.085], dryAmount: 0.5, place: disc(ACTION, 0, 75, worn) }));
   scene.add(grassField({ count: Math.round(9000 * k), height: [0.22, 0.5], seed: 7, blades: 12, width: 1.25, color: [0.035, 0.055, 0.018], dry: [0.22, 0.19, 0.1], dryAmount: 0.65, place: disc(ACTION, 4, 55, worn) }));
   const meadowUsed = Object.values(shotSpecs).some((s) => s.set?.area === 'meadow');
+  // P-17 looks straight down on the meadow from 46 m: one pixel ~5 cm, the grass tufts a fine noise and
+  // the 2 m terrain vertices' colour one flat green (it read as a sports pitch). A fine terrain CARD
+  // (0.3 m vertices, the same material) over the shot's footprint carries a grazed pasture's patchwork
+  // (meadow.js: lush / dry patches, tussocks, clover, a sheep track, molehills), faded to the plain
+  // field at its edges and lifted up to 10 cm (the coarse terrain's interpolation stays below it);
+  // shown in the meadow shots only
+  let meadowCard = null, cardLift = H;
   if (meadowUsed) {
-    scene.add(grassField({ count: Math.round(70000 * k), height: [0.12, 0.42], seed: 13, color: [0.05, 0.075, 0.02], dry: [0.24, 0.2, 0.1], dryAmount: 0.6, place: disc(MEADOW, 0, 60) }));
-    scene.add(grassField({ count: Math.round(9000 * k), height: [0.4, 0.8], seed: 17, blades: 4, width: 0.6, color: [0.16, 0.135, 0.065], dry: [0.26, 0.22, 0.12], dryAmount: 0.8, place: disc(MEADOW, 0, 45) }));
+    const MP = meadowPattern(31);
+    // seen through the photographic layers' own flecks and the tufts' self-shadowing the pattern at its
+    // natural strength barely registered (a still diff showed it): doubled
+    const MEADOW_GAIN = 2.2;
+    const X0 = -192, X1 = -78, Z0 = -6, Z1 = 86, step = draft ? 0.3 : 0.2;
+    const inside = (x, z) => Math.min(x - X0, X1 - x, z - Z0, Z1 - z);
+    const fade = (x, z) => smooth(0, 6, inside(x, z));
+    cardLift = (x, z) => H(x, z) + 0.1 * smooth(0, 2, inside(x, z));
+    const card = heightfield({
+      x: [X0, X1], nx: Math.round((X1 - X0) / step), z: [Z0, Z1], nz: Math.round((Z1 - Z0) / step),
+      height: cardLift,
+      splat: (x, z, y, n) => { const w = landSplat(x, z, y, n), so = MP.soil(x, z) * fade(x, z); return [w[0] * (1 - so), w[1] * (1 - so), w[2] * (1 - so), w[3] * (1 - so) + so]; },
+      color: (x, z) => { const b = landColor(x, z), c = MP.color(x, z), e = fade(x, z); return b.map((v, i) => v * Math.max(0.25, 1 + MEADOW_GAIN * (c[i] - 1) * e)); },
+    });
+    meadowCard = new THREE.Mesh(card.geometry, landMat);
+    meadowCard.receiveShadow = true; meadowCard.castShadow = false; meadowCard.name = 'meadowCard';
+    meadowCard.visible = false;
+    scene.add(meadowCard);
+    const onCard = (x, z) => (inside(x, z) > 0 ? cardLift(x, z) : H(x, z));
+    // the tufts cover most of the card from above: they take the pasture pattern too (instance colour),
+    // and are trodden flat on the track and the molehills
+    const patterned = (grp) => {
+      const m4 = new THREE.Matrix4(), pos = new THREE.Vector3(), qq = new THREE.Quaternion(), sc = new THREE.Vector3();
+      for (const mesh of grp.children) {
+        const col = mesh.instanceColor.array;
+        for (let i = 0; i < mesh.count; i++) {
+          mesh.getMatrixAt(i, m4); m4.decompose(pos, qq, sc);
+          const e = fade(pos.x, pos.z); if (e <= 0) continue;
+          const c = MP.color(pos.x, pos.z), so = MP.soil(pos.x, pos.z) * e;
+          for (let q = 0; q < 3; q++) col[i * 3 + q] *= Math.max(0.25, 1 + MEADOW_GAIN * (c[q] - 1) * e);
+          if (so > 0.05) { sc.y *= 1 - 0.8 * so; m4.compose(pos, qq, sc); mesh.setMatrixAt(i, m4); }
+        }
+        mesh.instanceColor.needsUpdate = true; mesh.instanceMatrix.needsUpdate = true;
+      }
+      return grp;
+    };
+    scene.add(patterned(grassField({ count: Math.round(70000 * k), height: [0.12, 0.42], seed: 13, color: [0.05, 0.075, 0.02], dry: [0.24, 0.2, 0.1], dryAmount: 0.6, place: disc(MEADOW, 0, 60, undefined, onCard) })));
+    scene.add(patterned(grassField({ count: Math.round(9000 * k), height: [0.4, 0.8], seed: 17, blades: 4, width: 0.6, color: [0.16, 0.135, 0.065], dry: [0.26, 0.22, 0.12], dryAmount: 0.8, place: disc(MEADOW, 0, 45, undefined, onCard) })));
   }
   // scrub and gorse along the field edges and the meadow's hedge line
   const foliage = foliageMaterial({ color: [0.04, 0.065, 0.025], leafScale: 4, flower: [0.55, 0.42, 0.04, 0.4] });
@@ -193,6 +237,7 @@ export async function build(ctx, { shotSpecs }) {
       const sc = sun.shadow.camera; sc.left = -ext; sc.right = ext; sc.top = ext; sc.bottom = -ext; sc.near = 10; sc.far = 900; sc.updateProjectionMatrix();
       sun.target.updateMatrixWorld();
       if (shadowDragon && !(info.spec.fx || []).some((f) => f.kind === 'shadow-pass')) shadowDragon.visible = false;
+      if (meadowCard) meadowCard.visible = st.area === 'meadow';
     },
   };
 }

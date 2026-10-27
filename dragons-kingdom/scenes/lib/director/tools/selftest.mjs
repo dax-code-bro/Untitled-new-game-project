@@ -18,6 +18,7 @@ import { estimateShot } from '../cost.js';
 import { faceReadability } from '../audit.js';
 import { wingOutline, paintWingCloud } from '../sets/wing-cloud.js';
 import { periodicNoise, periodicCells, paintCloudDeck, paintCloudDetail } from '../sets/cloud-deck.js';
+import { meadowPattern } from '../sets/meadow.js';
 import { fieldsVoronoi, landUse, hedgePlacements, FIELD_USE } from '../sets/farmland.js';
 import { solveFraming, suggestFrom } from '../framing.js';
 import { heldList, placeInHands } from '../handprops.js';
@@ -153,6 +154,19 @@ t('cloud deck: periodic noise + cells tile seamlessly; the painted deck is broke
   assert.ok(seam / 64 < 60, `seam alpha step ${seam / 64}`);
   const d = paintCloudDetail({ data: new Uint8ClampedArray(32 * 32 * 4), width: 32, height: 32 }).data;
   for (let i = 0; i < d.length; i += 4) assert.ok(d[i] >= 178 && d[i] <= 255);
+});
+t('meadow: a deterministic pasture patchwork - varied, bounded colour, worn soil only on the track and molehills', () => {
+  const A = meadowPattern(31), B = meadowPattern(31);
+  let lo = 9, hi = 0, soil = 0, n = 0;
+  for (let z = 0; z < 80; z += 0.37) for (let x = -190; x < -80; x += 0.53) {
+    const c = A.color(x, z), d = B.color(x, z), so = A.soil(x, z); n++;
+    assert.deepEqual(c, d);
+    for (const v of c) { assert.ok(Number.isFinite(v) && v > 0.3 && v < 1.6, `colour ${v}`); lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    assert.ok(so >= 0 && so <= 1); if (so > 0.3) soil++;
+  }
+  assert.ok(hi - lo > 0.4, `contrast ${lo}..${hi}`);
+  assert.ok(soil > n * 0.002 && soil < n * 0.08, `worn ${soil}/${n}`);
+  assert.ok(A.soil(-130, A.track(-130)) > 0.2, 'the track is worn at its centre line');
 });
 t('farmland: deterministic irregular fields of plausible size; hedges only on the boundaries', () => {
   const F = fieldsVoronoi({ cell: 64, rot: 0.22, stretch: 1.7, seed: 3 });

@@ -447,34 +447,37 @@ export async function build(ctx, { shotSpecs }) {
     g.add(wing);
   }
 
-  // ---- swell: the low stratocumulus deck (P-14): a painted underside (cloud-deck.js: dark cores, pale
-  // thin edges, gaps) tiled on a horizontal card at the cloud base, foreshortened by the lens toward
-  // the horizon; it writes depth so the haze and fog take its own distance. An opaque higher veil
-  // above it: through the gaps a paler overcast, not a clear sky
-  if (used.has('swell')) {
-    const g = group('swell');
-    const D = LOOKS.swell.deck;
-    const paint = (n, fn) => {
-      const cv = document.createElement('canvas'); cv.width = cv.height = n;
-      const c2 = cv.getContext('2d'), img = c2.createImageData(n, n);
-      fn(img); c2.putImageData(img, 0, 0);
-      const t = new THREE.CanvasTexture(cv);
-      t.wrapS = t.wrapT = THREE.RepeatWrapping; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.anisotropy = 8;
-      return t;
-    };
-    const map = paint(draft ? 512 : 1024, paintCloudDeck); map.colorSpace = THREE.SRGBColorSpace;
-    map.repeat.set(D.size / D.tile, D.size / D.tile);
-    const detail = paint(256, paintCloudDetail); detail.repeat.set(D.size / D.detail, D.size / D.detail);
-    const deck = new THREE.Mesh(new THREE.PlaneGeometry(D.size, D.size),
-      new THREE.MeshBasicMaterial({ map, alphaMap: detail, transparent: true, depthWrite: true, side: THREE.DoubleSide, color: new THREE.Color(...D.color), fog: false }));
-    deck.rotation.order = 'YXZ'; deck.rotation.set(Math.PI / 2, D.yaw * D2R, 0);
-    deck.position.set(D.center[0], D.y, D.center[1]);
-    deck.name = 'cloudDeck';
-    g.add(deck);
-    if (D.veil) {
-      const veil = new THREE.Mesh(new THREE.PlaneGeometry(D.size * 1.5, D.size * 1.5), new THREE.MeshBasicMaterial({ color: new THREE.Color(...D.veil), side: THREE.DoubleSide, fog: false }));
-      veil.rotation.x = Math.PI / 2; veil.position.set(D.center[0], D.y + 450, D.center[1]);
-      g.add(veil);
+  // ---- painted cloud decks (cloud-deck.js) for the locations whose look has `deck` (one or a list):
+  // P-14's low stratocumulus - a painted underside (dark cores, pale thin edges, gaps) tiled on a
+  // horizontal card at the cloud base, foreshortened by the lens toward the horizon; it writes depth so
+  // the haze and fog take its own distance. `veil`: an opaque paler layer above it (gaps show overcast,
+  // not clear sky). `paint`: options for paintCloudDeck (cover, cell sizes, shades)
+  const paintTex = (n, fn) => {
+    const cv = document.createElement('canvas'); cv.width = cv.height = n;
+    const c2 = cv.getContext('2d'), img = c2.createImageData(n, n);
+    fn(img); c2.putImageData(img, 0, 0);
+    const t = new THREE.CanvasTexture(cv);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.anisotropy = 8;
+    return t;
+  };
+  for (const loc of used) {
+    if (!LOOKS[loc]?.deck) continue;
+    const g = locs[loc] || group(loc);
+    for (const D of [].concat(LOOKS[loc].deck)) {
+      const map = paintTex(draft ? 512 : 1024, (img) => paintCloudDeck(img, D.paint)); map.colorSpace = THREE.SRGBColorSpace;
+      map.repeat.set(D.size / D.tile, D.size / D.tile);
+      const detail = paintTex(256, (img) => paintCloudDetail(img, D.paint)); detail.repeat.set(D.size / D.detail, D.size / D.detail);
+      const deck = new THREE.Mesh(new THREE.PlaneGeometry(D.size, D.size),
+        new THREE.MeshBasicMaterial({ map, alphaMap: detail, transparent: true, opacity: D.opacity ?? 1, depthWrite: true, side: THREE.DoubleSide, color: new THREE.Color(...D.color), fog: false }));
+      deck.rotation.order = 'YXZ'; deck.rotation.set(Math.PI / 2, D.yaw * D2R, 0);
+      deck.position.set(D.center[0], D.y, D.center[1]);
+      deck.name = `cloudDeck:${loc}`;
+      g.add(deck);
+      if (D.veil) {
+        const veil = new THREE.Mesh(new THREE.PlaneGeometry(D.size * 1.5, D.size * 1.5), new THREE.MeshBasicMaterial({ color: new THREE.Color(...D.veil), side: THREE.DoubleSide, fog: false }));
+        veil.rotation.x = Math.PI / 2; veil.position.set(D.center[0], D.y + 450, D.center[1]);
+        g.add(veil);
+      }
     }
   }
 
