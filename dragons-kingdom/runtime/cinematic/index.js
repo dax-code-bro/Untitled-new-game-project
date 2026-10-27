@@ -17,6 +17,11 @@
 //   -> the standard YUV packer (8 or 10 bit) / RGBA readback
 // Accumulate mode replaces the motion blur by N real sub-frames across the
 // shutter interval (sub-pixel jitter = supersampling, sun jitter = soft shadows).
+// Hybrid accumulation (motionBlur.subframeBlur, the quality tiers ultra8 / ultra / max): every
+// sub-frame is resolved (haze, fog, per-pixel velocity against the previous sub-frame's pose)
+// and velocity-blurred over its own 1/N slice of the shutter before it is added, so fast
+// motion is one continuous streak along its real arc instead of N separate copies.
+// motionBlur.subframeAO: the depth pre-pass + GTAO + contact shadows per sub-frame.
 import * as THREE from 'three';
 import { resolveCinematic, cinematicFor, validateCinematic, CINEMATIC_DEFAULTS } from './config.js';
 import * as P from './passes.js';
@@ -27,7 +32,7 @@ import { CascadedShadows } from './shadows.js';
 import { Atmosphere } from './atmosphere.js';
 import { Volumetrics, makeCloudTexture } from './volumetrics.js';
 import { EnvBake } from './envbake.js';
-import { SurfaceSSR } from './ssr.js';
+import { SurfaceSSR, TRACE as SSR_TRACE } from './ssr.js';
 import { sensorSize, focalLengthFromFov, cocScale, exposureMultiplier, exposureTime, LENS_DEFAULTS } from '../lib/camera.js';
 import { parseCube } from '../lib/lut.js';
 import { bakeGradeLut, LUT_SIZE, SHAPER_MIN_EV, SHAPER_MAX_EV } from './colorlut.js';
@@ -109,9 +114,18 @@ export class Cinematic {
     // ---- targets
     this.sceneRT = rt(RW, RH, { depth: true, depthTexture: true, linear: true });
     if (this.mode === 'accumulate') this.accRT = rt(RW, RH, { linear: true });
+    const nAcc = c.motionBlur.accumulateSamples;
+    this.hybrid = this.mode === 'accumulate' && !!c.motionBlur.subframeBlur && nAcc > 1;
+    this.subAO = this.mode === 'accumulate' && !!c.motionBlur.subframeAO && nAcc > 1;
+    if (this.hybrid) {
+      // per sub-frame: resolve (colour + velocity/depth MRT), motion vectors, velocity tiles; the centre's depth is kept for DOF
+      this.subRT = rt(RW, RH, { count: 2, linear: true });
+      this.subRT.textures[1].minFilter = this.subRT.textures[1].magFilter = THREE.NearestFilter;
+      this.centreDepthRT = rt(RW, RH, { depth: true, depthTexture: true, type: THREE.UnsignedByteType });
+    }
     this.resolveRT = rt(RW, RH, { count: this.mode === 'velocity' ? 2 : 1, linear: true });
-    if (this.mode === 'velocity') {
-      this.resolveRT.textures[1].minFilter = this.resolveRT.textures[1].magFilter = THREE.NearestFilter;
+    if (this.mode === 'velocity') this.resolveRT.textures[1].minFilter = this.resolveRT.textures[1].magFilter = THREE.NearestFilter;
+    if (this.mode === 'velocity' || this.hybrid) {
       this.dynVelRT = rt(RW, RH, { depth: true });
       this.K = Math.max(8, Math.round(RW / 192));            // velocity tile size (20 px at 4K)
       this.tileRT = rt(Math.ceil(RW / this.K), Math.ceil(RH / this.K));
@@ -167,7 +181,7 @@ export class Cinematic {
     const mk = (m) => this.h.makePass(m);
     this.pass = {
       acc: mk(P.makeAccumulateMaterial()),
-      tile: mk(P.makeTileMaxMaterial()),
+      tile: mk(P.makeTileMaxMaterial(c.motionBlur.tileStride ?? 2)),
       nb: mk(P.makeNeighborMaxMaterial()),
       cocTile: mk(P.makeCocTileMaterial()),
       cocDil: mk(P.makeCocDilateMaterial()),
@@ -200,6 +214,16 @@ export class Cinematic {
     const c = this.c;
     const mbVel = this.mode === 'velocity';
     const volTiled = !!this.volumetrics?.tiles;
+    if (this.hybrid) {
+      // per sub-frame resolve (always with velocity) + motion blur without FXAA (the jitter is the anti-aliasing)
+      const subKey = JSON.stringify({ atmo: !!this.atmoActive, vol: !!this.volActive, volTiled });
+      if (force || subKey !== this.subKey) {
+        this.pass.subResolve?.material.dispose();
+        this.pass.subResolve = this.h.makePass(P.makeResolveMaterial({ mb: true, atmo: !!this.atmoActive, vol: !!this.volActive, volTiled }));
+        this.subKey = subKey;
+      }
+      if (!this.pass.subMb) this.pass.subMb = this.h.makePass(P.makeMotionBlurMaterial({ mb: true, fxaa: false }));
+    }
     const resolveKey = JSON.stringify({ mb: mbVel, atmo: !!this.atmoActive, vol: !!this.volActive, ...(volTiled ? { volTiled } : {}) });
     if (force || resolveKey !== this.resolveKey) {
       this.pass.resolve?.material.dispose();
@@ -234,7 +258,8 @@ export class Cinematic {
   describe() {
     const c = this.c;
     return {
-      preset: c.preset, motionBlur: this.mode, aa: this.mode === 'accumulate' ? `jitter x${c.motionBlur.accumulateSamples}` : c.aa,
+      preset: c.preset, motionBlur: this.hybrid ? 'accumulate + per-sub-frame blur' : this.mode, aa: this.mode === 'accumulate' ? `jitter x${c.motionBlur.accumulateSamples}` : c.aa,
+      ...(this.subAO ? { subframeAO: true } : {}),
       dof: c.dof.enabled, bloom: c.bloom.intensity, grade: `${c.grade.toneMapping}/${c.grade.look}${this.lut ? ' + LUT' : ''}`,
       grain: c.grain.amount, ao: !!this.ao, atmosphere: !!this.atmoActive, volumetrics: !!this.volActive,
       ...(this.ssr ? { ssr: `${this.ssr.steps} steps, ${this.ssr.count} object(s)` } : {}),
@@ -314,7 +339,7 @@ export class Cinematic {
     // ---- sky + sun light from the atmosphere, cascades, material uniforms, then the depth pre-pass + GTAO
     if (this.atmosphere) { this.atmosphere.update(); mark('sky-luts', this.atmosphere.apRT); }
     this.prepareLighting();
-    if (this.ao) {
+    if (this.ao && !this.subAO) {
       this.ao.prepass();
       mark('prepass', this.ao.preRT);
       this.ao.compute(this.sunDirection());
@@ -322,7 +347,11 @@ export class Cinematic {
     }
 
     // ---- main scene (or N sub-frames)
-    if (this.mode === 'accumulate') {
+    let resolved = false;       // hybrid accumulation: haze, fog and motion blur were applied per sub-frame
+    if (this.mode === 'accumulate' && this.hybrid) {
+      this.renderHybrid(frame, mark);
+      color = this.accRT.texture; depthTex = this.centreDepthRT.depthTexture; resolved = true;
+    } else if (this.mode === 'accumulate') {
       this.renderAccumulated(frame);
       color = this.accRT.texture; depthTex = this.sceneRT.depthTexture;
     } else {
@@ -333,8 +362,8 @@ export class Cinematic {
     mark(this.lateDrawn ? 'late' : 'scene', this.mode === 'accumulate' ? this.accRT : this.sceneRT);
     camera.updateMatrixWorld();
 
-    // ---- volumetric fog (needs this frame's shadow maps)
-    if (this.volumetrics) {
+    // ---- volumetric fog (needs this frame's shadow maps; hybrid: built after the centre sub-frame)
+    if (this.volumetrics && !resolved) {
       this.volumetrics.render(frame / h.cfg.fps, { sun: this.sun, sunDir: this.sunDirection(), cascades: this.csm?.lights, atmosphere: this.atmosphere });
       mark('volumetrics', this.volumetrics.result);
     }
@@ -349,7 +378,7 @@ export class Cinematic {
     }
 
     // ---- resolve: atmosphere + per-pixel velocity
-    const needResolve = mbVel || this.atmoActive || this.volActive;
+    const needResolve = !resolved && (mbVel || this.atmoActive || this.volActive);
     if (needResolve) {
       const u = this.pass.resolve.material.uniforms;
       u.tColor.value = color; u.tDepth.value = depthTex; u.tDynVel.value = this.dynVelRT?.texture ?? null;
@@ -463,7 +492,7 @@ export class Cinematic {
       velocity: [2, velDepth, 1 / Math.max(1, this.c.motionBlur.maxBlur * this.RW * 0.25)],
       coc: [3, this.halfRT.texture, 1 / 20], depth: [4, velDepth ?? this.ao?.aoRT.texture, 1],
       dof: [5, this.dofRT.texture, 1], bloom: [5, this.bloomUp[0].texture, 1], scene: [5, this.sceneRT.texture, 1],
-      fog: [5, this.resolveRT.textures[0], 1],
+      fog: [5, this.hybrid ? this.accRT.texture : this.resolveRT.textures[0], 1],
     };
     const v = views[mode];
     if (!v || !v[1]) throw new Error(`cinematic.debug = '${mode}' is not available with these settings (${P.DEBUG_VIEWS.join(', ')})`);
@@ -566,6 +595,7 @@ export class Cinematic {
         noCache = true;
       }
       this.prepareLighting();
+      if (this.subAO && this.ao) { this.ao.prepass(); this.ao.compute(this.sunDirection()); }
       this.subIndex = i;
       this.renderSceneAndLate(this.sceneRT, { noShadowCache: noCache });
       this.subIndex = 0;
@@ -573,6 +603,124 @@ export class Cinematic {
       camera.updateProjectionMatrix();
       au.tSrc.value = this.sceneRT.texture; au.uWeight.value = 1 / N;
       h.drawPass(this.pass.acc, this.accRT);
+    }
+    camera.updateMatrixWorld();
+  }
+
+  /** Sub-pixel jitter of sub-frame i (Halton 2, 3) applied to the camera's projection. */
+  jitterProjection(i) {
+    const camera = this.h.camera;
+    const jx = halton(i + 1, 2) - 0.5, jy = halton(i + 1, 3) - 0.5;
+    const e = camera.projectionMatrix.elements;
+    e[8] += (2 * jx) / this.RW; e[9] += (2 * jy) / this.RH;
+    camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+  }
+
+  /** The sun moved to sub-frame i's point inside its disk (0.53 deg); returns the saved pose. */
+  jitterSun(sun, i, N) {
+    const save = { pos: sun.position.clone(), tgt: sun.target.position.clone() };
+    const dir = sun.position.clone().sub(sun.target.position);
+    const dist = dir.length(); dir.normalize();
+    const a = (i + 0.5) / N, r = Math.sqrt(a) * 0.004625, phi = i * 2.39996323;   // radius in radians (0.265 deg)
+    const u1 = new THREE.Vector3().crossVectors(dir, Math.abs(dir.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)).normalize();
+    const v1 = new THREE.Vector3().crossVectors(dir, u1);
+    dir.addScaledVector(u1, r * Math.cos(phi)).addScaledVector(v1, r * Math.sin(phi)).normalize();
+    sun.position.copy(sun.target.position).addScaledVector(dir, dist);
+    sun.updateMatrixWorld();
+    return save;
+  }
+
+  /**
+   * Hybrid accumulation (motionBlur.subframeBlur): N sub-frames as in renderAccumulated, but each one is
+   * resolved (haze + volumetric fog with ITS depth, per-pixel velocity against the previous sub-frame's
+   * pose) and velocity-blurred over its own 1/N slice of the shutter before it is added - the copies of
+   * fast motion smear into each other (one continuous streak along the real, curved path). Order: the
+   * centre sub-frame first (its shadow maps build the froxel fog, as in the other modes, and its depth is
+   * kept for depth of field), then the later ones, then the earlier ones; the pose before each run of
+   * sub-frames is posed once more for its motion vectors (N + 2 update() calls).
+   */
+  renderHybrid(frame, mark) {
+    const h = this.h, c = this.c, { renderer, camera, gl } = h;
+    const N = c.motionBlur.accumulateSamples;
+    const RW = this.RW, RH = this.RH;
+    const t = frame / h.cfg.fps;
+    const T = this.shutterTime();
+    const at = (i) => t + ((i + 0.5) / N - 0.5) * T;
+    const centre = Math.floor(N / 2);
+    const vScale = c.motionBlur.subframeBlurScale ?? 2;
+    const order = [centre];
+    for (let i = centre + 1; i < N; i++) order.push(i);
+    for (let i = 0; i < centre; i++) order.push(i);
+    const sun = c.motionBlur.softShadows ? this.findSun() : null;
+    const au = this.pass.acc.material.uniforms;
+    renderer.setRenderTarget(this.accRT);
+    const cc = renderer.getClearColor(new THREE.Color()), ca = renderer.getClearAlpha();
+    renderer.setClearColor(0x000000, 0);
+    renderer.clear(true, false, false);
+    renderer.setClearColor(cc, ca);
+    if (!this.centreDepthInit) { renderer.initRenderTarget(this.centreDepthRT); this.centreDepthInit = true; }
+    let held = null;                     // the sub-frame whose pose the velocity tracker remembers
+    for (const i of order) {
+      if (held !== i - 1) {
+        // the previous slice's pose: sub-frame i's motion vectors are its motion over one slice
+        h.runAt(at(i - 1), frame, { index: i - 1, count: N, kind: 'shutter-open' }); h.refreshBounds();
+        this.applyLens(); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+        this.vel.snapshot();
+      }
+      h.runAt(at(i), frame, { index: i, count: N, kind: 'accumulate' }); h.refreshBounds();
+      this.applyLens();
+      camera.updateProjectionMatrix();
+      if (c.motionBlur.jitterAA) this.jitterProjection(i);
+      const sunSave = sun ? this.jitterSun(sun, i, N) : null;
+      this.prepareLighting();
+      if (this.subAO && this.ao) { this.ao.prepass(); this.ao.compute(this.sunDirection()); }
+      this.subIndex = i;
+      this.renderSceneAndLate(this.sceneRT, { noShadowCache: !!sun });
+      this.subIndex = 0;
+      if (sunSave) { sun.position.copy(sunSave.pos); sun.target.position.copy(sunSave.tgt); sun.updateMatrixWorld(); }
+      // velocities and the resolve use the un-jittered projection (the jitter is not motion)
+      camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+      if (i === centre) {
+        // keep the centre's depth (depth of field, the final pass) and build the froxel fog from its shadow maps
+        const src = renderer.properties.get(this.sceneRT).__webglFramebuffer;
+        renderer.state.setScissorTest(false);
+        renderer.state.bindFramebuffer(gl.READ_FRAMEBUFFER, src);
+        renderer.state.bindFramebuffer(gl.DRAW_FRAMEBUFFER, renderer.properties.get(this.centreDepthRT).__webglFramebuffer);
+        gl.blitFramebuffer(0, 0, RW, RH, 0, 0, RW, RH, gl.DEPTH_BUFFER_BIT, gl.NEAREST);
+        renderer.state.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+        if (this.volumetrics) {
+          this.volumetrics.render(t, { sun: this.sun, sunDir: this.sunDirection(), cascades: this.csm?.lights, atmosphere: this.atmosphere });
+          mark?.('volumetrics', this.volumetrics.result);
+        }
+      }
+      // motion vectors of the objects that moved since the previous sub-frame
+      this.vel.collectDynamic();
+      this.vel.render(this.dynVelRT, { sceneDepth: this.sceneRT.depthTexture, width: RW, height: RH, velScale: vScale });
+      // resolve: haze + fog with this sub-frame's depth, per-pixel velocity (camera + objects) over one slice
+      const u = this.pass.subResolve.material.uniforms;
+      u.tColor.value = this.sceneRT.texture; u.tDepth.value = this.sceneRT.depthTexture; u.tDynVel.value = this.dynVelRT.texture;
+      u.uSize.value.set(RW, RH); u.uNear.value = camera.near; u.uFar.value = camera.far;
+      u.uInvProj.value.copy(camera.projectionMatrixInverse); u.uCamWorld.value.copy(camera.matrixWorld);
+      u.uPrevViewProj.value.copy(this.vel.prevViewProj);
+      u.uVelScale.value = vScale; u.uMaxVel.value = c.motionBlur.maxBlur * RW;
+      this.atmosphere?.bindResolve(u);
+      this.volumetrics?.bindResolve(u);
+      if (u.uFogOnly) u.uFogOnly.value = c.debug === 'fog' ? 1 : 0;
+      h.drawPass(this.pass.subResolve, this.subRT);
+      // velocity motion blur over the slice
+      const tu = this.pass.tile.material.uniforms;
+      tu.tVel.value = this.subRT.textures[1]; tu.uK.value = this.K; tu.uSize.value.set(RW, RH);
+      h.drawPass(this.pass.tile, this.tileRT);
+      this.pass.nb.material.uniforms.tTile.value = this.tileRT.texture;
+      h.drawPass(this.pass.nb, this.nbRT);
+      const mu = this.pass.subMb.material.uniforms;
+      mu.tColor.value = this.subRT.textures[0]; mu.tVelDepth.value = this.subRT.textures[1]; mu.tNeighbor.value = this.nbRT.texture;
+      mu.uK.value = this.K; mu.uInvSize.value.set(1 / RW, 1 / RH);
+      mu.uMaxSamples.value = c.motionBlur.samples; mu.uFrameSeed.value = (frame * N + i) % 64;
+      h.drawPass(this.pass.subMb, this.mbRT);
+      au.tSrc.value = this.mbRT.texture; au.uWeight.value = 1 / N;
+      h.drawPass(this.pass.acc, this.accRT);
+      this.vel.snapshot(); held = i;
     }
     camera.updateMatrixWorld();
   }
@@ -621,7 +769,11 @@ export class Cinematic {
     return late;
   }
 
-  /** Main pass, then the late objects with copies of the scene's colour + depth. */
+  /**
+   * Main pass, then the late objects with copies of the scene's colour + depth, then (quality tiers)
+   * the screen-space reflections of glossy surfaces from fresh copies that include the late objects:
+   * a steel ball over the sea reflects the water, not the sea bed under it.
+   */
   renderSceneAndLate(target, opts, mark = null) {
     const h = this.h, { renderer, scene, camera, gl } = h;
     h.renderScene(target, opts);
@@ -641,15 +793,29 @@ export class Cinematic {
       renderer.state.bindFramebuffer(gl.DRAW_FRAMEBUFFER, renderer.properties.get(dst).__webglFramebuffer);
       gl.blitFramebuffer(0, 0, this.RW, this.RH, 0, 0, this.RW, this.RH, bits, gl.NEAREST);
     };
-    renderer.state.setScissorTest(false);
-    blit(this.lateDepthRT, gl.DEPTH_BUFFER_BIT);
-    blit(this.lateColorRT, gl.COLOR_BUFFER_BIT);
-    renderer.state.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+    const copy = () => {
+      renderer.state.setScissorTest(false);
+      blit(this.lateDepthRT, gl.DEPTH_BUFFER_BIT);
+      blit(this.lateColorRT, gl.COLOR_BUFFER_BIT);
+      renderer.state.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+    };
+    copy();
     mark?.('late-copy', this.lateColorRT);
-    if (ssr) {
+    if (!late.length) {
       this.ssr.render(target, this.lateColorRT, this.lateDepthRT);
       mark?.('ssr', target);
-      if (!late.length) return;
+      return;
+    }
+    // the sea's own reflections through the same Hi-Z tracer (its pyramid: the scene without the water)
+    if (this.ssr) {
+      let sea = false;
+      for (const o of late) {
+        const oc = o.userData.dkOcean;
+        if (!oc?.useHiZ || !(oc.uniforms.dkSSR?.value > 0)) continue;
+        oc.useHiZ({ uniforms: this.ssr.uniforms, trace: SSR_TRACE, steps: this.ssr.steps });
+        sea = true;
+      }
+      if (sea) { this.ssr.prepare(this.lateColorRT, this.lateDepthRT, this.RW, this.RH); mark?.('sea-hiz', this.lateColorRT); }
     }
     for (const o of late) {
       const u = o.userData.dkOcean?.uniforms || o.material?.userData?.dkLateUniforms;
@@ -674,6 +840,12 @@ export class Cinematic {
       for (const o of lit) o.layers.disable(LATE_LAYER);
     }
     this.lateDrawn = true;
+    if (ssr) {
+      // glossy surfaces: copies taken now hold the water (its colour, its depth)
+      copy();
+      this.ssr.render(target, this.lateColorRT, this.lateDepthRT);
+      mark?.('ssr', target);
+    }
   }
 
   /** NaN / Inf / range of every float buffer of the last frame (tests, debugging). */

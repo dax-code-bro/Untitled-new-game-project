@@ -120,6 +120,18 @@ schedule (`episodes/s01e01/final/render-schedule.md`, "On Daxtyn's PC") guesses 
 to 250 times faster, which would mean about 1 to 5 days of rendering for the whole episode. That
 is a guess until your GPU check measures it.
 
+**The quality tier.** A graphics card like the 4090 can afford more work per pixel than the cloud
+computer, so the GPU check also draws its test frame at higher **quality tiers** (`high`, `ultra`,
+and others when they might fit): finer shadows, real motion blur from many sub-frames, reflections on
+water and wet stone. Every tier is still native 4K on every frame. It checks that each tier draws the
+same picture as `final`, works out how long the whole episode would take at each one, and ends with a
+banner `RECOMMENDED QUALITY TIER: ...`: the best tier that keeps Episode 1 under about 3 days.
+**You do not have to do anything with it:** the render (Step 3) uses that tier by itself, but only
+when it was really measured on your card and every picture check passed; otherwise it uses `final`.
+The render window prints which one it uses in a line `quality tier: ...`. To choose yourself, type
+for example `pc\Render-Episode.cmd --tier final` (see "How to type a command"). Shots that are
+already finished keep the tier they were made with.
+
 ---
 
 ## Step 3: render

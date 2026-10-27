@@ -327,9 +327,15 @@ export function createOcean(ctx, opts = {}) {
   });
   material.name = 'DKOcean';
   material.userData.dkNoSSAO = true;    // screen-space AO / contact shadows come from the ground under the water: not for the surface
+  // Hi-Z sea reflections (the quality tiers): the cinematic stack hands over its screen-space tracer
+  // (runtime/cinematic/ssr.js: exact crossings through a min-depth pyramid of the scene without the
+  // water, a mip-mapped colour copy) instead of this file's fixed-step march, which aliases into
+  // cross-hatching beside reflected objects. Without it (final) the march is used as before.
+  const seaHiZ = { on: false, uniforms: null, trace: '', steps: 64 };
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
-    shader.defines = { ...(shader.defines || {}), DK_OCEAN_NC: NC };
+    if (seaHiZ.on) Object.assign(shader.uniforms, seaHiZ.uniforms);
+    shader.defines = { ...(shader.defines || {}), DK_OCEAN_NC: NC, ...(seaHiZ.on ? { DK_SEA_HIZ: 1, DK_SSR_STEPS: seaHiZ.steps } : {}) };
     const common = /* glsl */ `
 uniform sampler2D dkOceanDisp[${NC}];
 uniform sampler2D dkOceanDeriv[${NC}];
@@ -491,13 +497,31 @@ dkFoam = clamp(dkFoam, 0.0, 1.0);
 #include <map_fragment>
 `)
       .replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\nnormal = normalize((viewMatrix * vec4(dkNw, 0.0)).xyz);')
-      .replace('#include <envmap_physical_pars_fragment>', '#include <envmap_physical_pars_fragment>\n' + /* glsl */ `
+      .replace('#include <envmap_physical_pars_fragment>', '#include <envmap_physical_pars_fragment>\n' + (seaHiZ.on ? seaHiZ.trace : '') + /* glsl */ `
 #if defined( USE_ENVMAP ) && defined( ENVMAP_TYPE_CUBE_UV )
 // sea reflections: a reflected ray that points below the horizon would meet the next wave,
 // which reflects the sky again - mirror it up (dimmed) instead of showing the environment's ground
+#ifdef DK_SEA_HIZ
+// screen-space reflection through the cinematic stack's Hi-Z tracer (exact crossings, glossy from a
+// mip-mapped colour copy; the pyramid holds the scene without the water, so no self hits)
+vec4 dkSeaSSR( vec3 viewPos, vec3 rv, float rough ) {
+  if ( dkLateOn < 0.5 || dkSSR < 0.5 || rv.z > 0.2 ) return vec4( 0.0 );
+  // a ray a wave sends DOWN goes into the water: in the pyramid (the scene without the water) it would
+  // hit the sea bed and paint it into the reflection - those keep the mirrored sky (dkSeaIBLEnv)
+  float up = inverseTransformDirection( rv, viewMatrix ).y;
+  if ( up < 0.005 ) return vec4( 0.0 );
+  vec4 h = dkSsrTrace( viewPos, rv, rough );
+  if ( dkSsrDebug > 0.5 ) {
+    // cinematic.debug = 'ssr': why each sea ray ended (colours as ssr.js)
+    vec3 dkC[8] = vec3[8]( vec3( 0.15 ), vec3( 0.3 ), vec3( 1.0, 0.0, 0.0 ), vec3( 1.0, 1.0, 0.0 ), vec3( 1.0, 0.0, 1.0 ), vec3( 0.0, 0.2, 1.0 ), vec3( 0.0, 1.0, 1.0 ), vec3( 0.0, 1.0, 0.0 ) );
+    return vec4( dkC[ dkSsrCode ] * 4.0, 1.0 );
+  }
+  return vec4( h.rgb, h.a * smoothstep( 0.2, -0.1, rv.z ) * smoothstep( 0.005, 0.04, up ) );
+}
+#else
 // screen-space reflection of the scene behind (colour/depth copies of the late pass):
 // march the reflected ray in view space with growing steps, refine the first hit
-vec4 dkSeaSSR( vec3 viewPos, vec3 rv ) {
+vec4 dkSeaSSR( vec3 viewPos, vec3 rv, float rough ) {
   if ( dkLateOn < 0.5 || dkSSR < 0.5 || rv.z > 0.2 ) return vec4( 0.0 );
   float t = 0.4 + 0.004 * -viewPos.z, prevT = 0.0;
   for ( int i = 0; i < ${o.ssrSteps}; i ++ ) {
@@ -528,9 +552,10 @@ vec4 dkSeaSSR( vec3 viewPos, vec3 rv ) {
   }
   return vec4( 0.0 );
 }
+#endif
 vec3 dkSeaIBLEnv( const in vec3 viewDir, const in vec3 normal, const in float roughness );
 vec3 dkSeaIBL( const in vec3 viewDir, const in vec3 normal, const in float roughness ) {
-  vec4 dkS = dkSeaSSR( -vViewPosition, reflect( - viewDir, normal ) );
+  vec4 dkS = dkSeaSSR( -vViewPosition, reflect( - viewDir, normal ), roughness );
   vec3 dkEnvR = dkSeaIBLEnv( viewDir, normal, roughness );
   return mix( dkEnvR, dkS.rgb, dkS.a * ( 1.0 - smoothstep( 0.15, 0.45, roughness ) ) );
 }
@@ -574,7 +599,7 @@ dkBody += dkScatter * dkSunColO * dkSss * (1.0 - dkFoam) * 0.6;
 vec3 outgoingLight = dkBody * mix(1.0 - dkF, 1.0, dkFoam) + totalSpecular + totalEmissiveRadiance;
 `);
   };
-  material.customProgramCacheKey = () => `dk-ocean-${NC}`;
+  material.customProgramCacheKey = () => `dk-ocean-${NC}${seaHiZ.on ? `-hiz${seaHiZ.steps}` : ''}`;
 
   const mesh = new THREE.Mesh(geo, material);
   mesh.name = 'dk-ocean';
@@ -583,7 +608,16 @@ vec3 outgoingLight = dkBody * mix(1.0 - dkF, 1.0, dkFoam) + totalSpecular + tota
   mesh.receiveShadow = true;
   mesh.userData.dkLate = true;          // cinematic stack: drawn after the scene (sees what is behind it)
   mesh.userData.dkNoVelocity = true;    // the grid follows the camera; the water itself has camera-only motion
-  mesh.userData.dkOcean = { uniforms };
+  mesh.userData.dkOcean = {
+    uniforms,
+    /** Cinematic stack (quality tiers): trace the sea's reflections with its Hi-Z tracer (shared uniforms + GLSL). */
+    useHiZ({ uniforms: u, trace, steps }) {
+      if (seaHiZ.on && seaHiZ.uniforms === u && seaHiZ.steps === steps) return;
+      Object.assign(seaHiZ, { on: true, uniforms: u, trace, steps });
+      material.needsUpdate = true;
+    },
+    get hiz() { return seaHiZ.on; },
+  };
 
   const camPos = new THREE.Vector3();
   let gpuPending = null;
@@ -648,16 +682,22 @@ vec3 outgoingLight = dkBody * mix(1.0 - dkF, 1.0, dkFoam) + totalSpecular + tota
   /** Water surface height (m) at world x, z for the current time (no horizontal displacement correction). */
   function heightAt(x, z) {
     let h = 0;
+    const at = cascades.map((c) => {
+      const fx = (((x / c.L) % 1) + 1) % 1 * N, fz = (((z / c.L) % 1) + 1) % 1 * N;
+      const i0 = Math.floor(fx) % N, j0 = Math.floor(fz) % N;
+      return { i0, j0, i1: (i0 + 1) % N, j1: (j0 + 1) % N, u: fx - Math.floor(fx), v: fz - Math.floor(fz) };
+    });
+    // GPU: only the 4 texels around the point in each cascade come back (ocean-gpu.js corners)
+    let g = null;
     if (gpu) {
       if (gpuPending !== null) { gpu.compute(gpuPending); gpuPending = null; }
-      cascades.forEach((c, ci) => { c.disp = gpu.displacement(ci); });
+      g = gpu.corners(at.map((a) => [a.i0, a.j0, a.i1, a.j1]));
     }
-    for (const c of cascades) {
-      const fx = (((x / c.L) % 1) + 1) % 1 * N, fz = (((z / c.L) % 1) + 1) % 1 * N;
-      const i0 = Math.floor(fx) % N, j0 = Math.floor(fz) % N, i1 = (i0 + 1) % N, j1 = (j0 + 1) % N, u = fx - Math.floor(fx), v = fz - Math.floor(fz);
-      const H = (i, j) => c.disp[4 * (j * N + i) + 1];
-      h += (H(i0, j0) * (1 - u) + H(i1, j0) * u) * (1 - v) + (H(i0, j1) * (1 - u) + H(i1, j1) * u) * v;
-    }
+    cascades.forEach((c, ci) => {
+      const { i0, j0, i1, j1, u, v } = at[ci];
+      const H = g ? (k) => g[4 * ci + k] : (k) => { const [i, j] = [[i0, j0], [i1, j0], [i0, j1], [i1, j1]][k]; return c.disp[4 * (j * N + i) + 1]; };
+      h += (H(0) * (1 - u) + H(1) * u) * (1 - v) + (H(2) * (1 - u) + H(3) * u) * v;
+    });
     return h + mesh.position.y;
   }
   const hs = 4 * Math.sqrt(cascades.reduce((a, c) => a + c.heightVar, 0));

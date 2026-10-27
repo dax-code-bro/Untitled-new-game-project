@@ -31,9 +31,13 @@
 //  6. Quality tiers (on a GPU, or with --tiers): renders the same frame at final, final-high and
 //     final-ultra (runtime/lib/quality.js), checks every tier draws the same picture structure (no NaN,
 //     no black frames), turns the measured speeds into hours of Episode 1 per tier and prints the
-//     RECOMMENDED preset: the highest tier that keeps the episode within ~3 days (--budget-hours).
+//     RECOMMENDED tier: the highest MEASURED tier that keeps the episode within ~3 days (--budget-hours).
+//     A tier the plan would pick from an extrapolation (ultra8, max) is rendered on the card first; only
+//     measured tiers are recommended. render/episode.mjs renders the masters at that tier (gpu-check.json
+//     recommendedTier) when it was measured at native 4K and every picture check passed.
 //  --heavy also renders the F5 Cling square style frame (the heaviest set, a third of the episode):
-//  graphics memory and the Windows GPU time-out (TDR) on the biggest scene.
+//  graphics memory and the Windows GPU time-out (TDR) on the biggest scene - at final, and again at the
+//  recommended tier (peak graphics memory from nvidia-smi, context loss).
 // Everything printed also goes to pc/logs/gpu-check-<date>.txt and
 // output/gpu-check/gpu-check.json. Exit code: 0 GPU ok, 2 no GPU (software), 3 the GPU draws a
 // DIFFERENT picture from the reference, 1 error.
@@ -86,8 +90,9 @@ GPU self-test: finds the graphics card, renders a 4K style frame, estimates Epis
   --write-reference-image  (with --swiftshader) store the picture (thumbnail + 1:1 crops) in pc/reference-image.json
   --schedule FILE     render schedule (default ${path.relative(PROJECT_ROOT, DEFAULT_SCHEDULE)})
   --probe-only        stop after the GPU search (no rendering)
-  --tiers LIST|none   quality tiers to compare with final on this card (default on a GPU: high,ultra; with
-                      --swiftshader: none) - prints the hours of Episode 1 at every tier and the recommended preset
+  --tiers LIST|all|none  quality tiers to compare with final on this card (default on a GPU: high,ultra, plus
+                      any tier the plan would pick from an extrapolation; all = high,ultra8,ultra,max; with
+                      --swiftshader: none) - prints the hours of Episode 1 at every tier and the recommended tier
   --tier-size WxH     render the tier comparison at this size instead of native 4K (a quick TEST)
   --budget-hours H    the time Episode 1 may take for the recommendation (default 72 = 3 days)
   --out DIR           where the PNG and gpu-check.json go (default output/gpu-check)
@@ -284,6 +289,38 @@ function estimate(m, scheduleFile) {
   return { ratio, setupRatio, speedup: 1 / ratio, reference: ref, rows, total: tot };
 }
 
+// ------------------------------------------------- heavy frame at a tier ---
+/** Peak graphics memory (MB) while fn runs, polled with nvidia-smi every second (null without it). */
+async function withGpuMemory(fn) {
+  const q = () => sh('nvidia-smi', ['--query-gpu=memory.used,memory.total', '--format=csv,noheader,nounits'], { timeout: 5000 });
+  const first = q();
+  if (!first) return { value: await fn(), peakMB: null, totalMB: null };
+  const [, total] = first.split(/\r?\n/)[0].split(',').map((x) => +x.trim());
+  let peak = 0;
+  const { execFile } = await import('node:child_process');
+  const poll = setInterval(() => {
+    execFile('nvidia-smi', ['--query-gpu=memory.used', '--format=csv,noheader,nounits'], { timeout: 5000, windowsHide: true }, (err, out) => {
+      if (!err) peak = Math.max(peak, ...String(out).split(/\r?\n/).filter(Boolean).map((x) => +x.trim() || 0));
+    });
+  }, 1000);
+  try { return { value: await fn(), peakMB: peak || null, totalMB: total || null }; } finally { clearInterval(poll); }
+}
+
+/** Render the heavy frame once at a tier (native 4K unless size): { tier, ok, firstS, error, peakGpuMB, totalGpuMB }. */
+async function heavyAtTier(c, tier, { gpu, profile, size }) {
+  const { measureTier } = await import('../runtime/tools/tier-check.mjs');
+  const out = { tier, scene: c.scene, size: size || '3840x2160' };
+  try {
+    const r = await withGpuMemory(() => measureTier({ scene: c.scene, time: c.time, tier, size, cinematic: c.cinematic, gpu, gpuProfile: profile, frames: 1 }));
+    const nan = Object.entries(r.value.buffers || {}).filter(([k, v]) => k !== 'shaderErrors' && v && (v.nan || v.inf)).map(([k]) => k);
+    Object.assign(out, { ok: !r.value.buffers?.shaderErrors, firstS: r.value.firstS, peakGpuMB: r.peakMB, totalGpuMB: r.totalMB, nanBuffers: nan });
+    if (r.value.buffers?.shaderErrors) out.error = `${r.value.buffers.shaderErrors} shader error(s)`;
+  } catch (e) {
+    Object.assign(out, { ok: false, error: e.message.split('\n')[0] + (/context lost|device lost|crash/i.test(e.message) ? ' (graphics memory or the Windows GPU time-out)' : '') });
+  }
+  return out;
+}
+
 // ------------------------------------------------------------------ main ---
 async function main() {
   const a = parseArgs(process.argv.slice(2), { booleans: ['help', 'all-profiles', 'swiftshader', 'write-reference', 'write-reference-image', 'probe-only', 'heavy'] });
@@ -423,25 +460,58 @@ async function main() {
     // ---- 4. quality tiers: final vs final-high / final-ultra on this card, and the tier to render Episode 1 at
     // (runtime/lib/quality.js, runtime/tools/tier-bench.mjs; the quality-tier track's part of this file)
     if (est.rows && (a.tiers ? a.tiers !== 'none' : !a.swiftshader)) {
-      const { benchTiers, planFromBench, planLines } = await import('../runtime/tools/tier-bench.mjs');
+      const { benchTiers, planFromBench, planLines, nextTierToMeasure } = await import('../runtime/tools/tier-bench.mjs');
+      const { TIER_NAMES, tierDefsHash } = await import('../runtime/lib/quality.js');
       const tc = CANDIDATES.find((x) => x.id === m.candidate) || { scene: m.scene, time: m.time, cinematic: m.cinematic };
-      const tierList = (a.tiers && a.tiers !== 'all' ? String(a.tiers) : 'high,ultra').split(',').map((x) => x.trim()).filter(Boolean);
+      const tierList = a.tiers === 'all' ? TIER_NAMES.filter((t) => t !== 'final') : String(a.tiers || 'high,ultra').split(',').map((x) => x.trim()).filter(Boolean);
+      for (const t of tierList) if (!TIER_NAMES.includes(t)) throw new Error(`--tiers: unknown tier "${t}" (${TIER_NAMES.join(', ')}, all or none)`);
       const budgetH = num(a.budgetHours, 'budget-hours', { min: 1 }) ?? 72;
       say(`\n== Quality tiers on this ${a.swiftshader ? 'CPU' : 'GPU'}: final vs ${tierList.join(', ')} (${a.tierSize ? `${a.tierSize}, a TEST size` : 'native 3840x2160'}; each tier builds the scene again)`);
       try {
-        const bench = await benchTiers({ scene: tc.scene, time: tc.time, cinematic: tc.cinematic, gpu: !a.swiftshader, gpuProfile: chosen?.profile, tiers: tierList, size: a.tierSize, frames: 2, log: say });
+        const benchArgs = { scene: tc.scene, time: tc.time, cinematic: tc.cinematic, gpu: !a.swiftshader, gpuProfile: chosen?.profile, size: a.tierSize, frames: 2, log: say };
+        const bench = await benchTiers({ ...benchArgs, tiers: tierList });
         const setupH = Math.max(0, est.total.hours - est.rows.reduce((acc, r) => acc + (r.cpuH || 0) * est.ratio, 0));
-        const plan = planFromBench(bench, { finalSteadyS: m.steadyS, refSteadyS: est.reference.steadyS, cpuHours: est.total.cpuH, setupH, encodeH: 4, budgetH });
-        result.tiers = { bench: { size: bench.size, results: Object.fromEntries(Object.entries(bench.results).map(([k, v]) => [k, { ...v, stats: undefined }])) }, plan };
+        const planArgs = { finalSteadyS: m.steadyS, refSteadyS: est.reference.steadyS, cpuHours: est.total.cpuH, setupH, encodeH: 4, budgetH };
+        // a tier the plan would choose from an extrapolation is measured on the card before anything is recommended
+        for (let k = 0; k < 2; k++) {
+          const next = nextTierToMeasure(bench, planArgs);
+          if (!next) break;
+          say(`   the plan would choose ${next} from an extrapolation - measuring it on this card first`);
+          const more = await benchTiers({ ...benchArgs, tiers: [next], base: bench.results.final });
+          Object.assign(bench.results, more.results);
+        }
+        const plan = planFromBench(bench, { ...planArgs, measuredOnly: true });
+        const shown = planFromBench(bench, planArgs);      // the table also shows extrapolated tiers (marked)
+        result.tiers = { defs: tierDefsHash(), bench: { size: bench.size, results: Object.fromEntries(Object.entries(bench.results).map(([k, v]) => [k, { ...v, stats: undefined }])) }, plan };
         say('');
-        for (const l of planLines(plan)) say(l);
+        for (const l of planLines(shown)) say(l);
+        const failed = Object.entries(bench.results).filter(([, r]) => r.compare && !r.compare.ok);
+        for (const [t, r] of failed) say(`   ${t}: FAILED the picture check against final - ${r.compare.problems.join('; ')}`);
+        // the heaviest set at the recommended tier: graphics memory and the GPU time-out where it matters most
+        if (a.heavy && plan.recommended && plan.recommended !== 'final') {
+          const f5 = CANDIDATES.find((c) => c.heavy);
+          say(`\n   the heavy frame (F5) at ${plan.recommended}:`);
+          const hv = await heavyAtTier(f5, plan.recommended, { gpu: !a.swiftshader, profile: chosen?.profile, size: a.tierSize });
+          result.tiers.heavy = hv;
+          say(hv.ok ? `   F5 at ${hv.tier}: ${hv.firstS} s for the first frame${hv.peakGpuMB ? `, peak graphics memory ${hv.peakGpuMB} MB of ${hv.totalGpuMB} MB (nvidia-smi)` : ', graphics memory not measured (no nvidia-smi)'}; no context loss`
+            : `   F5 at ${hv.tier} FAILED: ${hv.error}${hv.peakGpuMB ? ` (peak graphics memory ${hv.peakGpuMB} of ${hv.totalGpuMB} MB)` : ''}`);
+          if (!hv.ok) {
+            const lower = TIER_NAMES.slice(0, TIER_NAMES.indexOf(plan.recommended)).filter((t) => t === 'final' || (plan.tiers[t]?.fits && !plan.extrapolated.includes(t))).pop() || 'final';
+            plan.reason = `${plan.recommended} failed on the heavy frame (F5): ${hv.error}; ${lower} instead (its F5 was not rendered)`;
+            plan.recommended = lower; plan.preset = lower === 'final' ? 'final' : `final-${lower}`;
+          }
+        }
         const line = '#'.repeat(78);
         say(`\n${line}`);
-        say(`#  RECOMMENDED QUALITY: --preset ${plan.preset}   (${plan.reason})`);
+        say(`#  RECOMMENDED QUALITY TIER: ${plan.recommended}   (${plan.reason})`);
+        say(`#  render/episode.mjs uses it for the masters: --preset final${plan.recommended !== 'final' ? ` --tier ${plan.recommended}` : ''}`);
         say(`#  (native 4K, every frame, at every tier; the tier only decides how much work goes into each pixel)`);
-        if (a.tierSize) say('#  measured at a TEST size: run the GPU check without --tier-size for the real figures');
+        if (a.tierSize) say('#  measured at a TEST size: the episode renderer does not follow it - run the GPU check without --tier-size');
+        if (failed.length) say(`#  NOT RECOMMENDED (failed the picture check): ${failed.map(([t]) => t).join(', ')}`);
+        if (!a.heavy && plan.recommended !== 'final') say('#  (the heavy F5 frame was not rendered at this tier: add --heavy to check graphics memory there)');
         say(line);
         result.recommendedPreset = plan.preset;
+        result.recommendedTier = plan.recommended;
       } catch (e) {
         say(`   the quality-tier benchmark failed: ${e.message.split('\n')[0]}`);
         result.tiers = { error: e.message.split('\n')[0] };

@@ -18,9 +18,20 @@ export const CINEMATIC_DEFAULTS = {
     mode: 'velocity',               // 'velocity' | 'accumulate' | 'off'
     maxBlur: 0.04,                  // longest blur, fraction of the image width (0.04 = 154 px at 4K)
     samples: 20,                    // velocity mode: max taps per pixel (fewer where motion is short)
+    tileStride: 2,                  // velocity tiles read every 2nd pixel (1: every pixel - objects thinner than 2 px,
+                                    // a spear or a far wing finger, cannot slip between the samples; the quality tiers)
     accumulateSamples: 8,           // accumulate mode: sub-frames per frame
     jitterAA: true,                 // accumulate: sub-pixel jitter per sub-frame (true supersampling)
     softShadows: true,              // accumulate: jitter the sun inside its 0.53 deg disk (true penumbrae)
+    subframeBlur: false,            // accumulate: velocity motion blur INSIDE each sub-frame over its 1/N slice of the
+                                    // shutter, so the N copies of fast motion smear into one continuous streak; also
+                                    // resolves haze + volumetric fog per sub-frame with its own depth (quality tiers
+                                    // ultra8 / ultra / max; off: the sub-frames are instants, as reviewed at final)
+    subframeBlurScale: 2,           // subframeBlur: each sub-frame's blur spans this many slices (the reconstruction filter
+                                    // falls off like a tent: 2 makes neighbouring slices overlap into an even streak;
+                                    // measured on a 40 m/s wing tip, 1 left faint copies)
+    subframeAO: false,              // accumulate: depth pre-pass + GTAO + contact shadows per sub-frame (moving objects
+                                    // get occlusion from their own pose, not the frame-time pose)
   },
   dof: {
     enabled: true,                  // needs ctx.lens.focus or focusTarget; otherwise everything is sharp

@@ -10,6 +10,16 @@
 // native 3840x2160, 24 fps, --preset final, --cinematic velocity (1E-03: film),
 // 10-bit, CRF 12).
 //
+// QUALITY TIER (runtime/lib/quality.js, README "Quality tiers for the render PC"): every shot is
+// rendered with --preset final (native 4K, every frame) at one quality tier - final, high, ultra8,
+// ultra or max - which only decides how much work goes into each pixel. --tier T (or --preset
+// final-ultra ...) chooses it. Without one, the GPU check's RECOMMENDED tier
+// (output/gpu-check/gpu-check.json) is used, but only when that check ran on this computer and
+// card, ended without problems, its picture check said SAME PICTURE, and the tier was MEASURED on
+// this card at native 4K (not extrapolated) and drew the same picture as final there; otherwise
+// final. The tier is printed in the banner and the status, and kept in every shot's DONE.json.
+// A shot's job fingerprint includes the tier, so unfinished chunks are never mixed across tiers.
+//
 // THE RENDER GATE (render-ready.json next to render-jobs.json, render/lib/gate.mjs):
 // the branch carries every track's work in progress, so a scene file existing does
 // not make a shot ready for a master. A shot (and the end-credits card) is rendered
@@ -72,6 +82,8 @@ import { readGate, gateVerdict, GATE_NAME } from './lib/gate.mjs';
 import { drawRoll, scrollArgs, tmpDir as creditsTmpDir } from './lib/credits.mjs';
 import { ensureFonts } from './lib/fonts.mjs';
 import { PINS } from './lib/pins.mjs';
+import { TIER_NAMES, TIER_PRESETS, TIERS } from '../runtime/lib/quality.js';
+import { usableRecommendation } from '../runtime/tools/tier-bench.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RENDER_MJS = path.join(HERE, 'render.mjs');
@@ -91,6 +103,10 @@ Render Episode 1 scene by scene (resumable) and assemble the episode.
                        without one: stop)
   --workers N          browsers per shot (default: the job's own, 2; a shot that fails is retried with 1)
   --max-hours H        do not start a new shot after H hours (stop cleanly, resume later)
+  --tier T             quality tier of the masters: ${TIER_NAMES.join(' | ')} (always native 4K, every frame;
+                       the tier only adds work per pixel). Default: the GPU check's RECOMMENDED tier when it
+                       was measured on this graphics card and passed the picture checks, otherwise final
+  --preset P           the same as a preset name: final | ${Object.keys(TIER_PRESETS).join(' | ')}
   --rerender-stale     render finished shots again if files they loaded changed since (git pull), as long
                        as the current files are the approved ones (a changed APPROVAL re-renders by itself)
   --ignore-gate        TEST renders only (needs --size): also render shots that are not approved in
@@ -216,7 +232,7 @@ async function renderShot(o, scene, job, r, { workers, fresh }) {
   const a = r.args || {};
   const secs = job.frames / FPS;
   const args = [RENDER_MJS, r.scene,
-    '--preset', 'final',
+    '--preset', 'final', ...(o.tier && o.tier !== 'final' ? ['--tier', o.tier] : []),
     '--start', String(r.startS), '--seconds', secs.toFixed(6),
     '--workers', String(workers),
     '--chunk-seconds', String(a['chunk-seconds'] ?? job.chunk_seconds ?? 1),
@@ -230,7 +246,7 @@ async function renderShot(o, scene, job, r, { workers, fresh }) {
   const errFile = path.join(os.tmpdir(), `dk-episode-${process.pid}-${job.job.replace(/[^\w-]/g, '_')}.json`);
   fs.rmSync(errFile, { force: true });
   const t0 = Date.now();
-  say(`  > node render/render.mjs ${relp(r.scene)} --start ${r.startS} --seconds ${secs.toFixed(3)}${a.cinematic ? ` --cinematic ${a.cinematic}` : ''} --workers ${workers}${o.gpu ? ' --gpu' : ''}${fresh ? ' --fresh' : ''} --out ${relp(dir)}`);
+  say(`  > node render/render.mjs ${relp(r.scene)}${o.tier && o.tier !== 'final' ? ` --tier ${o.tier}` : ''} --start ${r.startS} --seconds ${secs.toFixed(3)}${a.cinematic ? ` --cinematic ${a.cinematic}` : ''} --workers ${workers}${o.gpu ? ' --gpu' : ''}${fresh ? ' --fresh' : ''} --out ${relp(dir)}`);
   const res = await runChild(args, { DK_ERROR_JSON: errFile });
   const err = readJson(errFile);
   fs.rmSync(errFile, { force: true });
@@ -247,6 +263,7 @@ function finishShot(o, scene, job, r, wallS, files = null) {
   writeJson(doneFile(o, scene, job), {
     job: job.job, scene: scene.key, set: job.set, kind: r.kind, frames: job.frames, width: o.W, height: o.H, stat: statKey(file),
     source: r.scene ? relp(r.scene) : null, startS: r.startS ?? null, via: r.via ?? null, cinematic: r.args?.cinematic ?? null,
+    tier: r.kind === '3d' ? (o.tier || 'final') : null,
     renderer: jj?.fingerprint?.renderer ?? null, files: files ?? jj?.fingerprint?.files ?? {}, wallS: wallS ?? null,
     // the render gate: the approval this shot was rendered under (null: a black card, or an ungated TEST render)
     lockId: r.lockId ?? null, lock: r.lock ?? null, approvedBy: r.approvedBy ?? null,
@@ -457,8 +474,12 @@ function speedModel(o, plan) {
     const d = shotDone(o, s, j);
     if (d?.wallS && d.kind === '3d') { per[j.set] ??= { s: 0, f: 0 }; per[j.set].s += d.wallS; per[j.set].f += j.frames; }
   }
-  const est = readJson(path.join(PROJECT_ROOT, 'output', 'gpu-check', 'gpu-check.json'))?.estimate;
-  const ratio = o.gpu && est?.ratio ? est.ratio : 1;
+  const gc = readJson(path.join(PROJECT_ROOT, 'output', 'gpu-check', 'gpu-check.json'));
+  const est = gc?.estimate;
+  // a higher quality tier: the GPU check's measured seconds per frame of that tier relative to final
+  const spf = gc?.tiers?.plan?.secondsPerFrame || {};
+  const tierK = o.gpu && o.tier && o.tier !== 'final' && spf[o.tier] > 0 && spf.final > 0 ? spf[o.tier] / spf.final : 1;
+  const ratio = (o.gpu && est?.ratio ? est.ratio : 1) * tierK;
   return (j) => (per[j.set]?.f ? per[j.set].s / per[j.set].f : (j.s_per_frame || 0) * ratio + (j.setup_s || 0) / Math.max(1, j.frames) * (o.gpu && est?.setupRatio ? est.setupRatio : 1));
 }
 
@@ -472,6 +493,7 @@ function collectStatus(o, plan) {
       const d = shotDone(o, s, j);
       const appr = o.gated && j.render !== 'black' ? GATE.approved[j.job] : null;
       if (d && (!o.gated || j.render === 'black' || (appr && d.lockId === appr.lockId))) {
+        if (d.kind === '3d') { r.tiers ??= {}; r.tiers[d.tier || 'final'] = (r.tiers[d.tier || 'final'] || 0) + 1; }
         r.done++; r.framesDone += j.frames; if (o.checkStale && d.kind === '3d' && staleFiles(o, d).length) r.stale++; continue;
       }
       if (d) { r.outdated++; why(`${j.job}: rendered under ${appr ? 'an older approval' : 'an approval that was withdrawn'} - not used`); }
@@ -496,6 +518,13 @@ function printStatus(o, plan, rows) {
   const ep4k = path.join(o.out, `${TITLE}${o.size ? '_TEST_' + o.size : '_4K'}.mp4`);
   const lines = [];
   lines.push(hr('='), `Dragon's Kingdom S01E01 - render status ${new Date().toLocaleString()}`, `renderer: ${o.gpu ? `GPU (${savedGpuProfile()?.renderer || 'see gpu-check'})` : 'CPU (SwiftShader)'}   output: ${relp(o.out)}`);
+  lines.push(`quality tier for new shots: ${o.tier || 'final'} - ${o.tierWhy || 'the default'}`);
+  const byTier = {};
+  for (const r of rows) for (const [t, n] of Object.entries(r.tiers || {})) byTier[t] = (byTier[t] || 0) + n;
+  if (Object.keys(byTier).length > 1 || (Object.keys(byTier).length === 1 && !byTier[o.tier || 'final'])) {
+    lines.push(`  finished shots by tier: ${Object.entries(byTier).map(([t, n]) => `${t} ${n}`).join(', ')} (shots keep the tier they were rendered at;`);
+    lines.push('  a scene that mixes tiers can differ slightly between its shots, e.g. reflections or fog detail)');
+  }
   const nAppr = Object.keys(GATE.approved || {}).length;
   lines.push(o.gated ? `render gate: ${GATE.exists ? `${nAppr} shot(s) approved in ${GATE_NAME}` : `${GATE_NAME} does not exist yet - nothing but black cards is rendered`}${GATE.error ? ` - ${GATE.error}` : ''}`
     : 'render gate: IGNORED (--ignore-gate, TEST render)');
@@ -519,6 +548,36 @@ function printStatus(o, plan, rows) {
   const text = lines.join('\n');
   console.log(text);
   try { fs.mkdirSync(o.out, { recursive: true }); fs.writeFileSync(path.join(o.out, 'STATUS.txt'), text + '\n'); writeJson(path.join(o.out, 'status.json'), { at: new Date().toISOString(), gate: o.gated ? { file: GATE_NAME, exists: GATE.exists, approved: nAppr } : 'ignored', rows }); } catch {}
+}
+
+// ---------------------------------------------------------- quality tier ---
+/**
+ * The quality tier the masters are rendered at: --tier / --preset when given, else the GPU check's
+ * recommendation when it may be followed (runtime/tools/tier-bench.mjs usableRecommendation), else final.
+ * Returns { tier, why, notes: [] }.
+ */
+function chooseTier(o, a, gpuSaved) {
+  let want = null, src = null;
+  if (a.preset !== undefined) {
+    want = a.preset === 'final' ? 'final' : TIER_PRESETS[a.preset];
+    if (!want) throw new Error(`--preset ${a.preset}: masters are native 4K on every frame (SERIES.md section 2) - use final or a quality tier: ${Object.keys(TIER_PRESETS).join(', ')}`);
+    src = `--preset ${a.preset}`;
+  }
+  if (a.tier !== undefined) {
+    if (!TIER_NAMES.includes(a.tier)) throw new Error(`--tier must be one of ${TIER_NAMES.join(', ')}`);
+    if (want && want !== a.tier) throw new Error(`${src} and --tier ${a.tier} contradict each other`);
+    want = a.tier; src = `--tier ${a.tier}`;
+  }
+  if (want) return { tier: want, why: `asked for (${src})`, notes: [] };
+  if (!o.gpu) return { tier: 'final', why: 'the default (rendering on the CPU: the tiers are for a graphics card)', notes: [] };
+  const g = readJson(path.join(PROJECT_ROOT, 'output', 'gpu-check', 'gpu-check.json'));
+  const u = usableRecommendation(g, { host: os.hostname(), renderer: gpuSaved?.renderer });
+  if (u.ok) {
+    const p = u.about;
+    return { tier: u.tier, why: `the GPU check's recommendation of ${String(u.date).slice(0, 10)}${p ? ` (measured on this card: Episode 1 about ${p.totalH} h)` : ''}`, notes: [] };
+  }
+  const rec = u.recommended && u.recommended !== 'final' ? ` (it recommended ${u.recommended}, not used: ${u.reasons.join('; ')})` : ` (${u.reasons.join('; ')})`;
+  return { tier: 'final', why: `the default${rec}`, notes: u.recommended && u.recommended !== 'final' ? [`to use ${u.recommended} anyway: ${renderCommand(`--tier ${u.recommended}`)}`] : [] };
 }
 
 // ----------------------------------------------------------------- main ---
@@ -554,6 +613,9 @@ async function main() {
   if (a.ignoreGate && !o.size) throw new Error(`--ignore-gate is only for TEST renders (with --size, e.g. --size 960x540): masters render the shots approved in ${GATE_NAME} only`);
   o.gated = !a.ignoreGate;
   GATE = readGate(PLAN_DIR);
+  // the quality tier of the masters (--tier / --preset, or the GPU check's recommendation, or final)
+  const tierChoice = chooseTier(o, a, gpuSaved);
+  o.tier = tierChoice.tier; o.tierWhy = tierChoice.why;
 
   if (a.status) { printStatus(o, plan, collectStatus(o, plan)); saveHashes(o); return 0; }
 
@@ -601,6 +663,9 @@ async function main() {
     if (verdict === 'SMALL DIFFERENCES') say('note: the GPU check found SMALL DIFFERENCES between this graphics card\'s picture and the cloud\'s (see its banner); please send the picture to Claude');
   }
   say(`renderer: ${o.gpu ? `GPU - ${gpuSaved?.renderer || 'default profile'}` : 'CPU (SwiftShader)'};  output: ${relp(o.out)}${o.size ? `  (TEST size ${o.size}: not a master)` : ''}`);
+  say(`quality tier: ${o.tier.toUpperCase()} - ${TIERS[o.tier].label}`);
+  say(`  why: ${o.tierWhy}; every shot: --preset final${o.tier !== 'final' ? ` --tier ${o.tier}` : ''} (native ${o.W}x${o.H}, every frame)`);
+  for (const n of tierChoice.notes) say(`  ${n}`);
   if (process.versions.node !== PINS.node) say(`note: this is Node.js ${process.version}, not the pinned ${PINS.node} that the setup puts in pc/tools/node (the launchers use that one)`);
   if (plan.orphans.length) say(`note: render-jobs.json has scenes that are not in the schedule: ${plan.orphans.join(', ')} (ignored)`);
   checkFfmpeg();

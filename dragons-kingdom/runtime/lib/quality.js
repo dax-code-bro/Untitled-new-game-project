@@ -66,20 +66,24 @@ const HIGH = {
   volumetrics: { scale: [2, 2, 1.5], softTaps: 32 },
   ibl: 'exact',
   anisotropy: 16,
-  ocean: { resolution: 512, ssr: true, ssrSteps: 48, gpuFFT: true },
+  // the sea's screen-space reflections only come with sub-frames: at one sample per pixel the waves break
+  // a reflected dragon or ship up into per-pixel hits and misses (hatching beside it, measured on a steel
+  // ball over the FFT sea); 8-32 jittered sub-frames average that into a rippled reflection
+  ocean: { resolution: 512, ssr: false, ssrSteps: 48, gpuFFT: true },
   ssr: { enabled: true, steps: 96, maxRoughness: 0.4, thickness: 0.35 },
   density: { grass: 1.5, vegetation: 1.3, crowd: 1.25, particles: 2.5 },
   textureScale: 2,
   fxTier: 'ultra',
 };
+const SEA_SSR = { ...HIGH.ocean, ssr: true };
 
 export const TIERS = {
   final: FINAL,
   high: HIGH,
-  ultra8: { ...HIGH, name: 'ultra8', label: 'ultra8 - high + 8 real sub-frames per frame (the style frames\' film finish)', subframes: 8 },
-  ultra: { ...HIGH, name: 'ultra', label: 'ultra - high + 16 real sub-frames per frame', subframes: 16 },
+  ultra8: { ...HIGH, name: 'ultra8', label: 'ultra8 - high + 8 real sub-frames per frame (the style frames\' film finish)', subframes: 8, ocean: SEA_SSR },
+  ultra: { ...HIGH, name: 'ultra', label: 'ultra - high + 16 real sub-frames per frame', subframes: 16, ocean: SEA_SSR },
   max: {
-    ...HIGH, name: 'max', label: 'max - high + 32 sub-frames, densest settings', subframes: 32, motionBlurSamples: 64,
+    ...HIGH, name: 'max', label: 'max - high + 32 sub-frames, densest settings', subframes: 32, motionBlurSamples: 64, ocean: SEA_SSR,
     ao: { resolution: 1, slices: 6, steps: 12, contactSteps: 24 }, dofSamples: 192,
     volumetrics: { scale: [2, 2, 2], softTaps: 32 },
     ssr: { enabled: true, steps: 128, maxRoughness: 0.45, thickness: 0.35 },
@@ -92,8 +96,8 @@ export const TIERS = {
  * cost: what it multiplies on a GPU (the cost model in tierCost() below uses the same numbers).
  */
 export const KNOB_DOCS = [
-  ['subframes', 'Real sub-frames per frame (accumulate mode): update() and the whole scene + shadow pass run N times across the 180-degree shutter, each with a Halton sub-pixel jitter and the sun jittered inside its 0.53-degree disk, averaged in 32-bit float. True motion blur (wing tips blur along their arc, not a straight line), N-x supersampling (no stair-stepped rigging, no sparkling scale highlights) and real sun penumbrae. Replaces velocity motion blur + FXAA. Scenes that already render sub-frames keep the larger count. Chunk-warmup (simulation) scenes cannot (velocity motion blur with more taps instead).', 'scene pass x N, update() x N on the CPU'],
-  ['motionBlurSamples', 'Velocity motion blur taps per pixel at the longest blur (high tier, and simulation scenes at ultra/max): smoother streaks, less noise in long blurs.', 'motion-blur pass ~x2.4'],
+  ['subframes', 'Real sub-frames per frame (accumulate mode): update() and the whole scene + shadow pass run N times across the 180-degree shutter, each with a Halton sub-pixel jitter and the sun jittered inside its 0.53-degree disk, averaged in 32-bit float. Each sub-frame also gets velocity motion blur over its own 1/N slice of the shutter (motion vectors from the previous sub-frame\'s pose), so fast motion is one continuous streak along its real arc instead of N separate copies; its haze and volumetric fog are resolved with its own depth, and GTAO + contact shadows are computed from its own pose. True curved motion blur (wing tips blur along their arc), N-x supersampling (no stair-stepped rigging, no sparkling scale highlights) and real sun penumbrae. Replaces the frame-level velocity motion blur + FXAA. Scenes that already render sub-frames keep the larger count. Chunk-warmup (simulation) scenes cannot (velocity motion blur with more taps instead). Depth of field still uses the centre sub-frame\'s depth.', 'scene + depth pre-pass + GTAO + resolve + blur x N, update() x (N + 2) on the CPU'],
+  ['motionBlurSamples', 'Velocity motion blur taps per pixel at the longest blur (high tier, and simulation scenes at ultra/max): smoother streaks, less noise in long blurs. The velocity tiles also read every pixel instead of every second one (motionBlur.tileStride 1), so a moving object thinner than 2 px - a spear, rigging, a far wing finger - still gets its blur (at final it can slip between the samples and stay sharp).', 'motion-blur pass ~x2.4, tile pass x4 (small)'],
   ['cascadeMapSize', 'Sun shadow cascades (scenes with shadows.cascades) at 4096x4096 each instead of 2048: half the texel size, so thin casters (rigging, spears, grass, fingers) keep their shadows and edges stop stepping.', 'shadow pass ~x4 texels per cascade'],
   ['ao', 'GTAO + contact shadows at full resolution instead of half, with more slices / steps / contact-ray steps: no blocky occlusion in creases (scales, cloth folds, masonry joints) at 4K and contact shadows that reach thin objects.', 'GTAO pass ~x4 pixels x ~2.2 taps'],
   ['dofSamples', 'Depth-of-field gather taps at the largest blur: smoother bokeh discs and out-of-focus foregrounds without grain.', 'DOF gather ~x2.7 (only where something is out of focus)'],
@@ -106,6 +110,20 @@ export const KNOB_DOCS = [
   ['textureScale', 'Size multiplier for procedurally generated textures (libraries read it): finer detail in close-ups.', 'texture memory x4'],
   ['fxTier', "The FX library's tier (scenes/lib/fx/core/tier.js): 'ultra' = 2.5x particles, finer smoke/fire grids, more ray-march steps, finer cloth and fracture, 48-step SSR in wet decals, 2048 decals.", 'FX passes ~x2-3'],
 ];
+
+/**
+ * A short fingerprint of the tier definitions (TIERS): gpu-check stores it with its measurements and
+ * render/episode.mjs only follows a recommendation measured with the tiers as they are now.
+ */
+export function tierDefsHash() {
+  const str = JSON.stringify(TIERS);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8, '0');
+}
+
+/** The preset name of a tier ('final' | 'final-high' | ...). */
+export const presetOfTier = (t) => (t === 'final' ? 'final' : Object.keys(TIER_PRESETS).find((k) => TIER_PRESETS[k] === t));
 
 /** The tier a render asked for: cfg.quality.tier, else the preset's (final-ultra ...), else 'final'. */
 export function tierNameFor(cfg = {}) {
@@ -135,13 +153,23 @@ export function qualityFor(base, name) {
   // stop choosing its CPU-friendly tier at draft / preview)
   if (name === 'final') return { ...base };
   const q = { ...base, tier: name };
-  q.fxTier = q.fxTier ?? t.fxTier;
-  q.density = { ...t.density, ...(base.density || {}) };
-  q.textureScale = base.textureScale ?? t.textureScale;
-  q.anisotropy = base.anisotropy ?? t.anisotropy;
-  q.ocean = { ...t.ocean, ...(base.ocean || {}) };
-  q.ssr = { ...t.ssr, ...(base.ssr || {}) };
+  // base.only = ['volumetrics', ...]: only these knobs (KNOB_DOCS names) take the tier's value, the
+  // others keep final's - one knob at a time for A/B checks (runtime/tools/tier-check.mjs --knobs)
+  const k = (knob) => (knobOn(base, knob) ? t : FINAL);
+  q.fxTier = q.fxTier ?? k('fxTier').fxTier ?? undefined;
+  if (q.fxTier === undefined) delete q.fxTier;
+  q.density = { ...k('density').density, ...(base.density || {}) };
+  q.textureScale = base.textureScale ?? k('textureScale').textureScale;
+  q.anisotropy = base.anisotropy ?? k('anisotropy').anisotropy;
+  q.ocean = { ...k('ocean').ocean, ...(base.ocean || {}) };
+  q.ssr = { ...k('ssr').ssr, ...(base.ssr || {}) };
   return q;
+}
+
+/** Is a knob applied (quality.only lists the knobs of a one-knob A/B; without it every knob is)? */
+export function knobOn(quality, knob) {
+  const only = quality?.only;
+  return !Array.isArray(only) || only.includes(knob);
 }
 
 /** The tier this render runs at ('final' when none was asked for). */
@@ -165,12 +193,21 @@ const maxOf = (a, b) => (a == null ? b : Math.max(a, b));
  * The volumetric froxel grid is clamped so its atlas fits opts.maxTextureSize.
  */
 export function applyTierToCinematic(c, name, opts = {}) {
-  // opts.quality (ctx.quality) may override parts of the tier: { ssr: { enabled: false }, subframes: 8, ... }
+  // opts.quality (ctx.quality) may override parts of the tier: { ssr: { enabled: false }, subframes: 8,
+  // subframeBlur: false, subframeAO: false, ... } (tests and A/B comparisons)
   const q = opts.quality || {};
   const T0 = TIERS[name];
-  const t = T0 ? { ...T0, ...(q.subframes !== undefined ? { subframes: q.subframes } : {}), ssr: { ...T0.ssr, ...(q.ssr || {}) } } : T0;
   const changed = [];
-  if (!c || name === 'final') return changed;
+  if (!c || name === 'final' || !T0) return changed;
+  // a knob outside quality.only keeps final's value (one-knob A/B)
+  const pick = (knob, field = knob) => (knobOn(q, knob) ? T0[field] : FINAL[field]);
+  const t = {
+    ...T0,
+    subframes: q.subframes ?? pick('subframes'), motionBlurSamples: pick('motionBlurSamples'), cascadeMapSize: pick('cascadeMapSize'),
+    ao: pick('ao'), dofSamples: pick('dofSamples'), ibl: pick('ibl'),
+    volumetrics: { ...pick('volumetrics'), ...(q.volumetrics || {}) },
+    ssr: { ...pick('ssr'), ...(q.ssr || {}) },
+  };
   const note = (k, from, to) => { if (JSON.stringify(from) !== JSON.stringify(to)) changed.push(`${k}: ${JSON.stringify(from)} -> ${JSON.stringify(to)}`); };
   const mb = c.motionBlur;
   // sub-frames
@@ -180,17 +217,21 @@ export function applyTierToCinematic(c, name, opts = {}) {
       const from = mb.mode === 'accumulate' ? mb.accumulateSamples : mb.mode;
       const n = mb.mode === 'accumulate' ? Math.max(mb.accumulateSamples, t.subframes) : t.subframes;
       mb.mode = 'accumulate'; mb.accumulateSamples = Math.min(64, n); mb.jitterAA = true; mb.softShadows = mb.softShadows !== false;
-      note('motionBlur', from, `accumulate x${mb.accumulateSamples}`);
+      // hybrid: velocity blur inside every sub-frame (its 1/N slice of the shutter) so fast motion is one continuous
+      // streak, not N copies; haze / fog resolved and GTAO + contact shadows computed per sub-frame (its own pose)
+      mb.subframeBlur = q.subframeBlur ?? true; mb.subframeAO = q.subframeAO ?? true;
+      note('motionBlur', from, `accumulate x${mb.accumulateSamples}${mb.subframeBlur ? ' + per-sub-frame blur + fog' : ''}${mb.subframeAO ? ' + per-sub-frame AO' : ''}`);
     }
   }
-  { const v = maxOf(mb.samples, t.motionBlurSamples); note('motionBlur.samples', mb.samples, v); mb.samples = Math.min(64, v); }
+  if (knobOn(q, 'motionBlurSamples')) { const v = maxOf(mb.samples, t.motionBlurSamples); note('motionBlur.samples', mb.samples, v); mb.samples = Math.min(64, v); }
+  if (knobOn(q, 'motionBlurSamples') && mb.mode !== 'off' && (mb.tileStride ?? 2) > 1) { note('motionBlur.tileStride', mb.tileStride ?? 2, 1); mb.tileStride = 1; }
   // shadows
-  if (c.shadows.cascades > 0) {
+  if (c.shadows.cascades > 0 && knobOn(q, 'cascadeMapSize')) {
     const v = maxOf(c.shadows.mapSize, t.cascadeMapSize);
     note('shadows.mapSize', c.shadows.mapSize ?? 'default', v); c.shadows.mapSize = v;
   }
   // GTAO + contact shadows
-  if (c.ao.enabled) {
+  if (c.ao.enabled && knobOn(q, 'ao')) {
     const a = c.ao, from = { resolution: a.resolution ?? 0.5, slices: a.slices, steps: a.steps, contactSteps: a.contactSteps };
     // (a scene asking for full resolution keeps it; the tier never lowers anything)
     a.resolution = Math.max(a.resolution ?? 0.5, t.ao.resolution);
@@ -199,9 +240,9 @@ export function applyTierToCinematic(c, name, opts = {}) {
     note('ao', from, { resolution: a.resolution, slices: a.slices, steps: a.steps, contactSteps: a.contactSteps });
   }
   // depth of field
-  if (c.dof.enabled) { const v = Math.min(256, maxOf(c.dof.samples, t.dofSamples)); note('dof.samples', c.dof.samples, v); c.dof.samples = v; }
+  if (c.dof.enabled && knobOn(q, 'dofSamples')) { const v = Math.min(256, maxOf(c.dof.samples, t.dofSamples)); note('dof.samples', c.dof.samples, v); c.dof.samples = v; }
   // volumetric fog
-  if (c.volumetrics.enabled) {
+  if (c.volumetrics.enabled && knobOn(q, 'volumetrics')) {
     const v = c.volumetrics, from = [...v.resolution];
     const s = t.volumetrics.scale;
     let r = [Math.round(v.resolution[0] * s[0]), Math.round(v.resolution[1] * s[1]), Math.round(v.resolution[2] * s[2])];

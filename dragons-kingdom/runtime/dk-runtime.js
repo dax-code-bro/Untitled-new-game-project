@@ -30,7 +30,7 @@ import * as POST from './post.js';
 import { createCinematic, cinematicFor, LENS_DEFAULTS } from './cinematic/index.js';
 import { tierNameFor, scenePresetOf, qualityFor, applyTierToCinematic } from './lib/quality.js';
 
-export const RUNTIME_VERSION = '1.1.0';   // part of every job fingerprint: bump when pictures change
+export const RUNTIME_VERSION = '1.2.0';   // part of every job fingerprint: bump when pictures change (1.2.0: quality tiers - hybrid sub-frames, SSR after the late pass, Hi-Z sea reflections)
 
 // ------------------------------------------------------------ randomness --
 export function mulberry32(seed) {

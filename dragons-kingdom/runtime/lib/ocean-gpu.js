@@ -14,7 +14,10 @@
 // The phase w*t is kept exact over hour-long episodes: per texel the frequency f = w / 2 pi is split
 // on the CPU (float64) into fract(64 f) and f, and the shader adds fract(fract(64 f) * floor(t / 64))
 // and f * (t mod 64) - every term stays small enough for float32.
-// heightAt() (buoyancy) reads the height field back from the GPU, only when it is asked for.
+// heightAt() (buoyancy) reads back only the texels it needs, only when it is asked for: one tiny gather
+// pass writes the 4 corner heights of every cascade around the asked point into a (4 x cascades) x 1
+// target, and those 16 floats are read (not the whole 512 x 512 RGBA32F cascades, ~4 MB each, per
+// sub-frame); the bilinear blend stays on the CPU in float64, exactly as for the CPU FFT.
 // Everything is a pure function of t; the same GPU and driver give the same bytes every time.
 import * as THREE from 'three';
 
@@ -86,6 +89,20 @@ void main() {
   oDeriv = vec4(A.w, B.x, uLambda * B.y, uLambda * B.z);
 }`;
 
+// gather: output texel p = cascade p / 4, corner p % 4 (i0 j0, i1 j0, i0 j1, i1 j1): its height (.y)
+const GATHER = `
+uniform highp sampler2D tD0, tD1, tD2, tD3;
+uniform ivec4 uI[4];           // per cascade: i0, j0, i1, j1
+out vec4 o;
+void main() {
+  int p = int(gl_FragCoord.x);
+  int c = p / 4, k = p - 4 * c;
+  ivec4 q = uI[c];
+  ivec2 at = k == 0 ? q.xy : k == 1 ? q.zy : k == 2 ? q.xw : q.zw;
+  float h = c == 0 ? texelFetch(tD0, at, 0).y : c == 1 ? texelFetch(tD1, at, 0).y : c == 2 ? texelFetch(tD2, at, 0).y : texelFetch(tD3, at, 0).y;
+  o = vec4(h, 0.0, 0.0, 1.0);
+}`;
+
 /** Butterfly table of the inverse radix-2 FFT (the CPU path's exact order): RGBA32F, log2(N) x N. */
 function butterflyTexture(N) {
   const bits = Math.log2(N);
@@ -126,7 +143,11 @@ export function createGpuFFT(renderer, N, cascades, { lambda = 1, mipFilter = 'n
     spec: raw(SPECTRUM, { tH0: { value: null }, tK: { value: null }, uTA: { value: 0 }, uTB: { value: 0 } }),
     bf: raw(BUTTERFLY, { tA: { value: null }, tB: { value: null }, tBf: { value: butterflyTexture(N) }, uStage: { value: 0 }, uHoriz: { value: 1 } }),
     asm: raw(ASSEMBLE, { tA: { value: null }, tB: { value: null }, uLambda: { value: lambda } }),
+    gather: raw(GATHER, { tD0: { value: null }, tD1: { value: null }, tD2: { value: null }, tD3: { value: null }, uI: { value: new Int32Array(16) } }),
   };
+  if (cascades.length > 4) throw new Error('ocean-gpu: at most 4 cascades');
+  const gatherRT = new THREE.WebGLRenderTarget(4 * cascades.length, 1, { type: THREE.FloatType, format: THREE.RGBAFormat, depthBuffer: false, stencilBuffer: false, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, generateMipmaps: false });
+  const gatherBuf = new Float32Array(4 * 4 * cascades.length);
   const bits = Math.log2(N);
   const outs = cascades.map((c) => {
     const h0 = new Float32Array(N * N * 4), k = new Float32Array(N * N * 4);
@@ -183,10 +204,25 @@ export function createGpuFFT(renderer, N, cascades, { lambda = 1, mipFilter = 'n
     return c.heights;
   }
 
+  /**
+   * The heights of the 4 texels around a point in every cascade: idx = [[i0, j0, i1, j1] per cascade].
+   * Returns a Float32Array of 4 * cascades heights (corner order i0j0, i1j0, i0j1, i1j1).
+   */
+  function corners(idx) {
+    const u = mats.gather.uniforms;
+    idx.forEach((q, ci) => { u.uI.value.set(q, 4 * ci); u[`tD${ci}`].value = outs[ci].out.textures[0]; });
+    const prevTarget = renderer.getRenderTarget();
+    try { draw(mats.gather, gatherRT); } finally { renderer.setRenderTarget(prevTarget); }
+    renderer.readRenderTargetPixels(gatherRT, 0, 0, 4 * outs.length, 1, gatherBuf);
+    const h = new Float32Array(4 * outs.length);
+    for (let i = 0; i < h.length; i++) h[i] = gatherBuf[4 * i];
+    return h;
+  }
+
   return {
     textures: outs.map((c) => ({ disp: c.out.textures[0], deriv: c.out.textures[1] })),
-    compute, displacement,
+    compute, displacement, corners,
     passesPerUpdate: cascades.length * (2 + 2 * bits),
-    dispose() { ping.dispose(); pong.dispose(); outs.forEach((c) => { c.out.dispose(); c.h0Tex.dispose(); c.kTex.dispose(); }); Object.values(mats).forEach((m) => m.dispose()); },
+    dispose() { ping.dispose(); pong.dispose(); gatherRT.dispose(); outs.forEach((c) => { c.out.dispose(); c.h0Tex.dispose(); c.kTex.dispose(); }); Object.values(mats).forEach((m) => m.dispose()); },
   };
 }

@@ -77,6 +77,37 @@ test('(u0) tiers: presets, ctx.quality, cinematic knobs only go up, atlas, cost 
   assert.equal(none.recommended, 'final'); assert.match(none.reason, /no tier fits/);
 });
 
+test('(u0b) the episode renderer follows the GPU check only for a tier measured on this card at 4K with every picture check passed', async () => {
+  const { usableRecommendation, nextTierToMeasure, planFromBench } = await import('../runtime/tools/tier-bench.mjs');
+  const { tierDefsHash } = await import('../runtime/lib/quality.js');
+  const good = () => ({
+    date: '2026-10-28T10:00:00Z', exitCode: 0, system: { host: 'pc' }, gpu: { renderer: 'ANGLE (NVIDIA GeForce RTX 4090)' },
+    picture: { verdict: 'SAME PICTURE' }, recommendedTier: 'ultra', recommendedPreset: 'final-ultra',
+    tiers: { defs: tierDefsHash(), bench: { size: '3840x2160', results: { final: {}, high: { compare: { ok: true } }, ultra: { compare: { ok: true } } } },
+      plan: { extrapolated: [], tiers: { ultra: { totalH: 61 } } } },
+  });
+  const who = { host: 'pc', renderer: 'ANGLE (NVIDIA GeForce RTX 4090)' };
+  const ok = usableRecommendation(good(), who);
+  assert.equal(ok.ok, true); assert.equal(ok.tier, 'ultra'); assert.equal(ok.preset, 'final-ultra');
+  const bad = (edit, re) => { const g = good(); edit(g); const u = usableRecommendation(g, who); assert.equal(u.ok, false); assert.equal(u.tier, 'final'); assert.match(u.reasons.join(' | '), re); };
+  bad((g) => { g.system.host = 'other'; }, /another computer/);
+  bad((g) => { g.exitCode = 3; }, /ended with code 3/);
+  bad((g) => { g.gpu.renderer = 'Intel UHD'; }, /another graphics card/);
+  bad((g) => { g.picture.verdict = 'SMALL DIFFERENCES'; }, /SMALL DIFFERENCES/);
+  bad((g) => { g.tiers.bench.size = '960x540'; }, /not native/);
+  bad((g) => { delete g.tiers.bench.results.ultra; g.tiers.plan.extrapolated = ['ultra']; }, /not measured on this card/);
+  bad((g) => { g.tiers.bench.results.ultra.compare = { ok: false, problems: ['SSIM 0.7'] }; }, /did not draw the same picture/);
+  bad((g) => { g.tiers.defs = 'deadbeef'; }, /have changed/);
+  bad((g) => { g.tiers.heavy = { tier: 'ultra', ok: false, error: 'WebGL context lost' }; }, /heavy frame/);
+  assert.equal(usableRecommendation(null, who).ok, false);
+  // gpu-check: a tier the plan would pick only from an extrapolation is measured before it is recommended
+  const bench = { size: '3840x2160', results: { final: {}, high: { relative: 1.3, compare: { ok: true } }, ultra: { relative: 3, compare: { ok: true } } } };
+  const pa = { finalSteadyS: 0.1, refSteadyS: 77, cpuHours: 2600, setupH: 5, budgetH: 72 };
+  assert.equal(nextTierToMeasure(bench, pa), 'max');
+  assert.equal(planFromBench(bench, { ...pa, measuredOnly: true }).recommended, 'ultra');
+  assert.equal(nextTierToMeasure(bench, { ...pa, finalSteadyS: 0.55 }), null);
+});
+
 test('(u1) every tier draws the same picture structure as final: finite buffers, no shader errors, the knobs applied', { timeout: 900000 }, async (t) => {
   const base = await measureTier({ scene: SCENE, time: 1, tier: 'final', size: '320x180' });
   assert.equal(base.quality.tier, 'final');
@@ -122,4 +153,40 @@ test('(u3) GPU FFT ocean answers heightAt() like the CPU FFT (same sea)', { time
   }
   assert.equal(heights.final.gpu, false); assert.equal(heights.high.gpu, true);
   for (let i = 0; i < 3; i++) assert.ok(Math.abs(heights.final.v[i] - heights.high.v[i]) < 2e-3, `heightAt ${i}: CPU ${heights.final.v[i]} vs GPU ${heights.high.v[i]}`);
+});
+
+// banding across a fast sweep: the rms of (luma - its 7-px vertical box mean) over a region the bar sweeps
+// through (a ladder of separate copies has a lot of it, a continuous streak little), and the region's mean luma
+function sweepStats(rgba, W, x0, y0, w, h) {
+  const L = (x, y) => { const i = 4 * (y * W + x); return 0.2126 * rgba[i] + 0.7152 * rgba[i + 1] + 0.0722 * rgba[i + 2]; };
+  let e = 0, n = 0, sum = 0;
+  for (let x = x0; x < x0 + w; x++) for (let y = y0 + 3; y < y0 + h - 3; y++) {
+    let s = 0; for (let k = -3; k <= 3; k++) s += L(x, y + k);
+    const d = L(x, y) - s / 7; e += d * d; n++; sum += L(x, y);
+  }
+  return { hf: Math.sqrt(e / n), mean: sum / n };
+}
+
+test('(u4) fast motion at a sub-frame tier: one continuous streak (hybrid blur), not a ladder of copies; same coverage', { timeout: 600000 }, async (t) => {
+  const SCENE4 = path.join(FIX, 'fast-motion.js');
+  const p = resolvePreset('final-ultra', { size: '320x180' });
+  const shot = async (quality) => {
+    const s = await openSession({ scene: SCENE4, resolved: p, bitDepth: 10, dither: false, ...(quality ? { quality } : {}) });
+    try {
+      const rgba = (await s.render([0], 'rgba')).frames.get(0);
+      const buffers = await s.worker.page.evaluate(() => window.dk.debugCinematic?.() ?? null);
+      return { rgba, buffers, changes: s.info.quality.changes.join(' | ') };
+    } finally { await s.close(); }
+  };
+  const plain = await shot({ subframeBlur: false, subframeAO: false });
+  const hybrid = await shot(null);
+  assert.match(hybrid.changes, /per-sub-frame blur/); assert.doesNotMatch(plain.changes, /per-sub-frame blur/);
+  // the bar 3 m from its pivot sweeps ~60 px of this column band during the shutter (5 px per sub-frame)
+  const a = sweepStats(plain.rgba, 320, 196, 55, 18, 55), b = sweepStats(hybrid.rgba, 320, 196, 55, 18, 55);
+  t.diagnostic(`sweep band: plain hf ${a.hf.toFixed(3)} mean ${a.mean.toFixed(1)}; hybrid hf ${b.hf.toFixed(3)} mean ${b.mean.toFixed(1)}`);
+  assert.ok(a.hf > 1.2, `plain sub-frames should band here (hf ${a.hf.toFixed(3)}) - the fixture no longer measures anything`);
+  assert.ok(b.hf < 0.65 * a.hf, `hybrid streak still banded: hf ${b.hf.toFixed(3)} vs plain ${a.hf.toFixed(3)}`);
+  assert.ok(Math.abs(b.mean - a.mean) < 2.5, `hybrid changes the coverage of the sweep: mean ${b.mean.toFixed(1)} vs ${a.mean.toFixed(1)}`);
+  for (const [k, v] of Object.entries(hybrid.buffers || {})) if (k !== 'shaderErrors' && v) assert.ok(!v.nan && !v.inf, `${k}: ${v.nan} NaN / ${v.inf} Inf`);
+  assert.equal(hybrid.buffers.shaderErrors, 0);
 });

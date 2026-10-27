@@ -7,8 +7,9 @@
 // their roughness comes from maps or shader code the runtime cannot see). userData.dkSSR = false
 // (or object.userData.dkNoSSR) excludes one.
 //
-// How: after the main pass the runtime keeps copies of the scene's colour and depth (the same
-// "late pass" the ocean uses). These surfaces are drawn ONCE MORE, with the same material object
+// How: after the main pass AND the late pass (the ocean, so a surface over water reflects the water,
+// not the sea bed under it) the runtime copies the scene's colour and depth. These surfaces are drawn
+// ONCE MORE, with the same material object
 // compiled as a second program variant (DK_SSR_PASS), depth-tested against the scene and added on
 // top. The variant runs the material's whole shading (maps, normal maps, wetness patches ...),
 // marches the reflected view ray through the depth copy, and outputs only the DIFFERENCE between
@@ -37,7 +38,7 @@ const opaque = (m) => !m.transparent && (m.opacity ?? 1) >= 1 && !(m.transmissio
 // exact crossing without fixed steps (no stepping noise, no missed thin poles). A ray that ends
 // up BEHIND a surface by more than the thickness (it passed behind an object's silhouette) is
 // no hit: the environment map's reflection stays.
-const TRACE = /* glsl */ `
+export const TRACE = /* glsl */ `
 uniform sampler2D dkSsrColor;      // mip-mapped copy of the scene colour (half float)
 uniform highp sampler2D dkSsrHiz;  // min-depth pyramid, all levels in one atlas (level 0 = the depth buffer)
 uniform ivec4 dkSsrLv[16];         // per level: atlas x, y, width, height
@@ -174,7 +175,14 @@ export class SurfaceSSR {
       fs = fs.replace('#include <common>', '#include <common>\n' + TRACE);
       // after the image-based light: radiance = what the environment map predicts for this pixel
       const hook = '#include <lights_fragment_end>';
-      if (!fs.includes(hook)) return;   // not a lit standard shader we know: the variant draws black (adds nothing)
+      if (!fs.includes(hook)) {
+        // not a lit standard shader we know (custom shading): the overlay is ADDED on top of the main pass, so
+        // this variant must write nothing - else the object would be drawn a second time (twice as bright).
+        // It discards every fragment, and the material is no longer collected for SSR.
+        shader.fragmentShader = fs.replace(/void\s+main\s*\(\s*\)\s*\{/, (m) => `${m}\n  discard;`);
+        self.mats.set(this, false);
+        return;
+      }
       fs = fs.replace(hook, /* glsl */ `
 vec3 dkSsrDelta = vec3(0.0);
 #ifdef USE_CLEARCOAT
@@ -310,20 +318,29 @@ if ( dkSsrDebug > 0.5 ) {
   }
 
   /**
+   * Build the tracer's inputs from copies of a pass' colour and depth (mip-mapped colour, min-depth
+   * pyramid) and set the shared uniforms - for the surfaces below and for the ocean's reflections.
+   */
+  prepare(colorRT, depthRT, W, H) {
+    const { camera } = this.h;
+    const u = this.uniforms;
+    u.dkSsrColor.value = this.colorCopy(colorRT);
+    u.dkSsrHiz.value = this.buildHiZ(depthRT.depthTexture, W, H);
+    u.dkSsrSize.value.set(W, H);
+    u.dkSsrNearFar.value.set(camera.near, camera.far);
+    u.dkSsrProj.value.copy(camera.projectionMatrix);
+    u.dkSsrInvProj.value.copy(camera.projectionMatrix).invert();
+  }
+
+  /**
    * Draw the correction of every eligible object into `target` (the scene target, depth attached).
-   * colorRT / depthRT: the late pass' copies of this pass' colour and depth.
+   * colorRT / depthRT: copies of target's colour and depth taken after the late pass.
    */
   render(target, colorRT, depthRT) {
     const list = this.list;
     if (!list.length) return;
     const { renderer, scene, camera } = this.h;
-    const u = this.uniforms;
-    u.dkSsrColor.value = this.colorCopy(colorRT);
-    u.dkSsrHiz.value = this.buildHiZ(depthRT.depthTexture, target.width, target.height);
-    u.dkSsrSize.value.set(target.width, target.height);
-    u.dkSsrNearFar.value.set(camera.near, camera.far);
-    u.dkSsrProj.value.copy(camera.projectionMatrix);
-    u.dkSsrInvProj.value.copy(camera.projectionMatrix).invert();
+    this.prepare(colorRT, depthRT, target.width, target.height);
     // materials of the drawn objects: eligible ones switch to the SSR program variant, the others hide
     const mats = new Set(), hidden = [];
     for (const o of list) for (const m of Array.isArray(o.material) ? o.material : [o.material]) {

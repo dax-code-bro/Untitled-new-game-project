@@ -174,7 +174,9 @@ void main() {
 // ------------------------------------------------------------- tile passes --
 // Velocity tile max: every tile pixel scans its K x K block (stride 2) of the
 // velocity buffer and keeps the longest vector. Then a 3x3 neighbour max.
-export function makeTileMaxMaterial() {
+// stride 2 (the default): every 2nd pixel of the block - a moving object thinner than 2 px (a spear,
+// rigging, a wing finger far away) can fall between the samples and get no blur; the quality tiers use 1.
+export function makeTileMaxMaterial(stride = 2) {
   return raw(/* glsl */ `
 uniform sampler2D tVel;
 uniform int uK;
@@ -183,9 +185,9 @@ out vec4 o;
 void main() {
   ivec2 t0 = ivec2(gl_FragCoord.xy) * uK;
   vec2 best = vec2(0.0); float bl = 0.0;
-  for (int y = 0; y < 64; y += 2) {
+  for (int y = 0; y < 64; y += TILE_STRIDE) {
     if (y >= uK) break;
-    for (int x = 0; x < 64; x += 2) {
+    for (int x = 0; x < 64; x += TILE_STRIDE) {
       if (x >= uK) break;
       ivec2 p = min(t0 + ivec2(x, y), uSize - 1);
       vec2 v = texelFetch(tVel, p, 0).xy;
@@ -194,7 +196,7 @@ void main() {
     }
   }
   o = vec4(best, sqrt(bl), 0.0);
-}`, { tVel: { value: null }, uK: { value: 20 }, uSize: { value: new THREE.Vector2(1, 1) } });
+}`, { tVel: { value: null }, uK: { value: 20 }, uSize: { value: new THREE.Vector2(1, 1) } }, { TILE_STRIDE: stride === 1 ? 1 : 2 });
 }
 export function makeNeighborMaxMaterial() {
   return raw(/* glsl */ `

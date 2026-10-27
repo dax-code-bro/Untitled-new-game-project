@@ -2,6 +2,8 @@
 rem Double-click: get the newest scene files (git pull) and continue rendering
 rem Dragon's Kingdom Episode 1. Stop any time with Ctrl+C; double-click again to continue.
 rem Progress only:  Render-Episode.cmd --status        GPU check:  GPU-Check.cmd
+rem Quality tier: the window prints it ("quality tier: ..."). Without --tier it is the tier the GPU check
+rem RECOMMENDED (when measured on this card), else final. Choose one:  Render-Episode.cmd --tier final
 rem The commands are one block in brackets on purpose: cmd.exe reads the whole block before
 rem running it, so a "git pull" that updates this very file cannot make cmd run half-lines.
 rem The exit code of the PowerShell script is passed on (kept in DK_RC while the window waits for a

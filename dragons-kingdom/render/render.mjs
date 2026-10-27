@@ -15,6 +15,7 @@ import { runJob } from './lib/job.mjs';
 import { openSession } from './lib/session.mjs';
 import { writePng, maxCrf } from './lib/ffmpeg.mjs';
 import { lookupTuning, tuningKey } from './lib/tuning.mjs';
+import { TIER_NAMES } from '../runtime/lib/quality.js';
 import { fmtDuration } from './lib/progress.mjs';
 
 const HELP = `
@@ -30,6 +31,19 @@ Presets (--preset, default "final"):
   final-fast   3840x2160   rendered at 2560x1440, upscaled + sharpened to 4K in-shader
                            (~1.4x faster than final on this 4-core CPU: 2.25x fewer pixels to
                            draw, but upscaling, packing and encoding stay at 4K)
+  final-high   3840x2160   = final --tier high    (quality tiers for a big GPU, see --tier)
+  final-ultra8 3840x2160   = final --tier ultra8
+  final-ultra  3840x2160   = final --tier ultra
+  final-max    3840x2160   = final --tier max
+
+Quality tier (--tier, default final; README "Quality tiers for the render PC"):
+  final        the master settings as reviewed on the cloud CPU
+  high         every GPU knob up (4096 shadow cascades, full-res GTAO, finer fog slices, reflections
+               on glossy surfaces and water, x16 texture filtering, finer GPU ocean), velocity motion blur
+  ultra8       high + 8 real sub-frames per frame (motion blur, supersampling, sun penumbrae)
+  ultra        high + 16 sub-frames            max   high + 32 sub-frames, densest settings
+  A tier never changes the size or the frames: --preset final --tier ultra is a native 4K master.
+  render/gpu-check.mjs measures the tiers on the graphics card and recommends one.
 
 Options:
   --seconds S        how much to render (default: the scene's meta.duration minus --start)
@@ -62,6 +76,7 @@ Options:
   --shadow-filter F  tent9 (default) | bilinear4 (fastest) | pcf-soft (three.js) |
                      pcss (contact-hardening: penumbra from the sun's real size, slower)
   --exposure X       exposure multiplier (default: scene's meta.exposure or 1)
+  --tier T           quality tier: final | high | ultra8 | ultra | max (see above; default final)
   --readback MODE    async (default) | sync
   --no-shadow-cache  ignore the scene's ctx.shadows cache, redraw every shadow map every frame
                      (same pictures, slower - for checking)
@@ -81,6 +96,13 @@ async function main() {
   if (!fs.existsSync(scene)) throw new Error(`scene file not found: ${scene}`);
   const presetName = a.preset || 'final';
   const p = resolvePreset(presetName, { size: a.size });
+  // quality tier: --tier, or the tier preset's (final-ultra = final --tier ultra)
+  if (a.tier !== undefined) {
+    if (!TIER_NAMES.includes(a.tier)) throw new Error(`--tier must be one of ${TIER_NAMES.join(', ')}`);
+    if (p.quality.tier && p.quality.tier !== a.tier) throw new Error(`--preset ${presetName} is the ${p.quality.tier} tier; --tier ${a.tier} contradicts it`);
+    if (a.tier !== 'final' && !/^final/.test(presetName)) console.log(`note: --tier ${a.tier} with --preset ${presetName}: a tier is meant for the final masters (it only adds work per pixel)`);
+  }
+  const tier = a.tier ?? p.quality.tier ?? 'final';
   const fps = num(a.fps, 'fps', { min: 1 }) ?? 24;
   if (a.aa && !AA_MODES.includes(a.aa)) throw new Error(`--aa must be one of ${AA_MODES.join(', ')}`);
   const capture = a.capture || 'yuv';
@@ -95,9 +117,11 @@ async function main() {
     scene, preset: p, fps, aa: a.aa, dither: a.dither ?? bitDepth === 8, gpu: !!a.gpu, bitDepth,
     sharpness: num(a.sharpness, 'sharpness', { min: 0 }), toneMapping: a.toneMapping, exposure: num(a.exposure, 'exposure', { min: 0 }),
     readback: a.readback, timing: a.timing, verbose: a.verbose, shadowCache: a.shadowCache ?? true,
-    quality: a.shadowFilter ? { shadowFilter: a.shadowFilter } : undefined,
+    // (the final tier adds nothing: plain final renders keep their job fingerprint)
+    quality: a.shadowFilter || (a.tier && a.tier !== 'final') ? { ...(a.shadowFilter ? { shadowFilter: a.shadowFilter } : {}), ...(a.tier && a.tier !== 'final' ? { tier: a.tier } : {}) } : undefined,
     ...(a.cinematic !== undefined ? { cinematic: a.cinematic } : {}),
   };
+  if (tier !== 'final') console.log(`quality tier: ${tier} (${presetName}${a.tier && !p.quality.tier ? ` --tier ${a.tier}` : ''}): native ${p.width}x${p.height}, every frame; more work per pixel`);
   if (a.cinematic !== undefined && !['off', 'on', 'default', 'hero', 'preview', 'film', 'velocity'].includes(a.cinematic)) throw new Error('--cinematic must be off, on, default, hero, preview, film or velocity');
   if (a.shadowFilter && !['tent9', 'bilinear4', 'pcf-soft', 'pcss'].includes(a.shadowFilter)) throw new Error('--shadow-filter must be tent9, bilinear4, pcf-soft or pcss');
 
@@ -172,6 +196,7 @@ async function main() {
 function defaultJobName({ scene, presetName, a, start, seconds, fps, bitDepth }) {
   const n = (x) => String(+x.toFixed(3));
   let name = `${path.basename(scene).replace(/\.m?js$/, '')}-${presetName}`;
+  if (a.tier && a.tier !== 'final' && !presetName.endsWith(`-${a.tier}`)) name += `-${a.tier}`;
   if (a.size) name += `-${a.size}`;
   if (fps !== 24) name += `-${n(fps)}fps`;
   if (a.twos) name += '-twos';
