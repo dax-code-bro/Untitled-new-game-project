@@ -243,8 +243,8 @@ abby.posture('kneel', 9.0, { hold: 2 });  abby.react('wince', 3.4);
 | `visemes.js` | phones -> 9 articulators (jaw, lip closure, rounding, spread, f/v tuck, th, tongue tip, upper lip, press), Cohen-Massaro dominance coarticulation (a phone that needs an articulator dominates it briefly and strongly; one that does not lets its neighbours decide; anticipation per articulator: rounding reaches ~2.4x further ahead than carry-over, lip closure and f/v tuck form late), a contact floor so p/b/m always close and f/v always tuck, rest in pauses > 80 ms, jaw scaled by the take's loudness, 40 ms visual lead -> MakeHuman face units |
 | `expressions.js` | 11 emotion layers as FACS-style unit mixes (calm worry pain fear anger grief amusement surprise tender contempt determined), blendable, softly limited; `emotionFromDelivery(note, preset)` (whole-word rules, negations dropped) |
 | `faceperf.js` | face performer: line emotion envelopes, brow raise / knit and head nods on stressed syllables (loudness accents), blinks (spontaneous; at phrase starts and pauses; on gaze shifts; more under fear), eye-target look-at with vergence, fixation saccades (eye-eye-mouth on a face), gaze aversion at line starts, lids that follow the eyes; `LINE_OVERRIDES` (hand-set key lines: L011 ...), `SCENE_MOOD` |
-| `motion.js` | `gestureNow(ch, name, o, w, t, dt)` / `legsNow(body, t, post)` pose a gesture or planted-foot legs on a character someone else placed (the director); body: trajectories (path + speed profile, fn(t), baked), gait phase table with PLANTED feet (plant = the root at 41 % of stance, 32 % running), heel strike / heel off rolling on heel and ball, Hermite swing with clearance and the running heel kick, pelvis lowered by the planted legs' reach (the walk's bob comes out of it), pelvis rotation / list / sway, spine counter-rotation and lean, arm swing (90 degrees bent when running), standing weight shift, gestures (`point wave reach support cradle handsToFace protectHead flail carry explain`), postures (`crouch kneel cower hunch`), `stagger` (quick recovery steps), `fall` (buckle, topple, hands to the ground, lie), head look with the chest helping on big turns, `carryChild(adult, child)` |
-| `crowd.js` | `createCrowd({ agents, exits, obstacles, walls, alarm, cower, groups })`: social-force bake at 30 Hz in setup (seeded): MILL (wander near home, stop and face neighbours; `groups` [[i, j, ...]]: conversation circles ~1.1 m apart, heads turn to the talker as the talk passes round, the talker gestures and smiles), FLEE along exit polylines (reaction wave from the threat, startle + gasp, glances back, some shield their heads), COWER (by a wall away from the threat, or frozen where they stand); no overlaps (position correction) |
+| `motion.js` | `gestureNow(ch, name, o, w, t, dt)` / `legsNow(body, t, post)` pose a gesture or planted-foot legs on a character someone else placed (the director); body: trajectories (path + speed profile, fn(t), baked), gait phase table with PLANTED feet (plant = the root at 41 % of stance, 32 % running), heel strike / heel off rolling on heel and ball (the heel rises from 70 % of a walking stance to ~60 deg at toe-off), a walking swing shaped on normative knee curves (`GAIT`: the heel comes up behind early, the knee folds to ~55-60 deg at 70-75 % of the cycle and is straight again before the strike - knee rms 8 deg from Winter's curves, was 18: the old swing peaked late and high and read as a march), Hermite swing with clearance and the running heel kick, pelvis lowered by the planted legs' reach (the walk's bob comes out of it), pelvis rotation / list / sway, spine counter-rotation and lean, arm swing (90 degrees bent when running), standing weight shift, gestures (`point wave reach support cradle handsToFace protectHead flail carry explain`), postures (`crouch kneel cower hunch`), `stagger` (quick recovery steps), `fall` (buckle, topple, hands to the ground, lie), head look with the chest helping on big turns, `carryChild(adult, child)` |
+| `crowd.js` | `createCrowd({ agents, exits, obstacles, walls, alarm, cower, groups, stumble, falls })`: social-force bake at 30 Hz in setup (seeded): MILL (wander near home, stop and face neighbours; `groups` [[i, j, ...]]: conversation circles ~1.1 m apart, heads turn to the talker as the talk passes round, the talker gestures and smiles), FLEE along exit polylines (reaction wave from the threat, startle + gasp, glances back, some shield their heads; `stumble` share: a hard shove throws them sideways - flailing arms, quick recovery steps; `falls` [i]: down mid-flight and stays down, the others run round), COWER (by a wall away from the threat, or frozen where they stand); agent `carry: j`: a parent holds child j's hand while milling (clasp between them, the child reaching up), scoops the child onto the hip at the alarm and runs for it; no overlaps (position correction) |
 | `director.js` | shot-director registration (automatic from `loadCharacter`): `'face'` (lip-sync of the shot's placed takes incl. split-take parts, delivery emotion, scene mood, blinks, eye-line) and the `'cradle'` overlay; opt-in `registerDirectorHooks({ legs: true })` = planted-foot legs from `info.stateAt` (see Director below); `setDirectorHooks(false)` before loading keeps the director's own |
 | `face.js` | the MakeHuman face pose units rig (+ derived `JawOpen`, `<Side>LidsDown/Up/TurnLeft/TurnRight`) and, when the character has them, the sculpted mouth shapes by name (`'mouth-pursing': 0.6`) |
 | `mouthshapes.js` | `loadMouthShapes(id)` / `attachMouthShapes(ch, ms)` (automatic in `loadCharacter`; `{ mouthShapes: false }` skips): the 9 CC0 MakeHuman / MPFB2 mouth expression targets (compression, pursing, protusion, eversion, retraction, corner-puller, depression, elevation, parling) as morph targets on the skin, from the optional sidecar `cache/<id>.mouth.json + .bin`; refused (with a warning) for another character or a rebuilt cache. With them the lip-sync presses the lips for p b m, purses for oo / w, flares for sh ch r, stretches thin for ee / s, lifts the upper lip for f v, parts the lips over the teeth on small jaw openings; emotions add the smile, corners-down, upper-lip and pressed-lip shapes (`EMOTION_SHAPES`) |
@@ -268,7 +268,27 @@ Proof scenes (`scenes/lookdev/humans-anim-*.js`): `alexandria` (L011 close-up), 
 Abby, L014-L016), `cradle` (Abby's injured left arm, Remi supporting her elbow, L091), `crowd` (the
 Cling square crowd talks in groups, then flees), `walk` (walk / run / kneel / stagger + fall / carry),
 `dev` (face units, visemes and emotions one per second), `pose` (one character posed by performer
-acts from `humans-anim-pose.json`, several views: frame k = view k - for gesture / posture work).
+acts from `humans-anim-pose.json`, several views: frame k = view k - for gesture / posture work),
+`mouth` (a mouth macro of one take - lips, teeth, tongue, the inside of the lips - at the moments
+listed in `humans-anim-mouth.json`, frame k = moment k; each light of the L011 rig can be switched off
+there: that is how the blue inner-lip line was traced to the back light).
+
+Mouth and back light (materials.js / loader.js, 2026-10-27): the shadow maps cannot resolve the head
+occluding the mouth, so a light from BEHIND the head (dot(light, head forward) < 0, ramp to -0.35) gives
+no direct light to the lips, the skin inside them, the teeth and the tongue: a per-character uniform
+carries the head's forward axis in view space (set before each draw, `headFwdUpdater`), the lips' outer
+skin is marked by a tiny depth (`LIP_ZONE`). L011's cool window shaft drew a blue line along the wet
+inner lower lip and lit the lower teeth from inside the skull. Enamel is a neutral warm off-white (the
+saturated ivory went olive in the shade of the mouth).
+
+Hands (rig.js `handShape`): `spread` > 0 fans the fingers out, < 0 closes them, 0 is a relaxed hand
+(~22 deg index to little finger); MakeHuman's rest hand is splayed ~31 deg and the sign was inverted
+until 2026-10-27 (so 'open' / 'wave' closed the fingers and every curled hand fanned them - the cradled
+hurt hand read as a claw). Shapes: relaxed open point fist cup grip clutch limp claw wave.
+
+Carrying (perform.js `carry`): while carried, a performer's own `update()` does nothing - the carrier
+poses it (any update order gives the same frame) - and its body has no gait of its own (feet hang from
+the drape pose, no reach drop), whatever its trajectory does.
 
 ### Director
 
@@ -290,7 +310,11 @@ delivery-rule traps, planted feet walking and running, order independence, falls
 spacing, the director face hook, split-take windows, registration + lip-sync through the director's own
 `poseHuman`, the director 'cradle' act, the opt-in planted legs (ankle travel on the ground vs the
 built-in gait), worn props free of hand weights, the mouth shapes attach, refuse another character's
-sidecar and are driven by L011's "my" / "weapon"). Body tests need the character caches.
+sidecar and are driven by L011's "my" / "weapon", walking knee flexion against normative gait curves,
+crowd hand-holding / carry / fall). Body tests need the character caches.
+
+Mouth-shape sidecars are listed in `cache/mouth-index.json` (written by tools/mouthmorphs.py): the
+runtime only asks for the sidecars of the ids listed there (no browser 404 per character without one).
 
 Loader (since 2026-10-27): worn props (belt, buckle, purse, buttons, chain, circlet, scabbard, hat)
 lose any hand / forearm skin weights at load time, and hair loses upper-arm weights (to the clavicle) -

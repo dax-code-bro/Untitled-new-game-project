@@ -86,6 +86,28 @@ else {
     try { return { units: await loadFaceUnits(), data: await loadPerformanceData() }; } finally { globalThis.fetch = realFetch; }
   })();
   const P = (ch, n) => new THREE.Vector3().setFromMatrixPosition(ch.bone(n).matrixWorld);
+  {
+    // walking kinematics close to normative gait (knee flexion over the cycle, Winter / Perry): the
+    // knee near straight at heel strike and mid-stance, ~40 deg at toe-off, a 55-65 deg peak early in
+    // the swing, straight again before the strike (the old swing peaked late and high: a march)
+    const { createBody } = await import('./motion.js');
+    const ch = load('remi');
+    const body = createBody(ch); body.place(0, 0, 0);
+    const w = body.walk([[0, 0], [0, 60]], 0, { speed: 1.35 });
+    const tm = w.t1 / 2, k = Math.ceil(body.apply(tm).phi);
+    const tAt = (ph) => { let lo = tm - 3, hi = tm + 3; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (body.apply(m).phi < ph) lo = m; else hi = m; } return lo; };
+    const NORM = { 0: 5, 10: 18, 20: 14, 30: 7, 40: 5, 50: 10, 60: 38, 65: 52, 70: 62, 75: 62, 80: 55, 85: 40, 90: 22, 95: 8, 100: 5 };
+    let err = 0, n = 0, peakAt = 0, peak = 0;
+    for (const [pc, kn] of Object.entries(NORM)) {
+      body.apply(tAt(k + pc / 100));
+      const hip = P(ch, 'upperleg01.L'), knee = P(ch, 'lowerleg01.L'), ank = P(ch, 'foot.L');
+      const f = hip.clone().sub(knee).angleTo(knee.clone().sub(ank)) * 57.3;
+      err += (f - kn) ** 2; n++;
+      if (f > peak) { peak = f; peakAt = +pc; }
+    }
+    const rms = Math.sqrt(err / n);
+    ok(rms < 10 && peakAt >= 65 && peakAt <= 80, `walk: knee flexion follows normative gait (rms ${rms.toFixed(1)} deg, swing peak ${peak.toFixed(0)} deg at ${peakAt} % of the cycle)`);
+  }
   for (const [speed, label] of [[1.3, 'walk'], [3.6, 'run']]) {
     const ch = load('remi');
     const perf = createPerformer(ch, units.data);

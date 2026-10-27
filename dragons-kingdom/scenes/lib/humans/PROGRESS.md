@@ -388,3 +388,38 @@ Next (for a successor): per-character mouth correctives (a wide AA still stretch
 asymmetric shape variants (one-sided smiles); trace the inner-lip blue line; the director's speaking
 shots still mostly frame faces from behind / in DOF (lip-sync exists now - their call); crowd faces
 have no sidecars (no speech) - emotion shapes for crowd fear would need them (~50 s each).
+
+## PERFORMANCE track, session 3 (2026-10-27, from ~09:30 UTC) - gait, mouth light, hands, crowd
+
+State found: commits up to 8d1cdac (session 2), selftest green. Proof outputs in output/humans/perf/ were
+from before the session-2 fixes (cradle-4k before the limp hand), the crowd draft never finished (its
+job was left locked) and there was no walk clip. Done (each checked by a render or a selftest number):
+- GAIT on normative curves (motion.js `GAIT` constants; scratch tools eng1/perf/s3/dbg/gait2.mjs +
+  gaitsearch.mjs grid-search them against Winter's knee-flexion curve). Measured before: knee 18 deg at
+  heel strike, 17 deg at toe-off, swing peak 66 deg at 80 % of the cycle, still 48 deg at 90 % -> the
+  swing leg high-stepped (seen in walkA_sheet.png). Now: heel off at 70 % of stance, toe-off pitch ~62
+  deg, the swing lift peaks early (q 0.2, beta-shaped decay) and the toe-off height falls to the strike
+  height by q 0.8, the foot level by q 0.45; pelvis drop halved. Knee rms vs normative 18.2 -> 6.9 deg
+  (remi 1.35 m/s), abby 21.5 -> 9.2, crowd03 23.6 -> 11.4, child 21.7 -> 11.1; slip still < 1 mm. The
+  run is unchanged in shape (run = 1 keeps the old swing). Selftest checks rms < 10 and the swing peak
+  at 65-80 %. Render: walkB_big.png (heel-rise push-off, early knee fold, straight leg into the strike).
+- MOUTH: the blue line along the inner lower lip (session 2's open item) is the L011 rig's cool BACK
+  light (a still with each light off: only shaft-off removes it, mc_lights2.png). The shadow maps cannot
+  resolve the head over the mouth, so lips / mouth skin / teeth / tongue now take no direct light from
+  behind the face (head-forward uniform per character in view space, lip-zone marker in mdepth). Gone
+  in mc_fix3.png; enamel neutral (olive before). New lookdev scenes/lookdev/humans-anim-mouth.js (+json).
+- HANDS: handShape's spread sign was inverted (positive closed) and 0 left MakeHuman's 31 deg rest
+  splay, so every curled hand fanned; now 0 = relaxed (22 deg), -0.12 = together (11 deg, measured
+  in dbg/spread.mjs). Cradle: hurt hand fingers together, gentle cascade curl; tray hand together.
+  Seen in handC_sheet.png / hAC.png (pose dev scene, 4 views).
+- CROWD: parent + child in the Cling proof (index 18 carries 19): they stand hand in hand (clasp
+  between them, pure function of both baked roots), the parent stoops for the child at the alarm and
+  runs for the arch with it on the hip; stumbles from hard shoves (stumble 0.35 of the shoved:
+  flail + quick steps + gasp); crowd10 falls mid-flight and stays down. perform.carry is now order
+  independent and a carried body has no gait of its own (its trajectory's stepping had lowered its
+  pelvis 13 cm by the reach drop). Node check dbg/crowd3.mjs; selftest: wrists 14 cm, child 12 cm above
+  the parent's pelvis, either update order, faller's head 0.19 m.
+- Mouth-shape sidecar index (cache/mouth-index.json from tools/mouthmorphs.py): no 404 per crowd member.
+- The crowd scene builds a lighter set below 2560 px wide (no hero-LOD focus, 2K shadow map): the
+  draft page OOM-crashed twice while three director renders ran (the memory cgroup is shared: 15 GB).
+Render queue (memory-gated, sequential): scratchpad eng1/perf/bin/q3.sh, logs eng1/perf/s3/q/*.log.

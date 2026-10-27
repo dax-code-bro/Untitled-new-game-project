@@ -50,6 +50,7 @@ export const GAIT = {
   pitchFlat: 0.45,    // the swing foot is level by this q, then turns toe-up for the strike
   drop: 0.5,          // scale of the walking pelvis drop (the legs' reach lowers it where needed)
   reach: 0.992,         // a stance leg may reach this fraction of its length before the pelvis drops
+  kick: 0.22,         // running: how far the heel comes up behind toward the buttock (m at 1.75 m tall)
 };
 
 // ------------------------------------------------------------- gait model --
@@ -69,7 +70,7 @@ export function gaitParams(v, h = 1.75) {
     bob: lerp(0.02 * Math.min(1.4, Math.max(0.35, v / 1.3)), 0.045, run) * s,
     drop: lerp((0.012 + 0.012 * lowV) * GAIT.drop, 0.07, run) * s,
     lift: lerp(0.06 + 0.04 * lowV, 0.2, run) * s,
-    kick: run * 0.22 * s,
+    kick: run * GAIT.kick * s,
     lean: lerp(0.03 + 0.04 * lowV, 0.2 + 0.03 * Math.max(0, v / s - 3), run),
     armA: lerp(0.22 * Math.min(1.5, v / 1.3), 0.62, run),
     elbow: lerp(0.18 + 0.1 * lowV, 1.45, run),
