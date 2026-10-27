@@ -32,13 +32,26 @@ How it works: `README.md` in this folder. Latest state first.
   - 1A-30 -> 1A-31 (18 deg, 1.47x): 1A-30 at 24 mm (was 28) - the children 1.7x smaller ("small").
     1A-30 was held out of the running queues with a lock owned by a `sleep` process (a running render's
     browser holds the OLD spec in memory: it would have rendered the old camera).
-  - X2-05 -> X2-06 (corridor, Remi 22 deg, 0.91x): two follow shots from behind; left as is for now.
+  - X2-05 -> X2-06 (corridor, Remi 22 deg, 0.91x): X2-05 restaged STATIC from the east wall (the
+    siblings walk past the lens into the depth, the servants on the right). Its first render showed what
+    the follow camera had hidden: a servant's arm swinging up over her head into the 'carry' (the act
+    started at 0.2 s) and upturned empty hands. Now the carry is settled before the shot ([-1, 'carry'])
+    and both servants hold real linen (corridor builder `linen` / `linen2`: stacks of the props library's
+    foldedCloth, 6 layers each - 4 layers read as a thin board in the hands); stills checked twice.
   - 1A-28 -> 1A-29: the children's eye-lines to the hatchling crossed (high SW corner -> behind them
     from the SE); check the 1A-29 render.
 - Rendered this session: 1A-32 (silhouettes in the bright doorway, Abby looks back, the door closes),
   1A-29 (Remi from behind, the hatchling sharp below), P-17 (meadow card: a pasture with lush / dry
   patches; the dragon's shadow crosses at 3.7 s - wings, neck and horned head, hard-edged), the stills
   of 1A-30 (24 mm) and X2-03 (both twice).
+- P-09 (dawn deck, rendered 18:51): the clouds stopped in a hard straight line ~2 deg above the horizon
+  with a flat grey haze band below (the card's edge fade is squeezed into a sliver by perspective).
+  `deck.distFade: [d0, d1]` (cloud-deck-mesh.js, self-tested): alpha falls with the distance from home,
+  22 -> 85 km for P-09, so the deck thins into the haze. Re-render queued after a still check.
+- render-shots now SKIPS a shot whose spec / set changed on disk after its browser built the set (tested
+  with a changed f-stop on X2-07) - no more sleep-process locks to hold a restaged shot out of a queue.
+- Edit check wired into `cut/assemble.sh`; `spec.cutsOk` records a flag looked at and kept (kept out of
+  the shot spec: a shot key change re-renders the shot).
 - X1-03: focus on the door from the first frame (the pull from her head showed the library bun sharp -
   a flat disc with a dashed band - for the first second).
 
