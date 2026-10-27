@@ -37,8 +37,12 @@ export default {
       cast: { alexandria: { at: WIN, face: 90, look: 'door', lookAmount: 0.9, acts: [[0.2, 'turn', { to: 'door', dur: 0.75 }]] } },
     },
     'X1-04': {
-      staging: 'OTS + DOF: over Alexandria\'s right shoulder (her face out of frame); the young attendant small and soft in the doorway, backlit by the passage lamp; Alexandria goes to the door.',
-      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.6, 0.2]], ['youngAttendant.head', [-0.25, 0.14]]], from: 158, height: 1.62, dist: 1.35, at: 0.6 }, mm: 50, fstop: 1.8, focus: 'alexandria.head', bounds: BOUNDS },
+      staging: 'OTS + DOF: over Alexandria\'s right shoulder (her head very soft in the foreground, face out of frame); the young attendant small and backlit in the doorway, nearly sharp; Alexandria goes to the door.',
+      // session 7: focus 2.8 m, just in front of the attendant at 3.7 m (was on Alexandria's head at 1.3 m):
+      // her hair sharp read as a painted cap - a flat disc bun, a jagged nape line (humans library,
+      // requested); focused on the attendant, her frontal face read CG (previs: blur 0, 'SPEAKING FACE
+      // READS'). Here: Alexandria blur 3.9 % of the frame height, the attendant 0.9 % (the audit's 0.6 %)
+      cam: { rig: 'static', frame: { subjects: [['alexandria.head', [0.6, 0.2]], ['youngAttendant.head', [-0.25, 0.14]]], from: 158, height: 1.62, dist: 1.35, at: 0.6 }, mm: 50, fstop: 1.8, focus: 2.8, bounds: BOUNDS },
       set: { door: 0.85 },
       cast: {
         alexandria: { at: [1.82, -0.25], face: 'youngAttendant', look: 'youngAttendant.head', acts: [[3.9, 'walk', { to: [1.6, -1.95], speed: 1.2 }]] },

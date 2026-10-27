@@ -96,6 +96,14 @@ How it works: `README.md` in this folder. Latest state first.
   selftest: 20 checks pass.
 - assemble.sh's edit-check step now prints only flags not yet accepted (a pair header used to print for
   an accepted pair).
+- After the cut (21:20-): P-08 re-rendering with `align: true` hedges (still st15 at 2x: long low
+  hedgerows instead of rows of round shrubs). X1-04 refocused: focus 2.8 m between the two (was on
+  Alexandria's head at 1.3 m - her hair sharp read as a painted cap with a flat disc bun; focused on
+  the attendant instead, her frontal face read CG with glinting white brows - previs 'SPEAKING FACE
+  READS'); now Alexandria 3.9 % blur, the attendant 0.9 % (st16). Tried the same on X2-02 (focus 0.7 m
+  behind Alexandria): the hair barely improved and the subject looked missed - reverted, X2-02 keeps her
+  sharp (the hair is the humans track's request). LESSON: a defocus hides a CG face or hair only where the
+  craft wants that plane soft anyway (an OTS foreground), not on the subject.
 - NOT DONE / next: P-08's hedges are still round bushes (`align: true` exists; P-08 costs ~100 min);
   1B (VERDOR_GROUNDS, 32 shots) is not authored - the multi-cut plumbing (edl-1B, make-cut --edl) waits
   for it; the 4K finals run on the render PC.

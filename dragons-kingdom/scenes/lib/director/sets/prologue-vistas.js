@@ -259,7 +259,8 @@ export async function build(ctx, { shotSpecs }) {
     town.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     g.add(town);
     // hedges: not on the shore, not across a house plot, not on the moor
-    const hg = hedges({ x: [-560, 560], z: [-800, -110], F, H, seed: 41, treeP: 0.02,
+    // align (session 7): long low hedgerows instead of rows of round shrubs (still st15, 2x crops)
+    const hg = hedges({ x: [-560, 560], z: [-800, -110], F, H, seed: 41, treeP: 0.02, align: true,
       where: (x, z) => shore(x) - z > 12 && moorAt(x, z) < 0.45 && !spots.some((s) => Math.hypot(s[0] - x, s[1] - z) < 9) });
     g.add(hg.group);
     // trees: wind-shorn hawthorn and sycamore in the hedges, a few round the houses, small woods in the

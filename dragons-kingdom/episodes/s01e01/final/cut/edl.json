@@ -635,11 +635,11 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.45,
-    "k4_cpu_s_per_frame": 38.57,
+    "draft_s_per_frame": 4.69,
+    "k4_cpu_s_per_frame": 40.67,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 15.13,
-    "k4_cpu_hours": 2.19,
+    "draft_minutes": 15.96,
+    "k4_cpu_hours": 2.3,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -649,7 +649,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "MEASURED draft 4.45 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
+    "basis": "MEASURED draft 4.69 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: open sea to the horizon, away from the land.",
    "deviation": null,
@@ -715,11 +715,11 @@
     }
    ],
    "cost": {
-    "draft_s_per_frame": 42.19,
-    "k4_cpu_s_per_frame": 365.66,
+    "draft_s_per_frame": 41.48,
+    "k4_cpu_s_per_frame": 359.53,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 33.75,
-    "k4_cpu_hours": 4.88,
+    "draft_minutes": 33.19,
+    "k4_cpu_hours": 4.79,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -729,7 +729,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "MEASURED draft 42.19 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
+    "basis": "MEASURED draft 41.48 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: a forest reaching a dark sea cliff, from the water, the cliff line receding west along the frame; caption TARA on the word.",
    "deviation": null,
@@ -795,11 +795,11 @@
     }
    ],
    "cost": {
-    "draft_s_per_frame": 8.49,
-    "k4_cpu_s_per_frame": 73.56,
+    "draft_s_per_frame": 10.27,
+    "k4_cpu_s_per_frame": 89.01,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 6.79,
-    "k4_cpu_hours": 0.98,
+    "draft_minutes": 8.22,
+    "k4_cpu_hours": 1.19,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -809,7 +809,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "MEASURED draft 8.49 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
+    "basis": "MEASURED draft 10.27 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: distant fortified walls along a ridge, inland; caption SCRAPPER on the word.",
    "deviation": null,
@@ -875,11 +875,11 @@
     }
    ],
    "cost": {
-    "draft_s_per_frame": 3.68,
-    "k4_cpu_s_per_frame": 31.88,
+    "draft_s_per_frame": 3.97,
+    "k4_cpu_s_per_frame": 34.36,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 2.94,
-    "k4_cpu_hours": 0.43,
+    "draft_minutes": 3.17,
+    "k4_cpu_hours": 0.46,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -889,7 +889,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "MEASURED draft 3.68 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
+    "basis": "MEASURED draft 3.97 s/f on this machine; 4K = draft x 8.67 (the set's 4K/draft ratio: ESTIMATE: F1-class (sea, haze, distant land))"
    },
    "staging": "NONE: a misted pale island alone on the sea, from open water; caption VERDOR on the word.",
    "deviation": "lens 35 mm (shot list: 24 mm) so the whole island sits in the frame with open sea at both ends",
@@ -1858,7 +1858,7 @@
     },
     "basis": "MEASURED draft 9.26 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-2 people, sea through the window)"
    },
-   "staging": "OTS + DOF: over Alexandria's right shoulder (her face out of frame); the young attendant small and soft in the doorway, backlit by the passage lamp; Alexandria goes to the door.",
+   "staging": "OTS + DOF: over Alexandria's right shoulder (her head very soft in the foreground, face out of frame); the young attendant small and backlit in the doorway, nearly sharp; Alexandria goes to the door.",
    "deviation": null,
    "action": "The message at the door.",
    "need": {
