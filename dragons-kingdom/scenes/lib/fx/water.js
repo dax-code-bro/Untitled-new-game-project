@@ -194,6 +194,141 @@ class SurfacePatch extends Effect {
   }
 }
 
+// ------------------------------------------------------------------ crown sheet --
+// The splash's crown: a thin sheet of water thrown up and out round the impact (a mesh re-shaped
+// every frame from closed-form kinematics: base ring spreading, the rim of the sheet flying up
+// ballistically - higher and further on the side the body was travelling to - and falling back).
+// Shaded as thin water in the late pass: the scene behind seen through it, displaced by its
+// slope (refraction), a Fresnel reflection of the sky / sea, aerated white streaks that grow up
+// the sheet and with age, holes tearing it from the rim down, a ragged rim breaking into fingers
+// (the drops of the splash leave from there). Replaces the old white puff "sheet".
+const CROWN_VERT = /* glsl */`
+attribute vec2 aUV;
+varying vec2 vUV; varying vec3 vW; varying vec3 vN; varying float vVZ;
+void main() { vUV = aUV; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal);
+  vec4 v = viewMatrix * w; vVZ = -v.z; gl_Position = projectionMatrix * v; }`;
+const CROWN_FRAG = /* glsl */`
+precision highp float;
+${LIGHT_GLSL}
+${LATE_GLSL}
+uniform float uAge, uLife, uSeed, uFade, uStreaks;
+uniform vec3 uFoamCol;
+varying vec2 vUV; varying vec3 vW; varying vec3 vN; varying float vVZ;
+float h12(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+float vn(vec2 p) { vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(h12(i), h12(i + vec2(1, 0)), u.x), mix(h12(i + vec2(0, 1)), h12(i + vec2(1, 1)), u.x), u.y); }
+void main() {
+  if (fxSceneZ() < vVZ - 0.02) discard;
+  float th = vUV.x, eta = vUV.y, age = uAge / uLife;
+  // streaks along the flow (the sheet is drawn up and out), wrapping round the crown
+  float st = vn(vec2(th * uStreaks, eta * 2.0 - uAge * 1.3 + uSeed)) * 0.65 + vn(vec2(th * uStreaks * 2.7, eta * 5.0 + uSeed * 1.7)) * 0.35;
+  // tearing: holes open from the rim down as the sheet thins
+  // (holes drawn out along the flow: the sheet tears into ligaments running up its length)
+  float hole = vn(vec2(th * uStreaks * 1.1, eta * 2.2 + uSeed * 3.1)) * 0.65 + vn(vec2(th * uStreaks * 3.1, eta * 4.0 + uSeed)) * 0.15 + st * 0.2;
+  float tear = smoothstep(0.0, 0.75, age) * 0.8 + eta * 0.55 * smoothstep(0.0, 0.25, age) - 0.08;
+  // (torn edges dissolve into spray: a soft, finely broken margin, not a cut)
+  float fine = vn(vec2(th * uStreaks * 9.0, eta * 12.0 + uSeed)) - 0.5;
+  float aw = max(fwidth(hole), 0.02) + 0.07;
+  float cov = smoothstep(tear - aw, tear + aw * 0.6, hole + fine * 0.12) * smoothstep(1.0, 0.86, eta + fine * 0.08) * uFade;
+  if (cov <= 0.003) discard;
+  vec3 V = normalize(cameraPosition - vW);
+  vec3 N = normalize(vN); if (dot(N, V) < 0.0) N = -N;
+  float cs = clamp(dot(N, V), 0.0, 1.0);
+  float F = 0.02 + 0.98 * pow(1.0 - cs, 5.0);
+  vec3 R = reflect(-V, N);
+  vec3 env = mix(uGroundCol * 0.6, uSkyCol, smoothstep(-0.2, 0.3, R.y));
+  // the scene behind, displaced by the sheet's slope (a thin, curved sheet refracts a little)
+  vec3 nv = (viewMatrix * vec4(N, 0.0)).xyz;
+  vec2 off = nv.xy * dkLateSize.y * 0.012;
+  vec3 behind = dkLateOn > 0.5 ? fxSceneColor(gl_FragCoord.xy + off) : mix(uGroundCol, uSkyCol, 0.5);
+  // aerated (white) water: up the sheet, with age, along the streaks
+  float white = smoothstep(0.42, 0.78, eta * 0.45 + age * 0.35 + (st - 0.5) * 1.6 + 0.12) * 0.92;
+  float sunL = clamp(dot(N, uSunDir), 0.0, 1.0) * 0.6 + 0.4;
+  // aerated water scatters forward: a sheet against the sun glows (Henyey-Greenstein, g 0.6)
+  float fwd = fxHG(dot(-V, uSunDir), 0.6) * 12.566;
+  vec3 whiteCol = uFoamCol * (uSunCol * (sunL + 0.35 * fwd) / 3.14159 + uSkyCol * 0.9);
+  vec3 water = behind * 0.9 * (1.0 - F) + env * F;
+  vec3 col = mix(water, whiteCol, white);
+  // (the clear sheet hides little of what is behind; the white water covers it)
+  float a = cov * (dkLateOn > 0.5 ? 1.0 : mix(0.25 + 0.6 * F, 1.0, white));
+  gl_FragColor = vec4(col * a, a);
+}`;
+
+class CrownSheet extends Effect {
+  constructor(fx, o = {}) {
+    super(fx, { name: 'fx-water-crown', ...o });
+    this.height = heightFn(fx, o);
+    this.S = o.size ?? 4; this.U = o.speed ?? 25;
+    const D = norm3(arr3(o.dir ?? [0, -1, 0]));
+    this.fwd = norm3([D[0], 0, D[2]]); this.horiz = Math.hypot(D[0], D[2]);
+    this.P = fx.at(o.at, this.t0); this.P[1] = this.height(this.P[0], this.P[2], this.t0);
+    const Ns = this.Ns = Math.round(160 + 224 * Math.min(1.5, fx.tier.particles)), Nh = this.Nh = 18;
+    const nv = (Ns + 1) * (Nh + 1);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(nv * 3), 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(nv * 3), 3));
+    const uv = new Float32Array(nv * 2);
+    for (let j = 0; j <= Nh; j++) for (let i = 0; i <= Ns; i++) { const k = j * (Ns + 1) + i; uv[k * 2] = i / Ns; uv[k * 2 + 1] = j / Nh; }
+    geo.setAttribute('aUV', new THREE.BufferAttribute(uv, 2));
+    const idx = [];
+    for (let j = 0; j < Nh; j++) for (let i = 0; i < Ns; i++) { const a = j * (Ns + 1) + i, b = a + 1, c = a + Ns + 1, d = c + 1; idx.push(a, b, c, b, d, c); }
+    geo.setIndex(idx);
+    this.geo = geo;
+    // per-angle launch: the rim of the sheet flies up faster on the side the body was going
+    const seed = o.seed ?? 1;
+    this.rim = Array.from({ length: Ns + 1 }, (_, i) => {
+      const th = (i % Ns) / Ns * Math.PI * 2;
+      const al = Math.cos(th) * this.fwd[0] + Math.sin(th) * this.fwd[2];
+      const bias = 1 + 0.9 * this.horiz * Math.max(0, al) - 0.4 * this.horiz * Math.max(0, -al);
+      const fing = 1 + 0.2 * noise1(th * 4.1, seed) * 2 + 0.12 * noise1(th * 13.3, seed + 3) * 2;
+      return { th, up: this.U * (o.crownUp ?? 0.25) * Math.pow(Math.max(bias, 0.2), 0.8) * fing, out: this.U * (o.crownOut ?? 0.17) * Math.max(bias, 0.3) * (0.9 + 0.2 * noise1(th * 7.7, seed + 9)) };
+    });
+    this.life = 2 * Math.max(...this.rim.map((r) => r.up)) / 9.81;
+    const late = makeLateUniforms();
+    const u = { ...fx.light.uniforms, ...late, uAge: { value: 0 }, uLife: { value: this.life }, uSeed: { value: seed * 1.73 }, uFade: { value: 1 }, uStreaks: { value: o.streaks ?? 60 }, uFoamCol: { value: new THREE.Vector3(...SPRAY) } };
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: CROWN_VERT, fragmentShader: CROWN_FRAG, uniforms: u, transparent: true, depthWrite: false, depthTest: true, side: THREE.DoubleSide,
+      blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
+      blendSrcAlpha: THREE.OneFactor, blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
+    });
+    mat.extensions = { derivatives: true };
+    this.u = u;
+    this.mesh = new THREE.Mesh(geo, mat);
+    this.mesh.frustumCulled = false; this.mesh.renderOrder = 9;
+    this.mesh.userData.dkNoVelocity = true;
+    this.mesh.userData.dkLate = true; mat.userData.dkLateUniforms = late;
+    this.object.add(this.mesh);
+  }
+  update(t) {
+    const tau = t - this.t0;
+    const vis = this.enabled && tau > 0 && tau < this.life;
+    this.mesh.visible = vis;
+    if (!vis) return;
+    const S = this.S, P = this.P, Ns = this.Ns, Nh = this.Nh, g = 9.81;
+    const Rb = S * (0.42 + 0.75 * (1 - Math.exp(-tau / 0.3)));
+    const pos = this.geo.attributes.position.array;
+    for (let i = 0; i <= Ns; i++) {
+      const r = this.rim[i], c = Math.cos(r.th), sn = Math.sin(r.th);
+      const ht = Math.max(0, r.up * tau - 0.5 * g * tau * tau);
+      const rt = Rb + r.out * tau * (1 - 0.2 * Math.min(1, tau));
+      const bx = P[0] + c * Rb, bz = P[2] + sn * Rb, by = this.height(bx, bz, t) - 0.15;
+      const tx = P[0] + c * rt, tz = P[2] + sn * rt, ty = P[1] + ht;
+      const bulge = 0.12 * ht;
+      const cx = (bx + tx) / 2 + c * bulge, cz = (bz + tz) / 2 + sn * bulge, cy = (by + ty) / 2;
+      for (let j = 0; j <= Nh; j++) {
+        const e = j / Nh, a = (1 - e) * (1 - e), b = 2 * e * (1 - e), d = e * e;
+        const k = (j * (Ns + 1) + i) * 3;
+        pos[k] = a * bx + b * cx + d * tx; pos[k + 1] = a * by + b * cy + d * ty; pos[k + 2] = a * bz + b * cz + d * tz;
+      }
+    }
+    this.geo.attributes.position.needsUpdate = true;
+    this.geo.computeVertexNormals();
+    this.geo.computeBoundingSphere();
+    this.u.uAge.value = tau;
+    this.u.uFade.value = 1 - smoothstep(this.life * 0.75, this.life, tau);
+  }
+}
+
 // ------------------------------------------------------------------ spray / splash --
 /**
  * Water particles: drops (glossy streaks) + mist (white scattering puffs). Every particle has a
@@ -206,7 +341,7 @@ class WaterBurst extends Effect {
     this.wind = arr3(o.wind ?? fx.wind);
     const { drops, mist, clumps } = gen(this);
     this.D = drops; this.M = mist;
-    this.drops = this.layer(new ParticleLayer(fx, { max: Math.max(1, drops.length), mode: 'drop', name: 'fx-water-drops', soft: 0.05, stretchMax: 300, shading: { albedo: [1, 1, 1], gloss: 200 } }));
+    this.drops = this.layer(new ParticleLayer(fx, { max: Math.max(1, drops.length), mode: 'drop', name: 'fx-water-drops', soft: 0.05, stretchMax: 300, shading: { albedo: [1, 1, 1], gloss: 200, water: true } }));
     this.C = clumps || [];
     this.clumps = this.C.length ? this.layer(new ParticleLayer(fx, {
       max: this.C.length, mode: 'puff', name: 'fx-water-sheet', soft: 0.15, conserve: false, stretchMax: 6,
@@ -292,7 +427,7 @@ function splashGen(fx, o) {
     }
     // crown sheet: whitewater clumps riding the same crown velocities (the sheet you see)
     const clumps = [];
-    const nS = Math.round((o.sheet ?? 1600) * Math.sqrt(fx.tier.particles));
+    const nS = Math.round((o.sheet ?? 0) * Math.sqrt(fx.tier.particles));        // (legacy puff sheet; the crown mesh replaces it)
     for (let i = 0; i < nS; i++) {
       const h = (k) => hash01(seed * 4441, i, k);
       const th = h(0) * 6.283, rad = [Math.cos(th), 0, Math.sin(th)];
@@ -316,7 +451,7 @@ function splashGen(fx, o) {
       drops.push({ te, p0: [P[0] + (h(5) - 0.5) * S * 0.2, P[1], P[2] + (h(6) - 0.5) * S * 0.2], v0: [d[0] * sp, d[1] * sp, d[2] * sp], k: 0.1 + 0.003 / r, r, s: h(7), life: 6 });
     }
     // mist: the sheet's fine spray, thrown out with the crown and hanging after it
-    const nM = Math.round((o.mist ?? 240) * Math.sqrt(fx.tier.particles));
+    const nM = Math.round((o.mist ?? 520) * Math.sqrt(fx.tier.particles));
     for (let i = 0; i < nM; i++) {
       const h = (k) => hash01(seed * 919, i, k);
       const th = h(0) * 6.283, rad = [Math.cos(th), 0, Math.sin(th)];
@@ -324,7 +459,7 @@ function splashGen(fx, o) {
       const te = t0 + 0.03 + 0.4 * h(1);
       const sp = U * (0.1 + 0.3 * h(2)) * (1 + horiz * Math.max(0, along));
       const r0 = S * (0.3 + 0.5 * h(3));
-      mist.push({ te, p0: [P[0] + rad[0] * r0, P[1] + S * 0.1, P[2] + rad[2] * r0], v0: [rad[0] * sp * 0.6, sp * (0.4 + 0.8 * h(4)), rad[2] * sp * 0.6], k: 2.5 + 2 * h(5), r: S * (0.12 + 0.18 * h(6)), dens: 0.28, s: h(7), life: 3 + 4 * h(8) });
+      mist.push({ te, p0: [P[0] + rad[0] * r0, P[1] + S * 0.1, P[2] + rad[2] * r0], v0: [rad[0] * sp * 0.6, sp * (0.4 + 0.8 * h(4)), rad[2] * sp * 0.6], k: 2.5 + 2 * h(5), r: S * (0.05 + 0.1 * h(6)), dens: 0.12, s: h(7), life: 3 + 4 * h(8) });
     }
     return { drops, mist, clumps };
   };
@@ -429,6 +564,7 @@ export function waterApi(fx) {
     splash: (o = {}) => {
       const S = o.size ?? 4;
       const b = burst({ name: 'fx-water-splash', ...o }, splashGen(fx, o));
+      if (o.crown !== false) fx.add(new CrownSheet(fx, { ...o, name: 'fx-water-crown', seed: (o.seed ?? 1) + 11 }));
       if (o.foam !== false) patch({ kind: 'foam', at: o.at, t0: (o.t0 ?? 0) + 0.05, radius: S * 2.6, spread: 1.2, life: o.foamLife ?? 25, height: o.height, seed: (o.seed ?? 1) + 3, cell: 0.25 * Math.sqrt(S / 4) });
       return b;
     },

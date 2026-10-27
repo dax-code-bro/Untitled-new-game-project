@@ -43,6 +43,7 @@ varying vec3 vQ;       // capsule coords: x along the streak (in r), y across (i
 varying vec4 vC; varying vec4 vD; varying vec2 vE;
 varying vec3 vCenterW; varying float vR; varying float vViewZ; varying float vAlphaK;
 varying vec3 vAxW; varying vec3 vAyW; varying vec3 vToCamW;
+varying vec2 vAx2; varying float vRpx;
 void main() {
   vec3 p0 = aA.xyz, p1 = aB.xyz; float r = aA.w;
   vec4 v0 = viewMatrix * vec4(p0, 1.0), v1 = viewMatrix * vec4(p1, 1.0);
@@ -71,6 +72,7 @@ void main() {
   mat3 vInv = transpose(mat3(viewMatrix));
   vAxW = vInv * vec3(ax, 0.0); vAyW = vInv * vec3(ay, 0.0); vToCamW = vInv * vec3(0.0, 0.0, 1.0);
   vCenterW = 0.5 * (p0 + p1);
+  vAx2 = ax; vRpx = r * pxPerM;
   gl_Position = projectionMatrix * c;
 }`;
 
@@ -85,6 +87,7 @@ ${NOISE_GLSL}
 varying vec3 vQ; varying vec4 vC; varying vec4 vD; varying vec2 vE;
 varying vec3 vCenterW; varying float vR; varying float vViewZ; varying float vAlphaK;
 varying vec3 vAxW; varying vec3 vAyW; varying vec3 vToCamW;
+varying vec2 vAx2; varying float vRpx;
 uniform float uSoft, uOpacity, uDepthThr;
 // depth-only twin: the cinematic resolve hazes / fogs every pixel at the depth it finds there. A
 // transparent particle in front of a far background would get the far background's haze. The
@@ -195,28 +198,72 @@ void main() {
   gl_FragColor = vec4(col * alpha, alpha);
 }`;
 
+// 'drop': a small liquid drop, or the streak it draws across the shutter.
+//   water (uWater = 1): a ball lens - the body shows the scene BEHIND it, inverted and minified
+//     (late pass: dkSceneColor sampled on the opposite side, ~5 radii away), the rim darkens
+//     (rays there leave at grazing angles / total internal reflection), a Fresnel reflection of
+//     the sky / sea (~4 % face-on), one sharp sun glint. Against the sky a drop reads slightly
+//     dark with a bright point, against the sea slightly bright - not a white outline.
+//   blood (uWater = 0): an absorbing body (near-black red where thick), the same Fresnel and glint.
+// A moving drop is a streak: every pixel of it sees the drop pass, i.e. the AVERAGE of the disc
+// along the chord at its offset from the axis (three samples along the chord), and the time it is
+// covered falls off toward the streak's sides (coverage ~ chord length) - so streak edges fade
+// instead of printing bright rims. The glint is placed analytically (where the sphere's normal is
+// the half vector) and energy-spread along the streak.
 const FRAG_DROP = FRAG_COMMON + /* glsl */`
-uniform vec3 uAlbedo; uniform float uGloss;
+uniform vec3 uAlbedo; uniform float uGloss, uWater;
+vec3 fxDropShade(vec2 d, vec3 V, vec3 alb, float rim) {
+  float zz = sqrt(max(1.0 - dot(d, d), 0.0));
+  vec3 nW = normalize(vAxW * d.x + vAyW * d.y + vToCamW * zz);
+  float cs = clamp(dot(nW, V), 0.0, 1.0);
+  float F = 0.02 + 0.98 * pow(1.0 - cs, 5.0);
+  vec3 R = reflect(-V, nW);
+  vec3 env = mix(uGroundCol, uSkyCol, smoothstep(-0.25, 0.35, R.y));
+  vec3 body;
+  if (uWater > 0.5) {
+    // refraction: the inverted, minified view behind the drop
+    vec2 off = -(d.x * vAx2 + d.y * vec2(-vAx2.y, vAx2.x)) * max(vRpx, 0.5) * 5.0;
+    vec3 behind = dkLateOn > 0.5 ? fxSceneColor(gl_FragCoord.xy + off) : mix(uSkyCol, uGroundCol, 0.5 + 0.5 * d.y);
+    body = behind * 0.93 * (1.0 - 0.55 * rim);
+  } else {
+    float diff = clamp(dot(nW, uSunDir), 0.0, 1.0);
+    body = alb * (uSunCol * (0.25 + 0.75 * diff) * 0.2 + mix(uGroundCol, uSkyCol, 0.5 + 0.5 * nW.y) * 0.5) * vC.w;
+  }
+  return mix(body, env, F);
+}
 void main() {
   vec2 q = fxCapsule();
   float d2 = dot(q, q);
   if (d2 >= 1.0) discard;
   float zs = sqrt(1.0 - d2);
-  float alpha = smoothstep(1.0, 0.55, sqrt(d2)) * vC.x * vAlphaK * uOpacity;
+  // streak weight: 0 = a drop at rest (a disc), 1 = a long streak
+  float wS = vQ.z / (vQ.z + 1.0);
+  float chord = sqrt(max(1.0 - q.y * q.y, 0.0));
+  float cov = mix(smoothstep(1.0, 0.82, sqrt(d2)), chord, wS * step(abs(vQ.x), vQ.z));
+  float alpha = cov * vC.x * vAlphaK * uOpacity;
   alpha *= fxSoftFade(vViewZ - zs * vR);
   if (alpha <= 0.002) discard;
   FX_DEPTH_OUT(alpha, vViewZ - zs * vR)
-  vec3 nW = normalize(vAxW * q.x + vAyW * q.y + vToCamW * zs);
   vec3 V = normalize(vToCamW);
   vec3 alb = uAlbedo * vD.rgb;
-  // a liquid drop: absorbing body (dark, saturated), lit thinly; a sharp sun glint; sky reflection at the rim
-  float diff = clamp(dot(nW, uSunDir), 0.0, 1.0);
-  vec3 body = alb * (uSunCol * (0.25 + 0.75 * diff) * 0.25 + mix(uGroundCol, uSkyCol, 0.5 + 0.5 * nW.y) * 0.6) * vC.w;
+  float rim = smoothstep(0.62, 1.0, sqrt(d2));
+  vec3 col = fxDropShade(q, V, alb, rim);
+  if (wS > 0.02 && abs(vQ.x) < vQ.z) {
+    // inside the swept part: the average along the chord at this lateral offset
+    vec3 avg = (fxDropShade(vec2(0.0, q.y), V, alb, smoothstep(0.62, 1.0, abs(q.y)))
+              + fxDropShade(vec2(0.7 * chord, q.y), V, alb, smoothstep(0.62, 1.0, length(vec2(0.7 * chord, q.y))))
+              + fxDropShade(vec2(-0.7 * chord, q.y), V, alb, smoothstep(0.62, 1.0, length(vec2(0.7 * chord, q.y))))) / 3.0;
+    col = mix(col, avg, wS);
+  }
+  // the sun glint: where the normal is the half vector; a spot of angular size ~ 1/sqrt(gloss)
   vec3 H = normalize(uSunDir + V);
-  float spec = pow(clamp(dot(nW, H), 0.0, 1.0), uGloss) * (uGloss + 2.0) / 25.0;
-  float fres = 0.04 + 0.96 * pow(1.0 - clamp(dot(nW, V), 0.0, 1.0), 5.0);
-  vec3 refl = mix(uGroundCol, uSkyCol, clamp(reflect(-V, nW).y * 0.5 + 0.5, 0.0, 1.0)) * fres * 0.8;
-  vec3 col = body + (uSunCol * spec * vC.w + refl) * vD.a;
+  vec2 hg = vec2(dot(H, vAxW), dot(H, vAyW));
+  float sg = 1.6 / sqrt(uGloss);
+  vec2 dg = q - hg;
+  float spread = mix(1.0, sg / (sg + 2.0 * vQ.z), wS);                 // energy spread along the streak
+  dg.x *= 1.0 - wS * step(abs(vQ.x), vQ.z);                           // a line along the streak
+  float glint = exp(-dot(dg, dg) / (sg * sg)) * spread * (uGloss + 2.0) / 30.0;
+  col += uSunCol * glint * vC.w * vD.a * (uWater > 0.5 ? 1.0 : 0.6);
   gl_FragColor = vec4(col * alpha, alpha);
 }`;
 
@@ -420,7 +467,7 @@ export class ParticleLayer {
       uNoiseScale: { value: s.noiseScale ?? 1.0 }, uNoiseAmt: { value: s.noiseAmt ?? 0.9 }, uEvolve: { value: s.evolve ?? 0.6 },
       uAmbient: { value: s.ambient ?? 1.0 }, uBillow: { value: s.billow ?? 0.6 }, uEdge: { value: s.edge ?? 0.6 },
       uEmissive: { value: s.emissive ?? 0 }, uMS: { value: s.ms ?? 0.5 }, uEmitCol: { value: v3(s.emitCol, [1, 0.4, 0.1]) }, uSunScale: { value: s.sunScale ?? 1 },
-      uGloss: { value: s.gloss ?? 120 }, uGain: { value: s.gain ?? 1 }, uCore: { value: s.core ?? 0 },
+      uGloss: { value: s.gloss ?? 120 }, uWater: { value: s.water ? 1 : 0 }, uGain: { value: s.gain ?? 1 }, uCore: { value: s.core ?? 0 },
       uCoreC: { value: v3(s.coreC, [1.0, 0.5, 0.09]) }, uBodyC: { value: v3(s.bodyC, [1.0, 0.27, 0.025]) }, uEdgeC: { value: v3(s.edgeC, [0.75, 0.07, 0.01]) },
       uSoot: { value: s.soot ?? 0 }, uStretchN: { value: s.stretch ?? 0.4 }, uCrease: { value: s.crease ?? 0.45 }, uHeatK: { value: s.heatK ?? 1 }, uShimmer: { value: s.shimmer ?? 1 }, uTimeS: { value: 0 }, uOcc: { value: s.occlusion ?? 0 },
     };
