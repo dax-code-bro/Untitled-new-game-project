@@ -252,12 +252,12 @@ export default {
       cast: { hatchling: hatchRest({ breathe: 0.45 }) },
     },
     '1A-27': {
-      staging: 'DOF: low and close on the hatchling (sharp) from the attendant\'s side; Abby and Alexandria soft beyond it at either side, mouths unreadable.',
-      // session 6: from behind Abby the room was too small (from 182 the solver put her in sharp profile;
-      // an explicit camera at her back filled half the frame with it, hid the hatchling and left
-      // Alexandria's face sharp): now low at the hatchling, wide open, both women far out of focus
-      cam: { rig: 'static', frame: { subjects: [['hatchling.head', [0.0, -0.3]], ['abby.head', [-0.5, 0.25]], ['alexandria.head', [0.5, 0.3]]], from: 318, height: 0.85, dist: 0.95 }, mm: 40, fstop: 1.4, focus: 'hatchling.head', focusOffset: -0.15, bounds: BOUNDS },
-      cast: { abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 } }, alexandria: seated, hatchling: hatchRest() },
+      staging: 'BACK + DOF: Abby\'s back soft at the left edge (a dirty frame), the hatchling sharp, Alexandria soft beyond, her face turned down to it.',
+      // session 6: the solver could not hold three subjects against the south wall (from 182: Abby in sharp
+      // profile; from 318: behind Alexandria, Abby's speaking face full on); an explicit camera behind
+      // Abby's right shoulder, wide open, Alexandria's eyes on the hatchling (her face turned 75 deg)
+      cam: { rig: 'static', pos: [-0.4, 1.07, 2.8], look: [-0.16, 1.01, 1.83], mm: 28, fstop: 1.4, focus: 'hatchling.head' },
+      cast: { abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', posture: { crouch: 1 } }, alexandria: { ...seated, lookAmount: 1 }, hatchling: hatchRest() },
       lines: [['L020', 0.45], ['L021', 0.45]],
       minTail: 0.8,
     },
