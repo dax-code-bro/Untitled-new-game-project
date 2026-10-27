@@ -2501,12 +2501,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.99,
-    "k4_cpu_s_per_frame": 56.97,
-    "k4_gpu_s_per_frame": 56.97,
-    "draft_minutes": 4.99,
-    "k4_cpu_hours": 0.95,
-    "k4_gpu_hours": 0.95,
+    "draft_s_per_frame": 6.45,
+    "k4_cpu_s_per_frame": 73.67,
+    "k4_gpu_s_per_frame": 73.67,
+    "draft_minutes": 6.45,
+    "k4_cpu_hours": 1.23,
+    "k4_gpu_hours": 1.23,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -2515,7 +2515,7 @@
      "move": 1,
      "total": 1.36
     },
-    "basis": "MEASURED draft 4.99 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
+    "basis": "MEASURED draft 6.45 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "SIL + HANDS: the two attendants as dark shapes against the cool shaft; the clasped hands carry it.",
    "deviation": null,
@@ -3207,12 +3207,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 5.44,
-    "k4_cpu_s_per_frame": 62.16,
-    "k4_gpu_s_per_frame": 62.16,
-    "draft_minutes": 14.14,
-    "k4_cpu_hours": 2.69,
-    "k4_gpu_hours": 2.69,
+    "draft_s_per_frame": 18.59,
+    "k4_cpu_s_per_frame": 212.45,
+    "k4_gpu_s_per_frame": 212.45,
+    "draft_minutes": 48.33,
+    "k4_cpu_hours": 9.21,
+    "k4_gpu_hours": 9.21,
     "factors": {
      "people": 1.48,
      "creatures": 1,
@@ -3221,7 +3221,7 @@
      "move": 1,
      "total": 1.55
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.55 for the shot's content"
+    "basis": "MEASURED draft 18.59 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "BACK: two backs over the nest; Alexandria soft beyond.",
    "deviation": null,
@@ -3253,12 +3253,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.56,
-    "k4_cpu_s_per_frame": 52.08,
-    "k4_gpu_s_per_frame": 52.08,
-    "draft_minutes": 9.11,
-    "k4_cpu_hours": 1.74,
-    "k4_gpu_hours": 1.74,
+    "draft_s_per_frame": 15.43,
+    "k4_cpu_s_per_frame": 176.37,
+    "k4_gpu_s_per_frame": 176.37,
+    "draft_minutes": 30.86,
+    "k4_cpu_hours": 5.88,
+    "k4_gpu_hours": 5.88,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -3267,7 +3267,7 @@
      "move": 1,
      "total": 1.3
     },
-    "basis": "ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame); x 1.3 for the shot's content"
+    "basis": "MEASURED draft 15.43 s/f on this machine; 4K = draft x 11.43 (the set's 4K/draft ratio: ESTIMATE until the set is measured (F4 style frame: draft 10 s/f MEASURED with its 4096 sun map, lamp shadow cube and 96-tap DOF every frame))"
    },
    "staging": "DOF + HANDS: her face far out of focus behind the sharp hatchling; the almost-touch is her hand.",
    "deviation": null,
@@ -4871,12 +4871,12 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 2.84,
-    "k4_cpu_s_per_frame": 35.49,
-    "k4_gpu_s_per_frame": 35.49,
-    "draft_minutes": 11.92,
-    "k4_cpu_hours": 2.48,
-    "k4_gpu_hours": 2.48,
+    "draft_s_per_frame": 9.7,
+    "k4_cpu_s_per_frame": 121.23,
+    "k4_gpu_s_per_frame": 121.23,
+    "draft_minutes": 40.73,
+    "k4_cpu_hours": 8.49,
+    "k4_gpu_hours": 8.49,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -4885,7 +4885,7 @@
      "move": 1.08,
      "total": 1.42
     },
-    "basis": "ESTIMATE: masonry interior, 1-3 people; x 1.42 for the shot's content"
+    "basis": "MEASURED draft 9.7 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-3 people)"
    },
    "staging": "BACK: a walking two-shot from behind; the teasing carries on the move; mouths unreadable.",
    "deviation": null,
@@ -4917,12 +4917,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 2.63,
-    "k4_cpu_s_per_frame": 32.86,
-    "k4_gpu_s_per_frame": 32.86,
-    "draft_minutes": 3.15,
-    "k4_cpu_hours": 0.66,
-    "k4_gpu_hours": 0.66,
+    "draft_s_per_frame": 10.3,
+    "k4_cpu_s_per_frame": 128.75,
+    "k4_gpu_s_per_frame": 128.75,
+    "draft_minutes": 12.36,
+    "k4_cpu_hours": 2.58,
+    "k4_gpu_hours": 2.58,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -4931,7 +4931,7 @@
      "move": 1,
      "total": 1.31
     },
-    "basis": "ESTIMATE: masonry interior, 1-3 people; x 1.31 for the shot's content"
+    "basis": "MEASURED draft 10.3 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-3 people)"
    },
    "staging": "SIL: at the corridor end, into the light; she shoves his arm without breaking stride; they go out.",
    "deviation": null,
@@ -5176,12 +5176,12 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.72,
-    "k4_cpu_s_per_frame": 43.4,
-    "k4_gpu_s_per_frame": 43.4,
-    "draft_minutes": 5.21,
-    "k4_cpu_hours": 1.01,
-    "k4_gpu_hours": 1.01,
+    "draft_s_per_frame": 20.27,
+    "k4_cpu_s_per_frame": 236.52,
+    "k4_gpu_s_per_frame": 236.52,
+    "draft_minutes": 28.38,
+    "k4_cpu_hours": 5.52,
+    "k4_gpu_hours": 5.52,
     "factors": {
      "people": 1.24,
      "creatures": 1,
@@ -5190,7 +5190,7 @@
      "move": 1,
      "total": 1.24
     },
-    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+    "basis": "MEASURED draft 20.27 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
    },
    "staging": "BACK: from behind her at the riding gear; Leaf noses in over her right shoulder; she pushes his head away; it comes straight back.",
    "deviation": null,

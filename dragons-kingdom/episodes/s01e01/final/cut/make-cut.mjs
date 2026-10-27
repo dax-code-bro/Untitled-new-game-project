@@ -119,7 +119,7 @@ for (const s of segs) {
   vf.push(chain); chain = `[${last}]settb=1/${FPS},setsar=1[${label}z]`; last = `${label}z`;
   vf.push(chain);
   s.out = last; s.len = e.frames + s.needPre + s.needPost;
-  report.shots.push({ job: e.job, scene: e.scene, kind: e.kind, source: src, frames: e.frames, rec_in: e.rec_in, trans: s.tIn, handles_used: [pre, post], held_frames: [Math.max(0, padPre), Math.max(0, padPost)] });
+  report.shots.push({ job: e.job, scene: e.scene, kind: e.kind, source: src, frames: e.frames, rec_in: e.rec_in, trans: s.tIn, handles_used: [pre, post], held_frames: [Math.max(0, padPre), Math.max(0, padPost)], ...(src.startsWith('rendered') && side?.notes?.length ? { notes: side.notes } : {}) });
 }
 // join: runs of cuts are concatenated, dissolves cross-fade (offset = the accumulated length - the overlap)
 let acc = segs[0].out, accLen = segs[0].len - segs[0].needPre;
@@ -192,7 +192,10 @@ const ts = (x) => { const ms = Math.max(0, Math.round(x * 1000)); const p = (n, 
 srt.sort((a, b) => a.a - b.a);
 fs.writeFileSync(OUT.replace(/\.mp4$/, '.en.srt'), srt.map((s, i) => `${i + 1}\n${ts(s.a)} --> ${ts(Math.max(s.b, s.a + 0.8))}\n${s.text}\n`).join('\n'));
 report.output = { file: rel(OUT), frames: pr.frames, duration_s: +(pr.frames / FPS).toFixed(3), size_mb: +(fs.statSync(OUT).size / 1048576).toFixed(1), assembled_s: Math.round((Date.now() - t0) / 1000) };
-report.summary = { rendered: report.shots.filter((s) => s.source.startsWith('rendered')).length, black: report.shots.filter((s) => s.source === 'black').length, slates: report.shots.filter((s) => s.source === 'slate').length, voice_cues: cues.length };
+report.summary = { rendered: report.shots.filter((s) => s.source.startsWith('rendered')).length, black: report.shots.filter((s) => s.source === 'black').length, slates: report.shots.filter((s) => s.source === 'slate').length, voice_cues: cues.length, review_flags: report.shots.filter((s) => s.notes).length };
 fs.writeFileSync(path.join(HERE, 'cut-report.json'), JSON.stringify(report, null, 1) + '\n');
 if (!flag("--keep-work")) fs.rmSync(WORK, { recursive: true, force: true }); else console.log(`work kept: ${WORK}`);
+// the render's review flags (framing the solver could not hold, a speaking face that reads): look at these shots first
+for (const r of report.shots.filter((x) => x.notes)) for (const n of r.notes) console.log(`  review ${r.job}: ${n}`);
+if (report.summary.slates) console.log(`  ${report.summary.slates} shot(s) still slates: ${report.shots.filter((x) => x.source === 'slate').map((x) => x.job).join(' ')}`);
 console.log(`wrote ${rel(OUT)}: ${pr.frames} frames = ${(pr.frames / FPS).toFixed(2)} s, ${report.output.size_mb} MB (${report.summary.rendered} rendered, ${report.summary.black} black, ${report.summary.slates} slates, ${cues.length} voice cues) in ${report.output.assembled_s} s`);

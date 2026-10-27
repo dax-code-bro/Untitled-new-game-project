@@ -214,7 +214,10 @@ export default {
     },
     '1A-22': {
       staging: 'DOF + HANDS: her face far out of focus behind the sharp hatchling; the almost-touch is her hand.',
-      cam: { rig: 'static', frame: { subjects: [['hatchling.head', [0.42, -0.05]], ['abby.head', [-0.35, 0.25]]], from: 320, height: 0.62, at: 2.0 }, mm: 65, fstop: 2, focus: 'hatchling.eye', bounds: BOUNDS },
+      // low on the straw from the nest's north-east corner, along the hatchling to Abby beyond it (the
+      // first render solved from 320 put her face sharp and frontal on the far side: the solver could not
+      // hold the two heads at 65 mm, 0.68 screen units off); the broken shell edges in at lower left
+      cam: { rig: 'static', frame: { subjects: [['hatchling.head', [0.3, -0.3]], ['abby.head', [-0.15, 0.55]]], from: 22, height: 0.6, dist: 1.2, at: 2.0 }, mm: 50, fstop: 1.4, focus: 'hatchling.eye', bounds: BOUNDS },
       cast: {
         abby: { at: ABBY_C, face: 'hatchling', look: 'hatchling', acts: [[0.3, 'crouch', { dur: 0.9 }], [2.4, 'reach', { side: 'R', at: 'hatchling.head', offset: [-0.05, 0.08, 0.25], in: 0.6, hold: 0.7, out: 0.5 }], [3.6, 'look', { at: 'alexandria.head' }]] },
         hatchling: { at: HR, face: 242, acts: [[0, 'lie', { sprawl: 1, breathe: 0.6, look: [0, 0] }], [1.3, 'lie', { sprawl: 1, breathe: 0.6, look: [0.45, 0.12], blend: 0.8 }]] },

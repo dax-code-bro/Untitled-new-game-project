@@ -163,6 +163,17 @@ const fmt = (s) => (s >= 3600 ? `${(s / 3600).toFixed(1)} h` : s >= 60 ? `${(s /
 const t0all = Date.now();
 let framesDone = 0;
 
+// review flags: the stage's per-shot warnings ("[director] 1A-22: framing: ...", the speaking-face
+// audit) are kept with the shot (its .json sidecar `notes`), listed at the end of the run and carried
+// into the cut report by make-cut.mjs - a warning that only scrolled past in a log was missed once
+const notes = new Map();
+function noteFrom(args) {
+  const m = /\[director\] ([A-Z0-9]+-[0-9A-Z]+): (.+)$/.exec(args.map(String).join(' ').trim());
+  if (!m) return;
+  if (!notes.has(m[1])) notes.set(m[1], new Set());
+  notes.get(m[1]).add(m[2].trim());
+}
+
 async function renderShot(w, set, item) {
   const r = item.row;
   if (STILLS) {
@@ -202,7 +213,7 @@ async function renderShot(w, set, item) {
   const ms = Date.now() - t0;
   // steady state: from the first frame to the last (the first frame of a page also compiles shaders)
   const spf = order.length > 1 && tFirst ? (Date.now() - tFirst) / 1000 / (order.length - 1) : ms / 1000 / order.length;
-  fs.writeFileSync(path.join(work.shots, `${r.job}.json`), JSON.stringify({ job: r.job, set, frames: r.frames, pre, post, drawn: order.length, ...item.keys, s_per_frame: +spf.toFixed(3), wall_s: +(ms / 1000).toFixed(1), at: new Date().toISOString() }, null, 1) + '\n');
+  fs.writeFileSync(path.join(work.shots, `${r.job}.json`), JSON.stringify({ job: r.job, set, frames: r.frames, pre, post, drawn: order.length, ...item.keys, s_per_frame: +spf.toFixed(3), wall_s: +(ms / 1000).toFixed(1), at: new Date().toISOString(), notes: [...(notes.get(r.job) || [])] }, null, 1) + '\n');
   written.shots.add(r.job);
   timings.shots[r.job] = { draft_s_per_frame: +spf.toFixed(3), frames_drawn: order.length, cinematic: CINE, twos: TWOS, load: +os.loadavg()[0].toFixed(2), machine, measured_at: new Date().toISOString().slice(0, 16) };
   saveTimings();
@@ -219,7 +230,7 @@ for (const s of plan) {
   const loops = [];
   for (let i = 1; i <= n; i++) {
     loops.push((async () => {
-      const w = new RenderWorker({ id: i, server, sceneFile: s.scene, init: initCfg, log: (...a) => console.error('\n', ...a) });
+      const w = new RenderWorker({ id: i, server, sceneFile: s.scene, init: initCfg, log: (...a) => { console.error('\n', ...a); noteFrom(a); } });
       workers.add(w);
       const ts = Date.now();
       let tries = 0;
@@ -257,5 +268,9 @@ for (const s of plan) {
   }
 }
 await server.close();
+if (notes.size) {
+  console.log('\nreview flags (also in each shot\'s .json `notes`):');
+  for (const [job, set] of notes) for (const n of set) console.log(`  ${job}: ${n}`);
+}
 console.log(`\ndone in ${fmt((Date.now() - t0all) / 1000)}: ${framesDone} frames${failed ? `, ${failed} shot(s) FAILED` : ''}`);
 process.exit(failed ? 1 : 0);

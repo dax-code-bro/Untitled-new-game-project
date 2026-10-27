@@ -18,6 +18,8 @@ import { estimateShot } from '../cost.js';
 import { faceReadability } from '../audit.js';
 import { wingOutline, paintWingCloud } from '../sets/wing-cloud.js';
 import { fieldsVoronoi, landUse, hedgePlacements, FIELD_USE } from '../sets/farmland.js';
+import { solveFraming, suggestFrom } from '../framing.js';
+import * as THREE from 'three';
 import { makeNoise, smooth } from '../../sets/terrain.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -151,5 +153,22 @@ t('farmland: deterministic irregular fields of plausible size; hedges only on th
   assert.equal(h.count, h2.count);
   assert.ok(h.count > 200, `bushes ${h.count}`);
   for (const b of h.bushes.flat()) assert.ok(F(b.p[0], b.p[2]).edge <= 0.75 + 1e-9);
+});
+t('framing: two subjects land on their screen places; a side that cannot hold them gets a better suggestion', () => {
+  // the chamber's 1A-22 case: the hatchling's head low in front, Abby's (crouched) beyond it
+  const P = { h: [-0.1, 0.56, 0.26], a: [-0.5, 0.95, 1.72] };
+  const env = { point: (k) => new THREE.Vector3(...P[k]) };
+  const B = [[-3.35, 0.25, -2.85], [3.35, 5.2, 2.85]];
+  const good = { subjects: [['h', [0.3, -0.3]], ['a', [-0.15, 0.55]]], from: 22, height: 0.6, dist: 1.2 };
+  const r = solveFraming(good, 50, env, 0, 16 / 9, 24.89, B);
+  assert.ok(r.worst < 0.12, `held framing ${r.worst}`);
+  for (let k = 0; k < 3; k++) assert.ok(r.pos.getComponent(k) >= B[0][k] - 1e-3 && r.pos.getComponent(k) <= B[1][k] + 1e-3, 'inside the room');
+  assert.ok(r.pos.distanceTo(new THREE.Vector3(...P.h)) > 0.55, 'clear of the subject');
+  assert.deepEqual(solveFraming(good, 50, env, 0, 16 / 9, 24.89, B).pos.toArray(), r.pos.toArray(), 'deterministic');
+  // the first authored side (320) put them the wrong way round; the search finds a side that holds it
+  const bad = { subjects: [['h', [0.42, -0.05]], ['a', [-0.35, 0.25]]], from: 320, height: 0.62 };
+  const w0 = solveFraming(bad, 65, env, 0, 16 / 9, 24.89, B).worst;
+  const alt = suggestFrom(bad, 65, env, 0, B);
+  assert.ok(w0 > 0.5 && alt.worst < w0 * 0.3, `suggestion ${JSON.stringify(alt)} vs ${w0}`);
 });
 console.log(`\n${n} checks passed`);
