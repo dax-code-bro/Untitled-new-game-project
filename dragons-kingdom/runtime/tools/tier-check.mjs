@@ -149,7 +149,7 @@ export function parseCrops(spec) {
 }
 
 /** The knobs a one-knob A/B can switch (KNOB_DOCS names without the scene-library ones nothing renders differently for). */
-export const AB_KNOBS = KNOB_DOCS.map(([k]) => k).filter((k) => !['density', 'textureScale'].includes(k));
+export const AB_KNOBS = KNOB_DOCS.map(([k]) => k);
 
 async function main() {
   const { parseArgs, num } = await imp('render/lib/args.mjs');

@@ -34,7 +34,7 @@ test('(u0) tiers: presets, ctx.quality, cinematic knobs only go up, atlas, cost 
   assert.deepEqual(qualityFor(base, 'final'), base);
   assert.equal(tierOf({ quality: base }), 'final');
   const q = qualityFor(base, 'ultra');
-  assert.equal(q.tier, 'ultra'); assert.equal(q.fxTier, 'ultra'); assert.equal(q.ocean.gpuFFT, true); assert.equal(q.ocean.resolution, 512);
+  assert.equal(q.tier, 'ultra'); assert.equal(q.fxTier, 'ultra'); assert.equal(q.ocean.gpuFFT, true); assert.equal(q.ocean.resolution, 256, 'the same sea as final (512 changes its sheen)');
   assert.equal(density({ quality: q }, 'grass'), 1.5); assert.equal(density({ quality: base }, 'grass'), 1);
   // the cinematic knobs: final changes nothing; the others only raise
   const scene = { volumetrics: { enabled: true }, shadows: { cascades: 3 }, dof: { samples: 200 } };
@@ -106,6 +106,29 @@ test('(u0b) the episode renderer follows the GPU check only for a tier measured 
   assert.equal(nextTierToMeasure(bench, pa), 'max');
   assert.equal(planFromBench(bench, { ...pa, measuredOnly: true }).recommended, 'ultra');
   assert.equal(nextTierToMeasure(bench, { ...pa, finalSteadyS: 0.55 }), null);
+});
+
+test('(u0c) density is append-only: a tier adds grass tufts and shrubs after the ones final places, which never move', async () => {
+  const { grassField } = await import('../scenes/lib/sets/grass.js');
+  const { scatterPlants, landCover } = await import('../scenes/lib/nature/plants.js');
+  const inst = (g) => { const o = []; g.traverse((m) => { if (m.isInstancedMesh) o.push(Array.from(m.instanceMatrix.array)); }); return o; };
+  const count = (lists) => lists.reduce((s, a) => s + a.length / 16, 0);
+  const prefix = (a, b) => a.length === b.length && a.every((arr, k) => arr.every((v, i) => v === b[k][i]));
+  const place = (r) => (r() < 0.3 ? null : [r() * 10, 0, r() * 10]);
+  const g1 = inst(grassField({ count: 400, seed: 3, place })), g15 = inst(grassField({ count: 400, seed: 3, place, density: 1.5 }));
+  assert.equal(count(g1), 400); assert.equal(count(g15), 600);
+  assert.ok(prefix(g1, g15), 'grassField: the density-1 tufts moved');
+  const H = (x) => 10 + 0.01 * x;
+  const cover = landCover({ x: [0, 60], z: [0, 60], cell: 2, height: H });
+  const warn = console.warn; console.warn = () => {};
+  const run = (quality) => scatterPlants({ quality }, { cover, views: [[30, 12, 30]], height: H, region: { x: [0, 60], z: [0, 60] }, grass: { radius: 20, count: 2000 }, edge: (x) => 5 - x * 0.1 });
+  let A, B;
+  try { A = run({}); B = run(qualityFor({}, 'high')); } finally { console.warn = warn; }
+  const a = inst(A.group), b = inst(B.group);
+  assert.ok(prefix(a, b), 'scatterPlants: the final shrubs / tufts moved');
+  assert.ok(count(b) > count(a) * 1.3, `scatterPlants: ${count(a)} -> ${count(b)} instances`);
+  assert.equal(B.counts.thrift, A.counts.thrift, 'the main random stream changed (thrift)');
+  assert.ok(B.counts.bracken > A.counts.bracken);
 });
 
 test('(u1) every tier draws the same picture structure as final: finite buffers, no shader errors, the knobs applied', { timeout: 900000 }, async (t) => {

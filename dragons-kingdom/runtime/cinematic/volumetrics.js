@@ -85,13 +85,14 @@ export function makeCloudTexture(seed = 3) {
 // Atlas layout: slices stacked in columns of ROWS slices (one column = the original layout, kept
 // bit-identical; quality tiers above final use several columns for grids taller than the GPU's
 // texture limit: runtime/lib/quality.js froxelAtlas()). Slice s sits in column s / ROWS, row s % ROWS.
-function makeInjectMaterial(soft = false, noiseLod = false, tiles = null, softTaps = 16) {
+function makeInjectMaterial(soft = false, noiseLod = false, tiles = null, softTaps = 16, densGrid = false) {
   return raw(/* glsl */ `
 ${COMMON}
 ${THREE.ShaderChunk.packing}
 precision highp sampler3D;
 uniform vec3 uGrid;
 uniform vec2 uRange;                 // near, far (m)
+uniform vec3 uDensGrid;              // DK_VOL_DENS_GRID: the grid the density is sampled on
 uniform mat4 uInvViewProj;
 uniform vec3 uCamPos;
 uniform float uTime;
@@ -139,6 +140,32 @@ float shadowAt(sampler2D m, mat4 M, vec3 p) {
   return s.z - uShadowBias <= d ? 1.0 : 0.0;
 #endif
 }
+// density at p (height fog modulated by drifting noise, plus mist banks); dist / thick / fAngle:
+// the froxel the noise is filtered to (DK_VOL_NOISE_LOD)
+float dkDensity(vec3 p, float dist, float thick, float fAngle) {
+  vec3 np = p * uNoiseScale + uWind * uTime * uNoiseScale;
+#ifdef DK_VOL_NOISE_LOD
+  // noise filtered to the froxel's footprint (mip-mapped 3D noise): detail finer than a froxel
+  // (thin slices far away are ~100 m deep) is averaged instead of aliasing into blocks
+  float fpT = max(thick * 0.5, dist * fAngle) * uNoiseScale * 64.0;
+  float lod = log2(max(fpT, 1.0));
+  float n = textureLod(tNoise, np, lod).r * 0.7 + textureLod(tNoise, np * 2.93 + 0.31, lod + 1.55).r * 0.3;
+#else
+  float n = texture(tNoise, np).r * 0.7 + texture(tNoise, np * 2.93 + 0.31).r * 0.3;
+#endif
+  float sig = uDensity * exp(-uFalloff * clamp(p.y - uFogBase, -40.0, 400.0));
+  sig *= max(0.0, 1.0 - uNoiseAmount + 2.0 * uNoiseAmount * n);
+  for (int i = 0; i < ${MAX_BANKS}; i++) {
+    if (i >= uBankCount) break;
+    vec3 q = (p - uBankC[i].xyz) / uBankR[i].xyz;
+    float r = length(q);
+    if (r > 1.6) continue;
+    // soft, noise-eroded edge: wisps where the noise is high, gaps where it is low
+    float edge = clamp((1.0 - r) * 2.2 + (n - 0.5) * 2.0 * uBankR[i].w, 0.0, 1.0);
+    sig += uBankC[i].w * edge * edge * mix(1.0, 0.4 + 1.2 * n, uBankR[i].w);
+  }
+  return sig;
+}
 void main() {
   ivec2 ip = ivec2(gl_FragCoord.xy);
   int Y = int(uGrid.y);
@@ -159,27 +186,31 @@ void main() {
   float dist = 0.5 * (d0 + d1), thick = d1 - d0;
   vec3 p = uCamPos + dir * dist;
   // density: height fog modulated by drifting noise, plus mist banks
-  vec3 np = p * uNoiseScale + uWind * uTime * uNoiseScale;
-#ifdef DK_VOL_NOISE_LOD
-  // noise filtered to the froxel's footprint (mip-mapped 3D noise): detail finer than a froxel
-  // (thin slices far away are ~100 m deep) is averaged instead of aliasing into blocks
-  float fpT = max(thick * 0.5, dist * uFroxelAngle) * uNoiseScale * 64.0;
-  float lod = log2(max(fpT, 1.0));
-  float n = textureLod(tNoise, np, lod).r * 0.7 + textureLod(tNoise, np * 2.93 + 0.31, lod + 1.55).r * 0.3;
-#else
-  float n = texture(tNoise, np).r * 0.7 + texture(tNoise, np * 2.93 + 0.31).r * 0.3;
-#endif
-  float sig = uDensity * exp(-uFalloff * clamp(p.y - uFogBase, -40.0, 400.0));
-  sig *= max(0.0, 1.0 - uNoiseAmount + 2.0 * uNoiseAmount * n);
-  for (int i = 0; i < ${MAX_BANKS}; i++) {
-    if (i >= uBankCount) break;
-    vec3 q = (p - uBankC[i].xyz) / uBankR[i].xyz;
-    float r = length(q);
-    if (r > 1.6) continue;
-    // soft, noise-eroded edge: wisps where the noise is high, gaps where it is low
-    float edge = clamp((1.0 - r) * 2.2 + (n - 0.5) * 2.0 * uBankR[i].w, 0.0, 1.0);
-    sig += uBankC[i].w * edge * edge * mix(1.0, 0.4 + 1.2 * n, uBankR[i].w);
+#ifdef DK_VOL_DENS_GRID
+  // a quality tier's finer grid (runtime/lib/quality.js): the density is sampled exactly where the
+  // scene's own grid (uDensGrid, the reviewed final look) samples it - at its froxel centres - and
+  // interpolated trilinearly between them, so the mist keeps its shape (sampling the noise at the
+  // finer froxels' own centres reshapes every mist bank: measured on the lookdev coast); only the
+  // light (sun shadow map, cloud shadows, soft taps) is evaluated per finer froxel: sharper shafts
+  float sig = 0.0;
+  {
+    vec3 fg = vec3(uv * uDensGrid.xy - 0.5, uDensGrid.z * log(dist / uRange.x) / lr - 0.5);
+    vec3 f0 = floor(fg), fr = fg - f0;
+    float fAng = uFroxelAngle * uGrid.y / uDensGrid.y;
+    for (int c = 0; c < 8; c++) {
+      vec3 k = vec3(float(c & 1), float((c >> 1) & 1), float((c >> 2) & 1));
+      vec3 g = clamp(f0 + k, vec3(0.0), uDensGrid - 1.0);
+      vec3 wk = mix(1.0 - fr, fr, k);
+      vec4 wc = uInvViewProj * vec4(((g.xy + 0.5) / uDensGrid.xy) * 2.0 - 1.0, 1.0, 1.0);
+      vec3 dc = normalize(wc.xyz / wc.w - uCamPos);
+      float e0 = uRange.x * exp(lr * g.z / uDensGrid.z), e1 = uRange.x * exp(lr * (g.z + 1.0) / uDensGrid.z);
+      float dd = 0.5 * (e0 + e1);
+      sig += wk.x * wk.y * wk.z * dkDensity(uCamPos + dc * dd, dd, e1 - e0, fAng);
+    }
   }
+#else
+  float sig = dkDensity(p, dist, thick, uFroxelAngle);
+#endif
   if (sig <= 1e-7) { o = vec4(0.0, 0.0, 0.0, 1.0); return; }
   // light: the sun (shadow map + cloud shadows) and the sky
   float vis = 1.0;
@@ -201,7 +232,7 @@ void main() {
   vec3 S = sigS * Lin * (1.0 - T) / sig * uIntensity;
   o = vec4(S, T);
 }`, {
-    uGrid: { value: new THREE.Vector3(1, 1, 1) }, uRange: { value: new THREE.Vector2(0.5, 500) },
+    uGrid: { value: new THREE.Vector3(1, 1, 1) }, uRange: { value: new THREE.Vector2(0.5, 500) }, uDensGrid: { value: new THREE.Vector3(1, 1, 1) },
     uInvViewProj: { value: new THREE.Matrix4() }, uCamPos: { value: new THREE.Vector3() }, uTime: { value: 0 },
     uDensity: { value: 0 }, uFalloff: { value: 0.05 }, uFogBase: { value: 0 }, uNoiseScale: { value: 0.03 }, uNoiseAmount: { value: 0.5 },
     uWind: { value: new THREE.Vector3() }, uAlbedo: { value: new THREE.Vector3(0.95, 0.95, 0.95) }, uG: { value: 0.6 },
@@ -215,7 +246,7 @@ void main() {
     tCloud: { value: null }, uCloud: { value: new THREE.Vector4(0.5, 0.2, 0.8, 1500) }, uCloudXf: { value: new THREE.Vector4(0.001, 0, 0, 0) },
     tAmbient: { value: null }, uAmbient: { value: new THREE.Vector3(0.3, 0.35, 0.42) }, uAmbientFromSky: { value: 0 },
     uIntensity: { value: 1 },
-  }, { ...(soft ? { DK_VOL_SOFT: 1, DK_VOL_SOFT_TAPS: softTaps } : {}), ...(noiseLod ? { DK_VOL_NOISE_LOD: 1 } : {}), ...(tiles ? { DK_VOL_TILED: 1, DK_VOL_ROWS: tiles.rows } : {}) });
+  }, { ...(soft ? { DK_VOL_SOFT: 1, DK_VOL_SOFT_TAPS: softTaps } : {}), ...(noiseLod ? { DK_VOL_NOISE_LOD: 1 } : {}), ...(tiles ? { DK_VOL_TILED: 1, DK_VOL_ROWS: tiles.rows } : {}), ...(densGrid ? { DK_VOL_DENS_GRID: 1 } : {}) });
 }
 
 function makeScanMaterial(tiles = null) {
@@ -262,7 +293,11 @@ export class Volumetrics {
     this.noise = makeNoise3D();
     if (this.c.noiseFilter) { this.noise.generateMipmaps = true; this.noise.minFilter = THREE.LinearMipmapLinearFilter; this.noise.needsUpdate = true; }
     this.cloudTex = cloudTex;
-    this.pass = { inject: this.h.makePass(makeInjectMaterial((this.c.shadowSoftness || 0) > 0, !!this.c.noiseFilter, this.tiles, Math.max(1, this.c.softTaps | 0 || 16))), scan: this.h.makePass(makeScanMaterial(this.tiles)) };
+    // densityGrid [X, Y, Z] (set by a quality tier that refines the grid): the density is sampled on
+    // that grid (the scene's own) and interpolated, the light on the finer one - same mist, finer shafts
+    const dg = this.c.densityGrid;
+    this.densGrid = Array.isArray(dg) && dg.length === 3 && (dg[0] !== X || dg[1] !== Y || dg[2] !== Z) ? dg.map(Number) : null;
+    this.pass = { inject: this.h.makePass(makeInjectMaterial((this.c.shadowSoftness || 0) > 0, !!this.c.noiseFilter, this.tiles, Math.max(1, this.c.softTaps | 0 || 16), !!this.densGrid)), scan: this.h.makePass(makeScanMaterial(this.tiles)) };
     return this;
   }
 
@@ -271,6 +306,7 @@ export class Volumetrics {
     const c = this.c, cam = this.h.camera, [X, Y, Z] = this.grid;
     const u = this.pass.inject.material.uniforms;
     u.uGrid.value.set(X, Y, Z);
+    if (this.densGrid) u.uDensGrid.value.fromArray(this.densGrid);
     u.uRange.value.set(c.near, c.range);
     u.uFroxelAngle.value = (cam.isPerspectiveCamera ? THREE.MathUtils.degToRad(cam.fov) : 1) / Y;
     cam.updateMatrixWorld();

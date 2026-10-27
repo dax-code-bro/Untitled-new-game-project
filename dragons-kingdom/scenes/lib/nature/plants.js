@@ -244,6 +244,8 @@ function shrubGeos(kind, lod) {
 /**
  * opts: cover (landCover), views [[x,y,z]], height(x, z), slope(x, z) -> normal y, region { x, z },
  * exclude(x, z) -> true (paths, buildings), density (1), grass { radius, count } | false,
+ * (the quality tiers' ctx.quality.density.vegetation / .grass add shrubs and tufts AFTER the ones
+ * density 1 gives: append-only, the reviewed plants never move),
  * edge(x, z) -> metres inland of the cliff edge (thrift), maxDistance (m).
  */
 export function scatterPlants(ctx, opts) {
@@ -268,10 +270,10 @@ export function scatterPlants(ctx, opts) {
     { kind: 'bracken', ch: 2, spacing: 1.4, size: [1.2, 2.8], hgt: [0.55, 1.0], lo: 0.22, hi: 0.55 },
     { kind: 'scrub', ch: 3, spacing: 2.6, size: [2.2, 5.5], hgt: [0.9, 2.4], lo: 0.25, hi: 0.6 },
   ];
-  for (const K of kinds) {
+  // one pass of a kind over a jittered grid (spacing `base`, offset `off`), drawing from `rng`
+  const scatterKind = (K, base, off, rng) => {
     let n = 0;
-    const base = K.spacing / Math.sqrt(dens);
-    for (let z = z0; z < z1; z += base) for (let x = x0; x < x1; x += base) {
+    for (let z = z0 + off; z < z1; z += base) for (let x = x0 + off; x < x1; x += base) {
       const jx = x + (rng() - 0.5) * base * 1.2, jz = z + (rng() - 0.5) * base * 1.2;
       const c = cover.sample(jx, jz)[K.ch];
       // inside a colony nearly every cell is filled; toward its edge the bushes thin and shrink over
@@ -302,7 +304,20 @@ export function scatterPlants(ctx, opts) {
       push(K.kind, lod, Math.floor(rng() * 4), m4.clone());
       n++;
     }
-    counts[K.kind] = n;
+    return n;
+  };
+  for (const K of kinds) counts[K.kind] = scatterKind(K, K.spacing / Math.sqrt(dens), 0, rng);
+  // quality tiers above final (ctx.quality.density.vegetation > 1, runtime/lib/quality.js): extra
+  // shrubs APPENDED after the reviewed ones - their own random stream on a shifted grid, after every
+  // draw of the main stream (the thrift below sees the same numbers) - so each shrub density 1
+  // places stays exactly where it was (same instance lists, same order) and a tier only fills in
+  const vegK = Number(ctx?.quality?.density?.vegetation);
+  if (Number.isFinite(vegK) && vegK > 1) {
+    const extra = mulberry(((opts.seed ?? 99) * 7919 + 0x5bd1e995) >>> 0);
+    for (const K of kinds) {
+      const base = K.spacing / Math.sqrt(dens * (vegK - 1));
+      counts[K.kind] += scatterKind(K, base, base * 0.5, extra);
+    }
   }
   for (const [key, list] of lists) {
     const [kind, lod, v] = key.split('|');
@@ -353,7 +368,7 @@ export function scatterPlants(ctx, opts) {
       // near the lens each cushion is a dense tuft of fine grass-like leaves (the set library's
       // blades, 4-9 cm), the smooth cushion only its core
       if (tuft.length) {
-        group.add(grassField({ count: Math.min(60000, tuft.length * 140), seed: 17, height: [0.04, 0.09], place: (rr) => {
+        group.add(grassField({ count: Math.min(60000, tuft.length * 140), seed: 17, height: [0.04, 0.09], density: ctx?.quality?.density?.grass, place: (rr) => {
           const [tx, ty, tz, tw] = tuft[Math.floor(rr() * tuft.length)];
           const a = rr() * Math.PI * 2, rd = tw * 0.45 * Math.sqrt(rr());
           return [tx + Math.cos(a) * rd, ty + 0.02 + tw * 0.25 * (1 - rd / (tw * 0.45)), tz + Math.sin(a) * rd];
@@ -367,7 +382,7 @@ export function scatterPlants(ctx, opts) {
     const R = G.radius ?? 70, count = G.count ?? 60000;
     const v0 = views[G.view ?? 0];
     const grass = grassField({
-      count, seed: 5, height: G.height || [0.08, 0.28],
+      count, seed: 5, height: G.height || [0.08, 0.28], density: ctx?.quality?.density?.grass,
       place: (rr) => {
         const a = rr() * Math.PI * 2, d = R * Math.sqrt(rr());
         const x = v0.x + Math.cos(a) * d, z = v0.z + Math.sin(a) * d;

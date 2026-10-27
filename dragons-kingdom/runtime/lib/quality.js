@@ -4,8 +4,13 @@
 // TIER decides how much work goes into every pixel of it. The masters are rendered with the
 // `final` preset on Daxtyn's PC (an NVIDIA RTX 4090), which can afford far more work per pixel
 // than the CPU cloud machine the shots are made and reviewed on. The higher tiers turn every
-// knob up where a GPU can afford it - and only there: they never change WHAT is in the picture
-// (camera, lens, light, grade, grain, look), only how finely it is sampled. A tier is opt-in:
+// knob up where a GPU can afford it - and only there. They keep the camera, lens, light, grade and
+// grain, and most knobs only sample the same picture more finely, but not all of them leave the look
+// untouched: screen-space reflections show the scene in wet and glossy surfaces, density adds grass
+// tufts and shrubs between the reviewed ones, the sub-frame tiers replace the velocity motion blur
+// with real sub-frames (curved streaks, real sun penumbrae), finer froxels sharpen light shafts. Each
+// is checked against final per knob (runtime/tools/tier-check.mjs --knobs all --crops ...: 192x108
+// structure + 1:1 crops). A tier is opt-in:
 //
 //   node render/render.mjs <scene> --preset final-ultra        (native 4K, ultra tier)
 //   openSession({ ..., quality: { tier: 'ultra' } })            (any size: tests, previews)
@@ -25,10 +30,17 @@
 // What scenes / libraries can read (ctx.quality, set before setup()):
 //   ctx.quality.tier             'high' | 'ultra' | 'max' (undefined at final: use tierOf(ctx))
 //   ctx.quality.fxTier           the FX library's tier (scenes/lib/fx/core/tier.js): 'ultra' above final
-//   ctx.quality.density          { grass, vegetation, crowd, particles }: multipliers for instance
-//                                counts (1 at final) - use density(ctx, 'grass') below
-//   ctx.quality.textureScale     multiplier for procedurally generated texture sizes (1 at final)
-//   ctx.quality.ocean            defaults dk/ocean.js uses (resolution, ssr, ssrSteps; a scene's own options win)
+//   ctx.quality.density          { grass, vegetation, crowd }: instance-count multipliers (absent at
+//                                final = 1) - density(ctx, 'grass') below. APPEND-ONLY contract: a
+//                                library that reads them adds its extra instances AFTER the ones
+//                                density 1 gives (own random stream, same order), so the reviewed
+//                                instances never move and a tier only fills in between. Read by:
+//                                grass - scenes/lib/sets/grass.js grassField({ density }) and
+//                                scenes/lib/nature/plants.js scatterPlants (its grass and thrift
+//                                tufts); vegetation - scatterPlants' shrubs; crowd - no crowd
+//                                library reads it yet (a crowd that does must append extras behind
+//                                the authored ones). Particles are the FX library's own tier (fxTier).
+//   ctx.quality.ocean            defaults dk/ocean.js uses (resolution, ssr, ssrSteps, gpuFFT; a scene's own options win)
 //   ctx.quality.anisotropy       anisotropic filtering applied to every mip-mapped texture after setup (0 = leave)
 
 export const TIER_NAMES = ['final', 'high', 'ultra8', 'ultra', 'max'];
@@ -50,8 +62,7 @@ const FINAL = {
   anisotropy: 0,                // 0: textures keep what the scene set
   ocean: { resolution: 256, ssr: false, ssrSteps: 24, gpuFFT: false },
   ssr: { enabled: false, steps: 0, maxRoughness: 0, thickness: 0 },
-  density: { grass: 1, vegetation: 1, crowd: 1, particles: 1 },
-  textureScale: 1,
+  density: { grass: 1, vegetation: 1, crowd: 1 },
   fxTier: null,                 // the FX library chooses (final on a GPU)
 };
 
@@ -63,16 +74,22 @@ const HIGH = {
   cascadeMapSize: 4096,
   ao: { resolution: 1, slices: 4, steps: 10, contactSteps: 24 },
   dofSamples: 128,
-  volumetrics: { scale: [2, 2, 1.5], softTaps: 32 },
+  // x2 across the screen, the scene's own depth slices: finer depth slices move how much of a mist bank
+  // lies in front of a surface (lookdev coast mist crop 39.7 dB at x1 x1 x1.5 vs 43.6 dB at x2 x2 x1)
+  volumetrics: { scale: [2, 2, 1], softTaps: 32 },
   ibl: 'exact',
   anisotropy: 16,
   // no screen-space reflections IN the sea at any tier (as at final): the fixed-step march hatches beside a
   // reflected object (a steel ball over the FFT sea, review 2026-10-27) and the Hi-Z variant
-  // (cinematic.ssr.sea, experimental) returned sea-bed colours there - runtime/PROGRESS.md
-  ocean: { resolution: 512, ssr: false, ssrSteps: 48, gpuFFT: true },
+  // (cinematic.ssr.sea, experimental) returned sea-bed colours there - runtime/PROGRESS.md.
+  // The same 256 x 256 sea as final, its FFTs on the GPU (every sub-frame, no CPU FFT per update()).
+  // NOT 512: its finer ripples (11-21 cm) carry as much slope again as the 256 sea's waves, and that
+  // changes the sheen of the whole sea (lookdev coast, ocean knob alone: structure SSIM 0.825, sea
+  // crop 18 dB - with or without the new ripples drawn: the unresolved-slope roughness moves too).
+  // A scene that wants them asks for createOcean({ resolution: 512 }) itself.
+  ocean: { resolution: 256, ssr: false, ssrSteps: 48, gpuFFT: true },
   ssr: { enabled: true, steps: 96, maxRoughness: 0.4, thickness: 0.35 },
-  density: { grass: 1.5, vegetation: 1.3, crowd: 1.25, particles: 2.5 },
-  textureScale: 2,
+  density: { grass: 1.5, vegetation: 1.3, crowd: 1.25 },
   fxTier: 'ultra',
 };
 
@@ -84,9 +101,8 @@ export const TIERS = {
   max: {
     ...HIGH, name: 'max', label: 'max - high + 32 sub-frames, densest settings', subframes: 32, motionBlurSamples: 64,
     ao: { resolution: 1, slices: 6, steps: 12, contactSteps: 24 }, dofSamples: 192,
-    volumetrics: { scale: [2, 2, 2], softTaps: 32 },
     ssr: { enabled: true, steps: 128, maxRoughness: 0.45, thickness: 0.35 },
-    density: { grass: 2, vegetation: 1.6, crowd: 1.5, particles: 2.5 },
+    density: { grass: 2, vegetation: 1.6, crowd: 1.5 },
   },
 };
 
@@ -100,13 +116,12 @@ export const KNOB_DOCS = [
   ['cascadeMapSize', 'Sun shadow cascades (scenes with shadows.cascades) at 4096x4096 each instead of 2048: half the texel size, so thin casters (rigging, spears, grass, fingers) keep their shadows and edges stop stepping.', 'shadow pass ~x4 texels per cascade'],
   ['ao', 'GTAO + contact shadows at full resolution instead of half, with more slices / steps / contact-ray steps: no blocky occlusion in creases (scales, cloth folds, masonry joints) at 4K and contact shadows that reach thin objects.', 'GTAO pass ~x4 pixels x ~2.2 taps'],
   ['dofSamples', 'Depth-of-field gather taps at the largest blur: smoother bokeh discs and out-of-focus foregrounds without grain.', 'DOF gather ~x2.7 (only where something is out of focus)'],
-  ['volumetrics', 'Froxel fog grid x2 across the screen (12-pixel froxels at 4K instead of 24) and x1.5 in depth (stored as a tiled atlas when it is taller than the GPU texture limit), 32-tap soft shadow lookups where the scene asked for soft shafts: sharper light shafts through trees, colonnades and wings, finer fog edges. (The mip-filtered noise switch stays the scene\'s choice: it turns distant mist wisps into flat haze.)', 'fog inject ~x6 froxels'],
+  ['volumetrics', 'Froxel fog grid x2 across the screen (12-pixel froxels at 4K instead of 24; the same depth slices; stored as a tiled atlas when it is taller than the GPU texture limit), 32-tap soft shadow lookups where the scene asked for soft shafts: sharper light shafts through trees, colonnades and wings. The mist keeps its shape: its density (noise, banks, height fog) is still sampled at the scene\'s own froxel centres and interpolated, only the light is evaluated per finer froxel (sampling the noise on the finer grid reshaped every mist bank; finer depth slices moved how much of a bank lies in front of the cliffs). (The mip-filtered noise switch stays the scene\'s choice: it turns distant mist wisps into flat haze.)', 'fog inject x4 froxels x 8 density taps'],
   ['ibl', "Image-based lighting from three's exact PMREM lookups instead of the baked spherical harmonics + equirect (the CPU shortcut): glossy reflections exactly as three.js intends.", 'two env lookups per lit pixel'],
   ['anisotropy', 'Anisotropic texture filtering x16 on every mip-mapped texture: ground, roads, roofs and water stay sharp at grazing angles instead of blurring.', 'texture taps on grazing surfaces'],
-  ['ocean', 'FFT ocean: 512x512 per cascade (finest ripples 11 cm instead of 21 cm, the 256 sea\'s waves unchanged) computed on the GPU every sub-frame; heightAt() (buoyancy) reads back only the 4 texels around each asked point. No screen-space reflections in the water (as at final: not clean yet).', 'FFT passes (3 x 20 small passes per sub-frame)'],
+  ['ocean', 'FFT ocean computed on the GPU, every sub-frame (the same 256x256 sea as final, so the sub-frame tiers do not run N + 2 CPU FFTs per frame); heightAt() (buoyancy) reads back only the 4 texels around each asked point. Not 512: its finer ripples change the sheen of the whole sea (a scene can ask for createOcean({ resolution: 512 }) itself). No screen-space reflections in the water (as at final: not clean yet).', 'FFT passes (3 x 16 small passes per sub-frame)'],
   ['ssr', 'Screen-space reflections on wet and glossy surfaces (puddles, wet cobbles and stone, polished metal, glazed windows, wet scales): the real scene is reflected instead of only the sky map, traced exactly through a min-depth pyramid (Hi-Z, 96 iterations: no stepping noise), blurred by roughness from a mip-mapped colour copy; fades at the screen edges and where the ray passes behind an object.', 'reflective objects drawn twice + Hi-Z build + trace'],
-  ['density', 'Instance-count multipliers libraries read through density(ctx, kind): grass tufts, shrubs/vegetation, crowd extras, particles (smoke, dust, sparks, spray; the FX library renormalises opacity so a cloud keeps its density).', 'proportional to the instances'],
-  ['textureScale', 'Size multiplier for procedurally generated textures (libraries read it): finer detail in close-ups.', 'texture memory x4'],
+  ['density', 'More grass tufts (x1.5; scenes/lib/sets/grass.js grassField and the nature library\'s scatterPlants) and shrubs (x1.3; scatterPlants), APPENDED after the ones final places: every reviewed tuft and shrub stays exactly where it was, the tier only fills in between (a denser lawn / heath - it changes what is in the picture, a little). Sets that call grassField without passing density (the director\'s verdor-grounds) are not affected yet. crowd: a contract only - no crowd library reads it yet.', 'proportional to the instances'],
   ['fxTier', "The FX library's tier (scenes/lib/fx/core/tier.js): 'ultra' = 2.5x particles, finer smoke/fire grids, more ray-march steps, finer cloth and fracture, 48-step SSR in wet decals, 2048 decals.", 'FX passes ~x2-3'],
 ];
 
@@ -158,7 +173,6 @@ export function qualityFor(base, name) {
   q.fxTier = q.fxTier ?? k('fxTier').fxTier ?? undefined;
   if (q.fxTier === undefined) delete q.fxTier;
   q.density = { ...k('density').density, ...(base.density || {}) };
-  q.textureScale = base.textureScale ?? k('textureScale').textureScale;
   q.anisotropy = base.anisotropy ?? k('anisotropy').anisotropy;
   q.ocean = { ...k('ocean').ocean, ...(base.ocean || {}) };
   q.ssr = { ...k('ssr').ssr, ...(base.ssr || {}) };
@@ -174,7 +188,7 @@ export function knobOn(quality, knob) {
 /** The tier this render runs at ('final' when none was asked for). */
 export function tierOf(ctx) { return ctx?.quality?.tier && TIERS[ctx.quality.tier] ? ctx.quality.tier : 'final'; }
 
-/** Instance-count multiplier for a kind of thing ('grass' | 'vegetation' | 'crowd' | 'particles'); 1 at final. */
+/** Instance-count multiplier for a kind of thing ('grass' | 'vegetation' | 'crowd'); 1 at final. Append-only (see the header). */
 export function density(ctx, kind) {
   const k = Number(ctx?.quality?.density?.[kind]);
   return Number.isFinite(k) && k > 0 ? k : 1;
@@ -250,8 +264,13 @@ export function applyTierToCinematic(c, name, opts = {}) {
     while ((r[0] * r[1] * r[2] > 6e6 || !froxelAtlas(r, maxTex)) && r[2] > v.resolution[2]) r = [r[0], r[1], r[2] - 8];
     while ((r[0] * r[1] * r[2] > 6e6 || !froxelAtlas(r, maxTex)) && r[0] > v.resolution[0]) r = [Math.round(r[0] * 0.9), Math.round(r[1] * 0.9), r[2]];
     v.resolution = r;
-    // (noiseFilter stays the scene's choice: filtering the density noise to the froxel footprint
-    // averages distant mist-bank wisps into flat haze - a different look, measured on the lookdev coast)
+    // the mist keeps its shape: the density (noise, banks, height fog) is still sampled at the
+    // scene's own froxel centres and interpolated (volumetrics.js DK_VOL_DENS_GRID); only the light
+    // (sun shadow map, cloud shadows, soft taps) is evaluated on the finer grid. Sampling the noise
+    // at the finer froxels themselves reshaped every mist bank (lookdev coast, mist crop 35 dB at
+    // x2 x2 x1.5 and at x1 x1 x1.5 alike), and filtering it to the froxel footprint (noiseFilter,
+    // the scene's choice) averages the wisps into flat haze.
+    if (r[0] !== from[0] || r[1] !== from[1] || r[2] !== from[2]) v.densityGrid = from;
     v.softTaps = Math.max(v.softTaps ?? 16, t.volumetrics.softTaps);
     note('volumetrics', { resolution: from }, { resolution: r, ...(v.shadowSoftness > 0 ? { softTaps: v.softTaps } : {}) });
   }
@@ -313,7 +332,9 @@ export function frameWork(frame, name) {
   const fog = frame.fogOn ? (() => {
     const g = frame.fogFroxels || [160, 90, 64], s = t.volumetrics.scale;
     const n = g[0] * s[0] * g[1] * s[1] * g[2] * s[2];
-    return n * (20 + (frame.fogSoft ? t.volumetrics.softTaps : 1)) + n * Math.log2(g[2] * s[2]) * 2 + px * 4;
+    // a refined grid samples the density at the 8 surrounding froxels of the scene's own grid (~6 units each)
+    const densTaps = s[0] !== 1 || s[1] !== 1 || s[2] !== 1 ? 8 : 1;
+    return n * (20 + 6 * (densTaps - 1) + (frame.fogSoft ? t.volumetrics.softTaps : 1)) + n * Math.log2(g[2] * s[2]) * 2 + px * 4;
   })() : 0;
   const ocean = frame.oceanOn ? px * (frame.oceanCoverage ?? 0.4) * (40 + (t.ocean.ssr ? t.ocean.ssrSteps * 1.3 : 0))
     + (t.ocean.gpuFFT ? 3 * t.ocean.resolution ** 2 * (2 + 2 * Math.log2(t.ocean.resolution)) * 4 : 0) : 0;

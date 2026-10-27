@@ -87,7 +87,11 @@ ${GLSL_NOISE}`)
 
 /**
  * opts: count, place(rng, i) -> [x, y, z] | null, height [min, max] (m), width scale, seed,
- * tufts (number of distinct tuft shapes, default 4), material.
+ * tufts (number of distinct tuft shapes, default 4), material,
+ * density (default 1): the quality tiers' grass multiplier (pass ctx.quality.density.grass, or
+ * density(ctx, 'grass') from dk/quality.js). APPEND-ONLY: the first `count` tufts are exactly the
+ * ones density 1 gives (same random stream, same order in every instance list); the extra tufts
+ * come after them, so a higher tier only adds grass between the reviewed tufts.
  * Returns a Group of InstancedMeshes.
  */
 export function grassField(opts) {
@@ -99,7 +103,9 @@ export function grassField(opts) {
   const rng = () => { a = (Math.imul(a, 1664525) + 1013904223) >>> 0; return a / 4294967296; };
   const lists = Array.from({ length: shapes }, () => []);
   const [h0, h1] = opts.height || [0.12, 0.35];
-  for (let i = 0, n = 0; i < opts.count * 4 && n < opts.count; i++) {
+  const dens = Number(opts.density);
+  const count = Number.isFinite(dens) && dens > 1 ? Math.round(opts.count * dens) : opts.count;
+  for (let i = 0, n = 0; i < count * 4 && n < count; i++) {
     const p = opts.place(rng, i);
     if (!p) continue;
     const h = h0 + (h1 - h0) * Math.pow(rng(), 1.5);

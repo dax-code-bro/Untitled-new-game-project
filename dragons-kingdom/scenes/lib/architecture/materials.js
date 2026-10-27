@@ -1231,6 +1231,13 @@ export async function archMaterials(ctx, opts = {}) {
     M.jet.userData.noShadow = true;
     M.glass.userData.noShadow = true;
     M.portal.userData.noShadow = true;
+    // quality tiers above final (runtime/cinematic/ssr.js; nothing changes at final): screen-space
+    // reflections on the wet surfaces whose roughness comes from the shader code above (the
+    // materials' own roughness is 1, so the tracer cannot find them by itself) - puddles and basin
+    // water, the quay's wet tide band and its joints, harbour stone below the tide, and the setts of
+    // a square (reflecting only where the shader makes them wet enough: the tracer fades out above
+    // ssr.maxRoughness, dry stone gets nothing)
+    for (const k of ['puddle', 'pool', 'stoneQuay', 'mortarQuay', 'stoneWet', 'stoneSett']) if (M[k]) M[k].userData.dkSSR = true;
     return M;
   })();
   cache.set(key, p);

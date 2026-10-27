@@ -97,6 +97,8 @@ export const CINEMATIC_DEFAULTS = {
     noiseFilter: false,             // true: mip-mapped density noise, filtered to each froxel's size (no blocky aliasing in distant banks)
     shadowSoftness: 0,              // metres: > 0 = soft 16-tap shadow lookup in the fog (smooth shafts from thin casters; 0 = one tap)
     softTaps: 16,                   // taps of that soft lookup (quality tiers above final: 32)
+    densityGrid: null,              // [X, Y, Z] (set by the quality tiers that refine `resolution`): sample the density on this grid
+                                    // (the scene's own) and interpolate it, light per finer froxel - the mist keeps its shape
     cloudShadows: null,             // { coverage: 0.5, scale: 0.0012, altitude: 1500, speed: [8, 0], softness: 0.25, surfaces: true }
     ambient: null,                  // ambient (sky) radiance for in-scattering; default: from the sky or [0.3,0.35,0.42]*sun
     intensity: 1.0,
