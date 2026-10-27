@@ -272,7 +272,17 @@ for (const s of plan) {
           if (lock === false) { console.log(`  [w${i}] ${item.row.job}: being rendered by another process, skipped`); continue; }
           try { await renderShot(w, s.set, item); tries = 0; } catch (e) {
             console.error(`\n  [w${i}] ${item.row.job} FAILED: ${e.message.split('\n')[0]}`);
-            if (w.dead && tries++ < 2) { release(item.row.job); queue.unshift(item); console.error(`  [w${i}] restarting the browser`); await w.restart(); } else failed++;
+            if (w.dead && tries++ < 3) {
+              // a renderer killed for memory (other renders on the machine) often dies again while the
+              // set rebuilds: wait for the memory to come back, then retry (1, 2, 4 min)
+              release(item.row.job); queue.unshift(item);
+              for (let k = 0; ; k++) {
+                const wait = 60 * 2 ** Math.min(k, 2);
+                console.error(`  [w${i}] restarting the browser in ${wait} s`);
+                await new Promise((r) => setTimeout(r, wait * 1000));
+                try { await w.restart(); break; } catch (e2) { if (k >= 3 || stopping) throw e2; console.error(`  [w${i}] restart failed: ${e2.message.split('\n')[0]}`); }
+              }
+            } else failed++;
           } finally { release(item.row.job); }
         }
       } catch (e) { console.error(`\n  [w${i}] ${s.set}: ${e.message}`); failed += queue.length; queue.length = 0; } finally { await w.close(); workers.delete(w); }

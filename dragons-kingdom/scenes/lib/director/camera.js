@@ -153,7 +153,9 @@ export function evalCamera(spec, t, u, ctx, env, shotSeconds = 1) {
         if (f2.worst < fr.worst) { fr = f2; fr.mm = mm; }
         if (f2.worst <= tol) break;
       }
-      if (fr.mm && env.warnOnce) env.warnOnce(`framing: ${mm0} mm cannot hold the framing here; a ${fr.mm} mm lens does (worst subject ${fr.worst.toFixed(2)} screen units off)`);
+      // the wider lens also loses depth of field: background blur scales ~ (focal length)^2 at the same
+      // f-stop and subject size - a DOF-staged shot (soft faces behind) can come out sharp (1A-24)
+      if (fr.mm && env.warnOnce) env.warnOnce(`framing: ${mm0} mm cannot hold the framing here; a ${fr.mm} mm lens does (worst subject ${fr.worst.toFixed(2)} screen units off; background blur ~${Math.round(100 * (fr.mm / mm0) ** 2)} % of the ${mm0} mm look)`);
     }
     s.mm = fr.mm ?? s.mm;
     pos = fr.pos; look = fr.look;

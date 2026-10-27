@@ -23,6 +23,17 @@ How it works: `README.md` in this folder. Latest state first.
   - 1A-06/07/08 macros: the shell movement (shift, flex, the fragment lifting away) is too subtle to
     read at draft; the props egg's zigzag crack lines read as drawn. Kept for the draft.
   - P-14 low-cloud sky is a flat gradient card; P-17 grass flat from above. Kept for the draft.
+- 03:56: both of my renders died for memory (`page crashed: renderer process died`) while I ran
+  extra still tests next to them and the other tracks' renders (15.7 GB machine, 6+ browsers): the
+  chamber process gave up its whole queue after one failed restart. render-shots now waits and retries
+  a crashed browser (1, 2, 4 min backoff) instead of failing the set; do not run still tests beside two
+  queues here.
+- X2-13 restaged (her head was INSIDE Leaf's long snout: `nearTo` 0.95 m from the skull, the snout
+  reaches ~0.75 m past the eye; now 1.35 m, she leans her forehead to the snout's tip, from the south-
+  east past her, his eye sharp); X1-03's focus pulls from her head to the door (the bun read as a
+  painted disc at that size).
+- Planted feet wired in (`legs: 'planted'`): on for the walkers of the not-yet-rendered chamber shots
+  (1A-31, 1A-32, X2-01, X2-03, X2-16); the rendered walkers keep the built-in gait.
 - Engine: the framing solver is now a pure module (`framing.js`, self-tested); a failed framing warning
   names the camera side that would hold it (`suggestFrom`); the stage's per-shot warnings are kept as
   review flags in each shot's sidecar (`notes`) and in `cut/cut-report.json` (they had only scrolled
