@@ -33,7 +33,7 @@ import { mulberry } from '../../nature/noise.js';
 import { filmFinish } from '../../../lookdev/finish.js';
 import { keyed, clamp } from '../timeline.js';
 import { paintWingCloud } from './wing-cloud.js';
-import { paintCloudDeck, paintCloudDetail } from './cloud-deck.js';
+import { cloudDeckMeshes } from './cloud-deck-mesh.js';
 import { fieldsVoronoi, FIELD_USE, landUse, hedgePlacements } from './farmland.js';
 
 export function cinematic() {
@@ -458,57 +458,15 @@ export async function build(ctx, { shotSpecs }) {
   // horizontal card at the cloud base, foreshortened by the lens toward the horizon; it writes depth so
   // the haze and fog take its own distance. `veil`: an opaque paler layer above it (gaps show overcast,
   // not clear sky). `paint`: options for paintCloudDeck (cover, cell sizes, shades)
-  const paintTex = (n, fn) => {
-    const cv = document.createElement('canvas'); cv.width = cv.height = n;
-    const c2 = cv.getContext('2d'), img = c2.createImageData(n, n);
-    fn(img); c2.putImageData(img, 0, 0);
-    const t = new THREE.CanvasTexture(cv);
-    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.anisotropy = 8;
-    return t;
-  };
   const optional = [];
   for (const loc of used) {
     if (!LOOKS[loc]?.deck) continue;
     const g = locs[loc] || group(loc);
     for (const D of [].concat(LOOKS[loc].deck)) {
-      const map = paintTex(draft ? 512 : 1024, (img) => paintCloudDeck(img, D.paint)); map.colorSpace = THREE.SRGBColorSpace;
-      map.repeat.set(D.size / D.tile, D.size / D.tile);
-      const detail = paintTex(256, (img) => paintCloudDetail(img, D.paint)); detail.repeat.set(D.size / D.detail, D.size / D.detail);
-      // `glow` (a low sun lights the deck's sun side warm, the far side cool: vertex colour by the
-      // heading from the location's home) and `edgeFade` (alpha to 0 over the outer fraction of the
-      // card: a high deck's edge would show above the horizon) need a subdivided card
-      const shaded = !!(D.glow || D.edgeFade);
-      const deck = new THREE.Mesh(new THREE.PlaneGeometry(D.size, D.size, shaded ? 48 : 1, shaded ? 48 : 1),
-        new THREE.MeshBasicMaterial({ map, alphaMap: detail, transparent: true, opacity: D.opacity ?? 1, depthWrite: true, side: THREE.DoubleSide, color: new THREE.Color(...D.color), fog: false, vertexColors: shaded }));
-      deck.rotation.order = 'YXZ'; deck.rotation.set(Math.PI / 2, D.yaw * D2R, 0);
-      deck.position.set(D.center[0], D.y, D.center[1]);
-      deck.name = `cloudDeck:${loc}`;
-      if (shaded) {
-        deck.updateMatrixWorld(true);
-        const P = deck.geometry.attributes.position, col = new Float32Array(P.count * 4), v = new THREE.Vector3();
-        const G = D.glow, home = D.home || [0, 0], half = D.size / 2;
-        for (let i = 0; i < P.count; i++) {
-          const r = Math.max(Math.abs(P.getX(i)), Math.abs(P.getY(i))) / half;
-          v.fromBufferAttribute(P, i).applyMatrix4(deck.matrixWorld);
-          let c = [1, 1, 1];
-          if (G) {
-            const da = Math.cos(Math.atan2(v.x - home[0], -(v.z - home[1])) - G.az * D2R);
-            const gs = Math.pow(Math.max(0, da), G.power ?? 2), ga = Math.max(0, -da);
-            c = c.map((q, k) => 1 + (G.sun[k] - 1) * gs + (G.away[k] - 1) * ga);
-          }
-          col.set([c[0], c[1], c[2], D.edgeFade ? smooth(1, 1 - D.edgeFade, r) : 1], i * 4);
-        }
-        deck.geometry.setAttribute('color', new THREE.BufferAttribute(col, 4));
-      }
-      // `when`: shown only in the shots whose set names it (a deck added to a location after some of
-      // its shots were final must not change those)
-      if (D.when) { deck.userData.when = D.when; optional.push(deck); }
+      const { deck, veil } = cloudDeckMeshes(D, { draft, name: `cloudDeck:${loc}` });
+      if (D.when) optional.push(deck);
       g.add(deck);
-      if (D.veil) {
-        const veil = new THREE.Mesh(new THREE.PlaneGeometry(D.size * 1.5, D.size * 1.5), new THREE.MeshBasicMaterial({ color: new THREE.Color(...D.veil), side: THREE.DoubleSide, fog: false }));
-        veil.rotation.x = Math.PI / 2; veil.position.set(D.center[0], D.y + 450, D.center[1]);
-        g.add(veil);
-      }
+      if (veil) g.add(veil);
     }
   }
 

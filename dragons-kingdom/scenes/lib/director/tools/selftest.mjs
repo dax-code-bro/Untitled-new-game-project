@@ -19,6 +19,7 @@ import { faceReadability } from '../audit.js';
 import { wingOutline, paintWingCloud } from '../sets/wing-cloud.js';
 import { periodicNoise, periodicCells, paintCloudDeck, paintCloudDetail } from '../sets/cloud-deck.js';
 import { meadowPattern } from '../sets/meadow.js';
+import { cloudDeckMeshes } from '../sets/cloud-deck-mesh.js';
 import { fieldsVoronoi, landUse, hedgePlacements, FIELD_USE } from '../sets/farmland.js';
 import { solveFraming, suggestFrom } from '../framing.js';
 import { heldList, placeInHands } from '../handprops.js';
@@ -154,6 +155,31 @@ t('cloud deck: periodic noise + cells tile seamlessly; the painted deck is broke
   assert.ok(seam / 64 < 60, `seam alpha step ${seam / 64}`);
   const d = paintCloudDetail({ data: new Uint8ClampedArray(32 * 32 * 4), width: 32, height: 32 }).data;
   for (let i = 0; i < d.length; i += 4) assert.ok(d[i] >= 178 && d[i] <= 255);
+});
+t('cloud deck card: horizontal facing down at its height, warm toward the sun, faded at the edges, tagged', () => {
+  const canvas = () => ({ width: 0, height: 0, getContext: () => ({ createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }), putImageData() {} }) });
+  const D = { when: 'clouds', y: 3500, size: 160000, tile: 14000, detail: 1250, center: [0, 80000], home: [0, 300], yaw: -25, color: [0.95, 0.86, 0.82], edgeFade: 0.3,
+    glow: { az: 95, power: 1.5, sun: [1.7, 1.25, 0.85], away: [0.8, 0.85, 0.95] }, paint: { cells: [29, 41], sub: [73, 103] } };
+  const { deck, veil } = cloudDeckMeshes(D, { canvas, texSize: 16 });
+  deck.updateMatrixWorld(true);
+  assert.ok(new THREE.Vector3(0, 0, 1).transformDirection(deck.matrixWorld).y < -0.999, 'faces down');
+  const P = deck.geometry.attributes.position, C = deck.geometry.attributes.color, v = new THREE.Vector3();
+  assert.equal(C.itemSize, 4);
+  let east = null, west = null, centre = null, corner = null;
+  for (let i = 0; i < P.count; i++) {
+    v.fromBufferAttribute(P, i).applyMatrix4(deck.matrixWorld);
+    assert.ok(Math.abs(v.y - 3500) < 1e-6);
+    const lx = P.getX(i), ly = P.getY(i), a = C.getW(i);
+    if (Math.abs(lx) < 1 && Math.abs(ly) < 1) centre = a;
+    if (Math.abs(lx) > 79999 && Math.abs(ly) > 79999) corner = a;
+    if (Math.abs(v.z - 20000) < 2000 && v.x > 30000) east = C.getX(i) / C.getZ(i);
+    if (Math.abs(v.z - 20000) < 2000 && v.x < -30000) west = C.getX(i) / C.getZ(i);
+  }
+  assert.equal(centre, 1); assert.equal(corner, 0);
+  assert.ok(east > 1.5 && west < 1.0, `east r/b ${east}, west ${west}`);
+  assert.equal(deck.userData.when, 'clouds'); assert.equal(veil, null);
+  const plain = cloudDeckMeshes({ y: 520, size: 64000, tile: 20000, detail: 1250, center: [-24000, 8000], yaw: 20, color: [1, 1, 1], veil: [0.8, 0.82, 0.86] }, { canvas, texSize: 16 });
+  assert.ok(!plain.deck.geometry.attributes.color && plain.veil && Math.abs(plain.veil.position.y - 970) < 1e-9);
 });
 t('meadow: a deterministic pasture patchwork - varied, bounded colour, worn soil only on the track and molehills', () => {
   const A = meadowPattern(31), B = meadowPattern(31);

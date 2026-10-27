@@ -76,8 +76,10 @@ How it works: `README.md` in this folder. Latest state first.
   names a dead process is removed instead of blocking the shot for 30 min. Tested on R1-01 (killed after
   2 of 4 segments, resumed: "removed the part file of a dead run", "resuming - 2/4 segments", 96 frames
   joined; PSNR 48-70 dB against the earlier one-piece render). Pure-mode velocity blur poses every frame
-  at its own shutter-open time, so a segment's first frame is the same as in one piece. The runs already
-  going (C, E) keep the old code; G, H, F2, M pick it up.
+  at its own shutter-open time, so a segment's first frame is the same as in one piece. The two running
+  chamber queues are stopped between shots (`stop-when-done.sh`: after C finishes 1A-31, E X2-14) and
+  replaced by two chains over ALL remaining chamber shots with the new renderer, one forward (P), one
+  reverse (Q): they meet in the middle (locks + finished-shot checks), no list to balance by hand.
 - P-09 (`set.clouds`): a dawn altocumulus deck south of the settlement home (`LOOKS.settlement.deck`,
   `when: 'clouds'` so P-08 is untouched), warm on the sun side (`glow`: vertex colour by heading from the
   home), alpha fading to the card's edge (`edgeFade`: a deck at 3.5 km would show its edge above the
