@@ -243,8 +243,9 @@ abby.posture('kneel', 9.0, { hold: 2 });  abby.react('wince', 3.4);
 | `visemes.js` | phones -> 9 articulators (jaw, lip closure, rounding, spread, f/v tuck, th, tongue tip, upper lip, press), Cohen-Massaro dominance coarticulation (a phone that needs an articulator dominates it briefly and strongly; one that does not lets its neighbours decide; anticipation reaches ~1.7x further than carry-over), a contact floor so p/b/m always close and f/v always tuck, rest in pauses > 80 ms, jaw scaled by the take's loudness, 40 ms visual lead -> MakeHuman face units |
 | `expressions.js` | 11 emotion layers as FACS-style unit mixes (calm worry pain fear anger grief amusement surprise tender contempt determined), blendable, softly limited; `emotionFromDelivery(note, preset)` (whole-word rules, negations dropped) |
 | `faceperf.js` | face performer: line emotion envelopes, brow raise / knit and head nods on stressed syllables (loudness accents), blinks (spontaneous; at phrase starts and pauses; on gaze shifts; more under fear), eye-target look-at with vergence, fixation saccades (eye-eye-mouth on a face), gaze aversion at line starts, lids that follow the eyes; `LINE_OVERRIDES` (hand-set key lines: L011 ...), `SCENE_MOOD` |
-| `motion.js` | body: trajectories (path + speed profile, fn(t), baked), gait phase table with PLANTED feet (plant = the root at 41 % of stance, 32 % running), heel strike / heel off rolling on heel and ball, Hermite swing with clearance and the running heel kick, pelvis lowered by the planted legs' reach (the walk's bob comes out of it), pelvis rotation / list / sway, spine counter-rotation and lean, arm swing (90 degrees bent when running), standing weight shift, gestures (`point wave reach support cradle handsToFace protectHead flail carry explain`), postures (`crouch kneel cower hunch`), `stagger` (quick recovery steps), `fall` (buckle, topple, hands to the ground, lie), head look with the chest helping on big turns, `carryChild(adult, child)` |
-| `crowd.js` | `createCrowd({ agents, exits, obstacles, walls, alarm, cower })`: social-force bake at 30 Hz in setup (seeded): MILL (wander near home, stop and face neighbours), FLEE along exit polylines (reaction wave from the threat, startle + gasp, glances back, some shield their heads), COWER (by a wall away from the threat, or frozen where they stand); no overlaps (position correction) |
+| `motion.js` | `gestureNow(ch, name, o, w, t, dt)` / `legsNow(body, t, post)` pose a gesture or planted-foot legs on a character someone else placed (the director); body: trajectories (path + speed profile, fn(t), baked), gait phase table with PLANTED feet (plant = the root at 41 % of stance, 32 % running), heel strike / heel off rolling on heel and ball, Hermite swing with clearance and the running heel kick, pelvis lowered by the planted legs' reach (the walk's bob comes out of it), pelvis rotation / list / sway, spine counter-rotation and lean, arm swing (90 degrees bent when running), standing weight shift, gestures (`point wave reach support cradle handsToFace protectHead flail carry explain`), postures (`crouch kneel cower hunch`), `stagger` (quick recovery steps), `fall` (buckle, topple, hands to the ground, lie), head look with the chest helping on big turns, `carryChild(adult, child)` |
+| `crowd.js` | `createCrowd({ agents, exits, obstacles, walls, alarm, cower, groups })`: social-force bake at 30 Hz in setup (seeded): MILL (wander near home, stop and face neighbours; `groups` [[i, j, ...]]: conversation circles ~1.1 m apart, heads turn to the talker as the talk passes round, the talker gestures and smiles), FLEE along exit polylines (reaction wave from the threat, startle + gasp, glances back, some shield their heads), COWER (by a wall away from the threat, or frozen where they stand); no overlaps (position correction) |
+| `director.js` | shot-director registration (automatic from `loadCharacter`): `'face'` (lip-sync of the shot's placed takes incl. split-take parts, delivery emotion, scene mood, blinks, eye-line) and the `'cradle'` overlay; opt-in `registerDirectorHooks({ legs: true })` = planted-foot legs from `info.stateAt` (see Director below); `setDirectorHooks(false)` before loading keeps the director's own |
 | `face.js` | the MakeHuman face pose units rig (+ derived `JawOpen`, `<Side>LidsDown/Up/TurnLeft/TurnRight`) |
 | `rig.js` | IK / hand-shape toolkit (two-bone IK with pole + soft reach, hand shapes, orientHand) |
 
@@ -255,12 +256,33 @@ only; `--meta-only` refreshes the delivery notes in seconds). Python with pocket
 
 Proof scenes (`scenes/lookdev/humans-anim-*.js`): `alexandria` (L011 close-up), `dialogue` (Remi and
 Abby, L014-L016), `cradle` (Abby's injured left arm, Remi supporting her elbow, L091), `crowd` (the
-Cling square crowd flees), `walk` (walk / run / kneel / stagger + fall), `dev` (face units, visemes and
-emotions one per second).
+Cling square crowd talks in groups, then flees), `walk` (walk / run / kneel / stagger + fall / carry),
+`dev` (face units, visemes and emotions one per second), `pose` (one character posed by performer
+acts from `humans-anim-pose.json`, several views: frame k = view k - for gesture / posture work).
+
+### Director
+
+The shot director (`scenes/lib/director`) poses humans with `poseHuman(ch, state, t, env, info)` and
+calls registered actions (`registerHumanAction(name, fn)`) in place of its built-in ones. The first
+`loadCharacter()` registers (director.js): `'face'` - every human in every shot lip-syncs the takes
+the shot places for its role (`info.placed`, parts of split takes speak only their own words), with
+the line's delivery emotion, the scene's mood (`SCENE_MOOD`, 60 %) under it, blinks, saccades and eyes
+on the blocking's eye-line; `'cradle'` - the blocking act `[t, 'cradle', { side: 'L' }]` holds the hurt
+arm the performance way. Planted feet are opt-in because they need the blocking as a function of time:
+the stage passes `info.stateAt = (tt) => actorState(spec, tt, env)` and `info.seconds`, and calls
+`registerDirectorHooks({ legs: true })`; then `'legs'` keeps every stance foot fixed in the world (heel
+strike, roll, toe-off, swing clearance, walk/run blend; the pelvis dips where a leg would over-reach;
+kneel / sit ramps place the feet like the director's own stances).
 
 Self-test: `node scenes/lib/humans/selftest-perf.mjs` (lip closures on all 340 p/b/m, rounding,
 delivery-rule traps, planted feet walking and running, order independence, falls, crowd determinism and
-spacing, the director face hook). Body tests need the character caches.
+spacing, the director face hook, split-take windows, registration + lip-sync through the director's own
+`poseHuman`, the director 'cradle' act, the opt-in planted legs (ankle travel on the ground vs the
+built-in gait), worn props free of hand weights). Body tests need the character caches.
+
+Loader (since 2026-10-27): worn props (belt, buckle, purse, buttons, chain, circlet, scabbard, hat)
+lose any hand / forearm skin weights at load time, and hair loses upper-arm weights (to the clavicle) -
+a hand resting on the belt in the drape pose dragged the belt tongue after it once the arm moved.
 
 Limits (honest): faces are MakeHuman bone units (no sculpted visemes / wrinkle maps), so expressions are
 subtle at a distance and corrective shapes are missing (a wide AA stretches the lip corners); garments are

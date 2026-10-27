@@ -164,6 +164,38 @@ else {
     actions.poseHuman(ch, st, 1.4, env, { role: 'REMI', placed: [{ id: 'L015', role: 'REMI', at_s: 1.0, file_in_s: 0 }], shot: '1A-test' });
     const jaw = ch.bone('jaw').quaternion.angleTo(ch.drape.q[ch.index.jaw]);
     ok(jaw > 0.005, `a director shot (poseHuman) lip-syncs a placed take (jaw ${(jaw * 57.3).toFixed(1)} deg)`);
+    // the director's 'cradle' act poses the performance cradle: the hurt LEFT wrist lies across the
+    // body in front of the chest, the right hand under the forearm
+    const ab = load('abby');
+    const st2 = actorState({ at: [0, 0], face: 180, acts: [[0, 'cradle', { side: 'L', in: 0.3, hold: 9 }]] }, 2.0, env);
+    actions.poseHuman(ab, st2, 2.0, env, { role: 'ABBY', placed: [], shot: '2A-test' });
+    const toLocal = (v) => ab.root.worldToLocal(v.clone());
+    const wl = toLocal(P(ab, 'wrist.L')), wr = toLocal(P(ab, 'wrist.R')), c = toLocal(P(ab, 'spine02'));
+    ok(wl.x < c.x && wl.z > c.z + 0.1 && Math.abs(wl.y - c.y) < 0.12 && wr.y < wl.y && Math.abs(wr.x - wl.x) < 0.15,
+      `director 'cradle' act: hurt left wrist across the chest (${wl.x.toFixed(2)}, ${(wl.y - c.y).toFixed(2)}, ${(wl.z - c.z).toFixed(2)} from spine02), right hand below it`);
+    // opt-in planted-foot legs ('legs' hook with info.stateAt): ankles on the ground travel far less
+    // than with the director's built-in offset gait on a curved walk, then a kneel stays finite
+    const { directorLegs } = await import('./director.js');
+    const spec = { at: [0, 0], face: 0, acts: [[0.5, 'walk', { path: [[0, -3], [2.5, -5.5], [2.5, -8]], speed: 1.3 }], [7.5, 'kneel', { dur: 1 }]] };
+    const walk = (hook) => {
+      actions.registerHumanAction('legs', hook);
+      const c2 = load('remi');
+      let slip = 0, n = 0, prev = null, fin = true;
+      for (let f = 0; f < 24 * 9.5; f++) {
+        const t = f / 24;
+        actions.poseHuman(c2, actorState(spec, t, env), t, env, { role: 'REMI', placed: [], shot: 'legs', stateAt: (tt) => actorState(spec, tt, env), seconds: 10 });
+        const cur = { L: P(c2, 'foot.L'), R: P(c2, 'foot.R') };
+        for (const sd of ['L', 'R']) {
+          if (!Number.isFinite(cur[sd].x + cur[sd].y + cur[sd].z)) fin = false;
+          if (prev && t > 0.5 && t < 7.4 && cur[sd].y < 0.103 && prev[sd].y < 0.103) { slip += Math.hypot(cur[sd].x - prev[sd].x, cur[sd].z - prev[sd].z); n++; }
+        }
+        prev = cur;
+      }
+      return { mm: (slip / Math.max(1, n)) * 1000, fin };
+    };
+    const builtin = walk(null), planted = walk(directorLegs());
+    actions.registerHumanAction('legs', null);
+    ok(planted.fin && planted.mm < builtin.mm / 4, `director 'legs' hook plants the feet (ankle travel on the ground ${planted.mm.toFixed(2)} mm/frame vs ${builtin.mm.toFixed(2)} built-in)`);
   }
   // worn props never follow a hand: no belt / buckle / purse vertex keeps an arm or hand weight
   {

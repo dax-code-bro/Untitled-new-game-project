@@ -16,6 +16,7 @@
 //     obstacles: [{ x, z, r }], walls: [[x0, z0, x1, z1], ...],
 //     alarm: { t: 4.0, at: [x, z] },                 // when / where the threat appears
 //     cower: 0.2,                                    // share that cower instead of fleeing
+//     groups: [[0, 1, 2], [3, 4]],                    // agents that stand together talking (optional)
 //   });
 //   crowd.bake();                                    // setup (also applies the schedule to the performers)
 //   update(t): for (const p of performers) p.update(t)
@@ -39,7 +40,10 @@ function segPoint(px, pz, ax, az, bx, bz) {
  * opts: { seed, t0, t1, agents: [{ performer?, pos: [x, z], yaw, home?: [x, z], radius (mill radius, 2.5),
  * talk (0.5: share of time stopped), speed (flee speed, default 3.0-4.4 by seed), exit (index) }],
  * exits: [polylines], obstacles: [{ x, z, r }], walls: [[x0, z0, x1, z1]], alarm: { t, at: [x, z],
- * wave (s per 10 m of distance: 0.6) }, cower (0.15), lookBack (0.5: share that glance back) }
+ * wave (s per 10 m of distance: 0.6) }, cower (0.15), lookBack (0.5: share that glance back),
+ * groups: [[agent indices], ...] - conversation groups: the members stand on a loose ring round the
+ * group's centre (shuffling a little), face it, turn their heads to whoever is talking (the turn passes
+ * round the group every few seconds), and the talker gestures - until the alarm breaks them up }
  */
 export function createCrowd(opts) {
   const seed = opts.seed ?? 1;
@@ -53,7 +57,17 @@ export function createCrowd(opts) {
     react: 0,
     mode: 'mill',
   }));
-  const C = { opts, agents, baked: false };
+  // conversation groups: centre = the members' mean start, each member a slot on the ring
+  const groups = (opts.groups || []).map((members, g) => {
+    const m = members.filter((i) => agents[i]);
+    const cx = m.reduce((s, i) => s + agents[i].pos[0], 0) / Math.max(1, m.length), cz = m.reduce((s, i) => s + agents[i].pos[1], 0) / Math.max(1, m.length);
+    // slots in the members' own angular order round the centre (nobody crosses the circle)
+    const order = m.slice().sort((i, j) => Math.atan2(agents[i].pos[1] - cz, agents[i].pos[0] - cx) - Math.atan2(agents[j].pos[1] - cz, agents[j].pos[0] - cx));
+    const r = 0.32 + 0.12 * m.length;            // ~1.1-1.2 m between neighbours (conversation distance)
+    order.forEach((i, k) => { const a = agents[i]; a.group = g; a.slot = (k / m.length) * Math.PI * 2 + hash01(seed, g * 13 + 1) * 6.283; a.ringR = r; });
+    return { g, members: order, x: cx, z: cz, r };
+  });
+  const C = { opts, agents, groups, baked: false };
   C.bake = () => bake(C);
   /** The baked state of agent i at t: { x, z, yaw, v, mode } */
   C.stateAt = (i, t) => {
@@ -122,6 +136,12 @@ function bake(C) {
   }
   // mill targets: piecewise, a new spot every 3-7 s, sometimes staying to talk
   const millGoal = (a, t) => {
+    if (a.group != null) {
+      const G = C.groups[a.group];
+      const ang = a.slot + 0.12 * Math.sin(t * 0.21 + a.i * 1.7), r = a.ringR * (1 + 0.08 * Math.sin(t * 0.33 + a.i));
+      const gx = G.x + Math.cos(ang) * r, gz = G.z + Math.sin(ang) * r;
+      return Math.hypot(gx - a.x, gz - a.z) > 0.12 ? [gx, gz] : null;
+    }
     const P = 3 + 4 * hash01(seed, a.i * 7 + 9);
     const k = Math.floor((t - t0 + hash01(seed, a.i * 7 + 8) * P) / P);
     if (hash01(seed, a.i * 977 + k) < a.talk) return null;           // standing / talking
@@ -188,7 +208,11 @@ function bake(C) {
       a.x += a.vx * DT; a.z += a.vz * DT;
       let want = a.h;
       if (sp > 0.25) want = Math.atan2(a.vx, a.vz);
-      else if (t < a.fleeT) {
+      else if (t < a.fleeT && a.group != null) {
+        // in a group: face its centre (the head turns to the talker on top, see below)
+        const G = C.groups[a.group];
+        want = Math.atan2(G.x - a.x, G.z - a.z);
+      } else if (t < a.fleeT) {
         // standing: face the nearest neighbour (talking groups)
         let nb = null, nd = 3.5;
         for (const b of agents) { if (b === a) continue; const d = Math.hypot(b.x - a.x, b.z - a.z); if (d < nd) { nd = d; nb = b; } }
@@ -229,6 +253,27 @@ function bake(C) {
     const P = a.performer;
     if (!P) continue;
     P.trajectory(a.traj);
+    if (a.group != null) {
+      // the talk passes round the group: a talker every 2-4.5 s; listeners turn their heads to the
+      // talker, the talker looks round at them and makes a point with a hand now and then
+      const G = C.groups[a.group];
+      const end = Math.min(a.fleeT ?? Infinity, t1);
+      let tt = t0 - 1, k = 0;
+      while (tt < end) {
+        const talker = G.members[Math.floor(hash01(seed, a.group * 101 + k) * G.members.length)];
+        const dur = 2 + 2.5 * hash01(seed, a.group * 103 + k);
+        if (talker === a.i) {
+          const other = G.members.find((j) => j !== a.i);
+          if (other != null && agents[other].performer) P.lookAt({ ch: agents[other].performer.ch }, tt + 0.2, { amount: 0.5, blend: 0.5 });
+          if (hash01(seed, a.i * 17 + k) < 0.6 && tt + 0.3 < end) P.gesture('explain', tt + 0.3, { side: hash01(seed, a.i * 19 + k) < 0.7 ? 'R' : 'L', in: 0.45, dur: Math.min(dur - 1.2, 1.4), out: 0.6, beat: 1.1 });
+          P.react('smile', tt + 0.5 + 0.8 * hash01(seed, a.i * 23 + k), 1.4);
+        } else if (agents[talker]?.performer) {
+          P.lookAt({ ch: agents[talker].performer.ch }, tt + 0.15 + 0.3 * hash01(seed, a.i * 29 + k), { amount: 0.65, blend: 0.45 });
+          if (hash01(seed, a.i * 31 + k) < 0.35) P.react('smile', tt + 0.9 + hash01(seed, a.i * 37 + k), 1.2);
+        }
+        tt += dur; k++;
+      }
+    }
     if (!al) continue;
     const threat = al.look || new THREE.Vector3(al.at[0], al.lookY ?? 6, al.at[1]);
     P.mood({ fear: 0.7 + 0.3 * hash01(seed, a.i * 11 + 5), worry: 0.3 }, a.fleeT - 0.5, 1e9, 0.3);

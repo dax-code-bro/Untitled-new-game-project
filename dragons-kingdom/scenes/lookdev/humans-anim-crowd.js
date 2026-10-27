@@ -1,5 +1,6 @@
 // Performance proof 4 - the Cling crowd flees (3C): festival villagers mill round the square
-// (wandering, stopping to talk, turning to each other); at t = 3.0 the alarm - something huge and
+// (talking in small groups - the talk passes round, heads turn to the talker, a hand makes a point -
+// one cheering the music, one waving, two wandering across); at t = 3.0 the alarm - something huge and
 // white over the north roofs - and the crowd reacts in a wave from the north side outward: heads
 // snap up, a gasp, then they run for the stone arch (west) and the broad gate (east), pushing past
 // each other round the fountain; a few shield their heads, some glance back, a few cower against
@@ -22,11 +23,18 @@ export const meta = {
 };
 
 const IDS = ['crowd01', 'crowd02', 'crowd03', 'crowd04', 'crowd05', 'crowd06', 'crowd07', 'crowd08', 'crowd09', 'crowd11', 'crowd12', 'crowd14', 'crowd15', 'crowd16', 'crowd17', 'crowd10'];
-// where each villager starts (milling groups: by the stall, round the fountain, the music space, the steps)
+// where each villager starts [x, z, yaw]: talking groups (by the stall, west of the steps, the music
+// space, under the steps) and a few on their own (one cheering the music, one waving to a friend,
+// two wandering across)
 const START = [
-  [-8.0, 5.2, 1.2], [-6.6, 4.4, -1.8], [-9.6, 6.8, 2.4], [-4.0, 8.5, 0.4], [3.2, 4.6, -2.6], [4.8, 6.0, 2.0], [6.4, 4.2, -0.8],
-  [8.6, 5.8, -2.2], [1.0, 9.2, 3.0], [-2.2, 12.4, 0.2], [2.8, 13.0, -1.0], [9.8, 10.4, -2.6], [-6.0, 11.5, 1.6], [12.4, 7.4, -1.4], [-11.8, 9.8, 0.8], [5.6, 11.0, 2.8],
+  [-10.5, 11.0, 0.6], [-7.9, 5.4, 0.9], [-7.0, 6.6, -2.4], [8.6, 2.6, 0.4], [-7.4, 5.0, -0.6], [-3.9, 10.0, 0.8], [-2.9, 10.9, -2.2],
+  [2.0, 12.6, 1.2], [3.2, 13.6, -2.4], [6.0, 5.2, 1.6], [7.0, 5.8, -1.6], [2.9, 12.4, -0.6], [-3.6, 11.2, 2.6], [11.5, 9.5, -1.4], [2.4, 13.6, 2.8], [-1.0, 6.5, -2.9],
 ];
+// conversation groups (indices into IDS)
+const GROUPS = [[1, 2, 4], [5, 6, 12], [9, 10], [7, 11, 14, 8]];
+// the cheering / waving drapes keep their raised arms; the wanderers' raised arms hang
+const ARMS = { 13: 'hang', 15: 'hang' };
+const WANDER = { 13: { radius: 4.5, talk: 0.15 }, 15: { radius: 4.0, talk: 0.25 }, 0: { radius: 1.2, talk: 0.8 }, 3: { radius: 0.8, talk: 0.85 } };
 const ALARM = { t: 3.0, at: [-2, -16], lookY: 14 };
 
 let S;
@@ -46,11 +54,12 @@ export async function setup(ctx) {
 
   const data = await loadPerformanceData();
   const chars = await Promise.all(IDS.map((id) => loadCharacter(id)));
-  const performers = chars.map((ch, i) => { scene.add(ch.root); return createPerformer(ch, data, { arms: 'auto' }); });
+  const performers = chars.map((ch, i) => { scene.add(ch.root); return createPerformer(ch, data, { arms: ARMS[i] || 'auto' }); });
   const sq = CLING.square, gate = CLING.gate, arch = CLING.arch;
   const crowd = createCrowd({
     seed: 3, t0: 0, t1: meta.duration + 1,
-    agents: performers.map((p, i) => ({ performer: p, pos: [START[i][0], START[i][1]], yaw: START[i][2], radius: 1.6, talk: 0.55 })),
+    agents: performers.map((p, i) => ({ performer: p, pos: [START[i][0], START[i][1]], yaw: START[i][2], radius: 1.6, talk: 0.55, ...(WANDER[i] || {}) })),
+    groups: GROUPS,
     exits: [
       [[arch.x + 5, arch.z], [arch.x, arch.z], [arch.x - 8, arch.z + 0.2], [arch.x - 16, arch.z - 4]],
       [[gate.x - 5, gate.z], [gate.x, gate.z], [gate.x + 10, gate.z + 0.3], [gate.x + 24, gate.z + 1]],

@@ -640,6 +640,75 @@ function envelopeW(dt, o) {
 }
 
 // ---------------------------------------------------------------- applying --
+/**
+ * The legs must reach their planted feet: lower the pelvis (root bone, already placed) where a
+ * stance leg would over-extend - this, not a formula, makes the walk's dip at double support; a
+ * smooth max keeps it C1.
+ */
+function reachDrop(S, feet, g) {
+  const { ch, rig } = S;
+  const rootB = ch.bone('root');
+  if (!rootB) return 0;
+  let over = -1;
+  for (const sd of ['L', 'R']) {
+    const Ft = feet[sd];
+    const wS = Ft.stance || Ft.kneeDown ? 1 : Math.max((1 - smooth(Ft.q / 0.22)) * (1 - g.run), smooth((Ft.q - 0.75) / 0.25));
+    if (wS <= 0) continue;
+    const hip = wpos(ch.bone(`upperleg01.${sd}`), _v);
+    const horiz = Math.hypot(hip.x - Ft.pos.x, hip.z - Ft.pos.z);
+    const Lmax = rig.legLen * (Ft.kneeDown ? 0.999 : 0.992);
+    const maxY = Ft.pos.y + Math.sqrt(Math.max(0, Lmax * Lmax - horiz * horiz));
+    over = Math.max(over, (hip.y - maxY) * wS);
+  }
+  const eps = 0.016;
+  const drop = 0.5 * (over + Math.sqrt(over * over + eps * eps));      // smooth max(0, over), >= over
+  if (drop > 0) {
+    // in world space (the root bone's parent frame may be turned: an actor parented to a boat)
+    const d = Math.min(drop, rig.legLen * 0.28);
+    const pw = wpos(rootB, new THREE.Vector3());
+    pw.y -= d;
+    rootB.parent.updateMatrixWorld(true);
+    rootB.position.copy(rootB.parent.worldToLocal(pw));
+    ch.root.updateMatrixWorld(true);
+  }
+  return drop;
+}
+
+/** Legs by two-bone IK to the foot targets, feet turned to the plant's yaw and rolled by its pitch. */
+function solveLegs(S, feet) {
+  const { ch, rig } = S;
+  for (const sd of ['L', 'R']) {
+    const F = feet[sd];
+    const kneePole = F.pos.clone().addScaledVector(new THREE.Vector3(Math.sin(F.yaw), 0, Math.cos(F.yaw)), 1.0).add(new THREE.Vector3(0, 0.5, 0));
+    if (F.kneeDown) kneePole.add(new THREE.Vector3(0, -1.2 * F.kneeDown, 0));
+    twoBoneIK(ch, 'leg', sd, F.pos, kneePole, { soft: 0.015 });
+    // foot orientation: yaw of the plant, pitch about the foot's lateral axis
+    const fb = ch.bone(`foot.${sd}`);
+    if (fb) {
+      const F0 = rig[`footQ${sd}`];
+      const yawRel = F.yaw - rig[`footYaw${sd}`];
+      _q.setFromAxisAngle(_v.set(0, 1, 0), yawRel);
+      const lat = _v2.set(1, 0, 0).applyAxisAngle(UP, F.yaw);
+      _q2.setFromAxisAngle(lat, -F.pitch);
+      const q = _q2.clone().multiply(_q).multiply(F0);
+      fb.parent.updateWorldMatrix(true, false);
+      setWorldQuat(fb, q);
+      // toes stay flat on the ground while the heel is up
+      if (F.pitch < 0) {
+        const toeQ = _q.clone();          // yaw only (flat)
+        for (let k = 1; k <= 5; k++) {
+          const tb = ch.bone(`toe${k}-1.${sd}`);
+          if (!tb) continue;
+          const T0 = rig[`toeQ${sd}`][k - 1];
+          const flat = toeQ.clone().multiply(T0);
+          const bent = _q2.clone().multiply(toeQ).multiply(T0);
+          setWorldQuat(tb, bent.slerp(flat, 0.85 * F.toeFlat));
+        }
+      }
+    }
+  }
+}
+
 function applyBody(S, t, o) {
   const { ch, rig, seed } = S;
   const C = S.compiled;
@@ -710,54 +779,10 @@ function applyBody(S, t, o) {
     _q3.setFromAxisAngle(_v.set(1, 0, 0), 0.06 * gw + post.crouch * 0.25 + post.cower * 0.35 + post.kneel * 0.05);
     rootB.quaternion.copy(ch.drape.q[ch.index.root]).premultiply(_q3).premultiply(_q2).premultiply(_q);
     ch.root.updateMatrixWorld(true);
-    // the legs must reach their planted feet: lower the pelvis where a stance leg would over-extend
-    // (this, not a formula, makes the walk's dip at double support; a smooth max keeps it C1)
-    let over = -1;
-    for (const sd of ['L', 'R']) {
-      const Ft = feet[sd];
-      const wS = Ft.stance || Ft.kneeDown ? 1 : Math.max((1 - smooth(Ft.q / 0.22)) * (1 - g.run), smooth((Ft.q - 0.75) / 0.25));
-      if (wS <= 0) continue;
-      const hip = wpos(ch.bone(`upperleg01.${sd}`), _v);
-      const horiz = Math.hypot(hip.x - Ft.pos.x, hip.z - Ft.pos.z);
-      const Lmax = rig.legLen * (Ft.kneeDown ? 0.999 : 0.992);
-      const maxY = Ft.pos.y + Math.sqrt(Math.max(0, Lmax * Lmax - horiz * horiz));
-      over = Math.max(over, (hip.y - maxY) * wS);
-    }
-    const eps = 0.016;
-    const drop = 0.5 * (over + Math.sqrt(over * over + eps * eps));      // smooth max(0, over), >= over
-    if (drop > 0) { rootB.position.y -= Math.min(drop, rig.legLen * 0.28); ch.root.updateMatrixWorld(true); }
+    reachDrop(S, feet, g);
   }
   // 4. legs by IK to the foot targets
-  for (const sd of ['L', 'R']) {
-    const F = feet[sd];
-    const kneePole = F.pos.clone().addScaledVector(new THREE.Vector3(Math.sin(F.yaw), 0, Math.cos(F.yaw)), 1.0).add(new THREE.Vector3(0, 0.5, 0));
-    if (F.kneeDown) kneePole.add(new THREE.Vector3(0, -1.2 * F.kneeDown, 0));
-    twoBoneIK(ch, 'leg', sd, F.pos, kneePole, { soft: 0.015 });
-    // foot orientation: yaw of the plant, pitch about the foot's lateral axis
-    const fb = ch.bone(`foot.${sd}`);
-    if (fb) {
-      const F0 = rig[`footQ${sd}`];
-      const yawRel = F.yaw - rig[`footYaw${sd}`];
-      _q.setFromAxisAngle(_v.set(0, 1, 0), yawRel);
-      const lat = _v2.set(1, 0, 0).applyAxisAngle(UP, F.yaw);
-      _q2.setFromAxisAngle(lat, -F.pitch);
-      const q = _q2.clone().multiply(_q).multiply(F0);
-      fb.parent.updateWorldMatrix(true, false);
-      setWorldQuat(fb, q);
-      // toes stay flat on the ground while the heel is up
-      if (F.pitch < 0) {
-        const toeQ = _q.clone();          // yaw only (flat)
-        for (let k = 1; k <= 5; k++) {
-          const tb = ch.bone(`toe${k}-1.${sd}`);
-          if (!tb) continue;
-          const T0 = rig[`toeQ${sd}`][k - 1];
-          const flat = toeQ.clone().multiply(T0);
-          const bent = _q2.clone().multiply(toeQ).multiply(T0);
-          setWorldQuat(tb, bent.slerp(flat, 0.85 * F.toeFlat));
-        }
-      }
-    }
-  }
+  solveLegs(S, feet);
   ch.root.updateMatrixWorld(true);
   // 5. spine: lean with speed, counter-rotation, postures
   const spineBend = g.lean * gw + post.crouch * 0.35 + post.cower * 0.75 + post.hunch * 0.28 + post.kneel * 0.08;
@@ -847,6 +872,80 @@ function frameOf(S, t, fwd, left) {
     pelvis: P('root'), chest: P('spine02'), head: P('head'),
     sh: { L: P('upperarm01.L'), R: P('upperarm01.R') },
   };
+}
+
+/**
+ * Planted-foot legs for a character whose root, pelvis and spine someone else posed for time t (the
+ * shot director's poseHuman): the feet come from this body's own trajectory (body.follow() of the
+ * director's blocking), so a stance foot stays fixed in the world whatever the path, speed or turn;
+ * the pelvis is lowered where a stance leg would over-extend; feet roll heel-to-toe. post: { crouch,
+ * kneel, sit } (0..1, the blocking's posture ramps) move the feet like the director's own stances
+ * (kneel: right knee down, left foot forward; sit: feet forward). Blocking coordinates are in the
+ * frame of ch.root's parent (an actor aboard a boat), converted to world here.
+ */
+export function legsNow(body, t, post = {}) {
+  const S = body.S;
+  compile(S);
+  const C = S.compiled, { ch, rig } = S;
+  const u = (t - C.traj.t0) / DT;
+  const i0 = Math.max(0, Math.min(C.traj.n - 2, Math.floor(u)));
+  const fi = clamp01(u - i0);
+  const phiT = C.phi[i0] + (C.phi[i0 + 1] - C.phi[i0]) * fi;
+  const vNow = C.vg[i0] + (C.vg[i0 + 1] - C.vg[i0]) * fi;
+  const gw = sstep(0.02, 0.5, vNow);
+  const g = gaitParams(Math.max(0.45, vNow), rig.height);
+  const stepping = C.phi[Math.min(C.traj.n - 1, i0 + 1)] !== C.phi[Math.max(0, i0 - 1)];
+  const amp = Math.max(gw, stepping ? 0.35 : 0);
+  const feet = { L: footAt(S, 'L', t, phiT, vNow, amp), R: footAt(S, 'R', t, phiT, vNow, amp) };
+  const par = ch.root.parent;
+  let yawP = 0;
+  if (par) {
+    par.updateMatrixWorld(true);
+    const pq = par.getWorldQuaternion(new THREE.Quaternion());
+    const f = new THREE.Vector3(0, 0, 1).applyQuaternion(pq);
+    yawP = Math.atan2(f.x, f.z);
+    for (const sd of ['L', 'R']) { feet[sd].pos.applyMatrix4(par.matrixWorld); feet[sd].yaw += yawP; }
+  }
+  const rq = ch.root.getWorldQuaternion(new THREE.Quaternion());
+  const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(rq).setY(0).normalize();
+  const kneel = post.kneel || 0, sit = post.sit || 0;
+  if (kneel > 0) {
+    feet.L.pos.addScaledVector(fwd, 0.22 * kneel);
+    feet.R.pos.addScaledVector(fwd, -0.38 * kneel).y += 0.07 * kneel;
+    feet.R.pitch = lerp(feet.R.pitch, -0.95, smooth(clamp01(kneel * 1.4 - 0.25)));
+    feet.R.kneeDown = kneel;
+  }
+  if (sit > 0) for (const sd of ['L', 'R']) feet[sd].pos.addScaledVector(fwd, 0.28 * sit);
+  ch.root.updateMatrixWorld(true);
+  reachDrop(S, feet, g);
+  solveLegs(S, feet);
+  ch.root.updateMatrixWorld(true);
+  return { feet, phi: phiT, v: vNow, gait: gw };
+}
+
+/**
+ * Pose one GESTURES entry on a character as it stands now (root, legs and spine already posed by
+ * someone else - e.g. the shot director's poseHuman): builds the body frame from the current bones,
+ * shrugs and solves the arms by IK at weight w. dt = seconds since the gesture began.
+ */
+export function gestureNow(ch, name, o = {}, w = 1, t = 0, dt = 0) {
+  if (!GESTURES[name] || w <= 0.001) return null;
+  ch.root.updateMatrixWorld(true);
+  const rq = ch.root.getWorldQuaternion(new THREE.Quaternion());
+  const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(rq).setY(0).normalize();
+  const left = new THREE.Vector3(fwd.z, 0, -fwd.x);
+  const S = { ch, rig: bodyRig(ch), seed: hashStr(ch.id + ':body:') };
+  const F = frameOf(S, t, fwd, left);
+  F.dt = dt; F.w = w;
+  const res = GESTURES[name](F, o, o.side || 'R');
+  for (const sd of ['L', 'R']) {
+    const g = res[sd];
+    if (!g) continue;
+    if (g.shoulder) shrug(ch, sd, g.shoulder, w, fwd);
+    solveArm(ch, sd, g, w);
+  }
+  ch.root.updateMatrixWorld(true);
+  return res;
 }
 
 function solveArm(ch, sd, tg, w) {

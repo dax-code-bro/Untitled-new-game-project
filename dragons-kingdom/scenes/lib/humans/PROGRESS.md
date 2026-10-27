@@ -294,3 +294,45 @@ data/face-units.json). New modules (all pure functions of t over a schedule set 
   lookAt, glance, mood, react, stagger, fall, carry, update) + directorFace() hook.
 Node test harness (no browser): scratchpad eng1/perf/nodechar.mjs + walkstat.mjs / walkerr.mjs
 (characters build in Node with a DOM stub; gait numbers: stance slip 0, IK error < 5 mm walking).
+
+## PERFORMANCE track, session 2 (2026-10-27, from ~02:20 UTC) - director registration, proofs
+
+State found: commits d277505 / 367a183 / 4c1328a (visemes, emotions, face performer, gait, crowd,
+proof scenes, selftest-perf) - selftest green. Done this session (each checked by selftest-perf or a
+render in scratchpad eng1/perf/):
+- DIRECTOR REGISTRATION (director.js, new): loadCharacter() (index.js) registers the performance
+  'face' action with scenes/lib/director/actions.js the first time a character loads, so every human
+  in every director shot lip-syncs its placed takes (whole takes and parts of split takes: say()
+  takes a `window` [a, b] of take seconds), carries the scene mood (SCENE_MOOD at 60 %), blinks, and
+  looks along the blocking's eye-line. No director file changes. Verified: selftest (poseHuman jaw
+  2.5 deg on a placed L015) and a director still (X2-02, birthing chamber) renders with the hooks.
+  Also registered: the 'cradle' overlay (the director's blocking act 'cradle' now uses motion.js's
+  cradle, sized from the build). Opt-in (needs a director change, REQUEST in the report):
+  registerDirectorHooks({ legs: true }) registers planted-foot 'legs' (directorLegs: a body per actor
+  and shot follows info.stateAt(tt) = the blocking as a function of time) - selftest: ankle travel
+  on the ground 0.66 mm/frame vs 6.98 for the built-in offset gait on a curved walk.
+- WORN PROPS OFF THE HANDS (loader.js rebindWorn): belts / buckles / purses / scabbards / chains /
+  circlets / hats had hand and forearm weights wherever the drape pose rested a hand on them (the belt
+  tongue stretched to Abby's moving hand as a long black strap); hair had upper-arm weights (Abby's
+  braid over the shoulder swung with the arm). Moved at load time (bind pose unchanged): worn props to
+  their other bones / the nearest torso bone, hair to the clavicle. Selftest checks no arm weights.
+- CRADLE rebuilt (motion.js GESTURES.cradle): bodyRig now measures the torso's front surface (clothes
+  included) and half width at spine02; the hurt forearm lies level across the lower ribs 4.5 cm clear
+  of the clothes, the hurt hand hangs limp at the far edge, the good hand holds the forearm from below
+  like a tray (palm up, fingers away from the body so their curl wraps the forearm). The old one put
+  the forearm on the belt line with the hurt hand round the far hip and the good hand clawing the air.
+  Pose dev scene humans-anim-pose.js (+ .json: id, acts, views) for this kind of iteration.
+- gestureNow(ch, name, o, w, t, dt) and legsNow(body, t, post): motion.js entry points for posers
+  that place the root / spine themselves (the director). reachDrop / solveLegs split out of applyBody.
+- CROWD conversation groups (crowd.js `groups`): members stand on a ring (~1.1 m apart) round the
+  group centre, face it, heads turn to the talker (the talk passes round every 2-4.5 s), the talker
+  makes a point with a hand and looks round, smiles; broken up by the alarm. Crowd proof restaged
+  with four groups, a cheerer, a waver, two wanderers (raised-arm drapes hang for wanderers).
+- Alexandria L011 camera lowered (el -0.24: from beside the nest looking up into her bowed face).
+Findings not fixed (look, not performance): the pulled-back hairlines show a band of scalp between
+the hairline roots (6 cm above the eyes, normal) and where the strands get dense, most visible under
+a low key light (Alexandria L011, Abby) - the hero renders show it too; hair build, not the rig
+(forehead skin moves < 2.4 mm relative to the head under the face units).
+Scratch: eng1/perf/dbg/*.mjs (Node harness perfload.mjs: load(id), perf, data; cradle.mjs,
+legs.mjs, crowdgrp.mjs, hairline.mjs), eng1/perf/bin/mixvo.sh (VO beds for the clips:
+mixvo.sh out.wav dur L011@1.0 ...).
