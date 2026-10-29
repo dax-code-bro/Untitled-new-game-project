@@ -22,6 +22,7 @@ import { loadCharacterData, buildCharacter, hashStr, loadLipMask } from './loade
 import { applyIdle } from './idle.js';
 import { registerDirectorHooks } from './director.js';
 import { loadMouthShapes, attachMouthShapes } from './mouthshapes.js';
+import { ROLE_OF } from './perform.js';
 
 export { loadCharacterData, buildCharacter, CACHE_URL } from './loader.js';
 export { applyIdle, blinkAt } from './idle.js';
@@ -60,6 +61,7 @@ for (const id of CROWD) CAST[id] = 'Festival villager';
  * The first call also registers the performance track's face (lip-sync, emotion, gaze) with the shot
  * director (director.js; opts.performance === false skips it).
  */
+const MOUTH_WARNED = new Set();
 export async function loadCharacter(id, opts = {}) {
   if (opts.performance !== false) {
     try { await registerDirectorHooks(); } catch (e) { console.warn(`[humans] performance hooks not registered: ${e.message}`); }
@@ -68,7 +70,16 @@ export async function loadCharacter(id, opts = {}) {
   if (opts.lipMask === undefined) await loadLipMask();
   const ch = buildCharacter(await loadCharacterData(id), opts);
   // sculpted mouth shapes when the character has the sidecar (tools/mouthmorphs.py; none: no-op)
-  if (opts.mouthShapes !== false) attachMouthShapes(ch, await loadMouthShapes(id));
+  if (opts.mouthShapes !== false) {
+    const added = attachMouthShapes(ch, await loadMouthShapes(id));
+    // a speaking character without its shapes talks with bone-only mouths: say so loudly, once (the
+    // render PC's cache check runs tools/check-mouth.mjs; build.py makes the sidecar after a build)
+    if (!added.length && ROLE_OF[id] && !MOUTH_WARNED.has(id)) {
+      MOUTH_WARNED.add(id);
+      console.error(`[humans] ${id} (${ROLE_OF[id]}) has NO sculpted mouth shapes (cache/${id}.mouth.json missing or stale): its lip-sync falls back to bone-only mouths. Fix: <bpy python> -I scenes/lib/humans/tools/mouthmorphs.py ${id} --force`);
+    }
+    ch.mouthShapeStatus = added.length ? 'ok' : (ROLE_OF[id] ? 'missing' : 'none');
+  }
   ch.update = (t, o = {}) => applyIdle(ch, t, { ...(opts.idle || {}), ...o });
   return ch;
 }

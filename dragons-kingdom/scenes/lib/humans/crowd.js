@@ -41,7 +41,8 @@ function segPoint(px, pz, ax, az, bx, bz) {
  * opts: { seed, t0, t1, agents: [{ performer?, pos: [x, z], yaw, home?: [x, z], radius (mill radius, 2.5),
  * talk (0.5: share of time stopped), speed (flee speed, default 3.0-4.4 by seed), exit (index) }],
  * exits: [polylines], obstacles: [{ x, z, r }], walls: [[x0, z0, x1, z1]], alarm: { t, at: [x, z],
- * wave (s per 10 m of distance: 0.6) }, cower (0.15), lookBack (0.5: share that glance back),
+ * wave (s per 10 m of distance: 0.25; each agent then reacts within 0.1 - 0.5 s of the wave reaching it) },
+ * cower (0.15), lookBack (0.5: share that glance back),
  * groups: [[agent indices], ...] - conversation groups: the members stand on a loose ring round the
  * group's centre (shuffling a little), face it, turn their heads to whoever is talking (the turn passes
  * round the group every few seconds), and the talker gestures - until the alarm breaks them up,
@@ -97,7 +98,9 @@ function bake(C) {
   // who flees where, who cowers, when each reacts
   for (const a of agents) {
     const d = al ? Math.hypot(a.pos[0] - al.at[0], a.pos[1] - al.at[1]) : 0;
-    a.fleeT = al ? al.t + (al.wave ?? 0.25) * d / 10 + 0.12 + 0.6 * hash01(seed, a.i * 11 + 3) : Infinity;
+    // the wave reaches each one at wave * d / 10 s; their own reaction follows within 0.1 - 0.5 s
+    // (nobody stands still more than ~0.5 s after it has passed them while everyone round them runs)
+    a.fleeT = al ? al.t + (al.wave ?? 0.25) * d / 10 + 0.1 + 0.4 * hash01(seed, a.i * 11 + 3) : Infinity;
     a.cowers = al && hash01(seed, a.i * 11 + 4) < (opts.cower ?? 0.15);
     // the nearest exit whose entrance is not past the threat (run away, not toward it)
     let best = -1, bs = Infinity;
@@ -147,7 +150,9 @@ function bake(C) {
     c.carrier = a; a.child = c;
     a.cowers = false; c.cowers = false;
     c.fleeT = a.fleeT;
-    a.pickT = a.fleeT + 0.2;
+    // the scoop starts as the parent turns; the run starts during the lift (not after it: a parent
+    // standing upright with the child on the hip while the square runs read as frozen)
+    a.pickT = a.fleeT + 0.1;
     a.vFlee *= 0.8;
   }
   const falls = new Set(opts.falls || []);
@@ -184,7 +189,7 @@ function bake(C) {
         a.fx = -a.vx / 0.18; a.fz = -a.vz / 0.18;
         continue;
       }
-      if (a.child && t >= a.fleeT && t < a.pickT + 0.75) {
+      if (a.child && t >= a.fleeT && t < a.pickT + 0.3) {
         // the parent stoops for the child: steps to it and stops
         gx = a.child.x - a.x; gz = a.child.z - a.z;
         v0 = Math.min(1.2, Math.max(0, Math.hypot(gx, gz) - 0.35) * 3); tau = 0.3;
@@ -360,7 +365,7 @@ function bake(C) {
     if (a.fallT != null) {
       const r0 = a.traj.at(a.fallT - 0.15, {}), r1 = a.traj.at(a.fallT, {});
       const dx = r1.x - r0.x, dz = r1.z - r0.z, d = Math.hypot(dx, dz);
-      P.fall(a.fallT, { dir: d > 1e-4 ? [dx / d, dz / d] : [Math.sin(r1.yaw), Math.cos(r1.yaw)], dur: 0.85 });
+      P.fall(a.fallT, { dir: d > 1e-4 ? [dx / d, dz / d] : [Math.sin(r1.yaw), Math.cos(r1.yaw)], dur: 0.85, drop: true });
     }
     if (a.stumbleT != null) {
       P.stagger(a.stumbleT, { dir: a.stumbleDir, dist: 0.04, dur: 0.6 });

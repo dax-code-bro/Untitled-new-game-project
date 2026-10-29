@@ -48,11 +48,12 @@ export async function setup(ctx) {
   abby.lookAt([0, 1.0, 6], wa.t1 - 0.3, { amount: 0.5 });
   abby.performLine('L091', LINES[0][2]);
   abby.lookAt({ ch: remiCh }, LINES[0][2] + 0.95, { amount: 0.7 });
-  // Remi: his right hand under her hurt (left) elbow, eyes on her
-  // (offset in Abby's body frame: x her left, y up, z forward) his hand holds her left upper arm from
-  // the outside, above the hurt forearm - steadying her without touching the break (a hand 'under the
-  // elbow' ended up at her belly once the cradled elbow sat against her side)
-  remi.gesture('support', 0.2, { side: 'R', at: { ch: abbyCh, bone: 'upperarm02.L', offset: [0.06, -0.01, -0.045] }, in: 0.8, dur: 99, palm: [-1, 0.1, 0.25], fingers: [-0.25, -0.75, 0.6], shape: 'clutch' });
+  // Remi: his right hand holds her left upper arm from the outside, above the hurt forearm -
+  // steadying her without touching the break (a hand 'under the elbow' ended up at her belly once the
+  // cradled elbow sat against her side); eyes on her
+  // (motion.js support grip: the palm ON the outside of her sleeve - limbRadius - fingers round the
+  // front of her arm; a target on her upper-arm bone put his fingers inside her sleeve)
+  remi.gesture('support', 0.2, { side: 'R', grip: { ch: abbyCh, from: 'upperarm01.L', to: 'lowerarm01.L', t: 0.55, dir: [1, 0.05, -0.35], fingers: [-0.15, -0.35, 1] }, in: 0.8, dur: 99, shape: 'clutch' });
   remi.mood({ worry: 0.45 });
   remi.lookAt({ ch: abbyCh }, -5, { amount: 0.7 });
   S = { abby, remi, sun };
@@ -63,9 +64,10 @@ export function update(t, ctx) {
   updateAll([S.abby, S.remi], t);      // any order poses the same frame (Remi's hand reads her arm at t)
   // a slow track back in front of them, eye level with Abby
   const r = S.abby.rootAt(Math.min(t, 7.5));
-  camera.position.set(r.x - 0.6, 1.28, r.z + 3.1);
-  camera.lookAt(r.x + 0.22, 1.12, r.z);
-  camera.fov = 21; camera.near = 0.1; camera.far = 400;
+  // (framed to keep Remi's head in: at fov 21 aimed at 1.12 m his crown was cut by the top edge)
+  camera.position.set(r.x - 0.6, 1.3, r.z + 3.1);
+  camera.lookAt(r.x + 0.24, 1.18, r.z);
+  camera.fov = 24; camera.near = 0.1; camera.far = 400;
   camera.updateProjectionMatrix();
   if (ctx.lens) { ctx.lens.focalLength = null; ctx.lens.fstop = 2.8; ctx.lens.focus = 3.15; ctx.lens.shutterAngle = 180; }
 }

@@ -29,7 +29,7 @@
 import * as THREE from 'three';
 import { twoBoneIK, rotateWorld, setWorldQuat, wpos, wquat, handShape, orientHand, hash01, noise1, clamp01, smooth, smoother, lerp } from './rig.js';
 import { hashStr } from './loader.js';
-import { isCharTarget, charTargetPoint } from './targets.js';
+import { isCharTarget, charTargetPoint, rootQuatAt } from './targets.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion();
@@ -241,8 +241,52 @@ export function bodyRig(ch) {
   }
   r.chestFront = front;
   r.chestHalfW = 0.39 * r.shoulderL.distanceTo(r.shoulderR);
+  // hand sizes: wrist -> middle knuckle (the palm centre lies half way), from the build
+  for (const s of ['L', 'R']) { const k = P(`finger3-1.${s}`); r[`palmLen${s}`] = k ? r[`wrist${s}`].distanceTo(k) : 0.09 * r.height / 1.75; }
   ch._bodyRig = r;
   return r;
+}
+
+/**
+ * Radii of a limb in the drape (bind) pose: { skin, sleeve } metres from the bone axis between
+ * bones a -> b (e.g. 'lowerarm01.L' -> 'wrist.L'): the skin's median radius and the outermost cloth
+ * layer's (90th percentile) - where a hand that holds the limb has to put its palm. Cached.
+ */
+export function limbRadius(ch, a, b) {
+  const key = `${a}>${b}`;
+  ch._limbR ||= {};
+  if (ch._limbR[key]) return ch._limbR[key];
+  const H = ch.header.bones, idx = ch.index;
+  const A = new THREE.Vector3(...H[idx[a]].p), B = new THREE.Vector3(...H[idx[b]].p);
+  const ab = B.clone().sub(A), L2 = ab.lengthSq();
+  // vertices skinned mostly to the bones of this segment (a and the bones between a and b)
+  const seg = new Set();
+  const m0 = /^([a-z]+)\d*(\.[LR])$/.exec(a);
+  H.forEach((h, j) => { if (h.name === a || (m0 && new RegExp(`^${m0[1]}\\d+\\${m0[2]}$`).test(h.name))) seg.add(j); });
+  const skin = [], cloth = [];
+  const p = new THREE.Vector3();
+  for (const m of ch.meshes) {
+    const k = m.userData.kind;
+    if (k !== 'skin' && k !== 'cloth') continue;
+    const g = m.geometry, pos = g.attributes.position, si = g.attributes.skinIndex, sw = g.attributes.skinWeight;
+    if (!si) continue;
+    for (let i = 0; i < pos.count; i++) {
+      let best = -1, bw = 0;
+      for (let c = 0; c < 4; c++) { const w = sw.getComponent(i, c); if (w > bw) { bw = w; best = si.getComponent(i, c); } }
+      if (!seg.has(best)) continue;
+      p.fromBufferAttribute(pos, i).sub(A);
+      const t = p.dot(ab) / L2;
+      if (t < 0.15 || t > 0.85) continue;
+      const r = p.addScaledVector(ab, -t).length();
+      if (r > 0.2) continue;
+      (k === 'skin' ? skin : cloth).push(r);
+    }
+  }
+  const q = (arr, f) => { if (!arr.length) return 0; arr.sort((x, y) => x - y); return arr[Math.min(arr.length - 1, Math.floor(arr.length * f))]; };
+  const sk = q(skin, 0.5) || 0.03;
+  const res = { skin: sk, sleeve: Math.max(sk + 0.002, q(cloth, 0.9) || sk) };
+  ch._limbR[key] = res;
+  return res;
 }
 
 // --------------------------------------------------------------- the body --
@@ -283,12 +327,30 @@ export function createBody(ch, opts = {}) {
       if (!GESTURES[name]) throw new Error(`motion: unknown gesture "${name}" (${Object.keys(GESTURES).join(', ')})`);
       S.gestures.push({ name, t0, o }); return body;
     },
-    /** Whole-body posture: 'crouch' | 'kneel' | 'cower' | 'hunch' (o: { hold, in, out, ... }) */
+    /**
+     * Whole-body posture: 'crouch' | 'kneel' | 'cower' | 'hunch' | 'crawl' (hands and knees; moving
+     * along the walk / trajectory the limbs step in diagonal pairs, planted on the ground - give it a
+     * crawling speed, ~0.3-0.6 m/s) | 'brace' (feet staggered, the body leaning into its hands: with the
+     * 'push' gesture) (o: { hold, in, out, ... })
+     */
     posture(name, t0, o = {}) { S.postures.push({ name, t0, o }); return body; },
     /** A shove / blast knocks the body dir [x, z] (world) by dist metres: the feet step to catch it. */
     stagger(t0, o = {}) { S.staggers.push({ t0, dir: o.dir || [0, -1], dist: o.dist ?? 0.6, dur: o.dur ?? 0.7 }); dirty(); return body; },
-    /** Fall to the ground at t0: o: { dir [x, z] world direction, dur (0.95), still (true: lies still) } */
-    fall(t0, o = {}) { S.falls.push({ t0, dir: o.dir || null, dur: o.dur ?? 0.95, o }); return body; },
+    /**
+     * Fall to the ground at t0: o: { dir [x, z] world direction, dur (0.95), still (true: lies still),
+     * drop (true: whatever the hands hold - a basket, a cup - leaves them as the knees buckle, flies on
+     * and settles on the ground: dropProps), thrown ({ dist (1.6 m), h (0.5 m) }: a blast lifts the body
+     * off its feet and throws it dist along dir - airborne while it turns, then a short slide), cover
+     * (true: once down - prone - the hands go to the back of the head, elbows out: dropping flat) }
+     */
+    fall(t0, o = {}) {
+      const f = { t0, dir: o.dir || null, dur: o.dur ?? 0.95, o };
+      S.falls.push(f);
+      if (o.drop) (S.drops ||= []).push({ t: t0 + (o.dropAt ?? 0.22 * f.dur), f });
+      return body;
+    },
+    /** Pose dropped hand props for t (call after apply(t); perform.js does). */
+    dropProps(t) { if (S.drops?.length) dropProps(body, t); return body; },
     /** Head (+ chest) look target from t0: Vector3 | [x,y,z] | fn(t) | { ch, bone } | null (heading) */
     look(target, t0 = -1e9, o = {}) { S.looks.push({ target, t0, amount: o.amount ?? 0.85, blend: o.blend ?? 0.45, chest: o.chest ?? 0.3 }); S.looks.sort((a, b) => a.t0 - b.t0); return body; },
     /** Where the root is at t ({ x, z, yaw, v }). */
@@ -396,7 +458,10 @@ function compile(S) {
   const holdStart = new Float64Array(n);
   let hs = -1;
   for (let i = 0; i < n; i++) { if (hold[i]) { if (hs < 0) hs = i; holdStart[i] = hs; } else { hs = -1; holdStart[i] = -1; } }
-  S.compiled = { traj, phi, hold, holdStart, vg, plants: new Map() };
+  // distance travelled (crawl limb cycles are tied to it, not to the walking cadence)
+  const dist = new Float64Array(n);
+  for (let i = 1; i < n; i++) dist[i] = dist[i - 1] + Math.hypot(traj.x[i] - traj.x[i - 1], traj.z[i] - traj.z[i - 1]);
+  S.compiled = { traj, phi, hold, holdStart, vg, dist, plants: new Map() };
 }
 
 /** First sample index with phi >= value (clamped). */
@@ -544,6 +609,31 @@ function pointOf(target, t) {
   return null;
 }
 
+/**
+ * A hand ON a limb of another character at t (its pass-1 snapshot, targets.js): grip = { ch, from, to,
+ * t, dir [x,y,z], fingers? [x,y,z] } (dir / fingers in the target's body frame: x its left, y up, z
+ * forward). The palm lies on the sleeve's outer surface on the dir side, square to the limb. ->
+ * { wrist, palm, fingers, contact } or null.
+ */
+function gripTarget(F, grip, sd) {
+  const ch = grip.ch;
+  if (!ch) return null;
+  const A = pointOf({ ch, bone: grip.from }, F.t), B = pointOf({ ch, bone: grip.to }, F.t);
+  if (!A || !B) return null;
+  const rq = rootQuatAt(ch, F.t, new THREE.Quaternion());
+  const axis = B.clone().sub(A).normalize();
+  const n = v3(grip.dir || [1, 0, 0]).applyQuaternion(rq);
+  n.addScaledVector(axis, -n.dot(axis)).normalize();
+  const r = limbRadius(ch, grip.from, grip.to);
+  const P = A.clone().lerp(B, grip.t ?? 0.5);
+  const contact = P.clone().addScaledVector(n, r.sleeve + 0.004);
+  let fingers = grip.fingers ? v3(grip.fingers).applyQuaternion(rq) : new THREE.Vector3().crossVectors(axis, n);
+  fingers.addScaledVector(n, -fingers.dot(n)).normalize();
+  const pl = F.rig[`palmLen${sd}`] || 0.09;
+  const wrist = contact.clone().addScaledVector(n, 0.13 * pl).addScaledVector(fingers, -0.5 * pl);
+  return { wrist, palm: n.clone().negate(), fingers, contact };
+}
+
 export const GESTURES = {
   /** point at o.at (world) with the index finger */
   point(F, o, sd) {
@@ -563,46 +653,114 @@ export const GESTURES = {
     const at = pointOf(o.at, F.t);
     if (!at) return {};
     const sg = sd === 'L' ? 1 : -1;
-    return { [sd]: { hand: at, palm: o.palm ? v3(o.palm).normalize() : null, fingers: o.fingers ? v3(o.fingers).normalize() : null, shape: o.shape || 'cup', pole: F.sh[sd].clone().add(new THREE.Vector3(0, -0.5, 0)).addScaledVector(F.left, sg * 0.35).addScaledVector(F.fwd, -0.25) } };
+    if (o.lateral) at.addScaledVector(F.left, sg * o.lateral);           // (handsTo: each hand to its side)
+    // (shape: null keeps the hand's fingers - a held prop's grip)
+    return { [sd]: { hand: at, palm: o.palm ? v3(o.palm).normalize() : null, fingers: o.fingers ? v3(o.fingers).normalize() : null, shape: o.shape === null ? null : o.shape || 'cup', pole: F.sh[sd].clone().add(new THREE.Vector3(0, -0.5, 0)).addScaledVector(F.left, sg * 0.35).addScaledVector(F.fwd, -0.25) } };
   },
-  /** hold / support another person: like reach, the hand closes round the point (o.at = { ch, bone, offset }) */
+  /**
+   * hold / support another person: like reach, the hand closes round the point (o.at = { ch, bone,
+   * offset }); or o.grip = { ch, from, to, t (0..1 along from -> to), dir [x, y, z] (the side of the
+   * limb the palm lies on, in the target's body frame: x its left, y up, z forward), fingers [x, y, z]
+   * (optional, same frame) } - the palm on the OUTSIDE of that limb's sleeve (limbRadius), the
+   * fingers round it (a hand aimed at a bone point lands inside the sleeve)
+   */
   support(F, o, sd) {
+    if (o.grip) {
+      const g = gripTarget(F, o.grip, sd);
+      if (!g) return {};
+      const sg = sd === 'L' ? 1 : -1;
+      return { [sd]: { hand: g.wrist, palm: g.palm, fingers: g.fingers, shape: o.shape || 'clutch', pole: o.pole ? v3(o.pole) : F.sh[sd].clone().add(new THREE.Vector3(0, -0.5, 0)).addScaledVector(F.left, sg * 0.35).addScaledVector(F.fwd, -0.25) } };
+    }
     const r = GESTURES.reach(F, { shape: 'clutch', ...o }, sd);
     return r;
   },
   /** cradle the injured arm (o.side = the HURT arm, default 'L'): the hurt forearm across the belly,
    *  the other hand under it near the wrist, shoulders drawn in */
   cradle(F, o) {
-    // the classic guard of a broken forearm: the hurt upper arm hangs close at the side, the elbow
-    // bent a little past 90 degrees so the forearm lies level across the lower ribs, just clear of
-    // the clothes; the hurt hand hangs limp from the wrist at the far edge of the torso; the good
-    // hand cups the forearm from below between wrist and mid-forearm (palm up, fingers round it);
-    // the hurt shoulder is drawn up and forward. Sizes from the build (bodyRig: chestFront, chestHalfW).
+    // the classic guard of a broken forearm: the hurt upper arm hangs tight at the side, the elbow
+    // bent a little past 90 degrees so the forearm lies across the stomach just clear of the clothes,
+    // rising a little to the wrist; the hurt hand hangs limp from the wrist, fingers together; the
+    // good hand holds the forearm from below near the wrist like a tray - its palm ON the sleeve
+    // (limbRadius: the sleeve's outer radius), the fingers curled up round the far side, its own
+    // forearm under the hurt one and clear of it; the hurt shoulder drawn up and forward (guarding).
+    // Sizes from the build (bodyRig: chestFront, chestHalfW, forearm and palm lengths).
     const hurt = o.side || 'L', good = hurt === 'L' ? 'R' : 'L';
     const sh = hurt === 'L' ? 1 : -1;            // +left for the hurt side
     const R = F.rig;
-    const hw = R.chestHalfW, fr = R.chestFront + (o.clear ?? 0.045);
-    const lvl = F.chest.clone().addScaledVector(F.up, (o.height ?? 0) - 0.015 * (1 - (o.low ?? 0)) - 0.06 * (o.low ?? 0));
+    const foreR = limbRadius(F.ch, `lowerarm01.${hurt}`, `wrist.${hurt}`);
+    const upR = limbRadius(F.ch, `upperarm01.${hurt}`, `lowerarm01.${hurt}`);
+    const hw = R.chestHalfW;
     const tremble = noise1(F.seed + 7, F.t * 7) * 0.003 * (o.tremble ?? 1);
-    // the hurt wrist: at the far edge of the torso front, a little higher than the elbow
-    const hurtWrist = lvl.clone().addScaledVector(F.fwd, fr + 0.01).addScaledVector(F.left, -sh * hw * 0.55).addScaledVector(F.up, 0.02 + tremble);
-    // where the elbow should go: by the hurt side, under the shoulder, a little forward
-    const elbowAim = lvl.clone().addScaledVector(F.left, sh * (hw + 0.02)).addScaledVector(F.fwd, fr * 0.45);
-    elbowAim.y = F.sh[hurt].y - R.upper * 0.93;
-    const foreDir = hurtWrist.clone().sub(elbowAim).normalize();
-    // the good hand holds the forearm from below 35 % of the way from the wrist like a tray: palm up
-    // under its axis, fingers pointing away from the body (a little toward the elbow) so that their
-    // curl wraps them round the front of the forearm; the wrist sits a palm's length behind
-    const fingersGood = F.fwd.clone().addScaledVector(F.left, sh * 0.55).addScaledVector(F.up, 0.1).normalize();
-    const under = hurtWrist.clone().lerp(elbowAim, 0.35).addScaledVector(F.up, -0.05).addScaledVector(fingersGood, -0.05 * R.height / 1.7);
-    // limp hurt hand: fingers carry on from the forearm and droop ~35 degrees; palm toward the body;
-    // the fingers fall together and flex the way a hand at rest does, the little finger most (a
-    // lighter curl with MakeHuman's splayed rest fingers read as a claw in the 4K still)
-    const droop = foreDir.clone().addScaledVector(F.up, -0.7).normalize();
+    // the hurt elbow: at the side against the ribs (half the sleeve outside the chest's half width),
+    // a little forward of the chest's centre line, the upper arm hanging nearly straight down
+    const elbow = F.chest.clone().addScaledVector(F.left, sh * (hw * 0.86 + upR.sleeve * 0.6)).addScaledVector(F.fwd, R.chestFront * 0.3 + (o.clear ?? 0));
+    elbow.y = F.sh[hurt].y - R.upper * 0.95 + (o.height ?? 0) - 0.03 * (o.low ?? 0);
+    // the forearm across the stomach: 50 deg from the side toward the front, rising 10 deg
+    const ang = (o.across ?? 56) * Math.PI / 180;
+    const foreDir = F.left.clone().multiplyScalar(-sh * Math.cos(ang)).addScaledVector(F.fwd, Math.sin(ang)).addScaledVector(F.up, 0.17).normalize();
+    const hurtWrist = elbow.clone().addScaledVector(foreDir, R.fore * 0.985).addScaledVector(F.up, tremble);
+    // the good hand: palm up on the underside of the forearm's sleeve, a third of the way from the
+    // wrist; fingers point along the forearm toward the elbow and out to its far side, so their curl
+    // wraps them up round the front of the sleeve
+    const toElbow = foreDir.clone().negate();
+    const below = F.up.clone().negate().addScaledVector(toElbow, -F.up.clone().negate().dot(toElbow)).normalize();
+    const out = new THREE.Vector3().crossVectors(below, toElbow).normalize();
+    if (out.dot(F.fwd) < 0) out.negate();                                  // the far (front) side
+    const axisP = hurtWrist.clone().lerp(elbow, o.holdAt ?? 0.3);
+    const palmUp = below.clone().negate();
+    const contact = axisP.clone().addScaledVector(below, foreR.sleeve + 0.003);
+    const pl = R[`palmLen${good}`] || 0.09;
+    const fingersGood = toElbow.clone().multiplyScalar(0.55).addScaledVector(out, 0.75).normalize();
+    // the wrist joint sits half a palm back from the palm's centre and half its thickness below it
+    const under = contact.clone().addScaledVector(below, 0.13 * pl).addScaledVector(fingersGood, -0.5 * pl);
+    // limp hurt hand: it carries on from the forearm and droops; palm toward the body; fingers
+    // together, flexed like a hand at rest (the little finger most)
+    const droop = foreDir.clone().addScaledVector(F.up, -0.9).normalize();
+    // the pole: the elbow target pushed away from the shoulder-wrist line (the IK elbow lands on it)
+    const S0 = F.sh[hurt], sw = hurtWrist.clone().sub(S0), u = Math.max(0, Math.min(1, elbow.clone().sub(S0).dot(sw) / sw.lengthSq()));
+    const pole = elbow.clone().addScaledVector(elbow.clone().sub(S0.clone().addScaledVector(sw, u)), 3);
     return {
-      [hurt]: { hand: hurtWrist, pole: elbowAim.clone().addScaledVector(F.left, sh * 0.35).addScaledVector(F.up, -0.2).addScaledVector(F.fwd, -0.15), fingers: droop, palm: F.fwd.clone().multiplyScalar(-1).addScaledVector(F.up, -0.3).normalize(), shape: { curl: [0.25, 0.42, 0.47, 0.52, 0.58], spread: -0.12, thumbIn: 0.3 }, shoulder: { up: 0.016, fwd: 0.02 } },
-      [good]: { hand: under, pole: F.sh[good].clone().addScaledVector(F.left, -sh * 0.35).addScaledVector(F.up, -0.45).addScaledVector(F.fwd, -0.1), fingers: fingersGood, palm: F.up.clone().addScaledVector(F.fwd, -0.1).normalize(), shape: { curl: [0.35, 0.75, 0.82, 0.85, 0.85], spread: -0.1, thumbIn: 0.05 }, shoulder: { fwd: 0.012 } },
+      [hurt]: { hand: hurtWrist, pole, fingers: droop, palm: F.fwd.clone().multiplyScalar(-1).addScaledVector(F.up, -0.3).normalize(), shape: { curl: [0.22, 0.38, 0.44, 0.5, 0.56], together: 1, thumbIn: 0.35 }, shoulder: { up: 0.028, fwd: 0.03 } },
+      [good]: { hand: under, pole: F.sh[good].clone().addScaledVector(F.left, -sh * 0.45).addScaledVector(F.up, -0.5).addScaledVector(F.fwd, -0.05), fingers: fingersGood, palm: palmUp, shape: { curl: [0.3, 0.62, 0.7, 0.74, 0.76], together: 0.85, thumbIn: 0.1 }, shoulder: { fwd: 0.015 } },
     };
+  },
+  /** a small raised hand, palm out (stop / wait / a greeting) */
+  raiseHand(F, o, sd) {
+    const sg = sd === 'L' ? 1 : -1;
+    const hand = F.sh[sd].clone().addScaledVector(F.fwd, 0.3).addScaledVector(F.left, sg * 0.1).addScaledVector(F.up, 0.03);
+    return { [sd]: { hand, palm: F.fwd.clone(), fingers: F.up.clone().addScaledVector(F.fwd, 0.2).normalize(), shape: 'open', pole: F.sh[sd].clone().addScaledVector(F.left, sg * 0.5).addScaledVector(F.up, -0.5) } };
+  },
+  /** a push: the hand(s) drive out to o.at (or straight ahead) and come back over o.dur (0.45 s) */
+  shove(F, o, sd) {
+    const sg = sd === 'L' ? 1 : -1;
+    const at = pointOf(o.at, F.t) || F.sh[sd].clone().addScaledVector(F.fwd, 0.7);
+    at.addScaledVector(F.left, sg * 0.08);
+    const k = Math.sin(Math.PI * clamp01(F.dt / (o.dur ?? 0.45)));
+    const hand = F.sh[sd].clone().addScaledVector(F.fwd, 0.15).lerp(at, 0.55 + 0.45 * k);
+    return { [sd]: { hand, palm: F.fwd.clone(), fingers: F.up.clone().addScaledVector(F.fwd, 0.3).normalize(), shape: 'open', pole: F.sh[sd].clone().addScaledVector(F.left, sg * 0.4).addScaledVector(F.up, -0.6).addScaledVector(F.fwd, -0.2) } };
+  },
+  /**
+   * push something heavy: both hands flat on o.at (a point on it: world / fn / { object }), o.width
+   * apart (0.36 m), palms into it, fingers up; a point beyond the arms bends the trunk into it (use
+   * the 'brace' posture for the legs). o.along [x, y, z]: the line the hands sit on (a beam: its axis;
+   * default the body's left)
+   */
+  push(F, o) {
+    const at = pointOf(o.at, F.t) || F.chest.clone().addScaledVector(F.fwd, 0.6);
+    const along = o.along ? v3(o.along).normalize() : F.left.clone();
+    if (along.dot(F.left) < 0) along.negate();
+    const into = at.clone().sub(F.chest).setY(0).normalize();
+    const out = {};
+    for (const sd of ['L', 'R']) {
+      const sg = sd === 'L' ? 1 : -1;
+      const pl = F.rig[`palmLen${sd}`] || 0.09;
+      const contact = at.clone().addScaledVector(along, sg * (o.width ?? 0.36) / 2);
+      const fingers = new THREE.Vector3(0, 1, 0).addScaledVector(along, sg * 0.35).addScaledVector(into, -0.15).normalize();
+      // the wrist below and behind the palm's centre (the heel of the hand drives)
+      const hand = contact.clone().addScaledVector(fingers, -0.5 * pl).addScaledVector(into, -0.02);
+      out[sd] = { hand, palm: into.clone(), fingers, shape: 'open', pole: F.sh[sd].clone().addScaledVector(F.left, sg * 0.4).add(new THREE.Vector3(0, -0.6, 0)).addScaledVector(F.fwd, -0.2) };
+    }
+    return out;
   },
   /** both hands up to the face (grief / shock) */
   handsToFace(F, o) {
@@ -751,13 +909,15 @@ function applyBody(S, t, o) {
   const phiT = C.phi[i0] + (C.phi[i0 + 1] - C.phi[i0]) * fi;
   // (o.carried: someone carries this body - no gait of its own, whatever its trajectory does)
   const vNow = o.carried ? 0 : C.vg[i0] + (C.vg[i0 + 1] - C.vg[i0]) * fi;
-  const gw = sstep(0.02, 0.5, vNow);                   // gait weight (0 standing)
+  let gw = sstep(0.02, 0.5, vNow);                     // gait weight (0 standing)
   const g = gaitParams(Math.max(0.45, vNow), rig.height);
   const stepping = !o.carried && C.phi[Math.min(C.traj.n - 1, i0 + 1)] !== C.phi[Math.max(0, i0 - 1)];
-  const amp = Math.max(gw, stepping ? 0.35 : 0);
+  let amp = Math.max(gw, stepping ? 0.35 : 0);
   // posture weights
-  const post = { crouch: 0, kneel: 0, cower: 0, hunch: 0 };
+  const post = { crouch: 0, kneel: 0, cower: 0, hunch: 0, crawl: 0, brace: 0 };
   for (const p of S.postures) { const w = envelopeW(t - p.t0, { in: 0.7, out: 0.8, hold: Infinity, ...p.o }); if (w > post[p.name]) post[p.name] = w; }
+  // crawling: no walking gait of its own (the limbs step in crawlLimbs)
+  if (post.crawl > 0) { gw *= 1 - post.crawl; amp *= 1 - post.crawl; }
   const fall = fallState(S, t);
   // 2. feet: planted feet (gait), standing feet, or posture feet
   const feet = {};
@@ -771,8 +931,25 @@ function applyBody(S, t, o) {
     }
   }
   // postures move the feet: kneel puts the right knee down, the left foot forward
+  const crawl = post.crawl > 0 ? crawlLimbs(S, t, r, gy, fwd, left, vNow) : null;
   for (const sd of ['L', 'R']) {
     const F = feet[sd];
+    if (crawl) {
+      // hands and knees: the knee on the ground under the hip, the shin along the ground behind it,
+      // the instep down
+      const k = smooth(post.crawl);
+      F.pos.lerp(crawl.ankle[sd], k);
+      F.pitch = lerp(F.pitch, -1.25, k);
+      F.yaw += wrap(r.yaw - F.yaw) * k;
+      F.kneeDown = Math.max(F.kneeDown || 0, k);
+      F.stance = true;
+    }
+    if (post.brace > 0) {
+      // a push: the right foot back and on its toes, the left a little forward (the body leans from them)
+      const k = smooth(post.brace);
+      if (sd === 'R') { F.pos.addScaledVector(fwd, -0.36 * rig.height / 1.75 * k).addScaledVector(left, -0.04 * k); F.pitch = lerp(F.pitch, -0.45, k); }
+      else F.pos.addScaledVector(fwd, 0.1 * k);
+    }
     if (post.kneel > 0) {
       const k = post.kneel;
       if (sd === 'L') { F.pos.addScaledVector(fwd, 0.3 * smooth(k * 1.6)); }
@@ -797,9 +974,10 @@ function applyBody(S, t, o) {
   const ws = (S.opts.weightShift ?? 1) * (1 - gw) * (1 - post.kneel) * (1 - fall.w);
   const shiftU = noise1(seed + 1, t * 0.11) * 0.8 + noise1(seed + 2, t * 0.27) * 0.2;
   const latStand = 0.025 * shiftU * ws;
-  const fallBuckle = fall.w > 0 ? smooth(fall.dt / fall.f.dur / 0.3) * (1 - 0.7 * clamp01((fall.dt / fall.f.dur - 0.18) / 0.82)) : 0;
-  const pelvisDrop = fallBuckle * 0.24 + post.crouch * rig.legLen * 0.38 + post.cower * rig.legLen * 0.5 + post.kneel * (rig.pelvis.y - (0.06 + rig.thigh * 0.95 + 0.0)) + post.hunch * 0.03 + Math.abs(shiftU) * 0.004 * ws;
-  const pelvisBack = post.crouch * 0.12 + post.cower * 0.16 - post.kneel * 0.02;
+  const fallBuckle = fall.w > 0 ? smooth(fall.dt / fall.f.dur / 0.3) * (1 - 0.7 * clamp01((fall.dt / fall.f.dur - 0.18) / 0.82)) * (fall.f.o?.thrown ? 0.2 : 1) : 0;
+  const pelvisDrop = fallBuckle * 0.24 + post.crouch * rig.legLen * 0.38 + post.cower * rig.legLen * 0.5 + post.kneel * (rig.pelvis.y - (0.06 + rig.thigh * 0.95 + 0.0)) + post.hunch * 0.03 + Math.abs(shiftU) * 0.004 * ws
+    + smooth(post.crawl) * (rig.pelvis.y - (0.11 * rig.height / 1.75 + rig.thigh * 0.93)) + post.brace * 0.05;
+  const pelvisBack = post.crouch * 0.12 + post.cower * 0.16 - post.kneel * 0.02 - post.brace * 0.06;
   if (rootB) {
     const d0 = ch.drape.p[ch.index.root];
     rootB.position.set(d0.x + lat + latStand, d0.y + bob - pelvisDrop, d0.z - pelvisBack);
@@ -807,7 +985,7 @@ function applyBody(S, t, o) {
     const rollP = g.rollA * Math.cos(ph2) * gw + 0.035 * shiftU * ws;
     _q.setFromAxisAngle(_v.set(0, 1, 0), yawP);
     _q2.setFromAxisAngle(_v.set(0, 0, 1), rollP);
-    _q3.setFromAxisAngle(_v.set(1, 0, 0), 0.06 * gw + post.crouch * 0.25 + post.cower * 0.35 + post.kneel * 0.05);
+    _q3.setFromAxisAngle(_v.set(1, 0, 0), 0.06 * gw + post.crouch * 0.25 + post.cower * 0.35 + post.kneel * 0.05 + smooth(post.crawl) * 0.66 + post.brace * 0.12);
     rootB.quaternion.copy(ch.drape.q[ch.index.root]).premultiply(_q3).premultiply(_q2).premultiply(_q);
     ch.root.updateMatrixWorld(true);
     if (!o.carried) reachDrop(S, feet, g);
@@ -816,7 +994,7 @@ function applyBody(S, t, o) {
   solveLegs(S, feet);
   ch.root.updateMatrixWorld(true);
   // 5. spine: lean with speed, counter-rotation, postures
-  const spineBend = g.lean * gw + post.crouch * 0.35 + post.cower * 0.75 + post.hunch * 0.28 + post.kneel * 0.08;
+  const spineBend = g.lean * gw + post.crouch * 0.35 + post.cower * 0.75 + post.hunch * 0.28 + post.kneel * 0.08 + smooth(post.crawl) * 0.82 + post.brace * 0.22;
   const counter = g.yawA * 0.9 * Math.cos(2 * Math.PI * phiT) * gw;
   const latBend = -0.6 * g.rollA * Math.cos(ph2) * gw - 0.02 * shiftU * ws;
   for (const [n, w] of [['spine04', 0.25], ['spine03', 0.3], ['spine02', 0.3], ['spine01', 0.15]]) {
@@ -826,7 +1004,8 @@ function applyBody(S, t, o) {
     if (latBend) rotateWorld(b, _q.setFromAxisAngle(fwd, latBend * w));
   }
   // head down a little when cowering / hunched
-  const headDown = post.cower * 0.45 + post.hunch * 0.15;
+  // (crawling: the neck extends - the face looks ahead, not at the ground under the chest)
+  const headDown = post.cower * 0.45 + post.hunch * 0.15 - smooth(post.crawl) * 0.85;
   if (headDown) for (const [n, w] of [['neck01', 0.5], ['head', 0.5]]) { const b = ch.bone(n); if (b) rotateWorld(b, _q.setFromAxisAngle(left, headDown * w)); }
   ch.root.updateMatrixWorld(true);
   // 6. arms: base (hang + swing while moving), then gestures
@@ -862,6 +1041,18 @@ function applyBody(S, t, o) {
     for (const sd of ['L', 'R']) if (res[sd] && (!gest[sd] || w >= gest[sd].w)) gest[sd] = { ...res[sd], w, name: ge.name };
   }
   // postures with arm poses
+  if (crawl && post.crawl > 0.01) {
+    for (const sd of ['L', 'R']) {
+      const sg = sd === 'L' ? 1 : -1;
+      const hd = crawl.hand[sd];
+      const pl = rig[`palmLen${sd}`] || 0.09;
+      const fingers = fwd.clone().addScaledVector(left, -sg * 0.25).normalize();
+      // the wrist above the heel of the hand, the palm flat on the ground (lifted in the swing)
+      const wrist = hd.clone().addScaledVector(fingers, -0.5 * pl).add(new THREE.Vector3(0, 0.035, 0));
+      const g2 = { hand: wrist, palm: new THREE.Vector3(0, -1, 0), fingers, shape: 'open', pole: F.sh[sd].clone().addScaledVector(fwd, -0.4).addScaledVector(left, sg * 0.35).add(new THREE.Vector3(0, 0.1, 0)), w: smooth(post.crawl) };
+      if (!gest[sd] || gest[sd].w < g2.w) gest[sd] = g2;
+    }
+  }
   if (post.cower > 0.01) {
     F.dt = t; const res = GESTURES.protectHead(F, {});
     for (const sd of ['L', 'R']) if (!gest[sd] || gest[sd].w < post.cower) gest[sd] = { ...res[sd], w: post.cower };
@@ -869,7 +1060,7 @@ function applyBody(S, t, o) {
   // a reach beyond the arm bends the trunk toward it (picking something up, a hand to the ground)
   for (const sd of ['L', 'R']) {
     const ge = gest[sd];
-    if (!ge || !ge.hand || !(ge.name === 'reach' || ge.name === 'support')) continue;
+    if (!ge || !ge.hand || !(ge.name === 'reach' || ge.name === 'support' || ge.name === 'push')) continue;
     const sh = wpos(ch.bone(`upperarm01.${sd}`), new THREE.Vector3());
     const deficit = sh.distanceTo(ge.hand) - rig.armLen * 0.93;
     if (deficit <= 0) continue;
@@ -895,6 +1086,67 @@ function applyBody(S, t, o) {
   if (S.opts.headLook !== false) applyLook(S, t, fwd, left, gw, fall, o.pass1);
   ch.root.updateMatrixWorld(true);
   return { phi: phiT, v: vNow, gait: gw, feet, post, fall: fall.w, root: r };
+}
+
+/**
+ * Crawling limbs at t: diagonal pairs (left hand + right knee, then right hand + left knee) step in
+ * turn, each planted on the ground while the body moves over it, then swung (lifted) to its next
+ * plant. Plants are tied to the distance travelled (compiled dist), not to time: a stop leaves the
+ * limbs where they are, and any t poses the same. -> { hand: { L, R } (palm contact points),
+ * ankle: { L, R } (the ankle joints, instep on the ground behind the knees) }
+ */
+function crawlLimbs(S, t, r, gy, fwd, left, v) {
+  const { rig } = S;
+  const C = S.compiled, n = C.traj.n;
+  const u = (t - C.traj.t0) / DT;
+  const i0 = Math.max(0, Math.min(n - 2, Math.floor(u))), fi = clamp01(u - i0);
+  const s = C.dist[i0] + (C.dist[i0 + 1] - C.dist[i0]) * fi;
+  const sc = rig.height / 1.75;
+  const Lc = 0.3 * sc;                                   // each limb advances Lc per cycle
+  const D = 0.68;                                        // share of the cycle a limb is planted
+  const torso = rig.shoulderL.y - rig.pelvis.y;
+  const hx = Math.abs(rig.hipL.x - rig.hipR.x) / 2, sx = Math.abs(rig.shoulderL.x - rig.shoulderR.x) / 2;
+  // anchors in the body frame (x left, z forward from the root): hands under the shoulders of a
+  // near-level trunk, knees under the hips
+  const anchor = { hL: [sx * 0.9, torso * 0.94 + 0.03], hR: [-sx * 0.9, torso * 0.94 + 0.03], kL: [hx * 1.1, -0.03], kR: [-hx * 1.1, -0.03] };
+  const phase = { hL: 0, kR: 0.08, hR: 0.5, kL: 0.58 };
+  // the root at a travelled distance (binary search in dist)
+  const rootAtDist = (d) => {
+    const a = C.dist;
+    let lo = 0, hi = n - 1;
+    if (d <= a[0]) return C.traj.at(C.traj.t0, {});
+    if (d >= a[hi]) return C.traj.at(C.traj.t0 + hi * DT, {});
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (a[m] >= d) hi = m; else lo = m; }
+    const f = (d - a[lo]) / Math.max(1e-9, a[hi] - a[lo]);
+    return C.traj.at(C.traj.t0 + (lo + f) * DT, {});
+  };
+  const plantAt = (name, k) => {
+    const R = rootAtDist((k + D / 2 - phase[name]) * Lc);
+    const [ax, az] = anchor[name];
+    const cy = Math.cos(R.yaw), sy = Math.sin(R.yaw);
+    // body x (left) = (cos yaw, 0, -sin yaw), z (fwd) = (sin yaw, 0, cos yaw)
+    const x = R.x + ax * cy + az * sy, z = R.z - ax * sy + az * cy;
+    return new THREE.Vector3(x, S.ground(x, z), z);
+  };
+  const moving = sstep(0.03, 0.15, v);
+  const limb = (name, lift) => {
+    const c = s / Lc + phase[name];
+    const k = Math.floor(c), p = c - k;
+    if (p < D) return plantAt(name, k);
+    const q = smooth((p - D) / (1 - D));
+    const P = plantAt(name, k).lerp(plantAt(name, k + 1), q);
+    P.y += lift * Math.sin(Math.PI * q) * moving;
+    return P;
+  };
+  const hand = { L: limb('hL', 0.06 * sc), R: limb('hR', 0.06 * sc) };
+  const ankle = {};
+  for (const sd of ['L', 'R']) {
+    const kn = limb(`k${sd}`, 0.03 * sc);
+    // (the knee joint ~5 cm up: on the kneecap; the ankle joint ~8 cm up: the instep on the ground)
+    ankle[sd] = kn.clone().addScaledVector(fwd, -rig.shin * 0.95).add(new THREE.Vector3(0, 0.08 * sc, 0));
+  }
+  void r; void gy; void left;
+  return { hand, ankle };
 }
 
 function frameOf(S, t, fwd, left) {
@@ -1079,6 +1331,8 @@ function applyFall(S, fs, t, fwd, left) {
   const buckle = smooth(u / 0.3);
   let topple = clamp01((u - 0.18) / 0.82);
   topple = topple * topple;                        // falling accelerates
+  // thrown by a blast: the push on the upper body turns it at once (fast at first), no knees buckling
+  if (f.o.thrown) { const v = clamp01((u - 0.02) / 0.85); topple = 1 - (1 - v) * (1 - v); }
   const bounce = u > 1 ? Math.exp(-(dt - T) * 9) * Math.sin((dt - T) * 22) * 0.04 : 0;
   const ang = (forward ? 1.42 : 1.48) * topple + bounce * (topple > 0.99 ? 1 : 0);
   // pivot: the ground under the feet's midpoint (forward: in front of the toes; back: the heels)
@@ -1088,19 +1342,40 @@ function applyFall(S, fs, t, fwd, left) {
   piv.addScaledVector(dirW, forward ? 0.1 : -0.06);
   void buckle;   // (the knees buckle in applyBody: the pelvis drops with the feet planted)
   const axis = new THREE.Vector3().crossVectors(UP, dirW).normalize();   // rotating about it tips the top toward dir
+  // the body's own left (axis is its left only for a forward fall: on the back, the right - placing the
+  // hands at "sg * axis" crossed the arms over the chest)
+  const side = forward ? axis : axis.clone().negate();
   // hips fold during the topple (forward: the trunk goes down first)
   const fold = (forward ? 0.55 : -0.25) * Math.sin(Math.PI * Math.min(1, topple * 1.1)) * 0.8 + (forward ? 0.12 : 0) * topple;
   for (const [n, w] of [['spine04', 0.4], ['spine03', 0.35], ['spine02', 0.25]]) { const b = ch.bone(n); if (b) rotateWorld(b, _q.setFromAxisAngle(axis, fold * w)); }
+  // the upper body and head LAG behind the pelvis while it tips (a body is not a plank): the chest and
+  // head stay back - up - and catch up at the end, the head held up out of the fall (looking where it goes)
+  const lag = -(forward ? 0.42 : 0.3) * Math.sin(Math.PI * Math.min(1, topple)) * (1 - 0.4 * topple);
+  if (Math.abs(lag) > 1e-4) {
+    for (const [n, w] of [['spine03', 0.25], ['spine04', 0.25], ['neck01', 0.25], ['head', 0.25]]) { const b = ch.bone(n); if (b) rotateWorld(b, _q.setFromAxisAngle(axis, lag * w)); }
+  }
   ch.root.updateMatrixWorld(true);
   // the whole body about the pivot
   const q = new THREE.Quaternion().setFromAxisAngle(axis, ang);
   const rp = ch.root.position.clone().sub(piv).applyQuaternion(q).add(piv);
   ch.root.position.copy(rp);
   ch.root.quaternion.premultiply(q);
+  if (f.o.thrown) {
+    // thrown by a blast: off the feet at once, carried along dir (fast at first) on a ballistic arc
+    // while the body turns, down by ~0.95 of dur, then a short slide on the ground
+    const th = f.o.thrown === true ? {} : f.o.thrown;
+    const dist = th.dist ?? 1.6, h = th.h ?? 0.5;
+    const air = clamp01(u / 0.95);
+    const along = dist * 0.85 * (1 - Math.pow(1 - air, 1.6)) + dist * 0.15 * smooth((u - 0.95) / 0.45);
+    ch.root.position.addScaledVector(dirW, along);
+    ch.root.position.y += h * 4 * air * (1 - air);
+  }
   // keep the lowest point on the ground: lift so nothing sinks (pelvis / chest about 0.12 m up)
   ch.root.updateMatrixWorld(true);
   const ch2 = wpos(ch.bone('spine02'), new THREE.Vector3());
-  const minY = S.ground(ch2.x, ch2.z) + 0.13;
+  // once down the chest and hips sink 2-3 cm into the ground's give (and the clothes) over 0.3 s
+  const sink = 0.025 * smooth((dt - T) / 0.3);
+  const minY = S.ground(ch2.x, ch2.z) + 0.13 - sink;
   if (ch2.y < minY) { ch.root.position.y += (minY - ch2.y) * smooth(topple * 1.5); ch.root.updateMatrixWorld(true); }
   // once down, the legs lie along the ground behind the pelvis (not folded up in the air): prone, nearly
   // straight with the knee caps on the ground (a bent knee pushed the joint 7 cm into it) and one leg a
@@ -1113,29 +1388,33 @@ function applyFall(S, fs, t, fwd, left) {
       const hip = wpos(ch.bone(`upperleg01.${sd}`), new THREE.Vector3());
       const bent = forward && sd === drawn;
       // the feet are on the pivot side (opposite the direction of the fall) either way
-      const tgt = hip.clone().addScaledVector(dirW, -rig.legLen * (forward ? (bent ? 0.8 : 0.997) : 0.93)).addScaledVector(axis, sg * (bent ? 0.2 : 0.06));
+      const tgt = hip.clone().addScaledVector(dirW, -rig.legLen * (forward ? (bent ? 0.8 : 0.997) : 0.93)).addScaledVector(side, sg * (bent ? 0.2 : 0.06));
       tgt.y = S.ground(tgt.x, tgt.z) + (forward ? (bent ? 0.08 : 0.07) : 0.09);
       // prone: the knee faces the ground (out to the side for the drawn-up leg); on the back: knees up
-      const pole = hip.clone().addScaledVector(dirW, -0.4).addScaledVector(axis, bent ? sg * 0.6 : 0).add(new THREE.Vector3(0, forward ? (bent ? -0.08 : -0.6) : 0.6, 0));
+      const pole = hip.clone().addScaledVector(dirW, -0.4).addScaledVector(side, bent ? sg * 0.6 : 0).add(new THREE.Vector3(0, forward ? (bent ? -0.08 : -0.6) : 0.6, 0));
       twoBoneIK(ch, 'leg', sd, tgt, pole, { reach: down, soft: 0.004 });
     }
     const pel = wpos(ch.bone('root'), new THREE.Vector3());
-    const pmin = S.ground(pel.x, pel.z) + 0.11;
+    const pmin = S.ground(pel.x, pel.z) + 0.11 - sink;
     if (pel.y < pmin) { ch.root.position.y += pmin - pel.y; ch.root.updateMatrixWorld(true); }
   }
-  // hands reach for the ground ahead to catch the fall (forward) / out to the sides (back); once down
-  // and still, the arms bend and the hands lie beside the head, elbows out (prone)
-  const reach = smooth((u - 0.25) / 0.45);
+  // the hands BRACE: they go out for the ground ahead early in the topple (forward) / out to the sides
+  // (back), palms down and fingers spread; on contact the elbows give and bend (the chest comes down
+  // between the hands); once still the hands lie beside the head, elbows out (prone)
+  const reach = smooth((u - 0.12) / 0.4);
   if (reach > 0) {
     const settle = forward ? smooth((dt - T * 1.05) / 0.6) : 0;
+    const contact = smooth((topple - 0.78) / 0.18);
     for (const sd of ['L', 'R']) {
       const sg = sd === 'L' ? 1 : -1;
       const sh = wpos(ch.bone(`upperarm01.${sd}`), new THREE.Vector3());
-      const tgt = sh.clone().addScaledVector(dirW, forward ? lerp(0.25, 0.1, settle) : -0.05).addScaledVector(axis, sg * (forward ? lerp(0.12, 0.3, settle) : 0.35));
-      tgt.y = S.ground(tgt.x, tgt.z) + 0.045;
-      const pole = sh.clone().add(new THREE.Vector3(0, lerp(0.4, 0.15, settle), 0)).addScaledVector(axis, sg * lerp(0.4, 0.7, settle)).addScaledVector(dirW, -0.2 * settle);
+      const ahead = forward ? lerp(lerp(0.42, 0.22, contact), 0.1, settle) : -0.05;
+      const tgt = sh.clone().addScaledVector(dirW, ahead).addScaledVector(side, sg * (forward ? lerp(lerp(0.14, 0.2, contact), 0.3, settle) : 0.35));
+      tgt.y = Math.max(S.ground(tgt.x, tgt.z) + 0.045, sh.y - rig.armLen * 0.98 * (1 - contact));
+      const pole = sh.clone().add(new THREE.Vector3(0, lerp(lerp(0.15, 0.45, contact), 0.15, settle), 0)).addScaledVector(side, sg * lerp(lerp(0.3, 0.55, contact), 0.7, settle)).addScaledVector(dirW, -0.2 * settle);
       twoBoneIK(ch, 'arm', sd, tgt, pole, { reach: reach * (u < 1.3 ? 1 : lerp(0.8, 1, settle)), soft: 0.03 });
       handShape(ch, sd, settle > 0.5 ? 'relaxed' : 'open', reach);
+      if (forward && settle < 0.5) orientHand(ch, sd, dirW, new THREE.Vector3(0, -1, 0), reach * (1 - settle));
     }
   }
   // the head turns to one side lying down, the cheek on the ground: the skull is lifted clear of it
@@ -1159,6 +1438,158 @@ function applyFall(S, fs, t, fwd, left) {
       ch.root.updateMatrixWorld(true);
     }
   }
+  // dropping flat (cover): once down, the hands go to the back of the head, fingers across it, the
+  // elbows out to the sides near the ground
+  if (f.o.cover && forward && hb) {
+    const cv = smooth((dt - T * 1.02) / 0.55);
+    if (cv > 0) {
+      const hp = wpos(hb, new THREE.Vector3());
+      for (const sd of ['L', 'R']) {
+        const sg = sd === 'L' ? 1 : -1;
+        const sh = wpos(ch.bone(`upperarm01.${sd}`), new THREE.Vector3());
+        const pl = rig[`palmLen${sd}`] || 0.09;
+        const fingers = axis.clone().multiplyScalar(-sg).addScaledVector(dirW, 0.35).normalize();
+        const tgt = hp.clone().add(new THREE.Vector3(0, 0.1 * rig.height / 1.75, 0)).addScaledVector(axis, sg * 0.05).addScaledVector(fingers, -0.45 * pl).addScaledVector(dirW, -0.02);
+        const pole = sh.clone().addScaledVector(axis, sg * 0.55).add(new THREE.Vector3(0, 0.08, 0)).addScaledVector(dirW, 0.1);
+        twoBoneIK(ch, 'arm', sd, tgt, pole, { reach: cv, soft: 0.02 });
+        handShape(ch, sd, 'relaxed', cv);
+        orientHand(ch, sd, fingers, new THREE.Vector3(0, -1, 0), cv);
+      }
+    }
+  }
+  ch.root.updateMatrixWorld(true);
+}
+
+// ---------------------------------------------------------- dropped props --
+const HAND_BONE = /^(wrist|finger\d|metacarpal\d)/;
+/** The props a character holds (meshes skinned mostly to one hand): [{ mesh, side, bone }] (cached). */
+function heldProps(ch) {
+  if (ch._held) return ch._held;
+  const out = [];
+  const names = ch.bones.map((b) => b.name);
+  for (const m of ch.meshes) {
+    if (m.userData.kind !== 'prop' || !m.isSkinnedMesh) continue;
+    const g = m.geometry, si = g.attributes.skinIndex, sw = g.attributes.skinWeight;
+    let hand = 0, n = 0;
+    const side = { L: 0, R: 0 };
+    for (let i = 0; i < si.count; i++) {
+      let best = -1, bw = 0;
+      for (let c = 0; c < 4; c++) { const w = sw.getComponent(i, c); if (w > bw) { bw = w; best = si.getComponent(i, c); } }
+      n++;
+      const nm = names[best] || '';
+      if (HAND_BONE.test(nm)) { hand++; side[nm.endsWith('.L') ? 'L' : 'R']++; }
+    }
+    if (n && hand / n > 0.6) { const sd = side.L > side.R ? 'L' : 'R'; out.push({ mesh: m, side: sd, bone: ch.bone(`wrist.${sd}`) }); }
+  }
+  ch._held = out;
+  return out;
+}
+
+/**
+ * Props let go in a fall (fall({ drop: true })): until the release each held prop rides on its hand
+ * as a rigid copy of the skinned mesh (the skinned one is hidden); at the release (the knees buckling)
+ * it leaves with the hand's velocity, tumbles under gravity, lands and settles on the ground (a short
+ * slide and rock), all from t (the release state comes from posing the body at the release time and
+ * 1/30 s before - cached, the same whatever frame asks first).
+ */
+function dropProps(body, t) {
+  const S = body.S, ch = S.ch;
+  const props = heldProps(ch);
+  if (!props.length) return;
+  for (const d of S.drops) {
+    if (!d.items) {
+      // rigid copies in the wrist's bind frame (bind = drape: the hand bones' world matrices at load)
+      d.items = props.map((pr) => {
+        const i = ch.index[pr.bone.name];
+        const bindW = new THREE.Matrix4().compose(ch.drape.p[i].clone(), ch.drape.q[i].clone(), new THREE.Vector3(1, 1, 1));
+        // the drape pose's world matrix of the wrist: rebuild from the chain of drape locals
+        const chain = [];
+        for (let b = pr.bone; b && b !== ch.root; b = b.parent) chain.unshift(b);
+        const W = new THREE.Matrix4();
+        for (const b of chain) { const k = ch.index[b.name]; W.multiply(new THREE.Matrix4().compose(ch.drape.p[k], ch.drape.q[k], b.scale)); }
+        void bindW;
+        const geo = pr.mesh.geometry.clone();
+        geo.deleteAttribute('skinIndex'); geo.deleteAttribute('skinWeight');
+        geo.applyMatrix4(W.clone().invert());
+        geo.computeBoundingBox(); geo.computeBoundingSphere();
+        const rigid = new THREE.Mesh(geo, pr.mesh.material);
+        rigid.name = pr.mesh.name + ':dropped';
+        rigid.castShadow = pr.mesh.castShadow; rigid.receiveShadow = true;
+        rigid.matrixAutoUpdate = false;
+        rigid.frustumCulled = false;
+        ch.root.add(rigid);                  // (hidden with the character; its matrix is set in world terms below)
+        return { ...pr, rigid };
+      });
+    }
+    if (!d.release) {
+      // the hand's world matrix at the release and 1/30 s before (posed and put back)
+      const saved = savePoseLocal(ch);
+      const M = (tt) => { applyBody(S, tt, { pass1: true }); ch.root.updateMatrixWorld(true); return d.items.map((it) => it.bone.matrixWorld.clone()); };
+      const m1 = M(d.t), m0 = M(d.t - 1 / 30);
+      restorePoseLocal(ch, saved);
+      d.release = d.items.map((it, k) => {
+        const p1 = new THREE.Vector3().setFromMatrixPosition(m1[k]), p0 = new THREE.Vector3().setFromMatrixPosition(m0[k]);
+        const v = p1.clone().sub(p0).multiplyScalar(30);
+        const q = new THREE.Quaternion().setFromRotationMatrix(m1[k]);
+        // a tumble axis / rate from the seed
+        const ax = new THREE.Vector3(hash01(S.seed, 401 + k) - 0.5, 0.3 * (hash01(S.seed, 402 + k) - 0.5), hash01(S.seed, 403 + k) - 0.5).normalize();
+        return { p: p1, v: v.add(new THREE.Vector3(0, 0.6, 0)), q, ax, w: 5 + 6 * hash01(S.seed, 404 + k) };
+      });
+    }
+    d.items.forEach((it, k) => {
+      it.mesh.visible = false;
+      it.rigid.visible = true;
+      const r = d.release[k];
+      const M = it.rigid.matrix;
+      ch.root.updateMatrixWorld(true);
+      const rootInv = ch.root.matrixWorld.clone().invert();
+      if (t < d.t) { M.copy(rootInv).multiply(it.bone.matrixWorld); it.rigid.updateMatrixWorld(true); return; }
+      // flight: p(tau), spin; landing: the lowest corner of the box touches the ground, then it settles
+      const g = 9.81;
+      const box = it.rigid.geometry.boundingBox;
+      const corners = [];
+      for (let c = 0; c < 8; c++) corners.push(new THREE.Vector3(c & 1 ? box.max.x : box.min.x, c & 2 ? box.max.y : box.min.y, c & 4 ? box.max.z : box.min.z));
+      const at = (tau) => {
+        const q = r.q.clone().premultiply(new THREE.Quaternion().setFromAxisAngle(r.ax, r.w * tau));
+        const p = r.p.clone().addScaledVector(r.v, tau).add(new THREE.Vector3(0, -0.5 * g * tau * tau, 0));
+        let low = Infinity;
+        for (const c of corners) low = Math.min(low, c.clone().applyQuaternion(q).y);
+        return { p, q, low };
+      };
+      // the landing time: first tau where the lowest corner reaches the ground (bisection, pure)
+      if (r.tLand == null) {
+        let lo = 0, hi = 3;
+        const hit = (tau) => { const s = at(tau); return s.p.y + s.low <= S.ground(s.p.x, s.p.z); };
+        if (hit(0)) hi = 0;
+        else for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (hit(m)) hi = m; else lo = m; }
+        r.tLand = hi;
+        const s = at(hi);
+        r.land = s;
+        // settle: it slides on a little (the horizontal velocity, friction 0.25 s) and rocks to rest
+        r.slide = new THREE.Vector3(r.v.x, 0, r.v.z).multiplyScalar(0.25);
+      }
+      const tau = t - d.t;
+      let p, q;
+      if (tau < r.tLand) { const s = at(tau); p = s.p; q = s.q; }
+      else {
+        const u = tau - r.tLand, k2 = 1 - Math.exp(-u / 0.25);
+        q = r.land.q.clone().premultiply(new THREE.Quaternion().setFromAxisAngle(r.ax, 0.25 * Math.exp(-u * 6) * Math.sin(u * 18)));
+        p = r.land.p.clone().addScaledVector(r.slide, k2);
+        let low = Infinity;
+        for (const c of corners) low = Math.min(low, c.clone().applyQuaternion(q).y);
+        p.y = S.ground(p.x, p.z) - low;
+      }
+      M.copy(rootInv).multiply(new THREE.Matrix4().compose(p, q, new THREE.Vector3(1, 1, 1)));
+      it.rigid.updateMatrixWorld(true);
+    });
+  }
+}
+function savePoseLocal(ch) {
+  return { b: ch.bones.map((b) => [b.position.clone(), b.quaternion.clone()]), r: [ch.root.position.clone(), ch.root.quaternion.clone()] };
+}
+function restorePoseLocal(ch, s) {
+  ch.bones.forEach((b, i) => { b.position.copy(s.b[i][0]); b.quaternion.copy(s.b[i][1]); });
+  ch.root.position.copy(s.r[0]); ch.root.quaternion.copy(s.r[1]);
   ch.root.updateMatrixWorld(true);
 }
 

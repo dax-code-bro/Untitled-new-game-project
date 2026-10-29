@@ -192,7 +192,7 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   // a little more saturated than the skin round them; not one even peach: a fine vertical mottling,
   // a slightly darker vermilion border (the lip line) and a deeper centre line
   { float lr = smoothstep(0.03, 0.55, vAux.r);
-    c = mix(c, c * vec3(1.03, 0.66, 0.67), lr * 0.85); }
+    c = mix(c, c * vec3(1.03, 0.63, 0.68), lr * 0.85); }
   { float lm1 = hN3(vObjP * vec3(700.0, 2500.0, 700.0) + 4.0) - 0.5;
     c *= 1.0 + vAux.r * (0.12 * lm1);
     c *= 1.0 - 0.1 * smoothstep(0.15, 0.4, vAux.r) * (1.0 - smoothstep(0.4, 0.7, vAux.r)); }
@@ -298,10 +298,11 @@ material.roughness = min(1.0, material.roughness + 5.0 * (1.0 - dot(normal, skin
   material.clearcoat *= 0.12 + 0.88 * vAux3.r;
   material.clearcoat = max(material.clearcoat, 0.9 * vAux2.g);
   material.clearcoatRoughness = mix(material.clearcoatRoughness, 0.08, vAux2.g);
-  // a thin wet film on the lower lip: a narrow, defined highlight (not the broad sheen of skin)
+  // a thin wet film on the lower lip: a narrow, defined highlight (not the broad sheen of skin; at 0.25
+  // / roughness 0.16 the mesh facets broke it into bright streaks in the 4K L011)
   { float lo = smoothstep(0.001, -0.0025, dot(vObjP - uLipM, uLipUp)) * smoothstep(0.35, 0.8, vAux.r);
-    material.clearcoat = max(material.clearcoat, 0.25 * lo);
-    material.clearcoatRoughness = mix(material.clearcoatRoughness, 0.16, lo); }
+    material.clearcoat = max(material.clearcoat, 0.16 * lo);
+    material.clearcoatRoughness = mix(material.clearcoatRoughness, 0.24, lo); }
 #endif
 `)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
@@ -511,9 +512,11 @@ export function simpleTexturedMaterial(o = {}) {
   // the light that does reach inside is bounced off lips and tongue: warm, not sky blue
   // (pink-warm, not ivory: next to the saturated lips a neutral grey tooth read teal, a yellow one
   // olive - the light inside is the lips' and the tongue's colour)
+  // (the teeth get a paler tint than the tongue: under the full pink-warm tint the enamel turned a
+  // warm grey that read grey-green beside the red lips - simultaneous contrast)
   { vec3 ind = reflectedLight.indirectDiffuse; float li = dot(ind, vec3(0.2126, 0.7152, 0.0722));
-    reflectedLight.indirectDiffuse = mix(ind, li * vec3(1.32, 0.9, 0.8), 0.9); }
-  reflectedLight.directDiffuse *= mix(vec3(1.0), vec3(1.12, 0.94, 0.9), smoothstep(0.003, 0.012, vMouth));
+    reflectedLight.indirectDiffuse = mix(ind, li * ${teeth ? 'vec3(1.18, 0.98, 0.9)' : 'vec3(1.32, 0.9, 0.8)'}, 0.9); }
+  reflectedLight.directDiffuse *= mix(vec3(1.0), ${teeth ? 'vec3(1.04, 1.0, 0.9)' : 'vec3(1.12, 0.94, 0.9)'}, smoothstep(0.003, 0.012, vMouth));
   reflectedLight.indirectDiffuse *= mOcc; reflectedLight.directDiffuse *= mOcc;
   reflectedLight.indirectSpecular *= mOcc * mOcc * 0.25; reflectedLight.directSpecular *= mOcc * mOcc;
   // the environment seen by the teeth is the inside of the lips, not the sky / the field: an
@@ -533,7 +536,12 @@ export function simpleTexturedMaterial(o = {}) {
 #ifdef USE_MAP
   { vec3 cm = texture2D(map, vMapUv, 6.0).rgb; lm = max(0.2, dot(cm, vec3(0.2126, 0.7152, 0.0722))); }
 #endif
-  vec3 enamel = vec3(0.68, 0.62, 0.52) * clamp(mix(1.0, l / lm, 0.75), 0.35, 1.15);
+  // (a touch of ivory: a neutral grey enamel read grey-green beside the now redder lips - simultaneous
+  // contrast; under the mouth's warm bounce this stays off-white, not olive. Bright: at half the
+  // skin's luminance the row read as dull grey-green whatever its hue, so the albedo is high and the
+  // texture's light / dark only modulates it. Not yellow either: a yellow-grey (hue ~38 deg) in the
+  // shade under the upper lip read green beside the pink lips - the enamel is a neutral warm white)
+  vec3 enamel = vec3(0.9, 0.83, 0.77) * clamp(mix(1.0, l / lm, 0.6), 0.4, 1.08);
   // the gums: darker, deeper red (not the pale pink of the texture under the mouth's light)
   diffuseColor.rgb = mix(enamel, c * vec3(0.72, 0.42, 0.42), gum);
   vTeethGum = gum; }`)

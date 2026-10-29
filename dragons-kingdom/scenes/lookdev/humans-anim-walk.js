@@ -56,7 +56,7 @@ export async function setup(ctx) {
   const D = createPerformer(vill, data).place(X.fall, 0, -Math.PI / 2);
   D.stagger(19.8, { dir: [1, 0.3], dist: 0.8, dur: 0.8 });
   D.gesture('flail', 19.8, { in: 0.15, dur: 0.6, out: 0.5 });
-  D.fall(21.0, { dir: [1, 0.2] });
+  D.fall(21.0, { dir: [1, 0.2], drop: true });       // the basket flies out of her hand and lands
   // 5. carry: the child is lifted onto the parent's hip, the parent walks off
   const K = createPerformer(kid, data).place(X.carry + 0.45, 0.25, -1.9);
   const E = createPerformer(par, data).place(X.carry, 0, 0.2);

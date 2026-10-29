@@ -197,21 +197,45 @@ function handAxes(ch, side) {
   const t1 = R(`finger1-1.${side}`), t3 = R(`finger1-3.${side}`);
   const tdir = t3 && t1 ? t3.clone().sub(t1).normalize() : fwd.clone();
   const tcurl = new THREE.Vector3().crossVectors(tdir, palm).normalize();
-  ch[k] = { fwd, lat, palm, curl, tcurl, tdir };
+  // each finger's own rest splay: the signed angle (about the palm axis) of the finger (knuckle to its
+  // last joint) from the middle finger's (MakeHuman's rest hand fans unevenly - the little finger most)
+  const mdir = R(`finger3-3.${side}`).clone().sub(m1).projectOnPlane(palm).normalize();
+  const latP = lat.clone().projectOnPlane(palm).normalize();
+  const ang = (d) => Math.atan2(new THREE.Vector3().crossVectors(mdir, d).dot(palm), mdir.dot(d));
+  const restOff = [], closeOff = [], fcurl = [];
+  for (const f of FINGERS) {
+    const a = R(`finger${f}-1.${side}`), b = R(`finger${f}-3.${side}`);
+    if (!a || !b) { restOff.push(0); closeOff.push(0); fcurl.push(curl.clone()); continue; }
+    const d = b.clone().sub(a).projectOnPlane(palm);
+    const len = d.length();
+    restOff.push(ang(d.clone().normalize()));
+    // each finger curls about ITS OWN cross axis (about one common axis a finger that points off the
+    // hand's axis also swings sideways: curled fingers fanned out)
+    fcurl.push(new THREE.Vector3().crossVectors(d.clone().normalize(), palm).normalize());
+    // fingers held together CONVERGE: the knuckles sit wider apart than the fingers are thick, so
+    // the last joints come in to ~45 % of the knuckle spacing (parallel fingers left gaps)
+    const x = a.clone().sub(m1).dot(latP);
+    closeOff.push(ang(mdir.clone().multiplyScalar(len).addScaledVector(latP, -x * 0.55).normalize()));
+  }
+  ch[k] = { fwd, lat, palm, curl, tcurl, tdir, restOff, closeOff, fcurl };
   return ch[k];
 }
 
 /**
  * Finger shape. shape: { curl: [thumb, index, middle, ring, little] radians per joint (or one
  * number), spread (rad: > 0 fans the fingers out, < 0 closes them; 0 = a natural relaxed hand,
- * index to little finger ~22 deg apart; -0.12 = fingers together), thumbIn (0..1 across the palm) }
+ * index to little finger ~22 deg apart; -0.12 = fingers together), together (0..1, instead of spread:
+ * each finger turned back by that share of its OWN rest splay - side by side at 1, measured per
+ * character: MakeHuman's rest fan is uneven, a linear spread closed the middle fingers past each
+ * other before the little finger came in), thumbIn (0..1 across the palm) }
  * or a preset name: 'relaxed', 'open', 'point', 'fist', 'cup', 'grip', 'clutch', 'limp', 'claw',
  * 'wave'. amount blends from the current (drape) fingers. The fingers are set from MakeHuman's rest
  * (straight) fingers, then curled - independent of whatever grip the build's drape pose gave the hand.
  * (MakeHuman's rest hand is splayed ~31 deg index to little finger; until 2026-10-27 the sign was
  * inverted - a positive spread closed the fingers and 0 left that splay, so a limp hand read as a claw.)
  */
-const SPREAD_REST = 0.12;            // closing applied at spread 0 (the rest splay -> a relaxed hand)
+const SPREAD_REST = 0.07;            // closing applied at spread 0 (the rest splay -> a relaxed hand; 0.12 before the
+                                     // per-finger curl axes - a common axis fanned curled fingers out)
 export const HAND_SHAPES = {
   relaxed: { curl: [0.15, 0.22, 0.32, 0.4, 0.48], spread: 0.03, thumbIn: 0.15 },
   open: { curl: [0.05, 0.04, 0.05, 0.07, 0.09], spread: 0.1, thumbIn: 0.0 },
@@ -221,7 +245,7 @@ export const HAND_SHAPES = {
   cup: { curl: [0.25, 0.35, 0.42, 0.5, 0.55], spread: 0.02, thumbIn: 0.3 },
   grip: { curl: [0.5, 0.9, 1.0, 1.05, 1.1], spread: -0.06, thumbIn: 0.5 },
   clutch: { curl: [0.45, 0.7, 0.8, 0.85, 0.9], spread: -0.06, thumbIn: 0.45 },
-  limp: { curl: [0.2, 0.35, 0.45, 0.55, 0.62], spread: -0.08, thumbIn: 0.2 },
+  limp: { curl: [0.2, 0.35, 0.45, 0.55, 0.62], together: 0.9, thumbIn: 0.2 },
   claw: { curl: [0.3, 0.75, 0.8, 0.85, 0.9], spread: 0.12, thumbIn: 0.1 },
 };
 export function handShape(ch, side, shape, amount = 1) {
@@ -241,12 +265,17 @@ export function handShape(ch, side, shape, amount = 1) {
   for (let fi = 0; fi < 4; fi++) {
     const f = FINGERS[fi];
     const c = curls[fi + 1];
-    const spread = (SPREAD_REST - (s.spread ?? 0)) * (fi - 1.2) * (side === 'L' ? 1 : -1);
+    // together (0..1): each finger turned from its own rest splay toward the closed hand (fingers
+    // side by side, converging a little); otherwise the linear spread
+    const spread = s.together != null
+ ? s.together * (ax.closeOff[fi] - ax.restOff[fi])
+      : (SPREAD_REST - (s.spread ?? 0)) * (fi - 1.2) * (side === 'L' ? 1 : -1);
     qs.setFromAxisAngle(ax.palm, spread);
     // base joint curls a little less, the middle joint most
-    set(`finger${f}-1`, q.setFromAxisAngle(ax.curl, c * 0.85).premultiply(qs));
-    set(`finger${f}-2`, q.setFromAxisAngle(ax.curl, c * 1.1));
-    set(`finger${f}-3`, q.setFromAxisAngle(ax.curl, c * 0.75));
+    const ca = ax.fcurl[fi];
+    set(`finger${f}-1`, q.setFromAxisAngle(ca, c * 0.85).premultiply(qs));
+    set(`finger${f}-2`, q.setFromAxisAngle(ca, c * 1.1));
+    set(`finger${f}-3`, q.setFromAxisAngle(ca, c * 0.75));
   }
   // thumb: swing across the palm (thumbIn) + curl
   const ti = s.thumbIn ?? 0.2, tc = curls[0];

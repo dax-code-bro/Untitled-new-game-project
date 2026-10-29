@@ -189,6 +189,44 @@ else {
     }
     ok(worst === 0, `two-person look + support: a chunk's first frame == the sequential frame, either update order (max matrix diff ${worst})`);
   }
+  // the cradle reads as guarding: the good palm ON the hurt forearm's sleeve (< 1.5 cm), its forearm
+  // clear of the hurt one, the hurt elbow in at the side, the limp hand's fingers together; a support
+  // grip lands on the outside of the other person's sleeve
+  {
+    const { limbRadius, bodyRig } = await import('./motion.js');
+    const seg = (p, a, b) => { const ab = b.clone().sub(a); const t = Math.max(0, Math.min(1, p.clone().sub(a).dot(ab) / ab.lengthSq())); return { d: p.distanceTo(a.clone().addScaledVector(ab, t)), t }; };
+    const res = [];
+    for (const id of ['abby', 'abby_injured', 'remi']) {
+      if (!fs.existsSync(cache(id))) continue;
+      const ch = load(id);
+      const p = createPerformer(ch, units.data); p.place(0, 0, 0);
+      p.gesture('cradle', -5, { side: 'L', in: 0.1, dur: 99 }); p.posture('hunch', -5, { in: 0.1, hold: 99 });
+      p.update(2, { face: false });
+      const R = bodyRig(ch), fr = limbRadius(ch, 'lowerarm01.L', 'wrist.L');
+      const hE = P(ch, 'lowerarm01.L'), hW = P(ch, 'wrist.L');
+      const palm = seg(P(ch, 'wrist.R').lerp(P(ch, 'finger3-1.R'), 0.5), hE, hW);
+      const gap = palm.d - fr.sleeve - 0.13 * R.palmLenR;
+      // the good forearm away from its hand (elbow end to 70 %) keeps a sleeve's width from the hurt one
+      let clear = 9;
+      for (let k = 0; k <= 7; k++) clear = Math.min(clear, seg(P(ch, 'lowerarm01.R').lerp(P(ch, 'wrist.R'), k / 10), hE, hW).d);
+      const loc = (v) => ch.root.worldToLocal(v.clone());
+      const elbowOut = loc(hE).x - loc(P(ch, 'spine02')).x;
+      // fingers together: the last joints closer than the knuckles (index-middle, middle-ring)
+      const lat = (a, b) => P(ch, b).distanceTo(P(ch, a));
+      const together = lat('finger2-3.L', 'finger3-3.L') < lat('finger2-1.L', 'finger3-1.L') && lat('finger3-3.L', 'finger4-3.L') < lat('finger3-1.L', 'finger4-1.L') * 1.05;
+      res.push({ id, gap, clear, clearNeed: fr.sleeve + limbRadius(ch, 'lowerarm01.R', 'wrist.R').sleeve * 0.6, elbowOut, hw: R.chestHalfW, together });
+    }
+    const okAll = res.every((r) => Math.abs(r.gap) < 0.015 && r.clear > r.clearNeed && r.elbowOut < r.hw + 0.07 && r.together);
+    ok(okAll, `cradle: ${res.map((r) => `${r.id} palm-to-sleeve ${(r.gap * 100).toFixed(1)} cm, good forearm ${(r.clear * 100).toFixed(1)} cm from the hurt one (needs ${(r.clearNeed * 100).toFixed(1)}), elbow ${(r.elbowOut * 100).toFixed(1)} cm out, fingers together ${r.together}`).join('; ')}`);
+    // a support grip (Remi's hand on Abby's upper arm, outside her sleeve)
+    const ab = load('abby'), re = load('remi');
+    const A = createPerformer(ab, units.data).place(0, 0, 0), Rm = createPerformer(re, units.data).place(0.5, -0.15, 0);
+    Rm.gesture('support', 0, { side: 'R', grip: { ch: ab, from: 'upperarm01.L', to: 'lowerarm01.L', t: 0.55, dir: [1, 0.05, -0.35], fingers: [-0.15, -0.35, 1] }, in: 0.3, dur: 99 });
+    A.update(2, { face: false }); Rm.update(2, { face: false });
+    const ur = limbRadius(ab, 'upperarm01.L', 'lowerarm01.L');
+    const g = seg(P(re, 'wrist.R').lerp(P(re, 'finger3-1.R'), 0.5), P(ab, 'upperarm01.L'), P(ab, 'lowerarm01.L')).d - ur.sleeve - 0.13 * bodyRig(re).palmLenR;
+    ok(g > -0.01 && g < 0.015, `support grip: Remi's palm on the outside of Abby's sleeve (gap ${(g * 100).toFixed(1)} cm, sleeve radius ${(ur.sleeve * 100).toFixed(1)} cm)`);
+  }
   {
     const ch = load('crowd03');
     const p = createPerformer(ch, units.data); p.place(0, 0, 0);
@@ -198,6 +236,49 @@ else {
     const pel = P(ch, 'root');
     ok(fin, 'kneel / stagger / fall stay finite');
     ok(pel.y > 0.05 && pel.y < 0.5, `after a fall the pelvis lies near the ground (${pel.y.toFixed(2)} m)`);
+  }
+  // crowd verbs: crawl, push, drop flat (cover), thrown by a blast
+  {
+    const { bodyRig } = await import('./motion.js');
+    const W = (ch, n) => new THREE.Vector3().setFromMatrixPosition(ch.bone(n).matrixWorld);
+    const cc = load('crowd06'); const A = createPerformer(cc, units.data).place(0, 0, Math.PI / 2);
+    A.posture('crawl', 0.4, { in: 0.9, hold: 99 });
+    A.walkPath([[0, 0], [2.4, 0.15]], 1.5, { speed: 0.42, accel: 0.5, decel: 0.5 });
+    let wMax = 0, kMax = 0, pMax = 0, slip = 0;
+    const planted = { L: null, R: null };
+    for (let t = 2.5; t < 6; t += 1 / 30) {
+      A.update(t, { face: false });
+      for (const sd of ['L', 'R']) {
+        const w = W(cc, `wrist.${sd}`);
+        wMax = Math.max(wMax, Math.min(w.y, 0.2));
+        kMax = Math.max(kMax, W(cc, `lowerleg01.${sd}`).y);
+        // a hand planted (wrist low) does not slide: compare frames while it stays below 6 cm
+        if (w.y < 0.06 && planted[sd]) slip = Math.max(slip, Math.hypot(w.x - planted[sd].x, w.z - planted[sd].z));
+        planted[sd] = w.y < 0.06 ? (planted[sd] || w) : null;
+      }
+      pMax = Math.max(pMax, W(cc, 'root').y);
+    }
+    ok(pMax < 0.55 && kMax < 0.13 && slip < 0.05, `crawl: on hands and knees (pelvis <= ${pMax.toFixed(2)} m, knees <= ${kMax.toFixed(2)} m), a planted hand slides ${(slip * 100).toFixed(1)} cm`);
+    const cp = load('crowd04'); const B = createPerformer(cp, units.data).place(0, -0.8, 0);
+    B.posture('brace', 0.2, { in: 0.6, hold: 99 });
+    B.gesture('push', 0.1, { at: [0, 1.12, -0.14], along: [1, 0, 0], width: 0.4, in: 0.55, dur: 99 });
+    B.update(2, { face: false });
+    const pl = bodyRig(cp).palmLenL;
+    const palmL = W(cp, 'wrist.L').lerp(W(cp, 'finger3-1.L'), 0.5), palmR = W(cp, 'wrist.R').lerp(W(cp, 'finger3-1.R'), 0.5);
+    const dPush = Math.max(palmL.distanceTo(new THREE.Vector3(0.2, 1.12, -0.16)), palmR.distanceTo(new THREE.Vector3(-0.2, 1.12, -0.16)));
+    ok(dPush < 0.05 + pl * 0.1 && W(cp, 'foot.R').z < W(cp, 'foot.L').z - 0.2, `push: both palms on the beam (within ${(dPush * 100).toFixed(1)} cm), the right foot braced back`);
+    const cpr = load('crowd09'); const C = createPerformer(cpr, units.data).place(0, 0, Math.PI / 2);
+    C.fall(1, { dir: [1, 0], dur: 1.05, cover: true });
+    C.update(4, { face: false });
+    const hd = W(cpr, 'head'), dc = Math.max(W(cpr, 'wrist.L').distanceTo(hd), W(cpr, 'wrist.R').distanceTo(hd));
+    ok(hd.y < 0.35 && dc < 0.2 && W(cpr, 'wrist.L').y > hd.y, `drop flat: prone (head ${hd.y.toFixed(2)} m up), hands on the back of the head (wrists within ${(dc * 100).toFixed(0)} cm)`);
+    const ct = load('crowd02'); const D = createPerformer(ct, units.data).place(0, 0, -Math.PI / 2);
+    D.fall(1, { dir: [1, 0], dur: 1.0, thrown: { dist: 1.8, h: 0.5 }, drop: true });
+    let air = 0;
+    for (let t = 1; t < 2; t += 0.05) { D.update(t, { face: false }); air = Math.max(air, Math.min(W(ct, 'foot.L').y, W(ct, 'foot.R').y)); }
+    D.update(4, { face: false });
+    const pe = W(ct, 'root');
+    ok(air > 0.3 && pe.y < 0.2 && pe.x > 1.5, `thrown: both feet off the ground (${air.toFixed(2)} m), lands ${pe.x.toFixed(2)} m along the blast, pelvis ${pe.y.toFixed(2)} m up`);
   }
   // crowd
   const mkCrowd = () => createCrowd({ seed: 7, t0: 0, t1: 8, agents: Array.from({ length: 12 }, (_, i) => ({ pos: [(i % 4) * 1.4 - 2, Math.floor(i / 4) * 1.5], yaw: i })), exits: [[[-6, 0], [-12, 0]], [[6, 2], [14, 2]]], obstacles: [{ x: 0, z: -3, r: 1.5 }], walls: [[-8, -6, 8, -6]], alarm: { t: 2, at: [0, -8] }, cower: 0.2 });
@@ -210,6 +291,13 @@ else {
   }
   ok(same && fin2, 'crowd bake deterministic and finite');
   ok(minD >= 0.5, `crowd keeps people apart (min ${minD.toFixed(2)} m)`);
+  // nobody stands still long after the alarm's wave has reached them (the reviewer saw a villager
+  // stand ~1.7 s while the square ran): each reacts within 0.5 s of the wave
+  {
+    const lag = c1.agents.map((a) => a.fleeT - (2 + 0.25 * Math.hypot(a.pos[0] - 0, a.pos[1] + 8) / 10));
+    const mx = Math.max(...lag);
+    ok(mx <= 0.5 + 1e-9 && Math.min(...lag) >= 0.1 - 1e-9, `crowd: each one reacts 0.1 - 0.5 s after the wave reaches them (latest ${mx.toFixed(2)} s)`);
+  }
   // crowd: a parent holds the child's hand, scoops it up at the alarm and runs (pose independent of
   // the update order); one villager falls and stays down
   if (['parent', 'child'].every((id) => fs.existsSync(cache(id)))) {
@@ -236,6 +324,10 @@ else {
     const fallen = W(A.P[2].ch, 'head').y;
     ok(hands < 0.2 && rise > 0.06 && rise < 0.2 && orderSame && fallen < 0.45,
       `crowd: hand in hand (wrists ${(hands * 100).toFixed(0)} cm), child carried ${(rise * 100).toFixed(0)} cm above the parent's pelvis, same pose either update order (${orderSame}), the faller's head ${fallen.toFixed(2)} m up`);
+    // the parent is already running while it lifts the child (not standing with it on the hip)
+    const pk = A.C.agents[0].pickT, s0 = A.C.stateAt(0, pk + 0.5), s1 = A.C.stateAt(0, pk + 0.9);
+    const vRun = Math.hypot(s1.x - s0.x, s1.z - s0.z) / 0.4;
+    ok(vRun > 0.8, `crowd: a parent runs during the lift (${vRun.toFixed(2)} m/s 0.5-0.9 s after the pickup starts)`);
   }
   // two takes of one character 0.25 s apart: the first syllable of the second is not swallowed by the
   // first's closing rest
@@ -302,15 +394,42 @@ else {
     actions.poseHuman(ch, st, 1.4, env, { role: 'REMI', placed: [{ id: 'L015', role: 'REMI', at_s: 1.0, file_in_s: 0 }], shot: '1A-test' });
     const jaw = ch.bone('jaw').quaternion.angleTo(ch.drape.q[ch.index.jaw]);
     ok(jaw > 0.005, `a director shot (poseHuman) lip-syncs a placed take (jaw ${(jaw * 57.3).toFixed(1)} deg)`);
-    // the director's 'cradle' act poses the performance cradle: the hurt LEFT wrist lies across the
-    // body in front of the chest, the right hand under the forearm
+    // every arm act the performance registers is posed by its performance gesture (the right wrist
+    // lands where motion.js gestureNow puts it, not where the director's built-in would)
+    {
+      const { OVERLAYS } = await import('./director.js');
+      const { gestureNow } = await import('./motion.js');
+      const tgt = [0.25, 1.1, 0.55];
+      const env2 = { mark: () => null, point: (n) => (Array.isArray(n) ? new THREE.Vector3(...n) : null), ground: () => 0 };
+      const acts = { point: { at: tgt }, wave: {}, reach: { at: tgt }, touch: { at: tgt }, handsTo: { at: tgt }, raiseHand: {}, gesture: { dur: 1.2 }, shove: { side: 'R', at: tgt } };
+      const bad = [];
+      for (const [name, o] of Object.entries(acts)) {
+        if (!OVERLAYS[name] || actions.humanAction(name) !== OVERLAYS[name]) { bad.push(`${name} not registered`); continue; }
+        const st3 = actorState({ at: [0, 0], face: 180, acts: [[0, name, { side: 'R', in: 0.2, hold: 9, ...o }]] }, 1.0, env2);
+        const c1 = load('remi');
+        actions.poseHuman(c1, st3, 1.0, env2, { role: 'REMI', placed: [], shot: 'acts' });
+        const got = P(c1, 'wrist.R');
+        // the same gesture by hand, from the same base pose (the director's pose without its overlays)
+        const c2 = load('remi');
+        actions.poseHuman(c2, { ...st3, overlays: [] }, 1.0, env2, { role: 'REMI', placed: [], shot: 'acts' });
+        const g = { point: 'point', wave: 'wave', reach: 'reach', touch: 'reach', handsTo: 'reach', raiseHand: 'raiseHand', gesture: 'explain', shove: 'shove' }[name];
+        const ov = st3.overlays[0];
+        const o2 = { ...ov.o, side: 'R', ...(o.at ? { at: new THREE.Vector3(...tgt) } : {}), ...(name === 'handsTo' ? { lateral: 0.09, palm: [0, 1, 0] } : {}), ...(name === 'gesture' ? { beat: 1.2 } : {}) };
+        gestureNow(c2, g, o2, ov.w, 1.0, ov.dt);
+        const want = P(c2, 'wrist.R');
+        if (got.distanceTo(want) > 0.01) bad.push(`${name} ${(got.distanceTo(want) * 100).toFixed(1)} cm off`);
+      }
+      ok(!bad.length, `the director's arm acts (${Object.keys(acts).join(', ')}) are posed by the performance gestures${bad.length ? `: ${bad.join('; ')}` : ''}`);
+    }
+    // the director's 'cradle' act poses the performance cradle: the hurt LEFT forearm lies across the
+    // body, its wrist in front of the midline, the right hand under the forearm
     const ab = load('abby');
     const st2 = actorState({ at: [0, 0], face: 180, acts: [[0, 'cradle', { side: 'L', in: 0.3, hold: 9 }]] }, 2.0, env);
     actions.poseHuman(ab, st2, 2.0, env, { role: 'ABBY', placed: [], shot: '2A-test' });
     const toLocal = (v) => ab.root.worldToLocal(v.clone());
     const wl = toLocal(P(ab, 'wrist.L')), wr = toLocal(P(ab, 'wrist.R')), c = toLocal(P(ab, 'spine02'));
-    ok(wl.x < c.x && wl.z > c.z + 0.1 && Math.abs(wl.y - c.y) < 0.12 && wr.y < wl.y && Math.abs(wr.x - wl.x) < 0.15,
-      `director 'cradle' act: hurt left wrist across the chest (${wl.x.toFixed(2)}, ${(wl.y - c.y).toFixed(2)}, ${(wl.z - c.z).toFixed(2)} from spine02), right hand below it`);
+    ok(wl.x < c.x + 0.05 && wl.z > c.z + 0.1 && Math.abs(wl.y - c.y) < 0.12 && wr.y < wl.y && Math.abs(wr.x - wl.x) < 0.15,
+      `director 'cradle' act: hurt left wrist in front of the body's midline (${wl.x.toFixed(2)}, ${(wl.y - c.y).toFixed(2)}, ${(wl.z - c.z).toFixed(2)} from spine02), right hand below it`);
     // opt-in planted-foot legs ('legs' hook with info.stateAt): ankles on the ground travel far less
     // than with the director's built-in offset gait on a curved walk, then a kneel stays finite
     const { directorLegs } = await import('./director.js');

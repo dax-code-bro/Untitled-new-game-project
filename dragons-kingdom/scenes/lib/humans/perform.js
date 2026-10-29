@@ -100,11 +100,12 @@ export function createPerformer(ch, data, opts = {}) {
     /** Follow an external root motion fn(t) -> { x, z, yaw } (director blocking, crowd sim). */
     follow(fn, t0, t1) { body.follow(fn, t0, t1); return P; },
     trajectory(tr) { body.trajectory(tr); return P; },
-    /** Arm gesture: point | wave | reach | support | cradle | handsToFace | protectHead | flail | carry | explain */
+    /** Arm gesture: point | wave | reach | support | cradle | raiseHand | shove | push | handsToFace | protectHead | flail | carry | explain */
     gesture(name, t0, o = {}) { body.gesture(name, t0, o); return P; },
-    /** Posture: crouch | kneel | cower | hunch (o: { in, hold, out }) */
+    /** Posture: crouch | kneel | cower | hunch | crawl (hands and knees, steps as the root moves) | brace (legs of a push) (o: { in, hold, out }) */
     posture(name, t0, o = {}) { body.posture(name, t0, o); return P; },
     stagger(t0, o = {}) { body.stagger(t0, o); if (face) face.react(PAIN_FLINCH, t0, 0.9); return P; },
+    /** Fall: o: { dir, dur, drop (a held prop flies out of the hand and settles on the ground), thrown ({ dist, h }: a blast throws the body off its feet), cover (prone, hands over the back of the head) } */
     fall(t0, o = {}) { body.fall(t0, o); if (face) face.react(PAIN_FLINCH, t0, 1.2); return P; },
     /** Head + eyes look at a target from t0 (Vector3 | [x,y,z] | fn(t) | { ch, bone, offset } | null). */
     lookAt(target, t0 = -1e9, o = {}) {
@@ -159,6 +160,7 @@ export function createPerformer(ch, data, opts = {}) {
       if (!o._fromCarrier && isCarried) return { body: null, face: null, carried: true };
       // carried: no gait of its own (its legs and arms are posed round the carrier by carryChild)
       const b = body.apply(t, isCarried ? { ...o, carried: true } : o);
+      body.dropProps(t);                     // props let go in a fall (fall({ drop: true }))
       for (const c of carries) {
         const w = Math.min(1, Math.max(0, (t - c.t0) / 0.6)) * Math.min(1, Math.max(0, (c.t1 - t) / 0.6));
         if (w > 0) {

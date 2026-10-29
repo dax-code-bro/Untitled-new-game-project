@@ -343,6 +343,18 @@ def assemble(kit, spec, out_dir, opts):
             log(f"   QA {cid}: {'OK' if not pr_ else '; '.join(pr_)}")
         except Exception as e:  # noqa: BLE001
             log(f'   QA {cid}: failed ({e})')
+        # the sculpted mouth shapes of the lip-sync (tools/mouthmorphs.py: the CC0 MakeHuman mouth
+        # expression targets as a sidecar next to the cache) - made here too, so a character built on the
+        # render PC talks with them (without it every mouth falls back to bone-only); never fatal
+        if not opts.get('suffix'):
+            try:
+                sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
+                import mouthmorphs
+                if not mouthmorphs.build_one(kit, spec, mouthmorphs.UNITS, force=True):
+                    log(f'   MOUTH SHAPES {cid}: refused (see above) - bone-only mouths for {cid}')
+                mouthmorphs.write_index()
+            except Exception as e:  # noqa: BLE001
+                log(f'   MOUTH SHAPES {cid}: FAILED ({e}) - bone-only mouths for {cid}; re-run tools/mouthmorphs.py {cid}')
     log(f'   {cid}: {sum(len(p.posed) for p in parts)} verts, {size / 1e6:.1f} MB, {time.time() - t0:.0f} s')
 
 
