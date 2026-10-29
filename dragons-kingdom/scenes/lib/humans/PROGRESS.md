@@ -473,3 +473,49 @@ flee, carry).
 Next (for a successor): a crowd member in the south of the square still
 stands at t 5.2 (late reactor - give the reaction wave a cap); the cradle framing cuts the top of
 Remi's head; the Cling crowd page needs ~5 GB free (the set, not the people) - render it alone.
+
+## PERFORMANCE fix round (critic r1, 14 defects; 2026-10-29, three short sessions, low-usage budget)
+Code for most defects landed in af75a6e + ab44473 (snapshot commits after usage stops); this
+session verified them (selftest-perf: all passed, 40 s) and re-rendered the proofs.
+Done (verified by selftest-perf unless noted):
+- D0 cross-character targets pure in t: perform.js snapshot(t) (pass-1 pose per t, memoised) +
+  updateAll(); lookdev dialogue/cradle/crowd and crowd.js use it; selftest "two-person look +
+  support: a chunk's first frame == the sequential frame, either update order (max diff 0)".
+- D1 mouth sidecars: offline/build.py now runs tools/mouthmorphs.py after every build (+ index);
+  tools/check-mouth.mjs validates sidecars. NOT done (not our paths): pack-caches.mjs must ship
+  cache/*.mouth.json, *.mouth.bin, mouth-index.json; render/gate.mjs must fail on a speaking
+  character without a valid sidecar (call tools/check-mouth.mjs). -> REQUEST pc-kit/render owners.
+- D2 lips: LIP_ZONE UV lip mask (redder, darker vermilion, wet lower lip), tooth crowns separated,
+  darker gums, L011 focus between eyes and mouth at f/4.5. 4K recheck this session (alex t 1.95,
+  final, 3 min; scratch eng1/perf-fix/alex2.png + alex2_mouth.png): the lips now READ as lips
+  (vermilion (175,121,102) vs skin (167,106,90) below, a clear lip line, wet lower lip), the mouth is
+  as sharp as the brows. The lower teeth still read grey-teal at 2x zoom though every pixel is warm
+  (no pixel with G or B >= R): it is simultaneous contrast with the saturated lips at low luminance.
+  This session: materials.js teeth occlusion starts deeper (vMouth 0.010-0.040 instead of
+  0.006-0.034): teeth (96,82,73) -> (116,102,93); better, not solved. NEXT: push the shaded enamel's
+  R/G toward ~1.25 (teeth indirect tint vec3(1.18,0.98,0.9) -> ~(1.3,0.98,0.85)) and lift the lower
+  row to ~0.8x skin luminance; re-check the same crop (render ~3 min at final).
+- D3 cradle: palm on the sleeve (0.7 cm), limp hurt hand fingers together, elbow in, Remi's
+  support grip on the OUTSIDE of her sleeve (limbRadius), reframed (fov 24). Preview still
+  t 6.62 checked this session (scratch eng1/perf-fix/cradle.png): Remi's head in frame, his
+  fingers wrap the outside of her upper sleeve, hurt hand droops with fingers together, good hand
+  palm-up under the hurt wrist, no forearm poke-through visible. The good hand's fingers still
+  curl up a little "claw"-like at the wrist - a softer curl / more wrap over the top would help.
+- D4 emotion: auto stage-direction notes skipped (dlsrc) + hand-set mixes; D5 nonverbal takes
+  open the mouth from the envelope; D6 overlapping takes keep the first syllable; D7 director
+  scene from shotlist.json; D8 director arm acts posed by the performance gestures (OVERLAYS in
+  director.js); D11 face-reading saccades at full scale + microsaccades; D12 falls with prop
+  drop / braced landing; D13 crowd verbs (crawl, push, drop flat, thrown, hand in hand, run during
+  the lift) + reaction-delay cap (latest 0.49 s).
+Open (next steps, in order):
+1. D9: add `node scenes/lib/humans/selftest-perf.mjs` as its own test in test/run.mjs and to
+   render/gate.mjs (not our paths -> REQUEST; it skips nothing yet when caches are missing: add a
+   cache check that skips the body/mouth checks and keeps lip-sync/emotion/director ones).
+2. D10 skirts (not started): ring of 6-8 secondary chains from the pelvis, damped spring baked in
+   setup from pelvis + thigh trajectories (deterministic), re-weight long-skirt verts from thighs
+   to chains (offline/build.py weight transfer or a runtime re-skin), clamp stride for long
+   skirts, seated drape for a carried child. Check in humans-anim-verbs.js (run, kneel, fall).
+3. Teeth colour (see D2 above). Re-render draft clips (alex, dialogue, cradle) to look at the new lips/cradle in motion;
+   crowd draft needs the machine alone (~5 GB).
+4. Cradle: soften the good hand's finger curl (motion.js GESTURES.cradle shape curl) so it wraps.
+- npm test at the end of this session: 48 pass, 1 skipped, 0 fail (4.8 min).

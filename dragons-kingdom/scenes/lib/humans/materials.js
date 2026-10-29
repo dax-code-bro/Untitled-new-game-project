@@ -508,7 +508,9 @@ export function simpleTexturedMaterial(o = {}) {
   clearcoatSpecularIndirect *= aoT * 0.12 * (1.0 - smoothstep(0.004, 0.02, vMouth));
   clearcoatSpecularDirect *= aoT * (1.0 - smoothstep(0.004, 0.02, vMouth));
 #endif
-{ float mOcc = 1.0 - smoothstep(0.006, 0.034, vMouth) * (0.93 - 0.3 * uMouthOpen);
+// (teeth: the front incisors' edges sit right behind the lips and catch the light - the occlusion
+  // starts deeper for them: from 6 mm the whispered L011's lower row was a dim grey slot at 4K)
+{ float mOcc = 1.0 - smoothstep(${teeth ? '0.010, 0.040' : '0.006, 0.034'}, vMouth) * (0.93 - 0.3 * uMouthOpen);
   // the light that does reach inside is bounced off lips and tongue: warm, not sky blue
   // (pink-warm, not ivory: next to the saturated lips a neutral grey tooth read teal, a yellow one
   // olive - the light inside is the lips' and the tongue's colour)
