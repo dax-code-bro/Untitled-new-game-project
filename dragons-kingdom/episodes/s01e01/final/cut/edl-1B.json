@@ -1,0 +1,2137 @@
+{
+ "title": "Dragon's Kingdom S01E01 - draft cut: 1B",
+ "status": "DRAFT EDIT for the animatic / timing check (960x540 draft renders, computer voices, provisional designs). Not a master (SERIES.md section 2).",
+ "fps": 24,
+ "frames": 3312,
+ "duration_s": 138,
+ "duration_tc": "00:02:18:00",
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "shots": [
+  {
+   "job": "1B-01",
+   "seq": 77,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 0,
+   "rec_out": 96,
+   "tc_in": "00:00:00:00",
+   "tc_out": "00:00:04:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 47,
+    "start_frame": 1128
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.36,
+    "k4_cpu_s_per_frame": 39.2,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.38,
+    "k4_cpu_hours": 1.05,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.12
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.12 for the shot's content"
+   },
+   "staging": "NONE: Charcoal's black hide fills the frame, close enough to read as dark terrain; it rises and falls with his breath (the match cut from the hatchling's breathing).",
+   "deviation": null,
+   "action": "Match cut: the immense rise of Charcoal's side, close enough to read as dark terrain. Black scales show texture and natural highlights.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1B-02",
+   "seq": 78,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 192,
+   "rec_in": 96,
+   "rec_out": 288,
+   "tc_in": "00:00:04:00",
+   "tc_out": "00:00:12:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 53,
+    "start_frame": 1272
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 46.87,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 12.86,
+    "k4_cpu_hours": 2.5,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.34 for the shot's content"
+   },
+   "staging": "BACK: the camera pulls back from his flank (zooming out) until Remi, small, comes into view beside him reaching up for the riding rig's band; Remi from behind, the rig's stair at left.",
+   "deviation": null,
+   "action": "Move back until Remi comes into view beside him, reaching for a riding strap: scale established by an ordinary human action.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1B-03",
+   "seq": 79,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 84,
+   "rec_in": 288,
+   "rec_out": 372,
+   "tc_in": "00:00:12:00",
+   "tc_out": "00:00:15:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 63,
+    "start_frame": 1512
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.21,
+    "k4_cpu_hours": 1.01,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+   },
+   "staging": "BACK + DOF: medium of Remi from behind his left shoulder, his face turned up to the dragon; Charcoal's flank breathing beyond, soft.",
+   "deviation": null,
+   "action": "Charcoal's breathing moves the air around Remi (hair and cloth stir). Calm, unthreatened dragon.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1B-04",
+   "seq": 80,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 372,
+   "rec_out": 468,
+   "tc_in": "00:00:15:12",
+   "tc_out": "00:00:19:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 69,
+    "start_frame": 1656
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.08,
+    "k4_cpu_s_per_frame": 47.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.53,
+    "k4_cpu_hours": 1.27,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.36
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.36 for the shot's content"
+   },
+   "staging": "WIDE: long lens across the field: Leaf crouched low and level, Abby at his shoulder straightening the breast strap (from behind); Charcoal's head enters at the right edge.",
+   "deviation": null,
+   "action": "Farther across the field, Leaf crouches low, belly near the grass, his two legs folded under the middle of his body, the wrists of his folded wings on the ground in front of him; Abby in front of him straightens riding equipment.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1B-05",
+   "seq": 81,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 132,
+   "rec_in": 468,
+   "rec_out": 600,
+   "tc_in": "00:00:19:12",
+   "tc_out": "00:00:25:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 75,
+    "start_frame": 1800
+   },
+   "dialogue": [
+    {
+     "id": "L032",
+     "part": 0,
+     "ref": "L032",
+     "role": "ABBY",
+     "file": "vo/L032.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.33,
+     "at_s": 1.42,
+     "speech_in_s": 1.45,
+     "speech_out_s": 2.72,
+     "words": [
+      {
+       "w": "leaf",
+       "start_s": 1.42,
+       "end_s": 1.91
+      },
+      {
+       "w": "here",
+       "start_s": 2.28,
+       "end_s": 2.65
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 20.92
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 8.18,
+    "k4_cpu_hours": 1.59,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+   },
+   "staging": "BACK: medium past Abby (from behind-left) to Leaf: he turns his head toward a noise and the strap pulls out of her hands; \"Leaf. Here.\" - he turns back; she finishes fastening.",
+   "deviation": null,
+   "action": "Leaf turns toward a noise and pulls the equipment out of reach. She calls him; Leaf turns back; she finishes fastening.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1B-06",
+   "seq": 82,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 180,
+   "rec_in": 600,
+   "rec_out": 780,
+   "tc_in": "00:00:25:00",
+   "tc_out": "00:00:32:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 83,
+    "start_frame": 1992
+   },
+   "dialogue": [
+    {
+     "id": "L033",
+     "part": 0,
+     "ref": "L033",
+     "role": "REMI",
+     "file": "vo/L033.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.76,
+     "at_s": 0.67,
+     "speech_in_s": 0.7,
+     "speech_out_s": 1.4,
+     "words": [
+      {
+       "w": "finished",
+       "start_s": 0.67,
+       "end_s": 1.36
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 25.67
+    },
+    {
+     "id": "L034",
+     "part": 0,
+     "ref": "L034",
+     "role": "ABBY",
+     "file": "vo/L034.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.605,
+     "at_s": 1.82,
+     "speech_in_s": 1.85,
+     "speech_out_s": 2.395,
+     "words": [
+      {
+       "w": "nearly",
+       "start_s": 1.82,
+       "end_s": 2.35
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 26.82
+    },
+    {
+     "id": "L035",
+     "part": 0,
+     "ref": "L035",
+     "role": "REMI",
+     "file": "vo/L035.wav",
+     "file_in_s": 0,
+     "file_out_s": 2.005,
+     "at_s": 2.865,
+     "speech_in_s": 2.895,
+     "speech_out_s": 4.84,
+     "words": [
+      {
+       "w": "that",
+       "start_s": 2.865,
+       "end_s": 3.055
+      },
+      {
+       "w": "was",
+       "start_s": 3.055,
+       "end_s": 3.235
+      },
+      {
+       "w": "nearly",
+       "start_s": 3.235,
+       "end_s": 3.565
+      },
+      {
+       "w": "when",
+       "start_s": 3.565,
+       "end_s": 3.725
+      },
+      {
+       "w": "i",
+       "start_s": 3.725,
+       "end_s": 3.815
+      },
+      {
+       "w": "asked",
+       "start_s": 3.815,
+       "end_s": 4.245
+      },
+      {
+       "w": "before",
+       "start_s": 4.245,
+       "end_s": 4.855
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 27.865
+    },
+    {
+     "id": "L036",
+     "part": 0,
+     "ref": "L036",
+     "role": "ABBY",
+     "file": "vo/L036.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.99,
+     "at_s": 5.26,
+     "speech_in_s": 5.29,
+     "speech_out_s": 6.22,
+     "words": [
+      {
+       "w": "you",
+       "start_s": 5.26,
+       "end_s": 5.43
+      },
+      {
+       "w": "asked",
+       "start_s": 5.43,
+       "end_s": 5.74
+      },
+      {
+       "w": "once",
+       "start_s": 5.74,
+       "end_s": 6.24
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 30.26
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.44,
+    "k4_cpu_s_per_frame": 51.8,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 13.32,
+    "k4_cpu_hours": 2.59,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.48
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.48 for the shot's content"
+   },
+   "staging": "WIDE: the master from the south-west: Abby at Leaf's shoulder left, Remi at his gear inside the stakes right, the rig and Charcoal beyond; the lines cross the stakes (11 m); nobody needs to look.",
+   "deviation": "The shot list puts Remi in the right foreground; the rig stands between his place and the camera side that keeps Leaf left / Charcoal right, so this is the wide master with both small.",
+   "action": "Across a short distance (speaking range). They do not need to look at each other for every line.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1B-07",
+   "seq": 83,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 780,
+   "rec_out": 852,
+   "tc_in": "00:00:32:12",
+   "tc_out": "00:00:35:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 93,
+    "start_frame": 2232
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.46,
+    "k4_cpu_hours": 0.87,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+   },
+   "staging": "HANDS: insert of Remi's hands checking the buckle of his riding belt; his face above the frame.",
+   "deviation": null,
+   "action": "Remi checks his own equipment instead of answering.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1B-08",
+   "seq": 84,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 852,
+   "rec_out": 924,
+   "tc_in": "00:00:35:12",
+   "tc_out": "00:00:38:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 98,
+    "start_frame": 2352
+   },
+   "dialogue": [
+    {
+     "id": "L037",
+     "part": 0,
+     "ref": "L037",
+     "role": "GROUND KEEPER",
+     "file": "vo/L037.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.94,
+     "at_s": 0.765,
+     "speech_in_s": 0.8,
+     "speech_out_s": 1.675,
+     "words": [
+      {
+       "w": "the",
+       "start_s": 0.765,
+       "end_s": 0.845
+      },
+      {
+       "w": "field's",
+       "start_s": 0.845,
+       "end_s": 1.215
+      },
+      {
+       "w": "clear",
+       "start_s": 1.215,
+       "end_s": 1.615
+      }
+     ],
+     "gain_db": 3,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 36.265
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.46,
+    "k4_cpu_hours": 0.87,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+   },
+   "staging": "WIDE: the ground keeper far left at the field's edge, well outside the launch space, calls it; Charcoal's head and shoulder at right.",
+   "deviation": null,
+   "action": "An unnamed ground keeper stands well outside Charcoal's launch space.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1B-09",
+   "seq": 85,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 48,
+   "rec_in": 924,
+   "rec_out": 972,
+   "tc_in": "00:00:38:12",
+   "tc_out": "00:00:40:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 103,
+    "start_frame": 2472
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 2.98,
+    "k4_cpu_hours": 0.58,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+   },
+   "staging": "BACK: Remi from behind raises a hand to the keeper (off left); the stair beyond him.",
+   "deviation": null,
+   "action": "Remi acknowledges with a raised hand.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1B-10",
+   "seq": 86,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 144,
+   "rec_in": 972,
+   "rec_out": 1116,
+   "tc_in": "00:00:40:12",
+   "tc_out": "00:00:46:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 107,
+    "start_frame": 2568
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.14,
+    "k4_cpu_s_per_frame": 48.28,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 9.93,
+    "k4_cpu_hours": 1.93,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1.08,
+     "total": 1.38
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.38 for the shot's content"
+   },
+   "staging": "BACK: Abby climbs the mounting platform brought alongside Leaf (standing for it), crosses the deck and swings onto the saddle - the shot ends as she leans over it (cut on the action).",
+   "deviation": "No mounted end state in this shot: the seated rider is a separate build (humans library riders), so the mount is shown up to the swing and cut on the action; she is seated from X3-06 on.",
+   "action": "Abby mounts Leaf by a low step or platform suited to his height. Remi glances over to check she is mounted before finishing his own preparations.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-01",
+   "seq": 87,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 1116,
+   "rec_out": 1212,
+   "tc_in": "00:00:46:12",
+   "tc_out": "00:00:50:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 115,
+    "start_frame": 2760
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.57,
+    "k4_cpu_s_per_frame": 53.35,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.32,
+    "k4_cpu_hours": 1.42,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.52
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.52 for the shot's content"
+   },
+   "staging": "WIDE: long lens: Remi crosses to the foot of the access rig; two keepers hold its guide ropes outside the stakes; Charcoal at right.",
+   "deviation": null,
+   "action": "Remi walks to Charcoal's access rig: a timber stair and platform at the edge of the launch space, built for this one animal. Two keepers hold its guide ropes.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-02",
+   "seq": 88,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 1212,
+   "rec_out": 1308,
+   "tc_in": "00:00:50:12",
+   "tc_out": "00:00:54:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 121,
+    "start_frame": 2904
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.36,
+    "k4_cpu_s_per_frame": 39.2,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.38,
+    "k4_cpu_hours": 1.05,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.12
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.12 for the shot's content"
+   },
+   "staging": "NONE: low and wide: Charcoal lowers himself a measured amount, belly toward the turf, wrists braced in front, and holds still; the rig at left.",
+   "deviation": null,
+   "action": "Charcoal does not need to be told. He lowers himself by a measured amount, belly toward the turf, the wrists of his folded wings braced in front, and holds still.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-03",
+   "seq": 89,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 1308,
+   "rec_out": 1404,
+   "tc_in": "00:00:54:12",
+   "tc_out": "00:00:58:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 127,
+    "start_frame": 3048
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.14,
+    "k4_cpu_s_per_frame": 48.28,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.62,
+    "k4_cpu_hours": 1.29,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1.08,
+     "total": 1.38
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.38 for the shot's content"
+   },
+   "staging": "BACK: following Remi up the first flight of the stair, from behind and outside the rail; the first turn at the landing.",
+   "deviation": null,
+   "action": "The climb: the first turn of the stair.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-04",
+   "seq": 90,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 1404,
+   "rec_out": 1476,
+   "tc_in": "00:00:58:12",
+   "tc_out": "00:01:01:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 133,
+    "start_frame": 3192
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.83,
+    "k4_cpu_s_per_frame": 44.7,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.6,
+    "k4_cpu_hours": 0.89,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.28
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.28 for the shot's content"
+   },
+   "staging": "WIDE: from the second landing: Remi comes up into the left of frame and turns for the last flight; Charcoal's back and folded wing fill the frame beyond.",
+   "deviation": null,
+   "action": "The landing: each turn shows more of Charcoal's body.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-05",
+   "seq": 91,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 1476,
+   "rec_out": 1548,
+   "tc_in": "00:01:01:12",
+   "tc_out": "00:01:04:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 138,
+    "start_frame": 3312
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.57,
+    "k4_cpu_s_per_frame": 53.35,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.49,
+    "k4_cpu_hours": 1.07,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.52
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.52 for the shot's content"
+   },
+   "staging": "BACK + WIDE: high on the gangway looking down past Remi at the deck rail; the keepers small on the turf below with the guide ropes.",
+   "deviation": null,
+   "action": "At the top the keepers below are small. Brisk and practised.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-06",
+   "seq": 92,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 120,
+   "rec_in": 1548,
+   "rec_out": 1668,
+   "tc_in": "00:01:04:12",
+   "tc_out": "00:01:09:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 143,
+    "start_frame": 3432
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.94,
+    "k4_cpu_s_per_frame": 57.68,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 9.89,
+    "k4_cpu_hours": 1.92,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.6,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.65
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.65 for the shot's content"
+   },
+   "staging": "WIDE: from the gangway past the ground keeper on the deck (right foreground, from behind): across the stakes Leaf has edged forward with Abby on his back, neck stretched toward Charcoal.",
+   "deviation": "The shot list asks for a 135-200 mm lens; Leaf waits ~15 m from the rig (speaking range in 1B-06 and 1B-12), so a 50 mm from the gangway holds him and the keeper.",
+   "action": "Across the field, Leaf has edged forward with Abby on his back, neck stretched toward Charcoal, past the line of stakes. The speaking GROUND KEEPER, now on the platform behind Remi, sees it.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-07",
+   "seq": 93,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 168,
+   "rec_in": 1668,
+   "rec_out": 1836,
+   "tc_in": "00:01:09:12",
+   "tc_out": "00:01:16:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 150,
+    "start_frame": 3600
+   },
+   "dialogue": [
+    {
+     "id": "X3-01",
+     "part": 0,
+     "ref": "X3-01",
+     "role": "GROUND KEEPER",
+     "file": "vo/X3-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.63,
+     "at_s": 0.37,
+     "speech_in_s": 0.4,
+     "speech_out_s": 1.975,
+     "words": [
+      {
+       "w": "your",
+       "start_s": 0.37,
+       "end_s": 0.53
+      },
+      {
+       "w": "highness",
+       "start_s": 0.53,
+       "end_s": 1.08
+      },
+      {
+       "w": "the",
+       "start_s": 1.41,
+       "end_s": 1.47
+      },
+      {
+       "w": "line",
+       "start_s": 1.47,
+       "end_s": 1.88
+      }
+     ],
+     "gain_db": 3,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 69.87
+    },
+    {
+     "id": "X3-02",
+     "part": 0,
+     "ref": "X3-02",
+     "role": "ABBY",
+     "file": "vo/X3-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.07,
+     "at_s": 2.45,
+     "speech_in_s": 2.475,
+     "speech_out_s": 3.49,
+     "words": [
+      {
+       "w": "he's",
+       "start_s": 2.45,
+       "end_s": 2.72
+      },
+      {
+       "w": "only",
+       "start_s": 2.72,
+       "end_s": 2.98
+      },
+      {
+       "w": "looking",
+       "start_s": 2.98,
+       "end_s": 3.44
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 71.95
+    },
+    {
+     "id": "X3-03",
+     "part": 0,
+     "ref": "X3-03",
+     "role": "GROUND KEEPER",
+     "file": "vo/X3-03.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.385,
+     "at_s": 3.91,
+     "speech_in_s": 3.94,
+     "speech_out_s": 5.265,
+     "words": [
+      {
+       "w": "he",
+       "start_s": 3.91,
+       "end_s": 4.04
+      },
+      {
+       "w": "can",
+       "start_s": 4.04,
+       "end_s": 4.19
+      },
+      {
+       "w": "look",
+       "start_s": 4.19,
+       "end_s": 4.41
+      },
+      {
+       "w": "from",
+       "start_s": 4.41,
+       "end_s": 4.57
+      },
+      {
+       "w": "behind",
+       "start_s": 4.57,
+       "end_s": 5.01
+      },
+      {
+       "w": "it",
+       "start_s": 5.01,
+       "end_s": 5.28
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 73.41
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.8,
+    "k4_cpu_s_per_frame": 56,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 13.44,
+    "k4_cpu_hours": 2.61,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.6,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.6
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.6 for the shot's content"
+   },
+   "staging": "OTS: over the ground keeper's right shoulder on the deck (he faces away, calling); Abby small on Leaf below, beyond the stakes.",
+   "deviation": null,
+   "action": "The line.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-08",
+   "seq": 94,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 108,
+   "rec_in": 1836,
+   "rec_out": 1944,
+   "tc_in": "00:01:16:12",
+   "tc_out": "00:01:21:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 159,
+    "start_frame": 3816
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.57,
+    "k4_cpu_s_per_frame": 53.35,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 8.23,
+    "k4_cpu_hours": 1.6,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.52
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.52 for the shot's content"
+   },
+   "staging": "WIDE: long lens: Abby turns Leaf back behind the stakes; he goes looking over his shoulder at Charcoal the whole way; Charcoal (right) never looks at him.",
+   "deviation": null,
+   "action": "Abby turns Leaf back behind the stakes. Leaf goes, looking over his shoulder at Charcoal the whole way. Charcoal does not look at him at all.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-09",
+   "seq": 95,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 1944,
+   "rec_out": 2040,
+   "tc_in": "00:01:21:00",
+   "tc_out": "00:01:25:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 166,
+    "start_frame": 3984
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.08,
+    "k4_cpu_s_per_frame": 47.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.53,
+    "k4_cpu_hours": 1.27,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.36
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.36 for the shot's content"
+   },
+   "staging": "BACK: medium from above his back, behind Remi's left shoulder: he settles into the riding rig and pulls each strap hard; the keeper on the gangway end beyond, soft.",
+   "deviation": null,
+   "action": "At the saddle, Remi settles into the riding rig: leather straps, buckles, a broad seat. No decorative armor, no crest. He pulls each strap hard against its buckle.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-10",
+   "seq": 96,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 60,
+   "rec_in": 2040,
+   "rec_out": 2100,
+   "tc_in": "00:01:25:00",
+   "tc_out": "00:01:27:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 172,
+    "start_frame": 4128
+   },
+   "dialogue": [
+    {
+     "id": "X3-04",
+     "part": 0,
+     "ref": "X3-04",
+     "role": "GROUND KEEPER",
+     "file": "vo/X3-04.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.64,
+     "at_s": 0.27,
+     "speech_in_s": 0.3,
+     "speech_out_s": 0.88,
+     "words": [
+      {
+       "w": "straps",
+       "start_s": 0.27,
+       "end_s": 0.81
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 85.27
+    },
+    {
+     "id": "X3-05",
+     "part": 0,
+     "ref": "X3-05",
+     "role": "REMI",
+     "file": "vo/X3-05.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.015,
+     "at_s": 1.2,
+     "speech_in_s": 1.23,
+     "speech_out_s": 2.185,
+     "words": [
+      {
+       "w": "checked",
+       "start_s": 1.2,
+       "end_s": 1.53
+      },
+      {
+       "w": "twice",
+       "start_s": 1.53,
+       "end_s": 2.12
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 86.2
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.08,
+    "k4_cpu_s_per_frame": 47.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.08,
+    "k4_cpu_hours": 0.79,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.36
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.36 for the shot's content"
+   },
+   "staging": "OTS: over the keeper's shoulder on the gangway end (his back right) to Remi in the seat in profile: \"Straps?\" - \"Checked twice.\"",
+   "deviation": null,
+   "action": "A ritual both of them respect.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-11",
+   "seq": 97,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 2100,
+   "rec_out": 2172,
+   "tc_in": "00:01:27:12",
+   "tc_out": "00:01:30:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 177,
+    "start_frame": 4248
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.08,
+    "k4_cpu_s_per_frame": 47.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.9,
+    "k4_cpu_hours": 0.95,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.36
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.36 for the shot's content"
+   },
+   "staging": "HANDS: insert: the keeper's hands check the strap at Remi's knee once more, quickly and thoroughly.",
+   "deviation": null,
+   "action": "The keeper checks them once more anyway, quickly and thoroughly, and Remi lets him.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-12",
+   "seq": 98,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 168,
+   "rec_in": 2172,
+   "rec_out": 2340,
+   "tc_in": "00:01:30:12",
+   "tc_out": "00:01:37:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 182,
+    "start_frame": 4368
+   },
+   "dialogue": [
+    {
+     "id": "X3-06",
+     "part": 0,
+     "ref": "X3-06",
+     "role": "ABBY",
+     "file": "vo/X3-06.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.845,
+     "at_s": 2.47,
+     "speech_in_s": 2.5,
+     "speech_out_s": 4.285,
+     "words": [
+      {
+       "w": "we",
+       "start_s": 2.47,
+       "end_s": 2.57
+      },
+      {
+       "w": "could",
+       "start_s": 2.57,
+       "end_s": 2.72
+      },
+      {
+       "w": "have",
+       "start_s": 2.72,
+       "end_s": 2.81
+      },
+      {
+       "w": "been",
+       "start_s": 2.81,
+       "end_s": 2.97
+      },
+      {
+       "w": "round",
+       "start_s": 2.97,
+       "end_s": 3.22
+      },
+      {
+       "w": "the",
+       "start_s": 3.22,
+       "end_s": 3.33
+      },
+      {
+       "w": "island",
+       "start_s": 3.33,
+       "end_s": 3.71
+      },
+      {
+       "w": "by",
+       "start_s": 3.71,
+       "end_s": 3.9
+      },
+      {
+       "w": "now",
+       "start_s": 3.9,
+       "end_s": 4.26
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 92.97
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.44,
+    "k4_cpu_s_per_frame": 51.8,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 12.43,
+    "k4_cpu_hours": 2.42,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.48
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.48 for the shot's content"
+   },
+   "staging": "BACK: medium from behind Leaf: Abby on his back adjusts a strap with both hands and watches the inspection on Charcoal's back across the field with open impatience (the line plays on her back).",
+   "deviation": null,
+   "action": "Abby, waiting on Leaf, adjusts a strap with both hands and watches the inspection with open impatience.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-13",
+   "seq": 99,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 48,
+   "rec_in": 2340,
+   "rec_out": 2388,
+   "tc_in": "00:01:37:12",
+   "tc_out": "00:01:39:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 191,
+    "start_frame": 4584
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 2.98,
+    "k4_cpu_hours": 0.58,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+   },
+   "staging": "NONE: medium of Leaf from his right side: he shifts his weight, agreeing with her tone if not her words; Abby on his back, half out of the top of frame.",
+   "deviation": null,
+   "action": "Leaf shifts his weight, agreeing with the tone if not the words.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-14",
+   "seq": 100,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 2388,
+   "rec_out": 2460,
+   "tc_in": "00:01:39:12",
+   "tc_out": "00:01:42:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 195,
+    "start_frame": 4680
+   },
+   "dialogue": [
+    {
+     "id": "X3-07",
+     "part": 0,
+     "ref": "X3-07",
+     "role": "REMI",
+     "file": "vo/X3-07.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.785,
+     "at_s": 1.47,
+     "speech_in_s": 1.5,
+     "speech_out_s": 2.225,
+     "words": [
+      {
+       "w": "morning",
+       "start_s": 1.47,
+       "end_s": 2.16
+      }
+     ],
+     "gain_db": -5.5,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 100.97
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.46,
+    "k4_cpu_hours": 0.87,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+   },
+   "staging": "HANDS: close: Remi lays his palm flat on Charcoal's neck ahead of the seat (\"Morning.\", quietly); his arm in from the left, his face out of frame.",
+   "deviation": null,
+   "action": "Remi lays his palm flat against Charcoal's neck.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-15",
+   "seq": 101,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 84,
+   "rec_in": 2460,
+   "rec_out": 2544,
+   "tc_in": "00:01:42:12",
+   "tc_out": "00:01:46:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 200,
+    "start_frame": 4800
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.36,
+    "k4_cpu_s_per_frame": 39.2,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.7,
+    "k4_cpu_hours": 0.91,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.12
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.12 for the shot's content"
+   },
+   "staging": "CREATURE: close on Charcoal's left eye in the morning sun: it half closes and opens again (an answer).",
+   "deviation": null,
+   "action": "Charcoal's eye half closes and opens again.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "R2-01",
+   "seq": 102,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 180,
+   "rec_in": 2544,
+   "rec_out": 2724,
+   "tc_in": "00:01:46:00",
+   "tc_out": "00:01:53:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 206,
+    "start_frame": 4944
+   },
+   "dialogue": [
+    {
+     "id": "R2-01",
+     "part": 0,
+     "ref": "R2-01",
+     "role": "GROUND KEEPER",
+     "file": "vo/R2-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.995,
+     "at_s": 3.57,
+     "speech_in_s": 3.6,
+     "speech_out_s": 5.54,
+     "words": [
+      {
+       "w": "every",
+       "start_s": 3.57,
+       "end_s": 3.86
+      },
+      {
+       "w": "damned",
+       "start_s": 3.86,
+       "end_s": 4.19
+      },
+      {
+       "w": "morning",
+       "start_s": 4.19,
+       "end_s": 4.54
+      },
+      {
+       "w": "i",
+       "start_s": 4.54,
+       "end_s": 4.62
+      },
+      {
+       "w": "lay",
+       "start_s": 4.62,
+       "end_s": 4.87
+      },
+      {
+       "w": "that",
+       "start_s": 4.87,
+       "end_s": 5.06
+      },
+      {
+       "w": "turf",
+       "start_s": 5.06,
+       "end_s": 5.55
+      }
+     ],
+     "gain_db": -5.5,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 109.57
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 11.16,
+    "k4_cpu_hours": 2.17,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+   },
+   "staging": "MEDIUM: the ground keeper at the edge of the launch space takes his clay pipe from his teeth, knocks it out (below frame) and looks down at the turf under his boot; the other keeper beside him. Adults only in frame (Leaf and Abby are behind the camera).",
+   "deviation": null,
+   "action": "The speaking GROUND KEEPER takes a short clay pipe from his teeth, knocks it out against his heel and grinds the ember into the turf. He looks down at the turf under his boot with something close to grief.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "R2-02",
+   "seq": 103,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 36,
+   "rec_in": 2724,
+   "rec_out": 2760,
+   "tc_in": "00:01:53:12",
+   "tc_out": "00:01:55:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 216,
+    "start_frame": 5184
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.36,
+    "k4_cpu_s_per_frame": 39.2,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 2.02,
+    "k4_cpu_hours": 0.39,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.12
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.12 for the shot's content"
+   },
+   "staging": "MEDIUM: the reverse: the other keeper does not answer - he hears it every morning; his eyes stay on the field.",
+   "deviation": null,
+   "action": "The other keeper does not answer. He hears it every morning.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X3-16",
+   "seq": 104,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 120,
+   "rec_in": 2760,
+   "rec_out": 2880,
+   "tc_in": "00:01:55:00",
+   "tc_out": "00:02:00:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 220,
+    "start_frame": 5280
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 5.23,
+    "k4_cpu_s_per_frame": 61.04,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 10.46,
+    "k4_cpu_hours": 2.03,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.6,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.09,
+     "move": 1,
+     "total": 1.74
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.74 for the shot's content"
+   },
+   "staging": "WIDE: the keepers draw the stair back on its runners, well clear of the launch space, its gangway raised; the ground keeper steps away; Charcoal with Remi on his back at right.",
+   "deviation": null,
+   "action": "The keeper climbs down. The keepers draw the stair back on its runners, well clear of the launch space, and step away.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1B-12",
+   "seq": 105,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 144,
+   "rec_in": 2880,
+   "rec_out": 3024,
+   "tc_in": "00:02:00:00",
+   "tc_out": "00:02:06:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 227,
+    "start_frame": 5448
+   },
+   "dialogue": [
+    {
+     "id": "L038",
+     "part": 0,
+     "ref": "L038",
+     "role": "REMI",
+     "file": "vo/L038.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.505,
+     "at_s": 0.47,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.945,
+     "words": [
+      {
+       "w": "stay",
+       "start_s": 0.47,
+       "end_s": 0.77
+      },
+      {
+       "w": "clear",
+       "start_s": 0.77,
+       "end_s": 1.15
+      },
+      {
+       "w": "when",
+       "start_s": 1.15,
+       "end_s": 1.32
+      },
+      {
+       "w": "he",
+       "start_s": 1.32,
+       "end_s": 1.39
+      },
+      {
+       "w": "lifts",
+       "start_s": 1.39,
+       "end_s": 1.92
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 120.47
+    },
+    {
+     "id": "L039",
+     "part": 0,
+     "ref": "L039",
+     "role": "ABBY",
+     "file": "vo/L039.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.805,
+     "at_s": 2.315,
+     "speech_in_s": 2.345,
+     "speech_out_s": 3.09,
+     "words": [
+      {
+       "w": "i",
+       "start_s": 2.315,
+       "end_s": 2.515
+      },
+      {
+       "w": "remember",
+       "start_s": 2.515,
+       "end_s": 3.025
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 122.315
+    },
+    {
+     "id": "L040",
+     "part": 0,
+     "ref": "L040",
+     "role": "REMI",
+     "file": "vo/L040.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.875,
+     "at_s": 3.46,
+     "speech_in_s": 3.49,
+     "speech_out_s": 5.305,
+     "words": [
+      {
+       "w": "leaf",
+       "start_s": 3.46,
+       "end_s": 3.86
+      },
+      {
+       "w": "doesn't",
+       "start_s": 3.86,
+       "end_s": 4.19
+      },
+      {
+       "w": "always",
+       "start_s": 4.19,
+       "end_s": 4.71
+      },
+      {
+       "w": "remember",
+       "start_s": 4.71,
+       "end_s": 5.32
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 123.46
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.44,
+    "k4_cpu_s_per_frame": 51.8,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 10.66,
+    "k4_cpu_hours": 2.07,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.48
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.48 for the shot's content"
+   },
+   "staging": "WIDE: long lens, both mounted at very different heights: Abby on Leaf left, Remi high on Charcoal right; speaking range across the stakes, faces too small to read.",
+   "deviation": null,
+   "action": "Both mounted at very different heights.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1B-13",
+   "seq": 106,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 3024,
+   "rec_out": 3096,
+   "tc_in": "00:02:06:00",
+   "tc_out": "00:02:09:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 235,
+    "start_frame": 5640
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.46,
+    "k4_cpu_hours": 0.87,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+   },
+   "staging": "CREATURE: close on Leaf's head in profile: his eye on Charcoal (off right), alert to the bigger dragon's every movement.",
+   "deviation": null,
+   "action": "Leaf watches Charcoal, alert to the larger dragon's movement.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1B-14",
+   "seq": 107,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 3096,
+   "rec_out": 3168,
+   "tc_in": "00:02:09:00",
+   "tc_out": "00:02:12:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 240,
+    "start_frame": 5760
+   },
+   "dialogue": [
+    {
+     "id": "L041",
+     "part": 0,
+     "ref": "L041",
+     "role": "ABBY",
+     "file": "vo/L041.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.97,
+     "at_s": 0.97,
+     "speech_in_s": 1,
+     "speech_out_s": 1.91,
+     "words": [
+      {
+       "w": "we'll",
+       "start_s": 0.97,
+       "end_s": 1.16
+      },
+      {
+       "w": "go",
+       "start_s": 1.16,
+       "end_s": 1.36
+      },
+      {
+       "w": "first",
+       "start_s": 1.36,
+       "end_s": 1.89
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 129.97
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.46,
+    "k4_cpu_hours": 0.87,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
+   },
+   "staging": "BACK: close past Abby's right shoulder (a lost profile): she rests her hand on Leaf's neck and turns his attention forward - \"We'll go first.\"",
+   "deviation": null,
+   "action": "Abby rests a hand against Leaf, directing his attention forward.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1B-15",
+   "seq": 108,
+   "scene": "1B",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 144,
+   "rec_in": 3168,
+   "rec_out": 3312,
+   "tc_in": "00:02:12:00",
+   "tc_out": "00:02:18:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 245,
+    "start_frame": 5880
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.8,
+    "k4_cpu_s_per_frame": 55.94,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 11.51,
+    "k4_cpu_hours": 2.24,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.6
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.6 for the shot's content"
+   },
+   "staging": "WIDE: long lens: Leaf rises out of his crouch with Abby on his back, the camera tilting up with him; Charcoal behind him fills the right of the frame - Leaf small beside him, huge beside her.",
+   "deviation": null,
+   "action": "Leaf rises. Charcoal stays in frame behind him: Leaf is small next to Charcoal yet huge next to Abby.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  }
+ ]
+}

@@ -25,7 +25,7 @@ import { SETS, continuityFor } from './registry.js';
 import { shotAt, clamp, keyed } from './timeline.js';
 import { evalCamera, resolvePoint } from './camera.js';
 import { actorState, actorVisible } from './blocking.js';
-import { poseHuman, poseCreature, humanRig } from './actions.js';
+import { poseHuman, poseCreature, humanRig, poseOverlays } from './actions.js';
 import { FxRunner, loadFxLibrary } from './fx.js';
 import { mouthAt, speakerAt } from './dialogue.js';
 import { faceReadability } from './audit.js';
@@ -108,6 +108,8 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
         c.root.name = `actor:${name}`;
         if (!d.instance) ctx.scene.add(c.root);
         actors[name] = { name, kind: 'creature', def: d, c, root: c.root };
+        // a creature the set builder made (and saddled, to fit a set piece to its back): its tack is the saddle riders use
+        if (d.tackInstance) actors[name].tack = d.tackInstance;
       } else if (d.kind === 'object') {
         const o = built.objects?.[d.object || name];
         if (!o) throw new Error(`${setId}: object actor "${name}" not provided by the set builder`);
@@ -297,6 +299,13 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
         // seated on its mount (posed before the humans): idle + the straddle fit; no blocking root
         if (!cast[a.ride.on]) throw new Error(`[director] ${row.job}: rider "${name}" is cast without its mount "${a.ride.on}"`);
         a.rider.update(tt, b.idle || {});
+        // a rider's arms, eye-line and face (lip-sync) from its blocking acts (reach / touch / handsTo /
+        // point / look / nod): the seated pose is the mount's, the overlays go on top of it
+        if (st.overlays.length || st.look || row.dialogue?.length) {
+          a.root.updateMatrixWorld(true);
+          const mouth = row.dialogue?.length ? mouthAt(row.dialogue, a.def.role || name.toUpperCase(), tt) : 0;
+          poseOverlays(a.ch, st, tt, S.env, { mouth, role: a.def.role, placed: row.dialogue, shot: row.job });
+        }
         S.posed.add(name);
         continue;
       }

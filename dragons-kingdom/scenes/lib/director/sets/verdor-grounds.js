@@ -29,6 +29,7 @@ import { meadowPattern } from './meadow.js';
 import { Kit as PropKit, frame as pframe, rng as prng } from '../../props/core.js';
 import { createCreature, poses } from '../../creatures/index.js';
 import { filmFinish } from '../../../lookdev/finish.js';
+import { buildLaunch } from './verdor-launch.js';
 
 export const GROUND = 9;
 export const LEAF_HOME = [8, -44];
@@ -55,7 +56,7 @@ export function cinematic() {
 
 const coastX = (N, z) => 235 + 25 * N.fbm(z * 0.006, 1.3, 3) + 60 * smooth(-200, 300, z);
 
-export async function build(ctx, { shotSpecs }) {
+export async function build(ctx, { shotSpecs, used = new Set() }) {
   const { scene, camera } = ctx;
   const draft = ctx.preset === 'draft' || ctx.preset === 'preview';
   const N = makeNoise(23);
@@ -189,11 +190,21 @@ export async function build(ctx, { shotSpecs }) {
   const yard = new Kit(0);
   stable(yard, yawFrame([-48, 0, -118], 0.9), { lod: 'mid', open: 0.7 });
   keeperHouse(yard, yawFrame([-76, 0, -104], 1.2), { lod: 'mid' });
-  leafPlatform(yard, yawFrame([LEAF_HOME[0] + 6.5, 0, LEAF_HOME[1] - 1.5], Math.PI / 2), {});
   const yardG = yard.build(M, { name: 'verdor-yard' });
   yardG.position.y = GROUND - 0.05;
   yardG.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   scene.add(yardG);
+  // Leaf's movable mounting platform (its own group: 1B has it brought alongside him at his 1B place,
+  // `set.platform: [x, z]`; at home by default)
+  const platK = new Kit(0);
+  leafPlatform(platK, yawFrame([0, 0, 0], Math.PI / 2), {});
+  const platG = new THREE.Group();
+  platG.name = 'leaf-platform';
+  platG.add(platK.build(M, { name: 'leaf-platform', origin: [0, 0, 0] }));
+  platG.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  const PLAT_HOME = [LEAF_HOME[0] + 6.5, LEAF_HOME[1] - 1.5];
+  platG.position.set(PLAT_HOME[0], GROUND - 0.05, PLAT_HOME[1]);
+  scene.add(platG);
   {
     const vk = await verdorKit(ctx);
     const pk = new PropKit();
@@ -218,15 +229,44 @@ export async function build(ctx, { shotSpecs }) {
     scene.add(c.root);
     shadowDragon = c.root;
   }
+  // scene 1B: the launch area (Charcoal, his access rig on runners, the stakes, the keeper's pipe) -
+  // built when a shot of this table casts him (sets/verdor-launch.js)
+  const launch = used.has('charcoal') ? await buildLaunch(ctx, { scene, H, G: GROUND, M, creatures: await import('../../creatures/index.js'), quality: ctx.preset === 'final' || ctx.preset === 'final-fast' ? 'hero' : 'standard' }) : null;
   camera.near = 0.05; camera.far = 30000; camera.updateProjectionMatrix();
+  // Leaf's mounting platform (leafPlatform, yaw 90 deg: its local +x = north, the stair down its local
+  // -z end = west): deck 1.45 m, six treads; Abby walks up it in 1B-10. PLAT follows the shot's set.platform
+  const PLAT = [...PLAT_HOME, 90];
+  const platform = (x, z) => {
+    const yw = PLAT[2] * Math.PI / 180, dx = x - PLAT[0], dz = z - PLAT[1];
+    const lx = dx * Math.cos(yw) - dz * Math.sin(yw), lz = dx * Math.sin(yw) + dz * Math.cos(yw);
+    const base = GROUND - 0.05;
+    if (Math.abs(lx) <= 1.2 && Math.abs(lz) <= 1.0) return base + 1.5;
+    if (Math.abs(lx) <= 0.5 && lz >= -2.62 && lz < -1.0) return base + 1.45 * Math.min(6, Math.floor((lz + 2.62) / 0.27) + 1) / 7 + 0.02;
+    return null;
+  };
 
   const marks = {
     leafHome: [LEAF_HOME[0], GROUND, LEAF_HOME[1]], gear: [0.5, GROUND + 0.8, -44.5], platform: [LEAF_HOME[0] + 6.5, GROUND + 1.4, LEAF_HOME[1] - 1.5],
     meadow: [MEADOW[0], GROUND, MEADOW[1]], farField: [40, GROUND + 2, -160], sea: [600, 0, -100], stable: [-48, GROUND + 3, -118],
+
+    ...(launch?.marks || {}),
   };
   return {
-    marks, objects: { shadowDragon }, ground: (x, z) => H(x, z),
+    marks, objects: { shadowDragon, leafPlatform: platG, ...(launch?.objects || {}) }, cast: launch?.cast,
+    ground: (x, z) => { const b = H(x, z), p = platform(x, z); const g = p == null ? b : Math.max(b, p); return launch ? launch.ground(x, z, g) : g; },
+    point: (name, t) => launch?.point(name, t) || null,
+    dynamic: (info) => launch?.dynamic() || [],
     applyShot(info) {
+      launch?.applyShot(info);
+      // set.platform: [x, z, yaw deg] (yaw 90 = at home: its padded side north, the stair down to the west)
+      const pa = info.spec.set?.platform || PLAT_HOME;
+      PLAT[0] = pa[0]; PLAT[1] = pa[1]; PLAT[2] = pa[2] ?? 90;
+      platG.position.set(PLAT[0], GROUND - 0.05, PLAT[1]);
+      platG.rotation.set(0, (PLAT[2] - 90) * Math.PI / 180, 0);
+      platG.updateMatrixWorld(true);
+      // the platform's stair and deck as marks (they move with it): local (x toward Leaf, z along the stair)
+      const yw = PLAT[2] * Math.PI / 180, W = (lx, lz, y) => [PLAT[0] + lx * Math.cos(yw) + lz * Math.sin(yw), GROUND + y, PLAT[1] - lx * Math.sin(yw) + lz * Math.cos(yw)];
+      Object.assign(marks, { platStairFoot: W(0, -3.0, 0), platStairTop: W(0, -1.05, 1.45), platDeck: W(0, 0, 1.45), platEdge: W(0.95, 0.3, 1.45) });
       const st = info.spec.set || {}, c = info.cont;
       ocean.update(info.t);
       const sd = new THREE.Vector3(...(c.sun || [0.94, 0.5, 0.16])).normalize();

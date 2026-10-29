@@ -28,6 +28,10 @@ export const SCENE_CONTINUITY = {
     notes: 'Historical prologue: no named dragon, nothing resolved in the fog. P-16 is the turn to the present day (first clear sunlight); P-17 is the present-day meadow (Verdor, morning).',
   },
   TITLE: { tod: 'morning (interior, dark)', weather: '-', notes: 'The closed egg in near-dark: one warm lamp rim. The chamber of 1A before the hatching.' },
+  '1B': {
+    tod: 'morning', weather: 'clear, light breeze off the sea; the last mist over the water',
+    notes: 'The riding grounds, minutes after Abby\'s routine with Leaf (X2-13): Charcoal at rest in his launch space (revealed here), his access rig at his right flank, the stakes; Leaf saddled by his mounting platform behind the stakes. Sun over the sea side (east), ~31 deg up.',
+  },
   '1A': {
     tod: 'early morning -> morning', weather: 'clear after a misty dawn; mist thinning over the sea by X2-08',
     notes: 'X1 (the queen\'s room, the corridor) is FIRST LIGHT: the sun not yet up, a grey sky over the sea. The hatching takes time: by the chamber shots the sun is up and shines through the chamber\'s high east window; X2-04..X2-07 and X2-08..X2-13 (the field) are full morning. Lamps burn in the chamber all scene.',
@@ -51,9 +55,9 @@ export const SETS = {
   },
   VERDOR_GROUNDS: {
     file: 'verdor-grounds.js', builder: 'verdor-grounds', frame: 'VERDOR',
-    libs: ['scenes/lib/sets/terrain.js + grass.js', 'dk/ocean.js (the sea beyond the field)', 'scenes/lib/creatures (Leaf; Charcoal shadow-only in P-17)', 'scenes/lib/humans (abby, remi)', 'scenes/lib/architecture/verdor.js (stable door)'],
+    libs: ['scenes/lib/sets/terrain.js + grass.js', 'dk/ocean.js (the sea beyond the field)', 'scenes/lib/creatures (Leaf; Charcoal shadow-only in P-17)', 'scenes/lib/humans (abby, remi)', 'scenes/lib/architecture/verdor.js (stable door; 1B: accessRig, leafPlatform)', '1B: sets/verdor-launch.js (Charcoal + riding rig, the access rig on runners, the stakes, the keeper\'s pipe)'],
     from: 'style frame F2 (scenes/lookdev/style-f2-riding-grounds.js), same sun side',
-    continuity: { PROLOGUE: { sun: sunDir(105, 32), tod: 'clear morning', exposure: 1.4 }, '1A': { sun: sunDir(100, 30), tod: 'morning, mist thinning', exposure: 1.4 } },
+    continuity: { PROLOGUE: { sun: sunDir(105, 32), tod: 'clear morning', exposure: 1.4 }, '1A': { sun: sunDir(100, 30), tod: 'morning, mist thinning', exposure: 1.4 }, '1B': { sun: sunDir(102, 31), tod: 'morning (minutes after X2-13)', exposure: 1.4 } },
   },
   BIRTHING_CHAMBER: {
     file: 'birthing-chamber.js', builder: 'birthing-chamber', frame: 'VERDOR',

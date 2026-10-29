@@ -269,11 +269,16 @@ function sheet(row, s1, res, file, bounds) {
 // --------------------------------------------------------------------- run ---
 if (OUT) fs.mkdirSync(OUT, { recursive: true });
 if (argv.includes('--cuts')) {
-  const edl = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/s01e01/final/cut/edl.json'), 'utf8'));
+  // every cut of every edit list (edl.json: PROLOGUE + TITLE + 1A; edl-1B.json ...: the later parts)
+  const CUTDIR = path.join(ROOT, 'episodes/s01e01/final/cut');
+  const pairs = [];
+  for (const f of fs.readdirSync(CUTDIR).filter((x) => /^edl(-[^.]+)?\.json$/.test(x)).sort()) {
+    const e = JSON.parse(fs.readFileSync(path.join(CUTDIR, f), 'utf8'));
+    for (let k = 1; k < e.shots.length; k++) pairs.push([e.shots[k - 1], e.shots[k]]);
+  }
   const rows = new Map(table.shots.map((r) => [r.job, r]));
   let n = 0, bad = 0;
-  for (let k = 1; k < edl.shots.length; k++) {
-    const A = edl.shots[k - 1], B = edl.shots[k];
+  for (const [A, B] of pairs) {
     if (A.set !== SET || B.set !== SET || !rows.has(A.job) || !rows.has(B.job)) continue;
     if (ONLY && !ONLY.has(B.job)) continue;
     const sa = merge(spec.defaults, spec.shots?.[A.job] || {}), sb = merge(spec.defaults, spec.shots?.[B.job] || {});

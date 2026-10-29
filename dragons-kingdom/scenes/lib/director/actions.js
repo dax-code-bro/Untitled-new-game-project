@@ -205,6 +205,37 @@ export function poseHuman(ch, st, t, env, info = {}) {
   ch.root.updateMatrixWorld(true);
 }
 
+/**
+ * Arm overlays, eye-line and face for a human whose body is posed by something else - a RIDER seated on
+ * its mount (the creatures library poses the seated build each frame): the blocking's overlays (reach,
+ * touch, handsTo, point, raiseHand, ...) by two-bone arm IK from the posed shoulders, the look, nods,
+ * and the registered 'face' action (lip-sync). info: { mouth, role, placed, shot } as for poseHuman.
+ */
+export function poseOverlays(ch, st, t, env, info = {}) {
+  const rig = humanRig(ch);
+  ch.root.updateMatrixWorld(true);
+  const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(ch.root.getWorldQuaternion(_q2)).setY(0).normalize();
+  const left = new THREE.Vector3(fwd.z, 0, -fwd.x);
+  const busy = { L: 0, R: 0 };
+  for (const ov of st.overlays || []) {
+    if (ov.w <= 0.001) continue;
+    const f = HUMAN_ACTIONS.get(ov.name);
+    if (f) { f(ch, st, t, env, info); continue; }
+    applyOverlay(ch, rig, ov, t, env, fwd, left, busy);
+  }
+  if (!HUMAN_ACTIONS.get('look') && st.look && st.look.at != null) {
+    const target = env.point(st.look.at, t);
+    if (target) {
+      const k = st.look.t0 != null ? ease('smooth', clamp((t - st.look.t0) / (st.look.blend || 0.5))) : 1;
+      lookAtPoint(ch, target, (st.look.amount ?? 0.85) * k, { limit: 1.3 });
+    }
+  }
+  for (const ov of st.overlays || []) if ((ov.name === 'nod' || ov.name === 'headShake') && ov.w > 0) headGesture(ch, ov, left);
+  const face = HUMAN_ACTIONS.get('face');
+  if (face) face(ch, st, t, env, info);
+  ch.root.updateMatrixWorld(true);
+}
+
 function headGesture(ch, ov, left) {
   const b = ch.bone('head'); if (!b) return;
   const f = ov.o.rate ?? 2.2, amp = (ov.o.amount ?? 0.12) * ov.w;

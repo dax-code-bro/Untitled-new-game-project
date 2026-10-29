@@ -11,14 +11,58 @@ const LEAF = [8, -44];                     // where he always waits
 const LEAF_C = [6.5, -37.5];               // where he crouches after coming to meet her (X2-08 on)
 const leafCrouched = (o = {}) => ({ at: LEAF_C, face: 185, acts: [[0, 'crouch', { k: 1, breathe: 0.5, ...o }]] });
 
+// ---- scene 1B: the launch area (scenes/lib/director/sets/verdor-launch.js builds Charcoal, his access
+// rig, the stakes; its marks: rigFoot, climb1..climb11 (the stair, the deck, the gangway), rigDeck,
+// deckWest, ropeHandL/R + ropeKeeperL/R (the guide ropes), sideL/R, flankStrap / flankStand (his right
+// flank at the girth), neckPalm (the top of his neck ahead of the seat), stakes). He lies with his head
+// SOUTH (heading 190), his right flank and the rig toward Leaf's side of the field (west). Cameras that
+// look north see Leaf LEFT and Charcoal RIGHT (shot list map), the morning sun (east) raking his back.
+const CH = [44, -66];                       // Charcoal's root (near his hips)
+const LF = [21.0, -50.0];                   // Leaf for 1B: crouched, facing east toward Charcoal, 2 m behind the stakes
+const PLAT1B = [21.0, -52.6, -90];          // his mounting platform, brought alongside his LEFT flank (north: never between him and the cameras)
+const ABBY_EQ = [23.15, -48.85];            // Abby at Leaf's right shoulder, fastening his breast strap
+const REMI_EQ = [33.5, -52.5];              // Remi with his own gear, inside the stakes south-west of the rig, before the climb
+const KEEP_EDGE = [14.0, -70.0];            // the ground keeper at the field's edge, well outside the launch space
+const KEEP_R2 = [25.6, -69.4];              // at the edge of the launch space (R2), facing it; the other keeper 1.8 m north of him
+const KEEP3_R2 = [25.7, -67.6];
+const SET1B = { rig: 'up', platform: PLAT1B, shadowAt: [31, G, -58], shadowExtent: 42 };
+const SET1B_DOWN = { ...SET1B, rig: 'down' };
+const SET1B_BACK = { ...SET1B, rig: 'back', rigSlide: 4 };
+// at rest he is low and level (a half crouch: crouch k 0.5 = verdor-launch.js REST_K); X3-02 lowers him to k 1
+const charRest = (o = {}) => ({ at: CH, face: 190, tack: true, acts: [[0, 'crouch', { k: 0.5, ...o }]] });
+const charLow = (o = {}) => ({ at: CH, face: 190, tack: true, acts: [[0, 'crouch', { k: 1, ...o }]] });
+const leafLow = (o = {}) => ({ at: LF, face: 90, tack: true, acts: [[0, 'crouch', { k: 1, breathe: 0.5, ...o }]] });
+const keeperDown = { armsDown: 1 };          // keeper1's build stands calling (a raised hand): hang the arms
+
 export default {
   set: 'VERDOR_GROUNDS',
   cast: {
     abby: { kind: 'human', id: 'abby', role: 'ABBY', armSwing: 0.8 },
     remi: { kind: 'human', id: 'remi', role: 'REMI', armSwing: 0.9 },
     leaf: { kind: 'creature', id: 'leaf', quality: 'standard' },
+    // 1B (verdor-launch.js makes Charcoal and saddles him; the stage adopts him)
+    charcoal: { kind: 'creature', id: 'charcoal' },
+    remiR: { kind: 'human', id: 'remi_ride', ride: 'charcoal', outfit: 'remi', role: 'REMI' },
+    abbyR: { kind: 'human', id: 'abby_ride', ride: 'leaf', outfit: 'abby', role: 'ABBY' },
+    keeper: { kind: 'human', id: 'keeper1', role: 'GROUND KEEPER', armSwing: 0.8 },
+    keeper2: { kind: 'human', id: 'keeper2', role: 'KEEPER (2)', armSwing: 0.8 },
+    keeper3: { kind: 'human', id: 'crowd08', role: 'KEEPER', armSwing: 0.8 },
   },
   homes: { leaf: [LEAF_C[0], G + 1.2, LEAF_C[1]], abby: [3.5, G + 1.4, -34] },
+  // tools/previs.mjs: the set builder's marks it cannot compute without the set (printed by verdor-launch.js
+  // at setup: "[launch] marks {...}"; Charcoal crouched unless noted)
+  previs: {
+    marks: {
+      charcoal: [44, 9.07, -66], rigFoot: [36.61, 8.96, -55.99], rigDeck: [31.42, 14.65, -59.34], rigTower: [31.42, 8.96, -59.34], rigGangEnd: [40.57, 13.95, -57.73],
+      climb1: [29.38, 10.86, -57.27], climb2: [28.64, 10.86, -57.4], climb3: [28.75, 10.86, -58.04], climb4: [29.36, 12.75, -61.48], climb5: [29.47, 12.75, -62.12],
+      climb6: [30.11, 12.75, -62.01], climb7: [33.5, 14.65, -61.41], climb8: [33.19, 14.65, -59.95], climb9: [33.33, 14.65, -59.01], climb10: [36.78, 14.65, -58.4],
+      climb11: [40.42, 13.85, -57.76], deckWest: [29.95, 14.65, -59.6], deckNE: [32.46, 14.65, -60.07],
+      ropeHandL: [22.53, 10.01, -57.87], ropeHandR: [23.57, 10.01, -63.77], ropeKeeperL: [21.97, 8.96, -57.86], ropeKeeperR: [23.04, 8.96, -63.97],
+      sideL: [30.7, 8.96, -56.98], sideR: [31.55, 8.96, -61.81], seat: [42.64, 15.17, -57.97], charcoalSeat: [42.64, 15.17, -57.97], stakes: [27, 9, -50],
+      neckPalm: [41.91, 14.44, -55.87], flankStrap: [39.75, 11.2, -58.48], flankStand: [39.14, 9, -58.59], flankInsert: [40.74, 12.2, -62.97],
+      platStairTop: [20.05, 10.45, -47.5], platDeck: [21.1, 10.45, -47.5],
+    },
+  },
   shots: {
     'P-17': {
       staging: 'NONE: high over the meadow edge; an immense shadow crosses the grass left to right; the dragon is never seen (cut before it is identified).',
@@ -83,6 +127,316 @@ export default {
       cast: {
         leaf: leafCrouched({ look: [0.0, -0.15], breathe: 1.0 }),
         abby: { at: [6.4, -32.4], nearTo: { to: 'leaf.head', dist: 1.35, from: 185 }, look: 'leaf.head', lookAmount: 1.0, posture: { kneel: 1 }, acts: [[0.4, 'bow', { to: 0.55, dur: 1.2 }]] },
+      },
+    },
+
+    // ================================================================== 1B
+    '1B-01': {
+      staging: 'NONE: Charcoal\'s black hide fills the frame, close enough to read as dark terrain; it rises and falls with his breath (the match cut from the hatchling\'s breathing).',
+      cam: { rig: 'static', pos: 'flankInsert', offset: [-5.4, 0.5, 1.0], look: 'flankInsert', mm: 100, fstop: 5.6, focus: 5.5, shake: { kind: 'handheld', amount: 0.08 } },
+      set: SET1B,
+      cast: { charcoal: charRest({ breathe: 0.12 }) },
+    },
+    '1B-02': {
+      staging: 'BACK: the camera pulls back from his flank (zooming out) until Remi, small, comes into view beside him reaching up for the riding rig\'s band; Remi from behind, the rig\'s stair at left.',
+      // from the 1B-01 insert (flankInsert + [-5.4, 0.5, 1.0], 100 mm) back to a wide from the south-west (24 mm);
+      // the path stays south of the rig's first flight (z > -55.6)
+      cam: { rig: 'dolly', pos: [[0, [34.4, G + 3.9, -53.0]], [1.2, [34.4, G + 3.9, -53.0]], [7.6, [23.5, G + 2.4, -39.5], 'sine']], look: [[0, [39.8, G + 3.4, -54.0]], [1.2, [39.8, G + 3.4, -54.0]], [7.6, [36.0, G + 4.0, -56.0], 'sine']], mm: [[0, 100], [1.2, 100], [7.6, 24, 'sine']], fstop: 5.6, focus: [[0, 5.5], [7.6, 24]] },
+      set: SET1B,
+      cast: {
+        charcoal: charRest(),
+        remi: { at: 'flankStand', face: 'flankStrap', look: 'flankStrap', lookAmount: 0.7, legs: 'planted', acts: [[1.8, 'reach', { side: 'R', at: 'flankStrap', in: 0.9, hold: 3.6, out: 0.8 }], [2.0, 'reach', { side: 'L', at: 'flankStrap', offset: [0, -0.25, -0.2], in: 0.8, hold: 2.6, out: 0.8 }]] },
+      },
+    },
+    '1B-03': {
+      staging: 'BACK + DOF: medium of Remi from behind his left shoulder, his face turned up to the dragon; Charcoal\'s flank breathing beyond, soft.',
+      cam: { rig: 'static', pos: [37.6, G + 1.7, -54.6], look: [39.8, G + 2.3, -59.2], mm: 40, fstop: 2.8, focus: 'remi.head' },
+      set: SET1B,
+      cast: {
+        charcoal: charRest(),
+        remi: { at: 'flankStand', face: 'flankStrap', look: [42, G + 6.5, -57], lookAmount: 0.6, acts: [[0, 'reach', { side: 'R', at: 'flankStrap', in: 0.01, hold: 0.9, out: 0.8 }]] },
+      },
+    },
+    '1B-04': {
+      staging: 'WIDE: long lens across the field: Leaf crouched low and level, Abby at his shoulder straightening the breast strap (from behind); Charcoal\'s head enters at the right edge.',
+      cam: { rig: 'static', pos: [-13.4, G + 1.8, -0.9], look: [27.0, G + 1.5, -50.5], mm: 60, fstop: 4, focus: 'abby.head' },
+      set: SET1B,
+      cast: {
+        charcoal: charRest(),
+        leaf: leafLow({ look: [0.15, 0.05] }),
+        abby: { at: ABBY_EQ, face: 5, look: 'leaf.chest', lookAmount: 0.8, acts: [[0.2, 'handsTo', { at: 'leaf.chest', spread: 0.12, in: 0.6, palm: [0, 0, -1] }]] },
+      },
+    },
+    '1B-05': {
+      staging: 'BACK: medium past Abby (from behind-left) to Leaf: he turns his head toward a noise and the strap pulls out of her hands; "Leaf. Here." - he turns back; she finishes fastening.',
+      cam: { rig: 'static', pos: [20.4, G + 1.6, -45.6], look: [24.3, G + 1.0, -49.8], mm: 40, fstop: 2.8, focus: 'abby.head' },
+      set: SET1B,
+      cast: {
+        leaf: { at: LF, face: 90, tack: true, yawKeys: [[0, 90], [0.6, 90], [1.2, 70, 'sine'], [2.6, 70], [3.4, 90, 'sine']], acts: [[0, 'crouch', { k: 1, breathe: 0.5, look: [0.1, 0.05] }], [0.6, 'crouch', { k: 1, breathe: 0.6, look: [0.85, 0.2], blend: 0.5 }], [2.7, 'crouch', { k: 1, breathe: 0.5, look: [-0.1, 0.0], blend: 0.7 }]] },
+        abby: { at: ABBY_EQ, face: 5, look: 'leaf.chest', lookAmount: 0.8, acts: [[0, 'handsTo', { at: 'leaf.chest', spread: 0.12, in: 0.01, hold: 0.9, out: 0.35, palm: [0, 0, -1] }], [1.1, 'look', { at: 'leaf.head', amount: 0.7, blend: 0.4 }], [3.5, 'look', { at: 'leaf.chest', amount: 0.8, blend: 0.4 }], [3.6, 'handsTo', { at: 'leaf.chest', spread: 0.12, in: 0.5, palm: [0, 0, -1] }]] },
+      },
+      lines: [['L032', 1.45]],
+    },
+    '1B-06': {
+      staging: 'WIDE: the master from the south-west: Abby at Leaf\'s shoulder left, Remi at his gear inside the stakes right, the rig and Charcoal beyond; the lines cross the stakes (11 m); nobody needs to look.',
+      deviation: 'The shot list puts Remi in the right foreground; the rig stands between his place and the camera side that keeps Leaf left / Charcoal right, so this is the wide master with both small.',
+      cam: { rig: 'static', pos: [16.5, G + 1.75, -36.5], look: [31.0, G + 2.0, -54.0], mm: 28, fstop: 5.6, focus: 16 },
+      set: SET1B,
+      cast: {
+        charcoal: charRest(),
+        leaf: leafLow(),
+        abby: { at: ABBY_EQ, face: 5, look: 'leaf.chest', acts: [[0, 'handsTo', { at: 'leaf.chest', spread: 0.12, in: 0.01, palm: [0, 0, -1] }], [2.1, 'look', { at: [37.4, G + 1.6, -51.6], amount: 0.5, blend: 0.5 }], [3.4, 'look', { at: 'leaf.chest', amount: 0.8, blend: 0.6 }]] },
+        remi: { at: REMI_EQ, face: 285, look: [33, G + 1.0, -50], lookAmount: 0.5, acts: [[0, 'clasp', { in: 0.01 }], [4.8, 'look', { at: [23.2, G + 1.5, -48.8], amount: 0.35, blend: 0.6 }], [6.6, 'look', { at: [33, G + 1.0, -50], amount: 0.5, blend: 0.6 }]] },
+      },
+      lines: [['L033', 0.7], ['L034', 0.45], ['L035', 0.5], ['L036', 0.45]],
+    },
+    '1B-07': {
+      staging: 'HANDS: insert of Remi\'s hands checking the buckle of his riding belt; his face above the frame.',
+      cam: { rig: 'static', pos: [32.3, G + 1.45, -52.2], look: [33.2, G + 1.05, -52.58], mm: 85, fstop: 4, focus: 'remi.hand.R' },
+      set: SET1B,
+      cast: { charcoal: charRest(), remi: { at: REMI_EQ, face: 285, look: 'remi.hand.R', lookAmount: 0.6, acts: [[0, 'clasp', { in: 0.01 }]] } },
+    },
+    '1B-08': {
+      staging: 'WIDE: the ground keeper far left at the field\'s edge, well outside the launch space, calls it; Charcoal\'s head and shoulder at right.',
+      cam: { rig: 'static', pos: [0, G + 1.8, -10], look: [22, G + 2.5, -62], mm: 28, fstop: 5.6, focus: 50 },
+      set: SET1B,
+      cast: { charcoal: charRest(), keeper: { at: KEEP_EDGE, face: 'charcoal', look: [40, G + 4, -58], lookAmount: 0.6 } },
+      lines: [['L037', 0.8]],
+    },
+    '1B-09': {
+      staging: 'BACK: Remi from behind raises a hand to the keeper (off left); the stair beyond him.',
+      cam: { rig: 'static', pos: [36.2, G + 1.75, -50.4], look: [32.0, G + 1.5, -54.0], mm: 40, fstop: 2.8, focus: 'remi.head' },
+      set: SET1B,
+      cast: { charcoal: charRest(), remi: { at: REMI_EQ, face: 308, look: [14, G + 1.6, -70], lookAmount: 0.6, acts: [[0.35, 'raiseHand', { side: 'R', in: 0.35, hold: 0.9, out: 0.4 }]] } },
+    },
+    '1B-10': {
+      staging: 'BACK: Abby climbs the mounting platform brought alongside Leaf (standing for it), crosses the deck and swings onto the saddle - the shot ends as she leans over it (cut on the action).',
+      deviation: 'No mounted end state in this shot: the seated rider is a separate build (humans library riders), so the mount is shown up to the swing and cut on the action; she is seated from X3-06 on.',
+      cam: { rig: 'pan', pos: [28.6, G + 2.1, -56.0], look: [[0, [24.4, G + 1.2, -52.8]], [2.4, [22.4, G + 2.2, -52.6]], [5.6, [21.8, G + 1.9, -51.4], 'sine']], mm: 35, fstop: 4, focus: 'abby.head' },
+      set: SET1B,
+      cast: {
+        leaf: leafLow({ look: [0.2, 0.0] }),
+        abby: { at: [24.7, -52.55], face: 270, look: 'leaf.chest', lookAmount: 0.4, legs: 'planted', acts: [[0.2, 'walk', { path: ['platStairTop', [21.3, -52.4], [21.4, -51.75]], speed: 0.85, stop: 0.5 }], [4.3, 'turn', { to: 175, dur: 0.5 }], [4.5, 'reach', { side: 'L', at: 'leaf.chest', offset: [0, 0.6, 0], in: 0.6 }], [4.6, 'bow', { to: 0.55, dur: 1.0 }]] },
+      },
+    },
+    'X3-01': {
+      staging: 'WIDE: long lens: Remi crosses to the foot of the access rig; two keepers hold its guide ropes outside the stakes; Charcoal at right.',
+      cam: { rig: 'static', pos: [8, G + 1.7, -22], look: [29, G + 3.5, -59], mm: 45, fstop: 5.6, focus: 'remi.head' },
+      set: SET1B,
+      cast: {
+        charcoal: charRest(),
+        remi: { at: REMI_EQ, face: 120, legs: 'planted', look: 'rigFoot', lookAmount: 0.4, acts: [[0.2, 'walk', { path: [[35.6, -53.4], 'rigFoot'], speed: 1.3, stop: 0.5 }]] },
+        keeper2: { at: 'ropeKeeperL', face: 'rigTower', acts: [[-1, 'handsTo', { at: 'ropeHandL', spread: 0.08 }]] },
+        keeper3: { at: 'ropeKeeperR', face: 'rigTower', acts: [[-1, 'handsTo', { at: 'ropeHandR', spread: 0.08 }]] },
+      },
+    },
+    'X3-02': {
+      staging: 'NONE: low and wide: Charcoal lowers himself a measured amount, belly toward the turf, wrists braced in front, and holds still; the rig at left.',
+      cam: { rig: 'static', pos: [50, G + 0.6, -30], look: [40, G + 4, -58], mm: 30, fstop: 5.6, focus: 'charcoal.head' },
+      set: SET1B,
+      cast: { charcoal: { at: CH, face: 190, tack: true, acts: [[0, 'crouch', { k: 0.5 }], [0.5, 'crouch', { k: 1, blend: 2.6 }]] } },
+    },
+    'X3-03': {
+      staging: 'BACK: following Remi up the first flight of the stair, from behind and outside the rail; the first turn at the landing.',
+      cam: { rig: 'follow', follow: { target: 'remi', lag: 0.3, offset: [0.95, 1.0, -2.6], lookOffset: [0.2, 1.6, 2.5] }, mm: 40, fstop: 4, focus: 'remi.head', shake: { kind: 'handheld', amount: 0.25 } },
+      set: SET1B_DOWN,
+      cast: {
+        charcoal: charLow(),
+        remi: { at: [33.2, -56.6], face: 280, legs: 'planted', armSwing: 0.6, acts: [[0, 'walk', { path: ['climb1', 'climb2', 'climb3', [29.1, -59.6]], speed: 1.0, acc: 0.2, stop: 0.6 }]] },
+      },
+    },
+    'X3-04': {
+      staging: 'WIDE: from the second landing: Remi comes up into the left of frame and turns for the last flight; Charcoal\'s back and folded wing fill the frame beyond.',
+      cam: { rig: 'static', pos: [27.2, G + 6.0, -65.6], look: [38.0, G + 6.0, -58.5], mm: 24, fstop: 5.6, focus: 12 },
+      set: SET1B_DOWN,
+      cast: {
+        charcoal: charLow(),
+        remi: { at: [29.3, -60.4], face: 350, legs: 'planted', armSwing: 0.6, acts: [[0, 'walk', { path: ['climb4', 'climb5', 'climb6', [30.9, -61.85]], speed: 0.95, acc: 0.2, stop: 0.6 }]] },
+      },
+    },
+    'X3-05': {
+      staging: 'BACK + WIDE: high on the gangway looking down past Remi at the deck rail; the keepers small on the turf below with the guide ropes.',
+      cam: { rig: 'static', pos: [33.4, G + 8.5, -58.4], look: [24.0, G + 2.2, -60.8], mm: 24, fstop: 5.6, focus: 4 },
+      set: SET1B_DOWN,
+      cast: {
+        charcoal: charLow(),
+        remi: { at: 'deckNE', face: 260, legs: 'planted', look: [23, G + 1, -60.8], lookAmount: 0.7, acts: [[0.3, 'walk', { to: 'deckWest', speed: 0.8 }]] },
+        keeper2: { at: 'ropeKeeperL', face: 'rigTower', acts: [[-1, 'handsTo', { at: 'ropeHandL', spread: 0.08 }]] },
+        keeper3: { at: 'ropeKeeperR', face: 'rigTower', acts: [[-1, 'handsTo', { at: 'ropeHandR', spread: 0.08 }]] },
+      },
+    },
+    'X3-06': {
+      staging: 'WIDE: from the gangway past the ground keeper on the deck (right foreground, from behind): across the stakes Leaf has edged forward with Abby on his back, neck stretched toward Charcoal.',
+      deviation: 'The shot list asks for a 135-200 mm lens; Leaf waits ~15 m from the rig (speaking range in 1B-06 and 1B-12), so a 50 mm from the gangway holds him and the keeper.',
+      cam: { rig: 'static', pos: [37.5, G + 9.8, -61.5], look: [27.0, G + 3.4, -53.5], mm: 35, fstop: 4, focus: 'abbyR.head' },
+      set: SET1B_DOWN,
+      cast: {
+        charcoal: charLow(),
+        remiR: {},
+        keeper: { ...keeperDown, at: [30.3, -57.9], face: 'leaf', look: 'leaf.head', lookAmount: 0.9 },
+        leaf: { at: LF, face: 90, tack: true, acts: [[0, 'crouch', { k: 1, breathe: 0.5 }], [0.4, 'walk', { to: [23.6, -51.0], speed: 0.8, blend: 0.6 }], [3.6, 'crouch', { k: 0.6, look: [0.0, 0.35], blend: 0.9 }]] },
+        abbyR: { look: 'charcoal.head', lookAmount: 0.5 },
+      },
+    },
+    'X3-07': {
+      staging: 'OTS: over the ground keeper\'s right shoulder on the deck (he faces away, calling); Abby small on Leaf below, beyond the stakes.',
+      cam: { rig: 'static', pos: [31.2, G + 8.6, -60.0], look: [25.8, G + 3.4, -52.6], mm: 35, fstop: 4, focus: 'abbyR.head' },
+      set: SET1B_DOWN,
+      cast: {
+        charcoal: charLow(),
+        remiR: {},
+        keeper: { ...keeperDown, at: [30.3, -57.9], face: 'leaf', look: 'abbyR.head', lookAmount: 0.9, acts: [[0.5, 'point', { side: 'R', at: [26.4, G + 0.8, -52.0], in: 0.4, hold: 1.4, out: 0.5 }], [4.6, 'raiseHand', { side: 'R', in: 0.35, hold: 1.0, out: 0.4 }]] },
+        leaf: { at: [23.6, -51.0], face: 90, tack: true, acts: [[0, 'crouch', { k: 0.6, look: [0.0, 0.35] }]] },
+        abbyR: { look: 'keeper.head', lookAmount: 0.6 },
+      },
+      lines: [['X3-01', 0.4], ['X3-02', 0.5], ['X3-03', 0.45]],
+    },
+    'X3-08': {
+      staging: 'WIDE: long lens: Abby turns Leaf back behind the stakes; he goes looking over his shoulder at Charcoal the whole way; Charcoal (right) never looks at him.',
+      cam: { rig: 'static', pos: [12, G + 1.8, 25], look: [31, G + 3.5, -55], mm: 60, fstop: 5.6, focus: 75 },
+      set: SET1B_DOWN,
+      cast: {
+        charcoal: charLow({ look: [-0.25, -0.05] }),
+        remiR: {},
+        leaf: { at: [23.6, -51.0], face: 90, tack: true, acts: [[0, 'crouch', { k: 0.6, look: [0.0, 0.3] }], [0.3, 'walk', { path: [[23.0, -49.0], [21.2, -48.6], [18.2, -49.4]], speed: 1.0, blend: 0.5, look: [1.1, 0.15] }]] },
+        abbyR: { look: [12, G + 1.5, -50], lookAmount: 0.5 },
+      },
+    },
+    'X3-09': {
+      staging: 'BACK: medium from above his back, behind Remi\'s left shoulder: he settles into the riding rig and pulls each strap hard; the keeper on the gangway end beyond, soft.',
+      cam: { rig: 'static', pos: [45.2, G + 9.1, -61.3], look: [41.6, G + 6.4, -57.2], mm: 40, fstop: 2.8, focus: 'remiR.head' },
+      set: SET1B_DOWN,
+      cast: {
+        charcoal: charLow(),
+        remiR: { look: 'remiR.hand.R', lookAmount: 0.6, acts: [[0.3, 'reach', { side: 'R', at: 'charcoalSeat', offset: [-0.42, -0.12, 0.05], in: 0.4, hold: 0.5, out: 0.3 }], [1.6, 'reach', { side: 'L', at: 'charcoalSeat', offset: [0.42, -0.12, 0.1], in: 0.4, hold: 0.6, out: 0.3 }], [2.9, 'reach', { side: 'R', at: 'charcoalSeat', offset: [-0.4, 0.05, 0.3], in: 0.35, hold: 0.5, out: 0.3 }]] },
+        keeper: { ...keeperDown, at: 'climb11', face: 'seat', look: 'remiR.head', lookAmount: 0.7 },
+      },
+    },
+    'X3-10': {
+      staging: 'OTS: over the keeper\'s shoulder on the gangway end (his back right) to Remi in the seat in profile: "Straps?" - "Checked twice."',
+      cam: { rig: 'static', pos: [38.3, G + 6.8, -59.2], look: [42.5, G + 6.6, -57.8], mm: 40, fstop: 2.8, focus: 'remiR.head' },
+      set: SET1B_DOWN,
+      cast: {
+        charcoal: charLow(),
+        remiR: { look: [43, G + 5, -40], lookAmount: 0.5, acts: [[1.3, 'look', { at: 'keeper.head', amount: 0.4, blend: 0.4 }]] },
+        keeper: { ...keeperDown, at: 'climb11', face: 'seat', look: 'remiR.head', lookAmount: 0.8 },
+      },
+      lines: [['X3-04', 0.3], ['X3-05', 0.35]],
+    },
+    'X3-11': {
+      staging: 'HANDS: insert: the keeper\'s hands check the strap at Remi\'s knee once more, quickly and thoroughly.',
+      cam: { rig: 'static', pos: [40.6, G + 6.4, -59.0], look: 'remiR.knee.R', mm: 85, fstop: 4, focus: 'remiR.knee.R' },
+      set: SET1B_DOWN,
+      cast: {
+        charcoal: charLow(),
+        remiR: {},
+        keeper: { ...keeperDown, at: 'climb11', face: 'seat', look: 'remiR.knee.R', lookAmount: 0.9, acts: [[0.2, 'handsTo', { at: 'remiR.knee.R', spread: 0.1, in: 0.5, hold: 1.4, out: 0.5, palm: [1, 0, 0] }], [0.2, 'bow', { to: 0.4, dur: 0.6 }]] },
+      },
+    },
+    'X3-12': {
+      staging: 'BACK: medium from behind Leaf: Abby on his back adjusts a strap with both hands and watches the inspection on Charcoal\'s back across the field with open impatience (the line plays on her back).',
+      cam: { rig: 'static', pos: [17.6, G + 2.6, -51.3], look: [32.0, G + 4.6, -54.6], mm: 40, fstop: 4, focus: 'abbyR.head' },
+      set: SET1B_DOWN,
+      cast: {
+        charcoal: charLow(),
+        remiR: {},
+        leaf: leafLow({ look: [0.0, 0.1] }),
+        abbyR: { look: 'remiR.head', lookAmount: 0.6, acts: [[0.2, 'handsTo', { at: 'leaf.neck', spread: 0.1, offset: [0, 0.2, 0], in: 0.6, hold: 2.0, out: 0.6 }], [3.9, 'handsTo', { at: 'leaf.neck', spread: 0.1, offset: [0, 0.2, 0], in: 0.6, hold: 2.0, out: 0.6 }]] },
+      },
+      lines: [['X3-06', 2.5]],
+    },
+    'X3-13': {
+      staging: 'NONE: medium of Leaf from his right side: he shifts his weight, agreeing with her tone if not her words; Abby on his back, half out of the top of frame.',
+      cam: { rig: 'static', pos: [22.2, G + 1.2, -43.0], look: [22.6, G + 1.1, -50.0], mm: 40, fstop: 4, focus: 'leaf.chest' },
+      set: SET1B_DOWN,
+      cast: {
+        leaf: { at: LF, face: 90, tack: true, acts: [[0, 'crouch', { k: 1, breathe: 0.5 }], [0.3, 'crouch', { k: 0.75, look: [-0.2, 0.1], blend: 0.5 }], [1.1, 'crouch', { k: 1, look: [0.05, 0.05], blend: 0.6 }]] },
+        abbyR: { look: [44, G + 6, -58], lookAmount: 0.5 },
+      },
+    },
+    'X3-14': {
+      staging: 'HANDS: close: Remi lays his palm flat on Charcoal\'s neck ahead of the seat ("Morning.", quietly); his arm in from the left, his face out of frame.',
+      cam: { rig: 'static', pos: [39.6, G + 6.6, -54.4], look: 'neckPalm', mm: 50, fstop: 2.8, focus: 'neckPalm' },
+      set: SET1B_DOWN,
+      cast: {
+        charcoal: charLow(),
+        remiR: { look: 'neckPalm', lookAmount: 0.6, acts: [[0.3, 'touch', { side: 'R', at: 'neckPalm', offset: [0, 0.03, 0], in: 0.8, palm: [0, -1, 0] }]] },
+      },
+      lines: [['X3-07', 1.5]],
+    },
+    'X3-15': {
+      staging: 'CREATURE: close on Charcoal\'s left eye in the morning sun: it half closes and opens again (an answer).',
+      cam: { rig: 'static', pos: [44.9, G + 5.3, -47.2], look: 'charcoal.eye', mm: 85, fstop: 4, focus: 'charcoal.eye' },
+      set: SET1B_DOWN,
+      cast: { charcoal: { at: CH, face: 190, tack: true, acts: [[0, 'crouch', { k: 1, blink: false, lidClose: 0.05 }], [1.0, 'crouch', { k: 1, blink: false, lidClose: 0.55, blend: 0.8 }], [2.3, 'crouch', { k: 1, blink: false, lidClose: 0.05, blend: 0.7 }]] } },
+    },
+    'R2-01': {
+      staging: 'MEDIUM: the ground keeper at the edge of the launch space takes his clay pipe from his teeth, knocks it out (below frame) and looks down at the turf under his boot; the other keeper beside him. Adults only in frame (Leaf and Abby are behind the camera).',
+      cam: { rig: 'static', pos: [29.3, G + 1.6, -69.0], look: [25.6, G + 1.45, -68.4], mm: 50, fstop: 2.8, focus: 'keeper.head' },
+      set: SET1B_DOWN,
+      cast: {
+        keeper: { ...keeperDown, at: KEEP_R2, face: 92, look: [30, G + 1.3, -67], lookAmount: 0.6, holds: { object: 'pipe', hands: 'R', to: 2.8, offset: [0, 0.01, 0] }, acts: [[0, 'reach', { side: 'R', at: 'keeper.head', offset: [0.09, -0.1, 0.03], in: 0.01, hold: 0.9, out: 0.7 }], [1.8, 'look', { at: [27.0, G, -68.9], amount: 0.9, blend: 0.6 }], [1.8, 'bow', { to: 0.35, dur: 0.8 }], [2.9, 'rise', { dur: 1.2 }]] },
+        keeper3: { at: KEEP3_R2, face: 95, look: [34, G + 1.2, -66], lookAmount: 0.5 },
+      },
+      lines: [['R2-01', 3.6]],
+    },
+    'R2-02': {
+      staging: 'MEDIUM: the reverse: the other keeper does not answer - he hears it every morning; his eyes stay on the field.',
+      cam: { rig: 'static', pos: [27.9, G + 1.65, -69.6], look: [25.7, G + 1.55, -67.6], mm: 50, fstop: 2.8, focus: 'keeper3.head' },
+      set: SET1B_DOWN,
+      cast: {
+        keeper3: { at: KEEP3_R2, face: 95, look: [34, G + 1.2, -66], lookAmount: 0.5 },
+      },
+    },
+    'X3-16': {
+      staging: 'WIDE: the keepers draw the stair back on its runners, well clear of the launch space, its gangway raised; the ground keeper steps away; Charcoal with Remi on his back at right.',
+      cam: { rig: 'static', pos: [12.5, G + 2.4, -33.0], look: [33.0, G + 4.6, -58.5], mm: 28, fstop: 5.6, focus: 30 },
+      set: { ...SET1B, rig: 'back', rigSlide: [[0.4, 0], [4.4, 4, 'smooth']] },
+      cast: {
+        charcoal: charLow(),
+        remiR: {},
+        keeper2: { at: 'sideL', face: 260, legs: 'planted', acts: [[0, 'reach', { side: 'R', at: 'rigPostL', in: 0.3 }], [0.4, 'walk', { to: [26.8, -57.7], speed: 1.33, acc: 1.0, stop: 1.0 }]] },
+        keeper3: { at: 'sideR', face: 260, legs: 'planted', acts: [[0, 'reach', { side: 'L', at: 'rigPostR', in: 0.3 }], [0.4, 'walk', { to: [27.6, -62.5], speed: 1.33, acc: 1.0, stop: 1.0 }]] },
+        keeper: { ...keeperDown, at: [27.4, -66.0], face: 270, legs: 'planted', acts: [[1.2, 'walk', { to: [22.0, -67.2], speed: 1.1 }]] },
+      },
+    },
+    '1B-12': {
+      staging: 'WIDE: long lens, both mounted at very different heights: Abby on Leaf left, Remi high on Charcoal right; speaking range across the stakes, faces too small to read.',
+      cam: { rig: 'static', pos: [14, G + 1.9, 22], look: [32, G + 3.8, -54], mm: 60, fstop: 5.6, focus: 75 },
+      set: SET1B_BACK,
+      cast: {
+        charcoal: charLow(),
+        remiR: { look: 'abbyR.head', lookAmount: 0.4 },
+        leaf: leafLow({ look: [-0.2, 0.05] }),
+        abbyR: { look: 'remiR.head', lookAmount: 0.5 },
+      },
+      lines: [['L038', 0.5], ['L039', 0.4], ['L040', 0.4]],
+    },
+    '1B-13': {
+      staging: 'CREATURE: close on Leaf\'s head in profile: his eye on Charcoal (off right), alert to the bigger dragon\'s every movement.',
+      cam: { rig: 'static', frame: { subjects: [['leaf.eye', [-0.25, 0.08]]], from: 175, height: G + 1.15, dist: 3.2 }, mm: 85, fstop: 2.8, focus: 'leaf.eye' },
+      set: SET1B_BACK,
+      cast: { leaf: leafLow({ look: [-0.3, 0.12] }), abbyR: {} },
+    },
+    '1B-14': {
+      staging: 'BACK: close past Abby\'s right shoulder (a lost profile): she rests her hand on Leaf\'s neck and turns his attention forward - "We\'ll go first."',
+      cam: { rig: 'static', pos: [21.5, G + 2.05, -48.3], look: [23.8, G + 1.55, -50.1], mm: 60, fstop: 2.8, focus: 'abbyR.head' },
+      set: SET1B_BACK,
+      cast: {
+        leaf: leafLow({ look: [-0.25, 0.08] }),
+        abbyR: { look: 'leaf.head', lookAmount: 0.6, acts: [[0.2, 'touch', { side: 'R', at: 'leaf.neck', offset: [0, 0.18, 0], in: 0.6, palm: [0, -1, 0] }]] },
+      },
+      lines: [['L041', 1.0]],
+    },
+    '1B-15': {
+      staging: 'WIDE: long lens: Leaf rises out of his crouch with Abby on his back, the camera tilting up with him; Charcoal behind him fills the right of the frame - Leaf small beside him, huge beside her.',
+      cam: { rig: 'tilt', pos: [-38.0, G + 1.5, -20.0], look: [[0, [21.0, G + 1.4, -50.0]], [1.2, [21.0, G + 1.4, -50.0]], [4.8, [21.5, G + 2.7, -50.5], 'sine']], mm: 85, fstop: 5.6, focus: 'leaf.chest' },
+      set: SET1B_BACK,
+      cast: {
+        charcoal: charLow({ look: [0.1, 0.0] }),
+        remiR: {},
+        leaf: { at: LF, face: 90, tack: true, acts: [[0, 'crouch', { k: 1, breathe: 0.5 }], [1.0, 'stand', { breathe: 0.6, look: [0.0, 0.15], blend: 2.4 }]] },
+        abbyR: {},
       },
     },
   },
