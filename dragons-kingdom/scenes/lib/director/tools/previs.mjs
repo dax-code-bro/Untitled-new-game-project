@@ -74,12 +74,26 @@ function shotEnv(s1) {
   const cast = s1.cast || {};
   const env = {
     missing,
-    ground: () => 0,
+    // the set's ground height (spec.previs.ground: a number, the Verdor field is at y 9) - 0 by default
+    // + spec.previs.floors: name prefixes of marks that are raised walkable surfaces (a stair's steps, a deck):
+    // an actor within 2 m of such marks stands at their height (inverse-distance blend) - stairs and decks
+    ground(x, z) {
+      const base = spec.previs?.ground ?? 0, fl = spec.previs?.floors;
+      if (!fl) return base;
+      let w = 0, wy = 0;
+      for (const [n, m] of Object.entries(spec.previs.marks || {})) {
+        if (m.length !== 3 || !fl.some((p) => n.startsWith(p))) continue;
+        const d = Math.hypot(m[0] - x, m[2] - z);
+        if (d > 2.0) continue;
+        const k = 1 / Math.max(d, 0.05) ** 2; w += k; wy += k * m[1];
+      }
+      return w ? wy / w : base;
+    },
     mark(n) {
       const m = spec.previs?.marks?.[n];
       if (m) return m;
       const b = cast[n];
-      if (b?.at) return Array.isArray(b.at) ? (b.at.length === 3 ? b.at : [b.at[0], 0, b.at[1]]) : env.mark(b.at);
+      if (b?.at) return Array.isArray(b.at) ? (b.at.length === 3 ? b.at : [b.at[0], spec.previs?.ground ?? 0, b.at[1]]) : env.mark(b.at);
       if (spec.homes?.[n]) return spec.homes[n];
       missing.add(n);
       return null;
@@ -92,6 +106,17 @@ function shotEnv(s1) {
       const [an, ...rest] = String(name).split('.');
       const part = rest.join('.');
       const def = spec.cast?.[an], b = cast[an];
+      // a RIDER (cast def.ride): seated on its mount - the seat from spec.previs.marks['<mount>Seat'] or
+      // spec.previs.seatH[mount] above the mount's root (default 0.18 x its length); head 0.75 m above the seat
+      if (def?.ride && b && cast[def.ride]) {
+        const mdef = spec.cast?.[def.ride], ms = actorState(cast[def.ride], t, env);
+        const L = cast[def.ride].length ?? mdef?.length ?? CREATURE_LEN[mdef?.id] ?? 2;
+        const fwd = new THREE.Vector3(Math.sin(ms.yaw), 0, Math.cos(ms.yaw));
+        const sm = spec.previs?.marks?.[`${def.ride}Seat`];
+        const seat = sm ? V(sm) : new THREE.Vector3(ms.x, ms.y + (spec.previs?.seatH?.[def.ride] ?? L * 0.18), ms.z).addScaledVector(fwd, L * 0.1);
+        const dy = part === 'head' || part === 'eye' || part === 'eyes' ? 0.75 : part === 'chest' ? 0.4 : part.startsWith('hand') ? 0.25 : 0.1;
+        return seat.add(new THREE.Vector3(0, dy, 0));
+      }
       if (def && b && def.kind !== 'object') {
         const st = actorState(b, t, env);
         const fwd = new THREE.Vector3(Math.sin(st.yaw), 0, Math.cos(st.yaw));

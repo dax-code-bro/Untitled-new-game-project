@@ -1735,21 +1735,21 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.36,
-    "k4_cpu_s_per_frame": 39.2,
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 43.4,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 2.02,
-    "k4_cpu_hours": 0.39,
+    "draft_minutes": 2.23,
+    "k4_cpu_hours": 0.43,
     "k4_gpu_hours": null,
     "factors": {
-     "people": 1.12,
+     "people": 1.24,
      "creatures": 1,
      "fx": 1,
      "walk": 1,
      "move": 1,
-     "total": 1.12
+     "total": 1.24
     },
-    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.12 for the shot's content"
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.24 for the shot's content"
    },
    "staging": "MEDIUM: the reverse: the other keeper does not answer - he hears it every morning; his eyes stay on the field.",
    "deviation": null,

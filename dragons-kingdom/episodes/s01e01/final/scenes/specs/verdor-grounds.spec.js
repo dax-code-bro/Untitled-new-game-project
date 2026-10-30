@@ -52,6 +52,8 @@ export default {
   // tools/previs.mjs: the set builder's marks it cannot compute without the set (printed by verdor-launch.js
   // at setup: "[launch] marks {...}"; Charcoal crouched unless noted)
   previs: {
+    ground: G,
+    floors: ['climb', 'deck', 'rigDeck', 'rigGangEnd', 'plat'],
     marks: {
       charcoal: [44, 9.07, -66], rigFoot: [36.61, 8.96, -55.99], rigDeck: [31.42, 14.65, -59.34], rigTower: [31.42, 8.96, -59.34], rigGangEnd: [40.57, 13.95, -57.73],
       climb1: [29.38, 10.86, -57.27], climb2: [28.64, 10.86, -57.4], climb3: [28.75, 10.86, -58.04], climb4: [29.36, 12.75, -61.48], climb5: [29.47, 12.75, -62.12],
@@ -280,7 +282,8 @@ export default {
     },
     'X3-07': {
       staging: 'OTS: over the ground keeper\'s right shoulder on the deck (he faces away, calling); Abby small on Leaf below, beyond the stakes.',
-      cam: { rig: 'static', pos: [31.2, G + 8.6, -60.0], look: [25.8, G + 3.4, -52.6], mm: 35, fstop: 4, focus: 'abbyR.head' },
+      cam: { rig: 'static', pos: [31.2, G + 8.6, -60.0], look: [25.8, G + 3.4, -52.6], mm: 60, fstop: 4, focus: 'abbyR.head' },
+      // 60 mm (was 35): X3-06 holds Leaf from the same deck - the edit check's jump cut (22 deg, 1.33x); now 2.3x the size
       set: SET1B_DOWN,
       cast: {
         charcoal: charLow(),
@@ -382,9 +385,12 @@ export default {
     },
     'R2-02': {
       staging: 'MEDIUM: the reverse: the other keeper does not answer - he hears it every morning; his eyes stay on the field.',
-      cam: { rig: 'static', pos: [27.9, G + 1.65, -69.6], look: [25.7, G + 1.55, -67.6], mm: 50, fstop: 2.8, focus: 'keeper3.head' },
+      // from the NORTH (was the south-east, 21 deg from R2-01: a jump cut): keeper3 in profile, the ground
+      // keeper soft beyond him; Leaf and Abby (west / north-west) stay behind the camera
+      cam: { rig: 'static', pos: [25.4, G + 1.65, -64.2], look: [25.7, G + 1.5, -67.8], mm: 50, fstop: 2.8, focus: 'keeper3.head' },
       set: SET1B_DOWN,
       cast: {
+        keeper: { ...keeperDown, at: KEEP_R2, face: 92, look: [30, G + 1.3, -67], lookAmount: 0.6 },
         keeper3: { at: KEEP3_R2, face: 95, look: [34, G + 1.2, -66], lookAmount: 0.5 },
       },
     },
