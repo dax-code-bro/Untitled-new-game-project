@@ -23,6 +23,8 @@
 //                     edits then never re-render them); shots finished from session 7 on have it already
 //   --reverse         take each set's shots from the last (a second queue meeting the first in the middle)
 //   --stills U,U      render stills at these fractions of each shot instead of videos (PNG + a contact sheet)
+//   (every segment / still that does not follow the last frame drawn starts with one discarded warm-up frame
+//   at first - 1: the velocity motion blur of a first frame after a jump was a whole-body smear)
 //   --segment N       render + encode a shot in N-frame segments (default 48; 0 = one piece): a crash or a
 //                     stop loses only the segment in flight, the next run resumes the shot
 //   --timings FILE    measured seconds per frame go here (default episodes/s01e01/final/cut/timings.json; only
@@ -267,14 +269,41 @@ function release(job) { if (held.delete(job)) fs.rmSync(path.join(work.shots, `$
 const held = new Set();
 process.on('exit', () => { for (const j of held) try { fs.rmSync(path.join(work.shots, `${j}.lock`), { force: true }); } catch { /* gone */ } });
 
+// WARM-UP FRAME (frame-0 motion-blur smear, session 11): the first frame drawn after a jump (a new shot,
+// a resumed segment, the first frame after the set build) came out as a whole-body smear: the stage's
+// per-shot state (the framed camera's subject cache poses the cast at frame.at, IK / performance layers
+// seeded by the previous call) differs between the shutter-open update and the frame's own update when
+// the previous update was another time. Before a piece whose first frame does not directly follow the
+// last frame this browser drew, draw one frame at first - 1 (the shot's own handle / the gap the shot
+// table reserves; the first frame itself if first - 1 belongs to another shot) and discard it.
+const tableOf = new Map();
+function warmFrameFor(set, r, first) {
+  if (!tableOf.has(set)) tableOf.set(set, tables.find((t) => t.set === set)?.shots || []);
+  const f = first - 1;
+  const other = tableOf.get(set).some((x) => x.job !== r.job && f >= x.start_frame - (x.pre | 0) && f < x.start_frame + x.frames + (x.post | 0));
+  return other || f < 0 ? first : f;
+}
+async function warmBefore(w, set, r, first) {
+  if (w.dkLast && w.dkLast.job === r.job && w.dkLast.frame === first - (TWOS ? 2 : 1)) return;
+  const wf = warmFrameFor(set, r, first);
+  const sink = memorySink([{ frame: wf, repeat: 1 }]);
+  const sid = newId('w');
+  const url = server.addSink(sid, sink);
+  try { await w.render({ sinkUrl: url, frames: [wf], capture: 'yuv', chunkStart: wf }); await sink.finish(); } finally { server.removeSink(sid); }
+  w.dkLast = { job: r.job, frame: wf };
+}
+
 async function renderShot(w, set, item) {
   const r = item.row;
   if (STILLS) {
     const frames = [...new Set(STILLS.map((u) => r.start_frame + Math.min(r.frames - 1, Math.max(0, Math.round(u * (r.frames - 1))))))];
-    const sink = memorySink(frames.map((f) => ({ frame: f, repeat: 1 })));
+    // each still is drawn right after its own previous frame (the warm-up frame, see warmBefore)
+    const drawn = [...new Set(frames.flatMap((f) => [warmFrameFor(set, r, f), f]))].sort((a, b) => a - b);
+    const sink = memorySink(drawn.map((f) => ({ frame: f, repeat: 1 })));
     const sid = newId('m');
     const url = server.addSink(sid, sink);
-    try { await w.render({ sinkUrl: url, frames, capture: 'rgba', chunkStart: frames[0] }); await sink.finish(); } finally { server.removeSink(sid); }
+    try { await w.render({ sinkUrl: url, frames: drawn, capture: 'rgba', chunkStart: drawn[0] }); await sink.finish(); } finally { server.removeSink(sid); }
+    w.dkLast = { job: r.job, frame: frames[frames.length - 1] };
     for (const f of frames) {
       const out = path.join(work.stills, `${r.job}_${String(f - r.start_frame).padStart(3, '0')}.png`);
       await writePng(sink.frames.get(f), { width: p.width, height: p.height, out });
@@ -296,6 +325,7 @@ async function renderShot(w, set, item) {
   // as <job>.mp4.part.mp4 (the in-flight name every tool knows: lock checks, cleanups, other queues)
   const encodePiece = async (list, file) => {
     const pp = part;
+    await warmBefore(w, set, r, list[0].frame);
     const args = encoderArgs({ width: p.width, height: p.height, fps: FPS, input: 'yuv', bitDepth: 8, crf: p.crf, preset: p.x264Preset, out: pp });
     const sink = ffmpegSink(list, args, { label: `x264 ${r.job}` });
     const sid = newId('c');
@@ -304,11 +334,12 @@ async function renderShot(w, set, item) {
     try {
       await w.render({ sinkUrl: url, frames: list.map((o) => o.frame), capture: 'yuv', chunkStart: list[0].frame });
       await sink.finish();
-    } catch (e) { await sink.abort().catch(() => {}); fs.rmSync(pp, { force: true }); throw e; } finally { server.removeSink(sid); }
+    } catch (e) { w.dkLast = null; await sink.abort().catch(() => {}); fs.rmSync(pp, { force: true }); throw e; } finally { server.removeSink(sid); }
     const v = verifyVideo(pp, { frames: outFrames(list), width: p.width, height: p.height });
     if (!v.ok) { fs.rmSync(pp, { force: true }); throw new Error(`${r.job}: encoded file failed the check: ${v.reason}`); }
     fs.renameSync(pp, file);
     nRendered += list.length;
+    w.dkLast = { job: r.job, frame: list[list.length - 1].frame };
   };
   if (!SEGMENT || order.length <= SEGMENT * 1.5) {
     await encodePiece(order, mp4);

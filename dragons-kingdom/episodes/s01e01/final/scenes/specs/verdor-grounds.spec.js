@@ -160,7 +160,7 @@ export default {
       set: SET1B,
       cast: {
         charcoal: charRest(),
-        remi: { at: 'flankStand', face: 'flankStrap', look: [42, G + 6.5, -57], lookAmount: 0.6, acts: [[0, 'reach', { side: 'R', at: 'flankStrap', in: 0.01, hold: 0.9, out: 0.8 }]] },
+        remi: { at: 'flankStand', face: 'flankStrap', look: [42, G + 6.5, -57], lookAmount: 0.6, acts: [[-0.1, 'reach', { side: 'R', at: 'flankStrap', in: 0.01, hold: 0.9, out: 0.8 }]] },
       },
     },
     '1B-04': {
@@ -180,7 +180,7 @@ export default {
       set: SET1B,
       cast: {
         leaf: { at: LF, face: 90, tack: true, yawKeys: [[0, 90], [0.6, 90], [1.2, 70, 'sine'], [2.6, 70], [3.4, 90, 'sine']], acts: [[0, 'crouch', { k: 0.6, breathe: 0.5, look: [0.1, 0.05] }], [0.6, 'crouch', { k: 0.6, breathe: 0.6, look: [0.85, 0.2], blend: 0.5 }], [2.7, 'crouch', { k: 0.6, breathe: 0.5, look: [-0.1, 0.0], blend: 0.7 }]] },
-        abby: { at: ABBY_EQ, face: 5, look: 'leaf.chest', lookAmount: 0.8, acts: [[0, 'handsTo', { at: 'leaf.chest', spread: 0.12, in: 0.01, hold: 0.9, out: 0.35, palm: [0, 0, -1] }], [1.1, 'look', { at: 'leaf.head', amount: 0.7, blend: 0.4 }], [3.5, 'look', { at: 'leaf.chest', amount: 0.8, blend: 0.4 }], [3.6, 'handsTo', { at: 'leaf.chest', spread: 0.12, in: 0.5, palm: [0, 0, -1] }]] },
+        abby: { at: ABBY_EQ, face: 5, look: 'leaf.chest', lookAmount: 0.8, acts: [[-0.1, 'handsTo', { at: 'leaf.chest', spread: 0.12, in: 0.01, hold: 0.9, out: 0.35, palm: [0, 0, -1] }], [1.1, 'look', { at: 'leaf.head', amount: 0.7, blend: 0.4 }], [3.5, 'look', { at: 'leaf.chest', amount: 0.8, blend: 0.4 }], [3.6, 'handsTo', { at: 'leaf.chest', spread: 0.12, in: 0.5, palm: [0, 0, -1] }]] },
       },
       lines: [['L032', 1.45]],
     },
@@ -192,8 +192,8 @@ export default {
       cast: {
         charcoal: charRest(),
         leaf: leafLow(),
-        abby: { at: ABBY_EQ, face: 5, look: 'leaf.chest', acts: [[0, 'handsTo', { at: 'leaf.chest', spread: 0.12, in: 0.01, palm: [0, 0, -1] }], [2.1, 'look', { at: [37.4, G + 1.6, -51.6], amount: 0.5, blend: 0.5 }], [3.4, 'look', { at: 'leaf.chest', amount: 0.8, blend: 0.6 }]] },
-        remi: { at: REMI_EQ, face: 285, look: [33, G + 1.0, -50], lookAmount: 0.5, acts: [[0, 'clasp', { in: 0.01 }], [4.8, 'look', { at: [23.2, G + 1.5, -48.8], amount: 0.35, blend: 0.6 }], [6.6, 'look', { at: [33, G + 1.0, -50], amount: 0.5, blend: 0.6 }]] },
+        abby: { at: ABBY_EQ, face: 5, look: 'leaf.chest', acts: [[-0.1, 'handsTo', { at: 'leaf.chest', spread: 0.12, in: 0.01, palm: [0, 0, -1] }], [2.1, 'look', { at: [37.4, G + 1.6, -51.6], amount: 0.5, blend: 0.5 }], [3.4, 'look', { at: 'leaf.chest', amount: 0.8, blend: 0.6 }]] },
+        remi: { at: REMI_EQ, face: 285, look: [33, G + 1.0, -50], lookAmount: 0.5, acts: [[-0.1, 'clasp', { in: 0.01 }], [4.8, 'look', { at: [23.2, G + 1.5, -48.8], amount: 0.35, blend: 0.6 }], [6.6, 'look', { at: [33, G + 1.0, -50], amount: 0.5, blend: 0.6 }]] },
       },
       lines: [['L033', 0.7], ['L034', 0.45], ['L035', 0.5], ['L036', 0.45]],
     },
@@ -201,7 +201,7 @@ export default {
       staging: 'HANDS: insert of Remi\'s hands checking the buckle of his riding belt; his face above the frame.',
       cam: { rig: 'static', pos: [32.3, G + 1.45, -52.2], look: [33.2, G + 1.05, -52.58], mm: 85, fstop: 4, focus: 'remi.hand.R' },
       set: SET1B,
-      cast: { charcoal: charRest(), remi: { at: REMI_EQ, face: 285, look: 'remi.hand.R', lookAmount: 0.6, acts: [[0, 'clasp', { in: 0.01 }]] } },
+      cast: { charcoal: charRest(), remi: { at: REMI_EQ, face: 285, look: 'remi.hand.R', lookAmount: 0.6, acts: [[-0.1, 'clasp', { in: 0.01 }]] } },
     },
     '1B-08': {
       staging: 'WIDE: the ground keeper far left at the field\'s edge, well outside the launch space, calls it; Charcoal\'s head and shoulder at right.',
@@ -232,7 +232,8 @@ export default {
       cam: { rig: 'static', pos: [8, G + 1.7, -22], look: [29, G + 3.5, -59], mm: 45, fstop: 5.6, focus: 'remi.head' },
       set: SET1B,
       cast: {
-        charcoal: charRest(),
+        // he rises out of the rest crouch as Remi reaches the rig foot (X3-02 lowers him from this stance)
+        charcoal: { ...charRest(), acts: [[0, 'crouch', { k: 0.5 }], [2.2, 'crouch', { k: 0.2, blend: 1.4 }]] },
         remi: { at: REMI_EQ, face: 120, legs: 'planted', look: 'rigFoot', lookAmount: 0.4, acts: [[0.2, 'walk', { path: [[35.6, -53.4], 'rigFoot'], speed: 1.3, stop: 0.5 }]] },
         keeper2: { at: 'ropeKeeperL', face: 'rigTower', acts: [[-1, 'handsTo', { at: 'ropeHandL', spread: 0.08 }]] },
         keeper3: { at: 'ropeKeeperR', face: 'rigTower', acts: [[-1, 'handsTo', { at: 'ropeHandR', spread: 0.08 }]] },
@@ -242,7 +243,9 @@ export default {
       staging: 'NONE: low and wide: Charcoal lowers himself a measured amount, belly toward the turf, wrists braced in front, and holds still; the rig at left.',
       cam: { rig: 'static', pos: [50, G + 0.6, -30], look: [40, G + 4, -58], mm: 30, fstop: 5.6, focus: 'charcoal.head' },
       set: SET1B,
-      cast: { charcoal: { at: CH, face: 190, tack: true, acts: [[0, 'crouch', { k: 0.5 }], [0.5, 'mount', { blend: 2.6 }]] } },
+      // session 11: starts from the higher stance X3-01 ends on (crouch k 0.2, he readies himself as Remi
+      // reaches the rig) so the measured lowering into 'mount' reads (from k 0.5 it barely moved)
+      cast: { charcoal: { at: CH, face: 190, tack: true, acts: [[0, 'crouch', { k: 0.2 }], [0.4, 'mount', { blend: 2.8 }]] } },
     },
     'X3-03': {
       staging: 'BACK: following Remi up the first flight of the stair, from behind and outside the rail; the first turn at the landing.',
@@ -392,7 +395,7 @@ export default {
       cam: { rig: 'static', pos: [22.4, G + 1.7, -70.8], look: [26.2, G + 1.35, -69.0], mm: 50, fstop: 2.8, focus: 'keeper.hand.R' },
       set: SET1B_DOWN,
       cast: {
-        keeper: { ...keeperDown, at: KEEP_R2, face: 92, look: [30, G + 1.3, -67], lookAmount: 0.6, holds: { object: 'pipe', hands: 'R', to: 2.8, offset: [0, 0.01, 0] }, acts: [[0, 'reach', { side: 'R', at: 'keeper.head', offset: [0.09, -0.1, 0.03], in: 0.01, hold: 0.9, out: 0.7 }], [1.8, 'look', { at: [27.0, G, -68.9], amount: 0.9, blend: 0.6 }], [1.8, 'bow', { to: 0.35, dur: 0.8 }], [2.9, 'rise', { dur: 1.2 }]] },
+        keeper: { ...keeperDown, at: KEEP_R2, face: 92, look: [30, G + 1.3, -67], lookAmount: 0.6, holds: { object: 'pipe', hands: 'R', to: 2.8, offset: [0, 0.01, 0] }, acts: [[-0.1, 'reach', { side: 'R', at: 'keeper.head', offset: [0.09, -0.1, 0.03], in: 0.01, hold: 0.9, out: 0.7 }], [1.8, 'look', { at: [27.0, G, -68.9], amount: 0.9, blend: 0.6 }], [1.8, 'bow', { to: 0.35, dur: 0.8 }], [2.9, 'rise', { dur: 1.2 }]] },
         keeper3: { at: KEEP3_R2, face: 95, look: [34, G + 1.2, -66], lookAmount: 0.5 },
       },
       lines: [['R2-01', 3.6]],

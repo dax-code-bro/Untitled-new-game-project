@@ -3,6 +3,33 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 11 (2026-10-30, short budgeted session: frame-0 smear root cause, X3-02 stance)
+
+- FRAME-0 SMEAR - ROOT CAUSE FOUND AND FIXED IN THE STAGE (not in the renderer): velocity motion blur poses the
+  scene at shutter-open (t - T/2 = local -1/96 s for frame 0). That is BEFORE the shot's acts, which start at 0, so
+  the cast stood in its un-blocked default pose there (Charcoal tall, Remi's arm down) and frame 0 came out as a
+  whole-body smear. `stage.js update()`: `local = Math.max(0, sel.local)` - before its first frame a shot HOLDS
+  its frame-0 state (cast, camera, fx, custom beats). Pre-handle frames (dissolve heads) are now a held frame 0
+  instead of the default pose; post-handles still run on. Proof: `eng1/director/st11/1B-03_f0_f1_f24.jpg`
+  (before: frame 0 smeared, frames 1/24 clean) vs `st11/1B-03_fixed_f0_f1_f24.jpg` (after: frame 0 matches 1).
+- `tools/render-shots.mjs`: also draws and DISCARDS one warm-up frame at first - 1 (the shot's handle / table gap,
+  or the first frame itself if first - 1 lies in another shot) before every segment / still that does not follow
+  the last frame that browser drew (`warmBefore`, `w.dkLast`). Alone it did NOT fix the smear (frame 0's
+  shutter-open is evaluated inside the same update call); kept because it makes a resumed segment / a still
+  start from the same history as a continuous render (+1 frame per 48-frame segment, ~2 %). README + usage text.
+- REQUEST pc-kit / gpu-tier (render/episode.mjs masters): episode.mjs renders each shot with render.mjs --start
+  --seconds and --chunk-seconds 1, so every chunk start is a jump in a fresh / reused browser. With the stage
+  fix above the director scenes no longer depend on it (frame 0 is pure in t again), so NO render/ change is
+  required for the smear; a pure scene whose update() keeps history would still want a discarded warm frame at
+  chunkStart - 1 in render/lib/job.mjs (or runtime renderFrames for pure + velocity scenes). Low priority.
+- Frame 0 one-frame pop: acts written `[0, 'reach' | 'handsTo' | 'clasp', { in: 0.01 }]` ("already in place")
+  were still at progress 0 on frame 0 (1B-03: Remi's arm down on frame 0, up on frame 1). All 6 in
+  verdor-grounds.spec.js now start at -0.1 (fully in at frame 0 with the hold above): 1B-03, 1B-05?/1B-06?-area
+  Abby handsTo + Remi clasp (lines ~183-204) and the R2 keeper's reach (~398). No other spec file uses the pattern.
+- X3-02 starts higher: X3-01 now ends with Charcoal rising out of the rest crouch (crouch k 0.5 -> k 0.2 at
+  2.2 s, blend 1.4) as Remi reaches the rig foot; X3-02 = crouch k 0.2 then `mount` at 0.4 s (blend 2.8), so the
+  measured lowering reads and the cut X3-01 -> X3-02 matches. (X3-01 is not rendered yet.)
+
 ## Session 10 (2026-10-30, short budgeted session: mount pose, strict render-shots, first 1B videos)
 
 - Charcoal lowered for mounting: `sets/verdor-launch.js` fits the rig to `poses.mount(c, { t: 0 })` (default drop

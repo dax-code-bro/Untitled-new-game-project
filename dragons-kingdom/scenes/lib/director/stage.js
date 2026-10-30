@@ -401,7 +401,13 @@ export function createSetScene({ set: setId, builder, spec, table: tableUrl, tit
       try { return update(f24 / 24, ctx); } finally { ctx.frame = save; ctx.fps = saveFps; }
     }
     const sel = shotAt(S.table.shots, ctx.frame, t, ctx.fps);
-    const row = sel.shot, local = sel.local;
+    // PRE-ROLL HOLDS FRAME 0 (session 11): before its first frame a shot shows its frame-0 state (cast,
+    // camera, effects) frozen. Velocity motion blur poses the scene at shutter-open (t - T/2): for frame 0
+    // that is BEFORE the shot's acts start at 0, so the cast stood in its default pose there and frame 0
+    // came out as a whole-body smear (1B-03: Charcoal blurred, Remi's arm down). Pre-handle frames (the
+    // dissolves' head) hold frame 0 too instead of showing the un-blocked default pose. Post-handles still
+    // run on (the blocking after the last frame is authored).
+    const row = sel.shot, local = Math.max(0, sel.local);
     const spec1 = S.shotSpecs[row.job];
     S.cur = spec1; spec1.job = row.job;
     const dur = row.frames / ctx.fps;
