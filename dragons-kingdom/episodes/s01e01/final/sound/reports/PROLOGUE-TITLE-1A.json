@@ -1,0 +1,371 @@
+{
+ "cut": "PROLOGUE-TITLE-1A",
+ "made_with": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers",
+ "inputs": {
+  "edl": "episodes/s01e01/final/cut/edl.json",
+  "cues": "episodes/s01e01/final/cut/audio-cues.json",
+  "video": "episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_PROLOGUE-TITLE-1A.mp4",
+  "beds": "episodes/s01e01/final/sound/beds.json"
+ },
+ "duration_s": 357.5,
+ "targets": {
+  "integrated_lufs": -16,
+  "true_peak_dbtp_max": -1,
+  "dialogue_lufs_pre_master": -17,
+  "min_dialogue_margin_lu": 10
+ },
+ "result": {
+  "mix": "../../../../tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/sound/det/mix.wav",
+  "I": -16,
+  "TP": -1.6,
+  "LRA": 22.7,
+  "sha256": "9f9031f066ec1c6cfef2eb0d39a6f998627a3ee582fe01463d93d5991a0eb6d0",
+  "master_gain_db": 0.1,
+  "limiter_ceiling_dbfs": -1.6,
+  "dialogue_gain_db": 10.9,
+  "min_dialogue_margin_lu": 11.68,
+  "pass": true
+ },
+ "muxed": null,
+ "beds": {
+  "sea_shore": {
+   "target_lufs": -23,
+   "raw_lufs_60s": -26.5,
+   "duck_db": 6
+  },
+  "sea_open": {
+   "target_lufs": -24,
+   "raw_lufs_60s": -26.4,
+   "duck_db": 6
+  },
+  "vista_wind_sea": {
+   "target_lufs": -27,
+   "raw_lufs_60s": -28.2,
+   "duck_db": 6
+  },
+  "grounds_wind": {
+   "target_lufs": -28,
+   "raw_lufs_60s": -31.3,
+   "duck_db": 6
+  },
+  "chamber_hush": {
+   "target_lufs": -37,
+   "raw_lufs_60s": -23.2,
+   "duck_db": 3
+  },
+  "corridor_stone": {
+   "target_lufs": -34,
+   "raw_lufs_60s": -22.1,
+   "duck_db": 4
+  },
+  "room_sea_window": {
+   "target_lufs": -33,
+   "raw_lufs_60s": -23.8,
+   "duck_db": 4
+  }
+ },
+ "runs": [
+  {
+   "bed": "sea_shore",
+   "from_s": 0,
+   "to_s": 4,
+   "xf_in_s": 1.5,
+   "xf_out_s": 0.5,
+   "shots": "P-01..P-01 (1)"
+  },
+  {
+   "bed": "sea_open",
+   "from_s": 4,
+   "to_s": 38,
+   "xf_in_s": 0.5,
+   "xf_out_s": 1,
+   "shots": "P-02..P-07 (6)"
+  },
+  {
+   "bed": "vista_wind_sea",
+   "from_s": 38,
+   "to_s": 87.5,
+   "xf_in_s": 1,
+   "xf_out_s": 0.5,
+   "shots": "P-08..P-16 (9)"
+  },
+  {
+   "bed": "grounds_wind",
+   "from_s": 87.5,
+   "to_s": 95,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "P-17..P-17 (1)"
+  },
+  {
+   "bed": "chamber_hush",
+   "from_s": 95,
+   "to_s": 114.5,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "T-01..1A-02 (3)"
+  },
+  {
+   "bed": "corridor_stone",
+   "from_s": 114.5,
+   "to_s": 119,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "X1-01..X1-01 (1)"
+  },
+  {
+   "bed": "room_sea_window",
+   "from_s": 119,
+   "to_s": 135,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "R1-01..X1-04 (4)"
+  },
+  {
+   "bed": "corridor_stone",
+   "from_s": 135,
+   "to_s": 142.5,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "X1-05..X1-06 (2)"
+  },
+  {
+   "bed": "chamber_hush",
+   "from_s": 142.5,
+   "to_s": 294,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "1A-03..X2-03 (34)"
+  },
+  {
+   "bed": "corridor_stone",
+   "from_s": 294,
+   "to_s": 314,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "X2-04..X2-07 (4)"
+  },
+  {
+   "bed": "grounds_wind",
+   "from_s": 314,
+   "to_s": 337,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "X2-08..X2-13 (6)"
+  },
+  {
+   "bed": "chamber_hush",
+   "from_s": 337,
+   "to_s": 357.5,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0,
+   "shots": "X2-14..1A-34 (5)"
+  }
+ ],
+ "voice_cues": 50,
+ "speech_windows": [
+  {
+   "from_s": 12.2,
+   "to_s": 17.005,
+   "dialogue_M": -16.129,
+   "ambience_M": -31.31,
+   "margin_LU": 15.181
+  },
+  {
+   "from_s": 39.3,
+   "to_s": 43.32,
+   "dialogue_M": -16.131,
+   "ambience_M": -39.213,
+   "margin_LU": 23.083
+  },
+  {
+   "from_s": 47.4,
+   "to_s": 51.935,
+   "dialogue_M": -16.167,
+   "ambience_M": -38.233,
+   "margin_LU": 22.066
+  },
+  {
+   "from_s": 55.05,
+   "to_s": 56.125,
+   "dialogue_M": -17.759,
+   "ambience_M": -29.439,
+   "margin_LU": 11.68
+  },
+  {
+   "from_s": 57,
+   "to_s": 57.775,
+   "dialogue_M": -16.11,
+   "ambience_M": -34.385,
+   "margin_LU": 18.275
+  },
+  {
+   "from_s": 59,
+   "to_s": 59.75,
+   "dialogue_M": -15.57,
+   "ambience_M": -32.738,
+   "margin_LU": 17.168
+  },
+  {
+   "from_s": 61.72,
+   "to_s": 64.065,
+   "dialogue_M": -15.86,
+   "ambience_M": -37.574,
+   "margin_LU": 21.714
+  },
+  {
+   "from_s": 66.2,
+   "to_s": 70.255,
+   "dialogue_M": -16.108,
+   "ambience_M": -31.505,
+   "margin_LU": 15.398
+  },
+  {
+   "from_s": 78.5,
+   "to_s": 84.4,
+   "dialogue_M": -16.307,
+   "ambience_M": -36.237,
+   "margin_LU": 19.93
+  },
+  {
+   "from_s": 90.1,
+   "to_s": 92.145,
+   "dialogue_M": -15.738,
+   "ambience_M": -34.645,
+   "margin_LU": 18.907
+  },
+  {
+   "from_s": 131.42,
+   "to_s": 134.525,
+   "dialogue_M": -17.812,
+   "ambience_M": -38.247,
+   "margin_LU": 20.435
+  },
+  {
+   "from_s": 148.1,
+   "to_s": 154.535,
+   "dialogue_M": -17.545,
+   "ambience_M": -39.846,
+   "margin_LU": 22.301
+  },
+  {
+   "from_s": 191.1,
+   "to_s": 192.07,
+   "dialogue_M": -17.022,
+   "ambience_M": -39.962,
+   "margin_LU": 22.94
+  },
+  {
+   "from_s": 196.9,
+   "to_s": 198.305,
+   "dialogue_M": -22.616,
+   "ambience_M": -39.747,
+   "margin_LU": 17.131
+  },
+  {
+   "from_s": 211.25,
+   "to_s": 211.955,
+   "dialogue_M": -17.266,
+   "ambience_M": -40.118,
+   "margin_LU": 22.852
+  },
+  {
+   "from_s": 213.3,
+   "to_s": 214.17,
+   "dialogue_M": -17.502,
+   "ambience_M": -39.715,
+   "margin_LU": 22.213
+  },
+  {
+   "from_s": 219.3,
+   "to_s": 222.61,
+   "dialogue_M": -17.435,
+   "ambience_M": -39.935,
+   "margin_LU": 22.5
+  },
+  {
+   "from_s": 230.4,
+   "to_s": 232.17,
+   "dialogue_M": -18.634,
+   "ambience_M": -39.761,
+   "margin_LU": 21.127
+  },
+  {
+   "from_s": 233.1,
+   "to_s": 237.84,
+   "dialogue_M": -17.403,
+   "ambience_M": -39.967,
+   "margin_LU": 22.564
+  },
+  {
+   "from_s": 245.45,
+   "to_s": 246.955,
+   "dialogue_M": -20.705,
+   "ambience_M": -39.905,
+   "margin_LU": 19.199
+  },
+  {
+   "from_s": 248.5,
+   "to_s": 252.105,
+   "dialogue_M": -17.634,
+   "ambience_M": -40.054,
+   "margin_LU": 22.42
+  },
+  {
+   "from_s": 255.4,
+   "to_s": 256.575,
+   "dialogue_M": -17.365,
+   "ambience_M": -39.627,
+   "margin_LU": 22.262
+  },
+  {
+   "from_s": 258.1,
+   "to_s": 259.8,
+   "dialogue_M": -17.537,
+   "ambience_M": -39.63,
+   "margin_LU": 22.092
+  },
+  {
+   "from_s": 264,
+   "to_s": 270.015,
+   "dialogue_M": -18.14,
+   "ambience_M": -39.959,
+   "margin_LU": 21.819
+  },
+  {
+   "from_s": 285.5,
+   "to_s": 288.14,
+   "dialogue_M": -18.929,
+   "ambience_M": -39.961,
+   "margin_LU": 21.032
+  },
+  {
+   "from_s": 290.5,
+   "to_s": 291.625,
+   "dialogue_M": -17.363,
+   "ambience_M": -39.715,
+   "margin_LU": 22.353
+  },
+  {
+   "from_s": 301.1,
+   "to_s": 308.31,
+   "dialogue_M": -17.693,
+   "ambience_M": -37.681,
+   "margin_LU": 19.988
+  },
+  {
+   "from_s": 328.4,
+   "to_s": 329.035,
+   "dialogue_M": -16.796,
+   "ambience_M": -34.031,
+   "margin_LU": 17.235
+  },
+  {
+   "from_s": 341.1,
+   "to_s": 346.085,
+   "dialogue_M": -18.102,
+   "ambience_M": -39.853,
+   "margin_LU": 21.752
+  }
+ ]
+}

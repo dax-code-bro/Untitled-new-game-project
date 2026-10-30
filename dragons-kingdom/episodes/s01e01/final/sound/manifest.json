@@ -1,0 +1,29 @@
+{
+ "about": "Every sound source used by the episode mix (sound/mix.mjs), with its licence. Add a row BEFORE a new source is used; credits.txt and credits-notes.md must agree with this file.",
+ "sources": [
+  {
+   "id": "vo-final",
+   "what": "Voice takes, episodes/s01e01/final/vo/*.wav (computer voices; see vo/README.md and vo/takes.json)",
+   "origin": "generated with Kokoro-82M by hexgrad",
+   "licence": "Apache License 2.0 (the model); the takes are the project's own output",
+   "credit": "Voices: computer-generated with Kokoro-82M by hexgrad (Apache License 2.0) - already in credits.txt",
+   "used_in": ["PROLOGUE-TITLE-1A", "1B"]
+  },
+  {
+   "id": "beds-procedural",
+   "what": "Ambience beds sea_shore, sea_open, vista_wind_sea, grounds_wind, corridor_stone, room_sea_window, chamber_hush (sound/beds.json)",
+   "origin": "synthesised by sound/mix.mjs from seeded noise generators in FFmpeg (anoisesrc, aevalsrc) and filters; no recording, sample or download",
+   "licence": "the project's own work (no third-party material)",
+   "credit": "Sound design line in credits.txt",
+   "used_in": ["PROLOGUE-TITLE-1A", "1B"]
+  },
+  {
+   "id": "ffmpeg",
+   "what": "Tool only (synthesis, mixing, loudness measurement, limiter, AAC encoding); nothing of FFmpeg is in the sound",
+   "origin": "FFmpeg (ffmpeg.org), the build the render kit already uses",
+   "licence": "LGPL 2.1+ / GPL 2+ (tool licence; no credit required for output)",
+   "credit": null,
+   "used_in": ["all"]
+  }
+ ]
+}

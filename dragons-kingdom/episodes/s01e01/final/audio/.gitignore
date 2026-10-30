@@ -12,3 +12,8 @@
 *.tar
 *.part
 *.part-dk
+# sound/mix.mjs: draft-cut mixes (mix.wav, the muxed .mp4 copy, a .srt copy, mix-report.json) and its work files.
+# The committed copy of each report is sound/reports/<cut>.json.
+cuts/
+.work/
+*.mp4

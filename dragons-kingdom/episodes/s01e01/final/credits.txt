@@ -22,6 +22,11 @@ computer-generated with Kokoro-82M by hexgrad
 (Apache License 2.0)
 
 
+Sound design
+ambience synthesised for the series
+(no library recordings)
+
+
 Skies and light, HDRI photographs (CC0)
 Greg Zaal, Alexander Scholten,
 Sergej Majboroda, Andreas Mischok

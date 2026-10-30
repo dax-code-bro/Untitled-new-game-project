@@ -1,0 +1,102 @@
+{
+ "about": "Ambience beds for the episode mix (sound/mix.mjs). Every bed is SYNTHESISED here from seeded noise in FFmpeg (anoisesrc, aevalsrc): no recorded or downloaded sound, so no licence beyond the project's own. A bed = layers summed, then set to target_lufs (measured, integrated, as if heard alone) and ducked by duck_db under the dialogue. env = an FFmpeg expression in t (seconds on the cut timeline) multiplied into the layer, evaluated every 5 ms. Layer: noise (white|pink|brown) + seed, or crackle (sparse random impulses at rate_hz, density x env_density); filters hp/lp (Hz), bp [centre Hz, Q]; gain_db; stereo (two decorrelated seeds) or pan -1..1. Change a value and re-run the mixer: everything is re-made from this file.",
+ "version": 1,
+ "sets": {
+  "CARD_BLACK": "sea_shore",
+  "SEA_COAST_DAWN": "sea_open",
+  "PROLOGUE_VISTAS": "vista_wind_sea",
+  "VERDOR_GROUNDS": "grounds_wind",
+  "BIRTHING_CHAMBER": "chamber_hush",
+  "PALACE_CORRIDOR": "corridor_stone",
+  "ALEXANDRIA_ROOM": "room_sea_window"
+ },
+ "shots": {},
+ "default_bed": "chamber_hush",
+ "crossfade_s": 0.5,
+ "start_fade_s": 1.5,
+ "beds": {
+  "sea_shore": {
+   "what": "Waves folding against a rocky shore, close: slow irregular swells with a foamy wash after each crest.",
+   "target_lufs": -23, "duck_db": 6,
+   "layers": [
+    { "noise": "brown", "seed": 101, "stereo": true, "hp": 30, "lp": 420, "gain_db": 0,
+      "env": "pow(0.5+0.32*sin(2*PI*t/7.9)+0.18*sin(2*PI*t/3.7+1.3),2)" },
+    { "noise": "pink", "seed": 131, "stereo": true, "hp": 700, "lp": 5200, "gain_db": -9,
+      "env": "pow(max(0,sin(2*PI*t/7.9-0.9)),3)*(0.7+0.3*sin(2*PI*t/1.9))+0.04" },
+    { "noise": "pink", "seed": 151, "stereo": true, "hp": 2500, "lp": 9000, "gain_db": -24,
+      "env": "pow(max(0,sin(2*PI*t/7.9-1.5)),6)" }
+   ]
+  },
+  "sea_open": {
+   "what": "Open water from low over the swell: broad wash, softer crests, no rocks.",
+   "target_lufs": -24, "duck_db": 6,
+   "layers": [
+    { "noise": "brown", "seed": 201, "stereo": true, "hp": 30, "lp": 360, "gain_db": 0,
+      "env": "pow(0.6+0.25*sin(2*PI*t/9.3)+0.15*sin(2*PI*t/4.1+0.4),2)" },
+    { "noise": "pink", "seed": 231, "stereo": true, "hp": 500, "lp": 3800, "gain_db": -12,
+      "env": "pow(0.5+0.5*sin(2*PI*t/9.3-0.8),2)*0.8+0.1" },
+    { "noise": "pink", "seed": 251, "stereo": true, "hp": 150, "lp": 900, "gain_db": -18,
+      "env": "0.6+0.4*sin(2*PI*t/13.1)" }
+   ]
+  },
+  "vista_wind_sea": {
+   "what": "Prologue vistas: low wind over a wide sea wash, gusting slowly.",
+   "target_lufs": -27, "duck_db": 6,
+   "layers": [
+    { "noise": "brown", "seed": 301, "stereo": true, "hp": 30, "lp": 380, "gain_db": -2,
+      "env": "pow(0.6+0.25*sin(2*PI*t/10.7)+0.15*sin(2*PI*t/4.6+2.1),2)" },
+    { "noise": "pink", "seed": 331, "stereo": true, "bp": [520, 0.7], "gain_db": -6,
+      "env": "0.25+0.75*pow(0.5+0.5*sin(2*PI*t/11.3),2)*(0.6+0.4*sin(2*PI*t/3.9+1))" },
+    { "noise": "pink", "seed": 351, "stereo": true, "bp": [1500, 3], "gain_db": -22,
+      "env": "pow(0.5+0.5*sin(2*PI*t/11.3-0.3),4)" }
+   ]
+  },
+  "grounds_wind": {
+   "what": "Outside on the palace grounds: wind through grass and trees in gusts, the sea far off below.",
+   "target_lufs": -28, "duck_db": 6,
+   "layers": [
+    { "noise": "pink", "seed": 401, "stereo": true, "hp": 250, "lp": 3800, "gain_db": -4,
+      "env": "0.2+0.8*pow(0.5+0.5*sin(2*PI*t/8.7),2)*(0.55+0.45*sin(2*PI*t/2.9+0.7))" },
+    { "noise": "pink", "seed": 431, "stereo": true, "bp": [700, 1.2], "gain_db": -6,
+      "env": "0.3+0.7*pow(0.5+0.5*sin(2*PI*t/12.1+1.0),2)" },
+    { "noise": "brown", "seed": 451, "stereo": true, "hp": 30, "lp": 260, "gain_db": -14,
+      "env": "pow(0.6+0.4*sin(2*PI*t/9.1),2)" }
+   ]
+  },
+  "corridor_stone": {
+   "what": "Palace corridor: stone hush, the sea far off through the windows, a faint draught.",
+   "target_lufs": -34, "duck_db": 4,
+   "layers": [
+    { "noise": "brown", "seed": 501, "stereo": true, "hp": 35, "lp": 220, "gain_db": 0 },
+    { "noise": "brown", "seed": 531, "stereo": true, "hp": 60, "lp": 300, "gain_db": -4,
+      "env": "pow(0.6+0.3*sin(2*PI*t/9.7)+0.1*sin(2*PI*t/4.3),2)" },
+    { "noise": "pink", "seed": 551, "stereo": true, "bp": [900, 1.5], "gain_db": -20,
+      "env": "0.4+0.6*pow(0.5+0.5*sin(2*PI*t/13.7),2)" }
+   ]
+  },
+  "room_sea_window": {
+   "what": "Alexandria's room: quiet room tone, the sea below the window.",
+   "target_lufs": -33, "duck_db": 4,
+   "layers": [
+    { "noise": "brown", "seed": 601, "stereo": true, "hp": 35, "lp": 200, "gain_db": -3 },
+    { "noise": "brown", "seed": 631, "stereo": true, "hp": 50, "lp": 420, "gain_db": 0,
+      "env": "pow(0.55+0.3*sin(2*PI*t/8.9)+0.15*sin(2*PI*t/3.3+0.5),2)" },
+    { "noise": "pink", "seed": 651, "stereo": true, "hp": 600, "lp": 2400, "gain_db": -18,
+      "env": "pow(max(0,sin(2*PI*t/8.9-0.8)),3)" }
+   ]
+  },
+  "chamber_hush": {
+   "what": "The birthing chamber: a quiet stone room, the air almost still, a faint wind beyond the high opening, the lamp flames hissing softly with an occasional crackle.",
+   "target_lufs": -37, "duck_db": 3,
+   "layers": [
+    { "noise": "brown", "seed": 701, "stereo": true, "hp": 30, "lp": 180, "gain_db": 0 },
+    { "noise": "pink", "seed": 731, "stereo": true, "bp": [600, 1.0], "gain_db": -16,
+      "env": "0.3+0.7*pow(0.5+0.5*sin(2*PI*t/14.3),2)" },
+    { "noise": "pink", "seed": 751, "pan": -0.3, "hp": 2200, "lp": 7500, "gain_db": -22,
+      "env": "0.75+0.15*sin(2*PI*t/0.73)+0.1*sin(2*PI*t/1.9+1)" },
+    { "crackle": true, "seed": 771, "rate_hz": 2.2, "pan": -0.3, "hp": 1400, "lp": 6500, "gain_db": -6,
+      "env_density": "pow(0.5+0.5*sin(2*PI*t/6.1),2)*1.6+0.2" }
+   ]
+  }
+ }
+}

@@ -76,3 +76,11 @@ Assets in the manifest with status "blocked" (not downloaded yet) are not credit
 - Checked on 2026-10-23: the card at 960x540 through `render/episode.mjs --only END --size 960x540 --ignore-gate`
   (contact sheet of six frames; every one of the 636 frames with text moved exactly 3 px), and two native 4K frames
   of the same roll (whole frame and 1:1 crops): legible, centred, nothing clipped, no missing glyphs.
+
+## Sound sources (sound/manifest.json)
+
+- The draft-cut mixes (`sound/mix.mjs`) use only the Kokoro voice takes (already credited) and ambience beds
+  **synthesised** from seeded noise in FFmpeg (`sound/beds.json`): no recorded, sampled or downloaded sound, so no
+  third-party sound licence applies yet. `credits.txt` says so under "Sound design".
+- Every new source (CC0 effects, a soundfont for the music) gets a row in `sound/manifest.json` first, then a credit
+  line here and in `credits.txt` (CC0 needs no credit but we credit it anyway; CC BY must be credited exactly).

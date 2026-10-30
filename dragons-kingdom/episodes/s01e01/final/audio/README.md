@@ -3,7 +3,8 @@
 This folder is where the episode's **sound mix** goes: `S01E01_mix.wav` for the whole episode, or
 `scenes/<scene>.wav` with one file per scene, plus the subtitles timed to it, `S01E01.en.srt`.
 `render/episode.mjs` looks here (and in `output/episode1/audio/`) and adds the sound to finished
-scene files without rendering the pictures again. The mix is **not made yet**.
+scene files without rendering the pictures again. The episode mix is **not made yet**; draft-cut mixes are made by
+`../sound/mix.mjs` into `cuts/<cut>/` (not packed, not committed; see `../sound/README.md`).
 
 Sound files are never committed (`SERIES.md` section 2). The `.gitignore` here keeps them out of
 git. They reach Daxtyn's PC like this (details in `pc/MANIFEST.md`, "Sound"):
