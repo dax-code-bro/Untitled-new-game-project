@@ -82,5 +82,11 @@ Assets in the manifest with status "blocked" (not downloaded yet) are not credit
 - The draft-cut mixes (`sound/mix.mjs`) use only the Kokoro voice takes (already credited) and ambience beds
   **synthesised** from seeded noise in FFmpeg (`sound/beds.json`): no recorded, sampled or downloaded sound, so no
   third-party sound licence applies yet. `credits.txt` says so under "Sound design".
+- **Music** (2026-10-30): the cues are original, composed as note data (`sound/music/scores.mjs`) and rendered with
+  FluidSynth (tool, LGPL; no credit needed) and the **Fluid R3 GM SoundFont** by Frank Wen and contributors, released
+  under the **MIT License** (Debian package `fluid-soundfont-gm`; licence text in its `copyright` file). MIT asks that
+  the copyright and permission notice travel with copies of the *soundfont*; we ship only rendered audio, and credit
+  it anyway under "Music" in `credits.txt`. If the soundfont file itself is ever packed for the PC, include its
+  licence text next to it.
 - Every new source (CC0 effects, a soundfont for the music) gets a row in `sound/manifest.json` first, then a credit
   line here and in `credits.txt` (CC0 needs no credit but we credit it anyway; CC BY must be credited exactly).

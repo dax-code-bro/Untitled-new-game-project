@@ -1,0 +1,14 @@
+{
+ "about": "Music cue sheet for Episode 1, keyed to EDL shot ids (the director's cut/edl*.json). Read by sound/mix.mjs. A cue is placed so that beat `sync.beat` of its score (music/scores.mjs) lands at the start of shot `sync.shot` plus `sync.offset_s`; a cue whose sync shot is not in the cut being mixed is skipped. `end_by` (optional): the cue is faded out (over fade_out_s) so it is silent from the start of that shot plus offset_s. `target_lufs`: the cue alone (integrated) is set to this before the master gain; `duck_db`: dip under every speech window, like the beds. Spotting follows shotlist.json `sound` notes: no music before P-15 ('No music yet'), the theme enters after the narrator's P-15 line, resolves on the title and falls away for the scratch; the hatching cue ends before 1A-15 ('Whisper close on mic; nothing else').",
+ "cues": [
+  { "id": "M1 dawn theme", "score": "dawn_theme", "sync": { "beat": 24, "shot": "T-01", "offset_s": 0 },
+    "target_lufs": -24, "duck_db": 8, "end_by": { "shot": "T-01", "offset_s": 5.0 }, "fade_out_s": 2.0,
+    "note": "Bars 1-2 low string tone from ~71 s (after the narrator's last P-15 line ends at 70.3), the rising horn theme under P-16/P-17 narration (ducked), stops on the dominant at the title cut." },
+  { "id": "M2 title sting", "score": "title_sting", "sync": { "beat": 2, "shot": "T-01", "offset_s": 0 },
+    "target_lufs": -21, "duck_db": 8, "end_by": { "shot": "T-01", "offset_s": 6.0 }, "fade_out_s": 1.5,
+    "note": "Timpani roll into D major on the title cut; falls away so the egg scratch is alone from T-01 +6 s." },
+  { "id": "M3 hatching", "score": "hatching", "sync": { "beat": 33.5, "shot": "1A-13", "offset_s": 0 },
+    "target_lufs": -28, "duck_db": 7, "end_by": { "shot": "1A-15", "offset_s": 0 }, "fade_out_s": 1.2,
+    "note": "Enters under 1A-05 (fabric, breathing), tightens through the shell breaking (1A-06..1A-12), turns tender at 1A-13 (hushed), silent by the 1A-15 whisper." }
+ ]
+}

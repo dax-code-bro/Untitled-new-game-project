@@ -15,18 +15,25 @@
   "min_dialogue_margin_lu": 10
  },
  "result": {
-  "mix": "../../../../tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/sound/det/mix.wav",
-  "I": -16,
+  "mix": "episodes/s01e01/final/audio/cuts/PROLOGUE-TITLE-1A/mix.wav",
+  "I": -16.1,
   "TP": -1.6,
-  "LRA": 22.7,
-  "sha256": "9f9031f066ec1c6cfef2eb0d39a6f998627a3ee582fe01463d93d5991a0eb6d0",
-  "master_gain_db": 0.1,
+  "LRA": 22.6,
+  "sha256": "4d8c53062d2ea1c6d9d288e754cc87f3646dd3e3e0d24460c7e5196ae5f94161",
+  "master_gain_db": 0.6,
   "limiter_ceiling_dbfs": -1.6,
   "dialogue_gain_db": 10.9,
   "min_dialogue_margin_lu": 11.68,
+  "anchored": "integrated",
   "pass": true
  },
- "muxed": null,
+ "muxed": {
+  "file": "episodes/s01e01/final/audio/cuts/PROLOGUE-TITLE-1A/DragonsKingdom_S01E01_draft-cut_PROLOGUE-TITLE-1A_sound.mp4",
+  "duration_s": 357.5,
+  "aac_I": -16.2,
+  "aac_TP": -1.5,
+  "bytes": 61330714
+ },
  "beds": {
   "sea_shore": {
    "target_lufs": -23,
@@ -64,6 +71,49 @@
    "duck_db": 4
   }
  },
+ "music": [
+  {
+   "id": "M1 dawn theme",
+   "score": "dawn_theme",
+   "start_s": 71,
+   "end_s": 100,
+   "sync": "beat 24 = T-01 +0 s",
+   "raw_lufs": -26.2,
+   "target_lufs": -24,
+   "gain_db": 2.2,
+   "duck_db": 8,
+   "fade_out_s": 2,
+   "render_sha256": "696b23db070eb2bd0777db08b611dd0a8c1a9d383004b703c69fa732789e407d"
+  },
+  {
+   "id": "M2 title sting",
+   "score": "title_sting",
+   "start_s": 93,
+   "end_s": 101,
+   "sync": "beat 2 = T-01 +0 s",
+   "raw_lufs": -18.7,
+   "target_lufs": -21,
+   "gain_db": -2.3,
+   "duck_db": 8,
+   "fade_out_s": 1.5,
+   "render_sha256": "020a82e627437b506ca184d6478baa17d322e2602d4b6a1cb4ba292c1e1c2ad3"
+  },
+  {
+   "id": "M3 hatching",
+   "score": "hatching",
+   "start_s": 157,
+   "end_s": 196,
+   "sync": "beat 33.5 = 1A-13 +0 s",
+   "raw_lufs": -34.1,
+   "target_lufs": -28,
+   "gain_db": 6.1,
+   "duck_db": 7,
+   "fade_out_s": 1.2,
+   "render_sha256": "34d1f98e95d5923502e9091f72e3077357ecdcd86b80bfb45439732b711494e7"
+  }
+ ],
+ "music_not_in_cut": [],
+ "music_cue_sheet": "episodes/s01e01/final/sound/music/cues.json",
  "runs": [
   {
    "bed": "sea_shore",
@@ -167,204 +217,204 @@
   {
    "from_s": 12.2,
    "to_s": 17.005,
-   "dialogue_M": -16.129,
-   "ambience_M": -31.31,
+   "dialogue_M": -15.629,
+   "background_M": -30.81,
    "margin_LU": 15.181
   },
   {
    "from_s": 39.3,
    "to_s": 43.32,
-   "dialogue_M": -16.131,
-   "ambience_M": -39.213,
-   "margin_LU": 23.083
+   "dialogue_M": -15.859,
+   "background_M": -38.713,
+   "margin_LU": 22.854
   },
   {
    "from_s": 47.4,
    "to_s": 51.935,
-   "dialogue_M": -16.167,
-   "ambience_M": -38.233,
+   "dialogue_M": -15.667,
+   "background_M": -37.733,
    "margin_LU": 22.066
   },
   {
    "from_s": 55.05,
    "to_s": 56.125,
-   "dialogue_M": -17.759,
-   "ambience_M": -29.439,
+   "dialogue_M": -17.259,
+   "background_M": -28.939,
    "margin_LU": 11.68
   },
   {
    "from_s": 57,
    "to_s": 57.775,
-   "dialogue_M": -16.11,
-   "ambience_M": -34.385,
+   "dialogue_M": -15.61,
+   "background_M": -33.885,
    "margin_LU": 18.275
   },
   {
    "from_s": 59,
    "to_s": 59.75,
-   "dialogue_M": -15.57,
-   "ambience_M": -32.738,
+   "dialogue_M": -15.07,
+   "background_M": -32.238,
    "margin_LU": 17.168
   },
   {
    "from_s": 61.72,
    "to_s": 64.065,
-   "dialogue_M": -15.86,
-   "ambience_M": -37.574,
+   "dialogue_M": -15.36,
+   "background_M": -37.074,
    "margin_LU": 21.714
   },
   {
    "from_s": 66.2,
    "to_s": 70.255,
-   "dialogue_M": -16.108,
-   "ambience_M": -31.505,
+   "dialogue_M": -15.608,
+   "background_M": -31.005,
    "margin_LU": 15.398
   },
   {
    "from_s": 78.5,
    "to_s": 84.4,
-   "dialogue_M": -16.307,
-   "ambience_M": -36.237,
-   "margin_LU": 19.93
+   "dialogue_M": -15.884,
+   "background_M": -29.522,
+   "margin_LU": 13.639
   },
   {
    "from_s": 90.1,
    "to_s": 92.145,
-   "dialogue_M": -15.738,
-   "ambience_M": -34.645,
-   "margin_LU": 18.907
+   "dialogue_M": -15.238,
+   "background_M": -29.214,
+   "margin_LU": 13.976
   },
   {
    "from_s": 131.42,
    "to_s": 134.525,
-   "dialogue_M": -17.812,
-   "ambience_M": -38.247,
+   "dialogue_M": -17.312,
+   "background_M": -37.747,
    "margin_LU": 20.435
   },
   {
    "from_s": 148.1,
    "to_s": 154.535,
-   "dialogue_M": -17.545,
-   "ambience_M": -39.846,
+   "dialogue_M": -17.045,
+   "background_M": -39.346,
    "margin_LU": 22.301
   },
   {
    "from_s": 191.1,
    "to_s": 192.07,
-   "dialogue_M": -17.022,
-   "ambience_M": -39.962,
-   "margin_LU": 22.94
+   "dialogue_M": -16.522,
+   "background_M": -32.128,
+   "margin_LU": 15.606
   },
   {
    "from_s": 196.9,
    "to_s": 198.305,
-   "dialogue_M": -22.616,
-   "ambience_M": -39.747,
+   "dialogue_M": -22.116,
+   "background_M": -39.247,
    "margin_LU": 17.131
   },
   {
    "from_s": 211.25,
    "to_s": 211.955,
-   "dialogue_M": -17.266,
-   "ambience_M": -40.118,
+   "dialogue_M": -16.766,
+   "background_M": -39.618,
    "margin_LU": 22.852
   },
   {
    "from_s": 213.3,
    "to_s": 214.17,
-   "dialogue_M": -17.502,
-   "ambience_M": -39.715,
+   "dialogue_M": -17.002,
+   "background_M": -39.215,
    "margin_LU": 22.213
   },
   {
    "from_s": 219.3,
    "to_s": 222.61,
-   "dialogue_M": -17.435,
-   "ambience_M": -39.935,
+   "dialogue_M": -16.935,
+   "background_M": -39.435,
    "margin_LU": 22.5
   },
   {
    "from_s": 230.4,
    "to_s": 232.17,
-   "dialogue_M": -18.634,
-   "ambience_M": -39.761,
+   "dialogue_M": -18.134,
+   "background_M": -39.261,
    "margin_LU": 21.127
   },
   {
    "from_s": 233.1,
    "to_s": 237.84,
-   "dialogue_M": -17.403,
-   "ambience_M": -39.967,
+   "dialogue_M": -16.903,
+   "background_M": -39.467,
    "margin_LU": 22.564
   },
   {
    "from_s": 245.45,
    "to_s": 246.955,
-   "dialogue_M": -20.705,
-   "ambience_M": -39.905,
+   "dialogue_M": -20.205,
+   "background_M": -39.405,
    "margin_LU": 19.199
   },
   {
    "from_s": 248.5,
    "to_s": 252.105,
-   "dialogue_M": -17.634,
-   "ambience_M": -40.054,
+   "dialogue_M": -17.134,
+   "background_M": -39.554,
    "margin_LU": 22.42
   },
   {
    "from_s": 255.4,
    "to_s": 256.575,
-   "dialogue_M": -17.365,
-   "ambience_M": -39.627,
+   "dialogue_M": -16.865,
+   "background_M": -39.127,
    "margin_LU": 22.262
   },
   {
    "from_s": 258.1,
    "to_s": 259.8,
-   "dialogue_M": -17.537,
-   "ambience_M": -39.63,
+   "dialogue_M": -17.037,
+   "background_M": -39.13,
    "margin_LU": 22.092
   },
   {
    "from_s": 264,
    "to_s": 270.015,
-   "dialogue_M": -18.14,
-   "ambience_M": -39.959,
+   "dialogue_M": -17.64,
+   "background_M": -39.459,
    "margin_LU": 21.819
   },
   {
    "from_s": 285.5,
    "to_s": 288.14,
-   "dialogue_M": -18.929,
-   "ambience_M": -39.961,
+   "dialogue_M": -18.429,
+   "background_M": -39.461,
    "margin_LU": 21.032
   },
   {
    "from_s": 290.5,
    "to_s": 291.625,
-   "dialogue_M": -17.363,
-   "ambience_M": -39.715,
+   "dialogue_M": -16.863,
+   "background_M": -39.215,
    "margin_LU": 22.353
   },
   {
    "from_s": 301.1,
    "to_s": 308.31,
-   "dialogue_M": -17.693,
-   "ambience_M": -37.681,
+   "dialogue_M": -17.193,
+   "background_M": -37.181,
    "margin_LU": 19.988
   },
   {
    "from_s": 328.4,
    "to_s": 329.035,
-   "dialogue_M": -16.796,
-   "ambience_M": -34.031,
+   "dialogue_M": -16.296,
+   "background_M": -33.531,
    "margin_LU": 17.235
   },
   {
    "from_s": 341.1,
    "to_s": 346.085,
-   "dialogue_M": -18.102,
-   "ambience_M": -39.853,
+   "dialogue_M": -17.602,
+   "background_M": -39.353,
    "margin_LU": 21.752
   }
  ]

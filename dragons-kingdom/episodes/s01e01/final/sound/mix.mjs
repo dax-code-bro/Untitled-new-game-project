@@ -4,13 +4,15 @@
 // COPY of the draft cut. Deterministic: same inputs + same FFmpeg = byte-identical WAV (seeded noise only).
 //
 //   node episodes/s01e01/final/sound/mix.mjs [--cut PROLOGUE-TITLE-1A] [--work DIR] [--out DIR]
-//        [--no-mux] [--keep-work] [--edl F --cues F --video F]
+//        [--no-mux] [--no-music] [--keep-work] [--edl F --cues F --video F]
 //
 // Reads (never writes) final/cut/: edl<-cut>.json (shots: scene, set, rec_in/out frames, trans),
 //   audio-cues<-cut>.json (voice takes: file, file_in/out_s, rec_s, speech_rec_in/out_s, gain_db),
 //   DragonsKingdom_S01E01_draft-cut_<cut>.mp4 (+ .en.srt). The cut "PROLOGUE-TITLE-1A" uses the files
 //   without a suffix (edl.json, audio-cues.json); any other cut id X uses edl-X.json / audio-cues-X.json.
 // Reads final/vo/*.wav (the voice takes) and sound/beds.json (ambience recipes, which set uses which bed).
+// Music: sound/music/cues.json (cue sheet keyed to EDL shot ids) -> scores in music/scores.mjs rendered by
+//   music/render.mjs (FluidSynth + Fluid R3 GM soundfont, MIT); --no-music leaves it out.
 // Writes final/audio/cuts/<cut>/: mix.wav (48 kHz 24-bit stereo), DragonsKingdom_S01E01_draft-cut_<cut>_sound.mp4
 //   (video stream copied bit for bit, AAC 256k), the .srt copied, mix-report.json; and sound/reports/<cut>.json.
 // Work files (stems) go to --work (default final/audio/.work/<cut>/) and are deleted unless --keep-work.
@@ -20,6 +22,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ffmpegPath } from '../../../../render/lib/tools.mjs';
+import { renderCue } from './music/render.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FINAL = path.resolve(HERE, '..');
@@ -109,8 +112,9 @@ function envExpr(bed) {
 const wins = cues.map((c) => [c.speech_rec_in_s ?? c.rec_s, c.speech_rec_out_s ?? c.rec_s + (c.file_out_s - c.file_in_s)]).sort((x, y) => x[0] - y[0]);
 const merged = [];
 for (const w of wins) { const l = merged[merged.length - 1]; if (l && w[0] - l[1] < 0.6) l[1] = Math.max(l[1], w[1]); else merged.push([...w]); }
-const duckSum = merged.map(([a, b]) => `clip((t-${f4(a - 0.2)})/0.2,0,1)*clip((${f4(b + 0.35)}-t)/0.35,0,1)`).join('+');
-const duckExpr = (db) => (merged.length && db > 0 ? `(1-${f4(1 - dbToLin(-db))}*min(1,${duckSum}))` : '1');
+// sh: the stream's own t is (timeline time - sh) (a music cue before its adelay)
+const duckSum = (sh) => merged.map(([a, b]) => `clip((t-${f4(a - 0.2 - sh)})/0.2,0,1)*clip((${f4(b + 0.35 - sh)}-t)/0.35,0,1)`).join('+');
+const duckExpr = (db, sh = 0) => (merged.length && db > 0 ? `(1-${f4(1 - dbToLin(-db))}*min(1,${duckSum(sh)}))` : '1');
 
 // ---------- bed graph ----------
 function layerGraph(L, i, tag, dur) {
@@ -215,16 +219,50 @@ ff(['-filter_complex_script', graphFile('ambience.txt', aG.join(';\n')), '-map',
 checkLen(ambWav);
 say('ambience stem written');
 
+// ---------- 3b. music stem: cues from music/cues.json placed by EDL shot ids, set to target_lufs, ducked ----------
+const MUSIC = flag('--no-music') ? { cues: [] } : JSON.parse(fs.readFileSync(path.join(HERE, 'music', 'cues.json'), 'utf8'));
+const shotAt = (id) => { const s = edl.shots.find((x) => x.job === id); return s ? s.rec_in / FPS : null; };
+const music = [], musicSkipped = [];
+for (const c of MUSIC.cues) {
+  const t0 = shotAt(c.sync.shot);
+  if (t0 === null) { musicSkipped.push(c.id); continue; }
+  const r = renderCue(c.score, path.join(WORK, 'music'));
+  const fileS = (fs.statSync(r.wav).size - 80) / 8 / SR;
+  const start = t0 + (c.sync.offset_s || 0) - c.sync.beat * 60 / r.tempo_bpm;
+  let end = Math.min(start + fileS, DUR);
+  const eb = c.end_by && shotAt(c.end_by.shot);
+  if (eb !== null && eb !== undefined) end = Math.min(end, eb + (c.end_by.offset_s || 0));
+  const raw = measure(['-i', r.wav], '', `music ${c.score}`);
+  music.push({ id: c.id, score: c.score, start_s: r3(start), end_s: r3(end), sync: `beat ${c.sync.beat} = ${c.sync.shot} +${c.sync.offset_s || 0} s`,
+    raw_lufs: raw.I, target_lufs: c.target_lufs, gain_db: r3(c.target_lufs - raw.I), duck_db: c.duck_db, fade_out_s: c.fade_out_s || 0, wav: r.wav, render_sha256: r.sha256 });
+  say(`  music ${c.id}: ${start.toFixed(2)}..${end.toFixed(2)} s, raw ${raw.I} LUFS -> ${c.target_lufs}`);
+}
+const mIn = [], mG = [];
+music.forEach((m, k) => {
+  mIn.push('-i', m.wav);
+  const lead = Math.max(0, -m.start_s), len = m.end_s - Math.max(0, m.start_s), fo = Math.min(m.fade_out_s, len);
+  mG.push(`[${k}:a]aresample=${SR},aformat=channel_layouts=stereo,atrim=start=${f4(lead)}:end=${f4(lead + len)},asetpts=PTS-STARTPTS,volume=${m.gain_db}dB,` +
+    (fo > 0 ? `afade=t=out:st=${f4(len - fo)}:d=${f4(fo)},` : '') +
+    `asetnsamples=n=240,volume='${duckExpr(m.duck_db, Math.max(0, m.start_s))}':eval=frame,adelay=delays=${Math.round(Math.max(0, m.start_s) * SR)}S:all=1[m${k}]`);
+});
+mIn.push('-f', 'lavfi', '-i', `anullsrc=r=${SR}:cl=stereo:d=${f4(DUR)}`);
+mG.push(`${music.map((_, k) => `[m${k}]`).join('')}[${music.length}:a]amix=inputs=${music.length + 1}:normalize=0:dropout_transition=0:duration=longest,` +
+  `aresample=async=1:first_pts=0,atrim=end=${f4(DUR)}[mus]`);
+const musWav = path.join(WORK, 'music.wav');
+ff([...mIn, '-filter_complex_script', graphFile('music.txt', mG.join(';\n')), '-map', '[mus]', '-c:a', 'pcm_f32le', '-fflags', '+bitexact', '-flags:a', '+bitexact', musWav], 'music stem');
+checkLen(musWav);
+say(`music stem written (${music.length} cues${musicSkipped.length ? `, not in this cut: ${musicSkipped.join(', ')}` : ''})`);
+
 // ---------- 4. master: sum, gain to -16 LUFS, 4x-oversampled limiter, verify true peak ----------
-const sumG = (gain, ceil) => `[0:a]volume=${dlgGain.toFixed(3)}dB,pan=stereo|c0=c0|c1=c0[d];[d][1:a]amix=inputs=2:normalize=0:duration=longest,` +
+const sumG = (gain, ceil) => `[0:a]volume=${dlgGain.toFixed(3)}dB,pan=stereo|c0=c0|c1=c0[d];[d][1:a][2:a]amix=inputs=3:normalize=0:duration=longest,` +
   `volume=${gain.toFixed(3)}dB,aresample=${SR * 4},alimiter=limit=${dbToLin(ceil).toFixed(5)}:attack=2:release=80:level=0:latency=1,` +
   `aresample=${SR},afade=t=out:st=${f4(DUR - 0.3)}:d=0.3[m]`;
-const pre = measure(['-i', dlgWav, '-i', ambWav], '', 'premaster', { text: sumG(0, 0).replace(/alimiter=[^,]*,/, ''), out: 'm' });
+const pre = measure(['-i', dlgWav, '-i', ambWav, '-i', musWav], '', 'premaster', { text: sumG(0, 0).replace(/alimiter=[^,]*,/, ''), out: 'm' });
 const gainCap = MAX_DIALOGUE_I - DIALOGUE_I;
 let gain = Math.min(TARGET_I - pre.I, gainCap), ceil = -1.6, mm = null;
 const mixWav = path.join(OUT, 'mix.wav');
 for (let it = 0; it < 4; it++) {
-  ff(['-i', dlgWav, '-i', ambWav, '-filter_complex', sumG(gain, ceil), '-map', '[m]', '-c:a', 'pcm_s24le', '-fflags', '+bitexact', '-flags:a', '+bitexact', mixWav], 'master');
+  ff(['-i', dlgWav, '-i', ambWav, '-i', musWav, '-filter_complex', sumG(gain, ceil), '-map', '[m]', '-c:a', 'pcm_s24le', '-fflags', '+bitexact', '-flags:a', '+bitexact', mixWav], 'master');
   mm = measure(['-i', mixWav], '', 'master check');
   say(`  master pass ${it + 1}: gain ${gain.toFixed(2)} dB, ceiling ${ceil} dBFS -> I ${mm.I} LUFS, TP ${mm.TP} dBTP, LRA ${mm.LRA}`);
   const okTP = mm.TP <= MAX_TP - 0.1, okI = Math.abs(mm.I - TARGET_I) <= 0.3 || (gain >= gainCap - 1e-9 && mm.I < TARGET_I);
@@ -233,14 +271,16 @@ for (let it = 0; it < 4; it++) {
   if (!okI) gain = Math.min(gain + TARGET_I - mm.I, gainCap);
 }
 
-// ---------- 5. intelligibility: dialogue vs ambience (both at mix gain) over every speech window ----------
+// ---------- 5. intelligibility: dialogue vs everything else (ambience + music, at mix gain) over every speech window ----------
+const bgWav = path.join(WORK, 'background.wav');
+ff(['-i', ambWav, '-i', musWav, '-filter_complex', '[0:a][1:a]amix=inputs=2:normalize=0:duration=longest[b]', '-map', '[b]', '-c:a', 'pcm_f32le', bgWav], 'background');
 const dl = framelog(dlgWav, `volume=${(dlgGain + gain).toFixed(3)}dB`);
-const al = framelog(ambWav, `volume=${gain.toFixed(3)}dB`);
+const al = framelog(bgWav, `volume=${gain.toFixed(3)}dB`);
 const meanM = (log, a, b) => { const v = log.filter(([t]) => t >= a + 0.4 && t <= b + 0.2).map(([, m]) => Math.pow(10, m / 10)); return v.length ? 10 * Math.log10(v.reduce((s, x) => s + x, 0) / v.length) : null; };
-const intel = merged.map(([a, b]) => { const d = meanM(dl, a, b), m = meanM(al, a, b); return { from_s: r3(a), to_s: r3(b), dialogue_M: d && r3(d), ambience_M: m && r3(m), margin_LU: d && m ? r3(d - m) : null }; });
+const intel = merged.map(([a, b]) => { const d = meanM(dl, a, b), m = meanM(al, a, b); return { from_s: r3(a), to_s: r3(b), dialogue_M: d && r3(d), background_M: m && r3(m), margin_LU: d && m ? r3(d - m) : null }; });
 const margins = intel.map((x) => x.margin_LU).filter((x) => x !== null);
 const minMargin = margins.length ? Math.min(...margins) : null;
-say(`intelligibility: dialogue over ambience, min ${minMargin} LU over ${intel.length} speech windows (want >= 10)`);
+say(`intelligibility: dialogue over ambience + music, min ${minMargin} LU over ${intel.length} speech windows (want >= 10)`);
 
 // ---------- 6. mux onto a copy of the draft cut ----------
 let muxed = null;
@@ -265,11 +305,12 @@ const report = {
     pass: mm.TP <= MAX_TP && (Math.abs(mm.I - TARGET_I) <= 0.5 || gain >= gainCap - 1e-9) && (minMargin === null || minMargin >= 10) },
   muxed,
   beds: Object.fromEntries(usedBeds.map((b) => [b, { target_lufs: BEDS.beds[b].target_lufs, raw_lufs_60s: cal[b].lufs_raw, duck_db: BEDS.beds[b].duck_db }])),
+  music: music.map(({ wav, ...m }) => m), music_not_in_cut: musicSkipped, music_cue_sheet: 'episodes/s01e01/final/sound/music/cues.json',
   runs: runs.map((r) => ({ bed: r.bed, from_s: r3(r.a), to_s: r3(r.b), xf_in_s: r3(r.xfIn), xf_out_s: r3(r.xfOut), shots: `${r.shots[0]}..${r.shots[r.shots.length - 1]} (${r.shots.length})` })),
   voice_cues: cues.length, speech_windows: intel,
 };
 fs.writeFileSync(path.join(OUT, 'mix-report.json'), JSON.stringify(report, null, 1));
 fs.mkdirSync(path.join(HERE, 'reports'), { recursive: true });
 fs.writeFileSync(path.join(HERE, 'reports', `${CUT}.json`), JSON.stringify(report, null, 1));
-if (!flag('--keep-work')) for (const f of [dlgWav, ambWav]) fs.rmSync(f, { force: true });
+if (!flag('--keep-work')) for (const f of [dlgWav, ambWav, musWav, bgWav]) fs.rmSync(f, { force: true });
 say(`${report.result.pass ? 'PASS' : 'CHECK'}: ${rel(mixWav)} I ${mm.I} LUFS, TP ${mm.TP} dBTP, sha256 ${report.result.sha256.slice(0, 16)}`);

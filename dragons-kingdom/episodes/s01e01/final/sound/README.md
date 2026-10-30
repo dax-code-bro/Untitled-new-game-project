@@ -6,8 +6,12 @@ byte-identical `mix.wav`; checked: two runs of PROLOGUE-TITLE-1A gave the same s
 ```
 node episodes/s01e01/final/sound/mix.mjs                 # the PROLOGUE + TITLE + 1A cut (cut/edl.json, cut/audio-cues.json)
 node episodes/s01e01/final/sound/mix.mjs --cut 1B        # cut/edl-1B.json, cut/audio-cues-1B.json
-     [--edl F --cues F --video F] [--out DIR] [--work DIR] [--no-mux] [--keep-work]
+     [--edl F --cues F --video F] [--out DIR] [--work DIR] [--no-mux] [--no-music] [--keep-work]
+node episodes/s01e01/final/sound/music/render.mjs [--out DIR] [cue ...]   # render the music cues alone (MIDI + WAV)
 ```
+
+Needs `fluidsynth` and the Fluid R3 GM soundfont for the music (Ubuntu: `apt install fluidsynth fluid-soundfont-gm`;
+elsewhere set `FLUIDSYNTH=` and `DK_SOUNDFONT=`). `--no-music` mixes without them.
 
 About 2 minutes for the 6-minute cut on the 4-vCPU cloud machine (all CPU, FFmpeg only; no numpy, no Python).
 
@@ -20,12 +24,20 @@ About 2 minutes for the 6-minute cut on the 4-vCPU cloud machine (all CPU, FFmpe
    same bed make one run; runs cross-fade (equal power) over 0.5 s at cuts or over the dissolve length. Every bed is
    synthesised from seeded noise (no recordings), calibrated to its own `target_lufs` and ducked by `duck_db` under
    every speech window (`speech_rec_in/out_s`, 0.2 s attack, 0.35 s release).
-3. **Master**: dialogue + ambience, one gain to -16 LUFS integrated, a 4x-oversampled look-ahead limiter at -1.6 dBFS,
+3. **Music**: `music/cues.json` is the cue sheet, keyed to EDL shot ids: beat `sync.beat` of a score lands at the
+   start of shot `sync.shot` (+ offset), `end_by` fades it out before a named shot; a cue whose shot is not in the cut
+   is skipped. The scores are original note data in `music/scores.mjs` (M1 dawn theme from the end of the P-15
+   narration to the title, M2 title sting resolving on T-01 and falling away for the scratch, M3 hatching 1A-05..1A-14,
+   tense pedal + rising cello, turning tender at 1A-13, silent before the 1A-15 whisper). `music/render.mjs` writes
+   them as MIDI (`music/midi.mjs`) and renders them with FluidSynth + Fluid R3 GM (MIT) at 48 kHz float, one core,
+   fixed reverb, no dither: byte-identical on re-render (checked), cached by a key of MIDI + versions. Each cue is set
+   to its `target_lufs` and ducked by `duck_db` under the speech windows.
+4. **Master**: dialogue + ambience + music, one gain to -16 LUFS integrated, a 4x-oversampled look-ahead limiter at -1.6 dBFS,
    re-measured until true peak <= -1.1 dBTP. The words are never pushed above -15 LUFS: in a cut with sparse dialogue
    and no music yet the mix stays below -16 and the report says `anchored: "dialogue"`.
-4. **Checks**: dialogue vs ambience momentary loudness over every speech window (want >= 10 LU), stem lengths equal
+5. **Checks**: dialogue vs ambience + music momentary loudness over every speech window (want >= 10 LU), stem lengths equal
    the cut, true peak of the AAC copy.
-5. **Outputs** (git-ignored) in `final/audio/cuts/<cut>/`: `mix.wav` (48 kHz 24-bit stereo), a COPY of the draft cut
+6. **Outputs** (git-ignored) in `final/audio/cuts/<cut>/`: `mix.wav` (48 kHz 24-bit stereo), a COPY of the draft cut
    with this sound (`..._sound.mp4`, video stream copied unchanged, AAC 256k), the cut's subtitles copied, and
    `mix-report.json`. The committed copy of the report is `sound/reports/<cut>.json`. `final/cut/` is only read.
 
@@ -35,6 +47,8 @@ About 2 minutes for the 6-minute cut on the 4-vCPU cloud machine (all CPU, FFmpe
 |---|---|
 | `mix.mjs` | the mixer |
 | `beds.json` | ambience recipes (layers of seeded noise, filters, slow swells as FFmpeg expressions in `t`), which set uses which bed |
+| `music/scores.mjs`, `music/cues.json` | the score as note data; the cue sheet (shot-id sync, levels, ducking) |
+| `music/midi.mjs`, `music/render.mjs` | SMF writer; FluidSynth render with cache (audio git-ignored) |
 | `manifest.json` | every sound source and its licence (credits must agree) |
 | `reports/<cut>.json` | last mix of each cut: loudness, true peak, sha256, bed runs, speech margins |
 

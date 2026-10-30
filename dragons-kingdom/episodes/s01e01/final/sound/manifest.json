@@ -7,7 +7,10 @@
    "origin": "generated with Kokoro-82M by hexgrad",
    "licence": "Apache License 2.0 (the model); the takes are the project's own output",
    "credit": "Voices: computer-generated with Kokoro-82M by hexgrad (Apache License 2.0) - already in credits.txt",
-   "used_in": ["PROLOGUE-TITLE-1A", "1B"]
+   "used_in": [
+    "PROLOGUE-TITLE-1A",
+    "1B"
+   ]
   },
   {
    "id": "beds-procedural",
@@ -15,7 +18,30 @@
    "origin": "synthesised by sound/mix.mjs from seeded noise generators in FFmpeg (anoisesrc, aevalsrc) and filters; no recording, sample or download",
    "licence": "the project's own work (no third-party material)",
    "credit": "Sound design line in credits.txt",
-   "used_in": ["PROLOGUE-TITLE-1A", "1B"]
+   "used_in": [
+    "PROLOGUE-TITLE-1A",
+    "1B"
+   ]
+  },
+  {
+   "id": "music-original",
+   "what": "Music cues M1 dawn theme, M2 title sting, M3 hatching (sound/music/scores.mjs note data, placed by sound/music/cues.json)",
+   "origin": "composed for this series as note data by the sound track (2026-10-30); MIDI written by sound/music/midi.mjs; no quotation of existing music",
+   "licence": "the project's own work",
+   "credit": "Music line in credits.txt",
+   "used_in": [
+    "PROLOGUE-TITLE-1A"
+   ]
+  },
+  {
+   "id": "soundfont-fluidr3-gm",
+   "what": "Instrument samples for the music render: Fluid R3 GM SoundFont (FluidR3_GM.sf2; Debian/Ubuntu package fluid-soundfont-gm 3.1)",
+   "origin": "Frank Wen and contributors (Suren M. Seron, Scott Hanan, Steve Aupperle, Chris Gillman, Alex Taubr, Chris Prola, Andrew Klenk, Winfried Hubbe, Dylan, Tim, Gort, Uros Katic, Ethan Winer); built partly from public-domain samples",
+   "licence": "MIT License (Copyright 2000-2002, 2008 Frank Wen; 2008 Toby Smithe). Licence text: /usr/share/doc/fluid-soundfont-gm/copyright",
+   "credit": "Music rendered with the Fluid R3 GM SoundFont by Frank Wen (MIT License)",
+   "used_in": [
+    "PROLOGUE-TITLE-1A"
+   ]
   },
   {
    "id": "ffmpeg",
@@ -23,7 +49,19 @@
    "origin": "FFmpeg (ffmpeg.org), the build the render kit already uses",
    "licence": "LGPL 2.1+ / GPL 2+ (tool licence; no credit required for output)",
    "credit": null,
-   "used_in": ["all"]
+   "used_in": [
+    "all"
+   ]
+  },
+  {
+   "id": "fluidsynth",
+   "what": "Tool only: renders the MIDI cues with the soundfont (sound/music/render.mjs); nothing of FluidSynth is in the sound",
+   "origin": "FluidSynth 2.3.4 (fluidsynth.org), Ubuntu package",
+   "licence": "LGPL 2.1+ (tool licence; no credit required for output)",
+   "credit": null,
+   "used_in": [
+    "PROLOGUE-TITLE-1A"
+   ]
   }
  ]
 }

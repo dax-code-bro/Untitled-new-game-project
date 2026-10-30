@@ -1,0 +1,5 @@
+# rendered music and MIDI are build products (see music/render.mjs); never commit audio
+*.wav
+*.mid
+*.flac
+*.mp3

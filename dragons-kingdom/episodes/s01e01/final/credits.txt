@@ -26,6 +26,11 @@ Sound design
 ambience synthesised for the series
 (no library recordings)
 
+Music
+original score composed for the series
+rendered with the Fluid R3 GM SoundFont
+by Frank Wen and contributors (MIT License)
+
 
 Skies and light, HDRI photographs (CC0)
 Greg Zaal, Alexander Scholten,
