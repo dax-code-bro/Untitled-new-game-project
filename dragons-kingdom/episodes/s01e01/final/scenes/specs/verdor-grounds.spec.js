@@ -270,7 +270,9 @@ export default {
     'X3-06': {
       staging: 'WIDE: from the gangway past the ground keeper on the deck (right foreground, from behind): across the stakes Leaf has edged forward with Abby on his back, neck stretched toward Charcoal.',
       deviation: 'The shot list asks for a 135-200 mm lens; Leaf waits ~15 m from the rig (speaking range in 1B-06 and 1B-12), so a 50 mm from the gangway holds him and the keeper.',
-      cam: { rig: 'static', pos: [37.5, G + 9.8, -61.5], look: [27.0, G + 3.4, -53.5], mm: 35, fstop: 4, focus: 'abbyR.head' },
+      // from the GANGWAY END (was 6 m along it: the deck and its stair stood between the lens and Leaf - the still
+      // showed the keeper and grass, Leaf hidden under the deck)
+      cam: { rig: 'static', pos: [40.4, G + 6.6, -57.6], look: [26.0, G + 2.0, -52.6], mm: 40, fstop: 4, focus: 'abbyR.head' },
       set: SET1B_DOWN,
       cast: {
         charcoal: charLow(),
@@ -282,7 +284,7 @@ export default {
     },
     'X3-07': {
       staging: 'OTS: over the ground keeper\'s right shoulder on the deck (he faces away, calling); Abby small on Leaf below, beyond the stakes.',
-      cam: { rig: 'static', pos: [31.2, G + 8.6, -60.0], look: [25.8, G + 3.4, -52.6], mm: 60, fstop: 4, focus: 'abbyR.head' },
+      cam: { rig: 'static', pos: [31.2, G + 8.6, -60.0], look: 'abbyR.head', mm: 60, fstop: 4, focus: 'abbyR.head' },
       // 60 mm (was 35): X3-06 holds Leaf from the same deck - the edit check's jump cut (22 deg, 1.33x); now 2.3x the size
       set: SET1B_DOWN,
       cast: {
@@ -328,7 +330,8 @@ export default {
     },
     'X3-11': {
       staging: 'HANDS: insert: the keeper\'s hands check the strap at Remi\'s knee once more, quickly and thoroughly.',
-      cam: { rig: 'static', pos: [40.6, G + 6.4, -59.0], look: 'remiR.knee.R', mm: 85, fstop: 4, focus: 'remiR.knee.R' },
+      // from behind the seat, up his back (was 1.2 m behind the keeper: his coat filled the 85 mm frame)
+      cam: { rig: 'static', pos: [41.4, G + 7.0, -60.8], look: 'remiR.knee.R', mm: 85, fstop: 4, focus: 'remiR.knee.R' },
       set: SET1B_DOWN,
       cast: {
         charcoal: charLow(),
@@ -338,7 +341,9 @@ export default {
     },
     'X3-12': {
       staging: 'BACK: medium from behind Leaf: Abby on his back adjusts a strap with both hands and watches the inspection on Charcoal\'s back across the field with open impatience (the line plays on her back).',
-      cam: { rig: 'static', pos: [17.6, G + 2.6, -51.3], look: [32.0, G + 4.6, -54.6], mm: 40, fstop: 4, focus: 'abbyR.head' },
+      // over his TAIL (was at x 17.6: inside Leaf's 9 m body, culled - the still showed the rig and no Leaf)
+      // (the first still from here: Abby's head at the bottom-right edge, the rig and Charcoal's legs filling the 75 mm frame)
+      cam: { rig: 'static', pos: [10.5, G + 3.0, -49.0], look: 'abbyR.head', mm: 55, fstop: 4, focus: 'abbyR.head' },
       set: SET1B_DOWN,
       cast: {
         charcoal: charLow(),

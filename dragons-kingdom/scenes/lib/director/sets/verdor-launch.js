@@ -94,8 +94,15 @@ export async function buildLaunch(ctx, { scene, H, G, M, creatures, quality }) {
     const gird = seat0.clone().setY(G + 2.2);
     const fl = hitOn(gird.clone().addScaledVector(right, 14), right.clone().negate());
     if (fl) { surf.flankStrap = fl.toArray(); surf.flankStand = fl.clone().addScaledVector(right, 0.62).setY(G).toArray(); }
-    const fl2 = hitOn(chest.clone().addScaledVector(fwd, 4.5).addScaledVector(right, 14).setY(G + 3.4), right.clone().negate());
+    // the first ray that meets him: ahead of the chest at 3.4 m first (the shot's framing), then lower and
+    // further back (a ray over a thin neck misses: 1B-01 failed with no mark at all)
+    let fl2 = null;
+    for (const [a, h] of [[4.5, 3.4], [3.0, 3.4], [4.5, 2.6], [1.5, 3.0], [0, 3.0], [-1.5, 2.6]]) {
+      fl2 = hitOn(chest.clone().addScaledVector(fwd, a).addScaledVector(right, 14).setY(G + h), right.clone().negate());
+      if (fl2) break;
+    }
     if (fl2) surf.flankInsert = fl2.toArray();
+    else if (fl) surf.flankInsert = fl.clone().setY(fl.y + 1).toArray();
     c.setPose(poses.crouch(c, { t: 0, k: 1 }));
     c.root.updateMatrixWorld(true);
   }

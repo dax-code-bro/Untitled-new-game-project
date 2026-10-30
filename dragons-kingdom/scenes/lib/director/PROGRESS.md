@@ -3,6 +3,54 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 8 (2026-10-30, short budgeted session after a weekly-limit stop; 1B)
+
+- State found: commit 9e3cbc6 had all 32 1B shot specs (`specs/verdor-grounds.spec.js`, scene 1B part),
+  the launch set (`sets/verdor-launch.js`: Charcoal + riding rig, access rig on runners, stakes, pipe),
+  riders' overlays (`actions.js poseOverlays`), `edl-1B.json/.md`, `audio-cues-1B.json`. Nothing rendered.
+- PREVIS WAS BLIND ON VERDOR: every actor stood at y 0 (`ground: () => 0`) while the field is at y 9, so
+  every head read OUT. New spec fields: `previs.ground` (the set's ground height), `previs.floors` (name
+  prefixes of raised walkable marks - stair steps, deck - an actor within 2 m stands at their height),
+  riders (cast `ride:`) sit at `previs.marks['<mount>Seat']` or `previs.seatH[mount]` above the mount.
+- Edit check (`previs --cuts`) on 1B: 2 jump cuts fixed - X3-06 -> X3-07 (X3-07 now 60 mm, aimed at
+  Abby) and R2-01 -> R2-02 (R2-02 from the NORTH: keeper3 in profile, the ground keeper soft beyond).
+  Now 0 flags.
+- REVIEW STILLS of all 1B shots (one browser, 6.7 min incl. a 2.2 min set build; `eng1/director/st1B/stills`,
+  contact sheet looked at in two halves):
+  - 1B-01 FAILED: unknown point "flankInsert" - the set's ray for that mark missed his neck. verdor-launch.js
+    now tries several rays (ahead of the chest -> lower -> further back), falls back to above flankStrap.
+  - X3-06: Leaf hidden under the deck (camera 6 m along the gangway: the deck + stair on the line) -> from
+    the gangway end. X3-12: the camera was INSIDE Leaf's 9 m body (culled) -> over his tail, 75 mm.
+    X3-11: the keeper's coat filled the 85 mm frame -> from behind the seat up his back.
+  - Look fine for drafts: 1B-02 (hide), 1B-05, 1B-07 (hands), 1B-08, 1B-09 (Remi waves from behind),
+    1B-10 (Abby on the platform), X3-01..X3-05, X3-13, X3-14, R2-02, X3-16, 1B-13 (Leaf's eye), 1B-14.
+  - Weak, kept for now (look again in the videos): 1B-03 Charcoal's head with a white jaw blob right of
+    Remi; 1B-04 / 1B-06 / 1B-10 Leaf lies FLAT on the turf (crouch k 1 reads as lying down - shot list
+    says "crouched low and level"); 1B-12 Leaf + Abby tiny at the rig's foot, Charcoal head-on reads like
+    a rearing bull; X3-10 a white sky/mist behind Remi; X3-15 the eye is a flat blue band; R2-01 the
+    keepers at both frame edges, the ground keeper's face 3/4 and sharp at 50 mm f/2.8.
+- Re-stage stills (`eng1/director/st1Bb/stills`, 2.3 min): 1B-01 now renders (black scales fill the frame);
+  X3-06 Leaf with Abby clear past the deck rail; X3-07 Abby small and soft beside the keeper's hood, partly
+  behind the deck's corner post (weak - try the camera 1 m north); X3-11 Remi's boot, coat and strap in the
+  dark, the keeper's hands not in frame (weak); X3-12 still wrong (Abby's head at the bottom-right edge, the
+  rig + Charcoal's legs filling the frame) -> re-aimed at `abbyR.head`, 55 mm, NOT re-checked yet.
+- 1B DRAFT CUT (slates only - no 1B shot is rendered as video yet): `make-cut.mjs --edl edl-1B` ->
+  `episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_1B.mp4` (+ `cut-report-1B.json`): the timed
+  animatic with the voice takes at their cue times.
+- NEXT (exact):
+  1. Stills of X3-12 and X3-07 (`render-shots.mjs --stills 0.5 --only X3-12,X3-07 --work <scratch>`); look.
+  2. Render the 1B videos: `node scenes/lib/director/tools/render-shots.mjs --only <the 32 ids of edl-1B>
+     --work <scratch>/work1B` (~229 min of one browser here, draft preset; resumable in 48-frame segments).
+     Cheap first if time is short: X3-15, 1B-13, 1B-14, R2-02, 1B-09 (inserts / short).
+  3. `node episodes/s01e01/final/cut/make-cut.mjs --edl edl-1B --shots <scratch>/work1B/shots`, then
+     `cut-sheet.mjs --cut <the 1B mp4> --out <dir> --at 0.2,0.75` and LOOK; `check-sync.py <the 1B mp4>`.
+     (assemble.sh is hard-wired to the first cut; give it an --edl argument or run the steps by hand.)
+  4. Weak shots to restage after the videos: 1B-04 / 1B-06 / 1B-10 Leaf flat on the turf (crouch k 1 reads
+     as lying; try k 0.6 like X3-07), 1B-12 Leaf + Abby too small (longer lens or closer), R2-01 framing
+     (the keepers at both frame edges), X3-11 (bring the keeper's hands in: camera west of the seat).
+  5. previs is approximate for creatures' heads (a 14 m dragon's head point is a guess) - its OUT lines for
+     charcoal / leaf in inserts are expected; the stills are the truth.
+
 ## Session 7 (2026-10-27 evening, resumed after a usage-limit stop + container restart)
 
 - State found: 72 of 75 3D shots rendered in `eng1/director/work/shots` (it survived); 1A-29, 1A-30, 1A-32
