@@ -34,7 +34,13 @@ How it works: `README.md` in this folder. Latest state first.
   two folders, never a session scratch path); check-sync prints "18 voice takes laid in -> 20 subtitle cues (2 takes
   have more than one sentence, one cue each: L032 X3-01)".
 - Video: started `render-shots.mjs --only X3-15,1B-13,1B-14,R2-02 --work eng1/director/work1B` (264 frames; slow
-  with npm test running alongside). See the end of this entry for what finished.
+  with npm test running alongside). RESULT: only X3-15 segment 0 (frames 0-47 of 84) finished in ~20 min. Cause: a
+  mistaken `render-shots.mjs --help` (there is NO --help: it starts rendering EVERY stale shot into
+  output/director/draft) ran alongside for ~20 min (it re-rendered R1-01 and two X1-02 segments there - harmless,
+  git-ignored) and its pkill missed. Stopped the 1B render (lock + part file removed; segment 0 kept, resumable).
+  Frame at 1.5 s looked at (`eng1/director/x315_s000.jpg`): the eye reads now - a blue iris with a slit pupil under
+  a half-closed scaled lid - but the scales read as hard grey cobbles at 85 mm (creatures track).
+  TODO for render-shots.mjs: make `--help` print usage and exit.
 - npm test: 47 subtests ok, 0 not ok before my 590 s timeout cut it (the render was competing for the 4 vCPUs); run it
   again alone.
 - NOT done (next, in order):
