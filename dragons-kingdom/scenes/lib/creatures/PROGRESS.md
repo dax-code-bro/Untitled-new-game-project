@@ -4,6 +4,44 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REALISM ROUND 2 - session 2 (2026-10-30, short budgeted session: X3-15 / 1B-03 / X3-08 in the director's set)
+Stills (draft, director's VERDOR_GROUNDS set via `node scenes/lib/director/tools/still.mjs <job>[@u] --preset draft --out DIR`,
+~2.5-4 min each) under `scratchpad/eng1/creatures/r2s2/`: `base/` (state at session start), `v1/` `v2/` `v3diag/` `v4/` (+ `v5/`).
+- X3-15 REPRODUCED (`base/X3-15_040.png`): hard grey cobbles. DIAGNOSIS (`v3diag/X3-15_040.png` = head specular x0): the
+  grey is the SPECULAR sky sheen (F0 0.04 at roughness ~0.6 over this set's bright IBL) - with it removed the head is near
+  black (~sRGB 45, the rest is set haze/post). Smoother crowns (v1, headLook.x -0.26) made chrome cobbles: worse.
+  Fix: new skin uniforms `headLook` [roughDelta, seamWidthMul, microMul, perPlateTilt] and `headSpec` (specular
+  occlusion of dry pitted keratin on the head: specularColor/F90 x headSpec x micro x (1-0.5 cav)). Charcoal:
+  headLook [0.04, 0.45, 0.3, 0.35], headSpec 0.25 (head AND eyelid shells, region 7), skin3 [0.7, 0.16, 0.15, 0] (fainter brushed micro streaks),
+  head plates scl.z 0.42 (was 0.6; the visible cell size barely changed - octave quantised), headRelief 0.6.
+  Defaults keep every other dragon unchanged. RESULT `v5/X3-15_040.png` (vs `base/`): the head and lid read
+  near-black charcoal with a faint sheen now, no grey film - but the SHAPE still reads as cobbles (pillow plates of one
+  size in even dark seams; per-plate tilt barely shows). `v4/` = headSpec 0.35 without the lids.
+- 1B-03 white patch CONFIRMED in the director's framing (`base/1B-03_042.png`): the folded wing's underside (pale
+  grey-blue, lit by sky through/under the fold) right of Remi + the forearm tube. Fix: membrane uniform `memFoldOcc`
+  (Charcoal 0.7, default 0): when folded, indirect diffuse+specular x (1 - occ x fold x (0.55..1 facing down)) and the
+  transmission x (1 - 0.8 occ fold). `v2/1B-03_042.png`: the underside is dark slate now, folds still read. The hanging
+  trailing-edge scallops still read like teeth/jaw from this angle (open).
+- X3-08 neck: `poses.mount` neck now leaves the chest nearly level and arches down (neckBase 0.24 -> 0.1, neckTop
+  0.06 -> -0.08; options still override): head joint 5.15 -> 4.19 m (seat 5.71). `x308_before_after.png` (3x crop):
+  the column is gone, head sits low in front of the chest, Remi visible on the seat above. Seat/rig fit unchanged
+  (thorax untouched), so the director's marks stay valid. X3-15's camera aims at `charcoal.eye`, so it follows.
+- tools/meas.mjs prints neck base/mid/top + head positions.
+- npm test (after the last code change, run beside one render): 49 tests, 48 pass, 0 fail, 1 skipped, exit 0.
+NEXT (exact):
+1. X3-15 cobble SHAPE: (a) periocular ring of small granules around the eye (scale size x0.35 within ~1.5 eye radii
+   of the eye centre - pass the eye centre as a uniform; real lizards/crocs have tiny granules round the lid); (b) the
+   head octave split (`C.id2 >= fsub` in dkSkin) gives one cell size per octave - mix two octaves per region so big
+   supraocular plates sit among small ones; (c) narrower seams/flatter dome on the head (dome 5 -> 8, headLook.y 0.3);
+   (d) lid shell: finer granules. Re-still `node scenes/lib/director/tools/still.mjs X3-15@0.48 --preset draft`.
+2. Body scales on Charcoal show the same sky-sheen grey at close range (1B-03 neck): try `headSpec`-like specular
+   occlusion for the whole body (e.g. a `bodySpec` 0.6) and check 1B-01 / 1B-03 / X3-09 + the lookdev hero shots
+   (creatures-shots.js charcoal-front / charcoal-head) so the approved distance look is kept.
+3. Folded-wing trailing-edge scallops hang like teeth in 1B-03: shorten/tuck the drape's free edge for crouch/mount
+   (drape.js) or stiffen the scallop amplitude when folded.
+4. Same memFoldOcc for Leaf / Starlight (default 0 now) after a still of each folded.
+5. Session 1 items 3-4 (Leaf/Starlight mount contacts, displacement hierarchy at 4K, gait weight) still open.
+
 ## REALISM ROUND 2 - session 1 (2026-10-30, short budgeted session)
 Done (code):
 - poses.js `mount(c, o)`: LOWERED FOR MOUNTING (director Session 9 request: crouch k 1 read as rearing - hind legs

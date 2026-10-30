@@ -836,7 +836,10 @@ export function mount(c, o = {}) {
   const calm = o.drapeBuild ? 0 : 1;
   const br = o.drapeBuild ? 0 : breathe(pb, t, o.breathe ?? (c.L > 20 ? 0.075 : c.L > 3 ? 0.15 : 0.5), 0.03);
   // the neck low and forward, the head up and level (alert, not resting the chin)
-  neckCurve(pb, (o.neckBase ?? 0.24) + (o.raise ?? 0), (o.neckTop ?? 0.06) + (o.raise ?? 0) * 0.5 - (o.headDown ?? 0), (o.headPitch ?? -0.1) - (o.headDown ?? 0) * 0.5, pitch);
+  // (round 2 s2, director X3-08 head-on: the neck stood like a column above the chest - now it leaves
+  // the chest nearly level and arches down to the head, as a couched crocodile/monitor carries it:
+  // head ~1 m lower, the poll below the seat; neckBase 0.24 / neckTop 0.06 = the old carriage)
+  neckCurve(pb, (o.neckBase ?? 0.1) + (o.raise ?? 0), (o.neckTop ?? -0.08) + (o.raise ?? 0) * 0.5 - (o.headDown ?? 0), (o.headPitch ?? -0.1) - (o.headDown ?? 0) * 0.5, pitch);
   const lk = o.look || [0, 0];
   look(pb, lk[0] + 0.03 * wob(t * 0.22, 3) * calm, lk[1] + 0.012 * br + 0.01 * wob(t * 0.27, 6) * calm);
   // the heavy tail hangs from the hips in an arc, its outer half along the turf (groundTail)

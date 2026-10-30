@@ -15,5 +15,6 @@ for (const spec of process.argv.slice(2)) {
   for (const [n, s] of [['rib_thorax', 0.25], ['rib_body', 0.5], ['rib_lumbar', 0.78]]) { const b = c.bones[c.boneIndex[n]]; const sc = d.trunkAt(s); const rp = c.restPos[n];
     const w = new THREE.Vector3(sc.c[0] - rp[0], sc.c[1] - sc.hh * 0.97 - rp[1], sc.c[2] - rp[2]).applyMatrix4(b.matrixWorld); bel.push(w.y.toFixed(2)); }
   console.log('  belly', bel.join(' '), 'chest depth', (2*d.trunkAt(0.25).hh).toFixed(2), 'thorax', P('thorax'));
+  { const nn = c.bones.map((b) => b.name).filter((n) => /^neck/.test(n)); console.log('  neck', nn.length ? P(nn[0]) + ' mid ' + P(nn[nn.length >> 1]) + ' top ' + P(nn[nn.length - 1]) : '-', 'head', P('head')); }
   console.log(spec, 'seat', seat.toArray().map((x) => x.toFixed(2)).join(','), '| hipL', P('hl_L_0'), 'knee', P('hl_L_1'), 'hock', P('hl_L_2'), 'ball', P('hl_L_3'), '| wristL', P('w_L_2'), 'rig', p.rig.position.map((x)=>x.toFixed(2)).join(','));
 }

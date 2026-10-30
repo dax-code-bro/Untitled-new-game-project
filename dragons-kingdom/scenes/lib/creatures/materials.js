@@ -41,7 +41,12 @@ export function lookParams(THREE, look) {
       // (round 2, director X3-15 at 85 mm: the head read as hard grey cobbles - every plate a domed
       // pebble with its own crown highlight in an even grout: smaller, flatter head plates, less
       // crown polish, so the sky breaks across many plates as on a monitor's head)
-      scl: [0.8, 0.36, 0.6, 1.5], tub: [0.28, 2.7, 0.7, 0], skin2: [0.5, 0.16, 0, 0.22], plateZ: -0.03, headRelief: 0.7,
+      // (round 2 s2, X3-15 reproduced: still grey cobbles - an even rough sheen (0.66) mirrored the
+      // whole sky on every plate, wide dark seams, brushed micro streaks. Now the head plates are
+      // smoother (sheen gathers into the plates that face the sky; the rest stay black), each
+      // plate tilted a little its own way, thin seams, faint micro relief)
+      scl: [0.8, 0.36, 0.42, 1.5], tub: [0.28, 2.7, 0.7, 0], skin2: [0.5, 0.16, 0, 0.22], plateZ: -0.03, headRelief: 0.6,
+      headLook: [0.04, 0.45, 0.3, 0.35], headSpec: 0.25, skin3: [0.7, 0.16, 0.15, 0],
       // body scale profile: flat tops (dome exponent), a keel along each scale, wide soft grooves
       vor: [6.0, 0.3, 0.14, 1.35],
       // old healed scars [a.xyz, halfWidth, b.xyz, strength] in L units (rest pose): left flank, right neck, right shoulder, left thigh
@@ -56,7 +61,7 @@ export function lookParams(THREE, look) {
       // (fix round 1, canon: the critics measured the folded wing as near-black navy with no
       // stripes: a lighter neutral grey, the black stripes RUN ALONG THE FINGER BONES (DRAGONS.md),
       // no bands between them; a neutral grey light through it, not brown)
-      membrane: lin(THREE, 0.24, 0.236, 0.228), trans: lin(THREE, 0.075, 0.074, 0.072), vein: lin(THREE, 0.14, 0.12, 0.12), memRough: 0.78, memSpec: 0.12, memSpecD: 0.25,
+      membrane: lin(THREE, 0.24, 0.236, 0.228), trans: lin(THREE, 0.075, 0.074, 0.072), vein: lin(THREE, 0.14, 0.12, 0.12), memRough: 0.78, memSpec: 0.12, memSpecD: 0.25, memFoldOcc: 0.7,
       stripe: [1.0, 0.2, 1.15, 1.0], stripeCol: lin(THREE, 0.011, 0.011, 0.012), stripeW: [0.38, 0.95], memX: [0.7, 0.8, 1.0, 0.0],
       // (round 2: looking up at the folded wing from beside his flank the grey underside read as a
       // white patch next to the black hide (director 1B-03): the gathered pleats shade each other)
@@ -242,6 +247,12 @@ function skinMaterial(THREE, P, ctx) {
     uVor: { value: new THREE.Vector4(...(P.vor || [3.0, 0.0, 0.22, 0.9])) },
     // relief multiplier on the head (the newborn's soft head scales)
     uHeadRel: { value: P.headRelief ?? 1.0 },
+    // head plates only: roughness offset, seam (groove) width factor, micro-relief factor, per-plate
+    // tilt (a random constant slope per plate: neighbouring plates catch the sky differently)
+    uHeadLk: { value: new THREE.Vector4(...(P.headLook || [0, 1, 1, 0])) },
+    // specular occlusion of dry, pitted keratin on the head (1 = none): the micro-pits and dust of old
+    // scales shadow their own sheen, so a black head reads black, not as a grey sky-coloured film
+    uHeadSpec: { value: P.headSpec ?? 1.0 },
   };
   // healed scars (rest-space segments, metres): [a(3), halfWidth, b(3), strength]
   (P.scars || []).slice(0, 4).forEach((sc, i) => {
@@ -262,7 +273,8 @@ vScale = aScale; vMask = aMask; vMask2 = aMask2; vRest = position; vRestN = norm
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec4 vScale; varying vec4 vMask; varying vec4 vMask2; varying vec3 vRest; varying vec3 vRestN; varying vec3 vRestT; varying vec4 vNoise; varying vec2 vWarp;
-uniform vec4 uScl, uScl2, uTub, uSkin2, uSkin3, uBellyZ, uVor; uniform float uHeadRel;
+uniform vec4 uScl, uScl2, uTub, uSkin2, uSkin3, uBellyZ, uVor, uHeadLk; uniform float uHeadRel, uHeadSpec;
+float dkSpecK = 1.0;
 uniform vec3 uBase, uBelly, uDorsal, uWearCol, uDustCol, uSaltCol, uOral, uOralDark;
 uniform vec4 uRough, uPat, uDirt, uMisc, uWound, uCrev, uWet, uBellyP, uDamp; uniform float uWoundR;
 uniform vec4 uScarA[4]; uniform vec4 uScarB[4]; uniform vec3 uScarCol; uniform vec4 uResidue;
@@ -327,7 +339,7 @@ void dkSkin(inout vec3 albedo) {
   float an = mix(uScl.w, 1.0, gran);
   float tilt = mix(uVor.w, 0.0, gran);                      // imbricate: rear edge raised
   float dome = mix(uVor.x, mix(2.2, 5.0, isHead), gran);    // profile exponent: flat-topped plates .. granules .. flat head plates
-  float groove = mix(uVor.z, mix(0.3, 0.16, isHead), gran); // crevice width (fraction of q)
+  float groove = mix(uVor.z, mix(0.3, 0.16 * uHeadLk.y, isHead), gran); // crevice width (fraction of q)
   dkKeel3 = uVor.y * (1.0 - gran);                          // a keel along each body scale
   // size grading: octave levels; a coarse scale either stays whole or splits into fine
   // ones (decided per coarse scale), so big and small scales meet along scale borders
@@ -338,6 +350,7 @@ void dkSkin(inout vec3 albedo) {
   float fwr = length(fwidth(vRest));
   float vh = 0.0, vcav = 0.0, vcr = 0.0, vid = 0.0; vec3 vg = vec3(0.0);
   float gDet = 1.0;
+  float tiltJ = uSkin3.z + uHeadLk.w * isHead;
   if (chainM < 0.5) {
     // the pattern of a level depends only on its size (offset (n) for size 2^n), so the
     // pattern is continuous where the octave index changes
@@ -346,10 +359,10 @@ void dkSkin(inout vec3 albedo) {
     if (C.id2 >= fsub) {
       DKV3 F = dkVor3(vRest / gA + l0 * 7.31, Tr, an, tilt, dome, groove, uScl2.x);
       float dF = 1.0 - smoothstep(0.35, 0.9, fwr / gA);
-      vh = F.h * gA * dF; vg = (F.g + uSkin3.z * (vec3(F.id, F.id2, fract(F.id * 7.13 + F.id2)) - 0.5) * 2.2) * dF; vcav = F.cav * dF; vcr = F.crown * dF; vid = F.id;
+      vh = F.h * gA * dF; vg = (F.g + tiltJ * (vec3(F.id, F.id2, fract(F.id * 7.13 + F.id2)) - 0.5) * 2.2) * dF; vcav = F.cav * dF; vcr = F.crown * dF; vid = F.id;
       gDet = dF;
     } else {
-      vh = C.h * gC * dC; vg = (C.g + uSkin3.z * (vec3(C.id, C.id2, fract(C.id * 7.13 + C.id2)) - 0.5) * 2.2) * dC; vcav = C.cav * dC; vcr = C.crown * dC; vid = C.id;
+      vh = C.h * gC * dC; vg = (C.g + tiltJ * (vec3(C.id, C.id2, fract(C.id * 7.13 + C.id2)) - 0.5) * 2.2) * dC; vcav = C.cav * dC; vcr = C.crown * dC; vid = C.id;
       gDet = dC;
     }
     // scattered enlarged tubercles on the upper flanks, the neck and the outer limbs
@@ -379,7 +392,7 @@ void dkSkin(inout vec3 albedo) {
     vec4 mn = dkNoised(vRest / cm + 5.3);
     vec4 mn2 = dkNoised(vRest / (cm * 0.43) + 17.1);
     float fade = 1.0 - smoothstep(0.25, 0.7, fwr / cm);
-    float on = (1.0 - vcav) * fade * uSkin3.x;
+    float on = (1.0 - vcav) * fade * uSkin3.x * mix(1.0, uHeadLk.z, isHead);
     vg += (mn.yzw + mn2.yzw * 0.45) * on * 0.08 / max(relief3, 1e-3);
     vcr *= 0.8 + 0.4 * mn.x;
     dkMicro = mix(0.5, mn.x * 0.7 + mn2.x * 0.3, on);
@@ -481,6 +494,8 @@ void dkSkin(inout vec3 albedo) {
   albedo = col;
   // --- roughness / metalness: polished crowns, rough dusty grooves
   float r = uRough.x + uRough.y * (sid - 0.5) - uRough.z * crown * detK + uRough.w * (dust + crevDust) + 0.25 * salt + 0.18 * dkCav + 0.2 * (0.5 - dkMicro);
+  r += uHeadLk.x * isHead * (1.0 - dkOralM) * (1.0 - 0.6 * dkCav);
+  dkSpecK = mix(1.0, uHeadSpec * (0.75 + 0.5 * dkMicro) * (1.0 - 0.5 * dkCav), max(isHead, step(6.5, region)) * (1.0 - dkOralM));   // head + eyelid shells
   r = mix(r, 0.2, dkOralM);
   r = sqrt(r * r + (1.0 - detK) * 0.05 * (1.0 - dkOralM));    // sub-pixel scale relief -> roughness
   r = mix(r, r * uDamp.z, dkDampM);
@@ -504,6 +519,8 @@ void dkSkin(inout vec3 albedo) {
       .replace('#include <color_fragment>', `#include <color_fragment>
 { vec3 a; dkSkin(a); diffuseColor.rgb = a; }`)
       .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>
+material.specularColor *= dkSpecK;
+material.specularF90 *= dkSpecK;
 #ifdef USE_CLEARCOAT
   if (uWet.x > 0.0) {
     material.clearcoat *= dkWetK;
@@ -592,6 +609,9 @@ function membraneMaterial(THREE, P, ctx) {
     uMemX: { value: new THREE.Vector4(...(P.memX || [1, 1, 1, 1])) },
     // folded and gathered: the pleats shade each other (darker than the open membrane)
     uMemFoldDark: { value: P.memFoldDark ?? 0.15 },
+    // sky occlusion of a FOLDED membrane (0 = none): gathered under the arm against the flank it sees
+    // the body and the turf, not the sky (no bake knows the pose); strongest where it faces down
+    uMemFoldOcc: { value: P.memFoldOcc ?? 0 },
     // stripe half-width along the bones at the wrist / at the finger tips (m at L = 36)
     uStripeW: { value: new THREE.Vector2(...(P.stripeW || [0.12, 0.17])) },
   };
@@ -623,7 +643,7 @@ vWing = aWing; vEdge = aEdge; vRest = position;
     let frag = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec4 vWing; varying vec4 vEdge; varying vec3 vRest;
-uniform vec3 uMemCol, uTransCol, uVeinCol, uStripeCol; uniform float uMemFoldDark; uniform float uL, uFold, uMemRough, uMemSpec, uMemSpecD, uTear; uniform vec4 uStripe, uWingRoot, uMemX; uniform vec2 uStripeW;
+uniform vec3 uMemCol, uTransCol, uVeinCol, uStripeCol; uniform float uMemFoldDark, uMemFoldOcc; uniform float uL, uFold, uMemRough, uMemSpec, uMemSpecD, uTear; uniform vec4 uStripe, uWingRoot, uMemX; uniform vec2 uStripeW;
 float dkStripeM = 0.0;
 ${GLSL_COMMON}
 ${PERTURB}
@@ -668,7 +688,7 @@ void dkMembrane(inout vec3 col) {
   // thickness: thick near bones and at the trailing-edge hem
   float nearBone = 1.0 - smoothstep(0.0, uL * 0.012, vEdge.x);
   float hem = 1.0 - smoothstep(0.0, uL * 0.004, vEdge.y);
-  dkThin = (1.0 - 0.75 * nearBone) * (1.0 - 0.5 * hem) * (1.0 - 0.45 * dkVein) * (0.6 + 0.8 * dkFbm(vRest / uL * 9.0)) * (1.0 - 0.55 * uFold);
+  dkThin = (1.0 - 0.75 * nearBone) * (1.0 - 0.5 * hem) * (1.0 - 0.45 * dkVein) * (0.6 + 0.8 * dkFbm(vRest / uL * 9.0)) * (1.0 - 0.55 * uFold) * (1.0 - 0.8 * uMemFoldOcc * uFold);   // gathered layers pass little light
   // blood in the vessels absorbs the transmitted light: veins show dark red against the sun
   vec3 vt = uVeinCol / max(max(uVeinCol.r, uVeinCol.g), max(uVeinCol.b, 1e-4));
   dkVeinAtt = mix(vec3(1.0), vt * 0.8, dkVein * 0.55);      // soft vessels, never drawn lines
@@ -798,7 +818,13 @@ normal = dkPerturb(-vViewPosition, normal, dkSlope(dkMemH, -vViewPosition), face
     }
     // direct (sun) sheen per creature: a melanistic membrane is matte black skin, not a grey tarp
     frag = frag.replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
-reflectedLight.directSpecular *= uMemSpecD;`);
+reflectedLight.directSpecular *= uMemSpecD;
+{
+  vec3 dkNW = inverseTransformDirection(geometryNormal, viewMatrix);
+  float dkOcc = 1.0 - uMemFoldOcc * uFold * (0.55 + 0.45 * smoothstep(0.3, -0.6, dkNW.y));
+  reflectedLight.indirectDiffuse *= dkOcc;
+  reflectedLight.indirectSpecular *= dkOcc;
+}`);
     frag = frag.replace('#include <lights_fragment_maps>', `#include <lights_fragment_maps>
 #if defined( USE_ENVMAP ) && defined( RE_IndirectSpecular )
   radiance *= uMemSpec * (1.0 - 0.45 * uFold);   // skin, not plastic: a satin sheen, no mirror-bright sky at grazing angles (duller still when folded and gathered)
