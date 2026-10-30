@@ -3,6 +3,55 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 10 (2026-10-30, short budgeted session: mount pose, strict render-shots, first 1B videos)
+
+- Charcoal lowered for mounting: `sets/verdor-launch.js` fits the rig to `poses.mount(c, { t: 0 })` (default drop
+  0.35, the creatures README's recommended fit; was crouch k 1) at both fit points; spec `charLow` = act `'mount'`,
+  X3-02 = `crouch k 0.5` then `[0.5, 'mount', { blend: 2.6 }]`, X3-15's eye close-up acts = `'mount'`;
+  `tools/probe-launch.js` too. `previs.marks` re-printed from the set's `[launch] marks` (31 marks; seat now
+  y 14.78, rigDeck 14.31, the gangway 0.35 m lower). `previs --set VERDOR_GROUNDS --cuts`: 36 cuts, 0 flagged.
+  build-shots re-run (edl.json cost numbers only).
+- Stills looked at (`eng1/director/st10/stills/`, contact `contact-VERDOR_GROUNDS.png`): X3-02 / X3-08 / 1B-12 /
+  X3-14. Charcoal now reads as COUCHED (chest on the turf, wrists planted either side, head up; the gangway lands
+  at the seat with Remi on it) - no longer rearing. Head-on (X3-08) his neck still stands tall.
+- `tools/render-shots.mjs` is strict now: `--help` / `-h` print the header usage (exit 0); an unknown flag, a stray
+  word or a value option without a value prints usage and exits 2; a run with no `--only` / `--sets` / `--all`
+  (and no `--dry-run`) renders NOTHING - "every stale shot of the cuts" needs `--all` (README updated).
+- Videos (`--only X3-15,X3-02,1B-12 --work eng1/director/work1B`, set build 1.7 min, ~8 s/frame alone):
+  X3-02 DONE (4.0 s, `work1B/shots/X3-02.mp4`; looked at frames 0,1,6,14,24,27,30,33,36,48,60,95):
+  * BUG frame 0 is a heavy whole-body motion-blur smear (frames 1+ are clean): the velocity pass uses the
+    previous matrices of whatever was drawn before (the setup's fit pose / the last shot), not t - 1/24 of this
+    shot. Fix in render-shots / stage: render (and discard) a warm frame at start_s - 1/24 before frame 0 of each
+    shot / segment, or reset previous matrices on a shot jump. Check other dailies' frame 0 (1A shots) too.
+  * the lowering barely reads: crouch k 0.5 (rest) and mount look almost the same from this camera (the body
+    drops a little between 1.0 and 1.5 s). Start X3-02 from a higher stance (`stand` / crouch k 0.2) so the
+    "he lowers himself" beat reads, and re-check REST_K continuity in the 1B shots before it.
+  X3-15 DONE (3.5 s, `work1B/shots/X3-15.mp4`; frames 0,2,40,83): the blue slit-pupil eye under the lid reads,
+  the blink at ~1.7 s reads; the scales read as hard grey cobbles at 85 mm (creatures track); frame 0 smeared
+  (the same frame-0 bug). 1B-12 NOT rendered (stopped before it; nothing of it on disk but segs.json - resumes).
+- Cut: `DK_DIRECTOR_WORK=eng1/director/work1B bash episodes/s01e01/final/cut/assemble.sh --edl edl-1B
+  eng1/director/work1B eng1/director/rev10` -> `episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_1B.mp4`
+  138.00 s (3312 frames; 2 rendered: X3-02, X3-15; 30 slates; 18 voice cues -> 20 subtitle cues). Sheet looked
+  at (`eng1/director/rev10/cut-sheet-01.png`, X3-01..X3-16 only): the two real shots sit between their slates.
+  Sound: `node episodes/s01e01/final/sound/mix.mjs --cut 1B` PASS (I -17.9 LUFS, TP -1.4 dBTP, dialogue >= 15 LU
+  over ambience) -> `episodes/s01e01/final/audio/cuts/1B/DragonsKingdom_S01E01_draft-cut_1B_sound.mp4`.
+  (mix.mjs rewrote `final/sound/reports/1B.json` - the sound track's file, left unstaged.)
+- FIXED: `tools/cut-sheet.mjs` read only cut/edl.json, so the 1B sheets were cut at the FIRST cut's shot times
+  and labelled P-01..1A-34; it takes `--edl <name>` now and assemble.sh passes its `--edl`.
+- selftest (director) 20 checks pass; npm test (alone): 49 tests, 48 pass, 0 fail (1 skipped), exit 0.
+- NEXT (exact, in order):
+  1. Frame-0 motion-blur smear (every shot / segment start): in `tools/render-shots.mjs` draw one throw-away frame
+     at t0 - 1/24 before each shot's / segment's first frame (velocity history), or reset the previous-matrix
+     cache on a jump. Prove on X3-15 (`--only X3-15 --force --work <scratch>/work1B`, ~10 min) and check a 1A
+     daily's frame 0 too (`ffmpeg -i <shot>.mp4 -vf select=eq(n\,0)`). render/episode.mjs masters may share it:
+     REQUEST pc-kit/gpu-tier if the fix belongs in render/.
+  2. X3-02: start Charcoal higher (`[0, 'stand', {}]` or crouch k 0.2) so the lowering into `mount` reads; check
+     the shots before it (charRest = crouch k 0.5) for continuity; re-still at 0.1/0.5/0.9.
+  3. Render more 1B (resumable, one queue, ~7 s/frame here): 1B-12 (144 f), 1B-13, 1B-14, R2-02, R2-01, 1B-09,
+     1B-07, then the wides. Then assemble.sh --edl edl-1B + mix.mjs --cut 1B as above, and LOOK at all sheets.
+  4. Session 9's list items 2-5 (subjectMin framing check, selftests for previs ground/floors/seat, sky + rim
+     hooks, X3-11 hands / X3-07 / 1B-03) still open.
+
 ## Session 9 (2026-10-30, short budgeted session: review fixes on 1B)
 
 - Stills looked at: `eng1/director/st9/stills` (13 restaged shots), `st9c`, `st9d` (re-takes); grids `g9a.jpg`..`g9d.jpg`.

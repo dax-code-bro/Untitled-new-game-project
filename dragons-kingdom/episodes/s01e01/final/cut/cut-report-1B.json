@@ -1,7 +1,7 @@
 {
  "title": "Dragon's Kingdom S01E01 - draft cut: 1B",
- "made_at": "2026-10-30T02:09",
- "shots_dir": "../../../../tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/work1B/shots",
+ "made_at": "2026-10-30T14:48",
+ "shots_dir": "$DK_DIRECTOR_WORK/shots",
  "size": "960x540",
  "fps": 24,
  "shots": [
@@ -218,7 +218,7 @@
    "job": "X3-02",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-30T14:36",
    "frames": 96,
    "rec_in": 1212,
    "trans": [
@@ -465,7 +465,7 @@
    "job": "X3-15",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-30T14:47",
    "frames": 84,
    "rec_in": 2460,
    "trans": [
@@ -800,13 +800,13 @@
   "file": "episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_1B.mp4",
   "frames": 3312,
   "duration_s": 138,
-  "size_mb": 1.3,
+  "size_mb": 2.2,
   "assembled_s": 17
  },
  "summary": {
-  "rendered": 0,
+  "rendered": 2,
   "black": 0,
-  "slates": 32,
+  "slates": 30,
   "voice_cues": 18,
   "review_flags": 0,
   "review_flags_accepted": 0

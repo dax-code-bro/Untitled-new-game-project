@@ -22,7 +22,10 @@ if (!CUT || !fs.existsSync(CUT)) throw new Error('--cut FILE.mp4 (an assembled c
 const AT = (opt('--at', '0.2,0.8')).split(',').map(Number);
 const PER = +opt('--per-page', 24), COLS = 6, TW = 320, TH = 180;
 const ONLY = opt('--only') ? new Set(opt('--only').split(',')) : null;
-const edl = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/s01e01/final/cut/edl.json'), 'utf8'));
+// --edl edl-1B: the edit list the cut was made from (default edl = PROLOGUE+TITLE+1A; session 10: the 1B
+// sheets were cut from the first cut's shot times and labelled P-01..1A-34)
+const EDL_NAME = (opt('--edl', 'edl')).replace(/\.json$/, '');
+const edl = JSON.parse(fs.readFileSync(path.join(ROOT, `episodes/s01e01/final/cut/${EDL_NAME}.json`), 'utf8'));
 const FPS = edl.fps;
 const font = ['/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 'C:/Windows/Fonts/arialbd.ttf'].find((f) => fs.existsSync(f));
 const ff = font ? `fontfile='${font.replace(/:/g, '\\:')}':` : '';
