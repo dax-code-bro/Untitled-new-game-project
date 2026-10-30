@@ -28,3 +28,22 @@ for a, b, text in cues:
     bad += not ok
     print(f"{'ok ' if ok else 'BAD'} {a}  pre {pre:6.1f} dB  post {post:6.1f} dB  line {body:6.1f} dB  {text[:50]!r}")
 print(f"duration {n / SR:.2f} s, {len(cues)} cues, {bad} suspicious")
+# subtitles vs voice takes: make-cut writes one subtitle per sentence of a take (vo/takes.json segments), so a
+# take of two sentences gives two cues; say so, so a different count is not read as a missing take
+import json, glob
+here = os.path.dirname(os.path.abspath(__file__))
+tag = os.path.basename(mp4)[:-4].split('draft-cut_')[-1]
+rep = None
+for f in sorted(glob.glob(os.path.join(here, 'cut-report*.json'))):
+    try:
+        r = json.load(open(f))
+    except Exception:
+        continue
+    if r.get('audio') and f.endswith('cut-report-%s.json' % tag) or (rep is None and f.endswith('cut-report.json') and 'PROLOGUE' in tag):
+        rep = r
+if rep:
+    takes = {t['id']: t for t in json.load(open(os.path.join(here, '..', 'vo', 'takes.json'))).get('takes', [])}
+    split = [a['ref'] for a in rep['audio'] if len(takes.get(a['ref'], {}).get('segments', [])) > 1]
+    print(f"{len(rep['audio'])} voice takes laid in -> {len(cues)} subtitle cues"
+          + (f" ({len(split)} takes have more than one sentence, one cue each: {' '.join(split)})" if split else "")
+          + ("" if len(cues) >= len(rep['audio']) else "  ** fewer cues than takes: a take without segments in vo/takes.json? **"))

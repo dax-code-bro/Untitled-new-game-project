@@ -3,6 +3,52 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 9 (2026-10-30, short budgeted session: review fixes on 1B)
+
+- Stills looked at: `eng1/director/st9/stills` (13 restaged shots), `st9c`, `st9d` (re-takes); grids `g9a.jpg`..`g9d.jpg`.
+- Leaf's crouch in 1B: k 1 read as lying flat -> `leafLow` k 0.6 (1B-04/05/06/10/12/13/14, X3-06 start, X3-13 0.6->0.4->0.6,
+  1B-15 start). Stills: 1B-04, 1B-10, X3-13 read as crouched low and level now.
+- Charcoal's crouch NOT changed: verdor-launch.js fits the rig/gangway to his back at crouch k 1 (line 57/106), so a
+  gentler k floats the gangway. His k 1 pose (hind legs trailing back, belly floating: 1B-12 / X3-02 / X3-08 read
+  as rearing) is in `creatures/poses.js crouch()` (feet dz = -0.2 mtl k: back, not under the hips) - FOR THE CREATURES
+  TRACK: a 'lowered for mounting' pose with the hind legs folded under the hips, belly near the turf. When it lands,
+  re-run verdor-launch's mark print and update `previs.marks`.
+- Restaged (stills checked): 1B-04 180 mm on Leaf's mark (Leaf crouched + Abby at the strap, rig + Charcoal soft
+  beyond - GOOD); 1B-08 the keeper from behind in the left foreground at 35 mm, ~1/3 frame height, Charcoal + rig right
+  (GOOD; the field into the sun reads pale); 1B-15 200 mm from 66 m, low: Leaf + Abby readable lower left, Charcoal
+  fills the frame behind (GOOD); 1B-12 85 mm (Leaf + Abby still small, Charcoal head-on still reads as rearing - the
+  pose); X3-07 camera moved to [29.9, -62.0] G+8.8, Abby looks at Leaf's head: Abby on Leaf visible past the post (OK,
+  but the keeper's shoulder is out of frame - no longer an OTS; her face is sharp at 7.6 % of frame height, 67 deg from
+  the lens); X3-11 from the south-west at 90 mm: Remi's boot + strap + seat read, the keeper's hands do NOT reach the
+  knee (his IK from climb11 falls short - move the keeper to a mark nearer the knee or offset the handsTo target);
+  X3-12 (55 mm on abbyR.head) Abby on Leaf from behind, Charcoal's head across the top (OK; Leaf's back reads pale
+  against the sun); R2-01 from behind the keeper's right shoulder into the sun (no face; GOOD); R2-02 85 mm focused
+  past both keepers (12 m): both faces soft (GOOD).
+- 1B-03 NOT fixed: [36.6, -54.4] on remi.head gave a sharp 3/4 face, [37.3, -59.8] put the lens inside his folded
+  wing; kept as authored. The white jaw/lip patch beside Remi (and X3-15's flat blue eye band) are creature shading
+  defects - FOR THE CREATURES TRACK (jaw/lip normals or material; Charcoal's eye at 85 mm needs cornea/iris depth;
+  1B-13 Leaf's eye is the reference).
+- Cut pipeline: `assemble.sh [--edl edl-1B] [<work>] [<review>]` (work default `$DK_DIRECTOR_WORK`, else
+  output/director/draft; checks only that edit list's shots; names the cut from its scenes); make-cut takes the shots
+  from `$DK_DIRECTOR_WORK/shots` when no --shots and records `shots_dir` portably (`$DK_DIRECTOR_WORK/...` or the last
+  two folders, never a session scratch path); check-sync prints "18 voice takes laid in -> 20 subtitle cues (2 takes
+  have more than one sentence, one cue each: L032 X3-01)".
+- Video: started `render-shots.mjs --only X3-15,1B-13,1B-14,R2-02 --work eng1/director/work1B` (264 frames; slow
+  with npm test running alongside). See the end of this entry for what finished.
+- npm test: 47 subtests ok, 0 not ok before my 590 s timeout cut it (the render was competing for the 4 vCPUs); run it
+  again alone.
+- NOT done (next, in order):
+  1. Finish the 1B videos (resumable): cheap first X3-15 1B-13 1B-14 R2-02 R2-01 1B-09 1B-07, then the wides.
+     `DK_DIRECTOR_WORK=<scratch>/work1B bash episodes/s01e01/final/cut/assemble.sh --edl edl-1B` and LOOK at the
+     sheets. Do not call 1B "cut" until most slates are replaced.
+  2. previs framing check: fail a shot whose named subject (first of `staging`'s subjects / `cam.focus` actor) is under
+     ~8 % of frame height or occluded (the review asked; audit.js has the projection - add `subjectMin` to the spec).
+  3. selftest cases for previs.ground / previs.floors / rider seat height.
+  4. Look: VERDOR_GROUNDS continuity is a cloudless physical sky (sets/verdor-grounds.js atmosphere) - add broken
+     cumulus / a lower morning sun from the cinematic atmosphere, and a rim/kicker hook for the black-dragon inserts
+     (1B-02, X3-14) - no per-shot light hook exists in stage.js yet.
+  5. X3-11 keeper's hands; X3-07 keeper back in frame; 1B-03 (needs the creature fix or a new angle from the south).
+
 ## Session 8 (2026-10-30, short budgeted session after a weekly-limit stop; 1B)
 
 - State found: commit 9e3cbc6 had all 32 1B shot specs (`specs/verdor-grounds.spec.js`, scene 1B part),

@@ -40,7 +40,17 @@ const EDL = opt('--edl', 'edl').replace(/\.json$/, '');
 const edl = readJson(path.join(HERE, `${EDL}.json`));
 if (!edl) throw new Error(`cut/${EDL}.json missing: run node scenes/lib/director/tools/build-shots.mjs`);
 const FPS = edl.fps, W = +(opt('--width', 960)), H = Math.round(W * 9 / 16 / 2) * 2;
-const SHOTS = path.resolve(opt('--shots', path.join(ROOT, 'output/director/draft/shots')));
+// the dailies: --shots, else $DK_DIRECTOR_WORK/shots (the folder render-shots.mjs --work wrote), else output/director/draft/shots
+const WORKROOT = process.env.DK_DIRECTOR_WORK ? path.resolve(process.env.DK_DIRECTOR_WORK) : null;
+const SHOTS = path.resolve(opt('--shots', WORKROOT ? path.join(WORKROOT, 'shots') : path.join(ROOT, 'output/director/draft/shots')));
+// recorded portably: repo-relative inside the repo, '$DK_DIRECTOR_WORK/...' under the work root, else only its last
+// two folders (a session's scratch path means nothing on another machine)
+const shotsDirLabel = (() => {
+  const inside = (base) => { const r = path.relative(base, SHOTS); return r && !r.startsWith('..') && !path.isAbsolute(r) ? r.split(path.sep).join('/') : null; };
+  if (inside(ROOT) != null) return rel(SHOTS);
+  if (WORKROOT && inside(WORKROOT) != null) return '$DK_DIRECTOR_WORK/' + inside(WORKROOT);
+  return '<outside the repo>/' + SHOTS.split(path.sep).slice(-2).join('/');
+})();
 const tag = [...new Set(edl.shots.map((s) => s.scene))].join('-');
 const OUT = path.resolve(opt('--out', path.join(HERE, `DragonsKingdom_S01E01_draft-cut_${tag}.mp4`)));
 const CLEAN = flag('--clean'), NOAUDIO = flag('--no-audio');
@@ -68,7 +78,7 @@ const collapseNotes = (notes) => { const seen = new Set(); return notes.filter((
 // ------------------------------------------------------------- segments ---
 const inputs = [];          // ffmpeg input args
 const vf = [];              // filter graph lines
-const report = { title: edl.title, made_at: new Date().toISOString().slice(0, 16), shots_dir: rel(SHOTS), size: `${W}x${H}`, fps: FPS, shots: [], audio: [] };
+const report = { title: edl.title, made_at: new Date().toISOString().slice(0, 16), shots_dir: shotsDirLabel, size: `${W}x${H}`, fps: FPS, shots: [], audio: [] };
 const segs = edl.shots.map((e, i) => ({ e, i, tIn: e.trans || ['cut'], tOut: e.transOut || null }));
 // handle frames each side needs (dissolves are centred on the cut)
 for (let k = 0; k < segs.length; k++) {
