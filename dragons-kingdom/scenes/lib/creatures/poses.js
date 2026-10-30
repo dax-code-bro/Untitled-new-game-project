@@ -791,6 +791,69 @@ export function lie(c, o = {}) {
   return pb.out({ groundTail: true, groundBody: true });
 }
 
+/**
+ * (round 2, director Session 9: crouch k 1 read as rearing - hind legs back, belly floating)
+ * LOWERED FOR MOUNTING: the way a camel couches or a crocodile drops onto its belly - the hind
+ * legs folded right under the hips (the foot flat beside the belly, the knee forward and up along
+ * the flank, the hock behind and low: nothing trails), the belly a hand above the turf, the
+ * folded-wing wrists and thumb claws down in front beside the base of the neck, the neck carried
+ * low and forward with the head up and alert (it waits for the rider), the tail low on the
+ * ground, slow breathing.
+ * The back stays where the rigs expect it: by default (o.match 'crouch') the thorax (the
+ * notarium, where the saddle sits) is put at the height / station / pitch it has in crouch k 1,
+ * so a gangway or access rig fitted to `crouch({k: 1})` still lands on it. o.match false: the
+ * belly on the turf (o.belly x chest depth clearance, default 0.03) - refit the rig then.
+ * o.drop (m): lower the matched back by this much (the belly comes down with it).
+ * o.k 0..1: blends from crouch k 1 (0) to the lowered pose (1); o.look, o.raise, o.headDown,
+ * o.tailCurl, o.breathe as in stand / lie. Drape kind 'lie' (the same wing fold).
+ */
+export function mount(c, o = {}) {
+  const t = o.t ?? 0;
+  const k = clamp(o.k ?? 1, 0, 1);
+  if (k < 1) {
+    const a = crouch(c, { ...o, k: 1 });
+    return k <= 0 ? a : blend(c, a, mount(c, { ...o, k: 1 }), k);
+  }
+  const A = c.anatomy, d = A.dims;
+  // (level, the chest a little lower than crouch's: a couched animal; bodyPitch -0.05 + drop 0
+  // keep crouch k 1's back exactly)
+  const pitch = o.bodyPitch ?? 0.02;
+  let body = { y: 0, z: 0, pitch, lumbar: o.lumbar };
+  const fkAt = (pb) => solveFK(pb);
+  if ((o.match ?? 'crouch') === 'crouch') {
+    // the reference notarium: thorax position of crouch k 1 (calm, t 0: no idle sway)
+    const ref = crouch(c, { t: 0, k: 1, asym: 0, breathe: 0, drapeBuild: true, blink: false });
+    const pr = new PB(c); copyInto(pr, ref); pr.rig = ref.rig;
+    const Tr = fkAt(pr).P.thorax;
+    const p0 = groundBase(c, { body }, t);
+    const T0 = fkAt(p0).P.thorax;
+    body = { ...body, y: Tr[1] - T0[1] - (o.drop ?? 0.35), z: Tr[2] - T0[2] };
+  } else {
+    const sc = d.trunkAt(0.45);
+    body.y = -(sc.c[1] - sc.hh) + (o.belly ?? 0.03) * 2 * sc.hh;
+  }
+  const pb = groundBase(c, { body }, t);
+  const calm = o.drapeBuild ? 0 : 1;
+  const br = o.drapeBuild ? 0 : breathe(pb, t, o.breathe ?? (c.L > 20 ? 0.075 : c.L > 3 ? 0.15 : 0.5), 0.03);
+  // the neck low and forward, the head up and level (alert, not resting the chin)
+  neckCurve(pb, (o.neckBase ?? 0.24) + (o.raise ?? 0), (o.neckTop ?? 0.06) + (o.raise ?? 0) * 0.5 - (o.headDown ?? 0), (o.headPitch ?? -0.1) - (o.headDown ?? 0) * 0.5, pitch);
+  const lk = o.look || [0, 0];
+  look(pb, lk[0] + 0.03 * wob(t * 0.22, 3) * calm, lk[1] + 0.012 * br + 0.01 * wob(t * 0.27, 6) * calm);
+  // the heavy tail hangs from the hips in an arc, its outer half along the turf (groundTail)
+  tailCurve(pb, t, { sway: 0.02 * calm, droop: 0.04, sag: o.tailSag ?? 0.55, curl: o.tailCurl ?? 0.4, swayHz: 0.04 });
+  const F = solveFK(pb);
+  for (const [side, sd] of sides) {
+    const hip = F.P[`hl_${side}_0`];
+    // folded right under: the foot flat beside the belly a little ahead of the hip, the knee up
+    // and forward along the flank (pole), the hock behind it near the turf
+    legIK(pb, F, side, [sd * Math.max(d.hipX * 1.2, (d.footX ?? 0) * 1.1), d.toeL * 0.13, hip[2] + d.fem * 0.62], { mtAng: o.mtAng ?? 35, fwd: [sd * 0.1, 0, 1], pole: [sd * 0.45, 0.8, 0.4], curl: o.toeCurl ?? 0.05 });
+    plantBack(pb, F, side, { hum: o.hum ?? [0.5, 0.06, 0.86], reach: 0.98, wristIn: -0.02, padK: 0.8, fold: { curl: [-2, 14, 30], mcFan: 0, fanDown: 0, handBack: 3, levelK: true, outUp: 0.35, ...(o.fold || {}) } });
+  }
+  common(pb, { ...o, jaw: (o.jaw ?? 0) + 0.01 * br, lidRelax: o.lidRelax ?? 0.2 }, t);
+  drape(pb, 'lie');
+  return pb.out({ groundTail: true, groundBody: true });
+}
+
 /** The newborn pushes up on its wrists and thumbs, trembling (o.k 0..1 = how far up). */
 export function pushUp(c, o = {}) {
   const t = o.t ?? 0;

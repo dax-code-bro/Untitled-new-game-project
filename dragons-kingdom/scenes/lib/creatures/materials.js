@@ -36,9 +36,12 @@ export function lookParams(THREE, look) {
       // (rev. 2: rougher with less crown polish - a sky highlight on every scale read slate grey)
       // (fix round 1: more spread in roughness from scale to scale and polish on the worn crowns, so
       // the sky breaks up across the scales instead of one even matte sheet)
-      rough: [0.66, 0.2, 0.13, 0.25], amp: 0.17, keel: 0.22, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.22,
+      rough: [0.66, 0.2, 0.08, 0.25], amp: 0.17, keel: 0.22, facet: 0.0, jit: 0.3, metal: [0, 0], mottle: 0.22,
       hier: [1.0, 1.0, 0.65, 0.0], damp: 0.35, bellyP: [0.6, 1.25, 0.55, 0.5], scarCol: lin(THREE, 0.03, 0.026, 0.025),
-      scl: [0.8, 0.36, 0.75, 1.5], tub: [0.28, 2.7, 0.7, 0], skin2: [0.5, 0.16, 0, 0.22], plateZ: -0.03,
+      // (round 2, director X3-15 at 85 mm: the head read as hard grey cobbles - every plate a domed
+      // pebble with its own crown highlight in an even grout: smaller, flatter head plates, less
+      // crown polish, so the sky breaks across many plates as on a monitor's head)
+      scl: [0.8, 0.36, 0.6, 1.5], tub: [0.28, 2.7, 0.7, 0], skin2: [0.5, 0.16, 0, 0.22], plateZ: -0.03, headRelief: 0.7,
       // body scale profile: flat tops (dome exponent), a keel along each scale, wide soft grooves
       vor: [6.0, 0.3, 0.14, 1.35],
       // old healed scars [a.xyz, halfWidth, b.xyz, strength] in L units (rest pose): left flank, right neck, right shoulder, left thigh
@@ -55,6 +58,9 @@ export function lookParams(THREE, look) {
       // no bands between them; a neutral grey light through it, not brown)
       membrane: lin(THREE, 0.24, 0.236, 0.228), trans: lin(THREE, 0.075, 0.074, 0.072), vein: lin(THREE, 0.14, 0.12, 0.12), memRough: 0.78, memSpec: 0.12, memSpecD: 0.25,
       stripe: [1.0, 0.2, 1.15, 1.0], stripeCol: lin(THREE, 0.011, 0.011, 0.012), stripeW: [0.38, 0.95], memX: [0.7, 0.8, 1.0, 0.0],
+      // (round 2: looking up at the folded wing from beside his flank the grey underside read as a
+      // white patch next to the black hide (director 1B-03): the gathered pleats shade each other)
+      memFoldDark: 0.45,
       // horns: rough, dull, ridged old keratin (water buffalo), a little lighter where worn
       horn: [lin(THREE, 0.016, 0.015, 0.014), lin(THREE, 0.05, 0.047, 0.043)], hornR: [0.82, 0.62, 2.2], claw: [lin(THREE, 0.018, 0.017, 0.016), lin(THREE, 0.06, 0.055, 0.05)],
       tooth: lin(THREE, 0.36, 0.3, 0.2), sclera: lin(THREE, 0.02, 0.018, 0.02),
@@ -584,6 +590,8 @@ function membraneMaterial(THREE, P, ctx) {
     // (fix round 1) per-look membrane detail: [leathery crease network, mottle, folded pleats,
     // bands BETWEEN the bones (0 = stripes only along the bones, canon for Charcoal)]
     uMemX: { value: new THREE.Vector4(...(P.memX || [1, 1, 1, 1])) },
+    // folded and gathered: the pleats shade each other (darker than the open membrane)
+    uMemFoldDark: { value: P.memFoldDark ?? 0.15 },
     // stripe half-width along the bones at the wrist / at the finger tips (m at L = 36)
     uStripeW: { value: new THREE.Vector2(...(P.stripeW || [0.12, 0.17])) },
   };
@@ -615,7 +623,7 @@ vWing = aWing; vEdge = aEdge; vRest = position;
     let frag = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec4 vWing; varying vec4 vEdge; varying vec3 vRest;
-uniform vec3 uMemCol, uTransCol, uVeinCol, uStripeCol; uniform float uL, uFold, uMemRough, uMemSpec, uMemSpecD, uTear; uniform vec4 uStripe, uWingRoot, uMemX; uniform vec2 uStripeW;
+uniform vec3 uMemCol, uTransCol, uVeinCol, uStripeCol; uniform float uMemFoldDark; uniform float uL, uFold, uMemRough, uMemSpec, uMemSpecD, uTear; uniform vec4 uStripe, uWingRoot, uMemX; uniform vec2 uStripeW;
 float dkStripeM = 0.0;
 ${GLSL_COMMON}
 ${PERTURB}
@@ -668,7 +676,7 @@ void dkMembrane(inout vec3 col) {
   float mot2 = dkFbm(vRest / uL * 90.0 + 4.1);
   // in reflected light the vessels show as a faint darker tracery, the skin is mottled, darker
   // and thicker along the bones and at the hem, a little paler where it is thinnest
-  col = mix(uMemCol, uVeinCol, dkVein * 0.14) * mix(1.0, 0.78 + 0.3 * mot + 0.16 * mot2, uMemX.y) * (1.0 - 0.35 * hem) * (1.0 - 0.15 * uFold);
+  col = mix(uMemCol, uVeinCol, dkVein * 0.14) * mix(1.0, 0.78 + 0.3 * mot + 0.16 * mot2, uMemX.y) * (1.0 - 0.35 * hem) * (1.0 - uMemFoldDark * uFold);
   col *= mix(1.0, 0.68, nearBone) * (0.9 + 0.2 * smoothstep(0.3, 1.0, dkThin));
   // pigment stripes: noise-warped bands across the span (concentric about the shoulder, so
   // every band crosses several panels), forking and pinching like an animal's pattern;

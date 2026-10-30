@@ -4,6 +4,43 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REALISM ROUND 2 - session 1 (2026-10-30, short budgeted session)
+Done (code):
+- poses.js `mount(c, o)`: LOWERED FOR MOUNTING (director Session 9 request: crouch k 1 read as rearing - hind legs
+  back, belly floating). Hind legs folded right under the hips (foot flat beside the belly a little ahead of the hip,
+  knee up/forward along the flank, metatarsus 35 deg so heel AND toes touch: `tools/cts.mjs charcoal mount` gives
+  hock 0.02, toes 0.00, wrist pad 0.11, thumb 0.02 m), level trunk (pitch 0.02), wrists + thumbs down in front
+  (plantBack like `lie`), neck low/forward head up, tail hanging from the hips to the turf (sag 0.55), drape 'lie'.
+  The thorax (seat bone) is placed from crouch k 1 then `drop` (0.35 m) lower: Charcoal seat y 5.71 z 8.00 vs crouch
+  k 1 y 6.10 z 8.14; `{drop: 0, bodyPitch: -0.05}` = y 6.03 z 8.14. Chest underside 0.06 m, mid belly 0.57, rear
+  1.11 m. `k` 0..1 blends crouch k 1 -> mount. Breathing lifts the seat ~0.07 m at the top of a breath (rib scale
+  pushes the belly contact; groundRig). Documented in README "Mounting pose".
+- materials.js: Charcoal head plates smaller (`scl.z` 0.75 -> 0.6), flatter (`headRelief` 0.7), less crown polish
+  (`rough.z` 0.13 -> 0.08) for the X3-15 "grey cobbles" note; new membrane uniform `uMemFoldDark` (param
+  `memFoldDark`, default 0.15 = old behaviour; Charcoal 0.45): the folded/gathered membrane is darker.
+- DIAGNOSIS of the 1B-03 "white jaw/lip patch": the 1B-03 camera (spec pos [37.6, G+1.7, -54.6], 40 mm) is at
+  Remi's head beside Charcoal's FLANK looking up - the pale area is the underside of the FOLDED WING (canon grey
+  membrane, albedo 0.24 = 20x the black hide) with the forearm as the smooth "tube", not the jaw. memFoldDark
+  darkens it ~1/3 when folded; NOT verified in that exact view (my lookdev camera missed the wing underside).
+- Stills looked at (preview, lookdev sky): `scratchpad/eng1/creatures/dev_mount/sheet.jpg` (top row mount v1 with a
+  straight tail - fixed; bottom crouch k 1), `dev_head1/sheet.jpg` (mount v2 side + 3/4: legs under, tail to turf;
+  head views before the material change), `dev_head2/sheet.jpg` (after: eye at fov 14, head 3/4 - black, finer head
+  plates; two wing-underside views that missed the wing). In this light the head reads black, not grey: the X3-15
+  grey is mostly the director's exposure/sky; re-check in X3-15 itself.
+- tools/meas.mjs (seat / joints / belly clearance per pose: `node scenes/lib/creatures/tools/meas.mjs 'mount'
+  'crouch:{"k":1}'`), tools/cts.mjs (contact heights: `node .../cts.mjs charcoal mount`) - absolute import paths.
+NEXT (exact):
+1. Director (REQUEST in report): switch verdor-launch.js lines 57/106 `poses.crouch(c,{t:0,k:1})` -> `poses.mount(c,
+   {t:0})`, X3-02 'crouch' act -> 'mount', re-run the mark print, update previs.marks; then render 1B-12 / X3-02 /
+   X3-08 / 1B-03 / X3-15 at draft and LOOK (legs under, belly low, wing underside not white, head not cobbles).
+2. If the folded wing underside still reads white in 1B-03: lower `trans` for folded wings too (dkThin x (1-0.55
+   uFold) today) or raise memFoldDark to ~0.6; if the head still reads grey at 85 mm: raise `rough.x` 0.66 -> 0.72
+   on the head only (add a head roughness term next to uHeadRel in the skin shader).
+3. Same `mount` check for Leaf/Starlight (cts.mjs: Leaf toes 0.11, wrist pad 0.35 m off the turf - give Leaf a
+   design override: mtAng ~45, or lift `hum` so the pad lands).
+4. Then the broader realism goals of round 2 (displacement scale hierarchy at 4K, muscle bulge/slide, membrane
+   flutter, gait weight, ground contact) - none started.
+
 ## FIX ROUND 1 of the low stance (rev. 3b, 2026-10-17, after the critics) - DONE
 Dev loop (scratch): scratchpad/ep1p1/creatures-fr1/tools/ (copies of the creatures-low tools + arm.mjs: wing-arm joint
 positions per pose; dev.sh, rv.sh <name> <ids|all> [preset], contact.sh, clear.mjs, build.mjs).

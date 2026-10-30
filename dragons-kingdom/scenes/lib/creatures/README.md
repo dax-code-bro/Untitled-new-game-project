@@ -54,7 +54,8 @@ Poses (`poses.js`; IK on the feet and wrist pads, so planted contacts stay plant
 | `upright` | (rev. 3) retired: an alias of `stand` |
 | `walk` | lateral-sequence low walk (foot, wrist, foot, wrist; duty ~0.7), speed from size; the scene moves the root by `speed * t` and the planted contacts stay put |
 | `sit` | Leaf's dog-like sit: the rump behind the hips on the ground, chest ~30 deg up, wrists planted in front (`plantWrists: false` folds the wings off the ground), tail curled round |
-| `crouch`, `lie` | the low stance sinking to the chest (mounting, the start of a launch); lying on the belly, legs folded under, `sprawl: 1` for the newborn |
+| `crouch`, `lie` | the low stance sinking to the chest (the start of a launch); lying on the belly, legs folded under, `sprawl: 1` for the newborn |
+| `mount` | (round 2) LOWERED FOR MOUNTING, couched like a camel / a crocodile on its belly: hind legs folded right under the hips (foot flat beside the belly, knee forward and up along the flank, metatarsus flat: nothing trails), chest underside ~0.06 m and rear belly ~1.1 m above the turf (Charcoal), level trunk, folded-wing wrists and thumbs down in front beside the neck, neck low and forward with the head up (alert), tail hanging from the hips to the turf, slow breathing. Use it instead of `crouch({k: 1})` for mounting. See *Mounting pose* below |
 | `rear` | up on the hind legs (`k` 0..1) - only for a moment (to look over something, to threaten) |
 | `pushUp`, `struggle` | the newborn pushing up on its wrists and thumbs; the full weak struggle of 1A (trembles, lifts the chest a few cm, a wrist slips, rests) |
 | `fire` | from the low stance: inhale, chest lifted a little on the planted wrists, neck stretched forward and low along the line of fire, jaw 25-30 deg; drive `createFire` with it |
@@ -81,6 +82,25 @@ claw furrows; see `stageTakeoff` in `scenes/lookdev/creatures-shots.js`).
 The scout's LEFT wing: `scout.detachWing(scene, worldMatrix)` moves the whole wing subtree (arm,
 fingers, membrane, membrane roots) off the body; `attachWing()` restores it. The tumble is
 computed as a pure function of `t` in `creatures-shots.js` (`scoutWingLoss`).
+
+
+### Mounting pose (`poses.mount`)
+
+```js
+c.setPose(poses.mount(c, { t }));                 // default: the back placed from crouch k 1, lowered 0.35 m
+c.setPose(poses.mount(c, { t, k: 0.4 }));         // k 0..1 blends crouch k 1 -> mount (a lowering move)
+c.setPose(poses.mount(c, { t, drop: 0, bodyPitch: -0.05 }));   // keeps crouch k 1's back within ~0.07 m
+```
+- The thorax (the notarium - `createSaddle`'s seat bone) is put at the station of `crouch({k: 1})`
+  and `o.drop` metres lower (default 0.35). Charcoal's seat point: crouch k 1 = y 6.10, z 8.14
+  (root frame); mount default = y 5.71, z 8.00; mount `{drop: 0, bodyPitch: -0.05}` = y 6.03, z 8.14.
+  A rig fitted to the back (director `sets/verdor-launch.js` fits its gangway at crouch k 1) should be
+  fitted with `poses.mount(c, { t: 0 })` instead (or use the drop 0 variant with the existing fit).
+- `o.match: false`: no crouch reference - the chest `o.belly` x chest depth (default 0.03) off the turf.
+- Other options: `look`, `raise`, `headDown`, `neckBase/neckTop/headPitch`, `tailSag`, `tailCurl`,
+  `mtAng` (foot metatarsus angle, default 35 deg: heel and toes both on the turf), `breathe`, `jaw`.
+- Drape kind `lie` (the same wing fold). The director's actions map an act named `mount` to it
+  (`poses[name]`), and blends from the previous pose over the act's `dur`.
 
 ## Lookdev scenes (`scenes/lookdev/`)
 
