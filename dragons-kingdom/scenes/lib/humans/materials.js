@@ -119,6 +119,11 @@ export function skinMaterial(o = {}) {
     uSeed: { value: (o.seed ?? 1) * 0.137 },
     uDirt: { value: o.dirt ?? 0.0 },
     uFlush: { value: o.flush ?? 0.5 },
+    // LOOK round 2 (look.js per character): freckles 0..1 (sun-exposed cheeks / nose), under-eye
+    // darkening 0..1, chromophore (blood / pigment) variation 0..1.5
+    uFreckle: { value: o.freckles ?? 0.0 },
+    uUnderEye: { value: o.underEye ?? 0.5 },
+    uChrom: { value: o.chromo ?? 1.0 },
     uLid: { value: o.lid ?? 0.5 },
     uScalp: { value: new THREE.Vector3(...(o.scalpColor || [0.05, 0.03, 0.02])) },
     uBeard: { value: new THREE.Vector3(...(o.beardColor || [0.04, 0.025, 0.015])) },
@@ -144,6 +149,7 @@ vObjP = position; vAO = ao; vThick = thick; vAux = aux; vAux2 = aux2; vAux3 = au
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 ${NOISE_GLSL}
+uniform float uFreckle, uUnderEye, uChrom;
 uniform vec3 uTone, uScalp, uBeard; uniform float uBeardFull; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid, uMouthOpen; uniform vec3 uHeadFwd, uLipM, uLipUp;
 varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG; varying float vMouth;
 vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
@@ -163,8 +169,21 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
     c *= 1.0 - vec3(0.1, 0.13, 0.14) * sp;
     c = mix(c, c * vec3(1.06, 0.9, 0.9), cap * 0.6); }
   c = mix(c, c * vec3(1.12, 0.92, 0.9), uRed * (0.5 + m1));
+  // LOOK r2: two chromophores varying independently at 1-6 cm - blood (haemoglobin: red up, green
+  // and blue down) and pigment (melanin: all down, blue most). One even peach read as wax in lamplight.
+  { float hb = hFbm(vObjP * 22.0 + uSeed * 2.0 + 31.0) - 0.5, hb2 = hN3(vObjP * 75.0 + uSeed + 13.0) - 0.5;
+    float mel = hFbm(vObjP * 48.0 + uSeed * 4.0 + 57.0) - 0.5;
+    c *= 1.0 + vec3(0.07, -0.08, -0.07) * (hb * 1.6 + hb2 * 0.7) * uChrom;
+    c *= 1.0 - vec3(0.05, 0.075, 0.11) * mel * 1.5 * uChrom; }
   // where blood shows (cheeks, nose tip, chin, ears) / thin cool skin under the eyes
-  c = mix(c, c * vec3(1.1, 0.84, 0.84), vAux2.r * uFlush * (0.7 + 0.6 * m1));
+  c = mix(c, c * vec3(1.13, 0.8, 0.79), vAux2.r * uFlush * (0.75 + 0.6 * m1));
+  // freckles (sun-exposed cheeks and nose, clustered; 1-3 mm, faded below pixel size)
+  if (uFreckle > 0.0) {
+    float fwf = length(fwidth(vObjP));
+    float ff = 1.0 - smoothstep(0.5, 1.2, fwf * 420.0);
+    float fr = smoothstep(0.6, 0.78, hN3(vObjP * 420.0 + uSeed * 9.0)) * smoothstep(0.3, 0.7, hN3(vObjP * 55.0 + 3.3));
+    float fm = smoothstep(0.02, 0.35, vAux2.r) * (1.0 - vAux2.a);
+    c *= 1.0 - vec3(0.16, 0.24, 0.32) * fr * fm * uFreckle * mix(0.35, 1.0, ff); }
   // periorbital skin (upper lid, crease, under-eye; aux2.b): the photo albedo carries make-up
   // there (reddish lid shadow, pale concealer under the eye). Replace its colour by plain skin
   // chroma at the same luminance, a touch darker and cooler (thin skin over the orbit).
@@ -184,7 +203,10 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
     float lref = dot(cref, vec3(0.2126, 0.7152, 0.0722));
     float lt = mix(lumc, lref * 0.95, 0.75 * smoothstep(0.1, 0.6, vAux2.b));
     vec3 plain = lt * (cref / max(lref, 1e-4)) * vec3(0.98, 0.97, 0.99);
-    c = mix(c, plain, clamp(vAux2.b * 0.85, 0.0, 0.85)); }
+    c = mix(c, plain, clamp(vAux2.b * 0.85, 0.0, 0.85));
+    // LOOK r2: the thin periorbital skin shows the dark vessels under it (darker, cooler, a little
+    // violet) - without it the eyes sat in an even mask of face colour (a doll's face)
+    c *= mix(vec3(1.0), vec3(0.84, 0.8, 0.86), smoothstep(0.12, 0.7, vAux2.b) * uUnderEye); }
   // lid margin: lash line and wet rim of the eye opening (dark, barely red)
   c = mix(c, c * vec3(0.62, 0.56, 0.55), vAux2.g * uLid);
   // lips (aux.r: loader.js applyLipMask, the photo's vermilion zone with its own colour - the face
@@ -361,7 +383,18 @@ void RE_Direct_Skin( const in IncidentLight directLight0, const in vec3 geometry
   #ifdef USE_SHEEN
     sheenSpecularDirect += irradiance * BRDF_Sheen( directLight.direction, geometryViewDir, geometryNormal, material.sheenColor, material.sheenRoughness );
   #endif
-  reflectedLight.directSpecular += irradiance * BRDF_GGX( directLight.direction, geometryViewDir, geometryNormal, material );
+  // LOOK r2: two specular lobes (the oil film's sharp one and the skin's broad one, ~55/45) - one
+  // mid-rough lobe gave the soft, even sheen of wax; the sharp lobe draws the forehead / nose / lower-lid
+  // highlights a lamp makes on a real face
+  PhysicalMaterial mA = material; mA.roughness = clamp(material.roughness * 0.7, 0.1, 1.0);
+  PhysicalMaterial mB = material; mB.roughness = min(1.0, material.roughness * 1.3);
+  reflectedLight.directSpecular += irradiance * (0.55 * BRDF_GGX( directLight.direction, geometryViewDir, geometryNormal, mA )
+                                               + 0.45 * BRDF_GGX( directLight.direction, geometryViewDir, geometryNormal, mB ));
+  // LOOK r2: light scattered through the skin comes out redder and more saturated just inside the
+  // terminator (the 'blood line' of a face lit by one lamp). Keep it small: at 0.32 x diffuse it painted
+  // an orange band down the side of the nose
+  { float band = smoothstep(-0.06, 0.1, ndl) * (1.0 - smoothstep(0.1, 0.5, ndl));
+    reflectedLight.directDiffuse += directLight.color * BRDF_Lambert( material.diffuseColor ) * vec3(0.05, 0.008, 0.002) * band * uSSS; }
 }
 #undef RE_Direct
 #define RE_Direct RE_Direct_Skin`);
@@ -383,18 +416,20 @@ export function eyeMaterial(o = {}) {
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', `#include <common>
 attribute float ao; attribute vec3 gaze; attribute float iris;
-varying float vAO; varying vec3 vGaze; varying float vIris;`)
+varying float vAO; varying vec3 vGaze; varying float vIris; varying vec3 vEyeN; varying vec3 vGazeO; varying vec3 vEyeP;`)
       .replace('#include <skinnormal_vertex>', `#include <skinnormal_vertex>
 vec3 gz = gaze;
 #ifdef USE_SKINNING
   gz = vec4( skinMatrix * vec4( gz, 0.0 ) ).xyz;
 #endif`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-vAO = ao; vIris = iris; vGaze = normalize(normalMatrix * gz);`);
+vAO = ao; vIris = iris; vGaze = normalize(normalMatrix * gz); vEyeN = normal; vGazeO = gaze; vEyeP = position;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 uniform vec3 uIrisTint, uScleraTint;
-varying float vAO; varying vec3 vGaze; varying float vIris;`)
+varying float vAO; varying vec3 vGaze; varying float vIris; varying vec3 vEyeN; varying vec3 vGazeO; varying vec3 vEyeP;
+${NOISE_GLSL}
+float eyeLidO;`)
       .replace('#include <lights_physical_pars_fragment>', '#include <lights_physical_pars_fragment>' + FRONT_GLSL)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
@@ -412,6 +447,20 @@ varying float vAO; varying vec3 vGaze; varying float vIris;`)
   // sclera: warmer and a little pinker toward the corners (vessels), never paper white
   diffuseColor.rgb *= mix(vec3(1.0), vec3(1.0, 0.86, 0.82), smoothstep(1.6, 2.6, vIris) * (1.0 - irisW));
   diffuseColor.rgb *= mix(1.0, 0.68, smoothstep(0.85, 1.0, vIris) * smoothstep(1.18, 1.0, vIris)); // limbal ring
+  // LOOK r2: sclera vessels - fine, branching, red; denser toward the corners, none on the cornea
+  { float vm = (1.0 - irisW) * smoothstep(1.25, 2.3, vIris);
+    vec3 q = vEyeP * 520.0 + hN3(vEyeP * 140.0) * 2.0;
+    float v1 = pow(1.0 - abs(hN3(q) - 0.5) * 2.0, 14.0), v2 = pow(1.0 - abs(hN3(q * 2.3 + 7.0) - 0.5) * 2.0, 18.0) * 0.6;
+    diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.95, 0.5, 0.48), clamp((v1 + v2) * vm * 0.6, 0.0, 0.6));
+    // the sclera is never one white: a faint grey-yellow mottling
+    diffuseColor.rgb *= 1.0 + (hFbm(vEyeP * 300.0) - 0.5) * 0.12 * (1.0 - irisW); }
+  // LOOK r2: lid and lash shadow on the eyeball. The eyeball's bind normal gives the elevation on
+  // the globe (the lids follow vertical gaze, so the bind frame is the lid frame); the upper lid and
+  // lashes shade a 2-3 mm band below their edge, the lower lid less, the corners deepest. Without it
+  // the eye was evenly lit to the lid edge: a glass ball pressed into the face.
+  { vec3 gz = normalize(vGazeO), up = normalize(vec3(0.0, 1.0, 0.0) - gz * gz.y);
+    float e = dot(normalize(vEyeN), up);
+    eyeLidO = clamp(smoothstep(0.1, 0.4, e) * 0.8 + smoothstep(-0.22, -0.42, e) * 0.35 + smoothstep(1.5, 2.4, vIris) * 0.35, 0.0, 0.88); }
 }`)
       .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>
 {
@@ -419,6 +468,9 @@ varying float vAO; varying vec3 vGaze; varying float vIris;`)
   float kc = smoothstep(1.2, 0.85, vIris);
   material.clearcoat *= mix(0.4, 1.0, kc);
   material.clearcoatRoughness = mix(0.12, 0.015, kc);
+  // LOOK r2: the iris lies UNDER the cornea - it is matte (the shine is the cornea's clearcoat);
+  // a glossy base lobe over the iris read as a painted glass marble
+  material.roughness = mix(0.32, 0.7, kc);
 }`)
       .replace('#include <clearcoat_normal_fragment_begin>', `#include <clearcoat_normal_fragment_begin>
 {
@@ -433,6 +485,11 @@ varying float vAO; varying vec3 vGaze; varying float vIris;`)
   reflectedLight.indirectDiffuse *= aoV * vec3(1.22, 1.0, 0.86);
   reflectedLight.indirectSpecular *= mix(1.0, aoV * aoV, 0.85);
   reflectedLight.directDiffuse *= mix(1.0, aoV, 0.6);
+  reflectedLight.directDiffuse *= 1.0 - eyeLidO; reflectedLight.indirectDiffuse *= 1.0 - 0.75 * eyeLidO;
+  reflectedLight.directSpecular *= 1.0 - eyeLidO;
+#ifdef USE_CLEARCOAT
+  clearcoatSpecularDirect *= 1.0 - 0.9 * eyeLidO; clearcoatSpecularIndirect *= 1.0 - 0.6 * eyeLidO;
+#endif
 }`);
   };
   return mat;

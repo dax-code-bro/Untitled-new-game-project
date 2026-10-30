@@ -4,6 +4,9 @@
 //   t 6-7  feet / shoes                   t 7-8  hairline from above the brow
 // (all views in one run: --fps 1 --seconds 8; frame k = view k)
 // The character id comes from scenes/lookdev/humans-dev.json ({ "id": "abby" }).
+// { "light": "lamp" }: the birthing-chamber look instead of daylight - a dark room, one warm oil
+// lamp (~1900 K) keyed 50 degrees off the lens and a little above the eyes, a faint cool window fill
+// from the other side (the hardest test for skin: waxy, uniform skin shows at once in lamplight).
 //   node render/render.mjs --still scenes/lookdev/humans-dev.js --time 1.5 --preset preview --png out.png
 import * as THREE from 'three';
 import { loadHDRI, loadPBR } from '../lib/assets.js';
@@ -32,6 +35,7 @@ export async function setup(ctx) {
   const { scene } = ctx;
   const sky = await loadHDRI(CFG.hdri || 'hdri/kloofendal_48d_partly_cloudy', ctx, { extractSun: true, rotationY: CFG.hdriRot ?? -1.0, backgroundBlurriness: 0.25 });
   const sun = sky.apply(scene);
+  if (CFG.light === 'lamp') { scene.background = new THREE.Color(0.004, 0.003, 0.0025); scene.environmentIntensity = 0.035; sun.intensity *= 0.05; sun.color.setRGB(0.75, 0.85, 1.0); }
   sun.castShadow = true;
   sun.shadow.mapSize.set(4096, 4096);
   const sc = sun.shadow.camera;
@@ -62,7 +66,14 @@ export async function setup(ctx) {
     for (const [k, v] of Object.entries(CFG.skinU || {})) m.material.userData.skin[k].value = v;
   }
   scene.add(ch.root);
-  S = { ch, sun };
+  let lamp = null;
+  if (CFG.light === 'lamp') {
+    lamp = new THREE.PointLight(new THREE.Color(1.0, 0.56, 0.24), CFG.lampI ?? 1.6, 0, 2);
+    lamp.castShadow = true; lamp.shadow.mapSize.set(2048, 2048); lamp.shadow.bias = -0.0002; lamp.shadow.normalBias = 0.004;
+    lamp.shadow.camera.near = 0.05;
+    scene.add(lamp);
+  }
+  S = { ch, sun, lamp };
 }
 
 const CAMS = [
@@ -90,6 +101,12 @@ export function update(t, ctx) {
   const yaw = (ch.root.rotation.y || 0) + (c.az * Math.PI) / 180, el = (c.el * Math.PI) / 180;
   camera.position.set(tgt.x + c.dist * Math.cos(el) * Math.sin(yaw), tgt.y + c.dist * Math.sin(el), tgt.z + c.dist * Math.cos(el) * Math.cos(yaw));
   camera.lookAt(tgt);
+  if (S.lamp) {
+    // the lamp sits ~0.7 m from the head, keyed 50 deg off the lens to the camera's left, 0.15 m up
+    const hp = new THREE.Vector3(); ch.bone('head').getWorldPosition(hp); hp.y += 0.08;
+    const la = yaw - (CFG.lampAz ?? 50) * Math.PI / 180;
+    S.lamp.position.set(hp.x + 0.7 * Math.sin(la), hp.y + 0.15, hp.z + 0.7 * Math.cos(la));
+  }
   camera.fov = c.fov; camera.near = 0.02; camera.far = 200;
   camera.updateProjectionMatrix();
   if (ctx.lens) { ctx.lens.focalLength = null; ctx.lens.fstop = c.fstop ?? 5.6; ctx.lens.focus = camera.position.distanceTo(tgt); ctx.lens.shutterAngle = 45; }

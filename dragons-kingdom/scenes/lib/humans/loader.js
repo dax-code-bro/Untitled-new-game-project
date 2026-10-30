@@ -7,6 +7,7 @@
 // simulated folds and nothing has to be re-solved at render time.
 import * as THREE from 'three';
 import { skinMaterial, eyeMaterial, cardMaterial, simpleTexturedMaterial } from './materials.js';
+import { skinLook } from './look.js';
 import { clothMaterial, hairStrandMaterial, propMaterial } from './cloth.js';
 
 export const CACHE_URL = new URL('./cache/', import.meta.url).href;
@@ -230,7 +231,7 @@ function rebindWorn(g, m, header, bones, index) {
 function materialFor(m, header, opts) {
   const mt = m.material || {};
   switch (m.kind) {
-    case 'skin': return skinMaterial({ ...mt, seed: hashStr(header.id) % 997, mouthU: opts.mouthU, headU: opts.headU, lipM: opts.lipM, lipUp: opts.lipUp });
+    case 'skin': return skinMaterial({ ...skinLook(header.id), ...mt, seed: hashStr(header.id) % 997, mouthU: opts.mouthU, headU: opts.headU, lipM: opts.lipM, lipUp: opts.lipUp });
     case 'eye': return eyeMaterial({ ...mt, headU: opts.headU });
     case 'brow': case 'lash': case 'haircard': return cardMaterial({ ...mt, colorMap: m.kind === 'haircard', cut: m.kind === 'brow' ? [0.0, 0.03] : [0.06, 0.3], front: m.kind === 'lash', headU: opts.headU });
     case 'hair': return hairStrandMaterial(mt);

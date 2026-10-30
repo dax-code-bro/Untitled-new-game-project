@@ -519,3 +519,55 @@ Open (next steps, in order):
    crowd draft needs the machine alone (~5 GB).
 4. Cradle: soften the good hand's finger curl (motion.js GESTURES.cradle shape curl) so it wraps.
 - npm test at the end of this session: 48 pass, 1 skipped, 0 fail (4.8 min).
+
+## LOOK round 2 (2026-10-30, short session, low-usage budget) - faces: waxy skin, plastic eyes
+
+Biggest 'video game' tell picked: the face skin was one even peach (no blood / pigment variation,
+no redness at nose / cheeks / ears, no darkening under the eyes) and the eyeballs were lit evenly up
+to the lid edge with a glossy iris (a glass ball pressed into the face). Fixed for the main cast in
+the RUNTIME shaders only (no rebuild; face rig, mouth morphs, lip mask untouched; selftest-perf and
+npm test green: 48 pass / 0 fail / 1 skipped).
+
+What changed:
+- `materials.js` skin: two-chromophore variation (haemoglobin at 1-5 cm, melanin at ~2 cm; uniform
+  `uChrom`); stronger flush at cheeks / nose / chin / ears (aux2.r); clustered freckles on the flush
+  zone, faded below pixel size (`uFreckle`); periorbital darkening, cooler / violet (`uUnderEye`, aux2.b);
+  dual-lobe specular (0.55 x roughness*0.7 + 0.45 x roughness*1.3) instead of one mid-rough lobe;
+  a small red 'blood line' just inside the terminator. (First try at 0.32 x diffuse painted an
+  orange band down the side of the nose - now 0.05 / 0.008 / 0.002.)
+- `materials.js` eye: lid + lash occlusion on the eyeball from the BIND normal's elevation
+  (upper band e 0.1-0.4, lower lid, corners), applied to diffuse, specular and the cornea clearcoat;
+  matte iris under the cornea (base roughness 0.7 on the iris, 0.32 sclera); fine red sclera vessels
+  toward the corners + faint sclera mottling.
+- `look.js` (new): per-character skin look table merged under the cache material in
+  `loader.js materialFor` (abby: freckles 0.55, underEye 0.3 - a CHILD: clear fine skin; remi: freckles
+  0.2, underEye 0.55, chromo 1.2; alexandria: underEye 0.8, chromo 1.1; others default).
+- `scenes/lookdev/humans-dev.js`: `"light": "lamp"` mode (dark room, one ~1900 K point lamp with
+  shadows keyed `lampAz` 50 deg off the lens, `lampI`, faint cool fill) = birthing-chamber lamplight test.
+
+Renders looked at (preview 1920x1080, face 3/4 view t=1.5, scratch, not committed):
+/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/look/
+c_b0_abby.png (before), c_b2_abby.png (after), c_b2_remi_alex.jpg (after; Remi out of focus - the
+dev camera's focus sits at head+0.08 m and he is taller: set CFG.cam or a fstop for him). Result: a
+visible step (mottled, redder nose/cheeks, darker sockets, lid shadow on the eyes) but NOT yet live
+action - see next steps. Director still base_a15.png (1A-15, birthing chamber) shows the shot is a
+medium-wide, faces are ~40 px there; the face close-ups matter most for 1A-14/15/22.
+
+Exact next steps (in order):
+1. Render the same view at 4K (`--preset final`, one still ~3-5 min on CPU) for abby / remi /
+   alexandria with `"light":"lamp"` and crop 1:1: check pores + freckles resolve, no sparkle from the
+   sharp lobe (mA roughness floor 0.1), the vessel pattern is not a regular grid (hN3 at 520/m).
+2. Lips: still nearly skin-coloured under the lamp (lip tint 1.03/0.63/0.68 x0.85 reads pale in warm
+   light) - raise saturation + darker vermilion border; check the performance track's lip mask (aux.r)
+   is unchanged (selftest-perf 'lip colour zone').
+3. Eyes: wet tear line (a thin bright meniscus along the lower lid - a separate strip mesh in
+   offline/humanbuild or a lid-margin clearcoat band in skin aux2.g), caruncle pink in the inner corner
+   (skin side, aux2.g x inner), iris parallax (offset vMapUv along the view vector projected on the
+   gaze plane x depth ~0.5 mm) - needs the UV tangent frame of the eye texture.
+4. Stubble for Remi / men with beardFull 0: the aux.b dots exist; check density at 4K.
+5. Hair (helmet look): root-to-tip colour + flyaways in offline/hair.py (needs a Blender rebuild:
+   `$PY -I scenes/lib/humans/offline/build.py --only remi`), anisotropic second highlight.
+6. Clothing weave / wear / hem dirt, hands (nail plate spec, knuckle creases at 4K).
+7. Abby's face reads too adult in 3/4 (cheek fat / nose / brow targets) - a MODEL change in
+   offline/characters.py (age macro), needs a rebuild; coordinate with the performance track (morph
+   targets are rebuilt with the body).
