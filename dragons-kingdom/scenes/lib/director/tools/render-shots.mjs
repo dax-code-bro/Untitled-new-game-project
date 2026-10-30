@@ -5,7 +5,7 @@
 // shot by shot by render/episode.mjs (render.mjs --start <start_s> --seconds <frames/24>), which
 // gives the same pictures for the same settings (update(t) is a pure function of the frame).
 //
-//   node scenes/lib/director/tools/render-shots.mjs                      every rendered shot of the cuts (cut/edl*.json)
+//   node scenes/lib/director/tools/render-shots.mjs --all                every rendered shot of the cuts (cut/edl*.json)
 //   node scenes/lib/director/tools/render-shots.mjs --only 1A-04,1A-05   just these
 //   node scenes/lib/director/tools/render-shots.mjs --sets SEA_COAST_DAWN --twos
 //   node scenes/lib/director/tools/render-shots.mjs --stills 0.1,0.5,0.9 --sets BIRTHING_CHAMBER   review stills + contact sheet
@@ -27,6 +27,8 @@
 //                     stop loses only the segment in flight, the next run resumes the shot
 //   --timings FILE    measured seconds per frame go here (default episodes/s01e01/final/cut/timings.json; only
 //                     written for video renders of the draft preset)
+//   --all             no --only / --sets: render every stale shot of every cut (required: a bare run, --help,
+//                     -h or any unknown flag / stray word prints this usage and renders NOTHING)
 // Interrupt (Ctrl+C) and run again: finished shots are kept. Several processes may share one --work
 // folder (e.g. two queues on the chamber): each shot is claimed with a <job>.lock (the pid) and a shot
 // another process finished or is rendering is skipped.
@@ -58,6 +60,31 @@ const FPS = 24;
 
 // ------------------------------------------------------------------ args ---
 const argv = process.argv.slice(2);
+// strict: a mistyped or unknown option must never start a render (session 9 lost 20 min of CPU to a
+// `--help` that this tool did not know and so rendered every stale shot)
+const VALUE_OPTS = ['--preset', '--cinematic', '--workers', '--work', '--redo-on', '--stills', '--only', '--sets', '--segment', '--timings'];
+const FLAG_OPTS = ['--twos', '--force', '--dry-run', '--adopt-v2', '--reverse', '--all'];
+function usage(code, why) {
+  const head = fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n');
+  const end = head.findIndex((l) => !l.startsWith('//') && !l.startsWith('#!'));
+  if (why) console.error(`render-shots: ${why}\n`);
+  (code ? console.error : console.log)(head.slice(0, end).filter((l) => l.startsWith('//')).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
+  process.exit(code);
+}
+{
+  if (argv.includes('--help') || argv.includes('-h')) usage(0);
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (VALUE_OPTS.includes(a)) {
+      const v = argv[i + 1];
+      if (v === undefined || v.startsWith('--')) usage(2, `${a} needs a value`);
+      i++;
+    } else if (!FLAG_OPTS.includes(a)) usage(2, `unknown argument "${a}" - nothing rendered`);
+  }
+  if (!argv.includes('--only') && !argv.includes('--sets') && !argv.includes('--all') && !argv.includes('--dry-run')) {
+    usage(2, 'say what to render: --only <ids>, --sets <SET,...> or --all (every stale shot of the cuts) - nothing rendered');
+  }
+}
 const opt = (n, d = null) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
 const flag = (n) => argv.includes(n);
 const PRESET = opt('--preset', 'draft');

@@ -16,8 +16,8 @@
 //   LEAF_1B (14.4, -48.0)  Leaf for 1B: crouched beside his mounting platform (its +x side), facing
 //                          EAST toward Charcoal, ~20 m from Remi at the rig (speaking range)
 // Charcoal's two postures (DRAGONS.md low stance): 'rest' (the low stand, belly a third of the chest
-// depth off the turf) until X3-02, where he lowers himself ('crouch', k 0 -> 1) and holds for the
-// climb. The rig is placed for the crouch: its gangway's bolster lands on his back there.
+// depth off the turf) until X3-02, where he lowers himself ('mount': poses.mount, lowered for mounting)
+// and holds for the climb. The rig is placed for that pose: its gangway's bolster lands on his back there.
 // Rig states per shot (`set.rig`): 'up' (gangway raised: before he crouches), 'down' (lowered onto
 // his back), 'back' (raised and drawn back on its runners, `set.rigSlide` metres, keys allowed).
 import * as THREE from 'three';
@@ -52,9 +52,10 @@ export async function buildLaunch(ctx, { scene, H, G, M, creatures, quality }) {
   const fwd = new THREE.Vector3(fx, 0, fz);
   const right = new THREE.Vector3(-fz, 0, fx);       // facing f, his right hand side (f x up)
   const yaw = Math.PI - CHARCOAL_HEADING * D2R;       // blocking.js yawFromHeading
-  // pose him crouched (the mounting posture) where the stage will put him, to fit the rig to his back
+  // pose him lowered for mounting (creatures poses.mount: hind legs folded under the hips, belly near the
+  // turf - session 10; was crouch k 1, which read as rearing) where the stage will put him, to fit the rig to his back
   const C = new THREE.Vector3(CHARCOAL_AT[0], H(CHARCOAL_AT[0], CHARCOAL_AT[1]), CHARCOAL_AT[1]);
-  c.setPose(poses.crouch(c, { t: 0, k: 1 }));
+  c.setPose(poses.mount(c, { t: 0 }));
   c.root.position.copy(C);
   c.root.rotation.set(0, yaw, 0, 'YXZ');
   c.root.updateMatrixWorld(true);
@@ -103,7 +104,7 @@ export async function buildLaunch(ctx, { scene, H, G, M, creatures, quality }) {
     }
     if (fl2) surf.flankInsert = fl2.toArray();
     else if (fl) surf.flankInsert = fl.clone().setY(fl.y + 1).toArray();
-    c.setPose(poses.crouch(c, { t: 0, k: 1 }));
+    c.setPose(poses.mount(c, { t: 0 }));
     c.root.updateMatrixWorld(true);
   }
   const gz = right.clone().negate();                   // the gangway reaches from the deck toward him

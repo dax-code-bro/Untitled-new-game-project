@@ -20,7 +20,7 @@ const cast = {
   keeper2: { kind: 'human', id: 'keeper2', role: 'KEEPER2' },
   k3: { kind: 'human', id: 'crowd08', role: 'KEEPER' },
 };
-const crouched = { at: CHARCOAL_AT, face: 190, tack: true, acts: [[0, 'crouch', { k: 1 }]] };
+const crouched = { at: CHARCOAL_AT, face: 190, tack: true, acts: [[0, 'mount', {}]] };   // lowered for mounting (poses.mount)
 const resting = { at: CHARCOAL_AT, face: 190, tack: true, acts: [[0, 'stand', {}]] };
 const leafC = { at: LEAF_1B, face: 90, tack: true, acts: [[0, 'crouch', { k: 1, breathe: 0.5 }]] };
 const spec = {

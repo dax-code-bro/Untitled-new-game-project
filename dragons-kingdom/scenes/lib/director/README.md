@@ -108,7 +108,7 @@ names) prints the solved camera position and the subjects' posed points once per
 node scenes/lib/director/tools/build-shots.mjs                          # tables + edit list + cue sheet
 node scenes/lib/director/tools/render-shots.mjs --stills 0.5             # one still per shot, contact sheets
 node scenes/lib/director/tools/render-shots.mjs --sets SEA_COAST_DAWN    # draft videos of one set
-node scenes/lib/director/tools/render-shots.mjs                          # every shot of the cut (resumes)
+node scenes/lib/director/tools/render-shots.mjs --all                    # every shot of the cut (resumes; a bare run / --help / unknown flag only prints usage)
 node episodes/s01e01/final/cut/make-cut.mjs                              # assemble the draft cut with the voices
 bash episodes/s01e01/final/cut/assemble.sh <work>                        # what is left + cut + review sheets + voice sync check
 python3 episodes/s01e01/final/cut/check-sync.py <cut.mp4>                 # speech starts at every subtitle cue

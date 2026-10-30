@@ -1637,11 +1637,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 2.62,
-    "k4_cpu_s_per_frame": 32.78,
+    "draft_s_per_frame": 3.02,
+    "k4_cpu_s_per_frame": 37.78,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 4.2,
-    "k4_cpu_hours": 0.87,
+    "draft_minutes": 4.84,
+    "k4_cpu_hours": 1.01,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -1651,7 +1651,7 @@
      "move": 1,
      "total": 1
     },
-    "basis": "MEASURED draft 2.62 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-2 people, sea through the window)"
+    "basis": "MEASURED draft 3.02 s/f on this machine; 4K = draft x 12.5 (the set's 4K/draft ratio: ESTIMATE: masonry interior, 1-2 people, sea through the window)"
    },
    "staging": "NONE: nobody in the room; the jug and the cup on the sill against the grey sea light.",
    "deviation": null,

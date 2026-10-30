@@ -28,9 +28,10 @@ const KEEP3_R2 = [25.7, -67.6];
 const SET1B = { rig: 'up', platform: PLAT1B, shadowAt: [31, G, -58], shadowExtent: 42 };
 const SET1B_DOWN = { ...SET1B, rig: 'down' };
 const SET1B_BACK = { ...SET1B, rig: 'back', rigSlide: 4 };
-// at rest he is low and level (a half crouch: crouch k 0.5 = verdor-launch.js REST_K); X3-02 lowers him to k 1
+// at rest he is low and level (a half crouch: crouch k 0.5 = verdor-launch.js REST_K); X3-02 lowers him for
+// mounting (creatures poses.mount: hind legs folded under the hips; crouch k 1 read as rearing - session 10)
 const charRest = (o = {}) => ({ at: CH, face: 190, tack: true, acts: [[0, 'crouch', { k: 0.5, ...o }]] });
-const charLow = (o = {}) => ({ at: CH, face: 190, tack: true, acts: [[0, 'crouch', { k: 1, ...o }]] });
+const charLow = (o = {}) => ({ at: CH, face: 190, tack: true, acts: [[0, 'mount', { ...o }]] });
 // Leaf low and level: crouch k 0.6 (k 1 read as lying flat on the turf in the 1B stills - session 9)
 const leafLow = (o = {}) => ({ at: LF, face: 90, tack: true, acts: [[0, 'crouch', { k: 0.6, breathe: 0.5, ...o }]] });
 const keeperDown = { armsDown: 1 };          // keeper1's build stands calling (a raised hand): hang the arms
@@ -51,18 +52,18 @@ export default {
   },
   homes: { leaf: [LEAF_C[0], G + 1.2, LEAF_C[1]], abby: [3.5, G + 1.4, -34] },
   // tools/previs.mjs: the set builder's marks it cannot compute without the set (printed by verdor-launch.js
-  // at setup: "[launch] marks {...}"; Charcoal crouched unless noted)
+  // at setup: "[launch] marks {...}"; Charcoal lowered for mounting (poses.mount) unless noted; re-printed session 10)
   previs: {
     ground: G,
     floors: ['climb', 'deck', 'rigDeck', 'rigGangEnd', 'plat'],
     marks: {
-      charcoal: [44, 9.07, -66], rigFoot: [36.61, 8.96, -55.99], rigDeck: [31.42, 14.65, -59.34], rigTower: [31.42, 8.96, -59.34], rigGangEnd: [40.57, 13.95, -57.73],
-      climb1: [29.38, 10.86, -57.27], climb2: [28.64, 10.86, -57.4], climb3: [28.75, 10.86, -58.04], climb4: [29.36, 12.75, -61.48], climb5: [29.47, 12.75, -62.12],
-      climb6: [30.11, 12.75, -62.01], climb7: [33.5, 14.65, -61.41], climb8: [33.19, 14.65, -59.95], climb9: [33.33, 14.65, -59.01], climb10: [36.78, 14.65, -58.4],
-      climb11: [40.42, 13.85, -57.76], deckWest: [29.95, 14.65, -59.6], deckNE: [32.46, 14.65, -60.07],
-      ropeHandL: [22.53, 10.01, -57.87], ropeHandR: [23.57, 10.01, -63.77], ropeKeeperL: [21.97, 8.96, -57.86], ropeKeeperR: [23.04, 8.96, -63.97],
-      sideL: [30.7, 8.96, -56.98], sideR: [31.55, 8.96, -61.81], seat: [42.64, 15.17, -57.97], charcoalSeat: [42.64, 15.17, -57.97], stakes: [27, 9, -50],
-      neckPalm: [41.91, 14.44, -55.87], flankStrap: [39.75, 11.2, -58.48], flankStand: [39.14, 9, -58.59], flankInsert: [40.74, 12.2, -62.97],
+      charcoal: [44, 9.07, -66], rigFoot: [36.58, 8.96, -56.13], rigDeck: [31.39, 14.31, -59.49], rigTower: [31.39, 8.96, -59.49], rigGangEnd: [40.54, 13.61, -57.87],
+      climb1: [29.35, 10.74, -57.41], climb2: [28.61, 10.74, -57.54], climb3: [28.72, 10.74, -58.18], climb4: [29.33, 12.53, -61.63], climb5: [29.44, 12.53, -62.27],
+      climb6: [30.08, 12.53, -62.15], climb7: [33.47, 14.31, -61.56], climb8: [33.16, 14.31, -60.09], climb9: [33.3, 14.31, -59.15], climb10: [36.75, 14.31, -58.54],
+      climb11: [40.39, 13.51, -57.9], deckWest: [29.92, 14.31, -59.75], deckNE: [32.43, 14.31, -60.22],
+      ropeHandL: [22.5, 10.01, -58.01], ropeHandR: [23.54, 10.01, -63.92], ropeKeeperL: [21.94, 8.96, -58.01], ropeKeeperR: [23.01, 8.96, -64.11],
+      sideL: [30.67, 8.96, -57.13], sideR: [31.52, 8.96, -61.95], seat: [42.61, 14.78, -58.12], charcoalSeat: [42.61, 14.78, -58.12], stakes: [27, 9, -50],
+      neckPalm: [42.13, 14.28, -57.14], flankStrap: [39.33, 11.2, -58.7], flankStand: [38.72, 9, -58.8], flankInsert: [41.34, 12.4, -55.68],
       platStairTop: [20.05, 10.45, -47.5], platDeck: [21.1, 10.45, -47.5],
     },
   },
@@ -241,7 +242,7 @@ export default {
       staging: 'NONE: low and wide: Charcoal lowers himself a measured amount, belly toward the turf, wrists braced in front, and holds still; the rig at left.',
       cam: { rig: 'static', pos: [50, G + 0.6, -30], look: [40, G + 4, -58], mm: 30, fstop: 5.6, focus: 'charcoal.head' },
       set: SET1B,
-      cast: { charcoal: { at: CH, face: 190, tack: true, acts: [[0, 'crouch', { k: 0.5 }], [0.5, 'crouch', { k: 1, blend: 2.6 }]] } },
+      cast: { charcoal: { at: CH, face: 190, tack: true, acts: [[0, 'crouch', { k: 0.5 }], [0.5, 'mount', { blend: 2.6 }]] } },
     },
     'X3-03': {
       staging: 'BACK: following Remi up the first flight of the stair, from behind and outside the rail; the first turn at the landing.',
@@ -383,7 +384,7 @@ export default {
       staging: 'CREATURE: close on Charcoal\'s left eye in the morning sun: it half closes and opens again (an answer).',
       cam: { rig: 'static', pos: [44.9, G + 5.3, -47.2], look: 'charcoal.eye', mm: 85, fstop: 4, focus: 'charcoal.eye' },
       set: SET1B_DOWN,
-      cast: { charcoal: { at: CH, face: 190, tack: true, acts: [[0, 'crouch', { k: 1, blink: false, lidClose: 0.05 }], [1.0, 'crouch', { k: 1, blink: false, lidClose: 0.55, blend: 0.8 }], [2.3, 'crouch', { k: 1, blink: false, lidClose: 0.05, blend: 0.7 }]] } },
+      cast: { charcoal: { at: CH, face: 190, tack: true, acts: [[0, 'mount', { blink: false, lidClose: 0.05 }], [1.0, 'mount', { blink: false, lidClose: 0.55, blend: 0.8 }], [2.3, 'mount', { blink: false, lidClose: 0.05, blend: 0.7 }]] } },
     },
     'R2-01': {
       staging: 'MEDIUM: the ground keeper at the edge of the launch space takes his clay pipe from his teeth, knocks it out (below frame) and looks down at the turf under his boot; the other keeper beside him. Adults only in frame (Leaf and Abby are behind the camera).',
