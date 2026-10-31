@@ -1,6 +1,6 @@
 {
  "title": "Dragon's Kingdom S01E01 - draft cut: 1B",
- "made_at": "2026-10-31T00:14",
+ "made_at": "2026-10-31T14:09",
  "shots_dir": "$DK_DIRECTOR_WORK/shots",
  "size": "960x540",
  "fps": 24,
@@ -9,7 +9,7 @@
    "job": "1B-01",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T07:22",
    "frames": 96,
    "rec_in": 0,
    "trans": [
@@ -28,7 +28,7 @@
    "job": "1B-02",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T07:43",
    "frames": 192,
    "rec_in": 96,
    "trans": [
@@ -47,7 +47,7 @@
    "job": "1B-03",
    "scene": "1B",
    "kind": "3d",
-   "source": "rendered 2026-10-30T23:58",
+   "source": "rendered 2026-10-31T07:44",
    "frames": 84,
    "rec_in": 288,
    "trans": [
@@ -66,7 +66,7 @@
    "job": "1B-04",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T08:10",
    "frames": 96,
    "rec_in": 372,
    "trans": [
@@ -85,7 +85,7 @@
    "job": "1B-05",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T08:17",
    "frames": 132,
    "rec_in": 468,
    "trans": [
@@ -104,7 +104,7 @@
    "job": "1B-06",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T09:10",
    "frames": 180,
    "rec_in": 600,
    "trans": [
@@ -123,7 +123,7 @@
    "job": "1B-07",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T08:32",
    "frames": 72,
    "rec_in": 780,
    "trans": [
@@ -142,7 +142,7 @@
    "job": "1B-08",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T08:49",
    "frames": 72,
    "rec_in": 852,
    "trans": [
@@ -161,7 +161,7 @@
    "job": "1B-09",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T09:10",
    "frames": 48,
    "rec_in": 924,
    "trans": [
@@ -180,7 +180,7 @@
    "job": "1B-10",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T09:53",
    "frames": 144,
    "rec_in": 972,
    "trans": [
@@ -199,7 +199,7 @@
    "job": "X3-01",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T09:32",
    "frames": 96,
    "rec_in": 1116,
    "trans": [
@@ -237,7 +237,7 @@
    "job": "X3-03",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T09:53",
    "frames": 96,
    "rec_in": 1308,
    "trans": [
@@ -256,7 +256,7 @@
    "job": "X3-04",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T10:11",
    "frames": 72,
    "rec_in": 1404,
    "trans": [
@@ -275,7 +275,7 @@
    "job": "X3-05",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T10:08",
    "frames": 72,
    "rec_in": 1476,
    "trans": [
@@ -294,7 +294,7 @@
    "job": "X3-06",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T10:43",
    "frames": 120,
    "rec_in": 1548,
    "trans": [
@@ -313,7 +313,7 @@
    "job": "X3-07",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T11:07",
    "frames": 168,
    "rec_in": 1668,
    "trans": [
@@ -332,7 +332,7 @@
    "job": "X3-08",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T11:29",
    "frames": 108,
    "rec_in": 1836,
    "trans": [
@@ -351,7 +351,7 @@
    "job": "X3-09",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T11:31",
    "frames": 96,
    "rec_in": 1944,
    "trans": [
@@ -370,7 +370,7 @@
    "job": "X3-10",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T11:40",
    "frames": 60,
    "rec_in": 2040,
    "trans": [
@@ -383,13 +383,16 @@
    "held_frames": [
     0,
     0
+   ],
+   "notes": [
+    "speaking face reads: REMI 70 deg from the lens, 15.5% of frame height, blur 0.01% (lip-sync carries it now: check the mouth, or soften / turn / shrink / backlight it)"
    ]
   },
   {
    "job": "X3-11",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T11:45",
    "frames": 72,
    "rec_in": 2100,
    "trans": [
@@ -408,7 +411,7 @@
    "job": "X3-12",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T12:25",
    "frames": 168,
    "rec_in": 2172,
    "trans": [
@@ -427,7 +430,7 @@
    "job": "X3-13",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T11:57",
    "frames": 48,
    "rec_in": 2340,
    "trans": [
@@ -446,7 +449,7 @@
    "job": "X3-14",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T12:15",
    "frames": 72,
    "rec_in": 2388,
    "trans": [
@@ -465,7 +468,7 @@
    "job": "X3-15",
    "scene": "1B",
    "kind": "3d",
-   "source": "rendered 2026-10-30T14:47",
+   "source": "rendered 2026-10-31T12:33",
    "frames": 84,
    "rec_in": 2460,
    "trans": [
@@ -484,7 +487,7 @@
    "job": "R2-01",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T12:56",
    "frames": 180,
    "rec_in": 2544,
    "trans": [
@@ -503,7 +506,7 @@
    "job": "R2-02",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T12:39",
    "frames": 36,
    "rec_in": 2724,
    "trans": [
@@ -522,7 +525,7 @@
    "job": "X3-16",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T13:24",
    "frames": 120,
    "rec_in": 2760,
    "trans": [
@@ -541,7 +544,7 @@
    "job": "1B-12",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T13:34",
    "frames": 144,
    "rec_in": 2880,
    "trans": [
@@ -560,7 +563,7 @@
    "job": "1B-13",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T13:39",
    "frames": 72,
    "rec_in": 3024,
    "trans": [
@@ -579,7 +582,7 @@
    "job": "1B-14",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T13:49",
    "frames": 72,
    "rec_in": 3096,
    "trans": [
@@ -598,7 +601,7 @@
    "job": "1B-15",
    "scene": "1B",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-10-31T14:08",
    "frames": 144,
    "rec_in": 3168,
    "trans": [
@@ -800,15 +803,15 @@
   "file": "episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_1B.mp4",
   "frames": 3312,
   "duration_s": 138,
-  "size_mb": 2.5,
-  "assembled_s": 21
+  "size_mb": 20.1,
+  "assembled_s": 19
  },
  "summary": {
-  "rendered": 3,
+  "rendered": 32,
   "black": 0,
-  "slates": 29,
+  "slates": 0,
   "voice_cues": 18,
-  "review_flags": 0,
+  "review_flags": 1,
   "review_flags_accepted": 0
  }
 }
