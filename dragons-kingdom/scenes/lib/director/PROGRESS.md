@@ -3,6 +3,52 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 12 (2026-10-31, short budgeted session: Charcoal grey at noon, X3-10 washout, X3-04 framing - STILLS only)
+
+Stills under `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st12/` (draft 960x540, X3-02 at t=123.0 = frame 48). Mean sRGB luma of a 100x70 body crop
+(400,150) / grass (400,420) / sky / rig:
+- WHY CHARCOAL READ MID GREY (creatures' REQUEST director): diagnostic scene variants (temporary files, deleted):
+  base 59 / grass 82 | Charcoal MeshBasic black (albedo 0, no light) **13** -> the haze / aerial perspective adds
+  only ~13 | scene.environmentIntensity 0.5 / 0.3 -> 56 / 54 (sky IBL is not it) | cinematic.debug 'scene'
+  (pre-grade linear): body 0.020 vs grass 0.036 | plain MeshStandardMaterial albedo 0.0125 rough 0.66 -> **82**
+  (= grass!) | same with specularIntensity 0 (diffuse only) -> **45**. So: not haze, not IBL, not exposure alone:
+  the field's grass is DARK in scene-linear, the continuity exposure (+1.4 stops, registry) lifts every dark
+  value through AgX's toe, and a black dielectric's F0 0.04 sun sheen sits only ~1 stop under that grass.
+  The creature's bodySpec already removes most of the sheen (82 -> 59). Images: `X3-02_base.png`,
+  `X3-02_black.png`, `X3-02_std.png`, `X3-02_diff.png`, `X3-02_dbg.png`, `X3-02_envA.png`, `X3-02_gradeC.png`,
+  `cmp_base_black.jpg`, `grid2.jpg`.
+- FIX (set look, not the creature): `sets/verdor-grounds.js` gains a per-shot `set.look` (applyLook, run from
+  applyShot; shots without it get the set's base look back): `haze` (atmosphere aerosol, not used yet), `banks`
+  (mist-bank density scale), `contrast`, `lift`, `gain` (runtime grade; the grade LUT is re-keyed per shot).
+  Spec: `LOOK1B = { banks: 0.3, contrast: 1.25, lift: -0.05, gain: 1.04 }` on SET1B (so on ALL 32 1B shots:
+  "the mist has burnt off" + a deeper print toe). Result `fix/X3-02_048.png`: body 59 -> **36**, grass 82 -> 70,
+  sky 154 -> 164, rig 164 -> 177: Charcoal reads black with a sheen. `fix/1B-03_042.png`: near-black silhouette.
+  1A / PROLOGUE shots on this set are unchanged (no look -> base).
+- X3-10 (washed out almost white): the level 40 mm line looked straight into the morning sun over the sea haze.
+  Camera now higher, looking down onto Remi (pos [38.2, G+7.6, -59.3] -> [42.6, G+6.1, -58.0]) so turf is behind
+  him. `fix/X3-10_030.png`: no white sky; the turf behind is still pale khaki (sunward haze) and the keeper's
+  coif in the foreground is still a soft grey shape (it is his coif from behind, out of focus at f/2.8).
+- X3-04 (Charcoal hidden behind the rig): the old line ran through the deck and its tower. Camera now NW of
+  landing 2, higher, aimed down past the deck onto his back (pos [26.0, G+7.0, -66.5] -> [38.5, G+3.8, -62.0],
+  24 mm). `fix/X3-04_054.png`: his back and folded wing fill the left two-thirds, the last flight at right.
+  Deviation (in the spec): Remi enters frame RIGHT (the landing is south of the only clear line); at 2.25 s he
+  is half cut by the right edge. Background beyond is pale (sunward haze).
+- Grid of all four: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st12/fix_grid.jpg`. selftest 20 pass; npm test 49 tests, 48 pass, 0 fail, 1 skipped.
+- 1B SHOTS TO RE-RENDER (the SET1B look changed every 1B shot's key -> all 32 are stale):
+  1B-01 1B-02 1B-03 1B-04 1B-05 1B-06 1B-07 1B-08 1B-09 1B-10 X3-01 X3-02 X3-03 X3-04 X3-05 X3-06 X3-07 X3-08
+  X3-09 X3-10 X3-11 X3-12 X3-13 X3-14 X3-15 R2-01 R2-02 X3-16 1B-12 1B-13 1B-14 1B-15.
+  Priority (the reviewed problems + the closest Charcoal shots): X3-02, X3-04, X3-10, 1B-03, X3-15, X3-08, 1B-12.
+- NEXT (exact, in order):
+  1. Before the videos, one more STILL pass on the sunward views: `node scenes/lib/director/tools/still.mjs
+     X3-04@0.75 X3-10@0.5 --preset draft --out <scratch>/st13` with `haze: 1.4` added to LOOK1B (the pale
+     khaki behind Remi / beyond Charcoal is aerial perspective toward the sun); and nudge X3-04's look 1 m south
+     ([38.5, G+3.8, -61.0]) so Remi is whole at the right edge. Also still X3-15@0.48 and 1B-12@0.5 to check
+     the deeper toe on the closest Charcoal shots (shadow detail must not crush to flat black).
+  2. Then videos: `node scenes/lib/director/tools/render-shots.mjs --only X3-02,X3-04,X3-10,1B-03,X3-15,X3-08,1B-12
+     --work <scratch>/work1B` then the rest of the list above (one resumable queue, ~10 min/shot here).
+  3. Re-assemble + mix exactly as in session 11; LOOK at all four cut sheets.
+  4. Session 11 NEXT items 4-5 still open (1A dailies frame-0 check; session 9 list items 2-5).
+
 ## Session 11 (2026-10-30, short budgeted session: frame-0 smear root cause, X3-02 stance)
 
 - FRAME-0 SMEAR - ROOT CAUSE FOUND AND FIXED IN THE STAGE (not in the renderer): velocity motion blur poses the

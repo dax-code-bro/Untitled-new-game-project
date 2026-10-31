@@ -251,6 +251,32 @@ export async function build(ctx, { shotSpecs, used = new Set() }) {
 
     ...(launch?.marks || {}),
   };
+  // Per-shot look (set.look in the spec; other shots get the set's base look back):
+  //   haze: the atmosphere's aerosol density (default: the set's 2.4);
+  //   banks: scale on the mist banks' density (1B: the morning mist has burnt off - looking toward the sun
+  //          through the full banks washed X3-04 / X3-10 out to white);
+  //   contrast / lift / gain: the grade (runtime grade.*). Session 12 measured why Charcoal read mid grey at
+  //          noon (X3-02, stills in eng1/director/st12): NOT haze (albedo 0 -> sRGB 13) and NOT the sky IBL
+  //          (environmentIntensity 0.3 -> 54 of 59): even a diffuse-only 0.0125 albedo reads 45 next to grass
+  //          at 82, because the field's grass is dark and the continuity exposure (+1.4) lifts every dark
+  //          value through AgX's toe. A deeper print toe (lift < 0) + contrast puts black at black.
+  const base = { grade: null, banks: null, haze: null };
+  function applyLook(lk) {
+    const cin = ctx.cinematic;
+    if (!cin) return;
+    const g = cin.grade, v = cin.volumetrics, at = cin.atmosphere;
+    if (at && base.haze == null) base.haze = at.haze;
+    if (at) at.haze = lk.haze ?? base.haze;            // (not used yet: a candidate for the sunward 1B views)
+    if (g && !base.grade) base.grade = { contrast: g.contrast, lift: [...(g.lift || [0, 0, 0])], gain: [...(g.gain || [1, 1, 1])] };
+    if (v?.banks && !base.banks) base.banks = v.banks.map((b) => b.density);
+    if (g) {
+      g.contrast = lk.contrast ?? base.grade.contrast;
+      g.lift = lk.lift != null ? [lk.lift, lk.lift, lk.lift] : [...base.grade.lift];
+      g.gain = lk.gain != null ? [lk.gain, lk.gain, lk.gain] : [...base.grade.gain];
+    }
+    if (v?.banks) v.banks.forEach((b, i) => { b.density = base.banks[i] * (lk.banks ?? 1); });
+  }
+
   return {
     marks, objects: { shadowDragon, leafPlatform: platG, ...(launch?.objects || {}) }, cast: launch?.cast,
     ground: (x, z) => { const b = H(x, z), p = platform(x, z); const g = p == null ? b : Math.max(b, p); return launch ? launch.ground(x, z, g) : g; },
@@ -268,6 +294,7 @@ export async function build(ctx, { shotSpecs, used = new Set() }) {
       const yw = PLAT[2] * Math.PI / 180, W = (lx, lz, y) => [PLAT[0] + lx * Math.cos(yw) + lz * Math.sin(yw), GROUND + y, PLAT[1] - lx * Math.sin(yw) + lz * Math.cos(yw)];
       Object.assign(marks, { platStairFoot: W(0, -3.0, 0), platStairTop: W(0, -1.05, 1.45), platDeck: W(0, 0, 1.45), platEdge: W(0.95, 0.3, 1.45) });
       const st = info.spec.set || {}, c = info.cont;
+      applyLook(st.look || {});
       ocean.update(info.t);
       const sd = new THREE.Vector3(...(c.sun || [0.94, 0.5, 0.16])).normalize();
       const at = st.shadowAt || (st.area === 'meadow' ? [MEADOW[0], GROUND, MEADOW[1]] : [ACTION[0], GROUND, ACTION[1]]);

@@ -25,7 +25,10 @@ const REMI_EQ = [33.5, -52.5];              // Remi with his own gear, inside th
 const KEEP_EDGE = [14.0, -70.0];            // the ground keeper at the field's edge, well outside the launch space
 const KEEP_R2 = [25.6, -69.4];              // at the edge of the launch space (R2), facing it; the other keeper 1.8 m north of him
 const KEEP3_R2 = [25.7, -67.6];
-const SET1B = { rig: 'up', platform: PLAT1B, shadowAt: [31, G, -58], shadowExtent: 42 };
+// 1B look (session 12): the mist has burnt off (banks x0.3) and a deeper print toe so Charcoal reads black,
+// not mid grey, in the flat morning light (verdor-grounds.js applyLook has the measurements)
+const LOOK1B = { banks: 0.3, contrast: 1.25, lift: -0.05, gain: 1.04 };
+const SET1B = { rig: 'up', platform: PLAT1B, shadowAt: [31, G, -58], shadowExtent: 42, look: LOOK1B };
 const SET1B_DOWN = { ...SET1B, rig: 'down' };
 const SET1B_BACK = { ...SET1B, rig: 'back', rigSlide: 4 };
 // at rest he is low and level (a half crouch: crouch k 0.5 = verdor-launch.js REST_K); X3-02 lowers him for
@@ -258,7 +261,10 @@ export default {
     },
     'X3-04': {
       staging: 'WIDE: from the second landing: Remi comes up into the left of frame and turns for the last flight; Charcoal\'s back and folded wing fill the frame beyond.',
-      cam: { rig: 'static', pos: [27.2, G + 6.0, -65.6], look: [38.0, G + 6.0, -58.5], mm: 24, fstop: 5.6, focus: 12 },
+      // session 12: higher and further north-west, aimed down past the deck onto his back (the old line ran
+      // through the deck and its tower: Charcoal mostly hidden behind the rig)
+      deviation: 'Remi comes up into frame RIGHT, not left: the landing lies south of the only line from it that clears the deck to Charcoal\'s back.',
+      cam: { rig: 'static', pos: [26.0, G + 7.0, -66.5], look: [38.5, G + 3.8, -62.0], mm: 24, fstop: 5.6, focus: 12 },
       set: SET1B_DOWN,
       cast: {
         charcoal: charLow(),
@@ -329,7 +335,9 @@ export default {
     },
     'X3-10': {
       staging: 'OTS: over the keeper\'s shoulder on the gangway end (his back right) to Remi in the seat in profile: "Straps?" - "Checked twice."',
-      cam: { rig: 'static', pos: [38.3, G + 6.8, -59.2], look: [42.5, G + 6.6, -57.8], mm: 40, fstop: 2.8, focus: 'remiR.head' },
+      // session 12: higher, looking down onto him so the turf, not the sunward sky / sea haze, is behind him
+      // (the level line looked straight into the sun: washed out almost white)
+      cam: { rig: 'static', pos: [38.2, G + 7.6, -59.3], look: [42.6, G + 6.1, -58.0], mm: 40, fstop: 2.8, focus: 'remiR.head' },
       set: SET1B_DOWN,
       cast: {
         charcoal: charLow(),
