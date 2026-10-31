@@ -18,6 +18,8 @@ URL flags:
 - `?fastprint` makes prints finish about 50× faster (for debugging).
 - `?quality=low|medium|high|ultra` overrides the graphics preset (also in the pause menu; applies on the next deploy).
 
+**Render distance** (pause menu, applies instantly, 0.4–5 km): detail rises as things get closer. Terrain is finest under your feet and coarser with distance; trees are full models nearby, flat stand-ins farther out and gone past the limit; grass, shadows, buildings, people and animals all follow it. Past the render distance only a coarse outline of the land remains, fading into haze. Defaults: Low 0.9 km, Medium 1.5 km, High 2.5 km, Ultra 4 km.
+
 During a session, the live game object is available as `window.__game`.
 
 ## Controls

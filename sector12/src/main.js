@@ -47,9 +47,13 @@ function setPaused(p) {
   game.paused = p;
   $('pause').classList.toggle('hidden', !p);
   if (touch) touch.show(!p && !!game && !game.over);
-  if (p) { $('sens').value = save.settings.sens; $('vol').value = save.settings.volume; $('quality').value = save.settings.quality || 'high'; }
+  if (p) { $('sens').value = save.settings.sens; $('vol').value = save.settings.volume; $('quality').value = save.settings.quality || 'high'; showViewDist(); }
 }
 const persist = () => Save.store(save);
+// render distance defaults to what the graphics preset can carry
+const VIEW_DEFAULT = { low: 900, medium: 1500, high: 2500, ultra: 4000 };
+const viewDist = () => save.settings.viewDist || VIEW_DEFAULT[save.settings.quality || 'high'] || 2500;
+const showViewDist = () => { $('viewdist').value = viewDist(); $('vdval').textContent = `${(viewDist() / 1000).toFixed(1)} km`; };
 
 // ---------------------------------------------------------------- title
 function showTitle(result = null) {
@@ -160,6 +164,7 @@ async function deploy() {
   }
   game = new Game({ renderer, audio, hud, input, save, persist, lock, unlock, onExit, textures });
   window.__game = game;
+  game.setViewDistance(viewDist());
   await game.load((ready, want) => { $('loading-detail').textContent = `Streaming terrain ${ready}/${want}`; });
   $('loading').classList.add('hidden');
   hud.show();
@@ -221,7 +226,8 @@ $('quit').addEventListener('click', () => {
   showTitle();
 });
 $('sens').addEventListener('input', (e) => { save.settings.sens = +e.target.value; persist(); });
-$('quality').addEventListener('change', (e) => { save.settings.quality = e.target.value; persist(); });
+$('quality').addEventListener('change', (e) => { save.settings.quality = e.target.value; persist(); showViewDist(); });
+$('viewdist').addEventListener('input', (e) => { save.settings.viewDist = +e.target.value; persist(); showViewDist(); if (game) game.setViewDistance(viewDist()); });
 $('vol').addEventListener('input', (e) => { save.settings.volume = +e.target.value; audio.setVolume(save.settings.volume); persist(); });
 addEventListener('resize', () => { if (game) game.resize(innerWidth, innerHeight); else renderer.setSize(innerWidth, innerHeight); });
 

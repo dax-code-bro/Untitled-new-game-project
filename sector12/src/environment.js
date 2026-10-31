@@ -98,7 +98,8 @@ export class Environment {
     A.haze = Math.min(1, oc * 0.5 + (1 - L.fog) * 1.2);
     A.cloudCover = 0.32 + oc * 0.55 + L.snow * 0.2;
     // fog: a thin sea-level haze normally, a wall of weather around you in a storm
-    A.fogDensity = 0.00011 / Math.max(0.012, L.fog);
+    // weather fog, plus distance haze that swallows the land past the render distance
+    A.fogDensity = Math.max(0.00011 / Math.max(0.012, L.fog), 0.55 / (this.game.viewDist || 2500));
     const storm = 1 - L.fog;
     const py = this.game.player ? this.game.player.pos.y : cam.y;
     A.fogBase = storm * (py - 40);

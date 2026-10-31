@@ -283,6 +283,13 @@ export class Graphics {
     mat.needsUpdate = true;
   }
 
+  // shadows only as far as they matter (they're the most expensive thing at a distance)
+  setShadowDistance(d) {
+    if (!this.csm) return;
+    this.csm.maxFar = d;
+    this.csm.updateFrustums();
+  }
+
   // how bright unlit particles (smoke, dust, blood) should be under the current sky
   particleLight() {
     const c = this._pl || (this._pl = new THREE.Color());

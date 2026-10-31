@@ -94,7 +94,7 @@ export class Animal {
     const nh = heightAt(nx, nz);
     if (waterLevelAt(nx, nz, nh) !== null || nh - this.pos.y > 1.2) { this.yaw += Math.PI * 0.6; this.wanderYaw = this.yaw; this.vel.set(0, 0, 0); }
     else { this.vel.set(vx, 0, vz); this.pos.x = nx; this.pos.z = nz; this.pos.y = nh; }
-    this.mesh.visible = dist < 600;
+    this.mesh.visible = dist < Math.min(600, (game.viewDist || 1000) * 0.6);
     if (this.mesh.visible) this.rig.update(dt, this.rigState(dt));
   }
 

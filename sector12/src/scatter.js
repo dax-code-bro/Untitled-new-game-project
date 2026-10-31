@@ -9,7 +9,7 @@ import { windHook, coverageHook } from './materials.js';
 
 const CELL = 128;
 let LOAD_R = 760;
-const NEAR_R = 210;
+let NEAR_R = 210;
 
 // ---------------------------------------------------------------- geometry helpers
 // geometry with position/normal/uv/color (color defaults to white)
@@ -423,6 +423,14 @@ export class Scatter {
       }
     }
     for (const k in this.meshes) for (const m of this.meshes[k]) { m.count = counts[k]; m.instanceMatrix.needsUpdate = true; }
+  }
+
+  // render distance: detailed trees close by, cut-out stand-ins farther, nothing past the limit
+  setViewDistance(vd) {
+    NEAR_R = Math.min(320, Math.max(70, vd * 0.11));
+    LOAD_R = Math.min(1500, Math.max(250, vd * 0.42));
+    this.center = null;
+    this.dirty = true;
   }
 
   warmup(pos) {

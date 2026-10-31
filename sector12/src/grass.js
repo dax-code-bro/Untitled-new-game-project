@@ -116,7 +116,7 @@ const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a
 export class Grass {
   constructor(scene, T, quality) {
     this.scene = scene;
-    this.R = 40 + 35 * quality.grass;
+    this.R = this.baseR = 40 + 35 * quality.grass;
     this.enabled = quality.grass > 0;
     this.dens = Math.min(1, 0.45 + quality.grass * 0.55); // fewer, bigger clumps on light presets
     this.tiles = new Map();
@@ -311,6 +311,13 @@ export class Grass {
     }
     this.meshes.forEach((m, k) => { m.count = cnt[k]; m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; });
     this.total = cnt.reduce((a, b) => a + b, 0);
+  }
+
+  setViewDistance(vd) {
+    if (!this.enabled) return;
+    this.R = this.baseR * Math.min(1.35, Math.max(0.55, vd / 1600));
+    this.uR.value = this.R;
+    this.center = null;
   }
 
   // compatibility with older callers

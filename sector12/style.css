@@ -246,3 +246,5 @@ button.armed { background: rgba(255,90,70,.2) !important; color: #ffb0a4 !import
 .newsave input, .slot input.rename { flex: 1; min-width: 0; background: #0d1a20; color: #e6efec; border: 1px solid #2a4a55; padding: 6px 8px; font: inherit; font-size: 13px; }
 @media (max-width: 640px) { .slot { grid-template-columns: 1fr; } }
 body.touch input { -webkit-user-select: text; user-select: text; }
+
+#vdval { color: var(--accent); margin-left: 6px; }

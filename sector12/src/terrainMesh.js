@@ -24,6 +24,8 @@ export class Terrain {
     this.visible = new Set();
     this.workers = [];
     this.time = 0;
+    this.viewDist = 2500;
+    this.detail = 1;
     try {
       const n = Math.max(2, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
       for (let i = 0; i < n; i++) {
@@ -80,7 +82,8 @@ export class Terrain {
     const dx = Math.max(0, Math.abs(cam.x - cx) - size / 2);
     const dz = Math.max(0, Math.abs(cam.z - cz) - size / 2);
     const d = Math.hypot(dx, dz, Math.max(0, cam.y - 60) * 0.7);
-    if (size > LEAF && d < size * SPLIT) {
+    // full detail up close; past the render distance only coarse chunks (the far outline of the land)
+    if (size > LEAF && d < size * SPLIT * this.detail && d < this.viewDist) {
       const h = size / 2;
       this.select(cam, x0, z0, h, out);
       this.select(cam, x0 + h, z0, h, out);

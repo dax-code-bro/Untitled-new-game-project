@@ -106,6 +106,28 @@ export class Game {
     this.patchT = 1;
   }
 
+  // ---------------------------------------------------------------- render distance
+  // Everything gets more detailed the closer it is: terrain resolution, trees (full models, then
+  // cut-outs), grass density, shadows, people and animals. Past the render distance the land is a
+  // coarse outline fading into haze.
+  setViewDistance(vd) {
+    vd = Math.max(300, Math.min(6000, vd || 2500));
+    this.viewDist = vd;
+    this.terrain.viewDist = vd;
+    this.scatter.setViewDistance(vd);
+    this.grass.setViewDistance(vd);
+    this.gfx.setShadowDistance(Math.min(this.gfx.q.shadowFar || 700, Math.max(80, vd * 0.3)));
+    this.updateStructureLOD(true);
+  }
+
+  updateStructureLOD(force = false) {
+    this.structT = (this.structT || 0) - (force ? 1e9 : 0.016);
+    if (!force && this.structT > 0) return;
+    this.structT = 1;
+    const c = this.camera.position;
+    this.structures.meshes.forEach((m, i) => { const p = POIS[i]; if (p) m.visible = Math.hypot(c.x - p.x, c.z - p.z) < (this.viewDist || 2500) + p.r + 200; });
+  }
+
   // Compile every material variant the game will need (people, animals, guns, effects) during the
   // loading screen, so the first operator / deer / explosion doesn't hitch the game.
   async warmShaders() {
@@ -169,6 +191,7 @@ export class Game {
     this.extraction.update(dt);
     this.wildlife.update(dt);
     this.ambient.update(dt);
+    this.updateStructureLOD();
     this.updateOperators(dt);
     this.updateProjectiles(dt);
     this.updateBullets(dt);

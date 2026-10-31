@@ -119,7 +119,7 @@ export class Operator {
     const dx = P.pos.x - this.pos.x, dz = P.pos.z - this.pos.z;
     const dist = Math.hypot(dx, dz);
     this.dist = dist;
-    this.mesh.visible = dist < 900;
+    this.mesh.visible = dist < Math.min(900, game.viewDist || 900);
     this.thinkT -= dt;
     if (this.thinkT <= 0) { const tdt = 0.25 - this.thinkT; this.thinkT = rand(0.2, 0.3); this.perceive(dist, tdt); }
 
