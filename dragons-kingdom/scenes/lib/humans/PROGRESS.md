@@ -571,3 +571,48 @@ Exact next steps (in order):
 7. Abby's face reads too adult in 3/4 (cheek fat / nose / brow targets) - a MODEL change in
    offline/characters.py (age macro), needs a rebuild; coordinate with the performance track (morph
    targets are rebuilt with the body).
+
+## LOOK round 2b (2026-10-31, short session) - lips, tear line, 4K check
+
+FOUND + FIXED (the main reason lips read skin-coloured): `loader.js loadCharacterData` did not load the
+lip mask (`data/lipmask-uv.json`); only `index.js loadCharacter` did. So `loadHuman` (riders),
+`loadCrowd` (person()), `humans-dev.js` and `creatures-shots.js` built every face with NO lip colour zone
+(aux.r = 0 on the lips). `loadCharacterData` now awaits `loadLipMask()` (cached, failures ignored).
+This changes the lips in every director shot that uses riders / crowd - re-render faces in close-ups.
+- `materials.js` skin: lips darker + more saturated under warm light (uniform `uLipSat`, default 0.6,
+  per character via look.js `lipSat`), vermilion border 0.13; tear meniscus: `tearLine()` (lid-margin
+  aux2.g x 1.2-9.5 mm below the eye centre x within 13.3-14.6 mm of it = the rim touching the globe;
+  eye centres from loader `eyeC` -> `uEyeL/uEyeR`) adds a thin specular line in RE_Direct_Skin toward
+  lights in front of the face (x10 x Fresnel).
+- `humans-dev.js`: `"focusEye": true` (focus on the nearer eye; the head target is ~9 cm behind the
+  eyes so at f/2.8 the eyes and lips were soft in every earlier close-up check), `"fstop"` override.
+- selftest-perf 'lip colour zone' unchanged and green; npm test 48 pass / 0 fail / 1 skipped.
+
+Renders looked at (scratch, not committed; Abby, `"light":"lamp"`, t=1.5):
+/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/look3/
+k0_eyes.png / k0_lips.png (4K, old focus: everything soft), p2_lips.png (preview, no lip mask: skin-coloured
+lips even at uLipSat 3), p3_lips.png (mask loaded, lipSat 1.0: coral / lipstick - too much),
+k2_abby_4k.png + k2_eyes.png + k2_lips.png (4K final, focusEye, lipSat 0.6: rosy lips, pores resolve,
+no sparkle seen on cheek / nose / forehead).
+
+Seen, NOT yet fixed (exact next steps, in order):
+1. Tear line barely visible in k2_eyes.png (one bright dot at the outer corner of the far eye): check
+   the mask by painting it (temporary `diffuseColor.rgb = vec3(tl)` in map_fragment) on a preview with
+   focusEye; if it is right, the lamp is simply not mirrored - widen the lobe (the meniscus is concave:
+   use 0.3 x irradiance x smooth front term instead of a Fresnel mirror).
+2. Lips at lipSat 0.6 are still a little coral + glossy for a CHILD (Abby): try look.js abby lipSat 0.4;
+   the lower-lip wet clearcoat (0.16, performance track's) reads as lip balm now that the mask applies -
+   REQUEST performance: re-check the lower-lip wet band with the mask loaded (it was tuned without? check).
+3. A yellow-green line of teeth shows between the closed lips (k2_lips.png): teeth should be in deep
+   shadow when the mouth is closed (materials.js teeth occlusion, uMouthOpen ~0).
+4. Cheek pores read as uniform 'orange peel' at 4K under the lamp (k2_eyes.png right side): fade pore
+   depth (0.00023) by 40% on the cheeks (aux2.r) and break it with a 1 cm fbm; check the forehead hotspot.
+5. Lower lashes: a dotted row (alphaHash at sub-pixel, accumulate:false) - lashes `lower` 0.4 -> 0.25.
+6. Caruncle (cache colour 0.72/0.42/0.40, teeth-kind material): reads brown-red in the far eye's corner;
+   override to a wet pink (0.78, 0.45, 0.45) + clearcoat 1.0 in loader materialFor for m.name 'caruncle'.
+7. Then the older list from round 2: stubble density (Remi), hair root-to-tip + flyaways (Blender
+   rebuild), cloth weave / hem dirt, hands at 4K, Abby's child face (model change, rebuild).
+Render recipe: humans-dev.json `{ "id": "abby", "accumulate": false, "still": true, "light": "lamp",
+"focusEye": true }`, `node render/render.mjs --still scenes/lookdev/humans-dev.js --time 1.5 --preset
+final --png <scratch>/x.png` (~60 s on this CPU box); crops with ffmpeg `-vf crop=1100:330:1300:1300`
+(eyes) and `crop=900:360:1300:1780` (lips). Restore humans-dev.json afterwards.

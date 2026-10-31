@@ -135,6 +135,10 @@ export function skinMaterial(o = {}) {
     // the lips' midpoint and up axis in the bind pose (loader.js mouthFrame): upper / lower lip
     uLipM: { value: o.lipM ? o.lipM.clone() : new THREE.Vector3(0, -10, 0) },
     uLipUp: { value: o.lipUp ? o.lipUp.clone() : new THREE.Vector3(0, 1, 0) },
+    // LOOK r2: lip colour strength (look.js) and the eye centres in the bind pose (loader.js eyeC)
+    uLipSat: { value: o.lipSat ?? 0.6 },
+    uEyeL: { value: o.eyeC?.[0] ? o.eyeC[0].clone() : new THREE.Vector3(0, -10, 0) },
+    uEyeR: { value: o.eyeC?.[1] ? o.eyeC[1].clone() : (o.eyeC?.[0] ? o.eyeC[0].clone() : new THREE.Vector3(0, -10, 0)) },
   };
   mat.userData.skin = U;
   mat.customProgramCacheKey = () => 'dk-human-skin';
@@ -149,7 +153,13 @@ vObjP = position; vAO = ao; vThick = thick; vAux = aux; vAux2 = aux2; vAux3 = au
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 ${NOISE_GLSL}
-uniform float uFreckle, uUnderEye, uChrom;
+uniform float uFreckle, uUnderEye, uChrom, uLipSat; uniform vec3 uEyeL, uEyeR;
+// LOOK r2: the lower lid's wet margin (tear meniscus): lid-margin zone, below the nearer eye's centre
+float tearLine(vec3 p, float lidM) { vec3 e = distance(p, uEyeL) < distance(p, uEyeR) ? uEyeL : uEyeR;
+  // (aux2.g spans the whole lid zone, 14 mm above to 14 mm below the eye centre: only the rim that
+  // touches the globe - ~12.5 mm from the eyeball centre, measured on abby - holds the tear line)
+  float dy = p.y - e.y;
+  return lidM * smoothstep(-0.0012, -0.0028, dy) * (1.0 - smoothstep(-0.0075, -0.0095, dy)) * (1.0 - smoothstep(0.0133, 0.0146, distance(p, e))); }
 uniform vec3 uTone, uScalp, uBeard; uniform float uBeardFull; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid, uMouthOpen; uniform vec3 uHeadFwd, uLipM, uLipUp;
 varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG; varying float vMouth;
 vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
@@ -213,11 +223,17 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   // de-lighting is lifted there): ~0.8x the skin's luminance, redder (hue ~10-15 deg toward red) and
   // a little more saturated than the skin round them; not one even peach: a fine vertical mottling,
   // a slightly darker vermilion border (the lip line) and a deeper centre line
+  // LOOK r2: under a ~1900 K lamp there is almost no green / blue left, so a hue shift alone vanishes and
+  // the lips read skin-coloured: they are also DARKER (~0.75x) and more saturated than the skin
+  // (vermilion: thin skin over blood), the border darker still
   { float lr = smoothstep(0.03, 0.55, vAux.r);
-    c = mix(c, c * vec3(1.03, 0.63, 0.68), lr * 0.85); }
+    vec3 lc = c * mix(vec3(1.03, 0.63, 0.68), vec3(0.94, 0.48, 0.52), clamp(uLipSat - 0.5, 0.0, 1.0));
+    float ll = dot(lc, vec3(0.2126, 0.7152, 0.0722));
+    lc = max(vec3(0.0), mix(vec3(ll), lc, 1.0 + 0.25 * uLipSat));
+    c = mix(c, lc, lr * 0.85); }
   { float lm1 = hN3(vObjP * vec3(700.0, 2500.0, 700.0) + 4.0) - 0.5;
     c *= 1.0 + vAux.r * (0.12 * lm1);
-    c *= 1.0 - 0.1 * smoothstep(0.15, 0.4, vAux.r) * (1.0 - smoothstep(0.4, 0.7, vAux.r)); }
+    c *= 1.0 - 0.13 * smoothstep(0.15, 0.4, vAux.r) * (1.0 - smoothstep(0.4, 0.7, vAux.r)); }
   // pores read in the colour too (a touch darker, shadowed openings) where they are resolved
   { float fwc = length(fwidth(vObjP));
     float fp = 1.0 - smoothstep(0.35, 1.0, fwc * 1600.0);
@@ -390,6 +406,13 @@ void RE_Direct_Skin( const in IncidentLight directLight0, const in vec3 geometry
   PhysicalMaterial mB = material; mB.roughness = min(1.0, material.roughness * 1.3);
   reflectedLight.directSpecular += irradiance * (0.55 * BRDF_GGX( directLight.direction, geometryViewDir, geometryNormal, mA )
                                                + 0.45 * BRDF_GGX( directLight.direction, geometryViewDir, geometryNormal, mB ));
+  // LOOK r2: the tear meniscus along the lower lid margin is a thin concave water line: some point of it
+  // always faces the half vector, so it draws a fine bright line toward any light in front of the face
+  // (without it the lower lid met the eyeball dry, a doll's eye)
+  { float tl = tearLine(vObjP, smoothstep(0.25, 0.7, vAux2.g));
+    float front = smoothstep(-0.1, 0.35, dot(directLight.direction, uHeadFwd));
+    float fv = 0.04 + 0.96 * pow(1.0 - saturate(dot(normalize(directLight.direction + geometryViewDir), geometryViewDir)), 5.0);
+    reflectedLight.directSpecular += directLight.color * tl * front * fv * 10.0; }
   // LOOK r2: light scattered through the skin comes out redder and more saturated just inside the
   // terminator (the 'blood line' of a face lit by one lamp). Keep it small: at 0.32 x diffuse it painted
   // an orange band down the side of the nose

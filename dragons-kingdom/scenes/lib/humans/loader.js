@@ -23,6 +23,10 @@ export function loadCharacterData(id) {
       const b = await fetch(CACHE_URL + id + '.bin');
       if (!b.ok) throw new Error(`human "${id}": ${id}.bin missing`);
       const bin = await b.arrayBuffer();
+      // LOOK r2: the lips' colour zone (applyLipMask) needs data/lipmask-uv.json - only loadCharacter
+      // loaded it, so loadHuman / loadCrowd / the lookdev scenes built every face WITHOUT lip colour
+      // (lips the colour of the skin under a warm lamp). Loaded once, failures ignored.
+      await loadLipMask();
       return { header, bin };
     })());
   }
@@ -70,6 +74,8 @@ export function buildCharacter(data, opts = {}) {
   // the mouth cavity, teeth and tongue darken with depth behind the lips (see mouthDepth)
   const mouthU = { value: 0 };
   const mouth = mouthFrame(header, bones, index);
+  // LOOK r2: the eye centres in the bind pose (skin shader: the wet tear meniscus on the lower lid margin)
+  const eyeC = ['eye.L', 'eye.R'].filter((b) => index[b] !== undefined).map((b) => bones[index[b]].getWorldPosition(new THREE.Vector3()));
   // one uniform per character: the head's forward axis in VIEW space, set before each draw of the
   // skin / teeth / tongue (headFwdUpdater): the lips and the inside of the mouth take no direct light
   // from behind the face. The shadow maps cannot resolve the head occluding them - a back light drew
@@ -128,7 +134,7 @@ export function buildCharacter(data, opts = {}) {
     if (mouth && m.kind === 'skin' && opts.lipMask !== false) applyLipMask(g, m, mouth, opts.lipMask || LIPMASK_DATA);
     if (g.attributes.skinIndex && opts.rebind !== false) rebindWorn(g, m, header, bones, index);
     g.computeBoundingSphere();
-    const mat = materialFor(m, header, { ...opts, mouthU, headU, lipM: mouth?.M, lipUp: mouth?.up });
+    const mat = materialFor(m, header, { ...opts, mouthU, headU, lipM: mouth?.M, lipUp: mouth?.up, eyeC });
     let mesh;
     if (g.attributes.skinIndex) {
       mesh = new THREE.SkinnedMesh(g, mat);
@@ -231,7 +237,7 @@ function rebindWorn(g, m, header, bones, index) {
 function materialFor(m, header, opts) {
   const mt = m.material || {};
   switch (m.kind) {
-    case 'skin': return skinMaterial({ ...skinLook(header.id), ...mt, seed: hashStr(header.id) % 997, mouthU: opts.mouthU, headU: opts.headU, lipM: opts.lipM, lipUp: opts.lipUp });
+    case 'skin': return skinMaterial({ ...skinLook(header.id), ...mt, seed: hashStr(header.id) % 997, mouthU: opts.mouthU, headU: opts.headU, lipM: opts.lipM, lipUp: opts.lipUp, eyeC: opts.eyeC });
     case 'eye': return eyeMaterial({ ...mt, headU: opts.headU });
     case 'brow': case 'lash': case 'haircard': return cardMaterial({ ...mt, colorMap: m.kind === 'haircard', cut: m.kind === 'brow' ? [0.0, 0.03] : [0.06, 0.3], front: m.kind === 'lash', headU: opts.headU });
     case 'hair': return hairStrandMaterial(mt);

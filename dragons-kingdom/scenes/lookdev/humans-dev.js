@@ -4,6 +4,7 @@
 //   t 6-7  feet / shoes                   t 7-8  hairline from above the brow
 // (all views in one run: --fps 1 --seconds 8; frame k = view k)
 // The character id comes from scenes/lookdev/humans-dev.json ({ "id": "abby" }).
+// { "focusEye": true, "fstop": 4 }: focus on the nearer eye / override the f-stop (4K skin checks).
 // { "light": "lamp" }: the birthing-chamber look instead of daylight - a dark room, one warm oil
 // lamp (~1900 K) keyed 50 degrees off the lens and a little above the eyes, a faint cool window fill
 // from the other side (the hardest test for skin: waxy, uniform skin shows at once in lamplight).
@@ -109,5 +110,9 @@ export function update(t, ctx) {
   }
   camera.fov = c.fov; camera.near = 0.02; camera.far = 200;
   camera.updateProjectionMatrix();
-  if (ctx.lens) { ctx.lens.focalLength = null; ctx.lens.fstop = c.fstop ?? 5.6; ctx.lens.focus = camera.position.distanceTo(tgt); ctx.lens.shutterAngle = 45; }
+  // { "focusEye": true }: focus on the nearer eye (the head target sits ~9 cm behind the eyes: at f/2.8
+  // and 0.6 m the eyes and lips were soft - a 4K skin / eye check needs them sharp)
+  let fd = camera.position.distanceTo(tgt);
+  if (CFG.focusEye) { const e = ['eye.L', 'eye.R'].map((b) => ch.bone(b)?.getWorldPosition(new THREE.Vector3())).filter(Boolean); if (e.length) fd = Math.min(...e.map((p) => camera.position.distanceTo(p))); }
+  if (ctx.lens) { ctx.lens.focalLength = null; ctx.lens.fstop = CFG.fstop ?? c.fstop ?? 5.6; ctx.lens.focus = fd; ctx.lens.shutterAngle = 45; }
 }
