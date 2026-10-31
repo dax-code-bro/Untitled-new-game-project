@@ -51,7 +51,7 @@ const LegendEngine = {
   quickStart,
   // building blocks, for games that want the lower level
   Vec3, Quat, Mat3, Mat4, Aabb, Rng, Noise,
-  Geometry, Shapes, convexHull, hullToGeometry,
+  Geometry, Shapes, convexHull, hullToGeometry, decimateGeometry, buildLodChain,
   SCAN, loadScan, scanIds, TextureLib,
   heightfieldSurface, heightfieldSampleWorld,
   Engine, Actor, Material, Body, PhysicsWorld, Shape, SHAPE,

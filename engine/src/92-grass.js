@@ -204,13 +204,33 @@ class Grass {
     const cs = P.clumpSize || 0.55;
     const clumpChance = P.clumpChance != null ? P.clumpChance : 0.6;
     const clumpRadius = cs * (P.clumpSpread != null ? P.clumpSpread : 0.65);
-    const saltBase = (opts.seed || 31337) * 4;
+    /* recenter() forwards the options it was called with, which do not
+       include the seed the field was built with — so without the
+       _baseSeed fallback a seeded meadow scatters one way on its first
+       scatter and another way on every move after, which is precisely
+       the "same ground grows the same meadow" promise recenter exists
+       to keep. */
+    const saltBase = (opts.seed || this._baseSeed || 31337) * 4;
     // Clumping rejects most candidates between tufts, so many more attempts
     // are needed to reach the target blade count than a uniform scatter.
-    const attempts = target * 7;
+    const attempts = target * 9;
+    /* How much thinner the far edge of the field is than the ground the
+       player is standing on. The blade budget is fixed — it is an
+       instance buffer — so spreading it evenly over the whole field
+       spends as much of it on grass forty metres off, where a blade is
+       a third of a pixel and all you can read is an average colour the
+       terrain texture already gives you, as on the grass around your
+       boots, where individual blades are the entire reason the field
+       exists. Thinning the edge to a third moves roughly a quarter of
+       every blade inward without drawing one more of them. */
+    const farThin = 0.65;
     for (let i = 0; i < attempts && n < target; i++) {
       const x = this.center.x + this.rng.range(-half, half);
       const z = this.center.z + this.rng.range(-half, half);
+      {
+        const rr = Math.min(1, Math.hypot(x - this.center.x, z - this.center.z) / half);
+        if (this.rng.next() > 1 - farThin * rr * rr) continue;
+      }
 
       // Nearest clump center among this cell and its 8 neighbors. Cells
       // roll their own presence, so most cells are empty gaps between tufts.

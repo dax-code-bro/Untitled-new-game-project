@@ -691,3 +691,100 @@ function meshVolume(points, indices) {
   if (Math.abs(vol) > 1e-9) cx.scale(1 / vol);
   return { volume: Math.abs(vol), centroid: cx };
 }
+
+/* ============================================================
+   DECIMATION — the same mesh, with fewer triangles in it.
+
+   A tree thirty metres away is nine pixels wide. Drawing it with the
+   fourteen hundred triangles it needs at arm's length is work the screen
+   cannot show, and it is the reason a wood costs what it costs.
+
+   The method is vertex clustering: drop a grid over the mesh, collapse
+   every vertex that falls in a cell to one representative at their
+   average, and rebuild the triangles against the representatives,
+   throwing away the ones that have collapsed to a line or a point. It is
+   not as careful as quadric error decimation — it will round a sharp
+   corner that a quadric would keep — but it is fast, it never produces a
+   hole, and at the distances it is used the difference is invisible.
+   ============================================================ */
+function decimateGeometry(geo, cells = 8) {
+  const P = geo.positions, I = geo.indices;
+  if (!P || !I || !I.length) return geo;
+  const n = P.length / 3;
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const x = P[i * 3], y = P[i * 3 + 1], z = P[i * 3 + 2];
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+  }
+  const sx = (maxX - minX) || 1e-6, sy = (maxY - minY) || 1e-6, sz = (maxZ - minZ) || 1e-6;
+  /* Cells are allotted along each axis in proportion to how long the mesh
+     is that way. A trunk is twenty times taller than it is wide, and a
+     cubic grid over it would collapse the whole thing to a stick. */
+  const longest = Math.max(sx, sy, sz);
+  const nx = Math.max(1, Math.round(cells * sx / longest));
+  const ny = Math.max(1, Math.round(cells * sy / longest));
+  const nz = Math.max(1, Math.round(cells * sz / longest));
+
+  const hasN = !!(geo.normals && geo.normals.length);
+  const hasUv = !!(geo.uvs && geo.uvs.length);
+  const hasC = !!(geo.colors && geo.colors.length);
+
+  const cellOf = new Int32Array(n);
+  const map = new Map();
+  const acc = [];
+  for (let i = 0; i < n; i++) {
+    const cx = Math.min(nx - 1, Math.floor(((P[i * 3] - minX) / sx) * nx));
+    const cy = Math.min(ny - 1, Math.floor(((P[i * 3 + 1] - minY) / sy) * ny));
+    const cz = Math.min(nz - 1, Math.floor(((P[i * 3 + 2] - minZ) / sz) * nz));
+    const key = (cz * ny + cy) * nx + cx;
+    let slot = map.get(key);
+    if (slot === undefined) {
+      slot = acc.length;
+      map.set(key, slot);
+      acc.push({ px: 0, py: 0, pz: 0, nx: 0, ny: 0, nz: 0, u: 0, v: 0, r: 0, g: 0, b: 0, k: 0 });
+    }
+    const a = acc[slot];
+    a.px += P[i * 3]; a.py += P[i * 3 + 1]; a.pz += P[i * 3 + 2];
+    if (hasN) { a.nx += geo.normals[i * 3]; a.ny += geo.normals[i * 3 + 1]; a.nz += geo.normals[i * 3 + 2]; }
+    if (hasUv) { a.u += geo.uvs[i * 2]; a.v += geo.uvs[i * 2 + 1]; }
+    if (hasC) { a.r += geo.colors[i * 3]; a.g += geo.colors[i * 3 + 1]; a.b += geo.colors[i * 3 + 2]; }
+    a.k++;
+    cellOf[i] = slot;
+  }
+
+  const out = new Geometry();
+  for (const a of acc) {
+    const k = a.k || 1;
+    let nxv = hasN ? a.nx / k : 0, nyv = hasN ? a.ny / k : 1, nzv = hasN ? a.nz / k : 0;
+    const l = Math.hypot(nxv, nyv, nzv) || 1;
+    nxv /= l; nyv /= l; nzv /= l;
+    out.vert(a.px / k, a.py / k, a.pz / k, nxv, nyv, nzv,
+      hasUv ? a.u / k : 0, hasUv ? a.v / k : 0);
+    if (hasC) out.vertColor(a.r / k, a.g / k, a.b / k);
+  }
+  for (let t = 0; t < I.length; t += 3) {
+    const a = cellOf[I[t]], b = cellOf[I[t + 1]], c = cellOf[I[t + 2]];
+    // Two corners in the same cell means the triangle has no area left.
+    if (a === b || b === c || a === c) continue;
+    out.tri(a, b, c);
+  }
+  if (!out.indices.length) return geo;
+  out.computeBounds();
+  return out;
+}
+
+/* Build a near/mid/far set from one mesh. The ratios are the grid
+   resolutions, not triangle fractions — a mesh that is already simple
+   comes back unchanged rather than being wrecked. */
+function buildLodChain(geo, cellsList = [14, 7]) {
+  const out = [geo];
+  for (const c of cellsList) {
+    const d = decimateGeometry(geo, c);
+    // No point carrying an LOD that saved nothing.
+    if (d.indices.length < geo.indices.length * 0.8) out.push(d);
+  }
+  return out;
+}

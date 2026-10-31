@@ -520,8 +520,26 @@ void main(){
     vec3 orm = texture(uOrmMap, uv).rgb;
     if (slopeMix > 0.0) orm = mix(orm, texture(uOrmMap2, uv2).rgb, slopeMix);
     ao = orm.r;
-    if (detailFade > 0.0) ao *= mix(1.0, texture(uOrmMap, uvDetail).r, detailFade * 0.65);
-    rough *= orm.g * 1.25;
+    /* Close-up occlusion rides on top of the coarse one, but gently:
+       multiplying two occlusion maps together squares the darkening,
+       and in shadow — where the sky is the only light there is — that
+       is the difference between a wood floor you can see and a black
+       hole. Half strength, and floored, so the detail adds creases
+       rather than subtracting light. */
+    if (detailFade > 0.0) ao *= mix(1.0, 0.45 + 0.55 * texture(uOrmMap, uvDetail).r, detailFade);
+    /* The map IS the roughness measurement; the preset is only where
+       the middle of its range should sit.
+
+       Multiplying the two and clamping was throwing the measurement
+       away. Ground presets sit at 0.90 to 0.96 and the captured
+       channel runs about 0.7 to 1.0, so 0.95 x 0.85 x 1.25 is 1.01 —
+       over the clamp — and every ground texel in the game came out at
+       exactly 1.0. The roughness debug view was a sheet of white
+       paper: no sheen anywhere, no wet patch darker than a dry one, no
+       difference between a worn plank and the soil beside it, because
+       there was no variation left to see. Lean on the measurement and
+       let the preset bias it, and the whole range survives. */
+    rough = mix(rough, orm.g, 0.75);
     // The map only modulates metalness, never introduces it: a dielectric
     // stays dielectric no matter what the ORM texture says, while a metal
     // picks up the map's variation (rust patches, worn edges).
@@ -568,6 +586,15 @@ void main(){
     if (uDebugMode == 3) { outColor = vec4(albedo, 1.0); return; }
     if (uDebugMode == 4) { outColor = vec4(vec3(rough), 1.0); return; }
     if (uDebugMode == 5) { outColor = vec4(vec3(vViewDepth / 60.0), 1.0); return; }
+    // 6 and 7 split the two halves of the lighting. A forest floor that
+    // reads black is either losing its sky (7) or being occluded to
+    // nothing before the sky arrives (6), and from the final image
+    // those two look identical.
+    if (uDebugMode == 6) { outColor = vec4(vec3(ao), 1.0); return; }
+    if (uDebugMode == 7) {
+      outColor = vec4(diffuseColor * skyIrradiance(N) * ao, 1.0); return;
+    }
+    if (uDebugMode == 8) { outColor = vec4(albedo, 1.0); return; }
   }
 
   if (NoL > 0.0) {
@@ -636,7 +663,14 @@ void main(){
 #endif
 #ifdef ALPHA_CLIP
   // Grass blades taper to nothing; clipping keeps the silhouette crisp.
-  if (uHasMaps >= 1) alpha *= texture(uAlbedoMap, uv).a;
+  // Where a second material has taken the fragment over, its holes are
+  // the ones that count — cutting rock against soil's alpha would punch
+  // the soil's gaps through solid stone.
+  if (uHasMaps >= 1) {
+    float a = texture(uAlbedoMap, uv).a;
+    if (slopeMix > 0.0) a = mix(a, texture(uAlbedoMap2, uv2).a, slopeMix);
+    alpha *= a;
+  }
   if (alpha < 0.35) discard;
   alpha = 1.0;
 #endif
@@ -659,8 +693,25 @@ void main(){
 
 GLSL.shadowFrag = `
 in vec2 vUv;
+#ifdef ALPHA_CLIP
+uniform sampler2D uAlbedoMap;
+uniform float uUvScale;
+#endif
 void main(){
-  // Depth-only: the fixed-function depth write is the entire output.
+  /* Depth-only: the fixed-function depth write is almost the entire
+     output. The exception is a surface that is mostly holes.
+
+     A canopy is modelled as a handful of solid cones and only becomes a
+     tree in the beauty pass, where the albedo's alpha cuts it down to
+     leaves. If this pass does not make the same cut, the two passes
+     disagree about the same surface: the tree you can see through casts
+     the shadow of something you cannot, and a wood goes from dapple to
+     one flat black pool with the sky's blue in it. Same map, same
+     threshold as the colour pass, deliberately — any daylight between
+     the two shows up as leaves whose shadows are the wrong shape. */
+#ifdef ALPHA_CLIP
+  if (texture(uAlbedoMap, vUv * uUvScale).a < 0.35) discard;
+#endif
 }
 `;
 
@@ -1022,6 +1073,9 @@ uniform float uSaturation;
 uniform float uContrast;
 uniform float uGrain;
 uniform float uTime;
+uniform sampler2D uAdapt;
+uniform float uAutoKey;
+uniform vec2 uAutoRange;
 layout(location=0) out vec4 outColor;
 
 /* ACES filmic tonemap (Narkowicz fit). Without a real tonemapper, bright
@@ -1052,7 +1106,21 @@ void main(){
              + texture(uBloom2, uv).rgb * 0.18;
   color += bloom * uBloomStrength;
 
-  color *= uExposure;
+  /* Stop the lens down to what the eye has adapted to. uAutoKey is the
+     average scene luminance the grade was authored against, so a frame
+     at exactly that brightness comes through at exposure 1 and looks
+     the way it always did; everything darker is opened up and
+     everything brighter is closed down, within a bounded range. The
+     bounds matter: without them a night scene would be lifted to
+     daylight and a snowfield crushed to grey, and the game would lose
+     the difference between noon and midnight, which is a difference it
+     is largely about. */
+  float ex = uExposure;
+  if (uAutoKey > 0.0) {
+    float avg = exp(texture(uAdapt, vec2(0.5)).r);
+    ex *= clamp(uAutoKey / max(avg, 1e-4), uAutoRange.x, uAutoRange.y);
+  }
+  color *= ex;
   color = acesFilm(color);
 
   // Grade in display space: contrast around mid-grey, then saturation.
@@ -1111,6 +1179,78 @@ void main(){
                                  + texture(uTex, vUv + dir * 0.5).rgb);
   float lB = dot(rgbB, luma);
   outColor = vec4((lB < lMin || lB > lMax) ? rgbA : rgbB, 1.0);
+}
+`;
+
+/* ---------------- eye adaptation ----------------
+
+   Three small passes that measure how bright the frame is and remember
+   it between frames.
+
+   A renderer with a fixed exposure is a camera with the lens taped
+   open. It is physically faithful and it is wrong, because the thing
+   it leaves out is the observer: a forest floor really does receive a
+   twentieth of the light the clearing beside it gets, and a person
+   standing on it really can see it perfectly well, because their eyes
+   have stopped down. Without that, every wood in the game is a black
+   pit with a bright hole in the middle, which is exactly what a
+   photograph exposed for the sky looks like and nothing like what
+   being in a wood looks like.
+
+   The measurement is the average of log luminance, not of luminance:
+   the eye works in ratios, and a mean in linear light is dominated by
+   whatever small bright thing is in frame — one glint of sun on water
+   would stop the whole image down. */
+GLSL.lumFrag = `
+in vec2 vUv;
+uniform sampler2D uTex;
+layout(location=0) out vec4 outColor;
+void main(){
+  vec3 c = texture(uTex, vUv).rgb;
+  float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  outColor = vec4(log(max(l, 1e-4)), 0.0, 0.0, 1.0);
+}
+`;
+
+/* One step of an exact 8x8 box reduction: each output texel averages
+   the eight-by-eight block of source texels it covers. Two steps take
+   64x64 down to a single number with no sampling gaps. */
+GLSL.lumReduceFrag = `
+in vec2 vUv;
+uniform sampler2D uTex;
+uniform vec2 uTexel;
+layout(location=0) out vec4 outColor;
+void main(){
+  float s = 0.0;
+  for (int y = 0; y < 8; y++) {
+    for (int x = 0; x < 8; x++) {
+      vec2 o = (vec2(float(x), float(y)) - 3.5) * uTexel;
+      s += texture(uTex, vUv + o).r;
+    }
+  }
+  outColor = vec4(s / 64.0, 0.0, 0.0, 1.0);
+}
+`;
+
+/* Move the remembered level a little way toward the measured one.
+
+   Asymmetrically, because eyes are asymmetric: walking out of a wood
+   into a field you are comfortable in under a second, and walking the
+   other way you are briefly blind. Light adaptation is quick, dark
+   adaptation is slow — minutes, really, which is more patience than a
+   game can ask for, so it is compressed to a couple of seconds while
+   keeping the direction of the asymmetry, which is the part you
+   actually feel. */
+GLSL.adaptFrag = `
+uniform sampler2D uPrev;
+uniform sampler2D uTarget;
+uniform float uUp;
+uniform float uDown;
+layout(location=0) out vec4 outColor;
+void main(){
+  float prev = texture(uPrev, vec2(0.5)).r;
+  float now  = texture(uTarget, vec2(0.5)).r;
+  outColor = vec4(mix(prev, now, now > prev ? uUp : uDown), 0.0, 0.0, 1.0);
 }
 `;
 

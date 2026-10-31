@@ -113,7 +113,7 @@ class GltfAsset {
           const cv = typeof OffscreenCanvas !== 'undefined'
             ? new OffscreenCanvas(bitmap.width, bitmap.height)
             : Object.assign(document.createElement('canvas'), { width: bitmap.width, height: bitmap.height });
-          const ctx2d = cv.getContext('2d');
+          const ctx2d = cv.getContext('2d', { willReadFrequently: true });
           ctx2d.drawImage(bitmap, 0, 0);
           const px = ctx2d.getImageData(0, 0, bitmap.width, bitmap.height).data;
           t.upload(new Uint8Array(px.buffer, px.byteOffset, px.byteLength), bitmap.width, bitmap.height);
@@ -428,7 +428,7 @@ async function loadImageTexture(gl, url, opts = {}) {
   const cv = typeof OffscreenCanvas !== 'undefined'
     ? new OffscreenCanvas(bitmap.width, bitmap.height)
     : Object.assign(document.createElement('canvas'), { width: bitmap.width, height: bitmap.height });
-  const ctx2d = cv.getContext('2d');
+  const ctx2d = cv.getContext('2d', { willReadFrequently: true });
   ctx2d.drawImage(bitmap, 0, 0);
   const px = ctx2d.getImageData(0, 0, bitmap.width, bitmap.height).data;
   const t = new Texture(gl, {

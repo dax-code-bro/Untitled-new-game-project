@@ -259,9 +259,14 @@ SurvivorGame.module({
       const variants = spec.canopy === 'none' ? 2 : 3;
       for (let v = 0; v < variants; v++) {
         const rng = new LE.Rng(variantSeed + key.length * 977 + v * 131);
-        GEO[key].push(spec.canopy === 'conifer' ? conifer(rng, spec)
+        const made = spec.canopy === 'conifer' ? conifer(rng, spec)
           : spec.canopy === 'broad' ? broadleaf(rng, spec)
-          : { crown: logGeo(rng), bark: null, rTrunk: 0 });
+          : { crown: logGeo(rng), bark: null, rTrunk: 0 };
+        /* Two simpler copies of the crown, for the middle distance and
+           the far one. A wood is fourteen hundred trees and almost all
+           of them are further away than the few you are standing in. */
+        made.crownLod = LE.buildLodChain(made.crown, [13, 6]);
+        GEO[key].push(made);
       }
     }
     const SHRUB_GEO = [0, 1, 2].map((v) => shrubGeo(new LE.Rng(0xb00b + v * 37)));
@@ -325,7 +330,7 @@ SurvivorGame.module({
     function buildCell(cx, cz) {
       const key = cellKey(cx, cz);
       if (cells.has(key)) return;
-      const rec = { actors: [], trees: [] };
+      const rec = { actors: [], trees: [], logs: [] };
       cells.set(key, rec);
 
       const x0 = cx * CELL, z0 = cz * CELL;
@@ -350,7 +355,9 @@ SurvivorGame.module({
           const speciesId = cover.mix.length ? cover.mix[rng.int(0, cover.mix.length - 1)] : null;
           if (!speciesId) continue;
           const t = spawnTree(speciesId, x, z, rng);
-          if (t) { rec.actors.push(t.actor); rec.trees.push(t); trees.push(t); treeCount++; }
+          // The cell it grew in, so the log it becomes can be unloaded
+          // with it when the player walks out of range.
+          if (t) { t.cellKey = key; rec.actors.push(t.actor); rec.trees.push(t); trees.push(t); treeCount++; }
         }
 
         const nShrubs = Math.round(cover.shrubs * hectares * share * 0.25 * (0.5 + rng.next()));
@@ -362,6 +369,7 @@ SurvivorGame.module({
           const scale = 0.5 + rng.next() * 0.9;
           const a = game.mesh({
             geometry: SHRUB_GEO[s], key: `veg:shrub:${s}`, material: FOLIAGE_MAT,
+            lodHide: 95, lodShadow: 30,
             at: [x, y, z], scale, physics: false, name: 'shrub',
           });
           a.setRotation([0, rng.next() * 360, 0]);
@@ -416,9 +424,15 @@ SurvivorGame.module({
       const turn = rng.next() * 360;
       const actor = game.mesh({
         geometry: geo.crown,
+        lod: geo.crownLod,
         key: `veg:tree:${speciesId}:${v}`,
         material: FOLIAGE_MAT,
         at: [x, y, z], scale: heightM,
+        /* A crown is the biggest thing in the frame and the last thing
+           worth simplifying, so its ladder starts well out; its shadow
+           is dropped far sooner, because a wood's floor is in shade
+           whether or not each individual tree draws its own. */
+        lodStep: 34, lodShadow: 48,
         physics: false, name: 'tree',
       });
       actor.setRotation([0, turn, 0]);
@@ -429,6 +443,12 @@ SurvivorGame.module({
           key: `veg:bark:${speciesId}:${v}`,
           material: BARK_MAT[speciesId] || WOOD_MAT,
           at: [x, y, z], scale: heightM,
+          /* The trunk IS this actor — splitting it out of the crown made
+             the crown a canopy with nothing holding it up — so it is
+             never hidden, however far away it gets. Sixteen vertices
+             instanced across a forest costs nothing; a wood of floating
+             canopies costs everything. Only its shadow goes. */
+          lodShadow: 30,
           physics: false, name: 'treeBark',
         });
         barkActor.setRotation([0, turn, 0]);
@@ -465,9 +485,18 @@ SurvivorGame.module({
         if (t.trunk) { try { t.trunk.destroy(); } catch (e) { /* already gone */ } }
         if (t.barkActor) { try { t.barkActor.destroy(); } catch (e) { /* already gone */ } }
         const i = trees.indexOf(t);
-        if (i >= 0) trees.splice(i, 1);
-        treeCount--;
+        /* Only count down for a tree this cell is actually still
+           holding. A felled one left the global list — and decremented
+           the count — back when the axe went through it, but it stays in
+           rec.trees, so counting it again here takes the tally below
+           truth by one per tree ever chopped. Walk a wood, fell it,
+           walk away and back, and MAX_TREES is quietly a hundred stems
+           too generous; keep doing it and the count goes negative, at
+           which point the cap never bites again and the island grows
+           actors until it stops. */
+        if (i >= 0) { trees.splice(i, 1); treeCount--; }
       }
+      for (const a of rec.logs || []) { try { a.destroy(); } catch (e) { /* already gone */ } }
       cells.delete(key);
     }
 
@@ -502,6 +531,15 @@ SurvivorGame.module({
       });
       log.setRotation([0, Math.atan2(tree.z, tree.x) * 180 / Math.PI, 4]);
       log.userData = { kind: 'deadfall', timberKg: tree.timberKg };
+      /* Hand the log to the cell that grew the tree, so it goes away
+         when that cell unloads. Without this it is an actor nothing
+         holds a reference to: a morning's logging leaves two hundred
+         of them three kilometres behind you, each still paying for a
+         frustum test and an instance write on every frame, for ever. */
+      if (tree.cellKey) {
+        const rec = cells.get(tree.cellKey);
+        if (rec) (rec.logs || (rec.logs = [])).push(log);
+      }
       ctx.log(`The ${tree.spec.name} comes down.`, true);
       ctx.emit('tree-felled', { tree, timberKg: tree.timberKg, x: tree.x, z: tree.z });
     });

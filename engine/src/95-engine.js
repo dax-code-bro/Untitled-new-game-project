@@ -40,6 +40,21 @@ class Actor {
     this.onUpdate = opts.onUpdate || null;
     this.userData = opts.userData || null;
     this.boundRadius = opts.boundRadius != null ? opts.boundRadius : 1;
+    /* Level of detail. `lodMeshes` is a near-to-far chain of GPU meshes
+       for the same object; `lodStep` is how many metres each rung lasts.
+       `lodHide` is the range past which an actor is not worth drawing at
+       all — the right answer for detail that only exists close up, like
+       the bark on a trunk or a pebble. `lodShadow` is where it stops
+       casting one, which is usually much nearer than where it stops
+       being visible, because a shadow is a second draw of the same
+       geometry and nobody can tell whose it is at sixty metres. */
+    this.lodMeshes = opts.lodMeshes || null;
+    this.lodStep = opts.lodStep != null ? opts.lodStep : 28;
+    this.lodHide = opts.lodHide != null ? opts.lodHide : 0;
+    this.lodShadow = opts.lodShadow != null ? opts.lodShadow : 0;
+    this._lodDist = 0;
+    this._lodOn = true;
+    this._lodShadow = true;
     this.dead = false;
 
     if (this.body) this.body.actor = this;
@@ -126,7 +141,17 @@ const _aQuat = new Quat();
 
 const SKY_PRESETS = {
   day: {
-    zenith: 0x2a5aa8, horizon: 0xa8c4e0, ground: 0x4a453c,
+    /* The zenith is the light that everything in shade is lit BY, so
+       its saturation is not a styling choice. 0x2a5aa8 reads as a
+       convincing sky blue on screen, but in linear radiance it is
+       seventeen times more blue than red — no sky is, not even a
+       polarised zenith at altitude — and under it every shadow in the
+       game went navy and nothing in shade had any red left in it. A
+       clear zenith is about twenty thousand kelvin and roughly two and
+       a half times more blue than red, at about four tenths the
+       horizon's luminance, which is this. It looks slightly paler
+       looking up, and correct looking at anything the sky is lighting. */
+    zenith: 0x6c88a8, horizon: 0xa8c4e0, ground: 0x4a453c,
     sun: [0.42, 0.78, 0.46], sunColor: 0xfff2dd, sunIntensity: 3.6,
     fog: 0xa8c0dc, fogDensity: 0.0045, clouds: 0.4, exposure: 1.0,
   },
@@ -218,6 +243,10 @@ class Engine {
     this.chunkBudget = opts.chunkBudget || 260;
     this.activeChunks = [];
     this.frustumCulling = opts.frustumCulling !== false;
+    /* One global dial on every distance in the level-of-detail system.
+       Above one, detail is kept further out; below one, it is dropped
+       sooner. It is what a quality setting should actually move. */
+    this.lodBias = opts.lodBias != null ? opts.lodBias : 1;
     this.stats = { fps: 0, actors: 0, draws: 0, bodies: 0, particles: 0 };
     this._fpsAccum = 0;
     this._fpsFrames = 0;
@@ -349,6 +378,10 @@ class Engine {
       lifetime: opts.lifetime,
       onUpdate: opts.onUpdate,
       userData: opts.userData,
+      // How far out this object is worth drawing, and in how much detail.
+      lodStep: opts.lodStep,
+      lodHide: opts.lodHide,
+      lodShadow: opts.lodShadow,
       boundRadius,
     });
 
@@ -483,7 +516,11 @@ class Engine {
        so the terrain still has the material's grain and normal detail — it
        is the same ground, wearing the right colour for where it is. */
     const resolvedMat = opts.colorFn
-      ? this.material(Object.assign(
+      // Object.assign writes into its first argument, so this used to
+      // stamp vertexColor and a white tint onto whatever spec object the
+      // caller passed — and a module-level const reused for a wall would
+      // quietly come back vertex-coloured. Copy, then overlay.
+      ? this.material(Object.assign({},
         typeof groundMat === 'object' ? groundMat : { preset: groundMat },
         { vertexColor: true, color: 0xffffff },
       ))
@@ -839,9 +876,45 @@ class Engine {
      none makes it visual-only. */
   mesh(opts = {}) {
     const geo = opts.geometry;
+    /* `lod` is a near-to-far chain of geometries for the same object —
+       usually what buildLodChain() handed back. Each rung is uploaded
+       and cached under the key with its index, so a thousand trees at
+       the same rung still cost one draw call between them. */
     if (!geo) throw new Error('mesh() needs a geometry');
     const key = opts.key || `mesh:${++_customMeshUid}`;
-    const gpu = this._mesh(key, () => (geo.positions instanceof Float32Array ? geo : geo.finalize()));
+    /* `uncached` is for a mesh that is rebuilt over and over from new
+       vertices — the near-terrain patch, which is thrown away and
+       remade every time the player walks far enough. Such a mesh must
+       not go in meshCache: the cache is keyed by name and never
+       evicts, so either the key is stable and hands back last
+       rebuild's geometry, or the key is fresh and the cache grows by a
+       megabyte and a half every ninety metres until the context is
+       lost. Build it outside the cache and give it to the actor, which
+       is then the thing that owns it and frees it. */
+    let gpu;
+    if (opts.uncached) {
+      gpu = new GpuMesh(this.gl, geo.positions instanceof Float32Array ? geo : geo.finalize());
+      gpu.setupInstancing(20);
+      gpu.__key = `${key}:${++_customMeshUid}`;
+    } else {
+      gpu = this._mesh(key, () => (geo.positions instanceof Float32Array ? geo : geo.finalize()));
+    }
+    /* `lod` is a near-to-far chain of geometries for the same object —
+       usually what buildLodChain() handed back. Each rung is uploaded
+       and cached under the key with its index, so a thousand trees at
+       the same rung still cost one draw call between them.
+
+       buildLodChain returns the original geometry as rung 0, so rung 0
+       is `gpu` — reuse it rather than uploading the same vertices a
+       second time under a second key. (It is not only wasted memory: the
+       first frame of LOD swaps actor.mesh to the duplicate and the
+       original upload is then referenced by nothing but the cache, one
+       orphan per tree species per variant.) */
+    let lodMeshes = null;
+    if (opts.lod && opts.lod.length > 1 && opts.key) {
+      lodMeshes = opts.lod.map((g, i) => (g === geo ? gpu : this._mesh(`${opts.key}#${i}`,
+        () => (g.positions instanceof Float32Array ? g : g.finalize()))));
+    }
 
     let shape = null;
     let boundRadius = opts.boundRadius;
@@ -869,7 +942,10 @@ class Engine {
         shape = Shape.sphere(boundRadius);
       }
     }
-    return this._spawn(opts, gpu, shape, boundRadius || 1);
+    const a = this._spawn(opts, gpu, shape, boundRadius || 1);
+    if (opts.uncached) a.ownMesh = gpu;
+    if (lodMeshes) { a.lodMeshes = lodMeshes; a.mesh = lodMeshes[0]; }
+    return a;
   }
 
   convex(points, opts = {}) {
@@ -878,7 +954,12 @@ class Engine {
     const geo = hullToGeometry({ points: shape.vertices, indices: facesToTriangles(shape.faces) }, opts.uvScale || 1);
     const mesh = new GpuMesh(this.gl, geo);
     mesh.setupInstancing(20);
-    return this._spawn(opts, mesh, opts.physics === false ? null : shape, shape.boundRadius);
+    const a = this._spawn(opts, mesh, opts.physics === false ? null : shape, shape.boundRadius);
+    /* This mesh is built here rather than through _mesh(), so it is in no
+       cache and nothing else will ever free it. Hand it to the actor:
+       _removeActor disposes `ownMesh`, which is the only route it has. */
+    a.ownMesh = mesh;
+    return a;
   }
 
   /* ---------------- destruction ---------------- */
@@ -1363,9 +1444,108 @@ class Engine {
 
   /* ---------------- batching ---------------- */
 
+  /* Decide, once per frame, how much of each object is worth drawing.
+
+     Everything the renderer does afterwards — which mesh goes in which
+     batch, what casts a shadow, what is skipped outright — reads the
+     answers this pass leaves on the actor, so the distance is measured
+     once rather than three times. */
+  _updateLod() {
+    const cam = this.camera.position;
+    const bias = this.lodBias || 1;
+    for (const actor of this.actors) {
+      if (actor.dead) continue;
+      /* An actor that was told nothing about its own detail still gets a
+         shadow range, worked out from how big it is.
+
+         The alternative is annotating every spawn site in the game, which
+         nobody will keep up to date, and which gets the answer wrong
+         anyway: what decides whether a shadow is worth a second draw of
+         the geometry is not what kind of object it is but how large it
+         looks from here. A shadow that has shrunk below a texel of the
+         shadow map is a smudge the terrain's own shading already
+         accounts for. Eighty times the bounding radius puts a 15 cm
+         pebble's shadow out at twelve metres, a fence post's at forty,
+         a cabin's at four hundred — which is past the fog, so a building
+         is in practice never culled. Exactly the right shape of rule,
+         and it costs one multiply.
+
+         Hiding the object itself is a far more dangerous business — get
+         it wrong and a wood turns into floating canopies — so the
+         automatic version only ever touches things too small to resolve:
+         under 30 cm, and not before they are a thousand radii away. An
+         actor can opt out of either with a negative value. */
+      if (actor.lodShadow === 0 && actor.castShadow !== false && !actor._lodAuto) {
+        actor._lodAuto = true;
+        const r = actor.boundRadius || 1;
+        actor.lodShadow = Math.max(14, r * 80);
+        if (!actor.lodHide && !actor.noCull && r < 0.3) actor.lodHide = Math.max(60, r * 1000);
+      }
+      if (!actor.lodMeshes && !(actor.lodHide > 0) && !(actor.lodShadow > 0) && !actor.furShells) {
+        actor._lodOn = true;
+        continue;
+      }
+      // Position straight off the matrix, for the same reason the frustum
+      // test does: a parented actor has no position of its own.
+      /* The matrix is composed later in the frame, so on an actor's
+         first frame it is still identity — which would put a tree at the
+         origin and hide it. Fall back to the position until there is a
+         matrix worth reading. */
+      const m = actor.matrix && actor._matrixValid !== false ? actor.matrix.e : null;
+      const px = m && (m[12] || m[13] || m[14]) ? m[12] : actor.position.x;
+      const py = m && (m[12] || m[13] || m[14]) ? m[13] : actor.position.y;
+      const pz = m && (m[12] || m[13] || m[14]) ? m[14] : actor.position.z;
+      const d = Math.hypot(px - cam.x, py - cam.y, pz - cam.z);
+      actor._lodDist = d;
+      actor._lodOn = !(actor.lodHide > 0 && d > actor.lodHide * bias);
+      /* A shadow is a second draw of the same geometry, and past a few
+         tens of metres nobody can tell whose shadow it is — only that
+         the ground is darker there, which the terrain's own shading
+         already says. Dropping them is the single cheapest thing the
+         level-of-detail system does. */
+      actor._lodShadow = !(actor.lodShadow > 0 && d > actor.lodShadow * bias);
+      /* Fur, the other way round: a coat gains layers as you walk up to
+         it. Each shell is a whole extra draw of the animal, so eight of
+         them on a deer forty metres off is eight draws spent on
+         something that is four pixels of brown either way — while the
+         same eight on a deer you are field-dressing are the difference
+         between hair and a painted decal. Full count inside six metres,
+         thinning to a couple by thirty, gone by fifty. */
+      if (actor.furShells) {
+        const want = actor.furShells;
+        const t = clamp((d / bias - 6) / 24, 0, 1);
+        actor._furShells = d / bias > 50 ? 0 : Math.max(1, Math.round(want * (1 - t) + 2 * t));
+      }
+      if (actor.lodMeshes && actor.lodMeshes.length > 1) {
+        /* Which rung of the chain. The steps widen as they go out, so the
+           first swap happens where it is nearly invisible and the last
+           covers everything beyond — a linear ladder would spend all its
+           rungs in the first thirty metres. */
+        let rung = 0, edge = actor.lodStep * bias;
+        while (rung < actor.lodMeshes.length - 1 && d > edge) { rung++; edge *= 2.4; }
+        const want = actor.lodMeshes[rung];
+        if (want && actor.mesh !== want) actor.mesh = want;
+      }
+    }
+  }
+
   _buildBatches() {
+    this._updateLod();
     const groups = this._batchGroups;
-    for (const g of groups.values()) g.count = 0;
+    /* Zeroing a group keeps its GpuMesh, its Material and an instance
+       buffer that only ever doubles. That is right for a group that will
+       fill again next frame and wrong for one whose mesh no longer
+       exists — the near-terrain patch alone retires a key every ninety
+       metres walked. Count how long each has been empty and drop the
+       ones that have clearly gone for good. */
+    for (const [k, g] of groups) {
+      if (g.count === 0) {
+        if ((g.idle = (g.idle || 0) + 1) > 600) { g.data = null; groups.delete(k); }
+      } else {
+        g.idle = 0;
+        g.count = 0;
+      }
+    }
     this._individual.length = 0;
 
     if (this.frustumCulling) this.camera.extractPlanes(this._planes);
@@ -1375,6 +1555,7 @@ class Engine {
     for (const actor of this.actors) {
       if (!actor.visible || !actor.mesh || actor.dead) continue;
       actor.updateMatrix();
+      if (!actor._lodOn) continue;
 
       if (this.frustumCulling && !actor.noCull) {
         // Cull against the matrix translation, not actor.position. A
@@ -1403,7 +1584,11 @@ class Engine {
         continue;
       }
 
-      const key = `${actor.mesh.__key || actor.mesh.__uid || (actor.mesh.__uid = ++_meshUid)}|${actor.material.id}`;
+      /* Shadow eligibility is part of the batch key, because a batch is
+         drawn whole: instances that have stopped casting have to be in a
+         different one from those that have not. */
+      const casts = actor._lodShadow !== false;
+      const key = `${actor.mesh.__key || actor.mesh.__uid || (actor.mesh.__uid = ++_meshUid)}|${actor.material.id}|${casts ? 1 : 0}`;
       let g = groups.get(key);
       if (!g) {
         g = {
@@ -1415,6 +1600,7 @@ class Engine {
           grass: false,
           alphaClip: !!actor.material.alphaClip,
           vertexColor: !!actor.material.vertexColor,
+          castShadow: casts,
           sortKey: 0,
           cx: 0, cy: 0, cz: 0,
         };
@@ -1465,6 +1651,10 @@ class Engine {
         grass: false,
         alphaClip: !!actor.material.alphaClip,
         vertexColor: !!actor.material.vertexColor,
+        // Same field the instanced path sets, and it has to be set here
+        // too: the shadow pass tests `=== false`, so leaving it undefined
+        // quietly exempted every skinned actor from its own distance cull.
+        castShadow: actor._lodShadow !== false,
         sortKey: camPos.distanceToSq(actor.position),
       };
       if (actor.skeleton) {
@@ -1475,9 +1665,10 @@ class Engine {
       // Fur shells: the same skinned mesh re-drawn in inflated layers, each
       // clipped harder against the strand mask, so hair tips break the
       // silhouette in 3D instead of living only in the texture.
-      if (actor.furShells) {
-        for (let layer = 1; layer <= actor.furShells; layer++) {
-          const t = layer / actor.furShells;
+      const shells = actor._furShells != null ? actor._furShells : actor.furShells;
+      if (shells) {
+        for (let layer = 1; layer <= shells; layer++) {
+          const t = layer / shells;
           list.push(Object.assign({}, batch, {
             furShell: true,
             // Loosened from the original 0.16 + t^0.85*0.68 (peaked at 0.84,

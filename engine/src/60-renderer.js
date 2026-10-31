@@ -163,6 +163,16 @@ class Renderer {
     this.shadows = { enabled: true, distance: 60, strength: 0.86, split: 14 };
     this.post = {
       exposure: 1.0,
+      /* The average scene luminance this grade was built around — an
+         open daylight frame. Measured, not guessed: see
+         survivor/test/_light.js, which prints it. Zero turns
+         adaptation off and pins the exposure. */
+      autoKey: 0.0,
+      autoMin: 0.45,
+      autoMax: 3.2,
+      // Fraction of the way to the measured level per frame, at 60 Hz.
+      adaptUp: 0.045,     // toward brighter: about a third of a second
+      adaptDown: 0.012,   // toward darker: about one and a half seconds
       bloom: 0.55,
       bloomThreshold: 1.1,
       vignette: 0.55,
@@ -237,6 +247,27 @@ class Renderer {
       });
     }
     this.ldr = new Framebuffer(gl, { width: 4, height: 4, colors: [{}], depth: false });
+
+    /* Eye adaptation. 64x64 -> 8x8 -> 1x1 measures the frame, and a
+       pair of 1x1 buffers remember the result between frames. All of
+       it needs a float target to hold a log, so where float render
+       targets are unavailable the whole feature switches itself off
+       and the renderer behaves exactly as it did before. */
+    const lumSpec = this.floatBuffers
+      ? { internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT }
+      : null;
+    this.autoExposure = !!lumSpec;
+    if (lumSpec) {
+      this.lum64 = new Framebuffer(gl, { width: 64, height: 64, colors: [lumSpec], depth: false });
+      this.lum8 = new Framebuffer(gl, { width: 8, height: 8, colors: [lumSpec], depth: false });
+      this.lum1 = new Framebuffer(gl, { width: 1, height: 1, colors: [lumSpec], depth: false });
+      this.adapt = [
+        new Framebuffer(gl, { width: 1, height: 1, colors: [lumSpec], depth: false }),
+        new Framebuffer(gl, { width: 1, height: 1, colors: [lumSpec], depth: false }),
+      ];
+      this._adaptIdx = 0;
+      this._adaptPrimed = false;
+    }
 
     const rSpec = this.floatBuffers
       ? { internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT }
@@ -480,16 +511,25 @@ class Renderer {
 
       for (const batch of batches) {
         if (!batch.count || !batch.material.castShadow) continue;
+        if (batch.castShadow === false) continue;   // too far out to be worth a second draw
         if (batch.furShell) continue;   // the base mesh already casts the shadow
         if (batch.material.transparent && batch.material.opacity < 0.6) continue;
         const defines = [];
         if (batch.instanced) defines.push('INSTANCED');
         if (batch.skinned) defines.push('SKINNED');
         if (batch.grass) defines.push('GRASS');
+        if (batch.alphaClip) defines.push('ALPHA_CLIP');
         const sh = this.program('shadow', GLSL.shadowVert, GLSL.shadowFrag, defines).use();
         sh.m4('uViewProj', this._shadowMats[i]);
         sh.f('uTime', this.time);
         sh.v3('uCameraPos', camera.position);
+        if (batch.alphaClip) {
+          // The clip needs the same map and the same tiling the colour pass
+          // will use, or the leaf it keeps is not the leaf it shades.
+          const m = batch.material.maps || this._fallbackMaps;
+          sh.tex('uAlbedoMap', m.albedo);
+          sh.f('uUvScale', batch.material.uvScale);
+        }
         if (batch.grass) {
           sh.v3('uWindDir', this.wind ? this.wind.direction : _defaultWind);
           sh.f('uWindStrength', (this.wind ? this.wind.strength : 0.25) * (batch.windScale != null ? batch.windScale : 1));
@@ -769,6 +809,46 @@ class Renderer {
       this.stats.draws += iters * 3;
     }
 
+    /* Measure this frame and move the remembered exposure toward it.
+       Four tiny draws: the largest is 64x64. */
+    if (this.autoExposure && this.post.autoKey > 0) {
+      const lum = this.program('lum', FULLSCREEN_VS, GLSL.lumFrag).use();
+      this.lum64.bind(false);
+      lum.tex('uTex', this.hdrA.color);
+      this.fullscreen.draw();
+
+      const red = this.program('lumReduce', FULLSCREEN_VS, GLSL.lumReduceFrag);
+      red.use();
+      this.lum8.bind(false);
+      red.tex('uTex', this.lum64.color);
+      red.v2('uTexel', 1 / 64, 1 / 64);
+      this.fullscreen.draw();
+      this.lum1.bind(false);
+      red.tex('uTex', this.lum8.color);
+      red.v2('uTexel', 1 / 8, 1 / 8);
+      this.fullscreen.draw();
+
+      const prev = this.adapt[this._adaptIdx];
+      const next = this.adapt[1 - this._adaptIdx];
+      const ad = this.program('adapt', FULLSCREEN_VS, GLSL.adaptFrag).use();
+      next.bind(false);
+      ad.tex('uPrev', prev.color);
+      ad.tex('uTarget', this.lum1.color);
+      /* On the first frame there is nothing remembered — a cleared
+         buffer reads as log-luminance zero, which is a luminance of
+         one, far brighter than any real frame — so jump straight to
+         the measurement rather than fading down from a white-out. */
+      const prime = !this._adaptPrimed;
+      const dt = Math.min(0.1, this._adaptDt || 1 / 60);
+      const rate = (k) => (prime ? 1 : Math.min(1, k * dt * 60));
+      ad.f('uUp', rate(this.post.adaptUp));
+      ad.f('uDown', rate(this.post.adaptDown));
+      this.fullscreen.draw();
+      this._adaptPrimed = true;
+      this._adaptIdx = 1 - this._adaptIdx;
+      this.stats.draws += 4;
+    }
+
     const useFxaa = this.quality.fxaa;
     const target = useFxaa ? this.ldr : null;
     if (target) target.bind(true, 0, 0, 0, 1);
@@ -790,6 +870,10 @@ class Renderer {
     comp.f('uContrast', this.post.contrast);
     comp.f('uGrain', this.post.grain);
     comp.f('uTime', this.time);
+    const autoOn = this.autoExposure && this.post.autoKey > 0;
+    comp.tex('uAdapt', autoOn ? this.adapt[this._adaptIdx].color : this.hdrA.color);
+    comp.f('uAutoKey', autoOn ? this.post.autoKey : 0);
+    comp.v2('uAutoRange', this.post.autoMin, this.post.autoMax);
     this.fullscreen.draw();
     this.stats.draws++;
 
@@ -806,6 +890,8 @@ class Renderer {
 
   beginFrame(dt) {
     this.time += dt;
+    // Adaptation rates are per second; present() needs the frame time.
+    this._adaptDt = dt;
     this.stats.draws = 0;
     this.stats.tris = 0;
     this.stats.instances = 0;

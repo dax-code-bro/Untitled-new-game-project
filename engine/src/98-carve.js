@@ -352,7 +352,7 @@ Engine.prototype.carveFromImages = async function (sources, opts = {}) {
     const cv = typeof OffscreenCanvas !== 'undefined'
       ? new OffscreenCanvas(bitmap.width, bitmap.height)
       : Object.assign(document.createElement('canvas'), { width: bitmap.width, height: bitmap.height });
-    const ctx2d = cv.getContext('2d');
+    const ctx2d = cv.getContext('2d', { willReadFrequently: true });
     ctx2d.drawImage(bitmap, 0, 0);
     const imgData = ctx2d.getImageData(0, 0, bitmap.width, bitmap.height);
     const sil = segmentSilhouette(imgData, opts);

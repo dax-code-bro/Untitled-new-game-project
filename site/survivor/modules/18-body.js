@@ -101,7 +101,11 @@ SurvivorGame.module({
         geometry: geo, key, material: matFor(mat), at: [0, -2000, 0],
         physics: false, name: name || 'body',
       });
-      if (a) { a.noCull = true; a.visible = false; }
+      /* Which material this actor was actually built with. It is fixed
+         for the life of the body — matFor() runs once, here — while the
+         material the outfit asks for changes every time you put gloves
+         on. The tint pass needs to know the difference. */
+      if (a) { a.noCull = true; a.visible = false; a._builtMat = mat; }
       return a;
     }
 
@@ -261,7 +265,17 @@ SurvivorGame.module({
       const CARRIES_COLOUR = { leather: 1, fur: 1 };
       const set = (actor, bone, defMat) => {
         if (!actor) return;
-        const base = CARRIES_COLOUR[SCAN_FOR[defMat]]
+        /* Whether the near-white applies is a fact about the texture
+           this actor is wearing, not about the garment the outfit
+           would like it to wear. Every limb bone is built out of
+           procedural skin and can never be rebuilt — so asking for
+           fur mitts used to hand the palm and all sixteen phalanges a
+           near-white tint over bare skin, and the hand came out paler
+           than the arm it was attached to. There is no fur to let
+           speak; the best a skin-coloured actor can do is take fur's
+           painted brown. Decide on what was built. */
+        const carries = CARRIES_COLOUR[SCAN_FOR[actor._builtMat]];
+        const base = carries
           ? 0xe2dcd2
           : (LE.FP_MATERIAL[defMat] || LE.FP_MATERIAL.skin).color;
         const d = damage.bones.get(bone);
@@ -276,7 +290,7 @@ SurvivorGame.module({
         if (!side) continue;
         set(side.actors.get('upperArm'), 'upperArm', 'skin');
         set(side.actors.get('forearm'), 'forearm', 'skin');
-        set(side.actors.get('shoulder'), 'upperArm', 'skin');
+        // (No shoulder: buildArm skips it deliberately — see there.)
         /* Gloves are the hand's material, not a layer over it — the
            hand is already sixteen actors and doubling that to draw
            cloth over each phalanx would buy nothing anyone can see. */

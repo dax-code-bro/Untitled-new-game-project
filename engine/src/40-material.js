@@ -636,6 +636,34 @@ class Material {
     this.scan2 = opts.scan2 || null;
     this.uvScale2 = opts.uvScale2 != null ? opts.uvScale2 : (opts.uvScale != null ? opts.uvScale : 1);
     this.slopeBlend = opts.slopeBlend || [0.30, 0.62];
+    /* Automatic close-up detail.
+
+       A capture has a real size — half a metre of brick, two metres of
+       soil — and that is also the finest thing it can say. Stand close
+       enough and you are looking at one tile across your whole screen:
+       a smooth wash where there should be grain, because the photograph
+       simply has no more to give at that distance.
+
+       Rather than pick a number per preset (which nobody will ever keep
+       in step with the captures), derive it from the capture's own
+       size. Target grain is four centimetres — roughly the scale at
+       which bark, soil, weave and skin all have structure the eye can
+       still resolve at arm's length — so the detail tile repeats
+       `metresPerTile / 0.04` times inside the base one. The bounds are
+       aliasing on one side and pointlessness on the other: below about
+       three the detail says nothing the base tile did not, and above
+       about twenty-four it turns to sparkle before the distance fade
+       can hide it.
+
+       This is the near half of the detail ladder. The far half throws
+       geometry away as things recede; this one finds surface that was
+       never in the texture as they approach. Nothing here costs
+       anything beyond a few metres — the shader fades the whole sample
+       out with distance and skips it entirely at zero. */
+    if (opts.detailScale == null && this.scan && typeof SCAN !== 'undefined' && SCAN[this.scan]) {
+      const mpt = SCAN[this.scan].metresPerTile;
+      if (mpt > 0) this.detailScale = Math.max(3, Math.min(24, Math.round(mpt / 0.04)));
+    }
     this.castShadow = opts.castShadow !== false;
     this.receiveShadow = opts.receiveShadow !== false;
     // Subsurface approximation — foliage and skin look dead without it.
@@ -653,7 +681,10 @@ class Material {
     this.scanReady = false;
     if (this.texture || this.scan) this._buildMaps(opts.textureSize || 256, opts.textureSeed || 1);
     if (this.scan) this._requestScan();
-    if (this.scan2) this._requestScan2();
+    /* uHasMaps is 0 unless `maps` exists, and the shader reads the second
+       set only at 2 — so a scan2 without a first set would upload three
+       textures nothing can ever sample. */
+    if (this.scan2 && this.maps) this._requestScan2();
   }
 
   _newMap(srgb) {
@@ -710,6 +741,18 @@ class Material {
       this.maps.orm.upload(s.orm.data, s.orm.size, s.orm.size);
       this.scanReady = true;
       if (s.spec && s.spec.subsurface && !this._ssOverride) this.subsurface = Math.max(this.subsurface, s.spec.subsurface);
+      /* Variants are shallow copies taken at spawn, which is long before
+         this decode lands. They share the `maps` object by reference, so
+         the new textures reach them for free — but these two are plain
+         numbers copied by value, and without this a 5 m patch of savanna
+         would light differently from a 1 m one for want of a scatter
+         term. */
+      if (this._variants) {
+        for (const v of this._variants.values()) {
+          v.scanReady = true;
+          if (!v._ssOverride) v.subsurface = this.subsurface;
+        }
+      }
     }).catch(() => { /* a missing scan is not a reason to lose the surface */ });
   }
 
@@ -731,6 +774,16 @@ class Material {
     if (hit) return hit;
     const v = Object.create(Material.prototype);
     Object.assign(v, this);
+    /* A fresh id, and it has to be fresh. Object.assign copies `id`, and
+       the renderer batches by `mesh|material.id`, so a variant that kept
+       its parent's id would hash into the parent's batch — and a batch
+       captures its material once, at creation, for the life of the
+       session. The first roof built would then pin the gravel density
+       for every roof in the game: a garage and a warehouse are both a
+       unit box with the same material, so one of them would be tiled
+       eight times wrong, permanently, and which one depended on build
+       order. The whole point of a variant is to be a different batch. */
+    v.id = _materialId++;
     v.uvScale = k;
     v.uvScale2 = this.uvScale2 === this.uvScale ? k : this.uvScale2;
     v._variants = null;
@@ -759,6 +812,15 @@ class Material {
       if (!m) continue;
       m.albedo.dispose(); m.normal.dispose(); m.orm.dispose();
     }
+    this.maps = this.maps2 = null;
+    /* The variants are still held by whatever batch groups reference
+       them, and they are still pointing at the textures just deleted.
+       Cut them loose so a stale draw binds the fallback maps instead of
+       a freed GL object. */
+    if (this._variants) {
+      for (const v of this._variants.values()) { v.maps = null; v.maps2 = null; }
+      this._variants.clear();
+    }
   }
 }
 
@@ -781,13 +843,18 @@ const MaterialPresets = {
      its texture, which multiplies with the vertex colour and darkens it;
      this one averages to 1 and leaves the colour alone. */
   painted: { color: 0xffffff, texture: 'terrainDetail', roughness: 0.55, metalness: 0,
-    uvScale: 3.0, normalStrength: 0.35 },
+    uvScale: 3.0, normalStrength: 0.35, detailScale: 6 },
 
   /* For anything whose colour comes from vertex colours: canopies, shrubs,
      hedges. The `grass` preset bakes a green albedo of its own and is the
      wrong thing to point a leaf at. */
+  /* detailScale is set by hand here because it is normally derived from
+     a capture's real-world tile size and this one has no capture. Nine
+     tiles of leaf per crown is about a hand's width per tile, so five
+     times finer is a leaf — which is the scale that appears when you
+     walk up to a shrub and is simply not there from across a field. */
   foliage: { color: 0xffffff, texture: 'foliageDetail', alphaClip: true, roughness: 0.88, metalness: 0,
-    subsurface: 0.5, doubleSided: true, uvScale: 9, normalStrength: 0.55 },
+    subsurface: 0.5, doubleSided: true, uvScale: 9, normalStrength: 0.55, detailScale: 5 },
   dirt: { color: 0xffffff, texture: 'dirt', scan: 'dirt', roughness: 0.96, metalness: 0 },
   // Neutral ground for vertex-coloured terrain: detail from the texture,
   // colour from the mesh.

@@ -113,8 +113,18 @@
     ocean: [0.03, 0.06, 0.09], beach: [0.34, 0.30, 0.22], dune: [0.31, 0.28, 0.20],
     saltMarsh: [0.15, 0.17, 0.10], freshMarsh: [0.12, 0.16, 0.08],
     riverbank: [0.14, 0.18, 0.10], meadow: [0.12, 0.19, 0.06],
-    prairie: [0.21, 0.22, 0.09], woodland: [0.07, 0.12, 0.05],
-    deepForest: [0.035, 0.075, 0.033], pineForest: [0.04, 0.09, 0.06],
+    prairie: [0.21, 0.22, 0.09],
+    /* These three are the floor of a wood, not the top of one. A forest
+       photographed from the air is very dark — six or seven per cent —
+       and that is the number that was here, but it is dark because the
+       canopy is shadowing itself, which the renderer already does with
+       actual shadows. Painting it on the ground as well counted the
+       canopy twice and turned every wood on the island into a black
+       hole with white grass in it. Leaf litter and needle duff are
+       ten to fifteen per cent, like damp cardboard, which is what they
+       are. */
+    woodland: [0.115, 0.108, 0.078],
+    deepForest: [0.092, 0.088, 0.064], pineForest: [0.098, 0.086, 0.062],
     scrub: [0.15, 0.15, 0.08], rockyHill: [0.15, 0.14, 0.12],
     scree: [0.18, 0.17, 0.15], cliff: [0.12, 0.115, 0.105],
     alpine: [0.22, 0.23, 0.21],
@@ -573,12 +583,32 @@
     /* Bounce is a fraction of the light falling on the ground, not the
        ground itself acting as a lamp — roughly a third of the hemisphere's
        contribution on a clear day. Any more and a wood tints the whole
-       frame green. */
-    const bounce = (0.10 + 0.42 * day) * overcast;
+       frame green.
+
+       Two corrections to how that fraction was being worked out.
+
+       First, the hex is a colour as a screen displays it, and this is a
+       reflectance going into a lighting calculation: it has to be
+       linearised first. Using the sRGB byte straight was overstating
+       every bounce by nearly double, more for dark ground than light.
+
+       Second and worse, the amount of light landing on that ground was
+       taken from the time of day alone — so a floor under a closed
+       canopy, which is getting a twentieth of what the field next to it
+       gets, was still being treated as a lamp of the same brightness.
+       Because a blade of grass stands up, it collects this made-up
+       bounce from the side while the floor it is rooted in collects only
+       real sky from above, and a shaded wood came out as bone-white
+       grass standing in a black floor. canopyAt already knows what is
+       overhead; ask it. */
+    const toLin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    const openSky = ctx && ctx.state && typeof ctx.state.canopyAt === 'function'
+      ? 1 - 0.85 * clamp01(ctx.state.canopyAt(player.x, player.z)) : 1;
+    const bounce = (0.10 + 0.42 * day) * overcast * openSky;
     r.sky.ground.set(
-      (((groundAlbedo >> 16) & 255) / 255) * bounce,
-      (((groundAlbedo >> 8) & 255) / 255) * bounce,
-      ((groundAlbedo & 255) / 255) * bounce,
+      toLin(((groundAlbedo >> 16) & 255) / 255) * bounce,
+      toLin(((groundAlbedo >> 8) & 255) / 255) * bounce,
+      toLin((groundAlbedo & 255) / 255) * bounce,
     );
 
     // Fog carries the weather: haze on a clear day, a wall in a fog bank,
@@ -693,9 +723,15 @@
     if (detailPatch) detailPatch.destroy();
     detailPatch = game.mesh({
       geometry: g,
-      // A fresh key each time: the geometry is different every rebuild, so
-      // caching it would hand back the previous patch.
-      key: `detail:${sx.toFixed(0)}:${sz.toFixed(0)}`,
+      /* Rebuilt from new vertices every ninety metres walked, so it must
+         stay out of the mesh cache: a stable key hands back the patch
+         from two hills ago, and a fresh key quietly piles up a megabyte
+         and a half of vertex buffers per rebuild — the cache never
+         evicts — until a long walk loses the GL context. `uncached`
+         makes the actor the owner, so destroy() below actually frees
+         it. */
+      key: 'detail',
+      uncached: true,
       material: { preset: 'terrain', vertexColor: true, color: 0xffffff },
       // Purely visual. The heightfield collider is already finer than this.
       physics: false,
@@ -754,7 +790,18 @@
       const b = toLin((hex & 255) / 255);
       const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
       if (lum < 1e-4) return hex;
-      const k = Math.min(1.4, target / lum);
+      /* This used to be Math.min(1.4, …), which caps brightening and
+         leaves darkening unbounded — exactly backwards for half this
+         table. The premise above (everything was painted too bright)
+         only held for seventeen of the thirty-two entries; the other
+         fifteen were painted far too DARK, because whoever picked them
+         was looking at a photograph of grass in shade and matching the
+         shade. deepForest.low sat at 0.042 against a target of 0.16, so
+         the cap pinned it at 0.058 and it never got near. Clamp wide
+         enough on both sides to actually reach the target, which is the
+         whole job of this pass; the ratio is taken on luminance, so the
+         hue each biome was given survives the move. */
+      const k = Math.max(0.25, Math.min(4, target / lum));
       const enc = (v) => Math.max(0, Math.min(255, Math.round(toSrgb(v * k) * 255)));
       return (enc(r) << 16) | (enc(g) << 8) | enc(b);
     };

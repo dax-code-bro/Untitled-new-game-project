@@ -367,20 +367,57 @@ function normalFromHeight(height, size, slopeDeg, _metresPerTile) {
 /* A supplied normal map is measured and rescaled the same way, so a scan
    whose normals were authored flat and one whose were authored violent
    both end up at the slope the real surface has. */
+/* RMS tilt of an interleaved normal array, in degrees. Printed at each
+   stage under SCAN_TRACE=1 — the normal pipeline has quietly thrown this
+   number away once already, and a stage that halves it should be visible
+   from the log rather than from the finished game. */
+function tiltOf(n3, count) {
+  let s = 0;
+  for (let i = 0; i < count; i++) s += n3[i * 3] ** 2 + n3[i * 3 + 1] ** 2;
+  return +(Math.asin(Math.min(1, Math.sqrt(s / count))) * 180 / Math.PI).toFixed(2);
+}
+function trace(id, stage, deg) {
+  if (process.env.SCAN_TRACE) console.log(`      [${id}] ${stage.padEnd(22)} ${deg}°`);
+}
+
+/* Scale a normal map so its typical texel tilts by the angle a real
+   surface of that kind tilts by.
+
+   The statistic is the RMS of sin(tilt) — the length of the tangent-space
+   xy — and not, as it was, the RMS of tan(tilt).
+
+   tan is unbounded, and a normal map that has been through JPEG has a
+   scatter of texels whose blue channel has been dragged towards the
+   middle of the range. Those decode to a normal lying almost flat in the
+   tangent plane, where tan is in the hundreds, and a few hundred such
+   texels in a quarter of a million dominate the mean completely. Oak
+   bark came out of the decoder measuring an RMS tilt of eighty-nine
+   degrees — a number no surface has — so scaling that down to the thirty
+   degrees bark actually has divided every honest texel by about fifty
+   and shipped a sheet of glass. The two materials that came from a
+   JPEG-compressed source normal were the two that arrived flat, and the
+   pipeline reported thirty degrees for both of them.
+
+   sin cannot do this: every term is at most one, so no texel can
+   contribute more than one texel's worth however badly it decoded. It
+   differs from tan by fifteen per cent at thirty degrees, which is well
+   inside the honest uncertainty on "how rough is bark", and it is
+   bounded, which matters far more. */
 function retargetNormal(n3, count, slopeDeg) {
   let sum = 0;
   for (let i = 0; i < count; i++) {
-    const z = Math.max(1e-4, n3[i * 3 + 2]);
-    const tx = n3[i * 3] / z, ty = n3[i * 3 + 1] / z;
-    sum += tx * tx + ty * ty;
+    const x = n3[i * 3], y = n3[i * 3 + 1];
+    sum += x * x + y * y;
   }
   const rms = Math.sqrt(sum / count) || 1e-6;
-  const k = Math.tan(slopeDeg * Math.PI / 180) / rms;
+  const target = Math.sin(slopeDeg * Math.PI / 180);
+  const k = target / rms;
   for (let i = 0; i < count; i++) {
-    const z = Math.max(1e-4, n3[i * 3 + 2]);
-    let x = (n3[i * 3] / z) * k, y = (n3[i * 3 + 1] / z) * k;
-    const len = Math.hypot(x, y, 1);
-    n3[i * 3] = x / len; n3[i * 3 + 1] = y / len; n3[i * 3 + 2] = 1 / len;
+    // Work in gradient space so the result is still a unit normal.
+    const z = Math.max(1e-3, n3[i * 3 + 2]);
+    const gx = (n3[i * 3] / z) * k, gy = (n3[i * 3 + 1] / z) * k;
+    const len = Math.hypot(gx, gy, 1);
+    n3[i * 3] = gx / len; n3[i * 3 + 1] = gy / len; n3[i * 3 + 2] = 1 / len;
   }
   return n3;
 }
@@ -532,10 +569,13 @@ async function capture(m) {
       const len = Math.hypot(x, y, z) || 1;
       normal[i * 3] = x / len; normal[i * 3 + 1] = y / len; normal[i * 3 + 2] = Math.abs(z / len);
     }
+    trace(m.id, 'decoded+tiled', tiltOf(normal, work * work));
     retargetNormal(normal, work * work, m.slopeDeg || 15);
+    trace(m.id, 'after retarget', tiltOf(normal, work * work));
     stats.from.push('normal map, retargeted');
   } else {
     normal = normalFromHeight(height, work, m.slopeDeg || 15, m.metresPerTile || 1);
+    trace(m.id, 'from height', tiltOf(normal, work * work));
     stats.from.push('normal derived from height');
   }
 
@@ -592,15 +632,64 @@ async function capture(m) {
      shader resamples it at a second, much higher frequency for close
      range anyway, so the base tile only has to carry the shape. The
      occlusion and roughness are smooth by nature and survive a quarter. */
-  const nSize = Math.max(128, size >> 1);
-  const oSize = Math.max(64, size >> 2);
+  const nSize = size;
+  const oSize = Math.max(128, size >> 1);
   const outDir = path.join(OUT, m.id);
   const nOut = down3(normal, work, nSize);
+  trace(m.id, `down3 ${work}->${nSize}`, (() => {
+    let t = 0; for (let i = 0; i < nSize * nSize; i++) t += nOut.x[i] ** 2 + nOut.y[i] ** 2;
+    return +(Math.asin(Math.min(1, Math.sqrt(t / (nSize * nSize)))) * 180 / Math.PI).toFixed(2);
+  })());
+  /* Set the slope on the map that actually ships, not the one we worked
+     in.
+
+     This used to retarget at the working resolution and then resample
+     down to a quarter of the pixels, and averaging four neighbouring
+     tilts mostly cancels them. How much it cancels depends entirely on
+     how fine the relief is, so the damage was invisible in the log and
+     wildly uneven in the game: rock, which is big slow blobs, came
+     through at about two thirds of what was asked for, while bark —
+     the whole point of which is narrow vertical fissures — arrived at
+     one twentieth. Thirty degrees of oak went out of here as one and
+     seven tenths, which is a photograph of bark printed on glass, and
+     that one number is most of why every surface in this game has been
+     reading as painted plastic.
+
+     Worse, the measurement below was taken from the working array too,
+     so the bake log cheerfully reported the thirty degrees that had
+     already been thrown away. Retarget here, measure here, and the
+     number in the log is a number about the file. */
+  retargetNormal3(nOut, nSize * nSize, m.slopeDeg || 15);
+  const nFile = path.join(outDir, 'normal.webp');
+  const writeNormal = () => writeRgb(nFile,
+    mapArr(nOut.x, (v) => v * 0.5 + 0.5), mapArr(nOut.y, (v) => v * 0.5 + 0.5),
+    mapArr(nOut.z, (v) => v * 0.5 + 0.5), nSize, false, 84);
+  let nBytes = await writeNormal();
+  /* Close the loop on the slope.
+
+     Three things between the target and the file each take a few per
+     cent off it: scaling gradients and then renormalising to unit
+     length compresses the top of the distribution, eight bits either
+     side of 128 quantises the small tilts, and the encoder smooths
+     what is left. Together they were landing seventeen-degree soil at
+     twelve. None of them is worth modelling — but now that the
+     measurement is taken on the far side of all three, the pipeline
+     can simply ask for more and check. One correction is enough to get
+     inside a few per cent, because the whole chain is close to linear
+     in the amount of tilt you feed it. */
+  const want = m.slopeDeg || 15;
+  let got = await measureSlope(nFile);
+  if (got > 0.5 && Math.abs(got - want) > want * 0.03) {
+    retargetNormal3(nOut, nSize * nSize, Math.min(78, want * want / got));
+    nBytes = await writeNormal();
+    const after = await measureSlope(nFile);
+    trace(m.id, `corrected ${got}->`, after);
+    got = after;
+  }
   const bytes = {
     albedo: await writeRgb(path.join(outDir, 'albedo.webp'),
       resample(albedo.r, work, size), resample(albedo.g, work, size), resample(albedo.b, work, size), size, true, 80),
-    normal: await writeRgb(path.join(outDir, 'normal.webp'),
-      mapArr(nOut.x, (v) => v * 0.5 + 0.5), mapArr(nOut.y, (v) => v * 0.5 + 0.5), mapArr(nOut.z, (v) => v * 0.5 + 0.5), nSize, false, 86),
+    normal: nBytes,
     orm: await writeRgb(path.join(outDir, 'orm.webp'),
       resample(ao, work, oSize), resample(rough, work, oSize), resample(metal, work, oSize), oSize, false, 84),
   };
@@ -608,12 +697,17 @@ async function capture(m) {
   let mean = 0;
   const la = luma(albedo);
   for (let i = 0; i < la.length; i++) mean += la[i];
-  let sl = 0;
-  for (let i = 0; i < work * work; i++) {
-    const z = Math.max(1e-4, normal[i * 3 + 2]);
-    sl += (normal[i * 3] / z) ** 2 + (normal[i * 3 + 1] / z) ** 2;
-  }
-  stats.slopeDeg = +(Math.atan(Math.sqrt(sl / (work * work))) * 180 / Math.PI).toFixed(1);
+  /* Measure the slope by reading the file back, not the array we wrote
+     it from.
+
+     Every version of this measurement so far has been taken from
+     whatever was convenient and in memory, and each time it reported a
+     number the shipped file did not have — first because the downsample
+     came afterwards, then because eight-bit quantisation takes another
+     bite. The only measurement that cannot drift from the truth is one
+     taken on the other side of the encoder. It costs one decode per
+     material and it is the number this pipeline exists to control. */
+  stats.slopeDeg = got;
   stats.size = size;
   stats.normalSize = nSize;
   stats.ormSize = oSize;
@@ -680,6 +774,38 @@ function resample(src, from, to, _ch) {
   }
   return out;
 }
+/* retargetNormal, for a normal held as three planes rather than
+   interleaved — which is the shape it is in once it has been
+   downsampled and is about to be written. */
+function retargetNormal3(n, count, slopeDeg) {
+  let sum = 0;
+  for (let i = 0; i < count; i++) sum += n.x[i] * n.x[i] + n.y[i] * n.y[i];
+  const rms = Math.sqrt(sum / count) || 1e-6;
+  const k = Math.sin(slopeDeg * Math.PI / 180) / rms;
+  for (let i = 0; i < count; i++) {
+    const z = Math.max(1e-3, n.z[i]);
+    const gx = (n.x[i] / z) * k, gy = (n.y[i] / z) * k;
+    const len = Math.hypot(gx, gy, 1);
+    n.x[i] = gx / len; n.y[i] = gy / len; n.z[i] = 1 / len;
+  }
+  return n;
+}
+
+/* RMS tilt of a normal map as it exists on disk, in degrees. */
+async function measureSlope(file) {
+  /* From a Buffer, not the path. sharp keeps a decode cache keyed on
+     the filename, so reading the same path twice in one run hands back
+     the first decode — which, when the point of the second read is to
+     check that rewriting the file changed it, reports that it did not. */
+  const { data, info } = await sharp(fs.readFileSync(file)).raw().toBuffer({ resolveWithObject: true });
+  let s = 0, n = 0;
+  for (let i = 0; i < data.length; i += info.channels) {
+    const x = (data[i] - 128) / 128, y = (data[i + 1] - 128) / 128;
+    s += x * x + y * y; n++;
+  }
+  return +(Math.asin(Math.min(1, Math.sqrt(s / n))) * 180 / Math.PI).toFixed(1);
+}
+
 function down3(n3, from, to) {
   const x = new Float32Array(from * from), y = new Float32Array(from * from), z = new Float32Array(from * from);
   for (let i = 0; i < from * from; i++) { x[i] = n3[i * 3]; y[i] = n3[i * 3 + 1]; z[i] = n3[i * 3 + 2]; }

@@ -80,18 +80,38 @@ function loadScan(id) {
     if (typeof Image === 'undefined' || typeof document === 'undefined') return resolve(null);
     const img = new Image();
     img.onload = () => {
-      const c = document.createElement('canvas');
-      c.width = img.width; c.height = img.height;
-      const ctx = c.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(img, 0, 0);
-      const d = ctx.getImageData(0, 0, c.width, c.height);
-      resolve({ data: new Uint8Array(d.data.buffer.slice(0)), size: c.width });
+      /* Everything in here can throw: getContext returns null once a tab
+         is over its canvas budget — and this decodes seventy-two of them
+         back to back — and a truncated WebP can come back zero by zero.
+         An exception thrown inside an onload handler does not reject
+         anything; it escapes to the window, Promise.all never settles,
+         and because the pending promise is memoised below, no material
+         asking for this scan later can ever retry it. Every garment on
+         the body would then stay a flat untextured colour for the rest
+         of the session with nothing said about it. Resolve null and let
+         the caller keep its procedural surface. */
+      try {
+        const c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        if (!ctx || !c.width || !c.height) return resolve(null);
+        ctx.drawImage(img, 0, 0);
+        const d = ctx.getImageData(0, 0, c.width, c.height);
+        resolve({ data: new Uint8Array(d.data.buffer.slice(0)), size: c.width });
+      } catch (e) { resolve(null); }
     };
     img.onerror = () => resolve(null);
     img.src = uri;
   });
   s._pending = Promise.all([one(s.albedo), one(s.normal), one(s.orm)])
-    .then(([albedo, normal, orm]) => (albedo && normal && orm ? { albedo, normal, orm, spec: s } : null));
+    .then(([albedo, normal, orm]) => {
+      if (albedo && normal && orm) return { albedo, normal, orm, spec: s };
+      // Nothing decoded: drop the memo so a later material gets a fresh
+      // attempt rather than inheriting this one's failure for ever.
+      s._pending = null;
+      return null;
+    })
+    .catch(() => { s._pending = null; return null; });
   return s._pending;
 }
 

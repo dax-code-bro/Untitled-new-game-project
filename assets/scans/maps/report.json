@@ -1,5 +1,399 @@
 [
   {
+    "id": "sand",
+    "from": [
+      "colour photograph",
+      "normal derived from height",
+      "roughness inferred from albedo variance",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 8.7,
+    "size": 512,
+    "normalSize": 512,
+    "ormSize": 256,
+    "meanAlbedo": 0.35,
+    "bytes": {
+      "albedo": 103312,
+      "normal": 98212,
+      "orm": 19466
+    },
+    "totalKb": 215.8
+  },
+  {
+    "id": "meadow",
+    "from": [
+      "colour photograph",
+      "normal map, retargeted",
+      "roughness inferred from albedo variance",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 18.2,
+    "size": 512,
+    "normalSize": 512,
+    "ormSize": 256,
+    "meanAlbedo": 0.21,
+    "bytes": {
+      "albedo": 115200,
+      "normal": 106316,
+      "orm": 26444
+    },
+    "totalKb": 242.1
+  },
+  {
+    "id": "grassTurf",
+    "from": [
+      "colour photograph",
+      "normal derived from height",
+      "roughness inferred from albedo variance",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 18.8,
+    "size": 512,
+    "normalSize": 512,
+    "ormSize": 256,
+    "meanAlbedo": 0.199,
+    "bytes": {
+      "albedo": 117864,
+      "normal": 147210,
+      "orm": 24342
+    },
+    "totalKb": 282.6
+  },
+  {
+    "id": "rock",
+    "from": [
+      "colour photograph",
+      "normal map, retargeted",
+      "roughness inferred from albedo variance",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 25.7,
+    "size": 512,
+    "normalSize": 512,
+    "ormSize": 256,
+    "meanAlbedo": 0.25,
+    "bytes": {
+      "albedo": 12908,
+      "normal": 99216,
+      "orm": 17220
+    },
+    "totalKb": 126.3
+  },
+  {
+    "id": "forestFloor",
+    "from": [
+      "colour photograph",
+      "normal derived from height",
+      "roughness inferred from albedo variance",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 15.8,
+    "size": 512,
+    "normalSize": 512,
+    "ormSize": 256,
+    "meanAlbedo": 0.119,
+    "bytes": {
+      "albedo": 91084,
+      "normal": 133600,
+      "orm": 27242
+    },
+    "totalKb": 246
+  },
+  {
+    "id": "dirt",
+    "from": [
+      "colour photograph",
+      "normal derived from height",
+      "roughness inferred from albedo variance",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 12.3,
+    "size": 256,
+    "normalSize": 256,
+    "ormSize": 128,
+    "meanAlbedo": 0.17,
+    "bytes": {
+      "albedo": 18240,
+      "normal": 30116,
+      "orm": 3810
+    },
+    "totalKb": 50.9
+  },
+  {
+    "id": "gravel",
+    "from": [
+      "colour photograph",
+      "normal map, retargeted",
+      "ORM roughness",
+      "ORM occlusion"
+    ],
+    "slopeDeg": 21.6,
+    "size": 256,
+    "normalSize": 256,
+    "ormSize": 128,
+    "meanAlbedo": 0.22,
+    "bytes": {
+      "albedo": 9070,
+      "normal": 36818,
+      "orm": 3496
+    },
+    "totalKb": 48.2
+  },
+  {
+    "id": "plank",
+    "from": [
+      "colour photograph",
+      "displacement map",
+      "normal derived from height",
+      "roughness map",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 6.8,
+    "size": 256,
+    "normalSize": 256,
+    "ormSize": 128,
+    "meanAlbedo": 0.344,
+    "bytes": {
+      "albedo": 10634,
+      "normal": 3752,
+      "orm": 822
+    },
+    "totalKb": 14.9
+  },
+  {
+    "id": "roughWood",
+    "from": [
+      "colour photograph",
+      "normal derived from height",
+      "roughness inferred from albedo variance",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 10.8,
+    "size": 256,
+    "normalSize": 256,
+    "ormSize": 128,
+    "meanAlbedo": 0.28,
+    "bytes": {
+      "albedo": 9660,
+      "normal": 21372,
+      "orm": 3586
+    },
+    "totalKb": 33.8
+  },
+  {
+    "id": "brick",
+    "from": [
+      "colour photograph",
+      "displacement map",
+      "normal derived from height",
+      "roughness map",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 14.4,
+    "size": 256,
+    "normalSize": 256,
+    "ormSize": 128,
+    "meanAlbedo": 0.3,
+    "bytes": {
+      "albedo": 19696,
+      "normal": 22654,
+      "orm": 3158
+    },
+    "totalKb": 44.4
+  },
+  {
+    "id": "leather",
+    "from": [
+      "colour photograph",
+      "normal map, retargeted",
+      "ORM roughness",
+      "ORM occlusion"
+    ],
+    "crop": {
+      "left": 1456,
+      "top": 224,
+      "width": 451,
+      "height": 451
+    },
+    "slopeDeg": 11.4,
+    "size": 256,
+    "normalSize": 256,
+    "ormSize": 128,
+    "meanAlbedo": 0.139,
+    "bytes": {
+      "albedo": 7834,
+      "normal": 22780,
+      "orm": 3716
+    },
+    "totalKb": 33.5
+  },
+  {
+    "id": "fabric",
+    "from": [
+      "structure only, published reflectance",
+      "normal map, retargeted",
+      "roughness inferred from albedo variance",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 13.7,
+    "size": 256,
+    "normalSize": 256,
+    "ormSize": 128,
+    "meanAlbedo": 0.45,
+    "bytes": {
+      "albedo": 296,
+      "normal": 2878,
+      "orm": 1568
+    },
+    "totalKb": 4.6
+  },
+  {
+    "id": "wornMetal",
+    "from": [
+      "published reflectance, flat",
+      "normal map, retargeted",
+      "roughness inferred from albedo variance",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 13.2,
+    "size": 256,
+    "normalSize": 256,
+    "ormSize": 128,
+    "meanAlbedo": 0.56,
+    "bytes": {
+      "albedo": 178,
+      "normal": 29064,
+      "orm": 114
+    },
+    "totalKb": 28.7
+  },
+  {
+    "id": "ice",
+    "from": [
+      "colour photograph",
+      "displacement map",
+      "normal map, retargeted",
+      "roughness map",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 13.5,
+    "size": 256,
+    "normalSize": 256,
+    "ormSize": 128,
+    "meanAlbedo": 0.344,
+    "bytes": {
+      "albedo": 14598,
+      "normal": 26274,
+      "orm": 4554
+    },
+    "totalKb": 44.4
+  },
+  {
+    "id": "fur",
+    "from": [
+      "colour photograph, hue removed",
+      "normal derived from height",
+      "roughness inferred from albedo variance",
+      "horizon occlusion from height"
+    ],
+    "crop": {
+      "left": 210,
+      "top": 0,
+      "width": 46,
+      "height": 46
+    },
+    "slopeDeg": 21.9,
+    "size": 256,
+    "normalSize": 256,
+    "ormSize": 128,
+    "meanAlbedo": 0.179,
+    "bytes": {
+      "albedo": 1590,
+      "normal": 12968,
+      "orm": 2398
+    },
+    "totalKb": 16.6
+  },
+  {
+    "id": "stoneFloor",
+    "from": [
+      "colour photograph",
+      "normal map, retargeted",
+      "roughness inferred from albedo variance",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 14.7,
+    "size": 256,
+    "normalSize": 256,
+    "ormSize": 128,
+    "meanAlbedo": 0.277,
+    "bytes": {
+      "albedo": 16190,
+      "normal": 8284,
+      "orm": 3104
+    },
+    "totalKb": 26.9
+  },
+  {
+    "id": "waterSurface",
+    "from": [
+      "normal map, retargeted",
+      "roughness inferred from albedo variance",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 10,
+    "size": 256,
+    "normalSize": 256,
+    "ormSize": 128,
+    "meanAlbedo": 0.105,
+    "bytes": {
+      "albedo": 186,
+      "normal": 13572,
+      "orm": 118
+    },
+    "totalKb": 13.6
+  },
+  {
+    "id": "groundDetail",
+    "from": [
+      "structure only, published reflectance",
+      "normal derived from height",
+      "roughness inferred from albedo variance",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 9.7,
+    "size": 512,
+    "normalSize": 512,
+    "ormSize": 256,
+    "meanAlbedo": 0.965,
+    "bytes": {
+      "albedo": 18408,
+      "normal": 99992,
+      "orm": 29382
+    },
+    "totalKb": 144.3
+  },
+  {
+    "id": "rockDetail",
+    "from": [
+      "structure only, published reflectance",
+      "normal map, retargeted",
+      "roughness inferred from albedo variance",
+      "horizon occlusion from height"
+    ],
+    "slopeDeg": 25.7,
+    "size": 512,
+    "normalSize": 512,
+    "ormSize": 256,
+    "meanAlbedo": 0.989,
+    "bytes": {
+      "albedo": 1058,
+      "normal": 99216,
+      "orm": 15368
+    },
+    "totalKb": 112.9
+  },
+  {
     "id": "cloth",
     "from": [
       "structure only, published reflectance",
@@ -7,17 +401,37 @@
       "ORM roughness",
       "ORM occlusion"
     ],
-    "slopeDeg": 14,
+    "slopeDeg": 13.7,
     "size": 256,
-    "normalSize": 128,
-    "ormSize": 64,
+    "normalSize": 256,
+    "ormSize": 128,
     "meanAlbedo": 0.907,
     "bytes": {
       "albedo": 6376,
-      "normal": 3370,
-      "orm": 172
+      "normal": 29606,
+      "orm": 1306
     },
-    "totalKb": 9.7
+    "totalKb": 36.4
+  },
+  {
+    "id": "sailcloth",
+    "from": [
+      "colour photograph",
+      "normal map, retargeted",
+      "ORM roughness",
+      "ORM occlusion"
+    ],
+    "slopeDeg": 11.6,
+    "size": 256,
+    "normalSize": 256,
+    "ormSize": 128,
+    "meanAlbedo": 0.423,
+    "bytes": {
+      "albedo": 8976,
+      "normal": 14670,
+      "orm": 2468
+    },
+    "totalKb": 25.5
   },
   {
     "id": "rope",
@@ -27,16 +441,56 @@
       "ORM roughness",
       "ORM occlusion"
     ],
-    "slopeDeg": 24,
+    "slopeDeg": 21.4,
     "size": 256,
-    "normalSize": 128,
-    "ormSize": 64,
+    "normalSize": 256,
+    "ormSize": 128,
     "meanAlbedo": 0.985,
     "bytes": {
       "albedo": 528,
-      "normal": 3442,
-      "orm": 546
+      "normal": 16836,
+      "orm": 1286
     },
-    "totalKb": 4.4
+    "totalKb": 18.2
+  },
+  {
+    "id": "weatheredTimber",
+    "from": [
+      "colour photograph",
+      "normal map, retargeted",
+      "ORM roughness",
+      "ORM occlusion"
+    ],
+    "slopeDeg": 15,
+    "size": 512,
+    "normalSize": 512,
+    "ormSize": 256,
+    "meanAlbedo": 0.2,
+    "bytes": {
+      "albedo": 52424,
+      "normal": 61430,
+      "orm": 14712
+    },
+    "totalKb": 125.6
+  },
+  {
+    "id": "barkDetail",
+    "from": [
+      "structure only, published reflectance",
+      "normal map, retargeted",
+      "ORM roughness",
+      "ORM occlusion"
+    ],
+    "slopeDeg": 26.3,
+    "size": 512,
+    "normalSize": 512,
+    "ormSize": 256,
+    "meanAlbedo": 0.981,
+    "bytes": {
+      "albedo": 2504,
+      "normal": 102284,
+      "orm": 9240
+    },
+    "totalKb": 111.4
   }
 ]
