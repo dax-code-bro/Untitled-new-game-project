@@ -79,7 +79,7 @@ Phones start on the Low graphics preset, which still has clouds, light grass and
 | `ui/hud.js`, `ui/terminal.js` | HUD, map, inventory, POB terminal |
 | `graphics.js` | Renderer setup per quality preset: atmospheric sky + clouds, image-based lighting, cascaded shadows, height fog, bloom / grade / SMAA post |
 | `textures.js`, `materials.js` | Procedural PBR texture library; terrain splat, water, wind-sway and foliage shaders |
-| `grass.js` | Streamed instanced grass that sways in the wind |
+| `grass.js` | Continuous ground cover (lawn, tall, dry grass, clover and weeds, wildflowers) wherever the ground is grassy, kept off roads, sand, snow, rock, water and buildings |
 | `weapons.js` | Detailed real-scale weapon models with named moving parts (mag, bolt, slide, pump, hammer, cylinder, barrel) |
 | `viewmodel.js` | First-person arms and weapon: IK hands, sway / bob / recoil springs, working actions, per-weapon reloads, melee, throws, medical |
 | `rig.js` | Human rig: planted-foot gait, two-bone IK legs and arms, aim stance, reloads, flinches, verlet ragdoll deaths |

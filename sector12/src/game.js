@@ -97,7 +97,7 @@ export class Game {
 
   async load(onProgress) {
     this.scatter.warmup(this.player.pos);
-    this.grass.update(this.player.pos);
+    this.grass.update(this.player.pos, 0);
     this.player.update(0, this.input, true);
     this.env.update(0, 0);
     await this.terrain.warmup(this.camera.position, onProgress);
@@ -156,7 +156,7 @@ export class Game {
     if (this.over) { this.clearInput(); return; }
     this.terrain.update(dt, this.camera.position);
     this.scatter.update(dt, P.pos);
-    this.grass.update(P.pos);
+    this.grass.update(P.pos, dt);
     SHARED.uTime.value += dt;
     const L = this.env.local;
     SHARED.uWet.value += ((L.rain > 0.3 ? 1 : 0) - SHARED.uWet.value) * Math.min(1, dt * 0.05);

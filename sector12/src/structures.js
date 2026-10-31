@@ -62,6 +62,29 @@ export class Batcher {
   }
 }
 
+// ---------------------------------------------------------------- ground cover
+// Footprints of everything built on the ground (pads, floors, walls, vehicles, tents...), so grass
+// and other ground cover know where not to grow.
+const COVER = new Map();
+const CC = 4;
+function coverRect(x0, z0, x1, z1) {
+  if (x1 < x0) [x0, x1] = [x1, x0];
+  if (z1 < z0) [z0, z1] = [z1, z0];
+  const r = [x0 - 0.15, z0 - 0.15, x1 + 0.15, z1 + 0.15];
+  for (let cx = Math.floor(r[0] / CC); cx <= Math.floor(r[2] / CC); cx++) for (let cz = Math.floor(r[1] / CC); cz <= Math.floor(r[3] / CC); cz++) {
+    const k = cx + ',' + cz;
+    if (!COVER.has(k)) COVER.set(k, []);
+    COVER.get(k).push(r);
+  }
+}
+export function groundCovered(x, z) {
+  const a = COVER.get(Math.floor(x / CC) + ',' + Math.floor(z / CC));
+  if (!a) return false;
+  for (const r of a) if (x >= r[0] && x <= r[2] && z >= r[1] && z <= r[3]) return true;
+  return false;
+}
+const _box = new THREE.Box3();
+
 const PAL = {
   concrete: 0x9b9a92, metal: 0x7d848b, rust: 0x8a5a3a, wood: 0x7a5a3a, darkwood: 0x4f3a26, stone: 0x8f8a7c,
   mossy: 0x6f7a5a, roof: 0x5d544a, white: 0xd8d8d2, red: 0xa33a2a, sandstone: 0xc7a777, canvas: 0x6f6a4a,
@@ -87,6 +110,7 @@ class POIBuilder {
   solid(x0, y0, z0, x1, y1, z1, color, collide = true, tint = 0.06) {
     const P = this.poi, Y = this.y;
     this.b.box(P.x + x0, Y + y0, P.z + z0, P.x + x1, Y + y1, P.z + z1, color, tint, this.rng);
+    if (Math.min(y0, y1) <= 0.35 && (x1 - x0) * (z1 - z0) > 0.04) coverRect(P.x + x0, P.z + z0, P.x + x1, P.z + z1);
     if (collide) this.physics.addBox([P.x + x0, Y + y0, P.z + z0], [P.x + x1, Y + y1, P.z + z1], { mat: surfaceOf(color) });
   }
 
@@ -94,6 +118,7 @@ class POIBuilder {
     const P = this.poi;
     const m = new THREE.Matrix4().makeTranslation(P.x + x, this.y + y0 + h / 2, P.z + z);
     this.b.geometry(new THREE.CylinderGeometry(r, r, h, seg), m, color, 0.04, this.rng);
+    if (y0 <= 0.35) coverRect(P.x + x - r, P.z + z - r, P.x + x + r, P.z + z + r);
     if (collide) this.physics.addBox([P.x + x - r * 0.85, this.y + y0, P.z + z - r * 0.85], [P.x + x + r * 0.85, this.y + y0 + h, P.z + z + r * 0.85], { mat: 'metal' });
   }
 
@@ -102,6 +127,9 @@ class POIBuilder {
     const P = this.poi;
     const m = new THREE.Matrix4().makeRotationY(ry).setPosition(P.x + x, this.y + y, P.z + z);
     this.b.geometry(geo, m, color, tint, this.rng);
+    geo.computeBoundingBox();
+    _box.copy(geo.boundingBox).applyMatrix4(m);
+    if (_box.min.y <= this.y + 0.35 && (_box.max.x - _box.min.x) * (_box.max.z - _box.min.z) > 0.04) coverRect(_box.min.x, _box.min.z, _box.max.x, _box.max.z);
   }
 
   // a shipping container (6 m x 2.4 m), with door ribs, along X or Z
@@ -198,6 +226,7 @@ class POIBuilder {
   // A single-storey building centered at (cx, cz). Door faces the POI center.
   house(cx, cz, w, d, h, color, o = {}) {
     const x0 = cx - w / 2, x1 = cx + w / 2, z0 = cz - d / 2, z1 = cz + d / 2, t = 0.35, y0 = o.y0 || 0;
+    coverRect(this.poi.x + x0, this.poi.z + z0, this.poi.x + x1, this.poi.z + z1); // the floor inside
     const door = o.door || { w: 1.6, t: 2.4 };
     const win = o.win === undefined ? { w: 1.2, b: 1.0, t: 2.0 } : o.win;
     const front = o.front || (Math.abs(cx) > Math.abs(cz) ? (cx > 0 ? 'w' : 'e') : (cz > 0 ? 'n' : 's'));
