@@ -36,8 +36,17 @@ const GOTO=(arg)=>{const [wantIds,eyeH,pitch]=arg;const S=window.SURVIVOR,g=S.ga
  const hit=!!found;
  if(!found)found=[ox,oz];
  const [x,z]=found;
+ /* Move the AVATAR, not the player record. stepPlayer() copies
+    avatar.position into player.x/z on every tick, so writing player.x
+    directly is undone before the next frame — the camera obeyed it
+    (lookAt is set straight on the engine) while the simulation quietly
+    snapped back to the spawn, which is how a tour of five biomes came
+    out standing in the same dune five times with the camera pointed
+    somewhere else. */
+ const av=S.ctx&&S.ctx.avatar;
+ if(av&&av.controller&&av.controller.teleport)av.controller.teleport([x,S.ctx.groundY(x,z)+1.2,z]);
+ else if(av&&av.setPosition)av.setPosition([x,S.ctx.groundY(x,z)+1.2,z]);
  S.player.x=x;S.player.z=z;
- if(S.player.body&&S.player.body.position)S.player.body.position.set(x,S.ctx.groundY(x,z)+1.7,z);
  const y=S.ctx.groundY(x,z);
  // Face whichever way has the most to look at.
  let best=null;

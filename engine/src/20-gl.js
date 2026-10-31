@@ -409,11 +409,28 @@ class GpuMesh {
     return this;
   }
 
-  uploadInstances(float32, count) {
+  /* `version` lets a caller whose instance data only changes occasionally
+     say so. Most batches are rebuilt every frame and pass nothing, which
+     keeps the old unconditional upload. A field that is rewritten once
+     every few seconds — grass, which only moves when the player has
+     walked far enough — passes a counter it bumps on each rewrite, and
+     the re-upload is skipped for every frame and every shadow cascade
+     in between.
+
+     It is worth the four lines. The scene is drawn three times a frame
+     (two shadow cascades and the colour pass) and each one was calling
+     bufferData on the whole field: at eighty bytes an instance that is
+     240 bytes per blade per frame of pure orphan-and-realloc for data
+     the GPU already had. At a hundred thousand blades it is 24 MB a
+     frame, which is most of a frame's memory bandwidth spent sending
+     the same numbers back. */
+  uploadInstances(float32, count, version) {
+    if (version !== undefined && version === this._instVersion && count === this.instanceCount) return this;
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, float32, gl.DYNAMIC_DRAW);
     this.instanceCount = count;
+    this._instVersion = version;
     return this;
   }
 

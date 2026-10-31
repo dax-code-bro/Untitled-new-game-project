@@ -735,8 +735,19 @@ class Engine {
   }
 
   addGrass(opts = {}) {
-    const max = Math.min(opts.max || this.renderer.quality.maxGrass, this.renderer.quality.maxGrass);
-    this.grass = new Grass(this.gl, Object.assign({}, opts, { max }));
+    const q = this.renderer.quality;
+    const max = Math.min(opts.max || q.maxGrass, q.maxGrass);
+    /* The field derives its own density from the camera it will be
+       seen through: how close the nearest visible ground is depends on
+       the eye height and the vertical field of view, and how far a
+       single blade stays legible depends on the render resolution. */
+    this.grass = new Grass(this.gl, Object.assign({
+      cover: q.grassCover,
+      radius: q.grassRadius,
+      fov: (this.camera.fov * 180) / Math.PI,
+      renderHeight: this.renderer.height,
+      aspect: this.camera.aspect || 16 / 9,
+    }, opts, { max }));
     return this.grass;
   }
 
@@ -1686,7 +1697,11 @@ class Engine {
       }
     }
 
-    if (this.grass && this.grass.count) list.push(this.grass.batch());
+/* Near rung first. A closed sward has real overdraw, and the
+         opaque list is drawn in array order, so putting the blades in
+         front of the tufts lets the depth test reject most of what is
+         behind them. */
+      if (this.grass) for (const b of this.grass.batches()) list.push(b);
     for (const w of this.waters) list.push(w.batch());
     return list;
   }

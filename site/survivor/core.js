@@ -221,18 +221,38 @@
       static: true, physics: false, name: 'sea',
     });
 
-    /* A tighter field with the same blade budget: 70 m square at 60,000
-       blades is about twelve to the square metre, which reads as ground
-       cover rather than as a scatter of sprigs. Beyond the field the
-       terrain's own colour carries it, and the field moves with the
-       player. */
+    /* No `area`. The field sizes itself.
+
+       It used to be a 58 m square holding whatever the quality tier
+       allowed — twenty thousand blades over three and a third thousand
+       square metres, which is six to the square metre, one every
+       forty-one centimetres, and about sixty per cent bare ground in
+       front of your boots. The field now takes a cover TARGET and a
+       radius from the quality tier and works out the density itself,
+       falling as one over the distance so that cover is the same at
+       twelve metres as at two. */
     game.addGrass({
-      area: 58, max: 90000, center: [spawn.x, spawn.y, spawn.z],
-      // A blade of grass is three to eight millimetres across and a third
-      // of a metre tall. At the default five centimetres each one reads as
-      // a leek, and thirty of them read as a field of them.
-      width: 0.014, height: 0.34,
+      center: [spawn.x, spawn.y, spawn.z],
+      /* A real blade is three to eight millimetres across; this is a
+         half-width, so 0.014 is twenty-eight, and that is deliberate.
+         Closing the ground is bought with blade area, and at a
+         botanically honest four millimetres the density needed would
+         be about seven times the entire instance budget. */
+      /* Taller than the 0.34 it was. Cover along a grazing sightline
+         is proportional to blade height, so height buys occlusion for
+         no instances at all — and 40 cm is well inside what unmown
+         meadow grass actually stands at, where a third of a metre is
+         a lawn three weeks after cutting. */
+      width: 0.014, height: 0.40,
+      thatch: true,
       heightFn: (x, z) => map.heightAtWorld(x, z),
+      // So a blade is the colour of the ground it grows out of, which
+      // is what makes the gaps between tufts read as shadow.
+      groundColorFn: (x, z) => (groundColourFn
+        ? groundColourFn(x, z, map.heightAtWorld(x, z), 0) : null),
+      // And so a sward thins, shortens and dulls under a canopy
+      // instead of growing as though the wood were not there.
+      canopyFn: (x, z) => (ctx && ctx.state && ctx.state.canopyAt ? ctx.state.canopyAt(x, z) : 0),
     });
 
     avatar = game.character({ at: [spawn.x, spawn.y + 1.2, spawn.z], color: 0x4a4f3f });
@@ -761,23 +781,42 @@
      marram in tufts over open sand; a meadow is a closed sward; a forest
      floor is mostly needle litter. Using the biome's own cover figure means
      these do not have to be kept in step with anything by hand. */
+  /* `cover` is a MULTIPLIER on the field's density, not a blade count.
+
+     These were absolute totals for a 58 m square, and the two things
+     wrong with that both silenced the hand-authored contrast between
+     biomes. They were clamped: scatter took min(max, count), so at the
+     medium tier meadow 90000, prairie 80600, freshMarsh 62000,
+     riverbank 58900, saltMarsh 52700 and woodland 40300 all collapsed
+     to the same twenty thousand, and six of the sixteen biomes were
+     indistinguishable. And they were silently tied to the field's
+     area: pineForest's 13950 was four blades a square metre at 58 m
+     and thirty-five at 20 m, so changing the field size changed what
+     every one of these numbers meant. A ratio is both cap-proof and
+     area-proof. The values are the old counts over 90000, so the
+     authored intent is preserved exactly.
+
+     `species` weights the four growth forms — fescue, cocksfoot, bent,
+     seed-head culm. A dune is tussocky marram standing clear of open
+     sand; a pine floor is fine fescue and bent with almost no culm; a
+     prairie is mostly broad leaf and seed head. */
   const GRASS_BY_BIOME = {
-    beach:      { count: 1395,   low: 0x9a8f6a, high: 0xc0b183 },
-    dune:       { count: 7750,  low: 0x8a8a58, high: 0xb9b478 },
-    saltMarsh:  { count: 52700, low: 0x53603a, high: 0x8a9a54 },
-    freshMarsh: { count: 62000, low: 0x3d5a2a, high: 0x74933e },
-    riverbank:  { count: 58900, low: 0x3a5a26, high: 0x7ea03c },
-    meadow:     { count: 90000, low: 0x2f5d24, high: 0x86a83c },
-    prairie:    { count: 80600, low: 0x5a6a2e, high: 0xa8ab54 },
-    woodland:   { count: 40300, low: 0x2c4a20, high: 0x5f7c30 },
-    deepForest: { count: 18600, low: 0x25401d, high: 0x4c6628 },
-    pineForest: { count: 13950,  low: 0x2a4024, high: 0x506030 },
-    scrub:      { count: 24800, low: 0x5c5f30, high: 0x969247 },
-    rockyHill:  { count: 10850,  low: 0x555a34, high: 0x8a8a4e },
-    scree:      { count: 1860,  low: 0x60624a, high: 0x8a8a6c },
-    alpine:     { count: 21700, low: 0x4e6440, high: 0x87975c },
-    cliff:      { count: 620,   low: 0x555a34, high: 0x8a8a4e },
-    ocean:      { count: 0,     low: 0x2f5d24, high: 0x86a83c },
+    beach:       { cover: 0.016 , species: [0.15, 0.10, 0.05, 0.70], low: 0x9a8f6a, high: 0xc0b183 },
+    dune:        { cover: 0.086 , species: [0.12, 0.08, 0.05, 0.75], low: 0x8a8a58, high: 0xb9b478 },
+    saltMarsh:   { cover: 0.59  , species: [0.45, 0.15, 0.30, 0.10], low: 0x53603a, high: 0x8a9a54 },
+    freshMarsh:  { cover: 0.69  , species: [0.30, 0.30, 0.25, 0.15], low: 0x3d5a2a, high: 0x74933e },
+    riverbank:   { cover: 0.65  , species: [0.30, 0.35, 0.20, 0.15], low: 0x3a5a26, high: 0x7ea03c },
+    meadow:      { cover: 1.0   , species: [0.42, 0.24, 0.22, 0.12], low: 0x2f5d24, high: 0x86a83c },
+    prairie:     { cover: 0.9   , species: [0.20, 0.32, 0.13, 0.35], low: 0x5a6a2e, high: 0xa8ab54 },
+    woodland:    { cover: 0.45  , species: [0.45, 0.18, 0.32, 0.05], low: 0x2c4a20, high: 0x5f7c30 },
+    deepForest:  { cover: 0.21  , species: [0.50, 0.08, 0.40, 0.02], low: 0x25401d, high: 0x4c6628 },
+    pineForest:  { cover: 0.16  , species: [0.52, 0.06, 0.40, 0.02], low: 0x2a4024, high: 0x506030 },
+    scrub:       { cover: 0.28  , species: [0.30, 0.25, 0.15, 0.30], low: 0x5c5f30, high: 0x969247 },
+    rockyHill:   { cover: 0.12  , species: [0.50, 0.10, 0.33, 0.07], low: 0x555a34, high: 0x8a8a4e },
+    scree:       { cover: 0.021 , species: [0.55, 0.08, 0.34, 0.03], low: 0x60624a, high: 0x8a8a6c },
+    alpine:      { cover: 0.24  , species: [0.58, 0.07, 0.33, 0.02], low: 0x4e6440, high: 0x87975c },
+    cliff:       { cover: 0.007 , species: [0.55, 0.08, 0.34, 0.03], low: 0x555a34, high: 0x8a8a4e },
+    ocean:       { cover: 0     , species: [0.42, 0.24, 0.22, 0.12], low: 0x2f5d24, high: 0x86a83c },
   };
 
   /* Grass was authored by eye and came out about twice as bright as grass
@@ -831,13 +870,39 @@
     const changed = b && b.id !== grassBiome;
     if (changed) {
       grassBiome = b.id;
-      game.grass.colorLow = LE.Vec3.from([((spec.low >> 16) & 255) / 255, ((spec.low >> 8) & 255) / 255, (spec.low & 255) / 255]);
-      game.grass.colorHigh = LE.Vec3.from([((spec.high >> 16) & 255) / 255, ((spec.high >> 8) & 255) / 255, (spec.high & 255) / 255]);
+      /* parseColor, not Vec3.from. Vec3.from takes the three bytes at
+         face value; parseColor decodes them from sRGB first, which is
+         what the Grass constructor does to the very same table and
+         what every other colour in the engine gets.
+
+         Using the code value as a linear albedo makes a blade 2.34
+         times brighter than it was painted, and because this runs on
+         the first update — grassBiome starts null, so `changed` is
+         true immediately — it overwrote the constructor's correctly
+         decoded colours before a single frame was drawn. Every blade
+         in the game has been shipping at linear luminance 0.47 against
+         terrain at 0.15: three stops of mismatch, which is why grass
+         read as bleached straw lying on soil rather than as growing
+         out of it, and it quietly defeated the whole calibrateGrass
+         pass above, whose entire job is to land these at 0.16 and
+         0.24. */
+      game.grass.colorLow = LE.parseColor(spec.low);
+      game.grass.colorHigh = LE.parseColor(spec.high);
     }
-    game.grass.recenter(
-      [player.x, world.map.heightAtWorld(player.x, player.z), player.z],
-      { minMoveM: changed ? 0 : 34, count: spec.count },
-    );
+    if (changed) {
+      game.grass.coverMul = spec.cover;
+      if (spec.species) game.grass.setSpecies(spec.species);
+      game.grass.recenter([player.x, world.map.heightAtWorld(player.x, player.z), player.z]);
+    } else {
+      /* Every frame, and almost always free: update() returns
+         immediately unless the player has crossed a tile boundary, and
+         then rebuilds only the tiles that entered and left. The old
+         call re-scattered the entire field whenever the player had
+         moved 34 m — which is further than the field's own 29 m
+         half-extent, so you could walk five metres clean off the grass
+         before it noticed. */
+      game.grass.update([player.x, world.map.heightAtWorld(player.x, player.z), player.z]);
+    }
   }
 
   function nearestPoi(x, z) {

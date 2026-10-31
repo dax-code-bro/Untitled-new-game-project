@@ -503,7 +503,16 @@ const Shapes = {
      exactly what read as flat/Roblox-y. Crossing a second plane at 90°
      gives every blade real volume from any viewing angle, the same trick
      billboarded foliage has used since Half-Life 2. */
-  grassBlade(height = 0.5, width = 0.05, segments = 4) {
+  /* `width` is a HALF-width: `side` runs [-1, 1], so the blade is twice
+     this across. Survivor passes 0.014, which is a 28 mm blade — wider
+     than the three to eight millimetres a real grass blade has, and
+     deliberately so. A closed sward is bought with blade area, and at
+     a botanically honest 4 mm the density needed to close the ground
+     two and a half metres in front of the camera is about nineteen
+     hundred blades to the square metre, which is seven times the
+     entire instance budget. The wide blade is the cheat that makes
+     ground cover affordable; narrowing it undoes the whole thing. */
+  grassBlade(height = 0.5, width = 0.05, segments = 4, arch = 1, taperExp = 1) {
     const g = new Geometry();
     const angles = [0, Math.PI / 2];
     for (const angle of angles) {
@@ -511,15 +520,25 @@ const Shapes = {
       const base = g.positions.length / 3;
       for (let i = 0; i <= segments; i++) {
         const t = i / segments;
-        const w = width * (1 - t * 0.9);
+        // taperExp shapes how the blade narrows: 1 is a straight taper,
+        // below 1 keeps the width high and ends abruptly (a culm), above
+        // 1 narrows early and runs out to a long thin tip.
+        const w = width * (1 - Math.pow(t, taperExp) * 0.9);
         const y = t * height;
         // Slight forward lean baked in so even still grass looks organic.
-        const lean = t * t * height * 0.15;
+        const lean = arch * t * t * height * 0.15;
         for (const side of [-1, 1]) {
           const lx = side * w, lz = lean;
           const wx = lx * ca - lz * sa, wz = lx * sa + lz * ca;
           const nwx = -sa, nwz = -ca;   // rotate the unrotated (0,0.3,-1) normal's XZ
           g.vert(wx, y, wz, nwx, 0.3, nwz, side < 0 ? 0 : 1, t);
+          /* Both grass meshes MUST write a colour. The grass vertex
+             shader declares aColor at location 4, and GpuMesh binds
+             that attribute only when the geometry has a colour array —
+             a grass mesh without one leaves location 4 unbound and the
+             shader reads whatever was last there. A single blade is
+             sub-blade zero of a tuft of one. */
+          g.vertColor(0, angle, t);
         }
       }
       for (let i = 0; i < segments; i++) {
@@ -528,6 +547,74 @@ const Shapes = {
       }
     }
     return g.finalize();
+  },
+
+  /* A tuft: nine blades from one root, as one mesh, so one instance
+     covers ground that would otherwise cost nine.
+
+     Single strips, not crossed quads. Crossing exists so that a lone
+     blade still presents something when you walk around it; a fan of
+     nine already points nine ways, and crossing them would double the
+     triangles to solve a problem the fan has already solved.
+
+     The spread is the whole design and must not be tidied downward.
+     Nine blades in a tight clump overlap each other and are worth far
+     less than nine: the lateral union of n strips of effective width
+     w scattered over a disc of diameter s is s*(1-(1-w/s)^n), so with
+     w = 1.386 cm a spread of 11 cm is worth 5.6 blades, 16 cm is 6.4,
+     24 cm is 7.2 and 30 cm is 7.5. The coverage budget is built on
+     seven. At 11 cm the mid-field comes out a fifth barer than
+     designed, which is the kind of error that is invisible in review
+     and obvious on screen.
+
+     Strips are emitted in nested rung order — the first two, then
+     three more, then the last four — so that each rung is a contiguous
+     prefix of the index buffer and can be drawn with a shorter index
+     count and no offset. Only the full rung is used today; the
+     ordering costs nothing and is there so a distance LOD can be
+     switched on without rebuilding the mesh. */
+  grassTuft(height = 0.5, width = 0.05, blades = 9, segments = 2, spread = 0.24) {
+    const g = new Geometry();
+    const GOLDEN = 2.39996323;          // radians; never looks combed
+    const order = [0, 1, 2, 3, 4, 5, 6, 7, 8].slice(0, blades);
+    const rungIndex = [], rungBlades = [2, 5, blades];
+    let emitted = 0;
+    for (const i of order) {
+      const yaw = i * GOLDEN;
+      const ca = Math.cos(yaw), sa = Math.sin(yaw);
+      // Roots on their own golden-angle spiral, so the nine do not all
+      // start from one point and the clump has a footprint.
+      const rr = (spread / 2) * Math.sqrt((i + 0.5) / blades);
+      const ra = i * GOLDEN * 1.7;
+      const rx = Math.cos(ra) * rr, rz = Math.sin(ra) * rr;
+      // Outer blades arch harder, which domes the tuft instead of
+      // leaving it a flat-topped shaving brush.
+      const arch = 0.35 + 1.5 * (i / Math.max(1, blades - 1));
+      const hs = 0.78 + 0.44 * ((i * 7) % 5) / 4;
+      const base = g.positions.length / 3;
+      for (let k = 0; k <= segments; k++) {
+        const t = k / segments;
+        const w = width * (1 - t * 0.9);
+        const y = t * height * hs;
+        const lean = arch * t * t * height * 0.22;
+        for (const side of [-1, 1]) {
+          const lx = side * w;
+          g.vert(rx + lx * ca - lean * sa, y, rz + lx * sa + lean * ca,
+            -sa, 0.3, -ca, side < 0 ? 0 : 1, t);
+          // r is the sub-blade index the shader uses to re-aim and
+          // re-length each strip, so nine copies of one fan become nine
+          // different tufts.
+          g.vertColor(i, yaw, t);
+        }
+      }
+      for (let k = 0; k < segments; k++) {
+        const a = base + k * 2;
+        g.quad(a, a + 2, a + 3, a + 1);
+      }
+      emitted++;
+      if (rungBlades.indexOf(emitted) >= 0) rungIndex.push(g.indices.length);
+    }
+    return { geo: g.finalize(), rungIndex, rungBlades };
   },
 };
 

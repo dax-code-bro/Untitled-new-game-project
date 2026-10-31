@@ -1041,11 +1041,28 @@ class GpuMesh {
     return this;
   }
 
-  uploadInstances(float32, count) {
+  /* `version` lets a caller whose instance data only changes occasionally
+     say so. Most batches are rebuilt every frame and pass nothing, which
+     keeps the old unconditional upload. A field that is rewritten once
+     every few seconds — grass, which only moves when the player has
+     walked far enough — passes a counter it bumps on each rewrite, and
+     the re-upload is skipped for every frame and every shadow cascade
+     in between.
+
+     It is worth the four lines. The scene is drawn three times a frame
+     (two shadow cascades and the colour pass) and each one was calling
+     bufferData on the whole field: at eighty bytes an instance that is
+     240 bytes per blade per frame of pure orphan-and-realloc for data
+     the GPU already had. At a hundred thousand blades it is 24 MB a
+     frame, which is most of a frame's memory bandwidth spent sending
+     the same numbers back. */
+  uploadInstances(float32, count, version) {
+    if (version !== undefined && version === this._instVersion && count === this.instanceCount) return this;
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, float32, gl.DYNAMIC_DRAW);
     this.instanceCount = count;
+    this._instVersion = version;
     return this;
   }
 
@@ -1610,7 +1627,16 @@ const Shapes = {
      exactly what read as flat/Roblox-y. Crossing a second plane at 90°
      gives every blade real volume from any viewing angle, the same trick
      billboarded foliage has used since Half-Life 2. */
-  grassBlade(height = 0.5, width = 0.05, segments = 4) {
+  /* `width` is a HALF-width: `side` runs [-1, 1], so the blade is twice
+     this across. Survivor passes 0.014, which is a 28 mm blade — wider
+     than the three to eight millimetres a real grass blade has, and
+     deliberately so. A closed sward is bought with blade area, and at
+     a botanically honest 4 mm the density needed to close the ground
+     two and a half metres in front of the camera is about nineteen
+     hundred blades to the square metre, which is seven times the
+     entire instance budget. The wide blade is the cheat that makes
+     ground cover affordable; narrowing it undoes the whole thing. */
+  grassBlade(height = 0.5, width = 0.05, segments = 4, arch = 1, taperExp = 1) {
     const g = new Geometry();
     const angles = [0, Math.PI / 2];
     for (const angle of angles) {
@@ -1618,15 +1644,25 @@ const Shapes = {
       const base = g.positions.length / 3;
       for (let i = 0; i <= segments; i++) {
         const t = i / segments;
-        const w = width * (1 - t * 0.9);
+        // taperExp shapes how the blade narrows: 1 is a straight taper,
+        // below 1 keeps the width high and ends abruptly (a culm), above
+        // 1 narrows early and runs out to a long thin tip.
+        const w = width * (1 - Math.pow(t, taperExp) * 0.9);
         const y = t * height;
         // Slight forward lean baked in so even still grass looks organic.
-        const lean = t * t * height * 0.15;
+        const lean = arch * t * t * height * 0.15;
         for (const side of [-1, 1]) {
           const lx = side * w, lz = lean;
           const wx = lx * ca - lz * sa, wz = lx * sa + lz * ca;
           const nwx = -sa, nwz = -ca;   // rotate the unrotated (0,0.3,-1) normal's XZ
           g.vert(wx, y, wz, nwx, 0.3, nwz, side < 0 ? 0 : 1, t);
+          /* Both grass meshes MUST write a colour. The grass vertex
+             shader declares aColor at location 4, and GpuMesh binds
+             that attribute only when the geometry has a colour array —
+             a grass mesh without one leaves location 4 unbound and the
+             shader reads whatever was last there. A single blade is
+             sub-blade zero of a tuft of one. */
+          g.vertColor(0, angle, t);
         }
       }
       for (let i = 0; i < segments; i++) {
@@ -1635,6 +1671,74 @@ const Shapes = {
       }
     }
     return g.finalize();
+  },
+
+  /* A tuft: nine blades from one root, as one mesh, so one instance
+     covers ground that would otherwise cost nine.
+
+     Single strips, not crossed quads. Crossing exists so that a lone
+     blade still presents something when you walk around it; a fan of
+     nine already points nine ways, and crossing them would double the
+     triangles to solve a problem the fan has already solved.
+
+     The spread is the whole design and must not be tidied downward.
+     Nine blades in a tight clump overlap each other and are worth far
+     less than nine: the lateral union of n strips of effective width
+     w scattered over a disc of diameter s is s*(1-(1-w/s)^n), so with
+     w = 1.386 cm a spread of 11 cm is worth 5.6 blades, 16 cm is 6.4,
+     24 cm is 7.2 and 30 cm is 7.5. The coverage budget is built on
+     seven. At 11 cm the mid-field comes out a fifth barer than
+     designed, which is the kind of error that is invisible in review
+     and obvious on screen.
+
+     Strips are emitted in nested rung order — the first two, then
+     three more, then the last four — so that each rung is a contiguous
+     prefix of the index buffer and can be drawn with a shorter index
+     count and no offset. Only the full rung is used today; the
+     ordering costs nothing and is there so a distance LOD can be
+     switched on without rebuilding the mesh. */
+  grassTuft(height = 0.5, width = 0.05, blades = 9, segments = 2, spread = 0.24) {
+    const g = new Geometry();
+    const GOLDEN = 2.39996323;          // radians; never looks combed
+    const order = [0, 1, 2, 3, 4, 5, 6, 7, 8].slice(0, blades);
+    const rungIndex = [], rungBlades = [2, 5, blades];
+    let emitted = 0;
+    for (const i of order) {
+      const yaw = i * GOLDEN;
+      const ca = Math.cos(yaw), sa = Math.sin(yaw);
+      // Roots on their own golden-angle spiral, so the nine do not all
+      // start from one point and the clump has a footprint.
+      const rr = (spread / 2) * Math.sqrt((i + 0.5) / blades);
+      const ra = i * GOLDEN * 1.7;
+      const rx = Math.cos(ra) * rr, rz = Math.sin(ra) * rr;
+      // Outer blades arch harder, which domes the tuft instead of
+      // leaving it a flat-topped shaving brush.
+      const arch = 0.35 + 1.5 * (i / Math.max(1, blades - 1));
+      const hs = 0.78 + 0.44 * ((i * 7) % 5) / 4;
+      const base = g.positions.length / 3;
+      for (let k = 0; k <= segments; k++) {
+        const t = k / segments;
+        const w = width * (1 - t * 0.9);
+        const y = t * height * hs;
+        const lean = arch * t * t * height * 0.22;
+        for (const side of [-1, 1]) {
+          const lx = side * w;
+          g.vert(rx + lx * ca - lean * sa, y, rz + lx * sa + lean * ca,
+            -sa, 0.3, -ca, side < 0 ? 0 : 1, t);
+          // r is the sub-blade index the shader uses to re-aim and
+          // re-length each strip, so nine copies of one fan become nine
+          // different tufts.
+          g.vertColor(i, yaw, t);
+        }
+      }
+      for (let k = 0; k < segments; k++) {
+        const a = base + k * 2;
+        g.quad(a, a + 2, a + 3, a + 1);
+      }
+      emitted++;
+      if (rungBlades.indexOf(emitted) >= 0) rungIndex.push(g.indices.length);
+    }
+    return { geo: g.finalize(), rungIndex, rungBlades };
   },
 };
 
@@ -3446,7 +3550,13 @@ layout(location=0) in vec3 aPosition;
 layout(location=1) in vec3 aNormal;
 layout(location=2) in vec2 aUv;
 layout(location=3) in vec4 aTangent;
-#if defined(VERTCOLOR) || defined(WATER_FX) || defined(FUR_SHELL)
+#if defined(VERTCOLOR) || defined(WATER_FX) || defined(FUR_SHELL) || defined(GRASS)
+/* Grass reads this too: r is which blade of a tuft this vertex belongs
+   to, which is what lets one nine-blade mesh be re-aimed per strip
+   into nine different-looking tufts. Both grass meshes must emit
+   colours — GpuMesh binds location 4 only when the geometry has a
+   colour array, so a colourless grass mesh leaves it unbound and the
+   shader reads whatever happened to be there last. */
 layout(location=4) in vec3 aColor;
 #endif
 #ifdef SKINNED
@@ -3481,6 +3591,9 @@ uniform float uTime;
 #ifdef GRASS
 uniform vec3 uWindDir;
 uniform float uWindStrength;
+// xy = fade centre in world XZ, z = where the field starts thinning,
+// w = where it has gone entirely.
+uniform vec4 uGrassFade;
 #endif
 #ifdef FUR_SHELL
 uniform float uShellOffset;
@@ -3501,6 +3614,10 @@ struct Surface {
   vec4 params;
 #if defined(VERTCOLOR) || defined(WATER_FX)
   vec3 vertColor;
+#endif
+#ifdef GRASS
+  float age;
+  float bladeHash;
 #endif
 };
 
@@ -3541,12 +3658,59 @@ Surface computeSurface(){
   localPos += localNrm * furDepth + uShellComb * furDepth;
 #endif
 #ifdef GRASS
+  /* Three per-instance floats ride in the model matrix's unused
+     column. Mat4.compose always writes hard zeros into e[3], e[7] and
+     e[11] — a transform with no projection has nothing there — so the
+     scatter packs arch, wind compliance and senescence into them for
+     free: no wider stride, no extra attribute, not one more byte
+     uploaded.
+
+     THE ZEROING ON THE NEXT LINE MUST COME BEFORE ANY USE OF the
+     model matrix. A non-zero w makes model * vec4(p, 1.0) come out
+     with w other than 1 and
+     every vertex projects to garbage. The symptom is the grass
+     vanishing, which reads as a culling or a count bug and sends you
+     looking in the wrong file entirely. */
+  float gArch = model[0].w, gStiff = model[1].w, gAge = model[2].w;
+  model[0].w = 0.0; model[1].w = 0.0; model[2].w = 0.0;
+
   // aParams.w carries a per-blade random seed; .xyz is the tint.
   float seed = s.params.w;
   float h = aUv.y;
-  // Bend increases with the square of height: stiff at the root, loose at
-  // the tip, which is how a real blade behaves.
-  float stiffness = h * h;
+
+  /* Re-aim and re-length this strip of the tuft. aColor.r is the
+     sub-blade index, 0..8, so a single nine-blade mesh instanced three
+     thousand times is three thousand different tufts instead of three
+     thousand copies of one fan. Four bounded-argument hashes rather
+     than a noise octave: there is a note further down recording that
+     fbm in this stage makes some drivers fail every draw. */
+  float sb = aColor.r;
+  float hs  = fract(sin(seed * 91.17 + sb * 37.91) * 143.5453);
+  float hs2 = fract(sin(seed * 57.31 + sb * 11.13) * 246.6345);
+  localPos.y *= mix(0.72, 1.28, hs);
+  {
+    float ya = (hs2 - 0.5) * 1.3;
+    float cs = cos(ya), sn = sin(ya);
+    /* The normal and tangent turn with the geometry. Rotating only the
+       position is the classic way to make a field of grass read as
+       plastic: every blade is lit as though it were still facing the
+       way it was authored. */
+    localPos.xz = vec2(localPos.x * cs - localPos.z * sn, localPos.x * sn + localPos.z * cs);
+    localNrm.xz = vec2(localNrm.x * cs - localNrm.z * sn, localNrm.x * sn + localNrm.z * cs);
+    localTan.xz = vec2(localTan.x * cs - localTan.z * sn, localTan.x * sn + localTan.z * cs);
+  }
+  // Per-species droop, along the axis the blade already leans on.
+  localPos.z += gArch * 0.33 * h * h;
+  localPos.y -= gArch * 0.10 * h * h;
+
+  /* Wind compliance as the EXPONENT of the bend curve, not a
+     multiplier on it. Scaling the bend only makes a blade lean
+     further; changing the exponent changes the SHAPE of the lean, so
+     a stiff seed-head whips from the tip while a broad soft leaf
+     folds from halfway down and flat litter does not move at all.
+     Same instruction count, and it is the difference between a field
+     of one grass and a field of several. */
+  float stiffness = pow(max(h, 0.0), mix(1.4, 2.6, clamp(gStiff * 0.5, 0.0, 1.0)));
   vec3 worldRoot = (model * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
   // Two travelling waves at different scales read as gusts over a field.
   float phase = uTime * 1.6 + worldRoot.x * 0.22 + worldRoot.z * 0.19 + seed * 6.28;
@@ -3556,14 +3720,44 @@ Surface computeSurface(){
   float gust = (sin(worldRoot.x * 0.12 + uTime * 0.70) *
                 sin(worldRoot.z * 0.09 + uTime * 0.53) * 0.5 + 0.5) * 1.4;
   float sway = (sin(phase) * 0.5 + sin(phase * 2.37 + 1.3) * 0.28) * (0.35 + gust);
+  /* Held back until after the model transform — see below. */
   vec3 bend = uWindDir * sway * uWindStrength * stiffness;
-  // Bending should not stretch the blade, so pull the tip down as it leans.
-  localPos += bend;
-  localPos.y -= dot(bend, bend) * 0.35;
-  localNrm = normalize(localNrm - uWindDir * sway * uWindStrength * 0.5);
+
+  /* Shrink the last few metres of the field to nothing rather than
+     stopping at a line. The material is opaque with no blend state and
+     no alpha clip, so there is no alpha to fade; scaling the blade
+     down is the only lever, and a blade scaled to zero is a degenerate
+     triangle that costs setup and no fragments. The centre comes from
+     the live camera every frame rather than the quantised field
+     centre, or the band itself jumps in four-metre steps. */
+  {
+    float fd = length(worldRoot.xz - uGrassFade.xy);
+    float fade = 1.0 - smoothstep(uGrassFade.z, uGrassFade.w, fd);
+    localPos *= fade;
+    bend *= fade;
+  }
 #endif
 
   vec4 wp = model * vec4(localPos, 1.0);
+#ifdef GRASS
+  /* The bend is in WORLD space, because uWindDir is, and it has to be
+     applied here rather than to localPos.
+
+     Added before the model transform it was multiplied by the blade's
+     own matrix — which carries a uniformly random yaw over the whole
+     circle and a scale of (14 mm, 34 cm, 1). So the wind blew a
+     different direction for every blade, and the component along the
+     blade's local X was divided by seventy. A field did not lean in
+     the wind; it fidgeted, each blade to its own compass. The gusts
+     travelling across the field were being computed correctly the
+     whole time and then scrambled on the last line.
+
+     Applying it to the world position instead costs nothing and the
+     whole sward leans together. */
+  wp.xyz += bend;
+  // Bending should not stretch the blade, so pull the tip down as it leans.
+  wp.y -= dot(bend, bend) * 0.35;
+#endif
   s.worldPos = wp.xyz;
 
   // Normal matrix. For a rotation-times-scale transform (no shear, which the
@@ -3575,10 +3769,20 @@ Surface computeSurface(){
   mat3 nm = mat3(c0 * invSq.x, c1 * invSq.y, c2 * invSq.z);
 
   s.normal = normalize(nm * localNrm);
+#ifdef GRASS
+  // Same correction for the normal: tilt the WORLD normal toward the
+  // wind, not the local one, or a blade's lighting disagrees with the
+  // direction it is visibly leaning.
+  s.normal = normalize(s.normal - uWindDir * sway * uWindStrength * 0.5);
+#endif
   s.tangent = vec4(normalize(nm * localTan), aTangent.w);
   s.uv = aUv;
 #if defined(VERTCOLOR) || defined(WATER_FX)
   s.vertColor = aColor;
+#endif
+#ifdef GRASS
+  s.age = gAge;
+  s.bladeHash = hs2;
 #endif
   return s;
 }
@@ -3599,6 +3803,10 @@ out float vViewDepth;
 #if defined(VERTCOLOR) || defined(WATER_FX)
 out vec3 vVertColor;
 #endif
+#ifdef GRASS
+out float vAge;
+out float vBladeHash;
+#endif
 
 void main(){
   Surface s = computeSurface();
@@ -3609,6 +3817,10 @@ void main(){
   vParams = s.params;
 #if defined(VERTCOLOR) || defined(WATER_FX)
   vVertColor = s.vertColor;
+#endif
+#ifdef GRASS
+  vAge = s.age;
+  vBladeHash = s.bladeHash;
 #endif
   vViewDepth = length(s.worldPos - uCameraPos);
   gl_Position = uViewProj * vec4(s.worldPos, 1.0);
@@ -3625,6 +3837,10 @@ ${GLSL.fog}
 in vec3 vWorldPos;
 in vec3 vNormal;
 in vec4 vTangent;
+#ifdef GRASS
+in float vAge;
+in float vBladeHash;
+#endif
 in vec2 vUv;
 in vec4 vParams;
 in float vViewDepth;
@@ -3693,6 +3909,40 @@ void main(){
     ? clamp(1.0 - vViewDepth / 55.0, 0.0, 1.0) : 0.0;
 
   vec3 albedo = uBaseColor * vParams.rgb;
+#ifdef GRASS
+  /* The first fragment-stage grass path this engine has had. Until
+     now a blade was one flat colour from root to tip, with vUv.x
+     (which edge) and vUv.y (how far up) arriving and being thrown
+     away. Everything here is free: no texture, no instance byte, no
+     triangle, no draw call — the Grass material has no maps at all,
+     so there is nothing to compete with.
+
+     The litter band is the important one. What gives a sparse field
+     away is not the gaps, it is sunlit soil showing through them; a
+     dark band at the base of every blade reads as the shadowed
+     interior of a canopy, so the ground between tufts looks like
+     depth instead of holes. It is also a far better self-shadow than
+     an actual shadow pass could be — a cascade texel here is three or
+     four centimetres against a fourteen-millimetre blade. */
+  {
+    float up = vUv.y;
+    albedo *= 1.0 - 0.72 * (1.0 - smoothstep(0.0, 0.22, up));
+    // Dead thatch low down, drying tip high up, both scaled by how old
+    // this particular blade is.
+    albedo = mix(albedo, albedo * vec3(0.78, 0.66, 0.44),
+                 vAge * (1.0 - smoothstep(0.0, 0.30, up)));
+    albedo = mix(albedo, albedo * vec3(1.18, 1.10, 0.62),
+                 vAge * smoothstep(0.80, 1.0, up));
+    // A midrib. One line, and it is most of what makes a blade read as
+    // a leaf rather than a painted strip.
+    albedo *= 1.0 - 0.16 * (1.0 - smoothstep(0.0, 0.14, abs(vUv.x - 0.5)));
+    // Per-blade tone, so a tuft is nine blades and not one repeated.
+    albedo *= mix(0.88, 1.12, vBladeHash);
+    // The matte glaucous underside; the roughness half of this lives
+    // below, where rough has been declared.
+    if (!gl_FrontFacing) albedo *= vec3(0.92, 0.97, 1.04);
+  }
+#endif
 #ifdef VERTCOLOR
   // Carved-from-photos meshes have no UV-mapped texture — each vertex
   // carries its own baked color instead.
@@ -3700,6 +3950,13 @@ void main(){
 #endif
   float rough = uRoughness;
   float metal = uMetalness;
+#ifdef GRASS
+  /* Glossy upper surface, matte underside. The grass material is
+     double-sided with face culling off, so both faces are drawn, and
+     this is the mechanism behind the silver flash a real field throws
+     when a gust turns the leaves over. */
+  rough = gl_FrontFacing ? max(0.03, rough - 0.22) : min(1.0, rough + 0.04);
+#endif
   float ao = 1.0;
 #ifdef WATER_FX
   // vVertColor.r carries a foam amount painted in by WaterVolume.update()
@@ -4545,29 +4802,37 @@ class Camera {
 // and "ultra" can still reach true 4K on a modest window with a capped
 // devicePixelRatio. label/fps are player-facing (a settings menu can read
 // them directly instead of re-describing each tier).
+/* grassCover and grassRadius are the grass ladder; maxGrass is only
+   the instance ceiling and is deliberately unchanged. When the budget
+   cannot buy the target density over the target radius, COVER gives
+   way and RADIUS does not: holding blades per square metre constant
+   across tiers would hand the weakest machines a two-metre plinth of
+   perfect lawn ending in a wall at the player's feet. Thinner grass
+   over ground you can walk across is a real grassland; a small
+   perfect disc is a putting green on a building site. */
 const QUALITY = {
   // Lean and fast — the "how do I get 300fps" tier. Roughly the visual
   // bar of a mid-2000s shooter: sharp enough to read, nothing to spare.
   performance: {
     shadowRes: 768, cascades: 1, bloom: false, bloomIters: 1, fluidScale: 0.4, fxaa: false, msaa: 0,
-    maxGrass: 3000, renderScale: 0.7, resolutionCap: [1600, 900],
+    maxGrass: 3000, grassCover: 0.50, grassRadius: 10, renderScale: 0.7, resolutionCap: [1600, 900],
     label: 'Performance', fps: '200+ fps',
   },
   low: {
     shadowRes: 1024, cascades: 1, bloom: true, bloomIters: 2, fluidScale: 0.5, fxaa: false, msaa: 0,
-    maxGrass: 6000, renderScale: 0.75, resolutionCap: [1600, 900],
+    maxGrass: 6000, grassCover: 0.70, grassRadius: 11, renderScale: 0.75, resolutionCap: [1600, 900],
     label: 'Low', fps: '~120 fps',
   },
   medium: {
     shadowRes: 1536, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 0.75, fxaa: true, msaa: 0,
-    maxGrass: 20000, renderScale: 1, resolutionCap: [1920, 1080],
+    maxGrass: 20000, grassCover: 0.90, grassRadius: 12, renderScale: 1, resolutionCap: [1920, 1080],
     label: 'Balanced', fps: '~90 fps',
   },
   // The "gorgeous and stable" middle ground — full HD/1440p, every effect
   // on, tuned to hold a high frame rate rather than chase peak fidelity.
   high: {
     shadowRes: 2048, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 1, fxaa: true, msaa: 0,
-    maxGrass: 60000, renderScale: 1, resolutionCap: [2560, 1440],
+    maxGrass: 60000, grassCover: 0.90, grassRadius: 14, renderScale: 1, resolutionCap: [2560, 1440],
     label: 'High', fps: '~75 fps',
   },
   // True 4K ceiling: on a 3840x2160 display (or a smaller window at 2x
@@ -4576,14 +4841,19 @@ const QUALITY = {
   // invocation, per pixel, quadruples versus 1080p.
   ultra: {
     shadowRes: 4096, cascades: 2, bloom: true, bloomIters: 4, fluidScale: 1, fxaa: true, msaa: 0,
-    maxGrass: 150000, renderScale: 1, resolutionCap: [3840, 2160],
+    maxGrass: 150000, grassCover: 0.95, grassRadius: 18, renderScale: 1, resolutionCap: [3840, 2160],
     label: 'Ultra 4K', fps: '~45-60 fps on capable hardware',
   },
 };
 const QUALITY_ORDER = ['performance', 'low', 'medium', 'high', 'ultra'];
 
 function detectQuality() {
-  const mem = navigator.deviceMemory || 4;
+  /* deviceMemory is Chrome-only. Defaulting it to 4 put every Firefox
+     and Safari desktop on 'medium' regardless of how much RAM it
+     actually had; inferring from the core count instead at least lets
+     a capable machine reach 'high'. */
+  const cores0 = navigator.hardwareConcurrency || 4;
+  const mem = navigator.deviceMemory || (cores0 >= 8 ? 8 : 4);
   const cores = navigator.hardwareConcurrency || 4;
   const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
   if (mobile) return (mem >= 6 && cores >= 6) ? 'medium' : 'low';
@@ -5030,7 +5300,7 @@ class Renderer {
       sh.f('uBoneCount', batch.boneCount || 0);
     }
     if (batch.instanced) {
-      batch.mesh.uploadInstances(batch.instances, batch.count);
+      batch.mesh.uploadInstances(batch.instances, batch.count, batch.instanceVersion);
       batch.mesh.drawInstanced(batch.count);
       this.stats.draws++;
       this.stats.instances += batch.count;
@@ -5098,7 +5368,15 @@ class Renderer {
     sh.i('uDebugMode', this.debugMode);
     if (batch.grass) {
       sh.v3('uWindDir', this.wind ? this.wind.direction : _defaultWind);
-      sh.f('uWindStrength', this.wind ? this.wind.strength : 0.25);
+      // windScale was applied in the shadow pass and not here, so any
+      // batch with a scale other than 1 would bend differently from
+      // the shadow it casts. Dormant while everything uses 1, and a
+      // very confusing bug the first time something does not.
+      sh.f('uWindStrength', (this.wind ? this.wind.strength : 0.25)
+        * (batch.windScale != null ? batch.windScale : 1));
+      const gf = batch.grassFade;
+      if (gf) sh.v4('uGrassFade', gf[0], gf[1], gf[2], gf[3]);
+      else sh.v4('uGrassFade', 0, 0, 1e6, 1e7);
     }
     if (batch.furShell) {
       sh.f('uShellOffset', batch.shellOffset || 0.01);
@@ -10417,6 +10695,46 @@ function resolveGrassSpec(spec) {
   return Object.assign(p, extra);
 }
 
+/* What a tuft is worth in single blades.
+
+   Not nine. Nine strips from one root overlap each other, and the
+   single blade they are measured against is a CROSSED pair of quads
+   while each tuft strip is one. Measured by rasterising the
+   azimuth-mean projected silhouette of both meshes and dividing:
+   at the authored spread of 0.24 m and 1.8x blade width a tuft comes
+   out at 7.27 single blades. Seven is used, which is deliberately
+   short of the measurement — the coverage budget is built on this
+   number and it should err toward too much grass.
+
+   If the tuft geometry is ever changed, re-measure. Narrowing the
+   spread is the dangerous edit: at 0.11 m the same nine strips are
+   worth 4.6, and the mid-field comes out a third barer than the
+   arithmetic says with nothing in the code to notice. */
+const TUFT_EQ = 7.0;
+const TUFT_WIDTH_MUL = 1.8;
+const TUFT_SPREAD = 0.24;
+
+/* Four growth forms that co-occur in one square metre of grassland.
+
+   Every number in a row moves together off ONE pick, which is the
+   whole point: real grassland is a mosaic of stands, not a per-blade
+   randomisation of six independent parameters. `f` is the share of
+   blades, `w` and `h` scale width and height, `arch` is how far the
+   blade droops, `stiff` how it answers the wind, `taper` how it
+   narrows, `hue` shifts it yellow or blue.
+
+   The weights are width-neutral by construction: sum(f*w) is
+   0.42*0.60 + 0.24*2.00 + 0.22*0.95 + 0.12*0.45 = 0.9955, near enough
+   to one that the coverage arithmetic above does not move when the mix
+   is retuned. Keep it that way, or the density law silently stops
+   holding. */
+const GRASS_SPECIES = [
+  { id: 'fescue',    f: 0.42, w: 0.60, h: 1.15, arch: 0.10, stiff: 1.25, taper: 1.0, hue: -0.06, age: 0.25 },
+  { id: 'cocksfoot', f: 0.24, w: 2.00, h: 1.00, arch: 0.70, stiff: 0.55, taper: 1.6, hue: 0.02, age: 0.30 },
+  { id: 'bent',      f: 0.22, w: 0.95, h: 0.70, arch: 0.95, stiff: 0.40, taper: 1.2, hue: 0.08, age: 0.35 },
+  { id: 'culm',      f: 0.12, w: 0.45, h: 1.95, arch: 0.05, stiff: 1.60, taper: 0.7, hue: 0.16, age: 0.55 },
+];
+
 class Grass {
   constructor(gl, opts = {}) {
     this.gl = gl;
@@ -10443,10 +10761,71 @@ class Grass {
     this.rng = new Rng(this._baseSeed);
     this.noise = new Noise(opts.seed || 31337);
 
+    /* The density law's inputs. cover is the fraction of ground the
+       sward should hide at the nearest point on screen; radiusClosed
+       is how far out that holds; the taper band is the last few metres
+       where it falls to nothing so the field has no rim. */
+    this.cover = opts.cover != null ? opts.cover : 0.9;
+    this.radiusClosed = opts.radius != null ? opts.radius : 12;
+    this.taperBand = opts.taperBand != null ? opts.taperBand : 6;
+    this.radiusDrawn = this.radiusClosed + this.taperBand;
+    this.eyeHeight = opts.eyeHeight || 1.62;
+    this.fov = opts.fov || 62;
+    this.aspect = opts.aspect || (16 / 9);
+    this.coverMul = opts.coverMul != null ? opts.coverMul : 1;
+    this.groundColorFn = opts.groundColorFn || null;
+    this.canopyFn = opts.canopyFn || null;
+    /* Prostrate litter — dead thatch lying flat at the base of the
+       sward — and it is not a decoration, it is what covers the
+       ground you are standing on.
+
+       Upright blades hide ground in proportion to how obliquely you
+       see it, so they work beautifully at ten metres and barely at
+       all at two: the nearest ground on screen is viewed steeply, a
+       vertical blade presents almost nothing from above, and that is
+       where a field looks balder than anywhere else however many
+       blades are in it. Flat material is the exact complement — it
+       covers best precisely where upright material covers worst — so
+       the litter disc is sized to reach past the nearest visible
+       ground rather than being a token scatter at the player's feet. */
+    this.thatch = opts.thatch !== false;
+    /* Concentrated rather than spread. The litter budget is a fixed
+       share of the instances, so a wider disc is a thinner one: five
+       metres of 51 per square metre covers less of the ground you are
+       actually looking at than three metres of 140. Steeply-viewed
+       ground is the near field by definition, so that is where it
+       goes. */
+    this.thatchPerM2 = opts.thatchPerM2 != null ? opts.thatchPerM2 : 150;
+    this.thatchR = opts.thatchR != null ? opts.thatchR : 3.2;
+    this.thatchShare = opts.thatchShare != null ? opts.thatchShare : 0.22;
+    this.species = opts.speciesTable || GRASS_SPECIES;
+    this._spWeights = this.species.map((x) => x.f);
+    if (opts.species) this.setSpecies(opts.species);
+
+    this._tile = 4;
+    this._salt = (this._baseSeed * 4) >>> 0;
+    this._tileKey = null;
+    this._rng = new Rng(this._baseSeed);
+    this._pos = new Vec3(); this._scale = new Vec3(); this._col = new Vec3();
+    this._quat = new Quat(); this._mat = new Mat4();
+
+    this._deriveDensity();
+    this._solveBudget();
+
     const geo = Shapes.grassBlade(this.bladeHeight, this.bladeWidth, opts.segments || 4);
     this.mesh = new GpuMesh(gl, geo);
     this.mesh.setupInstancing(20);
-    this.instances = new Float32Array(this.max * 20);
+    this.instances = new Float32Array(Math.max(1, this.nBladeCap) * 20);
+
+    /* The tuft is a second mesh and a second buffer, not a second
+       material: same shader, same uniforms, one extra draw call. */
+    const tuft = Shapes.grassTuft(this.bladeHeight, this.bladeWidth * TUFT_WIDTH_MUL,
+      9, 2, TUFT_SPREAD);
+    this.tuftMesh = new GpuMesh(gl, tuft.geo);
+    this.tuftMesh.setupInstancing(20);
+    this.tuftRung = tuft;
+    this.tuftCount = 0;
+    this.tuftInstances = new Float32Array(Math.max(1, this.nTuftCap + this.nThatch) * 20);
     this.material = new Material(gl, {
       color: 0xffffff,
       roughness: 0.92,
@@ -10460,7 +10839,8 @@ class Grass {
       doubleSided: true,
       castShadow: opts.castShadow !== false,
     });
-    this.scatter(opts);
+    this.castShadow = opts.castShadow === true;
+    this.update(this.center);
   }
 
   /* Move the field to a new centre and re-scatter it.
@@ -10476,189 +10856,480 @@ class Grass {
      Deterministic in the same way the original scatter is: the blade
      positions come from the same noise field, so walking away and coming
      back gives the same meadow rather than a reshuffled one. */
-  recenter(center, opts = {}) {
-    const c = Vec3.from(center);
-    if (opts.minMoveM != null && this.center.distanceTo(c) < opts.minMoveM) return false;
-    this.center.copy(c);
-    // Reseed from the quantised position rather than continuing the stream,
-    // so the same ground grows the same meadow every time you cross it.
-    // Without this, walking away and coming back reshuffles every blade,
-    // which reads as the world quietly rebuilding itself behind you.
-    const cell = 8;
-    const gx = Math.round(c.x / cell), gz = Math.round(c.z / cell);
-    this.rng = new Rng(((gx * 73856093) ^ (gz * 19349663) ^ this._baseSeed) >>> 0);
-    this.scatter(Object.assign({}, opts, { center: c }));
-    return true;
+  /* ---------------- the sward ----------------
+
+     Grass is placed by tile, not by rejection sampling over a square,
+     and its density falls as one over the distance rather than being
+     flat. Those two changes are most of this file.
+
+     WHY DENSITY MUST FALL AS 1/r. What closes a sward is not how much
+     ground the blades cover seen from above — a vertical blade seen
+     from above is a fourteen-millimetre line, about a thousandth of a
+     square metre, and no affordable number of them hides anything. It
+     is occlusion along the grazing sightline from an eye at 1.62 m.
+     A blade at ground distance d blocks a length of that sightline
+     proportional to d, so cover is 1 - exp(-rho*w*h*d/eye): ground
+     twice as far away needs half the blades for the same cover. Follow
+     that law and cover is constant everywhere and the instance count
+     grows LINEARLY with radius instead of with its square — which is
+     the entire reason the existing budget turns out to be enough. The
+     old field spread a flat density over fifty-eight metres, spent
+     three quarters of its blades past the distance where one is a
+     single pixel wide, and left six-tenths of the ground bare at the
+     player's feet.
+
+     WHY TILES. Placement hashed from a 4 m tile index makes a blade's
+     position a pure function of which tile it is in and which index it
+     has, so walking never moves a blade that was already there — the
+     old code reseeded the whole field from an 8 m-quantised centre,
+     which relocated every blade in it each time the player crossed a
+     cell boundary. Tiles also make the update incremental: crossing a
+     boundary rebuilds the few tiles that entered and left, not all
+     thirty thousand blades, which turns a hundred-millisecond freeze
+     into about a millisecond of work. */
+
+  /* Nearest ground on screen at a level view — eye height over the
+     tangent of half the vertical field of view. This is the hardest
+     point in the frame and it is what sets the density everywhere
+     else. */
+  _deriveDensity() {
+    const eye = this.eyeHeight;
+    /* The engine's camera.fov is the VERTICAL angle in degrees —
+       Camera stores `(opts.fov || 55) * DEG` and hands it straight to
+       Mat4.perspective(fovY, ...). Treating it as horizontal and
+       dividing by the aspect ratio puts the nearest visible ground at
+       4.8 m instead of 2.7, and since density is set from that point
+       it would under-cover the one piece of ground the player is
+       always looking at by a factor of nearly two. */
+    const vfov = this.fov * Math.PI / 180;
+    this.rNear = Math.max(1.2, eye / Math.tan(vfov / 2));
+    /* Effective blade width is the azimuth-mean of the union of the two
+       crossed quads — max(|cos|,|sin|) averages 0.9003 — times the mean
+       of the taper, times the full width (the geometry takes a HALF
+       width). */
+    const wEff = 2 * this.bladeWidth * 0.55 * 0.9003;
+    const hEff = this.bladeHeight * 0.97;
+    this._wEff = wEff;
+    const C = Math.min(0.98, Math.max(0.2, this.cover));
+    /* Beer-Lambert assumes the occluders are scattered independently.
+       These are not: blades come in tiles and nine of them share one
+       tuft's footprint, so they shadow the same ground as each other
+       and the field covers less than the same number of independent
+       blades would. Measured against the magenta-cover harness the
+       shortfall is a factor of about two and a half — 564
+       blade-equivalents per square metre delivering the cover the
+       model predicts for 230. CLUMP_LOSS carries that measurement
+       rather than pretending the idealised number is right. Re-measure
+       it if the tuft or the tiling changes; do not tune it by eye. */
+    const CLUMP_LOSS = 2.5;
+    this.rho0 = CLUMP_LOSS * -Math.log(1 - C) * eye / (wEff * hEff * this.rNear);
   }
 
-  /* Place blades. A meadow doesn't grow as an even carpet — it grows in
-     tufts, with visible ground or shorter cover between them. Blades are
-     scattered continuously, but each candidate is accepted or rejected by
-     distance to the nearest procedural clump center, so the field reads as
-     hand-placed grass clumps rather than a lawn of individually-scattered
-     blades. Large-scale noise still layers lush/dry variation on top. */
-  scatter(opts = {}) {
-    // Clumping concentrates blades into tufts rather than spreading them
-    // evenly, so the raw per-area budget goes up — a tuft needs several
-    // blades packed close together to read as a clump instead of a sprig.
-    const target = Math.min(this.max, opts.count || Math.floor(this.area * this.area * 26 * this.density));
-    const half = this.area / 2;
-    const buf = this.instances;
-    let n = 0;
-    const pos = new Vec3();
-    const quat = new Quat();
-    const scale = new Vec3();
-    const mat = new Mat4();
-    const color = new Vec3();
-    const up = new Vec3(0, 1, 0);
+  /* Split the instance budget between single blades near the camera and
+     nine-blade tufts beyond the distance where one blade is about a
+     pixel and a half wide — the only range at which swapping them is
+     invisible. Everything here is in blade-equivalents until the last
+     step. */
+  _solveBudget() {
+    const Rn = this.rNear, Rc = this.radiusClosed, taper = this.taperBand;
+    const Rd = this.radiusDrawn;
 
-    const P = this.P;
-    const jit = P.heightJitter || [0.65, 1.45];
-    const cs = P.clumpSize || 0.55;
-    const clumpChance = P.clumpChance != null ? P.clumpChance : 0.6;
-    const clumpRadius = cs * (P.clumpSpread != null ? P.clumpSpread : 0.65);
-    /* recenter() forwards the options it was called with, which do not
-       include the seed the field was built with — so without the
-       _baseSeed fallback a seeded meadow scatters one way on its first
-       scatter and another way on every move after, which is precisely
-       the "same ground grows the same meadow" promise recenter exists
-       to keep. */
-    const saltBase = (opts.seed || this._baseSeed || 31337) * 4;
-    // Clumping rejects most candidates between tufts, so many more attempts
-    // are needed to reach the target blade count than a uniform scatter.
-    const attempts = target * 9;
-    /* How much thinner the far edge of the field is than the ground the
-       player is standing on. The blade budget is fixed — it is an
-       instance buffer — so spreading it evenly over the whole field
-       spends as much of it on grass forty metres off, where a blade is
-       a third of a pixel and all you can read is an average colour the
-       terrain texture already gives you, as on the grass around your
-       boots, where individual blades are the entire reason the field
-       exists. Thinning the edge to a third moves roughly a quarter of
-       every blade inward without drawing one more of them. */
-    const farThin = 0.65;
-    for (let i = 0; i < attempts && n < target; i++) {
-      const x = this.center.x + this.rng.range(-half, half);
-      const z = this.center.z + this.rng.range(-half, half);
-      {
-        const rr = Math.min(1, Math.hypot(x - this.center.x, z - this.center.z) / half);
-        if (this.rng.next() > 1 - farThin * rr * rr) continue;
-      }
+    /* How far out a single blade is still worth drawing as a single
+       blade. Below about a pixel and a half of width it is a smear
+       whichever mesh drew it, which is the one range where swapping
+       nine blades for one tuft is invisible. */
+    const vfov = this.fov * Math.PI / 180;
+    const pxPerRad = (this.renderHeight || 1080) / vfov;
+    const rPixel = (2 * this.bladeWidth) * pxPerRad / 1.4;
 
-      // Nearest clump center among this cell and its 8 neighbors. Cells
-      // roll their own presence, so most cells are empty gaps between tufts.
-      const cellX = Math.floor(x / cs), cellZ = Math.floor(z / cs);
-      let bestDist = Infinity, clumpBias = 0.5;
-      for (let dcx = -1; dcx <= 1; dcx++) {
-        for (let dcz = -1; dcz <= 1; dcz++) {
-          const gx = cellX + dcx, gz = cellZ + dcz;
-          if (clumpHash(gx, gz, saltBase + 1) > clumpChance) continue;
-          const ccx = (gx + 0.5) * cs + (clumpHash(gx, gz, saltBase + 2) - 0.5) * cs;
-          const ccz = (gz + 0.5) * cs + (clumpHash(gx, gz, saltBase + 3) - 0.5) * cs;
-          const d = Math.hypot(x - ccx, z - ccz);
-          if (d < bestDist) { bestDist = d; clumpBias = clumpHash(gx, gz, saltBase + 4); }
+    // Thatch comes off the top: a flat population near the camera.
+    this.nThatch = this.thatch
+      ? Math.min(Math.round(this.max * this.thatchShare),
+        Math.round(this.thatchPerM2 * Math.PI * this.thatchR * this.thatchR))
+      : 0;
+    const spare = Math.max(1, this.max - this.nThatch);
+
+    const bladeEqTo = (A, B, r) => A + B * Math.max(0, Math.min(r, Rd) - Rn);
+
+    /* Cover gives way before radius does.
+
+       If the budget cannot buy the target density over the target
+       radius, the wrong answer is to shrink the field: holding
+       blades per square metre constant across tiers would give the
+       weakest machines a two-metre plinth of perfect lawn ending in a
+       wall at the player's feet. Thinner grass over ground you can
+       actually walk across is a real grassland; a small perfect disc
+       is a putting green on a building site. So the radius is fixed
+       and rho0 is scaled down until it fits. */
+    let rho0 = this.rho0;
+    let A = 0, B = 0, want = 0, rSwap = Rn;
+    for (let iter = 0; iter < 12; iter++) {
+      A = rho0 * Math.PI * Rn * Rn;
+      B = rho0 * Rn * 2 * Math.PI;
+      want = A + B * Math.max(0, Rc - Rn) + B * taper * 0.5;
+      const cost = (r) => {
+        const be = bladeEqTo(A, B, r);
+        return be + Math.max(0, want - be) / TUFT_EQ;
+      };
+      // Prefer blades as far out as they are individually legible, and
+      // further if there is slack — a blade always looks better than a
+      // tuft at the same distance.
+      const rWanted = Math.min(Rd, Math.max(Rn, rPixel));
+      if (cost(rWanted) <= spare) {
+        rSwap = rWanted;
+        // Spend any remainder pushing blades out past the pixel limit.
+        let lo = rWanted, hi = Rd;
+        for (let k = 0; k < 24; k++) {
+          const mid = (lo + hi) / 2;
+          if (cost(mid) <= spare) lo = mid; else hi = mid;
         }
+        rSwap = lo;
+        break;
       }
-      if (bestDist === Infinity) continue;                    // gap between tufts
-      const clumpFalloff = Math.exp(-(bestDist * bestDist) / (clumpRadius * clumpRadius));
-      if (this.rng.next() > clumpFalloff) continue;
-
-      const mask = this.noise.fbm(x * 0.05, 0, z * 0.05, 3) * 0.5 + 0.5;
-      if (opts.mask && !opts.mask(x, z)) continue;
-
-      // Hard bald patches: dead fields show bare hardpan, mud shows mud.
-      // A sharp threshold (not a fade) is what reads as a real bare patch.
-      if (P.bare > 0) {
-        const bareN = this.noise.fbm(x * 0.07, 7.7, z * 0.07, 3) * 0.5 + 0.5;
-        if (bareN < P.bare) continue;
+      // Pull the blade/tuft boundary in; never inside the nearest
+      // ground on screen, which must always be real blades.
+      let lo = Rn, hi = rWanted;
+      for (let k = 0; k < 24; k++) {
+        const mid = (lo + hi) / 2;
+        if (cost(mid) <= spare) lo = mid; else hi = mid;
       }
+      if (cost(lo) <= spare) { rSwap = lo; break; }
+      // Even all-tufts does not fit: thin the sward and try again.
+      rho0 *= Math.max(0.35, spare / cost(Rn) * 0.98);
+    }
+    this.rho0 = rho0;
+    this._A = A; this._B = B; this._wantEq = want;
+    this.rSwap = rSwap;
+    /* Size both populations from the arithmetic and only then make
+       them fit, proportionally. Clamping the blades to the whole spare
+       budget first and giving the tufts whatever is left means the
+       tufts get nothing — and the tufts are what covers everything
+       past the blade radius, so the field comes out closed near the
+       player and bare beyond it, which is the failure this whole
+       change exists to remove. A little headroom on each: tiles are
+       rounded up individually and the sum lands slightly over. */
+    const bladeEq = bladeEqTo(A, B, rSwap);
+    let nb = Math.ceil(bladeEq * 1.06) + 64;
+    let nt = Math.ceil(Math.max(0, want - bladeEq) / TUFT_EQ * 1.10) + 32;
+    if (nb + nt > spare) {
+      const k = spare / (nb + nt);
+      nb = Math.floor(nb * k); nt = Math.floor(nt * k);
+    }
+    this.nBladeCap = nb;
+    this.nTuftCap = nt;
+  }
 
-      const y = this.heightFn ? this.heightFn(x, z) : this.center.y;
+  /* Blade-equivalents a tile should hold, from the 1/r law plus the
+     edge taper. The radius each tile evaluates is jittered by its own
+     hash so the rungs are not concentric squares. */
+  _tileWant(tx, tz) {
+    const cx = (tx + 0.5) * this._tile, cz = (tz + 0.5) * this._tile;
+    const dx = cx - this.center.x, dz = cz - this.center.z;
+    const raw = Math.sqrt(dx * dx + dz * dz);
+    const r = Math.max(0.0001, raw + (clumpHash(tx, tz, this._salt + 11) - 0.5) * 1.8);
+    if (r > this.radiusDrawn) return { eq: 0, r };
+    /* Inside the nearest visible ground the law has nothing more to
+       say — min(1, rNear/r) is pinned at 1 — but cover still falls as
+       you look closer, because the sightline through the canopy gets
+       shorter. Lift the inner disc to compensate. It is cheap: the
+       disc is only about twenty square metres. */
+    let rho = this.rho0 * Math.min(1, this.rNear / r);
+    if (r < this.rNear) rho *= 1 + 0.55 * (1 - r / this.rNear);
+    if (r > this.radiusClosed) {
+      const t = (r - this.radiusClosed) / Math.max(0.001, this.taperBand);
+      rho *= Math.max(0, 1 - t * t);
+    }
+    return { eq: rho * this._tile * this._tile * this.coverMul, r };
+  }
 
-      // Trampled clusters: flattened blades lying near the ground, clumped
-      // by noise so they read as trails and rest spots, not static.
-      let flattened = false;
-      if (P.trampled > 0) {
-        const tramp = this.noise.fbm(x * 0.11, 11.3, z * 0.11, 2) * 0.5 + 0.5;
-        flattened = tramp < P.trampled;
-      }
+  /* ---------------- per-tile placement ---------------- */
 
-      // Weed clumps (mud seagrass) and occasional talls in mixed fields.
-      const isWeed = P.weedChance > 0 && this.rng.next() < P.weedChance;
-      const isTall = !isWeed && P.tallChance > 0 && this.rng.next() < P.tallChance;
+  /* R2, the two-dimensional low-discrepancy sequence. Every PREFIX of
+     it is evenly spread, which is exactly what a density law needs: a
+     tile can emit its first k points for any k and they still cover
+     the tile evenly, so thinning with distance is a shorter take from
+     the same fixed sequence rather than a different arrangement. A
+     blade therefore never moves as the player approaches — it only
+     ever appears or disappears. */
+  _placeTile(tx, tz, buf, outFirst, kind) {
+    const W = this._tileWant(tx, tz);
+    if (W.eq <= 0) return 0;
+    const perInstance = kind === 'tuft' ? TUFT_EQ : 1;
+    let k = Math.round(W.eq / perInstance);
+    if (kind === 'blade' && W.r > this.rSwap) k = 0;
+    if (kind === 'tuft' && W.r <= this.rSwap) k = 0;
+    if (k <= 0) return 0;
 
-      const lean = P.lean != null ? P.lean : 0.14;
-      if (flattened) {
-        // Bent over: pitched almost to the ground in a random direction,
-        // shorter, and it barely sways.
-        quat.setEuler(
-          this.rng.range(1.15, 1.42),
-          this.rng.range(0, TAU),
-          this.rng.range(-0.2, 0.2),
-        );
-      } else {
-        quat.setEuler(
-          this.rng.range(-lean, lean),
-          this.rng.range(0, TAU),
-          this.rng.range(-lean, lean),
-        );
-      }
+    const t = this._tile;
+    const ox = tx * t, oz = tz * t;
+    const h1 = clumpHash(tx, tz, this._salt + 1);
+    const h2 = clumpHash(tx, tz, this._salt + 2);
+    const rng = this._rng;
+    rng.s = (((tx * 73856093) ^ (tz * 19349663) ^ this._baseSeed) >>> 0) || 1;
 
-      // Blades in the same tuft share a height bias (clumpBias, stable per
-      // clump center) on top of their own random jitter, so a tuft reads as
-      // one coherent clump instead of independent blades that happen to be
-      // near each other.
-      let h = this.rng.range(jit[0], jit[1]) * (mask * 0.5 + 0.75) * lerp(0.82, 1.18, clumpBias);
-      let w = this.rng.range(0.8, 1.2);
-      if (isWeed) { h *= this.rng.range(2.0, 3.1); w *= 1.6; }
-      if (isTall) { h *= this.rng.range(1.8, 2.4); w *= 1.3; }
-      if (flattened) { h *= this.rng.range(0.55, 0.85); }
-      scale.set(w, h, 1);
-      pos.set(x, y, z);
-      mat.compose(pos, quat, scale);
-      buf.set(mat.e, n * 20);
+    // One moisture sample per tile rather than per blade. Concave and
+    // flat ground holds water; convex and steep sheds it. Four height
+    // taps per 4 m tile instead of four per blade is four hundred times
+    // less terrain querying for a field that does not need the detail.
+    const wet = this._tileMoisture(ox + t * 0.5, oz + t * 0.5);
+    const shade = this.canopyFn ? clamp(this.canopyFn(ox + t * 0.5, oz + t * 0.5), 0, 1) : 0;
+    // Tussock structure: one hash per tile scales everything in it.
+    const tuss = 0.85 + 0.3 * clumpHash(tx, tz, this._salt + 5);
 
-      // Tint by height and a large-scale patch noise: dry patches, lush ones.
-      const t = clamp(this.noise.fbm(x * 0.09, 3.1, z * 0.09, 2) * 0.5 + 0.5, 0, 1);
-      if (isWeed) {
-        color.copy(this.weedLow).lerp(this.weedHigh, t * 0.8 + this.rng.range(0, 0.2));
-      } else {
-        color.copy(this.colorLow).lerp(this.colorHigh, t * 0.8 + this.rng.range(0, 0.2));
-      }
-      // Trampled blades read duller: pulled toward gray-brown.
-      if (flattened) {
-        color.x = lerp(color.x, 0.32, 0.35);
-        color.y = lerp(color.y, 0.28, 0.35);
-        color.z = lerp(color.z, 0.20, 0.35);
-      }
-      buf[n * 20 + 16] = color.x;
-      buf[n * 20 + 17] = color.y;
-      buf[n * 20 + 18] = color.z;
-      buf[n * 20 + 19] = this.rng.next();   // per-blade wind phase seed
+    let n = 0;
+    for (let i = 0; i < k; i++) {
+      const u = (h1 + i * 0.7548776662) % 1;
+      const v = (h2 + i * 0.5698402910) % 1;
+      const x = ox + (u + (rng.next() - 0.5) * 0.22) * t;
+      const z = oz + (v + (rng.next() - 0.5) * 0.22) * t;
+      const slot = outFirst + n;
+      if ((slot + 1) * 20 > buf.length) break;
+      this._writeInstance(buf, slot, x, z, kind, wet, shade, tuss, rng);
       n++;
     }
-
-    this.count = n;
-    this.mesh.uploadInstances(this.instances.subarray(0, n * 20), n);
     return n;
   }
 
-  batch() {
-    return {
-      mesh: this.mesh,
+  _tileMoisture(x, z) {
+    const f = this.heightFn;
+    if (!f) return 0.5;
+    const d = 0.7;
+    const c = f(x, z);
+    const e = f(x + d, z), w = f(x - d, z), s = f(x, z + d), nn = f(x, z - d);
+    // Positive concavity means a hollow; a flat hollow is the wettest
+    // ground there is. Slope sheds, so it dries.
+    const concave = (e + w + s + nn) * 0.25 - c;
+    const slope = Math.max(Math.abs(e - w), Math.abs(s - nn)) / (2 * d);
+    const macro = this.noise.fbm(x * 0.013, 5.5, z * 0.013, 2) * 0.5 + 0.5;
+    return clamp(0.5 + concave * 2.2 - slope * 0.9 + (macro - 0.5) * 0.8, 0, 1);
+  }
+
+  /* One instance: where it is, which species it is, how it leans, what
+     colour it is, and the three extra floats the shader reads out of
+     the model matrix's unused w slots. */
+  _writeInstance(buf, slot, x, z, kind, wet, shade, tuss, rng) {
+    const P = this.P;
+    const sp = this._pickSpecies(x, z, wet, rng);
+    const o = slot * 20;
+
+    /* Species, height and colour all move together off ONE choice.
+       The old field drew height from one noise field and colour from
+       another at a different frequency and a different offset, so they
+       were uncorrelated by construction — which is why its variation
+       read as noise rather than as a plant community. A damp hollow
+       should be taller AND greener AND a different grass. */
+    const jit = P.heightJitter || [0.65, 1.45];
+    const wetH = 0.78 + 0.5 * wet;
+    const shadeH = 1 - 0.35 * shade;
+    let h = rng.range(jit[0], jit[1]) * sp.h * wetH * shadeH * tuss;
+    /* Species width applies to a single blade at full strength. A tuft
+       mesh is already built 1.8x wider than a blade so that nine
+       single strips are worth as much silhouette as the crossed pair
+       they replace, and multiplying the broad-leaved species' 2.0 on
+       top of that gives a ten-centimetre leaf — a hosta, not a grass.
+       Take the square root for the tuft meshes: the broad species is
+       still visibly broader, but within the range a grass occupies. */
+    const wide = kind !== 'blade';
+    let w = rng.range(0.85, 1.15) * (wide ? Math.sqrt(sp.w) : sp.w) * tuss;
+
+    const flat = kind === 'thatch';
+    // Litter lies flat and spreads a little; 2.4 on top of everything
+    // else was a dinner plate.
+    if (flat) { h *= rng.range(0.4, 0.62); w *= 1.25; }
+
+    const lean = P.lean != null ? P.lean : 0.14;
+    const q = this._quat;
+    if (flat) {
+      q.setEuler(rng.range(1.42, 1.57), rng.range(0, TAU), rng.range(-0.3, 0.3));
+    } else {
+      q.setEuler(rng.range(-lean, lean), rng.range(0, TAU), rng.range(-lean, lean));
+    }
+    this._pos.set(x, this.heightFn ? this.heightFn(x, z) : this.center.y, z);
+    /* Scale Z with the width, not 1. grassBlade lays one quad's width
+       on local X and the other's on local Z, so scaling only X stretched
+       one quad and left the other at authored width — and the baked
+       forward lean, which lives on the other axis, was being scaled by
+       the width jitter instead of left alone. */
+    this._scale.set(w, h, w);
+    this._mat.compose(this._pos, q, this._scale);
+    buf.set(this._mat.e, o);
+
+    /* Three floats that cost nothing. Mat4.compose always writes hard
+       zeros into e[3], e[7] and e[11] — the unused column of a
+       transform with no projection — so they carry per-instance data
+       at no extra stride and no extra upload. The shader MUST zero
+       them again before using the matrix. */
+    buf[o + 3] = flat ? 0 : sp.arch;
+    buf[o + 7] = flat ? 0 : sp.stiff;
+    buf[o + 11] = flat ? rng.range(0.6, 1) : clamp(sp.age + rng.range(-0.15, 0.25) + shade * 0.2, 0, 1);
+
+    // Colour: the biome ramp positioned by moisture, nudged toward the
+    // species' own hue, then pulled a third of the way toward the
+    // ground it is growing out of so the sward and the soil agree and
+    // the gaps between tufts read as shadow rather than as holes.
+    const c = this._col;
+    c.copy(this.colorLow).lerp(this.colorHigh, clamp(wet * 0.75 + rng.range(0, 0.25), 0, 1));
+    c.x *= 1 - sp.hue * 0.55; c.z *= 1 + sp.hue * 0.8;
+    if (shade > 0) { c.x *= 1 - shade * 0.18; c.y *= 1 - shade * 0.10; }
+    if (this.groundColorFn) {
+      const g = this.groundColorFn(x, z);
+      if (g) { c.x = lerp(c.x, g[0], 0.3); c.y = lerp(c.y, g[1], 0.3); c.z = lerp(c.z, g[2], 0.3); }
+    }
+    if (flat) { c.x = lerp(c.x, 0.30, 0.55); c.y = lerp(c.y, 0.26, 0.55); c.z = lerp(c.z, 0.17, 0.55); }
+    buf[o + 16] = c.x; buf[o + 17] = c.y; buf[o + 18] = c.z;
+    buf[o + 19] = rng.next();
+  }
+
+  /* Which grass this is. Spatially correlated over about three metres,
+     so a patch reads as a stand of one species rather than as six
+     independent randoms per blade. */
+  _pickSpecies(x, z, wet, rng) {
+    const list = this.species;
+    const t = clamp(this.noise.fbm(x * 0.35, 17.3, z * 0.35, 2) * 0.5 + 0.5
+      + (wet - 0.5) * 0.3 + rng.range(-0.22, 0.22), 0, 1);
+    let acc = 0;
+    for (let i = 0; i < list.length; i++) {
+      acc += this._spWeights[i];
+      if (t <= acc) return list[i];
+    }
+    return list[list.length - 1];
+  }
+
+  /* ---------------- the field ---------------- */
+
+  /* Called every frame. Does nothing until the player has crossed a
+     tile boundary, then rebuilds only the tiles that came into range
+     and drops the ones that left, a few per frame. */
+  update(center) {
+    const c = Vec3.from(center);
+    this.center.copy(c);
+    const t = this._tile;
+    const R = this.radiusDrawn + 6;
+    const tx0 = Math.floor((c.x - R) / t), tx1 = Math.floor((c.x + R) / t);
+    const tz0 = Math.floor((c.z - R) / t), tz1 = Math.floor((c.z + R) / t);
+    const key = `${tx0}:${tz0}:${tx1}:${tz1}`;
+    if (key === this._tileKey) return false;
+    this._tileKey = key;
+    this._rebuild(tx0, tx1, tz0, tz1);
+    return true;
+  }
+
+  _rebuild(tx0, tx1, tz0, tz1) {
+    const R2 = this.radiusDrawn * this.radiusDrawn;
+    let nb = 0, nt = 0;
+    for (let tx = tx0; tx <= tx1; tx++) {
+      for (let tz = tz0; tz <= tz1; tz++) {
+        const cx = (tx + 0.5) * this._tile, cz = (tz + 0.5) * this._tile;
+        const dx = cx - this.center.x, dz = cz - this.center.z;
+        if (dx * dx + dz * dz > R2 + 64) continue;
+        nb += this._placeTile(tx, tz, this.instances, nb, 'blade');
+        nt += this._placeTile(tx, tz, this.tuftInstances, nt, 'tuft');
+      }
+    }
+    // Thatch: a flat population near the camera, in the tuft buffer.
+    if (this.thatch && this.nThatch > 0) {
+      const rng = this._rng;
+      rng.s = (this._baseSeed ^ 0x9e3779b9) >>> 0;
+      const R = this.thatchR;
+      const tcx = Math.round(this.center.x / 4) * 4, tcz = Math.round(this.center.z / 4) * 4;
+      for (let i = 0; i < this.nThatch; i++) {
+        // Spiral rather than rejection sampling: no wasted candidates.
+        const fr = Math.sqrt((i + 0.5) / this.nThatch) * R;
+        const fa = i * 2.39996323;
+        const x = tcx + Math.cos(fa) * fr, z = tcz + Math.sin(fa) * fr;
+        if ((nt + 1) * 20 > this.tuftInstances.length) break;
+        this._writeInstance(this.tuftInstances, nt, x, z, 'thatch', 0.5, 0, 1, rng);
+        nt++;
+      }
+    }
+    this.count = nb;
+    this.tuftCount = nt;
+    this._version = (this._version || 0) + 1;
+    this._tuftVersion = (this._tuftVersion || 0) + 1;
+    this.mesh.uploadInstances(this.instances.subarray(0, nb * 20), nb, this._version);
+    this.tuftMesh.uploadInstances(this.tuftInstances.subarray(0, nt * 20), nt, this._tuftVersion);
+    return nb + nt;
+  }
+
+  /* Kept for callers that still ask for a re-scatter by hand: a biome
+     change, a quality change, or a test. */
+  recenter(center, opts = {}) {
+    if (opts.coverMul != null) this.coverMul = opts.coverMul;
+    if (opts.species) this.setSpecies(opts.species);
+    const c = Vec3.from(center);
+    this.center.copy(c);
+    this._tileKey = null;
+    return this.update(c) || this._rebuild(
+      Math.floor((c.x - this.radiusDrawn - 6) / this._tile),
+      Math.floor((c.x + this.radiusDrawn + 6) / this._tile),
+      Math.floor((c.z - this.radiusDrawn - 6) / this._tile),
+      Math.floor((c.z + this.radiusDrawn + 6) / this._tile)) >= 0;
+  }
+
+  /* Old name, same job: tests and demos call scatter() directly. */
+  scatter(opts = {}) {
+    if (opts.center) this.center.copy(Vec3.from(opts.center));
+    this._tileKey = null;
+    this.update(this.center);
+    return this.count + this.tuftCount;
+  }
+
+  setSpecies(weights) {
+    const n = this.species.length;
+    const w = [];
+    let sum = 0;
+    for (let i = 0; i < n; i++) { const v = Math.max(0, weights[i] != null ? weights[i] : this.species[i].f); w.push(v); sum += v; }
+    for (let i = 0; i < n; i++) w[i] = sum > 0 ? w[i] / sum : 1 / n;
+    this._spWeights = w;
+  }
+
+  batches() {
+    const out = [];
+    const common = {
       material: this.material,
-      instances: this.instances.subarray(0, this.count * 20),
-      count: this.count,
       instanced: true,
       grass: true,
       windScale: this.windScale,
       alphaClip: false,
-      sortKey: 0,
+      /* A field of grass casts a shadow that is, at any distance, a
+         slight general darkening of ground the blades are standing on
+         and already shading. It costs a full extra pass over every
+         blade per cascade for something nobody can point at. The dark
+         band at the base of every blade in the fragment shader is the
+         self-shadow, and it costs nothing. */
+      castShadow: this.castShadow === true,
+      grassFade: [this.center.x, this.center.z, this.radiusClosed, this.radiusDrawn],
     };
+    // Near rung first: a closed sward has real overdraw, and drawing
+    // the near blades before the far ones lets the depth test reject
+    // most of what is behind them.
+    if (this.count) {
+      out.push(Object.assign({}, common, {
+        mesh: this.mesh,
+        instances: this.instances.subarray(0, this.count * 20),
+        count: this.count,
+        instanceVersion: this._version || 0,
+        sortKey: 0,
+      }));
+    }
+    if (this.tuftCount) {
+      out.push(Object.assign({}, common, {
+        mesh: this.tuftMesh,
+        instances: this.tuftInstances.subarray(0, this.tuftCount * 20),
+        count: this.tuftCount,
+        instanceVersion: this._tuftVersion || 0,
+        sortKey: 1,
+      }));
+    }
+    return out;
   }
+
+  // Back-compat for any caller that still wants a single batch.
+  batch() { return this.batches()[0] || null; }
 
   dispose() {
     this.mesh.dispose();
+    if (this.tuftMesh) this.tuftMesh.dispose();
     this.material.dispose();
   }
 }
@@ -13470,8 +14141,19 @@ class Engine {
   }
 
   addGrass(opts = {}) {
-    const max = Math.min(opts.max || this.renderer.quality.maxGrass, this.renderer.quality.maxGrass);
-    this.grass = new Grass(this.gl, Object.assign({}, opts, { max }));
+    const q = this.renderer.quality;
+    const max = Math.min(opts.max || q.maxGrass, q.maxGrass);
+    /* The field derives its own density from the camera it will be
+       seen through: how close the nearest visible ground is depends on
+       the eye height and the vertical field of view, and how far a
+       single blade stays legible depends on the render resolution. */
+    this.grass = new Grass(this.gl, Object.assign({
+      cover: q.grassCover,
+      radius: q.grassRadius,
+      fov: (this.camera.fov * 180) / Math.PI,
+      renderHeight: this.renderer.height,
+      aspect: this.camera.aspect || 16 / 9,
+    }, opts, { max }));
     return this.grass;
   }
 
@@ -14421,7 +15103,11 @@ class Engine {
       }
     }
 
-    if (this.grass && this.grass.count) list.push(this.grass.batch());
+/* Near rung first. A closed sward has real overdraw, and the
+         opaque list is drawn in array order, so putting the blades in
+         front of the tufts lets the depth test reject most of what is
+         behind them. */
+      if (this.grass) for (const b of this.grass.batches()) list.push(b);
     for (const w of this.waters) list.push(w.batch());
     return list;
   }
@@ -18505,6 +19191,11 @@ const LegendEngine = {
   Geometry, Shapes, convexHull, hullToGeometry, decimateGeometry, buildLodChain,
   SCAN, loadScan, scanIds, TextureLib,
   heightfieldSurface, heightfieldSampleWorld,
+  // parseColor belongs in the public surface: a game that hands the
+  // engine a hex colour at runtime needs the same sRGB decode the
+  // Material constructor applies, and without it the obvious thing to
+  // reach for is Vec3.from, which does not decode — see the grass.
+  parseColor, srgbToLinear,
   Engine, Actor, Material, Body, PhysicsWorld, Shape, SHAPE,
   Fluid, WaterVolume, WATER_PRESETS, Animal, ANIMAL_SPECIES, Fracture, ParticleSystem, Skeleton, AnimationClip, Face,
   Grass, Input, Audio, Pad, PAD_BUTTON, PAD_LAYOUT, padStick, padFamily,

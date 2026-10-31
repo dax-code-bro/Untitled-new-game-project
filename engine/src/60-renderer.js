@@ -63,29 +63,37 @@ class Camera {
 // and "ultra" can still reach true 4K on a modest window with a capped
 // devicePixelRatio. label/fps are player-facing (a settings menu can read
 // them directly instead of re-describing each tier).
+/* grassCover and grassRadius are the grass ladder; maxGrass is only
+   the instance ceiling and is deliberately unchanged. When the budget
+   cannot buy the target density over the target radius, COVER gives
+   way and RADIUS does not: holding blades per square metre constant
+   across tiers would hand the weakest machines a two-metre plinth of
+   perfect lawn ending in a wall at the player's feet. Thinner grass
+   over ground you can walk across is a real grassland; a small
+   perfect disc is a putting green on a building site. */
 const QUALITY = {
   // Lean and fast — the "how do I get 300fps" tier. Roughly the visual
   // bar of a mid-2000s shooter: sharp enough to read, nothing to spare.
   performance: {
     shadowRes: 768, cascades: 1, bloom: false, bloomIters: 1, fluidScale: 0.4, fxaa: false, msaa: 0,
-    maxGrass: 3000, renderScale: 0.7, resolutionCap: [1600, 900],
+    maxGrass: 3000, grassCover: 0.50, grassRadius: 10, renderScale: 0.7, resolutionCap: [1600, 900],
     label: 'Performance', fps: '200+ fps',
   },
   low: {
     shadowRes: 1024, cascades: 1, bloom: true, bloomIters: 2, fluidScale: 0.5, fxaa: false, msaa: 0,
-    maxGrass: 6000, renderScale: 0.75, resolutionCap: [1600, 900],
+    maxGrass: 6000, grassCover: 0.70, grassRadius: 11, renderScale: 0.75, resolutionCap: [1600, 900],
     label: 'Low', fps: '~120 fps',
   },
   medium: {
     shadowRes: 1536, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 0.75, fxaa: true, msaa: 0,
-    maxGrass: 20000, renderScale: 1, resolutionCap: [1920, 1080],
+    maxGrass: 20000, grassCover: 0.90, grassRadius: 12, renderScale: 1, resolutionCap: [1920, 1080],
     label: 'Balanced', fps: '~90 fps',
   },
   // The "gorgeous and stable" middle ground — full HD/1440p, every effect
   // on, tuned to hold a high frame rate rather than chase peak fidelity.
   high: {
     shadowRes: 2048, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 1, fxaa: true, msaa: 0,
-    maxGrass: 60000, renderScale: 1, resolutionCap: [2560, 1440],
+    maxGrass: 60000, grassCover: 0.90, grassRadius: 14, renderScale: 1, resolutionCap: [2560, 1440],
     label: 'High', fps: '~75 fps',
   },
   // True 4K ceiling: on a 3840x2160 display (or a smaller window at 2x
@@ -94,14 +102,19 @@ const QUALITY = {
   // invocation, per pixel, quadruples versus 1080p.
   ultra: {
     shadowRes: 4096, cascades: 2, bloom: true, bloomIters: 4, fluidScale: 1, fxaa: true, msaa: 0,
-    maxGrass: 150000, renderScale: 1, resolutionCap: [3840, 2160],
+    maxGrass: 150000, grassCover: 0.95, grassRadius: 18, renderScale: 1, resolutionCap: [3840, 2160],
     label: 'Ultra 4K', fps: '~45-60 fps on capable hardware',
   },
 };
 const QUALITY_ORDER = ['performance', 'low', 'medium', 'high', 'ultra'];
 
 function detectQuality() {
-  const mem = navigator.deviceMemory || 4;
+  /* deviceMemory is Chrome-only. Defaulting it to 4 put every Firefox
+     and Safari desktop on 'medium' regardless of how much RAM it
+     actually had; inferring from the core count instead at least lets
+     a capable machine reach 'high'. */
+  const cores0 = navigator.hardwareConcurrency || 4;
+  const mem = navigator.deviceMemory || (cores0 >= 8 ? 8 : 4);
   const cores = navigator.hardwareConcurrency || 4;
   const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
   if (mobile) return (mem >= 6 && cores >= 6) ? 'medium' : 'low';
@@ -548,7 +561,7 @@ class Renderer {
       sh.f('uBoneCount', batch.boneCount || 0);
     }
     if (batch.instanced) {
-      batch.mesh.uploadInstances(batch.instances, batch.count);
+      batch.mesh.uploadInstances(batch.instances, batch.count, batch.instanceVersion);
       batch.mesh.drawInstanced(batch.count);
       this.stats.draws++;
       this.stats.instances += batch.count;
@@ -616,7 +629,15 @@ class Renderer {
     sh.i('uDebugMode', this.debugMode);
     if (batch.grass) {
       sh.v3('uWindDir', this.wind ? this.wind.direction : _defaultWind);
-      sh.f('uWindStrength', this.wind ? this.wind.strength : 0.25);
+      // windScale was applied in the shadow pass and not here, so any
+      // batch with a scale other than 1 would bend differently from
+      // the shadow it casts. Dormant while everything uses 1, and a
+      // very confusing bug the first time something does not.
+      sh.f('uWindStrength', (this.wind ? this.wind.strength : 0.25)
+        * (batch.windScale != null ? batch.windScale : 1));
+      const gf = batch.grassFade;
+      if (gf) sh.v4('uGrassFade', gf[0], gf[1], gf[2], gf[3]);
+      else sh.v4('uGrassFade', 0, 0, 1e6, 1e7);
     }
     if (batch.furShell) {
       sh.f('uShellOffset', batch.shellOffset || 0.01);

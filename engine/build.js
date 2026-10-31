@@ -54,6 +54,11 @@ const LegendEngine = {
   Geometry, Shapes, convexHull, hullToGeometry, decimateGeometry, buildLodChain,
   SCAN, loadScan, scanIds, TextureLib,
   heightfieldSurface, heightfieldSampleWorld,
+  // parseColor belongs in the public surface: a game that hands the
+  // engine a hex colour at runtime needs the same sRGB decode the
+  // Material constructor applies, and without it the obvious thing to
+  // reach for is Vec3.from, which does not decode — see the grass.
+  parseColor, srgbToLinear,
   Engine, Actor, Material, Body, PhysicsWorld, Shape, SHAPE,
   Fluid, WaterVolume, WATER_PRESETS, Animal, ANIMAL_SPECIES, Fracture, ParticleSystem, Skeleton, AnimationClip, Face,
   Grass, Input, Audio, Pad, PAD_BUTTON, PAD_LAYOUT, padStick, padFamily,

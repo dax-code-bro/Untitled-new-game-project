@@ -229,7 +229,13 @@ layout(location=0) in vec3 aPosition;
 layout(location=1) in vec3 aNormal;
 layout(location=2) in vec2 aUv;
 layout(location=3) in vec4 aTangent;
-#if defined(VERTCOLOR) || defined(WATER_FX) || defined(FUR_SHELL)
+#if defined(VERTCOLOR) || defined(WATER_FX) || defined(FUR_SHELL) || defined(GRASS)
+/* Grass reads this too: r is which blade of a tuft this vertex belongs
+   to, which is what lets one nine-blade mesh be re-aimed per strip
+   into nine different-looking tufts. Both grass meshes must emit
+   colours — GpuMesh binds location 4 only when the geometry has a
+   colour array, so a colourless grass mesh leaves it unbound and the
+   shader reads whatever happened to be there last. */
 layout(location=4) in vec3 aColor;
 #endif
 #ifdef SKINNED
@@ -264,6 +270,9 @@ uniform float uTime;
 #ifdef GRASS
 uniform vec3 uWindDir;
 uniform float uWindStrength;
+// xy = fade centre in world XZ, z = where the field starts thinning,
+// w = where it has gone entirely.
+uniform vec4 uGrassFade;
 #endif
 #ifdef FUR_SHELL
 uniform float uShellOffset;
@@ -284,6 +293,10 @@ struct Surface {
   vec4 params;
 #if defined(VERTCOLOR) || defined(WATER_FX)
   vec3 vertColor;
+#endif
+#ifdef GRASS
+  float age;
+  float bladeHash;
 #endif
 };
 
@@ -324,12 +337,59 @@ Surface computeSurface(){
   localPos += localNrm * furDepth + uShellComb * furDepth;
 #endif
 #ifdef GRASS
+  /* Three per-instance floats ride in the model matrix's unused
+     column. Mat4.compose always writes hard zeros into e[3], e[7] and
+     e[11] — a transform with no projection has nothing there — so the
+     scatter packs arch, wind compliance and senescence into them for
+     free: no wider stride, no extra attribute, not one more byte
+     uploaded.
+
+     THE ZEROING ON THE NEXT LINE MUST COME BEFORE ANY USE OF the
+     model matrix. A non-zero w makes model * vec4(p, 1.0) come out
+     with w other than 1 and
+     every vertex projects to garbage. The symptom is the grass
+     vanishing, which reads as a culling or a count bug and sends you
+     looking in the wrong file entirely. */
+  float gArch = model[0].w, gStiff = model[1].w, gAge = model[2].w;
+  model[0].w = 0.0; model[1].w = 0.0; model[2].w = 0.0;
+
   // aParams.w carries a per-blade random seed; .xyz is the tint.
   float seed = s.params.w;
   float h = aUv.y;
-  // Bend increases with the square of height: stiff at the root, loose at
-  // the tip, which is how a real blade behaves.
-  float stiffness = h * h;
+
+  /* Re-aim and re-length this strip of the tuft. aColor.r is the
+     sub-blade index, 0..8, so a single nine-blade mesh instanced three
+     thousand times is three thousand different tufts instead of three
+     thousand copies of one fan. Four bounded-argument hashes rather
+     than a noise octave: there is a note further down recording that
+     fbm in this stage makes some drivers fail every draw. */
+  float sb = aColor.r;
+  float hs  = fract(sin(seed * 91.17 + sb * 37.91) * 143.5453);
+  float hs2 = fract(sin(seed * 57.31 + sb * 11.13) * 246.6345);
+  localPos.y *= mix(0.72, 1.28, hs);
+  {
+    float ya = (hs2 - 0.5) * 1.3;
+    float cs = cos(ya), sn = sin(ya);
+    /* The normal and tangent turn with the geometry. Rotating only the
+       position is the classic way to make a field of grass read as
+       plastic: every blade is lit as though it were still facing the
+       way it was authored. */
+    localPos.xz = vec2(localPos.x * cs - localPos.z * sn, localPos.x * sn + localPos.z * cs);
+    localNrm.xz = vec2(localNrm.x * cs - localNrm.z * sn, localNrm.x * sn + localNrm.z * cs);
+    localTan.xz = vec2(localTan.x * cs - localTan.z * sn, localTan.x * sn + localTan.z * cs);
+  }
+  // Per-species droop, along the axis the blade already leans on.
+  localPos.z += gArch * 0.33 * h * h;
+  localPos.y -= gArch * 0.10 * h * h;
+
+  /* Wind compliance as the EXPONENT of the bend curve, not a
+     multiplier on it. Scaling the bend only makes a blade lean
+     further; changing the exponent changes the SHAPE of the lean, so
+     a stiff seed-head whips from the tip while a broad soft leaf
+     folds from halfway down and flat litter does not move at all.
+     Same instruction count, and it is the difference between a field
+     of one grass and a field of several. */
+  float stiffness = pow(max(h, 0.0), mix(1.4, 2.6, clamp(gStiff * 0.5, 0.0, 1.0)));
   vec3 worldRoot = (model * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
   // Two travelling waves at different scales read as gusts over a field.
   float phase = uTime * 1.6 + worldRoot.x * 0.22 + worldRoot.z * 0.19 + seed * 6.28;
@@ -339,14 +399,44 @@ Surface computeSurface(){
   float gust = (sin(worldRoot.x * 0.12 + uTime * 0.70) *
                 sin(worldRoot.z * 0.09 + uTime * 0.53) * 0.5 + 0.5) * 1.4;
   float sway = (sin(phase) * 0.5 + sin(phase * 2.37 + 1.3) * 0.28) * (0.35 + gust);
+  /* Held back until after the model transform — see below. */
   vec3 bend = uWindDir * sway * uWindStrength * stiffness;
-  // Bending should not stretch the blade, so pull the tip down as it leans.
-  localPos += bend;
-  localPos.y -= dot(bend, bend) * 0.35;
-  localNrm = normalize(localNrm - uWindDir * sway * uWindStrength * 0.5);
+
+  /* Shrink the last few metres of the field to nothing rather than
+     stopping at a line. The material is opaque with no blend state and
+     no alpha clip, so there is no alpha to fade; scaling the blade
+     down is the only lever, and a blade scaled to zero is a degenerate
+     triangle that costs setup and no fragments. The centre comes from
+     the live camera every frame rather than the quantised field
+     centre, or the band itself jumps in four-metre steps. */
+  {
+    float fd = length(worldRoot.xz - uGrassFade.xy);
+    float fade = 1.0 - smoothstep(uGrassFade.z, uGrassFade.w, fd);
+    localPos *= fade;
+    bend *= fade;
+  }
 #endif
 
   vec4 wp = model * vec4(localPos, 1.0);
+#ifdef GRASS
+  /* The bend is in WORLD space, because uWindDir is, and it has to be
+     applied here rather than to localPos.
+
+     Added before the model transform it was multiplied by the blade's
+     own matrix — which carries a uniformly random yaw over the whole
+     circle and a scale of (14 mm, 34 cm, 1). So the wind blew a
+     different direction for every blade, and the component along the
+     blade's local X was divided by seventy. A field did not lean in
+     the wind; it fidgeted, each blade to its own compass. The gusts
+     travelling across the field were being computed correctly the
+     whole time and then scrambled on the last line.
+
+     Applying it to the world position instead costs nothing and the
+     whole sward leans together. */
+  wp.xyz += bend;
+  // Bending should not stretch the blade, so pull the tip down as it leans.
+  wp.y -= dot(bend, bend) * 0.35;
+#endif
   s.worldPos = wp.xyz;
 
   // Normal matrix. For a rotation-times-scale transform (no shear, which the
@@ -358,10 +448,20 @@ Surface computeSurface(){
   mat3 nm = mat3(c0 * invSq.x, c1 * invSq.y, c2 * invSq.z);
 
   s.normal = normalize(nm * localNrm);
+#ifdef GRASS
+  // Same correction for the normal: tilt the WORLD normal toward the
+  // wind, not the local one, or a blade's lighting disagrees with the
+  // direction it is visibly leaning.
+  s.normal = normalize(s.normal - uWindDir * sway * uWindStrength * 0.5);
+#endif
   s.tangent = vec4(normalize(nm * localTan), aTangent.w);
   s.uv = aUv;
 #if defined(VERTCOLOR) || defined(WATER_FX)
   s.vertColor = aColor;
+#endif
+#ifdef GRASS
+  s.age = gAge;
+  s.bladeHash = hs2;
 #endif
   return s;
 }
@@ -382,6 +482,10 @@ out float vViewDepth;
 #if defined(VERTCOLOR) || defined(WATER_FX)
 out vec3 vVertColor;
 #endif
+#ifdef GRASS
+out float vAge;
+out float vBladeHash;
+#endif
 
 void main(){
   Surface s = computeSurface();
@@ -392,6 +496,10 @@ void main(){
   vParams = s.params;
 #if defined(VERTCOLOR) || defined(WATER_FX)
   vVertColor = s.vertColor;
+#endif
+#ifdef GRASS
+  vAge = s.age;
+  vBladeHash = s.bladeHash;
 #endif
   vViewDepth = length(s.worldPos - uCameraPos);
   gl_Position = uViewProj * vec4(s.worldPos, 1.0);
@@ -408,6 +516,10 @@ ${GLSL.fog}
 in vec3 vWorldPos;
 in vec3 vNormal;
 in vec4 vTangent;
+#ifdef GRASS
+in float vAge;
+in float vBladeHash;
+#endif
 in vec2 vUv;
 in vec4 vParams;
 in float vViewDepth;
@@ -476,6 +588,40 @@ void main(){
     ? clamp(1.0 - vViewDepth / 55.0, 0.0, 1.0) : 0.0;
 
   vec3 albedo = uBaseColor * vParams.rgb;
+#ifdef GRASS
+  /* The first fragment-stage grass path this engine has had. Until
+     now a blade was one flat colour from root to tip, with vUv.x
+     (which edge) and vUv.y (how far up) arriving and being thrown
+     away. Everything here is free: no texture, no instance byte, no
+     triangle, no draw call — the Grass material has no maps at all,
+     so there is nothing to compete with.
+
+     The litter band is the important one. What gives a sparse field
+     away is not the gaps, it is sunlit soil showing through them; a
+     dark band at the base of every blade reads as the shadowed
+     interior of a canopy, so the ground between tufts looks like
+     depth instead of holes. It is also a far better self-shadow than
+     an actual shadow pass could be — a cascade texel here is three or
+     four centimetres against a fourteen-millimetre blade. */
+  {
+    float up = vUv.y;
+    albedo *= 1.0 - 0.72 * (1.0 - smoothstep(0.0, 0.22, up));
+    // Dead thatch low down, drying tip high up, both scaled by how old
+    // this particular blade is.
+    albedo = mix(albedo, albedo * vec3(0.78, 0.66, 0.44),
+                 vAge * (1.0 - smoothstep(0.0, 0.30, up)));
+    albedo = mix(albedo, albedo * vec3(1.18, 1.10, 0.62),
+                 vAge * smoothstep(0.80, 1.0, up));
+    // A midrib. One line, and it is most of what makes a blade read as
+    // a leaf rather than a painted strip.
+    albedo *= 1.0 - 0.16 * (1.0 - smoothstep(0.0, 0.14, abs(vUv.x - 0.5)));
+    // Per-blade tone, so a tuft is nine blades and not one repeated.
+    albedo *= mix(0.88, 1.12, vBladeHash);
+    // The matte glaucous underside; the roughness half of this lives
+    // below, where rough has been declared.
+    if (!gl_FrontFacing) albedo *= vec3(0.92, 0.97, 1.04);
+  }
+#endif
 #ifdef VERTCOLOR
   // Carved-from-photos meshes have no UV-mapped texture — each vertex
   // carries its own baked color instead.
@@ -483,6 +629,13 @@ void main(){
 #endif
   float rough = uRoughness;
   float metal = uMetalness;
+#ifdef GRASS
+  /* Glossy upper surface, matte underside. The grass material is
+     double-sided with face culling off, so both faces are drawn, and
+     this is the mechanism behind the silver flash a real field throws
+     when a gust turns the leaves over. */
+  rough = gl_FrontFacing ? max(0.03, rough - 0.22) : min(1.0, rough + 0.04);
+#endif
   float ao = 1.0;
 #ifdef WATER_FX
   // vVertColor.r carries a foam amount painted in by WaterVolume.update()
