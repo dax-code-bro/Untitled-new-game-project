@@ -4,6 +4,48 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REALISM ROUND 2 - session 3 (2026-10-31, short budgeted session)
+Stills (draft, director's VERDOR_GROUNDS set, `node scenes/lib/director/tools/still.mjs <job> --preset draft --out DIR`)
+under `scratchpad/eng1/creatures/r2s3/`: `v1/` (X3-15@0.48, 1B-03, X3-02), `v2/` (1B-03, X3-02 after the stronger
+tuck / bodySpec 0.35), `diag_nodust/` (X3-02 with dust/wear off - diagnostic only, NOT committed),
+`teeth_v2s2_v1_v2.png` (1B-03 wing-edge crop: session 2 / v1 / v2), `x302_v1_v2.png` (X3-02 body crop).
+Done (code):
+- materials.js skin: new uniforms `uHeadLk2` (param `headLook2` [periR in eye radii (0 = off), granule size factor,
+  octave mix 0..1, lid scale factor]), `uEyeC` (eye centre |x|,y,z + radius in rest space, set from `ctx.anat.eyes[0]`),
+  `uLook3` (params `bodySpec` - specular occlusion for the whole body like headSpec, 1 = off - and `headDome`, the head
+  plate dome exponent, default 5 = old). Periocular granule ring (scale x0.38 inside ~2.6 eye radii, eased from 0.55x
+  that radius), lid shells x0.55 scale, head octave mix (fsub -> 0.42 so ~half the coarse plates stay big beside
+  split small ones). Charcoal: headLook [0.04, 0.3, 0.3, 0.3] (thinner seams, less tilt), headLook2 [2.6, 0.38, 0.85,
+  0.55], headDome 8, headRelief 0.45 (flatter), bodySpec 0.35. Defaults leave every other dragon unchanged.
+- drape.js: opt `edgeTuck` (0..1) + `tuckD` (m, default 0.05 L): rest lengths of membrane edges within tuckD of the
+  free trailing edge shrink by tuck x w^2 (elastin cord along a bat's trailing edge). Charcoal `drapeOpts`
+  (creature.js): lie/crouch {edgeTuck 0.85, tuckD 2.9}, stand {edgeTuck 0.6, tuckD 2.2}.
+RESULTS (looked at):
+- X3-15 `v1/X3-15_040.png` vs `../r2s2/v5/X3-15_040.png`: tiny granules now ring the eye, the lid is finely granular,
+  big and small plates mix, plates flatter. Still reads as a flagstone mosaic: every plate has a hard dark seam and a
+  flat grey top (mid grey, not black, in this ECU).
+- 1B-03 `teeth_v2s2_v1_v2.png`: the hanging spikes are shorter/thinner with the tuck but STILL there (two thin hanging
+  points left of the wrist). They do not respond much to the drape -> most likely PINNED geometry (finger-tip
+  phalanges / bone-adjacent membrane, edgeA.x < pinD, which the drape cannot move): a fold-pose issue (poses.js
+  plantBack finger angles in `lie`/mount), not the drape.
+- X3-02 body grey: YAVG of a 200x150 body crop = 81.7 (bodySpec 0.55) -> 78.8 (0.35) -> 77.8 (also no dust/wear).
+  So the mid grey is NOT specular sheen or dust: it comes from lighting/haze/grade (aerial perspective or black level
+  at ~40-60 m, or diffuse IBL strength) -> REQUEST to director/gpu-tier in the report. Even the smooth forearm and the
+  shadowed legs read the same grey.
+- npm test: 49 tests, 48 pass, 0 fail, 1 skipped, exit 0.
+NEXT (exact):
+1. 1B-03 spikes: build Charcoal in `mount` in a Node harness, list membrane vertices with the lowest y in the root frame
+   (and their aEdge.x / aWing.z patch id) to see whether the spikes are pinned finger tips; if so, in poses.js `mount`
+   / `lie` fold the last phalanges up/back (finger flex at the tips) so no tip points down past the wrist.
+2. X3-15: the seam still reads as dark grout. In dkSkin, for isHead make the cavity colour darkening (uMisc.x x dkCav)
+   much weaker (x0.3) and give the plate EDGES a small bevel highlight rather than a dark gap; try headDome 12 and a
+   lower headLook2.z (0.6). Re-still `X3-15@0.48`.
+3. X3-02 grey: diagnose with the director (exposure / AP haze / tone curve toe) before touching the material: render
+   X3-02 with the creature's albedo x0 (should go to the same grey if it is haze) - a one-line temporary edit in
+   materials.js (`albedo = col * 0.0`) - then file the result.
+4. Lookdev check that bodySpec 0.35 keeps the approved hero look: creatures-shots.js charcoal-front / charcoal-head.
+5. Session 2 items 4-5 (memFoldOcc for Leaf/Starlight; Leaf/Starlight mount contacts, displacement hierarchy, gait).
+
 ## REALISM ROUND 2 - session 2 (2026-10-30, short budgeted session: X3-15 / 1B-03 / X3-08 in the director's set)
 Stills (draft, director's VERDOR_GROUNDS set via `node scenes/lib/director/tools/still.mjs <job>[@u] --preset draft --out DIR`,
 ~2.5-4 min each) under `scratchpad/eng1/creatures/r2s2/`: `base/` (state at session start), `v1/` `v2/` `v3diag/` `v4/` (+ `v5/`).

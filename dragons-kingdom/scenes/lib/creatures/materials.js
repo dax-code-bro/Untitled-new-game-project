@@ -45,8 +45,13 @@ export function lookParams(THREE, look) {
       // whole sky on every plate, wide dark seams, brushed micro streaks. Now the head plates are
       // smoother (sheen gathers into the plates that face the sky; the rest stay black), each
       // plate tilted a little its own way, thin seams, faint micro relief)
-      scl: [0.8, 0.36, 0.42, 1.5], tub: [0.28, 2.7, 0.7, 0], skin2: [0.5, 0.16, 0, 0.22], plateZ: -0.03, headRelief: 0.6,
-      headLook: [0.04, 0.45, 0.3, 0.35], headSpec: 0.25, skin3: [0.7, 0.16, 0.15, 0],
+      scl: [0.8, 0.36, 0.42, 1.5], tub: [0.28, 2.7, 0.7, 0], skin2: [0.5, 0.16, 0, 0.22], plateZ: -0.03, headRelief: 0.45,
+      headLook: [0.04, 0.3, 0.3, 0.3], headSpec: 0.25, skin3: [0.7, 0.16, 0.15, 0],
+      // (round 2 s3: still one plate size in even seams - "cobbles". A monitor's / crocodile's head:
+      // small granules ringing the eye, big plates (supraoculars) among smaller ones, thin seams,
+      // flat plates; fine granules on the lids. And the body: dry keratin occludes its own sky sheen
+      // (bodySpec), so Charcoal reads black, not mid grey, in flat noon light (director X3-02 / 1B-03))
+      headLook2: [2.6, 0.38, 0.85, 0.55], headDome: 8.0, bodySpec: 0.35,
       // body scale profile: flat tops (dome exponent), a keel along each scale, wide soft grooves
       vor: [6.0, 0.3, 0.14, 1.35],
       // old healed scars [a.xyz, halfWidth, b.xyz, strength] in L units (rest pose): left flank, right neck, right shoulder, left thigh
@@ -253,7 +258,18 @@ function skinMaterial(THREE, P, ctx) {
     // specular occlusion of dry, pitted keratin on the head (1 = none): the micro-pits and dust of old
     // scales shadow their own sheen, so a black head reads black, not as a grey sky-coloured film
     uHeadSpec: { value: P.headSpec ?? 1.0 },
+    // head plates 2: periocular granule ring radius (eye radii, 0 = off), granule size factor there,
+    // octave mix (0..1: big and small plates side by side instead of one size per octave), lid scale size factor
+    uHeadLk2: { value: new THREE.Vector4(...(P.headLook2 || [0, 1, 0, 1])) },
+    // eye centre in rest space (|x|, y, z) and eye radius (set from ctx.anat.eyes)
+    uEyeC: { value: new THREE.Vector4(0, 0, 0, 0) },
+    // body specular occlusion (1 = none; dry pitted keratin, as uHeadSpec for the head), head plate dome exponent
+    uLook3: { value: new THREE.Vector4(P.bodySpec ?? 1.0, P.headDome ?? 5.0, 0, 0) },
   };
+  {
+    const e = ctx.anat && ctx.anat.eyes && ctx.anat.eyes[0];
+    if (e && e.center) U.uEyeC.value.set(Math.abs(e.center[0]), e.center[1], e.center[2], e.radius || 0);
+  }
   // healed scars (rest-space segments, metres): [a(3), halfWidth, b(3), strength]
   (P.scars || []).slice(0, 4).forEach((sc, i) => {
     const Lc = ctx.L;
@@ -273,7 +289,7 @@ vScale = aScale; vMask = aMask; vMask2 = aMask2; vRest = position; vRestN = norm
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec4 vScale; varying vec4 vMask; varying vec4 vMask2; varying vec3 vRest; varying vec3 vRestN; varying vec3 vRestT; varying vec4 vNoise; varying vec2 vWarp;
-uniform vec4 uScl, uScl2, uTub, uSkin2, uSkin3, uBellyZ, uVor, uHeadLk; uniform float uHeadRel, uHeadSpec;
+uniform vec4 uScl, uScl2, uTub, uSkin2, uSkin3, uBellyZ, uVor, uHeadLk, uHeadLk2, uEyeC, uLook3; uniform float uHeadRel, uHeadSpec;
 float dkSpecK = 1.0;
 uniform vec3 uBase, uBelly, uDorsal, uWearCol, uDustCol, uSaltCol, uOral, uOralDark;
 uniform vec4 uRough, uPat, uDirt, uMisc, uWound, uCrev, uWet, uBellyP, uDamp; uniform float uWoundR;
@@ -336,9 +352,17 @@ void dkSkin(inout vec3 albedo) {
   float csRaw = max(vMask2.z * mix(mix(uScl.x, uScl.y, gm), uScl.z * mix(1.0, 0.65, gm), isHead), L * 0.0012);
   // smaller scales on the lower flanks, chest and throat (per creature)
   csRaw *= mix(1.0, uScl2.y, smoothstep(0.4, 0.72, latD) * (region < 0.5 ? 1.0 : 0.0) * (1.0 - isHead));
+  // periocular granules: small scales ring the eye (lizards, crocodilians); finer granules on the lids
+  float isLid = step(6.5, region);
+  float peri = 0.0;
+  if (uHeadLk2.x > 0.0 && uEyeC.w > 0.0) {
+    float eyeD = length(vec3(abs(vRest.x), vRest.yz) - uEyeC.xyz) / uEyeC.w;
+    peri = (1.0 - smoothstep(uHeadLk2.x * 0.55, uHeadLk2.x, eyeD)) * max(isHead, isLid);
+  }
+  csRaw *= mix(1.0, uHeadLk2.y, peri) * mix(1.0, uHeadLk2.w, isLid);
   float an = mix(uScl.w, 1.0, gran);
   float tilt = mix(uVor.w, 0.0, gran);                      // imbricate: rear edge raised
-  float dome = mix(uVor.x, mix(2.2, 5.0, isHead), gran);    // profile exponent: flat-topped plates .. granules .. flat head plates
+  float dome = mix(uVor.x, mix(2.2, uLook3.y, isHead), gran);    // profile exponent: flat-topped plates .. granules .. flat head plates
   float groove = mix(uVor.z, mix(0.3, 0.16 * uHeadLk.y, isHead), gran); // crevice width (fraction of q)
   dkKeel3 = uVor.y * (1.0 - gran);                          // a keel along each body scale
   // size grading: octave levels; a coarse scale either stays whole or splits into fine
@@ -346,6 +370,8 @@ void dkSkin(inout vec3 albedo) {
   // the way they do on real skin (no cross-faded double patterns)
   float lv = log2(csRaw / L);
   float l0 = floor(lv), fsub = lv - l0;
+  // head: big and small plates side by side (each coarse plate stays whole or splits, ~half and half)
+  fsub = mix(fsub, 0.42, uHeadLk2.z * isHead * (1.0 - peri));
   float gA = L * exp2(l0), gC = gA * 2.0;
   float fwr = length(fwidth(vRest));
   float vh = 0.0, vcav = 0.0, vcr = 0.0, vid = 0.0; vec3 vg = vec3(0.0);
@@ -495,7 +521,8 @@ void dkSkin(inout vec3 albedo) {
   // --- roughness / metalness: polished crowns, rough dusty grooves
   float r = uRough.x + uRough.y * (sid - 0.5) - uRough.z * crown * detK + uRough.w * (dust + crevDust) + 0.25 * salt + 0.18 * dkCav + 0.2 * (0.5 - dkMicro);
   r += uHeadLk.x * isHead * (1.0 - dkOralM) * (1.0 - 0.6 * dkCav);
-  dkSpecK = mix(1.0, uHeadSpec * (0.75 + 0.5 * dkMicro) * (1.0 - 0.5 * dkCav), max(isHead, step(6.5, region)) * (1.0 - dkOralM));   // head + eyelid shells
+  float bodyK = uLook3.x < 0.999 ? mix(uLook3.x * (0.8 + 0.4 * dkMicro) * (1.0 - 0.4 * dkCav), 1.0, max(dkDampM, dkScarM)) : 1.0;
+  dkSpecK = mix(1.0, mix(bodyK, uHeadSpec * (0.75 + 0.5 * dkMicro) * (1.0 - 0.5 * dkCav), max(isHead, step(6.5, region))), 1.0 - dkOralM);   // body; head + eyelid shells
   r = mix(r, 0.2, dkOralM);
   r = sqrt(r * r + (1.0 - detK) * 0.05 * (1.0 - dkOralM));    // sub-pixel scale relief -> roughness
   r = mix(r, r * uDamp.z, dkDampM);

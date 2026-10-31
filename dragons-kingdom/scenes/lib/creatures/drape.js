@@ -117,6 +117,16 @@ export function drapeMembrane(c, mesh, opts = {}) {
   const shrink = opts.shrink ?? 0.45;            // elastic skin (elastin) contracts when the bones close
   const El = new Float64Array(E.length / 2), Bl = new Float64Array(B.length / 2);
   for (let i = 0; i < El.length; i++) El[i] = restLen(E[i * 2], E[i * 2 + 1]) * shrink;
+  // edgeTuck (0..1): the trailing edge band contracts more (the elastin cord along a bat's free
+  // edge), so the slack scallops between the folded finger tips tuck up instead of hanging as teeth
+  const tuck = opts.edgeTuck ?? 0, tuckD = opts.tuckD ?? L * 0.05;
+  if (tuck > 0) {
+    for (let i = 0; i < El.length; i++) {
+      const dE = Math.max(edgeA[E[i * 2] * 4 + 1], edgeA[E[i * 2 + 1] * 4 + 1]);
+      const w = 1 - Math.min(1, dE / tuckD);
+      El[i] *= 1 - tuck * w * w;
+    }
+  }
   for (let i = 0; i < Bl.length; i++) Bl[i] = restLen(B[i * 2], B[i * 2 + 1]) * shrink;
   // start: skinned positions, panels pushed out and down (the slack falls away from the body)
   const side = opts.side ?? 1;

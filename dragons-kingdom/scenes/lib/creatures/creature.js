@@ -34,7 +34,9 @@ const deg = Math.PI / 180;
  * flapAmp: half the peak-to-peak stroke (rad).
  */
 export const CREATURES = {
-  charcoal: { design: 'charcoal', L: 36, look: 'charcoal', flapHz: 0.42, flapAmp: 0.74, scaleMul: 0.6, seatBack: 1.2, title: 'Charcoal (Remi\'s dragon)' },
+  charcoal: { design: 'charcoal', L: 36, look: 'charcoal', flapHz: 0.42, flapAmp: 0.74, scaleMul: 0.6, seatBack: 1.2, title: 'Charcoal (Remi\'s dragon)',
+    // (round 2 s3: the folded wing's trailing-edge scallops hung like teeth in 1B-03 - tuck the free edge)
+    drapeOpts: { lie: { edgeTuck: 0.85, tuckD: 2.9 }, crouch: { edgeTuck: 0.85, tuckD: 2.9 }, stand: { edgeTuck: 0.6, tuckD: 2.2 } } },
   leaf: { design: 'leaf', L: 9.0, look: 'leaf', flapHz: 0.8, flapAmp: 0.92, scaleMul: 0.66, seatBack: 0.38, limbScaleMul: 0.8, title: 'Leaf (Abby\'s dragon, not fully grown)' },
   starlight: { design: 'starlight', L: 72, look: 'starlight', flapHz: 0.24, flapAmp: 0.65, scaleMul: 0.28, seatBack: 2.0, limbScaleMul: 0.8, resMul: 1.35, title: 'Starlight (Queen Fall\'s dragon, albino)' },
   hatchling: { design: 'hatchling', L: 1.0, look: 'gold', flapHz: 0, flapAmp: 0, scaleMul: 1.0, title: 'The gold hatchling (newborn)',
@@ -306,7 +308,7 @@ export async function createCreature(which, opts = {}) {
   // folded-wing drapes: relax each membrane in the ground folds (drape.js). The elastic skin
   // contracts hard (elastin: shrink ~0.26-0.3) and hardly sags (gravity ~0): it pleats tight
   // between the bundled fingers - a slack skirt read as a tarp.
-  // cfg.drapeOpts = { stand|sit|lie|crouch: { shrink, gravity } } overrides per dragon.
+  // cfg.drapeOpts = { stand|sit|lie|crouch: { shrink, gravity, edgeTuck, tuckD } } overrides per dragon.
   if (opts.drape !== false) {
     const td = nowMs();
     const variants = {
