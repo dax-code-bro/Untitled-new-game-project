@@ -1,0 +1,68 @@
+{
+ "grass": {
+  "source": "Poly Haven",
+  "material": "leafy_grass",
+  "url": "https://polyhaven.com/a/leafy_grass",
+  "license": "CC0 1.0"
+ },
+ "forest": {
+  "source": "Poly Haven",
+  "material": "forest_leaves_02",
+  "url": "https://polyhaven.com/a/forest_leaves_02",
+  "license": "CC0 1.0"
+ },
+ "jungle": {
+  "source": "Poly Haven",
+  "material": "brown_mud_leaves_01",
+  "url": "https://polyhaven.com/a/brown_mud_leaves_01",
+  "license": "CC0 1.0"
+ },
+ "sand": {
+  "source": "Poly Haven",
+  "material": "coast_sand_01",
+  "url": "https://polyhaven.com/a/coast_sand_01",
+  "license": "CC0 1.0"
+ },
+ "rock": {
+  "source": "Poly Haven",
+  "material": "rock_boulder_dry",
+  "url": "https://polyhaven.com/a/rock_boulder_dry",
+  "license": "CC0 1.0"
+ },
+ "snow": {
+  "source": "Poly Haven",
+  "material": "snow_02",
+  "url": "https://polyhaven.com/a/snow_02",
+  "license": "CC0 1.0"
+ },
+ "dirt": {
+  "source": "Poly Haven",
+  "material": "dirt",
+  "url": "https://polyhaven.com/a/dirt",
+  "license": "CC0 1.0"
+ },
+ "bark": {
+  "source": "Poly Haven",
+  "material": "bark_brown_02",
+  "url": "https://polyhaven.com/a/bark_brown_02",
+  "license": "CC0 1.0"
+ },
+ "concrete": {
+  "source": "Poly Haven",
+  "material": "concrete_floor_worn_001",
+  "url": "https://polyhaven.com/a/concrete_floor_worn_001",
+  "license": "CC0 1.0"
+ },
+ "wood": {
+  "source": "Poly Haven",
+  "material": "fine_grained_wood",
+  "url": "https://polyhaven.com/a/fine_grained_wood",
+  "license": "CC0 1.0"
+ },
+ "fabric": {
+  "source": "Poly Haven",
+  "material": "denim_fabric_03",
+  "url": "https://polyhaven.com/a/denim_fabric_03",
+  "license": "CC0 1.0"
+ }
+}

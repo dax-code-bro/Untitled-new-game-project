@@ -355,11 +355,45 @@ function grassCard(rng, dry) {
 }
 
 // ---------------------------------------------------------------- public
-export function buildTextures(size = 512, onProgress) {
+// Photoscanned CC0 materials (Poly Haven, see assets/materials/CREDITS.md). Each surface that has
+// a photo set uses it; anything missing (or a failed load) falls back to the procedural recipe.
+export const PHOTO_SLOTS = ['grass', 'forest', 'jungle', 'sand', 'rock', 'snow', 'dirt', 'bark', 'concrete', 'wood', 'fabric'];
+export async function loadMaterialPack(size, base = 'assets/materials/') {
+  const img = (url) => new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
+  const px = (im) => {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(im, 0, 0, size, size);
+    return g.getImageData(0, 0, size, size).data;
+  };
+  const out = {};
+  await Promise.all(PHOTO_SLOTS.map(async (s) => {
+    const [a, n, r] = await Promise.all(['albedo', 'normal', 'roughness'].map((k) => img(`${base}${s}/${k}.jpg`)));
+    if (!a || !n || !r) return;
+    const A = px(a), N = px(n), R = px(r);
+    const alb = new Uint8Array(A), nr = new Uint8Array(size * size * 4), rough = new Uint8Array(size * size * 4);
+    for (let i = 0; i < size * size; i++) {
+      nr[i * 4] = N[i * 4]; nr[i * 4 + 1] = N[i * 4 + 1]; nr[i * 4 + 2] = N[i * 4 + 2]; nr[i * 4 + 3] = R[i * 4];
+      rough[i * 4] = rough[i * 4 + 1] = rough[i * 4 + 2] = R[i * 4]; rough[i * 4 + 3] = 255;
+      alb[i * 4 + 3] = 255;
+    }
+    out[s] = { alb, nr, rough };
+  }));
+  return out;
+}
+
+export function buildTextures(size = 512, onProgress, pack = {}) {
   const T = {};
   const rng = mulberry32(90210);
   const names = Object.keys(RECIPES);
   names.forEach((name, k) => {
+    if (pack[name]) {
+      const P = pack[name];
+      T[name] = { map: dataTex(P.alb, size, true), nr: dataTex(P.nr, size, false), rough: dataTex(P.rough, size, false), albData: P.alb, nrData: P.nr, size, photo: true };
+      if (onProgress) onProgress(k + 1, names.length + 4, name + ' (photo)');
+      return;
+    }
     const B = RECIPES[name](size, rng);
     const alb = new Uint8Array(size * size * 4), rough = new Uint8Array(size * size * 4);
     for (let i = 0; i < size * size; i++) {

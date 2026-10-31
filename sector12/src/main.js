@@ -4,7 +4,7 @@ import { AudioSys } from './audio.js';
 import * as Save from './save.js';
 import { HUD, esc } from './ui/hud.js';
 import { Game } from './game.js';
-import { buildTextures, arrayTextures } from './textures.js';
+import { buildTextures, arrayTextures, loadMaterialPack } from './textures.js';
 import { QUALITY } from './graphics.js';
 import { TouchControls, isTouchDevice } from './touch.js';
 import { ITEMS, fmtDuration } from './data/catalog.js';
@@ -157,7 +157,9 @@ async function deploy() {
   await new Promise((r) => setTimeout(r, 30));
   const q = QUALITY[save.settings.quality || 'high'] || QUALITY.high;
   if (!textures || textures.size !== q.texSize) {
-    textures = buildTextures(q.texSize, (i, n, name) => { $('loading-detail').textContent = `Generating materials ${i}/${n} (${name})`; });
+    $('loading-detail').textContent = 'Loading photoscanned materials…';
+    const pack = await loadMaterialPack(q.texSize).catch(() => ({}));
+    textures = buildTextures(q.texSize, (i, n, name) => { $('loading-detail').textContent = `Preparing materials ${i}/${n} (${name})`; }, pack);
     textures.size = q.texSize;
     textures.terrain = arrayTextures(textures, ['grass', 'forest', 'jungle', 'sand', 'rock', 'snow', 'dirt']);
     await new Promise((r) => setTimeout(r, 10));
