@@ -123,8 +123,8 @@
        hole with white grass in it. Leaf litter and needle duff are
        ten to fifteen per cent, like damp cardboard, which is what they
        are. */
-    woodland: [0.115, 0.108, 0.078],
-    deepForest: [0.092, 0.088, 0.064], pineForest: [0.098, 0.086, 0.062],
+  woodland: [0.128, 0.104, 0.062],
+    deepForest: [0.101, 0.082, 0.049], pineForest: [0.104, 0.082, 0.047],
     scrub: [0.15, 0.15, 0.08], rockyHill: [0.15, 0.14, 0.12],
     scree: [0.18, 0.17, 0.15], cliff: [0.12, 0.115, 0.105],
     alpine: [0.22, 0.23, 0.21],
@@ -602,8 +602,15 @@
        grass standing in a black floor. canopyAt already knows what is
        overhead; ask it. */
     const toLin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    /* Not 1 - canopy: a closed canopy is not a lid. Five to twenty per
+       cent of a woodland floor at midday is sunfleck — gaps that track
+       across the ground all afternoon — and those patches are what
+       bounces the warm light that makes leaf litter read as brown
+       rather than as grey rock under a blue sky. Leaving a third of
+       the bounce under full cover is about what the fleck fraction
+       plus the light coming off the trunks amounts to. */
     const openSky = ctx && ctx.state && typeof ctx.state.canopyAt === 'function'
-      ? 1 - 0.85 * clamp01(ctx.state.canopyAt(player.x, player.z)) : 1;
+      ? 1 - 0.68 * clamp01(ctx.state.canopyAt(player.x, player.z)) : 1;
     const bounce = (0.10 + 0.42 * day) * overcast * openSky;
     r.sky.ground.set(
       toLin(((groundAlbedo >> 16) & 255) / 255) * bounce,

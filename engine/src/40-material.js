@@ -281,15 +281,32 @@ const TextureLib = {
       c.rough = 0.80 + leaf * 0.16;
       c.ao = 0.42 + clump * 0.38 + leaf * 0.20;
       c.h = clump * 0.6 + leaf * 0.4;
-      /* Where the foliage is actually there. A crown is mostly gaps —
-         a third of the sky gets through a summer canopy — and the alpha
-         is what lets a solid lobe of geometry read as leaves with light
-         between them. */
-      /* A summer canopy passes roughly a third of the sky. Biasing the
-         mask so about that much falls below the clip threshold is what
-         turns a solid lobe of geometry into leaves with daylight through
-         them. */
-      c.a = Math.max(0, Math.min(1, (clump * 0.45 + leaf * 0.75) * 1.25 - 0.22));
+      /* Where the foliage actually is. A crown is mostly gaps — a
+         summer canopy passes roughly a third of the sky — and this
+         alpha is the only thing standing between a solid cone of
+         geometry and a tree.
+
+         It was failing on both counts. Two fbms added together are
+         narrowly distributed around a half, so the old curve put the
+         mean at 0.53 against a clip threshold of 0.35 — about one and
+         a half standard deviations clear of it, which discards eight
+         per cent of the surface rather than a third. And what little
+         it did discard came mostly from the high-frequency term, so
+         the holes were single texels: a crown with pinpricks in it,
+         which from any distance is a solid crown. Woods were casting
+         pools of solid black and the trees in them had the silhouette
+         of traffic cones.
+
+         So the mask is now dominated by the coarse term, which is what
+         makes gaps the size of a bough rather than of a leaf, and the
+         offset and gain are chosen so that a third of it genuinely
+         falls below the threshold: the spread of clump*0.78+leaf*0.22
+         is about 0.097, so a gain of 2.6 about a mean of 0.328 puts
+         the clip point a third of a standard deviation inside the
+         distribution. The fine structure has not gone anywhere — it
+         rides on top, and the close-up detail sample puts it back at
+         the range where a leaf is a thing you can see. */
+      c.a = Math.max(0, Math.min(1, (clump * 0.78 + leaf * 0.22 - 0.328) * 2.6));
     },
 
     terrainDetail(u, v, n, c) {
@@ -853,8 +870,16 @@ const MaterialPresets = {
      tiles of leaf per crown is about a hand's width per tile, so five
      times finer is a leaf — which is the scale that appears when you
      walk up to a shrub and is simply not there from across a field. */
+  /* uvScale was 9, which put eighty-one cycles of the leaf mask across
+     a crown — every gap smaller than a leaf and the whole thing reading
+     as solid. Gaps in a canopy are the size of the spaces between
+     boughs, so the tile has to be a fair fraction of the crown; three
+     puts the coarse term at about nine cycles across it, which is
+     roughly a bough. detailScale then samples the same maps fifteen
+     times finer for anything within a few metres, so walking up to a
+     shrub still finds leaves. */
   foliage: { color: 0xffffff, texture: 'foliageDetail', alphaClip: true, roughness: 0.88, metalness: 0,
-    subsurface: 0.5, doubleSided: true, uvScale: 9, normalStrength: 0.55, detailScale: 5 },
+    subsurface: 0.5, doubleSided: true, uvScale: 3, normalStrength: 0.55, detailScale: 15 },
   dirt: { color: 0xffffff, texture: 'dirt', scan: 'dirt', roughness: 0.96, metalness: 0 },
   // Neutral ground for vertex-coloured terrain: detail from the texture,
   // colour from the mesh.
