@@ -20,6 +20,51 @@ export class AudioSys {
     } catch (e) { this.ctx = null; }
   }
 
+  // ---------------------------------------------------------------- ambience
+  // o: {reg, day, night, wind, rain}
+  ambience(dt, o) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    if (!this.windSrc) {
+      const src = ctx.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 400; f.Q.value = 0.5;
+      const g = ctx.createGain(); g.gain.value = 0;
+      src.connect(f); f.connect(g); g.connect(this.master); src.start();
+      this.windSrc = src; this.windF = f; this.windG = g; this.ambT = 0; this.gustT = 0;
+    }
+    this.ambT += dt;
+    const gust = 0.65 + 0.35 * Math.sin(this.ambT * 0.31) * Math.sin(this.ambT * 0.13 + 1);
+    const w = Math.min(3, Math.max(0.3, o.wind));
+    const t = ctx.currentTime;
+    this.windG.gain.setTargetAtTime(Math.min(0.28, (0.03 + w * 0.035) * gust + o.rain * 0.08), t, 0.5);
+    this.windF.frequency.setTargetAtTime(220 + w * 260 * gust + o.rain * 600, t, 0.5);
+    // birdsong by day, insects by night, in the green places
+    const green = o.reg === 's' || o.reg === 'e' || o.reg === 'hub';
+    this.songT = (this.songT ?? 2) - dt;
+    if (this.songT <= 0) {
+      this.songT = 0.6 + Math.random() * (o.day ? 2.5 : 1.2);
+      const pan = Math.random() * 1.6 - 0.8;
+      if (o.day && green && o.rain < 0.3) {
+        const base = 2400 + Math.random() * 2000, n = 2 + Math.floor(Math.random() * 4);
+        for (let i = 0; i < n; i++) this._tone(base * (1 + (Math.random() - 0.5) * 0.3), base * (0.8 + Math.random() * 0.5), 0.06 + Math.random() * 0.06, 'sine', 0.025, pan, i * 0.11);
+      } else if (o.night && green) {
+        for (let i = 0; i < 4; i++) this._tone(4300, 4250, 0.035, 'sine', 0.012, pan, i * 0.06);
+        if (o.reg === 'e' && Math.random() < 0.3) this._tone(260, 180, 0.18, 'triangle', 0.03, pan, 0.3); // frog
+      }
+    }
+  }
+
+  stopAmbience() { if (this.windG && this.ctx) this.windG.gain.setTargetAtTime(0, this.ctx.currentTime, 0.3); }
+
+  birdCall(kind, dist = 50) {
+    if (!this.ctx) return;
+    const v = Math.min(0.08, 6 / Math.max(30, dist));
+    const pan = Math.random() * 1.6 - 0.8;
+    if (kind === 'gull') { this._tone(1250, 820, 0.35, 'sawtooth', v * 0.5, pan); this._tone(1300, 900, 0.25, 'sine', v * 0.6, pan, 0.4); }
+    else if (kind === 'crow') { this._noise(0.22, 'bandpass', 750, v * 2.2, pan, 4); this._noise(0.2, 'bandpass', 700, v * 2, pan, 4, 0.3); }
+    else for (let i = 0; i < 3; i++) this._tone(5200, 4200, 0.04, 'sine', v * 0.6, pan, i * 0.07);
+  }
+
   setVolume(v) { this.volume = v; if (this.master) this.master.gain.value = v; }
 
   _out(pan) {

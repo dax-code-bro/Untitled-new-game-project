@@ -2,7 +2,7 @@
 // (one draw call for all of them) with matching colliders in the physics world.
 import * as THREE from 'three';
 import { mulberry32 } from './noise.js';
-import { POIS } from './terrain.js';
+import { POIS, roadDist } from './terrain.js';
 import { detailMaterial } from './materials.js';
 
 const _c = new THREE.Color();
@@ -95,6 +95,78 @@ class POIBuilder {
     const m = new THREE.Matrix4().makeTranslation(P.x + x, this.y + y0 + h / 2, P.z + z);
     this.b.geometry(new THREE.CylinderGeometry(r, r, h, seg), m, color, 0.04, this.rng);
     if (collide) this.physics.addBox([P.x + x - r * 0.85, this.y + y0, P.z + z - r * 0.85], [P.x + x + r * 0.85, this.y + y0 + h, P.z + z + r * 0.85], { mat: 'metal' });
+  }
+
+  // any geometry placed relative to the POI (y from the pad), turned by ry
+  shape(geo, x, y, z, ry, color, tint = 0.05) {
+    const P = this.poi;
+    const m = new THREE.Matrix4().makeRotationY(ry).setPosition(P.x + x, this.y + y, P.z + z);
+    this.b.geometry(geo, m, color, tint, this.rng);
+  }
+
+  // a shipping container (6 m x 2.4 m), with door ribs, along X or Z
+  container(x, z, alongX, color, y0 = 0) {
+    const [hx, hz] = alongX ? [3, 1.2] : [1.2, 3];
+    this.solid(x - hx, y0, z - hz, x + hx, y0 + 2.6, z + hz, color, true, 0.08);
+    for (let i = -4; i <= 4; i++) {
+      const o = i * 0.62;
+      if (alongX) { this.solid(x + o - 0.05, y0 + 0.1, z - hz - 0.04, x + o + 0.05, y0 + 2.5, z - hz, color, false, 0.12); this.solid(x + o - 0.05, y0 + 0.1, z + hz, x + o + 0.05, y0 + 2.5, z + hz + 0.04, color, false, 0.12); }
+      else { this.solid(x - hx - 0.04, y0 + 0.1, z + o - 0.05, x - hx, y0 + 2.5, z + o + 0.05, color, false, 0.12); this.solid(x + hx, y0 + 0.1, z + o - 0.05, x + hx + 0.04, y0 + 2.5, z + o + 0.05, color, false, 0.12); }
+    }
+  }
+
+  // a canvas ridge tent
+  tent(x, z, ry, color = PAL.canvas) {
+    const g = new THREE.CylinderGeometry(1.9, 1.9, 5, 3, 1);
+    g.rotateZ(Math.PI / 2); g.rotateX(Math.PI / 6); g.translate(0, 0.95, 0);
+    this.shape(g, x, 0, z, ry, color, 0.08);
+    this.shape(new THREE.CylinderGeometry(0.04, 0.04, 2.9, 5).translate(0, 1.45, 2.55), x, 0, z, ry, 0x3a3a3a);
+    this.shape(new THREE.CylinderGeometry(0.04, 0.04, 2.9, 5).translate(0, 1.45, -2.55), x, 0, z, ry, 0x3a3a3a);
+    const c = Math.cos(ry), sn = Math.sin(ry);
+    this.physics.addBox([this.poi.x + x - 1.8, this.y, this.poi.z + z - 1.8], [this.poi.x + x + 1.8, this.y + 1.8, this.poi.z + z + 1.8], { mat: 'wood' });
+    void c; void sn;
+  }
+
+  barrels(x, z, n) {
+    for (let i = 0; i < n; i++) {
+      const a = i * 2.4, r = i ? 0.75 + (i % 3) * 0.2 : 0;
+      const bx = x + Math.cos(a) * r, bz = z + Math.sin(a) * r;
+      const col = this.pk([0x2f4a6a, 0x6a2a22, 0x4a5a2e, 0x8a7a2a]);
+      this.shape(new THREE.CylinderGeometry(0.3, 0.3, 0.9, 12).translate(0, 0.45, 0), bx, 0, bz, 0, col, 0.1);
+      this.shape(new THREE.TorusGeometry(0.3, 0.025, 4, 12).rotateX(Math.PI / 2).translate(0, 0.3, 0), bx, 0, bz, 0, 0x222222);
+      this.shape(new THREE.TorusGeometry(0.3, 0.025, 4, 12).rotateX(Math.PI / 2).translate(0, 0.62, 0), bx, 0, bz, 0, 0x222222);
+    }
+    this.physics.addBox([this.poi.x + x - 1.2, this.y, this.poi.z + z - 1.2], [this.poi.x + x + 1.2, this.y + 0.9, this.poi.z + z + 1.2], { mat: 'metal' });
+  }
+
+  truck(x, z, ry, color) {
+    const c = Math.cos(ry), sn = Math.sin(ry);
+    const at = (lx, lz) => [x + lx * c + lz * sn, z - lx * sn + lz * c];
+    const box = (w, h, d, lx, ly, lz, col) => this.shape(new THREE.BoxGeometry(w, h, d).translate(lx, ly + h / 2, lz), x, 0, z, ry, col, 0.08);
+    box(2.3, 1.9, 2.0, 0, 0.9, -2.6, color);           // cab
+    box(2.0, 0.7, 0.05, 0, 1.9, -3.62, 0x1a2630);       // windscreen
+    box(2.4, 0.5, 5.2, 0, 0.75, 0.6, 0x2a2a2a);          // chassis
+    box(2.4, 1.0, 4.4, 0, 1.25, 1.0, color);             // bed
+    const tarp = new THREE.CylinderGeometry(1.25, 1.25, 4.4, 10, 1, false, 0, Math.PI); tarp.rotateX(Math.PI / 2); tarp.rotateZ(-Math.PI / 2); tarp.translate(0, 2.2, 1.0);
+    this.shape(tarp, x, 0, z, ry, PAL.canvas, 0.1);
+    for (const [lx, lz] of [[-1.15, -2.5], [1.15, -2.5], [-1.15, 1.2], [1.15, 1.2], [-1.15, 2.4], [1.15, 2.4]]) {
+      const w = new THREE.CylinderGeometry(0.48, 0.48, 0.38, 14); w.rotateZ(Math.PI / 2); w.translate(lx, 0.48, lz);
+      this.shape(w, x, 0, z, ry, 0x161616, 0.04);
+    }
+    const [ax, az] = at(0, -0.4);
+    this.physics.addBox([this.poi.x + ax - 1.8, this.y, this.poi.z + az - 3.6], [this.poi.x + ax + 1.8, this.y + 2.9, this.poi.z + az + 3.6], { mat: 'metal' });
+  }
+
+  watchtower(x, z) {
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) this.solid(x + sx * 1.5 - 0.15, 0, z + sz * 1.5 - 0.15, x + sx * 1.5 + 0.15, 6.2, z + sz * 1.5 + 0.15, PAL.darkwood, true, 0.1);
+    for (const y of [2, 4]) { this.solid(x - 1.6, y, z - 1.55, x + 1.6, y + 0.12, z - 1.45, PAL.wood, false); this.solid(x - 1.6, y, z + 1.45, x + 1.6, y + 0.12, z + 1.55, PAL.wood, false); }
+    this.solid(x - 1.9, 6.2, z - 1.9, x + 1.9, 6.4, z + 1.9, PAL.wood, true);
+    for (const [a, b, c2, d] of [[-1.9, -1.9, 1.9, -1.8], [-1.9, 1.8, 1.9, 1.9], [-1.9, -1.9, -1.8, 1.9], [1.8, -1.9, 1.9, 1.9]]) this.solid(x + a, 6.4, z + b, x + c2, 7.4, z + d, PAL.wood, true, 0.12);
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) this.solid(x + sx * 1.8 - 0.07, 7.4, z + sz * 1.8 - 0.07, x + sx * 1.8 + 0.07, 8.6, z + sz * 1.8 + 0.07, PAL.darkwood, false);
+    const roof = new THREE.ConeGeometry(2.9, 1.2, 4); roof.rotateY(Math.PI / 4); roof.translate(0, 9.2, 0);
+    this.shape(roof, x, 0, z, 0, PAL.roof, 0.06);
+    this.physics.addBox([this.poi.x + x + 0.35, this.y, this.poi.z + z + 1.6], [this.poi.x + x + 0.95, this.y + 6.4, this.poi.z + z + 2.0], { ladder: true });
+    for (let y = 0.3; y < 6.2; y += 0.4) this.solid(x + 0.35, y, z + 1.75, x + 0.95, y + 0.06, z + 1.85, PAL.wood, false);
   }
 
   wallX(a, b, z, h, ops, col, t = 0.35, y0 = 0) {
@@ -193,10 +265,55 @@ class POIBuilder {
       this.house(x, z, 8, 6, 3, PAL.metal, { roofColor: 0x4a4f55, loot: 1, table: 'common', front: x < 0 ? 'e' : 'w' });
     }
     for (const [x, z] of [[-34, 0], [34, 0], [0, -34], [0, 34]]) this.cyl(x, z, 0.12, 7, 0x333333, 0, false, 6); // lamp posts
+    // lamp heads on the posts
+    for (const [x, z] of [[-34, 0], [34, 0], [0, -34], [0, 34]]) { this.solid(x - 0.3, 6.9, z - 0.2, x + 0.3, 7.15, z + 0.2, 0x2a2a2a, false); this.solid(x - 0.25, 6.86, z - 0.15, x + 0.25, 6.9, z + 0.15, 0xfff2c0, false, 0); }
+    // sandbag emplacements: curved walls of bags in two courses
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * Math.PI * 2 + 0.3;
       const x = Math.cos(a) * 46, z = Math.sin(a) * 46;
-      this.solid(x - 1.5, 0, z - 0.45, x + 1.5, 1.0, z + 0.45, 0x9c8a62, true, 0.1);
+      if (roadDist(this.poi.x + x, this.poi.z + z) < 8) continue;
+      for (let k = -2; k <= 2; k++) for (const [y, off] of [[0, 0], [0.32, 0.3], [0.64, 0]]) {
+        const bx = x + Math.cos(a + Math.PI / 2) * (k * 0.62 + off), bz = z + Math.sin(a + Math.PI / 2) * (k * 0.62 + off);
+        const bag = new THREE.CapsuleGeometry(0.17, 0.32, 3, 8); bag.rotateZ(Math.PI / 2); bag.scale(1, 1, 1.4); bag.translate(0, y + 0.17, 0);
+        this.shape(bag, bx, 0, bz, -a + Math.PI / 2, 0x9c8a62, 0.12);
+      }
+      this.physics.addBox([this.poi.x + x - 1.6, this.y, this.poi.z + z - 1.6], [this.poi.x + x + 1.6, this.y + 1.0, this.poi.z + z + 1.6], { mat: 'concrete' });
+    }
+    // containers, some stacked
+    this.container(-42, -26, true, 0x8a3a2a); this.container(-42, -26, true, 0x2f5a7a, 2.6); this.container(-49, -20, false, 0x4a6a3a);
+    this.container(44, 26, false, 0x7a6a2a); this.container(50, 20, true, 0x8a3a2a);
+    this.container(-46, 30, true, 0x5a5f66);
+    // tents, trucks, fuel, barrels, a generator
+    this.tent(-14, 31, 0.2); this.tent(-22, 34, -0.3); this.tent(16, -30, 1.3);
+    this.truck(-30, 44, 0.6, 0x4a5a3a); this.truck(32, -44, -2.2, 0x5a5a4a);
+    this.barrels(20, -24, 6); this.barrels(-20, -26, 4); this.barrels(36, 38, 5); this.barrels(-38, 16, 3);
+    const tank = new THREE.CylinderGeometry(1.3, 1.3, 6.5, 18); tank.rotateZ(Math.PI / 2); tank.translate(0, 1.9, 0);
+    this.shape(tank, -40, 0, 6, 0, 0xb8b8ae, 0.04);
+    for (const dx of [-2.4, 2.4]) this.solid(-40 + dx - 0.15, 0, 6 - 1, -40 + dx + 0.15, 1.2, 6 + 1, 0x444444, false);
+    this.physics.addBox([this.poi.x - 43.3, this.y, this.poi.z + 4.7], [this.poi.x - 36.7, this.y + 3.2, this.poi.z + 7.3], { mat: 'metal' });
+    this.solid(-19, 0, -18, -16, 1.4, -16.6, 0x5a6a3a, true, 0.08); // generator
+    this.solid(-18.6, 1.4, -17.7, -18.3, 2.1, -17.4, 0x2a2a2a, false);
+    // wooden crate stacks
+    for (const [x, z, n] of [[-36, -34, 3], [40, 14, 2], [12, 40, 3], [-8, -42, 2]]) for (let i = 0; i < n; i++) {
+      const y = i > 1 ? 1.0 : 0, ox = (i % 2) * 1.05;
+      this.solid(x + ox - 0.5, y, z - 0.5, x + ox + 0.5, y + 1.0, z + 0.5, 0x8a6a42, true, 0.14);
+    }
+    // a watchtower and a radio mast
+    this.watchtower(40, -36);
+    this.solid(-31.25, 0, -40.25, -30.75, 18, -39.75, 0x8a8a8a, false, 0.05);
+    for (let y = 2; y < 18; y += 2) this.solid(-31.6, y, -40.6, -30.4, y + 0.06, -39.4, 0x8a8a8a, false, 0.05);
+    const dish = new THREE.SphereGeometry(0.9, 14, 8, 0, Math.PI * 2, 0, Math.PI / 3); dish.rotateX(Math.PI / 2); dish.translate(0, 14, 0.4);
+    this.shape(dish, -31, 0, -40, 0.6, 0xd0d0cc, 0.04);
+    this.physics.addBox([this.poi.x - 31.4, this.y, this.poi.z - 40.4], [this.poi.x - 30.6, this.y + 18, this.poi.z - 39.6], { mat: 'metal' });
+    // perimeter fence (posts and two rails), open where the roads come in
+    const R = 64, n = 72;
+    for (let i = 0; i < n; i++) {
+      const a0 = (i / n) * Math.PI * 2, a1 = ((i + 1) / n) * Math.PI * 2;
+      const x0 = Math.cos(a0) * R, z0 = Math.sin(a0) * R, x1 = Math.cos(a1) * R, z1 = Math.sin(a1) * R;
+      if (roadDist(this.poi.x + x0, this.poi.z + z0) < 9 || roadDist(this.poi.x + x1, this.poi.z + z1) < 9) continue;
+      this.solid(x0 - 0.08, 0, z0 - 0.08, x0 + 0.08, 1.5, z0 + 0.08, PAL.darkwood, false, 0.1);
+      const len = Math.hypot(x1 - x0, z1 - z0), ry = Math.atan2(x1 - x0, z1 - z0);
+      for (const y of [0.55, 1.15]) this.shape(new THREE.BoxGeometry(0.06, 0.1, len).translate(0, y, 0), (x0 + x1) / 2, 0, (z0 + z1) / 2, ry, PAL.wood, 0.12);
     }
   }
 

@@ -2,7 +2,7 @@
 // Detailed models near you (bark, leaf/needle cards, wind, shadows), cheap cross-card models far away.
 // Trunks/rocks register as cylinder colliders so trees are real cover.
 import * as THREE from 'three';
-import { heightAt, normalAt, regionAt, POIS } from './terrain.js';
+import { heightAt, normalAt, regionAt, POIS, roadDist } from './terrain.js';
 import { waterLevelAt } from './physics.js';
 import { mulberry32, makeNoise } from './noise.js';
 import { windHook, coverageHook } from './materials.js';
@@ -268,7 +268,7 @@ const FLORA = {
   e: [['jungle', 38, 0.8, 1.4, 0.6, 18], ['palm', 14, 0.8, 1.2, 0.3, 10], ['fern', 120, 0.7, 1.5, 0, 0], ['bush', 50, 0.7, 1.5, 0, 0], ['rock', 4, 0.8, 2.5, 0.9, 1.1]],
   w: [['cactus', 5, 0.7, 1.3, 0.35, 6], ['deadbush', 14, 0.7, 1.4, 0, 0], ['sandrock', 6, 0.8, 3.5, 0.95, 1.0]],
   n: [['snowpine', 22, 0.7, 1.4, 0.45, 15], ['snowrock', 20, 0.8, 4, 0.95, 1.1]],
-  hub: [['oak', 4, 0.8, 1.2, 0.55, 7], ['bush', 18, 0.6, 1.3, 0, 0], ['rock', 3, 0.8, 2, 0.9, 1.1]],
+  hub: [['oak', 15, 0.8, 1.35, 0.55, 7], ['pine', 7, 0.7, 1.3, 0.6, 30], ['bush', 48, 0.6, 1.4, 0, 0], ['fern', 14, 0.7, 1.2, 0, 0], ['rock', 6, 0.8, 2.4, 0.9, 1.1], ['log', 3, 0.8, 1.2, 0, 0]],
   beach: [['palm', 5, 0.8, 1.3, 0.3, 10], ['rock', 2, 0.8, 2.2, 0.9, 1.1], ['log', 2, 0.8, 1.2, 0, 0]],
 };
 
@@ -349,6 +349,7 @@ export class Scatter {
         const x = x0 + rng() * CELL, z = z0 + rng() * CELL;
         const s = s0 + rng() * (s1 - s0), rot = rng() * Math.PI * 2;
         if (nearPoi.some((p) => Math.hypot(x - p.x, z - p.z) < p.r + 6)) continue;
+        if (roadDist(x, z) < (type === 'fern' || type === 'bush' ? 3.5 : 7)) continue; // keep the roads clear
         const h = heightAt(x, z);
         if (h < 1.2 && type !== 'rock') continue;
         if (waterLevelAt(x, z, h) !== null) continue;

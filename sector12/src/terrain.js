@@ -131,6 +131,46 @@ export const POIS = [
   { id: 'lighthouse', name: 'Lighthouse Point', x: 12600, z: -11900, r: 40, region: 'beach', kind: 'lighthouse' },
 ];
 
+// ------------------------------------------------------------------ roads
+// Dirt roads link the POB to the towns and the towns to each other. Each road is a straight line
+// between two points of interest with a gentle meander; power lines run along the main ones.
+const ROAD_LINKS = [
+  ['pob', 'lodge', 1], ['pob', 'canopy', 1], ['pob', 'refinery', 1], ['pob', 'whiteout', 1], ['pob', 'glacier', 0],
+  ['lodge', 'mirror', 0], ['lodge', 'hollow', 0], ['hollow', 'shipwreck', 0], ['canopy', 'ruins', 1], ['ruins', 'howler', 0],
+  ['refinery', 'airfield', 1], ['airfield', 'mirage', 0], ['airfield', 'duneout', 0], ['mirror', 'canopy', 0],
+];
+export const ROADS = ROAD_LINKS.map(([a, b, power], i) => {
+  const A = POIS.find((p) => p.id === a), Bp = POIS.find((p) => p.id === b);
+  const dx = Bp.x - A.x, dz = Bp.z - A.z, len = Math.hypot(dx, dz);
+  const ux = dx / len, uz = dz / len;
+  return { a, b, power: !!power, ax: A.x, az: A.z, ux, uz, nx: -uz, nz: ux, len, seed: i * 1.7 + 0.3,
+    t0: (A.r * 0.6) / len, t1: 1 - (Bp.r * 0.6) / len,
+    minx: Math.min(A.x, Bp.x) - 90, maxx: Math.max(A.x, Bp.x) + 90, minz: Math.min(A.z, Bp.z) - 90, maxz: Math.max(A.z, Bp.z) + 90 };
+});
+// sideways meander (m) at fraction t along a road; zero at both ends
+export function roadWobble(R, t) {
+  const L = R.len * t;
+  return (Math.sin(L / 650 + R.seed) * 38 + Math.sin(L / 210 + R.seed * 2.3) * 9) * Math.sin(Math.PI * t);
+}
+export function roadPoint(R, t, side = 0) {
+  const w = roadWobble(R, t) + side;
+  return [R.ax + R.ux * R.len * t + R.nx * w, R.az + R.uz * R.len * t + R.nz * w];
+}
+// distance (m) from (x, z) to the nearest road centre line (large when far from every road)
+export function roadDist(x, z) {
+  let best = 1e9;
+  for (let i = 0; i < ROADS.length; i++) {
+    const R = ROADS[i];
+    if (x < R.minx || x > R.maxx || z < R.minz || z > R.maxz) continue;
+    const rx = x - R.ax, rz = z - R.az;
+    const t = (rx * R.ux + rz * R.uz) / R.len;
+    if (t < R.t0 || t > R.t1) continue;
+    const d = Math.abs(rx * R.nx + rz * R.nz - roadWobble(R, t));
+    if (d < best) best = d;
+  }
+  return best;
+}
+
 function findPeak() {
   let best = { x: MOUNTAIN.x, z: MOUNTAIN.z, h: -1e9 };
   for (let i = -40; i <= 40; i++) for (let j = -40; j <= 40; j++) {
@@ -231,7 +271,7 @@ const toLin = (hex) => {
   return c.map((v) => Math.pow(v / 255, 2.2));
 };
 const C = {
-  forestA: toLin(0x3d5a2a), forestB: toLin(0x5a7238), dirt: toLin(0x5e4b33),
+  forestA: toLin(0x3d5a2a), forestB: toLin(0x5a7238), dirt: toLin(0x5e4b33), road: toLin(0x7d6b50),
   jungleA: toLin(0x2a4f20), jungleB: toLin(0x3e6c27),
   desertA: toLin(0xd2b27a), desertB: toLin(0xe4cb98),
   tundra: toLin(0x7c8070), snow: toLin(0xeef3f8), snowShade: toLin(0xc9d6e6),
@@ -257,6 +297,8 @@ export function colorAt(x, z, h, ny, out = [0, 0, 0]) {
   else add(mix3(tmp, C.tundra, C.snowShade, smooth(60, 140, h) * 0.5), B.n);
   out[0] = acc[0]; out[1] = acc[1]; out[2] = acc[2];
   if (B.hub > 0) mix3(out, out, mix3(tmp, C.hubA, C.hubB, v), B.hub);
+  const rd = roadDist(x, z);
+  if (rd < 5) mix3(out, out, C.road, smooth(5, 2.5, rd) * (snowAt(x, z, h) ? 0.35 : 0.9));
   // steep ground shows rock
   const rockK = smooth(0.82, 0.62, ny);
   if (rockK > 0) {
@@ -292,6 +334,9 @@ export function splatAt(x, z, h, ny, out) {
     if (h < 1.5) wet = smooth(1.5, 0.1, h);
   }
   if (d < 0.82 && h < WORLD.lake + 1.5) { const k = smooth(WORLD.lake + 1.5, WORLD.lake - 0.5, h); dirt += k; wet = Math.max(wet, k); forest *= 1 - k; jungle *= 1 - k; }
+  // dirt roads (packed snow keeps some white up north)
+  const rd = roadDist(x, z);
+  if (rd < 5) { const rk = smooth(5, 2.2, rd); const keep = 1 - rk * (snow > 0 ? 0.6 : 1); forest *= keep; jungle *= keep; sand *= keep; snow *= 1 - rk * 0.6; dirt = dirt * keep + rk; }
   let sum = forest + jungle + sand + snow + dirt;
   if (sum > 1) { forest /= sum; jungle /= sum; sand /= sum; snow /= sum; dirt /= sum; sum = 1; }
   const rock = smooth(0.84, 0.64, ny) * (1 - smooth(4, 1, h) * (d > 0.85 ? 1 : 0));

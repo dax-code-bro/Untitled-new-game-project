@@ -45,7 +45,7 @@ Touch devices get on-screen controls automatically (force them with `?touch`, or
 | USE | Appears when you can open, loot, harvest or extract |
 | Top bar | SWAP weapon, HEAL, AMMO type, BAG (inventory), MAP, II (pause) |
 
-Phones start on the Low graphics preset.
+Phones start on the Low graphics preset, which still has clouds, light grass and sun shadows.
 
 ## How to play
 
@@ -84,6 +84,8 @@ Phones start on the Low graphics preset.
 | `viewmodel.js` | First-person arms and weapon: IK hands, sway / bob / recoil springs, working actions, per-weapon reloads, melee, throws, medical |
 | `rig.js` | Human rig: planted-foot gait, two-bone IK legs and arms, aim stance, reloads, flinches, verlet ragdoll deaths |
 | `animalRig.js` | Quadruped rig for every species: walk / trot / gallop / bound gaits, grazing, ears, tail, ragdoll |
+| `roads.js` | Power lines (poles and sagging wires) along the main dirt roads |
+| `ambient.js` | Ambient life: bird flocks, pollen, fireflies, snow glitter, sand wisps, and the wind / birdsong / cricket soundscape |
 | `touch.js` | On-screen touch controls for phones and tablets |
 | `effects.js` | Soft particles, decals, physical casings and dropped mags, impacts per surface, explosions, splashes, blood |
 

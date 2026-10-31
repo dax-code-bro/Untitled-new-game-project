@@ -1,13 +1,37 @@
 // Instanced grass clumps around the player, streamed in 12 m tiles, swaying in the wind
 // and shrinking smoothly at the edge of the grass radius (no popping).
 import * as THREE from 'three';
-import { heightAt, normalAt, regionAt, snowAt, POIS } from './terrain.js';
+import { heightAt, normalAt, regionAt, snowAt, POIS, roadDist } from './terrain.js';
 import { waterLevelAt } from './physics.js';
 import { mulberry32 } from './noise.js';
 import { windHook, coverageHook, SHARED } from './materials.js';
 
 const TILE = 12;
 const DENSITY = { s: 34, e: 40, hub: 30, n: 14, w: 3, beach: 2 };
+
+// wildflower card: thin green stems with white blossoms (tinted per instance)
+let FLOWER_TEX = null;
+function flowerTexture() {
+  if (FLOWER_TEX) return FLOWER_TEX;
+  const n = 128, c = document.createElement('canvas');
+  c.width = c.height = n;
+  const g = c.getContext('2d');
+  let s = 7;
+  const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  for (let k = 0; k < 9; k++) {
+    const x = 10 + r() * (n - 20), top = n * (0.25 + r() * 0.4), lean = (r() - 0.5) * 18;
+    g.strokeStyle = '#4c7a2a'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(x, n); g.quadraticCurveTo(x + lean * 0.4, (n + top) / 2, x + lean, top); g.stroke();
+    g.fillStyle = '#ffffff';
+    const cx = x + lean, cy = top, pr = 3 + r() * 3;
+    for (let p = 0; p < 6; p++) { const a = (p / 6) * Math.PI * 2; g.beginPath(); g.arc(cx + Math.cos(a) * pr, cy + Math.sin(a) * pr, pr * 0.75, 0, 7); g.fill(); }
+    g.fillStyle = '#e8c040'; g.beginPath(); g.arc(cx, cy, pr * 0.6, 0, 7); g.fill();
+  }
+  FLOWER_TEX = new THREE.CanvasTexture(c);
+  FLOWER_TEX.colorSpace = THREE.SRGBColorSpace;
+  return FLOWER_TEX;
+}
+const BLOOMS = [[1, 0.85, 0.2], [1, 1, 1], [0.75, 0.45, 1], [1, 0.35, 0.3], [0.45, 0.6, 1], [1, 0.6, 0.15]];
 
 function clumpGeometry() {
   const parts = [];
@@ -65,6 +89,11 @@ export class Grass {
       scene.add(m);
     }
     this.green.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(this.cap * 3), 3);
+    this.flowers = new THREE.InstancedMesh(clumpGeometry(), mk(flowerTexture(), 'flowers'), Math.round(this.cap / 5));
+    this.flowers.count = 0; this.flowers.frustumCulled = false; this.flowers.receiveShadow = true;
+    this.flowers.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.flowers.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Math.round(this.cap / 5) * 3), 3);
+    scene.add(this.flowers);
   }
 
   genTile(tx, tz) {
@@ -82,8 +111,12 @@ export class Grass {
       if (snowAt(x, z, h)) continue;
       if (nearPoi && rng() < 0.85) continue;
       if (normalAt(x, z, 1.5)[1] < 0.86) continue;
+      if (roadDist(x, z) < 2.6) continue;
       const dry = reg === 'w' || reg === 'beach' || (reg === 'n' && rng() < 0.6);
-      out.push({ x, y: h - 0.05, z, s: 0.7 + rng() * 0.8, r: rng() * Math.PI * 2, dry, hue: rng() });
+      // meadows: patches where wildflowers grow among the grass
+      const meadow = Math.sin(x / 37 + Math.sin(z / 53)) * Math.sin(z / 29 + Math.sin(x / 61));
+      const flower = !dry && (reg === 'hub' || reg === 's' || reg === 'e') && meadow > 0.35 && rng() < 0.45;
+      out.push({ x, y: h - 0.05, z, s: 0.7 + rng() * 0.8, r: rng() * Math.PI * 2, dry, flower, bloom: Math.floor(Math.abs(meadow * 97 + x * 0.013) % BLOOMS.length), hue: rng() });
     }
     return out;
   }
@@ -104,11 +137,13 @@ export class Grass {
     }
     for (const k of this.tiles.keys()) if (!want.has(k)) this.tiles.delete(k);
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), c = new THREE.Color();
-    let g = 0, d = 0;
+    let g = 0, d = 0, f = 0;
     for (const list of this.tiles.values()) for (const it of list) {
       q.setFromAxisAngle(up, it.r); s.set(it.s, it.s * (0.8 + it.hue * 0.5), it.s); p.set(it.x, it.y, it.z);
       m4.compose(p, q, s);
-      if (it.dry) { if (d < this.dry.instanceMatrix.count) this.dry.setMatrixAt(d++, m4); }
+      if (it.flower) {
+        if (f < this.flowers.instanceMatrix.count) { this.flowers.setMatrixAt(f, m4); const b = BLOOMS[it.bloom]; c.setRGB(b[0], b[1], b[2]); this.flowers.setColorAt(f, c); f++; }
+      } else if (it.dry) { if (d < this.dry.instanceMatrix.count) this.dry.setMatrixAt(d++, m4); }
       else if (g < this.cap) {
         this.green.setMatrixAt(g, m4);
         c.setRGB(0.85 + it.hue * 0.3, 0.9 + it.hue * 0.2, 0.8 + it.hue * 0.15);
@@ -116,8 +151,9 @@ export class Grass {
         g++;
       }
     }
-    this.green.count = g; this.dry.count = d;
-    this.green.instanceMatrix.needsUpdate = true; this.dry.instanceMatrix.needsUpdate = true;
+    this.green.count = g; this.dry.count = d; this.flowers.count = f;
+    this.green.instanceMatrix.needsUpdate = true; this.dry.instanceMatrix.needsUpdate = true; this.flowers.instanceMatrix.needsUpdate = true;
+    if (this.flowers.instanceColor) this.flowers.instanceColor.needsUpdate = true;
     if (this.green.instanceColor) this.green.instanceColor.needsUpdate = true;
     void SHARED;
   }

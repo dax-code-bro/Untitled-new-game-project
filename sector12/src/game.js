@@ -21,6 +21,8 @@ import { POIS, heightAt, regionAt, REGIONS, islandD, normalAt, snowAt } from './
 import { setWeaponTextures, buildWeapon } from './weapons.js';
 import { HumanRig, PALETTES } from './rig.js';
 import { QuadRig } from './animalRig.js';
+import { PowerLines } from './roads.js';
+import { Ambient } from './ambient.js';
 import { waterLevelAt } from './physics.js';
 import { rand, randi, clamp } from './rng.js';
 
@@ -60,6 +62,8 @@ export class Game {
     this.structures = buildStructures(scene, this.physics, this.tex);
     this.scatter = new Scatter(scene, this.physics, this.tex, this.gfx.q);
     this.grass = new Grass(scene, this.tex, this.gfx.q);
+    this.powerLines = new PowerLines(scene, this.physics, this.tex);
+    this.ambient = new Ambient(this);
     const pobPoi = POIS.find((p) => p.id === 'pob');
     this.pob = new POB(scene, this.physics, pobPoi, this.save, {
       persist: () => ctx.persist(),
@@ -127,13 +131,11 @@ export class Game {
     // the warm-up objects go away once compiling is done (not before: three still checks their programs)
     const cleanup = () => { for (const r of rigs) r.dispose(); this.scene.remove(tmp); };
     try {
-      if (this.renderer.compileAsync) {
-        const job = this.renderer.compileAsync(this.scene, this.camera);
-        job.then(cleanup, cleanup);
-        // never let a driver that doesn't report parallel-compile status hold up the loading screen
-        await Promise.race([job, new Promise((r) => setTimeout(r, 6000))]);
-      } else { this.renderer.compile(this.scene, this.camera); cleanup(); }
+      // a plain synchronous compile on the loading screen: slower than the parallel path, but it can't
+      // race the game starting (or hang on drivers that never report the parallel status)
+      this.renderer.compile(this.scene, this.camera);
       this.gfx.render(); // shadow-pass variants too
+      cleanup();
     } catch (e) { console.warn('shader warm-up', e); cleanup(); }
   }
 
@@ -166,6 +168,7 @@ export class Game {
     this.caches.update(dt);
     this.extraction.update(dt);
     this.wildlife.update(dt);
+    this.ambient.update(dt);
     this.updateOperators(dt);
     this.updateProjectiles(dt);
     this.updateBullets(dt);
@@ -848,6 +851,7 @@ export class Game {
 
   dispose() {
     this.terrain.destroy();
+    if (this.audio.stopAmbience) this.audio.stopAmbience();
     this.caches.clear();
     this.extraction.clearHeli();
     this.scene.traverse((o) => {

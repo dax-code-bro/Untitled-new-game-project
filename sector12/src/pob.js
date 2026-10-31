@@ -7,6 +7,7 @@ import { ITEMS, fmtDuration } from './data/catalog.js';
 import { buildItemModel } from './viewmodel.js';
 import { compactWeapon } from './weapons.js';
 import { makeItem } from './inventory.js';
+import { SHARED } from './materials.js';
 
 const SIZE = 14;      // footprint (m)
 const HEIGHT = 10.5;  // about three storeys
@@ -75,6 +76,32 @@ export class POB {
     add(new THREE.BoxGeometry(0.25, 1.6, 0.25), dark, sx - 1.5, 0.8, sz);
     add(new THREE.BoxGeometry(0.25, 1.6, 0.25), dark, sx + 1.5, 0.8, sz);
     add(new THREE.BoxGeometry(3.6, 2.3, 0.18), dark, sx, 2.75, sz);
+    // flagpole by the spawn with a cloth flag rippling in the wind
+    add(new THREE.CylinderGeometry(0.06, 0.08, 11, 8), steel, -9, 5.5, H + 4);
+    add(new THREE.SphereGeometry(0.12, 8, 6), yellow, -9, 11.05, H + 4);
+    const fg = new THREE.PlaneGeometry(2.6, 1.6, 24, 10);
+    fg.translate(1.3, 0, 0);
+    const fc = document.createElement('canvas'); fc.width = 256; fc.height = 160;
+    const fx = fc.getContext('2d');
+    fx.fillStyle = '#16323a'; fx.fillRect(0, 0, 256, 160);
+    fx.fillStyle = '#46ffb0'; fx.fillRect(0, 62, 256, 36);
+    fx.fillStyle = '#e6efec'; fx.font = 'bold 54px monospace'; fx.textAlign = 'center'; fx.fillText('S12', 128, 50);
+    const ft = new THREE.CanvasTexture(fc); ft.colorSpace = THREE.SRGBColorSpace;
+    const fm = new THREE.MeshStandardMaterial({ map: ft, side: THREE.DoubleSide, roughness: 0.85 });
+    const flagHook = (sh) => {
+      sh.uniforms.uTime = SHARED.uTime; sh.uniforms.uWindStrength = SHARED.uWindStrength;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTime; uniform float uWindStrength;')
+        .replace('#include <begin_vertex>', `#include <begin_vertex>
+          float fk = position.x / 2.6;
+          float amp = (0.12 + 0.1 * uWindStrength) * fk;
+          transformed.z += sin(position.x * 2.6 - uTime * 7.0) * amp + sin(position.y * 3.0 + position.x * 1.7 - uTime * 4.3) * amp * 0.4;
+          transformed.y -= fk * fk * 0.18 / (0.6 + uWindStrength);`)
+        .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
+          objectNormal = normalize(vec3(-cos(position.x * 2.6 - uTime * 7.0) * 0.4 * (position.x / 2.6), 0.0, 1.0));`);
+    };
+    fm.userData.hooks = [flagHook]; fm.userData.cacheKey = 'flag'; fm.onBeforeCompile = flagHook; fm.customProgramCacheKey = () => 'flag';
+    const flag = new THREE.Mesh(fg, fm); flag.position.set(-9 + 0.06, 10.1, H + 4); flag.castShadow = true;
+    g.add(flag);
     this.screenCanvas = document.createElement('canvas');
     this.screenCanvas.width = 512; this.screenCanvas.height = 320;
     this.screenTex = new THREE.CanvasTexture(this.screenCanvas);
