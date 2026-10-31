@@ -24,11 +24,41 @@ How it works: `README.md` in this folder. Latest state first.
   chunkStart - 1 in render/lib/job.mjs (or runtime renderFrames for pure + velocity scenes). Low priority.
 - Frame 0 one-frame pop: acts written `[0, 'reach' | 'handsTo' | 'clasp', { in: 0.01 }]` ("already in place")
   were still at progress 0 on frame 0 (1B-03: Remi's arm down on frame 0, up on frame 1). All 6 in
-  verdor-grounds.spec.js now start at -0.1 (fully in at frame 0 with the hold above): 1B-03, 1B-05?/1B-06?-area
-  Abby handsTo + Remi clasp (lines ~183-204) and the R2 keeper's reach (~398). No other spec file uses the pattern.
+  verdor-grounds.spec.js now start at -0.1 (fully in at frame 0): 1B-03 (Remi reach), 1B-05 (Abby handsTo),
+  1B-06 (Abby handsTo + Remi clasp), 1B-07 (Remi clasp), R2-01 (keeper reach). No other spec file uses the pattern.
 - X3-02 starts higher: X3-01 now ends with Charcoal rising out of the rest crouch (crouch k 0.5 -> k 0.2 at
   2.2 s, blend 1.4) as Remi reaches the rig foot; X3-02 = crouch k 0.2 then `mount` at 0.4 s (blend 2.8), so the
   measured lowering reads and the cut X3-01 -> X3-02 matches. (X3-01 is not rendered yet.)
+- Videos (`--only X3-02,X3-15,X3-08,1B-03,1B-12 --force --work eng1/director/work1B`, set build 1.3 min,
+  6.8-9.0 s/frame): 1B-03 DONE (84 f, 13.1 min; frames 0/1/24 looked at: frame 0 clean now; it still has the
+  one-frame arm pop - rendered before the -0.1 act fix, so it is stale ("shot spec changed")); X3-02 DONE (96 f,
+  11.1 min; frames 0,1,20,40,64,95 looked at, `eng1/director/st11/X3-02_grid.jpg`): frame 0 clean, Charcoal starts
+  tall (head above the rig deck) and visibly lowers into the couched mount pose by the end - the beat reads now.
+  Charcoal reads mid-grey, not black, in this flat noon light (creatures/look). STOPPED there (usage budget):
+  X3-08 (segment 0 in flight, discarded), X3-15 (the OLD session-10 file with the smeared frame 0 is still in the
+  cut) and 1B-12 NOT re-rendered.
+- Cut: `DK_DIRECTOR_WORK=eng1/director/work1B bash episodes/s01e01/final/cut/assemble.sh --edl edl-1B
+  eng1/director/work1B eng1/director/rev11` -> `episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_1B.mp4`
+  138.00 s (3312 frames): 3 REAL shots (1B-03, X3-02, X3-15 old), 29 slates; 18 voice cues -> 20 subtitle cues.
+  Sheets `eng1/director/rev11/cut-sheet-01..04.png` (01 + 02 looked at: 1B-03 and X3-02 sit between slates).
+  Sound: `node episodes/s01e01/final/sound/mix.mjs --cut 1B` PASS (I -17.9 LUFS, TP -1.4 dBTP AAC, dialogue
+  >= 14.96 LU over ambience) -> `episodes/s01e01/final/audio/cuts/1B/DragonsKingdom_S01E01_draft-cut_1B_sound.mp4`.
+  (mix.mjs rewrote `final/sound/reports/1B.json` - the sound track's file, left unstaged.)
+- selftest (director) 20 checks pass; npm test (alone): 49 tests, 48 pass, 0 fail (1 skipped), exit 0.
+- NEXT (exact, in order):
+  1. `node scenes/lib/director/tools/render-shots.mjs --only 1B-03,X3-15,X3-08,1B-12 --work <scratch>/work1B`
+     (1B-03 is stale from the -0.1 act fix; X3-15 needs --force or its sidecar deleted: its key did not change but
+     the file predates the creatures' head/wing change and has the smeared frame 0 - `rm work1B/shots/X3-15.*`
+     first). ~45 min for the four. Check frame 0 + 1 of each (`ffmpeg -i X.mp4 -vf "select='lt(n\,2)'"`).
+  2. Then X3-01 (the new rise), 1B-13, 1B-14, R2-02, R2-01, 1B-09, 1B-07, then the wides - 1 queue, resumable.
+  3. Re-assemble + mix exactly as above; LOOK at all four sheets.
+  4. The 1A/PROLOGUE dailies in eng1/director/work were rendered before the frame-0 fix: their frame 0 may be
+     smeared where the cast's blocking changes at 0 (an act at 0 whose pose differs from the default); every hard
+     cut shows the incoming shot's frame 0 for 1/24 s, so check frame 0 of the 1A dailies (one ffmpeg tile per
+     set) and re-render the smeared ones (`--only ... --force`), or all with `--redo-on core` when there is time.
+     Sampled this session: 1A-04, 1A-20, 1A-29 frame 0 == frame 1 (no smear; `eng1/director/st11/f01_1A.jpg`).
+  5. Session 9's list items 2-5 still open (subjectMin framing check, previs selftests, sky + rim hooks,
+     X3-11 hands / X3-07 / 1B-03 angle).
 
 ## Session 10 (2026-10-30, short budgeted session: mount pose, strict render-shots, first 1B videos)
 
